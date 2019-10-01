@@ -783,13 +783,13 @@ IndexedInstrProfReader::readSummary(IndexedInstrProf::ProfVersion Version,
         SummaryData->get(Summary::TotalNumFunctions));
     return Cur + SummarySize;
   } else {
-    // For older version of profile data, we need to compute on the fly:
-    using namespace IndexedInstrProf;
-
+    // The older versions do not support a profile summary. This just computes
+    // an empty summary, which will not result in accurate hot/cold detection.
+    // We would need to call addRecord for all NamedInstrProfRecords to get the
+    // correct summary. However, this version is old (prior to early 2016) and
+    // has not been supporting an accurate summary for several years.
     InstrProfSummaryBuilder Builder(ProfileSummaryBuilder::DefaultCutoffs);
-    // FIXME: This only computes an empty summary. Need to call addRecord for
-    // all NamedInstrProfRecords to get the correct summary.
-    this->Summary = Builder.getSummary();
+    Summary = Builder.getSummary();
     return Cur;
   }
 }

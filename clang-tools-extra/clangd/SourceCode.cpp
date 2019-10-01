@@ -659,6 +659,9 @@ static void lex(llvm::StringRef Code, const format::FormatStyle &Style,
 
   while (!Lex.LexFromRawLexer(Tok))
     A(Tok);
+  // LexFromRawLexer returns true after it lexes last token, so we still have
+  // one more token to report.
+  A(Tok);
 }
 
 llvm::StringMap<unsigned> collectIdentifiers(llvm::StringRef Content,

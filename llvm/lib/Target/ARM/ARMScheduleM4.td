@@ -18,6 +18,9 @@ def CortexM4Model : SchedMachineModel {
   let PostRAScheduler   = 1;
 
   let CompleteModel = 0;
+  let UnsupportedFeatures = [IsARM, HasNEON, HasDotProd, HasZCZ, HasMVEInt,
+          IsNotMClass, HasDPVFP, HasFPARMv8, HasFullFP16, Has8MSecExt, HasV8,
+          HasV8_3a, HasTrustZone, HasDFB, IsWindows];
 }
 
 
@@ -50,6 +53,7 @@ def : M4UnitL2<WriteMAC16>;
 def : M4UnitL2<WriteDIV>;
 
 def : M4UnitL2I<(instregex "(t|t2)LDM")>;
+def : M4UnitL2I<(instregex "(t|t2)LDR")>;
 
 
 // Stores we use a latency of 1 as they have no outputs
@@ -78,9 +82,20 @@ def : M4UnitL1<WriteNoop>;
 def : M4UnitL1<WritePreLd>;
 def : M4UnitL1I<(instregex "(t|t2)MOV")>;
 def : M4UnitL1I<(instrs COPY)>;
-def : M4UnitL1I<(instregex "t2IT")>;
-def : M4UnitL1I<(instregex "t2SEL", "t2USAD8",
-    "t2(S|Q|SH|U|UQ|UH)(ADD16|ASX|SAX|SUB16|ADD8|SUB8)", "t2USADA8", "(t|t2)REV")>;
+def : M4UnitL1I<(instregex "t2IT", "t2MSR", "t2MRS")>;
+def : M4UnitL1I<(instregex "t2CLREX")>;
+def : M4UnitL1I<(instregex "t2SEL", "t2USAD8", "t2SML[AS]",
+    "t2(S|Q|SH|U|UQ|UH|QD)(ADD|ASX|SAX|SUB)", "t2USADA8", "(t|t2)REV")>;
+
+// These instructions are not of much interest to scheduling as they will not
+// be generated or it is not very useful to schedule them. They are here to make
+// the model more complete.
+def : M4UnitL1I<(instregex "t2CDP", "t2LDC", "t2MCR", "t2MRC", "t2MRRC", "t2STC")>;
+def : M4UnitL1I<(instregex "tCPS", "t2ISB", "t2DSB", "t2DMB", "t2?HINT$")>;
+def : M4UnitL1I<(instregex "t2?UDF$", "tBKPT", "t2DBG")>;
+def : M4UnitL1I<(instregex "t?2?Int_eh_sjlj_", "tADDframe", "t?ADJCALL")>;
+def : M4UnitL1I<(instregex "CMP_SWAP", "JUMPTABLE", "MEMCPY")>;
+def : M4UnitL1I<(instregex "VSETLNi32", "VGETLNi32")>;
 
 def : ReadAdvance<ReadALU, 0>;
 def : ReadAdvance<ReadALUsr, 0>;
@@ -112,6 +127,9 @@ def : M4UnitL1<WriteVST1>;
 def : M4UnitL1<WriteVST2>;
 def : M4UnitL1<WriteVST3>;
 def : M4UnitL1<WriteVST4>;
+def : M4UnitL1I<(instregex "VMOVS", "FCONSTS", "VCMP", "VNEG", "VABS")>;
+def : M4UnitL2I<(instregex "VMOVD")>;
+def : M4UnitL1I<(instregex "VMRS", "VMSR", "FMSTAT")>;
 
 def : ReadAdvance<ReadFPMUL, 0>;
 def : ReadAdvance<ReadFPMAC, 0>;

@@ -287,8 +287,7 @@ phases::ID Driver::getFinalPhase(const DerivedArgList &DAL,
              (PhaseArg = DAL.getLastArg(options::OPT_rewrite_legacy_objc)) ||
              (PhaseArg = DAL.getLastArg(options::OPT__migrate)) ||
              (PhaseArg = DAL.getLastArg(options::OPT_emit_iterface_stubs)) ||
-             (PhaseArg = DAL.getLastArg(options::OPT__analyze,
-                                        options::OPT__analyze_auto)) ||
+             (PhaseArg = DAL.getLastArg(options::OPT__analyze)) ||
              (PhaseArg = DAL.getLastArg(options::OPT_emit_ast))) {
     FinalPhase = phases::Compile;
 
@@ -3450,8 +3449,10 @@ Action *Driver::ConstructPhaseAction(
     llvm_unreachable("link action invalid here.");
   case phases::Preprocess: {
     types::ID OutputTy;
-    // -{M, MM} alter the output type.
-    if (Args.hasArg(options::OPT_M, options::OPT_MM)) {
+    // -M and -MM specify the dependency file name by altering the output type,
+    // -if -MD and -MMD are not specified.
+    if (Args.hasArg(options::OPT_M, options::OPT_MM) &&
+        !Args.hasArg(options::OPT_MD, options::OPT_MMD)) {
       OutputTy = types::TY_Dependencies;
     } else {
       OutputTy = Input->getType();
@@ -3499,7 +3500,7 @@ Action *Driver::ConstructPhaseAction(
     if (Args.hasArg(options::OPT_rewrite_legacy_objc))
       return C.MakeAction<CompileJobAction>(Input,
                                             types::TY_RewrittenLegacyObjC);
-    if (Args.hasArg(options::OPT__analyze, options::OPT__analyze_auto))
+    if (Args.hasArg(options::OPT__analyze))
       return C.MakeAction<AnalyzeJobAction>(Input, types::TY_Plist);
     if (Args.hasArg(options::OPT__migrate))
       return C.MakeAction<MigrateJobAction>(Input, types::TY_Remap);

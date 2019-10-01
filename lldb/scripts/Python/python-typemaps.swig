@@ -395,13 +395,12 @@ bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
    else
    {
       PythonFile py_file(PyRefType::Borrowed, $input);
-      File file;
-      if (!py_file.GetUnderlyingFile(file))
+      lldb::FileUP file = py_file.GetUnderlyingFile();
+      if (!file)
          return nullptr;
-
-      $1 = file.GetStream();
+      $1 = file->GetStream();
       if ($1)
-         file.Clear();
+         file->Clear();
     }
 }
 

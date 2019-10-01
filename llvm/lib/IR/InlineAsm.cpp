@@ -181,6 +181,16 @@ bool InlineAsm::ConstraintInfo::Parse(StringRef Str,
       // FIXME: For now assuming these are 2-character constraints.
       pCodes->push_back(StringRef(I+1, 2));
       I += 3;
+    } else if (*I == '@') {
+      // Multi-letter constraint
+      ++I;
+      unsigned char C = static_cast<unsigned char>(*I);
+      assert(isdigit(C) && "Expected a digit!");
+      int N = C - '0';
+      assert(N > 0 && "Found a zero letter constraint!");
+      ++I;
+      pCodes->push_back(StringRef(I, N));
+      I += N;
     } else {
       // Single letter constraint.
       pCodes->push_back(StringRef(I, 1));

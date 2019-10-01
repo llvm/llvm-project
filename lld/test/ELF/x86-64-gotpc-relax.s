@@ -8,37 +8,37 @@
 # RELOC:    Relocations [
 # RELOC:    ]
 
-# 0x201003 + 7 - 10 = 0x201000
-# 0x20100a + 7 - 17 = 0x201000
-# 0x201011 + 7 - 23 = 0x201001
-# 0x201018 + 7 - 30 = 0x201001
+# 0x201173 + 7 - 10 = 0x201170
+# 0x20117a + 7 - 17 = 0x201170
+# 0x201181 + 7 - 23 = 0x201171
+# 0x201188 + 7 - 30 = 0x201171
 # DISASM:      Disassembly of section .text:
 # DISASM-EMPTY:
 # DISASM-NEXT: foo:
-# DISASM-NEXT:   201000: 90 nop
+# DISASM-NEXT:   201170: 90 nop
 # DISASM:      hid:
-# DISASM-NEXT:   201001: 90 nop
+# DISASM-NEXT:   201171: 90 nop
 # DISASM:      ifunc:
-# DISASM-NEXT:   201002: c3 retq
+# DISASM-NEXT:   201172: c3 retq
 # DISASM:      _start:
 # DISASM-NEXT: leaq -10(%rip), %rax
 # DISASM-NEXT: leaq -17(%rip), %rax
 # DISASM-NEXT: leaq -23(%rip), %rax
 # DISASM-NEXT: leaq -30(%rip), %rax
-# DISASM-NEXT: movq 4058(%rip), %rax
-# DISASM-NEXT: movq 4051(%rip), %rax
+# DISASM-NEXT: movq 4234(%rip), %rax
+# DISASM-NEXT: movq 4227(%rip), %rax
 # DISASM-NEXT: leaq -52(%rip), %rax
 # DISASM-NEXT: leaq -59(%rip), %rax
 # DISASM-NEXT: leaq -65(%rip), %rax
 # DISASM-NEXT: leaq -72(%rip), %rax
-# DISASM-NEXT: movq 4016(%rip), %rax
-# DISASM-NEXT: movq 4009(%rip), %rax
+# DISASM-NEXT: movq 4192(%rip), %rax
+# DISASM-NEXT: movq 4185(%rip), %rax
 # DISASM-NEXT: callq -93 <foo>
 # DISASM-NEXT: callq -99 <foo>
 # DISASM-NEXT: callq -104 <hid>
 # DISASM-NEXT: callq -110 <hid>
-# DISASM-NEXT: callq *3979(%rip)
-# DISASM-NEXT: callq *3973(%rip)
+# DISASM-NEXT: callq *4155(%rip)
+# DISASM-NEXT: callq *4149(%rip)
 # DISASM-NEXT: jmp   -128 <foo>
 # DISASM-NEXT: nop
 # DISASM-NEXT: jmp   -134 <foo>
@@ -47,8 +47,8 @@
 # DISASM-NEXT: nop
 # DISASM-NEXT: jmp   -145 <hid>
 # DISASM-NEXT: nop
-# DISASM-NEXT: jmpq  *3943(%rip)
-# DISASM-NEXT: jmpq  *3937(%rip)
+# DISASM-NEXT: jmpq  *4119(%rip)
+# DISASM-NEXT: jmpq  *4113(%rip)
 
 .text
 .globl foo

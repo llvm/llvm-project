@@ -93,8 +93,9 @@ SOCKET AcceptConnection(int portno) {
     } else {
       listen(sockfd, 5);
       socklen_t clilen = sizeof(cli_addr);
-      newsockfd = llvm::sys::RetryAfterSignal(-1, accept,
-          sockfd, (struct sockaddr *)&cli_addr, &clilen);
+      newsockfd =
+          llvm::sys::RetryAfterSignal(static_cast<SOCKET>(-1), accept, sockfd,
+                                      (struct sockaddr *)&cli_addr, &clilen);
       if (newsockfd < 0)
         if (g_vsc.log)
           *g_vsc.log << "error: accept (" << strerror(errno) << ")"
@@ -435,7 +436,7 @@ void SetSourceMapFromArguments(const llvm::json::Object &arguments) {
       }
       auto mapFrom = GetAsString((*mapping)[0]);
       auto mapTo = GetAsString((*mapping)[1]);
-      strm << "\"" << mapFrom << "\" \"" << mapTo << "\"";
+      strm << "\"" << mapFrom << "\" \"" << mapTo << "\" ";
     }
   } else {
     if (ObjectContainsKey(arguments, "sourceMap")) {
@@ -2581,7 +2582,7 @@ const std::map<std::string, RequestCallback> &GetRequestHandlers() {
 #undef REQUEST_CALLBACK
   return g_request_handlers;
 }
-  
+
 } // anonymous namespace
 
 int main(int argc, char *argv[]) {

@@ -2,10 +2,19 @@
 
 // RUN: %clang_cc1 -target-feature +altivec -target-feature +power9-vector \
 // RUN:   -triple powerpc64-unknown-unknown -fsyntax-only   \
+// RUN: -flax-vector-conversions=integer \
 // RUN: -Wall -Werror -verify %s
 
 // RUN: %clang_cc1 -target-feature +altivec -target-feature +power9-vector  \
 // RUN: -triple powerpc64le-unknown-unknown -fsyntax-only    \
+// RUN: -flax-vector-conversions=integer \
+// RUN: -Wall -Werror -verify %s
+
+// FIXME: Fix <altivec.h> so this test also passes under
+// -flax-vector-conversions=none (this last test exists to produce an error if
+// we change the default to that without fixing <altivec.h>).
+// RUN: %clang_cc1 -target-feature +altivec -target-feature +power9-vector \
+// RUN:   -triple powerpc64-unknown-unknown -fsyntax-only   \
 // RUN: -Wall -Werror -verify %s
 
 #include <altivec.h>

@@ -113,8 +113,6 @@ public:
 
   const WasmSignature* getSignature() const;
 
-  bool isInGOT() const { return gotIndex != INVALID_INDEX; }
-
   uint32_t getGOTIndex() const {
     assert(gotIndex != INVALID_INDEX);
     return gotIndex;
@@ -126,8 +124,9 @@ public:
 protected:
   Symbol(StringRef name, Kind k, uint32_t flags, InputFile *f)
       : name(name), file(f), flags(flags), symbolKind(k),
-        referenced(!config->gcSections), isUsedInRegularObj(false),
-        forceExport(false), canInline(false), traced(false) {}
+        referenced(!config->gcSections), requiresGOT(false),
+        isUsedInRegularObj(false), forceExport(false), canInline(false),
+        traced(false) {}
 
   StringRef name;
   InputFile *file;
@@ -138,6 +137,10 @@ protected:
 
 public:
   bool referenced : 1;
+
+  // True for data symbols that needs a dummy GOT entry.  Used for static
+  // linking of GOT accesses.
+  bool requiresGOT : 1;
 
   // True if the symbol was used for linking and thus need to be added to the
   // output file's symbol table. This is true for all symbols except for

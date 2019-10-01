@@ -7,7 +7,7 @@
 ; RUN:  --implicit-check-not cmpw --implicit-check-not cmpd --implicit-check-not cmpl
 ; ModuleID = 'ComparisonTestCases/testComparesieqsll.c'
 
-@glob = common local_unnamed_addr global i64 0, align 8
+@glob = local_unnamed_addr global i64 0, align 8
 
 ; Function Attrs: norecurse nounwind readnone
 define signext i32 @test_ieqsll(i64 %a, i64 %b) {

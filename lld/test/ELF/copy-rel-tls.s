@@ -6,8 +6,8 @@
 // RUN: llvm-nm %t1.so | FileCheck %s
 // RUN: llvm-nm %t | FileCheck --check-prefix=TLS %s
 // foo and tfoo have the same st_value but we should not copy tfoo.
-// CHECK: 2000 B foo
-// CHECK: 2000 B tfoo
+// CHECK: 0000000000003358 B foo
+// CHECK: 0000000000003358 B tfoo
 // TLS-NOT: tfoo
 
 .global _start

@@ -8,9 +8,9 @@ define double @fld(double *%a) nounwind {
 ; RV32IFD-LABEL: fld:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    fld ft0, 24(a0)
-; RV32IFD-NEXT:    fld ft1, 0(a0)
-; RV32IFD-NEXT:    fadd.d ft0, ft1, ft0
+; RV32IFD-NEXT:    fld ft0, 0(a0)
+; RV32IFD-NEXT:    fld ft1, 24(a0)
+; RV32IFD-NEXT:    fadd.d ft0, ft0, ft1
 ; RV32IFD-NEXT:    fsd ft0, 8(sp)
 ; RV32IFD-NEXT:    lw a0, 8(sp)
 ; RV32IFD-NEXT:    lw a1, 12(sp)
@@ -19,9 +19,9 @@ define double @fld(double *%a) nounwind {
 ;
 ; RV64IFD-LABEL: fld:
 ; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    fld ft0, 24(a0)
-; RV64IFD-NEXT:    fld ft1, 0(a0)
-; RV64IFD-NEXT:    fadd.d ft0, ft1, ft0
+; RV64IFD-NEXT:    fld ft0, 0(a0)
+; RV64IFD-NEXT:    fld ft1, 24(a0)
+; RV64IFD-NEXT:    fadd.d ft0, ft0, ft1
 ; RV64IFD-NEXT:    fmv.x.d a0, ft0
 ; RV64IFD-NEXT:    ret
   %1 = load double, double* %a
@@ -44,8 +44,8 @@ define void @fsd(double *%a, double %b, double %c) nounwind {
 ; RV32IFD-NEXT:    sw a2, 12(sp)
 ; RV32IFD-NEXT:    fld ft1, 8(sp)
 ; RV32IFD-NEXT:    fadd.d ft0, ft1, ft0
-; RV32IFD-NEXT:    fsd ft0, 64(a0)
 ; RV32IFD-NEXT:    fsd ft0, 0(a0)
+; RV32IFD-NEXT:    fsd ft0, 64(a0)
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
 ;
@@ -54,8 +54,8 @@ define void @fsd(double *%a, double %b, double %c) nounwind {
 ; RV64IFD-NEXT:    fmv.d.x ft0, a2
 ; RV64IFD-NEXT:    fmv.d.x ft1, a1
 ; RV64IFD-NEXT:    fadd.d ft0, ft1, ft0
-; RV64IFD-NEXT:    fsd ft0, 64(a0)
 ; RV64IFD-NEXT:    fsd ft0, 0(a0)
+; RV64IFD-NEXT:    fsd ft0, 64(a0)
 ; RV64IFD-NEXT:    ret
 ; Use %b and %c in an FP op to ensure floating point registers are used, even
 ; for the soft float ABI
@@ -100,10 +100,10 @@ define double @fld_fsd_global(double %a, double %b) nounwind {
 ; RV64IFD-NEXT:    lui a0, %hi(G)
 ; RV64IFD-NEXT:    fld ft1, %lo(G)(a0)
 ; RV64IFD-NEXT:    fsd ft0, %lo(G)(a0)
-; RV64IFD-NEXT:    addi a0, a0, %lo(G)
-; RV64IFD-NEXT:    fld ft1, 72(a0)
-; RV64IFD-NEXT:    fsd ft0, 72(a0)
+; RV64IFD-NEXT:    addi a1, a0, %lo(G)
+; RV64IFD-NEXT:    fld ft1, 72(a1)
 ; RV64IFD-NEXT:    fmv.x.d a0, ft0
+; RV64IFD-NEXT:    fsd ft0, 72(a1)
 ; RV64IFD-NEXT:    ret
 ; Use %a and %b in an FP op to ensure floating point registers are used, even
 ; for the soft float ABI
@@ -136,14 +136,14 @@ define double @fld_fsd_constant(double %a) nounwind {
 ;
 ; RV64IFD-LABEL: fld_fsd_constant:
 ; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    fmv.d.x ft0, a0
-; RV64IFD-NEXT:    lui a0, 56
-; RV64IFD-NEXT:    addiw a0, a0, -1353
-; RV64IFD-NEXT:    slli a0, a0, 14
-; RV64IFD-NEXT:    fld ft1, -273(a0)
-; RV64IFD-NEXT:    fadd.d ft0, ft0, ft1
-; RV64IFD-NEXT:    fsd ft0, -273(a0)
+; RV64IFD-NEXT:    lui a1, 56
+; RV64IFD-NEXT:    addiw a1, a1, -1353
+; RV64IFD-NEXT:    slli a1, a1, 14
+; RV64IFD-NEXT:    fld ft0, -273(a1)
+; RV64IFD-NEXT:    fmv.d.x ft1, a0
+; RV64IFD-NEXT:    fadd.d ft0, ft1, ft0
 ; RV64IFD-NEXT:    fmv.x.d a0, ft0
+; RV64IFD-NEXT:    fsd ft0, -273(a1)
 ; RV64IFD-NEXT:    ret
   %1 = inttoptr i32 3735928559 to double*
   %2 = load volatile double, double* %1
@@ -159,22 +159,18 @@ define double @fld_stack(double %a) nounwind {
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -32
 ; RV32IFD-NEXT:    sw ra, 28(sp)
-; RV32IFD-NEXT:    sw s0, 24(sp)
-; RV32IFD-NEXT:    sw s1, 20(sp)
-; RV32IFD-NEXT:    mv s0, a1
-; RV32IFD-NEXT:    mv s1, a0
-; RV32IFD-NEXT:    addi a0, sp, 8
-; RV32IFD-NEXT:    call notdead
-; RV32IFD-NEXT:    sw s1, 0(sp)
-; RV32IFD-NEXT:    sw s0, 4(sp)
-; RV32IFD-NEXT:    fld ft0, 0(sp)
-; RV32IFD-NEXT:    fld ft1, 8(sp)
-; RV32IFD-NEXT:    fadd.d ft0, ft1, ft0
+; RV32IFD-NEXT:    sw a0, 8(sp)
+; RV32IFD-NEXT:    sw a1, 12(sp)
+; RV32IFD-NEXT:    fld ft0, 8(sp)
 ; RV32IFD-NEXT:    fsd ft0, 0(sp)
-; RV32IFD-NEXT:    lw a0, 0(sp)
-; RV32IFD-NEXT:    lw a1, 4(sp)
-; RV32IFD-NEXT:    lw s1, 20(sp)
-; RV32IFD-NEXT:    lw s0, 24(sp)
+; RV32IFD-NEXT:    addi a0, sp, 16
+; RV32IFD-NEXT:    call notdead
+; RV32IFD-NEXT:    fld ft0, 16(sp)
+; RV32IFD-NEXT:    fld ft1, 0(sp)
+; RV32IFD-NEXT:    fadd.d ft0, ft0, ft1
+; RV32IFD-NEXT:    fsd ft0, 8(sp)
+; RV32IFD-NEXT:    lw a0, 8(sp)
+; RV32IFD-NEXT:    lw a1, 12(sp)
 ; RV32IFD-NEXT:    lw ra, 28(sp)
 ; RV32IFD-NEXT:    addi sp, sp, 32
 ; RV32IFD-NEXT:    ret
@@ -183,15 +179,14 @@ define double @fld_stack(double %a) nounwind {
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    addi sp, sp, -32
 ; RV64IFD-NEXT:    sd ra, 24(sp)
-; RV64IFD-NEXT:    sd s0, 16(sp)
-; RV64IFD-NEXT:    mv s0, a0
-; RV64IFD-NEXT:    addi a0, sp, 8
+; RV64IFD-NEXT:    fmv.d.x ft0, a0
+; RV64IFD-NEXT:    fsd ft0, 8(sp)
+; RV64IFD-NEXT:    addi a0, sp, 16
 ; RV64IFD-NEXT:    call notdead
-; RV64IFD-NEXT:    fmv.d.x ft0, s0
+; RV64IFD-NEXT:    fld ft0, 16(sp)
 ; RV64IFD-NEXT:    fld ft1, 8(sp)
-; RV64IFD-NEXT:    fadd.d ft0, ft1, ft0
+; RV64IFD-NEXT:    fadd.d ft0, ft0, ft1
 ; RV64IFD-NEXT:    fmv.x.d a0, ft0
-; RV64IFD-NEXT:    ld s0, 16(sp)
 ; RV64IFD-NEXT:    ld ra, 24(sp)
 ; RV64IFD-NEXT:    addi sp, sp, 32
 ; RV64IFD-NEXT:    ret

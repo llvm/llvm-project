@@ -6,10 +6,8 @@
 // CHECK: #include "Inputs\success.h"
 // CHECK:          ^
 
-// expected to fail on windows as the inclusion would succeed and the
-// compilation will fail due to the '#error success'.
-// XFAIL: windows-msvc
-
-// This test may or may not fail since 'Inputs\success.h' is passed
-// to Win32 APIs on Windows.
-// REQUIRES: disabled
+// This test is really checking that we *don't* replace backslashes with slashes
+// on non-Windows unless -fms-extensions is passed. It won't fail in this way on
+// Windows because the filesystem will interpret the backslash as a directory
+// separator.
+// UNSUPPORTED: system-windows

@@ -751,9 +751,12 @@ namespace dr263 { // dr263: yes
 #if __cplusplus < 201103L
     friend X::X() throw();
     friend X::~X() throw();
-#else
+#elif __cplusplus <= 201703L
     friend constexpr X::X() noexcept;
     friend X::~X();
+#else
+    friend constexpr X::X() noexcept;
+    friend constexpr X::~X();
 #endif
     Y::Y(); // expected-error {{extra qualification}}
     Y::~Y(); // expected-error {{extra qualification}}

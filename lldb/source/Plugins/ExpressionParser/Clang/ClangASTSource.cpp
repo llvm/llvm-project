@@ -108,8 +108,7 @@ void ClangASTSource::InstallASTContext(clang::ASTContext &ast_context,
     } while (false);
 
     do {
-      auto *modules_decl_vendor = llvm::cast<ClangModulesDeclVendor>(
-          m_target->GetClangModulesDeclVendor());
+      auto *modules_decl_vendor = m_target->GetClangModulesDeclVendor();
 
       if (!modules_decl_vendor)
         break;
@@ -649,6 +648,20 @@ void ClangASTSource::FindExternalLexicalDecls(
         QualType copied_field_type = copied_field->getType();
 
         m_ast_importer_sp->RequireCompleteType(copied_field_type);
+      }
+      auto decl_context_non_const = const_cast<DeclContext *>(decl_context);
+
+      // The decl ended up in the wrong DeclContext. Let's fix that so
+      // the decl we copied will actually be found.
+      // FIXME: This is a horrible hack that shouldn't be necessary. However
+      // it seems our current setup sometimes fails to copy decls to the right
+      // place. See rdar://55129537.
+      if (copied_decl->getDeclContext() != decl_context) {
+        assert(copied_decl->getDeclContext()->containsDecl(copied_decl));
+        copied_decl->getDeclContext()->removeDecl(copied_decl);
+        copied_decl->setDeclContext(decl_context_non_const);
+        assert(!decl_context_non_const->containsDecl(copied_decl));
+        decl_context_non_const->addDeclInternal(copied_decl);
       }
     } else {
       SkippedDecls = true;

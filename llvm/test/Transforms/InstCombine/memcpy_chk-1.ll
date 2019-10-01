@@ -18,7 +18,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 
 define i8* @test_simplify1() {
 ; CHECK-LABEL: @test_simplify1(
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 dereferenceable(1824) bitcast (%struct.T1* @t1 to i8*), i8* align 4 dereferenceable(1824) bitcast (%struct.T2* @t2 to i8*), i64 1824, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 4 dereferenceable(1824) bitcast (%struct.T1* @t1 to i8*), i8* nonnull align 4 dereferenceable(1824) bitcast (%struct.T2* @t2 to i8*), i64 1824, i1 false)
 ; CHECK-NEXT:    ret i8* bitcast (%struct.T1* @t1 to i8*)
 ;
   %dst = bitcast %struct.T1* @t1 to i8*
@@ -29,7 +29,7 @@ define i8* @test_simplify1() {
 
 define i8* @test_simplify2() {
 ; CHECK-LABEL: @test_simplify2(
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 dereferenceable(1824) bitcast (%struct.T1* @t1 to i8*), i8* align 4 dereferenceable(1824) bitcast (%struct.T3* @t3 to i8*), i64 1824, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 4 dereferenceable(1824) bitcast (%struct.T1* @t1 to i8*), i8* nonnull align 4 dereferenceable(1824) bitcast (%struct.T3* @t3 to i8*), i64 1824, i1 false)
 ; CHECK-NEXT:    ret i8* bitcast (%struct.T1* @t1 to i8*)
 ;
   %dst = bitcast %struct.T1* @t1 to i8*
@@ -65,7 +65,7 @@ define i8* @test_no_simplify2() {
 define i8* @test_simplify_return_indcall(i8* ()* %alloc) {
 ; CHECK-LABEL: @test_simplify_return_indcall(
 ; CHECK-NEXT:    [[DST:%.*]] = call i8* [[ALLOC:%.*]]()
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 dereferenceable(1824) [[DST]], i8* align 4 dereferenceable(1824) bitcast (%struct.T2* @t2 to i8*), i64 1824, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 1 dereferenceable(1824) [[DST]], i8* nonnull align 4 dereferenceable(1824) bitcast (%struct.T2* @t2 to i8*), i64 1824, i1 false)
 ; CHECK-NEXT:    ret i8* [[DST]]
 ;
   %src = bitcast %struct.T2* @t2 to i8*

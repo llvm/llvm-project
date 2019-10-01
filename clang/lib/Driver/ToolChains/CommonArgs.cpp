@@ -1334,17 +1334,6 @@ void tools::AddOpenMPLinkerScript(const ToolChain &TC, Compilation &C,
     LksStream << "  }\n";
   }
 
-  // Add commands to define host entries begin and end. We use 1-byte subalign
-  // so that the linker does not add any padding and the elements in this
-  // section form an array.
-  LksStream << "  .omp_offloading.entries :\n";
-  LksStream << "  ALIGN(0x10)\n";
-  LksStream << "  SUBALIGN(0x01)\n";
-  LksStream << "  {\n";
-  LksStream << "    PROVIDE_HIDDEN(.omp_offloading.entries_begin = .);\n";
-  LksStream << "    *(.omp_offloading.entries)\n";
-  LksStream << "    PROVIDE_HIDDEN(.omp_offloading.entries_end = .);\n";
-  LksStream << "  }\n";
   LksStream << "}\n";
   LksStream << "INSERT BEFORE .data\n";
   LksStream.flush();

@@ -764,6 +764,13 @@ static void InsertOCLBuiltinDeclarationsFromTable(Sema &S, LookupResult &LR,
         BuiltinTable[FctIndex + SignatureIndex];
     ASTContext &Context = S.Context;
 
+    // Ignore this BIF if its version does not match the language options.
+    if (Context.getLangOpts().OpenCLVersion < OpenCLBuiltin.MinVersion)
+      continue;
+    if ((OpenCLBuiltin.MaxVersion != 0) &&
+        (Context.getLangOpts().OpenCLVersion >= OpenCLBuiltin.MaxVersion))
+      continue;
+
     SmallVector<QualType, 1> RetTypes;
     SmallVector<SmallVector<QualType, 1>, 5> ArgTypes;
 
@@ -3701,6 +3708,7 @@ NamedDecl *VisibleDeclsRecord::checkHidden(NamedDecl *ND) {
   return nullptr;
 }
 
+namespace {
 class LookupVisibleHelper {
 public:
   LookupVisibleHelper(VisibleDeclConsumer &Consumer, bool IncludeDependentBases,
@@ -4025,6 +4033,7 @@ private:
   bool IncludeDependentBases;
   bool LoadExternal;
 };
+} // namespace
 
 void Sema::LookupVisibleDecls(Scope *S, LookupNameKind Kind,
                               VisibleDeclConsumer &Consumer,
@@ -5273,8 +5282,11 @@ static NamedDecl *getDefinitionToImport(NamedDecl *D) {
     return FD->getDefinition();
   if (TagDecl *TD = dyn_cast<TagDecl>(D))
     return TD->getDefinition();
+  // The first definition for this ObjCInterfaceDecl might be in the TU
+  // and not associated with any module. Use the one we know to be complete
+  // and have just seen in a module.
   if (ObjCInterfaceDecl *ID = dyn_cast<ObjCInterfaceDecl>(D))
-    return ID->getDefinition();
+    return ID;
   if (ObjCProtocolDecl *PD = dyn_cast<ObjCProtocolDecl>(D))
     return PD->getDefinition();
   if (TemplateDecl *TD = dyn_cast<TemplateDecl>(D))

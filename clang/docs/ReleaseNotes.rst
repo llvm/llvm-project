@@ -51,7 +51,11 @@ Major New Features
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- ...
+- -Wtautological-overlap-compare will warn on negative numbers and non-int
+  types.
+- -Wtautological-compare for self comparisons and
+  -Wtautological-overlap-compare will now look through member and array
+  access to determine if two operand expressions are the same.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -98,7 +102,18 @@ Attribute Changes in Clang
 Windows Support
 ---------------
 
-- ...
+- Previous Clang versions contained a work-around to avoid an issue with the
+  standard library headers in Visual Studio 2019 versions prior to 16.3. This
+  work-around has now been removed, and users of Visual Studio 2019 are
+  encouraged to upgrade to 16.3 or later, otherwise they may see link errors as
+  below:
+
+  .. code-block:: console
+
+    error LNK2005: "bool const std::_Is_integral<int>" (??$_Is_integral@H@std@@3_NB) already defined
+
+
+
 
 C Language Changes in Clang
 ---------------------------
@@ -113,7 +128,10 @@ C11 Feature Support
 C++ Language Changes in Clang
 -----------------------------
 
-- ...
+- The behaviour of the `gnu_inline` attribute now matches GCC, for cases
+  where used without the `extern` keyword. As this is a change compared to
+  how it behaved in previous Clang versions, a warning is emitted for this
+  combination.
 
 C++1z Feature Support
 ^^^^^^^^^^^^^^^^^^^^^

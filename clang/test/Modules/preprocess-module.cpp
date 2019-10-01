@@ -51,7 +51,7 @@
 // RUN: %clang_cc1 -fmodules -fmodule-file=%t/file.rewrite.pcm %s -I%t -verify -fno-modules-error-recovery -DFILE_REWRITE -DINCLUDE -I%S/Inputs/preprocess
 //
 // Check that we can preprocess this user of the .pcm file.
-// RUN: %clang_cc1 -fmodules -fmodule-file=%t/file.pcm %s -I%t -E -frewrite-imports -o %t/preprocess-module.ii
+// RUN: %clang_cc1 -fmodules -fmodule-file=%t/file.pcm %s -I%t -E -frewrite-imports -DFILE_REWRITE_FULL -o %t/preprocess-module.ii
 // RUN: %clang_cc1 -fmodules %t/preprocess-module.ii -verify -fno-modules-error-recovery -DFILE_REWRITE_FULL
 //
 // Check that language / header search options are ignored when preprocessing from a .pcm file.

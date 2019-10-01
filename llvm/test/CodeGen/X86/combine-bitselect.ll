@@ -329,9 +329,7 @@ define <8 x i64> @bitselect_v8i64_rr(<8 x i64>, <8 x i64>) {
 ;
 ; AVX512F-LABEL: bitselect_v8i64_rr:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpandq {{.*}}(%rip), %zmm0, %zmm0
-; AVX512F-NEXT:    vpandq {{.*}}(%rip), %zmm1, %zmm1
-; AVX512F-NEXT:    vporq %zmm0, %zmm1, %zmm0
+; AVX512F-NEXT:    vpternlogq $216, {{.*}}(%rip), %zmm1, %zmm0
 ; AVX512F-NEXT:    retq
   %3 = and <8 x i64> %0, <i64 4294967296, i64 12884901890, i64 12884901890, i64 12884901890, i64 4294967296, i64 12884901890, i64 12884901890, i64 12884901890>
   %4 = and <8 x i64> %1, <i64 -4294967297, i64 -12884901891, i64 -12884901891, i64 -12884901891, i64 -4294967297, i64 -12884901891, i64 -12884901891, i64 -12884901891>
@@ -405,9 +403,7 @@ define <8 x i64> @bitselect_v8i64_rm(<8 x i64>, <8 x i64>* nocapture readonly) {
 ; AVX512F-LABEL: bitselect_v8i64_rm:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovdqa64 (%rdi), %zmm1
-; AVX512F-NEXT:    vpandq {{.*}}(%rip), %zmm0, %zmm0
-; AVX512F-NEXT:    vpandq {{.*}}(%rip), %zmm1, %zmm1
-; AVX512F-NEXT:    vporq %zmm0, %zmm1, %zmm0
+; AVX512F-NEXT:    vpternlogq $216, {{.*}}(%rip), %zmm1, %zmm0
 ; AVX512F-NEXT:    retq
   %3 = load <8 x i64>, <8 x i64>* %1
   %4 = and <8 x i64> %0, <i64 8589934593, i64 3, i64 8589934593, i64 3, i64 8589934593, i64 3, i64 8589934593, i64 3>
@@ -482,9 +478,7 @@ define <8 x i64> @bitselect_v8i64_mr(<8 x i64>* nocapture readonly, <8 x i64>) {
 ; AVX512F-LABEL: bitselect_v8i64_mr:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovdqa64 (%rdi), %zmm1
-; AVX512F-NEXT:    vpandq {{.*}}(%rip), %zmm1, %zmm1
-; AVX512F-NEXT:    vpandq {{.*}}(%rip), %zmm0, %zmm0
-; AVX512F-NEXT:    vporq %zmm0, %zmm1, %zmm0
+; AVX512F-NEXT:    vpternlogq $216, {{.*}}(%rip), %zmm1, %zmm0
 ; AVX512F-NEXT:    retq
   %3 = load <8 x i64>, <8 x i64>* %0
   %4 = and <8 x i64> %3, <i64 12884901890, i64 4294967296, i64 12884901890, i64 4294967296, i64 12884901890, i64 4294967296, i64 12884901890, i64 4294967296>
@@ -554,11 +548,9 @@ define <8 x i64> @bitselect_v8i64_mm(<8 x i64>* nocapture readonly, <8 x i64>* n
 ;
 ; AVX512F-LABEL: bitselect_v8i64_mm:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vmovdqa64 (%rdi), %zmm0
 ; AVX512F-NEXT:    vmovdqa64 (%rsi), %zmm1
-; AVX512F-NEXT:    vpandq {{.*}}(%rip), %zmm0, %zmm0
-; AVX512F-NEXT:    vpandq {{.*}}(%rip), %zmm1, %zmm1
-; AVX512F-NEXT:    vporq %zmm0, %zmm1, %zmm0
+; AVX512F-NEXT:    vmovdqa64 {{.*#+}} zmm0 = [18446744073709551612,18446744065119617022,18446744073709551612,18446744065119617022,18446744073709551612,18446744065119617022,18446744073709551612,18446744065119617022]
+; AVX512F-NEXT:    vpternlogq $202, (%rdi), %zmm1, %zmm0
 ; AVX512F-NEXT:    retq
   %3 = load <8 x i64>, <8 x i64>* %0
   %4 = load <8 x i64>, <8 x i64>* %1

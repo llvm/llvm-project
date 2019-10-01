@@ -298,23 +298,23 @@ define double @select_fcmp_ueq(double %a, double %b) nounwind {
 ; RV32IFD-LABEL: select_fcmp_ueq:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    sw a0, 8(sp)
-; RV32IFD-NEXT:    sw a1, 12(sp)
-; RV32IFD-NEXT:    fld ft0, 8(sp)
 ; RV32IFD-NEXT:    sw a2, 8(sp)
 ; RV32IFD-NEXT:    sw a3, 12(sp)
+; RV32IFD-NEXT:    fld ft0, 8(sp)
+; RV32IFD-NEXT:    sw a0, 8(sp)
+; RV32IFD-NEXT:    sw a1, 12(sp)
 ; RV32IFD-NEXT:    fld ft1, 8(sp)
-; RV32IFD-NEXT:    feq.d a0, ft1, ft1
+; RV32IFD-NEXT:    feq.d a0, ft1, ft0
 ; RV32IFD-NEXT:    feq.d a1, ft0, ft0
-; RV32IFD-NEXT:    and a0, a1, a0
-; RV32IFD-NEXT:    seqz a0, a0
-; RV32IFD-NEXT:    feq.d a1, ft0, ft1
-; RV32IFD-NEXT:    or a0, a1, a0
+; RV32IFD-NEXT:    feq.d a2, ft1, ft1
+; RV32IFD-NEXT:    and a1, a2, a1
+; RV32IFD-NEXT:    seqz a1, a1
+; RV32IFD-NEXT:    or a0, a0, a1
 ; RV32IFD-NEXT:    bnez a0, .LBB8_2
 ; RV32IFD-NEXT:  # %bb.1:
-; RV32IFD-NEXT:    fmv.d ft0, ft1
+; RV32IFD-NEXT:    fmv.d ft1, ft0
 ; RV32IFD-NEXT:  .LBB8_2:
-; RV32IFD-NEXT:    fsd ft0, 8(sp)
+; RV32IFD-NEXT:    fsd ft1, 8(sp)
 ; RV32IFD-NEXT:    lw a0, 8(sp)
 ; RV32IFD-NEXT:    lw a1, 12(sp)
 ; RV32IFD-NEXT:    addi sp, sp, 16
@@ -322,14 +322,14 @@ define double @select_fcmp_ueq(double %a, double %b) nounwind {
 ;
 ; RV64IFD-LABEL: select_fcmp_ueq:
 ; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    fmv.d.x ft0, a0
 ; RV64IFD-NEXT:    fmv.d.x ft1, a1
-; RV64IFD-NEXT:    feq.d a0, ft1, ft1
-; RV64IFD-NEXT:    feq.d a1, ft0, ft0
-; RV64IFD-NEXT:    and a0, a1, a0
-; RV64IFD-NEXT:    seqz a0, a0
-; RV64IFD-NEXT:    feq.d a1, ft0, ft1
-; RV64IFD-NEXT:    or a0, a1, a0
+; RV64IFD-NEXT:    fmv.d.x ft0, a0
+; RV64IFD-NEXT:    feq.d a0, ft0, ft1
+; RV64IFD-NEXT:    feq.d a1, ft1, ft1
+; RV64IFD-NEXT:    feq.d a2, ft0, ft0
+; RV64IFD-NEXT:    and a1, a2, a1
+; RV64IFD-NEXT:    seqz a1, a1
+; RV64IFD-NEXT:    or a0, a0, a1
 ; RV64IFD-NEXT:    bnez a0, .LBB8_2
 ; RV64IFD-NEXT:  # %bb.1:
 ; RV64IFD-NEXT:    fmv.d ft0, ft1
@@ -604,12 +604,12 @@ define i32 @i32_select_fcmp_oeq(double %a, double %b, i32 %c, i32 %d) nounwind {
 ; RV32IFD-NEXT:    sw a0, 8(sp)
 ; RV32IFD-NEXT:    sw a1, 12(sp)
 ; RV32IFD-NEXT:    fld ft1, 8(sp)
-; RV32IFD-NEXT:    feq.d a0, ft1, ft0
-; RV32IFD-NEXT:    bnez a0, .LBB16_2
-; RV32IFD-NEXT:  # %bb.1:
-; RV32IFD-NEXT:    mv a4, a5
-; RV32IFD-NEXT:  .LBB16_2:
+; RV32IFD-NEXT:    feq.d a1, ft1, ft0
 ; RV32IFD-NEXT:    mv a0, a4
+; RV32IFD-NEXT:    bnez a1, .LBB16_2
+; RV32IFD-NEXT:  # %bb.1:
+; RV32IFD-NEXT:    mv a0, a5
+; RV32IFD-NEXT:  .LBB16_2:
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
 ;
@@ -617,12 +617,12 @@ define i32 @i32_select_fcmp_oeq(double %a, double %b, i32 %c, i32 %d) nounwind {
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    fmv.d.x ft0, a1
 ; RV64IFD-NEXT:    fmv.d.x ft1, a0
-; RV64IFD-NEXT:    feq.d a0, ft1, ft0
-; RV64IFD-NEXT:    bnez a0, .LBB16_2
-; RV64IFD-NEXT:  # %bb.1:
-; RV64IFD-NEXT:    mv a2, a3
-; RV64IFD-NEXT:  .LBB16_2:
+; RV64IFD-NEXT:    feq.d a1, ft1, ft0
 ; RV64IFD-NEXT:    mv a0, a2
+; RV64IFD-NEXT:    bnez a1, .LBB16_2
+; RV64IFD-NEXT:  # %bb.1:
+; RV64IFD-NEXT:    mv a0, a3
+; RV64IFD-NEXT:  .LBB16_2:
 ; RV64IFD-NEXT:    ret
   %1 = fcmp oeq double %a, %b
   %2 = select i1 %1, i32 %c, i32 %d

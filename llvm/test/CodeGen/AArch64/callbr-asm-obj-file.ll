@@ -6,11 +6,11 @@
 
 @l = common hidden local_unnamed_addr global i32 0, align 4
 
-; CHECK-LABEL: 0000000000000000 test1:
-; CHECK-LABEL: 0000000000000018 $d.1:
-; CHECK-LABEL: 0000000000000020 $x.2:
+; CHECK-LABEL: test1:
+; CHECK-LABEL: $d.1:
+; CHECK-LABEL: $x.2:
 ; CHECK-NEXT:    b #16 <$x.4+0x4>
-; CHECK-LABEL: 000000000000002c $x.4:
+; CHECK-LABEL: $x.4:
 ; CHECK-NEXT:    b #4 <$x.4+0x4>
 ; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    ldr x30, [sp], #16
@@ -40,11 +40,11 @@ declare dso_local i32 @g(...) local_unnamed_addr
 
 declare dso_local i32 @i(...) local_unnamed_addr
 
-; CHECK-LABEL: 000000000000003c test2:
-; CHECK:         bl #0 <test2+0x18>
-; CHECK-LABEL: 0000000000000064 $d.5:
-; CHECK-LABEL: 000000000000006c $x.6:
-; CHECK-NEXT:    b #-24 <test2+0x18>
+; CHECK-LABEL: test2:
+; CHECK:         bl #0 <test2+0x10>
+; CHECK-LABEL: $d.5:
+; CHECK-LABEL: $x.6:
+; CHECK-NEXT:    b #16 <$x.8+0x4>
 define hidden i32 @test2() local_unnamed_addr {
   %1 = load i32, i32* @l, align 4
   %2 = icmp eq i32 %1, 0
@@ -57,7 +57,7 @@ define hidden i32 @test2() local_unnamed_addr {
 
 6:                                                ; preds = %3
   callbr void asm sideeffect "1: nop\0A\09.quad b\0A\09b ${1:l}\0A\09.quad ${0:c}", "i,X"(i32* null, i8* blockaddress(@test2, %7))
-          to label %10 [label %9]
+          to label %10 [label %7]
 
 7:                                                ; preds = %3
   %8 = tail call i32 bitcast (i32 (...)* @i to i32 ()*)()
@@ -70,11 +70,11 @@ define hidden i32 @test2() local_unnamed_addr {
   ret i32 undef
 }
 
-; CHECK-LABEL: 0000000000000084 test3:
-; CHECK-LABEL: 00000000000000a8 $d.9:
-; CHECK-LABEL: 00000000000000b0 $x.10:
+; CHECK-LABEL: test3:
+; CHECK-LABEL: $d.9:
+; CHECK-LABEL: $x.10:
 ; CHECK-NEXT:    b #20 <$x.12+0x8>
-; CHECK-LABEL: 00000000000000bc $x.12:
+; CHECK-LABEL: $x.12:
 ; CHECK-NEXT:    b #4 <$x.12+0x4>
 ; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    ldr x30, [sp], #16

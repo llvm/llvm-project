@@ -30,6 +30,7 @@ def foo : Instruction {
 
 // CHECK: case ::foo: {
 // CHECK:   op = barEncoder
-// CHECK:   Value |= op & UINT64_C(255);
+// CHECK:   op &= UINT64_C(255);
+// CHECK:   Value |= op;
 // CHECK:   break;
 // CHECK: }

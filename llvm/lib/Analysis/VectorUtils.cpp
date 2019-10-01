@@ -832,7 +832,7 @@ void InterleavedAccessInfo::collectConstStrideAccesses(
                                     /*Assume=*/true, /*ShouldCheckWrap=*/false);
 
       const SCEV *Scev = replaceSymbolicStrideSCEV(PSE, Strides, Ptr);
-      PointerType *PtrTy = dyn_cast<PointerType>(Ptr->getType());
+      PointerType *PtrTy = cast<PointerType>(Ptr->getType());
       uint64_t Size = DL.getTypeAllocSize(PtrTy->getElementType());
 
       // An alignment of 0 means target ABI alignment.

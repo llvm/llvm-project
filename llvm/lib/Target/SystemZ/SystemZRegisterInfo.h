@@ -28,6 +28,15 @@ inline unsigned even128(bool Is32bit) {
 inline unsigned odd128(bool Is32bit) {
   return Is32bit ? subreg_l32 : subreg_l64;
 }
+
+// Reg should be a 32-bit GPR.  Return true if it is a high register rather
+// than a low register.
+inline bool isHighReg(unsigned int Reg) {
+  if (SystemZ::GRH32BitRegClass.contains(Reg))
+    return true;
+  assert(SystemZ::GR32BitRegClass.contains(Reg) && "Invalid GRX32");
+  return false;
+}
 } // end namespace SystemZ
 
 struct SystemZRegisterInfo : public SystemZGenRegisterInfo {

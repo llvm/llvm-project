@@ -3165,6 +3165,7 @@ void LSRInstance::GenerateIVChain(const IVChain &Chain, SCEVExpander &Rewriter,
     LLVM_DEBUG(dbgs() << "Concealed chain head: " << *Head.UserInst << "\n");
     return;
   }
+  assert(IVSrc && "Failed to find IV chain source");
 
   LLVM_DEBUG(dbgs() << "Generate chain at: " << *IVSrc << "\n");
   Type *IVTy = IVSrc->getType();
@@ -4835,6 +4836,7 @@ void LSRInstance::NarrowSearchSpaceByPickingWinnerRegs() {
         }
       }
     }
+    assert(Best && "Failed to find best LSRUse candidate");
 
     LLVM_DEBUG(dbgs() << "Narrowing the search space by assuming " << *Best
                       << " will yield profitable reuse.\n");

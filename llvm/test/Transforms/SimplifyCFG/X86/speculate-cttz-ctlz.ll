@@ -223,37 +223,13 @@ cond.end:                                         ; preds = %entry, %cond.true
 ; for the target.
 
 define i64 @test1e(i32 %x) {
-; BMI-LABEL: @test1e(
-; BMI-NEXT:  entry:
-; BMI-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[X:%.*]], 0
-; BMI-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.cttz.i32(i32 [[X]], i1 true)
-; BMI-NEXT:    [[PHITMP2:%.*]] = zext i32 [[TMP0]] to i64
-; BMI-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], i64 32, i64 [[PHITMP2]]
-; BMI-NEXT:    ret i64 [[COND]]
-;
-; LZCNT-LABEL: @test1e(
-; LZCNT-NEXT:  entry:
-; LZCNT-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[X:%.*]], 0
-; LZCNT-NEXT:    br i1 [[TOBOOL]], label [[COND_END:%.*]], label [[COND_TRUE:%.*]]
-; LZCNT:       cond.true:
-; LZCNT-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.cttz.i32(i32 [[X]], i1 true)
-; LZCNT-NEXT:    [[PHITMP2:%.*]] = zext i32 [[TMP0]] to i64
-; LZCNT-NEXT:    br label [[COND_END]]
-; LZCNT:       cond.end:
-; LZCNT-NEXT:    [[COND:%.*]] = phi i64 [ [[PHITMP2]], [[COND_TRUE]] ], [ 32, [[ENTRY:%.*]] ]
-; LZCNT-NEXT:    ret i64 [[COND]]
-;
-; GENERIC-LABEL: @test1e(
-; GENERIC-NEXT:  entry:
-; GENERIC-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[X:%.*]], 0
-; GENERIC-NEXT:    br i1 [[TOBOOL]], label [[COND_END:%.*]], label [[COND_TRUE:%.*]]
-; GENERIC:       cond.true:
-; GENERIC-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.cttz.i32(i32 [[X]], i1 true)
-; GENERIC-NEXT:    [[PHITMP2:%.*]] = zext i32 [[TMP0]] to i64
-; GENERIC-NEXT:    br label [[COND_END]]
-; GENERIC:       cond.end:
-; GENERIC-NEXT:    [[COND:%.*]] = phi i64 [ [[PHITMP2]], [[COND_TRUE]] ], [ 32, [[ENTRY:%.*]] ]
-; GENERIC-NEXT:    ret i64 [[COND]]
+; ALL-LABEL: @test1e(
+; ALL-NEXT:  entry:
+; ALL-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[X:%.*]], 0
+; ALL-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.cttz.i32(i32 [[X]], i1 true)
+; ALL-NEXT:    [[PHITMP2:%.*]] = zext i32 [[TMP0]] to i64
+; ALL-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], i64 32, i64 [[PHITMP2]]
+; ALL-NEXT:    ret i64 [[COND]]
 ;
 entry:
   %tobool = icmp eq i32 %x, 0
@@ -270,37 +246,13 @@ cond.end:                                         ; preds = %entry, %cond.true
 }
 
 define i32 @test2e(i64 %x) {
-; BMI-LABEL: @test2e(
-; BMI-NEXT:  entry:
-; BMI-NEXT:    [[TOBOOL:%.*]] = icmp eq i64 [[X:%.*]], 0
-; BMI-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.cttz.i64(i64 [[X]], i1 true)
-; BMI-NEXT:    [[CAST:%.*]] = trunc i64 [[TMP0]] to i32
-; BMI-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], i32 64, i32 [[CAST]]
-; BMI-NEXT:    ret i32 [[COND]]
-;
-; LZCNT-LABEL: @test2e(
-; LZCNT-NEXT:  entry:
-; LZCNT-NEXT:    [[TOBOOL:%.*]] = icmp eq i64 [[X:%.*]], 0
-; LZCNT-NEXT:    br i1 [[TOBOOL]], label [[COND_END:%.*]], label [[COND_TRUE:%.*]]
-; LZCNT:       cond.true:
-; LZCNT-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.cttz.i64(i64 [[X]], i1 true)
-; LZCNT-NEXT:    [[CAST:%.*]] = trunc i64 [[TMP0]] to i32
-; LZCNT-NEXT:    br label [[COND_END]]
-; LZCNT:       cond.end:
-; LZCNT-NEXT:    [[COND:%.*]] = phi i32 [ [[CAST]], [[COND_TRUE]] ], [ 64, [[ENTRY:%.*]] ]
-; LZCNT-NEXT:    ret i32 [[COND]]
-;
-; GENERIC-LABEL: @test2e(
-; GENERIC-NEXT:  entry:
-; GENERIC-NEXT:    [[TOBOOL:%.*]] = icmp eq i64 [[X:%.*]], 0
-; GENERIC-NEXT:    br i1 [[TOBOOL]], label [[COND_END:%.*]], label [[COND_TRUE:%.*]]
-; GENERIC:       cond.true:
-; GENERIC-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.cttz.i64(i64 [[X]], i1 true)
-; GENERIC-NEXT:    [[CAST:%.*]] = trunc i64 [[TMP0]] to i32
-; GENERIC-NEXT:    br label [[COND_END]]
-; GENERIC:       cond.end:
-; GENERIC-NEXT:    [[COND:%.*]] = phi i32 [ [[CAST]], [[COND_TRUE]] ], [ 64, [[ENTRY:%.*]] ]
-; GENERIC-NEXT:    ret i32 [[COND]]
+; ALL-LABEL: @test2e(
+; ALL-NEXT:  entry:
+; ALL-NEXT:    [[TOBOOL:%.*]] = icmp eq i64 [[X:%.*]], 0
+; ALL-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.cttz.i64(i64 [[X]], i1 true)
+; ALL-NEXT:    [[CAST:%.*]] = trunc i64 [[TMP0]] to i32
+; ALL-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], i32 64, i32 [[CAST]]
+; ALL-NEXT:    ret i32 [[COND]]
 ;
 entry:
   %tobool = icmp eq i64 %x, 0
@@ -317,37 +269,13 @@ cond.end:                                         ; preds = %entry, %cond.true
 }
 
 define i64 @test3e(i32 %x) {
-; BMI-LABEL: @test3e(
-; BMI-NEXT:  entry:
-; BMI-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[X:%.*]], 0
-; BMI-NEXT:    br i1 [[TOBOOL]], label [[COND_END:%.*]], label [[COND_TRUE:%.*]]
-; BMI:       cond.true:
-; BMI-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.ctlz.i32(i32 [[X]], i1 true)
-; BMI-NEXT:    [[PHITMP2:%.*]] = zext i32 [[TMP0]] to i64
-; BMI-NEXT:    br label [[COND_END]]
-; BMI:       cond.end:
-; BMI-NEXT:    [[COND:%.*]] = phi i64 [ [[PHITMP2]], [[COND_TRUE]] ], [ 32, [[ENTRY:%.*]] ]
-; BMI-NEXT:    ret i64 [[COND]]
-;
-; LZCNT-LABEL: @test3e(
-; LZCNT-NEXT:  entry:
-; LZCNT-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[X:%.*]], 0
-; LZCNT-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.ctlz.i32(i32 [[X]], i1 true)
-; LZCNT-NEXT:    [[PHITMP2:%.*]] = zext i32 [[TMP0]] to i64
-; LZCNT-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], i64 32, i64 [[PHITMP2]]
-; LZCNT-NEXT:    ret i64 [[COND]]
-;
-; GENERIC-LABEL: @test3e(
-; GENERIC-NEXT:  entry:
-; GENERIC-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[X:%.*]], 0
-; GENERIC-NEXT:    br i1 [[TOBOOL]], label [[COND_END:%.*]], label [[COND_TRUE:%.*]]
-; GENERIC:       cond.true:
-; GENERIC-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.ctlz.i32(i32 [[X]], i1 true)
-; GENERIC-NEXT:    [[PHITMP2:%.*]] = zext i32 [[TMP0]] to i64
-; GENERIC-NEXT:    br label [[COND_END]]
-; GENERIC:       cond.end:
-; GENERIC-NEXT:    [[COND:%.*]] = phi i64 [ [[PHITMP2]], [[COND_TRUE]] ], [ 32, [[ENTRY:%.*]] ]
-; GENERIC-NEXT:    ret i64 [[COND]]
+; ALL-LABEL: @test3e(
+; ALL-NEXT:  entry:
+; ALL-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[X:%.*]], 0
+; ALL-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.ctlz.i32(i32 [[X]], i1 true)
+; ALL-NEXT:    [[PHITMP2:%.*]] = zext i32 [[TMP0]] to i64
+; ALL-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], i64 32, i64 [[PHITMP2]]
+; ALL-NEXT:    ret i64 [[COND]]
 ;
 entry:
   %tobool = icmp eq i32 %x, 0
@@ -364,37 +292,13 @@ cond.end:                                         ; preds = %entry, %cond.true
 }
 
 define i32 @test4e(i64 %x) {
-; BMI-LABEL: @test4e(
-; BMI-NEXT:  entry:
-; BMI-NEXT:    [[TOBOOL:%.*]] = icmp eq i64 [[X:%.*]], 0
-; BMI-NEXT:    br i1 [[TOBOOL]], label [[COND_END:%.*]], label [[COND_TRUE:%.*]]
-; BMI:       cond.true:
-; BMI-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.ctlz.i64(i64 [[X]], i1 true)
-; BMI-NEXT:    [[CAST:%.*]] = trunc i64 [[TMP0]] to i32
-; BMI-NEXT:    br label [[COND_END]]
-; BMI:       cond.end:
-; BMI-NEXT:    [[COND:%.*]] = phi i32 [ [[CAST]], [[COND_TRUE]] ], [ 64, [[ENTRY:%.*]] ]
-; BMI-NEXT:    ret i32 [[COND]]
-;
-; LZCNT-LABEL: @test4e(
-; LZCNT-NEXT:  entry:
-; LZCNT-NEXT:    [[TOBOOL:%.*]] = icmp eq i64 [[X:%.*]], 0
-; LZCNT-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.ctlz.i64(i64 [[X]], i1 true)
-; LZCNT-NEXT:    [[CAST:%.*]] = trunc i64 [[TMP0]] to i32
-; LZCNT-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], i32 64, i32 [[CAST]]
-; LZCNT-NEXT:    ret i32 [[COND]]
-;
-; GENERIC-LABEL: @test4e(
-; GENERIC-NEXT:  entry:
-; GENERIC-NEXT:    [[TOBOOL:%.*]] = icmp eq i64 [[X:%.*]], 0
-; GENERIC-NEXT:    br i1 [[TOBOOL]], label [[COND_END:%.*]], label [[COND_TRUE:%.*]]
-; GENERIC:       cond.true:
-; GENERIC-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.ctlz.i64(i64 [[X]], i1 true)
-; GENERIC-NEXT:    [[CAST:%.*]] = trunc i64 [[TMP0]] to i32
-; GENERIC-NEXT:    br label [[COND_END]]
-; GENERIC:       cond.end:
-; GENERIC-NEXT:    [[COND:%.*]] = phi i32 [ [[CAST]], [[COND_TRUE]] ], [ 64, [[ENTRY:%.*]] ]
-; GENERIC-NEXT:    ret i32 [[COND]]
+; ALL-LABEL: @test4e(
+; ALL-NEXT:  entry:
+; ALL-NEXT:    [[TOBOOL:%.*]] = icmp eq i64 [[X:%.*]], 0
+; ALL-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.ctlz.i64(i64 [[X]], i1 true)
+; ALL-NEXT:    [[CAST:%.*]] = trunc i64 [[TMP0]] to i32
+; ALL-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], i32 64, i32 [[CAST]]
+; ALL-NEXT:    ret i32 [[COND]]
 ;
 entry:
   %tobool = icmp eq i64 %x, 0
@@ -411,37 +315,13 @@ cond.end:                                         ; preds = %entry, %cond.true
 }
 
 define i16 @test5e(i64 %x) {
-; BMI-LABEL: @test5e(
-; BMI-NEXT:  entry:
-; BMI-NEXT:    [[TOBOOL:%.*]] = icmp eq i64 [[X:%.*]], 0
-; BMI-NEXT:    br i1 [[TOBOOL]], label [[COND_END:%.*]], label [[COND_TRUE:%.*]]
-; BMI:       cond.true:
-; BMI-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.ctlz.i64(i64 [[X]], i1 true)
-; BMI-NEXT:    [[CAST:%.*]] = trunc i64 [[TMP0]] to i16
-; BMI-NEXT:    br label [[COND_END]]
-; BMI:       cond.end:
-; BMI-NEXT:    [[COND:%.*]] = phi i16 [ [[CAST]], [[COND_TRUE]] ], [ 64, [[ENTRY:%.*]] ]
-; BMI-NEXT:    ret i16 [[COND]]
-;
-; LZCNT-LABEL: @test5e(
-; LZCNT-NEXT:  entry:
-; LZCNT-NEXT:    [[TOBOOL:%.*]] = icmp eq i64 [[X:%.*]], 0
-; LZCNT-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.ctlz.i64(i64 [[X]], i1 true)
-; LZCNT-NEXT:    [[CAST:%.*]] = trunc i64 [[TMP0]] to i16
-; LZCNT-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], i16 64, i16 [[CAST]]
-; LZCNT-NEXT:    ret i16 [[COND]]
-;
-; GENERIC-LABEL: @test5e(
-; GENERIC-NEXT:  entry:
-; GENERIC-NEXT:    [[TOBOOL:%.*]] = icmp eq i64 [[X:%.*]], 0
-; GENERIC-NEXT:    br i1 [[TOBOOL]], label [[COND_END:%.*]], label [[COND_TRUE:%.*]]
-; GENERIC:       cond.true:
-; GENERIC-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.ctlz.i64(i64 [[X]], i1 true)
-; GENERIC-NEXT:    [[CAST:%.*]] = trunc i64 [[TMP0]] to i16
-; GENERIC-NEXT:    br label [[COND_END]]
-; GENERIC:       cond.end:
-; GENERIC-NEXT:    [[COND:%.*]] = phi i16 [ [[CAST]], [[COND_TRUE]] ], [ 64, [[ENTRY:%.*]] ]
-; GENERIC-NEXT:    ret i16 [[COND]]
+; ALL-LABEL: @test5e(
+; ALL-NEXT:  entry:
+; ALL-NEXT:    [[TOBOOL:%.*]] = icmp eq i64 [[X:%.*]], 0
+; ALL-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.ctlz.i64(i64 [[X]], i1 true)
+; ALL-NEXT:    [[CAST:%.*]] = trunc i64 [[TMP0]] to i16
+; ALL-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], i16 64, i16 [[CAST]]
+; ALL-NEXT:    ret i16 [[COND]]
 ;
 entry:
   %tobool = icmp eq i64 %x, 0
@@ -458,37 +338,13 @@ cond.end:                                         ; preds = %entry, %cond.true
 }
 
 define i16 @test6e(i32 %x) {
-; BMI-LABEL: @test6e(
-; BMI-NEXT:  entry:
-; BMI-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[X:%.*]], 0
-; BMI-NEXT:    br i1 [[TOBOOL]], label [[COND_END:%.*]], label [[COND_TRUE:%.*]]
-; BMI:       cond.true:
-; BMI-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.ctlz.i32(i32 [[X]], i1 true)
-; BMI-NEXT:    [[CAST:%.*]] = trunc i32 [[TMP0]] to i16
-; BMI-NEXT:    br label [[COND_END]]
-; BMI:       cond.end:
-; BMI-NEXT:    [[COND:%.*]] = phi i16 [ [[CAST]], [[COND_TRUE]] ], [ 32, [[ENTRY:%.*]] ]
-; BMI-NEXT:    ret i16 [[COND]]
-;
-; LZCNT-LABEL: @test6e(
-; LZCNT-NEXT:  entry:
-; LZCNT-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[X:%.*]], 0
-; LZCNT-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.ctlz.i32(i32 [[X]], i1 true)
-; LZCNT-NEXT:    [[CAST:%.*]] = trunc i32 [[TMP0]] to i16
-; LZCNT-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], i16 32, i16 [[CAST]]
-; LZCNT-NEXT:    ret i16 [[COND]]
-;
-; GENERIC-LABEL: @test6e(
-; GENERIC-NEXT:  entry:
-; GENERIC-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[X:%.*]], 0
-; GENERIC-NEXT:    br i1 [[TOBOOL]], label [[COND_END:%.*]], label [[COND_TRUE:%.*]]
-; GENERIC:       cond.true:
-; GENERIC-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.ctlz.i32(i32 [[X]], i1 true)
-; GENERIC-NEXT:    [[CAST:%.*]] = trunc i32 [[TMP0]] to i16
-; GENERIC-NEXT:    br label [[COND_END]]
-; GENERIC:       cond.end:
-; GENERIC-NEXT:    [[COND:%.*]] = phi i16 [ [[CAST]], [[COND_TRUE]] ], [ 32, [[ENTRY:%.*]] ]
-; GENERIC-NEXT:    ret i16 [[COND]]
+; ALL-LABEL: @test6e(
+; ALL-NEXT:  entry:
+; ALL-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[X:%.*]], 0
+; ALL-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.ctlz.i32(i32 [[X]], i1 true)
+; ALL-NEXT:    [[CAST:%.*]] = trunc i32 [[TMP0]] to i16
+; ALL-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], i16 32, i16 [[CAST]]
+; ALL-NEXT:    ret i16 [[COND]]
 ;
 entry:
   %tobool = icmp eq i32 %x, 0
@@ -505,37 +361,13 @@ cond.end:                                         ; preds = %entry, %cond.true
 }
 
 define i16 @test7e(i64 %x) {
-; BMI-LABEL: @test7e(
-; BMI-NEXT:  entry:
-; BMI-NEXT:    [[TOBOOL:%.*]] = icmp eq i64 [[X:%.*]], 0
-; BMI-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.cttz.i64(i64 [[X]], i1 true)
-; BMI-NEXT:    [[CAST:%.*]] = trunc i64 [[TMP0]] to i16
-; BMI-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], i16 64, i16 [[CAST]]
-; BMI-NEXT:    ret i16 [[COND]]
-;
-; LZCNT-LABEL: @test7e(
-; LZCNT-NEXT:  entry:
-; LZCNT-NEXT:    [[TOBOOL:%.*]] = icmp eq i64 [[X:%.*]], 0
-; LZCNT-NEXT:    br i1 [[TOBOOL]], label [[COND_END:%.*]], label [[COND_TRUE:%.*]]
-; LZCNT:       cond.true:
-; LZCNT-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.cttz.i64(i64 [[X]], i1 true)
-; LZCNT-NEXT:    [[CAST:%.*]] = trunc i64 [[TMP0]] to i16
-; LZCNT-NEXT:    br label [[COND_END]]
-; LZCNT:       cond.end:
-; LZCNT-NEXT:    [[COND:%.*]] = phi i16 [ [[CAST]], [[COND_TRUE]] ], [ 64, [[ENTRY:%.*]] ]
-; LZCNT-NEXT:    ret i16 [[COND]]
-;
-; GENERIC-LABEL: @test7e(
-; GENERIC-NEXT:  entry:
-; GENERIC-NEXT:    [[TOBOOL:%.*]] = icmp eq i64 [[X:%.*]], 0
-; GENERIC-NEXT:    br i1 [[TOBOOL]], label [[COND_END:%.*]], label [[COND_TRUE:%.*]]
-; GENERIC:       cond.true:
-; GENERIC-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.cttz.i64(i64 [[X]], i1 true)
-; GENERIC-NEXT:    [[CAST:%.*]] = trunc i64 [[TMP0]] to i16
-; GENERIC-NEXT:    br label [[COND_END]]
-; GENERIC:       cond.end:
-; GENERIC-NEXT:    [[COND:%.*]] = phi i16 [ [[CAST]], [[COND_TRUE]] ], [ 64, [[ENTRY:%.*]] ]
-; GENERIC-NEXT:    ret i16 [[COND]]
+; ALL-LABEL: @test7e(
+; ALL-NEXT:  entry:
+; ALL-NEXT:    [[TOBOOL:%.*]] = icmp eq i64 [[X:%.*]], 0
+; ALL-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.cttz.i64(i64 [[X]], i1 true)
+; ALL-NEXT:    [[CAST:%.*]] = trunc i64 [[TMP0]] to i16
+; ALL-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], i16 64, i16 [[CAST]]
+; ALL-NEXT:    ret i16 [[COND]]
 ;
 entry:
   %tobool = icmp eq i64 %x, 0
@@ -552,37 +384,13 @@ cond.end:                                         ; preds = %entry, %cond.true
 }
 
 define i16 @test8e(i32 %x) {
-; BMI-LABEL: @test8e(
-; BMI-NEXT:  entry:
-; BMI-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[X:%.*]], 0
-; BMI-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.cttz.i32(i32 [[X]], i1 true)
-; BMI-NEXT:    [[CAST:%.*]] = trunc i32 [[TMP0]] to i16
-; BMI-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], i16 32, i16 [[CAST]]
-; BMI-NEXT:    ret i16 [[COND]]
-;
-; LZCNT-LABEL: @test8e(
-; LZCNT-NEXT:  entry:
-; LZCNT-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[X:%.*]], 0
-; LZCNT-NEXT:    br i1 [[TOBOOL]], label [[COND_END:%.*]], label [[COND_TRUE:%.*]]
-; LZCNT:       cond.true:
-; LZCNT-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.cttz.i32(i32 [[X]], i1 true)
-; LZCNT-NEXT:    [[CAST:%.*]] = trunc i32 [[TMP0]] to i16
-; LZCNT-NEXT:    br label [[COND_END]]
-; LZCNT:       cond.end:
-; LZCNT-NEXT:    [[COND:%.*]] = phi i16 [ [[CAST]], [[COND_TRUE]] ], [ 32, [[ENTRY:%.*]] ]
-; LZCNT-NEXT:    ret i16 [[COND]]
-;
-; GENERIC-LABEL: @test8e(
-; GENERIC-NEXT:  entry:
-; GENERIC-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[X:%.*]], 0
-; GENERIC-NEXT:    br i1 [[TOBOOL]], label [[COND_END:%.*]], label [[COND_TRUE:%.*]]
-; GENERIC:       cond.true:
-; GENERIC-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.cttz.i32(i32 [[X]], i1 true)
-; GENERIC-NEXT:    [[CAST:%.*]] = trunc i32 [[TMP0]] to i16
-; GENERIC-NEXT:    br label [[COND_END]]
-; GENERIC:       cond.end:
-; GENERIC-NEXT:    [[COND:%.*]] = phi i16 [ [[CAST]], [[COND_TRUE]] ], [ 32, [[ENTRY:%.*]] ]
-; GENERIC-NEXT:    ret i16 [[COND]]
+; ALL-LABEL: @test8e(
+; ALL-NEXT:  entry:
+; ALL-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[X:%.*]], 0
+; ALL-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.cttz.i32(i32 [[X]], i1 true)
+; ALL-NEXT:    [[CAST:%.*]] = trunc i32 [[TMP0]] to i16
+; ALL-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], i16 32, i16 [[CAST]]
+; ALL-NEXT:    ret i16 [[COND]]
 ;
 entry:
   %tobool = icmp eq i32 %x, 0

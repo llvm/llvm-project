@@ -166,6 +166,11 @@ static cl::opt<bool>
                             cl::desc("instrument landing pads"), cl::Hidden,
                             cl::init(false), cl::ZeroOrMore);
 
+static cl::opt<bool> ClUseShortGranules(
+    "hwasan-use-short-granules",
+    cl::desc("use short granules in allocas and outlined checks"), cl::Hidden,
+    cl::init(false), cl::ZeroOrMore);
+
 static cl::opt<bool> ClInstrumentPersonalityFunctions(
     "hwasan-instrument-personality-functions",
     cl::desc("instrument personality functions"), cl::Hidden, cl::init(false),
@@ -269,6 +274,7 @@ private:
 
   bool CompileKernel;
   bool Recover;
+  bool UseShortGranules;
   bool InstrumentLandingPads;
 
   Function *HwasanCtorFunction;
@@ -372,10 +378,13 @@ void HWAddressSanitizer::initializeModule() {
   HwasanCtorFunction = nullptr;
 
   // Older versions of Android do not have the required runtime support for
-  // global or personality function instrumentation. On other platforms we
-  // currently require using the latest version of the runtime.
+  // short granules, global or personality function instrumentation. On other
+  // platforms we currently require using the latest version of the runtime.
   bool NewRuntime =
       !TargetTriple.isAndroid() || !TargetTriple.isAndroidVersionLT(30);
+
+  UseShortGranules =
+      ClUseShortGranules.getNumOccurrences() ? ClUseShortGranules : NewRuntime;
 
   // If we don't have personality function support, fall back to landing pads.
   InstrumentLandingPads = ClInstrumentLandingPads.getNumOccurrences()
@@ -608,9 +617,11 @@ void HWAddressSanitizer::instrumentMemAccessInline(Value *Ptr, bool IsWrite,
       TargetTriple.isOSBinFormatELF() && !Recover) {
     Module *M = IRB.GetInsertBlock()->getParent()->getParent();
     Ptr = IRB.CreateBitCast(Ptr, Int8PtrTy);
-    IRB.CreateCall(
-        Intrinsic::getDeclaration(M, Intrinsic::hwasan_check_memaccess),
-        {shadowBase(), Ptr, ConstantInt::get(Int32Ty, AccessInfo)});
+    IRB.CreateCall(Intrinsic::getDeclaration(
+                       M, UseShortGranules
+                              ? Intrinsic::hwasan_check_memaccess_shortgranules
+                              : Intrinsic::hwasan_check_memaccess),
+                   {shadowBase(), Ptr, ConstantInt::get(Int32Ty, AccessInfo)});
     return;
   }
 
@@ -763,6 +774,8 @@ static uint64_t getAllocaSizeInBytes(const AllocaInst &AI) {
 bool HWAddressSanitizer::tagAlloca(IRBuilder<> &IRB, AllocaInst *AI,
                                    Value *Tag, size_t Size) {
   size_t AlignedSize = alignTo(Size, Mapping.getObjectAlignment());
+  if (!UseShortGranules)
+    Size = AlignedSize;
 
   Value *JustTag = IRB.CreateTrunc(Tag, IRB.getInt8Ty());
   if (ClInstrumentWithCalls) {

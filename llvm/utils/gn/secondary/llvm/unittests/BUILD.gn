@@ -55,7 +55,10 @@ group("unittests") {
     ]
   }
   if (llvm_build_ARM) {
-    deps += [ "tools/llvm-exegesis/ARM:LLVMExegesisARMTests" ]
+    deps += [
+      "Target/ARM:ARMTests",
+      "tools/llvm-exegesis/ARM:LLVMExegesisARMTests",
+    ]
   }
   if (llvm_build_WebAssembly) {
     deps += [ "Target/WebAssembly:WebAssemblyTests" ]

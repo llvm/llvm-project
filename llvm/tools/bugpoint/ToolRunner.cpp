@@ -170,7 +170,7 @@ Expected<int> LLI::ExecuteProgram(const std::string &Bitcode,
                                   const std::vector<std::string> &SharedLibs,
                                   unsigned Timeout, unsigned MemoryLimit) {
   std::vector<StringRef> LLIArgs;
-  LLIArgs.push_back(LLIPath.c_str());
+  LLIArgs.push_back(LLIPath);
   LLIArgs.push_back("-force-interpreter=true");
 
   for (std::vector<std::string>::const_iterator i = SharedLibs.begin(),
@@ -266,15 +266,15 @@ Error CustomCompiler::compileProgram(const std::string &Bitcode,
                                      unsigned Timeout, unsigned MemoryLimit) {
 
   std::vector<StringRef> ProgramArgs;
-  ProgramArgs.push_back(CompilerCommand.c_str());
+  ProgramArgs.push_back(CompilerCommand);
 
-  for (std::size_t i = 0; i < CompilerArgs.size(); ++i)
-    ProgramArgs.push_back(CompilerArgs.at(i).c_str());
+  for (const auto &Arg : CompilerArgs)
+    ProgramArgs.push_back(Arg);
   ProgramArgs.push_back(Bitcode);
 
   // Add optional parameters to the running program from Argv
-  for (unsigned i = 0, e = CompilerArgs.size(); i != e; ++i)
-    ProgramArgs.push_back(CompilerArgs[i].c_str());
+  for (const auto &Arg : CompilerArgs)
+    ProgramArgs.push_back(Arg);
 
   if (RunProgramWithTimeout(CompilerCommand, ProgramArgs, "", "", "", Timeout,
                             MemoryLimit))
@@ -559,7 +559,7 @@ Expected<int> JIT::ExecuteProgram(const std::string &Bitcode,
                                   unsigned Timeout, unsigned MemoryLimit) {
   // Construct a vector of parameters, incorporating those from the command-line
   std::vector<StringRef> JITArgs;
-  JITArgs.push_back(LLIPath.c_str());
+  JITArgs.push_back(LLIPath);
   JITArgs.push_back("-force-interpreter=false");
 
   // Add any extra LLI args.
@@ -570,7 +570,7 @@ Expected<int> JIT::ExecuteProgram(const std::string &Bitcode,
     JITArgs.push_back("-load");
     JITArgs.push_back(SharedLibs[i]);
   }
-  JITArgs.push_back(Bitcode.c_str());
+  JITArgs.push_back(Bitcode);
   // Add optional parameters to the running program from Argv
   for (unsigned i = 0, e = Args.size(); i != e; ++i)
     JITArgs.push_back(Args[i]);

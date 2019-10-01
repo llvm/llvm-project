@@ -193,6 +193,8 @@ IdentifierNamingCheck::IdentifierNamingCheck(StringRef Name,
   IgnoreFailedSplit = Options.get("IgnoreFailedSplit", 0);
 }
 
+IdentifierNamingCheck::~IdentifierNamingCheck() = default;
+
 void IdentifierNamingCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   auto const toString = [](CaseType Type) {
     switch (Type) {

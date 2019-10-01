@@ -219,6 +219,9 @@ RangeSelector tooling::name(std::string ID) {
 }
 
 namespace {
+// FIXME: make this available in the public API for users to easily create their
+// own selectors.
+
 // Creates a selector from a range-selection function \p Func, which selects a
 // range that is relative to a bound node id.  \c T is the node type expected by
 // \p Func.
@@ -284,6 +287,19 @@ CharSourceRange getElementsRange(const MatchResult &,
 
 RangeSelector tooling::initListElements(std::string ID) {
   return RelativeSelector<InitListExpr, getElementsRange>(std::move(ID));
+}
+
+namespace {
+// Returns the range of the else branch, including the `else` keyword.
+CharSourceRange getElseRange(const MatchResult &Result, const IfStmt &S) {
+  return maybeExtendRange(
+      CharSourceRange::getTokenRange(S.getElseLoc(), S.getEndLoc()),
+      tok::TokenKind::semi, *Result.Context);
+}
+} // namespace
+
+RangeSelector tooling::elseBranch(std::string ID) {
+  return RelativeSelector<IfStmt, getElseRange>(std::move(ID));
 }
 
 RangeSelector tooling::expansion(RangeSelector S) {

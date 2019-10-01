@@ -24,16 +24,6 @@ namespace clang {
 namespace clangd {
 namespace {
 
-llvm::Optional<Path> uriToAbsolutePath(llvm::StringRef URI, PathRef HintPath) {
-  auto U = URI::parse(URI);
-  if (!U)
-    return llvm::None;
-  auto AbsolutePath = URI::resolve(*U, HintPath);
-  if (!AbsolutePath)
-    return llvm::None;
-  return *AbsolutePath;
-}
-
 /// A helper class to cache BackgroundIndexStorage operations and keep the
 /// inverse dependency mapping.
 class BackgroundIndexLoader {
@@ -79,9 +69,11 @@ BackgroundIndexLoader::loadShard(PathRef StartSourceFile, PathRef DependentTU) {
 
   LS.Shard = std::move(Shard);
   for (const auto &It : *LS.Shard->Sources) {
-    auto AbsPath = uriToAbsolutePath(It.getKey(), StartSourceFile);
-    if (!AbsPath)
+    auto AbsPath = URI::resolve(It.getKey(), StartSourceFile);
+    if (!AbsPath) {
+      elog("Failed to resolve URI: {0}", AbsPath.takeError());
       continue;
+    }
     // A shard contains only edges for non main-file sources.
     if (*AbsPath != StartSourceFile) {
       Edges.push_back(*AbsPath);

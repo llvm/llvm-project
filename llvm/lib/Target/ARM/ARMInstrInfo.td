@@ -1967,7 +1967,7 @@ multiclass AI_str1nopc<bit isByte, string opc, InstrItinClass iii,
 /// the function.  The first operand is the ID# for this instruction, the second
 /// is the index into the MachineConstantPool that this is, the third is the
 /// size in bytes of this constant pool entry.
-let hasSideEffects = 0, isNotDuplicable = 1 in
+let hasSideEffects = 0, isNotDuplicable = 1, hasNoSchedulingInfo = 1 in
 def CONSTPOOL_ENTRY :
 PseudoInst<(outs), (ins cpinst_operand:$instid, cpinst_operand:$cpidx,
                     i32imm:$size), NoItinerary, []>;
@@ -4895,14 +4895,13 @@ def SB : AInoP<(outs), (ins), MiscFrm, NoItinerary, "sb", "", []>,
   let hasSideEffects = 1;
 }
 
-let usesCustomInserter = 1, Defs = [CPSR] in {
-
-// Pseudo instruction that combines movs + predicated rsbmi
-// to implement integer ABS
+let usesCustomInserter = 1, Defs = [CPSR], hasNoSchedulingInfo = 1 in {
+  // Pseudo instruction that combines movs + predicated rsbmi
+  // to implement integer ABS
   def ABS : ARMPseudoInst<(outs GPR:$dst), (ins GPR:$src), 8, NoItinerary, []>;
 }
 
-let usesCustomInserter = 1, Defs = [CPSR] in {
+let usesCustomInserter = 1, Defs = [CPSR], hasNoSchedulingInfo = 1 in {
     def COPY_STRUCT_BYVAL_I32 : PseudoInst<
       (outs), (ins GPR:$dst, GPR:$src, i32imm:$size, i32imm:$alignment),
       NoItinerary,
@@ -5110,8 +5109,8 @@ def SWPB: AIswp<1, (outs GPRnopc:$Rt),
 def CDP : ABI<0b1110, (outs), (ins p_imm:$cop, imm0_15:$opc1,
             c_imm:$CRd, c_imm:$CRn, c_imm:$CRm, imm0_7:$opc2),
             NoItinerary, "cdp", "\t$cop, $opc1, $CRd, $CRn, $CRm, $opc2",
-            [(int_arm_cdp imm:$cop, imm:$opc1, imm:$CRd, imm:$CRn,
-                          imm:$CRm, imm:$opc2)]>,
+            [(int_arm_cdp timm:$cop, timm:$opc1, timm:$CRd, timm:$CRn,
+                          timm:$CRm, timm:$opc2)]>,
             Requires<[IsARM,PreV8]> {
   bits<4> opc1;
   bits<4> CRn;
@@ -5134,8 +5133,8 @@ def CDP : ABI<0b1110, (outs), (ins p_imm:$cop, imm0_15:$opc1,
 def CDP2 : ABXI<0b1110, (outs), (ins p_imm:$cop, imm0_15:$opc1,
                c_imm:$CRd, c_imm:$CRn, c_imm:$CRm, imm0_7:$opc2),
                NoItinerary, "cdp2\t$cop, $opc1, $CRd, $CRn, $CRm, $opc2",
-               [(int_arm_cdp2 imm:$cop, imm:$opc1, imm:$CRd, imm:$CRn,
-                              imm:$CRm, imm:$opc2)]>,
+               [(int_arm_cdp2 timm:$cop, timm:$opc1, timm:$CRd, timm:$CRn,
+                              timm:$CRm, timm:$opc2)]>,
                Requires<[IsARM,PreV8]> {
   let Inst{31-28} = 0b1111;
   bits<4> opc1;
@@ -5314,15 +5313,15 @@ multiclass LdSt2Cop<bit load, bit Dbit, string asm, list<dag> pattern> {
   }
 }
 
-defm LDC   : LdStCop <1, 0, "ldc", [(int_arm_ldc imm:$cop, imm:$CRd, addrmode5:$addr)]>;
-defm LDCL  : LdStCop <1, 1, "ldcl", [(int_arm_ldcl imm:$cop, imm:$CRd, addrmode5:$addr)]>;
-defm LDC2  : LdSt2Cop<1, 0, "ldc2", [(int_arm_ldc2 imm:$cop, imm:$CRd, addrmode5:$addr)]>, Requires<[IsARM,PreV8]>;
-defm LDC2L : LdSt2Cop<1, 1, "ldc2l", [(int_arm_ldc2l imm:$cop, imm:$CRd, addrmode5:$addr)]>, Requires<[IsARM,PreV8]>;
+defm LDC   : LdStCop <1, 0, "ldc", [(int_arm_ldc timm:$cop, timm:$CRd, addrmode5:$addr)]>;
+defm LDCL  : LdStCop <1, 1, "ldcl", [(int_arm_ldcl timm:$cop, timm:$CRd, addrmode5:$addr)]>;
+defm LDC2  : LdSt2Cop<1, 0, "ldc2", [(int_arm_ldc2 timm:$cop, timm:$CRd, addrmode5:$addr)]>, Requires<[IsARM,PreV8]>;
+defm LDC2L : LdSt2Cop<1, 1, "ldc2l", [(int_arm_ldc2l timm:$cop, timm:$CRd, addrmode5:$addr)]>, Requires<[IsARM,PreV8]>;
 
-defm STC   : LdStCop <0, 0, "stc", [(int_arm_stc imm:$cop, imm:$CRd, addrmode5:$addr)]>;
-defm STCL  : LdStCop <0, 1, "stcl", [(int_arm_stcl imm:$cop, imm:$CRd, addrmode5:$addr)]>;
-defm STC2  : LdSt2Cop<0, 0, "stc2", [(int_arm_stc2 imm:$cop, imm:$CRd, addrmode5:$addr)]>, Requires<[IsARM,PreV8]>;
-defm STC2L : LdSt2Cop<0, 1, "stc2l", [(int_arm_stc2l imm:$cop, imm:$CRd, addrmode5:$addr)]>, Requires<[IsARM,PreV8]>;
+defm STC   : LdStCop <0, 0, "stc", [(int_arm_stc timm:$cop, timm:$CRd, addrmode5:$addr)]>;
+defm STCL  : LdStCop <0, 1, "stcl", [(int_arm_stcl timm:$cop, timm:$CRd, addrmode5:$addr)]>;
+defm STC2  : LdSt2Cop<0, 0, "stc2", [(int_arm_stc2 timm:$cop, timm:$CRd, addrmode5:$addr)]>, Requires<[IsARM,PreV8]>;
+defm STC2L : LdSt2Cop<0, 1, "stc2l", [(int_arm_stc2l timm:$cop, timm:$CRd, addrmode5:$addr)]>, Requires<[IsARM,PreV8]>;
 
 } // DecoderNamespace = "CoProc"
 
@@ -5358,8 +5357,8 @@ def MCR : MovRCopro<"mcr", 0 /* from ARM core register to coprocessor */,
                     (outs),
                     (ins p_imm:$cop, imm0_7:$opc1, GPR:$Rt, c_imm:$CRn,
                          c_imm:$CRm, imm0_7:$opc2),
-                    [(int_arm_mcr imm:$cop, imm:$opc1, GPR:$Rt, imm:$CRn,
-                                  imm:$CRm, imm:$opc2)]>,
+                    [(int_arm_mcr timm:$cop, timm:$opc1, GPR:$Rt, timm:$CRn,
+                                  timm:$CRm, timm:$opc2)]>,
                     ComplexDeprecationPredicate<"MCR">;
 def : ARMInstAlias<"mcr${p} $cop, $opc1, $Rt, $CRn, $CRm",
                    (MCR p_imm:$cop, imm0_7:$opc1, GPR:$Rt, c_imm:$CRn,
@@ -5372,8 +5371,8 @@ def : ARMInstAlias<"mrc${p} $cop, $opc1, $Rt, $CRn, $CRm",
                    (MRC GPRwithAPSR:$Rt, p_imm:$cop, imm0_7:$opc1, c_imm:$CRn,
                         c_imm:$CRm, 0, pred:$p)>;
 
-def : ARMPat<(int_arm_mrc imm:$cop, imm:$opc1, imm:$CRn, imm:$CRm, imm:$opc2),
-             (MRC imm:$cop, imm:$opc1, imm:$CRn, imm:$CRm, imm:$opc2)>;
+def : ARMPat<(int_arm_mrc timm:$cop, timm:$opc1, timm:$CRn, timm:$CRm, timm:$opc2),
+             (MRC p_imm:$cop, imm0_7:$opc1, c_imm:$CRn, c_imm:$CRm, imm0_7:$opc2)>;
 
 class MovRCopro2<string opc, bit direction, dag oops, dag iops,
                  list<dag> pattern>
@@ -5404,8 +5403,8 @@ def MCR2 : MovRCopro2<"mcr2", 0 /* from ARM core register to coprocessor */,
                       (outs),
                       (ins p_imm:$cop, imm0_7:$opc1, GPR:$Rt, c_imm:$CRn,
                            c_imm:$CRm, imm0_7:$opc2),
-                      [(int_arm_mcr2 imm:$cop, imm:$opc1, GPR:$Rt, imm:$CRn,
-                                     imm:$CRm, imm:$opc2)]>,
+                      [(int_arm_mcr2 timm:$cop, timm:$opc1, GPR:$Rt, timm:$CRn,
+                                     timm:$CRm, timm:$opc2)]>,
                       Requires<[IsARM,PreV8]>;
 def : ARMInstAlias<"mcr2 $cop, $opc1, $Rt, $CRn, $CRm",
                    (MCR2 p_imm:$cop, imm0_7:$opc1, GPR:$Rt, c_imm:$CRn,
@@ -5419,9 +5418,9 @@ def : ARMInstAlias<"mrc2 $cop, $opc1, $Rt, $CRn, $CRm",
                    (MRC2 GPRwithAPSR:$Rt, p_imm:$cop, imm0_7:$opc1, c_imm:$CRn,
                          c_imm:$CRm, 0)>;
 
-def : ARMV5TPat<(int_arm_mrc2 imm:$cop, imm:$opc1, imm:$CRn,
-                              imm:$CRm, imm:$opc2),
-                (MRC2 imm:$cop, imm:$opc1, imm:$CRn, imm:$CRm, imm:$opc2)>;
+def : ARMV5TPat<(int_arm_mrc2 timm:$cop, timm:$opc1, timm:$CRn,
+                              timm:$CRm, timm:$opc2),
+                (MRC2 p_imm:$cop, imm0_7:$opc1, c_imm:$CRn, c_imm:$CRm, imm0_7:$opc2)>;
 
 class MovRRCopro<string opc, bit direction, dag oops, dag iops, list<dag>
                  pattern = []>
@@ -5447,8 +5446,8 @@ class MovRRCopro<string opc, bit direction, dag oops, dag iops, list<dag>
 def MCRR : MovRRCopro<"mcrr", 0 /* from ARM core register to coprocessor */,
                       (outs), (ins p_imm:$cop, imm0_15:$opc1, GPRnopc:$Rt,
                       GPRnopc:$Rt2, c_imm:$CRm),
-                      [(int_arm_mcrr imm:$cop, imm:$opc1, GPRnopc:$Rt,
-                                     GPRnopc:$Rt2, imm:$CRm)]>;
+                      [(int_arm_mcrr timm:$cop, timm:$opc1, GPRnopc:$Rt,
+                                     GPRnopc:$Rt2, timm:$CRm)]>;
 def MRRC : MovRRCopro<"mrrc", 1 /* from coprocessor to ARM core register */,
                       (outs GPRnopc:$Rt, GPRnopc:$Rt2),
                       (ins p_imm:$cop, imm0_15:$opc1, c_imm:$CRm), []>;
@@ -5480,8 +5479,8 @@ class MovRRCopro2<string opc, bit direction, dag oops, dag iops,
 def MCRR2 : MovRRCopro2<"mcrr2", 0 /* from ARM core register to coprocessor */,
                         (outs), (ins p_imm:$cop, imm0_15:$opc1, GPRnopc:$Rt,
                         GPRnopc:$Rt2, c_imm:$CRm),
-                        [(int_arm_mcrr2 imm:$cop, imm:$opc1, GPRnopc:$Rt,
-                                        GPRnopc:$Rt2, imm:$CRm)]>;
+                        [(int_arm_mcrr2 timm:$cop, timm:$opc1, GPRnopc:$Rt,
+                                        GPRnopc:$Rt2, timm:$CRm)]>;
 
 def MRRC2 : MovRRCopro2<"mrrc2", 1 /* from coprocessor to ARM core register */,
                        (outs GPRnopc:$Rt, GPRnopc:$Rt2),
@@ -5604,12 +5603,12 @@ def MSRbanked : ABI<0b0001, (outs), (ins banked_reg:$banked, GPRnopc:$Rn),
 
 def win__chkstk : SDNode<"ARMISD::WIN__CHKSTK", SDTNone,
                       [SDNPHasChain, SDNPSideEffect]>;
-let usesCustomInserter = 1, Uses = [R4], Defs = [R4, SP] in
+let usesCustomInserter = 1, Uses = [R4], Defs = [R4, SP], hasNoSchedulingInfo = 1 in
   def WIN__CHKSTK : PseudoInst<(outs), (ins), NoItinerary, [(win__chkstk)]>;
 
 def win__dbzchk : SDNode<"ARMISD::WIN__DBZCHK", SDT_WIN__DBZCHK,
                          [SDNPHasChain, SDNPSideEffect, SDNPOutGlue]>;
-let usesCustomInserter = 1, Defs = [CPSR] in
+let usesCustomInserter = 1, Defs = [CPSR], hasNoSchedulingInfo = 1 in
   def WIN__DBZCHK : PseudoInst<(outs), (ins tGPR:$divisor), NoItinerary,
                                [(win__dbzchk tGPR:$divisor)]>;
 
@@ -6156,10 +6155,10 @@ def : InstAlias<"umull${s}${p} $RdLo, $RdHi, $Rn, $Rm",
 def ITasm : ARMAsmPseudo<"it$mask $cc", (ins it_pred:$cc, it_mask:$mask)>,
          ComplexDeprecationPredicate<"IT">;
 
-let mayLoad = 1, mayStore =1, hasSideEffects = 1 in
+let mayLoad = 1, mayStore =1, hasSideEffects = 1, hasNoSchedulingInfo = 1 in
 def SPACE : PseudoInst<(outs GPR:$Rd), (ins i32imm:$size, GPR:$Rn),
                        NoItinerary,
-                       [(set GPR:$Rd, (int_arm_space imm:$size, GPR:$Rn))]>;
+                       [(set GPR:$Rd, (int_arm_space timm:$size, GPR:$Rn))]>;
 
 //===----------------------------------
 // Atomic cmpxchg for -O0
@@ -6199,4 +6198,5 @@ def CompilerBarrier : PseudoInst<(outs), (ins i32imm:$ordering), NoItinerary,
   let hasSideEffects = 1;
   let Size = 0;
   let AsmString = "@ COMPILER BARRIER";
+  let hasNoSchedulingInfo = 1;
 }

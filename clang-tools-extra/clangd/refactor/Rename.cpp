@@ -74,6 +74,10 @@ llvm::Optional<ReasonToReject> renamableWithinFile(const Decl &RenameDecl,
                                                    const SymbolIndex *Index) {
   if (llvm::isa<NamespaceDecl>(&RenameDecl))
     return ReasonToReject::UnsupportedSymbol;
+  if (const auto *FD = llvm::dyn_cast<FunctionDecl>(&RenameDecl)) {
+    if (FD->isOverloadedOperator())
+      return ReasonToReject::UnsupportedSymbol;
+  }
   auto &ASTCtx = RenameDecl.getASTContext();
   const auto &SM = ASTCtx.getSourceManager();
   bool MainFileIsHeader = ASTCtx.getLangOpts().IsHeaderFile;

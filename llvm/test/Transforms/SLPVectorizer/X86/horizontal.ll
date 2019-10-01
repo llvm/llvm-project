@@ -37,14 +37,11 @@ define i32 @add_red(float* %A, i32 %n) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[ARRAYIDX]] to <4 x float>*
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, <4 x float>* [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul <4 x float> [[TMP2]], <float 7.000000e+00, float 7.000000e+00, float 7.000000e+00, float 7.000000e+00>
-; CHECK-NEXT:    [[ADD6:%.*]] = fadd fast float undef, undef
-; CHECK-NEXT:    [[ADD11:%.*]] = fadd fast float [[ADD6]], undef
 ; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = fadd fast <4 x float> [[TMP3]], [[RDX_SHUF]]
 ; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x float> [[BIN_RDX]], <4 x float> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX2:%.*]] = fadd fast <4 x float> [[BIN_RDX]], [[RDX_SHUF1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[BIN_RDX2]], i32 0
-; CHECK-NEXT:    [[ADD16:%.*]] = fadd fast float [[ADD11]], undef
 ; CHECK-NEXT:    [[ADD17]] = fadd fast float [[SUM_032]], [[TMP4]]
 ; CHECK-NEXT:    [[INC]] = add nsw i64 [[I_033]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INC]], [[TMP0]]
@@ -77,14 +74,11 @@ define i32 @add_red(float* %A, i32 %n) {
 ; STORE-NEXT:    [[TMP1:%.*]] = bitcast float* [[ARRAYIDX]] to <4 x float>*
 ; STORE-NEXT:    [[TMP2:%.*]] = load <4 x float>, <4 x float>* [[TMP1]], align 4
 ; STORE-NEXT:    [[TMP3:%.*]] = fmul <4 x float> [[TMP2]], <float 7.000000e+00, float 7.000000e+00, float 7.000000e+00, float 7.000000e+00>
-; STORE-NEXT:    [[ADD6:%.*]] = fadd fast float undef, undef
-; STORE-NEXT:    [[ADD11:%.*]] = fadd fast float [[ADD6]], undef
 ; STORE-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
 ; STORE-NEXT:    [[BIN_RDX:%.*]] = fadd fast <4 x float> [[TMP3]], [[RDX_SHUF]]
 ; STORE-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x float> [[BIN_RDX]], <4 x float> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
 ; STORE-NEXT:    [[BIN_RDX2:%.*]] = fadd fast <4 x float> [[BIN_RDX]], [[RDX_SHUF1]]
 ; STORE-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[BIN_RDX2]], i32 0
-; STORE-NEXT:    [[ADD16:%.*]] = fadd fast float [[ADD11]], undef
 ; STORE-NEXT:    [[ADD17]] = fadd fast float [[SUM_032]], [[TMP4]]
 ; STORE-NEXT:    [[INC]] = add nsw i64 [[I_033]], 1
 ; STORE-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INC]], [[TMP0]]
@@ -178,14 +172,11 @@ define i32 @mul_red(float* noalias %A, float* noalias %B, i32 %n) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float* [[ARRAYIDX2]] to <4 x float>*
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x float>, <4 x float>* [[TMP3]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul <4 x float> [[TMP1]], [[TMP4]]
-; CHECK-NEXT:    [[ADD8:%.*]] = fadd fast float undef, undef
-; CHECK-NEXT:    [[ADD14:%.*]] = fadd fast float [[ADD8]], undef
 ; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x float> [[TMP5]], <4 x float> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = fadd fast <4 x float> [[TMP5]], [[RDX_SHUF]]
 ; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x float> [[BIN_RDX]], <4 x float> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX2:%.*]] = fadd fast <4 x float> [[BIN_RDX]], [[RDX_SHUF1]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[BIN_RDX2]], i32 0
-; CHECK-NEXT:    [[ADD20:%.*]] = fadd fast float [[ADD14]], undef
 ; CHECK-NEXT:    [[MUL21]] = fmul float [[SUM_039]], [[TMP6]]
 ; CHECK-NEXT:    [[INC]] = add nsw i64 [[I_040]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INC]], [[TMP2]]
@@ -223,14 +214,11 @@ define i32 @mul_red(float* noalias %A, float* noalias %B, i32 %n) {
 ; STORE-NEXT:    [[TMP3:%.*]] = bitcast float* [[ARRAYIDX2]] to <4 x float>*
 ; STORE-NEXT:    [[TMP4:%.*]] = load <4 x float>, <4 x float>* [[TMP3]], align 4
 ; STORE-NEXT:    [[TMP5:%.*]] = fmul <4 x float> [[TMP1]], [[TMP4]]
-; STORE-NEXT:    [[ADD8:%.*]] = fadd fast float undef, undef
-; STORE-NEXT:    [[ADD14:%.*]] = fadd fast float [[ADD8]], undef
 ; STORE-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x float> [[TMP5]], <4 x float> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
 ; STORE-NEXT:    [[BIN_RDX:%.*]] = fadd fast <4 x float> [[TMP5]], [[RDX_SHUF]]
 ; STORE-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x float> [[BIN_RDX]], <4 x float> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
 ; STORE-NEXT:    [[BIN_RDX2:%.*]] = fadd fast <4 x float> [[BIN_RDX]], [[RDX_SHUF1]]
 ; STORE-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[BIN_RDX2]], i32 0
-; STORE-NEXT:    [[ADD20:%.*]] = fadd fast float [[ADD14]], undef
 ; STORE-NEXT:    [[MUL21]] = fmul float [[SUM_039]], [[TMP6]]
 ; STORE-NEXT:    [[INC]] = add nsw i64 [[I_040]], 1
 ; STORE-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INC]], [[TMP2]]
@@ -350,13 +338,6 @@ define i32 @long_red(float* noalias %A, float* noalias %B, i32 %n) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast float* [[ARRAYIDX2]] to <8 x float>*
 ; CHECK-NEXT:    [[TMP5:%.*]] = load <8 x float>, <8 x float>* [[TMP4]], align 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = fmul fast <8 x float> [[TMP1]], [[TMP5]]
-; CHECK-NEXT:    [[ADD8:%.*]] = fadd fast float undef, undef
-; CHECK-NEXT:    [[ADD14:%.*]] = fadd fast float [[ADD8]], undef
-; CHECK-NEXT:    [[ADD20:%.*]] = fadd fast float [[ADD14]], undef
-; CHECK-NEXT:    [[ADD26:%.*]] = fadd fast float [[ADD20]], undef
-; CHECK-NEXT:    [[ADD32:%.*]] = fadd fast float [[ADD26]], undef
-; CHECK-NEXT:    [[ADD38:%.*]] = fadd fast float [[ADD32]], undef
-; CHECK-NEXT:    [[ADD44:%.*]] = fadd fast float [[ADD38]], undef
 ; CHECK-NEXT:    [[ADD47:%.*]] = add nsw i64 [[MUL]], 8
 ; CHECK-NEXT:    [[ARRAYIDX48:%.*]] = getelementptr inbounds float, float* [[A]], i64 [[ADD47]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = load float, float* [[ARRAYIDX48]], align 4
@@ -369,7 +350,6 @@ define i32 @long_red(float* noalias %A, float* noalias %B, i32 %n) {
 ; CHECK-NEXT:    [[BIN_RDX4:%.*]] = fadd fast <8 x float> [[BIN_RDX2]], [[RDX_SHUF3]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <8 x float> [[BIN_RDX4]], i32 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = fadd fast float [[TMP8]], [[MUL49]]
-; CHECK-NEXT:    [[ADD50:%.*]] = fadd fast float [[ADD44]], [[MUL49]]
 ; CHECK-NEXT:    [[ADD51]] = fadd fast float [[SUM_082]], [[TMP9]]
 ; CHECK-NEXT:    [[INC]] = add nsw i64 [[I_083]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INC]], [[TMP3]]
@@ -421,13 +401,6 @@ define i32 @long_red(float* noalias %A, float* noalias %B, i32 %n) {
 ; STORE-NEXT:    [[TMP4:%.*]] = bitcast float* [[ARRAYIDX2]] to <8 x float>*
 ; STORE-NEXT:    [[TMP5:%.*]] = load <8 x float>, <8 x float>* [[TMP4]], align 4
 ; STORE-NEXT:    [[TMP6:%.*]] = fmul fast <8 x float> [[TMP1]], [[TMP5]]
-; STORE-NEXT:    [[ADD8:%.*]] = fadd fast float undef, undef
-; STORE-NEXT:    [[ADD14:%.*]] = fadd fast float [[ADD8]], undef
-; STORE-NEXT:    [[ADD20:%.*]] = fadd fast float [[ADD14]], undef
-; STORE-NEXT:    [[ADD26:%.*]] = fadd fast float [[ADD20]], undef
-; STORE-NEXT:    [[ADD32:%.*]] = fadd fast float [[ADD26]], undef
-; STORE-NEXT:    [[ADD38:%.*]] = fadd fast float [[ADD32]], undef
-; STORE-NEXT:    [[ADD44:%.*]] = fadd fast float [[ADD38]], undef
 ; STORE-NEXT:    [[ADD47:%.*]] = add nsw i64 [[MUL]], 8
 ; STORE-NEXT:    [[ARRAYIDX48:%.*]] = getelementptr inbounds float, float* [[A]], i64 [[ADD47]]
 ; STORE-NEXT:    [[TMP7:%.*]] = load float, float* [[ARRAYIDX48]], align 4
@@ -440,7 +413,6 @@ define i32 @long_red(float* noalias %A, float* noalias %B, i32 %n) {
 ; STORE-NEXT:    [[BIN_RDX4:%.*]] = fadd fast <8 x float> [[BIN_RDX2]], [[RDX_SHUF3]]
 ; STORE-NEXT:    [[TMP8:%.*]] = extractelement <8 x float> [[BIN_RDX4]], i32 0
 ; STORE-NEXT:    [[TMP9:%.*]] = fadd fast float [[TMP8]], [[MUL49]]
-; STORE-NEXT:    [[ADD50:%.*]] = fadd fast float [[ADD44]], [[MUL49]]
 ; STORE-NEXT:    [[ADD51]] = fadd fast float [[SUM_082]], [[TMP9]]
 ; STORE-NEXT:    [[INC]] = add nsw i64 [[I_083]], 1
 ; STORE-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INC]], [[TMP3]]
@@ -576,16 +548,12 @@ define i32 @chain_red(float* noalias %A, float* noalias %B, i32 %n) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float* [[ARRAYIDX2]] to <4 x float>*
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x float>, <4 x float>* [[TMP3]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul fast <4 x float> [[TMP1]], [[TMP4]]
-; CHECK-NEXT:    [[ADD:%.*]] = fadd fast float [[SUM_042]], undef
-; CHECK-NEXT:    [[ADD9:%.*]] = fadd fast float [[ADD]], undef
-; CHECK-NEXT:    [[ADD15:%.*]] = fadd fast float [[ADD9]], undef
 ; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x float> [[TMP5]], <4 x float> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = fadd fast <4 x float> [[TMP5]], [[RDX_SHUF]]
 ; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x float> [[BIN_RDX]], <4 x float> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX2:%.*]] = fadd fast <4 x float> [[BIN_RDX]], [[RDX_SHUF1]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[BIN_RDX2]], i32 0
 ; CHECK-NEXT:    [[OP_EXTRA]] = fadd fast float [[TMP6]], [[SUM_042]]
-; CHECK-NEXT:    [[ADD21:%.*]] = fadd fast float [[ADD15]], undef
 ; CHECK-NEXT:    [[INC]] = add nsw i64 [[I_043]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INC]], [[TMP2]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_FOR_END_CRIT_EDGE:%.*]], label [[FOR_BODY]]
@@ -622,16 +590,12 @@ define i32 @chain_red(float* noalias %A, float* noalias %B, i32 %n) {
 ; STORE-NEXT:    [[TMP3:%.*]] = bitcast float* [[ARRAYIDX2]] to <4 x float>*
 ; STORE-NEXT:    [[TMP4:%.*]] = load <4 x float>, <4 x float>* [[TMP3]], align 4
 ; STORE-NEXT:    [[TMP5:%.*]] = fmul fast <4 x float> [[TMP1]], [[TMP4]]
-; STORE-NEXT:    [[ADD:%.*]] = fadd fast float [[SUM_042]], undef
-; STORE-NEXT:    [[ADD9:%.*]] = fadd fast float [[ADD]], undef
-; STORE-NEXT:    [[ADD15:%.*]] = fadd fast float [[ADD9]], undef
 ; STORE-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x float> [[TMP5]], <4 x float> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
 ; STORE-NEXT:    [[BIN_RDX:%.*]] = fadd fast <4 x float> [[TMP5]], [[RDX_SHUF]]
 ; STORE-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x float> [[BIN_RDX]], <4 x float> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
 ; STORE-NEXT:    [[BIN_RDX2:%.*]] = fadd fast <4 x float> [[BIN_RDX]], [[RDX_SHUF1]]
 ; STORE-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[BIN_RDX2]], i32 0
 ; STORE-NEXT:    [[OP_EXTRA]] = fadd fast float [[TMP6]], [[SUM_042]]
-; STORE-NEXT:    [[ADD21:%.*]] = fadd fast float [[ADD15]], undef
 ; STORE-NEXT:    [[INC]] = add nsw i64 [[I_043]], 1
 ; STORE-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INC]], [[TMP2]]
 ; STORE-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_FOR_END_CRIT_EDGE:%.*]], label [[FOR_BODY]]
@@ -1087,14 +1051,11 @@ define i32 @store_red(float* noalias %A, float* noalias %B, float* noalias %C, i
 ; STORE-NEXT:    [[TMP3:%.*]] = bitcast float* [[ARRAYIDX2]] to <4 x float>*
 ; STORE-NEXT:    [[TMP4:%.*]] = load <4 x float>, <4 x float>* [[TMP3]], align 4
 ; STORE-NEXT:    [[TMP5:%.*]] = fmul fast <4 x float> [[TMP2]], [[TMP4]]
-; STORE-NEXT:    [[ADD8:%.*]] = fadd fast float undef, undef
-; STORE-NEXT:    [[ADD14:%.*]] = fadd fast float [[ADD8]], undef
 ; STORE-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x float> [[TMP5]], <4 x float> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
 ; STORE-NEXT:    [[BIN_RDX:%.*]] = fadd fast <4 x float> [[TMP5]], [[RDX_SHUF]]
 ; STORE-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x float> [[BIN_RDX]], <4 x float> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
 ; STORE-NEXT:    [[BIN_RDX2:%.*]] = fadd fast <4 x float> [[BIN_RDX]], [[RDX_SHUF1]]
 ; STORE-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[BIN_RDX2]], i32 0
-; STORE-NEXT:    [[ADD20:%.*]] = fadd fast float [[ADD14]], undef
 ; STORE-NEXT:    store float [[TMP6]], float* [[C_ADDR_038]], align 4
 ; STORE-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds float, float* [[C_ADDR_038]], i64 1
 ; STORE-NEXT:    [[INC]] = add nsw i64 [[I_039]], 1
@@ -1169,14 +1130,11 @@ define void @float_red_example4(float* %res) {
 ; STORE-LABEL: @float_red_example4(
 ; STORE-NEXT:  entry:
 ; STORE-NEXT:    [[TMP0:%.*]] = load <4 x float>, <4 x float>* bitcast ([32 x float]* @arr_float to <4 x float>*), align 16
-; STORE-NEXT:    [[ADD:%.*]] = fadd fast float undef, undef
-; STORE-NEXT:    [[ADD_1:%.*]] = fadd fast float undef, [[ADD]]
 ; STORE-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
 ; STORE-NEXT:    [[BIN_RDX:%.*]] = fadd fast <4 x float> [[TMP0]], [[RDX_SHUF]]
 ; STORE-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x float> [[BIN_RDX]], <4 x float> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
 ; STORE-NEXT:    [[BIN_RDX2:%.*]] = fadd fast <4 x float> [[BIN_RDX]], [[RDX_SHUF1]]
 ; STORE-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[BIN_RDX2]], i32 0
-; STORE-NEXT:    [[ADD_2:%.*]] = fadd fast float undef, [[ADD_1]]
 ; STORE-NEXT:    store float [[TMP1]], float* [[RES:%.*]], align 16
 ; STORE-NEXT:    ret void
 ;
@@ -1216,12 +1174,6 @@ define void @float_red_example8(float* %res) {
 ; STORE-LABEL: @float_red_example8(
 ; STORE-NEXT:  entry:
 ; STORE-NEXT:    [[TMP0:%.*]] = load <8 x float>, <8 x float>* bitcast ([32 x float]* @arr_float to <8 x float>*), align 16
-; STORE-NEXT:    [[ADD:%.*]] = fadd fast float undef, undef
-; STORE-NEXT:    [[ADD_1:%.*]] = fadd fast float undef, [[ADD]]
-; STORE-NEXT:    [[ADD_2:%.*]] = fadd fast float undef, [[ADD_1]]
-; STORE-NEXT:    [[ADD_3:%.*]] = fadd fast float undef, [[ADD_2]]
-; STORE-NEXT:    [[ADD_4:%.*]] = fadd fast float undef, [[ADD_3]]
-; STORE-NEXT:    [[ADD_5:%.*]] = fadd fast float undef, [[ADD_4]]
 ; STORE-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <8 x float> [[TMP0]], <8 x float> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
 ; STORE-NEXT:    [[BIN_RDX:%.*]] = fadd fast <8 x float> [[TMP0]], [[RDX_SHUF]]
 ; STORE-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <8 x float> [[BIN_RDX]], <8 x float> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
@@ -1229,7 +1181,6 @@ define void @float_red_example8(float* %res) {
 ; STORE-NEXT:    [[RDX_SHUF3:%.*]] = shufflevector <8 x float> [[BIN_RDX2]], <8 x float> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; STORE-NEXT:    [[BIN_RDX4:%.*]] = fadd fast <8 x float> [[BIN_RDX2]], [[RDX_SHUF3]]
 ; STORE-NEXT:    [[TMP1:%.*]] = extractelement <8 x float> [[BIN_RDX4]], i32 0
-; STORE-NEXT:    [[ADD_6:%.*]] = fadd fast float undef, [[ADD_5]]
 ; STORE-NEXT:    store float [[TMP1]], float* [[RES:%.*]], align 16
 ; STORE-NEXT:    ret void
 ;
@@ -1293,20 +1244,6 @@ define void @float_red_example16(float* %res) {
 ; STORE-LABEL: @float_red_example16(
 ; STORE-NEXT:  entry:
 ; STORE-NEXT:    [[TMP0:%.*]] = load <16 x float>, <16 x float>* bitcast ([32 x float]* @arr_float to <16 x float>*), align 16
-; STORE-NEXT:    [[ADD:%.*]] = fadd fast float undef, undef
-; STORE-NEXT:    [[ADD_1:%.*]] = fadd fast float undef, [[ADD]]
-; STORE-NEXT:    [[ADD_2:%.*]] = fadd fast float undef, [[ADD_1]]
-; STORE-NEXT:    [[ADD_3:%.*]] = fadd fast float undef, [[ADD_2]]
-; STORE-NEXT:    [[ADD_4:%.*]] = fadd fast float undef, [[ADD_3]]
-; STORE-NEXT:    [[ADD_5:%.*]] = fadd fast float undef, [[ADD_4]]
-; STORE-NEXT:    [[ADD_6:%.*]] = fadd fast float undef, [[ADD_5]]
-; STORE-NEXT:    [[ADD_7:%.*]] = fadd fast float undef, [[ADD_6]]
-; STORE-NEXT:    [[ADD_8:%.*]] = fadd fast float undef, [[ADD_7]]
-; STORE-NEXT:    [[ADD_9:%.*]] = fadd fast float undef, [[ADD_8]]
-; STORE-NEXT:    [[ADD_10:%.*]] = fadd fast float undef, [[ADD_9]]
-; STORE-NEXT:    [[ADD_11:%.*]] = fadd fast float undef, [[ADD_10]]
-; STORE-NEXT:    [[ADD_12:%.*]] = fadd fast float undef, [[ADD_11]]
-; STORE-NEXT:    [[ADD_13:%.*]] = fadd fast float undef, [[ADD_12]]
 ; STORE-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <16 x float> [[TMP0]], <16 x float> undef, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; STORE-NEXT:    [[BIN_RDX:%.*]] = fadd fast <16 x float> [[TMP0]], [[RDX_SHUF]]
 ; STORE-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <16 x float> [[BIN_RDX]], <16 x float> undef, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
@@ -1316,7 +1253,6 @@ define void @float_red_example16(float* %res) {
 ; STORE-NEXT:    [[RDX_SHUF5:%.*]] = shufflevector <16 x float> [[BIN_RDX4]], <16 x float> undef, <16 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; STORE-NEXT:    [[BIN_RDX6:%.*]] = fadd fast <16 x float> [[BIN_RDX4]], [[RDX_SHUF5]]
 ; STORE-NEXT:    [[TMP1:%.*]] = extractelement <16 x float> [[BIN_RDX6]], i32 0
-; STORE-NEXT:    [[ADD_14:%.*]] = fadd fast float undef, [[ADD_13]]
 ; STORE-NEXT:    store float [[TMP1]], float* [[RES:%.*]], align 16
 ; STORE-NEXT:    ret void
 ;
@@ -1372,14 +1308,11 @@ define void @i32_red_example4(i32* %res) {
 ; STORE-LABEL: @i32_red_example4(
 ; STORE-NEXT:  entry:
 ; STORE-NEXT:    [[TMP0:%.*]] = load <4 x i32>, <4 x i32>* bitcast ([32 x i32]* @arr_i32 to <4 x i32>*), align 16
-; STORE-NEXT:    [[ADD:%.*]] = add nsw i32 undef, undef
-; STORE-NEXT:    [[ADD_1:%.*]] = add nsw i32 undef, [[ADD]]
 ; STORE-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
 ; STORE-NEXT:    [[BIN_RDX:%.*]] = add nsw <4 x i32> [[TMP0]], [[RDX_SHUF]]
 ; STORE-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x i32> [[BIN_RDX]], <4 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
 ; STORE-NEXT:    [[BIN_RDX2:%.*]] = add nsw <4 x i32> [[BIN_RDX]], [[RDX_SHUF1]]
 ; STORE-NEXT:    [[TMP1:%.*]] = extractelement <4 x i32> [[BIN_RDX2]], i32 0
-; STORE-NEXT:    [[ADD_2:%.*]] = add nsw i32 undef, [[ADD_1]]
 ; STORE-NEXT:    store i32 [[TMP1]], i32* [[RES:%.*]], align 16
 ; STORE-NEXT:    ret void
 ;
@@ -1419,12 +1352,6 @@ define void @i32_red_example8(i32* %res) {
 ; STORE-LABEL: @i32_red_example8(
 ; STORE-NEXT:  entry:
 ; STORE-NEXT:    [[TMP0:%.*]] = load <8 x i32>, <8 x i32>* bitcast ([32 x i32]* @arr_i32 to <8 x i32>*), align 16
-; STORE-NEXT:    [[ADD:%.*]] = add nsw i32 undef, undef
-; STORE-NEXT:    [[ADD_1:%.*]] = add nsw i32 undef, [[ADD]]
-; STORE-NEXT:    [[ADD_2:%.*]] = add nsw i32 undef, [[ADD_1]]
-; STORE-NEXT:    [[ADD_3:%.*]] = add nsw i32 undef, [[ADD_2]]
-; STORE-NEXT:    [[ADD_4:%.*]] = add nsw i32 undef, [[ADD_3]]
-; STORE-NEXT:    [[ADD_5:%.*]] = add nsw i32 undef, [[ADD_4]]
 ; STORE-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <8 x i32> [[TMP0]], <8 x i32> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
 ; STORE-NEXT:    [[BIN_RDX:%.*]] = add nsw <8 x i32> [[TMP0]], [[RDX_SHUF]]
 ; STORE-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <8 x i32> [[BIN_RDX]], <8 x i32> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
@@ -1432,7 +1359,6 @@ define void @i32_red_example8(i32* %res) {
 ; STORE-NEXT:    [[RDX_SHUF3:%.*]] = shufflevector <8 x i32> [[BIN_RDX2]], <8 x i32> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; STORE-NEXT:    [[BIN_RDX4:%.*]] = add nsw <8 x i32> [[BIN_RDX2]], [[RDX_SHUF3]]
 ; STORE-NEXT:    [[TMP1:%.*]] = extractelement <8 x i32> [[BIN_RDX4]], i32 0
-; STORE-NEXT:    [[ADD_6:%.*]] = add nsw i32 undef, [[ADD_5]]
 ; STORE-NEXT:    store i32 [[TMP1]], i32* [[RES:%.*]], align 16
 ; STORE-NEXT:    ret void
 ;
@@ -1496,20 +1422,6 @@ define void @i32_red_example16(i32* %res) {
 ; STORE-LABEL: @i32_red_example16(
 ; STORE-NEXT:  entry:
 ; STORE-NEXT:    [[TMP0:%.*]] = load <16 x i32>, <16 x i32>* bitcast ([32 x i32]* @arr_i32 to <16 x i32>*), align 16
-; STORE-NEXT:    [[ADD:%.*]] = add nsw i32 undef, undef
-; STORE-NEXT:    [[ADD_1:%.*]] = add nsw i32 undef, [[ADD]]
-; STORE-NEXT:    [[ADD_2:%.*]] = add nsw i32 undef, [[ADD_1]]
-; STORE-NEXT:    [[ADD_3:%.*]] = add nsw i32 undef, [[ADD_2]]
-; STORE-NEXT:    [[ADD_4:%.*]] = add nsw i32 undef, [[ADD_3]]
-; STORE-NEXT:    [[ADD_5:%.*]] = add nsw i32 undef, [[ADD_4]]
-; STORE-NEXT:    [[ADD_6:%.*]] = add nsw i32 undef, [[ADD_5]]
-; STORE-NEXT:    [[ADD_7:%.*]] = add nsw i32 undef, [[ADD_6]]
-; STORE-NEXT:    [[ADD_8:%.*]] = add nsw i32 undef, [[ADD_7]]
-; STORE-NEXT:    [[ADD_9:%.*]] = add nsw i32 undef, [[ADD_8]]
-; STORE-NEXT:    [[ADD_10:%.*]] = add nsw i32 undef, [[ADD_9]]
-; STORE-NEXT:    [[ADD_11:%.*]] = add nsw i32 undef, [[ADD_10]]
-; STORE-NEXT:    [[ADD_12:%.*]] = add nsw i32 undef, [[ADD_11]]
-; STORE-NEXT:    [[ADD_13:%.*]] = add nsw i32 undef, [[ADD_12]]
 ; STORE-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <16 x i32> [[TMP0]], <16 x i32> undef, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; STORE-NEXT:    [[BIN_RDX:%.*]] = add nsw <16 x i32> [[TMP0]], [[RDX_SHUF]]
 ; STORE-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <16 x i32> [[BIN_RDX]], <16 x i32> undef, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
@@ -1519,7 +1431,6 @@ define void @i32_red_example16(i32* %res) {
 ; STORE-NEXT:    [[RDX_SHUF5:%.*]] = shufflevector <16 x i32> [[BIN_RDX4]], <16 x i32> undef, <16 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; STORE-NEXT:    [[BIN_RDX6:%.*]] = add nsw <16 x i32> [[BIN_RDX4]], [[RDX_SHUF5]]
 ; STORE-NEXT:    [[TMP1:%.*]] = extractelement <16 x i32> [[BIN_RDX6]], i32 0
-; STORE-NEXT:    [[ADD_14:%.*]] = add nsw i32 undef, [[ADD_13]]
 ; STORE-NEXT:    store i32 [[TMP1]], i32* [[RES:%.*]], align 16
 ; STORE-NEXT:    ret void
 ;
@@ -1631,36 +1542,6 @@ define void @i32_red_example32(i32* %res) {
 ; STORE-LABEL: @i32_red_example32(
 ; STORE-NEXT:  entry:
 ; STORE-NEXT:    [[TMP0:%.*]] = load <32 x i32>, <32 x i32>* bitcast ([32 x i32]* @arr_i32 to <32 x i32>*), align 16
-; STORE-NEXT:    [[ADD:%.*]] = add nsw i32 undef, undef
-; STORE-NEXT:    [[ADD_1:%.*]] = add nsw i32 undef, [[ADD]]
-; STORE-NEXT:    [[ADD_2:%.*]] = add nsw i32 undef, [[ADD_1]]
-; STORE-NEXT:    [[ADD_3:%.*]] = add nsw i32 undef, [[ADD_2]]
-; STORE-NEXT:    [[ADD_4:%.*]] = add nsw i32 undef, [[ADD_3]]
-; STORE-NEXT:    [[ADD_5:%.*]] = add nsw i32 undef, [[ADD_4]]
-; STORE-NEXT:    [[ADD_6:%.*]] = add nsw i32 undef, [[ADD_5]]
-; STORE-NEXT:    [[ADD_7:%.*]] = add nsw i32 undef, [[ADD_6]]
-; STORE-NEXT:    [[ADD_8:%.*]] = add nsw i32 undef, [[ADD_7]]
-; STORE-NEXT:    [[ADD_9:%.*]] = add nsw i32 undef, [[ADD_8]]
-; STORE-NEXT:    [[ADD_10:%.*]] = add nsw i32 undef, [[ADD_9]]
-; STORE-NEXT:    [[ADD_11:%.*]] = add nsw i32 undef, [[ADD_10]]
-; STORE-NEXT:    [[ADD_12:%.*]] = add nsw i32 undef, [[ADD_11]]
-; STORE-NEXT:    [[ADD_13:%.*]] = add nsw i32 undef, [[ADD_12]]
-; STORE-NEXT:    [[ADD_14:%.*]] = add nsw i32 undef, [[ADD_13]]
-; STORE-NEXT:    [[ADD_15:%.*]] = add nsw i32 undef, [[ADD_14]]
-; STORE-NEXT:    [[ADD_16:%.*]] = add nsw i32 undef, [[ADD_15]]
-; STORE-NEXT:    [[ADD_17:%.*]] = add nsw i32 undef, [[ADD_16]]
-; STORE-NEXT:    [[ADD_18:%.*]] = add nsw i32 undef, [[ADD_17]]
-; STORE-NEXT:    [[ADD_19:%.*]] = add nsw i32 undef, [[ADD_18]]
-; STORE-NEXT:    [[ADD_20:%.*]] = add nsw i32 undef, [[ADD_19]]
-; STORE-NEXT:    [[ADD_21:%.*]] = add nsw i32 undef, [[ADD_20]]
-; STORE-NEXT:    [[ADD_22:%.*]] = add nsw i32 undef, [[ADD_21]]
-; STORE-NEXT:    [[ADD_23:%.*]] = add nsw i32 undef, [[ADD_22]]
-; STORE-NEXT:    [[ADD_24:%.*]] = add nsw i32 undef, [[ADD_23]]
-; STORE-NEXT:    [[ADD_25:%.*]] = add nsw i32 undef, [[ADD_24]]
-; STORE-NEXT:    [[ADD_26:%.*]] = add nsw i32 undef, [[ADD_25]]
-; STORE-NEXT:    [[ADD_27:%.*]] = add nsw i32 undef, [[ADD_26]]
-; STORE-NEXT:    [[ADD_28:%.*]] = add nsw i32 undef, [[ADD_27]]
-; STORE-NEXT:    [[ADD_29:%.*]] = add nsw i32 undef, [[ADD_28]]
 ; STORE-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <32 x i32> [[TMP0]], <32 x i32> undef, <32 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; STORE-NEXT:    [[BIN_RDX:%.*]] = add nsw <32 x i32> [[TMP0]], [[RDX_SHUF]]
 ; STORE-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <32 x i32> [[BIN_RDX]], <32 x i32> undef, <32 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
@@ -1672,7 +1553,6 @@ define void @i32_red_example32(i32* %res) {
 ; STORE-NEXT:    [[RDX_SHUF7:%.*]] = shufflevector <32 x i32> [[BIN_RDX6]], <32 x i32> undef, <32 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; STORE-NEXT:    [[BIN_RDX8:%.*]] = add nsw <32 x i32> [[BIN_RDX6]], [[RDX_SHUF7]]
 ; STORE-NEXT:    [[TMP1:%.*]] = extractelement <32 x i32> [[BIN_RDX8]], i32 0
-; STORE-NEXT:    [[ADD_30:%.*]] = add nsw i32 undef, [[ADD_29]]
 ; STORE-NEXT:    store i32 [[TMP1]], i32* [[RES:%.*]], align 16
 ; STORE-NEXT:    ret void
 ;
@@ -1750,12 +1630,6 @@ define void @i32_red_call(i32 %val) {
 ; CHECK-LABEL: @i32_red_call(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i32>, <8 x i32>* bitcast ([32 x i32]* @arr_i32 to <8 x i32>*), align 16
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 undef, undef
-; CHECK-NEXT:    [[ADD_1:%.*]] = add nsw i32 undef, [[ADD]]
-; CHECK-NEXT:    [[ADD_2:%.*]] = add nsw i32 undef, [[ADD_1]]
-; CHECK-NEXT:    [[ADD_3:%.*]] = add nsw i32 undef, [[ADD_2]]
-; CHECK-NEXT:    [[ADD_4:%.*]] = add nsw i32 undef, [[ADD_3]]
-; CHECK-NEXT:    [[ADD_5:%.*]] = add nsw i32 undef, [[ADD_4]]
 ; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <8 x i32> [[TMP0]], <8 x i32> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add nsw <8 x i32> [[TMP0]], [[RDX_SHUF]]
 ; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <8 x i32> [[BIN_RDX]], <8 x i32> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
@@ -1763,19 +1637,12 @@ define void @i32_red_call(i32 %val) {
 ; CHECK-NEXT:    [[RDX_SHUF3:%.*]] = shufflevector <8 x i32> [[BIN_RDX2]], <8 x i32> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX4:%.*]] = add nsw <8 x i32> [[BIN_RDX2]], [[RDX_SHUF3]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <8 x i32> [[BIN_RDX4]], i32 0
-; CHECK-NEXT:    [[ADD_6:%.*]] = add nsw i32 undef, [[ADD_5]]
 ; CHECK-NEXT:    [[RES:%.*]] = call i32 @foobar(i32 [[TMP1]])
 ; CHECK-NEXT:    ret void
 ;
 ; STORE-LABEL: @i32_red_call(
 ; STORE-NEXT:  entry:
 ; STORE-NEXT:    [[TMP0:%.*]] = load <8 x i32>, <8 x i32>* bitcast ([32 x i32]* @arr_i32 to <8 x i32>*), align 16
-; STORE-NEXT:    [[ADD:%.*]] = add nsw i32 undef, undef
-; STORE-NEXT:    [[ADD_1:%.*]] = add nsw i32 undef, [[ADD]]
-; STORE-NEXT:    [[ADD_2:%.*]] = add nsw i32 undef, [[ADD_1]]
-; STORE-NEXT:    [[ADD_3:%.*]] = add nsw i32 undef, [[ADD_2]]
-; STORE-NEXT:    [[ADD_4:%.*]] = add nsw i32 undef, [[ADD_3]]
-; STORE-NEXT:    [[ADD_5:%.*]] = add nsw i32 undef, [[ADD_4]]
 ; STORE-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <8 x i32> [[TMP0]], <8 x i32> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
 ; STORE-NEXT:    [[BIN_RDX:%.*]] = add nsw <8 x i32> [[TMP0]], [[RDX_SHUF]]
 ; STORE-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <8 x i32> [[BIN_RDX]], <8 x i32> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
@@ -1783,7 +1650,6 @@ define void @i32_red_call(i32 %val) {
 ; STORE-NEXT:    [[RDX_SHUF3:%.*]] = shufflevector <8 x i32> [[BIN_RDX2]], <8 x i32> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; STORE-NEXT:    [[BIN_RDX4:%.*]] = add nsw <8 x i32> [[BIN_RDX2]], [[RDX_SHUF3]]
 ; STORE-NEXT:    [[TMP1:%.*]] = extractelement <8 x i32> [[BIN_RDX4]], i32 0
-; STORE-NEXT:    [[ADD_6:%.*]] = add nsw i32 undef, [[ADD_5]]
 ; STORE-NEXT:    [[RES:%.*]] = call i32 @foobar(i32 [[TMP1]])
 ; STORE-NEXT:    ret void
 ;
@@ -1811,12 +1677,6 @@ define void @i32_red_invoke(i32 %val) personality i32 (...)* @__gxx_personality_
 ; CHECK-LABEL: @i32_red_invoke(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i32>, <8 x i32>* bitcast ([32 x i32]* @arr_i32 to <8 x i32>*), align 16
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 undef, undef
-; CHECK-NEXT:    [[ADD_1:%.*]] = add nsw i32 undef, [[ADD]]
-; CHECK-NEXT:    [[ADD_2:%.*]] = add nsw i32 undef, [[ADD_1]]
-; CHECK-NEXT:    [[ADD_3:%.*]] = add nsw i32 undef, [[ADD_2]]
-; CHECK-NEXT:    [[ADD_4:%.*]] = add nsw i32 undef, [[ADD_3]]
-; CHECK-NEXT:    [[ADD_5:%.*]] = add nsw i32 undef, [[ADD_4]]
 ; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <8 x i32> [[TMP0]], <8 x i32> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add nsw <8 x i32> [[TMP0]], [[RDX_SHUF]]
 ; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <8 x i32> [[BIN_RDX]], <8 x i32> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
@@ -1824,7 +1684,6 @@ define void @i32_red_invoke(i32 %val) personality i32 (...)* @__gxx_personality_
 ; CHECK-NEXT:    [[RDX_SHUF3:%.*]] = shufflevector <8 x i32> [[BIN_RDX2]], <8 x i32> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX4:%.*]] = add nsw <8 x i32> [[BIN_RDX2]], [[RDX_SHUF3]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <8 x i32> [[BIN_RDX4]], i32 0
-; CHECK-NEXT:    [[ADD_6:%.*]] = add nsw i32 undef, [[ADD_5]]
 ; CHECK-NEXT:    [[RES:%.*]] = invoke i32 @foobar(i32 [[TMP1]])
 ; CHECK-NEXT:    to label [[NORMAL:%.*]] unwind label [[EXCEPTION:%.*]]
 ; CHECK:       exception:
@@ -1837,12 +1696,6 @@ define void @i32_red_invoke(i32 %val) personality i32 (...)* @__gxx_personality_
 ; STORE-LABEL: @i32_red_invoke(
 ; STORE-NEXT:  entry:
 ; STORE-NEXT:    [[TMP0:%.*]] = load <8 x i32>, <8 x i32>* bitcast ([32 x i32]* @arr_i32 to <8 x i32>*), align 16
-; STORE-NEXT:    [[ADD:%.*]] = add nsw i32 undef, undef
-; STORE-NEXT:    [[ADD_1:%.*]] = add nsw i32 undef, [[ADD]]
-; STORE-NEXT:    [[ADD_2:%.*]] = add nsw i32 undef, [[ADD_1]]
-; STORE-NEXT:    [[ADD_3:%.*]] = add nsw i32 undef, [[ADD_2]]
-; STORE-NEXT:    [[ADD_4:%.*]] = add nsw i32 undef, [[ADD_3]]
-; STORE-NEXT:    [[ADD_5:%.*]] = add nsw i32 undef, [[ADD_4]]
 ; STORE-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <8 x i32> [[TMP0]], <8 x i32> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
 ; STORE-NEXT:    [[BIN_RDX:%.*]] = add nsw <8 x i32> [[TMP0]], [[RDX_SHUF]]
 ; STORE-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <8 x i32> [[BIN_RDX]], <8 x i32> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
@@ -1850,7 +1703,6 @@ define void @i32_red_invoke(i32 %val) personality i32 (...)* @__gxx_personality_
 ; STORE-NEXT:    [[RDX_SHUF3:%.*]] = shufflevector <8 x i32> [[BIN_RDX2]], <8 x i32> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; STORE-NEXT:    [[BIN_RDX4:%.*]] = add nsw <8 x i32> [[BIN_RDX2]], [[RDX_SHUF3]]
 ; STORE-NEXT:    [[TMP1:%.*]] = extractelement <8 x i32> [[BIN_RDX4]], i32 0
-; STORE-NEXT:    [[ADD_6:%.*]] = add nsw i32 undef, [[ADD_5]]
 ; STORE-NEXT:    [[RES:%.*]] = invoke i32 @foobar(i32 [[TMP1]])
 ; STORE-NEXT:    to label [[NORMAL:%.*]] unwind label [[EXCEPTION:%.*]]
 ; STORE:       exception:

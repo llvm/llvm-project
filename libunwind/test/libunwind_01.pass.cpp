@@ -35,8 +35,29 @@ void test3(int i, int j, int k) {
   test2(j, k);
 }
 
+void test_no_info() {
+  unw_context_t context;
+  unw_getcontext(&context);
+
+  unw_cursor_t cursor;
+  unw_init_local(&cursor, &context);
+
+  unw_proc_info_t info;
+  int ret = unw_get_proc_info(&cursor, &info);
+  if (ret != UNW_ESUCCESS)
+    abort();
+
+  // Set the IP to an address clearly outside any function.
+  unw_set_reg(&cursor, UNW_REG_IP, (unw_word_t)&context);
+
+  ret = unw_get_proc_info(&cursor, &info);
+  if (ret != UNW_ENOINFO)
+    abort();
+}
+
 int main() {
   test1(1);
   test2(1, 2);
   test3(1, 2, 3);
+  test_no_info();
 }

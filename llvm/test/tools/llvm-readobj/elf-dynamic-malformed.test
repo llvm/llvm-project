@@ -7,26 +7,21 @@
 # RUN: llvm-readelf --all %t.bad-size 2>&1 \
 # RUN:   | FileCheck %s -DFILE=%t.bad-size --implicit-check-not=warning --check-prefix WARN-GNU
 
-# WARN-NOT: warning
 # WARN: warning: '[[FILE]]': invalid section size (4) or entity size (16)
+# WARN: warning: '[[FILE]]': invalid section size (4) or entity size (16)
+# WARN: warning: '[[FILE]]': no valid dynamic table was found
 # WARN-EMPTY:
-# WARN-NEXT: File:
-# WARN:      Symbols [
-# WARN:      ]
-# WARN-EMPTY:
-## A warning is printed at the place where a normal dynamic table should be. 
-# WARN-NEXT: warning: '[[FILE]]': invalid section size (4) or entity size (16)
-# WARN-NEXT: ProgramHeaders [
+# WARN: File:
+# WARN: Symbols [
+# WARN: ]
+# WARN: ProgramHeaders [
 
-# WARN-GNU-NOT:  warning
-# WARN-GNU:      warning: '[[FILE]]': invalid section size (4) or entity size (16)
+# WARN-GNU: warning: '[[FILE]]': invalid section size (4) or entity size (16)
+# WARN-GNU: warning: '[[FILE]]': invalid section size (4) or entity size (16)
+# WARN-GNU: warning: '[[FILE]]': no valid dynamic table was found
 # WARN-GNU-NEXT: ELF Header:
 # WARN-GNU:      Symbol table '.symtab' contains 1 entries:
 # WARN-GNU:        0:
-# WARN-GNU-EMPTY:
-## A warning is printed at the place where a normal dynamic table should be. 
-# WARN-GNU:      warning: '[[FILE]]': invalid section size (4) or entity size (16)
-# WARN-GNU-EMPTY:
 
 --- !ELF
 FileHeader:

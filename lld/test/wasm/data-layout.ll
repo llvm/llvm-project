@@ -26,19 +26,19 @@ target triple = "wasm32-unknown-unknown"
 ; CHECK-NEXT:         Mutable:         true
 ; CHECK-NEXT:         InitExpr:
 ; CHECK-NEXT:           Opcode:          I32_CONST
-; CHECK-NEXT:           Value:           66608
+; CHECK-NEXT:           Value:           66624
 ; CHECK-NEXT:       - Index:           1
 ; CHECK-NEXT:         Type:            I32
 ; CHECK-NEXT:         Mutable:         false
 ; CHECK-NEXT:         InitExpr:
 ; CHECK-NEXT:           Opcode:          I32_CONST
-; CHECK-NEXT:           Value:           1071
+; CHECK-NEXT:           Value:           1080
 ; CHECK-NEXT:       - Index:           2
 ; CHECK-NEXT:         Type:            I32
 ; CHECK-NEXT:         Mutable:         false
 ; CHECK-NEXT:         InitExpr:
 ; CHECK-NEXT:           Opcode:          I32_CONST
-; CHECK-NEXT:           Value:           66608
+; CHECK-NEXT:           Value:           66624
 
 ; CHECK:        - Type:            DATA
 ; CHECK-NEXT:     Segments:
@@ -47,19 +47,19 @@ target triple = "wasm32-unknown-unknown"
 ; CHECK-NEXT:         Offset:
 ; CHECK-NEXT:           Opcode:          I32_CONST
 ; CHECK-NEXT:           Value:           1024
-; CHECK-NEXT:         Content:         '0100000000000000000000000000000003000000000000002804000024040000'
-; CHECK-NEXT:       - SectionOffset:   45
-; CHECK-NEXT:         InitFlags:       0
-; CHECK-NEXT:         Offset:
-; CHECK-NEXT:           Opcode:          I32_CONST
-; CHECK-NEXT:           Value:           1056
-; CHECK-NEXT:         Content:         '0000000000000000'
-; CHECK-NEXT:       - SectionOffset:   59
-; CHECK-NEXT:         InitFlags:       0
-; CHECK-NEXT:         Offset:
-; CHECK-NEXT:           Opcode:          I32_CONST
-; CHECK-NEXT:           Value:           1064
 ; CHECK-NEXT:         Content:         68656C6C6F0A00
+; CHECK-NEXT:       - SectionOffset:   20
+; CHECK-NEXT:         InitFlags:       0
+; CHECK-NEXT:         Offset:
+; CHECK-NEXT:           Opcode:          I32_CONST
+; CHECK-NEXT:           Value:           1040
+; CHECK-NEXT:         Content:         '0100000000000000000000000000000003000000000000000004000034040000'
+; CHECK-NEXT:       - SectionOffset:   58
+; CHECK-NEXT:         InitFlags:       0
+; CHECK-NEXT:         Offset:
+; CHECK-NEXT:           Opcode:          I32_CONST
+; CHECK-NEXT:           Value:           1072
+; CHECK-NEXT:         Content:         '0000000000000000'
 ; CHECK-NEXT:    - Type:            CUSTOM
 
 
@@ -92,10 +92,10 @@ target triple = "wasm32-unknown-unknown"
 ; RELOC-NEXT:     Relocations:
 ; RELOC-NEXT:       - Type:            R_WASM_MEMORY_ADDR_I32
 ; RELOC-NEXT:         Index:           3
-; RELOC-NEXT:         Offset:          0x00000018
+; RELOC-NEXT:         Offset:          0x00000024
 ; RELOC-NEXT:       - Type:            R_WASM_MEMORY_ADDR_I32
 ; RELOC-NEXT:         Index:           4
-; RELOC-NEXT:         Offset:          0x0000002E
+; RELOC-NEXT:         Offset:          0x0000002D
 ; RELOC-NEXT:         Addend:          4
 ; RELOC-NEXT:     Segments:
 ; RELOC-NEXT:       - SectionOffset:   6
@@ -103,60 +103,60 @@ target triple = "wasm32-unknown-unknown"
 ; RELOC-NEXT:         Offset:
 ; RELOC-NEXT:           Opcode:          I32_CONST
 ; RELOC-NEXT:           Value:           0
+; RELOC-NEXT:         Content:         68656C6C6F0A00
+; RELOC-NEXT:       - SectionOffset:   18
+; RELOC-NEXT:         InitFlags:       0
+; RELOC-NEXT:         Offset:
+; RELOC-NEXT:           Opcode:          I32_CONST
+; RELOC-NEXT:           Value:           8
 ; RELOC-NEXT:         Content:         '01000000'
-; RELOC-NEXT:       - SectionOffset:   15
+; RELOC-NEXT:       - SectionOffset:   27
 ; RELOC-NEXT:         InitFlags:       0
 ; RELOC-NEXT:         Offset:
 ; RELOC-NEXT:           Opcode:          I32_CONST
 ; RELOC-NEXT:           Value:           16
 ; RELOC-NEXT:         Content:         '03000000'
-; RELOC-NEXT:       - SectionOffset:   24
+; RELOC-NEXT:       - SectionOffset:   36
 ; RELOC-NEXT:         InitFlags:       0
 ; RELOC-NEXT:         Offset:
 ; RELOC-NEXT:           Opcode:          I32_CONST
 ; RELOC-NEXT:           Value:           24
-; RELOC-NEXT:         Content:         '28000000'
-; RELOC-NEXT:       - SectionOffset:   33
+; RELOC-NEXT:         Content:         '00000000'
+; RELOC-NEXT:       - SectionOffset:   45
 ; RELOC-NEXT:         InitFlags:       0
 ; RELOC-NEXT:         Offset:
 ; RELOC-NEXT:           Opcode:          I32_CONST
 ; RELOC-NEXT:           Value:           28
+; RELOC-NEXT:         Content:         '24000000'
+; RELOC-NEXT:       - SectionOffset:   54
+; RELOC-NEXT:         InitFlags:       0
+; RELOC-NEXT:         Offset:
+; RELOC-NEXT:           Opcode:          I32_CONST
+; RELOC-NEXT:           Value:           32
 ; RELOC-NEXT:         Content:         '0000000000000000'
-; RELOC-NEXT:       - SectionOffset:   46
-; RELOC-NEXT:         InitFlags:       0
-; RELOC-NEXT:         Offset:
-; RELOC-NEXT:           Opcode:          I32_CONST
-; RELOC-NEXT:           Value:           36
-; RELOC-NEXT:         Content:         '20000000'
-; RELOC-NEXT:       - SectionOffset:   55
-; RELOC-NEXT:         InitFlags:       0
-; RELOC-NEXT:         Offset:
-; RELOC-NEXT:           Opcode:          I32_CONST
-; RELOC-NEXT:           Value:           40
-; RELOC-NEXT:         Content:         68656C6C6F0A00
 
 ; RELOC:          SymbolTable:
 ; RELOC-NEXT:       - Index:           0
 ; RELOC-NEXT:         Kind:            DATA
 ; RELOC-NEXT:         Name:            foo
 ; RELOC-NEXT:         Flags:           [ VISIBILITY_HIDDEN ]
-; RELOC-NEXT:         Segment:         0
+; RELOC-NEXT:         Segment:         1
 ; RELOC-NEXT:         Size:            4
 ; RELOC-NEXT:       - Index:           1
 ; RELOC-NEXT:         Kind:            DATA
 ; RELOC-NEXT:         Name:            aligned_bar
 ; RELOC-NEXT:         Flags:           [ VISIBILITY_HIDDEN ]
-; RELOC-NEXT:         Segment:         1
+; RELOC-NEXT:         Segment:         2
 ; RELOC-NEXT:         Size:            4
 ; RELOC-NEXT:       - Index:           2
 ; RELOC-NEXT:         Kind:            DATA
 ; RELOC-NEXT:         Name:            external_ref
 ; RELOC-NEXT:         Flags:           [  ]
-; RELOC-NEXT:         Segment:         2
+; RELOC-NEXT:         Segment:         3
 ; RELOC-NEXT:         Size:            4
 ; RELOC-NEXT:       - Index:           3
 ; RELOC-NEXT:         Kind:            DATA
 ; RELOC-NEXT:         Name:            hello_str
 ; RELOC-NEXT:         Flags:           [  ]
-; RELOC-NEXT:         Segment:         5
+; RELOC-NEXT:         Segment:         0
 ; RELOC-NEXT:         Size:            7

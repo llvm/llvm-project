@@ -982,6 +982,9 @@ void Verifier::visitDICompositeType(const DICompositeType &N) {
            N.getRawVTableHolder());
   AssertDI(!hasConflictingReferenceFlags(N.getFlags()),
            "invalid reference flags", &N);
+  unsigned DIBlockByRefStruct = 1 << 4;
+  AssertDI((N.getFlags() & DIBlockByRefStruct) == 0,
+           "DIBlockByRefStruct on DICompositeType is no longer supported", &N);
 
   if (N.isVector()) {
     const DINodeArray Elements = N.getElements();
@@ -2501,6 +2504,15 @@ void Verifier::visitCallBrInst(CallBrInst &CBI) {
         Assert(CBI.getOperand(i) != CBI.getOperand(j),
                "Duplicate callbr destination!", &CBI);
   }
+  {
+    SmallPtrSet<BasicBlock *, 4> ArgBBs;
+    for (Value *V : CBI.args())
+      if (auto *BA = dyn_cast<BlockAddress>(V))
+        ArgBBs.insert(BA->getBasicBlock());
+    for (BasicBlock *BB : CBI.getIndirectDests())
+      Assert(ArgBBs.find(BB) != ArgBBs.end(),
+             "Indirect label missing from arglist.", &CBI);
+  }
 
   visitTerminator(CBI);
 }
@@ -2719,8 +2731,8 @@ void Verifier::visitPtrToIntInst(PtrToIntInst &I) {
          &I);
 
   if (SrcTy->isVectorTy()) {
-    VectorType *VSrc = dyn_cast<VectorType>(SrcTy);
-    VectorType *VDest = dyn_cast<VectorType>(DestTy);
+    VectorType *VSrc = cast<VectorType>(SrcTy);
+    VectorType *VDest = cast<VectorType>(DestTy);
     Assert(VSrc->getNumElements() == VDest->getNumElements(),
            "PtrToInt Vector width mismatch", &I);
   }
@@ -2744,8 +2756,8 @@ void Verifier::visitIntToPtrInst(IntToPtrInst &I) {
   Assert(SrcTy->isVectorTy() == DestTy->isVectorTy(), "IntToPtr type mismatch",
          &I);
   if (SrcTy->isVectorTy()) {
-    VectorType *VSrc = dyn_cast<VectorType>(SrcTy);
-    VectorType *VDest = dyn_cast<VectorType>(DestTy);
+    VectorType *VSrc = cast<VectorType>(SrcTy);
+    VectorType *VDest = cast<VectorType>(DestTy);
     Assert(VSrc->getNumElements() == VDest->getNumElements(),
            "IntToPtr Vector width mismatch", &I);
   }
@@ -4903,11 +4915,6 @@ void Verifier::visitDbgIntrinsic(StringRef Kind, DbgVariableIntrinsic &DII) {
   // This check is redundant with one in visitLocalVariable().
   AssertDI(isType(Var->getRawType()), "invalid type ref", Var,
            Var->getRawType());
-  if (auto *Type = dyn_cast_or_null<DIType>(Var->getRawType()))
-    if (Type->isBlockByrefStruct())
-      AssertDI(DII.getExpression() && DII.getExpression()->getNumElements(),
-               "BlockByRef variable without complex expression", Var, &DII);
-
   verifyFnArgs(DII);
 }
 

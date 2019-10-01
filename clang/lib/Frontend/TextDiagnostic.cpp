@@ -683,8 +683,9 @@ void TextDiagnostic::emitDiagnosticMessage(
   if (DiagOpts->ShowColors)
     OS.resetColor();
 
-  printDiagnosticLevel(OS, Level, DiagOpts->ShowColors,
-                       DiagOpts->CLFallbackMode);
+  if (DiagOpts->ShowLevel)
+    printDiagnosticLevel(OS, Level, DiagOpts->ShowColors,
+                         DiagOpts->CLFallbackMode);
   printDiagnosticMessage(OS,
                          /*IsSupplemental*/ Level == DiagnosticsEngine::Note,
                          Message, OS.tell() - StartOfLocationInfo,

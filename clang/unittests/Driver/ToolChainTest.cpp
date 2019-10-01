@@ -60,7 +60,7 @@ TEST(ToolChainTest, VFSGCCInstallation) {
                                 llvm::MemoryBuffer::getMemBuffer("\n"));
 
   std::unique_ptr<Compilation> C(TheDriver.BuildCompilation(
-      {"-fsyntax-only", "--gcc-toolchain=", "foo.cpp"}));
+      {"-fsyntax-only", "--gcc-toolchain=", "--sysroot=", "foo.cpp"}));
   EXPECT_TRUE(C);
 
   std::string S;

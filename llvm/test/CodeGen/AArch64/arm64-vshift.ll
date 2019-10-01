@@ -1192,6 +1192,96 @@ define <2 x i64> @ushll2_2d(<4 x i32>* %A) nounwind {
         ret <2 x i64> %tmp3
 }
 
+declare <16 x i8> @llvm.aarch64.neon.ushl.v16i8(<16 x i8>, <16 x i8>)
+declare <8 x i16> @llvm.aarch64.neon.ushl.v8i16(<8 x i16>, <8 x i16>)
+declare <4 x i32> @llvm.aarch64.neon.ushl.v4i32(<4 x i32>, <4 x i32>)
+declare <2 x i64> @llvm.aarch64.neon.ushl.v2i64(<2 x i64>, <2 x i64>)
+
+define <8 x i16> @neon.ushll8h_constant_shift(<8 x i8>* %A) nounwind {
+;CHECK-LABEL: neon.ushll8h_constant_shift
+;CHECK: ushll.8h v0, {{v[0-9]+}}, #1
+  %tmp1 = load <8 x i8>, <8 x i8>* %A
+  %tmp2 = zext <8 x i8> %tmp1 to <8 x i16>
+  %tmp3 = call <8 x i16> @llvm.aarch64.neon.ushl.v8i16(<8 x i16> %tmp2, <8 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>)
+  ret <8 x i16> %tmp3
+}
+
+define <8 x i16> @neon.ushl8h_no_constant_shift(<8 x i8>* %A) nounwind {
+;CHECK-LABEL: neon.ushl8h_no_constant_shift
+;CHECK: ushl.8h v0, v0, v0
+  %tmp1 = load <8 x i8>, <8 x i8>* %A
+  %tmp2 = zext <8 x i8> %tmp1 to <8 x i16>
+  %tmp3 = call <8 x i16> @llvm.aarch64.neon.ushl.v8i16(<8 x i16> %tmp2, <8 x i16> %tmp2)
+  ret <8 x i16> %tmp3
+}
+
+define <4 x i32> @neon.ushl8h_constant_shift_extend_not_2x(<4 x i8>* %A) nounwind {
+;CHECK-LABEL: @neon.ushl8h_constant_shift_extend_not_2x
+;CHECK-NOT: ushll.8h v0,
+;CHECK: ldrb    w8, [x0]
+;CHECK: fmov    s0, w8
+;CHECK: ldrb    w8, [x0, #1]
+;CHECK: mov.s   v0[1], w8
+;CHECK: ldrb    w8, [x0, #2]
+;CHECK: mov.s   v0[2], w8
+;CHECK: ldrb    w8, [x0, #3]
+;CHECK: mov.s   v0[3], w8
+;CHECK: shl.4s v0, v0, #1
+  %tmp1 = load <4 x i8>, <4 x i8>* %A
+  %tmp2 = zext <4 x i8> %tmp1 to <4 x i32>
+  %tmp3 = call <4 x i32> @llvm.aarch64.neon.ushl.v4i32(<4 x i32> %tmp2, <4 x i32> <i32 1, i32 1, i32 1, i32 1>)
+  ret <4 x i32> %tmp3
+}
+
+define <8 x i16> @neon.ushl8_noext_constant_shift(<8 x i16>* %A) nounwind {
+; CHECK-LABEL: neon.ushl8_noext_constant_shift
+; CHECK:      ldr       q0, [x0]
+; CHECK-NEXT: shl.8h   v0, v0, #1
+; CHECK-NEXT: ret
+  %tmp1 = load <8 x i16>, <8 x i16>* %A
+  %tmp3 = call <8 x i16> @llvm.aarch64.neon.ushl.v8i16(<8 x i16> %tmp1, <8 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>)
+  ret <8 x i16> %tmp3
+}
+
+define <4 x i32> @neon.ushll4s_constant_shift(<4 x i16>* %A) nounwind {
+;CHECK-LABEL: neon.ushll4s_constant_shift
+;CHECK: ushll.4s v0, {{v[0-9]+}}, #1
+  %tmp1 = load <4 x i16>, <4 x i16>* %A
+  %tmp2 = zext <4 x i16> %tmp1 to <4 x i32>
+  %tmp3 = call <4 x i32> @llvm.aarch64.neon.ushl.v4i32(<4 x i32> %tmp2, <4 x i32> <i32 1, i32 1, i32 1, i32 1>)
+  ret <4 x i32> %tmp3
+}
+
+; FIXME: unnecessary ushll.4s v0, v0, #0?
+define <4 x i32> @neon.ushll4s_neg_constant_shift(<4 x i16>* %A) nounwind {
+; CHECK-LABEL: neon.ushll4s_neg_constant_shift
+; CHECK: movi.2d v1, #0xffffffffffffffff
+; CHECK: ushll.4s v0, v0, #0
+; CHECK: ushl.4s v0, v0, v1
+  %tmp1 = load <4 x i16>, <4 x i16>* %A
+  %tmp2 = zext <4 x i16> %tmp1 to <4 x i32>
+  %tmp3 = call <4 x i32> @llvm.aarch64.neon.ushl.v4i32(<4 x i32> %tmp2, <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>)
+  ret <4 x i32> %tmp3
+}
+
+; FIXME: should be constant folded.
+define <4 x i32> @neon.ushll4s_constant_fold() nounwind {
+; CHECK-LABEL: neon.ushll4s_constant_fold
+; CHECK: shl.4s v0, v0, #1
+;
+  %tmp3 = call <4 x i32> @llvm.aarch64.neon.ushl.v4i32(<4 x i32> <i32 0, i32 1, i32 2, i32 3>, <4 x i32> <i32 1, i32 1, i32 1, i32 1>)
+  ret <4 x i32> %tmp3
+}
+
+define <2 x i64> @neon.ushll2d_constant_shift(<2 x i32>* %A) nounwind {
+;CHECK-LABEL: neon.ushll2d_constant_shift
+;CHECK: ushll.2d v0, {{v[0-9]+}}, #1
+  %tmp1 = load <2 x i32>, <2 x i32>* %A
+  %tmp2 = zext <2 x i32> %tmp1 to <2 x i64>
+  %tmp3 = call <2 x i64> @llvm.aarch64.neon.ushl.v2i64(<2 x i64> %tmp2, <2 x i64> <i64 1, i64 1>)
+  ret <2 x i64> %tmp3
+}
+
 define <8 x i16> @sshll8h(<8 x i8>* %A) nounwind {
 ;CHECK-LABEL: sshll8h:
 ;CHECK: sshll.8h v0, {{v[0-9]+}}, #1
@@ -1201,21 +1291,128 @@ define <8 x i16> @sshll8h(<8 x i8>* %A) nounwind {
         ret <8 x i16> %tmp3
 }
 
-define <4 x i32> @sshll4s(<4 x i16>* %A) nounwind {
-;CHECK-LABEL: sshll4s:
-;CHECK: sshll.4s v0, {{v[0-9]+}}, #1
-        %tmp1 = load <4 x i16>, <4 x i16>* %A
-        %tmp2 = sext <4 x i16> %tmp1 to <4 x i32>
-        %tmp3 = shl <4 x i32> %tmp2, <i32 1, i32 1, i32 1, i32 1>
-        ret <4 x i32> %tmp3
-}
-
 define <2 x i64> @sshll2d(<2 x i32>* %A) nounwind {
 ;CHECK-LABEL: sshll2d:
 ;CHECK: sshll.2d v0, {{v[0-9]+}}, #1
         %tmp1 = load <2 x i32>, <2 x i32>* %A
         %tmp2 = sext <2 x i32> %tmp1 to <2 x i64>
         %tmp3 = shl <2 x i64> %tmp2, <i64 1, i64 1>
+        ret <2 x i64> %tmp3
+}
+
+declare <16 x i8> @llvm.aarch64.neon.sshl.v16i8(<16 x i8>, <16 x i8>)
+declare <8 x i16> @llvm.aarch64.neon.sshl.v8i16(<8 x i16>, <8 x i16>)
+declare <4 x i32> @llvm.aarch64.neon.sshl.v4i32(<4 x i32>, <4 x i32>)
+declare <2 x i64> @llvm.aarch64.neon.sshl.v2i64(<2 x i64>, <2 x i64>)
+
+define <16 x i8> @neon.sshl16b_constant_shift(<16 x i8>* %A) nounwind {
+;CHECK-LABEL: neon.sshl16b_constant_shift
+;CHECK: shl.16b {{v[0-9]+}}, {{v[0-9]+}}, #1
+        %tmp1 = load <16 x i8>, <16 x i8>* %A
+        %tmp2 = call <16 x i8> @llvm.aarch64.neon.sshl.v16i8(<16 x i8> %tmp1, <16 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>)
+        ret <16 x i8> %tmp2
+}
+
+define <16 x i8> @neon.sshl16b_non_splat_constant_shift(<16 x i8>* %A) nounwind {
+;CHECK-LABEL: neon.sshl16b_non_splat_constant_shift
+;CHECK: sshl.16b {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}
+        %tmp1 = load <16 x i8>, <16 x i8>* %A
+        %tmp2 = call <16 x i8> @llvm.aarch64.neon.sshl.v16i8(<16 x i8> %tmp1, <16 x i8> <i8 6, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>)
+        ret <16 x i8> %tmp2
+}
+
+define <16 x i8> @neon.sshl16b_neg_constant_shift(<16 x i8>* %A) nounwind {
+;CHECK-LABEL: neon.sshl16b_neg_constant_shift
+;CHECK: sshl.16b {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}
+        %tmp1 = load <16 x i8>, <16 x i8>* %A
+        %tmp2 = call <16 x i8> @llvm.aarch64.neon.sshl.v16i8(<16 x i8> %tmp1, <16 x i8> <i8 -2, i8 -2, i8 -2, i8 -2, i8 -2, i8 -2, i8 -2, i8 -2, i8 -2, i8 -2, i8 -2, i8 -2, i8 -2, i8 -2, i8 -2, i8 -2>)
+        ret <16 x i8> %tmp2
+}
+
+define <8 x i16> @neon.sshll8h_constant_shift(<8 x i8>* %A) nounwind {
+;CHECK-LABEL: neon.sshll8h_constant_shift
+;CHECK: sshll.8h v0, {{v[0-9]+}}, #1
+        %tmp1 = load <8 x i8>, <8 x i8>* %A
+        %tmp2 = sext <8 x i8> %tmp1 to <8 x i16>
+        %tmp3 = call <8 x i16> @llvm.aarch64.neon.sshl.v8i16(<8 x i16> %tmp2, <8 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>)
+        ret <8 x i16> %tmp3
+}
+
+define <4 x i32> @neon.sshl4s_wrong_ext_constant_shift(<4 x i8>* %A) nounwind {
+;CHECK-LABEL: neon.sshl4s_wrong_ext_constant_shift
+;CHECK:       ldrsb   w8, [x0]
+;CHECK-NEXT:  fmov    s0, w8
+;CHECK-NEXT:  ldrsb   w8, [x0, #1]
+;CHECK-NEXT:  mov.s   v0[1], w8
+;CHECK-NEXT:  ldrsb   w8, [x0, #2]
+;CHECK-NEXT:  mov.s   v0[2], w8
+;CHECK-NEXT:  ldrsb   w8, [x0, #3]
+;CHECK-NEXT:  mov.s   v0[3], w8
+;CHECK-NEXT:  shl.4s  v0, v0, #1
+        %tmp1 = load <4 x i8>, <4 x i8>* %A
+        %tmp2 = sext <4 x i8> %tmp1 to <4 x i32>
+        %tmp3 = call <4 x i32> @llvm.aarch64.neon.sshl.v4i32(<4 x i32> %tmp2, <4 x i32> <i32 1, i32 1, i32 1, i32 1>)
+        ret <4 x i32> %tmp3
+}
+
+define <4 x i32> @neon.sshll4s_constant_shift(<4 x i16>* %A) nounwind {
+;CHECK-LABEL: neon.sshll4s_constant_shift
+;CHECK: sshll.4s v0, {{v[0-9]+}}, #1
+        %tmp1 = load <4 x i16>, <4 x i16>* %A
+        %tmp2 = sext <4 x i16> %tmp1 to <4 x i32>
+        %tmp3 = call <4 x i32> @llvm.aarch64.neon.sshl.v4i32(<4 x i32> %tmp2, <4 x i32> <i32 1, i32 1, i32 1, i32 1>)
+        ret <4 x i32> %tmp3
+}
+
+define <4 x i32> @neon.sshll4s_neg_constant_shift(<4 x i16>* %A) nounwind {
+;CHECK-LABEL: neon.sshll4s_neg_constant_shift
+;CHECK: movi.2d v1, #0xffffffffffffffff
+;CHECK: sshll.4s v0, v0, #0
+;CHECK: sshl.4s v0, v0, v1
+        %tmp1 = load <4 x i16>, <4 x i16>* %A
+        %tmp2 = sext <4 x i16> %tmp1 to <4 x i32>
+        %tmp3 = call <4 x i32> @llvm.aarch64.neon.sshl.v4i32(<4 x i32> %tmp2, <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>)
+        ret <4 x i32> %tmp3
+}
+
+; FIXME: should be constant folded.
+define <4 x i32> @neon.sshl4s_constant_fold() nounwind {
+;CHECK-LABEL: neon.sshl4s_constant_fold
+;CHECK: shl.4s {{v[0-9]+}}, {{v[0-9]+}}, #2
+        %tmp3 = call <4 x i32> @llvm.aarch64.neon.sshl.v4i32(<4 x i32> <i32 0, i32 1, i32 2, i32 3>, <4 x i32> <i32 2, i32 2, i32 2, i32 2>)
+        ret <4 x i32> %tmp3
+}
+
+define <4 x i32> @neon.sshl4s_no_fold(<4 x i32>* %A) nounwind {
+;CHECK-LABEL: neon.sshl4s_no_fold
+;CHECK: shl.4s {{v[0-9]+}}, {{v[0-9]+}}, #1
+        %tmp1 = load <4 x i32>, <4 x i32>* %A
+        %tmp3 = call <4 x i32> @llvm.aarch64.neon.sshl.v4i32(<4 x i32> %tmp1, <4 x i32> <i32 1, i32 1, i32 1, i32 1>)
+        ret <4 x i32> %tmp3
+}
+
+define <2 x i64> @neon.sshll2d_constant_shift(<2 x i32>* %A) nounwind {
+;CHECK-LABEL: neon.sshll2d_constant_shift
+;CHECK: sshll.2d v0, {{v[0-9]+}}, #1
+        %tmp1 = load <2 x i32>, <2 x i32>* %A
+        %tmp2 = sext <2 x i32> %tmp1 to <2 x i64>
+        %tmp3 = call <2 x i64> @llvm.aarch64.neon.sshl.v2i64(<2 x i64> %tmp2, <2 x i64> <i64 1, i64 1>)
+        ret <2 x i64> %tmp3
+}
+
+; FIXME: should be constant folded.
+define <2 x i64> @neon.sshl2d_constant_fold() nounwind {
+;CHECK-LABEL: neon.sshl2d_constant_fold
+;CHECK: shl.2d {{v[0-9]+}}, {{v[0-9]+}}, #1
+        %tmp3 = call <2 x i64> @llvm.aarch64.neon.sshl.v2i64(<2 x i64> <i64 99, i64 1000>, <2 x i64> <i64 1, i64 1>)
+        ret <2 x i64> %tmp3
+}
+
+define <2 x i64> @neon.sshl2d_no_fold(<2 x i64>* %A) nounwind {
+;CHECK-LABEL: neon.sshl2d_no_fold
+;CHECK: shl.2d {{v[0-9]+}}, {{v[0-9]+}}, #2
+        %tmp2 = load <2 x i64>, <2 x i64>* %A
+        %tmp3 = call <2 x i64> @llvm.aarch64.neon.sshl.v2i64(<2 x i64> %tmp2, <2 x i64> <i64 2, i64 2>)
         ret <2 x i64> %tmp3
 }
 

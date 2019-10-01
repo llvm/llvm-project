@@ -1991,7 +1991,10 @@ int UnwindCursor<A, R>::step() {
 
 template <typename A, typename R>
 void UnwindCursor<A, R>::getInfo(unw_proc_info_t *info) {
-  *info = _info;
+  if (_unwindInfoMissing)
+    memset(info, 0, sizeof(*info));
+  else
+    *info = _info;
 }
 
 template <typename A, typename R>

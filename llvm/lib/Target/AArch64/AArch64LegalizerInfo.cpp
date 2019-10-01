@@ -82,7 +82,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
 
   getActionDefinitionsBuilder(G_BSWAP)
       .legalFor({s32, s64, v4s32, v2s32, v2s64})
-      .clampScalar(0, s16, s64)
+      .clampScalar(0, s32, s64)
       .widenScalarToNextPow2(0);
 
   getActionDefinitionsBuilder({G_ADD, G_SUB, G_MUL, G_AND, G_OR, G_XOR})
@@ -124,8 +124,12 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
         return !SrcTy.isVector() && SrcTy.getSizeInBits() == 32 &&
                AmtTy.getSizeInBits() == 32;
       })
-      .legalFor(
-          {{s32, s32}, {s32, s64}, {s64, s64}, {v2s32, v2s32}, {v4s32, v4s32}})
+      .legalFor({{s32, s32},
+                 {s32, s64},
+                 {s64, s64},
+                 {v2s32, v2s32},
+                 {v4s32, v4s32},
+                 {v2s64, v2s64}})
       .clampScalar(1, s32, s64)
       .clampScalar(0, s32, s64)
       .minScalarSameAs(1, 0);

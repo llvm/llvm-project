@@ -17,8 +17,8 @@ define i32 @main() nounwind {
 ; RV32IFD:       # %bb.0: # %entry
 ; RV32IFD-NEXT:    addi sp, sp, -16
 ; RV32IFD-NEXT:    sw ra, 12(sp)
-; RV32IFD-NEXT:    mv a0, zero
 ; RV32IFD-NEXT:    lui a1, 262144
+; RV32IFD-NEXT:    mv a0, zero
 ; RV32IFD-NEXT:    call test
 ; RV32IFD-NEXT:    sw a0, 0(sp)
 ; RV32IFD-NEXT:    sw a1, 4(sp)

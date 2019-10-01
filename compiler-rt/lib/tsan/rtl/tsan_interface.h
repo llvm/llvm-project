@@ -94,6 +94,11 @@ void __tsan_read_range(void *addr, unsigned long size);
 SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_write_range(void *addr, unsigned long size);
 
+SANITIZER_INTERFACE_ATTRIBUTE
+void __tsan_read_range_pc(void *addr, unsigned long size, void *pc);  // NOLINT
+SANITIZER_INTERFACE_ATTRIBUTE
+void __tsan_write_range_pc(void *addr, unsigned long size, void *pc);  // NOLINT
+
 // User may provide function that would be called right when TSan detects
 // an error. The argument 'report' is an opaque pointer that can be used to
 // gather additional information using other TSan report API functions.

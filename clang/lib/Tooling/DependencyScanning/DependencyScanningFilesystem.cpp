@@ -193,6 +193,9 @@ private:
 llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>>
 createFile(const CachedFileSystemEntry *Entry,
            ExcludedPreprocessorDirectiveSkipMapping *PPSkipMappings) {
+  if (Entry->isDirectory())
+    return llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>>(
+        std::make_error_code(std::errc::is_a_directory));
   llvm::ErrorOr<StringRef> Contents = Entry->getContents();
   if (!Contents)
     return Contents.getError();

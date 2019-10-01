@@ -158,6 +158,7 @@ private:
                                     QualifiedNameNode *QN);
   SymbolNode *demangleDeclarator(StringView &MangledName);
   SymbolNode *demangleMD5Name(StringView &MangledName);
+  SymbolNode *demangleTypeinfoName(StringView &MangledName);
 
   VariableSymbolNode *demangleVariableEncoding(StringView &MangledName,
                                                StorageClass SC);

@@ -4,6 +4,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux -mcpu=nehalem | FileCheck %s --check-prefix=NEHALEM
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux -mcpu=sandybridge | FileCheck %s --check-prefix=SANDYBRIDGE
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux -mcpu=skylake | FileCheck %s --check-prefix=SKYLAKE
+; RUN: llc < %s -mtriple=x86_64-unknown-linux -mcpu=knl | FileCheck %s --check-prefix=KNL
 
 
 declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1) nounwind
@@ -28,6 +29,10 @@ define void @memset_0(i8* %a) nounwind  {
 ; SKYLAKE-LABEL: memset_0:
 ; SKYLAKE:       # %bb.0: # %entry
 ; SKYLAKE-NEXT:    retq
+;
+; KNL-LABEL: memset_0:
+; KNL:       # %bb.0: # %entry
+; KNL-NEXT:    retq
 entry:
 	call void @llvm.memset.p0i8.i64(i8* %a, i8 0, i64 0, i1 false)
 	ret void
@@ -59,6 +64,11 @@ define void @memset_4(i8* %a) nounwind  {
 ; SKYLAKE:       # %bb.0: # %entry
 ; SKYLAKE-NEXT:    movl $0, (%rdi)
 ; SKYLAKE-NEXT:    retq
+;
+; KNL-LABEL: memset_4:
+; KNL:       # %bb.0: # %entry
+; KNL-NEXT:    movl $0, (%rdi)
+; KNL-NEXT:    retq
 entry:
 	call void @llvm.memset.p0i8.i64(i8* %a, i8 0, i64 4, i1 false)
 	ret void
@@ -95,6 +105,12 @@ define void @memset_5(i8* %a) nounwind  {
 ; SKYLAKE-NEXT:    movb $0, 4(%rdi)
 ; SKYLAKE-NEXT:    movl $0, (%rdi)
 ; SKYLAKE-NEXT:    retq
+;
+; KNL-LABEL: memset_5:
+; KNL:       # %bb.0: # %entry
+; KNL-NEXT:    movb $0, 4(%rdi)
+; KNL-NEXT:    movl $0, (%rdi)
+; KNL-NEXT:    retq
 entry:
 	call void @llvm.memset.p0i8.i64(i8* %a, i8 0, i64 5, i1 false)
 	ret void
@@ -131,6 +147,12 @@ define void @memset_7(i8* %a) nounwind  {
 ; SKYLAKE-NEXT:    movl $0, 3(%rdi)
 ; SKYLAKE-NEXT:    movl $0, (%rdi)
 ; SKYLAKE-NEXT:    retq
+;
+; KNL-LABEL: memset_7:
+; KNL:       # %bb.0: # %entry
+; KNL-NEXT:    movl $0, 3(%rdi)
+; KNL-NEXT:    movl $0, (%rdi)
+; KNL-NEXT:    retq
 entry:
 	call void @llvm.memset.p0i8.i64(i8* %a, i8 0, i64 7, i1 false)
 	ret void
@@ -163,6 +185,11 @@ define void @memset_8(i8* %a) nounwind  {
 ; SKYLAKE:       # %bb.0: # %entry
 ; SKYLAKE-NEXT:    movq $0, (%rdi)
 ; SKYLAKE-NEXT:    retq
+;
+; KNL-LABEL: memset_8:
+; KNL:       # %bb.0: # %entry
+; KNL-NEXT:    movq $0, (%rdi)
+; KNL-NEXT:    retq
 entry:
 	call void @llvm.memset.p0i8.i64(i8* %a, i8 0, i64 8, i1 false)
 	ret void
@@ -200,6 +227,12 @@ define void @memset_11(i8* %a) nounwind  {
 ; SKYLAKE-NEXT:    movl $0, 7(%rdi)
 ; SKYLAKE-NEXT:    movq $0, (%rdi)
 ; SKYLAKE-NEXT:    retq
+;
+; KNL-LABEL: memset_11:
+; KNL:       # %bb.0: # %entry
+; KNL-NEXT:    movl $0, 7(%rdi)
+; KNL-NEXT:    movq $0, (%rdi)
+; KNL-NEXT:    retq
 entry:
 	call void @llvm.memset.p0i8.i64(i8* %a, i8 0, i64 11, i1 false)
 	ret void
@@ -238,6 +271,12 @@ define void @memset_13(i8* %a) nounwind  {
 ; SKYLAKE-NEXT:    movq $0, 5(%rdi)
 ; SKYLAKE-NEXT:    movq $0, (%rdi)
 ; SKYLAKE-NEXT:    retq
+;
+; KNL-LABEL: memset_13:
+; KNL:       # %bb.0: # %entry
+; KNL-NEXT:    movq $0, 5(%rdi)
+; KNL-NEXT:    movq $0, (%rdi)
+; KNL-NEXT:    retq
 entry:
 	call void @llvm.memset.p0i8.i64(i8* %a, i8 0, i64 13, i1 false)
 	ret void
@@ -276,6 +315,12 @@ define void @memset_15(i8* %a) nounwind  {
 ; SKYLAKE-NEXT:    movq $0, 7(%rdi)
 ; SKYLAKE-NEXT:    movq $0, (%rdi)
 ; SKYLAKE-NEXT:    retq
+;
+; KNL-LABEL: memset_15:
+; KNL:       # %bb.0: # %entry
+; KNL-NEXT:    movq $0, 7(%rdi)
+; KNL-NEXT:    movq $0, (%rdi)
+; KNL-NEXT:    retq
 entry:
 	call void @llvm.memset.p0i8.i64(i8* %a, i8 0, i64 15, i1 false)
 	ret void
@@ -314,6 +359,12 @@ define void @memset_16(i8* %a) nounwind  {
 ; SKYLAKE-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; SKYLAKE-NEXT:    vmovups %xmm0, (%rdi)
 ; SKYLAKE-NEXT:    retq
+;
+; KNL-LABEL: memset_16:
+; KNL:       # %bb.0: # %entry
+; KNL-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; KNL-NEXT:    vmovups %xmm0, (%rdi)
+; KNL-NEXT:    retq
 entry:
 	call void @llvm.memset.p0i8.i64(i8* %a, i8 0, i64 16, i1 false)
 	ret void
@@ -357,6 +408,13 @@ define void @memset_17(i8* %a) nounwind  {
 ; SKYLAKE-NEXT:    vmovups %xmm0, (%rdi)
 ; SKYLAKE-NEXT:    movb $0, 16(%rdi)
 ; SKYLAKE-NEXT:    retq
+;
+; KNL-LABEL: memset_17:
+; KNL:       # %bb.0: # %entry
+; KNL-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; KNL-NEXT:    vmovups %xmm0, (%rdi)
+; KNL-NEXT:    movb $0, 16(%rdi)
+; KNL-NEXT:    retq
 entry:
 	call void @llvm.memset.p0i8.i64(i8* %a, i8 0, i64 17, i1 false)
 	ret void
@@ -400,6 +458,13 @@ define void @memset_19(i8* %a) nounwind  {
 ; SKYLAKE-NEXT:    vmovups %xmm0, (%rdi)
 ; SKYLAKE-NEXT:    movl $0, 15(%rdi)
 ; SKYLAKE-NEXT:    retq
+;
+; KNL-LABEL: memset_19:
+; KNL:       # %bb.0: # %entry
+; KNL-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; KNL-NEXT:    vmovups %xmm0, (%rdi)
+; KNL-NEXT:    movl $0, 15(%rdi)
+; KNL-NEXT:    retq
 entry:
 	call void @llvm.memset.p0i8.i64(i8* %a, i8 0, i64 19, i1 false)
 	ret void
@@ -447,6 +512,13 @@ define void @memset_31(i8* %a) nounwind  {
 ; SKYLAKE-NEXT:    vmovups %xmm0, 15(%rdi)
 ; SKYLAKE-NEXT:    vmovups %xmm0, (%rdi)
 ; SKYLAKE-NEXT:    retq
+;
+; KNL-LABEL: memset_31:
+; KNL:       # %bb.0: # %entry
+; KNL-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; KNL-NEXT:    vmovups %xmm0, 15(%rdi)
+; KNL-NEXT:    vmovups %xmm0, (%rdi)
+; KNL-NEXT:    retq
 entry:
 	call void @llvm.memset.p0i8.i64(i8* %a, i8 0, i64 31, i1 false)
 	ret void
@@ -494,6 +566,12 @@ define void @memset_32(i8* %a) nounwind  {
 ; SKYLAKE-NEXT:    vmovups %ymm0, (%rdi)
 ; SKYLAKE-NEXT:    vzeroupper
 ; SKYLAKE-NEXT:    retq
+;
+; KNL-LABEL: memset_32:
+; KNL:       # %bb.0: # %entry
+; KNL-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; KNL-NEXT:    vmovups %ymm0, (%rdi)
+; KNL-NEXT:    retq
 entry:
 	call void @llvm.memset.p0i8.i64(i8* %a, i8 0, i64 32, i1 false)
 	ret void
@@ -540,6 +618,12 @@ define void @memset_32_align32(i8* %a) nounwind  {
 ; SKYLAKE-NEXT:    vmovaps %ymm0, (%rdi)
 ; SKYLAKE-NEXT:    vzeroupper
 ; SKYLAKE-NEXT:    retq
+;
+; KNL-LABEL: memset_32_align32:
+; KNL:       # %bb.0: # %entry
+; KNL-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; KNL-NEXT:    vmovaps %ymm0, (%rdi)
+; KNL-NEXT:    retq
 entry:
 	call void @llvm.memset.p0i8.i64(i8* align 32 %a, i8 0, i64 32, i1 false)
 	ret void
@@ -593,7 +677,150 @@ define void @memset_35(i8* %a) nounwind  {
 ; SKYLAKE-NEXT:    movl $0, 31(%rdi)
 ; SKYLAKE-NEXT:    vzeroupper
 ; SKYLAKE-NEXT:    retq
+;
+; KNL-LABEL: memset_35:
+; KNL:       # %bb.0: # %entry
+; KNL-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; KNL-NEXT:    vmovups %ymm0, (%rdi)
+; KNL-NEXT:    movl $0, 31(%rdi)
+; KNL-NEXT:    retq
 entry:
 	call void @llvm.memset.p0i8.i64(i8* %a, i8 0, i64 35, i1 false)
+	ret void
+}
+
+define void @memset_64(i8* %a) nounwind  {
+; X86-LABEL: memset_64:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl $0, 60(%eax)
+; X86-NEXT:    movl $0, 56(%eax)
+; X86-NEXT:    movl $0, 52(%eax)
+; X86-NEXT:    movl $0, 48(%eax)
+; X86-NEXT:    movl $0, 44(%eax)
+; X86-NEXT:    movl $0, 40(%eax)
+; X86-NEXT:    movl $0, 36(%eax)
+; X86-NEXT:    movl $0, 32(%eax)
+; X86-NEXT:    movl $0, 28(%eax)
+; X86-NEXT:    movl $0, 24(%eax)
+; X86-NEXT:    movl $0, 20(%eax)
+; X86-NEXT:    movl $0, 16(%eax)
+; X86-NEXT:    movl $0, 12(%eax)
+; X86-NEXT:    movl $0, 8(%eax)
+; X86-NEXT:    movl $0, 4(%eax)
+; X86-NEXT:    movl $0, (%eax)
+; X86-NEXT:    retl
+;
+; CORE2-LABEL: memset_64:
+; CORE2:       # %bb.0: # %entry
+; CORE2-NEXT:    movq $0, 56(%rdi)
+; CORE2-NEXT:    movq $0, 48(%rdi)
+; CORE2-NEXT:    movq $0, 40(%rdi)
+; CORE2-NEXT:    movq $0, 32(%rdi)
+; CORE2-NEXT:    movq $0, 24(%rdi)
+; CORE2-NEXT:    movq $0, 16(%rdi)
+; CORE2-NEXT:    movq $0, 8(%rdi)
+; CORE2-NEXT:    movq $0, (%rdi)
+; CORE2-NEXT:    retq
+;
+; NEHALEM-LABEL: memset_64:
+; NEHALEM:       # %bb.0: # %entry
+; NEHALEM-NEXT:    xorps %xmm0, %xmm0
+; NEHALEM-NEXT:    movups %xmm0, 48(%rdi)
+; NEHALEM-NEXT:    movups %xmm0, 32(%rdi)
+; NEHALEM-NEXT:    movups %xmm0, 16(%rdi)
+; NEHALEM-NEXT:    movups %xmm0, (%rdi)
+; NEHALEM-NEXT:    retq
+;
+; SANDYBRIDGE-LABEL: memset_64:
+; SANDYBRIDGE:       # %bb.0: # %entry
+; SANDYBRIDGE-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; SANDYBRIDGE-NEXT:    vmovups %xmm0, 16(%rdi)
+; SANDYBRIDGE-NEXT:    vmovups %xmm0, (%rdi)
+; SANDYBRIDGE-NEXT:    vmovups %xmm0, 48(%rdi)
+; SANDYBRIDGE-NEXT:    vmovups %xmm0, 32(%rdi)
+; SANDYBRIDGE-NEXT:    retq
+;
+; SKYLAKE-LABEL: memset_64:
+; SKYLAKE:       # %bb.0: # %entry
+; SKYLAKE-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; SKYLAKE-NEXT:    vmovups %ymm0, 32(%rdi)
+; SKYLAKE-NEXT:    vmovups %ymm0, (%rdi)
+; SKYLAKE-NEXT:    vzeroupper
+; SKYLAKE-NEXT:    retq
+;
+; KNL-LABEL: memset_64:
+; KNL:       # %bb.0: # %entry
+; KNL-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; KNL-NEXT:    vmovups %zmm0, (%rdi)
+; KNL-NEXT:    retq
+entry:
+	call void @llvm.memset.p0i8.i64(i8* %a, i8 0, i64 64, i1 false)
+	ret void
+}
+
+define void @memset_64_align64(i8* %a) nounwind  {
+; X86-LABEL: memset_64_align64:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl $0, 60(%eax)
+; X86-NEXT:    movl $0, 56(%eax)
+; X86-NEXT:    movl $0, 52(%eax)
+; X86-NEXT:    movl $0, 48(%eax)
+; X86-NEXT:    movl $0, 44(%eax)
+; X86-NEXT:    movl $0, 40(%eax)
+; X86-NEXT:    movl $0, 36(%eax)
+; X86-NEXT:    movl $0, 32(%eax)
+; X86-NEXT:    movl $0, 28(%eax)
+; X86-NEXT:    movl $0, 24(%eax)
+; X86-NEXT:    movl $0, 20(%eax)
+; X86-NEXT:    movl $0, 16(%eax)
+; X86-NEXT:    movl $0, 12(%eax)
+; X86-NEXT:    movl $0, 8(%eax)
+; X86-NEXT:    movl $0, 4(%eax)
+; X86-NEXT:    movl $0, (%eax)
+; X86-NEXT:    retl
+;
+; CORE2-LABEL: memset_64_align64:
+; CORE2:       # %bb.0: # %entry
+; CORE2-NEXT:    xorps %xmm0, %xmm0
+; CORE2-NEXT:    movaps %xmm0, 48(%rdi)
+; CORE2-NEXT:    movaps %xmm0, 32(%rdi)
+; CORE2-NEXT:    movaps %xmm0, 16(%rdi)
+; CORE2-NEXT:    movaps %xmm0, (%rdi)
+; CORE2-NEXT:    retq
+;
+; NEHALEM-LABEL: memset_64_align64:
+; NEHALEM:       # %bb.0: # %entry
+; NEHALEM-NEXT:    xorps %xmm0, %xmm0
+; NEHALEM-NEXT:    movaps %xmm0, 48(%rdi)
+; NEHALEM-NEXT:    movaps %xmm0, 32(%rdi)
+; NEHALEM-NEXT:    movaps %xmm0, 16(%rdi)
+; NEHALEM-NEXT:    movaps %xmm0, (%rdi)
+; NEHALEM-NEXT:    retq
+;
+; SANDYBRIDGE-LABEL: memset_64_align64:
+; SANDYBRIDGE:       # %bb.0: # %entry
+; SANDYBRIDGE-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; SANDYBRIDGE-NEXT:    vmovaps %ymm0, 32(%rdi)
+; SANDYBRIDGE-NEXT:    vmovaps %ymm0, (%rdi)
+; SANDYBRIDGE-NEXT:    vzeroupper
+; SANDYBRIDGE-NEXT:    retq
+;
+; SKYLAKE-LABEL: memset_64_align64:
+; SKYLAKE:       # %bb.0: # %entry
+; SKYLAKE-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; SKYLAKE-NEXT:    vmovaps %ymm0, 32(%rdi)
+; SKYLAKE-NEXT:    vmovaps %ymm0, (%rdi)
+; SKYLAKE-NEXT:    vzeroupper
+; SKYLAKE-NEXT:    retq
+;
+; KNL-LABEL: memset_64_align64:
+; KNL:       # %bb.0: # %entry
+; KNL-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; KNL-NEXT:    vmovaps %zmm0, (%rdi)
+; KNL-NEXT:    retq
+entry:
+	call void @llvm.memset.p0i8.i64(i8* align 64 %a, i8 0, i64 64, i1 false)
 	ret void
 }

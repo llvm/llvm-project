@@ -1736,8 +1736,14 @@ MemoryUseOrDef *MemorySSA::createNewAccess(Instruction *I,
   // FIXME: Replace this special casing with a more accurate modelling of
   // assume's control dependency.
   if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I))
-    if (II->getIntrinsicID() == Intrinsic::assume || isa<DbgInfoIntrinsic>(II))
+    if (II->getIntrinsicID() == Intrinsic::assume)
       return nullptr;
+
+  // Using a nonstandard AA pipelines might leave us with unexpected modref
+  // results for I, so add a check to not model instructions that may not read
+  // from or write to memory. This is necessary for correctness.
+  if (!I->mayReadFromMemory() && !I->mayWriteToMemory())
+    return nullptr;
 
   bool Def, Use;
   if (Template) {

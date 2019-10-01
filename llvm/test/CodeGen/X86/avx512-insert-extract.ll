@@ -2295,7 +2295,7 @@ define void @test_concat_v2i1(<2 x half>* %arg, <2 x half>* %arg1, <2 x half>* %
 ; KNL-NEXT:    movswl 2(%rsi), %eax
 ; KNL-NEXT:    vmovd %eax, %xmm1
 ; KNL-NEXT:    vcvtph2ps %xmm1, %xmm1
-; KNL-NEXT:    vmovss %xmm1, %xmm0, %xmm1 {%k2} {z}
+; KNL-NEXT:    vmovss %xmm1, %xmm1, %xmm1 {%k2} {z}
 ; KNL-NEXT:    vmovss %xmm0, %xmm0, %xmm0 {%k1} {z}
 ; KNL-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; KNL-NEXT:    vmovd %xmm0, %eax
@@ -2343,7 +2343,7 @@ define void @test_concat_v2i1(<2 x half>* %arg, <2 x half>* %arg1, <2 x half>* %
 ; SKX-NEXT:    movswl 2(%rsi), %eax
 ; SKX-NEXT:    vmovd %eax, %xmm1
 ; SKX-NEXT:    vcvtph2ps %xmm1, %xmm1
-; SKX-NEXT:    vmovss %xmm1, %xmm0, %xmm1 {%k2} {z}
+; SKX-NEXT:    vmovss %xmm1, %xmm1, %xmm1 {%k2} {z}
 ; SKX-NEXT:    vmovss %xmm0, %xmm0, %xmm0 {%k1} {z}
 ; SKX-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; SKX-NEXT:    vmovd %xmm0, %eax

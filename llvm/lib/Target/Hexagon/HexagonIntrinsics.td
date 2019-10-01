@@ -22,14 +22,14 @@ class T_RP_pat <InstHexagon MI, Intrinsic IntID>
 
 def: Pat<(int_hexagon_A2_add IntRegs:$Rs, IntRegs:$Rt),
          (A2_add IntRegs:$Rs, IntRegs:$Rt)>;
-def: Pat<(int_hexagon_A2_addi IntRegs:$Rs, imm:$s16),
+def: Pat<(int_hexagon_A2_addi IntRegs:$Rs, timm:$s16),
          (A2_addi IntRegs:$Rs, imm:$s16)>;
 def: Pat<(int_hexagon_A2_addp DoubleRegs:$Rs, DoubleRegs:$Rt),
          (A2_addp DoubleRegs:$Rs, DoubleRegs:$Rt)>;
 
 def: Pat<(int_hexagon_A2_sub IntRegs:$Rs, IntRegs:$Rt),
          (A2_sub IntRegs:$Rs, IntRegs:$Rt)>;
-def: Pat<(int_hexagon_A2_subri imm:$s10, IntRegs:$Rs),
+def: Pat<(int_hexagon_A2_subri timm:$s10, IntRegs:$Rs),
          (A2_subri imm:$s10, IntRegs:$Rs)>;
 def: Pat<(int_hexagon_A2_subp DoubleRegs:$Rs, DoubleRegs:$Rt),
          (A2_subp DoubleRegs:$Rs, DoubleRegs:$Rt)>;
@@ -45,26 +45,26 @@ def: Pat<(int_hexagon_M2_dpmpyss_s0 IntRegs:$Rs, IntRegs:$Rt),
 def: Pat<(int_hexagon_M2_dpmpyuu_s0 IntRegs:$Rs, IntRegs:$Rt),
          (M2_dpmpyuu_s0 IntRegs:$Rs, IntRegs:$Rt)>;
 
-def: Pat<(int_hexagon_S2_asl_i_r IntRegs:$Rs, imm:$u5),
+def: Pat<(int_hexagon_S2_asl_i_r IntRegs:$Rs, timm:$u5),
          (S2_asl_i_r IntRegs:$Rs, imm:$u5)>;
-def: Pat<(int_hexagon_S2_lsr_i_r IntRegs:$Rs, imm:$u5),
+def: Pat<(int_hexagon_S2_lsr_i_r IntRegs:$Rs, timm:$u5),
          (S2_lsr_i_r IntRegs:$Rs, imm:$u5)>;
-def: Pat<(int_hexagon_S2_asr_i_r IntRegs:$Rs, imm:$u5),
+def: Pat<(int_hexagon_S2_asr_i_r IntRegs:$Rs, timm:$u5),
          (S2_asr_i_r IntRegs:$Rs, imm:$u5)>;
-def: Pat<(int_hexagon_S2_asl_i_p DoubleRegs:$Rs, imm:$u6),
+def: Pat<(int_hexagon_S2_asl_i_p DoubleRegs:$Rs, timm:$u6),
          (S2_asl_i_p DoubleRegs:$Rs, imm:$u6)>;
-def: Pat<(int_hexagon_S2_lsr_i_p DoubleRegs:$Rs, imm:$u6),
+def: Pat<(int_hexagon_S2_lsr_i_p DoubleRegs:$Rs, timm:$u6),
          (S2_lsr_i_p DoubleRegs:$Rs, imm:$u6)>;
-def: Pat<(int_hexagon_S2_asr_i_p DoubleRegs:$Rs, imm:$u6),
+def: Pat<(int_hexagon_S2_asr_i_p DoubleRegs:$Rs, timm:$u6),
          (S2_asr_i_p DoubleRegs:$Rs, imm:$u6)>;
 
 def: Pat<(int_hexagon_A2_and IntRegs:$Rs, IntRegs:$Rt),
          (A2_and IntRegs:$Rs, IntRegs:$Rt)>;
-def: Pat<(int_hexagon_A2_andir IntRegs:$Rs, imm:$s10),
+def: Pat<(int_hexagon_A2_andir IntRegs:$Rs, timm:$s10),
          (A2_andir IntRegs:$Rs, imm:$s10)>;
 def: Pat<(int_hexagon_A2_or IntRegs:$Rs, IntRegs:$Rt),
          (A2_or IntRegs:$Rs, IntRegs:$Rt)>;
-def: Pat<(int_hexagon_A2_orir IntRegs:$Rs, imm:$s10),
+def: Pat<(int_hexagon_A2_orir IntRegs:$Rs, timm:$s10),
          (A2_orir IntRegs:$Rs, imm:$s10)>;
 def: Pat<(int_hexagon_A2_xor IntRegs:$Rs, IntRegs:$Rt),
          (A2_xor IntRegs:$Rs, IntRegs:$Rt)>;
@@ -99,13 +99,13 @@ def : Pat <(int_hexagon_S5_asrhub_rnd_sat_goodsyntax I64:$Rs, (i32 0)),
            (S2_vsathub I64:$Rs)>;
 }
 
-def : Pat <(int_hexagon_S2_asr_i_r_rnd_goodsyntax I32:$Rs, u5_0ImmPred:$imm),
+def : Pat <(int_hexagon_S2_asr_i_r_rnd_goodsyntax I32:$Rs, u5_0ImmPred_timm:$imm),
            (S2_asr_i_r_rnd I32:$Rs, (UDEC1 u5_0ImmPred:$imm))>;
-def : Pat <(int_hexagon_S2_asr_i_p_rnd_goodsyntax I64:$Rs, u6_0ImmPred:$imm),
+def : Pat <(int_hexagon_S2_asr_i_p_rnd_goodsyntax I64:$Rs, u6_0ImmPred_timm:$imm),
            (S2_asr_i_p_rnd I64:$Rs, (UDEC1 u6_0ImmPred:$imm))>;
-def : Pat <(int_hexagon_S5_vasrhrnd_goodsyntax I64:$Rs, u4_0ImmPred:$imm),
+def : Pat <(int_hexagon_S5_vasrhrnd_goodsyntax I64:$Rs, u4_0ImmPred_timm:$imm),
            (S5_vasrhrnd I64:$Rs, (UDEC1 u4_0ImmPred:$imm))>;
-def : Pat <(int_hexagon_S5_asrhub_rnd_sat_goodsyntax I64:$Rs, u4_0ImmPred:$imm),
+def : Pat <(int_hexagon_S5_asrhub_rnd_sat_goodsyntax I64:$Rs, u4_0ImmPred_timm:$imm),
            (S5_asrhub_rnd_sat I64:$Rs, (UDEC1 u4_0ImmPred:$imm))>;
 
 def ImmExt64: SDNodeXForm<imm, [{
@@ -121,13 +121,13 @@ def ImmExt64: SDNodeXForm<imm, [{
 // To connect the builtin with the instruction, the builtin's operand
 // needs to be extended to the right type.
 
-def : Pat<(int_hexagon_A2_tfrpi imm:$Is),
+def : Pat<(int_hexagon_A2_tfrpi timm:$Is),
           (A2_tfrpi (ImmExt64 $Is))>;
 
-def : Pat <(int_hexagon_C2_cmpgei I32:$src1, s32_0ImmPred:$src2),
+def : Pat <(int_hexagon_C2_cmpgei I32:$src1, s32_0ImmPred_timm:$src2),
            (C2_tfrpr (C2_cmpgti I32:$src1, (SDEC1 s32_0ImmPred:$src2)))>;
 
-def : Pat <(int_hexagon_C2_cmpgeui I32:$src1, u32_0ImmPred:$src2),
+def : Pat <(int_hexagon_C2_cmpgeui I32:$src1, u32_0ImmPred_timm:$src2),
            (C2_tfrpr (C2_cmpgtui I32:$src1, (UDEC1 u32_0ImmPred:$src2)))>;
 
 def : Pat <(int_hexagon_C2_cmpgeui I32:$src, 0),
@@ -142,7 +142,7 @@ def : Pat <(int_hexagon_C2_cmpltu I32:$src1, I32:$src2),
 //===----------------------------------------------------------------------===//
 class S2op_tableidx_pat <Intrinsic IntID, InstHexagon OutputInst,
                          SDNodeXForm XformImm>
-  : Pat <(IntID I32:$src1, I32:$src2, u4_0ImmPred:$src3, u5_0ImmPred:$src4),
+  : Pat <(IntID I32:$src1, I32:$src2, u4_0ImmPred_timm:$src3, u5_0ImmPred_timm:$src4),
          (OutputInst I32:$src1, I32:$src2, u4_0ImmPred:$src3,
                      (XformImm u5_0ImmPred:$src4))>;
 
@@ -197,11 +197,11 @@ class T_stc_pat <InstHexagon MI, Intrinsic IntID, PatLeaf Imm, PatLeaf Val>
   : Pat<(IntID I32:$Rs, Val:$Rt, I32:$Ru, Imm:$s),
         (MI I32:$Rs, Imm:$s, I32:$Ru, Val:$Rt)>;
 
-def: T_stc_pat<S2_storerb_pci, int_hexagon_circ_stb,   s4_0ImmPred, I32>;
-def: T_stc_pat<S2_storerh_pci, int_hexagon_circ_sth,   s4_1ImmPred, I32>;
-def: T_stc_pat<S2_storeri_pci, int_hexagon_circ_stw,   s4_2ImmPred, I32>;
-def: T_stc_pat<S2_storerd_pci, int_hexagon_circ_std,   s4_3ImmPred, I64>;
-def: T_stc_pat<S2_storerf_pci, int_hexagon_circ_sthhi, s4_1ImmPred, I32>;
+def: T_stc_pat<S2_storerb_pci, int_hexagon_circ_stb,   s4_0ImmPred_timm, I32>;
+def: T_stc_pat<S2_storerh_pci, int_hexagon_circ_sth,   s4_1ImmPred_timm, I32>;
+def: T_stc_pat<S2_storeri_pci, int_hexagon_circ_stw,   s4_2ImmPred_timm, I32>;
+def: T_stc_pat<S2_storerd_pci, int_hexagon_circ_std,   s4_3ImmPred_timm, I64>;
+def: T_stc_pat<S2_storerf_pci, int_hexagon_circ_sthhi, s4_1ImmPred_timm, I32>;
 
 multiclass MaskedStore <InstHexagon MI, Intrinsic IntID> {
   def : Pat<(IntID HvxQR:$src1, IntRegs:$src2, HvxVR:$src3),

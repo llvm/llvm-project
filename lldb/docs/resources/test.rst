@@ -1,11 +1,20 @@
 Testing
 =======
 
-The LLDB test suite consists of Python scripts located under the test
-directory. Each script contains a number of test cases and is usually
-accompanied by a C (C++, ObjC, etc.) source file. Each test first compiles the
-source file and then uses LLDB to debug the resulting executable. The tests
-verify both the LLDB command line interface and the scripting API.
+The LLDB test suite consists of three different kinds of test:
+
+* Python scripts located under ``lldb/packages/Python/lldbsuite``.
+  These are written using python's unittest2 testing framework.
+
+* Unit tests, located under ``lldb/unittests``.   These are written in C++,
+  using googletest.
+
+* LIT tests, located under ``lldb/lit``.  These use the LLVM Integrated Tester.
+
+Many of the tests are accompanied by a C (C++, ObjC, etc.) source file. Each test
+first compiles the source file and then uses LLDB to debug the resulting executable.
+
+The tests verify both the LLDB command line interface and the scripting API.
 
 .. contents::
    :local:
@@ -46,8 +55,8 @@ Note that multiple ``-A`` and ``-C`` flags can be specified to
 ``LLDB_TEST_USER_ARGS``.
 
 
-Running a Specific Test or Set of Tests
----------------------------------------
+Running a Specific Test or Set of Tests: Python
+-----------------------------------------------
 
 In addition to running all the LLDB test suites with the ``check-lldb`` CMake
 target above, it is possible to run individual LLDB tests. If you have a CMake
@@ -85,6 +94,52 @@ Many more options that are available. To see a list of all of them, run:
 ::
 
    > python dotest.py -h
+
+
+Running a Specific Test or Set of Tests: Unit Tests
+---------------------------------------------------
+
+The unit tests are simple executables, located in the build directory under ``tools/lldb/unittests``.
+
+To run them, just run the test binary, for example, to run all the Host tests:
+
+::
+
+   > ./tools/lldb/unittests/Host/HostTests
+
+
+To run a specific test, pass a filter, for example:
+
+::
+
+   > ./tools/lldb/unittests/Host/HostTests --gtest_filter=SocketTest.DomainListenConnectAccept
+
+
+Running a Specific Test or Set of Tests: LIT
+--------------------------------------------
+
+LIT automatically scans a directory for tests.   To run a subset of the LIT tests, pass it a
+subdirectory, for example:
+
+::
+
+   > ./bin/llvm-lit -sv tools/lldb/lit/Commands/CommandScriptImmediateOutput
+
+
+LIT can also filter based on test name.
+
+::
+
+   > ./bin/llvm-lit -sv tools/lldb/lit --filter CommandScriptImmediateOutput
+
+
+It is also possible to forward arguments to dotest.py by passing ``--param`` to
+lit and setting a value for ``dotest-args``.
+
+::
+
+   > ./bin/llvm-lit -sv tools/lldb/lit --param dotest-args='-C gcc'
+
 
 Running the Test Suite Remotely
 -------------------------------

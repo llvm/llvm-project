@@ -1,5 +1,5 @@
 Test that llvm-ar exits with 1 when there is an error.
 
 RUN: not llvm-ar e 2>&1 | FileCheck %s
-CHECK: unknown option e.
+CHECK: error: unknown option e
 CHECK: OVERVIEW: LLVM Archiver

@@ -382,7 +382,7 @@ bool CoreSimulatorSupport::Device::Shutdown(Status &err) {
 
 static Status HandleFileAction(ProcessLaunchInfo &launch_info,
                                NSMutableDictionary *options, NSString *key,
-                               const int fd, File &file) {
+                               const int fd, lldb::FileSP &file) {
   Status error;
   const FileAction *file_action = launch_info.GetFileActionForFD(fd);
   if (file_action) {
@@ -425,11 +425,16 @@ static Status HandleFileAction(ProcessLaunchInfo &launch_info,
           }
         }
         Status posix_error;
+        int oflag = file_action->GetActionArgument();
         int created_fd =
-            open(file_spec.GetPath().c_str(), file_action->GetActionArgument(),
-                 S_IRUSR | S_IWUSR);
+            open(file_spec.GetPath().c_str(), oflag, S_IRUSR | S_IWUSR);
         if (created_fd >= 0) {
-          file.SetDescriptor(created_fd, true);
+          uint32_t file_options = 0;
+          if ((oflag & O_RDWR) || (oflag & O_RDONLY))
+            file_options |= File::eOpenOptionRead;
+          if ((oflag & O_RDWR) || (oflag & O_RDONLY))
+            file_options |= File::eOpenOptionWrite;
+          file = std::make_shared<File>(created_fd, file_options, true);
           [options setValue:[NSNumber numberWithInteger:created_fd] forKey:key];
           return error; // Success
         } else {
@@ -489,9 +494,9 @@ CoreSimulatorSupport::Device::Spawn(ProcessLaunchInfo &launch_info) {
   [options setObject:env_dict forKey:kSimDeviceSpawnEnvironment];
 
   Status error;
-  File stdin_file;
-  File stdout_file;
-  File stderr_file;
+  lldb::FileSP stdin_file;
+  lldb::FileSP stdout_file;
+  lldb::FileSP stderr_file;
   error = HandleFileAction(launch_info, options, kSimDeviceSpawnStdin,
                            STDIN_FILENO, stdin_file);
 

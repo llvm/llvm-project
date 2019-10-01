@@ -17,19 +17,14 @@ define i64 @f1(float %f) {
 ; CHECK-LABEL: f1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    larl %r1, .LCPI0_0
-; CHECK-NEXT:    le %f2, 0(%r1)
-; CHECK-NEXT:    ler %f1, %f0
-; CHECK-NEXT:    sebr %f1, %f2
-; CHECK-NEXT:    cebr %f0, %f2
+; CHECK-NEXT:    le %f1, 0(%r1)
+; CHECK-NEXT:    cebr %f0, %f1
+; CHECK-NEXT:    lghi %r0, 0
 ; CHECK-NEXT:    jl .LBB0_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    ler %f0, %f1
-; CHECK-NEXT:  .LBB0_2:
-; CHECK-NEXT:    lghi %r0, 0
-; CHECK-NEXT:    jl .LBB0_4
-; CHECK-NEXT:  # %bb.3:
+; CHECK-NEXT:    sebr %f0, %f1
 ; CHECK-NEXT:    llihh %r0, 32768
-; CHECK-NEXT:  .LBB0_4:
+; CHECK-NEXT:  .LBB0_2:
 ; CHECK-NEXT:    cgebr %r2, 5, %f0
 ; CHECK-NEXT:    xgr %r2, %r0
 ; CHECK-NEXT:    br %r14
@@ -43,19 +38,14 @@ define i64 @f2(double %f) {
 ; CHECK-LABEL: f2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    larl %r1, .LCPI1_0
-; CHECK-NEXT:    ldeb %f2, 0(%r1)
-; CHECK-NEXT:    ldr %f1, %f0
-; CHECK-NEXT:    sdbr %f1, %f2
-; CHECK-NEXT:    cdbr %f0, %f2
+; CHECK-NEXT:    ldeb %f1, 0(%r1)
+; CHECK-NEXT:    cdbr %f0, %f1
+; CHECK-NEXT:    lghi %r0, 0
 ; CHECK-NEXT:    jl .LBB1_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    ldr %f0, %f1
-; CHECK-NEXT:  .LBB1_2:
-; CHECK-NEXT:    lghi %r0, 0
-; CHECK-NEXT:    jl .LBB1_4
-; CHECK-NEXT:  # %bb.3:
+; CHECK-NEXT:    sdbr %f0, %f1
 ; CHECK-NEXT:    llihh %r0, 32768
-; CHECK-NEXT:  .LBB1_4:
+; CHECK-NEXT:  .LBB1_2:
 ; CHECK-NEXT:    cgdbr %r2, 5, %f0
 ; CHECK-NEXT:    xgr %r2, %r0
 ; CHECK-NEXT:    br %r14
@@ -71,19 +61,14 @@ define i64 @f3(fp128 *%src) {
 ; CHECK-NEXT:    ld %f0, 0(%r2)
 ; CHECK-NEXT:    ld %f2, 8(%r2)
 ; CHECK-NEXT:    larl %r1, .LCPI2_0
-; CHECK-NEXT:    lxeb %f4, 0(%r1)
-; CHECK-NEXT:    lxr %f1, %f0
-; CHECK-NEXT:    sxbr %f1, %f4
-; CHECK-NEXT:    cxbr %f0, %f4
+; CHECK-NEXT:    lxeb %f1, 0(%r1)
+; CHECK-NEXT:    cxbr %f0, %f1
+; CHECK-NEXT:    lghi %r0, 0
 ; CHECK-NEXT:    jl .LBB2_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    lxr %f0, %f1
-; CHECK-NEXT:  .LBB2_2:
-; CHECK-NEXT:    lghi %r0, 0
-; CHECK-NEXT:    jl .LBB2_4
-; CHECK-NEXT:  # %bb.3:
+; CHECK-NEXT:    sxbr %f0, %f1
 ; CHECK-NEXT:    llihh %r0, 32768
-; CHECK-NEXT:  .LBB2_4:
+; CHECK-NEXT:  .LBB2_2:
 ; CHECK-NEXT:    cgxbr %r2, 5, %f0
 ; CHECK-NEXT:    xgr %r2, %r0
 ; CHECK-NEXT:    br %r14

@@ -63,7 +63,7 @@ OPTIONS
 
 .. option:: --version
 
-  Display the version of this program.
+  Display the version of the :program:`llvm-cxxfilt` executable.
 
 .. option:: @<FILE>
 

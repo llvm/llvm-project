@@ -58,8 +58,12 @@ def SDT_PPCldvsxlh : SDTypeProfile<1, 1, [
   SDTCisVT<0, v4f32>, SDTCisPtrTy<1>
 ]>;
 
-def SDT_PPCfpextlh : SDTypeProfile<1, 1, [
-  SDTCisVT<0, v2f64>, SDTCisVT<1, v4f32>
+def SDT_PPCfpexth : SDTypeProfile<1, 2, [
+  SDTCisVT<0, v2f64>, SDTCisVT<1, v4f32>, SDTCisPtrTy<2>
+]>;
+
+def SDT_PPCldsplat : SDTypeProfile<1, 1, [
+  SDTCisVec<0>, SDTCisPtrTy<1>
 ]>;
 
 // Little-endian-specific nodes.
@@ -102,8 +106,10 @@ def PPCuvec2fp: SDNode<"PPCISD::UINT_VEC_TO_FP", SDTVecConv, []>;
 def PPCswapNoChain : SDNode<"PPCISD::SWAP_NO_CHAIN", SDT_PPCxxswapd>;
 def PPCvabsd : SDNode<"PPCISD::VABSD", SDTVabsd, []>;
 
-def PPCfpextlh : SDNode<"PPCISD::FP_EXTEND_LH", SDT_PPCfpextlh, []>;
+def PPCfpexth : SDNode<"PPCISD::FP_EXTEND_HALF", SDT_PPCfpexth, []>;
 def PPCldvsxlh : SDNode<"PPCISD::LD_VSX_LH", SDT_PPCldvsxlh,
+                        [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def PPCldsplat : SDNode<"PPCISD::LD_SPLAT", SDT_PPCldsplat,
                         [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 
 multiclass XX3Form_Rcr<bits<6> opcode, bits<7> xo, string asmbase,
@@ -1086,7 +1092,8 @@ def : Pat<(v2f64 (PPCuvec2fp v4i32:$C, 0)),
 def : Pat<(v2f64 (PPCuvec2fp v4i32:$C, 1)),
           (v2f64 (XVCVUXWDP (v2i64 (XXMRGLW $C, $C))))>;
 
-def : Pat<(v2f64 (PPCfpextlh v4f32:$C)), (XVCVSPDP (XXMRGHW $C, $C))>;
+def : Pat<(v2f64 (PPCfpexth v4f32:$C, 0)), (XVCVSPDP (XXMRGHW $C, $C))>;
+def : Pat<(v2f64 (PPCfpexth v4f32:$C, 1)), (XVCVSPDP (XXMRGLW $C, $C))>;
 
 // Loads.
 let Predicates = [HasVSX, HasOnlySwappingMemOps] in {
@@ -1504,6 +1511,12 @@ let AddedComplexity = 400 in { // Prefer VSX patterns over non-VSX patterns.
                           RegConstraint<"$XTi = $XT">, NoEncode<"$XTi">,
                           AltVSXFMARel;
   }
+
+  // Additional xsnmsubasp patterns: -a*b + c == -(a*b - c)
+  def : Pat<(fma (fneg f32:$A), f32:$B, f32:$C),
+            (XSNMSUBASP $C, $A, $B)>;
+  def : Pat<(fma f32:$A, (fneg f32:$B), f32:$C),
+            (XSNMSUBASP $C, $A, $B)>;
 
   // Single Precision Conversions (FP <-> INT)
   def XSCVSXDSP : XX2Form<60, 312,
@@ -2861,12 +2874,12 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
                               (outs vsrc:$XT), (ins u7imm:$DCMX, vsrc:$XB),
                               "xvtstdcsp $XT, $XB, $DCMX", IIC_VecFP,
                               [(set v4i32: $XT,
-                               (int_ppc_vsx_xvtstdcsp v4f32:$XB, imm:$DCMX))]>;
+                               (int_ppc_vsx_xvtstdcsp v4f32:$XB, timm:$DCMX))]>;
   def XVTSTDCDP : XX2_RD6_DCMX7_RS6<60, 15, 5,
                               (outs vsrc:$XT), (ins u7imm:$DCMX, vsrc:$XB),
                               "xvtstdcdp $XT, $XB, $DCMX", IIC_VecFP,
                               [(set v2i64: $XT,
-                               (int_ppc_vsx_xvtstdcdp v2f64:$XB, imm:$DCMX))]>;
+                               (int_ppc_vsx_xvtstdcdp v2f64:$XB, timm:$DCMX))]>;
 
   //===--------------------------------------------------------------------===//
 
@@ -3930,6 +3943,10 @@ let AddedComplexity = 400 in {
                                 (XSCVDPUXWSs (XFLOADf32 xoaddr:$A)), VSRC), 1))>;
     def : Pat<(v4f32 (build_vector f32:$A, f32:$A, f32:$A, f32:$A)),
               (v4f32 (XXSPLTW (v4f32 (XSCVDPSPN $A)), 0))>;
+    def : Pat<(v2f64 (PPCldsplat xoaddr:$A)),
+              (v2f64 (LXVDSX xoaddr:$A))>;
+    def : Pat<(v2i64 (PPCldsplat xoaddr:$A)),
+              (v2i64 (LXVDSX xoaddr:$A))>;
 
     // Build vectors of floating point converted to i64.
     def : Pat<(v2i64 (build_vector FltToLong.A, FltToLong.A)),
@@ -4179,6 +4196,10 @@ let AddedComplexity = 400 in {
               (v2i64 (XXPERMDIs (XSCVDPUXDS (COPY_TO_REGCLASS
                                               (DFLOADf32 iaddrX4:$A),
                                               VSFRC)), 0))>;
+    def : Pat<(v4f32 (PPCldsplat xoaddr:$A)),
+              (v4f32 (LXVWSX xoaddr:$A))>;
+    def : Pat<(v4i32 (PPCldsplat xoaddr:$A)),
+              (v4i32 (LXVWSX xoaddr:$A))>;
   }
 
   let Predicates = [IsISA3_0, HasDirectMove, IsBigEndian] in {

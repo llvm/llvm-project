@@ -873,7 +873,6 @@ using object::OwningBinary;
 
 class BasicELFBuilder {
 protected:
-  uint16_t EMachine;
   std::unique_ptr<Object> Obj;
 
   void initFileHeader();
@@ -883,8 +882,7 @@ protected:
   void initSections();
 
 public:
-  BasicELFBuilder(uint16_t EM)
-      : EMachine(EM), Obj(std::make_unique<Object>()) {}
+  BasicELFBuilder() : Obj(std::make_unique<Object>()) {}
 };
 
 class BinaryELFBuilder : public BasicELFBuilder {
@@ -893,8 +891,8 @@ class BinaryELFBuilder : public BasicELFBuilder {
   void addData(SymbolTableSection *SymTab);
 
 public:
-  BinaryELFBuilder(uint16_t EM, MemoryBuffer *MB, uint8_t NewSymbolVisibility)
-      : BasicELFBuilder(EM), MemBuf(MB),
+  BinaryELFBuilder(MemoryBuffer *MB, uint8_t NewSymbolVisibility)
+      : BasicELFBuilder(), MemBuf(MB),
         NewSymbolVisibility(NewSymbolVisibility) {}
 
   std::unique_ptr<Object> build();
@@ -907,7 +905,7 @@ class IHexELFBuilder : public BasicELFBuilder {
 
 public:
   IHexELFBuilder(const std::vector<IHexRecord> &Records)
-      : BasicELFBuilder(ELF::EM_386), Records(Records) {}
+      : BasicELFBuilder(), Records(Records) {}
 
   std::unique_ptr<Object> build();
 };
@@ -942,14 +940,12 @@ public:
 };
 
 class BinaryReader : public Reader {
-  const MachineInfo &MInfo;
   MemoryBuffer *MemBuf;
   uint8_t NewSymbolVisibility;
 
 public:
-  BinaryReader(const MachineInfo &MI, MemoryBuffer *MB,
-               const uint8_t NewSymbolVisibility)
-      : MInfo(MI), MemBuf(MB), NewSymbolVisibility(NewSymbolVisibility) {}
+  BinaryReader(MemoryBuffer *MB, const uint8_t NewSymbolVisibility)
+      : MemBuf(MB), NewSymbolVisibility(NewSymbolVisibility) {}
   std::unique_ptr<Object> create() const override;
 };
 

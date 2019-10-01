@@ -1,4 +1,4 @@
 OBJC_SOURCES := static.m
-LDFLAGS = $(CFLAGS) -lobjc -framework Foundation
+LD_EXTRAS := -lobjc -framework Foundation
 
 include Makefile.rules

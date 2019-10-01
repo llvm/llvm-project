@@ -626,17 +626,19 @@ llvm::Error MachOFileLayout::writeSingleSegmentLoadCommand(uint8_t *&lc) {
                           + _file.sections.size() * sizeof(typename T::section);
   uint8_t *next = lc + seg->cmdsize;
   memset(seg->segname, 0, 16);
+  seg->flags = 0;
   seg->vmaddr = 0;
-  seg->vmsize = _file.sections.back().address
-              + _file.sections.back().content.size();
   seg->fileoff = _endOfLoadCommands;
-  seg->filesize = _sectInfo[&_file.sections.back()].fileOffset +
-                  _file.sections.back().content.size() -
-                  _sectInfo[&_file.sections.front()].fileOffset;
   seg->maxprot = VM_PROT_READ|VM_PROT_WRITE|VM_PROT_EXECUTE;
   seg->initprot = VM_PROT_READ|VM_PROT_WRITE|VM_PROT_EXECUTE;
   seg->nsects = _file.sections.size();
-  seg->flags = 0;
+  if (seg->nsects) {
+    seg->vmsize = _file.sections.back().address
+                + _file.sections.back().content.size();
+    seg->filesize = _sectInfo[&_file.sections.back()].fileOffset +
+                    _file.sections.back().content.size() -
+                    _sectInfo[&_file.sections.front()].fileOffset;
+  }
   if (_swap)
     swapStruct(*seg);
   typename T::section *sout = reinterpret_cast<typename T::section*>

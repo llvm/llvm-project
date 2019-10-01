@@ -142,6 +142,13 @@ Value *SimplifyFSubInst(Value *LHS, Value *RHS, FastMathFlags FMF,
 Value *SimplifyFMulInst(Value *LHS, Value *RHS, FastMathFlags FMF,
                         const SimplifyQuery &Q);
 
+/// Given operands for the multiplication of a FMA, fold the result or return
+/// null. In contrast to SimplifyFMulInst, this function will not perform
+/// simplifications whose unrounded results differ when rounded to the argument
+/// type.
+Value *SimplifyFMAFMul(Value *LHS, Value *RHS, FastMathFlags FMF,
+                       const SimplifyQuery &Q);
+
 /// Given operands for a Mul, fold the result or return null.
 Value *SimplifyMulInst(Value *LHS, Value *RHS, const SimplifyQuery &Q);
 

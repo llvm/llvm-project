@@ -6,4 +6,4 @@ DummyData:
 ...
 
 # CHECK: YAML:4:1: error: YAML Object File missing document type tag!
-# CHECK: error: Failed to parse YAML input!
+# CHECK: error: failed to parse YAML input

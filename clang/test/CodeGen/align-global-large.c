@@ -1,5 +1,5 @@
 // PR13606 - Clang crashes with large alignment attribute
-// RUN: %clang -cc1 -S -emit-llvm %s -o - -triple i686-pc-gnu | FileCheck %s
+// RUN: %clang_cc1 -S -emit-llvm %s -o - -triple i686-pc-gnu | FileCheck %s
 
 // CHECK: x
 // CHECK: align

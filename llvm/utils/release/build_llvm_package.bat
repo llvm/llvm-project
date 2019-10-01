@@ -8,9 +8,9 @@ REM Usage: build_llvm_package.bat <revision>
 
 REM Prerequisites:
 REM
-REM   Visual Studio 2017, CMake, Ninja, SVN, GNUWin32, SWIG, Python 3,
+REM   Visual Studio 2019, CMake, Ninja, SVN, GNUWin32, SWIG, Python 3,
 REM   NSIS with the strlen_8192 patch,
-REM   Visual Studio 2017 SDK and Nuget (for the clang-format plugin),
+REM   Visual Studio 2019 SDK and Nuget (for the clang-format plugin),
 REM   Perl (for the OpenMP run-time).
 REM
 REM
@@ -19,7 +19,7 @@ REM   https://github.com/swig/swig/issues/769
 
 
 REM You need to modify the paths below:
-set vsdevcmd=C:\Program Files (x86)\Microsoft Visual Studio\2017\Professional\Common7\Tools\VsDevCmd.bat
+set vsdevcmd=C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\Common7\Tools\VsDevCmd.bat
 
 set python32_dir=C:\Users\%USERNAME%\AppData\Local\Programs\Python\Python36-32
 set python64_dir=C:\Users\%USERNAME%\AppData\Local\Programs\Python\Python36
@@ -72,8 +72,7 @@ set CC=
 set CXX=
 mkdir build32_stage0
 cd build32_stage0
-REM Work around VS2017 bug by using MinSizeRel.
-cmake -GNinja %cmake_flags% -DPYTHON_HOME=%python32_dir% -DPYTHON_EXECUTABLE=%python32_dir%\python.exe -DCMAKE_BUILD_TYPE=MinSizeRel ..\llvm || exit /b
+cmake -GNinja %cmake_flags% -DPYTHON_HOME=%python32_dir% -DPYTHON_EXECUTABLE=%python32_dir%\python.exe ..\llvm || exit /b
 ninja all || ninja all || ninja all || exit /b
 ninja check || ninja check || ninja check || exit /b
 ninja check-clang || ninja check-clang || ninja check-clang || exit /b
@@ -97,6 +96,8 @@ cd ..
 REM The plug-in is built separately as it uses a statically linked clang-format.exe.
 mkdir build_vsix
 cd build_vsix
+REM Having VSSDKINSTALL set makes devenv *not* find the SDK for some reason.
+set VSSDKINSTALL=
 set CC=..\build32_stage0\bin\clang-cl
 set CXX=..\build32_stage0\bin\clang-cl
 cmake -GNinja %cmake_flags% -DLLVM_USE_CRT_RELEASE=MT -DBUILD_CLANG_FORMAT_VS_PLUGIN=ON -DPYTHON_HOME=%python32_dir% -DPYTHON_EXECUTABLE=%python32_dir%\python.exe ..\llvm || exit /b
@@ -111,8 +112,7 @@ set CC=
 set CXX=
 mkdir build64_stage0
 cd build64_stage0
-REM Work around VS2017 bug by using MinSizeRel.
-cmake -GNinja %cmake_flags% -DPYTHON_HOME=%python64_dir% -DPYTHON_EXECUTABLE=%python64_dir%\python.exe -DCMAKE_BUILD_TYPE=MinSizeRel ..\llvm || exit /b
+cmake -GNinja %cmake_flags% -DPYTHON_HOME=%python64_dir% -DPYTHON_EXECUTABLE=%python64_dir%\python.exe ..\llvm || exit /b
 ninja all || ninja all || ninja all || exit /b
 ninja check || ninja check || ninja check || exit /b
 ninja check-clang || ninja check-clang || ninja check-clang || exit /b

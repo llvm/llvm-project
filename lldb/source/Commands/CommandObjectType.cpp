@@ -151,7 +151,7 @@ public:
         "for\n"
         "        internal_dict: an LLDB support object not to be used\"\"\"\n";
 
-    StreamFileSP output_sp(io_handler.GetOutputStreamFile());
+    StreamFileSP output_sp(io_handler.GetOutputStreamFileSP());
     if (output_sp && interactive) {
       output_sp->PutCString(g_summary_addreader_instructions);
       output_sp->Flush();
@@ -160,7 +160,7 @@ public:
 
   void IOHandlerInputComplete(IOHandler &io_handler,
                               std::string &data) override {
-    StreamFileSP error_sp = io_handler.GetErrorStreamFile();
+    StreamFileSP error_sp = io_handler.GetErrorStreamFileSP();
 
 #ifndef LLDB_DISABLE_PYTHON
     ScriptInterpreter *interpreter = GetDebugger().GetScriptInterpreter();
@@ -383,7 +383,7 @@ protected:
   }
 
   void IOHandlerActivated(IOHandler &io_handler, bool interactive) override {
-    StreamFileSP output_sp(io_handler.GetOutputStreamFile());
+    StreamFileSP output_sp(io_handler.GetOutputStreamFileSP());
     if (output_sp && interactive) {
       output_sp->PutCString(g_synth_addreader_instructions);
       output_sp->Flush();
@@ -392,7 +392,7 @@ protected:
 
   void IOHandlerInputComplete(IOHandler &io_handler,
                               std::string &data) override {
-    StreamFileSP error_sp = io_handler.GetErrorStreamFile();
+    StreamFileSP error_sp = io_handler.GetErrorStreamFileSP();
 
 #ifndef LLDB_DISABLE_PYTHON
     ScriptInterpreter *interpreter = GetDebugger().GetScriptInterpreter();

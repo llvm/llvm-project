@@ -8,10 +8,10 @@
 // RUN: ld.lld -o %t %t2.o %t.so
 // RUN: llvm-objdump -s -h %t | FileCheck %s
 
-// CHECK: foo           00000000 0000000000201008
+// CHECK: foo           00000000 0000000000201248
 
 // CHECK: Contents of section .text:
-// CHECK-NEXT: 201000 08102000 00000000
+// CHECK-NEXT: 201240 48122000 00000000
 
 .quad __start_foo
 .section foo,"ax"

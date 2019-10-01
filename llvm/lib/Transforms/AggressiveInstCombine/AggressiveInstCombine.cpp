@@ -121,14 +121,13 @@ static bool foldGuardedRotateToFunnelShift(Instruction &I) {
   BasicBlock *GuardBB = Phi.getIncomingBlock(RotSrc == P1);
   BasicBlock *RotBB = Phi.getIncomingBlock(RotSrc != P1);
   Instruction *TermI = GuardBB->getTerminator();
-  BasicBlock *TrueBB, *FalseBB;
   ICmpInst::Predicate Pred;
-  if (!match(TermI, m_Br(m_ICmp(Pred, m_Specific(RotAmt), m_ZeroInt()), TrueBB,
-                         FalseBB)))
+  BasicBlock *PhiBB = Phi.getParent();
+  if (!match(TermI, m_Br(m_ICmp(Pred, m_Specific(RotAmt), m_ZeroInt()),
+                         m_SpecificBB(PhiBB), m_SpecificBB(RotBB))))
     return false;
 
-  BasicBlock *PhiBB = Phi.getParent();
-  if (Pred != CmpInst::ICMP_EQ || TrueBB != PhiBB || FalseBB != RotBB)
+  if (Pred != CmpInst::ICMP_EQ)
     return false;
 
   // We matched a variation of this IR pattern:

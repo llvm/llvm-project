@@ -441,6 +441,16 @@ TEST(SourceCodeTests, VisibleNamespaces) {
               "c::d",
           },
       },
+      {
+          "",
+          {""},
+      },
+      {
+          R"cpp(
+            // Parse until EOF
+            namespace bar{})cpp",
+          {""},
+      },
   };
   for (const auto& Case : Cases) {
     EXPECT_EQ(Case.second,

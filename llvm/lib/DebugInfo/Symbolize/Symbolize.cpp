@@ -401,7 +401,7 @@ LLVMSymbolizer::getOrCreateObject(const std::string &Path,
       return I->second.get();
 
     Expected<std::unique_ptr<ObjectFile>> ObjOrErr =
-        UB->getObjectForArch(ArchName);
+        UB->getMachOObjectForArch(ArchName);
     if (!ObjOrErr) {
       ObjectForUBPathAndArch.emplace(std::make_pair(Path, ArchName),
                                      std::unique_ptr<ObjectFile>());

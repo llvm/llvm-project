@@ -12,13 +12,13 @@
 // CHECK-NEXT:       SHF_ALLOC
 // CHECK-NEXT:       SHF_WRITE
 // CHECK-NEXT:     ]
-// CHECK-NEXT:     Address: 0x202000
+// CHECK-NEXT:     Address: 0x202159
 // CHECK-NEXT:     Offset:
 // CHECK-NEXT:     Size: 6
 // CHECK: ]
 // CHECK: Symbols [
 // CHECK:     Name: end
-// CHECK-NEXT:     Value: 0x202006
+// CHECK-NEXT:     Value: 0x20215F
 // CHECK: ]
 
 .global _start,end

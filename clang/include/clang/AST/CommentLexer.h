@@ -352,8 +352,7 @@ public:
 
   void lex(Token &T);
 
-  StringRef getSpelling(const Token &Tok, const SourceManager &SourceMgr,
-                        bool *Invalid = nullptr) const;
+  StringRef getSpelling(const Token &Tok, const SourceManager &SourceMgr) const;
 };
 
 } // end namespace comments

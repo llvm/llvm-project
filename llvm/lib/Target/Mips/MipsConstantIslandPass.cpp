@@ -222,12 +222,7 @@ namespace {
 
       BasicBlockInfo() = default;
 
-      // FIXME: ignore LogAlign for this patch
-      //
-      unsigned postOffset(unsigned LogAlign = 0) const {
-        unsigned PO = Offset + Size;
-        return PO;
-      }
+      unsigned postOffset() const { return Offset + Size; }
     };
 
     std::vector<BasicBlockInfo> BBInfo;
@@ -376,7 +371,7 @@ namespace {
 
     void doInitialPlacement(std::vector<MachineInstr*> &CPEMIs);
     CPEntry *findConstPoolEntry(unsigned CPI, const MachineInstr *CPEMI);
-    unsigned getCPELogAlign(const MachineInstr &CPEMI);
+    Align getCPEAlign(const MachineInstr &CPEMI);
     void initializeFunctionInfo(const std::vector<MachineInstr*> &CPEMIs);
     unsigned getOffsetOf(MachineInstr *MI) const;
     unsigned getUserOffset(CPUser&) const;
@@ -534,11 +529,11 @@ MipsConstantIslands::doInitialPlacement(std::vector<MachineInstr*> &CPEMIs) {
   MF->push_back(BB);
 
   // MachineConstantPool measures alignment in bytes. We measure in log2(bytes).
-  unsigned MaxLogAlign = Log2_32(MCP->getConstantPoolAlignment());
+  const Align MaxAlign(MCP->getConstantPoolAlignment());
 
   // Mark the basic block as required by the const-pool.
   // If AlignConstantIslands isn't set, use 4-byte alignment for everything.
-  BB->setLogAlignment(AlignConstantIslands ? MaxLogAlign : 2);
+  BB->setAlignment(AlignConstantIslands ? MaxAlign : Align(4));
 
   // The function needs to be as aligned as the basic blocks. The linker may
   // move functions around based on their alignment.
@@ -548,7 +543,7 @@ MipsConstantIslands::doInitialPlacement(std::vector<MachineInstr*> &CPEMIs) {
   // alignment of all entries as long as BB is sufficiently aligned.  Keep
   // track of the insertion point for each alignment.  We are going to bucket
   // sort the entries as they are created.
-  SmallVector<MachineBasicBlock::iterator, 8> InsPoint(MaxLogAlign + 1,
+  SmallVector<MachineBasicBlock::iterator, 8> InsPoint(Log2(MaxAlign) + 1,
                                                        BB->end());
 
   // Add all of the constants from the constant pool to the end block, use an
@@ -577,7 +572,7 @@ MipsConstantIslands::doInitialPlacement(std::vector<MachineInstr*> &CPEMIs) {
 
     // Ensure that future entries with higher alignment get inserted before
     // CPEMI. This is bucket sort with iterators.
-    for (unsigned a = LogAlign + 1; a <= MaxLogAlign; ++a)
+    for (unsigned a = LogAlign + 1; a <= Log2(MaxAlign); ++a)
       if (InsPoint[a] == InsAt)
         InsPoint[a] = CPEMI;
     // Add a new CPEntry, but no corresponding CPUser yet.
@@ -622,20 +617,18 @@ MipsConstantIslands::CPEntry
   return nullptr;
 }
 
-/// getCPELogAlign - Returns the required alignment of the constant pool entry
+/// getCPEAlign - Returns the required alignment of the constant pool entry
 /// represented by CPEMI.  Alignment is measured in log2(bytes) units.
-unsigned MipsConstantIslands::getCPELogAlign(const MachineInstr &CPEMI) {
+Align MipsConstantIslands::getCPEAlign(const MachineInstr &CPEMI) {
   assert(CPEMI.getOpcode() == Mips::CONSTPOOL_ENTRY);
 
   // Everything is 4-byte aligned unless AlignConstantIslands is set.
   if (!AlignConstantIslands)
-    return 2;
+    return Align(4);
 
   unsigned CPI = CPEMI.getOperand(1).getIndex();
   assert(CPI < MCP->getConstants().size() && "Invalid constant pool index.");
-  unsigned Align = MCP->getConstants()[CPI].getAlignment();
-  assert(isPowerOf2_32(Align) && "Invalid CPE alignment");
-  return Log2_32(Align);
+  return Align(MCP->getConstants()[CPI].getAlignment());
 }
 
 /// initializeFunctionInfo - Do the initial scan of the function, building up
@@ -941,14 +934,13 @@ bool MipsConstantIslands::isOffsetInRange(unsigned UserOffset,
 bool MipsConstantIslands::isWaterInRange(unsigned UserOffset,
                                         MachineBasicBlock* Water, CPUser &U,
                                         unsigned &Growth) {
-  unsigned CPELogAlign = getCPELogAlign(*U.CPEMI);
-  unsigned CPEOffset = BBInfo[Water->getNumber()].postOffset(CPELogAlign);
+  unsigned CPEOffset = BBInfo[Water->getNumber()].postOffset();
   unsigned NextBlockOffset;
-  llvm::Align NextBlockAlignment;
+  Align NextBlockAlignment;
   MachineFunction::const_iterator NextBlock = ++Water->getIterator();
   if (NextBlock == MF->end()) {
     NextBlockOffset = BBInfo[Water->getNumber()].postOffset();
-    NextBlockAlignment = llvm::Align();
+    NextBlockAlignment = Align::None();
   } else {
     NextBlockOffset = BBInfo[NextBlock->getNumber()].Offset;
     NextBlockAlignment = NextBlock->getAlignment();
@@ -1223,7 +1215,6 @@ void MipsConstantIslands::createNewWater(unsigned CPUserIndex,
   CPUser &U = CPUsers[CPUserIndex];
   MachineInstr *UserMI = U.MI;
   MachineInstr *CPEMI  = U.CPEMI;
-  unsigned CPELogAlign = getCPELogAlign(*CPEMI);
   MachineBasicBlock *UserMBB = UserMI->getParent();
   const BasicBlockInfo &UserBBI = BBInfo[UserMBB->getNumber()];
 
@@ -1233,7 +1224,7 @@ void MipsConstantIslands::createNewWater(unsigned CPUserIndex,
     // Size of branch to insert.
     unsigned Delta = 2;
     // Compute the offset where the CPE will begin.
-    unsigned CPEOffset = UserBBI.postOffset(CPELogAlign) + Delta;
+    unsigned CPEOffset = UserBBI.postOffset() + Delta;
 
     if (isOffsetInRange(UserOffset, CPEOffset, U)) {
       LLVM_DEBUG(dbgs() << "Split at end of " << printMBBReference(*UserMBB)
@@ -1259,9 +1250,8 @@ void MipsConstantIslands::createNewWater(unsigned CPUserIndex,
 
   // Try to split the block so it's fully aligned.  Compute the latest split
   // point where we can add a 4-byte branch instruction, and then align to
-  // LogAlign which is the largest possible alignment in the function.
-  unsigned LogAlign = Log2(MF->getAlignment());
-  assert(LogAlign >= CPELogAlign && "Over-aligned constant pool entry");
+  // Align which is the largest possible alignment in the function.
+  const Align Align = MF->getAlignment();
   unsigned BaseInsertOffset = UserOffset + U.getMaxDisp();
   LLVM_DEBUG(dbgs() << format("Split in middle of big block before %#x",
                               BaseInsertOffset));
@@ -1272,7 +1262,7 @@ void MipsConstantIslands::createNewWater(unsigned CPUserIndex,
   BaseInsertOffset -= 4;
 
   LLVM_DEBUG(dbgs() << format(", adjusted to %#x", BaseInsertOffset)
-                    << " la=" << LogAlign << '\n');
+                    << " la=" << Log2(Align) << '\n');
 
   // This could point off the end of the block if we've already got constant
   // pool entries following this block; only the last one is in the water list.
@@ -1297,8 +1287,8 @@ void MipsConstantIslands::createNewWater(unsigned CPUserIndex,
       CPUser &U = CPUsers[CPUIndex];
       if (!isOffsetInRange(Offset, EndInsertOffset, U)) {
         // Shift intertion point by one unit of alignment so it is within reach.
-        BaseInsertOffset -= 1u << LogAlign;
-        EndInsertOffset  -= 1u << LogAlign;
+        BaseInsertOffset -= Align.value();
+        EndInsertOffset -= Align.value();
       }
       // This is overly conservative, as we don't account for CPEMIs being
       // reused within the block, but it doesn't matter much.  Also assume CPEs
@@ -1401,7 +1391,7 @@ bool MipsConstantIslands::handleConstantPoolUser(unsigned CPUserIndex) {
   ++NumCPEs;
 
   // Mark the basic block as aligned as required by the const-pool entry.
-  NewIsland->setLogAlignment(getCPELogAlign(*U.CPEMI));
+  NewIsland->setAlignment(getCPEAlign(*U.CPEMI));
 
   // Increase the size of the island block to account for the new entry.
   BBInfo[NewIsland->getNumber()].Size += Size;
@@ -1433,10 +1423,11 @@ void MipsConstantIslands::removeDeadCPEMI(MachineInstr *CPEMI) {
     BBInfo[CPEBB->getNumber()].Size = 0;
 
     // This block no longer needs to be aligned.
-    CPEBB->setLogAlignment(0);
-  } else
+    CPEBB->setAlignment(Align(1));
+  } else {
     // Entries are sorted by descending alignment, so realign from the front.
-    CPEBB->setLogAlignment(getCPELogAlign(*CPEBB->begin()));
+    CPEBB->setAlignment(getCPEAlign(*CPEBB->begin()));
+  }
 
   adjustBBOffsetsAfter(CPEBB);
   // An island has only one predecessor BB and one successor BB. Check if
@@ -1531,7 +1522,7 @@ MipsConstantIslands::fixupUnconditionalBr(ImmBranch &Br) {
     // We should have a way to back out this alignment restriction if we "can" later.
     // but it is not harmful.
     //
-    DestBB->setLogAlignment(2);
+    DestBB->setAlignment(Align(4));
     Br.MaxDisp = ((1<<24)-1) * 2;
     MI->setDesc(TII->get(Mips::JalB16));
   }

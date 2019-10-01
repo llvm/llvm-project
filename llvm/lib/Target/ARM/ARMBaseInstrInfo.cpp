@@ -4337,10 +4337,10 @@ ARMBaseInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
   }
 
   const MCInstrDesc &UseMCID = get(UseNode->getMachineOpcode());
-  const MachineSDNode *DefMN = dyn_cast<MachineSDNode>(DefNode);
+  auto *DefMN = cast<MachineSDNode>(DefNode);
   unsigned DefAlign = !DefMN->memoperands_empty()
     ? (*DefMN->memoperands_begin())->getAlignment() : 0;
-  const MachineSDNode *UseMN = dyn_cast<MachineSDNode>(UseNode);
+  auto *UseMN = cast<MachineSDNode>(UseNode);
   unsigned UseAlign = !UseMN->memoperands_empty()
     ? (*UseMN->memoperands_begin())->getAlignment() : 0;
   int Latency = getOperandLatency(ItinData, DefMCID, DefIdx, DefAlign,

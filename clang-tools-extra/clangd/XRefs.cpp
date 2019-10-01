@@ -9,6 +9,7 @@
 #include "AST.h"
 #include "CodeCompletionStrings.h"
 #include "FindSymbols.h"
+#include "FindTarget.h"
 #include "FormattedString.h"
 #include "Logger.h"
 #include "ParsedAST.h"
@@ -1299,5 +1300,18 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
   return OS;
 }
 
+llvm::DenseSet<const Decl *> getNonLocalDeclRefs(ParsedAST &AST,
+                                                 const FunctionDecl *FD) {
+  if (!FD->hasBody())
+    return {};
+  llvm::DenseSet<const Decl *> DeclRefs;
+  findExplicitReferences(FD, [&](ReferenceLoc Ref) {
+    for (const Decl *D : Ref.Targets) {
+      if (!index::isFunctionLocalSymbol(D) && !D->isTemplateParameter())
+        DeclRefs.insert(D);
+    }
+  });
+  return DeclRefs;
+}
 } // namespace clangd
 } // namespace clang

@@ -346,6 +346,11 @@ public:
       : SelectionDAGISel(TM, OptLevel) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
+    const Function &F = MF.getFunction();
+    if (F.getFnAttribute("mnop-mcount").getValueAsString() == "true" &&
+        F.getFnAttribute("fentry-call").getValueAsString() != "true")
+      report_fatal_error("mnop-mcount only supported with fentry-call");
+
     Subtarget = &MF.getSubtarget<SystemZSubtarget>();
     return SelectionDAGISel::runOnMachineFunction(MF);
   }
@@ -1146,7 +1151,7 @@ void SystemZDAGToDAGISel::loadVectorConstant(
   SDLoc DL(Node);
   SmallVector<SDValue, 2> Ops;
   for (unsigned OpVal : VCI.OpVals)
-    Ops.push_back(CurDAG->getConstant(OpVal, DL, MVT::i32));
+    Ops.push_back(CurDAG->getTargetConstant(OpVal, DL, MVT::i32));
   SDValue Op = CurDAG->getNode(VCI.Opcode, DL, VCI.VecVT, Ops);
 
   if (VCI.VecVT == VT.getSimpleVT())
@@ -1550,8 +1555,8 @@ void SystemZDAGToDAGISel::Select(SDNode *Node) {
       uint64_t ConstCCMask =
         cast<ConstantSDNode>(CCMask.getNode())->getZExtValue();
       // Invert the condition.
-      CCMask = CurDAG->getConstant(ConstCCValid ^ ConstCCMask, SDLoc(Node),
-                                   CCMask.getValueType());
+      CCMask = CurDAG->getTargetConstant(ConstCCValid ^ ConstCCMask,
+                                         SDLoc(Node), CCMask.getValueType());
       SDValue Op4 = Node->getOperand(4);
       SDNode *UpdatedNode =
         CurDAG->UpdateNodeOperands(Node, Op1, Op0, CCValid, CCMask, Op4);

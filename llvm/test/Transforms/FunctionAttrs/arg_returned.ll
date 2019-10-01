@@ -1,5 +1,5 @@
 ; RUN: opt -functionattrs -S < %s | FileCheck %s --check-prefix=FNATTR
-; RUN: opt -attributor -attributor-manifest-internal -attributor-disable=false -attributor-max-iterations-verify -attributor-max-iterations=9 -S < %s | FileCheck %s --check-prefix=ATTRIBUTOR
+; RUN: opt -attributor -attributor-manifest-internal -attributor-disable=false -attributor-max-iterations-verify -attributor-max-iterations=6 -S < %s | FileCheck %s --check-prefix=ATTRIBUTOR
 ; RUN: opt -attributor -attributor-manifest-internal -attributor-disable=false -functionattrs -S < %s | FileCheck %s --check-prefix=BOTH
 ;
 ; Test cases specifically designed for the "returned" argument attribute.
@@ -825,6 +825,17 @@ define i32 @exact(i32* %a) {
   %add2 = add i32 %add1, %c2
   %add3 = add i32 %add2, %c4
   ret i32 %add3
+}
+
+@G = external global i8
+define i32* @ret_const() #0 {
+  %bc = bitcast i8* @G to i32*
+  ret i32* %bc
+}
+define i32* @use_const() #0 {
+  %c = call i32* @ret_const()
+  ; CHECK: ret i32* bitcast (i8* @G to i32*)
+  ret i32* %c
 }
 
 attributes #0 = { noinline nounwind uwtable }

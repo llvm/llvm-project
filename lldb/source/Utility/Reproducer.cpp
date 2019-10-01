@@ -136,7 +136,15 @@ FileSpec Reproducer::GetReproducerPath() const {
   return {};
 }
 
-Generator::Generator(const FileSpec &root) : m_root(root), m_done(false) {}
+static FileSpec MakeAbsolute(FileSpec file_spec) {
+  SmallString<128> path;
+  file_spec.GetPath(path, false);
+  llvm::sys::fs::make_absolute(path);
+  return FileSpec(path, file_spec.GetPathStyle());
+}
+
+Generator::Generator(FileSpec root)
+    : m_root(MakeAbsolute(std::move(root))), m_done(false) {}
 
 Generator::~Generator() {}
 
@@ -188,7 +196,8 @@ void Generator::AddProvidersToIndex() {
   yout << files;
 }
 
-Loader::Loader(const FileSpec &root) : m_root(root), m_loaded(false) {}
+Loader::Loader(FileSpec root)
+    : m_root(MakeAbsolute(std::move(root))), m_loaded(false) {}
 
 llvm::Error Loader::LoadIndex() {
   if (m_loaded)

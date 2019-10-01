@@ -137,10 +137,18 @@
 #endif
 
 /// LLVM_NODISCARD - Warn if a type or return value is discarded.
+
+// Use the 'nodiscard' attribute in C++17 or newer mode.
 #if __cplusplus > 201402L && LLVM_HAS_CPP_ATTRIBUTE(nodiscard)
 #define LLVM_NODISCARD [[nodiscard]]
 #elif LLVM_HAS_CPP_ATTRIBUTE(clang::warn_unused_result)
 #define LLVM_NODISCARD [[clang::warn_unused_result]]
+// Clang in C++14 mode claims that it has the 'nodiscard' attribute, but also
+// warns in the pedantic mode that 'nodiscard' is a C++17 extension (PR33518).
+// Use the 'nodiscard' attribute in C++14 mode only with GCC.
+// TODO: remove this workaround when PR33518 is resolved.
+#elif defined(__GNUC__) && LLVM_HAS_CPP_ATTRIBUTE(nodiscard)
+#define LLVM_NODISCARD [[nodiscard]]
 #else
 #define LLVM_NODISCARD
 #endif

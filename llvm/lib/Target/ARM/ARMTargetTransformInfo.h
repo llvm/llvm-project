@@ -152,6 +152,9 @@ public:
     return ST->getMaxInterleaveFactor();
   }
 
+  bool isLegalMaskedLoad(Type *DataTy);
+  bool isLegalMaskedStore(Type *DataTy) { return isLegalMaskedLoad(DataTy); }
+
   int getMemcpyCost(const Instruction *I);
 
   int getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index, Type *SubTp);

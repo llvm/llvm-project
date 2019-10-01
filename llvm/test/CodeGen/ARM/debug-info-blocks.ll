@@ -155,7 +155,7 @@ define hidden void @foobar_func_block_invoke_0(i8* %.block_descriptor, %0* %load
 !47 = !DIDerivedType(tag: DW_TAG_member, name: "DestroyFuncPtr", line: 307, size: 32, align: 32, offset: 96, file: !153, scope: !40, baseType: !46)
 !48 = !DIDerivedType(tag: DW_TAG_member, name: "mydata", line: 609, size: 32, align: 32, offset: 160, file: !152, scope: !24, baseType: !49)
 !49 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 32, scope: !0, baseType: !50)
-!50 = !DICompositeType(tag: DW_TAG_structure_type, size: 224, flags: DIFlagBlockByrefStruct, file: !152, scope: !24, elements: !51)
+!50 = !DICompositeType(tag: DW_TAG_structure_type, size: 224, file: !152, scope: !24, elements: !51)
 !51 = !{!52, !53, !54, !55, !56, !57, !58}
 !52 = !DIDerivedType(tag: DW_TAG_member, name: "__isa", size: 32, align: 32, file: !152, scope: !24, baseType: !32)
 !53 = !DIDerivedType(tag: DW_TAG_member, name: "__forwarding", size: 32, align: 32, offset: 32, file: !152, scope: !24, baseType: !32)

@@ -12,8 +12,8 @@
 
 // RELOC:      Relocations [
 // RELOC-NEXT:  Section {{.*}} .rela.dyn {
-// RELOC-NEXT:    0x2020C0 R_X86_64_TPOFF64 tlsshared0 0x0
-// RELOC-NEXT:    0x2020C8 R_X86_64_TPOFF64 tlsshared1 0x0
+// RELOC-NEXT:    0x202420 R_X86_64_TPOFF64 tlsshared0 0x0
+// RELOC-NEXT:    0x202428 R_X86_64_TPOFF64 tlsshared1 0x0
 // RELOC-NEXT:  }
 // RELOC-NEXT: ]
 
@@ -21,9 +21,9 @@
 
 // Table 11.5: GD -> IE Code Transition (LP64)
 // DISASM-NEXT:               movq %fs:0, %rax
-// DISASM-NEXT: 201009:       addq 4272(%rip), %rax
+// DISASM-NEXT: 201309:       addq 4368(%rip), %rax
 // DISASM-NEXT:               movq %fs:0, %rax
-// DISASM-NEXT: 201019:       addq 4264(%rip), %rax
+// DISASM-NEXT: 201319:       addq 4360(%rip), %rax
 
 // Table 11.7: GD -> LE Code Transition (LP64)
 // DISASM-NEXT:               movq %fs:0, %rax

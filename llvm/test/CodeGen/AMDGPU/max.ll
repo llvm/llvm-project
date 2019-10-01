@@ -1,5 +1,5 @@
-; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=pitcairn < %s | FileCheck -enable-var-scope -check-prefix=SI -check-prefix=FUNC %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -march=r600 -mcpu=cypress < %s | FileCheck -enable-var-scope -check-prefix=EG -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mcpu=pitcairn < %s | FileCheck -enable-var-scope -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=r600 -mcpu=cypress < %s | FileCheck -enable-var-scope -check-prefix=EG -check-prefix=FUNC %s
 
 
 ; FUNC-LABEL: {{^}}v_test_imax_sge_i32:
@@ -7,8 +7,10 @@
 
 ; EG: MAX_INT
 define amdgpu_kernel void @v_test_imax_sge_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr, i32 addrspace(1)* %bptr) nounwind {
+  %tid = call i32 @llvm.r600.read.tidig.x()
+  %gep.in = getelementptr inbounds i32, i32 addrspace(1)* %bptr, i32 %tid
   %a = load i32, i32 addrspace(1)* %aptr, align 4
-  %b = load i32, i32 addrspace(1)* %bptr, align 4
+  %b = load i32, i32 addrspace(1)* %gep.in, align 4
   %cmp = icmp sge i32 %a, %b
   %val = select i1 %cmp, i32 %a, i32 %b
   store i32 %val, i32 addrspace(1)* %out, align 4
@@ -27,8 +29,10 @@ define amdgpu_kernel void @v_test_imax_sge_i32(i32 addrspace(1)* %out, i32 addrs
 ; EG: MAX_INT
 ; EG: MAX_INT
 define amdgpu_kernel void @v_test_imax_sge_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> addrspace(1)* %aptr, <4 x i32> addrspace(1)* %bptr) nounwind {
+  %tid = call i32 @llvm.r600.read.tidig.x()
+  %gep.in = getelementptr inbounds <4 x i32>, <4 x i32> addrspace(1)* %bptr, i32 %tid
   %a = load <4 x i32>, <4 x i32> addrspace(1)* %aptr, align 4
-  %b = load <4 x i32>, <4 x i32> addrspace(1)* %bptr, align 4
+  %b = load <4 x i32>, <4 x i32> addrspace(1)* %gep.in, align 4
   %cmp = icmp sge <4 x i32> %a, %b
   %val = select <4 x i1> %cmp, <4 x i32> %a, <4 x i32> %b
   store <4 x i32> %val, <4 x i32> addrspace(1)* %out, align 4
@@ -101,8 +105,10 @@ define amdgpu_kernel void @s_test_imax_sgt_imm_v2i32(<2 x i32> addrspace(1)* %ou
 
 ; EG: MAX_INT
 define amdgpu_kernel void @v_test_imax_sgt_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr, i32 addrspace(1)* %bptr) nounwind {
+  %tid = call i32 @llvm.r600.read.tidig.x()
+  %gep.in = getelementptr inbounds i32, i32 addrspace(1)* %bptr, i32 %tid
   %a = load i32, i32 addrspace(1)* %aptr, align 4
-  %b = load i32, i32 addrspace(1)* %bptr, align 4
+  %b = load i32, i32 addrspace(1)* %gep.in, align 4
   %cmp = icmp sgt i32 %a, %b
   %val = select i1 %cmp, i32 %a, i32 %b
   store i32 %val, i32 addrspace(1)* %out, align 4
@@ -125,8 +131,10 @@ define amdgpu_kernel void @s_test_imax_sgt_i32(i32 addrspace(1)* %out, i32 %a, i
 
 ; EG: MAX_UINT
 define amdgpu_kernel void @v_test_umax_uge_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr, i32 addrspace(1)* %bptr) nounwind {
+  %tid = call i32 @llvm.r600.read.tidig.x()
+  %gep.in = getelementptr inbounds i32, i32 addrspace(1)* %bptr, i32 %tid
   %a = load i32, i32 addrspace(1)* %aptr, align 4
-  %b = load i32, i32 addrspace(1)* %bptr, align 4
+  %b = load i32, i32 addrspace(1)* %gep.in, align 4
   %cmp = icmp uge i32 %a, %b
   %val = select i1 %cmp, i32 %a, i32 %b
   store i32 %val, i32 addrspace(1)* %out, align 4
@@ -182,7 +190,9 @@ define amdgpu_kernel void @v_test_umax_uge_i8(i8 addrspace(1)* %out, i8 addrspac
 
 ; EG: MAX_UINT
 define amdgpu_kernel void @v_test_umax_ugt_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr, i32 addrspace(1)* %bptr) nounwind {
-  %a = load i32, i32 addrspace(1)* %aptr, align 4
+  %tid = call i32 @llvm.r600.read.tidig.x()
+  %gep.in = getelementptr inbounds i32, i32 addrspace(1)* %bptr, i32 %tid
+  %a = load i32, i32 addrspace(1)* %gep.in, align 4
   %b = load i32, i32 addrspace(1)* %bptr, align 4
   %cmp = icmp ugt i32 %a, %b
   %val = select i1 %cmp, i32 %a, i32 %b
@@ -320,3 +330,9 @@ define amdgpu_kernel void @test_imax_sge_i64(i64 addrspace(1)* %out, i64 %a, i64
   store i64 %val, i64 addrspace(1)* %out, align 8
   ret void
 }
+
+
+declare i32 @llvm.r600.read.tidig.x() #0
+
+attributes #0 = { nounwind readnone }
+attributes #1 = { nounwind }

@@ -89,8 +89,13 @@ TEST(TBDv2, ReadFile) {
   auto File = std::move(Result.get());
   EXPECT_EQ(FileType::TBD_V2, File->getFileType());
   auto Archs = AK_armv7 | AK_armv7s | AK_armv7k | AK_arm64;
+  auto Platform = PlatformKind::iOS;
+  TargetList Targets;
+  for (auto &&arch : Archs)
+    Targets.emplace_back(Target(arch, Platform));
   EXPECT_EQ(Archs, File->getArchitectures());
-  EXPECT_EQ(PlatformKind::iOS, File->getPlatform());
+  EXPECT_EQ(File->getPlatforms().size(), 1U);
+  EXPECT_EQ(Platform, *File->getPlatforms().begin());
   EXPECT_EQ(std::string("Test.dylib"), File->getInstallName());
   EXPECT_EQ(PackedVersion(2, 3, 4), File->getCurrentVersion());
   EXPECT_EQ(PackedVersion(1, 0, 0), File->getCompatibilityVersion());
@@ -99,8 +104,8 @@ TEST(TBDv2, ReadFile) {
   EXPECT_TRUE(File->isTwoLevelNamespace());
   EXPECT_TRUE(File->isApplicationExtensionSafe());
   EXPECT_TRUE(File->isInstallAPI());
-  InterfaceFileRef client("clientA", Archs);
-  InterfaceFileRef reexport("/usr/lib/libfoo.dylib", Archs);
+  InterfaceFileRef client("clientA", Targets);
+  InterfaceFileRef reexport("/usr/lib/libfoo.dylib", Targets);
   EXPECT_EQ(1U, File->allowableClients().size());
   EXPECT_EQ(client, File->allowableClients().front());
   EXPECT_EQ(1U, File->reexportedLibraries().size());
@@ -155,8 +160,13 @@ TEST(TBDv2, ReadFile2) {
   auto File = std::move(Result.get());
   EXPECT_EQ(FileType::TBD_V2, File->getFileType());
   auto Archs = AK_armv7 | AK_armv7s | AK_armv7k | AK_arm64;
+  auto Platform = PlatformKind::iOS;
+  TargetList Targets;
+  for (auto &&arch : Archs)
+    Targets.emplace_back(Target(arch, Platform));
   EXPECT_EQ(Archs, File->getArchitectures());
-  EXPECT_EQ(PlatformKind::iOS, File->getPlatform());
+  EXPECT_EQ(File->getPlatforms().size(), 1U);
+  EXPECT_EQ(Platform, *File->getPlatforms().begin());
   EXPECT_EQ(std::string("Test.dylib"), File->getInstallName());
   EXPECT_EQ(PackedVersion(1, 0, 0), File->getCurrentVersion());
   EXPECT_EQ(PackedVersion(1, 0, 0), File->getCompatibilityVersion());
@@ -192,27 +202,29 @@ TEST(TBDv2, WriteFile) {
       "...\n";
 
   InterfaceFile File;
+  TargetList Targets;
+  for (auto &&arch : AK_i386 | AK_x86_64)
+    Targets.emplace_back(Target(arch, PlatformKind::macOS));
   File.setPath("libfoo.dylib");
   File.setInstallName("/usr/lib/libfoo.dylib");
   File.setFileType(FileType::TBD_V2);
-  File.setArchitectures(AK_i386 | AK_x86_64);
-  File.setPlatform(PlatformKind::macOS);
+  File.addTargets(Targets);
   File.setCurrentVersion(PackedVersion(1, 2, 3));
   File.setTwoLevelNamespace();
   File.setApplicationExtensionSafe();
   File.setSwiftABIVersion(5);
   File.setObjCConstraint(ObjCConstraintType::Retain_Release);
-  File.addAllowableClient("clientA", AK_x86_64);
-  File.addReexportedLibrary("/usr/lib/libfoo.dylib", AK_x86_64);
-  File.addSymbol(SymbolKind::GlobalSymbol, "_sym1", AK_i386);
-  File.addSymbol(SymbolKind::GlobalSymbol, "_sym2", AK_i386,
+  File.addAllowableClient("clientA", Targets[1]);
+  File.addReexportedLibrary("/usr/lib/libfoo.dylib", Targets[1]);
+  File.addSymbol(SymbolKind::GlobalSymbol, "_sym1", {Targets[0]});
+  File.addSymbol(SymbolKind::GlobalSymbol, "_sym2", {Targets[0]},
                  SymbolFlags::WeakDefined);
-  File.addSymbol(SymbolKind::GlobalSymbol, "_sym3", AK_i386,
+  File.addSymbol(SymbolKind::GlobalSymbol, "_sym3", {Targets[0]},
                  SymbolFlags::ThreadLocalValue);
-  File.addSymbol(SymbolKind::ObjectiveCClass, "Class1", AK_x86_64);
-  File.addSymbol(SymbolKind::ObjectiveCClassEHType, "Class1", AK_x86_64);
+  File.addSymbol(SymbolKind::ObjectiveCClass, "Class1", {Targets[1]});
+  File.addSymbol(SymbolKind::ObjectiveCClassEHType, "Class1", {Targets[1]});
   File.addSymbol(SymbolKind::ObjectiveCInstanceVariable, "Class1._ivar1",
-                 AK_x86_64);
+                 {Targets[1]});
 
   SmallString<4096> Buffer;
   raw_svector_ostream OS(Buffer);
@@ -232,8 +244,10 @@ TEST(TBDv2, Platform_macOS) {
       TextAPIReader::get(MemoryBufferRef(tbd_v1_platform_macos, "Test.tbd"));
   EXPECT_TRUE(!!Result);
   auto File = std::move(Result.get());
+  auto Platform = PlatformKind::macOS;
   EXPECT_EQ(FileType::TBD_V2, File->getFileType());
-  EXPECT_EQ(PlatformKind::macOS, File->getPlatform());
+  EXPECT_EQ(File->getPlatforms().size(), 1U);
+  EXPECT_EQ(Platform, *File->getPlatforms().begin());
 }
 
 TEST(TBDv2, Platform_iOS) {
@@ -246,9 +260,11 @@ TEST(TBDv2, Platform_iOS) {
   auto Result =
       TextAPIReader::get(MemoryBufferRef(tbd_v1_platform_ios, "Test.tbd"));
   EXPECT_TRUE(!!Result);
+  auto Platform = PlatformKind::iOS;
   auto File = std::move(Result.get());
   EXPECT_EQ(FileType::TBD_V2, File->getFileType());
-  EXPECT_EQ(PlatformKind::iOS, File->getPlatform());
+  EXPECT_EQ(File->getPlatforms().size(), 1U);
+  EXPECT_EQ(Platform, *File->getPlatforms().begin());
 }
 
 TEST(TBDv2, Platform_watchOS) {
@@ -261,9 +277,11 @@ TEST(TBDv2, Platform_watchOS) {
   auto Result =
       TextAPIReader::get(MemoryBufferRef(tbd_v1_platform_watchos, "Test.tbd"));
   EXPECT_TRUE(!!Result);
+  auto Platform = PlatformKind::watchOS;
   auto File = std::move(Result.get());
   EXPECT_EQ(FileType::TBD_V2, File->getFileType());
-  EXPECT_EQ(PlatformKind::watchOS, File->getPlatform());
+  EXPECT_EQ(File->getPlatforms().size(), 1U);
+  EXPECT_EQ(Platform, *File->getPlatforms().begin());
 }
 
 TEST(TBDv2, Platform_tvOS) {
@@ -276,9 +294,11 @@ TEST(TBDv2, Platform_tvOS) {
   auto Result =
       TextAPIReader::get(MemoryBufferRef(tbd_v1_platform_tvos, "Test.tbd"));
   EXPECT_TRUE(!!Result);
+  auto Platform = PlatformKind::tvOS;
   auto File = std::move(Result.get());
   EXPECT_EQ(FileType::TBD_V2, File->getFileType());
-  EXPECT_EQ(PlatformKind::tvOS, File->getPlatform());
+  EXPECT_EQ(File->getPlatforms().size(), 1U);
+  EXPECT_EQ(Platform, *File->getPlatforms().begin());
 }
 
 TEST(TBDv2, Platform_bridgeOS) {
@@ -291,9 +311,11 @@ TEST(TBDv2, Platform_bridgeOS) {
   auto Result =
       TextAPIReader::get(MemoryBufferRef(tbd_v1_platform_bridgeos, "Test.tbd"));
   EXPECT_TRUE(!!Result);
+  auto Platform = PlatformKind::bridgeOS;
   auto File = std::move(Result.get());
   EXPECT_EQ(FileType::TBD_V2, File->getFileType());
-  EXPECT_EQ(PlatformKind::bridgeOS, File->getPlatform());
+  EXPECT_EQ(File->getPlatforms().size(), 1U);
+  EXPECT_EQ(Platform, *File->getPlatforms().begin());
 }
 
 TEST(TBDv2, Swift_1_0) {
@@ -415,7 +437,6 @@ TEST(TBDv2, UnknownArchitecture) {
       "platform: macosx\n"
       "install-name: Test.dylib\n"
       "...\n";
-
   auto Result = TextAPIReader::get(
       MemoryBufferRef(tbd_v2_file_unknown_architecture, "Test.tbd"));
   EXPECT_TRUE(!!Result);
@@ -423,9 +444,9 @@ TEST(TBDv2, UnknownArchitecture) {
 
 TEST(TBDv2, UnknownPlatform) {
   static const char tbd_v2_file_unknown_platform[] = "--- !tapi-tbd-v2\n"
-                                                     "archs: [ i386 ]\n"
-                                                     "platform: newOS\n"
-                                                     "...\n";
+	                                                     "archs: [ i386 ]\n"
+	                                                     "platform: newOS\n"
+	                                                     "...\n";
 
   auto Result = TextAPIReader::get(
       MemoryBufferRef(tbd_v2_file_unknown_platform, "Test.tbd"));
@@ -433,6 +454,23 @@ TEST(TBDv2, UnknownPlatform) {
   auto errorMessage = toString(Result.takeError());
   EXPECT_EQ("malformed file\nTest.tbd:3:11: error: unknown platform\nplatform: "
             "newOS\n          ^~~~~\n",
+            errorMessage);
+}
+
+TEST(TBDv2, InvalidPlatform) {
+  static const char tbd_v2_file_invalid_platform[] =
+      "--- !tapi-tbd-v2\n"
+      "archs: [ i386 ]\n"
+      "platform: iosmac\n"
+      "install-name: Test.dylib\n"
+      "...\n";
+
+  auto Result = TextAPIReader::get(
+      MemoryBufferRef(tbd_v2_file_invalid_platform, "Test.tbd"));
+  EXPECT_FALSE(!!Result);
+  auto errorMessage = toString(Result.takeError());
+  EXPECT_EQ("malformed file\nTest.tbd:3:11: error: invalid platform\nplatform: "
+            "iosmac\n          ^~~~~~\n",
             errorMessage);
 }
 

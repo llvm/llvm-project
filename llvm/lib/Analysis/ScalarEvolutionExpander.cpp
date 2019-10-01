@@ -1486,7 +1486,18 @@ Value *SCEVExpander::expandAddRecExprLiterally(const SCEVAddRecExpr *S) {
 }
 
 Value *SCEVExpander::visitAddRecExpr(const SCEVAddRecExpr *S) {
-  if (!CanonicalMode) return expandAddRecExprLiterally(S);
+  // In canonical mode we compute the addrec as an expression of a canonical IV
+  // using evaluateAtIteration and expand the resulting SCEV expression. This
+  // way we avoid introducing new IVs to carry on the comutation of the addrec
+  // throughout the loop.
+  //
+  // For nested addrecs evaluateAtIteration might need a canonical IV of a
+  // type wider than the addrec itself. Emitting a canonical IV of the
+  // proper type might produce non-legal types, for example expanding an i64
+  // {0,+,2,+,1} addrec would need an i65 canonical IV. To avoid this just fall
+  // back to non-canonical mode for nested addrecs.
+  if (!CanonicalMode || (S->getNumOperands() > 2))
+    return expandAddRecExprLiterally(S);
 
   Type *Ty = SE.getEffectiveSCEVType(S->getType());
   const Loop *L = S->getLoop();
@@ -2094,11 +2105,10 @@ SCEVExpander::getRelatedExistingExpansion(const SCEV *S, const Instruction *At,
   for (BasicBlock *BB : ExitingBlocks) {
     ICmpInst::Predicate Pred;
     Instruction *LHS, *RHS;
-    BasicBlock *TrueBB, *FalseBB;
 
     if (!match(BB->getTerminator(),
                m_Br(m_ICmp(Pred, m_Instruction(LHS), m_Instruction(RHS)),
-                    TrueBB, FalseBB)))
+                    m_BasicBlock(), m_BasicBlock())))
       continue;
 
     if (SE.getSCEV(LHS) == S && SE.DT.dominates(LHS, At))

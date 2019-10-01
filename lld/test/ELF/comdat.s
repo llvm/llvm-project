@@ -21,7 +21,7 @@ foo:
 // CHECK: Disassembly of section .text2:
 // CHECK-EMPTY:
 // CHECK-NEXT: foo:
-// CHECK-NEXT:   1000: {{.*}}  nop
+// CHECK-NEXT:   1234: {{.*}}  nop
 // CHECK-NOT: nop
 
         .section bar, "ax"
@@ -30,8 +30,8 @@ foo:
 // CHECK: Disassembly of section bar:
 // CHECK-EMPTY:
 // CHECK-NEXT: bar:
-// 0x1000 - 0x1001 - 5 = -6
-// CHECK-NEXT:   1001:	{{.*}}  callq  -6
+// 0x1234 - 0x1235 - 5 = -6
+// CHECK-NEXT:   1235:	{{.*}}  callq  -6
 
         .section .text3,"axG",@progbits,zed,comdat,unique,0
 
@@ -71,7 +71,7 @@ foo:
 // READ-NEXT:   }
 // READ-NEXT:   Symbol {
 // READ-NEXT:     Name: _DYNAMIC
-// READ-NEXT:     Value: 0x2000
+// READ-NEXT:     Value: 0x2240
 // READ-NEXT:     Size: 0
 // READ-NEXT:     Binding: Local
 // READ-NEXT:     Type: None

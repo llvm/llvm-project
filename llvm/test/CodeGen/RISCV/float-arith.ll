@@ -339,26 +339,26 @@ define float @fmadd_s(float %a, float %b, float %c) nounwind {
 define float @fmsub_s(float %a, float %b, float %c) nounwind {
 ; RV32IF-LABEL: fmsub_s:
 ; RV32IF:       # %bb.0:
-; RV32IF-NEXT:    fmv.w.x ft0, a2
-; RV32IF-NEXT:    lui a2, %hi(.LCPI15_0)
-; RV32IF-NEXT:    addi a2, a2, %lo(.LCPI15_0)
-; RV32IF-NEXT:    flw ft1, 0(a2)
-; RV32IF-NEXT:    fadd.s ft0, ft0, ft1
+; RV32IF-NEXT:    lui a3, %hi(.LCPI15_0)
+; RV32IF-NEXT:    addi a3, a3, %lo(.LCPI15_0)
+; RV32IF-NEXT:    flw ft0, 0(a3)
 ; RV32IF-NEXT:    fmv.w.x ft1, a1
 ; RV32IF-NEXT:    fmv.w.x ft2, a0
+; RV32IF-NEXT:    fmv.w.x ft3, a2
+; RV32IF-NEXT:    fadd.s ft0, ft3, ft0
 ; RV32IF-NEXT:    fmsub.s ft0, ft2, ft1, ft0
 ; RV32IF-NEXT:    fmv.x.w a0, ft0
 ; RV32IF-NEXT:    ret
 ;
 ; RV64IF-LABEL: fmsub_s:
 ; RV64IF:       # %bb.0:
-; RV64IF-NEXT:    fmv.w.x ft0, a2
-; RV64IF-NEXT:    lui a2, %hi(.LCPI15_0)
-; RV64IF-NEXT:    addi a2, a2, %lo(.LCPI15_0)
-; RV64IF-NEXT:    flw ft1, 0(a2)
-; RV64IF-NEXT:    fadd.s ft0, ft0, ft1
+; RV64IF-NEXT:    lui a3, %hi(.LCPI15_0)
+; RV64IF-NEXT:    addi a3, a3, %lo(.LCPI15_0)
+; RV64IF-NEXT:    flw ft0, 0(a3)
 ; RV64IF-NEXT:    fmv.w.x ft1, a1
 ; RV64IF-NEXT:    fmv.w.x ft2, a0
+; RV64IF-NEXT:    fmv.w.x ft3, a2
+; RV64IF-NEXT:    fadd.s ft0, ft3, ft0
 ; RV64IF-NEXT:    fmsub.s ft0, ft2, ft1, ft0
 ; RV64IF-NEXT:    fmv.x.w a0, ft0
 ; RV64IF-NEXT:    ret
@@ -371,29 +371,29 @@ define float @fmsub_s(float %a, float %b, float %c) nounwind {
 define float @fnmadd_s(float %a, float %b, float %c) nounwind {
 ; RV32IF-LABEL: fnmadd_s:
 ; RV32IF:       # %bb.0:
-; RV32IF-NEXT:    fmv.w.x ft0, a2
-; RV32IF-NEXT:    lui a2, %hi(.LCPI16_0)
-; RV32IF-NEXT:    addi a2, a2, %lo(.LCPI16_0)
-; RV32IF-NEXT:    flw ft1, 0(a2)
-; RV32IF-NEXT:    fadd.s ft0, ft0, ft1
-; RV32IF-NEXT:    fmv.w.x ft2, a0
-; RV32IF-NEXT:    fadd.s ft1, ft2, ft1
-; RV32IF-NEXT:    fmv.w.x ft2, a1
-; RV32IF-NEXT:    fnmadd.s ft0, ft1, ft2, ft0
+; RV32IF-NEXT:    lui a3, %hi(.LCPI16_0)
+; RV32IF-NEXT:    addi a3, a3, %lo(.LCPI16_0)
+; RV32IF-NEXT:    flw ft0, 0(a3)
+; RV32IF-NEXT:    fmv.w.x ft1, a1
+; RV32IF-NEXT:    fmv.w.x ft2, a2
+; RV32IF-NEXT:    fmv.w.x ft3, a0
+; RV32IF-NEXT:    fadd.s ft3, ft3, ft0
+; RV32IF-NEXT:    fadd.s ft0, ft2, ft0
+; RV32IF-NEXT:    fnmadd.s ft0, ft3, ft1, ft0
 ; RV32IF-NEXT:    fmv.x.w a0, ft0
 ; RV32IF-NEXT:    ret
 ;
 ; RV64IF-LABEL: fnmadd_s:
 ; RV64IF:       # %bb.0:
-; RV64IF-NEXT:    fmv.w.x ft0, a2
-; RV64IF-NEXT:    lui a2, %hi(.LCPI16_0)
-; RV64IF-NEXT:    addi a2, a2, %lo(.LCPI16_0)
-; RV64IF-NEXT:    flw ft1, 0(a2)
-; RV64IF-NEXT:    fadd.s ft0, ft0, ft1
-; RV64IF-NEXT:    fmv.w.x ft2, a0
-; RV64IF-NEXT:    fadd.s ft1, ft2, ft1
-; RV64IF-NEXT:    fmv.w.x ft2, a1
-; RV64IF-NEXT:    fnmadd.s ft0, ft1, ft2, ft0
+; RV64IF-NEXT:    lui a3, %hi(.LCPI16_0)
+; RV64IF-NEXT:    addi a3, a3, %lo(.LCPI16_0)
+; RV64IF-NEXT:    flw ft0, 0(a3)
+; RV64IF-NEXT:    fmv.w.x ft1, a1
+; RV64IF-NEXT:    fmv.w.x ft2, a2
+; RV64IF-NEXT:    fmv.w.x ft3, a0
+; RV64IF-NEXT:    fadd.s ft3, ft3, ft0
+; RV64IF-NEXT:    fadd.s ft0, ft2, ft0
+; RV64IF-NEXT:    fnmadd.s ft0, ft3, ft1, ft0
 ; RV64IF-NEXT:    fmv.x.w a0, ft0
 ; RV64IF-NEXT:    ret
   %a_ = fadd float 0.0, %a
@@ -407,26 +407,26 @@ define float @fnmadd_s(float %a, float %b, float %c) nounwind {
 define float @fnmsub_s(float %a, float %b, float %c) nounwind {
 ; RV32IF-LABEL: fnmsub_s:
 ; RV32IF:       # %bb.0:
-; RV32IF-NEXT:    fmv.w.x ft0, a0
-; RV32IF-NEXT:    lui a0, %hi(.LCPI17_0)
-; RV32IF-NEXT:    addi a0, a0, %lo(.LCPI17_0)
-; RV32IF-NEXT:    flw ft1, 0(a0)
-; RV32IF-NEXT:    fadd.s ft0, ft0, ft1
+; RV32IF-NEXT:    lui a3, %hi(.LCPI17_0)
+; RV32IF-NEXT:    addi a3, a3, %lo(.LCPI17_0)
+; RV32IF-NEXT:    flw ft0, 0(a3)
 ; RV32IF-NEXT:    fmv.w.x ft1, a2
 ; RV32IF-NEXT:    fmv.w.x ft2, a1
+; RV32IF-NEXT:    fmv.w.x ft3, a0
+; RV32IF-NEXT:    fadd.s ft0, ft3, ft0
 ; RV32IF-NEXT:    fnmsub.s ft0, ft0, ft2, ft1
 ; RV32IF-NEXT:    fmv.x.w a0, ft0
 ; RV32IF-NEXT:    ret
 ;
 ; RV64IF-LABEL: fnmsub_s:
 ; RV64IF:       # %bb.0:
-; RV64IF-NEXT:    fmv.w.x ft0, a0
-; RV64IF-NEXT:    lui a0, %hi(.LCPI17_0)
-; RV64IF-NEXT:    addi a0, a0, %lo(.LCPI17_0)
-; RV64IF-NEXT:    flw ft1, 0(a0)
-; RV64IF-NEXT:    fadd.s ft0, ft0, ft1
+; RV64IF-NEXT:    lui a3, %hi(.LCPI17_0)
+; RV64IF-NEXT:    addi a3, a3, %lo(.LCPI17_0)
+; RV64IF-NEXT:    flw ft0, 0(a3)
 ; RV64IF-NEXT:    fmv.w.x ft1, a2
 ; RV64IF-NEXT:    fmv.w.x ft2, a1
+; RV64IF-NEXT:    fmv.w.x ft3, a0
+; RV64IF-NEXT:    fadd.s ft0, ft3, ft0
 ; RV64IF-NEXT:    fnmsub.s ft0, ft0, ft2, ft1
 ; RV64IF-NEXT:    fmv.x.w a0, ft0
 ; RV64IF-NEXT:    ret

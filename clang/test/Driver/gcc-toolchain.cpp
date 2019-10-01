@@ -3,12 +3,14 @@
 // RUN: %clangxx -no-canonical-prefixes %s -### -o %t 2>&1 \
 // RUN:     --target=i386-unknown-linux -stdlib=libstdc++ \
 // RUN:     --gcc-toolchain=%S/Inputs/ubuntu_11.04_multiarch_tree/usr \
+// RUN:     --sysroot="" \
 // RUN:   | FileCheck %s
 //
 // Additionally check that the legacy spelling of the flag works.
 // RUN: %clangxx -no-canonical-prefixes %s -### -o %t 2>&1 \
 // RUN:     --target=i386-unknown-linux -stdlib=libstdc++ \
 // RUN:     -gcc-toolchain %S/Inputs/ubuntu_11.04_multiarch_tree/usr \
+// RUN:     --sysroot="" \
 // RUN:   | FileCheck %s
 //
 // Test for header search toolchain detection.

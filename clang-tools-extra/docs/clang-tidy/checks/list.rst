@@ -51,6 +51,7 @@ Clang-Tidy Checks
    bugprone-forwarding-reference-overload
    bugprone-inaccurate-erase
    bugprone-incorrect-roundings
+   bugprone-infinite-loop
    bugprone-integer-division
    bugprone-lambda-function-name
    bugprone-macro-parentheses
@@ -211,6 +212,7 @@ Clang-Tidy Checks
    cppcoreguidelines-pro-type-vararg
    cppcoreguidelines-slicing
    cppcoreguidelines-special-member-functions
+   darwin-dispatch-once-nonstatic
    fuchsia-default-arguments-calls
    fuchsia-default-arguments-declarations
    fuchsia-header-anon-namespaces (redirects to google-build-namespaces) <fuchsia-header-anon-namespaces>
@@ -325,6 +327,7 @@ Clang-Tidy Checks
    objc-avoid-nserror-init
    objc-avoid-spinlock
    objc-forbidden-subclassing
+   objc-missing-hash
    objc-property-declaration
    objc-super-self
    openmp-exception-escape

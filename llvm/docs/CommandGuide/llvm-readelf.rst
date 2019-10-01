@@ -163,7 +163,8 @@ OPTIONS
 .. option:: --stack-sizes
 
  Display the contents of the stack sizes section(s), i.e. pairs of function
- names and the size of their stack frames.
+ names and the size of their stack frames. Currently only implemented for GNU
+ style output.
 
 .. option:: --string-dump=<section[,section,...]>, -p
 
@@ -180,7 +181,7 @@ OPTIONS
 
 .. option:: --version
 
- Display the version of this program.
+ Display the version of the :program:`llvm-readelf` executable.
 
 .. option:: --version-info, -V
 

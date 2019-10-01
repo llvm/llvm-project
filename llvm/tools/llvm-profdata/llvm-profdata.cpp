@@ -982,10 +982,21 @@ static int showInstrProfile(const std::string &Filename, bool ShowCounts,
   return 0;
 }
 
+static void showSectionInfo(sampleprof::SampleProfileReader *Reader,
+                            raw_fd_ostream &OS) {
+  if (!Reader->dumpSectionInfo(OS)) {
+    WithColor::warning() << "-show-sec-info-only is only supported for "
+                         << "sample profile in extbinary format and is "
+                         << "ignored for other formats.\n";
+    return;
+  }
+}
+
 static int showSampleProfile(const std::string &Filename, bool ShowCounts,
                              bool ShowAllFunctions,
                              const std::string &ShowFunction,
-                             bool ShowProfileSymbolList, raw_fd_ostream &OS) {
+                             bool ShowProfileSymbolList,
+                             bool ShowSectionInfoOnly, raw_fd_ostream &OS) {
   using namespace sampleprof;
   LLVMContext Context;
   auto ReaderOrErr = SampleProfileReader::create(Filename, Context);
@@ -993,6 +1004,12 @@ static int showSampleProfile(const std::string &Filename, bool ShowCounts,
     exitWithErrorCode(EC, Filename);
 
   auto Reader = std::move(ReaderOrErr.get());
+
+  if (ShowSectionInfoOnly) {
+    showSectionInfo(Reader.get(), OS);
+    return 0;
+  }
+
   if (std::error_code EC = Reader->read())
     exitWithErrorCode(EC, Filename);
 
@@ -1062,6 +1079,11 @@ static int show_main(int argc, const char *argv[]) {
   cl::opt<bool> ShowProfileSymbolList(
       "show-prof-sym-list", cl::init(false),
       cl::desc("Show profile symbol list if it exists in the profile. "));
+  cl::opt<bool> ShowSectionInfoOnly(
+      "show-sec-info-only", cl::init(false),
+      cl::desc("Show the information of each section in the sample profile. "
+               "The flag is only usable when the sample profile is in "
+               "extbinary format"));
 
   cl::ParseCommandLineOptions(argc, argv, "LLVM profile data summary\n");
 
@@ -1090,7 +1112,8 @@ static int show_main(int argc, const char *argv[]) {
                             OnlyListBelow, ShowFunction, TextFormat, OS);
   else
     return showSampleProfile(Filename, ShowCounts, ShowAllFunctions,
-                             ShowFunction, ShowProfileSymbolList, OS);
+                             ShowFunction, ShowProfileSymbolList,
+                             ShowSectionInfoOnly, OS);
 }
 
 int main(int argc, const char *argv[]) {

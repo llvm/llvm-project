@@ -133,7 +133,7 @@ file formats.
 
 .. option:: --version
 
- Display the version of this program.
+ Display the version of the :program:`llvm-readobj` executable.
 
 .. option:: @<FILE>
 
@@ -213,6 +213,12 @@ The following options are implemented only for the ELF file format.
 .. option:: --section-mapping
 
  Display the section to segment mapping.
+
+.. option:: --stack-sizes
+
+ Display the contents of the stack sizes section(s), i.e. pairs of function
+ names and the size of their stack frames. Currently only implemented for GNU
+ style output.
 
 .. option:: --version-info, -V
 

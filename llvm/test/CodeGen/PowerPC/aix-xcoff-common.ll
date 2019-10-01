@@ -21,6 +21,8 @@
 
 @array = common local_unnamed_addr global [33 x i8] zeroinitializer, align 1
 
+; CHECK-NOT: .toc
+
 ; CHECK:      .csect .text[PR]
 ; CHECK-NEXT:  .file
 ; CHECK-NEXT: .comm   a,4,2

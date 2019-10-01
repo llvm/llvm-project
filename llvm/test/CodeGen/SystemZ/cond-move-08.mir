@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=s390x-linux-gnu -mcpu=arch13 -start-before=greedy %s -o - \
+# RUN: llc -mtriple=s390x-linux-gnu -mcpu=z15 -start-before=greedy %s -o - \
 # RUN:   | FileCheck %s
 #
 # Test that regalloc manages (via regalloc hints) to avoid a LOCRMux jump
@@ -73,7 +73,7 @@
   ; Function Attrs: nounwind
   declare void @llvm.stackprotector(i8*, i8**) #1
 
-  attributes #0 = { "target-cpu"="arch13" }
+  attributes #0 = { "target-cpu"="z15" }
   attributes #1 = { nounwind }
 
 ...

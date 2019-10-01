@@ -60,7 +60,7 @@ let Predicates = [FeatureVector] in {
     // Generate byte mask.
     def VZERO : InherentVRIa<"vzero", 0xE744, 0>;
     def VONE  : InherentVRIa<"vone", 0xE744, 0xffff>;
-    def VGBM  : UnaryVRIa<"vgbm", 0xE744, z_byte_mask, v128b, imm32zx16>;
+    def VGBM  : UnaryVRIa<"vgbm", 0xE744, z_byte_mask, v128b, imm32zx16_timm>;
 
     // Generate mask.
     def VGM  : BinaryVRIbGeneric<"vgm", 0xE746>;
@@ -71,10 +71,10 @@ let Predicates = [FeatureVector] in {
 
     // Replicate immediate.
     def VREPI  : UnaryVRIaGeneric<"vrepi", 0xE745, imm32sx16>;
-    def VREPIB : UnaryVRIa<"vrepib", 0xE745, z_replicate, v128b, imm32sx16, 0>;
-    def VREPIH : UnaryVRIa<"vrepih", 0xE745, z_replicate, v128h, imm32sx16, 1>;
-    def VREPIF : UnaryVRIa<"vrepif", 0xE745, z_replicate, v128f, imm32sx16, 2>;
-    def VREPIG : UnaryVRIa<"vrepig", 0xE745, z_replicate, v128g, imm32sx16, 3>;
+    def VREPIB : UnaryVRIa<"vrepib", 0xE745, z_replicate, v128b, imm32sx16_timm, 0>;
+    def VREPIH : UnaryVRIa<"vrepih", 0xE745, z_replicate, v128h, imm32sx16_timm, 1>;
+    def VREPIF : UnaryVRIa<"vrepif", 0xE745, z_replicate, v128f, imm32sx16_timm, 2>;
+    def VREPIG : UnaryVRIa<"vrepig", 0xE745, z_replicate, v128g, imm32sx16_timm, 3>;
   }
 
   // Load element immediate.
@@ -116,7 +116,7 @@ let Predicates = [FeatureVector] in {
                                (ins bdxaddr12only:$XBD2, imm32zx4:$M3),
                        "lcbb\t$R1, $XBD2, $M3",
                        [(set GR32:$R1, (int_s390_lcbb bdxaddr12only:$XBD2,
-                                                      imm32zx4:$M3))]>;
+                                                      imm32zx4_timm:$M3))]>;
 
   // Load with length.  The number of loaded bytes is only known at run time.
   def VLL : BinaryVRSb<"vll", 0xE737, int_s390_vll, 0>;
@@ -362,9 +362,9 @@ let Predicates = [FeatureVector] in {
   def VREPH : BinaryVRIc<"vreph", 0xE74D, z_splat, v128h, v128h, 1>;
   def VREPF : BinaryVRIc<"vrepf", 0xE74D, z_splat, v128f, v128f, 2>;
   def VREPG : BinaryVRIc<"vrepg", 0xE74D, z_splat, v128g, v128g, 3>;
-  def : Pat<(v4f32 (z_splat VR128:$vec, imm32zx16:$index)),
+  def : Pat<(v4f32 (z_splat VR128:$vec, imm32zx16_timm:$index)),
             (VREPF VR128:$vec, imm32zx16:$index)>;
-  def : Pat<(v2f64 (z_splat VR128:$vec, imm32zx16:$index)),
+  def : Pat<(v2f64 (z_splat VR128:$vec, imm32zx16_timm:$index)),
             (VREPG VR128:$vec, imm32zx16:$index)>;
 
   // Select.
@@ -778,7 +778,7 @@ let Predicates = [FeatureVector] in {
 
   // Shift left double by byte.
   def VSLDB : TernaryVRId<"vsldb", 0xE777, z_shl_double, v128b, v128b, 0>;
-  def : Pat<(int_s390_vsldb VR128:$x, VR128:$y, imm32zx8:$z),
+  def : Pat<(int_s390_vsldb VR128:$x, VR128:$y, imm32zx8_timm:$z),
             (VSLDB VR128:$x, VR128:$y, imm32zx8:$z)>;
 
   // Shift left double by bit.

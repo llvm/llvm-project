@@ -2,10 +2,10 @@
 ; RUN: llc -mtriple=powerpc64le-linux-gnu -mcpu=pwr8 < %s | FileCheck %s --check-prefix CHECK-LE
 ; RUN: llc -mtriple=powerpc64-linux-gnu -mcpu=pwr8 < %s | FileCheck %s --check-prefix CHECK-BE
 
-@as = common local_unnamed_addr global i16 0, align 2
-@bs = common local_unnamed_addr global i16 0, align 2
-@ai = common local_unnamed_addr global i32 0, align 4
-@bi = common local_unnamed_addr global i32 0, align 4
+@as = local_unnamed_addr global i16 0, align 2
+@bs = local_unnamed_addr global i16 0, align 2
+@ai = local_unnamed_addr global i32 0, align 4
+@bi = local_unnamed_addr global i32 0, align 4
 
 define void @bswapStorei64Toi32() {
 ; CHECK-LABEL: bswapStorei64Toi32:

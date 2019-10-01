@@ -472,17 +472,17 @@ def z_subcarry : PatFrag<(ops node:$lhs, node:$rhs),
                               (z_subcarry_1 node:$lhs, node:$rhs, CC)>;
 
 // Signed and unsigned comparisons.
-def z_scmp : PatFrag<(ops node:$a, node:$b), (z_icmp node:$a, node:$b, imm), [{
+def z_scmp : PatFrag<(ops node:$a, node:$b), (z_icmp node:$a, node:$b, timm), [{
   unsigned Type = cast<ConstantSDNode>(N->getOperand(2))->getZExtValue();
   return Type != SystemZICMP::UnsignedOnly;
 }]>;
-def z_ucmp : PatFrag<(ops node:$a, node:$b), (z_icmp node:$a, node:$b, imm), [{
+def z_ucmp : PatFrag<(ops node:$a, node:$b), (z_icmp node:$a, node:$b, timm), [{
   unsigned Type = cast<ConstantSDNode>(N->getOperand(2))->getZExtValue();
   return Type != SystemZICMP::SignedOnly;
 }]>;
 
 // Register- and memory-based TEST UNDER MASK.
-def z_tm_reg : PatFrag<(ops node:$a, node:$b), (z_tm node:$a, node:$b, imm)>;
+def z_tm_reg : PatFrag<(ops node:$a, node:$b), (z_tm node:$a, node:$b, timm)>;
 def z_tm_mem : PatFrag<(ops node:$a, node:$b), (z_tm node:$a, node:$b, 0)>;
 
 // Register sign-extend operations.  Sub-32-bit values are represented as i32s.

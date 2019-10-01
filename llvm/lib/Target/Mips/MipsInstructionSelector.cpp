@@ -773,6 +773,29 @@ bool MipsInstructionSelector::select(MachineInstr &I) {
     MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(Mips::SYNC)).addImm(0);
     break;
   }
+  case G_VASTART: {
+    MipsFunctionInfo *FuncInfo = MF.getInfo<MipsFunctionInfo>();
+    int FI = FuncInfo->getVarArgsFrameIndex();
+
+    Register LeaReg = MRI.createVirtualRegister(&Mips::GPR32RegClass);
+    MachineInstr *LEA_ADDiu =
+        BuildMI(MBB, I, I.getDebugLoc(), TII.get(Mips::LEA_ADDiu))
+            .addDef(LeaReg)
+            .addFrameIndex(FI)
+            .addImm(0);
+    if (!constrainSelectedInstRegOperands(*LEA_ADDiu, TII, TRI, RBI))
+      return false;
+
+    MachineInstr *Store = BuildMI(MBB, I, I.getDebugLoc(), TII.get(Mips::SW))
+                              .addUse(LeaReg)
+                              .addUse(I.getOperand(0).getReg())
+                              .addImm(0);
+    if (!constrainSelectedInstRegOperands(*Store, TII, TRI, RBI))
+      return false;
+
+    I.eraseFromParent();
+    return true;
+  }
   default:
     return false;
   }

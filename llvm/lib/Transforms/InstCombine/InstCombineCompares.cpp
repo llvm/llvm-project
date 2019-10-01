@@ -3638,7 +3638,8 @@ Value *InstCombiner::foldUnsignedMultiplicationOverflowCheck(ICmpInst &I) {
 /// TODO: A large part of this logic is duplicated in InstSimplify's
 /// simplifyICmpWithBinOp(). We should be able to share that and avoid the code
 /// duplication.
-Instruction *InstCombiner::foldICmpBinOp(ICmpInst &I) {
+Instruction *InstCombiner::foldICmpBinOp(ICmpInst &I, const SimplifyQuery &SQ) {
+  const SimplifyQuery Q = SQ.getWithInstruction(&I);
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
 
   // Special logic for binary operators.
@@ -3684,21 +3685,21 @@ Instruction *InstCombiner::foldICmpBinOp(ICmpInst &I) {
     D = BO1->getOperand(1);
   }
 
-  // icmp (X+Y), X -> icmp Y, 0 for equalities or if there is no overflow.
+  // icmp (A+B), A -> icmp B, 0 for equalities or if there is no overflow.
+  // icmp (A+B), B -> icmp A, 0 for equalities or if there is no overflow.
   if ((A == Op1 || B == Op1) && NoOp0WrapProblem)
     return new ICmpInst(Pred, A == Op1 ? B : A,
                         Constant::getNullValue(Op1->getType()));
 
-  // icmp X, (X+Y) -> icmp 0, Y for equalities or if there is no overflow.
+  // icmp C, (C+D) -> icmp 0, D for equalities or if there is no overflow.
+  // icmp D, (C+D) -> icmp 0, C for equalities or if there is no overflow.
   if ((C == Op0 || D == Op0) && NoOp1WrapProblem)
     return new ICmpInst(Pred, Constant::getNullValue(Op0->getType()),
                         C == Op0 ? D : C);
 
-  // icmp (X+Y), (X+Z) -> icmp Y, Z for equalities or if there is no overflow.
+  // icmp (A+B), (A+D) -> icmp B, D for equalities or if there is no overflow.
   if (A && C && (A == C || A == D || B == C || B == D) && NoOp0WrapProblem &&
-      NoOp1WrapProblem &&
-      // Try not to increase register pressure.
-      BO0->hasOneUse() && BO1->hasOneUse()) {
+      NoOp1WrapProblem) {
     // Determine Y and Z in the form icmp (X+Y), (X+Z).
     Value *Y, *Z;
     if (A == C) {
@@ -3722,39 +3723,39 @@ Instruction *InstCombiner::foldICmpBinOp(ICmpInst &I) {
     return new ICmpInst(Pred, Y, Z);
   }
 
-  // icmp slt (X + -1), Y -> icmp sle X, Y
+  // icmp slt (A + -1), Op1 -> icmp sle A, Op1
   if (A && NoOp0WrapProblem && Pred == CmpInst::ICMP_SLT &&
       match(B, m_AllOnes()))
     return new ICmpInst(CmpInst::ICMP_SLE, A, Op1);
 
-  // icmp sge (X + -1), Y -> icmp sgt X, Y
+  // icmp sge (A + -1), Op1 -> icmp sgt A, Op1
   if (A && NoOp0WrapProblem && Pred == CmpInst::ICMP_SGE &&
       match(B, m_AllOnes()))
     return new ICmpInst(CmpInst::ICMP_SGT, A, Op1);
 
-  // icmp sle (X + 1), Y -> icmp slt X, Y
+  // icmp sle (A + 1), Op1 -> icmp slt A, Op1
   if (A && NoOp0WrapProblem && Pred == CmpInst::ICMP_SLE && match(B, m_One()))
     return new ICmpInst(CmpInst::ICMP_SLT, A, Op1);
 
-  // icmp sgt (X + 1), Y -> icmp sge X, Y
+  // icmp sgt (A + 1), Op1 -> icmp sge A, Op1
   if (A && NoOp0WrapProblem && Pred == CmpInst::ICMP_SGT && match(B, m_One()))
     return new ICmpInst(CmpInst::ICMP_SGE, A, Op1);
 
-  // icmp sgt X, (Y + -1) -> icmp sge X, Y
+  // icmp sgt Op0, (C + -1) -> icmp sge Op0, C
   if (C && NoOp1WrapProblem && Pred == CmpInst::ICMP_SGT &&
       match(D, m_AllOnes()))
     return new ICmpInst(CmpInst::ICMP_SGE, Op0, C);
 
-  // icmp sle X, (Y + -1) -> icmp slt X, Y
+  // icmp sle Op0, (C + -1) -> icmp slt Op0, C
   if (C && NoOp1WrapProblem && Pred == CmpInst::ICMP_SLE &&
       match(D, m_AllOnes()))
     return new ICmpInst(CmpInst::ICMP_SLT, Op0, C);
 
-  // icmp sge X, (Y + 1) -> icmp sgt X, Y
+  // icmp sge Op0, (C + 1) -> icmp sgt Op0, C
   if (C && NoOp1WrapProblem && Pred == CmpInst::ICMP_SGE && match(D, m_One()))
     return new ICmpInst(CmpInst::ICMP_SGT, Op0, C);
 
-  // icmp slt X, (Y + 1) -> icmp sle X, Y
+  // icmp slt Op0, (C + 1) -> icmp sle Op0, C
   if (C && NoOp1WrapProblem && Pred == CmpInst::ICMP_SLT && match(D, m_One()))
     return new ICmpInst(CmpInst::ICMP_SLE, Op0, C);
 
@@ -3762,33 +3763,33 @@ Instruction *InstCombiner::foldICmpBinOp(ICmpInst &I) {
   // canonicalization from (X -nuw 1) to (X + -1) means that the combinations
   // wouldn't happen even if they were implemented.
   //
-  // icmp ult (X - 1), Y -> icmp ule X, Y
-  // icmp uge (X - 1), Y -> icmp ugt X, Y
-  // icmp ugt X, (Y - 1) -> icmp uge X, Y
-  // icmp ule X, (Y - 1) -> icmp ult X, Y
+  // icmp ult (A - 1), Op1 -> icmp ule A, Op1
+  // icmp uge (A - 1), Op1 -> icmp ugt A, Op1
+  // icmp ugt Op0, (C - 1) -> icmp uge Op0, C
+  // icmp ule Op0, (C - 1) -> icmp ult Op0, C
 
-  // icmp ule (X + 1), Y -> icmp ult X, Y
+  // icmp ule (A + 1), Op0 -> icmp ult A, Op1
   if (A && NoOp0WrapProblem && Pred == CmpInst::ICMP_ULE && match(B, m_One()))
     return new ICmpInst(CmpInst::ICMP_ULT, A, Op1);
 
-  // icmp ugt (X + 1), Y -> icmp uge X, Y
+  // icmp ugt (A + 1), Op0 -> icmp uge A, Op1
   if (A && NoOp0WrapProblem && Pred == CmpInst::ICMP_UGT && match(B, m_One()))
     return new ICmpInst(CmpInst::ICMP_UGE, A, Op1);
 
-  // icmp uge X, (Y + 1) -> icmp ugt X, Y
+  // icmp uge Op0, (C + 1) -> icmp ugt Op0, C
   if (C && NoOp1WrapProblem && Pred == CmpInst::ICMP_UGE && match(D, m_One()))
     return new ICmpInst(CmpInst::ICMP_UGT, Op0, C);
 
-  // icmp ult X, (Y + 1) -> icmp ule X, Y
+  // icmp ult Op0, (C + 1) -> icmp ule Op0, C
   if (C && NoOp1WrapProblem && Pred == CmpInst::ICMP_ULT && match(D, m_One()))
     return new ICmpInst(CmpInst::ICMP_ULE, Op0, C);
 
   // if C1 has greater magnitude than C2:
-  //  icmp (X + C1), (Y + C2) -> icmp (X + C3), Y
+  //  icmp (A + C1), (C + C2) -> icmp (A + C3), C
   //  s.t. C3 = C1 - C2
   //
   // if C2 has greater magnitude than C1:
-  //  icmp (X + C1), (Y + C2) -> icmp X, (Y + C3)
+  //  icmp (A + C1), (C + C2) -> icmp A, (C + C3)
   //  s.t. C3 = C2 - C1
   if (A && C && NoOp0WrapProblem && NoOp1WrapProblem &&
       (BO0->hasOneUse() || BO1->hasOneUse()) && !I.isUnsigned())
@@ -3826,10 +3827,10 @@ Instruction *InstCombiner::foldICmpBinOp(ICmpInst &I) {
     D = BO1->getOperand(1);
   }
 
-  // icmp (X-Y), X -> icmp 0, Y for equalities or if there is no overflow.
+  // icmp (A-B), A -> icmp 0, B for equalities or if there is no overflow.
   if (A == Op1 && NoOp0WrapProblem)
     return new ICmpInst(Pred, Constant::getNullValue(Op1->getType()), B);
-  // icmp X, (X-Y) -> icmp Y, 0 for equalities or if there is no overflow.
+  // icmp C, (C-D) -> icmp D, 0 for equalities or if there is no overflow.
   if (C == Op0 && NoOp1WrapProblem)
     return new ICmpInst(Pred, D, Constant::getNullValue(Op0->getType()));
 
@@ -3840,16 +3841,21 @@ Instruction *InstCombiner::foldICmpBinOp(ICmpInst &I) {
   // C u</u>= (C - D) --> C u</u>= D
   if (C == Op0 && (Pred == ICmpInst::ICMP_ULT || Pred == ICmpInst::ICMP_UGE))
     return new ICmpInst(Pred, C, D);
+  // (A - B) u>=/u< A --> B u>/u<= A  iff B != 0
+  if (A == Op1 && (Pred == ICmpInst::ICMP_UGE || Pred == ICmpInst::ICMP_ULT) &&
+      isKnownNonZero(B, Q.DL, /*Depth=*/0, Q.AC, Q.CxtI, Q.DT))
+    return new ICmpInst(CmpInst::getFlippedStrictnessPredicate(Pred), B, A);
+  // C u<=/u> (C - D) --> C u</u>= D  iff B != 0
+  if (C == Op0 && (Pred == ICmpInst::ICMP_ULE || Pred == ICmpInst::ICMP_UGT) &&
+      isKnownNonZero(D, Q.DL, /*Depth=*/0, Q.AC, Q.CxtI, Q.DT))
+    return new ICmpInst(CmpInst::getFlippedStrictnessPredicate(Pred), C, D);
 
-  // icmp (Y-X), (Z-X) -> icmp Y, Z for equalities or if there is no overflow.
-  if (B && D && B == D && NoOp0WrapProblem && NoOp1WrapProblem &&
-      // Try not to increase register pressure.
-      BO0->hasOneUse() && BO1->hasOneUse())
+  // icmp (A-B), (C-B) -> icmp A, C for equalities or if there is no overflow.
+  if (B && D && B == D && NoOp0WrapProblem && NoOp1WrapProblem)
     return new ICmpInst(Pred, A, C);
-  // icmp (X-Y), (X-Z) -> icmp Z, Y for equalities or if there is no overflow.
-  if (A && C && A == C && NoOp0WrapProblem && NoOp1WrapProblem &&
-      // Try not to increase register pressure.
-      BO0->hasOneUse() && BO1->hasOneUse())
+
+  // icmp (A-B), (A-D) -> icmp D, B for equalities or if there is no overflow.
+  if (A && C && A == C && NoOp0WrapProblem && NoOp1WrapProblem)
     return new ICmpInst(Pred, D, B);
 
   // icmp (0-X) < cst --> x > -cst
@@ -5135,16 +5141,11 @@ llvm::getFlippedStrictnessPredicateAndConstant(CmpInst::Predicate Pred,
     return WillIncrement ? !C->isMaxValue(IsSigned) : !C->isMinValue(IsSigned);
   };
 
-  // For scalars, SimplifyICmpInst should have already handled
-  // the edge cases for us, so we just assert on them.
-  // For vectors, we must handle the edge cases.
-  if (isa<ConstantInt>(C)) {
-    // A <= MAX -> TRUE ; A >= MIN -> TRUE
-    assert(ConstantIsOk(cast<ConstantInt>(C)));
+  if (auto *CI = dyn_cast<ConstantInt>(C)) {
+    // Bail out if the constant can't be safely incremented/decremented.
+    if (!ConstantIsOk(CI))
+      return llvm::None;
   } else if (Type->isVectorTy()) {
-    // TODO? If the edge cases for vectors were guaranteed to be handled as they
-    // are for scalar, we could remove the min/max checks. However, to do that,
-    // we would have to use insertelement/shufflevector to replace edge values.
     unsigned NumElts = Type->getVectorNumElements();
     for (unsigned i = 0; i != NumElts; ++i) {
       Constant *Elt = C->getAggregateElement(i);
@@ -5349,6 +5350,7 @@ static Instruction *foldVectorCmp(CmpInst &Cmp,
 
 Instruction *InstCombiner::visitICmpInst(ICmpInst &I) {
   bool Changed = false;
+  const SimplifyQuery Q = SQ.getWithInstruction(&I);
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
   unsigned Op0Cplxity = getComplexity(Op0);
   unsigned Op1Cplxity = getComplexity(Op1);
@@ -5363,8 +5365,7 @@ Instruction *InstCombiner::visitICmpInst(ICmpInst &I) {
     Changed = true;
   }
 
-  if (Value *V = SimplifyICmpInst(I.getPredicate(), Op0, Op1,
-                                  SQ.getWithInstruction(&I)))
+  if (Value *V = SimplifyICmpInst(I.getPredicate(), Op0, Op1, Q))
     return replaceInstUsesWith(I, V);
 
   // Comparing -val or val with non-zero is the same as just comparing val
@@ -5395,6 +5396,9 @@ Instruction *InstCombiner::visitICmpInst(ICmpInst &I) {
     return Res;
 
   if (Instruction *Res = foldICmpWithDominatingICmp(I))
+    return Res;
+
+  if (Instruction *Res = foldICmpBinOp(I, Q))
     return Res;
 
   if (Instruction *Res = foldICmpUsingKnownBits(I))
@@ -5473,9 +5477,6 @@ Instruction *InstCombiner::visitICmpInst(ICmpInst &I) {
 
   if (Instruction *R = foldICmpWithCastOp(I))
     return R;
-
-  if (Instruction *Res = foldICmpBinOp(I))
-    return Res;
 
   if (Instruction *Res = foldICmpWithMinMax(I))
     return Res;

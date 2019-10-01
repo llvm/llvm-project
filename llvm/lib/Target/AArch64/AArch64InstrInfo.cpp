@@ -929,7 +929,7 @@ bool AArch64InstrInfo::isCoalescableExtInstr(const MachineInstr &MI,
 }
 
 bool AArch64InstrInfo::areMemAccessesTriviallyDisjoint(
-    const MachineInstr &MIa, const MachineInstr &MIb, AliasAnalysis *AA) const {
+    const MachineInstr &MIa, const MachineInstr &MIb) const {
   const TargetRegisterInfo *TRI = &getRegisterInfo();
   const MachineOperand *BaseOpA = nullptr, *BaseOpB = nullptr;
   int64_t OffsetA = 0, OffsetB = 0;
@@ -2504,6 +2504,17 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
             .addReg(SrcReg, getKillRegState(KillSrc));
       }
     }
+    return;
+  }
+
+  // Copy a Predicate register by ORRing with itself.
+  if (AArch64::PPRRegClass.contains(DestReg) &&
+      AArch64::PPRRegClass.contains(SrcReg)) {
+    assert(Subtarget.hasSVE() && "Unexpected SVE register.");
+    BuildMI(MBB, I, DL, get(AArch64::ORR_PPzPP), DestReg)
+      .addReg(SrcReg) // Pg
+      .addReg(SrcReg)
+      .addReg(SrcReg, getKillRegState(KillSrc));
     return;
   }
 

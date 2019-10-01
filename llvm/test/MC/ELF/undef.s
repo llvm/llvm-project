@@ -18,6 +18,8 @@
         .text
         movsd   .Lsym8(%rip), %xmm1
 
+.hidden hidden
+
 test2_a = undef
 test2_b = undef + 1
 
@@ -41,11 +43,31 @@ test2_b = undef + 1
 // CHECK-NEXT:     Section: .rodata.str1.1
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Symbol {
+// CHECK-NEXT:     Name: hidden
+// CHECK-NEXT:     Value: 0x0
+// CHECK-NEXT:     Size: 0
+// CHECK-NEXT:     Binding: Global
+// CHECK-NEXT:     Type: None
+// CHECK-NEXT:     Other [
+// CHECK-NEXT:       STV_HIDDEN
+// CHECK-NEXT:     ]
+// CHECK-NEXT:     Section: Undefined
+// CHECK-NEXT:   }
+// CHECK-NEXT:   Symbol {
 // CHECK-NEXT:     Name: sym6
 // CHECK-NEXT:     Value: 0x0
 // CHECK-NEXT:     Size: 0
 // CHECK-NEXT:     Binding: Global
 // CHECK-NEXT:     Type: Object
+// CHECK-NEXT:     Other: 0
+// CHECK-NEXT:     Section: Undefined
+// CHECK-NEXT:   }
+// CHECK-NEXT:   Symbol {
+// CHECK-NEXT:     Name: undef
+// CHECK-NEXT:     Value: 0x0
+// CHECK-NEXT:     Size: 0
+// CHECK-NEXT:     Binding: Global
+// CHECK-NEXT:     Type: None
 // CHECK-NEXT:     Other: 0
 // CHECK-NEXT:     Section: Undefined
 // CHECK-NEXT:   }

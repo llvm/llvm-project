@@ -55,6 +55,7 @@ protected:
 
 private:
   std::string m_class_name;
+  std::string m_error_str;
   StructuredData::ObjectSP m_implementation_sp;
   bool m_did_push;
 

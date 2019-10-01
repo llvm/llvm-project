@@ -652,3 +652,9 @@ extern const char *lto_input_get_dependent_library(lto_input_t input,
                                                    size_t *size) {
   return LTOModule::getDependentLibrary(unwrap(input), index, size);
 }
+
+extern const char *const *lto_runtime_lib_symbols_list(size_t *size) {
+  auto symbols = lto::LTO::getRuntimeLibcallSymbols();
+  *size = symbols.size();
+  return symbols.data();
+}

@@ -1132,10 +1132,10 @@ bool llvm::EliminateDuplicatePHINodes(BasicBlock *BB) {
 /// often possible though. If alignment is important, a more reliable approach
 /// is to simply align all global variables and allocation instructions to
 /// their preferred alignment from the beginning.
-static unsigned enforceKnownAlignment(Value *V, unsigned Align,
+static unsigned enforceKnownAlignment(Value *V, unsigned Alignment,
                                       unsigned PrefAlign,
                                       const DataLayout &DL) {
-  assert(PrefAlign > Align);
+  assert(PrefAlign > Alignment);
 
   V = V->stripPointerCasts();
 
@@ -1146,36 +1146,36 @@ static unsigned enforceKnownAlignment(Value *V, unsigned Align,
     // stripPointerCasts recurses through infinite layers of bitcasts,
     // while computeKnownBits is not allowed to traverse more than 6
     // levels.
-    Align = std::max(AI->getAlignment(), Align);
-    if (PrefAlign <= Align)
-      return Align;
+    Alignment = std::max(AI->getAlignment(), Alignment);
+    if (PrefAlign <= Alignment)
+      return Alignment;
 
     // If the preferred alignment is greater than the natural stack alignment
     // then don't round up. This avoids dynamic stack realignment.
-    if (DL.exceedsNaturalStackAlignment(llvm::Align(PrefAlign)))
-      return Align;
+    if (DL.exceedsNaturalStackAlignment(Align(PrefAlign)))
+      return Alignment;
     AI->setAlignment(PrefAlign);
     return PrefAlign;
   }
 
   if (auto *GO = dyn_cast<GlobalObject>(V)) {
     // TODO: as above, this shouldn't be necessary.
-    Align = std::max(GO->getAlignment(), Align);
-    if (PrefAlign <= Align)
-      return Align;
+    Alignment = std::max(GO->getAlignment(), Alignment);
+    if (PrefAlign <= Alignment)
+      return Alignment;
 
     // If there is a large requested alignment and we can, bump up the alignment
     // of the global.  If the memory we set aside for the global may not be the
     // memory used by the final program then it is impossible for us to reliably
     // enforce the preferred alignment.
     if (!GO->canIncreaseAlignment())
-      return Align;
+      return Alignment;
 
     GO->setAlignment(PrefAlign);
     return PrefAlign;
   }
 
-  return Align;
+  return Alignment;
 }
 
 unsigned llvm::getOrEnforceKnownAlignment(Value *V, unsigned PrefAlign,

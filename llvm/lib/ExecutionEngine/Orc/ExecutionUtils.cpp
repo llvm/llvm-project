@@ -68,7 +68,7 @@ CtorDtorIterator::Element CtorDtorIterator::operator*() const {
     }
   }
 
-  ConstantInt *Priority = dyn_cast<ConstantInt>(CS->getOperand(0));
+  auto *Priority = cast<ConstantInt>(CS->getOperand(0));
   Value *Data = CS->getNumOperands() == 3 ? CS->getOperand(2) : nullptr;
   if (Data && !isa<GlobalValue>(Data))
     Data = nullptr;

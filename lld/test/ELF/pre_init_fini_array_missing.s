@@ -15,14 +15,14 @@ _start:
   call __fini_array_end
 
 // With no .init_array section the symbols resolve to .text.
-// 0x201000 - (0x201000 + 5) = -5
-// 0x201000 - (0x201005 + 5) = -10
+// 0x201120 - (0x201120 + 5) = -5
+// 0x201120 - (0x201125 + 5) = -10
 // ...
 
 // CHECK: Disassembly of section .text:
 // CHECK-EMPTY:
 // CHECK-NEXT:  _start:
-// CHECK-NEXT:   201000:       callq    -5
+// CHECK-NEXT:   201120:       callq    -5
 // CHECK-NEXT:                 callq    -10
 // CHECK-NEXT:                 callq    -15
 // CHECK-NEXT:                 callq    -20
@@ -34,7 +34,7 @@ _start:
 // PIE:      Disassembly of section .text:
 // PIE-EMPTY:
 // PIE-NEXT: _start:
-// PIE-NEXT:     1000:       callq   -5
+// PIE-NEXT:     1210:       callq   -5
 // PIE-NEXT:                 callq   -10
 // PIE-NEXT:                 callq   -15
 // PIE-NEXT:                 callq   -20

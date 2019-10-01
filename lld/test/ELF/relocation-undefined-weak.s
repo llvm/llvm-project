@@ -14,4 +14,4 @@ _start:
 
 .weak sym1
 
-# CHECK: 201000: movl $0x1, -0x20100a(%rip)
+# CHECK: 201120: movl $0x1, -0x20112a(%rip)

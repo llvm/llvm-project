@@ -44,6 +44,9 @@ else()
     XCODE_ATTRIBUTE_MACOSX_DEPLOYMENT_TARGET "${MACOSX_DEPLOYMENT_TARGET}")
 endif()
 
+# Add -Wdocumentation parameter
+set(CMAKE_XCODE_ATTRIBUTE_CLANG_WARN_DOCUMENTATION_COMMENTS "YES")
+
 # Apart from this one, CMake creates all required symlinks in the framework bundle.
 add_custom_command(TARGET liblldb POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E create_symlink

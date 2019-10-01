@@ -283,9 +283,11 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
     this->Options.TrapUnreachable = true;
   }
 
-  // Enable GlobalISel at or below EnableGlobalISelAt0.
+  // Enable GlobalISel at or below EnableGlobalISelAt0, unless this is
+  // MachO/CodeModel::Large, which GlobalISel does not support.
   if (getOptLevel() <= EnableGlobalISelAtO &&
-      TT.getArch() != Triple::aarch64_32) {
+      TT.getArch() != Triple::aarch64_32 &&
+      !(getCodeModel() == CodeModel::Large && TT.isOSBinFormatMachO())) {
     setGlobalISel(true);
     setGlobalISelAbort(GlobalISelAbortMode::Disable);
   }

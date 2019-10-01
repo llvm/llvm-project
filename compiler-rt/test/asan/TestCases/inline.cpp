@@ -13,6 +13,7 @@ int f(int *p) {
 int main(int argc, char **argv) {
   int * volatile x = (int*)malloc(2*sizeof(int) + 2);
   int res = f(x + 2);
+  free(x);
   if (res)
     exit(0);
   return 0;

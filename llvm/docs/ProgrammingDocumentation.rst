@@ -7,9 +7,8 @@ For developers of applications which use LLVM as a library.
    :hidden:
 
    Atomics
-   CodingStandards
    CommandLine
-   CompilerWriterInfo
+   CommandGuide/index
    ExtendingLLVM
    HowToSetUpLLVMStyleRTTI
    ProgrammersManual
@@ -19,10 +18,6 @@ For developers of applications which use LLVM as a library.
    ScudoHardenedAllocator
    OptBisect
    GwpAsan
-
-:doc:`LLVM Language Reference Manual <LangRef>`
-  Defines the LLVM intermediate representation and the assembly form of the
-  different nodes.
 
 :doc:`Atomics`
   Information about LLVM's concurrency model.
@@ -34,13 +29,6 @@ For developers of applications which use LLVM as a library.
 :doc:`Extensions`
   LLVM-specific extensions to tools and formats LLVM seeks compatibility with.
 
-:doc:`CommandLine`
-  Provides information on using the command line parsing library.
-
-:doc:`CodingStandards`
-  Details the LLVM coding standards and provides useful information on writing
-  efficient C++ code.
-
 :doc:`HowToSetUpLLVMStyleRTTI`
   How to make ``isa<>``, ``dyn_cast<>``, etc. available for clients of your
   class hierarchy.
@@ -48,28 +36,32 @@ For developers of applications which use LLVM as a library.
 :doc:`ExtendingLLVM`
   Look here to see how to add instructions and intrinsics to LLVM.
 
-`Doxygen generated documentation <http://llvm.org/doxygen/>`_
-  (`classes <http://llvm.org/doxygen/inherits.html>`_)
+:doc:`ScudoHardenedAllocator`
+  A library that implements a security-hardened `malloc()`.
 
-`Documentation for Go bindings <http://godoc.org/llvm.org/llvm/bindings/go/llvm>`_
+:doc:`GwpAsan`
+  A sampled heap memory error detection toolkit designed for production use.
 
-`Github Source Repository Browser <http://github.com/llvm/llvm-project//>`_
-   ..
+============
+Command Line
+============
 
-:doc:`CompilerWriterInfo`
-  A list of helpful links for compiler writers.
+:doc:`CommandLine`
+  Provides information on using the command line parsing library.
+
+:doc:`OptBisect`
+  A command line option for debugging optimization-induced failures.
+
+:doc:`LLVM Command Guide <CommandGuide/index>`
+   A reference manual for the LLVM command line utilities ("man" pages for LLVM
+   tools).
+
+=========
+LibFuzzer
+=========
 
 :doc:`LibFuzzer`
   A library for writing in-process guided fuzzers.
 
 :doc:`FuzzingLLVM`
   Information on writing and using Fuzzers to find bugs in LLVM.
-
-:doc:`ScudoHardenedAllocator`
-  A library that implements a security-hardened `malloc()`.
-
-:doc:`OptBisect`
-  A command line option for debugging optimization-induced failures.
-
-:doc:`GwpAsan`
-  A sampled heap memory error detection toolkit designed for production use.

@@ -42,6 +42,7 @@ enum OpenMPDirectiveKindEx {
   OMPD_teams_distribute_parallel,
   OMPD_target_teams_distribute_parallel,
   OMPD_mapper,
+  OMPD_variant,
 };
 
 class DeclDirectiveListParserHelper final {
@@ -80,6 +81,7 @@ static unsigned getOpenMPDirectiveKindEx(StringRef S) {
       .Case("reduction", OMPD_reduction)
       .Case("update", OMPD_update)
       .Case("mapper", OMPD_mapper)
+      .Case("variant", OMPD_variant)
       .Default(OMPD_unknown);
 }
 
@@ -93,6 +95,7 @@ static OpenMPDirectiveKind parseOpenMPDirectiveKind(Parser &P) {
       {OMPD_declare, OMPD_mapper, OMPD_declare_mapper},
       {OMPD_declare, OMPD_simd, OMPD_declare_simd},
       {OMPD_declare, OMPD_target, OMPD_declare_target},
+      {OMPD_declare, OMPD_variant, OMPD_declare_variant},
       {OMPD_distribute, OMPD_parallel, OMPD_distribute_parallel},
       {OMPD_distribute_parallel, OMPD_for, OMPD_distribute_parallel_for},
       {OMPD_distribute_parallel_for, OMPD_simd,
@@ -752,6 +755,7 @@ Parser::ParseOMPDeclareSimdClauses(Parser::DeclGroupPtrTy Ptr,
                       /*IsReinject*/ true);
   // Consume the previously pushed token.
   ConsumeAnyToken(/*ConsumeCodeCompletionTok=*/true);
+  ConsumeAnyToken(/*ConsumeCodeCompletionTok=*/true);
 
   FNContextRAII FnContext(*this, Ptr);
   OMPDeclareSimdDeclAttr::BranchStateTy BS =
@@ -780,6 +784,206 @@ Parser::ParseOMPDeclareSimdClauses(Parser::DeclGroupPtrTy Ptr,
   return Actions.ActOnOpenMPDeclareSimdDirective(
       Ptr, BS, Simdlen.get(), Uniforms, Aligneds, Alignments, Linears,
       LinModifiers, Steps, SourceRange(Loc, EndLoc));
+}
+
+/// Parse context selector for 'implementation' selector set:
+/// 'vendor' '(' <vendor> ')'
+static void
+parseImplementationSelector(Parser &P,
+                            Sema::OpenMPDeclareVariantCtsSelectorData &Data) {
+  const Token &Tok = P.getCurToken();
+  // Parse inner context selector set name, if any.
+  if (!Tok.is(tok::identifier)) {
+    P.Diag(Tok.getLocation(), diag::warn_omp_declare_variant_cs_name_expected)
+        << "implementation";
+    // Skip until either '}', ')', or end of directive.
+    while (!P.SkipUntil(tok::r_brace, tok::r_paren,
+                        tok::annot_pragma_openmp_end, Parser::StopBeforeMatch))
+      ;
+    return;
+  }
+  SmallString<16> Buffer;
+  StringRef CtxSelectorName = P.getPreprocessor().getSpelling(Tok, Buffer);
+  OMPDeclareVariantAttr::CtxSelectorType CSKind =
+      OMPDeclareVariantAttr::CtxUnknown;
+  (void)OMPDeclareVariantAttr::ConvertStrToCtxSelectorType(CtxSelectorName,
+                                                           CSKind);
+  (void)P.ConsumeToken();
+  switch (CSKind) {
+  case OMPDeclareVariantAttr::CtxVendor: {
+    // Parse '('.
+    BalancedDelimiterTracker T(P, tok::l_paren, tok::annot_pragma_openmp_end);
+    (void)T.expectAndConsume(diag::err_expected_lparen_after,
+                             CtxSelectorName.data());
+    // Parse <vendor>.
+    StringRef VendorName;
+    if (Tok.is(tok::identifier)) {
+      VendorName = P.getPreprocessor().getSpelling(P.getCurToken(), Buffer);
+      (void)P.ConsumeToken();
+    } else {
+      P.Diag(Tok.getLocation(), diag::err_omp_declare_variant_item_expected)
+          << "vendor identifier" << "vendor" << "implementation";
+    }
+    // Parse ')'.
+    (void)T.consumeClose();
+    if (!VendorName.empty())
+      Data.ImplVendor = VendorName;
+    break;
+  }
+  case OMPDeclareVariantAttr::CtxUnknown:
+    P.Diag(Tok.getLocation(), diag::warn_omp_declare_variant_cs_name_expected)
+        << "implementation";
+    // Skip until either '}', ')', or end of directive.
+    while (!P.SkipUntil(tok::r_brace, tok::r_paren,
+                        tok::annot_pragma_openmp_end, Parser::StopBeforeMatch))
+      ;
+    return;
+  }
+  Data.CtxSet = OMPDeclareVariantAttr::CtxSetImplementation;
+  Data.Ctx = CSKind;
+}
+
+/// Parses clauses for 'declare variant' directive.
+/// clause:
+/// <selector_set_name> '=' '{' <context_selectors> '}'
+/// [ ',' <selector_set_name> '=' '{' <context_selectors> '}' ]
+bool Parser::parseOpenMPContextSelectors(
+    SourceLocation Loc,
+    llvm::function_ref<void(SourceRange,
+                            const Sema::OpenMPDeclareVariantCtsSelectorData &)>
+        Callback) {
+  do {
+    // Parse inner context selector set name.
+    if (!Tok.is(tok::identifier)) {
+      Diag(Tok.getLocation(), diag::err_omp_declare_variant_no_ctx_selector)
+          << getOpenMPClauseName(OMPC_match);
+      return true;
+    }
+    SmallString<16> Buffer;
+    StringRef CtxSelectorSetName = PP.getSpelling(Tok, Buffer);
+    // Parse '='.
+    (void)ConsumeToken();
+    if (Tok.isNot(tok::equal)) {
+      Diag(Tok.getLocation(), diag::err_omp_declare_variant_equal_expected)
+          << CtxSelectorSetName;
+      return true;
+    }
+    (void)ConsumeToken();
+    // TBD: add parsing of known context selectors.
+    // Unknown selector - just ignore it completely.
+    Sema::OpenMPDeclareVariantCtsSelectorData Data;
+    {
+      // Parse '{'.
+      BalancedDelimiterTracker TBr(*this, tok::l_brace,
+                                   tok::annot_pragma_openmp_end);
+      if (TBr.expectAndConsume(diag::err_expected_lbrace_after, "="))
+        return true;
+      OMPDeclareVariantAttr::CtxSelectorSetType CSSKind =
+          OMPDeclareVariantAttr::CtxSetUnknown;
+      (void)OMPDeclareVariantAttr::ConvertStrToCtxSelectorSetType(
+          CtxSelectorSetName, CSSKind);
+      switch (CSSKind) {
+      case OMPDeclareVariantAttr::CtxSetImplementation:
+        parseImplementationSelector(*this, Data);
+        break;
+      case OMPDeclareVariantAttr::CtxSetUnknown:
+        // Skip until either '}', ')', or end of directive.
+        while (!SkipUntil(tok::r_brace, tok::r_paren,
+                          tok::annot_pragma_openmp_end, StopBeforeMatch))
+          ;
+        break;
+      }
+      // Parse '}'.
+      (void)TBr.consumeClose();
+    }
+    Callback(SourceRange(Loc, Tok.getLocation()), Data);
+    // Consume ','
+    if (Tok.isNot(tok::r_paren) && Tok.isNot(tok::annot_pragma_openmp_end))
+      (void)ExpectAndConsume(tok::comma);
+  } while (Tok.isAnyIdentifier());
+  return false;
+}
+
+/// Parse clauses for '#pragma omp declare variant ( variant-func-id ) clause'.
+void Parser::ParseOMPDeclareVariantClauses(Parser::DeclGroupPtrTy Ptr,
+                                           CachedTokens &Toks,
+                                           SourceLocation Loc) {
+  PP.EnterToken(Tok, /*IsReinject*/ true);
+  PP.EnterTokenStream(Toks, /*DisableMacroExpansion=*/true,
+                      /*IsReinject*/ true);
+  // Consume the previously pushed token.
+  ConsumeAnyToken(/*ConsumeCodeCompletionTok=*/true);
+  ConsumeAnyToken(/*ConsumeCodeCompletionTok=*/true);
+
+  FNContextRAII FnContext(*this, Ptr);
+  // Parse function declaration id.
+  SourceLocation RLoc;
+  // Parse with IsAddressOfOperand set to true to parse methods as DeclRefExprs
+  // instead of MemberExprs.
+  ExprResult AssociatedFunction =
+      ParseOpenMPParensExpr(getOpenMPDirectiveName(OMPD_declare_variant), RLoc,
+                            /*IsAddressOfOperand=*/true);
+  if (!AssociatedFunction.isUsable()) {
+    if (!Tok.is(tok::annot_pragma_openmp_end))
+      while (!SkipUntil(tok::annot_pragma_openmp_end, StopBeforeMatch))
+        ;
+    // Skip the last annot_pragma_openmp_end.
+    (void)ConsumeAnnotationToken();
+    return;
+  }
+  Optional<std::pair<FunctionDecl *, Expr *>> DeclVarData =
+      Actions.checkOpenMPDeclareVariantFunction(
+          Ptr, AssociatedFunction.get(), SourceRange(Loc, Tok.getLocation()));
+
+  // Parse 'match'.
+  OpenMPClauseKind CKind = Tok.isAnnotation()
+                               ? OMPC_unknown
+                               : getOpenMPClauseKind(PP.getSpelling(Tok));
+  if (CKind != OMPC_match) {
+    Diag(Tok.getLocation(), diag::err_omp_declare_variant_wrong_clause)
+        << getOpenMPClauseName(OMPC_match);
+    while (!SkipUntil(tok::annot_pragma_openmp_end, Parser::StopBeforeMatch))
+      ;
+    // Skip the last annot_pragma_openmp_end.
+    (void)ConsumeAnnotationToken();
+    return;
+  }
+  (void)ConsumeToken();
+  // Parse '('.
+  BalancedDelimiterTracker T(*this, tok::l_paren, tok::annot_pragma_openmp_end);
+  if (T.expectAndConsume(diag::err_expected_lparen_after,
+                         getOpenMPClauseName(OMPC_match))) {
+    while (!SkipUntil(tok::annot_pragma_openmp_end, StopBeforeMatch))
+      ;
+    // Skip the last annot_pragma_openmp_end.
+    (void)ConsumeAnnotationToken();
+    return;
+  }
+
+  // Parse inner context selectors.
+  if (!parseOpenMPContextSelectors(
+          Loc, [this, &DeclVarData](
+                   SourceRange SR,
+                   const Sema::OpenMPDeclareVariantCtsSelectorData &Data) {
+            if (DeclVarData.hasValue())
+              Actions.ActOnOpenMPDeclareVariantDirective(
+                  DeclVarData.getValue().first, DeclVarData.getValue().second,
+                  SR, Data);
+          })) {
+    // Parse ')'.
+    (void)T.consumeClose();
+    // Need to check for extra tokens.
+    if (Tok.isNot(tok::annot_pragma_openmp_end)) {
+      Diag(Tok, diag::warn_omp_extra_tokens_at_eol)
+          << getOpenMPDirectiveName(OMPD_declare_variant);
+    }
+  }
+
+  // Skip last tokens.
+  while (Tok.isNot(tok::annot_pragma_openmp_end))
+    ConsumeAnyToken();
+  // Skip the last annot_pragma_openmp_end.
+  (void)ConsumeAnnotationToken();
 }
 
 /// Parsing of simple OpenMP clauses like 'default' or 'proc_bind'.
@@ -1103,13 +1307,15 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
     }
     break;
   }
+  case OMPD_declare_variant:
   case OMPD_declare_simd: {
     // The syntax is:
-    // { #pragma omp declare simd }
+    // { #pragma omp declare {simd|variant} }
     // <function-declaration-or-definition>
     //
-    ConsumeToken();
     CachedTokens Toks;
+    Toks.push_back(Tok);
+    ConsumeToken();
     while(Tok.isNot(tok::annot_pragma_openmp_end)) {
       Toks.push_back(Tok);
       ConsumeAnyToken();
@@ -1133,10 +1339,16 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
       }
     }
     if (!Ptr) {
-      Diag(Loc, diag::err_omp_decl_in_declare_simd);
+      Diag(Loc, diag::err_omp_decl_in_declare_simd_variant)
+          << (DKind == OMPD_declare_simd ? 0 : 1);
       return DeclGroupPtrTy();
     }
-    return ParseOMPDeclareSimdClauses(Ptr, Toks, Loc);
+    if (DKind == OMPD_declare_simd)
+      return ParseOMPDeclareSimdClauses(Ptr, Toks, Loc);
+    assert(DKind == OMPD_declare_variant &&
+           "Expected declare variant directive only");
+    ParseOMPDeclareVariantClauses(Ptr, Toks, Loc);
+    return Ptr;
   }
   case OMPD_declare_target: {
     SourceLocation DTLoc = ConsumeAnyToken();
@@ -1572,6 +1784,7 @@ Parser::ParseOpenMPDeclarativeOrExecutableDirective(ParsedStmtContext StmtCtx) {
   case OMPD_declare_target:
   case OMPD_end_declare_target:
   case OMPD_requires:
+  case OMPD_declare_variant:
     Diag(Tok, diag::err_omp_unexpected_directive)
         << 1 << getOpenMPDirectiveName(DKind);
     SkipUntil(tok::annot_pragma_openmp_end);
@@ -1818,6 +2031,7 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
     break;
   case OMPC_threadprivate:
   case OMPC_uniform:
+  case OMPC_match:
     if (!WrongDirective)
       Diag(Tok, diag::err_omp_unexpected_clause)
           << getOpenMPClauseName(CKind) << getOpenMPDirectiveName(DKind);
@@ -1831,14 +2045,15 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
 /// constructs.
 /// \param RLoc Returned location of right paren.
 ExprResult Parser::ParseOpenMPParensExpr(StringRef ClauseName,
-                                         SourceLocation &RLoc) {
+                                         SourceLocation &RLoc,
+                                         bool IsAddressOfOperand) {
   BalancedDelimiterTracker T(*this, tok::l_paren, tok::annot_pragma_openmp_end);
   if (T.expectAndConsume(diag::err_expected_lparen_after, ClauseName.data()))
     return ExprError();
 
   SourceLocation ELoc = Tok.getLocation();
   ExprResult LHS(ParseCastExpression(
-      /*isUnaryExpression=*/false, /*isAddressOfOperand=*/false, NotTypeCast));
+      /*isUnaryExpression=*/false, IsAddressOfOperand, NotTypeCast));
   ExprResult Val(ParseRHSOfBinaryExpression(LHS, prec::Conditional));
   Val = Actions.ActOnFinishFullExpr(Val.get(), ELoc, /*DiscardedValue*/ false);
 

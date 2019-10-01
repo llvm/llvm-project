@@ -1,6 +1,6 @@
 ; Test vector insertions of byte-swapped memory values into 0.
 ;
-; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=arch13 | FileCheck %s
+; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z15 | FileCheck %s
 
 declare i16 @llvm.bswap.i16(i16)
 declare i32 @llvm.bswap.i32(i32)

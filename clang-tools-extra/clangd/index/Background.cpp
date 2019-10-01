@@ -69,13 +69,7 @@ public:
   llvm::StringRef resolve(llvm::StringRef FileURI) {
     auto I = URIToPathCache.try_emplace(FileURI);
     if (I.second) {
-      auto U = URI::parse(FileURI);
-      if (!U) {
-        elog("Failed to parse URI {0}: {1}", FileURI, U.takeError());
-        assert(false && "Failed to parse URI");
-        return "";
-      }
-      auto Path = URI::resolve(*U, HintPath);
+      auto Path = URI::resolve(FileURI, HintPath);
       if (!Path) {
         elog("Failed to resolve URI {0}: {1}", FileURI, Path.takeError());
         assert(false && "Failed to resolve URI");

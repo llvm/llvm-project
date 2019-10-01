@@ -733,6 +733,32 @@ struct FormatStyle {
     ///     B
     ///   };
     /// \endcode
+    BS_Whitesmiths,
+    /// Like ``Allman`` but always indent braces and line up code with braces.
+    /// \code
+    ///    try
+    ///     {
+    ///     foo();
+    ///     }
+    ///   catch ()
+    ///     {
+    ///     }
+    ///   void foo() { bar(); }
+    ///   class foo
+    ///     {
+    ///     };
+    ///   if (foo())
+    ///     {
+    ///     }
+    ///   else
+    ///     {
+    ///     }
+    ///   enum X : int
+    ///     {
+    ///     A,
+    ///     B
+    ///     };
+    /// \endcode
     BS_GNU,
     /// Like ``Attach``, but break before functions.
     /// \code

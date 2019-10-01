@@ -571,12 +571,15 @@ void Sema::ActOnPragmaUnused(const Token &IdTok, Scope *curScope,
   if (VD->isUsed())
     Diag(PragmaLoc, diag::warn_used_but_marked_unused) << Name;
 
-  VD->addAttr(UnusedAttr::CreateImplicit(Context, UnusedAttr::GNU_unused,
-                                         IdTok.getLocation()));
+  VD->addAttr(UnusedAttr::CreateImplicit(Context, IdTok.getLocation(),
+                                         AttributeCommonInfo::AS_Pragma,
+                                         UnusedAttr::GNU_unused));
 }
 
 void Sema::AddCFAuditedAttribute(Decl *D) {
-  SourceLocation Loc = PP.getPragmaARCCFCodeAuditedLoc();
+  IdentifierInfo *Ident;
+  SourceLocation Loc;
+  std::tie(Ident, Loc) = PP.getPragmaARCCFCodeAuditedInfo();
   if (!Loc.isValid()) return;
 
   // Don't add a redundant or conflicting attribute.
@@ -584,7 +587,9 @@ void Sema::AddCFAuditedAttribute(Decl *D) {
       D->hasAttr<CFUnknownTransferAttr>())
     return;
 
-  D->addAttr(CFAuditedTransferAttr::CreateImplicit(Context, Loc));
+  AttributeCommonInfo Info(Ident, SourceRange(Loc),
+                           AttributeCommonInfo::AS_Pragma);
+  D->addAttr(CFAuditedTransferAttr::CreateImplicit(Context, Info));
 }
 
 namespace {
@@ -735,7 +740,7 @@ void Sema::ActOnPragmaAttributeAttribute(
   if (!Rules.empty()) {
     auto Diagnostic =
         Diag(PragmaLoc, diag::err_pragma_attribute_invalid_matchers)
-        << Attribute.getName();
+        << Attribute;
     SmallVector<attr::SubjectMatchRule, 2> ExtraRules;
     for (const auto &Rule : Rules) {
       ExtraRules.push_back(attr::SubjectMatchRule(Rule.first));

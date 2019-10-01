@@ -10,8 +10,6 @@
 # CHECK:   $lr = t2LEUpdate renamable $lr
 
 --- |
-  ; ModuleID = '/home/sampar01/src/llvm/test/CodeGen/Thumb2/LowOverheadLoops/while.ll'
-  source_filename = "/home/sampar01/src/llvm/test/CodeGen/Thumb2/LowOverheadLoops/while.ll"
   target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
   target triple = "thumbv8.1m.main"
   
@@ -25,14 +23,14 @@
     %scevgep3 = getelementptr i16, i16* %b, i32 -1
     br label %while.body
   
-  while.body:                                       ; preds = %while.body.preheader, %while.body
+  while.body:                                       ; preds = %while.body, %while.body.preheader
     %lsr.iv4 = phi i16* [ %scevgep3, %while.body.preheader ], [ %scevgep5, %while.body ]
     %lsr.iv = phi i16* [ %scevgep, %while.body.preheader ], [ %scevgep1, %while.body ]
     %1 = phi i32 [ %3, %while.body ], [ %N, %while.body.preheader ]
-    %scevgep2 = getelementptr i16, i16* %lsr.iv, i32 1
-    %scevgep6 = getelementptr i16, i16* %lsr.iv4, i32 1
-    %2 = load i16, i16* %scevgep6, align 2, !tbaa !2
-    store i16 %2, i16* %scevgep2, align 2, !tbaa !2
+    %scevgep7 = getelementptr i16, i16* %lsr.iv, i32 1
+    %scevgep4 = getelementptr i16, i16* %lsr.iv4, i32 1
+    %2 = load i16, i16* %scevgep4, align 2
+    store i16 %2, i16* %scevgep7, align 2
     %3 = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %1, i32 1)
     %4 = icmp ne i32 %3, 0
     %scevgep1 = getelementptr i16, i16* %lsr.iv, i32 1
@@ -48,15 +46,6 @@
   
   attributes #0 = { noduplicate nounwind }
   attributes #1 = { nounwind }
-  
-  !llvm.module.flags = !{!0, !1}
-  
-  !0 = !{i32 1, !"wchar_size", i32 4}
-  !1 = !{i32 1, !"min_enum_size", i32 4}
-  !2 = !{!3, !3, i64 0}
-  !3 = !{!"short", !4, i64 0}
-  !4 = !{!"omnipotent char", !5, i64 0}
-  !5 = !{!"Simple C/C++ TBAA"}
 
 ...
 ---
@@ -67,7 +56,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: false
+tracksRegLiveness: true
 hasWinCFI:       false
 registers:       []
 liveins:
@@ -107,6 +96,7 @@ machineFunctionInfo: {}
 body:             |
   bb.0.entry:
     successors: %bb.1(0x40000000), %bb.3(0x40000000)
+    liveins: $r0, $r1, $r2, $r7, $lr
   
     frame-setup tPUSH 14, $noreg, killed $r7, killed $lr, implicit-def $sp, implicit $sp
     frame-setup CFI_INSTRUCTION def_cfa_offset 8
@@ -117,6 +107,7 @@ body:             |
   
   bb.1.while.body.preheader:
     successors: %bb.2(0x80000000)
+    liveins: $r0, $r1, $r2
   
     renamable $r1, dead $cpsr = tSUBi8 killed renamable $r1, 2, 14, $noreg
     renamable $r0, dead $cpsr = tSUBi8 killed renamable $r0, 2, 14, $noreg
@@ -124,9 +115,10 @@ body:             |
   
   bb.2.while.body:
     successors: %bb.2(0x7c000000), %bb.3(0x04000000)
+    liveins: $lr, $r0, $r1
   
-    renamable $r2, renamable $r1 = t2LDRH_PRE killed renamable $r1, 2, 14, $noreg :: (load 2 from %ir.scevgep6, !tbaa !2)
-    early-clobber renamable $r0 = t2STRH_PRE killed renamable $r2, killed renamable $r0, 2, 14, $noreg :: (store 2 into %ir.scevgep2, !tbaa !2)
+    renamable $r2, renamable $r1 = t2LDRH_PRE killed renamable $r1, 2, 14, $noreg :: (load 2 from %ir.scevgep4)
+    early-clobber renamable $r0 = t2STRH_PRE killed renamable $r2, killed renamable $r0, 2, 14, $noreg :: (store 2 into %ir.scevgep7)
     renamable $lr = t2LoopDec killed renamable $lr, 1
     t2LoopEnd renamable $lr, %bb.2, implicit-def dead $cpsr
     tB %bb.3, 14, $noreg
@@ -135,4 +127,3 @@ body:             |
     tPOP_RET 14, $noreg, def $r7, def $pc
 
 ...
-

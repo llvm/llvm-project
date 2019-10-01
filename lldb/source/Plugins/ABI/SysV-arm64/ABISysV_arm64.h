@@ -92,7 +92,9 @@ protected:
                            lldb_private::CompilerType &ast_type) const override;
 
 private:
-  ABISysV_arm64(lldb::ProcessSP process_sp) : lldb_private::ABI(process_sp) {
+  ABISysV_arm64(lldb::ProcessSP process_sp,
+                std::unique_ptr<llvm::MCRegisterInfo> info_up)
+      : lldb_private::ABI(std::move(process_sp), std::move(info_up)) {
     // Call CreateInstance instead.
   }
 };

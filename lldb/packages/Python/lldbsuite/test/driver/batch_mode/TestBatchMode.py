@@ -78,6 +78,35 @@ class DriverBatchModeTest(PExpectTest):
         import pexpect
         child.expect(pexpect.EOF)
 
+    @expectedFlakeyFreeBSD("llvm.org/pr25172 fails rarely on the buildbot")
+    def test_batch_mode_launch_stop_at_entry(self):
+        """Test that the lldb driver's batch mode works correctly for process launch."""
+        self.build()
+
+        exe = self.getBuildArtifact("a.out")
+
+        # Launch with the option '--stop-at-entry' stops with a signal (usually SIGSTOP)
+        # that should be suppressed since it doesn't imply a crash and
+        # this is not a reason to exit batch mode.
+        extra_args = ['-b',
+            '-o', 'process launch --stop-at-entry',
+            '-o', 'continue',
+        ]
+        self.launch(executable=exe, extra_args=extra_args)
+        child = self.child
+
+        # Check that the process has been launched:
+        child.expect("Process ([0-9]+) launched:")
+        # We should have continued:
+        child.expect_exact("continue")
+        # The App should have not have crashed:
+        child.expect_exact("Got there on time and it did not crash.")
+        
+        # Then lldb should exit.
+        child.expect_exact("exited")
+        import pexpect
+        child.expect(pexpect.EOF)
+
     def closeVictim(self):
         if self.victim is not None:
             self.victim.close()

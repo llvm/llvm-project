@@ -8,7 +8,7 @@
 ; RUN:  --implicit-check-not cmpw --implicit-check-not cmpd --implicit-check-not cmpl \
 ; RUN:  --check-prefixes=CHECK,LE
 
-@glob = common local_unnamed_addr global i64 0, align 8
+@glob = local_unnamed_addr global i64 0, align 8
 
 ; Function Attrs: norecurse nounwind readnone
 define signext i32 @test_iltsll(i64 %a, i64 %b) {

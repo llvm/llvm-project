@@ -29,7 +29,12 @@
 
 using namespace lldb_private;
 
-const char *ClangExpressionSourceCode::g_expression_prefix = R"(
+#define PREFIX_NAME "<lldb wrapper prefix>"
+
+const llvm::StringRef ClangExpressionSourceCode::g_prefix_file_name = PREFIX_NAME;
+
+const char *ClangExpressionSourceCode::g_expression_prefix =
+"#line 1 \"" PREFIX_NAME R"("
 #ifndef offsetof
 #define offsetof(t, d) __builtin_offsetof(t, d)
 #endif
@@ -66,9 +71,6 @@ extern "C"
     int printf(const char * __restrict, ...);
 }
 )";
-
-static const char *c_start_marker = "    /*LLDB_BODY_START*/\n    ";
-static const char *c_end_marker = ";\n    /*LLDB_BODY_END*/\n";
 
 namespace {
 
@@ -167,6 +169,17 @@ static void AddMacros(const DebugMacros *dm, CompileUnit *comp_unit,
       break;
     }
   }
+}
+
+lldb_private::ClangExpressionSourceCode::ClangExpressionSourceCode(
+    llvm::StringRef filename, llvm::StringRef name, llvm::StringRef prefix,
+    llvm::StringRef body, Wrapping wrap)
+    : ExpressionSourceCode(name, prefix, body, wrap) {
+  // Use #line markers to pretend that we have a single-line source file
+  // containing only the user expression. This will hide our wrapper code
+  // from the user when we render diagnostics with Clang.
+  m_start_marker = "#line 1 \"" + filename.str() + "\"\n";
+  m_end_marker = "\n;\n#line 1 \"<lldb wrapper suffix>\"\n";
 }
 
 namespace {
@@ -401,9 +414,9 @@ bool ClangExpressionSourceCode::GetText(
     case lldb::eLanguageTypeC:
     case lldb::eLanguageTypeC_plus_plus:
     case lldb::eLanguageTypeObjC:
-      tagged_body.append(c_start_marker);
+      tagged_body.append(m_start_marker);
       tagged_body.append(m_body);
-      tagged_body.append(c_end_marker);
+      tagged_body.append(m_end_marker);
       break;
     }
     switch (wrapping_language) {
@@ -477,24 +490,19 @@ bool ClangExpressionSourceCode::GetText(
 bool ClangExpressionSourceCode::GetOriginalBodyBounds(
     std::string transformed_text, lldb::LanguageType wrapping_language,
     size_t &start_loc, size_t &end_loc) {
-  const char *start_marker;
-  const char *end_marker;
-
   switch (wrapping_language) {
   default:
     return false;
   case lldb::eLanguageTypeC:
   case lldb::eLanguageTypeC_plus_plus:
   case lldb::eLanguageTypeObjC:
-    start_marker = c_start_marker;
-    end_marker = c_end_marker;
     break;
   }
 
-  start_loc = transformed_text.find(start_marker);
+  start_loc = transformed_text.find(m_start_marker);
   if (start_loc == std::string::npos)
     return false;
-  start_loc += strlen(start_marker);
-  end_loc = transformed_text.find(end_marker);
+  start_loc += m_start_marker.size();
+  end_loc = transformed_text.find(m_end_marker);
   return end_loc != std::string::npos;
 }

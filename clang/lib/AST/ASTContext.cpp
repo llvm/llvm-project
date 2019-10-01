@@ -7998,15 +7998,11 @@ ASTContext::ProtocolCompatibleWithProtocol(ObjCProtocolDecl *lProto,
 
 /// ObjCQualifiedClassTypesAreCompatible - compare  Class<pr,...> and
 /// Class<pr1, ...>.
-bool ASTContext::ObjCQualifiedClassTypesAreCompatible(QualType lhs,
-                                                      QualType rhs) {
-  const auto *lhsQID = lhs->getAs<ObjCObjectPointerType>();
-  const auto *rhsOPT = rhs->getAs<ObjCObjectPointerType>();
-  assert((lhsQID && rhsOPT) && "ObjCQualifiedClassTypesAreCompatible");
-
-  for (auto *lhsProto : lhsQID->quals()) {
+bool ASTContext::ObjCQualifiedClassTypesAreCompatible(
+    const ObjCObjectPointerType *lhs, const ObjCObjectPointerType *rhs) {
+  for (auto *lhsProto : lhs->quals()) {
     bool match = false;
-    for (auto *rhsProto : rhsOPT->quals()) {
+    for (auto *rhsProto : rhs->quals()) {
       if (ProtocolCompatibleWithProtocol(lhsProto, rhsProto)) {
         match = true;
         break;
@@ -8020,8 +8016,9 @@ bool ASTContext::ObjCQualifiedClassTypesAreCompatible(QualType lhs,
 
 /// ObjCQualifiedIdTypesAreCompatible - We know that one of lhs/rhs is an
 /// ObjCQualifiedIDType.
-bool ASTContext::ObjCQualifiedIdTypesAreCompatible(QualType lhs, QualType rhs,
-                                                   bool compare) {
+bool ASTContext::ObjCQualifiedIdTypesAreCompatible(
+    const ObjCObjectPointerType *lhs, const ObjCObjectPointerType *rhs,
+    bool compare) {
   // Allow id<P..> and an 'id' or void* type in all cases.
   if (lhs->isVoidPointerType() ||
       lhs->isObjCIdType() || lhs->isObjCClassType())
@@ -8030,16 +8027,12 @@ bool ASTContext::ObjCQualifiedIdTypesAreCompatible(QualType lhs, QualType rhs,
            rhs->isObjCIdType() || rhs->isObjCClassType())
     return true;
 
-  if (const ObjCObjectPointerType *lhsQID = lhs->getAsObjCQualifiedIdType()) {
-    const auto *rhsOPT = rhs->getAs<ObjCObjectPointerType>();
-
-    if (!rhsOPT) return false;
-
-    if (rhsOPT->qual_empty()) {
+  if (lhs->isObjCQualifiedIdType()) {
+    if (rhs->qual_empty()) {
       // If the RHS is a unqualified interface pointer "NSString*",
       // make sure we check the class hierarchy.
-      if (ObjCInterfaceDecl *rhsID = rhsOPT->getInterfaceDecl()) {
-        for (auto *I : lhsQID->quals()) {
+      if (ObjCInterfaceDecl *rhsID = rhs->getInterfaceDecl()) {
+        for (auto *I : lhs->quals()) {
           // when comparing an id<P> on lhs with a static type on rhs,
           // see if static class implements all of id's protocols, directly or
           // through its super class and categories.
@@ -8051,13 +8044,13 @@ bool ASTContext::ObjCQualifiedIdTypesAreCompatible(QualType lhs, QualType rhs,
       return true;
     }
     // Both the right and left sides have qualifiers.
-    for (auto *lhsProto : lhsQID->quals()) {
+    for (auto *lhsProto : lhs->quals()) {
       bool match = false;
 
       // when comparing an id<P> on lhs with a static type on rhs,
       // see if static class implements all of id's protocols, directly or
       // through its super class and categories.
-      for (auto *rhsProto : rhsOPT->quals()) {
+      for (auto *rhsProto : rhs->quals()) {
         if (ProtocolCompatibleWithProtocol(lhsProto, rhsProto) ||
             (compare && ProtocolCompatibleWithProtocol(rhsProto, lhsProto))) {
           match = true;
@@ -8066,8 +8059,8 @@ bool ASTContext::ObjCQualifiedIdTypesAreCompatible(QualType lhs, QualType rhs,
       }
       // If the RHS is a qualified interface pointer "NSString<P>*",
       // make sure we check the class hierarchy.
-      if (ObjCInterfaceDecl *rhsID = rhsOPT->getInterfaceDecl()) {
-        for (auto *I : lhsQID->quals()) {
+      if (ObjCInterfaceDecl *rhsID = rhs->getInterfaceDecl()) {
+        for (auto *I : lhs->quals()) {
           // when comparing an id<P> on lhs with a static type on rhs,
           // see if static class implements all of id's protocols, directly or
           // through its super class and categories.
@@ -8084,13 +8077,11 @@ bool ASTContext::ObjCQualifiedIdTypesAreCompatible(QualType lhs, QualType rhs,
     return true;
   }
 
-  const ObjCObjectPointerType *rhsQID = rhs->getAsObjCQualifiedIdType();
-  assert(rhsQID && "One of the LHS/RHS should be id<x>");
+  assert(rhs->isObjCQualifiedIdType() && "One of the LHS/RHS should be id<x>");
 
-  if (const ObjCObjectPointerType *lhsOPT =
-        lhs->getAsObjCInterfacePointerType()) {
+  if (lhs->getInterfaceType()) {
     // If both the right and left sides have qualifiers.
-    for (auto *lhsProto : lhsOPT->quals()) {
+    for (auto *lhsProto : lhs->quals()) {
       bool match = false;
 
       // when comparing an id<P> on rhs with a static type on lhs,
@@ -8098,7 +8089,7 @@ bool ASTContext::ObjCQualifiedIdTypesAreCompatible(QualType lhs, QualType rhs,
       // through its super class and categories.
       // First, lhs protocols in the qualifier list must be found, direct
       // or indirect in rhs's qualifier list or it is a mismatch.
-      for (auto *rhsProto : rhsQID->quals()) {
+      for (auto *rhsProto : rhs->quals()) {
         if (ProtocolCompatibleWithProtocol(lhsProto, rhsProto) ||
             (compare && ProtocolCompatibleWithProtocol(rhsProto, lhsProto))) {
           match = true;
@@ -8111,17 +8102,17 @@ bool ASTContext::ObjCQualifiedIdTypesAreCompatible(QualType lhs, QualType rhs,
 
     // Static class's protocols, or its super class or category protocols
     // must be found, direct or indirect in rhs's qualifier list or it is a mismatch.
-    if (ObjCInterfaceDecl *lhsID = lhsOPT->getInterfaceDecl()) {
+    if (ObjCInterfaceDecl *lhsID = lhs->getInterfaceDecl()) {
       llvm::SmallPtrSet<ObjCProtocolDecl *, 8> LHSInheritedProtocols;
       CollectInheritedProtocols(lhsID, LHSInheritedProtocols);
       // This is rather dubious but matches gcc's behavior. If lhs has
       // no type qualifier and its class has no static protocol(s)
       // assume that it is mismatch.
-      if (LHSInheritedProtocols.empty() && lhsOPT->qual_empty())
+      if (LHSInheritedProtocols.empty() && lhs->qual_empty())
         return false;
       for (auto *lhsProto : LHSInheritedProtocols) {
         bool match = false;
-        for (auto *rhsProto : rhsQID->quals()) {
+        for (auto *rhsProto : rhs->quals()) {
           if (ProtocolCompatibleWithProtocol(lhsProto, rhsProto) ||
               (compare && ProtocolCompatibleWithProtocol(rhsProto, lhsProto))) {
             match = true;
@@ -8166,14 +8157,11 @@ bool ASTContext::canAssignObjCInterfaces(const ObjCObjectPointerType *LHSOPT,
   };
 
   if (LHS->isObjCQualifiedId() || RHS->isObjCQualifiedId()) {
-    return finish(ObjCQualifiedIdTypesAreCompatible(QualType(LHSOPT,0),
-                                                    QualType(RHSOPT,0),
-                                                    false));
+    return finish(ObjCQualifiedIdTypesAreCompatible(LHSOPT, RHSOPT, false));
   }
 
   if (LHS->isObjCQualifiedClass() && RHS->isObjCQualifiedClass()) {
-    return finish(ObjCQualifiedClassTypesAreCompatible(QualType(LHSOPT,0),
-                                                       QualType(RHSOPT,0)));
+    return finish(ObjCQualifiedClassTypesAreCompatible(LHSOPT, RHSOPT));
   }
 
   // If we have 2 user-defined types, fall into that path.
@@ -8222,8 +8210,8 @@ bool ASTContext::canAssignObjCInterfacesInBlockPointer(
 
   if (LHSOPT->isObjCQualifiedIdType() || RHSOPT->isObjCQualifiedIdType())
     return finish(ObjCQualifiedIdTypesAreCompatible(
-        QualType(BlockReturnType ? LHSOPT : RHSOPT, 0),
-        QualType(BlockReturnType ? RHSOPT : LHSOPT, 0), false));
+        (BlockReturnType ? LHSOPT : RHSOPT),
+        (BlockReturnType ? RHSOPT : LHSOPT), false));
 
   const ObjCInterfaceType* LHS = LHSOPT->getInterfaceType();
   const ObjCInterfaceType* RHS = RHSOPT->getInterfaceType();
@@ -9927,25 +9915,10 @@ static GVALinkage basicGVALinkageForVariable(const ASTContext &Context,
     return StrongLinkage;
 
   case TSK_ExplicitSpecialization:
-    if (Context.getTargetInfo().getCXXABI().isMicrosoft()) {
-      // If this is a fully specialized constexpr variable template, pretend it
-      // was marked inline. MSVC 14.21.27702 headers define _Is_integral in a
-      // header this way, and we don't want to emit non-discardable definitions
-      // of these variables in every TU that includes <type_traits>. This
-      // behavior is non-conforming, since another TU could use an extern
-      // template declaration for this variable, but for constexpr variables,
-      // it's unlikely for a user to want to do that. This behavior can be
-      // removed if the headers change to explicitly mark such variable template
-      // specializations inline.
-      if (isa<VarTemplateSpecializationDecl>(VD) && VD->isConstexpr())
-        return GVA_DiscardableODR;
-
-      // Use ODR linkage for static data members of fully specialized templates
-      // to prevent duplicate definition errors with MSVC.
-      if (VD->isStaticDataMember())
-        return GVA_StrongODR;
-    }
-    return StrongLinkage;
+    return Context.getTargetInfo().getCXXABI().isMicrosoft() &&
+                   VD->isStaticDataMember()
+               ? GVA_StrongODR
+               : StrongLinkage;
 
   case TSK_ExplicitInstantiationDefinition:
     return GVA_StrongODR;
@@ -10091,7 +10064,7 @@ bool ASTContext::DeclMustBeEmitted(const Decl *D) {
     return false;
 
   // Variables that have destruction with side-effects are required.
-  if (VD->getType().isDestructedType())
+  if (VD->needsDestruction(*this))
     return true;
 
   // Variables that have initialization with side-effects are required.

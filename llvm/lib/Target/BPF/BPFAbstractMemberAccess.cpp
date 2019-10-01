@@ -375,6 +375,8 @@ void BPFAbstractMemberAccess::traceAICall(CallInst *Call, uint32_t Kind,
         traceGEP(GI, Call, Kind, ParentMeta, ParentAI);
       else
         BaseAICalls[Call] = Kind;
+    } else {
+      BaseAICalls[Call] = Kind;
     }
   }
 }
@@ -406,6 +408,8 @@ void BPFAbstractMemberAccess::traceBitCast(BitCastInst *BitCast,
         traceGEP(GI, Parent, Kind, ParentMeta, ParentAI);
       else
         BaseAICalls[Parent] = Kind;
+    } else {
+      BaseAICalls[Parent] = Kind;
     }
   }
 }
@@ -436,6 +440,8 @@ void BPFAbstractMemberAccess::traceGEP(GetElementPtrInst *GEP, CallInst *Parent,
         traceGEP(GI, Parent, Kind, ParentMeta, ParentAI);
       else
         BaseAICalls[Parent] = Kind;
+    } else {
+      BaseAICalls[Parent] = Kind;
     }
   }
 }

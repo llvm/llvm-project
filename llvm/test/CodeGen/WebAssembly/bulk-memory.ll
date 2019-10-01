@@ -142,8 +142,8 @@ define void @memset_1024(i8* %dest, i8 %val) {
 }
 
 ; The following tests check that frame index elimination works for
-; bulk memory instructions. The stack pointer is bumped by 16 instead
-; of 10 because the stack pointer in WebAssembly is currently always
+; bulk memory instructions. The stack pointer is bumped by 112 instead
+; of 100 because the stack pointer in WebAssembly is currently always
 ; 16-byte aligned, even in leaf functions, although it is not written
 ; back to the global in this case.
 
@@ -156,17 +156,17 @@ define void @memset_1024(i8* %dest, i8 %val) {
 ; NO-BULK-MEM-NOT: memory.copy
 ; BULK-MEM-NEXT: .functype memcpy_alloca_src (i32) -> ()
 ; BULK-MEM-NEXT: global.get $push[[L0:[0-9]+]]=, __stack_pointer
-; BULK-MEM-NEXT: i32.const $push[[L1:[0-9]+]]=, 16
+; BULK-MEM-NEXT: i32.const $push[[L1:[0-9]+]]=, 112
 ; BULK-MEM-NEXT: i32.sub $push[[L2:[0-9]+]]=, $pop[[L0]], $pop[[L1]]
-; BULK-MEM-NEXT: i32.const $push[[L3:[0-9]+]]=, 6
+; BULK-MEM-NEXT: i32.const $push[[L3:[0-9]+]]=, 12
 ; BULK-MEM-NEXT: i32.add $push[[L4:[0-9]+]]=, $pop[[L2]], $pop[[L3]]
-; BULK-MEM-NEXT: i32.const $push[[L5:[0-9]+]]=, 10
+; BULK-MEM-NEXT: i32.const $push[[L5:[0-9]+]]=, 100
 ; BULK-MEM-NEXT: memory.copy 0, 0, $0, $pop[[L4]], $pop[[L5]]
 ; BULK-MEM-NEXT: return
 define void @memcpy_alloca_src(i8* %dst) {
-  %a = alloca [10 x i8]
-  %p = bitcast [10 x i8]* %a to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %dst, i8* %p, i32 10, i1 false)
+  %a = alloca [100 x i8]
+  %p = bitcast [100 x i8]* %a to i8*
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %dst, i8* %p, i32 100, i1 false)
   ret void
 }
 
@@ -174,17 +174,17 @@ define void @memcpy_alloca_src(i8* %dst) {
 ; NO-BULK-MEM-NOT: memory.copy
 ; BULK-MEM-NEXT: .functype memcpy_alloca_dst (i32) -> ()
 ; BULK-MEM-NEXT: global.get $push[[L0:[0-9]+]]=, __stack_pointer
-; BULK-MEM-NEXT: i32.const $push[[L1:[0-9]+]]=, 16
+; BULK-MEM-NEXT: i32.const $push[[L1:[0-9]+]]=, 112
 ; BULK-MEM-NEXT: i32.sub $push[[L2:[0-9]+]]=, $pop[[L0]], $pop[[L1]]
-; BULK-MEM-NEXT: i32.const $push[[L3:[0-9]+]]=, 6
+; BULK-MEM-NEXT: i32.const $push[[L3:[0-9]+]]=, 12
 ; BULK-MEM-NEXT: i32.add $push[[L4:[0-9]+]]=, $pop[[L2]], $pop[[L3]]
-; BULK-MEM-NEXT: i32.const $push[[L5:[0-9]+]]=, 10
+; BULK-MEM-NEXT: i32.const $push[[L5:[0-9]+]]=, 100
 ; BULK-MEM-NEXT: memory.copy 0, 0, $pop[[L4]], $0, $pop[[L5]]
 ; BULK-MEM-NEXT: return
 define void @memcpy_alloca_dst(i8* %src) {
-  %a = alloca [10 x i8]
-  %p = bitcast [10 x i8]* %a to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %p, i8* %src, i32 10, i1 false)
+  %a = alloca [100 x i8]
+  %p = bitcast [100 x i8]* %a to i8*
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %p, i8* %src, i32 100, i1 false)
   ret void
 }
 
@@ -192,16 +192,16 @@ define void @memcpy_alloca_dst(i8* %src) {
 ; NO-BULK-MEM-NOT: memory.fill
 ; BULK-MEM-NEXT: .functype memset_alloca (i32) -> ()
 ; BULK-MEM-NEXT: global.get $push[[L0:[0-9]+]]=, __stack_pointer
-; BULK-MEM-NEXT: i32.const $push[[L1:[0-9]+]]=, 16
+; BULK-MEM-NEXT: i32.const $push[[L1:[0-9]+]]=, 112
 ; BULK-MEM-NEXT: i32.sub $push[[L2:[0-9]+]]=, $pop[[L0]], $pop[[L1]]
-; BULK-MEM-NEXT: i32.const $push[[L3:[0-9]+]]=, 6
+; BULK-MEM-NEXT: i32.const $push[[L3:[0-9]+]]=, 12
 ; BULK-MEM-NEXT: i32.add $push[[L4:[0-9]+]]=, $pop[[L2]], $pop[[L3]]
-; BULK-MEM-NEXT: i32.const $push[[L5:[0-9]+]]=, 10
+; BULK-MEM-NEXT: i32.const $push[[L5:[0-9]+]]=, 100
 ; BULK-MEM-NEXT: memory.fill 0, $pop[[L4]], $0, $pop[[L5]]
 ; BULK-MEM-NEXT: return
 define void @memset_alloca(i8 %val) {
-  %a = alloca [10 x i8]
-  %p = bitcast [10 x i8]* %a to i8*
-  call void @llvm.memset.p0i8.i32(i8* %p, i8 %val, i32 10, i1 false)
+  %a = alloca [100 x i8]
+  %p = bitcast [100 x i8]* %a to i8*
+  call void @llvm.memset.p0i8.i32(i8* %p, i8 %val, i32 100, i1 false)
   ret void
 }

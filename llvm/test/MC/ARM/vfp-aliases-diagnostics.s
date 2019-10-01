@@ -13,17 +13,17 @@ aliases:
 	fldmeax sp!, {s0}
 
 @ CHECK-LABEL: aliases
-@ CHECK: error: operand must be a list of registers in range [d0, d31]
+@ CHECK: error: operand must be a list of registers in range [d0, d15]
 @ CHECK:	fstmeax sp!, {s0}
 @ CHECK:                     ^
-@ CHECK: error: operand must be a list of registers in range [d0, d31]
+@ CHECK: error: operand must be a list of registers in range [d0, d15]
 @ CHECK:	fldmfdx sp!, {s0}
 @ CHECK:                     ^
 
-@ CHECK: error: operand must be a list of registers in range [d0, d31]
+@ CHECK: error: operand must be a list of registers in range [d0, d15]
 @ CHECK:	fstmfdx sp!, {s0}
 @ CHECK:                     ^
-@ CHECK: error: operand must be a list of registers in range [d0, d31]
+@ CHECK: error: operand must be a list of registers in range [d0, d15]
 @ CHECK:	fldmeax sp!, {s0}
 @ CHECK:                     ^
 
@@ -31,16 +31,16 @@ aliases:
 	fstmiaxhs r0, {s0}
 	fstmiaxls r0, {s0}
 	fstmiaxvs r0, {s0}
-@ CHECK: error: operand must be a list of registers in range [d0, d31]
+@ CHECK: error: operand must be a list of registers in range [d0, d15]
 @ CHECK: 	fstmiaxcs r0, {s0}
 @ CHECK:                      ^
-@ CHECK: error: operand must be a list of registers in range [d0, d31]
+@ CHECK: error: operand must be a list of registers in range [d0, d15]
 @ CHECK: 	fstmiaxhs r0, {s0}
 @ CHECK:                      ^
-@ CHECK: error: operand must be a list of registers in range [d0, d31]
+@ CHECK: error: operand must be a list of registers in range [d0, d15]
 @ CHECK: 	fstmiaxls r0, {s0}
 @ CHECK:                      ^
-@ CHECK: error: operand must be a list of registers in range [d0, d31]
+@ CHECK: error: operand must be a list of registers in range [d0, d15]
 @ CHECK: 	fstmiaxvs r0, {s0}
 @ CHECK:                      ^
 

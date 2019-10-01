@@ -14,8 +14,7 @@ using namespace lldb_private;
 TEST(CompletionRequest, Constructor) {
   std::string command = "a bad c";
   const unsigned cursor_pos = 3;
-  const int arg_index = 1;
-  const int arg_cursor_pos = 1;
+  const size_t arg_index = 1;
   StringList matches;
   CompletionResult result;
 
@@ -25,10 +24,93 @@ TEST(CompletionRequest, Constructor) {
   EXPECT_STREQ(request.GetRawLine().str().c_str(), command.c_str());
   EXPECT_EQ(request.GetRawCursorPos(), cursor_pos);
   EXPECT_EQ(request.GetCursorIndex(), arg_index);
-  EXPECT_EQ(request.GetCursorCharPosition(), arg_cursor_pos);
 
-  EXPECT_EQ(request.GetPartialParsedLine().GetArgumentCount(), 2u);
-  EXPECT_STREQ(request.GetPartialParsedLine().GetArgumentAtIndex(1), "b");
+  EXPECT_EQ(request.GetParsedLine().GetArgumentCount(), 2u);
+  EXPECT_EQ(request.GetCursorArgumentPrefix().str(), "b");
+}
+
+TEST(CompletionRequest, FakeLastArg) {
+  // We insert an empty fake argument into the argument list when the
+  // cursor is after a space.
+  std::string command = "a bad c ";
+  const unsigned cursor_pos = command.size();
+  CompletionResult result;
+
+  CompletionRequest request(command, cursor_pos, result);
+
+  EXPECT_STREQ(request.GetRawLine().str().c_str(), command.c_str());
+  EXPECT_EQ(request.GetRawCursorPos(), cursor_pos);
+  EXPECT_EQ(request.GetCursorIndex(), 3U);
+
+  EXPECT_EQ(request.GetParsedLine().GetArgumentCount(), 4U);
+  EXPECT_EQ(request.GetCursorArgumentPrefix().str(), "");
+}
+
+TEST(CompletionRequest, TryCompleteCurrentArgGood) {
+  std::string command = "a bad c";
+  StringList matches, descriptions;
+  CompletionResult result;
+
+  CompletionRequest request(command, 3, result);
+  request.TryCompleteCurrentArg("boo", "car");
+  result.GetMatches(matches);
+  result.GetDescriptions(descriptions);
+
+  EXPECT_EQ(1U, result.GetResults().size());
+  EXPECT_STREQ("boo", matches.GetStringAtIndex(0U));
+  EXPECT_EQ(1U, descriptions.GetSize());
+  EXPECT_STREQ("car", descriptions.GetStringAtIndex(0U));
+}
+
+TEST(CompletionRequest, TryCompleteCurrentArgBad) {
+  std::string command = "a bad c";
+  CompletionResult result;
+
+  CompletionRequest request(command, 3, result);
+  request.TryCompleteCurrentArg("car", "card");
+
+  EXPECT_EQ(0U, result.GetResults().size());
+}
+
+TEST(CompletionRequest, TryCompleteCurrentArgMode) {
+  std::string command = "a bad c";
+  CompletionResult result;
+
+  CompletionRequest request(command, 3, result);
+  request.TryCompleteCurrentArg<CompletionMode::Partial>("bar", "bard");
+
+  EXPECT_EQ(1U, result.GetResults().size());
+  EXPECT_EQ(CompletionMode::Partial, result.GetResults()[0].GetMode());
+}
+
+TEST(CompletionRequest, ShiftArguments) {
+  std::string command = "a bad c";
+  const unsigned cursor_pos = 3;
+  const size_t arg_index = 1;
+  StringList matches;
+  CompletionResult result;
+
+  CompletionRequest request(command, cursor_pos, result);
+  result.GetMatches(matches);
+
+  EXPECT_STREQ(request.GetRawLine().str().c_str(), command.c_str());
+  EXPECT_EQ(request.GetRawCursorPos(), cursor_pos);
+  EXPECT_EQ(request.GetCursorIndex(), arg_index);
+
+  EXPECT_EQ(request.GetParsedLine().GetArgumentCount(), 2u);
+  EXPECT_STREQ(request.GetParsedLine().GetArgumentAtIndex(1), "b");
+
+  // Shift away the 'a' argument.
+  request.ShiftArguments();
+
+  // The raw line/cursor stays identical.
+  EXPECT_STREQ(request.GetRawLine().str().c_str(), command.c_str());
+  EXPECT_EQ(request.GetRawCursorPos(), cursor_pos);
+
+  // Partially parsed line and cursor should be updated.
+  EXPECT_EQ(request.GetCursorIndex(), arg_index - 1U);
+  EXPECT_EQ(request.GetParsedLine().GetArgumentCount(), 1u);
+  EXPECT_EQ(request.GetCursorArgumentPrefix().str(), "b");
 }
 
 TEST(CompletionRequest, DuplicateFiltering) {

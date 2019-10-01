@@ -203,7 +203,7 @@ SubtargetFeatures ELFObjectFileBase::getARMFeatures() const {
     default:
       break;
     case ARMBuildAttrs::Not_Allowed:
-      Features.AddFeature("vfp2d16sp", false);
+      Features.AddFeature("vfp2sp", false);
       Features.AddFeature("vfp3d16sp", false);
       Features.AddFeature("vfp4d16sp", false);
       break;

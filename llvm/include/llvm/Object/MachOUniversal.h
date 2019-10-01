@@ -159,8 +159,14 @@ public:
     return V->isMachOUniversalBinary();
   }
 
-  Expected<std::unique_ptr<MachOObjectFile>>
+  Expected<ObjectForArch>
   getObjectForArch(StringRef ArchName) const;
+
+  Expected<std::unique_ptr<MachOObjectFile>>
+  getMachOObjectForArch(StringRef ArchName) const;
+
+  Expected<std::unique_ptr<Archive>>
+  getArchiveForArch(StringRef ArchName) const;
 };
 
 }

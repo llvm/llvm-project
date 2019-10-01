@@ -222,17 +222,35 @@ ABISP
 ABISysV_x86_64::CreateInstance(lldb::ProcessSP process_sp, const ArchSpec &arch) {
   const llvm::Triple::ArchType arch_type = arch.GetTriple().getArch();
   const llvm::Triple::OSType os_type = arch.GetTriple().getOS();
+  const llvm::Triple::EnvironmentType os_env =
+      arch.GetTriple().getEnvironment();
   if (arch_type == llvm::Triple::x86_64) {
     switch(os_type) {
-      case llvm::Triple::OSType::MacOSX:
-      case llvm::Triple::OSType::Linux:
-      case llvm::Triple::OSType::FreeBSD:
-      case llvm::Triple::OSType::NetBSD:
-      case llvm::Triple::OSType::Solaris:
-      case llvm::Triple::OSType::UnknownOS:
-        return ABISP(new ABISysV_x86_64(process_sp));
-      default: 
+    case llvm::Triple::OSType::IOS:
+    case llvm::Triple::OSType::TvOS:
+    case llvm::Triple::OSType::WatchOS:
+      switch (os_env) {
+      case llvm::Triple::EnvironmentType::MacABI:
+      case llvm::Triple::EnvironmentType::Simulator:
+      case llvm::Triple::EnvironmentType::UnknownEnvironment:
+        // UnknownEnvironment is needed for older compilers that don't
+        // support the simulator environment.
+        return ABISP(new ABISysV_x86_64(std::move(process_sp),
+                                        MakeMCRegisterInfo(arch)));
+      default:
         return ABISP();
+      }
+    case llvm::Triple::OSType::Darwin:
+    case llvm::Triple::OSType::FreeBSD:
+    case llvm::Triple::OSType::Linux:
+    case llvm::Triple::OSType::MacOSX:
+    case llvm::Triple::OSType::NetBSD:
+    case llvm::Triple::OSType::Solaris:
+    case llvm::Triple::OSType::UnknownOS:
+      return ABISP(
+          new ABISysV_x86_64(std::move(process_sp), MakeMCRegisterInfo(arch)));
+    default:
+      return ABISP();
     }
   }
   return ABISP();

@@ -78,29 +78,18 @@ int MCRegisterInfo::getDwarfRegNum(MCRegister RegNum, bool isEH) const {
   return I->ToReg;
 }
 
-int MCRegisterInfo::getLLVMRegNum(unsigned RegNum, bool isEH) const {
+Optional<unsigned> MCRegisterInfo::getLLVMRegNum(unsigned RegNum,
+                                                 bool isEH) const {
   const DwarfLLVMRegPair *M = isEH ? EHDwarf2LRegs : Dwarf2LRegs;
   unsigned Size = isEH ? EHDwarf2LRegsSize : Dwarf2LRegsSize;
 
   if (!M)
-    return -1;
+    return None;
   DwarfLLVMRegPair Key = { RegNum, 0 };
   const DwarfLLVMRegPair *I = std::lower_bound(M, M+Size, Key);
-  assert(I != M+Size && I->FromReg == RegNum && "Invalid RegNum");
-  return I->ToReg;
-}
-
-int MCRegisterInfo::getLLVMRegNumFromEH(unsigned RegNum) const {
-  const DwarfLLVMRegPair *M = EHDwarf2LRegs;
-  unsigned Size = EHDwarf2LRegsSize;
-
-  if (!M)
-    return -1;
-  DwarfLLVMRegPair Key = { RegNum, 0 };
-  const DwarfLLVMRegPair *I = std::lower_bound(M, M+Size, Key);
-  if (I == M+Size || I->FromReg != RegNum)
-    return -1;
-  return I->ToReg;
+  if (I != M + Size && I->FromReg == RegNum)
+    return I->ToReg;
+  return None;
 }
 
 int MCRegisterInfo::getDwarfRegNumFromDwarfEHRegNum(unsigned RegNum) const {
@@ -112,9 +101,8 @@ int MCRegisterInfo::getDwarfRegNumFromDwarfEHRegNum(unsigned RegNum) const {
   // a corresponding LLVM register number at all.  So if we can't map the
   // EH register number to an LLVM register number, assume it's just a
   // valid DWARF register number as is.
-  int LRegNum = getLLVMRegNumFromEH(RegNum);
-  if (LRegNum != -1)
-    return getDwarfRegNum(LRegNum, false);
+  if (Optional<unsigned> LRegNum = getLLVMRegNum(RegNum, true))
+    return getDwarfRegNum(*LRegNum, false);
   return RegNum;
 }
 

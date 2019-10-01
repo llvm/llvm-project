@@ -18,6 +18,11 @@ class MCAsmInfoXCOFF : public MCAsmInfo {
 
 protected:
   MCAsmInfoXCOFF();
+
+public:
+  // Return true only when the identifier Name does not need quotes to be
+  // syntactically correct for XCOFF.
+  bool isValidUnquotedName(StringRef Name) const override;
 };
 
 } // end namespace llvm

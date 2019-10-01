@@ -102,11 +102,11 @@ public:
   }
 
   bool isDeadEdge(const Use *U) const {
-    assert(dyn_cast<Instruction>(U->getUser())->isTerminator() &&
+    assert(cast<Instruction>(U->getUser())->isTerminator() &&
            "edge must be operand of terminator");
     assert(cast_or_null<BasicBlock>(U->get()) &&
            "edge must refer to basic block");
-    assert(!isDeadBlock(dyn_cast<Instruction>(U->getUser())->getParent()) &&
+    assert(!isDeadBlock(cast<Instruction>(U->getUser())->getParent()) &&
            "isDeadEdge() must be applied to edge from live block");
     return DeadEdges.count(U);
   }

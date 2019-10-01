@@ -2139,6 +2139,7 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableF32SrcMods = 0,
   field int NeedPatGen = PatGenMode.NoPattern;
 
   field bit IsMAI = 0;
+  field bit IsDOT = 0;
 
   field Operand Src0PackedMod = !if(HasSrc0FloatMods, PackedF16InputMods, PackedI16InputMods);
   field Operand Src1PackedMod = !if(HasSrc1FloatMods, PackedF16InputMods, PackedI16InputMods);

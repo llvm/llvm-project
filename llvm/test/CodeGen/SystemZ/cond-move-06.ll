@@ -1,6 +1,6 @@
 ; Test SELR and SELGR.
 ;
-; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=arch13 -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z15 -verify-machineinstrs | FileCheck %s
 
 ; Test SELR.
 define i32 @f1(i32 %limit, i32 %a, i32 %b) {

@@ -461,12 +461,12 @@ struct StaticAssertRef {
 };
 
 static_assert(StaticAssertRef::constVar, "index static asserts");
-// CHECK: [[@LINE-1]]:32 | static-property/C++ | constVar | c:@S@StaticAssertRef@constVar | __ZN15StaticAssertRef8constVarE | Ref | rel: 0
+// CHECK: [[@LINE-1]]:32 | static-property/C++ | constVar | c:@S@StaticAssertRef@constVar | __ZN15StaticAssertRef8constVarE | Ref,Read | rel: 0
 // CHECK: [[@LINE-2]]:15 | struct/C++ | StaticAssertRef | c:@S@StaticAssertRef | <no-cgname> | Ref | rel: 0
 
 void staticAssertInFn() {
   static_assert(StaticAssertRef::constVar, "index static asserts");
-// CHECK: [[@LINE-1]]:34 | static-property/C++ | constVar | c:@S@StaticAssertRef@constVar | __ZN15StaticAssertRef8constVarE | Ref,RelCont | rel: 1
+// CHECK: [[@LINE-1]]:34 | static-property/C++ | constVar | c:@S@StaticAssertRef@constVar | __ZN15StaticAssertRef8constVarE | Ref,Read,RelCont | rel: 1
 // CHECK-NEXT: RelCont | staticAssertInFn | c:@F@staticAssertInFn#
 // CHECK: [[@LINE-3]]:17 | struct/C++ | StaticAssertRef | c:@S@StaticAssertRef | <no-cgname> | Ref,RelCont | rel: 1
 // CHECK-NEXT: RelCont | staticAssertInFn | c:@F@staticAssertInFn#

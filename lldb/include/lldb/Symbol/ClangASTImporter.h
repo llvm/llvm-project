@@ -210,7 +210,7 @@ public:
   void ForgetDestination(clang::ASTContext *dst_ctx);
   void ForgetSource(clang::ASTContext *dst_ctx, clang::ASTContext *src_ctx);
 
-private:
+public:
   struct DeclOrigin {
     DeclOrigin() : ctx(nullptr), decl(nullptr) {}
 
@@ -235,23 +235,29 @@ private:
 
   typedef std::map<const clang::Decl *, DeclOrigin> OriginMap;
 
+  /// Listener interface used by the ASTImporterDelegate to inform other code
+  /// about decls that have been imported the first time.
+  struct NewDeclListener {
+    virtual ~NewDeclListener() = default;
+    /// A decl has been imported for the first time.
+    virtual void NewDeclImported(clang::Decl *from, clang::Decl *to) = 0;
+  };
+
   /// ASTImporter that intercepts and records the import process of the
   /// underlying ASTImporter.
   ///
   /// This class updates the map from declarations to their original
-  /// declarations and can record and complete declarations that have been
-  /// imported in a certain interval.
+  /// declarations and can record declarations that have been imported in a
+  /// certain interval.
   ///
   /// When intercepting a declaration import, the ASTImporterDelegate uses the
   /// CxxModuleHandler to replace any missing or malformed declarations with
   /// their counterpart from a C++ module.
-  class ASTImporterDelegate : public clang::ASTImporter {
-  public:
+  struct ASTImporterDelegate : public clang::ASTImporter {
     ASTImporterDelegate(ClangASTImporter &master, clang::ASTContext *target_ctx,
                         clang::ASTContext *source_ctx)
         : clang::ASTImporter(*target_ctx, master.m_file_manager, *source_ctx,
                              master.m_file_manager, true /*minimal*/),
-          m_decls_to_deport(nullptr), m_decls_already_deported(nullptr),
           m_master(master), m_source_ctx(source_ctx) {
       setODRHandling(clang::ASTImporter::ODRHandlingType::Liberal);
     }
@@ -287,43 +293,32 @@ private:
       }
     };
 
-  protected:
-    llvm::Expected<clang::Decl *> ImportImpl(clang::Decl *From) override;
-
-  public:
-    // A call to "InitDeportWorkQueues" puts the delegate into deport mode.
-    // In deport mode, every copied Decl that could require completion is
-    // recorded and placed into the decls_to_deport set.
-    //
-    // A call to "ExecuteDeportWorkQueues" completes all the Decls that
-    // are in decls_to_deport, adding any Decls it sees along the way that it
-    // hasn't already deported.  It proceeds until decls_to_deport is empty.
-    //
-    // These calls must be paired.  Leaving a delegate in deport mode or trying
-    // to start deport delegate with a new pair of queues will result in an
-    // assertion failure.
-
-    void
-    InitDeportWorkQueues(std::set<clang::NamedDecl *> *decls_to_deport,
-                         std::set<clang::NamedDecl *> *decls_already_deported);
-    void ExecuteDeportWorkQueues();
-
     void ImportDefinitionTo(clang::Decl *to, clang::Decl *from);
 
     void Imported(clang::Decl *from, clang::Decl *to) override;
 
     clang::Decl *GetOriginalDecl(clang::Decl *To) override;
 
+    void SetImportListener(NewDeclListener *listener) {
+      assert(m_new_decl_listener == nullptr && "Already attached a listener?");
+      m_new_decl_listener = listener;
+    }
+    void RemoveImportListener() { m_new_decl_listener = nullptr; }
+
+  protected:
+    llvm::Expected<clang::Decl *> ImportImpl(clang::Decl *From) override;
+
+  private:
     /// Decls we should ignore when mapping decls back to their original
     /// ASTContext. Used by the CxxModuleHandler to mark declarations that
     /// were created from the 'std' C++ module to prevent that the Importer
     /// tries to sync them with the broken equivalent in the debug info AST.
     std::set<clang::Decl *> m_decls_to_ignore;
-    std::set<clang::NamedDecl *> *m_decls_to_deport;
-    std::set<clang::NamedDecl *> *m_decls_already_deported;
     ClangASTImporter &m_master;
     clang::ASTContext *m_source_ctx;
     CxxModuleHandler *m_std_handler = nullptr;
+    /// The currently attached listener.
+    NewDeclListener *m_new_decl_listener = nullptr;
   };
 
   typedef std::shared_ptr<ASTImporterDelegate> ImporterDelegateSP;
@@ -389,6 +384,7 @@ private:
     }
   }
 
+public:
   DeclOrigin GetDeclOrigin(const clang::Decl *decl);
 
   clang::FileManager m_file_manager;

@@ -457,6 +457,7 @@ BreakAntiDependencies(const std::vector<SUnit> &SUnits,
     if (!Max || SU->getDepth() + SU->Latency > Max->getDepth() + Max->Latency)
       Max = SU;
   }
+  assert(Max && "Failed to find bottom of the critical path");
 
 #ifndef NDEBUG
   {

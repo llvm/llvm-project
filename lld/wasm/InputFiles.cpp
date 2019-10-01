@@ -165,10 +165,15 @@ uint32_t ObjFile::calcNewValue(const WasmRelocation &reloc) const {
   switch (reloc.Type) {
   case R_WASM_TABLE_INDEX_I32:
   case R_WASM_TABLE_INDEX_SLEB:
-  case R_WASM_TABLE_INDEX_REL_SLEB:
+  case R_WASM_TABLE_INDEX_REL_SLEB: {
     if (!getFunctionSymbol(reloc.Index)->hasTableIndex())
       return 0;
-    return getFunctionSymbol(reloc.Index)->getTableIndex();
+    uint32_t index = getFunctionSymbol(reloc.Index)->getTableIndex();
+    if (reloc.Type == R_WASM_TABLE_INDEX_REL_SLEB)
+      index -= config->tableBase;
+    return index;
+
+  }
   case R_WASM_MEMORY_ADDR_SLEB:
   case R_WASM_MEMORY_ADDR_I32:
   case R_WASM_MEMORY_ADDR_LEB:
@@ -421,7 +426,7 @@ Symbol *ObjFile::createDefined(const WasmSymbol &sym) {
 
 Symbol *ObjFile::createUndefined(const WasmSymbol &sym, bool isCalledDirectly) {
   StringRef name = sym.Info.Name;
-  uint32_t flags = sym.Info.Flags;
+  uint32_t flags = sym.Info.Flags | WASM_SYMBOL_UNDEFINED;
 
   switch (sym.Info.Kind) {
   case WASM_SYMBOL_TYPE_FUNCTION:
@@ -509,6 +514,7 @@ static Symbol *createBitcodeSymbol(const std::vector<bool> &keptComdats,
   bool excludedByComdat = c != -1 && !keptComdats[c];
 
   if (objSym.isUndefined() || excludedByComdat) {
+    flags |= WASM_SYMBOL_UNDEFINED;
     if (objSym.isExecutable())
       return symtab->addUndefinedFunction(name, name, defaultModule, flags, &f,
                                           nullptr, true);

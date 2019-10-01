@@ -48,13 +48,8 @@ int vasprintf(char **ret, const char *fmt, va_list ap) {
   size_t buflen;
   va_list ap2;
 
-#if defined(_MSC_VER) || defined(__MINGW64)
-  ap2 = ap;
-  len = _vscprintf(fmt, ap2);
-#else
   va_copy(ap2, ap);
   len = vsnprintf(NULL, 0, fmt, ap2);
-#endif
 
   if (len >= 0 &&
       (buf = (char *)malloc((buflen = (size_t)(len + 1)))) != NULL) {

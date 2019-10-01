@@ -61,6 +61,7 @@ static inline int MCLOHNameToId(StringRef Name) {
     MCLOHCaseNameToId(AdrpAdd)
     MCLOHCaseNameToId(AdrpLdrGot)
     .Default(-1);
+#undef MCLOHCaseNameToId
 }
 
 static inline StringRef MCLOHIdToName(MCLOHType Kind) {
@@ -76,6 +77,7 @@ static inline StringRef MCLOHIdToName(MCLOHType Kind) {
     MCLOHCaseIdToName(AdrpLdrGot);
   }
   return StringRef();
+#undef MCLOHCaseIdToName
 }
 
 static inline int MCLOHIdToNbArgs(MCLOHType Kind) {

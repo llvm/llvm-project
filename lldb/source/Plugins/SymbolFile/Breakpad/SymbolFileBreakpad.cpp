@@ -374,6 +374,20 @@ void SymbolFileBreakpad::AddSymbols(Symtab &symtab) {
   symtab.CalculateSymbolSizes();
 }
 
+llvm::Expected<lldb::addr_t>
+SymbolFileBreakpad::GetParameterStackSize(Symbol &symbol) {
+  ParseUnwindData();
+  if (auto *entry = m_unwind_data->win.FindEntryThatContains(
+          symbol.GetAddress().GetFileAddress())) {
+    auto record = StackWinRecord::parse(
+        *LineIterator(*m_objfile_sp, Record::StackWin, entry->data));
+    assert(record.hasValue());
+    return record->ParameterSize;
+  }
+  return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                 "Parameter size unknown.");
+}
+
 static llvm::Optional<std::pair<llvm::StringRef, llvm::StringRef>>
 GetRule(llvm::StringRef &unwind_rules) {
   // Unwind rules are of the form
@@ -585,12 +599,19 @@ SymbolFileBreakpad::ParseWinUnwindPlan(const Bookmark &bookmark,
 
   // We assume the first value will be the CFA. It is usually called T0, but
   // clang will use T1, if it needs to realign the stack.
-  if (!postfix::ResolveSymbols(it->second, symbol_resolver)) {
-    LLDB_LOG(log, "Resolving symbols in `{0}` failed.", record->ProgramString);
-    return nullptr;
+  auto *symbol = llvm::dyn_cast<postfix::SymbolNode>(it->second);
+  if (symbol && symbol->GetName() == ".raSearch") {
+    row_sp->GetCFAValue().SetRaSearch(record->LocalSize +
+                                      record->SavedRegisterSize);
+  } else {
+    if (!postfix::ResolveSymbols(it->second, symbol_resolver)) {
+      LLDB_LOG(log, "Resolving symbols in `{0}` failed.",
+               record->ProgramString);
+      return nullptr;
+    }
+    llvm::ArrayRef<uint8_t> saved  = SaveAsDWARF(*it->second);
+    row_sp->GetCFAValue().SetIsDWARFExpression(saved.data(), saved.size());
   }
-  llvm::ArrayRef<uint8_t> saved = SaveAsDWARF(*it->second);
-  row_sp->GetCFAValue().SetIsDWARFExpression(saved.data(), saved.size());
 
   // Replace the node value with InitialValueNode, so that subsequent
   // expressions refer to the CFA value instead of recomputing the whole

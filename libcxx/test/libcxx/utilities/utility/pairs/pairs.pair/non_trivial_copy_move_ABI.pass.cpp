@@ -6,9 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// The test fails due to the missing is_trivially_constructible intrinsic.
-// XFAIL: gcc-4.9
-
 // The test suite needs to define the ABI macros on the command line when
 // modules are enabled.
 // UNSUPPORTED: -fmodules

@@ -28,13 +28,13 @@ ScriptInterpreterNone::~ScriptInterpreterNone() {}
 bool ScriptInterpreterNone::ExecuteOneLine(llvm::StringRef command,
                                            CommandReturnObject *,
                                            const ExecuteScriptOptions &) {
-  m_debugger.GetErrorFile()->PutCString(
+  m_debugger.GetErrorStream().PutCString(
       "error: there is no embedded script interpreter in this mode.\n");
   return false;
 }
 
 void ScriptInterpreterNone::ExecuteInterpreterLoop() {
-  m_debugger.GetErrorFile()->PutCString(
+  m_debugger.GetErrorStream().PutCString(
       "error: there is no embedded script interpreter in this mode.\n");
 }
 

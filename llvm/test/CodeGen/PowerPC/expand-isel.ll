@@ -169,8 +169,8 @@ entry:
 }
 
 
-@b = common local_unnamed_addr global i32 0, align 4
-@a = common local_unnamed_addr global i32 0, align 4
+@b = local_unnamed_addr global i32 0, align 4
+@a = local_unnamed_addr global i32 0, align 4
 ; Function Attrs: norecurse nounwind readonly
 define signext i32 @testComplexISEL() #0 {
 entry:

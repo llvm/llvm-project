@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++98, c++03, c++11, c++14
-// UNSUPPORTED: clang-3, clang-4, clang-5, apple-clang, gcc-4, gcc-5, gcc-6
+// UNSUPPORTED: clang-3, clang-4, clang-5, apple-clang, gcc-5, gcc-6
 
 // type_traits
 

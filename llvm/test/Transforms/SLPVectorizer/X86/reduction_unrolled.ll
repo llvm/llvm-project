@@ -26,12 +26,6 @@ define i32 @test_add(i32* nocapture readonly %p) {
 ; CHECK-NEXT:    [[ARRAYIDX_7:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 7
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[P]] to <8 x i32>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, <8 x i32>* [[TMP0]], align 4
-; CHECK-NEXT:    [[MUL_18:%.*]] = add i32 undef, undef
-; CHECK-NEXT:    [[MUL_29:%.*]] = add i32 undef, [[MUL_18]]
-; CHECK-NEXT:    [[MUL_310:%.*]] = add i32 undef, [[MUL_29]]
-; CHECK-NEXT:    [[MUL_411:%.*]] = add i32 undef, [[MUL_310]]
-; CHECK-NEXT:    [[MUL_512:%.*]] = add i32 undef, [[MUL_411]]
-; CHECK-NEXT:    [[MUL_613:%.*]] = add i32 undef, [[MUL_512]]
 ; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <8 x i32> [[TMP1]], [[RDX_SHUF]]
 ; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <8 x i32> [[BIN_RDX]], <8 x i32> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
@@ -39,7 +33,6 @@ define i32 @test_add(i32* nocapture readonly %p) {
 ; CHECK-NEXT:    [[RDX_SHUF3:%.*]] = shufflevector <8 x i32> [[BIN_RDX2]], <8 x i32> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX4:%.*]] = add <8 x i32> [[BIN_RDX2]], [[RDX_SHUF3]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <8 x i32> [[BIN_RDX4]], i32 0
-; CHECK-NEXT:    [[MUL_714:%.*]] = add i32 undef, [[MUL_613]]
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
 entry:
@@ -147,12 +140,6 @@ define i32 @test_and(i32* nocapture readonly %p) {
 ; CHECK-NEXT:    [[ARRAYIDX_7:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 7
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[P]] to <8 x i32>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, <8 x i32>* [[TMP0]], align 4
-; CHECK-NEXT:    [[MUL_18:%.*]] = and i32 undef, undef
-; CHECK-NEXT:    [[MUL_29:%.*]] = and i32 undef, [[MUL_18]]
-; CHECK-NEXT:    [[MUL_310:%.*]] = and i32 undef, [[MUL_29]]
-; CHECK-NEXT:    [[MUL_411:%.*]] = and i32 undef, [[MUL_310]]
-; CHECK-NEXT:    [[MUL_512:%.*]] = and i32 undef, [[MUL_411]]
-; CHECK-NEXT:    [[MUL_613:%.*]] = and i32 undef, [[MUL_512]]
 ; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = and <8 x i32> [[TMP1]], [[RDX_SHUF]]
 ; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <8 x i32> [[BIN_RDX]], <8 x i32> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
@@ -160,7 +147,6 @@ define i32 @test_and(i32* nocapture readonly %p) {
 ; CHECK-NEXT:    [[RDX_SHUF3:%.*]] = shufflevector <8 x i32> [[BIN_RDX2]], <8 x i32> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX4:%.*]] = and <8 x i32> [[BIN_RDX2]], [[RDX_SHUF3]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <8 x i32> [[BIN_RDX4]], i32 0
-; CHECK-NEXT:    [[MUL_714:%.*]] = and i32 undef, [[MUL_613]]
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
 entry:
@@ -208,12 +194,6 @@ define i32 @test_or(i32* nocapture readonly %p) {
 ; CHECK-NEXT:    [[ARRAYIDX_7:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 7
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[P]] to <8 x i32>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, <8 x i32>* [[TMP0]], align 4
-; CHECK-NEXT:    [[MUL_18:%.*]] = or i32 undef, undef
-; CHECK-NEXT:    [[MUL_29:%.*]] = or i32 undef, [[MUL_18]]
-; CHECK-NEXT:    [[MUL_310:%.*]] = or i32 undef, [[MUL_29]]
-; CHECK-NEXT:    [[MUL_411:%.*]] = or i32 undef, [[MUL_310]]
-; CHECK-NEXT:    [[MUL_512:%.*]] = or i32 undef, [[MUL_411]]
-; CHECK-NEXT:    [[MUL_613:%.*]] = or i32 undef, [[MUL_512]]
 ; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = or <8 x i32> [[TMP1]], [[RDX_SHUF]]
 ; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <8 x i32> [[BIN_RDX]], <8 x i32> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
@@ -221,7 +201,6 @@ define i32 @test_or(i32* nocapture readonly %p) {
 ; CHECK-NEXT:    [[RDX_SHUF3:%.*]] = shufflevector <8 x i32> [[BIN_RDX2]], <8 x i32> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX4:%.*]] = or <8 x i32> [[BIN_RDX2]], [[RDX_SHUF3]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <8 x i32> [[BIN_RDX4]], i32 0
-; CHECK-NEXT:    [[MUL_714:%.*]] = or i32 undef, [[MUL_613]]
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
 entry:
@@ -269,12 +248,6 @@ define i32 @test_xor(i32* nocapture readonly %p) {
 ; CHECK-NEXT:    [[ARRAYIDX_7:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 7
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[P]] to <8 x i32>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, <8 x i32>* [[TMP0]], align 4
-; CHECK-NEXT:    [[MUL_18:%.*]] = xor i32 undef, undef
-; CHECK-NEXT:    [[MUL_29:%.*]] = xor i32 undef, [[MUL_18]]
-; CHECK-NEXT:    [[MUL_310:%.*]] = xor i32 undef, [[MUL_29]]
-; CHECK-NEXT:    [[MUL_411:%.*]] = xor i32 undef, [[MUL_310]]
-; CHECK-NEXT:    [[MUL_512:%.*]] = xor i32 undef, [[MUL_411]]
-; CHECK-NEXT:    [[MUL_613:%.*]] = xor i32 undef, [[MUL_512]]
 ; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = xor <8 x i32> [[TMP1]], [[RDX_SHUF]]
 ; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <8 x i32> [[BIN_RDX]], <8 x i32> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
@@ -282,7 +255,6 @@ define i32 @test_xor(i32* nocapture readonly %p) {
 ; CHECK-NEXT:    [[RDX_SHUF3:%.*]] = shufflevector <8 x i32> [[BIN_RDX2]], <8 x i32> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX4:%.*]] = xor <8 x i32> [[BIN_RDX2]], [[RDX_SHUF3]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <8 x i32> [[BIN_RDX4]], i32 0
-; CHECK-NEXT:    [[MUL_714:%.*]] = xor i32 undef, [[MUL_613]]
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
 entry:
@@ -322,15 +294,12 @@ define i32 @PR37731(<4 x i32>* noalias nocapture dereferenceable(16) %self) unna
 ; CHECK-NEXT:    [[TMP5:%.*]] = shl <4 x i32> [[TMP4]], <i32 18, i32 2, i32 7, i32 13>
 ; CHECK-NEXT:    [[TMP6:%.*]] = xor <4 x i32> [[TMP3]], [[TMP5]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP6]], <4 x i32>* [[SELF]], align 16
-; CHECK-NEXT:    [[TMP7:%.*]] = xor i32 undef, undef
-; CHECK-NEXT:    [[TMP8:%.*]] = xor i32 [[TMP7]], undef
 ; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x i32> [[TMP6]], <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = xor <4 x i32> [[TMP6]], [[RDX_SHUF]]
 ; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x i32> [[BIN_RDX]], <4 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX2:%.*]] = xor <4 x i32> [[BIN_RDX]], [[RDX_SHUF1]]
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i32> [[BIN_RDX2]], i32 0
-; CHECK-NEXT:    [[TMP10:%.*]] = xor i32 [[TMP8]], undef
-; CHECK-NEXT:    ret i32 [[TMP9]]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i32> [[BIN_RDX2]], i32 0
+; CHECK-NEXT:    ret i32 [[TMP7]]
 ;
 entry:
   %0 = load <4 x i32>, <4 x i32>* %self, align 16

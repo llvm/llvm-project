@@ -1,25 +1,25 @@
 ; RUN: opt < %s -cost-model -analyze -mtriple=systemz-unknown -mcpu=z13 \
 ; RUN:  | FileCheck %s -check-prefixes=CHECK,Z13
-; RUN: opt < %s -cost-model -analyze -mtriple=systemz-unknown -mcpu=arch13 \
-; RUN:  | FileCheck %s -check-prefixes=CHECK,AR13
+; RUN: opt < %s -cost-model -analyze -mtriple=systemz-unknown -mcpu=z15 \
+; RUN:  | FileCheck %s -check-prefixes=CHECK,Z15
 
 define void @fun0(i32 %a)  {
 ; CHECK-LABEL: Printing analysis 'Cost Model Analysis' for function 'fun0':
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %c0 = xor i32 %l0, -1
 ; Z13:   Cost Model: Found an estimated cost of 1 for instruction:   %res0 = or i32 %a, %c0
-; AR13:  Cost Model: Found an estimated cost of 0 for instruction:   %res0 = or i32 %a, %c0
+; Z15:   Cost Model: Found an estimated cost of 0 for instruction:   %res0 = or i32 %a, %c0
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %c1 = xor i32 %l1, -1
 ; Z13:   Cost Model: Found an estimated cost of 1 for instruction:   %res1 = and i32 %a, %c1
-; AR13:  Cost Model: Found an estimated cost of 0 for instruction:   %res1 = and i32 %a, %c1
+; Z15:   Cost Model: Found an estimated cost of 0 for instruction:   %res1 = and i32 %a, %c1
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %c2 = and i32 %l2, %a
 ; Z13:   Cost Model: Found an estimated cost of 1 for instruction:   %res2 = xor i32 %c2, -1
-; AR13:  Cost Model: Found an estimated cost of 0 for instruction:   %res2 = xor i32 %c2, -1
+; Z15:   Cost Model: Found an estimated cost of 0 for instruction:   %res2 = xor i32 %c2, -1
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %c3 = or i32 %l3, %a
 ; Z13:   Cost Model: Found an estimated cost of 1 for instruction:   %res3 = xor i32 %c3, -1
-; AR13:  Cost Model: Found an estimated cost of 0 for instruction:   %res3 = xor i32 %c3, -1
+; Z15:   Cost Model: Found an estimated cost of 0 for instruction:   %res3 = xor i32 %c3, -1
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %c4 = xor i32 %l4, %a
 ; Z13:   Cost Model: Found an estimated cost of 1 for instruction:   %res4 = xor i32 %c4, -1
-; AR13:  Cost Model: Found an estimated cost of 0 for instruction:   %res4 = xor i32 %c4, -1
+; Z15:   Cost Model: Found an estimated cost of 0 for instruction:   %res4 = xor i32 %c4, -1
 
 entry:
   %l0 = load i32, i32* undef
@@ -54,19 +54,19 @@ define void @fun1(i64 %a)  {
 ; CHECK-LABEL: Printing analysis 'Cost Model Analysis' for function 'fun1':
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %c0 = xor i64 %l0, -1
 ; Z13:   Cost Model: Found an estimated cost of 1 for instruction:   %res0 = or i64 %a, %c0
-; AR13:  Cost Model: Found an estimated cost of 0 for instruction:   %res0 = or i64 %a, %c0
+; Z15:   Cost Model: Found an estimated cost of 0 for instruction:   %res0 = or i64 %a, %c0
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %c1 = xor i64 %l1, -1
 ; Z13:   Cost Model: Found an estimated cost of 1 for instruction:   %res1 = and i64 %a, %c1
-; AR13:  Cost Model: Found an estimated cost of 0 for instruction:   %res1 = and i64 %a, %c1
+; Z15:   Cost Model: Found an estimated cost of 0 for instruction:   %res1 = and i64 %a, %c1
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %c2 = and i64 %l2, %a
 ; Z13:   Cost Model: Found an estimated cost of 1 for instruction:   %res2 = xor i64 %c2, -1
-; AR13:  Cost Model: Found an estimated cost of 0 for instruction:   %res2 = xor i64 %c2, -1
+; Z15:   Cost Model: Found an estimated cost of 0 for instruction:   %res2 = xor i64 %c2, -1
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %c3 = or i64 %l3, %a
 ; Z13:   Cost Model: Found an estimated cost of 1 for instruction:   %res3 = xor i64 %c3, -1
-; AR13:  Cost Model: Found an estimated cost of 0 for instruction:   %res3 = xor i64 %c3, -1
+; Z15:   Cost Model: Found an estimated cost of 0 for instruction:   %res3 = xor i64 %c3, -1
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %c4 = xor i64 %l4, %a
 ; Z13:   Cost Model: Found an estimated cost of 1 for instruction:   %res4 = xor i64 %c4, -1
-; AR13:  Cost Model: Found an estimated cost of 0 for instruction:   %res4 = xor i64 %c4, -1
+; Z15:   Cost Model: Found an estimated cost of 0 for instruction:   %res4 = xor i64 %c4, -1
 entry:
   %l0 = load i64, i64* undef
   %c0 = xor i64 %l0, -1

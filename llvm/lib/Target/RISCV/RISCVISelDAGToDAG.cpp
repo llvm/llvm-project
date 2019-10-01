@@ -68,7 +68,7 @@ static SDNode *selectImm(SelectionDAG *CurDAG, const SDLoc &DL, int64_t Imm,
   RISCVMatInt::InstSeq Seq;
   RISCVMatInt::generateInstSeq(Imm, XLenVT == MVT::i64, Seq);
 
-  SDNode *Result;
+  SDNode *Result = nullptr;
   SDValue SrcReg = CurDAG->getRegister(RISCV::X0, XLenVT);
   for (RISCVMatInt::Inst &Inst : Seq) {
     SDValue SDImm = CurDAG->getTargetConstant(Inst.Imm, DL, XLenVT);

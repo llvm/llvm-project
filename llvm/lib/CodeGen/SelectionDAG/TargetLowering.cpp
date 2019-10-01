@@ -585,7 +585,7 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
     SDValue Op, const APInt &DemandedBits, const APInt &DemandedElts,
     SelectionDAG &DAG, unsigned Depth) const {
   // Limit search depth.
-  if (Depth >= 6)
+  if (Depth >= SelectionDAG::MaxRecursionDepth)
     return SDValue();
 
   // Ignore UNDEFs.
@@ -798,12 +798,15 @@ bool TargetLowering::SimplifyDemandedBits(
   } else if (OriginalDemandedBits == 0 || OriginalDemandedElts == 0) {
     // Not demanding any bits/elts from Op.
     return TLO.CombineTo(Op, TLO.DAG.getUNDEF(VT));
-  } else if (Depth >= 6) { // Limit search depth.
+  } else if (Depth >= SelectionDAG::MaxRecursionDepth) {
+    // Limit search depth.
     return false;
   }
 
   KnownBits Known2, KnownOut;
   switch (Op.getOpcode()) {
+  case ISD::TargetConstant:
+    llvm_unreachable("Can't simplify this node");
   case ISD::SCALAR_TO_VECTOR: {
     if (!DemandedElts[0])
       return TLO.CombineTo(Op, TLO.DAG.getUNDEF(VT));
@@ -905,6 +908,21 @@ bool TargetLowering::SimplifyDemandedBits(
         Known.One &= KnownBase.One;
         Known.Zero &= KnownBase.Zero;
     }
+    break;
+  }
+  case ISD::EXTRACT_SUBVECTOR: {
+    // If index isn't constant, assume we need all the source vector elements.
+    SDValue Src = Op.getOperand(0);
+    ConstantSDNode *SubIdx = dyn_cast<ConstantSDNode>(Op.getOperand(1));
+    unsigned NumSrcElts = Src.getValueType().getVectorNumElements();
+    APInt SrcElts = APInt::getAllOnesValue(NumSrcElts);
+    if (SubIdx && SubIdx->getAPIntValue().ule(NumSrcElts - NumElts)) {
+      // Offset the demanded elts by the subvector index.
+      uint64_t Idx = SubIdx->getZExtValue();
+      SrcElts = DemandedElts.zextOrSelf(NumSrcElts).shl(Idx);
+    }
+    if (SimplifyDemandedBits(Src, DemandedBits, SrcElts, Known, TLO, Depth + 1))
+      return true;
     break;
   }
   case ISD::CONCAT_VECTORS: {
@@ -1270,7 +1288,7 @@ bool TargetLowering::SimplifyDemandedBits(
       // out) are never demanded.
       // TODO - support non-uniform vector amounts.
       if (Op0.getOpcode() == ISD::SRL) {
-        if ((DemandedBits & APInt::getLowBitsSet(BitWidth, ShAmt)) == 0) {
+        if (!DemandedBits.intersects(APInt::getLowBitsSet(BitWidth, ShAmt))) {
           if (ConstantSDNode *SA2 =
                   isConstOrConstSplat(Op0.getOperand(1), DemandedElts)) {
             if (SA2->getAPIntValue().ult(BitWidth)) {
@@ -1377,7 +1395,8 @@ bool TargetLowering::SimplifyDemandedBits(
       if (Op0.getOpcode() == ISD::SHL) {
         if (ConstantSDNode *SA2 =
                 isConstOrConstSplat(Op0.getOperand(1), DemandedElts)) {
-          if ((DemandedBits & APInt::getHighBitsSet(BitWidth, ShAmt)) == 0) {
+          if (!DemandedBits.intersects(
+                  APInt::getHighBitsSet(BitWidth, ShAmt))) {
             if (SA2->getAPIntValue().ult(BitWidth)) {
               unsigned C1 = SA2->getZExtValue();
               unsigned Opc = ISD::SRL;
@@ -2091,7 +2110,7 @@ bool TargetLowering::SimplifyDemandedVectorElts(
   }
 
   // Limit search depth.
-  if (Depth >= 6)
+  if (Depth >= SelectionDAG::MaxRecursionDepth)
     return false;
 
   SDLoc DL(Op);
@@ -6888,24 +6907,19 @@ void TargetLowering::expandSADDSUBO(
 
   SDValue Zero = DAG.getConstant(0, dl, LHS.getValueType());
 
-  //   LHSSign -> LHS >= 0
-  //   RHSSign -> RHS >= 0
-  //   SumSign -> Result >= 0
-  //
-  //   Add:
-  //   Overflow -> (LHSSign == RHSSign) && (LHSSign != SumSign)
-  //   Sub:
-  //   Overflow -> (LHSSign != RHSSign) && (LHSSign != SumSign)
-  SDValue LHSSign = DAG.getSetCC(dl, OType, LHS, Zero, ISD::SETGE);
-  SDValue RHSSign = DAG.getSetCC(dl, OType, RHS, Zero, ISD::SETGE);
-  SDValue SignsMatch = DAG.getSetCC(dl, OType, LHSSign, RHSSign,
-                                    IsAdd ? ISD::SETEQ : ISD::SETNE);
+  // For an addition, the result should be less than one of the operands (LHS)
+  // if and only if the other operand (RHS) is negative, otherwise there will
+  // be overflow.
+  // For a subtraction, the result should be less than one of the operands
+  // (LHS) if and only if the other operand (RHS) is (non-zero) positive,
+  // otherwise there will be overflow.
+  SDValue ResultLowerThanLHS = DAG.getSetCC(dl, OType, Result, LHS, ISD::SETLT);
+  SDValue ConditionRHS =
+      DAG.getSetCC(dl, OType, RHS, Zero, IsAdd ? ISD::SETLT : ISD::SETGT);
 
-  SDValue SumSign = DAG.getSetCC(dl, OType, Result, Zero, ISD::SETGE);
-  SDValue SumSignNE = DAG.getSetCC(dl, OType, LHSSign, SumSign, ISD::SETNE);
-
-  SDValue Cmp = DAG.getNode(ISD::AND, dl, OType, SignsMatch, SumSignNE);
-  Overflow = DAG.getBoolExtOrTrunc(Cmp, dl, ResultType, ResultType);
+  Overflow = DAG.getBoolExtOrTrunc(
+      DAG.getNode(ISD::XOR, dl, OType, ConditionRHS, ResultLowerThanLHS), dl,
+      ResultType, ResultType);
 }
 
 bool TargetLowering::expandMULO(SDNode *Node, SDValue &Result,

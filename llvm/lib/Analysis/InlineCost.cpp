@@ -1453,19 +1453,6 @@ bool CallAnalyzer::visitSwitchInst(SwitchInst &SI) {
   // Maximum valid cost increased in this function.
   int CostUpperBound = INT_MAX - InlineConstants::InstrCost - 1;
 
-  // Exit early for a large switch, assuming one case needs at least one
-  // instruction.
-  // FIXME: This is not true for a bit test, but ignore such case for now to
-  // save compile-time.
-  int64_t CostLowerBound =
-      std::min((int64_t)CostUpperBound,
-               (int64_t)SI.getNumCases() * InlineConstants::InstrCost + Cost);
-
-  if (CostLowerBound > Threshold && !ComputeFullInlineCost) {
-    addCost((int64_t)SI.getNumCases() * InlineConstants::InstrCost);
-    return false;
-  }
-
   unsigned JumpTableSize = 0;
   unsigned NumCaseCluster =
       TTI.getEstimatedNumberOfCaseClusters(SI, JumpTableSize);

@@ -96,7 +96,7 @@ void REPL::IOHandlerActivated(IOHandler &io_handler, bool interactive) {
   lldb::ProcessSP process_sp = m_target.GetProcessSP();
   if (process_sp && process_sp->IsAlive())
     return;
-  lldb::StreamFileSP error_sp(io_handler.GetErrorStreamFile());
+  lldb::StreamFileSP error_sp(io_handler.GetErrorStreamFileSP());
   error_sp->Printf("REPL requires a running target process.\n");
   io_handler.SetIsDone(true);
 }
@@ -180,8 +180,8 @@ int REPL::IOHandlerFixIndentation(IOHandler &io_handler,
 }
 
 void REPL::IOHandlerInputComplete(IOHandler &io_handler, std::string &code) {
-  lldb::StreamFileSP output_sp(io_handler.GetOutputStreamFile());
-  lldb::StreamFileSP error_sp(io_handler.GetErrorStreamFile());
+  lldb::StreamFileSP output_sp(io_handler.GetOutputStreamFileSP());
+  lldb::StreamFileSP error_sp(io_handler.GetErrorStreamFileSP());
   bool extra_line = false;
   bool did_quit = false;
 
@@ -398,17 +398,22 @@ void REPL::IOHandlerInputComplete(IOHandler &io_handler, std::string &code) {
 
           // Update our code on disk
           if (!m_repl_source_path.empty()) {
-            lldb_private::File file;
-            FileSystem::Instance().Open(file, FileSpec(m_repl_source_path),
-                                        File::eOpenOptionWrite |
-                                            File::eOpenOptionTruncate |
-                                            File::eOpenOptionCanCreate,
-                                        lldb::eFilePermissionsFileDefault);
-            std::string code(m_code.CopyList());
-            code.append(1, '\n');
-            size_t bytes_written = code.size();
-            file.Write(code.c_str(), bytes_written);
-            file.Close();
+            auto file = FileSystem::Instance().Open(
+                FileSpec(m_repl_source_path),
+                File::eOpenOptionWrite | File::eOpenOptionTruncate |
+                    File::eOpenOptionCanCreate,
+                lldb::eFilePermissionsFileDefault);
+            if (file) {
+              std::string code(m_code.CopyList());
+              code.append(1, '\n');
+              size_t bytes_written = code.size();
+              file.get()->Write(code.c_str(), bytes_written);
+              file.get()->Close();
+            } else {
+              std::string message = llvm::toString(file.takeError());
+              error_sp->Printf("error: couldn't open %s: %s\n",
+                               m_repl_source_path.c_str(), message.c_str());
+            }
 
             // Now set the default file and line to the REPL source file
             m_target.GetSourceManager().SetDefaultFileAndLine(
@@ -453,7 +458,7 @@ void REPL::IOHandlerComplete(IOHandler &io_handler,
   }
 
   // Strip spaces from the line and see if we had only spaces
-  if (request.GetRawLineUntilCursor().trim().empty()) {
+  if (request.GetRawLine().trim().empty()) {
     // Only spaces on this line, so just indent
     request.AddCompletion(m_indent_str);
     return;
@@ -479,7 +484,7 @@ void REPL::IOHandlerComplete(IOHandler &io_handler,
   }
 
   current_code.append("\n");
-  current_code += request.GetRawLineUntilCursor();
+  current_code += request.GetRawLine();
 
   StringList matches;
   int result = CompleteCode(current_code, matches);

@@ -968,7 +968,14 @@ void ASTDeclWriter::VisitVarDecl(VarDecl *D) {
   Record.push_back(D->getLinkageInternal());
 
   if (D->getInit()) {
-    Record.push_back(!D->isInitKnownICE() ? 1 : (D->isInitICE() ? 3 : 2));
+    if (!D->isInitKnownICE())
+      Record.push_back(1);
+    else {
+      Record.push_back(
+          2 |
+          (D->isInitICE() ? 1 : 0) |
+          (D->ensureEvaluatedStmt()->HasConstantDestruction ? 4 : 0));
+    }
     Record.AddStmt(D->getInit());
   } else {
     Record.push_back(0);
@@ -2140,7 +2147,7 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(0));                         // ImplicitParamKind
   Abv->Add(BitCodeAbbrevOp(0));                         // EscapingByref
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); // Linkage
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 2)); // IsInitICE (local)
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); // IsInitICE (local)
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 2)); // VarKind (local enum)
   // Type Source Info
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));

@@ -35,7 +35,7 @@ public:
       : ReturnStackOffsetSet(false), VarArgsFrameIndex(0),
         ReturnStackOffset(-1U), MaxCallStackReq(0) {
     // Functions are 4-byte aligned.
-    MF.setAlignment(llvm::Align(4));
+    MF.setAlignment(Align(4));
   }
 
   ~ARCFunctionInfo() {}

@@ -32,7 +32,7 @@
 ; CHECK-NEXT:        .long   0
 ; CHECK-NEXT:        .long   1
 ; CHECK-NEXT:        .long   3
-; CHECK-NEXT:        .long   0
+; CHECK-NEXT:        .long   10
 ; CHECK-NEXT:        .long   3                       # BTF_KIND_INT(id = 3)
 ; CHECK-NEXT:        .long   16777216                # 0x1000000
 ; CHECK-NEXT:        .long   4

@@ -87,6 +87,10 @@ namespace llvm {
   /// Upgrade the loop attachment metadata node.
   MDNode *upgradeInstructionLoopAttachment(MDNode &N);
 
+  /// Upgrade the datalayout string by adding a section for address space
+  /// pointers.
+  std::string UpgradeDataLayoutString(StringRef DL, StringRef Triple);
+
 } // End llvm namespace
 
 #endif

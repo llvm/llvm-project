@@ -13,6 +13,7 @@
 
 #include "CodeGenInstruction.h"
 #include "CodeGenTarget.h"
+#include "InfoByHwMode.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/CachedHashString.h"
@@ -97,9 +98,11 @@ struct DecoderTableInfo {
 struct EncodingAndInst {
   const Record *EncodingDef;
   const CodeGenInstruction *Inst;
+  StringRef HwModeName;
 
-  EncodingAndInst(const Record *EncodingDef, const CodeGenInstruction *Inst)
-      : EncodingDef(EncodingDef), Inst(Inst) {}
+  EncodingAndInst(const Record *EncodingDef, const CodeGenInstruction *Inst,
+                  StringRef HwModeName = "")
+      : EncodingDef(EncodingDef), Inst(Inst), HwModeName(HwModeName) {}
 };
 
 struct EncodingIDAndOpcode {
@@ -2382,12 +2385,50 @@ void FixedLenDecoderEmitter::run(raw_ostream &o) {
   Target.reverseBitsForLittleEndianEncoding();
 
   // Parameterize the decoders based on namespace and instruction width.
+  std::set<StringRef> HwModeNames;
   const auto &NumberedInstructions = Target.getInstructionsByEnumValue();
   NumberedEncodings.reserve(NumberedInstructions.size());
   DenseMap<Record *, unsigned> IndexOfInstruction;
+  // First, collect all HwModes referenced by the target.
   for (const auto &NumberedInstruction : NumberedInstructions) {
     IndexOfInstruction[NumberedInstruction->TheDef] = NumberedEncodings.size();
-    NumberedEncodings.emplace_back(NumberedInstruction->TheDef, NumberedInstruction);
+
+    if (const RecordVal *RV =
+            NumberedInstruction->TheDef->getValue("EncodingInfos")) {
+      if (auto *DI = dyn_cast_or_null<DefInit>(RV->getValue())) {
+        const CodeGenHwModes &HWM = Target.getHwModes();
+        EncodingInfoByHwMode EBM(DI->getDef(), HWM);
+        for (auto &KV : EBM.Map)
+          HwModeNames.insert(HWM.getMode(KV.first).Name);
+      }
+    }
+  }
+
+  // If HwModeNames is empty, add the empty string so we always have one HwMode.
+  if (HwModeNames.empty())
+    HwModeNames.insert("");
+
+  for (const auto &NumberedInstruction : NumberedInstructions) {
+    IndexOfInstruction[NumberedInstruction->TheDef] = NumberedEncodings.size();
+
+    if (const RecordVal *RV =
+            NumberedInstruction->TheDef->getValue("EncodingInfos")) {
+      if (DefInit *DI = dyn_cast_or_null<DefInit>(RV->getValue())) {
+        const CodeGenHwModes &HWM = Target.getHwModes();
+        EncodingInfoByHwMode EBM(DI->getDef(), HWM);
+        for (auto &KV : EBM.Map) {
+          NumberedEncodings.emplace_back(KV.second, NumberedInstruction,
+                                         HWM.getMode(KV.first).Name);
+          HwModeNames.insert(HWM.getMode(KV.first).Name);
+        }
+        continue;
+      }
+    }
+    // This instruction is encoded the same on all HwModes. Emit it for all
+    // HwModes.
+    for (StringRef HwModeName : HwModeNames)
+      NumberedEncodings.emplace_back(NumberedInstruction->TheDef,
+                                     NumberedInstruction, HwModeName);
   }
   for (const auto &NumberedAlias : RK.getAllDerivedDefinitions("AdditionalEncoding"))
     NumberedEncodings.emplace_back(
@@ -2415,13 +2456,19 @@ void FixedLenDecoderEmitter::run(raw_ostream &o) {
       NumInstructions++;
     NumEncodings++;
 
-    StringRef DecoderNamespace = EncodingDef->getValueAsString("DecoderNamespace");
+    if (!Size)
+      continue;
 
-    if (Size) {
-      if (populateInstruction(Target, *EncodingDef, *Inst, i, Operands)) {
-        OpcMap[std::make_pair(DecoderNamespace, Size)].emplace_back(i, IndexOfInstruction.find(Def)->second);
-      } else
-        NumEncodingsOmitted++;
+    if (populateInstruction(Target, *EncodingDef, *Inst, i, Operands)) {
+      std::string DecoderNamespace =
+          EncodingDef->getValueAsString("DecoderNamespace");
+      if (!NumberedEncodings[i].HwModeName.empty())
+        DecoderNamespace +=
+            std::string("_") + NumberedEncodings[i].HwModeName.str();
+      OpcMap[std::make_pair(DecoderNamespace, Size)].emplace_back(
+          i, IndexOfInstruction.find(Def)->second);
+    } else {
+      NumEncodingsOmitted++;
     }
   }
 

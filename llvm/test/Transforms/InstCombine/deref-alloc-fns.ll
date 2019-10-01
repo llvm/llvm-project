@@ -6,6 +6,9 @@ declare noalias i8* @calloc(i64, i64)
 declare noalias i8* @realloc(i8* nocapture, i64)
 declare noalias nonnull i8* @_Znam(i64) ; throwing version of 'new'
 declare noalias nonnull i8* @_Znwm(i64) ; throwing version of 'new'
+declare noalias i8* @strdup(i8*)
+
+@.str = private unnamed_addr constant [6 x i8] c"hello\00", align 1
 
 define noalias i8* @malloc_nonconstant_size(i64 %n) {
 ; CHECK-LABEL: @malloc_nonconstant_size(
@@ -204,5 +207,23 @@ define noalias i8* @op_new_constant_zero_size() {
 ; CHECK-NEXT:    ret i8* [[CALL]]
 ;
   %call = tail call i8* @_Znam(i64 0)
+  ret i8* %call
+}
+
+define noalias i8* @strdup_constant_str() {
+; CHECK-LABEL: @strdup_constant_str(
+; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias dereferenceable_or_null(6) i8* @strdup(i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str, i64 0, i64 0))
+; CHECK-NEXT:    ret i8* [[CALL]]
+;
+  %call = tail call noalias i8* @strdup(i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str, i64 0, i64 0))
+  ret i8* %call
+}
+
+define noalias i8* @strdup_notconstant_str(i8 * %str) {
+; CHECK-LABEL: @strdup_notconstant_str(
+; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias i8* @strdup(i8* [[STR:%.*]])
+; CHECK-NEXT:    ret i8* [[CALL]]
+;
+  %call = tail call noalias i8* @strdup(i8* %str)
   ret i8* %call
 }

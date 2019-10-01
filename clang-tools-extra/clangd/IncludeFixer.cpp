@@ -144,10 +144,8 @@ std::vector<Fix> IncludeFixer::fixIncompleteType(const Type &T) const {
 std::vector<Fix> IncludeFixer::fixesForSymbols(const SymbolSlab &Syms) const {
   auto Inserted = [&](const Symbol &Sym, llvm::StringRef Header)
       -> llvm::Expected<std::pair<std::string, bool>> {
-    auto DeclaringURI = URI::parse(Sym.CanonicalDeclaration.FileURI);
-    if (!DeclaringURI)
-      return DeclaringURI.takeError();
-    auto ResolvedDeclaring = URI::resolve(*DeclaringURI, File);
+    auto ResolvedDeclaring =
+        URI::resolve(Sym.CanonicalDeclaration.FileURI, File);
     if (!ResolvedDeclaring)
       return ResolvedDeclaring.takeError();
     auto ResolvedInserted = toHeaderFile(Header, File);

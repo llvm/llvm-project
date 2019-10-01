@@ -205,7 +205,7 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     for (auto T : {MVT::i8, MVT::i16, MVT::i32})
       setOperationAction(ISD::SIGN_EXTEND_INREG, T, Action);
   }
-  for (auto T : MVT::integer_vector_valuetypes())
+  for (auto T : MVT::integer_fixedlen_vector_valuetypes())
     setOperationAction(ISD::SIGN_EXTEND_INREG, T, Expand);
 
   // Dynamic stack allocation: use the default expansion.
@@ -228,7 +228,7 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
   //  - Floating-point extending loads.
   //  - Floating-point truncating stores.
   //  - i1 extending loads.
-  //  - extending/truncating SIMD loads/stores
+  //  - truncating SIMD stores and most extending loads
   setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f32, Expand);
   setTruncStoreAction(MVT::f64, MVT::f32, Expand);
   for (auto T : MVT::integer_valuetypes())
@@ -237,12 +237,20 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
   if (Subtarget->hasSIMD128()) {
     for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v2i64, MVT::v4f32,
                    MVT::v2f64}) {
-      for (auto MemT : MVT::vector_valuetypes()) {
+      for (auto MemT : MVT::fixedlen_vector_valuetypes()) {
         if (MVT(T) != MemT) {
           setTruncStoreAction(T, MemT, Expand);
           for (auto Ext : {ISD::EXTLOAD, ISD::ZEXTLOAD, ISD::SEXTLOAD})
             setLoadExtAction(Ext, T, MemT, Expand);
         }
+      }
+    }
+    // But some vector extending loads are legal
+    if (Subtarget->hasUnimplementedSIMD128()) {
+      for (auto Ext : {ISD::EXTLOAD, ISD::SEXTLOAD, ISD::ZEXTLOAD}) {
+        setLoadExtAction(Ext, MVT::v8i16, MVT::v8i8, Legal);
+        setLoadExtAction(Ext, MVT::v4i32, MVT::v4i16, Legal);
+        setLoadExtAction(Ext, MVT::v2i64, MVT::v2i32, Legal);
       }
     }
   }
@@ -258,16 +266,6 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
   setOperationAction(ISD::INTRINSIC_VOID, MVT::Other, Custom);
 
   setMaxAtomicSizeInBitsSupported(64);
-
-  if (Subtarget->hasBulkMemory()) {
-    // Use memory.copy and friends over multiple loads and stores
-    MaxStoresPerMemcpy = 1;
-    MaxStoresPerMemcpyOptSize = 1;
-    MaxStoresPerMemmove = 1;
-    MaxStoresPerMemmoveOptSize = 1;
-    MaxStoresPerMemset = 1;
-    MaxStoresPerMemsetOptSize = 1;
-  }
 
   // Override the __gnu_f2h_ieee/__gnu_h2f_ieee names so that the f32 name is
   // consistent with the f64 and f128 names.
@@ -548,6 +546,16 @@ bool WebAssemblyTargetLowering::isIntDivCheap(EVT VT,
   // The current thinking is that wasm engines will perform this optimization,
   // so we can save on code size.
   return true;
+}
+
+bool WebAssemblyTargetLowering::isVectorLoadExtDesirable(SDValue ExtVal) const {
+  if (!Subtarget->hasUnimplementedSIMD128())
+    return false;
+  MVT ExtT = ExtVal.getSimpleValueType();
+  MVT MemT = cast<LoadSDNode>(ExtVal->getOperand(0))->getSimpleValueType(0);
+  return (ExtT == MVT::v8i16 && MemT == MVT::v8i8) ||
+         (ExtT == MVT::v4i32 && MemT == MVT::v4i16) ||
+         (ExtT == MVT::v2i64 && MemT == MVT::v2i32);
 }
 
 EVT WebAssemblyTargetLowering::getSetCCResultType(const DataLayout &DL,
@@ -1368,7 +1376,16 @@ SDValue WebAssemblyTargetLowering::LowerBUILD_VECTOR(SDValue Op,
     }
   }
   // Use a splat for the initial vector
-  SDValue Result = DAG.getSplatBuildVector(VecT, DL, SplatValue);
+  SDValue Result;
+  // Possibly a load_splat
+  LoadSDNode *SplattedLoad;
+  if (Subtarget->hasUnimplementedSIMD128() &&
+      (SplattedLoad = dyn_cast<LoadSDNode>(SplatValue)) &&
+      SplattedLoad->getMemoryVT() == VecT.getVectorElementType()) {
+    Result = DAG.getNode(WebAssemblyISD::LOAD_SPLAT, DL, VecT, SplatValue);
+  } else {
+    Result = DAG.getSplatBuildVector(VecT, DL, SplatValue);
+  }
   // Add replace_lane instructions for other values
   for (size_t I = 0; I < Lanes; ++I) {
     const SDValue &Lane = Op->getOperand(I);

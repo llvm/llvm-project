@@ -215,8 +215,7 @@ void CommandObjectHelp::HandleCompletion(CompletionRequest &request) {
   // user is getting help on...
 
   if (cmd_obj) {
-    request.GetParsedLine().Shift();
-    request.SetCursorIndex(request.GetCursorIndex() - 1);
+    request.ShiftArguments();
     cmd_obj->HandleCompletion(request);
     return;
   }

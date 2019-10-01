@@ -1350,7 +1350,9 @@ uint64_t WasmObjectWriter::writeObject(MCAssembler &Asm,
         report_fatal_error(".size expression must be evaluatable");
 
       auto &DataSection = static_cast<MCSectionWasm &>(WS.getSection());
-      assert(DataSection.isWasmData());
+      if (!DataSection.isWasmData())
+        report_fatal_error("data symbols must live in a data section: " +
+                           WS.getName());
 
       // For each data symbol, export it in the symtab as a reference to the
       // corresponding Wasm data segment.

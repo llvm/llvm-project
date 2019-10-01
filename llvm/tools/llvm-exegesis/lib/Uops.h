@@ -26,7 +26,8 @@ public:
   ~UopsSnippetGenerator() override;
 
   llvm::Expected<std::vector<CodeTemplate>>
-  generateCodeTemplates(const Instruction &Instr) const override;
+  generateCodeTemplates(const Instruction &Instr,
+                        const BitVector &ForbiddenRegisters) const override;
 
   static constexpr const size_t kMinNumDifferentAddresses = 6;
 

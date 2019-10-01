@@ -790,7 +790,7 @@ unsigned AggressiveAntiDepBreaker::BreakAntiDependencies(
         CriticalPathSU = SU;
       }
     }
-
+    assert(CriticalPathSU && "Failed to find SUnit critical path");
     CriticalPathMI = CriticalPathSU->getInstr();
   }
 

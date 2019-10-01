@@ -75,8 +75,6 @@ define i32 @test_nonvoid_ret() {
   ret i32 %call
 }
 
-; Right now, this should not be tail called.
-; TODO: Support this.
 declare void @varargs(i32, double, i64, ...)
 define void @test_varargs() {
   ; COMMON-LABEL: name: test_varargs
@@ -84,14 +82,72 @@ define void @test_varargs() {
   ; COMMON:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 42
   ; COMMON:   [[C1:%[0-9]+]]:_(s64) = G_FCONSTANT double 1.000000e+00
   ; COMMON:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 12
-  ; COMMON:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; COMMON:   $w0 = COPY [[C]](s32)
   ; COMMON:   $d0 = COPY [[C1]](s64)
   ; COMMON:   $x1 = COPY [[C2]](s64)
-  ; COMMON:   BL @varargs, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $w0, implicit $d0, implicit $x1
-  ; COMMON:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
-  ; COMMON:   RET_ReallyLR
+  ; COMMON:   TCRETURNdi @varargs, 0, csr_aarch64_aapcs, implicit $sp, implicit $w0, implicit $d0, implicit $x1
   tail call void(i32, double, i64, ...) @varargs(i32 42, double 1.0, i64 12)
+  ret void
+}
+
+; Darwin should not tail call here, because the last parameter to @varargs is
+; not fixed. So, it's passed on the stack, which will make us not fit. On
+; Windows, it's passed in a register, so it's safe to tail call.
+define void @test_varargs_2() {
+  ; DARWIN-LABEL: name: test_varargs_2
+  ; DARWIN-NOT: TCRETURNdi @varargs
+  ; DARWIN:   BL @varargs, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $w0, implicit $d0, implicit $x1
+  ; DARWIN:   ADJCALLSTACKUP 8, 0, implicit-def $sp, implicit $sp
+  ; DARWIN:   RET_ReallyLR
+
+  ; WINDOWS-LABEL: name: test_varargs_2
+  ; WINDOWS: bb.1 (%ir-block.0):
+  ; WINDOWS:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 42
+  ; WINDOWS:   [[C1:%[0-9]+]]:_(s64) = G_FCONSTANT double 1.000000e+00
+  ; WINDOWS:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 12
+  ; WINDOWS:   [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 314
+  ; WINDOWS:   $w0 = COPY [[C]](s32)
+  ; WINDOWS:   $d0 = COPY [[C1]](s64)
+  ; WINDOWS:   $x1 = COPY [[C2]](s64)
+  ; WINDOWS:   $x2 = COPY [[C3]](s64)
+  ; WINDOWS:   TCRETURNdi @varargs, 0, csr_aarch64_aapcs, implicit $sp, implicit $w0, implicit $d0, implicit $x1, implicit $x2
+  tail call void(i32, double, i64, ...) @varargs(i32 42, double 1.0, i64 12, i64 314)
+  ret void
+}
+
+; Same deal here, even though we have enough room to fit. On Darwin, we'll pass
+; the last argument to @varargs on the stack. We don't allow tail calling
+; varargs arguments that are on the stack.
+define void @test_varargs_3([8 x <2 x double>], <4 x half> %arg) {
+  ; DARWIN-LABEL: name: test_varargs_3
+  ; DARWIN-NOT: TCRETURNdi @varargs
+  ; DARWIN:   BL @varargs, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $w0, implicit $d0, implicit $x1
+  ; DARWIN:   ADJCALLSTACKUP 8, 0, implicit-def $sp, implicit $sp
+  ; DARWIN:   RET_ReallyLR
+
+  ; WINDOWS-LABEL: name: test_varargs_3
+  ; WINDOWS: bb.1 (%ir-block.1):
+  ; WINDOWS:   liveins: $q0, $q1, $q2, $q3, $q4, $q5, $q6, $q7
+  ; WINDOWS:   [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
+  ; WINDOWS:   [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
+  ; WINDOWS:   [[COPY2:%[0-9]+]]:_(<2 x s64>) = COPY $q2
+  ; WINDOWS:   [[COPY3:%[0-9]+]]:_(<2 x s64>) = COPY $q3
+  ; WINDOWS:   [[COPY4:%[0-9]+]]:_(<2 x s64>) = COPY $q4
+  ; WINDOWS:   [[COPY5:%[0-9]+]]:_(<2 x s64>) = COPY $q5
+  ; WINDOWS:   [[COPY6:%[0-9]+]]:_(<2 x s64>) = COPY $q6
+  ; WINDOWS:   [[COPY7:%[0-9]+]]:_(<2 x s64>) = COPY $q7
+  ; WINDOWS:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
+  ; WINDOWS:   [[LOAD:%[0-9]+]]:_(<4 x s16>) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 8 from %fixed-stack.0, align 1)
+  ; WINDOWS:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 42
+  ; WINDOWS:   [[C1:%[0-9]+]]:_(s64) = G_FCONSTANT double 1.000000e+00
+  ; WINDOWS:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 12
+  ; WINDOWS:   [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 314
+  ; WINDOWS:   $w0 = COPY [[C]](s32)
+  ; WINDOWS:   $d0 = COPY [[C1]](s64)
+  ; WINDOWS:   $x1 = COPY [[C2]](s64)
+  ; WINDOWS:   $x2 = COPY [[C3]](s64)
+  ; WINDOWS:   TCRETURNdi @varargs, 0, csr_aarch64_aapcs, implicit $sp, implicit $w0, implicit $d0, implicit $x1, implicit $x2
+  tail call void(i32, double, i64, ...) @varargs(i32 42, double 1.0, i64 12, i64 314)
   ret void
 }
 
@@ -212,4 +268,19 @@ define hidden swiftcc i64 @swiftself_indirect_tail(i64* swiftself %arg) {
   %tmp1 = bitcast i8* %tmp to i64 (i64*)*
   %tmp2 = tail call swiftcc i64 %tmp1(i64* swiftself %arg)
   ret i64 %tmp2
+}
+
+; Verify that we can tail call musttail callees.
+declare void @must_callee(i8*)
+define void @foo(i32*) {
+  ; COMMON-LABEL: name: foo
+  ; COMMON: bb.1 (%ir-block.1):
+  ; COMMON:   liveins: $x0
+  ; COMMON:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+  ; COMMON:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; COMMON:   [[INTTOPTR:%[0-9]+]]:_(p0) = G_INTTOPTR [[C]](s64)
+  ; COMMON:   $x0 = COPY [[INTTOPTR]](p0)
+  ; COMMON:   TCRETURNdi @must_callee, 0, csr_aarch64_aapcs, implicit $sp, implicit $x0
+  musttail call void @must_callee(i8* null)
+  ret void
 }

@@ -30,7 +30,6 @@ def MMX_SET0 : I<0, Pseudo, (outs VR64:$dst), (ins), "", []>;
 
 let Constraints = "$src1 = $dst" in {
   // MMXI_binop_rm_int - Simple MMX binary operator based on intrinsic.
-  // When this is cleaned up, remove the FIXME from X86RecognizableInstr.cpp.
   multiclass MMXI_binop_rm_int<bits<8> opc, string OpcodeStr, Intrinsic IntId,
                                X86FoldableSchedWrite sched, bit Commutable = 0,
                                X86MemOperand OType = i64mem> {
@@ -67,7 +66,7 @@ let Constraints = "$src1 = $dst" in {
     def ri : MMXIi8<opc2, ImmForm, (outs VR64:$dst),
                                    (ins VR64:$src1, i32u8imm:$src2),
                     !strconcat(OpcodeStr, "\t{$src2, $dst|$dst, $src2}"),
-           [(set VR64:$dst, (IntId2 VR64:$src1, imm:$src2))]>,
+           [(set VR64:$dst, (IntId2 VR64:$src1, timm:$src2))]>,
            Sched<[schedImm]>;
   }
 }
@@ -114,13 +113,13 @@ multiclass ssse3_palign_mm<string asm, Intrinsic IntId,
   def rri  : MMXSS3AI<0x0F, MRMSrcReg, (outs VR64:$dst),
       (ins VR64:$src1, VR64:$src2, u8imm:$src3),
       !strconcat(asm, "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
-      [(set VR64:$dst, (IntId VR64:$src1, VR64:$src2, (i8 imm:$src3)))]>,
+      [(set VR64:$dst, (IntId VR64:$src1, VR64:$src2, (i8 timm:$src3)))]>,
       Sched<[sched]>;
   def rmi  : MMXSS3AI<0x0F, MRMSrcMem, (outs VR64:$dst),
       (ins VR64:$src1, i64mem:$src2, u8imm:$src3),
       !strconcat(asm, "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
       [(set VR64:$dst, (IntId VR64:$src1,
-                       (bitconvert (load_mmx addr:$src2)), (i8 imm:$src3)))]>,
+                       (bitconvert (load_mmx addr:$src2)), (i8 timm:$src3)))]>,
       Sched<[sched.Folded, sched.ReadAfterFold]>;
 }
 
@@ -496,14 +495,14 @@ def MMX_PSHUFWri : MMXIi8<0x70, MRMSrcReg,
                           (outs VR64:$dst), (ins VR64:$src1, u8imm:$src2),
                           "pshufw\t{$src2, $src1, $dst|$dst, $src1, $src2}",
                           [(set VR64:$dst,
-                             (int_x86_sse_pshuf_w VR64:$src1, imm:$src2))]>,
+                             (int_x86_sse_pshuf_w VR64:$src1, timm:$src2))]>,
                           Sched<[SchedWriteShuffle.MMX]>;
 def MMX_PSHUFWmi : MMXIi8<0x70, MRMSrcMem,
                           (outs VR64:$dst), (ins i64mem:$src1, u8imm:$src2),
                           "pshufw\t{$src2, $src1, $dst|$dst, $src1, $src2}",
                           [(set VR64:$dst,
                              (int_x86_sse_pshuf_w (load_mmx addr:$src1),
-                                                   imm:$src2))]>,
+                                                   timm:$src2))]>,
                           Sched<[SchedWriteShuffle.MMX.Folded]>;
 
 // -- Conversion Instructions
@@ -535,7 +534,7 @@ def MMX_PEXTRWrr: MMXIi8<0xC5, MRMSrcReg,
                      (outs GR32orGR64:$dst), (ins VR64:$src1, i32u8imm:$src2),
                      "pextrw\t{$src2, $src1, $dst|$dst, $src1, $src2}",
                      [(set GR32orGR64:$dst, (int_x86_mmx_pextr_w VR64:$src1,
-                                             imm:$src2))]>,
+                                             timm:$src2))]>,
                      Sched<[WriteVecExtract]>;
 let Constraints = "$src1 = $dst" in {
 let Predicates = [HasMMX, HasSSE1] in {
@@ -544,7 +543,7 @@ let Predicates = [HasMMX, HasSSE1] in {
                     (ins VR64:$src1, GR32orGR64:$src2, i32u8imm:$src3),
                     "pinsrw\t{$src3, $src2, $dst|$dst, $src2, $src3}",
                     [(set VR64:$dst, (int_x86_mmx_pinsr_w VR64:$src1,
-                                      GR32orGR64:$src2, imm:$src3))]>,
+                                      GR32orGR64:$src2, timm:$src3))]>,
                     Sched<[WriteVecInsert, ReadDefault, ReadInt2Fpu]>;
 
   def MMX_PINSRWrm : MMXIi8<0xC4, MRMSrcMem,
@@ -553,7 +552,7 @@ let Predicates = [HasMMX, HasSSE1] in {
                    "pinsrw\t{$src3, $src2, $dst|$dst, $src2, $src3}",
                    [(set VR64:$dst, (int_x86_mmx_pinsr_w VR64:$src1,
                                        (i32 (anyext (loadi16 addr:$src2))),
-                                     imm:$src3))]>,
+                                     timm:$src3))]>,
                    Sched<[WriteVecInsert.Folded, WriteVecInsert.ReadAfterFold]>;
 }
 }

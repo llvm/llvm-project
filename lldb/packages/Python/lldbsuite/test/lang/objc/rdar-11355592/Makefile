@@ -1,5 +1,6 @@
 OBJC_SOURCES := main.m
 
-include Makefile.rules
 
-LDFLAGS += -framework Foundation
+
+LD_EXTRAS := -framework Foundation
+include Makefile.rules

@@ -31,7 +31,7 @@
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/FileSpec.h"
 
-#if defined(_MSC_VER)
+#if defined(_WIN32)
 #include "lldb/Host/windows/windows.h"
 #include <objbase.h>
 #endif
@@ -46,7 +46,7 @@ public:
 // Initialize and TearDown the plugin every time, so we get a brand new
 // AST every time so that modifications to the AST from each test don't
 // leak into the next test.
-#if defined(_MSC_VER)
+#if defined(_WIN32)
     ::CoInitializeEx(nullptr, COINIT_MULTITHREADED);
 #endif
 
@@ -69,7 +69,7 @@ public:
     HostInfo::Terminate();
     FileSystem::Terminate();
 
-#if defined(_MSC_VER)
+#if defined(_WIN32)
     ::CoUninitialize();
 #endif
   }

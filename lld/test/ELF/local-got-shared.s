@@ -12,12 +12,12 @@ bar:
 foo:
         nop
 
-// 0x20B0 - 0x1000 - 5 = 4267
+// 0x22E0 - 0x1228 - 5 = 4275
 // DISASM:      bar:
-// DISASM-NEXT:   1000:       callq 4267
+// DISASM-NEXT:   1228:       callq 4275
 
 // DISASM:      foo:
-// DISASM-NEXT:   1005:       nop
+// DISASM-NEXT:   122d:       nop
 
 // CHECK:      Name: .got
 // CHECK-NEXT: Type: SHT_PROGBITS
@@ -25,13 +25,13 @@ foo:
 // CHECK-NEXT:   SHF_ALLOC
 // CHECK-NEXT:   SHF_WRITE
 // CHECK-NEXT: ]
-// CHECK-NEXT: Address: 0x20B0
+// CHECK-NEXT: Address: 0x22E0
 // CHECK-NEXT: Offset:
 // CHECK-NEXT: Size: 8
 
 // CHECK:      Relocations [
 // CHECK-NEXT:   Section ({{.*}}) .rela.dyn {
-// CHECK-NEXT:     0x20B0 R_X86_64_RELATIVE - 0x1005
+// CHECK-NEXT:     0x22E0 R_X86_64_RELATIVE - 0x122D
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]
 // CHECK:      0x000000006FFFFFF9 RELACOUNT            1

@@ -19,8 +19,8 @@
 #include "lldb/Symbol/TypeList.h"
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/lldb-private.h"
-
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/Support/Errc.h"
 
 #include <mutex>
 
@@ -122,6 +122,9 @@ public:
   virtual size_t ParseFunctions(CompileUnit &comp_unit) = 0;
   virtual bool ParseLineTable(CompileUnit &comp_unit) = 0;
   virtual bool ParseDebugMacros(CompileUnit &comp_unit) = 0;
+  virtual void
+  ForEachExternalModule(CompileUnit &comp_unit,
+                        llvm::function_ref<void(lldb::ModuleSP)> f) {}
   virtual bool ParseSupportFiles(CompileUnit &comp_unit,
                                  FileSpecList &support_files) = 0;
   virtual size_t ParseTypes(CompileUnit &comp_unit) = 0;
@@ -240,6 +243,13 @@ public:
   virtual lldb::UnwindPlanSP
   GetUnwindPlan(const Address &address, const RegisterInfoResolver &resolver) {
     return nullptr;
+  }
+
+  /// Return the number of stack bytes taken up by the parameters to this
+  /// function.
+  virtual llvm::Expected<lldb::addr_t> GetParameterStackSize(Symbol &symbol) {
+    return llvm::createStringError(make_error_code(llvm::errc::not_supported),
+                                   "Operation not supported.");
   }
 
   virtual void Dump(Stream &s);

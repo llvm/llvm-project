@@ -12,5 +12,5 @@
 
         .hidden foo
         .bss
-        .zero 0x7fffe007
+        .zero 0x7fffdf87
 foo:

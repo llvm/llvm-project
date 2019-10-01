@@ -1,6 +1,6 @@
 ; RUN: llvm-as -disable-output <%s 2>&1| FileCheck %s
 
-; CHECK: BlockByRef variable without complex expression
+; CHECK: DIBlockByRefStruct on DICompositeType is no longer supported
 ; CHECK: warning: ignoring invalid debug info
 
 define void @foo() {
@@ -16,4 +16,4 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 !0 = !{i32 2, !"Debug Info Version", i32 3}
 !1 = distinct !DISubprogram()
 !2 = !DILocalVariable(scope: !1, type: !3)
-!3 = !DICompositeType(tag: DW_TAG_structure_type, flags: DIFlagBlockByrefStruct)
+!3 = !DICompositeType(tag: DW_TAG_structure_type, flags: DIFlagReservedBit4)

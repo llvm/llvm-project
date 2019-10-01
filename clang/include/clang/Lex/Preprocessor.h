@@ -371,9 +371,9 @@ class Preprocessor {
   /// it expects a '.' or ';'.
   bool ModuleImportExpectsIdentifier = false;
 
-  /// The source location of the currently-active
+  /// The identifier and source location of the currently-active
   /// \#pragma clang arc_cf_code_audited begin.
-  SourceLocation PragmaARCCFCodeAuditedLoc;
+  std::pair<IdentifierInfo *, SourceLocation> PragmaARCCFCodeAuditedInfo;
 
   /// The source location of the currently-active
   /// \#pragma clang assume_nonnull begin.
@@ -1602,14 +1602,16 @@ public:
   /// arc_cf_code_audited begin.
   ///
   /// Returns an invalid location if there is no such pragma active.
-  SourceLocation getPragmaARCCFCodeAuditedLoc() const {
-    return PragmaARCCFCodeAuditedLoc;
+  std::pair<IdentifierInfo *, SourceLocation>
+  getPragmaARCCFCodeAuditedInfo() const {
+    return PragmaARCCFCodeAuditedInfo;
   }
 
   /// Set the location of the currently-active \#pragma clang
   /// arc_cf_code_audited begin.  An invalid location ends the pragma.
-  void setPragmaARCCFCodeAuditedLoc(SourceLocation Loc) {
-    PragmaARCCFCodeAuditedLoc = Loc;
+  void setPragmaARCCFCodeAuditedInfo(IdentifierInfo *Ident,
+                                     SourceLocation Loc) {
+    PragmaARCCFCodeAuditedInfo = {Ident, Loc};
   }
 
   /// The location of the currently-active \#pragma clang
@@ -2206,7 +2208,7 @@ private:
       SourceLocation FilenameLoc, CharSourceRange FilenameRange,
       const Token &FilenameTok, bool &IsFrameworkFound, bool IsImportDecl,
       bool &IsMapped, const DirectoryLookup *LookupFrom,
-      const FileEntry *LookupFromFile, SmallString<128> &NormalizedPath,
+      const FileEntry *LookupFromFile, StringRef LookupFilename,
       SmallVectorImpl<char> &RelativePath, SmallVectorImpl<char> &SearchPath,
       ModuleMap::KnownHeader &SuggestedModule, bool isAngled);
 

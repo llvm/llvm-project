@@ -61,9 +61,16 @@ def BoolConversion : DiagGroup<"bool-conversion", [PointerBoolConversion,
                                                    UndefinedBoolConversion]>;
 def IntConversion : DiagGroup<"int-conversion">;
 def EnumConversion : DiagGroup<"enum-conversion">;
-def ImplicitIntConversion : DiagGroup<"implicit-int-conversion">;
+def ObjCSignedCharBoolImplicitIntConversion :
+  DiagGroup<"objc-signed-char-bool-implicit-int-conversion">;
+def ImplicitIntConversion : DiagGroup<"implicit-int-conversion",
+                                     [ObjCSignedCharBoolImplicitIntConversion]>;
 def ImplicitIntFloatConversion : DiagGroup<"implicit-int-float-conversion">;
-def ImplicitFloatConversion : DiagGroup<"implicit-float-conversion", [ImplicitIntFloatConversion]>;
+def ObjCSignedCharBoolImplicitFloatConversion :
+  DiagGroup<"objc-signed-char-bool-implicit-float-conversion">;
+def ImplicitFloatConversion : DiagGroup<"implicit-float-conversion",
+  [ImplicitIntFloatConversion,
+   ObjCSignedCharBoolImplicitFloatConversion]>;
 def ImplicitFixedPointConversion : DiagGroup<"implicit-fixed-point-conversion">;
 
 def FloatOverflowConversion : DiagGroup<"float-overflow-conversion">;
@@ -492,6 +499,7 @@ def StringCompare : DiagGroup<"string-compare">;
 def StringPlusInt : DiagGroup<"string-plus-int">;
 def StringPlusChar : DiagGroup<"string-plus-char">;
 def StrncatSize : DiagGroup<"strncat-size">;
+def IntInBoolContext : DiagGroup<"int-in-bool-context">;
 def TautologicalTypeLimitCompare : DiagGroup<"tautological-type-limit-compare">;
 def TautologicalUnsignedZeroCompare : DiagGroup<"tautological-unsigned-zero-compare">;
 def TautologicalUnsignedEnumZeroCompare : DiagGroup<"tautological-unsigned-enum-zero-compare">;
@@ -814,6 +822,7 @@ def Most : DiagGroup<"most", [
     Format,
     Implicit,
     InfiniteRecursion,
+    IntInBoolContext,
     MismatchedTags,
     MissingBraces,
     Move,
@@ -1014,6 +1023,12 @@ def ObjCStringConcatenation : DiagGroup<"objc-string-concatenation">;
 def ObjCLiteralComparison : DiagGroup<"objc-literal-compare", [
     ObjCStringComparison
   ]>;
+
+def ObjCSignedCharBool : DiagGroup<"objc-signed-char-bool",
+  [ObjCSignedCharBoolImplicitIntConversion,
+   ObjCSignedCharBoolImplicitFloatConversion,
+   ObjCBoolConstantConversion,
+   TautologicalObjCBoolCompare]>;
 
 // Inline ASM warnings.
 def ASMOperandWidths : DiagGroup<"asm-operand-widths">;

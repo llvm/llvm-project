@@ -29,9 +29,9 @@
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Utility/Endian.h"
+#include "lldb/Utility/GDBRemote.h"
 #include "lldb/Utility/JSON.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/StreamGDBRemote.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StructuredData.h"
 #include "llvm/ADT/Triple.h"
@@ -512,14 +512,23 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_Open(
         mode_t mode = packet.GetHexMaxU32(false, 0600);
         FileSpec path_spec(path);
         FileSystem::Instance().Resolve(path_spec);
-        File file;
         // Do not close fd.
-        Status error =
-            FileSystem::Instance().Open(file, path_spec, flags, mode, false);
-        const int save_errno = error.GetError();
+        auto file = FileSystem::Instance().Open(path_spec, flags, mode, false);
+
+        int save_errno = 0;
+        int descriptor = File::kInvalidDescriptor;
+        if (file) {
+          descriptor = file.get()->GetDescriptor();
+        } else {
+          std::error_code code = errorToErrorCode(file.takeError());
+          if (code.category() == std::system_category()) {
+            save_errno = code.value();
+          }
+        }
+
         StreamString response;
         response.PutChar('F');
-        response.Printf("%i", file.GetDescriptor());
+        response.Printf("%i", descriptor);
         if (save_errno)
           response.Printf(",%i", save_errno);
         return SendPacketNoLock(response.GetString());
@@ -537,7 +546,7 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_Close(
   int err = -1;
   int save_errno = 0;
   if (fd >= 0) {
-    File file(fd, true);
+    File file(fd, 0, true);
     Status error = file.Close();
     err = 0;
     save_errno = error.GetError();
@@ -568,7 +577,7 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_pRead(
       }
 
       std::string buffer(count, 0);
-      File file(fd, false);
+      File file(fd, File::eOpenOptionRead, false);
       Status error = file.Read(static_cast<void *>(&buffer[0]), count, offset);
       const ssize_t bytes_read = error.Success() ? count : -1;
       const int save_errno = error.GetError();
@@ -600,7 +609,7 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_pWrite(
     if (packet.GetChar() == ',') {
       std::string buffer;
       if (packet.GetEscapedBinaryData(buffer)) {
-        File file(fd, false);
+        File file(fd, File::eOpenOptionWrite, false);
         size_t count = buffer.size();
         Status error =
             file.Write(static_cast<const void *>(&buffer[0]), count, offset);

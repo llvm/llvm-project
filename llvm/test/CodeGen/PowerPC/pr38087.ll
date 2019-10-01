@@ -8,16 +8,16 @@ declare <4 x float> @llvm.fmuladd.v4f32(<4 x float>, <4 x float>, <4 x float>) #
 ; Function Attrs: nounwind readnone speculatable
 declare { i32, i1 } @llvm.usub.with.overflow.i32(i32, i32) #0
 
-define void @draw_llvm_vs_variant0() {
+define void @draw_llvm_vs_variant0(<4 x float> %x) {
 ; CHECK-LABEL: draw_llvm_vs_variant0:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfd f0, 0(r3)
-; CHECK-NEXT:    xxpermdi v2, f0, f0, 2
-; CHECK-NEXT:    vmrglh v2, v2, v2
-; CHECK-NEXT:    vextsh2w v2, v2
-; CHECK-NEXT:    xvcvsxwsp vs0, v2
+; CHECK-NEXT:    xxpermdi v3, f0, f0, 2
+; CHECK-NEXT:    vmrglh v3, v3, v3
+; CHECK-NEXT:    vextsh2w v3, v3
+; CHECK-NEXT:    xvcvsxwsp vs0, v3
 ; CHECK-NEXT:    xxspltw vs0, vs0, 2
-; CHECK-NEXT:    xvmaddasp vs0, vs0, vs0
+; CHECK-NEXT:    xvmaddasp vs0, v2, v2
 ; CHECK-NEXT:    stxvx vs0, 0, r3
 ; CHECK-NEXT:    blr
 entry:
@@ -49,7 +49,7 @@ entry:
   %24 = and <4 x i32> %23, %22
   %25 = bitcast <4 x i32> %24 to <4 x float>
   %26 = shufflevector <4 x float> %25, <4 x float> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
-  %27 = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> undef, <4 x float> undef, <4 x float> %26)
+  %27 = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> %x, <4 x float> %x, <4 x float> %26)
   store <4 x float> %27, <4 x float>* undef
   ret void
 }

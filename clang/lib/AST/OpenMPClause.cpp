@@ -44,6 +44,7 @@ OMPClause::child_range OMPClause::used_children() {
   case OMPC_threadprivate:
   case OMPC_uniform:
   case OMPC_device_type:
+  case OMPC_match:
   case OMPC_unknown:
     break;
   }
@@ -129,6 +130,7 @@ const OMPClauseWithPreInit *OMPClauseWithPreInit::get(const OMPClause *C) {
   case OMPC_dynamic_allocators:
   case OMPC_atomic_default_mem_order:
   case OMPC_device_type:
+  case OMPC_match:
     break;
   }
 
@@ -206,6 +208,7 @@ const OMPClauseWithPostUpdate *OMPClauseWithPostUpdate::get(const OMPClause *C) 
   case OMPC_dynamic_allocators:
   case OMPC_atomic_default_mem_order:
   case OMPC_device_type:
+  case OMPC_match:
     break;
   }
 

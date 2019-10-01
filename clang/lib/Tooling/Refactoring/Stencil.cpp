@@ -14,6 +14,7 @@
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Tooling/Refactoring/SourceCode.h"
+#include "clang/Tooling/Refactoring/SourceCodeBuilders.h"
 #include "llvm/Support/Errc.h"
 #include <atomic>
 #include <memory>
@@ -23,7 +24,10 @@ using namespace clang;
 using namespace tooling;
 
 using ast_matchers::MatchFinder;
+using llvm::errc;
 using llvm::Error;
+using llvm::Expected;
+using llvm::StringError;
 
 // A down_cast function to safely down cast a StencilPartInterface to a subclass
 // D. Returns nullptr if P is not an instance of D.
@@ -51,15 +55,32 @@ struct RawTextData {
 };
 
 // A debugging operation to dump the AST for a particular (bound) AST node.
-struct DebugPrintNodeOpData {
-  explicit DebugPrintNodeOpData(std::string S) : Id(std::move(S)) {}
+struct DebugPrintNodeData {
+  explicit DebugPrintNodeData(std::string S) : Id(std::move(S)) {}
   std::string Id;
 };
 
 // The fragment of code corresponding to the selected range.
-struct SelectorOpData {
-  explicit SelectorOpData(RangeSelector S) : Selector(std::move(S)) {}
+struct SelectorData {
+  explicit SelectorData(RangeSelector S) : Selector(std::move(S)) {}
   RangeSelector Selector;
+};
+
+// A stencil operation to build a member access `e.m` or `e->m`, as appropriate.
+struct AccessData {
+  AccessData(StringRef BaseId, StencilPart Member)
+      : BaseId(BaseId), Member(std::move(Member)) {}
+  std::string BaseId;
+  StencilPart Member;
+};
+
+struct IfBoundData {
+  IfBoundData(StringRef Id, StencilPart TruePart, StencilPart FalsePart)
+      : Id(Id), TruePart(std::move(TruePart)), FalsePart(std::move(FalsePart)) {
+  }
+  std::string Id;
+  StencilPart TruePart;
+  StencilPart FalsePart;
 };
 } // namespace
 
@@ -67,12 +88,26 @@ bool isEqualData(const RawTextData &A, const RawTextData &B) {
   return A.Text == B.Text;
 }
 
-bool isEqualData(const DebugPrintNodeOpData &A, const DebugPrintNodeOpData &B) {
+bool isEqualData(const DebugPrintNodeData &A, const DebugPrintNodeData &B) {
   return A.Id == B.Id;
 }
 
 // Equality is not (yet) defined for \c RangeSelector.
-bool isEqualData(const SelectorOpData &, const SelectorOpData &) { return false; }
+bool isEqualData(const SelectorData &, const SelectorData &) { return false; }
+
+bool isEqualData(const AccessData &A, const AccessData &B) {
+  return A.BaseId == B.BaseId && A.Member == B.Member;
+}
+
+bool isEqualData(const IfBoundData &A, const IfBoundData &B) {
+  return A.Id == B.Id && A.TruePart == B.TruePart && A.FalsePart == B.FalsePart;
+}
+
+// Equality is not defined over MatchConsumers, which are opaque.
+bool isEqualData(const MatchConsumer<std::string> &A,
+                 const MatchConsumer<std::string> &B) {
+  return false;
+}
 
 // The `evalData()` overloads evaluate the given stencil data to a string, given
 // the match result, and append it to `Result`. We define an overload for each
@@ -84,7 +119,7 @@ Error evalData(const RawTextData &Data, const MatchFinder::MatchResult &,
   return Error::success();
 }
 
-Error evalData(const DebugPrintNodeOpData &Data,
+Error evalData(const DebugPrintNodeData &Data,
                const MatchFinder::MatchResult &Match, std::string *Result) {
   std::string Output;
   llvm::raw_string_ostream Os(Output);
@@ -96,12 +131,47 @@ Error evalData(const DebugPrintNodeOpData &Data,
   return Error::success();
 }
 
-Error evalData(const SelectorOpData &Data, const MatchFinder::MatchResult &Match,
+Error evalData(const SelectorData &Data, const MatchFinder::MatchResult &Match,
                std::string *Result) {
   auto Range = Data.Selector(Match);
   if (!Range)
     return Range.takeError();
   *Result += getText(*Range, *Match.Context);
+  return Error::success();
+}
+
+Error evalData(const AccessData &Data, const MatchFinder::MatchResult &Match,
+               std::string *Result) {
+  const auto *E = Match.Nodes.getNodeAs<Expr>(Data.BaseId);
+  if (E == nullptr)
+    return llvm::make_error<StringError>(errc::invalid_argument,
+                                         "Id not bound: " + Data.BaseId);
+  if (!E->isImplicitCXXThis()) {
+    if (llvm::Optional<std::string> S = E->getType()->isAnyPointerType()
+                                            ? buildArrow(*E, *Match.Context)
+                                            : buildDot(*E, *Match.Context))
+      *Result += *S;
+    else
+      return llvm::make_error<StringError>(
+          errc::invalid_argument,
+          "Could not construct object text from ID: " + Data.BaseId);
+  }
+  return Data.Member.eval(Match, Result);
+}
+
+Error evalData(const IfBoundData &Data, const MatchFinder::MatchResult &Match,
+               std::string *Result) {
+  auto &M = Match.Nodes.getMap();
+  return (M.find(Data.Id) != M.end() ? Data.TruePart : Data.FalsePart)
+      .eval(Match, Result);
+}
+
+Error evalData(const MatchConsumer<std::string> &Fn,
+               const MatchFinder::MatchResult &Match, std::string *Result) {
+  Expected<std::string> Value = Fn(Match);
+  if (!Value)
+    return Value.takeError();
+  *Result += *Value;
   return Error::success();
 }
 
@@ -134,12 +204,6 @@ public:
   }
 };
 
-namespace {
-using RawText = StencilPartImpl<RawTextData>;
-using DebugPrintNodeOp = StencilPartImpl<DebugPrintNodeOpData>;
-using SelectorOp = StencilPartImpl<SelectorOpData>;
-} // namespace
-
 StencilPart Stencil::wrap(StringRef Text) {
   return stencil::text(Text);
 }
@@ -163,13 +227,31 @@ Stencil::eval(const MatchFinder::MatchResult &Match) const {
 }
 
 StencilPart stencil::text(StringRef Text) {
-  return StencilPart(std::make_shared<RawText>(Text));
+  return StencilPart(std::make_shared<StencilPartImpl<RawTextData>>(Text));
 }
 
 StencilPart stencil::selection(RangeSelector Selector) {
-  return StencilPart(std::make_shared<SelectorOp>(std::move(Selector)));
+  return StencilPart(
+      std::make_shared<StencilPartImpl<SelectorData>>(std::move(Selector)));
 }
 
 StencilPart stencil::dPrint(StringRef Id) {
-  return StencilPart(std::make_shared<DebugPrintNodeOp>(Id));
+  return StencilPart(std::make_shared<StencilPartImpl<DebugPrintNodeData>>(Id));
+}
+
+StencilPart stencil::access(StringRef BaseId, StencilPart Member) {
+  return StencilPart(
+      std::make_shared<StencilPartImpl<AccessData>>(BaseId, std::move(Member)));
+}
+
+StencilPart stencil::ifBound(StringRef Id, StencilPart TruePart,
+                             StencilPart FalsePart) {
+  return StencilPart(std::make_shared<StencilPartImpl<IfBoundData>>(
+      Id, std::move(TruePart), std::move(FalsePart)));
+}
+
+StencilPart stencil::run(MatchConsumer<std::string> Fn) {
+  return StencilPart(
+      std::make_shared<StencilPartImpl<MatchConsumer<std::string>>>(
+          std::move(Fn)));
 }

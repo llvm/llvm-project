@@ -682,7 +682,7 @@ loadBinaryFormat(std::unique_ptr<Binary> Bin, StringRef Arch) {
   if (auto *Universal = dyn_cast<MachOUniversalBinary>(Bin.get())) {
     // If we have a universal binary, try to look up the object for the
     // appropriate architecture.
-    auto ObjectFileOrErr = Universal->getObjectForArch(Arch);
+    auto ObjectFileOrErr = Universal->getMachOObjectForArch(Arch);
     if (!ObjectFileOrErr)
       return ObjectFileOrErr.takeError();
     OF = std::move(ObjectFileOrErr.get());

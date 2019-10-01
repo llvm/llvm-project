@@ -18,8 +18,7 @@ body:             |
     ; GCN: S_SENDMSG 1, implicit $exec, implicit $m0
     ; GCN: S_ENDPGM 0
     %0:sgpr(s32) = COPY $sgpr0
-    %2:sgpr(s32) = G_CONSTANT i32 1
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.s.sendmsg), %2(s32), %0(s32)
+    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.s.sendmsg), 1, %0(s32)
     S_ENDPGM 0
 
 ...

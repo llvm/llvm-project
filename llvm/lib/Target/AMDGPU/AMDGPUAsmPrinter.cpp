@@ -229,7 +229,7 @@ void AMDGPUAsmPrinter::EmitFunctionBodyEnd() {
   // alignment.
   Streamer.EmitValueToAlignment(64, 0, 1, 0);
   if (ReadOnlySection.getAlignment() < 64)
-    ReadOnlySection.setAlignment(llvm::Align(64));
+    ReadOnlySection.setAlignment(Align(64));
 
   const MCSubtargetInfo &STI = MF->getSubtarget();
 
@@ -417,7 +417,7 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
 
   // The starting address of all shader programs must be 256 bytes aligned.
   // Regular functions just need the basic required instruction alignment.
-  MF.setAlignment(MFI->isEntryFunction() ? llvm::Align(256) : llvm::Align(4));
+  MF.setAlignment(MFI->isEntryFunction() ? Align(256) : Align(4));
 
   SetupMachineFunction(MF);
 

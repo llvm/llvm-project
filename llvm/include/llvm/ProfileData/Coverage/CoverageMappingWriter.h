@@ -30,8 +30,7 @@ class CoverageFilenamesSectionWriter {
   ArrayRef<StringRef> Filenames;
 
 public:
-  CoverageFilenamesSectionWriter(ArrayRef<StringRef> Filenames)
-      : Filenames(Filenames) {}
+  CoverageFilenamesSectionWriter(ArrayRef<StringRef> Filenames);
 
   /// Write encoded filenames to the given output stream.
   void write(raw_ostream &OS);

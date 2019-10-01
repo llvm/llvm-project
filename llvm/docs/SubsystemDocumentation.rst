@@ -14,7 +14,6 @@ For API clients and LLVM developers.
    BlockFrequencyTerminology
    BranchWeightMetadata
    Bugpoint
-   BugpointRedesign
    CodeGenerator
    ExceptionHandling
    AddingConstrainedIntrinsics
@@ -33,8 +32,6 @@ For API clients and LLVM developers.
    GarbageCollection
    WritingAnLLVMPass
    HowToUseAttributes
-   NVPTXUsage
-   AMDGPUUsage
    StackMaps
    InAlloca
    BigEndianNEON
@@ -44,7 +41,6 @@ For API clients and LLVM developers.
    TypeMetadata
    TransformMetadata
    FaultMaps
-   MIRLangRef
    Coroutines
    GlobalISel
    XRay
@@ -55,6 +51,7 @@ For API clients and LLVM developers.
    SpeculativeLoadHardening
    StackSafetyAnalysis
    LoopTerminology
+   DependenceGraphs/index
 
 :doc:`WritingAnLLVMPass`
    Information on how to write LLVM transformations and analyses.
@@ -67,10 +64,6 @@ For API clients and LLVM developers.
    working on retargetting LLVM to a new architecture, designing a new codegen
    pass, or enhancing existing components.
 
-:doc:`Machine IR (MIR) Format Reference Manual <MIRLangRef>`
-   A reference manual for the MIR serialization format, which is used to test
-   LLVM's code generation passes.
-
 :doc:`TableGen <TableGen/index>`
    Describes the TableGen tool, which is used heavily by the LLVM code
    generator.
@@ -81,10 +74,6 @@ For API clients and LLVM developers.
 
 :doc:`MemorySSA`
    Information about the MemorySSA utility in LLVM, as well as how to use it.
-
-:doc:`GarbageCollection`
-   The interfaces source-language compilers should use for compiling GC'd
-   programs.
 
 :doc:`Source Level Debugging with LLVM <SourceLevelDebugging>`
    This document describes the design and philosophy behind the LLVM
@@ -104,9 +93,6 @@ For API clients and LLVM developers.
 :doc:`Bugpoint`
    Automatic bug finder and test-case reducer description and usage
    information.
-
-:doc:`BugpointRedesign`
-   Design doc for a redesign of the Bugpoint tool.
 
 :doc:`BitCodeFormat`
    This describes the file format and encoding used for LLVM "bc" files.
@@ -148,12 +134,6 @@ For API clients and LLVM developers.
 :doc:`HowToUseAttributes`
   Answers some questions about the new Attributes infrastructure.
 
-:doc:`NVPTXUsage`
-   This document describes using the NVPTX backend to compile GPU kernels.
-
-:doc:`AMDGPUUsage`
-   This document describes using the AMDGPU backend to compile GPU kernels.
-
 :doc:`StackMaps`
   LLVM support for mapping instruction addresses to the location of
   values and allowing code to be patched.
@@ -164,10 +144,6 @@ For API clients and LLVM developers.
 
 :doc:`CoverageMappingFormat`
   This describes the format and encoding used for LLVM’s code coverage mapping.
-
-:doc:`Statepoints`
-  This describes a set of experimental extensions for garbage
-  collection support.
 
 :doc:`MergeFunctions`
   Describes functions merging optimization.
@@ -208,3 +184,19 @@ For API clients and LLVM developers.
 
 :doc:`LoopTerminology`
   A document describing Loops and associated terms as used in LLVM.
+
+:doc:`Dependence Graphs <DependenceGraphs/index>`
+  A description of the design of the various dependence graphs such as
+  the DDG (Data Dependence Graph).
+
+==================
+Garbage Collection
+==================
+
+:doc:`GarbageCollection`
+   The interfaces source-language compilers should use for compiling GC'd
+   programs.
+
+:doc:`Statepoints`
+  This describes a set of experimental extensions for garbage
+  collection support.

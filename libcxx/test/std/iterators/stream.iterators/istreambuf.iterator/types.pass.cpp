@@ -8,9 +8,6 @@
 
 // <iterator>
 
-// Test fails due to use of is_trivially_* trait.
-// XFAIL: gcc-4.9
-
 // template<class charT, class traits = char_traits<charT> >
 // class istreambuf_iterator
 //     : public iterator<input_iterator_tag, charT,

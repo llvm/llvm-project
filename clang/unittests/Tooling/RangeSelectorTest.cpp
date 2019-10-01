@@ -520,6 +520,35 @@ TEST(RangeSelectorTest, ElementsOpErrors) {
                        Failed<StringError>(withTypeErrorMessage("stmt")));
 }
 
+TEST(RangeSelectorTest, ElseBranchOpSingleStatement) {
+  StringRef Code = R"cc(
+    int f() {
+      int x = 0;
+      if (true) x = 3;
+      else x = 4;
+      return x + 5;
+    }
+  )cc";
+  StringRef ID = "id";
+  TestMatch Match = matchCode(Code, ifStmt().bind(ID));
+  EXPECT_THAT_EXPECTED(select(elseBranch(ID), Match), HasValue("else x = 4;"));
+}
+
+TEST(RangeSelectorTest, ElseBranchOpCompoundStatement) {
+  StringRef Code = R"cc(
+    int f() {
+      int x = 0;
+      if (true) x = 3;
+      else { x = 4; }
+      return x + 5;
+    }
+  )cc";
+  StringRef ID = "id";
+  TestMatch Match = matchCode(Code, ifStmt().bind(ID));
+  EXPECT_THAT_EXPECTED(select(elseBranch(ID), Match),
+                       HasValue("else { x = 4; }"));
+}
+
 // Tests case where the matched node is the complete expanded text.
 TEST(RangeSelectorTest, ExpansionOp) {
   StringRef Code = R"cc(
@@ -544,6 +573,31 @@ TEST(RangeSelectorTest, ExpansionOpPartial) {
   TestMatch Match = matchCode(Code, returnStmt().bind(Ret));
   EXPECT_THAT_EXPECTED(select(expansion(node(Ret)), Match),
                        HasValue("BADDECL(x * x)"));
+}
+
+TEST(RangeSelectorTest, IfBoundOpBound) {
+  StringRef Code = R"cc(
+    int f() {
+      return 3 + 5;
+    }
+  )cc";
+  StringRef ID = "id", Op = "op";
+  TestMatch Match =
+      matchCode(Code, binaryOperator(hasLHS(expr().bind(ID))).bind(Op));
+  EXPECT_THAT_EXPECTED(select(ifBound(ID, node(ID), node(Op)), Match),
+                       HasValue("3"));
+}
+
+TEST(RangeSelectorTest, IfBoundOpUnbound) {
+  StringRef Code = R"cc(
+    int f() {
+      return 3 + 5;
+    }
+  )cc";
+  StringRef ID = "id", Op = "op";
+  TestMatch Match = matchCode(Code, binaryOperator().bind(Op));
+  EXPECT_THAT_EXPECTED(select(ifBound(ID, node(ID), node(Op)), Match),
+                       HasValue("3 + 5"));
 }
 
 } // namespace

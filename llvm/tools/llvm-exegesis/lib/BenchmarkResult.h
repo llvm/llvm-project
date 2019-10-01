@@ -66,6 +66,8 @@ struct InstructionBenchmark {
   // The number of instructions inside the repeated snippet. For example, if a
   // snippet of 3 instructions is repeated 4 times, this is 12.
   int NumRepetitions = 0;
+  enum RepetitionModeE { Duplicate, Loop };
+  RepetitionModeE RepetitionMode;
   // Note that measurements are per instruction.
   std::vector<BenchmarkMeasure> Measurements;
   std::string Error;

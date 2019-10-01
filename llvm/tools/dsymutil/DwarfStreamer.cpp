@@ -260,7 +260,7 @@ void DwarfStreamer::emitAppleTypes(
 /// Emit the swift_ast section stored in \p Buffers.
 void DwarfStreamer::emitSwiftAST(StringRef Buffer) {
   MCSection *SwiftASTSection = MOFI->getDwarfSwiftASTSection();
-  SwiftASTSection->setAlignment(llvm::Align(32));
+  SwiftASTSection->setAlignment(Align(32));
   MS->SwitchSection(SwiftASTSection);
   MS->EmitBytes(Buffer);
 }
@@ -339,7 +339,7 @@ void DwarfStreamer::emitUnitRangesEntries(CompileUnit &Unit,
         sizeof(int8_t);   // Segment Size (in bytes)
 
     unsigned TupleSize = AddressSize * 2;
-    unsigned Padding = offsetToAlignment(HeaderSize, llvm::Align(TupleSize));
+    unsigned Padding = offsetToAlignment(HeaderSize, Align(TupleSize));
 
     Asm->EmitLabelDifference(EndLabel, BeginLabel, 4); // Arange length
     Asm->OutStreamer->EmitLabel(BeginLabel);

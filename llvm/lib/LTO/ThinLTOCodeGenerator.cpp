@@ -39,6 +39,7 @@
 #include "llvm/Support/CachePruning.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SHA1.h"
 #include "llvm/Support/SmallVectorMemoryBuffer.h"
@@ -368,23 +369,26 @@ public:
     // Write to a temporary to avoid race condition
     SmallString<128> TempFilename;
     SmallString<128> CachePath(EntryPath);
-    int TempFD;
     llvm::sys::path::remove_filename(CachePath);
     sys::path::append(TempFilename, CachePath, "Thin-%%%%%%.tmp.o");
-    std::error_code EC =
-      sys::fs::createUniqueFile(TempFilename, TempFD, TempFilename);
-    if (EC) {
-      errs() << "Error: " << EC.message() << "\n";
-      report_fatal_error("ThinLTO: Can't get a temporary file");
+
+    if (auto Err = handleErrors(
+            llvm::writeFileAtomically(TempFilename, EntryPath,
+                                      OutputBuffer.getBuffer()),
+            [](const llvm::AtomicFileWriteError &E) {
+              std::string ErrorMsgBuffer;
+              llvm::raw_string_ostream S(ErrorMsgBuffer);
+              E.log(S);
+
+              if (E.Error ==
+                  llvm::atomic_write_error::failed_to_create_uniq_file) {
+                errs() << "Error: " << ErrorMsgBuffer << "\n";
+                report_fatal_error("ThinLTO: Can't get a temporary file");
+              }
+            })) {
+      // FIXME
+      consumeError(std::move(Err));
     }
-    {
-      raw_fd_ostream OS(TempFD, /* ShouldClose */ true);
-      OS << OutputBuffer.getBuffer();
-    }
-    // Rename temp file to final destination; rename is atomic
-    EC = sys::fs::rename(TempFilename, EntryPath);
-    if (EC)
-      sys::fs::remove(TempFilename);
   }
 };
 

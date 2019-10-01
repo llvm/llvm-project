@@ -165,6 +165,7 @@ template <> struct ScalarEnumerationTraits<FormatStyle::BraceBreakingStyle> {
     IO.enumCase(Value, "Mozilla", FormatStyle::BS_Mozilla);
     IO.enumCase(Value, "Stroustrup", FormatStyle::BS_Stroustrup);
     IO.enumCase(Value, "Allman", FormatStyle::BS_Allman);
+    IO.enumCase(Value, "Whitesmiths", FormatStyle::BS_Whitesmiths);
     IO.enumCase(Value, "GNU", FormatStyle::BS_GNU);
     IO.enumCase(Value, "WebKit", FormatStyle::BS_WebKit);
     IO.enumCase(Value, "Custom", FormatStyle::BS_Custom);
@@ -657,6 +658,19 @@ static FormatStyle expandPresets(const FormatStyle &Style) {
     Expanded.BraceWrapping.BeforeCatch = true;
     Expanded.BraceWrapping.BeforeElse = true;
     break;
+  case FormatStyle::BS_Whitesmiths:
+    Expanded.BraceWrapping.AfterCaseLabel = true;
+    Expanded.BraceWrapping.AfterClass = true;
+    Expanded.BraceWrapping.AfterControlStatement = true;
+    Expanded.BraceWrapping.AfterEnum = true;
+    Expanded.BraceWrapping.AfterFunction = true;
+    Expanded.BraceWrapping.AfterNamespace = true;
+    Expanded.BraceWrapping.AfterObjCDeclaration = true;
+    Expanded.BraceWrapping.AfterStruct = true;
+    Expanded.BraceWrapping.AfterExternBlock = true;
+    Expanded.BraceWrapping.BeforeCatch = true;
+    Expanded.BraceWrapping.BeforeElse = true;
+    break;
   case FormatStyle::BS_GNU:
     Expanded.BraceWrapping = {true, true, true, true, true, true, true, true,
                               true, true, true, true, true, true, true, true};
@@ -720,9 +734,9 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.ForEachMacros.push_back("Q_FOREACH");
   LLVMStyle.ForEachMacros.push_back("BOOST_FOREACH");
   LLVMStyle.IncludeStyle.IncludeCategories = {
-      {"^\"(llvm|llvm-c|clang|clang-c)/", 2},
-      {"^(<|\"(gtest|gmock|isl|json)/)", 3},
-      {".*", 1}};
+      {"^\"(llvm|llvm-c|clang|clang-c)/", 2, 0},
+      {"^(<|\"(gtest|gmock|isl|json)/)", 3, 0},
+      {".*", 1, 0}};
   LLVMStyle.IncludeStyle.IncludeIsMainRegex = "(Test)?$";
   LLVMStyle.IncludeStyle.IncludeBlocks = tooling::IncludeStyle::IBS_Preserve;
   LLVMStyle.IndentCaseLabels = false;
@@ -804,8 +818,10 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
   GoogleStyle.AlwaysBreakTemplateDeclarations = FormatStyle::BTDS_Yes;
   GoogleStyle.ConstructorInitializerAllOnOneLineOrOnePerLine = true;
   GoogleStyle.DerivePointerAlignment = true;
-  GoogleStyle.IncludeStyle.IncludeCategories = {
-      {"^<ext/.*\\.h>", 2}, {"^<.*\\.h>", 1}, {"^<.*", 2}, {".*", 3}};
+  GoogleStyle.IncludeStyle.IncludeCategories = {{"^<ext/.*\\.h>", 2, 0},
+                                                {"^<.*\\.h>", 1, 0},
+                                                {"^<.*", 2, 0},
+                                                {".*", 3, 0}};
   GoogleStyle.IncludeStyle.IncludeIsMainRegex = "([-_](test|unittest))?$";
   GoogleStyle.IncludeStyle.IncludeBlocks = tooling::IncludeStyle::IBS_Regroup;
   GoogleStyle.IndentCaseLabels = true;
@@ -1417,22 +1433,29 @@ public:
 
     checkEmptyNamespace(AnnotatedLines);
 
-    for (auto &Line : AnnotatedLines) {
-      if (Line->Affected) {
-        cleanupRight(Line->First, tok::comma, tok::comma);
-        cleanupRight(Line->First, TT_CtorInitializerColon, tok::comma);
-        cleanupRight(Line->First, tok::l_paren, tok::comma);
-        cleanupLeft(Line->First, tok::comma, tok::r_paren);
-        cleanupLeft(Line->First, TT_CtorInitializerComma, tok::l_brace);
-        cleanupLeft(Line->First, TT_CtorInitializerColon, tok::l_brace);
-        cleanupLeft(Line->First, TT_CtorInitializerColon, tok::equal);
-      }
-    }
+    for (auto *Line : AnnotatedLines)
+      cleanupLine(Line);
 
     return {generateFixes(), 0};
   }
 
 private:
+  void cleanupLine(AnnotatedLine *Line) {
+    for (auto *Child : Line->Children) {
+      cleanupLine(Child);
+    }
+
+    if (Line->Affected) {
+      cleanupRight(Line->First, tok::comma, tok::comma);
+      cleanupRight(Line->First, TT_CtorInitializerColon, tok::comma);
+      cleanupRight(Line->First, tok::l_paren, tok::comma);
+      cleanupLeft(Line->First, tok::comma, tok::r_paren);
+      cleanupLeft(Line->First, TT_CtorInitializerComma, tok::l_brace);
+      cleanupLeft(Line->First, TT_CtorInitializerColon, tok::l_brace);
+      cleanupLeft(Line->First, TT_CtorInitializerColon, tok::equal);
+    }
+  }
+
   bool containsOnlyComments(const AnnotatedLine &Line) {
     for (FormatToken *Tok = Line.First; Tok != nullptr; Tok = Tok->Next) {
       if (Tok->isNot(tok::comment))
@@ -1750,6 +1773,7 @@ struct IncludeDirective {
   StringRef Text;
   unsigned Offset;
   int Category;
+  int Priority;
 };
 
 struct JavaImportDirective {
@@ -1813,6 +1837,7 @@ static void sortCppIncludes(const FormatStyle &Style,
                             ArrayRef<tooling::Range> Ranges, StringRef FileName,
                             StringRef Code, tooling::Replacements &Replaces,
                             unsigned *Cursor) {
+  tooling::IncludeCategoryManager Categories(Style.IncludeStyle, FileName);
   unsigned IncludesBeginOffset = Includes.front().Offset;
   unsigned IncludesEndOffset =
       Includes.back().Offset + Includes.back().Text.size();
@@ -1820,11 +1845,12 @@ static void sortCppIncludes(const FormatStyle &Style,
   if (!affectsRange(Ranges, IncludesBeginOffset, IncludesEndOffset))
     return;
   SmallVector<unsigned, 16> Indices;
-  for (unsigned i = 0, e = Includes.size(); i != e; ++i)
+  for (unsigned i = 0, e = Includes.size(); i != e; ++i) {
     Indices.push_back(i);
+  }
   llvm::stable_sort(Indices, [&](unsigned LHSI, unsigned RHSI) {
-    return std::tie(Includes[LHSI].Category, Includes[LHSI].Filename) <
-           std::tie(Includes[RHSI].Category, Includes[RHSI].Filename);
+    return std::tie(Includes[LHSI].Priority, Includes[LHSI].Filename) <
+           std::tie(Includes[RHSI].Priority, Includes[RHSI].Filename);
   });
   // The index of the include on which the cursor will be put after
   // sorting/deduplicating.
@@ -1939,9 +1965,12 @@ tooling::Replacements sortCppIncludes(const FormatStyle &Style, StringRef Code,
         int Category = Categories.getIncludePriority(
             IncludeName,
             /*CheckMainHeader=*/!MainIncludeFound && FirstIncludeBlock);
+        int Priority = Categories.getSortIncludePriority(
+            IncludeName, !MainIncludeFound && FirstIncludeBlock);
         if (Category == 0)
           MainIncludeFound = true;
-        IncludesInBlock.push_back({IncludeName, Line, Prev, Category});
+        IncludesInBlock.push_back(
+            {IncludeName, Line, Prev, Category, Priority});
       } else if (!IncludesInBlock.empty() && !EmptyLineSkipped) {
         sortCppIncludes(Style, IncludesInBlock, Ranges, FileName, Code,
                         Replaces, Cursor);

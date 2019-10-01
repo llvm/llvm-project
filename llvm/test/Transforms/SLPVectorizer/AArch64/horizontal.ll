@@ -46,12 +46,8 @@ define i32 @test_select(i32* noalias nocapture readonly %blk1, i32* noalias noca
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp slt <4 x i32> [[TMP4]], zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = sub nsw <4 x i32> zeroinitializer, [[TMP4]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = select <4 x i1> [[TMP5]], <4 x i32> [[TMP6]], <4 x i32> [[TMP4]]
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 undef, [[S_026]]
-; CHECK-NEXT:    [[ADD11:%.*]] = add nsw i32 [[ADD]], undef
-; CHECK-NEXT:    [[ADD19:%.*]] = add nsw i32 [[ADD11]], undef
 ; CHECK-NEXT:    [[TMP8:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> [[TMP7]])
 ; CHECK-NEXT:    [[OP_EXTRA]] = add nsw i32 [[TMP8]], [[S_026]]
-; CHECK-NEXT:    [[ADD27:%.*]] = add nsw i32 [[ADD19]], undef
 ; CHECK-NEXT:    [[ADD_PTR]] = getelementptr inbounds i32, i32* [[P1_023]], i64 [[IDX_EXT]]
 ; CHECK-NEXT:    [[ADD_PTR29]] = getelementptr inbounds i32, i32* [[P2_024]], i64 [[IDX_EXT]]
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[J_025]], 1
@@ -173,12 +169,8 @@ define i32 @reduction_with_br(i32* noalias nocapture readonly %blk1, i32* noalia
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32* [[P2_018]] to <4 x i32>*
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, <4 x i32>* [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul nsw <4 x i32> [[TMP3]], [[TMP1]]
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 undef, [[S_020]]
-; CHECK-NEXT:    [[ADD5:%.*]] = add nsw i32 [[ADD]], undef
-; CHECK-NEXT:    [[ADD9:%.*]] = add nsw i32 [[ADD5]], undef
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> [[TMP4]])
 ; CHECK-NEXT:    [[OP_EXTRA]] = add nsw i32 [[TMP5]], [[S_020]]
-; CHECK-NEXT:    [[ADD13:%.*]] = add nsw i32 [[ADD9]], undef
 ; CHECK-NEXT:    [[CMP14:%.*]] = icmp slt i32 [[OP_EXTRA]], [[LIM:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP14]], label [[IF_END]], label [[FOR_END_LOOPEXIT:%.*]]
 ; CHECK:       if.end:
@@ -293,16 +285,8 @@ define i32 @test_unrolled_select(i8* noalias nocapture readonly %blk1, i8* noali
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp slt <8 x i32> [[TMP6]], zeroinitializer
 ; CHECK-NEXT:    [[TMP8:%.*]] = sub nsw <8 x i32> zeroinitializer, [[TMP6]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = select <8 x i1> [[TMP7]], <8 x i32> [[TMP8]], <8 x i32> [[TMP6]]
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 undef, [[S_047]]
-; CHECK-NEXT:    [[ADD16:%.*]] = add nsw i32 [[ADD]], undef
-; CHECK-NEXT:    [[ADD27:%.*]] = add nsw i32 [[ADD16]], undef
-; CHECK-NEXT:    [[ADD38:%.*]] = add nsw i32 [[ADD27]], undef
-; CHECK-NEXT:    [[ADD49:%.*]] = add nsw i32 [[ADD38]], undef
-; CHECK-NEXT:    [[ADD60:%.*]] = add nsw i32 [[ADD49]], undef
-; CHECK-NEXT:    [[ADD71:%.*]] = add nsw i32 [[ADD60]], undef
 ; CHECK-NEXT:    [[TMP10:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v8i32(<8 x i32> [[TMP9]])
 ; CHECK-NEXT:    [[OP_EXTRA]] = add nsw i32 [[TMP10]], [[S_047]]
-; CHECK-NEXT:    [[ADD82:%.*]] = add nsw i32 [[ADD71]], undef
 ; CHECK-NEXT:    [[CMP83:%.*]] = icmp slt i32 [[OP_EXTRA]], [[LIM:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP83]], label [[IF_END_86]], label [[FOR_END_LOOPEXIT:%.*]]
 ; CHECK:       if.end.86:

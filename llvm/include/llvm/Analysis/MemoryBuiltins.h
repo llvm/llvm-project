@@ -104,6 +104,11 @@ bool isReallocLikeFn(const Function *F, const TargetLibraryInfo *TLI);
 bool isOpNewLikeFn(const Value *V, const TargetLibraryInfo *TLI,
                      bool LookThroughBitCast = false);
 
+/// Tests if a value is a call or invoke to a library function that
+/// allocates memory (strdup, strndup).
+bool isStrdupLikeFn(const Value *V, const TargetLibraryInfo *TLI,
+                     bool LookThroughBitCast = false);
+
 //===----------------------------------------------------------------------===//
 //  malloc Call Utility Functions.
 //

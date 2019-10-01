@@ -9,10 +9,7 @@ define amdgpu_ps void @disabled_input(float inreg %arg0, float %psinput0, float 
   ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
   ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; CHECK:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; CHECK:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 15
-  ; CHECK:   [[C2:%[0-9]+]]:_(s1) = G_CONSTANT i1 false
-  ; CHECK:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.exp), [[C]](s32), [[C1]](s32), [[COPY]](s32), [[COPY]](s32), [[COPY]](s32), [[COPY1]](s32), [[C2]](s1), [[C2]](s1)
+  ; CHECK:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.exp), 0, 15, [[COPY]](s32), [[COPY]](s32), [[COPY]](s32), [[COPY1]](s32), 0, 0
   ; CHECK:   S_ENDPGM 0
 main_body:
   call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %arg0, float %arg0, float %arg0, float %psinput1, i1 false, i1 false) #0
@@ -27,17 +24,14 @@ define amdgpu_ps void @disabled_input_struct(float inreg %arg0, { float, float }
   ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; CHECK:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; CHECK:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 15
-  ; CHECK:   [[C2:%[0-9]+]]:_(s1) = G_CONSTANT i1 false
-  ; CHECK:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.exp), [[C]](s32), [[C1]](s32), [[COPY]](s32), [[COPY]](s32), [[COPY]](s32), [[COPY1]](s32), [[C2]](s1), [[C2]](s1)
+  ; CHECK:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.exp), 0, 15, [[COPY]](s32), [[COPY]](s32), [[COPY]](s32), [[COPY1]](s32), 0, 0
   ; CHECK:   S_ENDPGM 0
 main_body:
   call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %arg0, float %arg0, float %arg0, float %psinput1, i1 false, i1 false) #0
   ret void
 }
 
-declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1)  #0
+declare void @llvm.amdgcn.exp.f32(i32 immarg, i32 immarg, float, float, float, float, i1 immarg, i1 immarg)  #0
 
 attributes #0 = { nounwind }
 attributes #1 = { "InitialPSInputAddr"="0x00002" }

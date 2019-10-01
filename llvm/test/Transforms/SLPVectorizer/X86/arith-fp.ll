@@ -99,6 +99,14 @@ define <2 x double> @buildvector_div_2f64(<2 x double> %a, <2 x double> %b) {
 ; AVX-NEXT:    [[R1:%.*]] = insertelement <2 x double> [[R0]], double [[TMP3]], i32 1
 ; AVX-NEXT:    ret <2 x double> [[R1]]
 ;
+; AVX512-LABEL: @buildvector_div_2f64(
+; AVX512-NEXT:    [[TMP1:%.*]] = fdiv <2 x double> [[A:%.*]], [[B:%.*]]
+; AVX512-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[TMP1]], i32 0
+; AVX512-NEXT:    [[R0:%.*]] = insertelement <2 x double> undef, double [[TMP2]], i32 0
+; AVX512-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[TMP1]], i32 1
+; AVX512-NEXT:    [[R1:%.*]] = insertelement <2 x double> [[R0]], double [[TMP3]], i32 1
+; AVX512-NEXT:    ret <2 x double> [[R1]]
+;
   %a0 = extractelement <2 x double> %a, i32 0
   %a1 = extractelement <2 x double> %a, i32 1
   %b0 = extractelement <2 x double> %b, i32 0
@@ -381,6 +389,18 @@ define <4 x double> @buildvector_div_4f64(<4 x double> %a, <4 x double> %b) {
 ; AVX-NEXT:    [[TMP5:%.*]] = extractelement <4 x double> [[TMP1]], i32 3
 ; AVX-NEXT:    [[R3:%.*]] = insertelement <4 x double> [[R2]], double [[TMP5]], i32 3
 ; AVX-NEXT:    ret <4 x double> [[R3]]
+;
+; AVX512-LABEL: @buildvector_div_4f64(
+; AVX512-NEXT:    [[TMP1:%.*]] = fdiv <4 x double> [[A:%.*]], [[B:%.*]]
+; AVX512-NEXT:    [[TMP2:%.*]] = extractelement <4 x double> [[TMP1]], i32 0
+; AVX512-NEXT:    [[R0:%.*]] = insertelement <4 x double> undef, double [[TMP2]], i32 0
+; AVX512-NEXT:    [[TMP3:%.*]] = extractelement <4 x double> [[TMP1]], i32 1
+; AVX512-NEXT:    [[R1:%.*]] = insertelement <4 x double> [[R0]], double [[TMP3]], i32 1
+; AVX512-NEXT:    [[TMP4:%.*]] = extractelement <4 x double> [[TMP1]], i32 2
+; AVX512-NEXT:    [[R2:%.*]] = insertelement <4 x double> [[R1]], double [[TMP4]], i32 2
+; AVX512-NEXT:    [[TMP5:%.*]] = extractelement <4 x double> [[TMP1]], i32 3
+; AVX512-NEXT:    [[R3:%.*]] = insertelement <4 x double> [[R2]], double [[TMP5]], i32 3
+; AVX512-NEXT:    ret <4 x double> [[R3]]
 ;
   %a0 = extractelement <4 x double> %a, i32 0
   %a1 = extractelement <4 x double> %a, i32 1
@@ -872,6 +892,26 @@ define <8 x double> @buildvector_div_8f64(<8 x double> %a, <8 x double> %b) {
 ; AVX-NEXT:    [[TMP9:%.*]] = extractelement <8 x double> [[TMP1]], i32 7
 ; AVX-NEXT:    [[R7:%.*]] = insertelement <8 x double> [[R6]], double [[TMP9]], i32 7
 ; AVX-NEXT:    ret <8 x double> [[R7]]
+;
+; AVX512-LABEL: @buildvector_div_8f64(
+; AVX512-NEXT:    [[TMP1:%.*]] = fdiv <8 x double> [[A:%.*]], [[B:%.*]]
+; AVX512-NEXT:    [[TMP2:%.*]] = extractelement <8 x double> [[TMP1]], i32 0
+; AVX512-NEXT:    [[R0:%.*]] = insertelement <8 x double> undef, double [[TMP2]], i32 0
+; AVX512-NEXT:    [[TMP3:%.*]] = extractelement <8 x double> [[TMP1]], i32 1
+; AVX512-NEXT:    [[R1:%.*]] = insertelement <8 x double> [[R0]], double [[TMP3]], i32 1
+; AVX512-NEXT:    [[TMP4:%.*]] = extractelement <8 x double> [[TMP1]], i32 2
+; AVX512-NEXT:    [[R2:%.*]] = insertelement <8 x double> [[R1]], double [[TMP4]], i32 2
+; AVX512-NEXT:    [[TMP5:%.*]] = extractelement <8 x double> [[TMP1]], i32 3
+; AVX512-NEXT:    [[R3:%.*]] = insertelement <8 x double> [[R2]], double [[TMP5]], i32 3
+; AVX512-NEXT:    [[TMP6:%.*]] = extractelement <8 x double> [[TMP1]], i32 4
+; AVX512-NEXT:    [[R4:%.*]] = insertelement <8 x double> [[R3]], double [[TMP6]], i32 4
+; AVX512-NEXT:    [[TMP7:%.*]] = extractelement <8 x double> [[TMP1]], i32 5
+; AVX512-NEXT:    [[R5:%.*]] = insertelement <8 x double> [[R4]], double [[TMP7]], i32 5
+; AVX512-NEXT:    [[TMP8:%.*]] = extractelement <8 x double> [[TMP1]], i32 6
+; AVX512-NEXT:    [[R6:%.*]] = insertelement <8 x double> [[R5]], double [[TMP8]], i32 6
+; AVX512-NEXT:    [[TMP9:%.*]] = extractelement <8 x double> [[TMP1]], i32 7
+; AVX512-NEXT:    [[R7:%.*]] = insertelement <8 x double> [[R6]], double [[TMP9]], i32 7
+; AVX512-NEXT:    ret <8 x double> [[R7]]
 ;
   %a0 = extractelement <8 x double> %a, i32 0
   %a1 = extractelement <8 x double> %a, i32 1

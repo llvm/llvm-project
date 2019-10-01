@@ -1,8 +1,5 @@
-; FIXME: FastISel currently returns false if it hits code that uses VSX
-; registers and with -fast-isel-abort=1 turned on the test case will then fail.
-; When fastisel better supports VSX fix up this test case.
-;
 ; RUN: llc -relocation-model=static < %s -O0 -verify-machineinstrs -fast-isel -fast-isel-abort=1 -mattr=-vsx -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 | FileCheck %s --check-prefix=ELF64
+; RUN: llc -relocation-model=static < %s -O0 -verify-machineinstrs -fast-isel -fast-isel-abort=1 -mattr=+vsx -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 | FileCheck %s --check-prefix=VSX
 ; RUN: llc -relocation-model=static < %s -O0 -verify-machineinstrs -fast-isel -fast-isel-abort=1 -mattr=spe  -mtriple=powerpc-unknown-linux-gnu -mcpu=e500 | FileCheck %s --check-prefix=SPE
 
 ; This test verifies that load/store instructions are properly generated,
@@ -78,9 +75,11 @@ define double @t6() nounwind {
 ; SPE: t6
   %1 = load double, double* @f, align 8
 ; ELF64: lfd
+; VSX: lxsdx
 ; SPE: evldd
   %2 = fadd double %1, 1.0
 ; ELF64: fadd
+; VSX: xsadddp
 ; SPE: efdadd
   ret double %2
 }
@@ -150,6 +149,8 @@ define void @t12(double %v) nounwind {
   store double %1, double* @f, align 8
 ; ELF64: fadd
 ; ELF64: stfd
+; VSX: xsadddp
+; VSX: stxsdx
 ; SPE: efdadd
 ; SPE: evstdd
   ret void

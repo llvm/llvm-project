@@ -710,6 +710,57 @@ TEST_F(TransformerTest, IdentityMacro) {
   testRule(ruleStrlenSize(), Input, Expected);
 }
 
+// Tests that two changes in a single macro expansion do not lead to conflicts
+// in applying the changes.
+TEST_F(TransformerTest, TwoChangesInOneMacroExpansion) {
+  std::string Input = R"cc(
+#define PLUS(a,b) (a) + (b)
+    int f() { return PLUS(3, 4); }
+  )cc";
+  std::string Expected = R"cc(
+#define PLUS(a,b) (a) + (b)
+    int f() { return PLUS(LIT, LIT); }
+  )cc";
+
+  testRule(makeRule(integerLiteral(), change(text("LIT"))), Input, Expected);
+}
+
+// Tests case where the rule's match spans both source from the macro and its
+// arg, with the begin location (the "anchor") being the arg.
+TEST_F(TransformerTest, MatchSpansMacroTextButChangeDoesNot) {
+  std::string Input = R"cc(
+#define PLUS_ONE(a) a + 1
+    int f() { return PLUS_ONE(3); }
+  )cc";
+  std::string Expected = R"cc(
+#define PLUS_ONE(a) a + 1
+    int f() { return PLUS_ONE(LIT); }
+  )cc";
+
+  StringRef E = "expr";
+  testRule(makeRule(binaryOperator(hasLHS(expr().bind(E))),
+                    change(node(E), text("LIT"))),
+           Input, Expected);
+}
+
+// Tests case where the rule's match spans both source from the macro and its
+// arg, with the begin location (the "anchor") being inside the macro.
+TEST_F(TransformerTest, MatchSpansMacroTextButChangeDoesNotAnchoredInMacro) {
+  std::string Input = R"cc(
+#define PLUS_ONE(a) 1 + a
+    int f() { return PLUS_ONE(3); }
+  )cc";
+  std::string Expected = R"cc(
+#define PLUS_ONE(a) 1 + a
+    int f() { return PLUS_ONE(LIT); }
+  )cc";
+
+  StringRef E = "expr";
+  testRule(makeRule(binaryOperator(hasRHS(expr().bind(E))),
+                    change(node(E), text("LIT"))),
+           Input, Expected);
+}
+
 // No rewrite is applied when the changed text does not encompass the entirety
 // of the expanded text. That is, the edit would have to be applied to the
 // macro's definition to succeed and editing the expansion point would not

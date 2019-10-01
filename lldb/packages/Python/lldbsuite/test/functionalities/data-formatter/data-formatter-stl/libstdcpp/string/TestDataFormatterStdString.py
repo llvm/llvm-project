@@ -52,12 +52,16 @@ class StdStringDataFormatterTestCase(TestBase):
         # Execute the cleanup function during test case tear down.
         self.addTearDownHook(cleanup)
 
+        var_wempty = self.frame().FindVariable('wempty')
         var_s = self.frame().FindVariable('s')
         var_S = self.frame().FindVariable('S')
         var_mazeltov = self.frame().FindVariable('mazeltov')
+        var_empty = self.frame().FindVariable('empty')
         var_q = self.frame().FindVariable('q')
         var_Q = self.frame().FindVariable('Q')
 
+        # TODO: This is currently broken
+        # self.assertTrue(var_wempty.GetSummary() == 'L""', "wempty summary wrong")
         self.assertTrue(
             var_s.GetSummary() == 'L"hello world! מזל טוב!"',
             "s summary wrong")
@@ -65,6 +69,7 @@ class StdStringDataFormatterTestCase(TestBase):
         self.assertTrue(
             var_mazeltov.GetSummary() == 'L"מזל טוב"',
             "mazeltov summary wrong")
+        self.assertTrue(var_empty.GetSummary() == '""', "empty summary wrong")
         self.assertTrue(
             var_q.GetSummary() == '"hello world"',
             "q summary wrong")

@@ -9,6 +9,9 @@
 external add_aggressive_dce
   : [< Llvm.PassManager.any ] Llvm.PassManager.t -> unit
   = "llvm_add_aggressive_dce"
+external add_dce
+  : [< Llvm.PassManager.any ] Llvm.PassManager.t -> unit
+  = "llvm_add_dce"
 external add_alignment_from_assumptions
   : [< Llvm.PassManager.any ] Llvm.PassManager.t -> unit
   = "llvm_add_alignment_from_assumptions"

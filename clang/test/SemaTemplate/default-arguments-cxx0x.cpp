@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -std=c++11 -verify %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++14 -verify %s
 // expected-no-diagnostics
 
 // Test default template arguments for function templates.
@@ -114,3 +115,17 @@ namespace rdar34167492 {
     S<int> _a{};
   };
 }
+
+#if __cplusplus >= 201402L
+namespace lambda {
+  // Verify that a default argument in a lambda can refer to the type of a
+  // previous `auto` argument without crashing.
+  template <class T>
+  void bar() {
+    (void) [](auto c, int x = sizeof(decltype(c))) {};
+  }
+  void foo() {
+    bar<int>();
+  }
+} // namespace lambda
+#endif

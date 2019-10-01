@@ -1,6 +1,6 @@
-; Test conversions between integer and float elements on arch13.
+; Test conversions between integer and float elements on z15.
 ;
-; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=arch13 | FileCheck %s
+; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z15 | FileCheck %s
 
 ; Test conversion of f32s to signed i32s.
 define <4 x i32> @f1(<4 x float> %floats) {

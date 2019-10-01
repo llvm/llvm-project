@@ -73,15 +73,9 @@ static void EmitDeclDestroy(CodeGenFunction &CGF, const VarDecl &D,
   // that isn't balanced out by a destructor call as intended by the
   // attribute. This also checks for -fno-c++-static-destructors and
   // bails even if the attribute is not present.
-  if (D.isNoDestroy(CGF.getContext()))
-    return;
-
-  CodeGenModule &CGM = CGF.CGM;
+  QualType::DestructionKind DtorKind = D.needsDestruction(CGF.getContext());
 
   // FIXME:  __attribute__((cleanup)) ?
-
-  QualType Type = D.getType();
-  QualType::DestructionKind DtorKind = Type.isDestructedType();
 
   switch (DtorKind) {
   case QualType::DK_none:
@@ -100,6 +94,9 @@ static void EmitDeclDestroy(CodeGenFunction &CGF, const VarDecl &D,
 
   llvm::FunctionCallee Func;
   llvm::Constant *Argument;
+
+  CodeGenModule &CGM = CGF.CGM;
+  QualType Type = D.getType();
 
   // Special-case non-array C++ destructors, if they have the right signature.
   // Under some ABIs, destructors return this instead of void, and cannot be

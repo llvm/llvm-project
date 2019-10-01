@@ -985,9 +985,9 @@ class PGOUseFunc {
 public:
   PGOUseFunc(Function &Func, Module *Modu,
              std::unordered_multimap<Comdat *, GlobalValue *> &ComdatMembers,
-             BranchProbabilityInfo *BPI = nullptr,
-             BlockFrequencyInfo *BFIin = nullptr, bool IsCS = false)
-      : F(Func), M(Modu), BFI(BFIin),
+             BranchProbabilityInfo *BPI, BlockFrequencyInfo *BFIin,
+             ProfileSummaryInfo *PSI, bool IsCS)
+      : F(Func), M(Modu), BFI(BFIin), PSI(PSI),
         FuncInfo(Func, ComdatMembers, false, BPI, BFIin, IsCS),
         FreqAttr(FFA_Normal), IsCS(IsCS) {}
 
@@ -1042,6 +1042,7 @@ private:
   Function &F;
   Module *M;
   BlockFrequencyInfo *BFI;
+  ProfileSummaryInfo *PSI;
 
   // This member stores the shared information with class PGOGenFunc.
   FuncPGOInstrumentation<PGOUseEdge, UseBBInfo> FuncInfo;
@@ -1079,15 +1080,9 @@ private:
   // FIXME: This function should be removed once the functionality in
   // the inliner is implemented.
   void markFunctionAttributes(uint64_t EntryCount, uint64_t MaxCount) {
-    if (ProgramMaxCount == 0)
-      return;
-    // Threshold of the hot functions.
-    const BranchProbability HotFunctionThreshold(1, 100);
-    // Threshold of the cold functions.
-    const BranchProbability ColdFunctionThreshold(2, 10000);
-    if (EntryCount >= HotFunctionThreshold.scale(ProgramMaxCount))
+    if (PSI->isHotCount(EntryCount))
       FreqAttr = FFA_Hot;
-    else if (MaxCount <= ColdFunctionThreshold.scale(ProgramMaxCount))
+    else if (PSI->isColdCount(MaxCount))
       FreqAttr = FFA_Cold;
   }
 };
@@ -1596,7 +1591,8 @@ PreservedAnalyses PGOInstrumentationGen::run(Module &M,
 static bool annotateAllFunctions(
     Module &M, StringRef ProfileFileName, StringRef ProfileRemappingFileName,
     function_ref<BranchProbabilityInfo *(Function &)> LookupBPI,
-    function_ref<BlockFrequencyInfo *(Function &)> LookupBFI, bool IsCS) {
+    function_ref<BlockFrequencyInfo *(Function &)> LookupBFI,
+    ProfileSummaryInfo *PSI, bool IsCS) {
   LLVM_DEBUG(dbgs() << "Read in profile counters: ");
   auto &Ctx = M.getContext();
   // Read the counter array from file.
@@ -1627,6 +1623,13 @@ static bool annotateAllFunctions(
     return false;
   }
 
+  // Add the profile summary (read from the header of the indexed summary) here
+  // so that we can use it below when reading counters (which checks if the
+  // function should be marked with a cold or inlinehint attribute).
+  M.setProfileSummary(PGOReader->getSummary(IsCS).getMD(M.getContext()),
+                      IsCS ? ProfileSummary::PSK_CSInstr
+                           : ProfileSummary::PSK_Instr);
+
   std::unordered_multimap<Comdat *, GlobalValue *> ComdatMembers;
   collectComdatMembers(M, ComdatMembers);
   std::vector<Function *> HotFunctions;
@@ -1639,7 +1642,7 @@ static bool annotateAllFunctions(
     // Split indirectbr critical edges here before computing the MST rather than
     // later in getInstrBB() to avoid invalidating it.
     SplitIndirectBrCriticalEdges(F, BPI, BFI);
-    PGOUseFunc Func(F, &M, ComdatMembers, BPI, BFI, IsCS);
+    PGOUseFunc Func(F, &M, ComdatMembers, BPI, BFI, PSI, IsCS);
     bool AllZeros = false;
     if (!Func.readCounters(PGOReader.get(), AllZeros))
       continue;
@@ -1687,9 +1690,6 @@ static bool annotateAllFunctions(
       }
     }
   }
-  M.setProfileSummary(PGOReader->getSummary(IsCS).getMD(M.getContext()),
-                      IsCS ? ProfileSummary::PSK_CSInstr
-                           : ProfileSummary::PSK_Instr);
 
   // Set function hotness attribute from the profile.
   // We have to apply these attributes at the end because their presence
@@ -1731,8 +1731,10 @@ PreservedAnalyses PGOInstrumentationUse::run(Module &M,
     return &FAM.getResult<BlockFrequencyAnalysis>(F);
   };
 
+  auto *PSI = &AM.getResult<ProfileSummaryAnalysis>(M);
+
   if (!annotateAllFunctions(M, ProfileFileName, ProfileRemappingFileName,
-                            LookupBPI, LookupBFI, IsCS))
+                            LookupBPI, LookupBFI, PSI, IsCS))
     return PreservedAnalyses::all();
 
   return PreservedAnalyses::none();
@@ -1749,7 +1751,8 @@ bool PGOInstrumentationUseLegacyPass::runOnModule(Module &M) {
     return &this->getAnalysis<BlockFrequencyInfoWrapperPass>(F).getBFI();
   };
 
-  return annotateAllFunctions(M, ProfileFileName, "", LookupBPI, LookupBFI,
+  auto *PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
+  return annotateAllFunctions(M, ProfileFileName, "", LookupBPI, LookupBFI, PSI,
                               IsCS);
 }
 

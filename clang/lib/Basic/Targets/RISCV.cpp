@@ -88,8 +88,14 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
   Builder.defineMacro("__riscv");
   bool Is64Bit = getTriple().getArch() == llvm::Triple::riscv64;
   Builder.defineMacro("__riscv_xlen", Is64Bit ? "64" : "32");
-  // TODO: modify when more code models are supported.
-  Builder.defineMacro("__riscv_cmodel_medlow");
+  StringRef CodeModel = getTargetOpts().CodeModel;
+  if (CodeModel == "default")
+    CodeModel = "small";
+
+  if (CodeModel == "small")
+    Builder.defineMacro("__riscv_cmodel_medlow");
+  else if (CodeModel == "medium")
+    Builder.defineMacro("__riscv_cmodel_medany");
 
   StringRef ABIName = getABI();
   if (ABIName == "ilp32f" || ABIName == "lp64f")

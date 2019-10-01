@@ -44,8 +44,8 @@ bool IsReduced(Module &M, TestRunner &Test, SmallString<128> &CurrentFilepath) {
 }
 
 /// Counts the amount of lines for a given file
-static unsigned getLines(StringRef Filepath) {
-  unsigned Lines = 0;
+static int getLines(StringRef Filepath) {
+  int Lines = 0;
   std::string CurrLine;
   std::ifstream FileStream(Filepath);
 
@@ -66,7 +66,7 @@ static bool increaseGranularity(std::vector<Chunk> &Chunks) {
     if (C.end - C.begin == 0)
       NewChunks.push_back(C);
     else {
-      unsigned Half = (C.begin + C.end) / 2;
+      int Half = (C.begin + C.end) / 2;
       NewChunks.push_back({C.begin, Half});
       NewChunks.push_back({Half + 1, C.end});
       SplitOne = true;
@@ -88,9 +88,10 @@ static bool increaseGranularity(std::vector<Chunk> &Chunks) {
 /// reduces the amount of chunks that are considered interesting by the
 /// given test.
 void llvm::runDeltaPass(
-    TestRunner &Test, unsigned Targets,
+    TestRunner &Test, int Targets,
     std::function<void(const std::vector<Chunk> &, Module *)>
         ExtractChunksFromModule) {
+  assert(Targets >= 0);
   if (!Targets) {
     errs() << "\nNothing to reduce\n";
     return;

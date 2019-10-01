@@ -1,7 +1,7 @@
 # REQUIRES: lld, x86
 
 # RUN: llvm-mc -triple x86_64-pc-linux %s -filetype=obj > %t.o
-# RUN: ld.lld %t.o -o %t
+# RUN: ld.lld %t.o -o %t -z separate-code
 # RUN: lldb-test symbols --find=function --name=inl --function-flags=method %t \
 # RUN:   | FileCheck %s
 

@@ -1412,3 +1412,45 @@ bb4:                                              ; preds = %bb1
 
 declare i64* @ham(i32)
 
+define internal void @bar() unnamed_addr #1 {
+  ; CHECK-LABEL: name: bar
+  ; CHECK: bb.1 (%ir-block.0):
+    unreachable
+}
+
+define i1 @i1_value_cmp_is_signed(i1) {
+  ; CHECK-LABEL: name: i1_value_cmp_is_signed
+  ; CHECK: bb.1.Entry:
+  ; CHECK:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
+  ; CHECK:   liveins: $w0
+  ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+  ; CHECK:   [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[COPY]](s32)
+  ; CHECK:   [[C:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
+  ; CHECK:   [[C1:%[0-9]+]]:_(s1) = G_CONSTANT i1 false
+  ; CHECK:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(sle), [[TRUNC]](s1), [[C1]]
+  ; CHECK:   G_BRCOND [[ICMP]](s1), %bb.3
+  ; CHECK:   G_BR %bb.2
+  ; CHECK: bb.2.BadValue:
+  ; CHECK:   successors:
+  ; CHECK:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
+  ; CHECK:   BL @bar, csr_aarch64_aapcs, implicit-def $lr, implicit $sp
+  ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
+  ; CHECK: bb.3.OkValue:
+  ; CHECK:   [[ZEXT:%[0-9]+]]:_(s8) = G_ZEXT [[TRUNC]](s1)
+  ; CHECK:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[ZEXT]](s8)
+  ; CHECK:   $w0 = COPY [[ANYEXT]](s32)
+  ; CHECK:   RET_ReallyLR implicit $w0
+Entry:
+  switch i1 %0, label %BadValue [
+    i1 false, label %OkValue
+    i1 true, label %OkValue
+  ]
+
+BadValue:
+  call fastcc void @bar()
+  unreachable
+
+OkValue:
+  ret i1 %0
+}
+

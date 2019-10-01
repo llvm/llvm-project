@@ -7,7 +7,7 @@
 ; RUN:  --implicit-check-not cmpw --implicit-check-not cmpd --implicit-check-not cmpl
 ; ModuleID = 'ComparisonTestCases/testCompareslleqsc.c'
 
-@glob = common local_unnamed_addr global i8 0, align 1
+@glob = local_unnamed_addr global i8 0, align 1
 
 ; Function Attrs: norecurse nounwind readnone
 define i64 @test_lleqsc(i8 signext %a, i8 signext %b) {

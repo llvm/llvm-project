@@ -30,6 +30,7 @@
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/raw_ostream.h"
 #include <bitset>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -1221,6 +1222,28 @@ struct SemanticHighlightingParams {
   std::vector<SemanticHighlightingInformation> Lines;
 };
 llvm::json::Value toJSON(const SemanticHighlightingParams &Highlighting);
+
+struct SelectionRangeParams {
+  /// The text document.
+  TextDocumentIdentifier textDocument;
+
+  /// The positions inside the text document.
+  std::vector<Position> positions;
+};
+bool fromJSON(const llvm::json::Value &, SelectionRangeParams &);
+
+struct SelectionRange {
+  /**
+   * The range of this selection range.
+   */
+  Range range;
+  /**
+   * The parent selection range containing this range. Therefore `parent.range`
+   * must contain `this.range`.
+   */
+  std::unique_ptr<SelectionRange> parent;
+};
+llvm::json::Value toJSON(const SelectionRange &);
 
 } // namespace clangd
 } // namespace clang

@@ -51,8 +51,8 @@ public:
   lldb_private::CompilerDecl
   GetDeclForUIDFromDWARF(const DWARFDIE &die) override;
 
-  std::vector<DWARFDIE>
-  GetDIEForDeclContext(lldb_private::CompilerDeclContext decl_context) override;
+  void EnsureAllDIEsInDeclContextHaveBeenParsed(
+      lldb_private::CompilerDeclContext decl_context) override;
 
   lldb_private::CompilerDeclContext
   GetDeclContextForUIDFromDWARF(const DWARFDIE &die) override;

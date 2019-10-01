@@ -15,6 +15,8 @@
 # LLVM: Symbols [
 # LLVM: Notes [
 # LLVM: ]
+# LLVM: StackSizes [
+# LLVM: ]
 
 # GNU: {{^$}}
 # GNU-NEXT: File: [[ARFILE]](trivial.obj.elf-x86-64)
@@ -34,6 +36,8 @@
 # LLVM: Relocations [
 # LLVM: Symbols [
 # LLVM: Notes [
+# LLVM: ]
+# LLVM: StackSizes [
 # LLVM: ]
 
 # GNU-EMPTY:

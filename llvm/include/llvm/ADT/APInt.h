@@ -1503,9 +1503,11 @@ public:
 
   /// Insert the bits from a smaller APInt starting at bitPosition.
   void insertBits(const APInt &SubBits, unsigned bitPosition);
+  void insertBits(uint64_t SubBits, unsigned bitPosition, unsigned numBits);
 
   /// Return an APInt with the extracted bits [bitPosition,bitPosition+numBits).
   APInt extractBits(unsigned numBits, unsigned bitPosition) const;
+  uint64_t extractBitsAsZExtValue(unsigned numBits, unsigned bitPosition) const;
 
   /// @}
   /// \name Value Characterization Functions

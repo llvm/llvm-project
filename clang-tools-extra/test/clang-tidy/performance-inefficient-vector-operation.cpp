@@ -1,4 +1,7 @@
-// RUN: %check_clang_tidy %s performance-inefficient-vector-operation %t -- -format-style=llvm
+// RUN: %check_clang_tidy %s performance-inefficient-vector-operation %t -- \
+// RUN: -format-style=llvm \
+// RUN: -config='{CheckOptions: \
+// RUN:  [{key: performance-inefficient-vector-operation.EnableProto, value: 1}]}'
 
 namespace std {
 
@@ -62,13 +65,35 @@ class Bar {
 
 int Op(int);
 
+namespace proto2 {
+class MessageLite {};
+class Message : public MessageLite {};
+} // namespace proto2
+
+class FooProto : public proto2::Message {
+ public:
+  int *add_x();  // repeated int x;
+  void add_x(int x);
+  void mutable_x();
+  void mutable_y();
+  int add_z() const; // optional int add_z;
+};
+
+class BarProto : public proto2::Message {
+ public:
+  int *add_x();
+  void add_x(int x);
+  void mutable_x();
+  void mutable_y();
+};
+
 void f(std::vector<int>& t) {
   {
     std::vector<int> v0;
     // CHECK-FIXES: v0.reserve(10);
     for (int i = 0; i < 10; ++i)
       v0.push_back(i);
-      // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: 'push_back' is called inside a loop; consider pre-allocating the vector capacity before the loop
+      // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: 'push_back' is called inside a loop; consider pre-allocating the container capacity before the loop
   }
   {
     std::vector<int> v1;
@@ -159,6 +184,15 @@ void f(std::vector<int>& t) {
     for (const auto &e : t) {
       v12.emplace_back(e);
       // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: 'emplace_back' is called
+    }
+  }
+
+  {
+    FooProto foo;
+    // CHECK-FIXES: foo.mutable_x()->Reserve(5);
+    for (int i = 0; i < 5; i++) {
+      foo.add_x(i);
+      // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: 'add_x' is called inside a loop; consider pre-allocating the container capacity before the loop
     }
   }
 
@@ -272,6 +306,56 @@ void f(std::vector<int>& t) {
     // Complex range init expressions like `*z13` is not supported.
     for (const auto &e : *z13) {
       z12.push_back(e);
+    }
+  }
+
+  {
+    FooProto foo;
+    foo.mutable_x();
+    // CHECK-FIXES-NOT: foo.mutable_x()->Reserve(5);
+    for (int i = 0; i < 5; i++) {
+      foo.add_x(i);
+    }
+  }
+  {
+    FooProto foo;
+    // CHECK-FIXES-NOT: foo.mutable_x()->Reserve(5);
+    for (int i = 0; i < 5; i++) {
+      foo.add_x(i);
+      foo.add_x(i);
+    }
+  }
+  {
+    FooProto foo;
+    // CHECK-FIXES-NOT: foo.mutable_x()->Reserve(5);
+    foo.add_x(-1);
+    for (int i = 0; i < 5; i++) {
+      foo.add_x(i);
+    }
+  }
+  {
+    FooProto foo;
+    BarProto bar;
+    bar.mutable_x();
+    // CHECK-FIXES-NOT: foo.mutable_x()->Reserve(5);
+    for (int i = 0; i < 5; i++) {
+      foo.add_x();
+      bar.add_x();
+    }
+  }
+  {
+    FooProto foo;
+    foo.mutable_y();
+    // CHECK-FIXES-NOT: foo.mutable_x()->Reserve(5);
+    for (int i = 0; i < 5; i++) {
+      foo.add_x(i);
+    }
+  }
+  {
+    FooProto foo;
+    // CHECK-FIXES-NOT: foo.mutable_z()->Reserve(5);
+    for (int i = 0; i < 5; i++) {
+      foo.add_z();
     }
   }
 }

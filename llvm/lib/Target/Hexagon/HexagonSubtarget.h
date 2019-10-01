@@ -228,7 +228,7 @@ public:
   }
 
   bool isHVXVectorType(MVT VecTy, bool IncludeBool = false) const {
-    if (!VecTy.isVector() || !useHVXOps())
+    if (!VecTy.isVector() || !useHVXOps() || VecTy.isScalableVector())
       return false;
     MVT ElemTy = VecTy.getVectorElementType();
     if (!IncludeBool && ElemTy == MVT::i1)

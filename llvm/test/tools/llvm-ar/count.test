@@ -31,9 +31,9 @@ RUN: not llvm-ar xN 4 %t/archive.a foo.txt 2>&1 | FileCheck %s --check-prefix=ER
 # N only applies to x/d.
 RUN: not llvm-ar rN 1 %t/archive.a foo.txt 2>&1 | FileCheck %s --check-prefix=ERR-BAD-OP
 
-ERR-NOT-NUM:   error: Value for [count] must be numeric
-ERR-NOT-POS:   error: Value for [count] must be positive
-ERR-BAD-OP:    error: The 'N' modifier can only be specified with the 'x' or 'd' operations
+ERR-NOT-NUM:   error: value for [count] must be numeric
+ERR-NOT-POS:   error: value for [count] must be positive
+ERR-BAD-OP:    error: the 'N' modifier can only be specified with the 'x' or 'd' operations
 ERR-NOT-FOUND: error: 'foo.txt' was not found
 
 # Extract individual items.

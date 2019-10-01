@@ -704,7 +704,7 @@ AppleObjCTrampolineHandler::AppleObjCTrampolineHandler(
     // step through any method dispatches.  Warn to that effect and get out of
     // here.
     if (process_sp->CanJIT()) {
-      process_sp->GetTarget().GetDebugger().GetErrorFile()->Printf(
+      process_sp->GetTarget().GetDebugger().GetErrorStream().Printf(
           "Could not find implementation lookup function \"%s\""
           " step in through ObjC method dispatch will not work.\n",
           get_impl_name.AsCString());

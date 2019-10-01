@@ -384,8 +384,8 @@ ClangTidyASTConsumerFactory::CreateASTConsumer(
   if (WorkingDir)
     Context.setCurrentBuildDirectory(WorkingDir.get());
 
-  std::vector<std::unique_ptr<ClangTidyCheck>> Checks;
-  CheckFactories->createChecks(&Context, Checks);
+  std::vector<std::unique_ptr<ClangTidyCheck>> Checks =
+      CheckFactories->createChecks(&Context);
 
   ast_matchers::MatchFinder::MatchFinderOptions FinderOptions;
 
@@ -459,8 +459,8 @@ std::vector<std::string> ClangTidyASTConsumerFactory::getCheckNames() {
 
 ClangTidyOptions::OptionMap ClangTidyASTConsumerFactory::getCheckOptions() {
   ClangTidyOptions::OptionMap Options;
-  std::vector<std::unique_ptr<ClangTidyCheck>> Checks;
-  CheckFactories->createChecks(&Context, Checks);
+  std::vector<std::unique_ptr<ClangTidyCheck>> Checks =
+      CheckFactories->createChecks(&Context);
   for (const auto &Check : Checks)
     Check->storeOptions(Options);
   return Options;

@@ -139,7 +139,7 @@ static void setSectionAlignmentForBundling(const MCAssembler &Assembler,
                                            MCSection *Section) {
   if (Section && Assembler.isBundlingEnabled() && Section->hasInstructions() &&
       Section->getAlignment() < Assembler.getBundleAlignSize())
-    Section->setAlignment(llvm::Align(Assembler.getBundleAlignSize()));
+    Section->setAlignment(Align(Assembler.getBundleAlignSize()));
 }
 
 void MCELFStreamer::ChangeSection(MCSection *Section,
@@ -277,6 +277,9 @@ bool MCELFStreamer::EmitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute) {
 
   case MCSA_AltEntry:
     llvm_unreachable("ELF doesn't support the .alt_entry attribute");
+
+  case MCSA_LGlobal:
+    llvm_unreachable("ELF doesn't support the .lglobl attribute");
   }
 
   return true;
@@ -306,7 +309,7 @@ void MCELFStreamer::EmitCommonSymbol(MCSymbol *S, uint64_t Size,
 
     // Update the maximum alignment of the section if necessary.
     if (ByteAlignment > Section.getAlignment())
-      Section.setAlignment(llvm::Align(ByteAlignment));
+      Section.setAlignment(Align(ByteAlignment));
 
     SwitchSection(P.first, P.second);
   } else {

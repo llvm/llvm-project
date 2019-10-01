@@ -1,7 +1,7 @@
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-unknown < %s  | \
 ; RUN:   FileCheck %s
 
-@glob = common local_unnamed_addr global <4 x float> zeroinitializer, align 4
+@glob = local_unnamed_addr global <4 x float> zeroinitializer, align 4
 
 ; Function Attrs: norecurse nounwind
 define void @test(float %a, <4 x float>* nocapture readonly %b) {

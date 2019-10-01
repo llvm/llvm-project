@@ -20,10 +20,10 @@
 # CHECK-NEXT:   ]
 # CHECK:      Relocations [
 # CHECK-NEXT:   Section ({{.*}}) .rela.text {
-# CHECK-NEXT:     0x201002 R_X86_64_32 .text 0x1
-# CHECK-NEXT:     0x201007 R_X86_64_PLT32 fn 0xFFFFFFFFFFFFFFFC
-# CHECK-NEXT:     0x20100E R_X86_64_32 .text 0xD
-# CHECK-NEXT:     0x201013 R_X86_64_PLT32 fn2 0xFFFFFFFFFFFFFFFC
+# CHECK-NEXT:     0x201122 R_X86_64_32 .text 0x1
+# CHECK-NEXT:     0x201127 R_X86_64_PLT32 fn 0xFFFFFFFFFFFFFFFC
+# CHECK-NEXT:     0x20112E R_X86_64_32 .text 0xD
+# CHECK-NEXT:     0x201133 R_X86_64_PLT32 fn2 0xFFFFFFFFFFFFFFFC
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]
 # CHECK-NEXT: Symbols [
@@ -38,7 +38,7 @@
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Symbol {
 # CHECK-NEXT:     Name: bar
-# CHECK-NEXT:     Value: 0x201001
+# CHECK-NEXT:     Value: 0x201121
 # CHECK-NEXT:     Size: 0
 # CHECK-NEXT:     Binding: Local
 # CHECK-NEXT:     Type: None
@@ -47,7 +47,7 @@
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Symbol {
 # CHECK-NEXT:     Name: foo
-# CHECK-NEXT:     Value: 0x20100D
+# CHECK-NEXT:     Value: 0x20112D
 # CHECK-NEXT:     Size: 0
 # CHECK-NEXT:     Binding: Local
 # CHECK-NEXT:     Type: None
@@ -56,7 +56,7 @@
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Symbol {
 # CHECK-NEXT:     Name:
-# CHECK-NEXT:     Value: 0x201000
+# CHECK-NEXT:     Value: 0x201120
 # CHECK-NEXT:     Size: 0
 # CHECK-NEXT:     Binding: Local
 # CHECK-NEXT:     Type: Section
@@ -74,7 +74,7 @@
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Symbol {
 # CHECK-NEXT:     Name: fn
-# CHECK-NEXT:     Value: 0x201000
+# CHECK-NEXT:     Value: 0x201120
 # CHECK-NEXT:     Size: 0
 # CHECK-NEXT:     Binding: Global
 # CHECK-NEXT:     Type: Function
@@ -83,7 +83,7 @@
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Symbol {
 # CHECK-NEXT:     Name: fn2
-# CHECK-NEXT:     Value: 0x20100C
+# CHECK-NEXT:     Value: 0x20112C
 # CHECK-NEXT:     Size: 0
 # CHECK-NEXT:     Binding: Global
 # CHECK-NEXT:     Type: Function

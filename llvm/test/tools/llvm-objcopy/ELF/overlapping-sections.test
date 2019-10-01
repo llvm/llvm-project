@@ -3,22 +3,6 @@
 ## inputs somehow.
 # RUN: yaml2obj %s -o %t.o
 
-## First, check the address of the section header table.
-# RUN: llvm-readobj --file-headers %t.o | FileCheck %s --check-prefix=SHDRS-OFFSET
-# SHDRS-OFFSET: SectionHeaderOffset: 0x1050{{$}}
-
-## Binary edit the section header sh_offset field of the second section to
-## (e_shoff+64*2+24 = 0x10e8) overlap the first one.
-# RUN: %python -c "with open('%/t.o', 'r+b') as input: import struct; bytes = struct.pack('<Q', 0x1001); input.seek(0x10e8); input.write(bytes)"
-
-## Sanity check that the binary editing modified the correct field.
-# RUN: llvm-readobj --section-headers %t.o | FileCheck %s --check-prefix=VALIDATE
-
-# VALIDATE: Name: .first
-# VALIDATE: Offset: 0x1000
-# VALIDATE: Name: .second
-# VALIDATE: Offset: 0x1001
-
 ## Check that the contents are as expected before the copy.
 # RUN: llvm-readobj -x .first -x .second %t.o | FileCheck %s --check-prefix=CONTENTS
 
@@ -54,3 +38,4 @@ Sections:
   - Name: .second
     Type: SHT_PROGBITS
     Content: '89abcdef'
+    ShOffset: 0x1001

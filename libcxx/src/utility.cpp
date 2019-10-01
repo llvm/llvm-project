@@ -10,6 +10,6 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-const piecewise_construct_t piecewise_construct = {};
+const piecewise_construct_t piecewise_construct{};
 
 _LIBCPP_END_NAMESPACE_STD

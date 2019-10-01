@@ -160,6 +160,7 @@ void GCNMaxOccupancySchedStrategy::pickNodeFromQueue(SchedBoundary &Zone,
       if (TryCand.ResDelta == SchedResourceDelta())
         TryCand.initResourceDelta(Zone.DAG, SchedModel);
       Cand.setBest(TryCand);
+      LLVM_DEBUG(traceCandidate(Cand));
     }
   }
 }

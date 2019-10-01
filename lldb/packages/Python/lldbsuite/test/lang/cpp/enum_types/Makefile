@@ -1,8 +1,9 @@
 CXX_SOURCES := main.cpp
 
-CXXFLAGS += -std=c++11
+CXXFLAGS_EXTRAS := -std=c++11
 
 clean: OBJECTS+=$(wildcard main.d.*)
 
-include Makefile.rules
 
+
+include Makefile.rules

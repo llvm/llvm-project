@@ -590,7 +590,7 @@ User-supplied mutators
 ----------------------
 
 LibFuzzer allows to use custom (user-supplied) mutators, see
-`Structure-Aware Fuzzing <https://github.com/google/fuzzer-test-suite/blob/master/tutorial/structure-aware-fuzzing.md>`_
+`Structure-Aware Fuzzing <https://github.com/google/fuzzing/blob/master/docs/structure-aware-fuzzing.md>`_
 for more details.
 
 Startup initialization

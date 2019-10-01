@@ -34,6 +34,9 @@ entry:
   ret i32 ptrtoint ([3 x i8]* @data_comdat to i32)
 }
 
+; Test that __attribute__(used) (i.e NO_STRIP) is preserved in the relocated symbol table
+@llvm.used = appending global [1 x i8*] [i8* bitcast (i32 ()* @my_func to i8*)], section "llvm.metadata"
+
 ; CHECK:      --- !WASM
 ; CHECK-NEXT: FileHeader:
 ; CHECK-NEXT:   Version:         0x00000001
@@ -113,21 +116,21 @@ entry:
 ; CHECK-NEXT:         Body:          1081808080001A1082808080001A41010B
 ; CHECK-NEXT:       - Index:         5
 ; CHECK-NEXT:         Locals:
-; CHECK-NEXT:         Body:          419C808080000B
+; CHECK-NEXT:         Body:          4187808080000B
 ; NORMAL-NEXT:  - Type:            DATA
 ; NORMAL-NEXT:    Relocations:
 ; NORMAL-NEXT:      - Type:            R_WASM_TABLE_INDEX_I32
 ; NORMAL-NEXT:        Index:           3
-; NORMAL-NEXT:        Offset:          0x00000012
+; NORMAL-NEXT:        Offset:          0x0000001A
 ; NORMAL-NEXT:      - Type:            R_WASM_TABLE_INDEX_I32
 ; NORMAL-NEXT:        Index:           4
-; NORMAL-NEXT:        Offset:          0x0000001B
+; NORMAL-NEXT:        Offset:          0x00000023
 ; NORMAL-NEXT:      - Type:            R_WASM_TABLE_INDEX_I32
 ; NORMAL-NEXT:        Index:           5
-; NORMAL-NEXT:        Offset:          0x00000024
+; NORMAL-NEXT:        Offset:          0x0000002C
 ; NORMAL-NEXT:      - Type:            R_WASM_MEMORY_ADDR_I32
 ; NORMAL-NEXT:        Index:           12
-; NORMAL-NEXT:        Offset:          0x0000002D
+; NORMAL-NEXT:        Offset:          0x00000035
 ; NORMAL-NEXT:    Segments:
 ; NORMAL-NEXT:      - SectionOffset:   6
 ; NORMAL-NEXT:        InitFlags:       0
@@ -139,32 +142,32 @@ entry:
 ; NORMAL-NEXT:        InitFlags:       0
 ; NORMAL-NEXT:        Offset:
 ; NORMAL-NEXT:          Opcode:          I32_CONST
-; NORMAL-NEXT:          Value:           8
-; NORMAL-NEXT:        Content:         '01000000'
-; NORMAL-NEXT:      - SectionOffset:   27
+; NORMAL-NEXT:          Value:           7
+; NORMAL-NEXT:        Content:         '616263'
+; NORMAL-NEXT:      - SectionOffset:   26
 ; NORMAL-NEXT:        InitFlags:       0
 ; NORMAL-NEXT:        Offset:
 ; NORMAL-NEXT:          Opcode:          I32_CONST
 ; NORMAL-NEXT:          Value:           12
-; NORMAL-NEXT:        Content:         '02000000'
-; NORMAL-NEXT:      - SectionOffset:   36
+; NORMAL-NEXT:        Content:         '01000000'
+; NORMAL-NEXT:      - SectionOffset:   35
 ; NORMAL-NEXT:        InitFlags:       0
 ; NORMAL-NEXT:        Offset:
 ; NORMAL-NEXT:          Opcode:          I32_CONST
 ; NORMAL-NEXT:          Value:           16
+; NORMAL-NEXT:        Content:         '02000000'
+; NORMAL-NEXT:      - SectionOffset:   44
+; NORMAL-NEXT:        InitFlags:       0
+; NORMAL-NEXT:        Offset:
+; NORMAL-NEXT:          Opcode:          I32_CONST
+; NORMAL-NEXT:          Value:           20
 ; NORMAL-NEXT:        Content:         '03000000'
-; NORMAL-NEXT:      - SectionOffset:   45
+; NORMAL-NEXT:      - SectionOffset:   53
 ; NORMAL-NEXT:        InitFlags:       0
 ; NORMAL-NEXT:        Offset:
 ; NORMAL-NEXT:          Opcode:          I32_CONST
 ; NORMAL-NEXT:          Value:           24
 ; NORMAL-NEXT:        Content:         '00000000'
-; NORMAL-NEXT:      - SectionOffset:   54
-; NORMAL-NEXT:        InitFlags:       0
-; NORMAL-NEXT:        Offset:
-; NORMAL-NEXT:          Opcode:          I32_CONST
-; NORMAL-NEXT:          Value:           28
-; NORMAL-NEXT:        Content:         '616263'
 ; NORMAL-NEXT:  - Type:            CUSTOM
 ; NORMAL-NEXT:    Name:            linking
 ; NORMAL-NEXT:    Version:         2
@@ -188,7 +191,7 @@ entry:
 ; NORMAL-NEXT:      - Index:           3
 ; NORMAL-NEXT:        Kind:            FUNCTION
 ; NORMAL-NEXT:        Name:            my_func
-; NORMAL-NEXT:        Flags:           [ VISIBILITY_HIDDEN ]
+; NORMAL-NEXT:        Flags:           [ VISIBILITY_HIDDEN, NO_STRIP ]
 ; NORMAL-NEXT:        Function:        4
 ; NORMAL-NEXT:      - Index:           4
 ; NORMAL-NEXT:        Kind:            FUNCTION
@@ -209,31 +212,31 @@ entry:
 ; NORMAL-NEXT:        Kind:            DATA
 ; NORMAL-NEXT:        Name:            data_comdat
 ; NORMAL-NEXT:        Flags:           [ BINDING_WEAK ]
-; NORMAL-NEXT:        Segment:         5
+; NORMAL-NEXT:        Segment:         1
 ; NORMAL-NEXT:        Size:            3
 ; NORMAL-NEXT:      - Index:           8
 ; NORMAL-NEXT:        Kind:            DATA
 ; NORMAL-NEXT:        Name:            func_addr1
 ; NORMAL-NEXT:        Flags:           [ VISIBILITY_HIDDEN ]
-; NORMAL-NEXT:        Segment:         1
+; NORMAL-NEXT:        Segment:         2
 ; NORMAL-NEXT:        Size:            4
 ; NORMAL-NEXT:      - Index:           9
 ; NORMAL-NEXT:        Kind:            DATA
 ; NORMAL-NEXT:        Name:            func_addr2
 ; NORMAL-NEXT:        Flags:           [ VISIBILITY_HIDDEN ]
-; NORMAL-NEXT:        Segment:         2
+; NORMAL-NEXT:        Segment:         3
 ; NORMAL-NEXT:        Size:            4
 ; NORMAL-NEXT:      - Index:           10
 ; NORMAL-NEXT:        Kind:            DATA
 ; NORMAL-NEXT:        Name:            func_addr3
 ; NORMAL-NEXT:        Flags:           [ VISIBILITY_HIDDEN ]
-; NORMAL-NEXT:        Segment:         3
+; NORMAL-NEXT:        Segment:         4
 ; NORMAL-NEXT:        Size:            4
 ; NORMAL-NEXT:      - Index:           11
 ; NORMAL-NEXT:        Kind:            DATA
 ; NORMAL-NEXT:        Name:            data_addr1
 ; NORMAL-NEXT:        Flags:           [ VISIBILITY_HIDDEN ]
-; NORMAL-NEXT:        Segment:         4
+; NORMAL-NEXT:        Segment:         5
 ; NORMAL-NEXT:        Size:            4
 ; NORMAL-NEXT:      - Index:           12
 ; NORMAL-NEXT:        Kind:            DATA
@@ -245,24 +248,24 @@ entry:
 ; NORMAL-NEXT:        Alignment:       0
 ; NORMAL-NEXT:        Flags:           [  ]
 ; NORMAL-NEXT:      - Index:           1
+; NORMAL-NEXT:        Name:            .rodata.data_comdat
+; NORMAL-NEXT:        Alignment:       0
+; NORMAL-NEXT:        Flags:           [  ]
+; NORMAL-NEXT:      - Index:           2
 ; NORMAL-NEXT:        Name:            .data.func_addr1
 ; NORMAL-NEXT:        Alignment:       2
 ; NORMAL-NEXT:        Flags:           [  ]
-; NORMAL-NEXT:      - Index:           2
+; NORMAL-NEXT:      - Index:           3
 ; NORMAL-NEXT:        Name:            .data.func_addr2
 ; NORMAL-NEXT:        Alignment:       2
 ; NORMAL-NEXT:        Flags:           [  ]
-; NORMAL-NEXT:      - Index:           3
+; NORMAL-NEXT:      - Index:           4
 ; NORMAL-NEXT:        Name:            .data.func_addr3
 ; NORMAL-NEXT:        Alignment:       2
 ; NORMAL-NEXT:        Flags:           [  ]
-; NORMAL-NEXT:      - Index:           4
+; NORMAL-NEXT:      - Index:           5
 ; NORMAL-NEXT:        Name:            .data.data_addr1
 ; NORMAL-NEXT:        Alignment:       3
-; NORMAL-NEXT:        Flags:           [  ]
-; NORMAL-NEXT:      - Index:           5
-; NORMAL-NEXT:        Name:            .rodata.data_comdat
-; NORMAL-NEXT:        Alignment:       0
 ; NORMAL-NEXT:        Flags:           [  ]
 ; NORMAL-NEXT:    Comdats:
 ; NORMAL-NEXT:      - Name:            func_comdat
@@ -270,7 +273,7 @@ entry:
 ; NORMAL-NEXT:          - Kind:            FUNCTION
 ; NORMAL-NEXT:            Index:           5
 ; NORMAL-NEXT:          - Kind:            DATA
-; NORMAL-NEXT:            Index:           5
+; NORMAL-NEXT:            Index:           1
 ; NORMAL-NEXT:  - Type:            CUSTOM
 ; NORMAL-NEXT:    Name:            name
 ; NORMAL-NEXT:    FunctionNames:

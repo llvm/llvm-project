@@ -138,6 +138,23 @@ done:
   ret i32 %p
 }
 
+define void @memops(i8* %ptr) {
+  %a = load i8, i8* %ptr
+  %b = load volatile i8, i8* %ptr
+  %c = load i8, i8* %ptr, align 8
+  %d = load atomic i8, i8* %ptr acquire, align 32
+  store i8 0, i8* %ptr
+  store volatile i8 0, i8* %ptr
+  store i8 0, i8* %ptr, align 8
+  store atomic i8 0, i8* %ptr release, align 32
+  %e = atomicrmw add i8* %ptr, i8 0 monotonic
+  %f = atomicrmw volatile xchg i8* %ptr, i8 0 acq_rel
+  %g = cmpxchg i8* %ptr, i8 1, i8 2 seq_cst acquire
+  %h = cmpxchg weak i8* %ptr, i8 1, i8 2 seq_cst acquire
+  %i = cmpxchg volatile i8* %ptr, i8 1, i8 2 monotonic monotonic
+  ret void
+}
+
 declare void @personalityFn()
 
 define void @exn() personality void ()* @personalityFn {

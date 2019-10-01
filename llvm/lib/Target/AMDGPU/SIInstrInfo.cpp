@@ -1675,7 +1675,8 @@ MachineInstr *SIInstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
 // This needs to be implemented because the source modifiers may be inserted
 // between the true commutable operands, and the base
 // TargetInstrInfo::commuteInstruction uses it.
-bool SIInstrInfo::findCommutedOpIndices(MachineInstr &MI, unsigned &SrcOpIdx0,
+bool SIInstrInfo::findCommutedOpIndices(const MachineInstr &MI,
+                                        unsigned &SrcOpIdx0,
                                         unsigned &SrcOpIdx1) const {
   return findCommutedOpIndices(MI.getDesc(), SrcOpIdx0, SrcOpIdx1);
 }
@@ -2505,8 +2506,7 @@ bool SIInstrInfo::checkInstOffsetsDoNotOverlap(const MachineInstr &MIa,
 }
 
 bool SIInstrInfo::areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
-                                                  const MachineInstr &MIb,
-                                                  AliasAnalysis *AA) const {
+                                                  const MachineInstr &MIb) const {
   assert((MIa.mayLoad() || MIa.mayStore()) &&
          "MIa must load from or modify a memory location");
   assert((MIb.mayLoad() || MIb.mayStore()) &&
@@ -6550,13 +6550,12 @@ MachineInstr *SIInstrInfo::createPHIDestinationCopy(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator LastPHIIt,
     const DebugLoc &DL, Register Src, Register Dst) const {
   auto Cur = MBB.begin();
-  while (Cur != MBB.end()) {
-    if (!Cur->isPHI() && Cur->readsRegister(Dst))
-      return BuildMI(MBB, Cur, DL, get(TargetOpcode::COPY), Dst).addReg(Src);
-    ++Cur;
-    if (Cur == LastPHIIt)
-      break;
-  }
+  if (Cur != MBB.end())
+    do {
+      if (!Cur->isPHI() && Cur->readsRegister(Dst))
+        return BuildMI(MBB, Cur, DL, get(TargetOpcode::COPY), Dst).addReg(Src);
+      ++Cur;
+    } while (Cur != MBB.end() && Cur != LastPHIIt);
 
   return TargetInstrInfo::createPHIDestinationCopy(MBB, LastPHIIt, DL, Src,
                                                    Dst);
@@ -6565,9 +6564,15 @@ MachineInstr *SIInstrInfo::createPHIDestinationCopy(
 MachineInstr *SIInstrInfo::createPHISourceCopy(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator InsPt,
     const DebugLoc &DL, Register Src, Register SrcSubReg, Register Dst) const {
-  if (InsPt != MBB.end() && InsPt->isPseudo() && InsPt->definesRegister(Src)) {
+  if (InsPt != MBB.end() &&
+      (InsPt->getOpcode() == AMDGPU::SI_IF ||
+       InsPt->getOpcode() == AMDGPU::SI_ELSE ||
+       InsPt->getOpcode() == AMDGPU::SI_IF_BREAK) &&
+      InsPt->definesRegister(Src)) {
     InsPt++;
-    return BuildMI(MBB, InsPt, InsPt->getDebugLoc(), get(TargetOpcode::COPY),
+    return BuildMI(MBB, InsPt, InsPt->getDebugLoc(),
+                   get(ST.isWave32() ? AMDGPU::S_MOV_B32_term
+                                     : AMDGPU::S_MOV_B64_term),
                    Dst)
         .addReg(Src, 0, SrcSubReg)
         .addReg(AMDGPU::EXEC, RegState::Implicit);
@@ -6575,3 +6580,5 @@ MachineInstr *SIInstrInfo::createPHISourceCopy(
   return TargetInstrInfo::createPHISourceCopy(MBB, InsPt, DL, Src, SrcSubReg,
                                               Dst);
 }
+
+bool llvm::SIInstrInfo::isWave32() const { return ST.isWave32(); }

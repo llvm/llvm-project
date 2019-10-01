@@ -502,6 +502,8 @@ protected:
 
   void GetProcessOutput();
 
+  bool DidProcessStopAbnormally() const;
+
   void SetSynchronous(bool value);
 
   lldb::CommandObjectSP GetCommandSP(llvm::StringRef cmd,

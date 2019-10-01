@@ -10,7 +10,7 @@
 // UNSUPPORTED: c++98, c++03
 
 // GCC versions prior to 7.0 don't provide the required [[nodiscard]] attribute.
-// UNSUPPORTED: gcc-4, gcc-5, gcc-6
+// UNSUPPORTED: gcc-5, gcc-6
 
 // AppleClang9 doesn't yet support C++17's implicitly synthesized deduction
 // guides from existing ctors, needed by default_searcher() below.

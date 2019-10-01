@@ -332,6 +332,10 @@ void InstrInfoEmitter::emitOperandTypeMappings(
 
   StringRef Namespace = Target.getInstNamespace();
   std::vector<Record *> Operands = Records.getAllDerivedDefinitions("Operand");
+  std::vector<Record *> RegisterOperands =
+      Records.getAllDerivedDefinitions("RegisterOperand");
+  std::vector<Record *> RegisterClasses =
+      Records.getAllDerivedDefinitions("RegisterClass");
 
   OS << "#ifdef GET_INSTRINFO_OPERAND_TYPES_ENUM\n";
   OS << "#undef GET_INSTRINFO_OPERAND_TYPES_ENUM\n";
@@ -341,10 +345,13 @@ void InstrInfoEmitter::emitOperandTypeMappings(
   OS << "enum OperandType {\n";
 
   unsigned EnumVal = 0;
-  for (const Record *Op : Operands) {
-    if (!Op->isAnonymous())
-      OS << "  " << Op->getName() << " = " << EnumVal << ",\n";
-    ++EnumVal;
+  for (const std::vector<Record *> *RecordsToAdd :
+       {&Operands, &RegisterOperands, &RegisterClasses}) {
+    for (const Record *Op : *RecordsToAdd) {
+      if (!Op->isAnonymous())
+        OS << "  " << Op->getName() << " = " << EnumVal << ",\n";
+      ++EnumVal;
+    }
   }
 
   OS << "  OPERAND_TYPE_LIST_END" << "\n};\n";
@@ -358,7 +365,8 @@ void InstrInfoEmitter::emitOperandTypeMappings(
   OS << "namespace llvm {\n";
   OS << "namespace " << Namespace << " {\n";
   OS << "LLVM_READONLY\n";
-  OS << "int getOperandType(uint16_t Opcode, uint16_t OpIdx) {\n";
+  OS << "static int getOperandType(uint16_t Opcode, uint16_t OpIdx) {\n";
+  // TODO: Factor out instructions with same operands to compress the tables.
   if (!NumberedInstructions.empty()) {
     std::vector<int> OperandOffsets;
     std::vector<Record *> OperandRecords;
@@ -399,7 +407,10 @@ void InstrInfoEmitter::emitOperandTypeMappings(
           OS << "/**/\n    ";
       }
       Record *OpR = OperandRecords[I];
-      if (OpR->isSubClassOf("Operand") && !OpR->isAnonymous())
+      if ((OpR->isSubClassOf("Operand") ||
+           OpR->isSubClassOf("RegisterOperand") ||
+           OpR->isSubClassOf("RegisterClass")) &&
+          !OpR->isAnonymous())
         OS << "OpTypes::" << OpR->getName();
       else
         OS << -1;
@@ -414,7 +425,7 @@ void InstrInfoEmitter::emitOperandTypeMappings(
   OS << "}\n";
   OS << "} // end namespace " << Namespace << "\n";
   OS << "} // end namespace llvm\n";
-  OS << "#endif //GET_INSTRINFO_OPERAND_TYPE\n\n";
+  OS << "#endif // GET_INSTRINFO_OPERAND_TYPE\n\n";
 }
 
 void InstrInfoEmitter::emitMCIIHelperMethods(raw_ostream &OS,

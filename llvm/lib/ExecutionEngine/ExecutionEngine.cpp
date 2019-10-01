@@ -626,7 +626,7 @@ GenericValue ExecutionEngine::getConstantValue(const Constant *C) {
       break;
     case Type::VectorTyID:
       // if the whole vector is 'undef' just reserve memory for the value.
-      auto* VTy = dyn_cast<VectorType>(C->getType());
+      auto* VTy = cast<VectorType>(C->getType());
       Type *ElemTy = VTy->getElementType();
       unsigned int elemNum = VTy->getNumElements();
       Result.AggregateVal.resize(elemNum);
@@ -925,7 +925,7 @@ GenericValue ExecutionEngine::getConstantValue(const Constant *C) {
         elemNum = CDV->getNumElements();
         ElemTy = CDV->getElementType();
     } else if (CV || CAZ) {
-        VectorType* VTy = dyn_cast<VectorType>(C->getType());
+        auto* VTy = cast<VectorType>(C->getType());
         elemNum = VTy->getNumElements();
         ElemTy = VTy->getElementType();
     } else {

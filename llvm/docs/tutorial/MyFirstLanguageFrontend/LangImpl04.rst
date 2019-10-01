@@ -318,7 +318,7 @@ look like this:
           TheJIT->removeModule(H);
         }
 
-If parsing and codegen succeeed, the next step is to add the module containing
+If parsing and codegen succeed, the next step is to add the module containing
 the top-level expression to the JIT. We do this by calling addModule, which
 triggers code generation for all the functions in the module, and returns a
 handle that can be used to remove the module from the JIT later. Once the module

@@ -2366,7 +2366,13 @@ def err_constexpr_tag : Error<
   "%select{class|struct|interface|union|enum}0 "
   "cannot be marked %sub{select_constexpr_spec_kind}1">;
 def err_constexpr_dtor : Error<
-  "destructor cannot be marked %sub{select_constexpr_spec_kind}0">;
+  "destructor cannot be declared %sub{select_constexpr_spec_kind}0">;
+def err_constexpr_dtor_subobject : Error<
+  "destructor cannot be declared %sub{select_constexpr_spec_kind}0 because "
+  "%select{data member %2|base class %3}1 does not have a "
+  "constexpr destructor">;
+def note_constexpr_dtor_subobject : Note<
+  "%select{data member %1|base class %2}0 declared here">;
 def err_constexpr_wrong_decl_kind : Error<
   "%sub{select_constexpr_spec_kind}0 can only be used "
   "in %select{|variable and function|function|variable}0 declarations">;
@@ -2378,6 +2384,8 @@ def err_constexpr_var_non_literal : Error<
   "constexpr variable cannot have non-literal type %0">;
 def err_constexpr_var_requires_const_init : Error<
   "constexpr variable %0 must be initialized by a constant expression">;
+def err_constexpr_var_requires_const_destruction : Error<
+  "constexpr variable %0 must have constant destruction">;
 def err_constexpr_redecl_mismatch : Error<
   "%select{non-constexpr|constexpr|consteval}1 declaration of %0"
   " follows %select{non-constexpr|constexpr|consteval}2 declaration">;
@@ -2438,9 +2446,13 @@ def err_constexpr_local_var_static : Error<
 def err_constexpr_local_var_non_literal_type : Error<
   "variable of non-literal type %1 cannot be defined in a constexpr "
   "%select{function|constructor}0">;
-def err_constexpr_local_var_no_init : Error<
-  "variables defined in a constexpr %select{function|constructor}0 must be "
-  "initialized">;
+def ext_constexpr_local_var_no_init : ExtWarn<
+  "uninitialized variable in a constexpr %select{function|constructor}0 "
+  "is a C++20 extension">, InGroup<CXX2a>;
+def warn_cxx17_compat_constexpr_local_var_no_init : Warning<
+  "uninitialized variable in a constexpr %select{function|constructor}0 "
+  "is incompatible with C++ standards before C++20">,
+  InGroup<CXXPre2aCompat>, DefaultIgnore;
 def ext_constexpr_function_never_constant_expr : ExtWarn<
   "constexpr %select{function|constructor}0 never produces a "
   "constant expression">, InGroup<DiagGroup<"invalid-constexpr">>, DefaultError;
@@ -2465,10 +2477,8 @@ def warn_cxx11_compat_constexpr_body_multiple_return : Warning<
   InGroup<CXXPre14Compat>, DefaultIgnore;
 def note_constexpr_body_previous_return : Note<
   "previous return statement is here">;
-def err_constexpr_function_try_block : Error<
-  "function try block not allowed in constexpr %select{function|constructor}0">;
 
-// c++2a function try blocks in constexpr
+// C++2a function try blocks in constexpr
 def ext_constexpr_function_try_block_cxx2a : ExtWarn<
   "function try block in constexpr %select{function|constructor}0 is "
   "a C++2a extension">, InGroup<CXX2a>;
@@ -2477,10 +2487,20 @@ def warn_cxx17_compat_constexpr_function_try_block : Warning<
   "incompatible with C++ standards before C++2a">,
   InGroup<CXXPre2aCompat>, DefaultIgnore;
 
-def err_constexpr_union_ctor_no_init : Error<
-  "constexpr union constructor does not initialize any member">;
-def err_constexpr_ctor_missing_init : Error<
-  "constexpr constructor must initialize all members">;
+def ext_constexpr_union_ctor_no_init : ExtWarn<
+  "constexpr union constructor that does not initialize any member "
+  "is a C++20 extension">, InGroup<CXX2a>;
+def warn_cxx17_compat_constexpr_union_ctor_no_init : Warning<
+  "constexpr union constructor that does not initialize any member "
+  "is incompatible with C++ standards before C++20">,
+  InGroup<CXXPre2aCompat>, DefaultIgnore;
+def ext_constexpr_ctor_missing_init : ExtWarn<
+  "constexpr constructor that does not initialize all members "
+  "is a C++20 extension">, InGroup<CXX2a>;
+def warn_cxx17_compat_constexpr_ctor_missing_init : Warning<
+  "constexpr constructor that does not initialize all members "
+  "is incompatible with C++ standards before C++20">,
+  InGroup<CXXPre2aCompat>, DefaultIgnore;
 def note_constexpr_ctor_missing_init : Note<
   "member not initialized by constructor">;
 def note_non_literal_no_constexpr_ctors : Note<
@@ -2495,6 +2515,8 @@ def note_non_literal_user_provided_dtor : Note<
   "%0 is not literal because it has a user-provided destructor">;
 def note_non_literal_nontrivial_dtor : Note<
   "%0 is not literal because it has a non-trivial destructor">;
+def note_non_literal_non_constexpr_dtor : Note<
+  "%0 is not literal because its destructor is not constexpr">;
 def note_non_literal_lambda : Note<
   "lambda closure types are non-literal types before C++17">;
 def warn_private_extern : Warning<
@@ -2988,6 +3010,10 @@ def warn_gnu_inline_attribute_requires_inline : Warning<
   "'gnu_inline' attribute requires function to be marked 'inline',"
   " attribute ignored">,
   InGroup<IgnoredAttributes>;
+def warn_gnu_inline_cplusplus_without_extern : Warning<
+  "'gnu_inline' attribute without 'extern' in C++ treated as externally"
+  " available, this changed in Clang 10">,
+  InGroup<DiagGroup<"gnu-inline-cpp-without-extern">>;
 def err_attribute_vecreturn_only_vector_member : Error<
   "the vecreturn attribute can only be used on a class or structure with one member, which must be a vector">;
 def err_attribute_vecreturn_only_pod_record : Error<
@@ -3290,9 +3316,9 @@ def warn_impcast_integer_precision_constant : Warning<
 def warn_impcast_bitfield_precision_constant : Warning<
   "implicit truncation from %2 to bit-field changes value from %0 to %1">,
   InGroup<BitFieldConstantConversion>;
-def warn_impcast_constant_int_to_objc_bool : Warning<
-  "implicit conversion from constant value %0 to BOOL; "
-  "the only well defined values for BOOL are YES and NO">,
+def warn_impcast_constant_value_to_objc_bool : Warning<
+  "implicit conversion from constant value %0 to 'BOOL'; "
+  "the only well defined values for 'BOOL' are YES and NO">,
   InGroup<ObjCBoolConstantConversion>;
 
 def warn_impcast_fixed_point_range : Warning<
@@ -3308,6 +3334,12 @@ def warn_impcast_literal_float_to_integer_out_of_range : Warning<
 def warn_impcast_float_integer : Warning<
   "implicit conversion turns floating-point number into integer: %0 to %1">,
   InGroup<FloatConversion>, DefaultIgnore;
+def warn_impcast_float_to_objc_signed_char_bool : Warning<
+  "implicit conversion from floating-point type %0 to 'BOOL'">,
+  InGroup<ObjCSignedCharBoolImplicitFloatConversion>;
+def warn_impcast_int_to_objc_signed_char_bool : Warning<
+  "implicit conversion from integral type %0 to 'BOOL'">,
+  InGroup<ObjCSignedCharBoolImplicitIntConversion>, DefaultIgnore;
 
 // Implicit int -> float conversion precision loss warnings.
 def warn_impcast_integer_float_precision : Warning<
@@ -5402,9 +5434,6 @@ def err_arc_mismatched_cast : Error<
   " to %3 is disallowed with ARC">;
 def err_arc_nolifetime_behavior : Error<
   "explicit ownership qualifier on cast result has no effect">;
-def err_arc_objc_object_in_tag : Error<
-  "ARC forbids %select{Objective-C objects|blocks}0 in "
-  "%select{struct|interface|union|<<ERROR>>|enum}1">;
 def err_arc_objc_property_default_assign_on_object : Error<
   "ARC forbids synthesizing a property of an Objective-C object "
   "with unspecified ownership or storage attribute">;
@@ -5697,6 +5726,12 @@ def warn_precedence_conditional : Warning<
 def note_precedence_conditional_first : Note<
   "place parentheses around the '?:' expression to evaluate it first">;
 
+def warn_enum_constant_in_bool_context : Warning<
+  "converting the enum constant to a boolean">,
+  InGroup<IntInBoolContext>, DefaultIgnore;
+def warn_left_shift_in_bool_context : Warning<
+  "converting the result of '<<' to a boolean; did you mean '(%0) != 0'?">,
+  InGroup<IntInBoolContext>, DefaultIgnore;
 def warn_logical_instead_of_bitwise : Warning<
   "use of logical '%0' with constant operand">,
   InGroup<DiagGroup<"constant-logical-operand">>;
@@ -6109,8 +6144,8 @@ def warn_tautological_constant_compare : Warning<
   "%select{%1|%3}0 is always %4">,
   InGroup<TautologicalTypeLimitCompare>, DefaultIgnore;
 def warn_tautological_compare_objc_bool : Warning<
-  "result of comparison of constant %0 with expression of type BOOL"
-  " is always %1, as the only well defined values for BOOL are YES and NO">,
+  "result of comparison of constant %0 with expression of type 'BOOL'"
+  " is always %1, as the only well defined values for 'BOOL' are YES and NO">,
   InGroup<TautologicalObjCBoolCompare>;
 
 def warn_mixed_sign_comparison : Warning<
@@ -6122,8 +6157,20 @@ def warn_out_of_range_compare : Warning<
   InGroup<TautologicalOutOfRangeCompare>;
 def warn_tautological_bool_compare : Warning<warn_out_of_range_compare.Text>,
   InGroup<TautologicalConstantCompare>;
+def warn_integer_constants_in_conditional_always_true : Warning<
+  "converting the result of '?:' with integer constants to a boolean always "
+  "evaluates to 'true'">,
+  InGroup<TautologicalConstantCompare>;
+def warn_left_shift_always : Warning<
+  "converting the result of '<<' to a boolean always evaluates "
+  "to %select{false|true}0">,
+  InGroup<TautologicalConstantCompare>;
 def warn_comparison_of_mixed_enum_types : Warning<
   "comparison of two values with different enumeration types"
+  "%diff{ ($ and $)|}0,1">,
+  InGroup<EnumCompare>;
+def warn_conditional_mixed_enum_types : Warning<
+  "enumeration type mismatch in conditional expression"
   "%diff{ ($ and $)|}0,1">,
   InGroup<EnumCompare>;
 def warn_comparison_of_mixed_enum_types_switch : Warning<
@@ -7595,8 +7642,6 @@ let CategoryName = "Inline Assembly Issue" in {
     "invalid lvalue in asm input for constraint '%0'">;
   def err_asm_invalid_input_constraint : Error<
     "invalid input constraint '%0' in asm">;
-  def err_asm_immediate_expected : Error<"constraint '%0' expects "
-    "an integer constant expression">;
   def err_asm_tying_incompatible_types : Error<
     "unsupported inline asm: input with type "
     "%diff{$ matching output with type $|}0,1">;
@@ -8124,6 +8169,9 @@ def warn_printf_invalid_objc_flag: Warning<
     InGroup<Format>;
 def warn_scanf_scanlist_incomplete : Warning<
   "no closing ']' for '%%[' in scanf format string">,
+  InGroup<Format>;
+def warn_format_bool_as_character : Warning<
+  "using '%0' format specifier, but argument has boolean value">,
   InGroup<Format>;
 def note_format_string_defined : Note<"format string is defined here">;
 def note_format_fix_specifier : Note<"did you mean to use '%0'?">;
@@ -9213,10 +9261,10 @@ def err_omp_single_copyprivate_with_nowait : Error<
   "the 'copyprivate' clause must not be used with the 'nowait' clause">;
 def note_omp_nowait_clause_here : Note<
   "'nowait' clause is here">;
-def err_omp_single_decl_in_declare_simd : Error<
-  "single declaration is expected after 'declare simd' directive">;
+def err_omp_single_decl_in_declare_simd_variant : Error<
+  "single declaration is expected after 'declare %select{simd|variant}0' directive">;
 def err_omp_function_expected : Error<
-  "'#pragma omp declare simd' can only be applied to functions">;
+  "'#pragma omp declare %select{simd|variant}0' can only be applied to functions">;
 def err_omp_wrong_cancel_region : Error<
   "one of 'for', 'parallel', 'sections' or 'taskgroup' is expected">;
 def err_omp_parent_cancel_region_nowait : Error<
@@ -9408,6 +9456,34 @@ def note_omp_marked_device_type_here : Note<"marked as 'device_type(%0)' here">;
 def warn_omp_declare_target_after_first_use : Warning<
   "declaration marked as declare target after first use, it may lead to incorrect results">,
   InGroup<OpenMPTarget>;
+def err_omp_declare_variant_incompat_attributes : Error<
+  "'#pragma omp declare variant' is not compatible with any target-specific attributes">;
+def warn_omp_declare_variant_after_used : Warning<
+  "'#pragma omp declare variant' cannot be applied for function after first "
+  "usage; the original function might be used">, InGroup<SourceUsesOpenMP>;
+def warn_omp_declare_variant_after_emitted : Warning<
+  "'#pragma omp declare variant' cannot be applied to the function that was defined already;"
+  " the original function might be used">, InGroup<SourceUsesOpenMP>;
+def err_omp_declare_variant_noproto : Error<
+  "function with '#pragma omp declare variant' must have a prototype">;
+def note_omp_declare_variant_specified_here : Note<
+  "'#pragma omp declare variant' for function specified here">;
+def err_omp_declare_variant_doesnt_support : Error<
+  "'#pragma omp declare variant' does not "
+  "support %select{function templates|virtual functions|"
+  "deduced return types|constructors|destructors|deleted functions|"
+  "defaulted functions|constexpr functions|consteval function}0">;
+def err_omp_declare_variant_diff : Error<
+  "function with '#pragma omp declare variant' has a different %select{calling convention"
+  "|return type|constexpr specification|inline specification|storage class|"
+  "linkage}0">;
+def err_omp_declare_variant_incompat_types : Error<
+  "variant in '#pragma omp declare variant' with type %0 is incompatible with type %1"
+  >;
+def warn_omp_declare_variant_marked_as_declare_variant : Warning<
+  "variant function in '#pragma omp declare variant' is itself marked as '#pragma omp declare variant'"
+  >, InGroup<SourceUsesOpenMP>;
+def note_omp_marked_declare_variant_here : Note<"marked as 'declare variant' here">;
 } // end of OpenMP category
 
 let CategoryName = "Related Result Type Issue" in {
@@ -9857,8 +9933,6 @@ def err_memtag_arg_must_be_pointer : Error<
   "%0 argument of MTE builtin function must be a pointer (%1 invalid)">;
 def err_memtag_arg_must_be_integer : Error<
   "%0 argument of MTE builtin function must be an integer type (%1 invalid)">;
-def err_memtag_arg_must_be_unsigned : Error<
-  "%0 argument  of MTE builtin function must be an unsigned integer type (%1 invalid)">;
 
 def warn_dereference_of_noderef_type : Warning<
   "dereferencing %0; was declared with a 'noderef' type">, InGroup<NoDeref>;

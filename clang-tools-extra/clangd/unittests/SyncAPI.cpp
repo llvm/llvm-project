@@ -145,5 +145,12 @@ RefSlab getRefs(const SymbolIndex &Index, SymbolID ID) {
   return std::move(Slab).build();
 }
 
+llvm::Expected<std::vector<Range>>
+runSemanticRanges(ClangdServer &Server, PathRef File, Position Pos) {
+  llvm::Optional<llvm::Expected<std::vector<Range>>> Result;
+  Server.semanticRanges(File, Pos, capture(Result));
+  return std::move(*Result);
+}
+
 } // namespace clangd
 } // namespace clang

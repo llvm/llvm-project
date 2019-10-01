@@ -13,7 +13,7 @@ define void @test_fcmp_storefloat(i1 %cond, float* %fptr, float %f1, float %f2, 
 ; X86-64-NEXT:  .LBB0_2: # %else
 ; X86-64-NEXT:    vcmpeqss %xmm5, %xmm4, %k1
 ; X86-64-NEXT:  .LBB0_3: # %exit
-; X86-64-NEXT:    vmovss %xmm0, %xmm0, %xmm1 {%k1}
+; X86-64-NEXT:    vmovss %xmm0, %xmm1, %xmm1 {%k1}
 ; X86-64-NEXT:    vmovss %xmm1, (%rsi)
 ; X86-64-NEXT:    retq
 ;
@@ -112,7 +112,7 @@ define void @test_load_add(i1 %cond, float* %fptr, i1* %iptr1, i1* %iptr2, float
 ; X86-64-NEXT:    movb (%rcx), %al
 ; X86-64-NEXT:  .LBB2_3: # %exit
 ; X86-64-NEXT:    kmovd %eax, %k1
-; X86-64-NEXT:    vmovss %xmm0, %xmm0, %xmm1 {%k1}
+; X86-64-NEXT:    vmovss %xmm0, %xmm1, %xmm1 {%k1}
 ; X86-64-NEXT:    vmovss %xmm1, (%rsi)
 ; X86-64-NEXT:    retq
 ;
@@ -167,7 +167,7 @@ define void @test_load_i1(i1 %cond, float* %fptr, i1* %iptr1, i1* %iptr2, float 
 ; X86-64-NEXT:  .LBB3_2: # %else
 ; X86-64-NEXT:    kmovb (%rcx), %k1
 ; X86-64-NEXT:  .LBB3_3: # %exit
-; X86-64-NEXT:    vmovss %xmm0, %xmm0, %xmm1 {%k1}
+; X86-64-NEXT:    vmovss %xmm0, %xmm1, %xmm1 {%k1}
 ; X86-64-NEXT:    vmovss %xmm1, (%rsi)
 ; X86-64-NEXT:    retq
 ;

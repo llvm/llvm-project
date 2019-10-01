@@ -1,4 +1,0 @@
-; RUN: echo abc > %t.mri
-
-; RUN: not llvm-ar -M  < %t.mri 2>&1 | FileCheck %s
-; CHECK: Unknown command: abc.

@@ -7,12 +7,12 @@ class MyFrameRecognizer(object):
         if frame.name == "foo":
             arg1 = frame.EvaluateExpression("$arg1").signed
             arg2 = frame.EvaluateExpression("$arg2").signed
-            val1 = lldb.target.CreateValueFromExpression("a", "%d" % arg1)
-            val2 = lldb.target.CreateValueFromExpression("b", "%d" % arg2)
+            val1 = frame.GetThread().GetProcess().GetTarget().CreateValueFromExpression("a", "%d" % arg1)
+            val2 = frame.GetThread().GetProcess().GetTarget().CreateValueFromExpression("b", "%d" % arg2)
             return [val1, val2]
         elif frame.name == "bar":
             arg1 = frame.EvaluateExpression("$arg1").signed
-            val1 = lldb.target.CreateValueFromExpression("a", "(int *)%d" % arg1)
+            val1 = frame.GetThread().GetProcess().GetTarget().CreateValueFromExpression("a", "(int *)%d" % arg1)
             return [val1]
         return []
 

@@ -14,6 +14,7 @@
 #define LLVM_TEXTAPI_MACHO_ARCHITECTURE_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
@@ -38,6 +39,9 @@ StringRef getArchitectureName(Architecture Arch);
 
 /// Convert an architecture slice to a CPU Type and Subtype pair.
 std::pair<uint32_t, uint32_t> getCPUTypeFromArchitecture(Architecture Arch);
+
+/// Convert a target to an architecture slice.
+Architecture mapToArchitecture(const llvm::Triple &Target);
 
 raw_ostream &operator<<(raw_ostream &OS, Architecture Arch);
 

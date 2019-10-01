@@ -160,23 +160,14 @@ let Predicates = [UseHVX] in {
 
 // Bitcasts between same-size vector types are no-ops, except for the
 // actual type change.
-class Bitcast<ValueType ResTy, ValueType InpTy, RegisterClass RC>
-  : Pat<(ResTy (bitconvert (InpTy RC:$Val))), (ResTy RC:$Val)>;
-
 let Predicates = [UseHVX] in {
-  def: Bitcast<VecI8,   VecI16,  HvxVR>;
-  def: Bitcast<VecI8,   VecI32,  HvxVR>;
-  def: Bitcast<VecI16,  VecI8,   HvxVR>;
-  def: Bitcast<VecI16,  VecI32,  HvxVR>;
-  def: Bitcast<VecI32,  VecI8,   HvxVR>;
-  def: Bitcast<VecI32,  VecI16,  HvxVR>;
+  defm: NopCast_pat<VecI8,   VecI16,  HvxVR>;
+  defm: NopCast_pat<VecI8,   VecI32,  HvxVR>;
+  defm: NopCast_pat<VecI16,  VecI32,  HvxVR>;
 
-  def: Bitcast<VecPI8,  VecPI16, HvxWR>;
-  def: Bitcast<VecPI8,  VecPI32, HvxWR>;
-  def: Bitcast<VecPI16, VecPI8,  HvxWR>;
-  def: Bitcast<VecPI16, VecPI32, HvxWR>;
-  def: Bitcast<VecPI32, VecPI8,  HvxWR>;
-  def: Bitcast<VecPI32, VecPI16, HvxWR>;
+  defm: NopCast_pat<VecPI8,  VecPI16, HvxWR>;
+  defm: NopCast_pat<VecPI8,  VecPI32, HvxWR>;
+  defm: NopCast_pat<VecPI16, VecPI32, HvxWR>;
 }
 
 let Predicates = [UseHVX] in {

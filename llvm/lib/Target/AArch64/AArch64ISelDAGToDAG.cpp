@@ -2053,7 +2053,7 @@ static void getUsefulBitsForUse(SDNode *UserNode, APInt &UsefulBits,
 }
 
 static void getUsefulBits(SDValue Op, APInt &UsefulBits, unsigned Depth) {
-  if (Depth >= 6)
+  if (Depth >= SelectionDAG::MaxRecursionDepth)
     return;
   // Initialize UsefulBits
   if (!Depth) {
@@ -2913,49 +2913,6 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       return;
     break;
 
-  case ISD::EXTRACT_VECTOR_ELT: {
-    // Extracting lane zero is a special case where we can just use a plain
-    // EXTRACT_SUBREG instruction, which will become FMOV. This is easier for
-    // the rest of the compiler, especially the register allocator and copyi
-    // propagation, to reason about, so is preferred when it's possible to
-    // use it.
-    ConstantSDNode *LaneNode = cast<ConstantSDNode>(Node->getOperand(1));
-    // Bail and use the default Select() for non-zero lanes.
-    if (LaneNode->getZExtValue() != 0)
-      break;
-    // If the element type is not the same as the result type, likewise
-    // bail and use the default Select(), as there's more to do than just
-    // a cross-class COPY. This catches extracts of i8 and i16 elements
-    // since they will need an explicit zext.
-    if (VT != Node->getOperand(0).getValueType().getVectorElementType())
-      break;
-    unsigned SubReg;
-    switch (Node->getOperand(0)
-                .getValueType()
-                .getVectorElementType()
-                .getSizeInBits()) {
-    default:
-      llvm_unreachable("Unexpected vector element type!");
-    case 64:
-      SubReg = AArch64::dsub;
-      break;
-    case 32:
-      SubReg = AArch64::ssub;
-      break;
-    case 16:
-      SubReg = AArch64::hsub;
-      break;
-    case 8:
-      llvm_unreachable("unexpected zext-requiring extract element!");
-    }
-    SDValue Extract = CurDAG->getTargetExtractSubreg(SubReg, SDLoc(Node), VT,
-                                                     Node->getOperand(0));
-    LLVM_DEBUG(dbgs() << "ISEL: Custom selection!\n=> ");
-    LLVM_DEBUG(Extract->dumpr(CurDAG));
-    LLVM_DEBUG(dbgs() << "\n");
-    ReplaceNode(Node, Extract.getNode());
-    return;
-  }
   case ISD::Constant: {
     // Materialize zero constants as copies from WZR/XZR.  This allows
     // the coalescer to propagate these into other instructions.

@@ -74,7 +74,7 @@ define float @select02(float %a, float %b, float %c, float %eps) {
 ; X64-LABEL: select02:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vcmpless %xmm0, %xmm3, %k1
-; X64-NEXT:    vmovss %xmm2, %xmm0, %xmm1 {%k1}
+; X64-NEXT:    vmovss %xmm2, %xmm1, %xmm1 {%k1}
 ; X64-NEXT:    vmovaps %xmm1, %xmm0
 ; X64-NEXT:    retq
   %cmp = fcmp oge float %a, %eps
@@ -96,7 +96,7 @@ define double @select03(double %a, double %b, double %c, double %eps) {
 ; X64-LABEL: select03:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vcmplesd %xmm0, %xmm3, %k1
-; X64-NEXT:    vmovsd %xmm2, %xmm0, %xmm1 {%k1}
+; X64-NEXT:    vmovsd %xmm2, %xmm1, %xmm1 {%k1}
 ; X64-NEXT:    vmovapd %xmm1, %xmm0
 ; X64-NEXT:    retq
   %cmp = fcmp oge double %a, %eps

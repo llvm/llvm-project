@@ -959,7 +959,7 @@ public:
   /// as this declaration, or NULL if there is no previous declaration.
   Decl *getPreviousDecl() { return getPreviousDeclImpl(); }
 
-  /// Retrieve the most recent declaration that declares the same entity
+  /// Retrieve the previous declaration that declares the same entity
   /// as this declaration, or NULL if there is no previous declaration.
   const Decl *getPreviousDecl() const {
     return const_cast<Decl *>(this)->getPreviousDeclImpl();

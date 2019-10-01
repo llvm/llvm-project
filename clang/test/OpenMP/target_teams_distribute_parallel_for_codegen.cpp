@@ -54,17 +54,14 @@ int target_teams_fun(int *g){
   // discard capture expressions for te and th
   // HCK1: = alloca i32,
   // HCK1: = alloca i32,
-  // HCK1: = alloca i32,
-  // HCK1: = alloca i32,
-  // HCK1: = alloca i32,
   // HCK1: [[N_CAST:%.+]] = alloca i{{32|64}},
   // HCK1: [[TE_CAST:%.+]] = alloca i{{32|64}},
   // HCK1: [[TH_CAST:%.+]] = alloca i{{32|64}},
-  // HCK1: call void @__kmpc_push_target_tripcount(i64 -1, i64 %{{.+}})
   // HCK1: [[N_PAR:%.+]] = load{{.+}}, {{.+}} [[N_CAST]],
   // HCK1: [[TE_PAR:%.+]] = load{{.+}}, {{.+}} [[TE_CAST]],
   // HCK1: [[TH_PAR:%.+]] = load{{.+}}, {{.+}} [[TH_CAST]],
-  // HCK1: call i32 @__tgt_target_teams(i64 -1, i8* @{{[^,]+}}, i32 4, i8** %{{[^,]+}}, i8** %{{[^,]+}}, 
+  // HCK1: call void @__kmpc_push_target_tripcount(i64 -1, i64 %{{.+}})
+  // HCK1: call i32 @__tgt_target_teams(i64 -1, i8* @{{[^,]+}}, i32 4, i8** %{{[^,]+}}, i8** %{{[^,]+}},
 
   // HCK1: call void @[[OFFL1:.+]](i{{32|64}} [[N_PAR]], {{.+}}, i{{32|64}} [[TE_PAR]], i{{32|64}} [[TH_PAR]])
   #pragma omp target teams distribute parallel for num_teams(te), thread_limit(th)

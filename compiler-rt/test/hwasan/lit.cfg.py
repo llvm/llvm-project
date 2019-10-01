@@ -18,9 +18,11 @@ if config.target_arch == 'x86_64':
   # equivalent target feature implemented on x86_64.
   clang_hwasan_common_cflags += ["-mcmodel=large"]
 clang_hwasan_cflags = clang_hwasan_common_cflags + ["-mllvm", "-hwasan-globals",
+                                                   "-mllvm", "-hwasan-use-short-granules",
                                                    "-mllvm", "-hwasan-instrument-landing-pads=0",
                                                    "-mllvm", "-hwasan-instrument-personality-functions"]
-clang_hwasan_oldrt_cflags = clang_hwasan_common_cflags + ["-mllvm", "-hwasan-instrument-landing-pads=1",
+clang_hwasan_oldrt_cflags = clang_hwasan_common_cflags + ["-mllvm", "-hwasan-use-short-granules=0",
+                                                          "-mllvm", "-hwasan-instrument-landing-pads=1",
                                                           "-mllvm", "-hwasan-instrument-personality-functions=0"]
 
 clang_hwasan_cxxflags = config.cxx_mode_flags + clang_hwasan_cflags
@@ -31,6 +33,7 @@ def build_invocation(compile_flags):
 
 config.substitutions.append( ("%clangxx ", build_invocation(clang_cxxflags)) )
 config.substitutions.append( ("%clang_hwasan ", build_invocation(clang_hwasan_cflags)) )
+config.substitutions.append( ("%clang_hwasan_oldrt ", build_invocation(clang_hwasan_oldrt_cflags)) )
 config.substitutions.append( ("%clangxx_hwasan ", build_invocation(clang_hwasan_cxxflags)) )
 config.substitutions.append( ("%clangxx_hwasan_oldrt ", build_invocation(clang_hwasan_oldrt_cxxflags)) )
 config.substitutions.append( ("%compiler_rt_libdir", config.compiler_rt_libdir) )

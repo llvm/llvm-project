@@ -111,6 +111,10 @@ public:
   /// of each call to runOnMachineFunction().
   MCSymbol *CurrentFnSym = nullptr;
 
+  /// The symbol for the current function descriptor on AIX. This is created
+  /// at the beginning of each call to SetupMachineFunction().
+  MCSymbol *CurrentFnDescSym = nullptr;
+
   /// The symbol used to represent the start of the current function for the
   /// purpose of calculating its size (e.g. using the .size directive). By
   /// default, this is equal to CurrentFnSym.
@@ -304,7 +308,7 @@ public:
 
   /// This should be called when a new MachineFunction is being processed from
   /// runOnMachineFunction.
-  void SetupMachineFunction(MachineFunction &MF);
+  virtual void SetupMachineFunction(MachineFunction &MF);
 
   /// This method emits the body and trailer for a function.
   void EmitFunctionBody();
@@ -346,7 +350,7 @@ public:
   /// global value is specified, and if that global has an explicit alignment
   /// requested, it will override the alignment request if required for
   /// correctness.
-  void EmitAlignment(llvm::Align Align, const GlobalObject *GV = nullptr) const;
+  void EmitAlignment(Align Alignment, const GlobalObject *GV = nullptr) const;
 
   /// Lower the specified LLVM Constant to an MCExpr.
   virtual const MCExpr *lowerConstant(const Constant *CV);
@@ -413,6 +417,10 @@ public:
   virtual MCSymbol *GetCPISymbol(unsigned CPID) const;
 
   virtual void EmitFunctionEntryLabel();
+
+  virtual void EmitFunctionDescriptor() {
+    llvm_unreachable("Function descriptor is target-specific.");
+  }
 
   virtual void EmitMachineConstantPoolValue(MachineConstantPoolValue *MCPV);
 
@@ -635,8 +643,8 @@ public:
   void EmitLinkage(const GlobalValue *GV, MCSymbol *GVSym) const;
 
   /// Return the alignment for the specified \p GV.
-  static llvm::Align getGVAlignment(const GlobalValue *GV, const DataLayout &DL,
-                                    llvm::Align InAlign = llvm::Align(1));
+  static Align getGVAlignment(const GlobalValue *GV, const DataLayout &DL,
+                              Align InAlign = Align::None());
 
 private:
   /// Private state for PrintSpecial()

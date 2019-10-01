@@ -37,7 +37,7 @@ void MipsRegInfoRecord::EmitMipsOptionRecord() {
         Context.getELFSection(".MIPS.options", ELF::SHT_MIPS_OPTIONS,
                               ELF::SHF_ALLOC | ELF::SHF_MIPS_NOSTRIP, 1, "");
     MCA.registerSection(*Sec);
-    Sec->setAlignment(llvm::Align(8));
+    Sec->setAlignment(Align(8));
     Streamer->SwitchSection(Sec);
 
     Streamer->EmitIntValue(ELF::ODK_REGINFO, 1);  // kind
@@ -55,7 +55,7 @@ void MipsRegInfoRecord::EmitMipsOptionRecord() {
     MCSectionELF *Sec = Context.getELFSection(".reginfo", ELF::SHT_MIPS_REGINFO,
                                               ELF::SHF_ALLOC, 24, "");
     MCA.registerSection(*Sec);
-    Sec->setAlignment(MTS->getABI().IsN32() ? llvm::Align(8) : llvm::Align(4));
+    Sec->setAlignment(MTS->getABI().IsN32() ? Align(8) : Align(4));
     Streamer->SwitchSection(Sec);
 
     Streamer->EmitIntValue(ri_gprmask, 4);

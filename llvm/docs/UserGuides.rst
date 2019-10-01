@@ -18,16 +18,9 @@ intermediate LLVM representation.
    HowToBuildWithPGO
    HowToCrossCompileBuiltinsOnArm
    HowToCrossCompileLLVM
-   GettingStarted
-   GettingStartedVS
-   FAQ
-   Lexicon
-   HowToAddABuilder
    yaml2obj
    MarkdownQuickstartTemplate
    Phabricator
-   tutorial/index
-   ReleaseNotes
    Passes
    YamlIO
    GetElementPtr
@@ -42,14 +35,26 @@ intermediate LLVM representation.
    BuildingADistribution
    Remarks
 
-:doc:`GettingStarted`
-   Discusses how to get up and running quickly with the LLVM infrastructure.
-   Everything from unpacking and compilation of the distribution to execution
-   of some tools.
+Building, Packaging, and Distributing LLVM
+------------------------------------------
+
+How to build, package, and distribute LLVM.
+
+=====
+CMake
+=====
+
+:doc:`BuildingADistribution`
+  A best-practices guide for using LLVM's CMake build system to package and
+  distribute LLVM-based tools.
 
 :doc:`CMake`
    An addendum to the main Getting Started guide for those using the `CMake
    build system <http://www.cmake.org>`_.
+
+=====
+Clang
+=====
 
 :doc:`HowToBuildOnARM`
    Notes on building and testing LLVM/Clang on ARM.
@@ -57,42 +62,33 @@ intermediate LLVM representation.
 :doc:`HowToBuildWithPGO`
     Notes on building LLVM/Clang with PGO.
 
-:doc:`HowToCrossCompileBuiltinsOnArm`
-   Notes on cross-building and testing the compiler-rt builtins for Arm.
-
 :doc:`HowToCrossCompileLLVM`
    Notes on cross-building and testing LLVM/Clang.
-
-:doc:`GettingStartedVS`
-   An addendum to the main Getting Started guide for those using Visual Studio
-   on Windows.
-
-:doc:`tutorial/index`
-   Tutorials about using LLVM. Includes a tutorial about making a custom
-   language with LLVM.
-
-:doc:`Passes`
-   A list of optimizations and analyses implemented in LLVM.
-
-:doc:`FAQ`
-   A list of common questions and problems and their solutions.
-
-:doc:`Release notes for the current release <ReleaseNotes>`
-   This describes new features, known bugs, and other limitations.
-
-:doc:`TestSuiteGuide`
-  Describes how to compile and run the test-suite benchmarks.
 
 `How to build the C, C++, ObjC, and ObjC++ front end`__
    Instructions for building the clang front-end from source.
 
    .. __: http://clang.llvm.org/get_started.html
 
-:doc:`Lexicon`
-   Definition of acronyms, terms and concepts used in LLVM.
+======
+Docker
+======
 
-:doc:`HowToAddABuilder`
-   Instructions for adding new builder to LLVM buildbot master.
+:doc:`Docker`
+   A reference for using Dockerfiles provided with LLVM.
+
+=================
+Additional Topics
+=================
+
+:doc:`HowToCrossCompileBuiltinsOnArm`
+   Notes on cross-building and testing the compiler-rt builtins for Arm.
+
+:doc:`Passes`
+   A list of optimizations and analyses implemented in LLVM.
+
+:doc:`TestSuiteGuide`
+  Describes how to compile and run the test-suite benchmarks.
 
 :doc:`YamlIO`
    A reference guide for using LLVM's YAML I/O library.
@@ -104,13 +100,6 @@ intermediate LLVM representation.
 :doc:`Frontend/PerformanceTips`
    A collection of tips for frontend authors on how to generate IR
    which LLVM is able to effectively optimize.
-
-:doc:`Docker`
-   A reference for using Dockerfiles provided with LLVM.
-
-:doc:`BuildingADistribution`
-  A best-practices guide for using LLVM's CMake build system to package and
-  distribute LLVM-based tools.
 
 :doc:`Remarks`
    A reference on the implementation of remarks in LLVM.

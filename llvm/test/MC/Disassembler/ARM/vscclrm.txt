@@ -1,5 +1,5 @@
 # RUN: llvm-mc -disassemble -triple=thumbv8.1m.main-none-eabi -mattr=+8msecext -show-encoding %s 2>&1 | FileCheck %s
-
+# RUN: llvm-mc -disassemble -triple=thumbv8.1m.main-none-eabi -mattr=+mve.fp,+8msecext -show-encoding %s 2>&1 | FileCheck %s
 
 [0x9f 0xec 0x04 0x0a]
 # CHECK: vscclrm {s0, s1, s2, s3, vpr}
@@ -15,6 +15,9 @@
 
 [0x9f,0xec,0x04,0x0b]
 # CHECK: vscclrm            {d0, d1, vpr}  @ encoding: [0x9f,0xec,0x04,0x0b]
+
+[0x9f,0xec,0x08,0x0b]
+# CHECK: vscclrm            {d0, d1, d2, d3, vpr}  @ encoding: [0x9f,0xec,0x08,0x0b]
 
 [0x9f,0xec,0x06,0x5b]
 # CHECK: vscclrm            {d5, d6, d7, vpr}  @ encoding: [0x9f,0xec,0x06,0x5b]

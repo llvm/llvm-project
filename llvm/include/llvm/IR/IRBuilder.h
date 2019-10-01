@@ -2231,7 +2231,10 @@ public:
 
   PHINode *CreatePHI(Type *Ty, unsigned NumReservedValues,
                      const Twine &Name = "") {
-    return Insert(PHINode::Create(Ty, NumReservedValues), Name);
+    PHINode *Phi = PHINode::Create(Ty, NumReservedValues);
+    if (isa<FPMathOperator>(Phi))
+      Phi = cast<PHINode>(setFPAttrs(Phi, nullptr /* MDNode* */, FMF));
+    return Insert(Phi, Name);
   }
 
   CallInst *CreateCall(FunctionType *FTy, Value *Callee,

@@ -9,7 +9,6 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/VASPrintf.h"
 
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/iterator.h"
@@ -38,13 +37,22 @@ using namespace lldb_private;
 
 llvm::ManagedStatic<Log::ChannelMap> Log::g_channel_map;
 
-void Log::ListCategories(llvm::raw_ostream &stream, const ChannelMap::value_type &entry) {
-  stream << llvm::formatv("Logging categories for '{0}':\n", entry.first());
-  stream << "  all - all available logging categories\n";
-  stream << "  default - default set of logging categories\n";
+void Log::ForEachCategory(
+    const Log::ChannelMap::value_type &entry,
+    llvm::function_ref<void(llvm::StringRef, llvm::StringRef)> lambda) {
+  lambda("all", "all available logging categories");
+  lambda("default", "default set of logging categories");
   for (const auto &category : entry.second.m_channel.categories)
-    stream << llvm::formatv("  {0} - {1}\n", category.name,
-                            category.description);
+    lambda(category.name, category.description);
+}
+
+void Log::ListCategories(llvm::raw_ostream &stream,
+                         const ChannelMap::value_type &entry) {
+  stream << llvm::formatv("Logging categories for '{0}':\n", entry.first());
+  ForEachCategory(entry,
+                  [&stream](llvm::StringRef name, llvm::StringRef description) {
+                    stream << llvm::formatv("  {0} - {1}\n", name, description);
+                  });
 }
 
 uint32_t Log::GetFlags(llvm::raw_ostream &stream, const ChannelMap::value_type &entry,
@@ -235,6 +243,23 @@ bool Log::ListChannelCategories(llvm::StringRef channel,
 void Log::DisableAllLogChannels() {
   for (auto &entry : *g_channel_map)
     entry.second.Disable(UINT32_MAX);
+}
+
+void Log::ForEachChannelCategory(
+    llvm::StringRef channel,
+    llvm::function_ref<void(llvm::StringRef, llvm::StringRef)> lambda) {
+  auto ch = g_channel_map->find(channel);
+  if (ch == g_channel_map->end())
+    return;
+
+  ForEachCategory(*ch, lambda);
+}
+
+std::vector<llvm::StringRef> Log::ListChannels() {
+  std::vector<llvm::StringRef> result;
+  for (const auto &channel : *g_channel_map)
+    result.push_back(channel.first());
+  return result;
 }
 
 void Log::ListAllLogChannels(llvm::raw_ostream &stream) {

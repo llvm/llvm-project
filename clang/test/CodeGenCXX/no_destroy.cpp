@@ -5,10 +5,8 @@ struct NonTrivial {
   ~NonTrivial();
 };
 
-// CHECK-LABEL: define internal void @__cxx_global_var_init
 // CHECK-NOT: __cxa_atexit{{.*}}_ZN10NonTrivialD1Ev
 [[clang::no_destroy]] NonTrivial nt1;
-// CHECK-LABEL: define internal void @__cxx_global_var_init
 // CHECK-NOT: _tlv_atexit{{.*}}_ZN10NonTrivialD1Ev
 [[clang::no_destroy]] thread_local NonTrivial nt2;
 
@@ -16,11 +14,9 @@ struct NonTrivial2 {
   ~NonTrivial2();
 };
 
-// CHECK-LABEL: define internal void @__cxx_global_var_init
-// CHECK: __cxa_atexit{{.*}}_ZN11NonTrivial2D1Ev
+// CHECK: __cxa_atexit{{.*}}_ZN11NonTrivial2D1Ev{{.*}}nt21
 NonTrivial2 nt21;
-// CHECK-LABEL: define internal void @__cxx_global_var_init
-// CHECK: _tlv_atexit{{.*}}_ZN11NonTrivial2D1Ev
+// CHECK: _tlv_atexit{{.*}}_ZN11NonTrivial2D1Ev{{.*}}nt22
 thread_local NonTrivial2 nt22;
 
 // CHECK-LABEL: define void @_Z1fv

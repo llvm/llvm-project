@@ -38,12 +38,12 @@ define void @foo(i32 signext %size) {
 ; RV64-NEXT:    .cfi_offset s0, -16
 ; RV64-NEXT:    addi s0, sp, 16
 ; RV64-NEXT:    .cfi_def_cfa s0, 0
-; RV64-NEXT:    addi a1, zero, 1
-; RV64-NEXT:    slli a1, a1, 33
-; RV64-NEXT:    addi a1, a1, -16
 ; RV64-NEXT:    slli a0, a0, 32
 ; RV64-NEXT:    srli a0, a0, 32
 ; RV64-NEXT:    addi a0, a0, 15
+; RV64-NEXT:    addi a1, zero, 1
+; RV64-NEXT:    slli a1, a1, 33
+; RV64-NEXT:    addi a1, a1, -16
 ; RV64-NEXT:    and a0, a0, a1
 ; RV64-NEXT:    sub a0, sp, a0
 ; RV64-NEXT:    mv sp, a0

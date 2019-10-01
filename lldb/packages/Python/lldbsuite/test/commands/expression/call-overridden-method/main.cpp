@@ -1,15 +1,16 @@
 class Base {
 public:
   virtual ~Base() {}
-  virtual void foo() {}
+  virtual int foo() { return 1; }
 };
 
 class Derived : public Base {
 public:
-  virtual void foo() {}
+  virtual int foo() { return 2; }
 };
 
 int main() {
+  Base realbase;
   Derived d;
   Base *b = &d;
   return 0; // Set breakpoint here

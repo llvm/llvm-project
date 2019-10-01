@@ -848,6 +848,11 @@ class ImmLeaf<ValueType vt, code pred, SDNodeXForm xform = NOOP_SDNodeXForm,
   bit IsAPFloat = 0;
 }
 
+// Convenience wrapper for ImmLeaf to use timm/TargetConstant instead
+// of imm/Constant.
+class TImmLeaf<ValueType vt, code pred, SDNodeXForm xform = NOOP_SDNodeXForm,
+  SDNode ImmNode = timm> : ImmLeaf<vt, pred, xform, ImmNode>;
+
 // An ImmLeaf except that Imm is an APInt. This is useful when you need to
 // zero-extend the immediate instead of sign-extend it.
 //

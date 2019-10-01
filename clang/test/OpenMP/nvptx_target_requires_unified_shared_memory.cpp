@@ -40,10 +40,10 @@ int bar(int n){
 // CHECK-HOST: [[OFFLOAD_MAPTYPES:@.+]] = private unnamed_addr constant [2 x i64] [i64 800, i64 800]
 
 // CHECK-HOST: [[OMP_OFFLOAD_ENTRY_LINK_VAR_PTR_NAME:@.+]] = internal unnamed_addr constant [21 x i8]
-// CHECK-HOST: [[OMP_OFFLOAD_ENTRY_LINK_VAR_PTR:@.+]] = weak constant %struct.__tgt_offload_entry { i8* bitcast (double** [[VAR_DECL_TGT_LINK_PTR]] to i8*), i8* getelementptr inbounds ([21 x i8], [21 x i8]* [[OMP_OFFLOAD_ENTRY_LINK_VAR_PTR_NAME]], i32 0, i32 0), i64 8, i32 1, i32 0 }, section ".omp_offloading.entries"
+// CHECK-HOST: [[OMP_OFFLOAD_ENTRY_LINK_VAR_PTR:@.+]] = weak constant %struct.__tgt_offload_entry { i8* bitcast (double** [[VAR_DECL_TGT_LINK_PTR]] to i8*), i8* getelementptr inbounds ([21 x i8], [21 x i8]* [[OMP_OFFLOAD_ENTRY_LINK_VAR_PTR_NAME]], i32 0, i32 0), i64 8, i32 1, i32 0 }, section "omp_offloading_entries"
 
 // CHECK-HOST: [[OMP_OFFLOAD_ENTRY_TO_VAR_PTR_NAME:@.+]] = internal unnamed_addr constant [24 x i8]
-// CHECK-HOST: [[OMP_OFFLOAD_ENTRY_TO_VAR_PTR:@.+]] = weak constant %struct.__tgt_offload_entry { i8* bitcast (double** [[VAR_DECL_TGT_TO_PTR]] to i8*), i8* getelementptr inbounds ([24 x i8], [24 x i8]* [[OMP_OFFLOAD_ENTRY_TO_VAR_PTR_NAME]], i32 0, i32 0), i64 8, i32 0, i32 0 }, section ".omp_offloading.entries"
+// CHECK-HOST: [[OMP_OFFLOAD_ENTRY_TO_VAR_PTR:@.+]] = weak constant %struct.__tgt_offload_entry { i8* bitcast (double** [[VAR_DECL_TGT_TO_PTR]] to i8*), i8* getelementptr inbounds ([24 x i8], [24 x i8]* [[OMP_OFFLOAD_ENTRY_TO_VAR_PTR_NAME]], i32 0, i32 0), i64 8, i32 0, i32 0 }, section "omp_offloading_entries"
 
 // CHECK-HOST: [[N_CASTED:%.+]] = alloca i64
 // CHECK-HOST: [[SUM_CASTED:%.+]] = alloca i64

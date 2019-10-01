@@ -67,7 +67,7 @@ public:
 /// Before:
 ///   ......
 ///   %cmp10 = fcmp une float %tmp1, %tmp2
-///   br i1 %cmp1, label %if.then, label %lor.rhs
+///   br i1 %cmp10, label %if.then, label %lor.rhs
 ///
 /// lor.rhs:
 ///   ......
@@ -251,8 +251,8 @@ bool FlattenCFGOpt::FlattenParallelAndOr(BasicBlock *BB, IRBuilder<> &Builder) {
     bool EverChanged = false;
     for (; CurrBlock != FirstCondBlock;
          CurrBlock = CurrBlock->getSinglePredecessor()) {
-      BranchInst *BI = dyn_cast<BranchInst>(CurrBlock->getTerminator());
-      CmpInst *CI = dyn_cast<CmpInst>(BI->getCondition());
+      auto *BI = cast<BranchInst>(CurrBlock->getTerminator());
+      auto *CI = dyn_cast<CmpInst>(BI->getCondition());
       if (!CI)
         continue;
 
@@ -278,7 +278,7 @@ bool FlattenCFGOpt::FlattenParallelAndOr(BasicBlock *BB, IRBuilder<> &Builder) {
 
   // Do the transformation.
   BasicBlock *CB;
-  BranchInst *PBI = dyn_cast<BranchInst>(FirstCondBlock->getTerminator());
+  BranchInst *PBI = cast<BranchInst>(FirstCondBlock->getTerminator());
   bool Iteration = true;
   IRBuilder<>::InsertPointGuard Guard(Builder);
   Value *PC = PBI->getCondition();
@@ -444,7 +444,7 @@ bool FlattenCFGOpt::MergeIfRegion(BasicBlock *BB, IRBuilder<> &Builder) {
   FirstEntryBlock->getInstList().pop_back();
   FirstEntryBlock->getInstList()
       .splice(FirstEntryBlock->end(), SecondEntryBlock->getInstList());
-  BranchInst *PBI = dyn_cast<BranchInst>(FirstEntryBlock->getTerminator());
+  BranchInst *PBI = cast<BranchInst>(FirstEntryBlock->getTerminator());
   Value *CC = PBI->getCondition();
   BasicBlock *SaveInsertBB = Builder.GetInsertBlock();
   BasicBlock::iterator SaveInsertPt = Builder.GetInsertPoint();
@@ -452,6 +452,16 @@ bool FlattenCFGOpt::MergeIfRegion(BasicBlock *BB, IRBuilder<> &Builder) {
   Value *NC = Builder.CreateOr(CInst1, CC);
   PBI->replaceUsesOfWith(CC, NC);
   Builder.SetInsertPoint(SaveInsertBB, SaveInsertPt);
+
+  // Handle PHI node to replace its predecessors to FirstEntryBlock.
+  for (BasicBlock *Succ : successors(PBI)) {
+    for (PHINode &Phi : Succ->phis()) {
+      for (unsigned i = 0, e = Phi.getNumIncomingValues(); i != e; ++i) {
+        if (Phi.getIncomingBlock(i) == SecondEntryBlock)
+          Phi.setIncomingBlock(i, FirstEntryBlock);
+      }
+    }
+  }
 
   // Remove IfTrue1
   if (IfTrue1 != FirstEntryBlock) {

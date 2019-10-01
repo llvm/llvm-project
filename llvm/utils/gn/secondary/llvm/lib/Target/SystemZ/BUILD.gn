@@ -35,7 +35,6 @@ static_library("LLVMSystemZCodeGen") {
     "SystemZCallingConv.cpp",
     "SystemZConstantPoolValue.cpp",
     "SystemZElimCompare.cpp",
-    "SystemZExpandPseudo.cpp",
     "SystemZFrameLowering.cpp",
     "SystemZHazardRecognizer.cpp",
     "SystemZISelDAGToDAG.cpp",

@@ -33,6 +33,7 @@
 # CHECK-NEXT:      "hoverProvider": true,
 # CHECK-NEXT:      "referencesProvider": true,
 # CHECK-NEXT:      "renameProvider": true,
+# CHECK-NEXT:      "selectionRangeProvider": true,
 # CHECK-NEXT:      "signatureHelpProvider": {
 # CHECK-NEXT:        "triggerCharacters": [
 # CHECK-NEXT:          "(",

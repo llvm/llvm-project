@@ -43,7 +43,7 @@ RUN: not llvm-ar mb invalid.txt %t-invalid.a %t2.txt 2>&1 \
 RUN:   | FileCheck %s --check-prefix=ERROR
 RUN: llvm-ar t %t-invalid.a | FileCheck %s --check-prefix=INVALID
 
-ERROR: error: Insertion point not found.
+ERROR: error: insertion point not found
 INVALID:      1.txt
 INVALID-NEXT: 2.txt
 INVALID-NEXT: 3.txt

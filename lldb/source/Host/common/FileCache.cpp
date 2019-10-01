@@ -29,12 +29,13 @@ lldb::user_id_t FileCache::OpenFile(const FileSpec &file_spec, uint32_t flags,
     error.SetErrorString("empty path");
     return UINT64_MAX;
   }
-  FileSP file_sp(new File());
-  error = FileSystem::Instance().Open(*file_sp, file_spec, flags, mode);
-  if (!file_sp->IsValid())
+  auto file = FileSystem::Instance().Open(file_spec, flags, mode);
+  if (!file) {
+    error = file.takeError();
     return UINT64_MAX;
-  lldb::user_id_t fd = file_sp->GetDescriptor();
-  m_cache[fd] = file_sp;
+  }
+  lldb::user_id_t fd = file.get()->GetDescriptor();
+  m_cache[fd] = std::move(file.get());
   return fd;
 }
 
@@ -48,12 +49,12 @@ bool FileCache::CloseFile(lldb::user_id_t fd, Status &error) {
     error.SetErrorStringWithFormat("invalid host file descriptor %" PRIu64, fd);
     return false;
   }
-  FileSP file_sp = pos->second;
-  if (!file_sp) {
+  FileUP &file_up = pos->second;
+  if (!file_up) {
     error.SetErrorString("invalid host backing file");
     return false;
   }
-  error = file_sp->Close();
+  error = file_up->Close();
   m_cache.erase(pos);
   return error.Success();
 }
@@ -70,16 +71,16 @@ uint64_t FileCache::WriteFile(lldb::user_id_t fd, uint64_t offset,
     error.SetErrorStringWithFormat("invalid host file descriptor %" PRIu64, fd);
     return false;
   }
-  FileSP file_sp = pos->second;
-  if (!file_sp) {
+  FileUP &file_up = pos->second;
+  if (!file_up) {
     error.SetErrorString("invalid host backing file");
     return UINT64_MAX;
   }
-  if (static_cast<uint64_t>(file_sp->SeekFromStart(offset, &error)) != offset ||
+  if (static_cast<uint64_t>(file_up->SeekFromStart(offset, &error)) != offset ||
       error.Fail())
     return UINT64_MAX;
   size_t bytes_written = src_len;
-  error = file_sp->Write(src, bytes_written);
+  error = file_up->Write(src, bytes_written);
   if (error.Fail())
     return UINT64_MAX;
   return bytes_written;
@@ -96,16 +97,16 @@ uint64_t FileCache::ReadFile(lldb::user_id_t fd, uint64_t offset, void *dst,
     error.SetErrorStringWithFormat("invalid host file descriptor %" PRIu64, fd);
     return false;
   }
-  FileSP file_sp = pos->second;
-  if (!file_sp) {
+  FileUP &file_up = pos->second;
+  if (!file_up) {
     error.SetErrorString("invalid host backing file");
     return UINT64_MAX;
   }
-  if (static_cast<uint64_t>(file_sp->SeekFromStart(offset, &error)) != offset ||
+  if (static_cast<uint64_t>(file_up->SeekFromStart(offset, &error)) != offset ||
       error.Fail())
     return UINT64_MAX;
   size_t bytes_read = dst_len;
-  error = file_sp->Read(dst, bytes_read);
+  error = file_up->Read(dst, bytes_read);
   if (error.Fail())
     return UINT64_MAX;
   return bytes_read;

@@ -322,7 +322,7 @@ uint64_t MCAssembler::computeFragmentSize(const MCAsmLayout &Layout,
   case MCFragment::FT_Align: {
     const MCAlignFragment &AF = cast<MCAlignFragment>(F);
     unsigned Offset = Layout.getFragmentOffset(&AF);
-    unsigned Size = offsetToAlignment(Offset, llvm::Align(AF.getAlignment()));
+    unsigned Size = offsetToAlignment(Offset, Align(AF.getAlignment()));
 
     // Insert extra Nops for code alignment if the target define
     // shouldInsertExtraNopBytesForCodeAlign target hook.

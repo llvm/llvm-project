@@ -69,8 +69,8 @@ for.cond.cleanup:                                 ; preds = %middle.block, %entr
 ; CHECK: phi
 ; CHECK: phi
 ; CHECK: [[IV:%[^ ]+]] = phi i32 [ %N, %for.cond1.preheader.us ], [ [[REM:%[^ ]+]], %vector.body ]
+; CHECK: [[VCTP:%[^ ]+]] = call <4 x i1> @llvm.arm.vctp32(i32 [[IV]])
 ; CHECK: [[REM]] = sub i32 [[IV]], 4
-; CHECK: [[VCTP:%[^ ]+]] = call <4 x i1> @llvm.arm.vctp32(i32 [[REM]])
 ; CHECK: call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* {{.*}}, i32 4, <4 x i1> [[VCTP]], <4 x i32> undef)
 ; CHECK: call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* {{.*}}, i32 4, <4 x i1> [[VCTP]], <4 x i32> undef)
 define void @mat_vec_i32(i32** nocapture readonly %A, i32* nocapture readonly %B, i32* noalias nocapture %C, i32 %N) {

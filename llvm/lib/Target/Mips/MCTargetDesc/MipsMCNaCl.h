@@ -15,7 +15,7 @@
 namespace llvm {
 
 // NaCl MIPS sandbox's instruction bundle size.
-static const llvm::Align MIPS_NACL_BUNDLE_ALIGN = llvm::Align(16);
+static const Align MIPS_NACL_BUNDLE_ALIGN = Align(16);
 
 bool isBasePlusOffsetMemoryAccess(unsigned Opcode, unsigned *AddrIdx,
                                   bool *IsStore = nullptr);

@@ -730,9 +730,10 @@ public:
 
   StringRef getExternalContentsPrefixDir() const;
 
+  void dump(raw_ostream &OS) const;
+  void dumpEntry(raw_ostream &OS, Entry *E, int NumSpaces = 0) const;
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() const;
-  LLVM_DUMP_METHOD void dumpEntry(Entry *E, int NumSpaces = 0) const;
 #endif
 };
 

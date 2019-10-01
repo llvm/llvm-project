@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -triple i686-linux-gnu -target-cpu i686 -emit-llvm %s -o - | FileCheck %s
 
-typedef signed long long V2LLi __attribute__((vector_size(16)));
-typedef signed long long V4LLi __attribute__((vector_size(32)));
+typedef double V2LLi __attribute__((vector_size(16)));
+typedef double V4LLi __attribute__((vector_size(32)));
 
 // Make sure builtin forces a min-legal-width attribute
 void foo(void) {

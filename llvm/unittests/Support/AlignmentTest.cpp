@@ -28,7 +28,10 @@ std::vector<uint64_t> getValidAlignments() {
   return Out;
 }
 
-TEST(AlignmentTest, AlignDefaultCTor) { EXPECT_EQ(Align().value(), 1ULL); }
+TEST(AlignmentTest, AlignDefaultCTor) {
+  EXPECT_EQ(Align().value(), 1ULL);
+  EXPECT_EQ(Align::None().value(), 1ULL);
+}
 
 TEST(AlignmentTest, MaybeAlignDefaultCTor) {
   EXPECT_FALSE(MaybeAlign().hasValue());

@@ -677,7 +677,8 @@ MipsInstrInfo::genInstrWithNewOpc(unsigned NewOpc,
   return MIB;
 }
 
-bool MipsInstrInfo::findCommutedOpIndices(MachineInstr &MI, unsigned &SrcOpIdx1,
+bool MipsInstrInfo::findCommutedOpIndices(const MachineInstr &MI,
+                                          unsigned &SrcOpIdx1,
                                           unsigned &SrcOpIdx2) const {
   assert(!MI.isBundle() &&
          "TargetInstrInfo::findCommutedOpIndices() can't handle bundles");

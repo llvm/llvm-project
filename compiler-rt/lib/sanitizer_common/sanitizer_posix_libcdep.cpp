@@ -328,7 +328,6 @@ bool MmapFixedNoReserve(uptr fixed_addr, uptr size, const char *name) {
 
 bool MmapFixedSuperNoReserve(uptr fixed_addr, uptr size, const char *name) {
 #if SANITIZER_FREEBSD
-  int flags = 0;
   if (common_flags()->no_huge_pages_for_shadow)
     return MmapFixedNoReserve(fixed_addr, size, name);
   // MAP_NORESERVE is implicit with FreeBSD

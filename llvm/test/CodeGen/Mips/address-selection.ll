@@ -1,8 +1,10 @@
 ; RUN: llc -march=mips < %s -debug 2>&1 | FileCheck %s --check-prefix=MIPS
-; RUN: llc -march=mips -relocation-model=pic -mxgot < %s -debug 2>&1 | FileCheck %s --check-prefix=MIPS-XGOT
+; RUN: llc -march=mips -relocation-model=pic -mattr=+xgot < %s \
+; RUN:     -debug 2>&1 | FileCheck %s --check-prefix=MIPS-XGOT
 
 ; RUN: llc -march=mips -mattr=+micromips < %s -debug 2>&1 | FileCheck %s --check-prefix=MM
-; RUN: llc -march=mips -relocation-model=pic -mxgot -mattr=+micromips < %s -debug 2>&1 | FileCheck %s --check-prefix=MM-XGOT
+; RUN: llc -march=mips -relocation-model=pic -mattr=+xgot,+micromips < %s \
+; RUN:     -debug 2>&1 | FileCheck %s --check-prefix=MM-XGOT
 
 ; REQUIRES: asserts
 

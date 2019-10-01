@@ -419,16 +419,16 @@ def S_SUBB_U32 : SOP2_32 <"s_subb_u32",
 
 let isCommutable = 1 in {
 def S_MIN_I32 : SOP2_32 <"s_min_i32",
-  [(set i32:$sdst, (UniformBinFrag<smin> i32:$src0, i32:$src1))]
+  [(set i32:$sdst, (smin i32:$src0, i32:$src1))]
 >;
 def S_MIN_U32 : SOP2_32 <"s_min_u32",
-  [(set i32:$sdst, (UniformBinFrag<umin> i32:$src0, i32:$src1))]
+  [(set i32:$sdst, (umin i32:$src0, i32:$src1))]
 >;
 def S_MAX_I32 : SOP2_32 <"s_max_i32",
-  [(set i32:$sdst, (UniformBinFrag<smax> i32:$src0, i32:$src1))]
+  [(set i32:$sdst, (smax i32:$src0, i32:$src1))]
 >;
 def S_MAX_U32 : SOP2_32 <"s_max_u32",
-  [(set i32:$sdst, (UniformBinFrag<umax> i32:$src0, i32:$src1))]
+  [(set i32:$sdst, (umax i32:$src0, i32:$src1))]
 >;
 } // End isCommutable = 1
 } // End Defs = [SCC]
@@ -1090,7 +1090,7 @@ def S_WAKEUP : SOPP <0x00000003, (ins), "s_wakeup"> {
 
 let mayLoad = 1, mayStore = 1, hasSideEffects = 1 in
 def S_WAITCNT : SOPP <0x0000000c, (ins WAIT_FLAG:$simm16), "s_waitcnt $simm16",
-    [(int_amdgcn_s_waitcnt UIMM16bit:$simm16)]>;
+    [(int_amdgcn_s_waitcnt timm:$simm16)]>;
 def S_SETHALT : SOPP <0x0000000d, (ins i16imm:$simm16), "s_sethalt $simm16">;
 def S_SETKILL : SOPP <0x0000000b, (ins i16imm:$simm16), "s_setkill $simm16">;
 
@@ -1099,7 +1099,7 @@ def S_SETKILL : SOPP <0x0000000b, (ins i16imm:$simm16), "s_setkill $simm16">;
 // maximum reported is 960 cycles, so 960 / 64 = 15 max, so is the
 // maximum really 15 on VI?
 def S_SLEEP : SOPP <0x0000000e, (ins i32imm:$simm16),
-  "s_sleep $simm16", [(int_amdgcn_s_sleep SIMM16bit:$simm16)]> {
+  "s_sleep $simm16", [(int_amdgcn_s_sleep timm:$simm16)]> {
   let hasSideEffects = 1;
   let mayLoad = 1;
   let mayStore = 1;
@@ -1110,10 +1110,10 @@ def S_SETPRIO : SOPP <0x0000000f, (ins i16imm:$simm16), "s_setprio $simm16">;
 let Uses = [EXEC, M0] in {
 // FIXME: Should this be mayLoad+mayStore?
 def S_SENDMSG : SOPP <0x00000010, (ins SendMsgImm:$simm16), "s_sendmsg $simm16",
-  [(int_amdgcn_s_sendmsg (i32 imm:$simm16), M0)]>;
+  [(int_amdgcn_s_sendmsg (i32 timm:$simm16), M0)]>;
 
 def S_SENDMSGHALT : SOPP <0x00000011, (ins SendMsgImm:$simm16), "s_sendmsghalt $simm16",
-  [(int_amdgcn_s_sendmsghalt (i32 imm:$simm16), M0)]>;
+  [(int_amdgcn_s_sendmsghalt (i32 timm:$simm16), M0)]>;
 
 } // End Uses = [EXEC, M0]
 
@@ -1125,13 +1125,13 @@ def S_ICACHE_INV : SOPP <0x00000013, (ins), "s_icache_inv"> {
   let simm16 = 0;
 }
 def S_INCPERFLEVEL : SOPP <0x00000014, (ins i32imm:$simm16), "s_incperflevel $simm16",
-  [(int_amdgcn_s_incperflevel SIMM16bit:$simm16)]> {
+  [(int_amdgcn_s_incperflevel timm:$simm16)]> {
   let hasSideEffects = 1;
   let mayLoad = 1;
   let mayStore = 1;
 }
 def S_DECPERFLEVEL : SOPP <0x00000015, (ins i32imm:$simm16), "s_decperflevel $simm16",
-  [(int_amdgcn_s_decperflevel SIMM16bit:$simm16)]> {
+  [(int_amdgcn_s_decperflevel timm:$simm16)]> {
   let hasSideEffects = 1;
   let mayLoad = 1;
   let mayStore = 1;
@@ -1180,7 +1180,7 @@ let SubtargetPredicate = isGFX10Plus in {
 // S_GETREG_B32 Intrinsic Pattern.
 //===----------------------------------------------------------------------===//
 def : GCNPat <
-  (int_amdgcn_s_getreg imm:$simm16),
+  (int_amdgcn_s_getreg timm:$simm16),
   (S_GETREG_B32 (as_i16imm $simm16))
 >;
 

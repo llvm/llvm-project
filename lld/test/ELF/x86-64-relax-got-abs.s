@@ -7,7 +7,7 @@
 # RUN: ld.lld %t.o -o %t.so -shared
 # RUN: llvm-objdump -d %t.so | FileCheck %s
 
-# CHECK: movq  4201(%rip), %rax
+# CHECK: movq  4209(%rip), %rax
 
 	movq    bar@GOTPCREL(%rip), %rax
         .data

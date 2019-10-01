@@ -35,6 +35,7 @@ class AMDGPUInstrInfo;
 class AMDGPURegisterBankInfo;
 class GCNSubtarget;
 class MachineInstr;
+class MachineIRBuilder;
 class MachineOperand;
 class MachineRegisterInfo;
 class SIInstrInfo;
@@ -42,6 +43,9 @@ class SIMachineFunctionInfo;
 class SIRegisterInfo;
 
 class AMDGPUInstructionSelector : public InstructionSelector {
+private:
+  MachineRegisterInfo *MRI;
+
 public:
   AMDGPUInstructionSelector(const GCNSubtarget &STI,
                             const AMDGPURegisterBankInfo &RBI,
@@ -49,6 +53,9 @@ public:
 
   bool select(MachineInstr &I) override;
   static const char *getName();
+
+  void setupMF(MachineFunction &MF, GISelKnownBits &KB,
+               CodeGenCoverage &CoverageInfo) override;
 
 private:
   struct GEPInfo {
@@ -82,6 +89,12 @@ private:
   bool selectG_IMPLICIT_DEF(MachineInstr &I) const;
   bool selectG_INSERT(MachineInstr &I) const;
   bool selectG_INTRINSIC(MachineInstr &I) const;
+
+  std::tuple<Register, unsigned, unsigned>
+  splitBufferOffsets(MachineIRBuilder &B, Register OrigOffset) const;
+
+  bool selectStoreIntrinsic(MachineInstr &MI, bool IsFormat) const;
+
   bool selectG_INTRINSIC_W_SIDE_EFFECTS(MachineInstr &I) const;
   int getS_CMPOpcode(CmpInst::Predicate P, unsigned Size) const;
   bool selectG_ICMP(MachineInstr &I) const;
@@ -99,7 +112,7 @@ private:
   bool selectG_PTR_MASK(MachineInstr &I) const;
 
   std::pair<Register, unsigned>
-  selectVOP3ModsImpl(Register Src, const MachineRegisterInfo &MRI) const;
+  selectVOP3ModsImpl(Register Src) const;
 
   InstructionSelector::ComplexRendererFns
   selectVCSRC(MachineOperand &Root) const;

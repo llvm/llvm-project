@@ -139,7 +139,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   // On PPC32/64, arguments smaller than 4/8 bytes are extended, so all
   // arguments are at least 4/8 bytes aligned.
   bool isPPC64 = Subtarget.isPPC64();
-  setMinStackArgumentAlignment(isPPC64 ? llvm::Align(8) : llvm::Align(4));
+  setMinStackArgumentAlignment(isPPC64 ? Align(8) : Align(4));
 
   // Set up the register classes.
   addRegisterClass(MVT::i32, &PPC::GPRCRegClass);
@@ -551,7 +551,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   if (Subtarget.hasAltivec()) {
     // First set operation action for all vector types to expand. Then we
     // will selectively turn on ones that can be effectively codegen'd.
-    for (MVT VT : MVT::vector_valuetypes()) {
+    for (MVT VT : MVT::fixedlen_vector_valuetypes()) {
       // add/sub are legal for all supported vector VT's.
       setOperationAction(ISD::ADD, VT, Legal);
       setOperationAction(ISD::SUB, VT, Legal);
@@ -652,7 +652,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       setOperationAction(ISD::ROTL, VT, Expand);
       setOperationAction(ISD::ROTR, VT, Expand);
 
-      for (MVT InnerVT : MVT::vector_valuetypes()) {
+      for (MVT InnerVT : MVT::fixedlen_vector_valuetypes()) {
         setTruncStoreAction(VT, InnerVT, Expand);
         setLoadExtAction(ISD::SEXTLOAD, VT, InnerVT, Expand);
         setLoadExtAction(ISD::ZEXTLOAD, VT, InnerVT, Expand);
@@ -1179,9 +1179,9 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setJumpIsExpensive();
   }
 
-  setMinFunctionAlignment(llvm::Align(4));
+  setMinFunctionAlignment(Align(4));
   if (Subtarget.isDarwin())
-    setPrefFunctionAlignment(llvm::Align(16));
+    setPrefFunctionAlignment(Align(16));
 
   switch (Subtarget.getDarwinDirective()) {
   default: break;
@@ -1198,8 +1198,8 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   case PPC::DIR_PWR7:
   case PPC::DIR_PWR8:
   case PPC::DIR_PWR9:
-    setPrefLoopAlignment(llvm::Align(16));
-    setPrefFunctionAlignment(llvm::Align(16));
+    setPrefLoopAlignment(Align(16));
+    setPrefFunctionAlignment(Align(16));
     break;
   }
 
@@ -1405,7 +1405,8 @@ const char *PPCTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case PPCISD::EXTRACT_SPE:     return "PPCISD::EXTRACT_SPE";
   case PPCISD::EXTSWSLI:        return "PPCISD::EXTSWSLI";
   case PPCISD::LD_VSX_LH:       return "PPCISD::LD_VSX_LH";
-  case PPCISD::FP_EXTEND_LH:    return "PPCISD::FP_EXTEND_LH";
+  case PPCISD::FP_EXTEND_HALF:  return "PPCISD::FP_EXTEND_HALF";
+  case PPCISD::LD_SPLAT:        return "PPCISD::LD_SPLAT";
   }
   return nullptr;
 }
@@ -1778,10 +1779,10 @@ int PPC::isVSLDOIShuffleMask(SDNode *N, unsigned ShuffleKind,
 
 /// isSplatShuffleMask - Return true if the specified VECTOR_SHUFFLE operand
 /// specifies a splat of a single element that is suitable for input to
-/// VSPLTB/VSPLTH/VSPLTW.
+/// one of the splat operations (VSPLTB/VSPLTH/VSPLTW/XXSPLTW/LXVDSX/etc.).
 bool PPC::isSplatShuffleMask(ShuffleVectorSDNode *N, unsigned EltSize) {
-  assert(N->getValueType(0) == MVT::v16i8 &&
-         (EltSize == 1 || EltSize == 2 || EltSize == 4));
+  assert(N->getValueType(0) == MVT::v16i8 && isPowerOf2_32(EltSize) &&
+         EltSize <= 8 && "Can only handle 1,2,4,8 byte element sizes");
 
   // The consecutive indices need to specify an element, not part of two
   // different elements.  So abandon ship early if this isn't the case.
@@ -2074,10 +2075,11 @@ bool PPC::isXXPERMDIShuffleMask(ShuffleVectorSDNode *N, unsigned &DM,
 }
 
 
-/// getVSPLTImmediate - Return the appropriate VSPLT* immediate to splat the
-/// specified isSplatShuffleMask VECTOR_SHUFFLE mask.
-unsigned PPC::getVSPLTImmediate(SDNode *N, unsigned EltSize,
-                                SelectionDAG &DAG) {
+/// getSplatIdxForPPCMnemonics - Return the splat index as a value that is
+/// appropriate for PPC mnemonics (which have a big endian bias - namely
+/// elements are counted from the left of the vector register).
+unsigned PPC::getSplatIdxForPPCMnemonics(SDNode *N, unsigned EltSize,
+                                         SelectionDAG &DAG) {
   ShuffleVectorSDNode *SVOp = cast<ShuffleVectorSDNode>(N);
   assert(isSplatShuffleMask(SVOp, EltSize));
   if (DAG.getDataLayout().isLittleEndian())
@@ -8185,6 +8187,18 @@ SDValue PPCTargetLowering::LowerBITCAST(SDValue Op, SelectionDAG &DAG) const {
                      Op0.getOperand(1));
 }
 
+static const SDValue *getNormalLoadInput(const SDValue &Op) {
+  const SDValue *InputLoad = &Op;
+  if (InputLoad->getOpcode() == ISD::BITCAST)
+    InputLoad = &InputLoad->getOperand(0);
+  if (InputLoad->getOpcode() == ISD::SCALAR_TO_VECTOR)
+    InputLoad = &InputLoad->getOperand(0);
+  if (InputLoad->getOpcode() != ISD::LOAD)
+    return nullptr;
+  LoadSDNode *LD = cast<LoadSDNode>(*InputLoad);
+  return ISD::isNormalLoad(LD) ? InputLoad : nullptr;
+}
+
 // If this is a case we can't handle, return null and let the default
 // expansion code take care of it.  If we CAN select this case, and if it
 // selects to a single instruction, return Op.  Otherwise, if we can codegen
@@ -8307,6 +8321,34 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
   if (! BVN->isConstantSplat(APSplatBits, APSplatUndef, SplatBitSize,
                              HasAnyUndefs, 0, !Subtarget.isLittleEndian()) ||
       SplatBitSize > 32) {
+
+    const SDValue *InputLoad = getNormalLoadInput(Op.getOperand(0));
+    // Handle load-and-splat patterns as we have instructions that will do this
+    // in one go.
+    if (InputLoad && DAG.isSplatValue(Op, true)) {
+      LoadSDNode *LD = cast<LoadSDNode>(*InputLoad);
+
+      // We have handling for 4 and 8 byte elements.
+      unsigned ElementSize = LD->getMemoryVT().getScalarSizeInBits();
+
+      // Checking for a single use of this load, we have to check for vector
+      // width (128 bits) / ElementSize uses (since each operand of the
+      // BUILD_VECTOR is a separate use of the value.
+      if (InputLoad->getNode()->hasNUsesOfValue(128 / ElementSize, 0) &&
+          ((Subtarget.hasVSX() && ElementSize == 64) ||
+           (Subtarget.hasP9Vector() && ElementSize == 32))) {
+        SDValue Ops[] = {
+          LD->getChain(),    // Chain
+          LD->getBasePtr(),  // Ptr
+          DAG.getValueType(Op.getValueType()) // VT
+        };
+        return
+          DAG.getMemIntrinsicNode(PPCISD::LD_SPLAT, dl,
+                                  DAG.getVTList(Op.getValueType(), MVT::Other),
+                                  Ops, LD->getMemoryVT(), LD->getMemOperand());
+      }
+    }
+
     // BUILD_VECTOR nodes that are not constant splats of up to 32-bits can be
     // lowered to VSX instructions under certain conditions.
     // Without VSX, there is no pattern more efficient than expanding the node.
@@ -8792,6 +8834,45 @@ SDValue PPCTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
 
   unsigned ShiftElts, InsertAtByte;
   bool Swap = false;
+
+  // If this is a load-and-splat, we can do that with a single instruction
+  // in some cases. However if the load has multiple uses, we don't want to
+  // combine it because that will just produce multiple loads.
+  const SDValue *InputLoad = getNormalLoadInput(V1);
+  if (InputLoad && Subtarget.hasVSX() && V2.isUndef() &&
+      (PPC::isSplatShuffleMask(SVOp, 4) || PPC::isSplatShuffleMask(SVOp, 8)) &&
+      InputLoad->hasOneUse()) {
+    bool IsFourByte = PPC::isSplatShuffleMask(SVOp, 4);
+    int SplatIdx =
+      PPC::getSplatIdxForPPCMnemonics(SVOp, IsFourByte ? 4 : 8, DAG);
+
+    LoadSDNode *LD = cast<LoadSDNode>(*InputLoad);
+    // For 4-byte load-and-splat, we need Power9.
+    if ((IsFourByte && Subtarget.hasP9Vector()) || !IsFourByte) {
+      uint64_t Offset = 0;
+      if (IsFourByte)
+        Offset = isLittleEndian ? (3 - SplatIdx) * 4 : SplatIdx * 4;
+      else
+        Offset = isLittleEndian ? (1 - SplatIdx) * 8 : SplatIdx * 8;
+      SDValue BasePtr = LD->getBasePtr();
+      if (Offset != 0)
+        BasePtr = DAG.getNode(ISD::ADD, dl, getPointerTy(DAG.getDataLayout()),
+                              BasePtr, DAG.getIntPtrConstant(Offset, dl));
+      SDValue Ops[] = {
+        LD->getChain(),    // Chain
+        BasePtr,           // BasePtr
+        DAG.getValueType(Op.getValueType()) // VT
+      };
+      SDVTList VTL =
+        DAG.getVTList(IsFourByte ? MVT::v4i32 : MVT::v2i64, MVT::Other);
+      SDValue LdSplt =
+        DAG.getMemIntrinsicNode(PPCISD::LD_SPLAT, dl, VTL,
+                                Ops, LD->getMemoryVT(), LD->getMemOperand());
+      if (LdSplt.getValueType() != SVOp->getValueType(0))
+        LdSplt = DAG.getBitcast(SVOp->getValueType(0), LdSplt);
+      return LdSplt;
+    }
+  }
   if (Subtarget.hasP9Vector() &&
       PPC::isXXINSERTWMask(SVOp, ShiftElts, InsertAtByte, Swap,
                            isLittleEndian)) {
@@ -8868,7 +8949,7 @@ SDValue PPCTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
 
   if (Subtarget.hasVSX()) {
     if (V2.isUndef() && PPC::isSplatShuffleMask(SVOp, 4)) {
-      int SplatIdx = PPC::getVSPLTImmediate(SVOp, 4, DAG);
+      int SplatIdx = PPC::getSplatIdxForPPCMnemonics(SVOp, 4, DAG);
 
       SDValue Conv = DAG.getNode(ISD::BITCAST, dl, MVT::v4i32, V1);
       SDValue Splat = DAG.getNode(PPCISD::XXSPLT, dl, MVT::v4i32, Conv,
@@ -9913,6 +9994,30 @@ SDValue PPCTargetLowering::LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const {
   switch (Op0.getOpcode()) {
   default:
     return SDValue();
+  case ISD::EXTRACT_SUBVECTOR: {
+    assert(Op0.getNumOperands() == 2 &&
+           isa<ConstantSDNode>(Op0->getOperand(1)) &&
+           "Node should have 2 operands with second one being a constant!");
+
+    if (Op0.getOperand(0).getValueType() != MVT::v4f32)
+      return SDValue();
+
+    // Custom lower is only done for high or low doubleword.
+    int Idx = cast<ConstantSDNode>(Op0.getOperand(1))->getZExtValue();
+    if (Idx % 2 != 0)
+      return SDValue();
+
+    // Since input is v4f32, at this point Idx is either 0 or 2.
+    // Shift to get the doubleword position we want.
+    int DWord = Idx >> 1;
+
+    // High and low word positions are different on little endian.
+    if (Subtarget.isLittleEndian())
+      DWord ^= 0x1;
+
+    return DAG.getNode(PPCISD::FP_EXTEND_HALF, dl, MVT::v2f64,
+                       Op0.getOperand(0), DAG.getConstant(DWord, dl, MVT::i32));
+  }
   case ISD::FADD:
   case ISD::FMUL:
   case ISD::FSUB: {
@@ -9924,26 +10029,25 @@ SDValue PPCTargetLowering::LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const {
         return SDValue();
       // Generate new load node.
       LoadSDNode *LD = cast<LoadSDNode>(LdOp);
-      SDValue LoadOps[] = { LD->getChain(), LD->getBasePtr() };
-      NewLoad[i] =
-        DAG.getMemIntrinsicNode(PPCISD::LD_VSX_LH, dl,
-                                DAG.getVTList(MVT::v4f32, MVT::Other),
-                                LoadOps, LD->getMemoryVT(),
-                                LD->getMemOperand());
+      SDValue LoadOps[] = {LD->getChain(), LD->getBasePtr()};
+      NewLoad[i] = DAG.getMemIntrinsicNode(
+          PPCISD::LD_VSX_LH, dl, DAG.getVTList(MVT::v4f32, MVT::Other), LoadOps,
+          LD->getMemoryVT(), LD->getMemOperand());
     }
-    SDValue NewOp = DAG.getNode(Op0.getOpcode(), SDLoc(Op0), MVT::v4f32,
-                              NewLoad[0], NewLoad[1],
-                              Op0.getNode()->getFlags());
-    return DAG.getNode(PPCISD::FP_EXTEND_LH, dl, MVT::v2f64, NewOp);
+    SDValue NewOp =
+        DAG.getNode(Op0.getOpcode(), SDLoc(Op0), MVT::v4f32, NewLoad[0],
+                    NewLoad[1], Op0.getNode()->getFlags());
+    return DAG.getNode(PPCISD::FP_EXTEND_HALF, dl, MVT::v2f64, NewOp,
+                       DAG.getConstant(0, dl, MVT::i32));
   }
   case ISD::LOAD: {
     LoadSDNode *LD = cast<LoadSDNode>(Op0);
-    SDValue LoadOps[] = { LD->getChain(), LD->getBasePtr() };
-    SDValue NewLd =
-      DAG.getMemIntrinsicNode(PPCISD::LD_VSX_LH, dl,
-                              DAG.getVTList(MVT::v4f32, MVT::Other),
-                              LoadOps, LD->getMemoryVT(), LD->getMemOperand());
-    return DAG.getNode(PPCISD::FP_EXTEND_LH, dl, MVT::v2f64, NewLd);
+    SDValue LoadOps[] = {LD->getChain(), LD->getBasePtr()};
+    SDValue NewLd = DAG.getMemIntrinsicNode(
+        PPCISD::LD_VSX_LH, dl, DAG.getVTList(MVT::v4f32, MVT::Other), LoadOps,
+        LD->getMemoryVT(), LD->getMemOperand());
+    return DAG.getNode(PPCISD::FP_EXTEND_HALF, dl, MVT::v2f64, NewLd,
+                       DAG.getConstant(0, dl, MVT::i32));
   }
   }
   llvm_unreachable("ERROR:Should return for all cases within swtich.");
@@ -14006,7 +14110,7 @@ void PPCTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
   }
 }
 
-llvm::Align PPCTargetLowering::getPrefLoopAlignment(MachineLoop *ML) const {
+Align PPCTargetLowering::getPrefLoopAlignment(MachineLoop *ML) const {
   switch (Subtarget.getDarwinDirective()) {
   default: break;
   case PPC::DIR_970:
@@ -14027,7 +14131,7 @@ llvm::Align PPCTargetLowering::getPrefLoopAlignment(MachineLoop *ML) const {
       // Actual alignment of the loop will depend on the hotness check and other
       // logic in alignBlocks.
       if (ML->getLoopDepth() > 1 && ML->getSubLoops().empty())
-        return llvm::Align(32);
+        return Align(32);
     }
 
     const PPCInstrInfo *TII = Subtarget.getInstrInfo();
@@ -14043,7 +14147,7 @@ llvm::Align PPCTargetLowering::getPrefLoopAlignment(MachineLoop *ML) const {
       }
 
     if (LoopSize > 16 && LoopSize <= 32)
-      return llvm::Align(32);
+      return Align(32);
 
     break;
   }
@@ -14451,14 +14555,8 @@ bool PPCTargetLowering::isAccessedAsGotIndirect(SDValue GA) const {
   if (isa<JumpTableSDNode>(GA) || isa<BlockAddressSDNode>(GA))
     return true;
 
-  if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(GA)) {
-    const GlobalValue *GV = G->getGlobal();
-    unsigned char GVFlags = Subtarget.classifyGlobalReference(GV);
-    // The NLP flag indicates that a global access has to use an
-    // extra indirection.
-    if (GVFlags & PPCII::MO_NLP_FLAG)
-      return true;
-  }
+  if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(GA))
+    return Subtarget.isGVIndirectSymbol(G->getGlobal());
 
   return false;
 }
@@ -14523,7 +14621,7 @@ bool PPCTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.ptrVal = I.getArgOperand(0);
     Info.offset = -VT.getStoreSize()+1;
     Info.size = 2*VT.getStoreSize()-1;
-    Info.align = Align(1);
+    Info.align = Align::None();
     Info.flags = MachineMemOperand::MOLoad;
     return true;
   }
@@ -14557,7 +14655,7 @@ bool PPCTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.ptrVal = I.getArgOperand(0);
     Info.offset = 0;
     Info.size = VT.getStoreSize();
-    Info.align = Align(1);
+    Info.align = Align::None();
     Info.flags = MachineMemOperand::MOLoad;
     return true;
   }
@@ -14609,7 +14707,7 @@ bool PPCTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.ptrVal = I.getArgOperand(1);
     Info.offset = -VT.getStoreSize()+1;
     Info.size = 2*VT.getStoreSize()-1;
-    Info.align = Align(1);
+    Info.align = Align::None();
     Info.flags = MachineMemOperand::MOStore;
     return true;
   }
@@ -14642,7 +14740,7 @@ bool PPCTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.ptrVal = I.getArgOperand(1);
     Info.offset = 0;
     Info.size = VT.getStoreSize();
-    Info.align = Align(1);
+    Info.align = Align::None();
     Info.flags = MachineMemOperand::MOStore;
     return true;
   }

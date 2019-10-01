@@ -14,12 +14,12 @@
 
 # CHECK:      Relocations [
 # CHECK-NEXT:   Section ({{.*}}) .rela.dyn {
-# CHECK-NEXT:     0x3020 R_X86_64_RELATIVE - 0x3028
-# CHECK-NEXT:     0x20B0 R_X86_64_GLOB_DAT aaa 0x0
-# CHECK-NEXT:     0x3000 R_X86_64_64 aaa 0x0
-# CHECK-NEXT:     0x3018 R_X86_64_64 aaa 0x0
-# CHECK-NEXT:     0x3010 R_X86_64_64 bbb 0x0
-# CHECK-NEXT:     0x3008 R_X86_64_64 ccc 0x0
+# CHECK-NEXT:     0x3428 R_X86_64_RELATIVE - 0x3430
+# CHECK-NEXT:     0x2400 R_X86_64_GLOB_DAT aaa 0x0
+# CHECK-NEXT:     0x3408 R_X86_64_64 aaa 0x0
+# CHECK-NEXT:     0x3420 R_X86_64_64 aaa 0x0
+# CHECK-NEXT:     0x3418 R_X86_64_64 bbb 0x0
+# CHECK-NEXT:     0x3410 R_X86_64_64 ccc 0x0
 # CHECK-NEXT:   }
 # CHECK:      DynamicSection [
 # CHECK:        RELACOUNT 1
@@ -29,12 +29,12 @@
 
 # NOCOMB:      Relocations [
 # NOCOMB-NEXT:   Section ({{.*}}) .rela.dyn {
-# NOCOMB-NEXT:     0x3000 R_X86_64_64 aaa 0x0
-# NOCOMB-NEXT:     0x3008 R_X86_64_64 ccc 0x0
-# NOCOMB-NEXT:     0x3010 R_X86_64_64 bbb 0x0
-# NOCOMB-NEXT:     0x3018 R_X86_64_64 aaa 0x0
-# NOCOMB-NEXT:     0x3020 R_X86_64_RELATIVE - 0x3028
-# NOCOMB-NEXT:     0x20A0 R_X86_64_GLOB_DAT aaa 0x0
+# NOCOMB-NEXT:     0x33F8 R_X86_64_64 aaa 0x0
+# NOCOMB-NEXT:     0x3400 R_X86_64_64 ccc 0x0
+# NOCOMB-NEXT:     0x3408 R_X86_64_64 bbb 0x0
+# NOCOMB-NEXT:     0x3410 R_X86_64_64 aaa 0x0
+# NOCOMB-NEXT:     0x3418 R_X86_64_RELATIVE - 0x3420
+# NOCOMB-NEXT:     0x23F0 R_X86_64_GLOB_DAT aaa 0x0
 # NOCOMB-NEXT:   }
 # NOCOMB:      DynamicSection [
 # NOCOMB-NOT:    RELACOUNT

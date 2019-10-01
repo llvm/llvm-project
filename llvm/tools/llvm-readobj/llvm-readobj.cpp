@@ -231,9 +231,13 @@ namespace opts {
       "codeview-subsection-bytes",
       cl::desc("Dump raw contents of codeview debug sections and records"));
 
-  // --arm-attributes
-  cl::opt<bool> ARMAttributes("arm-attributes",
-                              cl::desc("Display the ARM attributes section"));
+  // --arch-specific
+  cl::opt<bool> ArchSpecificInfo("arch-specific",
+                              cl::desc("Displays architecture-specific information, if there is any."));
+  cl::alias ArchSpecifcInfoShort("A", cl::desc("Alias for --arch-specific"),
+                                 cl::aliasopt(ArchSpecificInfo), cl::NotHidden);
+  cl::alias ARMAttributes("arm-attributes", cl::desc("Alias for --arch-specific"),
+                           cl::aliasopt(ArchSpecificInfo), cl::Hidden);
 
   // --mips-plt-got
   cl::opt<bool>
@@ -517,8 +521,8 @@ static void dumpObject(const ObjectFile *Obj, ScopedPrinter &Writer,
   if (Obj->isELF()) {
     if (opts::ELFLinkerOptions)
       Dumper->printELFLinkerOptions();
-    if (Obj->getArch() == llvm::Triple::arm)
-      if (opts::ARMAttributes)
+    if (opts::ArchSpecificInfo)
+      if (Obj->getArch() == llvm::Triple::arm)
         Dumper->printAttributes();
     if (isMipsArch(Obj->getArch())) {
       if (opts::MipsPLTGOT)
@@ -728,10 +732,8 @@ int main(int argc, const char *argv[]) {
     opts::UnwindInfo = true;
     opts::SectionGroups = true;
     opts::HashHistogram = true;
-    // FIXME: As soon as we implement LLVM-style printing of the .stack_size
-    // section, we will enable it with --all (only for LLVM-style).
     if (opts::Output == opts::LLVM)
-      opts::PrintStackSizes = false;
+      opts::PrintStackSizes = true;
   }
 
   if (opts::Headers) {

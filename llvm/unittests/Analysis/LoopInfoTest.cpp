@@ -868,6 +868,126 @@ TEST(LoopInfoTest, ZextIndVar) {
       });
 }
 
+TEST(LoopInfoTest, MultiExitingLoop) {
+  const char *ModuleStr =
+      "define void @foo(i32* %A, i32 %ub, i1 %cond) {\n"
+      "entry:\n"
+      "  %guardcmp = icmp slt i32 0, %ub\n"
+      "  br i1 %guardcmp, label %for.preheader, label %for.end\n"
+      "for.preheader:\n"
+      "  br label %for.body\n"
+      "for.body:\n"
+      "  %i = phi i32 [ 0, %for.preheader ], [ %inc, %for.body.1 ]\n"
+      "  br i1 %cond, label %for.body.1, label %for.exit\n"
+      "for.body.1:\n"
+      "  %idxprom = sext i32 %i to i64\n"
+      "  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %idxprom\n"
+      "  store i32 %i, i32* %arrayidx, align 4\n"
+      "  %inc = add nsw i32 %i, 1\n"
+      "  %cmp = icmp slt i32 %inc, %ub\n"
+      "  br i1 %cmp, label %for.body, label %for.exit\n"
+      "for.exit:\n"
+      "  br label %for.end\n"
+      "for.end:\n"
+      "  ret void\n"
+      "}\n";
+
+  // Parse the module.
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleStr);
+
+  runWithLoopInfoPlus(
+      *M, "foo",
+      [&](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+        Function::iterator FI = F.begin();
+        BasicBlock *Entry = &*(FI);
+        BranchInst *Guard = dyn_cast<BranchInst>(Entry->getTerminator());
+        // First two basic block are entry and for.preheader - skip them.
+        ++FI;
+        BasicBlock *Header = &*(++FI);
+        assert(Header->getName() == "for.body");
+        Loop *L = LI.getLoopFor(Header);
+        EXPECT_NE(L, nullptr);
+
+        Optional<Loop::LoopBounds> Bounds = L->getBounds(SE);
+        EXPECT_NE(Bounds, None);
+        ConstantInt *InitialIVValue =
+            dyn_cast<ConstantInt>(&Bounds->getInitialIVValue());
+        EXPECT_TRUE(InitialIVValue && InitialIVValue->isZero());
+        EXPECT_EQ(Bounds->getStepInst().getName(), "inc");
+        ConstantInt *StepValue =
+            dyn_cast_or_null<ConstantInt>(Bounds->getStepValue());
+        EXPECT_TRUE(StepValue && StepValue->isOne());
+        EXPECT_EQ(Bounds->getFinalIVValue().getName(), "ub");
+        EXPECT_EQ(Bounds->getCanonicalPredicate(), ICmpInst::ICMP_SLT);
+        EXPECT_EQ(Bounds->getDirection(),
+                  Loop::LoopBounds::Direction::Increasing);
+        EXPECT_EQ(L->getInductionVariable(SE)->getName(), "i");
+        EXPECT_EQ(L->getLoopGuardBranch(), Guard);
+        EXPECT_TRUE(L->isGuarded());
+      });
+}
+
+TEST(LoopInfoTest, MultiExitLoop) {
+  const char *ModuleStr =
+      "define void @foo(i32* %A, i32 %ub, i1 %cond) {\n"
+      "entry:\n"
+      "  %guardcmp = icmp slt i32 0, %ub\n"
+      "  br i1 %guardcmp, label %for.preheader, label %for.end\n"
+      "for.preheader:\n"
+      "  br label %for.body\n"
+      "for.body:\n"
+      "  %i = phi i32 [ 0, %for.preheader ], [ %inc, %for.body.1 ]\n"
+      "  br i1 %cond, label %for.body.1, label %for.exit\n"
+      "for.body.1:\n"
+      "  %idxprom = sext i32 %i to i64\n"
+      "  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %idxprom\n"
+      "  store i32 %i, i32* %arrayidx, align 4\n"
+      "  %inc = add nsw i32 %i, 1\n"
+      "  %cmp = icmp slt i32 %inc, %ub\n"
+      "  br i1 %cmp, label %for.body, label %for.exit.1\n"
+      "for.exit:\n"
+      "  br label %for.end\n"
+      "for.exit.1:\n"
+      "  br label %for.end\n"
+      "for.end:\n"
+      "  ret void\n"
+      "}\n";
+
+  // Parse the module.
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleStr);
+
+  runWithLoopInfoPlus(
+      *M, "foo",
+      [&](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+        Function::iterator FI = F.begin();
+        // First two basic block are entry and for.preheader - skip them.
+        ++FI;
+        BasicBlock *Header = &*(++FI);
+        assert(Header->getName() == "for.body");
+        Loop *L = LI.getLoopFor(Header);
+        EXPECT_NE(L, nullptr);
+
+        Optional<Loop::LoopBounds> Bounds = L->getBounds(SE);
+        EXPECT_NE(Bounds, None);
+        ConstantInt *InitialIVValue =
+            dyn_cast<ConstantInt>(&Bounds->getInitialIVValue());
+        EXPECT_TRUE(InitialIVValue && InitialIVValue->isZero());
+        EXPECT_EQ(Bounds->getStepInst().getName(), "inc");
+        ConstantInt *StepValue =
+            dyn_cast_or_null<ConstantInt>(Bounds->getStepValue());
+        EXPECT_TRUE(StepValue && StepValue->isOne());
+        EXPECT_EQ(Bounds->getFinalIVValue().getName(), "ub");
+        EXPECT_EQ(Bounds->getCanonicalPredicate(), ICmpInst::ICMP_SLT);
+        EXPECT_EQ(Bounds->getDirection(),
+                  Loop::LoopBounds::Direction::Increasing);
+        EXPECT_EQ(L->getInductionVariable(SE)->getName(), "i");
+        EXPECT_EQ(L->getLoopGuardBranch(), nullptr);
+        EXPECT_FALSE(L->isGuarded());
+      });
+}
+
 TEST(LoopInfoTest, UnguardedLoop) {
   const char *ModuleStr =
       "define void @foo(i32* %A, i32 %ub) {\n"

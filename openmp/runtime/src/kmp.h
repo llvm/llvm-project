@@ -2181,10 +2181,9 @@ struct kmp_dephash_entry {
 typedef struct kmp_dephash {
   kmp_dephash_entry_t **buckets;
   size_t size;
-#ifdef KMP_DEBUG
+  size_t generation;
   kmp_uint32 nelements;
   kmp_uint32 nconflicts;
-#endif
 } kmp_dephash_t;
 
 typedef struct kmp_task_affinity_info {

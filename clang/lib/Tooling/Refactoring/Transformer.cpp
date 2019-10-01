@@ -150,6 +150,21 @@ DynTypedMatcher tooling::detail::buildMatcher(const RewriteRule &Rule) {
   return Ms[0];
 }
 
+SourceLocation tooling::detail::getRuleMatchLoc(const MatchResult &Result) {
+  auto &NodesMap = Result.Nodes.getMap();
+  auto Root = NodesMap.find(RewriteRule::RootID);
+  assert(Root != NodesMap.end() && "Transformation failed: missing root node.");
+  llvm::Optional<CharSourceRange> RootRange = getRangeForEdit(
+      CharSourceRange::getTokenRange(Root->second.getSourceRange()),
+      *Result.Context);
+  if (RootRange)
+    return RootRange->getBegin();
+  // The match doesn't have a coherent range, so fall back to the expansion
+  // location as the "beginning" of the match.
+  return Result.SourceManager->getExpansionLoc(
+      Root->second.getSourceRange().getBegin());
+}
+
 // Finds the case that was "selected" -- that is, whose matcher triggered the
 // `MatchResult`.
 const RewriteRule::Case &
@@ -178,14 +193,6 @@ void Transformer::run(const MatchResult &Result) {
   if (Result.Context->getDiagnostics().hasErrorOccurred())
     return;
 
-  // Verify the existence and validity of the AST node that roots this rule.
-  auto &NodesMap = Result.Nodes.getMap();
-  auto Root = NodesMap.find(RewriteRule::RootID);
-  assert(Root != NodesMap.end() && "Transformation failed: missing root node.");
-  SourceLocation RootLoc = Result.SourceManager->getExpansionLoc(
-      Root->second.getSourceRange().getBegin());
-  assert(RootLoc.isValid() && "Invalid location for Root node of match.");
-
   RewriteRule::Case Case = tooling::detail::findSelectedCase(Result, Rule);
   auto Transformations = tooling::detail::translateEdits(Result, Case.Edits);
   if (!Transformations) {
@@ -195,14 +202,16 @@ void Transformer::run(const MatchResult &Result) {
 
   if (Transformations->empty()) {
     // No rewrite applied (but no error encountered either).
-    RootLoc.print(llvm::errs() << "note: skipping match at loc ",
-                  *Result.SourceManager);
+    detail::getRuleMatchLoc(Result).print(
+        llvm::errs() << "note: skipping match at loc ", *Result.SourceManager);
     llvm::errs() << "\n";
     return;
   }
 
-  // Record the results in the AtomicChange.
-  AtomicChange AC(*Result.SourceManager, RootLoc);
+  // Record the results in the AtomicChange, anchored at the location of the
+  // first change.
+  AtomicChange AC(*Result.SourceManager,
+                  (*Transformations)[0].Range.getBegin());
   for (const auto &T : *Transformations) {
     if (auto Err = AC.replace(*Result.SourceManager, T.Range, T.Replacement)) {
       Consumer(std::move(Err));

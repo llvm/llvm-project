@@ -461,7 +461,7 @@ BUILTIN(__builtin_rotateleft64, "UWiUWiUWi", "nc")
 BUILTIN(__builtin_rotateright8, "UcUcUc", "nc")
 BUILTIN(__builtin_rotateright16, "UsUsUs", "nc")
 BUILTIN(__builtin_rotateright32, "UZiUZiUZi", "nc")
-BUILTIN(__builtin_rotateright64, "UWiUWiWi", "nc")
+BUILTIN(__builtin_rotateright64, "UWiUWiUWi", "nc")
 
 // Random GCC builtins
 BUILTIN(__builtin_constant_p, "i.", "nctu")
@@ -1005,9 +1005,7 @@ LIBBUILTIN(pthread_create, "",  "fC<2,3>", "pthread.h", ALL_GNU_LANGUAGES)
 LIBBUILTIN(_setjmp, "iJ",         "fj",   "setjmp.h", ALL_LANGUAGES)
 LIBBUILTIN(__sigsetjmp, "iSJi",   "fj",   "setjmp.h", ALL_LANGUAGES)
 LIBBUILTIN(sigsetjmp, "iSJi",     "fj",   "setjmp.h", ALL_LANGUAGES)
-LIBBUILTIN(setjmp_syscall, "iJ",  "fj",   "setjmp.h", ALL_LANGUAGES)
 LIBBUILTIN(savectx, "iJ",         "fj",   "setjmp.h", ALL_LANGUAGES)
-LIBBUILTIN(qsetjmp, "iJ",         "fj",   "setjmp.h", ALL_LANGUAGES)
 LIBBUILTIN(getcontext, "iK*",     "fj",   "setjmp.h", ALL_LANGUAGES)
 
 LIBBUILTIN(_longjmp, "vJi",       "fr",    "setjmp.h", ALL_GNU_LANGUAGES)
@@ -1470,7 +1468,7 @@ BUILTIN(__builtin_operator_new, "v*z", "tc")
 BUILTIN(__builtin_operator_delete, "vv*", "tn")
 BUILTIN(__builtin_char_memchr, "c*cC*iz", "n")
 BUILTIN(__builtin_dump_struct, "ivC*v*", "tn")
-BUILTIN(__builtin_preserve_access_index, "vC*vC*", "nU")
+BUILTIN(__builtin_preserve_access_index, "v.", "t")
 
 // Safestack builtins
 BUILTIN(__builtin___get_unsafe_stack_start, "v*", "Fn")

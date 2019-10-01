@@ -78,11 +78,8 @@ STATISTIC(NumNoRecurse, "Number of functions marked as norecurse");
 STATISTIC(NumNoUnwind, "Number of functions marked as nounwind");
 STATISTIC(NumNoFree, "Number of functions marked as nofree");
 
-// FIXME: This is disabled by default to avoid exposing security vulnerabilities
-// in C/C++ code compiled by clang:
-// http://lists.llvm.org/pipermail/cfe-dev/2017-January/052066.html
 static cl::opt<bool> EnableNonnullArgPropagation(
-    "enable-nonnull-arg-prop", cl::Hidden,
+    "enable-nonnull-arg-prop", cl::init(true), cl::Hidden,
     cl::desc("Try to propagate nonnull argument attributes from callsites to "
              "caller functions."));
 

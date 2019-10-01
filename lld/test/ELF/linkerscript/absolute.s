@@ -19,7 +19,7 @@
 # CHECK-NEXT: }
 
 # CHECK-RHS:        Name: foo
-# CHECK-RHS-NEXT:   Value: 0x201001
+# CHECK-RHS-NEXT:   Value: 0x201121
 # CHECK-RHS-NEXT:   Size:
 # CHECK-RHS-NEXT:   Binding:
 # CHECK-RHS-NEXT:   Type:

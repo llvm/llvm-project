@@ -9,9 +9,9 @@
 ## Currently p_memsz of PT_GNU_RELRO is rounded up to protect the last page.
 
 # CHECK:      Type: PT_GNU_RELRO
-# CHECK:      VirtualAddress: 0x201000
+# CHECK:      VirtualAddress: 0x2021C8
 # CHECK:      FileSize: 4
-# CHECK-NEXT: MemSize: 4096
+# CHECK-NEXT: MemSize: 3640
 # CHECK:      Alignment: 1
 
 .section .foo,"awT",@progbits

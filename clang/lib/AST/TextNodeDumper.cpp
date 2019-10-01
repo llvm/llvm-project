@@ -223,7 +223,6 @@ void TextNodeDumper::Visit(const Decl *D) {
     return;
   }
 
-  Context = &D->getASTContext();
   {
     ColorScope Color(OS, ShowColors, DeclKindNameColor);
     OS << D->getDeclKindName() << "Decl";
@@ -688,7 +687,7 @@ void TextNodeDumper::VisitConstantExpr(const ConstantExpr *Node) {
   if (Node->getResultAPValueKind() != APValue::None) {
     ColorScope Color(OS, ShowColors, ValueColor);
     OS << " ";
-    Node->getAPValueResult().printPretty(OS, *Context, Node->getType());
+    Node->getAPValueResult().dump(OS);
   }
 }
 
@@ -1385,6 +1384,8 @@ void TextNodeDumper::VisitVarDecl(const VarDecl *D) {
       break;
     }
   }
+  if (D->needsDestruction(D->getASTContext()))
+    OS << " destroyed";
   if (D->isParameterPack())
     OS << " pack";
 }
@@ -1766,6 +1767,12 @@ void TextNodeDumper::VisitLinkageSpecDecl(const LinkageSpecDecl *D) {
     break;
   case LinkageSpecDecl::lang_cxx:
     OS << " C++";
+    break;
+  case LinkageSpecDecl::lang_cxx_11:
+    OS << " C++11";
+    break;
+  case LinkageSpecDecl::lang_cxx_14:
+    OS << " C++14";
     break;
   }
 }

@@ -7,6 +7,7 @@
 # NODEMANGLE: error: undefined symbol: __Z3fooi
 # NODEMANGLE: error: undefined symbol: __Z3barPKc
 # NODEMANGLE: error: undefined symbol: __imp___Z3bazv
+# NODEMANGLE: error: undefined symbol: _Z3fooi
 
 # CHECK: error: undefined symbol: foo(int)
 # CHECK-NEXT: >>> referenced by {{.*}}.o:(_main)
@@ -17,6 +18,9 @@
 # CHECK-NEXT: >>> referenced by {{.*}}.o:(_f1)
 # CHECK-EMPTY:
 # CHECK-NEXT: error: undefined symbol: __declspec(dllimport) baz()
+# CHECK-NEXT: >>> referenced by {{.*}}.o:(_f2)
+# CHECK-EMPTY:
+# CHECK-NEXT: error: undefined symbol: _Z3fooi
 # CHECK-NEXT: >>> referenced by {{.*}}.o:(_f2)
 
         .section        .text,"xr",one_only,_main
@@ -34,3 +38,4 @@ _f1:
 .globl _f2
 _f2:
 	call	*__imp___Z3bazv
+	call	_Z3fooi

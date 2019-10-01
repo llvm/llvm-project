@@ -1382,23 +1382,56 @@ static Value *simplifyUnsignedRangeCheck(ICmpInst *ZeroICmp,
 
   ICmpInst::Predicate UnsignedPred;
 
-  // Y = (A - B);  Y >= A && Y != 0  --> Y >= A  iff B != 0
-  // Y = (A - B);  Y <  A || Y == 0  --> Y <  A  iff B != 0
   Value *A, *B;
-  if (match(Y, m_Sub(m_Value(A), m_Value(B))) &&
-      match(UnsignedICmp,
-            m_c_ICmp(UnsignedPred, m_Specific(Y), m_Specific(A)))) {
-    if (UnsignedICmp->getOperand(0) != Y)
-      UnsignedPred = ICmpInst::getSwappedPredicate(UnsignedPred);
+  // Y = (A - B);
+  if (match(Y, m_Sub(m_Value(A), m_Value(B)))) {
+    if (match(UnsignedICmp,
+              m_c_ICmp(UnsignedPred, m_Specific(A), m_Specific(B))) &&
+        ICmpInst::isUnsigned(UnsignedPred)) {
+      if (UnsignedICmp->getOperand(0) != A)
+        UnsignedPred = ICmpInst::getSwappedPredicate(UnsignedPred);
 
-    if (UnsignedPred == ICmpInst::ICMP_UGE && IsAnd &&
-        EqPred == ICmpInst::ICMP_NE &&
-        isKnownNonZero(B, Q.DL, /*Depth=*/0, Q.AC, Q.CxtI, Q.DT))
-      return UnsignedICmp;
-    if (UnsignedPred == ICmpInst::ICMP_ULT && !IsAnd &&
-        EqPred == ICmpInst::ICMP_EQ &&
-        isKnownNonZero(B, Q.DL, /*Depth=*/0, Q.AC, Q.CxtI, Q.DT))
-      return UnsignedICmp;
+      // A >=/<= B || (A - B) != 0  <-->  true
+      if ((UnsignedPred == ICmpInst::ICMP_UGE ||
+           UnsignedPred == ICmpInst::ICMP_ULE) &&
+          EqPred == ICmpInst::ICMP_NE && !IsAnd)
+        return ConstantInt::getTrue(UnsignedICmp->getType());
+      // A </> B && (A - B) == 0  <-->  false
+      if ((UnsignedPred == ICmpInst::ICMP_ULT ||
+           UnsignedPred == ICmpInst::ICMP_UGT) &&
+          EqPred == ICmpInst::ICMP_EQ && IsAnd)
+        return ConstantInt::getFalse(UnsignedICmp->getType());
+
+      // A </> B && (A - B) != 0  <-->  A </> B
+      // A </> B || (A - B) != 0  <-->  (A - B) != 0
+      if (EqPred == ICmpInst::ICMP_NE && (UnsignedPred == ICmpInst::ICMP_ULT ||
+                                          UnsignedPred == ICmpInst::ICMP_UGT))
+        return IsAnd ? UnsignedICmp : ZeroICmp;
+
+      // A <=/>= B && (A - B) == 0  <-->  (A - B) == 0
+      // A <=/>= B || (A - B) == 0  <-->  A <=/>= B
+      if (EqPred == ICmpInst::ICMP_EQ && (UnsignedPred == ICmpInst::ICMP_ULE ||
+                                          UnsignedPred == ICmpInst::ICMP_UGE))
+        return IsAnd ? ZeroICmp : UnsignedICmp;
+    }
+
+    // Given  Y = (A - B)
+    //   Y >= A && Y != 0  --> Y >= A  iff B != 0
+    //   Y <  A || Y == 0  --> Y <  A  iff B != 0
+    if (match(UnsignedICmp,
+              m_c_ICmp(UnsignedPred, m_Specific(Y), m_Specific(A)))) {
+      if (UnsignedICmp->getOperand(0) != Y)
+        UnsignedPred = ICmpInst::getSwappedPredicate(UnsignedPred);
+
+      if (UnsignedPred == ICmpInst::ICMP_UGE && IsAnd &&
+          EqPred == ICmpInst::ICMP_NE &&
+          isKnownNonZero(B, Q.DL, /*Depth=*/0, Q.AC, Q.CxtI, Q.DT))
+        return UnsignedICmp;
+      if (UnsignedPred == ICmpInst::ICMP_ULT && !IsAnd &&
+          EqPred == ICmpInst::ICMP_EQ &&
+          isKnownNonZero(B, Q.DL, /*Depth=*/0, Q.AC, Q.CxtI, Q.DT))
+        return UnsignedICmp;
+    }
   }
 
   if (match(UnsignedICmp, m_ICmp(UnsignedPred, m_Value(X), m_Specific(Y))) &&
@@ -1422,24 +1455,26 @@ static Value *simplifyUnsignedRangeCheck(ICmpInst *ZeroICmp,
       isKnownNonZero(X, Q.DL, /*Depth=*/0, Q.AC, Q.CxtI, Q.DT))
     return IsAnd ? UnsignedICmp : ZeroICmp;
 
+  // X >= Y && Y == 0  -->  Y == 0
+  // X >= Y || Y == 0  -->  X >= Y
+  if (UnsignedPred == ICmpInst::ICMP_UGE && EqPred == ICmpInst::ICMP_EQ)
+    return IsAnd ? ZeroICmp : UnsignedICmp;
+
   // X > Y && Y == 0  -->  Y == 0  iff X != 0
   // X > Y || Y == 0  -->  X > Y   iff X != 0
   if (UnsignedPred == ICmpInst::ICMP_UGT && EqPred == ICmpInst::ICMP_EQ &&
       isKnownNonZero(X, Q.DL, /*Depth=*/0, Q.AC, Q.CxtI, Q.DT))
     return IsAnd ? ZeroICmp : UnsignedICmp;
 
-  // X >= Y || Y != 0  -->  true
-  // X >= Y || Y == 0  -->  X >= Y
-  if (UnsignedPred == ICmpInst::ICMP_UGE && !IsAnd) {
-    if (EqPred == ICmpInst::ICMP_NE)
-      return getTrue(UnsignedICmp->getType());
-    return UnsignedICmp;
-  }
-
   // X < Y && Y == 0  -->  false
   if (UnsignedPred == ICmpInst::ICMP_ULT && EqPred == ICmpInst::ICMP_EQ &&
       IsAnd)
     return getFalse(UnsignedICmp->getType());
+
+  // X >= Y || Y != 0  -->  true
+  if (UnsignedPred == ICmpInst::ICMP_UGE && EqPred == ICmpInst::ICMP_NE &&
+      !IsAnd)
+    return getTrue(UnsignedICmp->getType());
 
   return nullptr;
 }
@@ -4447,14 +4482,16 @@ static Constant *propagateNaN(Constant *In) {
   return In;
 }
 
-static Constant *simplifyFPBinop(Value *Op0, Value *Op1) {
-  if (isa<UndefValue>(Op0) || isa<UndefValue>(Op1))
-    return ConstantFP::getNaN(Op0->getType());
+/// Perform folds that are common to any floating-point operation. This implies
+/// transforms based on undef/NaN because the operation itself makes no
+/// difference to the result.
+static Constant *simplifyFPOp(ArrayRef<Value *> Ops) {
+  if (any_of(Ops, [](Value *V) { return isa<UndefValue>(V); }))
+    return ConstantFP::getNaN(Ops[0]->getType());
 
-  if (match(Op0, m_NaN()))
-    return propagateNaN(cast<Constant>(Op0));
-  if (match(Op1, m_NaN()))
-    return propagateNaN(cast<Constant>(Op1));
+  for (Value *V : Ops)
+    if (match(V, m_NaN()))
+      return propagateNaN(cast<Constant>(V));
 
   return nullptr;
 }
@@ -4466,7 +4503,7 @@ static Value *SimplifyFAddInst(Value *Op0, Value *Op1, FastMathFlags FMF,
   if (Constant *C = foldOrCommuteConstant(Instruction::FAdd, Op0, Op1, Q))
     return C;
 
-  if (Constant *C = simplifyFPBinop(Op0, Op1))
+  if (Constant *C = simplifyFPOp({Op0, Op1}))
     return C;
 
   // fadd X, -0 ==> X
@@ -4513,7 +4550,7 @@ static Value *SimplifyFSubInst(Value *Op0, Value *Op1, FastMathFlags FMF,
   if (Constant *C = foldOrCommuteConstant(Instruction::FSub, Op0, Op1, Q))
     return C;
 
-  if (Constant *C = simplifyFPBinop(Op0, Op1))
+  if (Constant *C = simplifyFPOp({Op0, Op1}))
     return C;
 
   // fsub X, +0 ==> X
@@ -4553,22 +4590,23 @@ static Value *SimplifyFSubInst(Value *Op0, Value *Op1, FastMathFlags FMF,
   return nullptr;
 }
 
-/// Given the operands for an FMul, see if we can fold the result
-static Value *SimplifyFMulInst(Value *Op0, Value *Op1, FastMathFlags FMF,
-                               const SimplifyQuery &Q, unsigned MaxRecurse) {
-  if (Constant *C = foldOrCommuteConstant(Instruction::FMul, Op0, Op1, Q))
-    return C;
-
-  if (Constant *C = simplifyFPBinop(Op0, Op1))
-    return C;
-
+static Value *SimplifyFMAFMul(Value *Op0, Value *Op1, FastMathFlags FMF,
+                              const SimplifyQuery &Q, unsigned MaxRecurse) {
   // fmul X, 1.0 ==> X
   if (match(Op1, m_FPOne()))
     return Op0;
 
+  // fmul 1.0, X ==> X
+  if (match(Op0, m_FPOne()))
+    return Op1;
+
   // fmul nnan nsz X, 0 ==> 0
   if (FMF.noNaNs() && FMF.noSignedZeros() && match(Op1, m_AnyZeroFP()))
     return ConstantFP::getNullValue(Op0->getType());
+
+  // fmul nnan nsz 0, X ==> 0
+  if (FMF.noNaNs() && FMF.noSignedZeros() && match(Op0, m_AnyZeroFP()))
+    return ConstantFP::getNullValue(Op1->getType());
 
   // sqrt(X) * sqrt(X) --> X, if we can:
   // 1. Remove the intermediate rounding (reassociate).
@@ -4580,6 +4618,19 @@ static Value *SimplifyFMulInst(Value *Op0, Value *Op1, FastMathFlags FMF,
     return X;
 
   return nullptr;
+}
+
+/// Given the operands for an FMul, see if we can fold the result
+static Value *SimplifyFMulInst(Value *Op0, Value *Op1, FastMathFlags FMF,
+                               const SimplifyQuery &Q, unsigned MaxRecurse) {
+  if (Constant *C = foldOrCommuteConstant(Instruction::FMul, Op0, Op1, Q))
+    return C;
+
+  if (Constant *C = simplifyFPOp({Op0, Op1}))
+    return C;
+
+  // Now apply simplifications that do not require rounding.
+  return SimplifyFMAFMul(Op0, Op1, FMF, Q, MaxRecurse);
 }
 
 Value *llvm::SimplifyFAddInst(Value *Op0, Value *Op1, FastMathFlags FMF,
@@ -4598,12 +4649,17 @@ Value *llvm::SimplifyFMulInst(Value *Op0, Value *Op1, FastMathFlags FMF,
   return ::SimplifyFMulInst(Op0, Op1, FMF, Q, RecursionLimit);
 }
 
+Value *llvm::SimplifyFMAFMul(Value *Op0, Value *Op1, FastMathFlags FMF,
+                             const SimplifyQuery &Q) {
+  return ::SimplifyFMAFMul(Op0, Op1, FMF, Q, RecursionLimit);
+}
+
 static Value *SimplifyFDivInst(Value *Op0, Value *Op1, FastMathFlags FMF,
                                const SimplifyQuery &Q, unsigned) {
   if (Constant *C = foldOrCommuteConstant(Instruction::FDiv, Op0, Op1, Q))
     return C;
 
-  if (Constant *C = simplifyFPBinop(Op0, Op1))
+  if (Constant *C = simplifyFPOp({Op0, Op1}))
     return C;
 
   // X / 1.0 -> X
@@ -4648,7 +4704,7 @@ static Value *SimplifyFRemInst(Value *Op0, Value *Op1, FastMathFlags FMF,
   if (Constant *C = foldOrCommuteConstant(Instruction::FRem, Op0, Op1, Q))
     return C;
 
-  if (Constant *C = simplifyFPBinop(Op0, Op1))
+  if (Constant *C = simplifyFPOp({Op0, Op1}))
     return C;
 
   // Unlike fdiv, the result of frem always matches the sign of the dividend.

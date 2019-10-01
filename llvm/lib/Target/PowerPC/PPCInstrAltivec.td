@@ -215,21 +215,21 @@ def vsldoi_swapped_shuffle : PatFrag<(ops node:$lhs, node:$rhs),
 
 // VSPLT*_get_imm xform function: convert vector_shuffle mask to VSPLT* imm.
 def VSPLTB_get_imm : SDNodeXForm<vector_shuffle, [{
-  return getI32Imm(PPC::getVSPLTImmediate(N, 1, *CurDAG), SDLoc(N));
+  return getI32Imm(PPC::getSplatIdxForPPCMnemonics(N, 1, *CurDAG), SDLoc(N));
 }]>;
 def vspltb_shuffle : PatFrag<(ops node:$lhs, node:$rhs),
                              (vector_shuffle node:$lhs, node:$rhs), [{
   return PPC::isSplatShuffleMask(cast<ShuffleVectorSDNode>(N), 1);
 }], VSPLTB_get_imm>;
 def VSPLTH_get_imm : SDNodeXForm<vector_shuffle, [{
-  return getI32Imm(PPC::getVSPLTImmediate(N, 2, *CurDAG), SDLoc(N));
+  return getI32Imm(PPC::getSplatIdxForPPCMnemonics(N, 2, *CurDAG), SDLoc(N));
 }]>;
 def vsplth_shuffle : PatFrag<(ops node:$lhs, node:$rhs),
                              (vector_shuffle node:$lhs, node:$rhs), [{
   return PPC::isSplatShuffleMask(cast<ShuffleVectorSDNode>(N), 2);
 }], VSPLTH_get_imm>;
 def VSPLTW_get_imm : SDNodeXForm<vector_shuffle, [{
-  return getI32Imm(PPC::getVSPLTImmediate(N, 4, *CurDAG), SDLoc(N));
+  return getI32Imm(PPC::getSplatIdxForPPCMnemonics(N, 4, *CurDAG), SDLoc(N));
 }]>;
 def vspltw_shuffle : PatFrag<(ops node:$lhs, node:$rhs),
                              (vector_shuffle node:$lhs, node:$rhs), [{
@@ -331,7 +331,7 @@ class VXBX_Int_Ty<bits<11> xo, string opc, Intrinsic IntID, ValueType Ty>
 class VXCR_Int_Ty<bits<11> xo, string opc, Intrinsic IntID, ValueType Ty>
   : VXForm_CR<xo, (outs vrrc:$vD), (ins vrrc:$vA, u1imm:$ST, u4imm:$SIX),
               !strconcat(opc, " $vD, $vA, $ST, $SIX"), IIC_VecFP,
-              [(set Ty:$vD, (IntID Ty:$vA, imm:$ST, imm:$SIX))]>;
+              [(set Ty:$vD, (IntID Ty:$vA, timm:$ST, timm:$SIX))]>;
 
 //===----------------------------------------------------------------------===//
 // Instruction Definitions.
@@ -401,10 +401,10 @@ let isCodeGenOnly = 1 in {
 
 def MFVSCR : VXForm_4<1540, (outs vrrc:$vD), (ins),
                       "mfvscr $vD", IIC_LdStStore,
-                      [(set v8i16:$vD, (int_ppc_altivec_mfvscr))]>; 
+                      [(set v8i16:$vD, (int_ppc_altivec_mfvscr))]>;
 def MTVSCR : VXForm_5<1604, (outs), (ins vrrc:$vB),
                       "mtvscr $vB", IIC_LdStLoad,
-                      [(int_ppc_altivec_mtvscr v4i32:$vB)]>; 
+                      [(int_ppc_altivec_mtvscr v4i32:$vB)]>;
 
 let PPC970_Unit = 2, mayLoad = 1, mayStore = 0 in {  // Loads.
 def LVEBX: XForm_1_memOp<31,   7, (outs vrrc:$vD), (ins memrr:$src),

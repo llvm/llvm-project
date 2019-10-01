@@ -247,8 +247,8 @@ define i32 @mulhs(i32 %a, i32 %b) nounwind {
 ;
 ; RV64IM-LABEL: mulhs:
 ; RV64IM:       # %bb.0:
-; RV64IM-NEXT:    sext.w a1, a1
 ; RV64IM-NEXT:    sext.w a0, a0
+; RV64IM-NEXT:    sext.w a1, a1
 ; RV64IM-NEXT:    mul a0, a0, a1
 ; RV64IM-NEXT:    srli a0, a0, 32
 ; RV64IM-NEXT:    ret

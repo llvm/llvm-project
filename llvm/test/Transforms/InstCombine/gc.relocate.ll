@@ -52,6 +52,17 @@ entry:
   ret <2 x i8 addrspace(1)*> %obj.relocated
 }
 
+define i32 addrspace(1)* @canonical_base(i32 addrspace(1)* %dparam) gc "statepoint-example" {
+; Checks that a nonnull pointer
+; CHECK-LABEL: @canonical_base
+; CHECK: (token %tok, i32 7, i32 7) ; (%dparam, %dparam)
+entry:
+  %tok = tail call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* @return_i1, i32 0, i32 0, i32 0, i32 0, i32 addrspace(1)* %dparam, i32 addrspace(1)* %dparam)
+  %relocate = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %tok,  i32 7, i32 8)
+  ret i32 addrspace(1)* %relocate
+}
+
+
 declare void @do_safepoint()
 
 declare token @llvm.experimental.gc.statepoint.p0f_isVoidf(i64, i32, void ()*, i32, i32, ...)

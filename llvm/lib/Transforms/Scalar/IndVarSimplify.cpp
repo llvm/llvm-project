@@ -1672,6 +1672,10 @@ Instruction *WidenIV::widenIVUse(NarrowIVDefUse DU, SCEVExpander &Rewriter) {
     return nullptr;
   }
 
+  // if we reached this point then we are going to replace
+  // DU.NarrowUse with WideUse. Reattach DbgValue then.
+  replaceAllDbgUsesWith(*DU.NarrowUse, *WideUse, *WideUse, *DT);
+
   ExtendKindMap[DU.NarrowUse] = WideAddRec.second;
   // Returning WideUse pushes it on the worklist.
   return WideUse;
@@ -1797,14 +1801,9 @@ PHINode *WidenIV::createWideIV(SCEVExpander &Rewriter) {
       DeadInsts.emplace_back(DU.NarrowDef);
   }
 
-  // Attach any debug information to the new PHI. Since OrigPhi and WidePHI
-  // evaluate the same recurrence, we can just copy the debug info over.
-  SmallVector<DbgValueInst *, 1> DbgValues;
-  llvm::findDbgValues(DbgValues, OrigPhi);
-  auto *MDPhi = MetadataAsValue::get(WidePhi->getContext(),
-                                     ValueAsMetadata::get(WidePhi));
-  for (auto &DbgValue : DbgValues)
-    DbgValue->setOperand(0, MDPhi);
+  // Attach any debug information to the new PHI.
+  replaceAllDbgUsesWith(*OrigPhi, *WidePhi, *WidePhi, *DT);
+
   return WidePhi;
 }
 
@@ -2845,7 +2844,7 @@ bool IndVarSimplify::run(Loop *L) {
       // that our definition of "high cost" is not exactly principled.  
       if (Rewriter.isHighCostExpansion(ExitCount, L))
         continue;
-      
+
       // Check preconditions for proper SCEVExpander operation. SCEV does not
       // express SCEVExpander's dependencies, such as LoopSimplify. Instead
       // any pass that uses the SCEVExpander must do it. This does not work

@@ -247,8 +247,8 @@ bool MipsSEDAGToDAGISel::selectAddrFrameIndexOffset(
         Base = Addr.getOperand(0);
         // If base is a FI, additional offset calculation is done in
         // eliminateFrameIndex, otherwise we need to check the alignment
-        const llvm::Align Align(1ULL << ShiftAmount);
-        if (!isAligned(Align, CN->getZExtValue()))
+        const Align Alignment(1ULL << ShiftAmount);
+        if (!isAligned(Alignment, CN->getZExtValue()))
           return false;
       }
 
@@ -720,7 +720,7 @@ bool MipsSEDAGToDAGISel::trySelect(SDNode *Node) {
   }
 
   case ISD::ConstantFP: {
-    ConstantFPSDNode *CN = dyn_cast<ConstantFPSDNode>(Node);
+    auto *CN = cast<ConstantFPSDNode>(Node);
     if (Node->getValueType(0) == MVT::f64 && CN->isExactlyValue(+0.0)) {
       if (Subtarget->isGP64bit()) {
         SDValue Zero = CurDAG->getCopyFromReg(CurDAG->getEntryNode(), DL,
@@ -744,7 +744,7 @@ bool MipsSEDAGToDAGISel::trySelect(SDNode *Node) {
   }
 
   case ISD::Constant: {
-    const ConstantSDNode *CN = dyn_cast<ConstantSDNode>(Node);
+    auto *CN = cast<ConstantSDNode>(Node);
     int64_t Imm = CN->getSExtValue();
     unsigned Size = CN->getValueSizeInBits(0);
 
@@ -970,7 +970,7 @@ bool MipsSEDAGToDAGISel::trySelect(SDNode *Node) {
       break;
     }
 
-    SDNode *Res;
+    SDNode *Res = nullptr;
 
     // If we have a signed 10 bit integer, we can splat it directly.
     //

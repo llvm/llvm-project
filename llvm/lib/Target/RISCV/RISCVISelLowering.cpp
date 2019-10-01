@@ -198,7 +198,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   setBooleanContents(ZeroOrOneBooleanContent);
 
   // Function alignments.
-  const llvm::Align FunctionAlignment(Subtarget.hasStdExtC() ? 2 : 4);
+  const Align FunctionAlignment(Subtarget.hasStdExtC() ? 2 : 4);
   setMinFunctionAlignment(FunctionAlignment);
   setPrefFunctionAlignment(FunctionAlignment);
 
@@ -1389,12 +1389,12 @@ static const MCPhysReg ArgGPRs[] = {
   RISCV::X14, RISCV::X15, RISCV::X16, RISCV::X17
 };
 static const MCPhysReg ArgFPR32s[] = {
-  RISCV::F10_32, RISCV::F11_32, RISCV::F12_32, RISCV::F13_32,
-  RISCV::F14_32, RISCV::F15_32, RISCV::F16_32, RISCV::F17_32
+  RISCV::F10_F, RISCV::F11_F, RISCV::F12_F, RISCV::F13_F,
+  RISCV::F14_F, RISCV::F15_F, RISCV::F16_F, RISCV::F17_F
 };
 static const MCPhysReg ArgFPR64s[] = {
-  RISCV::F10_64, RISCV::F11_64, RISCV::F12_64, RISCV::F13_64,
-  RISCV::F14_64, RISCV::F15_64, RISCV::F16_64, RISCV::F17_64
+  RISCV::F10_D, RISCV::F11_D, RISCV::F12_D, RISCV::F13_D,
+  RISCV::F14_D, RISCV::F15_D, RISCV::F16_D, RISCV::F17_D
 };
 
 // Pass a 2*XLEN argument that has been split into two XLEN values through
@@ -1903,8 +1903,7 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
     // ensure that the frame pointer is 2*XLEN-aligned, which in turn ensures
     // offsets to even-numbered registered remain 2*XLEN-aligned.
     if (Idx % 2) {
-      FI = MFI.CreateFixedObject(XLenInBytes, VaArgOffset - (int)XLenInBytes,
-                                 true);
+      MFI.CreateFixedObject(XLenInBytes, VaArgOffset - (int)XLenInBytes, true);
       VarArgsSaveSize += XLenInBytes;
     }
 
@@ -2108,6 +2107,7 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
             DAG.getStore(Chain, DL, Hi, StackPtr, MachinePointerInfo()));
       } else {
         // Second half of f64 is passed in another GPR.
+        assert(RegLo < RISCV::X31 && "Invalid register pair");
         Register RegHigh = RegLo + 1;
         RegsToPass.push_back(std::make_pair(RegHigh, Hi));
       }
@@ -2324,6 +2324,7 @@ RISCVTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
       SDValue Lo = SplitF64.getValue(0);
       SDValue Hi = SplitF64.getValue(1);
       Register RegLo = VA.getLocReg();
+      assert(RegLo < RISCV::X31 && "Invalid register pair");
       Register RegHi = RegLo + 1;
       Chain = DAG.getCopyToReg(Chain, DL, RegLo, Lo, Glue);
       Glue = Chain.getValue(1);
@@ -2511,38 +2512,38 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
   if (Subtarget.hasStdExtF() || Subtarget.hasStdExtD()) {
     std::pair<Register, Register> FReg =
         StringSwitch<std::pair<Register, Register>>(Constraint.lower())
-            .Cases("{f0}", "{ft0}", {RISCV::F0_32, RISCV::F0_64})
-            .Cases("{f1}", "{ft1}", {RISCV::F1_32, RISCV::F1_64})
-            .Cases("{f2}", "{ft2}", {RISCV::F2_32, RISCV::F2_64})
-            .Cases("{f3}", "{ft3}", {RISCV::F3_32, RISCV::F3_64})
-            .Cases("{f4}", "{ft4}", {RISCV::F4_32, RISCV::F4_64})
-            .Cases("{f5}", "{ft5}", {RISCV::F5_32, RISCV::F5_64})
-            .Cases("{f6}", "{ft6}", {RISCV::F6_32, RISCV::F6_64})
-            .Cases("{f7}", "{ft7}", {RISCV::F7_32, RISCV::F7_64})
-            .Cases("{f8}", "{fs0}", {RISCV::F8_32, RISCV::F8_64})
-            .Cases("{f9}", "{fs1}", {RISCV::F9_32, RISCV::F9_64})
-            .Cases("{f10}", "{fa0}", {RISCV::F10_32, RISCV::F10_64})
-            .Cases("{f11}", "{fa1}", {RISCV::F11_32, RISCV::F11_64})
-            .Cases("{f12}", "{fa2}", {RISCV::F12_32, RISCV::F12_64})
-            .Cases("{f13}", "{fa3}", {RISCV::F13_32, RISCV::F13_64})
-            .Cases("{f14}", "{fa4}", {RISCV::F14_32, RISCV::F14_64})
-            .Cases("{f15}", "{fa5}", {RISCV::F15_32, RISCV::F15_64})
-            .Cases("{f16}", "{fa6}", {RISCV::F16_32, RISCV::F16_64})
-            .Cases("{f17}", "{fa7}", {RISCV::F17_32, RISCV::F17_64})
-            .Cases("{f18}", "{fs2}", {RISCV::F18_32, RISCV::F18_64})
-            .Cases("{f19}", "{fs3}", {RISCV::F19_32, RISCV::F19_64})
-            .Cases("{f20}", "{fs4}", {RISCV::F20_32, RISCV::F20_64})
-            .Cases("{f21}", "{fs5}", {RISCV::F21_32, RISCV::F21_64})
-            .Cases("{f22}", "{fs6}", {RISCV::F22_32, RISCV::F22_64})
-            .Cases("{f23}", "{fs7}", {RISCV::F23_32, RISCV::F23_64})
-            .Cases("{f24}", "{fs8}", {RISCV::F24_32, RISCV::F24_64})
-            .Cases("{f25}", "{fs9}", {RISCV::F25_32, RISCV::F25_64})
-            .Cases("{f26}", "{fs10}", {RISCV::F26_32, RISCV::F26_64})
-            .Cases("{f27}", "{fs11}", {RISCV::F27_32, RISCV::F27_64})
-            .Cases("{f28}", "{ft8}", {RISCV::F28_32, RISCV::F28_64})
-            .Cases("{f29}", "{ft9}", {RISCV::F29_32, RISCV::F29_64})
-            .Cases("{f30}", "{ft10}", {RISCV::F30_32, RISCV::F30_64})
-            .Cases("{f31}", "{ft11}", {RISCV::F31_32, RISCV::F31_64})
+            .Cases("{f0}", "{ft0}", {RISCV::F0_F, RISCV::F0_D})
+            .Cases("{f1}", "{ft1}", {RISCV::F1_F, RISCV::F1_D})
+            .Cases("{f2}", "{ft2}", {RISCV::F2_F, RISCV::F2_D})
+            .Cases("{f3}", "{ft3}", {RISCV::F3_F, RISCV::F3_D})
+            .Cases("{f4}", "{ft4}", {RISCV::F4_F, RISCV::F4_D})
+            .Cases("{f5}", "{ft5}", {RISCV::F5_F, RISCV::F5_D})
+            .Cases("{f6}", "{ft6}", {RISCV::F6_F, RISCV::F6_D})
+            .Cases("{f7}", "{ft7}", {RISCV::F7_F, RISCV::F7_D})
+            .Cases("{f8}", "{fs0}", {RISCV::F8_F, RISCV::F8_D})
+            .Cases("{f9}", "{fs1}", {RISCV::F9_F, RISCV::F9_D})
+            .Cases("{f10}", "{fa0}", {RISCV::F10_F, RISCV::F10_D})
+            .Cases("{f11}", "{fa1}", {RISCV::F11_F, RISCV::F11_D})
+            .Cases("{f12}", "{fa2}", {RISCV::F12_F, RISCV::F12_D})
+            .Cases("{f13}", "{fa3}", {RISCV::F13_F, RISCV::F13_D})
+            .Cases("{f14}", "{fa4}", {RISCV::F14_F, RISCV::F14_D})
+            .Cases("{f15}", "{fa5}", {RISCV::F15_F, RISCV::F15_D})
+            .Cases("{f16}", "{fa6}", {RISCV::F16_F, RISCV::F16_D})
+            .Cases("{f17}", "{fa7}", {RISCV::F17_F, RISCV::F17_D})
+            .Cases("{f18}", "{fs2}", {RISCV::F18_F, RISCV::F18_D})
+            .Cases("{f19}", "{fs3}", {RISCV::F19_F, RISCV::F19_D})
+            .Cases("{f20}", "{fs4}", {RISCV::F20_F, RISCV::F20_D})
+            .Cases("{f21}", "{fs5}", {RISCV::F21_F, RISCV::F21_D})
+            .Cases("{f22}", "{fs6}", {RISCV::F22_F, RISCV::F22_D})
+            .Cases("{f23}", "{fs7}", {RISCV::F23_F, RISCV::F23_D})
+            .Cases("{f24}", "{fs8}", {RISCV::F24_F, RISCV::F24_D})
+            .Cases("{f25}", "{fs9}", {RISCV::F25_F, RISCV::F25_D})
+            .Cases("{f26}", "{fs10}", {RISCV::F26_F, RISCV::F26_D})
+            .Cases("{f27}", "{fs11}", {RISCV::F27_F, RISCV::F27_D})
+            .Cases("{f28}", "{ft8}", {RISCV::F28_F, RISCV::F28_D})
+            .Cases("{f29}", "{ft9}", {RISCV::F29_F, RISCV::F29_D})
+            .Cases("{f30}", "{ft10}", {RISCV::F30_F, RISCV::F30_D})
+            .Cases("{f31}", "{ft11}", {RISCV::F31_F, RISCV::F31_D})
             .Default({RISCV::NoRegister, RISCV::NoRegister});
     if (FReg.first != RISCV::NoRegister)
       return Subtarget.hasStdExtD()

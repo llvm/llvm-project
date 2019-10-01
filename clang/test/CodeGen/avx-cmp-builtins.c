@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -ffreestanding %s -O3 -triple=x86_64-apple-darwin -target-feature +avx -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -O3 -triple=x86_64-apple-darwin -target-feature +avx -emit-llvm -o - | FileCheck %s
 // FIXME: The shufflevector instructions in test_cmpgt_sd are relying on O3 here.
 
 
@@ -14,7 +14,7 @@ __m128d test_cmp_sd(__m128d a, __m128d b) {
   return _mm_cmp_sd(a, b, _CMP_GE_OS);
 }
 
-__m128d test_cmp_ss(__m128 a, __m128 b) {
+__m128 test_cmp_ss(__m128 a, __m128 b) {
   // Expects that the third argument in LLVM IR is immediate expression
   // CHECK: @llvm.x86.sse.cmp.ss({{.*}}, i8 13)
   return _mm_cmp_ss(a, b, _CMP_GE_OS);

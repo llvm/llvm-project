@@ -208,7 +208,7 @@ createScopeFileDistance(llvm::ArrayRef<std::string> QueryScopes) {
     Param.MaxUpTraversals = std::max(Path.second - 1, 0);
     Sources[Path.first] = std::move(Param);
   }
-  return FileDistance(Sources, Opts);
+  return FileDistance(std::move(Sources), Opts);
 }
 
 ScopeDistance::ScopeDistance(llvm::ArrayRef<std::string> QueryScopes)

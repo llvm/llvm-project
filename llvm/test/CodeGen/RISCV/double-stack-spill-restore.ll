@@ -37,10 +37,10 @@ define double @func(double %d, i32 %n) nounwind {
 ; RV64IFD:       # %bb.0: # %entry
 ; RV64IFD-NEXT:    addi sp, sp, -16
 ; RV64IFD-NEXT:    sd ra, 8(sp)
+; RV64IFD-NEXT:    slli a2, a1, 32
+; RV64IFD-NEXT:    srli a2, a2, 32
 ; RV64IFD-NEXT:    fmv.d.x ft0, a0
-; RV64IFD-NEXT:    slli a0, a1, 32
-; RV64IFD-NEXT:    srli a0, a0, 32
-; RV64IFD-NEXT:    beqz a0, .LBB0_2
+; RV64IFD-NEXT:    beqz a2, .LBB0_2
 ; RV64IFD-NEXT:  # %bb.1: # %if.else
 ; RV64IFD-NEXT:    addi a1, a1, -1
 ; RV64IFD-NEXT:    fmv.x.d a0, ft0

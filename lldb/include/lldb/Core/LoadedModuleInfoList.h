@@ -84,9 +84,6 @@ public:
     }
 
     bool operator==(LoadedModuleInfo const &rhs) const {
-      if (e_num != rhs.e_num)
-        return false;
-
       for (size_t i = 0; i < e_num; ++i) {
         if (m_has[i] != rhs.m_has[i])
           return false;

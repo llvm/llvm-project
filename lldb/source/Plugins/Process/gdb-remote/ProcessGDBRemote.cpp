@@ -99,12 +99,14 @@ namespace lldb {
 // namespace. This allows you to attach with a debugger and call this function
 // and get the packet history dumped to a file.
 void DumpProcessGDBRemotePacketHistory(void *p, const char *path) {
-  StreamFile strm;
-  Status error = FileSystem::Instance().Open(strm.GetFile(), FileSpec(path),
-                                             File::eOpenOptionWrite |
-                                                 File::eOpenOptionCanCreate);
-  if (error.Success())
-    ((ProcessGDBRemote *)p)->GetGDBRemote().DumpHistory(strm);
+  auto file = FileSystem::Instance().Open(
+      FileSpec(path), File::eOpenOptionWrite | File::eOpenOptionCanCreate);
+  if (!file) {
+    llvm::consumeError(file.takeError());
+    return;
+  }
+  StreamFile stream(std::move(file.get()));
+  ((ProcessGDBRemote *)p)->GetGDBRemote().DumpHistory(stream);
 }
 } // namespace lldb
 

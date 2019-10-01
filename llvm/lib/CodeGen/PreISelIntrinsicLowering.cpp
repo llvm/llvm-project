@@ -76,7 +76,7 @@ static bool lowerObjCCall(Function &F, const char *NewFn,
   }
 
   for (auto I = F.use_begin(), E = F.use_end(); I != E;) {
-    auto *CI = dyn_cast<CallInst>(I->getUser());
+    auto *CI = cast<CallInst>(I->getUser());
     assert(CI->getCalledFunction() && "Cannot lower an indirect call!");
     ++I;
 

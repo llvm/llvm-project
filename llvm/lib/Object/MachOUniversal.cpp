@@ -210,19 +210,34 @@ MachOUniversalBinary::MachOUniversalBinary(MemoryBufferRef Source, Error &Err)
   Err = Error::success();
 }
 
-Expected<std::unique_ptr<MachOObjectFile>>
+Expected<MachOUniversalBinary::ObjectForArch>
 MachOUniversalBinary::getObjectForArch(StringRef ArchName) const {
   if (Triple(ArchName).getArch() == Triple::ArchType::UnknownArch)
     return make_error<GenericBinaryError>("Unknown architecture "
                                           "named: " +
                                               ArchName,
                                           object_error::arch_not_found);
-
-  for (auto &Obj : objects())
+  for (const auto &Obj : objects())
     if (Obj.getArchFlagName() == ArchName)
-      return Obj.getAsObjectFile();
+      return Obj;
   return make_error<GenericBinaryError>("fat file does not "
                                         "contain " +
                                             ArchName,
                                         object_error::arch_not_found);
+}
+
+Expected<std::unique_ptr<MachOObjectFile>>
+MachOUniversalBinary::getMachOObjectForArch(StringRef ArchName) const {
+  Expected<ObjectForArch> O = getObjectForArch(ArchName);
+  if (!O)
+    return O.takeError();
+  return O->getAsObjectFile();
+}
+
+Expected<std::unique_ptr<Archive>>
+MachOUniversalBinary::getArchiveForArch(StringRef ArchName) const {
+  Expected<ObjectForArch> O = getObjectForArch(ArchName);
+  if (!O)
+    return O.takeError();
+  return O->getAsArchive();
 }

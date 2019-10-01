@@ -2,16 +2,8 @@
 ; The Metadata pass erases named & unnamed metadata nodes.
 ;
 ; RUN: rm -rf %t
-; RUN: mkdir %t
-; get the python path from lit
-; RUN: echo "#!" %python > %t/test.py
-; then include the rest of the test script
-; RUN: cat %p/Inputs/remove-metadata.py >> %t/test.py
-; RUN: chmod +x %t/test.py
-
-; RUN: llvm-reduce --test %t/test.py %s -o %t/out.ll
-; RUN: cat %t/out.ll | FileCheck -implicit-check-not=! %s
-; REQUIRES: shell
+; RUN: llvm-reduce --test %python --test-arg %p/Inputs/remove-metadata.py %s -o %t
+; RUN: cat %t | FileCheck -implicit-check-not=! %s
 
 @global = global i32 0, !dbg !0
 

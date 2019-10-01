@@ -1214,7 +1214,7 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
             A.getKind() == ParsedAttr::AT_CUDAHost ||
             A.getKind() == ParsedAttr::AT_CUDAGlobal)
           Diag(A.getLoc(), diag::warn_cuda_attr_lambda_position)
-              << A.getName()->getName();
+              << A.getAttrName()->getName();
   };
 
   // FIXME: Consider allowing this as an extension for GCC compatibiblity.

@@ -122,6 +122,9 @@ TEST(BasicBlockTest, TestInstructionsWithoutDebug) {
   CHECK_ITERATORS(BB1->instructionsWithoutDebug(), Exp);
   CHECK_ITERATORS(BBConst->instructionsWithoutDebug(), Exp);
 
+  EXPECT_EQ(static_cast<size_t>(BB1->sizeWithoutDebug()), Exp.size());
+  EXPECT_EQ(static_cast<size_t>(BBConst->sizeWithoutDebug()), Exp.size());
+
   delete M;
   delete V;
 }

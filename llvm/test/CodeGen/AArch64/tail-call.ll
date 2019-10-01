@@ -1,5 +1,5 @@
 ; RUN: llc -verify-machineinstrs < %s -mtriple=aarch64-none-linux-gnu -tailcallopt | FileCheck %s --check-prefixes=SDAG,COMMON
-; RUN: llc -global-isel -global-isel-abort=2 -verify-machineinstrs < %s -mtriple=aarch64-none-linux-gnu -tailcallopt | FileCheck %s --check-prefixes=GISEL,COMMON
+; RUN: llc -global-isel -global-isel-abort=1 -verify-machineinstrs < %s -mtriple=aarch64-none-linux-gnu -tailcallopt | FileCheck %s --check-prefixes=GISEL,COMMON
 
 declare fastcc void @callee_stack0()
 declare fastcc void @callee_stack8([8 x i64], i64)

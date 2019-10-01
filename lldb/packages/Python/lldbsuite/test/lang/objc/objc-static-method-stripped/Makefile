@@ -1,5 +1,5 @@
 OBJC_SOURCES := static.m
-LDFLAGS = $(CFLAGS) -lobjc -framework Foundation
+LD_EXTRAS := -lobjc -framework Foundation
 
 default:        a.out.stripped
 

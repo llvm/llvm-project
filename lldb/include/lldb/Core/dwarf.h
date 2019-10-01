@@ -22,7 +22,7 @@ typedef uint32_t dw_uleb128_t;
 typedef int32_t dw_sleb128_t;
 typedef uint16_t dw_attr_t;
 typedef uint16_t dw_form_t;
-typedef uint16_t dw_tag_t;
+typedef llvm::dwarf::Tag dw_tag_t;
 typedef uint64_t dw_addr_t; // Dwarf address define that must be big enough for
                             // any addresses in the compile units that get
                             // parsed

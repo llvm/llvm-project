@@ -216,7 +216,6 @@ public:
     return !FrameIndexExprs.empty();
   }
 
-  bool isBlockByrefVariable() const;
   const DIType *getType() const;
 
   static bool classof(const DbgEntity *N) {

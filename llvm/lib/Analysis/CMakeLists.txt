@@ -22,9 +22,11 @@ add_llvm_library(LLVMAnalysis
   CostModel.cpp
   CodeMetrics.cpp
   ConstantFolding.cpp
+  DDG.cpp
   Delinearization.cpp
   DemandedBits.cpp
   DependenceAnalysis.cpp
+  DependenceGraphBuilder.cpp
   DivergenceAnalysis.cpp
   DomPrinter.cpp
   DomTreeUpdater.cpp
@@ -95,6 +97,7 @@ add_llvm_library(LLVMAnalysis
   ValueLatticeUtils.cpp
   ValueTracking.cpp
   VectorUtils.cpp
+  VFABIDemangling.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Analysis

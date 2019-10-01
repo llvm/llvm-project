@@ -220,6 +220,11 @@ enum {
   /// - OpIdx - Operand index
   GIM_CheckIsMBB,
 
+  /// Check the specified operand is an Imm
+  /// - InsnID - Instruction ID
+  /// - OpIdx - Operand index
+  GIM_CheckIsImm,
+
   /// Check if the specified operand is safe to fold into the current
   /// instruction.
   /// - InsnID - Instruction ID

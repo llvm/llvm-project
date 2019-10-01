@@ -53,6 +53,34 @@ public:
 
   void print(llvm::raw_ostream &Out, const PrintingPolicy &Policy) const;
 };
+
+/// Symbolic representation of a dynamic allocation.
+class DynamicAllocLValue {
+  unsigned Index;
+
+public:
+  DynamicAllocLValue() : Index(0) {}
+  explicit DynamicAllocLValue(unsigned Index) : Index(Index + 1) {}
+  unsigned getIndex() { return Index - 1; }
+
+  explicit operator bool() const { return Index != 0; }
+
+  void *getOpaqueValue() {
+    return reinterpret_cast<void *>(static_cast<uintptr_t>(Index)
+                                    << NumLowBitsAvailable);
+  }
+  static DynamicAllocLValue getFromOpaqueValue(void *Value) {
+    DynamicAllocLValue V;
+    V.Index = reinterpret_cast<uintptr_t>(Value) >> NumLowBitsAvailable;
+    return V;
+  }
+
+  static unsigned getMaxIndex() {
+    return (std::numeric_limits<unsigned>::max() >> NumLowBitsAvailable) - 1;
+  }
+
+  static constexpr int NumLowBitsAvailable = 3;
+};
 }
 
 namespace llvm {
@@ -66,6 +94,17 @@ template<> struct PointerLikeTypeTraits<clang::TypeInfoLValue> {
   // Validated by static_assert in APValue.cpp; hardcoded to avoid needing
   // to include Type.h.
   static constexpr int NumLowBitsAvailable = 3;
+};
+
+template<> struct PointerLikeTypeTraits<clang::DynamicAllocLValue> {
+  static void *getAsVoidPointer(clang::DynamicAllocLValue V) {
+    return V.getOpaqueValue();
+  }
+  static clang::DynamicAllocLValue getFromVoidPointer(void *P) {
+    return clang::DynamicAllocLValue::getFromOpaqueValue(P);
+  }
+  static constexpr int NumLowBitsAvailable =
+      clang::DynamicAllocLValue::NumLowBitsAvailable;
 };
 }
 
@@ -97,13 +136,15 @@ public:
   };
 
   class LValueBase {
-    typedef llvm::PointerUnion<const ValueDecl *, const Expr *, TypeInfoLValue>
+    typedef llvm::PointerUnion<const ValueDecl *, const Expr *, TypeInfoLValue,
+                               DynamicAllocLValue>
         PtrTy;
 
   public:
     LValueBase() : Local{} {}
     LValueBase(const ValueDecl *P, unsigned I = 0, unsigned V = 0);
     LValueBase(const Expr *P, unsigned I = 0, unsigned V = 0);
+    static LValueBase getDynamicAlloc(DynamicAllocLValue LV, QualType Type);
     static LValueBase getTypeInfo(TypeInfoLValue LV, QualType TypeInfo);
 
     template <class T>
@@ -124,6 +165,7 @@ public:
     unsigned getCallIndex() const;
     unsigned getVersion() const;
     QualType getTypeInfoType() const;
+    QualType getDynamicAllocType() const;
 
     friend bool operator==(const LValueBase &LHS, const LValueBase &RHS);
     friend bool operator!=(const LValueBase &LHS, const LValueBase &RHS) {
@@ -140,6 +182,8 @@ public:
       LocalState Local;
       /// The type std::type_info, if this is a TypeInfoLValue.
       void *TypeInfoType;
+      /// The QualType, if this is a DynamicAllocLValue.
+      void *DynamicAllocType;
     };
   };
 

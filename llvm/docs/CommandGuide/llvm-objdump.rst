@@ -91,7 +91,8 @@ combined with other commands:
 
 .. option:: --version
 
-  Display the version of this program. Does not stack with other commands.
+  Display the version of the :program:`llvm-objdump` executable. Does not stack
+  with other commands.
 
 .. option:: -x, --all-headers
 

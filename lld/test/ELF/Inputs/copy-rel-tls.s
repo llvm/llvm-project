@@ -6,7 +6,7 @@ foo:
 
 .section .tbss,"awT",@nobits
 .global tfoo
-.skip 0x2000
+.skip 0x3358
 .type tfoo,@object
 .size tfoo, 4
 tfoo:

@@ -4,8 +4,8 @@
 ; CHECK: vector.body:
 ; CHECK: %index = phi i32
 ; CHECK: [[ELEMS:%[^ ]+]] = phi i32 [ %N, %vector.ph ], [ [[REMAINING:%[^ ]+]], %vector.body ]
+; CHECK: [[VCTP:%[^ ]+]] = call <16 x i1> @llvm.arm.vctp8(i32 [[ELEMS]])
 ; CHECK: [[REMAINING]] = sub i32 [[ELEMS]], 16
-; CHECK: [[VCTP:%[^ ]+]] = call <16 x i1> @llvm.arm.vctp8(i32 [[REMAINING]])
 ; CHECK: [[LD0:%[^ ]+]] = tail call <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>* {{.*}}, i32 4, <16 x i1> [[VCTP]], <16 x i8> undef)
 ; CHECK: [[LD1:%[^ ]+]] = tail call <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>* {{.*}}, i32 4, <16 x i1> [[VCTP]], <16 x i8> undef)
 ; CHECK: tail call void @llvm.masked.store.v16i8.p0v16i8(<16 x i8> {{.*}}, <16 x i8>* {{.*}}, i32 4, <16 x i1> [[VCTP]])
@@ -57,8 +57,8 @@ for.cond.cleanup:                                 ; preds = %vector.body, %entry
 ; CHECK: vector.body:
 ; CHECK: %index = phi i32
 ; CHECK: [[ELEMS:%[^ ]+]] = phi i32 [ %N, %vector.ph ], [ [[REMAINING:%[^ ]+]], %vector.body ]
+; CHECK: [[VCTP:%[^ ]+]] = call <8 x i1> @llvm.arm.vctp16(i32 [[ELEMS]])
 ; CHECK: [[REMAINING]] = sub i32 [[ELEMS]], 8
-; CHECK: [[VCTP:%[^ ]+]] = call <8 x i1> @llvm.arm.vctp16(i32 [[REMAINING]])
 ; CHECK: [[LD0:%[^ ]+]] = tail call <8 x i16> @llvm.masked.load.v8i16.p0v8i16(<8 x i16>* {{.*}}, i32 4, <8 x i1> [[VCTP]], <8 x i16> undef)
 ; CHECK: [[LD1:%[^ ]+]] = tail call <8 x i16> @llvm.masked.load.v8i16.p0v8i16(<8 x i16>* {{.*}}, i32 4, <8 x i1> [[VCTP]], <8 x i16> undef)
 ; CHECK: tail call void @llvm.masked.store.v8i16.p0v8i16(<8 x i16> {{.*}}, <8 x i16>* {{.*}}, i32 4, <8 x i1> [[VCTP]])
@@ -109,8 +109,8 @@ for.cond.cleanup:                                 ; preds = %vector.body, %entry
 ; CHECK-LABEL: mul_v4i32
 ; CHECK: vector.body:
 ; CHECK: [[ELEMS:%[^ ]+]] = phi i32 [ %N, %vector.ph ], [ [[REMAINING:%[^ ]+]], %vector.body ]
+; CHECK: [[VCTP:%[^ ]+]] = call <4 x i1> @llvm.arm.vctp32(i32 [[ELEMS]])
 ; CHECK: [[REMAINING]] = sub i32 [[ELEMS]], 4
-; CHECK: [[VCTP:%[^ ]+]] = call <4 x i1> @llvm.arm.vctp32(i32 [[REMAINING]])
 ; CHECK: [[LD0:%[^ ]+]] = tail call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* {{.*}}, i32 4, <4 x i1> [[VCTP]], <4 x i32> undef)
 ; CHECK: [[LD1:%[^ ]+]] = tail call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* {{.*}}, i32 4, <4 x i1> [[VCTP]], <4 x i32> undef)
 ; CHECK: tail call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> {{.*}}, <4 x i32>* {{.*}}, i32 4, <4 x i1> [[VCTP]])
@@ -162,8 +162,8 @@ for.cond.cleanup:                                 ; preds = %vector.body, %entry
 ; CHECK: vector.body:
 ; CHECK: %index = phi i32
 ; CHECK: [[ELEMS:%[^ ]+]] = phi i32 [ %N, %vector.ph ], [ [[REMAINING:%[^ ]+]], %vector.body ]
+; CHECK: [[VCTP:%[^ ]+]] = call <2 x i1> @llvm.arm.vctp64(i32 [[ELEMS]])
 ; CHECK: [[REMAINING]] = sub i32 [[ELEMS]], 2
-; CHECK: [[VCTP:%[^ ]+]] = call <2 x i1> @llvm.arm.vctp64(i32 [[REMAINING]])
 ; CHECK: [[LD0:%[^ ]+]] = tail call <2 x i64> @llvm.masked.load.v2i64.p0v2i64(<2 x i64>* {{.*}}, i32 4, <2 x i1> [[VCTP]], <2 x i64> undef)
 ; CHECK: tail call void @llvm.masked.store.v2i64.p0v2i64(<2 x i64> [[LD0]], <2 x i64>* {{.*}}, i32 4, <2 x i1> [[VCTP]])
 define void @copy_v2i64(i64* %a, i64* %b, i32 %N) {
@@ -210,8 +210,8 @@ for.cond.cleanup:                                 ; preds = %vector.body, %entry
 ; CHECK: vector.body:
 ; CHECK: %index = phi i32
 ; CHECK: [[ELEMS:%[^ ]+]] = phi i32 [ %N, %vector.ph ], [ [[REMAINING:%[^ ]+]], %vector.body ]
+; CHECK: [[VCTP:%[^ ]+]] = call <4 x i1> @llvm.arm.vctp32(i32 [[ELEMS]])
 ; CHECK: [[REMAINING]] = sub i32 [[ELEMS]], 4
-; CHECK: [[VCTP:%[^ ]+]] = call <4 x i1> @llvm.arm.vctp32(i32 [[REMAINING]])
 ; CHECK: [[LD0:%[^ ]+]] = tail call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* {{.*}}, i32 4, <4 x i1> [[VCTP]], <4 x i32> undef)
 ; CHECK: [[LD1:%[^ ]+]] = tail call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* {{.*}}, i32 4, <4 x i1> [[VCTP]], <4 x i32> undef)
 ; CHECK: tail call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> {{.*}}, <4 x i32>* {{.*}}, i32 4, <4 x i1> [[VCTP]])
@@ -268,8 +268,8 @@ for.cond.cleanup:                                 ; preds = %vector.body, %entry
 ; One of the loads now uses ult predicate.
 ; CHECK-LABEL: mismatch_load_pred
 ; CHECK: [[ELEMS:%[^ ]+]] = phi i32 [ %N, %vector.ph ], [ [[REMAINING:%[^ ]+]], %vector.body ]
+; CHECK: [[VCTP:%[^ ]+]] = call <4 x i1> @llvm.arm.vctp32(i32 [[ELEMS]])
 ; CHECK: [[REMAINING]] = sub i32 [[ELEMS]], 4
-; CHECK: [[VCTP:%[^ ]+]] = call <4 x i1> @llvm.arm.vctp32(i32 [[REMAINING]])
 ; CHECK: [[LD0:%[^ ]+]] = tail call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* {{.*}}, i32 4, <4 x i1> [[VCTP]], <4 x i32> undef)
 ; CHECK: [[LD1:%[^ ]+]] = tail call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* {{.*}}, i32 4, <4 x i1> %wrong, <4 x i32> undef)
 ; CHECK: tail call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> {{.*}}, <4 x i32>* {{.*}}, i32 4, <4 x i1> [[VCTP]])
@@ -322,8 +322,8 @@ for.cond.cleanup:                                 ; preds = %vector.body, %entry
 ; CHECK-LABEL: mismatch_store_pred
 ; CHECK: %index = phi i32
 ; CHECK: [[ELEMS:%[^ ]+]] = phi i32 [ %N, %vector.ph ], [ [[REMAINING:%[^ ]+]], %vector.body ]
+; CHECK: [[VCTP:%[^ ]+]] = call <4 x i1> @llvm.arm.vctp32(i32 [[ELEMS]])
 ; CHECK: [[REMAINING]] = sub i32 [[ELEMS]], 4
-; CHECK: [[VCTP:%[^ ]+]] = call <4 x i1> @llvm.arm.vctp32(i32 [[REMAINING]])
 ; CHECK: [[LD0:%[^ ]+]] = tail call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* {{.*}}, i32 4, <4 x i1> [[VCTP]], <4 x i32> undef)
 ; CHECK: [[LD1:%[^ ]+]] = tail call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* {{.*}}, i32 4, <4 x i1> [[VCTP]], <4 x i32> undef)
 ; CHECK: tail call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> {{.*}}, <4 x i32>* {{.*}}, i32 4, <4 x i1> %wrong)

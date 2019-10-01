@@ -16,7 +16,7 @@
 # DOC2: Name: _sym2
 # DOC3: Name: _sym3
 # DOC4: Name: _sym4
-# DOC5: error: Cannot find the 5th document
+# DOC5: error: cannot find the 5th document
 
 --- !ELF
 FileHeader: !FileHeader

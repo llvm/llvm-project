@@ -1073,5 +1073,18 @@ llvm::json::Value toJSON(const SemanticHighlightingParams &Highlighting) {
   };
 }
 
+bool fromJSON(const llvm::json::Value &Params, SelectionRangeParams &P) {
+  llvm::json::ObjectMapper O(Params);
+  return O && O.map("textDocument", P.textDocument) &&
+         O.map("positions", P.positions);
+}
+
+llvm::json::Value toJSON(const SelectionRange &Out) {
+  if (Out.parent) {
+    return llvm::json::Object{{"range", Out.range},
+                              {"parent", toJSON(*Out.parent)}};
+  }
+  return llvm::json::Object{{"range", Out.range}};
+}
 } // namespace clangd
 } // namespace clang

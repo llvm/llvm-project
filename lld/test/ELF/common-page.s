@@ -37,8 +37,8 @@ _start:
 # CHECK-MAX-NEXT:       SHF_ALLOC (0x2)
 # CHECK-MAX-NEXT:       SHF_EXECINSTR (0x4)
 # CHECK-MAX-NEXT:     ]
-# CHECK-MAX-NEXT:     Address: 0x210000
-# CHECK-MAX-NEXT:     Offset: 0x10000
+# CHECK-MAX-NEXT:     Address: 0x210120
+# CHECK-MAX-NEXT:     Offset: 0x120
 # CHECK-MAX-NEXT:     Size: 1
 # CHECK-MAX-NEXT:     Link: 0
 # CHECK-MAX-NEXT:     Info: 0
@@ -54,7 +54,7 @@ _start:
 # CHECK-MAX-NEXT:       SHF_STRINGS (0x20)
 # CHECK-MAX-NEXT:     ]
 # CHECK-MAX-NEXT:     Address: 0x0
-# CHECK-MAX-NEXT:     Offset: 0x10001
+# CHECK-MAX-NEXT:     Offset: 0x121
 # CHECK-MAX-NEXT:     Size: 8
 # CHECK-MAX-NEXT:     Link: 0
 # CHECK-MAX-NEXT:     Info: 0
@@ -88,9 +88,9 @@ _start:
 # CHECK-MAX-NEXT:   }
 # CHECK-MAX-NEXT:   ProgramHeader {
 # CHECK-MAX-NEXT:     Type: PT_LOAD (0x1)
-# CHECK-MAX-NEXT:     Offset: 0x10000
-# CHECK-MAX-NEXT:     VirtualAddress: 0x210000
-# CHECK-MAX-NEXT:     PhysicalAddress: 0x210000
+# CHECK-MAX-NEXT:     Offset: 0x120
+# CHECK-MAX-NEXT:     VirtualAddress: 0x210120
+# CHECK-MAX-NEXT:     PhysicalAddress: 0x210120
 # CHECK-MAX-NEXT:     FileSize: 1
 # CHECK-MAX-NEXT:     MemSize: 1
 # CHECK-MAX-NEXT:     Flags [ (0x5)
@@ -147,8 +147,8 @@ _start:
 # CHECK-COMMON-NEXT:       SHF_ALLOC (0x2)
 # CHECK-COMMON-NEXT:       SHF_EXECINSTR (0x4)
 # CHECK-COMMON-NEXT:     ]
-# CHECK-COMMON-NEXT:     Address: 0x210000
-# CHECK-COMMON-NEXT:     Offset: 0x10000
+# CHECK-COMMON-NEXT:     Address: 0x210120
+# CHECK-COMMON-NEXT:     Offset: 0x120
 # CHECK-COMMON-NEXT:     Size: 1
 # CHECK-COMMON-NEXT:     Link: 0
 # CHECK-COMMON-NEXT:     Info: 0
@@ -164,7 +164,7 @@ _start:
 # CHECK-COMMON-NEXT:       SHF_STRINGS (0x20)
 # CHECK-COMMON-NEXT:     ]
 # CHECK-COMMON-NEXT:     Address: 0x0
-# CHECK-COMMON-NEXT:     Offset: 0x10001
+# CHECK-COMMON-NEXT:     Offset: 0x121
 # CHECK-COMMON-NEXT:     Size: 8
 # CHECK-COMMON-NEXT:     Link: 0
 # CHECK-COMMON-NEXT:     Info: 0
@@ -198,9 +198,9 @@ _start:
 # CHECK-COMMON-NEXT:   }
 # CHECK-COMMON-NEXT:   ProgramHeader {
 # CHECK-COMMON-NEXT:     Type: PT_LOAD (0x1)
-# CHECK-COMMON-NEXT:     Offset: 0x10000
-# CHECK-COMMON-NEXT:     VirtualAddress: 0x210000
-# CHECK-COMMON-NEXT:     PhysicalAddress: 0x210000
+# CHECK-COMMON-NEXT:     Offset: 0x120
+# CHECK-COMMON-NEXT:     VirtualAddress: 0x210120
+# CHECK-COMMON-NEXT:     PhysicalAddress: 0x210120
 # CHECK-COMMON-NEXT:     FileSize: 1
 # CHECK-COMMON-NEXT:     MemSize: 1
 # CHECK-COMMON-NEXT:     Flags [ (0x5)

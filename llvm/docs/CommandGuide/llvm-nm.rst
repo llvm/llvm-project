@@ -34,7 +34,7 @@ a, A
 
 b, B
 
- Unitialized data (bss) object.
+ Uninitialized data (bss) object.
 
 C
 
@@ -90,7 +90,7 @@ V
 
  ELF: Defined weak object symbol. This definition will only be used if no
  regular definitions exist in a link. If multiple weak definitions and no
- regular definitons exist, one of the weak definitions will be used.
+ regular definitions exist, one of the weak definitions will be used.
 
 w
 
@@ -101,7 +101,7 @@ W
 
  Defined weak symbol other than an ELF object symbol. This definition will only
  be used if no regular definitions exist in a link. If multiple weak definitions
- and no regular definitons exist, one of the weak definitions will be used.
+ and no regular definitions exist, one of the weak definitions will be used.
 
 \-
 
@@ -227,7 +227,8 @@ OPTIONS
 
 .. option:: --version
 
- Display the version of this program. Does not stack with other commands.
+ Display the version of the :program:`llvm-nm` executable. Does not stack with
+ other commands.
 
 .. option:: --without-aliases
 

@@ -85,9 +85,9 @@ template <class BlockT, class LoopT>
 bool LoopBase<BlockT, LoopT>::hasDedicatedExits() const {
   // Each predecessor of each exit block of a normal loop is contained
   // within the loop.
-  SmallVector<BlockT *, 4> ExitBlocks;
-  getExitBlocks(ExitBlocks);
-  for (BlockT *EB : ExitBlocks)
+  SmallVector<BlockT *, 4> UniqueExitBlocks;
+  getUniqueExitBlocks(UniqueExitBlocks);
+  for (BlockT *EB : UniqueExitBlocks)
     for (BlockT *Predecessor : children<Inverse<BlockT *>>(EB))
       if (!contains(Predecessor))
         return false;
@@ -200,8 +200,6 @@ BlockT *LoopBase<BlockT, LoopT>::getLoopPredecessor() const {
     }
   }
 
-  // Make sure there is only one exit out of the preheader.
-  assert(Out && "Header of loop has no predecessors from outside loop?");
   return Out;
 }
 

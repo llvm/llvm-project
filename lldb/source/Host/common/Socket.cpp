@@ -74,9 +74,10 @@ bool IsInterrupted() {
 
 Socket::Socket(SocketProtocol protocol, bool should_close,
                bool child_processes_inherit)
-    : IOObject(eFDTypeSocket, should_close), m_protocol(protocol),
+    : IOObject(eFDTypeSocket), m_protocol(protocol),
       m_socket(kInvalidSocketValue),
-      m_child_processes_inherit(child_processes_inherit) {}
+      m_child_processes_inherit(child_processes_inherit),
+      m_should_close_fd(should_close) {}
 
 Socket::~Socket() { Close(); }
 
@@ -476,11 +477,11 @@ NativeSocket Socket::AcceptSocket(NativeSocket sockfd, struct sockaddr *addr,
   if (!child_processes_inherit) {
     flags |= SOCK_CLOEXEC;
   }
-  NativeSocket fd = llvm::sys::RetryAfterSignal(-1, ::accept4,
-      sockfd, addr, addrlen, flags);
+  NativeSocket fd = llvm::sys::RetryAfterSignal(
+      static_cast<NativeSocket>(-1), ::accept4, sockfd, addr, addrlen, flags);
 #else
-  NativeSocket fd = llvm::sys::RetryAfterSignal(-1, ::accept,
-      sockfd, addr, addrlen);
+  NativeSocket fd = llvm::sys::RetryAfterSignal(
+      static_cast<NativeSocket>(-1), ::accept, sockfd, addr, addrlen);
 #endif
   if (fd == kInvalidSocketValue)
     SetLastError(error);

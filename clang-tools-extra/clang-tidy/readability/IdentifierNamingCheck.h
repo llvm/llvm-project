@@ -34,6 +34,7 @@ namespace readability {
 class IdentifierNamingCheck : public ClangTidyCheck {
 public:
   IdentifierNamingCheck(StringRef Name, ClangTidyContext *Context);
+  ~IdentifierNamingCheck();
 
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;

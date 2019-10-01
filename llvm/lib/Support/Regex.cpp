@@ -52,14 +52,24 @@ Regex::~Regex() {
   }
 }
 
-bool Regex::isValid(std::string &Error) const {
-  if (!error)
-    return true;
+namespace {
 
+/// Utility to convert a regex error code into a human-readable string.
+void RegexErrorToString(int error, struct llvm_regex *preg,
+                        std::string &Error) {
   size_t len = llvm_regerror(error, preg, nullptr, 0);
 
   Error.resize(len - 1);
   llvm_regerror(error, preg, &Error[0], len);
+}
+
+} // namespace
+
+bool Regex::isValid(std::string &Error) const {
+  if (!error)
+    return true;
+
+  RegexErrorToString(error, preg, Error);
   return false;
 }
 
@@ -69,8 +79,14 @@ unsigned Regex::getNumMatches() const {
   return preg->re_nsub;
 }
 
-bool Regex::match(StringRef String, SmallVectorImpl<StringRef> *Matches){
-  if (error)
+bool Regex::match(StringRef String, SmallVectorImpl<StringRef> *Matches,
+                  std::string *Error) const {
+  // Reset error, if given.
+  if (Error && !Error->empty())
+    *Error = "";
+
+  // Check if the regex itself didn't successfully compile.
+  if (Error ? !isValid(*Error) : !isValid())
     return false;
 
   unsigned nmatch = Matches ? preg->re_nsub+1 : 0;
@@ -83,11 +99,13 @@ bool Regex::match(StringRef String, SmallVectorImpl<StringRef> *Matches){
 
   int rc = llvm_regexec(preg, String.data(), nmatch, pm.data(), REG_STARTEND);
 
+  // Failure to match is not an error, it's just a normal return value.
+  // Any other error code is considered abnormal, and is logged in the Error.
   if (rc == REG_NOMATCH)
     return false;
   if (rc != 0) {
-    // regexec can fail due to invalid pattern or running out of memory.
-    error = rc;
+    if (Error)
+      RegexErrorToString(error, preg, *Error);
     return false;
   }
 
@@ -112,14 +130,11 @@ bool Regex::match(StringRef String, SmallVectorImpl<StringRef> *Matches){
 }
 
 std::string Regex::sub(StringRef Repl, StringRef String,
-                       std::string *Error) {
+                       std::string *Error) const {
   SmallVector<StringRef, 8> Matches;
 
-  // Reset error, if given.
-  if (Error && !Error->empty()) *Error = "";
-
   // Return the input if there was no match.
-  if (!match(String, &Matches))
+  if (!match(String, &Matches, Error))
     return String;
 
   // Otherwise splice in the replacement string, starting with the prefix before

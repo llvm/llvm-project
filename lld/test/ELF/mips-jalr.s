@@ -1,20 +1,56 @@
 # REQUIRES: mips
-# Check that lld ignores R_MIPS_JALR relocation for now.
 
-# RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux %s -o %t.o
-# RUN: ld.lld %t.o -o %t.exe 
+## Check handling of the R_MIPS_JALR relocation.
+
+# RUN: llvm-mc -filetype=obj -triple=mipsel-unknown-linux %s -o %t.o
 # RUN: llvm-readelf -r %t.o | FileCheck -check-prefix=REL %s
-# RUN: llvm-objdump -d --no-show-raw-insn %t.exe | FileCheck %s
 
-# REL: R_MIPS_CALL16 {{.*}} foo
+# RUN: ld.lld %t.o -shared -o %t.so
+# RUN: llvm-objdump -d --no-show-raw-insn %t.so | FileCheck -check-prefix=SO %s
+
+# RUN: ld.lld %t.o --defsym=bar=__start -o %t.so
+# RUN: llvm-objdump -d --no-show-raw-insn %t.so | FileCheck -check-prefix=EXE %s
+
+# REL: R_MIPS_JALR   {{.*}} bar
 # REL: R_MIPS_JALR   {{.*}} foo
+# REL: R_MIPS_JALR   {{.*}} far
 
-# CHECK: jalr  $25
+# SO: jalr  $25
+# SO: bal   -24 <foo>
+# SO: jalr  $25
+
+# SO: jr    $25
+# SO: b     -64 <foo>
+# SO: jr    $25
+
+# EXE: bal   -4 <foo>
+# EXE: bal   -24 <foo>
+# EXE: jalr  $25
+
+# EXE: b     -56 <foo>
+# EXE: b     -64 <foo>
+# EXE: jr    $25
 
   .text
-  .global  __start
+  .global bar
+  .global __start
   .option pic2
+far:
+  .space 0x4fff0
 __start:
-  jal foo
 foo:
+  jal bar
   nop
+  jal foo
+  nop
+  jal far
+  nop
+l1:
+  jr $25
+  .reloc l1, R_MIPS_JALR, bar
+l2:
+  jr $25
+  .reloc l2, R_MIPS_JALR, foo
+l3:
+  jr $25
+  .reloc l3, R_MIPS_JALR, far

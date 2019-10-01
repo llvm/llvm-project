@@ -105,7 +105,7 @@ private:
 
   /// Alignment of the basic block. One if the basic block does not need to be
   /// aligned.
-  llvm::Align Alignment;
+  Align Alignment;
 
   /// Indicate that this basic block is entered via an exception handler.
   bool IsEHPad = false;
@@ -372,17 +372,11 @@ public:
   /// \see getBeginClobberMask()
   const uint32_t *getEndClobberMask(const TargetRegisterInfo *TRI) const;
 
-  /// Return alignment of the basic block. The alignment is specified as
-  /// log2(bytes).
-  /// FIXME: Remove the Log versions once migration to llvm::Align is over.
-  unsigned getLogAlignment() const { return Log2(Alignment); }
-  llvm::Align getAlignment() const { return Alignment; }
+  /// Return alignment of the basic block.
+  Align getAlignment() const { return Alignment; }
 
-  /// Set alignment of the basic block. The alignment is specified as
-  /// log2(bytes).
-  /// FIXME: Remove the Log versions once migration to llvm::Align is over.
-  void setLogAlignment(unsigned A) { Alignment = llvm::Align(1ULL << A); }
-  void setAlignment(llvm::Align A) { Alignment = A; }
+  /// Set alignment of the basic block.
+  void setAlignment(Align A) { Alignment = A; }
 
   /// Returns true if the block is a landing pad. That is this basic block is
   /// entered via an exception handler.

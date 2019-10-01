@@ -267,6 +267,18 @@ bool Sema::inferCUDATargetForImplicitSpecialMember(CXXRecordDecl *ClassDecl,
                                                    CXXMethodDecl *MemberDecl,
                                                    bool ConstRHS,
                                                    bool Diagnose) {
+  // If the defaulted special member is defined lexically outside of its
+  // owning class, or the special member already has explicit device or host
+  // attributes, do not infer.
+  bool InClass = MemberDecl->getLexicalParent() == MemberDecl->getParent();
+  bool HasH = MemberDecl->hasAttr<CUDAHostAttr>();
+  bool HasD = MemberDecl->hasAttr<CUDADeviceAttr>();
+  bool HasExplicitAttr =
+      (HasD && !MemberDecl->getAttr<CUDADeviceAttr>()->isImplicit()) ||
+      (HasH && !MemberDecl->getAttr<CUDAHostAttr>()->isImplicit());
+  if (!InClass || HasExplicitAttr)
+    return false;
+
   llvm::Optional<CUDAFunctionTarget> InferredTarget;
 
   // We're going to invoke special member lookup; mark that these special
@@ -371,21 +383,23 @@ bool Sema::inferCUDATargetForImplicitSpecialMember(CXXRecordDecl *ClassDecl,
     }
   }
 
+
+  // If no target was inferred, mark this member as __host__ __device__;
+  // it's the least restrictive option that can be invoked from any target.
+  bool NeedsH = true, NeedsD = true;
   if (InferredTarget.hasValue()) {
-    if (InferredTarget.getValue() == CFT_Device) {
-      MemberDecl->addAttr(CUDADeviceAttr::CreateImplicit(Context));
-    } else if (InferredTarget.getValue() == CFT_Host) {
-      MemberDecl->addAttr(CUDAHostAttr::CreateImplicit(Context));
-    } else {
-      MemberDecl->addAttr(CUDADeviceAttr::CreateImplicit(Context));
-      MemberDecl->addAttr(CUDAHostAttr::CreateImplicit(Context));
-    }
-  } else {
-    // If no target was inferred, mark this member as __host__ __device__;
-    // it's the least restrictive option that can be invoked from any target.
-    MemberDecl->addAttr(CUDADeviceAttr::CreateImplicit(Context));
-    MemberDecl->addAttr(CUDAHostAttr::CreateImplicit(Context));
+    if (InferredTarget.getValue() == CFT_Device)
+      NeedsH = false;
+    else if (InferredTarget.getValue() == CFT_Host)
+      NeedsD = false;
   }
+
+  // We either setting attributes first time, or the inferred ones must match
+  // previously set ones.
+  if (NeedsD && !HasD)
+    MemberDecl->addAttr(CUDADeviceAttr::CreateImplicit(Context));
+  if (NeedsH && !HasH)
+    MemberDecl->addAttr(CUDAHostAttr::CreateImplicit(Context));
 
   return false;
 }
@@ -806,7 +820,8 @@ void Sema::inheritCUDATargetAttrs(FunctionDecl *FD,
 
 std::string Sema::getCudaConfigureFuncName() const {
   if (getLangOpts().HIP)
-    return "hipConfigureCall";
+    return getLangOpts().HIPUseNewLaunchAPI ? "__hipPushCallConfiguration"
+                                            : "hipConfigureCall";
 
   // New CUDA kernel launch sequence.
   if (CudaFeatureEnabled(Context.getTargetInfo().getSDKVersion(),

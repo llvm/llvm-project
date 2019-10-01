@@ -55,6 +55,8 @@ bool UniqueDWARFASTTypeList::Find(const DWARFDIE &die,
               case DW_TAG_partial_unit:
                 done = true;
                 break;
+              default:
+                break;
               }
             }
             parent_arg_die = parent_arg_die.GetParent();

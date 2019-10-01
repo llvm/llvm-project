@@ -1,0 +1,39 @@
+## Check how obj2yaml dumps e_machine field.
+
+## Check it dumps an unknown e_machine as a number.
+
+# RUN: yaml2obj --docnum=1 %s -o %t1
+# RUN: obj2yaml %t1 | FileCheck %s --check-prefix=UNKNOWN
+
+# UNKNOWN:      --- !ELF
+# UNKNOWN-NEXT: FileHeader:
+# UNKNOWN-NEXT:   Class:   ELFCLASS64
+# UNKNOWN-NEXT:   Data:    ELFDATA2MSB
+# UNKNOWN-NEXT:   Type:    ET_REL
+# UNKNOWN-NEXT:   Machine: 0x1234
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2MSB
+  Type:    ET_REL
+  Machine: 0x1234
+
+## Check it dumps a known e_machine value as an enum string.
+
+# RUN: yaml2obj --docnum=2 %s -o %t2
+# RUN: obj2yaml %t2 | FileCheck %s --check-prefix=KNOWN
+
+# KNOWN:      --- !ELF
+# KNOWN-NEXT: FileHeader:
+# KNOWN-NEXT:   Class:   ELFCLASS64
+# KNOWN-NEXT:   Data:    ELFDATA2MSB
+# KNOWN-NEXT:   Type:    ET_REL
+# KNOWN-NEXT:   Machine: EM_NONE
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2MSB
+  Type:    ET_REL
+  Machine: 0

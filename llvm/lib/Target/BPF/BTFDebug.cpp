@@ -473,35 +473,29 @@ void BTFDebug::visitStructType(const DICompositeType *CTy, bool IsStruct,
 
 void BTFDebug::visitArrayType(const DICompositeType *CTy, uint32_t &TypeId) {
   // Visit array element type.
-  uint32_t ElemTypeId, ElemSize;
+  uint32_t ElemTypeId;
   const DIType *ElemType = CTy->getBaseType();
   visitTypeEntry(ElemType, ElemTypeId, false, false);
 
-  // Strip qualifiers from element type to get accurate element size.
-  ElemSize = ElemType->getSizeInBits() >> 3;
+  // Visit array dimensions.
+  DINodeArray Elements = CTy->getElements();
+  for (int I = Elements.size() - 1; I >= 0; --I) {
+    if (auto *Element = dyn_cast_or_null<DINode>(Elements[I]))
+      if (Element->getTag() == dwarf::DW_TAG_subrange_type) {
+        const DISubrange *SR = cast<DISubrange>(Element);
+        auto *CI = SR->getCount().dyn_cast<ConstantInt *>();
+        int64_t Count = CI->getSExtValue();
 
-  if (!CTy->getSizeInBits()) {
-    auto TypeEntry = std::make_unique<BTFTypeArray>(ElemTypeId, 0);
-    ElemTypeId = addType(std::move(TypeEntry), CTy);
-  } else {
-    // Visit array dimensions.
-    DINodeArray Elements = CTy->getElements();
-    for (int I = Elements.size() - 1; I >= 0; --I) {
-      if (auto *Element = dyn_cast_or_null<DINode>(Elements[I]))
-        if (Element->getTag() == dwarf::DW_TAG_subrange_type) {
-          const DISubrange *SR = cast<DISubrange>(Element);
-          auto *CI = SR->getCount().dyn_cast<ConstantInt *>();
-          int64_t Count = CI->getSExtValue();
-
-          auto TypeEntry =
-              std::make_unique<BTFTypeArray>(ElemTypeId, Count);
-          if (I == 0)
-            ElemTypeId = addType(std::move(TypeEntry), CTy);
-          else
-            ElemTypeId = addType(std::move(TypeEntry));
-          ElemSize = ElemSize * Count;
-        }
-    }
+        // For struct s { int b; char c[]; }, the c[] will be represented
+        // as an array with Count = -1.
+        auto TypeEntry =
+            std::make_unique<BTFTypeArray>(ElemTypeId,
+                Count >= 0 ? Count : 0);
+        if (I == 0)
+          ElemTypeId = addType(std::move(TypeEntry), CTy);
+        else
+          ElemTypeId = addType(std::move(TypeEntry));
+      }
   }
 
   // The array TypeId is the type id of the outermost dimension.
@@ -1160,12 +1154,8 @@ bool BTFDebug::InstLower(const MachineInstr *MI, MCInst &OutMI) {
       const GlobalValue *GVal = MO.getGlobal();
       auto *GVar = dyn_cast<GlobalVariable>(GVal);
       if (GVar && GVar->hasAttribute(BPFCoreSharedInfo::AmaAttr)) {
-        MDNode *MDN = GVar->getMetadata(LLVMContext::MD_preserve_access_index);
-        DIType *Ty = dyn_cast<DIType>(MDN);
-        std::string TypeName = Ty->getName();
-        int64_t Imm = AccessOffsets[GVar->getName().str()];
-
         // Emit "mov ri, <imm>" for abstract member accesses.
+        int64_t Imm = AccessOffsets[GVar->getName().str()];
         OutMI.setOpcode(BPF::MOV_ri);
         OutMI.addOperand(MCOperand::createReg(MI->getOperand(0).getReg()));
         OutMI.addOperand(MCOperand::createImm(Imm));

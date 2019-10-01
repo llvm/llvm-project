@@ -11,21 +11,21 @@
 define i32 @main() nounwind {
 ; RV32I-LABEL: main:
 ; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    lui a0, %hi(b)
-; RV32I-NEXT:    addi a0, a0, %lo(b)
-; RV32I-NEXT:    lui a1, %hi(a)
-; RV32I-NEXT:    addi a1, a1, %lo(a)
-; RV32I-NEXT:    lui a2, 1
-; RV32I-NEXT:    mv a3, zero
+; RV32I-NEXT:    mv a0, zero
+; RV32I-NEXT:    lui a1, %hi(b)
+; RV32I-NEXT:    addi a1, a1, %lo(b)
+; RV32I-NEXT:    lui a2, %hi(a)
+; RV32I-NEXT:    addi a2, a2, %lo(a)
+; RV32I-NEXT:    lui a3, 1
 ; RV32I-NEXT:  .LBB0_1: # %for.body
 ; RV32I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32I-NEXT:    addi a4, a3, -2048
-; RV32I-NEXT:    sw a4, 0(a1)
+; RV32I-NEXT:    addi a4, a0, -2048
+; RV32I-NEXT:    sw a4, 0(a2)
+; RV32I-NEXT:    sw a0, 0(a1)
+; RV32I-NEXT:    addi a0, a0, 1
 ; RV32I-NEXT:    addi a1, a1, 4
-; RV32I-NEXT:    sw a3, 0(a0)
-; RV32I-NEXT:    addi a0, a0, 4
-; RV32I-NEXT:    addi a3, a3, 1
-; RV32I-NEXT:    bne a3, a2, .LBB0_1
+; RV32I-NEXT:    addi a2, a2, 4
+; RV32I-NEXT:    bne a0, a3, .LBB0_1
 ; RV32I-NEXT:  # %bb.2: # %for.end
 ; RV32I-NEXT:    mv a0, zero
 ; RV32I-NEXT:    ret

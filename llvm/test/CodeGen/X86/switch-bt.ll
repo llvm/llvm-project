@@ -155,3 +155,43 @@ sw.epilog:
 ; CHECK: cmpl $60
 ; CHECK: jne
 }
+
+
+; TODO: Omit the range check when the default case is unreachable, see PR43129.
+declare void @g(i32)
+define void @test5(i32 %x) {
+
+; CHECK-LABEL: test5
+; CHECK: cmpl $8, %edi
+; CHECK: ja
+
+; 73 = 2^0 + 2^3 + 2^6
+; CHECK:      movl $73
+; CHECK-NEXT: btl
+; CHECK-NEXT: jb
+
+; 146 = 2^1 + 2^4 + 2^7
+; CHECK-NEXT: movl $146
+; CHECK-NEXT: btl
+; CHECK-NEXT: jae
+
+
+entry:
+  switch i32 %x, label %return [
+    i32 0, label %bb0
+    i32 3, label %bb0
+    i32 6, label %bb0
+
+    i32 1, label %bb1
+    i32 4, label %bb1
+    i32 7, label %bb1
+
+    i32 2, label %bb2
+    i32 5, label %bb2
+    i32 8, label %bb2
+  ]
+bb0: tail call void @g(i32 0) br label %return
+bb1: tail call void @g(i32 1) br label %return
+bb2: tail call void @g(i32 2) br label %return
+return: unreachable
+}

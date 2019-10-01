@@ -35,18 +35,22 @@ public:
 
   StreamFile(FILE *fh, bool transfer_ownership);
 
+  StreamFile(std::shared_ptr<File> file) : m_file_sp(file) { assert(file); };
+
   ~StreamFile() override;
 
-  File &GetFile() { return m_file; }
+  File &GetFile() { return *m_file_sp; }
 
-  const File &GetFile() const { return m_file; }
+  const File &GetFile() const { return *m_file_sp; }
+
+  std::shared_ptr<File> GetFileSP() { return m_file_sp; }
 
   void Flush() override;
 
 
 protected:
   // Classes that inherit from StreamFile can see and modify these
-  File m_file;
+  std::shared_ptr<File> m_file_sp; // never NULL
   size_t WriteImpl(const void *s, size_t length) override;
 
 private:

@@ -1,7 +1,8 @@
 OBJCXX_SOURCES := main.mm
 
-CFLAGS_EXTRAS += -w
+CFLAGS_EXTRAS := -w
 
+
+
+LD_EXTRAS := -framework Foundation
 include Makefile.rules
-
-LDFLAGS += -framework Foundation

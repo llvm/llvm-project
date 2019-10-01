@@ -9,7 +9,7 @@
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu -O2 \
 ; RUN:   -ppc-gpr-icmps=all -ppc-asm-full-reg-names -mcpu=pwr8 < %s | FileCheck %s \
 ; RUN:  --implicit-check-not cmpw --implicit-check-not cmpd --implicit-check-not cmpl
-@glob = common local_unnamed_addr global i64 0, align 8
+@glob = local_unnamed_addr global i64 0, align 8
 @.str = private unnamed_addr constant [12 x i8] c"Value = %d\0A\00", align 1
 
 ; Function Attrs: noinline nounwind

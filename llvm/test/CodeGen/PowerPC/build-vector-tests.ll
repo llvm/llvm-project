@@ -1278,16 +1278,12 @@ entry:
 define <4 x i32> @spltMemVali(i32* nocapture readonly %ptr) {
 ; P9BE-LABEL: spltMemVali:
 ; P9BE:       # %bb.0: # %entry
-; P9BE-NEXT:    lfiwzx f0, 0, r3
-; P9BE-NEXT:    xxsldwi vs0, f0, f0, 1
-; P9BE-NEXT:    xxspltw v2, vs0, 0
+; P9BE-NEXT:    lxvwsx v2, 0, r3
 ; P9BE-NEXT:    blr
 ;
 ; P9LE-LABEL: spltMemVali:
 ; P9LE:       # %bb.0: # %entry
-; P9LE-NEXT:    lfiwzx f0, 0, r3
-; P9LE-NEXT:    xxpermdi vs0, f0, f0, 2
-; P9LE-NEXT:    xxspltw v2, vs0, 3
+; P9LE-NEXT:    lxvwsx v2, 0, r3
 ; P9LE-NEXT:    blr
 ;
 ; P8BE-LABEL: spltMemVali:
@@ -2833,16 +2829,12 @@ entry:
 define <4 x i32> @spltMemValui(i32* nocapture readonly %ptr) {
 ; P9BE-LABEL: spltMemValui:
 ; P9BE:       # %bb.0: # %entry
-; P9BE-NEXT:    lfiwzx f0, 0, r3
-; P9BE-NEXT:    xxsldwi vs0, f0, f0, 1
-; P9BE-NEXT:    xxspltw v2, vs0, 0
+; P9BE-NEXT:    lxvwsx v2, 0, r3
 ; P9BE-NEXT:    blr
 ;
 ; P9LE-LABEL: spltMemValui:
 ; P9LE:       # %bb.0: # %entry
-; P9LE-NEXT:    lfiwzx f0, 0, r3
-; P9LE-NEXT:    xxpermdi vs0, f0, f0, 2
-; P9LE-NEXT:    xxspltw v2, vs0, 3
+; P9LE-NEXT:    lxvwsx v2, 0, r3
 ; P9LE-NEXT:    blr
 ;
 ; P8BE-LABEL: spltMemValui:

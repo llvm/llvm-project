@@ -31,7 +31,7 @@ class StringRef;
 
 namespace lldb_private {
 
-#if defined(_MSC_VER)
+#if defined(_WIN32)
 typedef SOCKET NativeSocket;
 #else
 typedef int NativeSocket;
@@ -122,6 +122,7 @@ protected:
   SocketProtocol m_protocol;
   NativeSocket m_socket;
   bool m_child_processes_inherit;
+  bool m_should_close_fd;
 };
 
 } // namespace lldb_private

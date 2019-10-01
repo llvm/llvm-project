@@ -11,6 +11,7 @@
 // [[nodiscard]] on constructors isn't supported by all compilers
 // UNSUPPORTED: clang-6, clang-7, clang-8, clang-9
 // UNSUPPORTED: apple-clang-9, apple-clang-10, apple-clang-11
+// UNSUPPORTED: gcc-5
 
 // [[nodiscard]] isn't supported in C++98 and C++03 (not even as an extension)
 // UNSUPPORTED: c++98, c++03

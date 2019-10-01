@@ -129,21 +129,10 @@ public:
                         const DebugLoc &DL,
                         int *BytesAdded = nullptr) const override;
 
-  /// Analyze the loop code, return true if it cannot be understood. Upon
-  /// success, this function returns false and returns information about the
-  /// induction variable and compare instruction used at the end.
-  bool analyzeLoop(MachineLoop &L, MachineInstr *&IndVarInst,
-                   MachineInstr *&CmpInst) const override;
-
-  /// Generate code to reduce the loop iteration by one and check if the loop
-  /// is finished.  Return the value/register of the new loop count.  We need
-  /// this function when peeling off one or more iterations of a loop. This
-  /// function assumes the nth iteration is peeled first.
-  unsigned reduceLoopCount(MachineBasicBlock &MBB, MachineBasicBlock &PreHeader,
-                           MachineInstr *IndVar, MachineInstr &Cmp,
-                           SmallVectorImpl<MachineOperand> &Cond,
-                           SmallVectorImpl<MachineInstr *> &PrevInsts,
-                           unsigned Iter, unsigned MaxIter) const override;
+  /// Analyze loop L, which must be a single-basic-block loop, and if the
+  /// conditions can be understood enough produce a PipelinerLoopInfo object.
+  std::unique_ptr<PipelinerLoopInfo>
+  analyzeLoopForPipelining(MachineBasicBlock *LoopBB) const override;
 
   /// Return true if it's profitable to predicate
   /// instructions with accumulated instruction latency of "NumCycles"
@@ -299,8 +288,7 @@ public:
   // memory addresses and false otherwise.
   bool
   areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
-                                  const MachineInstr &MIb,
-                                  AliasAnalysis *AA = nullptr) const override;
+                                  const MachineInstr &MIb) const override;
 
   /// For instructions with a base and offset, return the position of the
   /// base register and offset operands.

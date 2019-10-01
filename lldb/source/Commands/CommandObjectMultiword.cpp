@@ -94,8 +94,10 @@ bool CommandObjectMultiword::Execute(const char *args_string,
   }
 
   auto sub_command = args[0].ref();
-  if (sub_command.empty())
+  if (sub_command.empty()) {
+    result.AppendError("Need to specify a non-empty subcommand.");
     return result.Succeeded();
+  }
 
   if (sub_command.equals_lower("help")) {
     this->CommandObject::GenerateHelpText(result);
@@ -195,8 +197,7 @@ void CommandObjectMultiword::HandleCompletion(CompletionRequest &request) {
       if (cmd_obj != nullptr) {
         if (request.GetParsedLine().GetArgumentCount() != 1) {
           request.GetParsedLine().Shift();
-          request.SetCursorCharPosition(0);
-          request.GetParsedLine().AppendArgument(llvm::StringRef());
+          request.AppendEmptyArgument();
           cmd_obj->HandleCompletion(request);
         }
       }
@@ -214,8 +215,7 @@ void CommandObjectMultiword::HandleCompletion(CompletionRequest &request) {
   // Remove the one match that we got from calling GetSubcommandObject.
   new_matches.DeleteStringAtIndex(0);
   request.AddCompletions(new_matches);
-  request.GetParsedLine().Shift();
-  request.SetCursorIndex(request.GetCursorIndex() - 1);
+  request.ShiftArguments();
   sub_command_object->HandleCompletion(request);
 }
 

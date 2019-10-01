@@ -4,13 +4,13 @@
 ; Verify that we do NOT generate the mtctr instruction for loop trip counts < 4
 ; The latency of the mtctr is only justified if there are more than 4 comparisons that are removed as a result.
 
-@a = common local_unnamed_addr global i32 0, align 4
-@b = common local_unnamed_addr global i32 0, align 4
-@c = common local_unnamed_addr global i32 0, align 4
-@d = common local_unnamed_addr global i32 0, align 4
-@e = common local_unnamed_addr global i32 0, align 4
-@f = common local_unnamed_addr global i32 0, align 4
-@arr = common local_unnamed_addr global [5 x i32] zeroinitializer, align 4
+@a = local_unnamed_addr global i32 0, align 4
+@b = local_unnamed_addr global i32 0, align 4
+@c = local_unnamed_addr global i32 0, align 4
+@d = local_unnamed_addr global i32 0, align 4
+@e = local_unnamed_addr global i32 0, align 4
+@f = local_unnamed_addr global i32 0, align 4
+@arr = local_unnamed_addr global [5 x i32] zeroinitializer, align 4
 
 ; Function Attrs: norecurse nounwind readonly
 define signext i32 @testTripCount2(i32 signext %a) {

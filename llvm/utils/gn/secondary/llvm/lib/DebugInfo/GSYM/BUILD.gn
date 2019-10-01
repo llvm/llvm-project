@@ -6,6 +6,7 @@ static_library("GSYM") {
   sources = [
     "FileWriter.cpp",
     "FunctionInfo.cpp",
+    "Header.cpp",
     "InlineInfo.cpp",
     "LineTable.cpp",
     "Range.cpp",

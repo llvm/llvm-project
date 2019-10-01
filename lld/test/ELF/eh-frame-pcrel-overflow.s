@@ -4,7 +4,7 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %p/Inputs/eh-frame-pcrel-overflow.s -o %t1.o
 # RUN: ld.lld --eh-frame-hdr -Ttext=0x90000000 %t.o -o /dev/null
 # RUN: not ld.lld --eh-frame-hdr %t.o %t1.o -o /dev/null 2>&1 | FileCheck %s
-# CHECK: error: {{.*}}.o:(.eh_frame): PC offset is too large: 0x90000eac
+# CHECK: error: {{.*}}.o:(.eh_frame): PC offset is too large: 0x90001054
 
 .text
 .global _start

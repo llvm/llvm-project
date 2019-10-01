@@ -84,7 +84,7 @@ bool RegisterContextWindows::AddHardwareBreakpoint(uint32_t slot,
   case 1:
   case 2:
   case 4:
-#if defined(_M_AMD64)
+#if defined(_WIN64)
   case 8:
 #endif
     break;
@@ -95,6 +95,7 @@ bool RegisterContextWindows::AddHardwareBreakpoint(uint32_t slot,
   if (!CacheAllRegisterValues())
     return false;
 
+#if defined(__i386__) || defined(_M_IX86) || defined(__x86_64__) || defined(_M_AMD64)
   unsigned shift = 2 * slot;
   m_context.Dr7 |= 1ULL << shift;
 
@@ -109,6 +110,12 @@ bool RegisterContextWindows::AddHardwareBreakpoint(uint32_t slot,
   m_context.Dr7 |= (read ? 3ULL : (write ? 1ULL : 0)) << shift;
 
   return ApplyAllRegisterValues();
+
+#else
+  Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_REGISTERS);
+  LLDB_LOG(log, "hardware breakpoints not currently supported on this arch");
+  return false;
+#endif
 }
 
 bool RegisterContextWindows::RemoveHardwareBreakpoint(uint32_t slot) {
@@ -118,19 +125,25 @@ bool RegisterContextWindows::RemoveHardwareBreakpoint(uint32_t slot) {
   if (!CacheAllRegisterValues())
     return false;
 
+#if defined(__i386__) || defined(_M_IX86) || defined(__x86_64__) || defined(_M_AMD64)
   unsigned shift = 2 * slot;
   m_context.Dr7 &= ~(1ULL << shift);
 
   return ApplyAllRegisterValues();
+#else
+  return false;
+#endif
 }
 
 uint32_t RegisterContextWindows::GetTriggeredHardwareBreakpointSlotId() {
   if (!CacheAllRegisterValues())
     return LLDB_INVALID_INDEX32;
 
+#if defined(__i386__) || defined(_M_IX86) || defined(__x86_64__) || defined(_M_AMD64)
   for (unsigned i = 0UL; i < NUM_HARDWARE_BREAKPOINT_SLOTS; i++)
     if (m_context.Dr6 & (1ULL << i))
       return i;
+#endif
 
   return LLDB_INVALID_INDEX32;
 }

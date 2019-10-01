@@ -9,11 +9,11 @@ define void @test_blockaddress() nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp)
-; RV32I-NEXT:    lui a0, %hi(.Ltmp0)
-; RV32I-NEXT:    addi a0, a0, %lo(.Ltmp0)
-; RV32I-NEXT:    lui a1, %hi(addr)
-; RV32I-NEXT:    sw a0, %lo(addr)(a1)
-; RV32I-NEXT:    lw a0, %lo(addr)(a1)
+; RV32I-NEXT:    lui a0, %hi(addr)
+; RV32I-NEXT:    lui a1, %hi(.Ltmp0)
+; RV32I-NEXT:    addi a1, a1, %lo(.Ltmp0)
+; RV32I-NEXT:    sw a1, %lo(addr)(a0)
+; RV32I-NEXT:    lw a0, %lo(addr)(a0)
 ; RV32I-NEXT:    jr a0
 ; RV32I-NEXT:  .Ltmp0: # Block address taken
 ; RV32I-NEXT:  .LBB0_1: # %block

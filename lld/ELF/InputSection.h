@@ -54,21 +54,8 @@ public:
 
   unsigned sectionKind : 3;
 
-  // The next three bit fields are only used by InputSectionBase, but we
+  // The next two bit fields are only used by InputSectionBase, but we
   // put them here so the struct packs better.
-
-  // True if this section has already been placed to a linker script
-  // output section. This is needed because, in a linker script, you
-  // can refer to the same section more than once. For example, in
-  // the following linker script,
-  //
-  //   .foo : { *(.text) }
-  //   .bar : { *(.text) }
-  //
-  // .foo takes all .text sections, and .bar becomes empty. To achieve
-  // this, we need to memorize whether a section has been placed or
-  // not for each input section.
-  unsigned assigned : 1;
 
   unsigned bss : 1;
 
@@ -108,9 +95,9 @@ protected:
   SectionBase(Kind sectionKind, StringRef name, uint64_t flags,
               uint64_t entsize, uint64_t alignment, uint32_t type,
               uint32_t info, uint32_t link)
-      : name(name), repl(this), sectionKind(sectionKind), assigned(false),
-        bss(false), keepUnique(false), partition(0), alignment(alignment),
-        flags(flags), entsize(entsize), type(type), link(link), info(info) {}
+      : name(name), repl(this), sectionKind(sectionKind), bss(false),
+        keepUnique(false), partition(0), alignment(alignment), flags(flags),
+        entsize(entsize), type(type), link(link), info(info) {}
 };
 
 // This corresponds to a section of an input file.

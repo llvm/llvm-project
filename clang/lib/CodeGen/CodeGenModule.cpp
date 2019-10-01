@@ -3809,9 +3809,9 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
     return;
 
   llvm::Constant *Init = nullptr;
-  CXXRecordDecl *RD = ASTTy->getBaseElementTypeUnsafe()->getAsCXXRecordDecl();
   bool NeedsGlobalCtor = false;
-  bool NeedsGlobalDtor = RD && !RD->hasTrivialDestructor();
+  bool NeedsGlobalDtor =
+      D->needsDestruction(getContext()) == QualType::DK_cxx_destructor;
 
   const VarDecl *InitDecl;
   const Expr *InitExpr = D->getAnyInitializer(InitDecl);
@@ -5132,7 +5132,9 @@ void CodeGenModule::EmitObjCIvarInitializations(ObjCImplementationDecl *D) {
 // EmitLinkageSpec - Emit all declarations in a linkage spec.
 void CodeGenModule::EmitLinkageSpec(const LinkageSpecDecl *LSD) {
   if (LSD->getLanguage() != LinkageSpecDecl::lang_c &&
-      LSD->getLanguage() != LinkageSpecDecl::lang_cxx) {
+      LSD->getLanguage() != LinkageSpecDecl::lang_cxx &&
+      LSD->getLanguage() != LinkageSpecDecl::lang_cxx_11 &&
+      LSD->getLanguage() != LinkageSpecDecl::lang_cxx_14) {
     ErrorUnsupported(LSD, "linkage spec");
     return;
   }

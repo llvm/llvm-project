@@ -566,7 +566,7 @@ SOPC
     s_cmp_lg_u64                   :ref:`ssrc0<amdgpu_synid8_ssrc64_0>`,    :ref:`ssrc1<amdgpu_synid8_ssrc64_0>`
     s_cmp_lt_i32                   :ref:`ssrc0<amdgpu_synid8_ssrc32_0>`,    :ref:`ssrc1<amdgpu_synid8_ssrc32_0>`
     s_cmp_lt_u32                   :ref:`ssrc0<amdgpu_synid8_ssrc32_0>`,    :ref:`ssrc1<amdgpu_synid8_ssrc32_0>`
-    s_set_gpr_idx_on               :ref:`ssrc<amdgpu_synid8_ssrc32_0>`,     :ref:`imm4<amdgpu_synid8_imm4>`
+    s_set_gpr_idx_on               :ref:`ssrc<amdgpu_synid8_ssrc32_0>`,     :ref:`imask<amdgpu_synid8_imask>`
     s_setvskip                     :ref:`ssrc0<amdgpu_synid8_ssrc32_0>`,    :ref:`ssrc1<amdgpu_synid8_ssrc32_0>`
 
 SOPK
@@ -624,7 +624,7 @@ SOPP
     s_nop                          :ref:`imm16<amdgpu_synid8_bimm16>`
     s_sendmsg                      :ref:`msg<amdgpu_synid8_msg>`
     s_sendmsghalt                  :ref:`msg<amdgpu_synid8_msg>`
-    s_set_gpr_idx_mode             :ref:`imm4<amdgpu_synid8_imm4>`
+    s_set_gpr_idx_mode             :ref:`imask<amdgpu_synid8_imask>`
     s_set_gpr_idx_off
     s_sethalt                      :ref:`imm16<amdgpu_synid8_bimm16>`
     s_setkill                      :ref:`imm16<amdgpu_synid8_bimm16>`
@@ -1756,7 +1756,7 @@ VOPC
     gfx8_fimm16
     gfx8_fimm32
     gfx8_hwreg
-    gfx8_imm4
+    gfx8_imask
     gfx8_label
     gfx8_msg
     gfx8_param

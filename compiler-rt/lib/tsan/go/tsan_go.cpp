@@ -54,20 +54,31 @@ struct SymbolizeCodeContext {
 };
 
 SymbolizedStack *SymbolizeCode(uptr addr) {
-  SymbolizedStack *s = SymbolizedStack::New(addr);
-  SymbolizeCodeContext cbctx;
-  internal_memset(&cbctx, 0, sizeof(cbctx));
-  cbctx.pc = addr;
-  go_runtime_cb(CallbackSymbolizeCode, &cbctx);
-  if (cbctx.res) {
+  SymbolizedStack *first = SymbolizedStack::New(addr);
+  SymbolizedStack *s = first;
+  for (;;) {
+    SymbolizeCodeContext cbctx;
+    internal_memset(&cbctx, 0, sizeof(cbctx));
+    cbctx.pc = addr;
+    go_runtime_cb(CallbackSymbolizeCode, &cbctx);
+    if (cbctx.res == 0)
+      break;
     AddressInfo &info = s->info;
     info.module_offset = cbctx.off;
     info.function = internal_strdup(cbctx.func ? cbctx.func : "??");
     info.file = internal_strdup(cbctx.file ? cbctx.file : "-");
     info.line = cbctx.line;
     info.column = 0;
+
+    if (cbctx.pc == addr) // outermost (non-inlined) function
+      break;
+    addr = cbctx.pc;
+    // Allocate a stack entry for the parent of the inlined function.
+    SymbolizedStack *s2 = SymbolizedStack::New(addr);
+    s->next = s2;
+    s = s2;
   }
-  return s;
+  return first;
 }
 
 struct SymbolizeDataContext {

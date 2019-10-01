@@ -116,11 +116,11 @@ __default_memory_resource(bool set = false, memory_resource * new_res = nullptr)
         new_res = new_res ? new_res : new_delete_resource();
         // TODO: Can a weaker ordering be used?
         return _VSTD::atomic_exchange_explicit(
-            &__res, new_res, memory_order::memory_order_acq_rel);
+            &__res, new_res, memory_order_acq_rel);
     }
     else {
         return _VSTD::atomic_load_explicit(
-            &__res, memory_order::memory_order_acquire);
+            &__res, memory_order_acquire);
     }
 #elif !defined(_LIBCPP_HAS_NO_THREADS)
     _LIBCPP_SAFE_STATIC static memory_resource * res = &res_init.resources.new_delete_res;

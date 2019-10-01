@@ -1835,14 +1835,37 @@ define <16 x i8> @splatconstant_funnnel_v16i8(<16 x i8> %x) nounwind {
 ; AVX-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
-; AVX512-LABEL: splatconstant_funnnel_v16i8:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpsrlw $4, %xmm0, %xmm1
-; AVX512-NEXT:    vpand {{.*}}(%rip), %xmm1, %xmm1
-; AVX512-NEXT:    vpsllw $4, %xmm0, %xmm0
-; AVX512-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
-; AVX512-NEXT:    vpor %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    retq
+; AVX512F-LABEL: splatconstant_funnnel_v16i8:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vpsrlw $4, %xmm0, %xmm1
+; AVX512F-NEXT:    vpand {{.*}}(%rip), %xmm1, %xmm1
+; AVX512F-NEXT:    vpsllw $4, %xmm0, %xmm0
+; AVX512F-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; AVX512F-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-LABEL: splatconstant_funnnel_v16i8:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vpsllw $4, %xmm0, %xmm1
+; AVX512VL-NEXT:    vpsrlw $4, %xmm0, %xmm0
+; AVX512VL-NEXT:    vpternlogq $216, {{.*}}(%rip), %xmm1, %xmm0
+; AVX512VL-NEXT:    retq
+;
+; AVX512BW-LABEL: splatconstant_funnnel_v16i8:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    vpsrlw $4, %xmm0, %xmm1
+; AVX512BW-NEXT:    vpand {{.*}}(%rip), %xmm1, %xmm1
+; AVX512BW-NEXT:    vpsllw $4, %xmm0, %xmm0
+; AVX512BW-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; AVX512BW-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; AVX512BW-NEXT:    retq
+;
+; AVX512VLBW-LABEL: splatconstant_funnnel_v16i8:
+; AVX512VLBW:       # %bb.0:
+; AVX512VLBW-NEXT:    vpsllw $4, %xmm0, %xmm1
+; AVX512VLBW-NEXT:    vpsrlw $4, %xmm0, %xmm0
+; AVX512VLBW-NEXT:    vpternlogq $216, {{.*}}(%rip), %xmm1, %xmm0
+; AVX512VLBW-NEXT:    retq
 ;
 ; XOP-LABEL: splatconstant_funnnel_v16i8:
 ; XOP:       # %bb.0:

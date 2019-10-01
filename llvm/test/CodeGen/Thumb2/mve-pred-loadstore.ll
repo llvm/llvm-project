@@ -176,44 +176,42 @@ define arm_aapcs_vfpcc void @store_v4i1(<4 x i1> *%dst, <4 x i32> %a) {
 ; CHECK-LE-LABEL: store_v4i1:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vcmp.i32 eq, q0, zr
-; CHECK-LE-NEXT:    movs r1, #0
-; CHECK-LE-NEXT:    vmrs r2, p0
-; CHECK-LE-NEXT:    and r3, r2, #1
-; CHECK-LE-NEXT:    rsbs r3, r3, #0
-; CHECK-LE-NEXT:    bfi r1, r3, #0, #1
-; CHECK-LE-NEXT:    ubfx r3, r2, #4, #1
-; CHECK-LE-NEXT:    rsbs r3, r3, #0
-; CHECK-LE-NEXT:    bfi r1, r3, #1, #1
-; CHECK-LE-NEXT:    ubfx r3, r2, #8, #1
-; CHECK-LE-NEXT:    ubfx r2, r2, #12, #1
-; CHECK-LE-NEXT:    rsbs r3, r3, #0
-; CHECK-LE-NEXT:    bfi r1, r3, #2, #1
+; CHECK-LE-NEXT:    movs r3, #0
+; CHECK-LE-NEXT:    vmrs r1, p0
+; CHECK-LE-NEXT:    and r2, r1, #1
 ; CHECK-LE-NEXT:    rsbs r2, r2, #0
-; CHECK-LE-NEXT:    bfi r1, r2, #3, #1
-; CHECK-LE-NEXT:    and r1, r1, #15
-; CHECK-LE-NEXT:    strb r1, [r0]
+; CHECK-LE-NEXT:    bfi r3, r2, #0, #1
+; CHECK-LE-NEXT:    ubfx r2, r1, #4, #1
+; CHECK-LE-NEXT:    rsbs r2, r2, #0
+; CHECK-LE-NEXT:    bfi r3, r2, #1, #1
+; CHECK-LE-NEXT:    ubfx r2, r1, #8, #1
+; CHECK-LE-NEXT:    ubfx r1, r1, #12, #1
+; CHECK-LE-NEXT:    rsbs r2, r2, #0
+; CHECK-LE-NEXT:    bfi r3, r2, #2, #1
+; CHECK-LE-NEXT:    rsbs r1, r1, #0
+; CHECK-LE-NEXT:    bfi r3, r1, #3, #1
+; CHECK-LE-NEXT:    strb r3, [r0]
 ; CHECK-LE-NEXT:    bx lr
 ;
 ; CHECK-BE-LABEL: store_v4i1:
 ; CHECK-BE:       @ %bb.0: @ %entry
 ; CHECK-BE-NEXT:    vrev64.32 q1, q0
+; CHECK-BE-NEXT:    movs r3, #0
 ; CHECK-BE-NEXT:    vcmp.i32 eq, q1, zr
 ; CHECK-BE-NEXT:    vmrs r1, p0
-; CHECK-BE-NEXT:    and r3, r1, #1
+; CHECK-BE-NEXT:    and r2, r1, #1
+; CHECK-BE-NEXT:    rsbs r2, r2, #0
+; CHECK-BE-NEXT:    bfi r3, r2, #0, #1
 ; CHECK-BE-NEXT:    ubfx r2, r1, #4, #1
-; CHECK-BE-NEXT:    rsbs r3, r3, #0
-; CHECK-BE-NEXT:    rsb.w r12, r2, #0
-; CHECK-BE-NEXT:    movs r2, #0
-; CHECK-BE-NEXT:    bfi r2, r3, #0, #1
-; CHECK-BE-NEXT:    ubfx r3, r1, #8, #1
+; CHECK-BE-NEXT:    rsbs r2, r2, #0
+; CHECK-BE-NEXT:    bfi r3, r2, #1, #1
+; CHECK-BE-NEXT:    ubfx r2, r1, #8, #1
 ; CHECK-BE-NEXT:    ubfx r1, r1, #12, #1
-; CHECK-BE-NEXT:    bfi r2, r12, #1, #1
-; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    rsbs r2, r2, #0
+; CHECK-BE-NEXT:    bfi r3, r2, #2, #1
 ; CHECK-BE-NEXT:    rsbs r1, r1, #0
-; CHECK-BE-NEXT:    bfi r2, r3, #2, #1
-; CHECK-BE-NEXT:    bfi r2, r1, #3, #1
-; CHECK-BE-NEXT:    and r1, r2, #15
-; CHECK-BE-NEXT:    strb r1, [r0]
+; CHECK-BE-NEXT:    bfi r3, r1, #3, #1
+; CHECK-BE-NEXT:    strb r3, [r0]
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %c = icmp eq <4 x i32> %a, zeroinitializer
@@ -225,10 +223,10 @@ define arm_aapcs_vfpcc void @store_v8i1(<8 x i1> *%dst, <8 x i16> %a) {
 ; CHECK-LE-LABEL: store_v8i1:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vcmp.i16 eq, q0, zr
-; CHECK-LE-NEXT:    movs r1, #0
 ; CHECK-LE-NEXT:    vmrs r2, p0
-; CHECK-LE-NEXT:    and r3, r2, #1
-; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    and r1, r2, #1
+; CHECK-LE-NEXT:    rsbs r3, r1, #0
+; CHECK-LE-NEXT:    movs r1, #0
 ; CHECK-LE-NEXT:    bfi r1, r3, #0, #1
 ; CHECK-LE-NEXT:    ubfx r3, r2, #2, #1
 ; CHECK-LE-NEXT:    rsbs r3, r3, #0
@@ -259,14 +257,14 @@ define arm_aapcs_vfpcc void @store_v8i1(<8 x i1> *%dst, <8 x i16> %a) {
 ; CHECK-BE-NEXT:    vrev64.16 q1, q0
 ; CHECK-BE-NEXT:    vcmp.i16 eq, q1, zr
 ; CHECK-BE-NEXT:    vmrs r2, p0
-; CHECK-BE-NEXT:    ubfx r1, r2, #2, #1
-; CHECK-BE-NEXT:    rsb.w r12, r1, #0
 ; CHECK-BE-NEXT:    and r1, r2, #1
 ; CHECK-BE-NEXT:    rsbs r3, r1, #0
 ; CHECK-BE-NEXT:    movs r1, #0
 ; CHECK-BE-NEXT:    bfi r1, r3, #0, #1
+; CHECK-BE-NEXT:    ubfx r3, r2, #2, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r1, r3, #1, #1
 ; CHECK-BE-NEXT:    ubfx r3, r2, #4, #1
-; CHECK-BE-NEXT:    bfi r1, r12, #1, #1
 ; CHECK-BE-NEXT:    rsbs r3, r3, #0
 ; CHECK-BE-NEXT:    bfi r1, r3, #2, #1
 ; CHECK-BE-NEXT:    ubfx r3, r2, #6, #1

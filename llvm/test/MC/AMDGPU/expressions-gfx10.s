@@ -1,4 +1,5 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1010 -mattr=-WavefrontSize32,+WavefrontSize64 -show-encoding %s | FileCheck %s --check-prefix=GFX10
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 -mattr=-WavefrontSize32,+WavefrontSize64 -show-encoding %s | FileCheck %s --check-prefix=GFX10
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 -mattr=-WavefrontSize32,+WavefrontSize64 %s 2>&1 | FileCheck -check-prefix=NOGFX10 %s
 
 i1=1
 
@@ -47,3 +48,26 @@ v_cmp_f_i32 s[10:11], u+1, v2
 v_lshlrev_b64 v[5:6], u-1, v[2:3]
 // GFX10: v_lshlrev_b64 v[5:6], u-1, v[2:3] ; encoding: [0x05,0x00,0xff,0xd6,0xff,0x04,0x02,0x00,A,A,A,A]
 // GFX10-NEXT:                              ;   fixup A - offset: 8, value: u-1, kind: FK_Data_4
+
+//===----------------------------------------------------------------------===//
+// Instructions can use only one literal.
+// Relocatable expressions are counted as literals.
+//===----------------------------------------------------------------------===//
+
+s_sub_u32 s0, 123, u
+// NOGFX10: error: only one literal operand is allowed
+
+s_sub_u32 s0, u, u
+// NOGFX10: error: only one literal operand is allowed
+
+s_sub_u32 s0, u, u1
+// NOGFX10: error: only one literal operand is allowed
+
+v_bfe_u32 v0, v2, 123, u
+// NOGFX10: error: invalid literal operand
+
+v_bfe_u32 v0, v2, u, u
+// NOGFX10: error: invalid literal operand
+
+v_bfe_u32 v0, v2, u, u1
+// NOGFX10: error: invalid literal operand

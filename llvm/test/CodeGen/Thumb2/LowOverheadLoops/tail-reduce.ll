@@ -5,8 +5,8 @@
 ; CHECK: phi <8 x i16> [ zeroinitializer, %entry ]
 ; CHECK: phi i32
 ; CHECK: [[PHI:%[^ ]+]] = phi i32 [ %N, %entry ], [ [[ELEMS:%[^ ]+]], %vector.body ]
+; CHECK: [[VCTP:%[^ ]+]] = call <8 x i1> @llvm.arm.vctp16(i32 [[PHI]])
 ; CHECK: [[ELEMS]] = sub i32 [[PHI]], 8
-; CHECK: [[VCTP:%[^ ]+]] = call <8 x i1> @llvm.arm.vctp16(i32 [[ELEMS]])
 ; CHECK: call <8 x i16> @llvm.masked.load.v8i16.p0v8i16(<8 x i16>* %tmp4, i32 4, <8 x i1> [[VCTP]], <8 x i16> undef)
 ; CHECK: call <8 x i16> @llvm.masked.load.v8i16.p0v8i16(<8 x i16>* %tmp6, i32 4, <8 x i1> [[VCTP]], <8 x i16> undef)
 define i16 @reduction_i32(i16* nocapture readonly %A, i16* nocapture readonly %B, i32 %N) {
@@ -63,8 +63,8 @@ middle.block:                                     ; preds = %vector.body
 ; CHECK: phi <8 x i16> [ zeroinitializer, %entry ]
 ; CHECK: phi i32
 ; CHECK: [[PHI:%[^ ]+]] = phi i32 [ %N, %entry ], [ [[ELEMS:%[^ ]+]], %vector.body ]
+; CHECK: [[VCTP:%[^ ]+]] = call <8 x i1> @llvm.arm.vctp16(i32 [[PHI]])
 ; CHECK: [[ELEMS]] = sub i32 [[PHI]], 8
-; CHECK: [[VCTP:%[^ ]+]] = call <8 x i1> @llvm.arm.vctp16(i32 [[ELEMS]])
 ; CHECK: call <8 x i16> @llvm.masked.load.v8i16.p0v8i16(<8 x i16>* %tmp4, i32 4, <8 x i1> [[VCTP]], <8 x i16> undef)
 define i16 @reduction_i32_with_scalar(i16* nocapture readonly %A, i16 %B, i32 %N) local_unnamed_addr {
 entry:

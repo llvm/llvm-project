@@ -498,8 +498,8 @@ void CommandObjectExpression::IOHandlerInputComplete(IOHandler &io_handler,
   //    StreamSP output_stream =
   //    io_handler.GetDebugger().GetAsyncOutputStream();
   //    StreamSP error_stream = io_handler.GetDebugger().GetAsyncErrorStream();
-  StreamFileSP output_sp(io_handler.GetOutputStreamFile());
-  StreamFileSP error_sp(io_handler.GetErrorStreamFile());
+  StreamFileSP output_sp = io_handler.GetOutputStreamFileSP();
+  StreamFileSP error_sp = io_handler.GetErrorStreamFileSP();
 
   EvaluateExpression(line.c_str(), output_sp.get(), error_sp.get());
   if (output_sp)
@@ -537,7 +537,7 @@ void CommandObjectExpression::GetMultilineExpression() {
                             1, // Show line numbers starting at 1
                             *this, nullptr));
 
-  StreamFileSP output_sp(io_handler_sp->GetOutputStreamFile());
+  StreamFileSP output_sp = io_handler_sp->GetOutputStreamFileSP();
   if (output_sp) {
     output_sp->PutCString(
         "Enter expressions, then terminate with an empty line to evaluate:\n");

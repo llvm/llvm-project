@@ -793,9 +793,18 @@ multiclass SMLoad_Pattern <string Instr, ValueType vt> {
 // selector to prefer those.
 let AddedComplexity = 100 in {
 
-defm : SMRD_Pattern <"S_LOAD_DWORD",    i32>;
-defm : SMRD_Pattern <"S_LOAD_DWORDX2",  v2i32>;
-defm : SMRD_Pattern <"S_LOAD_DWORDX4",  v4i32>;
+foreach vt = Reg32Types.types in {
+defm : SMRD_Pattern <"S_LOAD_DWORD", vt>;
+}
+
+foreach vt = SReg_64.RegTypes in {
+defm : SMRD_Pattern <"S_LOAD_DWORDX2", vt>;
+}
+
+foreach vt = SReg_128.RegTypes in {
+defm : SMRD_Pattern <"S_LOAD_DWORDX4", vt>;
+}
+
 defm : SMRD_Pattern <"S_LOAD_DWORDX8",  v8i32>;
 defm : SMRD_Pattern <"S_LOAD_DWORDX16", v16i32>;
 

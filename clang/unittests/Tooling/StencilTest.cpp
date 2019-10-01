@@ -10,6 +10,8 @@
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Tooling/FixIt.h"
 #include "clang/Tooling/Tooling.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -18,34 +20,23 @@ using namespace tooling;
 using namespace ast_matchers;
 
 namespace {
+using ::llvm::HasValue;
 using ::testing::AllOf;
 using ::testing::Eq;
 using ::testing::HasSubstr;
 using MatchResult = MatchFinder::MatchResult;
+using stencil::access;
 using stencil::cat;
 using stencil::dPrint;
+using stencil::ifBound;
+using stencil::run;
 using stencil::text;
 
-// In tests, we can't directly match on llvm::Expected since its accessors
-// mutate the object. So, we collapse it to an Optional.
-static llvm::Optional<std::string> toOptional(llvm::Expected<std::string> V) {
-  if (V)
-    return *V;
-  ADD_FAILURE() << "Losing error in conversion to IsSomething: "
-                << llvm::toString(V.takeError());
-  return llvm::None;
-}
-
-// A very simple matcher for llvm::Optional values.
-MATCHER_P(IsSomething, ValueMatcher, "") {
-  if (!arg)
-    return false;
-  return ::testing::ExplainMatchResult(ValueMatcher, *arg, result_listener);
-}
-
 // Create a valid translation-unit from a statement.
-static std::string wrapSnippet(llvm::Twine StatementCode) {
-  return ("auto stencil_test_snippet = []{" + StatementCode + "};").str();
+static std::string wrapSnippet(StringRef StatementCode) {
+  return ("struct S { int field; }; auto stencil_test_snippet = []{" +
+          StatementCode + "};")
+      .str();
 }
 
 static DeclarationMatcher wrapMatcher(const StatementMatcher &Matcher) {
@@ -63,9 +54,10 @@ struct TestMatch {
 
 // Matches `Matcher` against the statement `StatementCode` and returns the
 // result. Handles putting the statement inside a function and modifying the
-// matcher correspondingly. `Matcher` should match `StatementCode` exactly --
-// that is, produce exactly one match.
-static llvm::Optional<TestMatch> matchStmt(llvm::Twine StatementCode,
+// matcher correspondingly. `Matcher` should match one of the statements in
+// `StatementCode` exactly -- that is, produce exactly one match. However,
+// `StatementCode` may contain other statements not described by `Matcher`.
+static llvm::Optional<TestMatch> matchStmt(StringRef StatementCode,
                                            StatementMatcher Matcher) {
   auto AstUnit = buildASTFromCode(wrapSnippet(StatementCode));
   if (AstUnit == nullptr) {
@@ -123,7 +115,7 @@ protected:
 
   // Tests failures caused by references to unbound nodes. `unbound_id` is the
   // id that will cause the failure.
-  void testUnboundNodeError(const Stencil &Stencil, llvm::StringRef UnboundId) {
+  void testUnboundNodeError(const Stencil &Stencil, StringRef UnboundId) {
     testError(Stencil, AllOf(HasSubstr(UnboundId), HasSubstr("not bound")));
   }
 };
@@ -143,8 +135,8 @@ TEST_F(StencilTest, SingleStatement) {
   // Invert the if-then-else.
   auto Stencil = cat("if (!", node(Condition), ") ", statement(Else), " else ",
                      statement(Then));
-  EXPECT_THAT(toOptional(Stencil.eval(StmtMatch->Result)),
-              IsSomething(Eq("if (!true) return 0; else return 1;")));
+  EXPECT_THAT_EXPECTED(Stencil.eval(StmtMatch->Result),
+                       HasValue("if (!true) return 0; else return 1;"));
 }
 
 TEST_F(StencilTest, SingleStatementCallOperator) {
@@ -162,8 +154,8 @@ TEST_F(StencilTest, SingleStatementCallOperator) {
   // Invert the if-then-else.
   Stencil S = cat("if (!", node(Condition), ") ", statement(Else), " else ",
                   statement(Then));
-  EXPECT_THAT(toOptional(S(StmtMatch->Result)),
-              IsSomething(Eq("if (!true) return 0; else return 1;")));
+  EXPECT_THAT_EXPECTED(S(StmtMatch->Result),
+                       HasValue("if (!true) return 0; else return 1;"));
 }
 
 TEST_F(StencilTest, UnboundNode) {
@@ -188,13 +180,117 @@ void testExpr(StringRef Id, StringRef Snippet, const Stencil &Stencil,
               StringRef Expected) {
   auto StmtMatch = matchStmt(Snippet, expr().bind(Id));
   ASSERT_TRUE(StmtMatch);
-  EXPECT_THAT(toOptional(Stencil.eval(StmtMatch->Result)),
-              IsSomething(Expected));
+  EXPECT_THAT_EXPECTED(Stencil.eval(StmtMatch->Result), HasValue(Expected));
 }
 
 TEST_F(StencilTest, SelectionOp) {
   StringRef Id = "id";
   testExpr(Id, "3;", cat(node(Id)), "3");
+}
+
+TEST_F(StencilTest, IfBoundOpBound) {
+  StringRef Id = "id";
+  testExpr(Id, "3;", cat(ifBound(Id, text("5"), text("7"))), "5");
+}
+
+TEST_F(StencilTest, IfBoundOpUnbound) {
+  StringRef Id = "id";
+  testExpr(Id, "3;", cat(ifBound("other", text("5"), text("7"))), "7");
+}
+
+TEST_F(StencilTest, AccessOpValue) {
+  StringRef Snippet = R"cc(
+    S x;
+    x;
+  )cc";
+  StringRef Id = "id";
+  testExpr(Id, Snippet, cat(access(Id, "field")), "x.field");
+}
+
+TEST_F(StencilTest, AccessOpValueExplicitText) {
+  StringRef Snippet = R"cc(
+    S x;
+    x;
+  )cc";
+  StringRef Id = "id";
+  testExpr(Id, Snippet, cat(access(Id, text("field"))), "x.field");
+}
+
+TEST_F(StencilTest, AccessOpValueAddress) {
+  StringRef Snippet = R"cc(
+    S x;
+    &x;
+  )cc";
+  StringRef Id = "id";
+  testExpr(Id, Snippet, cat(access(Id, "field")), "x.field");
+}
+
+TEST_F(StencilTest, AccessOpPointer) {
+  StringRef Snippet = R"cc(
+    S *x;
+    x;
+  )cc";
+  StringRef Id = "id";
+  testExpr(Id, Snippet, cat(access(Id, "field")), "x->field");
+}
+
+TEST_F(StencilTest, AccessOpPointerDereference) {
+  StringRef Snippet = R"cc(
+    S *x;
+    *x;
+  )cc";
+  StringRef Id = "id";
+  testExpr(Id, Snippet, cat(access(Id, "field")), "x->field");
+}
+
+TEST_F(StencilTest, AccessOpExplicitThis) {
+  using clang::ast_matchers::hasObjectExpression;
+  using clang::ast_matchers::memberExpr;
+
+  // Set up the code so we can bind to a use of this.
+  StringRef Snippet = R"cc(
+    class C {
+     public:
+      int x;
+      int foo() { return this->x; }
+    };
+  )cc";
+  auto StmtMatch =
+      matchStmt(Snippet, returnStmt(hasReturnValue(ignoringImplicit(memberExpr(
+                             hasObjectExpression(expr().bind("obj")))))));
+  ASSERT_TRUE(StmtMatch);
+  const Stencil Stencil = cat(access("obj", "field"));
+  EXPECT_THAT_EXPECTED(Stencil.eval(StmtMatch->Result),
+                       HasValue("this->field"));
+}
+
+TEST_F(StencilTest, AccessOpImplicitThis) {
+  using clang::ast_matchers::hasObjectExpression;
+  using clang::ast_matchers::memberExpr;
+
+  // Set up the code so we can bind to a use of (implicit) this.
+  StringRef Snippet = R"cc(
+    class C {
+     public:
+      int x;
+      int foo() { return x; }
+    };
+  )cc";
+  auto StmtMatch =
+      matchStmt(Snippet, returnStmt(hasReturnValue(ignoringImplicit(memberExpr(
+                             hasObjectExpression(expr().bind("obj")))))));
+  ASSERT_TRUE(StmtMatch);
+  const Stencil Stencil = cat(access("obj", "field"));
+  EXPECT_THAT_EXPECTED(Stencil.eval(StmtMatch->Result), HasValue("field"));
+}
+
+TEST_F(StencilTest, RunOp) {
+  StringRef Id = "id";
+  auto SimpleFn = [Id](const MatchResult &R) {
+    return std::string(R.Nodes.getNodeAs<Stmt>(Id) != nullptr ? "Bound"
+                                                              : "Unbound");
+  };
+  testExpr(Id, "3;", cat(run(SimpleFn)), "Bound");
 }
 
 TEST(StencilEqualityTest, Equality) {
@@ -219,6 +315,14 @@ TEST(StencilEqualityTest, InEqualityDifferentSizes) {
 TEST(StencilEqualityTest, InEqualitySelection) {
   auto S1 = cat(node("node"));
   auto S2 = cat(node("node"));
+  EXPECT_NE(S1, S2);
+}
+
+// `run` is opaque.
+TEST(StencilEqualityTest, InEqualityRun) {
+  auto F = [](const MatchResult &R) { return "foo"; };
+  auto S1 = cat(run(F));
+  auto S2 = cat(run(F));
   EXPECT_NE(S1, S2);
 }
 } // namespace

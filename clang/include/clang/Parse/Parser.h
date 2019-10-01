@@ -2834,6 +2834,17 @@ private:
   DeclGroupPtrTy ParseOMPDeclareSimdClauses(DeclGroupPtrTy Ptr,
                                             CachedTokens &Toks,
                                             SourceLocation Loc);
+  /// Parses OpenMP context selectors and calls \p Callback for each
+  /// successfully parsed context selector.
+  bool parseOpenMPContextSelectors(
+      SourceLocation Loc,
+      llvm::function_ref<
+          void(SourceRange, const Sema::OpenMPDeclareVariantCtsSelectorData &)>
+          Callback);
+
+  /// Parse clauses for '#pragma omp declare variant'.
+  void ParseOMPDeclareVariantClauses(DeclGroupPtrTy Ptr, CachedTokens &Toks,
+                                     SourceLocation Loc);
   /// Parse clauses for '#pragma omp declare target'.
   DeclGroupPtrTy ParseOMPDeclareTargetClauses();
   /// Parse '#pragma omp end declare target'.
@@ -2927,7 +2938,8 @@ public:
   /// Parses simple expression in parens for single-expression clauses of OpenMP
   /// constructs.
   /// \param RLoc Returned location of right paren.
-  ExprResult ParseOpenMPParensExpr(StringRef ClauseName, SourceLocation &RLoc);
+  ExprResult ParseOpenMPParensExpr(StringRef ClauseName, SourceLocation &RLoc,
+                                   bool IsAddressOfOperand = false);
 
   /// Data used for parsing list of variables in OpenMP clauses.
   struct OpenMPVarListDataTy {

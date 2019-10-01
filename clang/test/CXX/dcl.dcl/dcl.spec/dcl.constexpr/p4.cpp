@@ -136,29 +136,33 @@ struct V {
 
 // - every non-static data member and base class sub-object shall be initialized
 struct W {
-  int n; // expected-note {{member not initialized by constructor}}
-  constexpr W() {} // expected-error {{constexpr constructor must initialize all members}}
+  int n;
+  constexpr W() {}
+#ifndef CXX2A
+  // expected-error@-2 {{constexpr constructor that does not initialize all members}}
+  // expected-note@-4 {{member not initialized by constructor}}
+#endif
 };
 struct AnonMembers {
-  int a; // expected-note {{member not initialized by constructor}}
-  union { // expected-note 2{{member not initialized by constructor}}
+  int a; // expected-note 0-1{{member not initialized by constructor}}
+  union { // expected-note 0-2{{member not initialized by constructor}}
     char b;
     struct {
       double c;
-      long d; // expected-note {{member not initialized by constructor}}
+      long d; // expected-note 0-1{{member not initialized by constructor}}
     };
     union {
       char e;
       void *f;
     };
   };
-  struct { // expected-note {{member not initialized by constructor}}
+  struct { // expected-note 0-1{{member not initialized by constructor}}
     long long g;
     struct {
-      int h; // expected-note {{member not initialized by constructor}}
-      double i; // expected-note {{member not initialized by constructor}}
+      int h; // expected-note 0-1{{member not initialized by constructor}}
+      double i; // expected-note 0-1{{member not initialized by constructor}}
     };
-    union { // expected-note 2{{member not initialized by constructor}}
+    union { // expected-note 0-2{{member not initialized by constructor}}
       char *j;
       AnonMembers *k;
     };
@@ -166,14 +170,26 @@ struct AnonMembers {
 
   constexpr AnonMembers(int(&)[1]) : a(), b(), g(), h(), i(), j() {} // ok
   // missing d, i, j/k union
-  constexpr AnonMembers(int(&)[2]) : a(), c(), g(), h() {} // expected-error {{constexpr constructor must initialize all members}}
+  constexpr AnonMembers(int(&)[2]) : a(), c(), g(), h() {}
+#ifndef CXX2A
+  // expected-error@-2 {{constexpr constructor that does not initialize all members}}
+#endif
   constexpr AnonMembers(int(&)[3]) : a(), e(), g(), h(), i(), k() {} // ok
   // missing h, j/k union
-  constexpr AnonMembers(int(&)[4]) : a(), c(), d(), g(), i() {} // expected-error {{constexpr constructor must initialize all members}}
+  constexpr AnonMembers(int(&)[4]) : a(), c(), d(), g(), i() {}
+#ifndef CXX2A
+  // expected-error@-2 {{constexpr constructor that does not initialize all members}}
+#endif
   // missing b/c/d/e/f union
-  constexpr AnonMembers(int(&)[5]) : a(), g(), h(), i(), k() {} // expected-error {{constexpr constructor must initialize all members}}
+  constexpr AnonMembers(int(&)[5]) : a(), g(), h(), i(), k() {}
+#ifndef CXX2A
+  // expected-error@-2 {{constexpr constructor that does not initialize all members}}
+#endif
   // missing a, b/c/d/e/f union, g/h/i/j/k struct
-  constexpr AnonMembers(int(&)[6]) {} // expected-error {{constexpr constructor must initialize all members}}
+  constexpr AnonMembers(int(&)[6]) {}
+#ifndef CXX2A
+  // expected-error@-2 {{constexpr constructor that does not initialize all members}}
+#endif
 };
 
 union Empty {
@@ -253,14 +269,20 @@ struct X {
   constexpr X(int c) : a(c) {} // ok, b initialized by 2 * c + 1
 };
 
-union XU1 { int a; constexpr XU1() = default; }; // expected-error{{not constexpr}}
+union XU1 { int a; constexpr XU1() = default; };
+#ifndef CXX2A
+// expected-error@-2{{not constexpr}}
+#endif
 union XU2 { int a = 1; constexpr XU2() = default; };
 
 struct XU3 {
   union {
     int a;
   };
-  constexpr XU3() = default; // expected-error{{not constexpr}}
+  constexpr XU3() = default;
+#ifndef CXX2A
+  // expected-error@-2{{not constexpr}}
+#endif
 };
 struct XU4 {
   union {

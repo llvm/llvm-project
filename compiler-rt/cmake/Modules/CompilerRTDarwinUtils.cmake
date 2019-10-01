@@ -1,6 +1,8 @@
 include(CMakeParseArguments)
 include(CompilerRTUtils)
 
+set(CMAKE_LIPO "lipo" CACHE PATH "path to the lipo tool")
+
 # On OS X SDKs can be installed anywhere on the base system and xcode-select can
 # set the default Xcode to use. This function finds the SDKs that are present in
 # the current Xcode.
@@ -94,7 +96,8 @@ function(darwin_test_archs os valid_archs)
    
     set(arch_linker_flags "-arch ${arch} ${os_linker_flags}")
     if(TEST_COMPILE_ONLY)
-      try_compile_only(CAN_TARGET_${os}_${arch} FLAGS -v -arch ${arch} ${DARWIN_${os}_CFLAGS})
+      # `-w` is used to surpress compiler warnings which `try_compile_only()` treats as an error.
+      try_compile_only(CAN_TARGET_${os}_${arch} FLAGS -v -arch ${arch} ${DARWIN_${os}_CFLAGS} -w)
     else()
       set(SAVED_CMAKE_EXE_LINKER_FLAGS ${CMAKE_EXE_LINKER_FLAGS})
       set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${arch_linker_flags}")
@@ -112,7 +115,7 @@ function(darwin_test_archs os valid_archs)
     endif()
   endforeach()
   set(${valid_archs} ${working_archs}
-    CACHE STRING "List of valid architectures for platform ${os}.")
+    CACHE STRING "List of valid architectures for platform ${os}." FORCE)
 endfunction()
 
 # This function checks the host cpusubtype to see if it is post-haswell. Haswell
@@ -243,7 +246,7 @@ function(darwin_lipo_libs name)
   if(LIB_DEPENDS AND LIB_LIPO_FLAGS)
     add_custom_command(OUTPUT ${LIB_OUTPUT_DIR}/lib${name}.a
       COMMAND ${CMAKE_COMMAND} -E make_directory ${LIB_OUTPUT_DIR}
-      COMMAND lipo -output
+      COMMAND ${CMAKE_LIPO} -output
               ${LIB_OUTPUT_DIR}/lib${name}.a
               -create ${LIB_LIPO_FLAGS}
       DEPENDS ${LIB_DEPENDS}
@@ -282,7 +285,7 @@ macro(darwin_add_builtin_libraries)
                       ../profile/InstrProfilingPlatformDarwin
                       ../profile/InstrProfilingWriter)
   foreach (os ${ARGN})
-    list_intersect(DARWIN_BUILTIN_ARCHS DARWIN_${os}_ARCHS BUILTIN_SUPPORTED_ARCH)
+    list_intersect(DARWIN_BUILTIN_ARCHS DARWIN_${os}_BUILTIN_ARCHS BUILTIN_SUPPORTED_ARCH)
     foreach (arch ${DARWIN_BUILTIN_ARCHS})
       darwin_find_excluded_builtins_list(${arch}_${os}_EXCLUDED_BUILTINS
                               OS ${os}

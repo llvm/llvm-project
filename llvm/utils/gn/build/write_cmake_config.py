@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Emulates the bits of CMake's configure_file() function needed in LLVM.
+r"""Emulates the bits of CMake's configure_file() function needed in LLVM.
 
 The CMake build uses configure_file() for several things.  This emulates that
 function for the GN build.  In the GN build, this runs at build time instead
@@ -62,7 +62,8 @@ def main():
     # Matches e.g. '${FOO}' or '@FOO@' and captures FOO in group 1 or 2.
     var_re = re.compile(r'\$\{([^}]*)\}|@([^@]*)@')
 
-    in_lines = open(args.input).readlines()
+    with open(args.input) as f:
+        in_lines = f.readlines()
     out_lines = []
     for in_line in in_lines:
         def repl(m):
@@ -102,8 +103,13 @@ def main():
             file=sys.stderr)
         return 1
 
-    if not os.path.exists(args.output) or open(args.output).read() != output:
-        open(args.output, 'w').write(output)
+    def read(filename):
+        with open(args.output) as f:
+            return f.read()
+
+    if not os.path.exists(args.output) or read(args.output) != output:
+        with open(args.output, 'w') as f:
+            f.write(output)
         os.chmod(args.output, os.stat(args.input).st_mode & 0o777)
 
 

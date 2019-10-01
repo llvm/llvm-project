@@ -8,7 +8,7 @@
 ; RUN:  --implicit-check-not cmpw --implicit-check-not cmpd --implicit-check-not cmpl \
 ; RUN:  --check-prefixes=CHECK,LE
 
-@glob = common local_unnamed_addr global i8 0, align 1
+@glob = local_unnamed_addr global i8 0, align 1
 
 ; Function Attrs: norecurse nounwind readnone
 define i64 @test_llleuc(i8 zeroext %a, i8 zeroext %b) {

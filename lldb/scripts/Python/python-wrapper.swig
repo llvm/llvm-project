@@ -250,6 +250,7 @@ LLDBSwigPythonCreateScriptedThreadPlan
 (
     const char *python_class_name,
     const char *session_dictionary_name,
+    std::string &error_string,
     const lldb::ThreadPlanSP& thread_plan_sp
 )
 {
@@ -267,8 +268,11 @@ LLDBSwigPythonCreateScriptedThreadPlan
     auto dict = PythonModule::MainModule().ResolveName<PythonDictionary>(session_dictionary_name);
     auto pfunc = PythonObject::ResolveNameWithDictionary<PythonCallable>(python_class_name, dict);
 
-    if (!pfunc.IsAllocated())
+    if (!pfunc.IsAllocated()) {
+        error_string.append("could not find script class: ");
+        error_string.append(python_class_name);
         return nullptr;
+    }
 
     PythonObject tp_arg(PyRefType::Owned, SBTypeToSWIGWrapper(tp_value));
 

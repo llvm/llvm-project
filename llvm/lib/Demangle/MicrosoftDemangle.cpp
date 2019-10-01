@@ -783,8 +783,26 @@ SymbolNode *Demangler::demangleMD5Name(StringView &MangledName) {
   return S;
 }
 
+SymbolNode *Demangler::demangleTypeinfoName(StringView &MangledName) {
+  assert(MangledName.startsWith('.'));
+  MangledName.consumeFront('.');
+
+  TypeNode *T = demangleType(MangledName, QualifierMangleMode::Result);
+  if (Error || !MangledName.empty()) {
+    Error = true;
+    return nullptr;
+  }
+  return synthesizeVariable(Arena, T, "`RTTI Type Descriptor Name'");
+}
+
 // Parser entry point.
 SymbolNode *Demangler::parse(StringView &MangledName) {
+  // Typeinfo names are strings stored in RTTI data. They're not symbol names.
+  // It's still useful to demangle them. They're the only demangled entity
+  // that doesn't start with a "?" but a ".".
+  if (MangledName.startsWith('.'))
+    return demangleTypeinfoName(MangledName);
+
   if (MangledName.startsWith("??@"))
     return demangleMD5Name(MangledName);
 

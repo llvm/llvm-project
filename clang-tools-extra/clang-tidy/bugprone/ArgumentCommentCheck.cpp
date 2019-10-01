@@ -324,7 +324,7 @@ void ArgumentCommentCheck::checkCallArgs(ASTContext *Ctx,
           << FixItHint::CreateInsertion(Args[I]->getBeginLoc(), ArgComment);
     }
   }
-} // namespace bugprone
+}
 
 void ArgumentCommentCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *E = Result.Nodes.getNodeAs<Expr>("expr");
@@ -337,7 +337,7 @@ void ArgumentCommentCheck::check(const MatchFinder::MatchResult &Result) {
                   llvm::makeArrayRef(Call->getArgs(), Call->getNumArgs()));
   } else {
     const auto *Construct = cast<CXXConstructExpr>(E);
-    if (Construct->getNumArgs() == 1 &&
+    if (Construct->getNumArgs() > 0 &&
         Construct->getArg(0)->getSourceRange() == Construct->getSourceRange()) {
       // Ignore implicit construction.
       return;

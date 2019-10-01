@@ -14,19 +14,19 @@
 // CHECK-NEXT:     SHF_ALLOC (0x2)
 // CHECK-NEXT:     SHF_WRITE (0x1)
 // CHECK-NEXT:   ]
-// CHECK-NEXT:   Address: 0x2020C0
-// CHECK-NEXT:   Offset: 0x20C0
+// CHECK-NEXT:   Address: 0x202368
+// CHECK-NEXT:   Offset: 0x368
 // CHECK-NEXT:   Size: 8
 
-// CHECK: 0x2020C0 R_X86_64_COPY a 0x0
-// CHECK: 0x2020C4 R_X86_64_COPY b 0x0
+// CHECK: 0x202368 R_X86_64_COPY a 0x0
+// CHECK: 0x20236C R_X86_64_COPY b 0x0
 
 // CHECK:      Type: PT_GNU_RELRO (0x6474E552)
-// CHECK-NEXT: Offset: 0x2000
-// CHECK-NEXT: VirtualAddress: 0x202000
-// CHECK-NEXT: PhysicalAddress: 0x202000
+// CHECK-NEXT: Offset: 0x2A8
+// CHECK-NEXT: VirtualAddress: 0x2022A8
+// CHECK-NEXT: PhysicalAddress: 0x2022A8
 // CHECK-NEXT: FileSize: 192
-// CHECK-NEXT: MemSize: 4096
+// CHECK-NEXT: MemSize: 3416
 
 .text
 .global _start

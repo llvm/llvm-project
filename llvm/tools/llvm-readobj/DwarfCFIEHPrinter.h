@@ -114,11 +114,9 @@ void PrinterContext<ELFT>::printEHFrameHdr(uint64_t EHFrameHdrOffset,
     W.printString("Corresponding Section", *SectionName);
   }
 
-  DataExtractor DE(
-      StringRef(reinterpret_cast<const char *>(Obj->base()) + EHFrameHdrOffset,
-                EHFrameHdrSize),
-      ELFT::TargetEndianness == support::endianness::little,
-      ELFT::Is64Bits ? 8 : 4);
+  DataExtractor DE(makeArrayRef(Obj->base() + EHFrameHdrOffset, EHFrameHdrSize),
+                   ELFT::TargetEndianness == support::endianness::little,
+                   ELFT::Is64Bits ? 8 : 4);
 
   DictScope D(W, "Header");
   uint64_t Offset = 0;

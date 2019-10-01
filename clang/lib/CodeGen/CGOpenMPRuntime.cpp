@@ -2815,6 +2815,8 @@ llvm::Function *CGOpenMPRuntime::emitThreadPrivateVarDefinition(
 bool CGOpenMPRuntime::emitDeclareTargetVarDefinition(const VarDecl *VD,
                                                      llvm::GlobalVariable *Addr,
                                                      bool PerformInit) {
+  if (CGM.getLangOpts().OMPTargetTriples.empty())
+    return false;
   Optional<OMPDeclareTargetDeclAttr::MapTypeTy> Res =
       OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD);
   if (!Res || *Res == OMPDeclareTargetDeclAttr::MT_Link ||
@@ -3970,16 +3972,16 @@ CGOpenMPRuntime::createOffloadingBinaryDescriptorRegistration() {
   // host entries section. These will be defined by the linker.
   llvm::Type *OffloadEntryTy =
       CGM.getTypes().ConvertTypeForMem(getTgtOffloadEntryQTy());
-  std::string EntriesBeginName = getName({"omp_offloading", "entries_begin"});
   auto *HostEntriesBegin = new llvm::GlobalVariable(
       M, OffloadEntryTy, /*isConstant=*/true,
       llvm::GlobalValue::ExternalLinkage, /*Initializer=*/nullptr,
-      EntriesBeginName);
-  std::string EntriesEndName = getName({"omp_offloading", "entries_end"});
-  auto *HostEntriesEnd =
-      new llvm::GlobalVariable(M, OffloadEntryTy, /*isConstant=*/true,
-                               llvm::GlobalValue::ExternalLinkage,
-                               /*Initializer=*/nullptr, EntriesEndName);
+      "__start_omp_offloading_entries");
+  HostEntriesBegin->setVisibility(llvm::GlobalValue::HiddenVisibility);
+  auto *HostEntriesEnd = new llvm::GlobalVariable(
+      M, OffloadEntryTy, /*isConstant=*/true,
+      llvm::GlobalValue::ExternalLinkage,
+      /*Initializer=*/nullptr, "__stop_omp_offloading_entries");
+  HostEntriesEnd->setVisibility(llvm::GlobalValue::HiddenVisibility);
 
   // Create all device images
   auto *DeviceImageTy = cast<llvm::StructType>(
@@ -4127,8 +4129,7 @@ void CGOpenMPRuntime::createOffloadEntry(
       Twine(EntryName).concat(Name), llvm::GlobalValue::WeakAnyLinkage);
 
   // The entry has to be created in the section the linker expects it to be.
-  std::string Section = getName({"omp_offloading", "entries"});
-  Entry->setSection(Section);
+  Entry->setSection("omp_offloading_entries");
 }
 
 void CGOpenMPRuntime::createOffloadEntriesAndInfoMetadata() {
@@ -6770,6 +6771,7 @@ emitNumTeamsForTargetDirective(CodeGenFunction &CGF,
   case OMPD_teams_distribute_parallel_for_simd:
   case OMPD_target_update:
   case OMPD_declare_simd:
+  case OMPD_declare_variant:
   case OMPD_declare_target:
   case OMPD_end_declare_target:
   case OMPD_declare_reduction:
@@ -7075,6 +7077,7 @@ emitNumThreadsForTargetDirective(CodeGenFunction &CGF,
   case OMPD_teams_distribute_parallel_for_simd:
   case OMPD_target_update:
   case OMPD_declare_simd:
+  case OMPD_declare_variant:
   case OMPD_declare_target:
   case OMPD_end_declare_target:
   case OMPD_declare_reduction:
@@ -8826,6 +8829,7 @@ getNestedDistributeDirective(ASTContext &Ctx, const OMPExecutableDirective &D) {
     case OMPD_teams_distribute_parallel_for_simd:
     case OMPD_target_update:
     case OMPD_declare_simd:
+    case OMPD_declare_variant:
     case OMPD_declare_target:
     case OMPD_end_declare_target:
     case OMPD_declare_reduction:
@@ -9173,9 +9177,11 @@ void CGOpenMPRuntime::emitUDMapperArrayInitOrDel(
 }
 
 void CGOpenMPRuntime::emitTargetNumIterationsCall(
-    CodeGenFunction &CGF, const OMPExecutableDirective &D, const Expr *Device,
-    const llvm::function_ref<llvm::Value *(
-        CodeGenFunction &CGF, const OMPLoopDirective &D)> &SizeEmitter) {
+    CodeGenFunction &CGF, const OMPExecutableDirective &D,
+    llvm::Value *DeviceID,
+    llvm::function_ref<llvm::Value *(CodeGenFunction &CGF,
+                                     const OMPLoopDirective &D)>
+        SizeEmitter) {
   OpenMPDirectiveKind Kind = D.getDirectiveKind();
   const OMPExecutableDirective *TD = &D;
   // Get nested teams distribute kind directive, if any.
@@ -9184,30 +9190,24 @@ void CGOpenMPRuntime::emitTargetNumIterationsCall(
   if (!TD)
     return;
   const auto *LD = cast<OMPLoopDirective>(TD);
-  auto &&CodeGen = [LD, &Device, &SizeEmitter, this](CodeGenFunction &CGF,
+  auto &&CodeGen = [LD, DeviceID, SizeEmitter, this](CodeGenFunction &CGF,
                                                      PrePostActionTy &) {
-    llvm::Value *NumIterations = SizeEmitter(CGF, *LD);
-
-    // Emit device ID if any.
-    llvm::Value *DeviceID;
-    if (Device)
-      DeviceID = CGF.Builder.CreateIntCast(CGF.EmitScalarExpr(Device),
-                                           CGF.Int64Ty, /*isSigned=*/true);
-    else
-      DeviceID = CGF.Builder.getInt64(OMP_DEVICEID_UNDEF);
-
-    llvm::Value *Args[] = {DeviceID, NumIterations};
-    CGF.EmitRuntimeCall(
-        createRuntimeFunction(OMPRTL__kmpc_push_target_tripcount), Args);
+    if (llvm::Value *NumIterations = SizeEmitter(CGF, *LD)) {
+      llvm::Value *Args[] = {DeviceID, NumIterations};
+      CGF.EmitRuntimeCall(
+          createRuntimeFunction(OMPRTL__kmpc_push_target_tripcount), Args);
+    }
   };
   emitInlinedDirective(CGF, OMPD_unknown, CodeGen);
 }
 
-void CGOpenMPRuntime::emitTargetCall(CodeGenFunction &CGF,
-                                     const OMPExecutableDirective &D,
-                                     llvm::Function *OutlinedFn,
-                                     llvm::Value *OutlinedFnID,
-                                     const Expr *IfCond, const Expr *Device) {
+void CGOpenMPRuntime::emitTargetCall(
+    CodeGenFunction &CGF, const OMPExecutableDirective &D,
+    llvm::Function *OutlinedFn, llvm::Value *OutlinedFnID, const Expr *IfCond,
+    const Expr *Device,
+    llvm::function_ref<llvm::Value *(CodeGenFunction &CGF,
+                                     const OMPLoopDirective &D)>
+        SizeEmitter) {
   if (!CGF.HaveInsertPoint())
     return;
 
@@ -9226,8 +9226,8 @@ void CGOpenMPRuntime::emitTargetCall(CodeGenFunction &CGF,
   llvm::Value *MapTypesArray = nullptr;
   // Fill up the pointer arrays and transfer execution to the device.
   auto &&ThenGen = [this, Device, OutlinedFn, OutlinedFnID, &D, &InputInfo,
-                    &MapTypesArray, &CS, RequiresOuterTask,
-                    &CapturedVars](CodeGenFunction &CGF, PrePostActionTy &) {
+                    &MapTypesArray, &CS, RequiresOuterTask, &CapturedVars,
+                    SizeEmitter](CodeGenFunction &CGF, PrePostActionTy &) {
     // On top of the arrays that were filled up, the target offloading call
     // takes as arguments the device id as well as the host pointer. The host
     // pointer is used by the runtime library to identify the current target
@@ -9258,6 +9258,9 @@ void CGOpenMPRuntime::emitTargetCall(CodeGenFunction &CGF,
 
     llvm::Value *NumTeams = emitNumTeamsForTargetDirective(CGF, D);
     llvm::Value *NumThreads = emitNumThreadsForTargetDirective(CGF, D);
+
+    // Emit tripcount for the target loop-based directive.
+    emitTargetNumIterationsCall(CGF, D, DeviceID, SizeEmitter);
 
     bool HasNowait = D.hasClausesOfKind<OMPNowaitClause>();
     // The target region is an outlined function launched by the runtime
@@ -9583,6 +9586,7 @@ void CGOpenMPRuntime::scanForTargetRegionsFunctions(const Stmt *S,
     case OMPD_teams_distribute_parallel_for_simd:
     case OMPD_target_update:
     case OMPD_declare_simd:
+    case OMPD_declare_variant:
     case OMPD_declare_target:
     case OMPD_end_declare_target:
     case OMPD_declare_reduction:
@@ -9715,6 +9719,8 @@ CGOpenMPRuntime::registerTargetFirstprivateCopy(CodeGenFunction &CGF,
 
 void CGOpenMPRuntime::registerTargetGlobalVariable(const VarDecl *VD,
                                                    llvm::Constant *Addr) {
+  if (CGM.getLangOpts().OMPTargetTriples.empty())
+    return;
   llvm::Optional<OMPDeclareTargetDeclAttr::MapTypeTy> Res =
       OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD);
   if (!Res) {
@@ -10205,6 +10211,7 @@ void CGOpenMPRuntime::emitTargetDataStandAloneCall(
     case OMPD_teams_distribute_parallel_for:
     case OMPD_teams_distribute_parallel_for_simd:
     case OMPD_declare_simd:
+    case OMPD_declare_variant:
     case OMPD_declare_target:
     case OMPD_end_declare_target:
     case OMPD_declare_reduction:
@@ -11280,12 +11287,13 @@ void CGOpenMPSIMDRuntime::emitTargetOutlinedFunction(
   llvm_unreachable("Not supported in SIMD-only mode");
 }
 
-void CGOpenMPSIMDRuntime::emitTargetCall(CodeGenFunction &CGF,
-                                         const OMPExecutableDirective &D,
-                                         llvm::Function *OutlinedFn,
-                                         llvm::Value *OutlinedFnID,
-                                         const Expr *IfCond,
-                                         const Expr *Device) {
+void CGOpenMPSIMDRuntime::emitTargetCall(
+    CodeGenFunction &CGF, const OMPExecutableDirective &D,
+    llvm::Function *OutlinedFn, llvm::Value *OutlinedFnID, const Expr *IfCond,
+    const Expr *Device,
+    llvm::function_ref<llvm::Value *(CodeGenFunction &CGF,
+                                     const OMPLoopDirective &D)>
+        SizeEmitter) {
   llvm_unreachable("Not supported in SIMD-only mode");
 }
 

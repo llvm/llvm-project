@@ -882,7 +882,7 @@ void test1() {
 // CHECK: call void @dummy()
 // CHECK-LE: call void @dummy()
 
-  res_vf = vec_sel(vd, vd, vbll);
+  res_vd = vec_sel(vd, vd, vbll);
 // CHECK: xor <2 x i64> %{{[0-9]+}}, <i64 -1, i64 -1>
 // CHECK: and <2 x i64> %{{[0-9]+}},
 // CHECK: and <2 x i64> %{{[0-9]+}}, %{{[0-9]+}}

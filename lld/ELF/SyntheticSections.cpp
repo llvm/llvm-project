@@ -3125,10 +3125,9 @@ void MergeNoTailSection::finalizeContents() {
   });
 }
 
-static MergeSyntheticSection *createMergeSynthetic(StringRef name,
-                                                   uint32_t type,
-                                                   uint64_t flags,
-                                                   uint32_t alignment) {
+MergeSyntheticSection *elf::createMergeSynthetic(StringRef name, uint32_t type,
+                                                 uint64_t flags,
+                                                 uint32_t alignment) {
   bool shouldTailMerge = (flags & SHF_STRINGS) && config->optimize >= 2;
   if (shouldTailMerge)
     return make<MergeTailSection>(name, type, flags, alignment);
@@ -3146,63 +3145,6 @@ template <class ELFT> void elf::splitSections() {
   });
 }
 
-// This function scans over the inputsections to create mergeable
-// synthetic sections.
-//
-// It removes MergeInputSections from the input section array and adds
-// new synthetic sections at the location of the first input section
-// that it replaces. It then finalizes each synthetic section in order
-// to compute an output offset for each piece of each input section.
-void elf::mergeSections() {
-  std::vector<MergeSyntheticSection *> mergeSections;
-  for (InputSectionBase *&s : inputSections) {
-    MergeInputSection *ms = dyn_cast<MergeInputSection>(s);
-    if (!ms)
-      continue;
-
-    // We do not want to handle sections that are not alive, so just remove
-    // them instead of trying to merge.
-    if (!ms->isLive()) {
-      s = nullptr;
-      continue;
-    }
-
-    StringRef outsecName = getOutputSectionName(ms);
-
-    auto i = llvm::find_if(mergeSections, [=](MergeSyntheticSection *sec) {
-      // While we could create a single synthetic section for two different
-      // values of Entsize, it is better to take Entsize into consideration.
-      //
-      // With a single synthetic section no two pieces with different Entsize
-      // could be equal, so we may as well have two sections.
-      //
-      // Using Entsize in here also allows us to propagate it to the synthetic
-      // section.
-      //
-      // SHF_STRINGS section with different alignments should not be merged.
-      return sec->name == outsecName && sec->flags == ms->flags &&
-             sec->entsize == ms->entsize &&
-             (sec->alignment == ms->alignment || !(sec->flags & SHF_STRINGS));
-    });
-    if (i == mergeSections.end()) {
-      MergeSyntheticSection *syn =
-          createMergeSynthetic(outsecName, ms->type, ms->flags, ms->alignment);
-      mergeSections.push_back(syn);
-      i = std::prev(mergeSections.end());
-      s = syn;
-      syn->entsize = ms->entsize;
-    } else {
-      s = nullptr;
-    }
-    (*i)->addSection(ms);
-  }
-  for (auto *ms : mergeSections)
-    ms->finalizeContents();
-
-  std::vector<InputSectionBase *> &v = inputSections;
-  v.erase(std::remove(v.begin(), v.end(), nullptr), v.end());
-}
-
 MipsRldMapSection::MipsRldMapSection()
     : SyntheticSection(SHF_ALLOC | SHF_WRITE, SHT_PROGBITS, config->wordsize,
                        ".rld_map") {}
@@ -3218,17 +3160,23 @@ static InputSection *findExidxSection(InputSection *isec) {
   return nullptr;
 }
 
+static bool isValidExidxSectionDep(InputSection *isec) {
+  return (isec->flags & SHF_ALLOC) && (isec->flags & SHF_EXECINSTR) &&
+         isec->getSize() > 0;
+}
+
 bool ARMExidxSyntheticSection::addSection(InputSection *isec) {
   if (isec->type == SHT_ARM_EXIDX) {
-    exidxSections.push_back(isec);
-    return true;
+    if (InputSection* dep = isec->getLinkOrderDep())
+      if (isValidExidxSectionDep(dep)) {
+        exidxSections.push_back(isec);
+        return true;
+      }
+    return false;
   }
 
-  if ((isec->flags & SHF_ALLOC) && (isec->flags & SHF_EXECINSTR) &&
-      isec->getSize() > 0) {
+  if (isValidExidxSectionDep(isec)) {
     executableSections.push_back(isec);
-    if (empty && findExidxSection(isec))
-      empty = false;
     return false;
   }
 
@@ -3393,6 +3341,12 @@ void ARMExidxSyntheticSection::writeTo(uint8_t *buf) {
   uint64_t p = getVA() + offset;
   target->relocateOne(buf + offset, R_ARM_PREL31, s - p);
   assert(size == offset + 8);
+}
+
+bool ARMExidxSyntheticSection::isNeeded() const {
+  return llvm::find_if(exidxSections, [](InputSection *isec) {
+           return isec->isLive();
+         }) != exidxSections.end();
 }
 
 bool ARMExidxSyntheticSection::classof(const SectionBase *d) {

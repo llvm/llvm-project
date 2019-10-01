@@ -199,6 +199,20 @@ int IncludeCategoryManager::getIncludePriority(StringRef IncludeName,
   return Ret;
 }
 
+int IncludeCategoryManager::getSortIncludePriority(StringRef IncludeName,
+                                                   bool CheckMainHeader) const {
+  int Ret = INT_MAX;
+  for (unsigned i = 0, e = CategoryRegexs.size(); i != e; ++i)
+    if (CategoryRegexs[i].match(IncludeName)) {
+      Ret = Style.IncludeCategories[i].SortPriority;
+      if (Ret == 0)
+        Ret = Style.IncludeCategories[i].Priority;
+      break;
+    }
+  if (CheckMainHeader && IsMainFile && Ret > 0 && isMainHeader(IncludeName))
+    Ret = 0;
+  return Ret;
+}
 bool IncludeCategoryManager::isMainHeader(StringRef IncludeName) const {
   if (!IncludeName.startswith("\""))
     return false;

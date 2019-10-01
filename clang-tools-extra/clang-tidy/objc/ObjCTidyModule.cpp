@@ -12,6 +12,7 @@
 #include "AvoidNSErrorInitCheck.h"
 #include "AvoidSpinlockCheck.h"
 #include "ForbiddenSubclassingCheck.h"
+#include "MissingHashCheck.h"
 #include "PropertyDeclarationCheck.h"
 #include "SuperSelfCheck.h"
 
@@ -30,6 +31,8 @@ public:
         "objc-avoid-spinlock");
     CheckFactories.registerCheck<ForbiddenSubclassingCheck>(
         "objc-forbidden-subclassing");
+    CheckFactories.registerCheck<MissingHashCheck>(
+        "objc-missing-hash");
     CheckFactories.registerCheck<PropertyDeclarationCheck>(
         "objc-property-declaration");
     CheckFactories.registerCheck<SuperSelfCheck>(

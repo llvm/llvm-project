@@ -83,12 +83,32 @@ static bool canMergeToProgbits(unsigned type) {
          type == SHT_NOTE;
 }
 
-void OutputSection::addSection(InputSection *isec) {
+// Record that isec will be placed in the OutputSection. isec does not become
+// permanent until finalizeInputSections() is called. The function should not be
+// used after finalizeInputSections() is called. If you need to add an
+// InputSection post finalizeInputSections(), then you must do the following:
+//
+// 1. Find or create an InputSectionDescription to hold InputSection.
+// 2. Add the InputSection to the InputSectionDesciption::sections.
+// 3. Call commitSection(isec).
+void OutputSection::recordSection(InputSectionBase *isec) {
+  partition = isec->partition;
+  isec->parent = this;
+  if (sectionCommands.empty() ||
+      !isa<InputSectionDescription>(sectionCommands.back()))
+    sectionCommands.push_back(make<InputSectionDescription>(""));
+  auto *isd = cast<InputSectionDescription>(sectionCommands.back());
+  isd->sectionBases.push_back(isec);
+}
+
+// Update fields (type, flags, alignment, etc) according to the InputSection
+// isec. Also check whether the InputSection flags and type are consistent with
+// other InputSections.
+void OutputSection::commitSection(InputSection *isec) {
   if (!hasInputSections) {
     // If IS is the first section to be added to this section,
-    // initialize Partition, Type, Entsize and flags from IS.
+    // initialize type, entsize and flags from isec.
     hasInputSections = true;
-    partition = isec->partition;
     type = isec->type;
     entsize = isec->entsize;
     flags = isec->flags;
@@ -110,6 +130,8 @@ void OutputSection::addSection(InputSection *isec) {
       type = SHT_PROGBITS;
     }
   }
+  if (noload)
+    type = SHT_NOBITS;
 
   isec->parent = this;
   uint64_t andMask =
@@ -118,6 +140,8 @@ void OutputSection::addSection(InputSection *isec) {
   uint64_t andFlags = (flags & isec->flags) & andMask;
   uint64_t orFlags = (flags | isec->flags) & orMask;
   flags = andFlags | orFlags;
+  if (nonAlloc)
+    flags &= ~(uint64_t)SHF_ALLOC;
 
   alignment = std::max(alignment, isec->alignment);
 
@@ -126,15 +150,69 @@ void OutputSection::addSection(InputSection *isec) {
   // set sh_entsize to 0.
   if (entsize != isec->entsize)
     entsize = 0;
+}
 
-  if (!isec->assigned) {
-    isec->assigned = true;
-    if (sectionCommands.empty() ||
-        !isa<InputSectionDescription>(sectionCommands.back()))
-      sectionCommands.push_back(make<InputSectionDescription>(""));
-    auto *isd = cast<InputSectionDescription>(sectionCommands.back());
-    isd->sections.push_back(isec);
+// This function scans over the InputSectionBase list sectionBases to create
+// InputSectionDescription::sections.
+//
+// It removes MergeInputSections from the input section array and adds
+// new synthetic sections at the location of the first input section
+// that it replaces. It then finalizes each synthetic section in order
+// to compute an output offset for each piece of each input section.
+void OutputSection::finalizeInputSections() {
+  std::vector<MergeSyntheticSection *> mergeSections;
+  for (BaseCommand *base : sectionCommands) {
+    auto *cmd = dyn_cast<InputSectionDescription>(base);
+    if (!cmd)
+      continue;
+    cmd->sections.reserve(cmd->sectionBases.size());
+    for (InputSectionBase *s : cmd->sectionBases) {
+      MergeInputSection *ms = dyn_cast<MergeInputSection>(s);
+      if (!ms) {
+        cmd->sections.push_back(cast<InputSection>(s));
+        continue;
+      }
+
+      // We do not want to handle sections that are not alive, so just remove
+      // them instead of trying to merge.
+      if (!ms->isLive())
+        continue;
+
+      auto i = llvm::find_if(mergeSections, [=](MergeSyntheticSection *sec) {
+        // While we could create a single synthetic section for two different
+        // values of Entsize, it is better to take Entsize into consideration.
+        //
+        // With a single synthetic section no two pieces with different Entsize
+        // could be equal, so we may as well have two sections.
+        //
+        // Using Entsize in here also allows us to propagate it to the synthetic
+        // section.
+        //
+        // SHF_STRINGS section with different alignments should not be merged.
+        return sec->flags == ms->flags && sec->entsize == ms->entsize &&
+               (sec->alignment == ms->alignment || !(sec->flags & SHF_STRINGS));
+      });
+      if (i == mergeSections.end()) {
+        MergeSyntheticSection *syn =
+            createMergeSynthetic(name, ms->type, ms->flags, ms->alignment);
+        mergeSections.push_back(syn);
+        i = std::prev(mergeSections.end());
+        syn->entsize = ms->entsize;
+        cmd->sections.push_back(syn);
+      }
+      (*i)->addSection(ms);
+    }
+
+    // sectionBases should not be used from this point onwards. Clear it to
+    // catch misuses.
+    cmd->sectionBases.clear();
+
+    // Some input sections may be removed from the list after ICF.
+    for (InputSection *s : cmd->sections)
+      commitSection(s);
   }
+  for (auto *ms : mergeSections)
+    ms->finalizeContents();
 }
 
 static void sortByOrder(MutableArrayRef<InputSection *> in,

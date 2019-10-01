@@ -460,7 +460,7 @@ fp16_fml_fallthrough:
     //        now just be explicit and disable all known dependent features
     //        as well.
     for (std::string Feature : {
-            "vfp2", "vfp2sp", "vfp2d16", "vfp2d16sp",
+            "vfp2", "vfp2sp",
             "vfp3", "vfp3sp", "vfp3d16", "vfp3d16sp",
             "vfp4", "vfp4sp", "vfp4d16", "vfp4d16sp",
             "fp-armv8", "fp-armv8sp", "fp-armv8d16", "fp-armv8d16sp",

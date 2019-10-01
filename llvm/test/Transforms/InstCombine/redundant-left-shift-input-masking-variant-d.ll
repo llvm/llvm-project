@@ -361,26 +361,3 @@ define i32 @n13_different_shamts1(i32 %x, i32 %nbits0, i32 %nbits1) {
   %t3 = shl i32 %t2, %nbits1
   ret i32 %t3
 }
-
-define i32 @n14_shamt_is_smaller(i32 %x, i32 %nbits) {
-; CHECK-LABEL: @n14_shamt_is_smaller(
-; CHECK-NEXT:    [[T0:%.*]] = shl i32 -1, [[NBITS:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = lshr i32 [[T0]], [[NBITS]]
-; CHECK-NEXT:    [[T2:%.*]] = and i32 [[T1]], [[X:%.*]]
-; CHECK-NEXT:    [[T3:%.*]] = add i32 [[NBITS]], -1
-; CHECK-NEXT:    call void @use32(i32 [[T0]])
-; CHECK-NEXT:    call void @use32(i32 [[T1]])
-; CHECK-NEXT:    call void @use32(i32 [[T2]])
-; CHECK-NEXT:    [[T4:%.*]] = shl i32 [[T2]], [[T3]]
-; CHECK-NEXT:    ret i32 [[T4]]
-;
-  %t0 = shl i32 -1, %nbits
-  %t1 = lshr i32 %t0, %nbits
-  %t2 = and i32 %t1, %x
-  %t3 = add i32 %nbits, -1 ; shift is smaller than mask
-  call void @use32(i32 %t0)
-  call void @use32(i32 %t1)
-  call void @use32(i32 %t2)
-  %t4 = shl i32 %t2, %t3
-  ret i32 %t4
-}

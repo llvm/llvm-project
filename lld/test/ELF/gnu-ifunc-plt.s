@@ -13,20 +13,20 @@
 // Check that the IRELATIVE relocations are after the JUMP_SLOT in the plt
 // CHECK: Relocations [
 // CHECK-NEXT:   Section (4) .rela.dyn {
-// CHECK-NEXT:     0x203028 R_X86_64_IRELATIVE - 0x201000
-// CHECK-NEXT:     0x203030 R_X86_64_IRELATIVE - 0x201001
+// CHECK-NEXT:     0x203458 R_X86_64_IRELATIVE - 0x2012D8
+// CHECK-NEXT:     0x203460 R_X86_64_IRELATIVE - 0x2012D9
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Section (5) .rela.plt {
-// CHECK-NEXT:     0x203018 R_X86_64_JUMP_SLOT bar2 0x0
-// CHECK-NEXT:     0x203020 R_X86_64_JUMP_SLOT zed2 0x0
+// CHECK-NEXT:     0x203448 R_X86_64_JUMP_SLOT bar2 0x0
+// CHECK-NEXT:     0x203450 R_X86_64_JUMP_SLOT zed2 0x0
 // CHECK-NEXT:   }
 
 // Check that .got.plt entries point back to PLT header
 // GOTPLT: Contents of section .got.plt:
-// GOTPLT-NEXT:  203000 00202000 00000000 00000000 00000000
-// GOTPLT-NEXT:  203010 00000000 00000000 36102000 00000000
-// GOTPLT-NEXT:  203020 46102000 00000000 56102000 00000000
-// GOTPLT-NEXT:  203030 66102000 00000000
+// GOTPLT-NEXT:  203430 40232000 00000000 00000000 00000000
+// GOTPLT-NEXT:  203440 00000000 00000000 06132000 00000000
+// GOTPLT-NEXT:  203450 16132000 00000000 26132000 00000000
+// GOTPLT-NEXT:  203460 36132000 00000000
 
 // Check that the PLTRELSZ tag does not include the IRELATIVE relocations
 // CHECK: DynamicSection [
@@ -37,37 +37,37 @@
 // DISASM: Disassembly of section .text:
 // DISASM-EMPTY:
 // DISASM-NEXT: foo:
-// DISASM-NEXT:   201000:       retq
+// DISASM-NEXT:   2012d8:       retq
 // DISASM:      bar:
-// DISASM-NEXT:   201001:       retq
+// DISASM-NEXT:   2012d9:       retq
 // DISASM:      _start:
-// DISASM-NEXT:   201002:       callq   73
-// DISASM-NEXT:   201007:       callq   84
+// DISASM-NEXT:   2012da:       callq   65
+// DISASM-NEXT:   2012df:       callq   76
 // DISASM-NEXT:                 callq   {{.*}} <bar2@plt>
 // DISASM-NEXT:                 callq   {{.*}} <zed2@plt>
 // DISASM-EMPTY:
 // DISASM-NEXT: Disassembly of section .plt:
 // DISASM-EMPTY:
 // DISASM-NEXT: .plt:
-// DISASM-NEXT:   201020:       pushq   8162(%rip)
-// DISASM-NEXT:   201026:       jmpq    *8164(%rip)
-// DISASM-NEXT:   20102c:       nopl    (%rax)
+// DISASM-NEXT:   2012f0:       pushq   8514(%rip)
+// DISASM-NEXT:   2012f6:       jmpq    *8516(%rip)
+// DISASM-NEXT:   2012fc:       nopl    (%rax)
 // DISASM-EMPTY:
 // DISASM-NEXT:   bar2@plt:
-// DISASM-NEXT:   201030:       jmpq    *8162(%rip)
-// DISASM-NEXT:   201036:       pushq   $0
-// DISASM-NEXT:   20103b:       jmp     -32 <.plt>
+// DISASM-NEXT:   201300:       jmpq    *8514(%rip)
+// DISASM-NEXT:   201306:       pushq   $0
+// DISASM-NEXT:   20130b:       jmp     -32 <.plt>
 // DISASM-EMPTY:
 // DISASM-NEXT:   zed2@plt:
-// DISASM-NEXT:   201040:       jmpq    *8154(%rip)
-// DISASM-NEXT:   201046:       pushq   $1
-// DISASM-NEXT:   20104b:       jmp     -48 <.plt>
-// DISASM-NEXT:   201050:       jmpq    *8146(%rip)
-// DISASM-NEXT:   201056:       pushq   $0
-// DISASM-NEXT:   20105b:       jmp     -32 <zed2@plt>
-// DISASM-NEXT:   201060:       jmpq    *8138(%rip)
-// DISASM-NEXT:   201066:       pushq   $1
-// DISASM-NEXT:   20106b:       jmp     -48 <zed2@plt>
+// DISASM-NEXT:   201310:       jmpq    *8506(%rip)
+// DISASM-NEXT:   201316:       pushq   $1
+// DISASM-NEXT:   20131b:       jmp     -48 <.plt>
+// DISASM-NEXT:   201320:       jmpq    *8498(%rip)
+// DISASM-NEXT:   201326:       pushq   $0
+// DISASM-NEXT:   20132b:       jmp     -32 <zed2@plt>
+// DISASM-NEXT:   201330:       jmpq    *8490(%rip)
+// DISASM-NEXT:   201336:       pushq   $1
+// DISASM-NEXT:   20133b:       jmp     -48 <zed2@plt>
 
 .text
 .type foo STT_GNU_IFUNC

@@ -270,8 +270,6 @@ def err_target_unsupported_mcmse : Error<
   "-mcmse is not supported for %0">;
 def err_opt_not_valid_with_opt : Error<
   "option '%0' cannot be specified with '%1'">;
-def err_opt_not_valid_without_opt : Error<
-  "option '%0' cannot be specified without '%1'">;
 def err_opt_not_valid_on_target : Error<
   "option '%0' cannot be specified on this target">;
 
@@ -315,4 +313,9 @@ def err_unknown_analyzer_checker_or_package : Error<
     "no analyzer checkers or packages are associated with '%0'">;
 def note_suggest_disabling_all_checkers : Note<
     "use -analyzer-disable-all-checks to disable all static analyzer checkers">;
+
+// Poison system directories.
+def warn_poison_system_directories : Warning <
+  "include location '%0' is unsafe for cross-compilation">,
+  InGroup<DiagGroup<"poison-system-directories">>, DefaultIgnore;
 }

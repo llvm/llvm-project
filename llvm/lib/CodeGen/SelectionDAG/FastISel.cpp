@@ -1677,11 +1677,11 @@ bool FastISel::selectInstruction(const Instruction *I) {
 /// (fall-through) successor, and update the CFG.
 void FastISel::fastEmitBranch(MachineBasicBlock *MSucc,
                               const DebugLoc &DbgLoc) {
-  if (FuncInfo.MBB->getBasicBlock()->size() > 1 &&
+  if (FuncInfo.MBB->getBasicBlock()->sizeWithoutDebug() > 1 &&
       FuncInfo.MBB->isLayoutSuccessor(MSucc)) {
-    // For more accurate line information if this is the only instruction
-    // in the block then emit it, otherwise we have the unconditional
-    // fall-through case, which needs no instructions.
+    // For more accurate line information if this is the only non-debug
+    // instruction in the block then emit it, otherwise we have the
+    // unconditional fall-through case, which needs no instructions.
   } else {
     // The unconditional branch case.
     TII.insertBranch(*FuncInfo.MBB, MSucc, nullptr,

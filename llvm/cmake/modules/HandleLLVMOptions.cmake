@@ -821,37 +821,53 @@ string(TOUPPER "${LLVM_BUILD_INSTRUMENTED}" uppercase_LLVM_BUILD_INSTRUMENTED)
 
 if (LLVM_BUILD_INSTRUMENTED)
   if (LLVM_ENABLE_IR_PGO OR uppercase_LLVM_BUILD_INSTRUMENTED STREQUAL "IR")
-    append("-fprofile-generate='${LLVM_PROFILE_DATA_DIR}'"
+    append("-fprofile-generate=\"${LLVM_PROFILE_DATA_DIR}\""
       CMAKE_CXX_FLAGS
-      CMAKE_C_FLAGS
-      CMAKE_EXE_LINKER_FLAGS
-      CMAKE_SHARED_LINKER_FLAGS)
+      CMAKE_C_FLAGS)
+    if(NOT LINKER_IS_LLD_LINK)
+        append("-fprofile-generate=\"${LLVM_PROFILE_DATA_DIR}\""
+          CMAKE_EXE_LINKER_FLAGS
+          CMAKE_SHARED_LINKER_FLAGS)
+    endif()
   elseif(uppercase_LLVM_BUILD_INSTRUMENTED STREQUAL "CSIR")
-    append("-fcs-profile-generate='${LLVM_CSPROFILE_DATA_DIR}'"
+    append("-fcs-profile-generate=\"${LLVM_CSPROFILE_DATA_DIR}\""
       CMAKE_CXX_FLAGS
-      CMAKE_C_FLAGS
-      CMAKE_EXE_LINKER_FLAGS
-      CMAKE_SHARED_LINKER_FLAGS)
+      CMAKE_C_FLAGS)
+    if(NOT LINKER_IS_LLD_LINK)
+      append("-fcs-profile-generate=\"${LLVM_CSPROFILE_DATA_DIR}\""
+        CMAKE_EXE_LINKER_FLAGS
+        CMAKE_SHARED_LINKER_FLAGS)
+    endif()
   else()
-    append("-fprofile-instr-generate='${LLVM_PROFILE_FILE_PATTERN}'"
+    append("-fprofile-instr-generate=\"${LLVM_PROFILE_FILE_PATTERN}\""
       CMAKE_CXX_FLAGS
-      CMAKE_C_FLAGS
-      CMAKE_EXE_LINKER_FLAGS
-      CMAKE_SHARED_LINKER_FLAGS)
+      CMAKE_C_FLAGS)
+    if(NOT LINKER_IS_LLD_LINK)
+      append("-fprofile-instr-generate=\"${LLVM_PROFILE_FILE_PATTERN}\""
+        CMAKE_EXE_LINKER_FLAGS
+        CMAKE_SHARED_LINKER_FLAGS)
+    endif()
   endif()
 endif()
 
-# Need to pass -fprofile-instr-use to linker for context-sensitive PGO
-# compilation.
 if(LLVM_PROFDATA_FILE AND EXISTS ${LLVM_PROFDATA_FILE})
-    append("-fprofile-instr-use='${LLVM_PROFDATA_FILE}'"
-      CMAKE_EXE_LINKER_FLAGS
-      CMAKE_SHARED_LINKER_FLAGS)
+  if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang" )
+    append("-fprofile-instr-use=\"${LLVM_PROFDATA_FILE}\""
+      CMAKE_CXX_FLAGS
+      CMAKE_C_FLAGS)
+    if(NOT LINKER_IS_LLD_LINK)
+      append("-fprofile-instr-use=\"${LLVM_PROFDATA_FILE}\""
+        CMAKE_EXE_LINKER_FLAGS
+        CMAKE_SHARED_LINKER_FLAGS)
+    endif()
+  else()
+    message(FATAL_ERROR "LLVM_PROFDATA_FILE can only be specified when compiling with clang")
+  endif()
 endif()
 
 option(LLVM_BUILD_INSTRUMENTED_COVERAGE "Build LLVM and tools with Code Coverage instrumentation" Off)
 mark_as_advanced(LLVM_BUILD_INSTRUMENTED_COVERAGE)
-append_if(LLVM_BUILD_INSTRUMENTED_COVERAGE "-fprofile-instr-generate='${LLVM_PROFILE_FILE_PATTERN}' -fcoverage-mapping"
+append_if(LLVM_BUILD_INSTRUMENTED_COVERAGE "-fprofile-instr-generate=\"${LLVM_PROFILE_FILE_PATTERN}\" -fcoverage-mapping"
   CMAKE_CXX_FLAGS
   CMAKE_C_FLAGS
   CMAKE_EXE_LINKER_FLAGS

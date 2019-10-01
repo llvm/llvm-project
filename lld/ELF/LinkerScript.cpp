@@ -341,19 +341,19 @@ bool LinkerScript::shouldKeep(InputSectionBase *s) {
 }
 
 // A helper function for the SORT() command.
-static bool matchConstraints(ArrayRef<InputSection *> sections,
+static bool matchConstraints(ArrayRef<InputSectionBase *> sections,
                              ConstraintKind kind) {
   if (kind == ConstraintKind::NoConstraint)
     return true;
 
   bool isRW = llvm::any_of(
-      sections, [](InputSection *sec) { return sec->flags & SHF_WRITE; });
+      sections, [](InputSectionBase *sec) { return sec->flags & SHF_WRITE; });
 
   return (isRW && kind == ConstraintKind::ReadWrite) ||
          (!isRW && kind == ConstraintKind::ReadOnly);
 }
 
-static void sortSections(MutableArrayRef<InputSection *> vec,
+static void sortSections(MutableArrayRef<InputSectionBase *> vec,
                          SortSectionPolicy k) {
   auto alignmentComparator = [](InputSectionBase *a, InputSectionBase *b) {
     // ">" is not a mistake. Sections with larger alignments are placed
@@ -392,7 +392,7 @@ static void sortSections(MutableArrayRef<InputSection *> vec,
 //    --sort-section is handled as an inner SORT command.
 // 3. If one SORT command is given, and if it is SORT_NONE, don't sort.
 // 4. If no SORT command is given, sort according to --sort-section.
-static void sortInputSections(MutableArrayRef<InputSection *> vec,
+static void sortInputSections(MutableArrayRef<InputSectionBase *> vec,
                               const SectionPattern &pat) {
   if (pat.sortOuter == SortSectionPolicy::None)
     return;
@@ -405,16 +405,16 @@ static void sortInputSections(MutableArrayRef<InputSection *> vec,
 }
 
 // Compute and remember which sections the InputSectionDescription matches.
-std::vector<InputSection *>
+std::vector<InputSectionBase *>
 LinkerScript::computeInputSections(const InputSectionDescription *cmd) {
-  std::vector<InputSection *> ret;
+  std::vector<InputSectionBase *> ret;
 
   // Collects all sections that satisfy constraints of Cmd.
   for (const SectionPattern &pat : cmd->sectionPatterns) {
     size_t sizeBefore = ret.size();
 
     for (InputSectionBase *sec : inputSections) {
-      if (!sec->isLive() || sec->assigned)
+      if (!sec->isLive() || sec->parent)
         continue;
 
       // For -emit-relocs we have to ignore entries like
@@ -422,10 +422,8 @@ LinkerScript::computeInputSections(const InputSectionDescription *cmd) {
       // which are common because they are in the default bfd script.
       // We do not ignore SHT_REL[A] linker-synthesized sections here because
       // want to support scripts that do custom layout for them.
-      //
-      // It is safe to assume that Sec is an InputSection because mergeable or
-      // EH input sections have already been handled and eliminated.
-      if (cast<InputSection>(sec)->getRelocatedSection())
+      if (isa<InputSection>(sec) &&
+          cast<InputSection>(sec)->getRelocatedSection())
         continue;
 
       std::string filename = getFilename(sec->file);
@@ -434,42 +432,43 @@ LinkerScript::computeInputSections(const InputSectionDescription *cmd) {
           !pat.sectionPat.match(sec->name))
         continue;
 
-      ret.push_back(cast<InputSection>(sec));
-      sec->assigned = true;
+      ret.push_back(sec);
     }
 
-    sortInputSections(MutableArrayRef<InputSection *>(ret).slice(sizeBefore),
-                      pat);
+    sortInputSections(
+        MutableArrayRef<InputSectionBase *>(ret).slice(sizeBefore), pat);
   }
   return ret;
 }
 
-void LinkerScript::discard(ArrayRef<InputSection *> v) {
-  for (InputSection *s : v) {
-    if (s == in.shStrTab || s == mainPart->relaDyn || s == mainPart->relrDyn)
-      error("discarding " + s->name + " section is not allowed");
+void LinkerScript::discard(InputSectionBase *s) {
+  if (s == in.shStrTab || s == mainPart->relaDyn || s == mainPart->relrDyn)
+    error("discarding " + s->name + " section is not allowed");
 
-    // You can discard .hash and .gnu.hash sections by linker scripts. Since
-    // they are synthesized sections, we need to handle them differently than
-    // other regular sections.
-    if (s == mainPart->gnuHashTab)
-      mainPart->gnuHashTab = nullptr;
-    if (s == mainPart->hashTab)
-      mainPart->hashTab = nullptr;
+  // You can discard .hash and .gnu.hash sections by linker scripts. Since
+  // they are synthesized sections, we need to handle them differently than
+  // other regular sections.
+  if (s == mainPart->gnuHashTab)
+    mainPart->gnuHashTab = nullptr;
+  if (s == mainPart->hashTab)
+    mainPart->hashTab = nullptr;
 
-    s->markDead();
-    discard(s->dependentSections);
-  }
+  s->markDead();
+  s->parent = nullptr;
+  for (InputSection *ds : s->dependentSections)
+    discard(ds);
 }
 
-std::vector<InputSection *>
+std::vector<InputSectionBase *>
 LinkerScript::createInputSectionList(OutputSection &outCmd) {
-  std::vector<InputSection *> ret;
+  std::vector<InputSectionBase *> ret;
 
   for (BaseCommand *base : outCmd.sectionCommands) {
     if (auto *cmd = dyn_cast<InputSectionDescription>(base)) {
-      cmd->sections = computeInputSections(cmd);
-      ret.insert(ret.end(), cmd->sections.begin(), cmd->sections.end());
+      cmd->sectionBases = computeInputSections(cmd);
+      for (InputSectionBase *s : cmd->sectionBases)
+        s->parent = &outCmd;
+      ret.insert(ret.end(), cmd->sectionBases.begin(), cmd->sectionBases.end());
     }
   }
   return ret;
@@ -480,12 +479,13 @@ void LinkerScript::processSectionCommands() {
   size_t i = 0;
   for (BaseCommand *base : sectionCommands) {
     if (auto *sec = dyn_cast<OutputSection>(base)) {
-      std::vector<InputSection *> v = createInputSectionList(*sec);
+      std::vector<InputSectionBase *> v = createInputSectionList(*sec);
 
       // The output section name `/DISCARD/' is special.
       // Any input section assigned to it is discarded.
       if (sec->name == "/DISCARD/") {
-        discard(v);
+        for (InputSectionBase *s : v)
+          discard(s);
         sec->sectionCommands.clear();
         continue;
       }
@@ -499,7 +499,7 @@ void LinkerScript::processSectionCommands() {
       // way to "make it as if it wasn't present" is to make it empty.
       if (!matchConstraints(v, sec->constraint)) {
         for (InputSectionBase *s : v)
-          s->assigned = false;
+          s->parent = nullptr;
         sec->sectionCommands.clear();
         continue;
       }
@@ -513,15 +513,12 @@ void LinkerScript::processSectionCommands() {
           s->alignment = subalign;
       }
 
-      // Some input sections may be removed from the list after ICF.
-      for (InputSection *s : v)
-        sec->addSection(s);
+      // Set the partition field the same way OutputSection::recordSection()
+      // does. Partitions cannot be used with the SECTIONS command, so this is
+      // always 1.
+      sec->partition = 1;
 
       sec->sectionIndex = i++;
-      if (sec->noload)
-        sec->type = SHT_NOBITS;
-      if (sec->nonAlloc)
-        sec->flags &= ~(uint64_t)SHF_ALLOC;
     }
   }
 }
@@ -565,7 +562,7 @@ static OutputSection *findByName(ArrayRef<BaseCommand *> vec,
 static OutputSection *createSection(InputSectionBase *isec,
                                     StringRef outsecName) {
   OutputSection *sec = script->createOutputSection(outsecName, "<internal>");
-  sec->addSection(cast<InputSection>(isec));
+  sec->recordSection(isec);
   return sec;
 }
 
@@ -594,19 +591,13 @@ addInputSec(StringMap<TinyPtrVector<OutputSection *>> &map,
     OutputSection *out = sec->getRelocatedSection()->getOutputSection();
 
     if (out->relocationSection) {
-      out->relocationSection->addSection(sec);
+      out->relocationSection->recordSection(sec);
       return nullptr;
     }
 
     out->relocationSection = createSection(isec, outsecName);
     return out->relocationSection;
   }
-
-  // When control reaches here, mergeable sections have already been merged into
-  // synthetic sections. For relocatable case we want to create one output
-  // section per syntetic section so that they have a valid sh_entsize.
-  if (config->relocatable && (isec->flags & SHF_MERGE))
-    return createSection(isec, outsecName);
 
   //  The ELF spec just says
   // ----------------------------------------------------------------
@@ -654,7 +645,7 @@ addInputSec(StringMap<TinyPtrVector<OutputSection *>> &map,
   for (OutputSection *sec : v) {
     if (sec->partition != isec->partition)
       continue;
-    sec->addSection(cast<InputSection>(isec));
+    sec->recordSection(isec);
     return nullptr;
   }
 
@@ -680,13 +671,14 @@ void LinkerScript::addOrphanSections() {
       warn(toString(s) + " is being placed in '" + name + "'");
 
     if (OutputSection *sec = findByName(sectionCommands, name)) {
-      sec->addSection(cast<InputSection>(s));
+      sec->recordSection(s);
       return;
     }
 
     if (OutputSection *os = addInputSec(map, s, name))
       v.push_back(os);
-    assert(s->getOutputSection()->sectionIndex == UINT32_MAX);
+    assert(isa<MergeInputSection>(s) ||
+           s->getOutputSection()->sectionIndex == UINT32_MAX);
   };
 
   // For futher --emit-reloc handling code we need target output section
@@ -1006,17 +998,13 @@ static uint64_t computeBase(uint64_t min, bool allocateHeaders) {
   return alignDown(min, config->maxPageSize);
 }
 
-// Try to find an address for the file and program headers output sections,
-// which were unconditionally added to the first PT_LOAD segment earlier.
+// When the SECTIONS command is used, try to find an address for the file and
+// program headers output sections, which can be added to the first PT_LOAD
+// segment when program headers are created.
 //
-// When using the default layout, we check if the headers fit below the first
-// allocated section. When using a linker script, we also check if the headers
-// are covered by the output section. This allows omitting the headers by not
-// leaving enough space for them in the linker script; this pattern is common
-// in embedded systems.
-//
-// If there isn't enough space for these sections, we'll remove them from the
-// PT_LOAD segment, and we'll also remove the PT_PHDR segment.
+// We check if the headers fit below the first allocated section. If there isn't
+// enough space for these sections, we'll remove them from the PT_LOAD segment,
+// and we'll also remove the PT_PHDR segment.
 void LinkerScript::allocateHeaders(std::vector<PhdrEntry *> &phdrs) {
   uint64_t min = std::numeric_limits<uint64_t>::max();
   for (OutputSection *sec : outputSections)
@@ -1062,28 +1050,23 @@ LinkerScript::AddressState::AddressState() {
   }
 }
 
-static uint64_t getInitialDot() {
-  // By default linker scripts use an initial value of 0 for '.',
-  // but prefer -image-base if set.
-  if (script->hasSectionsCommand)
-    return config->imageBase ? *config->imageBase : 0;
-
-  uint64_t startAddr = UINT64_MAX;
-  // The sections with -T<section> have been sorted in order of ascending
-  // address. We must lower startAddr if the lowest -T<section address> as
-  // calls to setDot() must be monotonically increasing.
-  for (auto &kv : config->sectionStartMap)
-    startAddr = std::min(startAddr, kv.second);
-  return std::min(startAddr, target->getImageBase() + elf::getHeaderSize());
-}
-
 // Here we assign addresses as instructed by linker script SECTIONS
 // sub-commands. Doing that allows us to use final VA values, so here
 // we also handle rest commands like symbol assignments and ASSERTs.
 // Returns a symbol that has changed its section or value, or nullptr if no
 // symbol has changed.
 const Defined *LinkerScript::assignAddresses() {
-  dot = getInitialDot();
+  if (script->hasSectionsCommand) {
+    // With a linker script, assignment of addresses to headers is covered by
+    // allocateHeaders().
+    dot = config->imageBase.getValueOr(0);
+  } else {
+    // Assign addresses to headers right now.
+    dot = target->getImageBase();
+    Out::elfHeader->addr = dot;
+    Out::programHeaders->addr = dot + Out::elfHeader->size;
+    dot += getHeaderSize();
+  }
 
   auto deleter = std::make_unique<AddressState>();
   ctx = deleter.get();

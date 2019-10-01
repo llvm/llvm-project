@@ -33,17 +33,6 @@ BenchmarkRunner::BenchmarkRunner(const LLVMState &State,
 
 BenchmarkRunner::~BenchmarkRunner() = default;
 
-// Repeat the snippet until there are at least MinInstructions in the resulting
-// code.
-static std::vector<llvm::MCInst>
-GenerateInstructions(const BenchmarkCode &BC, const size_t MinInstructions) {
-  if (BC.Instructions.empty())
-    return {};
-  std::vector<llvm::MCInst> Code = BC.Instructions;
-  for (int I = 0; Code.size() < MinInstructions; ++I)
-    Code.push_back(BC.Instructions[I % BC.Instructions.size()]);
-  return Code;
-}
 
 namespace {
 class FunctionExecutorImpl : public BenchmarkRunner::FunctionExecutor {
@@ -95,10 +84,9 @@ private:
 };
 } // namespace
 
-InstructionBenchmark
-BenchmarkRunner::runConfiguration(const BenchmarkCode &BC,
-                                  unsigned NumRepetitions,
-                                  bool DumpObjectToDisk) const {
+InstructionBenchmark BenchmarkRunner::runConfiguration(
+    const BenchmarkCode &BC, unsigned NumRepetitions,
+    const SnippetRepetitor &Repetitor, bool DumpObjectToDisk) const {
   InstructionBenchmark InstrBenchmark;
   InstrBenchmark.Mode = Mode;
   InstrBenchmark.CpuName = State.getTargetMachine().getTargetCPU();
@@ -119,9 +107,10 @@ BenchmarkRunner::runConfiguration(const BenchmarkCode &BC,
   {
     llvm::SmallString<0> Buffer;
     llvm::raw_svector_ostream OS(Buffer);
-    assembleToStream(State.getExegesisTarget(), State.createTargetMachine(),
-                     BC.LiveIns, BC.RegisterInitialValues,
-                     GenerateInstructions(BC, kMinInstructionsForSnippet), OS);
+    assembleToStream(
+        State.getExegesisTarget(), State.createTargetMachine(), BC.LiveIns,
+        BC.RegisterInitialValues,
+        Repetitor.Repeat(BC.Instructions, kMinInstructionsForSnippet), OS);
     const ExecutableFunction EF(State.createTargetMachine(),
                                 getObjectFromBuffer(OS.str()));
     const auto FnBytes = EF.getFunctionBytes();
@@ -130,11 +119,12 @@ BenchmarkRunner::runConfiguration(const BenchmarkCode &BC,
 
   // Assemble NumRepetitions instructions repetitions of the snippet for
   // measurements.
-  const auto Code = GenerateInstructions(BC, InstrBenchmark.NumRepetitions);
+  const auto Filler =
+      Repetitor.Repeat(BC.Instructions, InstrBenchmark.NumRepetitions);
 
   llvm::object::OwningBinary<llvm::object::ObjectFile> ObjectFile;
   if (DumpObjectToDisk) {
-    auto ObjectFilePath = writeObjectFile(BC, Code);
+    auto ObjectFilePath = writeObjectFile(BC, Filler);
     if (llvm::Error E = ObjectFilePath.takeError()) {
       InstrBenchmark.Error = llvm::toString(std::move(E));
       return InstrBenchmark;
@@ -146,7 +136,7 @@ BenchmarkRunner::runConfiguration(const BenchmarkCode &BC,
     llvm::SmallString<0> Buffer;
     llvm::raw_svector_ostream OS(Buffer);
     assembleToStream(State.getExegesisTarget(), State.createTargetMachine(),
-                     BC.LiveIns, BC.RegisterInitialValues, Code, OS);
+                     BC.LiveIns, BC.RegisterInitialValues, Filler, OS);
     ObjectFile = getObjectFromBuffer(OS.str());
   }
 
@@ -172,7 +162,7 @@ BenchmarkRunner::runConfiguration(const BenchmarkCode &BC,
 
 llvm::Expected<std::string>
 BenchmarkRunner::writeObjectFile(const BenchmarkCode &BC,
-                                 llvm::ArrayRef<llvm::MCInst> Code) const {
+                                 const FillFunction &FillFunction) const {
   int ResultFD = 0;
   llvm::SmallString<256> ResultPath;
   if (llvm::Error E = llvm::errorCodeToError(llvm::sys::fs::createTemporaryFile(
@@ -180,7 +170,7 @@ BenchmarkRunner::writeObjectFile(const BenchmarkCode &BC,
     return std::move(E);
   llvm::raw_fd_ostream OFS(ResultFD, true /*ShouldClose*/);
   assembleToStream(State.getExegesisTarget(), State.createTargetMachine(),
-                   BC.LiveIns, BC.RegisterInitialValues, Code, OFS);
+                   BC.LiveIns, BC.RegisterInitialValues, FillFunction, OFS);
   return ResultPath.str();
 }
 

@@ -120,10 +120,26 @@ public:
 class OMPLoopScope : public CodeGenFunction::RunCleanupsScope {
   void emitPreInitStmt(CodeGenFunction &CGF, const OMPLoopDirective &S) {
     CodeGenFunction::OMPMapVars PreCondVars;
+    llvm::DenseSet<const VarDecl *> EmittedAsPrivate;
     for (const auto *E : S.counters()) {
       const auto *VD = cast<VarDecl>(cast<DeclRefExpr>(E)->getDecl());
+      EmittedAsPrivate.insert(VD->getCanonicalDecl());
       (void)PreCondVars.setVarAddr(
           CGF, VD, CGF.CreateMemTemp(VD->getType().getNonReferenceType()));
+    }
+    // Mark private vars as undefs.
+    for (const auto *C : S.getClausesOfKind<OMPPrivateClause>()) {
+      for (const Expr *IRef : C->varlists()) {
+        const auto *OrigVD = cast<VarDecl>(cast<DeclRefExpr>(IRef)->getDecl());
+        if (EmittedAsPrivate.insert(OrigVD->getCanonicalDecl()).second) {
+          (void)PreCondVars.setVarAddr(
+              CGF, OrigVD,
+              Address(llvm::UndefValue::get(
+                          CGF.ConvertTypeForMem(CGF.getContext().getPointerType(
+                              OrigVD->getType().getNonReferenceType()))),
+                      CGF.getContext().getDeclAlign(OrigVD)));
+        }
+      }
     }
     (void)PreCondVars.apply(CGF);
     if (const auto *PreInits = cast_or_null<DeclStmt>(S.getPreInits())) {
@@ -4022,6 +4038,7 @@ static void emitOMPAtomicExpr(CodeGenFunction &CGF, OpenMPClauseKind Kind,
   case OMPC_dynamic_allocators:
   case OMPC_atomic_default_mem_order:
   case OMPC_device_type:
+  case OMPC_match:
     llvm_unreachable("Clause is not allowed in 'omp atomic'.");
   }
 }
@@ -4121,18 +4138,21 @@ static void emitCommonOMPTargetDirective(CodeGenFunction &CGF,
   CGM.getOpenMPRuntime().emitTargetOutlinedFunction(S, ParentName, Fn, FnID,
                                                     IsOffloadEntry, CodeGen);
   OMPLexicalScope Scope(CGF, S, OMPD_task);
-  auto &&SizeEmitter = [](CodeGenFunction &CGF, const OMPLoopDirective &D) {
-    OMPLoopScope(CGF, D);
-    // Emit calculation of the iterations count.
-    llvm::Value *NumIterations = CGF.EmitScalarExpr(D.getNumIterations());
-    NumIterations = CGF.Builder.CreateIntCast(NumIterations, CGF.Int64Ty,
-                                              /*isSigned=*/false);
-    return NumIterations;
+  auto &&SizeEmitter =
+      [IsOffloadEntry](CodeGenFunction &CGF,
+                       const OMPLoopDirective &D) -> llvm::Value * {
+    if (IsOffloadEntry) {
+      OMPLoopScope(CGF, D);
+      // Emit calculation of the iterations count.
+      llvm::Value *NumIterations = CGF.EmitScalarExpr(D.getNumIterations());
+      NumIterations = CGF.Builder.CreateIntCast(NumIterations, CGF.Int64Ty,
+                                                /*isSigned=*/false);
+      return NumIterations;
+    }
+    return nullptr;
   };
-  if (IsOffloadEntry)
-    CGM.getOpenMPRuntime().emitTargetNumIterationsCall(CGF, S, Device,
-                                                       SizeEmitter);
-  CGM.getOpenMPRuntime().emitTargetCall(CGF, S, Fn, FnID, IfCond, Device);
+  CGM.getOpenMPRuntime().emitTargetCall(CGF, S, Fn, FnID, IfCond, Device,
+                                        SizeEmitter);
 }
 
 static void emitTargetRegion(CodeGenFunction &CGF, const OMPTargetDirective &S,

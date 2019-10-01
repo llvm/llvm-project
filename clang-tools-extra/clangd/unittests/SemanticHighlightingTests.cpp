@@ -425,8 +425,8 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
       // Tokens that share a source range but have conflicting Kinds are not
       // highlighted.
       R"cpp(
-      #define DEF_MULTIPLE(X) namespace X { class X { int X; }; }
-      #define DEF_CLASS(T) class T {};
+      #define $Macro[[DEF_MULTIPLE]](X) namespace X { class X { int X; }; }
+      #define $Macro[[DEF_CLASS]](T) class T {};
       // Preamble ends.
       $Macro[[DEF_MULTIPLE]](XYZ);
       $Macro[[DEF_MULTIPLE]](XYZW);
@@ -465,8 +465,8 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
       }
     )cpp",
       R"cpp(
-      #define fail(expr) expr
-      #define assert(COND) if (!(COND)) { fail("assertion failed" #COND); }
+      #define $Macro[[fail]](expr) expr
+      #define $Macro[[assert]](COND) if (!(COND)) { fail("assertion failed" #COND); }
       // Preamble ends.
       $Primitive[[int]] $Variable[[x]];
       $Primitive[[int]] $Variable[[y]];

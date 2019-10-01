@@ -346,11 +346,14 @@ SmallVector<VPlanSlp::MultiNodeOpTy, 4> VPlanSlp::reorderMultiNodeOps() {
 
 void VPlanSlp::dumpBundle(ArrayRef<VPValue *> Values) {
   dbgs() << " Ops: ";
-  for (auto Op : Values)
-    if (auto *Instr = cast_or_null<VPInstruction>(Op)->getUnderlyingInstr())
-      dbgs() << *Instr << " | ";
-    else
-      dbgs() << " nullptr | ";
+  for (auto Op : Values) {
+    if (auto *VPInstr = cast_or_null<VPInstruction>(Op))
+      if (auto *Instr = VPInstr->getUnderlyingInstr()) {
+        dbgs() << *Instr << " | ";
+        continue;
+      }
+    dbgs() << " nullptr | ";
+  }
   dbgs() << "\n";
 }
 

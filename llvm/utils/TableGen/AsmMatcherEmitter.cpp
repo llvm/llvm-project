@@ -1111,6 +1111,7 @@ static std::string getEnumNameForToken(StringRef Str) {
     case '<': Res += "_LT_"; break;
     case '>': Res += "_GT_"; break;
     case '-': Res += "_MINUS_"; break;
+    case '#': Res += "_HASH_"; break;
     default:
       if ((*it >= 'A' && *it <= 'Z') ||
           (*it >= 'a' && *it <= 'z') ||

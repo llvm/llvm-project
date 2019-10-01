@@ -2583,10 +2583,12 @@ public:
     return T == getObjCSelType();
   }
 
-  bool ObjCQualifiedIdTypesAreCompatible(QualType LHS, QualType RHS,
+  bool ObjCQualifiedIdTypesAreCompatible(const ObjCObjectPointerType *LHS,
+                                         const ObjCObjectPointerType *RHS,
                                          bool ForCompare);
 
-  bool ObjCQualifiedClassTypesAreCompatible(QualType LHS, QualType RHS);
+  bool ObjCQualifiedClassTypesAreCompatible(const ObjCObjectPointerType *LHS,
+                                            const ObjCObjectPointerType *RHS);
 
   // Check the safety of assignment from LHS to RHS
   bool canAssignObjCInterfaces(const ObjCObjectPointerType *LHSOPT,

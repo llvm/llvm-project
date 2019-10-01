@@ -1712,7 +1712,7 @@ FileCheckString::CheckDag(const SourceMgr &SM, StringRef Buffer,
 
 // A check prefix must contain only alphanumeric, hyphens and underscores.
 static bool ValidateCheckPrefix(StringRef CheckPrefix) {
-  Regex Validator("^[a-zA-Z0-9_-]*$");
+  static const Regex Validator("^[a-zA-Z0-9_-]*$");
   return Validator.match(CheckPrefix);
 }
 

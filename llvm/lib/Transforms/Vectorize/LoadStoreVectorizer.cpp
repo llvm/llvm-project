@@ -1092,7 +1092,7 @@ bool Vectorizer::vectorizeLoadChain(
   LoadInst *L0 = cast<LoadInst>(Chain[0]);
 
   // If the vector has an int element, default to int for the whole load.
-  Type *LoadTy;
+  Type *LoadTy = nullptr;
   for (const auto &V : Chain) {
     LoadTy = cast<LoadInst>(V)->getType();
     if (LoadTy->isIntOrIntVectorTy())
@@ -1104,6 +1104,7 @@ bool Vectorizer::vectorizeLoadChain(
       break;
     }
   }
+  assert(LoadTy && "Can't determine LoadInst type from chain");
 
   unsigned Sz = DL.getTypeSizeInBits(LoadTy);
   unsigned AS = L0->getPointerAddressSpace();

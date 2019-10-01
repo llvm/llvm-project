@@ -5,20 +5,20 @@
 # RUN: not llvm-lipo %t-universal.o -replace %t-32.o 2>&1 | FileCheck --check-prefix=MISSING_ARG %s
 # MISSING_ARG: error: replace is missing an argument: expects -replace arch_type file_name
 
-# RUN: not llvm-lipo %t-universal.o -replace %t-32.o i386 2>&1 | FileCheck --check-prefix=OUTPUT_FILE %s
+# RUN: not llvm-lipo %t-universal.o -replace i386 %t-32.o 2>&1 | FileCheck --check-prefix=OUTPUT_FILE %s
 # OUTPUT_FILE: error: replace expects a single output file to be specified
 
-# RUN: not llvm-lipo %t-universal.o %t-universal.o -replace %t-32.o i386 -o %t.o 2>&1 | FileCheck --check-prefix=INPUT_ARGS %s
+# RUN: not llvm-lipo %t-universal.o %t-universal.o -replace i386 %t-32.o -o %t.o 2>&1 | FileCheck --check-prefix=INPUT_ARGS %s
 # INPUT_ARGS: error: replace expects a single input file
 
-# RUN: not llvm-lipo %t-universal.o -replace %t-32.o i386 -o %t.o 2>&1 | FileCheck --check-prefix=INVALID_FILE %s
-# INVALID_FILE: error: 'i386': {{[nN]}}o such file or directory
+# RUN: not llvm-lipo %t-universal.o -replace i386 %t-33.o  -o %t.o 2>&1 | FileCheck --check-prefix=INVALID_FILE %s
+# INVALID_FILE: {{[nN]}}o such file or directory
 
 # RUN: not llvm-lipo %t-universal.o -replace i3866 %t-32.o -o %t.o 2>&1 | FileCheck --check-prefix=INVALID_ARCH %s
 # INVALID_ARCH: error: Invalid architecture: i3866
 
 # RUN: not llvm-lipo %t-universal.o -replace arm64 %t-32.o -o %t.o 2>&1 | FileCheck --check-prefix=ARCH_NOT_MATCHED %s
-# ARCH_NOT_MATCHED: error: specified architecture: arm64 for replacement file: {{.*}} does not match the file's architecture
+# ARCH_NOT_MATCHED: error: specified architecture: arm64 for file: {{.*}} does not match the file's architecture (i386)
 
 # RUN: not llvm-lipo %t-universal.o -replace arm64 %t-arm64.o -o %t.o 2>&1 | FileCheck --check-prefix=ARCH_NOT_IN_INPUT %s
 # ARCH_NOT_IN_INPUT: error: -replace arm64 <file_name> specified but fat file: {{.*}} does not contain that architecture

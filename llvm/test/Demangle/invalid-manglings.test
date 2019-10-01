@@ -374,3 +374,8 @@
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ??_P
 ; CHECK-NEXT: error: Invalid mangled name
+
+.?AUBase@@@8
+; CHECK-EMPTY:
+; CHECK-NEXT: .?AUBase@@@8
+; CHECK-NEXT: error: Invalid mangled name

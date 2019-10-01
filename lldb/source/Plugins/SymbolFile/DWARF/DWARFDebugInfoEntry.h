@@ -31,7 +31,7 @@ public:
 
   DWARFDebugInfoEntry()
       : m_offset(DW_INVALID_OFFSET), m_parent_idx(0), m_sibling_idx(0),
-        m_has_children(false), m_abbr_idx(0), m_tag(0) {}
+        m_has_children(false), m_abbr_idx(0), m_tag(llvm::dwarf::DW_TAG_null) {}
 
   explicit operator bool() const { return m_offset != DW_INVALID_OFFSET; }
   bool operator==(const DWARFDebugInfoEntry &rhs) const;
@@ -178,8 +178,9 @@ protected:
       // a single NULL terminating child.
       m_has_children : 1;
   uint16_t m_abbr_idx;
-  uint16_t m_tag; // A copy of the DW_TAG value so we don't have to go through
-                  // the compile unit abbrev table
+  /// A copy of the DW_TAG value so we don't have to go through the compile
+  /// unit abbrev table
+  dw_tag_t m_tag = llvm::dwarf::DW_TAG_null;
 };
 
 #endif // SymbolFileDWARF_DWARFDebugInfoEntry_h_

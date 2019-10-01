@@ -19,11 +19,6 @@ define void @hoge() {
 ; CHECK-NEXT:    [[TMP4:%.*]] = sub <2 x i32> [[TMP3]], undef
 ; CHECK-NEXT:    [[SHUFFLE8:%.*]] = shufflevector <2 x i32> [[TMP4]], <2 x i32> undef, <4 x i32> <i32 0, i32 1, i32 1, i32 1>
 ; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i32> [[SHUFFLE8]], <i32 undef, i32 15, i32 31, i32 47>
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp sgt i32 undef, undef
-; CHECK-NEXT:    [[TMP12:%.*]] = select i1 [[TMP11]], i32 undef, i32 undef
-; CHECK-NEXT:    [[TMP14:%.*]] = icmp sgt i32 [[TMP12]], undef
-; CHECK-NEXT:    [[TMP15:%.*]] = select i1 [[TMP14]], i32 [[TMP12]], i32 undef
-; CHECK-NEXT:    [[TMP17:%.*]] = icmp sgt i32 [[TMP15]], undef
 ; CHECK-NEXT:    [[RDX_SHUF9:%.*]] = shufflevector <4 x i32> [[TMP5]], <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[RDX_MINMAX_CMP10:%.*]] = icmp sgt <4 x i32> [[TMP5]], [[RDX_SHUF9]]
 ; CHECK-NEXT:    [[RDX_MINMAX_SELECT11:%.*]] = select <4 x i1> [[RDX_MINMAX_CMP10]], <4 x i32> [[TMP5]], <4 x i32> [[RDX_SHUF9]]
@@ -31,28 +26,12 @@ define void @hoge() {
 ; CHECK-NEXT:    [[RDX_MINMAX_CMP13:%.*]] = icmp sgt <4 x i32> [[RDX_MINMAX_SELECT11]], [[RDX_SHUF12]]
 ; CHECK-NEXT:    [[RDX_MINMAX_SELECT14:%.*]] = select <4 x i1> [[RDX_MINMAX_CMP13]], <4 x i32> [[RDX_MINMAX_SELECT11]], <4 x i32> [[RDX_SHUF12]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i32> [[RDX_MINMAX_SELECT14]], i32 0
-; CHECK-NEXT:    [[TMP18:%.*]] = select i1 [[TMP17]], i32 [[TMP15]], i32 undef
 ; CHECK-NEXT:    [[TMP19:%.*]] = select i1 undef, i32 [[TMP6]], i32 undef
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp sgt i32 [[TMP19]], 63
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub nsw <2 x i32> undef, [[TMP2]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = sub <2 x i32> [[TMP7]], undef
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i32> [[TMP8]], <2 x i32> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP9:%.*]] = add nsw <4 x i32> [[SHUFFLE]], <i32 -49, i32 -33, i32 -33, i32 -17>
-; CHECK-NEXT:    [[TMP26:%.*]] = icmp sgt i32 undef, undef
-; CHECK-NEXT:    [[TMP27:%.*]] = select i1 [[TMP26]], i32 undef, i32 undef
-; CHECK-NEXT:    [[TMP28:%.*]] = icmp sgt i32 [[TMP27]], undef
-; CHECK-NEXT:    [[TMP29:%.*]] = select i1 [[TMP28]], i32 undef, i32 [[TMP27]]
-; CHECK-NEXT:    [[TMP31:%.*]] = icmp sgt i32 undef, undef
-; CHECK-NEXT:    [[TMP32:%.*]] = select i1 [[TMP31]], i32 undef, i32 undef
-; CHECK-NEXT:    [[TMP33:%.*]] = icmp sgt i32 [[TMP32]], [[TMP29]]
-; CHECK-NEXT:    [[TMP34:%.*]] = select i1 [[TMP33]], i32 [[TMP29]], i32 [[TMP32]]
-; CHECK-NEXT:    [[TMP36:%.*]] = icmp sgt i32 undef, undef
-; CHECK-NEXT:    [[TMP37:%.*]] = select i1 [[TMP36]], i32 undef, i32 undef
-; CHECK-NEXT:    [[TMP38:%.*]] = icmp sgt i32 [[TMP37]], [[TMP34]]
-; CHECK-NEXT:    [[TMP39:%.*]] = select i1 [[TMP38]], i32 [[TMP34]], i32 [[TMP37]]
-; CHECK-NEXT:    [[TMP41:%.*]] = icmp sgt i32 undef, undef
-; CHECK-NEXT:    [[TMP42:%.*]] = select i1 [[TMP41]], i32 undef, i32 undef
-; CHECK-NEXT:    [[TMP43:%.*]] = icmp sgt i32 [[TMP42]], [[TMP39]]
 ; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x i32> [[TMP9]], <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[RDX_MINMAX_CMP:%.*]] = icmp slt <4 x i32> [[TMP9]], [[RDX_SHUF]]
 ; CHECK-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select <4 x i1> [[RDX_MINMAX_CMP]], <4 x i32> [[TMP9]], <4 x i32> [[RDX_SHUF]]
@@ -70,7 +49,6 @@ define void @hoge() {
 ; CHECK-NEXT:    [[OP_EXTRA6:%.*]] = select i1 [[TMP14]], i32 [[OP_EXTRA5]], i32 undef
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp slt i32 [[OP_EXTRA6]], undef
 ; CHECK-NEXT:    [[OP_EXTRA7:%.*]] = select i1 [[TMP15]], i32 [[OP_EXTRA6]], i32 undef
-; CHECK-NEXT:    [[TMP44:%.*]] = select i1 [[TMP43]], i32 [[TMP39]], i32 [[TMP42]]
 ; CHECK-NEXT:    [[TMP45:%.*]] = icmp sgt i32 undef, [[OP_EXTRA7]]
 ; CHECK-NEXT:    unreachable
 ;

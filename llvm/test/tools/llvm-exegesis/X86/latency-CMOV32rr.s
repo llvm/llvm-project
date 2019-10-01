@@ -1,4 +1,5 @@
-# RUN: llvm-exegesis -mode=latency -opcode-name=CMOV32rr | FileCheck %s
+# RUN: llvm-exegesis -mode=latency -opcode-name=CMOV32rr -repetition-mode=duplicate | FileCheck %s
+# RUN: llvm-exegesis -mode=latency -opcode-name=CMOV32rr -repetition-mode=loop | FileCheck %s
 
 CHECK:      ---
 CHECK-NEXT: mode: latency

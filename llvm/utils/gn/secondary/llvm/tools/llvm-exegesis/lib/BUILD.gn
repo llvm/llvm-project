@@ -29,6 +29,7 @@ static_library("lib") {
     "RegisterValue.cpp",
     "SchedClassResolution.cpp",
     "SnippetGenerator.cpp",
+    "SnippetRepetitor.cpp",
     "Target.cpp",
     "Uops.cpp",
   ]

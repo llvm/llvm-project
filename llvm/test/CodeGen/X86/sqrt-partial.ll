@@ -67,7 +67,6 @@ define double @minsize(double %x, double %y) minsize {
 ; SSE-NEXT:    mulsd %xmm0, %xmm0
 ; SSE-NEXT:    mulsd %xmm1, %xmm1
 ; SSE-NEXT:    addsd %xmm0, %xmm1
-; SSE-NEXT:    xorps %xmm0, %xmm0
 ; SSE-NEXT:    sqrtsd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;

@@ -45,7 +45,8 @@ def mve_shift_imm : AsmOperandClass {
   let RenderMethod = "addImmOperands";
   let DiagnosticString = "operand must be an immediate in the range [1,32]";
 }
-def long_shift : Operand<i32> {
+def long_shift : Operand<i32>,
+                 ImmLeaf<i32, [{ return Imm > 0 && Imm <= 32; }]> {
   let ParserMatchClass = mve_shift_imm;
   let DecoderMethod = "DecodeLongShiftOperand";
 }
@@ -4085,7 +4086,7 @@ def t2LDRpci_pic : PseudoInst<(outs rGPR:$dst), (ins i32imm:$addr, pclabel:$cp),
 
 // Pseudo isntruction that combines movs + predicated rsbmi
 // to implement integer ABS
-let usesCustomInserter = 1, Defs = [CPSR] in {
+let usesCustomInserter = 1, Defs = [CPSR], hasNoSchedulingInfo = 1 in {
 def t2ABS : PseudoInst<(outs rGPR:$dst), (ins rGPR:$src),
                        NoItinerary, []>, Requires<[IsThumb2]>;
 }
@@ -4175,15 +4176,15 @@ multiclass t2LdStCop<bits<4> op31_28, bit load, bit Dbit, string asm, list<dag> 
 }
 
 let DecoderNamespace = "Thumb2CoProc" in {
-defm t2LDC   : t2LdStCop<0b1110, 1, 0, "ldc", [(int_arm_ldc imm:$cop, imm:$CRd, addrmode5:$addr)]>;
-defm t2LDCL  : t2LdStCop<0b1110, 1, 1, "ldcl", [(int_arm_ldcl imm:$cop, imm:$CRd, addrmode5:$addr)]>;
-defm t2LDC2  : t2LdStCop<0b1111, 1, 0, "ldc2", [(int_arm_ldc2 imm:$cop, imm:$CRd, addrmode5:$addr)]>, Requires<[PreV8,IsThumb2]>;
-defm t2LDC2L : t2LdStCop<0b1111, 1, 1, "ldc2l", [(int_arm_ldc2l imm:$cop, imm:$CRd, addrmode5:$addr)]>, Requires<[PreV8,IsThumb2]>;
+defm t2LDC   : t2LdStCop<0b1110, 1, 0, "ldc", [(int_arm_ldc timm:$cop, timm:$CRd, addrmode5:$addr)]>;
+defm t2LDCL  : t2LdStCop<0b1110, 1, 1, "ldcl", [(int_arm_ldcl timm:$cop, timm:$CRd, addrmode5:$addr)]>;
+defm t2LDC2  : t2LdStCop<0b1111, 1, 0, "ldc2", [(int_arm_ldc2 timm:$cop, timm:$CRd, addrmode5:$addr)]>, Requires<[PreV8,IsThumb2]>;
+defm t2LDC2L : t2LdStCop<0b1111, 1, 1, "ldc2l", [(int_arm_ldc2l timm:$cop, timm:$CRd, addrmode5:$addr)]>, Requires<[PreV8,IsThumb2]>;
 
-defm t2STC   : t2LdStCop<0b1110, 0, 0, "stc", [(int_arm_stc imm:$cop, imm:$CRd, addrmode5:$addr)]>;
-defm t2STCL  : t2LdStCop<0b1110, 0, 1, "stcl", [(int_arm_stcl imm:$cop, imm:$CRd, addrmode5:$addr)]>;
-defm t2STC2  : t2LdStCop<0b1111, 0, 0, "stc2", [(int_arm_stc2 imm:$cop, imm:$CRd, addrmode5:$addr)]>, Requires<[PreV8,IsThumb2]>;
-defm t2STC2L : t2LdStCop<0b1111, 0, 1, "stc2l", [(int_arm_stc2l imm:$cop, imm:$CRd, addrmode5:$addr)]>, Requires<[PreV8,IsThumb2]>;
+defm t2STC   : t2LdStCop<0b1110, 0, 0, "stc", [(int_arm_stc timm:$cop, timm:$CRd, addrmode5:$addr)]>;
+defm t2STCL  : t2LdStCop<0b1110, 0, 1, "stcl", [(int_arm_stcl timm:$cop, timm:$CRd, addrmode5:$addr)]>;
+defm t2STC2  : t2LdStCop<0b1111, 0, 0, "stc2", [(int_arm_stc2 timm:$cop, timm:$CRd, addrmode5:$addr)]>, Requires<[PreV8,IsThumb2]>;
+defm t2STC2L : t2LdStCop<0b1111, 0, 1, "stc2l", [(int_arm_stc2l timm:$cop, timm:$CRd, addrmode5:$addr)]>, Requires<[PreV8,IsThumb2]>;
 }
 
 
@@ -4368,8 +4369,8 @@ def t2MCR : t2MovRCopro<0b1110, "mcr", 0,
            (outs),
            (ins p_imm:$cop, imm0_7:$opc1, GPR:$Rt, c_imm:$CRn,
                 c_imm:$CRm, imm0_7:$opc2),
-           [(int_arm_mcr imm:$cop, imm:$opc1, GPR:$Rt, imm:$CRn,
-                         imm:$CRm, imm:$opc2)]>,
+           [(int_arm_mcr timm:$cop, timm:$opc1, GPR:$Rt, timm:$CRn,
+                         timm:$CRm, timm:$opc2)]>,
            ComplexDeprecationPredicate<"MCR">;
 def : t2InstAlias<"mcr${p} $cop, $opc1, $Rt, $CRn, $CRm",
                   (t2MCR p_imm:$cop, imm0_7:$opc1, GPR:$Rt, c_imm:$CRn,
@@ -4377,8 +4378,8 @@ def : t2InstAlias<"mcr${p} $cop, $opc1, $Rt, $CRn, $CRm",
 def t2MCR2 : t2MovRCopro<0b1111, "mcr2", 0,
              (outs), (ins p_imm:$cop, imm0_7:$opc1, GPR:$Rt, c_imm:$CRn,
                           c_imm:$CRm, imm0_7:$opc2),
-             [(int_arm_mcr2 imm:$cop, imm:$opc1, GPR:$Rt, imm:$CRn,
-                            imm:$CRm, imm:$opc2)]> {
+             [(int_arm_mcr2 timm:$cop, timm:$opc1, GPR:$Rt, timm:$CRn,
+                            timm:$CRm, timm:$opc2)]> {
   let Predicates = [IsThumb2, PreV8];
 }
 def : t2InstAlias<"mcr2${p} $cop, $opc1, $Rt, $CRn, $CRm",
@@ -4402,24 +4403,24 @@ def : t2InstAlias<"mrc2${p} $cop, $opc1, $Rt, $CRn, $CRm",
                   (t2MRC2 GPRwithAPSR:$Rt, p_imm:$cop, imm0_7:$opc1, c_imm:$CRn,
                           c_imm:$CRm, 0, pred:$p)>;
 
-def : T2v6Pat<(int_arm_mrc  imm:$cop, imm:$opc1, imm:$CRn, imm:$CRm, imm:$opc2),
-              (t2MRC imm:$cop, imm:$opc1, imm:$CRn, imm:$CRm, imm:$opc2)>;
+def : T2v6Pat<(int_arm_mrc  timm:$cop, timm:$opc1, timm:$CRn, timm:$CRm, timm:$opc2),
+              (t2MRC p_imm:$cop, imm0_7:$opc1, c_imm:$CRn, c_imm:$CRm, imm0_7:$opc2)>;
 
-def : T2v6Pat<(int_arm_mrc2 imm:$cop, imm:$opc1, imm:$CRn, imm:$CRm, imm:$opc2),
-              (t2MRC2 imm:$cop, imm:$opc1, imm:$CRn, imm:$CRm, imm:$opc2)>;
+def : T2v6Pat<(int_arm_mrc2 timm:$cop, timm:$opc1, timm:$CRn, timm:$CRm, timm:$opc2),
+              (t2MRC2 p_imm:$cop, imm0_7:$opc1, c_imm:$CRn, c_imm:$CRm, imm0_7:$opc2)>;
 
 
 /* from ARM core register to coprocessor */
 def t2MCRR : t2MovRRCopro<0b1110, "mcrr", 0, (outs),
                          (ins p_imm:$cop, imm0_15:$opc1, GPR:$Rt, GPR:$Rt2,
                          c_imm:$CRm),
-                        [(int_arm_mcrr imm:$cop, imm:$opc1, GPR:$Rt, GPR:$Rt2,
-                                       imm:$CRm)]>;
+                        [(int_arm_mcrr timm:$cop, timm:$opc1, GPR:$Rt, GPR:$Rt2,
+                                       timm:$CRm)]>;
 def t2MCRR2 : t2MovRRCopro<0b1111, "mcrr2", 0, (outs),
                           (ins p_imm:$cop, imm0_15:$opc1, GPR:$Rt, GPR:$Rt2,
                            c_imm:$CRm),
-                          [(int_arm_mcrr2 imm:$cop, imm:$opc1, GPR:$Rt,
-                                          GPR:$Rt2, imm:$CRm)]> {
+                          [(int_arm_mcrr2 timm:$cop, timm:$opc1, GPR:$Rt,
+                                          GPR:$Rt2, timm:$CRm)]> {
   let Predicates = [IsThumb2, PreV8];
 }
 
@@ -4439,8 +4440,8 @@ def t2MRRC2 : t2MovRRCopro<0b1111, "mrrc2", 1, (outs GPR:$Rt, GPR:$Rt2),
 def t2CDP : T2Cop<0b1110, (outs), (ins p_imm:$cop, imm0_15:$opc1,
                  c_imm:$CRd, c_imm:$CRn, c_imm:$CRm, imm0_7:$opc2),
                  "cdp", "\t$cop, $opc1, $CRd, $CRn, $CRm, $opc2",
-                 [(int_arm_cdp imm:$cop, imm:$opc1, imm:$CRd, imm:$CRn,
-                               imm:$CRm, imm:$opc2)]> {
+                 [(int_arm_cdp timm:$cop, timm:$opc1, timm:$CRd, timm:$CRn,
+                               timm:$CRm, timm:$opc2)]> {
   let Inst{27-24} = 0b1110;
 
   bits<4> opc1;
@@ -4465,8 +4466,8 @@ def t2CDP : T2Cop<0b1110, (outs), (ins p_imm:$cop, imm0_15:$opc1,
 def t2CDP2 : T2Cop<0b1111, (outs), (ins p_imm:$cop, imm0_15:$opc1,
                    c_imm:$CRd, c_imm:$CRn, c_imm:$CRm, imm0_7:$opc2),
                    "cdp2", "\t$cop, $opc1, $CRd, $CRn, $CRm, $opc2",
-                   [(int_arm_cdp2 imm:$cop, imm:$opc1, imm:$CRd, imm:$CRn,
-                                  imm:$CRm, imm:$opc2)]> {
+                   [(int_arm_cdp2 timm:$cop, timm:$opc1, timm:$CRd, timm:$CRn,
+                                  timm:$CRm, timm:$opc2)]> {
   let Inst{27-24} = 0b1110;
 
   bits<4> opc1;
@@ -5087,6 +5088,7 @@ def t2BF_LabelPseudo
   : t2PseudoInst<(outs ), (ins pclabel:$cp), 0, NoItinerary, []> {
   let isTerminator = 1;
   let Predicates = [IsThumb2, HasV8_1MMainline, HasLOB];
+  let hasNoSchedulingInfo = 1;
 }
 
 def t2BFi : t2BF<(ins bflabel_u4:$b_label, bflabel_s16:$label, pred:$p),

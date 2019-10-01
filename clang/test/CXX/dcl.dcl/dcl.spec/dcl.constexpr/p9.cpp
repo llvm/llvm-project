@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++2a %s
 
 // A constexpr specifier used in an object declaration declares the object as
 // const.
@@ -35,3 +36,19 @@ struct pixel {
 };
 constexpr pixel ur = { 1294, 1024 }; // ok
 constexpr pixel origin;              // expected-error {{default initialization of an object of const type 'const pixel' without a user-provided default constructor}}
+
+#if __cplusplus > 201702L
+// A constexpr variable shall have constant destruction.
+struct A {
+  bool ok;
+  constexpr A(bool ok) : ok(ok) {}
+  constexpr ~A() noexcept(false) {
+    void oops(); // expected-note 2{{declared here}}
+    if (!ok) oops(); // expected-note 2{{non-constexpr function}}
+  }
+};
+
+constexpr A const_dtor(true);
+constexpr A non_const_dtor(false); // expected-error {{must have constant destruction}} expected-note {{in call}}
+constexpr A arr_dtor[5] = {true, true, true, false, true}; // expected-error {{must have constant destruction}} expected-note {{in call to '&arr_dtor[3]->~A()'}}
+#endif

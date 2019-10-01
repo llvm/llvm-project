@@ -14,6 +14,7 @@
 #include "lldb/lldb-defines.h"
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
@@ -112,6 +113,14 @@ public:
   static bool ListChannelCategories(llvm::StringRef channel,
                                     llvm::raw_ostream &stream);
 
+  /// Returns the list of log channels.
+  static std::vector<llvm::StringRef> ListChannels();
+  /// Calls the given lambda for every category in the given channel.
+  /// If no channel with the given name exists, lambda is never called.
+  static void ForEachChannelCategory(
+      llvm::StringRef channel,
+      llvm::function_ref<void(llvm::StringRef, llvm::StringRef)> lambda);
+
   static void DisableAllLogChannels();
 
   static void ListAllLogChannels(llvm::raw_ostream &stream);
@@ -192,6 +201,10 @@ private:
 
   typedef llvm::StringMap<Log> ChannelMap;
   static llvm::ManagedStatic<ChannelMap> g_channel_map;
+
+  static void ForEachCategory(
+      const Log::ChannelMap::value_type &entry,
+      llvm::function_ref<void(llvm::StringRef, llvm::StringRef)> lambda);
 
   static void ListCategories(llvm::raw_ostream &stream,
                              const ChannelMap::value_type &entry);

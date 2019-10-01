@@ -401,6 +401,33 @@ void APInt::insertBits(const APInt &subBits, unsigned bitPosition) {
   }
 }
 
+void APInt::insertBits(uint64_t subBits, unsigned bitPosition, unsigned numBits) {
+  uint64_t maskBits = maskTrailingOnes<uint64_t>(numBits);
+  subBits &= maskBits;
+  if (isSingleWord()) {
+    U.VAL &= ~(maskBits << bitPosition);
+    U.VAL |= subBits << bitPosition;
+    return;
+  }
+
+  unsigned loBit = whichBit(bitPosition);
+  unsigned loWord = whichWord(bitPosition);
+  unsigned hiWord = whichWord(bitPosition + numBits - 1);
+  if (loWord == hiWord) {
+    U.pVal[loWord] &= ~(maskBits << loBit);
+    U.pVal[loWord] |= subBits << loBit;
+    return;
+  }
+
+  static_assert(8 * sizeof(WordType) <= 64, "This code assumes only two words affected");
+  unsigned wordBits = 8 * sizeof(WordType);
+  U.pVal[loWord] &= ~(maskBits << loBit);
+  U.pVal[loWord] |= subBits << loBit;
+
+  U.pVal[hiWord] &= ~(maskBits >> (wordBits - loBit));
+  U.pVal[hiWord] |= subBits >> (wordBits - loBit);
+}
+
 APInt APInt::extractBits(unsigned numBits, unsigned bitPosition) const {
   assert(numBits > 0 && "Can't extract zero bits");
   assert(bitPosition < BitWidth && (numBits + bitPosition) <= BitWidth &&
@@ -436,6 +463,31 @@ APInt APInt::extractBits(unsigned numBits, unsigned bitPosition) const {
   }
 
   return Result.clearUnusedBits();
+}
+
+uint64_t APInt::extractBitsAsZExtValue(unsigned numBits,
+                                       unsigned bitPosition) const {
+  assert(numBits > 0 && "Can't extract zero bits");
+  assert(bitPosition < BitWidth && (numBits + bitPosition) <= BitWidth &&
+         "Illegal bit extraction");
+  assert(numBits <= 64 && "Illegal bit extraction");
+
+  uint64_t maskBits = maskTrailingOnes<uint64_t>(numBits);
+  if (isSingleWord())
+    return (U.VAL >> bitPosition) & maskBits;
+
+  unsigned loBit = whichBit(bitPosition);
+  unsigned loWord = whichWord(bitPosition);
+  unsigned hiWord = whichWord(bitPosition + numBits - 1);
+  if (loWord == hiWord)
+    return (U.pVal[loWord] >> loBit) & maskBits;
+
+  static_assert(8 * sizeof(WordType) <= 64, "This code assumes only two words affected");
+  unsigned wordBits = 8 * sizeof(WordType);
+  uint64_t retBits = U.pVal[loWord] >> loBit;
+  retBits |= U.pVal[hiWord] << (wordBits - loBit);
+  retBits &= maskBits;
+  return retBits;
 }
 
 unsigned APInt::getBitsNeeded(StringRef str, uint8_t radix) {

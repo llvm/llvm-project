@@ -281,6 +281,7 @@ FUNCTION_PASS_WITH_PARAMS("mldst-motion",
 #endif
 LOOP_ANALYSIS("no-op-loop", NoOpLoopAnalysis())
 LOOP_ANALYSIS("access-info", LoopAccessAnalysis())
+LOOP_ANALYSIS("ddg", DDGAnalysis())
 LOOP_ANALYSIS("ivusers", IVUsersAnalysis())
 LOOP_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis(PIC))
 #undef LOOP_ANALYSIS
@@ -303,6 +304,7 @@ LOOP_PASS("irce", IRCEPass())
 LOOP_PASS("unroll-and-jam", LoopUnrollAndJamPass())
 LOOP_PASS("unroll-full", LoopFullUnrollPass())
 LOOP_PASS("print-access-info", LoopAccessInfoPrinterPass(dbgs()))
+LOOP_PASS("print<ddg>", DDGAnalysisPrinterPass(dbgs()))
 LOOP_PASS("print<ivusers>", IVUsersPrinterPass(dbgs()))
 LOOP_PASS("print<loop-cache-cost>", LoopCachePrinterPass(dbgs()))
 LOOP_PASS("loop-predication", LoopPredicationPass())

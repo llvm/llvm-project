@@ -471,7 +471,7 @@ void AArch64StackTagging::alignAndPadAlloca(AllocaInfo &Info) {
       Info.AI->isArrayAllocation()
           ? ArrayType::get(
                 Info.AI->getAllocatedType(),
-                dyn_cast<ConstantInt>(Info.AI->getArraySize())->getZExtValue())
+                cast<ConstantInt>(Info.AI->getArraySize())->getZExtValue())
           : Info.AI->getAllocatedType();
   Type *PaddingType =
       ArrayType::get(Type::getInt8Ty(F->getContext()), AlignedSize - Size);

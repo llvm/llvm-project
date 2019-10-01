@@ -18,19 +18,6 @@ define i32 @foo(i32* nocapture readonly %arr, i32 %a1, i32 %a2, i32 %a3, i32 %a4
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <8 x i32> [[TMP7]], i32 [[A7:%.*]], i32 6
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <8 x i32> [[TMP8]], i32 [[A8:%.*]], i32 7
 ; CHECK-NEXT:    [[TMP10:%.*]] = add <8 x i32> [[SHUFFLE]], [[TMP9]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 undef, undef
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 undef, i32 undef
-; CHECK-NEXT:    [[CMP15:%.*]] = icmp ult i32 [[COND]], undef
-; CHECK-NEXT:    [[COND19:%.*]] = select i1 [[CMP15]], i32 [[COND]], i32 undef
-; CHECK-NEXT:    [[CMP20:%.*]] = icmp ult i32 [[COND19]], undef
-; CHECK-NEXT:    [[COND24:%.*]] = select i1 [[CMP20]], i32 [[COND19]], i32 undef
-; CHECK-NEXT:    [[CMP25:%.*]] = icmp ult i32 [[COND24]], undef
-; CHECK-NEXT:    [[COND29:%.*]] = select i1 [[CMP25]], i32 [[COND24]], i32 undef
-; CHECK-NEXT:    [[CMP30:%.*]] = icmp ult i32 [[COND29]], undef
-; CHECK-NEXT:    [[COND34:%.*]] = select i1 [[CMP30]], i32 [[COND29]], i32 undef
-; CHECK-NEXT:    [[CMP35:%.*]] = icmp ult i32 [[COND34]], undef
-; CHECK-NEXT:    [[COND39:%.*]] = select i1 [[CMP35]], i32 [[COND34]], i32 undef
-; CHECK-NEXT:    [[CMP40:%.*]] = icmp ult i32 [[COND39]], undef
 ; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <8 x i32> [[TMP10]], <8 x i32> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[RDX_MINMAX_CMP:%.*]] = icmp ult <8 x i32> [[TMP10]], [[RDX_SHUF]]
 ; CHECK-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select <8 x i1> [[RDX_MINMAX_CMP]], <8 x i32> [[TMP10]], <8 x i32> [[RDX_SHUF]]
@@ -41,7 +28,6 @@ define i32 @foo(i32* nocapture readonly %arr, i32 %a1, i32 %a2, i32 %a3, i32 %a4
 ; CHECK-NEXT:    [[RDX_MINMAX_CMP5:%.*]] = icmp ult <8 x i32> [[RDX_MINMAX_SELECT3]], [[RDX_SHUF4]]
 ; CHECK-NEXT:    [[RDX_MINMAX_SELECT6:%.*]] = select <8 x i1> [[RDX_MINMAX_CMP5]], <8 x i32> [[RDX_MINMAX_SELECT3]], <8 x i32> [[RDX_SHUF4]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <8 x i32> [[RDX_MINMAX_SELECT6]], i32 0
-; CHECK-NEXT:    [[COND44:%.*]] = select i1 [[CMP40]], i32 [[COND39]], i32 undef
 ; CHECK-NEXT:    ret i32 [[TMP11]]
 ;
 entry:
@@ -92,19 +78,6 @@ define i32 @foo1(i32* nocapture readonly %arr, i32 %a1, i32 %a2, i32 %a3, i32 %a
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <8 x i32> [[TMP7]], i32 [[A7:%.*]], i32 6
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <8 x i32> [[TMP8]], i32 [[A8:%.*]], i32 7
 ; CHECK-NEXT:    [[TMP10:%.*]] = add <8 x i32> [[SHUFFLE]], [[TMP9]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 undef, undef
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 undef, i32 undef
-; CHECK-NEXT:    [[CMP15:%.*]] = icmp ult i32 [[COND]], undef
-; CHECK-NEXT:    [[COND19:%.*]] = select i1 [[CMP15]], i32 [[COND]], i32 undef
-; CHECK-NEXT:    [[CMP20:%.*]] = icmp ult i32 [[COND19]], undef
-; CHECK-NEXT:    [[COND24:%.*]] = select i1 [[CMP20]], i32 [[COND19]], i32 undef
-; CHECK-NEXT:    [[CMP25:%.*]] = icmp ult i32 [[COND24]], undef
-; CHECK-NEXT:    [[COND29:%.*]] = select i1 [[CMP25]], i32 [[COND24]], i32 undef
-; CHECK-NEXT:    [[CMP30:%.*]] = icmp ult i32 [[COND29]], undef
-; CHECK-NEXT:    [[COND34:%.*]] = select i1 [[CMP30]], i32 [[COND29]], i32 undef
-; CHECK-NEXT:    [[CMP35:%.*]] = icmp ult i32 [[COND34]], undef
-; CHECK-NEXT:    [[COND39:%.*]] = select i1 [[CMP35]], i32 [[COND34]], i32 undef
-; CHECK-NEXT:    [[CMP40:%.*]] = icmp ult i32 [[COND39]], undef
 ; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <8 x i32> [[TMP10]], <8 x i32> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[RDX_MINMAX_CMP:%.*]] = icmp ult <8 x i32> [[TMP10]], [[RDX_SHUF]]
 ; CHECK-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select <8 x i1> [[RDX_MINMAX_CMP]], <8 x i32> [[TMP10]], <8 x i32> [[RDX_SHUF]]
@@ -115,7 +88,6 @@ define i32 @foo1(i32* nocapture readonly %arr, i32 %a1, i32 %a2, i32 %a3, i32 %a
 ; CHECK-NEXT:    [[RDX_MINMAX_CMP5:%.*]] = icmp ult <8 x i32> [[RDX_MINMAX_SELECT3]], [[RDX_SHUF4]]
 ; CHECK-NEXT:    [[RDX_MINMAX_SELECT6:%.*]] = select <8 x i1> [[RDX_MINMAX_CMP5]], <8 x i32> [[RDX_MINMAX_SELECT3]], <8 x i32> [[RDX_SHUF4]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <8 x i32> [[RDX_MINMAX_SELECT6]], i32 0
-; CHECK-NEXT:    [[COND44:%.*]] = select i1 [[CMP40]], i32 [[COND39]], i32 undef
 ; CHECK-NEXT:    ret i32 [[TMP11]]
 ;
 entry:
@@ -170,19 +142,6 @@ define i32 @foo2(i32* nocapture readonly %arr, i32 %a1, i32 %a2, i32 %a3, i32 %a
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <8 x i32> [[TMP7]], i32 [[A7:%.*]], i32 6
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <8 x i32> [[TMP8]], i32 [[A8:%.*]], i32 7
 ; CHECK-NEXT:    [[TMP10:%.*]] = add <8 x i32> [[SHUFFLE]], [[TMP9]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 undef, undef
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 undef, i32 undef
-; CHECK-NEXT:    [[CMP15:%.*]] = icmp ult i32 [[COND]], undef
-; CHECK-NEXT:    [[COND19:%.*]] = select i1 [[CMP15]], i32 [[COND]], i32 undef
-; CHECK-NEXT:    [[CMP20:%.*]] = icmp ult i32 [[COND19]], undef
-; CHECK-NEXT:    [[COND24:%.*]] = select i1 [[CMP20]], i32 [[COND19]], i32 undef
-; CHECK-NEXT:    [[CMP25:%.*]] = icmp ult i32 [[COND24]], undef
-; CHECK-NEXT:    [[COND29:%.*]] = select i1 [[CMP25]], i32 [[COND24]], i32 undef
-; CHECK-NEXT:    [[CMP30:%.*]] = icmp ult i32 [[COND29]], undef
-; CHECK-NEXT:    [[COND34:%.*]] = select i1 [[CMP30]], i32 [[COND29]], i32 undef
-; CHECK-NEXT:    [[CMP35:%.*]] = icmp ult i32 [[COND34]], undef
-; CHECK-NEXT:    [[COND39:%.*]] = select i1 [[CMP35]], i32 [[COND34]], i32 undef
-; CHECK-NEXT:    [[CMP40:%.*]] = icmp ult i32 [[COND39]], undef
 ; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <8 x i32> [[TMP10]], <8 x i32> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[RDX_MINMAX_CMP:%.*]] = icmp ult <8 x i32> [[TMP10]], [[RDX_SHUF]]
 ; CHECK-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select <8 x i1> [[RDX_MINMAX_CMP]], <8 x i32> [[TMP10]], <8 x i32> [[RDX_SHUF]]
@@ -193,7 +152,6 @@ define i32 @foo2(i32* nocapture readonly %arr, i32 %a1, i32 %a2, i32 %a3, i32 %a
 ; CHECK-NEXT:    [[RDX_MINMAX_CMP5:%.*]] = icmp ult <8 x i32> [[RDX_MINMAX_SELECT3]], [[RDX_SHUF4]]
 ; CHECK-NEXT:    [[RDX_MINMAX_SELECT6:%.*]] = select <8 x i1> [[RDX_MINMAX_CMP5]], <8 x i32> [[RDX_MINMAX_SELECT3]], <8 x i32> [[RDX_SHUF4]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <8 x i32> [[RDX_MINMAX_SELECT6]], i32 0
-; CHECK-NEXT:    [[COND44:%.*]] = select i1 [[CMP40]], i32 [[COND39]], i32 undef
 ; CHECK-NEXT:    ret i32 [[TMP11]]
 ;
 entry:

@@ -78,12 +78,12 @@ bool lldb_private::formatters::NSStringSummaryProvider(
     return false;
 
   ConstString class_name_cs = descriptor->GetClassName();
-  const char *class_name = class_name_cs.GetCString();
+  llvm::StringRef class_name = class_name_cs.GetStringRef();
 
-  if (!class_name || !*class_name)
+  if (class_name.empty())
     return false;
 
-  bool is_tagged_ptr = (0 == strcmp(class_name, "NSTaggedPointerString")) &&
+  bool is_tagged_ptr = class_name == "NSTaggedPointerString" &&
                        descriptor->GetTaggedPointerInfo();
   // for a tagged pointer, the descriptor has everything we need
   if (is_tagged_ptr)
@@ -111,7 +111,7 @@ bool lldb_private::formatters::NSStringSummaryProvider(
   bool is_inline = (info_bits & 0x60) == 0;
   bool has_explicit_length = (info_bits & (1 | 4)) != 4;
   bool is_unicode = (info_bits & 0x10) == 0x10;
-  bool is_path_store = strcmp(class_name, "NSPathStore2") == 0;
+  bool is_path_store = class_name == "NSPathStore2";
   bool has_null = (info_bits & 8) == 8;
 
   size_t explicit_length = 0;
@@ -135,14 +135,14 @@ bool lldb_private::formatters::NSStringSummaryProvider(
     }
   }
 
-  if (strcmp(class_name, "NSString") && strcmp(class_name, "CFStringRef") &&
-      strcmp(class_name, "CFMutableStringRef") &&
-      strcmp(class_name, "__NSCFConstantString") &&
-      strcmp(class_name, "__NSCFString") &&
-      strcmp(class_name, "NSCFConstantString") &&
-      strcmp(class_name, "NSCFString") && strcmp(class_name, "NSPathStore2")) {
+  const llvm::StringSet<> supported_string_classes = {
+      "NSString",     "CFMutableStringRef",
+      "CFStringRef",  "__NSCFConstantString",
+      "__NSCFString", "NSCFConstantString",
+      "NSCFString",   "NSPathStore2"};
+  if (supported_string_classes.count(class_name) == 0) {
     // not one of us - but tell me class name
-    stream.Printf("class name = %s", class_name);
+    stream.Printf("class name = %s", class_name_cs.GetCString());
     return true;
   }
 

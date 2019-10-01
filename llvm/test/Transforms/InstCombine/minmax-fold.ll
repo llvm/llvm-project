@@ -1080,8 +1080,8 @@ define i37 @add_umax_constant_limit(i37 %x) {
 
 define i37 @add_umax_simplify(i37 %x) {
 ; CHECK-LABEL: @add_umax_simplify(
-; CHECK-NEXT:    [[R:%.*]] = add nuw i37 [[X:%.*]], 42
-; CHECK-NEXT:    ret i37 [[R]]
+; CHECK-NEXT:    [[A:%.*]] = add i37 [[X:%.*]], 42
+; CHECK-NEXT:    ret i37 [[A]]
 ;
   %a = add nuw i37 %x, 42
   %c = icmp ugt i37 %a, 42

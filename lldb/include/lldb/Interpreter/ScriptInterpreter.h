@@ -208,6 +208,7 @@ public:
 
   virtual StructuredData::ObjectSP
   CreateScriptedThreadPlan(const char *class_name,
+                           std::string &error_str,
                            lldb::ThreadPlanSP thread_plan_sp) {
     return StructuredData::ObjectSP();
   }
@@ -462,8 +463,6 @@ public:
   static std::string LanguageToString(lldb::ScriptLanguage language);
 
   static lldb::ScriptLanguage StringToLanguage(const llvm::StringRef &string);
-
-  virtual void ResetOutputFileHandle(FILE *new_fh) {} // By default, do nothing.
 
   lldb::ScriptLanguage GetLanguage() { return m_script_lang; }
 

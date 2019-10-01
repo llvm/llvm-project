@@ -28,6 +28,7 @@
 #include "Plugins/ABI/SysV-ppc64/ABISysV_ppc64.h"
 #include "Plugins/ABI/SysV-s390x/ABISysV_s390x.h"
 #include "Plugins/ABI/SysV-x86_64/ABISysV_x86_64.h"
+#include "Plugins/ABI/Windows-x86_64/ABIWindows_x86_64.h"
 #include "Plugins/Architecture/Arm/ArchitectureArm.h"
 #include "Plugins/Architecture/PPC64/ArchitecturePPC64.h"
 #include "Plugins/Disassembler/llvm/DisassemblerLLVMC.h"
@@ -111,6 +112,38 @@ SystemInitializerTest::SystemInitializerTest() {}
 
 SystemInitializerTest::~SystemInitializerTest() {}
 
+#define LLDB_PROCESS_AArch64(op)                                               \
+  ABIMacOSX_arm64::op();                                                       \
+  ABISysV_arm64::op();
+#define LLDB_PROCESS_ARM(op)                                                   \
+  ABIMacOSX_arm::op();                                                         \
+  ABISysV_arm::op();
+#define LLDB_PROCESS_Hexagon(op) ABISysV_hexagon::op();
+#define LLDB_PROCESS_Mips(op)                                                  \
+  ABISysV_mips::op();                                                          \
+  ABISysV_mips64::op();
+#define LLDB_PROCESS_PowerPC(op)                                               \
+  ABISysV_ppc::op();                                                          \
+  ABISysV_ppc64::op();
+#define LLDB_PROCESS_SystemZ(op) ABISysV_s390x::op();
+#define LLDB_PROCESS_X86(op)                                                   \
+  ABIMacOSX_i386::op();                                                        \
+  ABISysV_i386::op();                                                          \
+  ABISysV_x86_64::op();                                                        \
+  ABIWindows_x86_64::op();
+
+#define LLDB_PROCESS_AMDGPU(op)
+#define LLDB_PROCESS_ARC(op)
+#define LLDB_PROCESS_AVR(op)
+#define LLDB_PROCESS_BPF(op)
+#define LLDB_PROCESS_Lanai(op)
+#define LLDB_PROCESS_MSP430(op)
+#define LLDB_PROCESS_NVPTX(op)
+#define LLDB_PROCESS_RISCV(op)
+#define LLDB_PROCESS_Sparc(op)
+#define LLDB_PROCESS_WebAssembly(op)
+#define LLDB_PROCESS_XCore(op)
+
 llvm::Error SystemInitializerTest::Initialize() {
   if (auto e = SystemInitializerCommon::Initialize())
     return e;
@@ -144,19 +177,8 @@ llvm::Error SystemInitializerTest::Initialize() {
 
   ClangASTContext::Initialize();
 
-  ABIMacOSX_i386::Initialize();
-  ABIMacOSX_arm::Initialize();
-  ABIMacOSX_arm64::Initialize();
-  ABISysV_arm::Initialize();
-  ABISysV_arm64::Initialize();
-  ABISysV_hexagon::Initialize();
-  ABISysV_i386::Initialize();
-  ABISysV_x86_64::Initialize();
-  ABISysV_ppc::Initialize();
-  ABISysV_ppc64::Initialize();
-  ABISysV_mips::Initialize();
-  ABISysV_mips64::Initialize();
-  ABISysV_s390x::Initialize();
+#define LLVM_TARGET(t) LLDB_PROCESS_ ## t(Initialize)
+#include "llvm/Config/Targets.def"
 
   ArchitectureArm::Initialize();
   ArchitecturePPC64::Initialize();
@@ -246,19 +268,9 @@ void SystemInitializerTest::Terminate() {
 
   ClangASTContext::Terminate();
 
-  ABIMacOSX_i386::Terminate();
-  ABIMacOSX_arm::Terminate();
-  ABIMacOSX_arm64::Terminate();
-  ABISysV_arm::Terminate();
-  ABISysV_arm64::Terminate();
-  ABISysV_hexagon::Terminate();
-  ABISysV_i386::Terminate();
-  ABISysV_x86_64::Terminate();
-  ABISysV_ppc::Terminate();
-  ABISysV_ppc64::Terminate();
-  ABISysV_mips::Terminate();
-  ABISysV_mips64::Terminate();
-  ABISysV_s390x::Terminate();
+#define LLVM_TARGET(t) LLDB_PROCESS_ ## t(Terminate)
+#include "llvm/Config/Targets.def"
+
   DisassemblerLLVMC::Terminate();
 
   JITLoaderGDB::Terminate();

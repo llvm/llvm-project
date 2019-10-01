@@ -20,10 +20,6 @@ define void @test() #0 {
 ; CHECK-NEXT:    [[DUMMY_SHL:%.*]] = shl i64 [[TMP7]], 32
 ; CHECK-NEXT:    [[TMP8:%.*]] = add <4 x i64> <i64 1, i64 1, i64 1, i64 1>, [[TMP5]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = ashr exact <4 x i64> [[TMP8]], <i64 32, i64 32, i64 32, i64 32>
-; CHECK-NEXT:    [[SUM1:%.*]] = add i64 undef, undef
-; CHECK-NEXT:    [[SUM2:%.*]] = add i64 [[SUM1]], undef
-; CHECK-NEXT:    [[ZSUM:%.*]] = add i64 [[SUM2]], 0
-; CHECK-NEXT:    [[JOIN:%.*]] = add i64 [[TMP6]], [[ZSUM]]
 ; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x i64> [[TMP9]], <4 x i64> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <4 x i64> [[TMP9]], [[RDX_SHUF]]
 ; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x i64> [[BIN_RDX]], <4 x i64> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
@@ -31,7 +27,6 @@ define void @test() #0 {
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i64> [[BIN_RDX2]], i32 0
 ; CHECK-NEXT:    [[OP_EXTRA:%.*]] = add i64 [[TMP10]], 0
 ; CHECK-NEXT:    [[OP_EXTRA3]] = add i64 [[OP_EXTRA]], [[TMP6]]
-; CHECK-NEXT:    [[LAST:%.*]] = add i64 [[JOIN]], undef
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
 entry:

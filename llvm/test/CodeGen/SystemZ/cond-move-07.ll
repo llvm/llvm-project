@@ -1,7 +1,7 @@
 ; Test SELFHR.
 ; See comments in asm-18.ll about testing high-word operations.
 ;
-; RUN: llc < %s -verify-machineinstrs -mtriple=s390x-linux-gnu -mcpu=arch13 \
+; RUN: llc < %s -verify-machineinstrs -mtriple=s390x-linux-gnu -mcpu=z15 \
 ; RUN:   -no-integrated-as | FileCheck %s
 
 define void @f1(i32 %limit) {

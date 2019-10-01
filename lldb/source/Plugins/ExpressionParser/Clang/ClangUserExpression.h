@@ -15,6 +15,7 @@
 #include "ASTStructExtractor.h"
 #include "ClangExpressionDeclMap.h"
 #include "ClangExpressionHelper.h"
+#include "ClangExpressionSourceCode.h"
 #include "ClangExpressionVariable.h"
 #include "IRForTarget.h"
 
@@ -178,7 +179,6 @@ private:
                     lldb::addr_t struct_address,
                     DiagnosticManager &diagnostic_manager) override;
 
-  std::vector<std::string> GetModulesToImport(ExecutionContext &exe_ctx);
   void CreateSourceCode(DiagnosticManager &diagnostic_manager,
                         ExecutionContext &exe_ctx,
                         std::vector<std::string> modules_to_import,
@@ -216,6 +216,10 @@ private:
   /// were not able to calculate this position.
   llvm::Optional<size_t> m_user_expression_start_pos;
   ResultDelegate m_result_delegate;
+  ClangPersistentVariables *m_clang_state;
+  std::unique_ptr<ClangExpressionSourceCode> m_source_code;
+  /// File name used for the expression.
+  std::string m_filename;
 
   /// The object (if any) in which context the expression is evaluated.
   /// See the comment to `UserExpression::Evaluate` for details.

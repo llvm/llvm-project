@@ -185,8 +185,8 @@
 ; CHECK-NEXT:     CallGraph Construction
 ; CHECK-NEXT:     Globals Alias Analysis
 ; CHECK-NEXT:     FunctionPass Manager
-; CHECK-NEXT:       Float to int
 ; CHECK-NEXT:       Dominator Tree Construction
+; CHECK-NEXT:       Float to int
 ; CHECK-NEXT:       Basic Alias Analysis (stateless AA impl)
 ; CHECK-NEXT:       Function Alias Analysis Results
 ; CHECK-NEXT:       Memory SSA

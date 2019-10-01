@@ -550,7 +550,7 @@ Archive::Archive(MemoryBufferRef Source, Error &Err)
   } else if (Buffer.startswith(Magic)) {
     IsThin = false;
   } else {
-    Err = make_error<GenericBinaryError>("File too small to be an archive",
+    Err = make_error<GenericBinaryError>("file too small to be an archive",
                                          object_error::invalid_file_type);
     return;
   }

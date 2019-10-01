@@ -15,9 +15,9 @@ define void @test1(float* %a, float* %b) nounwind {
 ;
 ; RV64-LABEL: test1:
 ; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    lw a1, 0(a1)
 ; RV64-NEXT:    addi a2, zero, 1
 ; RV64-NEXT:    slli a2, a2, 31
-; RV64-NEXT:    lw a1, 0(a1)
 ; RV64-NEXT:    xor a1, a1, a2
 ; RV64-NEXT:    sw a1, 0(a0)
 ; RV64-NEXT:    ret
@@ -33,17 +33,17 @@ define void @test2(double* %a, double* %b) nounwind {
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    lw a2, 4(a1)
 ; RV32-NEXT:    lw a1, 0(a1)
+; RV32-NEXT:    lui a3, 524288
+; RV32-NEXT:    xor a2, a2, a3
 ; RV32-NEXT:    sw a1, 0(a0)
-; RV32-NEXT:    lui a1, 524288
-; RV32-NEXT:    xor a1, a2, a1
-; RV32-NEXT:    sw a1, 4(a0)
+; RV32-NEXT:    sw a2, 4(a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test2:
 ; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    ld a1, 0(a1)
 ; RV64-NEXT:    addi a2, zero, -1
 ; RV64-NEXT:    slli a2, a2, 63
-; RV64-NEXT:    ld a1, 0(a1)
 ; RV64-NEXT:    xor a1, a1, a2
 ; RV64-NEXT:    sd a1, 0(a0)
 ; RV64-NEXT:    ret
@@ -57,27 +57,27 @@ entry:
 define void @test3(fp128* %a, fp128* %b) nounwind {
 ; RV32-LABEL: test3:
 ; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    lw a2, 12(a1)
-; RV32-NEXT:    lw a3, 4(a1)
-; RV32-NEXT:    lw a4, 0(a1)
-; RV32-NEXT:    lw a1, 8(a1)
-; RV32-NEXT:    sw a1, 8(a0)
-; RV32-NEXT:    sw a4, 0(a0)
-; RV32-NEXT:    sw a3, 4(a0)
-; RV32-NEXT:    lui a1, 524288
-; RV32-NEXT:    xor a1, a2, a1
-; RV32-NEXT:    sw a1, 12(a0)
+; RV32-NEXT:    lw a2, 4(a1)
+; RV32-NEXT:    lw a3, 12(a1)
+; RV32-NEXT:    lw a4, 8(a1)
+; RV32-NEXT:    lw a1, 0(a1)
+; RV32-NEXT:    lui a5, 524288
+; RV32-NEXT:    xor a3, a3, a5
+; RV32-NEXT:    sw a4, 8(a0)
+; RV32-NEXT:    sw a1, 0(a0)
+; RV32-NEXT:    sw a2, 4(a0)
+; RV32-NEXT:    sw a3, 12(a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test3:
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    ld a2, 8(a1)
 ; RV64-NEXT:    ld a1, 0(a1)
+; RV64-NEXT:    addi a3, zero, -1
+; RV64-NEXT:    slli a3, a3, 63
+; RV64-NEXT:    xor a2, a2, a3
 ; RV64-NEXT:    sd a1, 0(a0)
-; RV64-NEXT:    addi a1, zero, -1
-; RV64-NEXT:    slli a1, a1, 63
-; RV64-NEXT:    xor a1, a2, a1
-; RV64-NEXT:    sd a1, 8(a0)
+; RV64-NEXT:    sd a2, 8(a0)
 ; RV64-NEXT:    ret
 entry:
   %0 = load fp128, fp128* %b

@@ -150,15 +150,16 @@ public:
 
   static Expected<ELFFile> create(StringRef Object);
 
+  bool isLE() const {
+    return getHeader()->getDataEncoding() == ELF::ELFDATA2LSB;
+  }
+
   bool isMipsELF64() const {
     return getHeader()->e_machine == ELF::EM_MIPS &&
            getHeader()->getFileClass() == ELF::ELFCLASS64;
   }
 
-  bool isMips64EL() const {
-    return isMipsELF64() &&
-           getHeader()->getDataEncoding() == ELF::ELFDATA2LSB;
-  }
+  bool isMips64EL() const { return isMipsELF64() && isLE(); }
 
   Expected<Elf_Shdr_Range> sections() const;
 

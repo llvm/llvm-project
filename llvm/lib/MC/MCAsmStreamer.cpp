@@ -650,6 +650,7 @@ bool MCAsmStreamer::EmitSymbolAttribute(MCSymbol *Symbol,
   case MCSA_Global: // .globl/.global
     OS << MAI->getGlobalDirective();
     break;
+  case MCSA_LGlobal:        OS << "\t.lglobl\t";          break;
   case MCSA_Hidden:         OS << "\t.hidden\t";          break;
   case MCSA_IndirectSymbol: OS << "\t.indirect_symbol\t"; break;
   case MCSA_Internal:       OS << "\t.internal\t";        break;
@@ -1533,9 +1534,8 @@ void MCAsmStreamer::EmitRegisterName(int64_t Register) {
     // just ones that map to LLVM register numbers and have known names.
     // Fall back to using the original number directly if no name is known.
     const MCRegisterInfo *MRI = getContext().getRegisterInfo();
-    int LLVMRegister = MRI->getLLVMRegNumFromEH(Register);
-    if (LLVMRegister != -1) {
-      InstPrinter->printRegName(OS, LLVMRegister);
+    if (Optional<unsigned> LLVMRegister = MRI->getLLVMRegNum(Register, true)) {
+      InstPrinter->printRegName(OS, *LLVMRegister);
       return;
     }
   }

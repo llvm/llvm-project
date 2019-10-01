@@ -15,6 +15,7 @@ unittest("ASTTests") {
     "ASTContextParentMapTest.cpp",
     "ASTImporterFixtures.cpp",
     "ASTImporterGenericRedeclTest.cpp",
+    "ASTImporterODRStrategiesTest.cpp",
     "ASTImporterTest.cpp",
     "ASTImporterVisibilityTest.cpp",
     "ASTTraverserTest.cpp",

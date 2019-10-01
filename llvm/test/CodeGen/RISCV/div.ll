@@ -457,8 +457,8 @@ define i64 @sdiv64_sext_operands(i32 %a, i32 %b) nounwind {
 ;
 ; RV64IM-LABEL: sdiv64_sext_operands:
 ; RV64IM:       # %bb.0:
-; RV64IM-NEXT:    sext.w a1, a1
 ; RV64IM-NEXT:    sext.w a0, a0
+; RV64IM-NEXT:    sext.w a1, a1
 ; RV64IM-NEXT:    div a0, a0, a1
 ; RV64IM-NEXT:    ret
   %1 = sext i32 %a to i64

@@ -103,8 +103,7 @@ size_t GDBRemoteCommunication::SendAck() {
   char ch = '+';
   const size_t bytes_written = Write(&ch, 1, status, nullptr);
   LLDB_LOGF(log, "<%4" PRIu64 "> send packet: %c", (uint64_t)bytes_written, ch);
-  m_history.AddPacket(ch, GDBRemoteCommunicationHistory::ePacketTypeSend,
-                      bytes_written);
+  m_history.AddPacket(ch, GDBRemotePacket::ePacketTypeSend, bytes_written);
   return bytes_written;
 }
 
@@ -114,8 +113,7 @@ size_t GDBRemoteCommunication::SendNack() {
   char ch = '-';
   const size_t bytes_written = Write(&ch, 1, status, nullptr);
   LLDB_LOGF(log, "<%4" PRIu64 "> send packet: %c", (uint64_t)bytes_written, ch);
-  m_history.AddPacket(ch, GDBRemoteCommunicationHistory::ePacketTypeSend,
-                      bytes_written);
+  m_history.AddPacket(ch, GDBRemotePacket::ePacketTypeSend, bytes_written);
   return bytes_written;
 }
 
@@ -178,8 +176,7 @@ GDBRemoteCommunication::SendRawPacketNoLock(llvm::StringRef packet,
     }
 
     m_history.AddPacket(packet.str(), packet_length,
-                        GDBRemoteCommunicationHistory::ePacketTypeSend,
-                        bytes_written);
+                        GDBRemotePacket::ePacketTypeSend, bytes_written);
 
     if (bytes_written == packet_length) {
       if (!skip_ack && GetSendAcks())
@@ -809,8 +806,7 @@ GDBRemoteCommunication::CheckForPacket(const uint8_t *src, size_t src_len,
       }
 
       m_history.AddPacket(m_bytes, total_length,
-                          GDBRemoteCommunicationHistory::ePacketTypeRecv,
-                          total_length);
+                          GDBRemotePacket::ePacketTypeRecv, total_length);
 
       // Copy the packet from m_bytes to packet_str expanding the run-length
       // encoding in the process. Reserve enough byte for the most common case

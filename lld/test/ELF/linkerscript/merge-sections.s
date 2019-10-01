@@ -17,7 +17,7 @@
 # CHECK-NEXT:   ]
 # CHECK-NEXT:   Address: 0x[[ADDR1:.*]]
 # CHECK-NEXT:   Offset: 0x[[ADDR1]]
-# CHECK-NEXT:   Size: 14
+# CHECK-NEXT:   Size: 8
 # CHECK-NEXT:   Link: 0
 # CHECK-NEXT:   Info: 0
 # CHECK-NEXT:   AddressAlignment: 2
@@ -28,7 +28,7 @@
 # CHECK-NEXT: Value: 0x[[ADDR1]]
 
 # CHECK:      Name: end
-# CHECK-NEXT: Value: 0x236
+# CHECK-NEXT: Value: 0x230
 
 # Check that we don't crash with --gc-sections
 # RUN: ld.lld --gc-sections -o %t2 --script %t.script %t -shared

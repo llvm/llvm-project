@@ -244,11 +244,20 @@ static void skipToNewlineRaw(const char *&First, const char *const End) {
   }
 }
 
-static const char *reverseOverSpaces(const char *First, const char *Last) {
+static const char *findLastNonSpace(const char *First, const char *Last) {
   assert(First <= Last);
   while (First != Last && isHorizontalWhitespace(Last[-1]))
     --Last;
   return Last;
+}
+
+static const char *findFirstTrailingSpace(const char *First,
+                                          const char *Last) {
+  const char *LastNonSpace = findLastNonSpace(First, Last);
+  if (Last == LastNonSpace)
+    return Last;
+  assert(isHorizontalWhitespace(LastNonSpace[0]));
+  return LastNonSpace + 1;
 }
 
 static void skipLineComment(const char *&First, const char *const End) {
@@ -382,7 +391,7 @@ void Minimizer::printToNewline(const char *&First, const char *const End) {
       }
 
       // Deal with "//..." and "/*...*/".
-      append(First, reverseOverSpaces(First, Last));
+      append(First, findFirstTrailingSpace(First, Last));
       First = Last;
 
       if (Last[1] == '/') {
@@ -397,15 +406,20 @@ void Minimizer::printToNewline(const char *&First, const char *const End) {
     } while (Last != End && !isVerticalWhitespace(*Last));
 
     // Print out the string.
-    if (Last == End || Last == First || Last[-1] != '\\') {
-      append(First, reverseOverSpaces(First, Last));
+    const char *LastBeforeTrailingSpace = findLastNonSpace(First, Last);
+    if (Last == End || LastBeforeTrailingSpace == First ||
+        LastBeforeTrailingSpace[-1] != '\\') {
+      append(First, LastBeforeTrailingSpace);
       First = Last;
       skipNewline(First, End);
       return;
     }
 
-    // Print up to the backslash, backing up over spaces.
-    append(First, reverseOverSpaces(First, Last - 1));
+    // Print up to the backslash, backing up over spaces. Preserve at least one
+    // space, as the space matters when tokens are separated by a line
+    // continuation.
+    append(First, findFirstTrailingSpace(
+                      First, LastBeforeTrailingSpace - 1));
 
     First = Last;
     skipNewline(First, End);

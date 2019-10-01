@@ -509,7 +509,9 @@ namespace {
     bool tryShiftAmountMod(SDNode *N);
     bool combineIncDecVector(SDNode *Node);
     bool tryShrinkShlLogicImm(SDNode *N);
+    bool tryVPTERNLOG(SDNode *N);
     bool tryVPTESTM(SDNode *Root, SDValue Setcc, SDValue Mask);
+    bool tryMatchBitSelect(SDNode *N);
 
     MachineSDNode *emitPCMPISTR(unsigned ROpc, unsigned MOpc, bool MayFoldLoad,
                                 const SDLoc &dl, MVT VT, SDNode *Node);
@@ -879,10 +881,9 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
       case ISD::FRINT:      Imm = 0x4; break;
       }
       SDLoc dl(N);
-      SDValue Res = CurDAG->getNode(X86ISD::VRNDSCALE, dl,
-                                    N->getValueType(0),
-                                    N->getOperand(0),
-                                    CurDAG->getConstant(Imm, dl, MVT::i8));
+      SDValue Res = CurDAG->getNode(
+          X86ISD::VRNDSCALE, dl, N->getValueType(0), N->getOperand(0),
+          CurDAG->getTargetConstant(Imm, dl, MVT::i8));
       --I;
       CurDAG->ReplaceAllUsesOfValueWith(SDValue(N, 0), Res);
       ++I;
@@ -2581,6 +2582,7 @@ bool X86DAGToDAGISel::tryFoldLoad(SDNode *Root, SDNode *P, SDValue N,
                                   SDValue &Base, SDValue &Scale,
                                   SDValue &Index, SDValue &Disp,
                                   SDValue &Segment) {
+  assert(Root && P && "Unknown root/parent nodes");
   if (!ISD::isNON_EXTLoad(N.getNode()) ||
       !IsProfitableToFold(N, P, Root) ||
       !IsLegalToFold(N, P, Root, OptLevel))
@@ -3441,8 +3443,9 @@ MachineSDNode *X86DAGToDAGISel::matchBEXTRFromAndImm(SDNode *Node) {
   // TODO: Maybe load folding, greater than 32-bit masks, or a guarantee of LICM
   // hoisting the move immediate would make it worthwhile with a less optimal
   // BEXTR?
-  if (!Subtarget->hasTBM() &&
-      !(Subtarget->hasBMI() && Subtarget->hasFastBEXTR()))
+  bool PreferBEXTR =
+      Subtarget->hasTBM() || (Subtarget->hasBMI() && Subtarget->hasFastBEXTR());
+  if (!PreferBEXTR && !Subtarget->hasBMI2())
     return nullptr;
 
   // Must have a shift right.
@@ -3481,23 +3484,50 @@ MachineSDNode *X86DAGToDAGISel::matchBEXTRFromAndImm(SDNode *Node) {
   if (Shift + MaskSize > NVT.getSizeInBits())
     return nullptr;
 
-  SDValue New = CurDAG->getTargetConstant(Shift | (MaskSize << 8), dl, NVT);
-  unsigned ROpc = NVT == MVT::i64 ? X86::BEXTRI64ri : X86::BEXTRI32ri;
-  unsigned MOpc = NVT == MVT::i64 ? X86::BEXTRI64mi : X86::BEXTRI32mi;
+  // BZHI, if available, is always fast, unlike BEXTR. But even if we decide
+  // that we can't use BEXTR, it is only worthwhile using BZHI if the mask
+  // does not fit into 32 bits. Load folding is not a sufficient reason.
+  if (!PreferBEXTR && MaskSize <= 32)
+    return nullptr;
 
-  // BMI requires the immediate to placed in a register.
-  if (!Subtarget->hasTBM()) {
-    ROpc = NVT == MVT::i64 ? X86::BEXTR64rr : X86::BEXTR32rr;
-    MOpc = NVT == MVT::i64 ? X86::BEXTR64rm : X86::BEXTR32rm;
+  SDValue Control;
+  unsigned ROpc, MOpc;
+
+  if (!PreferBEXTR) {
+    assert(Subtarget->hasBMI2() && "We must have BMI2's BZHI then.");
+    // If we can't make use of BEXTR then we can't fuse shift+mask stages.
+    // Let's perform the mask first, and apply shift later. Note that we need to
+    // widen the mask to account for the fact that we'll apply shift afterwards!
+    Control = CurDAG->getTargetConstant(Shift + MaskSize, dl, NVT);
+    ROpc = NVT == MVT::i64 ? X86::BZHI64rr : X86::BZHI32rr;
+    MOpc = NVT == MVT::i64 ? X86::BZHI64rm : X86::BZHI32rm;
     unsigned NewOpc = NVT == MVT::i64 ? X86::MOV32ri64 : X86::MOV32ri;
-    New = SDValue(CurDAG->getMachineNode(NewOpc, dl, NVT, New), 0);
+    Control = SDValue(CurDAG->getMachineNode(NewOpc, dl, NVT, Control), 0);
+  } else {
+    // The 'control' of BEXTR has the pattern of:
+    // [15...8 bit][ 7...0 bit] location
+    // [ bit count][     shift] name
+    // I.e. 0b000000011'00000001 means  (x >> 0b1) & 0b11
+    Control = CurDAG->getTargetConstant(Shift | (MaskSize << 8), dl, NVT);
+    if (Subtarget->hasTBM()) {
+      ROpc = NVT == MVT::i64 ? X86::BEXTRI64ri : X86::BEXTRI32ri;
+      MOpc = NVT == MVT::i64 ? X86::BEXTRI64mi : X86::BEXTRI32mi;
+    } else {
+      assert(Subtarget->hasBMI() && "We must have BMI1's BEXTR then.");
+      // BMI requires the immediate to placed in a register.
+      ROpc = NVT == MVT::i64 ? X86::BEXTR64rr : X86::BEXTR32rr;
+      MOpc = NVT == MVT::i64 ? X86::BEXTR64rm : X86::BEXTR32rm;
+      unsigned NewOpc = NVT == MVT::i64 ? X86::MOV32ri64 : X86::MOV32ri;
+      Control = SDValue(CurDAG->getMachineNode(NewOpc, dl, NVT, Control), 0);
+    }
   }
 
   MachineSDNode *NewNode;
   SDValue Input = N0->getOperand(0);
   SDValue Tmp0, Tmp1, Tmp2, Tmp3, Tmp4;
   if (tryFoldLoad(Node, N0.getNode(), Input, Tmp0, Tmp1, Tmp2, Tmp3, Tmp4)) {
-    SDValue Ops[] = { Tmp0, Tmp1, Tmp2, Tmp3, Tmp4, New, Input.getOperand(0) };
+    SDValue Ops[] = {
+        Tmp0, Tmp1, Tmp2, Tmp3, Tmp4, Control, Input.getOperand(0)};
     SDVTList VTs = CurDAG->getVTList(NVT, MVT::i32, MVT::Other);
     NewNode = CurDAG->getMachineNode(MOpc, dl, VTs, Ops);
     // Update the chain.
@@ -3505,7 +3535,15 @@ MachineSDNode *X86DAGToDAGISel::matchBEXTRFromAndImm(SDNode *Node) {
     // Record the mem-refs
     CurDAG->setNodeMemRefs(NewNode, {cast<LoadSDNode>(Input)->getMemOperand()});
   } else {
-    NewNode = CurDAG->getMachineNode(ROpc, dl, NVT, MVT::i32, Input, New);
+    NewNode = CurDAG->getMachineNode(ROpc, dl, NVT, MVT::i32, Input, Control);
+  }
+
+  if (!PreferBEXTR) {
+    // We still need to apply the shift.
+    SDValue ShAmt = CurDAG->getTargetConstant(Shift, dl, NVT);
+    unsigned NewOpc = NVT == MVT::i64 ? X86::SHR64ri : X86::SHR32ri;
+    NewNode =
+        CurDAG->getMachineNode(NewOpc, dl, NVT, SDValue(NewNode, 0), ShAmt);
   }
 
   return NewNode;
@@ -3773,6 +3811,82 @@ bool X86DAGToDAGISel::tryShrinkShlLogicImm(SDNode *N) {
                                    Shift.getOperand(1));
   ReplaceNode(N, NewSHL.getNode());
   SelectCode(NewSHL.getNode());
+  return true;
+}
+
+// Try to match two logic ops to a VPTERNLOG.
+// FIXME: Handle inverted inputs?
+// FIXME: Handle more complex patterns that use an operand more than once?
+// FIXME: Support X86ISD::ANDNP
+bool X86DAGToDAGISel::tryVPTERNLOG(SDNode *N) {
+  MVT NVT = N->getSimpleValueType(0);
+
+  // Make sure we support VPTERNLOG.
+  if (!NVT.isVector() || !Subtarget->hasAVX512() ||
+      NVT.getVectorElementType() == MVT::i1)
+    return false;
+
+  // We need VLX for 128/256-bit.
+  if (!(Subtarget->hasVLX() || NVT.is512BitVector()))
+    return false;
+
+  unsigned Opc1 = N->getOpcode();
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+
+  auto isLogicOp = [](unsigned Opc) {
+    return Opc == ISD::AND || Opc == ISD::OR || Opc == ISD::XOR;
+  };
+
+  SDValue A, B, C;
+  unsigned Opc2;
+  if (isLogicOp(N1.getOpcode()) && N1.hasOneUse()) {
+    Opc2 = N1.getOpcode();
+    A = N0;
+    B = N1.getOperand(0);
+    C = N1.getOperand(1);
+  } else if (isLogicOp(N0.getOpcode()) && N0.hasOneUse()) {
+    Opc2 = N0.getOpcode();
+    A = N1;
+    B = N0.getOperand(0);
+    C = N0.getOperand(1);
+  } else
+    return false;
+
+  uint64_t Imm;
+  switch (Opc1) {
+  default: llvm_unreachable("Unexpected opcode!");
+  case ISD::AND:
+    switch (Opc2) {
+    default: llvm_unreachable("Unexpected opcode!");
+    case ISD::AND: Imm = 0x80; break;
+    case ISD::OR:  Imm = 0xe0; break;
+    case ISD::XOR: Imm = 0x60; break;
+    }
+    break;
+  case ISD::OR:
+    switch (Opc2) {
+    default: llvm_unreachable("Unexpected opcode!");
+    case ISD::AND: Imm = 0xf8; break;
+    case ISD::OR:  Imm = 0xfe; break;
+    case ISD::XOR: Imm = 0xf6; break;
+    }
+    break;
+  case ISD::XOR:
+    switch (Opc2) {
+    default: llvm_unreachable("Unexpected opcode!");
+    case ISD::AND: Imm = 0x78; break;
+    case ISD::OR:  Imm = 0x1e; break;
+    case ISD::XOR: Imm = 0x96; break;
+    }
+    break;
+  }
+
+  SDLoc DL(N);
+  SDValue New = CurDAG->getNode(X86ISD::VPTERNLOG, DL, NVT, A, B, C,
+                                CurDAG->getTargetConstant(Imm, DL, MVT::i8));
+  ReplaceNode(N, New.getNode());
+  SelectCode(New.getNode());
   return true;
 }
 
@@ -4062,12 +4176,18 @@ bool X86DAGToDAGISel::tryVPTESTM(SDNode *Root, SDValue Setcc,
   if (CC != ISD::SETEQ && CC != ISD::SETNE)
     return false;
 
-  // See if we're comparing against zero. This should have been canonicalized
-  // to RHS during lowering.
-  if (!ISD::isBuildVectorAllZeros(Setcc.getOperand(1).getNode()))
+  SDValue SetccOp0 = Setcc.getOperand(0);
+  SDValue SetccOp1 = Setcc.getOperand(1);
+
+  // Canonicalize the all zero vector to the RHS.
+  if (ISD::isBuildVectorAllZeros(SetccOp0.getNode()))
+    std::swap(SetccOp0, SetccOp1);
+
+  // See if we're comparing against zero.
+  if (!ISD::isBuildVectorAllZeros(SetccOp1.getNode()))
     return false;
 
-  SDValue N0 = Setcc.getOperand(0);
+  SDValue N0 = SetccOp0;
 
   MVT CmpVT = N0.getSimpleValueType();
   MVT CmpSVT = CmpVT.getVectorElementType();
@@ -4233,6 +4353,55 @@ bool X86DAGToDAGISel::tryVPTESTM(SDNode *Root, SDValue Setcc,
   return true;
 }
 
+// Try to match the bitselect pattern (or (and A, B), (andn A, C)). Turn it
+// into vpternlog.
+bool X86DAGToDAGISel::tryMatchBitSelect(SDNode *N) {
+  assert(N->getOpcode() == ISD::OR && "Unexpected opcode!");
+
+  MVT NVT = N->getSimpleValueType(0);
+
+  // Make sure we support VPTERNLOG.
+  if (!NVT.isVector() || !Subtarget->hasAVX512())
+    return false;
+
+  // We need VLX for 128/256-bit.
+  if (!(Subtarget->hasVLX() || NVT.is512BitVector()))
+    return false;
+
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+
+  // Canonicalize AND to LHS.
+  if (N1.getOpcode() == ISD::AND)
+    std::swap(N0, N1);
+
+  if (N0.getOpcode() != ISD::AND ||
+      N1.getOpcode() != X86ISD::ANDNP ||
+      !N0.hasOneUse() || !N1.hasOneUse())
+    return false;
+
+  // ANDN is not commutable, use it to pick down A and C.
+  SDValue A = N1.getOperand(0);
+  SDValue C = N1.getOperand(1);
+
+  // AND is commutable, if one operand matches A, the other operand is B.
+  // Otherwise this isn't a match.
+  SDValue B;
+  if (N0.getOperand(0) == A)
+    B = N0.getOperand(1);
+  else if (N0.getOperand(1) == A)
+    B = N0.getOperand(0);
+  else
+    return false;
+
+  SDLoc dl(N);
+  SDValue Imm = CurDAG->getTargetConstant(0xCA, dl, MVT::i8);
+  SDValue Ternlog = CurDAG->getNode(X86ISD::VPTERNLOG, dl, NVT, A, B, C, Imm);
+  ReplaceNode(N, Ternlog.getNode());
+  SelectCode(Ternlog.getNode());
+  return true;
+}
+
 void X86DAGToDAGISel::Select(SDNode *Node) {
   MVT NVT = Node->getSimpleValueType(0);
   unsigned Opcode = Node->getOpcode();
@@ -4389,6 +4558,10 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
   case ISD::OR:
   case ISD::XOR:
     if (tryShrinkShlLogicImm(Node))
+      return;
+    if (Opcode == ISD::OR && tryMatchBitSelect(Node))
+      return;
+    if (tryVPTERNLOG(Node))
       return;
 
     LLVM_FALLTHROUGH;
@@ -5095,10 +5268,9 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     case ISD::FRINT:      Imm = 0x4; break;
     }
     SDLoc dl(Node);
-    SDValue Res = CurDAG->getNode(X86ISD::VRNDSCALE, dl,
-                                  Node->getValueType(0),
+    SDValue Res = CurDAG->getNode(X86ISD::VRNDSCALE, dl, Node->getValueType(0),
                                   Node->getOperand(0),
-                                  CurDAG->getConstant(Imm, dl, MVT::i8));
+                                  CurDAG->getTargetConstant(Imm, dl, MVT::i8));
     ReplaceNode(Node, Res.getNode());
     SelectCode(Res.getNode());
     return;

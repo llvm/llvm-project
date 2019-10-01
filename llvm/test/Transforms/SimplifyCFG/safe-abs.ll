@@ -8,14 +8,10 @@ define i32 @abs_with_clamp(i32 %arg) {
 ; CHECK-LABEL: @abs_with_clamp(
 ; CHECK-NEXT:  begin:
 ; CHECK-NEXT:    [[IS_POSITIVE:%.*]] = icmp sgt i32 [[ARG:%.*]], 0
-; CHECK-NEXT:    br i1 [[IS_POSITIVE]], label [[END:%.*]], label [[NEGATIVE:%.*]]
-; CHECK:       negative:
 ; CHECK-NEXT:    [[IS_INT_MIN:%.*]] = icmp eq i32 [[ARG]], -2147483648
 ; CHECK-NEXT:    [[NEGATED:%.*]] = sub nsw i32 0, [[ARG]]
 ; CHECK-NEXT:    [[ABS:%.*]] = select i1 [[IS_INT_MIN]], i32 2147483647, i32 [[NEGATED]]
-; CHECK-NEXT:    br label [[END]]
-; CHECK:       end:
-; CHECK-NEXT:    [[TMP6:%.*]] = phi i32 [ [[ARG]], [[BEGIN:%.*]] ], [ [[ABS]], [[NEGATIVE]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = select i1 [[IS_POSITIVE]], i32 [[ARG]], i32 [[ABS]]
 ; CHECK-NEXT:    ret i32 [[TMP6]]
 ;
 begin:

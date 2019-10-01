@@ -18,6 +18,16 @@
 
 int main(int, char**)
 {
+    std::regex r0;
+    r0.assign("(a([bc]))", 9);
+    assert(r0.flags() == std::regex::ECMAScript);
+    assert(r0.mark_count() == 2);
+
+    std::regex r1;
+    r1.assign("(a([bc]))", 9, std::regex::ECMAScript);
+    assert(r1.flags() == std::regex::ECMAScript);
+    assert(r1.mark_count() == 2);
+
     std::regex r2;
     r2.assign("(a([bc]))", 9, std::regex::extended);
     assert(r2.flags() == std::regex::extended);

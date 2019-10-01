@@ -158,16 +158,17 @@ static bool readLocationInfo(LocationInfoTy &LocationInfo) {
   if (!Format) {
     handleAllErrors(Format.takeError(), [&](const ErrorInfoBase &PE) {
       PE.log(WithColor::error());
-      WithColor::error() << '\n';
+      errs() << '\n';
     });
     return false;
   }
 
   Expected<std::unique_ptr<remarks::RemarkParser>> MaybeParser =
-      remarks::createRemarkParser(*Format, (*Buf)->getBuffer());
+      remarks::createRemarkParserFromMeta(*Format, (*Buf)->getBuffer());
   if (!MaybeParser) {
     handleAllErrors(MaybeParser.takeError(), [&](const ErrorInfoBase &PE) {
       PE.log(WithColor::error());
+      errs() << '\n';
     });
     return false;
   }
@@ -182,8 +183,9 @@ static bool readLocationInfo(LocationInfoTy &LocationInfo) {
         consumeError(std::move(E));
         break;
       }
-      handleAllErrors(MaybeRemark.takeError(), [&](const ErrorInfoBase &PE) {
+      handleAllErrors(std::move(E), [&](const ErrorInfoBase &PE) {
         PE.log(WithColor::error());
+        errs() << '\n';
       });
       return false;
     }

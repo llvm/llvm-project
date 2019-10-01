@@ -130,6 +130,12 @@ static cl::opt<bool> ProfileSampleAccurate(
              "callsite and function as having 0 samples. Otherwise, treat "
              "un-sampled callsites and functions conservatively as unknown. "));
 
+static cl::opt<bool> ProfileAccurateForSymsInList(
+    "profile-accurate-for-symsinlist", cl::Hidden, cl::ZeroOrMore,
+    cl::init(true),
+    cl::desc("For symbols in profile symbol list, regard their profiles to "
+             "be accurate. It may be overriden by profile-sample-accurate. "));
+
 namespace {
 
 using BlockWeightMap = DenseMap<const BasicBlock *, uint64_t>;
@@ -139,9 +145,11 @@ using EdgeWeightMap = DenseMap<Edge, uint64_t>;
 using BlockEdgeMap =
     DenseMap<const BasicBlock *, SmallVector<const BasicBlock *, 8>>;
 
+class SampleProfileLoader;
+
 class SampleCoverageTracker {
 public:
-  SampleCoverageTracker() = default;
+  SampleCoverageTracker(SampleProfileLoader &SPL) : SPLoader(SPL){};
 
   bool markSamplesUsed(const FunctionSamples *FS, uint32_t LineOffset,
                        uint32_t Discriminator, uint64_t Samples);
@@ -187,6 +195,8 @@ private:
   /// keyed by FunctionSamples pointers, but these stats are cleared after
   /// every function, so we just need to keep a single counter.
   uint64_t TotalUsedSamples = 0;
+
+  SampleProfileLoader &SPLoader;
 };
 
 class GUIDToFuncNameMapper {
@@ -269,8 +279,9 @@ public:
       std::function<AssumptionCache &(Function &)> GetAssumptionCache,
       std::function<TargetTransformInfo &(Function &)> GetTargetTransformInfo)
       : GetAC(std::move(GetAssumptionCache)),
-        GetTTI(std::move(GetTargetTransformInfo)), Filename(Name),
-        RemappingFilename(RemapName), IsThinLTOPreLink(IsThinLTOPreLink) {}
+        GetTTI(std::move(GetTargetTransformInfo)), CoverageTracker(*this),
+        Filename(Name), RemappingFilename(RemapName),
+        IsThinLTOPreLink(IsThinLTOPreLink) {}
 
   bool doInitialization(Module &M);
   bool runOnModule(Module &M, ModuleAnalysisManager *AM,
@@ -279,6 +290,8 @@ public:
   void dump() { Reader->dump(); }
 
 protected:
+  friend class SampleCoverageTracker;
+
   bool runOnFunction(Function &F, ModuleAnalysisManager *AM);
   unsigned getFunctionLoc(Function &F);
   bool emitAnnotations(Function &F);
@@ -307,6 +320,8 @@ protected:
   bool propagateThroughEdges(Function &F, bool UpdateBlockCount);
   void computeDominanceAndLoopInfo(Function &F);
   void clearFunctionData();
+  bool callsiteIsHot(const FunctionSamples *CallsiteFS,
+                     ProfileSummaryInfo *PSI);
 
   /// Map basic blocks to their computed weights.
   ///
@@ -404,6 +419,17 @@ protected:
   // GUIDToFuncNameMap saves the mapping from GUID to the symbol name, for
   // all the function symbols defined or declared in current module.
   DenseMap<uint64_t, StringRef> GUIDToFuncNameMap;
+
+  // All the Names used in FunctionSamples including outline function
+  // names, inline instance names and call target names.
+  StringSet<> NamesInProfile;
+
+  // For symbol in profile symbol list, whether to regard their profiles
+  // to be accurate. It is mainly decided by existance of profile symbol
+  // list and -profile-accurate-for-symsinlist flag, but it can be
+  // overriden by -profile-sample-accurate or profile-sample-accurate
+  // attribute.
+  bool ProfAccForSymsInList;
 };
 
 class SampleProfileLoaderLegacyPass : public ModulePass {
@@ -459,14 +485,23 @@ private:
 /// To decide whether an inlined callsite is hot, we compare the callsite
 /// sample count with the hot cutoff computed by ProfileSummaryInfo, it is
 /// regarded as hot if the count is above the cutoff value.
-static bool callsiteIsHot(const FunctionSamples *CallsiteFS,
-                          ProfileSummaryInfo *PSI) {
+///
+/// When ProfileAccurateForSymsInList is enabled and profile symbol list
+/// is present, functions in the profile symbol list but without profile will
+/// be regarded as cold and much less inlining will happen in CGSCC inlining
+/// pass, so we tend to lower the hot criteria here to allow more early
+/// inlining to happen for warm callsites and it is helpful for performance.
+bool SampleProfileLoader::callsiteIsHot(const FunctionSamples *CallsiteFS,
+                                        ProfileSummaryInfo *PSI) {
   if (!CallsiteFS)
     return false; // The callsite was not inlined in the original binary.
 
   assert(PSI && "PSI is expected to be non null");
   uint64_t CallsiteTotalSamples = CallsiteFS->getTotalSamples();
-  return PSI->isHotCount(CallsiteTotalSamples);
+  if (ProfAccForSymsInList)
+    return !PSI->isColdCount(CallsiteTotalSamples);
+  else
+    return PSI->isHotCount(CallsiteTotalSamples);
 }
 
 /// Mark as used the sample record for the given function samples at
@@ -503,7 +538,7 @@ SampleCoverageTracker::countUsedRecords(const FunctionSamples *FS,
   for (const auto &I : FS->getCallsiteSamples())
     for (const auto &J : I.second) {
       const FunctionSamples *CalleeSamples = &J.second;
-      if (callsiteIsHot(CalleeSamples, PSI))
+      if (SPLoader.callsiteIsHot(CalleeSamples, PSI))
         Count += countUsedRecords(CalleeSamples, PSI);
     }
 
@@ -522,7 +557,7 @@ SampleCoverageTracker::countBodyRecords(const FunctionSamples *FS,
   for (const auto &I : FS->getCallsiteSamples())
     for (const auto &J : I.second) {
       const FunctionSamples *CalleeSamples = &J.second;
-      if (callsiteIsHot(CalleeSamples, PSI))
+      if (SPLoader.callsiteIsHot(CalleeSamples, PSI))
         Count += countBodyRecords(CalleeSamples, PSI);
     }
 
@@ -543,7 +578,7 @@ SampleCoverageTracker::countBodySamples(const FunctionSamples *FS,
   for (const auto &I : FS->getCallsiteSamples())
     for (const auto &J : I.second) {
       const FunctionSamples *CalleeSamples = &J.second;
-      if (callsiteIsHot(CalleeSamples, PSI))
+      if (SPLoader.callsiteIsHot(CalleeSamples, PSI))
         Total += countBodySamples(CalleeSamples, PSI);
     }
 
@@ -865,6 +900,14 @@ bool SampleProfileLoader::inlineCallInstruction(Instruction *I) {
 bool SampleProfileLoader::inlineHotFunctions(
     Function &F, DenseSet<GlobalValue::GUID> &InlinedGUIDs) {
   DenseSet<Instruction *> PromotedInsns;
+
+  // ProfAccForSymsInList is used in callsiteIsHot. The assertion makes sure
+  // Profile symbol list is ignored when profile-sample-accurate is on.
+  assert((!ProfAccForSymsInList ||
+          (!ProfileSampleAccurate &&
+           !F.hasFnAttribute("profile-sample-accurate"))) &&
+         "ProfAccForSymsInList should be false when profile-sample-accurate "
+         "is enabled");
 
   DenseMap<Instruction *, const FunctionSamples *> localNotInlinedCallSites;
   bool Changed = false;
@@ -1643,6 +1686,15 @@ bool SampleProfileLoader::doInitialization(Module &M) {
   ProfileIsValid = (Reader->read() == sampleprof_error::success);
   PSL = Reader->getProfileSymbolList();
 
+  // While profile-sample-accurate is on, ignore symbol list.
+  ProfAccForSymsInList =
+      ProfileAccurateForSymsInList && PSL && !ProfileSampleAccurate;
+  if (ProfAccForSymsInList) {
+    NamesInProfile.clear();
+    if (auto NameTable = Reader->getNameTable())
+      NamesInProfile.insert(NameTable->begin(), NameTable->end());
+  }
+
   if (!RemappingFilename.empty()) {
     // Apply profile remappings to the loaded profile data if requested.
     // For now, we only support remapping symbols encoded using the Itanium
@@ -1733,17 +1785,42 @@ bool SampleProfileLoader::runOnFunction(Function &F, ModuleAnalysisManager *AM) 
   // conservatively by getEntryCount as the same as unknown (None). This is
   // to avoid newly added code to be treated as cold. If we have samples
   // this will be overwritten in emitAnnotations.
-  //
+  uint64_t initialEntryCount = -1;
+
+  ProfAccForSymsInList = ProfileAccurateForSymsInList && PSL;
+  if (ProfileSampleAccurate || F.hasFnAttribute("profile-sample-accurate")) {
+    // initialize all the function entry counts to 0. It means all the
+    // functions without profile will be regarded as cold.
+    initialEntryCount = 0;
+    // profile-sample-accurate is a user assertion which has a higher precedence
+    // than symbol list. When profile-sample-accurate is on, ignore symbol list.
+    ProfAccForSymsInList = false;
+  }
+
   // PSL -- profile symbol list include all the symbols in sampled binary.
-  // If ProfileSampleAccurate is true or F has profile-sample-accurate
-  // attribute, and if there is no profile symbol list read in, initialize
-  // all the function entry counts to 0; if there is profile symbol list, only
-  // initialize the entry count to 0 when current function is in the list.
-  uint64_t initialEntryCount =
-      ((ProfileSampleAccurate || F.hasFnAttribute("profile-sample-accurate")) &&
-       (!PSL || PSL->contains(F.getName())))
-          ? 0
-          : -1;
+  // If ProfileAccurateForSymsInList is enabled, PSL is used to treat
+  // old functions without samples being cold, without having to worry
+  // about new and hot functions being mistakenly treated as cold.
+  if (ProfAccForSymsInList) {
+    // Initialize the entry count to 0 for functions in the list.
+    if (PSL->contains(F.getName()))
+      initialEntryCount = 0;
+
+    // Function in the symbol list but without sample will be regarded as
+    // cold. To minimize the potential negative performance impact it could
+    // have, we want to be a little conservative here saying if a function
+    // shows up in the profile, no matter as outline function, inline instance
+    // or call targets, treat the function as not being cold. This will handle
+    // the cases such as most callsites of a function are inlined in sampled
+    // binary but not inlined in current build (because of source code drift,
+    // imprecise debug information, or the callsites are all cold individually
+    // but not cold accumulatively...), so the outline function showing up as
+    // cold in sampled binary will actually not be cold after current build.
+    StringRef CanonName = FunctionSamples::getCanonicalFnName(F);
+    if (NamesInProfile.count(CanonName))
+      initialEntryCount = -1;
+  }
+
   F.setEntryCount(ProfileCount(initialEntryCount, Function::PCT_Real));
   std::unique_ptr<OptimizationRemarkEmitter> OwnedORE;
   if (AM) {

@@ -115,10 +115,14 @@ void HandleLeaks() {
   if (common_flags()->exitcode) Die();
 }
 
-static int DoStopTheWorldCallback(struct dl_phdr_info *info, size_t size,
-                                  void *data) {
+static int LockStuffAndStopTheWorldCallback(struct dl_phdr_info *info,
+                                            size_t size, void *data) {
+  LockThreadRegistry();
+  LockAllocator();
   DoStopTheWorldParam *param = reinterpret_cast<DoStopTheWorldParam *>(data);
   StopTheWorld(param->callback, param->argument);
+  UnlockAllocator();
+  UnlockThreadRegistry();
   return 1;
 }
 
@@ -130,9 +134,9 @@ static int DoStopTheWorldCallback(struct dl_phdr_info *info, size_t size,
 // while holding the libdl lock in the parent thread, we can safely reenter it
 // in the tracer. The solution is to run stoptheworld from a dl_iterate_phdr()
 // callback in the parent thread.
-void DoStopTheWorld(StopTheWorldCallback callback, void *argument) {
+void LockStuffAndStopTheWorld(StopTheWorldCallback callback, void *argument) {
   DoStopTheWorldParam param = {callback, argument};
-  dl_iterate_phdr(DoStopTheWorldCallback, &param);
+  dl_iterate_phdr(LockStuffAndStopTheWorldCallback, &param);
 }
 
 } // namespace __lsan

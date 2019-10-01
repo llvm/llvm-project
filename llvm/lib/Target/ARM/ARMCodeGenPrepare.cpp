@@ -179,9 +179,6 @@ public:
 }
 
 static bool GenerateSignBits(Value *V) {
-  if (auto *Arg = dyn_cast<Argument>(V))
-    return Arg->hasSExtAttr();
-
   if (!isa<Instruction>(V))
     return false;
 
@@ -843,8 +840,8 @@ bool ARMCodeGenPrepare::isSupportedValue(Value *V) {
     }
   } else if (isa<Constant>(V) && !isa<ConstantExpr>(V)) {
     return isSupportedType(V);
-  } else if (auto *Arg = dyn_cast<Argument>(V))
-    return isSupportedType(V) && !Arg->hasSExtAttr();
+  } else if (isa<Argument>(V))
+    return isSupportedType(V);
 
   return isa<BasicBlock>(V);
 }

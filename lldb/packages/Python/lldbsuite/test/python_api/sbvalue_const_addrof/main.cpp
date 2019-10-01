@@ -28,7 +28,7 @@ ThreadInfo *g_thread_list_ptr = &g_thread1;
 int main (int argc, char const *argv[], char const *envp[])
 {
     printf ("g_thread_list is %p\n", g_thread_list_ptr);
-    return 0; //% v = lldb.target.FindFirstGlobalVariable('g_thread_list_ptr')
+    return 0; //% v = self.dbg.GetSelectedTarget().FindFirstGlobalVariable('g_thread_list_ptr')
     //% v_gla = v.GetChildMemberWithName('regs').GetLoadAddress()
     //% v_aof = v.GetChildMemberWithName('regs').AddressOf().GetValueAsUnsigned(lldb.LLDB_INVALID_ADDRESS)
     //% expr = '(%s)0x%x' % (v.GetType().GetName(), v.GetValueAsUnsigned(0))

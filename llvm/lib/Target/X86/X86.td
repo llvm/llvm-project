@@ -457,6 +457,10 @@ def FeatureMergeToThreeWayBranch : SubtargetFeature<"merge-to-threeway-branch",
                                         "Merge branches to a three-way "
                                         "conditional branch">;
 
+// Enable use of alias analysis during code generation.
+def FeatureUseAA : SubtargetFeature<"use-aa", "UseAA", "true",
+                                    "Use alias analysis during codegen">;
+
 // Bonnell
 def ProcIntelAtom : SubtargetFeature<"", "X86ProcFamily", "IntelAtom", "">;
 // Silvermont

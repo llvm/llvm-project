@@ -370,9 +370,13 @@ typedef enum {
     LLVMAtomicRMWBinOpUMax, /**< Sets the value if it's greater than the
                              original using an unsigned comparison and return
                              the old one */
-    LLVMAtomicRMWBinOpUMin /**< Sets the value if it's greater than the
-                             original using an unsigned comparison  and return
-                             the old one */
+    LLVMAtomicRMWBinOpUMin, /**< Sets the value if it's greater than the
+                              original using an unsigned comparison and return
+                              the old one */
+    LLVMAtomicRMWBinOpFAdd, /**< Add a floating point value and return the
+                              old one */
+    LLVMAtomicRMWBinOpFSub /**< Subtract a floating point value and return the
+                             old one */
 } LLVMAtomicRMWBinOp;
 
 typedef enum {
@@ -1571,6 +1575,8 @@ LLVMTypeRef LLVMX86MMXType(void);
       macro(ResumeInst)                     \
       macro(CleanupReturnInst)              \
       macro(CatchReturnInst)                \
+      macro(CatchSwitchInst)                \
+      macro(CallBrInst)                     \
       macro(FuncletPadInst)                 \
         macro(CatchPadInst)                 \
         macro(CleanupPadInst)               \
@@ -1592,7 +1598,10 @@ LLVMTypeRef LLVMX86MMXType(void);
           macro(ZExtInst)                   \
         macro(ExtractValueInst)             \
         macro(LoadInst)                     \
-        macro(VAArgInst)
+        macro(VAArgInst)                    \
+      macro(AtomicCmpXchgInst)              \
+      macro(AtomicRMWInst)                  \
+      macro(FenceInst)
 
 /**
  * @defgroup LLVMCCoreValueGeneral General APIs
@@ -3807,8 +3816,12 @@ LLVMValueRef LLVMBuildGlobalStringPtr(LLVMBuilderRef B, const char *Str,
                                       const char *Name);
 LLVMBool LLVMGetVolatile(LLVMValueRef MemoryAccessInst);
 void LLVMSetVolatile(LLVMValueRef MemoryAccessInst, LLVMBool IsVolatile);
+LLVMBool LLVMGetWeak(LLVMValueRef CmpXchgInst);
+void LLVMSetWeak(LLVMValueRef CmpXchgInst, LLVMBool IsWeak);
 LLVMAtomicOrdering LLVMGetOrdering(LLVMValueRef MemoryAccessInst);
 void LLVMSetOrdering(LLVMValueRef MemoryAccessInst, LLVMAtomicOrdering Ordering);
+LLVMAtomicRMWBinOp LLVMGetAtomicRMWBinOp(LLVMValueRef AtomicRMWInst);
+void LLVMSetAtomicRMWBinOp(LLVMValueRef AtomicRMWInst, LLVMAtomicRMWBinOp BinOp);
 
 /* Casts */
 LLVMValueRef LLVMBuildTrunc(LLVMBuilderRef, LLVMValueRef Val,

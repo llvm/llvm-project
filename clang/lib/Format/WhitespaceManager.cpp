@@ -815,19 +815,24 @@ void WhitespaceManager::appendIndentText(std::string &Text,
     Text.append(Spaces, ' ');
     break;
   case FormatStyle::UT_Always: {
-    unsigned FirstTabWidth =
-        Style.TabWidth - WhitespaceStartColumn % Style.TabWidth;
-    // Insert only spaces when we want to end up before the next tab.
-    if (Spaces < FirstTabWidth || Spaces == 1) {
-      Text.append(Spaces, ' ');
-      break;
-    }
-    // Align to the next tab.
-    Spaces -= FirstTabWidth;
-    Text.append("\t");
+    if (Style.TabWidth) {
+      unsigned FirstTabWidth =
+          Style.TabWidth - WhitespaceStartColumn % Style.TabWidth;
 
-    Text.append(Spaces / Style.TabWidth, '\t');
-    Text.append(Spaces % Style.TabWidth, ' ');
+      // Insert only spaces when we want to end up before the next tab.
+      if (Spaces < FirstTabWidth || Spaces == 1) {
+        Text.append(Spaces, ' ');
+        break;
+      }
+      // Align to the next tab.
+      Spaces -= FirstTabWidth;
+      Text.append("\t");
+
+      Text.append(Spaces / Style.TabWidth, '\t');
+      Text.append(Spaces % Style.TabWidth, ' ');
+    } else if (Spaces == 1) {
+      Text.append(Spaces, ' ');
+    }
     break;
   }
   case FormatStyle::UT_ForIndentation:
@@ -837,14 +842,16 @@ void WhitespaceManager::appendIndentText(std::string &Text,
       // the first one.
       if (Indentation > Spaces)
         Indentation = Spaces;
-      unsigned Tabs = Indentation / Style.TabWidth;
-      Text.append(Tabs, '\t');
-      Spaces -= Tabs * Style.TabWidth;
+      if (Style.TabWidth) {
+        unsigned Tabs = Indentation / Style.TabWidth;
+        Text.append(Tabs, '\t');
+        Spaces -= Tabs * Style.TabWidth;
+      }
     }
     Text.append(Spaces, ' ');
     break;
   case FormatStyle::UT_ForContinuationAndIndentation:
-    if (WhitespaceStartColumn == 0) {
+    if (WhitespaceStartColumn == 0 && Style.TabWidth) {
       unsigned Tabs = Spaces / Style.TabWidth;
       Text.append(Tabs, '\t');
       Spaces -= Tabs * Style.TabWidth;

@@ -7,8 +7,9 @@
 define i32 @lb(i8 *%a) nounwind {
 ; RV32I-LABEL: lb:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lb a1, 0(a0)
-; RV32I-NEXT:    lb a0, 1(a0)
+; RV32I-NEXT:    lb a1, 1(a0)
+; RV32I-NEXT:    lb a0, 0(a0)
+; RV32I-NEXT:    mv a0, a1
 ; RV32I-NEXT:    ret
   %1 = getelementptr i8, i8* %a, i32 1
   %2 = load i8, i8* %1
@@ -21,8 +22,9 @@ define i32 @lb(i8 *%a) nounwind {
 define i32 @lh(i16 *%a) nounwind {
 ; RV32I-LABEL: lh:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lh a1, 0(a0)
-; RV32I-NEXT:    lh a0, 4(a0)
+; RV32I-NEXT:    lh a1, 4(a0)
+; RV32I-NEXT:    lh a0, 0(a0)
+; RV32I-NEXT:    mv a0, a1
 ; RV32I-NEXT:    ret
   %1 = getelementptr i16, i16* %a, i32 2
   %2 = load i16, i16* %1
@@ -35,8 +37,9 @@ define i32 @lh(i16 *%a) nounwind {
 define i32 @lw(i32 *%a) nounwind {
 ; RV32I-LABEL: lw:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lw a1, 0(a0)
-; RV32I-NEXT:    lw a0, 12(a0)
+; RV32I-NEXT:    lw a1, 12(a0)
+; RV32I-NEXT:    lw a0, 0(a0)
+; RV32I-NEXT:    mv a0, a1
 ; RV32I-NEXT:    ret
   %1 = getelementptr i32, i32* %a, i32 3
   %2 = load i32, i32* %1
@@ -47,9 +50,9 @@ define i32 @lw(i32 *%a) nounwind {
 define i32 @lbu(i8 *%a) nounwind {
 ; RV32I-LABEL: lbu:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lbu a1, 0(a0)
-; RV32I-NEXT:    lbu a0, 4(a0)
-; RV32I-NEXT:    add a0, a0, a1
+; RV32I-NEXT:    lbu a1, 4(a0)
+; RV32I-NEXT:    lbu a0, 0(a0)
+; RV32I-NEXT:    add a0, a1, a0
 ; RV32I-NEXT:    ret
   %1 = getelementptr i8, i8* %a, i32 4
   %2 = load i8, i8* %1
@@ -63,9 +66,9 @@ define i32 @lbu(i8 *%a) nounwind {
 define i32 @lhu(i16 *%a) nounwind {
 ; RV32I-LABEL: lhu:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lhu a1, 0(a0)
-; RV32I-NEXT:    lhu a0, 10(a0)
-; RV32I-NEXT:    add a0, a0, a1
+; RV32I-NEXT:    lhu a1, 10(a0)
+; RV32I-NEXT:    lhu a0, 0(a0)
+; RV32I-NEXT:    add a0, a1, a0
 ; RV32I-NEXT:    ret
   %1 = getelementptr i16, i16* %a, i32 5
   %2 = load i16, i16* %1
@@ -81,8 +84,8 @@ define i32 @lhu(i16 *%a) nounwind {
 define void @sb(i8 *%a, i8 %b) nounwind {
 ; RV32I-LABEL: sb:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    sb a1, 6(a0)
 ; RV32I-NEXT:    sb a1, 0(a0)
+; RV32I-NEXT:    sb a1, 6(a0)
 ; RV32I-NEXT:    ret
   store i8 %b, i8* %a
   %1 = getelementptr i8, i8* %a, i32 6
@@ -93,8 +96,8 @@ define void @sb(i8 *%a, i8 %b) nounwind {
 define void @sh(i16 *%a, i16 %b) nounwind {
 ; RV32I-LABEL: sh:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    sh a1, 14(a0)
 ; RV32I-NEXT:    sh a1, 0(a0)
+; RV32I-NEXT:    sh a1, 14(a0)
 ; RV32I-NEXT:    ret
   store i16 %b, i16* %a
   %1 = getelementptr i16, i16* %a, i32 7
@@ -105,8 +108,8 @@ define void @sh(i16 *%a, i16 %b) nounwind {
 define void @sw(i32 *%a, i32 %b) nounwind {
 ; RV32I-LABEL: sw:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    sw a1, 32(a0)
 ; RV32I-NEXT:    sw a1, 0(a0)
+; RV32I-NEXT:    sw a1, 32(a0)
 ; RV32I-NEXT:    ret
   store i32 %b, i32* %a
   %1 = getelementptr i32, i32* %a, i32 8
@@ -118,10 +121,10 @@ define void @sw(i32 *%a, i32 %b) nounwind {
 define i32 @load_sext_zext_anyext_i1(i1 *%a) nounwind {
 ; RV32I-LABEL: load_sext_zext_anyext_i1:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lb a1, 0(a0)
 ; RV32I-NEXT:    lbu a1, 1(a0)
-; RV32I-NEXT:    lbu a0, 2(a0)
-; RV32I-NEXT:    sub a0, a0, a1
+; RV32I-NEXT:    lbu a2, 2(a0)
+; RV32I-NEXT:    lb a0, 0(a0)
+; RV32I-NEXT:    sub a0, a2, a1
 ; RV32I-NEXT:    ret
   ; sextload i1
   %1 = getelementptr i1, i1* %a, i32 1
@@ -140,10 +143,10 @@ define i32 @load_sext_zext_anyext_i1(i1 *%a) nounwind {
 define i16 @load_sext_zext_anyext_i1_i16(i1 *%a) nounwind {
 ; RV32I-LABEL: load_sext_zext_anyext_i1_i16:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lb a1, 0(a0)
 ; RV32I-NEXT:    lbu a1, 1(a0)
-; RV32I-NEXT:    lbu a0, 2(a0)
-; RV32I-NEXT:    sub a0, a0, a1
+; RV32I-NEXT:    lbu a2, 2(a0)
+; RV32I-NEXT:    lb a0, 0(a0)
+; RV32I-NEXT:    sub a0, a2, a1
 ; RV32I-NEXT:    ret
   ; sextload i1
   %1 = getelementptr i1, i1* %a, i32 1

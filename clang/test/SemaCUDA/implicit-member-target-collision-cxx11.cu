@@ -74,11 +74,13 @@ struct B4_with_device_copy_ctor {
 struct C4_with_collision : A4_with_host_copy_ctor, B4_with_device_copy_ctor {
 };
 
-// expected-note@-3 {{copy constructor of 'C4_with_collision' is implicitly deleted because base class 'B4_with_device_copy_ctor' has no copy constructor}}
+// expected-note@-3 {{candidate constructor (the implicit copy constructor) not viable: call to invalid function from __host__ function}}
+// expected-note@-4 {{implicit copy constructor inferred target collision: call to both __host__ and __device__ members}}
+// expected-note@-5 {{candidate constructor (the implicit default constructor) not viable: requires 0 arguments, but 1 was provided}}
 
 void hostfoo4() {
   C4_with_collision c;
-  C4_with_collision c2 = c; // expected-error {{call to implicitly-deleted copy constructor of 'C4_with_collision'}}
+  C4_with_collision c2 = c; // expected-error {{no matching constructor for initialization of 'C4_with_collision'}}
 }
 
 //------------------------------------------------------------------------------

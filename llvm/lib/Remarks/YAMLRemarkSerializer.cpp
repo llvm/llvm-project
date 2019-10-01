@@ -56,11 +56,14 @@ template <> struct MappingTraits<remarks::Remark *> {
     else
       llvm_unreachable("Unknown remark type");
 
-    if (Optional<StringTable> &StrTab =
-            reinterpret_cast<YAMLRemarkSerializer *>(io.getContext())->StrTab) {
-      unsigned PassID = StrTab->add(Remark->PassName).first;
-      unsigned NameID = StrTab->add(Remark->RemarkName).first;
-      unsigned FunctionID = StrTab->add(Remark->FunctionName).first;
+    if (auto *Serializer = dyn_cast<YAMLStrTabRemarkSerializer>(
+            reinterpret_cast<RemarkSerializer *>(io.getContext()))) {
+      assert(Serializer->StrTab.hasValue() &&
+             "YAMLStrTabSerializer with no StrTab.");
+      StringTable &StrTab = *Serializer->StrTab;
+      unsigned PassID = StrTab.add(Remark->PassName).first;
+      unsigned NameID = StrTab.add(Remark->RemarkName).first;
+      unsigned FunctionID = StrTab.add(Remark->FunctionName).first;
       mapRemarkHeader(io, PassID, NameID, Remark->Loc, FunctionID,
                       Remark->Hotness, Remark->Args);
     } else {
@@ -78,9 +81,12 @@ template <> struct MappingTraits<RemarkLocation> {
     unsigned Line = RL.SourceLine;
     unsigned Col = RL.SourceColumn;
 
-    if (Optional<StringTable> &StrTab =
-            reinterpret_cast<YAMLRemarkSerializer *>(io.getContext())->StrTab) {
-      unsigned FileID = StrTab->add(File).first;
+    if (auto *Serializer = dyn_cast<YAMLStrTabRemarkSerializer>(
+            reinterpret_cast<RemarkSerializer *>(io.getContext()))) {
+      assert(Serializer->StrTab.hasValue() &&
+             "YAMLStrTabSerializer with no StrTab.");
+      StringTable &StrTab = *Serializer->StrTab;
+      unsigned FileID = StrTab.add(File).first;
       io.mapRequired("File", FileID);
     } else {
       io.mapRequired("File", File);
@@ -130,9 +136,12 @@ template <> struct MappingTraits<Argument> {
   static void mapping(IO &io, Argument &A) {
     assert(io.outputting() && "input not yet implemented");
 
-    if (Optional<StringTable> &StrTab =
-            reinterpret_cast<YAMLRemarkSerializer *>(io.getContext())->StrTab) {
-      auto ValueID = StrTab->add(A.Val).first;
+    if (auto *Serializer = dyn_cast<YAMLStrTabRemarkSerializer>(
+            reinterpret_cast<RemarkSerializer *>(io.getContext()))) {
+      assert(Serializer->StrTab.hasValue() &&
+             "YAMLStrTabSerializer with no StrTab.");
+      StringTable &StrTab = *Serializer->StrTab;
+      auto ValueID = StrTab.add(A.Val).first;
       io.mapRequired(A.Key.data(), ValueID);
     } else if (StringRef(A.Val).count('\n') > 1) {
       StringBlockVal S(A.Val);
@@ -149,8 +158,17 @@ template <> struct MappingTraits<Argument> {
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(Argument)
 
-YAMLRemarkSerializer::YAMLRemarkSerializer(raw_ostream &OS, SerializerMode Mode)
-    : RemarkSerializer(OS, Mode), YAMLOutput(OS, reinterpret_cast<void *>(this)) {}
+YAMLRemarkSerializer::YAMLRemarkSerializer(raw_ostream &OS, SerializerMode Mode,
+                                           Optional<StringTable> StrTabIn)
+    : YAMLRemarkSerializer(Format::YAML, OS, Mode, std::move(StrTabIn)) {}
+
+YAMLRemarkSerializer::YAMLRemarkSerializer(Format SerializerFormat,
+                                           raw_ostream &OS, SerializerMode Mode,
+                                           Optional<StringTable> StrTabIn)
+    : RemarkSerializer(SerializerFormat, OS, Mode),
+      YAMLOutput(OS, reinterpret_cast<void *>(this)) {
+  StrTab = std::move(StrTabIn);
+}
 
 void YAMLRemarkSerializer::emit(const Remark &Remark) {
   // Again, YAMLTraits expect a non-const object for inputting, but we're not
@@ -183,7 +201,7 @@ std::unique_ptr<MetaSerializer> YAMLStrTabRemarkSerializer::metaSerializer(
     raw_ostream &OS, Optional<StringRef> ExternalFilename) {
   assert(StrTab);
   return std::make_unique<YAMLStrTabMetaSerializer>(OS, ExternalFilename,
-                                                     std::move(*StrTab));
+                                                    *StrTab);
 }
 
 static void emitMagic(raw_ostream &OS) {
@@ -200,9 +218,9 @@ static void emitVersion(raw_ostream &OS) {
   OS.write(Version.data(), Version.size());
 }
 
-static void emitStrTab(raw_ostream &OS, const Optional<StringTable> &StrTab) {
+static void emitStrTab(raw_ostream &OS, Optional<const StringTable *> StrTab) {
   // Emit the string table in the section.
-  uint64_t StrTabSize = StrTab ? StrTab->SerializedSize : 0;
+  uint64_t StrTabSize = StrTab ? (*StrTab)->SerializedSize : 0;
   // Emit the total size of the string table (the size itself excluded):
   // little-endian uint64_t.
   // Note: even if no string table is used, emit 0.
@@ -210,7 +228,7 @@ static void emitStrTab(raw_ostream &OS, const Optional<StringTable> &StrTab) {
   support::endian::write64le(StrTabSizeBuf.data(), StrTabSize);
   OS.write(StrTabSizeBuf.data(), StrTabSizeBuf.size());
   if (StrTab)
-    StrTab->serialize(OS);
+    (*StrTab)->serialize(OS);
 }
 
 static void emitExternalFile(raw_ostream &OS, StringRef Filename) {
@@ -233,7 +251,7 @@ void YAMLMetaSerializer::emit() {
 void YAMLStrTabMetaSerializer::emit() {
   emitMagic(OS);
   emitVersion(OS);
-  emitStrTab(OS, std::move(StrTab));
+  emitStrTab(OS, &StrTab);
   if (ExternalFilename)
     emitExternalFile(OS, *ExternalFilename);
 }

@@ -463,4 +463,73 @@ main:
     # CHECK: f64x2.convert_i64x2_u # encoding: [0xfd,0xb2,0x01]
     f64x2.convert_i64x2_u
 
+    # CHECK: v8x16.load_splat 48 # encoding: [0xfd,0xc2,0x01,0x00,0x30]
+    v8x16.load_splat 48
+
+    # CHECK: v16x8.load_splat 48 # encoding: [0xfd,0xc3,0x01,0x01,0x30]
+    v16x8.load_splat 48
+
+    # CHECK: v32x4.load_splat 48 # encoding: [0xfd,0xc4,0x01,0x02,0x30]
+    v32x4.load_splat 48
+
+    # CHECK: v64x2.load_splat 48 # encoding: [0xfd,0xc5,0x01,0x03,0x30]
+    v64x2.load_splat 48
+
+    # CHECK: i8x16.narrow_i16x8_s # encoding: [0xfd,0xc6,0x01]
+    i8x16.narrow_i16x8_s
+
+    # CHECK: i8x16.narrow_i16x8_u # encoding: [0xfd,0xc7,0x01]
+    i8x16.narrow_i16x8_u
+
+    # CHECK: i16x8.narrow_i32x4_s # encoding: [0xfd,0xc8,0x01]
+    i16x8.narrow_i32x4_s
+
+    # CHECK: i16x8.narrow_i32x4_u # encoding: [0xfd,0xc9,0x01]
+    i16x8.narrow_i32x4_u
+
+    # CHECK: i16x8.widen_low_i8x16_s # encoding: [0xfd,0xca,0x01]
+    i16x8.widen_low_i8x16_s
+
+    # CHECK: i16x8.widen_high_i8x16_s # encoding: [0xfd,0xcb,0x01]
+    i16x8.widen_high_i8x16_s
+
+    # CHECK: i16x8.widen_low_i8x16_u # encoding: [0xfd,0xcc,0x01]
+    i16x8.widen_low_i8x16_u
+
+    # CHECK: i16x8.widen_high_i8x16_u # encoding: [0xfd,0xcd,0x01]
+    i16x8.widen_high_i8x16_u
+
+    # CHECK: i32x4.widen_low_i16x8_s # encoding: [0xfd,0xce,0x01]
+    i32x4.widen_low_i16x8_s
+
+    # CHECK: i32x4.widen_high_i16x8_s # encoding: [0xfd,0xcf,0x01]
+    i32x4.widen_high_i16x8_s
+
+    # CHECK: i32x4.widen_low_i16x8_u # encoding: [0xfd,0xd0,0x01]
+    i32x4.widen_low_i16x8_u
+
+    # CHECK: i32x4.widen_high_i16x8_u # encoding: [0xfd,0xd1,0x01]
+    i32x4.widen_high_i16x8_u
+
+    # CHECK: i16x8.load8x8_s 32 # encoding: [0xfd,0xd2,0x01,0x03,0x20]
+    i16x8.load8x8_s 32
+
+    # CHECK: i16x8.load8x8_u 32 # encoding: [0xfd,0xd3,0x01,0x03,0x20]
+    i16x8.load8x8_u 32
+
+    # CHECK: i32x4.load16x4_s 32 # encoding: [0xfd,0xd4,0x01,0x03,0x20]
+    i32x4.load16x4_s 32
+
+    # CHECK: i32x4.load16x4_u 32 # encoding: [0xfd,0xd5,0x01,0x03,0x20]
+    i32x4.load16x4_u 32
+
+    # CHECK: i64x2.load32x2_s 32 # encoding: [0xfd,0xd6,0x01,0x03,0x20]
+    i64x2.load32x2_s 32
+
+    # CHECK: i64x2.load32x2_u 32 # encoding: [0xfd,0xd7,0x01,0x03,0x20]
+    i64x2.load32x2_u 32
+
+    # CHECK: v128.andnot # encoding: [0xfd,0xd8,0x01]
+    v128.andnot
+
     end_function

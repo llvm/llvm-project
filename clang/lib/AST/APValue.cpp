@@ -42,6 +42,14 @@ APValue::LValueBase::LValueBase(const ValueDecl *P, unsigned I, unsigned V)
 APValue::LValueBase::LValueBase(const Expr *P, unsigned I, unsigned V)
     : Ptr(P), Local{I, V} {}
 
+APValue::LValueBase APValue::LValueBase::getDynamicAlloc(DynamicAllocLValue LV,
+                                                         QualType Type) {
+  LValueBase Base;
+  Base.Ptr = LV;
+  Base.DynamicAllocType = Type.getAsOpaquePtr();
+  return Base;
+}
+
 APValue::LValueBase APValue::LValueBase::getTypeInfo(TypeInfoLValue LV,
                                                      QualType TypeInfo) {
   LValueBase Base;
@@ -51,16 +59,22 @@ APValue::LValueBase APValue::LValueBase::getTypeInfo(TypeInfoLValue LV,
 }
 
 unsigned APValue::LValueBase::getCallIndex() const {
-  return is<TypeInfoLValue>() ? 0 : Local.CallIndex;
+  return (is<TypeInfoLValue>() || is<DynamicAllocLValue>()) ? 0
+                                                            : Local.CallIndex;
 }
 
 unsigned APValue::LValueBase::getVersion() const {
-  return is<TypeInfoLValue>() ? 0 : Local.Version;
+  return (is<TypeInfoLValue>() || is<DynamicAllocLValue>()) ? 0 : Local.Version;
 }
 
 QualType APValue::LValueBase::getTypeInfoType() const {
   assert(is<TypeInfoLValue>() && "not a type_info lvalue");
   return QualType::getFromOpaquePtr(TypeInfoType);
+}
+
+QualType APValue::LValueBase::getDynamicAllocType() const {
+  assert(is<DynamicAllocLValue>() && "not a dynamic allocation lvalue");
+  return QualType::getFromOpaquePtr(DynamicAllocType);
 }
 
 namespace clang {
@@ -111,7 +125,7 @@ llvm::DenseMapInfo<clang::APValue::LValueBase>::getTombstoneKey() {
 
 namespace clang {
 llvm::hash_code hash_value(const APValue::LValueBase &Base) {
-  if (Base.is<TypeInfoLValue>())
+  if (Base.is<TypeInfoLValue>() || Base.is<DynamicAllocLValue>())
     return llvm::hash_value(Base.getOpaqueValue());
   return llvm::hash_combine(Base.getOpaqueValue(), Base.getCallIndex(),
                             Base.getVersion());
@@ -528,13 +542,18 @@ void APValue::printPretty(raw_ostream &Out, const ASTContext &Ctx,
           S = CharUnits::One();
         }
         Out << '&';
-      } else if (!IsReference)
+      } else if (!IsReference) {
         Out << '&';
+      }
 
       if (const ValueDecl *VD = Base.dyn_cast<const ValueDecl*>())
         Out << *VD;
       else if (TypeInfoLValue TI = Base.dyn_cast<TypeInfoLValue>()) {
         TI.print(Out, Ctx.getPrintingPolicy());
+      } else if (DynamicAllocLValue DA = Base.dyn_cast<DynamicAllocLValue>()) {
+        Out << "{*new "
+            << Base.getDynamicAllocType().stream(Ctx.getPrintingPolicy()) << "#"
+            << DA.getIndex() << "}";
       } else {
         assert(Base.get<const Expr *>() != nullptr &&
                "Expecting non-null Expr");
@@ -563,10 +582,17 @@ void APValue::printPretty(raw_ostream &Out, const ASTContext &Ctx,
     } else if (TypeInfoLValue TI = Base.dyn_cast<TypeInfoLValue>()) {
       TI.print(Out, Ctx.getPrintingPolicy());
       ElemTy = Base.getTypeInfoType();
+    } else if (DynamicAllocLValue DA = Base.dyn_cast<DynamicAllocLValue>()) {
+      Out << "{*new "
+          << Base.getDynamicAllocType().stream(Ctx.getPrintingPolicy()) << "#"
+          << DA.getIndex() << "}";
+      ElemTy = Base.getDynamicAllocType();
     } else {
       const Expr *E = Base.get<const Expr*>();
       assert(E != nullptr && "Expecting non-null Expr");
       E->printPretty(Out, nullptr, Ctx.getPrintingPolicy());
+      // FIXME: This is wrong if E is a MaterializeTemporaryExpr with an lvalue
+      // adjustment.
       ElemTy = E->getType();
     }
 

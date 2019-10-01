@@ -3,12 +3,13 @@
 ; fixed values.
 ; RUN: llc -relocation-model=pic -filetype=obj %p/Inputs/ret32.ll -o %t.ret32.o
 ; RUN: llc -relocation-model=pic -filetype=obj %s -o %t.o
-; RUN: wasm-ld -o %t.wasm %t.o %t.ret32.o
+; RUN: wasm-ld --allow-undefined --export-all -o %t.wasm %t.o %t.ret32.o
 ; RUN: obj2yaml %t.wasm | FileCheck %s
 
 target triple = "wasm32-unknown-emscripten"
 
 declare i32 @ret32(float)
+declare i32 @missing_function(float)
 @global_float = global float 1.0
 @hidden_float = hidden global float 2.0
 
@@ -16,6 +17,10 @@ declare i32 @ret32(float)
 
 define i32 (float)* @getaddr_external() {
   ret i32 (float)* @ret32;
+}
+
+define i32 (float)* @getaddr_missing_function() {
+  ret i32 (float)* @missing_function;
 }
 
 define i32 ()* @getaddr_hidden() {
@@ -60,10 +65,18 @@ entry:
 ; CHECK-NEXT:         Mutable:         false
 ; CHECK-NEXT:         InitExpr:
 ; CHECK-NEXT:           Opcode:          I32_CONST
+; CHECK-NEXT:           Value:           1
+
+; GOT.func.missing_function
+; CHECK-NEXT:       - Index:           2
+; CHECK-NEXT:         Type:            I32
+; CHECK-NEXT:         Mutable:         false
+; CHECK-NEXT:         InitExpr:
+; CHECK-NEXT:           Opcode:          I32_CONST
 ; CHECK-NEXT:           Value:           2
 
 ; __table_base
-; CHECK-NEXT:       - Index:           2
+; CHECK-NEXT:       - Index:           3
 ; CHECK-NEXT:         Type:            I32
 ; CHECK-NEXT:         Mutable:         false
 ; CHECK-NEXT:         InitExpr:
@@ -71,7 +84,7 @@ entry:
 ; CHECK-NEXT:           Value:           1
 
 ; GOT.mem.global_float
-; CHECK-NEXT:       - Index:           3
+; CHECK-NEXT:       - Index:           4
 ; CHECK-NEXT:         Type:            I32
 ; CHECK-NEXT:         Mutable:         false
 ; CHECK-NEXT:         InitExpr:
@@ -79,7 +92,7 @@ entry:
 ; CHECK-NEXT:           Value:           1024
 
 ; GOT.mem.ret32_ptr
-; CHECK-NEXT:       - Index:           4
+; CHECK-NEXT:       - Index:           5
 ; CHECK-NEXT:         Type:            I32
 ; CHECK-NEXT:         Mutable:         false
 ; CHECK-NEXT:         InitExpr:
@@ -87,7 +100,7 @@ entry:
 ; CHECK-NEXT:           Value:           1032
 
 ; __memory_base
-; CHECK-NEXT:       - Index:           5
+; CHECK-NEXT:       - Index:           6
 ; CHECK-NEXT:         Type:            I32
 ; CHECK-NEXT:         Mutable:         false
 ; CHECK-NEXT:         InitExpr:

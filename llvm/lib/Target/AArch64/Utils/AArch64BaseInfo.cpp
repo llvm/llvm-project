@@ -125,7 +125,7 @@ namespace llvm {
 
 uint32_t AArch64SysReg::parseGenericRegister(StringRef Name) {
   // Try to parse an S<op0>_<op1>_<Cn>_<Cm>_<op2> register name
-  Regex GenericRegPattern("^S([0-3])_([0-7])_C([0-9]|1[0-5])_C([0-9]|1[0-5])_([0-7])$");
+  static const Regex GenericRegPattern("^S([0-3])_([0-7])_C([0-9]|1[0-5])_C([0-9]|1[0-5])_([0-7])$");
 
   std::string UpperName = Name.upper();
   SmallVector<StringRef, 5> Ops;

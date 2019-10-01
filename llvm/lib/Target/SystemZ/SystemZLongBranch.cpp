@@ -85,9 +85,9 @@ struct MBBInfo {
   // This value never changes.
   uint64_t Size = 0;
 
-  // The minimum alignment of the block, as a log2 value.
+  // The minimum alignment of the block.
   // This value never changes.
-  unsigned LogAlignment = 0;
+  Align Alignment;
 
   // The number of terminators in this block.  This value never changes.
   unsigned NumTerminators = 0;
@@ -179,17 +179,16 @@ const uint64_t MaxForwardRange = 0xfffe;
 // instructions.
 void SystemZLongBranch::skipNonTerminators(BlockPosition &Position,
                                            MBBInfo &Block) {
-  if (Block.LogAlignment > Position.KnownBits) {
+  if (Log2(Block.Alignment) > Position.KnownBits) {
     // When calculating the address of Block, we need to conservatively
     // assume that Block had the worst possible misalignment.
-    Position.Address += ((uint64_t(1) << Block.LogAlignment) -
-                         (uint64_t(1) << Position.KnownBits));
-    Position.KnownBits = Block.LogAlignment;
+    Position.Address +=
+        (Block.Alignment.value() - (uint64_t(1) << Position.KnownBits));
+    Position.KnownBits = Log2(Block.Alignment);
   }
 
   // Align the addresses.
-  uint64_t AlignMask = (uint64_t(1) << Block.LogAlignment) - 1;
-  Position.Address = (Position.Address + AlignMask) & ~AlignMask;
+  Position.Address = alignTo(Position.Address, Block.Alignment);
 
   // Record the block's position.
   Block.Address = Position.Address;
@@ -282,7 +281,7 @@ uint64_t SystemZLongBranch::initMBBInfo() {
     MBBInfo &Block = MBBs[I];
 
     // Record the alignment, for quick access.
-    Block.LogAlignment = MBB->getLogAlignment();
+    Block.Alignment = MBB->getAlignment();
 
     // Calculate the size of the fixed part of the block.
     MachineBasicBlock::iterator MI = MBB->begin();

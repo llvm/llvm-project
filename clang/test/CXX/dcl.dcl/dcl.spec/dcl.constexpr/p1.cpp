@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 -triple %itanium_abi_triple -fsyntax-only -verify -std=c++11 %s
 // RUN: %clang_cc1 -triple %itanium_abi_triple -fsyntax-only -verify -std=c++14 %s
-// RUN: %clang_cc1 -triple %itanium_abi_triple -fsyntax-only -verify -std=c++1z %s
+// RUN: %clang_cc1 -triple %itanium_abi_triple -fsyntax-only -verify -std=c++17 %s
+// RUN: %clang_cc1 -triple %itanium_abi_triple -fsyntax-only -verify -std=c++2a %s
 
 // MSVC always adopted the C++17 rule that implies that constexpr variables are
 // implicitly inline, so do the test again.
@@ -75,7 +76,10 @@ template<typename T> T f6(T); // expected-note {{here}}
 template<typename T> constexpr T f6(T); // expected-error {{constexpr declaration of 'f6' follows non-constexpr declaration}}
 // destructor
 struct ConstexprDtor {
-  constexpr ~ConstexprDtor() = default; // expected-error {{destructor cannot be marked constexpr}}
+  constexpr ~ConstexprDtor() = default;
+#if __cplusplus <= 201703L
+  // expected-error@-2 {{destructor cannot be declared constexpr}}
+#endif
 };
 
 // template stuff

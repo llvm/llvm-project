@@ -244,17 +244,8 @@ void ArchSpec::ListSupportedArchNames(StringList &list) {
 }
 
 void ArchSpec::AutoComplete(CompletionRequest &request) {
-  if (!request.GetCursorArgumentPrefix().empty()) {
-    for (uint32_t i = 0; i < llvm::array_lengthof(g_core_definitions); ++i) {
-      if (NameMatches(g_core_definitions[i].name, NameMatch::StartsWith,
-                      request.GetCursorArgumentPrefix()))
-        request.AddCompletion(g_core_definitions[i].name);
-    }
-  } else {
-    StringList matches;
-    ListSupportedArchNames(matches);
-    request.AddCompletions(matches);
-  }
+  for (uint32_t i = 0; i < llvm::array_lengthof(g_core_definitions); ++i)
+    request.TryCompleteCurrentArg(g_core_definitions[i].name);
 }
 
 #define CPU_ANY (UINT32_MAX)
@@ -468,7 +459,9 @@ static const ArchDefinitionEntry g_coff_arch_entries[] = {
     {ArchSpec::eCore_thumb, llvm::COFF::IMAGE_FILE_MACHINE_THUMB,
      LLDB_INVALID_CPUTYPE, 0xFFFFFFFFu, 0xFFFFFFFFu}, // ARMv7
     {ArchSpec::eCore_x86_64_x86_64, llvm::COFF::IMAGE_FILE_MACHINE_AMD64,
-     LLDB_INVALID_CPUTYPE, 0xFFFFFFFFu, 0xFFFFFFFFu} // AMD64
+     LLDB_INVALID_CPUTYPE, 0xFFFFFFFFu, 0xFFFFFFFFu}, // AMD64
+    {ArchSpec::eCore_arm_arm64, llvm::COFF::IMAGE_FILE_MACHINE_ARM64,
+     LLDB_INVALID_CPUTYPE, 0xFFFFFFFFu, 0xFFFFFFFFu} // ARM64
 };
 
 static const ArchDefinition g_coff_arch_def = {

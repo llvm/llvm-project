@@ -277,7 +277,7 @@ class MachineFunction {
   unsigned FunctionNumber;
 
   /// Alignment - The alignment of the function.
-  llvm::Align Alignment;
+  Align Alignment;
 
   /// ExposesReturnsTwice - True if the function calls setjmp or related
   /// functions with attribute "returns twice", but doesn't have
@@ -509,13 +509,13 @@ public:
   WinEHFuncInfo *getWinEHFuncInfo() { return WinEHInfo; }
 
   /// getAlignment - Return the alignment of the function.
-  llvm::Align getAlignment() const { return Alignment; }
+  Align getAlignment() const { return Alignment; }
 
   /// setAlignment - Set the alignment of the function.
-  void setAlignment(llvm::Align A) { Alignment = A; }
+  void setAlignment(Align A) { Alignment = A; }
 
   /// ensureAlignment - Make sure the function is at least A bytes aligned.
-  void ensureAlignment(llvm::Align A) {
+  void ensureAlignment(Align A) {
     if (Alignment < A)
       Alignment = A;
   }

@@ -25,12 +25,14 @@ namespace clang {
 /// same set of semantic restrictions.
 enum AccessKinds {
   AK_Read,
+  AK_ReadObjectRepresentation,
   AK_Assign,
   AK_Increment,
   AK_Decrement,
   AK_MemberCall,
   AK_DynamicCast,
   AK_TypeId,
+  AK_Destroy,
 };
 
 // The order of this enum is important for diagnostics.

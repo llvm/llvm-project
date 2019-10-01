@@ -344,9 +344,8 @@ public:
 
   bool enableSubRegLiveness() const override;
 
-  /// classifyGlobalReference - Classify a global variable reference for the
-  /// current subtarget accourding to how we should reference it.
-  unsigned char classifyGlobalReference(const GlobalValue *GV) const;
+  /// True if the GV will be accessed via an indirect symbol.
+  bool isGVIndirectSymbol(const GlobalValue *GV) const;
 
   bool isXRaySupported() const override { return IsPPC64 && IsLittleEndian; }
 };

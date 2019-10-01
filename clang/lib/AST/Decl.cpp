@@ -1558,6 +1558,24 @@ void NamedDecl::printQualifiedName(raw_ostream &OS) const {
 
 void NamedDecl::printQualifiedName(raw_ostream &OS,
                                    const PrintingPolicy &P) const {
+  if (getDeclContext()->isFunctionOrMethod()) {
+    // We do not print '(anonymous)' for function parameters without name.
+    printName(OS);
+    return;
+  }
+  printNestedNameSpecifier(OS, P);
+  if (getDeclName() || isa<DecompositionDecl>(this))
+    OS << *this;
+  else
+    OS << "(anonymous)";
+}
+
+void NamedDecl::printNestedNameSpecifier(raw_ostream &OS) const {
+  printNestedNameSpecifier(OS, getASTContext().getPrintingPolicy());
+}
+
+void NamedDecl::printNestedNameSpecifier(raw_ostream &OS,
+                                         const PrintingPolicy &P) const {
   const DeclContext *Ctx = getDeclContext();
 
   // For ObjC methods and properties, look through categories and use the
@@ -1571,10 +1589,8 @@ void NamedDecl::printQualifiedName(raw_ostream &OS,
         Ctx = ID;
   }
 
-  if (Ctx->isFunctionOrMethod()) {
-    printName(OS);
+  if (Ctx->isFunctionOrMethod())
     return;
-  }
 
   using ContextsTy = SmallVector<const DeclContext *, 8>;
   ContextsTy Contexts;
@@ -1644,11 +1660,6 @@ void NamedDecl::printQualifiedName(raw_ostream &OS,
     }
     OS << "::";
   }
-
-  if (getDeclName() || isa<DecompositionDecl>(this))
-    OS << *this;
-  else
-    OS << "(anonymous)";
 }
 
 void NamedDecl::getNameForDiagnostic(raw_ostream &OS,
@@ -2581,6 +2592,18 @@ bool VarDecl::isNoDestroy(const ASTContext &Ctx) const {
                                  !hasAttr<AlwaysDestroyAttr>()));
 }
 
+QualType::DestructionKind
+VarDecl::needsDestruction(const ASTContext &Ctx) const {
+  if (EvaluatedStmt *Eval = Init.dyn_cast<EvaluatedStmt *>())
+    if (Eval->HasConstantDestruction)
+      return QualType::DK_none;
+
+  if (isNoDestroy(Ctx))
+    return QualType::DK_none;
+
+  return getType().isDestructedType();
+}
+
 MemberSpecializationInfo *VarDecl::getMemberSpecializationInfo() const {
   if (isStaticDataMember())
     // FIXME: Remove ?
@@ -2966,8 +2989,7 @@ bool FunctionDecl::isReplaceableGlobalAllocationFunction(bool *IsAligned) const 
     Ty = Ty->getPointeeType();
     if (Ty.getCVRQualifiers() != Qualifiers::Const)
       return false;
-    const CXXRecordDecl *RD = Ty->getAsCXXRecordDecl();
-    if (RD && isNamed(RD, "nothrow_t") && RD->isInStdNamespace())
+    if (Ty->isNothrowT())
       Consume();
   }
 
@@ -3251,6 +3273,9 @@ bool FunctionDecl::doesDeclarationForceExternallyVisibleDefinition() const {
       return true;
   }
 
+  if (Context.getLangOpts().CPlusPlus)
+    return false;
+
   if (Context.getLangOpts().GNUInline || hasAttr<GNUInlineAttr>()) {
     // With GNU inlining, a declaration with 'inline' but not 'extern', forces
     // an externally visible definition.
@@ -3278,9 +3303,6 @@ bool FunctionDecl::doesDeclarationForceExternallyVisibleDefinition() const {
     }
     return FoundBody;
   }
-
-  if (Context.getLangOpts().CPlusPlus)
-    return false;
 
   // C99 6.7.4p6:
   //   [...] If all of the file scope declarations for a function in a
@@ -3361,6 +3383,8 @@ bool FunctionDecl::isInlineDefinitionExternallyVisible() const {
     // If it's not the case that both 'inline' and 'extern' are
     // specified on the definition, then this inline definition is
     // externally visible.
+    if (Context.getLangOpts().CPlusPlus)
+      return false;
     if (!(isInlineSpecified() && getStorageClass() == SC_Extern))
       return true;
 

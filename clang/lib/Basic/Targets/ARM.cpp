@@ -428,11 +428,10 @@ bool ARMTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   for (const auto &Feature : Features) {
     if (Feature == "+soft-float") {
       SoftFloat = true;
-    } else if (Feature == "+vfp2sp" || Feature == "+vfp2d16sp" ||
-               Feature == "+vfp2" || Feature == "+vfp2d16") {
+    } else if (Feature == "+vfp2sp" || Feature == "+vfp2") {
       FPU |= VFP2FPU;
       HW_FP |= HW_FP_SP;
-      if (Feature == "+vfp2" || Feature == "+vfp2d16")
+      if (Feature == "+vfp2")
           HW_FP |= HW_FP_DP;
     } else if (Feature == "+vfp3sp" || Feature == "+vfp3d16sp" ||
                Feature == "+vfp3" || Feature == "+vfp3d16") {

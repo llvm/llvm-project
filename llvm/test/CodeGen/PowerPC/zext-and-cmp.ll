@@ -4,7 +4,7 @@
 ; to zero can be simplifed by using the record form when one of its operands
 ; is known to be zero extended.
 
-@k = common local_unnamed_addr global i32 0, align 4
+@k = local_unnamed_addr global i32 0, align 4
 
 ; Function Attrs: norecurse nounwind
 define signext i32 @cmplwi(i32* nocapture readonly %p, i32* nocapture readonly %q, i32 signext %j, i32 signext %r10) {

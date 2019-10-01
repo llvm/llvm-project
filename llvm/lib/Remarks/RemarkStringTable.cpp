@@ -46,7 +46,6 @@ void StringTable::internalize(Remark &R) {
   if (R.Loc)
     Impl(R.Loc->SourceFilePath);
   for (Argument &Arg : R.Args) {
-    // We need to mutate elements from an ArrayRef here.
     Impl(Arg.Key);
     Impl(Arg.Val);
     if (Arg.Loc)

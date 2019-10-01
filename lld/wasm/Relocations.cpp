@@ -51,7 +51,7 @@ static void addGOTEntry(Symbol *sym) {
   if (config->isPic)
     out.importSec->addGOTEntry(sym);
   else
-    out.globalSec->addDummyGOTEntry(sym);
+    out.globalSec->addStaticGOTEntry(sym);
 }
 
 void lld::wasm::scanRelocations(InputChunk *chunk) {

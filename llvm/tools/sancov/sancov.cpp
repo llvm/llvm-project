@@ -123,8 +123,8 @@ static const uint32_t BinCoverageMagic = 0xC0BFFFFF;
 static const uint32_t Bitness32 = 0xFFFFFF32;
 static const uint32_t Bitness64 = 0xFFFFFF64;
 
-static Regex SancovFileRegex("(.*)\\.[0-9]+\\.sancov");
-static Regex SymcovFileRegex(".*\\.symcov");
+static const Regex SancovFileRegex("(.*)\\.[0-9]+\\.sancov");
+static const Regex SymcovFileRegex(".*\\.symcov");
 
 // --------- MAIN DATASTRUCTURES ----------
 

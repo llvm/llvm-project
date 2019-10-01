@@ -24,6 +24,7 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/AST/TypeOrdering.h"
+#include "clang/Basic/AttributeCommonInfo.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/LiteralSupport.h"
@@ -1589,6 +1590,36 @@ static bool CheckLiteralType(Sema &SemaRef, Sema::CheckConstexprKind Kind,
   llvm_unreachable("unknown CheckConstexprKind");
 }
 
+/// Determine whether a destructor cannot be constexpr due to
+static bool CheckConstexprDestructorSubobjects(Sema &SemaRef,
+                                               const CXXDestructorDecl *DD,
+                                               Sema::CheckConstexprKind Kind) {
+  auto Check = [&](SourceLocation Loc, QualType T, const FieldDecl *FD) {
+    const CXXRecordDecl *RD =
+        T->getBaseElementTypeUnsafe()->getAsCXXRecordDecl();
+    if (!RD || RD->hasConstexprDestructor())
+      return true;
+
+    if (Kind == Sema::CheckConstexprKind::Diagnose) {
+      SemaRef.Diag(DD->getLocation(), diag::err_constexpr_dtor_subobject)
+          << DD->getConstexprKind() << !FD
+          << (FD ? FD->getDeclName() : DeclarationName()) << T;
+      SemaRef.Diag(Loc, diag::note_constexpr_dtor_subobject)
+          << !FD << (FD ? FD->getDeclName() : DeclarationName()) << T;
+    }
+    return false;
+  };
+
+  const CXXRecordDecl *RD = DD->getParent();
+  for (const CXXBaseSpecifier &B : RD->bases())
+    if (!Check(B.getBaseTypeLoc(), B.getType(), nullptr))
+      return false;
+  for (const FieldDecl *FD : RD->fields())
+    if (!Check(FD->getLocation(), FD->getType(), FD))
+      return false;
+  return true;
+}
+
 // CheckConstexprParameterTypes - Check whether a function's parameter types
 // are all literal types. If so, return true. If not, produce a suitable
 // diagnostic and return false.
@@ -1644,8 +1675,8 @@ bool Sema::CheckConstexprFunctionDefinition(const FunctionDecl *NewFD,
     //  constraints:
     //  - the class shall not have any virtual base classes;
     //
-    // FIXME: This only applies to constructors, not arbitrary member
-    // functions.
+    // FIXME: This only applies to constructors and destructors, not arbitrary
+    // member functions.
     const CXXRecordDecl *RD = MD->getParent();
     if (RD->getNumVBases()) {
       if (Kind == CheckConstexprKind::CheckValid)
@@ -1696,6 +1727,18 @@ bool Sema::CheckConstexprFunctionDefinition(const FunctionDecl *NewFD,
                          diag::err_constexpr_non_literal_return,
                          NewFD->isConsteval()))
       return false;
+  }
+
+  if (auto *Dtor = dyn_cast<CXXDestructorDecl>(NewFD)) {
+    // A destructor can be constexpr only if the defaulted destructor could be;
+    // we don't need to check the members and bases if we already know they all
+    // have constexpr destructors.
+    if (!Dtor->getParent()->defaultedDestructorIsConstexpr()) {
+      if (Kind == CheckConstexprKind::CheckValid)
+        return false;
+      if (!CheckConstexprDestructorSubobjects(*this, Dtor, Kind))
+        return false;
+    }
   }
 
   // - each of its parameter types shall be a literal type;
@@ -1777,7 +1820,8 @@ static bool CheckConstexprDeclStmt(Sema &SemaRef, const FunctionDecl *Dcl,
     case Decl::Decomposition: {
       // C++1y [dcl.constexpr]p3 allows anything except:
       //   a definition of a variable of non-literal type or of static or
-      //   thread storage duration or for which no initialization is performed.
+      //   thread storage duration or [before C++2a] for which no
+      //   initialization is performed.
       const auto *VD = cast<VarDecl>(DclIt);
       if (VD->isThisDeclarationADefinition()) {
         if (VD->isStaticLocal()) {
@@ -1796,11 +1840,16 @@ static bool CheckConstexprDeclStmt(Sema &SemaRef, const FunctionDecl *Dcl,
         if (!VD->getType()->isDependentType() &&
             !VD->hasInit() && !VD->isCXXForRangeDecl()) {
           if (Kind == Sema::CheckConstexprKind::Diagnose) {
-            SemaRef.Diag(VD->getLocation(),
-                         diag::err_constexpr_local_var_no_init)
-              << isa<CXXConstructorDecl>(Dcl);
+            SemaRef.Diag(
+                VD->getLocation(),
+                SemaRef.getLangOpts().CPlusPlus2a
+                    ? diag::warn_cxx17_compat_constexpr_local_var_no_init
+                    : diag::ext_constexpr_local_var_no_init)
+                << isa<CXXConstructorDecl>(Dcl);
+          } else if (!SemaRef.getLangOpts().CPlusPlus2a) {
+            return false;
           }
-          return false;
+          continue;
         }
       }
       if (Kind == Sema::CheckConstexprKind::Diagnose) {
@@ -1854,6 +1903,11 @@ static bool CheckConstexprCtorInitializer(Sema &SemaRef,
                                           llvm::SmallSet<Decl*, 16> &Inits,
                                           bool &Diagnosed,
                                           Sema::CheckConstexprKind Kind) {
+  // In C++20 onwards, there's nothing to check for validity.
+  if (Kind == Sema::CheckConstexprKind::CheckValid &&
+      SemaRef.getLangOpts().CPlusPlus2a)
+    return true;
+
   if (Field->isInvalidDecl())
     return true;
 
@@ -1872,12 +1926,15 @@ static bool CheckConstexprCtorInitializer(Sema &SemaRef,
   if (!Inits.count(Field)) {
     if (Kind == Sema::CheckConstexprKind::Diagnose) {
       if (!Diagnosed) {
-        SemaRef.Diag(Dcl->getLocation(), diag::err_constexpr_ctor_missing_init);
+        SemaRef.Diag(Dcl->getLocation(),
+                     SemaRef.getLangOpts().CPlusPlus2a
+                         ? diag::warn_cxx17_compat_constexpr_ctor_missing_init
+                         : diag::ext_constexpr_ctor_missing_init);
         Diagnosed = true;
       }
       SemaRef.Diag(Field->getLocation(),
                    diag::note_constexpr_ctor_missing_init);
-    } else {
+    } else if (!SemaRef.getLangOpts().CPlusPlus2a) {
       return false;
     }
   } else if (Field->isAnonymousStructOrUnion()) {
@@ -2120,10 +2177,15 @@ static bool CheckConstexprFunctionBody(Sema &SemaRef, const FunctionDecl *Dcl,
     if (RD->isUnion()) {
       if (Constructor->getNumCtorInitializers() == 0 &&
           RD->hasVariantMembers()) {
-        if (Kind == Sema::CheckConstexprKind::Diagnose)
-          SemaRef.Diag(Dcl->getLocation(),
-                       diag::err_constexpr_union_ctor_no_init);
-        return false;
+        if (Kind == Sema::CheckConstexprKind::Diagnose) {
+          SemaRef.Diag(
+              Dcl->getLocation(),
+              SemaRef.getLangOpts().CPlusPlus2a
+                  ? diag::warn_cxx17_compat_constexpr_union_ctor_no_init
+                  : diag::ext_constexpr_union_ctor_no_init);
+        } else if (!SemaRef.getLangOpts().CPlusPlus2a) {
+          return false;
+        }
       }
     } else if (!Constructor->isDependentContext() &&
                !Constructor->isDelegatingConstructor()) {
@@ -2500,7 +2562,7 @@ Sema::ActOnBaseSpecifier(Decl *classdecl, SourceRange SpecifierRange,
     Diag(AL.getLoc(), AL.getKind() == ParsedAttr::UnknownAttribute
                           ? (unsigned)diag::warn_unknown_attribute_ignored
                           : (unsigned)diag::err_base_specifier_attribute)
-        << AL.getName();
+        << AL;
   }
 
   TypeSourceInfo *TInfo = nullptr;
@@ -3344,10 +3406,12 @@ Sema::ActOnCXXMemberDeclarator(Scope *S, AccessSpecifier AS, Declarator &D,
   }
 
   if (VS.isOverrideSpecified())
-    Member->addAttr(new (Context) OverrideAttr(VS.getOverrideLoc(), Context, 0));
+    Member->addAttr(OverrideAttr::Create(Context, VS.getOverrideLoc(),
+                                         AttributeCommonInfo::AS_Keyword));
   if (VS.isFinalSpecified())
-    Member->addAttr(new (Context) FinalAttr(VS.getFinalLoc(), Context,
-                                            VS.isFinalSpelledSealed()));
+    Member->addAttr(FinalAttr::Create(
+        Context, VS.getFinalLoc(), AttributeCommonInfo::AS_Keyword,
+        static_cast<FinalAttr::Spelling>(VS.isFinalSpelledSealed())));
 
   if (VS.getLastLocation().isValid()) {
     // Update the end location of a method that has a virt-specifiers.
@@ -5920,14 +5984,10 @@ void Sema::checkClassLevelDLLAttribute(CXXRecordDecl *Class) {
           TSK != TSK_ExplicitInstantiationDefinition) {
         if (ClassExported) {
           NewAttr = ::new (getASTContext())
-            DLLExportStaticLocalAttr(ClassAttr->getRange(),
-                                     getASTContext(),
-                                     ClassAttr->getSpellingListIndex());
+              DLLExportStaticLocalAttr(getASTContext(), *ClassAttr);
         } else {
           NewAttr = ::new (getASTContext())
-            DLLImportStaticLocalAttr(ClassAttr->getRange(),
-                                     getASTContext(),
-                                     ClassAttr->getSpellingListIndex());
+              DLLImportStaticLocalAttr(getASTContext(), *ClassAttr);
         }
       } else {
         NewAttr = cast<InheritableAttr>(ClassAttr->clone(getASTContext()));
@@ -6304,6 +6364,12 @@ void Sema::CheckCompletedCXXClass(CXXRecordDecl *Record) {
         DelayedDllExportMemberFunctions.push_back(M);
       }
     }
+
+    // Define defaulted constexpr virtual functions that override a base class
+    // function right away.
+    // FIXME: We can defer doing this until the vtable is marked as used.
+    if (M->isDefaulted() && M->isConstexpr() && M->size_overridden_methods())
+      DefineImplicitSpecialMember(*this, M, M->getLocation());
   };
 
   bool HasMethodWithOverrideControl = false,
@@ -6517,6 +6583,8 @@ specialMemberIsConstexpr(Sema &S, CXXRecordDecl *ClassDecl,
 
   if (CSM == Sema::CXXDefaultConstructor)
     return ClassDecl->hasConstexprDefaultConstructor();
+  if (CSM == Sema::CXXDestructor)
+    return ClassDecl->hasConstexprDestructor();
 
   Sema::SpecialMemberOverloadResult SMOR =
       lookupCallFromSpecialMember(S, ClassDecl, CSM, Quals, ConstRHS);
@@ -6565,6 +6633,8 @@ static bool defaultedSpecialMemberIsConstexpr(
     break;
 
   case Sema::CXXDestructor:
+    return ClassDecl->defaultedDestructorIsConstexpr();
+
   case Sema::CXXInvalid:
     return false;
   }
@@ -6817,13 +6887,14 @@ void Sema::CheckExplicitlyDefaultedSpecialMember(CXXMethodDecl *MD) {
   // Do not apply this rule to members of class templates, since core issue 1358
   // makes such functions always instantiate to constexpr functions. For
   // functions which cannot be constexpr (for non-constructors in C++11 and for
-  // destructors in C++1y), this is checked elsewhere.
+  // destructors in C++14 and C++17), this is checked elsewhere.
   //
   // FIXME: This should not apply if the member is deleted.
   bool Constexpr = defaultedSpecialMemberIsConstexpr(*this, RD, CSM,
                                                      HasConstParam);
-  if ((getLangOpts().CPlusPlus14 ? !isa<CXXDestructorDecl>(MD)
-                                 : isa<CXXConstructorDecl>(MD)) &&
+  if ((getLangOpts().CPlusPlus2a ||
+       (getLangOpts().CPlusPlus14 ? !isa<CXXDestructorDecl>(MD)
+                                  : isa<CXXConstructorDecl>(MD))) &&
       MD->isConstexpr() && !Constexpr &&
       MD->getTemplatedKind() == FunctionDecl::TK_NonTemplate) {
     Diag(MD->getBeginLoc(), MD->isConsteval()
@@ -8101,8 +8172,7 @@ void Sema::ActOnFinishCXXMemberSpecification(
     if (AL.getKind() != ParsedAttr::AT_Visibility)
       continue;
     AL.setInvalid();
-    Diag(AL.getLoc(), diag::warn_attribute_after_definition_ignored)
-        << AL.getName();
+    Diag(AL.getLoc(), diag::warn_attribute_after_definition_ignored) << AL;
   }
 
   ActOnFields(S, RLoc, TagDecl, llvm::makeArrayRef(
@@ -11447,6 +11517,10 @@ CXXDestructorDecl *Sema::DeclareImplicitDestructor(CXXRecordDecl *ClassDecl) {
   if (DSM.isAlreadyBeingDeclared())
     return nullptr;
 
+  bool Constexpr = defaultedSpecialMemberIsConstexpr(*this, ClassDecl,
+                                                     CXXDestructor,
+                                                     false);
+
   // Create the actual destructor declaration.
   CanQualType ClassType
     = Context.getCanonicalType(Context.getTypeDeclType(ClassDecl));
@@ -11454,10 +11528,11 @@ CXXDestructorDecl *Sema::DeclareImplicitDestructor(CXXRecordDecl *ClassDecl) {
   DeclarationName Name
     = Context.DeclarationNames.getCXXDestructorName(ClassType);
   DeclarationNameInfo NameInfo(Name, ClassLoc);
-  CXXDestructorDecl *Destructor
-      = CXXDestructorDecl::Create(Context, ClassDecl, ClassLoc, NameInfo,
-                                  QualType(), nullptr, /*isInline=*/true,
-                                  /*isImplicitlyDeclared=*/true);
+  CXXDestructorDecl *Destructor =
+      CXXDestructorDecl::Create(Context, ClassDecl, ClassLoc, NameInfo,
+                                QualType(), nullptr, /*isInline=*/true,
+                                /*isImplicitlyDeclared=*/true,
+                                Constexpr ? CSK_constexpr : CSK_unspecified);
   Destructor->setAccess(AS_public);
   Destructor->setDefaulted();
 
@@ -13323,6 +13398,20 @@ void Sema::FinalizeVarWithDestructor(VarDecl *VD, const RecordType *Record) {
   }
 
   if (Destructor->isTrivial()) return;
+
+  // If the destructor is constexpr, check whether the variable has constant
+  // destruction now.
+  if (Destructor->isConstexpr() && VD->getInit() &&
+      !VD->getInit()->isValueDependent() && VD->evaluateValue()) {
+    SmallVector<PartialDiagnosticAt, 8> Notes;
+    if (!VD->evaluateDestruction(Notes) && VD->isConstexpr()) {
+      Diag(VD->getLocation(),
+           diag::err_constexpr_var_requires_const_destruction) << VD;
+      for (unsigned I = 0, N = Notes.size(); I != N; ++I)
+        Diag(Notes[I].first, Notes[I].second);
+    }
+  }
+
   if (!VD->hasGlobalStorage()) return;
 
   // Emit warning for non-trivial dtor in global scope (a real global,
@@ -13913,6 +14002,10 @@ Decl *Sema::ActOnStartLinkageSpecification(Scope *S, SourceLocation ExternLoc,
     Language = LinkageSpecDecl::lang_c;
   else if (Lang == "C++")
     Language = LinkageSpecDecl::lang_cxx;
+  else if (Lang == "C++11")
+    Language = LinkageSpecDecl::lang_cxx_11;
+  else if (Lang == "C++14")
+    Language = LinkageSpecDecl::lang_cxx_14;
   else {
     Diag(LangStr->getExprLoc(), diag::err_language_linkage_spec_unknown)
       << LangStr->getSourceRange();
@@ -14165,8 +14258,17 @@ Decl *Sema::BuildStaticAssertDeclaration(SourceLocation StaticAssertLoc,
     if (Converted.isInvalid())
       Failed = true;
 
+    ExprResult FullAssertExpr =
+        ActOnFinishFullExpr(Converted.get(), StaticAssertLoc,
+                            /*DiscardedValue*/ false,
+                            /*IsConstexpr*/ true);
+    if (FullAssertExpr.isInvalid())
+      Failed = true;
+    else
+      AssertExpr = FullAssertExpr.get();
+
     llvm::APSInt Cond;
-    if (!Failed && VerifyIntegerConstantExpression(Converted.get(), &Cond,
+    if (!Failed && VerifyIntegerConstantExpression(AssertExpr, &Cond,
           diag::err_static_assert_expression_is_not_constant,
           /*AllowFold=*/false).isInvalid())
       Failed = true;
@@ -14192,15 +14294,15 @@ Decl *Sema::BuildStaticAssertDeclaration(SourceLocation StaticAssertLoc,
       }
       Failed = true;
     }
+  } else {
+    ExprResult FullAssertExpr = ActOnFinishFullExpr(AssertExpr, StaticAssertLoc,
+                                                    /*DiscardedValue*/false,
+                                                    /*IsConstexpr*/true);
+    if (FullAssertExpr.isInvalid())
+      Failed = true;
+    else
+      AssertExpr = FullAssertExpr.get();
   }
-
-  ExprResult FullAssertExpr = ActOnFinishFullExpr(AssertExpr, StaticAssertLoc,
-                                                  /*DiscardedValue*/false,
-                                                  /*IsConstexpr*/true);
-  if (FullAssertExpr.isInvalid())
-    Failed = true;
-  else
-    AssertExpr = FullAssertExpr.get();
 
   Decl *Decl = StaticAssertDecl::Create(Context, CurContext, StaticAssertLoc,
                                         AssertExpr, AssertMessage, RParenLoc,

@@ -1,8 +1,4 @@
-; FIXME: FastISel currently returns false if it hits code that uses VSX
-; registers and with -fast-isel-abort=1 turned on the test case will then fail.
-; When fastisel better supports VSX fix up this test case.
-;
-; RUN: llc < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 -mattr=-vsx | FileCheck %s --check-prefix=ELF64
+; RUN: llc < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 | FileCheck %s --check-prefix=ELF64
 
 define zeroext i1 @rettrue() nounwind {
 entry:

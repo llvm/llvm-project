@@ -18,9 +18,9 @@
 
 # CHECK:      Relocations [
 # CHECK-NEXT:   Section {{.*}} .rela.dyn {
-# CHECK-NEXT:     0x1000 R_X86_64_RELATIVE - 0x1000
-# CHECK-NEXT:     0x1008 R_X86_64_64 bar 0x0
-# CHECK-NEXT:     0x1010 R_X86_64_PC64 zed 0x0
+# CHECK-NEXT:     0x12A0 R_X86_64_RELATIVE - 0x12A0
+# CHECK-NEXT:     0x12A8 R_X86_64_64 bar 0x0
+# CHECK-NEXT:     0x12B0 R_X86_64_PC64 zed 0x0
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]
 
@@ -30,8 +30,8 @@
 
 # STATIC:      Relocations [
 # STATIC-NEXT:   Section {{.*}} .rela.dyn {
-# STATIC-NEXT:     0x201008 R_X86_64_64 bar 0x0
-# STATIC-NEXT:     0x201010 R_X86_64_PC64 zed 0x0
+# STATIC-NEXT:     0x201290 R_X86_64_64 bar 0x0
+# STATIC-NEXT:     0x201298 R_X86_64_PC64 zed 0x0
 # STATIC-NEXT:   }
 # STATIC-NEXT: ]
 

@@ -6,7 +6,7 @@
 ; RUN:   -ppc-gpr-icmps=all -ppc-asm-full-reg-names -mcpu=pwr8 < %s | FileCheck %s --check-prefix=CHECK-LE \
 ; RUN:   --implicit-check-not cmpw --implicit-check-not cmpd --implicit-check-not cmpl
 
-@glob = common local_unnamed_addr global i16 0, align 2
+@glob = local_unnamed_addr global i16 0, align 2
 
 define i64 @test_llless(i16 signext %a, i16 signext %b)  {
 ; CHECK-LABEL: test_llless:

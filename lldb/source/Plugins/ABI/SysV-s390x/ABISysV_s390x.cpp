@@ -200,7 +200,7 @@ size_t ABISysV_s390x::GetRedZoneSize() const { return 0; }
 ABISP
 ABISysV_s390x::CreateInstance(lldb::ProcessSP process_sp, const ArchSpec &arch) {
   if (arch.GetTriple().getArch() == llvm::Triple::systemz) {
-    return ABISP(new ABISysV_s390x(process_sp));
+    return ABISP(new ABISysV_s390x(std::move(process_sp), MakeMCRegisterInfo(arch)));
   }
   return ABISP();
 }

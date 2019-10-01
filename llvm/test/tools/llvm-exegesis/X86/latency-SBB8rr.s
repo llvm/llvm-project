@@ -1,4 +1,5 @@
-# RUN: llvm-exegesis -mode=latency -opcode-name=SBB8rr | FileCheck %s
+# RUN: llvm-exegesis -mode=latency -opcode-name=SBB8rr -repetition-mode=duplicate | FileCheck %s
+# RUN: llvm-exegesis -mode=latency -opcode-name=SBB8rr -repetition-mode=loop | FileCheck %s
 
 CHECK:      ---
 CHECK-NEXT: mode: latency

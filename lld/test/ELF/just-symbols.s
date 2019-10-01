@@ -6,7 +6,7 @@
 # RUN: ld.lld -just-symbols=%t1.exe -o %t2.exe
 # RUN: llvm-readelf -symbols %t2.exe | FileCheck %s
 
-# CHECK: 0000000000011000    40 OBJECT  GLOBAL DEFAULT  ABS bar
+# CHECK: 0000000000011001    40 OBJECT  GLOBAL DEFAULT  ABS bar
 # CHECK: 0000000000010000     0 NOTYPE  GLOBAL DEFAULT  ABS foo
 
 .globl foo, bar

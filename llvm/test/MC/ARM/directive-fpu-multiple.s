@@ -3,7 +3,7 @@
 @ The later .fpu directive should overwrite the earlier one.
 @ We also check here that all the .fpu directives that we expect to work do work
 
-@ RUN: llvm-mc -triple arm-eabi -filetype obj %s | llvm-readobj --arm-attributes \
+@ RUN: llvm-mc -triple arm-eabi -filetype obj %s | llvm-readobj --arch-specific \
 @ RUN:   | FileCheck %s -check-prefix CHECK-ATTR
 
 	.fpu none

@@ -11,10 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/IR/CFG.h"
+#include "llvm/IR/ValueHandle.h"
 #include "llvm/Pass.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Utils/Local.h"
+
 using namespace llvm;
 
 #define DEBUG_TYPE "flattencfg"
@@ -52,15 +54,23 @@ FunctionPass *llvm::createFlattenCFGPass() { return new FlattenCFGPass(); }
 static bool iterativelyFlattenCFG(Function &F, AliasAnalysis *AA) {
   bool Changed = false;
   bool LocalChange = true;
+
+  // Use block handles instead of iterating over function blocks directly
+  // to avoid using iterators invalidated by erasing blocks.
+  std::vector<WeakVH> Blocks;
+  Blocks.reserve(F.size());
+  for (auto &BB : F)
+    Blocks.push_back(&BB);
+
   while (LocalChange) {
     LocalChange = false;
 
-    // Loop over all of the basic blocks and remove them if they are unneeded...
-    //
-    for (Function::iterator BBIt = F.begin(); BBIt != F.end();) {
-      if (FlattenCFG(&*BBIt++, AA)) {
-        LocalChange = true;
-      }
+    // Loop over all of the basic blocks and try to flatten them.
+    for (WeakVH &BlockHandle : Blocks) {
+      // Skip blocks erased by FlattenCFG.
+      if (auto *BB = cast_or_null<BasicBlock>(BlockHandle))
+        if (FlattenCFG(BB, AA))
+          LocalChange = true;
     }
     Changed |= LocalChange;
   }

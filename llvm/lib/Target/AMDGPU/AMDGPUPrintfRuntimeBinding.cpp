@@ -163,8 +163,7 @@ bool AMDGPUPrintfRuntimeBinding::lowerPrintfForGpu(
   const char NonLiteralStr[4] = "???";
 
   for (auto P : Printfs) {
-    CallInst *CI = dyn_cast<CallInst>(P);
-
+    auto CI = cast<CallInst>(P);
     unsigned NumOps = CI->getNumArgOperands();
 
     SmallString<16> OpConvSpecifiers;
@@ -566,7 +565,7 @@ bool AMDGPUPrintfRuntimeBinding::lowerPrintfForGpu(
 
   // erase the printf calls
   for (auto P : Printfs) {
-    CallInst *CI = dyn_cast<CallInst>(P);
+    auto CI = cast<CallInst>(P);
     CI->eraseFromParent();
   }
 

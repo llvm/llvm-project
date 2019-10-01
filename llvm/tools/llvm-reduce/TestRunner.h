@@ -24,23 +24,20 @@ namespace llvm {
 // respective filename.
 class TestRunner {
 public:
-  TestRunner(StringRef TestName, std::vector<std::string> TestArgs);
+  TestRunner(StringRef TestName, const std::vector<std::string> &TestArgs);
 
   /// Runs the interesting-ness test for the specified file
   /// @returns 0 if test was successful, 1 if otherwise
   int run(StringRef Filename);
 
-  /// Directory where tmp files are created
-  StringRef getTmpDir() const { return TmpDirectory; }
   /// Returns the most reduced version of the original testcase
   Module *getProgram() const { return Program.get(); }
 
   void setProgram(std::unique_ptr<Module> P) { Program = std::move(P); }
 
 private:
-  SmallString<128> TestName;
-  std::vector<std::string> TestArgs;
-  SmallString<128> TmpDirectory;
+  StringRef TestName;
+  const std::vector<std::string> &TestArgs;
   std::unique_ptr<Module> Program;
 };
 

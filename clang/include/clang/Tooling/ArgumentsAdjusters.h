@@ -43,6 +43,10 @@ ArgumentsAdjuster getClangSyntaxOnlyAdjuster();
 /// arguments.
 ArgumentsAdjuster getClangStripOutputAdjuster();
 
+/// Gets an argument adjuster which removes command line arguments related to
+/// diagnostic serialization.
+ArgumentsAdjuster getClangStripSerializeDiagnosticAdjuster();
+
 /// Gets an argument adjuster which removes dependency-file
 /// related command line arguments.
 ArgumentsAdjuster getClangStripDependencyFileAdjuster();

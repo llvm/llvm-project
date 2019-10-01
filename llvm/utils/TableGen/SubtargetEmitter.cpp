@@ -1746,7 +1746,10 @@ void SubtargetEmitter::emitGenMCSubtargetInfo(raw_ostream &OS) {
      << "    return " << Target << "_MC"
      << "::resolveVariantSchedClassImpl(SchedClass, MI, CPUID); \n";
   OS << "  }\n";
+  if (TGT.getHwModes().getNumModeIds() > 1)
+    OS << "  unsigned getHwMode() const override;\n";
   OS << "};\n";
+  EmitHwModeCheck(Target + "GenMCSubtargetInfo", OS);
 }
 
 void SubtargetEmitter::EmitMCInstrAnalysisPredicateFunctions(raw_ostream &OS) {

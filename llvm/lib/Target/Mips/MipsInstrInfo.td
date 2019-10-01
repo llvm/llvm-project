@@ -1263,6 +1263,7 @@ def immSExt16  : PatLeaf<(imm), [{ return isInt<16>(N->getSExtValue()); }]>;
 
 // Node immediate fits as 7-bit zero extended on target immediate.
 def immZExt7 : PatLeaf<(imm), [{ return isUInt<7>(N->getZExtValue()); }]>;
+def timmZExt7 : PatLeaf<(timm), [{ return isUInt<7>(N->getZExtValue()); }]>;
 
 // Node immediate fits as 16-bit zero extended on target immediate.
 // The LO16 param means that only the lower 16 bits of the node
@@ -1295,6 +1296,7 @@ def immZExt32  : PatLeaf<(imm), [{ return isUInt<32>(N->getZExtValue()); }]>;
 
 // shamt field must fit in 5 bits.
 def immZExt5 : ImmLeaf<i32, [{return Imm == (Imm & 0x1f);}]>;
+def timmZExt5 : TImmLeaf<i32, [{return Imm == (Imm & 0x1f);}]>;
 
 def immZExt5Plus1 : PatLeaf<(imm), [{
   return isUInt<5>(N->getZExtValue() - 1);

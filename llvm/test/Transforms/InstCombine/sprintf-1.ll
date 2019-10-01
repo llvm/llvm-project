@@ -21,11 +21,11 @@ declare i32 @sprintf(i8*, i8*, ...)
 
 define void @test_simplify1(i8* %dst) {
 ; CHECK-LABEL: @test_simplify1(
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 dereferenceable(13) [[DST:%.*]], i8* align 1 dereferenceable(13) getelementptr inbounds ([13 x i8], [13 x i8]* @hello_world, i32 0, i32 0), i32 13, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* nonnull align 1 dereferenceable(13) [[DST:%.*]], i8* nonnull align 1 dereferenceable(13) getelementptr inbounds ([13 x i8], [13 x i8]* @hello_world, i32 0, i32 0), i32 13, i1 false)
 ; CHECK-NEXT:    ret void
 ;
 ; CHECK-IPRINTF-LABEL: @test_simplify1(
-; CHECK-IPRINTF-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 dereferenceable(13) [[DST:%.*]], i8* align 1 dereferenceable(13) getelementptr inbounds ([13 x i8], [13 x i8]* @hello_world, i32 0, i32 0), i32 13, i1 false)
+; CHECK-IPRINTF-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* nonnull align 1 dereferenceable(13) [[DST:%.*]], i8* nonnull align 1 dereferenceable(13) getelementptr inbounds ([13 x i8], [13 x i8]* @hello_world, i32 0, i32 0), i32 13, i1 false)
 ; CHECK-IPRINTF-NEXT:    ret void
 ;
   %fmt = getelementptr [13 x i8], [13 x i8]* @hello_world, i32 0, i32 0
@@ -85,13 +85,13 @@ define void @test_simplify4(i8* %dst) {
 
 define void @test_simplify5(i8* %dst, i8* %str) {
 ; CHECK-LABEL: @test_simplify5(
-; CHECK-NEXT:    [[STRLEN:%.*]] = call i32 @strlen(i8* [[STR:%.*]])
+; CHECK-NEXT:    [[STRLEN:%.*]] = call i32 @strlen(i8* nonnull dereferenceable(1) [[STR:%.*]])
 ; CHECK-NEXT:    [[LENINC:%.*]] = add i32 [[STRLEN]], 1
 ; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 [[DST:%.*]], i8* align 1 [[STR]], i32 [[LENINC]], i1 false)
 ; CHECK-NEXT:    ret void
 ;
 ; CHECK-IPRINTF-LABEL: @test_simplify5(
-; CHECK-IPRINTF-NEXT:    [[STRLEN:%.*]] = call i32 @strlen(i8* [[STR:%.*]])
+; CHECK-IPRINTF-NEXT:    [[STRLEN:%.*]] = call i32 @strlen(i8* nonnull dereferenceable(1) [[STR:%.*]])
 ; CHECK-IPRINTF-NEXT:    [[LENINC:%.*]] = add i32 [[STRLEN]], 1
 ; CHECK-IPRINTF-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 [[DST:%.*]], i8* align 1 [[STR]], i32 [[LENINC]], i1 false)
 ; CHECK-IPRINTF-NEXT:    ret void
@@ -105,7 +105,7 @@ define void @test_simplify5(i8* %dst, i8* %str) {
 
 define void @test_simplify6(i8* %dst) {
 ; CHECK-LABEL: @test_simplify6(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 (i8*, i8*, ...) @sprintf(i8* [[DST:%.*]], i8* getelementptr inbounds ([3 x i8], [3 x i8]* @percent_d, i32 0, i32 0), i32 187)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 (i8*, i8*, ...) @sprintf(i8* nonnull dereferenceable(1) [[DST:%.*]], i8* nonnull dereferenceable(1) getelementptr inbounds ([3 x i8], [3 x i8]* @percent_d, i32 0, i32 0), i32 187)
 ; CHECK-NEXT:    ret void
 ;
 ; CHECK-IPRINTF-LABEL: @test_simplify6(
@@ -119,11 +119,11 @@ define void @test_simplify6(i8* %dst) {
 
 define void @test_no_simplify1(i8* %dst) {
 ; CHECK-LABEL: @test_no_simplify1(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 (i8*, i8*, ...) @sprintf(i8* [[DST:%.*]], i8* getelementptr inbounds ([3 x i8], [3 x i8]* @percent_f, i32 0, i32 0), double 1.870000e+00)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 (i8*, i8*, ...) @sprintf(i8* nonnull dereferenceable(1) [[DST:%.*]], i8* nonnull dereferenceable(1) getelementptr inbounds ([3 x i8], [3 x i8]* @percent_f, i32 0, i32 0), double 1.870000e+00)
 ; CHECK-NEXT:    ret void
 ;
 ; CHECK-IPRINTF-LABEL: @test_no_simplify1(
-; CHECK-IPRINTF-NEXT:    [[TMP1:%.*]] = call i32 (i8*, i8*, ...) @sprintf(i8* [[DST:%.*]], i8* getelementptr inbounds ([3 x i8], [3 x i8]* @percent_f, i32 0, i32 0), double 1.870000e+00)
+; CHECK-IPRINTF-NEXT:    [[TMP1:%.*]] = call i32 (i8*, i8*, ...) @sprintf(i8* nonnull dereferenceable(1) [[DST:%.*]], i8* nonnull dereferenceable(1) getelementptr inbounds ([3 x i8], [3 x i8]* @percent_f, i32 0, i32 0), double 1.870000e+00)
 ; CHECK-IPRINTF-NEXT:    ret void
 ;
   %fmt = getelementptr [3 x i8], [3 x i8]* @percent_f, i32 0, i32 0
@@ -133,11 +133,11 @@ define void @test_no_simplify1(i8* %dst) {
 
 define void @test_no_simplify2(i8* %dst, i8* %fmt, double %d) {
 ; CHECK-LABEL: @test_no_simplify2(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 (i8*, i8*, ...) @sprintf(i8* [[DST:%.*]], i8* [[FMT:%.*]], double [[D:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 (i8*, i8*, ...) @sprintf(i8* nonnull dereferenceable(1) [[DST:%.*]], i8* nonnull dereferenceable(1) [[FMT:%.*]], double [[D:%.*]])
 ; CHECK-NEXT:    ret void
 ;
 ; CHECK-IPRINTF-LABEL: @test_no_simplify2(
-; CHECK-IPRINTF-NEXT:    [[TMP1:%.*]] = call i32 (i8*, i8*, ...) @sprintf(i8* [[DST:%.*]], i8* [[FMT:%.*]], double [[D:%.*]])
+; CHECK-IPRINTF-NEXT:    [[TMP1:%.*]] = call i32 (i8*, i8*, ...) @sprintf(i8* nonnull dereferenceable(1) [[DST:%.*]], i8* nonnull dereferenceable(1) [[FMT:%.*]], double [[D:%.*]])
 ; CHECK-IPRINTF-NEXT:    ret void
 ;
   call i32 (i8*, i8*, ...) @sprintf(i8* %dst, i8* %fmt, double %d)

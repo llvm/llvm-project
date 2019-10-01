@@ -64,6 +64,9 @@ private:
                          const DataLayout &DL, MachineRegisterInfo &MRI,
                          CallingConv::ID CallConv) const;
 
+  bool lowerTailCall(MachineIRBuilder &MIRBuilder, CallLoweringInfo &Info,
+                     SmallVectorImpl<ArgInfo> &OutArgs) const;
+
   bool
   doCallerAndCalleePassArgsTheSameWay(CallLoweringInfo &Info,
                                       MachineFunction &MF,

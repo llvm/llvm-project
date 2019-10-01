@@ -963,7 +963,7 @@ bool llvm::hoistRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
 
     // Now that we've finished hoisting make sure that LI and DT are still
     // valid.
-#ifndef NDEBUG
+#ifdef EXPENSIVE_CHECKS
   if (Changed) {
     assert(DT->verify(DominatorTree::VerificationLevel::Fast) &&
            "Dominator tree verification failed");

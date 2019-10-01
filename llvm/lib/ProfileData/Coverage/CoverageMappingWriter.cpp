@@ -24,6 +24,16 @@
 using namespace llvm;
 using namespace coverage;
 
+CoverageFilenamesSectionWriter::CoverageFilenamesSectionWriter(
+    ArrayRef<StringRef> Filenames)
+    : Filenames(Filenames) {
+#ifndef NDEBUG
+  StringSet<> NameSet;
+  for (StringRef Name : Filenames)
+    assert(NameSet.insert(Name).second && "Duplicate filename");
+#endif
+}
+
 void CoverageFilenamesSectionWriter::write(raw_ostream &OS) {
   encodeULEB128(Filenames.size(), OS);
   for (const auto &Filename : Filenames) {

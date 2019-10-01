@@ -863,13 +863,11 @@ bool ThreadSanitizerRuntime::NotifyBreakpointHit(
               CreateStopReasonWithInstrumentationData(
                   *thread_sp, stop_reason_description, report));
 
-    StreamFileSP stream_sp(
-        process_sp->GetTarget().GetDebugger().GetOutputFile());
-    if (stream_sp) {
-      stream_sp->Printf("ThreadSanitizer report breakpoint hit. Use 'thread "
-                        "info -s' to get extended information about the "
-                        "report.\n");
-    }
+    StreamFile &s = process_sp->GetTarget().GetDebugger().GetOutputStream();
+    s.Printf("ThreadSanitizer report breakpoint hit. Use 'thread "
+             "info -s' to get extended information about the "
+             "report.\n");
+
     return true; // Return true to stop the target
   } else
     return false; // Let target run

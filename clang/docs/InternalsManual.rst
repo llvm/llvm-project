@@ -859,7 +859,7 @@ benefits:
 
 There are unfortunately exceptions to this general approach, such as:
 
-  * A the first declaration of a redeclarable entity maintains a pointer to the
+  * The first declaration of a redeclarable entity maintains a pointer to the
     most recent declaration of that entity, which naturally needs to change as
     more declarations are parsed.
   * Name lookup tables in declaration contexts change after the namespace
@@ -1913,7 +1913,7 @@ declarations like enums, classes, etc. if they are in anonymous namespaces.
 Therefore, we filter the lookup results and consider only those which have the
 same visibility as the declaration we currently import.
 
-We consider two declarations in two anonymous namsepaces to have the same
+We consider two declarations in two anonymous namespaces to have the same
 visibility only if they are imported from the same AST context.
 
 Strategies to Handle Conflicting Names
@@ -2134,7 +2134,7 @@ about them.
 
 Finally, this is not just a problem for semantic analysis.  The code generator
 and other clients have to be able to fold constants (e.g., to initialize global
-variables) and has to handle a superset of what C99 allows.  Further, these
+variables) and have to handle a superset of what C99 allows.  Further, these
 clients can benefit from extended information.  For example, we know that
 "``foo() || 1``" always evaluates to ``true``, but we can't replace the
 expression with ``true`` because it has side effects.

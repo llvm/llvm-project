@@ -71,8 +71,8 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
 
   if (Subtarget.hasDSP() || Subtarget.hasMSA()) {
     // Expand all truncating stores and extending loads.
-    for (MVT VT0 : MVT::vector_valuetypes()) {
-      for (MVT VT1 : MVT::vector_valuetypes()) {
+    for (MVT VT0 : MVT::fixedlen_vector_valuetypes()) {
+      for (MVT VT1 : MVT::fixedlen_vector_valuetypes()) {
         setTruncStoreAction(VT0, VT1, Expand);
         setLoadExtAction(ISD::SEXTLOAD, VT0, VT1, Expand);
         setLoadExtAction(ISD::ZEXTLOAD, VT0, VT1, Expand);
@@ -2596,7 +2596,8 @@ static SDValue lowerVECTOR_SHUFFLE_SHF(SDValue Op, EVT ResTy,
 
   SDLoc DL(Op);
   return DAG.getNode(MipsISD::SHF, DL, ResTy,
-                     DAG.getConstant(Imm, DL, MVT::i32), Op->getOperand(0));
+                     DAG.getTargetConstant(Imm, DL, MVT::i32),
+                     Op->getOperand(0));
 }
 
 /// Determine whether a range fits a regular pattern of values.

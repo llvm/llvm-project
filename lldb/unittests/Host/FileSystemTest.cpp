@@ -288,3 +288,18 @@ TEST(FileSystemTest, EnumerateDirectory) {
   EXPECT_THAT(visited,
               testing::UnorderedElementsAre("/foo", "/bar", "/baz", "/qux"));
 }
+
+TEST(FileSystemTest, OpenErrno) {
+#ifdef _WIN32
+  FileSpec spec("C:\\FILE\\THAT\\DOES\\NOT\\EXIST.TXT");
+#else
+  FileSpec spec("/file/that/does/not/exist.txt");
+#endif
+  FileSystem fs;
+  auto file = fs.Open(spec, File::eOpenOptionRead, 0, true);
+  ASSERT_FALSE(file);
+  std::error_code code = errorToErrorCode(file.takeError());
+  EXPECT_EQ(code.category(), std::system_category());
+  EXPECT_EQ(code.value(), ENOENT);
+}
+

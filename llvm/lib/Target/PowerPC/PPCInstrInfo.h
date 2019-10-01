@@ -252,7 +252,7 @@ public:
   unsigned isStoreToStackSlot(const MachineInstr &MI,
                               int &FrameIndex) const override;
 
-  bool findCommutedOpIndices(MachineInstr &MI, unsigned &SrcOpIdx1,
+  bool findCommutedOpIndices(const MachineInstr &MI, unsigned &SrcOpIdx1,
                              unsigned &SrcOpIdx2) const override;
 
   void insertNoop(MachineBasicBlock &MBB,
@@ -370,8 +370,7 @@ public:
   /// otherwise
   bool
   areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
-                                  const MachineInstr &MIb,
-                                  AliasAnalysis *AA = nullptr) const override;
+                                  const MachineInstr &MIb) const override;
 
   /// GetInstSize - Return the number of bytes of code the specified
   /// instruction may be.  This returns the maximum number of bytes.
@@ -486,26 +485,14 @@ public:
   /// On PPC, we have two instructions used to set-up the hardware loop
   /// (MTCTRloop, MTCTR8loop) with corresponding endloop (BDNZ, BDNZ8)
   /// instructions to indicate the end of a loop.
-  MachineInstr *findLoopInstr(MachineBasicBlock &PreHeader) const;
+  MachineInstr *
+  findLoopInstr(MachineBasicBlock &PreHeader,
+                SmallPtrSet<MachineBasicBlock *, 8> &Visited) const;
 
-  /// Analyze the loop code to find the loop induction variable and compare used
-  /// to compute the number of iterations. Currently, we analyze loop that are
-  /// controlled using hardware loops.  In this case, the induction variable
-  /// instruction is null.  For all other cases, this function returns true,
-  /// which means we're unable to analyze it. \p IndVarInst and \p CmpInst will
-  /// return new values when we can analyze the readonly loop \p L, otherwise,
-  /// nothing got changed
-  bool analyzeLoop(MachineLoop &L, MachineInstr *&IndVarInst,
-                   MachineInstr *&CmpInst) const override;
-  /// Generate code to reduce the loop iteration by one and check if the loop
-  /// is finished.  Return the value/register of the new loop count.  We need
-  /// this function when peeling off one or more iterations of a loop. This
-  /// function assumes the last iteration is peeled first.
-  unsigned reduceLoopCount(MachineBasicBlock &MBB, MachineBasicBlock &PreHeader,
-                           MachineInstr *IndVar, MachineInstr &Cmp,
-                           SmallVectorImpl<MachineOperand> &Cond,
-                           SmallVectorImpl<MachineInstr *> &PrevInsts,
-                           unsigned Iter, unsigned MaxIter) const override;
+  /// Analyze loop L, which must be a single-basic-block loop, and if the
+  /// conditions can be understood enough produce a PipelinerLoopInfo object.
+  std::unique_ptr<TargetInstrInfo::PipelinerLoopInfo>
+  analyzeLoopForPipelining(MachineBasicBlock *LoopBB) const override;
 };
 
 }

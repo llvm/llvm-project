@@ -143,8 +143,8 @@
 // CHECK-NEXT:   ProgramHeader {
 // CHECK-NEXT:     Type: PT_PHDR (0x6)
 // CHECK-NEXT:     Offset: 0x34
-// CHECK-NEXT:     VirtualAddress: 0x10010034
-// CHECK-NEXT:     PhysicalAddress: 0x10010034
+// CHECK-NEXT:     VirtualAddress: 0x10000034
+// CHECK-NEXT:     PhysicalAddress: 0x10000034
 // CHECK-NEXT:     FileSize: 128
 // CHECK-NEXT:     MemSize: 128
 // CHECK-NEXT:     Flags [ (0x4)
@@ -155,8 +155,8 @@
 // CHECK-NEXT:   ProgramHeader {
 // CHECK-NEXT:     Type: PT_LOAD (0x1)
 // CHECK-NEXT:     Offset: 0x0
-// CHECK-NEXT:     VirtualAddress: 0x10010000
-// CHECK-NEXT:     PhysicalAddress: 0x10010000
+// CHECK-NEXT:     VirtualAddress: 0x10000000
+// CHECK-NEXT:     PhysicalAddress: 0x10000000
 // CHECK-NEXT:     FileSize: 180
 // CHECK-NEXT:     MemSize: 180
 // CHECK-NEXT:     Flags [ (0x4)

@@ -9,8 +9,8 @@
 @G4 = global <2 x double> <double 7.0, double 8.0>
 
 ; CHECK-LABEL: @zg
-; CHECK: xxspltd
-; CHECK-NEXT: xxspltd
+; CHECK: lxvdsx
+; CHECK-NEXT: lxvdsx
 ; CHECK-NEXT: xvmuldp
 ; CHECK-DAG: xvmuldp
 ; CHECK-DAG: xvsubdp

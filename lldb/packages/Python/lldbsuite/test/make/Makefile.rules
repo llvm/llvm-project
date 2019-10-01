@@ -13,6 +13,12 @@
 # the building of the a.out executable program.  For example,
 # DYLIB_ONLY := YES
 #
+# Specifying FRAMEWORK and its variants has the effect of building a NeXT-style
+# framework.
+# FRAMEWORK := "Foo"
+# FRAMEWORK_HEADERS := "Foo.h"
+# FRAMEWORK_MODULES := "module.modulemap"
+#
 # Also might be of interest:
 # FRAMEWORK_INCLUDES (Darwin only) :=
 # CFLAGS_EXTRAS :=
@@ -329,7 +335,7 @@ ifeq "$(MAKE_GMODULES)" "YES"
 	CXXFLAGS += $(MANDATORY_MODULE_BUILD_CFLAGS)
 endif
 
-CXXFLAGS += -std=c++11 $(CFLAGS) $(ARCH_CXXFLAGS)
+CXXFLAGS += -std=c++11 $(CFLAGS) $(ARCH_CXXFLAGS) $(CXXFLAGS_EXTRAS)
 LD = $(CC)
 LDFLAGS ?= $(CFLAGS)
 LDFLAGS += $(LD_EXTRAS) $(ARCH_LDFLAGS)
@@ -346,10 +352,19 @@ endif
 OBJECTS =
 EXE ?= a.out
 
+ifneq "$(FRAMEWORK)" ""
+	DYLIB_NAME ?= $(FRAMEWORK).framework/Versions/A/$(FRAMEWORK)
+	DYLIB_FILENAME ?= $(FRAMEWORK).framework/Versions/A/$(FRAMEWORK)
+endif
+
 ifneq "$(DYLIB_NAME)" ""
 	ifeq "$(OS)" "Darwin"
-		DYLIB_FILENAME = lib$(DYLIB_NAME).dylib
-		DYLIB_EXECUTABLE_PATH ?= @executable_path
+		ifneq "$(FRAMEWORK)" ""
+			DYLIB_INSTALL_NAME ?= @executable_path/$(FRAMEWORK).framework/Versions/A/$(FRAMEWORK)
+		else
+			DYLIB_FILENAME = lib$(DYLIB_NAME).dylib
+			DYLIB_INSTALL_NAME ?= @executable_path/$(DYLIB_FILENAME)
+		endif
 	else ifeq "$(OS)" "Windows_NT"
 		DYLIB_FILENAME = $(DYLIB_NAME).dll
 	else
@@ -467,16 +482,11 @@ endif
 #----------------------------------------------------------------------
 # dylib settings
 #----------------------------------------------------------------------
-ifneq "$(strip $(DYLIB_C_SOURCES))" ""
-	DYLIB_OBJECTS +=$(strip $(DYLIB_C_SOURCES:.c=.o))
-endif
 
-ifneq "$(strip $(DYLIB_OBJC_SOURCES))" ""
-	DYLIB_OBJECTS +=$(strip $(DYLIB_OBJC_SOURCES:.m=.o))
-endif
-
+DYLIB_OBJECTS +=$(strip $(DYLIB_C_SOURCES:.c=.o))
+DYLIB_OBJECTS +=$(strip $(DYLIB_OBJC_SOURCES:.m=.o))
 ifneq "$(strip $(DYLIB_CXX_SOURCES))" ""
-	DYLIB_OBJECTS +=$(strip $(DYLIB_CXX_SOURCES:.cpp=.o))
+	DYLIB_OBJECTS +=$(strip $(patsubst %.mm, %.o, $(DYLIB_CXX_SOURCES:.cpp=.o)))
 	CXX = $(call cxx_compiler,$(CC))
 	LD = $(call cxx_linker,$(CC))
 endif
@@ -650,7 +660,23 @@ endif
 
 $(DYLIB_FILENAME) : $(DYLIB_OBJECTS)
 ifeq "$(OS)" "Darwin"
-	$(LD) $(DYLIB_OBJECTS) $(LDFLAGS) -install_name "$(DYLIB_EXECUTABLE_PATH)/$(DYLIB_FILENAME)" -dynamiclib -o "$(DYLIB_FILENAME)"
+ifneq "$(FRAMEWORK)" ""
+	mkdir -p $(FRAMEWORK).framework/Versions/A/Headers
+	mkdir -p $(FRAMEWORK).framework/Versions/A/Modules
+	mkdir -p $(FRAMEWORK).framework/Versions/A/Resources
+ifneq "$(FRAMEWORK_MODULES)" ""
+	cp -r $(FRAMEWORK_MODULES) $(FRAMEWORK).framework/Versions/A/Modules
+endif
+ifneq "$(FRAMEWORK_HEADERS)" ""
+	cp -r $(FRAMEWORK_HEADERS) $(FRAMEWORK).framework/Versions/A/Headers
+endif
+	(cd $(FRAMEWORK).framework/Versions; ln -sf A Current)
+	(cd $(FRAMEWORK).framework/; ln -sf Versions/A/Headers Headers)
+	(cd $(FRAMEWORK).framework/; ln -sf Versions/A/Modules Modules)
+	(cd $(FRAMEWORK).framework/; ln -sf Versions/A/Resources Resources)
+	(cd $(FRAMEWORK).framework/; ln -sf Versions/A/$(FRAMEWORK) $(FRAMEWORK))
+endif
+	$(LD) $(DYLIB_OBJECTS) $(LDFLAGS) -install_name "$(DYLIB_INSTALL_NAME)" -dynamiclib -o "$(DYLIB_FILENAME)"
 ifneq "$(CODESIGN)" ""
 	$(CODESIGN) -s - "$(DYLIB_FILENAME)"
 endif
@@ -742,6 +768,9 @@ clean::
 ifneq "$(DYLIB_NAME)" ""
 	$(RM) -r $(DYLIB_FILENAME).dSYM
 	$(RM) $(DYLIB_OBJECTS) $(DYLIB_PREREQS) $(DYLIB_PREREQS:.d=.d.tmp) $(DYLIB_DWOS) $(DYLIB_FILENAME) $(DYLIB_FILENAME).debug
+endif
+ifneq "$(FRAMEWORK)" ""
+	$(RM) -rf $(FRAMEWORK).framework
 endif
 ifneq "$(PCH_OUTPUT)" ""
 	$(RM) $(PCH_OUTPUT)

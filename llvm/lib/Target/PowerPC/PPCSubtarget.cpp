@@ -145,7 +145,8 @@ void PPCSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
   if (isDarwin())
     HasLazyResolverStubs = true;
 
-  if (TargetTriple.isOSNetBSD() || TargetTriple.isOSOpenBSD() ||
+  if ((TargetTriple.isOSFreeBSD() && TargetTriple.getOSMajorVersion() >= 13) ||
+      TargetTriple.isOSNetBSD() || TargetTriple.isOSOpenBSD() ||
       TargetTriple.isMusl())
     SecurePlt = true;
 
@@ -228,18 +229,13 @@ bool PPCSubtarget::enableSubRegLiveness() const {
   return UseSubRegLiveness;
 }
 
-unsigned char
-PPCSubtarget::classifyGlobalReference(const GlobalValue *GV) const {
-  // Note that currently we don't generate non-pic references.
-  // If a caller wants that, this will have to be updated.
-
+bool PPCSubtarget::isGVIndirectSymbol(const GlobalValue *GV) const {
   // Large code model always uses the TOC even for local symbols.
   if (TM.getCodeModel() == CodeModel::Large)
-    return PPCII::MO_PIC_FLAG | PPCII::MO_NLP_FLAG;
-
+    return true;
   if (TM.shouldAssumeDSOLocal(*GV->getParent(), GV))
-    return PPCII::MO_PIC_FLAG;
-  return PPCII::MO_PIC_FLAG | PPCII::MO_NLP_FLAG;
+    return false;
+  return true;
 }
 
 bool PPCSubtarget::isELFv2ABI() const { return TM.isELFv2ABI(); }

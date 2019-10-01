@@ -302,12 +302,11 @@ bool TargetTransformInfo::isLegalMaskedLoad(Type *DataType) const {
 }
 
 bool TargetTransformInfo::isLegalNTStore(Type *DataType,
-                                         llvm::Align Alignment) const {
+                                         Align Alignment) const {
   return TTIImpl->isLegalNTStore(DataType, Alignment);
 }
 
-bool TargetTransformInfo::isLegalNTLoad(Type *DataType,
-                                        llvm::Align Alignment) const {
+bool TargetTransformInfo::isLegalNTLoad(Type *DataType, Align Alignment) const {
   return TTIImpl->isLegalNTLoad(DataType, Alignment);
 }
 
@@ -367,14 +366,6 @@ bool TargetTransformInfo::useAA() const { return TTIImpl->useAA(); }
 
 bool TargetTransformInfo::isTypeLegal(Type *Ty) const {
   return TTIImpl->isTypeLegal(Ty);
-}
-
-unsigned TargetTransformInfo::getJumpBufAlignment() const {
-  return TTIImpl->getJumpBufAlignment();
-}
-
-unsigned TargetTransformInfo::getJumpBufSize() const {
-  return TTIImpl->getJumpBufSize();
 }
 
 bool TargetTransformInfo::shouldBuildLookupTables() const {

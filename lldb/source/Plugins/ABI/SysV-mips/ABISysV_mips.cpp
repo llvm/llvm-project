@@ -556,7 +556,8 @@ ABISysV_mips::CreateInstance(lldb::ProcessSP process_sp, const ArchSpec &arch) {
   const llvm::Triple::ArchType arch_type = arch.GetTriple().getArch();
   if ((arch_type == llvm::Triple::mips) ||
       (arch_type == llvm::Triple::mipsel)) {
-    return ABISP(new ABISysV_mips(process_sp));
+    return ABISP(
+        new ABISysV_mips(std::move(process_sp), MakeMCRegisterInfo(arch)));
   }
   return ABISP();
 }

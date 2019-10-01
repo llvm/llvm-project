@@ -10,7 +10,7 @@
 // UNSUPPORTED: c++98, c++03
 
 // GCC 7 is the first version to introduce [[nodiscard]]
-// UNSUPPORTED: gcc-4.9, gcc-5, gcc-6
+// UNSUPPORTED: gcc-5, gcc-6
 
 
 // MODULES_DEFINES: _LIBCPP_ENABLE_NODISCARD

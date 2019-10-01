@@ -27,7 +27,7 @@ struct A {
   }
   consteval A(int i);
   consteval A() = default;
-  consteval ~A() = default; // expected-error {{destructor cannot be marked consteval}}
+  consteval ~A() = default;
 };
 
 consteval struct B {}; // expected-error {{struct cannot be marked consteval}}
@@ -45,11 +45,17 @@ consteval int f1() {} // expected-error {{no return statement in consteval funct
 
 struct C {
   C() {}
+  ~C() {}
 };
 
 struct D {
   C c;
   consteval D() = default; // expected-error {{cannot be consteval}}
+  consteval ~D() = default; // expected-error {{cannot be consteval}}
+};
+
+struct E : C { // expected-note {{here}}
+  consteval ~E() {} // expected-error {{cannot be declared consteval because base class 'basic_sema::C' does not have a constexpr destructor}}
 };
 }
 

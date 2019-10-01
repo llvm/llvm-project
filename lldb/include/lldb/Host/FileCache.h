@@ -22,7 +22,7 @@ class FileCache {
 private:
   FileCache() {}
 
-  typedef std::map<lldb::user_id_t, lldb::FileSP> FDToFileMap;
+  typedef std::map<lldb::user_id_t, lldb::FileUP> FDToFileMap;
 
 public:
   static FileCache &GetInstance();

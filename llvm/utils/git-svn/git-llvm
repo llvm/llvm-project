@@ -53,6 +53,7 @@ LLVM_MONOREPO_SVN_MAPPING = {
         'debuginfo-tests',
         'dragonegg',
         'klee',
+        'libc',
         'libclc',
         'libcxx',
         'libcxxabi',
@@ -190,16 +191,16 @@ def program_exists(cmd):
 
 
 def get_default_rev_range():
-    # Get the branch tracked by the current branch, as set by
-    # git branch --set-upstream-to  See http://serverfault.com/a/352236/38694.
-    cur_branch = git('rev-parse', '--symbolic-full-name', 'HEAD')
-    upstream_branch = git('for-each-ref', '--format=%(upstream:short)',
-                          cur_branch)
-    if not upstream_branch:
-        upstream_branch = 'origin/master'
-
     # Get the newest common ancestor between HEAD and our upstream branch.
-    upstream_rev = git('merge-base', 'HEAD', upstream_branch)
+    upstream_rev = git('merge-base', 'HEAD', '@{upstream}', ignore_errors=True)
+    if not upstream_rev:
+        eprint("Warning: git-llvm assumes that origin/master is the upstream "
+               "branch but git does not.")
+        eprint("To make this warning go away: git branch -u origin/master")
+        eprint("To avoid this warning when creating branches: "
+               "git checkout -b MyBranchName origin/master")
+        upstream_rev = git('merge-base', 'HEAD', 'origin/master')
+
     return '%s..' % upstream_rev
 
 

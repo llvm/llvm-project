@@ -16,7 +16,12 @@
 # RUN: llvm-mc %s -filetype obj -triple x86_64-pc-linux --defsym CASE6=0 -o %t6.o
 # RUN: llvm-dwarfdump -debug-loc %t6.o 2>&1 | FileCheck %s
 
+# RUN: llvm-mc %s -filetype obj -triple x86_64-pc-linux --defsym CASE7=0 -o %t7.o
+# RUN: llvm-dwarfdump -debug-loc %t7.o 2>&1 | FileCheck %s --check-prefix=UNKNOWN-REG
+
 # CHECK: error: unexpected end of data
+
+# UNKNOWN-REG: [0x0000000000000000,  0x0000000000000001): DW_OP_regx 0xdeadbeef
 
 .section  .debug_loc,"",@progbits
 .ifdef CASE1
@@ -44,6 +49,17 @@
   .quad  0                       # starting offset
   .quad  1                       # ending offset
   .word  0xffff                  # Loc expr size
+.endif
+.ifdef CASE7
+  .quad  0                       # starting offset
+  .quad  1                       # ending offset
+  .word  2f-1f                   # Loc expr size
+1:
+  .byte  0x90                    # DW_OP_regx
+  .uleb128 0xdeadbeef
+2:
+  .quad  0                       # starting offset
+  .quad  0                       # ending offset
 .endif
 
 # A minimal compile unit is needed to deduce the address size of the location

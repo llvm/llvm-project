@@ -84,7 +84,7 @@ VBPtrLayoutItem::VBPtrLayoutItem(const UDTLayoutBase &Parent,
 }
 
 const PDBSymbolData &DataMemberLayoutItem::getDataMember() {
-  return *dyn_cast<PDBSymbolData>(Symbol);
+  return *cast<PDBSymbolData>(Symbol);
 }
 
 bool DataMemberLayoutItem::hasUDTLayout() const { return UdtLayout != nullptr; }

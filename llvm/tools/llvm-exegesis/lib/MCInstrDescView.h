@@ -112,14 +112,11 @@ struct Instruction {
   // Repeating this instruction may execute sequentially by picking aliasing
   // Use and Def registers. It may also execute in parallel by picking non
   // aliasing Use and Def registers.
-  bool hasAliasingRegisters() const;
-
-  // Whether this instruction's implicit registers alias with OtherInstr's
-  // implicit registers.
-  bool hasAliasingImplicitRegistersThrough(const Instruction &OtherInstr) const;
+  bool hasAliasingRegisters(const BitVector &ForbiddenRegisters) const;
 
   // Whether this instruction's registers alias with OtherInstr's registers.
-  bool hasAliasingRegistersThrough(const Instruction &OtherInstr) const;
+  bool hasAliasingRegistersThrough(const Instruction &OtherInstr,
+                                   const BitVector &ForbiddenRegisters) const;
 
   // Returns whether this instruction has Memory Operands.
   // Repeating this instruction executes sequentially with an instruction that
@@ -133,6 +130,7 @@ struct Instruction {
 
   // Convenient function to help with debugging.
   void dump(const llvm::MCRegisterInfo &RegInfo,
+            const RegisterAliasingTrackerCache &RATC,
             llvm::raw_ostream &Stream) const;
 
   const llvm::MCInstrDesc *Description; // Never nullptr.

@@ -192,6 +192,11 @@ public:
                                  std::function<bool(Instruction &)>>>
   instructionsWithoutDebug();
 
+  /// Return the size of the basic block ignoring debug instructions
+  filter_iterator<BasicBlock::const_iterator,
+                  std::function<bool(const Instruction &)>>::difference_type
+  sizeWithoutDebug() const;
+
   /// Unlink 'this' from the containing function, but do not delete it.
   void removeFromParent();
 

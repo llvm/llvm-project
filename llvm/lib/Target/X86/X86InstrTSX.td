@@ -45,7 +45,7 @@ def XTEST : I<0x01, MRM_D6, (outs), (ins),
 
 def XABORT : Ii8<0xc6, MRM_F8, (outs), (ins i8imm:$imm),
                  "xabort\t$imm",
-                 [(int_x86_xabort imm:$imm)]>, Requires<[HasRTM]>;
+                 [(int_x86_xabort timm:$imm)]>, Requires<[HasRTM]>;
 } // SchedRW
 
 // HLE prefixes

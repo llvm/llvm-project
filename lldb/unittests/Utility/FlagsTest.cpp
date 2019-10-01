@@ -30,19 +30,18 @@ TEST(Flags, Reset) {
   Flags f;
   f.Reset(0x3);
   EXPECT_EQ(0x3U, f.Get());
-  EXPECT_EQ(2U, f.SetCount());
 }
 
 TEST(Flags, Clear) {
   Flags f;
   f.Reset(0x3);
-  EXPECT_EQ(2U, f.SetCount());
+  EXPECT_EQ(0x3U, f.Get());
 
   f.Clear(0x5);
-  EXPECT_EQ(1U, f.SetCount());
+  EXPECT_EQ(0x2U, f.Get());
 
   f.Clear();
-  EXPECT_EQ(0U, f.SetCount());
+  EXPECT_EQ(0x0U, f.Get());
 }
 
 TEST(Flags, AllSet) {
@@ -161,38 +160,4 @@ TEST(Flags, IsClear) {
   f.Clear(eFlag1);
   EXPECT_TRUE(f.IsClear(eFlag0));
   EXPECT_TRUE(f.IsClear(eFlag1));
-}
-
-TEST(Flags, ClearCount) {
-  Flags f;
-  EXPECT_EQ(32U, f.ClearCount());
-
-  f.Set(eFlag0);
-  EXPECT_EQ(31U, f.ClearCount());
-
-  f.Set(eFlag0);
-  EXPECT_EQ(31U, f.ClearCount());
-
-  f.Set(eFlag1);
-  EXPECT_EQ(30U, f.ClearCount());
-
-  f.Set(eAllFlags);
-  EXPECT_EQ(29U, f.ClearCount());
-}
-
-TEST(Flags, SetCount) {
-  Flags f;
-  EXPECT_EQ(0U, f.SetCount());
-
-  f.Set(eFlag0);
-  EXPECT_EQ(1U, f.SetCount());
-
-  f.Set(eFlag0);
-  EXPECT_EQ(1U, f.SetCount());
-
-  f.Set(eFlag1);
-  EXPECT_EQ(2U, f.SetCount());
-
-  f.Set(eAllFlags);
-  EXPECT_EQ(3U, f.SetCount());
 }

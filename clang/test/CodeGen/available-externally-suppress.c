@@ -30,10 +30,8 @@ inline int __attribute__((always_inline)) f1(int x) {
 // CHECK: @test1
 // LTO: @test1
 int test1(int x) {
-  // CHECK: br i1
   // CHECK-NOT: call {{.*}} @f1
   // CHECK: ret i32
-  // LTO: br i1
   // LTO-NOT: call {{.*}} @f1
   // LTO: ret i32
   return f1(x);

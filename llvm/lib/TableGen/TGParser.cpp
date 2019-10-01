@@ -1147,9 +1147,9 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
       if (!InitList.back()) return nullptr;
 
       // All BinOps require their arguments to be of compatible types.
-      TypedInit *TI = dyn_cast<TypedInit>(InitList.back());
+      RecTy *ListType = cast<TypedInit>(InitList.back())->getType();
       if (!ArgType) {
-        ArgType = TI->getType();
+        ArgType = ListType;
 
         switch (Code) {
         case BinOpInit::LISTCONCAT:
@@ -1198,11 +1198,11 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
         default: llvm_unreachable("other ops have fixed argument types");
         }
       } else {
-        RecTy *Resolved = resolveTypes(ArgType, TI->getType());
+        RecTy *Resolved = resolveTypes(ArgType, ListType);
         if (!Resolved) {
           Error(InitLoc, Twine("expected value of type '") +
-                         ArgType->getAsString() + "', got '" +
-                         TI->getType()->getAsString() + "'");
+                             ArgType->getAsString() + "', got '" +
+                             ListType->getAsString() + "'");
           return nullptr;
         }
         if (Code != BinOpInit::ADD && Code != BinOpInit::AND &&

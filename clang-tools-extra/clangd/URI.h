@@ -63,6 +63,10 @@ public:
   static llvm::Expected<std::string> resolve(const URI &U,
                                              llvm::StringRef HintPath = "");
 
+  /// Same as above, in addition it parses the \p FileURI using URI::parse.
+  static llvm::Expected<std::string> resolve(llvm::StringRef FileURI,
+                                             llvm::StringRef HintPath = "");
+
   /// Resolves \p AbsPath into a canonical path of its URI, by converting
   /// \p AbsPath to URI and resolving the URI to get th canonical path.
   /// This ensures that paths with the same URI are resolved into consistent

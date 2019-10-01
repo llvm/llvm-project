@@ -850,17 +850,14 @@ again:
 }
 
 StringRef Lexer::getSpelling(const Token &Tok,
-                             const SourceManager &SourceMgr,
-                             bool *Invalid) const {
+                             const SourceManager &SourceMgr) const {
   SourceLocation Loc = Tok.getLocation();
   std::pair<FileID, unsigned> LocInfo = SourceMgr.getDecomposedLoc(Loc);
 
   bool InvalidTemp = false;
   StringRef File = SourceMgr.getBufferData(LocInfo.first, &InvalidTemp);
-  if (InvalidTemp) {
-    *Invalid = true;
+  if (InvalidTemp)
     return StringRef();
-  }
 
   const char *Begin = File.data() + LocInfo.second;
   return StringRef(Begin, Tok.getLength());

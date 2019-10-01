@@ -7658,13 +7658,13 @@ _mm512_maskz_getexp_ps (__mmask16 __U, __m512 __A)
 #define _mm512_i32gather_ps(index, addr, scale) \
   (__m512)__builtin_ia32_gathersiv16sf((__v16sf)_mm512_undefined_ps(), \
                                        (void const *)(addr), \
-                                       (__v16sf)(__m512)(index), \
+                                       (__v16si)(__m512)(index), \
                                        (__mmask16)-1, (int)(scale))
 
 #define _mm512_mask_i32gather_ps(v1_old, mask, index, addr, scale) \
   (__m512)__builtin_ia32_gathersiv16sf((__v16sf)(__m512)(v1_old), \
                                        (void const *)(addr), \
-                                       (__v16sf)(__m512)(index), \
+                                       (__v16si)(__m512)(index), \
                                        (__mmask16)(mask), (int)(scale))
 
 #define _mm512_i32gather_epi32(index, addr, scale) \

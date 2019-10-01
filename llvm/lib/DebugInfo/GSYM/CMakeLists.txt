@@ -1,4 +1,5 @@
 add_llvm_library(LLVMDebugInfoGSYM
+  Header.cpp
   FileWriter.cpp
   FunctionInfo.cpp
   InlineInfo.cpp

@@ -585,22 +585,22 @@ define void @test_psrlq_by_volatile_shift_amount(x86_mmx* %t) nounwind {
 ; X86-NEXT:    pushl %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl $1, (%esp)
-; X86-NEXT:    movd (%esp), %mm0
 ; X86-NEXT:    movl $255, %ecx
-; X86-NEXT:    movd %ecx, %mm1
-; X86-NEXT:    psrlq %mm0, %mm1
-; X86-NEXT:    movq %mm1, (%eax)
+; X86-NEXT:    movd %ecx, %mm0
+; X86-NEXT:    movd (%esp), %mm1
+; X86-NEXT:    psrlq %mm1, %mm0
+; X86-NEXT:    movq %mm0, (%eax)
 ; X86-NEXT:    popl %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_psrlq_by_volatile_shift_amount:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movl $1, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movd -{{[0-9]+}}(%rsp), %mm0
 ; X64-NEXT:    movl $255, %eax
-; X64-NEXT:    movd %eax, %mm1
-; X64-NEXT:    psrlq %mm0, %mm1
-; X64-NEXT:    movq %mm1, (%rdi)
+; X64-NEXT:    movd %eax, %mm0
+; X64-NEXT:    movd -{{[0-9]+}}(%rsp), %mm1
+; X64-NEXT:    psrlq %mm1, %mm0
+; X64-NEXT:    movq %mm0, (%rdi)
 ; X64-NEXT:    retq
 entry:
   %0 = alloca i32, align 4

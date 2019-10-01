@@ -83,10 +83,6 @@ using namespace llvm;
 STATISTIC(NumTailCalls, "Number of tail calls");
 
 static cl::opt<bool>
-LargeGOT("mxgot", cl::Hidden,
-         cl::desc("MIPS: Enable GOT larger than 64k."), cl::init(false));
-
-static cl::opt<bool>
 NoZeroDivCheck("mno-check-zero-division", cl::Hidden,
                cl::desc("MIPS: Don't trap on integer division by zero."),
                cl::init(false));
@@ -330,7 +326,7 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
   }
 
   // Set LoadExtAction for f16 vectors to Expand
-  for (MVT VT : MVT::fp_vector_valuetypes()) {
+  for (MVT VT : MVT::fp_fixedlen_vector_valuetypes()) {
     MVT F16VT = MVT::getVectorVT(MVT::f16, VT.getVectorNumElements());
     if (F16VT.isValid())
       setLoadExtAction(ISD::EXTLOAD, VT, F16VT, Expand);
@@ -518,13 +514,12 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
     setLibcallName(RTLIB::SRA_I128, nullptr);
   }
 
-  setMinFunctionAlignment(Subtarget.isGP64bit() ? llvm::Align(8)
-                                                : llvm::Align(4));
+  setMinFunctionAlignment(Subtarget.isGP64bit() ? Align(8) : Align(4));
 
   // The arguments on the stack are defined in terms of 4-byte slots on O32
   // and 8-byte slots on N32/N64.
-  setMinStackArgumentAlignment((ABI.IsN32() || ABI.IsN64()) ? llvm::Align(8)
-                                                            : llvm::Align(4));
+  setMinStackArgumentAlignment((ABI.IsN32() || ABI.IsN64()) ? Align(8)
+                                                            : Align(4));
 
   setStackPointerRegisterToSaveRestore(ABI.IsN64() ? Mips::SP_64 : Mips::SP);
 
@@ -554,8 +549,9 @@ MipsTargetLowering::createFastISel(FunctionLoweringInfo &funcInfo,
                      !Subtarget.inMicroMipsMode();
 
   // Disable if either of the following is true:
-  // We do not generate PIC, the ABI is not O32, LargeGOT is being used.
-  if (!TM.isPositionIndependent() || !TM.getABI().IsO32() || LargeGOT)
+  // We do not generate PIC, the ABI is not O32, XGOT is being used.
+  if (!TM.isPositionIndependent() || !TM.getABI().IsO32() ||
+      Subtarget.useXGOT())
     UseFastISel = false;
 
   return UseFastISel ? Mips::createFastISel(funcInfo, libInfo) : nullptr;
@@ -1989,7 +1985,7 @@ SDValue MipsTargetLowering::lowerGlobalAddress(SDValue Op,
   if (GV->hasLocalLinkage())
     return getAddrLocal(N, SDLoc(N), Ty, DAG, ABI.IsN32() || ABI.IsN64());
 
-  if (LargeGOT)
+  if (Subtarget.useXGOT())
     return getAddrGlobalLargeGOT(
         N, SDLoc(N), Ty, DAG, MipsII::MO_GOT_HI16, MipsII::MO_GOT_LO16,
         DAG.getEntryNode(),
@@ -2151,7 +2147,7 @@ SDValue MipsTargetLowering::lowerVAARG(SDValue Op, SelectionDAG &DAG) const {
   EVT VT = Node->getValueType(0);
   SDValue Chain = Node->getOperand(0);
   SDValue VAListPtr = Node->getOperand(1);
-  const llvm::Align Align =
+  const Align Align =
       llvm::MaybeAlign(Node->getConstantOperandVal(3)).valueOrOne();
   const Value *SV = cast<SrcValueSDNode>(Node->getOperand(2))->getValue();
   SDLoc DL(Node);
@@ -2872,7 +2868,7 @@ static bool CC_MipsO32(unsigned ValNo, MVT ValVT, MVT LocVT,
 #include "MipsGenCallingConv.inc"
 
  CCAssignFn *MipsTargetLowering::CCAssignFnForCall() const{
-   return CC_Mips;
+   return CC_Mips_FixedArg;
  }
 
  CCAssignFn *MipsTargetLowering::CCAssignFnForReturn() const{
@@ -3272,7 +3268,7 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
       if (InternalLinkage)
         Callee = getAddrLocal(G, DL, Ty, DAG, ABI.IsN32() || ABI.IsN64());
-      else if (LargeGOT) {
+      else if (Subtarget.useXGOT()) {
         Callee = getAddrGlobalLargeGOT(G, DL, Ty, DAG, MipsII::MO_CALL_HI16,
                                        MipsII::MO_CALL_LO16, Chain,
                                        FuncInfo->callPtrInfo(Val));
@@ -3294,7 +3290,7 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     if (!IsPIC) // static
       Callee = DAG.getTargetExternalSymbol(
           Sym, getPointerTy(DAG.getDataLayout()), MipsII::MO_NO_FLAG);
-    else if (LargeGOT) {
+    else if (Subtarget.useXGOT()) {
       Callee = getAddrGlobalLargeGOT(S, DL, Ty, DAG, MipsII::MO_CALL_HI16,
                                      MipsII::MO_CALL_LO16, Chain,
                                      FuncInfo->callPtrInfo(Sym));

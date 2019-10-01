@@ -418,21 +418,20 @@ define <32 x i16> @vec512_i16_unsigned_reg_reg(<32 x i16> %a1, <32 x i16> %a2) n
 ; AVX512VL-FALLBACK-NEXT:    vextracti64x4 $1, %zmm0, %ymm3
 ; AVX512VL-FALLBACK-NEXT:    vpminuw %ymm2, %ymm3, %ymm4
 ; AVX512VL-FALLBACK-NEXT:    vpcmpeqw %ymm4, %ymm3, %ymm5
-; AVX512VL-FALLBACK-NEXT:    vpternlogq $15, %ymm5, %ymm5, %ymm5
-; AVX512VL-FALLBACK-NEXT:    vmovdqa {{.*#+}} ymm6 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
-; AVX512VL-FALLBACK-NEXT:    vpor %ymm6, %ymm5, %ymm5
-; AVX512VL-FALLBACK-NEXT:    vpminuw %ymm1, %ymm0, %ymm7
-; AVX512VL-FALLBACK-NEXT:    vpcmpeqw %ymm7, %ymm0, %ymm8
-; AVX512VL-FALLBACK-NEXT:    vpternlogq $15, %ymm8, %ymm8, %ymm8
-; AVX512VL-FALLBACK-NEXT:    vpor %ymm6, %ymm8, %ymm6
+; AVX512VL-FALLBACK-NEXT:    vpcmpeqd %ymm6, %ymm6, %ymm6
+; AVX512VL-FALLBACK-NEXT:    vmovdqa {{.*#+}} ymm7 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+; AVX512VL-FALLBACK-NEXT:    vpternlogq $222, %ymm6, %ymm7, %ymm5
+; AVX512VL-FALLBACK-NEXT:    vpminuw %ymm1, %ymm0, %ymm8
+; AVX512VL-FALLBACK-NEXT:    vpcmpeqw %ymm8, %ymm0, %ymm9
+; AVX512VL-FALLBACK-NEXT:    vpternlogq $222, %ymm6, %ymm7, %ymm9
 ; AVX512VL-FALLBACK-NEXT:    vpmaxuw %ymm2, %ymm3, %ymm2
 ; AVX512VL-FALLBACK-NEXT:    vpmaxuw %ymm1, %ymm0, %ymm1
-; AVX512VL-FALLBACK-NEXT:    vpsubw %ymm7, %ymm1, %ymm1
+; AVX512VL-FALLBACK-NEXT:    vpsubw %ymm8, %ymm1, %ymm1
 ; AVX512VL-FALLBACK-NEXT:    vpsubw %ymm4, %ymm2, %ymm2
 ; AVX512VL-FALLBACK-NEXT:    vpsrlw $1, %ymm2, %ymm2
 ; AVX512VL-FALLBACK-NEXT:    vpmullw %ymm5, %ymm2, %ymm2
 ; AVX512VL-FALLBACK-NEXT:    vpsrlw $1, %ymm1, %ymm1
-; AVX512VL-FALLBACK-NEXT:    vpmullw %ymm6, %ymm1, %ymm1
+; AVX512VL-FALLBACK-NEXT:    vpmullw %ymm9, %ymm1, %ymm1
 ; AVX512VL-FALLBACK-NEXT:    vpaddw %ymm3, %ymm2, %ymm2
 ; AVX512VL-FALLBACK-NEXT:    vpaddw %ymm0, %ymm1, %ymm0
 ; AVX512VL-FALLBACK-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
@@ -877,45 +876,44 @@ define <64 x i8> @vec512_i8_unsigned_reg_reg(<64 x i8> %a1, <64 x i8> %a2) nounw
 ;
 ; AVX512VL-FALLBACK-LABEL: vec512_i8_unsigned_reg_reg:
 ; AVX512VL-FALLBACK:       # %bb.0:
-; AVX512VL-FALLBACK-NEXT:    vextracti64x4 $1, %zmm1, %ymm3
+; AVX512VL-FALLBACK-NEXT:    vextracti64x4 $1, %zmm1, %ymm4
 ; AVX512VL-FALLBACK-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
-; AVX512VL-FALLBACK-NEXT:    vpminub %ymm3, %ymm2, %ymm4
-; AVX512VL-FALLBACK-NEXT:    vpcmpeqb %ymm4, %ymm2, %ymm5
-; AVX512VL-FALLBACK-NEXT:    vpternlogq $15, %ymm5, %ymm5, %ymm5
-; AVX512VL-FALLBACK-NEXT:    vmovdqa {{.*#+}} ymm6 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
-; AVX512VL-FALLBACK-NEXT:    vpor %ymm6, %ymm5, %ymm5
-; AVX512VL-FALLBACK-NEXT:    vpminub %ymm1, %ymm0, %ymm7
-; AVX512VL-FALLBACK-NEXT:    vpcmpeqb %ymm7, %ymm0, %ymm8
-; AVX512VL-FALLBACK-NEXT:    vpternlogq $15, %ymm8, %ymm8, %ymm8
-; AVX512VL-FALLBACK-NEXT:    vpor %ymm6, %ymm8, %ymm6
-; AVX512VL-FALLBACK-NEXT:    vpmaxub %ymm3, %ymm2, %ymm3
+; AVX512VL-FALLBACK-NEXT:    vpminub %ymm4, %ymm2, %ymm5
+; AVX512VL-FALLBACK-NEXT:    vpcmpeqb %ymm5, %ymm2, %ymm3
+; AVX512VL-FALLBACK-NEXT:    vpcmpeqd %ymm6, %ymm6, %ymm6
+; AVX512VL-FALLBACK-NEXT:    vmovdqa {{.*#+}} ymm7 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+; AVX512VL-FALLBACK-NEXT:    vpternlogq $222, %ymm6, %ymm7, %ymm3
+; AVX512VL-FALLBACK-NEXT:    vpminub %ymm1, %ymm0, %ymm8
+; AVX512VL-FALLBACK-NEXT:    vpcmpeqb %ymm8, %ymm0, %ymm9
+; AVX512VL-FALLBACK-NEXT:    vpternlogq $222, %ymm6, %ymm7, %ymm9
+; AVX512VL-FALLBACK-NEXT:    vpmaxub %ymm4, %ymm2, %ymm4
 ; AVX512VL-FALLBACK-NEXT:    vpmaxub %ymm1, %ymm0, %ymm1
-; AVX512VL-FALLBACK-NEXT:    vpsubb %ymm7, %ymm1, %ymm1
-; AVX512VL-FALLBACK-NEXT:    vpsubb %ymm4, %ymm3, %ymm3
-; AVX512VL-FALLBACK-NEXT:    vpsrlw $1, %ymm3, %ymm3
-; AVX512VL-FALLBACK-NEXT:    vmovdqa {{.*#+}} ymm4 = [127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127]
-; AVX512VL-FALLBACK-NEXT:    vpand %ymm4, %ymm3, %ymm3
+; AVX512VL-FALLBACK-NEXT:    vpsubb %ymm8, %ymm1, %ymm1
+; AVX512VL-FALLBACK-NEXT:    vpsubb %ymm5, %ymm4, %ymm4
+; AVX512VL-FALLBACK-NEXT:    vpsrlw $1, %ymm4, %ymm4
+; AVX512VL-FALLBACK-NEXT:    vmovdqa {{.*#+}} ymm5 = [127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127]
+; AVX512VL-FALLBACK-NEXT:    vpand %ymm5, %ymm4, %ymm4
 ; AVX512VL-FALLBACK-NEXT:    vpsrlw $1, %ymm1, %ymm1
-; AVX512VL-FALLBACK-NEXT:    vpand %ymm4, %ymm1, %ymm1
-; AVX512VL-FALLBACK-NEXT:    vpunpckhbw {{.*#+}} ymm4 = ymm1[8],ymm0[8],ymm1[9],ymm0[9],ymm1[10],ymm0[10],ymm1[11],ymm0[11],ymm1[12],ymm0[12],ymm1[13],ymm0[13],ymm1[14],ymm0[14],ymm1[15],ymm0[15],ymm1[24],ymm0[24],ymm1[25],ymm0[25],ymm1[26],ymm0[26],ymm1[27],ymm0[27],ymm1[28],ymm0[28],ymm1[29],ymm0[29],ymm1[30],ymm0[30],ymm1[31],ymm0[31]
-; AVX512VL-FALLBACK-NEXT:    vpunpckhbw {{.*#+}} ymm7 = ymm6[8],ymm0[8],ymm6[9],ymm0[9],ymm6[10],ymm0[10],ymm6[11],ymm0[11],ymm6[12],ymm0[12],ymm6[13],ymm0[13],ymm6[14],ymm0[14],ymm6[15],ymm0[15],ymm6[24],ymm0[24],ymm6[25],ymm0[25],ymm6[26],ymm0[26],ymm6[27],ymm0[27],ymm6[28],ymm0[28],ymm6[29],ymm0[29],ymm6[30],ymm0[30],ymm6[31],ymm0[31]
-; AVX512VL-FALLBACK-NEXT:    vpmullw %ymm7, %ymm4, %ymm4
-; AVX512VL-FALLBACK-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; AVX512VL-FALLBACK-NEXT:    vpand %ymm7, %ymm4, %ymm4
+; AVX512VL-FALLBACK-NEXT:    vpand %ymm5, %ymm1, %ymm1
+; AVX512VL-FALLBACK-NEXT:    vpunpckhbw {{.*#+}} ymm5 = ymm1[8],ymm0[8],ymm1[9],ymm0[9],ymm1[10],ymm0[10],ymm1[11],ymm0[11],ymm1[12],ymm0[12],ymm1[13],ymm0[13],ymm1[14],ymm0[14],ymm1[15],ymm0[15],ymm1[24],ymm0[24],ymm1[25],ymm0[25],ymm1[26],ymm0[26],ymm1[27],ymm0[27],ymm1[28],ymm0[28],ymm1[29],ymm0[29],ymm1[30],ymm0[30],ymm1[31],ymm0[31]
+; AVX512VL-FALLBACK-NEXT:    vpunpckhbw {{.*#+}} ymm6 = ymm9[8],ymm0[8],ymm9[9],ymm0[9],ymm9[10],ymm0[10],ymm9[11],ymm0[11],ymm9[12],ymm0[12],ymm9[13],ymm0[13],ymm9[14],ymm0[14],ymm9[15],ymm0[15],ymm9[24],ymm0[24],ymm9[25],ymm0[25],ymm9[26],ymm0[26],ymm9[27],ymm0[27],ymm9[28],ymm0[28],ymm9[29],ymm0[29],ymm9[30],ymm0[30],ymm9[31],ymm0[31]
+; AVX512VL-FALLBACK-NEXT:    vpmullw %ymm6, %ymm5, %ymm5
+; AVX512VL-FALLBACK-NEXT:    vmovdqa {{.*#+}} ymm6 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
+; AVX512VL-FALLBACK-NEXT:    vpand %ymm6, %ymm5, %ymm5
 ; AVX512VL-FALLBACK-NEXT:    vpunpcklbw {{.*#+}} ymm1 = ymm1[0],ymm0[0],ymm1[1],ymm0[1],ymm1[2],ymm0[2],ymm1[3],ymm0[3],ymm1[4],ymm0[4],ymm1[5],ymm0[5],ymm1[6],ymm0[6],ymm1[7],ymm0[7],ymm1[16],ymm0[16],ymm1[17],ymm0[17],ymm1[18],ymm0[18],ymm1[19],ymm0[19],ymm1[20],ymm0[20],ymm1[21],ymm0[21],ymm1[22],ymm0[22],ymm1[23],ymm0[23]
-; AVX512VL-FALLBACK-NEXT:    vpunpcklbw {{.*#+}} ymm6 = ymm6[0],ymm0[0],ymm6[1],ymm0[1],ymm6[2],ymm0[2],ymm6[3],ymm0[3],ymm6[4],ymm0[4],ymm6[5],ymm0[5],ymm6[6],ymm0[6],ymm6[7],ymm0[7],ymm6[16],ymm0[16],ymm6[17],ymm0[17],ymm6[18],ymm0[18],ymm6[19],ymm0[19],ymm6[20],ymm0[20],ymm6[21],ymm0[21],ymm6[22],ymm0[22],ymm6[23],ymm0[23]
-; AVX512VL-FALLBACK-NEXT:    vpmullw %ymm6, %ymm1, %ymm1
-; AVX512VL-FALLBACK-NEXT:    vpand %ymm7, %ymm1, %ymm1
-; AVX512VL-FALLBACK-NEXT:    vpackuswb %ymm4, %ymm1, %ymm1
-; AVX512VL-FALLBACK-NEXT:    vpunpckhbw {{.*#+}} ymm4 = ymm3[8],ymm0[8],ymm3[9],ymm0[9],ymm3[10],ymm0[10],ymm3[11],ymm0[11],ymm3[12],ymm0[12],ymm3[13],ymm0[13],ymm3[14],ymm0[14],ymm3[15],ymm0[15],ymm3[24],ymm0[24],ymm3[25],ymm0[25],ymm3[26],ymm0[26],ymm3[27],ymm0[27],ymm3[28],ymm0[28],ymm3[29],ymm0[29],ymm3[30],ymm0[30],ymm3[31],ymm0[31]
-; AVX512VL-FALLBACK-NEXT:    vpunpckhbw {{.*#+}} ymm6 = ymm5[8],ymm0[8],ymm5[9],ymm0[9],ymm5[10],ymm0[10],ymm5[11],ymm0[11],ymm5[12],ymm0[12],ymm5[13],ymm0[13],ymm5[14],ymm0[14],ymm5[15],ymm0[15],ymm5[24],ymm0[24],ymm5[25],ymm0[25],ymm5[26],ymm0[26],ymm5[27],ymm0[27],ymm5[28],ymm0[28],ymm5[29],ymm0[29],ymm5[30],ymm0[30],ymm5[31],ymm0[31]
-; AVX512VL-FALLBACK-NEXT:    vpmullw %ymm6, %ymm4, %ymm4
-; AVX512VL-FALLBACK-NEXT:    vpand %ymm7, %ymm4, %ymm4
+; AVX512VL-FALLBACK-NEXT:    vpunpcklbw {{.*#+}} ymm7 = ymm9[0],ymm0[0],ymm9[1],ymm0[1],ymm9[2],ymm0[2],ymm9[3],ymm0[3],ymm9[4],ymm0[4],ymm9[5],ymm0[5],ymm9[6],ymm0[6],ymm9[7],ymm0[7],ymm9[16],ymm0[16],ymm9[17],ymm0[17],ymm9[18],ymm0[18],ymm9[19],ymm0[19],ymm9[20],ymm0[20],ymm9[21],ymm0[21],ymm9[22],ymm0[22],ymm9[23],ymm0[23]
+; AVX512VL-FALLBACK-NEXT:    vpmullw %ymm7, %ymm1, %ymm1
+; AVX512VL-FALLBACK-NEXT:    vpand %ymm6, %ymm1, %ymm1
+; AVX512VL-FALLBACK-NEXT:    vpackuswb %ymm5, %ymm1, %ymm1
+; AVX512VL-FALLBACK-NEXT:    vpunpckhbw {{.*#+}} ymm5 = ymm4[8],ymm0[8],ymm4[9],ymm0[9],ymm4[10],ymm0[10],ymm4[11],ymm0[11],ymm4[12],ymm0[12],ymm4[13],ymm0[13],ymm4[14],ymm0[14],ymm4[15],ymm0[15],ymm4[24],ymm0[24],ymm4[25],ymm0[25],ymm4[26],ymm0[26],ymm4[27],ymm0[27],ymm4[28],ymm0[28],ymm4[29],ymm0[29],ymm4[30],ymm0[30],ymm4[31],ymm0[31]
+; AVX512VL-FALLBACK-NEXT:    vpunpckhbw {{.*#+}} ymm7 = ymm3[8],ymm0[8],ymm3[9],ymm0[9],ymm3[10],ymm0[10],ymm3[11],ymm0[11],ymm3[12],ymm0[12],ymm3[13],ymm0[13],ymm3[14],ymm0[14],ymm3[15],ymm0[15],ymm3[24],ymm0[24],ymm3[25],ymm0[25],ymm3[26],ymm0[26],ymm3[27],ymm0[27],ymm3[28],ymm0[28],ymm3[29],ymm0[29],ymm3[30],ymm0[30],ymm3[31],ymm0[31]
+; AVX512VL-FALLBACK-NEXT:    vpmullw %ymm7, %ymm5, %ymm5
+; AVX512VL-FALLBACK-NEXT:    vpand %ymm6, %ymm5, %ymm5
+; AVX512VL-FALLBACK-NEXT:    vpunpcklbw {{.*#+}} ymm4 = ymm4[0],ymm0[0],ymm4[1],ymm0[1],ymm4[2],ymm0[2],ymm4[3],ymm0[3],ymm4[4],ymm0[4],ymm4[5],ymm0[5],ymm4[6],ymm0[6],ymm4[7],ymm0[7],ymm4[16],ymm0[16],ymm4[17],ymm0[17],ymm4[18],ymm0[18],ymm4[19],ymm0[19],ymm4[20],ymm0[20],ymm4[21],ymm0[21],ymm4[22],ymm0[22],ymm4[23],ymm0[23]
 ; AVX512VL-FALLBACK-NEXT:    vpunpcklbw {{.*#+}} ymm3 = ymm3[0],ymm0[0],ymm3[1],ymm0[1],ymm3[2],ymm0[2],ymm3[3],ymm0[3],ymm3[4],ymm0[4],ymm3[5],ymm0[5],ymm3[6],ymm0[6],ymm3[7],ymm0[7],ymm3[16],ymm0[16],ymm3[17],ymm0[17],ymm3[18],ymm0[18],ymm3[19],ymm0[19],ymm3[20],ymm0[20],ymm3[21],ymm0[21],ymm3[22],ymm0[22],ymm3[23],ymm0[23]
-; AVX512VL-FALLBACK-NEXT:    vpunpcklbw {{.*#+}} ymm5 = ymm5[0],ymm0[0],ymm5[1],ymm0[1],ymm5[2],ymm0[2],ymm5[3],ymm0[3],ymm5[4],ymm0[4],ymm5[5],ymm0[5],ymm5[6],ymm0[6],ymm5[7],ymm0[7],ymm5[16],ymm0[16],ymm5[17],ymm0[17],ymm5[18],ymm0[18],ymm5[19],ymm0[19],ymm5[20],ymm0[20],ymm5[21],ymm0[21],ymm5[22],ymm0[22],ymm5[23],ymm0[23]
-; AVX512VL-FALLBACK-NEXT:    vpmullw %ymm5, %ymm3, %ymm3
-; AVX512VL-FALLBACK-NEXT:    vpand %ymm7, %ymm3, %ymm3
-; AVX512VL-FALLBACK-NEXT:    vpackuswb %ymm4, %ymm3, %ymm3
+; AVX512VL-FALLBACK-NEXT:    vpmullw %ymm3, %ymm4, %ymm3
+; AVX512VL-FALLBACK-NEXT:    vpand %ymm6, %ymm3, %ymm3
+; AVX512VL-FALLBACK-NEXT:    vpackuswb %ymm5, %ymm3, %ymm3
 ; AVX512VL-FALLBACK-NEXT:    vpaddb %ymm2, %ymm3, %ymm2
 ; AVX512VL-FALLBACK-NEXT:    vpaddb %ymm0, %ymm1, %ymm0
 ; AVX512VL-FALLBACK-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0

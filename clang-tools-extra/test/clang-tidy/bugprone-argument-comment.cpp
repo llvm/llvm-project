@@ -63,6 +63,28 @@ void ignores_underscores() {
   f3(/*With_Underscores=*/false);
 }
 
+namespace IgnoresImplicit {
+struct S {
+  S(int x);
+  int x;
+};
+
+struct T {
+  // Use two arguments (one defaulted) because simplistic check for implicit
+  // constructor looks for only one argument. We need to default the argument so
+  // that it will still be triggered implicitly.  This is not contrived -- it
+  // comes up in real code, for example std::set(std::initializer_list...).
+  T(S s, int y = 0);
+};
+
+void k(T arg1);
+
+void mynewtest() {
+  int foo = 3;
+  k(/*arg1=*/S(foo));
+}
+} // namespace IgnoresImplicit
+
 namespace ThisEditDistanceAboveThreshold {
 void f4(int xxx);
 void g() { f4(/*xyz=*/0); }

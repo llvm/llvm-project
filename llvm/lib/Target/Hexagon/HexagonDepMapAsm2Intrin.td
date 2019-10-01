@@ -37,12 +37,12 @@ def: Pat<(int_hexagon_F2_sfmax IntRegs:$src1, IntRegs:$src2),
          (F2_sfmax IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A2_vabswsat DoubleRegs:$src1),
          (A2_vabswsat DoubleRegs:$src1)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S2_asr_i_r IntRegs:$src1, u5_0ImmPred:$src2),
-         (S2_asr_i_r IntRegs:$src1, u5_0ImmPred:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S2_asr_i_p DoubleRegs:$src1, u6_0ImmPred:$src2),
-         (S2_asr_i_p DoubleRegs:$src1, u6_0ImmPred:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_A4_combineri IntRegs:$src1, s32_0ImmPred:$src2),
-         (A4_combineri IntRegs:$src1, s32_0ImmPred:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S2_asr_i_r IntRegs:$src1, u5_0ImmPred_timm:$src2),
+         (S2_asr_i_r IntRegs:$src1, u5_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S2_asr_i_p DoubleRegs:$src1, u6_0ImmPred_timm:$src2),
+         (S2_asr_i_p DoubleRegs:$src1, u6_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_A4_combineri IntRegs:$src1, s32_0ImmPred_timm:$src2),
+         (A4_combineri IntRegs:$src1, s32_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mpy_nac_sat_hl_s1 IntRegs:$src1, IntRegs:$src2, IntRegs:$src3),
          (M2_mpy_nac_sat_hl_s1 IntRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M4_vpmpyh_acc DoubleRegs:$src1, IntRegs:$src2, IntRegs:$src3),
@@ -75,8 +75,8 @@ def: Pat<(int_hexagon_A2_vaddws DoubleRegs:$src1, DoubleRegs:$src2),
          (A2_vaddws DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A2_maxup DoubleRegs:$src1, DoubleRegs:$src2),
          (A2_maxup DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_A4_vcmphgti DoubleRegs:$src1, s8_0ImmPred:$src2),
-         (A4_vcmphgti DoubleRegs:$src1, s8_0ImmPred:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_A4_vcmphgti DoubleRegs:$src1, s8_0ImmPred_timm:$src2),
+         (A4_vcmphgti DoubleRegs:$src1, s8_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_S2_interleave DoubleRegs:$src1),
          (S2_interleave DoubleRegs:$src1)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_vrcmpyi_s0 DoubleRegs:$src1, DoubleRegs:$src2),
@@ -89,10 +89,10 @@ def: Pat<(int_hexagon_C2_cmpgtu IntRegs:$src1, IntRegs:$src2),
          (C2_cmpgtu IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_C2_cmpgtp DoubleRegs:$src1, DoubleRegs:$src2),
          (C2_cmpgtp DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_A4_cmphgtui IntRegs:$src1, u32_0ImmPred:$src2),
-         (A4_cmphgtui IntRegs:$src1, u32_0ImmPred:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_C2_cmpgti IntRegs:$src1, s32_0ImmPred:$src2),
-         (C2_cmpgti IntRegs:$src1, s32_0ImmPred:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_A4_cmphgtui IntRegs:$src1, u32_0ImmPred_timm:$src2),
+         (A4_cmphgtui IntRegs:$src1, u32_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_C2_cmpgti IntRegs:$src1, s32_0ImmPred_timm:$src2),
+         (C2_cmpgti IntRegs:$src1, s32_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mpyi IntRegs:$src1, IntRegs:$src2),
          (M2_mpyi IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_F2_conv_df2uw_chop DoubleRegs:$src1),
@@ -103,12 +103,12 @@ def: Pat<(int_hexagon_M2_mpy_lh_s1 IntRegs:$src1, IntRegs:$src2),
          (M2_mpy_lh_s1 IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mpy_lh_s0 IntRegs:$src1, IntRegs:$src2),
          (M2_mpy_lh_s0 IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S2_lsr_i_r_xacc IntRegs:$src1, IntRegs:$src2, u5_0ImmPred:$src3),
-         (S2_lsr_i_r_xacc IntRegs:$src1, IntRegs:$src2, u5_0ImmPred:$src3)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S2_lsr_i_r_xacc IntRegs:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3),
+         (S2_lsr_i_r_xacc IntRegs:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_S2_vrcnegh DoubleRegs:$src1, DoubleRegs:$src2, IntRegs:$src3),
          (S2_vrcnegh DoubleRegs:$src1, DoubleRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S2_extractup DoubleRegs:$src1, u6_0ImmPred:$src2, u6_0ImmPred:$src3),
-         (S2_extractup DoubleRegs:$src1, u6_0ImmPred:$src2, u6_0ImmPred:$src3)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S2_extractup DoubleRegs:$src1, u6_0ImmPred_timm:$src2, u6_0ImmPred_timm:$src3),
+         (S2_extractup DoubleRegs:$src1, u6_0ImmPred_timm:$src2, u6_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_S4_ntstbit_r IntRegs:$src1, IntRegs:$src2),
          (S4_ntstbit_r IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_F2_conv_w2sf IntRegs:$src1),
@@ -125,10 +125,10 @@ def: Pat<(int_hexagon_A4_cmpbgt IntRegs:$src1, IntRegs:$src2),
          (A4_cmpbgt IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_S2_asr_r_r_and IntRegs:$src1, IntRegs:$src2, IntRegs:$src3),
          (S2_asr_r_r_and IntRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_A4_rcmpneqi IntRegs:$src1, s32_0ImmPred:$src2),
-         (A4_rcmpneqi IntRegs:$src1, s32_0ImmPred:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S2_asl_i_r_nac IntRegs:$src1, IntRegs:$src2, u5_0ImmPred:$src3),
-         (S2_asl_i_r_nac IntRegs:$src1, IntRegs:$src2, u5_0ImmPred:$src3)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_A4_rcmpneqi IntRegs:$src1, s32_0ImmPred_timm:$src2),
+         (A4_rcmpneqi IntRegs:$src1, s32_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S2_asl_i_r_nac IntRegs:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3),
+         (S2_asl_i_r_nac IntRegs:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_subacc IntRegs:$src1, IntRegs:$src2, IntRegs:$src3),
          (M2_subacc IntRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A2_orp DoubleRegs:$src1, DoubleRegs:$src2),
@@ -137,28 +137,28 @@ def: Pat<(int_hexagon_M2_mpyu_up IntRegs:$src1, IntRegs:$src2),
          (M2_mpyu_up IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mpy_acc_sat_lh_s1 IntRegs:$src1, IntRegs:$src2, IntRegs:$src3),
          (M2_mpy_acc_sat_lh_s1 IntRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S2_asr_i_vh DoubleRegs:$src1, u4_0ImmPred:$src2),
-         (S2_asr_i_vh DoubleRegs:$src1, u4_0ImmPred:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S2_asr_i_vw DoubleRegs:$src1, u5_0ImmPred:$src2),
-         (S2_asr_i_vw DoubleRegs:$src1, u5_0ImmPred:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S2_asr_i_vh DoubleRegs:$src1, u4_0ImmPred_timm:$src2),
+         (S2_asr_i_vh DoubleRegs:$src1, u4_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S2_asr_i_vw DoubleRegs:$src1, u5_0ImmPred_timm:$src2),
+         (S2_asr_i_vw DoubleRegs:$src1, u5_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A4_cmpbgtu IntRegs:$src1, IntRegs:$src2),
          (A4_cmpbgtu IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A4_vcmpbeq_any DoubleRegs:$src1, DoubleRegs:$src2),
          (A4_vcmpbeq_any DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_A4_cmpbgti IntRegs:$src1, s8_0ImmPred:$src2),
-         (A4_cmpbgti IntRegs:$src1, s8_0ImmPred:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_A4_cmpbgti IntRegs:$src1, s8_0ImmPred_timm:$src2),
+         (A4_cmpbgti IntRegs:$src1, s8_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mpyd_lh_s1 IntRegs:$src1, IntRegs:$src2),
          (M2_mpyd_lh_s1 IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_S2_asl_r_p_nac DoubleRegs:$src1, DoubleRegs:$src2, IntRegs:$src3),
          (S2_asl_r_p_nac DoubleRegs:$src1, DoubleRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S2_lsr_i_r_nac IntRegs:$src1, IntRegs:$src2, u5_0ImmPred:$src3),
-         (S2_lsr_i_r_nac IntRegs:$src1, IntRegs:$src2, u5_0ImmPred:$src3)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S2_lsr_i_r_nac IntRegs:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3),
+         (S2_lsr_i_r_nac IntRegs:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A2_addsp IntRegs:$src1, DoubleRegs:$src2),
          (A2_addsp IntRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_S4_vxsubaddw DoubleRegs:$src1, DoubleRegs:$src2),
          (S4_vxsubaddw DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_A4_vcmpheqi DoubleRegs:$src1, s8_0ImmPred:$src2),
-         (A4_vcmpheqi DoubleRegs:$src1, s8_0ImmPred:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_A4_vcmpheqi DoubleRegs:$src1, s8_0ImmPred_timm:$src2),
+         (A4_vcmpheqi DoubleRegs:$src1, s8_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_S4_vxsubaddh DoubleRegs:$src1, DoubleRegs:$src2),
          (S4_vxsubaddh DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M4_pmpyw IntRegs:$src1, IntRegs:$src2),
@@ -177,10 +177,10 @@ def: Pat<(int_hexagon_A2_pxorf PredRegs:$src1, IntRegs:$src2, IntRegs:$src3),
          (A2_pxorf PredRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A2_vsubub DoubleRegs:$src1, DoubleRegs:$src2),
          (A2_vsubub DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S2_asl_i_p DoubleRegs:$src1, u6_0ImmPred:$src2),
-         (S2_asl_i_p DoubleRegs:$src1, u6_0ImmPred:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S2_asl_i_r IntRegs:$src1, u5_0ImmPred:$src2),
-         (S2_asl_i_r IntRegs:$src1, u5_0ImmPred:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S2_asl_i_p DoubleRegs:$src1, u6_0ImmPred_timm:$src2),
+         (S2_asl_i_p DoubleRegs:$src1, u6_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S2_asl_i_r IntRegs:$src1, u5_0ImmPred_timm:$src2),
+         (S2_asl_i_r IntRegs:$src1, u5_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A4_vrminuw DoubleRegs:$src1, DoubleRegs:$src2, IntRegs:$src3),
          (A4_vrminuw DoubleRegs:$src1, DoubleRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_F2_sffma IntRegs:$src1, IntRegs:$src2, IntRegs:$src3),
@@ -199,10 +199,10 @@ def: Pat<(int_hexagon_M4_vrmpyoh_s1 DoubleRegs:$src1, DoubleRegs:$src2),
          (M4_vrmpyoh_s1 DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_C2_bitsset IntRegs:$src1, IntRegs:$src2),
          (C2_bitsset IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_M2_mpysip IntRegs:$src1, u32_0ImmPred:$src2),
-         (M2_mpysip IntRegs:$src1, u32_0ImmPred:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_M2_mpysin IntRegs:$src1, u8_0ImmPred:$src2),
-         (M2_mpysin IntRegs:$src1, u8_0ImmPred:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_M2_mpysip IntRegs:$src1, u32_0ImmPred_timm:$src2),
+         (M2_mpysip IntRegs:$src1, u32_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_M2_mpysin IntRegs:$src1, u8_0ImmPred_timm:$src2),
+         (M2_mpysin IntRegs:$src1, u8_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A4_boundscheck IntRegs:$src1, DoubleRegs:$src2),
          (A4_boundscheck IntRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M5_vrmpybuu DoubleRegs:$src1, DoubleRegs:$src2),
@@ -225,10 +225,10 @@ def: Pat<(int_hexagon_F2_conv_ud2df DoubleRegs:$src1),
          (F2_conv_ud2df DoubleRegs:$src1)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A2_vnavgw DoubleRegs:$src1, DoubleRegs:$src2),
          (A2_vnavgw DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S2_asl_i_r_acc IntRegs:$src1, IntRegs:$src2, u5_0ImmPred:$src3),
-         (S2_asl_i_r_acc IntRegs:$src1, IntRegs:$src2, u5_0ImmPred:$src3)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S4_subi_lsr_ri u32_0ImmPred:$src1, IntRegs:$src2, u5_0ImmPred:$src3),
-         (S4_subi_lsr_ri u32_0ImmPred:$src1, IntRegs:$src2, u5_0ImmPred:$src3)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S2_asl_i_r_acc IntRegs:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3),
+         (S2_asl_i_r_acc IntRegs:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S4_subi_lsr_ri u32_0ImmPred_timm:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3),
+         (S4_subi_lsr_ri u32_0ImmPred_timm:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_S2_vzxthw IntRegs:$src1),
          (S2_vzxthw IntRegs:$src1)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_F2_sfadd IntRegs:$src1, IntRegs:$src2),
@@ -241,12 +241,12 @@ def: Pat<(int_hexagon_M2_vmac2su_s1 DoubleRegs:$src1, IntRegs:$src2, IntRegs:$sr
          (M2_vmac2su_s1 DoubleRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_dpmpyss_s0 IntRegs:$src1, IntRegs:$src2),
          (M2_dpmpyss_s0 IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S2_insert IntRegs:$src1, IntRegs:$src2, u5_0ImmPred:$src3, u5_0ImmPred:$src4),
-         (S2_insert IntRegs:$src1, IntRegs:$src2, u5_0ImmPred:$src3, u5_0ImmPred:$src4)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S2_insert IntRegs:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3, u5_0ImmPred_timm:$src4),
+         (S2_insert IntRegs:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3, u5_0ImmPred_timm:$src4)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_S2_packhl IntRegs:$src1, IntRegs:$src2),
          (S2_packhl IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_A4_vcmpwgti DoubleRegs:$src1, s8_0ImmPred:$src2),
-         (A4_vcmpwgti DoubleRegs:$src1, s8_0ImmPred:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_A4_vcmpwgti DoubleRegs:$src1, s8_0ImmPred_timm:$src2),
+         (A4_vcmpwgti DoubleRegs:$src1, s8_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A2_vavguwr DoubleRegs:$src1, DoubleRegs:$src2),
          (A2_vavguwr DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_S2_asl_r_r_and IntRegs:$src1, IntRegs:$src2, IntRegs:$src3),
@@ -259,8 +259,8 @@ def: Pat<(int_hexagon_M4_and_and IntRegs:$src1, IntRegs:$src2, IntRegs:$src3),
          (M4_and_and IntRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_F2_conv_d2df DoubleRegs:$src1),
          (F2_conv_d2df DoubleRegs:$src1)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_C2_cmpgtui IntRegs:$src1, u32_0ImmPred:$src2),
-         (C2_cmpgtui IntRegs:$src1, u32_0ImmPred:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_C2_cmpgtui IntRegs:$src1, u32_0ImmPred_timm:$src2),
+         (C2_cmpgtui IntRegs:$src1, u32_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A2_vconj DoubleRegs:$src1),
          (A2_vconj DoubleRegs:$src1)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_S2_lsr_r_vw DoubleRegs:$src1, IntRegs:$src2),
@@ -279,8 +279,8 @@ def: Pat<(int_hexagon_C2_any8 PredRegs:$src1),
          (C2_any8 PredRegs:$src1)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_S2_togglebit_r IntRegs:$src1, IntRegs:$src2),
          (S2_togglebit_r IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S2_togglebit_i IntRegs:$src1, u5_0ImmPred:$src2),
-         (S2_togglebit_i IntRegs:$src1, u5_0ImmPred:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S2_togglebit_i IntRegs:$src1, u5_0ImmPred_timm:$src2),
+         (S2_togglebit_i IntRegs:$src1, u5_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_F2_conv_uw2sf IntRegs:$src1),
          (F2_conv_uw2sf IntRegs:$src1)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_S2_vsathb_nopack DoubleRegs:$src1),
@@ -303,10 +303,10 @@ def: Pat<(int_hexagon_C4_or_andn PredRegs:$src1, PredRegs:$src2, PredRegs:$src3)
          (C4_or_andn PredRegs:$src1, PredRegs:$src2, PredRegs:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_S2_asl_r_r_nac IntRegs:$src1, IntRegs:$src2, IntRegs:$src3),
          (S2_asl_r_r_nac IntRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S2_asl_i_p_acc DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred:$src3),
-         (S2_asl_i_p_acc DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred:$src3)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_A4_vcmpwgtui DoubleRegs:$src1, u7_0ImmPred:$src2),
-         (A4_vcmpwgtui DoubleRegs:$src1, u7_0ImmPred:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S2_asl_i_p_acc DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred_timm:$src3),
+         (S2_asl_i_p_acc DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_A4_vcmpwgtui DoubleRegs:$src1, u7_0ImmPred_timm:$src2),
+         (A4_vcmpwgtui DoubleRegs:$src1, u7_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M4_vrmpyoh_acc_s0 DoubleRegs:$src1, DoubleRegs:$src2, DoubleRegs:$src3),
          (M4_vrmpyoh_acc_s0 DoubleRegs:$src1, DoubleRegs:$src2, DoubleRegs:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M4_vrmpyoh_acc_s1 DoubleRegs:$src1, DoubleRegs:$src2, DoubleRegs:$src3),
@@ -323,34 +323,34 @@ def: Pat<(int_hexagon_M2_vrcmacr_s0c DoubleRegs:$src1, DoubleRegs:$src2, DoubleR
          (M2_vrcmacr_s0c DoubleRegs:$src1, DoubleRegs:$src2, DoubleRegs:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A2_vavgwcr DoubleRegs:$src1, DoubleRegs:$src2),
          (A2_vavgwcr DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S2_asl_i_p_xacc DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred:$src3),
-         (S2_asl_i_p_xacc DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred:$src3)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S2_asl_i_p_xacc DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred_timm:$src3),
+         (S2_asl_i_p_xacc DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A4_vrmaxw DoubleRegs:$src1, DoubleRegs:$src2, IntRegs:$src3),
          (A4_vrmaxw DoubleRegs:$src1, DoubleRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A2_vnavghr DoubleRegs:$src1, DoubleRegs:$src2),
          (A2_vnavghr DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M4_cmpyi_wh DoubleRegs:$src1, IntRegs:$src2),
          (M4_cmpyi_wh DoubleRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_A2_tfrsi s32_0ImmPred:$src1),
-         (A2_tfrsi s32_0ImmPred:$src1)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S2_asr_i_r_acc IntRegs:$src1, IntRegs:$src2, u5_0ImmPred:$src3),
-         (S2_asr_i_r_acc IntRegs:$src1, IntRegs:$src2, u5_0ImmPred:$src3)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_A2_tfrsi s32_0ImmPred_timm:$src1),
+         (A2_tfrsi s32_0ImmPred_timm:$src1)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S2_asr_i_r_acc IntRegs:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3),
+         (S2_asr_i_r_acc IntRegs:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A2_svnavgh IntRegs:$src1, IntRegs:$src2),
          (A2_svnavgh IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S2_lsr_i_r IntRegs:$src1, u5_0ImmPred:$src2),
-         (S2_lsr_i_r IntRegs:$src1, u5_0ImmPred:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S2_lsr_i_r IntRegs:$src1, u5_0ImmPred_timm:$src2),
+         (S2_lsr_i_r IntRegs:$src1, u5_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_vmac2 DoubleRegs:$src1, IntRegs:$src2, IntRegs:$src3),
          (M2_vmac2 DoubleRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_A4_vcmphgtui DoubleRegs:$src1, u7_0ImmPred:$src2),
-         (A4_vcmphgtui DoubleRegs:$src1, u7_0ImmPred:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_A4_vcmphgtui DoubleRegs:$src1, u7_0ImmPred_timm:$src2),
+         (A4_vcmphgtui DoubleRegs:$src1, u7_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A2_svavgh IntRegs:$src1, IntRegs:$src2),
          (A2_svavgh IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M4_vrmpyeh_acc_s0 DoubleRegs:$src1, DoubleRegs:$src2, DoubleRegs:$src3),
          (M4_vrmpyeh_acc_s0 DoubleRegs:$src1, DoubleRegs:$src2, DoubleRegs:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M4_vrmpyeh_acc_s1 DoubleRegs:$src1, DoubleRegs:$src2, DoubleRegs:$src3),
          (M4_vrmpyeh_acc_s1 DoubleRegs:$src1, DoubleRegs:$src2, DoubleRegs:$src3)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S2_lsr_i_p DoubleRegs:$src1, u6_0ImmPred:$src2),
-         (S2_lsr_i_p DoubleRegs:$src1, u6_0ImmPred:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S2_lsr_i_p DoubleRegs:$src1, u6_0ImmPred_timm:$src2),
+         (S2_lsr_i_p DoubleRegs:$src1, u6_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A2_combine_hl IntRegs:$src1, IntRegs:$src2),
          (A2_combine_hl IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mpy_up IntRegs:$src1, IntRegs:$src2),
@@ -381,10 +381,10 @@ def: Pat<(int_hexagon_M2_cmacr_s0 DoubleRegs:$src1, IntRegs:$src2, IntRegs:$src3
          (M2_cmacr_s0 DoubleRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M4_or_and IntRegs:$src1, IntRegs:$src2, IntRegs:$src3),
          (M4_or_and IntRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_M4_mpyrr_addi u32_0ImmPred:$src1, IntRegs:$src2, IntRegs:$src3),
-         (M4_mpyrr_addi u32_0ImmPred:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S4_or_andi IntRegs:$src1, IntRegs:$src2, s32_0ImmPred:$src3),
-         (S4_or_andi IntRegs:$src1, IntRegs:$src2, s32_0ImmPred:$src3)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_M4_mpyrr_addi u32_0ImmPred_timm:$src1, IntRegs:$src2, IntRegs:$src3),
+         (M4_mpyrr_addi u32_0ImmPred_timm:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S4_or_andi IntRegs:$src1, IntRegs:$src2, s32_0ImmPred_timm:$src3),
+         (S4_or_andi IntRegs:$src1, IntRegs:$src2, s32_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mpy_sat_hl_s0 IntRegs:$src1, IntRegs:$src2),
          (M2_mpy_sat_hl_s0 IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mpy_sat_hl_s1 IntRegs:$src1, IntRegs:$src2),
@@ -453,8 +453,8 @@ def: Pat<(int_hexagon_M2_mpy_rnd_hl_s1 IntRegs:$src1, IntRegs:$src2),
          (M2_mpy_rnd_hl_s1 IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_F2_sffms_lib IntRegs:$src1, IntRegs:$src2, IntRegs:$src3),
          (F2_sffms_lib IntRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_C4_cmpneqi IntRegs:$src1, s32_0ImmPred:$src2),
-         (C4_cmpneqi IntRegs:$src1, s32_0ImmPred:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_C4_cmpneqi IntRegs:$src1, s32_0ImmPred_timm:$src2),
+         (C4_cmpneqi IntRegs:$src1, s32_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M4_and_xor IntRegs:$src1, IntRegs:$src2, IntRegs:$src3),
          (M4_and_xor IntRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A2_sat DoubleRegs:$src1),
@@ -469,8 +469,8 @@ def: Pat<(int_hexagon_A2_svavghs IntRegs:$src1, IntRegs:$src2),
          (A2_svavghs IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A2_vrsadub_acc DoubleRegs:$src1, DoubleRegs:$src2, DoubleRegs:$src3),
          (A2_vrsadub_acc DoubleRegs:$src1, DoubleRegs:$src2, DoubleRegs:$src3)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_C2_bitsclri IntRegs:$src1, u6_0ImmPred:$src2),
-         (C2_bitsclri IntRegs:$src1, u6_0ImmPred:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_C2_bitsclri IntRegs:$src1, u6_0ImmPred_timm:$src2),
+         (C2_bitsclri IntRegs:$src1, u6_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A2_subh_h16_sat_hh IntRegs:$src1, IntRegs:$src2),
          (A2_subh_h16_sat_hh IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A2_subh_h16_sat_hl IntRegs:$src1, IntRegs:$src2),
@@ -535,10 +535,10 @@ def: Pat<(int_hexagon_C2_vmux PredRegs:$src1, DoubleRegs:$src2, DoubleRegs:$src3
          (C2_vmux PredRegs:$src1, DoubleRegs:$src2, DoubleRegs:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_S2_parityp DoubleRegs:$src1, DoubleRegs:$src2),
          (S2_parityp DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S2_lsr_i_p_and DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred:$src3),
-         (S2_lsr_i_p_and DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred:$src3)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S2_asr_i_r_or IntRegs:$src1, IntRegs:$src2, u5_0ImmPred:$src3),
-         (S2_asr_i_r_or IntRegs:$src1, IntRegs:$src2, u5_0ImmPred:$src3)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S2_lsr_i_p_and DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred_timm:$src3),
+         (S2_lsr_i_p_and DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S2_asr_i_r_or IntRegs:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3),
+         (S2_asr_i_r_or IntRegs:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mpyu_nac_ll_s0 IntRegs:$src1, IntRegs:$src2, IntRegs:$src3),
          (M2_mpyu_nac_ll_s0 IntRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mpyu_nac_ll_s1 IntRegs:$src1, IntRegs:$src2, IntRegs:$src3),
@@ -557,30 +557,30 @@ def: Pat<(int_hexagon_M2_cnacsc_s1 DoubleRegs:$src1, IntRegs:$src2, IntRegs:$src
          (M2_cnacsc_s1 DoubleRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_cnacsc_s0 DoubleRegs:$src1, IntRegs:$src2, IntRegs:$src3),
          (M2_cnacsc_s0 DoubleRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S4_subaddi IntRegs:$src1, s32_0ImmPred:$src2, IntRegs:$src3),
-         (S4_subaddi IntRegs:$src1, s32_0ImmPred:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S4_subaddi IntRegs:$src1, s32_0ImmPred_timm:$src2, IntRegs:$src3),
+         (S4_subaddi IntRegs:$src1, s32_0ImmPred_timm:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mpyud_nac_hl_s1 DoubleRegs:$src1, IntRegs:$src2, IntRegs:$src3),
          (M2_mpyud_nac_hl_s1 DoubleRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mpyud_nac_hl_s0 DoubleRegs:$src1, IntRegs:$src2, IntRegs:$src3),
          (M2_mpyud_nac_hl_s0 DoubleRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_S2_tstbit_r IntRegs:$src1, IntRegs:$src2),
          (S2_tstbit_r IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S4_vrcrotate DoubleRegs:$src1, IntRegs:$src2, u2_0ImmPred:$src3),
-         (S4_vrcrotate DoubleRegs:$src1, IntRegs:$src2, u2_0ImmPred:$src3)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S4_vrcrotate DoubleRegs:$src1, IntRegs:$src2, u2_0ImmPred_timm:$src3),
+         (S4_vrcrotate DoubleRegs:$src1, IntRegs:$src2, u2_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mmachs_s1 DoubleRegs:$src1, DoubleRegs:$src2, DoubleRegs:$src3),
          (M2_mmachs_s1 DoubleRegs:$src1, DoubleRegs:$src2, DoubleRegs:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mmachs_s0 DoubleRegs:$src1, DoubleRegs:$src2, DoubleRegs:$src3),
          (M2_mmachs_s0 DoubleRegs:$src1, DoubleRegs:$src2, DoubleRegs:$src3)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S2_tstbit_i IntRegs:$src1, u5_0ImmPred:$src2),
-         (S2_tstbit_i IntRegs:$src1, u5_0ImmPred:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S2_tstbit_i IntRegs:$src1, u5_0ImmPred_timm:$src2),
+         (S2_tstbit_i IntRegs:$src1, u5_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mpy_up_s1 IntRegs:$src1, IntRegs:$src2),
          (M2_mpy_up_s1 IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_S2_extractu_rp IntRegs:$src1, DoubleRegs:$src2),
          (S2_extractu_rp IntRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mmpyuh_rs0 DoubleRegs:$src1, DoubleRegs:$src2),
          (M2_mmpyuh_rs0 DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S2_lsr_i_vw DoubleRegs:$src1, u5_0ImmPred:$src2),
-         (S2_lsr_i_vw DoubleRegs:$src1, u5_0ImmPred:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S2_lsr_i_vw DoubleRegs:$src1, u5_0ImmPred_timm:$src2),
+         (S2_lsr_i_vw DoubleRegs:$src1, u5_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mpy_rnd_ll_s0 IntRegs:$src1, IntRegs:$src2),
          (M2_mpy_rnd_ll_s0 IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mpy_rnd_ll_s1 IntRegs:$src1, IntRegs:$src2),
@@ -605,14 +605,14 @@ def: Pat<(int_hexagon_F2_conv_w2df IntRegs:$src1),
          (F2_conv_w2df IntRegs:$src1)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A2_subh_l16_sat_hl IntRegs:$src1, IntRegs:$src2),
          (A2_subh_l16_sat_hl IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_C2_cmpeqi IntRegs:$src1, s32_0ImmPred:$src2),
-         (C2_cmpeqi IntRegs:$src1, s32_0ImmPred:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S2_asl_i_r_and IntRegs:$src1, IntRegs:$src2, u5_0ImmPred:$src3),
-         (S2_asl_i_r_and IntRegs:$src1, IntRegs:$src2, u5_0ImmPred:$src3)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_C2_cmpeqi IntRegs:$src1, s32_0ImmPred_timm:$src2),
+         (C2_cmpeqi IntRegs:$src1, s32_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S2_asl_i_r_and IntRegs:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3),
+         (S2_asl_i_r_and IntRegs:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_S2_vcnegh DoubleRegs:$src1, IntRegs:$src2),
          (S2_vcnegh DoubleRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_A4_vcmpweqi DoubleRegs:$src1, s8_0ImmPred:$src2),
-         (A4_vcmpweqi DoubleRegs:$src1, s8_0ImmPred:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_A4_vcmpweqi DoubleRegs:$src1, s8_0ImmPred_timm:$src2),
+         (A4_vcmpweqi DoubleRegs:$src1, s8_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_vdmpyrs_s0 DoubleRegs:$src1, DoubleRegs:$src2),
          (M2_vdmpyrs_s0 DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_vdmpyrs_s1 DoubleRegs:$src1, DoubleRegs:$src2),
@@ -633,8 +633,8 @@ def: Pat<(int_hexagon_S2_asl_r_r_acc IntRegs:$src1, IntRegs:$src2, IntRegs:$src3
          (S2_asl_r_r_acc IntRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_S2_cl0p DoubleRegs:$src1),
          (S2_cl0p DoubleRegs:$src1)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S2_valignib DoubleRegs:$src1, DoubleRegs:$src2, u3_0ImmPred:$src3),
-         (S2_valignib DoubleRegs:$src1, DoubleRegs:$src2, u3_0ImmPred:$src3)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S2_valignib DoubleRegs:$src1, DoubleRegs:$src2, u3_0ImmPred_timm:$src3),
+         (S2_valignib DoubleRegs:$src1, DoubleRegs:$src2, u3_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_F2_sffixupd IntRegs:$src1, IntRegs:$src2),
          (F2_sffixupd IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mpy_sat_rnd_hl_s1 IntRegs:$src1, IntRegs:$src2),
@@ -653,8 +653,8 @@ def: Pat<(int_hexagon_M2_dpmpyuu_nac_s0 DoubleRegs:$src1, IntRegs:$src2, IntRegs
          (M2_dpmpyuu_nac_s0 DoubleRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mmpyul_rs1 DoubleRegs:$src1, DoubleRegs:$src2),
          (M2_mmpyul_rs1 DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S4_ntstbit_i IntRegs:$src1, u5_0ImmPred:$src2),
-         (S4_ntstbit_i IntRegs:$src1, u5_0ImmPred:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S4_ntstbit_i IntRegs:$src1, u5_0ImmPred_timm:$src2),
+         (S4_ntstbit_i IntRegs:$src1, u5_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_F2_sffixupr IntRegs:$src1),
          (F2_sffixupr IntRegs:$src1)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_S2_asr_r_p_xor DoubleRegs:$src1, DoubleRegs:$src2, IntRegs:$src3),
@@ -669,32 +669,32 @@ def: Pat<(int_hexagon_C2_andn PredRegs:$src1, PredRegs:$src2),
          (C2_andn PredRegs:$src1, PredRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_vmpy2s_s0pack IntRegs:$src1, IntRegs:$src2),
          (M2_vmpy2s_s0pack IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S4_addaddi IntRegs:$src1, IntRegs:$src2, s32_0ImmPred:$src3),
-         (S4_addaddi IntRegs:$src1, IntRegs:$src2, s32_0ImmPred:$src3)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S4_addaddi IntRegs:$src1, IntRegs:$src2, s32_0ImmPred_timm:$src3),
+         (S4_addaddi IntRegs:$src1, IntRegs:$src2, s32_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mpyd_acc_ll_s0 DoubleRegs:$src1, IntRegs:$src2, IntRegs:$src3),
          (M2_mpyd_acc_ll_s0 DoubleRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mpy_acc_sat_hl_s1 IntRegs:$src1, IntRegs:$src2, IntRegs:$src3),
          (M2_mpy_acc_sat_hl_s1 IntRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_A4_rcmpeqi IntRegs:$src1, s32_0ImmPred:$src2),
-         (A4_rcmpeqi IntRegs:$src1, s32_0ImmPred:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_A4_rcmpeqi IntRegs:$src1, s32_0ImmPred_timm:$src2),
+         (A4_rcmpeqi IntRegs:$src1, s32_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M4_xor_and IntRegs:$src1, IntRegs:$src2, IntRegs:$src3),
          (M4_xor_and IntRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S2_asl_i_p_and DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred:$src3),
-         (S2_asl_i_p_and DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred:$src3)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S2_asl_i_p_and DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred_timm:$src3),
+         (S2_asl_i_p_and DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mmpyuh_rs1 DoubleRegs:$src1, DoubleRegs:$src2),
          (M2_mmpyuh_rs1 DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_S2_asr_r_r_or IntRegs:$src1, IntRegs:$src2, IntRegs:$src3),
          (S2_asr_r_r_or IntRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_A4_round_ri IntRegs:$src1, u5_0ImmPred:$src2),
-         (A4_round_ri IntRegs:$src1, u5_0ImmPred:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_A4_round_ri IntRegs:$src1, u5_0ImmPred_timm:$src2),
+         (A4_round_ri IntRegs:$src1, u5_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A2_max IntRegs:$src1, IntRegs:$src2),
          (A2_max IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A4_round_rr IntRegs:$src1, IntRegs:$src2),
          (A4_round_rr IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_A4_combineii s8_0ImmPred:$src1, u32_0ImmPred:$src2),
-         (A4_combineii s8_0ImmPred:$src1, u32_0ImmPred:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_A4_combineir s32_0ImmPred:$src1, IntRegs:$src2),
-         (A4_combineir s32_0ImmPred:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_A4_combineii s8_0ImmPred_timm:$src1, u32_0ImmPred_timm:$src2),
+         (A4_combineii s8_0ImmPred_timm:$src1, u32_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_A4_combineir s32_0ImmPred_timm:$src1, IntRegs:$src2),
+         (A4_combineir s32_0ImmPred_timm:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_C4_and_orn PredRegs:$src1, PredRegs:$src2, PredRegs:$src3),
          (C4_and_orn PredRegs:$src1, PredRegs:$src2, PredRegs:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M5_vmacbuu DoubleRegs:$src1, IntRegs:$src2, IntRegs:$src3),
@@ -703,8 +703,8 @@ def: Pat<(int_hexagon_A4_rcmpeq IntRegs:$src1, IntRegs:$src2),
          (A4_rcmpeq IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M4_cmpyr_whc DoubleRegs:$src1, IntRegs:$src2),
          (M4_cmpyr_whc DoubleRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S2_lsr_i_r_acc IntRegs:$src1, IntRegs:$src2, u5_0ImmPred:$src3),
-         (S2_lsr_i_r_acc IntRegs:$src1, IntRegs:$src2, u5_0ImmPred:$src3)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S2_lsr_i_r_acc IntRegs:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3),
+         (S2_lsr_i_r_acc IntRegs:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_S2_vzxtbh IntRegs:$src1),
          (S2_vzxtbh IntRegs:$src1)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mmacuhs_rs1 DoubleRegs:$src1, DoubleRegs:$src2, DoubleRegs:$src3),
@@ -721,8 +721,8 @@ def: Pat<(int_hexagon_M2_cmpyi_s0 IntRegs:$src1, IntRegs:$src2),
          (M2_cmpyi_s0 IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_S2_asl_r_p_or DoubleRegs:$src1, DoubleRegs:$src2, IntRegs:$src3),
          (S2_asl_r_p_or DoubleRegs:$src1, DoubleRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S4_ori_asl_ri u32_0ImmPred:$src1, IntRegs:$src2, u5_0ImmPred:$src3),
-         (S4_ori_asl_ri u32_0ImmPred:$src1, IntRegs:$src2, u5_0ImmPred:$src3)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S4_ori_asl_ri u32_0ImmPred_timm:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3),
+         (S4_ori_asl_ri u32_0ImmPred_timm:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_C4_nbitsset IntRegs:$src1, IntRegs:$src2),
          (C4_nbitsset IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mpyu_acc_hh_s1 IntRegs:$src1, IntRegs:$src2, IntRegs:$src3),
@@ -745,10 +745,10 @@ def: Pat<(int_hexagon_M2_mpyd_acc_hh_s0 DoubleRegs:$src1, IntRegs:$src2, IntRegs
          (M2_mpyd_acc_hh_s0 DoubleRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mpyd_acc_hh_s1 DoubleRegs:$src1, IntRegs:$src2, IntRegs:$src3),
          (M2_mpyd_acc_hh_s1 DoubleRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_F2_sfimm_p u10_0ImmPred:$src1),
-         (F2_sfimm_p u10_0ImmPred:$src1)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_F2_sfimm_n u10_0ImmPred:$src1),
-         (F2_sfimm_n u10_0ImmPred:$src1)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_F2_sfimm_p u10_0ImmPred_timm:$src1),
+         (F2_sfimm_p u10_0ImmPred_timm:$src1)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_F2_sfimm_n u10_0ImmPred_timm:$src1),
+         (F2_sfimm_n u10_0ImmPred_timm:$src1)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M4_cmpyr_wh DoubleRegs:$src1, IntRegs:$src2),
          (M4_cmpyr_wh DoubleRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_S2_lsl_r_p_and DoubleRegs:$src1, DoubleRegs:$src2, IntRegs:$src3),
@@ -759,14 +759,14 @@ def: Pat<(int_hexagon_F2_conv_d2sf DoubleRegs:$src1),
          (F2_conv_d2sf DoubleRegs:$src1)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A2_vavguh DoubleRegs:$src1, DoubleRegs:$src2),
          (A2_vavguh DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_A4_cmpbeqi IntRegs:$src1, u8_0ImmPred:$src2),
-         (A4_cmpbeqi IntRegs:$src1, u8_0ImmPred:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_A4_cmpbeqi IntRegs:$src1, u8_0ImmPred_timm:$src2),
+         (A4_cmpbeqi IntRegs:$src1, u8_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_F2_sfcmpuo IntRegs:$src1, IntRegs:$src2),
          (F2_sfcmpuo IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A2_vavguw DoubleRegs:$src1, DoubleRegs:$src2),
          (A2_vavguw DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S2_asr_i_p_nac DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred:$src3),
-         (S2_asr_i_p_nac DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred:$src3)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S2_asr_i_p_nac DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred_timm:$src3),
+         (S2_asr_i_p_nac DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_S2_vsatwh_nopack DoubleRegs:$src1),
          (S2_vsatwh_nopack DoubleRegs:$src1)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mpyd_hh_s0 IntRegs:$src1, IntRegs:$src2),
@@ -783,8 +783,8 @@ def: Pat<(int_hexagon_M4_or_andn IntRegs:$src1, IntRegs:$src2, IntRegs:$src3),
          (M4_or_andn IntRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A2_minp DoubleRegs:$src1, DoubleRegs:$src2),
          (A2_minp DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S4_or_andix IntRegs:$src1, IntRegs:$src2, s32_0ImmPred:$src3),
-         (S4_or_andix IntRegs:$src1, IntRegs:$src2, s32_0ImmPred:$src3)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S4_or_andix IntRegs:$src1, IntRegs:$src2, s32_0ImmPred_timm:$src3),
+         (S4_or_andix IntRegs:$src1, IntRegs:$src2, s32_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mpy_rnd_lh_s0 IntRegs:$src1, IntRegs:$src2),
          (M2_mpy_rnd_lh_s0 IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mpy_rnd_lh_s1 IntRegs:$src1, IntRegs:$src2),
@@ -817,16 +817,16 @@ def: Pat<(int_hexagon_S4_extract_rp IntRegs:$src1, DoubleRegs:$src2),
          (S4_extract_rp IntRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_S2_lsl_r_r_or IntRegs:$src1, IntRegs:$src2, IntRegs:$src3),
          (S2_lsl_r_r_or IntRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_C4_cmplteui IntRegs:$src1, u32_0ImmPred:$src2),
-         (C4_cmplteui IntRegs:$src1, u32_0ImmPred:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S4_addi_lsr_ri u32_0ImmPred:$src1, IntRegs:$src2, u5_0ImmPred:$src3),
-         (S4_addi_lsr_ri u32_0ImmPred:$src1, IntRegs:$src2, u5_0ImmPred:$src3)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_C4_cmplteui IntRegs:$src1, u32_0ImmPred_timm:$src2),
+         (C4_cmplteui IntRegs:$src1, u32_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S4_addi_lsr_ri u32_0ImmPred_timm:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3),
+         (S4_addi_lsr_ri u32_0ImmPred_timm:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A4_tfrcpp CtrRegs64:$src1),
          (A4_tfrcpp CtrRegs64:$src1)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S2_asr_i_svw_trun DoubleRegs:$src1, u5_0ImmPred:$src2),
-         (S2_asr_i_svw_trun DoubleRegs:$src1, u5_0ImmPred:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_A4_cmphgti IntRegs:$src1, s32_0ImmPred:$src2),
-         (A4_cmphgti IntRegs:$src1, s32_0ImmPred:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S2_asr_i_svw_trun DoubleRegs:$src1, u5_0ImmPred_timm:$src2),
+         (S2_asr_i_svw_trun DoubleRegs:$src1, u5_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_A4_cmphgti IntRegs:$src1, s32_0ImmPred_timm:$src2),
+         (A4_cmphgti IntRegs:$src1, s32_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A4_vrminh DoubleRegs:$src1, DoubleRegs:$src2, IntRegs:$src3),
          (A4_vrminh DoubleRegs:$src1, DoubleRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A4_vrminw DoubleRegs:$src1, DoubleRegs:$src2, IntRegs:$src3),
@@ -837,8 +837,8 @@ def: Pat<(int_hexagon_S2_insertp_rp DoubleRegs:$src1, DoubleRegs:$src2, DoubleRe
          (S2_insertp_rp DoubleRegs:$src1, DoubleRegs:$src2, DoubleRegs:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A2_vnavghcr DoubleRegs:$src1, DoubleRegs:$src2),
          (A2_vnavghcr DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S4_subi_asl_ri u32_0ImmPred:$src1, IntRegs:$src2, u5_0ImmPred:$src3),
-         (S4_subi_asl_ri u32_0ImmPred:$src1, IntRegs:$src2, u5_0ImmPred:$src3)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S4_subi_asl_ri u32_0ImmPred_timm:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3),
+         (S4_subi_asl_ri u32_0ImmPred_timm:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_S2_lsl_r_vh DoubleRegs:$src1, IntRegs:$src2),
          (S2_lsl_r_vh DoubleRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mpy_hh_s0 IntRegs:$src1, IntRegs:$src2),
@@ -851,14 +851,14 @@ def: Pat<(int_hexagon_S2_asl_r_p_xor DoubleRegs:$src1, DoubleRegs:$src2, IntRegs
          (S2_asl_r_p_xor DoubleRegs:$src1, DoubleRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A2_satb IntRegs:$src1),
          (A2_satb IntRegs:$src1)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S2_insertp DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred:$src3, u6_0ImmPred:$src4),
-         (S2_insertp DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred:$src3, u6_0ImmPred:$src4)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S2_insertp DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred_timm:$src3, u6_0ImmPred_timm:$src4),
+         (S2_insertp DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred_timm:$src3, u6_0ImmPred_timm:$src4)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mpyd_rnd_ll_s1 IntRegs:$src1, IntRegs:$src2),
          (M2_mpyd_rnd_ll_s1 IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mpyd_rnd_ll_s0 IntRegs:$src1, IntRegs:$src2),
          (M2_mpyd_rnd_ll_s0 IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S2_lsr_i_p_nac DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred:$src3),
-         (S2_lsr_i_p_nac DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred:$src3)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S2_lsr_i_p_nac DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred_timm:$src3),
+         (S2_lsr_i_p_nac DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_S2_extractup_rp DoubleRegs:$src1, DoubleRegs:$src2),
          (S2_extractup_rp DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_S4_vxaddsubw DoubleRegs:$src1, DoubleRegs:$src2),
@@ -925,8 +925,8 @@ def: Pat<(int_hexagon_M2_cmpyr_s0 IntRegs:$src1, IntRegs:$src2),
          (M2_cmpyr_s0 IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_dpmpyss_rnd_s0 IntRegs:$src1, IntRegs:$src2),
          (M2_dpmpyss_rnd_s0 IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_C2_muxri PredRegs:$src1, s32_0ImmPred:$src2, IntRegs:$src3),
-         (C2_muxri PredRegs:$src1, s32_0ImmPred:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_C2_muxri PredRegs:$src1, s32_0ImmPred_timm:$src2, IntRegs:$src3),
+         (C2_muxri PredRegs:$src1, s32_0ImmPred_timm:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_vmac2es_s0 DoubleRegs:$src1, DoubleRegs:$src2, DoubleRegs:$src3),
          (M2_vmac2es_s0 DoubleRegs:$src1, DoubleRegs:$src2, DoubleRegs:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_vmac2es_s1 DoubleRegs:$src1, DoubleRegs:$src2, DoubleRegs:$src3),
@@ -937,8 +937,8 @@ def: Pat<(int_hexagon_M2_mpyu_lh_s1 IntRegs:$src1, IntRegs:$src2),
          (M2_mpyu_lh_s1 IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mpyu_lh_s0 IntRegs:$src1, IntRegs:$src2),
          (M2_mpyu_lh_s0 IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S2_asl_i_r_or IntRegs:$src1, IntRegs:$src2, u5_0ImmPred:$src3),
-         (S2_asl_i_r_or IntRegs:$src1, IntRegs:$src2, u5_0ImmPred:$src3)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S2_asl_i_r_or IntRegs:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3),
+         (S2_asl_i_r_or IntRegs:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mpyd_acc_hl_s0 DoubleRegs:$src1, IntRegs:$src2, IntRegs:$src3),
          (M2_mpyd_acc_hl_s0 DoubleRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mpyd_acc_hl_s1 DoubleRegs:$src1, IntRegs:$src2, IntRegs:$src3),
@@ -947,8 +947,8 @@ def: Pat<(int_hexagon_S2_asr_r_p_nac DoubleRegs:$src1, DoubleRegs:$src2, IntRegs
          (S2_asr_r_p_nac DoubleRegs:$src1, DoubleRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A2_vaddw DoubleRegs:$src1, DoubleRegs:$src2),
          (A2_vaddw DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S2_asr_i_r_and IntRegs:$src1, IntRegs:$src2, u5_0ImmPred:$src3),
-         (S2_asr_i_r_and IntRegs:$src1, IntRegs:$src2, u5_0ImmPred:$src3)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S2_asr_i_r_and IntRegs:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3),
+         (S2_asr_i_r_and IntRegs:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A2_vaddh DoubleRegs:$src1, DoubleRegs:$src2),
          (A2_vaddh DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mpy_nac_sat_lh_s1 IntRegs:$src1, IntRegs:$src2, IntRegs:$src3),
@@ -957,16 +957,16 @@ def: Pat<(int_hexagon_M2_mpy_nac_sat_lh_s0 IntRegs:$src1, IntRegs:$src2, IntRegs
          (M2_mpy_nac_sat_lh_s0 IntRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_C2_cmpeqp DoubleRegs:$src1, DoubleRegs:$src2),
          (C2_cmpeqp DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_M4_mpyri_addi u32_0ImmPred:$src1, IntRegs:$src2, u6_0ImmPred:$src3),
-         (M4_mpyri_addi u32_0ImmPred:$src1, IntRegs:$src2, u6_0ImmPred:$src3)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S4_andi_lsr_ri u32_0ImmPred:$src1, IntRegs:$src2, u5_0ImmPred:$src3),
-         (S4_andi_lsr_ri u32_0ImmPred:$src1, IntRegs:$src2, u5_0ImmPred:$src3)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_M2_macsip IntRegs:$src1, IntRegs:$src2, u32_0ImmPred:$src3),
-         (M2_macsip IntRegs:$src1, IntRegs:$src2, u32_0ImmPred:$src3)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_M4_mpyri_addi u32_0ImmPred_timm:$src1, IntRegs:$src2, u6_0ImmPred_timm:$src3),
+         (M4_mpyri_addi u32_0ImmPred_timm:$src1, IntRegs:$src2, u6_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S4_andi_lsr_ri u32_0ImmPred_timm:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3),
+         (S4_andi_lsr_ri u32_0ImmPred_timm:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_M2_macsip IntRegs:$src1, IntRegs:$src2, u32_0ImmPred_timm:$src3),
+         (M2_macsip IntRegs:$src1, IntRegs:$src2, u32_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A2_tfrcrr CtrRegs:$src1),
          (A2_tfrcrr CtrRegs:$src1)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_M2_macsin IntRegs:$src1, IntRegs:$src2, u32_0ImmPred:$src3),
-         (M2_macsin IntRegs:$src1, IntRegs:$src2, u32_0ImmPred:$src3)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_M2_macsin IntRegs:$src1, IntRegs:$src2, u32_0ImmPred_timm:$src3),
+         (M2_macsin IntRegs:$src1, IntRegs:$src2, u32_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_C2_orn PredRegs:$src1, PredRegs:$src2),
          (C2_orn PredRegs:$src1, PredRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M4_and_andn IntRegs:$src1, IntRegs:$src2, IntRegs:$src3),
@@ -1005,8 +1005,8 @@ def: Pat<(int_hexagon_M2_vrcmpys_acc_s1 DoubleRegs:$src1, DoubleRegs:$src2, IntR
          (M2_vrcmpys_acc_s1 DoubleRegs:$src1, DoubleRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_F2_dfcmpge DoubleRegs:$src1, DoubleRegs:$src2),
          (F2_dfcmpge DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_M2_accii IntRegs:$src1, IntRegs:$src2, s32_0ImmPred:$src3),
-         (M2_accii IntRegs:$src1, IntRegs:$src2, s32_0ImmPred:$src3)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_M2_accii IntRegs:$src1, IntRegs:$src2, s32_0ImmPred_timm:$src3),
+         (M2_accii IntRegs:$src1, IntRegs:$src2, s32_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A5_vaddhubs DoubleRegs:$src1, DoubleRegs:$src2),
          (A5_vaddhubs DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A2_vmaxw DoubleRegs:$src1, DoubleRegs:$src2),
@@ -1017,10 +1017,10 @@ def: Pat<(int_hexagon_A2_vmaxh DoubleRegs:$src1, DoubleRegs:$src2),
          (A2_vmaxh DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_S2_vsxthw IntRegs:$src1),
          (S2_vsxthw IntRegs:$src1)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S4_andi_asl_ri u32_0ImmPred:$src1, IntRegs:$src2, u5_0ImmPred:$src3),
-         (S4_andi_asl_ri u32_0ImmPred:$src1, IntRegs:$src2, u5_0ImmPred:$src3)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S2_asl_i_p_nac DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred:$src3),
-         (S2_asl_i_p_nac DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred:$src3)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S4_andi_asl_ri u32_0ImmPred_timm:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3),
+         (S4_andi_asl_ri u32_0ImmPred_timm:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S2_asl_i_p_nac DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred_timm:$src3),
+         (S2_asl_i_p_nac DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_S2_lsl_r_p_xor DoubleRegs:$src1, DoubleRegs:$src2, IntRegs:$src3),
          (S2_lsl_r_p_xor DoubleRegs:$src1, DoubleRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_C2_cmpgt IntRegs:$src1, IntRegs:$src2),
@@ -1035,22 +1035,22 @@ def: Pat<(int_hexagon_F2_conv_sf2w IntRegs:$src1),
          (F2_conv_sf2w IntRegs:$src1)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_S2_lsr_r_p_or DoubleRegs:$src1, DoubleRegs:$src2, IntRegs:$src3),
          (S2_lsr_r_p_or DoubleRegs:$src1, DoubleRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_F2_sfclass IntRegs:$src1, u5_0ImmPred:$src2),
-         (F2_sfclass IntRegs:$src1, u5_0ImmPred:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_F2_sfclass IntRegs:$src1, u5_0ImmPred_timm:$src2),
+         (F2_sfclass IntRegs:$src1, u5_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mpyud_acc_lh_s0 DoubleRegs:$src1, IntRegs:$src2, IntRegs:$src3),
          (M2_mpyud_acc_lh_s0 DoubleRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M4_xor_andn IntRegs:$src1, IntRegs:$src2, IntRegs:$src3),
          (M4_xor_andn IntRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S2_addasl_rrri IntRegs:$src1, IntRegs:$src2, u3_0ImmPred:$src3),
-         (S2_addasl_rrri IntRegs:$src1, IntRegs:$src2, u3_0ImmPred:$src3)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S2_addasl_rrri IntRegs:$src1, IntRegs:$src2, u3_0ImmPred_timm:$src3),
+         (S2_addasl_rrri IntRegs:$src1, IntRegs:$src2, u3_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M5_vdmpybsu DoubleRegs:$src1, DoubleRegs:$src2),
          (M5_vdmpybsu DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mpyu_nac_hh_s0 IntRegs:$src1, IntRegs:$src2, IntRegs:$src3),
          (M2_mpyu_nac_hh_s0 IntRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mpyu_nac_hh_s1 IntRegs:$src1, IntRegs:$src2, IntRegs:$src3),
          (M2_mpyu_nac_hh_s1 IntRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_A2_addi IntRegs:$src1, s32_0ImmPred:$src2),
-         (A2_addi IntRegs:$src1, s32_0ImmPred:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_A2_addi IntRegs:$src1, s32_0ImmPred_timm:$src2),
+         (A2_addi IntRegs:$src1, s32_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A2_addp DoubleRegs:$src1, DoubleRegs:$src2),
          (A2_addp DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_vmpy2s_s1pack IntRegs:$src1, IntRegs:$src2),
@@ -1063,8 +1063,8 @@ def: Pat<(int_hexagon_M2_nacci IntRegs:$src1, IntRegs:$src2, IntRegs:$src3),
          (M2_nacci IntRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_S2_shuffeh DoubleRegs:$src1, DoubleRegs:$src2),
          (S2_shuffeh DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S2_lsr_i_r_and IntRegs:$src1, IntRegs:$src2, u5_0ImmPred:$src3),
-         (S2_lsr_i_r_and IntRegs:$src1, IntRegs:$src2, u5_0ImmPred:$src3)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S2_lsr_i_r_and IntRegs:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3),
+         (S2_lsr_i_r_and IntRegs:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mpy_sat_rnd_hh_s1 IntRegs:$src1, IntRegs:$src2),
          (M2_mpy_sat_rnd_hh_s1 IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mpy_sat_rnd_hh_s0 IntRegs:$src1, IntRegs:$src2),
@@ -1131,12 +1131,12 @@ def: Pat<(int_hexagon_C2_and PredRegs:$src1, PredRegs:$src2),
          (C2_and PredRegs:$src1, PredRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_S5_popcountp DoubleRegs:$src1),
          (S5_popcountp DoubleRegs:$src1)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S4_extractp DoubleRegs:$src1, u6_0ImmPred:$src2, u6_0ImmPred:$src3),
-         (S4_extractp DoubleRegs:$src1, u6_0ImmPred:$src2, u6_0ImmPred:$src3)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S4_extractp DoubleRegs:$src1, u6_0ImmPred_timm:$src2, u6_0ImmPred_timm:$src3),
+         (S4_extractp DoubleRegs:$src1, u6_0ImmPred_timm:$src2, u6_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_S2_cl0 IntRegs:$src1),
          (S2_cl0 IntRegs:$src1)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_A4_vcmpbgti DoubleRegs:$src1, s8_0ImmPred:$src2),
-         (A4_vcmpbgti DoubleRegs:$src1, s8_0ImmPred:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_A4_vcmpbgti DoubleRegs:$src1, s8_0ImmPred_timm:$src2),
+         (A4_vcmpbgti DoubleRegs:$src1, s8_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mmacls_s1 DoubleRegs:$src1, DoubleRegs:$src2, DoubleRegs:$src3),
          (M2_mmacls_s1 DoubleRegs:$src1, DoubleRegs:$src2, DoubleRegs:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mmacls_s0 DoubleRegs:$src1, DoubleRegs:$src2, DoubleRegs:$src3),
@@ -1167,8 +1167,8 @@ def: Pat<(int_hexagon_M2_maci IntRegs:$src1, IntRegs:$src2, IntRegs:$src3),
          (M2_maci IntRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A2_vmaxuh DoubleRegs:$src1, DoubleRegs:$src2),
          (A2_vmaxuh DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_A4_bitspliti IntRegs:$src1, u5_0ImmPred:$src2),
-         (A4_bitspliti IntRegs:$src1, u5_0ImmPred:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_A4_bitspliti IntRegs:$src1, u5_0ImmPred_timm:$src2),
+         (A4_bitspliti IntRegs:$src1, u5_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A2_vmaxub DoubleRegs:$src1, DoubleRegs:$src2),
          (A2_vmaxub DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mpyud_hh_s0 IntRegs:$src1, IntRegs:$src2),
@@ -1185,26 +1185,26 @@ def: Pat<(int_hexagon_F2_conv_sf2d IntRegs:$src1),
          (F2_conv_sf2d IntRegs:$src1)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_S2_asr_r_r_nac IntRegs:$src1, IntRegs:$src2, IntRegs:$src3),
          (S2_asr_r_r_nac IntRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_F2_dfimm_n u10_0ImmPred:$src1),
-         (F2_dfimm_n u10_0ImmPred:$src1)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_F2_dfimm_n u10_0ImmPred_timm:$src1),
+         (F2_dfimm_n u10_0ImmPred_timm:$src1)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A4_cmphgt IntRegs:$src1, IntRegs:$src2),
          (A4_cmphgt IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_F2_dfimm_p u10_0ImmPred:$src1),
-         (F2_dfimm_p u10_0ImmPred:$src1)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_F2_dfimm_p u10_0ImmPred_timm:$src1),
+         (F2_dfimm_p u10_0ImmPred_timm:$src1)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mpyud_acc_lh_s1 DoubleRegs:$src1, IntRegs:$src2, IntRegs:$src3),
          (M2_mpyud_acc_lh_s1 DoubleRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_vcmpy_s1_sat_r DoubleRegs:$src1, DoubleRegs:$src2),
          (M2_vcmpy_s1_sat_r DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_M4_mpyri_addr_u2 IntRegs:$src1, u6_2ImmPred:$src2, IntRegs:$src3),
-         (M4_mpyri_addr_u2 IntRegs:$src1, u6_2ImmPred:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_M4_mpyri_addr_u2 IntRegs:$src1, u6_2ImmPred_timm:$src2, IntRegs:$src3),
+         (M4_mpyri_addr_u2 IntRegs:$src1, u6_2ImmPred_timm:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_vcmpy_s1_sat_i DoubleRegs:$src1, DoubleRegs:$src2),
          (M2_vcmpy_s1_sat_i DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_S2_lsl_r_p_nac DoubleRegs:$src1, DoubleRegs:$src2, IntRegs:$src3),
          (S2_lsl_r_p_nac DoubleRegs:$src1, DoubleRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M5_vrmacbuu DoubleRegs:$src1, DoubleRegs:$src2, DoubleRegs:$src3),
          (M5_vrmacbuu DoubleRegs:$src1, DoubleRegs:$src2, DoubleRegs:$src3)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S2_vspliceib DoubleRegs:$src1, DoubleRegs:$src2, u3_0ImmPred:$src3),
-         (S2_vspliceib DoubleRegs:$src1, DoubleRegs:$src2, u3_0ImmPred:$src3)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S2_vspliceib DoubleRegs:$src1, DoubleRegs:$src2, u3_0ImmPred_timm:$src3),
+         (S2_vspliceib DoubleRegs:$src1, DoubleRegs:$src2, u3_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_dpmpyss_acc_s0 DoubleRegs:$src1, IntRegs:$src2, IntRegs:$src3),
          (M2_dpmpyss_acc_s0 DoubleRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_cnacs_s1 DoubleRegs:$src1, IntRegs:$src2, IntRegs:$src3),
@@ -1215,20 +1215,20 @@ def: Pat<(int_hexagon_A2_maxu IntRegs:$src1, IntRegs:$src2),
          (A2_maxu IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A2_maxp DoubleRegs:$src1, DoubleRegs:$src2),
          (A2_maxp DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_A2_andir IntRegs:$src1, s32_0ImmPred:$src2),
-         (A2_andir IntRegs:$src1, s32_0ImmPred:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_A2_andir IntRegs:$src1, s32_0ImmPred_timm:$src2),
+         (A2_andir IntRegs:$src1, s32_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_F2_sfrecipa IntRegs:$src1, IntRegs:$src2),
          (F2_sfrecipa IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_A2_combineii s32_0ImmPred:$src1, s8_0ImmPred:$src2),
-         (A2_combineii s32_0ImmPred:$src1, s8_0ImmPred:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_A2_combineii s32_0ImmPred_timm:$src1, s8_0ImmPred_timm:$src2),
+         (A2_combineii s32_0ImmPred_timm:$src1, s8_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A4_orn IntRegs:$src1, IntRegs:$src2),
          (A4_orn IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_A4_cmpbgtui IntRegs:$src1, u32_0ImmPred:$src2),
-         (A4_cmpbgtui IntRegs:$src1, u32_0ImmPred:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_A4_cmpbgtui IntRegs:$src1, u32_0ImmPred_timm:$src2),
+         (A4_cmpbgtui IntRegs:$src1, u32_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_S2_lsr_r_r_or IntRegs:$src1, IntRegs:$src2, IntRegs:$src3),
          (S2_lsr_r_r_or IntRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_A4_vcmpbeqi DoubleRegs:$src1, u8_0ImmPred:$src2),
-         (A4_vcmpbeqi DoubleRegs:$src1, u8_0ImmPred:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_A4_vcmpbeqi DoubleRegs:$src1, u8_0ImmPred_timm:$src2),
+         (A4_vcmpbeqi DoubleRegs:$src1, u8_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_S2_lsl_r_r IntRegs:$src1, IntRegs:$src2),
          (S2_lsl_r_r IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_S2_lsl_r_p DoubleRegs:$src1, IntRegs:$src2),
@@ -1251,16 +1251,16 @@ def: Pat<(int_hexagon_A2_satub IntRegs:$src1),
          (A2_satub IntRegs:$src1)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_vrcmpys_s1 DoubleRegs:$src1, IntRegs:$src2),
          (M2_vrcmpys_s1 DoubleRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S4_or_ori IntRegs:$src1, IntRegs:$src2, s32_0ImmPred:$src3),
-         (S4_or_ori IntRegs:$src1, IntRegs:$src2, s32_0ImmPred:$src3)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S4_or_ori IntRegs:$src1, IntRegs:$src2, s32_0ImmPred_timm:$src3),
+         (S4_or_ori IntRegs:$src1, IntRegs:$src2, s32_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_C4_fastcorner9_not PredRegs:$src1, PredRegs:$src2),
          (C4_fastcorner9_not PredRegs:$src1, PredRegs:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_A2_tfrih IntRegs:$src1, u16_0ImmPred:$src2),
-         (A2_tfrih IntRegs:$src1, u16_0ImmPred:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_A2_tfril IntRegs:$src1, u16_0ImmPred:$src2),
-         (A2_tfril IntRegs:$src1, u16_0ImmPred:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_M4_mpyri_addr IntRegs:$src1, IntRegs:$src2, u32_0ImmPred:$src3),
-         (M4_mpyri_addr IntRegs:$src1, IntRegs:$src2, u32_0ImmPred:$src3)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_A2_tfrih IntRegs:$src1, u16_0ImmPred_timm:$src2),
+         (A2_tfrih IntRegs:$src1, u16_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_A2_tfril IntRegs:$src1, u16_0ImmPred_timm:$src2),
+         (A2_tfril IntRegs:$src1, u16_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_M4_mpyri_addr IntRegs:$src1, IntRegs:$src2, u32_0ImmPred_timm:$src3),
+         (M4_mpyri_addr IntRegs:$src1, IntRegs:$src2, u32_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_S2_vtrunehb DoubleRegs:$src1),
          (S2_vtrunehb DoubleRegs:$src1)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A2_vabsw DoubleRegs:$src1),
@@ -1269,14 +1269,14 @@ def: Pat<(int_hexagon_A2_vabsh DoubleRegs:$src1),
          (A2_vabsh DoubleRegs:$src1)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_F2_sfsub IntRegs:$src1, IntRegs:$src2),
          (F2_sfsub IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_C2_muxii PredRegs:$src1, s32_0ImmPred:$src2, s8_0ImmPred:$src3),
-         (C2_muxii PredRegs:$src1, s32_0ImmPred:$src2, s8_0ImmPred:$src3)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_C2_muxir PredRegs:$src1, IntRegs:$src2, s32_0ImmPred:$src3),
-         (C2_muxir PredRegs:$src1, IntRegs:$src2, s32_0ImmPred:$src3)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_C2_muxii PredRegs:$src1, s32_0ImmPred_timm:$src2, s8_0ImmPred_timm:$src3),
+         (C2_muxii PredRegs:$src1, s32_0ImmPred_timm:$src2, s8_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_C2_muxir PredRegs:$src1, IntRegs:$src2, s32_0ImmPred_timm:$src3),
+         (C2_muxir PredRegs:$src1, IntRegs:$src2, s32_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A2_swiz IntRegs:$src1),
          (A2_swiz IntRegs:$src1)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S2_asr_i_p_and DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred:$src3),
-         (S2_asr_i_p_and DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred:$src3)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S2_asr_i_p_and DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred_timm:$src3),
+         (S2_asr_i_p_and DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_cmpyrsc_s0 IntRegs:$src1, IntRegs:$src2),
          (M2_cmpyrsc_s0 IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_cmpyrsc_s1 IntRegs:$src1, IntRegs:$src2),
@@ -1295,44 +1295,44 @@ def: Pat<(int_hexagon_M2_mpy_nac_sat_ll_s1 IntRegs:$src1, IntRegs:$src2, IntRegs
          (M2_mpy_nac_sat_ll_s1 IntRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mpy_nac_sat_ll_s0 IntRegs:$src1, IntRegs:$src2, IntRegs:$src3),
          (M2_mpy_nac_sat_ll_s0 IntRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S4_extract IntRegs:$src1, u5_0ImmPred:$src2, u5_0ImmPred:$src3),
-         (S4_extract IntRegs:$src1, u5_0ImmPred:$src2, u5_0ImmPred:$src3)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S4_extract IntRegs:$src1, u5_0ImmPred_timm:$src2, u5_0ImmPred_timm:$src3),
+         (S4_extract IntRegs:$src1, u5_0ImmPred_timm:$src2, u5_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A2_vcmpweq DoubleRegs:$src1, DoubleRegs:$src2),
          (A2_vcmpweq DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_acci IntRegs:$src1, IntRegs:$src2, IntRegs:$src3),
          (M2_acci IntRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S2_lsr_i_p_acc DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred:$src3),
-         (S2_lsr_i_p_acc DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred:$src3)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S2_lsr_i_p_or DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred:$src3),
-         (S2_lsr_i_p_or DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred:$src3)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S2_lsr_i_p_acc DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred_timm:$src3),
+         (S2_lsr_i_p_acc DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S2_lsr_i_p_or DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred_timm:$src3),
+         (S2_lsr_i_p_or DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_F2_conv_ud2sf DoubleRegs:$src1),
          (F2_conv_ud2sf DoubleRegs:$src1)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A2_tfr IntRegs:$src1),
          (A2_tfr IntRegs:$src1)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S2_asr_i_p_or DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred:$src3),
-         (S2_asr_i_p_or DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred:$src3)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_A2_subri s32_0ImmPred:$src1, IntRegs:$src2),
-         (A2_subri s32_0ImmPred:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S2_asr_i_p_or DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred_timm:$src3),
+         (S2_asr_i_p_or DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_A2_subri s32_0ImmPred_timm:$src1, IntRegs:$src2),
+         (A2_subri s32_0ImmPred_timm:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A4_vrmaxuw DoubleRegs:$src1, DoubleRegs:$src2, IntRegs:$src3),
          (A4_vrmaxuw DoubleRegs:$src1, DoubleRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M5_vmpybuu IntRegs:$src1, IntRegs:$src2),
          (M5_vmpybuu IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A4_vrmaxuh DoubleRegs:$src1, DoubleRegs:$src2, IntRegs:$src3),
          (A4_vrmaxuh DoubleRegs:$src1, DoubleRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S2_asl_i_vw DoubleRegs:$src1, u5_0ImmPred:$src2),
-         (S2_asl_i_vw DoubleRegs:$src1, u5_0ImmPred:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S2_asl_i_vw DoubleRegs:$src1, u5_0ImmPred_timm:$src2),
+         (S2_asl_i_vw DoubleRegs:$src1, u5_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A2_vavgw DoubleRegs:$src1, DoubleRegs:$src2),
          (A2_vavgw DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_S2_brev IntRegs:$src1),
          (S2_brev IntRegs:$src1)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A2_vavgh DoubleRegs:$src1, DoubleRegs:$src2),
          (A2_vavgh DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S2_clrbit_i IntRegs:$src1, u5_0ImmPred:$src2),
-         (S2_clrbit_i IntRegs:$src1, u5_0ImmPred:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S2_asl_i_vh DoubleRegs:$src1, u4_0ImmPred:$src2),
-         (S2_asl_i_vh DoubleRegs:$src1, u4_0ImmPred:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S2_lsr_i_r_or IntRegs:$src1, IntRegs:$src2, u5_0ImmPred:$src3),
-         (S2_lsr_i_r_or IntRegs:$src1, IntRegs:$src2, u5_0ImmPred:$src3)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S2_clrbit_i IntRegs:$src1, u5_0ImmPred_timm:$src2),
+         (S2_clrbit_i IntRegs:$src1, u5_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S2_asl_i_vh DoubleRegs:$src1, u4_0ImmPred_timm:$src2),
+         (S2_asl_i_vh DoubleRegs:$src1, u4_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S2_lsr_i_r_or IntRegs:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3),
+         (S2_lsr_i_r_or IntRegs:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_S2_lsl_r_r_nac IntRegs:$src1, IntRegs:$src2, IntRegs:$src3),
          (S2_lsl_r_r_nac IntRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mmpyl_rs1 DoubleRegs:$src1, DoubleRegs:$src2),
@@ -1343,8 +1343,8 @@ def: Pat<(int_hexagon_M2_mmpyl_s0 DoubleRegs:$src1, DoubleRegs:$src2),
          (M2_mmpyl_s0 DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mmpyl_s1 DoubleRegs:$src1, DoubleRegs:$src2),
          (M2_mmpyl_s1 DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_M2_naccii IntRegs:$src1, IntRegs:$src2, s32_0ImmPred:$src3),
-         (M2_naccii IntRegs:$src1, IntRegs:$src2, s32_0ImmPred:$src3)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_M2_naccii IntRegs:$src1, IntRegs:$src2, s32_0ImmPred_timm:$src3),
+         (M2_naccii IntRegs:$src1, IntRegs:$src2, s32_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_S2_vrndpackwhs DoubleRegs:$src1),
          (S2_vrndpackwhs DoubleRegs:$src1)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_S2_vtrunewh DoubleRegs:$src1, DoubleRegs:$src2),
@@ -1357,24 +1357,24 @@ def: Pat<(int_hexagon_M2_mpyd_ll_s1 IntRegs:$src1, IntRegs:$src2),
          (M2_mpyd_ll_s1 IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M4_mac_up_s1_sat IntRegs:$src1, IntRegs:$src2, IntRegs:$src3),
          (M4_mac_up_s1_sat IntRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S4_vrcrotate_acc DoubleRegs:$src1, DoubleRegs:$src2, IntRegs:$src3, u2_0ImmPred:$src4),
-         (S4_vrcrotate_acc DoubleRegs:$src1, DoubleRegs:$src2, IntRegs:$src3, u2_0ImmPred:$src4)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S4_vrcrotate_acc DoubleRegs:$src1, DoubleRegs:$src2, IntRegs:$src3, u2_0ImmPred_timm:$src4),
+         (S4_vrcrotate_acc DoubleRegs:$src1, DoubleRegs:$src2, IntRegs:$src3, u2_0ImmPred_timm:$src4)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_F2_conv_uw2df IntRegs:$src1),
          (F2_conv_uw2df IntRegs:$src1)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A2_vaddubs DoubleRegs:$src1, DoubleRegs:$src2),
          (A2_vaddubs DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_S2_asr_r_r_acc IntRegs:$src1, IntRegs:$src2, IntRegs:$src3),
          (S2_asr_r_r_acc IntRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_A2_orir IntRegs:$src1, s32_0ImmPred:$src2),
-         (A2_orir IntRegs:$src1, s32_0ImmPred:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_A2_orir IntRegs:$src1, s32_0ImmPred_timm:$src2),
+         (A2_orir IntRegs:$src1, s32_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A2_andp DoubleRegs:$src1, DoubleRegs:$src2),
          (A2_andp DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_S2_lfsp DoubleRegs:$src1, DoubleRegs:$src2),
          (S2_lfsp DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A2_min IntRegs:$src1, IntRegs:$src2),
          (A2_min IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_M2_mpysmi IntRegs:$src1, m32_0ImmPred:$src2),
-         (M2_mpysmi IntRegs:$src1, m32_0ImmPred:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_M2_mpysmi IntRegs:$src1, m32_0ImmPred_timm:$src2),
+         (M2_mpysmi IntRegs:$src1, m32_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_vcmpy_s0_sat_r DoubleRegs:$src1, DoubleRegs:$src2),
          (M2_vcmpy_s0_sat_r DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mpyu_acc_ll_s1 IntRegs:$src1, IntRegs:$src2, IntRegs:$src3),
@@ -1397,10 +1397,10 @@ def: Pat<(int_hexagon_M2_mpyd_lh_s0 IntRegs:$src1, IntRegs:$src2),
          (M2_mpyd_lh_s0 IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_F2_conv_df2w DoubleRegs:$src1),
          (F2_conv_df2w DoubleRegs:$src1)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S5_asrhub_sat DoubleRegs:$src1, u4_0ImmPred:$src2),
-         (S5_asrhub_sat DoubleRegs:$src1, u4_0ImmPred:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S2_asl_i_r_xacc IntRegs:$src1, IntRegs:$src2, u5_0ImmPred:$src3),
-         (S2_asl_i_r_xacc IntRegs:$src1, IntRegs:$src2, u5_0ImmPred:$src3)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S5_asrhub_sat DoubleRegs:$src1, u4_0ImmPred_timm:$src2),
+         (S5_asrhub_sat DoubleRegs:$src1, u4_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S2_asl_i_r_xacc IntRegs:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3),
+         (S2_asl_i_r_xacc IntRegs:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_F2_conv_df2d DoubleRegs:$src1),
          (F2_conv_df2d DoubleRegs:$src1)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mmaculs_s1 DoubleRegs:$src1, DoubleRegs:$src2, DoubleRegs:$src3),
@@ -1423,8 +1423,8 @@ def: Pat<(int_hexagon_A2_vavghr DoubleRegs:$src1, DoubleRegs:$src2),
          (A2_vavghr DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_F2_sffma_sc IntRegs:$src1, IntRegs:$src2, IntRegs:$src3, PredRegs:$src4),
          (F2_sffma_sc IntRegs:$src1, IntRegs:$src2, IntRegs:$src3, PredRegs:$src4)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_F2_dfclass DoubleRegs:$src1, u5_0ImmPred:$src2),
-         (F2_dfclass DoubleRegs:$src1, u5_0ImmPred:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_F2_dfclass DoubleRegs:$src1, u5_0ImmPred_timm:$src2),
+         (F2_dfclass DoubleRegs:$src1, u5_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_F2_conv_df2ud DoubleRegs:$src1),
          (F2_conv_df2ud DoubleRegs:$src1)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_F2_conv_df2uw DoubleRegs:$src1),
@@ -1433,16 +1433,16 @@ def: Pat<(int_hexagon_M2_cmpyrs_s0 IntRegs:$src1, IntRegs:$src2),
          (M2_cmpyrs_s0 IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_cmpyrs_s1 IntRegs:$src1, IntRegs:$src2),
          (M2_cmpyrs_s1 IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_C4_cmpltei IntRegs:$src1, s32_0ImmPred:$src2),
-         (C4_cmpltei IntRegs:$src1, s32_0ImmPred:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_C4_cmpltei IntRegs:$src1, s32_0ImmPred_timm:$src2),
+         (C4_cmpltei IntRegs:$src1, s32_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_C4_cmplteu IntRegs:$src1, IntRegs:$src2),
          (C4_cmplteu IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A2_vsubb_map DoubleRegs:$src1, DoubleRegs:$src2),
          (A2_vsubub DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A2_subh_l16_ll IntRegs:$src1, IntRegs:$src2),
          (A2_subh_l16_ll IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S2_asr_i_r_rnd IntRegs:$src1, u5_0ImmPred:$src2),
-         (S2_asr_i_r_rnd IntRegs:$src1, u5_0ImmPred:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S2_asr_i_r_rnd IntRegs:$src1, u5_0ImmPred_timm:$src2),
+         (S2_asr_i_r_rnd IntRegs:$src1, u5_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_vrmpy_s0 DoubleRegs:$src1, DoubleRegs:$src2),
          (M2_vrmpy_s0 DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mpyd_rnd_hh_s1 IntRegs:$src1, IntRegs:$src2),
@@ -1471,14 +1471,14 @@ def: Pat<(int_hexagon_M2_mpyud_hl_s0 IntRegs:$src1, IntRegs:$src2),
          (M2_mpyud_hl_s0 IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_vrcmpyi_s0c DoubleRegs:$src1, DoubleRegs:$src2),
          (M2_vrcmpyi_s0c DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S2_asr_i_p_rnd DoubleRegs:$src1, u6_0ImmPred:$src2),
-         (S2_asr_i_p_rnd DoubleRegs:$src1, u6_0ImmPred:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S2_asr_i_p_rnd DoubleRegs:$src1, u6_0ImmPred_timm:$src2),
+         (S2_asr_i_p_rnd DoubleRegs:$src1, u6_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A2_addpsat DoubleRegs:$src1, DoubleRegs:$src2),
          (A2_addpsat DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A2_svaddhs IntRegs:$src1, IntRegs:$src2),
          (A2_svaddhs IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S4_ori_lsr_ri u32_0ImmPred:$src1, IntRegs:$src2, u5_0ImmPred:$src3),
-         (S4_ori_lsr_ri u32_0ImmPred:$src1, IntRegs:$src2, u5_0ImmPred:$src3)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S4_ori_lsr_ri u32_0ImmPred_timm:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3),
+         (S4_ori_lsr_ri u32_0ImmPred_timm:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mpy_sat_rnd_ll_s1 IntRegs:$src1, IntRegs:$src2),
          (M2_mpy_sat_rnd_ll_s1 IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mpy_sat_rnd_ll_s0 IntRegs:$src1, IntRegs:$src2),
@@ -1499,8 +1499,8 @@ def: Pat<(int_hexagon_M2_mpyud_lh_s1 IntRegs:$src1, IntRegs:$src2),
          (M2_mpyud_lh_s1 IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_S2_asl_r_r_or IntRegs:$src1, IntRegs:$src2, IntRegs:$src3),
          (S2_asl_r_r_or IntRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S4_lsli s6_0ImmPred:$src1, IntRegs:$src2),
-         (S4_lsli s6_0ImmPred:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S4_lsli s6_0ImmPred_timm:$src1, IntRegs:$src2),
+         (S4_lsli s6_0ImmPred_timm:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_S2_lsl_r_vw DoubleRegs:$src1, IntRegs:$src2),
          (S2_lsl_r_vw DoubleRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mpy_hh_s1 IntRegs:$src1, IntRegs:$src2),
@@ -1529,8 +1529,8 @@ def: Pat<(int_hexagon_A4_cmpbeq IntRegs:$src1, IntRegs:$src2),
          (A4_cmpbeq IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A2_negp DoubleRegs:$src1),
          (A2_negp DoubleRegs:$src1)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S2_asl_i_r_sat IntRegs:$src1, u5_0ImmPred:$src2),
-         (S2_asl_i_r_sat IntRegs:$src1, u5_0ImmPred:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S2_asl_i_r_sat IntRegs:$src1, u5_0ImmPred_timm:$src2),
+         (S2_asl_i_r_sat IntRegs:$src1, u5_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A2_addh_l16_sat_hl IntRegs:$src1, IntRegs:$src2),
          (A2_addh_l16_sat_hl IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_S2_vsatwuh DoubleRegs:$src1),
@@ -1541,10 +1541,10 @@ def: Pat<(int_hexagon_S2_svsathb IntRegs:$src1),
          (S2_svsathb IntRegs:$src1)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_C2_cmpgtup DoubleRegs:$src1, DoubleRegs:$src2),
          (C2_cmpgtup DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_A4_cround_ri IntRegs:$src1, u5_0ImmPred:$src2),
-         (A4_cround_ri IntRegs:$src1, u5_0ImmPred:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S4_clbpaddi DoubleRegs:$src1, s6_0ImmPred:$src2),
-         (S4_clbpaddi DoubleRegs:$src1, s6_0ImmPred:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_A4_cround_ri IntRegs:$src1, u5_0ImmPred_timm:$src2),
+         (A4_cround_ri IntRegs:$src1, u5_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S4_clbpaddi DoubleRegs:$src1, s6_0ImmPred_timm:$src2),
+         (S4_clbpaddi DoubleRegs:$src1, s6_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A4_cround_rr IntRegs:$src1, IntRegs:$src2),
          (A4_cround_rr IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_C2_mux PredRegs:$src1, IntRegs:$src2, IntRegs:$src3),
@@ -1563,12 +1563,12 @@ def: Pat<(int_hexagon_A2_vminuh DoubleRegs:$src1, DoubleRegs:$src2),
          (A2_vminuh DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A2_vminub DoubleRegs:$src1, DoubleRegs:$src2),
          (A2_vminub DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S2_extractu IntRegs:$src1, u5_0ImmPred:$src2, u5_0ImmPred:$src3),
-         (S2_extractu IntRegs:$src1, u5_0ImmPred:$src2, u5_0ImmPred:$src3)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S2_extractu IntRegs:$src1, u5_0ImmPred_timm:$src2, u5_0ImmPred_timm:$src3),
+         (S2_extractu IntRegs:$src1, u5_0ImmPred_timm:$src2, u5_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A2_svsubh IntRegs:$src1, IntRegs:$src2),
          (A2_svsubh IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S4_clbaddi IntRegs:$src1, s6_0ImmPred:$src2),
-         (S4_clbaddi IntRegs:$src1, s6_0ImmPred:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S4_clbaddi IntRegs:$src1, s6_0ImmPred_timm:$src2),
+         (S4_clbaddi IntRegs:$src1, s6_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_F2_sffms IntRegs:$src1, IntRegs:$src2, IntRegs:$src3),
          (F2_sffms IntRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_S2_vsxtbh IntRegs:$src1),
@@ -1589,16 +1589,16 @@ def: Pat<(int_hexagon_M2_mpy_acc_hh_s1 IntRegs:$src1, IntRegs:$src2, IntRegs:$sr
          (M2_mpy_acc_hh_s1 IntRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mpy_acc_hh_s0 IntRegs:$src1, IntRegs:$src2, IntRegs:$src3),
          (M2_mpy_acc_hh_s0 IntRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S4_addi_asl_ri u32_0ImmPred:$src1, IntRegs:$src2, u5_0ImmPred:$src3),
-         (S4_addi_asl_ri u32_0ImmPred:$src1, IntRegs:$src2, u5_0ImmPred:$src3)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S4_addi_asl_ri u32_0ImmPred_timm:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3),
+         (S4_addi_asl_ri u32_0ImmPred_timm:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mpyd_nac_hh_s1 DoubleRegs:$src1, IntRegs:$src2, IntRegs:$src3),
          (M2_mpyd_nac_hh_s1 DoubleRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mpyd_nac_hh_s0 DoubleRegs:$src1, IntRegs:$src2, IntRegs:$src3),
          (M2_mpyd_nac_hh_s0 DoubleRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S2_asr_i_r_nac IntRegs:$src1, IntRegs:$src2, u5_0ImmPred:$src3),
-         (S2_asr_i_r_nac IntRegs:$src1, IntRegs:$src2, u5_0ImmPred:$src3)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_A4_cmpheqi IntRegs:$src1, s32_0ImmPred:$src2),
-         (A4_cmpheqi IntRegs:$src1, s32_0ImmPred:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S2_asr_i_r_nac IntRegs:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3),
+         (S2_asr_i_r_nac IntRegs:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_A4_cmpheqi IntRegs:$src1, s32_0ImmPred_timm:$src2),
+         (A4_cmpheqi IntRegs:$src1, s32_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_S2_lsr_r_p_xor DoubleRegs:$src1, DoubleRegs:$src2, IntRegs:$src3),
          (S2_lsr_r_p_xor DoubleRegs:$src1, DoubleRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mpy_acc_hl_s1 IntRegs:$src1, IntRegs:$src2, IntRegs:$src3),
@@ -1623,8 +1623,8 @@ def: Pat<(int_hexagon_M2_mpyud_nac_lh_s1 DoubleRegs:$src1, IntRegs:$src2, IntReg
          (M2_mpyud_nac_lh_s1 DoubleRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mpyud_nac_lh_s0 DoubleRegs:$src1, IntRegs:$src2, IntRegs:$src3),
          (M2_mpyud_nac_lh_s0 DoubleRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_A4_round_ri_sat IntRegs:$src1, u5_0ImmPred:$src2),
-         (A4_round_ri_sat IntRegs:$src1, u5_0ImmPred:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_A4_round_ri_sat IntRegs:$src1, u5_0ImmPred_timm:$src2),
+         (A4_round_ri_sat IntRegs:$src1, u5_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mpy_nac_hl_s0 IntRegs:$src1, IntRegs:$src2, IntRegs:$src3),
          (M2_mpy_nac_hl_s0 IntRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mpy_nac_hl_s1 IntRegs:$src1, IntRegs:$src2, IntRegs:$src3),
@@ -1637,10 +1637,10 @@ def: Pat<(int_hexagon_M2_mmacls_rs1 DoubleRegs:$src1, DoubleRegs:$src2, DoubleRe
          (M2_mmacls_rs1 DoubleRegs:$src1, DoubleRegs:$src2, DoubleRegs:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_cmaci_s0 DoubleRegs:$src1, IntRegs:$src2, IntRegs:$src3),
          (M2_cmaci_s0 DoubleRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S2_setbit_i IntRegs:$src1, u5_0ImmPred:$src2),
-         (S2_setbit_i IntRegs:$src1, u5_0ImmPred:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S2_asl_i_p_or DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred:$src3),
-         (S2_asl_i_p_or DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred:$src3)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S2_setbit_i IntRegs:$src1, u5_0ImmPred_timm:$src2),
+         (S2_setbit_i IntRegs:$src1, u5_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S2_asl_i_p_or DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred_timm:$src3),
+         (S2_asl_i_p_or DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A4_andn IntRegs:$src1, IntRegs:$src2),
          (A4_andn IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M5_vrmpybsu DoubleRegs:$src1, DoubleRegs:$src2),
@@ -1655,8 +1655,8 @@ def: Pat<(int_hexagon_C2_bitsclr IntRegs:$src1, IntRegs:$src2),
          (C2_bitsclr IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_xor_xacc IntRegs:$src1, IntRegs:$src2, IntRegs:$src3),
          (M2_xor_xacc IntRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_A4_vcmpbgtui DoubleRegs:$src1, u7_0ImmPred:$src2),
-         (A4_vcmpbgtui DoubleRegs:$src1, u7_0ImmPred:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_A4_vcmpbgtui DoubleRegs:$src1, u7_0ImmPred_timm:$src2),
+         (A4_vcmpbgtui DoubleRegs:$src1, u7_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A4_ornp DoubleRegs:$src1, DoubleRegs:$src2),
          (A4_ornp DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_C4_and_or PredRegs:$src1, PredRegs:$src2, PredRegs:$src3),
@@ -1673,14 +1673,14 @@ def: Pat<(int_hexagon_M2_vmpy2su_s1 IntRegs:$src1, IntRegs:$src2),
          (M2_vmpy2su_s1 IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_vmpy2su_s0 IntRegs:$src1, IntRegs:$src2),
          (M2_vmpy2su_s0 IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S2_asr_i_p_acc DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred:$src3),
-         (S2_asr_i_p_acc DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred:$src3)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_C4_nbitsclri IntRegs:$src1, u6_0ImmPred:$src2),
-         (C4_nbitsclri IntRegs:$src1, u6_0ImmPred:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S2_lsr_i_vh DoubleRegs:$src1, u4_0ImmPred:$src2),
-         (S2_lsr_i_vh DoubleRegs:$src1, u4_0ImmPred:$src2)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_S2_lsr_i_p_xacc DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred:$src3),
-         (S2_lsr_i_p_xacc DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred:$src3)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S2_asr_i_p_acc DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred_timm:$src3),
+         (S2_asr_i_p_acc DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_C4_nbitsclri IntRegs:$src1, u6_0ImmPred_timm:$src2),
+         (C4_nbitsclri IntRegs:$src1, u6_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S2_lsr_i_vh DoubleRegs:$src1, u4_0ImmPred_timm:$src2),
+         (S2_lsr_i_vh DoubleRegs:$src1, u4_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
+def: Pat<(int_hexagon_S2_lsr_i_p_xacc DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred_timm:$src3),
+         (S2_lsr_i_p_xacc DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
 
 // V55 Scalar Instructions.
 
@@ -1689,30 +1689,30 @@ def: Pat<(int_hexagon_A5_ACS DoubleRegs:$src1, DoubleRegs:$src2, DoubleRegs:$src
 
 // V60 Scalar Instructions.
 
-def: Pat<(int_hexagon_S6_rol_i_p_and DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred:$src3),
-         (S6_rol_i_p_and DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred:$src3)>, Requires<[HasV60]>;
-def: Pat<(int_hexagon_S6_rol_i_r_xacc IntRegs:$src1, IntRegs:$src2, u5_0ImmPred:$src3),
-         (S6_rol_i_r_xacc IntRegs:$src1, IntRegs:$src2, u5_0ImmPred:$src3)>, Requires<[HasV60]>;
-def: Pat<(int_hexagon_S6_rol_i_r_and IntRegs:$src1, IntRegs:$src2, u5_0ImmPred:$src3),
-         (S6_rol_i_r_and IntRegs:$src1, IntRegs:$src2, u5_0ImmPred:$src3)>, Requires<[HasV60]>;
-def: Pat<(int_hexagon_S6_rol_i_r_acc IntRegs:$src1, IntRegs:$src2, u5_0ImmPred:$src3),
-         (S6_rol_i_r_acc IntRegs:$src1, IntRegs:$src2, u5_0ImmPred:$src3)>, Requires<[HasV60]>;
-def: Pat<(int_hexagon_S6_rol_i_p_xacc DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred:$src3),
-         (S6_rol_i_p_xacc DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred:$src3)>, Requires<[HasV60]>;
-def: Pat<(int_hexagon_S6_rol_i_p DoubleRegs:$src1, u6_0ImmPred:$src2),
-         (S6_rol_i_p DoubleRegs:$src1, u6_0ImmPred:$src2)>, Requires<[HasV60]>;
-def: Pat<(int_hexagon_S6_rol_i_p_nac DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred:$src3),
-         (S6_rol_i_p_nac DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred:$src3)>, Requires<[HasV60]>;
-def: Pat<(int_hexagon_S6_rol_i_p_acc DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred:$src3),
-         (S6_rol_i_p_acc DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred:$src3)>, Requires<[HasV60]>;
-def: Pat<(int_hexagon_S6_rol_i_r_or IntRegs:$src1, IntRegs:$src2, u5_0ImmPred:$src3),
-         (S6_rol_i_r_or IntRegs:$src1, IntRegs:$src2, u5_0ImmPred:$src3)>, Requires<[HasV60]>;
-def: Pat<(int_hexagon_S6_rol_i_r IntRegs:$src1, u5_0ImmPred:$src2),
-         (S6_rol_i_r IntRegs:$src1, u5_0ImmPred:$src2)>, Requires<[HasV60]>;
-def: Pat<(int_hexagon_S6_rol_i_r_nac IntRegs:$src1, IntRegs:$src2, u5_0ImmPred:$src3),
-         (S6_rol_i_r_nac IntRegs:$src1, IntRegs:$src2, u5_0ImmPred:$src3)>, Requires<[HasV60]>;
-def: Pat<(int_hexagon_S6_rol_i_p_or DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred:$src3),
-         (S6_rol_i_p_or DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred:$src3)>, Requires<[HasV60]>;
+def: Pat<(int_hexagon_S6_rol_i_p_and DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred_timm:$src3),
+         (S6_rol_i_p_and DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred_timm:$src3)>, Requires<[HasV60]>;
+def: Pat<(int_hexagon_S6_rol_i_r_xacc IntRegs:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3),
+         (S6_rol_i_r_xacc IntRegs:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3)>, Requires<[HasV60]>;
+def: Pat<(int_hexagon_S6_rol_i_r_and IntRegs:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3),
+         (S6_rol_i_r_and IntRegs:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3)>, Requires<[HasV60]>;
+def: Pat<(int_hexagon_S6_rol_i_r_acc IntRegs:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3),
+         (S6_rol_i_r_acc IntRegs:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3)>, Requires<[HasV60]>;
+def: Pat<(int_hexagon_S6_rol_i_p_xacc DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred_timm:$src3),
+         (S6_rol_i_p_xacc DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred_timm:$src3)>, Requires<[HasV60]>;
+def: Pat<(int_hexagon_S6_rol_i_p DoubleRegs:$src1, u6_0ImmPred_timm:$src2),
+         (S6_rol_i_p DoubleRegs:$src1, u6_0ImmPred_timm:$src2)>, Requires<[HasV60]>;
+def: Pat<(int_hexagon_S6_rol_i_p_nac DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred_timm:$src3),
+         (S6_rol_i_p_nac DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred_timm:$src3)>, Requires<[HasV60]>;
+def: Pat<(int_hexagon_S6_rol_i_p_acc DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred_timm:$src3),
+         (S6_rol_i_p_acc DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred_timm:$src3)>, Requires<[HasV60]>;
+def: Pat<(int_hexagon_S6_rol_i_r_or IntRegs:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3),
+         (S6_rol_i_r_or IntRegs:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3)>, Requires<[HasV60]>;
+def: Pat<(int_hexagon_S6_rol_i_r IntRegs:$src1, u5_0ImmPred_timm:$src2),
+         (S6_rol_i_r IntRegs:$src1, u5_0ImmPred_timm:$src2)>, Requires<[HasV60]>;
+def: Pat<(int_hexagon_S6_rol_i_r_nac IntRegs:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3),
+         (S6_rol_i_r_nac IntRegs:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3)>, Requires<[HasV60]>;
+def: Pat<(int_hexagon_S6_rol_i_p_or DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred_timm:$src3),
+         (S6_rol_i_p_or DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred_timm:$src3)>, Requires<[HasV60]>;
 
 // V62 Scalar Instructions.
 
@@ -1744,8 +1744,8 @@ def: Pat<(int_hexagon_F2_dfadd DoubleRegs:$src1, DoubleRegs:$src2),
          (F2_dfadd DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV66]>;
 def: Pat<(int_hexagon_M2_mnaci IntRegs:$src1, IntRegs:$src2, IntRegs:$src3),
          (M2_mnaci IntRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV66]>;
-def: Pat<(int_hexagon_S2_mask u5_0ImmPred:$src1, u5_0ImmPred:$src2),
-         (S2_mask u5_0ImmPred:$src1, u5_0ImmPred:$src2)>, Requires<[HasV66]>;
+def: Pat<(int_hexagon_S2_mask u5_0ImmPred_timm:$src1, u5_0ImmPred_timm:$src2),
+         (S2_mask u5_0ImmPred_timm:$src1, u5_0ImmPred_timm:$src2)>, Requires<[HasV66]>;
 
 // V60 HVX Instructions.
 
@@ -1773,10 +1773,10 @@ def: Pat<(int_hexagon_V6_vaddh_dv HvxWR:$src1, HvxWR:$src2),
          (V6_vaddh_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[HasV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vaddh_dv_128B HvxWR:$src1, HvxWR:$src2),
          (V6_vaddh_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[HasV60, UseHVX128B]>;
-def: Pat<(int_hexagon_V6_vrmpybusi HvxWR:$src1, IntRegs:$src2, u1_0ImmPred:$src3),
-         (V6_vrmpybusi HvxWR:$src1, IntRegs:$src2, u1_0ImmPred:$src3)>, Requires<[HasV60, UseHVX64B]>;
-def: Pat<(int_hexagon_V6_vrmpybusi_128B HvxWR:$src1, IntRegs:$src2, u1_0ImmPred:$src3),
-         (V6_vrmpybusi HvxWR:$src1, IntRegs:$src2, u1_0ImmPred:$src3)>, Requires<[HasV60, UseHVX128B]>;
+def: Pat<(int_hexagon_V6_vrmpybusi HvxWR:$src1, IntRegs:$src2, u1_0ImmPred_timm:$src3),
+         (V6_vrmpybusi HvxWR:$src1, IntRegs:$src2, u1_0ImmPred_timm:$src3)>, Requires<[HasV60, UseHVX64B]>;
+def: Pat<(int_hexagon_V6_vrmpybusi_128B HvxWR:$src1, IntRegs:$src2, u1_0ImmPred_timm:$src3),
+         (V6_vrmpybusi HvxWR:$src1, IntRegs:$src2, u1_0ImmPred_timm:$src3)>, Requires<[HasV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vshufoh HvxVR:$src1, HvxVR:$src2),
          (V6_vshufoh HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vshufoh_128B HvxVR:$src1, HvxVR:$src2),
@@ -1789,10 +1789,10 @@ def: Pat<(int_hexagon_V6_vdmpyhsuisat HvxWR:$src1, IntRegs:$src2),
          (V6_vdmpyhsuisat HvxWR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vdmpyhsuisat_128B HvxWR:$src1, IntRegs:$src2),
          (V6_vdmpyhsuisat HvxWR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX128B]>;
-def: Pat<(int_hexagon_V6_vrsadubi_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3, u1_0ImmPred:$src4),
-         (V6_vrsadubi_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3, u1_0ImmPred:$src4)>, Requires<[HasV60, UseHVX64B]>;
-def: Pat<(int_hexagon_V6_vrsadubi_acc_128B HvxWR:$src1, HvxWR:$src2, IntRegs:$src3, u1_0ImmPred:$src4),
-         (V6_vrsadubi_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3, u1_0ImmPred:$src4)>, Requires<[HasV60, UseHVX128B]>;
+def: Pat<(int_hexagon_V6_vrsadubi_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3, u1_0ImmPred_timm:$src4),
+         (V6_vrsadubi_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3, u1_0ImmPred_timm:$src4)>, Requires<[HasV60, UseHVX64B]>;
+def: Pat<(int_hexagon_V6_vrsadubi_acc_128B HvxWR:$src1, HvxWR:$src2, IntRegs:$src3, u1_0ImmPred_timm:$src4),
+         (V6_vrsadubi_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3, u1_0ImmPred_timm:$src4)>, Requires<[HasV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vnavgw HvxVR:$src1, HvxVR:$src2),
          (V6_vnavgw HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vnavgw_128B HvxVR:$src1, HvxVR:$src2),
@@ -2369,10 +2369,10 @@ def: Pat<(int_hexagon_V6_vsubhsat HvxVR:$src1, HvxVR:$src2),
          (V6_vsubhsat HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vsubhsat_128B HvxVR:$src1, HvxVR:$src2),
          (V6_vsubhsat HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
-def: Pat<(int_hexagon_V6_vrmpyubi_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3, u1_0ImmPred:$src4),
-         (V6_vrmpyubi_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3, u1_0ImmPred:$src4)>, Requires<[HasV60, UseHVX64B]>;
-def: Pat<(int_hexagon_V6_vrmpyubi_acc_128B HvxWR:$src1, HvxWR:$src2, IntRegs:$src3, u1_0ImmPred:$src4),
-         (V6_vrmpyubi_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3, u1_0ImmPred:$src4)>, Requires<[HasV60, UseHVX128B]>;
+def: Pat<(int_hexagon_V6_vrmpyubi_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3, u1_0ImmPred_timm:$src4),
+         (V6_vrmpyubi_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3, u1_0ImmPred_timm:$src4)>, Requires<[HasV60, UseHVX64B]>;
+def: Pat<(int_hexagon_V6_vrmpyubi_acc_128B HvxWR:$src1, HvxWR:$src2, IntRegs:$src3, u1_0ImmPred_timm:$src4),
+         (V6_vrmpyubi_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3, u1_0ImmPred_timm:$src4)>, Requires<[HasV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vabsw HvxVR:$src1),
          (V6_vabsw HvxVR:$src1)>, Requires<[HasV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vabsw_128B HvxVR:$src1),
@@ -2489,10 +2489,10 @@ def: Pat<(int_hexagon_V6_vmpybv_acc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3),
          (V6_vmpybv_acc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpybv_acc_128B HvxWR:$src1, HvxVR:$src2, HvxVR:$src3),
          (V6_vmpybv_acc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX128B]>;
-def: Pat<(int_hexagon_V6_vrsadubi HvxWR:$src1, IntRegs:$src2, u1_0ImmPred:$src3),
-         (V6_vrsadubi HvxWR:$src1, IntRegs:$src2, u1_0ImmPred:$src3)>, Requires<[HasV60, UseHVX64B]>;
-def: Pat<(int_hexagon_V6_vrsadubi_128B HvxWR:$src1, IntRegs:$src2, u1_0ImmPred:$src3),
-         (V6_vrsadubi HvxWR:$src1, IntRegs:$src2, u1_0ImmPred:$src3)>, Requires<[HasV60, UseHVX128B]>;
+def: Pat<(int_hexagon_V6_vrsadubi HvxWR:$src1, IntRegs:$src2, u1_0ImmPred_timm:$src3),
+         (V6_vrsadubi HvxWR:$src1, IntRegs:$src2, u1_0ImmPred_timm:$src3)>, Requires<[HasV60, UseHVX64B]>;
+def: Pat<(int_hexagon_V6_vrsadubi_128B HvxWR:$src1, IntRegs:$src2, u1_0ImmPred_timm:$src3),
+         (V6_vrsadubi HvxWR:$src1, IntRegs:$src2, u1_0ImmPred_timm:$src3)>, Requires<[HasV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vdmpyhb_dv_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3),
          (V6_vdmpyhb_dv_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3)>, Requires<[HasV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vdmpyhb_dv_acc_128B HvxWR:$src1, HvxWR:$src2, IntRegs:$src3),
@@ -2677,10 +2677,10 @@ def: Pat<(int_hexagon_V6_vaddbnq HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
          (V6_vaddbnq HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vaddbnq_128B HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
          (V6_vaddbnq HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX128B]>;
-def: Pat<(int_hexagon_V6_vlalignbi HvxVR:$src1, HvxVR:$src2, u3_0ImmPred:$src3),
-         (V6_vlalignbi HvxVR:$src1, HvxVR:$src2, u3_0ImmPred:$src3)>, Requires<[HasV60, UseHVX64B]>;
-def: Pat<(int_hexagon_V6_vlalignbi_128B HvxVR:$src1, HvxVR:$src2, u3_0ImmPred:$src3),
-         (V6_vlalignbi HvxVR:$src1, HvxVR:$src2, u3_0ImmPred:$src3)>, Requires<[HasV60, UseHVX128B]>;
+def: Pat<(int_hexagon_V6_vlalignbi HvxVR:$src1, HvxVR:$src2, u3_0ImmPred_timm:$src3),
+         (V6_vlalignbi HvxVR:$src1, HvxVR:$src2, u3_0ImmPred_timm:$src3)>, Requires<[HasV60, UseHVX64B]>;
+def: Pat<(int_hexagon_V6_vlalignbi_128B HvxVR:$src1, HvxVR:$src2, u3_0ImmPred_timm:$src3),
+         (V6_vlalignbi HvxVR:$src1, HvxVR:$src2, u3_0ImmPred_timm:$src3)>, Requires<[HasV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vsatwh HvxVR:$src1, HvxVR:$src2),
          (V6_vsatwh HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vsatwh_128B HvxVR:$src1, HvxVR:$src2),
@@ -2721,10 +2721,10 @@ def: Pat<(int_hexagon_V6_veqh_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
          (V6_veqh_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_veqh_and_128B HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
          (V6_veqh_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX128B]>;
-def: Pat<(int_hexagon_V6_valignbi HvxVR:$src1, HvxVR:$src2, u3_0ImmPred:$src3),
-         (V6_valignbi HvxVR:$src1, HvxVR:$src2, u3_0ImmPred:$src3)>, Requires<[HasV60, UseHVX64B]>;
-def: Pat<(int_hexagon_V6_valignbi_128B HvxVR:$src1, HvxVR:$src2, u3_0ImmPred:$src3),
-         (V6_valignbi HvxVR:$src1, HvxVR:$src2, u3_0ImmPred:$src3)>, Requires<[HasV60, UseHVX128B]>;
+def: Pat<(int_hexagon_V6_valignbi HvxVR:$src1, HvxVR:$src2, u3_0ImmPred_timm:$src3),
+         (V6_valignbi HvxVR:$src1, HvxVR:$src2, u3_0ImmPred_timm:$src3)>, Requires<[HasV60, UseHVX64B]>;
+def: Pat<(int_hexagon_V6_valignbi_128B HvxVR:$src1, HvxVR:$src2, u3_0ImmPred_timm:$src3),
+         (V6_valignbi HvxVR:$src1, HvxVR:$src2, u3_0ImmPred_timm:$src3)>, Requires<[HasV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vaddwsat HvxVR:$src1, HvxVR:$src2),
          (V6_vaddwsat HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vaddwsat_128B HvxVR:$src1, HvxVR:$src2),
@@ -2885,10 +2885,10 @@ def: Pat<(int_hexagon_V6_vsubh HvxVR:$src1, HvxVR:$src2),
          (V6_vsubh HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vsubh_128B HvxVR:$src1, HvxVR:$src2),
          (V6_vsubh HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
-def: Pat<(int_hexagon_V6_vrmpyubi HvxWR:$src1, IntRegs:$src2, u1_0ImmPred:$src3),
-         (V6_vrmpyubi HvxWR:$src1, IntRegs:$src2, u1_0ImmPred:$src3)>, Requires<[HasV60, UseHVX64B]>;
-def: Pat<(int_hexagon_V6_vrmpyubi_128B HvxWR:$src1, IntRegs:$src2, u1_0ImmPred:$src3),
-         (V6_vrmpyubi HvxWR:$src1, IntRegs:$src2, u1_0ImmPred:$src3)>, Requires<[HasV60, UseHVX128B]>;
+def: Pat<(int_hexagon_V6_vrmpyubi HvxWR:$src1, IntRegs:$src2, u1_0ImmPred_timm:$src3),
+         (V6_vrmpyubi HvxWR:$src1, IntRegs:$src2, u1_0ImmPred_timm:$src3)>, Requires<[HasV60, UseHVX64B]>;
+def: Pat<(int_hexagon_V6_vrmpyubi_128B HvxWR:$src1, IntRegs:$src2, u1_0ImmPred_timm:$src3),
+         (V6_vrmpyubi HvxWR:$src1, IntRegs:$src2, u1_0ImmPred_timm:$src3)>, Requires<[HasV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vminw HvxVR:$src1, HvxVR:$src2),
          (V6_vminw HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vminw_128B HvxVR:$src1, HvxVR:$src2),
@@ -2929,10 +2929,10 @@ def: Pat<(int_hexagon_V6_vsubuhw HvxVR:$src1, HvxVR:$src2),
          (V6_vsubuhw HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vsubuhw_128B HvxVR:$src1, HvxVR:$src2),
          (V6_vsubuhw HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
-def: Pat<(int_hexagon_V6_vrmpybusi_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3, u1_0ImmPred:$src4),
-         (V6_vrmpybusi_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3, u1_0ImmPred:$src4)>, Requires<[HasV60, UseHVX64B]>;
-def: Pat<(int_hexagon_V6_vrmpybusi_acc_128B HvxWR:$src1, HvxWR:$src2, IntRegs:$src3, u1_0ImmPred:$src4),
-         (V6_vrmpybusi_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3, u1_0ImmPred:$src4)>, Requires<[HasV60, UseHVX128B]>;
+def: Pat<(int_hexagon_V6_vrmpybusi_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3, u1_0ImmPred_timm:$src4),
+         (V6_vrmpybusi_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3, u1_0ImmPred_timm:$src4)>, Requires<[HasV60, UseHVX64B]>;
+def: Pat<(int_hexagon_V6_vrmpybusi_acc_128B HvxWR:$src1, HvxWR:$src2, IntRegs:$src3, u1_0ImmPred_timm:$src4),
+         (V6_vrmpybusi_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3, u1_0ImmPred_timm:$src4)>, Requires<[HasV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vasrw HvxVR:$src1, IntRegs:$src2),
          (V6_vasrw HvxVR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vasrw_128B HvxVR:$src1, IntRegs:$src2),
@@ -3016,10 +3016,10 @@ def: Pat<(int_hexagon_V6_vlsrb HvxVR:$src1, IntRegs:$src2),
          (V6_vlsrb HvxVR:$src1, IntRegs:$src2)>, Requires<[HasV62, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vlsrb_128B HvxVR:$src1, IntRegs:$src2),
          (V6_vlsrb HvxVR:$src1, IntRegs:$src2)>, Requires<[HasV62, UseHVX128B]>;
-def: Pat<(int_hexagon_V6_vlutvwhi HvxVR:$src1, HvxVR:$src2, u3_0ImmPred:$src3),
-         (V6_vlutvwhi HvxVR:$src1, HvxVR:$src2, u3_0ImmPred:$src3)>, Requires<[HasV62, UseHVX64B]>;
-def: Pat<(int_hexagon_V6_vlutvwhi_128B HvxVR:$src1, HvxVR:$src2, u3_0ImmPred:$src3),
-         (V6_vlutvwhi HvxVR:$src1, HvxVR:$src2, u3_0ImmPred:$src3)>, Requires<[HasV62, UseHVX128B]>;
+def: Pat<(int_hexagon_V6_vlutvwhi HvxVR:$src1, HvxVR:$src2, u3_0ImmPred_timm:$src3),
+         (V6_vlutvwhi HvxVR:$src1, HvxVR:$src2, u3_0ImmPred_timm:$src3)>, Requires<[HasV62, UseHVX64B]>;
+def: Pat<(int_hexagon_V6_vlutvwhi_128B HvxVR:$src1, HvxVR:$src2, u3_0ImmPred_timm:$src3),
+         (V6_vlutvwhi HvxVR:$src1, HvxVR:$src2, u3_0ImmPred_timm:$src3)>, Requires<[HasV62, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vaddububb_sat HvxVR:$src1, HvxVR:$src2),
          (V6_vaddububb_sat HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV62, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vaddububb_sat_128B HvxVR:$src1, HvxVR:$src2),
@@ -3032,10 +3032,10 @@ def: Pat<(int_hexagon_V6_ldtp0 PredRegs:$src1, IntRegs:$src2),
          (V6_ldtp0 PredRegs:$src1, IntRegs:$src2)>, Requires<[HasV62, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_ldtp0_128B PredRegs:$src1, IntRegs:$src2),
          (V6_ldtp0 PredRegs:$src1, IntRegs:$src2)>, Requires<[HasV62, UseHVX128B]>;
-def: Pat<(int_hexagon_V6_vlutvvb_oracci HvxVR:$src1, HvxVR:$src2, HvxVR:$src3, u3_0ImmPred:$src4),
-         (V6_vlutvvb_oracci HvxVR:$src1, HvxVR:$src2, HvxVR:$src3, u3_0ImmPred:$src4)>, Requires<[HasV62, UseHVX64B]>;
-def: Pat<(int_hexagon_V6_vlutvvb_oracci_128B HvxVR:$src1, HvxVR:$src2, HvxVR:$src3, u3_0ImmPred:$src4),
-         (V6_vlutvvb_oracci HvxVR:$src1, HvxVR:$src2, HvxVR:$src3, u3_0ImmPred:$src4)>, Requires<[HasV62, UseHVX128B]>;
+def: Pat<(int_hexagon_V6_vlutvvb_oracci HvxVR:$src1, HvxVR:$src2, HvxVR:$src3, u3_0ImmPred_timm:$src4),
+         (V6_vlutvvb_oracci HvxVR:$src1, HvxVR:$src2, HvxVR:$src3, u3_0ImmPred_timm:$src4)>, Requires<[HasV62, UseHVX64B]>;
+def: Pat<(int_hexagon_V6_vlutvvb_oracci_128B HvxVR:$src1, HvxVR:$src2, HvxVR:$src3, u3_0ImmPred_timm:$src4),
+         (V6_vlutvvb_oracci HvxVR:$src1, HvxVR:$src2, HvxVR:$src3, u3_0ImmPred_timm:$src4)>, Requires<[HasV62, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vsubuwsat_dv HvxWR:$src1, HvxWR:$src2),
          (V6_vsubuwsat_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[HasV62, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vsubuwsat_dv_128B HvxWR:$src1, HvxWR:$src2),
@@ -3124,10 +3124,10 @@ def: Pat<(int_hexagon_V6_vasrwuhrndsat HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$sr
          (V6_vasrwuhrndsat HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[HasV62, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vasrwuhrndsat_128B HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3),
          (V6_vasrwuhrndsat HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[HasV62, UseHVX128B]>;
-def: Pat<(int_hexagon_V6_vlutvvbi HvxVR:$src1, HvxVR:$src2, u3_0ImmPred:$src3),
-         (V6_vlutvvbi HvxVR:$src1, HvxVR:$src2, u3_0ImmPred:$src3)>, Requires<[HasV62, UseHVX64B]>;
-def: Pat<(int_hexagon_V6_vlutvvbi_128B HvxVR:$src1, HvxVR:$src2, u3_0ImmPred:$src3),
-         (V6_vlutvvbi HvxVR:$src1, HvxVR:$src2, u3_0ImmPred:$src3)>, Requires<[HasV62, UseHVX128B]>;
+def: Pat<(int_hexagon_V6_vlutvvbi HvxVR:$src1, HvxVR:$src2, u3_0ImmPred_timm:$src3),
+         (V6_vlutvvbi HvxVR:$src1, HvxVR:$src2, u3_0ImmPred_timm:$src3)>, Requires<[HasV62, UseHVX64B]>;
+def: Pat<(int_hexagon_V6_vlutvvbi_128B HvxVR:$src1, HvxVR:$src2, u3_0ImmPred_timm:$src3),
+         (V6_vlutvvbi HvxVR:$src1, HvxVR:$src2, u3_0ImmPred_timm:$src3)>, Requires<[HasV62, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vsubuwsat HvxVR:$src1, HvxVR:$src2),
          (V6_vsubuwsat HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV62, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vsubuwsat_128B HvxVR:$src1, HvxVR:$src2),
@@ -3188,10 +3188,10 @@ def: Pat<(int_hexagon_V6_ldcnp0 PredRegs:$src1, IntRegs:$src2),
          (V6_ldcnp0 PredRegs:$src1, IntRegs:$src2)>, Requires<[HasV62, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_ldcnp0_128B PredRegs:$src1, IntRegs:$src2),
          (V6_ldcnp0 PredRegs:$src1, IntRegs:$src2)>, Requires<[HasV62, UseHVX128B]>;
-def: Pat<(int_hexagon_V6_vlutvwh_oracci HvxWR:$src1, HvxVR:$src2, HvxVR:$src3, u3_0ImmPred:$src4),
-         (V6_vlutvwh_oracci HvxWR:$src1, HvxVR:$src2, HvxVR:$src3, u3_0ImmPred:$src4)>, Requires<[HasV62, UseHVX64B]>;
-def: Pat<(int_hexagon_V6_vlutvwh_oracci_128B HvxWR:$src1, HvxVR:$src2, HvxVR:$src3, u3_0ImmPred:$src4),
-         (V6_vlutvwh_oracci HvxWR:$src1, HvxVR:$src2, HvxVR:$src3, u3_0ImmPred:$src4)>, Requires<[HasV62, UseHVX128B]>;
+def: Pat<(int_hexagon_V6_vlutvwh_oracci HvxWR:$src1, HvxVR:$src2, HvxVR:$src3, u3_0ImmPred_timm:$src4),
+         (V6_vlutvwh_oracci HvxWR:$src1, HvxVR:$src2, HvxVR:$src3, u3_0ImmPred_timm:$src4)>, Requires<[HasV62, UseHVX64B]>;
+def: Pat<(int_hexagon_V6_vlutvwh_oracci_128B HvxWR:$src1, HvxVR:$src2, HvxVR:$src3, u3_0ImmPred_timm:$src4),
+         (V6_vlutvwh_oracci HvxWR:$src1, HvxVR:$src2, HvxVR:$src3, u3_0ImmPred_timm:$src4)>, Requires<[HasV62, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vsubbsat HvxVR:$src1, HvxVR:$src2),
          (V6_vsubbsat HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV62, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vsubbsat_128B HvxVR:$src1, HvxVR:$src2),

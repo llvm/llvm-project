@@ -12,8 +12,8 @@ target triple = "wasm32-unknown-unknown"
 @bar = hidden local_unnamed_addr global i32* getelementptr inbounds ([76 x i32], [76 x i32]* @foo, i32 0, i32 16), align 4
 
 ; CHECK:        - Type:            DATA
-; CHECK-NEXT:     Relocations:     
+; CHECK-NEXT:     Relocations:
 ; CHECK-NEXT:       - Type:            R_WASM_MEMORY_ADDR_I32
 ; CHECK-NEXT:         Index:           0
-; CHECK-NEXT:         Offset:          0x0000013D
+; CHECK-NEXT:         Offset:          0x00000006
 ; CHECK-NEXT:         Addend:          64

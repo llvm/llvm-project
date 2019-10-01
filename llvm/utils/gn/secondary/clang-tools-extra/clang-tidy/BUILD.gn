@@ -37,3 +37,32 @@ static_library("clang-tidy") {
     "GlobList.cpp",
   ]
 }
+
+group("all-checks") {
+  # If you add a check, also add it to ClangTidyForceLinker.h.
+  deps = [
+    "//clang-tools-extra/clang-tidy/abseil",
+    "//clang-tools-extra/clang-tidy/android",
+    "//clang-tools-extra/clang-tidy/boost",
+    "//clang-tools-extra/clang-tidy/bugprone",
+    "//clang-tools-extra/clang-tidy/cert",
+    "//clang-tools-extra/clang-tidy/cppcoreguidelines",
+    "//clang-tools-extra/clang-tidy/darwin",
+    "//clang-tools-extra/clang-tidy/fuchsia",
+    "//clang-tools-extra/clang-tidy/google",
+    "//clang-tools-extra/clang-tidy/hicpp",
+    "//clang-tools-extra/clang-tidy/linuxkernel",
+    "//clang-tools-extra/clang-tidy/llvm",
+    "//clang-tools-extra/clang-tidy/misc",
+    "//clang-tools-extra/clang-tidy/modernize",
+    "//clang-tools-extra/clang-tidy/objc",
+    "//clang-tools-extra/clang-tidy/openmp",
+    "//clang-tools-extra/clang-tidy/performance",
+    "//clang-tools-extra/clang-tidy/portability",
+    "//clang-tools-extra/clang-tidy/readability",
+    "//clang-tools-extra/clang-tidy/zircon",
+  ]
+  if (clang_enable_static_analyzer) {
+    deps += [ "//clang-tools-extra/clang-tidy/mpi" ]
+  }
+}

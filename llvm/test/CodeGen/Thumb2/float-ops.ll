@@ -130,7 +130,7 @@ define void @store_d(double* %a, double %b) {
 entry:
 ; CHECK-LABEL: store_d:
 ; NOREGS: strd r2, r3, [r0]
-; ONLYREGS: vstr d0, [r0]
+; ONLYREGS: strd r2, r3, [r0]
 ; HARD: vstr d0, [r0]
   store double %b, double* %a, align 8
   ret void

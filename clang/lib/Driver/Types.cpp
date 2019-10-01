@@ -328,7 +328,7 @@ void types::getCompilationPhases(const clang::driver::Driver &Driver,
            DAL.getLastArg(options::OPT_rewrite_legacy_objc) ||
            DAL.getLastArg(options::OPT__migrate) ||
            DAL.getLastArg(options::OPT_emit_iterface_stubs) ||
-           DAL.getLastArg(options::OPT__analyze, options::OPT__analyze_auto) ||
+           DAL.getLastArg(options::OPT__analyze) ||
            DAL.getLastArg(options::OPT_emit_ast))
     llvm::copy_if(PhaseList, std::back_inserter(P),
                   [](phases::ID Phase) { return Phase <= phases::Compile; });

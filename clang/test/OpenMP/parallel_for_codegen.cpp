@@ -15,10 +15,13 @@
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=50 -DOMP5 -x c++ -triple x86_64-unknown-unknown -emit-llvm %s -fexceptions -fcxx-exceptions -o - | FileCheck --check-prefix=OMP5 %s
 // RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -DOMP5 -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -o %t %s
 // RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -DOMP5 -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix=OMP5 %s
-// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -o %t %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=50 -DOMP5 -x c++ -triple x86_64-unknown-unknown -emit-llvm %s -fexceptions -fcxx-exceptions -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -DOMP5 -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -DOMP5 -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY0 %s
 #ifndef HEADER
 #define HEADER
 
+#ifndef OMP5
 // CHECK-DAG: [[IDENT_T_TY:%.+]] = type { i32, i32, i32, i32, i8* }
 // CHECK-DAG: [[LOOP_LOC:@.+]] = private unnamed_addr global [[IDENT_T_TY]] { i32 0, i32 514, i32 0, i32 0, i8*
 
@@ -32,12 +35,14 @@ void with_var_schedule() {
 // CHECK: [[CHUNK:%.+]] = load i64, i64* %
 // CHECK: call void {{.+}} @__kmpc_fork_call({{.+}}, i64 [[CHUNK]])
 
+// CHECK: [[UNDEF_A:%.+]] = load double, double* undef
+// CHECK: fadd double 2.000000e+00, [[UNDEF_A]]
 // CHECK: [[CHUNK_VAL:%.+]] = load i8, i8* %
 // CHECK: [[CHUNK_SIZE:%.+]] = sext i8 [[CHUNK_VAL]] to i64
 // CHECK: call void @__kmpc_for_static_init_8u([[IDENT_T_TY]]* [[LOOP_LOC]], i32 [[GTID:%[^,]+]], i32 33, i32* [[IS_LAST:%[^,]+]], i64* [[OMP_LB:%[^,]+]], i64* [[OMP_UB:%[^,]+]], i64* [[OMP_ST:%[^,]+]], i64 1, i64 [[CHUNK_SIZE]])
 // CHECK: call void @__kmpc_for_static_fini([[IDENT_T_TY]]* [[LOOP_LOC]], i32 [[GTID]])
-#pragma omp parallel for schedule(static, char(a))
-  for (unsigned long long i = 1; i < 2; ++i) {
+#pragma omp parallel for schedule(static, char(a)) private(a)
+  for (unsigned long long i = 1; i < 2 + a; ++i) {
   }
 }
 
@@ -383,16 +388,13 @@ void parallel_for(float *a, const int n) {
 // TERM_DEBUG-DAG: [[DBG_LOC_START]] = !DILocation(line: [[@LINE-4]],
 // TERM_DEBUG-DAG: [[DBG_LOC_END]] = !DILocation(line: [[@LINE-18]],
 
-#ifdef OMP5
-// OMP5-DAG: [[IDENT_T_TY:%.+]] = type { i32, i32, i32, i32, i8* }
-// OMP5-DAG: [[LOOP_LOC:@.+]] = private unnamed_addr global [[IDENT_T_TY]] { i32 0, i32 514, i32 0, i32 0, i8*
-
+#else // OMP5
 // OMP5-LABEL: increment
 int increment () {
-// OMP5: [[GTID:%.+]] = call i32 @__kmpc_global_thread_num([[IDENT_T_TY]]* [[DEFAULT_LOC:[@%].+]])
+// OMP5: [[GTID:%.+]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* [[DEFAULT_LOC:[@%].+]])
   #pragma omp for
 // Determine UB = min(UB, GlobalUB)
-// OMP5: call void @__kmpc_for_static_init_4([[IDENT_T_TY]]* [[LOOP_LOC]], i32 [[GTID]], i32 34, i32* [[IS_LAST:%[^,]+]], i32* [[OMP_LB:%[^,]+]], i32* [[OMP_UB:%[^,]+]], i32* [[OMP_ST:%[^,]+]], i32 1, i32 1)
+// OMP5: call void @__kmpc_for_static_init_4(%struct.ident_t* [[LOOP_LOC:[@%].+]], i32 [[GTID]], i32 34, i32* [[IS_LAST:%[^,]+]], i32* [[OMP_LB:%[^,]+]], i32* [[OMP_UB:%[^,]+]], i32* [[OMP_ST:%[^,]+]], i32 1, i32 1)
 // OMP5-NEXT: [[UB:%.+]] = load i32, i32* [[OMP_UB]]
 // OMP5-NEXT: [[UBCMP:%.+]] = icmp sgt i32 [[UB]], 4
 // OMP5-NEXT: br i1 [[UBCMP]], label [[UB_TRUE:%[^,]+]], label [[UB_FALSE:%[^,]+]]
@@ -422,7 +424,7 @@ int increment () {
 // OMP5-NEXT: br label %[[LOOP1_HEAD]]
     ;
 // OMP5: [[LOOP1_END]]
-// OMP5: call void @__kmpc_for_static_fini([[IDENT_T_TY]]* [[LOOP_LOC]], i32 [[GTID]])
+// OMP5: call void @__kmpc_for_static_fini(%struct.ident_t* [[LOOP_LOC]], i32 [[GTID]])
 // OMP5: __kmpc_barrier
   return 0;
 // OMP5: ret i32 0
@@ -430,10 +432,10 @@ int increment () {
 
 // OMP5-LABEL: decrement_nowait
 int decrement_nowait () {
-// OMP5: [[GTID:%.+]] = call i32 @__kmpc_global_thread_num([[IDENT_T_TY]]* [[DEFAULT_LOC:[@%].+]])
+// OMP5: [[GTID:%.+]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* [[DEFAULT_LOC:[@%].+]])
   #pragma omp for nowait
 // Determine UB = min(UB, GlobalUB)
-// OMP5: call void @__kmpc_for_static_init_4([[IDENT_T_TY]]* [[LOOP_LOC]], i32 [[GTID]], i32 34, i32* [[IS_LAST:%[^,]+]], i32* [[OMP_LB:%[^,]+]], i32* [[OMP_UB:%[^,]+]], i32* [[OMP_ST:%[^,]+]], i32 1, i32 1)
+// OMP5: call void @__kmpc_for_static_init_4(%struct.ident_t* [[LOOP_LOC]], i32 [[GTID]], i32 34, i32* [[IS_LAST:%[^,]+]], i32* [[OMP_LB:%[^,]+]], i32* [[OMP_UB:%[^,]+]], i32* [[OMP_ST:%[^,]+]], i32 1, i32 1)
 // OMP5-NEXT: [[UB:%.+]] = load i32, i32* [[OMP_UB]]
 // OMP5-NEXT: [[UBCMP:%.+]] = icmp sgt i32 [[UB]], 4
 // OMP5-NEXT: br i1 [[UBCMP]], label [[UB_TRUE:%[^,]+]], label [[UB_FALSE:%[^,]+]]
@@ -462,12 +464,12 @@ int decrement_nowait () {
 // OMP5-NEXT: br label %[[LOOP1_HEAD]]
     ;
 // OMP5: [[LOOP1_END]]
-// OMP5: call void @__kmpc_for_static_fini([[IDENT_T_TY]]* [[LOOP_LOC]], i32 [[GTID]])
+// OMP5: call void @__kmpc_for_static_fini(%struct.ident_t* [[LOOP_LOC]], i32 [[GTID]])
 // OMP5-NOT: __kmpc_barrier
   return 0;
 // OMP5: ret i32 0
 }
-#endif
+#endif // OMP5
 
 #endif // HEADER
 

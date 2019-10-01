@@ -184,6 +184,7 @@ public:
   bool addInstSelector() override;
   bool addILPOpts() override;
   void addPostRewrite() override;
+  void addPostRegAlloc() override;
   void addPreSched2() override;
   void addPreEmitPass() override;
 };
@@ -217,14 +218,14 @@ void SystemZPassConfig::addPostRewrite() {
   addPass(createSystemZPostRewritePass(getSystemZTargetMachine()));
 }
 
-void SystemZPassConfig::addPreSched2() {
+void SystemZPassConfig::addPostRegAlloc() {
   // PostRewrite needs to be run at -O0 also (in which case addPostRewrite()
   // is not called).
   if (getOptLevel() == CodeGenOpt::None)
     addPass(createSystemZPostRewritePass(getSystemZTargetMachine()));
+}
 
-  addPass(createSystemZExpandPseudoPass(getSystemZTargetMachine()));
-
+void SystemZPassConfig::addPreSched2() {
   if (getOptLevel() != CodeGenOpt::None)
     addPass(&IfConverterID);
 }

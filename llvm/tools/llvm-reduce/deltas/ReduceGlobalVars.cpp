@@ -21,9 +21,9 @@ static void extractGVsFromModule(std::vector<Chunk> ChunksToKeep,
                                  Module *Program) {
   // Get GVs inside desired chunks
   std::set<GlobalVariable *> GVsToKeep;
-  unsigned I = 0, GVCount = 0;
+  int I = 0, GVCount = 0;
   for (auto &GV : Program->globals())
-    if (GV.hasInitializer() && I < ChunksToKeep.size()) {
+    if (GV.hasInitializer() && I < (int)ChunksToKeep.size()) {
       if (ChunksToKeep[I].contains(++GVCount))
         GVsToKeep.insert(&GV);
       if (GVCount == ChunksToKeep[I].end)
@@ -69,6 +69,6 @@ static int countGVs(Module *Program) {
 
 void llvm::reduceGlobalsDeltaPass(TestRunner &Test) {
   outs() << "*** Reducing GVs...\n";
-  unsigned GVCount = countGVs(Test.getProgram());
+  int GVCount = countGVs(Test.getProgram());
   runDeltaPass(Test, GVCount, extractGVsFromModule);
 }

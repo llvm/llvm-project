@@ -580,9 +580,9 @@ public:
   bool isLegalMaskedLoad(Type *DataType) const;
 
   /// Return true if the target supports nontemporal store.
-  bool isLegalNTStore(Type *DataType, llvm::Align Alignment) const;
+  bool isLegalNTStore(Type *DataType, Align Alignment) const;
   /// Return true if the target supports nontemporal load.
-  bool isLegalNTLoad(Type *DataType, llvm::Align Alignment) const;
+  bool isLegalNTLoad(Type *DataType, Align Alignment) const;
 
   /// Return true if the target supports masked scatter.
   bool isLegalMaskedScatter(Type *DataType) const;
@@ -640,12 +640,6 @@ public:
 
   /// Return true if this type is legal.
   bool isTypeLegal(Type *Ty) const;
-
-  /// Returns the target's jmp_buf alignment in bytes.
-  unsigned getJumpBufAlignment() const;
-
-  /// Returns the target's jmp_buf size in bytes.
-  unsigned getJumpBufSize() const;
 
   /// Return true if switches should be turned into lookup tables for the
   /// target.
@@ -1202,8 +1196,8 @@ public:
   virtual bool shouldFavorBackedgeIndex(const Loop *L) const = 0;
   virtual bool isLegalMaskedStore(Type *DataType) = 0;
   virtual bool isLegalMaskedLoad(Type *DataType) = 0;
-  virtual bool isLegalNTStore(Type *DataType, llvm::Align Alignment) = 0;
-  virtual bool isLegalNTLoad(Type *DataType, llvm::Align Alignment) = 0;
+  virtual bool isLegalNTStore(Type *DataType, Align Alignment) = 0;
+  virtual bool isLegalNTLoad(Type *DataType, Align Alignment) = 0;
   virtual bool isLegalMaskedScatter(Type *DataType) = 0;
   virtual bool isLegalMaskedGather(Type *DataType) = 0;
   virtual bool isLegalMaskedCompressStore(Type *DataType) = 0;
@@ -1219,8 +1213,6 @@ public:
   virtual bool isProfitableToHoist(Instruction *I) = 0;
   virtual bool useAA() = 0;
   virtual bool isTypeLegal(Type *Ty) = 0;
-  virtual unsigned getJumpBufAlignment() = 0;
-  virtual unsigned getJumpBufSize() = 0;
   virtual bool shouldBuildLookupTables() = 0;
   virtual bool shouldBuildLookupTablesForConstant(Constant *C) = 0;
   virtual bool useColdCCForColdCall(Function &F) = 0;
@@ -1479,10 +1471,10 @@ public:
   bool isLegalMaskedLoad(Type *DataType) override {
     return Impl.isLegalMaskedLoad(DataType);
   }
-  bool isLegalNTStore(Type *DataType, llvm::Align Alignment) override {
+  bool isLegalNTStore(Type *DataType, Align Alignment) override {
     return Impl.isLegalNTStore(DataType, Alignment);
   }
-  bool isLegalNTLoad(Type *DataType, llvm::Align Alignment) override {
+  bool isLegalNTLoad(Type *DataType, Align Alignment) override {
     return Impl.isLegalNTLoad(DataType, Alignment);
   }
   bool isLegalMaskedScatter(Type *DataType) override {
@@ -1523,8 +1515,6 @@ public:
   }
   bool useAA() override { return Impl.useAA(); }
   bool isTypeLegal(Type *Ty) override { return Impl.isTypeLegal(Ty); }
-  unsigned getJumpBufAlignment() override { return Impl.getJumpBufAlignment(); }
-  unsigned getJumpBufSize() override { return Impl.getJumpBufSize(); }
   bool shouldBuildLookupTables() override {
     return Impl.shouldBuildLookupTables();
   }

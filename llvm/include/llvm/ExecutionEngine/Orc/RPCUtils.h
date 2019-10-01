@@ -1417,7 +1417,7 @@ public:
     auto FutureResult = Promise.get_future();
 
     if (auto Err = this->template appendCallAsync<Func>(
-            [Promise = std::move(Promise)](ErrorReturn RetOrErr) {
+            [Promise = std::move(Promise)](ErrorReturn RetOrErr) mutable {
               Promise.set_value(std::move(RetOrErr));
               return Error::success();
             },

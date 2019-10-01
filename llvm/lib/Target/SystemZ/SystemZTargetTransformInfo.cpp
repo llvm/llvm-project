@@ -707,7 +707,7 @@ int SystemZTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
       // TODO: Fix base implementation which could simplify things a bit here
       // (seems to miss on differentiating on scalar/vector types).
 
-      // Only 64 bit vector conversions are natively supported before arch13.
+      // Only 64 bit vector conversions are natively supported before z15.
       if (DstScalarBits == 64 || ST->hasVectorEnhancements2()) {
         if (SrcScalarBits == DstScalarBits)
           return NumDstVectors;

@@ -44,15 +44,10 @@ define arm_aapcs_vfpcc <4 x i32> @build_varN_v4i1(i32 %s, i32 %t, <4 x i32> %a, 
 ; CHECK-LABEL: build_varN_v4i1:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    cmp r0, r1
-; CHECK-NEXT:    mov.w r1, #0
 ; CHECK-NEXT:    cset r0, lo
 ; CHECK-NEXT:    and r0, r0, #1
 ; CHECK-NEXT:    rsbs r0, r0, #0
-; CHECK-NEXT:    bfi r1, r0, #0, #4
-; CHECK-NEXT:    bfi r1, r0, #4, #4
-; CHECK-NEXT:    bfi r1, r0, #8, #4
-; CHECK-NEXT:    bfi r1, r0, #12, #4
-; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    vmsr p0, r0
 ; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
@@ -106,19 +101,10 @@ define arm_aapcs_vfpcc <8 x i16> @build_varN_v8i1(i32 %s, i32 %t, <8 x i16> %a, 
 ; CHECK-LABEL: build_varN_v8i1:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    cmp r0, r1
-; CHECK-NEXT:    mov.w r1, #0
 ; CHECK-NEXT:    cset r0, lo
 ; CHECK-NEXT:    and r0, r0, #1
 ; CHECK-NEXT:    rsbs r0, r0, #0
-; CHECK-NEXT:    bfi r1, r0, #0, #2
-; CHECK-NEXT:    bfi r1, r0, #2, #2
-; CHECK-NEXT:    bfi r1, r0, #4, #2
-; CHECK-NEXT:    bfi r1, r0, #6, #2
-; CHECK-NEXT:    bfi r1, r0, #8, #2
-; CHECK-NEXT:    bfi r1, r0, #10, #2
-; CHECK-NEXT:    bfi r1, r0, #12, #2
-; CHECK-NEXT:    bfi r1, r0, #14, #2
-; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    vmsr p0, r0
 ; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
@@ -172,27 +158,10 @@ define arm_aapcs_vfpcc <16 x i8> @build_varN_v16i1(i32 %s, i32 %t, <16 x i8> %a,
 ; CHECK-LABEL: build_varN_v16i1:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    cmp r0, r1
-; CHECK-NEXT:    mov.w r1, #0
 ; CHECK-NEXT:    cset r0, lo
 ; CHECK-NEXT:    and r0, r0, #1
 ; CHECK-NEXT:    rsbs r0, r0, #0
-; CHECK-NEXT:    bfi r1, r0, #0, #1
-; CHECK-NEXT:    bfi r1, r0, #1, #1
-; CHECK-NEXT:    bfi r1, r0, #2, #1
-; CHECK-NEXT:    bfi r1, r0, #3, #1
-; CHECK-NEXT:    bfi r1, r0, #4, #1
-; CHECK-NEXT:    bfi r1, r0, #5, #1
-; CHECK-NEXT:    bfi r1, r0, #6, #1
-; CHECK-NEXT:    bfi r1, r0, #7, #1
-; CHECK-NEXT:    bfi r1, r0, #8, #1
-; CHECK-NEXT:    bfi r1, r0, #9, #1
-; CHECK-NEXT:    bfi r1, r0, #10, #1
-; CHECK-NEXT:    bfi r1, r0, #11, #1
-; CHECK-NEXT:    bfi r1, r0, #12, #1
-; CHECK-NEXT:    bfi r1, r0, #13, #1
-; CHECK-NEXT:    bfi r1, r0, #14, #1
-; CHECK-NEXT:    bfi r1, r0, #15, #1
-; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    vmsr p0, r0
 ; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    bx lr
 entry:

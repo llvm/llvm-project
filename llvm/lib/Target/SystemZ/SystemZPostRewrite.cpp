@@ -25,6 +25,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "systemz-postrewrite"
 STATISTIC(MemFoldCopies, "Number of copies inserted before folded mem ops.");
+STATISTIC(LOCRMuxJumps, "Number of LOCRMux jump-sequences (lower is better)");
 
 namespace llvm {
   void initializeSystemZPostRewritePass(PassRegistry&);
@@ -45,12 +46,20 @@ public:
 
   StringRef getPassName() const override { return SYSTEMZ_POSTREWRITE_NAME; }
 
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesAll();
-    MachineFunctionPass::getAnalysisUsage(AU);
-  }
-
 private:
+  void selectLOCRMux(MachineBasicBlock &MBB,
+                     MachineBasicBlock::iterator MBBI,
+                     MachineBasicBlock::iterator &NextMBBI,
+                     unsigned LowOpcode,
+                     unsigned HighOpcode);
+  void selectSELRMux(MachineBasicBlock &MBB,
+                     MachineBasicBlock::iterator MBBI,
+                     MachineBasicBlock::iterator &NextMBBI,
+                     unsigned LowOpcode,
+                     unsigned HighOpcode);
+  bool expandCondMove(MachineBasicBlock &MBB,
+                      MachineBasicBlock::iterator MBBI,
+                      MachineBasicBlock::iterator &NextMBBI);
   bool selectMI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                 MachineBasicBlock::iterator &NextMBBI);
   bool selectMBB(MachineBasicBlock &MBB);
@@ -68,11 +77,141 @@ FunctionPass *llvm::createSystemZPostRewritePass(SystemZTargetMachine &TM) {
   return new SystemZPostRewrite();
 }
 
+// MI is a load-register-on-condition pseudo instruction.  Replace it with
+// LowOpcode if source and destination are both low GR32s and HighOpcode if
+// source and destination are both high GR32s. Otherwise, a branch sequence
+// is created.
+void SystemZPostRewrite::selectLOCRMux(MachineBasicBlock &MBB,
+                                       MachineBasicBlock::iterator MBBI,
+                                       MachineBasicBlock::iterator &NextMBBI,
+                                       unsigned LowOpcode,
+                                       unsigned HighOpcode) {
+  Register DestReg = MBBI->getOperand(0).getReg();
+  Register SrcReg = MBBI->getOperand(2).getReg();
+  bool DestIsHigh = SystemZ::isHighReg(DestReg);
+  bool SrcIsHigh = SystemZ::isHighReg(SrcReg);
+
+  if (!DestIsHigh && !SrcIsHigh)
+    MBBI->setDesc(TII->get(LowOpcode));
+  else if (DestIsHigh && SrcIsHigh)
+    MBBI->setDesc(TII->get(HighOpcode));
+  else
+    expandCondMove(MBB, MBBI, NextMBBI);
+}
+
+// MI is a select pseudo instruction.  Replace it with LowOpcode if source
+// and destination are all low GR32s and HighOpcode if source and destination
+// are all high GR32s. Otherwise, a branch sequence is created.
+void SystemZPostRewrite::selectSELRMux(MachineBasicBlock &MBB,
+                                       MachineBasicBlock::iterator MBBI,
+                                       MachineBasicBlock::iterator &NextMBBI,
+                                       unsigned LowOpcode,
+                                       unsigned HighOpcode) {
+  Register DestReg = MBBI->getOperand(0).getReg();
+  Register Src1Reg = MBBI->getOperand(1).getReg();
+  Register Src2Reg = MBBI->getOperand(2).getReg();
+  bool DestIsHigh = SystemZ::isHighReg(DestReg);
+  bool Src1IsHigh = SystemZ::isHighReg(Src1Reg);
+  bool Src2IsHigh = SystemZ::isHighReg(Src2Reg);
+
+  // If sources and destination aren't all high or all low, we may be able to
+  // simplify the operation by moving one of the sources to the destination
+  // first.  But only if this doesn't clobber the other source.
+  if (DestReg != Src1Reg && DestReg != Src2Reg) {
+    if (DestIsHigh != Src1IsHigh) {
+      BuildMI(*MBBI->getParent(), MBBI, MBBI->getDebugLoc(),
+              TII->get(SystemZ::COPY), DestReg)
+        .addReg(MBBI->getOperand(1).getReg(), getRegState(MBBI->getOperand(1)));
+      MBBI->getOperand(1).setReg(DestReg);
+      Src1Reg = DestReg;
+      Src1IsHigh = DestIsHigh;
+    } else if (DestIsHigh != Src2IsHigh) {
+      BuildMI(*MBBI->getParent(), MBBI, MBBI->getDebugLoc(),
+              TII->get(SystemZ::COPY), DestReg)
+        .addReg(MBBI->getOperand(2).getReg(), getRegState(MBBI->getOperand(2)));
+      MBBI->getOperand(2).setReg(DestReg);
+      Src2Reg = DestReg;
+      Src2IsHigh = DestIsHigh;
+    }
+  }
+
+  // If the destination (now) matches one source, prefer this to be first.
+  if (DestReg != Src1Reg && DestReg == Src2Reg) {
+    TII->commuteInstruction(*MBBI, false, 1, 2);
+    std::swap(Src1Reg, Src2Reg);
+    std::swap(Src1IsHigh, Src2IsHigh);
+  }
+
+  if (!DestIsHigh && !Src1IsHigh && !Src2IsHigh)
+    MBBI->setDesc(TII->get(LowOpcode));
+  else if (DestIsHigh && Src1IsHigh && Src2IsHigh)
+    MBBI->setDesc(TII->get(HighOpcode));
+  else
+    // Given the simplification above, we must already have a two-operand case.
+    expandCondMove(MBB, MBBI, NextMBBI);
+}
+
+// Replace MBBI by a branch sequence that performs a conditional move of
+// operand 2 to the destination register. Operand 1 is expected to be the
+// same register as the destination.
+bool SystemZPostRewrite::expandCondMove(MachineBasicBlock &MBB,
+                                        MachineBasicBlock::iterator MBBI,
+                                        MachineBasicBlock::iterator &NextMBBI) {
+  MachineFunction &MF = *MBB.getParent();
+  const BasicBlock *BB = MBB.getBasicBlock();
+  MachineInstr &MI = *MBBI;
+  DebugLoc DL = MI.getDebugLoc();
+  Register DestReg = MI.getOperand(0).getReg();
+  Register SrcReg = MI.getOperand(2).getReg();
+  unsigned CCValid = MI.getOperand(3).getImm();
+  unsigned CCMask = MI.getOperand(4).getImm();
+  assert(DestReg == MI.getOperand(1).getReg() &&
+         "Expected destination and first source operand to be the same.");
+
+  LivePhysRegs LiveRegs(TII->getRegisterInfo());
+  LiveRegs.addLiveOuts(MBB);
+  for (auto I = std::prev(MBB.end()); I != MBBI; --I)
+    LiveRegs.stepBackward(*I);
+
+  // Splice MBB at MI, moving the rest of the block into RestMBB.
+  MachineBasicBlock *RestMBB = MF.CreateMachineBasicBlock(BB);
+  MF.insert(std::next(MachineFunction::iterator(MBB)), RestMBB);
+  RestMBB->splice(RestMBB->begin(), &MBB, MI, MBB.end());
+  RestMBB->transferSuccessors(&MBB);
+  for (auto I = LiveRegs.begin(); I != LiveRegs.end(); ++I)
+    RestMBB->addLiveIn(*I);
+
+  // Create a new block MoveMBB to hold the move instruction.
+  MachineBasicBlock *MoveMBB = MF.CreateMachineBasicBlock(BB);
+  MF.insert(std::next(MachineFunction::iterator(MBB)), MoveMBB);
+  MoveMBB->addLiveIn(SrcReg);
+  for (auto I = LiveRegs.begin(); I != LiveRegs.end(); ++I)
+    MoveMBB->addLiveIn(*I);
+
+  // At the end of MBB, create a conditional branch to RestMBB if the
+  // condition is false, otherwise fall through to MoveMBB.
+  BuildMI(&MBB, DL, TII->get(SystemZ::BRC))
+    .addImm(CCValid).addImm(CCMask ^ CCValid).addMBB(RestMBB);
+  MBB.addSuccessor(RestMBB);
+  MBB.addSuccessor(MoveMBB);
+
+  // In MoveMBB, emit an instruction to move SrcReg into DestReg,
+  // then fall through to RestMBB.
+  BuildMI(*MoveMBB, MoveMBB->end(), DL, TII->get(SystemZ::COPY), DestReg)
+      .addReg(MI.getOperand(2).getReg(), getRegState(MI.getOperand(2)));
+  MoveMBB->addSuccessor(RestMBB);
+
+  NextMBBI = MBB.end();
+  MI.eraseFromParent();
+  LOCRMuxJumps++;
+  return true;
+}
+
 /// If MBBI references a pseudo instruction that should be selected here,
 /// do it and return true.  Otherwise return false.
 bool SystemZPostRewrite::selectMI(MachineBasicBlock &MBB,
-                                MachineBasicBlock::iterator MBBI,
-                                MachineBasicBlock::iterator &NextMBBI) {
+                                  MachineBasicBlock::iterator MBBI,
+                                  MachineBasicBlock::iterator &NextMBBI) {
   MachineInstr &MI = *MBBI;
   unsigned Opcode = MI.getOpcode();
 
@@ -91,6 +230,15 @@ bool SystemZPostRewrite::selectMI(MachineBasicBlock &MBB,
       SrcMO.setReg(DstReg);
       MemFoldCopies++;
     }
+    return true;
+  }
+
+  switch (Opcode) {
+  case SystemZ::LOCRMux:
+    selectLOCRMux(MBB, MBBI, NextMBBI, SystemZ::LOCR, SystemZ::LOCFHR);
+    return true;
+  case SystemZ::SELRMux:
+    selectSELRMux(MBB, MBBI, NextMBBI, SystemZ::SELR, SystemZ::SELFHR);
     return true;
   }
 

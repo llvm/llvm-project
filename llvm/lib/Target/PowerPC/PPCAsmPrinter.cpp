@@ -167,7 +167,13 @@ public:
 
   StringRef getPassName() const override { return "AIX PPC Assembly Printer"; }
 
+  void SetupMachineFunction(MachineFunction &MF) override;
+
   void EmitGlobalVariable(const GlobalVariable *GV) override;
+
+  void EmitFunctionDescriptor() override;
+
+  void EmitEndOfAsmFile(Module &) override;
 };
 
 } // end anonymous namespace
@@ -649,16 +655,19 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     }
   }
   case PPC::LWZtoc: {
-    // Transform %r3 = LWZtoc @min1, %r2
+    assert(!isDarwin && "TOC is an ELF/XCOFF construct.");
+
+    // Transform %rN = LWZtoc @op1, %r2
     LowerPPCMachineInstrToMCInst(MI, TmpInst, *this, isDarwin);
 
-    // Change the opcode to LWZ, and the global address operand to be a
-    // reference to the GOT entry we will synthesize later.
+    // Change the opcode to LWZ.
     TmpInst.setOpcode(PPC::LWZ);
-    const MachineOperand &MO = MI->getOperand(1);
 
-    // Map symbol -> label of TOC entry
-    assert(MO.isGlobal() || MO.isCPI() || MO.isJTI() || MO.isBlockAddress());
+    const MachineOperand &MO = MI->getOperand(1);
+    assert((MO.isGlobal() || MO.isCPI() || MO.isJTI() || MO.isBlockAddress()) &&
+           "Unexpected operand type for LWZtoc pseudo.");
+
+    // Map the operand to its corresponding MCSymbol.
     MCSymbol *MOSymbol = nullptr;
     if (MO.isGlobal())
       MOSymbol = getSymbol(MO.getGlobal());
@@ -669,23 +678,44 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     else if (MO.isBlockAddress())
       MOSymbol = GetBlockAddressSymbol(MO.getBlockAddress());
 
-    if (PL == PICLevel::SmallPIC) {
+    const bool IsAIX = TM.getTargetTriple().isOSAIX();
+
+    // Create a reference to the GOT entry for the symbol. The GOT entry will be
+    // synthesized later.
+    if (PL == PICLevel::SmallPIC && !IsAIX) {
       const MCExpr *Exp =
         MCSymbolRefExpr::create(MOSymbol, MCSymbolRefExpr::VK_GOT,
                                 OutContext);
       TmpInst.getOperand(1) = MCOperand::createExpr(Exp);
-    } else {
-      MCSymbol *TOCEntry = lookUpOrCreateTOCEntry(MOSymbol);
-
-      const MCExpr *Exp =
-        MCSymbolRefExpr::create(TOCEntry, MCSymbolRefExpr::VK_None,
-                                OutContext);
-      const MCExpr *PB =
-        MCSymbolRefExpr::create(OutContext.getOrCreateSymbol(Twine(".LTOC")),
-                                                             OutContext);
-      Exp = MCBinaryExpr::createSub(Exp, PB, OutContext);
-      TmpInst.getOperand(1) = MCOperand::createExpr(Exp);
+      EmitToStreamer(*OutStreamer, TmpInst);
+      return;
     }
+
+    // Otherwise use the TOC. 'TOCEntry' is a label used to reference the
+    // storage allocated in the TOC which contains the address of
+    // 'MOSymbol'. Said TOC entry will be synthesized later.
+    MCSymbol *TOCEntry = lookUpOrCreateTOCEntry(MOSymbol);
+    const MCExpr *Exp =
+        MCSymbolRefExpr::create(TOCEntry, MCSymbolRefExpr::VK_None, OutContext);
+
+    // AIX uses the label directly as the lwz displacement operand for
+    // references into the toc section. The displacement value will be generated
+    // relative to the toc-base.
+    if (IsAIX) {
+      assert(
+          TM.getCodeModel() == CodeModel::Small &&
+          "This pseudo should only be selected for 32-bit small code model.");
+      TmpInst.getOperand(1) = MCOperand::createExpr(Exp);
+      EmitToStreamer(*OutStreamer, TmpInst);
+      return;
+    }
+
+    // Create an explicit subtract expression between the local symbol and
+    // '.LTOC' to manifest the toc-relative offset.
+    const MCExpr *PB = MCSymbolRefExpr::create(
+        OutContext.getOrCreateSymbol(Twine(".LTOC")), OutContext);
+    Exp = MCBinaryExpr::createSub(Exp, PB, OutContext);
+    TmpInst.getOperand(1) = MCOperand::createExpr(Exp);
     EmitToStreamer(*OutStreamer, TmpInst);
     return;
   }
@@ -742,8 +772,7 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     if (MO.isGlobal()) {
       const GlobalValue *GV = MO.getGlobal();
       MOSymbol = getSymbol(GV);
-      unsigned char GVFlags = Subtarget->classifyGlobalReference(GV);
-      GlobalToc = (GVFlags & PPCII::MO_NLP_FLAG);
+      GlobalToc = Subtarget->isGVIndirectSymbol(GV);
     } else if (MO.isCPI()) {
       MOSymbol = GetCPISymbol(MO.getIndex());
     } else if (MO.isJTI()) {
@@ -799,8 +828,7 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
       const GlobalValue *GV = MO.getGlobal();
       MOSymbol = getSymbol(GV);
       LLVM_DEBUG(
-          unsigned char GVFlags = Subtarget->classifyGlobalReference(GV);
-          assert((GVFlags & PPCII::MO_NLP_FLAG) &&
+          assert((Subtarget->isGVIndirectSymbol(GV)) &&
                  "LDtocL used on symbol that could be accessed directly is "
                  "invalid. Must match ADDIStocHA8."));
       MOSymbol = lookUpOrCreateTOCEntry(MOSymbol);
@@ -827,8 +855,7 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
 
     if (MO.isGlobal()) {
       const GlobalValue *GV = MO.getGlobal();
-      LLVM_DEBUG(unsigned char GVFlags = Subtarget->classifyGlobalReference(GV);
-                 assert(!(GVFlags & PPCII::MO_NLP_FLAG) &&
+      LLVM_DEBUG(assert(!(Subtarget->isGVIndirectSymbol(GV)) &&
                         "Interposable definitions must use indirect access."));
       MOSymbol = getSymbol(GV);
     } else if (MO.isCPI()) {
@@ -1607,7 +1634,7 @@ bool PPCDarwinAsmPrinter::doFinalization(Module &M) {
     if (!Stubs.empty()) {
       // Switch with ".non_lazy_symbol_pointer" directive.
       OutStreamer->SwitchSection(TLOFMacho.getNonLazySymbolPointerSection());
-      EmitAlignment(isPPC64 ? llvm::Align(8) : llvm::Align(4));
+      EmitAlignment(isPPC64 ? Align(8) : Align(4));
 
       for (unsigned i = 0, e = Stubs.size(); i != e; ++i) {
         // L_foo$stub:
@@ -1646,6 +1673,18 @@ bool PPCDarwinAsmPrinter::doFinalization(Module &M) {
   OutStreamer->EmitAssemblerFlag(MCAF_SubsectionsViaSymbols);
 
   return AsmPrinter::doFinalization(M);
+}
+
+void PPCAIXAsmPrinter::SetupMachineFunction(MachineFunction &MF) {
+  // Get the function descriptor symbol.
+  CurrentFnDescSym = getSymbol(&MF.getFunction());
+  // Set the containing csect.
+  MCSectionXCOFF *FnDescSec = OutStreamer->getContext().getXCOFFSection(
+      CurrentFnDescSym->getName(), XCOFF::XMC_DS, XCOFF::XTY_SD,
+      XCOFF::C_HIDEXT, SectionKind::getData());
+  cast<MCSymbolXCOFF>(CurrentFnDescSym)->setContainingCsect(FnDescSec);
+
+  return AsmPrinter::SetupMachineFunction(MF);
 }
 
 void PPCAIXAsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
@@ -1696,6 +1735,45 @@ void PPCAIXAsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
   OutStreamer->EmitLabel(EmittedInitSym);
   EmitGlobalConstant(GV->getParent()->getDataLayout(), GV->getInitializer());
 }
+
+void PPCAIXAsmPrinter::EmitFunctionDescriptor() {
+  const DataLayout &DL = getDataLayout();
+  const unsigned PointerSize = DL.getPointerSizeInBits() == 64 ? 8 : 4;
+
+  MCSectionSubPair Current = OutStreamer->getCurrentSection();
+  // Emit function descriptor.
+  OutStreamer->SwitchSection(
+      cast<MCSymbolXCOFF>(CurrentFnDescSym)->getContainingCsect());
+  OutStreamer->EmitLabel(CurrentFnDescSym);
+  // Emit function entry point address.
+  OutStreamer->EmitValue(MCSymbolRefExpr::create(CurrentFnSym, OutContext),
+                         PointerSize);
+  // Emit TOC base address.
+  MCSymbol *TOCBaseSym = OutContext.getOrCreateSymbol(StringRef("TOC[TC0]"));
+  OutStreamer->EmitValue(MCSymbolRefExpr::create(TOCBaseSym, OutContext),
+                         PointerSize);
+  // Emit a null environment pointer.
+  OutStreamer->EmitIntValue(0, PointerSize);
+
+  OutStreamer->SwitchSection(Current.first, Current.second);
+}
+
+void PPCAIXAsmPrinter::EmitEndOfAsmFile(Module &M) {
+  // If there are no functions in this module, we will never need to reference
+  // the TOC base.
+  if (M.empty())
+    return;
+
+  // Emit TOC base.
+  MCSymbol *TOCBaseSym = OutContext.getOrCreateSymbol(StringRef("TOC[TC0]"));
+  MCSectionXCOFF *TOCBaseSection = OutStreamer->getContext().getXCOFFSection(
+      StringRef("TOC"), XCOFF::XMC_TC0, XCOFF::XTY_SD, XCOFF::C_HIDEXT,
+      SectionKind::getData());
+  cast<MCSymbolXCOFF>(TOCBaseSym)->setContainingCsect(TOCBaseSection);
+  // Switch to section to emit TOC base.
+  OutStreamer->SwitchSection(TOCBaseSection);
+}
+
 
 /// createPPCAsmPrinterPass - Returns a pass that prints the PPC assembly code
 /// for a MachineFunction to the given output stream, in a format that the

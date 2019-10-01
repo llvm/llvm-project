@@ -33,8 +33,6 @@ namespace lldb {
         void
         Clear();
 
-        lldb::SBStructuredData &operator=(const lldb::SBStructuredData &rhs);
-
         lldb::StructuredDataType GetType() const;
 
         size_t GetSize() const;

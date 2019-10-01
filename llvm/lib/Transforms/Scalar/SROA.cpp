@@ -1266,7 +1266,7 @@ static void speculatePHINodeLoads(PHINode &PN) {
   PHINode *NewPN = PHIBuilder.CreatePHI(LoadTy, PN.getNumIncomingValues(),
                                         PN.getName() + ".sroa.speculated");
 
-  // Get the AA tags and alignment to use from one of the loads.  It doesn't
+  // Get the AA tags and alignment to use from one of the loads. It does not
   // matter which one we get and if any differ.
   AAMDNodes AATags;
   SomeLoad->getAAMetadata(AATags);
@@ -1888,6 +1888,14 @@ static VectorType *isVectorPromotionViable(Partition &P, const DataLayout &DL) {
   bool HaveCommonEltTy = true;
   auto CheckCandidateType = [&](Type *Ty) {
     if (auto *VTy = dyn_cast<VectorType>(Ty)) {
+      // Return if bitcast to vectors is different for total size in bits.
+      if (!CandidateTys.empty()) {
+        VectorType *V = CandidateTys[0];
+        if (DL.getTypeSizeInBits(VTy) != DL.getTypeSizeInBits(V)) {
+          CandidateTys.clear();
+          return;
+        }
+      }
       CandidateTys.push_back(VTy);
       if (!CommonEltTy)
         CommonEltTy = VTy->getElementType();

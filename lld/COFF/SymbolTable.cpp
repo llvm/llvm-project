@@ -15,6 +15,7 @@
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
 #include "lld/Common/Timer.h"
+#include "llvm/DebugInfo/Symbolize/Symbolize.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Object/WindowsMachineFlag.h"
 #include "llvm/Support/Debug.h"
@@ -105,6 +106,30 @@ static std::vector<std::string> getSymbolLocations(BitcodeFile *file) {
     res += source.str() + "\n>>>               ";
   res += toString(file);
   return {res};
+}
+
+static std::pair<StringRef, uint32_t> getFileLineDwarf(const SectionChunk *c,
+                                                       uint32_t addr) {
+  if (!config->symbolizer)
+    config->symbolizer = make<symbolize::LLVMSymbolizer>();
+  Expected<DILineInfo> expectedLineInfo = config->symbolizer->symbolizeCode(
+      *c->file->getCOFFObj(), {addr, c->getSectionNumber() - 1});
+  if (!expectedLineInfo)
+    return {"", 0};
+  const DILineInfo &lineInfo = *expectedLineInfo;
+  if (lineInfo.FileName == DILineInfo::BadString)
+    return {"", 0};
+  return {saver.save(lineInfo.FileName), lineInfo.Line};
+}
+
+static std::pair<StringRef, uint32_t> getFileLine(const SectionChunk *c,
+                                                  uint32_t addr) {
+  // MinGW can optionally use codeview, even if the default is dwarf.
+  std::pair<StringRef, uint32_t> fileLine = getFileLineCodeView(c, addr);
+  // If codeview didn't yield any result, check dwarf in MinGW mode.
+  if (fileLine.first.empty() && config->mingw)
+    fileLine = getFileLineDwarf(c, addr);
+  return fileLine;
 }
 
 // Given a file and the index of a symbol in that file, returns a description

@@ -21,7 +21,7 @@ using namespace llvm;
 
 /// Adds all Unnamed Metadata Nodes that are inside desired Chunks to set
 template <class T>
-static void getChunkMetadataNodes(T &MDUser, unsigned &I,
+static void getChunkMetadataNodes(T &MDUser, int &I,
                                   const std::vector<Chunk> &ChunksToKeep,
                                   std::set<MDNode *> &SeenNodes,
                                   std::set<MDNode *> &NodesToKeep) {
@@ -29,10 +29,10 @@ static void getChunkMetadataNodes(T &MDUser, unsigned &I,
   MDUser.getAllMetadata(MDs);
   for (auto &MD : MDs) {
     SeenNodes.insert(MD.second);
-    if (I < ChunksToKeep.size()) {
+    if (I < (int)ChunksToKeep.size()) {
       if (ChunksToKeep[I].contains(SeenNodes.size()))
         NodesToKeep.insert(MD.second);
-      if (ChunksToKeep[I].end == SeenNodes.size())
+      if (ChunksToKeep[I].end == (int)SeenNodes.size())
         ++I;
     }
   }
@@ -55,7 +55,7 @@ static void extractMetadataFromModule(const std::vector<Chunk> &ChunksToKeep,
                                       Module *Program) {
   std::set<MDNode *> SeenNodes;
   std::set<MDNode *> NodesToKeep;
-  unsigned I = 0;
+  int I = 0;
 
   // Add chunk MDNodes used by GVs, Functions, and Instructions to set
   for (auto &GV : Program->globals())
@@ -84,10 +84,10 @@ static void extractMetadataFromModule(const std::vector<Chunk> &ChunksToKeep,
   unsigned MetadataCount = SeenNodes.size();
   std::vector<NamedMDNode *> NamedNodesToDelete;
   for (auto &MD : Program->named_metadata()) {
-    if (I < ChunksToKeep.size()) {
+    if (I < (int)ChunksToKeep.size()) {
       if (!ChunksToKeep[I].contains(++MetadataCount))
         NamedNodesToDelete.push_back(&MD);
-      if (ChunksToKeep[I].end == SeenNodes.size())
+      if (ChunksToKeep[I].end == (int)SeenNodes.size())
         ++I;
     } else
       NamedNodesToDelete.push_back(&MD);
@@ -111,7 +111,7 @@ static void addMetadataToSet(T &MDUser, std::set<MDNode *> &UnnamedNodes) {
 }
 
 /// Returns the amount of Named and Unnamed Metadata Nodes
-static unsigned countMetadataTargets(Module *Program) {
+static int countMetadataTargets(Module *Program) {
   std::set<MDNode *> UnnamedNodes;
   int NamedMetadataNodes = Program->named_metadata_size();
 
@@ -132,7 +132,7 @@ static unsigned countMetadataTargets(Module *Program) {
 
 void llvm::reduceMetadataDeltaPass(TestRunner &Test) {
   outs() << "*** Reducing Metadata...\n";
-  unsigned MDCount = countMetadataTargets(Test.getProgram());
+  int MDCount = countMetadataTargets(Test.getProgram());
   runDeltaPass(Test, MDCount, extractMetadataFromModule);
   outs() << "----------------------------\n";
 }

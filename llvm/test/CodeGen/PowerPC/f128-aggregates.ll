@@ -11,7 +11,7 @@
 %struct.With9fp128params = type { fp128, fp128, fp128, fp128, fp128, fp128,
                                   fp128, fp128, fp128 }
 
-@a1 = common local_unnamed_addr global [3 x fp128] zeroinitializer, align 16
+@a1 = local_unnamed_addr global [3 x fp128] zeroinitializer, align 16
 
 ; Function Attrs: norecurse nounwind readonly
 define fp128 @testArray_01(fp128* nocapture readonly %sa) {

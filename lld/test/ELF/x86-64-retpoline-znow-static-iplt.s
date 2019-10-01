@@ -3,18 +3,18 @@
 # RUN: ld.lld -z retpolineplt -z now %t.o -o %t
 # RUN: llvm-objdump -d -no-show-raw-insn %t | FileCheck %s
 
-#0x201001+5 + 42 = 0x201030 (foo@plt)
+#0x2011a9+5 + 34 = 0x2011d0 (foo@plt)
 # CHECK:      _start:
-# CHECK-NEXT:  201001:       callq   42
+# CHECK-NEXT:  2011a9:       callq   34
 
 #Static IPLT header due to -z retpolineplt
-# CHECK:       0000000000201010 .plt:
-# CHECK-NEXT:  201010:       callq   11 <.plt+0x10>
-# CHECK-NEXT:  201015:       pause
-# CHECK-NEXT:  201017:       lfence
+# CHECK:       00000000002011b0 .plt:
+# CHECK-NEXT:  2011b0:       callq   11 <.plt+0x10>
+# CHECK-NEXT:  2011b5:       pause
+# CHECK-NEXT:  2011b7:       lfence
 #foo@plt
-# CHECK:       201030:       movq    4041(%rip), %r11
-# CHECK-NEXT:  201037:       jmp     -44 <.plt>
+# CHECK:       2011d0:       movq    4105(%rip), %r11
+# CHECK-NEXT:  2011d7:       jmp     -44 <.plt>
 
 .type foo STT_GNU_IFUNC
 .globl foo

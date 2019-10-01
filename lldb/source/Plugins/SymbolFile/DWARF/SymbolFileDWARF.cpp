@@ -314,6 +314,8 @@ void SymbolFileDWARF::GetTypes(const DWARFDIE &die, dw_offset_t min_die_offset,
       case DW_TAG_ptr_to_member_type:
         add_type = (type_mask & eTypeClassMemberPointer) != 0;
         break;
+      default:
+        break;
       }
 
       if (add_type) {
@@ -392,6 +394,8 @@ SymbolFileDWARF::GetParentSymbolContextDIE(const DWARFDIE &child_die) {
     case DW_TAG_inlined_subroutine:
     case DW_TAG_lexical_block:
       return die;
+    default:
+      break;
     }
   }
   return DWARFDIE();
@@ -845,6 +849,18 @@ size_t SymbolFileDWARF::ParseFunctions(CompileUnit &comp_unit) {
   return functions_added;
 }
 
+void SymbolFileDWARF::ForEachExternalModule(
+    CompileUnit &comp_unit, llvm::function_ref<void(ModuleSP)> f) {
+  UpdateExternalModuleListIfNeeded();
+
+  for (auto &p : m_external_type_modules) {
+    ModuleSP module = p.second;
+    f(module);
+    for (std::size_t i = 0; i < module->GetNumCompileUnits(); ++i)
+      module->GetCompileUnitAtIndex(i)->ForEachExternalModule(f);
+  }
+}
+
 bool SymbolFileDWARF::ParseSupportFiles(CompileUnit &comp_unit,
                                         FileSpecList &support_files) {
   if (!comp_unit.GetLineTable())
@@ -1205,16 +1221,9 @@ bool SymbolFileDWARF::ClassOrStructIsVirtual(const DWARFDIE &parent_die) {
 
 void SymbolFileDWARF::ParseDeclsForContext(CompilerDeclContext decl_ctx) {
   auto *type_system = decl_ctx.GetTypeSystem();
-  if (!type_system)
-    return;
-  DWARFASTParser *ast_parser = type_system->GetDWARFParser();
-  std::vector<DWARFDIE> decl_ctx_die_list =
-      ast_parser->GetDIEForDeclContext(decl_ctx);
-
-  for (DWARFDIE decl_ctx_die : decl_ctx_die_list)
-    for (DWARFDIE decl = decl_ctx_die.GetFirstChild(); decl;
-         decl = decl.GetSibling())
-      ast_parser->GetDeclForUIDFromDWARF(decl);
+  if (type_system != nullptr)
+    type_system->GetDWARFParser()->EnsureAllDIEsInDeclContextHaveBeenParsed(
+        decl_ctx);
 }
 
 user_id_t SymbolFileDWARF::GetUID(DIERef ref) {
@@ -3578,6 +3587,8 @@ SymbolFileDWARF::FindBlockContainingSpecification(
           spec_block_die_offset)
         return die;
     } break;
+    default:
+      break;
     }
 
     // Give the concrete function die specified by "func_die_offset", find the

@@ -547,6 +547,27 @@ int foo() {
 }
 } // namespace statement_expression_in_return
 
+// CHECK-LABEL: int overlap_compare(int x)
+// CHECK: [B2]
+// CHECK-NEXT:   1: 1
+// CHECK-NEXT:   2: return [B2.1];
+// CHECK-NEXT:   Preds (1): B3(Unreachable)
+// CHECK-NEXT:   Succs (1): B0
+// CHECK: [B3]
+// CHECK-NEXT:   1: x
+// CHECK-NEXT:   2: [B3.1] (ImplicitCastExpr, LValueToRValue, int)
+// CHECK-NEXT:   3: 5
+// CHECK-NEXT:   4: [B3.2] > [B3.3]
+// CHECK-NEXT:   T: if [B4.5] && [B3.4]
+// CHECK-NEXT:   Preds (1): B4
+// CHECK-NEXT:   Succs (2): B2(Unreachable) B1
+int overlap_compare(int x) {
+  if (x == -1 && x > 5)
+    return 1;
+
+  return 2;
+}
+
 // CHECK-LABEL: template<> int *PR18472<int>()
 // CHECK: [B2 (ENTRY)]
 // CHECK-NEXT:   Succs (1): B1

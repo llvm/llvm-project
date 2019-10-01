@@ -170,10 +170,6 @@ class SystemZInstrInfo : public SystemZGenInstrInfo {
                        unsigned HighOpcode) const;
   void expandLOCPseudo(MachineInstr &MI, unsigned LowOpcode,
                        unsigned HighOpcode) const;
-  void expandLOCRPseudo(MachineInstr &MI, unsigned LowOpcode,
-                        unsigned HighOpcode) const;
-  void expandSELRPseudo(MachineInstr &MI, unsigned LowOpcode,
-                        unsigned HighOpcode, unsigned MixedOpcode) const;
   void expandZExtPseudo(MachineInstr &MI, unsigned LowOpcode,
                         unsigned Size) const;
   void expandLoadStackGuard(MachineInstr *MI) const;
@@ -332,8 +328,7 @@ public:
   // memory addresses and false otherwise.
   bool
   areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
-                                  const MachineInstr &MIb,
-                                  AliasAnalysis *AA = nullptr) const override;
+                                  const MachineInstr &MIb) const override;
 };
 
 } // end namespace llvm

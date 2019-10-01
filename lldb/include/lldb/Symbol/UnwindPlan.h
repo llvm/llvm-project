@@ -201,7 +201,8 @@ public:
         unspecified,            // not specified
         isRegisterPlusOffset,   // FA = register + offset
         isRegisterDereferenced, // FA = [reg]
-        isDWARFExpression       // FA = eval(dwarf_expr)
+        isDWARFExpression,      // FA = eval(dwarf_expr)
+        isRaSearch,             // FA = SP + offset + ???
       };
 
       FAValue() : m_type(unspecified), m_value() {}
@@ -213,6 +214,11 @@ public:
       void SetUnspecified() { m_type = unspecified; }
 
       bool IsUnspecified() const { return m_type == unspecified; }
+
+      void SetRaSearch(int32_t offset) {
+        m_type = isRaSearch;
+        m_value.ra_search_offset = offset;
+      }
 
       bool IsRegisterPlusOffset() const {
         return m_type == isRegisterPlusOffset;
@@ -250,9 +256,14 @@ public:
       ValueType GetValueType() const { return m_type; }
 
       int32_t GetOffset() const {
-        if (m_type == isRegisterPlusOffset)
-          return m_value.reg.offset;
-        return 0;
+        switch (m_type) {
+          case isRegisterPlusOffset:
+            return m_value.reg.offset;
+          case isRaSearch:
+            return m_value.ra_search_offset;
+          default:
+            return 0;
+        }
       }
 
       void IncOffset(int32_t delta) {
@@ -304,6 +315,8 @@ public:
           const uint8_t *opcodes;
           uint16_t length;
         } expr;
+        // For m_type == isRaSearch
+        int32_t ra_search_offset;
       } m_value;
     }; // class FAValue
 

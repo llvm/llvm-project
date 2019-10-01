@@ -2,9 +2,11 @@
 
 int main()
 {
+    std::wstring wempty(L"");
     std::wstring s(L"hello world! מזל טוב!");
     std::wstring S(L"!!!!");
     const wchar_t *mazeltov = L"מזל טוב";
+    std::string empty("");
     std::string q("hello world");
     std::string Q("quite a long std::strin with lots of info inside it");
     S.assign(L"!!!!!"); // Set break point at this line.

@@ -1,8 +1,8 @@
 ; RUN: llc -mcpu=pwr9 -mtriple=powerpc64le-unknown-linux-gnu < %s \
 ; RUN:   -verify-machineinstrs | FileCheck %s
 
-@b = common dso_local local_unnamed_addr global i64* null, align 8
-@a = common dso_local local_unnamed_addr global i8 0, align 1
+@b = dso_local local_unnamed_addr global i64* null, align 8
+@a = dso_local local_unnamed_addr global i8 0, align 1
 
 define void @testADDEPromoteResult() {
 entry:

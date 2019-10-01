@@ -503,7 +503,7 @@ bool RegisterContextDarwin_arm64::ReadRegister(const RegisterInfo *reg_info,
   case fpu_d31: {
     ProcessSP process_sp(m_thread.GetProcess());
     if (process_sp.get()) {
-      DataExtractor regdata(&fpu.v[reg - fpu_s0], 8, process_sp->GetByteOrder(),
+      DataExtractor regdata(&fpu.v[reg - fpu_d0], 8, process_sp->GetByteOrder(),
                             process_sp->GetAddressByteSize());
       offset_t offset = 0;
       value.SetDouble(regdata.GetDouble(&offset));

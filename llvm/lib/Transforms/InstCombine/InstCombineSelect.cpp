@@ -1126,6 +1126,7 @@ static Value *simplifyWithOpReplaced(Value *V, Value *Op, Value *ReplaceOp,
 ///   %sel = select i1 %cmp, i32 -2147483648, i32 %add
 ///
 /// We can't replace %sel with %add unless we strip away the flags.
+/// TODO: Wrapping flags could be preserved in some cases with better analysis.
 static Value *foldSelectValueEquivalence(SelectInst &Sel, ICmpInst &Cmp,
                                          const SimplifyQuery &Q) {
   if (!Cmp.isEquality())

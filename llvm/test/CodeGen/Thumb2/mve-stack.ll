@@ -77,10 +77,9 @@ define arm_aapcs_vfpcc void @vstrh32() {
 ; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    .pad #8
 ; CHECK-NEXT:    sub sp, #8
+; CHECK-NEXT:    mov r0, sp
 ; CHECK-NEXT:    vmov.i32 q0, #0x6
-; CHECK-NEXT:    mov r0, sp
 ; CHECK-NEXT:    vstrh.32 q0, [r0, #4]
-; CHECK-NEXT:    mov r0, sp
 ; CHECK-NEXT:    bl func
 ; CHECK-NEXT:    add sp, #8
 ; CHECK-NEXT:    pop {r7, pc}
@@ -101,10 +100,9 @@ define arm_aapcs_vfpcc void @vstrb32() {
 ; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    .pad #8
 ; CHECK-NEXT:    sub sp, #8
-; CHECK-NEXT:    vmov.i32 q0, #0x6
-; CHECK-NEXT:    mov r0, sp
-; CHECK-NEXT:    vstrb.32 q0, [r0, #6]
 ; CHECK-NEXT:    add r0, sp, #4
+; CHECK-NEXT:    vmov.i32 q0, #0x6
+; CHECK-NEXT:    vstrb.32 q0, [r0, #2]
 ; CHECK-NEXT:    bl func
 ; CHECK-NEXT:    add sp, #8
 ; CHECK-NEXT:    pop {r7, pc}
@@ -125,10 +123,9 @@ define arm_aapcs_vfpcc void @vstrb16() {
 ; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    .pad #8
 ; CHECK-NEXT:    sub sp, #8
+; CHECK-NEXT:    mov r0, sp
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
-; CHECK-NEXT:    mov r0, sp
 ; CHECK-NEXT:    vstrb.16 q0, [r0, #2]
-; CHECK-NEXT:    mov r0, sp
 ; CHECK-NEXT:    bl func
 ; CHECK-NEXT:    add sp, #8
 ; CHECK-NEXT:    pop {r7, pc}
@@ -212,16 +209,16 @@ entry:
 define arm_aapcs_vfpcc <4 x i16> @vldrh32() {
 ; CHECK-LABEL: vldrh32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r7, lr}
-; CHECK-NEXT:    push {r7, lr}
+; CHECK-NEXT:    .save {r4, lr}
+; CHECK-NEXT:    push {r4, lr}
 ; CHECK-NEXT:    .pad #8
 ; CHECK-NEXT:    sub sp, #8
-; CHECK-NEXT:    mov r0, sp
+; CHECK-NEXT:    mov r4, sp
+; CHECK-NEXT:    mov r0, r4
 ; CHECK-NEXT:    bl func
-; CHECK-NEXT:    mov r0, sp
-; CHECK-NEXT:    vldrh.u32 q0, [r0, #4]
+; CHECK-NEXT:    vldrh.u32 q0, [r4, #4]
 ; CHECK-NEXT:    add sp, #8
-; CHECK-NEXT:    pop {r7, pc}
+; CHECK-NEXT:    pop {r4, pc}
 entry:
   %d = alloca [4 x i16], align 2
   %arraydecay = getelementptr inbounds [4 x i16], [4 x i16]* %d, i32 0, i32 0
@@ -235,16 +232,16 @@ entry:
 define arm_aapcs_vfpcc <4 x i8> @vldrb32() {
 ; CHECK-LABEL: vldrb32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r7, lr}
-; CHECK-NEXT:    push {r7, lr}
+; CHECK-NEXT:    .save {r4, lr}
+; CHECK-NEXT:    push {r4, lr}
 ; CHECK-NEXT:    .pad #8
 ; CHECK-NEXT:    sub sp, #8
-; CHECK-NEXT:    add r0, sp, #4
+; CHECK-NEXT:    add r4, sp, #4
+; CHECK-NEXT:    mov r0, r4
 ; CHECK-NEXT:    bl func
-; CHECK-NEXT:    mov r0, sp
-; CHECK-NEXT:    vldrb.u32 q0, [r0, #6]
+; CHECK-NEXT:    vldrb.u32 q0, [r4, #2]
 ; CHECK-NEXT:    add sp, #8
-; CHECK-NEXT:    pop {r7, pc}
+; CHECK-NEXT:    pop {r4, pc}
 entry:
   %d = alloca [4 x i8], align 2
   %arraydecay = getelementptr inbounds [4 x i8], [4 x i8]* %d, i32 0, i32 0
@@ -258,16 +255,16 @@ entry:
 define arm_aapcs_vfpcc <8 x i8> @vldrb16() {
 ; CHECK-LABEL: vldrb16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r7, lr}
-; CHECK-NEXT:    push {r7, lr}
+; CHECK-NEXT:    .save {r4, lr}
+; CHECK-NEXT:    push {r4, lr}
 ; CHECK-NEXT:    .pad #8
 ; CHECK-NEXT:    sub sp, #8
-; CHECK-NEXT:    mov r0, sp
+; CHECK-NEXT:    mov r4, sp
+; CHECK-NEXT:    mov r0, r4
 ; CHECK-NEXT:    bl func
-; CHECK-NEXT:    mov r0, sp
-; CHECK-NEXT:    vldrb.u16 q0, [r0, #2]
+; CHECK-NEXT:    vldrb.u16 q0, [r4, #2]
 ; CHECK-NEXT:    add sp, #8
-; CHECK-NEXT:    pop {r7, pc}
+; CHECK-NEXT:    pop {r4, pc}
 entry:
   %d = alloca [8 x i8], align 2
   %arraydecay = getelementptr inbounds [8 x i8], [8 x i8]* %d, i32 0, i32 0

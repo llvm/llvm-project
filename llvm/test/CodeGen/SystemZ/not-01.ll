@@ -1,6 +1,6 @@
-; Combined logical operations involving complement on arch13
+; Combined logical operations involving complement on z15
 ;
-; RUN: llc -mcpu=arch13 < %s -mtriple=s390x-linux-gnu | FileCheck %s
+; RUN: llc -mcpu=z15 < %s -mtriple=s390x-linux-gnu | FileCheck %s
 
 ; And-with-complement 32-bit.
 define i32 @f1(i32 %dummy, i32 %a, i32 %b) {

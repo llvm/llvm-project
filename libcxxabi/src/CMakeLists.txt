@@ -91,6 +91,10 @@ if (MINGW)
   list(APPEND LIBCXXABI_LIBRARIES ${MINGW_LIBRARIES})
 endif()
 
+if (NOT LIBCXXABI_USE_COMPILER_RT)
+  add_library_flags_if(LIBCXXABI_HAS_GCC_LIB gcc)
+endif ()
+
 # Setup flags.
 add_link_flags_if_supported(-nodefaultlibs)
 

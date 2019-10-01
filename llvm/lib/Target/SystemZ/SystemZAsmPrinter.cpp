@@ -553,6 +553,12 @@ static unsigned EmitNop(MCContext &OutContext, MCStreamer &OutStreamer,
 void SystemZAsmPrinter::LowerFENTRY_CALL(const MachineInstr &MI,
                                          SystemZMCInstLower &Lower) {
   MCContext &Ctx = MF->getContext();
+  if (MF->getFunction().getFnAttribute("mnop-mcount")
+                       .getValueAsString() == "true") {
+    EmitNop(Ctx, *OutStreamer, 6, getSubtargetInfo());
+    return;
+  }
+
   MCSymbol *fentry = Ctx.getOrCreateSymbol("__fentry__");
   const MCSymbolRefExpr *Op =
       MCSymbolRefExpr::create(fentry, MCSymbolRefExpr::VK_PLT, Ctx);

@@ -85,8 +85,14 @@ RelExpr MIPS<ELFT>::getRelExpr(RelType type, const Symbol &s,
 
   switch (type) {
   case R_MIPS_JALR:
+    // If the target symbol is not preemptible and is not microMIPS,
+    // it might be possible to replace jalr/jr instruction by bal/b.
+    // It depends on the target symbol's offset.
+    if (!s.isPreemptible && !(s.getVA() & 0x1))
+      return R_PC;
+    return R_NONE;
   case R_MICROMIPS_JALR:
-    return R_HINT;
+    return R_NONE;
   case R_MIPS_GPREL16:
   case R_MIPS_GPREL32:
   case R_MICROMIPS_GPREL16:
@@ -633,6 +639,20 @@ void MIPS<ELFT>::relocateOne(uint8_t *loc, RelType type, uint64_t val) const {
     writeValue<e>(loc, val + 0x800080008000, 16, 48);
     break;
   case R_MIPS_JALR:
+    val -= 4;
+    // Replace jalr/jr instructions by bal/b if the target
+    // offset fits into the 18-bit range.
+    if (isInt<18>(val)) {
+      switch (read32<e>(loc)) {
+      case 0x0320f809:  // jalr $25 => bal sym
+        write32<e>(loc, 0x04110000 | ((val >> 2) & 0xffff));
+        break;
+      case 0x03200008:  // jr $25 => b sym
+        write32<e>(loc, 0x10000000 | ((val >> 2) & 0xffff));
+        break;
+      }
+    }
+    break;
   case R_MICROMIPS_JALR:
     // Ignore this optimization relocation for now
     break;

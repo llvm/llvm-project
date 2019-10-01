@@ -1,12 +1,12 @@
 // Test that the specified output merges the profiling data.
 // Run the program twice so that the counters accumulate.
 // RUN: %clang -fprofile-instr-generate -fcoverage-mapping -o %t %s
+// RUN: rm -f %t.merging.profraw %t.merging.profdata
 // RUN: %run %t %t.merging.profraw
 // RUN: %run %t %t.merging.profraw
 // RUN: test -f %t.merging.profraw
 // RUN: llvm-profdata merge -o %t.merging.profdata %t.merging.profraw
 // RUN: llvm-cov show -instr-profile %t.merging.profdata %t | FileCheck %s --match-full-lines
-// RUN: rm %t.merging.profdata %t.merging.profraw
 #include <stdio.h>
 
 extern void __llvm_profile_set_file_object(FILE *, int);

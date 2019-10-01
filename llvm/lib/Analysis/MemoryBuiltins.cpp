@@ -307,6 +307,13 @@ bool llvm::isOpNewLikeFn(const Value *V, const TargetLibraryInfo *TLI,
   return getAllocationData(V, OpNewLike, TLI, LookThroughBitCast).hasValue();
 }
 
+/// Tests if a value is a call or invoke to a library function that
+/// allocates memory (strdup, strndup).
+bool llvm::isStrdupLikeFn(const Value *V, const TargetLibraryInfo *TLI,
+                          bool LookThroughBitCast) {
+  return getAllocationData(V, StrDupLike, TLI, LookThroughBitCast).hasValue();
+}
+
 /// extractMallocCall - Returns the corresponding CallInst if the instruction
 /// is a malloc call.  Since CallInst::CreateMalloc() only creates calls, we
 /// ignore InvokeInst here.
@@ -553,9 +560,9 @@ STATISTIC(ObjectVisitorArgument,
 STATISTIC(ObjectVisitorLoad,
           "Number of load instructions with unsolved size and offset");
 
-APInt ObjectSizeOffsetVisitor::align(APInt Size, uint64_t Align) {
-  if (Options.RoundToAlign && Align)
-    return APInt(IntTyBits, alignTo(Size.getZExtValue(), llvm::Align(Align)));
+APInt ObjectSizeOffsetVisitor::align(APInt Size, uint64_t Alignment) {
+  if (Options.RoundToAlign && Alignment)
+    return APInt(IntTyBits, alignTo(Size.getZExtValue(), Align(Alignment)));
   return Size;
 }
 

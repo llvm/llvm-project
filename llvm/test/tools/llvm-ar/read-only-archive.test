@@ -13,7 +13,7 @@
 # RUN: not llvm-ar r %t/archive.a %t/3.txt \
 # RUN:   FileCheck %s --check-prefix=ERROR -DFILE=%t/archive.a
 
-# ERROR: error: [[FILE]]: no such file or directory.
+# ERROR: error: [[FILE]]: no such file or directory
 
 # RUN: not llvm-ar q %t/archive.a %t/3.txt \
 # RUN:   FileCheck %s --check-prefix=ERROR -DFILE=%t/archive.a
@@ -21,7 +21,7 @@
 # RUN: not llvm-ar m %t/archive.a t/1.txt \
 # RUN:   FileCheck %s --check-prefix=ERROR-2 -DFILE=%t/archive.a
 
-# ERROR-2: error: [[FILE]]: permission denied.
+# ERROR-2: error: [[FILE]]: permission denied
 
 # RUN: llvm-ar t %t/archive.a \
 # RUN:   | FileCheck %s --check-prefix=ARCHIVE --match-full-lines --implicit-check-not {{.}}

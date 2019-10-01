@@ -25,6 +25,8 @@
 namespace llvm {
 namespace ELFYAML {
 
+StringRef dropUniqueSuffix(StringRef S);
+
 // These types are invariant across 32/64-bit ELF, so for simplicity just
 // directly give them their exact sizes. We don't need to worry about
 // endianness because these are just the types in the YAMLIO structures,
@@ -117,6 +119,11 @@ struct DynamicEntry {
   llvm::yaml::Hex64 Val;
 };
 
+struct StackSizeEntry {
+  llvm::yaml::Hex64 Address;
+  llvm::yaml::Hex64 Size;
+};
+
 struct Section {
   enum class SectionKind {
     Dynamic,
@@ -126,6 +133,7 @@ struct Section {
     NoBits,
     Verdef,
     Verneed,
+    StackSizes,
     SymtabShndxSection,
     Symver,
     MipsABIFlags
@@ -161,6 +169,22 @@ struct Section {
   // This can be used to override the sh_size field. It does not affect the
   // content written.
   Optional<llvm::yaml::Hex64> ShSize;
+};
+
+struct StackSizesSection : Section {
+  Optional<yaml::BinaryRef> Content;
+  Optional<llvm::yaml::Hex64> Size;
+  Optional<std::vector<StackSizeEntry>> Entries;
+
+  StackSizesSection() : Section(SectionKind::StackSizes) {}
+
+  static bool classof(const Section *S) {
+    return S->Kind == SectionKind::StackSizes;
+  }
+
+  static bool nameMatches(StringRef Name) {
+    return Name == ".stack_sizes";
+  }
 };
 
 struct DynamicSection : Section {
@@ -326,6 +350,7 @@ struct Object {
 } // end namespace ELFYAML
 } // end namespace llvm
 
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::StackSizeEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::DynamicEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::ProgramHeader)
 LLVM_YAML_IS_SEQUENCE_VECTOR(std::unique_ptr<llvm::ELFYAML::Section>)
@@ -459,6 +484,10 @@ template <>
 struct MappingTraits<ELFYAML::Symbol> {
   static void mapping(IO &IO, ELFYAML::Symbol &Symbol);
   static StringRef validate(IO &IO, ELFYAML::Symbol &Symbol);
+};
+
+template <> struct MappingTraits<ELFYAML::StackSizeEntry> {
+  static void mapping(IO &IO, ELFYAML::StackSizeEntry &Rel);
 };
 
 template <> struct MappingTraits<ELFYAML::DynamicEntry> {

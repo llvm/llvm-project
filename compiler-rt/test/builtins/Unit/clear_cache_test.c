@@ -13,24 +13,15 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
+
 #if defined(_WIN32)
 #include <windows.h>
-static uintptr_t get_page_size() {
-    SYSTEM_INFO si;
-    GetSystemInfo(&si);
-    return si.dwPageSize;
-}
 #else
 #include <unistd.h>
 #include <sys/mman.h>
-
-static uintptr_t get_page_size() {
-    return sysconf(_SC_PAGE_SIZE);
-}
 #endif
 
 extern void __clear_cache(void* start, void* end);
-
 
 typedef int (*pfunc)(void);
 
@@ -51,34 +42,36 @@ memcpy_f(void *dst, const void *src, size_t n) {
 #endif
 }
 
-unsigned char execution_buffer[128] __attribute__((aligned(8)));
-
 int main()
 {
-    // make executable the page containing execution_buffer 
-    uintptr_t page_size = get_page_size();
-    char* start = (char*)((uintptr_t)execution_buffer & (-page_size));
-    char* end = (char*)((uintptr_t)(&execution_buffer[128+page_size]) & (-page_size));
-#if defined(_WIN32)
-    DWORD dummy_oldProt;
-    MEMORY_BASIC_INFORMATION b;
-    if (!VirtualQuery(start, &b, sizeof(b)))
-        return 1;
-    if (!VirtualProtect(b.BaseAddress, b.RegionSize, PAGE_EXECUTE_READWRITE, &b.Protect))
+    const int kSize = 128;
+#if !defined(_WIN32)
+    uint8_t *execution_buffer = mmap(0, kSize,
+                                     PROT_READ | PROT_WRITE | PROT_EXEC,
+                                     MAP_ANON | MAP_PRIVATE, 0, 0);
+    if (execution_buffer == MAP_FAILED)
+      return 1;
 #else
-    if (mprotect(start, end-start, PROT_READ|PROT_WRITE|PROT_EXEC) != 0)
-#endif
+    HANDLE mapping = CreateFileMapping(INVALID_HANDLE_VALUE, NULL,
+                                       PAGE_EXECUTE_READWRITE, 0, kSize, NULL);
+    if (mapping == NULL)
         return 1;
 
+    uint8_t* execution_buffer = MapViewOfFile(
+        mapping, FILE_MAP_ALL_ACCESS | FILE_MAP_EXECUTE, 0, 0, 0);
+    if (execution_buffer == NULL)
+        return 1;
+#endif
+
     // verify you can copy and execute a function
-    pfunc f1 = (pfunc)memcpy_f(execution_buffer, func1, 128);
-    __clear_cache(execution_buffer, &execution_buffer[128]);
+    pfunc f1 = (pfunc)memcpy_f(execution_buffer, func1, kSize);
+    __clear_cache(execution_buffer, execution_buffer + kSize);
     if ((*f1)() != 1)
         return 1;
 
     // verify you can overwrite a function with another
-    pfunc f2 = (pfunc)memcpy_f(execution_buffer, func2, 128);
-    __clear_cache(execution_buffer, &execution_buffer[128]);
+    pfunc f2 = (pfunc)memcpy_f(execution_buffer, func2, kSize);
+    __clear_cache(execution_buffer, execution_buffer + kSize);
     if ((*f2)() != 2)
         return 1;
 

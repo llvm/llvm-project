@@ -76,3 +76,4 @@ lto_input_create
 lto_input_dispose
 lto_input_get_num_dependent_libraries
 lto_input_get_dependent_library
+lto_runtime_lib_symbols_list

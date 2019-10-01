@@ -179,7 +179,7 @@ exit:
 }
 
 ; CHECK: Determining loop execution counts for: @nsw_startx
-; CHECK: Loop %loop: backedge-taken count is (-1 + (-1 * %x) + ((1 + %x)<nsw> smax %n))
+; CHECK: Loop %loop: backedge-taken count is (-1 + (-1 * %x) + ((1 + %x) smax %n))
 ; CHECK: Loop %loop: max backedge-taken count is -1
 define void @nsw_startx(i4 %n, i4 %x) {
 entry:
@@ -195,7 +195,7 @@ exit:
 }
 
 ; CHECK: Determining loop execution counts for: @nsw_startx_step2
-; CHECK: Loop %loop: backedge-taken count is ((-1 + (-1 * %x) + ((2 + %x)<nsw> smax %n)) /u 2)
+; CHECK: Loop %loop: backedge-taken count is ((-1 + (-1 * %x) + ((2 + %x) smax %n)) /u 2)
 ; CHECK: Loop %loop: max backedge-taken count is 7
 define void @nsw_startx_step2(i4 %n, i4 %x) {
 entry:
@@ -381,7 +381,7 @@ exit:
 }
 
 ; CHECK: Determining loop execution counts for: @even_nsw_startx
-; CHECK: Loop %loop: backedge-taken count is (-1 + (-1 * %x) + ((1 + %x)<nsw> smax (2 * %n)))
+; CHECK: Loop %loop: backedge-taken count is (-1 + (-1 * %x) + ((1 + %x) smax (2 * %n)))
 ; CHECK: Loop %loop: max backedge-taken count is -2
 define void @even_nsw_startx(i4 %n, i4 %x) {
 entry:
@@ -398,7 +398,7 @@ exit:
 }
 
 ; CHECK: Determining loop execution counts for: @even_nsw_startx_step2
-; CHECK: Loop %loop: backedge-taken count is ((-1 + (-1 * %x) + ((2 + %x)<nsw> smax (2 * %n))) /u 2)
+; CHECK: Loop %loop: backedge-taken count is ((-1 + (-1 * %x) + ((2 + %x) smax (2 * %n))) /u 2)
 ; CHECK: Loop %loop: max backedge-taken count is 7
 define void @even_nsw_startx_step2(i4 %n, i4 %x) {
 entry:

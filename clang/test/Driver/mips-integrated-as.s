@@ -293,3 +293,13 @@
 // IMG-SINGLEFLOAT-EXPLICIT-FPXX: "-target-feature" "+single-float"
 // IMG-SINGLEFLOAT-EXPLICIT-FPXX: "-target-feature" "+fpxx"
 // IMG-SINGLEFLOAT-EXPLICIT-FPXX: "-target-feature" "+nooddspreg"
+
+// RUN: %clang -target mips-linux-gnu -### -fintegrated-as -mxgot -c %s 2>&1 | \
+// RUN:   FileCheck -check-prefix=XGOT %s
+// XGOT: -cc1as
+// XGOT: "-target-feature" "+xgot"
+
+// RUN: %clang -target mips-linux-gnu -### -fintegrated-as -mno-xgot -c %s 2>&1 | \
+// RUN:   FileCheck -check-prefix=NOXGOT %s
+// NOXGOT: -cc1as
+// NOXGOT: "-target-feature" "-xgot"

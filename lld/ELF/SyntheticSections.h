@@ -994,7 +994,7 @@ public:
 
   size_t getSize() const override { return size; }
   void writeTo(uint8_t *buf) override;
-  bool isNeeded() const override { return !empty; }
+  bool isNeeded() const override;
   // Sort and remove duplicate entries.
   void finalizeContents() override;
   InputSection *getLinkOrderDep() const;
@@ -1007,9 +1007,6 @@ public:
 
 private:
   size_t size;
-
-  // Empty if ExecutableSections contains no dependent .ARM.exidx sections.
-  bool empty = true;
 
   // Instead of storing pointers to the .ARM.exidx InputSections from
   // InputObjects, we store pointers to the executable sections that need
@@ -1102,8 +1099,9 @@ public:
 
 InputSection *createInterpSection();
 MergeInputSection *createCommentSection();
+MergeSyntheticSection *createMergeSynthetic(StringRef name, uint32_t type,
+                                            uint64_t flags, uint32_t alignment);
 template <class ELFT> void splitSections();
-void mergeSections();
 
 template <typename ELFT> void writeEhdr(uint8_t *buf, Partition &part);
 template <typename ELFT> void writePhdrs(uint8_t *buf, Partition &part);

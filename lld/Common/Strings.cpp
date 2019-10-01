@@ -18,39 +18,17 @@
 using namespace llvm;
 using namespace lld;
 
-// Returns the demangled C++ symbol name for Name.
-Optional<std::string> lld::demangleItanium(StringRef name) {
+// Returns the demangled C++ symbol name for name.
+std::string lld::demangleItanium(StringRef name) {
   // itaniumDemangle can be used to demangle strings other than symbol
   // names which do not necessarily start with "_Z". Name can be
-  // either a C or C++ symbol. Don't call itaniumDemangle if the name
+  // either a C or C++ symbol. Don't call demangle if the name
   // does not look like a C++ symbol name to avoid getting unexpected
   // result for a C symbol that happens to match a mangled type name.
   if (!name.startswith("_Z"))
-    return None;
+    return name;
 
-  char *buf = itaniumDemangle(name.str().c_str(), nullptr, nullptr, nullptr);
-  if (!buf)
-    return None;
-  std::string s(buf);
-  free(buf);
-  return s;
-}
-
-Optional<std::string> lld::demangleMSVC(StringRef name) {
-  std::string prefix;
-  if (name.consume_front("__imp_"))
-    prefix = "__declspec(dllimport) ";
-
-  // Demangle only C++ names.
-  if (!name.startswith("?"))
-    return None;
-
-  char *buf = microsoftDemangle(name.str().c_str(), nullptr, nullptr, nullptr);
-  if (!buf)
-    return None;
-  std::string s(buf);
-  free(buf);
-  return prefix + s;
+  return demangle(name);
 }
 
 StringMatcher::StringMatcher(ArrayRef<StringRef> pat) {

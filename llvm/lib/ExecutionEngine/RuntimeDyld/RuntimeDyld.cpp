@@ -729,17 +729,17 @@ Error RuntimeDyldImpl::emitCommonSymbols(const ObjectFile &Obj,
 
   // Assign the address of each symbol
   for (auto &Sym : SymbolsToAllocate) {
-    uint32_t Align = Sym.getAlignment();
+    uint32_t Alignment = Sym.getAlignment();
     uint64_t Size = Sym.getCommonSize();
     StringRef Name;
     if (auto NameOrErr = Sym.getName())
       Name = *NameOrErr;
     else
       return NameOrErr.takeError();
-    if (Align) {
+    if (Alignment) {
       // This symbol has an alignment requirement.
       uint64_t AlignOffset =
-          offsetToAlignment((uint64_t)Addr, llvm::Align(Align));
+          offsetToAlignment((uint64_t)Addr, Align(Alignment));
       Addr += AlignOffset;
       Offset += AlignOffset;
     }

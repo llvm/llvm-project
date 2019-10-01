@@ -1,7 +1,7 @@
 ; RUN: opt < %s -cost-model -analyze -mtriple=systemz-unknown -mcpu=z13 \
 ; RUN:  | FileCheck %s -check-prefixes=CHECK,Z13
-; RUN: opt < %s -cost-model -analyze -mtriple=systemz-unknown -mcpu=arch13 \
-; RUN:  | FileCheck %s -check-prefixes=CHECK,AR13
+; RUN: opt < %s -cost-model -analyze -mtriple=systemz-unknown -mcpu=z15 \
+; RUN:  | FileCheck %s -check-prefixes=CHECK,Z15
 
 define void @bswap_i64(i64 %arg, <2 x i64> %arg2) {
 ; CHECK: Printing analysis 'Cost Model Analysis' for function 'bswap_i64':
@@ -69,15 +69,15 @@ define void @bswap_i64_mem(i64* %src, i64 %arg, i64* %dst) {
 define void @bswap_v2i64_mem(<2 x i64>* %src, <2 x i64> %arg, <2 x i64>* %dst) {
 ; CHECK:Printing analysis 'Cost Model Analysis' for function 'bswap_v2i64_mem':
 ; Z13:   Cost Model: Found an estimated cost of 1 for instruction:   %Ld1 = load <2 x i64>, <2 x i64>* %src
-; AR13:  Cost Model: Found an estimated cost of 0 for instruction:   %Ld1 = load <2 x i64>, <2 x i64>* %src
+; Z15:   Cost Model: Found an estimated cost of 0 for instruction:   %Ld1 = load <2 x i64>, <2 x i64>* %src
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %swp1 = tail call <2 x i64> @llvm.bswap.v2i64(<2 x i64> %Ld1)
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %swp2 = tail call <2 x i64> @llvm.bswap.v2i64(<2 x i64> %arg)
 ; Z13:   Cost Model: Found an estimated cost of 1 for instruction:   store <2 x i64> %swp2, <2 x i64>* %dst
-; AR13:  Cost Model: Found an estimated cost of 0 for instruction:   store <2 x i64> %swp2, <2 x i64>* %dst
+; Z15:   Cost Model: Found an estimated cost of 0 for instruction:   store <2 x i64> %swp2, <2 x i64>* %dst
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %Ld2 = load <2 x i64>, <2 x i64>* %src
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %swp3 = tail call <2 x i64> @llvm.bswap.v2i64(<2 x i64> %Ld2)
 ; Z13:   Cost Model: Found an estimated cost of 1 for instruction:   store <2 x i64> %swp3, <2 x i64>* %dst
-; AR13:  Cost Model: Found an estimated cost of 0 for instruction:   store <2 x i64> %swp3, <2 x i64>* %dst
+; Z15:   Cost Model: Found an estimated cost of 0 for instruction:   store <2 x i64> %swp3, <2 x i64>* %dst
 
   %Ld1  = load <2 x i64>, <2 x i64>* %src
   %swp1 = tail call <2 x i64> @llvm.bswap.v2i64(<2 x i64> %Ld1)
@@ -117,15 +117,15 @@ define void @bswap_i32_mem(i32* %src, i32 %arg, i32* %dst) {
 define void @bswap_v4i32_mem(<4 x i32>* %src, <4 x i32> %arg, <4 x i32>* %dst) {
 ; CHECK: Printing analysis 'Cost Model Analysis' for function 'bswap_v4i32_mem':
 ; Z13:   Cost Model: Found an estimated cost of 1 for instruction:   %Ld1 = load <4 x i32>, <4 x i32>* %src
-; AR13:  Cost Model: Found an estimated cost of 0 for instruction:   %Ld1 = load <4 x i32>, <4 x i32>* %src
+; Z15:   Cost Model: Found an estimated cost of 0 for instruction:   %Ld1 = load <4 x i32>, <4 x i32>* %src
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %swp1 = tail call <4 x i32> @llvm.bswap.v4i32(<4 x i32> %Ld1)
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %swp2 = tail call <4 x i32> @llvm.bswap.v4i32(<4 x i32> %arg)
 ; Z13:   Cost Model: Found an estimated cost of 1 for instruction:   store <4 x i32> %swp2, <4 x i32>* %dst
-; AR13:  Cost Model: Found an estimated cost of 0 for instruction:   store <4 x i32> %swp2, <4 x i32>* %dst
+; Z15:   Cost Model: Found an estimated cost of 0 for instruction:   store <4 x i32> %swp2, <4 x i32>* %dst
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %Ld2 = load <4 x i32>, <4 x i32>* %src
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %swp3 = tail call <4 x i32> @llvm.bswap.v4i32(<4 x i32> %Ld2)
 ; Z13:   Cost Model: Found an estimated cost of 1 for instruction:   store <4 x i32> %swp3, <4 x i32>* %dst
-; AR13:  Cost Model: Found an estimated cost of 0 for instruction:   store <4 x i32> %swp3, <4 x i32>* %dst
+; Z15:   Cost Model: Found an estimated cost of 0 for instruction:   store <4 x i32> %swp3, <4 x i32>* %dst
 %Ld1  = load <4 x i32>, <4 x i32>* %src
   %swp1 = tail call <4 x i32> @llvm.bswap.v4i32(<4 x i32> %Ld1)
 
@@ -164,15 +164,15 @@ define void @bswap_i16_mem(i16* %src, i16 %arg, i16* %dst) {
 define void @bswap_v8i16_mem(<8 x i16>* %src, <8 x i16> %arg, <8 x i16>* %dst) {
 ; CHECK: Printing analysis 'Cost Model Analysis' for function 'bswap_v8i16_mem':
 ; Z13:   Cost Model: Found an estimated cost of 1 for instruction:   %Ld1 = load <8 x i16>, <8 x i16>* %src
-; AR13:  Cost Model: Found an estimated cost of 0 for instruction:   %Ld1 = load <8 x i16>, <8 x i16>* %src
+; Z15:   Cost Model: Found an estimated cost of 0 for instruction:   %Ld1 = load <8 x i16>, <8 x i16>* %src
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %swp1 = tail call <8 x i16> @llvm.bswap.v8i16(<8 x i16> %Ld1)
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %swp2 = tail call <8 x i16> @llvm.bswap.v8i16(<8 x i16> %arg)
 ; Z13:   Cost Model: Found an estimated cost of 1 for instruction:   store <8 x i16> %swp2, <8 x i16>* %dst
-; AR13:  Cost Model: Found an estimated cost of 0 for instruction:   store <8 x i16> %swp2, <8 x i16>* %dst
+; Z15:   Cost Model: Found an estimated cost of 0 for instruction:   store <8 x i16> %swp2, <8 x i16>* %dst
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %Ld2 = load <8 x i16>, <8 x i16>* %src
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %swp3 = tail call <8 x i16> @llvm.bswap.v8i16(<8 x i16> %Ld2)
 ; Z13:   Cost Model: Found an estimated cost of 1 for instruction:   store <8 x i16> %swp3, <8 x i16>* %dst
-; AR13:  Cost Model: Found an estimated cost of 0 for instruction:   store <8 x i16> %swp3, <8 x i16>* %dst
+; Z15:   Cost Model: Found an estimated cost of 0 for instruction:   store <8 x i16> %swp3, <8 x i16>* %dst
 %Ld1  = load <8 x i16>, <8 x i16>* %src
   %swp1 = tail call <8 x i16> @llvm.bswap.v8i16(<8 x i16> %Ld1)
 

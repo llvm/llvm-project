@@ -65,15 +65,15 @@ _start:
 # DEFAULT:      Contents of section .note.test:
 # DEFAULT:      Contents of section .note.gnu.build-id:
 # DEFAULT-NEXT: 04000000 08000000 03000000 474e5500  ............GNU.
-# DEFAULT-NEXT: 605e19a6 30469e00
+# DEFAULT-NEXT: 7e8ddeff 3ed41fa3
 
 # MD5:      Contents of section .note.gnu.build-id:
 # MD5-NEXT: 04000000 10000000 03000000 474e5500  ............GNU.
-# MD5-NEXT: adbf65c5 42b4a428 184fd7c9 099cdc29
+# MD5-NEXT: 7b00fd9e 054ceb4b 06f64d0e 482cb476
 
 # SHA1:      Contents of section .note.gnu.build-id:
 # SHA1-NEXT: 04000000 14000000 03000000 474e5500  ............GNU.
-# SHA1-NEXT: fe148fd4 1add2878 6b298b61 5880148b
+# SHA1-NEXT: 221a99da dd1d2bf3 05e48a91 dde8a0cb
 
 # UUID:      Contents of section .note.gnu.build-id:
 # UUID-NEXT: 04000000 10000000 03000000 474e5500  ............GNU.

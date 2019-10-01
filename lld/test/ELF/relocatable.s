@@ -92,9 +92,9 @@
 # CHECKEXE-NEXT:    Type: Executable
 # CHECKEXE-NEXT:    Machine: EM_X86_64
 # CHECKEXE-NEXT:    Version: 1
-# CHECKEXE-NEXT:    Entry: 0x201000
+# CHECKEXE-NEXT:    Entry: 0x201160
 # CHECKEXE-NEXT:    ProgramHeaderOffset: 0x40
-# CHECKEXE-NEXT:    SectionHeaderOffset: 0x21A0
+# CHECKEXE-NEXT:    SectionHeaderOffset: 0x358
 # CHECKEXE-NEXT:    Flags [
 # CHECKEXE-NEXT:    ]
 # CHECKEXE-NEXT:    HeaderSize: 64

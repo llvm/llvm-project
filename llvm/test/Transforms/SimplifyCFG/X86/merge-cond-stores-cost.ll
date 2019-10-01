@@ -8,24 +8,16 @@ define void @test_costly(i32* %p, i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-NEXT:    br i1 [[X1]], label [[FALLTHROUGH:%.*]], label [[YES1:%.*]]
 ; CHECK:       yes1:
 ; CHECK-NEXT:    [[VAL0:%.*]] = sdiv i32 [[D:%.*]], [[C:%.*]]
+; CHECK-NEXT:    store i32 [[VAL0]], i32* [[P:%.*]]
 ; CHECK-NEXT:    br label [[FALLTHROUGH]]
 ; CHECK:       fallthrough:
-; CHECK-NEXT:    [[SIMPLIFYCFG_MERGE:%.*]] = phi i32 [ [[VAL0]], [[YES1]] ], [ undef, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[X2:%.*]] = icmp eq i32 [[B:%.*]], 0
 ; CHECK-NEXT:    br i1 [[X2]], label [[END:%.*]], label [[YES2:%.*]]
 ; CHECK:       yes2:
 ; CHECK-NEXT:    [[VAL1:%.*]] = sdiv i32 [[C]], [[D]]
+; CHECK-NEXT:    store i32 [[VAL1]], i32* [[P]]
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[SIMPLIFYCFG_MERGE1:%.*]] = phi i32 [ [[VAL1]], [[YES2]] ], [ [[SIMPLIFYCFG_MERGE]], [[FALLTHROUGH]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[X1]], true
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[X2]], true
-; CHECK-NEXT:    [[TMP2:%.*]] = or i1 [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    br i1 [[TMP2]], label [[TMP3:%.*]], label [[TMP4:%.*]]
-; CHECK:       3:
-; CHECK-NEXT:    store i32 [[SIMPLIFYCFG_MERGE1]], i32* [[P:%.*]], align 4
-; CHECK-NEXT:    br label [[TMP4]]
-; CHECK:       4:
 ; CHECK-NEXT:    ret void
 ;
 entry:

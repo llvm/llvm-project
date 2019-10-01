@@ -68,6 +68,10 @@ std::pair<uint32_t, uint32_t> getCPUTypeFromArchitecture(Architecture Arch) {
   return std::make_pair(0, 0);
 }
 
+Architecture mapToArchitecture(const Triple &Target) {
+  return getArchitectureFromName(Target.getArchName());
+}
+
 raw_ostream &operator<<(raw_ostream &OS, Architecture Arch) {
   OS << getArchitectureName(Arch);
   return OS;

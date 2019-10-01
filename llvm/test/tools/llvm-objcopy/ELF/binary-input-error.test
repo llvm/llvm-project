@@ -1,10 +1,4 @@
 # RUN: echo abcd > %t.txt
 
-# RUN: not llvm-objcopy -I binary %t.txt %t.o 2>&1 \
-# RUN:   | FileCheck %s --check-prefix=MISSING-BINARY-ARCH
-
-# RUN: not llvm-objcopy -I binary -B xyz %t.txt %t.o 2>&1 \
-# RUN:   | FileCheck %s --check-prefix=BAD-BINARY-ARCH
-
-# MISSING-BINARY-ARCH: specified binary input without specifiying an architecture
-# BAD-BINARY-ARCH: invalid architecture: 'xyz'
+## -B is ignored.
+# RUN: llvm-objcopy -I binary -B xyz %t.txt %t.o

@@ -603,7 +603,7 @@ def DS_ADD_SRC2_F32 : DS_1A<"ds_add_src2_f32">;
 //===----------------------------------------------------------------------===//
 
 def : GCNPat <
-  (int_amdgcn_ds_swizzle i32:$src, imm:$offset16),
+  (int_amdgcn_ds_swizzle i32:$src, timm:$offset16),
   (DS_SWIZZLE_B32 $src, (as_i16imm $offset16), (i1 0))
 >;
 

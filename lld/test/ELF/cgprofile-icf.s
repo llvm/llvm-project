@@ -35,19 +35,19 @@ A:
     retq
 
 # CHECK:          Name: A
-# CHECK-NEXT:     Value: 0x201000
+# CHECK-NEXT:     Value: 0x201120
 # CHECK:          Name: B
-# CHECK-NEXT:     Value: 0x201010
+# CHECK-NEXT:     Value: 0x201130
 # CHECK:          Name: C
-# CHECK-NEXT:     Value: 0x201008
+# CHECK-NEXT:     Value: 0x201128
 # CHECK:          Name: D
-# CHECK-NEXT:     Value: 0x201008
+# CHECK-NEXT:     Value: 0x201128
 
 # NOICF:          Name: A
-# NOICF-NEXT:     Value: 0x201000
+# NOICF-NEXT:     Value: 0x201120
 # NOICF:          Name: B
-# NOICF-NEXT:     Value: 0x201008
+# NOICF-NEXT:     Value: 0x201128
 # NOICF:          Name: C
-# NOICF-NEXT:     Value: 0x201010
+# NOICF-NEXT:     Value: 0x201130
 # NOICF:          Name: D
-# NOICF-NEXT:     Value: 0x201018
+# NOICF-NEXT:     Value: 0x201138

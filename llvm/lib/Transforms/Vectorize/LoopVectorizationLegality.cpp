@@ -742,7 +742,7 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
           assert(VecTy && "did not find vectorized version of stored type");
           unsigned Alignment = getLoadStoreAlignment(ST);
           assert(Alignment && "Alignment should be set");
-          if (!TTI->isLegalNTStore(VecTy, llvm::Align(Alignment))) {
+          if (!TTI->isLegalNTStore(VecTy, Align(Alignment))) {
             reportVectorizationFailure(
                 "nontemporal store instruction cannot be vectorized",
                 "nontemporal store instruction cannot be vectorized",
@@ -759,7 +759,7 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
           assert(VecTy && "did not find vectorized version of load type");
           unsigned Alignment = getLoadStoreAlignment(LD);
           assert(Alignment && "Alignment should be set");
-          if (!TTI->isLegalNTLoad(VecTy, llvm::Align(Alignment))) {
+          if (!TTI->isLegalNTLoad(VecTy, Align(Alignment))) {
             reportVectorizationFailure(
                 "nontemporal load instruction cannot be vectorized",
                 "nontemporal load instruction cannot be vectorized",

@@ -22,6 +22,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_PREAMBLE_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_PREAMBLE_H
 
+#include "CollectMacros.h"
 #include "Compiler.h"
 #include "Diagnostics.h"
 #include "FS.h"
@@ -43,8 +44,7 @@ namespace clangd {
 /// be obtained during parsing must be eagerly captured and stored here.
 struct PreambleData {
   PreambleData(PrecompiledPreamble Preamble, std::vector<Diag> Diags,
-               IncludeStructure Includes,
-               std::vector<std::string> MainFileMacros,
+               IncludeStructure Includes, MainFileMacros Macros,
                std::unique_ptr<PreambleFileStatusCache> StatCache,
                CanonicalIncludes CanonIncludes);
 
@@ -57,7 +57,7 @@ struct PreambleData {
   // Macros defined in the preamble section of the main file.
   // Users care about headers vs main-file, not preamble vs non-preamble.
   // These should be treated as main-file entities e.g. for code completion.
-  std::vector<std::string> MainFileMacros;
+  MainFileMacros Macros;
   // Cache of FS operations performed when building the preamble.
   // When reusing a preamble, this cache can be consumed to save IO.
   std::unique_ptr<PreambleFileStatusCache> StatCache;

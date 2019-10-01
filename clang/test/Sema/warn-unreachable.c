@@ -433,7 +433,7 @@ void wrapOneInFixit(struct StructWithPointer *s) {
 }
 
 void unaryOpNoFixit() {
-  if (- 1)
+  if (~ 1)
     return; // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]
   unaryOpNoFixit(); // expected-warning {{code will never be executed}}
 }

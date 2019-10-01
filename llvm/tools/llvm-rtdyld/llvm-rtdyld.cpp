@@ -984,4 +984,5 @@ int main(int argc, char **argv) {
     Result = linkAndVerify();
     break;
   }
+  return Result;
 }

@@ -218,9 +218,8 @@ static bool prettyPrintRegisterOp(raw_ostream &OS, uint8_t Opcode,
   else
     DwarfRegNum = Opcode - DW_OP_reg0;
 
-  int LLVMRegNum = MRI->getLLVMRegNum(DwarfRegNum, isEH);
-  if (LLVMRegNum >= 0) {
-    if (const char *RegName = MRI->getName(LLVMRegNum)) {
+  if (Optional<unsigned> LLVMRegNum = MRI->getLLVMRegNum(DwarfRegNum, isEH)) {
+    if (const char *RegName = MRI->getName(*LLVMRegNum)) {
       if ((Opcode >= DW_OP_breg0 && Opcode <= DW_OP_breg31) ||
           Opcode == DW_OP_bregx)
         OS << format(" %s%+" PRId64, RegName, Operands[OpNum]);

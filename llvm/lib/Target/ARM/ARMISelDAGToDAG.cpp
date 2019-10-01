@@ -139,6 +139,8 @@ public:
   bool SelectThumbAddrModeImm5S4(SDValue N, SDValue &Base,
                                  SDValue &OffImm);
   bool SelectThumbAddrModeSP(SDValue N, SDValue &Base, SDValue &OffImm);
+  template <unsigned Shift>
+  bool SelectTAddrModeImm7(SDValue N, SDValue &Base, SDValue &OffImm);
 
   // Thumb 2 Addressing Modes:
   bool SelectT2AddrModeImm12(SDValue N, SDValue &Base, SDValue &OffImm);
@@ -1149,6 +1151,28 @@ bool ARMDAGToDAGISel::SelectThumbAddrModeSP(SDValue N,
   }
 
   return false;
+}
+
+template <unsigned Shift>
+bool ARMDAGToDAGISel::SelectTAddrModeImm7(SDValue N, SDValue &Base,
+                                          SDValue &OffImm) {
+  if (N.getOpcode() == ISD::SUB || CurDAG->isBaseWithConstantOffset(N)) {
+    int RHSC;
+    if (isScaledConstantInRange(N.getOperand(1), 1 << Shift, -0x7f, 0x80,
+                                RHSC)) {
+      Base = N.getOperand(0);
+      if (N.getOpcode() == ISD::SUB)
+        RHSC = -RHSC;
+      OffImm =
+          CurDAG->getTargetConstant(RHSC * (1 << Shift), SDLoc(N), MVT::i32);
+      return true;
+    }
+  }
+
+  // Base only.
+  Base = N;
+  OffImm = CurDAG->getTargetConstant(0, SDLoc(N), MVT::i32);
+  return true;
 }
 
 

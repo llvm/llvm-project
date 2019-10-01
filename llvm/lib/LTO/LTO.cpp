@@ -1011,6 +1011,16 @@ Error LTO::runRegularLTO(AddStreamFn AddStream) {
                  std::move(RegularLTO.CombinedModule), ThinLTO.CombinedIndex);
 }
 
+static const char *libcallRoutineNames[] = {
+#define HANDLE_LIBCALL(code, name) name,
+#include "llvm/IR/RuntimeLibcalls.def"
+#undef HANDLE_LIBCALL
+};
+
+ArrayRef<const char*> LTO::getRuntimeLibcallSymbols() {
+  return makeArrayRef(libcallRoutineNames);
+}
+
 /// This class defines the interface to the ThinLTO backend.
 class lto::ThinBackendProc {
 protected:

@@ -13,7 +13,7 @@ endfunction()
 add_lldb_test_executable(thread_inferior inferior/thread_inferior.cpp)
 add_lldb_test_executable(environment_check inferior/environment_check.cpp)
 
-if(LLDB_CAN_USE_DEBUGSERVER AND LLDB_TOOL_DEBUGSERVER_BUILD)
+if(LLDB_CAN_USE_DEBUGSERVER AND (LLDB_TOOL_DEBUGSERVER_BUILD OR LLDB_USE_SYSTEM_DEBUGSERVER))
   if(LLDB_USE_SYSTEM_DEBUGSERVER)
     lldb_find_system_debugserver(debugserver_path)
   else()

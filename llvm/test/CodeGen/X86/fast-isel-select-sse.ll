@@ -26,7 +26,7 @@ define float @select_fcmp_oeq_f32(float %a, float %b, float %c, float %d) {
 ; AVX512-LABEL: select_fcmp_oeq_f32:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vcmpeqss %xmm1, %xmm0, %k1
-; AVX512-NEXT:    vmovss %xmm2, %xmm0, %xmm3 {%k1}
+; AVX512-NEXT:    vmovss %xmm2, %xmm3, %xmm3 {%k1}
 ; AVX512-NEXT:    vmovaps %xmm3, %xmm0
 ; AVX512-NEXT:    retq
   %1 = fcmp oeq float %a, %b
@@ -52,7 +52,7 @@ define double @select_fcmp_oeq_f64(double %a, double %b, double %c, double %d) {
 ; AVX512-LABEL: select_fcmp_oeq_f64:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vcmpeqsd %xmm1, %xmm0, %k1
-; AVX512-NEXT:    vmovsd %xmm2, %xmm0, %xmm3 {%k1}
+; AVX512-NEXT:    vmovsd %xmm2, %xmm3, %xmm3 {%k1}
 ; AVX512-NEXT:    vmovapd %xmm3, %xmm0
 ; AVX512-NEXT:    retq
   %1 = fcmp oeq double %a, %b
@@ -79,7 +79,7 @@ define float @select_fcmp_ogt_f32(float %a, float %b, float %c, float %d) {
 ; AVX512-LABEL: select_fcmp_ogt_f32:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vcmpltss %xmm0, %xmm1, %k1
-; AVX512-NEXT:    vmovss %xmm2, %xmm0, %xmm3 {%k1}
+; AVX512-NEXT:    vmovss %xmm2, %xmm3, %xmm3 {%k1}
 ; AVX512-NEXT:    vmovaps %xmm3, %xmm0
 ; AVX512-NEXT:    retq
   %1 = fcmp ogt float %a, %b
@@ -106,7 +106,7 @@ define double @select_fcmp_ogt_f64(double %a, double %b, double %c, double %d) {
 ; AVX512-LABEL: select_fcmp_ogt_f64:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vcmpltsd %xmm0, %xmm1, %k1
-; AVX512-NEXT:    vmovsd %xmm2, %xmm0, %xmm3 {%k1}
+; AVX512-NEXT:    vmovsd %xmm2, %xmm3, %xmm3 {%k1}
 ; AVX512-NEXT:    vmovapd %xmm3, %xmm0
 ; AVX512-NEXT:    retq
   %1 = fcmp ogt double %a, %b
@@ -133,7 +133,7 @@ define float @select_fcmp_oge_f32(float %a, float %b, float %c, float %d) {
 ; AVX512-LABEL: select_fcmp_oge_f32:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vcmpless %xmm0, %xmm1, %k1
-; AVX512-NEXT:    vmovss %xmm2, %xmm0, %xmm3 {%k1}
+; AVX512-NEXT:    vmovss %xmm2, %xmm3, %xmm3 {%k1}
 ; AVX512-NEXT:    vmovaps %xmm3, %xmm0
 ; AVX512-NEXT:    retq
   %1 = fcmp oge float %a, %b
@@ -160,7 +160,7 @@ define double @select_fcmp_oge_f64(double %a, double %b, double %c, double %d) {
 ; AVX512-LABEL: select_fcmp_oge_f64:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vcmplesd %xmm0, %xmm1, %k1
-; AVX512-NEXT:    vmovsd %xmm2, %xmm0, %xmm3 {%k1}
+; AVX512-NEXT:    vmovsd %xmm2, %xmm3, %xmm3 {%k1}
 ; AVX512-NEXT:    vmovapd %xmm3, %xmm0
 ; AVX512-NEXT:    retq
   %1 = fcmp oge double %a, %b
@@ -186,7 +186,7 @@ define float @select_fcmp_olt_f32(float %a, float %b, float %c, float %d) {
 ; AVX512-LABEL: select_fcmp_olt_f32:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vcmpltss %xmm1, %xmm0, %k1
-; AVX512-NEXT:    vmovss %xmm2, %xmm0, %xmm3 {%k1}
+; AVX512-NEXT:    vmovss %xmm2, %xmm3, %xmm3 {%k1}
 ; AVX512-NEXT:    vmovaps %xmm3, %xmm0
 ; AVX512-NEXT:    retq
   %1 = fcmp olt float %a, %b
@@ -212,7 +212,7 @@ define double @select_fcmp_olt_f64(double %a, double %b, double %c, double %d) {
 ; AVX512-LABEL: select_fcmp_olt_f64:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vcmpltsd %xmm1, %xmm0, %k1
-; AVX512-NEXT:    vmovsd %xmm2, %xmm0, %xmm3 {%k1}
+; AVX512-NEXT:    vmovsd %xmm2, %xmm3, %xmm3 {%k1}
 ; AVX512-NEXT:    vmovapd %xmm3, %xmm0
 ; AVX512-NEXT:    retq
   %1 = fcmp olt double %a, %b
@@ -238,7 +238,7 @@ define float @select_fcmp_ole_f32(float %a, float %b, float %c, float %d) {
 ; AVX512-LABEL: select_fcmp_ole_f32:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vcmpless %xmm1, %xmm0, %k1
-; AVX512-NEXT:    vmovss %xmm2, %xmm0, %xmm3 {%k1}
+; AVX512-NEXT:    vmovss %xmm2, %xmm3, %xmm3 {%k1}
 ; AVX512-NEXT:    vmovaps %xmm3, %xmm0
 ; AVX512-NEXT:    retq
   %1 = fcmp ole float %a, %b
@@ -264,7 +264,7 @@ define double @select_fcmp_ole_f64(double %a, double %b, double %c, double %d) {
 ; AVX512-LABEL: select_fcmp_ole_f64:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vcmplesd %xmm1, %xmm0, %k1
-; AVX512-NEXT:    vmovsd %xmm2, %xmm0, %xmm3 {%k1}
+; AVX512-NEXT:    vmovsd %xmm2, %xmm3, %xmm3 {%k1}
 ; AVX512-NEXT:    vmovapd %xmm3, %xmm0
 ; AVX512-NEXT:    retq
   %1 = fcmp ole double %a, %b
@@ -290,7 +290,7 @@ define float @select_fcmp_ord_f32(float %a, float %b, float %c, float %d) {
 ; AVX512-LABEL: select_fcmp_ord_f32:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vcmpordss %xmm1, %xmm0, %k1
-; AVX512-NEXT:    vmovss %xmm2, %xmm0, %xmm3 {%k1}
+; AVX512-NEXT:    vmovss %xmm2, %xmm3, %xmm3 {%k1}
 ; AVX512-NEXT:    vmovaps %xmm3, %xmm0
 ; AVX512-NEXT:    retq
   %1 = fcmp ord float %a, %b
@@ -316,7 +316,7 @@ define double @select_fcmp_ord_f64(double %a, double %b, double %c, double %d) {
 ; AVX512-LABEL: select_fcmp_ord_f64:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vcmpordsd %xmm1, %xmm0, %k1
-; AVX512-NEXT:    vmovsd %xmm2, %xmm0, %xmm3 {%k1}
+; AVX512-NEXT:    vmovsd %xmm2, %xmm3, %xmm3 {%k1}
 ; AVX512-NEXT:    vmovapd %xmm3, %xmm0
 ; AVX512-NEXT:    retq
   %1 = fcmp ord double %a, %b
@@ -342,7 +342,7 @@ define float @select_fcmp_uno_f32(float %a, float %b, float %c, float %d) {
 ; AVX512-LABEL: select_fcmp_uno_f32:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vcmpunordss %xmm1, %xmm0, %k1
-; AVX512-NEXT:    vmovss %xmm2, %xmm0, %xmm3 {%k1}
+; AVX512-NEXT:    vmovss %xmm2, %xmm3, %xmm3 {%k1}
 ; AVX512-NEXT:    vmovaps %xmm3, %xmm0
 ; AVX512-NEXT:    retq
   %1 = fcmp uno float %a, %b
@@ -368,7 +368,7 @@ define double @select_fcmp_uno_f64(double %a, double %b, double %c, double %d) {
 ; AVX512-LABEL: select_fcmp_uno_f64:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vcmpunordsd %xmm1, %xmm0, %k1
-; AVX512-NEXT:    vmovsd %xmm2, %xmm0, %xmm3 {%k1}
+; AVX512-NEXT:    vmovsd %xmm2, %xmm3, %xmm3 {%k1}
 ; AVX512-NEXT:    vmovapd %xmm3, %xmm0
 ; AVX512-NEXT:    retq
   %1 = fcmp uno double %a, %b
@@ -394,7 +394,7 @@ define float @select_fcmp_ugt_f32(float %a, float %b, float %c, float %d) {
 ; AVX512-LABEL: select_fcmp_ugt_f32:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vcmpnless %xmm1, %xmm0, %k1
-; AVX512-NEXT:    vmovss %xmm2, %xmm0, %xmm3 {%k1}
+; AVX512-NEXT:    vmovss %xmm2, %xmm3, %xmm3 {%k1}
 ; AVX512-NEXT:    vmovaps %xmm3, %xmm0
 ; AVX512-NEXT:    retq
   %1 = fcmp ugt float %a, %b
@@ -420,7 +420,7 @@ define double @select_fcmp_ugt_f64(double %a, double %b, double %c, double %d) {
 ; AVX512-LABEL: select_fcmp_ugt_f64:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vcmpnlesd %xmm1, %xmm0, %k1
-; AVX512-NEXT:    vmovsd %xmm2, %xmm0, %xmm3 {%k1}
+; AVX512-NEXT:    vmovsd %xmm2, %xmm3, %xmm3 {%k1}
 ; AVX512-NEXT:    vmovapd %xmm3, %xmm0
 ; AVX512-NEXT:    retq
   %1 = fcmp ugt double %a, %b
@@ -446,7 +446,7 @@ define float @select_fcmp_uge_f32(float %a, float %b, float %c, float %d) {
 ; AVX512-LABEL: select_fcmp_uge_f32:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vcmpnltss %xmm1, %xmm0, %k1
-; AVX512-NEXT:    vmovss %xmm2, %xmm0, %xmm3 {%k1}
+; AVX512-NEXT:    vmovss %xmm2, %xmm3, %xmm3 {%k1}
 ; AVX512-NEXT:    vmovaps %xmm3, %xmm0
 ; AVX512-NEXT:    retq
   %1 = fcmp uge float %a, %b
@@ -472,7 +472,7 @@ define double @select_fcmp_uge_f64(double %a, double %b, double %c, double %d) {
 ; AVX512-LABEL: select_fcmp_uge_f64:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vcmpnltsd %xmm1, %xmm0, %k1
-; AVX512-NEXT:    vmovsd %xmm2, %xmm0, %xmm3 {%k1}
+; AVX512-NEXT:    vmovsd %xmm2, %xmm3, %xmm3 {%k1}
 ; AVX512-NEXT:    vmovapd %xmm3, %xmm0
 ; AVX512-NEXT:    retq
   %1 = fcmp uge double %a, %b
@@ -499,7 +499,7 @@ define float @select_fcmp_ult_f32(float %a, float %b, float %c, float %d) {
 ; AVX512-LABEL: select_fcmp_ult_f32:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vcmpnless %xmm0, %xmm1, %k1
-; AVX512-NEXT:    vmovss %xmm2, %xmm0, %xmm3 {%k1}
+; AVX512-NEXT:    vmovss %xmm2, %xmm3, %xmm3 {%k1}
 ; AVX512-NEXT:    vmovaps %xmm3, %xmm0
 ; AVX512-NEXT:    retq
   %1 = fcmp ult float %a, %b
@@ -526,7 +526,7 @@ define double @select_fcmp_ult_f64(double %a, double %b, double %c, double %d) {
 ; AVX512-LABEL: select_fcmp_ult_f64:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vcmpnlesd %xmm0, %xmm1, %k1
-; AVX512-NEXT:    vmovsd %xmm2, %xmm0, %xmm3 {%k1}
+; AVX512-NEXT:    vmovsd %xmm2, %xmm3, %xmm3 {%k1}
 ; AVX512-NEXT:    vmovapd %xmm3, %xmm0
 ; AVX512-NEXT:    retq
   %1 = fcmp ult double %a, %b
@@ -553,7 +553,7 @@ define float @select_fcmp_ule_f32(float %a, float %b, float %c, float %d) {
 ; AVX512-LABEL: select_fcmp_ule_f32:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vcmpnltss %xmm0, %xmm1, %k1
-; AVX512-NEXT:    vmovss %xmm2, %xmm0, %xmm3 {%k1}
+; AVX512-NEXT:    vmovss %xmm2, %xmm3, %xmm3 {%k1}
 ; AVX512-NEXT:    vmovaps %xmm3, %xmm0
 ; AVX512-NEXT:    retq
   %1 = fcmp ule float %a, %b
@@ -580,7 +580,7 @@ define double @select_fcmp_ule_f64(double %a, double %b, double %c, double %d) {
 ; AVX512-LABEL: select_fcmp_ule_f64:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vcmpnltsd %xmm0, %xmm1, %k1
-; AVX512-NEXT:    vmovsd %xmm2, %xmm0, %xmm3 {%k1}
+; AVX512-NEXT:    vmovsd %xmm2, %xmm3, %xmm3 {%k1}
 ; AVX512-NEXT:    vmovapd %xmm3, %xmm0
 ; AVX512-NEXT:    retq
   %1 = fcmp ule double %a, %b
@@ -606,7 +606,7 @@ define float @select_fcmp_une_f32(float %a, float %b, float %c, float %d) {
 ; AVX512-LABEL: select_fcmp_une_f32:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vcmpneqss %xmm1, %xmm0, %k1
-; AVX512-NEXT:    vmovss %xmm2, %xmm0, %xmm3 {%k1}
+; AVX512-NEXT:    vmovss %xmm2, %xmm3, %xmm3 {%k1}
 ; AVX512-NEXT:    vmovaps %xmm3, %xmm0
 ; AVX512-NEXT:    retq
   %1 = fcmp une float %a, %b
@@ -632,7 +632,7 @@ define double @select_fcmp_une_f64(double %a, double %b, double %c, double %d) {
 ; AVX512-LABEL: select_fcmp_une_f64:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vcmpneqsd %xmm1, %xmm0, %k1
-; AVX512-NEXT:    vmovsd %xmm2, %xmm0, %xmm3 {%k1}
+; AVX512-NEXT:    vmovsd %xmm2, %xmm3, %xmm3 {%k1}
 ; AVX512-NEXT:    vmovapd %xmm3, %xmm0
 ; AVX512-NEXT:    retq
   %1 = fcmp une double %a, %b

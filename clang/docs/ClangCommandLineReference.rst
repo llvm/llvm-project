@@ -86,8 +86,6 @@ Pass <arg> to the target offloading toolchain identified by <triple>.
 
 Run the static analyzer
 
-.. option:: --analyze-auto
-
 .. option:: --analyzer-no-default-checks
 
 .. option:: --analyzer-output<arg>
@@ -2194,7 +2192,7 @@ Set EABI type, e.g. 4, 5 or gnu (default depends on triple)
 
 .. option:: -mfentry
 
-Insert calls to fentry at function entry (x86 only)
+Insert calls to fentry at function entry (x86/SystemZ only)
 
 .. option:: -mfloat-abi=<arg>
 

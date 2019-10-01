@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Errc.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 
@@ -75,10 +76,40 @@ namespace llvm {
     void releaseFile() { DeleteIt = false; }
   };
 
+  enum class atomic_write_error {
+    failed_to_create_uniq_file = 0,
+    output_stream_error,
+    failed_to_rename_temp_file
+  };
+
+  class AtomicFileWriteError : public llvm::ErrorInfo<AtomicFileWriteError> {
+  public:
+    AtomicFileWriteError(atomic_write_error Error) : Error(Error) {}
+
+    void log(raw_ostream &OS) const override;
+
+    const atomic_write_error Error;
+    static char ID;
+
+  private:
+    // Users are not expected to use error_code.
+    std::error_code convertToErrorCode() const override {
+      return llvm::inconvertibleErrorCode();
+    }
+  };
+
+  // atomic_write_error + whatever the Writer can return
+
   /// Creates a unique file with name according to the given \p TempPathModel,
   /// writes content of \p Buffer to the file and renames it to \p FinalPath.
+  ///
+  /// \returns \c AtomicFileWriteError in case of error.
   llvm::Error writeFileAtomically(StringRef TempPathModel, StringRef FinalPath,
                                   StringRef Buffer);
+
+  llvm::Error
+  writeFileAtomically(StringRef TempPathModel, StringRef FinalPath,
+                      std::function<llvm::Error(llvm::raw_ostream &)> Writer);
 } // End llvm namespace
 
 #endif

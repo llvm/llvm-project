@@ -1,0 +1,344 @@
+## Check how yaml2obj produces .stack_sizes sections.
+
+## Test the following cases when the .stack_sizes Content field is specified:
+## 1) We can produce a .stack_sizes section from a description with
+##    a valid section content.
+## 2) We can produce an incorrect .stack_sizes section from a description with
+##    a broken (truncated) section content.
+## 3) We can produce an empty .stack_sizes section from a description with
+##    empty section content.
+
+# RUN: yaml2obj --docnum=1 %s -o %t1
+# RUN: llvm-readobj --sections --section-data %t1 | FileCheck %s
+
+## Case 1: valid content.
+# CHECK:      Section {
+# CHECK:        Index: 1
+# CHECK-NEXT:   Name: .stack_sizes (1)
+# CHECK-NEXT:   Type: SHT_PROGBITS (0x1)
+# CHECK-NEXT:   Flags [ (0x0)
+# CHECK-NEXT:   ]
+# CHECK-NEXT:   Address: 0x0
+# CHECK-NEXT:   Offset: 0x40
+# CHECK-NEXT:   Size: 9
+# CHECK-NEXT:   Link: 0
+# CHECK-NEXT:   Info: 0
+# CHECK-NEXT:   AddressAlignment: 0
+# CHECK-NEXT:   EntrySize: 0
+# CHECK-NEXT:   SectionData (
+# CHECK-NEXT:     0000: 10000000 00000000 20
+# CHECK-NEXT:   )
+# CHECK-NEXT: }
+
+## Case 2: truncated content.
+# CHECK:      Name: .stack_sizes
+# CHECK:      Size:
+# CHECK-SAME: 8
+# CHECK:      SectionData (
+# CHECK-NEXT:  0000: 10000000 00000000
+
+## Case 3: empty content.
+# CHECK:      Name: .stack_sizes
+# CHECK:      Size:
+# CHECK-SAME: 0
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+## Valid.
+  - Name:    '.stack_sizes [1]'
+    Type:    SHT_PROGBITS
+    Content: "100000000000000020"
+## Truncated.
+  - Name:    '.stack_sizes [2]'
+    Type:    SHT_PROGBITS
+    Content: "1000000000000000"
+## Empty.
+  - Name:    '.stack_sizes [3]'
+    Type:    SHT_PROGBITS
+    Content: ""
+
+## Check we can describe .stack_sizes section using <address, size> pairs.
+
+# RUN: yaml2obj --docnum=2 %s -o %t2
+# RUN: llvm-readobj --sections --section-data %t2 | FileCheck %s --check-prefix=ENTRIES-LE64-BOTH
+# RUN: yaml2obj --docnum=3 %s -o %t3
+# RUN: llvm-readobj --sections --section-data %t3 | FileCheck %s --check-prefix=ENTRIES-BE64-BOTH
+# RUN: yaml2obj --docnum=4 %s -o %t4
+# RUN: llvm-readobj --sections --section-data %t4 | FileCheck %s --check-prefix=ENTRIES-LE32-BOTH
+# RUN: yaml2obj --docnum=5 %s -o %t5
+# RUN: llvm-readobj --sections --section-data %t5 | FileCheck %s --check-prefix=ENTRIES-BE32-BOTH
+
+# ENTRIES-LE64-BOTH:      Name: .stack_sizes
+# ENTRIES-LE64-BOTH:      SectionData (
+# ENTRIES-LE64-BOTH-NEXT:  0000: 10000000 00000000 20300000 00000000 |
+# ENTRIES-LE64-BOTH-NEXT:  0010: 0040                                |
+
+# ENTRIES-BE64-BOTH:      Name: .stack_sizes
+# ENTRIES-BE64-BOTH:      SectionData (
+# ENTRIES-BE64-BOTH-NEXT:  0000: 00000000 00000010 20000000 00000000 |
+# ENTRIES-BE64-BOTH-NEXT:  0010: 3040
+
+# ENTRIES-LE32-BOTH:      Name: .stack_sizes
+# ENTRIES-LE32-BOTH:      SectionData (
+# ENTRIES-LE32-BOTH-NEXT:  0000: 10000000 20300000 0040 |
+
+# ENTRIES-BE32-BOTH:      Name: .stack_sizes
+# ENTRIES-BE32-BOTH:      SectionData (
+# ENTRIES-BE32-BOTH-NEXT:  0000: 00000010 20000000 3040 |
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:    .stack_sizes
+    Type:    SHT_PROGBITS
+    Entries:
+      - Address: 0x10
+        Size:    0x20
+      - Address: 0x30
+        Size:    0x40
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2MSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:    .stack_sizes
+    Type:    SHT_PROGBITS
+    Entries:
+      - Address: 0x10
+        Size:    0x20
+      - Address: 0x30
+        Size:    0x40
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_386
+Sections:
+  - Name:    .stack_sizes
+    Type:    SHT_PROGBITS
+    Entries:
+      - Address: 0x10
+        Size:    0x20
+      - Address: 0x30
+        Size:    0x40
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2MSB
+  Type:    ET_EXEC
+  Machine: EM_386
+Sections:
+  - Name:    .stack_sizes
+    Type:    SHT_PROGBITS
+    Entries:
+      - Address: 0x10
+        Size:    0x20
+      - Address: 0x30
+        Size:    0x40
+
+## Check we can omit the "Address" tag. In this case the address will be zero.
+
+# RUN: yaml2obj --docnum=6 %s -o %t6
+# RUN: llvm-readobj --sections --section-data %t6 | FileCheck %s --check-prefix=ENTRIES-NOADDR
+
+# ENTRIES-NOADDR:      Name: .stack_sizes
+# ENTRIES-NOADDR:      SectionData (
+# ENTRIES-NOADDR-NEXT:  0000: 00000000 00000000 10000000 00000000 |
+# ENTRIES-NOADDR-NEXT:  0010: 0020                                |
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:    .stack_sizes
+    Type:    SHT_PROGBITS
+    Entries:
+       - Size: 0x10
+       - Size: 0x20
+
+## Check that "Size" tag is mandatory when we describe .stack_sizes using "Entries".
+
+# RUN: not yaml2obj --docnum=7 %s 2>&1 | FileCheck %s --check-prefix=ENTRIES-NOSIZE
+
+# ENTRIES-NOSIZE: error: missing required key 'Size'
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:    .stack_sizes
+    Type:    SHT_PROGBITS
+    Entries:
+       - Address: 0x10
+
+## Check we can't use both "Content" and "Entries" tags at the same time.
+
+# RUN: not yaml2obj --docnum=8 %s 2>&1 | FileCheck %s --check-prefix=ENTRIES-AND-CONTENT
+
+# ENTRIES-AND-CONTENT: error: .stack_sizes: Content and Entries cannot be used together
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:    .stack_sizes
+    Type:    SHT_PROGBITS
+    Content: "00"
+    Entries:
+      - Address: 0x10
+        Size:    0x20
+
+## Check we must specify either "Content", "Entries" or "Size" tag when describing .stack_sizes.
+
+# RUN: not yaml2obj --docnum=9 %s 2>&1 | FileCheck %s --check-prefix=NO-TAGS
+
+# NO-TAGS: .stack_sizes: one of Content, Entries and Size must be specified
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name: .stack_sizes
+    Type: SHT_PROGBITS
+
+## Check we can't use both "Size" and "Entries" tags at the same time.
+
+# RUN: not yaml2obj --docnum=10 %s 2>&1 | FileCheck %s --check-prefix=ENTRIES-AND-SIZE
+
+# ENTRIES-AND-SIZE: .stack_sizes: Size and Entries cannot be used together
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name: .stack_sizes
+    Type: SHT_PROGBITS
+    Size: 0x1
+    Entries:
+      - Address: 0x10
+        Size:    0x20
+
+## Check we can use only "Size" to create .stack_sizes section.
+
+# RUN: yaml2obj --docnum=11 %s -o %t11
+# RUN: llvm-readobj --sections --section-data %t11 | FileCheck %s --check-prefix=SIZE
+
+# SIZE:      Name: .stack_sizes
+# SIZE:      Size:
+# SIZE-SAME: 17
+# SIZE:      SectionData (
+# SIZE-NEXT:  0000: 00000000 00000000 00000000 00000000  |
+# SIZE-NEXT:  0010: 00                                   |
+# SIZE-NEXT: )
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name: .stack_sizes
+    Type: SHT_PROGBITS
+    Size: 0x11
+
+## Check we can use "Size" and "Content" together to create .stack_sizes section.
+
+# RUN: yaml2obj --docnum=12 %s -o %t12
+# RUN: llvm-readobj --sections --section-data %t12 | FileCheck %s --check-prefix=SIZE-CONTENT
+
+# SIZE-CONTENT:      Name: .stack_sizes
+# SIZE-CONTENT:      Size:
+# SIZE-CONTENT-SAME: 5
+# SIZE-CONTENT:      SectionData (
+# SIZE-CONTENT-NEXT:  0000: 11223300 00 |
+# SIZE-CONTENT-NEXT: )
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name: .stack_sizes
+    Type: SHT_PROGBITS
+    Size: 0x5
+    Content: "112233"
+
+# RUN: not yaml2obj --docnum=13 %s 2>&1 | FileCheck %s --check-prefix=SIZE-CONTENT-ERR
+
+# SIZE-CONTENT-ERR: error: .stack_sizes: Size must be greater than or equal to the content size
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name: .stack_sizes
+    Type: SHT_PROGBITS
+    Size: 0x1
+    Content: "1122"
+
+## Check we can describe multiple .stack_sizes sections using unique suffixes.
+
+# RUN: yaml2obj --docnum=14 %s -o %t11
+# RUN: llvm-readobj --sections --section-data %t11 | FileCheck %s --check-prefix=UNIQUE
+
+# UNIQUE:      Name: .stack_sizes
+# UNIQUE:      SectionData (
+# UNIQUE-NEXT:   0000: 10000000 00000000 20 |
+
+# UNIQUE:      Name: .stack_sizes
+# UNIQUE:      SectionData (
+# UNIQUE-NEXT:   0000: 30000000 00000000 40 |
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:    '.stack_sizes [1]'
+    Type:    SHT_PROGBITS
+    Entries:
+      - Address: 0x10
+        Size:    0x20
+  - Name:    '.stack_sizes [2]'
+    Type:    SHT_PROGBITS
+    Entries:
+      - Address: 0x30
+        Size:    0x40

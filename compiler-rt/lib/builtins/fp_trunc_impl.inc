@@ -113,7 +113,7 @@ static __inline dst_t __truncXfYf2__(src_t a) {
     if (shift > srcSigBits) {
       absResult = 0;
     } else {
-      const bool sticky = significand << (srcBits - shift);
+      const bool sticky = (significand << (srcBits - shift)) != 0;
       src_rep_t denormalizedSignificand = significand >> shift | sticky;
       absResult = denormalizedSignificand >> (srcSigBits - dstSigBits);
       const src_rep_t roundBits = denormalizedSignificand & roundMask;

@@ -177,6 +177,11 @@ llvm::cl::opt<bool> SkipExcludedPPRanges(
         "until reaching the end directive."),
     llvm::cl::init(true), llvm::cl::cat(DependencyScannerCategory));
 
+llvm::cl::opt<bool> Verbose("v", llvm::cl::Optional,
+                            llvm::cl::desc("Use verbose output."),
+                            llvm::cl::init(false),
+                            llvm::cl::cat(DependencyScannerCategory));
+
 } // end anonymous namespace
 
 /// \returns object-file path derived from source-file path.
@@ -242,6 +247,7 @@ int main(int argc, const char **argv) {
         AdjustedArgs.push_back("-o");
         AdjustedArgs.push_back("/dev/null");
         if (!HasMT && !HasMQ) {
+          AdjustedArgs.push_back("-M");
           AdjustedArgs.push_back("-MT");
           // We're interested in source dependencies of an object file.
           if (!HasMD) {
@@ -260,6 +266,8 @@ int main(int argc, const char **argv) {
         AdjustedArgs.push_back("-Wno-error");
         return AdjustedArgs;
       });
+  AdjustingCompilations->appendArgumentsAdjuster(
+      tooling::getClangStripSerializeDiagnosticAdjuster());
 
   SharedStream Errs(llvm::errs());
   // Print out the dependency results to STDOUT by default.
@@ -283,8 +291,10 @@ int main(int argc, const char **argv) {
   std::mutex Lock;
   size_t Index = 0;
 
-  llvm::outs() << "Running clang-scan-deps on " << Inputs.size()
-               << " files using " << NumWorkers << " workers\n";
+  if (Verbose) {
+    llvm::outs() << "Running clang-scan-deps on " << Inputs.size()
+                 << " files using " << NumWorkers << " workers\n";
+  }
   for (unsigned I = 0; I < NumWorkers; ++I) {
     auto Worker = [I, &Lock, &Index, &Inputs, &HadErrors, &WorkerTools]() {
       while (true) {

@@ -695,14 +695,18 @@ PathDiagnosticLocation::create(const ProgramPoint& P,
     return PathDiagnosticLocation(
         CEB->getLocationContext()->getDecl()->getSourceRange().getEnd(), SMng);
   } else if (Optional<BlockEntrance> BE = P.getAs<BlockEntrance>()) {
-    CFGElement BlockFront = BE->getBlock()->front();
-    if (auto StmtElt = BlockFront.getAs<CFGStmt>()) {
-      return PathDiagnosticLocation(StmtElt->getStmt()->getBeginLoc(), SMng);
-    } else if (auto NewAllocElt = BlockFront.getAs<CFGNewAllocator>()) {
-      return PathDiagnosticLocation(
-          NewAllocElt->getAllocatorExpr()->getBeginLoc(), SMng);
+    if (Optional<CFGElement> BlockFront = BE->getFirstElement()) {
+      if (auto StmtElt = BlockFront->getAs<CFGStmt>()) {
+        return PathDiagnosticLocation(StmtElt->getStmt()->getBeginLoc(), SMng);
+      } else if (auto NewAllocElt = BlockFront->getAs<CFGNewAllocator>()) {
+        return PathDiagnosticLocation(
+            NewAllocElt->getAllocatorExpr()->getBeginLoc(), SMng);
+      }
+      llvm_unreachable("Unexpected CFG element at front of block");
     }
-    llvm_unreachable("Unexpected CFG element at front of block");
+
+    return PathDiagnosticLocation(
+        BE->getBlock()->getTerminatorStmt()->getBeginLoc(), SMng);
   } else if (Optional<FunctionExitPoint> FE = P.getAs<FunctionExitPoint>()) {
     return PathDiagnosticLocation(FE->getStmt(), SMng,
                                   FE->getLocationContext());

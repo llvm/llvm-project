@@ -506,7 +506,7 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
         unsigned Reg32 = TRI->getSubReg(DstReg, AArch64::sub_32);
         unsigned DstFlags = MI.getOperand(0).getTargetFlags();
         MIB2 = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::LDRWui))
-                   .addDef(Reg32, RegState::Dead)
+                   .addDef(Reg32)
                    .addReg(DstReg, RegState::Kill)
                    .addReg(DstReg, DstFlags | RegState::Implicit);
       } else {

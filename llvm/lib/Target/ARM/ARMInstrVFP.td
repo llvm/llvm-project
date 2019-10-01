@@ -324,7 +324,7 @@ defm : VFPDTAnyInstAlias<"vpop${p}", "$r",
 // However, there is no UAL syntax for them, so we keep them around for
 // (dis)assembly only.
 multiclass vfp_ldstx_mult<string asm, bit L_bit> {
-  let Predicates = [HasFPRegs] in {
+  let Predicates = [HasFPRegs], hasNoSchedulingInfo = 1 in {
   // Unknown precision
   def XIA :
     AXXI4<(outs), (ins GPR:$Rn, pred:$p, dpr_reglist:$regs, variable_ops),
@@ -1732,7 +1732,8 @@ def VTOSHS : AVConv1XInsS_Encode<0b11101, 0b11, 0b1110, 0b1010, 0,
 
 def VTOUHS : AVConv1XInsS_Encode<0b11101, 0b11, 0b1111, 0b1010, 0,
                        (outs SPR:$dst), (ins SPR:$a, fbits16:$fbits),
-                 IIC_fpCVTSI, "vcvt", ".u16.f32\t$dst, $a, $fbits", []> {
+                 IIC_fpCVTSI, "vcvt", ".u16.f32\t$dst, $a, $fbits", []>,
+             Sched<[WriteFPCVT]> {
   // Some single precision VFP instructions may be executed on both NEON and
   // VFP pipelines on A8.
   let D = VFPNeonA8Domain;
@@ -1740,7 +1741,8 @@ def VTOUHS : AVConv1XInsS_Encode<0b11101, 0b11, 0b1111, 0b1010, 0,
 
 def VTOSLS : AVConv1XInsS_Encode<0b11101, 0b11, 0b1110, 0b1010, 1,
                        (outs SPR:$dst), (ins SPR:$a, fbits32:$fbits),
-                 IIC_fpCVTSI, "vcvt", ".s32.f32\t$dst, $a, $fbits", []> {
+                 IIC_fpCVTSI, "vcvt", ".s32.f32\t$dst, $a, $fbits", []>,
+             Sched<[WriteFPCVT]> {
   // Some single precision VFP instructions may be executed on both NEON and
   // VFP pipelines on A8.
   let D = VFPNeonA8Domain;
@@ -1748,7 +1750,8 @@ def VTOSLS : AVConv1XInsS_Encode<0b11101, 0b11, 0b1110, 0b1010, 1,
 
 def VTOULS : AVConv1XInsS_Encode<0b11101, 0b11, 0b1111, 0b1010, 1,
                        (outs SPR:$dst), (ins SPR:$a, fbits32:$fbits),
-                 IIC_fpCVTSI, "vcvt", ".u32.f32\t$dst, $a, $fbits", []> {
+                 IIC_fpCVTSI, "vcvt", ".u32.f32\t$dst, $a, $fbits", []>,
+             Sched<[WriteFPCVT]> {
   // Some single precision VFP instructions may be executed on both NEON and
   // VFP pipelines on A8.
   let D = VFPNeonA8Domain;
@@ -2618,7 +2621,8 @@ def VSCCLRMD : VFPXI<(outs), (ins pred:$p, fp_dreglist_with_vpr:$regs, variable_
   let Inst{21-16} = 0b011111;
   let Inst{15-12} = regs{11-8};
   let Inst{11-8} = 0b1011;
-  let Inst{7-0} = regs{7-0};
+  let Inst{7-1} = regs{7-1};
+  let Inst{0} = 0;
 
   let DecoderMethod = "DecodeVSCCLRM";
 

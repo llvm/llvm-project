@@ -2093,8 +2093,7 @@ unsigned PPCFastISel::PPCMaterializeGV(const GlobalValue *GV, MVT VT) {
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(PPC::ADDIStocHA8),
             HighPartReg).addReg(PPC::X2).addGlobalAddress(GV);
 
-    unsigned char GVFlags = PPCSubTarget->classifyGlobalReference(GV);
-    if (GVFlags & PPCII::MO_NLP_FLAG) {
+    if (PPCSubTarget->isGVIndirectSymbol(GV)) {
       BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(PPC::LDtocL),
               DestReg).addGlobalAddress(GV).addReg(HighPartReg);
     } else {

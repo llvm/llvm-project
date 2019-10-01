@@ -26,7 +26,6 @@ class ExprCommandCallOverriddenMethod(TestBase):
         # Find the line number to break for main.c.
         self.line = line_number('main.cpp', '// Set breakpoint here')
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr21765")
     def test(self):
         """Test calls to overridden methods in derived classes."""
         self.build()
@@ -41,9 +40,12 @@ class ExprCommandCallOverriddenMethod(TestBase):
 
         # Test call to method in base class (this should always work as the base
         # class method is never an override).
-        self.expect("expr b->foo()")
+        self.expect("expr b->foo()", substrs=["2"])
 
         # Test call to overridden method in derived class (this will fail if the
         # overrides table is not correctly set up, as Derived::foo will be assigned
         # a vtable entry that does not exist in the compiled program).
-        self.expect("expr d.foo()")
+        self.expect("expr d.foo()", substrs=["2"])
+
+        # Test calling the base class.
+        self.expect("expr realbase.foo()", substrs=["1"])

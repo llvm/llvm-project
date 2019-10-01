@@ -1,0 +1,43 @@
+# RUN: yaml2obj %S/Inputs/unwind-via-stack-win.yaml > %t
+# RUN: %lldb -c %t \
+# RUN:   -o "target symbols add %S/Inputs/unwind-via-raSearch.syms" \
+# RUN:   -s %s -b | FileCheck %s
+
+# First check that unwind plan generation works correctly.
+# This function has a "typical" unwind rule.
+image show-unwind -n call_many
+# CHECK-LABEL: image show-unwind -n call_many
+# CHECK: UNWIND PLANS for unwind-via-stack-win.exe`call_many
+# CHECK: Symbol file UnwindPlan:
+# CHECK: This UnwindPlan originally sourced from breakpad STACK WIN
+# CHECK: This UnwindPlan is sourced from the compiler: yes.
+# CHECK: This UnwindPlan is valid at all instruction locations: no.
+# CHECK: Address range of this UnwindPlan: [unwind-via-stack-win.exe..module_image + 16-0x0000007d)
+# CHECK: row[0]:    0: CFA=RaSearch@SP+0 => esp=DW_OP_pick 0x00, DW_OP_consts +4, DW_OP_plus  eip=DW_OP_pick 0x00, DW_OP_deref
+
+image show-unwind -n nonzero_frame_size
+# CHECK-LABEL: image show-unwind -n nonzero_frame_size
+# CHECK: UNWIND PLANS for unwind-via-stack-win.exe`nonzero_frame_size
+# CHECK: Symbol file UnwindPlan:
+# CHECK: row[0]:    0: CFA=RaSearch@SP+12 => esp=DW_OP_pick 0x00, DW_OP_consts +4, DW_OP_plus  eip=DW_OP_pick 0x00, DW_OP_deref
+
+# Then, some invalid rules.
+image show-unwind -n complex_rasearch
+# CHECK-LABEL: image show-unwind -n complex_rasearch
+# CHECK: UNWIND PLANS for unwind-via-stack-win.exe`complex_rasearch
+# CHECK-NOT: Symbol file
+
+image show-unwind -n esp_rasearch
+# CHECK-LABEL: image show-unwind -n esp_rasearch
+# CHECK: UNWIND PLANS for unwind-via-stack-win.exe`esp_rasearch
+# CHECK-NOT: Symbol file
+
+# And finally, check that backtracing works as a whole by unwinding a simple
+# stack.
+thread backtrace
+# CHECK-LABEL: thread backtrace
+# CHECK: frame #0: 0x000b1092 unwind-via-stack-win.exe`many_pointer_args
+# CHECK: frame #1: 0x000b1079 unwind-via-stack-win.exe`call_many + 105
+# CHECK: frame #2: 0x000b1085 unwind-via-stack-win.exe`main + 5
+# CHECK: frame #3: 0x77278494 kernel32.dll
+# CHECK-NOT: frame

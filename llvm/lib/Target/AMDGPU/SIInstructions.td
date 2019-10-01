@@ -43,8 +43,8 @@ multiclass V_INTERP_P1_F32_m : VINTRP_m <
   (outs VINTRPDst:$vdst),
   (ins VGPR_32:$vsrc, Attr:$attr, AttrChan:$attrchan),
   "v_interp_p1_f32$vdst, $vsrc, $attr$attrchan",
-  [(set f32:$vdst, (AMDGPUinterp_p1 f32:$vsrc, (i32 imm:$attrchan),
-                                               (i32 imm:$attr)))]
+  [(set f32:$vdst, (AMDGPUinterp_p1 f32:$vsrc, (i32 timm:$attrchan),
+                                               (i32 timm:$attr)))]
 >;
 
 let OtherPredicates = [has32BankLDS] in {
@@ -66,8 +66,8 @@ defm V_INTERP_P2_F32 : VINTRP_m <
   (outs VINTRPDst:$vdst),
   (ins VGPR_32:$src0, VGPR_32:$vsrc, Attr:$attr, AttrChan:$attrchan),
   "v_interp_p2_f32$vdst, $vsrc, $attr$attrchan",
-  [(set f32:$vdst, (AMDGPUinterp_p2 f32:$src0, f32:$vsrc, (i32 imm:$attrchan),
-                                                          (i32 imm:$attr)))]>;
+  [(set f32:$vdst, (AMDGPUinterp_p2 f32:$src0, f32:$vsrc, (i32 timm:$attrchan),
+                                                          (i32 timm:$attr)))]>;
 
 } // End DisableEncoding = "$src0", Constraints = "$src0 = $vdst"
 
@@ -76,8 +76,8 @@ defm V_INTERP_MOV_F32 : VINTRP_m <
   (outs VINTRPDst:$vdst),
   (ins InterpSlot:$vsrc, Attr:$attr, AttrChan:$attrchan),
   "v_interp_mov_f32$vdst, $vsrc, $attr$attrchan",
-  [(set f32:$vdst, (AMDGPUinterp_mov (i32 imm:$vsrc), (i32 imm:$attrchan),
-                                     (i32 imm:$attr)))]>;
+  [(set f32:$vdst, (AMDGPUinterp_mov (i32 imm:$vsrc), (i32 timm:$attrchan),
+                                     (i32 timm:$attr)))]>;
 
 } // End Uses = [M0, EXEC]
 
@@ -815,22 +815,22 @@ def : GCNPat <
 
 def : GCNPat <
   (i32 (fp_to_sint f16:$src)),
-  (V_CVT_I32_F32_e32 (V_CVT_F32_F16_e32 $src))
+  (V_CVT_I32_F32_e32 (V_CVT_F32_F16_e32 VSrc_b32:$src))
 >;
 
 def : GCNPat <
   (i32 (fp_to_uint f16:$src)),
-  (V_CVT_U32_F32_e32 (V_CVT_F32_F16_e32 $src))
+  (V_CVT_U32_F32_e32 (V_CVT_F32_F16_e32 VSrc_b32:$src))
 >;
 
 def : GCNPat <
   (f16 (sint_to_fp i32:$src)),
-  (V_CVT_F16_F32_e32 (V_CVT_F32_I32_e32 $src))
+  (V_CVT_F16_F32_e32 (V_CVT_F32_I32_e32 VSrc_b32:$src))
 >;
 
 def : GCNPat <
   (f16 (uint_to_fp i32:$src)),
-  (V_CVT_F16_F32_e32 (V_CVT_F32_U32_e32 $src))
+  (V_CVT_F16_F32_e32 (V_CVT_F32_U32_e32 VSrc_b32:$src))
 >;
 
 //===----------------------------------------------------------------------===//
@@ -1181,6 +1181,11 @@ def : GCNPat <
 >;
 
 def : GCNPat <
+  (fneg (f16 VGPR_32:$src)),
+  (V_XOR_B32_e32 (S_MOV_B32 (i32 0x00008000)), VGPR_32:$src)
+>;
+
+def : GCNPat <
   (fabs (f16 SReg_32:$src)),
   (S_AND_B32 SReg_32:$src, (S_MOV_B32 (i32 0x00007fff)))
 >;
@@ -1188,6 +1193,11 @@ def : GCNPat <
 def : GCNPat <
   (fneg (fabs (f16 SReg_32:$src))),
   (S_OR_B32 SReg_32:$src, (S_MOV_B32 (i32 0x00008000))) // Set sign bit
+>;
+
+def : GCNPat <
+  (fneg (fabs (f16 VGPR_32:$src))),
+  (V_OR_B32_e32 (S_MOV_B32 (i32 0x00008000)), VGPR_32:$src) // Set sign bit
 >;
 
 def : GCNPat <

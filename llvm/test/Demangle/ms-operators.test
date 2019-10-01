@@ -209,6 +209,9 @@
 ??_R0?AUBase@@@8
 ; CHECK: struct Base `RTTI Type Descriptor'
 
+.?AUBase@@
+; CHECK: struct Base `RTTI Type Descriptor Name'
+
 ??_R1A@?0A@EA@Base@@8
 ; CHECK: Base::`RTTI Base Class Descriptor at (0, -1, 0, 64)'
 

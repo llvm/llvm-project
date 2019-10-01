@@ -10,8 +10,6 @@
 
 // is_trivially_assignable
 
-// XFAIL: gcc-4.9
-
 #include <type_traits>
 #include "test_macros.h"
 

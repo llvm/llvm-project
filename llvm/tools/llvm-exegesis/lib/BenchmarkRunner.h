@@ -20,6 +20,7 @@
 #include "BenchmarkResult.h"
 #include "LlvmState.h"
 #include "MCInstrDescView.h"
+#include "SnippetRepetitor.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/Support/Error.h"
 #include <cstdlib>
@@ -46,6 +47,7 @@ public:
 
   InstructionBenchmark runConfiguration(const BenchmarkCode &Configuration,
                                         unsigned NumRepetitions,
+                                        const SnippetRepetitor &Repetitor,
                                         bool DumpObjectToDisk) const;
 
   // Scratch space to run instructions that touch memory.
@@ -84,7 +86,7 @@ private:
 
   llvm::Expected<std::string>
   writeObjectFile(const BenchmarkCode &Configuration,
-                  llvm::ArrayRef<llvm::MCInst> Code) const;
+                  const FillFunction &Fill) const;
 
   const std::unique_ptr<ScratchSpace> Scratch;
 };

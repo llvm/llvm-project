@@ -132,7 +132,7 @@ public:
         MapRec->getName() + "' has empty " + "`ValueCols' field!");
 
     for (Init *I : ColValList->getValues()) {
-      ListInit *ColI = dyn_cast<ListInit>(I);
+      auto *ColI = cast<ListInit>(I);
 
       // Make sure that all the sub-lists in 'ValueCols' have same number of
       // elements as the fields in 'ColFields'.
@@ -521,7 +521,7 @@ static void emitEnums(raw_ostream &OS, RecordKeeper &Records) {
     unsigned ListSize = List->size();
 
     for (unsigned j = 0; j < ListSize; j++) {
-      ListInit *ListJ = dyn_cast<ListInit>(List->getElement(j));
+      auto *ListJ = cast<ListInit>(List->getElement(j));
 
       if (ListJ->size() != ColFields->size())
         PrintFatalError("Record `" + CurMap->getName() + "', field "

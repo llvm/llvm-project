@@ -573,7 +573,7 @@ public:
       case MCCFIInstruction::OpDefCfa: {
         // Defines a frame pointer.
         unsigned XReg =
-            getXRegFromWReg(MRI.getLLVMRegNum(Inst.getRegister(), true));
+            getXRegFromWReg(*MRI.getLLVMRegNum(Inst.getRegister(), true));
 
         // Other CFA registers than FP are not supported by compact unwind.
         // Fallback on DWARF.
@@ -592,8 +592,8 @@ public:
         assert(FPPush.getOperation() == MCCFIInstruction::OpOffset &&
                "Frame pointer not pushed!");
 
-        unsigned LRReg = MRI.getLLVMRegNum(LRPush.getRegister(), true);
-        unsigned FPReg = MRI.getLLVMRegNum(FPPush.getRegister(), true);
+        unsigned LRReg = *MRI.getLLVMRegNum(LRPush.getRegister(), true);
+        unsigned FPReg = *MRI.getLLVMRegNum(FPPush.getRegister(), true);
 
         LRReg = getXRegFromWReg(LRReg);
         FPReg = getXRegFromWReg(FPReg);
@@ -614,14 +614,14 @@ public:
       case MCCFIInstruction::OpOffset: {
         // Registers are saved in pairs. We expect there to be two consecutive
         // `.cfi_offset' instructions with the appropriate registers specified.
-        unsigned Reg1 = MRI.getLLVMRegNum(Inst.getRegister(), true);
+        unsigned Reg1 = *MRI.getLLVMRegNum(Inst.getRegister(), true);
         if (i + 1 == e)
           return CU::UNWIND_ARM64_MODE_DWARF;
 
         const MCCFIInstruction &Inst2 = Instrs[++i];
         if (Inst2.getOperation() != MCCFIInstruction::OpOffset)
           return CU::UNWIND_ARM64_MODE_DWARF;
-        unsigned Reg2 = MRI.getLLVMRegNum(Inst2.getRegister(), true);
+        unsigned Reg2 = *MRI.getLLVMRegNum(Inst2.getRegister(), true);
 
         // N.B. The encodings must be in register number order, and the X
         // registers before the D registers.

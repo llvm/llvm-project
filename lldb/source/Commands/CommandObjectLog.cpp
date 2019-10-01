@@ -34,6 +34,21 @@ using namespace lldb_private;
 #define LLDB_OPTIONS_log
 #include "CommandOptions.inc"
 
+/// Common completion logic for log enable/disable.
+static void CompleteEnableDisable(CompletionRequest &request) {
+  size_t arg_index = request.GetCursorIndex();
+  if (arg_index == 0) { // We got: log enable/disable x[tab]
+    for (llvm::StringRef channel : Log::ListChannels())
+      request.TryCompleteCurrentArg(channel);
+  } else if (arg_index >= 1) { // We got: log enable/disable channel x[tab]
+    llvm::StringRef channel = request.GetParsedLine().GetArgumentAtIndex(0);
+    Log::ForEachChannelCategory(
+        channel, [&request](llvm::StringRef name, llvm::StringRef desc) {
+          request.TryCompleteCurrentArg(name, desc);
+        });
+  }
+}
+
 class CommandObjectLogEnable : public CommandObjectParsed {
 public:
   // Constructors and Destructors
@@ -134,6 +149,12 @@ public:
     uint32_t log_options;
   };
 
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    CompleteEnableDisable(request);
+  }
+
 protected:
   bool DoExecute(Args &args, CommandReturnObject &result) override {
     if (args.GetArgumentCount() < 2) {
@@ -202,6 +223,12 @@ public:
 
   ~CommandObjectLogDisable() override = default;
 
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    CompleteEnableDisable(request);
+  }
+
 protected:
   bool DoExecute(Args &args, CommandReturnObject &result) override {
     if (args.empty()) {
@@ -253,6 +280,13 @@ public:
   }
 
   ~CommandObjectLogList() override = default;
+
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    for (llvm::StringRef channel : Log::ListChannels())
+      request.TryCompleteCurrentArg(channel);
+  }
 
 protected:
   bool DoExecute(Args &args, CommandReturnObject &result) override {
