@@ -68,7 +68,7 @@ public:
   /// Return the location list at the given offset or nullptr.
   LocationList const *getLocationListAtOffset(uint64_t Offset) const;
 
-  static Expected<LocationList>
+  Expected<LocationList>
   parseOneLocationList(const DWARFDataExtractor &Data, uint64_t *Offset);
 };
 

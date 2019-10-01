@@ -101,6 +101,7 @@ DWARFDebugLoc::parseOneLocationList(const DWARFDataExtractor &Data,
 
     if (Error Err = C.takeError())
       return std::move(Err);
+
     // The end of any given location list is marked by an end of list entry,
     // which consists of a 0 for the beginning address offset and a 0 for the
     // ending address offset.
@@ -109,9 +110,12 @@ DWARFDebugLoc::parseOneLocationList(const DWARFDataExtractor &Data,
       return LL;
     }
 
-    unsigned Bytes = Data.getU16(C);
-    // A single location description describing the location of the object...
-    Data.getU8(C, E.Loc, Bytes);
+    if (E.Begin != (AddressSize == 4 ? -1U : -1ULL)) {
+      unsigned Bytes = Data.getU16(C);
+      // A single location description describing the location of the object...
+      Data.getU8(C, E.Loc, Bytes);
+    }
+
     LL.Entries.push_back(std::move(E));
   }
 }
