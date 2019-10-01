@@ -3,6 +3,11 @@
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
+# This package definition is based on the LLVM package in the Spack source tree
+# (var/spack/repos/builtin/packages/llvm/package.py) modified to fit the
+# newly adopted monorepo layout and for Kitsune's specific needs.
+
+
 from spack import *
 import llnl.util.tty as tty
 
@@ -18,15 +23,25 @@ class Kitsune(CMakePackage):
     family = 'compiler'  # Used by lmod
     git = 'https://github.com/lanl/kitsune.git'
 
+    
+    # Ninja seems to build LLVM a little faster than Makefiles, but it's not
+    # clear how machine-dependent this is.  This would introduce another
+    # dependency to the package, which isn't great, and a lot of the developer
+    # benefits of Ninja aren't realized when it's being used by an automated
+    # system like spack.
+    # TODO: Test this a bit.
+    # generator = 'Ninja'
+
     version('0.8.0', tag='kitsune-0.8.0')
     version('develop', branch='release/8.x')
 
 
-    # mapping of Spack spec architecture to (lower-case) the corresponding LLVM
-    # target as used in the CMake var LLVM_TARGETS_TO_BUILD.
+    # Mapping of Spack spec architecture family (lower-case) to the
+    # corresponding LLVM target as used in the CMake var LLVM_TARGETS_TO_BUILD.
     target_arch_mapping = {
     #   Spack     : LLVM
         'x86'     : 'X86',
+        'x86_64'  : 'X86',
         'arm'     : 'ARM',
         'aarch64' : 'AArch64',
         'sparc'   : 'Sparc',
@@ -34,9 +49,10 @@ class Kitsune(CMakePackage):
         'power'   : 'PowerPC',
     }
 
-    available_target_archs = ('AArch64', 'AMDGPU', 'ARM', 'NVPTX', 'PowerPC', 'Sparc', 'X86',)
     # Omitting less common targets:
     # BPF, Hexagon, Lanai, Mips, MSP430, SystemZ, WebAssembly, XCore
+    available_target_archs = ('AArch64', 'AMDGPU', 'ARM', 'NVPTX', 'PowerPC', 'Sparc', 'X86')
+
 
     # *** Project Variants
 
@@ -104,9 +120,10 @@ class Kitsune(CMakePackage):
     }
 
 
-    # make the project variants here
+    # make the spack variants for the projects here
     for project, desc in projects.items():
         variant(project, **desc)
+
 
 
     # *** Other Variants
@@ -341,8 +358,7 @@ class Kitsune(CMakePackage):
             targets = []
             if 'targets=default' in spec:
                 targets.extend(['NVPTX', 'AMDGPU'])
-                arch = spec.architecture.target
-                targets.append(target_arch_mapping.get(arch.lower()))
+                targets.append(Kitsune.target_arch_mapping.get(str(spec.target.family)))
             else:
                 for tgt in available_target_archs:
                     if 'targets={}'.format(tgt) in spec:
