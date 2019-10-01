@@ -765,17 +765,24 @@ INTERCEPTOR(char *, fgets_unlocked, char *s, int size, void *stream) {
 #define MSAN_MAYBE_INTERCEPT_FGETS_UNLOCKED
 #endif
 
+#define INTERCEPTOR_GETRLIMIT_BODY(func, resource, rlim)  \
+  if (msan_init_is_running)                               \
+    return REAL(getrlimit)(resource, rlim);               \
+  ENSURE_MSAN_INITED();                                   \
+  int res = REAL(func)(resource, rlim);                   \
+  if (!res)                                               \
+    __msan_unpoison(rlim, __sanitizer::struct_rlimit_sz); \
+  return res
+
 INTERCEPTOR(int, getrlimit, int resource, void *rlim) {
-  if (msan_init_is_running)
-    return REAL(getrlimit)(resource, rlim);
-  ENSURE_MSAN_INITED();
-  int res = REAL(getrlimit)(resource, rlim);
-  if (!res)
-    __msan_unpoison(rlim, __sanitizer::struct_rlimit_sz);
-  return res;
+  INTERCEPTOR_GETRLIMIT_BODY(getrlimit, resource, rlim);
 }
 
 #if !SANITIZER_FREEBSD && !SANITIZER_NETBSD
+INTERCEPTOR(int, __getrlimit, int resource, void *rlim) {
+  INTERCEPTOR_GETRLIMIT_BODY(__getrlimit, resource, rlim);
+}
+
 INTERCEPTOR(int, getrlimit64, int resource, void *rlim) {
   if (msan_init_is_running) return REAL(getrlimit64)(resource, rlim);
   ENSURE_MSAN_INITED();
@@ -806,10 +813,12 @@ INTERCEPTOR(int, prlimit64, int pid, int resource, void *new_rlimit,
   return res;
 }
 
+#define MSAN_MAYBE_INTERCEPT___GETRLIMIT INTERCEPT_FUNCTION(__getrlimit)
 #define MSAN_MAYBE_INTERCEPT_GETRLIMIT64 INTERCEPT_FUNCTION(getrlimit64)
 #define MSAN_MAYBE_INTERCEPT_PRLIMIT INTERCEPT_FUNCTION(prlimit)
 #define MSAN_MAYBE_INTERCEPT_PRLIMIT64 INTERCEPT_FUNCTION(prlimit64)
 #else
+#define MSAN_MAYBE_INTERCEPT___GETRLIMIT
 #define MSAN_MAYBE_INTERCEPT_GETRLIMIT64
 #define MSAN_MAYBE_INTERCEPT_PRLIMIT
 #define MSAN_MAYBE_INTERCEPT_PRLIMIT64
@@ -1678,6 +1687,7 @@ void InitializeInterceptors() {
   INTERCEPT_FUNCTION(socketpair);
   MSAN_MAYBE_INTERCEPT_FGETS_UNLOCKED;
   INTERCEPT_FUNCTION(getrlimit);
+  MSAN_MAYBE_INTERCEPT___GETRLIMIT;
   MSAN_MAYBE_INTERCEPT_GETRLIMIT64;
   MSAN_MAYBE_INTERCEPT_PRLIMIT;
   MSAN_MAYBE_INTERCEPT_PRLIMIT64;

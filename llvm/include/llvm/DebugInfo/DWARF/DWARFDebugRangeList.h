@@ -53,8 +53,7 @@ public:
       assert(AddressSize == 4 || AddressSize == 8);
       if (AddressSize == 4)
         return StartAddress == -1U;
-      else
-        return StartAddress == -1ULL;
+      return StartAddress == -1ULL;
     }
   };
 

@@ -73,6 +73,7 @@ class Constant;
 class FastISel;
 class FunctionLoweringInfo;
 class GlobalValue;
+class GISelKnownBits;
 class IntrinsicInst;
 struct KnownBits;
 class LLVMContext;
@@ -3167,7 +3168,8 @@ public:
   /// or one and return them in the KnownZero/KnownOne bitsets. The DemandedElts
   /// argument allows us to only collect the known bits that are shared by the
   /// requested vector elements. This is for GISel.
-  virtual void computeKnownBitsForTargetInstr(Register R, KnownBits &Known,
+  virtual void computeKnownBitsForTargetInstr(GISelKnownBits &Analysis,
+                                              Register R, KnownBits &Known,
                                               const APInt &DemandedElts,
                                               const MachineRegisterInfo &MRI,
                                               unsigned Depth = 0) const;

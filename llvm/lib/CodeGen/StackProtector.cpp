@@ -158,33 +158,61 @@ bool StackProtector::ContainsProtectableArray(Type *Ty, bool &IsLarge,
 
 bool StackProtector::HasAddressTaken(const Instruction *AI) {
   for (const User *U : AI->users()) {
-    if (const StoreInst *SI = dyn_cast<StoreInst>(U)) {
-      if (AI == SI->getValueOperand())
+    const auto *I = cast<Instruction>(U);
+    switch (I->getOpcode()) {
+    case Instruction::Store:
+      if (AI == cast<StoreInst>(I)->getValueOperand())
         return true;
-    } else if (const PtrToIntInst *SI = dyn_cast<PtrToIntInst>(U)) {
-      if (AI == SI->getOperand(0))
+      break;
+    case Instruction::AtomicCmpXchg:
+      // cmpxchg conceptually includes both a load and store from the same
+      // location. So, like store, the value being stored is what matters.
+      if (AI == cast<AtomicCmpXchgInst>(I)->getNewValOperand())
         return true;
-    } else if (const CallInst *CI = dyn_cast<CallInst>(U)) {
-      // Ignore intrinsics that are not calls. TODO: Use isLoweredToCall().
+      break;
+    case Instruction::PtrToInt:
+      if (AI == cast<PtrToIntInst>(I)->getOperand(0))
+        return true;
+      break;
+    case Instruction::Call: {
+      // Ignore intrinsics that do not become real instructions.
+      // TODO: Narrow this to intrinsics that have store-like effects.
+      const auto *CI = cast<CallInst>(I);
       if (!isa<DbgInfoIntrinsic>(CI) && !CI->isLifetimeStartOrEnd())
         return true;
-    } else if (isa<InvokeInst>(U)) {
+      break;
+    }
+    case Instruction::Invoke:
       return true;
-    } else if (const SelectInst *SI = dyn_cast<SelectInst>(U)) {
-      if (HasAddressTaken(SI))
+    case Instruction::BitCast:
+    case Instruction::GetElementPtr:
+    case Instruction::Select:
+    case Instruction::AddrSpaceCast:
+      if (HasAddressTaken(I))
         return true;
-    } else if (const PHINode *PN = dyn_cast<PHINode>(U)) {
+      break;
+    case Instruction::PHI: {
       // Keep track of what PHI nodes we have already visited to ensure
       // they are only visited once.
+      const auto *PN = cast<PHINode>(I);
       if (VisitedPHIs.insert(PN).second)
         if (HasAddressTaken(PN))
           return true;
-    } else if (const GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(U)) {
-      if (HasAddressTaken(GEP))
-        return true;
-    } else if (const BitCastInst *BI = dyn_cast<BitCastInst>(U)) {
-      if (HasAddressTaken(BI))
-        return true;
+      break;
+    }
+    case Instruction::Load:
+    case Instruction::AtomicRMW:
+    case Instruction::Ret:
+      // These instructions take an address operand, but have load-like or
+      // other innocuous behavior that should not trigger a stack protector.
+      // atomicrmw conceptually has both load and store semantics, but the
+      // value being stored must be integer; so if a pointer is being stored,
+      // we'll catch it in the PtrToInt case above.
+      break;
+    default:
+      // Conservatively return true for any instruction that takes an address
+      // operand, but is not handled above.
+      return true;
     }
   }
   return false;

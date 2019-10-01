@@ -172,9 +172,13 @@ auto fn_deduced_variant() { return 0; }
 int fn_deduced();
 
 int fn_deduced_variant1();
-// expected-warning@+1 {{'#pragma omp declare variant' cannot be applied to the function that was defined already; the original function might be used}}
 #pragma omp declare variant(fn_deduced_variant1) match(xxx = {})
 auto fn_deduced1() { return 0; }
+
+auto fn_deduced3() { return 0; }
+// expected-warning@+1 {{'#pragma omp declare variant' cannot be applied to the function that was defined already; the original function might be used}}
+#pragma omp declare variant(fn_deduced_variant1) match(xxx = {})
+auto fn_deduced3();
 
 auto fn_deduced_variant2() { return 0; }
 // expected-error@+1 {{variant in '#pragma omp declare variant' with type 'int ()' is incompatible with type 'float (*)()'}}

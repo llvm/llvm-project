@@ -1907,6 +1907,10 @@ public:
   /// lambda expression.
   CXXMethodDecl *getCallOperator() const;
 
+  /// Retrieve the function template call operator associated with this
+  /// lambda expression.
+  FunctionTemplateDecl *getDependentCallOperator() const;
+
   /// If this is a generic lambda expression, retrieve the template
   /// parameter list associated with it, or else return null.
   TemplateParameterList *getTemplateParameterList() const;
@@ -2274,8 +2278,8 @@ public:
   CXXDeleteExpr(QualType Ty, bool GlobalDelete, bool ArrayForm,
                 bool ArrayFormAsWritten, bool UsualArrayDeleteWantsSize,
                 FunctionDecl *OperatorDelete, Expr *Arg, SourceLocation Loc)
-      : Expr(CXXDeleteExprClass, Ty, VK_RValue, OK_Ordinary, false, false,
-             Arg->isInstantiationDependent(),
+      : Expr(CXXDeleteExprClass, Ty, VK_RValue, OK_Ordinary, false,
+             Arg->isValueDependent(), Arg->isInstantiationDependent(),
              Arg->containsUnexpandedParameterPack()),
         OperatorDelete(OperatorDelete), Argument(Arg) {
     CXXDeleteExprBits.GlobalDelete = GlobalDelete;

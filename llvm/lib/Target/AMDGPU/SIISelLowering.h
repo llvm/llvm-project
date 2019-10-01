@@ -186,6 +186,7 @@ private:
 
   unsigned isCFIntrinsic(const SDNode *Intr) const;
 
+public:
   /// \returns True if fixup needs to be emitted for given global value \p GV,
   /// false otherwise.
   bool shouldEmitFixup(const GlobalValue *GV) const;
@@ -198,6 +199,7 @@ private:
   /// global value \p GV, false otherwise.
   bool shouldEmitPCReloc(const GlobalValue *GV) const;
 
+private:
   // Analyze a combined offset from an amdgcn_buffer_ intrinsic and store the
   // three offsets (voffset, soffset and instoffset) into the SDValue[3] array
   // pointed to by Offsets.

@@ -3082,8 +3082,9 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
     BranchFolder BF(/*EnableTailMerge=*/true, /*CommonHoist=*/false, *MBFI,
                     *MBPI, TailMergeSize);
 
+    auto *MMIWP = getAnalysisIfAvailable<MachineModuleInfoWrapperPass>();
     if (BF.OptimizeFunction(MF, TII, MF.getSubtarget().getRegisterInfo(),
-                            getAnalysisIfAvailable<MachineModuleInfo>(), MLI,
+                            MMIWP ? &MMIWP->getMMI() : nullptr, MLI,
                             /*AfterPlacement=*/true)) {
       // Redo the layout if tail merging creates/removes/moves blocks.
       BlockToChain.clear();

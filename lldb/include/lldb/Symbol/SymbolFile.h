@@ -190,15 +190,14 @@ public:
                                  SymbolContextList &sc_list);
   virtual uint32_t
   FindTypes(ConstString name, const CompilerDeclContext *parent_decl_ctx,
-            bool append, uint32_t max_matches,
+            uint32_t max_matches,
             llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
             TypeMap &types);
 
   /// Find types specified by a CompilerContextPattern.
   /// \param languages    Only return results in these languages.
   virtual size_t FindTypes(llvm::ArrayRef<CompilerContext> pattern,
-                           LanguageSet languages, bool append,
-                           TypeMap &types);
+                           LanguageSet languages, TypeMap &types);
 
   virtual void
   GetMangledNamesForFunction(const std::string &scope_qualified_name,

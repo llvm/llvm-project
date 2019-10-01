@@ -391,6 +391,47 @@ bool AMDGPUInstructionSelector::selectG_ADD_SUB(MachineInstr &I) const {
   return true;
 }
 
+bool AMDGPUInstructionSelector::selectG_UADDO_USUBO(MachineInstr &I) const {
+  MachineBasicBlock *BB = I.getParent();
+  MachineFunction *MF = BB->getParent();
+  MachineRegisterInfo &MRI = MF->getRegInfo();
+  const DebugLoc &DL = I.getDebugLoc();
+  Register Dst0Reg = I.getOperand(0).getReg();
+  Register Dst1Reg = I.getOperand(1).getReg();
+  const bool IsAdd = I.getOpcode() == AMDGPU::G_UADDO;
+
+  if (!isSCC(Dst1Reg, MRI)) {
+    // The name of the opcodes are misleading. v_add_i32/v_sub_i32 have unsigned
+    // carry out despite the _i32 name. These were renamed in VI to _U32.
+    // FIXME: We should probably rename the opcodes here.
+    unsigned NewOpc = IsAdd ? AMDGPU::V_ADD_I32_e64 : AMDGPU::V_SUB_I32_e64;
+    I.setDesc(TII.get(NewOpc));
+    I.addOperand(*MF, MachineOperand::CreateReg(AMDGPU::EXEC, false, true));
+    I.addOperand(*MF, MachineOperand::CreateImm(0));
+    return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+  }
+
+  Register Src0Reg = I.getOperand(2).getReg();
+  Register Src1Reg = I.getOperand(3).getReg();
+  unsigned NewOpc = IsAdd ? AMDGPU::S_ADD_U32 : AMDGPU::S_SUB_U32;
+  BuildMI(*BB, &I, DL, TII.get(NewOpc), Dst0Reg)
+    .add(I.getOperand(2))
+    .add(I.getOperand(3));
+  BuildMI(*BB, &I, DL, TII.get(AMDGPU::COPY), Dst1Reg)
+    .addReg(AMDGPU::SCC);
+
+  if (!MRI.getRegClassOrNull(Dst1Reg))
+    MRI.setRegClass(Dst1Reg, &AMDGPU::SReg_32RegClass);
+
+  if (!RBI.constrainGenericRegister(Dst0Reg, AMDGPU::SReg_32RegClass, MRI) ||
+      !RBI.constrainGenericRegister(Src0Reg, AMDGPU::SReg_32RegClass, MRI) ||
+      !RBI.constrainGenericRegister(Src1Reg, AMDGPU::SReg_32RegClass, MRI))
+    return false;
+
+  I.eraseFromParent();
+  return true;
+}
+
 bool AMDGPUInstructionSelector::selectG_EXTRACT(MachineInstr &I) const {
   MachineBasicBlock *BB = I.getParent();
   assert(I.getOperand(2).getImm() % 32 == 0);
@@ -1576,6 +1617,9 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
     if (selectImpl(I, *CoverageInfo))
       return true;
     return selectG_ADD_SUB(I);
+  case TargetOpcode::G_UADDO:
+  case TargetOpcode::G_USUBO:
+    return selectG_UADDO_USUBO(I);
   case TargetOpcode::G_INTTOPTR:
   case TargetOpcode::G_BITCAST:
     return selectCOPY(I);

@@ -184,12 +184,12 @@ public:
   uint32_t
   FindTypes(lldb_private::ConstString name,
             const lldb_private::CompilerDeclContext *parent_decl_ctx,
-            bool append, uint32_t max_matches,
+            uint32_t max_matches,
             llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
             lldb_private::TypeMap &types) override;
 
   size_t FindTypes(llvm::ArrayRef<lldb_private::CompilerContext> pattern,
-                   lldb_private::LanguageSet languages, bool append,
+                   lldb_private::LanguageSet languages,
                    lldb_private::TypeMap &types) override;
 
   size_t GetTypes(lldb_private::SymbolContextScope *sc_scope,
