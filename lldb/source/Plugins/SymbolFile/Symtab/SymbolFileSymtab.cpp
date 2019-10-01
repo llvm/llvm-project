@@ -47,11 +47,9 @@ SymbolFile *SymbolFileSymtab::CreateInstance(ObjectFileSP objfile_sp) {
   return new SymbolFileSymtab(std::move(objfile_sp));
 }
 
-size_t SymbolFileSymtab::GetTypes(SymbolContextScope *sc_scope,
-                                  TypeClass type_mask,
-                                  lldb_private::TypeList &type_list) {
-  return 0;
-}
+void SymbolFileSymtab::GetTypes(SymbolContextScope *sc_scope,
+                                TypeClass type_mask,
+                                lldb_private::TypeList &type_list) {}
 
 SymbolFileSymtab::SymbolFileSymtab(ObjectFileSP objfile_sp)
     : SymbolFile(std::move(objfile_sp)), m_source_indexes(), m_func_indexes(),

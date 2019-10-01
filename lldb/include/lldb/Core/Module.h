@@ -447,9 +447,7 @@ public:
   /// \param[out] type_list
   ///     A type list gets populated with any matches.
   ///
-  /// \return
-  ///     The number of matches added to \a type_list.
-  size_t
+  void
   FindTypes(ConstString type_name, bool exact_match, size_t max_matches,
             llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
             TypeList &types);
@@ -459,8 +457,8 @@ public:
   /// This behaves like the other FindTypes method but allows to
   /// specify a DeclContext and a language for the type being searched
   /// for.
-  size_t FindTypes(llvm::ArrayRef<CompilerContext> pattern,
-                   LanguageSet languages, TypeMap &types);
+  void FindTypes(llvm::ArrayRef<CompilerContext> pattern, LanguageSet languages,
+                 TypeMap &types);
 
   lldb::TypeSP FindFirstType(const SymbolContext &sc,
                              ConstString type_name, bool exact_match);
@@ -479,11 +477,9 @@ public:
   /// \param[out] type_list
   ///     A type list gets populated with any matches.
   ///
-  /// \return
-  ///     The number of matches added to \a type_list.
-  size_t FindTypesInNamespace(ConstString type_name,
-                              const CompilerDeclContext *parent_decl_ctx,
-                              size_t max_matches, TypeList &type_list);
+  void FindTypesInNamespace(ConstString type_name,
+                            const CompilerDeclContext *parent_decl_ctx,
+                            size_t max_matches, TypeList &type_list);
 
   /// Get const accessor for the module architecture.
   ///
@@ -1074,7 +1070,7 @@ protected:
 private:
   Module(); // Only used internally by CreateJITModule ()
 
-  size_t FindTypes_Impl(
+  void FindTypes_Impl(
       ConstString name, const CompilerDeclContext *parent_decl_ctx,
       size_t max_matches,
       llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,

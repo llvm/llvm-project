@@ -1250,33 +1250,28 @@ uint32_t SymbolFileNativePDB::FindFunctions(const RegularExpression &regex,
   return 0;
 }
 
-uint32_t SymbolFileNativePDB::FindTypes(
+void SymbolFileNativePDB::FindTypes(
     ConstString name, const CompilerDeclContext *parent_decl_ctx,
-    uint32_t max_matches,
-    llvm::DenseSet<SymbolFile *> &searched_symbol_files, TypeMap &types) {
+    uint32_t max_matches, llvm::DenseSet<SymbolFile *> &searched_symbol_files,
+    TypeMap &types) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   if (!name)
-    return 0;
+    return;
 
   searched_symbol_files.clear();
   searched_symbol_files.insert(this);
 
   // There is an assumption 'name' is not a regex
-  size_t match_count = FindTypesByName(name.GetStringRef(), max_matches, types);
-
-  return match_count;
+  FindTypesByName(name.GetStringRef(), max_matches, types);
 }
 
-size_t SymbolFileNativePDB::FindTypes(llvm::ArrayRef<CompilerContext> pattern,
-                                      LanguageSet languages, TypeMap &types) {
-  return 0;
-}
+void SymbolFileNativePDB::FindTypes(llvm::ArrayRef<CompilerContext> pattern,
+                                    LanguageSet languages, TypeMap &types) {}
 
-size_t SymbolFileNativePDB::FindTypesByName(llvm::StringRef name,
-                                            uint32_t max_matches,
-                                            TypeMap &types) {
+void SymbolFileNativePDB::FindTypesByName(llvm::StringRef name,
+                                          uint32_t max_matches,
+                                          TypeMap &types) {
 
-  size_t match_count = 0;
   std::vector<TypeIndex> matches = m_index->tpi().findRecordsByName(name);
   if (max_matches > 0 && max_matches < matches.size())
     matches.resize(max_matches);
@@ -1287,9 +1282,7 @@ size_t SymbolFileNativePDB::FindTypesByName(llvm::StringRef name,
       continue;
 
     types.Insert(type);
-    ++match_count;
   }
-  return match_count;
 }
 
 size_t SymbolFileNativePDB::ParseTypes(CompileUnit &comp_unit) {
@@ -1578,11 +1571,9 @@ bool SymbolFileNativePDB::CompleteType(CompilerType &compiler_type) {
   return m_ast->CompleteType(qt);
 }
 
-size_t SymbolFileNativePDB::GetTypes(lldb_private::SymbolContextScope *sc_scope,
-                                     TypeClass type_mask,
-                                     lldb_private::TypeList &type_list) {
-  return 0;
-}
+void SymbolFileNativePDB::GetTypes(lldb_private::SymbolContextScope *sc_scope,
+                                   TypeClass type_mask,
+                                   lldb_private::TypeList &type_list) {}
 
 CompilerDeclContext
 SymbolFileNativePDB::FindNamespace(ConstString name,
