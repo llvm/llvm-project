@@ -137,6 +137,8 @@ llvm::Optional<QualType> getDeducedType(ASTContext &, SourceLocation Loc);
 /// InsertionPoint. i.e, if you have `using namespace
 /// clang::clangd::bar`, this function will return an empty string for the
 /// example above since no qualification is necessary in that case.
+/// FIXME: Also take using directives and namespace aliases inside function body
+/// into account.
 std::string getQualification(ASTContext &Context,
                              const DeclContext *DestContext,
                              SourceLocation InsertionPoint,
