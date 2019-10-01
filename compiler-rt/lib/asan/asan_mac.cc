@@ -1,9 +1,8 @@
 //===-- asan_mac.cc -------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -182,8 +181,8 @@ void asan_register_worker_thread(int parent_tid, StackTrace *stack) {
     t = AsanThread::Create(/* start_routine */ nullptr, /* arg */ nullptr,
                            parent_tid, stack, /* detached */ true);
     t->Init();
-    asanThreadRegistry().StartThread(t->tid(), GetTid(),
-                                     /* workerthread */ true, 0);
+    asanThreadRegistry().StartThread(t->tid(), GetTid(), ThreadType::Worker,
+                                     nullptr);
     SetCurrentThread(t);
   }
 }

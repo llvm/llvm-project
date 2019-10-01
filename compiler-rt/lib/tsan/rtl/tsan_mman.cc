@@ -1,9 +1,8 @@
 //===-- tsan_mman.cc ------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -200,6 +199,16 @@ void *user_calloc(ThreadState *thr, uptr pc, uptr size, uptr n) {
   if (p)
     internal_memset(p, 0, n * size);
   return SetErrnoOnNull(p);
+}
+
+void *user_reallocarray(ThreadState *thr, uptr pc, void *p, uptr size, uptr n) {
+  if (UNLIKELY(CheckForCallocOverflow(size, n))) {
+    if (AllocatorMayReturnNull())
+      return SetErrnoOnNull(nullptr);
+    GET_STACK_TRACE_FATAL(thr, pc);
+    ReportReallocArrayOverflow(size, n, &stack);
+  }
+  return user_realloc(thr, pc, p, size * n);
 }
 
 void OnUserAlloc(ThreadState *thr, uptr pc, uptr p, uptr sz, bool write) {

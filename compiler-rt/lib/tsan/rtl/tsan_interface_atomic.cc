@@ -1,9 +1,8 @@
 //===-- tsan_interface_atomic.cc ------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -475,7 +474,7 @@ static morder convert_morder(morder mo) {
 
 #define SCOPED_ATOMIC(func, ...) \
     ThreadState *const thr = cur_thread(); \
-    if (thr->ignore_sync || thr->ignore_interceptors) { \
+    if (UNLIKELY(thr->ignore_sync || thr->ignore_interceptors)) { \
       ProcessPendingSignals(thr); \
       return NoTsanAtomic##func(__VA_ARGS__); \
     } \

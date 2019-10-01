@@ -13,7 +13,7 @@ int main(int argc, char **argv) {
       malloc(sizeof(*handle) + MAX_HANDLE_SZ));
 
   handle->handle_bytes = MAX_HANDLE_SZ;
-  int res = name_to_handle_at(AT_FDCWD, argv[0], handle, &mount_id, 0);
+  int res = name_to_handle_at(AT_FDCWD, "/dev/null", handle, &mount_id, 0);
   assert(!res);
 
   free(handle);

@@ -1,9 +1,8 @@
 /*===- InstrProfiling.h- Support library for PGO instrumentation ----------===*\
 |*
-|*                     The LLVM Compiler Infrastructure
-|*
-|* This file is distributed under the University of Illinois Open Source
-|* License. See LICENSE.TXT for details.
+|* Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+|* See https://llvm.org/LICENSE.txt for license information.
+|* SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 |*
 \*===----------------------------------------------------------------------===*/
 
@@ -16,7 +15,7 @@
 #include "InstrProfData.inc"
 
 enum ValueKind {
-#define VALUE_PROF_KIND(Enumerator, Value) Enumerator = Value,
+#define VALUE_PROF_KIND(Enumerator, Value, Descr) Enumerator = Value,
 #include "InstrProfData.inc"
 };
 
@@ -65,6 +64,7 @@ uint64_t *__llvm_profile_begin_counters(void);
 uint64_t *__llvm_profile_end_counters(void);
 ValueProfNode *__llvm_profile_begin_vnodes();
 ValueProfNode *__llvm_profile_end_vnodes();
+uint32_t *__llvm_profile_begin_orderfile();
 
 /*!
  * \brief Clear profile counters to zero.
@@ -121,6 +121,7 @@ void __llvm_profile_instrument_target_value(uint64_t TargetValue, void *Data,
  */
 int __llvm_profile_write_file(void);
 
+int __llvm_orderfile_write_file(void);
 /*!
  * \brief this is a wrapper interface to \c __llvm_profile_write_file.
  * After this interface is invoked, a arleady dumped flag will be set
@@ -142,6 +143,8 @@ int __llvm_profile_write_file(void);
  *  for different regions before dumping to avoid profile write clobbering.
  */
 int __llvm_profile_dump(void);
+
+int __llvm_orderfile_dump(void);
 
 /*!
  * \brief Set the filename for writing instrumentation data.
@@ -187,6 +190,14 @@ uint64_t __llvm_profile_get_version(void);
 /*! \brief Get the number of entries in the profile data section. */
 uint64_t __llvm_profile_get_data_size(const __llvm_profile_data *Begin,
                                       const __llvm_profile_data *End);
+
+/*!
+ * \brief Set the flag that profile data has been dumped to the file.
+ * This is useful for users to disable dumping profile data to the file for
+ * certain processes in case the processes don't have permission to write to
+ * the disks, and trying to do so would result in side effects such as crashes.
+ */
+void __llvm_profile_set_dumped();
 
 /*!
  * This variable is defined in InstrProfilingRuntime.cc as a hidden

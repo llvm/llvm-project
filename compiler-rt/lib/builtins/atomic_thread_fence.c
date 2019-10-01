@@ -1,16 +1,14 @@
-/*===-- atomic_thread_fence.c -----------------------------------------------===
- *
- *                     The LLVM Compiler Infrastructure
- *
- * This file is dual licensed under the MIT and the University of Illinois Open
- * Source Licenses. See LICENSE.TXT for details.
- *
- *===------------------------------------------------------------------------===
- *
- * This file implements atomic_thread_fence from C11's stdatomic.h.
- *
- *===------------------------------------------------------------------------===
- */
+//===-- atomic_thread_fence.c ---------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file implements atomic_thread_fence from C11's stdatomic.h.
+//
+//===----------------------------------------------------------------------===//
 
 #ifndef __has_include
 #define __has_include(inc) 0

@@ -1,9 +1,8 @@
 //===- FuzzerFlags.def - Run-time flags -------------------------*- C++ -* ===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 // Flags. FUZZER_FLAG_INT/FUZZER_FLAG_STRING macros should be defined at the
@@ -20,7 +19,10 @@ FUZZER_FLAG_INT(max_len, 0, "Maximum length of the test input. "
 FUZZER_FLAG_INT(len_control, 100, "Try generating small inputs first, "
   "then try larger inputs over time.  Specifies the rate at which the length "
   "limit is increased (smaller == faster).  If 0, immediately try inputs with "
-  "size up to max_len.")
+  "size up to max_len. Default value is 0, if LLVMFuzzerCustomMutator is used.")
+FUZZER_FLAG_STRING(seed_inputs, "A comma-separated list of input files "
+  "to use as an additional seed corpus. Alternatively, an \"@\" followed by "
+  "the name of a file containing the comma-seperated list.")
 FUZZER_FLAG_INT(cross_over, 1, "If 1, cross over inputs.")
 FUZZER_FLAG_INT(mutate_depth, 5,
             "Apply this number of consecutive mutations to each input.")
@@ -35,27 +37,26 @@ FUZZER_FLAG_INT(
     "If one unit runs more than this number of seconds the process will abort.")
 FUZZER_FLAG_INT(error_exitcode, 77, "When libFuzzer itself reports a bug "
   "this exit code will be used.")
-FUZZER_FLAG_INT(timeout_exitcode, 77, "When libFuzzer reports a timeout "
+FUZZER_FLAG_INT(timeout_exitcode, 70, "When libFuzzer reports a timeout "
   "this exit code will be used.")
 FUZZER_FLAG_INT(max_total_time, 0, "If positive, indicates the maximal total "
                                    "time in seconds to run the fuzzer.")
 FUZZER_FLAG_INT(help, 0, "Print help.")
+FUZZER_FLAG_INT(fork, 0, "Experimental mode where fuzzing happens "
+                "in a subprocess")
+FUZZER_FLAG_INT(ignore_timeouts, 1, "Ignore timeouts in fork mode")
+FUZZER_FLAG_INT(ignore_ooms, 1, "Ignore OOMs in fork mode")
+FUZZER_FLAG_INT(ignore_crashes, 0, "Ignore crashes in fork mode")
 FUZZER_FLAG_INT(merge, 0, "If 1, the 2-nd, 3-rd, etc corpora will be "
   "merged into the 1-st corpus. Only interesting units will be taken. "
   "This flag can be used to minimize a corpus.")
+FUZZER_FLAG_STRING(stop_file, "Stop fuzzing ASAP if this file exists")
 FUZZER_FLAG_STRING(merge_inner, "internal flag")
 FUZZER_FLAG_STRING(merge_control_file,
                    "Specify a control file used for the merge process. "
                    "If a merge process gets killed it tries to leave this file "
                    "in a state suitable for resuming the merge. "
                    "By default a temporary file will be used.")
-FUZZER_FLAG_STRING(save_coverage_summary, "Experimental:"
-                   " save coverage summary to a given file."
-                   " Used with -merge=1")
-FUZZER_FLAG_STRING(load_coverage_summary, "Experimental:"
-                   " load coverage summary from a given file."
-                   " Treat this coverage as belonging to the first corpus. "
-                   " Used with -merge=1")
 FUZZER_FLAG_INT(minimize_crash, 0, "If 1, minimizes the provided"
   " crash input. Use with -runs=N or -max_total_time=N to limit "
   "the number attempts."
@@ -68,6 +69,10 @@ FUZZER_FLAG_INT(cleanse_crash, 0, "If 1, tries to cleanse the provided"
   " Use with -exact_artifact_path to specify the output."
   )
 FUZZER_FLAG_INT(minimize_crash_internal_step, 0, "internal flag")
+FUZZER_FLAG_STRING(features_dir, "internal flag. Used to dump feature sets on disk."
+  "Every time a new input is added to the corpus, a corresponding file in the features_dir"
+  " is created containing the unique features of that input."
+  " Features are stored in binary format.")
 FUZZER_FLAG_INT(use_counters, 1, "Use coverage counters")
 FUZZER_FLAG_INT(use_memmem, 1,
                 "Use hints from intercepting memmem, strstr, etc")
@@ -107,18 +112,7 @@ FUZZER_FLAG_INT(print_corpus_stats, 0,
   "If 1, print statistics on corpus elements at exit.")
 FUZZER_FLAG_INT(print_coverage, 0, "If 1, print coverage information as text"
                                    " at exit.")
-FUZZER_FLAG_INT(dump_coverage, 0, "Deprecated."
-                                  " If 1, dump coverage information as a"
-                                  " .sancov file at exit.")
-FUZZER_FLAG_INT(handle_unstable, 0, "Experimental."
-                   " Executes every input 3 times in total if a unique feature"
-                   " is found during the first execution."
-                   " If 1, we only use the minimum hit count from the 3 runs"
-                   " to determine whether an input is interesting."
-                   " If 2, we disregard edges that are found unstable for"
-                   " feature collection.")
-FUZZER_FLAG_INT(print_unstable_stats, 0, "Experimental."
-				  " If 1, print unstable statistics at exit.")
+FUZZER_FLAG_INT(dump_coverage, 0, "Deprecated.")
 FUZZER_FLAG_INT(handle_segv, 1, "If 1, try to intercept SIGSEGV.")
 FUZZER_FLAG_INT(handle_bus, 1, "If 1, try to intercept SIGBUS.")
 FUZZER_FLAG_INT(handle_abrt, 1, "If 1, try to intercept SIGABRT.")
@@ -129,6 +123,9 @@ FUZZER_FLAG_INT(handle_term, 1, "If 1, try to intercept SIGTERM.")
 FUZZER_FLAG_INT(handle_xfsz, 1, "If 1, try to intercept SIGXFSZ.")
 FUZZER_FLAG_INT(handle_usr1, 1, "If 1, try to intercept SIGUSR1.")
 FUZZER_FLAG_INT(handle_usr2, 1, "If 1, try to intercept SIGUSR2.")
+FUZZER_FLAG_INT(lazy_counters, 0, "If 1, a performance optimization is"
+    "enabled for the 8bit inline counters. "
+    "Requires that libFuzzer successfully installs its SEGV handler")
 FUZZER_FLAG_INT(close_fd_mask, 0, "If 1, close stdout at startup; "
     "if 2, close stderr; if 3, close both. "
     "Be careful, this will also close e.g. stderr of asan.")
@@ -155,10 +152,12 @@ FUZZER_FLAG_INT(ignore_remaining_args, 0, "If 1, ignore all arguments passed "
                 "after this one. Useful for fuzzers that need to do their own "
                 "argument parsing.")
 FUZZER_FLAG_STRING(focus_function, "Experimental. "
-     "Fuzzing will focus on inputs that trigger calls to this function")
+     "Fuzzing will focus on inputs that trigger calls to this function. "
+     "If -focus_function=auto and -data_flow_trace is used, libFuzzer "
+     "will choose the focus functions automatically.")
 
-FUZZER_DEPRECATED_FLAG(run_equivalence_server)
-FUZZER_DEPRECATED_FLAG(use_equivalence_server)
 FUZZER_FLAG_INT(analyze_dict, 0, "Experimental")
 FUZZER_DEPRECATED_FLAG(use_clang_coverage)
 FUZZER_FLAG_STRING(data_flow_trace, "Experimental: use the data flow trace")
+FUZZER_FLAG_STRING(collect_data_flow,
+                   "Experimental: collect the data flow trace")

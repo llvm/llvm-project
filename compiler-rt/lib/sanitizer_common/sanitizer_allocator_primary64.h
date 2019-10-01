@@ -1,9 +1,8 @@
 //===-- sanitizer_allocator_primary64.h -------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -81,7 +80,8 @@ class SizeClassAllocator64 {
       CHECK_NE(NonConstSpaceBeg, ~(uptr)0);
     }
     SetReleaseToOSIntervalMs(release_to_os_interval_ms);
-    MapWithCallbackOrDie(SpaceEnd(), AdditionalSize());
+    MapWithCallbackOrDie(SpaceEnd(), AdditionalSize(),
+                         "SizeClassAllocator: region info");
     // Check that the RegionInfo array is aligned on the CacheLine size.
     DCHECK_EQ(SpaceEnd() % kCacheLineSize, 0);
   }
@@ -154,7 +154,7 @@ class SizeClassAllocator64 {
     return true;
   }
 
-  bool PointerIsMine(const void *p) {
+  bool PointerIsMine(const void *p) const {
     uptr P = reinterpret_cast<uptr>(p);
     if (kUsingConstantSpaceBeg && (kSpaceBeg % kSpaceSize) == 0)
       return P / kSpaceSize == kSpaceBeg / kSpaceSize;
@@ -189,7 +189,7 @@ class SizeClassAllocator64 {
     uptr beg = chunk_idx * size;
     uptr next_beg = beg + size;
     if (class_id >= kNumClasses) return nullptr;
-    RegionInfo *region = GetRegionInfo(class_id);
+    const RegionInfo *region = AddressSpaceView::Load(GetRegionInfo(class_id));
     if (region->mapped_user >= next_beg)
       return reinterpret_cast<void*>(reg_beg + beg);
     return nullptr;
@@ -200,7 +200,7 @@ class SizeClassAllocator64 {
     return ClassIdToSize(GetSizeClass(p));
   }
 
-  uptr ClassID(uptr size) { return SizeClassMap::ClassID(size); }
+  static uptr ClassID(uptr size) { return SizeClassMap::ClassID(size); }
 
   void *GetMetaData(const void *p) {
     uptr class_id = GetSizeClass(p);
@@ -634,8 +634,8 @@ class SizeClassAllocator64 {
     return reinterpret_cast<CompactPtrT *>(GetMetadataEnd(region_beg));
   }
 
-  bool MapWithCallback(uptr beg, uptr size) {
-    uptr mapped = address_range.Map(beg, size);
+  bool MapWithCallback(uptr beg, uptr size, const char *name) {
+    uptr mapped = address_range.Map(beg, size, name);
     if (UNLIKELY(!mapped))
       return false;
     CHECK_EQ(beg, mapped);
@@ -643,8 +643,8 @@ class SizeClassAllocator64 {
     return true;
   }
 
-  void MapWithCallbackOrDie(uptr beg, uptr size) {
-    CHECK_EQ(beg, address_range.MapOrDie(beg, size));
+  void MapWithCallbackOrDie(uptr beg, uptr size, const char *name) {
+    CHECK_EQ(beg, address_range.MapOrDie(beg, size, name));
     MapUnmapCallback().OnMap(beg, size);
   }
 
@@ -662,7 +662,8 @@ class SizeClassAllocator64 {
       uptr current_map_end = reinterpret_cast<uptr>(GetFreeArray(region_beg)) +
                              region->mapped_free_array;
       uptr new_map_size = new_mapped_free_array - region->mapped_free_array;
-      if (UNLIKELY(!MapWithCallback(current_map_end, new_map_size)))
+      if (UNLIKELY(!MapWithCallback(current_map_end, new_map_size,
+                                    "SizeClassAllocator: freearray")))
         return false;
       region->mapped_free_array = new_mapped_free_array;
     }
@@ -713,7 +714,8 @@ class SizeClassAllocator64 {
       if (UNLIKELY(IsRegionExhausted(region, class_id, user_map_size)))
         return false;
       if (UNLIKELY(!MapWithCallback(region_beg + region->mapped_user,
-                                    user_map_size)))
+                                    user_map_size,
+                                    "SizeClassAllocator: region data")))
         return false;
       stat->Add(AllocatorStatMapped, user_map_size);
       region->mapped_user += user_map_size;
@@ -733,7 +735,7 @@ class SizeClassAllocator64 {
           return false;
         if (UNLIKELY(!MapWithCallback(
             GetMetadataEnd(region_beg) - region->mapped_meta - meta_map_size,
-            meta_map_size)))
+            meta_map_size, "SizeClassAllocator: region metadata")))
           return false;
         region->mapped_meta += meta_map_size;
       }

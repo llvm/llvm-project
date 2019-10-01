@@ -1,9 +1,8 @@
 /*===- InstrProfilingValue.c - Support library for PGO instrumentation ----===*\
 |*
-|*                     The LLVM Compiler Infrastructure
-|*
-|* This file is distributed under the University of Illinois Open Source
-|* License. See LICENSE.TXT for details.
+|* Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+|* See https://llvm.org/LICENSE.txt for license information.
+|* SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 |*
 \*===----------------------------------------------------------------------===*/
 
@@ -32,7 +31,7 @@ static int hasNonDefaultValsPerSite = 0;
  * allocated by the compiler.  */
 COMPILER_RT_VISIBILITY ValueProfNode
     lprofValueProfNodes[INSTR_PROF_VNODE_POOL_SIZE] COMPILER_RT_SECTION(
-       COMPILER_RT_SEG INSTR_PROF_VNODES_SECT_NAME_STR);
+       COMPILER_RT_SEG INSTR_PROF_VNODES_SECT_NAME);
 #endif
 
 COMPILER_RT_VISIBILITY uint32_t VPMaxNumValsPerSite =

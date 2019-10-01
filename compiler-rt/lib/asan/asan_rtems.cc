@@ -1,9 +1,8 @@
 //===-- asan_rtems.cc -----------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -184,8 +183,8 @@ static void ThreadStartHook(void *hook, uptr os_id) {
   // Determine whether we are starting or restarting the thread.
   if (status == ThreadStatusCreated)
     // In lieu of AsanThread::ThreadStart.
-    asanThreadRegistry().StartThread(thread->tid(), os_id,
-                                     /*workerthread*/ false, nullptr);
+    asanThreadRegistry().StartThread(thread->tid(), os_id, ThreadType::Regular,
+                                     nullptr);
   else {
     // In a thread restart, a thread may resume execution at an
     // arbitrary function entry point, with its stack and TLS state

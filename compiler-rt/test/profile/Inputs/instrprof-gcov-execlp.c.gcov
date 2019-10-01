@@ -1,4 +1,4 @@
-//CHECK:        -:    0:Source:{{.*}}Inputs/instrprof-gcov-execlp.c
+//CHECK:        -:    0:Source:{{.*}}Inputs{{[/\\]}}instrprof-gcov-execlp.c
 //CHECK-NEXT:        -:    0:Graph:instrprof-gcov-execlp.gcno
 //CHECK-NEXT:        -:    0:Data:instrprof-gcov-execlp.gcda
 //CHECK-NEXT:        -:    0:Runs:1

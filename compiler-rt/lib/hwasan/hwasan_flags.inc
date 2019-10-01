@@ -1,9 +1,8 @@
 //===-- hwasan_flags.inc ------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -86,3 +85,16 @@ HWASAN_FLAG(int, stack_history_size, 1024,
             "The number of stack frames remembered per thread. "
             "Affects the quality of stack-related reports, but not the ability "
             "to find bugs.")
+
+// Malloc / free bisection. Only tag malloc and free calls when a hash of
+// allocation size and stack trace is between malloc_bisect_left and
+// malloc_bisect_right (both inclusive). [0, 0] range is special and disables
+// bisection (i.e. everything is tagged). Once the range is narrowed down
+// enough, use malloc_bisect_dump to see interesting allocations.
+HWASAN_FLAG(uptr, malloc_bisect_left, 0,
+            "Left bound of malloc bisection, inclusive.")
+HWASAN_FLAG(uptr, malloc_bisect_right, 0,
+            "Right bound of malloc bisection, inclusive.")
+HWASAN_FLAG(bool, malloc_bisect_dump, false,
+            "Print all allocations within [malloc_bisect_left, "
+            "malloc_bisect_right] range ")

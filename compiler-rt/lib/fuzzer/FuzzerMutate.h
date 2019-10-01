@@ -1,9 +1,8 @@
 //===- FuzzerMutate.h - Internal header for the Fuzzer ----------*- C++ -* ===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 // fuzzer::MutationDispatcher
@@ -64,7 +63,7 @@ public:
   /// Change a 1-, 2-, 4-, or 8-byte integer in interesting ways.
   size_t Mutate_ChangeBinaryInteger(uint8_t *Data, size_t Size, size_t MaxSize);
 
-  /// CrossOver Data with some other element of the corpus.
+  /// CrossOver Data with CrossOverWith.
   size_t Mutate_CrossOver(uint8_t *Data, size_t Size, size_t MaxSize);
 
   /// Applies one of the configured mutations.
@@ -89,7 +88,7 @@ public:
 
   void PrintRecommendedDictionary();
 
-  void SetCorpus(const InputCorpus *Corpus) { this->Corpus = Corpus; }
+  void SetCrossOverWith(const Unit *U) { CrossOverWith = U; }
 
   Random &GetRand() { return Rand; }
 
@@ -140,7 +139,7 @@ public:
   DictionaryEntry CmpDictionaryEntriesDeque[kCmpDictionaryEntriesDequeSize];
   size_t CmpDictionaryEntriesDequeIdx = 0;
 
-  const InputCorpus *Corpus = nullptr;
+  const Unit *CrossOverWith = nullptr;
   Vector<uint8_t> MutateInPlaceHere;
   Vector<uint8_t> MutateWithMaskTemp;
   // CustomCrossOver needs its own buffer as a custom implementation may call

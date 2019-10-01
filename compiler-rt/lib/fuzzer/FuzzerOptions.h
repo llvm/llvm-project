@@ -1,8 +1,7 @@
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 // fuzzer::FuzzingOptions
@@ -20,8 +19,13 @@ struct FuzzingOptions {
   size_t MaxLen = 0;
   size_t LenControl = 1000;
   int UnitTimeoutSec = 300;
-  int TimeoutExitCode = 77;
+  int TimeoutExitCode = 70;
+  int OOMExitCode = 71;
+  int InterruptExitCode = 72;
   int ErrorExitCode = 77;
+  bool IgnoreTimeouts = true;
+  bool IgnoreOOMs = true;
+  bool IgnoreCrashes = false;
   int MaxTotalTimeSec = 0;
   int RssLimitMb = 0;
   int MallocLimitMb = 0;
@@ -47,6 +51,9 @@ struct FuzzingOptions {
   std::string ExitOnItem;
   std::string FocusFunction;
   std::string DataFlowTrace;
+  std::string CollectDataFlow;
+  std::string FeaturesDir;
+  std::string StopFile;
   bool SaveArtifacts = true;
   bool PrintNEW = true; // Print a status line when new units are found;
   bool PrintNewCovPcs = false;
@@ -54,8 +61,6 @@ struct FuzzingOptions {
   bool PrintFinalStats = false;
   bool PrintCorpusStats = false;
   bool PrintCoverage = false;
-  bool PrintUnstableStats = false;
-  int HandleUnstable = 0;
   bool DumpCoverage = false;
   bool DetectLeaks = true;
   int PurgeAllocatorIntervalSec = 1;
@@ -70,6 +75,7 @@ struct FuzzingOptions {
   bool HandleXfsz = false;
   bool HandleUsr1 = false;
   bool HandleUsr2 = false;
+  bool LazyCounters = false;
 };
 
 }  // namespace fuzzer

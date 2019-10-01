@@ -1,9 +1,8 @@
 //===- FuzzerIOPosix.cpp - IO utils for Posix. ----------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 // IO functions implementation using Posix API.
@@ -79,6 +78,28 @@ void ListFilesInDirRecursive(const std::string &Dir, long *Epoch,
     *Epoch = E;
 }
 
+
+void IterateDirRecursive(const std::string &Dir,
+                         void (*DirPreCallback)(const std::string &Dir),
+                         void (*DirPostCallback)(const std::string &Dir),
+                         void (*FileCallback)(const std::string &Dir)) {
+  DirPreCallback(Dir);
+  DIR *D = opendir(Dir.c_str());
+  if (!D) return;
+  while (auto E = readdir(D)) {
+    std::string Path = DirPlusFile(Dir, E->d_name);
+    if (E->d_type == DT_REG || E->d_type == DT_LNK ||
+        (E->d_type == DT_UNKNOWN && IsFile(Path)))
+      FileCallback(Path);
+    else if ((E->d_type == DT_DIR ||
+             (E->d_type == DT_UNKNOWN && IsDirectory(Path))) &&
+             *E->d_name != '.')
+      IterateDirRecursive(Path, DirPreCallback, DirPostCallback, FileCallback);
+  }
+  closedir(D);
+  DirPostCallback(Dir);
+}
+
 char GetSeparator() {
   return '/';
 }
@@ -97,6 +118,10 @@ int DuplicateFile(int Fd) {
 
 void RemoveFile(const std::string &Path) {
   unlink(Path.c_str());
+}
+
+void RenameFile(const std::string &OldPath, const std::string &NewPath) {
+  rename(OldPath.c_str(), NewPath.c_str());
 }
 
 void DiscardOutput(int Fd) {
@@ -137,9 +162,21 @@ bool IsInterestingCoverageFile(const std::string &FileName) {
   return true;
 }
 
-
 void RawPrint(const char *Str) {
   write(2, Str, strlen(Str));
+}
+
+void MkDir(const std::string &Path) {
+  mkdir(Path.c_str(), 0700);
+}
+
+void RmDir(const std::string &Path) {
+  rmdir(Path.c_str());
+}
+
+const std::string &getDevNull() {
+  static const std::string devNull = "/dev/null";
+  return devNull;
 }
 
 }  // namespace fuzzer

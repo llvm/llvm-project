@@ -20,6 +20,7 @@ int main() {
   sink = (void *)&__sanitizer_malloc_stats;
   sink = (void *)&__sanitizer_calloc;
   sink = (void *)&__sanitizer_realloc;
+  sink = (void *)&__sanitizer_reallocarray;
   sink = (void *)&__sanitizer_malloc;
 
   // sanity check

@@ -1,9 +1,8 @@
 //===-- interception_linux.cc -----------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -513,10 +512,12 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
     case 0xc0854d:    // 4d 85 c0 : test r8, r8
     case 0xc2b60f:    // 0f b6 c2 : movzx eax, dl
     case 0xc03345:    // 45 33 c0 : xor r8d, r8d
+    case 0xc93345:    // 45 33 c9 : xor r9d, r9d
     case 0xdb3345:    // 45 33 DB : xor r11d, r11d
     case 0xd98b4c:    // 4c 8b d9 : mov r11, rcx
     case 0xd28b4c:    // 4c 8b d2 : mov r10, rdx
     case 0xc98b4c:    // 4C 8B C9 : mov r9, rcx
+    case 0xc18b4c:    // 4C 8B C1 : mov r8, rcx
     case 0xd2b60f:    // 0f b6 d2 : movzx edx, dl
     case 0xca2b48:    // 48 2b ca : sub rcx, rdx
     case 0x10b70f:    // 0f b7 10 : movzx edx, WORD PTR [rax]
@@ -524,6 +525,7 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
     case 0xd18b48:    // 48 8b d1 : mov rdx, rcx
     case 0xdc8b4c:    // 4c 8b dc : mov r11, rsp
     case 0xd18b4c:    // 4c 8b d1 : mov r10, rcx
+    case 0xE0E483:    // 83 E4 E0 : and esp, 0xFFFFFFE0
       return 3;
 
     case 0xec8348:    // 48 83 ec XX : sub rsp, XX
@@ -555,6 +557,9 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
     case 0x245c8948:  // 48 89 5c 24 XX : mov QWORD PTR [rsp + XX], rbx
     case 0x24748948:  // 48 89 74 24 XX : mov QWORD PTR [rsp + XX], rsi
     case 0x244C8948:  // 48 89 4C 24 XX : mov QWORD PTR [rsp + XX], rcx
+    case 0x24548948:  // 48 89 54 24 XX : mov QWORD PTR [rsp + XX], rdx
+    case 0x244c894c:  // 4c 89 4c 24 XX : mov QWORD PTR [rsp + XX], r9
+    case 0x2444894c:  // 4c 89 44 24 XX : mov QWORD PTR [rsp + XX], r8
       return 5;
     case 0x24648348:  // 48 83 64 24 XX : and QWORD PTR [rsp + XX], YY
       return 6;

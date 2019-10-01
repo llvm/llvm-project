@@ -1,9 +1,8 @@
 //===-- ledf2vfp.S - Implement ledf2vfp -----------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -13,7 +12,7 @@
 // extern double __ledf2vfp(double a, double b);
 //
 // Returns one iff a <= b and neither is NaN.
-// Uses Darwin calling convention where double precision arguments are passsed 
+// Uses Darwin calling convention where double precision arguments are passsed
 // like in GPR pairs.
 //
 	.syntax unified

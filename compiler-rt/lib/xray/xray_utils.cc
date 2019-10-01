@@ -1,9 +1,8 @@
 //===-- xray_utils.cc -------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -79,7 +78,7 @@ void LogWriter::Flush() XRAY_NEVER_INSTRUMENT {
 LogWriter *LogWriter::Open() XRAY_NEVER_INSTRUMENT {
   // Create VMO to hold the profile data.
   zx_handle_t Vmo;
-  zx_status_t Status = _zx_vmo_create(0, 0, &Vmo);
+  zx_status_t Status = _zx_vmo_create(0, ZX_VMO_RESIZABLE, &Vmo);
   if (Status != ZX_OK) {
     Report("XRay: cannot create VMO: %s\n", _zx_status_get_string(Status));
     return nullptr;

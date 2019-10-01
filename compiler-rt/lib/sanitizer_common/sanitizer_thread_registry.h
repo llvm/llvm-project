@@ -1,9 +1,8 @@
 //===-- sanitizer_thread_registry.h -----------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -29,6 +28,12 @@ enum ThreadStatus {
   ThreadStatusDead       // Joined, but some info is still available.
 };
 
+enum class ThreadType {
+  Regular, // Normal thread
+  Worker,  // macOS Grand Central Dispatch (GCD) worker thread
+  Fiber,   // Fiber
+};
+
 // Generic thread context. Specific sanitizer tools may inherit from it.
 // If thread is dead, context may optionally be reused for a new thread.
 class ThreadContextBase {
@@ -45,7 +50,7 @@ class ThreadContextBase {
 
   ThreadStatus status;
   bool detached;
-  bool workerthread;
+  ThreadType thread_type;
 
   u32 parent_tid;
   ThreadContextBase *next;  // For storing thread contexts in a list.
@@ -57,7 +62,7 @@ class ThreadContextBase {
   void SetDead();
   void SetJoined(void *arg);
   void SetFinished();
-  void SetStarted(tid_t _os_id, bool _workerthread, void *arg);
+  void SetStarted(tid_t _os_id, ThreadType _thread_type, void *arg);
   void SetCreated(uptr _user_id, u64 _unique_id, bool _detached,
                   u32 _parent_tid, void *arg);
   void Reset();
@@ -121,7 +126,7 @@ class ThreadRegistry {
   void DetachThread(u32 tid, void *arg);
   void JoinThread(u32 tid, void *arg);
   void FinishThread(u32 tid);
-  void StartThread(u32 tid, tid_t os_id, bool workerthread, void *arg);
+  void StartThread(u32 tid, tid_t os_id, ThreadType thread_type, void *arg);
   void SetThreadUserId(u32 tid, uptr user_id);
 
  private:

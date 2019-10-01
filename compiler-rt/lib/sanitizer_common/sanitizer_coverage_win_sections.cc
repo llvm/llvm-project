@@ -1,9 +1,8 @@
 //===-- sanitizer_coverage_win_sections.cc --------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -27,35 +26,40 @@
 #include "sanitizer_platform.h"
 #if SANITIZER_WINDOWS
 #include <stdint.h>
-extern "C" {
-// The Guard array and counter array should both be merged into the .data
-// section to reduce the number of PE sections However, because PCTable is
-// constant it should be merged with the .rdata section.
-#pragma section(".SCOV$GA", read, write)  // NOLINT
-// Use align(1) to avoid adding any padding that will mess up clients trying to
-// determine the start and end of the array.
-__declspec(allocate(".SCOV$GA")) __declspec(align(1)) uint64_t
-    __start___sancov_guards = 0;
-#pragma section(".SCOV$GZ", read, write)  // NOLINT
-__declspec(allocate(".SCOV$GZ")) __declspec(align(1)) uint64_t
-    __stop___sancov_guards = 0;
 
+extern "C" {
+// Use uint64_t so the linker won't need to add any padding if it tries to word
+// align the start of the 8-bit counters array. The array will always start 8
+// bytes after __start_sancov_cntrs.
 #pragma section(".SCOV$CA", read, write)  // NOLINT
-__declspec(allocate(".SCOV$CA")) __declspec(align(1)) uint64_t
-    __start___sancov_cntrs = 0;
+__declspec(allocate(".SCOV$CA")) uint64_t __start___sancov_cntrs = 0;
+
+// Even though we said not to align __stop__sancov_cntrs (using the "align"
+// declspec), MSVC's linker may try to align the section, .SCOV$CZ, containing
+// it. This can cause a mismatch between the number of PCs and counters since
+// each PCTable element is 8 bytes (unlike counters which are 1 byte) so no
+// padding would be added to align .SCOVP$Z, However, if .SCOV$CZ section is 1
+// byte, the linker won't try to align it on an 8-byte boundary, so use a
+// uint8_t for __stop_sancov_cntrs.
 #pragma section(".SCOV$CZ", read, write)  // NOLINT
-__declspec(allocate(".SCOV$CZ")) __declspec(align(1)) uint64_t
+__declspec(allocate(".SCOV$CZ")) __declspec(align(1)) uint8_t
     __stop___sancov_cntrs = 0;
 
+#pragma section(".SCOV$GA", read, write)  // NOLINT
+__declspec(allocate(".SCOV$GA")) uint64_t __start___sancov_guards = 0;
+#pragma section(".SCOV$GZ", read, write)  // NOLINT
+__declspec(allocate(".SCOV$GZ")) __declspec(align(1)) uint8_t
+    __stop___sancov_guards = 0;
+
+// The guard array and counter array should both be merged into the .data
+// section to reduce the number of PE sections. However, because PCTable is
+// constant it should be merged with the .rdata section.
 #pragma comment(linker, "/MERGE:.SCOV=.data")
 
-// Use uint64_t so there won't be any issues if the linker tries to word align
-// the pc array.
 #pragma section(".SCOVP$A", read)  // NOLINT
-__declspec(allocate(".SCOVP$A")) __declspec(align(1)) uint64_t
-    __start___sancov_pcs = 0;
+__declspec(allocate(".SCOVP$A")) uint64_t __start___sancov_pcs = 0;
 #pragma section(".SCOVP$Z", read)  // NOLINT
-__declspec(allocate(".SCOVP$Z")) __declspec(align(1)) uint64_t
+__declspec(allocate(".SCOVP$Z")) __declspec(align(1)) uint8_t
     __stop___sancov_pcs = 0;
 
 #pragma comment(linker, "/MERGE:.SCOVP=.rdata")

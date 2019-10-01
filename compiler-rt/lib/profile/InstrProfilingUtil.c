@@ -1,9 +1,8 @@
 /*===- InstrProfilingUtil.c - Support library for PGO instrumentation -----===*\
 |*
-|*                     The LLVM Compiler Infrastructure
-|*
-|* This file is distributed under the University of Illinois Open Source
-|* License. See LICENSE.TXT for details.
+|* Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+|* See https://llvm.org/LICENSE.txt for license information.
+|* SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 |*
 \*===----------------------------------------------------------------------===*/
 
@@ -24,7 +23,6 @@
 #include <sys/utsname.h>
 #endif
 
-#include <signal.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -82,7 +80,7 @@ void *lprofPtrFetchAdd(void **Mem, long ByteIncr) {
 
 #endif
 
-#ifdef _MSC_VER
+#ifdef _WIN32
 COMPILER_RT_VISIBILITY int lprofGetHostName(char *Name, int Len) {
   WCHAR Buffer[COMPILER_RT_MAX_HOSTLEN];
   DWORD BufferSize = sizeof(Buffer);
@@ -270,24 +268,6 @@ COMPILER_RT_VISIBILITY const char *lprofFindLastDirSeparator(const char *Path) {
     Sep = Sep2;
 #endif
   return Sep;
-}
-
-COMPILER_RT_VISIBILITY void lprofInstallSignalHandler(int sig,
-                                                      void (*handler)(int)) {
-#ifdef _WIN32
-  void (*err)(int) = signal(sig, handler);
-  if (err == SIG_ERR)
-    PROF_WARN("Unable to install an exit signal handler for %d (errno = %d).\n",
-              sig, errno);
-#else
-  struct sigaction sigact;
-  memset(&sigact, 0, sizeof(sigact));
-  sigact.sa_handler = handler;
-  int err = sigaction(sig, &sigact, NULL);
-  if (err)
-    PROF_WARN("Unable to install an exit signal handler for %d (errno = %d).\n",
-              sig, err);
-#endif
 }
 
 COMPILER_RT_VISIBILITY int lprofSuspendSigKill() {

@@ -1,9 +1,8 @@
 /*===- InstrProfilingPlatformFuchsia.c - Profile data Fuchsia platform ----===*\
 |*
-|*                     The LLVM Compiler Infrastructure
-|*
-|* This file is distributed under the University of Illinois Open Source
-|* License. See LICENSE.TXT for details.
+|* Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+|* See https://llvm.org/LICENSE.txt for license information.
+|* SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 |*
 \*===----------------------------------------------------------------------===*/
 /*
@@ -71,7 +70,7 @@ static uint32_t lprofVMOWriter(ProfDataWriter *This, ProfDataIOVec *IOVecs,
       return -1;
 
     /* Create VMO to hold the profile data. */
-    Status = _zx_vmo_create(0, 0, &__llvm_profile_vmo);
+    Status = _zx_vmo_create(0, ZX_VMO_RESIZABLE, &__llvm_profile_vmo);
     if (Status != ZX_OK)
       return -1;
 

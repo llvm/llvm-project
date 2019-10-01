@@ -3,3 +3,5 @@
 // RUN: %clang_profgen  -o %t -L %t.d -rpath %t.d  %S/Inputs/instrprof-merge-match.c -lt
 // RUN: %run %t
 
+rpath isn't supported on Windows.
+UNSUPPORTED: windows

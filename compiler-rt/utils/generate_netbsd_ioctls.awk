@@ -2,10 +2,9 @@
 
 #===-- generate_netbsd_ioctls.awk ------------------------------------------===#
 #
-#                     The LLVM Compiler Infrastructure
-#
-# This file is distributed under the University of Illinois Open Source
-# License. See LICENSE.TXT for details.
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
 #===------------------------------------------------------------------------===#
 #
@@ -152,7 +151,6 @@ FNR == 1 {
       $0 ~ /JOY_GET_X_OFFSET/ ||
       $0 ~ /CHIOGPICKER/ ||
       $0 ~ /SLIOCGUNIT/ ||
-      $0 ~ /SATIOSBUFSIZE/ ||
       $0 ~ /TUNSLMODE/ ||
       $0 ~ /CBQ_IF_ATTACH/ ||
       $0 ~ /CDNR_IF_ATTACH/ ||
@@ -256,10 +254,9 @@ END {
 
   pcmd("//===-- sanitizer_interceptors_ioctl_netbsd.inc -----------------*- C++ -*-===//")
   pcmd("//")
-  pcmd("//                     The LLVM Compiler Infrastructure")
-  pcmd("//")
-  pcmd("// This file is distributed under the University of Illinois Open Source")
-  pcmd("// License. See LICENSE.TXT for details.")
+  pcmd("// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.")
+  pcmd("// See https://llvm.org/LICENSE.txt for license information.")
+  pcmd("// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception")
   pcmd("//")
   pcmd("//===----------------------------------------------------------------------===//")
   pcmd("//")

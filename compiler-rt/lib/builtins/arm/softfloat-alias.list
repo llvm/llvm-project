@@ -1,5 +1,5 @@
 #
-# These are soft float functions which can be 
+# These are soft float functions which can be
 # aliased to the *vfp functions on arm processors
 # that support floating point instructions.
 #

@@ -1,15 +1,14 @@
 //===----------------------Hexagon builtin routine ------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 
-/* Functions that implement common sequences in function prologues and epilogues
-   used to save code size */
+// Functions that implement common sequences in function prologues and epilogues
+// used to save code size
 
 	.macro FUNCTION_BEGIN name
 	.text
@@ -34,17 +33,17 @@
 
 
 
-/* Save r27:26 at fp+#-8, r25:24 at fp+#-16, r23:22 at fp+#-24, r21:20 at
-   fp+#-32, r19:18 at fp+#-40, and r17:16 at fp+#-48. */
+// Save r27:26 at fp+#-8, r25:24 at fp+#-16, r23:22 at fp+#-24, r21:20 at
+// fp+#-32, r19:18 at fp+#-40, and r17:16 at fp+#-48.
 
 
 
 
-/* The compiler knows that the __save_* functions clobber LR.  No other
-   registers should be used without informing the compiler. */
+// The compiler knows that the __save_* functions clobber LR.  No other
+// registers should be used without informing the compiler.
 
-/* Since we can only issue one store per packet, we don't hurt performance by
-   simply jumping to the right point in this sequence of stores. */
+// Since we can only issue one store per packet, we don't hurt performance by
+// simply jumping to the right point in this sequence of stores.
 
 FUNCTION_BEGIN __save_r27_through_r16
 		memd(fp+#-48) = r17:16
@@ -65,10 +64,10 @@ FUNCTION_END __save_r27_through_r24
 
 
 
-/* For each of the *_before_sibcall functions, jumpr lr is executed in parallel
-   with deallocframe.  That way, the return gets the old value of lr, which is
-   where these functions need to return, and at the same time, lr gets the value
-   it needs going into the sibcall. */
+// For each of the *_before_sibcall functions, jumpr lr is executed in parallel
+// with deallocframe.  That way, the return gets the old value of lr, which is
+// where these functions need to return, and at the same time, lr gets the value
+// it needs going into the sibcall.
 
 FUNCTION_BEGIN __restore_r27_through_r20_and_deallocframe_before_sibcall
 	{
@@ -108,8 +107,8 @@ FUNCTION_END __restore_r27_through_r26_and_deallocframe_before_sibcall
 
 
 
-/* Here we use the extra load bandwidth to restore LR early, allowing the return
-   to occur in parallel with the deallocframe. */
+// Here we use the extra load bandwidth to restore LR early, allowing the return
+// to occur in parallel with the deallocframe.
 
 FUNCTION_BEGIN __restore_r27_through_r16_and_deallocframe
 	{
@@ -136,7 +135,7 @@ FUNCTION_END __restore_r27_through_r24_and_deallocframe
 
 
 
-/* Here the load bandwidth is maximized for all three functions. */
+// Here the load bandwidth is maximized for all three functions.
 
 FUNCTION_BEGIN __restore_r27_through_r18_and_deallocframe
 	{

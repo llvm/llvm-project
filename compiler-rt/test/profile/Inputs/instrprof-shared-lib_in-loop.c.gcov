@@ -1,4 +1,4 @@
-// CHECK:        -:    0:Source:{{.*}}Inputs/instrprof-shared-lib.c
+// CHECK:        -:    0:Source:{{.*}}Inputs{{[/\\]}}instrprof-shared-lib.c
 // CHECK-NEXT:        -:    0:Graph:instrprof-shared-lib.gcno
 // CHECK-NEXT:        -:    0:Data:instrprof-shared-lib.gcda
 // CHECK-NEXT:        -:    0:Runs:1

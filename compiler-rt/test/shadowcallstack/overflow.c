@@ -8,12 +8,10 @@
 // RUN: %clang_scs %s -o %t -DITERATIONS=3
 // RUN: %run %t | FileCheck %s
 
-// The behavioral check for SCS + overflow lives in the tests overflow-x86_64.c
-// and overflow-aarch64.c. This is because the expected behavior is different
-// between the two platforms. On x86_64 we crash because the comparison between
-// the shadow call stack and the regular stack fails. On aarch64 there is no
-// comparison, we just load the return address from the shadow call stack. So we
-// just expect not to see the output from print_and_exit.
+// On aarch64 we just load the return address from the shadow call stack so we
+// do not expect to see the output from print_and_exit.
+// RUN: %clang_scs %s -o %t -DITERATIONS=12
+// RUN: %run %t | FileCheck %S/overflow.c
 
 #include <stdio.h>
 #include <stdlib.h>

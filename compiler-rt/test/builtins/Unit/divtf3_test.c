@@ -1,10 +1,9 @@
 // RUN: %clang_builtins %s %librt -o %t && %run %t
 //===--------------- divtf3_test.c - Test __divtf3 ------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -29,8 +28,8 @@ int test__divtf3(long double a, long double b,
     int ret = compareResultLD(x, expectedHi, expectedLo);
 
     if (ret){
-        printf("error in test__divtf3(%.20Lf, %.20Lf) = %.20Lf, "
-               "expected %.20Lf\n", a, b, x,
+        printf("error in test__divtf3(%.20Le, %.20Le) = %.20Le, "
+               "expected %.20Le\n", a, b, x,
                fromRep128(expectedHi, expectedLo));
     }
     return ret;
@@ -86,6 +85,11 @@ int main()
                      0x1.edcba987d6bb3aa467754354321fp-4055L,
                      UINT64_C(0x50bf2e02f0798d36),
                      UINT64_C(0x5e6fcb6b60044078)))
+        return 1;
+    if (test__divtf3(6.72420628622418701252535563464350521E-4932L,
+                     2.L,
+                     UINT64_C(0x0001000000000000),
+                     UINT64_C(0)))
         return 1;
 
 #else

@@ -1,9 +1,8 @@
 //===-- sanitizer_posix.cc ------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -18,6 +17,7 @@
 
 #include "sanitizer_common.h"
 #include "sanitizer_file.h"
+#include "sanitizer_flags.h"
 #include "sanitizer_libc.h"
 #include "sanitizer_posix.h"
 #include "sanitizer_procmaps.h"
@@ -43,9 +43,8 @@ uptr GetMmapGranularity() {
 
 void *MmapOrDie(uptr size, const char *mem_type, bool raw_report) {
   size = RoundUpTo(size, GetPageSizeCached());
-  uptr res = internal_mmap(nullptr, size,
-                           PROT_READ | PROT_WRITE,
-                           MAP_PRIVATE | MAP_ANON, -1, 0);
+  uptr res = MmapNamed(nullptr, size, PROT_READ | PROT_WRITE,
+                       MAP_PRIVATE | MAP_ANON, mem_type);
   int reserrno;
   if (UNLIKELY(internal_iserror(res, &reserrno)))
     ReportMmapFailureAndDie(size, mem_type, "allocate", reserrno, raw_report);
@@ -66,9 +65,8 @@ void UnmapOrDie(void *addr, uptr size) {
 
 void *MmapOrDieOnFatalError(uptr size, const char *mem_type) {
   size = RoundUpTo(size, GetPageSizeCached());
-  uptr res = internal_mmap(nullptr, size,
-                           PROT_READ | PROT_WRITE,
-                           MAP_PRIVATE | MAP_ANON, -1, 0);
+  uptr res = MmapNamed(nullptr, size, PROT_READ | PROT_WRITE,
+                       MAP_PRIVATE | MAP_ANON, mem_type);
   int reserrno;
   if (UNLIKELY(internal_iserror(res, &reserrno))) {
     if (reserrno == ENOMEM)
@@ -103,12 +101,9 @@ void *MmapAlignedOrDieOnFatalError(uptr size, uptr alignment,
 }
 
 void *MmapNoReserveOrDie(uptr size, const char *mem_type) {
-  uptr PageSize = GetPageSizeCached();
-  uptr p = internal_mmap(nullptr,
-                         RoundUpTo(size, PageSize),
-                         PROT_READ | PROT_WRITE,
-                         MAP_PRIVATE | MAP_ANON | MAP_NORESERVE,
-                         -1, 0);
+  size = RoundUpTo(size, GetPageSizeCached());
+  uptr p = MmapNamed(nullptr, size, PROT_READ | PROT_WRITE,
+                     MAP_PRIVATE | MAP_ANON | MAP_NORESERVE, mem_type);
   int reserrno;
   if (UNLIKELY(internal_iserror(p, &reserrno)))
     ReportMmapFailureAndDie(size, mem_type, "allocate noreserve", reserrno);
@@ -116,13 +111,12 @@ void *MmapNoReserveOrDie(uptr size, const char *mem_type) {
   return (void *)p;
 }
 
-void *MmapFixedImpl(uptr fixed_addr, uptr size, bool tolerate_enomem) {
-  uptr PageSize = GetPageSizeCached();
-  uptr p = internal_mmap((void*)(fixed_addr & ~(PageSize - 1)),
-      RoundUpTo(size, PageSize),
-      PROT_READ | PROT_WRITE,
-      MAP_PRIVATE | MAP_ANON | MAP_FIXED,
-      -1, 0);
+static void *MmapFixedImpl(uptr fixed_addr, uptr size, bool tolerate_enomem,
+                           const char *name) {
+  size = RoundUpTo(size, GetPageSizeCached());
+  fixed_addr = RoundDownTo(fixed_addr, GetPageSizeCached());
+  uptr p = MmapNamed((void *)fixed_addr, size, PROT_READ | PROT_WRITE,
+                     MAP_PRIVATE | MAP_ANON | MAP_FIXED, name);
   int reserrno;
   if (UNLIKELY(internal_iserror(p, &reserrno))) {
     if (tolerate_enomem && reserrno == ENOMEM)
@@ -136,12 +130,12 @@ void *MmapFixedImpl(uptr fixed_addr, uptr size, bool tolerate_enomem) {
   return (void *)p;
 }
 
-void *MmapFixedOrDie(uptr fixed_addr, uptr size) {
-  return MmapFixedImpl(fixed_addr, size, false /*tolerate_enomem*/);
+void *MmapFixedOrDie(uptr fixed_addr, uptr size, const char *name) {
+  return MmapFixedImpl(fixed_addr, size, false /*tolerate_enomem*/, name);
 }
 
-void *MmapFixedOrDieOnFatalError(uptr fixed_addr, uptr size) {
-  return MmapFixedImpl(fixed_addr, size, true /*tolerate_enomem*/);
+void *MmapFixedOrDieOnFatalError(uptr fixed_addr, uptr size, const char *name) {
+  return MmapFixedImpl(fixed_addr, size, true /*tolerate_enomem*/, name);
 }
 
 bool MprotectNoAccess(uptr addr, uptr size) {
@@ -157,6 +151,8 @@ void MprotectMallocZones(void *addr, int prot) {}
 #endif
 
 fd_t OpenFile(const char *filename, FileAccessMode mode, error_t *errno_p) {
+  if (ShouldMockFailureToOpen(filename))
+    return kInvalidFd;
   int flags;
   switch (mode) {
     case RdOnly: flags = O_RDONLY; break;
@@ -230,6 +226,8 @@ static inline bool IntervalsAreSeparate(uptr start1, uptr end1,
 // memory).
 bool MemoryRangeIsAvailable(uptr range_start, uptr range_end) {
   MemoryMappingLayout proc_maps(/*cache_enabled*/true);
+  if (proc_maps.Error())
+    return true; // and hope for the best
   MemoryMappedSegment segment;
   while (proc_maps.Next(&segment)) {
     if (segment.start == segment.end) continue;  // Empty range.
@@ -333,6 +331,57 @@ fd_t ReserveStandardFds(fd_t fd) {
       internal_close(i);
   return fd;
 }
+
+bool ShouldMockFailureToOpen(const char *path) {
+  return common_flags()->test_only_emulate_no_memorymap &&
+         internal_strncmp(path, "/proc/", 6) == 0;
+}
+
+#if SANITIZER_LINUX && !SANITIZER_ANDROID && !SANITIZER_GO
+int GetNamedMappingFd(const char *name, uptr size, int *flags) {
+  if (!common_flags()->decorate_proc_maps || !name)
+    return -1;
+  char shmname[200];
+  CHECK(internal_strlen(name) < sizeof(shmname) - 10);
+  internal_snprintf(shmname, sizeof(shmname), "/dev/shm/%zu [%s]",
+                    internal_getpid(), name);
+  int fd = ReserveStandardFds(
+      internal_open(shmname, O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, S_IRWXU));
+  CHECK_GE(fd, 0);
+  int res = internal_ftruncate(fd, size);
+  CHECK_EQ(0, res);
+  res = internal_unlink(shmname);
+  CHECK_EQ(0, res);
+  *flags &= ~(MAP_ANON | MAP_ANONYMOUS);
+  return fd;
+}
+#else
+int GetNamedMappingFd(const char *name, uptr size, int *flags) {
+  return -1;
+}
+#endif
+
+#if SANITIZER_ANDROID
+#define PR_SET_VMA 0x53564d41
+#define PR_SET_VMA_ANON_NAME 0
+void DecorateMapping(uptr addr, uptr size, const char *name) {
+  if (!common_flags()->decorate_proc_maps || !name)
+    return;
+  internal_prctl(PR_SET_VMA, PR_SET_VMA_ANON_NAME, addr, size, (uptr)name);
+}
+#else
+void DecorateMapping(uptr addr, uptr size, const char *name) {
+}
+#endif
+
+uptr MmapNamed(void *addr, uptr length, int prot, int flags, const char *name) {
+  int fd = GetNamedMappingFd(name, length, &flags);
+  uptr res = internal_mmap(addr, length, prot, flags, fd, 0);
+  if (!internal_iserror(res))
+    DecorateMapping(res, length, name);
+  return res;
+}
+
 
 } // namespace __sanitizer
 

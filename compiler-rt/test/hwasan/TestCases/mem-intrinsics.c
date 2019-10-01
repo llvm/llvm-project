@@ -10,8 +10,8 @@
 #include <unistd.h>
 
 int main() {
-  char Q[16];
-  char P[16];
+  char Q[16] __attribute__((aligned(256)));
+  char P[16] __attribute__((aligned(256)));
 #if TEST_NO == 1
   memset(Q, 0, 32);
 #elif TEST_NO == 2
@@ -21,15 +21,17 @@ int main() {
 #endif
   write(STDOUT_FILENO, "recovered\n", 10);
   // WRITE: ERROR: HWAddressSanitizer: tag-mismatch on address
-  // WRITE: WRITE {{.*}} tags: [[PTR_TAG:..]]/[[MEM_TAG:..]] (ptr/mem)
+  // WRITE: WRITE of size 32 at {{.*}} tags: [[PTR_TAG:..]]/[[MEM_TAG:..]] (ptr/mem)
+  // WRITE: Invalid access starting at offset [16, 32)
   // WRITE: Memory tags around the buggy address (one tag corresponds to 16 bytes):
-  // WRITE: =>{{.*}}[[MEM_TAG]]
+  // WRITE: =>{{.*}}[[PTR_TAG]]{{[[:space:]]\[}}[[MEM_TAG]]
   // WRITE-NOT: recovered
 
   // READ: ERROR: HWAddressSanitizer: tag-mismatch on address
+  // READ-NOT: Invalid access starting at offset
   // READ: READ {{.*}} tags: [[PTR_TAG:..]]/[[MEM_TAG:..]] (ptr/mem)
   // READ: Memory tags around the buggy address (one tag corresponds to 16 bytes):
-  // READ: =>{{.*}}[[MEM_TAG]]
+  // READ: =>{{.*}}[[PTR_TAG]]{{[[:space:]]\[}}[[MEM_TAG]]
   // READ-NOT: recovered
 
   // RECOVER: recovered

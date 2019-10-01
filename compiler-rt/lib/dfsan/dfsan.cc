@@ -1,9 +1,8 @@
 //===-- dfsan.cc ----------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -163,6 +162,8 @@ static void dfsan_check_label(dfsan_label label) {
 // this function (the instrumentation pass inlines the equality test).
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
 dfsan_label __dfsan_union(dfsan_label l1, dfsan_label l2) {
+  if (flags().fast16labels)
+    return l1 | l2;
   DCHECK_NE(l1, l2);
 
   if (l1 == 0)
@@ -382,7 +383,7 @@ static void InitializeFlags() {
   FlagParser parser;
   RegisterCommonFlags(&parser);
   RegisterDfsanFlags(&parser, &flags());
-  parser.ParseString(GetEnv("DFSAN_OPTIONS"));
+  parser.ParseStringFromEnv("DFSAN_OPTIONS");
   InitializeCommonFlags();
   if (Verbosity()) ReportUnrecognizedFlags();
   if (common_flags()->help) parser.PrintFlagDescriptions();
@@ -418,6 +419,12 @@ static void dfsan_fini() {
     dfsan_dump_labels(fd);
     CloseFile(fd);
   }
+}
+
+extern "C" void dfsan_flush() {
+  UnmapOrDie((void*)ShadowAddr(), UnusedAddr() - ShadowAddr());
+  if (!MmapFixedNoReserve(ShadowAddr(), UnusedAddr() - ShadowAddr()))
+    Die();
 }
 
 static void dfsan_init(int argc, char **argv, char **envp) {

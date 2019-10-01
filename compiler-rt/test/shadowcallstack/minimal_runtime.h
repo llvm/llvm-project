@@ -4,10 +4,6 @@
 
 #pragma once
 
-#ifdef __x86_64__
-#include <asm/prctl.h>
-int arch_prctl(int code, void *addr);
-#endif
 #include <stdlib.h>
 #include <sys/mman.h>
 #include <sys/prctl.h>
@@ -21,10 +17,7 @@ static void __shadowcallstack_init() {
   if (stack == MAP_FAILED)
     abort();
 
-#if defined(__x86_64__)
-  if (arch_prctl(ARCH_SET_GS, stack))
-    abort();
-#elif defined(__aarch64__)
+#if defined(__aarch64__)
   __asm__ __volatile__("mov x18, %0" ::"r"(stack));
 #else
 #error Unsupported platform

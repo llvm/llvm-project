@@ -1,9 +1,8 @@
 //===-- extendsfdf2vfp.S - Implement extendsfdf2vfp -----------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -13,7 +12,7 @@
 // extern double __extendsfdf2vfp(float a);
 //
 // Converts single precision float to double precision result.
-// Uses Darwin calling convention where a single precision parameter is 
+// Uses Darwin calling convention where a single precision parameter is
 // passed in a GPR and a double precision result is returned in R0/R1 pair.
 //
 	.syntax unified

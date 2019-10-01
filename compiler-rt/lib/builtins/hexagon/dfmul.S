@@ -1,13 +1,12 @@
 //===----------------------Hexagon builtin routine ------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
-/* Double Precision Multiply */
+// Double Precision Multiply
 #define A r1:0
 #define AH r1
 #define AL r0
@@ -47,8 +46,8 @@
 #define BIAS 1024
 #define MANTISSA_TO_INT_BIAS 52
 
-/* Some constant to adjust normalization amount in error code */
-/* Amount to right shift the partial product to get to a denorm */
+// Some constant to adjust normalization amount in error code
+// Amount to right shift the partial product to get to a denorm
 #define FUDGE 5
 
 #define Q6_ALIAS(TAG) .global __qdsp_##TAG ; .set __qdsp_##TAG, __hexagon_##TAG
@@ -80,10 +79,10 @@ __hexagon_muldf3:
 		PP_ODD = mpyu(BTMPL,ATMPH)
 		BTMP = insert(ONE,#2,#62)
 	}
-	/* since we know that the MSB of the H registers is zero, we should never carry */
-	/* H <= 2^31-1.  L <= 2^32-1.  Therefore, HL <= 2^63-2^32-2^31+1 */
-	/* Adding 2 HLs, we get 2^64-3*2^32+2 maximum.  */
-	/* Therefore, we can add 3 2^32-1 values safely without carry.  We only need one. */
+	// since we know that the MSB of the H registers is zero, we should never carry
+	// H <= 2^31-1.  L <= 2^32-1.  Therefore, HL <= 2^63-2^32-2^31+1
+	// Adding 2 HLs, we get 2^64-3*2^32+2 maximum.
+	// Therefore, we can add 3 2^32-1 values safely without carry.  We only need one.
 	{
 		PP_LL = mpyu(ATMPL,BTMPL)
 		PP_ODD += mpyu(ATMPL,BTMPH)
@@ -99,10 +98,10 @@ __hexagon_muldf3:
 		p1 = cmp.eq(PP_LL_L,#0)		// 64 lsb's 0?
 		p1 = cmp.eq(PP_ODD_L,#0)	// 64 lsb's 0?
 	}
-	/*
-	 * PP_HH can have a maximum of 0x3FFF_FFFF_FFFF_FFFF or thereabouts
-	 * PP_HH can have a minimum of 0x1000_0000_0000_0000 or so
-	 */
+
+	// PP_HH can have a maximum of 0x3FFF_FFFF_FFFF_FFFF or thereabouts
+	// PP_HH can have a minimum of 0x1000_0000_0000_0000 or so
+
 #undef PP_ODD
 #undef PP_ODD_H
 #undef PP_ODD_L
@@ -137,15 +136,15 @@ __hexagon_muldf3:
 
 	.falign
 .Lpossible_unf:
-	/* We end up with a positive exponent */
-	/* But we may have rounded up to an exponent of 1. */
-	/* If the exponent is 1, if we rounded up to it
-	 * we need to also raise underflow
-	 * Fortunately, this is pretty easy to detect, we must have +/- 0x0010_0000_0000_0000
-	 * And the PP should also have more than one bit set
-	 */
-	/* Note: ATMP should have abs(PP_HH) */
-	/* Note: BTMPL should have 0x7FEFFFFF */
+	// We end up with a positive exponent
+	// But we may have rounded up to an exponent of 1.
+	// If the exponent is 1, if we rounded up to it
+	// we need to also raise underflow
+	// Fortunately, this is pretty easy to detect, we must have +/- 0x0010_0000_0000_0000
+	// And the PP should also have more than one bit set
+	//
+	// Note: ATMP should have abs(PP_HH)
+	// Note: BTMPL should have 0x7FEFFFFF
 	{
 		p0 = cmp.eq(AL,#0)
 		p0 = bitsclr(AH,BTMPL)
@@ -194,29 +193,25 @@ __hexagon_muldf3:
 		BTMPH = sub(EXP0,BTMPH)
 		TMP = #63				// max amount to shift
 	}
-	/* Underflow */
-	/*
-	 * PP_HH has the partial product with sticky LSB.
-	 * PP_HH can have a maximum of 0x3FFF_FFFF_FFFF_FFFF or thereabouts
-	 * PP_HH can have a minimum of 0x1000_0000_0000_0000 or so
-	 * The exponent of PP_HH is in  EXP1, which is non-positive (0 or negative)
-	 * That's the exponent that happens after the normalization
-	 *
-	 * EXP0 has the exponent that, when added to the normalized value, is out of range.
-	 *
-	 * Strategy:
-	 *
-	 * * Shift down bits, with sticky bit, such that the bits are aligned according
-	 *   to the LZ count and appropriate exponent, but not all the way to mantissa
-	 *   field, keep around the last few bits.
-	 * * Put a 1 near the MSB
-	 * * Check the LSBs for inexact; if inexact also set underflow
-	 * * Convert [u]d2df -- will correctly round according to rounding mode
-	 * * Replace exponent field with zero
-	 *
-	 *
-	 */
-
+	// Underflow
+	//
+	// PP_HH has the partial product with sticky LSB.
+	// PP_HH can have a maximum of 0x3FFF_FFFF_FFFF_FFFF or thereabouts
+	// PP_HH can have a minimum of 0x1000_0000_0000_0000 or so
+	// The exponent of PP_HH is in  EXP1, which is non-positive (0 or negative)
+	// That's the exponent that happens after the normalization
+	//
+	// EXP0 has the exponent that, when added to the normalized value, is out of range.
+	//
+	// Strategy:
+	//
+	// * Shift down bits, with sticky bit, such that the bits are aligned according
+	//   to the LZ count and appropriate exponent, but not all the way to mantissa
+	//   field, keep around the last few bits.
+	// * Put a 1 near the MSB
+	// * Check the LSBs for inexact; if inexact also set underflow
+	// * Convert [u]d2df -- will correctly round according to rounding mode
+	// * Replace exponent field with zero
 
 	{
 		BTMPL = #0	 			// offset for extract

@@ -1,5 +1,6 @@
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 #include "../assembly.h"
 
@@ -22,10 +23,10 @@ DEFINE_COMPILERRT_FUNCTION(__ashrdi3)
 #endif
 
 	psrlq		%xmm2,		%xmm0	// unsigned shift input by count
-	
+
 	testl		%eax,		%eax	// check the sign-bit of the input
 	jns			1f					// early out for positive inputs
-	
+
 	// If the input is negative, we need to construct the shifted sign bit
 	// to or into the result, as xmm does not have a signed right shift.
 	pcmpeqb		%xmm1,		%xmm1	// -1ULL
@@ -35,7 +36,7 @@ DEFINE_COMPILERRT_FUNCTION(__ashrdi3)
 	psubq		%xmm1,		%xmm2	// 64 - count
 	psllq		%xmm2,		%xmm1	// -1 << (64 - count) = leading sign bits
 	por			%xmm1,		%xmm0
-	
+
 	// Move the result back to the general purpose registers and return
 1:	movd		%xmm0,		%eax
 	psrlq		$32,		%xmm0
@@ -51,14 +52,14 @@ DEFINE_COMPILERRT_FUNCTION(__ashrdi3)
 	movl	  12(%esp),		%ecx	// Load count
 	movl	   8(%esp),		%edx	// Load high
 	movl	   4(%esp),		%eax	// Load low
-	
+
 	testl		$0x20,		%ecx	// If count >= 32
 	jnz			1f					//    goto 1
 
 	shrdl		%cl, %edx,	%eax	// right shift low by count
 	sarl		%cl,		%edx	// right shift high by count
 	ret
-	
+
 1:	movl		%edx,		%eax	// Move high to low
 	sarl		$31,		%edx	// clear high
 	sarl		%cl,		%eax	// shift low by count - 32

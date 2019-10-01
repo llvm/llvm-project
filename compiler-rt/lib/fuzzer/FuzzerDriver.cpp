@@ -1,9 +1,8 @@
 //===- FuzzerDriver.cpp - FuzzerDriver function and flags -----------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 // FuzzerDriver and flag parsing.
@@ -11,12 +10,13 @@
 
 #include "FuzzerCommand.h"
 #include "FuzzerCorpus.h"
+#include "FuzzerFork.h"
 #include "FuzzerIO.h"
 #include "FuzzerInterface.h"
 #include "FuzzerInternal.h"
+#include "FuzzerMerge.h"
 #include "FuzzerMutate.h"
 #include "FuzzerRandom.h"
-#include "FuzzerShmem.h"
 #include "FuzzerTracePC.h"
 #include <algorithm>
 #include <atomic>
@@ -26,10 +26,16 @@
 #include <mutex>
 #include <string>
 #include <thread>
+#include <fstream>
 
 // This function should be present in the libFuzzer so that the client
 // binary can test for its existence.
+#if LIBFUZZER_MSVC
+extern "C" void __libfuzzer_is_present() {}
+#pragma comment(linker, "/include:__libfuzzer_is_present")
+#else
 extern "C" __attribute__((used)) void __libfuzzer_is_present() {}
+#endif  // LIBFUZZER_MSVC
 
 namespace fuzzer {
 
@@ -176,7 +182,8 @@ static bool ParseOneFlag(const char *Param) {
 }
 
 // We don't use any library to minimize dependencies.
-static void ParseFlags(const Vector<std::string> &Args) {
+static void ParseFlags(const Vector<std::string> &Args,
+                       const ExternalFunctions *EF) {
   for (size_t F = 0; F < kNumFlags; F++) {
     if (FlagDescriptions[F].IntFlag)
       *FlagDescriptions[F].IntFlag = FlagDescriptions[F].Default;
@@ -186,6 +193,11 @@ static void ParseFlags(const Vector<std::string> &Args) {
     if (FlagDescriptions[F].StrFlag)
       *FlagDescriptions[F].StrFlag = nullptr;
   }
+
+  // Disable len_control by default, if LLVMFuzzerCustomMutator is used.
+  if (EF->LLVMFuzzerCustomMutator)
+    Flags.len_control = 0;
+
   Inputs = new Vector<std::string>;
   for (size_t A = 1; A < Args.size(); A++) {
     if (ParseOneFlag(Args[A].c_str())) {
@@ -316,10 +328,8 @@ int CleanseCrashInput(const Vector<std::string> &Args,
   assert(Cmd.hasArgument(InputFilePath));
   Cmd.removeArgument(InputFilePath);
 
-  auto LogFilePath = DirPlusFile(
-      TmpDir(), "libFuzzerTemp." + std::to_string(GetPid()) + ".txt");
-  auto TmpFilePath = DirPlusFile(
-      TmpDir(), "libFuzzerTemp." + std::to_string(GetPid()) + ".repro");
+  auto LogFilePath = TempPath(".txt");
+  auto TmpFilePath = TempPath(".repro");
   Cmd.addArgument(TmpFilePath);
   Cmd.setOutputFile(LogFilePath);
   Cmd.combineOutAndErr();
@@ -379,8 +389,7 @@ int MinimizeCrashInput(const Vector<std::string> &Args,
     BaseCmd.addFlag("max_total_time", "600");
   }
 
-  auto LogFilePath = DirPlusFile(
-      TmpDir(), "libFuzzerTemp." + std::to_string(GetPid()) + ".txt");
+  auto LogFilePath = TempPath(".txt");
   BaseCmd.setOutputFile(LogFilePath);
   BaseCmd.combineOutAndErr();
 
@@ -464,6 +473,34 @@ int MinimizeCrashInputInternalStep(Fuzzer *F, InputCorpus *Corpus) {
   return 0;
 }
 
+void Merge(Fuzzer *F, FuzzingOptions &Options, const Vector<std::string> &Args,
+           const Vector<std::string> &Corpora, const char *CFPathOrNull) {
+  if (Corpora.size() < 2) {
+    Printf("INFO: Merge requires two or more corpus dirs\n");
+    exit(0);
+  }
+
+  Vector<SizedFile> OldCorpus, NewCorpus;
+  GetSizedFilesFromDir(Corpora[0], &OldCorpus);
+  for (size_t i = 1; i < Corpora.size(); i++)
+    GetSizedFilesFromDir(Corpora[i], &NewCorpus);
+  std::sort(OldCorpus.begin(), OldCorpus.end());
+  std::sort(NewCorpus.begin(), NewCorpus.end());
+
+  std::string CFPath = CFPathOrNull ? CFPathOrNull : TempPath(".txt");
+  Vector<std::string> NewFiles;
+  Set<uint32_t> NewFeatures, NewCov;
+  CrashResistantMerge(Args, OldCorpus, NewCorpus, &NewFiles, {}, &NewFeatures,
+                      {}, &NewCov, CFPath, true);
+  for (auto &Path : NewFiles)
+    F->WriteToOutputCorpus(FileToVector(Path, Options.MaxLen));
+  // We are done, delete the control file if it was a temporary one.
+  if (!Flags.merge_control_file)
+    RemoveFile(CFPath);
+
+  exit(0);
+}
+
 int AnalyzeDictionary(Fuzzer *F, const Vector<Unit>& Dict,
                       UnitVector& Corpus) {
   Printf("Started dictionary minimization (up to %d tests)\n",
@@ -530,6 +567,45 @@ int AnalyzeDictionary(Fuzzer *F, const Vector<Unit>& Dict,
   return 0;
 }
 
+Vector<std::string> ParseSeedInuts(const char *seed_inputs) {
+  // Parse -seed_inputs=file1,file2,... or -seed_inputs=@seed_inputs_file
+  Vector<std::string> Files;
+  if (!seed_inputs) return Files;
+  std::string SeedInputs;
+  if (Flags.seed_inputs[0] == '@')
+    SeedInputs = FileToString(Flags.seed_inputs + 1); // File contains list.
+  else
+    SeedInputs = Flags.seed_inputs; // seed_inputs contains the list.
+  if (SeedInputs.empty()) {
+    Printf("seed_inputs is empty or @file does not exist.\n");
+    exit(1);
+  }
+  // Parse SeedInputs.
+  size_t comma_pos = 0;
+  while ((comma_pos = SeedInputs.find_last_of(',')) != std::string::npos) {
+    Files.push_back(SeedInputs.substr(comma_pos + 1));
+    SeedInputs = SeedInputs.substr(0, comma_pos);
+  }
+  Files.push_back(SeedInputs);
+  return Files;
+}
+
+static Vector<SizedFile> ReadCorpora(const Vector<std::string> &CorpusDirs,
+    const Vector<std::string> &ExtraSeedFiles) {
+  Vector<SizedFile> SizedFiles;
+  size_t LastNumFiles = 0;
+  for (auto &Dir : CorpusDirs) {
+    GetSizedFilesFromDir(Dir, &SizedFiles);
+    Printf("INFO: % 8zd files found in %s\n", SizedFiles.size() - LastNumFiles,
+           Dir.c_str());
+    LastNumFiles = SizedFiles.size();
+  }
+  for (auto &File : ExtraSeedFiles)
+    if (auto Size = FileSize(File))
+      SizedFiles.push_back({File, Size});
+  return SizedFiles;
+}
+
 int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   using namespace fuzzer;
   assert(argc && argv && "Argument pointers cannot be nullptr");
@@ -546,7 +622,7 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
     Printf("ERROR: argv[0] has been modified in LLVMFuzzerInitialize\n");
     exit(1);
   }
-  ParseFlags(Args);
+  ParseFlags(Args, EF);
   if (Flags.help) {
     PrintHelp();
     return 0;
@@ -573,6 +649,9 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   Options.UnitTimeoutSec = Flags.timeout;
   Options.ErrorExitCode = Flags.error_exitcode;
   Options.TimeoutExitCode = Flags.timeout_exitcode;
+  Options.IgnoreTimeouts = Flags.ignore_timeouts;
+  Options.IgnoreOOMs = Flags.ignore_ooms;
+  Options.IgnoreCrashes = Flags.ignore_crashes;
   Options.MaxTotalTimeSec = Flags.max_total_time;
   Options.DoCrossOver = Flags.cross_over;
   Options.MutateDepth = Flags.mutate_depth;
@@ -609,19 +688,14 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
       return 1;
   if (Flags.verbosity > 0 && !Dictionary.empty())
     Printf("Dictionary: %zd entries\n", Dictionary.size());
-  bool DoPlainRun = AllInputsAreFiles();
+  bool RunIndividualFiles = AllInputsAreFiles();
   Options.SaveArtifacts =
-      !DoPlainRun || Flags.minimize_crash_internal_step;
+      !RunIndividualFiles || Flags.minimize_crash_internal_step;
   Options.PrintNewCovPcs = Flags.print_pcs;
   Options.PrintNewCovFuncs = Flags.print_funcs;
   Options.PrintFinalStats = Flags.print_final_stats;
   Options.PrintCorpusStats = Flags.print_corpus_stats;
   Options.PrintCoverage = Flags.print_coverage;
-  Options.PrintUnstableStats = Flags.print_unstable_stats;
-  if (Flags.handle_unstable == TracePC::MinUnstable ||
-      Flags.handle_unstable == TracePC::ZeroUnstable)
-    Options.HandleUnstable = Flags.handle_unstable;
-  Options.DumpCoverage = Flags.dump_coverage;
   if (Flags.exit_on_src_pos)
     Options.ExitOnSrcPos = Flags.exit_on_src_pos;
   if (Flags.exit_on_item)
@@ -630,6 +704,13 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
     Options.FocusFunction = Flags.focus_function;
   if (Flags.data_flow_trace)
     Options.DataFlowTrace = Flags.data_flow_trace;
+  if (Flags.features_dir)
+    Options.FeaturesDir = Flags.features_dir;
+  if (Flags.collect_data_flow)
+    Options.CollectDataFlow = Flags.collect_data_flow;
+  Options.LazyCounters = Flags.lazy_counters;
+  if (Flags.stop_file)
+    Options.StopFile = Flags.stop_file;
 
   unsigned Seed = Flags.seed;
   // Initialize Seed.
@@ -638,6 +719,15 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
         std::chrono::system_clock::now().time_since_epoch().count() + GetPid();
   if (Flags.verbosity)
     Printf("INFO: Seed: %u\n", Seed);
+
+  if (Flags.collect_data_flow && !Flags.fork && !Flags.merge) {
+    if (RunIndividualFiles)
+      return CollectDataFlow(Flags.collect_data_flow, Flags.data_flow_trace,
+                        ReadCorpora({}, *Inputs));
+    else
+      return CollectDataFlow(Flags.collect_data_flow, Flags.data_flow_trace,
+                        ReadCorpora(*Inputs, {}));
+  }
 
   Random Rand(Seed);
   auto *MD = new MutationDispatcher(Rand, Options);
@@ -673,35 +763,7 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   if (Flags.cleanse_crash)
     return CleanseCrashInput(Args, Options);
 
-#if 0  // deprecated, to be removed.
-  if (auto Name = Flags.run_equivalence_server) {
-    SMR.Destroy(Name);
-    if (!SMR.Create(Name)) {
-       Printf("ERROR: can't create shared memory region\n");
-      return 1;
-    }
-    Printf("INFO: EQUIVALENCE SERVER UP\n");
-    while (true) {
-      SMR.WaitClient();
-      size_t Size = SMR.ReadByteArraySize();
-      SMR.WriteByteArray(nullptr, 0);
-      const Unit tmp(SMR.GetByteArray(), SMR.GetByteArray() + Size);
-      F->ExecuteCallback(tmp.data(), tmp.size());
-      SMR.PostServer();
-    }
-    return 0;
-  }
-
-  if (auto Name = Flags.use_equivalence_server) {
-    if (!SMR.Open(Name)) {
-      Printf("ERROR: can't open shared memory region\n");
-      return 1;
-    }
-    Printf("INFO: EQUIVALENCE CLIENT UP\n");
-  }
-#endif
-
-  if (DoPlainRun) {
+  if (RunIndividualFiles) {
     Options.SaveArtifacts = false;
     int Runs = std::max(1, Flags.runs);
     Printf("%s: Running %zd inputs %d time(s) each.\n", ProgName->c_str(),
@@ -723,13 +785,11 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
     exit(0);
   }
 
-  if (Flags.merge) {
-    F->CrashResistantMerge(Args, *Inputs,
-                           Flags.load_coverage_summary,
-                           Flags.save_coverage_summary,
-                           Flags.merge_control_file);
-    exit(0);
-  }
+  if (Flags.fork)
+    FuzzWithFork(F->GetMD().GetRand(), Options, Args, *Inputs, Flags.fork);
+
+  if (Flags.merge)
+    Merge(F, Options, Args, *Inputs, Flags.merge_control_file);
 
   if (Flags.merge_inner) {
     const size_t kDefaultMaxMergeLen = 1 << 20;
@@ -761,7 +821,8 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
     exit(0);
   }
 
-  F->Loop(*Inputs);
+  auto CorporaFiles = ReadCorpora(*Inputs, ParseSeedInuts(Flags.seed_inputs));
+  F->Loop(CorporaFiles);
 
   if (Flags.verbosity)
     Printf("Done %zd runs in %zd second(s)\n", F->getTotalNumberOfRuns(),

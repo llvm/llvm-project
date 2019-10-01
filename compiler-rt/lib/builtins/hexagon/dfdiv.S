@@ -1,13 +1,12 @@
 //===----------------------Hexagon builtin routine ------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
-/* Double Precision Divide */
+// Double Precision Divide
 
 #define A r1:0
 #define AH r1
@@ -237,10 +236,10 @@ __hexagon_divdf3:
 		P_TMP = cmp.gt(EXPA,#0)
 		if (P_TMP.new) jump:nt .Lpossible_unf		// round up to normal possible...
 	}
-	/* Underflow */
-	/* We know what the infinite range exponent should be (EXPA) */
-	/* Q is 2's complement, PROD is abs(Q) */
-	/* Normalize Q, shift right, add a high bit, convert, change exponent */
+	// Underflow
+	// We know what the infinite range exponent should be (EXPA)
+	// Q is 2's complement, PROD is abs(Q)
+	// Normalize Q, shift right, add a high bit, convert, change exponent
 
 #define FUDGE1 7	// how much to shift right
 #define FUDGE2 4	// how many guard/round to keep at lsbs
@@ -287,8 +286,8 @@ __hexagon_divdf3:
 
 
 .Lpossible_unf:
-	/* If upper parts of Q were all F's, but abs(A) == 0x00100000_00000000, we rounded up to min_normal */
-	/* The answer is correct, but we need to raise Underflow */
+	// If upper parts of Q were all F's, but abs(A) == 0x00100000_00000000, we rounded up to min_normal
+	// The answer is correct, but we need to raise Underflow
 	{
 		B = extractu(A,#63,#0)
 		TMPPAIR = combine(##0x00100000,#0)		// min normal
@@ -321,9 +320,9 @@ __hexagon_divdf3:
 	}
 
 .Ldiv_ovf:
-	/*
-	 * Raise Overflow, and choose the correct overflow value (saturated normal or infinity)
-	 */
+
+	// Raise Overflow, and choose the correct overflow value (saturated normal or infinity)
+
 	{
 		TMP = USR
 		B = combine(##0x7fefffff,#-1)
@@ -389,8 +388,8 @@ __hexagon_divdf3:
 		if (!P_ZERO) jump .Ldiv_zero_result
 		if (!P_INF) jump .Ldiv_inf_result
 	}
-	/* Now we've narrowed it down to (de)normal / (de)normal */
-	/* Set up A/EXPA B/EXPB and go back */
+	// Now we've narrowed it down to (de)normal / (de)normal
+	// Set up A/EXPA B/EXPB and go back
 #undef P_ZERO
 #undef P_INF
 #define P_TMP2 p1

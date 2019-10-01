@@ -1,3 +1,5 @@
+// REQUIRES: sunrpc
+
 // RUN: %clang_tsan -O1 %s -o %t && %run %t 2>&1 | FileCheck %s
 
 #include <pthread.h>

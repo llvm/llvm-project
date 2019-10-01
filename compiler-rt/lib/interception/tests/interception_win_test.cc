@@ -1,9 +1,8 @@
 //===-- interception_win_test.cc ------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -207,6 +206,24 @@ const u8 kUnpatchableCode5[] = {
 const u8 kUnpatchableCode6[] = {
     0xE8, 0xCC, 0xCC, 0xCC, 0xCC,   // call <func>
     0x90, 0x90, 0x90, 0x90,
+};
+
+const u8 kPatchableCode6[] = {
+    0x48, 0x89, 0x54, 0x24, 0xBB, // mov QWORD PTR [rsp + 0xBB], rdx
+    0x33, 0xC9,                   // xor ecx,ecx
+    0xC3,                         // ret
+};
+
+const u8 kPatchableCode7[] = {
+    0x4c, 0x89, 0x4c, 0x24, 0xBB,  // mov QWORD PTR [rsp + 0xBB], r9
+    0x33, 0xC9,                   // xor ecx,ecx
+    0xC3,                         // ret
+};
+
+const u8 kPatchableCode8[] = {
+    0x4c, 0x89, 0x44, 0x24, 0xBB, // mov QWORD PTR [rsp + 0xBB], r8
+    0x33, 0xC9,                   // xor ecx,ecx
+    0xC3,                         // ret
 };
 
 // A buffer holding the dynamically generated code under test.
@@ -508,7 +525,6 @@ TEST(Interception, PatchableFunction) {
 #endif
   EXPECT_TRUE(TestFunctionPatching(kPatchableCode4, override));
   EXPECT_TRUE(TestFunctionPatching(kPatchableCode5, override));
-
 #if SANITIZER_WINDOWS64
   EXPECT_TRUE(TestFunctionPatching(kLoadGlobalCode, override));
 #endif
@@ -573,7 +589,11 @@ TEST(Interception, PatchableFunctionWithHotPatch) {
   EXPECT_FALSE(TestFunctionPatching(kPatchableCode2, override, prefix));
   EXPECT_FALSE(TestFunctionPatching(kPatchableCode3, override, prefix));
   EXPECT_FALSE(TestFunctionPatching(kPatchableCode4, override, prefix));
-
+#if SANITIZER_WINDOWS64
+  EXPECT_TRUE(TestFunctionPatching(kPatchableCode6, override, prefix));
+  EXPECT_TRUE(TestFunctionPatching(kPatchableCode7, override, prefix));
+  EXPECT_TRUE(TestFunctionPatching(kPatchableCode8, override, prefix));
+#endif
   EXPECT_FALSE(TestFunctionPatching(kUnpatchableCode1, override, prefix));
   EXPECT_TRUE(TestFunctionPatching(kUnpatchableCode2, override, prefix));
   EXPECT_FALSE(TestFunctionPatching(kUnpatchableCode3, override, prefix));

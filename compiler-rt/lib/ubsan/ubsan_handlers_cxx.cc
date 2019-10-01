@@ -1,9 +1,8 @@
 //===-- ubsan_handlers_cxx.cc ---------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -156,6 +155,51 @@ void __ubsan_handle_cfi_bad_type(CFICheckFailData *Data, ValueHandle Vtable,
   if (internal_strcmp(SrcModule, DstModule))
     Diag(Loc, DL_Note, ET, "check failed in %0, vtable located in %1")
         << SrcModule << DstModule;
+}
+
+static bool handleFunctionTypeMismatch(FunctionTypeMismatchData *Data,
+                                       ValueHandle Function,
+                                       ValueHandle calleeRTTI,
+                                       ValueHandle fnRTTI, ReportOptions Opts) {
+  if (checkTypeInfoEquality(reinterpret_cast<void *>(calleeRTTI),
+                            reinterpret_cast<void *>(fnRTTI)))
+    return false;
+
+  SourceLocation CallLoc = Data->Loc.acquire();
+  ErrorType ET = ErrorType::FunctionTypeMismatch;
+
+  if (ignoreReport(CallLoc, Opts, ET))
+    return true;
+
+  ScopedReport R(Opts, CallLoc, ET);
+
+  SymbolizedStackHolder FLoc(getSymbolizedLocation(Function));
+  const char *FName = FLoc.get()->info.function;
+  if (!FName)
+    FName = "(unknown)";
+
+  Diag(CallLoc, DL_Error, ET,
+       "call to function %0 through pointer to incorrect function type %1")
+      << FName << Data->Type;
+  Diag(FLoc, DL_Note, ET, "%0 defined here") << FName;
+  return true;
+}
+
+void __ubsan_handle_function_type_mismatch(FunctionTypeMismatchData *Data,
+                                           ValueHandle Function,
+                                           ValueHandle calleeRTTI,
+                                           ValueHandle fnRTTI) {
+  GET_REPORT_OPTIONS(false);
+  handleFunctionTypeMismatch(Data, Function, calleeRTTI, fnRTTI, Opts);
+}
+
+void __ubsan_handle_function_type_mismatch_abort(FunctionTypeMismatchData *Data,
+                                                 ValueHandle Function,
+                                                 ValueHandle calleeRTTI,
+                                                 ValueHandle fnRTTI) {
+  GET_REPORT_OPTIONS(true);
+  if (handleFunctionTypeMismatch(Data, Function, calleeRTTI, fnRTTI, Opts))
+    Die();
 }
 }  // namespace __ubsan
 

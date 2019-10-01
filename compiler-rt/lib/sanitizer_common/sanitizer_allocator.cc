@@ -1,9 +1,8 @@
 //===-- sanitizer_allocator.cc --------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -169,6 +168,18 @@ void *InternalRealloc(void *addr, uptr size, InternalAllocatorCache *cache) {
   if (UNLIKELY(!p))
     ReportInternalAllocatorOutOfMemory(size);
   return (char*)p + sizeof(u64);
+}
+
+void *InternalReallocArray(void *addr, uptr count, uptr size,
+                           InternalAllocatorCache *cache) {
+  if (UNLIKELY(CheckForCallocOverflow(count, size))) {
+    Report(
+        "FATAL: %s: reallocarray parameters overflow: count * size (%zd * %zd) "
+        "cannot be represented in type size_t\n",
+        SanitizerToolName, count, size);
+    Die();
+  }
+  return InternalRealloc(addr, count * size, cache);
 }
 
 void *InternalCalloc(uptr count, uptr size, InternalAllocatorCache *cache) {

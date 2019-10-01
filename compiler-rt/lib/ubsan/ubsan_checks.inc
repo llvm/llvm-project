@@ -1,9 +1,8 @@
 //===-- ubsan_checks.inc ----------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -21,6 +20,7 @@ UBSAN_CHECK(GenericUB, "undefined-behavior", "undefined")
 UBSAN_CHECK(NullPointerUse, "null-pointer-use", "null")
 UBSAN_CHECK(PointerOverflow, "pointer-overflow", "pointer-overflow")
 UBSAN_CHECK(MisalignedPointerUse, "misaligned-pointer-use", "alignment")
+UBSAN_CHECK(AlignmentAssumption, "alignment-assumption", "alignment")
 UBSAN_CHECK(InsufficientObjectSize, "insufficient-object-size", "object-size")
 UBSAN_CHECK(SignedIntegerOverflow, "signed-integer-overflow",
             "signed-integer-overflow")

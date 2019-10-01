@@ -1,9 +1,8 @@
 //===-- ubsan_handlers.cc -------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -103,6 +102,62 @@ void __ubsan::__ubsan_handle_type_mismatch_v1_abort(TypeMismatchData *Data,
                                                     ValueHandle Pointer) {
   GET_REPORT_OPTIONS(true);
   handleTypeMismatchImpl(Data, Pointer, Opts);
+  Die();
+}
+
+static void handleAlignmentAssumptionImpl(AlignmentAssumptionData *Data,
+                                          ValueHandle Pointer,
+                                          ValueHandle Alignment,
+                                          ValueHandle Offset,
+                                          ReportOptions Opts) {
+  Location Loc = Data->Loc.acquire();
+  SourceLocation AssumptionLoc = Data->AssumptionLoc.acquire();
+
+  ErrorType ET = ErrorType::AlignmentAssumption;
+
+  if (ignoreReport(Loc.getSourceLocation(), Opts, ET))
+    return;
+
+  ScopedReport R(Opts, Loc, ET);
+
+  uptr RealPointer = Pointer - Offset;
+  uptr LSB = LeastSignificantSetBitIndex(RealPointer);
+  uptr ActualAlignment = uptr(1) << LSB;
+
+  uptr Mask = Alignment - 1;
+  uptr MisAlignmentOffset = RealPointer & Mask;
+
+  if (!Offset) {
+    Diag(Loc, DL_Error, ET,
+         "assumption of %0 byte alignment for pointer of type %1 failed")
+        << Alignment << Data->Type;
+  } else {
+    Diag(Loc, DL_Error, ET,
+         "assumption of %0 byte alignment (with offset of %1 byte) for pointer "
+         "of type %2 failed")
+        << Alignment << Offset << Data->Type;
+  }
+
+  if (!AssumptionLoc.isInvalid())
+    Diag(AssumptionLoc, DL_Note, ET, "alignment assumption was specified here");
+
+  Diag(RealPointer, DL_Note, ET,
+       "%0address is %1 aligned, misalignment offset is %2 bytes")
+      << (Offset ? "offset " : "") << ActualAlignment << MisAlignmentOffset;
+}
+
+void __ubsan::__ubsan_handle_alignment_assumption(AlignmentAssumptionData *Data,
+                                                  ValueHandle Pointer,
+                                                  ValueHandle Alignment,
+                                                  ValueHandle Offset) {
+  GET_REPORT_OPTIONS(false);
+  handleAlignmentAssumptionImpl(Data, Pointer, Alignment, Offset, Opts);
+}
+void __ubsan::__ubsan_handle_alignment_assumption_abort(
+    AlignmentAssumptionData *Data, ValueHandle Pointer, ValueHandle Alignment,
+    ValueHandle Offset) {
+  GET_REPORT_OPTIONS(true);
+  handleAlignmentAssumptionImpl(Data, Pointer, Alignment, Offset, Opts);
   Die();
 }
 
@@ -540,42 +595,6 @@ void __ubsan::__ubsan_handle_invalid_builtin(InvalidBuiltinData *Data) {
 void __ubsan::__ubsan_handle_invalid_builtin_abort(InvalidBuiltinData *Data) {
   GET_REPORT_OPTIONS(true);
   handleInvalidBuiltin(Data, Opts);
-  Die();
-}
-
-static void handleFunctionTypeMismatch(FunctionTypeMismatchData *Data,
-                                       ValueHandle Function,
-                                       ReportOptions Opts) {
-  SourceLocation CallLoc = Data->Loc.acquire();
-  ErrorType ET = ErrorType::FunctionTypeMismatch;
-
-  if (ignoreReport(CallLoc, Opts, ET))
-    return;
-
-  ScopedReport R(Opts, CallLoc, ET);
-
-  SymbolizedStackHolder FLoc(getSymbolizedLocation(Function));
-  const char *FName = FLoc.get()->info.function;
-  if (!FName)
-    FName = "(unknown)";
-
-  Diag(CallLoc, DL_Error, ET,
-       "call to function %0 through pointer to incorrect function type %1")
-      << FName << Data->Type;
-  Diag(FLoc, DL_Note, ET, "%0 defined here") << FName;
-}
-
-void
-__ubsan::__ubsan_handle_function_type_mismatch(FunctionTypeMismatchData *Data,
-                                               ValueHandle Function) {
-  GET_REPORT_OPTIONS(false);
-  handleFunctionTypeMismatch(Data, Function, Opts);
-}
-
-void __ubsan::__ubsan_handle_function_type_mismatch_abort(
-    FunctionTypeMismatchData *Data, ValueHandle Function) {
-  GET_REPORT_OPTIONS(true);
-  handleFunctionTypeMismatch(Data, Function, Opts);
   Die();
 }
 

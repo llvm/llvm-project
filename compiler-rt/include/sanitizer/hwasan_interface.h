@@ -1,9 +1,8 @@
 //===-- sanitizer/asan_interface.h ------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -19,11 +18,15 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-  // Initialize shadow but not the rest of the runtime.
+  // Libc hook for program startup in statically linked executables.
+  // Initializes enough of the runtime to run instrumented code. This function
+  // should only be called in statically linked executables because it modifies
+  // the GOT, which won't work in regular binaries because RELRO will already
+  // have been applied by the time the function is called. This also means that
+  // the function should be called before libc applies RELRO.
   // Does not call libc unless there is an error.
-  // Can be called multiple times, or not at all (in which case shadow will
-  // be initialized in compiler-inserted __hwasan_init() call).
-  void __hwasan_shadow_init(void);
+  // Can be called multiple times.
+  void __hwasan_init_static(void);
 
   // This function may be optionally provided by user and should return
   // a string containing HWASan runtime options. See asan_flags.h for details.
@@ -47,6 +50,10 @@ extern "C" {
   // does would cause false reports.
   void __hwasan_handle_longjmp(const void *sp_dst);
 
+  // Set memory tag for the part of the current thread stack below sp_dst to
+  // zero. Call this in vfork() before returning in the parent process.
+  void __hwasan_handle_vfork(const void *sp_dst);
+
   // Libc hook for thread creation. Should be called in the child thread before
   // any instrumented code.
   void __hwasan_thread_enter();
@@ -62,6 +69,10 @@ extern "C" {
   // Print one-line report about the memory usage of the current process.
   void __hwasan_print_memory_usage();
 
+  /* Returns the offset of the first byte in the memory range that can not be
+   * accessed through the pointer in x, or -1 if the whole range is good. */
+  intptr_t __hwasan_test_shadow(const volatile void *x, size_t size);
+
   int __sanitizer_posix_memalign(void **memptr, size_t alignment, size_t size);
   void * __sanitizer_memalign(size_t alignment, size_t size);
   void * __sanitizer_aligned_alloc(size_t alignment, size_t size);
@@ -76,6 +87,7 @@ extern "C" {
   void __sanitizer_malloc_stats(void);
   void * __sanitizer_calloc(size_t nmemb, size_t size);
   void * __sanitizer_realloc(void *ptr, size_t size);
+  void * __sanitizer_reallocarray(void *ptr, size_t nmemb, size_t size);
   void * __sanitizer_malloc(size_t size);
 #ifdef __cplusplus
 }  // extern "C"

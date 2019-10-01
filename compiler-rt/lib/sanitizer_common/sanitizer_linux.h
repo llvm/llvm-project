@@ -1,9 +1,8 @@
 //===-- sanitizer_linux.h ---------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -59,10 +58,6 @@ uptr internal_prctl(int option, uptr arg2, uptr arg3, uptr arg4, uptr arg5);
 // (like the process-wide error reporting SEGV handler) must use
 // internal_sigaction instead.
 int internal_sigaction_norestorer(int signum, const void *act, void *oldact);
-#if (defined(__x86_64__) || SANITIZER_MIPS64) && !SANITIZER_GO
-// Uses a raw system call to avoid interceptors.
-int internal_sigaction_syscall(int signum, const void *act, void *oldact);
-#endif
 void internal_sigdelset(__sanitizer_sigset_t *set, int signum);
 #if defined(__x86_64__) || defined(__mips__) || defined(__aarch64__) \
   || defined(__powerpc64__) || defined(__s390__) || defined(__i386__) \
@@ -106,6 +101,17 @@ bool LibraryNameIs(const char *full_name, const char *base_name);
 // Call cb for each region mapped by map.
 void ForEachMappedRegion(link_map *map, void (*cb)(const void *, uptr));
 
+// Releases memory pages entirely within the [beg, end] address range.
+// The pages no longer count toward RSS; reads are guaranteed to return 0.
+// Requires (but does not verify!) that pages are MAP_PRIVATE.
+INLINE void ReleaseMemoryPagesToOSAndZeroFill(uptr beg, uptr end) {
+  // man madvise on Linux promises zero-fill for anonymous private pages.
+  // Testing shows the same behaviour for private (but not anonymous) mappings
+  // of shm_open() files, as long as the underlying file is untouched.
+  CHECK(SANITIZER_LINUX);
+  ReleaseMemoryPagesToOS(beg, end);
+}
+
 #if SANITIZER_ANDROID
 
 #if defined(__aarch64__)
@@ -134,13 +140,13 @@ void ForEachMappedRegion(link_map *map, void (*cb)(const void *, uptr));
 #error "Unsupported architecture."
 #endif
 
-// The Android Bionic team has allocated a TLS slot for TSan starting with N,
-// given that Android currently doesn't support ELF TLS. It is used to store
-// Sanitizers thread specific data.
-static const int TLS_SLOT_TSAN = 8;
+// The Android Bionic team has allocated a TLS slot for sanitizers starting
+// with Q, given that Android currently doesn't support ELF TLS. It is used to
+// store sanitizer thread specific data.
+static const int TLS_SLOT_SANITIZER = 6;
 
 ALWAYS_INLINE uptr *get_android_tls_ptr() {
-  return reinterpret_cast<uptr *>(&__get_tls()[TLS_SLOT_TSAN]);
+  return reinterpret_cast<uptr *>(&__get_tls()[TLS_SLOT_SANITIZER]);
 }
 
 #endif  // SANITIZER_ANDROID

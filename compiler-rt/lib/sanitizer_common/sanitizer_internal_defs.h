@@ -1,9 +1,8 @@
 //===-- sanitizer_internal_defs.h -------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -423,7 +422,6 @@ inline void Trap() {
 namespace __asan  { using namespace __sanitizer; }  // NOLINT
 namespace __dsan  { using namespace __sanitizer; }  // NOLINT
 namespace __dfsan { using namespace __sanitizer; }  // NOLINT
-namespace __esan  { using namespace __sanitizer; }  // NOLINT
 namespace __lsan  { using namespace __sanitizer; }  // NOLINT
 namespace __msan  { using namespace __sanitizer; }  // NOLINT
 namespace __hwasan  { using namespace __sanitizer; }  // NOLINT

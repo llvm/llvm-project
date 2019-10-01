@@ -1,9 +1,8 @@
 /*===- InstrProfilingPlatformDarwin.c - Profile data on Darwin ------------===*\
 |*
-|*                     The LLVM Compiler Infrastructure
-|*
-|* This file is distributed under the University of Illinois Open Source
-|* License. See LICENSE.TXT for details.
+|* Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+|* See https://llvm.org/LICENSE.txt for license information.
+|* SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 |*
 \*===----------------------------------------------------------------------===*/
 
@@ -13,28 +12,31 @@
 /* Use linker magic to find the bounds of the Data section. */
 COMPILER_RT_VISIBILITY
 extern __llvm_profile_data
-    DataStart __asm("section$start$__DATA$" INSTR_PROF_DATA_SECT_NAME_STR);
+    DataStart __asm("section$start$__DATA$" INSTR_PROF_DATA_SECT_NAME);
 COMPILER_RT_VISIBILITY
 extern __llvm_profile_data
-    DataEnd __asm("section$end$__DATA$" INSTR_PROF_DATA_SECT_NAME_STR);
+    DataEnd __asm("section$end$__DATA$" INSTR_PROF_DATA_SECT_NAME);
 COMPILER_RT_VISIBILITY
 extern char
-    NamesStart __asm("section$start$__DATA$" INSTR_PROF_NAME_SECT_NAME_STR);
+    NamesStart __asm("section$start$__DATA$" INSTR_PROF_NAME_SECT_NAME);
 COMPILER_RT_VISIBILITY
-extern char NamesEnd __asm("section$end$__DATA$" INSTR_PROF_NAME_SECT_NAME_STR);
-COMPILER_RT_VISIBILITY
-extern uint64_t
-    CountersStart __asm("section$start$__DATA$" INSTR_PROF_CNTS_SECT_NAME_STR);
+extern char NamesEnd __asm("section$end$__DATA$" INSTR_PROF_NAME_SECT_NAME);
 COMPILER_RT_VISIBILITY
 extern uint64_t
-    CountersEnd __asm("section$end$__DATA$" INSTR_PROF_CNTS_SECT_NAME_STR);
+    CountersStart __asm("section$start$__DATA$" INSTR_PROF_CNTS_SECT_NAME);
+COMPILER_RT_VISIBILITY
+extern uint64_t
+    CountersEnd __asm("section$end$__DATA$" INSTR_PROF_CNTS_SECT_NAME);
+COMPILER_RT_VISIBILITY
+extern uint32_t
+    OrderFileStart __asm("section$start$__DATA$" INSTR_PROF_ORDERFILE_SECT_NAME);
 
 COMPILER_RT_VISIBILITY
 extern ValueProfNode
-    VNodesStart __asm("section$start$__DATA$" INSTR_PROF_VNODES_SECT_NAME_STR);
+    VNodesStart __asm("section$start$__DATA$" INSTR_PROF_VNODES_SECT_NAME);
 COMPILER_RT_VISIBILITY
 extern ValueProfNode
-    VNodesEnd __asm("section$end$__DATA$" INSTR_PROF_VNODES_SECT_NAME_STR);
+    VNodesEnd __asm("section$end$__DATA$" INSTR_PROF_VNODES_SECT_NAME);
 
 COMPILER_RT_VISIBILITY
 const __llvm_profile_data *__llvm_profile_begin_data(void) {
@@ -50,6 +52,8 @@ COMPILER_RT_VISIBILITY
 uint64_t *__llvm_profile_begin_counters(void) { return &CountersStart; }
 COMPILER_RT_VISIBILITY
 uint64_t *__llvm_profile_end_counters(void) { return &CountersEnd; }
+COMPILER_RT_VISIBILITY
+uint32_t *__llvm_profile_begin_orderfile(void) { return &OrderFileStart; }
 
 COMPILER_RT_VISIBILITY
 ValueProfNode *__llvm_profile_begin_vnodes(void) {

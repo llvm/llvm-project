@@ -1,16 +1,15 @@
-/*===-- sync_fetch_and_max_8.S - ------------------------------------------===//
- *
- *                     The LLVM Compiler Infrastructure
- *
- * This file is dual licensed under the MIT and the University of Illinois Open
- * Source Licenses. See LICENSE.TXT for details.
- *
- *===----------------------------------------------------------------------===//
- *
- * This file implements the __sync_fetch_and_max_8 function for the ARM
- * architecture.
- *
- *===----------------------------------------------------------------------===*/
+//===-- sync_fetch_and_max_8.S - ------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file implements the __sync_fetch_and_max_8 function for the ARM
+// architecture.
+//
+//===----------------------------------------------------------------------===//
 
 #include "sync-ops.h"
 

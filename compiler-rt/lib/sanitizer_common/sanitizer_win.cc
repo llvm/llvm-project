@@ -1,9 +1,8 @@
 //===-- sanitizer_win.cc --------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -31,6 +30,18 @@
 
 #if defined(PSAPI_VERSION) && PSAPI_VERSION == 1
 #pragma comment(lib, "psapi")
+#endif
+#if SANITIZER_WIN_TRACE
+#include <traceloggingprovider.h>
+//  Windows trace logging provider init
+#pragma comment(lib, "advapi32.lib")
+TRACELOGGING_DECLARE_PROVIDER(g_asan_provider);
+// GUID must be the same in utils/AddressSanitizerLoggingProvider.wprp
+TRACELOGGING_DEFINE_PROVIDER(g_asan_provider, "AddressSanitizerLoggingProvider",
+                             (0x6c6c766d, 0x3846, 0x4e6a, 0xa4, 0xfb, 0x5b,
+                              0x53, 0x0b, 0xd0, 0xf3, 0xfa));
+#else
+#define TraceLoggingUnregister(x)
 #endif
 
 // A macro to tell the compiler that this part of the code cannot be reached,
@@ -230,7 +241,7 @@ bool MmapFixedNoReserve(uptr fixed_addr, uptr size, const char *name) {
 
 // Memory space mapped by 'MmapFixedOrDie' must have been reserved by
 // 'MmapFixedNoAccess'.
-void *MmapFixedOrDie(uptr fixed_addr, uptr size) {
+void *MmapFixedOrDie(uptr fixed_addr, uptr size, const char *name) {
   void *p = VirtualAlloc((LPVOID)fixed_addr, size,
       MEM_COMMIT, PAGE_READWRITE);
   if (p == 0) {
@@ -244,11 +255,12 @@ void *MmapFixedOrDie(uptr fixed_addr, uptr size) {
 
 // Uses fixed_addr for now.
 // Will use offset instead once we've implemented this function for real.
-uptr ReservedAddressRange::Map(uptr fixed_addr, uptr size) {
+uptr ReservedAddressRange::Map(uptr fixed_addr, uptr size, const char *name) {
   return reinterpret_cast<uptr>(MmapFixedOrDieOnFatalError(fixed_addr, size));
 }
 
-uptr ReservedAddressRange::MapOrDie(uptr fixed_addr, uptr size) {
+uptr ReservedAddressRange::MapOrDie(uptr fixed_addr, uptr size,
+                                    const char *name) {
   return reinterpret_cast<uptr>(MmapFixedOrDie(fixed_addr, size));
 }
 
@@ -261,7 +273,7 @@ void ReservedAddressRange::Unmap(uptr addr, uptr size) {
   UnmapOrDie(reinterpret_cast<void*>(addr), size);
 }
 
-void *MmapFixedOrDieOnFatalError(uptr fixed_addr, uptr size) {
+void *MmapFixedOrDieOnFatalError(uptr fixed_addr, uptr size, const char *name) {
   void *p = VirtualAlloc((LPVOID)fixed_addr, size,
       MEM_COMMIT, PAGE_READWRITE);
   if (p == 0) {
@@ -487,8 +499,14 @@ bool IsPathSeparator(const char c) {
   return c == '\\' || c == '/';
 }
 
+static bool IsAlpha(char c) {
+  c = ToLower(c);
+  return c >= 'a' && c <= 'z';
+}
+
 bool IsAbsolutePath(const char *path) {
-  UNIMPLEMENTED();
+  return path != nullptr && IsAlpha(path[0]) && path[1] == ':' &&
+         IsPathSeparator(path[2]);
 }
 
 void SleepForSeconds(int seconds) {
@@ -646,6 +664,7 @@ int Atexit(void (*function)(void)) {
 }
 
 static int RunAtexit() {
+  TraceLoggingUnregister(g_asan_provider);
   int ret = 0;
   for (uptr i = 0; i < atexit_functions.size(); ++i) {
     ret |= atexit(atexit_functions[i]);
@@ -743,6 +762,7 @@ uptr internal_sched_yield() {
 }
 
 void internal__exit(int exitcode) {
+  TraceLoggingUnregister(g_asan_provider);
   // ExitProcess runs some finalizers, so use TerminateProcess to avoid that.
   // The debugger doesn't stop on TerminateProcess like it does on ExitProcess,
   // so add our own breakpoint here.
@@ -1063,6 +1083,32 @@ u32 GetNumberOfCPUs() {
   GetNativeSystemInfo(&sysinfo);
   return sysinfo.dwNumberOfProcessors;
 }
+
+#if SANITIZER_WIN_TRACE
+// TODO(mcgov): Rename this project-wide to PlatformLogInit
+void AndroidLogInit(void) {
+  HRESULT hr = TraceLoggingRegister(g_asan_provider);
+  if (!SUCCEEDED(hr))
+    return;
+}
+
+void SetAbortMessage(const char *) {}
+
+void LogFullErrorReport(const char *buffer) {
+  if (common_flags()->log_to_syslog) {
+    InternalMmapVector<wchar_t> filename;
+    DWORD filename_length = 0;
+    do {
+      filename.resize(filename.size() + 0x100);
+      filename_length =
+          GetModuleFileNameW(NULL, filename.begin(), filename.size());
+    } while (filename_length >= filename.size());
+    TraceLoggingWrite(g_asan_provider, "AsanReportEvent",
+                      TraceLoggingValue(filename.begin(), "ExecutableName"),
+                      TraceLoggingValue(buffer, "AsanReportContents"));
+  }
+}
+#endif // SANITIZER_WIN_TRACE
 
 }  // namespace __sanitizer
 

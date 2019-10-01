@@ -1,9 +1,8 @@
 //===-- asan_interface_internal.h -------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -250,6 +249,8 @@ extern "C" {
 
   SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
   const char* __asan_default_suppressions();
+
+  SANITIZER_INTERFACE_ATTRIBUTE void __asan_handle_vfork(void *sp);
 }  // extern "C"
 
 #endif  // ASAN_INTERFACE_INTERNAL_H

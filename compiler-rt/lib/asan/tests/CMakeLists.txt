@@ -74,10 +74,6 @@ set(ASAN_UNITTEST_INSTRUMENTED_CFLAGS
   -fsanitize=address
   "-fsanitize-blacklist=${ASAN_BLACKLIST_FILE}"
 )
-if(CAN_TARGET_x86_64 OR CAN_TARGET_i386)
-  list(APPEND ASAN_UNITTEST_INSTRUMENTED_CFLAGS -mllvm -asan-instrument-assembly)
-endif()
-
 if(NOT MSVC)
   list(APPEND ASAN_UNITTEST_COMMON_LINK_FLAGS --driver-mode=g++)
 endif()
@@ -142,7 +138,6 @@ set(ASAN_NOINST_TEST_SOURCES
 
 set(ASAN_INST_TEST_SOURCES
   ${COMPILER_RT_GTEST_SOURCE}
-  asan_asm_test.cc
   asan_globals_test.cc
   asan_interface_test.cc
   asan_internal_interface_test.cc

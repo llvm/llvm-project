@@ -1,9 +1,8 @@
 //===- FuzzerCorpus.h - Internal header for the Fuzzer ----------*- C++ -* ===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 // fuzzer::InputCorpus
@@ -86,9 +85,10 @@ class InputCorpus {
 
   bool empty() const { return Inputs.empty(); }
   const Unit &operator[] (size_t Idx) const { return Inputs[Idx]->U; }
-  void AddToCorpus(const Unit &U, size_t NumFeatures, bool MayDeleteFile,
-                   bool HasFocusFunction, const Vector<uint32_t> &FeatureSet,
-                   const DataFlowTrace &DFT, const InputInfo *BaseII) {
+  InputInfo *AddToCorpus(const Unit &U, size_t NumFeatures, bool MayDeleteFile,
+                         bool HasFocusFunction,
+                         const Vector<uint32_t> &FeatureSet,
+                         const DataFlowTrace &DFT, const InputInfo *BaseII) {
     assert(!U.empty());
     if (FeatureDebug)
       Printf("ADD_TO_CORPUS %zd NF %zd\n", Inputs.size(), NumFeatures);
@@ -114,6 +114,7 @@ class InputCorpus {
     UpdateCorpusDistribution();
     PrintCorpus();
     // ValidateFeatureSet();
+    return &II;
   }
 
   // Debug-only
@@ -170,7 +171,7 @@ class InputCorpus {
     InputInfo &II = *Inputs[ChooseUnitIdxToMutate(Rand)];
     assert(!II.U.empty());
     return II;
-  };
+  }
 
   // Returns an index of random unit from the corpus to mutate.
   size_t ChooseUnitIdxToMutate(Random &Rand) {
@@ -236,12 +237,6 @@ class InputCorpus {
       return true;
     }
     return false;
-  }
-
-  bool IsFeatureNew(size_t Idx, uint32_t NewSize, bool Shrink) {
-    assert(NewSize);
-    uint32_t OldSize = GetFeature(Idx % kFeatureSetSize);
-    return OldSize == 0 || (Shrink && OldSize > NewSize);
   }
 
   size_t NumFeatures() const { return NumAddedFeatures; }

@@ -1,9 +1,9 @@
-//===-lib/fp_extend.h - low precision -> high precision conversion -*- C -*-===//
+//===-lib/fp_extend.h - low precision -> high precision conversion -*- C
+//-*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -30,12 +30,12 @@ typedef uint64_t src_rep_t;
 static const int srcSigBits = 52;
 static __inline int src_rep_t_clz(src_rep_t a) {
 #if defined __LP64__
-    return __builtin_clzl(a);
+  return __builtin_clzl(a);
 #else
-    if (a & REP_C(0xffffffff00000000))
-        return __builtin_clz(a >> 32);
-    else
-        return 32 + __builtin_clz(a & REP_C(0xffffffff));
+  if (a & REP_C(0xffffffff00000000))
+    return __builtin_clz(a >> 32);
+  else
+    return 32 + __builtin_clz(a & REP_C(0xffffffff));
 #endif
 }
 
@@ -48,7 +48,7 @@ static const int srcSigBits = 10;
 
 #else
 #error Source should be half, single, or double precision!
-#endif //end source precision
+#endif // end source precision
 
 #if defined DST_SINGLE
 typedef float dst_t;
@@ -70,20 +70,26 @@ static const int dstSigBits = 112;
 
 #else
 #error Destination should be single, double, or quad precision!
-#endif //end destination precision
+#endif // end destination precision
 
 // End of specialization parameters.  Two helper routines for conversion to and
 // from the representation of floating-point data as integer values follow.
 
 static __inline src_rep_t srcToRep(src_t x) {
-    const union { src_t f; src_rep_t i; } rep = {.f = x};
-    return rep.i;
+  const union {
+    src_t f;
+    src_rep_t i;
+  } rep = {.f = x};
+  return rep.i;
 }
 
 static __inline dst_t dstFromRep(dst_rep_t x) {
-    const union { dst_t f; dst_rep_t i; } rep = {.i = x};
-    return rep.f;
+  const union {
+    dst_t f;
+    dst_rep_t i;
+  } rep = {.i = x};
+  return rep.f;
 }
 // End helper routines.  Conversion implementation follows.
 
-#endif //FP_EXTEND_HEADER
+#endif // FP_EXTEND_HEADER

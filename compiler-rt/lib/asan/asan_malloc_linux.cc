@@ -1,9 +1,8 @@
 //===-- asan_malloc_linux.cc ----------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -165,6 +164,14 @@ INTERCEPTOR(void*, realloc, void *ptr, uptr size) {
   GET_STACK_TRACE_MALLOC;
   return asan_realloc(ptr, size, &stack);
 }
+
+#if SANITIZER_INTERCEPT_REALLOCARRAY
+INTERCEPTOR(void*, reallocarray, void *ptr, uptr nmemb, uptr size) {
+  ENSURE_ASAN_INITED();
+  GET_STACK_TRACE_MALLOC;
+  return asan_reallocarray(ptr, nmemb, size, &stack);
+}
+#endif  // SANITIZER_INTERCEPT_REALLOCARRAY
 
 #if SANITIZER_INTERCEPT_MEMALIGN
 INTERCEPTOR(void*, memalign, uptr boundary, uptr size) {

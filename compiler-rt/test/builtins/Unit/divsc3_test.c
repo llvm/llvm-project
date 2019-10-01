@@ -1,10 +1,9 @@
 // RUN: %clang_builtins %s %librt -lm -o %t && %run %t
 //===-- divsc3_test.c - Test __divsc3 -------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -103,7 +102,7 @@ int test__divsc3(float a, float b, float c, float d)
             {
             float _Complex z = (a * c + b * d) / (c * c + d * d)
                              + (b * c - a * d) / (c * c + d * d) * _Complex_I;
-            if (r != z)
+            if (cabsf((r-z)/r) > 1.e-6)
                 return 1;
             }
             break;

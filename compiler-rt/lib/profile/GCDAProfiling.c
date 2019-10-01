@@ -1,9 +1,8 @@
 /*===- GCDAProfiling.c - Support library for GCDA file emission -----------===*\
 |*
-|*                     The LLVM Compiler Infrastructure
-|*
-|* This file is distributed under the University of Illinois Open Source
-|* License. See LICENSE.TXT for details.
+|* Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+|* See https://llvm.org/LICENSE.txt for license information.
+|* SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 |* 
 |*===----------------------------------------------------------------------===*|
 |* 
@@ -269,14 +268,14 @@ static int map_file() {
 
   mmap_handle = CreateFileMapping(mmap_fd, NULL, PAGE_READWRITE, DWORD_HI(file_size), DWORD_LO(file_size), NULL);
   if (mmap_handle == NULL) {
-    fprintf(stderr, "profiling: %s: cannot create file mapping: %d\n", filename,
-            GetLastError());
+    fprintf(stderr, "profiling: %s: cannot create file mapping: %lu\n",
+            filename, GetLastError());
     return -1;
   }
 
   write_buffer = MapViewOfFile(mmap_handle, FILE_MAP_WRITE, 0, 0, file_size);
   if (write_buffer == NULL) {
-    fprintf(stderr, "profiling: %s: cannot map: %d\n", filename,
+    fprintf(stderr, "profiling: %s: cannot map: %lu\n", filename,
             GetLastError());
     CloseHandle(mmap_handle);
     return -1;
@@ -298,18 +297,18 @@ static int map_file() {
 static void unmap_file() {
 #if defined(_WIN32)
   if (!FlushViewOfFile(write_buffer, file_size)) {
-    fprintf(stderr, "profiling: %s: cannot flush mapped view: %d\n", filename,
+    fprintf(stderr, "profiling: %s: cannot flush mapped view: %lu\n", filename,
             GetLastError());
   }
 
   if (!UnmapViewOfFile(write_buffer)) {
-    fprintf(stderr, "profiling: %s: cannot unmap mapped view: %d\n", filename,
+    fprintf(stderr, "profiling: %s: cannot unmap mapped view: %lu\n", filename,
             GetLastError());
   }
 
   if (!CloseHandle(mmap_handle)) {
-    fprintf(stderr, "profiling: %s: cannot close file mapping handle: %d\n", filename,
-            GetLastError());
+    fprintf(stderr, "profiling: %s: cannot close file mapping handle: %lu\n",
+            filename, GetLastError());
   }
 
   mmap_handle = NULL;

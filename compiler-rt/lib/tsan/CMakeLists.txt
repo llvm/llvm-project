@@ -240,6 +240,7 @@ endif()
 
 # Build libcxx instrumented with TSan.
 if(COMPILER_RT_LIBCXX_PATH AND
+   COMPILER_RT_LIBCXXABI_PATH AND
    COMPILER_RT_TEST_COMPILER_ID STREQUAL "Clang" AND
    NOT ANDROID)
   set(libcxx_tsan_deps)
@@ -248,7 +249,7 @@ if(COMPILER_RT_LIBCXX_PATH AND
     set(LIBCXX_PREFIX ${CMAKE_CURRENT_BINARY_DIR}/libcxx_tsan_${arch})
     add_custom_libcxx(libcxx_tsan_${arch} ${LIBCXX_PREFIX}
       DEPS ${TSAN_RUNTIME_LIBRARIES}
-      CFLAGS ${TARGET_CFLAGS} -fsanitize=thread ${COMPILER_RT_TEST_LIBDISPATCH_CFLAGS}
+      CFLAGS ${TARGET_CFLAGS} -fsanitize=thread
       USE_TOOLCHAIN)
     list(APPEND libcxx_tsan_deps libcxx_tsan_${arch}-build)
   endforeach()

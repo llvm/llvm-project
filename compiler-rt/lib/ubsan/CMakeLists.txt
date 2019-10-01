@@ -6,18 +6,21 @@ set(UBSAN_SOURCES
   ubsan_flags.cc
   ubsan_handlers.cc
   ubsan_monitor.cc
-  ubsan_value.cc)
+  ubsan_value.cc
+  )
 
 set(UBSAN_STANDALONE_SOURCES
   ubsan_diag_standalone.cc
   ubsan_init_standalone.cc
-  ubsan_signals_standalone.cc)
+  ubsan_signals_standalone.cc
+  )
 
 set(UBSAN_CXXABI_SOURCES
   ubsan_handlers_cxx.cc
   ubsan_type_hash.cc
   ubsan_type_hash_itanium.cc
-  ubsan_type_hash_win.cc)
+  ubsan_type_hash_win.cc
+ )
 
 set(UBSAN_HEADERS
   ubsan_checks.inc
@@ -33,7 +36,7 @@ set(UBSAN_HEADERS
   ubsan_signals_standalone.h
   ubsan_type_hash.h
   ubsan_value.h
-)
+  )
 
 include_directories(..)
 
@@ -49,7 +52,7 @@ set(UBSAN_CXXFLAGS ${SANITIZER_COMMON_CFLAGS})
 append_rtti_flag(ON UBSAN_CXXFLAGS)
 append_list_if(SANITIZER_CAN_USE_CXXABI -DUBSAN_CAN_USE_CXXABI UBSAN_CXXFLAGS)
 
-set(UBSAN_DYNAMIC_LIBS ${SANITIZER_CXX_ABI_LIBRARY} ${SANITIZER_COMMON_LINK_LIBS})
+set(UBSAN_DYNAMIC_LIBS ${SANITIZER_CXX_ABI_LIBRARIES} ${SANITIZER_COMMON_LINK_LIBS})
 
 append_list_if(COMPILER_RT_HAS_LIBDL dl UBSAN_DYNAMIC_LIBS)
 append_list_if(COMPILER_RT_HAS_LIBLOG log UBSAN_DYNAMIC_LIBS)

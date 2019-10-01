@@ -1,9 +1,8 @@
 //===-- sanitizer_symbolizer_markup.cc ------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -118,7 +117,7 @@ _Unwind_Reason_Code Unwind_Trace(struct _Unwind_Context *ctx, void *param) {
                                              : _URC_NO_REASON);
 }
 
-void BufferedStackTrace::SlowUnwindStack(uptr pc, u32 max_depth) {
+void BufferedStackTrace::UnwindSlow(uptr pc, u32 max_depth) {
   CHECK_GE(max_depth, 2);
   size = 0;
   UnwindTraceArg arg = {this, Min(max_depth + 1, kStackTraceMax)};
@@ -133,9 +132,9 @@ void BufferedStackTrace::SlowUnwindStack(uptr pc, u32 max_depth) {
   trace_buffer[0] = pc;
 }
 
-void BufferedStackTrace::SlowUnwindStackWithContext(uptr pc, void *context,
-                                                    u32 max_depth) {
-  CHECK_NE(context, nullptr);
+void BufferedStackTrace::UnwindSlow(uptr pc, void *context, u32 max_depth) {
+  CHECK(context);
+  CHECK_GE(max_depth, 2);
   UNREACHABLE("signal context doesn't exist");
 }
 #endif  // SANITIZER_CAN_SLOW_UNWIND

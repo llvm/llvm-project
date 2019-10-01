@@ -1,9 +1,8 @@
 //===-- scudo_allocator.h ---------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -85,12 +84,6 @@ struct AP64 {
 };
 typedef SizeClassAllocator64<AP64> PrimaryT;
 #else
-static const uptr NumRegions = SANITIZER_MMAP_RANGE_SIZE >> RegionSizeLog;
-# if SANITIZER_WORDSIZE == 32
-typedef FlatByteMap<NumRegions> ByteMap;
-# elif SANITIZER_WORDSIZE == 64
-typedef TwoLevelByteMap<(NumRegions >> 12), 1 << 12> ByteMap;
-# endif  // SANITIZER_WORDSIZE
 struct AP32 {
   static const uptr kSpaceBeg = 0;
   static const u64 kSpaceSize = SANITIZER_MMAP_RANGE_SIZE;
@@ -98,7 +91,6 @@ struct AP32 {
   typedef __scudo::SizeClassMap SizeClassMap;
   static const uptr kRegionSizeLog = RegionSizeLog;
   using AddressSpaceView = LocalAddressSpaceView;
-  using ByteMap = __scudo::ByteMap;
   typedef NoOpMapUnmapCallback MapUnmapCallback;
   static const uptr kFlags =
       SizeClassAllocator32FlagMasks::kRandomShuffleChunks |
@@ -108,11 +100,13 @@ typedef SizeClassAllocator32<AP32> PrimaryT;
 #endif  // SANITIZER_CAN_USE_ALLOCATOR64
 
 #include "scudo_allocator_secondary.h"
+
+typedef LargeMmapAllocator SecondaryT;
+
 #include "scudo_allocator_combined.h"
 
-typedef SizeClassAllocatorLocalCache<PrimaryT> AllocatorCacheT;
-typedef LargeMmapAllocator SecondaryT;
-typedef CombinedAllocator<PrimaryT, AllocatorCacheT, SecondaryT> BackendT;
+typedef CombinedAllocator BackendT;
+typedef CombinedAllocator::AllocatorCache AllocatorCacheT;
 
 void initScudo();
 

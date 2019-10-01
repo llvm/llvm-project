@@ -1,9 +1,8 @@
 //===-- tsan_md5.cc -------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -138,6 +137,14 @@ static const void *body(MD5_CTX *ctx, const void *data, ulong_t size) {
 
   return ptr;
 }
+
+#undef F
+#undef G
+#undef H
+#undef I
+#undef STEP
+#undef SET
+#undef GET
 
 void MD5_Init(MD5_CTX *ctx) {
   ctx->a = 0x67452301;

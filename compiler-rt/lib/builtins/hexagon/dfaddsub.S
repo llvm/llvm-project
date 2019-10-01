@@ -1,13 +1,12 @@
 //===----------------------Hexagon builtin routine ------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
-/* Double Precision Multiply */
+// Double Precision Multiply
 
 #define A r1:0
 #define AH r1
@@ -179,18 +178,17 @@ __hexagon_subdf3:
 .Ladd_ovf_unf:
 	// Overflow or Denormal is possible
 	// Good news: Underflow flag is not possible!
-	/*
-	 * ATMP has 2's complement value
-	 *
-	 * EXPA has A's exponent, EXPB has EXPA-BIAS-60
-	 *
-	 * Convert, extract exponent, add adjustment.
-	 * If > 2046, overflow
-	 * If <= 0, denormal
-	 *
-	 * Note that we've not done our zero check yet, so do that too
-	 *
-	 */
+
+	// ATMP has 2's complement value
+	//
+	// EXPA has A's exponent, EXPB has EXPA-BIAS-60
+	//
+	// Convert, extract exponent, add adjustment.
+	// If > 2046, overflow
+	// If <= 0, denormal
+	//
+	// Note that we've not done our zero check yet, so do that too
+
 	{
 		A = convert_d2df(ATMP)
 		p0 = cmp.eq(ATMPH,#0)

@@ -1,9 +1,8 @@
 //===-- msan.h --------------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -289,6 +288,7 @@ void MsanDeallocate(StackTrace *stack, void *ptr);
 void *msan_malloc(uptr size, StackTrace *stack);
 void *msan_calloc(uptr nmemb, uptr size, StackTrace *stack);
 void *msan_realloc(void *ptr, uptr size, StackTrace *stack);
+void *msan_reallocarray(void *ptr, uptr nmemb, uptr size, StackTrace *stack);
 void *msan_valloc(uptr size, StackTrace *stack);
 void *msan_pvalloc(uptr size, StackTrace *stack);
 void *msan_aligned_alloc(uptr alignment, uptr size, StackTrace *stack);
@@ -313,9 +313,6 @@ struct SymbolizerScope {
 void PrintWarning(uptr pc, uptr bp);
 void PrintWarningWithOrigin(uptr pc, uptr bp, u32 origin);
 
-void GetStackTrace(BufferedStackTrace *stack, uptr max_s, uptr pc, uptr bp,
-                   void *context, bool request_fast_unwind);
-
 // Unpoison first n function arguments.
 void UnpoisonParam(uptr n);
 void UnpoisonThreadLocalState();
@@ -329,23 +326,21 @@ const int STACK_TRACE_TAG_POISON = StackTrace::TAG_CUSTOM + 1;
 #define GET_MALLOC_STACK_TRACE                                            \
   BufferedStackTrace stack;                                               \
   if (__msan_get_track_origins() && msan_inited)                          \
-  GetStackTrace(&stack, common_flags()->malloc_context_size,              \
-                StackTrace::GetCurrentPc(), GET_CURRENT_FRAME(), nullptr, \
-                common_flags()->fast_unwind_on_malloc)
+    stack.Unwind(StackTrace::GetCurrentPc(), GET_CURRENT_FRAME(),         \
+                 nullptr, common_flags()->fast_unwind_on_malloc,          \
+                 common_flags()->malloc_context_size)
 
 // For platforms which support slow unwinder only, we restrict the store context
 // size to 1, basically only storing the current pc. We do this because the slow
 // unwinder which is based on libunwind is not async signal safe and causes
 // random freezes in forking applications as well as in signal handlers.
-#define GET_STORE_STACK_TRACE_PC_BP(pc, bp)                               \
-  BufferedStackTrace stack;                                               \
-  if (__msan_get_track_origins() > 1 && msan_inited) {                    \
-    if (!SANITIZER_CAN_FAST_UNWIND)                                       \
-      GetStackTrace(&stack, Min(1, flags()->store_context_size), pc, bp,  \
-                    nullptr, false);                                      \
-    else                                                                  \
-      GetStackTrace(&stack, flags()->store_context_size, pc, bp, nullptr, \
-                    common_flags()->fast_unwind_on_malloc);               \
+#define GET_STORE_STACK_TRACE_PC_BP(pc, bp)                                    \
+  BufferedStackTrace stack;                                                    \
+  if (__msan_get_track_origins() > 1 && msan_inited) {                         \
+    int size = flags()->store_context_size;                                    \
+    if (!SANITIZER_CAN_FAST_UNWIND)                                            \
+      size = Min(size, 1);                                                     \
+    stack.Unwind(pc, bp, nullptr, common_flags()->fast_unwind_on_malloc, size);\
   }
 
 #define GET_STORE_STACK_TRACE \
@@ -354,8 +349,7 @@ const int STACK_TRACE_TAG_POISON = StackTrace::TAG_CUSTOM + 1;
 #define GET_FATAL_STACK_TRACE_PC_BP(pc, bp)              \
   BufferedStackTrace stack;                              \
   if (msan_inited)                                       \
-  GetStackTrace(&stack, kStackTraceMax, pc, bp, nullptr, \
-                common_flags()->fast_unwind_on_fatal)
+    stack.Unwind(pc, bp, nullptr, common_flags()->fast_unwind_on_fatal)
 
 #define GET_FATAL_STACK_TRACE_HERE \
   GET_FATAL_STACK_TRACE_PC_BP(StackTrace::GetCurrentPc(), GET_CURRENT_FRAME())

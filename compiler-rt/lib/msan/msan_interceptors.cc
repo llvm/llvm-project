@@ -1,9 +1,8 @@
 //===-- msan_interceptors.cc ----------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -908,6 +907,11 @@ INTERCEPTOR(void *, realloc, void *ptr, SIZE_T size) {
   return msan_realloc(ptr, size, &stack);
 }
 
+INTERCEPTOR(void *, reallocarray, void *ptr, SIZE_T nmemb, SIZE_T size) {
+  GET_MALLOC_STACK_TRACE;
+  return msan_reallocarray(ptr, nmemb, size, &stack);
+}
+
 INTERCEPTOR(void *, malloc, SIZE_T size) {
   GET_MALLOC_STACK_TRACE;
   if (UNLIKELY(!msan_inited))
@@ -1119,8 +1123,12 @@ void MSanAtExitWrapper() {
 void MSanCxaAtExitWrapper(void *arg) {
   UnpoisonParam(1);
   MSanAtExitRecord *r = (MSanAtExitRecord *)arg;
+  // libc before 2.27 had race which caused occasional double handler execution
+  // https://sourceware.org/ml/libc-alpha/2017-08/msg01204.html
+  if (!r->func)
+    return;
   r->func(r->arg);
-  InternalFree(r);
+  r->func = nullptr;
 }
 
 static int setup_at_exit_wrapper(void(*f)(), void *arg, void *dso);
@@ -1184,14 +1192,14 @@ INTERCEPTOR(int, fork, void) {
 // NetBSD ships with openpty(3) in -lutil, that needs to be prebuilt explicitly
 // with MSan.
 #if SANITIZER_LINUX
-INTERCEPTOR(int, openpty, int *amaster, int *aslave, char *name,
+INTERCEPTOR(int, openpty, int *aparent, int *aworker, char *name,
             const void *termp, const void *winp) {
   ENSURE_MSAN_INITED();
   InterceptorScope interceptor_scope;
-  int res = REAL(openpty)(amaster, aslave, name, termp, winp);
+  int res = REAL(openpty)(aparent, aworker, name, termp, winp);
   if (!res) {
-    __msan_unpoison(amaster, sizeof(*amaster));
-    __msan_unpoison(aslave, sizeof(*aslave));
+    __msan_unpoison(aparent, sizeof(*aparent));
+    __msan_unpoison(aworker, sizeof(*aworker));
   }
   return res;
 }
@@ -1203,13 +1211,13 @@ INTERCEPTOR(int, openpty, int *amaster, int *aslave, char *name,
 // NetBSD ships with forkpty(3) in -lutil, that needs to be prebuilt explicitly
 // with MSan.
 #if SANITIZER_LINUX
-INTERCEPTOR(int, forkpty, int *amaster, char *name, const void *termp,
+INTERCEPTOR(int, forkpty, int *aparent, char *name, const void *termp,
             const void *winp) {
   ENSURE_MSAN_INITED();
   InterceptorScope interceptor_scope;
-  int res = REAL(forkpty)(amaster, name, termp, winp);
+  int res = REAL(forkpty)(aparent, name, termp, winp);
   if (res != -1)
-    __msan_unpoison(amaster, sizeof(*amaster));
+    __msan_unpoison(aparent, sizeof(*aparent));
   return res;
 }
 #define MSAN_MAYBE_INTERCEPT_FORKPTY INTERCEPT_FUNCTION(forkpty)
@@ -1238,17 +1246,17 @@ int OnExit() {
       CHECK_UNPOISONED_0(x, n);                                 \
   } while (0)
 
-#define MSAN_INTERCEPT_FUNC(name)                                       \
-  do {                                                                  \
-    if ((!INTERCEPT_FUNCTION(name) || !REAL(name)))                     \
-      VReport(1, "MemorySanitizer: failed to intercept '" #name "'\n"); \
+#define MSAN_INTERCEPT_FUNC(name)                                        \
+  do {                                                                   \
+    if (!INTERCEPT_FUNCTION(name))                                       \
+      VReport(1, "MemorySanitizer: failed to intercept '%s'\n'", #name); \
   } while (0)
 
-#define MSAN_INTERCEPT_FUNC_VER(name, ver)                                    \
-  do {                                                                        \
-    if ((!INTERCEPT_FUNCTION_VER(name, ver) || !REAL(name)))                  \
-      VReport(                                                                \
-          1, "MemorySanitizer: failed to intercept '" #name "@@" #ver "'\n"); \
+#define MSAN_INTERCEPT_FUNC_VER(name, ver)                                 \
+  do {                                                                     \
+    if (!INTERCEPT_FUNCTION_VER(name, ver))                                \
+      VReport(1, "MemorySanitizer: failed to intercept '%s@@%s'\n", #name, \
+              #ver);                                                       \
   } while (0)
 
 #define COMMON_INTERCEPT_FUNCTION(name) MSAN_INTERCEPT_FUNC(name)
@@ -1535,6 +1543,8 @@ void __msan_poison_stack(void *a, uptr size) {
   SetShadow(a, size, __msan::flags()->poison_stack_with_zeroes ? 0 : -1);
 }
 
+void __msan_unpoison_param(uptr n) { UnpoisonParam(n); }
+
 void __msan_clear_and_unpoison(void *a, uptr size) {
   REAL(memset)(a, 0, size);
   SetShadow(a, size, 0);
@@ -1594,6 +1604,7 @@ void InitializeInterceptors() {
   INTERCEPT_FUNCTION(malloc);
   INTERCEPT_FUNCTION(calloc);
   INTERCEPT_FUNCTION(realloc);
+  INTERCEPT_FUNCTION(reallocarray);
   INTERCEPT_FUNCTION(free);
   MSAN_MAYBE_INTERCEPT_CFREE;
   MSAN_MAYBE_INTERCEPT_MALLOC_USABLE_SIZE;

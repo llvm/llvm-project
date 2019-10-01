@@ -15,7 +15,10 @@
 
 // RUN: echo "unsigned-integer-overflow:do_overflow" > %t.func-supp
 // RUN: %env_ubsan_opts=halt_on_error=1:suppressions='"%t.func-supp"' %run %t
-// RUN: echo "unsigned-integer-overflow:%t" > %t.module-supp
+// FIXME: The '%t' substitution can't be used for the module name because it
+// contains a colon, so we have to use the basename, which is
+// suppressions.cpp.tmp.
+// RUN: echo "unsigned-integer-overflow:suppressions.cpp.tmp" > %t.module-supp
 // RUN: %env_ubsan_opts=halt_on_error=1:suppressions='"%t.module-supp"' %run %t
 
 // Note: file-level suppressions should work even without debug info.

@@ -1,9 +1,8 @@
 //===-- tsan_rtl_report.cc ------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -202,7 +201,7 @@ void ScopedReportBase::AddThread(const ThreadContext *tctx, bool suppressable) {
   rt->running = (tctx->status == ThreadStatusRunning);
   rt->name = internal_strdup(tctx->name);
   rt->parent_tid = tctx->parent_tid;
-  rt->workerthread = tctx->workerthread;
+  rt->thread_type = tctx->thread_type;
   rt->stack = 0;
   rt->stack = SymbolizeStackId(tctx->creation_stack_id);
   if (rt->stack)
@@ -730,10 +729,12 @@ void PrintCurrentStack(ThreadState *thr, uptr pc) {
 ALWAYS_INLINE
 void PrintCurrentStackSlow(uptr pc) {
 #if !SANITIZER_GO
+  uptr bp = GET_CURRENT_FRAME();
   BufferedStackTrace *ptrace =
       new(internal_alloc(MBlockStackTrace, sizeof(BufferedStackTrace)))
           BufferedStackTrace();
-  ptrace->Unwind(kStackTraceMax, pc, 0, 0, 0, 0, false);
+  ptrace->Unwind(pc, bp, nullptr, false);
+
   for (uptr i = 0; i < ptrace->size / 2; i++) {
     uptr tmp = ptrace->trace_buffer[i];
     ptrace->trace_buffer[i] = ptrace->trace_buffer[ptrace->size - i - 1];

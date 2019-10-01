@@ -1,17 +1,15 @@
-/* ===-- os_version_check.c - OS version checking  -------------------------===
- *
- *                     The LLVM Compiler Infrastructure
- *
- * This file is dual licensed under the MIT and the University of Illinois Open
- * Source Licenses. See LICENSE.TXT for details.
- *
- * ===----------------------------------------------------------------------===
- *
- * This file implements the function __isOSVersionAtLeast, used by
- * Objective-C's @available
- *
- * ===----------------------------------------------------------------------===
- */
+//===-- os_version_check.c - OS version checking  -------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file implements the function __isOSVersionAtLeast, used by
+// Objective-C's @available
+//
+//===----------------------------------------------------------------------===//
 
 #ifdef __APPLE__
 
@@ -23,7 +21,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* These three variables hold the host's OS version. */
+// These three variables hold the host's OS version.
 static int32_t GlobalMajor, GlobalMinor, GlobalSubminor;
 static dispatch_once_t DispatchOnceCounter;
 
@@ -31,20 +29,20 @@ static dispatch_once_t DispatchOnceCounter;
 typedef uint32_t dyld_platform_t;
 
 typedef struct {
-    dyld_platform_t platform;
-    uint32_t version;
+  dyld_platform_t platform;
+  uint32_t version;
 } dyld_build_version_t;
 
 typedef bool (*AvailabilityVersionCheckFuncTy)(uint32_t count,
-dyld_build_version_t versions[]);
+                                               dyld_build_version_t versions[]);
 
 static AvailabilityVersionCheckFuncTy AvailabilityVersionCheck;
 
-/* We can't include <CoreFoundation/CoreFoundation.h> directly from here, so
- * just forward declare everything that we need from it. */
+// We can't include <CoreFoundation/CoreFoundation.h> directly from here, so
+// just forward declare everything that we need from it.
 
 typedef const void *CFDataRef, *CFAllocatorRef, *CFPropertyListRef,
-                   *CFStringRef, *CFDictionaryRef, *CFTypeRef, *CFErrorRef;
+    *CFStringRef, *CFDictionaryRef, *CFTypeRef, *CFErrorRef;
 
 #if __LLP64__
 typedef unsigned long long CFTypeID;
@@ -61,9 +59,9 @@ typedef _Bool Boolean;
 typedef CFIndex CFPropertyListFormat;
 typedef uint32_t CFStringEncoding;
 
-/* kCFStringEncodingASCII analog. */
+// kCFStringEncodingASCII analog.
 #define CF_STRING_ENCODING_ASCII 0x0600
-/* kCFStringEncodingUTF8 analog. */
+// kCFStringEncodingUTF8 analog.
 #define CF_STRING_ENCODING_UTF8 0x08000100
 #define CF_PROPERTY_LIST_IMMUTABLE 0
 
@@ -87,7 +85,7 @@ typedef Boolean (*CFStringGetCStringFuncTy)(CFStringRef, char *, CFIndex,
                                             CFStringEncoding);
 typedef void (*CFReleaseFuncTy)(CFTypeRef);
 
-/* Find and parse the SystemVersion.plist file. */
+// Find and parse the SystemVersion.plist file.
 static void initializeAvailabilityCheck(void *Unused) {
   (void)Unused;
 
@@ -97,7 +95,7 @@ static void initializeAvailabilityCheck(void *Unused) {
   AvailabilityVersionCheck = (AvailabilityVersionCheckFuncTy)dlsym(
       RTLD_DEFAULT, "_availability_version_check");
 
-  /* Load CoreFoundation dynamically */
+  // Load CoreFoundation dynamically
   const void *NullAllocator = dlsym(RTLD_DEFAULT, "kCFAllocatorNull");
   if (!NullAllocator)
     return;
@@ -108,18 +106,18 @@ static void initializeAvailabilityCheck(void *Unused) {
   if (!CFDataCreateWithBytesNoCopyFunc)
     return;
   CFPropertyListCreateWithDataFuncTy CFPropertyListCreateWithDataFunc =
-      (CFPropertyListCreateWithDataFuncTy)dlsym(
-          RTLD_DEFAULT, "CFPropertyListCreateWithData");
-/* CFPropertyListCreateWithData was introduced only in macOS 10.6+, so it
- * will be NULL on earlier OS versions. */
+      (CFPropertyListCreateWithDataFuncTy)dlsym(RTLD_DEFAULT,
+                                                "CFPropertyListCreateWithData");
+// CFPropertyListCreateWithData was introduced only in macOS 10.6+, so it
+// will be NULL on earlier OS versions.
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
   CFPropertyListCreateFromXMLDataFuncTy CFPropertyListCreateFromXMLDataFunc =
       (CFPropertyListCreateFromXMLDataFuncTy)dlsym(
           RTLD_DEFAULT, "CFPropertyListCreateFromXMLData");
 #pragma clang diagnostic pop
-  /* CFPropertyListCreateFromXMLDataFunc is deprecated in macOS 10.10, so it
-   * might be NULL in future OS versions. */
+  // CFPropertyListCreateFromXMLDataFunc is deprecated in macOS 10.10, so it
+  // might be NULL in future OS versions.
   if (!CFPropertyListCreateWithDataFunc && !CFPropertyListCreateFromXMLDataFunc)
     return;
   CFStringCreateWithCStringNoCopyFuncTy CFStringCreateWithCStringNoCopyFunc =
@@ -163,7 +161,7 @@ static void initializeAvailabilityCheck(void *Unused) {
   if (!PropertyList)
     return;
 
-  /* Dynamically allocated stuff. */
+  // Dynamically allocated stuff.
   CFDictionaryRef PListRef = NULL;
   CFDataRef FileContentsRef = NULL;
   UInt8 *PListBuf = NULL;
@@ -182,8 +180,8 @@ static void initializeAvailabilityCheck(void *Unused) {
   if (NumRead != (size_t)PListFileSize)
     goto Fail;
 
-  /* Get the file buffer into CF's format. We pass in a null allocator here *
-   * because we free PListBuf ourselves */
+  // Get the file buffer into CF's format. We pass in a null allocator here *
+  // because we free PListBuf ourselves
   FileContentsRef = (*CFDataCreateWithBytesNoCopyFunc)(
       NULL, PListBuf, (CFIndex)NumRead, AllocatorNull);
   if (!FileContentsRef)
@@ -227,7 +225,7 @@ Fail:
 // around to ensure that object files that reference it are still usable when
 // linked with new compiler-rt.
 int32_t __isOSVersionAtLeast(int32_t Major, int32_t Minor, int32_t Subminor) {
-  /* Populate the global version variables, if they haven't already. */
+  // Populate the global version variables, if they haven't already.
   dispatch_once_f(&DispatchOnceCounter, NULL, initializeAvailabilityCheck);
 
   if (Major < GlobalMajor)
@@ -260,7 +258,7 @@ int32_t __isPlatformVersionAtLeast(uint32_t Platform, uint32_t Major,
 
 #else
 
-/* Silence an empty translation unit warning. */
+// Silence an empty translation unit warning.
 typedef int unused;
 
 #endif

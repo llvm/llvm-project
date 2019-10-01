@@ -1,9 +1,8 @@
 //===-- scudo_allocator.cpp -------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -25,6 +24,11 @@
 #include "sanitizer_common/sanitizer_allocator_checks.h"
 #include "sanitizer_common/sanitizer_allocator_interface.h"
 #include "sanitizer_common/sanitizer_quarantine.h"
+
+#ifdef GWP_ASAN_HOOKS
+# include "gwp_asan/guarded_pool_allocator.h"
+# include "gwp_asan/optional/options_parser.h"
+#endif // GWP_ASAN_HOOKS
 
 #include <errno.h>
 #include <string.h>
@@ -214,6 +218,10 @@ QuarantineCacheT *getQuarantineCache(ScudoTSD *TSD) {
   return reinterpret_cast<QuarantineCacheT *>(TSD->QuarantineCachePlaceHolder);
 }
 
+#ifdef GWP_ASAN_HOOKS
+static gwp_asan::GuardedPoolAllocator GuardedAlloc;
+#endif // GWP_ASAN_HOOKS
+
 struct Allocator {
   static const uptr MaxAllowedMallocSize =
       FIRST_32_SECOND_64(2UL << 30, 1ULL << 40);
@@ -292,6 +300,14 @@ struct Allocator {
   void *allocate(uptr Size, uptr Alignment, AllocType Type,
                  bool ForceZeroContents = false) {
     initThreadMaybe();
+
+#ifdef GWP_ASAN_HOOKS
+    if (UNLIKELY(GuardedAlloc.shouldSample())) {
+      if (void *Ptr = GuardedAlloc.allocate(Size))
+        return Ptr;
+    }
+#endif // GWP_ASAN_HOOKS
+
     if (UNLIKELY(Alignment > MaxAlignment)) {
       if (AllocatorMayReturnNull())
         return nullptr;
@@ -435,6 +451,14 @@ struct Allocator {
       __sanitizer_free_hook(Ptr);
     if (UNLIKELY(!Ptr))
       return;
+
+#ifdef GWP_ASAN_HOOKS
+    if (UNLIKELY(GuardedAlloc.pointerIsMine(Ptr))) {
+      GuardedAlloc.deallocate(Ptr);
+      return;
+    }
+#endif // GWP_ASAN_HOOKS
+
     if (UNLIKELY(!Chunk::isAligned(Ptr)))
       dieWithMessage("misaligned pointer when deallocating address %p\n", Ptr);
     UnpackedHeader Header;
@@ -464,6 +488,18 @@ struct Allocator {
   // size still fits in the chunk.
   void *reallocate(void *OldPtr, uptr NewSize) {
     initThreadMaybe();
+
+#ifdef GWP_ASAN_HOOKS
+    if (UNLIKELY(GuardedAlloc.pointerIsMine(OldPtr))) {
+      size_t OldSize = GuardedAlloc.getSize(OldPtr);
+      void *NewPtr = allocate(NewSize, MinAlignment, FromMalloc);
+      if (NewPtr)
+        memcpy(NewPtr, OldPtr, (NewSize < OldSize) ? NewSize : OldSize);
+      GuardedAlloc.deallocate(OldPtr);
+      return NewPtr;
+    }
+#endif // GWP_ASAN_HOOKS
+
     if (UNLIKELY(!Chunk::isAligned(OldPtr)))
       dieWithMessage("misaligned address when reallocating address %p\n",
                      OldPtr);
@@ -505,6 +541,12 @@ struct Allocator {
     initThreadMaybe();
     if (UNLIKELY(!Ptr))
       return 0;
+
+#ifdef GWP_ASAN_HOOKS
+    if (UNLIKELY(GuardedAlloc.pointerIsMine(Ptr)))
+      return GuardedAlloc.getSize(Ptr);
+#endif // GWP_ASAN_HOOKS
+
     UnpackedHeader Header;
     Chunk::loadHeader(Ptr, &Header);
     // Getting the usable size of a chunk only makes sense if it's allocated.
@@ -588,11 +630,11 @@ NOINLINE void Allocator::performSanityChecks() {
 }
 
 // Opportunistic RSS limit check. This will update the RSS limit status, if
-// it can, every 100ms, otherwise it will just return the current one.
+// it can, every 250ms, otherwise it will just return the current one.
 NOINLINE bool Allocator::isRssLimitExceeded() {
   u64 LastCheck = atomic_load_relaxed(&RssLastCheckedAtNS);
   const u64 CurrentCheck = MonotonicNanoTime();
-  if (LIKELY(CurrentCheck < LastCheck + (100ULL * 1000000ULL)))
+  if (LIKELY(CurrentCheck < LastCheck + (250ULL * 1000000ULL)))
     return atomic_load_relaxed(&RssLimitExceeded);
   if (!atomic_compare_exchange_weak(&RssLastCheckedAtNS, &LastCheck,
                                     CurrentCheck, memory_order_relaxed))
@@ -627,6 +669,10 @@ static BackendT &getBackend() {
 
 void initScudo() {
   Instance.init();
+#ifdef GWP_ASAN_HOOKS
+  gwp_asan::options::initOptions();
+  GuardedAlloc.init(gwp_asan::options::getOptions());
+#endif // GWP_ASAN_HOOKS
 }
 
 void ScudoTSD::init() {

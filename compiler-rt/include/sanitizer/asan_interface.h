@@ -1,13 +1,12 @@
 //===-- sanitizer/asan_interface.h ------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
-// This file is a part of AddressSanitizer.
+// This file is a part of AddressSanitizer (ASan).
 //
 // Public interface header.
 //===----------------------------------------------------------------------===//
@@ -19,28 +18,54 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-  // Marks memory region [addr, addr+size) as unaddressable.
-  // This memory must be previously allocated by the user program. Accessing
-  // addresses in this region from instrumented code is forbidden until
-  // this region is unpoisoned. This function is not guaranteed to poison
-  // the whole region - it may poison only subregion of [addr, addr+size) due
-  // to ASan alignment restrictions.
-  // Method is NOT thread-safe in the sense that no two threads can
-  // (un)poison memory in the same memory region simultaneously.
-  void __asan_poison_memory_region(void const volatile *addr, size_t size);
-  // Marks memory region [addr, addr+size) as addressable.
-  // This memory must be previously allocated by the user program. Accessing
-  // addresses in this region is allowed until this region is poisoned again.
-  // This function may unpoison a superregion of [addr, addr+size) due to
-  // ASan alignment restrictions.
-  // Method is NOT thread-safe in the sense that no two threads can
-  // (un)poison memory in the same memory region simultaneously.
-  void __asan_unpoison_memory_region(void const volatile *addr, size_t size);
+/// Marks a memory region (<c>[addr, addr+size)</c>) as unaddressable.
+///
+/// This memory must be previously allocated by your program. Instrumented
+/// code is forbidden from accessing addresses in this region until it is
+/// unpoisoned. This function is not guaranteed to poison the entire region -
+/// it could poison only a subregion of <c>[addr, addr+size)</c> due to ASan
+/// alignment restrictions.
+///
+/// \note This function is not thread-safe because no two threads can poison or
+/// unpoison memory in the same memory region simultaneously.
+///
+/// \param addr Start of memory region.
+/// \param size Size of memory region.
+void __asan_poison_memory_region(void const volatile *addr, size_t size);
 
-// User code should use macros instead of functions.
+/// Marks a memory region (<c>[addr, addr+size)</c>) as addressable.
+///
+/// This memory must be previously allocated by your program. Accessing
+/// addresses in this region is allowed until this region is poisoned again.
+/// This function could unpoison a super-region of <c>[addr, addr+size)</c> due
+/// to ASan alignment restrictions.
+///
+/// \note This function is not thread-safe because no two threads can
+/// poison or unpoison memory in the same memory region simultaneously.
+///
+/// \param addr Start of memory region.
+/// \param size Size of memory region.
+void __asan_unpoison_memory_region(void const volatile *addr, size_t size);
+
+// Macros provided for convenience.
 #if __has_feature(address_sanitizer) || defined(__SANITIZE_ADDRESS__)
+/// Marks a memory region as unaddressable.
+///
+/// \note Macro provided for convenience; defined as a no-op if ASan is not
+/// enabled.
+///
+/// \param addr Start of memory region.
+/// \param size Size of memory region.
 #define ASAN_POISON_MEMORY_REGION(addr, size) \
   __asan_poison_memory_region((addr), (size))
+
+/// Marks a memory region as addressable.
+///
+/// \note Macro provided for convenience; defined as a no-op if ASan is not
+/// enabled.
+///
+/// \param addr Start of memory region.
+/// \param size Size of memory region.
 #define ASAN_UNPOISON_MEMORY_REGION(addr, size) \
   __asan_unpoison_memory_region((addr), (size))
 #else
@@ -50,103 +75,245 @@ extern "C" {
   ((void)(addr), (void)(size))
 #endif
 
-  // Returns 1 if addr is poisoned (i.e. 1-byte read/write access to this
-  // address will result in error report from AddressSanitizer).
-  // Otherwise returns 0.
-  int __asan_address_is_poisoned(void const volatile *addr);
+/// Checks if an address is poisoned.
+///
+/// Returns 1 if <c><i>addr</i></c> is poisoned (that is, 1-byte read/write
+/// access to this address would result in an error report from ASan).
+/// Otherwise returns 0.
+///
+/// \param addr Address to check.
+///
+/// \retval 1 Address is poisoned.
+/// \retval 0 Address is not poisoned.
+int __asan_address_is_poisoned(void const volatile *addr);
 
-  // If at least one byte in [beg, beg+size) is poisoned, return the address
-  // of the first such byte. Otherwise return 0.
-  void *__asan_region_is_poisoned(void *beg, size_t size);
+/// Checks if a region is poisoned.
+///
+/// If at least one byte in <c>[beg, beg+size)</c> is poisoned, returns the
+/// address of the first such byte. Otherwise returns 0.
+///
+/// \param beg Start of memory region.
+/// \param size Start of memory region.
+/// \returns Address of first poisoned byte.
+void *__asan_region_is_poisoned(void *beg, size_t size);
 
-  // Print the description of addr (useful when debugging in gdb).
-  void __asan_describe_address(void *addr);
+/// Describes an address (useful for calling from the debugger).
+///
+/// Prints the description of <c><i>addr</i></c>.
+///
+/// \param addr Address to describe.
+void __asan_describe_address(void *addr);
 
-  // Useful for calling from a debugger to get information about an ASan error.
-  // Returns 1 if an error has been (or is being) reported, otherwise returns 0.
-  int __asan_report_present(void);
+/// Checks if an error has been or is being reported (useful for calling from
+/// the debugger to get information about an ASan error).
+///
+/// Returns 1 if an error has been (or is being) reported. Otherwise returns 0.
+///
+/// \returns 1 if an error has been (or is being) reported. Otherwise returns
+/// 0.
+int __asan_report_present(void);
 
-  // Useful for calling from a debugger to get information about an ASan error.
-  // If an error has been (or is being) reported, the following functions return
-  // the pc, bp, sp, address, access type (0 = read, 1 = write), access size and
-  // bug description (e.g. "heap-use-after-free"). Otherwise they return 0.
-  void *__asan_get_report_pc(void);
-  void *__asan_get_report_bp(void);
-  void *__asan_get_report_sp(void);
-  void *__asan_get_report_address(void);
-  int __asan_get_report_access_type(void);
-  size_t __asan_get_report_access_size(void);
-  const char *__asan_get_report_description(void);
+/// Gets the PC (program counter) register value of an ASan error (useful for
+/// calling from the debugger).
+///
+/// Returns PC if an error has been (or is being) reported.
+/// Otherwise returns 0.
+///
+/// \returns PC value.
+void *__asan_get_report_pc(void);
 
-  // Useful for calling from the debugger to get information about a pointer.
-  // Returns the category of the given pointer as a constant string.
-  // Possible return values are "global", "stack", "stack-fake", "heap",
-  // "heap-invalid", "shadow-low", "shadow-gap", "shadow-high", "unknown".
-  // If global or stack, tries to also return the variable name, address and
-  // size. If heap, tries to return the chunk address and size. 'name' should
-  // point to an allocated buffer of size 'name_size'.
-  const char *__asan_locate_address(void *addr, char *name, size_t name_size,
-                                    void **region_address, size_t *region_size);
+/// Gets the BP (base pointer) register value of an ASan error (useful for
+/// calling from the debugger).
+///
+/// Returns BP if an error has been (or is being) reported.
+/// Otherwise returns 0.
+///
+/// \returns BP value.
+void *__asan_get_report_bp(void);
 
-  // Useful for calling from the debugger to get the allocation stack trace
-  // and thread ID for a heap address. Stores up to 'size' frames into 'trace',
-  // returns the number of stored frames or 0 on error.
-  size_t __asan_get_alloc_stack(void *addr, void **trace, size_t size,
-                                int *thread_id);
+/// Gets the SP (stack pointer) register value of an ASan error (useful for
+/// calling from the debugger).
+///
+/// If an error has been (or is being) reported, returns SP.
+/// Otherwise returns 0.
+///
+/// \returns SP value.
+void *__asan_get_report_sp(void);
 
-  // Useful for calling from the debugger to get the free stack trace
-  // and thread ID for a heap address. Stores up to 'size' frames into 'trace',
-  // returns the number of stored frames or 0 on error.
-  size_t __asan_get_free_stack(void *addr, void **trace, size_t size,
-                               int *thread_id);
+/// Gets the address of the report buffer of an ASan error (useful for calling
+/// from the debugger).
+///
+/// Returns the address of the report buffer if an error has been (or is being)
+/// reported. Otherwise returns 0.
+///
+/// \returns Address of report buffer.
+void *__asan_get_report_address(void);
 
-  // Useful for calling from the debugger to get the current shadow memory
-  // mapping.
-  void __asan_get_shadow_mapping(size_t *shadow_scale, size_t *shadow_offset);
+/// Gets access type of an ASan error (useful for calling from the debugger).
+///
+/// Returns access type (read or write) if an error has been (or is being)
+/// reported. Otherwise returns 0.
+///
+/// \returns Access type (0 = read, 1 = write).
+int __asan_get_report_access_type(void);
 
-  // This is an internal function that is called to report an error.
-  // However it is still a part of the interface because users may want to
-  // set a breakpoint on this function in a debugger.
-  void __asan_report_error(void *pc, void *bp, void *sp,
-                           void *addr, int is_write, size_t access_size);
+/// Gets access size of an ASan error (useful for calling from the debugger).
+///
+/// Returns access size if an error has been (or is being) reported. Otherwise
+/// returns 0.
+///
+/// \returns Access size in bytes.
+size_t __asan_get_report_access_size(void);
 
-  // Deprecated. Call __sanitizer_set_death_callback instead.
-  void __asan_set_death_callback(void (*callback)(void));
+/// Gets the bug description of an ASan error (useful for calling from a
+/// debugger).
+///
+/// \returns Returns a bug description if an error has been (or is being)
+/// reported - for example, "heap-use-after-free". Otherwise returns an empty
+/// string.
+const char *__asan_get_report_description(void);
 
-  void __asan_set_error_report_callback(void (*callback)(const char*));
+/// Gets information about a pointer (useful for calling from the debugger).
+///
+/// Returns the category of the given pointer as a constant string.
+/// Possible return values are <c>global</c>, <c>stack</c>, <c>stack-fake</c>,
+/// <c>heap</c>, <c>heap-invalid</c>, <c>shadow-low</c>, <c>shadow-gap</c>,
+/// <c>shadow-high</c>, and <c>unknown</c>.
+///
+/// If the return value is <c>global</c> or <c>stack</c>, tries to also return
+/// the variable name, address, and size. If the return value is <c>heap</c>,
+/// tries to return the chunk address and size. <c><i>name</i></c> should point
+/// to an allocated buffer of size <c><i>name_size</i></c>.
+///
+/// \param addr Address to locate.
+/// \param name Buffer to store the variable's name.
+/// \param name_size Size in bytes of the variable's name buffer.
+/// \param region_address [out] Address of the region.
+/// \param region_size [out] Size of the region in bytes.
+///
+/// \returns Returns the category of the given pointer as a constant string.
+const char *__asan_locate_address(void *addr, char *name, size_t name_size,
+                                  void **region_address, size_t *region_size);
 
-  // User may provide function that would be called right when ASan detects
-  // an error. This can be used to notice cases when ASan detects an error, but
-  // the program crashes before ASan report is printed.
-  void __asan_on_error(void);
+/// Gets the allocation stack trace and thread ID for a heap address (useful
+/// for calling from the debugger).
+///
+/// Stores up to <c><i>size</i></c> frames in <c><i>trace</i></c>. Returns
+/// the number of stored frames or 0 on error.
+///
+/// \param addr A heap address.
+/// \param trace A buffer to store the stack trace.
+/// \param size Size in bytes of the trace buffer.
+/// \param thread_id [out] The thread ID of the address.
+///
+/// \returns Returns the number of stored frames or 0 on error.
+size_t __asan_get_alloc_stack(void *addr, void **trace, size_t size,
+                              int *thread_id);
 
-  // Prints accumulated stats to stderr. Used for debugging.
-  void __asan_print_accumulated_stats(void);
+/// Gets the free stack trace and thread ID for a heap address (useful for
+/// calling from the debugger).
+///
+/// Stores up to <c><i>size</i></c> frames in <c><i>trace</i></c>. Returns
+/// the number of stored frames or 0 on error.
+///
+/// \param addr A heap address.
+/// \param trace A buffer to store the stack trace.
+/// \param size Size in bytes of the trace buffer.
+/// \param thread_id [out] The thread ID of the address.
+///
+/// \returns Returns the number of stored frames or 0 on error.
+size_t __asan_get_free_stack(void *addr, void **trace, size_t size,
+                             int *thread_id);
 
-  // This function may be optionally provided by user and should return
-  // a string containing ASan runtime options. See asan_flags.h for details.
-  const char* __asan_default_options(void);
+/// Gets the current shadow memory mapping (useful for calling from the
+/// debugger).
+///
+/// \param shadow_scale [out] Shadow scale value.
+/// \param shadow_offset [out] Offset value.
+void __asan_get_shadow_mapping(size_t *shadow_scale, size_t *shadow_offset);
 
-  // The following 2 functions facilitate garbage collection in presence of
-  // asan's fake stack.
+/// This is an internal function that is called to report an error. However,
+/// it is still a part of the interface because you might want to set a
+/// breakpoint on this function in the debugger.
+///
+/// \param pc <c><i>pc</i></c> value of the ASan error.
+/// \param bp <c><i>bp</i></c> value of the ASan error.
+/// \param sp <c><i>sp</i></c> value of the ASan error.
+/// \param addr Address of the ASan error.
+/// \param is_write True if the error is a write error; false otherwise.
+/// \param access_size Size of the memory access of the ASan error.
+void __asan_report_error(void *pc, void *bp, void *sp,
+                         void *addr, int is_write, size_t access_size);
 
-  // Returns an opaque handler to be used later in __asan_addr_is_in_fake_stack.
-  // Returns NULL if the current thread does not have a fake stack.
-  void *__asan_get_current_fake_stack(void);
+// Deprecated. Call __sanitizer_set_death_callback instead.
+void __asan_set_death_callback(void (*callback)(void));
 
-  // If fake_stack is non-NULL and addr belongs to a fake frame in
-  // fake_stack, returns the address on real stack that corresponds to
-  // the fake frame and sets beg/end to the boundaries of this fake frame.
-  // Otherwise returns NULL and does not touch beg/end.
-  // If beg/end are NULL, they are not touched.
-  // This function may be called from a thread other than the owner of
-  // fake_stack, but the owner thread need to be alive.
-  void *__asan_addr_is_in_fake_stack(void *fake_stack, void *addr, void **beg,
-                                     void **end);
+/// Sets the callback function to be called during ASan error reporting.
+///
+/// The callback provides a string pointer to the report.
+///
+/// \param callback User-provided function.
+void __asan_set_error_report_callback(void (*callback)(const char *));
 
-  // Performs cleanup before a [[noreturn]] function.  Must be called
-  // before things like _exit and execl to avoid false positives on stack.
-  void __asan_handle_no_return(void);
+/// User-provided callback on ASan errors.
+///
+/// You can provide a function that would be called immediately when ASan
+/// detects an error. This is useful in cases when ASan detects an error but
+/// your program crashes before the ASan report is printed.
+void __asan_on_error(void);
+
+/// Prints accumulated statistics to <c>stderr</c> (useful for calling from the
+/// debugger).
+void __asan_print_accumulated_stats(void);
+
+/// User-provided default option settings.
+///
+/// You can provide your own implementation of this function to return a string
+/// containing ASan runtime options (for example,
+/// <c>verbosity=1:halt_on_error=0</c>).
+///
+/// \returns Default options string.
+const char* __asan_default_options(void);
+
+// The following two functions facilitate garbage collection in presence of
+// ASan's fake stack.
+
+/// Gets an opaque handler to the current thread's fake stack.
+///
+/// Returns an opaque handler to be used by
+/// <c>__asan_addr_is_in_fake_stack()</c>. Returns NULL if the current thread
+/// does not have a fake stack.
+///
+/// \returns An opaque handler to the fake stack or NULL.
+void *__asan_get_current_fake_stack(void);
+
+/// Checks if an address belongs to a given fake stack.
+///
+/// If <c><i>fake_stack</i></c> is non-NULL and <c><i>addr</i></c> belongs to a
+/// fake frame in <c><i>fake_stack</i></c>, returns the address of the real
+/// stack that corresponds to the fake frame and sets <c><i>beg</i></c> and
+/// <c><i>end</i></c> to the boundaries of this fake frame. Otherwise returns
+/// NULL and does not touch <c><i>beg</i></c> and <c><i>end</i></c>.
+///
+/// If <c><i>beg</i></c> or <c><i>end</i></c> are NULL, they are not touched.
+///
+/// \note This function can be called from a thread other than the owner of
+/// <c><i>fake_stack</i></c>, but the owner thread needs to be alive.
+///
+/// \param fake_stack An opaque handler to a fake stack.
+/// \param addr Address to test.
+/// \param beg [out] Beginning of fake frame.
+/// \param end [out] End of fake frame.
+/// \returns Stack address or NULL.
+void *__asan_addr_is_in_fake_stack(void *fake_stack, void *addr, void **beg,
+                                   void **end);
+
+/// Performs shadow memory cleanup of the current thread's stack before a
+/// function marked with the <c>[[noreturn]]</c> attribute is called.
+///
+/// To avoid false positives on the stack, must be called before no-return
+/// functions like <c>_exit()</c> and <c>execl()</c>.
+void __asan_handle_no_return(void);
 
 #ifdef __cplusplus
 }  // extern "C"

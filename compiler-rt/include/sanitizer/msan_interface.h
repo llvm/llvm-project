@@ -1,9 +1,8 @@
 //===-- msan_interface.h --------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -42,6 +41,9 @@ extern "C" {
   /* Make a null-terminated string fully initialized (without changing its
      contents). */
   void __msan_unpoison_string(const volatile char *a);
+
+  /* Make first n parameters of the next function call fully initialized. */
+  void __msan_unpoison_param(size_t n);
 
   /* Make memory region fully uninitialized (without changing its contents).
      This is a legacy interface that does not update origin information. Use

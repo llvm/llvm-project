@@ -2,20 +2,23 @@ include_directories(..)
 
 # Runtime library sources and build flags.
 set(HWASAN_RTL_SOURCES
-  hwasan.cc
-  hwasan_allocator.cc
-  hwasan_dynamic_shadow.cc
-  hwasan_interceptors.cc
-  hwasan_linux.cc
-  hwasan_memintrinsics.cc
-  hwasan_poisoning.cc
-  hwasan_report.cc
-  hwasan_thread.cc
-  hwasan_thread_list.cc
+  hwasan.cpp
+  hwasan_allocator.cpp
+  hwasan_dynamic_shadow.cpp
+  hwasan_interceptors.cpp
+  hwasan_interceptors_vfork.S
+  hwasan_linux.cpp
+  hwasan_memintrinsics.cpp
+  hwasan_poisoning.cpp
+  hwasan_report.cpp
+  hwasan_tag_mismatch_aarch64.S
+  hwasan_thread.cpp
+  hwasan_thread_list.cpp
   )
 
 set(HWASAN_RTL_CXX_SOURCES
-  hwasan_new_delete.cc)
+  hwasan_new_delete.cpp
+  )
 
 set(HWASAN_RTL_HEADERS
   hwasan.h
@@ -24,6 +27,7 @@ set(HWASAN_RTL_HEADERS
   hwasan_flags.h
   hwasan_flags.inc
   hwasan_interface_internal.h
+  hwasan_malloc_bisect.h
   hwasan_mapping.h
   hwasan_poisoning.h
   hwasan_report.h
@@ -55,7 +59,7 @@ append_list_if(COMPILER_RT_HAS_FTLS_MODEL_INITIAL_EXEC
   -ftls-model=initial-exec HWASAN_DYNAMIC_CFLAGS)
 append_list_if(MSVC /DEBUG HWASAN_DYNAMIC_LINK_FLAGS)
 
-set(HWASAN_DYNAMIC_LIBS ${SANITIZER_CXX_ABI_LIBRARY} ${SANITIZER_COMMON_LINK_LIBS})
+set(HWASAN_DYNAMIC_LIBS ${SANITIZER_CXX_ABI_LIBRARIES} ${SANITIZER_COMMON_LINK_LIBS})
 
 append_list_if(COMPILER_RT_HAS_LIBDL dl HWASAN_DYNAMIC_LIBS)
 append_list_if(COMPILER_RT_HAS_LIBRT rt HWASAN_DYNAMIC_LIBS)

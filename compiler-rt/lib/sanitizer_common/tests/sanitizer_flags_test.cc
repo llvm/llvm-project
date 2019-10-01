@@ -1,9 +1,8 @@
 //===-- sanitizer_flags_test.cc -------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -17,6 +16,7 @@
 #include "sanitizer_common/sanitizer_allocator_internal.h"
 #include "gtest/gtest.h"
 
+#include <stdint.h>
 #include <string.h>
 
 namespace __sanitizer {
@@ -34,6 +34,9 @@ static void TestFlag(T start_value, const char *env, T final_value) {
   parser.ParseString(env);
 
   EXPECT_EQ(final_value, flag);
+
+  // Reporting unrecognized flags is needed to reset them.
+  ReportUnrecognizedFlags();
 }
 
 template <>
@@ -106,6 +109,21 @@ TEST(SanitizerCommon, IntFlags) {
   EXPECT_DEATH(TestFlag(-11, "flag_name", 0), "expected '='");
   EXPECT_DEATH(TestFlag(-11, "flag_name=42U", 0),
                "Invalid value for int option");
+}
+
+TEST(SanitizerCommon, LongLongIntFlags) {
+  s64 InitValue = -5;
+  s64 IntMin = INT64_MIN;
+  s64 IntMax = INT64_MAX;
+  TestFlag(InitValue, "flag_name=0", 0ll);
+  TestFlag(InitValue, "flag_name=42", 42ll);
+  TestFlag(InitValue, "flag_name=-42", -42ll);
+
+  TestFlag(InitValue, "flag_name=-9223372036854775808", IntMin);
+  TestFlag(InitValue, "flag_name=9223372036854775807", IntMax);
+
+  TestFlag(InitValue, "flag_name=-92233720368547758080000", IntMin);
+  TestFlag(InitValue, "flag_name=92233720368547758070000", IntMax);
 }
 
 TEST(SanitizerCommon, StrFlags) {

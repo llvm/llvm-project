@@ -1,16 +1,14 @@
-/* ===-- bswapdi2.c - Implement __bswapdi2 ---------------------------------===
- *
- *               The LLVM Compiler Infrastructure
- *
- * This file is dual licensed under the MIT and the University of Illinois Open
- * Source Licenses. See LICENSE.TXT for details.
- *
- * ===----------------------------------------------------------------------===
- *
- * This file implements __bswapdi2 for the compiler_rt library.
- *
- * ===----------------------------------------------------------------------===
- */
+//===-- bswapdi2.c - Implement __bswapdi2 ---------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file implements __bswapdi2 for the compiler_rt library.
+//
+//===----------------------------------------------------------------------===//
 
 #include "int_lib.h"
 

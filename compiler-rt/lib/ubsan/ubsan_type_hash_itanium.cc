@@ -1,9 +1,8 @@
 //===-- ubsan_type_hash_itanium.cc ----------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -118,8 +117,7 @@ static bool isDerivedFromAtOffset(const abi::__class_type_info *Derived,
                                   const abi::__class_type_info *Base,
                                   sptr Offset) {
   if (Derived->__type_name == Base->__type_name ||
-      (SANITIZER_NON_UNIQUE_TYPEINFO &&
-       !internal_strcmp(Derived->__type_name, Base->__type_name)))
+      __ubsan::checkTypeInfoEquality(Derived, Base))
     return Offset == 0;
 
   if (const abi::__si_class_type_info *SI =
@@ -256,6 +254,15 @@ __ubsan::getDynamicTypeInfoFromVtable(void *VtablePtr) {
     -Vtable->Offset);
   return DynamicTypeInfo(Vtable->TypeInfo->__type_name, -Vtable->Offset,
                          ObjectType ? ObjectType->__type_name : "<unknown>");
+}
+
+bool __ubsan::checkTypeInfoEquality(const void *TypeInfo1,
+                                    const void *TypeInfo2) {
+  auto TI1 = static_cast<const std::type_info *>(TypeInfo1);
+  auto TI2 = static_cast<const std::type_info *>(TypeInfo2);
+  return SANITIZER_NON_UNIQUE_TYPEINFO && TI1->__type_name[0] != '*' &&
+         TI2->__type_name[0] != '*' &&
+         !internal_strcmp(TI1->__type_name, TI2->__type_name);
 }
 
 #endif  // CAN_SANITIZE_UB && !SANITIZER_WINDOWS

@@ -1,9 +1,8 @@
 //===-- asan_malloc_win.cc ------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -48,6 +47,18 @@ using namespace __asan;  // NOLINT
 #endif
 
 extern "C" {
+ALLOCATION_FUNCTION_ATTRIBUTE
+size_t _msize(void *ptr) {
+  GET_CURRENT_PC_BP_SP;
+  (void)sp;
+  return asan_malloc_usable_size(ptr, pc, bp);
+}
+
+ALLOCATION_FUNCTION_ATTRIBUTE
+size_t _msize_base(void *ptr) {
+  return _msize(ptr);
+}
+
 ALLOCATION_FUNCTION_ATTRIBUTE
 void free(void *ptr) {
   GET_STACK_TRACE_FREE;
@@ -125,24 +136,21 @@ void *_recalloc(void *p, size_t n, size_t elem_size) {
   const size_t size = n * elem_size;
   if (elem_size != 0 && size / elem_size != n)
     return 0;
-  return realloc(p, size);
+
+  size_t old_size = _msize(p);
+  void *new_alloc = malloc(size);
+  if (new_alloc) {
+    REAL(memcpy)(new_alloc, p, Min(size, old_size));
+    if (old_size < size)
+      REAL(memset)(((u8 *)new_alloc) + old_size, 0, size - old_size);
+    free(p);
+  }
+  return new_alloc;
 }
 
 ALLOCATION_FUNCTION_ATTRIBUTE
 void *_recalloc_base(void *p, size_t n, size_t elem_size) {
   return _recalloc(p, n, elem_size);
-}
-
-ALLOCATION_FUNCTION_ATTRIBUTE
-size_t _msize(void *ptr) {
-  GET_CURRENT_PC_BP_SP;
-  (void)sp;
-  return asan_malloc_usable_size(ptr, pc, bp);
-}
-
-ALLOCATION_FUNCTION_ATTRIBUTE
-size_t _msize_base(void *ptr) {
-  return _msize(ptr);
 }
 
 ALLOCATION_FUNCTION_ATTRIBUTE
@@ -199,11 +207,31 @@ INTERCEPTOR_WINAPI(BOOL, HeapFree, HANDLE hHeap, DWORD dwFlags, LPVOID lpMem) {
 INTERCEPTOR_WINAPI(LPVOID, HeapReAlloc, HANDLE hHeap, DWORD dwFlags,
                    LPVOID lpMem, SIZE_T dwBytes) {
   GET_STACK_TRACE_MALLOC;
+  GET_CURRENT_PC_BP_SP;
+  (void)sp;
   // Realloc should never reallocate in place.
   if (dwFlags & HEAP_REALLOC_IN_PLACE_ONLY)
     return nullptr;
   CHECK(dwFlags == 0 && "unsupported heap flags");
-  return asan_realloc(lpMem, dwBytes, &stack);
+  // HeapReAlloc and HeapAlloc both happily accept 0 sized allocations.
+  // passing a 0 size into asan_realloc will free the allocation.
+  // To avoid this and keep behavior consistent, fudge the size if 0.
+  // (asan_malloc already does this)
+  if (dwBytes == 0)
+    dwBytes = 1;
+  size_t old_size;
+  if (dwFlags & HEAP_ZERO_MEMORY)
+    old_size = asan_malloc_usable_size(lpMem, pc, bp);
+  void *ptr = asan_realloc(lpMem, dwBytes, &stack);
+  if (ptr == nullptr)
+    return nullptr;
+
+  if (dwFlags & HEAP_ZERO_MEMORY) {
+    size_t new_size = asan_malloc_usable_size(ptr, pc, bp);
+    if (old_size < new_size)
+      REAL(memset)(((u8 *)ptr) + old_size, 0, new_size - old_size);
+  }
+  return ptr;
 }
 
 INTERCEPTOR_WINAPI(SIZE_T, HeapSize, HANDLE hHeap, DWORD dwFlags,

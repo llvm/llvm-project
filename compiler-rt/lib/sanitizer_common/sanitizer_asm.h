@@ -1,9 +1,8 @@
 //===-- sanitizer_asm.h -----------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -45,14 +44,23 @@
 
 #if !defined(__APPLE__)
 # define ASM_HIDDEN(symbol) .hidden symbol
-# define ASM_TYPE_FUNCTION(symbol) .type symbol, @function
+# define ASM_TYPE_FUNCTION(symbol) .type symbol, %function
 # define ASM_SIZE(symbol) .size symbol, .-symbol
 # define ASM_SYMBOL(symbol) symbol
 # define ASM_SYMBOL_INTERCEPTOR(symbol) symbol
+# define ASM_WRAPPER_NAME(symbol) __interceptor_##symbol
 #else
 # define ASM_HIDDEN(symbol)
 # define ASM_TYPE_FUNCTION(symbol)
 # define ASM_SIZE(symbol)
 # define ASM_SYMBOL(symbol) _##symbol
 # define ASM_SYMBOL_INTERCEPTOR(symbol) _wrap_##symbol
+# define ASM_WRAPPER_NAME(symbol) __interceptor_##symbol
+#endif
+
+#if defined(__ELF__) && (defined(__GNU__) || defined(__FreeBSD__) || \
+                         defined(__Fuchsia__) || defined(__linux__))
+#define NO_EXEC_STACK_DIRECTIVE .section .note.GNU-stack,"",%progbits // NOLINT
+#else
+#define NO_EXEC_STACK_DIRECTIVE
 #endif

@@ -1,9 +1,8 @@
 //===-- sanitizer_symbolizer_report.cc ------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -104,9 +103,11 @@ void ReportMmapWriteExec(int prot) {
   GET_CALLER_PC_BP_SP;
   (void)sp;
   bool fast = common_flags()->fast_unwind_on_fatal;
-  if (fast)
+  if (StackTrace::WillUseFastUnwind(fast)) {
     GetThreadStackTopAndBottom(false, &top, &bottom);
-  stack->Unwind(kStackTraceMax, pc, bp, nullptr, top, bottom, fast);
+    stack->Unwind(kStackTraceMax, pc, bp, nullptr, top, bottom, true);
+  } else
+    stack->Unwind(kStackTraceMax, pc, 0, nullptr, 0, 0, false);
 
   Printf("%s", d.Warning());
   Report("WARNING: %s: writable-executable page usage\n", SanitizerToolName);

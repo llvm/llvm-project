@@ -1,9 +1,8 @@
 //===-- msan.cc -----------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -176,12 +175,10 @@ static void InitializeFlags() {
   ubsan_parser.ParseString(ubsan_default_options);
 #endif
 
-  const char *msan_options = GetEnv("MSAN_OPTIONS");
-  parser.ParseString(msan_options);
+  parser.ParseStringFromEnv("MSAN_OPTIONS");
 #if MSAN_CONTAINS_UBSAN
-  ubsan_parser.ParseString(GetEnv("UBSAN_OPTIONS"));
+  ubsan_parser.ParseStringFromEnv("UBSAN_OPTIONS");
 #endif
-  VPrintf(1, "MSAN_OPTIONS: %s\n", msan_options ? msan_options : "<empty>");
 
   InitializeCommonFlags();
 
@@ -220,18 +217,6 @@ static void InitializeFlags() {
     Die();
   }
   if (f->store_context_size < 1) f->store_context_size = 1;
-}
-
-void GetStackTrace(BufferedStackTrace *stack, uptr max_s, uptr pc, uptr bp,
-                   void *context, bool request_fast_unwind) {
-  MsanThread *t = GetCurrentThread();
-  if (!t || !StackTrace::WillUseFastUnwind(request_fast_unwind)) {
-    // Block reports from our interceptors during _Unwind_Backtrace.
-    SymbolizerScope sym_scope;
-    return stack->Unwind(max_s, pc, bp, context, 0, 0, request_fast_unwind);
-  }
-  stack->Unwind(max_s, pc, bp, context, t->stack_top(), t->stack_bottom(),
-                request_fast_unwind);
 }
 
 void PrintWarning(uptr pc, uptr bp) {
@@ -314,6 +299,21 @@ u32 ChainOrigin(u32 id, StackTrace *stack) {
 
 } // namespace __msan
 
+void __sanitizer::BufferedStackTrace::UnwindImpl(
+    uptr pc, uptr bp, void *context, bool request_fast, u32 max_depth) {
+  using namespace __msan;
+  MsanThread *t = GetCurrentThread();
+  if (!t || !StackTrace::WillUseFastUnwind(request_fast)) {
+    // Block reports from our interceptors during _Unwind_Backtrace.
+    SymbolizerScope sym_scope;
+    return Unwind(max_depth, pc, bp, context, 0, 0, false);
+  }
+  if (StackTrace::WillUseFastUnwind(request_fast))
+    Unwind(max_depth, pc, bp, nullptr, t->stack_top(), t->stack_bottom(), true);
+  else
+    Unwind(max_depth, pc, 0, context, 0, 0, false);
+}
+
 // Interface.
 
 using namespace __msan;
@@ -378,7 +378,7 @@ void __msan_warning_noreturn() {
 
 static void OnStackUnwind(const SignalContext &sig, const void *,
                           BufferedStackTrace *stack) {
-  GetStackTrace(stack, kStackTraceMax, sig.pc, sig.bp, sig.context,
+  stack->Unwind(sig.pc, sig.bp, sig.context,
                 common_flags()->fast_unwind_on_fatal);
 }
 

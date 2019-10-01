@@ -27,11 +27,11 @@ int main() {
   // CHECK: is located 5 bytes inside of 10-byte region
   //
   // CHECK: freed by thread {{.*}} here:
-  // CHECK: #0 {{.*}} in {{.*}}free{{.*}} {{.*}}hwasan_interceptors.cc
+  // CHECK: #0 {{.*}} in {{.*}}free{{.*}} {{.*}}hwasan_interceptors.cpp
   // CHECK: #1 {{.*}} in main {{.*}}use-after-free.c:[[@LINE-14]]
 
   // CHECK: previously allocated here:
-  // CHECK: #0 {{.*}} in {{.*}}malloc{{.*}} {{.*}}hwasan_interceptors.cc
+  // CHECK: #0 {{.*}} in {{.*}}malloc{{.*}} {{.*}}hwasan_interceptors.cpp
   // CHECK: #1 {{.*}} in main {{.*}}use-after-free.c:[[@LINE-19]]
   // CHECK: Memory tags around the buggy address (one tag corresponds to 16 bytes):
   // CHECK: =>{{.*}}[[MEM_TAG]]

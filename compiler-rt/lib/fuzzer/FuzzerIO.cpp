@@ -1,17 +1,17 @@
 //===- FuzzerIO.cpp - IO utils. -------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 // IO functions.
 //===----------------------------------------------------------------------===//
 
-#include "FuzzerIO.h"
 #include "FuzzerDefs.h"
 #include "FuzzerExtFunctions.h"
+#include "FuzzerIO.h"
+#include "FuzzerUtil.h"
 #include <algorithm>
 #include <cstdarg>
 #include <fstream>
@@ -61,10 +61,19 @@ void CopyFileToErr(const std::string &Path) {
 }
 
 void WriteToFile(const Unit &U, const std::string &Path) {
+  WriteToFile(U.data(), U.size(), Path);
+}
+
+void WriteToFile(const std::string &Data, const std::string &Path) {
+  WriteToFile(reinterpret_cast<const uint8_t *>(Data.c_str()), Data.size(),
+              Path);
+}
+
+void WriteToFile(const uint8_t *Data, size_t Size, const std::string &Path) {
   // Use raw C interface because this function may be called from a sig handler.
-  FILE *Out = fopen(Path.c_str(), "w");
+  FILE *Out = fopen(Path.c_str(), "wb");
   if (!Out) return;
-  fwrite(U.data(), sizeof(U[0]), U.size(), Out);
+  fwrite(Data, sizeof(Data[0]), Size, Out);
   fclose(Out);
 }
 
@@ -124,6 +133,27 @@ void Printf(const char *Fmt, ...) {
   vfprintf(OutputFile, Fmt, ap);
   va_end(ap);
   fflush(OutputFile);
+}
+
+void VPrintf(bool Verbose, const char *Fmt, ...) {
+  if (!Verbose) return;
+  va_list ap;
+  va_start(ap, Fmt);
+  vfprintf(OutputFile, Fmt, ap);
+  va_end(ap);
+  fflush(OutputFile);
+}
+
+void RmDirRecursive(const std::string &Dir) {
+  IterateDirRecursive(
+      Dir, [](const std::string &Path) {},
+      [](const std::string &Path) { RmDir(Path); },
+      [](const std::string &Path) { RemoveFile(Path); });
+}
+
+std::string TempPath(const char *Extension) {
+  return DirPlusFile(TmpDir(),
+                     "libFuzzerTemp." + std::to_string(GetPid()) + Extension);
 }
 
 }  // namespace fuzzer

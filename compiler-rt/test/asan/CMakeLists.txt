@@ -45,14 +45,8 @@ if(OS_NAME MATCHES "SunOS")
 endif()
 
 foreach(arch ${ASAN_TEST_ARCH})
-  if(ANDROID)
-    set(ASAN_TEST_TARGET_ARCH ${arch}-android)
-  else()
-    set(ASAN_TEST_TARGET_ARCH ${arch})
-  endif()
-
+  set(ASAN_TEST_TARGET_ARCH ${arch})
   set(ASAN_TEST_APPLE_PLATFORM "osx")
-
   string(TOLOWER "-${arch}-${OS_NAME}" ASAN_TEST_CONFIG_SUFFIX)
   get_bits_for_arch(${arch} ASAN_TEST_BITS)
   get_test_cc_for_arch(${arch} ASAN_TEST_TARGET_CC ASAN_TEST_TARGET_CFLAGS)

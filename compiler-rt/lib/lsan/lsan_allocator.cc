@@ -1,9 +1,8 @@
 //=-- lsan_allocator.cc ---------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -184,6 +183,17 @@ void lsan_free(void *p) {
 
 void *lsan_realloc(void *p, uptr size, const StackTrace &stack) {
   return SetErrnoOnNull(Reallocate(stack, p, size, 1));
+}
+
+void *lsan_reallocarray(void *ptr, uptr nmemb, uptr size,
+                        const StackTrace &stack) {
+  if (UNLIKELY(CheckForCallocOverflow(size, nmemb))) {
+    errno = errno_ENOMEM;
+    if (AllocatorMayReturnNull())
+      return nullptr;
+    ReportReallocArrayOverflow(nmemb, size, &stack);
+  }
+  return lsan_realloc(ptr, nmemb * size, stack);
 }
 
 void *lsan_calloc(uptr nmemb, uptr size, const StackTrace &stack) {

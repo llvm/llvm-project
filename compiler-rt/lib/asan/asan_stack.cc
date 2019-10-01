@@ -1,9 +1,8 @@
 //===-- asan_stack.cc -----------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -27,7 +26,56 @@ u32 GetMallocContextSize() {
   return atomic_load(&malloc_context_size, memory_order_acquire);
 }
 
+namespace {
+
+// ScopedUnwinding is a scope for stacktracing member of a context
+class ScopedUnwinding {
+ public:
+  explicit ScopedUnwinding(AsanThread *t) : thread(t) {
+    if (thread) {
+      can_unwind = !thread->isUnwinding();
+      thread->setUnwinding(true);
+    }
+  }
+  ~ScopedUnwinding() {
+    if (thread)
+      thread->setUnwinding(false);
+  }
+
+  bool CanUnwind() const { return can_unwind; }
+
+ private:
+  AsanThread *thread = nullptr;
+  bool can_unwind = true;
+};
+
+}  // namespace
+
 }  // namespace __asan
+
+void __sanitizer::BufferedStackTrace::UnwindImpl(
+    uptr pc, uptr bp, void *context, bool request_fast, u32 max_depth) {
+  using namespace __asan;
+  size = 0;
+  if (UNLIKELY(!asan_inited))
+    return;
+  request_fast = StackTrace::WillUseFastUnwind(request_fast);
+  AsanThread *t = GetCurrentThread();
+  ScopedUnwinding unwind_scope(t);
+  if (!unwind_scope.CanUnwind())
+    return;
+  if (request_fast) {
+    if (t) {
+      Unwind(max_depth, pc, bp, nullptr, t->stack_top(), t->stack_bottom(),
+             true);
+    }
+    return;
+  }
+  if (SANITIZER_MIPS && t &&
+      !IsValidFrame(bp, t->stack_top(), t->stack_bottom()))
+    return;
+  Unwind(max_depth, pc, bp, context, 0, 0, false);
+}
 
 // ------------------ Interface -------------- {{{1
 

@@ -1,9 +1,8 @@
 //===-- asan_globals.cc ---------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -116,7 +115,11 @@ int GetGlobalsForAddress(uptr addr, Global *globals, u32 *reg_sites,
     if (flags()->report_globals >= 2)
       ReportGlobal(g, "Search");
     if (IsAddressNearGlobal(addr, g)) {
+#if defined(__GNUC__) && defined(__sparc__)
+      internal_memcpy(&globals[res], &g, sizeof(g));
+#else
       globals[res] = g;
+#endif
       if (reg_sites)
         reg_sites[res] = FindRegistrationSite(&g);
       res++;

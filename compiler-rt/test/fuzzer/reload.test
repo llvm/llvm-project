@@ -1,0 +1,13 @@
+RUN: %cpp_compiler %S/ReloadTest.cpp -o %t-ReloadTest
+RUN: not %run %t-ReloadTest -max_len=10000 -seed=1 -timeout=15 -len_control=0 -exact_artifact_path=%t.crash 2>&1 | FileCheck %s
+
+CHECK: Test unit written to {{.*}}reload.test.tmp.crash
+
+RUN: not %run %t-ReloadTest %t.crash 2>&1 | FileCheck %s --check-prefix=ARTIFACT
+
+ARTIFACT: Running: {{.*}}reload.test.tmp.crash
+ARTIFACT: ERROR: libFuzzer: deadly signal
+
+# Sanity check that altered artifact is not going to crash
+RUN: echo z >> %t.crash
+RUN: %run %t-ReloadTest %t.crash

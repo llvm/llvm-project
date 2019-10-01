@@ -2,7 +2,7 @@
 // RUN: mkdir %t-dir
 
 // RUN: %clangxx_tsan -O1 %s -DLIB -fPIC -fno-sanitize=thread -shared -o %t-dir/libignore_lib0.so
-// RUN: %clangxx_tsan -O1 %s -L%t-dir -lignore_lib0 -o %t
+// RUN: %clangxx_tsan -O1 %s -L%t-dir -lignore_lib0 %link_libcxx_tsan -o %t
 // RUN: echo running w/o suppressions:
 // RUN: env LD_LIBRARY_PATH=%t-dir${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH} %deflake %run %t | FileCheck %s --check-prefix=CHECK-NOSUPP
 // RUN: echo running with suppressions:

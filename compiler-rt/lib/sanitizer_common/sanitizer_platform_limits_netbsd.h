@@ -1,9 +1,8 @@
 //===-- sanitizer_platform_limits_netbsd.h --------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -448,8 +447,36 @@ struct __sanitizer_wordexp_t {
   uptr we_nbytes;
 };
 
-typedef char __sanitizer_FILE;
-#define SANITIZER_HAS_STRUCT_FILE 0
+struct __sanitizer_FILE {
+  unsigned char *_p;
+  int _r;
+  int _w;
+  unsigned short _flags;
+  short _file;
+  struct {
+    unsigned char *_base;
+    int _size;
+  } _bf;
+  int _lbfsize;
+  void *_cookie;
+  int (*_close)(void *ptr);
+  u64 (*_read)(void *, void *, uptr);
+  u64 (*_seek)(void *, u64, int);
+  uptr (*_write)(void *, const void *, uptr);
+  struct {
+    unsigned char *_base;
+    int _size;
+  } _ext;
+  unsigned char *_up;
+  int _ur;
+  unsigned char _ubuf[3];
+  unsigned char _nbuf[1];
+  int (*_flush)(void *ptr);
+  char _lb_unused[sizeof(uptr)];
+  int _blksize;
+  u64 _offset;
+};
+#define SANITIZER_HAS_STRUCT_FILE 1
 
 extern int shmctl_ipc_stat;
 
@@ -775,7 +802,6 @@ extern unsigned struct_rf_recon_req_sz;
 extern unsigned struct_rio_conf_sz;
 extern unsigned struct_rio_interface_sz;
 extern unsigned struct_rio_stats_sz;
-extern unsigned struct_satlink_id_sz;
 extern unsigned struct_scan_io_sz;
 extern unsigned struct_scbusaccel_args_sz;
 extern unsigned struct_scbusiodetach_args_sz;
@@ -961,6 +987,7 @@ extern unsigned struct_RF_ComponentLabel_sz;
 extern unsigned struct_RF_SingleComponent_sz;
 extern unsigned struct_RF_ProgressInfo_sz;
 extern unsigned struct_nvlist_ref_sz;
+extern unsigned struct_StringList_sz;
 
 
 // A special value to mark ioctls that are not present on the target platform,
@@ -1237,9 +1264,6 @@ extern unsigned IOCTL_IRDA_GET_TURNAROUNDMASK;
 extern unsigned IOCTL_IRFRAMETTY_GET_DEVICE;
 extern unsigned IOCTL_IRFRAMETTY_GET_DONGLE;
 extern unsigned IOCTL_IRFRAMETTY_SET_DONGLE;
-extern unsigned IOCTL_SATIORESET;
-extern unsigned IOCTL_SATIOGID;
-extern unsigned IOCTL_SATIOSBUFSIZE;
 extern unsigned IOCTL_ISV_CMD;
 extern unsigned IOCTL_WTQICMD;
 extern unsigned IOCTL_ISCSI_GET_VERSION;

@@ -1,5 +1,6 @@
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 #include "../assembly.h"
 
@@ -57,7 +58,7 @@ DEFINE_COMPILERRT_FUNCTION(__floatundixf)
 	orq		REL_ADDR(twop52),	%rsi			// 2^52 + lo (as a double)
 	movq	%rdi,			 -8(%rsp)
 	movq	%rsi,			-16(%rsp)
-	fldl	REL_ADDR(twop84_plus_twop52_neg)	
+	fldl	REL_ADDR(twop84_plus_twop52_neg)
 	faddl	-8(%rsp)	// hi - 2^52 (as double extended, no rounding occurs)
 	faddl	-16(%rsp)	// hi + lo (as double extended)
 	ret

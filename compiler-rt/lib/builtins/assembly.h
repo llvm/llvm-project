@@ -1,17 +1,15 @@
-/* ===-- assembly.h - compiler-rt assembler support macros -----------------===
- *
- *                     The LLVM Compiler Infrastructure
- *
- * This file is dual licensed under the MIT and the University of Illinois Open
- * Source Licenses. See LICENSE.TXT for details.
- *
- * ===----------------------------------------------------------------------===
- *
- * This file defines macros for use in compiler-rt assembler source.
- * This file is not part of the interface of this library.
- *
- * ===----------------------------------------------------------------------===
- */
+//===-- assembly.h - compiler-rt assembler support macros -----------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file defines macros for use in compiler-rt assembler source.
+// This file is not part of the interface of this library.
+//
+//===----------------------------------------------------------------------===//
 
 #ifndef COMPILERRT_ASSEMBLY_H
 #define COMPILERRT_ASSEMBLY_H
@@ -69,11 +67,9 @@
 
 #if defined(__arm__)
 
-/*
- * Determine actual [ARM][THUMB[1][2]] ISA using compiler predefined macros:
- * - for '-mthumb -march=armv6' compiler defines '__thumb__'
- * - for '-mthumb -march=armv7' compiler defines '__thumb__' and '__thumb2__'
- */
+// Determine actual [ARM][THUMB[1][2]] ISA using compiler predefined macros:
+// - for '-mthumb -march=armv6' compiler defines '__thumb__'
+// - for '-mthumb -march=armv7' compiler defines '__thumb__' and '__thumb2__'
 #if defined(__thumb2__) || defined(__thumb__)
 #define DEFINE_CODE_STATE .thumb SEPARATOR
 #define DECLARE_FUNC_ENCODING    .thumb_func SEPARATOR
@@ -201,4 +197,4 @@
 #define END_COMPILERRT_FUNCTION(name)
 #endif
 
-#endif /* COMPILERRT_ASSEMBLY_H */
+#endif // COMPILERRT_ASSEMBLY_H

@@ -1,5 +1,6 @@
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 #include "../assembly.h"
 
@@ -41,14 +42,14 @@ DEFINE_COMPILERRT_FUNCTION(__lshrdi3)
 	movl	  12(%esp),		%ecx	// Load count
 	movl	   8(%esp),		%edx	// Load high
 	movl	   4(%esp),		%eax	// Load low
-	
+
 	testl		$0x20,		%ecx	// If count >= 32
 	jnz			1f					//    goto 1
 
 	shrdl		%cl, %edx,	%eax	// right shift low by count
 	shrl		%cl,		%edx	// right shift high by count
 	ret
-	
+
 1:	movl		%edx,		%eax	// Move high to low
 	xorl		%edx,		%edx	// clear high
 	shrl		%cl,		%eax	// shift low by count - 32

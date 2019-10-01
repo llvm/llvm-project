@@ -14,19 +14,13 @@ if(COMPILER_RT_BUILD_PROFILE AND COMPILER_RT_HAS_PROFILE)
   list(APPEND SANITIZER_COMMON_LIT_TEST_DEPS profile)
 endif()
 
-if(COMPILER_RT_STANDALONE_BUILD)
-  add_executable(FileCheck IMPORTED GLOBAL)
-  set_property(TARGET FileCheck PROPERTY IMPORTED_LOCATION ${LLVM_TOOLS_BINARY_DIR}/FileCheck)
-  list(APPEND SANITIZER_COMMON_LIT_TEST_DEPS FileCheck)
-endif()
-
 # When ANDROID, we build tests with the host compiler (i.e. CMAKE_C_COMPILER),
 # and run tests with tools from the host toolchain.
 if(NOT ANDROID)
-  if(NOT COMPILER_RT_STANDALONE_BUILD)
+  if(NOT COMPILER_RT_STANDALONE_BUILD AND NOT RUNTIMES_BUILD)
     # Use LLVM utils and Clang from the same build tree.
     list(APPEND SANITIZER_COMMON_LIT_TEST_DEPS
-      clang clang-headers FileCheck count not llvm-config llvm-nm llvm-objdump
+      clang clang-resource-headers FileCheck count not llvm-config llvm-nm llvm-objdump
       llvm-readobj llvm-symbolizer compiler-rt-headers sancov)
     if (WIN32)
       list(APPEND SANITIZER_COMMON_LIT_TEST_DEPS KillTheDoctor)
@@ -78,6 +72,9 @@ if(COMPILER_RT_CAN_EXECUTE_TESTS)
   endif()
   if(COMPILER_RT_BUILD_XRAY)
     compiler_rt_test_runtime(xray)
+  endif()
+  if(COMPILER_RT_BUILD_CRT AND COMPILER_RT_HAS_CRT)
+    add_subdirectory(crt)
   endif()
   # ShadowCallStack does not yet provide a runtime with compiler-rt, the tests
   # include their own minimal runtime

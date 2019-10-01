@@ -1,9 +1,8 @@
 //===-- sanitizer_thread_registry.cc --------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -18,8 +17,8 @@ namespace __sanitizer {
 
 ThreadContextBase::ThreadContextBase(u32 tid)
     : tid(tid), unique_id(0), reuse_count(), os_id(0), user_id(0),
-      status(ThreadStatusInvalid),
-      detached(false), workerthread(false), parent_tid(0), next(0) {
+      status(ThreadStatusInvalid), detached(false),
+      thread_type(ThreadType::Regular), parent_tid(0), next(0) {
   name[0] = '\0';
   atomic_store(&thread_destroyed, 0, memory_order_release);
 }
@@ -71,11 +70,11 @@ void ThreadContextBase::SetFinished() {
   OnFinished();
 }
 
-void ThreadContextBase::SetStarted(tid_t _os_id, bool _workerthread,
+void ThreadContextBase::SetStarted(tid_t _os_id, ThreadType _thread_type,
                                    void *arg) {
   status = ThreadStatusRunning;
   os_id = _os_id;
-  workerthread = _workerthread;
+  thread_type = _thread_type;
   OnStarted(arg);
 }
 
@@ -303,7 +302,7 @@ void ThreadRegistry::FinishThread(u32 tid) {
   tctx->SetDestroyed();
 }
 
-void ThreadRegistry::StartThread(u32 tid, tid_t os_id, bool workerthread,
+void ThreadRegistry::StartThread(u32 tid, tid_t os_id, ThreadType thread_type,
                                  void *arg) {
   BlockingMutexLock l(&mtx_);
   running_threads_++;
@@ -311,7 +310,7 @@ void ThreadRegistry::StartThread(u32 tid, tid_t os_id, bool workerthread,
   ThreadContextBase *tctx = threads_[tid];
   CHECK_NE(tctx, 0);
   CHECK_EQ(ThreadStatusCreated, tctx->status);
-  tctx->SetStarted(os_id, workerthread, arg);
+  tctx->SetStarted(os_id, thread_type, arg);
 }
 
 void ThreadRegistry::QuarantinePush(ThreadContextBase *tctx) {

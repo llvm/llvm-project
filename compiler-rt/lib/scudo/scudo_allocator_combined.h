@@ -1,9 +1,8 @@
 //===-- scudo_allocator_combined.h ------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -19,10 +18,11 @@
 # error "This file must be included inside scudo_allocator.h."
 #endif
 
-template <class PrimaryAllocator, class AllocatorCache,
-    class SecondaryAllocator>
 class CombinedAllocator {
  public:
+  using PrimaryAllocator = PrimaryT;
+  using SecondaryAllocator = SecondaryT;
+  using AllocatorCache = typename PrimaryAllocator::AllocatorCache;
   void init(s32 ReleaseToOSIntervalMs) {
     Primary.Init(ReleaseToOSIntervalMs);
     Secondary.Init();

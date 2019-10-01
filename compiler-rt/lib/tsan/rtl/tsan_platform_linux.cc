@@ -1,9 +1,8 @@
 //===-- tsan_platform_linux.cc --------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -400,6 +399,10 @@ ThreadState *cur_thread() {
     CHECK_EQ(0, internal_sigprocmask(SIG_SETMASK, &oldset, nullptr));
   }
   return thr;
+}
+
+void set_cur_thread(ThreadState *thr) {
+  *get_android_tls_ptr() = reinterpret_cast<uptr>(thr);
 }
 
 void cur_thread_finalize() {

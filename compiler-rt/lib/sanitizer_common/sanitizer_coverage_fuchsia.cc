@@ -1,9 +1,8 @@
 //===-- sanitizer_coverage_fuchsia.cc -------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -133,7 +132,7 @@ class TracePcGuardController final {
       // The first sample goes at [1] to reserve [0] for the magic number.
       next_index_ = 1 + num_guards;
 
-      zx_status_t status = _zx_vmo_create(DataSize(), 0, &vmo_);
+      zx_status_t status = _zx_vmo_create(DataSize(), ZX_VMO_RESIZABLE, &vmo_);
       CHECK_EQ(status, ZX_OK);
 
       // Give the VMO a name including our process KOID so it's easy to spot.

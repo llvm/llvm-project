@@ -6,7 +6,8 @@
 // RUN: %clangxx_asan -O3 %s -o %t && %run %t 2>&1 | FileCheck %s
 //
 // This test is too sublte to try on non-x86 arch for now.
-// REQUIRES: x86-target-arch
+// Android does not support swapcontext.
+// REQUIRES: x86-target-arch && !android
 
 #include <stdio.h>
 #include <ucontext.h>

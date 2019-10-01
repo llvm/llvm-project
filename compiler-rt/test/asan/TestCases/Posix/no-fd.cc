@@ -9,6 +9,10 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+extern "C" const char *__asan_default_options() {
+  return "test_only_emulate_no_memorymap=1";
+}
+
 void parent(int argc, char **argv) {
   fprintf(stderr, "hello\n");
   // CHECK: hello

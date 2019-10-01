@@ -1,9 +1,8 @@
 //===-- sanitizer_platform_limits_posix.cc --------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -116,8 +115,6 @@ typedef struct user_fpregs elf_fpregset_t;
 #include <netrom/netrom.h>
 #if HAVE_RPC_XDR_H
 # include <rpc/xdr.h>
-#elif HAVE_TIRPC_RPC_XDR_H
-# include <tirpc/rpc/xdr.h>
 #endif
 #include <scsi/scsi.h>
 #include <sys/mtio.h>
@@ -1214,7 +1211,7 @@ CHECK_SIZE_AND_OFFSET(group, gr_passwd);
 CHECK_SIZE_AND_OFFSET(group, gr_gid);
 CHECK_SIZE_AND_OFFSET(group, gr_mem);
 
-#if HAVE_RPC_XDR_H || HAVE_TIRPC_RPC_XDR_H
+#if HAVE_RPC_XDR_H
 CHECK_TYPE_SIZE(XDR);
 CHECK_SIZE_AND_OFFSET(XDR, x_op);
 CHECK_SIZE_AND_OFFSET(XDR, x_ops);

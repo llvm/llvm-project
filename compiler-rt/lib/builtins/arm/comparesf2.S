@@ -1,9 +1,8 @@
 //===-- comparesf2.S - Implement single-precision soft-float comparisons --===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -38,14 +37,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "../assembly.h"
+
     .syntax unified
     .text
     DEFINE_CODE_STATE
 
-@ int __eqsf2(float a, float b)
-
-    .p2align 2
-DEFINE_COMPILERRT_FUNCTION(__eqsf2)
+    .macro COMPARESF2_FUNCTION_BODY handle_nan:req
 #if defined(COMPILER_RT_ARMHF_TARGET)
     vmov r0, s0
     vmov r1, s1
@@ -113,9 +110,9 @@ DEFINE_COMPILERRT_FUNCTION(__eqsf2)
     // b < 0 ? 1 : -1. Same if a and b have the opposite sign (ignoring Nan).
     movs    r0,         #1
     lsrs    r1,         #31
-    bne     LOCAL_LABEL(CHECK_NAN)
+    bne     LOCAL_LABEL(CHECK_NAN\@)
     negs    r0,         r0
-    b       LOCAL_LABEL(CHECK_NAN)
+    b       LOCAL_LABEL(CHECK_NAN\@)
 1:
 #else
     it lo
@@ -131,7 +128,7 @@ DEFINE_COMPILERRT_FUNCTION(__eqsf2)
     // Here both have the same sign and absA > absB.
     movs    r0,         #1
     lsrs    r1,         #31
-    beq     LOCAL_LABEL(CHECK_NAN)
+    beq     LOCAL_LABEL(CHECK_NAN\@)
     negs    r0, r0
 1:
 #else
@@ -152,7 +149,7 @@ DEFINE_COMPILERRT_FUNCTION(__eqsf2)
     // Finally, we need to deal with NaNs.  If either argument is NaN, replace
     // the value in r0 with 1.
 #if defined(USE_THUMB_1)
-LOCAL_LABEL(CHECK_NAN):
+LOCAL_LABEL(CHECK_NAN\@):
     movs    r6,         #0xff
     lsls    r6,         #24
     cmp     r2,         r6
@@ -160,92 +157,60 @@ LOCAL_LABEL(CHECK_NAN):
     cmp     r3,         r6
 1:
     bls     2f
-    movs    r0,         #1
+    \handle_nan
 2:
     pop     {r6, pc}
 #else
     cmp     r2,         #0xff000000
     ite ls
     cmpls   r3,         #0xff000000
-    movhi   r0,         #1
+    \handle_nan
     JMP(lr)
 #endif
+    .endm
+
+@ int __eqsf2(float a, float b)
+
+    .p2align 2
+DEFINE_COMPILERRT_FUNCTION(__eqsf2)
+
+    .macro __eqsf2_handle_nan
+#if defined(USE_THUMB_1)
+    movs    r0,         #1
+#else
+    movhi   r0,         #1
+#endif
+    .endm
+
+COMPARESF2_FUNCTION_BODY __eqsf2_handle_nan
+
 END_COMPILERRT_FUNCTION(__eqsf2)
 
 DEFINE_COMPILERRT_FUNCTION_ALIAS(__lesf2, __eqsf2)
 DEFINE_COMPILERRT_FUNCTION_ALIAS(__ltsf2, __eqsf2)
 DEFINE_COMPILERRT_FUNCTION_ALIAS(__nesf2, __eqsf2)
 
+#if defined(__ELF__)
+// Alias for libgcc compatibility
+DEFINE_COMPILERRT_FUNCTION_ALIAS(__cmpsf2, __lesf2)
+#endif
+
 @ int __gtsf2(float a, float b)
 
     .p2align 2
 DEFINE_COMPILERRT_FUNCTION(__gtsf2)
-    // Identical to the preceding except in that we return -1 for NaN values.
-    // Given that the two paths share so much code, one might be tempted to
-    // unify them; however, the extra code needed to do so makes the code size
-    // to performance tradeoff very hard to justify for such small functions.
-#if defined(COMPILER_RT_ARMHF_TARGET)
-    vmov r0, s0
-    vmov r1, s1
-#endif
+
+    .macro __gtsf2_handle_nan
 #if defined(USE_THUMB_1)
-    push    {r6, lr}
-    lsls    r2,        r0, #1
-    lsls    r3,        r1, #1
-    lsrs    r6,        r3, #1
-    orrs    r6,        r2
-    beq     1f
-    movs    r6,        r0
-    eors    r6,        r1
-1:
-    bmi     2f
-    subs    r0,        r2, r3
-2:
-    bhs     3f
-    movs    r0,        #1
-    lsrs    r1,        #31
-    bne     LOCAL_LABEL(CHECK_NAN_2)
-    negs    r0, r0
-    b       LOCAL_LABEL(CHECK_NAN_2)
-3:
-    bls     4f
-    movs    r0,         #1
-    lsrs    r1,         #31
-    beq     LOCAL_LABEL(CHECK_NAN_2)
-    negs    r0, r0
-4:
-LOCAL_LABEL(CHECK_NAN_2):
-    movs    r6,         #0xff
-    lsls    r6,         #24
-    cmp     r2,         r6
-    bhi     5f
-    cmp     r3,         r6
-5:
-    bls     6f
     movs    r0,         #1
     negs    r0,         r0
-6:
-    pop     {r6, pc}
 #else
-    mov     r2,         r0, lsl #1
-    mov     r3,         r1, lsl #1
-    orrs    r12,    r2, r3, lsr #1
-    it ne
-    eorsne  r12,    r0, r1
-    it pl
-    subspl  r0,     r2, r3
-    it lo
-    mvnlo   r0,         r1, asr #31
-    it hi
-    movhi   r0,         r1, asr #31
-    it ne
-    orrne   r0,     r0, #1
-    cmp     r2,         #0xff000000
-    ite ls
-    cmpls   r3,         #0xff000000
     movhi   r0,         #-1
-    JMP(lr)
 #endif
+    .endm
+
+COMPARESF2_FUNCTION_BODY __gtsf2_handle_nan
+
 END_COMPILERRT_FUNCTION(__gtsf2)
 
 DEFINE_COMPILERRT_FUNCTION_ALIAS(__gesf2, __gtsf2)
@@ -283,11 +248,11 @@ DEFINE_COMPILERRT_FUNCTION(__unordsf2)
 END_COMPILERRT_FUNCTION(__unordsf2)
 
 #if defined(COMPILER_RT_ARMHF_TARGET)
-DEFINE_COMPILERRT_FUNCTION(__aeabi_fcmpum)
+DEFINE_COMPILERRT_FUNCTION(__aeabi_fcmpun)
 	vmov s0, r0
 	vmov s1, r1
 	b SYMBOL_NAME(__unordsf2)
-END_COMPILERRT_FUNCTION(__aeabi_fcmpum)
+END_COMPILERRT_FUNCTION(__aeabi_fcmpun)
 #else
 DEFINE_AEABI_FUNCTION_ALIAS(__aeabi_fcmpun, __unordsf2)
 #endif

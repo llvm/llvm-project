@@ -1,9 +1,8 @@
 //===-- sanitizer_common.h --------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -61,6 +60,15 @@ INLINE int Verbosity() {
   return atomic_load(&current_verbosity, memory_order_relaxed);
 }
 
+#if SANITIZER_ANDROID
+INLINE uptr GetPageSize() {
+// Android post-M sysconf(_SC_PAGESIZE) crashes if called from .preinit_array.
+  return 4096;
+}
+INLINE uptr GetPageSizeCached() {
+  return 4096;
+}
+#else
 uptr GetPageSize();
 extern uptr PageSizeCached;
 INLINE uptr GetPageSizeCached() {
@@ -68,6 +76,7 @@ INLINE uptr GetPageSizeCached() {
     PageSizeCached = GetPageSize();
   return PageSizeCached;
 }
+#endif
 uptr GetMmapGranularity();
 uptr GetMaxVirtualAddress();
 uptr GetMaxUserVirtualAddress();
@@ -92,10 +101,11 @@ void *MmapOrDieOnFatalError(uptr size, const char *mem_type);
 bool MmapFixedNoReserve(uptr fixed_addr, uptr size, const char *name = nullptr)
      WARN_UNUSED_RESULT;
 void *MmapNoReserveOrDie(uptr size, const char *mem_type);
-void *MmapFixedOrDie(uptr fixed_addr, uptr size);
+void *MmapFixedOrDie(uptr fixed_addr, uptr size, const char *name = nullptr);
 // Behaves just like MmapFixedOrDie, but tolerates out of memory condition, in
 // that case returns nullptr.
-void *MmapFixedOrDieOnFatalError(uptr fixed_addr, uptr size);
+void *MmapFixedOrDieOnFatalError(uptr fixed_addr, uptr size,
+                                 const char *name = nullptr);
 void *MmapFixedNoAccess(uptr fixed_addr, uptr size, const char *name = nullptr);
 void *MmapNoAccess(uptr size);
 // Map aligned chunk of address space; size and alignment are powers of two.
@@ -131,8 +141,8 @@ void RunFreeHooks(const void *ptr);
 class ReservedAddressRange {
  public:
   uptr Init(uptr size, const char *name = nullptr, uptr fixed_addr = 0);
-  uptr Map(uptr fixed_addr, uptr size);
-  uptr MapOrDie(uptr fixed_addr, uptr size);
+  uptr Map(uptr fixed_addr, uptr size, const char *name = nullptr);
+  uptr MapOrDie(uptr fixed_addr, uptr size, const char *name = nullptr);
   void Unmap(uptr addr, uptr size);
   void *base() const { return base_; }
   uptr size() const { return size_; }
@@ -228,7 +238,6 @@ char **GetArgv();
 char **GetEnviron();
 void PrintCmdline();
 bool StackSizeIsUnlimited();
-uptr GetStackSizeLimitInBytes();
 void SetStackSizeLimitInBytes(uptr limit);
 bool AddressSpaceIsUnlimited();
 void SetAddressSpaceUnlimited();
@@ -795,7 +804,13 @@ enum AndroidApiLevel {
 
 void WriteToSyslog(const char *buffer);
 
-#if SANITIZER_MAC
+#if defined(SANITIZER_WINDOWS) && defined(_MSC_VER) && !defined(__clang__)
+#define SANITIZER_WIN_TRACE 1
+#else
+#define SANITIZER_WIN_TRACE 0
+#endif
+
+#if SANITIZER_MAC || SANITIZER_WIN_TRACE
 void LogFullErrorReport(const char *buffer);
 #else
 INLINE void LogFullErrorReport(const char *buffer) {}
@@ -809,7 +824,7 @@ INLINE void WriteOneLineToSyslog(const char *s) {}
 INLINE void LogMessageOnPrintf(const char *str) {}
 #endif
 
-#if SANITIZER_LINUX
+#if SANITIZER_LINUX || SANITIZER_WIN_TRACE
 // Initialize Android logging. Any writes before this are silently lost.
 void AndroidLogInit();
 void SetAbortMessage(const char *);

@@ -1,9 +1,8 @@
 //===-- asan_allocator.cc -------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -878,6 +877,17 @@ void *asan_malloc(uptr size, BufferedStackTrace *stack) {
 
 void *asan_calloc(uptr nmemb, uptr size, BufferedStackTrace *stack) {
   return SetErrnoOnNull(instance.Calloc(nmemb, size, stack));
+}
+
+void *asan_reallocarray(void *p, uptr nmemb, uptr size,
+                        BufferedStackTrace *stack) {
+  if (UNLIKELY(CheckForCallocOverflow(size, nmemb))) {
+    errno = errno_ENOMEM;
+    if (AllocatorMayReturnNull())
+      return nullptr;
+    ReportReallocArrayOverflow(nmemb, size, stack);
+  }
+  return asan_realloc(p, nmemb * size, stack);
 }
 
 void *asan_realloc(void *p, uptr size, BufferedStackTrace *stack) {

@@ -1,7 +1,6 @@
 // RUN: %clangxx_tsan %s -o %t -framework Foundation -fobjc-arc %darwin_min_target_with_full_runtime_arc_support
 // RUN:     %run %t 6 2>&1 | FileCheck %s --check-prefix=SIX
 // RUN: not %run %t 7 2>&1 | FileCheck %s --check-prefix=SEVEN
-// XFAIL: *
 
 #import <Foundation/Foundation.h>
 
@@ -12,7 +11,7 @@ static bool isTaggedPtr(id obj) {
 
 int main(int argc, char* argv[]) {
   assert(argc == 2);
-  int arg = atoi(argv[0]);
+  int arg = atoi(argv[1]);
 
   @autoreleasepool {
     NSObject* obj = [NSObject new];

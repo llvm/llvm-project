@@ -1,9 +1,8 @@
 //===-- tsan_go.cc --------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -214,7 +213,7 @@ void __tsan_go_start(ThreadState *parent, ThreadState **pthr, void *pc) {
   ThreadState *thr = AllocGoroutine();
   *pthr = thr;
   int goid = ThreadCreate(parent, (uptr)pc, 0, true);
-  ThreadStart(thr, goid, 0, /*workerthread*/ false);
+  ThreadStart(thr, goid, 0, ThreadType::Regular);
 }
 
 void __tsan_go_end(ThreadState *thr) {

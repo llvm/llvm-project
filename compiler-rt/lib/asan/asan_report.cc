@@ -1,9 +1,8 @@
 //===-- asan_report.cc ----------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -191,7 +190,7 @@ class ScopedInErrorReport {
   void ReportError(const ErrorDescription &description) {
     // Can only report one error per ScopedInErrorReport.
     CHECK_EQ(current_error_.kind, kErrorKindInvalid);
-    current_error_ = description;
+    internal_memcpy(&current_error_, &description, sizeof(current_error_));
   }
 
   static ErrorDescription &CurrentError() {
@@ -261,6 +260,13 @@ void ReportSanitizerGetAllocatedSizeNotOwned(uptr addr,
 void ReportCallocOverflow(uptr count, uptr size, BufferedStackTrace *stack) {
   ScopedInErrorReport in_report(/*fatal*/ true);
   ErrorCallocOverflow error(GetCurrentTidOrInvalid(), stack, count, size);
+  in_report.ReportError(error);
+}
+
+void ReportReallocArrayOverflow(uptr count, uptr size,
+                                BufferedStackTrace *stack) {
+  ScopedInErrorReport in_report(/*fatal*/ true);
+  ErrorReallocArrayOverflow error(GetCurrentTidOrInvalid(), stack, count, size);
   in_report.ReportError(error);
 }
 

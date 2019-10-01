@@ -1,9 +1,8 @@
 //===-- sanitizer_allocator_report.cc ---------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -48,6 +47,18 @@ void NORETURN ReportCallocOverflow(uptr count, uptr size,
     Report("ERROR: %s: calloc parameters overflow: count * size (%zd * %zd) "
            "cannot be represented in type size_t\n", SanitizerToolName, count,
            size);
+  }
+  Die();
+}
+
+void NORETURN ReportReallocArrayOverflow(uptr count, uptr size,
+                                         const StackTrace *stack) {
+  {
+    ScopedAllocatorErrorReport report("reallocarray-overflow", stack);
+    Report(
+        "ERROR: %s: reallocarray parameters overflow: count * size (%zd * %zd) "
+        "cannot be represented in type size_t\n",
+        SanitizerToolName, count, size);
   }
   Die();
 }

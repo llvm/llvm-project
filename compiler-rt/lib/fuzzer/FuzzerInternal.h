@@ -1,9 +1,8 @@
 //===- FuzzerInternal.h - Internal header for the Fuzzer --------*- C++ -* ===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 // Define the main class fuzzer::Fuzzer and most functions.
@@ -36,8 +35,8 @@ public:
   Fuzzer(UserCallback CB, InputCorpus &Corpus, MutationDispatcher &MD,
          FuzzingOptions Options);
   ~Fuzzer();
-  void Loop(const Vector<std::string> &CorpusDirs);
-  void ReadAndExecuteSeedCorpora(const Vector<std::string> &CorpusDirs);
+  void Loop(Vector<SizedFile> &CorporaFiles);
+  void ReadAndExecuteSeedCorpora(Vector<SizedFile> &CorporaFiles);
   void MinimizeCrashLoop(const Unit &U);
   void RereadOutputCorpus(size_t MaxSize);
 
@@ -67,17 +66,11 @@ public:
   static void StaticGracefulExitCallback();
 
   void ExecuteCallback(const uint8_t *Data, size_t Size);
-  void CheckForUnstableCounters(const uint8_t *Data, size_t Size);
   bool RunOne(const uint8_t *Data, size_t Size, bool MayDeleteFile = false,
               InputInfo *II = nullptr, bool *FoundUniqFeatures = nullptr);
 
   // Merge Corpora[1:] into Corpora[0].
   void Merge(const Vector<std::string> &Corpora);
-  void CrashResistantMerge(const Vector<std::string> &Args,
-                           const Vector<std::string> &Corpora,
-                           const char *CoverageSummaryInputPathOrNull,
-                           const char *CoverageSummaryOutputPathOrNull,
-                           const char *MergeControlFilePathOrNull);
   void CrashResistantMergeInternalStep(const std::string &ControlFilePath);
   MutationDispatcher &GetMD() { return MD; }
   void PrintFinalStats();
@@ -91,20 +84,19 @@ public:
                                bool DuringInitialCorpusExecution);
 
   void HandleMalloc(size_t Size);
-  void AnnounceOutput(const uint8_t *Data, size_t Size);
+  static void MaybeExitGracefully();
+  std::string WriteToOutputCorpus(const Unit &U);
 
 private:
   void AlarmCallback();
   void CrashCallback();
   void ExitCallback();
-  void MaybeExitGracefully();
   void CrashOnOverwrittenData();
   void InterruptCallback();
   void MutateAndTestOne();
   void PurgeAllocator();
   void ReportNewCoverage(InputInfo *II, const Unit &U);
   void PrintPulseAndReportSlowInput(const uint8_t *Data, size_t Size);
-  void WriteToOutputCorpus(const Unit &U);
   void WriteUnitToFileWithPrefix(const Unit &U, const char *Prefix);
   void PrintStats(const char *Where, const char *End = "\n", size_t Units = 0);
   void PrintStatusForNewUnit(const Unit &U, const char *Text);

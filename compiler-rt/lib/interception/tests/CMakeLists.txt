@@ -21,6 +21,9 @@ set(INTERCEPTION_TEST_CFLAGS_COMMON
   -Werror=sign-compare
   -Wno-non-virtual-dtor)
 
+set(INTERCEPTION_TEST_LINK_FLAGS_COMMON
+  ${COMPILER_RT_UNITTEST_LINK_FLAGS})
+
 # -gline-tables-only must be enough for these tests, so use it if possible.
 if(COMPILER_RT_TEST_COMPILER_ID MATCHES "Clang")
   list(APPEND INTERCEPTION_TEST_CFLAGS_COMMON -gline-tables-only)

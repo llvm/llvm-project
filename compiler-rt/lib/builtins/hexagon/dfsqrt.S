@@ -1,13 +1,12 @@
 //===----------------------Hexagon builtin routine ------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
-/* Double Precision square root */
+// Double Precision square root
 
 #define EXP r28
 
@@ -169,9 +168,9 @@ __hexagon_sqrt:
 #define P_CARRY1 p2
 #define P_CARRY2 p3
 
-	/* Iteration 0 */
-	/* Maybe we can save a cycle by starting with ERROR=asl(fracrad), then as we multiply */
-	/* We can shift and subtract instead of shift and add? */
+	// Iteration 0
+	// Maybe we can save a cycle by starting with ERROR=asl(fracrad), then as we multiply
+	// We can shift and subtract instead of shift and add?
 	{
 		ERROR = asl(FRACRAD,#15)
 		PROD = mpyu(ROOTHI,ROOTHI)
@@ -194,7 +193,7 @@ __hexagon_sqrt:
 		SHIFTAMT = add(SHIFTAMT,#16)
 		ERROR = asl(FRACRAD,#31)		// for next iter
 	}
-	/* Iteration 1 */
+	// Iteration 1
 	{
 		PROD = mpyu(ROOTHI,ROOTHI)
 		ERROR -= mpyu(ROOTHI,ROOTLO)	// amount is 31, no shift needed
@@ -214,7 +213,7 @@ __hexagon_sqrt:
 		SHIFTAMT = add(SHIFTAMT,#16)
 		ERROR = asl(FRACRAD,#47)	// for next iter
 	}
-	/* Iteration 2 */
+	// Iteration 2
 	{
 		PROD = mpyu(ROOTHI,ROOTHI)
 	}
@@ -245,7 +244,7 @@ __hexagon_sqrt:
 #undef RECIPEST
 #undef SHIFTAMT
 #define TWOROOT_LO r9:8
-	/* Adjust Root */
+	// Adjust Root
 	{
 		HL = mpyu(ROOTHI,ROOTLO)
 		LL = mpyu(ROOTLO,ROOTLO)

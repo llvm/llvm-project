@@ -6,10 +6,6 @@
 // RUN: %run %t_no_tsan   2>&1 | FileCheck %s
 // RUN: %run %t_with_tsan 2>&1 | FileCheck %s --implicit-check-not='ThreadSanitizer'
 
-// On Linux, requires upstream changes for how libc++ is built under TSan, which
-// aren't included in the swift-5.1-branch.
-// XFAIL: linux
-
 #include <dispatch/dispatch.h>
 
 #include <stdio.h>

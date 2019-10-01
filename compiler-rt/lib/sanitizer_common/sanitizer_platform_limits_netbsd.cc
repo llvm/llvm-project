@@ -1,9 +1,8 @@
 //===-- sanitizer_platform_limits_netbsd.cc -------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -122,10 +121,11 @@
 #include <dev/ic/nvmeio.h>
 #include <dev/ir/irdaio.h>
 #include <dev/isa/isvio.h>
-#include <dev/isa/satlinkio.h>
 #include <dev/isa/wtreg.h>
 #include <dev/iscsi/iscsi_ioctl.h>
+#if 0
 #include <dev/nvmm/nvmm_ioctl.h>
+#endif
 #include <dev/ofw/openfirmio.h>
 #include <dev/pci/amrio.h>
 #include <dev/pci/mlyreg.h>
@@ -220,6 +220,7 @@
 #include <fts.h>
 #include <regex.h>
 #include <fstab.h>
+#include <stringlist.h>
 // clang-format on
 
 // Include these after system headers to avoid name clashes and ambiguities.
@@ -638,7 +639,6 @@ unsigned struct_rf_recon_req_sz = sizeof(rf_recon_req);
 unsigned struct_rio_conf_sz = sizeof(rio_conf);
 unsigned struct_rio_interface_sz = sizeof(rio_interface);
 unsigned struct_rio_stats_sz = sizeof(rio_stats);
-unsigned struct_satlink_id_sz = sizeof(satlink_id);
 unsigned struct_scan_io_sz = sizeof(scan_io);
 unsigned struct_scbusaccel_args_sz = sizeof(scbusaccel_args);
 unsigned struct_scbusiodetach_args_sz = sizeof(scbusiodetach_args);
@@ -831,6 +831,7 @@ unsigned struct_RF_ComponentLabel_sz = sizeof(RF_ComponentLabel_t);
 unsigned struct_RF_SingleComponent_sz = sizeof(RF_SingleComponent_t);
 unsigned struct_RF_ProgressInfo_sz = sizeof(RF_ProgressInfo_t);
 unsigned struct_nvlist_ref_sz = sizeof(struct __sanitizer_nvlist_ref_t);
+unsigned struct_StringList_sz = sizeof(StringList);
 
 const unsigned IOCTL_NOT_PRESENT = 0;
 
@@ -1103,9 +1104,6 @@ unsigned IOCTL_IRDA_GET_TURNAROUNDMASK = IRDA_GET_TURNAROUNDMASK;
 unsigned IOCTL_IRFRAMETTY_GET_DEVICE = IRFRAMETTY_GET_DEVICE;
 unsigned IOCTL_IRFRAMETTY_GET_DONGLE = IRFRAMETTY_GET_DONGLE;
 unsigned IOCTL_IRFRAMETTY_SET_DONGLE = IRFRAMETTY_SET_DONGLE;
-unsigned IOCTL_SATIORESET = SATIORESET;
-unsigned IOCTL_SATIOGID = SATIOGID;
-unsigned IOCTL_SATIOSBUFSIZE = SATIOSBUFSIZE;
 unsigned IOCTL_ISV_CMD = ISV_CMD;
 unsigned IOCTL_WTQICMD = WTQICMD;
 unsigned IOCTL_ISCSI_GET_VERSION = ISCSI_GET_VERSION;
@@ -2243,6 +2241,29 @@ CHECK_TYPE_SIZE(wordexp_t);
 CHECK_SIZE_AND_OFFSET(wordexp_t, we_wordc);
 CHECK_SIZE_AND_OFFSET(wordexp_t, we_wordv);
 CHECK_SIZE_AND_OFFSET(wordexp_t, we_offs);
+
+COMPILER_CHECK(sizeof(__sanitizer_FILE) <= sizeof(FILE));
+CHECK_SIZE_AND_OFFSET(FILE, _p);
+CHECK_SIZE_AND_OFFSET(FILE, _r);
+CHECK_SIZE_AND_OFFSET(FILE, _w);
+CHECK_SIZE_AND_OFFSET(FILE, _flags);
+CHECK_SIZE_AND_OFFSET(FILE, _file);
+CHECK_SIZE_AND_OFFSET(FILE, _bf);
+CHECK_SIZE_AND_OFFSET(FILE, _lbfsize);
+CHECK_SIZE_AND_OFFSET(FILE, _cookie);
+CHECK_SIZE_AND_OFFSET(FILE, _close);
+CHECK_SIZE_AND_OFFSET(FILE, _read);
+CHECK_SIZE_AND_OFFSET(FILE, _seek);
+CHECK_SIZE_AND_OFFSET(FILE, _write);
+CHECK_SIZE_AND_OFFSET(FILE, _ext);
+CHECK_SIZE_AND_OFFSET(FILE, _up);
+CHECK_SIZE_AND_OFFSET(FILE, _ur);
+CHECK_SIZE_AND_OFFSET(FILE, _ubuf);
+CHECK_SIZE_AND_OFFSET(FILE, _nbuf);
+CHECK_SIZE_AND_OFFSET(FILE, _flush);
+CHECK_SIZE_AND_OFFSET(FILE, _lb_unused);
+CHECK_SIZE_AND_OFFSET(FILE, _blksize);
+CHECK_SIZE_AND_OFFSET(FILE, _offset);
 
 CHECK_TYPE_SIZE(tm);
 CHECK_SIZE_AND_OFFSET(tm, tm_sec);

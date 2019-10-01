@@ -1,4 +1,4 @@
-// CHECK:        -:    0:Source:{{.*}}Inputs/instrprof-shared-main-gcov-flush.c
+// CHECK:        -:    0:Source:{{.*}}Inputs{{[/\\]}}instrprof-shared-main-gcov-flush.c
 // CHECK-NEXT:        -:    0:Graph:instrprof-shared-main-gcov-flush.gcno
 // CHECK-NEXT:        -:    0:Data:instrprof-shared-main-gcov-flush.gcda
 // CHECK-NEXT:        -:    0:Runs:1

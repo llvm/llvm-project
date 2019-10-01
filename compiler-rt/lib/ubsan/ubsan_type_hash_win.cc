@@ -1,9 +1,8 @@
 //===-- ubsan_type_hash_win.cc --------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -76,6 +75,10 @@ __ubsan::getDynamicTypeInfoFromVtable(void *VtablePtr) {
   // FIXME: Implement a base class search like we do for Itanium.
   return DynamicTypeInfo(tinfo->name(), obj_locator->offset_to_top,
                          "<unknown>");
+}
+
+bool __ubsan::checkTypeInfoEquality(const void *, const void *) {
+  return false;
 }
 
 #endif  // CAN_SANITIZE_UB && SANITIZER_WINDOWS

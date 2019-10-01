@@ -30,6 +30,15 @@ set(SCUDO_MINIMAL_OBJECT_LIBS
   RTSanitizerCommonNoTermination
   RTSanitizerCommonLibc
   RTInterception)
+
+if (COMPILER_RT_HAS_GWP_ASAN)
+  # Currently, Scudo uses the GwpAsan flag parser. This backs onto the flag
+  # parsing mechanism of sanitizer_common. Once Scudo has its own flag parsing,
+  # and parses GwpAsan options, you can remove this dependency.
+  list(APPEND SCUDO_MINIMAL_OBJECT_LIBS RTGwpAsan RTGwpAsanOptionsParser)
+  list(APPEND SCUDO_CFLAGS -DGWP_ASAN_HOOKS)
+endif()
+
 set(SCUDO_OBJECT_LIBS ${SCUDO_MINIMAL_OBJECT_LIBS})
 set(SCUDO_DYNAMIC_LIBS ${SCUDO_MINIMAL_DYNAMIC_LIBS})
 
@@ -37,7 +46,7 @@ if (FUCHSIA)
   list(APPEND SCUDO_CFLAGS -nostdinc++)
   list(APPEND SCUDO_DYNAMIC_LINK_FLAGS -nostdlib++)
 else()
-  list(APPEND SCUDO_DYNAMIC_LIBS ${SANITIZER_CXX_ABI_LIBRARY})
+  list(APPEND SCUDO_DYNAMIC_LIBS ${SANITIZER_CXX_ABI_LIBRARIES})
   list(APPEND SCUDO_OBJECT_LIBS
     RTSanitizerCommonCoverage
     RTSanitizerCommonSymbolizer

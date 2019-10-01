@@ -1,9 +1,8 @@
 //===-- tsan_rtl_thread.cc ------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -240,13 +239,15 @@ int ThreadCreate(ThreadState *thr, uptr pc, uptr uid, bool detached) {
   return tid;
 }
 
-void ThreadStart(ThreadState *thr, int tid, tid_t os_id, bool workerthread) {
+void ThreadStart(ThreadState *thr, int tid, tid_t os_id,
+                 ThreadType thread_type) {
   uptr stk_addr = 0;
   uptr stk_size = 0;
   uptr tls_addr = 0;
   uptr tls_size = 0;
 #if !SANITIZER_GO
-  GetThreadStackAndTls(tid == 0, &stk_addr, &stk_size, &tls_addr, &tls_size);
+  if (thread_type != ThreadType::Fiber)
+    GetThreadStackAndTls(tid == 0, &stk_addr, &stk_size, &tls_addr, &tls_size);
 
   if (tid) {
     if (stk_addr && stk_size)
@@ -258,7 +259,7 @@ void ThreadStart(ThreadState *thr, int tid, tid_t os_id, bool workerthread) {
 
   ThreadRegistry *tr = ctx->thread_registry;
   OnStartedArgs args = { thr, stk_addr, stk_size, tls_addr, tls_size };
-  tr->StartThread(tid, os_id, workerthread, &args);
+  tr->StartThread(tid, os_id, thread_type, &args);
 
   tr->Lock();
   thr->tctx = (ThreadContext*)tr->GetThreadLocked(tid);
@@ -276,14 +277,10 @@ void ThreadStart(ThreadState *thr, int tid, tid_t os_id, bool workerthread) {
 void ThreadFinish(ThreadState *thr) {
   ThreadCheckIgnore(thr);
   StatInc(thr, StatThreadFinish);
-  if (thr->stk_addr && thr->stk_size) {
-    MemoryResetRange(thr, /*pc=*/ 1, thr->stk_addr, thr->stk_size);
+  if (thr->stk_addr && thr->stk_size)
     DontNeedShadowFor(thr->stk_addr, thr->stk_size);
-  }
-  if (thr->tls_addr && thr->tls_size) {
-    MemoryResetRange(thr, /*pc=*/ 1, thr->tls_addr, thr->tls_size);
+  if (thr->tls_addr && thr->tls_size)
     DontNeedShadowFor(thr->tls_addr, thr->tls_size);
-  }
   thr->is_dead = true;
   ctx->thread_registry->FinishThread(thr->tid);
 }
@@ -407,5 +404,41 @@ void MemoryAccessRange(ThreadState *thr, uptr pc, uptr addr,
         shadow_mem, cur);
   }
 }
+
+#if !SANITIZER_GO
+void FiberSwitchImpl(ThreadState *from, ThreadState *to) {
+  Processor *proc = from->proc();
+  ProcUnwire(proc, from);
+  ProcWire(proc, to);
+  set_cur_thread(to);
+}
+
+ThreadState *FiberCreate(ThreadState *thr, uptr pc, unsigned flags) {
+  void *mem = internal_alloc(MBlockThreadContex, sizeof(ThreadState));
+  ThreadState *fiber = static_cast<ThreadState *>(mem);
+  internal_memset(fiber, 0, sizeof(*fiber));
+  int tid = ThreadCreate(thr, pc, 0, true);
+  FiberSwitchImpl(thr, fiber);
+  ThreadStart(fiber, tid, 0, ThreadType::Fiber);
+  FiberSwitchImpl(fiber, thr);
+  return fiber;
+}
+
+void FiberDestroy(ThreadState *thr, uptr pc, ThreadState *fiber) {
+  FiberSwitchImpl(thr, fiber);
+  ThreadFinish(fiber);
+  FiberSwitchImpl(fiber, thr);
+  internal_free(fiber);
+}
+
+void FiberSwitch(ThreadState *thr, uptr pc,
+                 ThreadState *fiber, unsigned flags) {
+  if (!(flags & FiberSwitchFlagNoSync))
+    Release(thr, pc, (uptr)fiber);
+  FiberSwitchImpl(thr, fiber);
+  if (!(flags & FiberSwitchFlagNoSync))
+    Acquire(fiber, pc, (uptr)fiber);
+}
+#endif
 
 }  // namespace __tsan

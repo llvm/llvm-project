@@ -1,21 +1,19 @@
 //===-- nedf2vfp.S - Implement nedf2vfp -----------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "../assembly.h"
 
-//
 // extern double __nedf2vfp(double a, double b);
 //
 // Returns zero if a and b are unequal and neither is NaN.
-// Uses Darwin calling convention where double precision arguments are passsed 
+// Uses Darwin calling convention where double precision arguments are passsed
 // like in GPR pairs.
-//
+
 	.syntax unified
 	.p2align 2
 DEFINE_COMPILERRT_FUNCTION(__nedf2vfp)
@@ -24,7 +22,7 @@ DEFINE_COMPILERRT_FUNCTION(__nedf2vfp)
 #else
 	vmov 	d6, r0, r1	// load r0/r1 pair in double register
 	vmov 	d7, r2, r3	// load r2/r3 pair in double register
-	vcmp.f64 d6, d7		
+	vcmp.f64 d6, d7
 #endif
 	vmrs	apsr_nzcv, fpscr
 	ITE(ne)

@@ -1,9 +1,8 @@
 //===----------------------Hexagon builtin routine ------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -15,17 +14,14 @@
 #define Q6_ALIAS(TAG) .global __qdsp_##TAG ; .set __qdsp_##TAG, __hexagon_##TAG
 #define END(TAG) .size TAG,.-TAG
 
-/*
- * Min and Max return A if B is NaN, or B if A is NaN
- * Otherwise, they return the smaller or bigger value
- *
- * If values are equal, we want to favor -0.0 for min and +0.0 for max.
- */
+// Min and Max return A if B is NaN, or B if A is NaN
+// Otherwise, they return the smaller or bigger value
+//
+// If values are equal, we want to favor -0.0 for min and +0.0 for max.
 
-/*
- * Compares always return false for NaN
- * if (isnan(A)) A = B; if (A > B) A = B will only trigger at most one of those options.
- */
+// Compares always return false for NaN
+// if (isnan(A)) A = B; if (A > B) A = B will only trigger at most one of those options.
+
 	.text
 	.global __hexagon_mindf3
 	.global __hexagon_maxdf3
@@ -51,7 +47,7 @@ fmin:
 		p2 = dfcmp.eq(A,B)		// if A == B
 		if (!p2.new) jumpr:t r31
 	}
-	/* A == B, return A|B to select -0.0 over 0.0 */
+	// A == B, return A|B to select -0.0 over 0.0
 	{
 		A = or(ATMP,B)
 		jumpr r31
@@ -71,7 +67,7 @@ fmax:
 		p2 = dfcmp.eq(A,B)
 		if (!p2.new) jumpr:t r31
 	}
-	/* A == B, return A&B to select 0.0 over -0.0 */
+	// A == B, return A&B to select 0.0 over -0.0
 	{
 		A = and(ATMP,B)
 		jumpr r31

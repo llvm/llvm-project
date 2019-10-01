@@ -12,12 +12,14 @@ if (NOT COMPILER_RT_STANDALONE_BUILD)
   endif()
 endif()
 
+set(FUZZER_TEST_ARCH ${FUZZER_SUPPORTED_ARCH})
 if (APPLE)
-  darwin_filter_host_archs(FUZZER_SUPPORTED_ARCH FUZZER_SUPPORTED_ARCH)
+  darwin_filter_host_archs(FUZZER_SUPPORTED_ARCH FUZZER_TEST_ARCH)
 endif()
 
 if(COMPILER_RT_INCLUDE_TESTS)
   list(APPEND LIBFUZZER_TEST_DEPS FuzzerUnitTests)
+  list(APPEND LIBFUZZER_TEST_DEPS FuzzedDataProviderUnitTests)
 endif()
 
 add_custom_target(check-fuzzer)
@@ -45,10 +47,11 @@ macro(test_fuzzer stdlib)
     string(REGEX REPLACE "^.(.*)" "${first_letter}\\1" part "${part}")
     set(STDLIB_CAPITALIZED "${STDLIB_CAPITALIZED}${part}")
   endforeach()
-  foreach(arch ${FUZZER_SUPPORTED_ARCH})
+  foreach(arch ${FUZZER_TEST_ARCH})
     set(LIBFUZZER_TEST_COMPILER ${COMPILER_RT_TEST_COMPILER})
     get_test_cc_for_arch(${arch} LIBFUZZER_TEST_COMPILER LIBFUZZER_TEST_FLAGS)
 
+    set(LIBFUZZER_TEST_TARGET_ARCH ${arch})
     set(LIBFUZZER_TEST_APPLE_PLATFORM "osx")
 
     set(LIBFUZZER_TEST_STDLIB ${stdlib})

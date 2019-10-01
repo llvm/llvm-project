@@ -1,9 +1,8 @@
 //===- FuzzerUtilLinux.cpp - Misc utils for Linux. ------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 // Misc utils for Linux.
@@ -14,12 +13,18 @@
 #include "FuzzerCommand.h"
 
 #include <stdlib.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+
 
 namespace fuzzer {
 
 int ExecuteCommand(const Command &Cmd) {
   std::string CmdLine = Cmd.toString();
-  return system(CmdLine.c_str());
+  int exit_code = system(CmdLine.c_str());
+  if (WIFEXITED(exit_code))
+    return WEXITSTATUS(exit_code);
+  return exit_code;
 }
 
 } // namespace fuzzer

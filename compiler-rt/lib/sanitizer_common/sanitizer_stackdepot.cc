@@ -1,9 +1,8 @@
 //===-- sanitizer_stackdepot.cc -------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -14,6 +13,7 @@
 #include "sanitizer_stackdepot.h"
 
 #include "sanitizer_common.h"
+#include "sanitizer_hash.h"
 #include "sanitizer_stackdepotbase.h"
 
 namespace __sanitizer {
@@ -26,7 +26,7 @@ struct StackDepotNode {
   u32 tag;
   uptr stack[1];  // [size]
 
-  static const u32 kTabSizeLog = 20;
+  static const u32 kTabSizeLog = SANITIZER_ANDROID ? 16 : 20;
   // Lower kTabSizeLog bits are equal for all items in one bucket.
   // We use these bits to store the per-stack use counter.
   static const u32 kUseCountBits = kTabSizeLog;
@@ -50,23 +50,9 @@ struct StackDepotNode {
     return sizeof(StackDepotNode) + (args.size - 1) * sizeof(uptr);
   }
   static u32 hash(const args_type &args) {
-    // murmur2
-    const u32 m = 0x5bd1e995;
-    const u32 seed = 0x9747b28c;
-    const u32 r = 24;
-    u32 h = seed ^ (args.size * sizeof(uptr));
-    for (uptr i = 0; i < args.size; i++) {
-      u32 k = args.trace[i];
-      k *= m;
-      k ^= k >> r;
-      k *= m;
-      h *= m;
-      h ^= k;
-    }
-    h ^= h >> 13;
-    h *= m;
-    h ^= h >> 15;
-    return h;
+    MurMur2HashBuilder H(args.size * sizeof(uptr));
+    for (uptr i = 0; i < args.size; i++) H.add(args.trace[i]);
+    return H.get();
   }
   static bool is_valid(const args_type &args) {
     return args.size > 0 && args.trace;

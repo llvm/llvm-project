@@ -1,9 +1,8 @@
 //===-- sanitizer_stacktrace.h ----------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -17,9 +16,11 @@
 
 namespace __sanitizer {
 
+struct BufferedStackTrace;
+
 static const u32 kStackTraceMax = 256;
 
-#if defined(__sparc__) || (SANITIZER_LINUX && defined(__mips__))
+#if SANITIZER_LINUX && defined(__mips__)
 # define SANITIZER_CAN_FAST_UNWIND 0
 #elif SANITIZER_WINDOWS
 # define SANITIZER_CAN_FAST_UNWIND 0
@@ -59,7 +60,7 @@ struct StackTrace {
   static bool WillUseFastUnwind(bool request_fast_unwind) {
     if (!SANITIZER_CAN_FAST_UNWIND)
       return false;
-    else if (!SANITIZER_CAN_SLOW_UNWIND)
+    if (!SANITIZER_CAN_SLOW_UNWIND)
       return true;
     return request_fast_unwind;
   }
@@ -97,6 +98,23 @@ struct BufferedStackTrace : public StackTrace {
   BufferedStackTrace() : StackTrace(trace_buffer, 0), top_frame_bp(0) {}
 
   void Init(const uptr *pcs, uptr cnt, uptr extra_top_pc = 0);
+
+  // Get the stack trace with the given pc and bp.
+  // The pc will be in the position 0 of the resulting stack trace.
+  // The bp may refer to the current frame or to the caller's frame.
+  void Unwind(uptr pc, uptr bp, void *context, bool request_fast,
+              u32 max_depth = kStackTraceMax) {
+    top_frame_bp = (max_depth > 0) ? bp : 0;
+    // Small max_depth optimization
+    if (max_depth <= 1) {
+      if (max_depth == 1)
+        trace_buffer[0] = pc;
+      size = max_depth;
+      return;
+    }
+    UnwindImpl(pc, bp, context, request_fast, max_depth);
+  }
+
   void Unwind(u32 max_depth, uptr pc, uptr bp, void *context, uptr stack_top,
               uptr stack_bottom, bool request_fast_unwind);
 
@@ -106,16 +124,23 @@ struct BufferedStackTrace : public StackTrace {
   }
 
  private:
-  void FastUnwindStack(uptr pc, uptr bp, uptr stack_top, uptr stack_bottom,
-                       u32 max_depth);
-  void SlowUnwindStack(uptr pc, u32 max_depth);
-  void SlowUnwindStackWithContext(uptr pc, void *context,
-                                  u32 max_depth);
+  // Every runtime defines its own implementation of this method
+  void UnwindImpl(uptr pc, uptr bp, void *context, bool request_fast,
+                  u32 max_depth);
+
+  // UnwindFast/Slow have platform-specific implementations
+  void UnwindFast(uptr pc, uptr bp, uptr stack_top, uptr stack_bottom,
+                  u32 max_depth);
+  void UnwindSlow(uptr pc, u32 max_depth);
+  void UnwindSlow(uptr pc, void *context, u32 max_depth);
+
   void PopStackFrames(uptr count);
   uptr LocatePcInTrace(uptr pc);
 
   BufferedStackTrace(const BufferedStackTrace &) = delete;
   void operator=(const BufferedStackTrace &) = delete;
+
+  friend class FastUnwindTest;
 };
 
 // Check if given pointer points into allocated stack area.
@@ -127,21 +152,23 @@ static inline bool IsValidFrame(uptr frame, uptr stack_top, uptr stack_bottom) {
 
 // Use this macro if you want to print stack trace with the caller
 // of the current function in the top frame.
-#define GET_CALLER_PC_BP_SP \
-  uptr bp = GET_CURRENT_FRAME();              \
-  uptr pc = GET_CALLER_PC();                  \
-  uptr local_stack;                           \
-  uptr sp = (uptr)&local_stack
-
 #define GET_CALLER_PC_BP \
   uptr bp = GET_CURRENT_FRAME();              \
   uptr pc = GET_CALLER_PC();
 
+#define GET_CALLER_PC_BP_SP \
+  GET_CALLER_PC_BP;                           \
+  uptr local_stack;                           \
+  uptr sp = (uptr)&local_stack
+
 // Use this macro if you want to print stack trace with the current
 // function in the top frame.
-#define GET_CURRENT_PC_BP_SP \
+#define GET_CURRENT_PC_BP \
   uptr bp = GET_CURRENT_FRAME();              \
-  uptr pc = StackTrace::GetCurrentPc();   \
+  uptr pc = StackTrace::GetCurrentPc()
+
+#define GET_CURRENT_PC_BP_SP \
+  GET_CURRENT_PC_BP;                          \
   uptr local_stack;                           \
   uptr sp = (uptr)&local_stack
 

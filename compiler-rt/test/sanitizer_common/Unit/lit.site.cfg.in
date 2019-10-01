@@ -12,3 +12,6 @@ config.name = 'SanitizerCommon-Unit'
 config.test_exec_root = os.path.join("@COMPILER_RT_BINARY_DIR@", "lib",
                                      "sanitizer_common", "tests")
 config.test_source_root = config.test_exec_root
+
+if config.host_os == 'Darwin':
+  config.parallelism_group = config.darwin_sanitizer_parallelism_group_func

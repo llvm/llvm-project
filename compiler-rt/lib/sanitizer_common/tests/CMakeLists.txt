@@ -59,6 +59,8 @@ set(SANITIZER_TEST_CFLAGS_COMMON
   -Wno-non-virtual-dtor
   -Wno-gnu-zero-variadic-macro-arguments)
 
+set(SANITIZER_TEST_LINK_FLAGS_COMMON ${COMPILER_RT_UNITTEST_LINK_FLAGS})
+
 # -gline-tables-only must be enough for these tests, so use it if possible.
 if(COMPILER_RT_TEST_COMPILER_ID MATCHES "Clang")
   list(APPEND SANITIZER_TEST_CFLAGS_COMMON -gline-tables-only)

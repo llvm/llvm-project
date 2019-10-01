@@ -1,10 +1,6 @@
 // RUN: %clangxx_tsan %s %link_libcxx_tsan -o %t
 // RUN: %run %t 2>&1 | FileCheck %s --implicit-check-not='ThreadSanitizer'
 
-// This test requires the %link_libcxx_tsan substitution, which was recently
-// added and is not available in swift-5.1-branch.
-// REQUIRES: link_libcxx_tsan
-
 #include <dispatch/dispatch.h>
 
 #include <memory>

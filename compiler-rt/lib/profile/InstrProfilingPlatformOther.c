@@ -1,16 +1,17 @@
 /*===- InstrProfilingPlatformOther.c - Profile data default platform ------===*\
 |*
-|*                     The LLVM Compiler Infrastructure
-|*
-|* This file is distributed under the University of Illinois Open Source
-|* License. See LICENSE.TXT for details.
+|* Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+|* See https://llvm.org/LICENSE.txt for license information.
+|* SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 |*
 \*===----------------------------------------------------------------------===*/
 
-#if !defined(__APPLE__) && !defined(__linux__) && !defined(__FreeBSD__) && \
-    !(defined(__sun__) && defined(__svr4__)) && !defined(__NetBSD__)
+#if !defined(__APPLE__) && !defined(__linux__) && !defined(__FreeBSD__) &&     \
+    !(defined(__sun__) && defined(__svr4__)) && !defined(__NetBSD__) &&        \
+    !defined(_WIN32)
 
 #include <stdlib.h>
+#include <stdio.h>
 
 #include "InstrProfiling.h"
 
@@ -20,6 +21,7 @@ static const char *NamesFirst = NULL;
 static const char *NamesLast = NULL;
 static uint64_t *CountersFirst = NULL;
 static uint64_t *CountersLast = NULL;
+static uint32_t *OrderFileFirst = NULL;
 
 static const void *getMinAddr(const void *A1, const void *A2) {
   return A1 < A2 ? A1 : A2;
@@ -81,6 +83,9 @@ COMPILER_RT_VISIBILITY
 uint64_t *__llvm_profile_begin_counters(void) { return CountersFirst; }
 COMPILER_RT_VISIBILITY
 uint64_t *__llvm_profile_end_counters(void) { return CountersLast; }
+/* TODO: correctly set up OrderFileFirst. */
+COMPILER_RT_VISIBILITY
+uint32_t *__llvm_profile_begin_orderfile(void) { return OrderFileFirst; }
 
 COMPILER_RT_VISIBILITY
 ValueProfNode *__llvm_profile_begin_vnodes(void) {

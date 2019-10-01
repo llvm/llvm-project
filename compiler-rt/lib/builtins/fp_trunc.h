@@ -1,9 +1,8 @@
 //=== lib/fp_trunc.h - high precision -> low precision conversion *- C -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -36,7 +35,7 @@ static const int srcSigBits = 112;
 
 #else
 #error Source should be double precision or quad precision!
-#endif //end source precision
+#endif // end source precision
 
 #if defined DST_DOUBLE
 typedef double dst_t;
@@ -58,19 +57,25 @@ static const int dstSigBits = 10;
 
 #else
 #error Destination should be single precision or double precision!
-#endif //end destination precision
+#endif // end destination precision
 
 // End of specialization parameters.  Two helper routines for conversion to and
 // from the representation of floating-point data as integer values follow.
 
 static __inline src_rep_t srcToRep(src_t x) {
-    const union { src_t f; src_rep_t i; } rep = {.f = x};
-    return rep.i;
+  const union {
+    src_t f;
+    src_rep_t i;
+  } rep = {.f = x};
+  return rep.i;
 }
 
 static __inline dst_t dstFromRep(dst_rep_t x) {
-    const union { dst_t f; dst_rep_t i; } rep = {.i = x};
-    return rep.f;
+  const union {
+    dst_t f;
+    dst_rep_t i;
+  } rep = {.i = x};
+  return rep.f;
 }
 
 #endif // FP_TRUNC_HEADER

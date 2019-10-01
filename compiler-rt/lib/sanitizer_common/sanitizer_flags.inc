@@ -1,9 +1,8 @@
 //===-- sanitizer_flags.h ---------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -219,9 +218,9 @@ COMMON_FLAG(bool, intercept_stat, true,
 COMMON_FLAG(bool, intercept_send, true,
             "If set, uses custom wrappers for send* functions "
             "to find more errors.")
-COMMON_FLAG(bool, decorate_proc_maps, false, "If set, decorate sanitizer "
-                                             "mappings in /proc/self/maps with "
-                                             "user-readable names")
+COMMON_FLAG(bool, decorate_proc_maps, (bool)SANITIZER_ANDROID,
+            "If set, decorate sanitizer mappings in /proc/self/maps with "
+            "user-readable names")
 COMMON_FLAG(int, exitcode, 1, "Override the program exit status if the tool "
                               "found an error")
 COMMON_FLAG(
@@ -243,3 +242,6 @@ COMMON_FLAG(bool, dump_registers, true,
 COMMON_FLAG(bool, detect_write_exec, false,
           "If true, triggers warning when writable-executable pages requests "
           "are being made")
+COMMON_FLAG(bool, test_only_emulate_no_memorymap, false,
+            "TEST ONLY fail to read memory mappings to emulate sanitized "
+            "\"init\"")

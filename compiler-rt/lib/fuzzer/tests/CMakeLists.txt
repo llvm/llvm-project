@@ -14,17 +14,27 @@ endif()
 add_custom_target(FuzzerUnitTests)
 set_target_properties(FuzzerUnitTests PROPERTIES FOLDER "Compiler-RT Tests")
 
+add_custom_target(FuzzedDataProviderUnitTests)
+set_target_properties(FuzzedDataProviderUnitTests PROPERTIES FOLDER "Compiler-RT Tests")
+
 set(LIBFUZZER_UNITTEST_LINK_FLAGS ${COMPILER_RT_UNITTEST_LINK_FLAGS})
 list(APPEND LIBFUZZER_UNITTEST_LINK_FLAGS --driver-mode=g++)
 
-if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
-  list(APPEND LIBFUZZER_UNITTEST_LINK_FLAGS -lc++ -lpthread)
-elseif(NOT WIN32)
-  list(APPEND LIBFUZZER_UNITTEST_LINK_FLAGS -lstdc++ -lpthread)
+if(WIN32)
+  list(APPEND LIBFUZZER_UNITTEST_LINK_FLAGS -Wl,-defaultlib:libcmt,-defaultlib:oldnames)
+else()
+  list(APPEND LIBFUZZER_UNITTEST_LINK_FLAGS -lpthread)
 endif()
 
-if("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux" AND COMPILER_RT_LIBCXX_PATH)
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND
+   COMPILER_RT_LIBCXX_PATH AND
+   COMPILER_RT_LIBCXXABI_PATH)
   list(APPEND LIBFUZZER_UNITTEST_CFLAGS -nostdinc++)
+endif()
+
+if ("-fvisibility=hidden" IN_LIST LIBFUZZER_CFLAGS)
+  # Match visibility settings.
+  list(APPEND LIBFUZZER_UNITTEST_CFLAGS "-fvisibility=hidden")
 endif()
 
 if(COMPILER_RT_DEFAULT_TARGET_ARCH IN_LIST FUZZER_SUPPORTED_ARCH)
@@ -45,8 +55,11 @@ if(COMPILER_RT_DEFAULT_TARGET_ARCH IN_LIST FUZZER_SUPPORTED_ARCH)
     ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     FOLDER "Compiler-RT Runtime tests")
 
-  if("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux" AND COMPILER_RT_LIBCXX_PATH)
-    set(LIBFUZZER_TEST_RUNTIME_DEPS libcxx_fuzzer_${arch}-build)
+  if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND
+     COMPILER_RT_LIBCXX_PATH AND
+     COMPILER_RT_LIBCXXABI_PATH)
+    file(GLOB libfuzzer_headers ../*.h)
+    set(LIBFUZZER_TEST_RUNTIME_DEPS libcxx_fuzzer_${arch}-build ${libfuzzer_headers})
     set(LIBFUZZER_TEST_RUNTIME_CFLAGS -isystem ${LIBCXX_${arch}_PREFIX}/include/c++/v1)
     set(LIBFUZZER_TEST_RUNTIME_LINK_FLAGS ${LIBCXX_${arch}_PREFIX}/lib/libc++.a)
   endif()
@@ -56,9 +69,19 @@ if(COMPILER_RT_DEFAULT_TARGET_ARCH IN_LIST FUZZER_SUPPORTED_ARCH)
     FuzzerUnitTests "Fuzzer-${arch}-Test" ${arch}
     SOURCES FuzzerUnittest.cpp ${COMPILER_RT_GTEST_SOURCE}
     RUNTIME ${LIBFUZZER_TEST_RUNTIME}
-    DEPS gtest ${LIBFUZZER_TEST_RUNTIME_DEPS}
+    DEPS gtest ${LIBFUZZER_TEST_RUNTIME_DEPS} 
     CFLAGS ${LIBFUZZER_UNITTEST_CFLAGS} ${LIBFUZZER_TEST_RUNTIME_CFLAGS}
     LINK_FLAGS ${LIBFUZZER_UNITTEST_LINK_FLAGS} ${LIBFUZZER_TEST_RUNTIME_LINK_FLAGS})
   set_target_properties(FuzzerUnitTests PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+
+  set(FuzzedDataProviderTestObjects)
+  generate_compiler_rt_tests(FuzzedDataProviderTestObjects
+    FuzzedDataProviderUnitTests "FuzzerUtils-${arch}-Test" ${arch}
+    SOURCES FuzzedDataProviderUnittest.cpp ${COMPILER_RT_GTEST_SOURCE}
+    DEPS gtest ${LIBFUZZER_TEST_RUNTIME_DEPS}
+    CFLAGS ${LIBFUZZER_UNITTEST_CFLAGS} ${LIBFUZZER_TEST_RUNTIME_CFLAGS}
+    LINK_FLAGS ${LIBFUZZER_UNITTEST_LINK_FLAGS} ${LIBFUZZER_TEST_RUNTIME_LINK_FLAGS})
+  set_target_properties(FuzzedDataProviderUnitTests PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 endif()
