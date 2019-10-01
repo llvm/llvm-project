@@ -125,8 +125,8 @@ public:
                                     std::vector<SDValue> &Ops,
                                     SelectionDAG &DAG) const override;
 
-  unsigned getRegisterByName(const char* RegName, EVT VT,
-                             SelectionDAG &DAG) const override;
+  Register getRegisterByName(const char* RegName, EVT VT,
+                             const MachineFunction &MF) const override;
 
   bool shouldSplitFunctionArgumentsAsLittleEndian(const DataLayout &DL)
     const override {

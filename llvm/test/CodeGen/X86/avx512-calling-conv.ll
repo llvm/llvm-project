@@ -729,12 +729,12 @@ define <17 x i1> @test16(<17 x i1> %a, <17 x i1> %b) nounwind {
 ; KNL-NEXT:    korw %k2, %k0, %k0
 ; KNL-NEXT:    kandw %k1, %k0, %k0
 ; KNL-NEXT:    xorl %ecx, %ecx
-; KNL-NEXT:    cmpb $0, {{[0-9]+}}(%rsp)
+; KNL-NEXT:    testb $1, {{[0-9]+}}(%rsp)
 ; KNL-NEXT:    movl $65535, %edx ## imm = 0xFFFF
 ; KNL-NEXT:    movl $0, %esi
 ; KNL-NEXT:    cmovnel %edx, %esi
 ; KNL-NEXT:    kmovw %esi, %k1
-; KNL-NEXT:    cmpb $0, {{[0-9]+}}(%rsp)
+; KNL-NEXT:    testb $1, {{[0-9]+}}(%rsp)
 ; KNL-NEXT:    cmovnel %edx, %ecx
 ; KNL-NEXT:    kmovw %ecx, %k2
 ; KNL-NEXT:    kandw %k1, %k2, %k1
@@ -1314,11 +1314,11 @@ define <17 x i1> @test16(<17 x i1> %a, <17 x i1> %b) nounwind {
 ; KNL_X32-NEXT:    kshiftlw $15, %k2, %k2
 ; KNL_X32-NEXT:    korw %k2, %k1, %k1
 ; KNL_X32-NEXT:    xorl %eax, %eax
-; KNL_X32-NEXT:    cmpb $0, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    testb $1, {{[0-9]+}}(%esp)
 ; KNL_X32-NEXT:    movl $65535, %ecx ## imm = 0xFFFF
 ; KNL_X32-NEXT:    movl $0, %edx
 ; KNL_X32-NEXT:    cmovnel %ecx, %edx
-; KNL_X32-NEXT:    cmpb $0, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    testb $1, {{[0-9]+}}(%esp)
 ; KNL_X32-NEXT:    cmovnel %ecx, %eax
 ; KNL_X32-NEXT:    kandw %k0, %k1, %k0
 ; KNL_X32-NEXT:    kmovw %edx, %k1

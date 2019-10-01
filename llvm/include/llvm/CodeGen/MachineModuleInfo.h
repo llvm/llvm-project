@@ -33,6 +33,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PointerIntPair.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Pass.h"
@@ -74,7 +75,10 @@ protected:
 /// made by different debugging and exception handling schemes and reformated
 /// for specific use.
 ///
-class MachineModuleInfo : public ImmutablePass {
+class MachineModuleInfo {
+  friend class MachineModuleInfoWrapperPass;
+  friend class MachineModuleAnalysis;
+
   const LLVMTargetMachine &TM;
 
   /// This is the MCContext used for the entire code generator.
@@ -140,15 +144,17 @@ class MachineModuleInfo : public ImmutablePass {
   const Function *LastRequest = nullptr; ///< Used for shortcut/cache.
   MachineFunction *LastResult = nullptr; ///< Used for shortcut/cache.
 
+  MachineModuleInfo &operator=(MachineModuleInfo &&MMII) = delete;
+
 public:
-  static char ID; // Pass identification, replacement for typeid
-
   explicit MachineModuleInfo(const LLVMTargetMachine *TM = nullptr);
-  ~MachineModuleInfo() override;
 
-  // Initialization and Finalization
-  bool doInitialization(Module &) override;
-  bool doFinalization(Module &) override;
+  MachineModuleInfo(MachineModuleInfo &&MMII);
+
+  ~MachineModuleInfo();
+
+  void initialize();
+  void finalize();
 
   const LLVMTargetMachine &getTarget() const { return TM; }
 
@@ -253,6 +259,38 @@ public:
   }
   /// \}
 }; // End class MachineModuleInfo
+
+class MachineModuleInfoWrapperPass : public ImmutablePass {
+  MachineModuleInfo MMI;
+
+public:
+  static char ID; // Pass identification, replacement for typeid
+  explicit MachineModuleInfoWrapperPass(const LLVMTargetMachine *TM = nullptr);
+
+  // Initialization and Finalization
+  bool doInitialization(Module &) override;
+  bool doFinalization(Module &) override;
+
+  MachineModuleInfo &getMMI() { return MMI; }
+  const MachineModuleInfo &getMMI() const { return MMI; }
+};
+
+/// An analysis that produces \c MachineInfo for a module.
+class MachineModuleAnalysis : public AnalysisInfoMixin<MachineModuleAnalysis> {
+  friend AnalysisInfoMixin<MachineModuleAnalysis>;
+  static AnalysisKey Key;
+
+  const LLVMTargetMachine *TM;
+
+public:
+  /// Provide the result type for this analysis pass.
+  using Result = MachineModuleInfo;
+
+  MachineModuleAnalysis(const LLVMTargetMachine *TM) : TM(TM) {}
+
+  /// Run the analysis pass and produce machine module information.
+  MachineModuleInfo run(Module &M, ModuleAnalysisManager &);
+};
 
 } // end namespace llvm
 

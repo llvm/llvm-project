@@ -1523,6 +1523,21 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
   case Intrinsic::sideeffect:
     // Discard annotate attributes, assumptions, and artificial side-effects.
     return true;
+  case Intrinsic::read_register: {
+    Value *Arg = CI.getArgOperand(0);
+    const Metadata *MD = cast<MetadataAsValue>(Arg)->getMetadata();
+    const MDString *RegStr = cast<MDString>(cast<MDNode>(MD)->getOperand(0));
+
+    auto *TLI = MF->getSubtarget().getTargetLowering();
+    Register Dst = getOrCreateVReg(CI);
+    EVT VT = TLI->getValueType(*DL, CI.getType());
+    Register Reg = TLI->getRegisterByName(RegStr->getString().data(), VT, *MF);
+    if (!Reg.isValid())
+      return false;
+
+    MIRBuilder.buildCopy(Dst, Reg);
+    return true;
+  }
   }
   return false;
 }

@@ -209,8 +209,10 @@ public:
 
   unsigned getUsedLQEntries() const { return UsedLQEntries; }
   unsigned getUsedSQEntries() const { return UsedSQEntries; }
-  unsigned assignLQSlot() { return UsedLQEntries++; }
-  unsigned assignSQSlot() { return UsedSQEntries++; }
+  void acquireLQSlot() { ++UsedLQEntries; }
+  void acquireSQSlot() { ++UsedSQEntries; }
+  void releaseLQSlot() { --UsedLQEntries; }
+  void releaseSQSlot() { --UsedSQEntries; }
 
   bool assumeNoAlias() const { return NoAlias; }
 

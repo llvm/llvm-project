@@ -12,22 +12,22 @@ class StepScriptedTestCase(TestBase):
 
     NO_DEBUG_INFO_TESTCASE = True
 
-    def test_standard_step_out(self):
-        """Tests stepping with the scripted thread plan laying over a standard thread plan for stepping out."""
-        self.build()
-        self.main_source_file = lldb.SBFileSpec("main.c")
-        self.step_out_with_scripted_plan("Steps.StepOut")
-
-    def test_scripted_step_out(self):
-        """Tests stepping with the scripted thread plan laying over an another scripted thread plan for stepping out."""
-        self.build()
-        self.main_source_file = lldb.SBFileSpec("main.c")
-        self.step_out_with_scripted_plan("Steps.StepScripted")
-
     def setUp(self):
         TestBase.setUp(self)
         self.main_source_file = lldb.SBFileSpec("main.c")
         self.runCmd("command script import Steps.py")
+
+    def test_standard_step_out(self):
+        """Tests stepping with the scripted thread plan laying over a standard 
+        thread plan for stepping out."""
+        self.build()
+        self.step_out_with_scripted_plan("Steps.StepOut")
+
+    def test_scripted_step_out(self):
+        """Tests stepping with the scripted thread plan laying over an another 
+        scripted thread plan for stepping out."""
+        self.build()
+        self.step_out_with_scripted_plan("Steps.StepScripted")
 
     def step_out_with_scripted_plan(self, name):
         (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(self,
@@ -42,6 +42,7 @@ class StepScriptedTestCase(TestBase):
 
         frame = thread.GetFrameAtIndex(0)
         self.assertEqual("main", frame.GetFunctionName())
+
 
     def test_misspelled_plan_name(self):
         """Test that we get a useful error if we misspell the plan class name"""
@@ -60,3 +61,28 @@ class StepScriptedTestCase(TestBase):
         
         # Make sure we didn't let the process run:
         self.assertEqual(stop_id, process.GetStopID(), "Process didn't run")
+        
+    def test_checking_variable(self):
+        """Test that we can call SBValue API's from a scripted thread plan"""
+        self.build()
+        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(self,
+                                                                            "Set a breakpoint here",
+                                                                            self.main_source_file)
+
+        frame = thread.GetFrameAtIndex(0)
+        self.assertEqual("foo", frame.GetFunctionName())
+        foo_val = frame.FindVariable("foo")
+        self.assertTrue(foo_val.GetError().Success(), "Got the foo variable")
+        self.assertEqual(foo_val.GetValueAsUnsigned(), 10, "foo starts at 10")
+
+        err = thread.StepUsingScriptedThreadPlan("Steps.StepUntil")
+        self.assertTrue(err.Success(), err.GetCString())
+
+        # We should not have exited:
+        self.assertEqual(process.GetState(), lldb.eStateStopped, "We are stopped")
+        
+        # We should still be in foo:
+        self.assertEqual("foo", frame.GetFunctionName())
+
+        # And foo should have changed:
+        self.assertTrue(foo_val.GetValueDidChange(), "Foo changed")

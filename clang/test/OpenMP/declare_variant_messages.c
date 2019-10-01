@@ -79,9 +79,13 @@ int bar() {
 // expected-warning@+1 {{'#pragma omp declare variant' cannot be applied for function after first usage; the original function might be used}}
 #pragma omp declare variant(after_use_variant) match(xxx={})
 int after_use(void);
-// expected-warning@+1 {{#pragma omp declare variant' cannot be applied to the function that was defined already; the original function might be used}}
 #pragma omp declare variant(after_use_variant) match(xxx={})
 int defined(void) { return 0; }
+int defined1(void) { return 0; }
+// expected-warning@+1 {{#pragma omp declare variant' cannot be applied to the function that was defined already; the original function might be used}}
+#pragma omp declare variant(after_use_variant) match(xxx={})
+int defined1(void);
+
 
 int diff_cc_variant(void);
 // expected-error@+1 {{function with '#pragma omp declare variant' has a different calling convention}}

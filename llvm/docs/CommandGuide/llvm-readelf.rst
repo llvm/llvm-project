@@ -28,9 +28,9 @@ OPTIONS
 
  Display the address-significance table.
 
-.. option:: --arm-attributes
+.. option:: --arch-specific, -A
 
- Display the ARM attributes section. Only applicable for ARM architectures.
+ Display architecture-specific information, e.g. the ARM attributes section on ARM.
 
 .. option:: --color
 
