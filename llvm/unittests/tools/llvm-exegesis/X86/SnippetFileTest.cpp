@@ -9,6 +9,7 @@
 #include "SnippetFile.h"
 
 #include "LlvmState.h"
+#include "TestBase.h"
 #include "X86InstrInfo.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
@@ -33,19 +34,8 @@ using testing::Field;
 using testing::Property;
 using testing::SizeIs;
 
-class X86SnippetFileTest : public ::testing::Test {
+class X86SnippetFileTest : public X86TestBase {
 protected:
-  X86SnippetFileTest() : State("x86_64-unknown-linux", "haswell") {}
-
-  static void SetUpTestCase() {
-    LLVMInitializeX86TargetInfo();
-    LLVMInitializeX86TargetMC();
-    LLVMInitializeX86Target();
-    LLVMInitializeX86AsmPrinter();
-    LLVMInitializeX86AsmParser();
-    InitializeX86ExegesisTarget();
-  }
-
   Expected<std::vector<BenchmarkCode>> TestCommon(StringRef Contents) {
     SmallString<64> Filename;
     std::error_code EC;
@@ -60,8 +50,6 @@ protected:
     }
     return readSnippets(State, Filename);
   }
-
-  const LLVMState State;
 };
 
 // FIXME: Refactor these to ../Common/Matchers.h

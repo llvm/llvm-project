@@ -49,10 +49,6 @@ public:
 
   Status ClearAllHardwareWatchpoints() override;
 
-  Status SetHardwareWatchpointWithIndex(lldb::addr_t addr, size_t size,
-                                        uint32_t watch_flags,
-                                        uint32_t wp_index);
-
   uint32_t SetHardwareWatchpoint(lldb::addr_t addr, size_t size,
                                  uint32_t watch_flags) override;
 
@@ -64,8 +60,15 @@ protected:
   Status GPRRead(const uint32_t reg, RegisterValue &reg_value);
   Status GPRWrite(const uint32_t reg, const RegisterValue &reg_value);
 
+  Status DRRead(const uint32_t reg, RegisterValue &reg_value);
+  Status DRWrite(const uint32_t reg, const RegisterValue &reg_value);
+
 private:
+  Status ApplyHardwareBreakpoint(uint32_t wp_index, lldb::addr_t addr,
+                                 size_t size, uint32_t flags);
+
   bool IsGPR(uint32_t reg_index) const;
+  bool IsDR(uint32_t reg_index) const;
 };
 
 } // namespace lldb_private

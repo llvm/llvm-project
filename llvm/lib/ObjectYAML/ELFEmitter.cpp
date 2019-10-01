@@ -171,6 +171,9 @@ template <class ELFT> class ELFState {
   void writeSectionContent(Elf_Shdr &SHeader,
                            const ELFYAML::StackSizesSection &Section,
                            ContiguousBlobAccumulator &CBA);
+  void writeSectionContent(Elf_Shdr &SHeader,
+                           const ELFYAML::HashSection &Section,
+                           ContiguousBlobAccumulator &CBA);
   ELFState(ELFYAML::Object &D, yaml::ErrorHandler EH);
 
 public:
@@ -417,7 +420,9 @@ void ELFState<ELFT>::initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
     } else if (auto S = dyn_cast<ELFYAML::VerdefSection>(Sec)) {
       writeSectionContent(SHeader, *S, CBA);
     } else if (auto S = dyn_cast<ELFYAML::StackSizesSection>(Sec)) {
-      writeSectionContent(SHeader, *S, CBA);  
+      writeSectionContent(SHeader, *S, CBA);
+    } else if (auto S = dyn_cast<ELFYAML::HashSection>(Sec)) {
+      writeSectionContent(SHeader, *S, CBA);
     } else {
       llvm_unreachable("Unknown section type");
     }
@@ -806,6 +811,34 @@ void ELFState<ELFT>::writeSectionContent(
     support::endian::write<uintX_t>(OS, E.Address, ELFT::TargetEndianness);
     SHeader.sh_size += sizeof(uintX_t) + encodeULEB128(E.Size, OS);
   }
+}
+
+template <class ELFT>
+void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
+                                         const ELFYAML::HashSection &Section,
+                                         ContiguousBlobAccumulator &CBA) {
+  raw_ostream &OS =
+      CBA.getOSAndAlignedOffset(SHeader.sh_offset, SHeader.sh_addralign);
+
+  unsigned Link = 0;
+  if (Section.Link.empty() && SN2I.lookup(".dynsym", Link))
+    SHeader.sh_link = Link;
+
+  if (Section.Content) {
+    SHeader.sh_size = writeContent(OS, Section.Content, None);
+    return;
+  }
+
+  support::endian::write<uint32_t>(OS, Section.Bucket->size(),
+                                   ELFT::TargetEndianness);
+  support::endian::write<uint32_t>(OS, Section.Chain->size(),
+                                   ELFT::TargetEndianness);
+  for (uint32_t Val : *Section.Bucket)
+    support::endian::write<uint32_t>(OS, Val, ELFT::TargetEndianness);
+  for (uint32_t Val : *Section.Chain)
+    support::endian::write<uint32_t>(OS, Val, ELFT::TargetEndianness);
+
+  SHeader.sh_size = (2 + Section.Bucket->size() + Section.Chain->size()) * 4;
 }
 
 template <class ELFT>

@@ -395,14 +395,8 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:       "tokLen": 4
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
-// CHECK-NEXT:       "begin": {
-// CHECK-NEXT:        "col": 29,
-// CHECK-NEXT:        "tokLen": 4
-// CHECK-NEXT:       },
-// CHECK-NEXT:       "end": {
-// CHECK-NEXT:        "col": 29,
-// CHECK-NEXT:        "tokLen": 4
-// CHECK-NEXT:       }
+// CHECK-NEXT:       "begin": {},
+// CHECK-NEXT:       "end": {}
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "isImplicit": true,
 // CHECK-NEXT:      "tagUsed": "class",
@@ -497,14 +491,8 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:       "tokLen": 4
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
-// CHECK-NEXT:       "begin": {
-// CHECK-NEXT:        "col": 29,
-// CHECK-NEXT:        "tokLen": 4
-// CHECK-NEXT:       },
-// CHECK-NEXT:       "end": {
-// CHECK-NEXT:        "col": 29,
-// CHECK-NEXT:        "tokLen": 4
-// CHECK-NEXT:       }
+// CHECK-NEXT:       "begin": {},
+// CHECK-NEXT:       "end": {}
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "isImplicit": true,
 // CHECK-NEXT:      "tagUsed": "class",
@@ -563,14 +551,8 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:       "tokLen": 4
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
-// CHECK-NEXT:       "begin": {
-// CHECK-NEXT:        "col": 29,
-// CHECK-NEXT:        "tokLen": 4
-// CHECK-NEXT:       },
-// CHECK-NEXT:       "end": {
-// CHECK-NEXT:        "col": 29,
-// CHECK-NEXT:        "tokLen": 4
-// CHECK-NEXT:       }
+// CHECK-NEXT:       "begin": {},
+// CHECK-NEXT:       "end": {}
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "isImplicit": true,
 // CHECK-NEXT:      "tagUsed": "class",

@@ -89,23 +89,6 @@ void loop_with_counter_collapse() {
   // CHECK: [[NUM_ITERS_VAL:%.+]] = sub nsw i64 [[MUL]], 1
   // CHECK: store i64 [[NUM_ITERS_VAL]], i64* [[NUM_ITERS:%.+]],
 
-  // Initialization
-  // CHECK: store i32 0, i32* [[I:%.+]],
-  // CHECK: [[I_INIT:%.+]] = load i32, i32* [[I]],
-  // CHECK: store i32 [[I_INIT]], i32* [[J:%.+]],
-
-  // LIFETIME: call void @llvm.lifetime.end
-  // LIFETIME: call void @llvm.lifetime.end
-
-  // Precondition for j counter
-  // CHECK: store i32 0, i32* [[TMP_I:%.+]],
-  // CHECK: [[J_LB_VAL:%.+]] = load i32, i32* [[TMP_I]],
-  // CHECK: [[I_VAL:%.+]] = load i32, i32* [[TMP_I]],
-  // CHECK: [[J_UB_VAL:%.+]] = add nsw i32 4, [[I_VAL]]
-  // CHECK: [[CMP:%.+]] = icmp slt i32 [[J_LB_VAL]], [[J_UB_VAL]]
-  // CHECK: br i1 [[CMP]], label %[[THEN:[^,]+]], label %[[ELSE:[^,]+]]
-
-  // CHECK: [[THEN]]:
   // CHECK: store i64 0, i64* [[LB:%.+]],
   // CHECK: [[NUM_ITERS_VAL:%.+]] = load i64, i64* [[NUM_ITERS]],
   // CHECK: store i64 [[NUM_ITERS_VAL]], i64* [[UB:%.+]],
@@ -630,6 +613,22 @@ void for_with_references() {
 #pragma omp for collapse(2)
   for (cnt = 0; cnt < 2; ++cnt)
     for (int j = cnt; j < 4 + cnt; j++)
+    k = cnt;
+}
+
+// CHECK-LABEL: for_with_references_dep_cond
+void for_with_references_dep_cond() {
+// CHECK: [[I:%.+]] = alloca i8,
+// CHECK: [[CNT:%.+]] = alloca i8*,
+// CHECK: [[CNT_PRIV:%.+]] = alloca i8,
+// CHECK: call void @__kmpc_for_static_init_8(
+// CHECK-NOT: load i8, i8* [[CNT]],
+// CHECK: call void @__kmpc_for_static_fini(
+  char i = 0;
+  char &cnt = i;
+#pragma omp for collapse(2)
+  for (cnt = 0; cnt < 2; ++cnt)
+    for (int j = 0; j < 4 + cnt; j++)
     k = cnt;
 }
 

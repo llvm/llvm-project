@@ -124,6 +124,11 @@ static cl::opt<bool>
 DisableLFTR("disable-lftr", cl::Hidden, cl::init(false),
             cl::desc("Disable Linear Function Test Replace optimization"));
 
+static cl::opt<bool>
+LoopPredication("indvars-predicate-loops", cl::Hidden, cl::init(false),
+                cl::desc("Predicate conditions in read only loops"));
+
+
 namespace {
 
 struct RewritePhi;
@@ -144,7 +149,7 @@ class IndVarSimplify {
   bool rewriteNonIntegerIVs(Loop *L);
 
   bool simplifyAndExtend(Loop *L, SCEVExpander &Rewriter, LoopInfo *LI);
-  bool optimizeLoopExits(Loop *L);
+  bool optimizeLoopExits(Loop *L, SCEVExpander &Rewriter);
 
   bool canLoopBeDeleted(Loop *L, SmallVector<RewritePhi, 8> &RewritePhiSet);
   bool rewriteLoopExitValues(Loop *L, SCEVExpander &Rewriter);
@@ -2641,7 +2646,7 @@ bool IndVarSimplify::sinkUnusedInvariants(Loop *L) {
   return MadeAnyChanges;
 }
 
-bool IndVarSimplify::optimizeLoopExits(Loop *L) {
+bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
   SmallVector<BasicBlock*, 16> ExitingBlocks;
   L->getExitingBlocks(ExitingBlocks);
 
@@ -2719,8 +2724,7 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L) {
     assert(MaxExitCount->getType() == ExitCount->getType());
     
     // Can we prove that some other exit must be taken strictly before this
-    // one?  TODO: handle cases where ule is known, and equality is covered
-    // by a dominating exit
+    // one?
     if (SE->isLoopEntryGuardedByCond(L, CmpInst::ICMP_ULT,
                                      MaxExitCount, ExitCount)) {
       bool ExitIfTrue = !L->contains(*succ_begin(ExitingBB));
@@ -2737,14 +2741,136 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L) {
     // TODO: If we can prove that the exiting iteration is equal to the exit
     // count for this exit and that no previous exit oppurtunities exist within
     // the loop, then we can discharge all other exits.  (May fall out of
-    // previous TODO.) 
-    
-    // TODO: If we can't prove any relation between our exit count and the
-    // loops exit count, but taking this exit doesn't require actually running
-    // the loop (i.e. no side effects, no computed values used in exit), then
-    // we can replace the exit test with a loop invariant test which exits on
-    // the first iteration.  
+    // previous TODO.)
   }
+
+  // Finally, see if we can rewrite our exit conditions into a loop invariant
+  // form.  If we have a read-only loop, and we can tell that we must exit down
+  // a path which does not need any of the values computed within the loop, we
+  // can rewrite the loop to exit on the first iteration.  Note that this
+  // doesn't either a) tell us the loop exits on the first iteration (unless
+  // *all* exits are predicateable) or b) tell us *which* exit might be taken.
+  // This transformation looks a lot like a restricted form of dead loop
+  // elimination, but restricted to read-only loops and without neccesssarily
+  // needing to kill the loop entirely. 
+  if (!LoopPredication)
+    return Changed;
+
+  if (!SE->hasLoopInvariantBackedgeTakenCount(L))
+    return Changed;
+
+  // Note: ExactBTC is the exact backedge taken count *iff* the loop exits
+  // through *explicit* control flow.  We have to eliminate the possibility of
+  // implicit exits (see below) before we know it's truly exact.
+  const SCEV *ExactBTC = SE->getBackedgeTakenCount(L);
+  if (isa<SCEVCouldNotCompute>(ExactBTC) ||
+      !SE->isLoopInvariant(ExactBTC, L) ||
+      !isSafeToExpand(ExactBTC, *SE))
+    return Changed;
+
+  auto Filter = [&](BasicBlock *ExitingBB) {
+    // If our exiting block exits multiple loops, we can only rewrite the
+    // innermost one.  Otherwise, we're changing how many times the innermost
+    // loop runs before it exits. 
+    if (LI->getLoopFor(ExitingBB) != L)
+      return true;
+
+    // Can't rewrite non-branch yet.
+    BranchInst *BI = dyn_cast<BranchInst>(ExitingBB->getTerminator());
+    if (!BI)
+      return true;
+
+    // If already constant, nothing to do.
+    if (isa<Constant>(BI->getCondition()))
+      return true;
+
+    // If the exit block has phis, we need to be able to compute the values
+    // within the loop which contains them.  This assumes trivially lcssa phis
+    // have already been removed; TODO: generalize
+    BasicBlock *ExitBlock =
+    BI->getSuccessor(L->contains(BI->getSuccessor(0)) ? 1 : 0);
+    if (!empty(ExitBlock->phis()))
+      return true;
+
+    const SCEV *ExitCount = SE->getExitCount(L, ExitingBB);
+    assert(!isa<SCEVCouldNotCompute>(ExactBTC) && "implied by having exact trip count");
+    if (!SE->isLoopInvariant(ExitCount, L) ||
+        !isSafeToExpand(ExitCount, *SE))
+      return true;
+
+    return false;
+  };
+  auto Erased = std::remove_if(ExitingBlocks.begin(), ExitingBlocks.end(),
+                               Filter);
+  ExitingBlocks.erase(Erased, ExitingBlocks.end());
+
+  if (ExitingBlocks.empty())
+    return Changed;
+
+  // We rely on not being able to reach an exiting block on a later iteration
+  // than it's statically compute exit count.  The implementaton of
+  // getExitCount currently has this invariant, but assert it here so that
+  // breakage is obvious if this ever changes..
+  assert(llvm::all_of(ExitingBlocks, [&](BasicBlock *ExitingBB) {
+        return DT->dominates(ExitingBB, L->getLoopLatch());
+      }));
+
+  // At this point, ExitingBlocks consists of only those blocks which are
+  // predicatable.  Given that, we know we have at least one exit we can
+  // predicate if the loop is doesn't have side effects and doesn't have any
+  // implicit exits (because then our exact BTC isn't actually exact).
+  // @Reviewers - As structured, this is O(I^2) for loop nests.  Any
+  // suggestions on how to improve this?  I can obviously bail out for outer
+  // loops, but that seems less than ideal.  MemorySSA can find memory writes,
+  // is that enough for *all* side effects?
+  for (BasicBlock *BB : L->blocks())
+    for (auto &I : *BB)
+      // TODO:isGuaranteedToTransfer
+      if (I.mayHaveSideEffects() || I.mayThrow())
+        return Changed;
+
+  // Finally, do the actual predication for all predicatable blocks.  A couple
+  // of notes here:
+  // 1) We don't bother to constant fold dominated exits with identical exit
+  //    counts; that's simply a form of CSE/equality propagation and we leave
+  //    it for dedicated passes.
+  // 2) We insert the comparison at the branch.  Hoisting introduces additional
+  //    legality constraints and we leave that to dedicated logic.  We want to
+  //    predicate even if we can't insert a loop invariant expression as
+  //    peeling or unrolling will likely reduce the cost of the otherwise loop
+  //    varying check.
+  Rewriter.setInsertPoint(L->getLoopPreheader()->getTerminator());
+  IRBuilder<> B(L->getLoopPreheader()->getTerminator());
+  Value *ExactBTCV = nullptr; //lazy generated if needed
+  for (BasicBlock *ExitingBB : ExitingBlocks) {
+    const SCEV *ExitCount = SE->getExitCount(L, ExitingBB);
+
+    auto *BI = cast<BranchInst>(ExitingBB->getTerminator());
+    Value *NewCond;
+    if (ExitCount == ExactBTC) {
+      NewCond = L->contains(BI->getSuccessor(0)) ?
+        B.getFalse() : B.getTrue();
+    } else {
+      Value *ECV = Rewriter.expandCodeFor(ExitCount);
+      if (!ExactBTCV)
+        ExactBTCV = Rewriter.expandCodeFor(ExactBTC);
+      Value *RHS = ExactBTCV;
+      if (ECV->getType() != RHS->getType()) {
+        Type *WiderTy = SE->getWiderType(ECV->getType(), RHS->getType());
+        ECV = B.CreateZExt(ECV, WiderTy);
+        RHS = B.CreateZExt(RHS, WiderTy);
+      }
+      auto Pred = L->contains(BI->getSuccessor(0)) ?
+        ICmpInst::ICMP_NE : ICmpInst::ICMP_EQ;
+      NewCond = B.CreateICmp(Pred, ECV, RHS);
+    }
+    Value *OldCond = BI->getCondition();
+    BI->setCondition(NewCond);
+    if (OldCond->use_empty())
+      DeadInsts.push_back(OldCond);
+    Changed = true;
+  }
+
   return Changed;
 }
 
@@ -2804,7 +2930,7 @@ bool IndVarSimplify::run(Loop *L) {
   // Eliminate redundant IV cycles.
   NumElimIV += Rewriter.replaceCongruentIVs(L, DT, DeadInsts);
 
-  Changed |= optimizeLoopExits(L);
+  Changed |= optimizeLoopExits(L, Rewriter);
 
   // If we have a trip count expression, rewrite the loop's exit condition
   // using it.  

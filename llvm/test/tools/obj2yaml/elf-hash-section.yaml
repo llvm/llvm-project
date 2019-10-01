@@ -1,0 +1,78 @@
+## Check how obj2yaml produces SHT_HASH section descriptions.
+
+## Check that obj2yaml uses "Bucket" and "Chain" tags to describe
+## a SHT_HASH section when it has content of a correct size.
+## I.e. data size == 4 * (2 + nbucket + nchain).
+
+# RUN: yaml2obj --docnum=1 %s -o %t1
+# RUN: obj2yaml %t1 | FileCheck %s --check-prefix=CHAIN-BUCKET
+
+# CHAIN-BUCKET:      - Name:  .hash1
+# CHAIN-BUCKET-NEXT:  Type:   SHT_HASH
+# CHAIN-BUCKET-NEXT:  Bucket: [ 3 ]
+# CHAIN-BUCKET-NEXT:  Chain:  [ 4, 5 ]
+# CHAIN-BUCKET:      - Name:  .hash2
+# CHAIN-BUCKET-NEXT:  Type:   SHT_HASH
+# CHAIN-BUCKET-NEXT:  Bucket: [  ]
+# CHAIN-BUCKET-NEXT:  Chain:  [  ]
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_386
+Sections:
+## Case 1: A non-empty hash table: nbucket == 1, nchain == 2. 
+  - Name:    .hash1
+    Type:    SHT_HASH
+    Content: '0100000002000000030000000400000005000000'
+## Case 2: An empty hash table: nbucket == 0, nchain == 0.
+  - Name:    .hash2
+    Type:    SHT_HASH
+    Content: '0000000000000000'
+
+## Check that obj2yaml falls back to using the "Content" tag when
+## hash sections are broken.
+
+# RUN: yaml2obj --docnum=2 %s -o %t2
+# RUN: obj2yaml %t2 | FileCheck %s --check-prefix=CONTENT
+
+# CONTENT:      - Name:    .empty_hash
+# CONTENT-NEXT:   Type:    SHT_HASH
+# CONTENT-NEXT:   Content: ''
+# CONTENT-NEXT: - Name:    .invalid_header
+# CONTENT-NEXT:   Type:    SHT_HASH
+# CONTENT-NEXT:   Content: '00'
+# CONTENT-NEXT: - Name:    .truncated
+# CONTENT-NEXT:   Type:    SHT_HASH
+# CONTENT-NEXT:   Content: '01000000020000000300000004000000'
+# CONTENT-NEXT: - Name:    .oversized
+# CONTENT-NEXT:   Type:    SHT_HASH
+# CONTENT-NEXT:   Content: '0100000002000000030000000400000000'
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_386
+Sections:
+## Case 1: section has no data.
+  - Name:    .empty_hash
+    Type:    SHT_HASH
+    Content: ''
+## Case 2: section size is less than 2 * 4.
+  - Name:    .invalid_header
+    Type:    SHT_HASH
+    Content: '00'
+## Case 3: nbucket == 1, nchain == 2.
+##         Section size is less than (2 * nbucket + nchain) * 4.
+  - Name:    .truncated
+    Type:    SHT_HASH
+    Content: '01000000020000000300000004000000'
+## Case 4: nbucket == 1, nchain == 2.
+##         Section size is greater than (2 * nbucket + nchain) * 4.
+  - Name:    .oversized
+    Type:    SHT_HASH
+    Content: '0100000002000000030000000400000000'

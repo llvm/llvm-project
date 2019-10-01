@@ -263,8 +263,8 @@ void AddExternalSource(CIAndOrigins &CI,
       {CI.getASTContext(), CI.getFileManager()});
   llvm::SmallVector<ExternalASTMerger::ImporterSource, 3> Sources;
   for (CIAndOrigins &Import : Imports)
-    Sources.push_back({Import.getASTContext(), Import.getFileManager(),
-                       Import.getOriginMap()});
+    Sources.emplace_back(Import.getASTContext(), Import.getFileManager(),
+                         Import.getOriginMap());
   auto ES = std::make_unique<ExternalASTMerger>(Target, Sources);
   CI.getASTContext().setExternalSource(ES.release());
   CI.getASTContext().getTranslationUnitDecl()->setHasExternalVisibleStorage();

@@ -12,6 +12,7 @@
 #include <cassert>
 #include <memory>
 
+#include "TestBase.h"
 #include "X86InstrInfo.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
@@ -22,37 +23,10 @@ namespace llvm {
 namespace exegesis {
 namespace {
 
-class RegisterAliasingTest : public ::testing::Test {
-protected:
-  RegisterAliasingTest() {
-    const std::string TT = "x86_64-unknown-linux";
-    std::string error;
-    const llvm::Target *const TheTarget =
-        llvm::TargetRegistry::lookupTarget(TT, error);
-    if (!TheTarget) {
-      llvm::errs() << error << "\n";
-      return;
-    }
-    MCRegInfo.reset(TheTarget->createMCRegInfo(TT));
-  }
-
-  static void SetUpTestCase() {
-    LLVMInitializeX86TargetInfo();
-    LLVMInitializeX86Target();
-    LLVMInitializeX86TargetMC();
-  }
-
-  const llvm::MCRegisterInfo &getMCRegInfo() {
-    assert(MCRegInfo);
-    return *MCRegInfo;
-  }
-
-private:
-  std::unique_ptr<const llvm::MCRegisterInfo> MCRegInfo;
-};
+class RegisterAliasingTest : public X86TestBase {};
 
 TEST_F(RegisterAliasingTest, TrackSimpleRegister) {
-  const auto &RegInfo = getMCRegInfo();
+  const auto &RegInfo = State.getRegInfo();
   const RegisterAliasingTracker tracker(RegInfo, llvm::X86::EAX);
   std::set<llvm::MCPhysReg> ActualAliasedRegisters;
   for (unsigned I : tracker.aliasedBits().set_bits())
@@ -69,7 +43,7 @@ TEST_F(RegisterAliasingTest, TrackSimpleRegister) {
 TEST_F(RegisterAliasingTest, TrackRegisterClass) {
   // The alias bits for GR8_ABCD_LRegClassID are the union of the alias bits for
   // AL, BL, CL and DL.
-  const auto &RegInfo = getMCRegInfo();
+  const auto &RegInfo = State.getRegInfo();
   const llvm::BitVector NoReservedReg(RegInfo.getNumRegs());
 
   const RegisterAliasingTracker RegClassTracker(
@@ -87,7 +61,7 @@ TEST_F(RegisterAliasingTest, TrackRegisterClass) {
 
 TEST_F(RegisterAliasingTest, TrackRegisterClassCache) {
   // Fetching twice the same tracker yields the same pointers.
-  const auto &RegInfo = getMCRegInfo();
+  const auto &RegInfo = State.getRegInfo();
   const llvm::BitVector NoReservedReg(RegInfo.getNumRegs());
   RegisterAliasingTrackerCache Cache(RegInfo, NoReservedReg);
   ASSERT_THAT(&Cache.getRegister(llvm::X86::AX),

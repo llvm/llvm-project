@@ -6,5 +6,5 @@
 
 // UNIT: "-fsplit-lto-unit"
 // NOUNIT-NOT: "-fsplit-lto-unit"
-// ERROR1: error: invalid argument '-fno-split-lto-unit' not allowed with '-fwhole-program-vtables'
+// ERROR1-NOT: error: invalid argument
 // ERROR2: error: invalid argument '-fno-split-lto-unit' not allowed with '-fsanitize=cfi'

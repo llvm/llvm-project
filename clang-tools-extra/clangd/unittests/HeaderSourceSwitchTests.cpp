@@ -8,6 +8,7 @@
 
 #include "HeaderSourceSwitch.h"
 
+#include "SyncAPI.h"
 #include "TestFS.h"
 #include "TestTU.h"
 #include "index/MemIndex.h"
@@ -238,6 +239,32 @@ TEST(HeaderSourceSwitchTest, FromSourceToHeader) {
               getCorrespondingHeaderOrSource(testPath(TU.Filename), AST,
                                              Index.get()));
   }
+}
+
+TEST(HeaderSourceSwitchTest, ClangdServerIntegration) {
+  class IgnoreDiagnostics : public DiagnosticsConsumer {
+    void onDiagnosticsReady(PathRef File,
+                            std::vector<Diag> Diagnostics) override {}
+  } DiagConsumer;
+  MockCompilationDatabase CDB;
+  CDB.ExtraClangFlags = {"-I" +
+                         testPath("src/include")}; // add search directory.
+  MockFSProvider FS;
+  // File heuristic fails here, we rely on the index to find the .h file.
+  std::string CppPath = testPath("src/lib/test.cpp");
+  std::string HeaderPath = testPath("src/include/test.h");
+  FS.Files[HeaderPath] = "void foo();";
+  const std::string FileContent = R"cpp(
+    #include "test.h"
+    void foo() {};
+  )cpp";
+  FS.Files[CppPath] = FileContent;
+  auto Options = ClangdServer::optsForTest();
+  Options.BuildDynamicSymbolIndex = true;
+  ClangdServer Server(CDB, FS, DiagConsumer, Options);
+  runAddDocument(Server, CppPath, FileContent);
+  EXPECT_EQ(HeaderPath,
+            *llvm::cantFail(runSwitchHeaderSource(Server, CppPath)));
 }
 
 } // namespace
