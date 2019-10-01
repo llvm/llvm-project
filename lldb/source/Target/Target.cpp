@@ -4129,3 +4129,10 @@ Target::TargetEventData::GetModuleListFromEvent(const Event *event_ptr) {
     module_list = event_data->m_module_list;
   return module_list;
 }
+
+std::recursive_mutex &Target::GetAPIMutex() { 
+  if (GetProcessSP() && GetProcessSP()->CurrentThreadIsPrivateStateThread())
+    return m_private_mutex;
+  else
+    return m_mutex;
+}
