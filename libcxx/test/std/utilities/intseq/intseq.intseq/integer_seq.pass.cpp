@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -23,7 +22,9 @@
 #include <cstddef>
 #include <cassert>
 
-int main()
+#include "test_macros.h"
+
+int main(int, char**)
 {
 //  Make a few of sequences
     using int3    = std::integer_sequence<int, 3, 2, 1>;
@@ -43,4 +44,6 @@ int main()
 
     static_assert ( std::is_same<bool0::value_type, bool>::value, "bool0 type wrong" );
     static_assert ( bool0::size() == 0, "bool0 size wrong" );
+
+  return 0;
 }

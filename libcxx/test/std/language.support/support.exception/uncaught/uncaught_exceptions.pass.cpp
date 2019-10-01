@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -22,6 +21,8 @@
 
 #include <exception>
 #include <cassert>
+
+#include "test_macros.h"
 
 struct Uncaught {
     Uncaught(int depth) : d_(depth) {}
@@ -42,7 +43,7 @@ struct Outer {
     int d_;
 };
 
-int main () {
+int main(int, char**) {
     assert(std::uncaught_exceptions() == 0);
     {
     Outer o(0);
@@ -59,4 +60,6 @@ int main () {
         }
     }
     assert(std::uncaught_exceptions() == 0);
+
+  return 0;
 }

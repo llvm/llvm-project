@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -19,6 +18,8 @@
 // https://bugs.llvm.org/show_bug.cgi?id=22003
 
 #include <functional>
+
+#include "test_macros.h"
 
 struct DummyUnaryFunction
 {
@@ -39,7 +40,7 @@ struct BadUnaryFunction
     }
 };
 
-int main()
+int main(int, char**)
 {
     // Check that BadUnaryFunction::operator()(S const &) is not
     // instantiated when checking if BadUnaryFunction is a nested bind
@@ -48,4 +49,6 @@ int main()
     b(0);
     auto b2 = std::bind<long>(DummyUnaryFunction(), BadUnaryFunction());
     b2(0);
+
+  return 0;
 }

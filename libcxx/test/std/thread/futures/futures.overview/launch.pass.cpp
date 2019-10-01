@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -23,7 +22,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
 #ifdef _LIBCPP_HAS_NO_STRONG_ENUMS
    LIBCPP_STATIC_ASSERT(static_cast<int>(std::launch::any) ==
@@ -44,4 +43,6 @@ int main()
 #endif
     static_assert(static_cast<int>(std::launch::async) == 1, "");
     static_assert(static_cast<int>(std::launch::deferred) == 2, "");
+
+  return 0;
 }

@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -15,7 +14,6 @@
 #include <memory>
 #include <cassert>
 #include <cstddef>       // for std::max_align_t
-#include <iostream>
 
 #include "test_macros.h"
 #include "count_new.hpp"
@@ -100,7 +98,7 @@ void test_aligned() {
   }
 }
 
-int main() {
+int main(int, char**) {
     test_aligned<1>();
     test_aligned<2>();
     test_aligned<4>();
@@ -109,4 +107,6 @@ int main() {
     test_aligned<MaxAligned>();
     test_aligned<OverAligned>();
     test_aligned<OverAligned * 2>();
+
+  return 0;
 }

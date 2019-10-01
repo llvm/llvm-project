@@ -1,10 +1,9 @@
 // -*- C++ -*-
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -34,7 +33,7 @@ constexpr bool check_suspend_constexpr() {
 }
 
 
-int main()
+int main(int, char**)
 {
   using H = coro::coroutine_handle<>;
   using S = SuspendT;
@@ -72,4 +71,6 @@ int main()
     // suppress unused warnings for the global constexpr test variable
     ((void)constexpr_sn);
   }
+
+  return 0;
 }

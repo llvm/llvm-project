@@ -1,21 +1,14 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++98, c++03, c++11, c++14
 
-// XFAIL: availability=macosx10.13
-// XFAIL: availability=macosx10.12
-// XFAIL: availability=macosx10.11
-// XFAIL: availability=macosx10.10
-// XFAIL: availability=macosx10.9
-// XFAIL: availability=macosx10.8
-// XFAIL: availability=macosx10.7
+// XFAIL: dylib-has-no-bad_any_cast && !libcpp-no-exceptions
 
 // <any>
 
@@ -152,11 +145,13 @@ void test_sfinae_constraints() {
     }
 }
 
-int main() {
+int main(int, char**) {
     test_copy_move_value<small>();
     test_copy_move_value<large>();
     test_copy_value_throws<small_throws_on_copy>();
     test_copy_value_throws<large_throws_on_copy>();
     test_move_value_throws();
     test_sfinae_constraints();
+
+  return 0;
 }

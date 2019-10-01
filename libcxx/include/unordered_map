@@ -1,10 +1,9 @@
 // -*- C++ -*-
 //===-------------------------- unordered_map -----------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -80,12 +79,12 @@ public:
       unordered_map(InputIterator f, InputIterator l, size_type n, const allocator_type& a)
       : unordered_map(f, l, n, hasher(), key_equal(), a) {}  // C++14
     template <class InputIterator>
-      unordered_map(InputIterator f, InputIterator l, size_type n, const hasher& hf, 
+      unordered_map(InputIterator f, InputIterator l, size_type n, const hasher& hf,
         const allocator_type& a)
       : unordered_map(f, l, n, hf, key_equal(), a) {}  // C++14
     unordered_map(initializer_list<value_type> il, size_type n, const allocator_type& a)
       : unordered_map(il, n, hasher(), key_equal(), a) {}  // C++14
-    unordered_map(initializer_list<value_type> il, size_type n, const hasher& hf, 
+    unordered_map(initializer_list<value_type> il, size_type n, const hasher& hf,
       const allocator_type& a)
       : unordered_map(il, n, hf, key_equal(), a) {}  // C++14
     ~unordered_map();
@@ -278,12 +277,12 @@ public:
       unordered_multimap(InputIterator f, InputIterator l, size_type n, const allocator_type& a)
       : unordered_multimap(f, l, n, hasher(), key_equal(), a) {}  // C++14
     template <class InputIterator>
-      unordered_multimap(InputIterator f, InputIterator l, size_type n, const hasher& hf, 
+      unordered_multimap(InputIterator f, InputIterator l, size_type n, const hasher& hf,
         const allocator_type& a)
       : unordered_multimap(f, l, n, hf, key_equal(), a) {}  // C++14
     unordered_multimap(initializer_list<value_type> il, size_type n, const allocator_type& a)
       : unordered_multimap(il, n, hasher(), key_equal(), a) {}  // C++14
-    unordered_multimap(initializer_list<value_type> il, size_type n, const hasher& hf, 
+    unordered_multimap(initializer_list<value_type> il, size_type n, const hasher& hf,
       const allocator_type& a)
       : unordered_multimap(il, n, hf, key_equal(), a) {}  // C++14
     ~unordered_multimap();
@@ -853,7 +852,6 @@ public:
     typedef const value_type&                              const_reference;
     static_assert((is_same<value_type, typename allocator_type::value_type>::value),
                   "Invalid allocator::value_type");
-    static_assert(sizeof(__diagnose_unordered_container_requirements<_Key, _Hash, _Pred>(0)), "");
 
 private:
     typedef __hash_value_type<key_type, mapped_type>                 __value_type;
@@ -953,18 +951,22 @@ public:
       : unordered_map(__first, __last, __n, hasher(), key_equal(), __a) {}
     template <class _InputIterator>
     _LIBCPP_INLINE_VISIBILITY
-      unordered_map(_InputIterator __first, _InputIterator __last, size_type __n, const hasher& __hf, 
+      unordered_map(_InputIterator __first, _InputIterator __last, size_type __n, const hasher& __hf,
         const allocator_type& __a)
       : unordered_map(__first, __last, __n, __hf, key_equal(), __a) {}
     _LIBCPP_INLINE_VISIBILITY
     unordered_map(initializer_list<value_type> __il, size_type __n, const allocator_type& __a)
       : unordered_map(__il, __n, hasher(), key_equal(), __a) {}
     _LIBCPP_INLINE_VISIBILITY
-    unordered_map(initializer_list<value_type> __il, size_type __n, const hasher& __hf, 
+    unordered_map(initializer_list<value_type> __il, size_type __n, const hasher& __hf,
       const allocator_type& __a)
       : unordered_map(__il, __n, __hf, key_equal(), __a) {}
 #endif
-    // ~unordered_map() = default;
+    _LIBCPP_INLINE_VISIBILITY
+    ~unordered_map() {
+        static_assert(sizeof(__diagnose_unordered_container_requirements<_Key, _Hash, _Pred>(0)), "");
+    }
+
     _LIBCPP_INLINE_VISIBILITY
     unordered_map& operator=(const unordered_map& __u)
     {
@@ -1679,7 +1681,6 @@ public:
     typedef const value_type&                              const_reference;
     static_assert((is_same<value_type, typename allocator_type::value_type>::value),
                   "Invalid allocator::value_type");
-    static_assert(sizeof(__diagnose_unordered_container_requirements<_Key, _Hash, _Pred>(0)), "");
 
 private:
     typedef __hash_value_type<key_type, mapped_type>                 __value_type;
@@ -1777,18 +1778,22 @@ public:
       : unordered_multimap(__first, __last, __n, hasher(), key_equal(), __a) {}
     template <class _InputIterator>
     _LIBCPP_INLINE_VISIBILITY
-      unordered_multimap(_InputIterator __first, _InputIterator __last, size_type __n, const hasher& __hf, 
+      unordered_multimap(_InputIterator __first, _InputIterator __last, size_type __n, const hasher& __hf,
         const allocator_type& __a)
       : unordered_multimap(__first, __last, __n, __hf, key_equal(), __a) {}
     _LIBCPP_INLINE_VISIBILITY
     unordered_multimap(initializer_list<value_type> __il, size_type __n, const allocator_type& __a)
       : unordered_multimap(__il, __n, hasher(), key_equal(), __a) {}
     _LIBCPP_INLINE_VISIBILITY
-    unordered_multimap(initializer_list<value_type> __il, size_type __n, const hasher& __hf, 
+    unordered_multimap(initializer_list<value_type> __il, size_type __n, const hasher& __hf,
       const allocator_type& __a)
       : unordered_multimap(__il, __n, __hf, key_equal(), __a) {}
 #endif
-    // ~unordered_multimap() = default;
+    _LIBCPP_INLINE_VISIBILITY
+    ~unordered_multimap() {
+        static_assert(sizeof(__diagnose_unordered_container_requirements<_Key, _Hash, _Pred>(0)), "");
+    }
+
     _LIBCPP_INLINE_VISIBILITY
     unordered_multimap& operator=(const unordered_multimap& __u)
     {

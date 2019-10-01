@@ -1,10 +1,9 @@
 #!/usr/bin/env python
 #===----------------------------------------------------------------------===##
 #
-#                     The LLVM Compiler Infrastructure
-#
-# This file is dual licensed under the MIT and the University of Illinois Open
-# Source Licenses. See LICENSE.TXT for details.
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
 #===----------------------------------------------------------------------===##
 
@@ -79,6 +78,7 @@ def execute_command_verbose(cmd, cwd=None, verbose=False):
         sys.stderr.write('%s\n' % report)
         if exitCode != 0:
             exit_with_cleanups(exitCode)
+    return out
 
 def main():
     parser = ArgumentParser(
@@ -98,6 +98,12 @@ def main():
         help='The ar executable to use, finds \'ar\' in the path if not given',
         type=str, action='store')
     parser.add_argument(
+        '--use-libtool', dest='use_libtool', action='store_true', default=False)
+    parser.add_argument(
+        '--libtool', dest='libtool_exe', required=False,
+        help='The libtool executable to use, finds \'libtool\' in the path if not given',
+        type=str, action='store')
+    parser.add_argument(
         'archives', metavar='archives',  nargs='+',
         help='The archives to merge')
 
@@ -108,6 +114,13 @@ def main():
         ar_exe = distutils.spawn.find_executable('ar')
     if not ar_exe:
         print_and_exit("failed to find 'ar' executable")
+
+    if args.use_libtool:
+        libtool_exe = args.libtool_exe
+        if not libtool_exe:
+            libtool_exe = distutils.spawn.find_executable('libtool')
+        if not libtool_exe:
+            print_and_exit("failed to find 'libtool' executable")
 
     if len(args.archives) < 2:
         print_and_exit('fewer than 2 inputs provided')
@@ -120,15 +133,20 @@ def main():
     global temp_directory_root
     temp_directory_root = tempfile.mkdtemp('.libcxx.merge.archives')
 
+    files = []
     for arc in archives:
-        execute_command_verbose([ar_exe, 'x', arc], cwd=temp_directory_root,
-                                verbose=args.verbose)
+        execute_command_verbose([ar_exe, 'x', arc],
+                                cwd=temp_directory_root, verbose=args.verbose)
+        out = execute_command_verbose([ar_exe, 't', arc])
+        files.extend(out.splitlines())
 
-    files = glob.glob(os.path.join(temp_directory_root, '*.o*'))
-    if not files:
-        print_and_exit('Failed to glob for %s' % temp_directory_root)
-    cmd = [ar_exe, 'qcs', args.output] + files
-    execute_command_verbose(cmd, cwd=temp_directory_root, verbose=args.verbose)
+    if args.use_libtool:
+        files = [f for f in files if not f.startswith('__.SYMDEF')]
+        execute_command_verbose([libtool_exe, '-static', '-o', args.output] + files,
+                                cwd=temp_directory_root, verbose=args.verbose)
+    else:
+        execute_command_verbose([ar_exe, 'rcs', args.output] + files,
+                                cwd=temp_directory_root, verbose=args.verbose)
 
 
 if __name__ == '__main__':

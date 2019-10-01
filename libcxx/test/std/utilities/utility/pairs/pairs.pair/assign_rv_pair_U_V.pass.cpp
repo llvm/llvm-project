@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -20,6 +19,8 @@
 #include <cassert>
 #include <archetypes.hpp>
 
+#include "test_macros.h"
+
 struct Base
 {
     virtual ~Base() {}
@@ -30,7 +31,7 @@ struct Derived
 {
 };
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::pair<std::unique_ptr<Derived>, short> P1;
@@ -56,4 +57,6 @@ int main()
        assert(p.first == 42);
        assert(p.second.value == -42);
     }
+
+  return 0;
 }

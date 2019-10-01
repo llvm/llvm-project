@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -29,9 +28,11 @@
 #include <memory>
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     typedef std::auto_ptr<int> AP; // expected-error{{'auto_ptr<int>' is deprecated}}
     typedef std::auto_ptr<void> APV; // expected-error{{'auto_ptr<void>' is deprecated}}
     typedef std::auto_ptr_ref<int> APR; // expected-error{{'auto_ptr_ref<int>' is deprecated}}
+
+  return 0;
 }

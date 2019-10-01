@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -5748,7 +5747,7 @@ void test54()
 }
 
 
-int main () {
+int main(int, char**) {
     test0();
     test1();
     test2();
@@ -5841,8 +5840,10 @@ int main () {
     typedef std::basic_string_view<char, constexpr_char_traits<char>> SV;
     constexpr SV  sv1 { "abcde", 5 };
     static_assert ( sv1.compare(5, 1, "", 0, 0) == 0, "" );
-    static_assert ( sv1.compare(2, 4, "", 0, 0) == 1, "" );
-    static_assert ( sv1.compare(2, 4, "abcde", 3, 4) == -1, "" );
+    static_assert ( sv1.compare(2, 4, "", 0, 0) > 0, "" );
+    static_assert ( sv1.compare(2, 4, "abcde", 3, 4) < 0, "" );
     }
 #endif
+
+  return 0;
 }

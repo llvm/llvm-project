@@ -1,16 +1,13 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++98, c++03, c++11, c++14, c++17
-
-// TODO: Remove this when filesystem gets integrated into the dylib
-// REQUIRES: c++filesystem
+// XFAIL: dylib-has-no-filesystem
 
 // <chrono>
 
@@ -23,7 +20,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     typedef std::chrono::file_clock C;
     ASSERT_NOEXCEPT(C::now());
@@ -32,4 +29,6 @@ int main()
     assert(t1.time_since_epoch().count() != 0);
     assert(C::time_point::min() < t1);
     assert(C::time_point::max() > t1);
+
+  return 0;
 }

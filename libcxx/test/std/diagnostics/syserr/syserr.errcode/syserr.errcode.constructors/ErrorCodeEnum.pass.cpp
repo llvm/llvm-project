@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -15,6 +14,8 @@
 
 #include <system_error>
 #include <cassert>
+
+#include "test_macros.h"
 
 enum testing
 {
@@ -34,11 +35,13 @@ make_error_code(testing x)
     return std::error_code(static_cast<int>(x), std::generic_category());
 }
 
-int main()
+int main(int, char**)
 {
     {
         std::error_code ec(two);
         assert(ec.value() == 2);
         assert(ec.category() == std::generic_category());
     }
+
+  return 0;
 }

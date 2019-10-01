@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -103,7 +102,7 @@ void test(CheckLamdba&& getAndCheckFn, bool IsDeferred, Args&&... args) {
     }
 }
 
-int main()
+int main(int, char**)
 {
     // The default launch policy is implementation defined. libc++ defines
     // it to be std::launch::async.
@@ -152,4 +151,5 @@ int main()
         try { f.get(); assert (false); } catch ( int ) {}
     }
 #endif
+    return 0;
 }

@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -21,7 +20,9 @@
 #include <cassert>
 #include <cstdlib>
 
-int main()
+#include "test_macros.h"
+
+int main(int, char**)
 {
     int a1[] = {1, 2, 3};
     std::list<int> l1(a1, a1+3);
@@ -29,4 +30,6 @@ int main()
     std::list<int>::const_iterator i = l2.begin();
     l1.erase(i);
     assert(false);
+
+  return 0;
 }

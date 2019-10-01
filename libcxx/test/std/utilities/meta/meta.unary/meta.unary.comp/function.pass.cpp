@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -12,6 +11,8 @@
 // function
 
 #include <type_traits>
+
+#include "test_macros.h"
 
 template <class T>
 void test_function_imp()
@@ -34,10 +35,12 @@ void test_function()
     test_function_imp<const volatile T>();
 }
 
-int main()
+int main(int, char**)
 {
     test_function<void ()>();
     test_function<void (int)>();
     test_function<int (double)>();
     test_function<int (double, char)>();
+
+  return 0;
 }

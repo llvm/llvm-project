@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -16,10 +15,9 @@
 
 // REQUIRES: -faligned-allocation
 
-// The dylibs shipped before macosx10.14 do not contain the aligned allocation
+// The dylibs shipped before macosx10.13 do not contain the aligned allocation
 // functions, so trying to force using those with -faligned-allocation results
 // in a link error.
-// XFAIL: with_system_cxx_lib=macosx10.13
 // XFAIL: with_system_cxx_lib=macosx10.12
 // XFAIL: with_system_cxx_lib=macosx10.11
 // XFAIL: with_system_cxx_lib=macosx10.10
@@ -37,7 +35,7 @@
 
 #include "test_macros.h"
 
-int main() {
+int main(int, char**) {
   {
     static_assert(std::is_enum<std::align_val_t>::value, "");
     typedef std::underlying_type<std::align_val_t>::type UT;
@@ -89,4 +87,6 @@ int main() {
     assert(typeid(std::align_val_t).name() == std::string("St11align_val_t"));
   }
 #endif
+
+  return 0;
 }

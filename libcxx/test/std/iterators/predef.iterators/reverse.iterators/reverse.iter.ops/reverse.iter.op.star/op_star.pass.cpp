@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -44,7 +43,7 @@ test(It i, typename std::iterator_traits<It>::value_type x)
     assert(*r == x);
 }
 
-int main()
+int main(int, char**)
 {
     A a;
     test(&a+1, A());
@@ -59,4 +58,6 @@ int main()
         static_assert(*it2 == p[1], "");
     }
 #endif
+
+  return 0;
 }

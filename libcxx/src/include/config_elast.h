@@ -1,9 +1,8 @@
 //===----------------------- config_elast.h -------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -24,6 +23,8 @@
 #define _LIBCPP_ELAST __ELASTERROR
 #elif defined(__Fuchsia__)
 // No _LIBCPP_ELAST needed on Fuchsia
+#elif defined(__wasi__)
+// No _LIBCPP_ELAST needed on WASI
 #elif defined(__linux__) || defined(_LIBCPP_HAS_MUSL_LIBC)
 #define _LIBCPP_ELAST 4095
 #elif defined(__APPLE__)

@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -46,7 +45,7 @@ void operator delete[](void* p, const std::nothrow_t&) TEST_NOEXCEPT
 //   selected.
 struct A { ~A() {} };
 
-int main()
+int main(int, char**)
 {
     A *x = new A[3];
     DoNotOptimize(x);
@@ -57,4 +56,6 @@ int main()
     DoNotOptimize(x);
     assert(1 == delete_called);
     assert(0 == delete_nothrow_called);
+
+  return 0;
 }

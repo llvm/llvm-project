@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -62,7 +61,7 @@ void test(int expected_num_allocs = 1) {
   }
 }
 
-int main() {
+int main(int, char**) {
   { // test sequence containers
     test<std::vector<int, test_allocator<int> > >();
     test<std::vector<bool, test_allocator<bool> > >();
@@ -103,4 +102,6 @@ int main() {
     test<std::unordered_multimap<int, int, std::hash<int>, std::equal_to<int>,
                                  test_allocator<KV> > >(stored_allocators);
   }
+
+  return 0;
 }

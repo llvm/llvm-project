@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -23,7 +22,7 @@
 
 
 // NOTE: this is tested in path.members/path.modifiers via the member swap.
-int main()
+int main(int, char**)
 {
   using namespace fs;
   const char* value1 = "foo/bar/baz";
@@ -46,4 +45,6 @@ int main()
     assert(p1.native() == value1);
     assert(p2.native() == value2);
   }
+
+  return 0;
 }

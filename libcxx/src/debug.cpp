@@ -1,9 +1,8 @@
 //===-------------------------- debug.cpp ---------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -14,17 +13,26 @@
 #include "string"
 #include "cstdio"
 #include "__hash_table"
+#ifndef _LIBCPP_HAS_NO_THREADS
 #include "mutex"
+#if defined(__unix__) &&  defined(__ELF__) && defined(_LIBCPP_HAS_COMMENT_LIB_PRAGMA)
+#pragma comment(lib, "pthread")
+#endif
+#endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-static std::string make_what_str(__libcpp_debug_info const& info) {
-  string msg = info.__file_;
-  msg += ":" + to_string(info.__line_) + ": _LIBCPP_ASSERT '";
-  msg += info.__pred_;
+std::string __libcpp_debug_info::what() const {
+  string msg = __file_;
+  msg += ":" + to_string(__line_) + ": _LIBCPP_ASSERT '";
+  msg += __pred_;
   msg += "' failed. ";
-  msg += info.__msg_;
+  msg += __msg_;
   return msg;
+}
+_LIBCPP_NORETURN void __libcpp_abort_debug_function(__libcpp_debug_info const& info) {
+    std::fprintf(stderr, "%s\n", info.what().c_str());
+    std::abort();
 }
 
 _LIBCPP_SAFE_STATIC __libcpp_debug_function_type
@@ -35,56 +43,11 @@ bool __libcpp_set_debug_function(__libcpp_debug_function_type __func) {
   return true;
 }
 
-_LIBCPP_NORETURN void __libcpp_abort_debug_function(__libcpp_debug_info const& info) {
-  std::fprintf(stderr, "%s\n", make_what_str(info).c_str());
-  std::abort();
-}
-
-_LIBCPP_NORETURN void __libcpp_throw_debug_function(__libcpp_debug_info const& info) {
-#ifndef _LIBCPP_NO_EXCEPTIONS
-  throw __libcpp_debug_exception(info);
-#else
-  __libcpp_abort_debug_function(info);
-#endif
-}
-
-struct __libcpp_debug_exception::__libcpp_debug_exception_imp {
-  __libcpp_debug_info __info_;
-  std::string __what_str_;
-};
-
-__libcpp_debug_exception::__libcpp_debug_exception() _NOEXCEPT
-    : __imp_(nullptr) {
-}
-
-__libcpp_debug_exception::__libcpp_debug_exception(
-    __libcpp_debug_info const& info) : __imp_(new __libcpp_debug_exception_imp)
-{
-  __imp_->__info_ = info;
-  __imp_->__what_str_ = make_what_str(info);
-}
-__libcpp_debug_exception::__libcpp_debug_exception(
-    __libcpp_debug_exception const& other) : __imp_(nullptr) {
-  if (other.__imp_)
-    __imp_ = new __libcpp_debug_exception_imp(*other.__imp_);
-}
-
-__libcpp_debug_exception::~__libcpp_debug_exception() _NOEXCEPT {
-  if (__imp_)
-    delete __imp_;
-}
-
-const char* __libcpp_debug_exception::what() const _NOEXCEPT {
-  if (__imp_)
-    return __imp_->__what_str_.c_str();
-  return "__libcpp_debug_exception";
-}
-
 _LIBCPP_FUNC_VIS
 __libcpp_db*
 __get_db()
 {
-    static __libcpp_db db;
+    static _LIBCPP_NO_DESTROY __libcpp_db db;
     return &db;
 }
 
@@ -106,7 +69,7 @@ typedef lock_guard<mutex_type> RLock;
 mutex_type&
 mut()
 {
-    static mutex_type m;
+    static _LIBCPP_NO_DESTROY mutex_type m;
     return m;
 }
 #endif // !_LIBCPP_HAS_NO_THREADS
@@ -204,8 +167,8 @@ __libcpp_db::__insert_ic(void* __i, const void* __c)
     i->__c_ = c;
 }
 
-__c_node*
-__libcpp_db::__insert_c(void* __c)
+void
+__libcpp_db::__insert_c(void* __c, __libcpp_db::_InsertConstruct *__fn)
 {
 #ifndef _LIBCPP_HAS_NO_THREADS
     WLock _(mut());
@@ -213,7 +176,7 @@ __libcpp_db::__insert_c(void* __c)
     if (__csz_ + 1 > static_cast<size_t>(__cend_ - __cbeg_))
     {
         size_t nc = __next_prime(2*static_cast<size_t>(__cend_ - __cbeg_) + 1);
-        __c_node** cbeg = static_cast<__c_node**>(calloc(nc, sizeof(void*)));
+        __c_node** cbeg = static_cast<__c_node**>(calloc(nc, sizeof(__c_node*)));
         if (cbeg == nullptr)
             __throw_bad_alloc();
 
@@ -235,15 +198,12 @@ __libcpp_db::__insert_c(void* __c)
     }
     size_t hc = hash<void*>()(__c) % static_cast<size_t>(__cend_ - __cbeg_);
     __c_node* p = __cbeg_[hc];
-    __c_node* r = __cbeg_[hc] =
-      static_cast<__c_node*>(malloc(sizeof(__c_node)));
-    if (__cbeg_[hc] == nullptr)
-        __throw_bad_alloc();
+    void *buf = malloc(sizeof(__c_node));
+    if (buf == nullptr)
+      __throw_bad_alloc();
+    __cbeg_[hc] = __fn(buf, __c, p);
 
-    r->__c_ = __c;
-    r->__next_ = p;
     ++__csz_;
-    return r;
 }
 
 void
@@ -553,7 +513,7 @@ __libcpp_db::__insert_iterator(void* __i)
     if (__isz_ + 1 > static_cast<size_t>(__iend_ - __ibeg_))
     {
         size_t nc = __next_prime(2*static_cast<size_t>(__iend_ - __ibeg_) + 1);
-        __i_node** ibeg = static_cast<__i_node**>(calloc(nc, sizeof(void*)));
+        __i_node** ibeg = static_cast<__i_node**>(calloc(nc, sizeof(__i_node*)));
         if (ibeg == nullptr)
             __throw_bad_alloc();
 

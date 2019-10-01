@@ -1,13 +1,11 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: c++experimental
 // UNSUPPORTED: c++98, c++03
 
 // <experimental/memory_resource>
@@ -188,7 +186,7 @@ void test_non_pmr_uses_alloc(AllocObj const& A, Args&&... args)
     }
 }
 
-int main()
+int main(int, char**)
 {
     using ET = std::experimental::erased_type;
     using PMR = ex::memory_resource*;
@@ -224,4 +222,6 @@ int main()
         test_non_pmr_uses_alloc<STDA>(std_alloc, cvalue, std::move(value));
         test_non_pmr_uses_alloc<TESTA>(test_alloc, cvalue, std::move(value));
     }
+
+  return 0;
 }

@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -23,7 +22,9 @@ protected:
    S () {};  // ctor is protected
 };
 
-int main()
+int main(int, char**)
 {
     std::shared_ptr<S> p = std::make_shared<S>();  // expected-error-re@memory:* {{static_assert failed{{.*}} "Can't construct object in make_shared"}}
+
+  return 0;
 }

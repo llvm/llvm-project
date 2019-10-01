@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -27,10 +26,12 @@
 
 #include <chrono>
 
+#include "test_macros.h"
+
 template <class T>
 void test(const T &) {}
 
-int main()
+int main(int, char**)
 {
     typedef std::chrono::steady_clock C;
     static_assert((std::is_same<C::rep, C::duration::rep>::value), "");
@@ -38,4 +39,6 @@ int main()
     static_assert((std::is_same<C::duration, C::time_point::duration>::value), "");
     static_assert(C::is_steady, "");
     test(std::chrono::steady_clock::is_steady);
+
+  return 0;
 }

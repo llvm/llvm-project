@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -24,7 +23,9 @@
 
 #include <future>
 
-int main()
+#include "test_macros.h"
+
+int main(int, char**)
 {
     static_assert(std::future_errc::broken_promise != std::future_errc::future_already_retrieved, "");
     static_assert(std::future_errc::broken_promise != std::future_errc::promise_already_satisfied, "");
@@ -37,4 +38,6 @@ int main()
     static_assert(std::future_errc::future_already_retrieved != static_cast<std::future_errc>(0), "");
     static_assert(std::future_errc::promise_already_satisfied != static_cast<std::future_errc>(0), "");
     static_assert(std::future_errc::no_state != static_cast<std::future_errc>(0), "");
+
+  return 0;
 }

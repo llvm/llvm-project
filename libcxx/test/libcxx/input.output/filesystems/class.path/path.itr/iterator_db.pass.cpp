@@ -1,16 +1,14 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++98, c++03
-// UNSUPPORTED: libcpp-no-exceptions
+// UNSUPPORTED: windows
 
-// MODULES_DEFINES: _LIBCPP_DEBUG_USE_EXCEPTIONS
 // MODULES_DEFINES: _LIBCPP_DEBUG=0
 
 // <filesystem>
@@ -18,7 +16,6 @@
 // class path
 
 #define _LIBCPP_DEBUG 0
-#define _LIBCPP_DEBUG_USE_EXCEPTIONS
 #include "filesystem_include.hpp"
 #include <iterator>
 #include <type_traits>
@@ -26,50 +23,33 @@
 
 #include "test_macros.h"
 #include "filesystem_test_helper.hpp"
+#include "debug_mode_helper.h"
 
-int main() {
+int main(int, char**) {
   using namespace fs;
-  using ExType = std::__libcpp_debug_exception;
   // Test incrementing/decrementing a singular iterator
   {
     path::iterator singular;
-    try {
-      ++singular;
-      assert(false);
-    } catch (ExType const&) {}
-    try {
-      --singular;
-      assert(false);
-    } catch (ExType const&) {}
+    EXPECT_DEATH( ++singular );
+    EXPECT_DEATH( --singular );
   }
   // Test decrementing the begin iterator
   {
     path p("foo/bar");
     auto it = p.begin();
-    try {
-      --it;
-      assert(false);
-    } catch (ExType const&) {}
     ++it;
     ++it;
-    try {
-      ++it;
-      assert(false);
-    } catch (ExType const&) {}
+    EXPECT_DEATH( ++it );
   }
   // Test incrementing the end iterator
   {
     path p("foo/bar");
     auto it = p.end();
-    try {
-      ++it;
-      assert(false);
-    } catch (ExType const&) {}
+    EXPECT_DEATH( ++it );
     --it;
     --it;
-    try {
-      --it;
-      assert(false);
-    } catch (ExType const&) {}
+    EXPECT_DEATH( --it );
   }
+
+  return 0;
 }

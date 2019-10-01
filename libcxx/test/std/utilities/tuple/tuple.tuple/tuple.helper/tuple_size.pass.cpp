@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -20,6 +19,8 @@
 #include <tuple>
 #include <type_traits>
 
+#include "test_macros.h"
+
 template <class T, std::size_t N>
 void test()
 {
@@ -33,10 +34,12 @@ void test()
                                    std::tuple_size<const volatile T> >::value), "");
 }
 
-int main()
+int main(int, char**)
 {
     test<std::tuple<>, 0>();
     test<std::tuple<int>, 1>();
     test<std::tuple<char, int>, 2>();
     test<std::tuple<char, char*, int>, 3>();
+
+  return 0;
 }

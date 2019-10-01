@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -15,6 +14,8 @@
 
 #include <functional>
 #include <type_traits>
+
+#include "test_macros.h"
 
 template <class Arg, class Result>
 struct my_unary_function
@@ -69,7 +70,7 @@ public:
     static const bool value = sizeof(test<T>(0)) == 1;
 };
 
-int main()
+int main(int, char**)
 {
     static_assert((std::is_same<std::reference_wrapper<functor1>::result_type,
                                 char>::value), "");
@@ -94,4 +95,6 @@ int main()
     static_assert(has_result_type<std::reference_wrapper<functor3> >::value, "");
     static_assert(!has_result_type<std::reference_wrapper<functor4> >::value, "");
     static_assert(!has_result_type<std::reference_wrapper<C> >::value, "");
+
+  return 0;
 }

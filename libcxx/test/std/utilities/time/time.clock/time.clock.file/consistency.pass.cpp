@@ -1,16 +1,16 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
 // UNSUPPORTED: c++98, c++03, c++11, c++14, c++17
-//
-// TODO: Remove this when filesystem gets integrated into the dylib
-// REQUIRES: c++filesystem
+
+// Due to C++17 inline variables ASAN flags this test as containing an ODR
+// violation because Clock::is_steady is defined in both the dylib and this TU.
+// UNSUPPORTED: asan
 
 // <chrono>
 
@@ -20,10 +20,12 @@
 
 #include <chrono>
 
+#include "test_macros.h"
+
 template <class T>
 void test(const T &) {}
 
-int main()
+int main(int, char**)
 {
     typedef std::chrono::file_clock C;
     static_assert((std::is_same<C::rep, C::duration::rep>::value), "");
@@ -32,4 +34,6 @@ int main()
     static_assert((std::is_same<C::time_point::clock, C>::value), "");
     static_assert(!C::is_steady, "");
     test(std::chrono::file_clock::is_steady);
+
+  return 0;
 }

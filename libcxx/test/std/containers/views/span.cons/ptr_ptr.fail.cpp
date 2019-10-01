@@ -1,10 +1,9 @@
 // -*- C++ -*-
 //===------------------------------ span ---------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===---------------------------------------------------------------------===//
 // UNSUPPORTED: c++98, c++03, c++11, c++14, c++17
@@ -28,7 +27,7 @@ const          int  carr[] = {4,5,6};
       volatile int  varr[] = {7,8,9};
 const volatile int cvarr[] = {1,3,5};
 
-int main ()
+int main(int, char**)
 {
 //  We can't check that the size doesn't match - because that's a runtime property
 //  std::span<int, 2>   s1(arr, arr + 3);
@@ -60,4 +59,6 @@ int main ()
     std::span<      volatile int,3> s6{ carr,  carr + 3};   // expected-error {{no matching constructor for initialization of 'std::span<volatile int, 3>'}}
     std::span<      volatile int,3> s7{cvarr, cvarr + 3};   // expected-error {{no matching constructor for initialization of 'std::span<volatile int, 3>'}}
     }
+
+  return 0;
 }

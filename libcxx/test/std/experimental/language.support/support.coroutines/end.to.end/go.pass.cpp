@@ -1,10 +1,9 @@
 // -*- C++ -*-
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -12,6 +11,8 @@
 
 #include <experimental/coroutine>
 #include <cassert>
+
+#include "test_macros.h"
 
 using namespace std::experimental;
 
@@ -165,7 +166,7 @@ goroutine pusher(channel& left, channel& right)
 const int N = 100;
 channel* c = new channel[N + 1];
 
-int main() {
+int main(int, char**) {
   for (int i = 0; i < N; ++i)
     goroutine::go(pusher(c[i], c[i + 1]));
 
@@ -173,4 +174,6 @@ int main() {
   int result = c[N].sync_pull();
 
   assert(result == 100);
+
+  return 0;
 }

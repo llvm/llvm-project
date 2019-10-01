@@ -1,9 +1,8 @@
 #===----------------------------------------------------------------------===##
 #
-#                     The LLVM Compiler Infrastructure
-#
-# This file is dual licensed under the MIT and the University of Illinois Open
-# Source Licenses. See LICENSE.TXT for details.
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
 #===----------------------------------------------------------------------===##
 
@@ -12,6 +11,7 @@ import distutils.spawn
 import sys
 import re
 import libcxx.util
+from pprint import pformat
 
 
 def read_syms_from_list(slist):
@@ -39,17 +39,20 @@ def read_blacklist(filename):
     return lines
 
 
-def write_syms(sym_list, out=None, names_only=False):
+def write_syms(sym_list, out=None, names_only=False, filter=None):
     """
     Write a list of symbols to the file named by out.
     """
     out_str = ''
     out_list = sym_list
     out_list.sort(key=lambda x: x['name'])
+    if filter is not None:
+        out_list = filter(out_list)
     if names_only:
-        out_list = [sym['name'] for sym in sym_list]
+        out_list = [sym['name'] for sym in out_list]
     for sym in out_list:
-        out_str += '%s\n' % sym
+        # Use pformat for consistent ordering of keys.
+        out_str += pformat(sym, width=100000) + '\n'
     if out is None:
         sys.stdout.write(out_str)
     else:
@@ -241,10 +244,11 @@ cxxabi_symbols = [
     '_ZTSy'
 ]
 
-def is_stdlib_symbol_name(name):
+def is_stdlib_symbol_name(name, sym):
     name = adjust_mangled_name(name)
     if re.search("@GLIBC|@GCC", name):
-        return False
+        # Only when symbol is defined do we consider it ours
+        return sym['is_defined']
     if re.search('(St[0-9])|(__cxa)|(__cxxabi)', name):
         return True
     if name in new_delete_std_symbols:
@@ -260,8 +264,7 @@ def filter_stdlib_symbols(syms):
     other_symbols = []
     for s in syms:
         canon_name = adjust_mangled_name(s['name'])
-        if not is_stdlib_symbol_name(canon_name):
-            assert not s['is_defined'] and "found defined non-std symbol"
+        if not is_stdlib_symbol_name(canon_name, s):
             other_symbols += [s]
         else:
             stdlib_symbols += [s]

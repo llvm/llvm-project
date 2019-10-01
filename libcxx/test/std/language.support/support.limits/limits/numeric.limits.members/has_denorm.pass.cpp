@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -25,7 +24,7 @@ test()
     static_assert(std::numeric_limits<const volatile T>::has_denorm == expected, "has_denorm test 4");
 }
 
-int main()
+int main(int, char**)
 {
     test<bool, std::denorm_absent>();
     test<char, std::denorm_absent>();
@@ -54,4 +53,6 @@ int main()
     test<float, std::denorm_present>();
     test<double, std::denorm_present>();
     test<long double, std::denorm_present>();
+
+  return 0;
 }

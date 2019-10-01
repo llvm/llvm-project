@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -54,7 +53,7 @@ test_w(const char_type* A,
       assert(!matches_underscore && "should not match underscore");
 }
 
-int main()
+int main(int, char**)
 {
 //  if __regex_word is not distinct from all the classes, bad things happen
 //  See https://bugs.llvm.org/show_bug.cgi?id=26476 for an example.
@@ -244,4 +243,6 @@ int main()
     test(L"dig", std::ctype_base::mask());
     test(L"", std::ctype_base::mask());
     test(L"digits", std::ctype_base::mask());
+
+  return 0;
 }

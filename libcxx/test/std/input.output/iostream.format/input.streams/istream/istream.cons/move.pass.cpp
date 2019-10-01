@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -18,6 +17,8 @@
 
 #include <istream>
 #include <cassert>
+
+#include "test_macros.h"
 
 template <class CharT>
 struct testbuf
@@ -37,7 +38,7 @@ struct test_istream
         : base(std::move(s)) {}
 };
 
-int main()
+int main(int, char**)
 {
     {
         testbuf<char> sb;
@@ -71,4 +72,6 @@ int main()
         assert(is.precision() == 6);
         assert(is.getloc().name() == "C");
     }
+
+  return 0;
 }

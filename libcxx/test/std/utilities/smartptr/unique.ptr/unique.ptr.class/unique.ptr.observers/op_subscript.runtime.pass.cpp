@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -15,6 +14,8 @@
 
 #include <memory>
 #include <cassert>
+
+#include "test_macros.h"
 
 class A {
   int state_;
@@ -34,7 +35,7 @@ public:
 
 int A::next_ = 0;
 
-int main() {
+int main(int, char**) {
   std::unique_ptr<A[]> p(new A[3]);
   assert(p[0] == 1);
   assert(p[1] == 2);
@@ -45,4 +46,6 @@ int main() {
   assert(p[0] == 3);
   assert(p[1] == 2);
   assert(p[2] == 1);
+
+  return 0;
 }

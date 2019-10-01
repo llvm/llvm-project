@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -30,7 +29,7 @@
 #pragma GCC diagnostic ignored "-Wformat-zero-length"
 #endif
 
-int main()
+int main(int, char**)
 {
     std::clock_t c = 0;
     std::size_t s = 0;
@@ -61,4 +60,6 @@ int main()
     static_assert((std::is_same<decltype(std::localtime(&t)), std::tm*>::value), "");
 #endif
     static_assert((std::is_same<decltype(std::strftime(str,s,"",&tm)), std::size_t>::value), "");
+
+  return 0;
 }

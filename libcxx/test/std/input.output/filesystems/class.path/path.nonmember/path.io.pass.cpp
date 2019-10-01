@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -89,10 +88,12 @@ void test_LWG2989() {
   static_assert(!is_istreamable<decltype(std::wcin), std::string>::value, "");
 }
 
-int main() {
+int main(int, char**) {
   doIOTest<char>();
   doIOTest<wchar_t>();
   //doIOTest<char16_t>();
   //doIOTest<char32_t>();
   test_LWG2989();
+
+  return 0;
 }

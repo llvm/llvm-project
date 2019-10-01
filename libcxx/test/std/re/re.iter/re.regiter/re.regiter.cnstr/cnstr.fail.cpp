@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -25,7 +24,7 @@
 #error
 #endif
 
-int main()
+int main(int, char**)
 {
     {
         const char phone_book[] = "555-1234, 555-2345, 555-3456";
@@ -33,4 +32,6 @@ int main()
             std::begin(phone_book), std::end(phone_book),
             std::regex("\\d{3}-\\d{4}"));
     }
+
+  return 0;
 }

@@ -22,6 +22,8 @@
 #include <ios>
 #include <streambuf>
 
+#include "test_macros.h"
+
 
 void exit_success(int) {
     std::_Exit(EXIT_SUCCESS);

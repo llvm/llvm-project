@@ -1,10 +1,9 @@
 # -*- Python -*- vim: set syntax=python tabstop=4 expandtab cc=80:
 #===----------------------------------------------------------------------===##
 #
-#                     The LLVM Compiler Infrastructure
-#
-# This file is dual licensed under the MIT and the University of Illinois Open
-# Source Licenses. See LICENSE.TXT for details.
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
 #===----------------------------------------------------------------------===##
 """
@@ -15,10 +14,10 @@ from libcxx.sym_check import util
 
 
 def _symbol_difference(lhs, rhs):
-    lhs_names = set((n['name'] for n in lhs))
-    rhs_names = set((n['name'] for n in rhs))
+    lhs_names = set(((n['name'], n['type']) for n in lhs))
+    rhs_names = set(((n['name'], n['type']) for n in rhs))
     diff_names = lhs_names - rhs_names
-    return [n for n in lhs if n['name'] in diff_names]
+    return [n for n in lhs if (n['name'], n['type']) in diff_names]
 
 
 def _find_by_key(sym_list, k):

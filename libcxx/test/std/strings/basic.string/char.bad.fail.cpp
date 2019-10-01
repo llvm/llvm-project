@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -27,7 +26,7 @@ private:
     int two;
 };
 
-int main()
+int main(int, char**)
 {
     {
 //  array
@@ -50,4 +49,6 @@ int main()
     std::basic_string<NotStandardLayout, test_traits<NotStandardLayout> > s;
 //  expected-error-re@string:* {{static_assert failed{{.*}} "Character type of basic_string must be standard-layout"}}
     }
+
+  return 0;
 }

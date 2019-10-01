@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -86,10 +85,12 @@ void test_converting_store() {
   assert(buffer[3] == 8.);
 }
 
-int main() {
+int main(int, char**) {
   // TODO: adjust the tests when this assertion fails.
   test_store<ex::native_simd<int32_t>>();
   test_store<ex::fixed_size_simd<int32_t, 4>>();
   test_converting_store<ex::native_simd<int32_t>>();
   test_converting_store<ex::fixed_size_simd<int32_t, 4>>();
+
+  return 0;
 }

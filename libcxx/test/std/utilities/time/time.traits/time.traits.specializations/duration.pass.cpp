@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -17,6 +16,8 @@
 
 #include <chrono>
 
+#include "test_macros.h"
+
 template <class D1, class D2, class De>
 void
 test()
@@ -25,7 +26,7 @@ test()
     static_assert((std::is_same<Dc, De>::value), "");
 }
 
-int main()
+int main(int, char**)
 {
     test<std::chrono::duration<int, std::ratio<1, 100> >,
          std::chrono::duration<long, std::ratio<1, 1000> >,
@@ -39,4 +40,6 @@ int main()
     test<std::chrono::duration<double, std::ratio<21, 1> >,
          std::chrono::duration<short, std::ratio<15, 1> >,
          std::chrono::duration<double, std::ratio<3, 1> > >();
+
+  return 0;
 }

@@ -1,18 +1,19 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++98, c++03, c++11, c++14
 // UNSUPPORTED: sanitizer-new-delete
 
-// Aligned allocation was not provided before macosx10.12 and as a result we
-// get availability errors when the deployment target is older than macosx10.13.
-// However, AppleClang 10 (and older) don't trigger availability errors.
+// Aligned allocation was not provided before macosx10.14 and as a result we
+// get availability errors when the deployment target is older than macosx10.14.
+// However, AppleClang 10 (and older) don't trigger availability errors, and
+// Clang < 8.0 doesn't warn for 10.13
+// XFAIL: !(apple-clang-9 || apple-clang-10 || clang-7) && availability=macosx10.13
 // XFAIL: !(apple-clang-9 || apple-clang-10) && availability=macosx10.12
 // XFAIL: !(apple-clang-9 || apple-clang-10) && availability=macosx10.11
 // XFAIL: !(apple-clang-9 || apple-clang-10) && availability=macosx10.10
@@ -87,7 +88,7 @@ void  operator delete(void* p, std::align_val_t a) TEST_NOEXCEPT
 }
 
 
-int main()
+int main(int, char**)
 {
     {
         A* ap = new (std::nothrow) A;
@@ -107,4 +108,6 @@ int main()
         assert(!new_called);
         assert(!B_constructed);
     }
+
+  return 0;
 }

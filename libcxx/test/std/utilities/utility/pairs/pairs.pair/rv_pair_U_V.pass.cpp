@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -21,6 +20,8 @@
 
 #include "archetypes.hpp"
 #include "test_convertible.hpp"
+
+#include "test_macros.h"
 using namespace ImplicitTypes; // Get implicitly archetypes
 
 template <class T1, class U1,
@@ -64,7 +65,7 @@ struct ImplicitT {
   int value;
 };
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::pair<std::unique_ptr<Derived>, int> P1;
@@ -174,4 +175,6 @@ int main()
         static_assert(p2.second.value == 43, "");
     }
 #endif
+
+  return 0;
 }

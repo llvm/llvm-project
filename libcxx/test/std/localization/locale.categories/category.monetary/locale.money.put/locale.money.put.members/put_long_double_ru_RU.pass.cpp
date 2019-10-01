@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -32,6 +31,7 @@
 #include <ios>
 #include <streambuf>
 #include <cassert>
+#include "test_macros.h"
 #include "test_iterators.h"
 
 #include "platform_support.h" // locale name macros
@@ -56,7 +56,7 @@ public:
         : Fw(refs) {}
 };
 
-int main()
+int main(int, char**)
 {
     std::ios ios(0);
     std::string loc_name(LOCALE_ru_RU_UTF_8);
@@ -502,4 +502,6 @@ int main()
         assert(ios.width() == 0);
     }
 }
+
+  return 0;
 }

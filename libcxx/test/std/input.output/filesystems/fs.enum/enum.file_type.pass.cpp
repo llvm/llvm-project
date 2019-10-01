@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -22,7 +21,7 @@
 
 constexpr fs::file_type ME(int val) { return static_cast<fs::file_type>(val); }
 
-int main() {
+int main(int, char**) {
   typedef fs::file_type E;
   static_assert(std::is_enum<E>::value, "");
 
@@ -44,4 +43,6 @@ int main() {
           E::socket == ME(7) &&
           E::unknown == ME(8),
         "Expected enumeration values do not match");
+
+  return 0;
 }

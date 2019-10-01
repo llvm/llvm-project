@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -16,11 +15,15 @@
 #include <string>
 #include <cassert>
 
-int main()
+#include "test_macros.h"
+
+int main(int, char**)
 {
     assert( std::char_traits<char>::eq_int_type('a', 'a'));
     assert(!std::char_traits<char>::eq_int_type('a', 'A'));
     assert(!std::char_traits<char>::eq_int_type(std::char_traits<char>::eof(), 'A'));
     assert( std::char_traits<char>::eq_int_type(std::char_traits<char>::eof(),
                                                 std::char_traits<char>::eof()));
+
+  return 0;
 }

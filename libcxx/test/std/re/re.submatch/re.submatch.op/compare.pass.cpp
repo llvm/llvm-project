@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -277,7 +276,7 @@ test(const std::basic_string<CharT>& x, const std::basic_string<CharT>& y, bool 
     assert((sm1 >= y[0]) == (x >= string(1, y[0])));
 }
 
-int main()
+int main(int, char**)
 {
     test(std::string("123"), std::string("123"));
     test(std::string("1234"), std::string("123"));
@@ -285,4 +284,6 @@ int main()
     test(std::wstring(L"1234"), std::wstring(L"123"));
     test(std::string("123\000" "56", 6), std::string("123\000" "56", 6), false);
     test(std::wstring(L"123\000" L"56", 6), std::wstring(L"123\000" L"56", 6), false);
+
+  return 0;
 }

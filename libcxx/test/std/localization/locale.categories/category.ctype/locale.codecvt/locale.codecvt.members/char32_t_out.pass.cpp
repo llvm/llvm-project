@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -22,9 +21,11 @@
 
 #include <stdio.h>
 
+#include "test_macros.h"
+
 typedef std::codecvt<char32_t, char, std::mbstate_t> F;
 
-int main()
+int main(int, char**)
 {
     std::locale l = std::locale::classic();
     const F& f = std::use_facet<F>(l);
@@ -42,4 +43,6 @@ int main()
         for (unsigned i = 0; i < 9; ++i)
             assert(static_cast<char32_t>(to[i]) == from[i]);
     }
+
+  return 0;
 }

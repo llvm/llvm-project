@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -18,7 +17,9 @@
 #include <system_error>
 #include <cassert>
 
-int main()
+#include "test_macros.h"
+
+int main(int, char**)
 {
     // LWG2462 std::ios_base::failure is overspecified
     static_assert((std::is_base_of<std::system_error, std::ios_base::failure>::value), "");
@@ -41,4 +42,6 @@ int main()
         assert(what_message.find(std::iostream_category().message(static_cast<int>
             (std::io_errc::stream))) != std::string::npos);
     }
+
+  return 0;
 }

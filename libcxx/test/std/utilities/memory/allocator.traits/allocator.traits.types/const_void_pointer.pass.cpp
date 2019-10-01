@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -58,7 +57,7 @@ private:
     typedef int const_void_pointer;
 };
 
-int main()
+int main(int, char**)
 {
     static_assert((std::is_same<std::allocator_traits<A<char> >::const_void_pointer, Ptr<const void> >::value), "");
     static_assert((std::is_same<std::allocator_traits<B<char> >::const_void_pointer, const void*>::value), "");
@@ -66,4 +65,6 @@ int main()
 #if TEST_STD_VER >= 11
     static_assert((std::is_same<std::allocator_traits<D<char> >::const_void_pointer, const void*>::value), "");
 #endif
+
+  return 0;
 }

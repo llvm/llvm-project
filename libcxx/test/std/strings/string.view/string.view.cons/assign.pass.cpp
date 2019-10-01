@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -30,7 +29,7 @@ bool test (T sv0)
     return sv0.size() == sv1.size() && sv0.data() == sv1.data();
     }
 
-int main () {
+int main(int, char**) {
 
     assert( test<std::string_view>    (  "1234"));
 #if defined(__cpp_lib_char8_t) && __cpp_lib_char8_t >= 201811L
@@ -55,4 +54,6 @@ int main () {
 #endif
     static_assert( test<std::wstring_view>   ({ L"abc", 3}), "");
 #endif
+
+  return 0;
 }

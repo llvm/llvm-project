@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -32,10 +31,12 @@
 #include <cassert>
 #include <cstddef>
 
-int main()
+int main(int, char**)
 {
     {
     std::string_view sv = "12345678901234";
     std::basic_string s1{sv, 23}; // expected-error {{no viable constructor or deduction guide for deduction of template arguments of 'basic_string'}}
     }
+
+  return 0;
 }

@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -50,11 +49,11 @@ operator<<(std::basic_ostream<_CharT, _Traits>& os, mutating_delimiter2 &d)
 { return os << d.get(); }
 
 
-namespace exp = std::experimental;
+namespace exper = std::experimental;
 
 template <class Delim, class Iter, class CharT = char, class Traits = std::char_traits<CharT>>
 void test (Delim &&d, Iter first, Iter last, const CharT *expected ) {
-    typedef exp::ostream_joiner<typename std::decay<Delim>::type, CharT, Traits> Joiner;
+    typedef exper::ostream_joiner<typename std::decay<Delim>::type, CharT, Traits> Joiner;
 
     static_assert((std::is_copy_constructible<Joiner>::value == std::is_copy_constructible<typename std::decay<Delim>::type>::value), "" );
     static_assert((std::is_move_constructible<Joiner>::value == std::is_move_constructible<typename std::decay<Delim>::type>::value), "" );
@@ -68,7 +67,7 @@ void test (Delim &&d, Iter first, Iter last, const CharT *expected ) {
     assert(sstream.str() == expected);
     }
 
-int main () {
+int main(int, char**) {
 {
     const char chars[] = "0123456789";
     const int  ints [] = { 10, 11, 12, 13, 14, 15, 16, 17, 18, 19 };
@@ -117,4 +116,6 @@ int main () {
     test(mutating_delimiter(), chars, chars+10, L"0 1!2\"3#4$5%6&7'8(9");
     }
 
+
+  return 0;
 }

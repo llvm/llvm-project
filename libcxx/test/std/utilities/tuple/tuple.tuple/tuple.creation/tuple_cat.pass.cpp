@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -24,7 +23,7 @@
 #include "test_macros.h"
 #include "MoveOnly.h"
 
-int main()
+int main(int, char**)
 {
     {
         std::tuple<> t = std::tuple_cat();
@@ -239,4 +238,21 @@ int main()
         );
         assert(t2 == std::make_tuple(std::make_tuple(1), std::make_tuple(2)));
     }
+    {
+        int x = 101;
+        std::tuple<int, const int, int&, const int&, int&&> t(42, 101, x, x, std::move(x));
+        const auto& ct = t;
+        std::tuple<int, const int, int&, const int&> t2(42, 101, x, x);
+        const auto& ct2 = t2;
+
+        auto r = std::tuple_cat(std::move(t), std::move(ct), t2, ct2);
+
+        ASSERT_SAME_TYPE(decltype(r), std::tuple<
+            int, const int, int&, const int&, int&&,
+            int, const int, int&, const int&, int&&,
+            int, const int, int&, const int&,
+            int, const int, int&, const int&>);
+        ((void)r);
+    }
+  return 0;
 }

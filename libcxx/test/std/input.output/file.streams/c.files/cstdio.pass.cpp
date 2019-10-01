@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -86,7 +85,7 @@
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 #endif
 
-int main()
+int main(int, char**)
 {
     std::FILE* fp = 0;
     std::fpos_t fpos = std::fpos_t();
@@ -155,4 +154,6 @@ int main()
     static_assert((std::is_same<decltype(std::puts("")), int>::value), "");
     static_assert((std::is_same<decltype(std::vprintf(" ",va)), int>::value), "");
 #endif
+
+  return 0;
 }

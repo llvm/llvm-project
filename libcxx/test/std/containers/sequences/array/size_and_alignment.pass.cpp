@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -60,7 +59,7 @@ struct TEST_ALIGNAS(TEST_ALIGNOF(std::max_align_t) * 2) TestType2 {
 
 //static_assert(sizeof(void*) == 4, "");
 
-int main() {
+int main(int, char**) {
   test_type<char>();
   test_type<int>();
   test_type<double>();
@@ -68,4 +67,6 @@ int main() {
   test_type<std::max_align_t>();
   test_type<TestType1>();
   test_type<TestType2>();
+
+  return 0;
 }

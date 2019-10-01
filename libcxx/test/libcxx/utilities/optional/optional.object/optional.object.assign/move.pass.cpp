@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -16,6 +15,8 @@
 #include <string>
 #include <type_traits>
 #include <utility>
+
+#include "test_macros.h"
 
 using std::optional;
 
@@ -51,7 +52,7 @@ test()
     return true;
 }
 
-int main()
+int main(int, char**)
 {
     {
         using T = int;
@@ -68,4 +69,6 @@ int main()
 
     static_assert(!(std::is_move_assignable<optional<Z1>>::value), "");
     static_assert(!(std::is_move_assignable<optional<Z2>>::value), "");
+
+  return 0;
 }

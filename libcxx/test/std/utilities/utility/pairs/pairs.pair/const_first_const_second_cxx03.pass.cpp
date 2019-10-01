@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -16,6 +15,8 @@
 #include <utility>
 #include <cassert>
 
+#include "test_macros.h"
+
 class A
 {
     int data_;
@@ -25,7 +26,7 @@ public:
     bool operator==(const A& a) const {return data_ == a.data_;}
 };
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::pair<float, short*> P;
@@ -39,4 +40,6 @@ int main()
         assert(p.first == A(1));
         assert(p.second == 2);
     }
+
+  return 0;
 }

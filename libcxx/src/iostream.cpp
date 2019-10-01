@@ -1,13 +1,13 @@
 //===------------------------ iostream.cpp --------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "__std_stream"
+#include "__locale"
 #include "string"
 #include "new"
 
@@ -79,8 +79,28 @@ __asm__("?wclog@" _LIBCPP_ABI_NAMESPACE_STR "@std@@3V?$basic_ostream@_WU?$char_t
 
 _LIBCPP_HIDDEN ios_base::Init __start_std_streams;
 
+// On Windows the TLS storage for locales needs to be initialized before we create
+// the standard streams, otherwise it may not be alive during program termination
+// when we flush the streams.
+static void force_locale_initialization() {
+#if defined(_LIBCPP_MSVCRT_LIKE)
+  static bool once = []() {
+    auto loc = newlocale(LC_ALL_MASK, "C", 0);
+    {
+        __libcpp_locale_guard g(loc); // forces initialization of locale TLS
+        ((void)g);
+    }
+    freelocale(loc);
+    return true;
+  }();
+  ((void)once);
+#endif
+}
+
 ios_base::Init::Init()
 {
+    force_locale_initialization();
+
 #ifndef _LIBCPP_HAS_NO_STDIN
     istream* cin_ptr  = ::new(cin)  istream(::new(__cin)  __stdinbuf <char>(stdin, &mb_cin));
     wistream* wcin_ptr  = ::new(wcin)  wistream(::new(__wcin)  __stdinbuf <wchar_t>(stdin, &mb_wcin));

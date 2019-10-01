@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -16,6 +15,7 @@
 // iterator insert(const_iterator hint, node_type&&);
 
 #include <unordered_map>
+#include "test_macros.h"
 #include "min_allocator.h"
 
 template <class Container>
@@ -54,10 +54,12 @@ void test(Container& c)
     }
 }
 
-int main()
+int main(int, char**)
 {
     std::unordered_multimap<int, int> m;
     test(m);
     std::unordered_multimap<int, int, std::hash<int>, std::equal_to<int>, min_allocator<std::pair<const int, int>>> m2;
     test(m2);
+
+  return 0;
 }

@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -18,6 +17,8 @@
 #include <sstream>
 #include <cassert>
 
+#include "test_macros.h"
+
 template<typename T>
 struct NoDefaultAllocator : std::allocator<T>
 {
@@ -28,7 +29,7 @@ struct NoDefaultAllocator : std::allocator<T>
 };
 
 
-int main()
+int main(int, char**)
 {
     {
         std::stringstream ss(" 123 456 ");
@@ -65,4 +66,6 @@ int main()
     //  This test is not required by the standard, but *where else* could it get the allocator?
         assert(sb.str().get_allocator() == s.get_allocator());
     }
+
+  return 0;
 }

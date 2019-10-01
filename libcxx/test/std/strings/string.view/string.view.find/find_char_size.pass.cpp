@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -36,7 +35,7 @@ test(const S& s, typename S::value_type c, typename S::size_type x)
         assert(0 <= x && x + 1 <= s.size());
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string_view S;
@@ -82,4 +81,6 @@ int main()
     static_assert (sv2.find( 'c', 4 ) == SV::npos, "" );
     }
 #endif
+
+  return 0;
 }

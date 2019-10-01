@@ -1,13 +1,11 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: c++experimental
 // UNSUPPORTED: c++98, c++03
 
 // <memory_resource>
@@ -121,7 +119,7 @@ void test_evil()
     }
 }
 
-int main()
+int main(int, char**)
 {
     test_evil<WidgetV0, WidgetV0>();
     test_evil<WidgetV0, WidgetV1>();
@@ -139,4 +137,6 @@ int main()
     test_evil<WidgetV3, WidgetV1>();
     test_evil<WidgetV3, WidgetV2>();
     test_evil<WidgetV3, WidgetV3>();
+
+  return 0;
 }

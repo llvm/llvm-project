@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 // UNSUPPORTED: c++98, c++03, c++11, c++14, c++17
@@ -28,8 +27,6 @@
 
 #include "test_macros.h"
 
-#include <iostream>
-
 constexpr bool testConstexprYears (std::chrono::year_month_day_last ymdl)
 {
     std::chrono::year_month_day_last ym1 = ymdl - std::chrono::years{10};
@@ -48,7 +45,7 @@ constexpr bool testConstexprMonths (std::chrono::year_month_day_last ymdl)
         ;
 }
 
-int main()
+int main(int, char**)
 {
     using year                = std::chrono::year;
     using month               = std::chrono::month;
@@ -88,4 +85,6 @@ int main()
     }
     }
 
+
+  return 0;
 }

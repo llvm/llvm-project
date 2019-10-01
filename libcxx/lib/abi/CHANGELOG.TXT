@@ -13,10 +13,288 @@ Afterwards the ABI list should be updated to include the new changes.
 New entries should be added directly below the "Version" header.
 
 -----------
+Version 9.0
+-----------
+
+* rXXXXX - Re-rexport missing symbols from libc++abi
+
+  libc++ now re-exports `__cxa_throw_bad_array_new_length` and `__cxa_uncaught_exceptions`,
+  both of which are provided by libc++abi. This is not an ABI break because
+  we're just adding symbols. Also, this does mean that libc++ can't be linked
+  against an older version of libc++abi that doesn't provide those symbols,
+  however doing so is not supported anyway.
+
+  x86_64-unknown-linux-gnu
+  ------------------------
+  TODO
+
+  x86_64-apple-apple-darwin
+  -------------------------
+  Symbol added: ___cxa_throw_bad_array_new_length
+  Symbol added: ___cxa_uncaught_exceptions
+
+* r356518 - Integrate <filesystem> support into the shared library
+
+  This patch introduces support for <filesystem> into the shared library,
+  instead of requiring users to manually link against a static archive. As
+  such, new symbols required to implement <filesystem> are exported from
+  the shared library.
+
+  x86_64-unknown-linux-gnu
+  ------------------------
+  Symbol added: _ZNKSt3__14__fs10filesystem18directory_iterator13__dereferenceEv
+  Symbol added: _ZNKSt3__14__fs10filesystem28recursive_directory_iterator13__dereferenceEv
+  Symbol added: _ZNKSt3__14__fs10filesystem28recursive_directory_iterator5depthEv
+  Symbol added: _ZNKSt3__14__fs10filesystem28recursive_directory_iterator7optionsEv
+  Symbol added: _ZNKSt3__14__fs10filesystem4path10__filenameEv
+  Symbol added: _ZNKSt3__14__fs10filesystem4path11__extensionEv
+  Symbol added: _ZNKSt3__14__fs10filesystem4path11__root_nameEv
+  Symbol added: _ZNKSt3__14__fs10filesystem4path13__parent_pathEv
+  Symbol added: _ZNKSt3__14__fs10filesystem4path15__relative_pathEv
+  Symbol added: _ZNKSt3__14__fs10filesystem4path15__root_path_rawEv
+  Symbol added: _ZNKSt3__14__fs10filesystem4path16__root_directoryEv
+  Symbol added: _ZNKSt3__14__fs10filesystem4path16lexically_normalEv
+  Symbol added: _ZNKSt3__14__fs10filesystem4path18lexically_relativeERKS2_
+  Symbol added: _ZNKSt3__14__fs10filesystem4path3endEv
+  Symbol added: _ZNKSt3__14__fs10filesystem4path5beginEv
+  Symbol added: _ZNKSt3__14__fs10filesystem4path6__stemEv
+  Symbol added: _ZNKSt3__14__fs10filesystem4path9__compareENS_17basic_string_viewIcNS_11char_traitsIcEEEE
+  Symbol added: _ZNSt3__14__fs10filesystem10__absoluteERKNS1_4pathEPNS_10error_codeE
+  Symbol added: _ZNSt3__14__fs10filesystem10hash_valueERKNS1_4pathE
+  Symbol added: _ZNSt3__14__fs10filesystem11__canonicalERKNS1_4pathEPNS_10error_codeE
+  Symbol added: _ZNSt3__14__fs10filesystem11__copy_fileERKNS1_4pathES4_NS1_12copy_optionsEPNS_10error_codeE
+  Symbol added: _ZNSt3__14__fs10filesystem11__file_sizeERKNS1_4pathEPNS_10error_codeE
+  Symbol added: _ZNSt3__14__fs10filesystem12__equivalentERKNS1_4pathES4_PNS_10error_codeE
+  Symbol added: _ZNSt3__14__fs10filesystem12__remove_allERKNS1_4pathEPNS_10error_codeE
+  Symbol added: _ZNSt3__14__fs10filesystem13__fs_is_emptyERKNS1_4pathEPNS_10error_codeE
+  Symbol added: _ZNSt3__14__fs10filesystem13__permissionsERKNS1_4pathENS1_5permsENS1_12perm_optionsEPNS_10error_codeE
+  Symbol added: _ZNSt3__14__fs10filesystem13__resize_fileERKNS1_4pathEmPNS_10error_codeE
+  Symbol added: _ZNSt3__14__fs10filesystem14__copy_symlinkERKNS1_4pathES4_PNS_10error_codeE
+  Symbol added: _ZNSt3__14__fs10filesystem14__current_pathEPNS_10error_codeE
+  Symbol added: _ZNSt3__14__fs10filesystem14__current_pathERKNS1_4pathEPNS_10error_codeE
+  Symbol added: _ZNSt3__14__fs10filesystem14__read_symlinkERKNS1_4pathEPNS_10error_codeE
+  Symbol added: _ZNSt3__14__fs10filesystem15directory_entry12__do_refreshEv
+  Symbol added: _ZNSt3__14__fs10filesystem16_FilesystemClock3nowEv
+  Symbol added: _ZNSt3__14__fs10filesystem16_FilesystemClock9is_steadyE
+  Symbol added: _ZNSt3__14__fs10filesystem16__create_symlinkERKNS1_4pathES4_PNS_10error_codeE
+  Symbol added: _ZNSt3__14__fs10filesystem16__symlink_statusERKNS1_4pathEPNS_10error_codeE
+  Symbol added: _ZNSt3__14__fs10filesystem16filesystem_error13__create_whatEi
+  Symbol added: _ZNSt3__14__fs10filesystem16filesystem_errorD0Ev
+  Symbol added: _ZNSt3__14__fs10filesystem16filesystem_errorD1Ev
+  Symbol added: _ZNSt3__14__fs10filesystem16filesystem_errorD2Ev
+  Symbol added: _ZNSt3__14__fs10filesystem17__hard_link_countERKNS1_4pathEPNS_10error_codeE
+  Symbol added: _ZNSt3__14__fs10filesystem17__last_write_timeERKNS1_4pathENS_6chrono10time_pointINS1_16_FilesystemClockENS5_8durationInNS_5ratioILl1ELl1000000000EEEEEEEPNS_10error_codeE
+  Symbol added: _ZNSt3__14__fs10filesystem17__last_write_timeERKNS1_4pathEPNS_10error_codeE
+  Symbol added: _ZNSt3__14__fs10filesystem18__create_directoryERKNS1_4pathEPNS_10error_codeE
+  Symbol added: _ZNSt3__14__fs10filesystem18__create_directoryERKNS1_4pathES4_PNS_10error_codeE
+  Symbol added: _ZNSt3__14__fs10filesystem18__create_hard_linkERKNS1_4pathES4_PNS_10error_codeE
+  Symbol added: _ZNSt3__14__fs10filesystem18__weakly_canonicalERKNS1_4pathEPNS_10error_codeE
+  Symbol added: _ZNSt3__14__fs10filesystem18directory_iterator11__incrementEPNS_10error_codeE
+  Symbol added: _ZNSt3__14__fs10filesystem18directory_iteratorC1ERKNS1_4pathEPNS_10error_codeENS1_17directory_optionsE
+  Symbol added: _ZNSt3__14__fs10filesystem18directory_iteratorC2ERKNS1_4pathEPNS_10error_codeENS1_17directory_optionsE
+  Symbol added: _ZNSt3__14__fs10filesystem20__create_directoriesERKNS1_4pathEPNS_10error_codeE
+  Symbol added: _ZNSt3__14__fs10filesystem21__temp_directory_pathEPNS_10error_codeE
+  Symbol added: _ZNSt3__14__fs10filesystem26__create_directory_symlinkERKNS1_4pathES4_PNS_10error_codeE
+  Symbol added: _ZNSt3__14__fs10filesystem28recursive_directory_iterator11__incrementEPNS_10error_codeE
+  Symbol added: _ZNSt3__14__fs10filesystem28recursive_directory_iterator15__try_recursionEPNS_10error_codeE
+  Symbol added: _ZNSt3__14__fs10filesystem28recursive_directory_iterator5__popEPNS_10error_codeE
+  Symbol added: _ZNSt3__14__fs10filesystem28recursive_directory_iterator9__advanceEPNS_10error_codeE
+  Symbol added: _ZNSt3__14__fs10filesystem28recursive_directory_iteratorC1ERKNS1_4pathENS1_17directory_optionsEPNS_10error_codeE
+  Symbol added: _ZNSt3__14__fs10filesystem28recursive_directory_iteratorC2ERKNS1_4pathENS1_17directory_optionsEPNS_10error_codeE
+  Symbol added: _ZNSt3__14__fs10filesystem4path17replace_extensionERKS2_
+  Symbol added: _ZNSt3__14__fs10filesystem4path19preferred_separatorE
+  Symbol added: _ZNSt3__14__fs10filesystem4path8iterator11__decrementEv
+  Symbol added: _ZNSt3__14__fs10filesystem4path8iterator11__incrementEv
+  Symbol added: _ZNSt3__14__fs10filesystem6__copyERKNS1_4pathES4_NS1_12copy_optionsEPNS_10error_codeE
+  Symbol added: _ZNSt3__14__fs10filesystem7__spaceERKNS1_4pathEPNS_10error_codeE
+  Symbol added: _ZNSt3__14__fs10filesystem8__removeERKNS1_4pathEPNS_10error_codeE
+  Symbol added: _ZNSt3__14__fs10filesystem8__renameERKNS1_4pathES4_PNS_10error_codeE
+  Symbol added: _ZNSt3__14__fs10filesystem8__statusERKNS1_4pathEPNS_10error_codeE
+  Symbol added: _ZTINSt3__14__fs10filesystem16filesystem_errorE
+  Symbol added: _ZTSNSt3__14__fs10filesystem16filesystem_errorE
+  Symbol added: _ZTVNSt3__14__fs10filesystem16filesystem_errorE
+
+  x86_64-apple-apple-darwin
+  -------------------------
+  Symbol added: __ZNKSt3__14__fs10filesystem18directory_iterator13__dereferenceEv
+  Symbol added: __ZNKSt3__14__fs10filesystem28recursive_directory_iterator13__dereferenceEv
+  Symbol added: __ZNKSt3__14__fs10filesystem28recursive_directory_iterator5depthEv
+  Symbol added: __ZNKSt3__14__fs10filesystem28recursive_directory_iterator7optionsEv
+  Symbol added: __ZNKSt3__14__fs10filesystem4path10__filenameEv
+  Symbol added: __ZNKSt3__14__fs10filesystem4path11__extensionEv
+  Symbol added: __ZNKSt3__14__fs10filesystem4path11__root_nameEv
+  Symbol added: __ZNKSt3__14__fs10filesystem4path13__parent_pathEv
+  Symbol added: __ZNKSt3__14__fs10filesystem4path15__relative_pathEv
+  Symbol added: __ZNKSt3__14__fs10filesystem4path15__root_path_rawEv
+  Symbol added: __ZNKSt3__14__fs10filesystem4path16__root_directoryEv
+  Symbol added: __ZNKSt3__14__fs10filesystem4path16lexically_normalEv
+  Symbol added: __ZNKSt3__14__fs10filesystem4path18lexically_relativeERKS2_
+  Symbol added: __ZNKSt3__14__fs10filesystem4path3endEv
+  Symbol added: __ZNKSt3__14__fs10filesystem4path5beginEv
+  Symbol added: __ZNKSt3__14__fs10filesystem4path6__stemEv
+  Symbol added: __ZNKSt3__14__fs10filesystem4path9__compareENS_17basic_string_viewIcNS_11char_traitsIcEEEE
+  Symbol added: __ZNSt3__14__fs10filesystem10__absoluteERKNS1_4pathEPNS_10error_codeE
+  Symbol added: __ZNSt3__14__fs10filesystem10hash_valueERKNS1_4pathE
+  Symbol added: __ZNSt3__14__fs10filesystem11__canonicalERKNS1_4pathEPNS_10error_codeE
+  Symbol added: __ZNSt3__14__fs10filesystem11__copy_fileERKNS1_4pathES4_NS1_12copy_optionsEPNS_10error_codeE
+  Symbol added: __ZNSt3__14__fs10filesystem11__file_sizeERKNS1_4pathEPNS_10error_codeE
+  Symbol added: __ZNSt3__14__fs10filesystem12__equivalentERKNS1_4pathES4_PNS_10error_codeE
+  Symbol added: __ZNSt3__14__fs10filesystem12__remove_allERKNS1_4pathEPNS_10error_codeE
+  Symbol added: __ZNSt3__14__fs10filesystem13__fs_is_emptyERKNS1_4pathEPNS_10error_codeE
+  Symbol added: __ZNSt3__14__fs10filesystem13__permissionsERKNS1_4pathENS1_5permsENS1_12perm_optionsEPNS_10error_codeE
+  Symbol added: __ZNSt3__14__fs10filesystem13__resize_fileERKNS1_4pathEmPNS_10error_codeE
+  Symbol added: __ZNSt3__14__fs10filesystem14__copy_symlinkERKNS1_4pathES4_PNS_10error_codeE
+  Symbol added: __ZNSt3__14__fs10filesystem14__current_pathEPNS_10error_codeE
+  Symbol added: __ZNSt3__14__fs10filesystem14__current_pathERKNS1_4pathEPNS_10error_codeE
+  Symbol added: __ZNSt3__14__fs10filesystem14__read_symlinkERKNS1_4pathEPNS_10error_codeE
+  Symbol added: __ZNSt3__14__fs10filesystem15directory_entry12__do_refreshEv
+  Symbol added: __ZNSt3__14__fs10filesystem16__create_symlinkERKNS1_4pathES4_PNS_10error_codeE
+  Symbol added: __ZNSt3__14__fs10filesystem16__symlink_statusERKNS1_4pathEPNS_10error_codeE
+  Symbol added: __ZNSt3__14__fs10filesystem16_FilesystemClock3nowEv
+  Symbol added: __ZNSt3__14__fs10filesystem16filesystem_error13__create_whatEi
+  Symbol added: __ZNSt3__14__fs10filesystem16filesystem_errorD0Ev
+  Symbol added: __ZNSt3__14__fs10filesystem16filesystem_errorD1Ev
+  Symbol added: __ZNSt3__14__fs10filesystem16filesystem_errorD2Ev
+  Symbol added: __ZNSt3__14__fs10filesystem17__hard_link_countERKNS1_4pathEPNS_10error_codeE
+  Symbol added: __ZNSt3__14__fs10filesystem17__last_write_timeERKNS1_4pathENS_6chrono10time_pointINS1_16_FilesystemClockENS5_8durationInNS_5ratioILl1ELl1000000000EEEEEEEPNS_10error_codeE
+  Symbol added: __ZNKSt3__14__fs10filesystem28recursive_directory_iterator5depthEv
+  Symbol added: __ZNKSt3__14__fs10filesystem28recursive_directory_iterator7optionsEv
+  Symbol added: __ZNKSt3__14__fs10filesystem4path10__filenameEv
+  Symbol added: __ZNKSt3__14__fs10filesystem4path11__extensionEv
+  Symbol added: __ZNKSt3__14__fs10filesystem4path11__root_nameEv
+  Symbol added: __ZNKSt3__14__fs10filesystem4path13__parent_pathEv
+  Symbol added: __ZNKSt3__14__fs10filesystem4path15__relative_pathEv
+  Symbol added: __ZNKSt3__14__fs10filesystem4path15__root_path_rawEv
+  Symbol added: __ZNKSt3__14__fs10filesystem4path16__root_directoryEv
+  Symbol added: __ZNKSt3__14__fs10filesystem4path16lexically_normalEv
+  Symbol added: __ZNKSt3__14__fs10filesystem4path18lexically_relativeERKS2_
+  Symbol added: __ZNKSt3__14__fs10filesystem4path3endEv
+  Symbol added: __ZNKSt3__14__fs10filesystem4path5beginEv
+  Symbol added: __ZNKSt3__14__fs10filesystem4path6__stemEv
+  Symbol added: __ZNKSt3__14__fs10filesystem4path9__compareENS_17basic_string_viewIcNS_11char_traitsIcEEEE
+  Symbol added: __ZNSt3__14__fs10filesystem10__absoluteERKNS1_4pathEPNS_10error_codeE
+  Symbol added: __ZNSt3__14__fs10filesystem10hash_valueERKNS1_4pathE
+  Symbol added: __ZNSt3__14__fs10filesystem11__canonicalERKNS1_4pathEPNS_10error_codeE
+  Symbol added: __ZNSt3__14__fs10filesystem11__copy_fileERKNS1_4pathES4_NS1_12copy_optionsEPNS_10error_codeE
+  Symbol added: __ZNSt3__14__fs10filesystem11__file_sizeERKNS1_4pathEPNS_10error_codeE
+  Symbol added: __ZNSt3__14__fs10filesystem12__equivalentERKNS1_4pathES4_PNS_10error_codeE
+  Symbol added: __ZNSt3__14__fs10filesystem12__remove_allERKNS1_4pathEPNS_10error_codeE
+  Symbol added: __ZNSt3__14__fs10filesystem13__fs_is_emptyERKNS1_4pathEPNS_10error_codeE
+  Symbol added: __ZNSt3__14__fs10filesystem13__permissionsERKNS1_4pathENS1_5permsENS1_12perm_optionsEPNS_10error_codeE
+  Symbol added: __ZNSt3__14__fs10filesystem13__resize_fileERKNS1_4pathEmPNS_10error_codeE
+  Symbol added: __ZNSt3__14__fs10filesystem14__copy_symlinkERKNS1_4pathES4_PNS_10error_codeE
+  Symbol added: __ZNSt3__14__fs10filesystem14__current_pathEPNS_10error_codeE
+  Symbol added: __ZNSt3__14__fs10filesystem14__current_pathERKNS1_4pathEPNS_10error_codeE
+  Symbol added: __ZNSt3__14__fs10filesystem14__read_symlinkERKNS1_4pathEPNS_10error_codeE
+  Symbol added: __ZNSt3__14__fs10filesystem15directory_entry12__do_refreshEv
+  Symbol added: __ZNSt3__14__fs10filesystem16__create_symlinkERKNS1_4pathES4_PNS_10error_codeE
+  Symbol added: __ZNSt3__14__fs10filesystem16__symlink_statusERKNS1_4pathEPNS_10error_codeE
+  Symbol added: __ZNSt3__14__fs10filesystem16_FilesystemClock3nowEv
+  Symbol added: __ZNSt3__14__fs10filesystem16filesystem_error13__create_whatEi
+  Symbol added: __ZNSt3__14__fs10filesystem16filesystem_errorD0Ev
+  Symbol added: __ZNSt3__14__fs10filesystem16filesystem_errorD1Ev
+  Symbol added: __ZNSt3__14__fs10filesystem16filesystem_errorD2Ev
+  Symbol added: __ZNSt3__14__fs10filesystem17__hard_link_countERKNS1_4pathEPNS_10error_codeE
+  Symbol added: __ZNSt3__14__fs10filesystem17__last_write_timeERKNS1_4pathENS_6chrono10time_pointINS1_16_FilesystemClockENS5_8durationInNS_5ratioILl1ELl1000000000EEEEEEEPNS_10error_codeE
+  Symbol added: __ZNSt3__14__fs10filesystem17__last_write_timeERKNS1_4pathEPNS_10error_codeE
+  Symbol added: __ZNSt3__14__fs10filesystem18__create_directoryERKNS1_4pathEPNS_10error_codeE
+  Symbol added: __ZNSt3__14__fs10filesystem18__create_directoryERKNS1_4pathES4_PNS_10error_codeE
+  Symbol added: __ZNSt3__14__fs10filesystem18__create_hard_linkERKNS1_4pathES4_PNS_10error_codeE
+  Symbol added: __ZNSt3__14__fs10filesystem18__weakly_canonicalERKNS1_4pathEPNS_10error_codeE
+  Symbol added: __ZNSt3__14__fs10filesystem18directory_iterator11__incrementEPNS_10error_codeE
+  Symbol added: __ZNSt3__14__fs10filesystem18directory_iteratorC1ERKNS1_4pathEPNS_10error_codeENS1_17directory_optionsE
+  Symbol added: __ZNSt3__14__fs10filesystem18directory_iteratorC2ERKNS1_4pathEPNS_10error_codeENS1_17directory_optionsE
+  Symbol added: __ZNSt3__14__fs10filesystem20__create_directoriesERKNS1_4pathEPNS_10error_codeE
+  Symbol added: __ZNSt3__14__fs10filesystem21__temp_directory_pathEPNS_10error_codeE
+  Symbol added: __ZNSt3__14__fs10filesystem26__create_directory_symlinkERKNS1_4pathES4_PNS_10error_codeE
+  Symbol added: __ZNSt3__14__fs10filesystem28recursive_directory_iterator11__incrementEPNS_10error_codeE
+  Symbol added: __ZNSt3__14__fs10filesystem28recursive_directory_iterator15__try_recursionEPNS_10error_codeE
+  Symbol added: __ZNSt3__14__fs10filesystem28recursive_directory_iterator5__popEPNS_10error_codeE
+  Symbol added: __ZNSt3__14__fs10filesystem28recursive_directory_iterator9__advanceEPNS_10error_codeE
+  Symbol added: __ZNSt3__14__fs10filesystem28recursive_directory_iteratorC1ERKNS1_4pathENS1_17directory_optionsEPNS_10error_codeE
+  Symbol added: __ZNSt3__14__fs10filesystem28recursive_directory_iteratorC2ERKNS1_4pathENS1_17directory_optionsEPNS_10error_codeE
+  Symbol added: __ZNSt3__14__fs10filesystem4path17replace_extensionERKS2_
+  Symbol added: __ZNSt3__14__fs10filesystem4path8iterator11__decrementEv
+  Symbol added: __ZNSt3__14__fs10filesystem4path8iterator11__incrementEv
+  Symbol added: __ZNSt3__14__fs10filesystem6__copyERKNS1_4pathES4_NS1_12copy_optionsEPNS_10error_codeE
+  Symbol added: __ZNSt3__14__fs10filesystem7__spaceERKNS1_4pathEPNS_10error_codeE
+  Symbol added: __ZNSt3__14__fs10filesystem8__removeERKNS1_4pathEPNS_10error_codeE
+  Symbol added: __ZNSt3__14__fs10filesystem8__renameERKNS1_4pathES4_PNS_10error_codeE
+  Symbol added: __ZNSt3__14__fs10filesystem8__statusERKNS1_4pathEPNS_10error_codeE
+  Symbol added: __ZNSt3__14__fs10filesystem16_FilesystemClock9is_steadyE
+  Symbol added: __ZNSt3__14__fs10filesystem4path19preferred_separatorE
+  Symbol added: __ZTINSt3__14__fs10filesystem16filesystem_errorE
+  Symbol added: __ZTSNSt3__14__fs10filesystem16filesystem_errorE
+  Symbol added: __ZTVNSt3__14__fs10filesystem16filesystem_errorE
+
+* r356417 - Remove exception throwing debug mode handler support.
+
+  The reason libc++ implemented a throwing debug mode handler was for ease of testing. Specifically,
+  I thought that if a debug violation aborted, we could only test one violation per file. This made
+  it impossible to test debug mode. Which throwing behavior we could test more!
+
+  However, the throwing approach didn't work either, since there are debug violations underneath noexcept
+  functions. This lead to the introduction of `_NOEXCEPT_DEBUG`, which was only noexcept when debug
+  mode was off.
+
+  Having thought more and having grown wiser, `_NOEXCEPT_DEBUG` was a horrible decision. It was
+  viral, it didn't cover all the cases it needed to, and it was observable to the user -- at worst
+  changing the behavior of their program.
+
+  This patch removes the throwing debug handler, and rewrites the debug tests using 'fork-ing' style
+  death tests.
+
+  All Platforms (ignoring versioning namespaces)
+  ----------------------------------------------
+  Symbol added: _ZNKSt3__119__libcpp_debug_info4whatEv
+  Symbol removed: _ZNKSt3__124__libcpp_debug_exception4whatEv
+  Symbol removed: _ZNSt3__124__libcpp_debug_exceptionC1ERKNS_19__libcpp_debug_infoE
+  Symbol removed: _ZNSt3__124__libcpp_debug_exceptionC1ERKS0_
+  Symbol removed: _ZNSt3__124__libcpp_debug_exceptionC1Ev
+  Symbol removed: _ZNSt3__124__libcpp_debug_exceptionC2ERKNS_19__libcpp_debug_infoE
+  Symbol removed: _ZNSt3__124__libcpp_debug_exceptionC2ERKS0_
+  Symbol removed: _ZNSt3__124__libcpp_debug_exceptionC2Ev
+  Symbol removed: _ZNSt3__124__libcpp_debug_exceptionD0Ev
+  Symbol removed: _ZNSt3__124__libcpp_debug_exceptionD1Ev
+  Symbol removed: _ZNSt3__124__libcpp_debug_exceptionD2Ev
+  Symbol removed: _ZNSt3__129__libcpp_throw_debug_functionERKNS_19__libcpp_debug_infoE
+  Symbol removed: _ZTINSt3__124__libcpp_debug_exceptionE
+  Symbol removed: _ZTSNSt3__124__libcpp_debug_exceptionE
+  Symbol removed: _ZTVNSt3__124__libcpp_debug_exceptionE
+
+
+    x86_64-apple-apple-darwin
+    -------------------------
+    Symbol added: __ZNSt3__111__libcpp_db10__insert_cEPvPFPNS_8__c_nodeES1_S1_S3_E
+    Symbol removed: __ZNSt3__111__libcpp_db10__insert_cEPv
+
+* r355367 - Fix -fsanitize=vptr badness in <__debug>
+
+  This patch fixes a lifetime bug when inserting a new container into the debug database. It is
+  diagnosed by UBSAN when debug mode is enabled. This patch corrects how nodes are constructed
+  during insertion.
+
+  The fix requires unconditionally breaking the debug mode ABI. Users should not expect ABI
+  stability from debug mode.
+
+
+  x86_64-unknown-linux-gnu
+  ------------------------
+  Symbol added: _ZNSt3__111__libcpp_db10__insert_cEPvPFPNS_8__c_nodeES1_S1_S3_E
+  Symbol removed: _ZNSt3__111__libcpp_db10__insert_cEPv
+
+
+  x86_64-apple-apple-darwin
+  -------------------------
+  Symbol added: __ZNSt3__111__libcpp_db10__insert_cEPvPFPNS_8__c_nodeES1_S1_S3_E
+  Symbol removed: __ZNSt3__111__libcpp_db10__insert_cEPv
+
+
+-----------
 Version 8.0
 -----------
 
-* rXXXXX - Remove std::bad_array_length
+* r347903 - Remove std::bad_array_length
 
   The change removes the definition of std::bad_array_length (which never made
   it into the standard) from the headers and the dylib. This is technically an

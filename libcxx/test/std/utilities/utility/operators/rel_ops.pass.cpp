@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -11,6 +10,8 @@
 
 #include <utility>
 #include <cassert>
+
+#include "test_macros.h"
 
 struct A
 {
@@ -33,7 +34,7 @@ operator < (const A& x, const A& y)
     return x.data_ < y.data_;
 }
 
-int main()
+int main(int, char**)
 {
     using namespace std::rel_ops;
     A a1(1);
@@ -46,4 +47,6 @@ int main()
     assert(a1 <= a2);
     assert(a2 >= a2);
     assert(a2 >= a1);
+
+  return 0;
 }

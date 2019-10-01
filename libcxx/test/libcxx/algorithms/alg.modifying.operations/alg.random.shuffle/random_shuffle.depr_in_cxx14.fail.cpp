@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -39,10 +38,12 @@ struct gen
 };
 
 
-int main()
+int main(int, char**)
 {
     int v[1] = {1};
     std::random_shuffle(&v[0], &v[1]); // expected-error{{'random_shuffle<int *>' is deprecated}}
     gen r;
     std::random_shuffle(&v[0], &v[1], r); // expected-error{{'random_shuffle<int *, gen &>' is deprecated}}
+
+  return 0;
 }

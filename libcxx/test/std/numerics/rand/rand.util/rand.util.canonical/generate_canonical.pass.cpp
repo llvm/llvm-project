@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -15,9 +14,10 @@
 #include <random>
 #include <cassert>
 
+#include "test_macros.h"
 #include "truncate_fp.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::minstd_rand0 E;
@@ -99,4 +99,6 @@ int main()
             (282475249 - E::min()) * (E::max() - E::min() + F(1))) /
             ((E::max() - E::min() + F(1)) * (E::max() - E::min() + F(1)))));
     }
+
+  return 0;
 }

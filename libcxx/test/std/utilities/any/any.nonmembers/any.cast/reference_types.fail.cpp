@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -22,7 +21,7 @@
 using std::any;
 using std::any_cast;
 
-int main()
+int main(int, char**)
 {
     any a(1);
 
@@ -51,4 +50,6 @@ int main()
 
     // expected-error-re@any:* 1 {{static_assert failed{{.*}} "_ValueType may not be a reference."}}
     any_cast<int const &&>(&a2); // expected-note {{requested here}}
+
+  return 0;
 }

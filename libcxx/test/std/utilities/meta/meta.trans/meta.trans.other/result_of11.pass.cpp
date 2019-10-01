@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -38,8 +37,8 @@ struct test_invoke_result<Fn(Args...), Ret>
     {
         static_assert(std::is_invocable<Fn, Args...>::value, "");
         static_assert(std::is_invocable_r<Ret, Fn, Args...>::value, "");
-        static_assert((std::is_same<typename std::invoke_result<Fn, Args...>::type, Ret>::value), "");
-        static_assert((std::is_same<std::invoke_result_t<Fn, Args...>, Ret>::value), "");
+        ASSERT_SAME_TYPE(Ret, typename std::invoke_result<Fn, Args...>::type);
+        ASSERT_SAME_TYPE(Ret,        std::invoke_result_t<Fn, Args...>);
     }
 };
 #endif
@@ -47,16 +46,16 @@ struct test_invoke_result<Fn(Args...), Ret>
 template <class T, class U>
 void test_result_of_imp()
 {
-    static_assert((std::is_same<typename std::result_of<T>::type, U>::value), "");
+    ASSERT_SAME_TYPE(U, typename std::result_of<T>::type);
 #if TEST_STD_VER > 11
-    static_assert((std::is_same<std::result_of_t<T>, U>::value), "");
+    ASSERT_SAME_TYPE(U,        std::result_of_t<T>);
 #endif
 #if TEST_STD_VER > 14
     test_invoke_result<T, U>::call();
 #endif
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef char F::*PMD;
@@ -169,4 +168,6 @@ int main()
     test_result_of_imp<int (F::* (std::unique_ptr<const F> ))       () const, int>();
     }
     test_result_of_imp<decltype(&wat::foo)(wat), void>();
+
+  return 0;
 }

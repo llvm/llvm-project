@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -11,7 +10,9 @@
 
 #include <ratio>
 
-int main()
+#include "test_macros.h"
+
+int main(int, char**)
 {
     {
     typedef std::ratio<1, 1> R1;
@@ -55,4 +56,6 @@ int main()
     typedef std::ratio_multiply<R1, R2>::type R;
     static_assert(R::num == 15519594064236LL && R::den == 5177331081415LL, "");
     }
+
+  return 0;
 }

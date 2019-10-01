@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -30,7 +29,7 @@ test(Iter first, Iter last, std::regex_constants::syntax_option_type f, unsigned
     assert(r.mark_count() == mc);
 }
 
-int main()
+int main(int, char**)
 {
     typedef forward_iterator<std::string::const_iterator> F;
     std::string s1("\\(a\\)");
@@ -67,4 +66,6 @@ int main()
     test(F(s2.begin()), F(s2.end()), std::regex_constants::egrep, 0);
     test(F(s3.begin()), F(s3.end()), std::regex_constants::egrep, 0);
     test(F(s4.begin()), F(s4.end()), std::regex_constants::egrep, 2);
+
+  return 0;
 }

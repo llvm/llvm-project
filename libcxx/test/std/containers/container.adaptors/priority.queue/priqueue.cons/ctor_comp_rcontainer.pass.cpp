@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -16,6 +15,7 @@
 #include <queue>
 #include <cassert>
 
+#include "test_macros.h"
 #include "MoveOnly.h"
 
 
@@ -30,9 +30,11 @@ make(int n)
 }
 
 
-int main()
+int main(int, char**)
 {
     std::priority_queue<MoveOnly> q(std::less<MoveOnly>(), make<std::vector<MoveOnly> >(5));
     assert(q.size() == 5);
     assert(q.top() == MoveOnly(4));
+
+  return 0;
 }

@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -17,13 +16,13 @@
 template <class T, class U>
 void test_remove_reference()
 {
-    static_assert((std::is_same<typename std::remove_reference<T>::type, U>::value), "");
+    ASSERT_SAME_TYPE(U, typename std::remove_reference<T>::type);
 #if TEST_STD_VER > 11
-    static_assert((std::is_same<std::remove_reference_t<T>, U>::value), "");
+    ASSERT_SAME_TYPE(U, std::remove_reference_t<T>);
 #endif
 }
 
-int main()
+int main(int, char**)
 {
     test_remove_reference<void, void>();
     test_remove_reference<int, int>();
@@ -44,4 +43,6 @@ int main()
     test_remove_reference<int*&&, int*>();
     test_remove_reference<const int*&&, const int*>();
 #endif
+
+  return 0;
 }

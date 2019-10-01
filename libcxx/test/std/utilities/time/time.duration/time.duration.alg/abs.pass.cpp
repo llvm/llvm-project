@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -20,6 +19,8 @@
 #include <type_traits>
 #include <cassert>
 
+#include "test_macros.h"
+
 template <class Duration>
 void
 test(const Duration& f, const Duration& d)
@@ -31,7 +32,7 @@ test(const Duration& f, const Duration& d)
     }
 }
 
-int main()
+int main(int, char**)
 {
 //  7290000ms is 2 hours, 1 minute, and 30 seconds
     test(std::chrono::milliseconds( 7290000), std::chrono::milliseconds( 7290000));
@@ -47,4 +48,6 @@ int main()
     constexpr std::chrono::hours h2 = std::chrono::abs(std::chrono::hours(3));
     static_assert(h2.count() == 3, "");
     }
+
+  return 0;
 }

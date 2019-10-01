@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -92,7 +91,7 @@ test(SV sv, std::size_t pos, std::size_t n, const typename S::allocator_type& a)
 #endif
 }
 
-int main()
+int main(int, char**)
 {
 
     {
@@ -184,4 +183,6 @@ int main()
     S s7(s.data(), 2);     // calls ctor(const char *, len)
     assert(s7 == "AB");
     }
+
+  return 0;
 }

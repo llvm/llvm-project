@@ -1,14 +1,15 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include <cstddef>
 #include <type_traits>
+
+#include "test_macros.h"
 
 // size_t should:
 
@@ -16,7 +17,7 @@
 //  2. be the same sizeof as void*.
 //  3. be an unsigned integral.
 
-int main()
+int main(int, char**)
 {
     static_assert(sizeof(std::size_t) == sizeof(void*),
                   "sizeof(std::size_t) == sizeof(void*)");
@@ -24,4 +25,6 @@ int main()
                   "std::is_unsigned<std::size_t>::value");
     static_assert(std::is_integral<std::size_t>::value,
                   "std::is_integral<std::size_t>::value");
+
+  return 0;
 }

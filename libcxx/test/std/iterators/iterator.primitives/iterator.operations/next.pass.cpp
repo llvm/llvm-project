@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -17,6 +16,7 @@
 #include <iterator>
 #include <cassert>
 
+#include "test_macros.h"
 #include "test_iterators.h"
 
 template <class It>
@@ -52,14 +52,16 @@ constexpr_test(It i, It x)
 }
 #endif
 
-int main()
+int main(int, char**)
 {
     {
     const char* s = "1234567890";
-    test(input_iterator<const char*>(s), 10, input_iterator<const char*>(s+10));
-    test(forward_iterator<const char*>(s), 10, forward_iterator<const char*>(s+10));
-    test(bidirectional_iterator<const char*>(s), 10, bidirectional_iterator<const char*>(s+10));
-    test(random_access_iterator<const char*>(s), 10, random_access_iterator<const char*>(s+10));
+    test(input_iterator<const char*>(s),             10, input_iterator<const char*>(s+10));
+    test(forward_iterator<const char*>(s),           10, forward_iterator<const char*>(s+10));
+    test(bidirectional_iterator<const char*>(s),     10, bidirectional_iterator<const char*>(s+10));
+    test(bidirectional_iterator<const char*>(s+10), -10, bidirectional_iterator<const char*>(s));
+    test(random_access_iterator<const char*>(s),     10, random_access_iterator<const char*>(s+10));
+    test(random_access_iterator<const char*>(s+10), -10, random_access_iterator<const char*>(s));
     test(s, 10, s+10);
 
     test(input_iterator<const char*>(s), input_iterator<const char*>(s+1));
@@ -71,10 +73,12 @@ int main()
 #if TEST_STD_VER > 14
     {
     constexpr const char* s = "1234567890";
-    static_assert( constexpr_test(input_iterator<const char*>(s), 10, input_iterator<const char*>(s+10)), "" );
-    static_assert( constexpr_test(forward_iterator<const char*>(s), 10, forward_iterator<const char*>(s+10)), "" );
-    static_assert( constexpr_test(bidirectional_iterator<const char*>(s), 10, bidirectional_iterator<const char*>(s+10)), "" );
-    static_assert( constexpr_test(random_access_iterator<const char*>(s), 10, random_access_iterator<const char*>(s+10)), "" );
+    static_assert( constexpr_test(input_iterator<const char*>(s),             10, input_iterator<const char*>(s+10)), "" );
+    static_assert( constexpr_test(forward_iterator<const char*>(s),           10, forward_iterator<const char*>(s+10)), "" );
+    static_assert( constexpr_test(bidirectional_iterator<const char*>(s),     10, bidirectional_iterator<const char*>(s+10)), "" );
+    static_assert( constexpr_test(bidirectional_iterator<const char*>(s+10), -10, bidirectional_iterator<const char*>(s)), "" );
+    static_assert( constexpr_test(random_access_iterator<const char*>(s),     10, random_access_iterator<const char*>(s+10)), "" );
+    static_assert( constexpr_test(random_access_iterator<const char*>(s+10), -10, random_access_iterator<const char*>(s)), "" );
     static_assert( constexpr_test(s, 10, s+10), "" );
 
     static_assert( constexpr_test(input_iterator<const char*>(s), input_iterator<const char*>(s+1)), "" );
@@ -84,4 +88,6 @@ int main()
     static_assert( constexpr_test(s, s+1), "" );
     }
 #endif
+
+  return 0;
 }

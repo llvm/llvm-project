@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -14,6 +13,11 @@
 //                          size_type pos2, size_type n=npos);
 //
 //  Mostly we're testing string_view here
+
+// When back-deploying to macosx10.7, the RTTI for exception classes
+// incorrectly provided by libc++.dylib is mixed with the one in
+// libc++abi.dylib and exceptions are not caught properly.
+// XFAIL: with_system_cxx_lib=macosx10.7
 
 #include <string>
 #include <stdexcept>
@@ -5870,7 +5874,7 @@ void test55()
     test_npos(S("abcdefghij"), 9, 2, SV("12345"), 6, S("can't happen"));
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string S;
@@ -6026,4 +6030,6 @@ int main()
     s.replace(0, 4, arr, 0, std::string::npos);    // calls replace(pos1, n1, string("IJKL"), pos, npos)
     assert(s == "IJKL");
     }
+
+  return 0;
 }

@@ -1,19 +1,20 @@
 //===------------------------- string.cpp ---------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "string"
+#include "charconv"
 #include "cstdlib"
 #include "cwchar"
 #include "cerrno"
 #include "limits"
 #include "stdexcept"
 #include <stdio.h>
+#include "__debug"
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -172,7 +173,7 @@ as_integer( const string& func, const wstring& s, size_t* idx, int base )
 
 // as_float
 
-template<typename V, typename S, typename F> 
+template<typename V, typename S, typename F>
 inline
 V
 as_float_helper(const string& func, const S& str, size_t* idx, F f )
@@ -376,11 +377,11 @@ as_string(P sprintf_like, S s, const typename S::value_type* fmt, V a)
     return s;
 }
 
-template <class S, class V, bool = is_floating_point<V>::value>
+template <class S>
 struct initial_string;
 
-template <class V, bool b>
-struct initial_string<string, V, b>
+template <>
+struct initial_string<string>
 {
     string
     operator()() const
@@ -391,23 +392,8 @@ struct initial_string<string, V, b>
     }
 };
 
-template <class V>
-struct initial_string<wstring, V, false>
-{
-    wstring
-    operator()() const
-    {
-        const size_t n = (numeric_limits<unsigned long long>::digits / 3)
-          + ((numeric_limits<unsigned long long>::digits % 3) != 0)
-          + 1;
-        wstring s(n, wchar_t());
-        s.resize(s.capacity());
-        return s;
-    }
-};
-
-template <class V>
-struct initial_string<wstring, V, true>
+template <>
+struct initial_string<wstring>
 {
     wstring
     operator()() const
@@ -431,95 +417,42 @@ get_swprintf()
 #endif
 }
 
+template <typename S, typename V>
+S i_to_string(const V v)
+{
+//  numeric_limits::digits10 returns value less on 1 than desired for unsigned numbers.
+//  For example, for 1-byte unsigned value digits10 is 2 (999 can not be represented),
+//  so we need +1 here.
+    constexpr size_t bufsize = numeric_limits<V>::digits10 + 2;  // +1 for minus, +1 for digits10
+    char buf[bufsize];
+    const auto res = to_chars(buf, buf + bufsize, v);
+    _LIBCPP_ASSERT(res.ec == errc(), "bufsize must be large enough to accomodate the value");
+    return S(buf, res.ptr);
+}
+
 }  // unnamed namespace
 
-string to_string(int val)
-{
-    return as_string(snprintf, initial_string<string, int>()(), "%d", val);
-}
+string  to_string (int val)                { return i_to_string< string>(val); }
+string  to_string (long val)               { return i_to_string< string>(val); }
+string  to_string (long long val)          { return i_to_string< string>(val); }
+string  to_string (unsigned val)           { return i_to_string< string>(val); }
+string  to_string (unsigned long val)      { return i_to_string< string>(val); }
+string  to_string (unsigned long long val) { return i_to_string< string>(val); }
 
-string to_string(unsigned val)
-{
-    return as_string(snprintf, initial_string<string, unsigned>()(), "%u", val);
-}
+wstring to_wstring(int val)                { return i_to_string<wstring>(val); }
+wstring to_wstring(long val)               { return i_to_string<wstring>(val); }
+wstring to_wstring(long long val)          { return i_to_string<wstring>(val); }
+wstring to_wstring(unsigned val)           { return i_to_string<wstring>(val); }
+wstring to_wstring(unsigned long val)      { return i_to_string<wstring>(val); }
+wstring to_wstring(unsigned long long val) { return i_to_string<wstring>(val); }
 
-string to_string(long val)
-{
-    return as_string(snprintf, initial_string<string, long>()(), "%ld", val);
-}
 
-string to_string(unsigned long val)
-{
-    return as_string(snprintf, initial_string<string, unsigned long>()(), "%lu", val);
-}
+string  to_string (float val)       { return as_string(snprintf,       initial_string< string>()(),   "%f", val); }
+string  to_string (double val)      { return as_string(snprintf,       initial_string< string>()(),   "%f", val); }
+string  to_string (long double val) { return as_string(snprintf,       initial_string< string>()(),  "%Lf", val); }
 
-string to_string(long long val)
-{
-    return as_string(snprintf, initial_string<string, long long>()(), "%lld", val);
-}
+wstring to_wstring(float val)       { return as_string(get_swprintf(), initial_string<wstring>()(),  L"%f", val); }
+wstring to_wstring(double val)      { return as_string(get_swprintf(), initial_string<wstring>()(),  L"%f", val); }
+wstring to_wstring(long double val) { return as_string(get_swprintf(), initial_string<wstring>()(), L"%Lf", val); }
 
-string to_string(unsigned long long val)
-{
-    return as_string(snprintf, initial_string<string, unsigned long long>()(), "%llu", val);
-}
-
-string to_string(float val)
-{
-    return as_string(snprintf, initial_string<string, float>()(), "%f", val);
-}
-
-string to_string(double val)
-{
-    return as_string(snprintf, initial_string<string, double>()(), "%f", val);
-}
-
-string to_string(long double val)
-{
-    return as_string(snprintf, initial_string<string, long double>()(), "%Lf", val);
-}
-
-wstring to_wstring(int val)
-{
-    return as_string(get_swprintf(), initial_string<wstring, int>()(), L"%d", val);
-}
-
-wstring to_wstring(unsigned val)
-{
-    return as_string(get_swprintf(), initial_string<wstring, unsigned>()(), L"%u", val);
-}
-
-wstring to_wstring(long val)
-{
-    return as_string(get_swprintf(), initial_string<wstring, long>()(), L"%ld", val);
-}
-
-wstring to_wstring(unsigned long val)
-{
-    return as_string(get_swprintf(), initial_string<wstring, unsigned long>()(), L"%lu", val);
-}
-
-wstring to_wstring(long long val)
-{
-    return as_string(get_swprintf(), initial_string<wstring, long long>()(), L"%lld", val);
-}
-
-wstring to_wstring(unsigned long long val)
-{
-    return as_string(get_swprintf(), initial_string<wstring, unsigned long long>()(), L"%llu", val);
-}
-
-wstring to_wstring(float val)
-{
-    return as_string(get_swprintf(), initial_string<wstring, float>()(), L"%f", val);
-}
-
-wstring to_wstring(double val)
-{
-    return as_string(get_swprintf(), initial_string<wstring, double>()(), L"%f", val);
-}
-
-wstring to_wstring(long double val)
-{
-    return as_string(get_swprintf(), initial_string<wstring, long double>()(), L"%Lf", val);
-}
 _LIBCPP_END_NAMESPACE_STD

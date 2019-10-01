@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -13,9 +12,11 @@
 
 #include <utility>
 
+#include "test_macros.h"
+
 struct S {};
 
-int main() {
+int main(int, char**) {
   using T = std::in_place_type_t<int>;
   static_assert( std::__is_inplace_type<T>::value, "");
   static_assert( std::__is_inplace_type<const T>::value, "");
@@ -31,4 +32,6 @@ int main() {
   static_assert(!std::__is_inplace_type<void>::value, "");
   static_assert(!std::__is_inplace_type<int>::value, "");
   static_assert(!std::__is_inplace_type<S>::value, "");
+
+  return 0;
 }

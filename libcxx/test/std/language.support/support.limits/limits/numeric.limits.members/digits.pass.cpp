@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -26,7 +25,7 @@ test()
     static_assert(std::numeric_limits<const volatile T>::digits == expected, "digits test 4");
 }
 
-int main()
+int main(int, char**)
 {
     test<bool, 1>();
     test<char, std::numeric_limits<char>::is_signed ? 7 : 8>();
@@ -55,4 +54,6 @@ int main()
     test<float, FLT_MANT_DIG>();
     test<double, DBL_MANT_DIG>();
     test<long double, LDBL_MANT_DIG>();
+
+  return 0;
 }

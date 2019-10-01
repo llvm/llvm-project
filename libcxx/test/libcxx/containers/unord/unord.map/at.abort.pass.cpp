@@ -22,6 +22,8 @@
 #include <cstdlib>
 #include <unordered_map>
 
+#include "test_macros.h"
+
 
 int main(int, char**) {
     std::signal(SIGABRT, [](int) { std::_Exit(EXIT_SUCCESS); });

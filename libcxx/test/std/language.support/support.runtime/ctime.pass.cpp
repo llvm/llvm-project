@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -27,7 +26,7 @@
 #endif
 #endif
 
-int main()
+int main(int, char**)
 {
     std::clock_t c = 0;
     std::size_t s = 0;
@@ -59,4 +58,6 @@ int main()
     ((void)c1); // Prevent unused warning
     ((void)c2); // Prevent unused warning
     static_assert((std::is_same<decltype(std::strftime(c1,s,c2,&tm)), std::size_t>::value), "");
+
+  return 0;
 }

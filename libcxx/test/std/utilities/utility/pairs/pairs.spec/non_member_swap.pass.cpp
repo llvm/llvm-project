@@ -16,7 +16,9 @@
 #include <utility>
 #include <cassert>
 
-int main()
+#include "test_macros.h"
+
+int main(int, char**)
 {
     {
         typedef std::pair<int, short> P1;
@@ -28,4 +30,6 @@ int main()
         assert(p2.first == 3);
         assert(p2.second == 4);
     }
+
+  return 0;
 }

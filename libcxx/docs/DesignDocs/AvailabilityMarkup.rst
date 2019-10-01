@@ -51,6 +51,12 @@ or on a particular symbol:
 
     _LIBCPP_OVERRIDABLE_FUNC_VIS _LIBCPP_AVAILABILITY_SIZED_NEW_DELETE void  operator delete(void* __p, std::size_t __sz) _NOEXCEPT;
 
+Furthermore, a lit feature should be added to match that availability macro,
+so that tests depending on that feature can be marked to XFAIL if the feature
+is not supported. This way, the test suite will work on platforms that have
+not shipped the feature yet. This can be done by adding the appropriate lit
+feature in test/config.py.
+
 
 Testing
 =======

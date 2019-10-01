@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -24,6 +23,8 @@
 #include <tuple>
 #include <memory>
 #include <type_traits>
+
+#include "test_macros.h"
 
 
 struct UnconstrainedCtor {
@@ -58,7 +59,7 @@ struct ExplicitUnconstrainedCtor {
 
 };
 
-int main() {
+int main(int, char**) {
     typedef UnconstrainedCtor A;
     typedef ExplicitUnconstrainedCtor ExplicitA;
     {
@@ -95,4 +96,6 @@ int main() {
         std::tuple<ExplicitA&&> t2(std::forward_as_tuple(ExplicitA{}));
         ((void)t2);
     }
+
+  return 0;
 }

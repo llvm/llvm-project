@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -15,6 +14,8 @@
 
 #include <functional>
 #include <type_traits>
+
+#include "test_macros.h"
 
 class functor1
     : public std::unary_function<int, char>
@@ -47,7 +48,7 @@ struct C
     typedef int result_type;
 };
 
-int main()
+int main(int, char**)
 {
     static_assert((std::is_base_of<std::unary_function<int, char>,
                                    std::reference_wrapper<functor1> >::value), "");
@@ -75,4 +76,6 @@ int main()
                                    std::reference_wrapper<float(C::*)() const volatile> >::value), "");
     static_assert((!std::is_base_of<std::unary_function<C*, float>,
                                    std::reference_wrapper<float(C::*)(int)> >::value), "");
+
+  return 0;
 }

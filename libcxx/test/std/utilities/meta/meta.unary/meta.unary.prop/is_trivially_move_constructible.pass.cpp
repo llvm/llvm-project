@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -76,7 +75,7 @@ struct MoveOnly2
 
 #endif
 
-int main()
+int main(int, char**)
 {
     test_has_not_trivial_move_constructor<void>();
     test_has_not_trivial_move_constructor<A>();
@@ -95,4 +94,6 @@ int main()
     static_assert(!std::is_trivially_move_constructible<MoveOnly1>::value, "");
     static_assert( std::is_trivially_move_constructible<MoveOnly2>::value, "");
 #endif
+
+  return 0;
 }

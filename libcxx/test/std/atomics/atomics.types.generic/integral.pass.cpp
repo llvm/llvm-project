@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -168,7 +167,7 @@ void test()
 }
 
 
-int main()
+int main(int, char**)
 {
     test<std::atomic_char, char>();
     test<std::atomic_schar, signed char>();
@@ -221,4 +220,6 @@ int main()
     test<volatile std::atomic_uint32_t, uint32_t>();
     test<volatile std::atomic_int64_t,   int64_t>();
     test<volatile std::atomic_uint64_t, uint64_t>();
+
+  return 0;
 }

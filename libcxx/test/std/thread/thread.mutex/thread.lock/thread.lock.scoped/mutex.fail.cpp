@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -22,7 +21,7 @@
 template <class LG>
 void test_conversion(LG) {}
 
-int main()
+int main(int, char**)
 {
     using M = std::mutex;
     M m0, m1, m2;
@@ -50,4 +49,6 @@ int main()
         LG lg = {m0, m1, m2}; // expected-error{{chosen constructor is explicit in copy-initialization}}
         test_conversion<LG>({n0, n1, n2}); // expected-error{{no matching function for call}}
     }
+
+  return 0;
 }

@@ -21,6 +21,8 @@
 #include <cstdlib>
 #include <locale>
 
+#include "test_macros.h"
+
 
 void exit_success(int) {
     std::_Exit(EXIT_SUCCESS);

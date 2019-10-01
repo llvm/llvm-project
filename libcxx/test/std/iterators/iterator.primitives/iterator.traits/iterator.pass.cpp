@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -22,6 +21,8 @@
 #include <iterator>
 #include <type_traits>
 
+#include "test_macros.h"
+
 struct A {};
 
 struct test_iterator
@@ -33,7 +34,7 @@ struct test_iterator
     typedef std::forward_iterator_tag iterator_category;
 };
 
-int main()
+int main(int, char**)
 {
     typedef std::iterator_traits<test_iterator> It;
     static_assert((std::is_same<It::difference_type, int>::value), "");
@@ -41,4 +42,6 @@ int main()
     static_assert((std::is_same<It::pointer, A*>::value), "");
     static_assert((std::is_same<It::reference, A&>::value), "");
     static_assert((std::is_same<It::iterator_category, std::forward_iterator_tag>::value), "");
+
+  return 0;
 }

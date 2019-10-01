@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -59,7 +58,7 @@ void test_flip_one(bool test_throws)
 #endif
 }
 
-int main()
+int main(int, char**)
 {
     test_flip_one<0>(true);
     test_flip_one<1>(true);
@@ -70,4 +69,6 @@ int main()
     test_flip_one<64>(false);
     test_flip_one<65>(false);
     test_flip_one<1000>(false);
+
+  return 0;
 }

@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -25,8 +24,9 @@
 #include <cassert>
 
 #include "test_macros.h"
+#include "../../rep.h"
 
-int main()
+int main(int, char**)
 {
     {
     std::chrono::nanoseconds ns(3);
@@ -35,6 +35,7 @@ int main()
     ns = 6 * ns;
     assert(ns.count() == 90);
     }
+
 #if TEST_STD_VER >= 11
     {
     constexpr std::chrono::nanoseconds ns(3);
@@ -44,4 +45,20 @@ int main()
     static_assert(ns3.count() == 18, "");
     }
 #endif
+
+#if TEST_STD_VER >= 11
+    { // This is related to PR#41130
+    typedef std::chrono::nanoseconds Duration;
+    Duration d(5);
+    NotARep n;
+    ASSERT_SAME_TYPE(Duration, decltype(d * n));
+    ASSERT_SAME_TYPE(Duration, decltype(n * d));
+    d = d * n;
+    assert(d.count() == 5);
+    d = n * d;
+    assert(d.count() == 5);
+    }
+#endif
+
+  return 0;
 }

@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -114,7 +113,7 @@ void test_reference_extension()
 #endif
 }
 
-int main()
+int main(int, char**)
 {
     test<int>();
     test<int>(3);
@@ -170,4 +169,6 @@ int main()
         constexpr std::optional<int> o2 = o1;
         static_assert( *o2 == 4, "" );
     }
+
+  return 0;
 }

@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -28,7 +27,7 @@ test(const String& p, std::regex_constants::syntax_option_type f, unsigned mc)
     assert(r.mark_count() == mc);
 }
 
-int main()
+int main(int, char**)
 {
     test(std::string("\\(a\\)"), std::regex_constants::basic, 1);
     test(std::string("\\(a[bc]\\)"), std::regex_constants::basic, 1);
@@ -59,4 +58,6 @@ int main()
     test(std::string("\\(a[bc]\\)"), std::regex_constants::egrep, 0);
     test(std::string("\\(a\\([bc]\\)\\)"), std::regex_constants::egrep, 0);
     test(std::string("(a([bc]))"), std::regex_constants::egrep, 2);
+
+  return 0;
 }

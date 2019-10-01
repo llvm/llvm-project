@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -22,7 +21,7 @@ void test()
 #endif
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::ratio<1, 1> R1;
@@ -64,4 +63,6 @@ int main()
     typedef std::ratio<1, -0x7FFFFFFFFFFFFFFFLL> R2;
     test<R1, R2, false>();
     }
+
+  return 0;
 }

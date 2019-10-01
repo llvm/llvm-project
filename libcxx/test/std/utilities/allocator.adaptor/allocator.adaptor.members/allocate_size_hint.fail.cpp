@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -22,8 +21,10 @@
 
 #include "allocators.h"
 
-int main()
+int main(int, char**)
 {
     std::scoped_allocator_adaptor<A1<int>> a;
     a.allocate(10, (const void*)0); // expected-error {{ignoring return value of function declared with 'nodiscard' attribute}}
+
+  return 0;
 }

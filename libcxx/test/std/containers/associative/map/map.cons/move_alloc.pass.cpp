@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -18,13 +17,14 @@
 #include <map>
 #include <cassert>
 
+#include "test_macros.h"
 #include "MoveOnly.h"
 #include "../../../test_compare.h"
 #include "test_allocator.h"
 #include "min_allocator.h"
 #include "Counter.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::pair<MoveOnly, MoveOnly> V;
@@ -63,7 +63,7 @@ int main()
         assert(m3 == m2);
         assert(m3.get_allocator() == A(7));
         assert(m3.key_comp() == C(5));
-        assert(m1.empty());
+        LIBCPP_ASSERT(m1.empty());
     }
     {
         typedef std::pair<MoveOnly, MoveOnly> V;
@@ -102,7 +102,7 @@ int main()
         assert(m3 == m2);
         assert(m3.get_allocator() == A(5));
         assert(m3.key_comp() == C(5));
-        assert(m1.empty());
+        LIBCPP_ASSERT(m1.empty());
     }
     {
         typedef std::pair<MoveOnly, MoveOnly> V;
@@ -141,7 +141,7 @@ int main()
         assert(m3 == m2);
         assert(m3.get_allocator() == A(5));
         assert(m3.key_comp() == C(5));
-        assert(m1.empty());
+        LIBCPP_ASSERT(m1.empty());
     }
     {
         typedef Counter<int> T;
@@ -177,16 +177,19 @@ int main()
 
             M m3(std::move(m1), A());
             assert(m3 == m2);
-            assert(m1.empty());
-            assert(Counter_base::gConstructed == num+6);
+            LIBCPP_ASSERT(m1.empty());
+            assert(Counter_base::gConstructed >= (int)(num+6));
+            assert(Counter_base::gConstructed <= (int)(num+6+m1.size()));
 
             {
             M m4(std::move(m2), A(5));
-            assert(Counter_base::gConstructed == num+6);
+            assert(Counter_base::gConstructed >= (int)(num+6));
+            assert(Counter_base::gConstructed <= (int)(num+6+m1.size()+m2.size()));
             assert(m4 == m3);
-            assert(m2.empty());
+            LIBCPP_ASSERT(m2.empty());
             }
-            assert(Counter_base::gConstructed == num+3);
+            assert(Counter_base::gConstructed >= (int)(num+3));
+            assert(Counter_base::gConstructed <= (int)(num+3+m1.size()+m2.size()));
         }
         assert(Counter_base::gConstructed == 0);
     }
@@ -227,7 +230,7 @@ int main()
         assert(m3 == m2);
         assert(m3.get_allocator() == A());
         assert(m3.key_comp() == C(5));
-        assert(m1.empty());
+        LIBCPP_ASSERT(m1.empty());
     }
     {
         typedef std::pair<MoveOnly, MoveOnly> V;
@@ -266,6 +269,8 @@ int main()
         assert(m3 == m2);
         assert(m3.get_allocator() == A{});
         assert(m3.key_comp() == C(5));
-        assert(m1.empty());
+        LIBCPP_ASSERT(m1.empty());
     }
+
+  return 0;
 }

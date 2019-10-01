@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -14,10 +13,12 @@
 #include <cstring>
 #include <cassert>
 
+#include "test_macros.h"
+
 bool test_constructor_explicit(std::type_info const&) { return false; }
 bool test_constructor_explicit(std::string const&) { return true; }
 
-int main()
+int main(int, char**)
 {
   {
     const std::type_info& t1 = typeid(int);
@@ -26,8 +27,8 @@ int main()
     const std::type_info& t3 = typeid(short);
     assert(t1 != t3);
     assert(!t1.before(t2));
-    assert(strcmp(t1.name(), t2.name()) == 0);
-    assert(strcmp(t1.name(), t3.name()) != 0);
+    assert(std::strcmp(t1.name(), t2.name()) == 0);
+    assert(std::strcmp(t1.name(), t3.name()) != 0);
   }
   {
     // type_info has a protected constructor taking a string literal. This
@@ -37,4 +38,6 @@ int main()
     // See: https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=216201
     assert(test_constructor_explicit("abc"));
   }
+
+  return 0;
 }

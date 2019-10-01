@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -50,7 +49,53 @@ void test_div_struct() {
     ((void) obj);
 };
 
-int main()
+template <class T, class = decltype(std::abs(std::declval<T>()))>
+std::true_type has_abs_imp(int);
+template <class T>
+std::false_type has_abs_imp(...);
+
+template <class T>
+struct has_abs : decltype(has_abs_imp<T>(0)) {};
+
+void test_abs() {
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wabsolute-value"
+#endif
+    static_assert((std::is_same<decltype(std::abs((float)0)), float>::value), "");
+    static_assert((std::is_same<decltype(std::abs((double)0)), double>::value), "");
+    static_assert(
+        (std::is_same<decltype(std::abs((long double)0)), long double>::value), "");
+    static_assert((std::is_same<decltype(std::abs((int)0)), int>::value), "");
+    static_assert((std::is_same<decltype(std::abs((long)0)), long>::value), "");
+    static_assert((std::is_same<decltype(std::abs((long long)0)), long long>::value),
+                  "");
+    static_assert((std::is_same<decltype(std::abs((unsigned char)0)), int>::value),
+                  "");
+    static_assert((std::is_same<decltype(std::abs((unsigned short)0)), int>::value),
+                  "");
+    static_assert((std::is_same<decltype(std::abs((signed char)0)), int>::value),
+                  "");
+    static_assert((std::is_same<decltype(std::abs((short)0)), int>::value),
+                  "");
+    static_assert((std::is_same<decltype(std::abs((unsigned char)0)), int>::value),
+                  "");
+    static_assert((std::is_same<decltype(std::abs((char)0)), int>::value),
+                  "");
+
+    static_assert(!has_abs<unsigned>::value, "");
+    static_assert(!has_abs<unsigned long>::value, "");
+    static_assert(!has_abs<unsigned long long>::value, "");
+    static_assert(!has_abs<size_t>::value, "");
+
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
+
+    assert(std::abs(-1.) == 1);
+}
+
+int main(int, char**)
 {
     std::size_t s = 0;
     ((void)s);
@@ -109,4 +154,8 @@ int main()
     static_assert((std::is_same<decltype(std::wctomb(pc,L' ')), int>::value), "");
     static_assert((std::is_same<decltype(std::mbstowcs(pw,"",0)), std::size_t>::value), "");
     static_assert((std::is_same<decltype(std::wcstombs(pc,pwc,0)), std::size_t>::value), "");
+
+    test_abs();
+
+    return 0;
 }

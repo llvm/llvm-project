@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -12,9 +11,8 @@
 // template <class... Types> class tuple;
 
 // template <size_t I, class... Types>
-// class tuple_element<I, tuple<Types...> >
+// struct tuple_element<I, tuple<Types...> >
 // {
-// public:
 //     typedef Ti type;
 // };
 
@@ -23,7 +21,7 @@
 #include <tuple>
 #include <type_traits>
 
-int main()
+int main(int, char**)
 {
     using T =  std::tuple<int, long, void*>;
     using E1 = typename std::tuple_element<1, T &>::type; // expected-error{{undefined template}}
@@ -31,4 +29,6 @@ int main()
     using E3 = typename std::tuple_element<4, T const>::type;
         // expected-error@__tuple:* 2 {{static_assert failed}}
 
+
+  return 0;
 }

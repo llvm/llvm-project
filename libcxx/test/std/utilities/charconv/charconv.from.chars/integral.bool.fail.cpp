@@ -1,13 +1,14 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++98, c++03, c++11
+// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: !libc++ && c++11
+// UNSUPPORTED: !libc++ && c++14
 // <charconv>
 
 // In
@@ -19,7 +20,7 @@
 
 #include <charconv>
 
-int main()
+int main(int, char**)
 {
     using std::from_chars;
     char buf[] = "01001";
@@ -27,4 +28,6 @@ int main()
 
     from_chars(buf, buf + sizeof(buf), lv);      // expected-error {{call to deleted function}}
     from_chars(buf, buf + sizeof(buf), lv, 16);  // expected-error {{call to deleted function}}
+
+  return 0;
 }

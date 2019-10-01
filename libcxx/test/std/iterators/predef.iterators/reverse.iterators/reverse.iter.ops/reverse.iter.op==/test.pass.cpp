@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -33,7 +32,7 @@ test(It l, It r, bool x)
     assert((r1 == r2) == x);
 }
 
-int main()
+int main(int, char**)
 {
     const char* s = "1234567890";
     test(bidirectional_iterator<const char*>(s), bidirectional_iterator<const char*>(s), true);
@@ -55,4 +54,6 @@ int main()
     }
 #endif
 
+
+  return 0;
 }

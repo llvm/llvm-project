@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -22,15 +21,14 @@
 #include "MoveOnly.h"
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::unordered_set<double> C;
         typedef C::iterator R;
         typedef double P;
         C c;
-        C::const_iterator e = c.end();
-        R r = c.insert(e, P(3.5));
+        R r = c.insert(c.end(), P(3.5));
         assert(c.size() == 1);
         assert(*r == 3.5);
 
@@ -38,11 +36,11 @@ int main()
         assert(c.size() == 1);
         assert(*r == 3.5);
 
-        r = c.insert(e, P(4.5));
+        r = c.insert(c.end(), P(4.5));
         assert(c.size() == 2);
         assert(*r == 4.5);
 
-        r = c.insert(e, P(5.5));
+        r = c.insert(c.end(), P(5.5));
         assert(c.size() == 3);
         assert(*r == 5.5);
     }
@@ -52,8 +50,7 @@ int main()
         typedef C::iterator R;
         typedef MoveOnly P;
         C c;
-        C::const_iterator e = c.end();
-        R r = c.insert(e, P(3));
+        R r = c.insert(c.end(), P(3));
         assert(c.size() == 1);
         assert(*r == 3);
 
@@ -61,11 +58,11 @@ int main()
         assert(c.size() == 1);
         assert(*r == 3);
 
-        r = c.insert(e, P(4));
+        r = c.insert(c.end(), P(4));
         assert(c.size() == 2);
         assert(*r == 4);
 
-        r = c.insert(e, P(5));
+        r = c.insert(c.end(), P(5));
         assert(c.size() == 3);
         assert(*r == 5);
     }
@@ -75,8 +72,7 @@ int main()
         typedef C::iterator R;
         typedef double P;
         C c;
-        C::const_iterator e = c.end();
-        R r = c.insert(e, P(3.5));
+        R r = c.insert(c.end(), P(3.5));
         assert(c.size() == 1);
         assert(*r == 3.5);
 
@@ -84,11 +80,11 @@ int main()
         assert(c.size() == 1);
         assert(*r == 3.5);
 
-        r = c.insert(e, P(4.5));
+        r = c.insert(c.end(), P(4.5));
         assert(c.size() == 2);
         assert(*r == 4.5);
 
-        r = c.insert(e, P(5.5));
+        r = c.insert(c.end(), P(5.5));
         assert(c.size() == 3);
         assert(*r == 5.5);
     }
@@ -98,8 +94,7 @@ int main()
         typedef C::iterator R;
         typedef MoveOnly P;
         C c;
-        C::const_iterator e = c.end();
-        R r = c.insert(e, P(3));
+        R r = c.insert(c.end(), P(3));
         assert(c.size() == 1);
         assert(*r == 3);
 
@@ -107,13 +102,15 @@ int main()
         assert(c.size() == 1);
         assert(*r == 3);
 
-        r = c.insert(e, P(4));
+        r = c.insert(c.end(), P(4));
         assert(c.size() == 2);
         assert(*r == 4);
 
-        r = c.insert(e, P(5));
+        r = c.insert(c.end(), P(5));
         assert(c.size() == 3);
         assert(*r == 5);
     }
 #endif // TEST_STD_VER >= 11
+
+  return 0;
 }

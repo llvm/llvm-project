@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -67,7 +66,7 @@ void test()
 
 struct incomplete_type;
 
-int main()
+int main(int, char**)
 {
     TEST_REGULAR( void () );
     TEST_REGULAR( void (int) );
@@ -90,4 +89,6 @@ int main()
 
 //  LWG#2582
     static_assert(!std::is_function<incomplete_type>::value, "");
+
+  return 0;
 }

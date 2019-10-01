@@ -1,10 +1,9 @@
 // -*- C++ -*-
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -13,6 +12,8 @@
 #include <experimental/coroutine>
 #include <vector>
 #include <cassert>
+
+#include "test_macros.h"
 
 using namespace std::experimental;
 
@@ -73,11 +74,13 @@ float fyield(int x) { yielded_values.push_back(x); return static_cast<float>(x +
 void Do1(func<int> f) { yield(f()); }
 void Do2(func<double> f) { yield(static_cast<int>(f())); }
 
-int main() {
+int main(int, char**) {
   Do1([] { return yield(43); });
   assert((yielded_values == std::vector<int>{43, 44}));
 
   yielded_values = {};
   Do2([] { return fyield(44); });
   assert((yielded_values == std::vector<int>{44, 46}));
+
+  return 0;
 }

@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -20,6 +19,8 @@
 
 #include <future>
 #include <cassert>
+
+#include "test_macros.h"
 
 typedef std::chrono::milliseconds ms;
 
@@ -44,7 +45,7 @@ void func5(std::promise<void> p)
     p.set_value();
 }
 
-int main()
+int main(int, char**)
 {
     typedef std::chrono::high_resolution_clock Clock;
     {
@@ -95,4 +96,6 @@ int main()
         assert(f.valid());
         assert(t1-t0 < ms(5));
     }
+
+  return 0;
 }

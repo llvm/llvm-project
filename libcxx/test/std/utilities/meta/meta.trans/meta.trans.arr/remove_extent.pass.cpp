@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -20,14 +19,14 @@ enum Enum {zero, one_};
 template <class T, class U>
 void test_remove_extent()
 {
-    static_assert((std::is_same<typename std::remove_extent<T>::type, U>::value), "");
+    ASSERT_SAME_TYPE(U, typename std::remove_extent<T>::type);
 #if TEST_STD_VER > 11
-    static_assert((std::is_same<std::remove_extent_t<T>,     U>::value), "");
+    ASSERT_SAME_TYPE(U,        std::remove_extent_t<T>);
 #endif
 }
 
 
-int main()
+int main(int, char**)
 {
     test_remove_extent<int, int> ();
     test_remove_extent<const Enum, const Enum> ();
@@ -41,4 +40,6 @@ int main()
     test_remove_extent<const int[2][3], const int[3]> ();
     test_remove_extent<int[1][2][3], int[2][3]> ();
     test_remove_extent<const int[1][2][3], const int[2][3]> ();
+
+  return 0;
 }

@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -20,6 +19,8 @@
 #include <functional>
 #include <type_traits>
 
+#include "test_macros.h"
+
 
 template <typename T, typename Result>
 void check() {
@@ -29,7 +30,7 @@ void check() {
 
 struct T { };
 
-int main() {
+int main(int, char**) {
   check<T,             T>();
   check<T&,            T>();
   check<T const,       T>();
@@ -55,4 +56,6 @@ int main() {
   check<std::reference_wrapper<T[3]>&,     T (&)[3]>();
   check<std::reference_wrapper<T ()>,      T (&)()>();
   check<std::reference_wrapper<T ()>&,     T (&)()>();
+
+  return 0;
 }

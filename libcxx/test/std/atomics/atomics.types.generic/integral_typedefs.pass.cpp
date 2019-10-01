@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -41,7 +40,9 @@
 #include <atomic>
 #include <type_traits>
 
-int main()
+#include "test_macros.h"
+
+int main(int, char**)
 {
     static_assert((std::is_same<std::atomic<char>, std::atomic_char>::value), "");
     static_assert((std::is_same<std::atomic<signed char>, std::atomic_schar>::value), "");
@@ -72,4 +73,6 @@ int main()
     static_assert((std::is_same<std::atomic<uint32_t>,  std::atomic_uint32_t>::value), "");
     static_assert((std::is_same<std::atomic<int64_t>,   std::atomic_int64_t>::value), "");
     static_assert((std::is_same<std::atomic<uint64_t>,  std::atomic_uint64_t>::value), "");
+
+  return 0;
 }

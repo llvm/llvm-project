@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -19,8 +18,9 @@
 #include <cassert>
 
 #include "min_allocator.h"
+#include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     {
         std::istringstream in(" abc\n  def\n   ghij");
@@ -78,4 +78,85 @@ int main()
         assert(s == L"   ghij");
     }
 #endif
+#ifndef TEST_HAS_NO_EXCEPTIONS
+    {
+        std::basic_stringbuf<char> sb("hello");
+        std::basic_istream<char> is(&sb);
+        is.exceptions(std::ios_base::eofbit);
+
+        std::basic_string<char> s;
+        bool threw = false;
+        try {
+            std::getline(is, s);
+        } catch (std::ios::failure const&) {
+            threw = true;
+        }
+
+        assert(!is.bad());
+        assert(!is.fail());
+        assert( is.eof());
+        assert(threw);
+        assert(s == "hello");
+    }
+    {
+        std::basic_stringbuf<wchar_t> sb(L"hello");
+        std::basic_istream<wchar_t> is(&sb);
+        is.exceptions(std::ios_base::eofbit);
+
+        std::basic_string<wchar_t> s;
+        bool threw = false;
+        try {
+            std::getline(is, s);
+        } catch (std::ios::failure const&) {
+            threw = true;
+        }
+
+        assert(!is.bad());
+        assert(!is.fail());
+        assert( is.eof());
+        assert(threw);
+        assert(s == L"hello");
+    }
+
+    {
+        std::basic_stringbuf<char> sb;
+        std::basic_istream<char> is(&sb);
+        is.exceptions(std::ios_base::failbit);
+
+        std::basic_string<char> s;
+        bool threw = false;
+        try {
+            std::getline(is, s);
+        } catch (std::ios::failure const&) {
+            threw = true;
+        }
+
+        assert(!is.bad());
+        assert( is.fail());
+        assert( is.eof());
+        assert(threw);
+        assert(s == "");
+    }
+    {
+        std::basic_stringbuf<wchar_t> sb;
+        std::basic_istream<wchar_t> is(&sb);
+        is.exceptions(std::ios_base::failbit);
+
+        std::basic_string<wchar_t> s;
+        bool threw = false;
+        try {
+            std::getline(is, s);
+        } catch (std::ios::failure const&) {
+            threw = true;
+        }
+
+        assert(!is.bad());
+        assert( is.fail());
+        assert( is.eof());
+        assert(threw);
+        assert(s == L"");
+    }
+#endif // TEST_HAS_NO_EXCEPTIONS
+
+    return 0;
 }

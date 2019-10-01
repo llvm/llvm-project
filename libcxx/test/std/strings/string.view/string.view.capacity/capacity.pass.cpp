@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -63,7 +62,7 @@ void test2 ( const CharT *s, size_t len ) {
     }
 }
 
-int main () {
+int main(int, char**) {
     test1<std::string_view> ();
 #if defined(__cpp_lib_char8_t) && __cpp_lib_char8_t >= 201811L
     test1<std::u8string_view> ();
@@ -100,4 +99,6 @@ int main () {
     test2 ( U"a", 1 );
     test2 ( U"", 0 );
 #endif
+
+  return 0;
 }

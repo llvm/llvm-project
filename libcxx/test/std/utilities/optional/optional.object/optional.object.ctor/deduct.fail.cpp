@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -24,7 +23,7 @@
 
 struct A {};
 
-int main()
+int main(int, char**)
 {
 //  Test the explicit deduction guides
 
@@ -43,4 +42,6 @@ int main()
 //  optional(nullopt_t)
     std::optional opt(std::nullopt);   // expected-error-re@optional:* {{static_assert failed{{.*}} "instantiation of optional with nullopt_t is ill-formed"}}
     }
+
+  return 0;
 }

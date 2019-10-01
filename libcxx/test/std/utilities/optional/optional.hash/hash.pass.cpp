@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -19,6 +18,8 @@
 
 #include "poisoned_hash_helper.hpp"
 
+#include "test_macros.h"
+
 struct A {};
 struct B {};
 
@@ -31,7 +32,7 @@ struct hash<B> {
 
 }
 
-int main()
+int main(int, char**)
 {
     using std::optional;
     const std::size_t nullopt_hash =
@@ -77,4 +78,6 @@ int main()
       test_hash_enabled_for_type<std::optional<B>>();
       test_hash_enabled_for_type<std::optional<const B>>();
     }
+
+  return 0;
 }

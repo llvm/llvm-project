@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -20,12 +19,14 @@
 #include <utility>
 #include <cassert>
 
+#include "test_macros.h"
+
 struct Key {
   template <typename T> Key(const T&) {}
   bool operator< (const Key&) const { return false; }
 };
 
-int main()
+int main(int, char**)
 {
     typedef std::map<Key, int> MapT;
     typedef MapT::iterator Iter;
@@ -49,4 +50,6 @@ int main()
         assert(!result2.second);
         assert(map[Key(0)] == 42);
     }
+
+  return 0;
 }

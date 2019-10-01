@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -18,6 +17,11 @@
 
 #include "test_macros.h"
 
+class NotARep {};
+
+typedef std::chrono::seconds Duration;
+Duration operator%=(Duration d, NotARep) { return d; }
+
 #if TEST_STD_VER > 14
 constexpr bool test_constexpr()
 {
@@ -27,7 +31,7 @@ constexpr bool test_constexpr()
 }
 #endif
 
-int main()
+int main(int, char**)
 {
     {
     std::chrono::microseconds us(11);
@@ -38,4 +42,16 @@ int main()
 #if TEST_STD_VER > 14
     static_assert(test_constexpr(), "");
 #endif
+
+#if TEST_STD_VER >= 11
+    { // This is PR#41130
+    Duration d(5);
+    NotARep n;
+    d %= n;
+    assert(d.count() == 5);
+    }
+#endif
+
+
+  return 0;
 }

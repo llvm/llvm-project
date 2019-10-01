@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -21,9 +20,11 @@
 #include <cassert>
 #include <cstddef>
 
+#include "test_macros.h"
+
 typedef std::codecvt<wchar_t, char, std::mbstate_t> F;
 
-int main()
+int main(int, char**)
 {
     std::locale l = std::locale::classic();
     const std::basic_string<F::extern_type> from("some text");
@@ -40,4 +41,6 @@ int main()
     assert(static_cast<std::size_t>(to_next - to.data()) == expected.size());
     assert(static_cast<std::size_t>(to_next - to.data()) == expected.size());
     assert(to == expected);
+
+  return 0;
 }

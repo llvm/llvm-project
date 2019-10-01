@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -22,6 +21,7 @@
 #include <cassert>
 #include <stdexcept>
 
+#include "test_macros.h"
 #include "min_allocator.h"
 
 template <class S>
@@ -36,7 +36,7 @@ test(const S& s)
     assert ( false );
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string S;
@@ -52,4 +52,6 @@ int main()
     test(S("12345678901234567890123456789012345678901234567890"));
     }
 #endif
+
+  return 0;
 }

@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -14,6 +13,7 @@
 // Check that the size and alignment of any are what we expect.
 
 #include <any>
+#include "test_macros.h"
 #include "any_helpers.h"
 
 constexpr std::size_t BufferSize = (sizeof(void*) * 3);
@@ -55,7 +55,7 @@ struct alignas(DoubleBufferAlignment) OverSizeAndAlignedType {
     char buff[BufferSize + 1];
 };
 
-int main()
+int main(int, char**)
 {
     using std::any;
     using std::__any_imp::_IsSmallObject;
@@ -111,4 +111,6 @@ int main()
         static_assert(alignof(T) > BufferAlignment, "");
         static_assert(!_IsSmallObject<T>::value, "");
     }
+
+  return 0;
 }

@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -91,7 +90,7 @@ constexpr bool do_test(int = 0)
     return accumulate;
 }
 
-int main()
+int main(int, char**)
 {
     auto non_cce = std::rand(); // a value that can't possibly be constexpr
 
@@ -142,4 +141,6 @@ int main()
     static_assert(std::is_same_v<decltype(res1), std::int64_t>, "");
     assert(res1 == 1324997410816LL);
     }
+
+  return 0;
 }

@@ -1,22 +1,15 @@
 // -*- C++ -*-
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++98, c++03, c++11, c++14
 
-// XFAIL: availability=macosx10.13
-// XFAIL: availability=macosx10.12
-// XFAIL: availability=macosx10.11
-// XFAIL: availability=macosx10.10
-// XFAIL: availability=macosx10.9
-// XFAIL: availability=macosx10.8
-// XFAIL: availability=macosx10.7
+// XFAIL: dylib-has-no-bad_variant_access && !libcpp-no-exceptions
 
 // <variant>
 // template <class Visitor, class... Variants>
@@ -311,10 +304,12 @@ void test_caller_accepts_nonconst() {
   std::visit(Visitor{}, v);
 }
 
-int main() {
+int main(int, char**) {
   test_call_operator_forwarding();
   test_argument_forwarding();
   test_constexpr();
   test_exceptions();
   test_caller_accepts_nonconst();
+
+  return 0;
 }

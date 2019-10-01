@@ -1,10 +1,9 @@
 // -*- C++ -*-
 //===------------------------------ span ---------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===---------------------------------------------------------------------===//
 // UNSUPPORTED: c++98, c++03, c++11, c++14, c++17
@@ -38,7 +37,7 @@ constexpr int carr3[] = {7,8};
 std::string strs[] = {"ABC", "DEF", "GHI"};
 
 
-int main ()
+int main(int, char**)
 {
 
 //  constexpr dynamically sized assignment
@@ -56,18 +55,18 @@ int main ()
 //      On darwin i386, ptrdiff_t is the same as int.
         constexpr std::span<const int> spans[] = {
             {},
-            {carr1, static_cast<std::ptrdiff_t>(0)},
-            {carr1,     1},
-            {carr1,     2},
-            {carr1,     3},
-            {carr1,     4},
-            {carr2, static_cast<std::ptrdiff_t>(0)},
-            {carr2,     1},
-            {carr2,     2},
-            {carr2,     3},
-            {carr3, static_cast<std::ptrdiff_t>(0)},
-            {carr3,     1},
-            {carr3,     2}
+            {carr1, static_cast<std::size_t>(0)},
+            {carr1,     1U},
+            {carr1,     2U},
+            {carr1,     3U},
+            {carr1,     4U},
+            {carr2, static_cast<std::size_t>(0)},
+            {carr2,     1U},
+            {carr2,     2U},
+            {carr2,     3U},
+            {carr3, static_cast<std::size_t>(0)},
+            {carr3,     1U},
+            {carr3,     2U}
             };
 
         static_assert(std::size(spans) == 13, "" );
@@ -290,4 +289,6 @@ int main ()
             for (size_t j = i; j < std::size(spans); ++j)
                 assert((doAssign(spans[i], spans[j])));
     }
+
+  return 0;
 }

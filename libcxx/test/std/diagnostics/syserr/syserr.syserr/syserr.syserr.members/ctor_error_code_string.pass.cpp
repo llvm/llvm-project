@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -19,7 +18,9 @@
 #include <string>
 #include <cassert>
 
-int main()
+#include "test_macros.h"
+
+int main(int, char**)
 {
     std::string what_arg("test message");
     std::system_error se(make_error_code(std::errc::not_a_directory), what_arg);
@@ -27,4 +28,6 @@ int main()
     std::string what_message(se.what());
     assert(what_message.find(what_arg) != std::string::npos);
     assert(what_message.find("Not a directory") != std::string::npos);
+
+  return 0;
 }

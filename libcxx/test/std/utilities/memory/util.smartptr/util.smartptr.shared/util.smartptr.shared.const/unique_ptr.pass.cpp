@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -50,7 +49,7 @@ void fn ( const std::shared_ptr<B> &) { assert (false); }
 template <typename T>
 void assert_deleter ( T * ) { assert(false); }
 
-int main()
+int main(int, char**)
 {
     {
         std::unique_ptr<A> ptr(new A);
@@ -98,4 +97,6 @@ int main()
         std::shared_ptr<int> p2(std::move(p)); // should not call deleter when going out of scope
     }
 #endif
+
+  return 0;
 }

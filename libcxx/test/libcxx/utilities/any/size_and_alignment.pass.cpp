@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -15,9 +14,13 @@
 
 #include <any>
 
-int main()
+#include "test_macros.h"
+
+int main(int, char**)
 {
     using std::any;
     static_assert(sizeof(any) == sizeof(void*)*4, "");
     static_assert(alignof(any) == alignof(void*), "");
+
+  return 0;
 }

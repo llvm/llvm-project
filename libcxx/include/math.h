@@ -1,10 +1,9 @@
 // -*- C++ -*-
 //===---------------------------- math.h ----------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -297,6 +296,9 @@ long double    truncl(long double x);
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
 #endif
+
+#define _LIBCPP_STDLIB_INCLUDE_NEXT
+#include <stdlib.h>
 
 #include_next <math.h>
 
@@ -755,19 +757,60 @@ isunordered(_A1 __lcpp_x, _A2 __lcpp_y) _NOEXCEPT
 
 // abs
 
+#undef abs
+#undef labs
+#ifndef _LIBCPP_HAS_NO_LONG_LONG
+#undef llabs
+#endif
+
+// MSVCRT already has the correct prototype in <stdlib.h> if __cplusplus is defined
+#if !defined(_LIBCPP_MSVCRT) && !defined(__sun__) && !defined(_AIX)
+inline _LIBCPP_INLINE_VISIBILITY long abs(long __x) _NOEXCEPT {
+  return ::labs(__x);
+}
+#ifndef _LIBCPP_HAS_NO_LONG_LONG
+inline _LIBCPP_INLINE_VISIBILITY long long abs(long long __x) _NOEXCEPT {
+  return ::llabs(__x);
+}
+#endif // _LIBCPP_HAS_NO_LONG_LONG
+#endif // !defined(_LIBCPP_MSVCRT) && !defined(__sun__) && !defined(_AIX)
+
+
 #if !(defined(_AIX) || defined(__sun__))
-inline _LIBCPP_INLINE_VISIBILITY
-float
-abs(float __lcpp_x) _NOEXCEPT {return ::fabsf(__lcpp_x);}
+inline _LIBCPP_INLINE_VISIBILITY float abs(float __lcpp_x) _NOEXCEPT {
+  return ::fabsf(__lcpp_x);
+}
 
-inline _LIBCPP_INLINE_VISIBILITY
-double
-abs(double __lcpp_x) _NOEXCEPT {return ::fabs(__lcpp_x);}
+inline _LIBCPP_INLINE_VISIBILITY double abs(double __lcpp_x) _NOEXCEPT {
+  return ::fabs(__lcpp_x);
+}
 
-inline _LIBCPP_INLINE_VISIBILITY
-long double
-abs(long double __lcpp_x) _NOEXCEPT {return ::fabsl(__lcpp_x);}
+inline _LIBCPP_INLINE_VISIBILITY long double
+abs(long double __lcpp_x) _NOEXCEPT {
+  return ::fabsl(__lcpp_x);
+}
 #endif // !(defined(_AIX) || defined(__sun__))
+
+// div
+
+#undef div
+#undef ldiv
+#ifndef _LIBCPP_HAS_NO_LONG_LONG
+#undef lldiv
+#endif
+
+// MSVCRT already has the correct prototype in <stdlib.h> if __cplusplus is defined
+#if !defined(_LIBCPP_MSVCRT) && !defined(__sun__) && !defined(_AIX)
+inline _LIBCPP_INLINE_VISIBILITY ldiv_t div(long __x, long __y) _NOEXCEPT {
+  return ::ldiv(__x, __y);
+}
+#ifndef _LIBCPP_HAS_NO_LONG_LONG
+inline _LIBCPP_INLINE_VISIBILITY lldiv_t div(long long __x,
+                                             long long __y) _NOEXCEPT {
+  return ::lldiv(__x, __y);
+}
+#endif // _LIBCPP_HAS_NO_LONG_LONG
+#endif // _LIBCPP_MSVCRT / __sun__ / _AIX
 
 // acos
 

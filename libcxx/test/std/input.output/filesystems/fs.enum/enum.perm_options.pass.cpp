@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -26,7 +25,7 @@ constexpr fs::perm_options ME(int val) {
   return static_cast<fs::perm_options>(val);
 }
 
-int main() {
+int main(int, char**) {
   typedef fs::perm_options E;
   static_assert(std::is_enum<E>::value, "");
 
@@ -45,4 +44,6 @@ int main() {
         E::remove   == ME(4) &&
         E::nofollow == ME(8),
         "Expected enumeration values do not match");
+
+  return 0;
 }

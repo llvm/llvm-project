@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -11,8 +10,9 @@
 
 // <functional>
 
-// template <class F, class ...Args>
-// result_of_t<F&&(Args&&...)> invoke(F&&, Args&&...);
+// template<class F, class... Args>
+// invoke_result_t<F, Args...> invoke(F&& f, Args&&... args) // C++17
+//     noexcept(is_nothrow_invocable_v<_Fn, _Args...>);
 
 /// C++14 [func.def] 20.9.0
 /// (1) The following definitions apply to this Clause:
@@ -42,6 +42,8 @@
 #include <type_traits>
 #include <utility> // for std::move
 #include <cassert>
+
+#include "test_macros.h"
 
 struct NonCopyable {
     NonCopyable() {}
@@ -341,9 +343,11 @@ void noexcept_test() {
     }
 }
 
-int main() {
+int main(int, char**) {
     bullet_one_two_tests();
     bullet_three_four_tests();
     bullet_five_tests();
     noexcept_test();
+
+  return 0;
 }

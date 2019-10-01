@@ -1,10 +1,9 @@
 // -*- C++ -*-
 //===-------------------------- optional ----------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -105,8 +104,8 @@ namespace std {
 
     // 23.6.3.3, assignment
     optional &operator=(nullopt_t) noexcept;
-    optional &operator=(const optional &);
-    optional &operator=(optional &&) noexcept(see below );
+    optional &operator=(const optional &);                // constexpr in C++20
+    optional &operator=(optional &&) noexcept(see below); // constexpr in C++20
     template <class U = T> optional &operator=(U &&);
     template <class U> optional &operator=(const optional<U> &);
     template <class U> optional &operator=(optional<U> &&);
@@ -593,7 +592,7 @@ public:
 
 private:
      // Disable the reference extension using this static assert.
-    static_assert(!is_same_v<value_type, in_place_t>,
+    static_assert(!is_same_v<__uncvref_t<value_type>, in_place_t>,
         "instantiation of optional with in_place_t is ill-formed");
     static_assert(!is_same_v<__uncvref_t<value_type>, nullopt_t>,
         "instantiation of optional with nullopt_t is ill-formed");
@@ -601,6 +600,8 @@ private:
         "instantiation of optional with a reference type is ill-formed");
     static_assert(is_destructible_v<value_type>,
         "instantiation of optional with a non-destructible type is ill-formed");
+    static_assert(!is_array_v<value_type>,
+        "instantiation of optional with an array type is ill-formed");
 
     // LWG2756: conditionally explicit conversion from _Up
     struct _CheckOptionalArgsConstructor {
@@ -688,11 +689,15 @@ public:
     _LIBCPP_INLINE_VISIBILITY constexpr optional(optional&&) = default;
     _LIBCPP_INLINE_VISIBILITY constexpr optional(nullopt_t) noexcept {}
 
-    template <class... _Args, class = enable_if_t<
-        is_constructible_v<value_type, _Args...>>
+    template <class _InPlaceT, class... _Args, class = enable_if_t<
+        __lazy_and<
+            is_same<_InPlaceT, in_place_t>,
+            is_constructible<value_type, _Args...>
+            >::value
+        >
     >
     _LIBCPP_INLINE_VISIBILITY
-    constexpr explicit optional(in_place_t, _Args&&... __args)
+    constexpr explicit optional(_InPlaceT, _Args&&... __args)
         : __base(in_place, _VSTD::forward<_Args>(__args)...) {}
 
     template <class _Up, class... _Args, class = enable_if_t<

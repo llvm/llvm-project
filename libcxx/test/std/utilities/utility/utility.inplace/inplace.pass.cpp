@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -43,7 +42,7 @@ constexpr bool check_tag(Up) {
         && std::is_same<Tp, Up>::value;
 }
 
-int main() {
+int main(int, char**) {
     // test in_place_t
     {
         using T = std::in_place_t;
@@ -71,4 +70,6 @@ int main() {
         static_assert(check_tag<T2>(std::in_place_index<1>));
         static_assert(check_tag<T3>(std::in_place_index<static_cast<size_t>(-1)>));
     }
+
+  return 0;
 }

@@ -1,11 +1,17 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+
+// XFAIL: with_system_cxx_lib=macosx10.14
+// XFAIL: with_system_cxx_lib=macosx10.13
+// XFAIL: with_system_cxx_lib=macosx10.12
+// XFAIL: with_system_cxx_lib=macosx10.11
+// XFAIL: with_system_cxx_lib=macosx10.10
+// XFAIL: with_system_cxx_lib=macosx10.9
 
 // <istream>
 
@@ -13,6 +19,7 @@
 
 #include <istream>
 #include <cassert>
+#include "test_macros.h"
 
 template <class CharT>
 struct testbuf
@@ -38,7 +45,7 @@ public:
     CharT* egptr() const {return base::egptr();}
 };
 
-int main()
+int main(int, char**)
 {
     {
         testbuf<char> sb(" 123456789");
@@ -78,4 +85,40 @@ int main()
         assert( is.fail());
         assert(is.gcount() == 0);
     }
+#ifndef TEST_HAS_NO_EXCEPTIONS
+    {
+        testbuf<char> sb;
+        std::basic_istream<char> is(&sb);
+        is.exceptions(std::ios_base::eofbit);
+        char s[10];
+        bool threw = false;
+        try {
+            is.read(s, 5);
+        } catch (std::ios_base::failure&) {
+            threw = true;
+        }
+        assert(threw);
+        assert(!is.bad());
+        assert( is.eof());
+        assert( is.fail());
+    }
+    {
+        testbuf<wchar_t> sb;
+        std::basic_istream<wchar_t> is(&sb);
+        is.exceptions(std::ios_base::eofbit);
+        wchar_t s[10];
+        bool threw = false;
+        try {
+            is.read(s, 5);
+        } catch (std::ios_base::failure&) {
+            threw = true;
+        }
+        assert(threw);
+        assert(!is.bad());
+        assert( is.eof());
+        assert( is.fail());
+    }
+#endif
+
+    return 0;
 }

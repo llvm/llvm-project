@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -22,12 +21,13 @@
 #include <cstddef>
 
 #include "test_macros.h"
+#include "../../../check_consecutive.h"
 #include "../../../test_compare.h"
 #include "../../../test_hash.h"
 #include "test_allocator.h"
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::unordered_multiset<int,
@@ -54,18 +54,10 @@ int main()
         C c = c0;
         LIBCPP_ASSERT(c.bucket_count() == 7);
         assert(c.size() == 6);
-        C::const_iterator i = c.cbegin();
-        assert(*i == 1);
-        ++i;
-        assert(*i == 1);
-        ++i;
-        assert(*i == 2);
-        ++i;
-        assert(*i == 2);
-        ++i;
-        assert(*i == 3);
-        ++i;
-        assert(*i == 4);
+        CheckConsecutiveValues<C::const_iterator>(c.find(1), c.end(), 1, 2);
+        CheckConsecutiveValues<C::const_iterator>(c.find(2), c.end(), 2, 2);
+        CheckConsecutiveValues<C::const_iterator>(c.find(3), c.end(), 3, 1);
+        CheckConsecutiveValues<C::const_iterator>(c.find(4), c.end(), 4, 1);
         assert(c.hash_function() == test_hash<std::hash<int> >(8));
         assert(c.key_eq() == test_compare<std::equal_to<int> >(9));
         assert(c.get_allocator() == test_allocator<int>(10));
@@ -101,18 +93,10 @@ int main()
         C c = c0;
         LIBCPP_ASSERT(c.bucket_count() == 7);
         assert(c.size() == 6);
-        C::const_iterator i = c.cbegin();
-        assert(*i == 1);
-        ++i;
-        assert(*i == 1);
-        ++i;
-        assert(*i == 2);
-        ++i;
-        assert(*i == 2);
-        ++i;
-        assert(*i == 3);
-        ++i;
-        assert(*i == 4);
+        CheckConsecutiveValues<C::const_iterator>(c.find(1), c.end(), 1, 2);
+        CheckConsecutiveValues<C::const_iterator>(c.find(2), c.end(), 2, 2);
+        CheckConsecutiveValues<C::const_iterator>(c.find(3), c.end(), 3, 1);
+        CheckConsecutiveValues<C::const_iterator>(c.find(4), c.end(), 4, 1);
         assert(c.hash_function() == test_hash<std::hash<int> >(8));
         assert(c.key_eq() == test_compare<std::equal_to<int> >(9));
         assert(c.get_allocator() == other_allocator<int>(-2));
@@ -147,18 +131,10 @@ int main()
         C c = c0;
         LIBCPP_ASSERT(c.bucket_count() == 7);
         assert(c.size() == 6);
-        C::const_iterator i = c.cbegin();
-        assert(*i == 1);
-        ++i;
-        assert(*i == 1);
-        ++i;
-        assert(*i == 2);
-        ++i;
-        assert(*i == 2);
-        ++i;
-        assert(*i == 3);
-        ++i;
-        assert(*i == 4);
+        CheckConsecutiveValues<C::const_iterator>(c.find(1), c.end(), 1, 2);
+        CheckConsecutiveValues<C::const_iterator>(c.find(2), c.end(), 2, 2);
+        CheckConsecutiveValues<C::const_iterator>(c.find(3), c.end(), 3, 1);
+        CheckConsecutiveValues<C::const_iterator>(c.find(4), c.end(), 4, 1);
         assert(c.hash_function() == test_hash<std::hash<int> >(8));
         assert(c.key_eq() == test_compare<std::equal_to<int> >(9));
         assert(c.get_allocator() == min_allocator<int>());
@@ -169,4 +145,6 @@ int main()
         assert(c.max_load_factor() == 1);
     }
 #endif
+
+  return 0;
 }

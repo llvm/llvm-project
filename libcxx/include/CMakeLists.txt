@@ -65,8 +65,6 @@ set(files
   experimental/__config
   experimental/__memory
   experimental/algorithm
-  experimental/any
-  experimental/chrono
   experimental/coroutine
   experimental/deque
   experimental/filesystem
@@ -76,17 +74,11 @@ set(files
   experimental/list
   experimental/map
   experimental/memory_resource
-  experimental/numeric
-  experimental/optional
   experimental/propagate_const
-  experimental/ratio
   experimental/regex
   experimental/set
   experimental/simd
   experimental/string
-  experimental/string_view
-  experimental/system_error
-  experimental/tuple
   experimental/type_traits
   experimental/unordered_map
   experimental/unordered_set
@@ -95,6 +87,7 @@ set(files
   ext/__hash
   ext/hash_map
   ext/hash_set
+  fenv.h
   filesystem
   float.h
   forward_list
@@ -182,7 +175,6 @@ if(LIBCXX_INSTALL_SUPPORT_HEADERS)
     support/xlocale/__nop_locale_mgmt.h
     support/xlocale/__posix_l_fallback.h
     support/xlocale/__strtonum_fallback.h
-    support/xlocale/xlocale.h
     )
 endif()
 
@@ -208,6 +200,14 @@ else()
     )
 endif()
 
+# In some build configuraitons (like boostrapping clang), we need to be able to
+# install the libcxx headers before CMake configuraiton for libcxx runs. Making
+# the name of this target configurable allows LLVM/runtimes/CMakeLists.txt to
+# add this subdirectory to the LLVM build to put libcxx's headers in place
+# before libcxx's build configuration is run.
+if (NOT CXX_HEADER_TARGET)
+  set(CXX_HEADER_TARGET cxx-headers)
+endif()
 if(NOT LIBCXX_USING_INSTALLED_LLVM AND LIBCXX_HEADER_DIR)
   set(output_dir ${LIBCXX_HEADER_DIR}/include/c++/v1)
 
@@ -233,18 +233,18 @@ if(NOT LIBCXX_USING_INSTALLED_LLVM AND LIBCXX_HEADER_DIR)
     list(APPEND out_files ${dst})
   endif()
 
-  add_custom_target(cxx-headers ALL DEPENDS ${out_files} ${LIBCXX_CXX_ABI_HEADER_TARGET})
+  add_custom_target(${CXX_HEADER_TARGET} ALL DEPENDS ${out_files} ${LIBCXX_CXX_ABI_HEADER_TARGET})
 else()
-  add_custom_target(cxx-headers)
+  add_custom_target(${CXX_HEADER_TARGET})
 endif()
-set_target_properties(cxx-headers PROPERTIES FOLDER "Misc")
+set_target_properties(${CXX_HEADER_TARGET} PROPERTIES FOLDER "Misc")
 
 if (LIBCXX_INSTALL_HEADERS)
   foreach(file ${files})
     get_filename_component(dir ${file} DIRECTORY)
     install(FILES ${file}
       DESTINATION ${LIBCXX_INSTALL_HEADER_PREFIX}include/c++/v1/${dir}
-      COMPONENT cxx-headers
+      COMPONENT ${CXX_HEADER_TARGET}
       PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
     )
   endforeach()
@@ -255,19 +255,19 @@ if (LIBCXX_INSTALL_HEADERS)
       DESTINATION ${LIBCXX_INSTALL_HEADER_PREFIX}include/c++/v1
       PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
       RENAME __config
-      COMPONENT cxx-headers)
+      COMPONENT ${CXX_HEADER_TARGET})
   endif()
 
   if (NOT CMAKE_CONFIGURATION_TYPES)
-    add_custom_target(install-cxx-headers
-                      DEPENDS cxx-headers ${generated_config_deps}
+    add_custom_target(install-${CXX_HEADER_TARGET}
+                      DEPENDS ${CXX_HEADER_TARGET} ${generated_config_deps}
                       COMMAND "${CMAKE_COMMAND}"
-                              -DCMAKE_INSTALL_COMPONENT=cxx-headers
+                              -DCMAKE_INSTALL_COMPONENT=${CXX_HEADER_TARGET}
                               -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
     # Stripping is a no-op for headers
-    add_custom_target(install-cxx-headers-stripped DEPENDS install-cxx-headers)
+    add_custom_target(install-${CXX_HEADER_TARGET}-stripped DEPENDS install-${CXX_HEADER_TARGET})
 
-    add_custom_target(install-libcxx-headers DEPENDS install-cxx-headers)
-    add_custom_target(install-libcxx-headers-stripped DEPENDS install-cxx-headers-stripped)
+    add_custom_target(install-libcxx-headers DEPENDS install-${CXX_HEADER_TARGET})
+    add_custom_target(install-libcxx-headers-stripped DEPENDS install-${CXX_HEADER_TARGET}-stripped)
   endif()
 endif()

@@ -1,22 +1,15 @@
 // -*- C++ -*-
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++98, c++03, c++11, c++14
 
-// XFAIL: availability=macosx10.13
-// XFAIL: availability=macosx10.12
-// XFAIL: availability=macosx10.11
-// XFAIL: availability=macosx10.10
-// XFAIL: availability=macosx10.9
-// XFAIL: availability=macosx10.8
-// XFAIL: availability=macosx10.7
+// XFAIL: dylib-has-no-bad_variant_access && !libcpp-no-exceptions
 
 // <variant>
 
@@ -28,6 +21,7 @@
 // variant<Types...>&& v);
 
 #include "test_macros.h"
+#include "test_workarounds.h"
 #include "variant_test_helpers.hpp"
 #include <cassert>
 #include <type_traits>
@@ -38,24 +32,28 @@ void test_const_lvalue_get() {
   {
     using V = std::variant<int, const long>;
     constexpr V v(42);
-#ifndef __clang__ // Avoid https://bugs.llvm.org/show_bug.cgi?id=15481
+#ifdef TEST_WORKAROUND_CONSTEXPR_IMPLIES_NOEXCEPT
     ASSERT_NOEXCEPT(std::get<int>(v));
+#else
+    ASSERT_NOT_NOEXCEPT(std::get<int>(v));
 #endif
-    ASSERT_SAME_TYPE(decltype(std::get<0>(v)), const int &);
+    ASSERT_SAME_TYPE(decltype(std::get<int>(v)), const int &);
     static_assert(std::get<int>(v) == 42, "");
   }
   {
     using V = std::variant<int, const long>;
     const V v(42);
     ASSERT_NOT_NOEXCEPT(std::get<int>(v));
-    ASSERT_SAME_TYPE(decltype(std::get<0>(v)), const int &);
+    ASSERT_SAME_TYPE(decltype(std::get<int>(v)), const int &);
     assert(std::get<int>(v) == 42);
   }
   {
     using V = std::variant<int, const long>;
     constexpr V v(42l);
-#ifndef __clang__ // Avoid https://bugs.llvm.org/show_bug.cgi?id=15481
+#ifdef TEST_WORKAROUND_CONSTEXPR_IMPLIES_NOEXCEPT
     ASSERT_NOEXCEPT(std::get<const long>(v));
+#else
+    ASSERT_NOT_NOEXCEPT(std::get<const long>(v));
 #endif
     ASSERT_SAME_TYPE(decltype(std::get<const long>(v)), const long &);
     static_assert(std::get<const long>(v) == 42, "");
@@ -286,10 +284,12 @@ void test_throws_for_all_value_categories() {
 #endif
 }
 
-int main() {
+int main(int, char**) {
   test_const_lvalue_get();
   test_lvalue_get();
   test_rvalue_get();
   test_const_rvalue_get();
   test_throws_for_all_value_categories();
+
+  return 0;
 }

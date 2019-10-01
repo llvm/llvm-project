@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -36,8 +35,10 @@ std::tuple<ExplicitCopy> non_const_explicity_copy_test() {
     return {std::allocator_arg, std::allocator<void>{}, e};
     // expected-error@-1 {{chosen constructor is explicit in copy-initialization}}
 }
-int main()
+int main(int, char**)
 {
     const_explicit_copy_test();
     non_const_explicity_copy_test();
+
+  return 0;
 }

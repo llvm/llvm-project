@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -23,7 +22,7 @@
 
 struct X {};
 
-int main()
+int main(int, char**)
 {
     using H = std::hash<X>;
     static_assert(!std::is_default_constructible<H>::value, "");
@@ -35,4 +34,6 @@ int main()
     static_assert(!std::is_invocable<H, X&>::value, "");
     static_assert(!std::is_invocable<H, X const&>::value, "");
 #endif
+
+  return 0;
 }

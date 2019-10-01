@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 // UNSUPPORTED: c++03
@@ -29,14 +28,14 @@ test(const Allocator& a)
 
     m1 = std::move(m0);
     assert(m1.size()          == 0);
-    assert(m1.str()           == std::basic_string<CharT>());
+    assert(!m1.ready());
     if (std::allocator_traits<Allocator>::propagate_on_container_move_assignment::value)
         assert(m1.get_allocator() == a);
     else
         assert(m1.get_allocator() == Allocator());
 }
 
-int main()
+int main(int, char**)
 {
     test<char>   (std::allocator<std::sub_match<const char *> >());
     test<wchar_t>(std::allocator<std::sub_match<const wchar_t *> >());
@@ -48,4 +47,6 @@ int main()
 //  other_allocator has POCMA -> true
     test<char>   (other_allocator<std::sub_match<const char*> >(3));
     test<wchar_t>(other_allocator<std::sub_match<const wchar_t*> >(3));
+
+  return 0;
 }

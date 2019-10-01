@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -73,7 +72,7 @@ enum Enum {zero, one};
 typedef void (*FunctionPtr)();
 
 
-int main()
+int main(int, char**)
 {
 //  Arithmetic types (3.9.1), enumeration types, pointer types, pointer to member types (3.9.2),
 //    std::nullptr_t, and cv-qualified versions of these types (3.9.3)
@@ -102,4 +101,6 @@ int main()
     test_is_not_member_pointer<int(int)>();
     test_is_not_member_pointer<Enum>();
     test_is_not_member_pointer<FunctionPtr>();
+
+  return 0;
 }

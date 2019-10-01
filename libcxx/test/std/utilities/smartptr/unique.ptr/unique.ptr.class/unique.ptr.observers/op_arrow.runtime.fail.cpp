@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -20,7 +19,7 @@ struct V {
   int member;
 };
 
-int main() {
+int main(int, char**) {
   std::unique_ptr<V[]> p;
   std::unique_ptr<V[]> const& cp = p;
 
@@ -29,4 +28,6 @@ int main() {
 
   cp->member; // expected-error {{member reference type 'const std::unique_ptr<V []>' is not a pointer}}
               // expected-error@-1 {{no member named 'member'}}
+
+  return 0;
 }

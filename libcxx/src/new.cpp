@@ -1,9 +1,8 @@
 //===--------------------------- new.cpp ----------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -13,29 +12,25 @@
 #include "include/atomic_support.h"
 
 #if defined(_LIBCPP_ABI_MICROSOFT)
-#if defined(_LIBCPP_NO_VCRUNTIME)
-#include "support/runtime/new_handler_fallback.ipp"
-#endif
+#   if !defined(_LIBCPP_ABI_VCRUNTIME)
+#       include "support/runtime/new_handler_fallback.ipp"
+#   endif
 #elif defined(LIBCXX_BUILDING_LIBCXXABI)
-#include <cxxabi.h>
+#   include <cxxabi.h>
 #elif defined(LIBCXXRT)
-#include <cxxabi.h>
-#include "support/runtime/new_handler_fallback.ipp"
-#elif defined(__GLIBCXX__)
-// nothing todo
-#else
-# if defined(__APPLE__) && !defined(_LIBCPP_BUILDING_HAS_NO_ABI_LIBRARY)
-#   include <cxxabi.h> // FIXME: remove this once buildit is gone.
-# else
+#   include <cxxabi.h>
 #   include "support/runtime/new_handler_fallback.ipp"
-# endif
+#elif defined(__GLIBCXX__)
+    // nothing to do
+#else
+#   include "support/runtime/new_handler_fallback.ipp"
 #endif
 
 namespace std
 {
 
 #ifndef __GLIBCXX__
-const nothrow_t nothrow = {};
+const nothrow_t nothrow{};
 #endif
 
 #ifndef LIBSTDCXX
@@ -55,7 +50,7 @@ __throw_bad_alloc()
 }  // std
 
 #if !defined(__GLIBCXX__) &&                                                   \
-    !defined(_LIBCPP_DEFER_NEW_TO_VCRUNTIME) &&      \
+    !defined(_LIBCPP_ABI_VCRUNTIME) &&      \
     !defined(_LIBCPP_DISABLE_NEW_DELETE_DEFINITIONS)
 
 // Implement all new and delete operators as weak definitions
@@ -299,4 +294,4 @@ operator delete[] (void* ptr, size_t, std::align_val_t alignment) _NOEXCEPT
 }
 
 #endif // !_LIBCPP_HAS_NO_LIBRARY_ALIGNED_ALLOCATION
-#endif // !__GLIBCXX__ && (!_LIBCPP_ABI_MICROSOFT || _LIBCPP_NO_VCRUNTIME) && !_LIBCPP_DISABLE_NEW_DELETE_DEFINITIONS
+#endif // !__GLIBCXX__ && !_LIBCPP_ABI_VCRUNTIME && !_LIBCPP_DISABLE_NEW_DELETE_DEFINITIONS

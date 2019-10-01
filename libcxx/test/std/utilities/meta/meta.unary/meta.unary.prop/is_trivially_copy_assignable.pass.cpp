@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -60,7 +59,7 @@ struct A
     A& operator=(const A&);
 };
 
-int main()
+int main(int, char**)
 {
     test_has_trivially_copy_assignable<int&>();
     test_has_trivially_copy_assignable<Union>();
@@ -77,4 +76,6 @@ int main()
     test_has_not_trivially_copy_assignable<Abstract>();
     test_has_not_trivially_copy_assignable<const Empty>();
 
+
+  return 0;
 }

@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -20,7 +19,7 @@
 
 #include <atomic>
 
-int main() {
+int main(int, char**) {
     std::atomic<int> x(42);
     volatile std::atomic<int>& vx = x;
     int val1 = 1; ((void)val1);
@@ -125,4 +124,6 @@ int main() {
         std::atomic_compare_exchange_strong_explicit(&x, &val1, val2, std::memory_order_seq_cst, std::memory_order_acquire);
         std::atomic_compare_exchange_strong_explicit(&x, &val1, val2, std::memory_order_seq_cst, std::memory_order_seq_cst);
     }
+
+  return 0;
 }

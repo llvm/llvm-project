@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -18,8 +17,8 @@
 
 #include "test_macros.h"
 
-#if TEST_STD_VER <= 11
-#error This file requires C++14
+#if TEST_STD_VER < 11
+#error This file requires C++11
 #endif
 
 using std::false_type;
@@ -57,14 +56,14 @@ template <typename X, typename T, typename xl = std::numeric_limits<X>>
 constexpr bool
 _fits_in(T v, false_type, true_type /* T signed */, false_type /* X unsigned*/)
 {
-    return 0 <= v && std::make_unsigned_t<T>(v) <= (xl::max)();
+    return 0 <= v && typename std::make_unsigned<T>::type(v) <= (xl::max)();
 }
 
 template <typename X, typename T, typename xl = std::numeric_limits<X>>
 constexpr bool
 _fits_in(T v, false_type, false_type /* T unsigned */, ...)
 {
-    return v <= std::make_unsigned_t<X>((xl::max)());
+    return v <= typename std::make_unsigned<X>::type((xl::max)());
 }
 
 template <typename X, typename T>
@@ -120,7 +119,7 @@ struct to_chars_test_base
     }
 
 private:
-    static auto fromchars(char const* p, char const* ep, int base, true_type)
+    static long long fromchars(char const* p, char const* ep, int base, true_type)
     {
         char* last;
         auto r = strtoll(p, &last, base);
@@ -129,7 +128,7 @@ private:
         return r;
     }
 
-    static auto fromchars(char const* p, char const* ep, int base, false_type)
+    static unsigned long long fromchars(char const* p, char const* ep, int base, false_type)
     {
         char* last;
         auto r = strtoull(p, &last, base);
@@ -139,6 +138,7 @@ private:
     }
 
     static auto fromchars(char const* p, char const* ep, int base = 10)
+    -> decltype(fromchars(p, ep, base, std::is_signed<X>()))
     {
         return fromchars(p, ep, base, std::is_signed<X>());
     }

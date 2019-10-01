@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -48,7 +47,7 @@ void test_iterators() {
     static_assert((std::is_same<typename CItT::difference_type, typename C::difference_type>::value), "");
 }
 
-int main()
+int main(int, char**)
 {
     {
         typedef double T;
@@ -94,4 +93,6 @@ int main()
         static_assert((std::is_same<typename C::difference_type,
             typename std::iterator_traits<typename C::const_iterator>::difference_type>::value), "");
     }
+
+  return 0;
 }

@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -16,6 +15,10 @@
 // void * do_allocate(size_t size, size_t align)
 // void   do_deallocate(void*, size_t, size_t)
 
+// When back-deploying to macosx10.7, the RTTI for exception classes
+// incorrectly provided by libc++.dylib is mixed with the one in
+// libc++abi.dylib and exceptions are not caught properly.
+// XFAIL: with_system_cxx_lib=macosx10.7
 
 #include <experimental/memory_resource>
 #include <type_traits>
@@ -107,9 +110,11 @@ void check_alloc_max_size() {
 #endif
 }
 
-int main()
+int main(int, char**)
 {
     check_allocate_deallocate<CountingAllocator<char>>();
     check_allocate_deallocate<MinAlignedAllocator<char>>();
     check_alloc_max_size();
+
+  return 0;
 }

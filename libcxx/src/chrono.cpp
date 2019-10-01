@@ -1,9 +1,8 @@
 //===------------------------- chrono.cpp ---------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -36,6 +35,10 @@
 #elif !defined(_LIBCPP_WIN32API) && !defined(CLOCK_MONOTONIC)
 #error "Monotonic clock not implemented"
 #endif
+#endif
+
+#if defined(__unix__) &&  defined(__ELF__) && defined(_LIBCPP_HAS_COMMENT_LIB_PRAGMA)
+#pragma comment(lib, "rt")
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
@@ -178,16 +181,26 @@ steady_clock::now() _NOEXCEPT
 
 #elif defined(_LIBCPP_WIN32API)
 
+// https://msdn.microsoft.com/en-us/library/windows/desktop/ms644905(v=vs.85).aspx says:
+//    If the function fails, the return value is zero. <snip>
+//    On systems that run Windows XP or later, the function will always succeed 
+//      and will thus never return zero.
+
+static LARGE_INTEGER
+__QueryPerformanceFrequency()
+{
+	LARGE_INTEGER val;
+	(void) QueryPerformanceFrequency(&val);
+	return val;
+}
+
 steady_clock::time_point
 steady_clock::now() _NOEXCEPT
 {
-  static LARGE_INTEGER freq;
-  static BOOL initialized = FALSE;
-  if (!initialized)
-    initialized = QueryPerformanceFrequency(&freq); // always succceeds
+  static const LARGE_INTEGER freq = __QueryPerformanceFrequency();
 
   LARGE_INTEGER counter;
-  QueryPerformanceCounter(&counter);
+  (void) QueryPerformanceCounter(&counter);
   return time_point(duration(counter.QuadPart * nano::den / freq.QuadPart));
 }
 

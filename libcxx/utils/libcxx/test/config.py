@@ -1,9 +1,8 @@
 #===----------------------------------------------------------------------===##
 #
-#                     The LLVM Compiler Infrastructure
-#
-# This file is dual licensed under the MIT and the University of Illinois Open
-# Source Licenses. See LICENSE.TXT for details.
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
 #===----------------------------------------------------------------------===##
 
@@ -282,9 +281,15 @@ class Configuration(object):
         self.project_obj_root = self.get_lit_conf('project_obj_root')
         self.libcxx_obj_root = self.get_lit_conf('libcxx_obj_root')
         if not self.libcxx_obj_root and self.project_obj_root is not None:
-            possible_root = os.path.join(self.project_obj_root, 'projects', 'libcxx')
-            if os.path.isdir(possible_root):
-                self.libcxx_obj_root = possible_root
+            possible_roots = [
+                os.path.join(self.project_obj_root, 'libcxx'),
+                os.path.join(self.project_obj_root, 'projects', 'libcxx'),
+                os.path.join(self.project_obj_root, 'runtimes', 'libcxx'),
+            ]
+            for possible_root in possible_roots:
+                if os.path.isdir(possible_root):
+                    self.libcxx_obj_root = possible_root
+                    break
             else:
                 self.libcxx_obj_root = self.project_obj_root
 
@@ -327,8 +332,6 @@ class Configuration(object):
             # FIXME this is a hack.
             if self.get_lit_conf('enable_experimental') is None:
                 self.config.enable_experimental = 'true'
-            if self.get_lit_conf('enable_filesystem') is None:
-                self.config.enable_filesystem = 'true'
 
     def configure_use_clang_verify(self):
         '''If set, run clang with -verify on failing tests.'''
@@ -431,6 +434,11 @@ class Configuration(object):
 
         if self.long_tests:
             self.config.available_features.add('long_tests')
+
+        if not self.get_lit_bool('enable_filesystem', default=True):
+            self.config.available_features.add('c++filesystem-disabled')
+            self.config.available_features.add('dylib-has-no-filesystem')
+
 
         # Run a compile test for the -fsized-deallocation flag. This is needed
         # in test/std/language.support/support.dynamic/new.delete
@@ -548,10 +556,10 @@ class Configuration(object):
         self.cxx.flags += ['-v']
         sysroot = self.get_lit_conf('sysroot')
         if sysroot:
-            self.cxx.flags += ['--sysroot', sysroot]
+            self.cxx.flags += ['--sysroot=' + sysroot]
         gcc_toolchain = self.get_lit_conf('gcc_toolchain')
         if gcc_toolchain:
-            self.cxx.flags += ['-gcc-toolchain', gcc_toolchain]
+            self.cxx.flags += ['--gcc-toolchain=' + gcc_toolchain]
         # NOTE: the _DEBUG definition must preceed the triple check because for
         # the Windows build of libc++, the forced inclusion of a header requires
         # that _DEBUG is defined.  Incorrect ordering will result in -target
@@ -560,8 +568,8 @@ class Configuration(object):
             self.cxx.compile_flags += ['-D_DEBUG']
         if self.use_target:
             if not self.cxx.addFlagIfSupported(
-                    ['-target', self.config.target_triple]):
-                self.lit_config.warning('use_target is true but -target is '\
+                    ['--target=' + self.config.target_triple]):
+                self.lit_config.warning('use_target is true but --target is '\
                         'not supported by the compiler')
         if self.use_deployment:
             arch, name, version = self.config.deployment
@@ -702,10 +710,6 @@ class Configuration(object):
           self.cxx.compile_flags += ['-D_LIBCPP_ABI_UNSTABLE']
 
     def configure_filesystem_compile_flags(self):
-        enable_fs = self.get_lit_bool('enable_filesystem', default=False)
-        if not enable_fs:
-            return
-        self.config.available_features.add('c++filesystem')
         static_env = os.path.join(self.libcxx_src_root, 'test', 'std',
                                   'input.output', 'filesystems', 'Inputs', 'static_test_env')
         static_env = os.path.realpath(static_env)
@@ -743,12 +747,8 @@ class Configuration(object):
             self.configure_link_flags_abi_library()
             self.configure_extra_library_flags()
         elif self.cxx_stdlib_under_test == 'libstdc++':
-            enable_fs = self.get_lit_bool('enable_filesystem',
-                                          default=False)
-            if enable_fs:
-                self.config.available_features.add('c++experimental')
-                self.cxx.link_flags += ['-lstdc++fs']
-            self.cxx.link_flags += ['-lm', '-pthread']
+            self.config.available_features.add('c++experimental')
+            self.cxx.link_flags += ['-lstdc++fs', '-lm', '-pthread']
         elif self.cxx_stdlib_under_test == 'msvc':
             # FIXME: Correctly setup debug/release flags here.
             pass
@@ -798,10 +798,6 @@ class Configuration(object):
         if libcxx_experimental:
             self.config.available_features.add('c++experimental')
             self.cxx.link_flags += ['-lc++experimental']
-        libcxx_fs = self.get_lit_bool('enable_filesystem', default=False)
-        if libcxx_fs:
-            self.config.available_features.add('c++fs')
-            self.cxx.link_flags += ['-lc++fs']
         if self.link_shared:
             self.cxx.link_flags += ['-lc++']
         else:
@@ -822,7 +818,11 @@ class Configuration(object):
         elif cxx_abi == 'libsupc++':
             self.cxx.link_flags += ['-lsupc++']
         elif cxx_abi == 'libcxxabi':
-            if self.target_info.allow_cxxabi_link():
+            # If the C++ library requires explicitly linking to libc++abi, or
+            # if we're testing libc++abi itself (the test configs are shared),
+            # then link it.
+            testing_libcxxabi = self.get_lit_conf('name', '') == 'libc++abi'
+            if self.target_info.allow_cxxabi_link() or testing_libcxxabi:
                 libcxxabi_shared = self.get_lit_bool('libcxxabi_shared', default=True)
                 if libcxxabi_shared:
                     self.cxx.link_flags += ['-lc++abi']
@@ -934,7 +934,7 @@ class Configuration(object):
 
             def add_ubsan():
                 self.cxx.flags += ['-fsanitize=undefined',
-                                   '-fno-sanitize=vptr,function,float-divide-by-zero',
+                                   '-fno-sanitize=float-divide-by-zero',
                                    '-fno-sanitize-recover=all']
                 self.exec_env['UBSAN_OPTIONS'] = 'print_stacktrace=1'
                 self.config.available_features.add('ubsan')
@@ -1143,6 +1143,33 @@ class Configuration(object):
         self.config.target_triple = arch + '-apple-' + name + version
         self.lit_config.note(
             "computed target_triple as: %r" % self.config.target_triple)
+
+        # If we're testing a system libc++ as opposed to the upstream LLVM one,
+        # take the version of the system libc++ into account to compute which
+        # features are enabled/disabled. Otherwise, disable availability markup,
+        # which is not relevant for non-shipped flavors of libc++.
+        if self.use_system_cxx_lib:
+            # Dylib support for shared_mutex was added in macosx10.12.
+            if name == 'macosx' and version in ('10.%s' % v for v in range(7, 12)):
+                self.config.available_features.add('dylib-has-no-shared_mutex')
+                self.lit_config.note("shared_mutex is not supported by the deployment target")
+            # Throwing bad_optional_access, bad_variant_access and bad_any_cast is
+            # supported starting in macosx10.14.
+            if name == 'macosx' and version in ('10.%s' % v for v in range(7, 14)):
+                self.config.available_features.add('dylib-has-no-bad_optional_access')
+                self.lit_config.note("throwing bad_optional_access is not supported by the deployment target")
+
+                self.config.available_features.add('dylib-has-no-bad_variant_access')
+                self.lit_config.note("throwing bad_variant_access is not supported by the deployment target")
+
+                self.config.available_features.add('dylib-has-no-bad_any_cast')
+                self.lit_config.note("throwing bad_any_cast is not supported by the deployment target")
+            # Filesystem is not supported on Apple platforms yet
+            if name == 'macosx':
+                self.config.available_features.add('dylib-has-no-filesystem')
+                self.lit_config.note("the deployment target does not support the dylib parts of <filesystem>")
+        else:
+            self.cxx.flags += ['-D_LIBCPP_DISABLE_AVAILABILITY']
 
     def configure_env(self):
         self.target_info.configure_env(self.exec_env)

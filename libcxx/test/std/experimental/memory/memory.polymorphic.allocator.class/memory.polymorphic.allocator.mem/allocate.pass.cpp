@@ -1,13 +1,11 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: c++experimental
 // UNSUPPORTED: c++98, c++03
 
 // <experimental/memory_resource>
@@ -81,7 +79,7 @@ void testAllocForSizeThrows() {
 }
 #endif // TEST_HAS_NO_EXCEPTIONS
 
-int main()
+int main(int, char**)
 {
     {
         ex::polymorphic_allocator<int> a;
@@ -109,4 +107,6 @@ int main()
         testAllocForSizeThrows<13>();
     }
 #endif
+
+  return 0;
 }

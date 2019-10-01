@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -20,9 +19,11 @@
 #include <vector>
 #include <cassert>
 
+#include "test_macros.h"
+
 typedef std::codecvt<char16_t, char, std::mbstate_t> F;
 
-int main()
+int main(int, char**)
 {
     std::locale l = std::locale::classic();
     const char from[] = "some text";
@@ -37,4 +38,6 @@ int main()
     assert(to_next - to == 9);
     for (unsigned i = 0; i < 9; ++i)
         assert(to[i] == from[i]);
+
+  return 0;
 }

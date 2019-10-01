@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -31,6 +30,7 @@
 #include <iterator>
 #include <type_traits>
 
+#include "test_macros.h"
 #include "test_allocator.h"
 #include "../../Copyable.h"
 #include "min_allocator.h"
@@ -68,7 +68,7 @@ test()
         std::reverse_iterator<typename C::const_iterator> >::value), "");
 }
 
-int main()
+int main(int, char**)
 {
     test<test_allocator<bool> >();
     test<std::allocator<bool> >();
@@ -77,4 +77,6 @@ int main()
 #if TEST_STD_VER >= 11
     test<min_allocator<bool> >();
 #endif
+
+  return 0;
 }

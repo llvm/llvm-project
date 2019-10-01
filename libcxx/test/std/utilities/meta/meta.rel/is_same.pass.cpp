@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -57,7 +56,7 @@ public:
     ~Class();
 };
 
-int main()
+int main(int, char**)
 {
     test_is_same<int, int>();
     test_is_same<void, void>();
@@ -70,4 +69,6 @@ int main()
     test_is_not_same<Class, int*>();
     test_is_not_same<int*, int&>();
     test_is_not_same<int&, int>();
+
+  return 0;
 }

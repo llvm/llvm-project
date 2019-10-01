@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -12,6 +11,8 @@
 
 #include <ratio>
 
+#include "test_macros.h"
+
 template <long long N, long long D, long long eN, long long eD>
 void test()
 {
@@ -19,7 +20,7 @@ void test()
     static_assert((std::ratio<N, D>::den == eD), "");
 }
 
-int main()
+int main(int, char**)
 {
     test<1, 1, 1, 1>();
     test<1, 10, 1, 10>();
@@ -41,4 +42,6 @@ int main()
     test<-0x7FFFFFFFFFFFFFFFLL, 127, -72624976668147841LL, 1>();
     test<0x7FFFFFFFFFFFFFFFLL, -127, -72624976668147841LL, 1>();
     test<-0x7FFFFFFFFFFFFFFFLL, -127, 72624976668147841LL, 1>();
+
+  return 0;
 }

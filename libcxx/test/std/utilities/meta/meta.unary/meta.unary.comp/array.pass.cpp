@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -12,6 +11,8 @@
 // array
 
 #include <type_traits>
+
+#include "test_macros.h"
 
 template <class T>
 void test_array_imp()
@@ -40,10 +41,12 @@ typedef char incomplete_array[];
 
 class incomplete_type;
 
-int main()
+int main(int, char**)
 {
     test_array<array>();
     test_array<const_array>();
     test_array<incomplete_array>();
     test_array<incomplete_type[]>();
+
+  return 0;
 }

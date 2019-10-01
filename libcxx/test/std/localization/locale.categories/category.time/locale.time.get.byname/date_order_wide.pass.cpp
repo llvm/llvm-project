@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -20,6 +19,7 @@
 
 #include <locale>
 #include <cassert>
+#include "test_macros.h"
 #include "test_iterators.h"
 
 #include "platform_support.h" // locale name macros
@@ -34,7 +34,7 @@ public:
         : F(nm, refs) {}
 };
 
-int main()
+int main(int, char**)
 {
     {
         const my_facet f(LOCALE_en_US_UTF_8, 1);
@@ -52,4 +52,6 @@ int main()
         const my_facet f(LOCALE_zh_CN_UTF_8, 1);
         assert(f.date_order() == std::time_base::ymd);
     }
+
+  return 0;
 }

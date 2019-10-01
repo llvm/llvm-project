@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -13,6 +12,7 @@
 // const_reference operator[] (size_type); // constexpr in C++14
 // reference at (size_type)
 // const_reference at (size_type); // constexpr in C++14
+// Libc++ marks these as noexcept
 
 #include <array>
 #include <cassert>
@@ -31,12 +31,14 @@ constexpr bool check_idx( size_t idx, double val )
 }
 #endif
 
-int main()
+int main(int, char**)
 {
     {
         typedef double T;
         typedef std::array<T, 3> C;
         C c = {1, 2, 3.5};
+        LIBCPP_ASSERT_NOEXCEPT(c[0]);
+        ASSERT_SAME_TYPE(C::reference, decltype(c[0]));
         C::reference r1 = c[0];
         assert(r1 == 1);
         r1 = 5.5;
@@ -51,6 +53,8 @@ int main()
         typedef double T;
         typedef std::array<T, 3> C;
         const C c = {1, 2, 3.5};
+        LIBCPP_ASSERT_NOEXCEPT(c[0]);
+        ASSERT_SAME_TYPE(C::const_reference, decltype(c[0]));
         C::const_reference r1 = c[0];
         assert(r1 == 1);
         C::const_reference r2 = c[2];
@@ -61,8 +65,10 @@ int main()
         typedef std::array<T, 0> C;
         C c = {};
         C const& cc = c;
-        static_assert((std::is_same<decltype(c[0]), T &>::value), "");
-        static_assert((std::is_same<decltype(cc[0]), const T &>::value), "");
+        LIBCPP_ASSERT_NOEXCEPT(c[0]);
+        LIBCPP_ASSERT_NOEXCEPT(cc[0]);
+        ASSERT_SAME_TYPE(C::reference, decltype(c[0]));
+        ASSERT_SAME_TYPE(C::const_reference, decltype(cc[0]));
         if (c.size() > (0)) { // always false
           C::reference r1 = c[0];
           C::const_reference r2 = cc[0];
@@ -75,8 +81,10 @@ int main()
         typedef std::array<const T, 0> C;
         C c = {{}};
         C const& cc = c;
-        static_assert((std::is_same<decltype(c[0]), const T &>::value), "");
-        static_assert((std::is_same<decltype(cc[0]), const T &>::value), "");
+        LIBCPP_ASSERT_NOEXCEPT(c[0]);
+        LIBCPP_ASSERT_NOEXCEPT(cc[0]);
+        ASSERT_SAME_TYPE(C::reference, decltype(c[0]));
+        ASSERT_SAME_TYPE(C::const_reference, decltype(cc[0]));
         if (c.size() > (0)) { // always false
           C::reference r1 = c[0];
           C::const_reference r2 = cc[0];
@@ -89,6 +97,8 @@ int main()
         typedef double T;
         typedef std::array<T, 3> C;
         constexpr C c = {1, 2, 3.5};
+        LIBCPP_ASSERT_NOEXCEPT(c[0]);
+        ASSERT_SAME_TYPE(C::const_reference, decltype(c[0]));
 
         constexpr T t1 = c[0];
         static_assert (t1 == 1, "");
@@ -105,4 +115,6 @@ int main()
         static_assert (check_idx(2, 3.5), "");
     }
 #endif
+
+  return 0;
 }

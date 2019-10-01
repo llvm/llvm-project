@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -16,6 +15,7 @@
 #include <cassert>
 #include <cstddef>
 
+#include "test_macros.h"
 #include "min_allocator.h"
 #include "counting_predicates.hpp"
 
@@ -25,7 +25,16 @@ bool g(int i)
     return i < 3;
 }
 
-int main()
+struct PredLWG529 {
+    PredLWG529 (int i) : i_(i) {};
+    ~PredLWG529() { i_ = -32767; }
+    bool operator() (const PredLWG529 &p) const { return p.i_ == i_; }
+
+    bool operator==(int i) const { return i == i_;}
+    int i_;
+};
+
+int main(int, char**)
 {
     {
         typedef int T;
@@ -89,6 +98,21 @@ int main()
         assert(c1 == c2);
         assert(cp.count() == static_cast<std::size_t>(std::distance(std::begin(t1), std::end(t1))));
     }
+
+    { // LWG issue #526
+    int a1[] = {1, 2, 1, 3, 5, 8, 11};
+    int a2[] = {   2,    3, 5, 8, 11};
+    std::forward_list<PredLWG529> c(a1, a1 + 7);
+    c.remove_if(std::ref(c.front()));
+    for (size_t i = 0; i < 5; ++i)
+    {
+        assert(!c.empty());
+        assert(c.front() == a2[i]);
+        c.pop_front();
+    }
+    assert(c.empty());
+    }
+
 #if TEST_STD_VER >= 11
     {
         typedef int T;
@@ -153,4 +177,6 @@ int main()
         assert(cp.count() == static_cast<std::size_t>(std::distance(std::begin(t1), std::end(t1))));
     }
 #endif
+
+  return 0;
 }

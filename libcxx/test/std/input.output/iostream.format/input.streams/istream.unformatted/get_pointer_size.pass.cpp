@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -49,7 +48,7 @@ public:
     CharT* egptr() const {return base::egptr();}
 };
 
-int main()
+int main(int, char**)
 {
     {
         testbuf<char> sb("  \n    \n ");
@@ -85,26 +84,6 @@ int main()
         assert(std::string(s) == "");
         assert(is.gcount() == 0);
     }
-#ifndef TEST_HAS_NO_EXCEPTIONS
-    {
-        testbuf<char> sb(" ");
-        std::istream is(&sb);
-        char s[5] = "test";
-        is.exceptions(std::istream::eofbit | std::istream::badbit);
-        try
-        {
-            is.get(s, 5);
-            assert(false);
-        }
-        catch (std::ios_base::failure&)
-        {
-        }
-        assert( is.eof());
-        assert( is.fail());
-        assert(std::string(s) == " ");
-        assert(is.gcount() == 1);
-    }
-#endif
     {
         testbuf<wchar_t> sb(L"  \n    \n ");
         std::wistream is(&sb);
@@ -141,22 +120,79 @@ int main()
     }
 #ifndef TEST_HAS_NO_EXCEPTIONS
     {
-        testbuf<wchar_t> sb(L" ");
-        std::wistream is(&sb);
-        wchar_t s[5] = L"test";
-        is.exceptions(std::wistream::eofbit | std::wistream::badbit);
-        try
-        {
+        testbuf<char> sb(" ");
+        std::basic_istream<char> is(&sb);
+        char s[5] = "test";
+        is.exceptions(std::ios_base::eofbit);
+        bool threw = false;
+        try {
             is.get(s, 5);
-            assert(false);
+        } catch (std::ios_base::failure&) {
+            threw = true;
         }
-        catch (std::ios_base::failure&)
-        {
-        }
+        assert(!is.bad());
         assert( is.eof());
-        assert( is.fail());
+        assert(!is.fail());
+        assert(threw);
+        assert(std::string(s) == " ");
+        assert(is.gcount() == 1);
+    }
+    {
+        testbuf<wchar_t> sb(L" ");
+        std::basic_istream<wchar_t> is(&sb);
+        wchar_t s[5] = L"test";
+        is.exceptions(std::ios_base::eofbit);
+        bool threw = false;
+        try {
+            is.get(s, 5);
+        } catch (std::ios_base::failure&) {
+            threw = true;
+        }
+        assert(!is.bad());
+        assert( is.eof());
+        assert(!is.fail());
+        assert(threw);
         assert(std::wstring(s) == L" ");
         assert(is.gcount() == 1);
     }
+
+    {
+        testbuf<char> sb;
+        std::basic_istream<char> is(&sb);
+        char s[5] = "test";
+        is.exceptions(std::ios_base::failbit);
+        bool threw = false;
+        try {
+            is.get(s, 5);
+        } catch (std::ios_base::failure&) {
+            threw = true;
+        }
+        assert(!is.bad());
+        assert( is.eof());
+        assert( is.fail());
+        assert(threw);
+        assert(std::basic_string<char>(s) == "");
+        assert(is.gcount() == 0);
+    }
+    {
+        testbuf<wchar_t> sb;
+        std::basic_istream<wchar_t> is(&sb);
+        wchar_t s[5] = L"test";
+        is.exceptions(std::ios_base::failbit);
+        bool threw = false;
+        try {
+            is.get(s, 5);
+        } catch (std::ios_base::failure&) {
+            threw = true;
+        }
+        assert(!is.bad());
+        assert( is.eof());
+        assert( is.fail());
+        assert(threw);
+        assert(std::basic_string<wchar_t>(s) == L"");
+        assert(is.gcount() == 0);
+    }
 #endif
+
+  return 0;
 }

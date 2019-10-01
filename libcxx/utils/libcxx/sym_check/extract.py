@@ -1,16 +1,16 @@
 # -*- Python -*- vim: set syntax=python tabstop=4 expandtab cc=80:
 #===----------------------------------------------------------------------===##
 #
-#                     The LLVM Compiler Infrastructure
-#
-# This file is dual licensed under the MIT and the University of Illinois Open
-# Source Licenses. See LICENSE.TXT for details.
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
 #===----------------------------------------------------------------------===##
 """
 extract - A set of function that extract symbol lists from shared libraries.
 """
 import distutils.spawn
+import os.path
 import sys
 import re
 
@@ -31,7 +31,7 @@ class NMExtractor(object):
         """
         return distutils.spawn.find_executable('nm')
 
-    def __init__(self):
+    def __init__(self, static_lib):
         """
         Initialize the nm executable and flags that will be used to extract
         symbols from shared libraries.
@@ -41,7 +41,9 @@ class NMExtractor(object):
             # ERROR no NM found
             print("ERROR: Could not find nm")
             sys.exit(1)
+        self.static_lib = static_lib
         self.flags = ['-P', '-g']
+
 
     def extract(self, lib):
         """
@@ -54,7 +56,7 @@ class NMExtractor(object):
             raise RuntimeError('Failed to run %s on %s' % (self.nm_exe, lib))
         fmt_syms = (self._extract_sym(l)
                     for l in out.splitlines() if l.strip())
-            # Cast symbol to string.
+        # Cast symbol to string.
         final_syms = (repr(s) for s in fmt_syms if self._want_sym(s))
         # Make unique and sort strings.
         tmp_list = list(sorted(set(final_syms)))
@@ -117,7 +119,7 @@ class ReadElfExtractor(object):
         """
         return distutils.spawn.find_executable('readelf')
 
-    def __init__(self):
+    def __init__(self, static_lib):
         """
         Initialize the readelf executable and flags that will be used to
         extract symbols from shared libraries.
@@ -127,6 +129,8 @@ class ReadElfExtractor(object):
             # ERROR no NM found
             print("ERROR: Could not find readelf")
             sys.exit(1)
+        # TODO: Support readelf for reading symbols from archives
+        assert not static_lib and "RealElf does not yet support static libs"
         self.flags = ['--wide', '--symbols']
 
     def extract(self, lib):
@@ -156,7 +160,7 @@ class ReadElfExtractor(object):
                 'type': parts[3],
                 'is_defined': (parts[6] != 'UND')
             }
-            assert new_sym['type'] in ['OBJECT', 'FUNC', 'NOTYPE']
+            assert new_sym['type'] in ['OBJECT', 'FUNC', 'NOTYPE', 'TLS']
             if new_sym['name'] in extract_ignore_names:
                 continue
             if new_sym['type'] == 'NOTYPE':
@@ -181,14 +185,17 @@ class ReadElfExtractor(object):
         return lines[start:end]
 
 
-def extract_symbols(lib_file):
+def extract_symbols(lib_file, static_lib=None):
     """
-    Extract and return a list of symbols extracted from a dynamic library.
-    The symbols are extracted using NM. They are then filtered and formated.
-    Finally they symbols are made unique.
+    Extract and return a list of symbols extracted from a static or dynamic
+    library. The symbols are extracted using NM or readelf. They are then
+    filtered and formated. Finally they symbols are made unique.
     """
-    if ReadElfExtractor.find_tool():
-        extractor = ReadElfExtractor()
+    if static_lib is None:
+        _, ext = os.path.splitext(lib_file)
+        static_lib = True if ext in ['.a'] else False
+    if ReadElfExtractor.find_tool() and not static_lib:
+        extractor = ReadElfExtractor(static_lib=static_lib)
     else:
-        extractor = NMExtractor()
+        extractor = NMExtractor(static_lib=static_lib)
     return extractor.extract(lib_file)

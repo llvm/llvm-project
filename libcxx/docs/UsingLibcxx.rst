@@ -15,7 +15,7 @@ If you already have libc++ installed you can use it with clang.
     $ clang++ -stdlib=libc++ test.cpp
     $ clang++ -std=c++11 -stdlib=libc++ test.cpp
 
-On OS X and FreeBSD libc++ is the default standard library
+On macOS and FreeBSD libc++ is the default standard library
 and the ``-stdlib=libc++`` is not required.
 
 .. _alternate libcxx:
@@ -34,7 +34,7 @@ can use the following options.
 The option ``-Wl,-rpath,<libcxx-install-prefix>/lib`` adds a runtime library
 search path. Meaning that the systems dynamic linker will look for libc++ in
 ``<libcxx-install-prefix>/lib`` whenever the program is run. Alternatively the
-environment variable ``LD_LIBRARY_PATH`` (``DYLD_LIBRARY_PATH`` on OS X) can
+environment variable ``LD_LIBRARY_PATH`` (``DYLD_LIBRARY_PATH`` on macOS) can
 be used to change the dynamic linkers search paths after a program is compiled.
 
 An example of using ``LD_LIBRARY_PATH``:
@@ -49,23 +49,16 @@ An example of using ``LD_LIBRARY_PATH``:
   $ export LD_LIBRARY_PATH=<libcxx-install-prefix>/lib
   $ ./a.out # Searches for libc++ along LD_LIBRARY_PATH
 
+Using ``<filesystem>``
+======================
 
-Using ``<filesystem>`` and libc++fs
-====================================
+Prior to LLVM 9.0, libc++ provides the implementation of the filesystem library
+in a separate static library. Users of ``<filesystem>`` and ``<experimental/filesystem>``
+are required to link ``-lc++fs``. Prior to libc++ 7.0, users of
+``<experimental/filesystem>`` were required to link libc++experimental.
 
-Libc++ provides the implementation of the filesystem library in a separate
-library. Users of ``<filesystem>`` and ``<experimental/filesystem>`` are
-required to link ``-lc++fs``.
-
-.. note::
-  Prior to libc++ 7.0, users of ``<experimental/filesystem>`` were required
-  to link libc++experimental.
-
-.. warning::
-  The Filesystem library is still experimental in nature. As such normal
-  guarantees about ABI stability and backwards compatibility do not yet apply
-  to it. In the future, this restriction will be removed.
-
+Starting with LLVM 9.0, support for ``<filesystem>`` is provided in the main
+library and nothing special is required to use ``<filesystem>``.
 
 Using libc++experimental and ``<experimental/...>``
 =====================================================
@@ -83,9 +76,6 @@ installed. For information on building libc++experimental from source see
 :ref:`Building Libc++ <build instructions>` and
 :ref:`libc++experimental CMake Options <libc++experimental options>`.
 
-Note that as of libc++ 7.0 using the ``<experimental/filesystem>`` requires linking
-libc++fs instead of libc++experimental.
-
 Also see the `Experimental Library Implementation Status <http://libcxx.llvm.org/ts1z_status.html>`__
 page.
 
@@ -94,6 +84,9 @@ page.
     * The contents of the ``<experimental/...>`` headers and ``libc++experimental.a``
       library will not remain compatible between versions.
     * No guarantees of API or ABI stability are provided.
+    * When we implement the standardized version of an experimental feature,
+      the experimental feature is removed two releases after the non-experimental
+      version has shipped. The full policy is explained :ref:`here <experimental features>`.
 
 Using libc++ on Linux
 =====================
@@ -314,4 +307,41 @@ Entities declared with ``_LIBCPP_NODISCARD_EXT``
 This section lists all extended applications of ``[[nodiscard]]`` to entities
 which no dialect declares as such (See the second form described above).
 
+* ``adjacent_find``
+* ``all_of``
+* ``any_of``
+* ``binary_search``
+* ``clamp``
+* ``count_if``
+* ``count``
+* ``equal_range``
+* ``equal``
+* ``find_end``
+* ``find_first_of``
+* ``find_if_not``
+* ``find_if``
+* ``find``
 * ``get_temporary_buffer``
+* ``includes``
+* ``is_heap_until``
+* ``is_heap``
+* ``is_partitioned``
+* ``is_permutation``
+* ``is_sorted_until``
+* ``is_sorted``
+* ``lexicographical_compare``
+* ``lower_bound``
+* ``max_element``
+* ``max``
+* ``min_element``
+* ``min``
+* ``minmax_element``
+* ``minmax``
+* ``mismatch``
+* ``none_of``
+* ``remove_if``
+* ``remove``
+* ``search_n``
+* ``search``
+* ``unique``
+* ``upper_bound``

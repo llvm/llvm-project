@@ -1,16 +1,15 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++98, c++03, c++11, c++14
-// UNSUPPORTED: libcpp-no-exceptions, libcpp-no-if-constexpr
+// UNSUPPORTED: windows
+// UNSUPPORTED: libcpp-no-if-constexpr
 // MODULES_DEFINES: _LIBCPP_DEBUG=1
-// MODULES_DEFINES: _LIBCPP_DEBUG_USE_EXCEPTIONS
 
 // Can't test the system lib because this test enables debug mode
 // UNSUPPORTED: with_system_cxx_lib
@@ -18,11 +17,13 @@
 // test container debugging
 
 #define _LIBCPP_DEBUG 1
-#define _LIBCPP_DEBUG_USE_EXCEPTIONS
+
 #include <forward_list>
 #include <list>
 #include <vector>
 #include <deque>
+#include "container_debug_tests.hpp"
+#include "test_macros.h"
 #include "debug_mode_helper.h"
 
 using namespace IteratorDebugChecks;
@@ -40,10 +41,10 @@ struct SequenceContainerChecks : BasicContainerChecks<Container, CT> {
 public:
   static void run() {
     Base::run();
-    try {
-      FrontOnEmptyContainer();
+    SanityTest();
+    FrontOnEmptyContainer();
 
-      if constexpr (CT != CT_ForwardList) {
+    if constexpr(CT != CT_ForwardList) {
         AssignInvalidates();
         BackOnEmptyContainer();
         InsertIterValue();
@@ -51,27 +52,32 @@ public:
         InsertIterIterIter();
         EmplaceIterValue();
         EraseIterIter();
-      } else {
-        SpliceFirstElemAfter();
       }
-      if constexpr (CT == CT_Vector || CT == CT_Deque || CT == CT_List) {
-        PopBack();
-      }
-      if constexpr (CT == CT_List || CT == CT_Deque) {
-        PopFront(); // FIXME: Run with forward list as well
-      }
-      if constexpr (CT == CT_List || CT == CT_ForwardList) {
-        RemoveFirstElem();
-      }
-      if constexpr (CT == CT_List) {
-        SpliceFirstElem();
-      }
-    } catch (...) {
-      assert(false && "uncaught debug exception");
+    else {
+      SpliceFirstElemAfter();
+    }
+    if constexpr (CT == CT_Vector || CT == CT_Deque || CT == CT_List) {
+      PopBack();
+    }
+    if constexpr (CT == CT_List || CT == CT_Deque) {
+      PopFront(); // FIXME: Run with forward list as well
+    }
+    if constexpr (CT == CT_List || CT == CT_ForwardList) {
+      RemoveFirstElem();
+    }
+    if constexpr (CT == CT_List) {
+      SpliceFirstElem();
+      SpliceSameContainer();
     }
   }
 
 private:
+  static void SanityTest() {
+    CHECKPOINT("sanity test");
+    Container C = {1, 1, 1, 1};
+    ::DoNotOptimize(&C);
+  }
+
   static void RemoveFirstElem() {
     // See llvm.org/PR35564
     CHECKPOINT("remove(<first-elem>)");
@@ -104,6 +110,11 @@ private:
     }
   }
 
+  static void SpliceSameContainer() {
+    CHECKPOINT("splice(<same-container>)");
+    Container C = {1, 1};
+    C.splice(C.end(), C, C.begin());
+  }
 
   static void SpliceFirstElemAfter() {
     // See llvm.org/PR35564
@@ -131,9 +142,9 @@ private:
       it3 = C.end();
     };
     auto check = [&]() {
-      CHECK_DEBUG_THROWS( C.erase(it1) );
-      CHECK_DEBUG_THROWS( C.erase(it2) );
-      CHECK_DEBUG_THROWS( C.erase(it3, C.end()) );
+      EXPECT_DEATH( C.erase(it1) );
+      EXPECT_DEATH( C.erase(it2) );
+      EXPECT_DEATH( C.erase(it3, C.end()) );
     };
     reset();
     C.assign(2, makeValueType(4));
@@ -160,8 +171,8 @@ private:
     (void)C.back();
     (void)CC.back();
     C.clear();
-    CHECK_DEBUG_THROWS( C.back() );
-    CHECK_DEBUG_THROWS( CC.back() );
+    EXPECT_DEATH( C.back() );
+    EXPECT_DEATH( CC.back() );
   }
 
   static void FrontOnEmptyContainer() {
@@ -171,8 +182,8 @@ private:
     (void)C.front();
     (void)CC.front();
     C.clear();
-    CHECK_DEBUG_THROWS( C.front() );
-    CHECK_DEBUG_THROWS( CC.front() );
+    EXPECT_DEATH( C.front() );
+    EXPECT_DEATH( CC.front() );
   }
 
   static void EraseIterIter() {
@@ -185,15 +196,15 @@ private:
     iterator it1_back = --C1.end();
     assert(it1_next != it1_back);
     if (CT == CT_Vector) {
-      CHECK_DEBUG_THROWS( C1.erase(it1_next, it1) ); // bad range
+      EXPECT_DEATH( C1.erase(it1_next, it1) ); // bad range
     }
     C1.erase(it1, it1_after_next);
-    CHECK_DEBUG_THROWS( C1.erase(it1) );
-    CHECK_DEBUG_THROWS( C1.erase(it1_next) );
+    EXPECT_DEATH( C1.erase(it1) );
+    EXPECT_DEATH( C1.erase(it1_next) );
     if (CT == CT_List) {
       C1.erase(it1_back);
     } else {
-      CHECK_DEBUG_THROWS( C1.erase(it1_back) );
+      EXPECT_DEATH( C1.erase(it1_back) );
     }
   }
 
@@ -203,10 +214,10 @@ private:
     iterator it1 = C1.end();
     --it1;
     C1.pop_back();
-    CHECK_DEBUG_THROWS( C1.erase(it1) );
+    EXPECT_DEATH( C1.erase(it1) );
     C1.erase(C1.begin());
     assert(C1.size() == 0);
-    CHECK_DEBUG_THROWS( C1.pop_back() );
+    EXPECT_DEATH( C1.pop_back() );
   }
 
   static void PopFront() {
@@ -214,10 +225,10 @@ private:
     Container C1 = makeContainer(2);
     iterator it1 = C1.begin();
     C1.pop_front();
-    CHECK_DEBUG_THROWS( C1.erase(it1) );
+    EXPECT_DEATH( C1.erase(it1) );
     C1.erase(C1.begin());
     assert(C1.size() == 0);
-    CHECK_DEBUG_THROWS( C1.pop_front() );
+    EXPECT_DEATH( C1.pop_front() );
   }
 
   static void InsertIterValue() {
@@ -229,8 +240,8 @@ private:
     Container C2 = C1;
     const value_type value = makeValueType(3);
     value_type rvalue = makeValueType(3);
-    CHECK_DEBUG_THROWS( C2.insert(it1, value) ); // wrong container
-    CHECK_DEBUG_THROWS( C2.insert(it1, std::move(rvalue)) ); // wrong container
+    EXPECT_DEATH( C2.insert(it1, value) ); // wrong container
+    EXPECT_DEATH( C2.insert(it1, std::move(rvalue)) ); // wrong container
     C1.insert(it1_next, value);
     if  (CT == CT_List) {
       C1.insert(it1_next, value);
@@ -238,10 +249,10 @@ private:
       C1.insert(it1_next, std::move(rvalue));
       C1.insert(it1, std::move(rvalue));
     } else {
-      CHECK_DEBUG_THROWS( C1.insert(it1_next, value) ); // invalidated iterator
-      CHECK_DEBUG_THROWS( C1.insert(it1, value) ); // invalidated iterator
-      CHECK_DEBUG_THROWS( C1.insert(it1_next, std::move(rvalue)) ); // invalidated iterator
-      CHECK_DEBUG_THROWS( C1.insert(it1, std::move(rvalue)) ); // invalidated iterator
+      EXPECT_DEATH( C1.insert(it1_next, value) ); // invalidated iterator
+      EXPECT_DEATH( C1.insert(it1, value) ); // invalidated iterator
+      EXPECT_DEATH( C1.insert(it1_next, std::move(rvalue)) ); // invalidated iterator
+      EXPECT_DEATH( C1.insert(it1, std::move(rvalue)) ); // invalidated iterator
     }
   }
 
@@ -253,15 +264,15 @@ private:
     ++it1_next;
     Container C2 = C1;
     const value_type value = makeValueType(3);
-    CHECK_DEBUG_THROWS( C2.emplace(it1, value) ); // wrong container
-    CHECK_DEBUG_THROWS( C2.emplace(it1, makeValueType(4)) ); // wrong container
+    EXPECT_DEATH( C2.emplace(it1, value) ); // wrong container
+    EXPECT_DEATH( C2.emplace(it1, makeValueType(4)) ); // wrong container
     C1.emplace(it1_next, value);
     if  (CT == CT_List) {
       C1.emplace(it1_next, value);
       C1.emplace(it1, value);
     } else {
-      CHECK_DEBUG_THROWS( C1.emplace(it1_next, value) ); // invalidated iterator
-      CHECK_DEBUG_THROWS( C1.emplace(it1, value) ); // invalidated iterator
+      EXPECT_DEATH( C1.emplace(it1_next, value) ); // invalidated iterator
+      EXPECT_DEATH( C1.emplace(it1, value) ); // invalidated iterator
     }
   }
 
@@ -273,14 +284,14 @@ private:
     ++it1_next;
     Container C2 = C1;
     const value_type value = makeValueType(3);
-    CHECK_DEBUG_THROWS( C2.insert(it1, 1, value) ); // wrong container
+    EXPECT_DEATH( C2.insert(it1, 1, value) ); // wrong container
     C1.insert(it1_next, 2, value);
     if  (CT == CT_List) {
       C1.insert(it1_next, 3, value);
       C1.insert(it1, 1, value);
     } else {
-      CHECK_DEBUG_THROWS( C1.insert(it1_next, 1, value) ); // invalidated iterator
-      CHECK_DEBUG_THROWS( C1.insert(it1, 1, value) ); // invalidated iterator
+      EXPECT_DEATH( C1.insert(it1_next, 1, value) ); // invalidated iterator
+      EXPECT_DEATH( C1.insert(it1, 1, value) ); // invalidated iterator
     }
   }
 
@@ -296,19 +307,19 @@ private:
         makeValueType(2),
         makeValueType(3)
     };
-    CHECK_DEBUG_THROWS( C2.insert(it1, V.begin(), V.end()) ); // wrong container
+    EXPECT_DEATH( C2.insert(it1, V.begin(), V.end()) ); // wrong container
     C1.insert(it1_next, V.begin(), V.end());
     if  (CT == CT_List) {
       C1.insert(it1_next, V.begin(), V.end());
       C1.insert(it1, V.begin(), V.end());
     } else {
-      CHECK_DEBUG_THROWS( C1.insert(it1_next, V.begin(), V.end()) ); // invalidated iterator
-      CHECK_DEBUG_THROWS( C1.insert(it1, V.begin(), V.end()) ); // invalidated iterator
+      EXPECT_DEATH( C1.insert(it1_next, V.begin(), V.end()) ); // invalidated iterator
+      EXPECT_DEATH( C1.insert(it1, V.begin(), V.end()) ); // invalidated iterator
     }
   }
 };
 
-int main()
+int main(int, char**)
 {
   using Alloc = test_allocator<int>;
   {
@@ -324,4 +335,6 @@ int main()
     SequenceContainerChecks<
         std::deque<int, Alloc>, CT_Deque>::run();
   }
+
+  return 0;
 }

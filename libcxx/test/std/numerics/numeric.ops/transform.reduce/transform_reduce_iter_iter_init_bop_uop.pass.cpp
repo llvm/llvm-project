@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -21,6 +20,7 @@
 #include <utility>
 #include <iterator>
 
+#include "test_macros.h"
 #include "MoveOnly.h"
 #include "test_iterators.h"
 
@@ -92,7 +92,7 @@ void test_move_only_types()
         [](const MoveOnly& target) { return MoveOnly{target.get() * 10}; }).get());
 }
 
-int main()
+int main(int, char**)
 {
     test_return_type<char, int>();
     test_return_type<int, int>();
@@ -118,4 +118,6 @@ int main()
     }
 
     test_move_only_types();
+
+  return 0;
 }

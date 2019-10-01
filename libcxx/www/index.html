@@ -26,8 +26,7 @@
     <a href="https://lists.llvm.org/mailman/listinfo/libcxx-dev">libcxx-dev</a>
     <a href="https://lists.llvm.org/mailman/listinfo/libcxx-commits">libcxx-commits</a>
     <a href="https://bugs.llvm.org/">Bug Reports</a>
-    <a href="https://llvm.org/svn/llvm-project/libcxx/trunk/">Browse SVN</a>
-    <a href="https://llvm.org/viewvc/llvm-project/libcxx/trunk/">Browse ViewVC</a>
+    <a href="https://github.com/llvm/llvm-project/tree/master/libcxx/">Browse Sources</a>
   </div>
 </div>
 
@@ -146,7 +145,7 @@
       and the current status of these features can be found <a href="ts1z_status.html">here</a>.</p>
    <p>As features get moved from the Technical Specifications into the main standard, we
       will (after a period for migration) remove them from the TS implementation. This
-      process is detailed <a href="TS_deprecation.html">here</a>.</p>
+      process is detailed <a href="DesignDocs/ExperimentalFeatures.html">here</a>.</p>
 
    <!--======================================================================-->
    <h2 id="buildbots">Build Bots</h2>
@@ -190,11 +189,6 @@
       <li>
         Building libc++ with <code>-fno-rtti</code> is not supported. However
         linking against it with <code>-fno-rtti</code> is supported.
-      </li>
-      <li>
-        On OS X v10.8 and older the CMake option
-        <code>-DLIBCXX_LIBCPPABI_VERSION=""</code> must be used during
-        configuration.
       </li>
     </ul>
   </p>

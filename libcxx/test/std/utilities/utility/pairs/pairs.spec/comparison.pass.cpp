@@ -23,7 +23,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::pair<int, short> P;
@@ -94,4 +94,6 @@ int main()
         static_assert( (p1 >= p2), "");
     }
 #endif
+
+  return 0;
 }

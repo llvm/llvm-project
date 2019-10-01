@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -22,6 +21,7 @@
 #include <iterator>
 #include <vector>
 
+#include "test_macros.h"
 #include "test_iterators.h"
 
 template <class Iter1, class Iter2>
@@ -91,7 +91,7 @@ void basic_tests()
     }
 }
 
-int main()
+int main(int, char**)
 {
     basic_tests();
 
@@ -102,4 +102,6 @@ int main()
     test<random_access_iterator<const int*> >();
     test<const int*>();
     test<      int*>();
+
+  return 0;
 }

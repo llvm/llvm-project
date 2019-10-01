@@ -1,13 +1,14 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
 // UNSUPPORTED: libcpp-has-no-threads
+
+// FLAKY_TEST.
 
 // <condition_variable>
 
@@ -22,6 +23,8 @@
 #include <thread>
 #include <chrono>
 #include <cassert>
+
+#include "test_macros.h"
 
 std::condition_variable_any cv;
 
@@ -61,7 +64,7 @@ void f()
     ++runs;
 }
 
-int main()
+int main(int, char**)
 {
     {
         L1 lk(m0);
@@ -87,4 +90,6 @@ int main()
         lk.unlock();
         t.join();
     }
+
+  return 0;
 }

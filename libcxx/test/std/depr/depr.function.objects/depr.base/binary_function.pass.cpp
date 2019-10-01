@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -22,9 +21,13 @@
 #include <functional>
 #include <type_traits>
 
-int main()
+#include "test_macros.h"
+
+int main(int, char**)
 {
     static_assert((std::is_same<std::binary_function<int, unsigned, char>::first_argument_type, int>::value), "");
     static_assert((std::is_same<std::binary_function<int, unsigned, char>::second_argument_type, unsigned>::value), "");
     static_assert((std::is_same<std::binary_function<int, unsigned, char>::result_type, char>::value), "");
+
+  return 0;
 }

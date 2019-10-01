@@ -1,10 +1,9 @@
 // -*- C++ -*-
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -26,6 +25,13 @@ _LIBCPP_PUSH_MACROS
 
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+
+#if defined(__GNUC__) && !defined(__clang__) // gcc.gnu.org/PR37804
+template <class, class, class, class> class _LIBCPP_TEMPLATE_VIS map;
+template <class, class, class, class> class _LIBCPP_TEMPLATE_VIS multimap;
+template <class, class, class> class _LIBCPP_TEMPLATE_VIS set;
+template <class, class, class> class _LIBCPP_TEMPLATE_VIS multiset;
+#endif
 
 template <class _Tp, class _Compare, class _Allocator> class __tree;
 template <class _Tp, class _NodePtr, class _DiffType>
@@ -965,7 +971,7 @@ private:
 template<class _Tp, class _Compare>
 #ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_DIAGNOSE_WARNING(!std::__invokable<_Compare const&, _Tp const&, _Tp const&>::value,
-        "the specified comparator type does not provide a const call operator")
+        "the specified comparator type does not provide a viable const call operator")
 #endif
 int __diagnose_non_const_comparator();
 
@@ -2408,7 +2414,7 @@ __tree<_Tp, _Compare, _Allocator>::__node_handle_insert_unique(
 
     __insert_node_at(__parent, __child,
                      static_cast<__node_base_pointer>(__ptr));
-    __nh.__release();
+    __nh.__release_ptr();
     return _InsertReturnType{iterator(__ptr), true, _NodeHandle()};
 }
 
@@ -2433,7 +2439,7 @@ __tree<_Tp, _Compare, _Allocator>::__node_handle_insert_unique(
         __insert_node_at(__parent, __child,
                          static_cast<__node_base_pointer>(__ptr));
         __r = __ptr;
-        __nh.__release();
+        __nh.__release_ptr();
     }
     return iterator(__r);
 }
@@ -2498,7 +2504,7 @@ __tree<_Tp, _Compare, _Allocator>::__node_handle_insert_multi(_NodeHandle&& __nh
     __node_base_pointer& __child = __find_leaf_high(
         __parent, _NodeTypes::__get_key(__ptr->__value_));
     __insert_node_at(__parent, __child, static_cast<__node_base_pointer>(__ptr));
-    __nh.__release();
+    __nh.__release_ptr();
     return iterator(__ptr);
 }
 
@@ -2517,7 +2523,7 @@ __tree<_Tp, _Compare, _Allocator>::__node_handle_insert_multi(
     __node_base_pointer& __child = __find_leaf(__hint, __parent,
                                                _NodeTypes::__get_key(__ptr->__value_));
     __insert_node_at(__parent, __child, static_cast<__node_base_pointer>(__ptr));
-    __nh.__release();
+    __nh.__release_ptr();
     return iterator(__ptr);
 }
 

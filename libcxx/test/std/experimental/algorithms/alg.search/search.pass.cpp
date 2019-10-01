@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -21,6 +20,7 @@
 #include <experimental/algorithm>
 #include <cassert>
 
+#include "test_macros.h"
 #include "test_iterators.h"
 
 int searcher_called = 0;
@@ -36,11 +36,13 @@ struct MySearcher {
 };
 
 
-int main() {
+int main(int, char**) {
     typedef int * RI;
     static_assert((std::is_same<RI, decltype(std::experimental::search(RI(), RI(), MySearcher()))>::value), "" );
 
     RI it(nullptr);
     assert(it == std::experimental::search(it, it, MySearcher()));
     assert(searcher_called == 1);
+
+  return 0;
 }

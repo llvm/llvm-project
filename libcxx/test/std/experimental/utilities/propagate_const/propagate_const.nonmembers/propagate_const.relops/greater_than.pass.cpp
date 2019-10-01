@@ -1,9 +1,8 @@
 //>=---------------------------------------------------------------------->=//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //>=---------------------------------------------------------------------->=//
 
@@ -16,6 +15,7 @@
 // template <class T> constexpr bool operator>(const propagate_const<T>& x, const T& y);
 
 #include <experimental/propagate_const>
+#include "test_macros.h"
 #include "propagate_const_helpers.h"
 #include <cassert>
 
@@ -25,7 +25,7 @@ constexpr bool operator>(const X &lhs, const X &rhs) {
   return lhs.i_ > rhs.i_;
 }
 
-int main() {
+int main(int, char**) {
   constexpr X x1_1(1);
   constexpr X x2_1(1);
   constexpr X x3_2(2);
@@ -47,4 +47,6 @@ int main() {
 
   static_assert(!(x1_1 > p2_1), "");
   static_assert(x3_2 > p1_1, "");
+
+  return 0;
 }

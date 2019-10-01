@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -12,7 +11,7 @@
 // template <class... Types> class tuple;
 
 // template <class... Types>
-//   class tuple_size<tuple<Types...>>
+//   struct tuple_size<tuple<Types...>>
 //     : public integral_constant<size_t, sizeof...(Types)> { };
 
 // XFAIL: gcc-4.9
@@ -21,6 +20,8 @@
 #include <tuple>
 #include <array>
 #include <type_traits>
+
+#include "test_macros.h"
 
 template <class T, size_t Size = sizeof(std::tuple_size<T>)>
 constexpr bool is_complete(int) { static_assert(Size > 0, ""); return true; }
@@ -31,7 +32,7 @@ struct Dummy1 {};
 struct Dummy2 {};
 
 namespace std {
-template <> class tuple_size<Dummy1> : public integral_constant<size_t, 0> {};
+template <> struct tuple_size<Dummy1> : public integral_constant<size_t, 0> {};
 }
 
 template <class T>
@@ -51,7 +52,7 @@ void test_incomplete() {
 }
 
 
-int main()
+int main(int, char**)
 {
   test_complete<std::tuple<> >();
   test_complete<std::tuple<int&> >();
@@ -64,4 +65,6 @@ int main()
   test_incomplete<int>();
   test_incomplete<std::tuple<int>&>();
   test_incomplete<Dummy2>();
+
+  return 0;
 }

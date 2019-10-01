@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -38,7 +37,7 @@ void test_return_type() {
 #endif
 }
 
-int main()
+int main(int, char**)
 {
     test_return_type<std::queue<int> > ();
     test_return_type<std::queue<int, std::list<int> > > ();
@@ -62,4 +61,6 @@ int main()
     assert(q.size() == 3);
     assert(q.front() == Emplaceable(1, 2.5));
     assert(q.back() == Emplaceable(3, 4.5));
+
+  return 0;
 }

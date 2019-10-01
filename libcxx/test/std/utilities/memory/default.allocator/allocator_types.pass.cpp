@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -34,7 +33,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     static_assert((std::is_same<std::allocator<char>::size_type, std::size_t>::value), "");
     static_assert((std::is_same<std::allocator<char>::difference_type, std::ptrdiff_t>::value), "");
@@ -54,4 +53,6 @@ int main()
     a2 = a;
     std::allocator<int> a3 = a2;
     ((void)a3);
+
+  return 0;
 }

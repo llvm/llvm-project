@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -16,6 +15,7 @@
 #include <iterator>
 #include <cstddef>
 
+#include "test_macros.h"
 #include "min_allocator.h"
 
 typedef int T;
@@ -39,7 +39,7 @@ testd(const C& c, int p, int l)
     assert(distance(c.begin(), c.end()) == size_t1 + l);
 }
 
-int main()
+int main(int, char**)
 {
     {
     // splicing different containers
@@ -73,4 +73,6 @@ int main()
     }
     }
 #endif
+
+  return 0;
 }

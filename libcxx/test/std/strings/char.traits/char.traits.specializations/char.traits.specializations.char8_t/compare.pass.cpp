@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 // UNSUPPORTED: c++98, c++03, c++11, c++14, c++17
@@ -28,7 +27,7 @@ constexpr bool test_constexpr()
 }
 
 
-int main()
+int main(int, char**)
 {
     assert(std::char_traits<char8_t>::compare(u8"", u8"", 0) == 0);
     assert(std::char_traits<char8_t>::compare(NULL, NULL, 0) == 0);
@@ -52,7 +51,10 @@ int main()
     assert(std::char_traits<char8_t>::compare(u8"124", u8"123", 3) > 0);
 
     static_assert(test_constexpr(), "" );
+    return 0;
 }
 #else
-int main () {}
+int main(int, char**) {
+  return 0;
+}
 #endif

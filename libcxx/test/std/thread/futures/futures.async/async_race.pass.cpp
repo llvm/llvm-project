@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -28,6 +27,8 @@
 #include <thread>
 #include <memory>
 #include <cassert>
+
+#include "test_macros.h"
 
 int f_async() {
     typedef std::chrono::milliseconds ms;
@@ -63,6 +64,8 @@ void test_each() {
     }
 }
 
-int main() {
+int main(int, char**) {
     for (int i=0; i < 25; ++i) test_each();
+
+  return 0;
 }

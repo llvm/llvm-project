@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -61,7 +60,7 @@ class CannotInstantiate {
   enum { X = T::ThisExpressionWillBlowUp };
 };
 
-int main()
+int main(int, char**)
 {
     // void
     test_is_convertible<void,void> ();
@@ -260,4 +259,6 @@ int main()
     // Ensure that CannotInstantiate is not instantiated by is_convertible when it is not needed.
     // For example CannotInstantiate is instatiated as a part of ADL lookup for arguments of type CannotInstantiate*.
     static_assert((std::is_convertible<CannotInstantiate<int>*, CannotInstantiate<int>*>::value), "");
+
+  return 0;
 }

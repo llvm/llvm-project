@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -13,6 +12,8 @@
 
 #include <istream>
 #include <cassert>
+
+#include "test_macros.h"
 
 template <class CharT>
 struct testbuf
@@ -38,7 +39,7 @@ public:
     CharT* egptr() const {return base::egptr();}
 };
 
-int main()
+int main(int, char**)
 {
     {
         testbuf<char> sb(" 123456789");
@@ -86,4 +87,38 @@ int main()
         assert(is.bad());
         assert(is.gcount() == 0);
     }
+#ifndef TEST_HAS_NO_EXCEPTIONS
+    {
+        testbuf<char> sb;
+        std::basic_istream<char> is(&sb);
+        is.exceptions(std::ios_base::badbit);
+        bool threw = false;
+        try {
+            is.putback('x');
+        } catch (std::ios_base::failure&) {
+            threw = true;
+        }
+        assert(threw);
+        assert( is.bad());
+        assert(!is.eof());
+        assert( is.fail());
+    }
+    {
+        testbuf<wchar_t> sb;
+        std::basic_istream<wchar_t> is(&sb);
+        is.exceptions(std::ios_base::badbit);
+        bool threw = false;
+        try {
+            is.putback(L'x');
+        } catch (std::ios_base::failure&) {
+            threw = true;
+        }
+        assert(threw);
+        assert( is.bad());
+        assert(!is.eof());
+        assert( is.fail());
+    }
+#endif
+
+    return 0;
 }

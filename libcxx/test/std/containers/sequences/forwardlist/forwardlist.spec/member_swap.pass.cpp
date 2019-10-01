@@ -14,10 +14,11 @@
 #include <forward_list>
 #include <cassert>
 
+#include "test_macros.h"
 #include "test_allocator.h"
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef int T;
@@ -256,4 +257,6 @@ int main()
         assert(c2.get_allocator() == A());
     }
 #endif
+
+  return 0;
 }

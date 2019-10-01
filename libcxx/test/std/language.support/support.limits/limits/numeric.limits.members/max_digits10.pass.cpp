@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -26,7 +25,7 @@ test()
     static_assert(std::numeric_limits<const volatile T>::max_digits10 == expected, "max_digits10 test 4");
 }
 
-int main()
+int main(int, char**)
 {
     test<bool, 0>();
     test<char, 0>();
@@ -55,4 +54,6 @@ int main()
     test<float, 2+(FLT_MANT_DIG * 30103)/100000>();
     test<double, 2+(DBL_MANT_DIG * 30103)/100000>();
     test<long double, 2+(LDBL_MANT_DIG * 30103)/100000>();
+
+  return 0;
 }

@@ -1,17 +1,16 @@
 // -*- C++ -*-
 //===------------------------------ span ---------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===---------------------------------------------------------------------===//
 // UNSUPPORTED: c++98, c++03, c++11, c++14, c++17
 
 // <span>
 
-// template<class OtherElementType, ptrdiff_t OtherExtent>
+// template<class OtherElementType, size_t OtherExtent>
 //    constexpr span(const span<OtherElementType, OtherExtent>& s) noexcept;
 //
 //  Remarks: This constructor shall not participate in overload resolution unless:
@@ -90,7 +89,7 @@ void checkCV ()
     }
 }
 
-int main ()
+int main(int, char**)
 {
     std::span<int>      sp;
     std::span<int, 0>   sp0;
@@ -101,4 +100,6 @@ int main ()
     std::span<float, 0> s4{sp0};    // expected-error {{no matching constructor for initialization of 'std::span<float, 0>'}}
 
     checkCV();
+
+  return 0;
 }

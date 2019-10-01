@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -19,9 +18,11 @@
 
 namespace ex = std::experimental::pmr;
 
-int main() {
+int main(int, char**) {
     ex::memory_resource *m = ex::new_delete_resource();
     m->do_allocate(0, 0); // expected-error{{'do_allocate' is a protected member}}
     m->do_deallocate(nullptr, 0, 0); // expected-error{{'do_deallocate' is a protected member}}
     m->do_is_equal(*m); // expected-error{{'do_is_equal' is a protected member}}
+
+  return 0;
 }

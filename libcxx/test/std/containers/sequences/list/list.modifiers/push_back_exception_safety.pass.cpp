@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -14,6 +13,8 @@
 
 #include <list>
 #include <cassert>
+
+#include "test_macros.h"
 
 // Flag that makes the copy constructor for CMyClass throw an exception
 static bool gCopyConstructorShouldThow = false;
@@ -58,7 +59,7 @@ CMyClass::~CMyClass() {
     assert(fMagicValue == kFinishedConstructionMagicValue);
 }
 
-int main()
+int main(int, char**)
 {
     CMyClass instance;
     std::list<CMyClass> vec;
@@ -71,4 +72,6 @@ int main()
     }
     catch (...) {
     }
+
+  return 0;
 }

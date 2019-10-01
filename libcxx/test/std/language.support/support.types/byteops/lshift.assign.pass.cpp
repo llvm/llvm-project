@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -23,7 +22,7 @@ constexpr std::byte test(std::byte b) {
     }
 
 
-int main () {
+int main(int, char**) {
     std::byte b;  // not constexpr, just used in noexcept check
     constexpr std::byte b2{static_cast<std::byte>(2)};
     constexpr std::byte b3{static_cast<std::byte>(3)};
@@ -33,4 +32,6 @@ int main () {
     static_assert(std::to_integer<int>(test(b2)) ==  8, "" );
     static_assert(std::to_integer<int>(test(b3)) == 12, "" );
 
+
+  return 0;
 }

@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -12,7 +11,7 @@
 // template <class... Types> class tuple;
 
 // template <class... Types>
-//   class tuple_size<tuple<Types...>>
+//   struct tuple_size<tuple<Types...>>
 //     : public integral_constant<size_t, sizeof...(Types)> { };
 
 // UNSUPPORTED: c++98, c++03, c++11, c++14
@@ -22,6 +21,8 @@
 #include <array>
 #include <type_traits>
 #include <cassert>
+
+#include "test_macros.h"
 
 struct S { int x; };
 
@@ -117,8 +118,7 @@ template <size_t N>
 int get(Test const&) { static_assert(N == 0, ""); return -1; }
 
 template <>
-class std::tuple_element<0, Test> {
-public:
+struct std::tuple_element<0, Test> {
   typedef int type;
 };
 
@@ -129,7 +129,7 @@ void test_before_tuple_size_specialization() {
 }
 
 template <>
-class std::tuple_size<Test> {
+struct std::tuple_size<Test> {
 public:
   static const size_t value = 1;
 };
@@ -140,11 +140,13 @@ void test_after_tuple_size_specialization() {
   assert(p == -1);
 }
 
-int main() {
+int main(int, char**) {
   test_decomp_user_type();
   test_decomp_tuple();
   test_decomp_pair();
   test_decomp_array();
   test_before_tuple_size_specialization();
   test_after_tuple_size_specialization();
+
+  return 0;
 }

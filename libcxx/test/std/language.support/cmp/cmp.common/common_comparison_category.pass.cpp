@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -34,7 +33,7 @@ void test_cat() {
 
 // [class.spaceship]p4: The 'common comparison type' U of a possibly-empty list
 //   of 'n' types T0, T1, ..., TN, is defined as follows:
-int main() {
+int main(int, char**) {
   using WE = std::weak_equality;
   using SE = std::strong_equality;
   using PO = std::partial_ordering;
@@ -90,4 +89,6 @@ int main() {
     test_cat<SO, SO>();
     test_cat<SO, SO, SO>();
   }
+
+  return 0;
 }

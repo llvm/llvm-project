@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -20,6 +19,8 @@
 #include <string>
 #include <cassert>
 
+#include "test_macros.h"
+
 struct B
 {
     int id_;
@@ -33,7 +34,7 @@ struct D
     explicit D(int i = 0) : B(i) {}
 };
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::tuple<long> T0;
@@ -86,4 +87,6 @@ int main()
         assert(std::get<0>(t) == 43);
         assert(&std::get<0>(t) == &x);
     }
+
+  return 0;
 }

@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -13,13 +12,15 @@
 
 #include <limits>
 
+#include "test_macros.h"
+
 typedef char one;
 struct two {one _[2];};
 
 one test(std::float_round_style);
 two test(int);
 
-int main()
+int main(int, char**)
 {
     static_assert(std::round_indeterminate == -1,
                  "std::round_indeterminate == -1");
@@ -35,4 +36,6 @@ int main()
                  "sizeof(test(std::round_to_nearest)) == 1");
     static_assert(sizeof(test(1)) == 2,
                  "sizeof(test(1)) == 2");
+
+  return 0;
 }

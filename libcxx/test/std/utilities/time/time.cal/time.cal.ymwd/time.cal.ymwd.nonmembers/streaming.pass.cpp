@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 // UNSUPPORTED: c++98, c++03, c++11, c++14, c++17
@@ -46,7 +45,7 @@
 #include <iostream>
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     using year_month_weekday = std::chrono::year_month_weekday;
     using year                = std::chrono::year;
@@ -54,4 +53,6 @@ int main()
     using weekday             = std::chrono::weekday;
 
     std::cout << year_month_weekday{year{2018}, month{3}, weekday{4}};
+
+  return 0;
 }

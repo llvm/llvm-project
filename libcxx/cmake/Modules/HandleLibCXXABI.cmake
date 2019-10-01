@@ -8,7 +8,8 @@
 #
 # Parameters:
 #   abidefines: A list of defines needed to compile libc++ with the ABI library
-#   abilib    : The ABI library to link against.
+#   abishared : The shared ABI library to link against.
+#   abistatic : The static ABI library to link against.
 #   abifiles  : A list of files (which may be relative paths) to copy into the
 #               libc++ build tree for the build.  These files will be copied
 #               twice: once into include/, so the libc++ build itself can find
@@ -19,7 +20,7 @@
 #               in the libc++ build directory.
 #
 
-macro(setup_abi_lib abidefines abilib abifiles abidirs)
+macro(setup_abi_lib abidefines abishared abistatic abifiles abidirs)
   list(APPEND LIBCXX_COMPILE_FLAGS ${abidefines})
   set(LIBCXX_CXX_ABI_INCLUDE_PATHS "${LIBCXX_CXX_ABI_INCLUDE_PATHS}"
     CACHE PATH
@@ -29,7 +30,8 @@ macro(setup_abi_lib abidefines abilib abifiles abidirs)
     CACHE PATH
     "Paths to C++ ABI library directory"
     )
-  set(LIBCXX_CXX_ABI_LIBRARY ${abilib})
+  set(LIBCXX_CXX_SHARED_ABI_LIBRARY ${abishared})
+  set(LIBCXX_CXX_STATIC_ABI_LIBRARY ${abistatic})
   set(LIBCXX_ABILIB_FILES ${abifiles})
 
   foreach(fpath ${LIBCXX_ABILIB_FILES})
@@ -93,29 +95,30 @@ if ("${LIBCXX_CXX_ABI_LIBNAME}" STREQUAL "libstdc++" OR
   endif()
   setup_abi_lib(
     "-D__GLIBCXX__ ${_LIBSUPCXX_DEFINES}"
-    "${_LIBSUPCXX_LIBNAME}" "${_LIBSUPCXX_INCLUDE_FILES}" "bits"
+    "${_LIBSUPCXX_LIBNAME}" "${_LIBSUPCXX_LIBNAME}" "${_LIBSUPCXX_INCLUDE_FILES}" "bits"
     )
 elseif ("${LIBCXX_CXX_ABI_LIBNAME}" STREQUAL "libcxxabi")
   if (LIBCXX_CXX_ABI_INTREE)
     # Link against just-built "cxxabi" target.
-    if (LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY)
-      set(CXXABI_LIBNAME cxxabi_static)
-    else()
-      set(CXXABI_LIBNAME cxxabi_shared)
-    endif()
-    set(LIBCXX_LIBCPPABI_VERSION "2" PARENT_SCOPE)
+    set(CXXABI_SHARED_LIBNAME cxxabi_shared)
+    set(CXXABI_STATIC_LIBNAME cxxabi_static)
   else()
     # Assume c++abi is installed in the system, rely on -lc++abi link flag.
-    set(CXXABI_LIBNAME "c++abi")
+    set(CXXABI_SHARED_LIBNAME "c++abi")
+    set(CXXABI_STATIC_LIBNAME "c++abi")
   endif()
-  set(HEADERS "cxxabi.h;__cxxabi_config.h")
   if (LIBCXX_CXX_ABI_SYSTEM)
     set(HEADERS "")
+  else()
+    set(HEADERS "cxxabi.h;__cxxabi_config.h")
   endif()
-  setup_abi_lib("-DLIBCXX_BUILDING_LIBCXXABI" ${CXXABI_LIBNAME} "${HEADERS}" "")
+  setup_abi_lib(
+    "-DLIBCXX_BUILDING_LIBCXXABI"
+    "${CXXABI_SHARED_LIBNAME}" "${CXXABI_STATIC_LIBNAME}" "${HEADERS}" "")
 elseif ("${LIBCXX_CXX_ABI_LIBNAME}" STREQUAL "libcxxrt")
-  setup_abi_lib("-DLIBCXXRT"
-    "cxxrt" "cxxabi.h;unwind.h;unwind-arm.h;unwind-itanium.h" ""
+  setup_abi_lib(
+    "-DLIBCXXRT"
+    "cxxrt" "cxxrt" "cxxabi.h;unwind.h;unwind-arm.h;unwind-itanium.h" ""
     )
 elseif ("${LIBCXX_CXX_ABI_LIBNAME}" STREQUAL "vcruntime")
  # Nothing TODO

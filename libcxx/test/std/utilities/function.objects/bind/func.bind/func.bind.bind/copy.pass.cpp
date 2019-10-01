@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -22,16 +21,20 @@
 #include <cmath>
 #include <cassert>
 
+#include "test_macros.h"
+
 float _pow(float a, float b)
 {
     return std::pow(a, b);
 }
 
-int main()
+int main(int, char**)
 {
     std::function<float(float, float)> fnc = _pow;
     auto task = std::bind(fnc, 2.f, 4.f);
     auto task2(task);
     assert(task() == 16);
     assert(task2() == 16);
+
+  return 0;
 }

@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -148,7 +147,7 @@ static constexpr bool clang_disallows_valid_static_cast_bug =
 #endif
 
 
-int main()
+int main(int, char**)
 {
     typedef Base B;
     typedef Derived D;
@@ -302,4 +301,6 @@ int main()
     test_is_not_constructible<void() &&> ();
 #endif
 #endif // TEST_STD_VER >= 11
+
+  return 0;
 }

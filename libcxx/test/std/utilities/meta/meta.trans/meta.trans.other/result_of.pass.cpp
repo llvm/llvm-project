@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -53,7 +52,7 @@ struct test_invoke_result<Fn(Args...), Ret>
     {
         static_assert(std::is_invocable<Fn, Args...>::value, "");
         static_assert(std::is_invocable_r<Ret, Fn, Args...>::value, "");
-        static_assert((std::is_same<typename std::invoke_result<Fn, Args...>::type, Ret>::value), "");
+        ASSERT_SAME_TYPE(Ret, typename std::invoke_result<Fn, Args...>::type);
     }
 };
 #endif
@@ -61,7 +60,7 @@ struct test_invoke_result<Fn(Args...), Ret>
 template <class T, class U>
 void test_result_of()
 {
-    static_assert((std::is_same<typename std::result_of<T>::type, U>::value), "");
+    ASSERT_SAME_TYPE(U, typename std::result_of<T>::type);
 #if TEST_STD_VER > 14
     test_invoke_result<T, U>::call();
 #endif
@@ -93,7 +92,7 @@ void test_no_result()
 #endif
 }
 
-int main()
+int main(int, char**)
 {
     typedef NotDerived ND;
     { // functor object
@@ -367,4 +366,6 @@ int main()
 #endif
     test_no_result<PMD(ND&)>();
     }
+
+  return 0;
 }

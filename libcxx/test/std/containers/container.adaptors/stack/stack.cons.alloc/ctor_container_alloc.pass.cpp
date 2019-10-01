@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -45,7 +44,7 @@ struct test
     test_allocator<int> get_allocator() {return c.get_allocator();}
 };
 
-int main()
+int main(int, char**)
 {
     C d = make<C>(5);
     test q(d, test_allocator<int>(4));
@@ -56,4 +55,6 @@ int main()
         assert(q.top() == d[d.size() - i - 1]);
         q.pop();
     }
+
+  return 0;
 }

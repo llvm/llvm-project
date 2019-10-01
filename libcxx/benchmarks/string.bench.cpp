@@ -73,18 +73,23 @@ struct AllDiffTypes : EnumValuesAsTuple<AllDiffTypes, DiffType, 4> {
                                           "ChangeMiddle", "ChangeLast"};
 };
 
+static constexpr char SmallStringLiteral[] = "012345678";
+
 TEST_ALWAYS_INLINE const char* getSmallString(DiffType D) {
   switch (D) {
     case DiffType::Control:
-      return "0123456";
+      return SmallStringLiteral;
     case DiffType::ChangeFirst:
-      return "-123456";
+      return "-12345678";
     case DiffType::ChangeMiddle:
-      return "012-456";
+      return "0123-5678";
     case DiffType::ChangeLast:
-      return "012345-";
+      return "01234567-";
   }
 }
+
+static constexpr char LargeStringLiteral[] =
+    "012345678901234567890123456789012345678901234567890123456789012";
 
 TEST_ALWAYS_INLINE const char* getLargeString(DiffType D) {
 #define LARGE_STRING_FIRST "123456789012345678901234567890"
@@ -261,6 +266,47 @@ struct StringRelational {
   }
 };
 
+template <class Rel, class LHLength, class RHLength, class DiffType>
+struct StringRelationalLiteral {
+  static void run(benchmark::State& state) {
+    auto Lhs = makeString(LHLength(), DiffType());
+    for (auto _ : state) {
+      benchmark::DoNotOptimize(Lhs);
+      constexpr const char* Literal = RHLength::value == Length::Empty
+                                          ? ""
+                                          : RHLength::value == Length::Small
+                                                ? SmallStringLiteral
+                                                : LargeStringLiteral;
+      switch (Rel()) {
+      case Relation::Eq:
+        benchmark::DoNotOptimize(Lhs == Literal);
+        break;
+      case Relation::Less:
+        benchmark::DoNotOptimize(Lhs < Literal);
+        break;
+      case Relation::Compare:
+        benchmark::DoNotOptimize(Lhs.compare(Literal));
+        break;
+      }
+    }
+  }
+
+  static bool skip() {
+    // Doesn't matter how they differ if they have different size.
+    if (LHLength() != RHLength() && DiffType() != ::DiffType::Control)
+      return true;
+    // We don't need huge. Doensn't give anything different than Large.
+    if (LHLength() == Length::Huge || RHLength() == Length::Huge)
+      return true;
+    return false;
+  }
+
+  static std::string name() {
+    return "BM_StringRelationalLiteral" + Rel::name() + LHLength::name() +
+           RHLength::name() + DiffType::name();
+  }
+};
+
 enum class Depth { Shallow, Deep };
 struct AllDepths : EnumValuesAsTuple<AllDepths, Depth, 2> {
   static constexpr const char* Names[] = {"Shallow", "Deep"};
@@ -355,6 +401,22 @@ void sanityCheckGeneratedStrings() {
   }
 }
 
+// Some small codegen thunks to easily see generated code.
+bool StringEqString(const std::string& a, const std::string& b) {
+  return a == b;
+}
+bool StringEqCStr(const std::string& a, const char* b) { return a == b; }
+bool CStrEqString(const char* a, const std::string& b) { return a == b; }
+bool StringEqCStrLiteralEmpty(const std::string& a) {
+  return a == "";
+}
+bool StringEqCStrLiteralSmall(const std::string& a) {
+  return a == SmallStringLiteral;
+}
+bool StringEqCStrLiteralLarge(const std::string& a) {
+  return a == LargeStringLiteral;
+}
+
 int main(int argc, char** argv) {
   benchmark::Initialize(&argc, argv);
   if (benchmark::ReportUnrecognizedArguments(argc, argv))
@@ -369,7 +431,17 @@ int main(int argc, char** argv) {
   makeCartesianProductBenchmark<StringDestroy, AllLengths>();
   makeCartesianProductBenchmark<StringRelational, AllRelations, AllLengths,
                                 AllLengths, AllDiffTypes>();
+  makeCartesianProductBenchmark<StringRelationalLiteral, AllRelations,
+                                AllLengths, AllLengths, AllDiffTypes>();
   makeCartesianProductBenchmark<StringRead, AllTemperatures, AllDepths,
                                 AllLengths>();
   benchmark::RunSpecifiedBenchmarks();
+
+  if (argc < 0) {
+    // ODR-use the functions to force them being generated in the binary.
+    auto functions = std::make_tuple(
+        StringEqString, StringEqCStr, CStrEqString, StringEqCStrLiteralEmpty,
+        StringEqCStrLiteralSmall, StringEqCStrLiteralLarge);
+    printf("%p", &functions);
+  }
 }

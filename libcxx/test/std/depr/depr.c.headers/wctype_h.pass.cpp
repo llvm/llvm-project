@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -11,6 +10,8 @@
 
 #include <wctype.h>
 #include <type_traits>
+
+#include "test_macros.h"
 
 #ifndef WEOF
 #error WEOF not defined
@@ -88,7 +89,7 @@
 #error wctrans defined
 #endif
 
-int main()
+int main(int, char**)
 {
     wint_t w = 0;
     wctrans_t wctr = 0;
@@ -111,4 +112,6 @@ int main()
     static_assert((std::is_same<decltype(towupper(w)), wint_t>::value), "");
     static_assert((std::is_same<decltype(towctrans(w, wctr)), wint_t>::value), "");
     static_assert((std::is_same<decltype(wctrans("")), wctrans_t>::value), "");
+
+  return 0;
 }
