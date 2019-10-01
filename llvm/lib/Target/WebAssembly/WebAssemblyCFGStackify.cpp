@@ -694,8 +694,26 @@ void WebAssemblyCFGStackify::removeUnnecessaryInstrs(MachineFunction &MF) {
   }
 }
 
+// When MBB is split into MBB and Split, we should unstackify defs in MBB that
+// have their uses in Split.
+static void unstackifyVRegsUsedInSplitBB(MachineBasicBlock &MBB,
+                                         MachineBasicBlock &Split,
+                                         WebAssemblyFunctionInfo &MFI,
+                                         MachineRegisterInfo &MRI) {
+  for (auto &MI : Split) {
+    for (auto &MO : MI.explicit_uses()) {
+      if (!MO.isReg() || Register::isPhysicalRegister(MO.getReg()))
+        continue;
+      if (MachineInstr *Def = MRI.getUniqueVRegDef(MO.getReg()))
+        if (Def->getParent() == &MBB)
+          MFI.unstackifyVReg(MO.getReg());
+    }
+  }
+}
+
 bool WebAssemblyCFGStackify::fixUnwindMismatches(MachineFunction &MF) {
   const auto &TII = *MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
+  auto &MFI = *MF.getInfo<WebAssemblyFunctionInfo>();
   MachineRegisterInfo &MRI = MF.getRegInfo();
 
   // Linearizing the control flow by placing TRY / END_TRY markers can create
@@ -1007,6 +1025,7 @@ bool WebAssemblyCFGStackify::fixUnwindMismatches(MachineFunction &MF) {
     BrDest->insert(BrDest->end(), EndTry->removeFromParent());
     // Take out the handler body from EH pad to the new branch destination BB.
     BrDest->splice(BrDest->end(), EHPad, SplitPos, EHPad->end());
+    unstackifyVRegsUsedInSplitBB(*EHPad, *BrDest, MFI, MRI);
     // Fix predecessor-successor relationship.
     BrDest->transferSuccessors(EHPad);
     EHPad->addSuccessor(BrDest);
@@ -1122,6 +1141,7 @@ bool WebAssemblyCFGStackify::fixUnwindMismatches(MachineFunction &MF) {
       // new nested continuation BB.
       NestedCont->splice(NestedCont->end(), MBB,
                          std::next(RangeEnd->getIterator()), MBB->end());
+      unstackifyVRegsUsedInSplitBB(*MBB, *NestedCont, MFI, MRI);
       registerTryScope(NestedTry, NestedEndTry, NestedEHPad);
 
       // Fix predecessor-successor relationship.

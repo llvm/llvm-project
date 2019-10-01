@@ -188,7 +188,7 @@ public:
   virtual uint32_t FindFunctions(const RegularExpression &regex,
                                  bool include_inlines, bool append,
                                  SymbolContextList &sc_list);
-  virtual uint32_t
+  virtual void
   FindTypes(ConstString name, const CompilerDeclContext *parent_decl_ctx,
             uint32_t max_matches,
             llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
@@ -196,16 +196,16 @@ public:
 
   /// Find types specified by a CompilerContextPattern.
   /// \param languages    Only return results in these languages.
-  virtual size_t FindTypes(llvm::ArrayRef<CompilerContext> pattern,
+  virtual void FindTypes(llvm::ArrayRef<CompilerContext> pattern,
                            LanguageSet languages, TypeMap &types);
 
   virtual void
   GetMangledNamesForFunction(const std::string &scope_qualified_name,
                              std::vector<ConstString> &mangled_names);
 
-  virtual size_t GetTypes(lldb_private::SymbolContextScope *sc_scope,
-                          lldb::TypeClass type_mask,
-                          lldb_private::TypeList &type_list) = 0;
+  virtual void GetTypes(lldb_private::SymbolContextScope *sc_scope,
+                        lldb::TypeClass type_mask,
+                        lldb_private::TypeList &type_list) = 0;
 
   virtual void PreloadSymbols();
 

@@ -23,7 +23,6 @@
 #include "sanitizer_flags.h"
 #include "sanitizer_freebsd.h"
 #include "sanitizer_getauxval.h"
-#include "sanitizer_glibc_version.h"
 #include "sanitizer_linux.h"
 #include "sanitizer_placement_new.h"
 #include "sanitizer_procmaps.h"
@@ -189,7 +188,11 @@ __attribute__((unused)) static bool GetLibcVersion(int *major, int *minor,
 static uptr g_tls_size;
 
 #ifdef __i386__
-# define CHECK_GET_TLS_STATIC_INFO_VERSION (!__GLIBC_PREREQ(2, 27))
+# ifndef __GLIBC_PREREQ
+#  define CHECK_GET_TLS_STATIC_INFO_VERSION 1
+# else
+#  define CHECK_GET_TLS_STATIC_INFO_VERSION (!__GLIBC_PREREQ(2, 27))
+# endif
 #else
 # define CHECK_GET_TLS_STATIC_INFO_VERSION 0
 #endif

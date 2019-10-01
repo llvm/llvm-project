@@ -84,9 +84,9 @@ void ClangASTSource::InstallASTContext(clang::ASTContext &ast_context,
                      &type_system_or_err.get())) {
         lldbassert(module_ast_ctx->getASTContext());
         lldbassert(module_ast_ctx->getFileManager());
-        sources.push_back({*module_ast_ctx->getASTContext(),
-                           *module_ast_ctx->getFileManager(),
-                           module_ast_ctx->GetOriginMap()});
+        sources.emplace_back(*module_ast_ctx->getASTContext(),
+                             *module_ast_ctx->getFileManager(),
+                             module_ast_ctx->GetOriginMap());
       }
     }
 

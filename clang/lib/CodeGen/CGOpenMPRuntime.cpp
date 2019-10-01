@@ -7249,9 +7249,11 @@ private:
                             OAE->getBase()->IgnoreParenImpCasts())
                             .getCanonicalType();
 
-      // If there is no length associated with the expression, that means we
-      // are using the whole length of the base.
-      if (!OAE->getLength() && OAE->getColonLoc().isValid())
+      // If there is no length associated with the expression and lower bound is
+      // not specified too, that means we are using the whole length of the
+      // base.
+      if (!OAE->getLength() && OAE->getColonLoc().isValid() &&
+          !OAE->getLowerBound())
         return CGF.getTypeSize(BaseTy);
 
       llvm::Value *ElemSize;
@@ -7265,13 +7267,30 @@ private:
 
       // If we don't have a length at this point, that is because we have an
       // array section with a single element.
-      if (!OAE->getLength())
+      if (!OAE->getLength() && OAE->getColonLoc().isInvalid())
         return ElemSize;
 
-      llvm::Value *LengthVal = CGF.EmitScalarExpr(OAE->getLength());
-      LengthVal =
-          CGF.Builder.CreateIntCast(LengthVal, CGF.SizeTy, /*isSigned=*/false);
-      return CGF.Builder.CreateNUWMul(LengthVal, ElemSize);
+      if (const Expr *LenExpr = OAE->getLength()) {
+        llvm::Value *LengthVal = CGF.EmitScalarExpr(OAE->getLength());
+        LengthVal = CGF.EmitScalarConversion(
+            LengthVal, OAE->getLength()->getType(),
+            CGF.getContext().getSizeType(), OAE->getLength()->getExprLoc());
+        return CGF.Builder.CreateNUWMul(LengthVal, ElemSize);
+      }
+      assert(!OAE->getLength() && OAE->getColonLoc().isValid() &&
+             OAE->getLowerBound() && "expected array_section[lb:].");
+      // Size = sizetype - lb * elemtype;
+      llvm::Value *LengthVal = CGF.getTypeSize(BaseTy);
+      llvm::Value *LBVal = CGF.EmitScalarExpr(OAE->getLowerBound());
+      LBVal = CGF.EmitScalarConversion(LBVal, OAE->getLowerBound()->getType(),
+                                       CGF.getContext().getSizeType(),
+                                       OAE->getLowerBound()->getExprLoc());
+      LBVal = CGF.Builder.CreateNUWMul(LBVal, ElemSize);
+      llvm::Value *Cmp = CGF.Builder.CreateICmpUGT(LengthVal, LBVal);
+      llvm::Value *TrueVal = CGF.Builder.CreateNUWSub(LengthVal, LBVal);
+      LengthVal = CGF.Builder.CreateSelect(
+          Cmp, TrueVal, llvm::ConstantInt::get(CGF.SizeTy, 0));
+      return LengthVal;
     }
     return CGF.getTypeSize(ExprTy);
   }

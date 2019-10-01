@@ -9,9 +9,7 @@
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/FileSpec.h"
-#include "lldb/Utility/JSON.h"
 #include "lldb/Utility/Status.h"
-#include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -21,11 +19,20 @@
 #include <limits>
 
 using namespace lldb_private;
+using namespace llvm;
 
-// Functions that use a JSONParser to parse JSON into StructuredData
-static StructuredData::ObjectSP ParseJSONValue(JSONParser &json_parser);
-static StructuredData::ObjectSP ParseJSONObject(JSONParser &json_parser);
-static StructuredData::ObjectSP ParseJSONArray(JSONParser &json_parser);
+static StructuredData::ObjectSP ParseJSONValue(json::Value &value);
+static StructuredData::ObjectSP ParseJSONObject(json::Object *object);
+static StructuredData::ObjectSP ParseJSONArray(json::Array *array);
+
+StructuredData::ObjectSP StructuredData::ParseJSON(std::string json_text) {
+  llvm::Expected<json::Value> value = json::parse(json_text);
+  if (!value) {
+    llvm::consumeError(value.takeError());
+    return nullptr;
+  }
+  return ParseJSONValue(*value);
+}
 
 StructuredData::ObjectSP
 StructuredData::ParseJSONFromFile(const FileSpec &input_spec, Status &error) {
@@ -38,112 +45,53 @@ StructuredData::ParseJSONFromFile(const FileSpec &input_spec, Status &error) {
                                     buffer_or_error.getError().message());
     return return_sp;
   }
-
-  JSONParser json_parser(buffer_or_error.get()->getBuffer());
-  return_sp = ParseJSONValue(json_parser);
-  return return_sp;
+  return ParseJSON(buffer_or_error.get()->getBuffer().str());
 }
 
-static StructuredData::ObjectSP ParseJSONObject(JSONParser &json_parser) {
-  // The "JSONParser::Token::ObjectStart" token should have already been
-  // consumed by the time this function is called
+static StructuredData::ObjectSP ParseJSONValue(json::Value &value) {
+  if (json::Object *O = value.getAsObject())
+    return ParseJSONObject(O);
+
+  if (json::Array *A = value.getAsArray())
+    return ParseJSONArray(A);
+
+  std::string s;
+  if (json::fromJSON(value, s))
+    return std::make_shared<StructuredData::String>(s);
+
+  bool b;
+  if (json::fromJSON(value, b))
+    return std::make_shared<StructuredData::Boolean>(b);
+
+  int64_t i;
+  if (json::fromJSON(value, i))
+    return std::make_shared<StructuredData::Integer>(i);
+
+  double d;
+  if (json::fromJSON(value, d))
+    return std::make_shared<StructuredData::Float>(d);
+
+  return StructuredData::ObjectSP();
+}
+
+static StructuredData::ObjectSP ParseJSONObject(json::Object *object) {
   auto dict_up = std::make_unique<StructuredData::Dictionary>();
-
-  std::string value;
-  std::string key;
-  while (true) {
-    JSONParser::Token token = json_parser.GetToken(value);
-
-    if (token == JSONParser::Token::String) {
-      key.swap(value);
-      token = json_parser.GetToken(value);
-      if (token == JSONParser::Token::Colon) {
-        StructuredData::ObjectSP value_sp = ParseJSONValue(json_parser);
-        if (value_sp)
-          dict_up->AddItem(key, value_sp);
-        else
-          break;
-      }
-    } else if (token == JSONParser::Token::ObjectEnd) {
-      return StructuredData::ObjectSP(dict_up.release());
-    } else if (token == JSONParser::Token::Comma) {
-      continue;
-    } else {
-      break;
-    }
+  for (auto &KV : *object) {
+    StringRef key = KV.first;
+    json::Value value = KV.second;
+    if (StructuredData::ObjectSP value_sp = ParseJSONValue(value))
+      dict_up->AddItem(key, value_sp);
   }
-  return StructuredData::ObjectSP();
+  return dict_up;
 }
 
-static StructuredData::ObjectSP ParseJSONArray(JSONParser &json_parser) {
-  // The "JSONParser::Token::ObjectStart" token should have already been
-  // consumed by the time this function is called
+static StructuredData::ObjectSP ParseJSONArray(json::Array *array) {
   auto array_up = std::make_unique<StructuredData::Array>();
-
-  std::string value;
-  std::string key;
-  while (true) {
-    StructuredData::ObjectSP value_sp = ParseJSONValue(json_parser);
-    if (value_sp)
+  for (json::Value &value : *array) {
+    if (StructuredData::ObjectSP value_sp = ParseJSONValue(value))
       array_up->AddItem(value_sp);
-    else
-      break;
-
-    JSONParser::Token token = json_parser.GetToken(value);
-    if (token == JSONParser::Token::Comma) {
-      continue;
-    } else if (token == JSONParser::Token::ArrayEnd) {
-      return StructuredData::ObjectSP(array_up.release());
-    } else {
-      break;
-    }
   }
-  return StructuredData::ObjectSP();
-}
-
-static StructuredData::ObjectSP ParseJSONValue(JSONParser &json_parser) {
-  std::string value;
-  const JSONParser::Token token = json_parser.GetToken(value);
-  switch (token) {
-  case JSONParser::Token::ObjectStart:
-    return ParseJSONObject(json_parser);
-
-  case JSONParser::Token::ArrayStart:
-    return ParseJSONArray(json_parser);
-
-  case JSONParser::Token::Integer: {
-    uint64_t uval;
-    if (llvm::to_integer(value, uval, 0))
-      return std::make_shared<StructuredData::Integer>(uval);
-  } break;
-
-  case JSONParser::Token::Float: {
-    double val;
-    if (llvm::to_float(value, val))
-      return std::make_shared<StructuredData::Float>(val);
-  } break;
-
-  case JSONParser::Token::String:
-    return std::make_shared<StructuredData::String>(value);
-
-  case JSONParser::Token::True:
-  case JSONParser::Token::False:
-    return std::make_shared<StructuredData::Boolean>(token ==
-                                                     JSONParser::Token::True);
-
-  case JSONParser::Token::Null:
-    return std::make_shared<StructuredData::Null>();
-
-  default:
-    break;
-  }
-  return StructuredData::ObjectSP();
-}
-
-StructuredData::ObjectSP StructuredData::ParseJSON(std::string json_text) {
-  JSONParser json_parser(json_text);
-  StructuredData::ObjectSP object_sp = ParseJSONValue(json_parser);
-  return object_sp;
+  return array_up;
 }
 
 StructuredData::ObjectSP
@@ -181,98 +129,48 @@ StructuredData::Object::GetObjectForDotSeparatedPath(llvm::StringRef path) {
 }
 
 void StructuredData::Object::DumpToStdout(bool pretty_print) const {
-  StreamString stream;
-  Dump(stream, pretty_print);
-  llvm::outs() << stream.GetString();
+  json::OStream stream(llvm::outs(), pretty_print ? 2 : 0);
+  Serialize(stream);
 }
 
-void StructuredData::Array::Dump(Stream &s, bool pretty_print) const {
-  bool first = true;
-  s << "[";
-  if (pretty_print) {
-    s << "\n";
-    s.IndentMore();
-  }
+void StructuredData::Array::Serialize(json::OStream &s) const {
+  s.arrayBegin();
   for (const auto &item_sp : m_items) {
-    if (first) {
-      first = false;
-    } else {
-      s << ",";
-      if (pretty_print)
-        s << "\n";
-    }
-
-    if (pretty_print)
-      s.Indent();
-    item_sp->Dump(s, pretty_print);
+    item_sp->Serialize(s);
   }
-  if (pretty_print) {
-    s.IndentLess();
-    s.EOL();
-    s.Indent();
-  }
-  s << "]";
+  s.arrayEnd();
 }
 
-void StructuredData::Integer::Dump(Stream &s, bool pretty_print) const {
-  s.Printf("%" PRIu64, m_value);
+void StructuredData::Integer::Serialize(json::OStream &s) const {
+  s.value(static_cast<int64_t>(m_value));
 }
 
-void StructuredData::Float::Dump(Stream &s, bool pretty_print) const {
-  s.Printf("%lg", m_value);
+void StructuredData::Float::Serialize(json::OStream &s) const {
+  s.value(m_value);
 }
 
-void StructuredData::Boolean::Dump(Stream &s, bool pretty_print) const {
-  if (m_value)
-    s.PutCString("true");
-  else
-    s.PutCString("false");
+void StructuredData::Boolean::Serialize(json::OStream &s) const {
+  s.value(m_value);
 }
 
-void StructuredData::String::Dump(Stream &s, bool pretty_print) const {
-  std::string quoted;
-  const size_t strsize = m_value.size();
-  for (size_t i = 0; i < strsize; ++i) {
-    char ch = m_value[i];
-    if (ch == '"' || ch == '\\')
-      quoted.push_back('\\');
-    quoted.push_back(ch);
-  }
-  s.Printf("\"%s\"", quoted.c_str());
+void StructuredData::String::Serialize(json::OStream &s) const {
+  s.value(m_value);
 }
 
-void StructuredData::Dictionary::Dump(Stream &s, bool pretty_print) const {
-  bool first = true;
-  s << "{";
-  if (pretty_print) {
-    s << "\n";
-    s.IndentMore();
-  }
+void StructuredData::Dictionary::Serialize(json::OStream &s) const {
+  s.objectBegin();
   for (const auto &pair : m_dict) {
-    if (first)
-      first = false;
-    else {
-      s << ",";
-      if (pretty_print)
-        s << "\n";
-    }
-    if (pretty_print)
-      s.Indent();
-    s << "\"" << pair.first.AsCString() << "\" : ";
-    pair.second->Dump(s, pretty_print);
+    s.attributeBegin(pair.first.AsCString());
+    pair.second->Serialize(s);
+    s.attributeEnd();
   }
-  if (pretty_print) {
-    s.IndentLess();
-    s.EOL();
-    s.Indent();
-  }
-  s << "}";
+  s.objectEnd();
 }
 
-void StructuredData::Null::Dump(Stream &s, bool pretty_print) const {
-  s << "null";
+void StructuredData::Null::Serialize(json::OStream &s) const {
+  s.value(nullptr);
 }
 
-void StructuredData::Generic::Dump(Stream &s, bool pretty_print) const {
-  s << "0x" << m_object;
+void StructuredData::Generic::Serialize(json::OStream &s) const {
+  s.value(llvm::formatv("{0:X}", m_object));
 }

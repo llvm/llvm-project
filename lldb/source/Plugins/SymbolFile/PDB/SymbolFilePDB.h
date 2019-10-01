@@ -125,23 +125,23 @@ public:
 
   void AddSymbols(lldb_private::Symtab &symtab) override;
 
-  uint32_t
+  void
   FindTypes(lldb_private::ConstString name,
             const lldb_private::CompilerDeclContext *parent_decl_ctx,
             uint32_t max_matches,
             llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
             lldb_private::TypeMap &types) override;
 
-  size_t FindTypes(llvm::ArrayRef<lldb_private::CompilerContext> pattern,
-                   lldb_private::LanguageSet languages,
-                   lldb_private::TypeMap &types) override;
+  void FindTypes(llvm::ArrayRef<lldb_private::CompilerContext> pattern,
+                 lldb_private::LanguageSet languages,
+                 lldb_private::TypeMap &types) override;
 
   void FindTypesByRegex(const lldb_private::RegularExpression &regex,
                         uint32_t max_matches, lldb_private::TypeMap &types);
 
-  size_t GetTypes(lldb_private::SymbolContextScope *sc_scope,
-                  lldb::TypeClass type_mask,
-                  lldb_private::TypeList &type_list) override;
+  void GetTypes(lldb_private::SymbolContextScope *sc_scope,
+                lldb::TypeClass type_mask,
+                lldb_private::TypeList &type_list) override;
 
   llvm::Expected<lldb_private::TypeSystem &>
   GetTypeSystemForLanguage(lldb::LanguageType language) override;

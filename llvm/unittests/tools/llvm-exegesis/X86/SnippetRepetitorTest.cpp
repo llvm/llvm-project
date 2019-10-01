@@ -11,6 +11,7 @@
 #include "LlvmState.h"
 #include "MCInstrDescView.h"
 #include "RegisterAliasing.h"
+#include "TestBase.h"
 #include "Uops.h"
 #include "X86InstrInfo.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -28,18 +29,8 @@ using testing::Field;
 using testing::Property;
 using testing::UnorderedElementsAre;
 
-class X86SnippetRepetitorTest : public ::testing::Test {
+class X86SnippetRepetitorTest : public X86TestBase {
 protected:
-  X86SnippetRepetitorTest() : State("x86_64-unknown-linux", "haswell") {}
-
-  static void SetUpTestCase() {
-    LLVMInitializeX86TargetInfo();
-    LLVMInitializeX86TargetMC();
-    LLVMInitializeX86Target();
-    LLVMInitializeX86AsmPrinter();
-    InitializeX86ExegesisTarget();
-  }
-
   void SetUp() {
     TM = State.createTargetMachine();
     Context = std::make_unique<LLVMContext>();
@@ -60,7 +51,6 @@ protected:
 
   static constexpr const unsigned kMinInstructions = 3;
 
-  const LLVMState State;
   std::unique_ptr<LLVMTargetMachine> TM;
   std::unique_ptr<LLVMContext> Context;
   std::unique_ptr<Module> Mod;

@@ -26,7 +26,7 @@ template <typename Ty, template<typename> typename Uy>
 // CHECK: FunctionTemplateDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:1, line:[[@LINE+4]]:18> col:6 d
 // CHECK-NEXT: TemplateTypeParmDecl 0x{{[^ ]*}} <line:[[@LINE-2]]:11, col:20> col:20 referenced typename depth 0 index 0 Ty
 // CHECK-NEXT: TemplateTemplateParmDecl 0x{{[^ ]*}} <col:24, col:52> col:52 depth 0 index 1 Uy
-// CHECK-NEXT: TemplateTypeParmDecl 0x{{[^ ]*}} <col:33> col:33 typename depth 1 index 0
+// CHECK-NEXT: TemplateTypeParmDecl 0x{{[^ ]*}} <col:33> col:41 typename depth 1 index 0
 void d(Ty, Uy<Ty>);
 
 template <class Ty>
@@ -47,7 +47,7 @@ void g(Ty);
 
 template <typename = void>
 // CHECK: FunctionTemplateDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:1, line:[[@LINE+3]]:8> col:6 h
-// CHECK-NEXT: TemplateTypeParmDecl 0x{{[^ ]*}} <line:[[@LINE-2]]:11, col:22> col:11 typename depth 0 index 0
+// CHECK-NEXT: TemplateTypeParmDecl 0x{{[^ ]*}} <line:[[@LINE-2]]:11, col:22> col:20 typename depth 0 index 0
 // CHECK-NEXT: TemplateArgument type 'void'
 void h();
 

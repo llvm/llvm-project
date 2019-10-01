@@ -10,9 +10,11 @@
 #define liblldb_StructuredData_h_
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/JSON.h"
 
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/Stream.h"
 #include "lldb/lldb-enumerations.h"
 
 #include <cassert>
@@ -28,7 +30,6 @@
 
 namespace lldb_private {
 class Status;
-class Stream;
 }
 
 namespace lldb_private {
@@ -150,7 +151,12 @@ public:
 
     void DumpToStdout(bool pretty_print = true) const;
 
-    virtual void Dump(Stream &s, bool pretty_print = true) const = 0;
+    virtual void Serialize(llvm::json::OStream &s) const = 0;
+
+    void Dump(lldb_private::Stream &s, bool pretty_print = true) const {
+      llvm::json::OStream jso(s.AsRawOstream(), pretty_print ? 2 : 0);
+      Serialize(jso);
+    }
 
   private:
     lldb::StructuredDataType m_type;
@@ -269,7 +275,7 @@ public:
 
     void AddItem(ObjectSP item) { m_items.push_back(item); }
 
-    void Dump(Stream &s, bool pretty_print = true) const override;
+    void Serialize(llvm::json::OStream &s) const override;
 
   protected:
     typedef std::vector<ObjectSP> collection;
@@ -287,7 +293,7 @@ public:
 
     uint64_t GetValue() { return m_value; }
 
-    void Dump(Stream &s, bool pretty_print = true) const override;
+    void Serialize(llvm::json::OStream &s) const override;
 
   protected:
     uint64_t m_value;
@@ -304,7 +310,7 @@ public:
 
     double GetValue() { return m_value; }
 
-    void Dump(Stream &s, bool pretty_print = true) const override;
+    void Serialize(llvm::json::OStream &s) const override;
 
   protected:
     double m_value;
@@ -321,7 +327,7 @@ public:
 
     bool GetValue() { return m_value; }
 
-    void Dump(Stream &s, bool pretty_print = true) const override;
+    void Serialize(llvm::json::OStream &s) const override;
 
   protected:
     bool m_value;
@@ -337,7 +343,7 @@ public:
 
     llvm::StringRef GetValue() { return m_value; }
 
-    void Dump(Stream &s, bool pretty_print = true) const override;
+    void Serialize(llvm::json::OStream &s) const override;
 
   protected:
     std::string m_value;
@@ -506,7 +512,7 @@ public:
       AddItem(key, std::make_shared<Boolean>(value));
     }
 
-    void Dump(Stream &s, bool pretty_print = true) const override;
+    void Serialize(llvm::json::OStream &s) const override;
 
   protected:
     typedef std::map<ConstString, ObjectSP> collection;
@@ -521,7 +527,7 @@ public:
 
     bool IsValid() const override { return false; }
 
-    void Dump(Stream &s, bool pretty_print = true) const override;
+    void Serialize(llvm::json::OStream &s) const override;
   };
 
   class Generic : public Object {
@@ -535,14 +541,13 @@ public:
 
     bool IsValid() const override { return m_object != nullptr; }
 
-    void Dump(Stream &s, bool pretty_print = true) const override;
+    void Serialize(llvm::json::OStream &s) const override;
 
   private:
     void *m_object;
   };
 
   static ObjectSP ParseJSON(std::string json_text);
-
   static ObjectSP ParseJSONFromFile(const FileSpec &file, Status &error);
 };
 

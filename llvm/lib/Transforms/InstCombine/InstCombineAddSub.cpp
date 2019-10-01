@@ -1666,25 +1666,42 @@ Instruction *InstCombiner::visitSub(BinaryOperator &I) {
 
   const APInt *Op0C;
   if (match(Op0, m_APInt(Op0C))) {
-    unsigned BitWidth = I.getType()->getScalarSizeInBits();
 
-    // -(X >>u 31) -> (X >>s 31)
-    // -(X >>s 31) -> (X >>u 31)
     if (Op0C->isNullValue()) {
+      Value *Op1Wide;
+      match(Op1, m_TruncOrSelf(m_Value(Op1Wide)));
+      bool HadTrunc = Op1Wide != Op1;
+      bool NoTruncOrTruncIsOneUse = !HadTrunc || Op1->hasOneUse();
+      unsigned BitWidth = Op1Wide->getType()->getScalarSizeInBits();
+
       Value *X;
       const APInt *ShAmt;
-      if (match(Op1, m_LShr(m_Value(X), m_APInt(ShAmt))) &&
+      // -(X >>u 31) -> (X >>s 31)
+      if (NoTruncOrTruncIsOneUse &&
+          match(Op1Wide, m_LShr(m_Value(X), m_APInt(ShAmt))) &&
           *ShAmt == BitWidth - 1) {
-        Value *ShAmtOp = cast<Instruction>(Op1)->getOperand(1);
-        return BinaryOperator::CreateAShr(X, ShAmtOp);
+        Value *ShAmtOp = cast<Instruction>(Op1Wide)->getOperand(1);
+        Instruction *NewShift = BinaryOperator::CreateAShr(X, ShAmtOp);
+        NewShift->copyIRFlags(Op1Wide);
+        if (!HadTrunc)
+          return NewShift;
+        Builder.Insert(NewShift);
+        return TruncInst::CreateTruncOrBitCast(NewShift, Op1->getType());
       }
-      if (match(Op1, m_AShr(m_Value(X), m_APInt(ShAmt))) &&
+      // -(X >>s 31) -> (X >>u 31)
+      if (NoTruncOrTruncIsOneUse &&
+          match(Op1Wide, m_AShr(m_Value(X), m_APInt(ShAmt))) &&
           *ShAmt == BitWidth - 1) {
-        Value *ShAmtOp = cast<Instruction>(Op1)->getOperand(1);
-        return BinaryOperator::CreateLShr(X, ShAmtOp);
+        Value *ShAmtOp = cast<Instruction>(Op1Wide)->getOperand(1);
+        Instruction *NewShift = BinaryOperator::CreateLShr(X, ShAmtOp);
+        NewShift->copyIRFlags(Op1Wide);
+        if (!HadTrunc)
+          return NewShift;
+        Builder.Insert(NewShift);
+        return TruncInst::CreateTruncOrBitCast(NewShift, Op1->getType());
       }
 
-      if (Op1->hasOneUse()) {
+      if (!HadTrunc && Op1->hasOneUse()) {
         Value *LHS, *RHS;
         SelectPatternFlavor SPF = matchSelectPattern(Op1, LHS, RHS).Flavor;
         if (SPF == SPF_ABS || SPF == SPF_NABS) {

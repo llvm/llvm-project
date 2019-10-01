@@ -92,7 +92,7 @@ public:
   virtual InstrProfSymtab &getSymtab() = 0;
 
   /// Compute the sum of counts and return in Sum.
-  void accumuateCounts(CountSumOrPercent &Sum, bool IsCS);
+  void accumulateCounts(CountSumOrPercent &Sum, bool IsCS);
 
 protected:
   std::unique_ptr<InstrProfSymtab> Symtab;
