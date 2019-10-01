@@ -27,7 +27,7 @@ public:
 
 // Register the DarwinTidyModule using this statically initialized variable.
 static ClangTidyModuleRegistry::Add<darwin::DarwinModule>
-    X("misc-module", "Adds miscellaneous lint checks.");
+    X("darwin-module", "Adds Darwin-specific lint checks.");
 
 // This anchor is used to force the linker to link in the generated object file
 // and thus register the DarwinModule.

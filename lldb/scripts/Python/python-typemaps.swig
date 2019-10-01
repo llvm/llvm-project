@@ -372,6 +372,9 @@ bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
   $1 = $1 || PyCallable_Check(reinterpret_cast<PyObject*>($input));
 }
 
+// FIXME both of these paths wind up calling fdopen() with no provision for ever calling
+// fclose() on the result.  SB interfaces that use FILE* should be deprecated for scripting
+// use and this typemap should eventually be removed.
 %typemap(in) FILE * {
    using namespace lldb_private;
    if ($input == Py_None)
@@ -398,9 +401,7 @@ bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
       lldb::FileUP file = py_file.GetUnderlyingFile();
       if (!file)
          return nullptr;
-      $1 = file->GetStream();
-      if ($1)
-         file->Clear();
+      $1 = file->TakeStreamAndClear();
     }
 }
 

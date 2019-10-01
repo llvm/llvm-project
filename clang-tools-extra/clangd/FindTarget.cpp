@@ -189,6 +189,10 @@ public:
           D = USD;
         Outer.add(D, Flags);
       }
+      void VisitOverloadExpr(const OverloadExpr *OE) {
+        for (auto *D : OE->decls())
+          Outer.add(D, Flags);
+      }
       void VisitCXXConstructExpr(const CXXConstructExpr *CCE) {
         Outer.add(CCE->getConstructor(), Flags);
       }
