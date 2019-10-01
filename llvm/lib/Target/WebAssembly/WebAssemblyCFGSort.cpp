@@ -317,6 +317,7 @@ static void sortBlocks(MachineFunction &MF, const MachineLoopInfo &MLI,
       // If Next was originally ordered before MBB, and it isn't because it was
       // loop-rotated above the header, it's not preferred.
       if (Next->getNumber() < MBB->getNumber() &&
+          (WasmDisableEHPadSort || !Next->isEHPad()) &&
           (!R || !R->contains(Next) ||
            R->getHeader()->getNumber() < Next->getNumber())) {
         Ready.push(Next);

@@ -40,7 +40,7 @@ using namespace LegalityPredicates;
 
 
 static LegalityPredicate isMultiple32(unsigned TypeIdx,
-                                      unsigned MaxSize = 512) {
+                                      unsigned MaxSize = 1024) {
   return [=](const LegalityQuery &Query) {
     const LLT Ty = Query.Types[TypeIdx];
     const LLT EltTy = Ty.getScalarType();
@@ -115,7 +115,7 @@ static LegalityPredicate numElementsNotEven(unsigned TypeIdx) {
   };
 }
 
-// Any combination of 32 or 64-bit elements up to 512 bits, and multiples of
+// Any combination of 32 or 64-bit elements up to 1024 bits, and multiples of
 // v2s16.
 static LegalityPredicate isRegisterType(unsigned TypeIdx) {
   return [=](const LegalityQuery &Query) {
@@ -127,7 +127,7 @@ static LegalityPredicate isRegisterType(unsigned TypeIdx) {
              EltSize == 128 || EltSize == 256;
     }
 
-    return Ty.getSizeInBits() % 32 == 0 && Ty.getSizeInBits() <= 512;
+    return Ty.getSizeInBits() % 32 == 0 && Ty.getSizeInBits() <= 1024;
   };
 }
 
@@ -162,7 +162,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   const LLT S96 = LLT::scalar(96);
   const LLT S128 = LLT::scalar(128);
   const LLT S256 = LLT::scalar(256);
-  const LLT S512 = LLT::scalar(512);
+  const LLT S1024 = LLT::scalar(1024);
 
   const LLT V2S16 = LLT::vector(2, 16);
   const LLT V4S16 = LLT::vector(4, 16);
@@ -293,7 +293,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .legalFor({S1, S32, S64, S16, V2S32, V4S32, V2S16, V4S16, GlobalPtr,
                ConstantPtr, LocalPtr, FlatPtr, PrivatePtr})
     .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
-    .clampScalarOrElt(0, S32, S512)
+    .clampScalarOrElt(0, S32, S1024)
     .legalIf(isMultiple32(0))
     .widenScalarToNextPow2(0, 32)
     .clampMaxNumElements(0, S32, 16);
@@ -417,9 +417,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
                {S32, S8}, {S128, S32}, {S128, S64}, {S32, LLT::scalar(24)}})
     .scalarize(0);
 
-  // TODO: Legal for s1->s64, requires split for VALU.
+  // TODO: Split s1->s64 during regbankselect for VALU.
   getActionDefinitionsBuilder({G_SITOFP, G_UITOFP})
-    .legalFor({{S32, S32}, {S64, S32}, {S16, S32}, {S32, S1}, {S16, S1}})
+    .legalFor({{S32, S32}, {S64, S32}, {S16, S32}, {S32, S1}, {S16, S1}, {S64, S1}})
     .lowerFor({{S32, S64}})
     .customFor({{S64, S64}})
     .scalarize(0);
@@ -884,7 +884,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
           return (EltTy.getSizeInBits() == 16 ||
                   EltTy.getSizeInBits() % 32 == 0) &&
                  VecTy.getSizeInBits() % 32 == 0 &&
-                 VecTy.getSizeInBits() <= 512 &&
+                 VecTy.getSizeInBits() <= 1024 &&
                  IdxTy.getSizeInBits() == 32;
         })
       .clampScalar(EltTypeIdx, S32, S64)
@@ -991,7 +991,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .fewerElementsIf(
         [=](const LegalityQuery &Query) { return notValidElt(Query, 1); },
         scalarize(1))
-      .clampScalar(BigTyIdx, S32, S512)
+      .clampScalar(BigTyIdx, S32, S1024)
       .lowerFor({{S16, V2S16}})
       .widenScalarIf(
         [=](const LegalityQuery &Query) {
@@ -1022,7 +1022,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
           return BigTy.getSizeInBits() % 16 == 0 &&
                  LitTy.getSizeInBits() % 16 == 0 &&
-                 BigTy.getSizeInBits() <= 512;
+                 BigTy.getSizeInBits() <= 1024;
         })
       // Any vectors left are the wrong size. Scalarize them.
       .scalarize(0)
@@ -1717,9 +1717,14 @@ bool AMDGPULegalizerInfo::loadInputValue(Register DstReg, MachineIRBuilder &B,
     const unsigned Mask = Arg->getMask();
     const unsigned Shift = countTrailingZeros<unsigned>(Mask);
 
-    auto ShiftAmt = B.buildConstant(S32, Shift);
-    auto LShr = B.buildLShr(S32, LiveIn, ShiftAmt);
-    B.buildAnd(DstReg, LShr, B.buildConstant(S32, Mask >> Shift));
+    Register AndMaskSrc = LiveIn;
+
+    if (Shift != 0) {
+      auto ShiftAmt = B.buildConstant(S32, Shift);
+      AndMaskSrc = B.buildLShr(S32, LiveIn, ShiftAmt).getReg(0);
+    }
+
+    B.buildAnd(DstReg, AndMaskSrc, B.buildConstant(S32, Mask >> Shift));
   } else
     B.buildCopy(DstReg, LiveIn);
 

@@ -9,6 +9,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/TargetTransformInfoImpl.h"
 #include "llvm/IR/CallSite.h"
+#include "llvm/IR/CFG.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -59,11 +60,7 @@ bool HardwareLoopInfo::isHardwareLoopCandidate(ScalarEvolution &SE,
   SmallVector<BasicBlock *, 4> ExitingBlocks;
   L->getExitingBlocks(ExitingBlocks);
 
-  for (SmallVectorImpl<BasicBlock *>::iterator I = ExitingBlocks.begin(),
-                                               IE = ExitingBlocks.end();
-       I != IE; ++I) {
-    BasicBlock *BB = *I;
-
+  for (BasicBlock *BB : ExitingBlocks) {
     // If we pass the updated counter back through a phi, we need to know
     // which latch the updated value will be coming from.
     if (!L->isLoopLatch(BB)) {
@@ -97,13 +94,11 @@ bool HardwareLoopInfo::isHardwareLoopCandidate(ScalarEvolution &SE,
     // For this to be true, we must dominate all blocks with backedges. Such
     // blocks are in-loop predecessors to the header block.
     bool NotAlways = false;
-    for (pred_iterator PI = pred_begin(L->getHeader()),
-                       PIE = pred_end(L->getHeader());
-         PI != PIE; ++PI) {
-      if (!L->contains(*PI))
+    for (BasicBlock *Pred : predecessors(L->getHeader())) {
+      if (!L->contains(Pred))
         continue;
 
-      if (!DT.dominates(*I, *PI)) {
+      if (!DT.dominates(BB, Pred)) {
         NotAlways = true;
         break;
       }
@@ -127,7 +122,7 @@ bool HardwareLoopInfo::isHardwareLoopCandidate(ScalarEvolution &SE,
 
     // Note that this block may not be the loop latch block, even if the loop
     // has a latch block.
-    ExitBlock = *I;
+    ExitBlock = BB;
     ExitCount = EC;
     break;
   }

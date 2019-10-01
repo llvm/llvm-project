@@ -148,22 +148,23 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWO(const DWARFDIE &die, Log *log) {
   die.GetDeclContext(decl_context);
   TypeMap dwo_types;
 
-  // The type in the Clang module must have the same langage as the current CU.
+  // The type in the Clang module must have the same language as the current CU.
   LanguageSet languages;
   languages.Insert(die.GetCU()->GetLanguageType());
-  if (!dwo_module_sp->GetSymbolFile()->FindTypes(decl_context, languages,
-                                                 dwo_types)) {
+  dwo_module_sp->GetSymbolFile()->FindTypes(decl_context, languages, dwo_types);
+  if (dwo_types.Empty()) {
     if (!IsClangModuleFwdDecl(die))
       return TypeSP();
 
-    // Since this this type is defined in one of the Clang modules imported by
-    // this symbol file, search all of them.
+    // Since this type is defined in one of the Clang modules imported
+    // by this symbol file, search all of them.
     auto &sym_file = die.GetCU()->GetSymbolFileDWARF();
     for (const auto &name_module : sym_file.getExternalTypeModules()) {
       if (!name_module.second)
         continue;
-      if (name_module.second->GetSymbolFile()->FindTypes(decl_context,
-                                                         languages, dwo_types))
+      name_module.second->GetSymbolFile()->FindTypes(decl_context,
+                                                     languages, dwo_types);
+      if (dwo_types.GetSize())
         break;
     }
   }

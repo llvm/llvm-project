@@ -139,18 +139,14 @@ void SymbolFile::GetMangledNamesForFunction(
   return;
 }
 
-uint32_t SymbolFile::FindTypes(
+void SymbolFile::FindTypes(
     ConstString name, const CompilerDeclContext *parent_decl_ctx,
     uint32_t max_matches,
     llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
-    TypeMap &types) {
-  return 0;
-}
+    TypeMap &types) {}
 
-size_t SymbolFile::FindTypes(llvm::ArrayRef<CompilerContext> pattern,
-                             LanguageSet languages, TypeMap &types) {
-  return 0;
-}
+void SymbolFile::FindTypes(llvm::ArrayRef<CompilerContext> pattern,
+                           LanguageSet languages, TypeMap &types) {}
 
 void SymbolFile::AssertModuleLock() {
   // The code below is too expensive to leave enabled in release builds. It's

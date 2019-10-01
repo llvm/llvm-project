@@ -6172,7 +6172,7 @@ def warn_comparison_of_mixed_enum_types : Warning<
 def warn_conditional_mixed_enum_types : Warning<
   "enumeration type mismatch in conditional expression"
   "%diff{ ($ and $)|}0,1">,
-  InGroup<EnumCompare>;
+  InGroup<EnumCompareConditional>, DefaultIgnore;
 def warn_comparison_of_mixed_enum_types_switch : Warning<
   "comparison of two values with different enumeration types in switch statement"
   "%diff{ ($ and $)|}0,1">,

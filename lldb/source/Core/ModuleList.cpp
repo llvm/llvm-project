@@ -17,6 +17,7 @@
 #include "lldb/Symbol/LocateSymbolFile.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Symbol/TypeList.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/ConstString.h"
@@ -55,9 +56,6 @@ class SymbolFile;
 }
 namespace lldb_private {
 class Target;
-}
-namespace lldb_private {
-class TypeList;
 }
 
 using namespace lldb;
@@ -525,44 +523,36 @@ ModuleSP ModuleList::FindModule(const UUID &uuid) const {
   return module_sp;
 }
 
-size_t
-ModuleList::FindTypes(Module *search_first, ConstString name,
-                      bool name_is_fully_qualified, size_t max_matches,
-                      llvm::DenseSet<SymbolFile *> &searched_symbol_files,
-                      TypeList &types) const {
+void ModuleList::FindTypes(Module *search_first, ConstString name,
+                           bool name_is_fully_qualified, size_t max_matches,
+                           llvm::DenseSet<SymbolFile *> &searched_symbol_files,
+                           TypeList &types) const {
   std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
 
-  size_t total_matches = 0;
   collection::const_iterator pos, end = m_modules.end();
   if (search_first) {
     for (pos = m_modules.begin(); pos != end; ++pos) {
       if (search_first == pos->get()) {
-        total_matches +=
-            search_first->FindTypes(name, name_is_fully_qualified, max_matches,
-                                    searched_symbol_files, types);
+        search_first->FindTypes(name, name_is_fully_qualified, max_matches,
+                                searched_symbol_files, types);
 
-        if (total_matches >= max_matches)
-          break;
+        if (types.GetSize() >= max_matches)
+          return;
       }
     }
   }
 
-  if (total_matches < max_matches) {
-    for (pos = m_modules.begin(); pos != end; ++pos) {
-      // Search the module if the module is not equal to the one in the symbol
-      // context "sc". If "sc" contains a empty module shared pointer, then the
-      // comparison will always be true (valid_module_ptr != nullptr).
-      if (search_first != pos->get())
-        total_matches +=
-            (*pos)->FindTypes(name, name_is_fully_qualified, max_matches,
-                              searched_symbol_files, types);
+  for (pos = m_modules.begin(); pos != end; ++pos) {
+    // Search the module if the module is not equal to the one in the symbol
+    // context "sc". If "sc" contains a empty module shared pointer, then the
+    // comparison will always be true (valid_module_ptr != nullptr).
+    if (search_first != pos->get())
+      (*pos)->FindTypes(name, name_is_fully_qualified, max_matches,
+                        searched_symbol_files, types);
 
-      if (total_matches >= max_matches)
-        break;
-    }
+    if (types.GetSize() >= max_matches)
+      return;
   }
-
-  return total_matches;
 }
 
 bool ModuleList::FindSourceFile(const FileSpec &orig_spec,

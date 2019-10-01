@@ -89,6 +89,11 @@ static cl::opt<std::string>
          cl::desc("Target a specific cpu type (-mcpu=help for details)"),
          cl::value_desc("cpu-name"), cl::cat(ToolOptions), cl::init("native"));
 
+static cl::opt<std::string>
+    MATTR("mattr",
+          cl::desc("Additional target features."),
+          cl::cat(ToolOptions));
+
 static cl::opt<int>
     OutputAsmVariant("output-asm-variant",
                      cl::desc("Syntax variant to use for output printing"),
@@ -322,7 +327,7 @@ int main(int argc, char **argv) {
     MCPU = llvm::sys::getHostCPUName();
 
   std::unique_ptr<MCSubtargetInfo> STI(
-      TheTarget->createMCSubtargetInfo(TripleName, MCPU, /* FeaturesStr */ ""));
+      TheTarget->createMCSubtargetInfo(TripleName, MCPU, MATTR));
   if (!STI->isCPUStringValid(MCPU))
     return 1;
 

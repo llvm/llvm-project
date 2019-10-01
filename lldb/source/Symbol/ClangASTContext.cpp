@@ -522,15 +522,18 @@ static void ParseLangArgs(LangOptions &Opts, InputKind IK, const char *triple) {
   Opts.NoInlineDefine = !Opt;
 }
 
-ClangASTContext::ClangASTContext(const char *target_triple)
-    : TypeSystem(TypeSystem::eKindClang), m_target_triple(), m_ast_up(),
-      m_language_options_up(), m_source_manager_up(), m_diagnostics_engine_up(),
-      m_target_options_rp(), m_target_info_up(), m_identifier_table_up(),
-      m_selector_table_up(), m_builtins_up(), m_callback_tag_decl(nullptr),
-      m_callback_objc_decl(nullptr), m_callback_baton(nullptr),
-      m_pointer_byte_size(0), m_ast_owned(false) {
-  if (target_triple && target_triple[0])
+ClangASTContext::ClangASTContext(llvm::StringRef target_triple)
+    : TypeSystem(TypeSystem::eKindClang) {
+  if (!target_triple.empty())
     SetTargetTriple(target_triple);
+}
+
+ClangASTContext::ClangASTContext(ASTContext &existing_ctxt)
+  : TypeSystem(TypeSystem::eKindClang) {
+  SetTargetTriple(existing_ctxt.getTargetInfo().getTriple().str());
+
+  m_ast_up.reset(&existing_ctxt);
+  GetASTMap().Insert(&existing_ctxt, this);
 }
 
 // Destructor
@@ -676,20 +679,13 @@ const char *ClangASTContext::GetTargetTriple() {
   return m_target_triple.c_str();
 }
 
-void ClangASTContext::SetTargetTriple(const char *target_triple) {
+void ClangASTContext::SetTargetTriple(llvm::StringRef target_triple) {
   Clear();
-  m_target_triple.assign(target_triple);
+  m_target_triple = target_triple.str();
 }
 
 void ClangASTContext::SetArchitecture(const ArchSpec &arch) {
-  SetTargetTriple(arch.GetTriple().str().c_str());
-}
-
-bool ClangASTContext::HasExternalSource() {
-  ASTContext *ast = getASTContext();
-  if (ast)
-    return ast->getExternalSource() != nullptr;
-  return false;
+  SetTargetTriple(arch.GetTriple().str());
 }
 
 void ClangASTContext::SetExternalSource(
@@ -699,25 +695,6 @@ void ClangASTContext::SetExternalSource(
     ast->setExternalSource(ast_source_up);
     ast->getTranslationUnitDecl()->setHasExternalLexicalStorage(true);
   }
-}
-
-void ClangASTContext::RemoveExternalSource() {
-  ASTContext *ast = getASTContext();
-
-  if (ast) {
-    llvm::IntrusiveRefCntPtr<ExternalASTSource> empty_ast_source_up;
-    ast->setExternalSource(empty_ast_source_up);
-    ast->getTranslationUnitDecl()->setHasExternalLexicalStorage(false);
-  }
-}
-
-void ClangASTContext::setASTContext(clang::ASTContext *ast_ctx) {
-  if (!m_ast_owned) {
-    m_ast_up.release();
-  }
-  m_ast_owned = false;
-  m_ast_up.reset(ast_ctx);
-  GetASTMap().Insert(ast_ctx, this);
 }
 
 ASTContext *ClangASTContext::getASTContext() {
@@ -8742,74 +8719,6 @@ clang::ObjCMethodDecl *ClangASTContext::AddMethodToObjCObjectType(
 #endif
 
   return objc_method_decl;
-}
-
-bool ClangASTContext::GetHasExternalStorage(const CompilerType &type) {
-  if (ClangUtil::IsClangType(type))
-    return false;
-
-  clang::QualType qual_type(ClangUtil::GetCanonicalQualType(type));
-
-  const clang::Type::TypeClass type_class = qual_type->getTypeClass();
-  switch (type_class) {
-  case clang::Type::Record: {
-    clang::CXXRecordDecl *cxx_record_decl = qual_type->getAsCXXRecordDecl();
-    if (cxx_record_decl)
-      return cxx_record_decl->hasExternalLexicalStorage() ||
-             cxx_record_decl->hasExternalVisibleStorage();
-  } break;
-
-  case clang::Type::Enum: {
-    clang::EnumDecl *enum_decl =
-        llvm::cast<clang::EnumType>(qual_type)->getDecl();
-    if (enum_decl)
-      return enum_decl->hasExternalLexicalStorage() ||
-             enum_decl->hasExternalVisibleStorage();
-  } break;
-
-  case clang::Type::ObjCObject:
-  case clang::Type::ObjCInterface: {
-    const clang::ObjCObjectType *objc_class_type =
-        llvm::dyn_cast<clang::ObjCObjectType>(qual_type.getTypePtr());
-    assert(objc_class_type);
-    if (objc_class_type) {
-      clang::ObjCInterfaceDecl *class_interface_decl =
-          objc_class_type->getInterface();
-
-      if (class_interface_decl)
-        return class_interface_decl->hasExternalLexicalStorage() ||
-               class_interface_decl->hasExternalVisibleStorage();
-    }
-  } break;
-
-  case clang::Type::Typedef:
-    return GetHasExternalStorage(CompilerType(
-        type.GetTypeSystem(), llvm::cast<clang::TypedefType>(qual_type)
-                                  ->getDecl()
-                                  ->getUnderlyingType()
-                                  .getAsOpaquePtr()));
-
-  case clang::Type::Auto:
-    return GetHasExternalStorage(CompilerType(
-        type.GetTypeSystem(), llvm::cast<clang::AutoType>(qual_type)
-                                  ->getDeducedType()
-                                  .getAsOpaquePtr()));
-
-  case clang::Type::Elaborated:
-    return GetHasExternalStorage(CompilerType(
-        type.GetTypeSystem(), llvm::cast<clang::ElaboratedType>(qual_type)
-                                  ->getNamedType()
-                                  .getAsOpaquePtr()));
-
-  case clang::Type::Paren:
-    return GetHasExternalStorage(CompilerType(
-        type.GetTypeSystem(),
-        llvm::cast<clang::ParenType>(qual_type)->desugar().getAsOpaquePtr()));
-
-  default:
-    break;
-  }
-  return false;
 }
 
 bool ClangASTContext::SetHasExternalStorage(lldb::opaque_compiler_type_t type,

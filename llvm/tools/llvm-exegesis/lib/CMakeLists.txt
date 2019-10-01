@@ -47,6 +47,7 @@ llvm_map_components_to_libnames(libs
   MC
   MCDisassembler
   MCJIT
+  MCParser
   Object
   ObjectYAML
   Support

@@ -413,13 +413,13 @@ namespace testClassTemplateDecl {
 
 // CHECK:       ClassTemplateDecl 0x{{.+}} <{{.+}}:275:3, col:68> col:68 TestTemplateTemplateDefaultType
 // CHECK-NEXT:  |-TemplateTemplateParmDecl 0x{{.+}} <col:12, col:42> col:37 depth 0 index 0 TT
-// CHECK-NEXT:  | |-TemplateTypeParmDecl 0x{{.+}} <col:21> col:21 typename depth 1 index 0
+// CHECK-NEXT:  | |-TemplateTypeParmDecl 0x{{.+}} <col:21> col:29 typename depth 1 index 0
 // CHECK-NEXT:  | `-TemplateArgument <col:42> template TestClassTemplate
 // CHECK-NEXT:  `-CXXRecordDecl 0x{{.+}} <col:61, col:68> col:68 struct TestTemplateTemplateDefaultType
 
 // CHECK:       ClassTemplateDecl 0x{{.+}} prev 0x{{.+}} <{{.+}}:276:3, col:82> col:48 TestTemplateTemplateDefaultType
 // CHECK-NEXT:  |-TemplateTemplateParmDecl 0x{{.+}} <col:12, col:37> col:37 depth 0 index 0 TT
-// CHECK-NEXT:  | |-TemplateTypeParmDecl 0x{{.+}} <col:21> col:21 typename depth 1 index 0
+// CHECK-NEXT:  | |-TemplateTypeParmDecl 0x{{.+}} <col:21> col:29 typename depth 1 index 0
 // CHECK-NEXT:  | `-TemplateArgument <line:275:42> template TestClassTemplate
 // CHECK-NEXT:  |   `-inherited from TemplateTemplateParm 0x{{.+}} 'TT'
 // CHECK-NEXT:  `-CXXRecordDecl 0x{{.+}} prev 0x{{.+}} <line:276:41, col:82> col:48 struct TestTemplateTemplateDefaultType definition

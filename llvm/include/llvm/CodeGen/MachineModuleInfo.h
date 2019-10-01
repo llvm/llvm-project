@@ -266,7 +266,6 @@ class MachineModuleInfoWrapperPass : public ImmutablePass {
 public:
   static char ID; // Pass identification, replacement for typeid
   explicit MachineModuleInfoWrapperPass(const LLVMTargetMachine *TM = nullptr);
-  explicit MachineModuleInfoWrapperPass(const MachineModuleInfo &MMI);
 
   // Initialization and Finalization
   bool doInitialization(Module &) override;

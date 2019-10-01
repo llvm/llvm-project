@@ -95,31 +95,27 @@ TypeAndOrName ItaniumABILanguageRuntime::GetTypeInfoFromVTableAddress(
             const bool exact_match = true;
             TypeList class_types;
 
-            uint32_t num_matches = 0;
             // First look in the module that the vtable symbol came from and
             // look for a single exact match.
             llvm::DenseSet<SymbolFile *> searched_symbol_files;
-            if (sc.module_sp) {
-              num_matches = sc.module_sp->FindTypes(
-                  ConstString(lookup_name), exact_match, 1,
-                  searched_symbol_files, class_types);
-            }
+            if (sc.module_sp)
+              sc.module_sp->FindTypes(ConstString(lookup_name), exact_match, 1,
+                                      searched_symbol_files, class_types);
 
             // If we didn't find a symbol, then move on to the entire module
             // list in the target and get as many unique matches as possible
-            if (num_matches == 0) {
-              num_matches = target.GetImages().FindTypes(
-                  nullptr, ConstString(lookup_name), exact_match, UINT32_MAX,
-                  searched_symbol_files, class_types);
-            }
+            if (class_types.Empty())
+              target.GetImages().FindTypes(nullptr, ConstString(lookup_name),
+                                           exact_match, UINT32_MAX,
+                                           searched_symbol_files, class_types);
 
             lldb::TypeSP type_sp;
-            if (num_matches == 0) {
+            if (class_types.Empty()) {
               LLDB_LOGF(log, "0x%16.16" PRIx64 ": is not dynamic\n",
                         original_ptr);
               return TypeAndOrName();
             }
-            if (num_matches == 1) {
+            if (class_types.GetSize() == 1) {
               type_sp = class_types.GetTypeAtIndex(0);
               if (type_sp) {
                 if (ClangASTContext::IsCXXClassType(
@@ -134,10 +130,10 @@ TypeAndOrName ItaniumABILanguageRuntime::GetTypeInfoFromVTableAddress(
                   type_info.SetTypeSP(type_sp);
                 }
               }
-            } else if (num_matches > 1) {
+            } else {
               size_t i;
               if (log) {
-                for (i = 0; i < num_matches; i++) {
+                for (i = 0; i < class_types.GetSize(); i++) {
                   type_sp = class_types.GetTypeAtIndex(i);
                   if (type_sp) {
                     LLDB_LOGF(
@@ -151,7 +147,7 @@ TypeAndOrName ItaniumABILanguageRuntime::GetTypeInfoFromVTableAddress(
                 }
               }
 
-              for (i = 0; i < num_matches; i++) {
+              for (i = 0; i < class_types.GetSize(); i++) {
                 type_sp = class_types.GetTypeAtIndex(i);
                 if (type_sp) {
                   if (ClangASTContext::IsCXXClassType(
@@ -168,7 +164,7 @@ TypeAndOrName ItaniumABILanguageRuntime::GetTypeInfoFromVTableAddress(
                 }
               }
 
-              if (log && i == num_matches) {
+              if (log) {
                 LLDB_LOGF(log,
                           "0x%16.16" PRIx64
                           ": static-type = '%s' has multiple matching dynamic "
