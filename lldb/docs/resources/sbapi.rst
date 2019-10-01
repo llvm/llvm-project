@@ -53,3 +53,43 @@ file, and adding documentation and the Python decorations, etc. We do this in a
 decidedly low-tech way, by maintaining the two files in parallel. That
 simplifies the build process, but it does mean that if you add a method to the
 C++ API's for an SB class, you have to copy the interface to the .i file.
+
+API Instrumentation
+-------------------
+
+The reproducer infrastructure requires API methods to be instrumented so that
+they can be captured and replayed. Instrumentation consists of two macros,
+``LLDB_REGISTER`` and ``LLDB_RECORD``. Both can be automatically generated with
+the ``lldb-instr`` utility.
+
+To add instrumentation for a given file, pass it to the ``lldb-instr`` tool.
+Like other clang-based tools it requires a compilation database
+(``compile_commands.json``) to be present in the current working directory.
+
+::
+
+    ./bin/lldb-instr /path/to/lldb/source/API/SBDebugger.cpp
+
+
+The tool will automatically insert ``LLDB_RECORD`` macros inline, however you
+will need to run ``clang-format`` over the processed file, as the tool
+(intentionally) makes no attempt to get that right.
+
+The ``LLDB_REGISTER`` macros are printed to standard out between curly braces.
+You'll have to copy-paste those into the corresponding `RegsiterMethods`
+function in the implementation file. This function is fully specialized in the
+corresponding type.
+
+::
+
+  template <> void RegisterMethods<SBDebugger>(Registry &R) {
+    ...
+  }
+
+
+When adding a new class, you'll also have to add a call to ``RegisterMethods``
+in the ``SBRegistry`` constructor.
+
+The tool can be used incrementally. However, it will ignore existing macros
+even if their signature is wrong. It will only generate a ``LLDB_REGISTER`` if
+it emitted a corresponding ``LLDB_RECORD`` macro.

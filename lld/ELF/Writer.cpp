@@ -314,7 +314,18 @@ template <class ELFT> void elf::createSyntheticSections() {
   // you can call lld::elf::main more than once as a library.
   memset(&Out::first, 0, sizeof(Out));
 
-  auto add = [](InputSectionBase *sec) { inputSections.push_back(sec); };
+  // Add the .interp section first because it is not a SyntheticSection.
+  // The removeUnusedSyntheticSections() function relies on the
+  // SyntheticSections coming last.
+  if (needsInterpSection()) {
+    for (size_t i = 1; i <= partitions.size(); ++i) {
+      InputSection *sec = createInterpSection();
+      sec->partition = i;
+      inputSections.push_back(sec);
+    }
+  }
+
+  auto add = [](SyntheticSection *sec) { inputSections.push_back(sec); };
 
   in.shStrTab = make<StringTableSection>(".shstrtab", false);
 
@@ -356,7 +367,7 @@ template <class ELFT> void elf::createSyntheticSections() {
   StringRef relaDynName = config->isRela ? ".rela.dyn" : ".rel.dyn";
 
   for (Partition &part : partitions) {
-    auto add = [&](InputSectionBase *sec) {
+    auto add = [&](SyntheticSection *sec) {
       sec->partition = part.getNumber();
       inputSections.push_back(sec);
     };
@@ -383,9 +394,6 @@ template <class ELFT> void elf::createSyntheticSections() {
     else
       part.relaDyn =
           make<RelocationSection<ELFT>>(relaDynName, config->zCombreloc);
-
-    if (needsInterpSection())
-      add(createInterpSection());
 
     if (config->hasDynSymTab) {
       part.dynSymTab = make<SymbolTableSection<ELFT>>(*part.dynStrTab);

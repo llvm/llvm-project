@@ -152,5 +152,12 @@ runSemanticRanges(ClangdServer &Server, PathRef File, Position Pos) {
   return std::move(*Result);
 }
 
+llvm::Expected<llvm::Optional<clangd::Path>>
+runSwitchHeaderSource(ClangdServer &Server, PathRef File) {
+  llvm::Optional<llvm::Expected<llvm::Optional<clangd::Path>>> Result;
+  Server.switchSourceHeader(File, capture(Result));
+  return std::move(*Result);
+}
+
 } // namespace clangd
 } // namespace clang

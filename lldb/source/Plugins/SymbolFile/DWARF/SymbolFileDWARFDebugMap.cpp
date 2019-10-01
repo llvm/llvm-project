@@ -1070,16 +1070,15 @@ uint32_t SymbolFileDWARFDebugMap::FindFunctions(const RegularExpression &regex,
   return sc_list.GetSize() - initial_size;
 }
 
-size_t SymbolFileDWARFDebugMap::GetTypes(SymbolContextScope *sc_scope,
-                                         lldb::TypeClass type_mask,
-                                         TypeList &type_list) {
+void SymbolFileDWARFDebugMap::GetTypes(SymbolContextScope *sc_scope,
+                                       lldb::TypeClass type_mask,
+                                       TypeList &type_list) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
   Timer scoped_timer(func_cat,
                      "SymbolFileDWARFDebugMap::GetTypes (type_mask = 0x%8.8x)",
                      type_mask);
 
-  uint32_t initial_size = type_list.GetSize();
   SymbolFileDWARF *oso_dwarf = nullptr;
   if (sc_scope) {
     SymbolContext sc;
@@ -1097,7 +1096,6 @@ size_t SymbolFileDWARFDebugMap::GetTypes(SymbolContextScope *sc_scope,
       return false;
     });
   }
-  return type_list.GetSize() - initial_size;
 }
 
 std::vector<lldb_private::CallEdge>
@@ -1199,21 +1197,17 @@ TypeSP SymbolFileDWARFDebugMap::FindCompleteObjCDefinitionTypeForDIE(
   return TypeSP();
 }
 
-uint32_t SymbolFileDWARFDebugMap::FindTypes(
+void SymbolFileDWARFDebugMap::FindTypes(
     ConstString name, const CompilerDeclContext *parent_decl_ctx,
     uint32_t max_matches,
     llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
     TypeMap &types) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
-  const uint32_t initial_types_size = types.GetSize();
-
   ForEachSymbolFile([&](SymbolFileDWARF *oso_dwarf) -> bool {
     oso_dwarf->FindTypes(name, parent_decl_ctx, max_matches,
                          searched_symbol_files, types);
     return types.GetSize() >= max_matches;
   });
-
-  return types.GetSize() - initial_types_size;
 }
 
 //

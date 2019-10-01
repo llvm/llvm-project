@@ -308,17 +308,13 @@ uint32_t SymbolFileBreakpad::FindFunctions(const RegularExpression &regex,
   return sc_list.GetSize();
 }
 
-uint32_t SymbolFileBreakpad::FindTypes(
+void SymbolFileBreakpad::FindTypes(
     ConstString name, const CompilerDeclContext *parent_decl_ctx,
     uint32_t max_matches, llvm::DenseSet<SymbolFile *> &searched_symbol_files,
-    TypeMap &types) {
-  return 0;
-}
+    TypeMap &types) {}
 
-size_t SymbolFileBreakpad::FindTypes(llvm::ArrayRef<CompilerContext> pattern,
-                                     LanguageSet languages, TypeMap &types) {
-  return 0;
-}
+void SymbolFileBreakpad::FindTypes(llvm::ArrayRef<CompilerContext> pattern,
+                                   LanguageSet languages, TypeMap &types) {}
 
 void SymbolFileBreakpad::AddSymbols(Symtab &symtab) {
   Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_SYMBOLS);

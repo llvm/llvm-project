@@ -540,11 +540,11 @@ namespace {
     SDValue MatchBSwapHWordLow(SDNode *N, SDValue N0, SDValue N1,
                                bool DemandHighBits = true);
     SDValue MatchBSwapHWord(SDNode *N, SDValue N0, SDValue N1);
-    SDNode *MatchRotatePosNeg(SDValue Shifted, SDValue Pos, SDValue Neg,
+    SDValue MatchRotatePosNeg(SDValue Shifted, SDValue Pos, SDValue Neg,
                               SDValue InnerPos, SDValue InnerNeg,
                               unsigned PosOpcode, unsigned NegOpcode,
                               const SDLoc &DL);
-    SDNode *MatchRotate(SDValue LHS, SDValue RHS, const SDLoc &DL);
+    SDValue MatchRotate(SDValue LHS, SDValue RHS, const SDLoc &DL);
     SDValue MatchLoadCombine(SDNode *N);
     SDValue MatchStoreCombine(StoreSDNode *N);
     SDValue ReduceLoadWidth(SDNode *N);
@@ -783,252 +783,6 @@ void DAGCombiner::deleteAndRecombine(SDNode *N) {
       AddToWorklist(Op.getNode());
 
   DAG.DeleteNode(N);
-}
-
-/// Return 1 if we can compute the negated form of the specified expression for
-/// the same cost as the expression itself, or 2 if we can compute the negated
-/// form more cheaply than the expression itself.
-static char isNegatibleForFree(SDValue Op, bool LegalOperations,
-                               const TargetLowering &TLI,
-                               const TargetOptions *Options,
-                               bool ForCodeSize,
-                               unsigned Depth = 0) {
-  // fneg is removable even if it has multiple uses.
-  if (Op.getOpcode() == ISD::FNEG)
-    return 2;
-
-  // Don't allow anything with multiple uses unless we know it is free.
-  EVT VT = Op.getValueType();
-  const SDNodeFlags Flags = Op->getFlags();
-  if (!Op.hasOneUse() &&
-      !(Op.getOpcode() == ISD::FP_EXTEND &&
-        TLI.isFPExtFree(VT, Op.getOperand(0).getValueType())))
-    return 0;
-
-  // Don't recurse exponentially.
-  if (Depth > SelectionDAG::MaxRecursionDepth)
-    return 0;
-
-  switch (Op.getOpcode()) {
-  default: return false;
-  case ISD::ConstantFP: {
-    if (!LegalOperations)
-      return 1;
-
-    // Don't invert constant FP values after legalization unless the target says
-    // the negated constant is legal.
-    return TLI.isOperationLegal(ISD::ConstantFP, VT) ||
-           TLI.isFPImmLegal(neg(cast<ConstantFPSDNode>(Op)->getValueAPF()), VT,
-                            ForCodeSize);
-  }
-  case ISD::BUILD_VECTOR: {
-    // Only permit BUILD_VECTOR of constants.
-    if (llvm::any_of(Op->op_values(), [&](SDValue N) {
-          return !N.isUndef() && !isa<ConstantFPSDNode>(N);
-        }))
-      return 0;
-    if (!LegalOperations)
-      return 1;
-    if (TLI.isOperationLegal(ISD::ConstantFP, VT) &&
-        TLI.isOperationLegal(ISD::BUILD_VECTOR, VT))
-      return 1;
-    return llvm::all_of(Op->op_values(), [&](SDValue N) {
-      return N.isUndef() ||
-             TLI.isFPImmLegal(neg(cast<ConstantFPSDNode>(N)->getValueAPF()), VT,
-                              ForCodeSize);
-    });
-  }
-  case ISD::FADD:
-    if (!Options->NoSignedZerosFPMath && !Flags.hasNoSignedZeros())
-      return 0;
-
-    // After operation legalization, it might not be legal to create new FSUBs.
-    if (LegalOperations && !TLI.isOperationLegalOrCustom(ISD::FSUB, VT))
-      return 0;
-
-    // fold (fneg (fadd A, B)) -> (fsub (fneg A), B)
-    if (char V = isNegatibleForFree(Op.getOperand(0), LegalOperations, TLI,
-                                    Options, ForCodeSize, Depth + 1))
-      return V;
-    // fold (fneg (fadd A, B)) -> (fsub (fneg B), A)
-    return isNegatibleForFree(Op.getOperand(1), LegalOperations, TLI, Options,
-                              ForCodeSize, Depth + 1);
-  case ISD::FSUB:
-    // We can't turn -(A-B) into B-A when we honor signed zeros.
-    if (!Options->NoSignedZerosFPMath && !Flags.hasNoSignedZeros())
-      return 0;
-
-    // fold (fneg (fsub A, B)) -> (fsub B, A)
-    return 1;
-
-  case ISD::FMUL:
-  case ISD::FDIV:
-    // fold (fneg (fmul X, Y)) -> (fmul (fneg X), Y) or (fmul X, (fneg Y))
-    if (char V = isNegatibleForFree(Op.getOperand(0), LegalOperations, TLI,
-                                    Options, ForCodeSize, Depth + 1))
-      return V;
-
-    // Ignore X * 2.0 because that is expected to be canonicalized to X + X.
-    if (auto *C = isConstOrConstSplatFP(Op.getOperand(1)))
-      if (C->isExactlyValue(2.0) && Op.getOpcode() == ISD::FMUL)
-        return 0;
-
-    return isNegatibleForFree(Op.getOperand(1), LegalOperations, TLI, Options,
-                              ForCodeSize, Depth + 1);
-
-  case ISD::FMA:
-  case ISD::FMAD: {
-    if (!Options->NoSignedZerosFPMath && !Flags.hasNoSignedZeros())
-      return 0;
-
-    // fold (fneg (fma X, Y, Z)) -> (fma (fneg X), Y, (fneg Z))
-    // fold (fneg (fma X, Y, Z)) -> (fma X, (fneg Y), (fneg Z))
-    char V2 = isNegatibleForFree(Op.getOperand(2), LegalOperations, TLI,
-                                 Options, ForCodeSize, Depth + 1);
-    if (!V2)
-      return 0;
-
-    // One of Op0/Op1 must be cheaply negatible, then select the cheapest.
-    char V0 = isNegatibleForFree(Op.getOperand(0), LegalOperations, TLI,
-                                 Options, ForCodeSize, Depth + 1);
-    char V1 = isNegatibleForFree(Op.getOperand(1), LegalOperations, TLI,
-                                 Options, ForCodeSize, Depth + 1);
-    char V01 = std::max(V0, V1);
-    return V01 ? std::max(V01, V2) : 0;
-  }
-
-  case ISD::FP_EXTEND:
-  case ISD::FP_ROUND:
-  case ISD::FSIN:
-    return isNegatibleForFree(Op.getOperand(0), LegalOperations, TLI, Options,
-                              ForCodeSize, Depth + 1);
-  }
-}
-
-/// If isNegatibleForFree returns true, return the newly negated expression.
-static SDValue GetNegatedExpression(SDValue Op, SelectionDAG &DAG,
-                                    bool LegalOperations, bool ForCodeSize,
-                                    unsigned Depth = 0) {
-  // fneg is removable even if it has multiple uses.
-  if (Op.getOpcode() == ISD::FNEG)
-    return Op.getOperand(0);
-
-  assert(Depth <= SelectionDAG::MaxRecursionDepth &&
-         "GetNegatedExpression doesn't match isNegatibleForFree");
-  const TargetOptions &Options = DAG.getTarget().Options;
-  const SDNodeFlags Flags = Op->getFlags();
-
-  switch (Op.getOpcode()) {
-  default: llvm_unreachable("Unknown code");
-  case ISD::ConstantFP: {
-    APFloat V = cast<ConstantFPSDNode>(Op)->getValueAPF();
-    V.changeSign();
-    return DAG.getConstantFP(V, SDLoc(Op), Op.getValueType());
-  }
-  case ISD::BUILD_VECTOR: {
-    SmallVector<SDValue, 4> Ops;
-    for (SDValue C : Op->op_values()) {
-      if (C.isUndef()) {
-        Ops.push_back(C);
-        continue;
-      }
-      APFloat V = cast<ConstantFPSDNode>(C)->getValueAPF();
-      V.changeSign();
-      Ops.push_back(DAG.getConstantFP(V, SDLoc(Op), C.getValueType()));
-    }
-    return DAG.getBuildVector(Op.getValueType(), SDLoc(Op), Ops);
-  }
-  case ISD::FADD:
-    assert((Options.NoSignedZerosFPMath || Flags.hasNoSignedZeros()) &&
-           "Expected NSZ fp-flag");
-
-    // fold (fneg (fadd A, B)) -> (fsub (fneg A), B)
-    if (isNegatibleForFree(Op.getOperand(0), LegalOperations,
-                           DAG.getTargetLoweringInfo(), &Options, ForCodeSize,
-                           Depth + 1))
-      return DAG.getNode(ISD::FSUB, SDLoc(Op), Op.getValueType(),
-                         GetNegatedExpression(Op.getOperand(0), DAG,
-                                              LegalOperations, ForCodeSize,
-                                              Depth + 1),
-                         Op.getOperand(1), Flags);
-    // fold (fneg (fadd A, B)) -> (fsub (fneg B), A)
-    return DAG.getNode(ISD::FSUB, SDLoc(Op), Op.getValueType(),
-                       GetNegatedExpression(Op.getOperand(1), DAG,
-                                            LegalOperations, ForCodeSize,
-                                            Depth + 1),
-                       Op.getOperand(0), Flags);
-  case ISD::FSUB:
-    // fold (fneg (fsub 0, B)) -> B
-    if (ConstantFPSDNode *N0CFP =
-            isConstOrConstSplatFP(Op.getOperand(0), /*AllowUndefs*/ true))
-      if (N0CFP->isZero())
-        return Op.getOperand(1);
-
-    // fold (fneg (fsub A, B)) -> (fsub B, A)
-    return DAG.getNode(ISD::FSUB, SDLoc(Op), Op.getValueType(),
-                       Op.getOperand(1), Op.getOperand(0), Flags);
-
-  case ISD::FMUL:
-  case ISD::FDIV:
-    // fold (fneg (fmul X, Y)) -> (fmul (fneg X), Y)
-    if (isNegatibleForFree(Op.getOperand(0), LegalOperations,
-                           DAG.getTargetLoweringInfo(), &Options, ForCodeSize,
-                           Depth + 1))
-      return DAG.getNode(Op.getOpcode(), SDLoc(Op), Op.getValueType(),
-                         GetNegatedExpression(Op.getOperand(0), DAG,
-                                              LegalOperations, ForCodeSize,
-                                              Depth + 1),
-                         Op.getOperand(1), Flags);
-
-    // fold (fneg (fmul X, Y)) -> (fmul X, (fneg Y))
-    return DAG.getNode(Op.getOpcode(), SDLoc(Op), Op.getValueType(),
-                       Op.getOperand(0),
-                       GetNegatedExpression(Op.getOperand(1), DAG,
-                                            LegalOperations, ForCodeSize,
-                                            Depth + 1), Flags);
-
-  case ISD::FMA:
-  case ISD::FMAD: {
-    assert((Options.NoSignedZerosFPMath || Flags.hasNoSignedZeros()) &&
-           "Expected NSZ fp-flag");
-
-    SDValue Neg2 = GetNegatedExpression(Op.getOperand(2), DAG, LegalOperations,
-                                        ForCodeSize, Depth + 1);
-
-    char V0 = isNegatibleForFree(Op.getOperand(0), LegalOperations,
-                                 DAG.getTargetLoweringInfo(), &Options,
-                                 ForCodeSize, Depth + 1);
-    char V1 = isNegatibleForFree(Op.getOperand(1), LegalOperations,
-                                 DAG.getTargetLoweringInfo(), &Options,
-                                 ForCodeSize, Depth + 1);
-    if (V0 >= V1) {
-      // fold (fneg (fma X, Y, Z)) -> (fma (fneg X), Y, (fneg Z))
-      SDValue Neg0 = GetNegatedExpression(
-          Op.getOperand(0), DAG, LegalOperations, ForCodeSize, Depth + 1);
-      return DAG.getNode(Op.getOpcode(), SDLoc(Op), Op.getValueType(), Neg0,
-                         Op.getOperand(1), Neg2, Flags);
-    }
-
-    // fold (fneg (fma X, Y, Z)) -> (fma X, (fneg Y), (fneg Z))
-    SDValue Neg1 = GetNegatedExpression(Op.getOperand(1), DAG, LegalOperations,
-                                        ForCodeSize, Depth + 1);
-    return DAG.getNode(Op.getOpcode(), SDLoc(Op), Op.getValueType(),
-                       Op.getOperand(0), Neg1, Neg2, Flags);
-  }
-
-  case ISD::FP_EXTEND:
-  case ISD::FSIN:
-    return DAG.getNode(Op.getOpcode(), SDLoc(Op), Op.getValueType(),
-                       GetNegatedExpression(Op.getOperand(0), DAG,
-                                            LegalOperations, ForCodeSize,
-                                            Depth + 1));
-  case ISD::FP_ROUND:
-    return DAG.getNode(ISD::FP_ROUND, SDLoc(Op), Op.getValueType(),
-                       GetNegatedExpression(Op.getOperand(0), DAG,
-                                            LegalOperations, ForCodeSize,
-                                            Depth + 1),
-                       Op.getOperand(1));
-  }
 }
 
 // APInts must be the same size for most operations, this helper
@@ -6062,8 +5816,8 @@ SDValue DAGCombiner::visitOR(SDNode *N) {
       return V;
 
   // See if this is some rotate idiom.
-  if (SDNode *Rot = MatchRotate(N0, N1, SDLoc(N)))
-    return SDValue(Rot, 0);
+  if (SDValue Rot = MatchRotate(N0, N1, SDLoc(N)))
+    return Rot;
 
   if (SDValue Load = MatchLoadCombine(N))
     return Load;
@@ -6348,7 +6102,7 @@ static bool matchRotateSub(SDValue Pos, SDValue Neg, unsigned EltSize,
 // to both (PosOpcode Shifted, Pos) and (NegOpcode Shifted, Neg), with the
 // former being preferred if supported.  InnerPos and InnerNeg are Pos and
 // Neg with outer conversions stripped away.
-SDNode *DAGCombiner::MatchRotatePosNeg(SDValue Shifted, SDValue Pos,
+SDValue DAGCombiner::MatchRotatePosNeg(SDValue Shifted, SDValue Pos,
                                        SDValue Neg, SDValue InnerPos,
                                        SDValue InnerNeg, unsigned PosOpcode,
                                        unsigned NegOpcode, const SDLoc &DL) {
@@ -6363,32 +6117,33 @@ SDNode *DAGCombiner::MatchRotatePosNeg(SDValue Shifted, SDValue Pos,
   if (matchRotateSub(InnerPos, InnerNeg, VT.getScalarSizeInBits(), DAG)) {
     bool HasPos = TLI.isOperationLegalOrCustom(PosOpcode, VT);
     return DAG.getNode(HasPos ? PosOpcode : NegOpcode, DL, VT, Shifted,
-                       HasPos ? Pos : Neg).getNode();
+                       HasPos ? Pos : Neg);
   }
 
-  return nullptr;
+  return SDValue();
 }
 
 // MatchRotate - Handle an 'or' of two operands.  If this is one of the many
 // idioms for rotate, and if the target supports rotation instructions, generate
 // a rot[lr].
-SDNode *DAGCombiner::MatchRotate(SDValue LHS, SDValue RHS, const SDLoc &DL) {
+SDValue DAGCombiner::MatchRotate(SDValue LHS, SDValue RHS, const SDLoc &DL) {
   // Must be a legal type.  Expanded 'n promoted things won't work with rotates.
   EVT VT = LHS.getValueType();
-  if (!TLI.isTypeLegal(VT)) return nullptr;
+  if (!TLI.isTypeLegal(VT))
+    return SDValue();
 
   // The target must have at least one rotate flavor.
   bool HasROTL = hasOperation(ISD::ROTL, VT);
   bool HasROTR = hasOperation(ISD::ROTR, VT);
-  if (!HasROTL && !HasROTR) return nullptr;
+  if (!HasROTL && !HasROTR)
+    return SDValue();
 
   // Check for truncated rotate.
   if (LHS.getOpcode() == ISD::TRUNCATE && RHS.getOpcode() == ISD::TRUNCATE &&
       LHS.getOperand(0).getValueType() == RHS.getOperand(0).getValueType()) {
     assert(LHS.getValueType() == RHS.getValueType());
-    if (SDNode *Rot = MatchRotate(LHS.getOperand(0), RHS.getOperand(0), DL)) {
-      return DAG.getNode(ISD::TRUNCATE, SDLoc(LHS), LHS.getValueType(),
-                         SDValue(Rot, 0)).getNode();
+    if (SDValue Rot = MatchRotate(LHS.getOperand(0), RHS.getOperand(0), DL)) {
+      return DAG.getNode(ISD::TRUNCATE, SDLoc(LHS), LHS.getValueType(), Rot);
     }
   }
 
@@ -6403,7 +6158,7 @@ SDNode *DAGCombiner::MatchRotate(SDValue LHS, SDValue RHS, const SDLoc &DL) {
 
   // If neither side matched a rotate half, bail
   if (!LHSShift && !RHSShift)
-    return nullptr;
+    return SDValue();
 
   // InstCombine may have combined a constant shl, srl, mul, or udiv with one
   // side of the rotate, so try to handle that here. In all cases we need to
@@ -6426,15 +6181,15 @@ SDNode *DAGCombiner::MatchRotate(SDValue LHS, SDValue RHS, const SDLoc &DL) {
 
   // If a side is still missing, nothing else we can do.
   if (!RHSShift || !LHSShift)
-    return nullptr;
+    return SDValue();
 
   // At this point we've matched or extracted a shift op on each side.
 
   if (LHSShift.getOperand(0) != RHSShift.getOperand(0))
-    return nullptr;   // Not shifting the same value.
+    return SDValue(); // Not shifting the same value.
 
   if (LHSShift.getOpcode() == RHSShift.getOpcode())
-    return nullptr;   // Shifts must disagree.
+    return SDValue(); // Shifts must disagree.
 
   // Canonicalize shl to left side in a shl/srl pair.
   if (RHSShift.getOpcode() == ISD::SHL) {
@@ -6478,13 +6233,13 @@ SDNode *DAGCombiner::MatchRotate(SDValue LHS, SDValue RHS, const SDLoc &DL) {
       Rot = DAG.getNode(ISD::AND, DL, VT, Rot, Mask);
     }
 
-    return Rot.getNode();
+    return Rot;
   }
 
   // If there is a mask here, and we have a variable shift, we can't be sure
   // that we're masking out the right stuff.
   if (LHSMask.getNode() || RHSMask.getNode())
-    return nullptr;
+    return SDValue();
 
   // If the shift amount is sign/zext/any-extended just peel it off.
   SDValue LExtOp0 = LHSShiftAmt;
@@ -6501,17 +6256,17 @@ SDNode *DAGCombiner::MatchRotate(SDValue LHS, SDValue RHS, const SDLoc &DL) {
     RExtOp0 = RHSShiftAmt.getOperand(0);
   }
 
-  SDNode *TryL = MatchRotatePosNeg(LHSShiftArg, LHSShiftAmt, RHSShiftAmt,
+  SDValue TryL = MatchRotatePosNeg(LHSShiftArg, LHSShiftAmt, RHSShiftAmt,
                                    LExtOp0, RExtOp0, ISD::ROTL, ISD::ROTR, DL);
   if (TryL)
     return TryL;
 
-  SDNode *TryR = MatchRotatePosNeg(RHSShiftArg, RHSShiftAmt, LHSShiftAmt,
+  SDValue TryR = MatchRotatePosNeg(RHSShiftArg, RHSShiftAmt, LHSShiftAmt,
                                    RExtOp0, LExtOp0, ISD::ROTR, ISD::ROTL, DL);
   if (TryR)
     return TryR;
 
-  return nullptr;
+  return SDValue();
 }
 
 namespace {
@@ -12052,17 +11807,17 @@ SDValue DAGCombiner::visitFADD(SDNode *N) {
 
   // fold (fadd A, (fneg B)) -> (fsub A, B)
   if ((!LegalOperations || TLI.isOperationLegalOrCustom(ISD::FSUB, VT)) &&
-      isNegatibleForFree(N1, LegalOperations, TLI, &Options, ForCodeSize) == 2)
-    return DAG.getNode(ISD::FSUB, DL, VT, N0,
-                       GetNegatedExpression(N1, DAG, LegalOperations,
-                                            ForCodeSize), Flags);
+      TLI.isNegatibleForFree(N1, DAG, LegalOperations, ForCodeSize) == 2)
+    return DAG.getNode(
+        ISD::FSUB, DL, VT, N0,
+        TLI.getNegatedExpression(N1, DAG, LegalOperations, ForCodeSize), Flags);
 
   // fold (fadd (fneg A), B) -> (fsub B, A)
   if ((!LegalOperations || TLI.isOperationLegalOrCustom(ISD::FSUB, VT)) &&
-      isNegatibleForFree(N0, LegalOperations, TLI, &Options, ForCodeSize) == 2)
-    return DAG.getNode(ISD::FSUB, DL, VT, N1,
-                       GetNegatedExpression(N0, DAG, LegalOperations,
-                                            ForCodeSize), Flags);
+      TLI.isNegatibleForFree(N0, DAG, LegalOperations, ForCodeSize) == 2)
+    return DAG.getNode(
+        ISD::FSUB, DL, VT, N1,
+        TLI.getNegatedExpression(N0, DAG, LegalOperations, ForCodeSize), Flags);
 
   auto isFMulNegTwo = [](SDValue FMul) {
     if (!FMul.hasOneUse() || FMul.getOpcode() != ISD::FMUL)
@@ -12241,16 +11996,16 @@ SDValue DAGCombiner::visitFSUB(SDNode *N) {
   if (N0CFP && N0CFP->isZero()) {
     if (N0CFP->isNegative() ||
         (Options.NoSignedZerosFPMath || Flags.hasNoSignedZeros())) {
-      if (isNegatibleForFree(N1, LegalOperations, TLI, &Options, ForCodeSize))
-        return GetNegatedExpression(N1, DAG, LegalOperations, ForCodeSize);
+      if (TLI.isNegatibleForFree(N1, DAG, LegalOperations, ForCodeSize))
+        return TLI.getNegatedExpression(N1, DAG, LegalOperations, ForCodeSize);
       if (!LegalOperations || TLI.isOperationLegal(ISD::FNEG, VT))
         return DAG.getNode(ISD::FNEG, DL, VT, N1, Flags);
     }
   }
 
   if (((Options.UnsafeFPMath && Options.NoSignedZerosFPMath) ||
-      (Flags.hasAllowReassociation() && Flags.hasNoSignedZeros()))
-      && N1.getOpcode() == ISD::FADD) {
+       (Flags.hasAllowReassociation() && Flags.hasNoSignedZeros())) &&
+      N1.getOpcode() == ISD::FADD) {
     // X - (X + Y) -> -Y
     if (N0 == N1->getOperand(0))
       return DAG.getNode(ISD::FNEG, DL, VT, N1->getOperand(1), Flags);
@@ -12260,10 +12015,10 @@ SDValue DAGCombiner::visitFSUB(SDNode *N) {
   }
 
   // fold (fsub A, (fneg B)) -> (fadd A, B)
-  if (isNegatibleForFree(N1, LegalOperations, TLI, &Options, ForCodeSize))
-    return DAG.getNode(ISD::FADD, DL, VT, N0,
-                       GetNegatedExpression(N1, DAG, LegalOperations,
-                                            ForCodeSize), Flags);
+  if (TLI.isNegatibleForFree(N1, DAG, LegalOperations, ForCodeSize))
+    return DAG.getNode(
+        ISD::FADD, DL, VT, N0,
+        TLI.getNegatedExpression(N1, DAG, LegalOperations, ForCodeSize), Flags);
 
   // FSUB -> FMA combines:
   if (SDValue Fused = visitFSUBForFMACombine(N)) {
@@ -12277,11 +12032,10 @@ SDValue DAGCombiner::visitFSUB(SDNode *N) {
 /// Return true if both inputs are at least as cheap in negated form and at
 /// least one input is strictly cheaper in negated form.
 bool DAGCombiner::isCheaperToUseNegatedFPOps(SDValue X, SDValue Y) {
-  const TargetOptions &Options = DAG.getTarget().Options;
-  if (char LHSNeg = isNegatibleForFree(X, LegalOperations, TLI, &Options,
-                                   ForCodeSize))
-    if (char RHSNeg = isNegatibleForFree(Y, LegalOperations, TLI, &Options,
-                                         ForCodeSize))
+  if (char LHSNeg =
+          TLI.isNegatibleForFree(X, DAG, LegalOperations, ForCodeSize))
+    if (char RHSNeg =
+            TLI.isNegatibleForFree(Y, DAG, LegalOperations, ForCodeSize))
       // Both negated operands are at least as cheap as their counterparts.
       // Check to see if at least one is cheaper negated.
       if (LHSNeg == 2 || RHSNeg == 2)
@@ -12362,8 +12116,10 @@ SDValue DAGCombiner::visitFMUL(SDNode *N) {
 
   // -N0 * -N1 --> N0 * N1
   if (isCheaperToUseNegatedFPOps(N0, N1)) {
-    SDValue NegN0 = GetNegatedExpression(N0, DAG, LegalOperations, ForCodeSize);
-    SDValue NegN1 = GetNegatedExpression(N1, DAG, LegalOperations, ForCodeSize);
+    SDValue NegN0 =
+        TLI.getNegatedExpression(N0, DAG, LegalOperations, ForCodeSize);
+    SDValue NegN1 =
+        TLI.getNegatedExpression(N1, DAG, LegalOperations, ForCodeSize);
     return DAG.getNode(ISD::FMUL, DL, VT, NegN0, NegN1, Flags);
   }
 
@@ -12445,8 +12201,10 @@ SDValue DAGCombiner::visitFMA(SDNode *N) {
 
   // (-N0 * -N1) + N2 --> (N0 * N1) + N2
   if (isCheaperToUseNegatedFPOps(N0, N1)) {
-    SDValue NegN0 = GetNegatedExpression(N0, DAG, LegalOperations, ForCodeSize);
-    SDValue NegN1 = GetNegatedExpression(N1, DAG, LegalOperations, ForCodeSize);
+    SDValue NegN0 =
+        TLI.getNegatedExpression(N0, DAG, LegalOperations, ForCodeSize);
+    SDValue NegN1 =
+        TLI.getNegatedExpression(N1, DAG, LegalOperations, ForCodeSize);
     return DAG.getNode(ISD::FMA, DL, VT, NegN0, NegN1, N2, Flags);
   }
 
@@ -12707,8 +12465,8 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
   if (isCheaperToUseNegatedFPOps(N0, N1))
     return DAG.getNode(
         ISD::FDIV, SDLoc(N), VT,
-        GetNegatedExpression(N0, DAG, LegalOperations, ForCodeSize),
-        GetNegatedExpression(N1, DAG, LegalOperations, ForCodeSize), Flags);
+        TLI.getNegatedExpression(N0, DAG, LegalOperations, ForCodeSize),
+        TLI.getNegatedExpression(N1, DAG, LegalOperations, ForCodeSize), Flags);
 
   return SDValue();
 }
@@ -13262,9 +13020,8 @@ SDValue DAGCombiner::visitFNEG(SDNode *N) {
   if (isConstantFPBuildVectorOrConstantFP(N0))
     return DAG.getNode(ISD::FNEG, SDLoc(N), VT, N0);
 
-  if (isNegatibleForFree(N0, LegalOperations, DAG.getTargetLoweringInfo(),
-                         &DAG.getTarget().Options, ForCodeSize))
-    return GetNegatedExpression(N0, DAG, LegalOperations, ForCodeSize);
+  if (TLI.isNegatibleForFree(N0, DAG, LegalOperations, ForCodeSize))
+    return TLI.getNegatedExpression(N0, DAG, LegalOperations, ForCodeSize);
 
   // Transform fneg(bitconvert(x)) -> bitconvert(x ^ sign) to avoid loading
   // constant pool values.

@@ -1,5 +1,7 @@
+// RUN: %clang_cc1 -x c -fsyntax-only -verify -Wenum-compare-conditional %s
 // RUN: %clang_cc1 -x c -fsyntax-only -verify -Wenum-compare %s
 // RUN: %clang_cc1 -x c -fsyntax-only -verify  %s
+// RUN: %clang_cc1 -x c++ -fsyntax-only -verify -Wenum-compare-conditional %s
 // RUN: %clang_cc1 -x c++ -fsyntax-only -verify -Wenum-compare %s
 // RUN: %clang_cc1 -x c++ -fsyntax-only -verify %s
 

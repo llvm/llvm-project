@@ -96,3 +96,22 @@ body: |
     %3:_(<16 x s32>) = G_INSERT_VECTOR_ELT %0, %1, %2
     S_ENDPGM 0, implicit %3
 ...
+
+---
+name: insert_vector_elt_0_v16s64
+
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+
+    ; CHECK-LABEL: name: insert_vector_elt_0_v16s64
+    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; CHECK: [[DEF:%[0-9]+]]:_(<16 x s64>) = G_IMPLICIT_DEF
+    ; CHECK: [[INSERT:%[0-9]+]]:_(<16 x s64>) = G_INSERT [[DEF]], [[COPY]](s64), 0
+    ; CHECK: S_ENDPGM 0, implicit [[INSERT]](<16 x s64>)
+    %0:_(s64) = COPY $vgpr0_vgpr1
+    %1:_(<16 x s64>) = G_IMPLICIT_DEF
+    %2:_(s32) = G_CONSTANT i32 0
+    %3:_(<16 x s64>) = G_INSERT_VECTOR_ELT %1, %0, %2
+    S_ENDPGM 0, implicit %3
+...

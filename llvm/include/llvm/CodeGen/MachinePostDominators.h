@@ -85,6 +85,7 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   void releaseMemory() override { PDT.reset(nullptr); }
+  void verifyAnalysis() const override;
   void print(llvm::raw_ostream &OS, const Module *M = nullptr) const override;
 };
 } //end of namespace llvm

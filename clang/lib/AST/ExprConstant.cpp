@@ -5258,7 +5258,9 @@ static bool HandleUnionActiveMemberChange(EvalInfo &Info, const Expr *LHSExpr,
     //   -- If E is of the form A.B, S(E) contains the elements of S(A)...
     if (auto *ME = dyn_cast<MemberExpr>(E)) {
       auto *FD = dyn_cast<FieldDecl>(ME->getMemberDecl());
-      if (!FD)
+      // Note that we can't implicitly start the lifetime of a reference,
+      // so we don't need to proceed any further if we reach one.
+      if (!FD || FD->getType()->isReferenceType())
         break;
 
       //    ... and also contains A.B if B names a union member
@@ -6489,6 +6491,12 @@ public:
   bool VisitExprWithCleanups(const ExprWithCleanups *E) {
     FullExpressionRAII Scope(Info);
     return StmtVisitorTy::Visit(E->getSubExpr()) && Scope.destroy();
+  }
+
+  // Temporaries are registered when created, so we don't care about
+  // CXXBindTemporaryExpr.
+  bool VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr *E) {
+    return StmtVisitorTy::Visit(E->getSubExpr());
   }
 
   bool VisitCXXReinterpretCastExpr(const CXXReinterpretCastExpr *E) {
@@ -8446,13 +8454,6 @@ namespace {
     bool VisitCXXInheritedCtorInitExpr(const CXXInheritedCtorInitExpr *E);
     bool VisitCXXConstructExpr(const CXXConstructExpr *E, QualType T);
     bool VisitCXXStdInitializerListExpr(const CXXStdInitializerListExpr *E);
-
-    // Temporaries are registered when created, so we don't care about
-    // CXXBindTemporaryExpr.
-    bool VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr *E) {
-      return Visit(E->getSubExpr());
-    }
-
     bool VisitBinCmp(const BinaryOperator *E);
   };
 }

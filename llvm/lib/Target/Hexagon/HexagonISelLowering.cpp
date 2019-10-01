@@ -240,12 +240,12 @@ bool HexagonTargetLowering::mayBeEmittedAsTailCall(const CallInst *CI) const {
   return true;
 }
 
-unsigned  HexagonTargetLowering::getRegisterByName(const char* RegName, EVT VT,
-                                              SelectionDAG &DAG) const {
+Register HexagonTargetLowering::getRegisterByName(const char* RegName, EVT VT,
+                                                  const MachineFunction &) const {
   // Just support r19, the linux kernel uses it.
-  unsigned Reg = StringSwitch<unsigned>(RegName)
+  Register Reg = StringSwitch<Register>(RegName)
                      .Case("r19", Hexagon::R19)
-                     .Default(0);
+                     .Default(Register());
   if (Reg)
     return Reg;
 

@@ -436,13 +436,17 @@ try.cont:                                         ; preds = %catch.start1, %catc
 ; the right destination (label4), from which we rethrow the exception to the
 ; caller.
 
+; And the return value of 'baz' should NOT be stackified because the BB is split
+; during fixing unwind mismatches.
+
 ; NOSORT-LABEL: test6
 ; NOSORT:   try
 ; NOSORT:     call      foo
 ; --- Nested try/catch/end_try starts
 ; NOSORT:     try
 ; NOSORT:       call      bar
-; NOSORT:       call      bar
+; NOSORT:       i32.call  ${{[0-9]+}}=, baz
+; NOSORT-NOT:   i32.call  $push{{.*}}=, baz
 ; NOSORT:     catch     $[[REG:[0-9]+]]=
 ; NOSORT:       br        1                            # 1: down to label35
 ; NOSORT:     end_try
@@ -460,7 +464,8 @@ bb0:
 
 bb1:                                              ; preds = %bb0
   call void @bar()
-  call void @bar()
+  %call = call i32 @baz()
+  call void @nothrow(i32 %call) #0
   ret void
 
 catch.dispatch0:                                  ; preds = %bb0
@@ -616,8 +621,54 @@ try.cont:                                         ; preds = %catch.start1, %catc
   ret void
 }
 
+; In CFGSort, EH pads should be sorted as soon as it is available and
+; 'Preferred' queue and should NOT be entered into 'Ready' queue unless we are
+; in the middle of sorting another region that does not contain the EH pad. In
+; this example, 'catch.start' should be sorted right after 'if.then' is sorted
+; (before 'cont' is sorted) and there should not be any unwind destination
+; mismatches in CFGStackify.
+
+; NOOPT: block
+; NOOPT:   try
+; NOOPT:     call      foo
+; NOOPT:   catch
+; NOOPT:   end_try
+; NOOPT:   call      foo
+; NOOPT: end_block
+; NOOPT: return
+define void @test9(i32 %arg) personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+entry:
+  %tobool = icmp ne i32 %arg, 0
+  br i1 %tobool, label %if.then, label %if.end
+
+catch.dispatch:                                   ; preds = %if.then
+  %0 = catchswitch within none [label %catch.start] unwind to caller
+
+catch.start:                                      ; preds = %catch.dispatch
+  %1 = catchpad within %0 [i8* null]
+  %2 = call i8* @llvm.wasm.get.exception(token %1)
+  %3 = call i32 @llvm.wasm.get.ehselector(token %1)
+  %4 = call i8* @__cxa_begin_catch(i8* %2) [ "funclet"(token %1) ]
+  call void @__cxa_end_catch() [ "funclet"(token %1) ]
+  catchret from %1 to label %if.end
+
+if.then:                                          ; preds = %entry
+  invoke void @foo()
+          to label %cont unwind label %catch.dispatch
+
+cont:                                             ; preds = %if.then
+  call void @foo()
+  br label %if.end
+
+if.end:                                           ; preds = %cont, %catch.start, %entry
+  ret void
+}
+
 declare void @foo()
 declare void @bar()
+declare i32 @baz()
+; Function Attrs: nounwind
+declare void @nothrow(i32) #0
 declare i32 @__gxx_wasm_personality_v0(...)
 declare i8* @llvm.wasm.get.exception(token)
 declare i32 @llvm.wasm.get.ehselector(token)
@@ -627,3 +678,5 @@ declare i8* @__cxa_begin_catch(i8*)
 declare void @__cxa_end_catch()
 declare void @__clang_call_terminate(i8*)
 declare void @_ZSt9terminatev()
+
+attributes #0 = { nounwind }

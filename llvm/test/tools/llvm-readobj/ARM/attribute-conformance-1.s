@@ -3,8 +3,6 @@
 @ RUN:   | llvm-readobj --arch-specific - | FileCheck %s --check-prefix=CHECK-OBJ
 @ RUN: llvm-mc -triple armv7-eabi -filetype obj -o - %s \
 @ RUN:   | llvm-readobj -A - | FileCheck %s --check-prefix=CHECK-OBJ
-@ RUN: llvm-mc -triple armv7-eabi -filetype obj -o - %s \
-@ RUN:   | llvm-readobj --arm-attributes - | FileCheck %s --check-prefix=CHECK-OBJ
 .eabi_attribute  Tag_conformance, "0"
 @CHECK:   .eabi_attribute 67, "0"
 @CHECK-OBJ: Tag: 67

@@ -393,12 +393,10 @@ public:
   /// \param[out] type_list
   ///     A type list gets populated with any matches.
   ///
-  /// \return
-  ///     The number of matches added to \a type_list.
-  size_t FindTypes(Module *search_first, ConstString name,
-                   bool name_is_fully_qualified, size_t max_matches,
-                   llvm::DenseSet<SymbolFile *> &searched_symbol_files,
-                   TypeList &types) const;
+  void FindTypes(Module *search_first, ConstString name,
+                 bool name_is_fully_qualified, size_t max_matches,
+                 llvm::DenseSet<SymbolFile *> &searched_symbol_files,
+                 TypeList &types) const;
 
   bool FindSourceFile(const FileSpec &orig_spec, FileSpec &new_spec) const;
 

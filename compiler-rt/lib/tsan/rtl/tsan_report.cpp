@@ -298,7 +298,7 @@ static bool FrameIsInternal(const SymbolizedStack *frame) {
   const char *file = frame->info.file;
   const char *module = frame->info.module;
   if (file != 0 &&
-      (internal_strstr(file, "tsan_interceptors.cpp") ||
+      (internal_strstr(file, "tsan_interceptors_posix.cpp") ||
        internal_strstr(file, "sanitizer_common_interceptors.inc") ||
        internal_strstr(file, "tsan_interface_")))
     return true;

@@ -2278,8 +2278,8 @@ public:
   CXXDeleteExpr(QualType Ty, bool GlobalDelete, bool ArrayForm,
                 bool ArrayFormAsWritten, bool UsualArrayDeleteWantsSize,
                 FunctionDecl *OperatorDelete, Expr *Arg, SourceLocation Loc)
-      : Expr(CXXDeleteExprClass, Ty, VK_RValue, OK_Ordinary, false, false,
-             Arg->isInstantiationDependent(),
+      : Expr(CXXDeleteExprClass, Ty, VK_RValue, OK_Ordinary, false,
+             Arg->isValueDependent(), Arg->isInstantiationDependent(),
              Arg->containsUnexpandedParameterPack()),
         OperatorDelete(OperatorDelete), Argument(Arg) {
     CXXDeleteExprBits.GlobalDelete = GlobalDelete;

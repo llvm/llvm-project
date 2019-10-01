@@ -18,12 +18,15 @@
 
 using namespace llvm;
 
+namespace llvm {
 // Always verify dominfo if expensive checking is enabled.
 #ifdef EXPENSIVE_CHECKS
-static bool VerifyMachineDomInfo = true;
+bool VerifyMachineDomInfo = true;
 #else
-static bool VerifyMachineDomInfo = false;
+bool VerifyMachineDomInfo = false;
 #endif
+} // namespace llvm
+
 static cl::opt<bool, true> VerifyMachineDomInfoX(
     "verify-machine-dom-info", cl::location(VerifyMachineDomInfo), cl::Hidden,
     cl::desc("Verify machine dominator info (time consuming)"));

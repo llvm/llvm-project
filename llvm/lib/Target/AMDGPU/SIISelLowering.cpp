@@ -2971,9 +2971,9 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
                          IsThisReturn ? OutVals[0] : SDValue());
 }
 
-unsigned SITargetLowering::getRegisterByName(const char* RegName, EVT VT,
-                                             SelectionDAG &DAG) const {
-  unsigned Reg = StringSwitch<unsigned>(RegName)
+Register SITargetLowering::getRegisterByName(const char* RegName, EVT VT,
+                                             const MachineFunction &MF) const {
+  Register Reg = StringSwitch<Register>(RegName)
     .Case("m0", AMDGPU::M0)
     .Case("exec", AMDGPU::EXEC)
     .Case("exec_lo", AMDGPU::EXEC_LO)
@@ -2981,7 +2981,7 @@ unsigned SITargetLowering::getRegisterByName(const char* RegName, EVT VT,
     .Case("flat_scratch", AMDGPU::FLAT_SCR)
     .Case("flat_scratch_lo", AMDGPU::FLAT_SCR_LO)
     .Case("flat_scratch_hi", AMDGPU::FLAT_SCR_HI)
-    .Default(AMDGPU::NoRegister);
+    .Default(Register());
 
   if (Reg == AMDGPU::NoRegister) {
     report_fatal_error(Twine("invalid register name \""

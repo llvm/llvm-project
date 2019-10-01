@@ -510,8 +510,12 @@ SourceRange TemplateTypeParmDecl::getSourceRange() const {
   if (hasDefaultArgument() && !defaultArgumentWasInherited())
     return SourceRange(getBeginLoc(),
                        getDefaultArgumentInfo()->getTypeLoc().getEndLoc());
-  else
-    return TypeDecl::getSourceRange();
+  // TypeDecl::getSourceRange returns a range containing name location, which is
+  // wrong for unnamed template parameters. e.g:
+  // it will return <[[typename>]] instead of <[[typename]]>
+  else if (getDeclName().isEmpty())
+    return SourceRange(getBeginLoc());
+  return TypeDecl::getSourceRange();
 }
 
 unsigned TemplateTypeParmDecl::getDepth() const {

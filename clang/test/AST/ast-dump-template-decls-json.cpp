@@ -656,8 +656,8 @@ void V<Ty>::f() {}
 // CHECK-NEXT:        "id": "0x{{.*}}",
 // CHECK-NEXT:        "kind": "TemplateTypeParmDecl",
 // CHECK-NEXT:        "loc": {
-// CHECK-NEXT:         "col": 33,
-// CHECK-NEXT:         "tokLen": 8
+// CHECK-NEXT:         "col": 41,
+// CHECK-NEXT:         "tokLen": 1
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
@@ -1099,8 +1099,8 @@ void V<Ty>::f() {}
 // CHECK-NEXT:      "kind": "TemplateTypeParmDecl",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "line": 27,
-// CHECK-NEXT:       "col": 11,
-// CHECK-NEXT:       "tokLen": 8
+// CHECK-NEXT:       "col": 20,
+// CHECK-NEXT:       "tokLen": 1
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
