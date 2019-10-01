@@ -580,6 +580,7 @@ TEST_F(SymbolFilePDBTests, TestMaxMatches) {
     uint32_t num_limited_results = results.GetSize() - num_results;
     EXPECT_EQ(i, num_limited_results);
     EXPECT_EQ(num_limited_results, results.GetSize());
+    num_results = num_limited_results;
   }
 }
 
