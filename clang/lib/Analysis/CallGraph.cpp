@@ -80,7 +80,10 @@ public:
   }
 
   void VisitLambdaExpr(LambdaExpr *LE) {
-    if (CXXMethodDecl *MD = LE->getCallOperator())
+    if (FunctionTemplateDecl *FTD = LE->getDependentCallOperator())
+      for (FunctionDecl *FD : FTD->specializations())
+        G->VisitFunctionDecl(FD);
+    else if (CXXMethodDecl *MD = LE->getCallOperator())
       G->VisitFunctionDecl(MD);
   }
 

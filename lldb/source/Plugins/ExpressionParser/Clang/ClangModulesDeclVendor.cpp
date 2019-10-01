@@ -573,8 +573,9 @@ ClangModulesDeclVendorImpl::DoGetModule(clang::ModuleIdPath path,
 
 clang::ExternalASTMerger::ImporterSource
 ClangModulesDeclVendorImpl::GetImporterSource() {
-  return {m_compiler_instance->getASTContext(),
-          m_compiler_instance->getFileManager(), m_origin_map};
+  return clang::ExternalASTMerger::ImporterSource(
+      m_compiler_instance->getASTContext(),
+      m_compiler_instance->getFileManager(), m_origin_map);
 }
 
 static const char *ModuleImportBufferName = "LLDBModulesMemoryBuffer";

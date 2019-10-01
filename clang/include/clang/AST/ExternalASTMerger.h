@@ -80,10 +80,17 @@ public:
   /// import SourceLocations properly.  Additionally, when import occurs for
   /// a DeclContext whose origin has been overridden, then this
   /// ExternalASTMerger must be able to determine that.
-  struct ImporterSource {
+  class ImporterSource {
     ASTContext &AST;
     FileManager &FM;
     const OriginMap &OM;
+
+  public:
+    ImporterSource(ASTContext &_AST, FileManager &_FM, const OriginMap &_OM)
+        : AST(_AST), FM(_FM), OM(_OM) {}
+    ASTContext &getASTContext() const { return AST; }
+    FileManager &getFileManager() const { return FM; }
+    const OriginMap &getOriginMap() const { return OM; }
   };
 
 private:
