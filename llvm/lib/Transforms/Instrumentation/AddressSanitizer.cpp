@@ -580,10 +580,10 @@ char ASanGlobalsMetadataWrapperPass::ID = 0;
 
 /// AddressSanitizer: instrument the code in module to find memory bugs.
 struct AddressSanitizer {
-  AddressSanitizer(Module &M, GlobalsMetadata &GlobalsMD,
+  AddressSanitizer(Module &M, const GlobalsMetadata *GlobalsMD,
                    bool CompileKernel = false, bool Recover = false,
                    bool UseAfterScope = false)
-      : UseAfterScope(UseAfterScope || ClUseAfterScope), GlobalsMD(GlobalsMD) {
+      : UseAfterScope(UseAfterScope || ClUseAfterScope), GlobalsMD(*GlobalsMD) {
     this->Recover = ClRecover.getNumOccurrences() > 0 ? ClRecover : Recover;
     this->CompileKernel =
         ClEnableKasan.getNumOccurrences() > 0 ? ClEnableKasan : CompileKernel;
@@ -692,7 +692,7 @@ private:
   FunctionCallee AsanMemmove, AsanMemcpy, AsanMemset;
   InlineAsm *EmptyAsm;
   Value *LocalDynamicShadow = nullptr;
-  GlobalsMetadata GlobalsMD;
+  const GlobalsMetadata &GlobalsMD;
   DenseMap<const AllocaInst *, bool> ProcessedAllocas;
 };
 
@@ -722,7 +722,7 @@ public:
         getAnalysis<ASanGlobalsMetadataWrapperPass>().getGlobalsMD();
     const TargetLibraryInfo *TLI =
         &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
-    AddressSanitizer ASan(*F.getParent(), GlobalsMD, CompileKernel, Recover,
+    AddressSanitizer ASan(*F.getParent(), &GlobalsMD, CompileKernel, Recover,
                           UseAfterScope);
     return ASan.instrumentFunction(F, TLI);
   }
@@ -735,10 +735,10 @@ private:
 
 class ModuleAddressSanitizer {
 public:
-  ModuleAddressSanitizer(Module &M, GlobalsMetadata &GlobalsMD,
+  ModuleAddressSanitizer(Module &M, const GlobalsMetadata *GlobalsMD,
                          bool CompileKernel = false, bool Recover = false,
                          bool UseGlobalsGC = true, bool UseOdrIndicator = false)
-      : GlobalsMD(GlobalsMD), UseGlobalsGC(UseGlobalsGC && ClUseGlobalsGC),
+      : GlobalsMD(*GlobalsMD), UseGlobalsGC(UseGlobalsGC && ClUseGlobalsGC),
         // Enable aliases as they should have no downside with ODR indicators.
         UsePrivateAlias(UseOdrIndicator || ClUsePrivateAlias),
         UseOdrIndicator(UseOdrIndicator || ClUseOdrIndicator),
@@ -798,7 +798,7 @@ private:
   }
   int GetAsanVersion(const Module &M) const;
 
-  GlobalsMetadata GlobalsMD;
+  const GlobalsMetadata &GlobalsMD;
   bool CompileKernel;
   bool Recover;
   bool UseGlobalsGC;
@@ -845,7 +845,7 @@ public:
   bool runOnModule(Module &M) override {
     GlobalsMetadata &GlobalsMD =
         getAnalysis<ASanGlobalsMetadataWrapperPass>().getGlobalsMD();
-    ModuleAddressSanitizer ASanModule(M, GlobalsMD, CompileKernel, Recover,
+    ModuleAddressSanitizer ASanModule(M, &GlobalsMD, CompileKernel, Recover,
                                       UseGlobalGC, UseOdrIndicator);
     return ASanModule.instrumentModule(M);
   }
@@ -1171,7 +1171,7 @@ PreservedAnalyses AddressSanitizerPass::run(Function &F,
   Module &M = *F.getParent();
   if (auto *R = MAM.getCachedResult<ASanGlobalsMetadataAnalysis>(M)) {
     const TargetLibraryInfo *TLI = &AM.getResult<TargetLibraryAnalysis>(F);
-    AddressSanitizer Sanitizer(M, *R, CompileKernel, Recover, UseAfterScope);
+    AddressSanitizer Sanitizer(M, R, CompileKernel, Recover, UseAfterScope);
     if (Sanitizer.instrumentFunction(F, TLI))
       return PreservedAnalyses::none();
     return PreservedAnalyses::all();
@@ -1193,7 +1193,7 @@ ModuleAddressSanitizerPass::ModuleAddressSanitizerPass(bool CompileKernel,
 PreservedAnalyses ModuleAddressSanitizerPass::run(Module &M,
                                                   AnalysisManager<Module> &AM) {
   GlobalsMetadata &GlobalsMD = AM.getResult<ASanGlobalsMetadataAnalysis>(M);
-  ModuleAddressSanitizer Sanitizer(M, GlobalsMD, CompileKernel, Recover,
+  ModuleAddressSanitizer Sanitizer(M, &GlobalsMD, CompileKernel, Recover,
                                    UseGlobalGC, UseOdrIndicator);
   if (Sanitizer.instrumentModule(M))
     return PreservedAnalyses::none();

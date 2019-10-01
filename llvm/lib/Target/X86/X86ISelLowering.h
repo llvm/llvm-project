@@ -615,6 +615,9 @@ namespace llvm {
       // extract_vector_elt, store.
       VEXTRACT_STORE,
 
+      // scalar broadcast from memory
+      VBROADCAST_LOAD,
+
       // Store FP control world into i16 memory.
       FNSTCW16m,
 

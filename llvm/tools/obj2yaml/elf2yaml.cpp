@@ -647,7 +647,9 @@ ELFDumper<ELFT>::dumpHashSection(const Elf_Shdr *Shdr) {
   uint32_t NChain = Data.getU32(Cur);
   if (Content.size() != (2 + NBucket + NChain) * 4) {
     S->Content = yaml::BinaryRef(Content);
-    return S.release();
+    if (Cur)
+      return S.release();
+    llvm_unreachable("entries were not read correctly");
   }
 
   S->Bucket.emplace(NBucket);
@@ -658,9 +660,9 @@ ELFDumper<ELFT>::dumpHashSection(const Elf_Shdr *Shdr) {
   for (uint32_t &V : *S->Chain)
     V = Data.getU32(Cur);
 
-  if (!Cur)
-    llvm_unreachable("entries were not read correctly");
-  return S.release();
+  if (Cur)
+    return S.release();
+  llvm_unreachable("entries were not read correctly");
 }
 
 template <class ELFT>

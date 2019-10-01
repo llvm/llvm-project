@@ -253,6 +253,11 @@ namespace {
       return tryFoldLoad(P, P, N, Base, Scale, Index, Disp, Segment);
     }
 
+    bool tryFoldBroadcast(SDNode *Root, SDNode *P, SDValue N,
+                          SDValue &Base, SDValue &Scale,
+                          SDValue &Index, SDValue &Disp,
+                          SDValue &Segment);
+
     /// Implement addressing mode selection for inline asm expressions.
     bool SelectInlineAsmMemoryOperand(const SDValue &Op,
                                       unsigned ConstraintID,
@@ -509,7 +514,6 @@ namespace {
     bool tryShiftAmountMod(SDNode *N);
     bool combineIncDecVector(SDNode *Node);
     bool tryShrinkShlLogicImm(SDNode *N);
-    bool tryVPTERNLOG(SDNode *N);
     bool tryVPTESTM(SDNode *Root, SDValue Setcc, SDValue Mask);
     bool tryMatchBitSelect(SDNode *N);
 
@@ -2592,6 +2596,20 @@ bool X86DAGToDAGISel::tryFoldLoad(SDNode *Root, SDNode *P, SDValue N,
                     N.getOperand(1), Base, Scale, Index, Disp, Segment);
 }
 
+bool X86DAGToDAGISel::tryFoldBroadcast(SDNode *Root, SDNode *P, SDValue N,
+                                       SDValue &Base, SDValue &Scale,
+                                       SDValue &Index, SDValue &Disp,
+                                       SDValue &Segment) {
+  assert(Root && P && "Unknown root/parent nodes");
+  if (N->getOpcode() != X86ISD::VBROADCAST_LOAD ||
+      !IsProfitableToFold(N, P, Root) ||
+      !IsLegalToFold(N, P, Root, OptLevel))
+    return false;
+
+  return selectAddr(N.getNode(),
+                    N.getOperand(1), Base, Scale, Index, Disp, Segment);
+}
+
 /// Return an SDNode that returns the value of the global base register.
 /// Output instructions required to initialize the global base register,
 /// if necessary.
@@ -3814,82 +3832,6 @@ bool X86DAGToDAGISel::tryShrinkShlLogicImm(SDNode *N) {
   return true;
 }
 
-// Try to match two logic ops to a VPTERNLOG.
-// FIXME: Handle inverted inputs?
-// FIXME: Handle more complex patterns that use an operand more than once?
-// FIXME: Support X86ISD::ANDNP
-bool X86DAGToDAGISel::tryVPTERNLOG(SDNode *N) {
-  MVT NVT = N->getSimpleValueType(0);
-
-  // Make sure we support VPTERNLOG.
-  if (!NVT.isVector() || !Subtarget->hasAVX512() ||
-      NVT.getVectorElementType() == MVT::i1)
-    return false;
-
-  // We need VLX for 128/256-bit.
-  if (!(Subtarget->hasVLX() || NVT.is512BitVector()))
-    return false;
-
-  unsigned Opc1 = N->getOpcode();
-  SDValue N0 = N->getOperand(0);
-  SDValue N1 = N->getOperand(1);
-
-  auto isLogicOp = [](unsigned Opc) {
-    return Opc == ISD::AND || Opc == ISD::OR || Opc == ISD::XOR;
-  };
-
-  SDValue A, B, C;
-  unsigned Opc2;
-  if (isLogicOp(N1.getOpcode()) && N1.hasOneUse()) {
-    Opc2 = N1.getOpcode();
-    A = N0;
-    B = N1.getOperand(0);
-    C = N1.getOperand(1);
-  } else if (isLogicOp(N0.getOpcode()) && N0.hasOneUse()) {
-    Opc2 = N0.getOpcode();
-    A = N1;
-    B = N0.getOperand(0);
-    C = N0.getOperand(1);
-  } else
-    return false;
-
-  uint64_t Imm;
-  switch (Opc1) {
-  default: llvm_unreachable("Unexpected opcode!");
-  case ISD::AND:
-    switch (Opc2) {
-    default: llvm_unreachable("Unexpected opcode!");
-    case ISD::AND: Imm = 0x80; break;
-    case ISD::OR:  Imm = 0xe0; break;
-    case ISD::XOR: Imm = 0x60; break;
-    }
-    break;
-  case ISD::OR:
-    switch (Opc2) {
-    default: llvm_unreachable("Unexpected opcode!");
-    case ISD::AND: Imm = 0xf8; break;
-    case ISD::OR:  Imm = 0xfe; break;
-    case ISD::XOR: Imm = 0xf6; break;
-    }
-    break;
-  case ISD::XOR:
-    switch (Opc2) {
-    default: llvm_unreachable("Unexpected opcode!");
-    case ISD::AND: Imm = 0x78; break;
-    case ISD::OR:  Imm = 0x1e; break;
-    case ISD::XOR: Imm = 0x96; break;
-    }
-    break;
-  }
-
-  SDLoc DL(N);
-  SDValue New = CurDAG->getNode(X86ISD::VPTERNLOG, DL, NVT, A, B, C,
-                                CurDAG->getTargetConstant(Imm, DL, MVT::i8));
-  ReplaceNode(N, New.getNode());
-  SelectCode(New.getNode());
-  return true;
-}
-
 /// Convert vector increment or decrement to sub/add with an all-ones constant:
 /// add X, <1, 1...> --> sub X, <-1, -1...>
 /// sub X, <1, 1...> --> add X, <-1, -1...>
@@ -4234,13 +4176,14 @@ bool X86DAGToDAGISel::tryVPTESTM(SDNode *Root, SDValue Setcc,
 
   auto findBroadcastedOp = [](SDValue Src, MVT CmpSVT, SDNode *&Parent) {
     // Look through single use bitcasts.
-    if (Src.getOpcode() == ISD::BITCAST && Src.hasOneUse())
-      Src = Src.getOperand(0);
-
-    if (Src.getOpcode() == X86ISD::VBROADCAST && Src.hasOneUse()) {
+    if (Src.getOpcode() == ISD::BITCAST && Src.hasOneUse()) {
       Parent = Src.getNode();
       Src = Src.getOperand(0);
-      if (Src.getSimpleValueType() == CmpSVT)
+    }
+
+    if (Src.getOpcode() == X86ISD::VBROADCAST_LOAD && Src.hasOneUse()) {
+      auto *MemIntr = cast<MemIntrinsicSDNode>(Src);
+      if (MemIntr->getMemoryVT().getSizeInBits() == CmpSVT.getSizeInBits())
         return Src;
     }
 
@@ -4252,17 +4195,18 @@ bool X86DAGToDAGISel::tryVPTESTM(SDNode *Root, SDValue Setcc,
   bool FoldedBCast = false;
   if (!FoldedLoad && CanFoldLoads &&
       (CmpSVT == MVT::i32 || CmpSVT == MVT::i64)) {
-    SDNode *ParentNode = nullptr;
+    SDNode *ParentNode = N0.getNode();
     if ((Load = findBroadcastedOp(Src1, CmpSVT, ParentNode))) {
-      FoldedBCast = tryFoldLoad(Root, ParentNode, Load, Tmp0,
-                                Tmp1, Tmp2, Tmp3, Tmp4);
+      FoldedBCast = tryFoldBroadcast(Root, ParentNode, Load, Tmp0,
+                                     Tmp1, Tmp2, Tmp3, Tmp4);
     }
 
     // Try the other operand.
     if (!FoldedBCast) {
+      SDNode *ParentNode = N0.getNode();
       if ((Load = findBroadcastedOp(Src0, CmpSVT, ParentNode))) {
-        FoldedBCast = tryFoldLoad(Root, ParentNode, Load, Tmp0,
-                                  Tmp1, Tmp2, Tmp3, Tmp4);
+        FoldedBCast = tryFoldBroadcast(Root, ParentNode, Load, Tmp0,
+                                       Tmp1, Tmp2, Tmp3, Tmp4);
         if (FoldedBCast)
           std::swap(Src0, Src1);
       }
@@ -4332,7 +4276,7 @@ bool X86DAGToDAGISel::tryVPTESTM(SDNode *Root, SDValue Setcc,
     // Update the chain.
     ReplaceUses(Load.getValue(1), SDValue(CNode, 1));
     // Record the mem-refs
-    CurDAG->setNodeMemRefs(CNode, {cast<LoadSDNode>(Load)->getMemOperand()});
+    CurDAG->setNodeMemRefs(CNode, {cast<MemSDNode>(Load)->getMemOperand()});
   } else {
     if (IsMasked)
       CNode = CurDAG->getMachineNode(Opc, dl, MaskVT, InMask, Src0, Src1);
@@ -4559,9 +4503,8 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
   case ISD::XOR:
     if (tryShrinkShlLogicImm(Node))
       return;
+
     if (Opcode == ISD::OR && tryMatchBitSelect(Node))
-      return;
-    if (tryVPTERNLOG(Node))
       return;
 
     LLVM_FALLTHROUGH;
