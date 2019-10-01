@@ -152,7 +152,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWO(const DWARFDIE &die, Log *log) {
   LanguageSet languages;
   languages.Insert(die.GetCU()->GetLanguageType());
   dwo_module_sp->GetSymbolFile()->FindTypes(decl_context, languages, dwo_types);
-  if (dwo_types.GetSize()) {
+  if (dwo_types.Empty()) {
     if (!IsClangModuleFwdDecl(die))
       return TypeSP();
 
