@@ -1,9 +1,8 @@
 //===--- UseDefaultMemberInitCheck.cpp - clang-tidy------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -256,17 +255,20 @@ void UseDefaultMemberInitCheck::checkDefaultInit(
   CharSourceRange InitRange =
       CharSourceRange::getCharRange(LParenEnd, Init->getRParenLoc());
 
+  bool ValueInit = isa<ImplicitValueInitExpr>(Init->getInit());
+  bool CanAssign = UseAssignment && (!ValueInit || !Init->getInit()->getType()->isEnumeralType());
+
   auto Diag =
       diag(Field->getLocation(), "use default member initializer for %0")
       << Field
-      << FixItHint::CreateInsertion(FieldEnd, UseAssignment ? " = " : "{")
+      << FixItHint::CreateInsertion(FieldEnd, CanAssign ? " = " : "{")
       << FixItHint::CreateInsertionFromRange(FieldEnd, InitRange);
 
-  if (UseAssignment && isa<ImplicitValueInitExpr>(Init->getInit()))
+  if (CanAssign && ValueInit)
     Diag << FixItHint::CreateInsertion(
         FieldEnd, getValueOfValueInit(Init->getInit()->getType()));
 
-  if (!UseAssignment)
+  if (!CanAssign)
     Diag << FixItHint::CreateInsertion(FieldEnd, "}");
 
   Diag << FixItHint::CreateRemoval(Init->getSourceRange());
@@ -274,7 +276,7 @@ void UseDefaultMemberInitCheck::checkDefaultInit(
 
 void UseDefaultMemberInitCheck::checkExistingInit(
     const MatchFinder::MatchResult &Result, const CXXCtorInitializer *Init) {
-  const FieldDecl *Field = Init->getMember();
+  const FieldDecl *Field = Init->getAnyMember();
 
   if (!sameValue(Field->getInClassInitializer(), Init->getInit()))
     return;

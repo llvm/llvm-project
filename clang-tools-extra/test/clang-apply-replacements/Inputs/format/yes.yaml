@@ -4,24 +4,25 @@
 MainSourceFile:  yes.cpp
 Diagnostics:
   - DiagnosticName:  test-yes
-    Message: Fix
-    FilePath: $(path)/yes.cpp
-    FileOffset: 494
-    Replacements:
-      - FilePath:        $(path)/yes.cpp
-        Offset:          494
-        Length:          1
-        ReplacementText: nullptr
-      - FilePath:        $(path)/yes.cpp
-        Offset:          410
-        Length:          1
-        ReplacementText: nullptr
-      - FilePath:        $(path)/yes.cpp
-        Offset:          454
-        Length:          1
-        ReplacementText: nullptr
-      - FilePath:        $(path)/yes.cpp
-        Offset:          108
-        Length:          38
-        ReplacementText: 'auto '
+    DiagnosticMessage:
+      Message: Fix
+      FilePath: $(path)/yes.cpp
+      FileOffset: 494
+      Replacements:
+        - FilePath:        $(path)/yes.cpp
+          Offset:          494
+          Length:          1
+          ReplacementText: nullptr
+        - FilePath:        $(path)/yes.cpp
+          Offset:          410
+          Length:          1
+          ReplacementText: nullptr
+        - FilePath:        $(path)/yes.cpp
+          Offset:          454
+          Length:          1
+          ReplacementText: nullptr
+        - FilePath:        $(path)/yes.cpp
+          Offset:          108
+          Length:          38
+          ReplacementText: 'auto '
 ...

@@ -42,9 +42,9 @@ To build from source:
 Before continuing, take a look at :doc:`ModularizeUsage` to see how to invoke
 modularize.
 
-.. _Getting Started with the LLVM System: http://llvm.org/docs/GettingStarted.html
-.. _Building LLVM with CMake: http://llvm.org/docs/CMake.html
-.. _Clang Tools Documentation: http://clang.llvm.org/docs/ClangTools.html
+.. _Getting Started with the LLVM System: https://llvm.org/docs/GettingStarted.html
+.. _Building LLVM with CMake: https://llvm.org/docs/CMake.html
+.. _Clang Tools Documentation: https://clang.llvm.org/docs/ClangTools.html
 
 What Modularize Checks
 ======================
@@ -262,4 +262,4 @@ names. If a header has one of these names, an underscore ('_') will be
 prepended to the name. For example, if the header name is ``header.h``,
 because ``header`` is a keyword, the module name will be ``_header``.
 For a list of the module map keywords, please see:
-`Lexical structure <http://clang.llvm.org/docs/Modules.html#lexical-structure>`_
+`Lexical structure <https://clang.llvm.org/docs/Modules.html#lexical-structure>`_

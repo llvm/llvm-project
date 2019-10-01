@@ -2,24 +2,25 @@
 MainSourceFile:     source1.cpp
 Diagnostics:
   - DiagnosticName: test-basic
-    Message: Fix
-    FilePath: $(path)/basic.h
-    FileOffset: 242
-    Replacements:
-      - FilePath:        $(path)/basic.h
-        Offset:          242
-        Length:          26
-        ReplacementText: 'auto & elem : ints'
-      - FilePath:        $(path)/basic.h
-        Offset:          276
-        Length:          22
-        ReplacementText: ''
-      - FilePath:        $(path)/basic.h
-        Offset:          298
-        Length:          1
-        ReplacementText: elem
-      - FilePath:        $(path)/../basic/basic.h
-        Offset:          148
-        Length:          0
-        ReplacementText: 'override '
+    DiagnosticMessage:
+      Message: Fix
+      FilePath: $(path)/basic.h
+      FileOffset: 242
+      Replacements:
+        - FilePath:        $(path)/basic.h
+          Offset:          242
+          Length:          26
+          ReplacementText: 'auto & elem : ints'
+        - FilePath:        $(path)/basic.h
+          Offset:          276
+          Length:          22
+          ReplacementText: ''
+        - FilePath:        $(path)/basic.h
+          Offset:          298
+          Length:          1
+          ReplacementText: elem
+        - FilePath:        $(path)/../basic/basic.h
+          Offset:          148
+          Length:          0
+          ReplacementText: 'override '
 ...

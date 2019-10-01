@@ -1,29 +1,52 @@
 //===-- Serialization.cpp - Binary serialization of index data ------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "Serialization.h"
-#include "Index.h"
 #include "Logger.h"
 #include "RIFF.h"
+#include "SymbolLocation.h"
+#include "SymbolOrigin.h"
 #include "Trace.h"
 #include "dex/Dex.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 
-using namespace llvm;
 namespace clang {
 namespace clangd {
 namespace {
-Error makeError(const Twine &Msg) {
-  return make_error<StringError>(Msg, inconvertibleErrorCode());
+llvm::Error makeError(const llvm::Twine &Msg) {
+  return llvm::make_error<llvm::StringError>(Msg,
+                                             llvm::inconvertibleErrorCode());
 }
+} // namespace
+
+RelationKind symbolRoleToRelationKind(index::SymbolRole Role) {
+  // SymbolRole is used to record relations in the index.
+  // Only handle the relations we actually store currently.
+  // If we start storing more relations, this list can be expanded.
+  switch (Role) {
+  case index::SymbolRole::RelationBaseOf:
+    return RelationKind::BaseOf;
+  default:
+    llvm_unreachable("Unsupported symbol role");
+  }
+}
+
+index::SymbolRole relationKindToSymbolRole(RelationKind Kind) {
+  switch (Kind) {
+  case RelationKind::BaseOf:
+    return index::SymbolRole::RelationBaseOf;
+  }
+  llvm_unreachable("Invalid relation kind");
+}
+
+namespace {
 
 // IO PRIMITIVES
 // We use little-endian 32 bit ints, sometimes with variable-length encoding.
@@ -40,14 +63,14 @@ class Reader {
   bool Err = false;
 
 public:
-  Reader(StringRef Data) : Begin(Data.begin()), End(Data.end()) {}
+  Reader(llvm::StringRef Data) : Begin(Data.begin()), End(Data.end()) {}
   // The "error" bit is set by reading past EOF or reading invalid data.
   // When in an error state, reads may return zero values: callers should check.
   bool err() const { return Err; }
   // Did we read all the data, or encounter an error?
   bool eof() const { return Begin == End || Err; }
   // All the data we didn't read yet.
-  StringRef rest() const { return StringRef(Begin, End - Begin); }
+  llvm::StringRef rest() const { return llvm::StringRef(Begin, End - Begin); }
 
   uint8_t consume8() {
     if (LLVM_UNLIKELY(Begin == End)) {
@@ -62,17 +85,17 @@ public:
       Err = true;
       return 0;
     }
-    auto Ret = support::endian::read32le(Begin);
+    auto Ret = llvm::support::endian::read32le(Begin);
     Begin += 4;
     return Ret;
   }
 
-  StringRef consume(int N) {
+  llvm::StringRef consume(int N) {
     if (LLVM_UNLIKELY(Begin + N > End)) {
       Err = true;
-      return StringRef();
+      return llvm::StringRef();
     }
-    StringRef Ret(Begin, N);
+    llvm::StringRef Ret(Begin, N);
     Begin += N;
     return Ret;
   }
@@ -90,28 +113,28 @@ public:
     return Val;
   }
 
-  StringRef consumeString(ArrayRef<StringRef> Strings) {
+  llvm::StringRef consumeString(llvm::ArrayRef<llvm::StringRef> Strings) {
     auto StringIndex = consumeVar();
     if (LLVM_UNLIKELY(StringIndex >= Strings.size())) {
       Err = true;
-      return StringRef();
+      return llvm::StringRef();
     }
     return Strings[StringIndex];
   }
 
   SymbolID consumeID() {
-    StringRef Raw = consume(SymbolID::RawSize); // short if truncated.
+    llvm::StringRef Raw = consume(SymbolID::RawSize); // short if truncated.
     return LLVM_UNLIKELY(err()) ? SymbolID() : SymbolID::fromRaw(Raw);
   }
 };
 
-void write32(uint32_t I, raw_ostream &OS) {
-  char buf[4];
-  support::endian::write32le(buf, I);
-  OS.write(buf, sizeof(buf));
+void write32(uint32_t I, llvm::raw_ostream &OS) {
+  char Buf[4];
+  llvm::support::endian::write32le(Buf, I);
+  OS.write(Buf, sizeof(Buf));
 }
 
-void writeVar(uint32_t I, raw_ostream &OS) {
+void writeVar(uint32_t I, llvm::raw_ostream &OS) {
   constexpr static uint8_t More = 1 << 7;
   if (LLVM_LIKELY(I < 1 << 7)) {
     OS.write(I);
@@ -142,10 +165,10 @@ void writeVar(uint32_t I, raw_ostream &OS) {
 // Maps each string to a canonical representation.
 // Strings remain owned externally (e.g. by SymbolSlab).
 class StringTableOut {
-  DenseSet<StringRef> Unique;
-  std::vector<StringRef> Sorted;
+  llvm::DenseSet<llvm::StringRef> Unique;
+  std::vector<llvm::StringRef> Sorted;
   // Since strings are interned, look up can be by pointer.
-  DenseMap<std::pair<const char *, size_t>, unsigned> Index;
+  llvm::DenseMap<std::pair<const char *, size_t>, unsigned> Index;
 
 public:
   StringTableOut() {
@@ -154,22 +177,22 @@ public:
     Unique.insert("");
   }
   // Add a string to the table. Overwrites S if an identical string exists.
-  void intern(StringRef &S) { S = *Unique.insert(S).first; };
+  void intern(llvm::StringRef &S) { S = *Unique.insert(S).first; };
   // Finalize the table and write it to OS. No more strings may be added.
-  void finalize(raw_ostream &OS) {
+  void finalize(llvm::raw_ostream &OS) {
     Sorted = {Unique.begin(), Unique.end()};
     llvm::sort(Sorted);
     for (unsigned I = 0; I < Sorted.size(); ++I)
       Index.try_emplace({Sorted[I].data(), Sorted[I].size()}, I);
 
     std::string RawTable;
-    for (StringRef S : Sorted) {
+    for (llvm::StringRef S : Sorted) {
       RawTable.append(S);
       RawTable.push_back(0);
     }
-    if (zlib::isAvailable()) {
-      SmallString<1> Compressed;
-      cantFail(zlib::compress(RawTable, Compressed));
+    if (llvm::zlib::isAvailable()) {
+      llvm::SmallString<1> Compressed;
+      llvm::cantFail(llvm::zlib::compress(RawTable, Compressed));
       write32(RawTable.size(), OS);
       OS << Compressed;
     } else {
@@ -178,7 +201,7 @@ public:
     }
   }
   // Get the ID of an string, which must be interned. Table must be finalized.
-  unsigned index(StringRef S) const {
+  unsigned index(llvm::StringRef S) const {
     assert(!Sorted.empty() && "table not finalized");
     assert(Index.count({S.data(), S.size()}) && "string not interned");
     return Index.find({S.data(), S.size()})->second;
@@ -186,33 +209,33 @@ public:
 };
 
 struct StringTableIn {
-  BumpPtrAllocator Arena;
-  std::vector<StringRef> Strings;
+  llvm::BumpPtrAllocator Arena;
+  std::vector<llvm::StringRef> Strings;
 };
 
-Expected<StringTableIn> readStringTable(StringRef Data) {
+llvm::Expected<StringTableIn> readStringTable(llvm::StringRef Data) {
   Reader R(Data);
   size_t UncompressedSize = R.consume32();
   if (R.err())
     return makeError("Truncated string table");
 
-  StringRef Uncompressed;
-  SmallString<1> UncompressedStorage;
+  llvm::StringRef Uncompressed;
+  llvm::SmallString<1> UncompressedStorage;
   if (UncompressedSize == 0) // No compression
     Uncompressed = R.rest();
   else {
-    if (Error E = llvm::zlib::uncompress(R.rest(), UncompressedStorage,
-                                         UncompressedSize))
+    if (llvm::Error E = llvm::zlib::uncompress(R.rest(), UncompressedStorage,
+                                               UncompressedSize))
       return std::move(E);
     Uncompressed = UncompressedStorage;
   }
 
   StringTableIn Table;
-  StringSaver Saver(Table.Arena);
+  llvm::StringSaver Saver(Table.Arena);
   R = Reader(Uncompressed);
   for (Reader R(Uncompressed); !R.eof();) {
     auto Len = R.rest().find(0);
-    if (Len == StringRef::npos)
+    if (Len == llvm::StringRef::npos)
       return makeError("Bad string table: not null terminated");
     Table.Strings.push_back(Saver.save(R.consume(Len)));
     R.consume8();
@@ -229,7 +252,7 @@ Expected<StringTableIn> readStringTable(StringRef Data) {
 //  - most numbers encode as varint
 
 void writeLocation(const SymbolLocation &Loc, const StringTableOut &Strings,
-                   raw_ostream &OS) {
+                   llvm::raw_ostream &OS) {
   writeVar(Strings.index(Loc.FileURI), OS);
   for (const auto &Endpoint : {Loc.Start, Loc.End}) {
     writeVar(Endpoint.line(), OS);
@@ -237,7 +260,8 @@ void writeLocation(const SymbolLocation &Loc, const StringTableOut &Strings,
   }
 }
 
-SymbolLocation readLocation(Reader &Data, ArrayRef<StringRef> Strings) {
+SymbolLocation readLocation(Reader &Data,
+                            llvm::ArrayRef<llvm::StringRef> Strings) {
   SymbolLocation Loc;
   Loc.FileURI = Data.consumeString(Strings).data();
   for (auto *Endpoint : {&Loc.Start, &Loc.End}) {
@@ -261,7 +285,8 @@ IncludeGraphNode readIncludeGraphNode(Reader &Data,
 }
 
 void writeIncludeGraphNode(const IncludeGraphNode &IGN,
-                           const StringTableOut &Strings, raw_ostream &OS) {
+                           const StringTableOut &Strings,
+                           llvm::raw_ostream &OS) {
   OS.write(IGN.IsTU);
   writeVar(Strings.index(IGN.URI), OS);
   llvm::StringRef Hash(reinterpret_cast<const char *>(IGN.Digest.data()),
@@ -273,13 +298,14 @@ void writeIncludeGraphNode(const IncludeGraphNode &IGN,
 }
 
 void writeSymbol(const Symbol &Sym, const StringTableOut &Strings,
-                 raw_ostream &OS) {
+                 llvm::raw_ostream &OS) {
   OS << Sym.ID.raw(); // TODO: once we start writing xrefs and posting lists,
                       // symbol IDs should probably be in a string table.
   OS.write(static_cast<uint8_t>(Sym.SymInfo.Kind));
   OS.write(static_cast<uint8_t>(Sym.SymInfo.Lang));
   writeVar(Strings.index(Sym.Name), OS);
   writeVar(Strings.index(Sym.Scope), OS);
+  writeVar(Strings.index(Sym.TemplateSpecializationArgs), OS);
   writeLocation(Sym.Definition, Strings, OS);
   writeLocation(Sym.CanonicalDeclaration, Strings, OS);
   writeVar(Sym.References, OS);
@@ -300,18 +326,19 @@ void writeSymbol(const Symbol &Sym, const StringTableOut &Strings,
     WriteInclude(Include);
 }
 
-Symbol readSymbol(Reader &Data, ArrayRef<StringRef> Strings) {
+Symbol readSymbol(Reader &Data, llvm::ArrayRef<llvm::StringRef> Strings) {
   Symbol Sym;
   Sym.ID = Data.consumeID();
   Sym.SymInfo.Kind = static_cast<index::SymbolKind>(Data.consume8());
   Sym.SymInfo.Lang = static_cast<index::SymbolLanguage>(Data.consume8());
   Sym.Name = Data.consumeString(Strings);
   Sym.Scope = Data.consumeString(Strings);
+  Sym.TemplateSpecializationArgs = Data.consumeString(Strings);
   Sym.Definition = readLocation(Data, Strings);
   Sym.CanonicalDeclaration = readLocation(Data, Strings);
   Sym.References = Data.consumeVar();
-  Sym.Flags = static_cast<Symbol::SymbolFlag>(Data.consumeVar());
-  Sym.Origin = static_cast<SymbolOrigin>(Data.consumeVar());
+  Sym.Flags = static_cast<Symbol::SymbolFlag>(Data.consume8());
+  Sym.Origin = static_cast<SymbolOrigin>(Data.consume8());
   Sym.Signature = Data.consumeString(Strings);
   Sym.CompletionSnippetSuffix = Data.consumeString(Strings);
   Sym.Documentation = Data.consumeString(Strings);
@@ -332,8 +359,8 @@ Symbol readSymbol(Reader &Data, ArrayRef<StringRef> Strings) {
 //  - Ref[NumRefs]
 // Fields of Ref are encoded in turn, see implementation.
 
-void writeRefs(const SymbolID &ID, ArrayRef<Ref> Refs,
-               const StringTableOut &Strings, raw_ostream &OS) {
+void writeRefs(const SymbolID &ID, llvm::ArrayRef<Ref> Refs,
+               const StringTableOut &Strings, llvm::raw_ostream &OS) {
   OS << ID.raw();
   writeVar(Refs.size(), OS);
   for (const auto &Ref : Refs) {
@@ -342,8 +369,8 @@ void writeRefs(const SymbolID &ID, ArrayRef<Ref> Refs,
   }
 }
 
-std::pair<SymbolID, std::vector<Ref>> readRefs(Reader &Data,
-                                               ArrayRef<StringRef> Strings) {
+std::pair<SymbolID, std::vector<Ref>>
+readRefs(Reader &Data, llvm::ArrayRef<llvm::StringRef> Strings) {
   std::pair<SymbolID, std::vector<Ref>> Result;
   Result.first = Data.consumeID();
   Result.second.resize(Data.consumeVar());
@@ -352,6 +379,28 @@ std::pair<SymbolID, std::vector<Ref>> readRefs(Reader &Data,
     Ref.Location = readLocation(Data, Strings);
   }
   return Result;
+}
+
+// RELATIONS ENCODING
+// A relations section is a flat list of relations. Each relation has:
+//  - SymbolID (subject): 8 bytes
+//  - relation kind (predicate): 1 byte
+//  - SymbolID (object): 8 bytes
+// In the future, we might prefer a packed representation if the need arises.
+
+void writeRelation(const Relation &R, llvm::raw_ostream &OS) {
+  OS << R.Subject.raw();
+  RelationKind Kind = symbolRoleToRelationKind(R.Predicate);
+  OS.write(static_cast<uint8_t>(Kind));
+  OS << R.Object.raw();
+}
+
+Relation readRelation(Reader &Data) {
+  SymbolID Subject = Data.consumeID();
+  index::SymbolRole Predicate =
+      relationKindToSymbolRole(static_cast<RelationKind>(Data.consume8()));
+  SymbolID Object = Data.consumeID();
+  return {Subject, Predicate, Object};
 }
 
 // FILE ENCODING
@@ -366,19 +415,20 @@ std::pair<SymbolID, std::vector<Ref>> readRefs(Reader &Data,
 // The current versioning scheme is simple - non-current versions are rejected.
 // If you make a breaking change, bump this version number to invalidate stored
 // data. Later we may want to support some backward compatibility.
-constexpr static uint32_t Version = 8;
+constexpr static uint32_t Version = 10;
 
-Expected<IndexFileIn> readRIFF(StringRef Data) {
+llvm::Expected<IndexFileIn> readRIFF(llvm::StringRef Data) {
   auto RIFF = riff::readFile(Data);
   if (!RIFF)
     return RIFF.takeError();
   if (RIFF->Type != riff::fourCC("CdIx"))
     return makeError("wrong RIFF type");
-  StringMap<StringRef> Chunks;
+  llvm::StringMap<llvm::StringRef> Chunks;
   for (const auto &Chunk : RIFF->Chunks)
-    Chunks.try_emplace(StringRef(Chunk.ID.data(), Chunk.ID.size()), Chunk.Data);
+    Chunks.try_emplace(llvm::StringRef(Chunk.ID.data(), Chunk.ID.size()),
+                       Chunk.Data);
 
-  for (StringRef RequiredChunk : {"meta", "stri"})
+  for (llvm::StringRef RequiredChunk : {"meta", "stri"})
     if (!Chunks.count(RequiredChunk))
       return makeError("missing required chunk " + RequiredChunk);
 
@@ -429,6 +479,17 @@ Expected<IndexFileIn> readRIFF(StringRef Data) {
       return makeError("malformed or truncated refs");
     Result.Refs = std::move(Refs).build();
   }
+  if (Chunks.count("rela")) {
+    Reader RelationsReader(Chunks.lookup("rela"));
+    RelationSlab::Builder Relations;
+    while (!RelationsReader.eof()) {
+      auto Relation = readRelation(RelationsReader);
+      Relations.insert(Relation);
+    }
+    if (RelationsReader.err())
+      return makeError("malformed or truncated relations");
+    Result.Relations = std::move(Relations).build();
+  }
   return std::move(Result);
 }
 
@@ -439,14 +500,14 @@ void visitStrings(IncludeGraphNode &IGN, const Callback &CB) {
     CB(Include);
 }
 
-void writeRIFF(const IndexFileOut &Data, raw_ostream &OS) {
+void writeRIFF(const IndexFileOut &Data, llvm::raw_ostream &OS) {
   assert(Data.Symbols && "An index file without symbols makes no sense!");
   riff::File RIFF;
   RIFF.Type = riff::fourCC("CdIx");
 
-  SmallString<4> Meta;
+  llvm::SmallString<4> Meta;
   {
-    raw_svector_ostream MetaOS(Meta);
+    llvm::raw_svector_ostream MetaOS(Meta);
     write32(Version, MetaOS);
   }
   RIFF.Chunks.push_back({riff::fourCC("meta"), Meta});
@@ -455,13 +516,15 @@ void writeRIFF(const IndexFileOut &Data, raw_ostream &OS) {
   std::vector<Symbol> Symbols;
   for (const auto &Sym : *Data.Symbols) {
     Symbols.emplace_back(Sym);
-    visitStrings(Symbols.back(), [&](StringRef &S) { Strings.intern(S); });
+    visitStrings(Symbols.back(),
+                 [&](llvm::StringRef &S) { Strings.intern(S); });
   }
   std::vector<IncludeGraphNode> Sources;
   if (Data.Sources)
     for (const auto &Source : *Data.Sources) {
       Sources.push_back(Source.getValue());
-      visitStrings(Sources.back(), [&](StringRef &S) { Strings.intern(S); });
+      visitStrings(Sources.back(),
+                   [&](llvm::StringRef &S) { Strings.intern(S); });
     }
 
   std::vector<std::pair<SymbolID, std::vector<Ref>>> Refs;
@@ -469,23 +532,31 @@ void writeRIFF(const IndexFileOut &Data, raw_ostream &OS) {
     for (const auto &Sym : *Data.Refs) {
       Refs.emplace_back(Sym);
       for (auto &Ref : Refs.back().second) {
-        StringRef File = Ref.Location.FileURI;
+        llvm::StringRef File = Ref.Location.FileURI;
         Strings.intern(File);
         Ref.Location.FileURI = File.data();
       }
     }
   }
 
+  std::vector<Relation> Relations;
+  if (Data.Relations) {
+    for (const auto &Relation : *Data.Relations) {
+      Relations.emplace_back(Relation);
+      // No strings to be interned in relations.
+    }
+  }
+
   std::string StringSection;
   {
-    raw_string_ostream StringOS(StringSection);
+    llvm::raw_string_ostream StringOS(StringSection);
     Strings.finalize(StringOS);
   }
   RIFF.Chunks.push_back({riff::fourCC("stri"), StringSection});
 
   std::string SymbolSection;
   {
-    raw_string_ostream SymbolOS(SymbolSection);
+    llvm::raw_string_ostream SymbolOS(SymbolSection);
     for (const auto &Sym : Symbols)
       writeSymbol(Sym, Strings, SymbolOS);
   }
@@ -494,17 +565,27 @@ void writeRIFF(const IndexFileOut &Data, raw_ostream &OS) {
   std::string RefsSection;
   if (Data.Refs) {
     {
-      raw_string_ostream RefsOS(RefsSection);
+      llvm::raw_string_ostream RefsOS(RefsSection);
       for (const auto &Sym : Refs)
         writeRefs(Sym.first, Sym.second, Strings, RefsOS);
     }
     RIFF.Chunks.push_back({riff::fourCC("refs"), RefsSection});
   }
 
+  std::string RelationSection;
+  if (Data.Relations) {
+    {
+      llvm::raw_string_ostream RelationOS{RelationSection};
+      for (const auto &Relation : Relations)
+        writeRelation(Relation, RelationOS);
+    }
+    RIFF.Chunks.push_back({riff::fourCC("rela"), RelationSection});
+  }
+
   std::string SrcsSection;
   {
     {
-      raw_string_ostream SrcsOS(SrcsSection);
+      llvm::raw_string_ostream SrcsOS(SrcsSection);
       for (const auto &SF : Sources)
         writeIncludeGraphNode(SF, Strings, SrcsOS);
     }
@@ -517,10 +598,10 @@ void writeRIFF(const IndexFileOut &Data, raw_ostream &OS) {
 } // namespace
 
 // Defined in YAMLSerialization.cpp.
-void writeYAML(const IndexFileOut &, raw_ostream &);
-Expected<IndexFileIn> readYAML(StringRef);
+void writeYAML(const IndexFileOut &, llvm::raw_ostream &);
+llvm::Expected<IndexFileIn> readYAML(llvm::StringRef);
 
-raw_ostream &operator<<(raw_ostream &OS, const IndexFileOut &O) {
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const IndexFileOut &O) {
   switch (O.Format) {
   case IndexFileFormat::RIFF:
     writeRIFF(O, OS);
@@ -532,27 +613,29 @@ raw_ostream &operator<<(raw_ostream &OS, const IndexFileOut &O) {
   return OS;
 }
 
-Expected<IndexFileIn> readIndexFile(StringRef Data) {
+llvm::Expected<IndexFileIn> readIndexFile(llvm::StringRef Data) {
   if (Data.startswith("RIFF")) {
     return readRIFF(Data);
   } else if (auto YAMLContents = readYAML(Data)) {
     return std::move(*YAMLContents);
   } else {
     return makeError("Not a RIFF file and failed to parse as YAML: " +
-                     toString(YAMLContents.takeError()));
+                     llvm::toString(YAMLContents.takeError()));
   }
 }
 
-std::unique_ptr<SymbolIndex> loadIndex(StringRef SymbolFilename, bool UseDex) {
+std::unique_ptr<SymbolIndex> loadIndex(llvm::StringRef SymbolFilename,
+                                       bool UseDex) {
   trace::Span OverallTracer("LoadIndex");
-  auto Buffer = MemoryBuffer::getFile(SymbolFilename);
+  auto Buffer = llvm::MemoryBuffer::getFile(SymbolFilename);
   if (!Buffer) {
-    errs() << "Can't open " << SymbolFilename << "\n";
+    llvm::errs() << "Can't open " << SymbolFilename << "\n";
     return nullptr;
   }
 
   SymbolSlab Symbols;
   RefSlab Refs;
+  RelationSlab Relations;
   {
     trace::Span Tracer("ParseIndex");
     if (auto I = readIndexFile(Buffer->get()->getBuffer())) {
@@ -560,23 +643,29 @@ std::unique_ptr<SymbolIndex> loadIndex(StringRef SymbolFilename, bool UseDex) {
         Symbols = std::move(*I->Symbols);
       if (I->Refs)
         Refs = std::move(*I->Refs);
+      if (I->Relations)
+        Relations = std::move(*I->Relations);
     } else {
-      errs() << "Bad Index: " << toString(I.takeError()) << "\n";
+      llvm::errs() << "Bad Index: " << llvm::toString(I.takeError()) << "\n";
       return nullptr;
     }
   }
 
   size_t NumSym = Symbols.size();
   size_t NumRefs = Refs.numRefs();
+  size_t NumRelations = Relations.size();
 
   trace::Span Tracer("BuildIndex");
-  auto Index = UseDex ? dex::Dex::build(std::move(Symbols), std::move(Refs))
-                      : MemIndex::build(std::move(Symbols), std::move(Refs));
+  auto Index = UseDex ? dex::Dex::build(std::move(Symbols), std::move(Refs),
+                                        std::move(Relations))
+                      : MemIndex::build(std::move(Symbols), std::move(Refs),
+                                        std::move(Relations));
   vlog("Loaded {0} from {1} with estimated memory usage {2} bytes\n"
        "  - number of symbols: {3}\n"
-       "  - number of refs: {4}\n",
+       "  - number of refs: {4}\n"
+       "  - numnber of relations: {5}",
        UseDex ? "Dex" : "MemIndex", SymbolFilename,
-       Index->estimateMemoryUsage(), NumSym, NumRefs);
+       Index->estimateMemoryUsage(), NumSym, NumRefs, NumRelations);
   return Index;
 }
 

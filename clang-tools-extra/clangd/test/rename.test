@@ -1,0 +1,39 @@
+# RUN: clangd -lit-test < %s | FileCheck -strict-whitespace %s
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"clangd","capabilities":{},"trace":"off"}}
+---
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"test:///foo.cpp","languageId":"cpp","version":1,"text":"int foo;"}}}
+---
+{"jsonrpc":"2.0","id":1,"method":"textDocument/rename","params":{"textDocument":{"uri":"test:///foo.cpp"},"position":{"line":0,"character":5},"newName":"bar"}}
+#      CHECK:  "id": 1,
+# CHECK-NEXT:  "jsonrpc": "2.0",
+# CHECK-NEXT:  "result": {
+# CHECK-NEXT:    "changes": {
+# CHECK-NEXT:      "file://{{.*}}/foo.cpp": [
+# CHECK-NEXT:        {
+# CHECK-NEXT:          "newText": "bar",
+# CHECK-NEXT:          "range": {
+# CHECK-NEXT:            "end": {
+# CHECK-NEXT:              "character": 7
+# CHECK-NEXT:              "line": 0
+# CHECK-NEXT:            },
+# CHECK-NEXT:            "start": {
+# CHECK-NEXT:              "character": 4
+# CHECK-NEXT:              "line": 0
+# CHECK-NEXT:            }
+# CHECK-NEXT:          }
+# CHECK-NEXT:        }
+# CHECK-NEXT:      ]
+# CHECK-NEXT:    }
+# CHECK-NEXT:  }
+---
+{"jsonrpc":"2.0","id":2,"method":"textDocument/rename","params":{"textDocument":{"uri":"test:///foo.cpp"},"position":{"line":0,"character":2},"newName":"bar"}}
+#      CHECK:  "error": {
+# CHECK-NEXT:    "code": -32001,
+# CHECK-NEXT:    "message": "there is no symbol at the given location"
+# CHECK-NEXT:  },
+# CHECK-NEXT:  "id": 2,
+# CHECK-NEXT:  "jsonrpc": "2.0"
+---
+{"jsonrpc":"2.0","id":3,"method":"shutdown"}
+---
+{"jsonrpc":"2.0","method":"exit"}

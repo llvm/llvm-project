@@ -79,6 +79,7 @@ T ff() { T t; return t; }
 // eol-comments aren't removed (yet)
 using n::A; // A
 // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: using decl 'A' is unused
+// CHECK-MESSAGES: :[[@LINE-2]]:10: note: remove the using
 // CHECK-FIXES: {{^}}// A
 using n::B;
 using n::C;

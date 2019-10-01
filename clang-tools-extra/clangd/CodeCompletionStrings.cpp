@@ -1,9 +1,8 @@
 //===--- CodeCompletionStrings.cpp -------------------------------*- C++-*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -12,19 +11,20 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/RawCommentList.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Sema/CodeCompleteConsumer.h"
+#include <limits>
 #include <utility>
 
-using namespace llvm;
 namespace clang {
 namespace clangd {
 namespace {
 
 bool isInformativeQualifierChunk(CodeCompletionString::Chunk const &Chunk) {
   return Chunk.Kind == CodeCompletionString::CK_Informative &&
-         StringRef(Chunk.Text).endswith("::");
+         llvm::StringRef(Chunk.Text).endswith("::");
 }
 
-void appendEscapeSnippet(const StringRef Text, std::string *Out) {
+void appendEscapeSnippet(const llvm::StringRef Text, std::string *Out) {
   for (const auto Character : Text) {
     if (Character == '$' || Character == '}' || Character == '\\')
       Out->push_back('\\');
@@ -32,13 +32,13 @@ void appendEscapeSnippet(const StringRef Text, std::string *Out) {
   }
 }
 
-bool looksLikeDocComment(StringRef CommentText) {
+bool looksLikeDocComment(llvm::StringRef CommentText) {
   // We don't report comments that only contain "special" chars.
   // This avoids reporting various delimiters, like:
   //   =================
   //   -----------------
   //   *****************
-  return CommentText.find_first_not_of("/*-= \t\r\n") != StringRef::npos;
+  return CommentText.find_first_not_of("/*-= \t\r\n") != llvm::StringRef::npos;
 }
 
 } // namespace
@@ -75,8 +75,23 @@ std::string getDeclComment(const ASTContext &Ctx, const NamedDecl &Decl) {
 }
 
 void getSignature(const CodeCompletionString &CCS, std::string *Signature,
-                  std::string *Snippet, std::string *RequiredQualifiers) {
-  unsigned ArgCount = 0;
+                  std::string *Snippet, std::string *RequiredQualifiers,
+                  bool CompletingPattern) {
+  // Placeholder with this index will be ${0:…} to mark final cursor position.
+  // Usually we do not add $0, so the cursor is placed at end of completed text.
+  unsigned CursorSnippetArg = std::numeric_limits<unsigned>::max();
+  if (CompletingPattern) {
+    // In patterns, it's best to place the cursor at the last placeholder, to
+    // handle cases like
+    //    namespace ${1:name} {
+    //      ${0:decls}
+    //    }
+    CursorSnippetArg =
+        llvm::count_if(CCS, [](const CodeCompletionString::Chunk &C) {
+          return C.Kind == CodeCompletionString::CK_Placeholder;
+        });
+  }
+  unsigned SnippetArg = 0;
   bool HadObjCArguments = false;
   for (const auto &Chunk : CCS) {
     // Informative qualifier chunks only clutter completion results, skip
@@ -97,7 +112,7 @@ void getSignature(const CodeCompletionString &CCS, std::string *Signature,
       //   treat them carefully. For Objective-C methods, all typed-text chunks
       //   will end in ':' (unless there are no arguments, in which case we
       //   can safely treat them as C++).
-      if (!StringRef(Chunk.Text).endswith(":")) { // Treat as C++.
+      if (!llvm::StringRef(Chunk.Text).endswith(":")) { // Treat as C++.
         if (RequiredQualifiers)
           *RequiredQualifiers = std::move(*Signature);
         Signature->clear();
@@ -126,8 +141,10 @@ void getSignature(const CodeCompletionString &CCS, std::string *Signature,
       break;
     case CodeCompletionString::CK_Placeholder:
       *Signature += Chunk.Text;
-      ++ArgCount;
-      *Snippet += "${" + std::to_string(ArgCount) + ':';
+      ++SnippetArg;
+      *Snippet +=
+          "${" +
+          std::to_string(SnippetArg == CursorSnippetArg ? 0 : SnippetArg) + ':';
       appendEscapeSnippet(Chunk.Text, Snippet);
       *Snippet += '}';
       break;
@@ -171,7 +188,7 @@ void getSignature(const CodeCompletionString &CCS, std::string *Signature,
 }
 
 std::string formatDocumentation(const CodeCompletionString &CCS,
-                                StringRef DocComment) {
+                                llvm::StringRef DocComment) {
   // Things like __attribute__((nonnull(1,3))) and [[noreturn]]. Present this
   // information in the documentation field.
   std::string Result;

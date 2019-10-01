@@ -1,4 +1,5 @@
-// RUN: %check_clang_tidy %s modernize-use-default-member-init %t -- -- -std=c++11
+// RUN: %check_clang_tidy -std=c++11,c++14,c++17 %s modernize-use-default-member-init %t
+// FIXME: Fix the checker to work in C++2a mode.
 
 struct S {
 };
@@ -163,6 +164,14 @@ struct PositiveEnum {
   Enum e;
   // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: use default member initializer for 'e'
   // CHECK-FIXES: Enum e{Foo};
+};
+
+struct PositiveValueEnum {
+  PositiveValueEnum() : e() {}
+  // CHECK-FIXES: PositiveValueEnum()  {}
+  Enum e;
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: use default member initializer for 'e'
+  // CHECK-FIXES: Enum e{};
 };
 
 struct PositiveString {
@@ -380,6 +389,16 @@ struct ExistingString {
   const char *e2 = nullptr;
   const char *e3 = "foo";
   const char *e4 = "bar";
+};
+
+struct UnionExisting {
+  UnionExisting() : e(5.0) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: member initializer for 'e' is redundant
+  // CHECK-FIXES: UnionExisting()  {}
+  union {
+    int i;
+    double e = 5.0;
+  };
 };
 
 template <typename T>

@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s cppcoreguidelines-pro-type-member-init %t -- -- -std=c++2a -fno-delayed-template-parsing
+// RUN: %check_clang_tidy -std=c++2a %s cppcoreguidelines-pro-type-member-init %t -- -- -fno-delayed-template-parsing
 
 struct PositiveBitfieldMember {
   PositiveBitfieldMember() {}

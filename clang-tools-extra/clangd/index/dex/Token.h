@@ -1,9 +1,8 @@
 //===--- Token.h - Symbol Search primitive ----------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -63,11 +62,11 @@ struct Token {
     /// Example: "file:///path/to/clang-tools-extra/clangd/index/SymbolIndex.h"
     /// and some amount of its parents.
     ProximityURI,
+    /// Type of symbol (see `Symbol::Type`).
+    Type,
     /// Internal Token type for invalid/special tokens, e.g. empty tokens for
     /// llvm::DenseMap.
     Sentinel,
-    /// FIXME(kbobyrev): Add other Token Kinds
-    /// * Type with qualified type name or its USR
   };
 
   Token(Kind TokenKind, llvm::StringRef Data)
@@ -91,6 +90,9 @@ struct Token {
       break;
     case Kind::ProximityURI:
       OS << "U=";
+      break;
+    case Kind::Type:
+      OS << "Ty=";
       break;
     case Kind::Sentinel:
       OS << "?=";

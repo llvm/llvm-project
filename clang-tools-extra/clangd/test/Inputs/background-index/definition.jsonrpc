@@ -1,0 +1,51 @@
+{
+  "jsonrpc": "2.0",
+  "id": 0,
+  "method": "initialize",
+  "params": {
+    "processId": 123,
+    "rootPath": "clangd",
+    "capabilities": {},
+    "trace": "off"
+  }
+}
+---
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didOpen",
+  "params": {
+    "textDocument": {
+      "uri": "file://DIRECTORY/bar.cpp",
+      "languageId": "cpp",
+      "version": 1,
+      "text": "#include \"foo.h\"\nint main(){\nreturn foo();\n}"
+    }
+  }
+}
+---
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "sync",
+  "params": null
+}
+---
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "textDocument/definition",
+  "params": {
+    "textDocument": {
+      "uri": "file://DIRECTORY/bar.cpp"
+    },
+    "position": {
+      "line": 2,
+      "character": 8
+    }
+  }
+}
+# CHECK: "uri": "file://{{.*}}/foo.cpp"
+---
+{"jsonrpc":"2.0","id":3,"method":"shutdown"}
+---
+{"jsonrpc":"2.0","method":"exit"}

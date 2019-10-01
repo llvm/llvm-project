@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 import * as vscodelc from 'vscode-languageclient';
-import { realpathSync } from 'fs';
 
 /**
  * Method to get workspace configuration option
@@ -40,6 +39,11 @@ class FileStatus {
         this.statusBarItem.show();
     }
 
+    clear() {
+        this.statuses.clear();
+        this.statusBarItem.hide();
+    }
+
     dispose() {
         this.statusBarItem.dispose();
     }
@@ -63,58 +67,69 @@ export function activate(context: vscode.ExtensionContext) {
     }
     const serverOptions: vscodelc.ServerOptions = clangd;
 
-    const filePattern: string = '**/*.{' +
-        ['cpp', 'c', 'cc', 'cxx', 'c++', 'm', 'mm', 'h', 'hh', 'hpp', 'hxx', 'inc'].join() + '}';
+    // Note that CUDA ('.cu') files are special. When opening files of all other
+    // extensions, VSCode would load clangd automatically. This is achieved by
+    // having a corresponding 'onLanguage:...' activation event in package.json.
+    // However, VSCode does not have CUDA as a supported language yet, so we
+    // cannot add a corresponding activationEvent for CUDA files and clangd will
+    // *not* load itself automatically on '.cu' files.
+    const cudaFilePattern: string = '**/*.{' +['cu'].join()+ '}';
     const clientOptions: vscodelc.LanguageClientOptions = {
-        // Register the server for C/C++ files
-        documentSelector: [{ scheme: 'file', pattern: filePattern }],
+        // Register the server for c-family and cuda files.
+        documentSelector: [
+            { scheme: 'file', language: 'c' },
+            { scheme: 'file', language: 'cpp' },
+            { scheme: 'file', language: 'objective-c'},
+            { scheme: 'file', language: 'objective-cpp'},
+            { scheme: 'file', pattern: cudaFilePattern },
+        ],
         synchronize: !syncFileEvents ? undefined : {
-            fileEvents: vscode.workspace.createFileSystemWatcher(filePattern)
+        // FIXME: send sync file events when clangd provides implemenatations.
         },
         initializationOptions: { clangdFileStatus: true },
-        // Resolve symlinks for all files provided by clangd.
-        // This is a workaround for a bazel + clangd issue - bazel produces a symlink tree to build in,
-        // and when navigating to the included file, clangd passes its path inside the symlink tree
-        // rather than its filesystem path.
-        // FIXME: remove this once clangd knows enough about bazel to resolve the
-        // symlinks where needed (or if this causes problems for other workflows).
-        uriConverters: {
-            code2Protocol: (value: vscode.Uri) => value.toString(),
-            protocol2Code: (value: string) =>
-                vscode.Uri.file(realpathSync(vscode.Uri.parse(value).fsPath))
-        },
         // Do not switch to output window when clangd returns output
         revealOutputChannelOn: vscodelc.RevealOutputChannelOn.Never
     };
 
-  const clangdClient = new vscodelc.LanguageClient('Clang Language Server', serverOptions, clientOptions);
-  console.log('Clang Language Server is now active!');
-  context.subscriptions.push(clangdClient.start());
-  context.subscriptions.push(vscode.commands.registerCommand(
-      'clangd-vscode.switchheadersource', async () => {
-        const uri =
-            vscode.Uri.file(vscode.window.activeTextEditor.document.fileName);
-        if (!uri) {
-          return;
-        }
-        const docIdentifier =
-            vscodelc.TextDocumentIdentifier.create(uri.toString());
-        const sourceUri = await clangdClient.sendRequest(
-            SwitchSourceHeaderRequest.type, docIdentifier);
-        if (!sourceUri) {
-          return;
-        }
-        const doc = await vscode.workspace.openTextDocument(
-            vscode.Uri.parse(sourceUri));
-        vscode.window.showTextDocument(doc);
-      }));
+    const clangdClient = new vscodelc.LanguageClient('Clang Language Server',serverOptions, clientOptions);
+    console.log('Clang Language Server is now active!');
+    context.subscriptions.push(clangdClient.start());
+    context.subscriptions.push(vscode.commands.registerCommand(
+        'clangd-vscode.switchheadersource', async () => {
+            const uri =
+                vscode.Uri.file(vscode.window.activeTextEditor.document.fileName);
+            if (!uri) {
+                return;
+            }
+            const docIdentifier =
+                vscodelc.TextDocumentIdentifier.create(uri.toString());
+            const sourceUri = await clangdClient.sendRequest(
+                SwitchSourceHeaderRequest.type, docIdentifier);
+            if (!sourceUri) {
+                return;
+            }
+            const doc = await vscode.workspace.openTextDocument(
+                vscode.Uri.parse(sourceUri));
+            vscode.window.showTextDocument(doc);
+        }));
     const status = new FileStatus();
     context.subscriptions.push(vscode.window.onDidChangeActiveTextEditor(() => {
         status.updateStatus();
     }));
-    clangdClient.onReady().then(() => {
-        clangdClient.onNotification(
-            'textDocument/clangd.fileStatus',
-            (fileStatus) => { status.onFileUpdated(fileStatus); });
-    })
+    clangdClient.onDidChangeState(
+        ({ newState }) => {
+            if (newState == vscodelc.State.Running) {
+                // clangd starts or restarts after crash.
+                clangdClient.onNotification(
+                    'textDocument/clangd.fileStatus',
+                    (fileStatus) => { status.onFileUpdated(fileStatus); });
+            } else if (newState == vscodelc.State.Stopped) {
+                // Clear all cached statuses when clangd crashes.
+                status.clear();
+            }
+        })
+    // An empty place holder for the activate command, otherwise we'll get an
+    // "command is not registered" error.
+    context.subscriptions.push(vscode.commands.registerCommand(
+            'clangd-vscode.activate', async () => {}));
 }

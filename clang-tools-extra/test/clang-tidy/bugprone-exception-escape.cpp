@@ -1,4 +1,9 @@
-// RUN: %check_clang_tidy %s bugprone-exception-escape %t -- -extra-arg=-std=c++11 -extra-arg=-fexceptions -config="{CheckOptions: [{key: bugprone-exception-escape.IgnoredExceptions, value: 'ignored1,ignored2'}, {key: bugprone-exception-escape.FunctionsThatShouldNotThrow, value: 'enabled1,enabled2,enabled3'}]}" --
+// RUN: %check_clang_tidy -std=c++11,c++14 %s bugprone-exception-escape %t -- \
+// RUN:     -config="{CheckOptions: [ \
+// RUN:         {key: bugprone-exception-escape.IgnoredExceptions, value: 'ignored1,ignored2'}, \
+// RUN:         {key: bugprone-exception-escape.FunctionsThatShouldNotThrow, value: 'enabled1,enabled2,enabled3'} \
+// RUN:     ]}" \
+// RUN:     -- -fexceptions
 
 struct throwing_destructor {
   ~throwing_destructor() {

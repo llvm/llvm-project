@@ -1,9 +1,8 @@
 //===- ClangTidyForceLinker.h - clang-tidy --------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -77,6 +76,11 @@ extern volatile int MPIModuleAnchorSource;
 static int LLVM_ATTRIBUTE_UNUSED MPIModuleAnchorDestination =
     MPIModuleAnchorSource;
 #endif
+
+// This anchor is used to force the linker to link the OpenMPModule.
+extern volatile int OpenMPModuleAnchorSource;
+static int LLVM_ATTRIBUTE_UNUSED OpenMPModuleAnchorDestination =
+    OpenMPModuleAnchorSource;
 
 // This anchor is used to force the linker to link the PerformanceModule.
 extern volatile int PerformanceModuleAnchorSource;

@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s readability-implicit-bool-conversion %t -- -- -std=c++98
+// RUN: %check_clang_tidy -std=c++98 %s readability-implicit-bool-conversion %t
 
 // We need NULL macro, but some buildbots don't like including <cstddef> header
 // This is a portable way of getting it to work

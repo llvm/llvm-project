@@ -1,4 +1,5 @@
-// RUN: %check_clang_tidy %s google-readability-casting %t
+// RUN: %check_clang_tidy -std=c++11-or-later %s google-readability-casting %t
+// FIXME: Fix the checker to work in C++17 mode.
 
 bool g() { return false; }
 

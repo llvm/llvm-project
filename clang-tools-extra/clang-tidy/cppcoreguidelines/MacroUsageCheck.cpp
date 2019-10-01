@@ -1,9 +1,8 @@
 //===--- MacroUsageCheck.cpp - clang-tidy----------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -37,7 +36,8 @@ public:
         IgnoreCommandLineMacros(IgnoreCommandLine) {}
   void MacroDefined(const Token &MacroNameTok,
                     const MacroDirective *MD) override {
-    if (MD->getMacroInfo()->isUsedForHeaderGuard() ||
+    if (SM.isWrittenInBuiltinFile(MD->getLocation()) ||
+        MD->getMacroInfo()->isUsedForHeaderGuard() ||
         MD->getMacroInfo()->getNumTokens() == 0)
       return;
 
@@ -68,14 +68,14 @@ void MacroUsageCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IgnoreCommandLineMacros", IgnoreCommandLineMacros);
 }
 
-void MacroUsageCheck::registerPPCallbacks(CompilerInstance &Compiler) {
+void MacroUsageCheck::registerPPCallbacks(const SourceManager &SM,
+                                          Preprocessor *PP,
+                                          Preprocessor *ModuleExpanderPP) {
   if (!getLangOpts().CPlusPlus11)
     return;
 
-  Compiler.getPreprocessor().addPPCallbacks(
-      llvm::make_unique<MacroUsageCallbacks>(this, Compiler.getSourceManager(),
-                                             AllowedRegexp, CheckCapsOnly,
-                                             IgnoreCommandLineMacros));
+  PP->addPPCallbacks(llvm::make_unique<MacroUsageCallbacks>(
+      this, SM, AllowedRegexp, CheckCapsOnly, IgnoreCommandLineMacros));
 }
 
 void MacroUsageCheck::warnMacro(const MacroDirective *MD, StringRef MacroName) {

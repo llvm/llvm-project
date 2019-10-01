@@ -1,9 +1,8 @@
 //===--- CodeComplete.h ------------------------------------------*- C++-*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -22,6 +21,8 @@
 #include "Path.h"
 #include "Protocol.h"
 #include "index/Index.h"
+#include "index/Symbol.h"
+#include "index/SymbolOrigin.h"
 #include "clang/Frontend/PrecompiledPreamble.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "clang/Sema/CodeCompleteOptions.h"
@@ -34,7 +35,6 @@
 
 namespace clang {
 class NamedDecl;
-class PCHContainerOperations;
 namespace clangd {
 
 struct CodeCompleteOptions {
@@ -67,6 +67,11 @@ struct CodeCompleteOptions {
   /// Limit the number of results returned (0 means no limit).
   /// If more results are available, we set CompletionList.isIncomplete.
   size_t Limit = 0;
+
+  enum IncludeInsertion {
+    IWYU,
+    NeverInsert,
+  } InsertIncludes = IncludeInsertion::IWYU;
 
   /// A visual indicator to prepend to the completion label to indicate whether
   /// completion result would trigger an #include insertion or not.
@@ -109,6 +114,19 @@ struct CodeCompleteOptions {
   ///
   /// Such completions can insert scope qualifiers.
   bool AllScopes = false;
+
+  /// Whether to use the clang parser, or fallback to text-based completion
+  /// (using identifiers in the current file and symbol indexes).
+  enum CodeCompletionParse {
+    /// Block until we can run the parser (e.g. preamble is built).
+    /// Return an error if this fails.
+    AlwaysParse,
+    /// Run the parser if inputs (preamble) are ready.
+    /// Otherwise, use text-based completion.
+    ParseIfReady,
+    /// Always use text-based completion.
+    NeverParse,
+  } RunParser = ParseIfReady;
 };
 
 // Semi-structured representation of a code-complete suggestion for our C++ API.
@@ -196,6 +214,9 @@ struct CodeCompleteResult {
   std::vector<CodeCompletion> Completions;
   bool HasMore = false;
   CodeCompletionContext::Kind Context = CodeCompletionContext::CCC_Other;
+  // Usually the source will be parsed with a real C++ parser.
+  // But heuristics may be used instead if e.g. the preamble is not ready.
+  bool RanParser = true;
 };
 raw_ostream &operator<<(raw_ostream &, const CodeCompleteResult &);
 
@@ -214,7 +235,11 @@ struct SpeculativeFuzzyFind {
   std::future<SymbolSlab> Result;
 };
 
-/// Get code completions at a specified \p Pos in \p FileName.
+/// Gets code completions at a specified \p Pos in \p FileName.
+///
+/// If \p Preamble is nullptr, this runs code completion without compiling the
+/// code.
+///
 /// If \p SpecFuzzyFind is set, a speculative and asynchronous fuzzy find index
 /// request (based on cached request) will be run before parsing sema. In case
 /// the speculative result is used by code completion (e.g. speculation failed),
@@ -225,7 +250,6 @@ CodeCompleteResult codeComplete(PathRef FileName,
                                 const PreambleData *Preamble,
                                 StringRef Contents, Position Pos,
                                 IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
-                                std::shared_ptr<PCHContainerOperations> PCHs,
                                 CodeCompleteOptions Opts,
                                 SpeculativeFuzzyFind *SpecFuzzyFind = nullptr);
 
@@ -235,7 +259,6 @@ SignatureHelp signatureHelp(PathRef FileName,
                             const PreambleData *Preamble, StringRef Contents,
                             Position Pos,
                             IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
-                            std::shared_ptr<PCHContainerOperations> PCHs,
                             const SymbolIndex *Index);
 
 // For index-based completion, we only consider:
@@ -250,10 +273,21 @@ SignatureHelp signatureHelp(PathRef FileName,
 // completion.
 bool isIndexedForCodeCompletion(const NamedDecl &ND, ASTContext &ASTCtx);
 
-/// Retrives a speculative code completion filter text before the cursor.
-/// Exposed for testing only.
-llvm::Expected<llvm::StringRef>
-speculateCompletionFilter(llvm::StringRef Content, Position Pos);
+// Text immediately before the completion point that should be completed.
+// This is heuristically derived from the source code, and is used when:
+//   - semantic analysis fails
+//   - semantic analysis may be slow, and we speculatively query the index
+struct CompletionPrefix {
+  // The unqualified partial name.
+  // If there is none, begin() == end() == completion position.
+  llvm::StringRef Name;
+  // The spelled scope qualifier, such as Foo::.
+  // If there is none, begin() == end() == Name.begin().
+  llvm::StringRef Qualifier;
+};
+// Heuristically parses before Offset to determine what should be completed.
+CompletionPrefix guessCompletionPrefix(llvm::StringRef Content,
+                                       unsigned Offset);
 
 } // namespace clangd
 } // namespace clang

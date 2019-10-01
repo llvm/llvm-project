@@ -1,0 +1,28 @@
+@LIT_SITE_CFG_IN_HEADER@
+
+# Variables needed for common clang config.
+config.lit_tools_dir = "@LLVM_LIT_TOOLS_DIR@"
+config.clang_tools_dir = "@CLANG_TOOLS_DIR@"
+config.llvm_tools_dir = "@LLVM_TOOLS_DIR@"
+config.clang_libs_dir = "@CLANG_LIBS_DIR@"
+config.llvm_libs_dir = "@LLVM_LIBS_DIR@"
+config.target_triple = "@TARGET_TRIPLE@"
+config.host_triple = "@LLVM_HOST_TRIPLE@"
+
+# Support substitution of the tools and libs dirs with user parameters. This is
+# used when we can't determine the tool dir at configuration time.
+try:
+    config.clang_tools_dir = config.clang_tools_dir % lit_config.params
+    config.llvm_tools_dir = config.llvm_tools_dir % lit_config.params
+    config.llvm_libs_dir = config.llvm_libs_dir % lit_config.params
+except KeyError:
+    e = sys.exc_info()[1]
+    key, = e.args
+    lit_config.fatal("unable to find %r parameter, use '--param=%s=VALUE'" % (key,key))
+
+config.clangd_source_dir = "@CMAKE_CURRENT_SOURCE_DIR@/.."
+config.clangd_binary_dir = "@CMAKE_CURRENT_BINARY_DIR@/.."
+config.clangd_build_xpc = @CLANGD_BUILD_XPC@
+
+# Delegate logic to lit.cfg.py.
+lit_config.load_config(config, "@CMAKE_CURRENT_SOURCE_DIR@/lit.cfg.py")

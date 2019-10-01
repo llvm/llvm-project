@@ -1,9 +1,8 @@
 //===--- DraftStore.cpp - File contents container ---------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -11,11 +10,10 @@
 #include "SourceCode.h"
 #include "llvm/Support/Errc.h"
 
-using namespace llvm;
 namespace clang {
 namespace clangd {
 
-Optional<std::string> DraftStore::getDraft(PathRef File) const {
+llvm::Optional<std::string> DraftStore::getDraft(PathRef File) const {
   std::lock_guard<std::mutex> Lock(Mutex);
 
   auto It = Drafts.find(File);
@@ -35,20 +33,19 @@ std::vector<Path> DraftStore::getActiveFiles() const {
   return ResultVector;
 }
 
-void DraftStore::addDraft(PathRef File, StringRef Contents) {
+void DraftStore::addDraft(PathRef File, llvm::StringRef Contents) {
   std::lock_guard<std::mutex> Lock(Mutex);
 
   Drafts[File] = Contents;
 }
 
-Expected<std::string>
-DraftStore::updateDraft(PathRef File,
-                        ArrayRef<TextDocumentContentChangeEvent> Changes) {
+llvm::Expected<std::string> DraftStore::updateDraft(
+    PathRef File, llvm::ArrayRef<TextDocumentContentChangeEvent> Changes) {
   std::lock_guard<std::mutex> Lock(Mutex);
 
   auto EntryIt = Drafts.find(File);
   if (EntryIt == Drafts.end()) {
-    return make_error<StringError>(
+    return llvm::make_error<llvm::StringError>(
         "Trying to do incremental update on non-added document: " + File,
         llvm::errc::invalid_argument);
   }
@@ -62,19 +59,21 @@ DraftStore::updateDraft(PathRef File,
     }
 
     const Position &Start = Change.range->start;
-    Expected<size_t> StartIndex = positionToOffset(Contents, Start, false);
+    llvm::Expected<size_t> StartIndex =
+        positionToOffset(Contents, Start, false);
     if (!StartIndex)
       return StartIndex.takeError();
 
     const Position &End = Change.range->end;
-    Expected<size_t> EndIndex = positionToOffset(Contents, End, false);
+    llvm::Expected<size_t> EndIndex = positionToOffset(Contents, End, false);
     if (!EndIndex)
       return EndIndex.takeError();
 
     if (*EndIndex < *StartIndex)
-      return make_error<StringError>(
-          formatv("Range's end position ({0}) is before start position ({1})",
-                  End, Start),
+      return llvm::make_error<llvm::StringError>(
+          llvm::formatv(
+              "Range's end position ({0}) is before start position ({1})", End,
+              Start),
           llvm::errc::invalid_argument);
 
     // Since the range length between two LSP positions is dependent on the
@@ -88,10 +87,10 @@ DraftStore::updateDraft(PathRef File,
         lspLength(Contents.substr(*StartIndex, *EndIndex - *StartIndex));
 
     if (Change.rangeLength && ComputedRangeLength != *Change.rangeLength)
-      return make_error<StringError>(
-          formatv("Change's rangeLength ({0}) doesn't match the "
-                  "computed range length ({1}).",
-                  *Change.rangeLength, *EndIndex - *StartIndex),
+      return llvm::make_error<llvm::StringError>(
+          llvm::formatv("Change's rangeLength ({0}) doesn't match the "
+                        "computed range length ({1}).",
+                        *Change.rangeLength, *EndIndex - *StartIndex),
           llvm::errc::invalid_argument);
 
     std::string NewContents;

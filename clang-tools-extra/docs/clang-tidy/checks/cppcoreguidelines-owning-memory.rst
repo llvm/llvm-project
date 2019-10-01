@@ -50,7 +50,7 @@ to be deleted.
   int* NonOwner = new int(42); // First warning here, since new must land in an owner
   delete NonOwner; // Second warning here, since only owners are allowed to be deleted
 
-  // Example Good, Ownership correclty stated
+  // Example Good, Ownership correctly stated
   gsl::owner<int*> Owner = new int(42); // Good
   delete Owner; // Good as well, statically enforced, that only owners get deleted
   

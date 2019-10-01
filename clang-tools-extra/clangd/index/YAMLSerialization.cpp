@@ -1,9 +1,8 @@
-//===--- SymbolYAML.cpp ------------------------------------------*- C++-*-===//
+//===-- YAMLSerialization.cpp ------------------------------------*- C++-*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -14,7 +13,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "Index.h"
+#include "Relation.h"
 #include "Serialization.h"
+#include "SymbolLocation.h"
+#include "SymbolOrigin.h"
 #include "Trace.h"
 #include "dex/Dex.h"
 #include "llvm/ADT/Optional.h"
@@ -28,18 +30,17 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
 
-using namespace llvm;
-
 LLVM_YAML_IS_SEQUENCE_VECTOR(clang::clangd::Symbol::IncludeHeaderWithReferences)
 LLVM_YAML_IS_SEQUENCE_VECTOR(clang::clangd::Ref)
 
 namespace {
 using RefBundle =
     std::pair<clang::clangd::SymbolID, std::vector<clang::clangd::Ref>>;
-// This is a pale imitation of std::variant<Symbol, RefBundle>
+// This is a pale imitation of std::variant<Symbol, RefBundle, Relation>
 struct VariantEntry {
-  Optional<clang::clangd::Symbol> Symbol;
-  Optional<RefBundle> Refs;
+  llvm::Optional<clang::clangd::Symbol> Symbol;
+  llvm::Optional<RefBundle> Refs;
+  llvm::Optional<clang::clangd::Relation> Relation;
 };
 // A class helps YAML to serialize the 32-bit encoded position (Line&Column),
 // as YAMLIO can't directly map bitfields.
@@ -54,6 +55,8 @@ namespace yaml {
 
 using clang::clangd::Ref;
 using clang::clangd::RefKind;
+using clang::clangd::Relation;
+using clang::clangd::RelationKind;
 using clang::clangd::Symbol;
 using clang::clangd::SymbolID;
 using clang::clangd::SymbolLocation;
@@ -61,19 +64,20 @@ using clang::clangd::SymbolOrigin;
 using clang::index::SymbolInfo;
 using clang::index::SymbolKind;
 using clang::index::SymbolLanguage;
+using clang::index::SymbolRole;
 
 // Helper to (de)serialize the SymbolID. We serialize it as a hex string.
 struct NormalizedSymbolID {
   NormalizedSymbolID(IO &) {}
   NormalizedSymbolID(IO &, const SymbolID &ID) {
-    raw_string_ostream OS(HexString);
+    llvm::raw_string_ostream OS(HexString);
     OS << ID;
   }
 
   SymbolID denormalize(IO &I) {
     auto ID = SymbolID::fromStr(HexString);
     if (!ID) {
-      I.setError(toString(ID.takeError()));
+      I.setError(llvm::toString(ID.takeError()));
       return SymbolID();
     }
     return *ID;
@@ -194,6 +198,8 @@ template <> struct MappingTraits<Symbol> {
     IO.mapOptional("Origin", NSymbolOrigin->Origin);
     IO.mapOptional("Flags", NSymbolFlag->Flag);
     IO.mapOptional("Signature", Sym.Signature);
+    IO.mapOptional("TemplateSpecializationArgs",
+                   Sym.TemplateSpecializationArgs);
     IO.mapOptional("CompletionSnippetSuffix", Sym.CompletionSnippetSuffix);
     IO.mapOptional("Documentation", Sym.Documentation);
     IO.mapOptional("ReturnType", Sym.ReturnType);
@@ -274,6 +280,37 @@ template <> struct MappingTraits<Ref> {
   }
 };
 
+struct NormalizedSymbolRole {
+  NormalizedSymbolRole(IO &) {}
+  NormalizedSymbolRole(IO &IO, SymbolRole R) {
+    Kind = static_cast<uint8_t>(clang::clangd::symbolRoleToRelationKind(R));
+  }
+
+  SymbolRole denormalize(IO &IO) {
+    return clang::clangd::relationKindToSymbolRole(
+        static_cast<RelationKind>(Kind));
+  }
+
+  uint8_t Kind = 0;
+};
+
+template <> struct MappingTraits<SymbolID> {
+  static void mapping(IO &IO, SymbolID &ID) {
+    MappingNormalization<NormalizedSymbolID, SymbolID> NSymbolID(IO, ID);
+    IO.mapRequired("ID", NSymbolID->HexString);
+  }
+};
+
+template <> struct MappingTraits<Relation> {
+  static void mapping(IO &IO, Relation &Relation) {
+    MappingNormalization<NormalizedSymbolRole, SymbolRole> NRole(
+        IO, Relation.Predicate);
+    IO.mapRequired("Subject", Relation.Subject);
+    IO.mapRequired("Predicate", NRole->Kind);
+    IO.mapRequired("Object", Relation.Object);
+  }
+};
+
 template <> struct MappingTraits<VariantEntry> {
   static void mapping(IO &IO, VariantEntry &Variant) {
     if (IO.mapTag("!Symbol", Variant.Symbol.hasValue())) {
@@ -284,6 +321,10 @@ template <> struct MappingTraits<VariantEntry> {
       if (!IO.outputting())
         Variant.Refs.emplace();
       MappingTraits<RefBundle>::mapping(IO, *Variant.Refs);
+    } else if (IO.mapTag("!Relations", Variant.Relation.hasValue())) {
+      if (!IO.outputting())
+        Variant.Relation.emplace();
+      MappingTraits<Relation>::mapping(IO, *Variant.Relation);
     }
   }
 };
@@ -294,8 +335,8 @@ template <> struct MappingTraits<VariantEntry> {
 namespace clang {
 namespace clangd {
 
-void writeYAML(const IndexFileOut &O, raw_ostream &OS) {
-  yaml::Output Yout(OS);
+void writeYAML(const IndexFileOut &O, llvm::raw_ostream &OS) {
+  llvm::yaml::Output Yout(OS);
   for (const auto &Sym : *O.Symbols) {
     VariantEntry Entry;
     Entry.Symbol = Sym;
@@ -307,50 +348,75 @@ void writeYAML(const IndexFileOut &O, raw_ostream &OS) {
       Entry.Refs = Sym;
       Yout << Entry;
     }
+  if (O.Relations)
+    for (auto &R : *O.Relations) {
+      VariantEntry Entry;
+      Entry.Relation = R;
+      Yout << Entry;
+    }
 }
 
-Expected<IndexFileIn> readYAML(StringRef Data) {
+llvm::Expected<IndexFileIn> readYAML(llvm::StringRef Data) {
   SymbolSlab::Builder Symbols;
   RefSlab::Builder Refs;
-  BumpPtrAllocator Arena; // store the underlying data of Position::FileURI.
-  UniqueStringSaver Strings(Arena);
-  yaml::Input Yin(Data, &Strings);
-  do {
+  RelationSlab::Builder Relations;
+  llvm::BumpPtrAllocator
+      Arena; // store the underlying data of Position::FileURI.
+  llvm::UniqueStringSaver Strings(Arena);
+  llvm::yaml::Input Yin(Data, &Strings);
+  while (Yin.setCurrentDocument()) {
+    llvm::yaml::EmptyContext Ctx;
     VariantEntry Variant;
-    Yin >> Variant;
+    yamlize(Yin, Variant, true, Ctx);
     if (Yin.error())
-      return errorCodeToError(Yin.error());
+      return llvm::errorCodeToError(Yin.error());
+
     if (Variant.Symbol)
       Symbols.insert(*Variant.Symbol);
     if (Variant.Refs)
       for (const auto &Ref : Variant.Refs->second)
         Refs.insert(Variant.Refs->first, Ref);
-  } while (Yin.nextDocument());
+    if (Variant.Relation)
+      Relations.insert(*Variant.Relation);
+    Yin.nextDocument();
+  }
 
   IndexFileIn Result;
   Result.Symbols.emplace(std::move(Symbols).build());
   Result.Refs.emplace(std::move(Refs).build());
+  Result.Relations.emplace(std::move(Relations).build());
   return std::move(Result);
 }
 
 std::string toYAML(const Symbol &S) {
   std::string Buf;
   {
-    raw_string_ostream OS(Buf);
-    yaml::Output Yout(OS);
+    llvm::raw_string_ostream OS(Buf);
+    llvm::yaml::Output Yout(OS);
     Symbol Sym = S; // copy: Yout<< requires mutability.
     Yout << Sym;
   }
   return Buf;
 }
 
-std::string toYAML(const std::pair<SymbolID, ArrayRef<Ref>> &Data) {
+std::string toYAML(const std::pair<SymbolID, llvm::ArrayRef<Ref>> &Data) {
   RefBundle Refs = {Data.first, Data.second};
   std::string Buf;
   {
-    raw_string_ostream OS(Buf);
-    yaml::Output Yout(OS);
+    llvm::raw_string_ostream OS(Buf);
+    llvm::yaml::Output Yout(OS);
     Yout << Refs;
+  }
+  return Buf;
+}
+
+std::string toYAML(const Relation &R) {
+  std::string Buf;
+  {
+    llvm::raw_string_ostream OS(Buf);
+    llvm::yaml::Output Yout(OS);
+    Relation Rel = R; // copy: Yout<< requires mutability.
+    Yout << Rel;
   }
   return Buf;
 }

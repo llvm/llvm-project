@@ -7,7 +7,7 @@ Finds global variable declarations in Objective-C files that do not follow the
 pattern of variable names in Google's Objective-C Style Guide.
 
 The corresponding style guide rule:
-http://google.github.io/styleguide/objcguide.html#variable-names
+https://google.github.io/styleguide/objcguide.html#variable-names
 
 All the global variables should follow the pattern of `g[A-Z].*` (variables) or
 `k[A-Z].*` (constants). The check will suggest a variable name that follows the

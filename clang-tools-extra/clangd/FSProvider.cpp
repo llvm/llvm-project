@@ -1,9 +1,8 @@
 //===--- FSProvider.cpp - VFS provider for ClangdServer -------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -14,8 +13,6 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include <memory>
-
-using namespace llvm;
 
 namespace clang {
 namespace clangd {
@@ -28,9 +25,9 @@ public:
   explicit VolatileFileSystem(llvm::IntrusiveRefCntPtr<FileSystem> FS)
       : ProxyFileSystem(std::move(FS)) {}
 
-  llvm::ErrorOr<std::unique_ptr<vfs::File>>
-  openFileForRead(const Twine &InPath) override {
-    SmallString<128> Path;
+  llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>>
+  openFileForRead(const llvm::Twine &InPath) override {
+    llvm::SmallString<128> Path;
     InPath.toVector(Path);
 
     auto File = getUnderlyingFS().openFileForRead(Path);
@@ -38,28 +35,30 @@ public:
       return File;
     // Try to guess preamble files, they can be memory-mapped even on Windows as
     // clangd has exclusive access to those.
-    StringRef FileName = llvm::sys::path::filename(Path);
+    llvm::StringRef FileName = llvm::sys::path::filename(Path);
     if (FileName.startswith("preamble-") && FileName.endswith(".pch"))
       return File;
     return std::unique_ptr<VolatileFile>(new VolatileFile(std::move(*File)));
   }
 
 private:
-  class VolatileFile : public vfs::File {
+  class VolatileFile : public llvm::vfs::File {
   public:
-    VolatileFile(std::unique_ptr<vfs::File> Wrapped)
+    VolatileFile(std::unique_ptr<llvm::vfs::File> Wrapped)
         : Wrapped(std::move(Wrapped)) {
       assert(this->Wrapped);
     }
 
     virtual llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
-    getBuffer(const Twine &Name, int64_t FileSize, bool RequiresNullTerminator,
-              bool /*IsVolatile*/) override {
+    getBuffer(const llvm::Twine &Name, int64_t FileSize,
+              bool RequiresNullTerminator, bool /*IsVolatile*/) override {
       return Wrapped->getBuffer(Name, FileSize, RequiresNullTerminator,
                                 /*IsVolatile=*/true);
     }
 
-    llvm::ErrorOr<vfs::Status> status() override { return Wrapped->status(); }
+    llvm::ErrorOr<llvm::vfs::Status> status() override {
+      return Wrapped->status();
+    }
     llvm::ErrorOr<std::string> getName() override { return Wrapped->getName(); }
     std::error_code close() override { return Wrapped->close(); }
 
@@ -75,9 +74,10 @@ clang::clangd::RealFileSystemProvider::getFileSystem() const {
 // FIXME: Try to use a similar approach in Sema instead of relying on
 //        propagation of the 'isVolatile' flag through all layers.
 #ifdef _WIN32
-  return new VolatileFileSystem(vfs::getRealFileSystem());
+  return new VolatileFileSystem(
+      llvm::vfs::createPhysicalFileSystem().release());
 #else
-  return vfs::getRealFileSystem();
+  return llvm::vfs::createPhysicalFileSystem().release();
 #endif
 }
 } // namespace clangd

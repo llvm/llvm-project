@@ -1,9 +1,8 @@
 //===--- DefinitionsInHeadersCheck.cpp - clang-tidy------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -125,13 +124,16 @@ void DefinitionsInHeadersCheck::check(const MatchFinder::MatchResult &Result) {
       }
     }
 
-    bool is_full_spec = FD->getTemplateSpecializationKind() != TSK_Undeclared;
+    bool IsFullSpec = FD->getTemplateSpecializationKind() != TSK_Undeclared;
     diag(FD->getLocation(),
          "%select{function|full function template specialization}0 %1 defined "
          "in a header file; function definitions in header files can lead to "
          "ODR violations")
-        << is_full_spec << FD << FixItHint::CreateInsertion(
-                     FD->getReturnTypeSourceRange().getBegin(), "inline ");
+        << IsFullSpec << FD;
+    diag(FD->getLocation(), /*FixDescription=*/"make as 'inline'",
+         DiagnosticIDs::Note)
+        << FixItHint::CreateInsertion(FD->getReturnTypeSourceRange().getBegin(),
+                                      "inline ");
   } else if (const auto *VD = dyn_cast<VarDecl>(ND)) {
     // Static data members of a class template are allowed.
     if (VD->getDeclContext()->isDependentContext() && VD->isStaticDataMember())

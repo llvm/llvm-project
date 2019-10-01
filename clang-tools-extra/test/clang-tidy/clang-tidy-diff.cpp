@@ -23,5 +23,4 @@ struct B : public A {
 // CHECK-QUIET-NOT: warning:
 };
 // CHECK-SANITY-NOT: Suppressed
-// CHECK: Suppressed 1 warnings (1 due to line filter).
 // CHECK-QUIET-NOT: Suppressed

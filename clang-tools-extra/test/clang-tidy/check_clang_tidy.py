@@ -2,10 +2,9 @@
 #
 #===- check_clang_tidy.py - ClangTidy Test Helper ------------*- python -*--===#
 #
-#                     The LLVM Compiler Infrastructure
-#
-# This file is distributed under the University of Illinois Open Source
-# License. See LICENSE.TXT for details.
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
 #===------------------------------------------------------------------------===#
 
@@ -39,29 +38,15 @@ def write_file(file_name, text):
     f.write(text)
     f.truncate()
 
-def csv(string):
-  return string.split(',')
 
-def main():
-  parser = argparse.ArgumentParser()
-  parser.add_argument('-expect-clang-tidy-error', action='store_true')
-  parser.add_argument('-resource-dir')
-  parser.add_argument('-assume-filename')
-  parser.add_argument('input_file_name')
-  parser.add_argument('check_name')
-  parser.add_argument('temp_file_name')
-  parser.add_argument('-check-suffix', '-check-suffixes',
-                      default=[''], type=csv,
-                      help="comma-separated list of FileCheck suffixes")
-
-  args, extra_args = parser.parse_known_args()
-
+def run_test_once(args, extra_args):
   resource_dir = args.resource_dir
   assume_file_name = args.assume_filename
   input_file_name = args.input_file_name
   check_name = args.check_name
   temp_file_name = args.temp_file_name
   expect_clang_tidy_error = args.expect_clang_tidy_error
+  std = args.std
 
   file_name_with_extension = assume_file_name or input_file_name
   _, extension = os.path.splitext(file_name_with_extension)
@@ -70,20 +55,31 @@ def main():
   temp_file_name = temp_file_name + extension
 
   clang_tidy_extra_args = extra_args
-  if len(clang_tidy_extra_args) == 0:
-    clang_tidy_extra_args = ['--']
-    if extension in ['.cpp', '.hpp', '.mm']:
-      clang_tidy_extra_args.append('--std=c++11')
-    if extension in ['.m', '.mm']:
-      clang_tidy_extra_args.extend(
-          ['-fobjc-abi-version=2', '-fobjc-arc'])
+  clang_extra_args = []
+  if '--' in extra_args:
+    i = clang_tidy_extra_args.index('--')
+    clang_extra_args = clang_tidy_extra_args[i + 1:]
+    clang_tidy_extra_args = clang_tidy_extra_args[:i]
+
+  # If the test does not specify a formatting style, force "none"; otherwise
+  # autodetection logic can discover a ".clang-tidy" file that is not related to
+  # the test.
+  if not any(
+      [arg.startswith('-format-style=') for arg in clang_tidy_extra_args]):
+    clang_tidy_extra_args.append('-format-style=none')
+
+  if extension in ['.m', '.mm']:
+    clang_extra_args = ['-fobjc-abi-version=2', '-fobjc-arc'] + clang_extra_args
+
+  if extension in ['.cpp', '.hpp', '.mm']:
+    clang_extra_args.append('-std=' + std)
 
   # Tests should not rely on STL being available, and instead provide mock
   # implementations of relevant APIs.
-  clang_tidy_extra_args.append('-nostdinc++')
+  clang_extra_args.append('-nostdinc++')
 
   if resource_dir is not None:
-    clang_tidy_extra_args.append('-resource-dir=%s' % resource_dir)
+    clang_extra_args.append('-resource-dir=%s' % resource_dir)
 
   with open(input_file_name, 'r') as input_file:
     input_text = input_file.read()
@@ -139,7 +135,7 @@ def main():
   write_file(original_file_name, cleaned_test)
 
   args = ['clang-tidy', temp_file_name, '-fix', '--checks=-*,' + check_name] + \
-        clang_tidy_extra_args
+      clang_tidy_extra_args + ['--'] + clang_extra_args
   if expect_clang_tidy_error:
     args.insert(0, 'not')
   print('Running ' + repr(args) + '...')
@@ -203,6 +199,50 @@ def main():
     except subprocess.CalledProcessError as e:
       print('FileCheck failed:\n' + e.output.decode())
       raise
+
+
+def expand_std(std):
+  if std == 'c++98-or-later':
+    return ['c++98', 'c++11', 'c++14', 'c++17', 'c++2a']
+  if std == 'c++11-or-later':
+    return ['c++11', 'c++14', 'c++17', 'c++2a']
+  if std == 'c++14-or-later':
+    return ['c++14', 'c++17', 'c++2a']
+  if std == 'c++17-or-later':
+    return ['c++17', 'c++2a']
+  if std == 'c++2a-or-later':
+    return ['c++2a']
+  return [std]
+
+
+def csv(string):
+  return string.split(',')
+
+
+def main():
+  parser = argparse.ArgumentParser()
+  parser.add_argument('-expect-clang-tidy-error', action='store_true')
+  parser.add_argument('-resource-dir')
+  parser.add_argument('-assume-filename')
+  parser.add_argument('input_file_name')
+  parser.add_argument('check_name')
+  parser.add_argument('temp_file_name')
+  parser.add_argument(
+      '-check-suffix',
+      '-check-suffixes',
+      default=[''],
+      type=csv,
+      help='comma-separated list of FileCheck suffixes')
+  parser.add_argument('-std', type=csv, default=['c++11-or-later'])
+
+  args, extra_args = parser.parse_known_args()
+
+  abbreviated_stds = args.std
+  for abbreviated_std in abbreviated_stds:
+    for std in expand_std(abbreviated_std):
+      args.std = std
+      run_test_once(args, extra_args)
+
 
 if __name__ == '__main__':
   main()

@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s modernize-loop-convert %t -- -- -std=c++11 -I %S/Inputs/modernize-loop-convert
+// RUN: %check_clang_tidy %s modernize-loop-convert %t -- -- -I %S/Inputs/modernize-loop-convert
 
 #include "structures.h"
 

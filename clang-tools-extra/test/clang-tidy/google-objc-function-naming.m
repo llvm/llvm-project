@@ -1,4 +1,12 @@
-// RUN: %check_clang_tidy %s google-objc-function-naming %t
+// RUN: %check_clang_tidy %s google-objc-function-naming %t -- -- -isystem %S/Inputs/Headers
+
+#include <stdio.h>
+
+static void TestImplicitFunctionDeclaration(int a) {
+  // Call a builtin function so that the compiler generates an implicit
+  // function declaration.
+  printf("%d", a);
+}
 
 typedef _Bool bool;
 

@@ -1,8 +1,7 @@
 // RUN: %check_clang_tidy %s readability-redundant-declaration %t -- \
 // RUN:   -config="{CheckOptions: \
 // RUN:             [{key: readability-redundant-declaration.IgnoreMacros, \
-// RUN:               value: 0}]}" \
-// RUN:   -- -std=c++11
+// RUN:               value: 0}]}"
 
 extern int Xyz;
 extern int Xyz; // Xyz
@@ -68,3 +67,13 @@ DEFINE(test);
 // CHECK-FIXES: {{^}}DEFINE(test);{{$}}
 
 } // namespace macros
+
+inline void g() {}
+
+inline void g(); // g
+// CHECK-MESSAGES: :[[@LINE-1]]:13: warning: redundant 'g' declaration
+// CHECK-FIXES: {{^}}// g{{$}}
+
+extern inline void g(); // extern g
+// CHECK-MESSAGES: :[[@LINE-1]]:20: warning: redundant 'g' declaration
+// CHECK-FIXES: {{^}}// extern g{{$}}

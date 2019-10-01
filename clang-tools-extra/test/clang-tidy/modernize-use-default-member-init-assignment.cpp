@@ -1,5 +1,5 @@
 // RUN: %check_clang_tidy %s modernize-use-default-member-init %t -- \
-// RUN: -config="{CheckOptions: [{key: modernize-use-default-member-init.UseAssignment, value: 1}]}" -- -std=c++11
+// RUN: -config="{CheckOptions: [{key: modernize-use-default-member-init.UseAssignment, value: 1}]}"
 
 struct S {
 };
@@ -164,6 +164,14 @@ struct PositiveEnum {
   Enum e;
   // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: use default member initializer for 'e'
   // CHECK-FIXES: Enum e = Foo;
+};
+
+struct PositiveValueEnum {
+  PositiveValueEnum() : e() {}
+  // CHECK-FIXES: PositiveValueEnum()  {}
+  Enum e;
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: use default member initializer for 'e'
+  // CHECK-FIXES: Enum e{};
 };
 
 struct PositiveString {

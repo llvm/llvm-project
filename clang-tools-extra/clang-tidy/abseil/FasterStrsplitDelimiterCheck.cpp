@@ -1,9 +1,8 @@
 //===--- FasterStrsplitDelimiterCheck.cpp - clang-tidy---------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -20,21 +19,6 @@ namespace abseil {
 namespace {
 
 AST_MATCHER(StringLiteral, lengthIsOne) { return Node.getLength() == 1; }
-
-::internal::Matcher<Expr>
-constructExprWithArg(llvm::StringRef ClassName,
-                     const ::internal::Matcher<Expr> &Arg) {
-  auto ConstrExpr = cxxConstructExpr(hasType(recordDecl(hasName(ClassName))),
-                                     hasArgument(0, ignoringParenCasts(Arg)));
-
-  return anyOf(ConstrExpr, cxxBindTemporaryExpr(has(ConstrExpr)));
-}
-
-::internal::Matcher<Expr>
-copyConstructExprWithArg(llvm::StringRef ClassName,
-                         const ::internal::Matcher<Expr> &Arg) {
-  return constructExprWithArg(ClassName, constructExprWithArg(ClassName, Arg));
-}
 
 llvm::Optional<std::string> makeCharacterLiteral(const StringLiteral *Literal) {
   std::string Result;
@@ -75,11 +59,17 @@ void FasterStrsplitDelimiterCheck::registerMatchers(MatchFinder *Finder) {
 
   // Binds to a string_view (either absl or std) that was passed by value and
   // contructed from string literal.
-  auto StringViewArg =
-      copyConstructExprWithArg("::absl::string_view", SingleChar);
+  auto StringViewArg = ignoringElidableConstructorCall(ignoringImpCasts(
+      cxxConstructExpr(hasType(recordDecl(hasName("::absl::string_view"))),
+                       hasArgument(0, ignoringParenImpCasts(SingleChar)))));
 
+  // Need to ignore the elidable constructor as otherwise there is no match for
+  // c++14 and earlier.
   auto ByAnyCharArg =
-      expr(copyConstructExprWithArg("::absl::ByAnyChar", StringViewArg))
+      expr(has(ignoringElidableConstructorCall(
+               ignoringParenCasts(cxxBindTemporaryExpr(has(cxxConstructExpr(
+                   hasType(recordDecl(hasName("::absl::ByAnyChar"))),
+                   hasArgument(0, StringViewArg))))))))
           .bind("ByAnyChar");
 
   // Find uses of absl::StrSplit(..., "x") and absl::StrSplit(...,

@@ -1,4 +1,5 @@
-// RUN: %check_clang_tidy %s cppcoreguidelines-pro-bounds-constant-array-index %t -- -config='{CheckOptions: [{key: cppcoreguidelines-pro-bounds-constant-array-index.GslHeader, value: "dir1/gslheader.h"}]}' -- -std=c++11
+// RUN: %check_clang_tidy %s cppcoreguidelines-pro-bounds-constant-array-index %t -- \
+// RUN:     -config='{CheckOptions: [{key: cppcoreguidelines-pro-bounds-constant-array-index.GslHeader, value: "dir1/gslheader.h"}]}'
 // CHECK-FIXES: #include "dir1/gslheader.h"
 
 typedef __SIZE_TYPE__ size_t;

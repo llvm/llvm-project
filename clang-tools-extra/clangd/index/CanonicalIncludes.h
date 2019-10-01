@@ -1,9 +1,8 @@
 //===-- CanonicalIncludes.h - remap #include header -------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -51,9 +50,9 @@ public:
                         llvm::StringRef CanonicalPath);
 
   /// Returns the canonical include for symbol with \p QualifiedName.
-  /// \p Headers is the include stack: Headers.front() is the file declaring the
-  /// symbol, and Headers.back() is the main file.
-  llvm::StringRef mapHeader(llvm::ArrayRef<std::string> Headers,
+  /// \p Header is the file the declaration was reachable from.
+  /// Header itself will be returned if there is no relevant mapping.
+  llvm::StringRef mapHeader(llvm::StringRef Header,
                             llvm::StringRef QualifiedName) const;
 
 private:

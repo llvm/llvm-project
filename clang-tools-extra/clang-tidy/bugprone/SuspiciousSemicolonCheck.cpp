@@ -1,9 +1,8 @@
 //===--- SuspiciousSemicolonCheck.cpp - clang-tidy-------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -54,7 +53,7 @@ void SuspiciousSemicolonCheck::check(const MatchFinder::MatchResult &Result) {
 
   SourceLocation LocEnd = Semicolon->getEndLoc();
   FileID FID = SM.getFileID(LocEnd);
-  llvm::MemoryBuffer *Buffer = SM.getBuffer(FID, LocEnd);
+  const llvm::MemoryBuffer *Buffer = SM.getBuffer(FID, LocEnd);
   Lexer Lexer(SM.getLocForStartOfFile(FID), Ctxt.getLangOpts(),
               Buffer->getBufferStart(), SM.getCharacterData(LocEnd) + 1,
               Buffer->getBufferEnd());

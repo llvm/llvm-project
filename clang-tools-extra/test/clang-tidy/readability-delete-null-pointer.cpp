@@ -3,6 +3,15 @@
 #define NULL 0
 
 void f() {
+  int *ps = 0;
+  if (ps /**/) // #0
+    delete ps;
+  // CHECK-MESSAGES: :[[@LINE-2]]:3: warning: 'if' statement is unnecessary; deleting null pointer has no effect [readability-delete-null-pointer]
+
+  // CHECK-FIXES: int *ps = 0;
+  // CHECK-FIXES-NEXT: {{^  }}// #0
+  // CHECK-FIXES-NEXT: delete ps;
+
   int *p = 0;
 
   // #1

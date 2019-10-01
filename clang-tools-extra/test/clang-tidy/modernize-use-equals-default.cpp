@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s modernize-use-equals-default %t -- -- -std=c++11 -fno-delayed-template-parsing  -fexceptions
+// RUN: %check_clang_tidy %s modernize-use-equals-default %t -- -- -fno-delayed-template-parsing -fexceptions
 
 // Out of line definition.
 class OL {

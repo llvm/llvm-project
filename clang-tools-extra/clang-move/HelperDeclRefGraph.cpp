@@ -1,14 +1,13 @@
-//===-- UsedHelperDeclFinder.cpp - AST-based call graph for helper decls --===//
+//===-- HelperDeclRefGraph.cpp - AST-based call graph for helper decls ----===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "HelperDeclRefGraph.h"
-#include "ClangMove.h"
+#include "Move.h"
 #include "clang/AST/Decl.h"
 #include "llvm/Support/Debug.h"
 #include <vector>

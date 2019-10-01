@@ -1,9 +1,8 @@
 //===--- PassByValueCheck.cpp - clang-tidy---------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -165,14 +164,16 @@ void PassByValueCheck::registerMatchers(MatchFinder *Finder) {
       this);
 }
 
-void PassByValueCheck::registerPPCallbacks(CompilerInstance &Compiler) {
+void PassByValueCheck::registerPPCallbacks(const SourceManager &SM,
+                                           Preprocessor *PP,
+                                           Preprocessor *ModuleExpanderPP) {
   // Only register the preprocessor callbacks for C++; the functionality
   // currently does not provide any benefit to other languages, despite being
   // benign.
   if (getLangOpts().CPlusPlus) {
-    Inserter.reset(new utils::IncludeInserter(
-        Compiler.getSourceManager(), Compiler.getLangOpts(), IncludeStyle));
-    Compiler.getPreprocessor().addPPCallbacks(Inserter->CreatePPCallbacks());
+    Inserter = llvm::make_unique<utils::IncludeInserter>(SM, getLangOpts(),
+                                                         IncludeStyle);
+    PP->addPPCallbacks(Inserter->CreatePPCallbacks());
   }
 }
 

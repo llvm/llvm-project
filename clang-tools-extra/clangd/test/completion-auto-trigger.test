@@ -1,0 +1,108 @@
+# RUN: clangd -lit-test < %s | FileCheck -strict-whitespace %s
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"clangd","capabilities":{},"trace":"off"}}
+---
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"test:///main.cpp","languageId":"cpp","version":1,"text":"namespace ns { int ns_member; } struct vector { int size; static int default_capacity; };\nvoid test(vector *a, vector *b) {\n  if (a > b) {} \n  a->size = 10;\n\n  a ? a : b;\n  ns::ns_member = 10;\n}"}}}
+---
+{"jsonrpc":"2.0","id":1,"method":"textDocument/completion","params":{"textDocument":{"uri":"test:///main.cpp"},"position":{"line":2,"character":9},"context":{"triggerKind":2,"triggerCharacter":">"}}}
+#      CHECK:  "id": 1,
+# CHECK-NEXT:  "jsonrpc": "2.0"
+# CHECK-NEXT:  "result": {
+# CHECK-NEXT:    "isIncomplete": false,
+# CHECK-NEXT:    "items": []
+# CHECK-NEXT:  }
+---
+{"jsonrpc":"2.0","id":2,"method":"textDocument/completion","params":{"textDocument":{"uri":"test:///main.cpp"},"position":{"line":3,"character":5},"context":{"triggerKind":2,"triggerCharacter":">"}}}
+#      CHECK:  "id": 2,
+# CHECK-NEXT:  "jsonrpc": "2.0"
+# CHECK-NEXT:  "result": {
+# CHECK-NEXT:    "isIncomplete": false,
+# CHECK-NEXT:    "items": [
+# CHECK-NEXT:       {
+# CHECK-NEXT:        "detail": "int",
+# CHECK-NEXT:        "filterText": "size",
+# CHECK-NEXT:        "insertText": "size",
+# CHECK-NEXT:        "insertTextFormat": 1,
+# CHECK-NEXT:        "kind": 5,
+# CHECK-NEXT:        "label": " size",
+# CHECK-NEXT:        "sortText": "{{.*}}size",
+# CHECK-NEXT:        "textEdit": {
+# CHECK-NEXT:          "newText": "size",
+# CHECK-NEXT:          "range": {
+# CHECK-NEXT:            "end": {
+# CHECK-NEXT:              "character": 5,
+# CHECK-NEXT:              "line": 3
+# CHECK-NEXT:            },
+# CHECK-NEXT:            "start": {
+# CHECK-NEXT:              "character": 5,
+# CHECK-NEXT:              "line": 3
+# CHECK-NEXT:            }
+# CHECK-NEXT:          }
+# CHECK-NEXT:        }
+# CHECK-NEXT:      },
+# CHECK-NEXT:      {
+# CHECK-NEXT:         "detail": "int",
+# CHECK-NEXT:         "filterText": "default_capacity",
+# CHECK-NEXT:         "insertText": "default_capacity",
+# CHECK-NEXT:         "insertTextFormat": 1,
+# CHECK-NEXT:         "kind": 10,
+# CHECK-NEXT:         "label": " default_capacity",
+# CHECK-NEXT:         "sortText": "{{.*}}default_capacity",
+# CHECK-NEXT:         "textEdit": {
+# CHECK-NEXT:           "newText": "default_capacity",
+# CHECK-NEXT:           "range": {
+# CHECK-NEXT:             "end": {
+# CHECK-NEXT:               "character": 5,
+# CHECK-NEXT:               "line": 3
+# CHECK-NEXT:             },
+# CHECK-NEXT:             "start": {
+# CHECK-NEXT:               "character": 5,
+# CHECK-NEXT:               "line": 3
+# CHECK-NEXT:             }
+# CHECK-NEXT:           }
+# CHECK-NEXT:         }
+# CHECK-NEXT:       }
+# CHECK-NEXT:     ]
+# CHECK-NEXT:   }
+---
+{"jsonrpc":"2.0","id":3,"method":"textDocument/completion","params":{"textDocument":{"uri":"test:///main.cpp"},"position":{"line":5,"character":9},"context":{"triggerKind":2,"triggerCharacter":":"}}}
+#      CHECK:  "id": 3,
+# CHECK-NEXT:  "jsonrpc": "2.0",
+# CHECK-NEXT:  "result": {
+# CHECK-NEXT:    "isIncomplete": false,
+# CHECK-NEXT:    "items": []
+# CHECK-NEXT:  }
+---
+{"jsonrpc":"2.0","id":4,"method":"textDocument/completion","params":{"textDocument":{"uri":"test:///main.cpp"},"position":{"line":6,"character":6},"context":{"triggerKind":2,"triggerCharacter":":"}}}
+---
+#      CHECK:  "id": 4,
+# CHECK-NEXT:  "jsonrpc": "2.0"
+# CHECK-NEXT:  "result": {
+# CHECK-NEXT:    "isIncomplete": false,
+# CHECK-NEXT:    "items": [
+# CHECK-NEXT:      {
+# CHECK-NEXT:        "detail": "int",
+# CHECK-NEXT:        "filterText": "ns_member",
+# CHECK-NEXT:        "insertText": "ns_member",
+# CHECK-NEXT:        "insertTextFormat": 1,
+# CHECK-NEXT:        "kind": 6,
+# CHECK-NEXT:        "label": " ns_member",
+# CHECK-NEXT:        "sortText": "{{.*}}ns_member",
+# CHECK-NEXT:        "textEdit": {
+# CHECK-NEXT:          "newText": "ns_member",
+# CHECK-NEXT:          "range": {
+# CHECK-NEXT:            "end": {
+# CHECK-NEXT:              "character": 6,
+# CHECK-NEXT:              "line": 6
+# CHECK-NEXT:            },
+# CHECK-NEXT:            "start": {
+# CHECK-NEXT:              "character": 6,
+# CHECK-NEXT:              "line": 6
+# CHECK-NEXT:            }
+# CHECK-NEXT:          }
+# CHECK-NEXT:        }
+# CHECK-NEXT:      }
+# CHECK-NEXT:    ]
+# CHECK-NEXT:  }
+{"jsonrpc":"2.0","id":5,"method":"shutdown"}
+---
+{"jsonrpc":"2.0","method":"exit"}

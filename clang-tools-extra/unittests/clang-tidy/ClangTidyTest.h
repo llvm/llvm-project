@@ -1,9 +1,8 @@
 //===--- ClangTidyTest.h - clang-tidy ---------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -15,6 +14,8 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendActions.h"
+#include "clang/Tooling/Core/Diagnostic.h"
+#include "clang/Tooling/Core/Replacement.h"
 #include "clang/Tooling/Refactoring.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/Optional.h"
@@ -40,9 +41,10 @@ private:
     Context.setCurrentFile(File);
     Context.setASTContext(&Compiler.getASTContext());
 
+    Preprocessor *PP = &Compiler.getPreprocessor();
     for (auto &Check : Checks) {
       Check->registerMatchers(&Finder);
-      Check->registerPPCallbacks(Compiler);
+      Check->registerPPCallbacks(Compiler.getSourceManager(), PP, PP);
     }
     return Finder.newASTConsumer();
   }
@@ -130,16 +132,17 @@ runCheckOnCode(StringRef Code, std::vector<ClangTidyError> *Errors = nullptr,
   tooling::Replacements Fixes;
   std::vector<ClangTidyError> Diags = DiagConsumer.take();
   for (const ClangTidyError &Error : Diags) {
-    for (const auto &FileAndFixes : Error.Fix) {
-      for (const auto &Fix : FileAndFixes.second) {
-        auto Err = Fixes.add(Fix);
-        // FIXME: better error handling. Keep the behavior for now.
-        if (Err) {
-          llvm::errs() << llvm::toString(std::move(Err)) << "\n";
-          return "";
+    if (const auto *ChosenFix = tooling::selectFirstFix(Error))
+      for (const auto &FileAndFixes : *ChosenFix) {
+        for (const auto &Fix : FileAndFixes.second) {
+          auto Err = Fixes.add(Fix);
+          // FIXME: better error handling. Keep the behavior for now.
+          if (Err) {
+            llvm::errs() << llvm::toString(std::move(Err)) << "\n";
+            return "";
+          }
         }
       }
-    }
   }
   if (Errors)
     *Errors = std::move(Diags);

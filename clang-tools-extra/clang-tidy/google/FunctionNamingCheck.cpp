@@ -1,9 +1,8 @@
 //===--- FunctionNamingCheck.cpp - clang-tidy -----------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -94,12 +93,16 @@ void FunctionNamingCheck::registerMatchers(MatchFinder *Finder) {
   if (!getLangOpts().ObjC)
     return;
 
-  // Match function declarations that are not in system headers and are not
-  // main.
+  // Enforce Objective-C function naming conventions on all functions except:
+  // • Functions defined in system headers.
+  // • C++ member functions.
+  // • Namespaced functions.
+  // • Implicitly defined functions.
+  // • The main function.
   Finder->addMatcher(
       functionDecl(
           unless(anyOf(isExpansionInSystemHeader(), cxxMethodDecl(),
-                       hasAncestor(namespaceDecl()), isMain(),
+                       hasAncestor(namespaceDecl()), isMain(), isImplicit(),
                        matchesName(validFunctionNameRegex(true)),
                        allOf(isStaticStorageClass(),
                              matchesName(validFunctionNameRegex(false))))))

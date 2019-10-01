@@ -1,9 +1,8 @@
 //===--- StringConstructorCheck.cpp - clang-tidy---------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -100,6 +99,15 @@ void StringConstructorCheck::registerMatchers(MatchFinder *Finder) {
                                        integerLiteral().bind("int"))))))
           .bind("constructor"),
       this);
+
+  // Check the literal string constructor with char pointer.
+  // [i.e. string (const char* s);]
+  Finder->addMatcher(
+      cxxConstructExpr(hasDeclaration(cxxMethodDecl(hasName("basic_string"))),
+                       hasArgument(0, expr().bind("from-ptr")),
+                       hasArgument(1, unless(hasType(isInteger()))))
+          .bind("constructor"),
+      this);
 }
 
 void StringConstructorCheck::check(const MatchFinder::MatchResult &Result) {
@@ -126,7 +134,15 @@ void StringConstructorCheck::check(const MatchFinder::MatchResult &Result) {
     const auto *Str = Result.Nodes.getNodeAs<StringLiteral>("str");
     const auto *Lit = Result.Nodes.getNodeAs<IntegerLiteral>("int");
     if (Lit->getValue().ugt(Str->getLength())) {
-      diag(Loc, "length is bigger then string literal size");
+      diag(Loc, "length is bigger than string literal size");
+    }
+  } else if (const auto *Ptr = Result.Nodes.getNodeAs<Expr>("from-ptr")) {
+    Expr::EvalResult ConstPtr;
+    if (!Ptr->isInstantiationDependent() &&
+        Ptr->EvaluateAsRValue(ConstPtr, Ctx) &&
+        ((ConstPtr.Val.isInt() && ConstPtr.Val.getInt().isNullValue()) ||
+         (ConstPtr.Val.isLValue() && ConstPtr.Val.isNullPointer()))) {
+      diag(Loc, "constructing string from nullptr is undefined behaviour");
     }
   }
 }

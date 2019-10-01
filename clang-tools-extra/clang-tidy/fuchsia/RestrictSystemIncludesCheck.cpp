@@ -1,9 +1,8 @@
 //===--- RestrictSystemIncludesCheck.cpp - clang-tidy----------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -24,7 +23,7 @@ namespace fuchsia {
 class RestrictedIncludesPPCallbacks : public PPCallbacks {
 public:
   explicit RestrictedIncludesPPCallbacks(RestrictSystemIncludesCheck &Check,
-                                         SourceManager &SM)
+                                         const SourceManager &SM)
       : Check(Check), SM(SM) {}
 
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
@@ -54,7 +53,7 @@ private:
   llvm::SmallDenseMap<FileID, FileIncludes> IncludeDirectives;
 
   RestrictSystemIncludesCheck &Check;
-  SourceManager &SM;
+  const SourceManager &SM;
 };
 
 void RestrictedIncludesPPCallbacks::InclusionDirective(
@@ -102,10 +101,9 @@ void RestrictedIncludesPPCallbacks::EndOfMainFile() {
 }
 
 void RestrictSystemIncludesCheck::registerPPCallbacks(
-    CompilerInstance &Compiler) {
-  Compiler.getPreprocessor().addPPCallbacks(
-      llvm::make_unique<RestrictedIncludesPPCallbacks>(
-          *this, Compiler.getSourceManager()));
+    const SourceManager &SM, Preprocessor *PP, Preprocessor *ModuleExpanderPP) {
+  PP->addPPCallbacks(
+      llvm::make_unique<RestrictedIncludesPPCallbacks>(*this, SM));
 }
 
 void RestrictSystemIncludesCheck::storeOptions(

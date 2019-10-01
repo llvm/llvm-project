@@ -1,16 +1,16 @@
 //===--- Quality.cpp ---------------------------------------------*- C++-*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+
 #include "Quality.h"
 #include "AST.h"
 #include "FileDistance.h"
 #include "URI.h"
-#include "index/Index.h"
+#include "index/Symbol.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
@@ -31,10 +31,9 @@
 #include <algorithm>
 #include <cmath>
 
-using namespace llvm;
 namespace clang {
 namespace clangd {
-static bool isReserved(StringRef Name) {
+static bool isReserved(llvm::StringRef Name) {
   // FIXME: Should we exclude _Bool and others recognized by the standard?
   return Name.size() >= 2 && Name[0] == '_' &&
          (isUppercase(Name[1]) || Name[1] == '_');
@@ -249,12 +248,13 @@ float SymbolQualitySignals::evaluate() const {
   return Score;
 }
 
-raw_ostream &operator<<(raw_ostream &OS, const SymbolQualitySignals &S) {
-  OS << formatv("=== Symbol quality: {0}\n", S.evaluate());
-  OS << formatv("\tReferences: {0}\n", S.References);
-  OS << formatv("\tDeprecated: {0}\n", S.Deprecated);
-  OS << formatv("\tReserved name: {0}\n", S.ReservedName);
-  OS << formatv("\tCategory: {0}\n", static_cast<int>(S.Category));
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
+                              const SymbolQualitySignals &S) {
+  OS << llvm::formatv("=== Symbol quality: {0}\n", S.evaluate());
+  OS << llvm::formatv("\tReferences: {0}\n", S.References);
+  OS << llvm::formatv("\tDeprecated: {0}\n", S.Deprecated);
+  OS << llvm::formatv("\tReserved name: {0}\n", S.ReservedName);
+  OS << llvm::formatv("\tCategory: {0}\n", static_cast<int>(S.Category));
   return OS;
 }
 
@@ -283,12 +283,12 @@ computeScope(const NamedDecl *D) {
 }
 
 void SymbolRelevanceSignals::merge(const Symbol &IndexResult) {
-  // FIXME: Index results always assumed to be at global scope. If Scope becomes
-  // relevant to non-completion requests, we should recognize class members etc.
-
   SymbolURI = IndexResult.CanonicalDeclaration.FileURI;
   SymbolScope = IndexResult.Scope;
   IsInstanceMember |= isInstanceMember(IndexResult.SymInfo);
+  if (!(IndexResult.Flags & Symbol::VisibleOutsideFile)) {
+    Scope = AccessibleScope::FileScope;
+  }
 }
 
 void SymbolRelevanceSignals::merge(const CodeCompletionResult &SemaCCResult) {
@@ -317,7 +317,7 @@ void SymbolRelevanceSignals::merge(const CodeCompletionResult &SemaCCResult) {
   NeedsFixIts = !SemaCCResult.FixIts.empty();
 }
 
-static std::pair<float, unsigned> uriProximity(StringRef SymbolURI,
+static std::pair<float, unsigned> uriProximity(llvm::StringRef SymbolURI,
                                                URIDistance *D) {
   if (!D || SymbolURI.empty())
     return {0.f, 0u};
@@ -327,13 +327,22 @@ static std::pair<float, unsigned> uriProximity(StringRef SymbolURI,
 }
 
 static float scopeBoost(ScopeDistance &Distance,
-                        Optional<StringRef> SymbolScope) {
+                        llvm::Optional<llvm::StringRef> SymbolScope) {
   if (!SymbolScope)
     return 1;
   auto D = Distance.distance(*SymbolScope);
   if (D == FileDistance::Unreachable)
     return 0.6f;
   return std::max(0.65, 2.0 * std::pow(0.6, D / 2.0));
+}
+
+static llvm::Optional<llvm::StringRef>
+wordMatching(llvm::StringRef Name, const llvm::StringSet<> *ContextWords) {
+  if (ContextWords)
+    for (const auto& Word : ContextWords->keys())
+      if (Name.contains_lower(Word))
+        return Word;
+  return llvm::None;
 }
 
 float SymbolRelevanceSignals::evaluate() const {
@@ -357,6 +366,9 @@ float SymbolRelevanceSignals::evaluate() const {
     Score *=
         SemaSaysInScope ? 2.0 : scopeBoost(*ScopeProximityMatch, SymbolScope);
 
+  if (wordMatching(Name, ContextWords))
+    Score *= 1.5;
+
   // Symbols like local variables may only be referenced within their scope.
   // Conversely if we're in that scope, it's likely we'll reference them.
   if (Query == CodeComplete) {
@@ -366,13 +378,26 @@ float SymbolRelevanceSignals::evaluate() const {
     case GlobalScope:
       break;
     case FileScope:
-      Score *= 1.5;
+      Score *= 1.5f;
       break;
     case ClassScope:
       Score *= 2;
       break;
     case FunctionScope:
       Score *= 4;
+      break;
+    }
+  } else {
+    // For non-completion queries, the wider the scope where a symbol is
+    // visible, the more likely it is to be relevant.
+    switch (Scope) {
+    case GlobalScope:
+      break;
+    case FileScope:
+      Score *= 0.5f;
+      break;
+    default:
+      // TODO: Handle other scopes as we start to use them for index results.
       break;
     }
   }
@@ -397,33 +422,39 @@ float SymbolRelevanceSignals::evaluate() const {
   return Score;
 }
 
-raw_ostream &operator<<(raw_ostream &OS, const SymbolRelevanceSignals &S) {
-  OS << formatv("=== Symbol relevance: {0}\n", S.evaluate());
-  OS << formatv("\tName match: {0}\n", S.NameMatch);
-  OS << formatv("\tForbidden: {0}\n", S.Forbidden);
-  OS << formatv("\tNeedsFixIts: {0}\n", S.NeedsFixIts);
-  OS << formatv("\tIsInstanceMember: {0}\n", S.IsInstanceMember);
-  OS << formatv("\tContext: {0}\n", getCompletionKindString(S.Context));
-  OS << formatv("\tQuery type: {0}\n", static_cast<int>(S.Query));
-  OS << formatv("\tScope: {0}\n", static_cast<int>(S.Scope));
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
+                              const SymbolRelevanceSignals &S) {
+  OS << llvm::formatv("=== Symbol relevance: {0}\n", S.evaluate());
+  OS << llvm::formatv("\tName: {0}\n", S.Name);
+  OS << llvm::formatv("\tName match: {0}\n", S.NameMatch);
+  if (S.ContextWords)
+    OS << llvm::formatv(
+        "\tMatching context word: {0}\n",
+        wordMatching(S.Name, S.ContextWords).getValueOr("<none>"));
+  OS << llvm::formatv("\tForbidden: {0}\n", S.Forbidden);
+  OS << llvm::formatv("\tNeedsFixIts: {0}\n", S.NeedsFixIts);
+  OS << llvm::formatv("\tIsInstanceMember: {0}\n", S.IsInstanceMember);
+  OS << llvm::formatv("\tContext: {0}\n", getCompletionKindString(S.Context));
+  OS << llvm::formatv("\tQuery type: {0}\n", static_cast<int>(S.Query));
+  OS << llvm::formatv("\tScope: {0}\n", static_cast<int>(S.Scope));
 
-  OS << formatv("\tSymbol URI: {0}\n", S.SymbolURI);
-  OS << formatv("\tSymbol scope: {0}\n",
-                S.SymbolScope ? *S.SymbolScope : "<None>");
+  OS << llvm::formatv("\tSymbol URI: {0}\n", S.SymbolURI);
+  OS << llvm::formatv("\tSymbol scope: {0}\n",
+                      S.SymbolScope ? *S.SymbolScope : "<None>");
 
   if (S.FileProximityMatch) {
     auto Score = uriProximity(S.SymbolURI, S.FileProximityMatch);
-    OS << formatv("\tIndex URI proximity: {0} (distance={1})\n", Score.first,
-                  Score.second);
+    OS << llvm::formatv("\tIndex URI proximity: {0} (distance={1})\n",
+                        Score.first, Score.second);
   }
-  OS << formatv("\tSema file proximity: {0}\n", S.SemaFileProximityScore);
+  OS << llvm::formatv("\tSema file proximity: {0}\n", S.SemaFileProximityScore);
 
-  OS << formatv("\tSema says in scope: {0}\n", S.SemaSaysInScope);
+  OS << llvm::formatv("\tSema says in scope: {0}\n", S.SemaSaysInScope);
   if (S.ScopeProximityMatch)
-    OS << formatv("\tIndex scope boost: {0}\n",
-                  scopeBoost(*S.ScopeProximityMatch, S.SymbolScope));
+    OS << llvm::formatv("\tIndex scope boost: {0}\n",
+                        scopeBoost(*S.ScopeProximityMatch, S.SymbolScope));
 
-  OS << formatv(
+  OS << llvm::formatv(
       "\tType matched preferred: {0} (Context type: {1}, Symbol type: {2}\n",
       S.TypeMatchesPreferred, S.HadContextType, S.HadSymbolType);
 
@@ -441,33 +472,32 @@ static uint32_t encodeFloat(float F) {
   constexpr uint32_t TopBit = ~(~uint32_t{0} >> 1);
 
   // Get the bits of the float. Endianness is the same as for integers.
-  uint32_t U = FloatToBits(F);
+  uint32_t U = llvm::FloatToBits(F);
   // IEEE 754 floats compare like sign-magnitude integers.
   if (U & TopBit)    // Negative float.
     return 0 - U;    // Map onto the low half of integers, order reversed.
   return U + TopBit; // Positive floats map onto the high half of integers.
 }
 
-std::string sortText(float Score, StringRef Name) {
+std::string sortText(float Score, llvm::StringRef Name) {
   // We convert -Score to an integer, and hex-encode for readability.
   // Example: [0.5, "foo"] -> "41000000foo"
   std::string S;
-  raw_string_ostream OS(S);
-  write_hex(OS, encodeFloat(-Score), HexPrintStyle::Lower,
-            /*Width=*/2 * sizeof(Score));
+  llvm::raw_string_ostream OS(S);
+  llvm::write_hex(OS, encodeFloat(-Score), llvm::HexPrintStyle::Lower,
+                  /*Width=*/2 * sizeof(Score));
   OS << Name;
   OS.flush();
   return S;
 }
 
-raw_ostream &operator<<(raw_ostream &OS, const SignatureQualitySignals &S) {
-  OS << formatv("=== Signature Quality:\n");
-  OS << formatv("\tNumber of parameters: {0}\n", S.NumberOfParameters);
-  OS << formatv("\tNumber of optional parameters: {0}\n",
-                S.NumberOfOptionalParameters);
-  OS << formatv("\tContains active parameter: {0}\n",
-                S.ContainsActiveParameter);
-  OS << formatv("\tKind: {0}\n", S.Kind);
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
+                              const SignatureQualitySignals &S) {
+  OS << llvm::formatv("=== Signature Quality:\n");
+  OS << llvm::formatv("\tNumber of parameters: {0}\n", S.NumberOfParameters);
+  OS << llvm::formatv("\tNumber of optional parameters: {0}\n",
+                      S.NumberOfOptionalParameters);
+  OS << llvm::formatv("\tKind: {0}\n", S.Kind);
   return OS;
 }
 

@@ -1,9 +1,8 @@
 //===--- UnusedUsingDeclsCheck.cpp - clang-tidy----------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -155,7 +154,10 @@ void UnusedUsingDeclsCheck::onEndOfTranslationUnit() {
   for (const auto &Context : Contexts) {
     if (!Context.IsUsed) {
       diag(Context.FoundUsingDecl->getLocation(), "using decl %0 is unused")
-          << Context.FoundUsingDecl
+          << Context.FoundUsingDecl;
+      // Emit a fix and a fix description of the check;
+      diag(Context.FoundUsingDecl->getLocation(),
+           /*FixDescription=*/"remove the using", DiagnosticIDs::Note)
           << FixItHint::CreateRemoval(Context.UsingDeclRange);
     }
   }

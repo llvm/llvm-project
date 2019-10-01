@@ -1,9 +1,8 @@
 //===--- AST.cpp - Utility AST functions  -----------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -12,15 +11,36 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/TemplateBase.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Index/USRGeneration.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ScopedPrinter.h"
+#include "llvm/Support/raw_ostream.h"
 
-using namespace llvm;
 namespace clang {
 namespace clangd {
+
+namespace {
+llvm::Optional<llvm::ArrayRef<TemplateArgumentLoc>>
+getTemplateSpecializationArgLocs(const NamedDecl &ND) {
+  if (auto *Func = llvm::dyn_cast<FunctionDecl>(&ND)) {
+    if (const ASTTemplateArgumentListInfo *Args =
+            Func->getTemplateSpecializationArgsAsWritten())
+      return Args->arguments();
+  } else if (auto *Cls =
+                 llvm::dyn_cast<ClassTemplatePartialSpecializationDecl>(&ND)) {
+    if (auto *Args = Cls->getTemplateArgsAsWritten())
+      return Args->arguments();
+  } else if (auto *Var = llvm::dyn_cast<VarTemplateSpecializationDecl>(&ND))
+    return Var->getTemplateArgsInfo().arguments();
+  // We return None for ClassTemplateSpecializationDecls because it does not
+  // contain TemplateArgumentLoc information.
+  return llvm::None;
+}
+} // namespace
 
 // Returns true if the complete name of decl \p D is spelled in the source code.
 // This is not the case for:
@@ -35,8 +55,8 @@ bool isSpelledInSourceCode(const Decl *D) {
   // macros, we should use the location where the whole definition occurs.
   if (Loc.isMacroID()) {
     std::string PrintLoc = SM.getSpellingLoc(Loc).printToString(SM);
-    if (StringRef(PrintLoc).startswith("<scratch") ||
-        StringRef(PrintLoc).startswith("<command line>"))
+    if (llvm::StringRef(PrintLoc).startswith("<scratch") ||
+        llvm::StringRef(PrintLoc).startswith("<command line>"))
       return false;
   }
   return true;
@@ -54,7 +74,7 @@ SourceLocation findNameLoc(const clang::Decl *D) {
 
 std::string printQualifiedName(const NamedDecl &ND) {
   std::string QName;
-  raw_string_ostream OS(QName);
+  llvm::raw_string_ostream OS(QName);
   PrintingPolicy Policy(ND.getASTContext().getLangOpts());
   // Note that inline namespaces are treated as transparent scopes. This
   // reflects the way they're most commonly used for lookup. Ideally we'd
@@ -65,17 +85,6 @@ std::string printQualifiedName(const NamedDecl &ND) {
   OS.flush();
   assert(!StringRef(QName).startswith("::"));
   return QName;
-}
-
-static const TemplateArgumentList *
-getTemplateSpecializationArgs(const NamedDecl &ND) {
-  if (auto *Func = llvm::dyn_cast<FunctionDecl>(&ND))
-    return Func->getTemplateSpecializationArgs();
-  if (auto *Cls = llvm::dyn_cast<ClassTemplateSpecializationDecl>(&ND))
-    return &Cls->getTemplateInstantiationArgs();
-  if (auto *Var = llvm::dyn_cast<VarTemplateSpecializationDecl>(&ND))
-    return &Var->getTemplateInstantiationArgs();
-  return nullptr;
 }
 
 std::string printName(const ASTContext &Ctx, const NamedDecl &ND) {
@@ -92,9 +101,7 @@ std::string printName(const ASTContext &Ctx, const NamedDecl &ND) {
   }
   ND.getDeclName().print(Out, PP);
   if (!Out.str().empty()) {
-    // FIXME(ibiryukov): do not show args not explicitly written by the user.
-    if (auto *ArgList = getTemplateSpecializationArgs(ND))
-      printTemplateArgumentList(Out, ArgList->asArray(), PP);
+    Out << printTemplateSpecializationArgs(ND);
     return Out.str();
   }
   // The name was empty, so present an anonymous entity.
@@ -107,6 +114,35 @@ std::string printName(const ASTContext &Ctx, const NamedDecl &ND) {
   return "(anonymous)";
 }
 
+std::string printTemplateSpecializationArgs(const NamedDecl &ND) {
+  std::string TemplateArgs;
+  llvm::raw_string_ostream OS(TemplateArgs);
+  PrintingPolicy Policy(ND.getASTContext().getLangOpts());
+  if (llvm::Optional<llvm::ArrayRef<TemplateArgumentLoc>> Args =
+          getTemplateSpecializationArgLocs(ND)) {
+    printTemplateArgumentList(OS, *Args, Policy);
+  } else if (auto *Cls = llvm::dyn_cast<ClassTemplateSpecializationDecl>(&ND)) {
+    if (const TypeSourceInfo *TSI = Cls->getTypeAsWritten()) {
+      // ClassTemplateSpecializationDecls do not contain
+      // TemplateArgumentTypeLocs, they only have TemplateArgumentTypes. So we
+      // create a new argument location list from TypeSourceInfo.
+      auto STL = TSI->getTypeLoc().getAs<TemplateSpecializationTypeLoc>();
+      llvm::SmallVector<TemplateArgumentLoc, 8> ArgLocs;
+      ArgLocs.reserve(STL.getNumArgs());
+      for (unsigned I = 0; I < STL.getNumArgs(); ++I)
+        ArgLocs.push_back(STL.getArgLoc(I));
+      printTemplateArgumentList(OS, ArgLocs, Policy);
+    } else {
+      // FIXME: Fix cases when getTypeAsWritten returns null inside clang AST,
+      // e.g. friend decls. Currently we fallback to Template Arguments without
+      // location information.
+      printTemplateArgumentList(OS, Cls->getTemplateArgs().asArray(), Policy);
+    }
+  }
+  OS.flush();
+  return TemplateArgs;
+}
+
 std::string printNamespaceScope(const DeclContext &DC) {
   for (const auto *Ctx = &DC; Ctx != nullptr; Ctx = Ctx->getParent())
     if (const auto *NS = dyn_cast<NamespaceDecl>(Ctx))
@@ -115,18 +151,19 @@ std::string printNamespaceScope(const DeclContext &DC) {
   return "";
 }
 
-Optional<SymbolID> getSymbolID(const Decl *D) {
-  SmallString<128> USR;
+llvm::Optional<SymbolID> getSymbolID(const Decl *D) {
+  llvm::SmallString<128> USR;
   if (index::generateUSRForDecl(D, USR))
     return None;
   return SymbolID(USR);
 }
 
-Optional<SymbolID> getSymbolID(const IdentifierInfo &II, const MacroInfo *MI,
-                               const SourceManager &SM) {
+llvm::Optional<SymbolID> getSymbolID(const IdentifierInfo &II,
+                                     const MacroInfo *MI,
+                                     const SourceManager &SM) {
   if (MI == nullptr)
     return None;
-  SmallString<128> USR;
+  llvm::SmallString<128> USR;
   if (index::generateUSRForMacro(II.getName(), MI->getDefinitionLoc(), SM, USR))
     return None;
   return SymbolID(USR);

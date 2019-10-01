@@ -1,9 +1,8 @@
 //===--- MisleadingIndentationCheck.cpp - clang-tidy-----------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -82,6 +81,10 @@ void MisleadingIndentationCheck::missingBracesCheck(const SourceManager &SM,
     SourceLocation InnerLoc = Inner->getBeginLoc();
     SourceLocation OuterLoc = CurrentStmt->getBeginLoc();
 
+    if (InnerLoc.isInvalid() || InnerLoc.isMacroID() || OuterLoc.isInvalid() ||
+        OuterLoc.isMacroID())
+      continue;
+
     if (SM.getExpansionLineNumber(InnerLoc) ==
         SM.getExpansionLineNumber(OuterLoc))
       continue;
@@ -89,7 +92,7 @@ void MisleadingIndentationCheck::missingBracesCheck(const SourceManager &SM,
     const Stmt *NextStmt = CStmt->body_begin()[i + 1];
     SourceLocation NextLoc = NextStmt->getBeginLoc();
 
-    if (InnerLoc.isMacroID() || OuterLoc.isMacroID() || NextLoc.isMacroID())
+    if (NextLoc.isInvalid() || NextLoc.isMacroID())
       continue;
 
     if (SM.getExpansionColumnNumber(InnerLoc) ==

@@ -1,9 +1,8 @@
 //===--- TooSmallLoopVariableCheck.cpp - clang-tidy -----------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -27,6 +26,17 @@ static constexpr llvm::StringLiteral LoopUpperBoundName =
     llvm::StringLiteral("loopUpperBound");
 static constexpr llvm::StringLiteral LoopIncrementName =
     llvm::StringLiteral("loopIncrement");
+
+TooSmallLoopVariableCheck::TooSmallLoopVariableCheck(StringRef Name,
+                                                     ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      MagnitudeBitsUpperLimit(Options.get<unsigned>(
+          "MagnitudeBitsUpperLimit", 16)) {}
+
+void TooSmallLoopVariableCheck::storeOptions(
+    ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "MagnitudeBitsUpperLimit", MagnitudeBitsUpperLimit);
+}
 
 /// \brief The matcher for loops with suspicious integer loop variable.
 ///
@@ -85,9 +95,9 @@ void TooSmallLoopVariableCheck::registerMatchers(MatchFinder *Finder) {
       this);
 }
 
-/// Returns the positive part of the integer width for an integer type.
-static unsigned calcPositiveBits(const ASTContext &Context,
-                                 const QualType &IntExprType) {
+/// Returns the magnitude bits of an integer type.
+static unsigned calcMagnitudeBits(const ASTContext &Context,
+                                  const QualType &IntExprType) {
   assert(IntExprType->isIntegerType());
 
   return IntExprType->isUnsignedIntegerType()
@@ -95,13 +105,13 @@ static unsigned calcPositiveBits(const ASTContext &Context,
              : Context.getIntWidth(IntExprType) - 1;
 }
 
-/// \brief Calculate the upper bound expression's positive bits, but ignore
+/// \brief Calculate the upper bound expression's magnitude bits, but ignore
 /// constant like values to reduce false positives.
-static unsigned calcUpperBoundPositiveBits(const ASTContext &Context,
-                                           const Expr *UpperBound,
-                                           const QualType &UpperBoundType) {
+static unsigned calcUpperBoundMagnitudeBits(const ASTContext &Context,
+                                            const Expr *UpperBound,
+                                            const QualType &UpperBoundType) {
   // Ignore casting caused by constant values inside a binary operator.
-  // We are interested in variable values' positive bits.
+  // We are interested in variable values' magnitude bits.
   if (const auto *BinOperator = dyn_cast<BinaryOperator>(UpperBound)) {
     const Expr *RHSE = BinOperator->getRHS()->IgnoreParenImpCasts();
     const Expr *LHSE = BinOperator->getLHS()->IgnoreParenImpCasts();
@@ -123,15 +133,15 @@ static unsigned calcUpperBoundPositiveBits(const ASTContext &Context,
     if (RHSEIsConstantValue && LHSEIsConstantValue)
       return 0;
     if (RHSEIsConstantValue)
-      return calcPositiveBits(Context, LHSEType);
+      return calcMagnitudeBits(Context, LHSEType);
     if (LHSEIsConstantValue)
-      return calcPositiveBits(Context, RHSEType);
+      return calcMagnitudeBits(Context, RHSEType);
 
-    return std::max(calcPositiveBits(Context, LHSEType),
-                    calcPositiveBits(Context, RHSEType));
+    return std::max(calcMagnitudeBits(Context, LHSEType),
+                    calcMagnitudeBits(Context, RHSEType));
   }
 
-  return calcPositiveBits(Context, UpperBoundType);
+  return calcMagnitudeBits(Context, UpperBoundType);
 }
 
 void TooSmallLoopVariableCheck::check(const MatchFinder::MatchResult &Result) {
@@ -150,14 +160,17 @@ void TooSmallLoopVariableCheck::check(const MatchFinder::MatchResult &Result) {
 
   ASTContext &Context = *Result.Context;
 
-  unsigned LoopVarPosBits = calcPositiveBits(Context, LoopVarType);
-  unsigned UpperBoundPosBits =
-      calcUpperBoundPositiveBits(Context, UpperBound, UpperBoundType);
+  unsigned LoopVarMagnitudeBits = calcMagnitudeBits(Context, LoopVarType);
+  unsigned UpperBoundMagnitudeBits =
+      calcUpperBoundMagnitudeBits(Context, UpperBound, UpperBoundType);
 
-  if (UpperBoundPosBits == 0)
+  if (UpperBoundMagnitudeBits == 0)
     return;
 
-  if (LoopVarPosBits < UpperBoundPosBits)
+  if (LoopVarMagnitudeBits > MagnitudeBitsUpperLimit)
+    return;
+
+  if (LoopVarMagnitudeBits < UpperBoundMagnitudeBits)
     diag(LoopVar->getBeginLoc(), "loop variable has narrower type %0 than "
                                  "iteration's upper bound %1")
         << LoopVarType << UpperBoundType;

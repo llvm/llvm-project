@@ -1,9 +1,8 @@
 //===--- Serialization.h - Binary serialization of index data ----*- C++-*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -24,8 +23,10 @@
 
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_RIFF_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_RIFF_H
+
 #include "Headers.h"
 #include "Index.h"
+#include "index/Symbol.h"
 #include "llvm/Support/Error.h"
 
 namespace clang {
@@ -40,6 +41,7 @@ enum class IndexFileFormat {
 struct IndexFileIn {
   llvm::Optional<SymbolSlab> Symbols;
   llvm::Optional<RefSlab> Refs;
+  llvm::Optional<RelationSlab> Relations;
   // Keys are URIs of the source files.
   llvm::Optional<IncludeGraph> Sources;
 };
@@ -50,6 +52,7 @@ llvm::Expected<IndexFileIn> readIndexFile(llvm::StringRef);
 struct IndexFileOut {
   const SymbolSlab *Symbols = nullptr;
   const RefSlab *Refs = nullptr;
+  const RelationSlab *Relations = nullptr;
   // Keys are URIs of the source files.
   const IncludeGraph *Sources = nullptr;
   // TODO: Support serializing Dex posting lists.
@@ -58,7 +61,8 @@ struct IndexFileOut {
   IndexFileOut() = default;
   IndexFileOut(const IndexFileIn &I)
       : Symbols(I.Symbols ? I.Symbols.getPointer() : nullptr),
-        Refs(I.Refs ? I.Refs.getPointer() : nullptr) {}
+        Refs(I.Refs ? I.Refs.getPointer() : nullptr),
+        Relations(I.Relations ? I.Relations.getPointer() : nullptr) {}
 };
 // Serializes an index file.
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const IndexFileOut &O);
@@ -66,11 +70,17 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const IndexFileOut &O);
 // Convert a single symbol to YAML, a nice debug representation.
 std::string toYAML(const Symbol &);
 std::string toYAML(const std::pair<SymbolID, ArrayRef<Ref>> &);
+std::string toYAML(const Relation &);
 
 // Build an in-memory static index from an index file.
 // The size should be relatively small, so data can be managed in memory.
 std::unique_ptr<SymbolIndex> loadIndex(llvm::StringRef Filename,
                                        bool UseDex = true);
+
+// Used for serializing SymbolRole as used in Relation.
+enum class RelationKind : uint8_t { BaseOf };
+RelationKind symbolRoleToRelationKind(index::SymbolRole);
+index::SymbolRole relationKindToSymbolRole(RelationKind);
 
 } // namespace clangd
 } // namespace clang

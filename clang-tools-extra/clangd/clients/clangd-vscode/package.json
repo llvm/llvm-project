@@ -2,11 +2,11 @@
     "name": "vscode-clangd",
     "displayName": "vscode-clangd",
     "description": "Clang Language Server",
-    "version": "0.0.9",
+    "version": "0.0.15",
     "publisher": "llvm-vs-code-extensions",
     "homepage": "https://clang.llvm.org/extra/clangd.html",
     "engines": {
-        "vscode": "^1.27.0"
+        "vscode": "^1.30.0"
     },
     "categories": [
         "Programming Languages",
@@ -21,8 +21,11 @@
         "LLVM"
     ],
     "activationEvents": [
+        "onLanguage:c",
         "onLanguage:cpp",
-        "onLanguage:c"
+        "onLanguage:objective-c",
+        "onLanguage:objective-cpp",
+        "onCommand:clangd-vscode.activate"
     ],
     "main": "./out/src/extension",
     "scripts": {
@@ -32,21 +35,29 @@
         "test": "node ./node_modules/vscode/bin/test"
     },
     "dependencies": {
-        "vscode-languageclient": "^5.1.0",
-        "vscode-languageserver": "^5.1.0"
+        "vscode-languageclient": "^5.2.0",
+        "vscode-languageserver": "^5.2.0"
     },
     "devDependencies": {
-        "typescript": "^2.0.3",
-        "vscode": "^1.1.0",
-        "mocha": "^2.3.3",
+        "@types/mocha": "^2.2.32",
         "@types/node": "^6.0.40",
-        "@types/mocha": "^2.2.32"
+        "mocha": "^5.2.0",
+        "typescript": "^2.0.3",
+        "vscode": "^1.1.0"
     },
     "repository": {
         "type": "svn",
         "url": "http://llvm.org/svn/llvm-project/clang-tools-extra/trunk/clangd/clients/clangd-vscode/"
     },
     "contributes": {
+        "languages": [{
+            "id": "cpp",
+            "filenamePatterns": [
+                "**/include/c++/**",
+                "**/MSVC/*/include/**"
+            ],
+            "firstLine": "^\/[/*].*-\\*-\\s*C\\+\\+\\s*-\\*-.*"
+        }],
         "configuration": {
             "type": "object",
             "title": "clangd configuration",
@@ -79,6 +90,10 @@
             {
                 "command": "clangd-vscode.switchheadersource",
                 "title": "Switch between Source/Header"
+            },
+            {
+                "command": "clangd-vscode.activate",
+                "title": "Manually activate clangd extension"
             }
         ],
         "keybindings": [

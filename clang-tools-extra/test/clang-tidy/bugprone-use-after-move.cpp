@@ -244,6 +244,19 @@ void standardSmartPtr() {
     std::move(ptr);
     ptr.get();
   }
+  // Make sure we treat references to smart pointers correctly.
+  {
+    std::unique_ptr<A> ptr;
+    std::unique_ptr<A>& ref_to_ptr = ptr;
+    std::move(ref_to_ptr);
+    ref_to_ptr.get();
+  }
+  {
+    std::unique_ptr<A> ptr;
+    std::unique_ptr<A>&& rvalue_ref_to_ptr = std::move(ptr);
+    std::move(rvalue_ref_to_ptr);
+    rvalue_ref_to_ptr.get();
+  }
   // We don't give any special treatment to types that are called "unique_ptr"
   // or "shared_ptr" but are not in the "::std" namespace.
   {

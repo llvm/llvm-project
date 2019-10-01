@@ -1,9 +1,8 @@
 //===--- IndexAction.h - Run the indexer as a frontend action ----*- C++-*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -23,11 +22,12 @@ namespace clangd {
 //   - include paths are always collected, and canonicalized appropriately
 //   - references are always counted
 //   - all references are collected (if RefsCallback is non-null)
-//   - the symbol origin is always Static
+//   - the symbol origin is set to Static if not specified by caller
 std::unique_ptr<FrontendAction> createStaticIndexingAction(
     SymbolCollector::Options Opts,
     std::function<void(SymbolSlab)> SymbolsCallback,
     std::function<void(RefSlab)> RefsCallback,
+    std::function<void(RelationSlab)> RelationsCallback,
     std::function<void(IncludeGraph)> IncludeGraphCallback);
 
 } // namespace clangd

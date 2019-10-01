@@ -1,9 +1,8 @@
 //===--- MemIndex.cpp - Dynamic in-memory symbol index. ----------*- C++-*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===-------------------------------------------------------------------===//
 
@@ -12,21 +11,23 @@
 #include "Logger.h"
 #include "Quality.h"
 #include "Trace.h"
+#include "clang/Index/IndexSymbol.h"
 
-using namespace llvm;
 namespace clang {
 namespace clangd {
 
-std::unique_ptr<SymbolIndex> MemIndex::build(SymbolSlab Slab, RefSlab Refs) {
+std::unique_ptr<SymbolIndex> MemIndex::build(SymbolSlab Slab, RefSlab Refs,
+                                             RelationSlab Relations) {
   // Store Slab size before it is moved.
   const auto BackingDataSize = Slab.bytes() + Refs.bytes();
   auto Data = std::make_pair(std::move(Slab), std::move(Refs));
-  return llvm::make_unique<MemIndex>(Data.first, Data.second, std::move(Data),
-                                     BackingDataSize);
+  return llvm::make_unique<MemIndex>(Data.first, Data.second, Relations,
+                                     std::move(Data), BackingDataSize);
 }
 
-bool MemIndex::fuzzyFind(const FuzzyFindRequest &Req,
-                         function_ref<void(const Symbol &)> Callback) const {
+bool MemIndex::fuzzyFind(
+    const FuzzyFindRequest &Req,
+    llvm::function_ref<void(const Symbol &)> Callback) const {
   assert(!StringRef(Req.Query).contains("::") &&
          "There must be no :: in query.");
   trace::Span Tracer("MemIndex fuzzyFind");
@@ -39,7 +40,7 @@ bool MemIndex::fuzzyFind(const FuzzyFindRequest &Req,
     const Symbol *Sym = Pair.second;
 
     // Exact match against all possible scopes.
-    if (!Req.AnyScope && !is_contained(Req.Scopes, Sym->Scope))
+    if (!Req.AnyScope && !llvm::is_contained(Req.Scopes, Sym->Scope))
       continue;
     if (Req.RestrictForCodeCompletion &&
         !(Sym->Flags & Symbol::IndexedForCodeCompletion))
@@ -57,7 +58,7 @@ bool MemIndex::fuzzyFind(const FuzzyFindRequest &Req,
 }
 
 void MemIndex::lookup(const LookupRequest &Req,
-                      function_ref<void(const Symbol &)> Callback) const {
+                      llvm::function_ref<void(const Symbol &)> Callback) const {
   trace::Span Tracer("MemIndex lookup");
   for (const auto &ID : Req.IDs) {
     auto I = Index.find(ID);
@@ -67,20 +68,46 @@ void MemIndex::lookup(const LookupRequest &Req,
 }
 
 void MemIndex::refs(const RefsRequest &Req,
-                    function_ref<void(const Ref &)> Callback) const {
+                    llvm::function_ref<void(const Ref &)> Callback) const {
   trace::Span Tracer("MemIndex refs");
+  uint32_t Remaining =
+      Req.Limit.getValueOr(std::numeric_limits<uint32_t>::max());
   for (const auto &ReqID : Req.IDs) {
     auto SymRefs = Refs.find(ReqID);
     if (SymRefs == Refs.end())
       continue;
-    for (const auto &O : SymRefs->second)
-      if (static_cast<int>(Req.Filter & O.Kind))
+    for (const auto &O : SymRefs->second) {
+      if (Remaining > 0 && static_cast<int>(Req.Filter & O.Kind)) {
+        --Remaining;
         Callback(O);
+      }
+    }
+  }
+}
+
+void MemIndex::relations(
+    const RelationsRequest &Req,
+    llvm::function_ref<void(const SymbolID &, const Symbol &)> Callback) const {
+  uint32_t Remaining =
+      Req.Limit.getValueOr(std::numeric_limits<uint32_t>::max());
+  for (const SymbolID &Subject : Req.Subjects) {
+    LookupRequest LookupReq;
+    auto It = Relations.find(std::make_pair(Subject, Req.Predicate));
+    if (It != Relations.end()) {
+      for (const auto &Obj : It->second) {
+        if (Remaining > 0) {
+          --Remaining;
+          LookupReq.IDs.insert(Obj);
+        }
+      }
+    }
+    lookup(LookupReq, [&](const Symbol &Object) { Callback(Subject, Object); });
   }
 }
 
 size_t MemIndex::estimateMemoryUsage() const {
-  return Index.getMemorySize() + Refs.getMemorySize() + BackingDataSize;
+  return Index.getMemorySize() + Refs.getMemorySize() +
+         Relations.getMemorySize() + BackingDataSize;
 }
 
 } // namespace clangd

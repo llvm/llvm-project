@@ -1,9 +1,8 @@
 //===--- Diagnostics.h -------------------------------------------*- C++-*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -15,12 +14,18 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/LangOptions.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/None.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include <cassert>
 #include <string>
 
 namespace clang {
+namespace tidy {
+class ClangTidyContext;
+} // namespace tidy
 namespace clangd {
 
 struct ClangdDiagnosticOptions {
@@ -28,11 +33,20 @@ struct ClangdDiagnosticOptions {
   /// diagnostics that are sent to the client.
   bool EmbedFixesInDiagnostics = false;
 
+  /// If true, Clangd uses the relatedInformation field to include other
+  /// locations (in particular attached notes).
+  /// Otherwise, these are flattened into the diagnostic message.
+  bool EmitRelatedLocations = false;
+
   /// If true, Clangd uses an LSP extension to send the diagnostic's
   /// category to the client. The category typically describes the compilation
   /// stage during which the issue was produced, e.g. "Semantic Issue" or "Parse
   /// Issue".
   bool SendDiagnosticCategory = false;
+
+  /// If true, Clangd will add a number of available fixes to the diagnostic's
+  /// message.
+  bool DisplayFixesCount = true;
 };
 
 /// Contains basic information about a diagnostic.
@@ -41,6 +55,9 @@ struct DiagBase {
   // Intended to be used only in error messages.
   // May be relative, absolute or even artifically constructed.
   std::string File;
+  // Absolute path to containing file, if available.
+  llvm::Optional<std::string> AbsFile;
+
   clangd::Range Range;
   DiagnosticsEngine::Level Severity = DiagnosticsEngine::Note;
   std::string Category;
@@ -65,6 +82,14 @@ struct Note : DiagBase {};
 
 /// A top-level diagnostic that may have Notes and Fixes.
 struct Diag : DiagBase {
+  unsigned ID;      // e.g. member of clang::diag, or clang-tidy assigned ID.
+  std::string Name; // if ID was recognized.
+  // The source of this diagnostic.
+  enum {
+    Unknown,
+    Clang,
+    ClangTidy,
+  } Source = Unknown;
   /// Elaborate on the problem, usually pointing to a related piece of code.
   std::vector<Note> Notes;
   /// *Alternative* fixes for this diagnostic, one should be chosen.
@@ -93,19 +118,35 @@ int getSeverity(DiagnosticsEngine::Level L);
 /// the diag itself nor its notes are in the main file).
 class StoreDiags : public DiagnosticConsumer {
 public:
-  std::vector<Diag> take();
+  // The ClangTidyContext populates Source and Name for clang-tidy diagnostics.
+  std::vector<Diag> take(const clang::tidy::ClangTidyContext *Tidy = nullptr);
 
   void BeginSourceFile(const LangOptions &Opts, const Preprocessor *) override;
   void EndSourceFile() override;
   void HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
                         const clang::Diagnostic &Info) override;
 
+  using DiagFixer = std::function<std::vector<Fix>(DiagnosticsEngine::Level,
+                                                   const clang::Diagnostic &)>;
+  using LevelAdjuster = std::function<DiagnosticsEngine::Level(
+      DiagnosticsEngine::Level, const clang::Diagnostic &)>;
+  /// If set, possibly adds fixes for diagnostics using \p Fixer.
+  void contributeFixes(DiagFixer Fixer) { this->Fixer = Fixer; }
+  /// If set, this allows the client of this class to adjust the level of
+  /// diagnostics, such as promoting warnings to errors, or ignoring
+  /// diagnostics.
+  void setLevelAdjuster(LevelAdjuster Adjuster) { this->Adjuster = Adjuster; }
+
 private:
   void flushLastDiag();
 
+  DiagFixer Fixer = nullptr;
+  LevelAdjuster Adjuster = nullptr;
   std::vector<Diag> Output;
   llvm::Optional<LangOptions> LangOpts;
   llvm::Optional<Diag> LastDiag;
+  llvm::DenseSet<int> IncludeLinesWithErrors;
+  bool LastPrimaryDiagnosticWasSuppressed = false;
 };
 
 } // namespace clangd

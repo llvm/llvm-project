@@ -1,9 +1,8 @@
 //===--- Dex.h - Dex Symbol Index Implementation ----------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -42,26 +41,32 @@ namespace dex {
 class Dex : public SymbolIndex {
 public:
   // All data must outlive this index.
-  template <typename SymbolRange, typename RefsRange>
-  Dex(SymbolRange &&Symbols, RefsRange &&Refs) : Corpus(0) {
+  template <typename SymbolRange, typename RefsRange, typename RelationsRange>
+  Dex(SymbolRange &&Symbols, RefsRange &&Refs, RelationsRange &&Relations)
+      : Corpus(0) {
     for (auto &&Sym : Symbols)
       this->Symbols.push_back(&Sym);
     for (auto &&Ref : Refs)
       this->Refs.try_emplace(Ref.first, Ref.second);
+    for (auto &&Rel : Relations)
+      this->Relations[std::make_pair(Rel.Subject, Rel.Predicate)].push_back(
+          Rel.Object);
     buildIndex();
   }
   // Symbols and Refs are owned by BackingData, Index takes ownership.
-  template <typename SymbolRange, typename RefsRange, typename Payload>
-  Dex(SymbolRange &&Symbols, RefsRange &&Refs, Payload &&BackingData,
-      size_t BackingDataSize)
-      : Dex(std::forward<SymbolRange>(Symbols), std::forward<RefsRange>(Refs)) {
+  template <typename SymbolRange, typename RefsRange, typename RelationsRange,
+            typename Payload>
+  Dex(SymbolRange &&Symbols, RefsRange &&Refs, RelationsRange &&Relations,
+      Payload &&BackingData, size_t BackingDataSize)
+      : Dex(std::forward<SymbolRange>(Symbols), std::forward<RefsRange>(Refs),
+            std::forward<RelationsRange>(Relations)) {
     KeepAlive = std::shared_ptr<void>(
         std::make_shared<Payload>(std::move(BackingData)), nullptr);
     this->BackingDataSize = BackingDataSize;
   }
 
   /// Builds an index from slabs. The index takes ownership of the slab.
-  static std::unique_ptr<SymbolIndex> build(SymbolSlab, RefSlab);
+  static std::unique_ptr<SymbolIndex> build(SymbolSlab, RefSlab, RelationSlab);
 
   bool
   fuzzyFind(const FuzzyFindRequest &Req,
@@ -73,11 +78,19 @@ public:
   void refs(const RefsRequest &Req,
             llvm::function_ref<void(const Ref &)> Callback) const override;
 
+  void relations(const RelationsRequest &Req,
+                 llvm::function_ref<void(const SymbolID &, const Symbol &)>
+                     Callback) const override;
+
   size_t estimateMemoryUsage() const override;
 
 private:
   void buildIndex();
   std::unique_ptr<Iterator> iterator(const Token &Tok) const;
+  std::unique_ptr<Iterator>
+  createFileProximityIterator(llvm::ArrayRef<std::string> ProximityPaths) const;
+  std::unique_ptr<Iterator>
+  createTypeBoostingIterator(llvm::ArrayRef<std::string> Types) const;
 
   /// Stores symbols sorted in the descending order of symbol quality..
   std::vector<const Symbol *> Symbols;
@@ -93,6 +106,8 @@ private:
   llvm::DenseMap<Token, PostingList> InvertedIndex;
   dex::Corpus Corpus;
   llvm::DenseMap<SymbolID, llvm::ArrayRef<Ref>> Refs;
+  llvm::DenseMap<std::pair<SymbolID, index::SymbolRole>, std::vector<SymbolID>>
+      Relations;
   std::shared_ptr<void> KeepAlive; // poor man's move-only std::any
   // Size of memory retained by KeepAlive.
   size_t BackingDataSize = 0;

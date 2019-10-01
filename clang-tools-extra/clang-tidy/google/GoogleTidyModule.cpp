@@ -1,9 +1,8 @@
 //===--- GoogleTidyModule.cpp - clang-tidy --------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -14,7 +13,9 @@
 #include "../readability/FunctionSizeCheck.h"
 #include "../readability/NamespaceCommentCheck.h"
 #include "AvoidCStyleCastsCheck.h"
+#include "AvoidNSObjectNewCheck.h"
 #include "AvoidThrowingObjCExceptionCheck.h"
+#include "AvoidUnderscoreInGoogletestNameCheck.h"
 #include "DefaultArgumentsCheck.h"
 #include "ExplicitConstructorCheck.h"
 #include "ExplicitMakePairCheck.h"
@@ -49,6 +50,8 @@ class GoogleModule : public ClangTidyModule {
         "google-explicit-constructor");
     CheckFactories.registerCheck<readability::GlobalNamesInHeadersCheck>(
         "google-global-names-in-headers");
+    CheckFactories.registerCheck<objc::AvoidNSObjectNewCheck>(
+        "google-objc-avoid-nsobject-new");
     CheckFactories.registerCheck<objc::AvoidThrowingObjCExceptionCheck>(
         "google-objc-avoid-throwing-exception");
     CheckFactories.registerCheck<objc::FunctionNamingCheck>(
@@ -61,6 +64,9 @@ class GoogleModule : public ClangTidyModule {
         "google-runtime-operator");
     CheckFactories.registerCheck<runtime::NonConstReferences>(
         "google-runtime-references");
+    CheckFactories
+        .registerCheck<readability::AvoidUnderscoreInGoogletestNameCheck>(
+            "google-readability-avoid-underscore-in-googletest-name");
     CheckFactories.registerCheck<readability::AvoidCStyleCastsCheck>(
         "google-readability-casting");
     CheckFactories.registerCheck<readability::TodoCommentCheck>(

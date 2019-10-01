@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s modernize-raw-string-literal %t -- -config='{CheckOptions: [{key: "modernize-raw-string-literal.DelimiterStem", value: "str"}, {key: modernize-raw-string-literal.ReplaceShorterLiterals, value: 1}]}' -- -std=c++11
+// RUN: %check_clang_tidy %s modernize-raw-string-literal %t -- -config='{CheckOptions: [{key: "modernize-raw-string-literal.DelimiterStem", value: "str"}, {key: modernize-raw-string-literal.ReplaceShorterLiterals, value: 1}]}'
 
 char const *const ContainsSentinel{"who\\ops)\""};
 // CHECK-MESSAGES: :[[@LINE-1]]:36: warning: {{.*}} can be written as a raw string literal

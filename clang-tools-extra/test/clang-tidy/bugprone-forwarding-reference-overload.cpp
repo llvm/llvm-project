@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s bugprone-forwarding-reference-overload %t -- -- -std=c++14
+// RUN: %check_clang_tidy %s bugprone-forwarding-reference-overload %t
 
 namespace std {
 template <bool B, class T = void> struct enable_if { typedef T type; };

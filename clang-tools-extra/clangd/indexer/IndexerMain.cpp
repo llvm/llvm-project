@@ -1,9 +1,8 @@
 //===--- IndexerMain.cpp -----------------------------------------*- C++-*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -11,31 +10,30 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "index/Index.h"
 #include "index/IndexAction.h"
 #include "index/Merge.h"
+#include "index/Ref.h"
 #include "index/Serialization.h"
+#include "index/Symbol.h"
 #include "index/SymbolCollector.h"
+#include "clang/Tooling/ArgumentsAdjusters.h"
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Execution.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Signals.h"
 
-using namespace llvm;
-using namespace clang::tooling;
-
 namespace clang {
 namespace clangd {
 namespace {
 
-static cl::opt<IndexFileFormat>
-    Format("format", cl::desc("Format of the index to be written"),
-           cl::values(clEnumValN(IndexFileFormat::YAML, "yaml",
-                                 "human-readable YAML format"),
-                      clEnumValN(IndexFileFormat::RIFF, "binary",
-                                 "binary RIFF format")),
-           cl::init(IndexFileFormat::RIFF));
+static llvm::cl::opt<IndexFileFormat>
+    Format("format", llvm::cl::desc("Format of the index to be written"),
+           llvm::cl::values(clEnumValN(IndexFileFormat::YAML, "yaml",
+                                       "human-readable YAML format"),
+                            clEnumValN(IndexFileFormat::RIFF, "binary",
+                                       "binary RIFF format")),
+           llvm::cl::init(IndexFileFormat::RIFF));
 
 class IndexActionFactory : public tooling::FrontendActionFactory {
 public:
@@ -43,6 +41,7 @@ public:
 
   clang::FrontendAction *create() override {
     SymbolCollector::Options Opts;
+    Opts.CountReferences = true;
     return createStaticIndexingAction(
                Opts,
                [&](SymbolSlab S) {
@@ -58,9 +57,15 @@ public:
                [&](RefSlab S) {
                  std::lock_guard<std::mutex> Lock(SymbolsMu);
                  for (const auto &Sym : S) {
-                   // No need to merge as currently all Refs are from main file.
+                   // Deduplication happens during insertion.
                    for (const auto &Ref : Sym.second)
                      Refs.insert(Sym.first, Ref);
+                 }
+               },
+               [&](RelationSlab S) {
+                 std::lock_guard<std::mutex> Lock(SymbolsMu);
+                 for (const auto &R : S) {
+                   Relations.insert(R);
                  }
                },
                /*IncludeGraphCallback=*/nullptr)
@@ -72,6 +77,7 @@ public:
   ~IndexActionFactory() {
     Result.Symbols = std::move(Symbols).build();
     Result.Refs = std::move(Refs).build();
+    Result.Relations = std::move(Relations).build();
   }
 
 private:
@@ -79,6 +85,7 @@ private:
   std::mutex SymbolsMu;
   SymbolSlab::Builder Symbols;
   RefSlab::Builder Refs;
+  RelationSlab::Builder Relations;
 };
 
 } // namespace
@@ -86,7 +93,7 @@ private:
 } // namespace clang
 
 int main(int argc, const char **argv) {
-  sys::PrintStackTraceOnErrorSignal(argv[0]);
+  llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
 
   const char *Overview = R"(
   Creates an index of symbol information etc in a whole project.
@@ -103,24 +110,25 @@ int main(int argc, const char **argv) {
   )";
 
   auto Executor = clang::tooling::createExecutorFromCommandLineArgs(
-      argc, argv, cl::GeneralCategory, Overview);
+      argc, argv, llvm::cl::GeneralCategory, Overview);
 
   if (!Executor) {
-    errs() << toString(Executor.takeError()) << "\n";
+    llvm::errs() << llvm::toString(Executor.takeError()) << "\n";
     return 1;
   }
 
   // Collect symbols found in each translation unit, merging as we go.
   clang::clangd::IndexFileIn Data;
   auto Err = Executor->get()->execute(
-      llvm::make_unique<clang::clangd::IndexActionFactory>(Data));
+      llvm::make_unique<clang::clangd::IndexActionFactory>(Data),
+      clang::tooling::getStripPluginsAdjuster());
   if (Err) {
-    errs() << toString(std::move(Err)) << "\n";
+    llvm::errs() << llvm::toString(std::move(Err)) << "\n";
   }
 
   // Emit collected data.
   clang::clangd::IndexFileOut Out(Data);
   Out.Format = clang::clangd::Format;
-  outs() << Out;
+  llvm::outs() << Out;
   return 0;
 }

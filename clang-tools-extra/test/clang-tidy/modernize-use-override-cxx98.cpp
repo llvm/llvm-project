@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s modernize-use-override %t -- -- -std=c++98
+// RUN: %check_clang_tidy -std=c++98 %s modernize-use-override %t
 
 struct Base {
   virtual ~Base() {}

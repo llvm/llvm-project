@@ -1,9 +1,8 @@
 //===--- ObjCTidyModule.cpp - clang-tidy --------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -14,6 +13,7 @@
 #include "AvoidSpinlockCheck.h"
 #include "ForbiddenSubclassingCheck.h"
 #include "PropertyDeclarationCheck.h"
+#include "SuperSelfCheck.h"
 
 using namespace clang::ast_matchers;
 
@@ -32,6 +32,8 @@ public:
         "objc-forbidden-subclassing");
     CheckFactories.registerCheck<PropertyDeclarationCheck>(
         "objc-property-declaration");
+    CheckFactories.registerCheck<SuperSelfCheck>(
+        "objc-super-self");
   }
 };
 

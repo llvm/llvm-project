@@ -1,4 +1,5 @@
-// RUN: %check_clang_tidy %s readability-redundant-string-init %t
+// RUN: %check_clang_tidy -std=c++11,c++14 %s readability-redundant-string-init %t
+// FIXME: Fix the checker to work in C++17 mode.
 
 namespace std {
 template <typename T>

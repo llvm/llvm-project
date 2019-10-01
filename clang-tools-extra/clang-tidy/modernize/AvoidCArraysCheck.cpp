@@ -1,9 +1,8 @@
 //===--- AvoidCArraysCheck.cpp - clang-tidy -------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -31,6 +30,12 @@ AST_MATCHER(clang::RecordDecl, isExternCContext) {
   return Node.isExternCContext();
 }
 
+AST_MATCHER(clang::ParmVarDecl, isArgvOfMain) {
+  const clang::DeclContext *DC = Node.getDeclContext();
+  const auto *FD = llvm::dyn_cast<clang::FunctionDecl>(DC);
+  return FD ? FD->isMain() : false;
+}
+
 } // namespace
 
 namespace clang {
@@ -44,7 +49,8 @@ void AvoidCArraysCheck::registerMatchers(MatchFinder *Finder) {
 
   Finder->addMatcher(
       typeLoc(hasValidBeginLoc(), hasType(arrayType()),
-              unless(anyOf(hasParent(varDecl(isExternC())),
+              unless(anyOf(hasParent(parmVarDecl(isArgvOfMain())),
+                           hasParent(varDecl(isExternC())),
                            hasParent(fieldDecl(
                                hasParent(recordDecl(isExternCContext())))),
                            hasAncestor(functionDecl(isExternC())))))

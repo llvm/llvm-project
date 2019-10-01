@@ -1,4 +1,8 @@
-// RUN: %check_clang_tidy %s bugprone-too-small-loop-variable %t -- -- --target=x86_64-linux
+// RUN: %check_clang_tidy %s bugprone-too-small-loop-variable %t -- \
+// RUN:   -config="{CheckOptions: \
+// RUN:             [{key: bugprone-too-small-loop-variable.MagnitudeBitsUpperLimit, \
+// RUN:               value: 1024}]}" \
+// RUN:   -- --target=x86_64-linux
 
 long size() { return 294967296l; }
 

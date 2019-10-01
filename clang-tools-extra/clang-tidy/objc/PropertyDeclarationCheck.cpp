@@ -1,9 +1,8 @@
 //===--- PropertyDeclarationCheck.cpp - clang-tidy-------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -81,7 +80,8 @@ std::string validPropertyNameRegex(bool UsedInMatcher) {
 }
 
 bool hasCategoryPropertyPrefix(llvm::StringRef PropertyName) {
-  auto RegexExp = llvm::Regex("^[a-zA-Z]+_[a-zA-Z0-9][a-zA-Z0-9_]+$");
+  auto RegexExp =
+      llvm::Regex("^[a-zA-Z][a-zA-Z0-9]*_[a-zA-Z0-9][a-zA-Z0-9_]+$");
   return RegexExp.match(PropertyName);
 }
 
@@ -92,31 +92,21 @@ bool prefixedPropertyNameValid(llvm::StringRef PropertyName) {
   if (Prefix.lower() != Prefix) {
     return false;
   }
-  auto RegexExp =
-      llvm::Regex(llvm::StringRef(validPropertyNameRegex(false)));
+  auto RegexExp = llvm::Regex(llvm::StringRef(validPropertyNameRegex(false)));
   return RegexExp.match(PropertyName.substr(Start + 1));
 }
 }  // namespace
-
-PropertyDeclarationCheck::PropertyDeclarationCheck(StringRef Name,
-                                                   ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context),
-      SpecialAcronyms(
-          utils::options::parseStringList(Options.get("Acronyms", ""))),
-      IncludeDefaultAcronyms(Options.get("IncludeDefaultAcronyms", true)),
-      EscapedAcronyms() {}
 
 void PropertyDeclarationCheck::registerMatchers(MatchFinder *Finder) {
   // this check should only be applied to ObjC sources.
   if (!getLangOpts().ObjC) return;
 
-  Finder->addMatcher(
-      objcPropertyDecl(
-          // the property name should be in Lower Camel Case like
-          // 'lowerCamelCase'
-          unless(matchesName(validPropertyNameRegex(true))))
-          .bind("property"),
-      this);
+  Finder->addMatcher(objcPropertyDecl(
+                         // the property name should be in Lower Camel Case like
+                         // 'lowerCamelCase'
+                         unless(matchesName(validPropertyNameRegex(true))))
+                         .bind("property"),
+                     this);
 }
 
 void PropertyDeclarationCheck::check(const MatchFinder::MatchResult &Result) {
@@ -144,12 +134,6 @@ void PropertyDeclarationCheck::check(const MatchFinder::MatchResult &Result) {
        "a category, according to the Apple Coding Guidelines")
       << MatchedDecl->getName()
       << generateFixItHint(MatchedDecl, StandardProperty);
-}
-
-void PropertyDeclarationCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "Acronyms",
-                utils::options::serializeStringList(SpecialAcronyms));
-  Options.store(Opts, "IncludeDefaultAcronyms", IncludeDefaultAcronyms);
 }
 
 }  // namespace objc

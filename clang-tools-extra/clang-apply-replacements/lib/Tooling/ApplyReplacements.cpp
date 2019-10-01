@@ -1,9 +1,8 @@
 //===-- ApplyReplacements.cpp - Apply and deduplicate replacements --------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -20,6 +19,7 @@
 #include "clang/Format/Format.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Rewrite/Core/Rewriter.h"
+#include "clang/Tooling/Core/Diagnostic.h"
 #include "clang/Tooling/DiagnosticsYaml.h"
 #include "clang/Tooling/ReplacementsYaml.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -151,13 +151,13 @@ groupReplacements(const TUReplacements &TUs, const TUDiagnostics &TUDs,
   auto AddToGroup = [&](const tooling::Replacement &R, bool FromDiag) {
     // Use the file manager to deduplicate paths. FileEntries are
     // automatically canonicalized.
-    if (const FileEntry *Entry = SM.getFileManager().getFile(R.getFilePath())) {
+    if (auto Entry = SM.getFileManager().getFile(R.getFilePath())) {
       if (FromDiag) {
-        auto &Replaces = DiagReplacements[Entry];
+        auto &Replaces = DiagReplacements[*Entry];
         if (!Replaces.insert(R).second)
           return;
       }
-      GroupedReplacements[Entry].push_back(R);
+      GroupedReplacements[*Entry].push_back(R);
     } else if (Warned.insert(R.getFilePath()).second) {
       errs() << "Described file '" << R.getFilePath()
              << "' doesn't exist. Ignoring...\n";
@@ -170,9 +170,11 @@ groupReplacements(const TUReplacements &TUs, const TUDiagnostics &TUDs,
 
   for (const auto &TU : TUDs)
     for (const auto &D : TU.Diagnostics)
-      for (const auto &Fix : D.Fix)
-        for (const tooling::Replacement &R : Fix.second)
-          AddToGroup(R, true);
+      if (const auto *ChoosenFix = tooling::selectFirstFix(D)) {
+        for (const auto &Fix : *ChoosenFix)
+          for (const tooling::Replacement &R : Fix.second)
+            AddToGroup(R, true);
+      }
 
   // Sort replacements per file to keep consistent behavior when
   // clang-apply-replacements run on differents machine.

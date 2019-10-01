@@ -1,9 +1,8 @@
 //===--- Dex.cpp - Dex Symbol Index Implementation --------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -20,15 +19,18 @@
 #include <algorithm>
 #include <queue>
 
-using namespace llvm;
 namespace clang {
 namespace clangd {
 namespace dex {
 
-std::unique_ptr<SymbolIndex> Dex::build(SymbolSlab Symbols, RefSlab Refs) {
+std::unique_ptr<SymbolIndex> Dex::build(SymbolSlab Symbols, RefSlab Refs,
+                                        RelationSlab Rels) {
   auto Size = Symbols.bytes() + Refs.bytes();
+  // There is no need to include "Rels" in Data because the relations are self-
+  // contained, without references into a backing store.
   auto Data = std::make_pair(std::move(Symbols), std::move(Refs));
-  return llvm::make_unique<Dex>(Data.first, Data.second, std::move(Data), Size);
+  return llvm::make_unique<Dex>(Data.first, Data.second, Rels, std::move(Data),
+                                Size);
 }
 
 namespace {
@@ -44,59 +46,20 @@ const Token RestrictedForCodeCompletion =
 // Returns the tokens which are given symbols's characteristics. For example,
 // trigrams and scopes.
 // FIXME(kbobyrev): Support more token types:
-// * Types
 // * Namespace proximity
 std::vector<Token> generateSearchTokens(const Symbol &Sym) {
   std::vector<Token> Result = generateIdentifierTrigrams(Sym.Name);
   Result.emplace_back(Token::Kind::Scope, Sym.Scope);
   // Skip token generation for symbols with unknown declaration location.
-  if (!StringRef(Sym.CanonicalDeclaration.FileURI).empty())
+  if (!llvm::StringRef(Sym.CanonicalDeclaration.FileURI).empty())
     for (const auto &ProximityURI :
          generateProximityURIs(Sym.CanonicalDeclaration.FileURI))
       Result.emplace_back(Token::Kind::ProximityURI, ProximityURI);
   if (Sym.Flags & Symbol::IndexedForCodeCompletion)
     Result.emplace_back(RestrictedForCodeCompletion);
+  if (!Sym.Type.empty())
+    Result.emplace_back(Token::Kind::Type, Sym.Type);
   return Result;
-}
-
-// Constructs BOOST iterators for Path Proximities.
-std::unique_ptr<Iterator>
-createFileProximityIterator(ArrayRef<std::string> ProximityPaths,
-                            const DenseMap<Token, PostingList> &InvertedIndex,
-                            const Corpus &Corpus) {
-  std::vector<std::unique_ptr<Iterator>> BoostingIterators;
-  // Deduplicate parent URIs extracted from the ProximityPaths.
-  StringSet<> ParentURIs;
-  StringMap<SourceParams> Sources;
-  for (const auto &Path : ProximityPaths) {
-    Sources[Path] = SourceParams();
-    auto PathURI = URI::create(Path);
-    const auto PathProximityURIs = generateProximityURIs(PathURI.toString());
-    for (const auto &ProximityURI : PathProximityURIs)
-      ParentURIs.insert(ProximityURI);
-  }
-  // Use SymbolRelevanceSignals for symbol relevance evaluation: use defaults
-  // for all parameters except for Proximity Path distance signal.
-  SymbolRelevanceSignals PathProximitySignals;
-  // DistanceCalculator will find the shortest distance from ProximityPaths to
-  // any URI extracted from the ProximityPaths.
-  URIDistance DistanceCalculator(Sources);
-  PathProximitySignals.FileProximityMatch = &DistanceCalculator;
-  // Try to build BOOST iterator for each Proximity Path provided by
-  // ProximityPaths. Boosting factor should depend on the distance to the
-  // Proximity Path: the closer processed path is, the higher boosting factor.
-  for (const auto &ParentURI : ParentURIs.keys()) {
-    Token Tok(Token::Kind::ProximityURI, ParentURI);
-    const auto It = InvertedIndex.find(Tok);
-    if (It != InvertedIndex.end()) {
-      // FIXME(kbobyrev): Append LIMIT on top of every BOOST iterator.
-      PathProximitySignals.SymbolURI = ParentURI;
-      BoostingIterators.push_back(Corpus.boost(
-          It->second.iterator(&It->first), PathProximitySignals.evaluate()));
-    }
-  }
-  BoostingIterators.push_back(Corpus.all());
-  return Corpus.unionOf(std::move(BoostingIterators));
 }
 
 } // namespace
@@ -124,7 +87,7 @@ void Dex::buildIndex() {
   }
 
   // Populate TempInvertedIndex with lists for index symbols.
-  DenseMap<Token, std::vector<DocID>> TempInvertedIndex;
+  llvm::DenseMap<Token, std::vector<DocID>> TempInvertedIndex;
   for (DocID SymbolRank = 0; SymbolRank < Symbols.size(); ++SymbolRank) {
     const auto *Sym = Symbols[SymbolRank];
     for (const auto &Token : generateSearchTokens(*Sym))
@@ -143,11 +106,62 @@ std::unique_ptr<Iterator> Dex::iterator(const Token &Tok) const {
                                    : It->second.iterator(&It->first);
 }
 
+// Constructs BOOST iterators for Path Proximities.
+std::unique_ptr<Iterator> Dex::createFileProximityIterator(
+    llvm::ArrayRef<std::string> ProximityPaths) const {
+  std::vector<std::unique_ptr<Iterator>> BoostingIterators;
+  // Deduplicate parent URIs extracted from the ProximityPaths.
+  llvm::StringSet<> ParentURIs;
+  llvm::StringMap<SourceParams> Sources;
+  for (const auto &Path : ProximityPaths) {
+    Sources[Path] = SourceParams();
+    auto PathURI = URI::create(Path);
+    const auto PathProximityURIs = generateProximityURIs(PathURI.toString());
+    for (const auto &ProximityURI : PathProximityURIs)
+      ParentURIs.insert(ProximityURI);
+  }
+  // Use SymbolRelevanceSignals for symbol relevance evaluation: use defaults
+  // for all parameters except for Proximity Path distance signal.
+  SymbolRelevanceSignals PathProximitySignals;
+  // DistanceCalculator will find the shortest distance from ProximityPaths to
+  // any URI extracted from the ProximityPaths.
+  URIDistance DistanceCalculator(Sources);
+  PathProximitySignals.FileProximityMatch = &DistanceCalculator;
+  // Try to build BOOST iterator for each Proximity Path provided by
+  // ProximityPaths. Boosting factor should depend on the distance to the
+  // Proximity Path: the closer processed path is, the higher boosting factor.
+  for (const auto &ParentURI : ParentURIs.keys()) {
+    // FIXME(kbobyrev): Append LIMIT on top of every BOOST iterator.
+    auto It = iterator(Token(Token::Kind::ProximityURI, ParentURI));
+    if (It->kind() != Iterator::Kind::False) {
+      PathProximitySignals.SymbolURI = ParentURI;
+      BoostingIterators.push_back(
+          Corpus.boost(std::move(It), PathProximitySignals.evaluate()));
+    }
+  }
+  BoostingIterators.push_back(Corpus.all());
+  return Corpus.unionOf(std::move(BoostingIterators));
+}
+
+// Constructs BOOST iterators for preferred types.
+std::unique_ptr<Iterator>
+Dex::createTypeBoostingIterator(llvm::ArrayRef<std::string> Types) const {
+  std::vector<std::unique_ptr<Iterator>> BoostingIterators;
+  SymbolRelevanceSignals PreferredTypeSignals;
+  PreferredTypeSignals.TypeMatchesPreferred = true;
+  auto Boost = PreferredTypeSignals.evaluate();
+  for (const auto &T : Types)
+    BoostingIterators.push_back(
+        Corpus.boost(iterator(Token(Token::Kind::Type, T)), Boost));
+  BoostingIterators.push_back(Corpus.all());
+  return Corpus.unionOf(std::move(BoostingIterators));
+}
+
 /// Constructs iterators over tokens extracted from the query and exhausts it
 /// while applying Callback to each symbol in the order of decreasing quality
 /// of the matched symbols.
 bool Dex::fuzzyFind(const FuzzyFindRequest &Req,
-                    function_ref<void(const Symbol &)> Callback) const {
+                    llvm::function_ref<void(const Symbol &)> Callback) const {
   assert(!StringRef(Req.Query).contains("::") &&
          "There must be no :: in query.");
   trace::Span Tracer("Dex fuzzyFind");
@@ -176,8 +190,9 @@ bool Dex::fuzzyFind(const FuzzyFindRequest &Req,
   Criteria.push_back(Corpus.unionOf(move(ScopeIterators)));
 
   // Add proximity paths boosting (all symbols, some boosted).
-  Criteria.push_back(
-      createFileProximityIterator(Req.ProximityPaths, InvertedIndex, Corpus));
+  Criteria.push_back(createFileProximityIterator(Req.ProximityPaths));
+  // Add boosting for preferred types.
+  Criteria.push_back(createTypeBoostingIterator(Req.PreferredTypes));
 
   if (Req.RestrictForCodeCompletion)
     Criteria.push_back(iterator(RestrictedForCodeCompletion));
@@ -190,7 +205,7 @@ bool Dex::fuzzyFind(const FuzzyFindRequest &Req,
   // FIXME(kbobyrev): Tune this ratio.
   if (Req.Limit)
     Root = Corpus.limit(move(Root), *Req.Limit * 100);
-  SPAN_ATTACH(Tracer, "query", to_string(*Root));
+  SPAN_ATTACH(Tracer, "query", llvm::to_string(*Root));
   vlog("Dex query tree: {0}", *Root);
 
   using IDAndScore = std::pair<DocID, float>;
@@ -204,7 +219,7 @@ bool Dex::fuzzyFind(const FuzzyFindRequest &Req,
   for (const auto &IDAndScore : IDAndScores) {
     const DocID SymbolDocID = IDAndScore.first;
     const auto *Sym = Symbols[SymbolDocID];
-    const Optional<float> Score = Filter.match(Sym->Name);
+    const llvm::Optional<float> Score = Filter.match(Sym->Name);
     if (!Score)
       continue;
     // Combine Fuzzy Matching score, precomputed symbol quality and boosting
@@ -225,7 +240,7 @@ bool Dex::fuzzyFind(const FuzzyFindRequest &Req,
 }
 
 void Dex::lookup(const LookupRequest &Req,
-                 function_ref<void(const Symbol &)> Callback) const {
+                 llvm::function_ref<void(const Symbol &)> Callback) const {
   trace::Span Tracer("Dex lookup");
   for (const auto &ID : Req.IDs) {
     auto I = LookupTable.find(ID);
@@ -235,12 +250,38 @@ void Dex::lookup(const LookupRequest &Req,
 }
 
 void Dex::refs(const RefsRequest &Req,
-               function_ref<void(const Ref &)> Callback) const {
+               llvm::function_ref<void(const Ref &)> Callback) const {
   trace::Span Tracer("Dex refs");
+  uint32_t Remaining =
+      Req.Limit.getValueOr(std::numeric_limits<uint32_t>::max());
   for (const auto &ID : Req.IDs)
-    for (const auto &Ref : Refs.lookup(ID))
-      if (static_cast<int>(Req.Filter & Ref.Kind))
+    for (const auto &Ref : Refs.lookup(ID)) {
+      if (Remaining > 0 && static_cast<int>(Req.Filter & Ref.Kind)) {
+        --Remaining;
         Callback(Ref);
+      }
+    }
+}
+
+void Dex::relations(
+    const RelationsRequest &Req,
+    llvm::function_ref<void(const SymbolID &, const Symbol &)> Callback) const {
+  trace::Span Tracer("Dex relations");
+  uint32_t Remaining =
+      Req.Limit.getValueOr(std::numeric_limits<uint32_t>::max());
+  for (const SymbolID &Subject : Req.Subjects) {
+    LookupRequest LookupReq;
+    auto It = Relations.find(std::make_pair(Subject, Req.Predicate));
+    if (It != Relations.end()) {
+      for (const auto &Object : It->second) {
+        if (Remaining > 0) {
+          --Remaining;
+          LookupReq.IDs.insert(Object);
+        }
+      }
+    }
+    lookup(LookupReq, [&](const Symbol &Object) { Callback(Subject, Object); });
+  }
 }
 
 size_t Dex::estimateMemoryUsage() const {
@@ -251,16 +292,17 @@ size_t Dex::estimateMemoryUsage() const {
   for (const auto &TokenToPostingList : InvertedIndex)
     Bytes += TokenToPostingList.second.bytes();
   Bytes += Refs.getMemorySize();
+  Bytes += Relations.getMemorySize();
   return Bytes + BackingDataSize;
 }
 
-std::vector<std::string> generateProximityURIs(StringRef URIPath) {
+std::vector<std::string> generateProximityURIs(llvm::StringRef URIPath) {
   std::vector<std::string> Result;
   auto ParsedURI = URI::parse(URIPath);
   assert(ParsedURI &&
          "Non-empty argument of generateProximityURIs() should be a valid "
          "URI.");
-  StringRef Body = ParsedURI->body();
+  llvm::StringRef Body = ParsedURI->body();
   // FIXME(kbobyrev): Currently, this is a heuristic which defines the maximum
   // size of resulting vector. Some projects might want to have higher limit if
   // the file hierarchy is deeper. For the generic case, it would be useful to
@@ -273,7 +315,7 @@ std::vector<std::string> generateProximityURIs(StringRef URIPath) {
   while (!Body.empty() && --Limit > 0) {
     // FIXME(kbobyrev): Parsing and encoding path to URIs is not necessary and
     // could be optimized.
-    Body = sys::path::parent_path(Body, sys::path::Style::posix);
+    Body = llvm::sys::path::parent_path(Body, llvm::sys::path::Style::posix);
     URI TokenURI(ParsedURI->scheme(), ParsedURI->authority(), Body);
     if (!Body.empty())
       Result.emplace_back(TokenURI.toString());

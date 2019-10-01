@@ -9,6 +9,7 @@ template <typename C, typename T = std::char_traits<C>, typename A = std::alloca
 struct basic_string {
   basic_string();
   basic_string(const C*, unsigned int size);
+  basic_string(const C *, const A &allocator = A());
   basic_string(unsigned int size, C c);
 };
 typedef basic_string<char> string;
@@ -38,13 +39,22 @@ void Test() {
   std::string q1(kText, -4);
   // CHECK-MESSAGES: [[@LINE-1]]:15: warning: negative value used as length parameter
   std::string q2("test", 200);
-  // CHECK-MESSAGES: [[@LINE-1]]:15: warning: length is bigger then string literal size
+  // CHECK-MESSAGES: [[@LINE-1]]:15: warning: length is bigger than string literal size
   std::string q3(kText, 200);
-  // CHECK-MESSAGES: [[@LINE-1]]:15: warning: length is bigger then string literal size
+  // CHECK-MESSAGES: [[@LINE-1]]:15: warning: length is bigger than string literal size
   std::string q4(kText2, 200);
-  // CHECK-MESSAGES: [[@LINE-1]]:15: warning: length is bigger then string literal size
+  // CHECK-MESSAGES: [[@LINE-1]]:15: warning: length is bigger than string literal size
   std::string q5(kText3,  0x1000000);
   // CHECK-MESSAGES: [[@LINE-1]]:15: warning: suspicious large length parameter
+  std::string q6(nullptr);
+  // CHECK-MESSAGES: [[@LINE-1]]:15: warning: constructing string from nullptr is undefined behaviour
+  std::string q7 = 0;
+  // CHECK-MESSAGES: [[@LINE-1]]:20: warning: constructing string from nullptr is undefined behaviour
+}
+
+std::string StringFromZero() {
+  return 0;
+  // CHECK-MESSAGES: [[@LINE-1]]:10: warning: constructing string from nullptr is undefined behaviour
 }
 
 void Valid() {
@@ -53,4 +63,13 @@ void Valid() {
   std::wstring wstr(4, L'x');
   std::string s1("test", 4);
   std::string s2("test", 3);
+  std::string s3("test");
+}
+
+namespace instantiation_dependent_exprs {
+template<typename T>
+struct S {
+  bool x;
+  std::string f() { return x ? "a" : "b"; }
+};
 }

@@ -1,0 +1,7 @@
+# RUN: not clangd -sync < %s 2>&1 | FileCheck -check-prefix=STDERR %s
+# vim: fileformat=dos
+# It is absolutely vital that this file has CRLF line endings.
+#
+Content-Length: 2147483648
+
+# STDERR: Refusing to read message

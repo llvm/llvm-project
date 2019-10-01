@@ -1,9 +1,8 @@
 //===--- UpgradeDurationConversionsCheck.cpp - clang-tidy -----------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -41,7 +40,8 @@ void UpgradeDurationConversionsCheck::registerMatchers(MatchFinder *Finder) {
           callee(functionDecl(
               hasParent(functionTemplateDecl()),
               unless(hasTemplateArgument(0, refersToType(builtinType()))),
-              hasAnyName("operator*=", "operator/=")))),
+              hasAnyName("operator*=", "operator/="))))
+          .bind("OuterExpr"),
       this);
 
   // Match expressions like `a.operator*=(b)` and `a.operator/=(b)` where `a`
@@ -53,7 +53,8 @@ void UpgradeDurationConversionsCheck::registerMatchers(MatchFinder *Finder) {
               hasParent(functionTemplateDecl()),
               unless(hasTemplateArgument(0, refersToType(builtinType()))),
               hasAnyName("operator*=", "operator/="))),
-          argumentCountIs(1), hasArgument(0, expr().bind("arg"))),
+          argumentCountIs(1), hasArgument(0, expr().bind("arg")))
+          .bind("OuterExpr"),
       this);
 
   // Match expressions like `a * b`, `a / b`, `operator*(a, b)`, and
@@ -67,7 +68,8 @@ void UpgradeDurationConversionsCheck::registerMatchers(MatchFinder *Finder) {
                argumentCountIs(2),
                hasArgument(0, expr(hasType(
                                   cxxRecordDecl(hasName("::absl::Duration"))))),
-               hasArgument(1, expr().bind("arg"))),
+               hasArgument(1, expr().bind("arg")))
+          .bind("OuterExpr"),
       this);
 
   // Match expressions like `a * b` and `operator*(a, b)` where `a` is not of a
@@ -78,8 +80,9 @@ void UpgradeDurationConversionsCheck::registerMatchers(MatchFinder *Finder) {
                    unless(hasTemplateArgument(0, refersToType(builtinType()))),
                    hasName("::absl::operator*"))),
                argumentCountIs(2), hasArgument(0, expr().bind("arg")),
-               hasArgument(1, expr(hasType(cxxRecordDecl(
-                                  hasName("::absl::Duration")))))),
+               hasArgument(1, expr(hasType(
+                                  cxxRecordDecl(hasName("::absl::Duration"))))))
+          .bind("OuterExpr"),
       this);
 
   // For the factory functions, we match only the non-templated overloads that
@@ -104,8 +107,9 @@ void UpgradeDurationConversionsCheck::registerMatchers(MatchFinder *Finder) {
                 has(implicitCastExpr(hasCastKind(CK_UserDefinedConversion)))),
           hasParent(callExpr(
               callee(functionDecl(DurationFactoryFunction(),
-                  unless(hasParent(functionTemplateDecl())))),
-              hasArgument(0, expr().bind("arg"))))),
+                                  unless(hasParent(functionTemplateDecl())))),
+              hasArgument(0, expr().bind("arg")))))
+          .bind("OuterExpr"),
       this);
 }
 
@@ -118,7 +122,10 @@ void UpgradeDurationConversionsCheck::check(
   const auto *ArgExpr = Result.Nodes.getNodeAs<Expr>("arg");
   SourceLocation Loc = ArgExpr->getBeginLoc();
 
-  if (!match(isInTemplateInstantiation(), *ArgExpr, *Result.Context).empty()) {
+  const auto *OuterExpr = Result.Nodes.getNodeAs<Expr>("OuterExpr");
+
+  if (!match(isInTemplateInstantiation(), *OuterExpr, *Result.Context)
+           .empty()) {
     if (MatchedTemplateLocations.count(Loc.getRawEncoding()) == 0) {
       // For each location matched in a template instantiation, we check if the
       // location can also be found in `MatchedTemplateLocations`. If it is not

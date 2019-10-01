@@ -1,9 +1,8 @@
 //===--- AvoidCStyleCastsCheck.cpp - clang-tidy -----------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -87,6 +86,10 @@ void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
   bool FnToFnCast =
       isFunction(SourceTypeAsWritten) && isFunction(DestTypeAsWritten);
 
+  const bool ConstructorCast = !CastExpr->getTypeAsWritten().hasQualifiers() &&
+      DestTypeAsWritten->isRecordType() &&
+      !DestTypeAsWritten->isElaboratedTypeSpecifier();
+
   if (CastExpr->getCastKind() == CK_NoOp && !FnToFnCast) {
     // Function pointer/reference casts may be needed to resolve ambiguities in
     // case of overloaded functions, so detection of redundant casts is trickier
@@ -145,19 +148,19 @@ void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
     Diag << CastType;
     ReplaceWithCast((CastType + "<" + DestTypeString + ">").str());
   };
-
+  auto ReplaceWithConstructorCall = [&]() {
+    Diag << "constructor call syntax";
+    // FIXME: Validate DestTypeString, maybe.
+    ReplaceWithCast(DestTypeString.str());
+  };
   // Suggest appropriate C++ cast. See [expr.cast] for cast notation semantics.
   switch (CastExpr->getCastKind()) {
   case CK_FunctionToPointerDecay:
     ReplaceWithNamedCast("static_cast");
     return;
   case CK_ConstructorConversion:
-    if (!CastExpr->getTypeAsWritten().hasQualifiers() &&
-        DestTypeAsWritten->isRecordType() &&
-        !DestTypeAsWritten->isElaboratedTypeSpecifier()) {
-      Diag << "constructor call syntax";
-      // FIXME: Validate DestTypeString, maybe.
-      ReplaceWithCast(DestTypeString.str());
+    if (ConstructorCast) {
+      ReplaceWithConstructorCall();
     } else {
       ReplaceWithNamedCast("static_cast");
     }
@@ -175,6 +178,10 @@ void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
     if (needsConstCast(SourceType, DestType) &&
         pointedUnqualifiedTypesAreEqual(SourceType, DestType)) {
       ReplaceWithNamedCast("const_cast");
+      return;
+    }
+    if (ConstructorCast) {
+      ReplaceWithConstructorCall();
       return;
     }
     if (DestType->isReferenceType()) {

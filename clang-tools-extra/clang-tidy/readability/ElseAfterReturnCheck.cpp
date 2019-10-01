@@ -1,9 +1,8 @@
 //===--- ElseAfterReturnCheck.cpp - clang-tidy-----------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -19,16 +18,22 @@ namespace tidy {
 namespace readability {
 
 void ElseAfterReturnCheck::registerMatchers(MatchFinder *Finder) {
-  const auto ControlFlowInterruptorMatcher =
+  const auto InterruptsControlFlow =
       stmt(anyOf(returnStmt().bind("return"), continueStmt().bind("continue"),
                  breakStmt().bind("break"),
                  expr(ignoringImplicit(cxxThrowExpr().bind("throw")))));
   Finder->addMatcher(
       compoundStmt(forEach(
           ifStmt(unless(isConstexpr()),
-                 hasThen(stmt(
-                     anyOf(ControlFlowInterruptorMatcher,
-                           compoundStmt(has(ControlFlowInterruptorMatcher))))),
+                 // FIXME: Explore alternatives for the
+                 // `if (T x = ...) {... return; } else { <use x> }`
+                 // pattern:
+                 //   * warn, but don't fix;
+                 //   * fix by pulling out the variable declaration out of
+                 //     the condition.
+                 unless(hasConditionVariableStatement(anything())),
+                 hasThen(stmt(anyOf(InterruptsControlFlow,
+                                    compoundStmt(has(InterruptsControlFlow))))),
                  hasElse(stmt().bind("else")))
               .bind("if"))),
       this);

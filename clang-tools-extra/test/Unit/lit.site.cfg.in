@@ -1,9 +1,0 @@
-@LIT_SITE_CFG_IN_HEADER@
-
-config.extra_tools_obj_dir = "@CLANG_TOOLS_BINARY_DIR@/unittests"
-config.extra_tools_src_dir = "@CLANG_TOOLS_SOURCE_DIR@/unittests"
-config.llvm_libs_dir = "@LLVM_LIBS_DIR@"
-config.shlibdir = "@SHLIBDIR@"
-config.target_triple = "@TARGET_TRIPLE@"
-
-lit_config.load_config(config, "@CLANG_TOOLS_SOURCE_DIR@/test/Unit/lit.cfg")

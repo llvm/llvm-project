@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s bugprone-suspicious-semicolon %t -- -- -fno-objc-arc -fobjc-abi-version=1
+// RUN: %check_clang_tidy -std=c99 %s bugprone-suspicious-semicolon %t -- -- -fno-objc-arc -fobjc-abi-version=1
 
 // This test ensures check_clang_tidy.py allows disabling Objective-C ARC and
 // Objective-C 2.0 via passing arguments after -- on the command line.

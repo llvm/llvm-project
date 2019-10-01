@@ -1,9 +1,8 @@
 //===---- IncludeInserterTest.cpp - clang-tidy ----------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -32,12 +31,11 @@ public:
   IncludeInserterCheckBase(StringRef CheckName, ClangTidyContext *Context)
       : ClangTidyCheck(CheckName, Context) {}
 
-  void registerPPCallbacks(CompilerInstance &Compiler) override {
-    Inserter.reset(new utils::IncludeInserter(
-        Compiler.getSourceManager(),
-        Compiler.getLangOpts(),
-        utils::IncludeSorter::IS_Google));
-    Compiler.getPreprocessor().addPPCallbacks(Inserter->CreatePPCallbacks());
+  void registerPPCallbacks(const SourceManager &SM, Preprocessor *PP,
+                           Preprocessor *ModuleExpanderPP) override {
+    Inserter = llvm::make_unique<utils::IncludeInserter>(
+        SM, getLangOpts(), utils::IncludeSorter::IS_Google);
+    PP->addPPCallbacks(Inserter->CreatePPCallbacks());
   }
 
   void registerMatchers(ast_matchers::MatchFinder *Finder) override {

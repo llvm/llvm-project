@@ -1,9 +1,8 @@
 //===--- ConstReturnTypeCheck.cpp - clang-tidy ---------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -23,8 +22,8 @@ namespace readability {
 
 // Finds the location of the qualifying `const` token in the `FunctionDecl`'s
 // return type. Returns `None` when the return type is not `const`-qualified or
-// `const` does not appear in `Def`'s source like when the type is an alias or a
-// macro.
+// `const` does not appear in `Def`'s source, like when the type is an alias or
+// a macro.
 static llvm::Optional<Token>
 findConstToRemove(const FunctionDecl *Def,
                   const MatchFinder::MatchResult &Result) {

@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s readability-else-after-return %t -- -- -std=c++11 -fexceptions
+// RUN: %check_clang_tidy %s readability-else-after-return %t -- -- -fexceptions
 
 namespace std {
 struct string {
@@ -103,5 +103,17 @@ void foo() {
     // CHECK-FIXES: {{^}}    } // comment-10
       x++;
     }
+  }
+}
+
+extern int *g();
+extern void h(int **x);
+
+int *decl_in_condition() {
+  if (int *x = g()) {
+    return x;
+  } else {
+    h(&x);
+    return x;
   }
 }
