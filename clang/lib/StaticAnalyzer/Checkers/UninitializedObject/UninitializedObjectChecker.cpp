@@ -1,9 +1,8 @@
 //===----- UninitializedObjectChecker.cpp ------------------------*- C++ -*-==//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -20,6 +19,8 @@
 
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "UninitializedObject.h"
+#include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
@@ -27,6 +28,7 @@
 
 using namespace clang;
 using namespace clang::ento;
+using namespace clang::ast_matchers;
 
 /// We'll mark fields (and pointee of fields) that are confirmed to be
 /// uninitialized as already analyzed.
@@ -118,6 +120,16 @@ static bool willObjectBeAnalyzedLater(const CXXConstructorDecl *Ctor,
 /// Checks whether RD contains a field with a name or type name that matches
 /// \p Pattern.
 static bool shouldIgnoreRecord(const RecordDecl *RD, StringRef Pattern);
+
+/// Checks _syntactically_ whether it is possible to access FD from the record
+/// that contains it without a preceding assert (even if that access happens
+/// inside a method). This is mainly used for records that act like unions, like
+/// having multiple bit fields, with only a fraction being properly initialized.
+/// If these fields are properly guarded with asserts, this method returns
+/// false.
+///
+/// Since this check is done syntactically, this method could be inaccurate.
+static bool hasUnguardedAccess(const FieldDecl *FD, ProgramStateRef State);
 
 //===----------------------------------------------------------------------===//
 //                  Methods for UninitializedObjectChecker.
@@ -235,6 +247,13 @@ bool FindUninitializedFields::addFieldToUninits(FieldChainInfo Chain,
          "One must also pass the pointee region as a parameter for "
          "dereferenceable fields!");
 
+  if (State->getStateManager().getContext().getSourceManager().isInSystemHeader(
+          FR->getDecl()->getLocation()))
+    return false;
+
+  if (Opts.IgnoreGuardedFields && !hasUnguardedAccess(FR->getDecl(), State))
+    return false;
+
   if (State->contains<AnalyzedRegions>(FR))
     return false;
 
@@ -247,13 +266,10 @@ bool FindUninitializedFields::addFieldToUninits(FieldChainInfo Chain,
 
   State = State->add<AnalyzedRegions>(FR);
 
-  if (State->getStateManager().getContext().getSourceManager().isInSystemHeader(
-          FR->getDecl()->getLocation()))
-    return false;
-
   UninitFieldMap::mapped_type NoteMsgBuf;
   llvm::raw_svector_ostream OS(NoteMsgBuf);
   Chain.printNoteMsg(OS);
+
   return UninitFields.insert({FR, std::move(NoteMsgBuf)}).second;
 }
 
@@ -442,8 +458,8 @@ static const TypedValueRegion *
 getConstructedRegion(const CXXConstructorDecl *CtorDecl,
                      CheckerContext &Context) {
 
-  Loc ThisLoc = Context.getSValBuilder().getCXXThis(CtorDecl,
-                                                    Context.getStackFrame());
+  Loc ThisLoc =
+      Context.getSValBuilder().getCXXThis(CtorDecl, Context.getStackFrame());
 
   SVal ObjectV = Context.getState()->getSVal(ThisLoc);
 
@@ -496,6 +512,75 @@ static bool shouldIgnoreRecord(const RecordDecl *RD, StringRef Pattern) {
   return false;
 }
 
+static const Stmt *getMethodBody(const CXXMethodDecl *M) {
+  if (isa<CXXConstructorDecl>(M))
+    return nullptr;
+
+  if (!M->isDefined())
+    return nullptr;
+
+  return M->getDefinition()->getBody();
+}
+
+static bool hasUnguardedAccess(const FieldDecl *FD, ProgramStateRef State) {
+
+  if (FD->getAccess() == AccessSpecifier::AS_public)
+    return true;
+
+  const auto *Parent = dyn_cast<CXXRecordDecl>(FD->getParent());
+
+  if (!Parent)
+    return true;
+
+  Parent = Parent->getDefinition();
+  assert(Parent && "The record's definition must be avaible if an uninitialized"
+                   " field of it was found!");
+
+  ASTContext &AC = State->getStateManager().getContext();
+
+  auto FieldAccessM = memberExpr(hasDeclaration(equalsNode(FD))).bind("access");
+
+  auto AssertLikeM = callExpr(callee(functionDecl(
+      anyOf(hasName("exit"), hasName("panic"), hasName("error"),
+            hasName("Assert"), hasName("assert"), hasName("ziperr"),
+            hasName("assfail"), hasName("db_error"), hasName("__assert"),
+            hasName("__assert2"), hasName("_wassert"), hasName("__assert_rtn"),
+            hasName("__assert_fail"), hasName("dtrace_assfail"),
+            hasName("yy_fatal_error"), hasName("_XCAssertionFailureHandler"),
+            hasName("_DTAssertionFailureHandler"),
+            hasName("_TSAssertionFailureHandler")))));
+
+  auto NoReturnFuncM = callExpr(callee(functionDecl(isNoReturn())));
+
+  auto GuardM =
+      stmt(anyOf(ifStmt(), switchStmt(), conditionalOperator(), AssertLikeM,
+            NoReturnFuncM))
+          .bind("guard");
+
+  for (const CXXMethodDecl *M : Parent->methods()) {
+    const Stmt *MethodBody = getMethodBody(M);
+    if (!MethodBody)
+      continue;
+
+    auto Accesses = match(stmt(hasDescendant(FieldAccessM)), *MethodBody, AC);
+    if (Accesses.empty())
+      continue;
+    const auto *FirstAccess = Accesses[0].getNodeAs<MemberExpr>("access");
+    assert(FirstAccess);
+
+    auto Guards = match(stmt(hasDescendant(GuardM)), *MethodBody, AC);
+    if (Guards.empty())
+      return true;
+    const auto *FirstGuard = Guards[0].getNodeAs<Stmt>("guard");
+    assert(FirstGuard);
+
+    if (FirstAccess->getBeginLoc() < FirstGuard->getBeginLoc())
+      return true;
+  }
+
+  return false;
+}
+
 std::string clang::ento::getVariableName(const FieldDecl *Field) {
   // If Field is a captured lambda variable, Field->getName() will return with
   // an empty string. We can however acquire it's name from the lambda's
@@ -526,15 +611,21 @@ void ento::registerUninitializedObjectChecker(CheckerManager &Mgr) {
   AnalyzerOptions &AnOpts = Mgr.getAnalyzerOptions();
   UninitObjCheckerOptions &ChOpts = Chk->Opts;
 
-  ChOpts.IsPedantic =
-      AnOpts.getCheckerBooleanOption("Pedantic", /*DefaultVal*/ false, Chk);
-  ChOpts.ShouldConvertNotesToWarnings =
-      AnOpts.getCheckerBooleanOption("NotesAsWarnings", /*DefaultVal*/ false, Chk);
+  ChOpts.IsPedantic = AnOpts.getCheckerBooleanOption(Chk, "Pedantic");
+  ChOpts.ShouldConvertNotesToWarnings = AnOpts.getCheckerBooleanOption(
+      Chk, "NotesAsWarnings");
   ChOpts.CheckPointeeInitialization = AnOpts.getCheckerBooleanOption(
-      "CheckPointeeInitialization", /*DefaultVal*/ false, Chk);
+      Chk, "CheckPointeeInitialization");
   ChOpts.IgnoredRecordsWithFieldPattern =
-      AnOpts.getCheckerStringOption("IgnoreRecordsWithField",
-                               /*DefaultVal*/ "", Chk);
+      AnOpts.getCheckerStringOption(Chk, "IgnoreRecordsWithField");
+  ChOpts.IgnoreGuardedFields =
+      AnOpts.getCheckerBooleanOption(Chk, "IgnoreGuardedFields");
+
+  std::string ErrorMsg;
+  if (!llvm::Regex(ChOpts.IgnoredRecordsWithFieldPattern).isValid(ErrorMsg))
+    Mgr.reportInvalidCheckerOptionValue(Chk, "IgnoreRecordsWithField",
+        "a valid regex, building failed with error message "
+        "\"" + ErrorMsg + "\"");
 }
 
 bool ento::shouldRegisterUninitializedObjectChecker(const LangOptions &LO) {

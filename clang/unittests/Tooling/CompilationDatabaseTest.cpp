@@ -1,9 +1,8 @@
 //===- unittest/Tooling/CompilationDatabaseTest.cpp -----------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -14,10 +13,14 @@
 #include "clang/Tooling/JSONCompilationDatabase.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Support/Path.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 namespace clang {
 namespace tooling {
+
+using testing::ElementsAre;
+using testing::EndsWith;
 
 static void expectFailure(StringRef JSONDatabase, StringRef Explanation) {
   std::string ErrorMessage;
@@ -85,10 +88,15 @@ TEST(JSONCompilationDatabase, GetAllFiles) {
   expected_files.push_back(PathStorage.str());
   llvm::sys::path::native("//net/dir/file2", PathStorage);
   expected_files.push_back(PathStorage.str());
+  llvm::sys::path::native("//net/file1", PathStorage);
+  expected_files.push_back(PathStorage.str());
   EXPECT_EQ(expected_files,
             getAllFiles("[{\"directory\":\"//net/dir\","
                         "\"command\":\"command\","
                         "\"file\":\"file1\"},"
+                        " {\"directory\":\"//net/dir\","
+                        "\"command\":\"command\","
+                        "\"file\":\"../file1\"},"
                         " {\"directory\":\"//net/dir\","
                         "\"command\":\"command\","
                         "\"file\":\"file2\"}]",
@@ -467,21 +475,15 @@ TEST(unescapeJsonCommandLine, ParsesSingleQuotedString) {
 }
 
 TEST(FixedCompilationDatabase, ReturnsFixedCommandLine) {
-  std::vector<std::string> CommandLine;
-  CommandLine.push_back("one");
-  CommandLine.push_back("two");
-  FixedCompilationDatabase Database(".", CommandLine);
+  FixedCompilationDatabase Database(".", /*CommandLine*/ {"one", "two"});
   StringRef FileName("source");
   std::vector<CompileCommand> Result =
     Database.getCompileCommands(FileName);
   ASSERT_EQ(1ul, Result.size());
-  std::vector<std::string> ExpectedCommandLine(1, "clang-tool");
-  ExpectedCommandLine.insert(ExpectedCommandLine.end(),
-                             CommandLine.begin(), CommandLine.end());
-  ExpectedCommandLine.push_back("source");
   EXPECT_EQ(".", Result[0].Directory);
   EXPECT_EQ(FileName, Result[0].Filename);
-  EXPECT_EQ(ExpectedCommandLine, Result[0].CommandLine);
+  EXPECT_THAT(Result[0].CommandLine,
+              ElementsAre(EndsWith("clang-tool"), "one", "two", "source"));
 }
 
 TEST(FixedCompilationDatabase, GetAllFiles) {
@@ -537,12 +539,8 @@ TEST(ParseFixedCompilationDatabase, ReturnsArgumentsAfterDoubleDash) {
     Database->getCompileCommands("source");
   ASSERT_EQ(1ul, Result.size());
   ASSERT_EQ(".", Result[0].Directory);
-  std::vector<std::string> CommandLine;
-  CommandLine.push_back("clang-tool");
-  CommandLine.push_back("-DDEF3");
-  CommandLine.push_back("-DDEF4");
-  CommandLine.push_back("source");
-  ASSERT_EQ(CommandLine, Result[0].CommandLine);
+  ASSERT_THAT(Result[0].CommandLine, ElementsAre(EndsWith("clang-tool"),
+                                                 "-DDEF3", "-DDEF4", "source"));
   EXPECT_EQ(2, Argc);
 }
 
@@ -558,10 +556,8 @@ TEST(ParseFixedCompilationDatabase, ReturnsEmptyCommandLine) {
     Database->getCompileCommands("source");
   ASSERT_EQ(1ul, Result.size());
   ASSERT_EQ(".", Result[0].Directory);
-  std::vector<std::string> CommandLine;
-  CommandLine.push_back("clang-tool");
-  CommandLine.push_back("source");
-  ASSERT_EQ(CommandLine, Result[0].CommandLine);
+  ASSERT_THAT(Result[0].CommandLine,
+              ElementsAre(EndsWith("clang-tool"), "source"));
   EXPECT_EQ(2, Argc);
 }
 
@@ -577,12 +573,8 @@ TEST(ParseFixedCompilationDatabase, HandlesPositionalArgs) {
     Database->getCompileCommands("source");
   ASSERT_EQ(1ul, Result.size());
   ASSERT_EQ(".", Result[0].Directory);
-  std::vector<std::string> Expected;
-  Expected.push_back("clang-tool");
-  Expected.push_back("-c");
-  Expected.push_back("-DDEF3");
-  Expected.push_back("source");
-  ASSERT_EQ(Expected, Result[0].CommandLine);
+  ASSERT_THAT(Result[0].CommandLine,
+              ElementsAre(EndsWith("clang-tool"), "-c", "-DDEF3", "source"));
   EXPECT_EQ(2, Argc);
 }
 
@@ -599,12 +591,9 @@ TEST(ParseFixedCompilationDatabase, HandlesPositionalArgsSyntaxOnly) {
   std::vector<CompileCommand> Result = Database->getCompileCommands("source");
   ASSERT_EQ(1ul, Result.size());
   ASSERT_EQ(".", Result[0].Directory);
-  std::vector<std::string> Expected;
-  Expected.push_back("clang-tool");
-  Expected.push_back("-fsyntax-only");
-  Expected.push_back("-DDEF3");
-  Expected.push_back("source");
-  ASSERT_EQ(Expected, Result[0].CommandLine);
+  ASSERT_THAT(
+      Result[0].CommandLine,
+      ElementsAre(EndsWith("clang-tool"), "-fsyntax-only", "-DDEF3", "source"));
 }
 
 TEST(ParseFixedCompilationDatabase, HandlesArgv0) {
@@ -620,9 +609,8 @@ TEST(ParseFixedCompilationDatabase, HandlesArgv0) {
   ASSERT_EQ(1ul, Result.size());
   ASSERT_EQ(".", Result[0].Directory);
   std::vector<std::string> Expected;
-  Expected.push_back("clang-tool");
-  Expected.push_back("source");
-  ASSERT_EQ(Expected, Result[0].CommandLine);
+  ASSERT_THAT(Result[0].CommandLine,
+              ElementsAre(EndsWith("clang-tool"), "source"));
   EXPECT_EQ(2, Argc);
 }
 
@@ -685,6 +673,27 @@ protected:
     return llvm::join(Results[0].CommandLine, " ");
   }
 
+  // Parse the file whose command was used out of the Heuristic string.
+  std::string getProxy(llvm::StringRef F) {
+    auto Results =
+        inferMissingCompileCommands(llvm::make_unique<MemCDB>(Entries))
+            ->getCompileCommands(path(F));
+    if (Results.empty())
+      return "none";
+    StringRef Proxy = Results.front().Heuristic;
+    if (!Proxy.consume_front("inferred from "))
+      return "";
+    // We have a proxy file, convert back to a unix relative path.
+    // This is a bit messy, but we do need to test these strings somehow...
+    llvm::SmallString<32> TempDir;
+    llvm::sys::path::system_temp_directory(false, TempDir);
+    Proxy.consume_front(TempDir);
+    Proxy.consume_front(llvm::sys::path::get_separator());
+    llvm::SmallString<32> Result = Proxy;
+    llvm::sys::path::native(Result, llvm::sys::path::Style::posix);
+    return Result.str();
+  }
+
   MemCDB::EntryMap Entries;
 };
 
@@ -694,18 +703,16 @@ TEST_F(InterpolateTest, Nearby) {
   add("an/other/foo.cpp");
 
   // great: dir and name both match (prefix or full, case insensitive)
-  EXPECT_EQ(getCommand("dir/f.cpp"), "clang -D dir/foo.cpp");
-  EXPECT_EQ(getCommand("dir/FOO.cpp"), "clang -D dir/foo.cpp");
+  EXPECT_EQ(getProxy("dir/f.cpp"), "dir/foo.cpp");
+  EXPECT_EQ(getProxy("dir/FOO.cpp"), "dir/foo.cpp");
   // no name match. prefer matching dir, break ties by alpha
-  EXPECT_EQ(getCommand("dir/a.cpp"), "clang -D dir/bar.cpp");
+  EXPECT_EQ(getProxy("dir/a.cpp"), "dir/bar.cpp");
   // an exact name match beats one segment of directory match
-  EXPECT_EQ(getCommand("some/other/bar.h"),
-            "clang -D dir/bar.cpp -x c++-header");
+  EXPECT_EQ(getProxy("some/other/bar.h"), "dir/bar.cpp");
   // two segments of directory match beat a prefix name match
-  EXPECT_EQ(getCommand("an/other/b.cpp"), "clang -D an/other/foo.cpp");
+  EXPECT_EQ(getProxy("an/other/b.cpp"), "an/other/foo.cpp");
   // if nothing matches at all, we still get the closest alpha match
-  EXPECT_EQ(getCommand("below/some/obscure/path.cpp"),
-            "clang -D an/other/foo.cpp");
+  EXPECT_EQ(getProxy("below/some/obscure/path.cpp"), "an/other/foo.cpp");
 }
 
 TEST_F(InterpolateTest, Language) {
@@ -716,14 +723,17 @@ TEST_F(InterpolateTest, Language) {
   // .h is ambiguous, so we add explicit language flags
   EXPECT_EQ(getCommand("foo.h"),
             "clang -D dir/foo.cpp -x c++-header -std=c++17");
+  // Same thing if we have no extension. (again, we treat as header).
+  EXPECT_EQ(getCommand("foo"), "clang -D dir/foo.cpp -x c++-header -std=c++17");
+  // and invalid extensions.
+  EXPECT_EQ(getCommand("foo.cce"),
+            "clang -D dir/foo.cpp -x c++-header -std=c++17");
   // and don't add -x if the inferred language is correct.
   EXPECT_EQ(getCommand("foo.hpp"), "clang -D dir/foo.cpp -std=c++17");
   // respect -x if it's already there.
   EXPECT_EQ(getCommand("baz.h"), "clang -D dir/baz.cee -x c-header");
   // prefer a worse match with the right extension.
   EXPECT_EQ(getCommand("foo.c"), "clang -D dir/bar.c");
-  // make sure we don't crash on queries with invalid extensions.
-  EXPECT_EQ(getCommand("foo.cce"), "clang -D dir/foo.cpp");
   Entries.erase(path(StringRef("dir/bar.c")));
   // Now we transfer across languages, so drop -std too.
   EXPECT_EQ(getCommand("foo.c"), "clang -D dir/foo.cpp");
@@ -739,7 +749,7 @@ TEST_F(InterpolateTest, Case) {
   add("FOO/BAR/BAZ/SHOUT.cc");
   add("foo/bar/baz/quiet.cc");
   // Case mismatches are completely ignored, so we choose the name match.
-  EXPECT_EQ(getCommand("foo/bar/baz/shout.C"), "clang -D FOO/BAR/BAZ/SHOUT.cc");
+  EXPECT_EQ(getProxy("foo/bar/baz/shout.C"), "FOO/BAR/BAZ/SHOUT.cc");
 }
 
 TEST_F(InterpolateTest, Aliasing) {

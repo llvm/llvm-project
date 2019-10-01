@@ -23,7 +23,7 @@ void c();
 
 void func() {} // expected-note {{'func' defined here}}
 
-#pragma omp declare target link(func) // expected-error {{function name is not allowed in 'link' clause}}
+#pragma omp declare target link(func) allocate(a) // expected-error {{function name is not allowed in 'link' clause}} expected-error {{unexpected 'allocate' clause, only 'to' or 'link' clauses expected}}
 
 extern int b;
 

@@ -95,10 +95,10 @@ void g4() {
   f4m(1, 2, 3, 4, 5, s);
 }
 // CHECK: define void @g4
-// CHECK: call void @f4(i32 1, %struct.SF16* byval nonnull align 8
-// CHECK: call void @f4m(i32 1, i32 2, i32 3, i32 4, i32 5, %struct.SF16* byval nonnull align 8
-// CHECK: declare void @f4(i32, %struct.SF16* byval align 8)
-// CHECK: declare void @f4m(i32, i32, i32, i32, i32, %struct.SF16* byval align 8)
+// CHECK: call void @f4(i32 1, %struct.SF16* nonnull byval(%struct.SF16) align 8
+// CHECK: call void @f4m(i32 1, i32 2, i32 3, i32 4, i32 5, %struct.SF16* nonnull byval(%struct.SF16) align 8
+// CHECK: declare void @f4(i32, %struct.SF16* byval(%struct.SF16) align 8)
+// CHECK: declare void @f4m(i32, i32, i32, i32, i32, %struct.SF16* byval(%struct.SF16) align 8)
 
 // Packed structure.
 struct  __attribute__((packed)) P {

@@ -120,6 +120,6 @@ TEST(struct_indirect_1)
 class struct_trivial {
   int x;
 };
-// CHECK-LABEL define void @test_struct_trivial(i32{{( %.*)?}})
+// CHECK-LABEL: define swiftcc void @test_struct_trivial(i32{{( %.*)?}})
 extern "C" SWIFTCALL
 void test_struct_trivial(struct_trivial triv) {}

@@ -13,6 +13,9 @@
 // RUN: %clang_cc1 %s -Rpass=inline -Rno-everything -emit-llvm -o - 2>&1 | FileCheck %s --check-prefix=CHECK-NO-REMARKS
 // RUN: %clang_cc1 %s -Rpass=inline -Rno-everything -Reverything -emit-llvm -o - 2>&1 | FileCheck %s --check-prefix=CHECK-REMARKS
 //
+// Check that -w doesn't disable remarks.
+// RUN: %clang_cc1 %s -Rpass=inline -w -emit-llvm -o - 2>&1 | FileCheck %s --check-prefix=CHECK-REMARKS
+//
 // FIXME: -Reverything should imply -Rpass=.*.
 // RUN: %clang_cc1 %s -Reverything -emit-llvm -o - 2>/dev/null | FileCheck %s --check-prefix=CHECK-NO-REMARKS
 //

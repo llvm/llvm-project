@@ -1,9 +1,8 @@
 //===--- SarifDiagnostics.cpp - Sarif Diagnostics for Paths -----*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -192,15 +191,16 @@ static json::Object createLocation(json::Object &&PhysicalLocation,
 
 static Importance calculateImportance(const PathDiagnosticPiece &Piece) {
   switch (Piece.getKind()) {
-  case PathDiagnosticPiece::Kind::Call:
-  case PathDiagnosticPiece::Kind::Macro:
-  case PathDiagnosticPiece::Kind::Note:
+  case PathDiagnosticPiece::Call:
+  case PathDiagnosticPiece::Macro:
+  case PathDiagnosticPiece::Note:
+  case PathDiagnosticPiece::PopUp:
     // FIXME: What should be reported here?
     break;
-  case PathDiagnosticPiece::Kind::Event:
+  case PathDiagnosticPiece::Event:
     return Piece.getTagStr() == "ConditionBRVisitor" ? Importance::Important
                                                      : Importance::Essential;
-  case PathDiagnosticPiece::Kind::ControlFlow:
+  case PathDiagnosticPiece::ControlFlow:
     return Importance::Unimportant;
   }
   return Importance::Unimportant;
@@ -257,7 +257,7 @@ static json::Object createResult(const PathDiagnostic &Diag, json::Array &Files,
 static StringRef getRuleDescription(StringRef CheckName) {
   return llvm::StringSwitch<StringRef>(CheckName)
 #define GET_CHECKERS
-#define CHECKER(FULLNAME, CLASS, HELPTEXT, DOC_URI)                            \
+#define CHECKER(FULLNAME, CLASS, HELPTEXT, DOC_URI, IS_HIDDEN)                 \
   .Case(FULLNAME, HELPTEXT)
 #include "clang/StaticAnalyzer/Checkers/Checkers.inc"
 #undef CHECKER
@@ -268,7 +268,7 @@ static StringRef getRuleDescription(StringRef CheckName) {
 static StringRef getRuleHelpURIStr(StringRef CheckName) {
   return llvm::StringSwitch<StringRef>(CheckName)
 #define GET_CHECKERS
-#define CHECKER(FULLNAME, CLASS, HELPTEXT, DOC_URI)                            \
+#define CHECKER(FULLNAME, CLASS, HELPTEXT, DOC_URI, IS_HIDDEN)                 \
   .Case(FULLNAME, DOC_URI)
 #include "clang/StaticAnalyzer/Checkers/Checkers.inc"
 #undef CHECKER

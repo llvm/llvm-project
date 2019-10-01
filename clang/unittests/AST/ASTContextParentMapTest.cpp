@@ -1,9 +1,8 @@
 //===- unittest/AST/ASTContextParentMapTest.cpp - AST parent map test -----===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -104,6 +103,17 @@ TEST(GetParents, RespectsTraversalScope) {
   Ctx.setTraversalScope({&TU});
   EXPECT_THAT(Ctx.getParents(Bar), ElementsAre(DynTypedNode::create(Foo)));
   EXPECT_THAT(Ctx.getParents(Foo), ElementsAre(DynTypedNode::create(TU)));
+}
+
+TEST(GetParents, ImplicitLambdaNodes) {
+  MatchVerifier<Decl> LambdaVerifier;
+  EXPECT_TRUE(LambdaVerifier.match(
+      "auto x = []{int y;};",
+      varDecl(hasName("y"), hasAncestor(functionDecl(
+                                hasOverloadedOperatorName("()"),
+                                hasParent(cxxRecordDecl(
+                                    isImplicit(), hasParent(lambdaExpr())))))),
+      Lang_CXX11));
 }
 
 } // end namespace ast_matchers

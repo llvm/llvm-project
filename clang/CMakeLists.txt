@@ -75,6 +75,11 @@ if( CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR )
     set(LIBRARY_DIR ${LLVM_LIBRARY_DIR})
     set(INCLUDE_DIR ${LLVM_INCLUDE_DIR})
     set(LLVM_OBJ_DIR ${LLVM_BINARY_DIR})
+    # The LLVM_CMAKE_PATH variable is set when doing non-standalone builds and
+    # used in this project, so we need to make sure we set this value.
+    # FIXME: LLVM_CMAKE_DIR comes from LLVMConfig.cmake.  We should rename
+    # LLVM_CMAKE_PATH to LLVM_CMAKE_DIR throughout the project.
+    set(LLVM_CMAKE_PATH ${LLVM_CMAKE_DIR})
   endif()
 
   set(LLVM_TOOLS_BINARY_DIR ${TOOLS_BINARY_DIR} CACHE PATH "Path to llvm/bin")
@@ -261,6 +266,25 @@ if (NOT(CLANG_DEFAULT_RTLIB STREQUAL "" OR
     "Default runtime library to use (\"libgcc\" or \"compiler-rt\", empty for platform default)" FORCE)
 endif()
 
+set(CLANG_DEFAULT_UNWINDLIB "" CACHE STRING
+  "Default unwind library to use (\"none\" \"libgcc\" or \"libunwind\", empty to match runtime library.)")
+if (CLANG_DEFAULT_UNWINDLIB STREQUAL "")
+  if (CLANG_DEFAULT_RTLIB STREQUAL "libgcc")
+    set (CLANG_DEFAULT_UNWINDLIB "libgcc" CACHE STRING "" FORCE)
+  elseif (CLANG_DEFAULT_RTLIBS STREQUAL "libunwind")
+    set (CLANG_DEFAULT_UNWINDLIB "none" CACHE STRING "" FORCE)
+  endif()
+endif()
+
+if (NOT(CLANG_DEFAULT_UNWINDLIB STREQUAL "" OR
+        CLANG_DEFAULT_UNWINDLIB STREQUAL "none" OR
+        CLANG_DEFAULT_UNWINDLIB STREQUAL "libgcc" OR
+        CLANG_DEFAULT_UNWINDLIB STREQUAL "libunwind"))
+  message(WARNING "Resetting default unwindlib to use platform default")
+  set(CLANG_DEFAULT_UNWINDLIB "" CACHE STRING
+    "Default unwind library to use (\"none\" \"libgcc\" or \"libunwind\", empty for none)" FORCE)
+endif()
+
 set(CLANG_DEFAULT_OBJCOPY "objcopy" CACHE STRING
   "Default objcopy executable to use.")
 
@@ -383,6 +407,7 @@ include_directories(BEFORE
 if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
   install(DIRECTORY include/clang include/clang-c
     DESTINATION include
+    COMPONENT clang-headers
     FILES_MATCHING
     PATTERN "*.def"
     PATTERN "*.h"
@@ -392,11 +417,22 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
 
   install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include/clang
     DESTINATION include
+    COMPONENT clang-headers
     FILES_MATCHING
     PATTERN "CMakeFiles" EXCLUDE
     PATTERN "*.inc"
     PATTERN "*.h"
     )
+
+  # Installing the headers needs to depend on generating any public
+  # tablegen'd headers.
+  add_custom_target(clang-headers DEPENDS clang-tablegen-targets)
+  set_target_properties(clang-headers PROPERTIES FOLDER "Misc")
+  if(NOT LLVM_ENABLE_IDE)
+    add_llvm_install_targets(install-clang-headers
+                             DEPENDS clang-headers
+                             COMPONENT clang-headers)
+  endif()
 
   install(PROGRAMS utils/bash-autocomplete.sh
     DESTINATION share/clang
@@ -411,34 +447,9 @@ option(CLANG_BUILD_TOOLS
 option(CLANG_ENABLE_ARCMT "Build ARCMT." ON)
 option(CLANG_ENABLE_STATIC_ANALYZER "Build static analyzer." ON)
 
-set(CLANG_ANALYZER_Z3_INSTALL_DIR "" CACHE STRING "Install directory of the Z3 solver.")
-
-find_package(Z3 4.7.1)
-
-if (CLANG_ANALYZER_Z3_INSTALL_DIR)
-  if (NOT Z3_FOUND)
-    message(FATAL_ERROR "Z3 4.7.1 has not been found in CLANG_ANALYZER_Z3_INSTALL_DIR: ${CLANG_ANALYZER_Z3_INSTALL_DIR}.")
-  endif()
-endif()
-
-set(CLANG_ANALYZER_ENABLE_Z3_SOLVER_DEFAULT "${Z3_FOUND}")
-
-option(CLANG_ANALYZER_ENABLE_Z3_SOLVER
-  "Enable Support for the Z3 constraint solver in the Clang Static Analyzer."
-  ${CLANG_ANALYZER_ENABLE_Z3_SOLVER_DEFAULT}
-)
-
-if (CLANG_ANALYZER_ENABLE_Z3_SOLVER)
-  if (NOT Z3_FOUND)
-    message(FATAL_ERROR "CLANG_ANALYZER_ENABLE_Z3_SOLVER cannot be enabled when Z3 is not available.")
-  endif()
-
-  set(CLANG_ANALYZER_WITH_Z3 1)
-endif()
-
 option(CLANG_ENABLE_PROTO_FUZZER "Build Clang protobuf fuzzer." OFF)
 
-if(NOT CLANG_ENABLE_STATIC_ANALYZER AND (CLANG_ENABLE_ARCMT OR CLANG_ANALYZER_ENABLE_Z3_SOLVER))
+if(NOT CLANG_ENABLE_STATIC_ANALYZER AND CLANG_ENABLE_ARCMT)
   message(FATAL_ERROR "Cannot disable static analyzer while enabling ARCMT or Z3")
 endif()
 
@@ -541,6 +552,27 @@ option(CLANG_INCLUDE_DOCS "Generate build targets for the Clang docs."
   ${LLVM_INCLUDE_DOCS})
 if( CLANG_INCLUDE_DOCS )
   add_subdirectory(docs)
+endif()
+
+# Custom target to install all clang libraries.
+add_custom_target(clang-libraries)
+set_target_properties(clang-libraries PROPERTIES FOLDER "Misc")
+
+if(NOT LLVM_ENABLE_IDE)
+  add_llvm_install_targets(install-clang-libraries
+                           DEPENDS clang-libraries
+                           COMPONENT clang-libraries)
+endif()
+
+get_property(CLANG_LIBS GLOBAL PROPERTY CLANG_LIBS)
+if(CLANG_LIBS)
+  list(REMOVE_DUPLICATES CLANG_LIBS)
+  foreach(lib ${CLANG_LIBS})
+    add_dependencies(clang-libraries ${lib})
+    if(NOT LLVM_ENABLE_IDE)
+      add_dependencies(install-clang-libraries install-${lib})
+    endif()
+  endforeach()
 endif()
 
 add_subdirectory(cmake/modules)

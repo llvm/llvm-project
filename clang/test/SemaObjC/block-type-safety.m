@@ -133,9 +133,20 @@ int test4 () {
 @end
 
 int test5() {
+    // Returned value is used outside of a block, so error on changing
+    // a return type to a more general than expected.
     NSAllArray *(^block)(id);
     id <Foo> (^genericBlock)(id);
     genericBlock = block;
+    block = genericBlock; // expected-error {{incompatible block pointer types assigning to 'NSAllArray *(^)(id)' from 'id<Foo> (^)(id)'}}
+
+    // A parameter is used inside a block, so error on changing a parameter type
+    // to a more specific than an argument type it will be called with.
+    // rdar://problem/52788423
+    void (^blockWithParam)(NSAllArray *);
+    void (^genericBlockWithParam)(id<Foo>);
+    genericBlockWithParam = blockWithParam; // expected-error {{incompatible block pointer types assigning to 'void (^)(id<Foo>)' from 'void (^)(NSAllArray *)'}}
+    blockWithParam = genericBlockWithParam;
     return 0;
 }
 

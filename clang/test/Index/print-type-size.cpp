@@ -400,4 +400,10 @@ plopplop;
 struct lastValid {
 };
 
+// CHECK64: CXXMethod=Tie:[[@LINE+3]]:8 (const) [type=auto (void *) const] [typekind=FunctionProto] [sizeof=1] [alignof=4] [resulttype=auto] [resulttypekind=Auto] [resultsizeof=-6] [resultalignof=-6]
+// CHECK32: CXXMethod=Tie:[[@LINE+2]]:8 (const) [type=auto (void *) const] [typekind=FunctionProto] [sizeof=1] [alignof=4] [resulttype=auto] [resulttypekind=Auto] [resultsizeof=-6] [resultalignof=-6]
+class BrowsingContext {
+  auto Tie(void*) const;
+};
+
 }

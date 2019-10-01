@@ -1,9 +1,8 @@
 //===- ConstraintManager.h - Constraints on symbolic values. ----*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -163,12 +162,9 @@ public:
   virtual ProgramStateRef removeDeadBindings(ProgramStateRef state,
                                                  SymbolReaper& SymReaper) = 0;
 
-  virtual void print(ProgramStateRef state,
-                     raw_ostream &Out,
-                     const char* nl,
-                     const char *sep) = 0;
-
-  virtual void EndPath(ProgramStateRef state) {}
+  virtual void printJson(raw_ostream &Out, ProgramStateRef State,
+                         const char *NL, unsigned int Space,
+                         bool IsDot) const = 0;
 
   /// Convenience method to query the state to see if a symbol is null or
   /// not null, or if neither assumption can be made.

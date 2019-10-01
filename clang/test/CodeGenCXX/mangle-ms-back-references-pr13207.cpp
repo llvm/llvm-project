@@ -191,3 +191,66 @@ void fun_instantiate2() {
 // CHECK: "??$fun_tmpl_recurse@H$1??$fun_tmpl_recurse@H$1?ident@fn_space@@YA?AURetVal@2@H@Z@fn_space@@YA?AURetVal@1@H@Z@fn_space@@YA?AURetVal@0@H@Z"
 // CHECK: "??$fun_tmpl_recurse@H$1?ident@fn_space@@YA?AURetVal@2@H@Z@fn_space@@YA?AURetVal@0@H@Z"
 }
+
+
+template <class T1, class T2, class T3, class T4, class T5, class T6, class T7,
+          class T8, class T9, class T10>
+struct Fooob {};
+
+using A0 = Fooob<int, int, int, int, int, int, int, int, int, int>;
+using A1 = Fooob<A0, A0, A0, A0, A0, A0, A0, A0, A0, A0>;
+using A2 = Fooob<A1, A1, A1, A1, A1, A1, A1, A1, A1, A1>;
+using A3 = Fooob<A2, A2, A2, A2, A2, A2, A2, A2, A2, A2>;
+using A4 = Fooob<A3, A3, A3, A3, A3, A3, A3, A3, A3, A3>;
+using A5 = Fooob<A4, A4, A4, A4, A4, A4, A4, A4, A4, A4>;
+using A6 = Fooob<A5, A5, A5, A5, A5, A5, A5, A5, A5, A5>;
+using A7 = Fooob<A6, A6, A6, A6, A6, A6, A6, A6, A6, A6>;
+using A8 = Fooob<A7, A7, A7, A7, A7, A7, A7, A7, A7, A7>;
+using A9 = Fooob<A8, A8, A8, A8, A8, A8, A8, A8, A8, A8>;
+using A10 = Fooob<A9, A9, A9, A9, A9, A9, A9, A9, A9, A9>;
+
+// This should take milliseconds, not minutes.
+void f(A9 a) {}
+// CHECK: "?f@@YAXU?$Fooob@U?$Fooob@U?$Fooob@U?$Fooob@U?$Fooob@U?$Fooob@U?$Fooob@U?$Fooob@U?$Fooob@U?$Fooob@HHHHHHHHHH@@U1@U1@U1@U1@U1@U1@U1@U1@U1@@@U1@U1@U1@U1@U1@U1@U1@U1@U1@@@U1@U1@U1@U1@U1@U1@U1@U1@U1@@@U1@U1@U1@U1@U1@U1@U1@U1@U1@@@U1@U1@U1@U1@U1@U1@U1@U1@U1@@@U1@U1@U1@U1@U1@U1@U1@U1@U1@@@U1@U1@U1@U1@U1@U1@U1@U1@U1@@@U1@U1@U1@U1@U1@U1@U1@U1@U1@@@U1@U1@U1@U1@U1@U1@U1@U1@U1@@@@Z"
+
+
+template <class T1, class T2, class T3, class T4, class T5, class T6, class T7,
+          class T8, class T9, class T10, class T11, class T12, class T13,
+          class T14, class T15, class T16, class T17, class T18, class T19,
+          class T20>
+struct Food {};
+
+using B0 = Food<int, int, int, int, int, int, int, int, int, int,  int, int, int, int, int, int, int, int, int, int>;
+using B1 = Food<B0, B0, B0, B0, B0, B0, B0, B0, B0, B0,  B0, B0, B0, B0, B0, B0, B0, B0, B0, B0>;
+using B2 = Food<B1, B0, B0, B0, B0, B0, B0, B0, B0, B0,  B1, B1, B1, B1, B1, B1, B1, B1, B1, B1>;
+using B3 = Food<B2, B1, B0, B0, B0, B0, B0, B0, B0, B0,  B2, B2, B2, B2, B2, B2, B2, B2, B2, B2>;
+using B4 = Food<B3, B2, B1, B0, B0, B0, B0, B0, B0, B0,  B3, B3, B3, B3, B3, B3, B3, B3, B3, B3>;
+using B5 = Food<B4, B3, B2, B1, B0, B0, B0, B0, B0, B0,  B4, B4, B4, B4, B4, B4, B4, B4, B4, B4>;
+using B6 = Food<B5, B4, B3, B2, B1, B0, B0, B0, B0, B0,  B5, B5, B5, B5, B5, B5, B5, B5, B5, B5>;
+
+// This too should take milliseconds, not minutes.
+void f(B6 a) {}
+
+// CHECK: "?f@@YAXU?$Food@U?$Food@U?$Food@U?$Food@U?$Food@U?$Food@U?$Food@HHHHHHHHHHHHHHHHHHHH@@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@@@U?$Food@HHHHHHHHHHHHHHHHHHHH@@U2@U2@U2@U2@U2@U2@U2@U2@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@@@U?$Food@U?$Food@HHHHHHHHHHHHHHHHHHHH@@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@@@U?$Food@HHHHHHHHHHHHHHHHHHHH@@U3@U3@U3@U3@U3@U3@U3@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@@@U?$Food@U?$Food@U?$Food@HHHHHHHHHHHHHHHHHHHH@@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@@@U?$Food@HHHHHHHHHHHHHHHHHHHH@@U2@U2@U2@U2@U2@U2@U2@U2@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@@@U?$Food@U?$Food@HHHHHHHHHHHHHHHHHHHH@@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@@@U?$Food@HHHHHHHHHHHHHHHHHHHH@@U4@U4@U4@U4@U4@U4@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@@@U?$Food@U?$Food@U?$Food@U?$Food@HHHHHHHHHHHHHHHHHHHH@@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@@@U?$Food@HHHHHHHHHHHHHHHHHHHH@@U2@U2@U2@U2@U2@U2@U2@U2@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@@@U?$Food@U?$Food@HHHHHHHHHHHHHHHHHHHH@@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@@@U?$Food@HHHHHHHHHHHHHHHHHHHH@@U3@U3@U3@U3@U3@U3@U3@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@@@U?$Food@U?$Food@U?$Food@HHHHHHHHHHHHHHHHHHHH@@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@@@U?$Food@HHHHHHHHHHHHHHHHHHHH@@U2@U2@U2@U2@U2@U2@U2@U2@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@@@U?$Food@U?$Food@HHHHHHHHHHHHHHHHHHHH@@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@@@U?$Food@HHHHHHHHHHHHHHHHHHHH@@U5@U5@U5@U5@U5@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@@@U?$Food@U?$Food@U?$Food@U?$Food@U?$Food@HHHHHHHHHHHHHHHHHHHH@@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@@@U?$Food@HHHHHHHHHHHHHHHHHHHH@@U2@U2@U2@U2@U2@U2@U2@U2@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@@@U?$Food@U?$Food@HHHHHHHHHHHHHHHHHHHH@@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@@@U?$Food@HHHHHHHHHHHHHHHHHHHH@@U3@U3@U3@U3@U3@U3@U3@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@@@U?$Food@U?$Food@U?$Food@HHHHHHHHHHHHHHHHHHHH@@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@@@U?$Food@HHHHHHHHHHHHHHHHHHHH@@U2@U2@U2@U2@U2@U2@U2@U2@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@@@U?$Food@U?$Food@HHHHHHHHHHHHHHHHHHHH@@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@@@U?$Food@HHHHHHHHHHHHHHHHHHHH@@U4@U4@U4@U4@U4@U4@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@@@U?$Food@U?$Food@U?$Food@U?$Food@HHHHHHHHHHHHHHHHHHHH@@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@@@U?$Food@HHHHHHHHHHHHHHHHHHHH@@U2@U2@U2@U2@U2@U2@U2@U2@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@@@U?$Food@U?$Food@HHHHHHHHHHHHHHHHHHHH@@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@@@U?$Food@HHHHHHHHHHHHHHHHHHHH@@U3@U3@U3@U3@U3@U3@U3@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@@@U?$Food@U?$Food@U?$Food@HHHHHHHHHHHHHHHHHHHH@@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@@@U?$Food@HHHHHHHHHHHHHHHHHHHH@@U2@U2@U2@U2@U2@U2@U2@U2@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@@@U?$Food@U?$Food@HHHHHHHHHHHHHHHHHHHH@@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@@@U?$Food@HHHHHHHHHHHHHHHHHHHH@@U6@U6@U6@U6@U1@U1@U1@U1@U1@U1@U1@U1@U1@U1@@@@Z"
+
+
+// Similar to the previous case, except that the later arguments aren't
+// present in the earlier ones and hence aren't in the backref cache.
+template <class T1, class T2, class T3, class T4, class T5, class T6, class T7,
+          class T8, class T9, class T10, class T11, class T12, class T13,
+          class T14, class T15, class T16, class T17, class T18, class T19,
+          class T20>
+struct Fooe {};
+
+using C0 = Fooe<int, int, int, int, int, int, int, int, int, int,  int, int, int, int, int, int, int, int, int, int>;
+using C1 = Fooe<C0, C0, C0, C0, C0, C0, C0, C0, C0, C0,  C0, C0, C0, C0, C0, C0, C0, C0, C0, C0>;
+using C2 = Fooe<C0, C0, C0, C0, C0, C0, C0, C0, C0, C0,  C1, C1, C1, C1, C1, C1, C1, C1, C1, C1>;
+using C3 = Fooe<C1, C1, C0, C0, C0, C0, C0, C0, C0, C0,  C2, C2, C2, C2, C2, C2, C2, C2, C2, C2>;
+using C4 = Fooe<C2, C2, C1, C0, C0, C0, C0, C0, C0, C0,  C3, C3, C3, C3, C3, C3, C3, C3, C3, C3>;
+using C5 = Fooe<C3, C3, C2, C1, C0, C0, C0, C0, C0, C0,  C4, C4, C4, C4, C4, C4, C4, C4, C4, C4>;
+using C6 = Fooe<C4, C4, C3, C2, C1, C0, C0, C0, C0, C0,  C5, C5, C5, C5, C5, C5, C5, C5, C5, C5>;
+using C7 = Fooe<C5, C4, C3, C2, C1, C0, C0, C0, C0, C0,  C6, C6, C6, C6, C6, C6, C6, C6, C6, C6>;
+
+// This too should take milliseconds, not minutes.
+void f(C7 a) {}
+// CHECK: "??@f23afdfb44276eaa53a5575352cf0ebc@"

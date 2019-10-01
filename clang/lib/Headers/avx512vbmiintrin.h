@@ -1,23 +1,9 @@
 /*===------------- avx512vbmiintrin.h - VBMI intrinsics ------------------===
  *
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
+ * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+ * See https://llvm.org/LICENSE.txt for license information.
+ * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  *===-----------------------------------------------------------------------===
  */
@@ -91,30 +77,26 @@ _mm512_mask_permutexvar_epi8 (__m512i __W, __mmask64 __M, __m512i __A,
 }
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS
-_mm512_mask_multishift_epi64_epi8 (__m512i __W, __mmask64 __M, __m512i __X, __m512i __Y)
+_mm512_multishift_epi64_epi8(__m512i __X, __m512i __Y)
 {
-  return (__m512i) __builtin_ia32_vpmultishiftqb512_mask ((__v64qi) __X,
-                (__v64qi) __Y,
-                (__v64qi) __W,
-                (__mmask64) __M);
+  return (__m512i)__builtin_ia32_vpmultishiftqb512((__v64qi)__X, (__v64qi) __Y);
 }
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS
-_mm512_maskz_multishift_epi64_epi8 (__mmask64 __M, __m512i __X, __m512i __Y)
+_mm512_mask_multishift_epi64_epi8(__m512i __W, __mmask64 __M, __m512i __X,
+                                  __m512i __Y)
 {
-  return (__m512i) __builtin_ia32_vpmultishiftqb512_mask ((__v64qi) __X,
-                (__v64qi) __Y,
-                (__v64qi) _mm512_setzero_si512 (),
-                (__mmask64) __M);
+  return (__m512i)__builtin_ia32_selectb_512((__mmask64)__M,
+                                (__v64qi)_mm512_multishift_epi64_epi8(__X, __Y),
+                                (__v64qi)__W);
 }
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS
-_mm512_multishift_epi64_epi8 (__m512i __X, __m512i __Y)
+_mm512_maskz_multishift_epi64_epi8(__mmask64 __M, __m512i __X, __m512i __Y)
 {
-  return (__m512i) __builtin_ia32_vpmultishiftqb512_mask ((__v64qi) __X,
-                (__v64qi) __Y,
-                (__v64qi) _mm512_undefined_epi32 (),
-                (__mmask64) -1);
+  return (__m512i)__builtin_ia32_selectb_512((__mmask64)__M,
+                                (__v64qi)_mm512_multishift_epi64_epi8(__X, __Y),
+                                (__v64qi)_mm512_setzero_si512());
 }
 
 

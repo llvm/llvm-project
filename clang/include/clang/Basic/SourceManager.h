@@ -1,9 +1,8 @@
 //===- SourceManager.h - Track and cache source files -----------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -106,7 +105,7 @@ namespace SrcMgr {
     ///
     /// This is owned by the ContentCache object.  The bits indicate
     /// whether the buffer is invalid.
-    mutable llvm::PointerIntPair<llvm::MemoryBuffer *, 2> Buffer;
+    mutable llvm::PointerIntPair<const llvm::MemoryBuffer *, 2> Buffer;
 
   public:
     /// Reference to the file entry representing this ContentCache.
@@ -185,10 +184,10 @@ namespace SrcMgr {
     ///   will be emitted at.
     ///
     /// \param Invalid If non-NULL, will be set \c true if an error occurred.
-    llvm::MemoryBuffer *getBuffer(DiagnosticsEngine &Diag,
-                                  const SourceManager &SM,
-                                  SourceLocation Loc = SourceLocation(),
-                                  bool *Invalid = nullptr) const;
+    const llvm::MemoryBuffer *getBuffer(DiagnosticsEngine &Diag,
+                                        const SourceManager &SM,
+                                        SourceLocation Loc = SourceLocation(),
+                                        bool *Invalid = nullptr) const;
 
     /// Returns the size of the content encapsulated by this
     /// ContentCache.
@@ -210,11 +209,13 @@ namespace SrcMgr {
 
     /// Get the underlying buffer, returning NULL if the buffer is not
     /// yet available.
-    llvm::MemoryBuffer *getRawBuffer() const { return Buffer.getPointer(); }
+    const llvm::MemoryBuffer *getRawBuffer() const {
+      return Buffer.getPointer();
+    }
 
     /// Replace the existing buffer (which will be deleted)
     /// with the given buffer.
-    void replaceBuffer(llvm::MemoryBuffer *B, bool DoNotFree = false);
+    void replaceBuffer(const llvm::MemoryBuffer *B, bool DoNotFree = false);
 
     /// Determine whether the buffer itself is invalid.
     bool isBufferInvalid() const {
@@ -264,16 +265,21 @@ namespace SrcMgr {
     llvm::PointerIntPair<const ContentCache*, 3, CharacteristicKind>
         ContentAndKind;
 
+    /// The filename that is used to access the file entry represented by the
+    /// content cache.
+    StringRef Filename;
+
   public:
     /// Return a FileInfo object.
     static FileInfo get(SourceLocation IL, const ContentCache *Con,
-                        CharacteristicKind FileCharacter) {
+                        CharacteristicKind FileCharacter, StringRef Filename) {
       FileInfo X;
       X.IncludeLoc = IL.getRawEncoding();
       X.NumCreatedFIDs = 0;
       X.HasLineDirectives = false;
       X.ContentAndKind.setPointer(Con);
       X.ContentAndKind.setInt(FileCharacter);
+      X.Filename = Filename;
       return X;
     }
 
@@ -298,6 +304,10 @@ namespace SrcMgr {
     void setHasLineDirectives() {
       HasLineDirectives = true;
     }
+
+    /// Returns the name of the file that was used when the file was loaded from
+    /// the underlying file system.
+    StringRef getName() const { return Filename; }
   };
 
   /// Each ExpansionInfo encodes the expansion location - where
@@ -820,7 +830,18 @@ public:
     const SrcMgr::ContentCache *IR =
         getOrCreateContentCache(SourceFile, isSystem(FileCharacter));
     assert(IR && "getOrCreateContentCache() cannot return NULL");
-    return createFileID(IR, IncludePos, FileCharacter, LoadedID, LoadedOffset);
+    return createFileID(IR, SourceFile->getName(), IncludePos, FileCharacter,
+                        LoadedID, LoadedOffset);
+  }
+
+  FileID createFileID(FileEntryRef SourceFile, SourceLocation IncludePos,
+                      SrcMgr::CharacteristicKind FileCharacter,
+                      int LoadedID = 0, unsigned LoadedOffset = 0) {
+    const SrcMgr::ContentCache *IR = getOrCreateContentCache(
+        &SourceFile.getFileEntry(), isSystem(FileCharacter));
+    assert(IR && "getOrCreateContentCache() cannot return NULL");
+    return createFileID(IR, SourceFile.getName(), IncludePos, FileCharacter,
+                        LoadedID, LoadedOffset);
   }
 
   /// Create a new FileID that represents the specified memory buffer.
@@ -831,23 +852,25 @@ public:
                       SrcMgr::CharacteristicKind FileCharacter = SrcMgr::C_User,
                       int LoadedID = 0, unsigned LoadedOffset = 0,
                       SourceLocation IncludeLoc = SourceLocation()) {
+    StringRef Name = Buffer->getBufferIdentifier();
     return createFileID(
         createMemBufferContentCache(Buffer.release(), /*DoNotFree*/ false),
-        IncludeLoc, FileCharacter, LoadedID, LoadedOffset);
+        Name, IncludeLoc, FileCharacter, LoadedID, LoadedOffset);
   }
 
   enum UnownedTag { Unowned };
 
   /// Create a new FileID that represents the specified memory buffer.
   ///
-  /// This does no caching of the buffer and takes ownership of the
-  /// MemoryBuffer, so only pass a MemoryBuffer to this once.
-  FileID createFileID(UnownedTag, llvm::MemoryBuffer *Buffer,
+  /// This does not take ownership of the MemoryBuffer. The memory buffer must
+  /// outlive the SourceManager.
+  FileID createFileID(UnownedTag, const llvm::MemoryBuffer *Buffer,
                       SrcMgr::CharacteristicKind FileCharacter = SrcMgr::C_User,
                       int LoadedID = 0, unsigned LoadedOffset = 0,
                       SourceLocation IncludeLoc = SourceLocation()) {
-    return createFileID(createMemBufferContentCache(Buffer, /*DoNotFree*/true),
-                        IncludeLoc, FileCharacter, LoadedID, LoadedOffset);
+    return createFileID(createMemBufferContentCache(Buffer, /*DoNotFree*/ true),
+                        Buffer->getBufferIdentifier(), IncludeLoc,
+                        FileCharacter, LoadedID, LoadedOffset);
   }
 
   /// Get the FileID for \p SourceFile if it exists. Otherwise, create a
@@ -888,8 +911,8 @@ public:
   ///
   /// \param Invalid If non-NULL, will be set \c true if an error
   /// occurs while retrieving the memory buffer.
-  llvm::MemoryBuffer *getMemoryBufferForFile(const FileEntry *File,
-                                             bool *Invalid = nullptr);
+  const llvm::MemoryBuffer *getMemoryBufferForFile(const FileEntry *File,
+                                                   bool *Invalid = nullptr);
 
   /// Override the contents of the given source file by providing an
   /// already-allocated buffer.
@@ -952,8 +975,8 @@ public:
   ///
   /// If there is an error opening this buffer the first time, this
   /// manufactures a temporary buffer and returns a non-empty error string.
-  llvm::MemoryBuffer *getBuffer(FileID FID, SourceLocation Loc,
-                                bool *Invalid = nullptr) const {
+  const llvm::MemoryBuffer *getBuffer(FileID FID, SourceLocation Loc,
+                                      bool *Invalid = nullptr) const {
     bool MyInvalid = false;
     const SrcMgr::SLocEntry &Entry = getSLocEntry(FID, &MyInvalid);
     if (MyInvalid || !Entry.isFile()) {
@@ -967,7 +990,8 @@ public:
                                                         Invalid);
   }
 
-  llvm::MemoryBuffer *getBuffer(FileID FID, bool *Invalid = nullptr) const {
+  const llvm::MemoryBuffer *getBuffer(FileID FID,
+                                      bool *Invalid = nullptr) const {
     bool MyInvalid = false;
     const SrcMgr::SLocEntry &Entry = getSLocEntry(FID, &MyInvalid);
     if (MyInvalid || !Entry.isFile()) {
@@ -993,6 +1017,19 @@ public:
     if (!Content)
       return nullptr;
     return Content->OrigEntry;
+  }
+
+  /// Returns the FileEntryRef for the provided FileID.
+  Optional<FileEntryRef> getFileEntryRefForID(FileID FID) const {
+    bool Invalid = false;
+    const SrcMgr::SLocEntry &Entry = getSLocEntry(FID, &Invalid);
+    if (Invalid || !Entry.isFile())
+      return None;
+
+    const SrcMgr::ContentCache *Content = Entry.getFile().getContentCache();
+    if (!Content || !Content->OrigEntry)
+      return None;
+    return FileEntryRef(Entry.getFile().getName(), *Content->OrigEntry);
   }
 
   /// Returns the FileEntry record for the provided SLocEntry.
@@ -1441,6 +1478,12 @@ public:
     return Filename.equals("<command line>");
   }
 
+  /// Returns whether \p Loc is located in a <scratch space> file.
+  bool isWrittenInScratchSpace(SourceLocation Loc) const {
+    StringRef Filename(getPresumedLoc(Loc).getFilename());
+    return Filename.equals("<scratch space>");
+  }
+
   /// Returns if a SourceLocation is in a system header.
   bool isInSystemHeader(SourceLocation Loc) const {
     return isSystem(getFileCharacteristic(Loc));
@@ -1453,7 +1496,20 @@ public:
 
   /// Returns whether \p Loc is expanded from a macro in a system header.
   bool isInSystemMacro(SourceLocation loc) const {
-    return loc.isMacroID() && isInSystemHeader(getSpellingLoc(loc));
+    if (!loc.isMacroID())
+      return false;
+
+    // This happens when the macro is the result of a paste, in that case
+    // its spelling is the scratch memory, so we take the parent context.
+    // There can be several level of token pasting.
+    if (isWrittenInScratchSpace(getSpellingLoc(loc))) {
+      do {
+        loc = getImmediateMacroCallerLoc(loc);
+      } while (isWrittenInScratchSpace(getSpellingLoc(loc)));
+      return isInSystemMacro(loc);
+    }
+
+    return isInSystemHeader(getSpellingLoc(loc));
   }
 
   /// The size of the SLocEntry that \p FID represents.
@@ -1764,10 +1820,10 @@ private:
   ///
   /// This works regardless of whether the ContentCache corresponds to a
   /// file or some other input source.
-  FileID createFileID(const SrcMgr::ContentCache* File,
+  FileID createFileID(const SrcMgr::ContentCache *File, StringRef Filename,
                       SourceLocation IncludePos,
-                      SrcMgr::CharacteristicKind DirCharacter,
-                      int LoadedID, unsigned LoadedOffset);
+                      SrcMgr::CharacteristicKind DirCharacter, int LoadedID,
+                      unsigned LoadedOffset);
 
   const SrcMgr::ContentCache *
     getOrCreateContentCache(const FileEntry *SourceFile,
@@ -1775,7 +1831,7 @@ private:
 
   /// Create a new ContentCache for the specified  memory buffer.
   const SrcMgr::ContentCache *
-  createMemBufferContentCache(llvm::MemoryBuffer *Buf, bool DoNotFree);
+  createMemBufferContentCache(const llvm::MemoryBuffer *Buf, bool DoNotFree);
 
   FileID getFileIDSlow(unsigned SLocOffset) const;
   FileID getFileIDLocal(unsigned SLocOffset) const;

@@ -1,9 +1,8 @@
 //===--- Builtins.cpp - Builtin function implementation -------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -71,14 +70,18 @@ bool Builtin::Context::builtinIsSupported(const Builtin::Info &BuiltinInfo,
   bool ObjCUnsupported = !LangOpts.ObjC && BuiltinInfo.Langs == OBJC_LANG;
   bool OclC1Unsupported = (LangOpts.OpenCLVersion / 100) != 1 &&
                           (BuiltinInfo.Langs & ALL_OCLC_LANGUAGES ) ==  OCLC1X_LANG;
-  bool OclC2Unsupported = LangOpts.OpenCLVersion != 200 &&
-                          (BuiltinInfo.Langs & ALL_OCLC_LANGUAGES) == OCLC20_LANG;
+  bool OclC2Unsupported =
+      (LangOpts.OpenCLVersion != 200 && !LangOpts.OpenCLCPlusPlus) &&
+      (BuiltinInfo.Langs & ALL_OCLC_LANGUAGES) == OCLC20_LANG;
   bool OclCUnsupported = !LangOpts.OpenCL &&
                          (BuiltinInfo.Langs & ALL_OCLC_LANGUAGES);
   bool OpenMPUnsupported = !LangOpts.OpenMP && BuiltinInfo.Langs == OMP_LANG;
+  bool CPlusPlusUnsupported =
+      !LangOpts.CPlusPlus && BuiltinInfo.Langs == CXX_LANG;
   return !BuiltinsUnsupported && !MathBuiltinsUnsupported && !OclCUnsupported &&
          !OclC1Unsupported && !OclC2Unsupported && !OpenMPUnsupported &&
-         !GnuModeUnsupported && !MSModeUnsupported && !ObjCUnsupported;
+         !GnuModeUnsupported && !MSModeUnsupported && !ObjCUnsupported &&
+         !CPlusPlusUnsupported;
 }
 
 /// initializeBuiltins - Mark the identifiers for all the builtins with their
@@ -154,6 +157,33 @@ bool Builtin::Context::isPrintfLike(unsigned ID, unsigned &FormatIdx,
 bool Builtin::Context::isScanfLike(unsigned ID, unsigned &FormatIdx,
                                    bool &HasVAListArg) {
   return isLike(ID, FormatIdx, HasVAListArg, "sS");
+}
+
+bool Builtin::Context::performsCallback(unsigned ID,
+                                        SmallVectorImpl<int> &Encoding) const {
+  const char *CalleePos = ::strchr(getRecord(ID).Attributes, 'C');
+  if (!CalleePos)
+    return false;
+
+  ++CalleePos;
+  assert(*CalleePos == '<' &&
+         "Callback callee specifier must be followed by a '<'");
+  ++CalleePos;
+
+  char *EndPos;
+  int CalleeIdx = ::strtol(CalleePos, &EndPos, 10);
+  assert(CalleeIdx >= 0 && "Callee index is supposed to be positive!");
+  Encoding.push_back(CalleeIdx);
+
+  while (*EndPos == ',') {
+    const char *PayloadPos = EndPos + 1;
+
+    int PayloadIdx = ::strtol(PayloadPos, &EndPos, 10);
+    Encoding.push_back(PayloadIdx);
+  }
+
+  assert(*EndPos == '>' && "Callback callee specifier must end with a '>'");
+  return true;
 }
 
 bool Builtin::Context::canBeRedeclared(unsigned ID) const {

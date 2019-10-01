@@ -40,7 +40,7 @@ void f3() {
   D b;
 }
 // Trivial default ctor, might or might not be defined, but we must not expect
-// someone else ot define it.
+// someone else to define it.
 // CHECK-NOT: declare {{.*}} @_ZN1CILi0EEC1Ev
 // CHECK: define {{.*}} @_ZN1DC1Ev
 

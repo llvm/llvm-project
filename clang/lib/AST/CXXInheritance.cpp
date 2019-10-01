@@ -1,9 +1,8 @@
 //===- CXXInheritance.cpp - C++ Inheritance -------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -487,6 +486,21 @@ bool CXXRecordDecl::FindOMPReductionMember(const CXXBaseSpecifier *Specifier,
   return false;
 }
 
+bool CXXRecordDecl::FindOMPMapperMember(const CXXBaseSpecifier *Specifier,
+                                        CXXBasePath &Path,
+                                        DeclarationName Name) {
+  RecordDecl *BaseRecord =
+      Specifier->getType()->castAs<RecordType>()->getDecl();
+
+  for (Path.Decls = BaseRecord->lookup(Name); !Path.Decls.empty();
+       Path.Decls = Path.Decls.slice(1)) {
+    if (Path.Decls.front()->isInIdentifierNamespace(IDNS_OMPMapper))
+      return true;
+  }
+
+  return false;
+}
+
 bool CXXRecordDecl::
 FindNestedNameSpecifierMember(const CXXBaseSpecifier *Specifier,
                               CXXBasePath &Path,
@@ -540,8 +554,7 @@ void OverridingMethods::add(unsigned OverriddenSubobject,
                             UniqueVirtualMethod Overriding) {
   SmallVectorImpl<UniqueVirtualMethod> &SubobjectOverrides
     = Overrides[OverriddenSubobject];
-  if (std::find(SubobjectOverrides.begin(), SubobjectOverrides.end(),
-                Overriding) == SubobjectOverrides.end())
+  if (llvm::find(SubobjectOverrides, Overriding) == SubobjectOverrides.end())
     SubobjectOverrides.push_back(Overriding);
 }
 

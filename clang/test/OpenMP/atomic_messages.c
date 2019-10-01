@@ -59,8 +59,8 @@ int readint() {
 
 int readS() {
   struct S a, b;
-  // expected-error@+1 {{directive '#pragma omp atomic' cannot contain more than one 'read' clause}}
-#pragma omp atomic read read
+  // expected-error@+1 {{directive '#pragma omp atomic' cannot contain more than one 'read' clause}} expected-error@+1 {{unexpected OpenMP clause 'allocate' in directive '#pragma omp atomic'}}
+#pragma omp atomic read read allocate(a)
   // expected-error@+2 {{the statement for 'atomic read' must be an expression statement of form 'v = x;', where v and x are both lvalue expressions with scalar type}}
   // expected-note@+1 {{expected expression of scalar type}}
   a = b;

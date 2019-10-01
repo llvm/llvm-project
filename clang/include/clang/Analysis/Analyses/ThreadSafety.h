@@ -1,9 +1,8 @@
 //===- ThreadSafety.h -------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -120,18 +119,22 @@ public:
   /// \param Kind -- the capability's name parameter (role, mutex, etc).
   /// \param Expected -- the kind of lock expected.
   /// \param Received -- the kind of lock received.
-  /// \param Loc -- The SourceLocation of the Unlock.
+  /// \param LocLocked -- The SourceLocation of the Lock.
+  /// \param LocUnlock -- The SourceLocation of the Unlock.
   virtual void handleIncorrectUnlockKind(StringRef Kind, Name LockName,
                                          LockKind Expected, LockKind Received,
-                                         SourceLocation Loc) {}
+                                         SourceLocation LocLocked,
+                                         SourceLocation LocUnlock) {}
 
   /// Warn about lock function calls for locks which are already held.
   /// \param Kind -- the capability's name parameter (role, mutex, etc).
   /// \param LockName -- A StringRef name for the lock expression, to be printed
   /// in the error message.
-  /// \param Loc -- The location of the second lock expression.
+  /// \param LocLocked -- The location of the first lock expression.
+  /// \param LocDoubleLock -- The location of the second lock expression.
   virtual void handleDoubleLock(StringRef Kind, Name LockName,
-                                SourceLocation Loc) {}
+                                SourceLocation LocLocked,
+                                SourceLocation LocDoubleLock) {}
 
   /// Warn about situations where a mutex is sometimes held and sometimes not.
   /// The three situations are:

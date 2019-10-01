@@ -1,9 +1,8 @@
 //===- ASTMatchers.h - Structural query framework ---------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -57,10 +56,12 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/NestedNameSpecifier.h"
+#include "clang/AST/OpenMPClause.h"
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtObjC.h"
+#include "clang/AST/StmtOpenMP.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/TemplateName.h"
 #include "clang/AST/Type.h"
@@ -2159,6 +2160,10 @@ extern const internal::VariadicDynCastAllOfMatcher<Stmt, CompoundLiteralExpr>
 extern const internal::VariadicDynCastAllOfMatcher<Stmt, CXXNullPtrLiteralExpr>
     cxxNullPtrLiteralExpr;
 
+/// Matches GNU __builtin_choose_expr.
+extern const internal::VariadicDynCastAllOfMatcher<Stmt, ChooseExpr>
+    chooseExpr;
+
 /// Matches GNU __null expression.
 extern const internal::VariadicDynCastAllOfMatcher<Stmt, GNUNullExpr>
     gnuNullExpr;
@@ -2487,6 +2492,9 @@ AST_MATCHER_P(UnaryExprOrTypeTraitExpr, hasArgumentOfType,
 /// \endcode
 /// unaryExprOrTypeTraitExpr(ofKind(UETT_SizeOf))
 ///   matches \c sizeof(x)
+///
+/// If the matcher is use from clang-query, UnaryExprOrTypeTrait parameter
+/// should be passed as a quoted string. e.g., ofKind("UETT_SizeOf").
 AST_MATCHER_P(UnaryExprOrTypeTraitExpr, ofKind, UnaryExprOrTypeTrait, Kind) {
   return Node.getKind() == Kind;
 }
@@ -2887,14 +2895,22 @@ AST_MATCHER_P(NamedDecl, hasUnderlyingDecl, internal::Matcher<NamedDecl>,
          InnerMatcher.matches(*UnderlyingDecl, Finder, Builder);
 }
 
-/// Matches on the implicit object argument of a member call expression.
+/// Matches on the implicit object argument of a member call expression, after
+/// stripping off any parentheses or implicit casts.
 ///
-/// Example matches y.x()
-///   (matcher = cxxMemberCallExpr(on(hasType(cxxRecordDecl(hasName("Y"))))))
+/// Given
 /// \code
-///   class Y { public: void x(); };
-///   void z() { Y y; y.x(); }
+///   class Y { public: void m(); };
+///   Y g();
+///   class X : public Y {};
+///   void z(Y y, X x) { y.m(); (g()).m(); x.m(); }
 /// \endcode
+/// cxxMemberCallExpr(on(hasType(cxxRecordDecl(hasName("Y")))))
+///   matches `y.m()` and `(g()).m()`.
+/// cxxMemberCallExpr(on(hasType(cxxRecordDecl(hasName("X")))))
+///   matches `x.m()`.
+/// cxxMemberCallExpr(on(callExpr()))
+///   matches `(g()).m()`.
 ///
 /// FIXME: Overload to allow directly matching types?
 AST_MATCHER_P(CXXMemberCallExpr, on, internal::Matcher<Expr>,
@@ -2922,10 +2938,59 @@ AST_MATCHER_P(ObjCMessageExpr, hasReceiverType, internal::Matcher<QualType>,
   return InnerMatcher.matches(TypeDecl, Finder, Builder);
 }
 
+/// Returns true when the Objective-C method declaration is a class method.
+///
+/// Example
+/// matcher = objcMethodDecl(isClassMethod())
+/// matches
+/// \code
+/// @interface I + (void)foo; @end
+/// \endcode
+/// but not
+/// \code
+/// @interface I - (void)bar; @end
+/// \endcode
+AST_MATCHER(ObjCMethodDecl, isClassMethod) {
+  return Node.isClassMethod();
+}
+
+/// Returns true when the Objective-C method declaration is an instance method.
+///
+/// Example
+/// matcher = objcMethodDecl(isInstanceMethod())
+/// matches
+/// \code
+/// @interface I - (void)bar; @end
+/// \endcode
+/// but not
+/// \code
+/// @interface I + (void)foo; @end
+/// \endcode
+AST_MATCHER(ObjCMethodDecl, isInstanceMethod) {
+  return Node.isInstanceMethod();
+}
+
+/// Returns true when the Objective-C message is sent to a class.
+///
+/// Example
+/// matcher = objcMessageExpr(isClassMessage())
+/// matches
+/// \code
+///   [NSString stringWithFormat:@"format"];
+/// \endcode
+/// but not
+/// \code
+///   NSString *x = @"hello";
+///   [x containsString:@"h"];
+/// \endcode
+AST_MATCHER(ObjCMessageExpr, isClassMessage) {
+  return Node.isClassMessage();
+}
+
 /// Returns true when the Objective-C message is sent to an instance.
 ///
 /// Example
-/// matcher = objcMessagaeExpr(isInstanceMessage())
+/// matcher = objcMessageExpr(isInstanceMessage())
 /// matches
 /// \code
 ///   NSString *x = @"hello";
@@ -3254,6 +3319,23 @@ AST_MATCHER_P_OVERLOAD(QualType, references, internal::Matcher<Decl>,
       .matches(Node, Finder, Builder);
 }
 
+/// Matches on the implicit object argument of a member call expression. Unlike
+/// `on`, matches the argument directly without stripping away anything.
+///
+/// Given
+/// \code
+///   class Y { public: void m(); };
+///   Y g();
+///   class X : public Y { void g(); };
+///   void z(Y y, X x) { y.m(); x.m(); x.g(); (g()).m(); }
+/// \endcode
+/// cxxMemberCallExpr(onImplicitObjectArgument(hasType(
+///     cxxRecordDecl(hasName("Y")))))
+///   matches `y.m()`, `x.m()` and (g()).m(), but not `x.g()`.
+/// cxxMemberCallExpr(on(callExpr()))
+///   does not match `(g()).m()`, because the parens are not ignored.
+///
+/// FIXME: Overload to allow directly matching types?
 AST_MATCHER_P(CXXMemberCallExpr, onImplicitObjectArgument,
               internal::Matcher<Expr>, InnerMatcher) {
   const Expr *ExprNode = Node.getImplicitObjectArgument();
@@ -3261,8 +3343,22 @@ AST_MATCHER_P(CXXMemberCallExpr, onImplicitObjectArgument,
           InnerMatcher.matches(*ExprNode, Finder, Builder));
 }
 
-/// Matches if the expression's type either matches the specified
-/// matcher, or is a pointer to a type that matches the InnerMatcher.
+/// Matches if the type of the expression's implicit object argument either
+/// matches the InnerMatcher, or is a pointer to a type that matches the
+/// InnerMatcher.
+///
+/// Given
+/// \code
+///   class Y { public: void m(); };
+///   class X : public Y { void g(); };
+///   void z() { Y y; y.m(); Y *p; p->m(); X x; x.m(); x.g(); }
+/// \endcode
+/// cxxMemberCallExpr(thisPointerType(hasDeclaration(
+///     cxxRecordDecl(hasName("Y")))))
+///   matches `y.m()`, `p->m()` and `x.m()`.
+/// cxxMemberCallExpr(thisPointerType(hasDeclaration(
+///     cxxRecordDecl(hasName("X")))))
+///   matches `x.g()`.
 AST_MATCHER_P_OVERLOAD(CXXMemberCallExpr, thisPointerType,
                        internal::Matcher<QualType>, InnerMatcher, 0) {
   return onImplicitObjectArgument(
@@ -3512,6 +3608,19 @@ AST_POLYMORPHIC_MATCHER_P2(hasArgument,
   return (N < Node.getNumArgs() &&
           InnerMatcher.matches(
               *Node.getArg(N)->IgnoreParenImpCasts(), Finder, Builder));
+}
+
+/// Matches the n'th item of an initializer list expression.
+///
+/// Example matches y.
+///     (matcher = initListExpr(hasInit(0, expr())))
+/// \code
+///   int x{y}.
+/// \endcode
+AST_MATCHER_P2(InitListExpr, hasInit, unsigned, N,
+               ast_matchers::internal::Matcher<Expr>, InnerMatcher) {
+  return N < Node.getNumInits() &&
+          InnerMatcher.matches(*Node.getInit(N), Finder, Builder);
 }
 
 /// Matches declaration statements that contain a specific number of
@@ -4426,6 +4535,9 @@ AST_POLYMORPHIC_MATCHER_P(hasSourceExpression,
 /// \code
 ///   int *p = 0;
 /// \endcode
+///
+/// If the matcher is use from clang-query, CastKind parameter
+/// should be passed as a quoted string. e.g., ofKind("CK_NullToPointer").
 AST_MATCHER_P(CastExpr, hasCastKind, CastKind, Kind) {
   return Node.getCastKind() == Kind;
 }
@@ -4951,18 +5063,22 @@ AST_MATCHER_P(MemberExpr, member,
   return InnerMatcher.matches(*Node.getMemberDecl(), Finder, Builder);
 }
 
-/// Matches a member expression where the object expression is
-/// matched by a given matcher.
+/// Matches a member expression where the object expression is matched by a
+/// given matcher. Implicit object expressions are included; that is, it matches
+/// use of implicit `this`.
 ///
 /// Given
 /// \code
-///   struct X { int m; };
-///   void f(X x) { x.m; m; }
+///   struct X {
+///     int m;
+///     int f(X x) { x.m; return m; }
+///   };
 /// \endcode
-/// memberExpr(hasObjectExpression(hasType(cxxRecordDecl(hasName("X")))))))
-///   matches "x.m" and "m"
-/// with hasObjectExpression(...)
-///   matching "x" and the implicit object expression of "m" which has type X*.
+/// memberExpr(hasObjectExpression(hasType(cxxRecordDecl(hasName("X")))))
+///   matches `x.m`, but not `m`; however,
+/// memberExpr(hasObjectExpression(hasType(pointsTo(
+//      cxxRecordDecl(hasName("X"))))))
+///   matches `m` (aka. `this->m`), but not `x.m`.
 AST_POLYMORPHIC_MATCHER_P(
     hasObjectExpression,
     AST_POLYMORPHIC_SUPPORTED_TYPES(MemberExpr, UnresolvedMemberExpr,
@@ -6055,6 +6171,9 @@ AST_MATCHER(CXXConstructorDecl, isDelegatingConstructor) {
 AST_POLYMORPHIC_MATCHER(isExplicit,
                         AST_POLYMORPHIC_SUPPORTED_TYPES(CXXConstructorDecl,
                                                         CXXConversionDecl)) {
+  // FIXME : it's not clear whether this should match a dependent
+  //         explicit(....). this matcher should also be able to match
+  //         CXXDeductionGuideDecl with explicit specifier.
   return Node.isExplicit();
 }
 
@@ -6096,6 +6215,29 @@ AST_MATCHER(NamespaceDecl, isAnonymous) {
   return Node.isAnonymousNamespace();
 }
 
+/// Matches declarations in the namespace `std`, but not in nested namespaces.
+///
+/// Given
+/// \code
+///   class vector {};
+///   namespace foo {
+///     class vector {};
+///     namespace std {
+///       class vector {};
+///     }
+///   }
+///   namespace std {
+///     inline namespace __1 {
+///       class vector {}; // #1
+///       namespace experimental {
+///         class vector {};
+///       }
+///     }
+///   }
+/// \endcode
+/// cxxRecordDecl(hasName("vector"), isInStdNamespace()) will match only #1.
+AST_MATCHER(Decl, isInStdNamespace) { return Node.isInStdNamespace(); }
+
 /// If the given case statement does not use the GNU case range
 /// extension, matches the constant given in the statement.
 ///
@@ -6120,7 +6262,7 @@ AST_MATCHER_P(CaseStmt, hasCaseConstant, internal::Matcher<Expr>,
 ///   __attribute__((device)) void f() { ... }
 /// \endcode
 /// decl(hasAttr(clang::attr::CUDADevice)) matches the function declaration of
-/// f. If the matcher is use from clang-query, attr::Kind parameter should be
+/// f. If the matcher is used from clang-query, attr::Kind parameter should be
 /// passed as a quoted string. e.g., hasAttr("attr::CUDADevice").
 AST_MATCHER_P(Decl, hasAttr, attr::Kind, AttrKind) {
   for (const auto *Attr : Node.attrs()) {
@@ -6271,8 +6413,8 @@ AST_MATCHER(CXXNewExpr, isArray) {
 /// cxxNewExpr(hasArraySize(intgerLiteral(equals(10))))
 ///   matches the expression 'new MyClass[10]'.
 AST_MATCHER_P(CXXNewExpr, hasArraySize, internal::Matcher<Expr>, InnerMatcher) {
-  return Node.isArray() &&
-    InnerMatcher.matches(*Node.getArraySize(), Finder, Builder);
+  return Node.isArray() && *Node.getArraySize() &&
+         InnerMatcher.matches(**Node.getArraySize(), Finder, Builder);
 }
 
 /// Matches a class declaration that is defined.
@@ -6309,6 +6451,203 @@ AST_MATCHER(FunctionDecl, hasTrailingReturn) {
     return F->hasTrailingReturn();
   return false;
 }
+
+/// Matches expressions that match InnerMatcher that are possibly wrapped in an
+/// elidable constructor.
+///
+/// In C++17 copy elidable constructors are no longer being
+/// generated in the AST as it is not permitted by the standard. They are
+/// however part of the AST in C++14 and earlier. Therefore, to write a matcher
+/// that works in all language modes, the matcher has to skip elidable
+/// constructor AST nodes if they appear in the AST. This matcher can be used to
+/// skip those elidable constructors.
+///
+/// Given
+///
+/// \code
+/// struct H {};
+/// H G();
+/// void f() {
+///   H D = G();
+/// }
+/// \endcode
+///
+/// ``varDecl(hasInitializer(any(
+///       ignoringElidableConstructorCall(callExpr()),
+///       exprWithCleanups(ignoringElidableConstructorCall(callExpr()))))``
+/// matches ``H D = G()``
+AST_MATCHER_P(Expr, ignoringElidableConstructorCall,
+              ast_matchers::internal::Matcher<Expr>, InnerMatcher) {
+  if (const auto *CtorExpr = dyn_cast<CXXConstructExpr>(&Node)) {
+    if (CtorExpr->isElidable()) {
+      if (const auto *MaterializeTemp =
+              dyn_cast<MaterializeTemporaryExpr>(CtorExpr->getArg(0))) {
+        return InnerMatcher.matches(*MaterializeTemp->GetTemporaryExpr(),
+                                    Finder, Builder);
+      }
+    }
+  }
+  return InnerMatcher.matches(Node, Finder, Builder);
+}
+
+//----------------------------------------------------------------------------//
+// OpenMP handling.
+//----------------------------------------------------------------------------//
+
+/// Matches any ``#pragma omp`` executable directive.
+///
+/// Given
+///
+/// \code
+///   #pragma omp parallel
+///   #pragma omp parallel default(none)
+///   #pragma omp taskyield
+/// \endcode
+///
+/// ``ompExecutableDirective()`` matches ``omp parallel``,
+/// ``omp parallel default(none)`` and ``omp taskyield``.
+extern const internal::VariadicDynCastAllOfMatcher<Stmt, OMPExecutableDirective>
+    ompExecutableDirective;
+
+/// Matches standalone OpenMP directives,
+/// i.e., directives that can't have a structured block.
+///
+/// Given
+///
+/// \code
+///   #pragma omp parallel
+///   {}
+///   #pragma omp taskyield
+/// \endcode
+///
+/// ``ompExecutableDirective(isStandaloneDirective()))`` matches
+/// ``omp taskyield``.
+AST_MATCHER(OMPExecutableDirective, isStandaloneDirective) {
+  return Node.isStandaloneDirective();
+}
+
+/// Matches the Stmt AST node that is marked as being the structured-block
+/// of an OpenMP executable directive.
+///
+/// Given
+///
+/// \code
+///    #pragma omp parallel
+///    {}
+/// \endcode
+///
+/// ``stmt(isOMPStructuredBlock()))`` matches ``{}``.
+AST_MATCHER(Stmt, isOMPStructuredBlock) { return Node.isOMPStructuredBlock(); }
+
+/// Matches the structured-block of the OpenMP executable directive
+///
+/// Prerequisite: the executable directive must not be standalone directive.
+/// If it is, it will never match.
+///
+/// Given
+///
+/// \code
+///    #pragma omp parallel
+///    ;
+///    #pragma omp parallel
+///    {}
+/// \endcode
+///
+/// ``ompExecutableDirective(hasStructuredBlock(nullStmt()))`` will match ``;``
+AST_MATCHER_P(OMPExecutableDirective, hasStructuredBlock,
+              internal::Matcher<Stmt>, InnerMatcher) {
+  if (Node.isStandaloneDirective())
+    return false; // Standalone directives have no structured blocks.
+  return InnerMatcher.matches(*Node.getStructuredBlock(), Finder, Builder);
+}
+
+/// Matches any clause in an OpenMP directive.
+///
+/// Given
+///
+/// \code
+///   #pragma omp parallel
+///   #pragma omp parallel default(none)
+/// \endcode
+///
+/// ``ompExecutableDirective(hasAnyClause(anything()))`` matches
+/// ``omp parallel default(none)``.
+AST_MATCHER_P(OMPExecutableDirective, hasAnyClause,
+              internal::Matcher<OMPClause>, InnerMatcher) {
+  ArrayRef<OMPClause *> Clauses = Node.clauses();
+  return matchesFirstInPointerRange(InnerMatcher, Clauses.begin(),
+                                    Clauses.end(), Finder, Builder);
+}
+
+/// Matches OpenMP ``default`` clause.
+///
+/// Given
+///
+/// \code
+///   #pragma omp parallel default(none)
+///   #pragma omp parallel default(shared)
+///   #pragma omp parallel
+/// \endcode
+///
+/// ``ompDefaultClause()`` matches ``default(none)`` and ``default(shared)``.
+extern const internal::VariadicDynCastAllOfMatcher<OMPClause, OMPDefaultClause>
+    ompDefaultClause;
+
+/// Matches if the OpenMP ``default`` clause has ``none`` kind specified.
+///
+/// Given
+///
+/// \code
+///   #pragma omp parallel
+///   #pragma omp parallel default(none)
+///   #pragma omp parallel default(shared)
+/// \endcode
+///
+/// ``ompDefaultClause(isNoneKind())`` matches only ``default(none)``.
+AST_MATCHER(OMPDefaultClause, isNoneKind) {
+  return Node.getDefaultKind() == OMPC_DEFAULT_none;
+}
+
+/// Matches if the OpenMP ``default`` clause has ``shared`` kind specified.
+///
+/// Given
+///
+/// \code
+///   #pragma omp parallel
+///   #pragma omp parallel default(none)
+///   #pragma omp parallel default(shared)
+/// \endcode
+///
+/// ``ompDefaultClause(isSharedKind())`` matches only ``default(shared)``.
+AST_MATCHER(OMPDefaultClause, isSharedKind) {
+  return Node.getDefaultKind() == OMPC_DEFAULT_shared;
+}
+
+/// Matches if the OpenMP directive is allowed to contain the specified OpenMP
+/// clause kind.
+///
+/// Given
+///
+/// \code
+///   #pragma omp parallel
+///   #pragma omp parallel for
+///   #pragma omp          for
+/// \endcode
+///
+/// `ompExecutableDirective(isAllowedToContainClause(OMPC_default))`` matches
+/// ``omp parallel`` and ``omp parallel for``.
+///
+/// If the matcher is use from clang-query, ``OpenMPClauseKind`` parameter
+/// should be passed as a quoted string. e.g.,
+/// ``isAllowedToContainClauseKind("OMPC_default").``
+AST_MATCHER_P(OMPExecutableDirective, isAllowedToContainClauseKind,
+              OpenMPClauseKind, CKind) {
+  return isAllowedClauseForDirective(Node.getDirectiveKind(), CKind);
+}
+
+//----------------------------------------------------------------------------//
+// End OpenMP handling.
+//----------------------------------------------------------------------------//
 
 } // namespace ast_matchers
 } // namespace clang

@@ -1,23 +1,9 @@
 /*===------------- avx512vbmivlintrin.h - VBMI intrinsics ------------------===
  *
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
+ * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+ * See https://llvm.org/LICENSE.txt for license information.
+ * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  *===-----------------------------------------------------------------------===
  */
@@ -150,61 +136,49 @@ _mm256_mask_permutexvar_epi8 (__m256i __W, __mmask32 __M, __m256i __A,
 }
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
-_mm_mask_multishift_epi64_epi8 (__m128i __W, __mmask16 __M, __m128i __X, __m128i __Y)
+_mm_multishift_epi64_epi8(__m128i __X, __m128i __Y)
 {
-  return (__m128i) __builtin_ia32_vpmultishiftqb128_mask ((__v16qi) __X,
-                (__v16qi) __Y,
-                (__v16qi) __W,
-                (__mmask16) __M);
+  return (__m128i)__builtin_ia32_vpmultishiftqb128((__v16qi)__X, (__v16qi)__Y);
 }
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
-_mm_maskz_multishift_epi64_epi8 (__mmask16 __M, __m128i __X, __m128i __Y)
+_mm_mask_multishift_epi64_epi8(__m128i __W, __mmask16 __M, __m128i __X,
+                               __m128i __Y)
 {
-  return (__m128i) __builtin_ia32_vpmultishiftqb128_mask ((__v16qi) __X,
-                (__v16qi) __Y,
-                (__v16qi)
-                _mm_setzero_si128 (),
-                (__mmask16) __M);
+  return (__m128i)__builtin_ia32_selectb_128((__mmask16)__M,
+                                   (__v16qi)_mm_multishift_epi64_epi8(__X, __Y),
+                                   (__v16qi)__W);
 }
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
-_mm_multishift_epi64_epi8 (__m128i __X, __m128i __Y)
+_mm_maskz_multishift_epi64_epi8(__mmask16 __M, __m128i __X, __m128i __Y)
 {
-  return (__m128i) __builtin_ia32_vpmultishiftqb128_mask ((__v16qi) __X,
-                (__v16qi) __Y,
-                (__v16qi)
-                _mm_undefined_si128 (),
-                (__mmask16) -1);
+  return (__m128i)__builtin_ia32_selectb_128((__mmask16)__M,
+                                   (__v16qi)_mm_multishift_epi64_epi8(__X, __Y),
+                                   (__v16qi)_mm_setzero_si128());
 }
 
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_mask_multishift_epi64_epi8 (__m256i __W, __mmask32 __M, __m256i __X, __m256i __Y)
+_mm256_multishift_epi64_epi8(__m256i __X, __m256i __Y)
 {
-  return (__m256i) __builtin_ia32_vpmultishiftqb256_mask ((__v32qi) __X,
-                (__v32qi) __Y,
-                (__v32qi) __W,
-                (__mmask32) __M);
+  return (__m256i)__builtin_ia32_vpmultishiftqb256((__v32qi)__X, (__v32qi)__Y);
 }
 
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_maskz_multishift_epi64_epi8 (__mmask32 __M, __m256i __X, __m256i __Y)
+_mm256_mask_multishift_epi64_epi8(__m256i __W, __mmask32 __M, __m256i __X,
+                                  __m256i __Y)
 {
-  return (__m256i) __builtin_ia32_vpmultishiftqb256_mask ((__v32qi) __X,
-                (__v32qi) __Y,
-                (__v32qi)
-                _mm256_setzero_si256 (),
-                (__mmask32) __M);
+  return (__m256i)__builtin_ia32_selectb_256((__mmask32)__M,
+                                (__v32qi)_mm256_multishift_epi64_epi8(__X, __Y),
+                                (__v32qi)__W);
 }
 
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_multishift_epi64_epi8 (__m256i __X, __m256i __Y)
+_mm256_maskz_multishift_epi64_epi8(__mmask32 __M, __m256i __X, __m256i __Y)
 {
-  return (__m256i) __builtin_ia32_vpmultishiftqb256_mask ((__v32qi) __X,
-                (__v32qi) __Y,
-                (__v32qi)
-                _mm256_undefined_si256 (),
-                (__mmask32) -1);
+  return (__m256i)__builtin_ia32_selectb_256((__mmask32)__M,
+                                (__v32qi)_mm256_multishift_epi64_epi8(__X, __Y),
+                                (__v32qi)_mm256_setzero_si256());
 }
 
 

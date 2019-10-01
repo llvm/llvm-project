@@ -16,7 +16,9 @@ void foo() {
   T t;
 }
 
-// CHECK: (LC1,S{{[0-9]*}},construct into local variable) T t;\n : &t
-// CHECK: (LC2,I{{[0-9]*}},construct into member variable) s : &t-\>s
-// CHECK: conj_$5\{int, LC3, no stmt, #1\}
+// CHECK: \"location_context\": \"#0 Call\", \"calling\": \"foo\", \"call_line\": null, \"items\": [\l&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;\{ \"lctx_id\": 1, \"stmt_id\": {{[0-9]+}}, \"kind\": \"construct into local variable\", \"argument_index\": null, \"pretty\": \"T t;\", \"value\": \"&t\"
+
+// CHECK: \"location_context\": \"#0 Call\", \"calling\": \"T::T\", \"call_line\": \"16\", \"items\": [\l&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;\{ \"lctx_id\": 2, \"init_id\": {{[0-9]+}}, \"kind\": \"construct into member variable\", \"argument_index\": null, \"pretty\": \"s\", \"value\": \"&t-\>s\"
+
+// CHECK: \"cluster\": \"t\", \"items\": [\l&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;\{ \"kind\": \"Default\", \"offset\": 0, \"value\": \"conj_$3\{int, LC3, no stmt, #1\}\"
 

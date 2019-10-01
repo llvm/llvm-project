@@ -841,7 +841,7 @@ namespace VirtualFromBase {
   // Virtual f(), not OK.
   constexpr X<X<S2>> xxs2;
   constexpr X<S2> *q = const_cast<X<X<S2>>*>(&xxs2);
-  static_assert(q->f() == sizeof(X<S2>), ""); // expected-error {{constant expression}} expected-note {{virtual function call}}
+  static_assert(q->f() == sizeof(X<S2>), ""); // expected-error {{constant expression}} expected-note {{virtual function}}
 }
 
 namespace Lifetime {
@@ -1135,3 +1135,89 @@ constexpr bool indirect_builtin_constant_p(const char *__s) {
   return __builtin_constant_p(*__s);
 }
 constexpr bool n = indirect_builtin_constant_p("a");
+
+__attribute__((enable_if(indirect_builtin_constant_p("a") == n, "OK")))
+int test_in_enable_if() { return 0; }
+int n2 = test_in_enable_if();
+
+template <bool n = indirect_builtin_constant_p("a")>
+int test_in_template_param() { return 0; }
+int n3 = test_in_template_param();
+
+void test_in_case(int n) {
+  switch (n) {
+    case indirect_builtin_constant_p("abc"):
+    break;
+  }
+}
+enum InEnum1 {
+  ONE = indirect_builtin_constant_p("abc")
+};
+enum InEnum2 : int {
+  TWO = indirect_builtin_constant_p("abc")
+};
+enum class InEnum3 {
+  THREE = indirect_builtin_constant_p("abc")
+};
+
+// [class.ctor]p4:
+//   A constructor can be invoked for a const, volatile or const volatile
+//   object. const and volatile semantics are not applied on an object under
+//   construction. They come into effect when the constructor for the most
+//   derived object ends.
+namespace ObjectsUnderConstruction {
+  struct A {
+    int n;
+    constexpr A() : n(1) { n = 2; }
+  };
+  struct B {
+    const A a;
+    constexpr B(bool mutate) {
+      if (mutate)
+        const_cast<A &>(a).n = 3; // expected-note {{modification of object of const-qualified type 'const int'}}
+    }
+  };
+  constexpr B b(false);
+  static_assert(b.a.n == 2, "");
+  constexpr B bad(true); // expected-error {{must be initialized by a constant expression}} expected-note {{in call to 'B(true)'}}
+
+  struct C {
+    int n;
+    constexpr C() : n(1) { n = 2; }
+  };
+  constexpr int f(bool get) {
+    volatile C c; // expected-note {{here}}
+    return get ? const_cast<int&>(c.n) : 0; // expected-note {{read of volatile object 'c'}}
+  }
+  static_assert(f(false) == 0, ""); // ok, can modify volatile c.n during c's initialization: it's not volatile then
+  static_assert(f(true) == 2, ""); // expected-error {{constant}} expected-note {{in call}}
+
+  struct Aggregate {
+    int x = 0;
+    int y = ++x;
+  };
+  constexpr Aggregate aggr1;
+  static_assert(aggr1.x == 1 && aggr1.y == 1, "");
+  // FIXME: This is not specified by the standard, but sanity requires it.
+  constexpr Aggregate aggr2 = {};
+  static_assert(aggr2.x == 1 && aggr2.y == 1, "");
+
+  // The lifetime of 'n' begins at the initialization, not before.
+  constexpr int n = ++const_cast<int&>(n); // expected-error {{constant expression}} expected-note {{modification}}
+}
+
+namespace PR39728 {
+  struct Comment0 {
+    Comment0 &operator=(const Comment0 &) = default;
+    ~Comment0() = default;
+  };
+  constexpr void f() {
+    Comment0 a;
+    a = a;
+  }
+  static_assert((f(), true), "");
+  struct Comment1 {
+    constexpr Comment1 &operator=(const Comment1 &) = default; // OK
+    ~Comment1() = default;
+  };
+}

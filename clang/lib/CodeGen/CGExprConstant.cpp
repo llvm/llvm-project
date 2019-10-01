@@ -1,9 +1,8 @@
 //===--- CGExprConstant.cpp - Emit LLVM Code from Constant Expressions ----===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -23,6 +22,8 @@
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/Builtins.h"
+#include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
@@ -31,148 +32,562 @@ using namespace clang;
 using namespace CodeGen;
 
 //===----------------------------------------------------------------------===//
-//                            ConstStructBuilder
+//                            ConstantAggregateBuilder
 //===----------------------------------------------------------------------===//
 
 namespace {
 class ConstExprEmitter;
-class ConstStructBuilder {
+
+struct ConstantAggregateBuilderUtils {
   CodeGenModule &CGM;
-  ConstantEmitter &Emitter;
 
-  bool Packed;
-  CharUnits NextFieldOffsetInChars;
-  CharUnits LLVMStructAlignment;
-  SmallVector<llvm::Constant *, 32> Elements;
-public:
-  static llvm::Constant *BuildStruct(ConstantEmitter &Emitter,
-                                     ConstExprEmitter *ExprEmitter,
-                                     llvm::Constant *Base,
-                                     InitListExpr *Updater,
-                                     QualType ValTy);
-  static llvm::Constant *BuildStruct(ConstantEmitter &Emitter,
-                                     InitListExpr *ILE, QualType StructTy);
-  static llvm::Constant *BuildStruct(ConstantEmitter &Emitter,
-                                     const APValue &Value, QualType ValTy);
-
-private:
-  ConstStructBuilder(ConstantEmitter &emitter)
-    : CGM(emitter.CGM), Emitter(emitter), Packed(false),
-    NextFieldOffsetInChars(CharUnits::Zero()),
-    LLVMStructAlignment(CharUnits::One()) { }
-
-  void AppendField(const FieldDecl *Field, uint64_t FieldOffset,
-                   llvm::Constant *InitExpr);
-
-  void AppendBytes(CharUnits FieldOffsetInChars, llvm::Constant *InitCst);
-
-  void AppendBitField(const FieldDecl *Field, uint64_t FieldOffset,
-                      llvm::ConstantInt *InitExpr);
-
-  void AppendPadding(CharUnits PadSize);
-
-  void AppendTailPadding(CharUnits RecordSize);
-
-  void ConvertStructToPacked();
-
-  bool Build(InitListExpr *ILE);
-  bool Build(ConstExprEmitter *Emitter, llvm::Constant *Base,
-             InitListExpr *Updater);
-  bool Build(const APValue &Val, const RecordDecl *RD, bool IsPrimaryBase,
-             const CXXRecordDecl *VTableClass, CharUnits BaseOffset);
-  llvm::Constant *Finalize(QualType Ty);
+  ConstantAggregateBuilderUtils(CodeGenModule &CGM) : CGM(CGM) {}
 
   CharUnits getAlignment(const llvm::Constant *C) const {
-    if (Packed)  return CharUnits::One();
     return CharUnits::fromQuantity(
         CGM.getDataLayout().getABITypeAlignment(C->getType()));
   }
 
-  CharUnits getSizeInChars(const llvm::Constant *C) const {
-    return CharUnits::fromQuantity(
-        CGM.getDataLayout().getTypeAllocSize(C->getType()));
+  CharUnits getSize(llvm::Type *Ty) const {
+    return CharUnits::fromQuantity(CGM.getDataLayout().getTypeAllocSize(Ty));
+  }
+
+  CharUnits getSize(const llvm::Constant *C) const {
+    return getSize(C->getType());
+  }
+
+  llvm::Constant *getPadding(CharUnits PadSize) const {
+    llvm::Type *Ty = CGM.Int8Ty;
+    if (PadSize > CharUnits::One())
+      Ty = llvm::ArrayType::get(Ty, PadSize.getQuantity());
+    return llvm::UndefValue::get(Ty);
+  }
+
+  llvm::Constant *getZeroes(CharUnits ZeroSize) const {
+    llvm::Type *Ty = llvm::ArrayType::get(CGM.Int8Ty, ZeroSize.getQuantity());
+    return llvm::ConstantAggregateZero::get(Ty);
   }
 };
 
-void ConstStructBuilder::
-AppendField(const FieldDecl *Field, uint64_t FieldOffset,
-            llvm::Constant *InitCst) {
+/// Incremental builder for an llvm::Constant* holding a struct or array
+/// constant.
+class ConstantAggregateBuilder : private ConstantAggregateBuilderUtils {
+  /// The elements of the constant. These two arrays must have the same size;
+  /// Offsets[i] describes the offset of Elems[i] within the constant. The
+  /// elements are kept in increasing offset order, and we ensure that there
+  /// is no overlap: Offsets[i+1] >= Offsets[i] + getSize(Elemes[i]).
+  ///
+  /// This may contain explicit padding elements (in order to create a
+  /// natural layout), but need not. Gaps between elements are implicitly
+  /// considered to be filled with undef.
+  llvm::SmallVector<llvm::Constant*, 32> Elems;
+  llvm::SmallVector<CharUnits, 32> Offsets;
+
+  /// The size of the constant (the maximum end offset of any added element).
+  /// May be larger than the end of Elems.back() if we split the last element
+  /// and removed some trailing undefs.
+  CharUnits Size = CharUnits::Zero();
+
+  /// This is true only if laying out Elems in order as the elements of a
+  /// non-packed LLVM struct will give the correct layout.
+  bool NaturalLayout = true;
+
+  bool split(size_t Index, CharUnits Hint);
+  Optional<size_t> splitAt(CharUnits Pos);
+
+  static llvm::Constant *buildFrom(CodeGenModule &CGM,
+                                   ArrayRef<llvm::Constant *> Elems,
+                                   ArrayRef<CharUnits> Offsets,
+                                   CharUnits StartOffset, CharUnits Size,
+                                   bool NaturalLayout, llvm::Type *DesiredTy,
+                                   bool AllowOversized);
+
+public:
+  ConstantAggregateBuilder(CodeGenModule &CGM)
+      : ConstantAggregateBuilderUtils(CGM) {}
+
+  /// Update or overwrite the value starting at \p Offset with \c C.
+  ///
+  /// \param AllowOverwrite If \c true, this constant might overwrite (part of)
+  ///        a constant that has already been added. This flag is only used to
+  ///        detect bugs.
+  bool add(llvm::Constant *C, CharUnits Offset, bool AllowOverwrite);
+
+  /// Update or overwrite the bits starting at \p OffsetInBits with \p Bits.
+  bool addBits(llvm::APInt Bits, uint64_t OffsetInBits, bool AllowOverwrite);
+
+  /// Attempt to condense the value starting at \p Offset to a constant of type
+  /// \p DesiredTy.
+  void condense(CharUnits Offset, llvm::Type *DesiredTy);
+
+  /// Produce a constant representing the entire accumulated value, ideally of
+  /// the specified type. If \p AllowOversized, the constant might be larger
+  /// than implied by \p DesiredTy (eg, if there is a flexible array member).
+  /// Otherwise, the constant will be of exactly the same size as \p DesiredTy
+  /// even if we can't represent it as that type.
+  llvm::Constant *build(llvm::Type *DesiredTy, bool AllowOversized) const {
+    return buildFrom(CGM, Elems, Offsets, CharUnits::Zero(), Size,
+                     NaturalLayout, DesiredTy, AllowOversized);
+  }
+};
+
+template<typename Container, typename Range = std::initializer_list<
+                                 typename Container::value_type>>
+static void replace(Container &C, size_t BeginOff, size_t EndOff, Range Vals) {
+  assert(BeginOff <= EndOff && "invalid replacement range");
+  llvm::replace(C, C.begin() + BeginOff, C.begin() + EndOff, Vals);
+}
+
+bool ConstantAggregateBuilder::add(llvm::Constant *C, CharUnits Offset,
+                          bool AllowOverwrite) {
+  // Common case: appending to a layout.
+  if (Offset >= Size) {
+    CharUnits Align = getAlignment(C);
+    CharUnits AlignedSize = Size.alignTo(Align);
+    if (AlignedSize > Offset || Offset.alignTo(Align) != Offset)
+      NaturalLayout = false;
+    else if (AlignedSize < Offset) {
+      Elems.push_back(getPadding(Offset - Size));
+      Offsets.push_back(Size);
+    }
+    Elems.push_back(C);
+    Offsets.push_back(Offset);
+    Size = Offset + getSize(C);
+    return true;
+  }
+
+  // Uncommon case: constant overlaps what we've already created.
+  llvm::Optional<size_t> FirstElemToReplace = splitAt(Offset);
+  if (!FirstElemToReplace)
+    return false;
+
+  CharUnits CSize = getSize(C);
+  llvm::Optional<size_t> LastElemToReplace = splitAt(Offset + CSize);
+  if (!LastElemToReplace)
+    return false;
+
+  assert((FirstElemToReplace == LastElemToReplace || AllowOverwrite) &&
+         "unexpectedly overwriting field");
+
+  replace(Elems, *FirstElemToReplace, *LastElemToReplace, {C});
+  replace(Offsets, *FirstElemToReplace, *LastElemToReplace, {Offset});
+  Size = std::max(Size, Offset + CSize);
+  NaturalLayout = false;
+  return true;
+}
+
+bool ConstantAggregateBuilder::addBits(llvm::APInt Bits, uint64_t OffsetInBits,
+                              bool AllowOverwrite) {
+  const ASTContext &Context = CGM.getContext();
+  const uint64_t CharWidth = CGM.getContext().getCharWidth();
+
+  // Offset of where we want the first bit to go within the bits of the
+  // current char.
+  unsigned OffsetWithinChar = OffsetInBits % CharWidth;
+
+  // We split bit-fields up into individual bytes. Walk over the bytes and
+  // update them.
+  for (CharUnits OffsetInChars = Context.toCharUnitsFromBits(OffsetInBits);
+       /**/; ++OffsetInChars) {
+    // Number of bits we want to fill in this char.
+    unsigned WantedBits =
+        std::min((uint64_t)Bits.getBitWidth(), CharWidth - OffsetWithinChar);
+
+    // Get a char containing the bits we want in the right places. The other
+    // bits have unspecified values.
+    llvm::APInt BitsThisChar = Bits;
+    if (BitsThisChar.getBitWidth() < CharWidth)
+      BitsThisChar = BitsThisChar.zext(CharWidth);
+    if (CGM.getDataLayout().isBigEndian()) {
+      // Figure out how much to shift by. We may need to left-shift if we have
+      // less than one byte of Bits left.
+      int Shift = Bits.getBitWidth() - CharWidth + OffsetWithinChar;
+      if (Shift > 0)
+        BitsThisChar.lshrInPlace(Shift);
+      else if (Shift < 0)
+        BitsThisChar = BitsThisChar.shl(-Shift);
+    } else {
+      BitsThisChar = BitsThisChar.shl(OffsetWithinChar);
+    }
+    if (BitsThisChar.getBitWidth() > CharWidth)
+      BitsThisChar = BitsThisChar.trunc(CharWidth);
+
+    if (WantedBits == CharWidth) {
+      // Got a full byte: just add it directly.
+      add(llvm::ConstantInt::get(CGM.getLLVMContext(), BitsThisChar),
+          OffsetInChars, AllowOverwrite);
+    } else {
+      // Partial byte: update the existing integer if there is one. If we
+      // can't split out a 1-CharUnit range to update, then we can't add
+      // these bits and fail the entire constant emission.
+      llvm::Optional<size_t> FirstElemToUpdate = splitAt(OffsetInChars);
+      if (!FirstElemToUpdate)
+        return false;
+      llvm::Optional<size_t> LastElemToUpdate =
+          splitAt(OffsetInChars + CharUnits::One());
+      if (!LastElemToUpdate)
+        return false;
+      assert(*LastElemToUpdate - *FirstElemToUpdate < 2 &&
+             "should have at most one element covering one byte");
+
+      // Figure out which bits we want and discard the rest.
+      llvm::APInt UpdateMask(CharWidth, 0);
+      if (CGM.getDataLayout().isBigEndian())
+        UpdateMask.setBits(CharWidth - OffsetWithinChar - WantedBits,
+                           CharWidth - OffsetWithinChar);
+      else
+        UpdateMask.setBits(OffsetWithinChar, OffsetWithinChar + WantedBits);
+      BitsThisChar &= UpdateMask;
+
+      if (*FirstElemToUpdate == *LastElemToUpdate ||
+          Elems[*FirstElemToUpdate]->isNullValue() ||
+          isa<llvm::UndefValue>(Elems[*FirstElemToUpdate])) {
+        // All existing bits are either zero or undef.
+        add(llvm::ConstantInt::get(CGM.getLLVMContext(), BitsThisChar),
+            OffsetInChars, /*AllowOverwrite*/ true);
+      } else {
+        llvm::Constant *&ToUpdate = Elems[*FirstElemToUpdate];
+        // In order to perform a partial update, we need the existing bitwise
+        // value, which we can only extract for a constant int.
+        auto *CI = dyn_cast<llvm::ConstantInt>(ToUpdate);
+        if (!CI)
+          return false;
+        // Because this is a 1-CharUnit range, the constant occupying it must
+        // be exactly one CharUnit wide.
+        assert(CI->getBitWidth() == CharWidth && "splitAt failed");
+        assert((!(CI->getValue() & UpdateMask) || AllowOverwrite) &&
+               "unexpectedly overwriting bitfield");
+        BitsThisChar |= (CI->getValue() & ~UpdateMask);
+        ToUpdate = llvm::ConstantInt::get(CGM.getLLVMContext(), BitsThisChar);
+      }
+    }
+
+    // Stop if we've added all the bits.
+    if (WantedBits == Bits.getBitWidth())
+      break;
+
+    // Remove the consumed bits from Bits.
+    if (!CGM.getDataLayout().isBigEndian())
+      Bits.lshrInPlace(WantedBits);
+    Bits = Bits.trunc(Bits.getBitWidth() - WantedBits);
+
+    // The remanining bits go at the start of the following bytes.
+    OffsetWithinChar = 0;
+  }
+
+  return true;
+}
+
+/// Returns a position within Elems and Offsets such that all elements
+/// before the returned index end before Pos and all elements at or after
+/// the returned index begin at or after Pos. Splits elements as necessary
+/// to ensure this. Returns None if we find something we can't split.
+Optional<size_t> ConstantAggregateBuilder::splitAt(CharUnits Pos) {
+  if (Pos >= Size)
+    return Offsets.size();
+
+  while (true) {
+    auto FirstAfterPos = std::upper_bound(Offsets.begin(), Offsets.end(), Pos);
+    if (FirstAfterPos == Offsets.begin())
+      return 0;
+
+    // If we already have an element starting at Pos, we're done.
+    size_t LastAtOrBeforePosIndex = FirstAfterPos - Offsets.begin() - 1;
+    if (Offsets[LastAtOrBeforePosIndex] == Pos)
+      return LastAtOrBeforePosIndex;
+
+    // We found an element starting before Pos. Check for overlap.
+    if (Offsets[LastAtOrBeforePosIndex] +
+        getSize(Elems[LastAtOrBeforePosIndex]) <= Pos)
+      return LastAtOrBeforePosIndex + 1;
+
+    // Try to decompose it into smaller constants.
+    if (!split(LastAtOrBeforePosIndex, Pos))
+      return None;
+  }
+}
+
+/// Split the constant at index Index, if possible. Return true if we did.
+/// Hint indicates the location at which we'd like to split, but may be
+/// ignored.
+bool ConstantAggregateBuilder::split(size_t Index, CharUnits Hint) {
+  NaturalLayout = false;
+  llvm::Constant *C = Elems[Index];
+  CharUnits Offset = Offsets[Index];
+
+  if (auto *CA = dyn_cast<llvm::ConstantAggregate>(C)) {
+    replace(Elems, Index, Index + 1,
+            llvm::map_range(llvm::seq(0u, CA->getNumOperands()),
+                            [&](unsigned Op) { return CA->getOperand(Op); }));
+    if (auto *Seq = dyn_cast<llvm::SequentialType>(CA->getType())) {
+      // Array or vector.
+      CharUnits ElemSize = getSize(Seq->getElementType());
+      replace(
+          Offsets, Index, Index + 1,
+          llvm::map_range(llvm::seq(0u, CA->getNumOperands()),
+                          [&](unsigned Op) { return Offset + Op * ElemSize; }));
+    } else {
+      // Must be a struct.
+      auto *ST = cast<llvm::StructType>(CA->getType());
+      const llvm::StructLayout *Layout =
+          CGM.getDataLayout().getStructLayout(ST);
+      replace(Offsets, Index, Index + 1,
+              llvm::map_range(
+                  llvm::seq(0u, CA->getNumOperands()), [&](unsigned Op) {
+                    return Offset + CharUnits::fromQuantity(
+                                        Layout->getElementOffset(Op));
+                  }));
+    }
+    return true;
+  }
+
+  if (auto *CDS = dyn_cast<llvm::ConstantDataSequential>(C)) {
+    // FIXME: If possible, split into two ConstantDataSequentials at Hint.
+    CharUnits ElemSize = getSize(CDS->getElementType());
+    replace(Elems, Index, Index + 1,
+            llvm::map_range(llvm::seq(0u, CDS->getNumElements()),
+                            [&](unsigned Elem) {
+                              return CDS->getElementAsConstant(Elem);
+                            }));
+    replace(Offsets, Index, Index + 1,
+            llvm::map_range(
+                llvm::seq(0u, CDS->getNumElements()),
+                [&](unsigned Elem) { return Offset + Elem * ElemSize; }));
+    return true;
+  }
+
+  if (isa<llvm::ConstantAggregateZero>(C)) {
+    CharUnits ElemSize = getSize(C);
+    assert(Hint > Offset && Hint < Offset + ElemSize && "nothing to split");
+    replace(Elems, Index, Index + 1,
+            {getZeroes(Hint - Offset), getZeroes(Offset + ElemSize - Hint)});
+    replace(Offsets, Index, Index + 1, {Offset, Hint});
+    return true;
+  }
+
+  if (isa<llvm::UndefValue>(C)) {
+    replace(Elems, Index, Index + 1, {});
+    replace(Offsets, Index, Index + 1, {});
+    return true;
+  }
+
+  // FIXME: We could split a ConstantInt if the need ever arose.
+  // We don't need to do this to handle bit-fields because we always eagerly
+  // split them into 1-byte chunks.
+
+  return false;
+}
+
+static llvm::Constant *
+EmitArrayConstant(CodeGenModule &CGM, llvm::ArrayType *DesiredType,
+                  llvm::Type *CommonElementType, unsigned ArrayBound,
+                  SmallVectorImpl<llvm::Constant *> &Elements,
+                  llvm::Constant *Filler);
+
+llvm::Constant *ConstantAggregateBuilder::buildFrom(
+    CodeGenModule &CGM, ArrayRef<llvm::Constant *> Elems,
+    ArrayRef<CharUnits> Offsets, CharUnits StartOffset, CharUnits Size,
+    bool NaturalLayout, llvm::Type *DesiredTy, bool AllowOversized) {
+  ConstantAggregateBuilderUtils Utils(CGM);
+
+  if (Elems.empty())
+    return llvm::UndefValue::get(DesiredTy);
+
+  auto Offset = [&](size_t I) { return Offsets[I] - StartOffset; };
+
+  // If we want an array type, see if all the elements are the same type and
+  // appropriately spaced.
+  if (llvm::ArrayType *ATy = dyn_cast<llvm::ArrayType>(DesiredTy)) {
+    assert(!AllowOversized && "oversized array emission not supported");
+
+    bool CanEmitArray = true;
+    llvm::Type *CommonType = Elems[0]->getType();
+    llvm::Constant *Filler = llvm::Constant::getNullValue(CommonType);
+    CharUnits ElemSize = Utils.getSize(ATy->getElementType());
+    SmallVector<llvm::Constant*, 32> ArrayElements;
+    for (size_t I = 0; I != Elems.size(); ++I) {
+      // Skip zeroes; we'll use a zero value as our array filler.
+      if (Elems[I]->isNullValue())
+        continue;
+
+      // All remaining elements must be the same type.
+      if (Elems[I]->getType() != CommonType ||
+          Offset(I) % ElemSize != 0) {
+        CanEmitArray = false;
+        break;
+      }
+      ArrayElements.resize(Offset(I) / ElemSize + 1, Filler);
+      ArrayElements.back() = Elems[I];
+    }
+
+    if (CanEmitArray) {
+      return EmitArrayConstant(CGM, ATy, CommonType, ATy->getNumElements(),
+                               ArrayElements, Filler);
+    }
+
+    // Can't emit as an array, carry on to emit as a struct.
+  }
+
+  CharUnits DesiredSize = Utils.getSize(DesiredTy);
+  CharUnits Align = CharUnits::One();
+  for (llvm::Constant *C : Elems)
+    Align = std::max(Align, Utils.getAlignment(C));
+  CharUnits AlignedSize = Size.alignTo(Align);
+
+  bool Packed = false;
+  ArrayRef<llvm::Constant*> UnpackedElems = Elems;
+  llvm::SmallVector<llvm::Constant*, 32> UnpackedElemStorage;
+  if ((DesiredSize < AlignedSize && !AllowOversized) ||
+      DesiredSize.alignTo(Align) != DesiredSize) {
+    // The natural layout would be the wrong size; force use of a packed layout.
+    NaturalLayout = false;
+    Packed = true;
+  } else if (DesiredSize > AlignedSize) {
+    // The constant would be too small. Add padding to fix it.
+    UnpackedElemStorage.assign(Elems.begin(), Elems.end());
+    UnpackedElemStorage.push_back(Utils.getPadding(DesiredSize - Size));
+    UnpackedElems = UnpackedElemStorage;
+  }
+
+  // If we don't have a natural layout, insert padding as necessary.
+  // As we go, double-check to see if we can actually just emit Elems
+  // as a non-packed struct and do so opportunistically if possible.
+  llvm::SmallVector<llvm::Constant*, 32> PackedElems;
+  if (!NaturalLayout) {
+    CharUnits SizeSoFar = CharUnits::Zero();
+    for (size_t I = 0; I != Elems.size(); ++I) {
+      CharUnits Align = Utils.getAlignment(Elems[I]);
+      CharUnits NaturalOffset = SizeSoFar.alignTo(Align);
+      CharUnits DesiredOffset = Offset(I);
+      assert(DesiredOffset >= SizeSoFar && "elements out of order");
+
+      if (DesiredOffset != NaturalOffset)
+        Packed = true;
+      if (DesiredOffset != SizeSoFar)
+        PackedElems.push_back(Utils.getPadding(DesiredOffset - SizeSoFar));
+      PackedElems.push_back(Elems[I]);
+      SizeSoFar = DesiredOffset + Utils.getSize(Elems[I]);
+    }
+    // If we're using the packed layout, pad it out to the desired size if
+    // necessary.
+    if (Packed) {
+      assert((SizeSoFar <= DesiredSize || AllowOversized) &&
+             "requested size is too small for contents");
+      if (SizeSoFar < DesiredSize)
+        PackedElems.push_back(Utils.getPadding(DesiredSize - SizeSoFar));
+    }
+  }
+
+  llvm::StructType *STy = llvm::ConstantStruct::getTypeForElements(
+      CGM.getLLVMContext(), Packed ? PackedElems : UnpackedElems, Packed);
+
+  // Pick the type to use.  If the type is layout identical to the desired
+  // type then use it, otherwise use whatever the builder produced for us.
+  if (llvm::StructType *DesiredSTy = dyn_cast<llvm::StructType>(DesiredTy)) {
+    if (DesiredSTy->isLayoutIdentical(STy))
+      STy = DesiredSTy;
+  }
+
+  return llvm::ConstantStruct::get(STy, Packed ? PackedElems : UnpackedElems);
+}
+
+void ConstantAggregateBuilder::condense(CharUnits Offset,
+                                        llvm::Type *DesiredTy) {
+  CharUnits Size = getSize(DesiredTy);
+
+  llvm::Optional<size_t> FirstElemToReplace = splitAt(Offset);
+  if (!FirstElemToReplace)
+    return;
+  size_t First = *FirstElemToReplace;
+
+  llvm::Optional<size_t> LastElemToReplace = splitAt(Offset + Size);
+  if (!LastElemToReplace)
+    return;
+  size_t Last = *LastElemToReplace;
+
+  size_t Length = Last - First;
+  if (Length == 0)
+    return;
+
+  if (Length == 1 && Offsets[First] == Offset &&
+      getSize(Elems[First]) == Size) {
+    // Re-wrap single element structs if necessary. Otherwise, leave any single
+    // element constant of the right size alone even if it has the wrong type.
+    auto *STy = dyn_cast<llvm::StructType>(DesiredTy);
+    if (STy && STy->getNumElements() == 1 &&
+        STy->getElementType(0) == Elems[First]->getType())
+      Elems[First] = llvm::ConstantStruct::get(STy, Elems[First]);
+    return;
+  }
+
+  llvm::Constant *Replacement = buildFrom(
+      CGM, makeArrayRef(Elems).slice(First, Length),
+      makeArrayRef(Offsets).slice(First, Length), Offset, getSize(DesiredTy),
+      /*known to have natural layout=*/false, DesiredTy, false);
+  replace(Elems, First, Last, {Replacement});
+  replace(Offsets, First, Last, {Offset});
+}
+
+//===----------------------------------------------------------------------===//
+//                            ConstStructBuilder
+//===----------------------------------------------------------------------===//
+
+class ConstStructBuilder {
+  CodeGenModule &CGM;
+  ConstantEmitter &Emitter;
+  ConstantAggregateBuilder &Builder;
+  CharUnits StartOffset;
+
+public:
+  static llvm::Constant *BuildStruct(ConstantEmitter &Emitter,
+                                     InitListExpr *ILE, QualType StructTy);
+  static llvm::Constant *BuildStruct(ConstantEmitter &Emitter,
+                                     const APValue &Value, QualType ValTy);
+  static bool UpdateStruct(ConstantEmitter &Emitter,
+                           ConstantAggregateBuilder &Const, CharUnits Offset,
+                           InitListExpr *Updater);
+
+private:
+  ConstStructBuilder(ConstantEmitter &Emitter,
+                     ConstantAggregateBuilder &Builder, CharUnits StartOffset)
+      : CGM(Emitter.CGM), Emitter(Emitter), Builder(Builder),
+        StartOffset(StartOffset) {}
+
+  bool AppendField(const FieldDecl *Field, uint64_t FieldOffset,
+                   llvm::Constant *InitExpr, bool AllowOverwrite = false);
+
+  bool AppendBytes(CharUnits FieldOffsetInChars, llvm::Constant *InitCst,
+                   bool AllowOverwrite = false);
+
+  bool AppendBitField(const FieldDecl *Field, uint64_t FieldOffset,
+                      llvm::ConstantInt *InitExpr, bool AllowOverwrite = false);
+
+  bool Build(InitListExpr *ILE, bool AllowOverwrite);
+  bool Build(const APValue &Val, const RecordDecl *RD, bool IsPrimaryBase,
+             const CXXRecordDecl *VTableClass, CharUnits BaseOffset);
+  llvm::Constant *Finalize(QualType Ty);
+};
+
+bool ConstStructBuilder::AppendField(
+    const FieldDecl *Field, uint64_t FieldOffset, llvm::Constant *InitCst,
+    bool AllowOverwrite) {
   const ASTContext &Context = CGM.getContext();
 
   CharUnits FieldOffsetInChars = Context.toCharUnitsFromBits(FieldOffset);
 
-  AppendBytes(FieldOffsetInChars, InitCst);
+  return AppendBytes(FieldOffsetInChars, InitCst, AllowOverwrite);
 }
 
-void ConstStructBuilder::
-AppendBytes(CharUnits FieldOffsetInChars, llvm::Constant *InitCst) {
-
-  assert(NextFieldOffsetInChars <= FieldOffsetInChars
-         && "Field offset mismatch!");
-
-  CharUnits FieldAlignment = getAlignment(InitCst);
-
-  // Round up the field offset to the alignment of the field type.
-  CharUnits AlignedNextFieldOffsetInChars =
-      NextFieldOffsetInChars.alignTo(FieldAlignment);
-
-  if (AlignedNextFieldOffsetInChars < FieldOffsetInChars) {
-    // We need to append padding.
-    AppendPadding(FieldOffsetInChars - NextFieldOffsetInChars);
-
-    assert(NextFieldOffsetInChars == FieldOffsetInChars &&
-           "Did not add enough padding!");
-
-    AlignedNextFieldOffsetInChars =
-        NextFieldOffsetInChars.alignTo(FieldAlignment);
-  }
-
-  if (AlignedNextFieldOffsetInChars > FieldOffsetInChars) {
-    assert(!Packed && "Alignment is wrong even with a packed struct!");
-
-    // Convert the struct to a packed struct.
-    ConvertStructToPacked();
-
-    // After we pack the struct, we may need to insert padding.
-    if (NextFieldOffsetInChars < FieldOffsetInChars) {
-      // We need to append padding.
-      AppendPadding(FieldOffsetInChars - NextFieldOffsetInChars);
-
-      assert(NextFieldOffsetInChars == FieldOffsetInChars &&
-             "Did not add enough padding!");
-    }
-    AlignedNextFieldOffsetInChars = NextFieldOffsetInChars;
-  }
-
-  // Add the field.
-  Elements.push_back(InitCst);
-  NextFieldOffsetInChars = AlignedNextFieldOffsetInChars +
-                           getSizeInChars(InitCst);
-
-  if (Packed)
-    assert(LLVMStructAlignment == CharUnits::One() &&
-           "Packed struct not byte-aligned!");
-  else
-    LLVMStructAlignment = std::max(LLVMStructAlignment, FieldAlignment);
+bool ConstStructBuilder::AppendBytes(CharUnits FieldOffsetInChars,
+                                     llvm::Constant *InitCst,
+                                     bool AllowOverwrite) {
+  return Builder.add(InitCst, StartOffset + FieldOffsetInChars, AllowOverwrite);
 }
 
-void ConstStructBuilder::AppendBitField(const FieldDecl *Field,
-                                        uint64_t FieldOffset,
-                                        llvm::ConstantInt *CI) {
-  const ASTContext &Context = CGM.getContext();
-  const uint64_t CharWidth = Context.getCharWidth();
-  uint64_t NextFieldOffsetInBits = Context.toBits(NextFieldOffsetInChars);
-  if (FieldOffset > NextFieldOffsetInBits) {
-    // We need to add padding.
-    CharUnits PadSize = Context.toCharUnitsFromBits(
-        llvm::alignTo(FieldOffset - NextFieldOffsetInBits,
-                      Context.getTargetInfo().getCharAlign()));
-
-    AppendPadding(PadSize);
-  }
-
-  uint64_t FieldSize = Field->getBitWidthValue(Context);
-
+bool ConstStructBuilder::AppendBitField(
+    const FieldDecl *Field, uint64_t FieldOffset, llvm::ConstantInt *CI,
+    bool AllowOverwrite) {
+  uint64_t FieldSize = Field->getBitWidthValue(CGM.getContext());
   llvm::APInt FieldValue = CI->getValue();
 
   // Promote the size of FieldValue if necessary
@@ -186,190 +601,67 @@ void ConstStructBuilder::AppendBitField(const FieldDecl *Field,
   if (FieldSize < FieldValue.getBitWidth())
     FieldValue = FieldValue.trunc(FieldSize);
 
-  NextFieldOffsetInBits = Context.toBits(NextFieldOffsetInChars);
-  if (FieldOffset < NextFieldOffsetInBits) {
-    // Either part of the field or the entire field can go into the previous
-    // byte.
-    assert(!Elements.empty() && "Elements can't be empty!");
+  return Builder.addBits(FieldValue,
+                         CGM.getContext().toBits(StartOffset) + FieldOffset,
+                         AllowOverwrite);
+}
 
-    unsigned BitsInPreviousByte = NextFieldOffsetInBits - FieldOffset;
+static bool EmitDesignatedInitUpdater(ConstantEmitter &Emitter,
+                                      ConstantAggregateBuilder &Const,
+                                      CharUnits Offset, QualType Type,
+                                      InitListExpr *Updater) {
+  if (Type->isRecordType())
+    return ConstStructBuilder::UpdateStruct(Emitter, Const, Offset, Updater);
 
-    bool FitsCompletelyInPreviousByte =
-      BitsInPreviousByte >= FieldValue.getBitWidth();
+  auto CAT = Emitter.CGM.getContext().getAsConstantArrayType(Type);
+  if (!CAT)
+    return false;
+  QualType ElemType = CAT->getElementType();
+  CharUnits ElemSize = Emitter.CGM.getContext().getTypeSizeInChars(ElemType);
+  llvm::Type *ElemTy = Emitter.CGM.getTypes().ConvertTypeForMem(ElemType);
 
-    llvm::APInt Tmp = FieldValue;
-
-    if (!FitsCompletelyInPreviousByte) {
-      unsigned NewFieldWidth = FieldSize - BitsInPreviousByte;
-
-      if (CGM.getDataLayout().isBigEndian()) {
-        Tmp.lshrInPlace(NewFieldWidth);
-        Tmp = Tmp.trunc(BitsInPreviousByte);
-
-        // We want the remaining high bits.
-        FieldValue = FieldValue.trunc(NewFieldWidth);
-      } else {
-        Tmp = Tmp.trunc(BitsInPreviousByte);
-
-        // We want the remaining low bits.
-        FieldValue.lshrInPlace(BitsInPreviousByte);
-        FieldValue = FieldValue.trunc(NewFieldWidth);
-      }
+  llvm::Constant *FillC = nullptr;
+  if (Expr *Filler = Updater->getArrayFiller()) {
+    if (!isa<NoInitExpr>(Filler)) {
+      FillC = Emitter.tryEmitAbstractForMemory(Filler, ElemType);
+      if (!FillC)
+        return false;
     }
+  }
 
-    Tmp = Tmp.zext(CharWidth);
-    if (CGM.getDataLayout().isBigEndian()) {
-      if (FitsCompletelyInPreviousByte)
-        Tmp = Tmp.shl(BitsInPreviousByte - FieldValue.getBitWidth());
+  unsigned NumElementsToUpdate =
+      FillC ? CAT->getSize().getZExtValue() : Updater->getNumInits();
+  for (unsigned I = 0; I != NumElementsToUpdate; ++I, Offset += ElemSize) {
+    Expr *Init = nullptr;
+    if (I < Updater->getNumInits())
+      Init = Updater->getInit(I);
+
+    if (!Init && FillC) {
+      if (!Const.add(FillC, Offset, true))
+        return false;
+    } else if (!Init || isa<NoInitExpr>(Init)) {
+      continue;
+    } else if (InitListExpr *ChildILE = dyn_cast<InitListExpr>(Init)) {
+      if (!EmitDesignatedInitUpdater(Emitter, Const, Offset, ElemType,
+                                     ChildILE))
+        return false;
+      // Attempt to reduce the array element to a single constant if necessary.
+      Const.condense(Offset, ElemTy);
     } else {
-      Tmp = Tmp.shl(CharWidth - BitsInPreviousByte);
+      llvm::Constant *Val = Emitter.tryEmitPrivateForMemory(Init, ElemType);
+      if (!Const.add(Val, Offset, true))
+        return false;
     }
-
-    // 'or' in the bits that go into the previous byte.
-    llvm::Value *LastElt = Elements.back();
-    if (llvm::ConstantInt *Val = dyn_cast<llvm::ConstantInt>(LastElt))
-      Tmp |= Val->getValue();
-    else {
-      assert(isa<llvm::UndefValue>(LastElt));
-      // If there is an undef field that we're adding to, it can either be a
-      // scalar undef (in which case, we just replace it with our field) or it
-      // is an array.  If it is an array, we have to pull one byte off the
-      // array so that the other undef bytes stay around.
-      if (!isa<llvm::IntegerType>(LastElt->getType())) {
-        // The undef padding will be a multibyte array, create a new smaller
-        // padding and then an hole for our i8 to get plopped into.
-        assert(isa<llvm::ArrayType>(LastElt->getType()) &&
-               "Expected array padding of undefs");
-        llvm::ArrayType *AT = cast<llvm::ArrayType>(LastElt->getType());
-        assert(AT->getElementType()->isIntegerTy(CharWidth) &&
-               AT->getNumElements() != 0 &&
-               "Expected non-empty array padding of undefs");
-
-        // Remove the padding array.
-        NextFieldOffsetInChars -= CharUnits::fromQuantity(AT->getNumElements());
-        Elements.pop_back();
-
-        // Add the padding back in two chunks.
-        AppendPadding(CharUnits::fromQuantity(AT->getNumElements()-1));
-        AppendPadding(CharUnits::One());
-        assert(isa<llvm::UndefValue>(Elements.back()) &&
-               Elements.back()->getType()->isIntegerTy(CharWidth) &&
-               "Padding addition didn't work right");
-      }
-    }
-
-    Elements.back() = llvm::ConstantInt::get(CGM.getLLVMContext(), Tmp);
-
-    if (FitsCompletelyInPreviousByte)
-      return;
   }
 
-  while (FieldValue.getBitWidth() > CharWidth) {
-    llvm::APInt Tmp;
-
-    if (CGM.getDataLayout().isBigEndian()) {
-      // We want the high bits.
-      Tmp =
-        FieldValue.lshr(FieldValue.getBitWidth() - CharWidth).trunc(CharWidth);
-    } else {
-      // We want the low bits.
-      Tmp = FieldValue.trunc(CharWidth);
-
-      FieldValue.lshrInPlace(CharWidth);
-    }
-
-    Elements.push_back(llvm::ConstantInt::get(CGM.getLLVMContext(), Tmp));
-    ++NextFieldOffsetInChars;
-
-    FieldValue = FieldValue.trunc(FieldValue.getBitWidth() - CharWidth);
-  }
-
-  assert(FieldValue.getBitWidth() > 0 &&
-         "Should have at least one bit left!");
-  assert(FieldValue.getBitWidth() <= CharWidth &&
-         "Should not have more than a byte left!");
-
-  if (FieldValue.getBitWidth() < CharWidth) {
-    if (CGM.getDataLayout().isBigEndian()) {
-      unsigned BitWidth = FieldValue.getBitWidth();
-
-      FieldValue = FieldValue.zext(CharWidth) << (CharWidth - BitWidth);
-    } else
-      FieldValue = FieldValue.zext(CharWidth);
-  }
-
-  // Append the last element.
-  Elements.push_back(llvm::ConstantInt::get(CGM.getLLVMContext(),
-                                            FieldValue));
-  ++NextFieldOffsetInChars;
+  return true;
 }
 
-void ConstStructBuilder::AppendPadding(CharUnits PadSize) {
-  if (PadSize.isZero())
-    return;
-
-  llvm::Type *Ty = CGM.Int8Ty;
-  if (PadSize > CharUnits::One())
-    Ty = llvm::ArrayType::get(Ty, PadSize.getQuantity());
-
-  llvm::Constant *C = llvm::UndefValue::get(Ty);
-  Elements.push_back(C);
-  assert(getAlignment(C) == CharUnits::One() &&
-         "Padding must have 1 byte alignment!");
-
-  NextFieldOffsetInChars += getSizeInChars(C);
-}
-
-void ConstStructBuilder::AppendTailPadding(CharUnits RecordSize) {
-  assert(NextFieldOffsetInChars <= RecordSize &&
-         "Size mismatch!");
-
-  AppendPadding(RecordSize - NextFieldOffsetInChars);
-}
-
-void ConstStructBuilder::ConvertStructToPacked() {
-  SmallVector<llvm::Constant *, 16> PackedElements;
-  CharUnits ElementOffsetInChars = CharUnits::Zero();
-
-  for (unsigned i = 0, e = Elements.size(); i != e; ++i) {
-    llvm::Constant *C = Elements[i];
-
-    CharUnits ElementAlign = CharUnits::fromQuantity(
-      CGM.getDataLayout().getABITypeAlignment(C->getType()));
-    CharUnits AlignedElementOffsetInChars =
-        ElementOffsetInChars.alignTo(ElementAlign);
-
-    if (AlignedElementOffsetInChars > ElementOffsetInChars) {
-      // We need some padding.
-      CharUnits NumChars =
-        AlignedElementOffsetInChars - ElementOffsetInChars;
-
-      llvm::Type *Ty = CGM.Int8Ty;
-      if (NumChars > CharUnits::One())
-        Ty = llvm::ArrayType::get(Ty, NumChars.getQuantity());
-
-      llvm::Constant *Padding = llvm::UndefValue::get(Ty);
-      PackedElements.push_back(Padding);
-      ElementOffsetInChars += getSizeInChars(Padding);
-    }
-
-    PackedElements.push_back(C);
-    ElementOffsetInChars += getSizeInChars(C);
-  }
-
-  assert(ElementOffsetInChars == NextFieldOffsetInChars &&
-         "Packing the struct changed its size!");
-
-  Elements.swap(PackedElements);
-  LLVMStructAlignment = CharUnits::One();
-  Packed = true;
-}
-
-bool ConstStructBuilder::Build(InitListExpr *ILE) {
+bool ConstStructBuilder::Build(InitListExpr *ILE, bool AllowOverwrite) {
   RecordDecl *RD = ILE->getType()->getAs<RecordType>()->getDecl();
   const ASTRecordLayout &Layout = CGM.getContext().getASTRecordLayout(RD);
 
-  unsigned FieldNo = 0;
+  unsigned FieldNo = -1;
   unsigned ElementNo = 0;
 
   // Bail out if we have base classes. We could support these, but they only
@@ -379,10 +671,11 @@ bool ConstStructBuilder::Build(InitListExpr *ILE) {
     if (CXXRD->getNumBases())
       return false;
 
-  for (RecordDecl::field_iterator Field = RD->field_begin(),
-       FieldEnd = RD->field_end(); Field != FieldEnd; ++Field, ++FieldNo) {
+  for (FieldDecl *Field : RD->fields()) {
+    ++FieldNo;
+
     // If this is a union, skip all the fields that aren't being initialized.
-    if (RD->isUnion() && ILE->getInitializedFieldInUnion() != *Field)
+    if (RD->isUnion() && ILE->getInitializedFieldInUnion() != Field)
       continue;
 
     // Don't emit anonymous bitfields, they just affect layout.
@@ -391,23 +684,48 @@ bool ConstStructBuilder::Build(InitListExpr *ILE) {
 
     // Get the initializer.  A struct can include fields without initializers,
     // we just use explicit null values for them.
-    llvm::Constant *EltInit;
+    Expr *Init = nullptr;
     if (ElementNo < ILE->getNumInits())
-      EltInit = Emitter.tryEmitPrivateForMemory(ILE->getInit(ElementNo++),
-                                                Field->getType());
-    else
-      EltInit = Emitter.emitNullForMemory(Field->getType());
+      Init = ILE->getInit(ElementNo++);
+    if (Init && isa<NoInitExpr>(Init))
+      continue;
 
+    // When emitting a DesignatedInitUpdateExpr, a nested InitListExpr
+    // represents additional overwriting of our current constant value, and not
+    // a new constant to emit independently.
+    if (AllowOverwrite &&
+        (Field->getType()->isArrayType() || Field->getType()->isRecordType())) {
+      if (auto *SubILE = dyn_cast<InitListExpr>(Init)) {
+        CharUnits Offset = CGM.getContext().toCharUnitsFromBits(
+            Layout.getFieldOffset(FieldNo));
+        if (!EmitDesignatedInitUpdater(Emitter, Builder, StartOffset + Offset,
+                                       Field->getType(), SubILE))
+          return false;
+        // If we split apart the field's value, try to collapse it down to a
+        // single value now.
+        Builder.condense(StartOffset + Offset,
+                         CGM.getTypes().ConvertTypeForMem(Field->getType()));
+        continue;
+      }
+    }
+
+    llvm::Constant *EltInit =
+        Init ? Emitter.tryEmitPrivateForMemory(Init, Field->getType())
+             : Emitter.emitNullForMemory(Field->getType());
     if (!EltInit)
       return false;
 
     if (!Field->isBitField()) {
       // Handle non-bitfield members.
-      AppendField(*Field, Layout.getFieldOffset(FieldNo), EltInit);
+      if (!AppendField(Field, Layout.getFieldOffset(FieldNo), EltInit,
+                       AllowOverwrite))
+        return false;
     } else {
       // Otherwise we have a bitfield.
       if (auto *CI = dyn_cast<llvm::ConstantInt>(EltInit)) {
-        AppendBitField(*Field, Layout.getFieldOffset(FieldNo), CI);
+        if (!AppendBitField(Field, Layout.getFieldOffset(FieldNo), CI,
+                            AllowOverwrite))
+          return false;
       } else {
         // We are trying to initialize a bitfield with a non-trivial constant,
         // this must require run-time code.
@@ -445,7 +763,8 @@ bool ConstStructBuilder::Build(const APValue &Val, const RecordDecl *RD,
       llvm::Constant *VTableAddressPoint =
           CGM.getCXXABI().getVTableAddressPointForConstExpr(
               BaseSubobject(CD, Offset), VTableClass);
-      AppendBytes(Offset, VTableAddressPoint);
+      if (!AppendBytes(Offset, VTableAddressPoint))
+        return false;
     }
 
     // Accumulate and sort bases, in order to visit them in address order, which
@@ -460,7 +779,7 @@ bool ConstStructBuilder::Build(const APValue &Val, const RecordDecl *RD,
       CharUnits BaseOffset = Layout.getBaseClassOffset(BD);
       Bases.push_back(BaseInfo(BD, BaseOffset, BaseNo));
     }
-    std::stable_sort(Bases.begin(), Bases.end());
+    llvm::stable_sort(Bases);
 
     for (unsigned I = 0, N = Bases.size(); I != N; ++I) {
       BaseInfo &Base = Bases[I];
@@ -477,7 +796,7 @@ bool ConstStructBuilder::Build(const APValue &Val, const RecordDecl *RD,
   for (RecordDecl::field_iterator Field = RD->field_begin(),
        FieldEnd = RD->field_end(); Field != FieldEnd; ++Field, ++FieldNo) {
     // If this is a union, skip all the fields that aren't being initialized.
-    if (RD->isUnion() && Val.getUnionField() != *Field)
+    if (RD->isUnion() && !declaresSameEntity(Val.getUnionField(), *Field))
       continue;
 
     // Don't emit anonymous bitfields, they just affect layout.
@@ -494,93 +813,33 @@ bool ConstStructBuilder::Build(const APValue &Val, const RecordDecl *RD,
 
     if (!Field->isBitField()) {
       // Handle non-bitfield members.
-      AppendField(*Field, Layout.getFieldOffset(FieldNo) + OffsetBits, EltInit);
+      if (!AppendField(*Field, Layout.getFieldOffset(FieldNo) + OffsetBits,
+                       EltInit))
+        return false;
     } else {
       // Otherwise we have a bitfield.
-      AppendBitField(*Field, Layout.getFieldOffset(FieldNo) + OffsetBits,
-                     cast<llvm::ConstantInt>(EltInit));
+      if (!AppendBitField(*Field, Layout.getFieldOffset(FieldNo) + OffsetBits,
+                          cast<llvm::ConstantInt>(EltInit)))
+        return false;
     }
   }
 
   return true;
 }
 
-llvm::Constant *ConstStructBuilder::Finalize(QualType Ty) {
-  RecordDecl *RD = Ty->getAs<RecordType>()->getDecl();
-  const ASTRecordLayout &Layout = CGM.getContext().getASTRecordLayout(RD);
-
-  CharUnits LayoutSizeInChars = Layout.getSize();
-
-  if (NextFieldOffsetInChars > LayoutSizeInChars) {
-    // If the struct is bigger than the size of the record type,
-    // we must have a flexible array member at the end.
-    assert(RD->hasFlexibleArrayMember() &&
-           "Must have flexible array member if struct is bigger than type!");
-
-    // No tail padding is necessary.
-  } else {
-    // Append tail padding if necessary.
-    CharUnits LLVMSizeInChars =
-        NextFieldOffsetInChars.alignTo(LLVMStructAlignment);
-
-    if (LLVMSizeInChars != LayoutSizeInChars)
-      AppendTailPadding(LayoutSizeInChars);
-
-    LLVMSizeInChars = NextFieldOffsetInChars.alignTo(LLVMStructAlignment);
-
-    // Check if we need to convert the struct to a packed struct.
-    if (NextFieldOffsetInChars <= LayoutSizeInChars &&
-        LLVMSizeInChars > LayoutSizeInChars) {
-      assert(!Packed && "Size mismatch!");
-
-      ConvertStructToPacked();
-      assert(NextFieldOffsetInChars <= LayoutSizeInChars &&
-             "Converting to packed did not help!");
-    }
-
-    LLVMSizeInChars = NextFieldOffsetInChars.alignTo(LLVMStructAlignment);
-
-    assert(LayoutSizeInChars == LLVMSizeInChars &&
-           "Tail padding mismatch!");
-  }
-
-  // Pick the type to use.  If the type is layout identical to the ConvertType
-  // type then use it, otherwise use whatever the builder produced for us.
-  llvm::StructType *STy =
-      llvm::ConstantStruct::getTypeForElements(CGM.getLLVMContext(),
-                                               Elements, Packed);
-  llvm::Type *ValTy = CGM.getTypes().ConvertType(Ty);
-  if (llvm::StructType *ValSTy = dyn_cast<llvm::StructType>(ValTy)) {
-    if (ValSTy->isLayoutIdentical(STy))
-      STy = ValSTy;
-  }
-
-  llvm::Constant *Result = llvm::ConstantStruct::get(STy, Elements);
-
-  assert(NextFieldOffsetInChars.alignTo(getAlignment(Result)) ==
-             getSizeInChars(Result) &&
-         "Size mismatch!");
-
-  return Result;
-}
-
-llvm::Constant *ConstStructBuilder::BuildStruct(ConstantEmitter &Emitter,
-                                                ConstExprEmitter *ExprEmitter,
-                                                llvm::Constant *Base,
-                                                InitListExpr *Updater,
-                                                QualType ValTy) {
-  ConstStructBuilder Builder(Emitter);
-  if (!Builder.Build(ExprEmitter, Base, Updater))
-    return nullptr;
-  return Builder.Finalize(ValTy);
+llvm::Constant *ConstStructBuilder::Finalize(QualType Type) {
+  RecordDecl *RD = Type->getAs<RecordType>()->getDecl();
+  llvm::Type *ValTy = CGM.getTypes().ConvertType(Type);
+  return Builder.build(ValTy, RD->hasFlexibleArrayMember());
 }
 
 llvm::Constant *ConstStructBuilder::BuildStruct(ConstantEmitter &Emitter,
                                                 InitListExpr *ILE,
                                                 QualType ValTy) {
-  ConstStructBuilder Builder(Emitter);
+  ConstantAggregateBuilder Const(Emitter.CGM);
+  ConstStructBuilder Builder(Emitter, Const, CharUnits::Zero());
 
-  if (!Builder.Build(ILE))
+  if (!Builder.Build(ILE, /*AllowOverwrite*/false))
     return nullptr;
 
   return Builder.Finalize(ValTy);
@@ -589,7 +848,8 @@ llvm::Constant *ConstStructBuilder::BuildStruct(ConstantEmitter &Emitter,
 llvm::Constant *ConstStructBuilder::BuildStruct(ConstantEmitter &Emitter,
                                                 const APValue &Val,
                                                 QualType ValTy) {
-  ConstStructBuilder Builder(Emitter);
+  ConstantAggregateBuilder Const(Emitter.CGM);
+  ConstStructBuilder Builder(Emitter, Const, CharUnits::Zero());
 
   const RecordDecl *RD = ValTy->castAs<RecordType>()->getDecl();
   const CXXRecordDecl *CD = dyn_cast<CXXRecordDecl>(RD);
@@ -599,6 +859,12 @@ llvm::Constant *ConstStructBuilder::BuildStruct(ConstantEmitter &Emitter,
   return Builder.Finalize(ValTy);
 }
 
+bool ConstStructBuilder::UpdateStruct(ConstantEmitter &Emitter,
+                                      ConstantAggregateBuilder &Const,
+                                      CharUnits Offset, InitListExpr *Updater) {
+  return ConstStructBuilder(Emitter, Const, Offset)
+      .Build(Updater, /*AllowOverwrite*/ true);
+}
 
 //===----------------------------------------------------------------------===//
 //                             ConstExprEmitter
@@ -636,7 +902,7 @@ static ConstantAddress tryEmitGlobalCompoundLiteral(CodeGenModule &CGM,
 }
 
 static llvm::Constant *
-EmitArrayConstant(CodeGenModule &CGM, const ConstantArrayType *DestType,
+EmitArrayConstant(CodeGenModule &CGM, llvm::ArrayType *DesiredType,
                   llvm::Type *CommonElementType, unsigned ArrayBound,
                   SmallVectorImpl<llvm::Constant *> &Elements,
                   llvm::Constant *Filler) {
@@ -649,10 +915,8 @@ EmitArrayConstant(CodeGenModule &CGM, const ConstantArrayType *DestType,
       --NonzeroLength;
   }
 
-  if (NonzeroLength == 0) {
-    return llvm::ConstantAggregateZero::get(
-        CGM.getTypes().ConvertType(QualType(DestType, 0)));
-  }
+  if (NonzeroLength == 0)
+    return llvm::ConstantAggregateZero::get(DesiredType);
 
   // Add a zeroinitializer array filler if we have lots of trailing zeroes.
   unsigned TrailingZeroes = ArrayBound - NonzeroLength;
@@ -673,9 +937,7 @@ EmitArrayConstant(CodeGenModule &CGM, const ConstantArrayType *DestType,
     }
 
     auto *FillerType =
-        CommonElementType
-            ? CommonElementType
-            : CGM.getTypes().ConvertType(DestType->getElementType());
+        CommonElementType ? CommonElementType : DesiredType->getElementType();
     FillerType = llvm::ArrayType::get(FillerType, TrailingZeroes);
     Elements.back() = llvm::ConstantAggregateZero::get(FillerType);
     CommonElementType = nullptr;
@@ -701,10 +963,12 @@ EmitArrayConstant(CodeGenModule &CGM, const ConstantArrayType *DestType,
   return llvm::ConstantStruct::get(SType, Elements);
 }
 
-/// This class only needs to handle two cases:
-/// 1) Literals (this is used by APValue emission to emit literals).
-/// 2) Arrays, structs and unions (outside C++11 mode, we don't currently
-///    constant fold these types).
+// This class only needs to handle arrays, structs and unions. Outside C++11
+// mode, we don't currently constant fold those types.  All other types are
+// handled by constant folding.
+//
+// Constant folding is currently missing support for a few features supported
+// here: CK_ToUnion, CK_ReinterpretMemberPointer, and DesignatedInitUpdateExpr.
 class ConstExprEmitter :
   public StmtVisitor<ConstExprEmitter, llvm::Constant*, QualType> {
   CodeGenModule &CGM;
@@ -875,14 +1139,12 @@ public:
     case CK_FloatingCast:
     case CK_FixedPointCast:
     case CK_FixedPointToBoolean:
+    case CK_FixedPointToIntegral:
+    case CK_IntegralToFixedPoint:
     case CK_ZeroToOCLOpaqueType:
       return nullptr;
     }
     llvm_unreachable("Invalid CastKind");
-  }
-
-  llvm::Constant *VisitCXXDefaultArgExpr(CXXDefaultArgExpr *DAE, QualType T) {
-    return Visit(DAE->getExpr(), T);
   }
 
   llvm::Constant *VisitCXXDefaultInitExpr(CXXDefaultInitExpr *DIE, QualType T) {
@@ -942,7 +1204,9 @@ public:
       Elts.push_back(C);
     }
 
-    return EmitArrayConstant(CGM, CAT, CommonElementType, NumElements, Elts,
+    llvm::ArrayType *Desired =
+        cast<llvm::ArrayType>(CGM.getTypes().ConvertType(ILE->getType()));
+    return EmitArrayConstant(CGM, Desired, CommonElementType, NumElements, Elts,
                              fillC);
   }
 
@@ -968,80 +1232,24 @@ public:
     return nullptr;
   }
 
-  llvm::Constant *EmitDesignatedInitUpdater(llvm::Constant *Base,
-                                            InitListExpr *Updater,
-                                            QualType destType) {
-    if (auto destAT = CGM.getContext().getAsArrayType(destType)) {
-      llvm::ArrayType *AType = cast<llvm::ArrayType>(ConvertType(destType));
-      llvm::Type *ElemType = AType->getElementType();
-
-      unsigned NumInitElements = Updater->getNumInits();
-      unsigned NumElements = AType->getNumElements();
-
-      std::vector<llvm::Constant *> Elts;
-      Elts.reserve(NumElements);
-
-      QualType destElemType = destAT->getElementType();
-
-      if (auto DataArray = dyn_cast<llvm::ConstantDataArray>(Base))
-        for (unsigned i = 0; i != NumElements; ++i)
-          Elts.push_back(DataArray->getElementAsConstant(i));
-      else if (auto Array = dyn_cast<llvm::ConstantArray>(Base))
-        for (unsigned i = 0; i != NumElements; ++i)
-          Elts.push_back(Array->getOperand(i));
-      else
-        return nullptr; // FIXME: other array types not implemented
-
-      llvm::Constant *fillC = nullptr;
-      if (Expr *filler = Updater->getArrayFiller())
-        if (!isa<NoInitExpr>(filler))
-          fillC = Emitter.tryEmitAbstractForMemory(filler, destElemType);
-      bool RewriteType = (fillC && fillC->getType() != ElemType);
-
-      for (unsigned i = 0; i != NumElements; ++i) {
-        Expr *Init = nullptr;
-        if (i < NumInitElements)
-          Init = Updater->getInit(i);
-
-        if (!Init && fillC)
-          Elts[i] = fillC;
-        else if (!Init || isa<NoInitExpr>(Init))
-          ; // Do nothing.
-        else if (InitListExpr *ChildILE = dyn_cast<InitListExpr>(Init))
-          Elts[i] = EmitDesignatedInitUpdater(Elts[i], ChildILE, destElemType);
-        else
-          Elts[i] = Emitter.tryEmitPrivateForMemory(Init, destElemType);
-
-       if (!Elts[i])
-          return nullptr;
-        RewriteType |= (Elts[i]->getType() != ElemType);
-      }
-
-      if (RewriteType) {
-        std::vector<llvm::Type *> Types;
-        Types.reserve(NumElements);
-        for (unsigned i = 0; i != NumElements; ++i)
-          Types.push_back(Elts[i]->getType());
-        llvm::StructType *SType = llvm::StructType::get(AType->getContext(),
-                                                        Types, true);
-        return llvm::ConstantStruct::get(SType, Elts);
-      }
-
-      return llvm::ConstantArray::get(AType, Elts);
-    }
-
-    if (destType->isRecordType())
-      return ConstStructBuilder::BuildStruct(Emitter, this, Base, Updater,
-                                             destType);
-
-    return nullptr;
-  }
-
   llvm::Constant *VisitDesignatedInitUpdateExpr(DesignatedInitUpdateExpr *E,
                                                 QualType destType) {
     auto C = Visit(E->getBase(), destType);
-    if (!C) return nullptr;
-    return EmitDesignatedInitUpdater(C, E->getUpdater(), destType);
+    if (!C)
+      return nullptr;
+
+    ConstantAggregateBuilder Const(CGM);
+    Const.add(C, CharUnits::Zero(), false);
+
+    if (!EmitDesignatedInitUpdater(Emitter, Const, CharUnits::Zero(), destType,
+                                   E->getUpdater()))
+      return nullptr;
+
+    llvm::Type *ValTy = CGM.getTypes().ConvertType(destType);
+    bool HasFlexibleArray = false;
+    if (auto *RT = destType->getAs<RecordType>())
+      HasFlexibleArray = RT->getDecl()->hasFlexibleArrayMember();
+    return Const.build(ValTy, HasFlexibleArray);
   }
 
   llvm::Constant *VisitCXXConstructExpr(CXXConstructExpr *E, QualType Ty) {
@@ -1077,6 +1285,7 @@ public:
   }
 
   llvm::Constant *VisitStringLiteral(StringLiteral *E, QualType T) {
+    // This is a string literal initializing an array in an initializer.
     return CGM.GetConstantArrayFromStringLiteral(E);
   }
 
@@ -1105,76 +1314,6 @@ public:
 };
 
 }  // end anonymous namespace.
-
-bool ConstStructBuilder::Build(ConstExprEmitter *ExprEmitter,
-                               llvm::Constant *Base,
-                               InitListExpr *Updater) {
-  assert(Base && "base expression should not be empty");
-
-  QualType ExprType = Updater->getType();
-  RecordDecl *RD = ExprType->getAs<RecordType>()->getDecl();
-  const ASTRecordLayout &Layout = CGM.getContext().getASTRecordLayout(RD);
-  const llvm::StructLayout *BaseLayout = CGM.getDataLayout().getStructLayout(
-      cast<llvm::StructType>(Base->getType()));
-  unsigned FieldNo = -1;
-  unsigned ElementNo = 0;
-
-  // Bail out if we have base classes. We could support these, but they only
-  // arise in C++1z where we will have already constant folded most interesting
-  // cases. FIXME: There are still a few more cases we can handle this way.
-  if (auto *CXXRD = dyn_cast<CXXRecordDecl>(RD))
-    if (CXXRD->getNumBases())
-      return false;
-
-  for (FieldDecl *Field : RD->fields()) {
-    ++FieldNo;
-
-    if (RD->isUnion() && Updater->getInitializedFieldInUnion() != Field)
-      continue;
-
-    // Skip anonymous bitfields.
-    if (Field->isUnnamedBitfield())
-      continue;
-
-    llvm::Constant *EltInit = Base->getAggregateElement(ElementNo);
-
-    // Bail out if the type of the ConstantStruct does not have the same layout
-    // as the type of the InitListExpr.
-    if (CGM.getTypes().ConvertType(Field->getType()) != EltInit->getType() ||
-        Layout.getFieldOffset(ElementNo) !=
-          BaseLayout->getElementOffsetInBits(ElementNo))
-      return false;
-
-    // Get the initializer. If we encounter an empty field or a NoInitExpr,
-    // we use values from the base expression.
-    Expr *Init = nullptr;
-    if (ElementNo < Updater->getNumInits())
-      Init = Updater->getInit(ElementNo);
-
-    if (!Init || isa<NoInitExpr>(Init))
-      ; // Do nothing.
-    else if (InitListExpr *ChildILE = dyn_cast<InitListExpr>(Init))
-      EltInit = ExprEmitter->EmitDesignatedInitUpdater(EltInit, ChildILE,
-                                                       Field->getType());
-    else
-      EltInit = Emitter.tryEmitPrivateForMemory(Init, Field->getType());
-
-    ++ElementNo;
-
-    if (!EltInit)
-      return false;
-
-    if (!Field->isBitField())
-      AppendField(Field, Layout.getFieldOffset(FieldNo), EltInit);
-    else if (llvm::ConstantInt *CI = dyn_cast<llvm::ConstantInt>(EltInit))
-      AppendBitField(Field, Layout.getFieldOffset(FieldNo), CI);
-    else
-      // Initializing a bitfield with a non-trivial constant?
-      return false;
-  }
-
-  return true;
-}
 
 llvm::Constant *ConstantEmitter::validateAndPopAbstract(llvm::Constant *C,
                                                         AbstractState saved) {
@@ -1651,17 +1790,7 @@ private:
 llvm::Constant *ConstantLValueEmitter::tryEmit() {
   const APValue::LValueBase &base = Value.getLValueBase();
 
-  // Certain special array initializers are represented in APValue
-  // as l-values referring to the base expression which generates the
-  // array.  This happens with e.g. string literals.  These should
-  // probably just get their own representation kind in APValue.
-  if (DestType->isArrayType()) {
-    assert(!hasNonZeroOffset() && "offset on array initializer");
-    auto expr = const_cast<Expr*>(base.get<const Expr*>());
-    return ConstExprEmitter(Emitter).Visit(expr, DestType);
-  }
-
-  // Otherwise, the destination type should be a pointer or reference
+  // The destination type should be a pointer or reference
   // type, but it might also be a cast thereof.
   //
   // FIXME: the chain of casts required should be reflected in the APValue.
@@ -1701,34 +1830,21 @@ llvm::Constant *ConstantLValueEmitter::tryEmit() {
 /// bitcast to pointer type.
 llvm::Constant *
 ConstantLValueEmitter::tryEmitAbsolute(llvm::Type *destTy) {
-  auto offset = getOffset();
-
   // If we're producing a pointer, this is easy.
-  if (auto destPtrTy = cast<llvm::PointerType>(destTy)) {
-    if (Value.isNullPointer()) {
-      // FIXME: integer offsets from non-zero null pointers.
-      return CGM.getNullPointer(destPtrTy, DestType);
-    }
-
-    // Convert the integer to a pointer-sized integer before converting it
-    // to a pointer.
-    // FIXME: signedness depends on the original integer type.
-    auto intptrTy = CGM.getDataLayout().getIntPtrType(destPtrTy);
-    llvm::Constant *C = offset;
-    C = llvm::ConstantExpr::getIntegerCast(getOffset(), intptrTy,
-                                           /*isSigned*/ false);
-    C = llvm::ConstantExpr::getIntToPtr(C, destPtrTy);
-    return C;
+  auto destPtrTy = cast<llvm::PointerType>(destTy);
+  if (Value.isNullPointer()) {
+    // FIXME: integer offsets from non-zero null pointers.
+    return CGM.getNullPointer(destPtrTy, DestType);
   }
 
-  // Otherwise, we're basically returning an integer constant.
-
-  // FIXME: this does the wrong thing with ptrtoint of a null pointer,
-  // but since we don't know the original pointer type, there's not much
-  // we can do about it.
-
-  auto C = getOffset();
-  C = llvm::ConstantExpr::getIntegerCast(C, destTy, /*isSigned*/ false);
+  // Convert the integer to a pointer-sized integer before converting it
+  // to a pointer.
+  // FIXME: signedness depends on the original integer type.
+  auto intptrTy = CGM.getDataLayout().getIntPtrType(destPtrTy);
+  llvm::Constant *C;
+  C = llvm::ConstantExpr::getIntegerCast(getOffset(), intptrTy,
+                                         /*isSigned*/ false);
+  C = llvm::ConstantExpr::getIntToPtr(C, destPtrTy);
   return C;
 }
 
@@ -1756,6 +1872,17 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
     }
 
     return nullptr;
+  }
+
+  // Handle typeid(T).
+  if (TypeInfoLValue TI = base.dyn_cast<TypeInfoLValue>()) {
+    llvm::Type *StdTypeInfoPtrTy =
+        CGM.getTypes().ConvertType(base.getTypeInfoType())->getPointerTo();
+    llvm::Constant *TypeInfo =
+        CGM.GetAddrOfRTTIDescriptor(QualType(TI.getType(), 0));
+    if (TypeInfo->getType() != StdTypeInfoPtrTy)
+      TypeInfo = llvm::ConstantExpr::getBitCast(TypeInfo, StdTypeInfoPtrTy);
+    return TypeInfo;
   }
 
   // Otherwise, it must be an expression.
@@ -1804,17 +1931,7 @@ ConstantLValueEmitter::VisitObjCBoxedExpr(const ObjCBoxedExpr *E) {
 
 ConstantLValue
 ConstantLValueEmitter::VisitPredefinedExpr(const PredefinedExpr *E) {
-  if (auto CGF = Emitter.CGF) {
-    LValue Res = CGF->EmitPredefinedLValue(E);
-    return cast<ConstantAddress>(Res.getAddress());
-  }
-
-  auto kind = E->getIdentKind();
-  if (kind == PredefinedExpr::PrettyFunction) {
-    return CGM.GetAddrOfConstantCString("top level", ".tmp");
-  }
-
-  return CGM.GetAddrOfConstantCString("", ".tmp");
+  return CGM.GetAddrOfConstantStringFromLiteral(E->getFunctionName());
 }
 
 ConstantLValue
@@ -1882,12 +1999,17 @@ ConstantLValueEmitter::VisitMaterializeTemporaryExpr(
 llvm::Constant *ConstantEmitter::tryEmitPrivate(const APValue &Value,
                                                 QualType DestType) {
   switch (Value.getKind()) {
-  case APValue::Uninitialized:
-    llvm_unreachable("Constant expressions should be initialized.");
+  case APValue::None:
+  case APValue::Indeterminate:
+    // Out-of-lifetime and indeterminate values can be modeled as 'undef'.
+    return llvm::UndefValue::get(CGM.getTypes().ConvertType(DestType));
   case APValue::LValue:
     return ConstantLValueEmitter(*this, Value, DestType).tryEmit();
   case APValue::Int:
     return llvm::ConstantInt::get(CGM.getLLVMContext(), Value.getInt());
+  case APValue::FixedPoint:
+    return llvm::ConstantInt::get(CGM.getLLVMContext(),
+                                  Value.getFixedPoint().getValue());
   case APValue::ComplexInt: {
     llvm::Constant *Complex[2];
 
@@ -2005,7 +2127,9 @@ llvm::Constant *ConstantEmitter::tryEmitPrivate(const APValue &Value,
       return llvm::ConstantAggregateZero::get(AType);
     }
 
-    return EmitArrayConstant(CGM, CAT, CommonElementType, NumElements, Elts,
+    llvm::ArrayType *Desired =
+        cast<llvm::ArrayType>(CGM.getTypes().ConvertType(DestType));
+    return EmitArrayConstant(CGM, Desired, CommonElementType, NumElements, Elts,
                              Filler);
   }
   case APValue::MemberPointer:

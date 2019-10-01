@@ -1,9 +1,8 @@
 //== CheckerContext.h - Context info for path-sensitive checkers--*- C++ -*--=//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -219,6 +218,24 @@ public:
     Changed = true;
     Eng.getBugReporter().emitReport(std::move(R));
   }
+
+
+  /// Produce a program point tag that displays an additional path note
+  /// to the user. This is a lightweight alternative to the
+  /// BugReporterVisitor mechanism: instead of visiting the bug report
+  /// node-by-node to restore the sequence of events that led to discovering
+  /// a bug, you can add notes as you add your transitions.
+  const NoteTag *getNoteTag(NoteTag::Callback &&Cb) {
+    return Eng.getNoteTags().makeNoteTag(std::move(Cb));
+  }
+
+  /// A shorthand version of getNoteTag that doesn't require you to accept
+  /// the BugReporterContext arguments when you don't need it.
+  const NoteTag *getNoteTag(std::function<std::string(BugReport &)> &&Cb) {
+    return getNoteTag(
+        [Cb](BugReporterContext &, BugReport &BR) { return Cb(BR); });
+  }
+
 
   /// Returns the word that should be used to refer to the declaration
   /// in the report.

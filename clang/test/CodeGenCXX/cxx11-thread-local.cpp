@@ -4,6 +4,12 @@
 // RUN:     -triple x86_64-linux-gnu 2>&1 | FileCheck --check-prefix=CHECK --check-prefix=LINUX %s
 // RUN: %clang_cc1 -std=c++11 -emit-llvm %s -o - -triple x86_64-apple-darwin12 | FileCheck --check-prefix=CHECK --check-prefix=DARWIN %s
 
+// RUN: %clang_cc1 -std=c++11 -fno-use-cxa-atexit -emit-llvm %s -o - -triple x86_64-linux-gnu | FileCheck --check-prefix=CHECK --check-prefix=LINUX %s
+// RUN: %clang_cc1 -std=c++11 -fno-use-cxa-atexit -emit-llvm %s -O2 -disable-llvm-passes -o - -triple x86_64-linux-gnu | FileCheck --check-prefix=CHECK --check-prefix=LINUX --check-prefix=CHECK-OPT %s
+// RUN: %clang_cc1 -std=c++11 -fno-use-cxa-atexit -femulated-tls -emit-llvm %s -o - \
+// RUN:     -triple x86_64-linux-gnu 2>&1 | FileCheck --check-prefix=CHECK --check-prefix=LINUX %s
+// RUN: %clang_cc1 -std=c++11 -fno-use-cxa-atexit -emit-llvm %s -o - -triple x86_64-apple-darwin12 | FileCheck --check-prefix=CHECK --check-prefix=DARWIN %s
+
 int f();
 int g();
 
@@ -318,7 +324,7 @@ void set_anon_i() {
 // CHECK-NOT: call void @[[V_M_INIT]]()
 
 
-// LIUNX: define weak_odr hidden i32* @_ZTW1a() {
+// LINUX: define weak_odr hidden i32* @_ZTW1a()
 // DARWIN: define cxx_fast_tlscc i32* @_ZTW1a()
 // LINUX:   call void @_ZTH1a()
 // DARWIN: call cxx_fast_tlscc void @_ZTH1a()

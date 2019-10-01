@@ -1,0 +1,38 @@
+// RUN: %clang_cc1 -triple aarch64-linux-gnu -ast-dump \
+// RUN:   -ast-dump-filter __SV %s | FileCheck %s
+
+// CHECK: TypedefDecl {{.*}} implicit __SVInt8_t '__SVInt8_t'
+// CHECK-NEXT: -BuiltinType {{.*}} '__SVInt8_t'
+
+// CHECK: TypedefDecl {{.*}} implicit __SVInt16_t '__SVInt16_t'
+// CHECK-NEXT: -BuiltinType {{.*}} '__SVInt16_t'
+
+// CHECK: TypedefDecl {{.*}} implicit __SVInt32_t '__SVInt32_t'
+// CHECK-NEXT: -BuiltinType {{.*}} '__SVInt32_t'
+
+// CHECK: TypedefDecl {{.*}} implicit __SVInt64_t '__SVInt64_t'
+// CHECK-NEXT: -BuiltinType {{.*}} '__SVInt64_t'
+
+// CHECK: TypedefDecl {{.*}} implicit __SVUint8_t '__SVUint8_t'
+// CHECK-NEXT: -BuiltinType {{.*}} '__SVUint8_t'
+
+// CHECK: TypedefDecl {{.*}} implicit __SVUint16_t '__SVUint16_t'
+// CHECK-NEXT: -BuiltinType {{.*}} '__SVUint16_t'
+
+// CHECK: TypedefDecl {{.*}} implicit __SVUint32_t '__SVUint32_t'
+// CHECK-NEXT: -BuiltinType {{.*}} '__SVUint32_t'
+
+// CHECK: TypedefDecl {{.*}} implicit __SVUint64_t '__SVUint64_t'
+// CHECK-NEXT: -BuiltinType {{.*}} '__SVUint64_t'
+
+// CHECK: TypedefDecl {{.*}} implicit __SVFloat16_t '__SVFloat16_t'
+// CHECK-NEXT: -BuiltinType {{.*}} '__SVFloat16_t'
+
+// CHECK: TypedefDecl {{.*}} implicit __SVFloat32_t '__SVFloat32_t'
+// CHECK-NEXT: -BuiltinType {{.*}} '__SVFloat32_t'
+
+// CHECK: TypedefDecl {{.*}} implicit __SVFloat64_t '__SVFloat64_t'
+// CHECK-NEXT: -BuiltinType {{.*}} '__SVFloat64_t'
+
+// CHECK: TypedefDecl {{.*}} implicit __SVBool_t '__SVBool_t'
+// CHECK-NEXT: -BuiltinType {{.*}} '__SVBool_t'

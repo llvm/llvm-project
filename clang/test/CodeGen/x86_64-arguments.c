@@ -48,7 +48,7 @@ void f7(e7 a0) {
 // Test merging/passing of upper eightbyte with X87 class.
 //
 // CHECK-LABEL: define void @f8_1(%union.u8* noalias sret %agg.result)
-// CHECK-LABEL: define void @f8_2(%union.u8* byval align 16 %a0)
+// CHECK-LABEL: define void @f8_2(%union.u8* byval(%union.u8) align 16 %a0)
 union u8 {
   long double a;
   int b;
@@ -74,7 +74,7 @@ void f12_1(struct s12 a0) {}
 
 // Check that sret parameter is accounted for when checking available integer
 // registers.
-// CHECK: define void @f13(%struct.s13_0* noalias sret %agg.result, i32 %a, i32 %b, i32 %c, i32 %d, {{.*}}* byval align 8 %e, i32 %f)
+// CHECK: define void @f13(%struct.s13_0* noalias sret %agg.result, i32 %a, i32 %b, i32 %c, i32 %d, {{.*}}* byval({{.*}}) align 8 %e, i32 %f)
 
 struct s13_0 { long long f0[3]; };
 struct s13_1 { long long f0[2]; };
@@ -104,13 +104,13 @@ void f18(int a, struct f18_s0 f18_arg1) { while (1) {} }
 
 // Check byval alignment.
 
-// CHECK-LABEL: define void @f19(%struct.s19* byval align 16 %x)
+// CHECK-LABEL: define void @f19(%struct.s19* byval(%struct.s19) align 16 %x)
 struct s19 {
   long double a;
 };
 void f19(struct s19 x) {}
 
-// CHECK-LABEL: define void @f20(%struct.s20* byval align 32 %x)
+// CHECK-LABEL: define void @f20(%struct.s20* byval(%struct.s20) align 32 %x)
 struct __attribute__((aligned(32))) s20 {
   int x;
   int y;
@@ -271,7 +271,7 @@ typedef unsigned long v1i64_2 __attribute__((__vector_size__(8)));
 v1i64_2 f35(v1i64_2 arg) { return arg+arg; }
 
 // rdar://9122143
-// CHECK: declare void @func(%struct._str* byval align 16)
+// CHECK: declare void @func(%struct._str* byval(%struct._str) align 16)
 typedef struct _str {
   union {
     long double a;
@@ -292,8 +292,8 @@ v2i32 f36(v2i32 arg) { return arg; }
 
 // AVX: declare void @f38(<8 x float>)
 // AVX: declare void @f37(<8 x float>)
-// SSE: declare void @f38(%struct.s256* byval align 32)
-// SSE: declare void @f37(<8 x float>* byval align 32)
+// SSE: declare void @f38(%struct.s256* byval(%struct.s256) align 32)
+// SSE: declare void @f37(<8 x float>* byval(<8 x float>) align 32)
 typedef float __m256 __attribute__ ((__vector_size__ (32)));
 typedef struct {
   __m256 m;
@@ -309,7 +309,7 @@ void f39() { f38(x38); f37(x37); }
 // The two next tests make sure that the struct below is passed
 // in the same way regardless of avx being used
 
-// CHECK: declare void @func40(%struct.t128* byval align 16)
+// CHECK: declare void @func40(%struct.t128* byval(%struct.t128) align 16)
 typedef float __m128 __attribute__ ((__vector_size__ (16)));
 typedef struct t128 {
   __m128 m;
@@ -321,7 +321,7 @@ void func41(two128 s) {
   func40(s);
 }
 
-// CHECK: declare void @func42(%struct.t128_2* byval align 16)
+// CHECK: declare void @func42(%struct.t128_2* byval(%struct.t128_2) align 16)
 typedef struct xxx {
   __m128 array[2];
 } Atwo128;
@@ -368,7 +368,7 @@ void test45() { f45(x45); }
 // Make sure we use byval to pass 64-bit vectors in memory; the LLVM call
 // lowering can't handle this case correctly because it runs after legalization.
 // CHECK: @test46
-// CHECK: call void @f46({{.*}}<2 x float>* byval align 8 {{.*}}, <2 x float>* byval align 8 {{.*}})
+// CHECK: call void @f46({{.*}}<2 x float>* byval(<2 x float>) align 8 {{.*}}, <2 x float>* byval(<2 x float>) align 8 {{.*}})
 typedef float v46 __attribute((vector_size(8)));
 void f46(v46,v46,v46,v46,v46,v46,v46,v46,v46,v46);
 void test46() { v46 x = {1,2}; f46(x,x,x,x,x,x,x,x,x,x); }
@@ -460,7 +460,7 @@ void test54() {
   test54_helper(x54, x54, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0i);
 }
 // AVX: @test54_helper(<8 x float> {{%[a-zA-Z0-9]+}}, <8 x float> {{%[a-zA-Z0-9]+}}, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double {{%[a-zA-Z0-9]+}}, double {{%[a-zA-Z0-9]+}})
-// AVX: @test54_helper(<8 x float> {{%[a-zA-Z0-9]+}}, <8 x float> {{%[a-zA-Z0-9]+}}, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, { double, double }* byval align 8 {{%[^)]+}})
+// AVX: @test54_helper(<8 x float> {{%[a-zA-Z0-9]+}}, <8 x float> {{%[a-zA-Z0-9]+}}, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, { double, double }* byval({ double, double }) align 8 {{%[^)]+}})
 
 typedef float __m512 __attribute__ ((__vector_size__ (64)));
 typedef struct {
@@ -474,20 +474,20 @@ __m512 x56;
 // as per https://github.com/hjl-tools/x86-psABI/commit/30f9c9 3.2.3p2 Rule 1
 //
 // AVX512: declare void @f55(<16 x float>)
-// NO-AVX512: declare void @f55(%struct.s512* byval align 64)
+// NO-AVX512: declare void @f55(%struct.s512* byval(%struct.s512) align 64)
 void f55(s512 x);
 
 // __m512 has type SSE/SSEUP on AVX512.
 //
 // AVX512: declare void @f56(<16 x float>)
-// NO-AVX512: declare void @f56(<16 x float>* byval align 64)
+// NO-AVX512: declare void @f56(<16 x float>* byval(<16 x float>) align 64)
 void f56(__m512 x);
 void f57() { f55(x55); f56(x56); }
 
 // Like for __m128 on AVX, check that the struct below is passed
 // in the same way regardless of AVX512 being used.
 //
-// CHECK: declare void @f58(%struct.t256* byval align 32)
+// CHECK: declare void @f58(%struct.t256* byval(%struct.t256) align 32)
 typedef struct t256 {
   __m256 m;
   __m256 n;
@@ -498,7 +498,7 @@ void f59(two256 s) {
   f58(s);
 }
 
-// CHECK: declare void @f60(%struct.sat256* byval align 32)
+// CHECK: declare void @f60(%struct.sat256* byval(%struct.sat256) align 32)
 typedef struct at256 {
   __m256 array[2];
 } Atwo256;
@@ -529,7 +529,7 @@ void f63(__m512 *m, __builtin_va_list argList) {
 }
 
 // AVX512: @f64_helper(<16 x float> {{%[a-zA-Z0-9]+}}, <16 x float> {{%[a-zA-Z0-9]+}}, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double {{%[a-zA-Z0-9]+}}, double {{%[a-zA-Z0-9]+}})
-// AVX512: @f64_helper(<16 x float> {{%[a-zA-Z0-9]+}}, <16 x float> {{%[a-zA-Z0-9]+}}, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, { double, double }* byval align 8 {{%[^)]+}})
+// AVX512: @f64_helper(<16 x float> {{%[a-zA-Z0-9]+}}, <16 x float> {{%[a-zA-Z0-9]+}}, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, { double, double }* byval({ double, double }) align 8 {{%[^)]+}})
 void f64_helper(__m512, ...);
 __m512 x64;
 void f64() {
@@ -541,7 +541,7 @@ struct t65 {
   __m256 m;
   int : 0;
 };
-// SSE-LABEL: @f65(%struct.t65* byval align 32 %{{[^,)]+}})
+// SSE-LABEL: @f65(%struct.t65* byval(%struct.t65) align 32 %{{[^,)]+}})
 // AVX: @f65(<8 x float> %{{[^,)]+}})
 void f65(struct t65 a0) {
 }

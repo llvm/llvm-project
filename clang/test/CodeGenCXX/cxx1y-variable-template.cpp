@@ -27,4 +27,21 @@ int *p = &n<0>;
 // CHECK: @_ZN5OuterIA100_cE5InnerIA20_cE3arrIA3_cEE = linkonce_odr global [123 x i32] zeroinitializer
 // CHECK: @_ZGVN5OuterIA100_cE5InnerIA20_cE3arrIA3_cEE = linkonce_odr global
 
+// CHECK: @_ZTHN7PR4211112_GLOBAL__N_11nILi0EEE = internal alias {{.*}} @[[PR42111_CTOR:.*]]
+
 // CHECK: call {{.*}}@_Z8init_arrv
+
+// Ensure that we use guarded initialization for an instantiated thread_local
+// variable with internal linkage.
+namespace PR42111 {
+  int f();
+  namespace { template <int = 0> thread_local int n = f(); }
+  // CHECK: define {{.*}}@[[PR42111_CTOR]](
+  // CHECK: load {{.*}} @_ZGVN7PR4211112_GLOBAL__N_11nILi0EEE
+  // CHECK: icmp eq i8 {{.*}}, 0
+  // CHECK: br i1
+  // CHECK: call i32 @_ZN7PR421111fEv(
+  // CHECK: store i32 {{.*}}, i32* @_ZN7PR4211112_GLOBAL__N_11nILi0EEE
+  // CHECK: store i8 1, i8* @_ZGVN7PR4211112_GLOBAL__N_11nILi0EEE
+  int g() { return n<> + n<>; }
+}

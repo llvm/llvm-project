@@ -1,15 +1,15 @@
 //===--- HeaderIncludes.cpp - Insert/Delete #includes --*- C++ -*----------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "clang/Tooling/Inclusions/HeaderIncludes.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Lexer.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/Support/FormatVariadic.h"
 
 namespace clang {
@@ -51,12 +51,16 @@ unsigned getOffsetAfterTokenSequence(
 
 // Check if a sequence of tokens is like "#<Name> <raw_identifier>". If it is,
 // \p Tok will be the token after this directive; otherwise, it can be any token
-// after the given \p Tok (including \p Tok).
-bool checkAndConsumeDirectiveWithName(Lexer &Lex, StringRef Name, Token &Tok) {
+// after the given \p Tok (including \p Tok). If \p RawIDName is provided, the
+// (second) raw_identifier name is checked.
+bool checkAndConsumeDirectiveWithName(
+    Lexer &Lex, StringRef Name, Token &Tok,
+    llvm::Optional<StringRef> RawIDName = llvm::None) {
   bool Matched = Tok.is(tok::hash) && !Lex.LexFromRawLexer(Tok) &&
                  Tok.is(tok::raw_identifier) &&
                  Tok.getRawIdentifier() == Name && !Lex.LexFromRawLexer(Tok) &&
-                 Tok.is(tok::raw_identifier);
+                 Tok.is(tok::raw_identifier) &&
+                 (!RawIDName || Tok.getRawIdentifier() == *RawIDName);
   if (Matched)
     Lex.LexFromRawLexer(Tok);
   return Matched;
@@ -69,24 +73,45 @@ void skipComments(Lexer &Lex, Token &Tok) {
 }
 
 // Returns the offset after header guard directives and any comments
-// before/after header guards. If no header guard presents in the code, this
-// will returns the offset after skipping all comments from the start of the
-// code.
+// before/after header guards (e.g. #ifndef/#define pair, #pragma once). If no
+// header guard is present in the code, this will return the offset after
+// skipping all comments from the start of the code.
 unsigned getOffsetAfterHeaderGuardsAndComments(StringRef FileName,
                                                StringRef Code,
                                                const IncludeStyle &Style) {
-  return getOffsetAfterTokenSequence(
-      FileName, Code, Style,
-      [](const SourceManager &SM, Lexer &Lex, Token Tok) {
-        skipComments(Lex, Tok);
-        unsigned InitialOffset = SM.getFileOffset(Tok.getLocation());
-        if (checkAndConsumeDirectiveWithName(Lex, "ifndef", Tok)) {
-          skipComments(Lex, Tok);
-          if (checkAndConsumeDirectiveWithName(Lex, "define", Tok))
-            return SM.getFileOffset(Tok.getLocation());
-        }
-        return InitialOffset;
-      });
+  // \p Consume returns location after header guard or 0 if no header guard is
+  // found.
+  auto ConsumeHeaderGuardAndComment =
+      [&](std::function<unsigned(const SourceManager &SM, Lexer &Lex,
+                                 Token Tok)>
+              Consume) {
+        return getOffsetAfterTokenSequence(
+            FileName, Code, Style,
+            [&Consume](const SourceManager &SM, Lexer &Lex, Token Tok) {
+              skipComments(Lex, Tok);
+              unsigned InitialOffset = SM.getFileOffset(Tok.getLocation());
+              return std::max(InitialOffset, Consume(SM, Lex, Tok));
+            });
+      };
+  return std::max(
+      // #ifndef/#define
+      ConsumeHeaderGuardAndComment(
+          [](const SourceManager &SM, Lexer &Lex, Token Tok) -> unsigned {
+            if (checkAndConsumeDirectiveWithName(Lex, "ifndef", Tok)) {
+              skipComments(Lex, Tok);
+              if (checkAndConsumeDirectiveWithName(Lex, "define", Tok))
+                return SM.getFileOffset(Tok.getLocation());
+            }
+            return 0;
+          }),
+      // #pragma once
+      ConsumeHeaderGuardAndComment(
+          [](const SourceManager &SM, Lexer &Lex, Token Tok) -> unsigned {
+            if (checkAndConsumeDirectiveWithName(Lex, "pragma", Tok,
+                                                 StringRef("once")))
+              return SM.getFileOffset(Tok.getLocation());
+            return 0;
+          }));
 }
 
 // Check if a sequence of tokens is like

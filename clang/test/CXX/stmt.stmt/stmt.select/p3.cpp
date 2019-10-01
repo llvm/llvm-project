@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
-// RUN: %clang_cc1 -fsyntax-only -std=c++1z -Wc++14-compat -verify %s -DCPP17
+// RUN: %clang_cc1 -fsyntax-only -Wno-unused-value -verify %s
+// RUN: %clang_cc1 -fsyntax-only -Wno-unused-value -std=c++1z -Wc++14-compat -verify %s -DCPP17
 
 int f();
 
@@ -71,7 +71,6 @@ void whileInitStatement() {
 // last loop above. It would be nice to remove this.
 void whileInitStatement2() {
   while (; false) {} // expected-error {{expected expression}}
-  // expected-warning@-1 {{expression result unused}}
-  // expected-error@-2 {{expected ';' after expression}}
-  // expected-error@-3 {{expected expression}}
+  // expected-error@-1 {{expected ';' after expression}}
+  // expected-error@-2 {{expected expression}}
 }

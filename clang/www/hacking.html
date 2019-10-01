@@ -89,22 +89,22 @@
       wrapped <tt>Type*</tt> which you can then dump.</li>
       <li>For <a href="http://lldb.llvm.org"> <tt>LLDB</tt></a> users there are
       data formatters for clang data structures in
-      <a href="http://llvm.org/svn/llvm-project/cfe/trunk/utils/ClangDataFormat.py">
-      <tt>utils/ClangDataFormat.py</tt></a>.</li>
+      <a href="https://github.com/llvm/llvm-project/blob/master/clang/utils/ClangDataFormat.py">
+      <tt>clang/utils/ClangDataFormat.py</tt></a>.</li>
     </ul>
 
   <!--=====================================================================-->
   <h3 id="debuggingVisualStudio">Debugging using Visual Studio</h3>
   <!--=====================================================================-->
 
-  <p>The files 
-    <a href="http://llvm.org/svn/llvm-project/llvm/trunk/utils/LLVMVisualizers/llvm.natvis">
-      <tt>utils/LLVMVisualizers/llvm.natvis</tt></a> and 
-    <a href="http://llvm.org/svn/llvm-project/cfe/trunk/utils/ClangVisualizers/clang.natvis">
-      <tt>utils/ClangVisualizers/clang.natvis</tt></a> provide debugger visualizers 
+  <p>The files
+    <a href="https://github.com/llvm/llvm-project/blob/master/llvm/utils/LLVMVisualizers/llvm.natvis">
+      <tt>llvm/utils/LLVMVisualizers/llvm.natvis</tt></a> and
+    <a href="https://github.com/llvm/llvm-project/blob/master/clang/utils/ClangVisualizers/clang.natvis">
+      <tt>clang/utils/ClangVisualizers/clang.natvis</tt></a> provide debugger visualizers
       that make debugging of more complex data types much easier.</p>
-  <p>For Visual Studio 2013 only, put the files into 
-    <tt>%USERPROFILE%\Documents\Visual Studio 2013\Visualizers</tt> or 
+  <p>For Visual Studio 2013 only, put the files into
+    <tt>%USERPROFILE%\Documents\Visual Studio 2013\Visualizers</tt> or
     create a symbolic link so they update automatically.</p>
   <p>For later versions of Visual Studio, no installation is required.
     Note also that later versions of Visual Studio also display better visualizations.</p>

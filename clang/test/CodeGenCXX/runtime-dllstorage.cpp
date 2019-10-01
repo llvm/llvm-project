@@ -14,7 +14,7 @@
 
 // RUN: %clang_cc1 -triple i686-windows-gnu -std=c++11 -fdeclspec -fms-compatibility -fexceptions -fcxx-exceptions -emit-llvm -o - %s | FileCheck -allow-deprecated-dag-overlap %s -check-prefix CHECK-IA -check-prefix CHECK-STATIC-IA
 // RUN: %clang_cc1 -triple i686-windows-gnu -std=c++11 -fdeclspec -fms-compatibility -fexceptions -fcxx-exceptions -flto-visibility-public-std -emit-llvm -o - %s | FileCheck -allow-deprecated-dag-overlap %s -check-prefix CHECK-IA -check-prefix CHECK-STATIC-IA
-// RUN: %clang_cc1 -triple i686-windows-cygnus -std=c++11 -fdeclspec -fms-compatibility -fexceptions -fcxx-exceptions -emit-llvm -o - %s | FileCheck -allow-deprecated-dag-overlap %s -check-prefix CHECK-IA -check-prefix CHECK-DYNAMIC-IA
+// RUN: %clang_cc1 -triple i686-windows-cygnus -std=c++11 -fdeclspec -fms-compatibility -fexceptions -fcxx-exceptions -emit-llvm -o - %s | FileCheck -allow-deprecated-dag-overlap %s -check-prefix CHECK-IA -check-prefix CHECK-STATIC-IA
 // RUN: %clang_cc1 -triple i686-windows-cygnus -std=c++11 -fdeclspec -fms-compatibility -fexceptions -fcxx-exceptions -flto-visibility-public-std -emit-llvm -o - %s | FileCheck -allow-deprecated-dag-overlap %s -check-prefix CHECK-IA -check-prefix CHECK-STATIC-IA
 
 #if defined(IMPORT_DECLARATIONS)
@@ -108,7 +108,7 @@ void l() {
 // CHECK-MS-DAG: @_Init_thread_epoch = external thread_local global i32
 // CHECK-MS-DAG: declare dso_local i32 @__tlregdtor(void ()*)
 // CHECK-MS-DAG: declare dso_local i32 @atexit(void ()*)
-// CHECK-MS-DYNAMIC-DAG: declare dllimport {{.*}} void @_CxxThrowException
+// CHECK-MS-DYNAMIC-DAG: declare {{.*}} void @_CxxThrowException
 // CHECK-MS-STATIC-DAG: declare {{.*}} void @_CxxThrowException
 // CHECK-MS-DAG: declare dso_local noalias i8* @"??2@YAPAXI@Z"
 // CHECK-MS-DAG: declare dso_local void @_Init_thread_header(i32*)

@@ -13,3 +13,13 @@ c:@N@chns@S@chcls@F@chf4#I# ctu-chain.cpp.ast
 c:@N@chns@F@chf2#I# ctu-chain.cpp.ast
 c:@F@fun_using_anon_struct#I# ctu-other.cpp.ast
 c:@F@other_macro_diag#I# ctu-other.cpp.ast
+c:@extInt ctu-other.cpp.ast
+c:@N@intns@extInt ctu-other.cpp.ast
+c:@extS ctu-other.cpp.ast
+c:@S@A@a ctu-other.cpp.ast
+c:@extSC ctu-other.cpp.ast
+c:@S@ST@sc ctu-other.cpp.ast
+c:@extSCN ctu-other.cpp.ast
+c:@extSubSCN ctu-other.cpp.ast
+c:@extSCC ctu-other.cpp.ast
+c:@extU ctu-other.cpp.ast

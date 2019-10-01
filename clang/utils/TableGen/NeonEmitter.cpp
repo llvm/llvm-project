@@ -1,9 +1,8 @@
 //===- NeonEmitter.cpp - Generate arm_neon.h for use with clang -*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -2457,9 +2456,7 @@ void NeonEmitter::run(raw_ostream &OS) {
   for (auto *I : Defs)
     I->indexBody();
 
-  std::stable_sort(
-      Defs.begin(), Defs.end(),
-      [](const Intrinsic *A, const Intrinsic *B) { return *A < *B; });
+  llvm::stable_sort(Defs, llvm::less_ptr<Intrinsic>());
 
   // Only emit a def when its requirements have been met.
   // FIXME: This loop could be made faster, but it's fast enough for now.
@@ -2472,7 +2469,7 @@ void NeonEmitter::run(raw_ostream &OS) {
          I != Defs.end(); /*No step*/) {
       bool DependenciesSatisfied = true;
       for (auto *II : (*I)->getDependencies()) {
-        if (std::find(Defs.begin(), Defs.end(), II) != Defs.end())
+        if (llvm::is_contained(Defs, II))
           DependenciesSatisfied = false;
       }
       if (!DependenciesSatisfied) {
@@ -2566,9 +2563,7 @@ void NeonEmitter::runFP16(raw_ostream &OS) {
   for (auto *I : Defs)
     I->indexBody();
 
-  std::stable_sort(
-      Defs.begin(), Defs.end(),
-      [](const Intrinsic *A, const Intrinsic *B) { return *A < *B; });
+  llvm::stable_sort(Defs, llvm::less_ptr<Intrinsic>());
 
   // Only emit a def when its requirements have been met.
   // FIXME: This loop could be made faster, but it's fast enough for now.
@@ -2581,7 +2576,7 @@ void NeonEmitter::runFP16(raw_ostream &OS) {
          I != Defs.end(); /*No step*/) {
       bool DependenciesSatisfied = true;
       for (auto *II : (*I)->getDependencies()) {
-        if (std::find(Defs.begin(), Defs.end(), II) != Defs.end())
+        if (llvm::is_contained(Defs, II))
           DependenciesSatisfied = false;
       }
       if (!DependenciesSatisfied) {

@@ -1,9 +1,8 @@
 //===--- StmtCXX.h - Classes for representing C++ statements ----*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -56,6 +55,10 @@ public:
   }
 
   child_range children() { return child_range(&HandlerBlock, &HandlerBlock+1); }
+
+  const_child_range children() const {
+    return const_child_range(&HandlerBlock, &HandlerBlock + 1);
+  }
 
   friend class ASTStmtReader;
 };
@@ -114,6 +117,10 @@ public:
 
   child_range children() {
     return child_range(getStmts(), getStmts() + getNumHandlers() + 1);
+  }
+
+  const_child_range children() const {
+    return const_child_range(getStmts(), getStmts() + getNumHandlers() + 1);
   }
 };
 
@@ -209,6 +216,10 @@ public:
   child_range children() {
     return child_range(&SubExprs[0], &SubExprs[END]);
   }
+
+  const_child_range children() const {
+    return const_child_range(&SubExprs[0], &SubExprs[END]);
+  }
 };
 
 /// Representation of a Microsoft __if_exists or __if_not_exists
@@ -289,6 +300,10 @@ public:
 
   child_range children() {
     return child_range(&SubStmt, &SubStmt+1);
+  }
+
+  const_child_range children() const {
+    return const_child_range(&SubStmt, &SubStmt + 1);
   }
 
   static bool classof(const Stmt *T) {
@@ -416,6 +431,12 @@ public:
                        getStoredStmts() + SubStmt::FirstParamMove + NumParams);
   }
 
+  const_child_range children() const {
+    return const_child_range(getStoredStmts(), getStoredStmts() +
+                                                   SubStmt::FirstParamMove +
+                                                   NumParams);
+  }
+
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == CoroutineBodyStmtClass;
   }
@@ -478,6 +499,13 @@ public:
       return child_range(SubStmts + SubStmt::PromiseCall,
                          SubStmts + SubStmt::Count);
     return child_range(SubStmts, SubStmts + SubStmt::Count);
+  }
+
+  const_child_range children() const {
+    if (!getOperand())
+      return const_child_range(SubStmts + SubStmt::PromiseCall,
+                               SubStmts + SubStmt::Count);
+    return const_child_range(SubStmts, SubStmts + SubStmt::Count);
   }
 
   static bool classof(const Stmt *T) {

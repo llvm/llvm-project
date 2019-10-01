@@ -27,12 +27,12 @@ __attribute__((amdgpu_waves_per_eu(2, 4))) void func_waves_per_eu_2_4() {} // ex
 __attribute__((amdgpu_num_sgpr(32))) void func_num_sgpr_32() {} // expected-error {{'amdgpu_num_sgpr' attribute only applies to kernel functions}}
 __attribute__((amdgpu_num_vgpr(64))) void func_num_vgpr_64() {} // expected-error {{'amdgpu_num_vgpr' attribute only applies to kernel functions}}
 
-__attribute__((amdgpu_flat_work_group_size("ABC", "ABC"))) kernel void kernel_flat_work_group_size_ABC_ABC() {} // expected-error {{'amdgpu_flat_work_group_size' attribute requires an integer constant}}
-__attribute__((amdgpu_flat_work_group_size(32, "ABC"))) kernel void kernel_flat_work_group_size_32_ABC() {} // expected-error {{'amdgpu_flat_work_group_size' attribute requires an integer constant}}
-__attribute__((amdgpu_flat_work_group_size("ABC", 64))) kernel void kernel_flat_work_group_size_ABC_64() {} // expected-error {{'amdgpu_flat_work_group_size' attribute requires an integer constant}}
-__attribute__((amdgpu_waves_per_eu("ABC"))) kernel void kernel_waves_per_eu_ABC() {} // expected-error {{'amdgpu_waves_per_eu' attribute requires an integer constant}}
-__attribute__((amdgpu_waves_per_eu(2, "ABC"))) kernel void kernel_waves_per_eu_2_ABC() {} // expected-error {{'amdgpu_waves_per_eu' attribute requires an integer constant}}
-__attribute__((amdgpu_waves_per_eu("ABC", 4))) kernel void kernel_waves_per_eu_ABC_4() {} // expected-error {{'amdgpu_waves_per_eu' attribute requires an integer constant}}
+__attribute__((amdgpu_flat_work_group_size("ABC", "ABC"))) kernel void kernel_flat_work_group_size_ABC_ABC() {} // expected-error {{'amdgpu_flat_work_group_size' attribute requires parameter 0 to be an integer constant}}
+__attribute__((amdgpu_flat_work_group_size(32, "ABC"))) kernel void kernel_flat_work_group_size_32_ABC() {} // expected-error {{'amdgpu_flat_work_group_size' attribute requires parameter 1 to be an integer constant}}
+__attribute__((amdgpu_flat_work_group_size("ABC", 64))) kernel void kernel_flat_work_group_size_ABC_64() {} // expected-error {{'amdgpu_flat_work_group_size' attribute requires parameter 0 to be an integer constant}}
+__attribute__((amdgpu_waves_per_eu("ABC"))) kernel void kernel_waves_per_eu_ABC() {} // expected-error {{'amdgpu_waves_per_eu' attribute requires parameter 0 to be an integer constant}}
+__attribute__((amdgpu_waves_per_eu(2, "ABC"))) kernel void kernel_waves_per_eu_2_ABC() {} // expected-error {{'amdgpu_waves_per_eu' attribute requires parameter 1 to be an integer constant}}
+__attribute__((amdgpu_waves_per_eu("ABC", 4))) kernel void kernel_waves_per_eu_ABC_4() {} // expected-error {{'amdgpu_waves_per_eu' attribute requires parameter 0 to be an integer constant}}
 __attribute__((amdgpu_num_sgpr("ABC"))) kernel void kernel_num_sgpr_ABC() {} // expected-error {{'amdgpu_num_sgpr' attribute requires an integer constant}}
 __attribute__((amdgpu_num_vgpr("ABC"))) kernel void kernel_num_vgpr_ABC() {} // expected-error {{'amdgpu_num_vgpr' attribute requires an integer constant}}
 

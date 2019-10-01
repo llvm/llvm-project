@@ -20,10 +20,16 @@ public:
   }
 };
 
+template<typename ...T> int *arr_new(T ...v) {
+  return new int[]{v...};
+}
+
 #else
 
 New<int> *clone_new(New<int> *n) {
   return n->clone();
 }
+
+int *use_arr_new = arr_new(1, 2, 3);
 
 #endif

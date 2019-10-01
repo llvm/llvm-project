@@ -15,28 +15,46 @@ void foo() {}
 // CHECK: template <typename T, int N> int tmain(T argc, char **argv)
 // CHECK: static int a;
 // CHECK-NEXT: #pragma omp critical{{$}}
-// CHECK-NEXT: a = 2;
+// CHECK-NEXT: a = argv[0][0];
 // CHECK-NEXT: ++a;
+// CHECK-NEXT: #pragma omp critical{{$}}
+// CHECK-NEXT: {
+// CHECK-NEXT: int b = 10;
+// CHECK-NEXT: T c = 100;
+// CHECK-NEXT: a = b + c;
+// CHECK-NEXT: }
 // CHECK-NEXT: #pragma omp critical (the_name) hint(N){{$}}
 // CHECK-NEXT: foo();
 // CHECK-NEXT: return N;
 // CHECK: template<> int tmain<int, 4>(int argc, char **argv)
 template <typename T, int N>
-int tmain (T argc, char **argv) {
+int tmain(T argc, char **argv) {
   T b = argc, c, d, e, f, g;
   static int a;
 // CHECK: static int a;
 #pragma omp critical
-  a=2;
-// CHECK-NEXT: #pragma omp critical
-// CHECK-NEXT: a = 2;
-// CHECK-NEXT: ++a;
+  a = argv[0][0];
   ++a;
-#pragma omp critical  (the_name) hint(N)
+  // CHECK-NEXT: #pragma omp critical
+  // CHECK-NEXT: a = argv[0][0];
+  // CHECK-NEXT: ++a;
+  // CHECK-NEXT: #pragma omp critical{{$}}
+  // CHECK-NEXT: {
+  // CHECK-NEXT: int b = 10;
+  // CHECK-NEXT: int c = 100;
+  // CHECK-NEXT: a = b + c;
+  // CHECK-NEXT: }
+#pragma omp critical
+  {
+    int b = 10;
+    T c = 100;
+    a = b + c;
+  }
+#pragma omp critical(the_name) hint(N)
   foo();
-// CHECK-NEXT: #pragma omp critical (the_name) hint(4)
-// CHECK-NEXT: foo();
-// CHECK-NEXT: return 4;
+  // CHECK-NEXT: #pragma omp critical (the_name) hint(4)
+  // CHECK-NEXT: foo();
+  // CHECK-NEXT: return 4;
   return N;
 }
 

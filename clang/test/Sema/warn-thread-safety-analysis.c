@@ -77,7 +77,7 @@ int main() {
   Foo_fun1(1); // expected-warning{{calling function 'Foo_fun1' requires holding mutex 'mu2'}} \
                   expected-warning{{calling function 'Foo_fun1' requires holding mutex 'mu1' exclusively}}
 
-  mutex_exclusive_lock(&mu1);
+  mutex_exclusive_lock(&mu1); // expected-note{{mutex acquired here}}
   mutex_shared_lock(&mu2);
   Foo_fun1(1);
 
@@ -117,11 +117,11 @@ int main() {
   (void)(*d_ == 1);
   mutex_unlock(foo_.mu_);
 
-  mutex_exclusive_lock(&mu1);
+  mutex_exclusive_lock(&mu1);    // expected-note {{mutex acquired here}}
   mutex_shared_unlock(&mu1);     // expected-warning {{releasing mutex 'mu1' using shared access, expected exclusive access}}
   mutex_exclusive_unlock(&mu1);  // expected-warning {{releasing mutex 'mu1' that was not held}}
 
-  mutex_shared_lock(&mu1);
+  mutex_shared_lock(&mu1);      // expected-note {{mutex acquired here}}
   mutex_exclusive_unlock(&mu1); // expected-warning {{releasing mutex 'mu1' using exclusive access, expected shared access}}
   mutex_shared_unlock(&mu1);    // expected-warning {{releasing mutex 'mu1' that was not held}}
 

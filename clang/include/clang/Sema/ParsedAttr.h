@@ -1,9 +1,8 @@
 //======- ParsedAttr.h - Parsed attribute sets ------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -168,6 +167,8 @@ public:
 private:
   IdentifierInfo *AttrName;
   IdentifierInfo *ScopeName;
+  IdentifierInfo *MacroII = nullptr;
+  SourceLocation MacroExpansionLoc;
   SourceRange AttrRange;
   SourceLocation ScopeLoc;
   SourceLocation EllipsisLoc;
@@ -439,7 +440,7 @@ public:
   }
 
   bool isUsedAsTypeAttr() const { return UsedAsTypeAttr; }
-  void setUsedAsTypeAttr() { UsedAsTypeAttr = true; }
+  void setUsedAsTypeAttr(bool Used = true) { UsedAsTypeAttr = Used; }
 
   /// True if the attribute is specified using '#pragma clang attribute'.
   bool isPragmaClangAttribute() const { return IsPragmaClangAttribute; }
@@ -548,6 +549,27 @@ public:
     return getPropertyDataBuffer().SetterId;
   }
 
+  /// Set the macro identifier info object that this parsed attribute was
+  /// declared in if it was declared in a macro. Also set the expansion location
+  /// of the macro.
+  void setMacroIdentifier(IdentifierInfo *MacroName, SourceLocation Loc) {
+    MacroII = MacroName;
+    MacroExpansionLoc = Loc;
+  }
+
+  /// Returns true if this attribute was declared in a macro.
+  bool hasMacroIdentifier() const { return MacroII != nullptr; }
+
+  /// Return the macro identifier if this attribute was declared in a macro.
+  /// nullptr is returned if it was not declared in a macro.
+  IdentifierInfo *getMacroIdentifier() const { return MacroII; }
+
+  SourceLocation getMacroExpansionLoc() const {
+    assert(hasMacroIdentifier() && "Can only get the macro expansion location "
+                                   "if this attribute has a macro identifier.");
+    return MacroExpansionLoc;
+  }
+
   /// Get an index into the attribute spelling list
   /// defined in Attr.td. This index is used by an attribute
   /// to pretty print itself.
@@ -577,6 +599,25 @@ public:
   /// parsed attribute does not have a semantic equivalent, or would not have
   /// a Spelling enumeration, the value UINT_MAX is returned.
   unsigned getSemanticSpelling() const;
+
+  /// If this is an OpenCL addr space attribute returns its representation
+  /// in LangAS, otherwise returns default addr space.
+  LangAS asOpenCLLangAS() const {
+    switch (getKind()) {
+    case ParsedAttr::AT_OpenCLConstantAddressSpace:
+      return LangAS::opencl_constant;
+    case ParsedAttr::AT_OpenCLGlobalAddressSpace:
+      return LangAS::opencl_global;
+    case ParsedAttr::AT_OpenCLLocalAddressSpace:
+      return LangAS::opencl_local;
+    case ParsedAttr::AT_OpenCLPrivateAddressSpace:
+      return LangAS::opencl_private;
+    case ParsedAttr::AT_OpenCLGenericAddressSpace:
+      return LangAS::opencl_generic;
+    default:
+      return LangAS::Default;
+    }
+  }
 };
 
 class AttributePool;

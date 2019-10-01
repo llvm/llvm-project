@@ -138,7 +138,7 @@ how to fix it, include that as well. Patches are also welcome.
 License
 -------
 
-The project is licensed under University of Illinois/NCSA Open Source License.
+The project is licensed under Apache-2.0 with LLVM exceptions.
 See LICENSE.TXT for details.
 
   [1]: http://clang.llvm.org/docs/JSONCompilationDatabase.html

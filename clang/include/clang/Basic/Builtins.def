@@ -1,9 +1,8 @@
 //===--- Builtins.def - Builtin function info database ----------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -51,8 +50,10 @@
 //  L   -> long (e.g. Li for 'long int', Ld for 'long double')
 //  LL  -> long long (e.g. LLi for 'long long int', LLd for __float128)
 //  LLL -> __int128_t (e.g. LLLi)
-//  W   -> int64_t
+//  Z   -> int32_t (require a native 32-bit integer type on the target)
+//  W   -> int64_t (require a native 64-bit integer type on the target)
 //  N   -> 'int' size if target is LP64, 'L' otherwise.
+//  O   -> long for OpenCL targets, long long otherwise.
 //  S   -> signed
 //  U   -> unsigned
 //  I   -> Required to constant fold to an integer constant expression.
@@ -93,6 +94,8 @@
 //  j -> returns_twice (like setjmp)
 //  u -> arguments are not evaluated for their side-effects
 //  V:N: -> requires vectors of at least N bits to be legal
+//  C<N,M_0,...,M_k> -> callback behavior: argument N is called with argument
+//                      M_0, ..., M_k as payload
 //  FIXME: gcc has nonnull
 
 #if defined(BUILTIN) && !defined(LIBBUILTIN)
@@ -417,25 +420,27 @@ BUILTIN(__builtin_clrsb  , "ii"  , "nc")
 BUILTIN(__builtin_clrsbl , "iLi" , "nc")
 BUILTIN(__builtin_clrsbll, "iLLi", "nc")
 
-// FIXME: These type signatures are not correct for targets with int != 32-bits
-// or with ULL != 64-bits.
+// The following builtins rely on that char == 8 bits, short == 16 bits and that
+// there exists native types on the target that are 32- and 64-bits wide, unless
+// these conditions are fulfilled these builtins will operate on a not intended
+// bitwidth.
 BUILTIN(__builtin_bswap16, "UsUs", "nc")
-BUILTIN(__builtin_bswap32, "UiUi", "nc")
-BUILTIN(__builtin_bswap64, "ULLiULLi", "nc")
+BUILTIN(__builtin_bswap32, "UZiUZi", "nc")
+BUILTIN(__builtin_bswap64, "UWiUWi", "nc")
 
 BUILTIN(__builtin_bitreverse8, "UcUc", "nc")
 BUILTIN(__builtin_bitreverse16, "UsUs", "nc")
-BUILTIN(__builtin_bitreverse32, "UiUi", "nc")
-BUILTIN(__builtin_bitreverse64, "ULLiULLi", "nc")
+BUILTIN(__builtin_bitreverse32, "UZiUZi", "nc")
+BUILTIN(__builtin_bitreverse64, "UWiUWi", "nc")
 
 BUILTIN(__builtin_rotateleft8, "UcUcUc", "nc")
 BUILTIN(__builtin_rotateleft16, "UsUsUs", "nc")
-BUILTIN(__builtin_rotateleft32, "UiUiUi", "nc")
-BUILTIN(__builtin_rotateleft64, "ULLiULLiULLi", "nc")
+BUILTIN(__builtin_rotateleft32, "UZiUZiUZi", "nc")
+BUILTIN(__builtin_rotateleft64, "UWiUWiUWi", "nc")
 BUILTIN(__builtin_rotateright8, "UcUcUc", "nc")
 BUILTIN(__builtin_rotateright16, "UsUsUs", "nc")
-BUILTIN(__builtin_rotateright32, "UiUiUi", "nc")
-BUILTIN(__builtin_rotateright64, "ULLiULLiULLi", "nc")
+BUILTIN(__builtin_rotateright32, "UZiUZiUZi", "nc")
+BUILTIN(__builtin_rotateright64, "UWiUWiWi", "nc")
 
 // Random GCC builtins
 BUILTIN(__builtin_constant_p, "i.", "nctu")
@@ -447,7 +452,7 @@ BUILTIN(__builtin_va_end, "vA", "n")
 BUILTIN(__builtin_va_copy, "vAA", "n")
 BUILTIN(__builtin_stdarg_start, "vA.", "n")
 BUILTIN(__builtin_assume_aligned, "v*vC*z.", "nc")
-BUILTIN(__builtin_bcmp, "iv*v*z", "Fn")
+BUILTIN(__builtin_bcmp, "ivC*vC*z", "Fn")
 BUILTIN(__builtin_bcopy, "vv*v*z", "n")
 BUILTIN(__builtin_bzero, "vv*z", "nF")
 BUILTIN(__builtin_fprintf, "iP*cC*.", "Fp:1:")
@@ -499,6 +504,7 @@ BUILTIN(__builtin_vsprintf, "ic*cC*a", "nFP:1:")
 BUILTIN(__builtin_vsnprintf, "ic*zcC*a", "nFP:2:")
 BUILTIN(__builtin_thread_pointer, "v*", "nc")
 BUILTIN(__builtin_launder, "v*v*", "nt")
+LANGBUILTIN(__builtin_is_constant_evaluated, "b", "n", CXX_LANG)
 
 // GCC exception builtins
 BUILTIN(__builtin_eh_return, "vzv*", "r") // FIXME: Takes intptr_t, not size_t!
@@ -819,6 +825,14 @@ LANGBUILTIN(_interlockedbittestandset64,     "UcWiD*Wi", "n", ALL_MS_LANGUAGES)
 LANGBUILTIN(_interlockedbittestandset_acq,   "UcNiD*Ni", "n", ALL_MS_LANGUAGES)
 LANGBUILTIN(_interlockedbittestandset_nf,    "UcNiD*Ni", "n", ALL_MS_LANGUAGES)
 LANGBUILTIN(_interlockedbittestandset_rel,   "UcNiD*Ni", "n", ALL_MS_LANGUAGES)
+LANGBUILTIN(__iso_volatile_load8,   "ccCD*",     "n", ALL_MS_LANGUAGES)
+LANGBUILTIN(__iso_volatile_load16,  "ssCD*",     "n", ALL_MS_LANGUAGES)
+LANGBUILTIN(__iso_volatile_load32,  "iiCD*",     "n", ALL_MS_LANGUAGES)
+LANGBUILTIN(__iso_volatile_load64,  "LLiLLiCD*", "n", ALL_MS_LANGUAGES)
+LANGBUILTIN(__iso_volatile_store8,  "vcD*c",     "n", ALL_MS_LANGUAGES)
+LANGBUILTIN(__iso_volatile_store16, "vsD*s",     "n", ALL_MS_LANGUAGES)
+LANGBUILTIN(__iso_volatile_store32, "viD*i",     "n", ALL_MS_LANGUAGES)
+LANGBUILTIN(__iso_volatile_store64, "vLLiD*LLi", "n", ALL_MS_LANGUAGES)
 LANGBUILTIN(__noop,           "i.",  "n", ALL_MS_LANGUAGES)
 LANGBUILTIN(__lzcnt16, "UsUs",    "nc", ALL_MS_LANGUAGES)
 LANGBUILTIN(__lzcnt,   "UiUi",    "nc", ALL_MS_LANGUAGES)
@@ -830,12 +844,12 @@ LANGBUILTIN(_ReturnAddress, "v*", "n", ALL_MS_LANGUAGES)
 LANGBUILTIN(_rotl8,  "UcUcUc",    "n", ALL_MS_LANGUAGES)
 LANGBUILTIN(_rotl16, "UsUsUc",    "n", ALL_MS_LANGUAGES)
 LANGBUILTIN(_rotl,   "UiUii",     "n", ALL_MS_LANGUAGES)
-LANGBUILTIN(_lrotl,  "UNiUNii",   "n", ALL_MS_LANGUAGES)
+LANGBUILTIN(_lrotl,  "ULiULii",   "n", ALL_MS_LANGUAGES)
 LANGBUILTIN(_rotl64, "UWiUWii",   "n", ALL_MS_LANGUAGES)
 LANGBUILTIN(_rotr8,  "UcUcUc",    "n", ALL_MS_LANGUAGES)
 LANGBUILTIN(_rotr16, "UsUsUc",    "n", ALL_MS_LANGUAGES)
 LANGBUILTIN(_rotr,   "UiUii",     "n", ALL_MS_LANGUAGES)
-LANGBUILTIN(_lrotr,  "UNiUNii",   "n", ALL_MS_LANGUAGES)
+LANGBUILTIN(_lrotr,  "ULiULii",   "n", ALL_MS_LANGUAGES)
 LANGBUILTIN(_rotr64, "UWiUWii",   "n", ALL_MS_LANGUAGES)
 LANGBUILTIN(__va_start,       "vc**.", "nt", ALL_MS_LANGUAGES)
 LANGBUILTIN(__fastfail, "vUi",    "nr", ALL_MS_LANGUAGES)
@@ -952,6 +966,7 @@ LIBBUILTIN(strndup, "c*cC*z",     "f",     "string.h", ALL_GNU_LANGUAGES)
 LIBBUILTIN(index, "c*cC*i",       "f",     "strings.h", ALL_GNU_LANGUAGES)
 LIBBUILTIN(rindex, "c*cC*i",      "f",     "strings.h", ALL_GNU_LANGUAGES)
 LIBBUILTIN(bzero, "vv*z",         "f",     "strings.h", ALL_GNU_LANGUAGES)
+LIBBUILTIN(bcmp, "ivC*vC*z",      "f",     "strings.h", ALL_GNU_LANGUAGES)
 // In some systems str[n]casejmp is a macro that expands to _str[n]icmp.
 // We undefine then here to avoid wrong name.
 #undef strcasecmp
@@ -961,6 +976,9 @@ LIBBUILTIN(strncasecmp, "icC*cC*z", "f",   "strings.h", ALL_GNU_LANGUAGES)
 // POSIX unistd.h
 LIBBUILTIN(_exit, "vi",           "fr",    "unistd.h", ALL_GNU_LANGUAGES)
 LIBBUILTIN(vfork, "p",            "fj",    "unistd.h", ALL_LANGUAGES)
+// POSIX pthread.h
+LIBBUILTIN(pthread_create, "",  "fC<2,3>", "pthread.h", ALL_GNU_LANGUAGES)
+
 // POSIX setjmp.h
 
 LIBBUILTIN(_setjmp, "iJ",         "fj",   "setjmp.h", ALL_LANGUAGES)

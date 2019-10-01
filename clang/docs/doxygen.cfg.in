@@ -384,7 +384,7 @@ TYPEDEF_HIDES_STRUCT   = NO
 # the optimal cache size from a speed point of view.
 # Minimum value: 0, maximum value: 9, default value: 0.
 
-LOOKUP_CACHE_SIZE      = 2
+LOOKUP_CACHE_SIZE      = 3
 
 #---------------------------------------------------------------------------
 # Build related configuration options

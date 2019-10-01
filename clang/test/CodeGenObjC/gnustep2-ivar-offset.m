@@ -19,10 +19,12 @@
 @package
 // CHECK: @__objc_ivar_offset_ANObject._intIvar.i = hidden global i32 16
   int         _intIvar;
+  _Bool       boolIvar;
 }
 @end
 @implementation ANObject @end
 
 // Check that the ivar metadata contains 3 entries of the correct form and correctly sets the size.
-// CHECK: @.objc_ivar_list = private global { i32, i64, [3 x { i8*, i8*, i32*, i32, i32 }] } { i32 3, i64 32,
-// Check that we're emitting the extended type encoding for the string ivar.
+// CHECK: @.objc_ivar_list = private global { i32, i64, [4 x { i8*, i8*, i32*, i32, i32 }] } { i32 4, i64 32,
+// Check that we emit 1 as the size of _Bool, not 0.
+// CHECK-SAME:  @__objc_ivar_offset_ANObject.boolIvar.B, i32 1, i32 4

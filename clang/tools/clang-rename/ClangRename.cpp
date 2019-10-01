@@ -1,9 +1,8 @@
 //===--- tools/extra/clang-rename/ClangRename.cpp - Clang rename tool -----===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -223,8 +222,8 @@ int main(int argc, const char **argv) {
 
     Tool.applyAllReplacements(Rewrite);
     for (const auto &File : Files) {
-      const auto *Entry = FileMgr.getFile(File);
-      const auto ID = Sources.getOrCreateFileID(Entry, SrcMgr::C_User);
+      auto Entry = FileMgr.getFile(File);
+      const auto ID = Sources.getOrCreateFileID(*Entry, SrcMgr::C_User);
       Rewrite.getEditBuffer(ID).write(outs());
     }
   }

@@ -1,9 +1,8 @@
 //===--- MicrosoftCXXABI.cpp - Emit LLVM Code from ASTs for a Module ------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -27,7 +26,6 @@
 #include "clang/AST/VTableBuilder.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Intrinsics.h"
 
 using namespace clang;
@@ -207,7 +205,7 @@ public:
   // delegate to or alias the base destructor.
 
   AddedStructorArgs
-  buildStructorSignature(const CXXMethodDecl *MD, StructorType T,
+  buildStructorSignature(GlobalDecl GD,
                          SmallVectorImpl<CanQualType> &ArgTys) override;
 
   /// Non-base dtors should be emitted as delegating thunks in this ABI.
@@ -396,7 +394,8 @@ public:
                        llvm::GlobalVariable *DeclPtr,
                        bool PerformInit) override;
   void registerGlobalDtor(CodeGenFunction &CGF, const VarDecl &D,
-                          llvm::Constant *Dtor, llvm::Constant *Addr) override;
+                          llvm::FunctionCallee Dtor,
+                          llvm::Constant *Addr) override;
 
   // ==== Notes on array cookies =========
   //
@@ -674,7 +673,7 @@ public:
                                   llvm::Value *MemPtr,
                                   const MemberPointerType *MPT) override;
 
-  void emitCXXStructor(const CXXMethodDecl *MD, StructorType Type) override;
+  void emitCXXStructor(GlobalDecl GD) override;
 
   llvm::StructType *getCatchableTypeType() {
     if (CatchableTypeType)
@@ -726,18 +725,20 @@ public:
     return ThrowInfoType;
   }
 
-  llvm::Constant *getThrowFn() {
+  llvm::FunctionCallee getThrowFn() {
     // _CxxThrowException is passed an exception object and a ThrowInfo object
     // which describes the exception.
     llvm::Type *Args[] = {CGM.Int8PtrTy, getThrowInfoType()->getPointerTo()};
     llvm::FunctionType *FTy =
         llvm::FunctionType::get(CGM.VoidTy, Args, /*IsVarArgs=*/false);
-    auto *Fn = cast<llvm::Function>(
-        CGM.CreateRuntimeFunction(FTy, "_CxxThrowException"));
+    llvm::FunctionCallee Throw =
+        CGM.CreateRuntimeFunction(FTy, "_CxxThrowException");
     // _CxxThrowException is stdcall on 32-bit x86 platforms.
-    if (CGM.getTarget().getTriple().getArch() == llvm::Triple::x86)
-      Fn->setCallingConv(llvm::CallingConv::X86_StdCall);
-    return Fn;
+    if (CGM.getTarget().getTriple().getArch() == llvm::Triple::x86) {
+      if (auto *Fn = dyn_cast<llvm::Function>(Throw.getCallee()))
+        Fn->setCallingConv(llvm::CallingConv::X86_StdCall);
+    }
+    return Throw;
   }
 
   llvm::Function *getAddrOfCXXCtorClosure(const CXXConstructorDecl *CD,
@@ -810,7 +811,7 @@ MicrosoftCXXABI::getRecordArgABI(const CXXRecordDecl *RD) const {
     // Use the simple Itanium rules for now.
     // FIXME: This is incompatible with MSVC for arguments with a dtor and no
     // copy ctor.
-    return !canCopyArgument(RD) ? RAA_Indirect : RAA_Default;
+    return !RD->canPassInRegisters() ? RAA_Indirect : RAA_Default;
 
   case llvm::Triple::x86:
     // All record arguments are passed in memory on x86.  Decide whether to
@@ -819,7 +820,7 @@ MicrosoftCXXABI::getRecordArgABI(const CXXRecordDecl *RD) const {
 
     // If C++ prohibits us from making a copy, construct the arguments directly
     // into argument memory.
-    if (!canCopyArgument(RD))
+    if (!RD->canPassInRegisters())
       return RAA_DirectInMemory;
 
     // Otherwise, construct the argument into a temporary and copy the bytes
@@ -828,7 +829,7 @@ MicrosoftCXXABI::getRecordArgABI(const CXXRecordDecl *RD) const {
 
   case llvm::Triple::x86_64:
   case llvm::Triple::aarch64:
-    return !canCopyArgument(RD) ? RAA_Indirect : RAA_Default;
+    return !RD->canPassInRegisters() ? RAA_Indirect : RAA_Default;
   }
 
   llvm_unreachable("invalid enum");
@@ -853,7 +854,7 @@ void MicrosoftCXXABI::emitRethrow(CodeGenFunction &CGF, bool isNoReturn) {
   llvm::Value *Args[] = {
       llvm::ConstantPointerNull::get(CGM.Int8PtrTy),
       llvm::ConstantPointerNull::get(getThrowInfoType()->getPointerTo())};
-  auto *Fn = getThrowFn();
+  llvm::FunctionCallee Fn = getThrowFn();
   if (isNoReturn)
     CGF.EmitNoreturnRuntimeCallOrInvoke(Fn, Args);
   else
@@ -927,20 +928,20 @@ bool MicrosoftCXXABI::shouldTypeidBeNullChecked(bool IsDeref,
          !getContext().getASTRecordLayout(SrcDecl).hasExtendableVFPtr();
 }
 
-static llvm::CallSite emitRTtypeidCall(CodeGenFunction &CGF,
-                                       llvm::Value *Argument) {
+static llvm::CallBase *emitRTtypeidCall(CodeGenFunction &CGF,
+                                        llvm::Value *Argument) {
   llvm::Type *ArgTypes[] = {CGF.Int8PtrTy};
   llvm::FunctionType *FTy =
       llvm::FunctionType::get(CGF.Int8PtrTy, ArgTypes, false);
   llvm::Value *Args[] = {Argument};
-  llvm::Constant *Fn = CGF.CGM.CreateRuntimeFunction(FTy, "__RTtypeid");
+  llvm::FunctionCallee Fn = CGF.CGM.CreateRuntimeFunction(FTy, "__RTtypeid");
   return CGF.EmitRuntimeCallOrInvoke(Fn, Args);
 }
 
 void MicrosoftCXXABI::EmitBadTypeidCall(CodeGenFunction &CGF) {
-  llvm::CallSite Call =
+  llvm::CallBase *Call =
       emitRTtypeidCall(CGF, llvm::Constant::getNullValue(CGM.VoidPtrTy));
-  Call.setDoesNotReturn();
+  Call->setDoesNotReturn();
   CGF.Builder.CreateUnreachable();
 }
 
@@ -950,7 +951,7 @@ llvm::Value *MicrosoftCXXABI::EmitTypeid(CodeGenFunction &CGF,
                                          llvm::Type *StdTypeInfoPtrTy) {
   std::tie(ThisPtr, std::ignore, std::ignore) =
       performBaseAdjustment(CGF, ThisPtr, SrcRecordTy);
-  auto Typeid = emitRTtypeidCall(CGF, ThisPtr.getPointer()).getInstruction();
+  llvm::CallBase *Typeid = emitRTtypeidCall(CGF, ThisPtr.getPointer());
   return CGF.Builder.CreateBitCast(Typeid, StdTypeInfoPtrTy);
 }
 
@@ -985,13 +986,13 @@ llvm::Value *MicrosoftCXXABI::EmitDynamicCastCall(
   //   BOOL isReference)
   llvm::Type *ArgTypes[] = {CGF.Int8PtrTy, CGF.Int32Ty, CGF.Int8PtrTy,
                             CGF.Int8PtrTy, CGF.Int32Ty};
-  llvm::Constant *Function = CGF.CGM.CreateRuntimeFunction(
+  llvm::FunctionCallee Function = CGF.CGM.CreateRuntimeFunction(
       llvm::FunctionType::get(CGF.Int8PtrTy, ArgTypes, false),
       "__RTDynamicCast");
   llvm::Value *Args[] = {
       ThisPtr, Offset, SrcRTTI, DestRTTI,
       llvm::ConstantInt::get(CGF.Int32Ty, DestTy->isReferenceType())};
-  ThisPtr = CGF.EmitRuntimeCallOrInvoke(Function, Args).getInstruction();
+  ThisPtr = CGF.EmitRuntimeCallOrInvoke(Function, Args);
   return CGF.Builder.CreateBitCast(ThisPtr, DestLTy);
 }
 
@@ -1005,7 +1006,7 @@ MicrosoftCXXABI::EmitDynamicCastToVoid(CodeGenFunction &CGF, Address Value,
   // PVOID __RTCastToVoid(
   //   PVOID inptr)
   llvm::Type *ArgTypes[] = {CGF.Int8PtrTy};
-  llvm::Constant *Function = CGF.CGM.CreateRuntimeFunction(
+  llvm::FunctionCallee Function = CGF.CGM.CreateRuntimeFunction(
       llvm::FunctionType::get(CGF.Int8PtrTy, ArgTypes, false),
       "__RTCastToVoid");
   llvm::Value *Args[] = {Value.getPointer()};
@@ -1050,33 +1051,55 @@ bool MicrosoftCXXABI::hasMostDerivedReturn(GlobalDecl GD) const {
   return isDeletingDtor(GD);
 }
 
+static bool IsSizeGreaterThan128(const CXXRecordDecl *RD) {
+  return RD->getASTContext().getTypeSize(RD->getTypeForDecl()) > 128;
+}
+
+static bool hasMicrosoftABIRestrictions(const CXXRecordDecl *RD) {
+  // For AArch64, we use the C++14 definition of an aggregate, so we also
+  // check for:
+  //   No private or protected non static data members.
+  //   No base classes
+  //   No virtual functions
+  // Additionally, we need to ensure that there is a trivial copy assignment
+  // operator, a trivial destructor and no user-provided constructors.
+  if (RD->hasProtectedFields() || RD->hasPrivateFields())
+    return true;
+  if (RD->getNumBases() > 0)
+    return true;
+  if (RD->isPolymorphic())
+    return true;
+  if (RD->hasNonTrivialCopyAssignment())
+    return true;
+  for (const CXXConstructorDecl *Ctor : RD->ctors())
+    if (Ctor->isUserProvided())
+      return true;
+  if (RD->hasNonTrivialDestructor())
+    return true;
+  return false;
+}
+
 bool MicrosoftCXXABI::classifyReturnType(CGFunctionInfo &FI) const {
   const CXXRecordDecl *RD = FI.getReturnType()->getAsCXXRecordDecl();
   if (!RD)
     return false;
 
-  CharUnits Align = CGM.getContext().getTypeAlignInChars(FI.getReturnType());
-  if (FI.isInstanceMethod()) {
-    // If it's an instance method, aggregates are always returned indirectly via
-    // the second parameter.
-    FI.getReturnInfo() = ABIArgInfo::getIndirect(Align, /*ByVal=*/false);
-    FI.getReturnInfo().setSRetAfterThis(FI.isInstanceMethod());
+  bool isAArch64 = CGM.getTarget().getTriple().isAArch64();
+  bool isSimple = !isAArch64 || !hasMicrosoftABIRestrictions(RD);
+  bool isIndirectReturn =
+      isAArch64 ? (!RD->canPassInRegisters() ||
+                   IsSizeGreaterThan128(RD))
+                : !RD->isPOD();
+  bool isInstanceMethod = FI.isInstanceMethod();
 
-    // aarch64-windows requires that instance methods use X1 for the return
-    // address. So for aarch64-windows we do not mark the
-    // return as SRet.
-    FI.getReturnInfo().setSuppressSRet(CGM.getTarget().getTriple().getArch() ==
-                                       llvm::Triple::aarch64);
-    return true;
-  } else if (!RD->isPOD()) {
-    // If it's a free function, non-POD types are returned indirectly.
+  if (isIndirectReturn || !isSimple || isInstanceMethod) {
+    CharUnits Align = CGM.getContext().getTypeAlignInChars(FI.getReturnType());
     FI.getReturnInfo() = ABIArgInfo::getIndirect(Align, /*ByVal=*/false);
+    FI.getReturnInfo().setSRetAfterThis(isInstanceMethod);
 
-    // aarch64-windows requires that non-POD, non-instance returns use X0 for
-    // the return address. So for aarch64-windows we do not mark the return as
-    // SRet.
-    FI.getReturnInfo().setSuppressSRet(CGM.getTarget().getTriple().getArch() ==
-                                       llvm::Triple::aarch64);
+    FI.getReturnInfo().setInReg(isAArch64 &&
+                                !(isSimple && IsSizeGreaterThan128(RD)));
+
     return true;
   }
 
@@ -1233,16 +1256,17 @@ void MicrosoftCXXABI::EmitVBPtrStores(CodeGenFunction &CGF,
 }
 
 CGCXXABI::AddedStructorArgs
-MicrosoftCXXABI::buildStructorSignature(const CXXMethodDecl *MD, StructorType T,
+MicrosoftCXXABI::buildStructorSignature(GlobalDecl GD,
                                         SmallVectorImpl<CanQualType> &ArgTys) {
   AddedStructorArgs Added;
   // TODO: 'for base' flag
-  if (T == StructorType::Deleting) {
+  if (isa<CXXDestructorDecl>(GD.getDecl()) &&
+      GD.getDtorType() == Dtor_Deleting) {
     // The scalar deleting destructor takes an implicit int parameter.
     ArgTys.push_back(getContext().IntTy);
     ++Added.Suffix;
   }
-  auto *CD = dyn_cast<CXXConstructorDecl>(MD);
+  auto *CD = dyn_cast<CXXConstructorDecl>(GD.getDecl());
   if (!CD)
     return Added;
 
@@ -1552,9 +1576,8 @@ void MicrosoftCXXABI::EmitDestructorCall(CodeGenFunction &CGF,
   if (Type == Dtor_Complete && DD->getParent()->getNumVBases() == 0)
     Type = Dtor_Base;
 
-  CGCallee Callee =
-      CGCallee::forDirect(CGM.getAddrOfCXXStructor(DD, getFromDtorType(Type)),
-                          GlobalDecl(DD, Type));
+  GlobalDecl GD(DD, Type);
+  CGCallee Callee = CGCallee::forDirect(CGM.getAddrOfCXXStructor(GD), GD);
 
   if (DD->isVirtual()) {
     assert(Type != CXXDtorType::Dtor_Deleting &&
@@ -1568,10 +1591,9 @@ void MicrosoftCXXABI::EmitDestructorCall(CodeGenFunction &CGF,
     BaseDtorEndBB = EmitDtorCompleteObjectHandler(CGF);
   }
 
-  CGF.EmitCXXDestructorCall(DD, Callee, This.getPointer(),
+  CGF.EmitCXXDestructorCall(GD, Callee, This.getPointer(),
                             /*ImplicitParam=*/nullptr,
-                            /*ImplicitParamTy=*/QualType(), nullptr,
-                            getFromDtorType(Type));
+                            /*ImplicitParamTy=*/QualType(), nullptr);
   if (BaseDtorEndBB) {
     // Complete object handler should continue to be the remaining
     CGF.Builder.CreateBr(BaseDtorEndBB);
@@ -1885,8 +1907,8 @@ llvm::Value *MicrosoftCXXABI::EmitVirtualDestructorCall(
   // We have only one destructor in the vftable but can get both behaviors
   // by passing an implicit int parameter.
   GlobalDecl GD(Dtor, Dtor_Deleting);
-  const CGFunctionInfo *FInfo = &CGM.getTypes().arrangeCXXStructorDeclaration(
-      Dtor, StructorType::Deleting);
+  const CGFunctionInfo *FInfo =
+      &CGM.getTypes().arrangeCXXStructorDeclaration(GD);
   llvm::FunctionType *Ty = CGF.CGM.getTypes().GetFunctionType(*FInfo);
   CGCallee Callee = CGCallee::forVirtual(CE, GD, This, Ty);
 
@@ -1896,9 +1918,8 @@ llvm::Value *MicrosoftCXXABI::EmitVirtualDestructorCall(
       DtorType == Dtor_Deleting);
 
   This = adjustThisArgumentForVirtualFunctionCall(CGF, GD, This, true);
-  RValue RV =
-      CGF.EmitCXXDestructorCall(Dtor, Callee, This.getPointer(), ImplicitParam,
-                                Context.IntTy, CE, StructorType::Deleting);
+  RValue RV = CGF.EmitCXXDestructorCall(GD, Callee, This.getPointer(),
+                                        ImplicitParam, Context.IntTy, CE);
   return RV.getScalarVal();
 }
 
@@ -1996,7 +2017,7 @@ MicrosoftCXXABI::EmitVirtualMemPtrThunk(const CXXMethodDecl *MD,
   llvm::Value *Callee =
     CGF.Builder.CreateAlignedLoad(VFuncPtr, CGF.getPointerAlign());
 
-  CGF.EmitMustTailThunk(MD, getThisValue(CGF), Callee);
+  CGF.EmitMustTailThunk(MD, getThisValue(CGF), {ThunkTy, Callee});
 
   return ThunkFn;
 }
@@ -2222,7 +2243,7 @@ Address MicrosoftCXXABI::InitializeArrayCookie(CodeGenFunction &CGF,
 }
 
 static void emitGlobalDtorWithTLRegDtor(CodeGenFunction &CGF, const VarDecl &VD,
-                                        llvm::Constant *Dtor,
+                                        llvm::FunctionCallee Dtor,
                                         llvm::Constant *Addr) {
   // Create a function which calls the destructor.
   llvm::Constant *DtorStub = CGF.createAtExitStub(VD, Dtor, Addr);
@@ -2231,16 +2252,17 @@ static void emitGlobalDtorWithTLRegDtor(CodeGenFunction &CGF, const VarDecl &VD,
   llvm::FunctionType *TLRegDtorTy = llvm::FunctionType::get(
       CGF.IntTy, DtorStub->getType(), /*IsVarArg=*/false);
 
-  llvm::Constant *TLRegDtor = CGF.CGM.CreateRuntimeFunction(
+  llvm::FunctionCallee TLRegDtor = CGF.CGM.CreateRuntimeFunction(
       TLRegDtorTy, "__tlregdtor", llvm::AttributeList(), /*Local=*/true);
-  if (llvm::Function *TLRegDtorFn = dyn_cast<llvm::Function>(TLRegDtor))
+  if (llvm::Function *TLRegDtorFn =
+          dyn_cast<llvm::Function>(TLRegDtor.getCallee()))
     TLRegDtorFn->setDoesNotThrow();
 
   CGF.EmitNounwindRuntimeCall(TLRegDtor, DtorStub);
 }
 
 void MicrosoftCXXABI::registerGlobalDtor(CodeGenFunction &CGF, const VarDecl &D,
-                                         llvm::Constant *Dtor,
+                                         llvm::FunctionCallee Dtor,
                                          llvm::Constant *Addr) {
   if (D.isNoDestroy(CGM.getContext()))
     return;
@@ -2325,7 +2347,7 @@ static ConstantAddress getInitThreadEpochPtr(CodeGenModule &CGM) {
   return ConstantAddress(GV, Align);
 }
 
-static llvm::Constant *getInitThreadHeaderFn(CodeGenModule &CGM) {
+static llvm::FunctionCallee getInitThreadHeaderFn(CodeGenModule &CGM) {
   llvm::FunctionType *FTy =
       llvm::FunctionType::get(llvm::Type::getVoidTy(CGM.getLLVMContext()),
                               CGM.IntTy->getPointerTo(), /*isVarArg=*/false);
@@ -2337,7 +2359,7 @@ static llvm::Constant *getInitThreadHeaderFn(CodeGenModule &CGM) {
       /*Local=*/true);
 }
 
-static llvm::Constant *getInitThreadFooterFn(CodeGenModule &CGM) {
+static llvm::FunctionCallee getInitThreadFooterFn(CodeGenModule &CGM) {
   llvm::FunctionType *FTy =
       llvm::FunctionType::get(llvm::Type::getVoidTy(CGM.getLLVMContext()),
                               CGM.IntTy->getPointerTo(), /*isVarArg=*/false);
@@ -2349,7 +2371,7 @@ static llvm::Constant *getInitThreadFooterFn(CodeGenModule &CGM) {
       /*Local=*/true);
 }
 
-static llvm::Constant *getInitThreadAbortFn(CodeGenModule &CGM) {
+static llvm::FunctionCallee getInitThreadAbortFn(CodeGenModule &CGM) {
   llvm::FunctionType *FTy =
       llvm::FunctionType::get(llvm::Type::getVoidTy(CGM.getLLVMContext()),
                               CGM.IntTy->getPointerTo(), /*isVarArg=*/false);
@@ -3816,42 +3838,34 @@ MicrosoftCXXABI::getMSCompleteObjectLocator(const CXXRecordDecl *RD,
   return MSRTTIBuilder(*this, RD).getCompleteObjectLocator(Info);
 }
 
-static void emitCXXConstructor(CodeGenModule &CGM,
-                               const CXXConstructorDecl *ctor,
-                               StructorType ctorType) {
-  // There are no constructor variants, always emit the complete destructor.
-  llvm::Function *Fn = CGM.codegenCXXStructor(ctor, StructorType::Complete);
-  CGM.maybeSetTrivialComdat(*ctor, *Fn);
-}
+void MicrosoftCXXABI::emitCXXStructor(GlobalDecl GD) {
+  if (auto *ctor = dyn_cast<CXXConstructorDecl>(GD.getDecl())) {
+    // There are no constructor variants, always emit the complete destructor.
+    llvm::Function *Fn =
+        CGM.codegenCXXStructor(GD.getWithCtorType(Ctor_Complete));
+    CGM.maybeSetTrivialComdat(*ctor, *Fn);
+    return;
+  }
 
-static void emitCXXDestructor(CodeGenModule &CGM, const CXXDestructorDecl *dtor,
-                              StructorType dtorType) {
+  auto *dtor = cast<CXXDestructorDecl>(GD.getDecl());
+
   // Emit the base destructor if the base and complete (vbase) destructors are
   // equivalent. This effectively implements -mconstructor-aliases as part of
   // the ABI.
-  if (dtorType == StructorType::Complete &&
+  if (GD.getDtorType() == Dtor_Complete &&
       dtor->getParent()->getNumVBases() == 0)
-    dtorType = StructorType::Base;
+    GD = GD.getWithDtorType(Dtor_Base);
 
   // The base destructor is equivalent to the base destructor of its
   // base class if there is exactly one non-virtual base class with a
   // non-trivial destructor, there are no fields with a non-trivial
   // destructor, and the body of the destructor is trivial.
-  if (dtorType == StructorType::Base && !CGM.TryEmitBaseDestructorAsAlias(dtor))
+  if (GD.getDtorType() == Dtor_Base && !CGM.TryEmitBaseDestructorAsAlias(dtor))
     return;
 
-  llvm::Function *Fn = CGM.codegenCXXStructor(dtor, dtorType);
+  llvm::Function *Fn = CGM.codegenCXXStructor(GD);
   if (Fn->isWeakForLinker())
     Fn->setComdat(CGM.getModule().getOrInsertComdat(Fn->getName()));
-}
-
-void MicrosoftCXXABI::emitCXXStructor(const CXXMethodDecl *MD,
-                                      StructorType Type) {
-  if (auto *CD = dyn_cast<CXXConstructorDecl>(MD)) {
-    emitCXXConstructor(CGM, CD, Type);
-    return;
-  }
-  emitCXXDestructor(CGM, cast<CXXDestructorDecl>(MD), Type);
 }
 
 llvm::Function *
@@ -3929,7 +3943,7 @@ MicrosoftCXXABI::getAddrOfCXXCtorClosure(const CXXConstructorDecl *CD,
   CallArgList Args;
 
   // Push the this ptr.
-  Args.add(RValue::get(This), CD->getThisType(getContext()));
+  Args.add(RValue::get(This), CD->getThisType());
 
   // Push the src ptr.
   if (SrcVal)
@@ -3955,7 +3969,7 @@ MicrosoftCXXABI::getAddrOfCXXCtorClosure(const CXXConstructorDecl *CD,
                                  /*Delegating=*/false, Args);
   // Call the destructor with our arguments.
   llvm::Constant *CalleePtr =
-    CGM.getAddrOfCXXStructor(CD, StructorType::Complete);
+      CGM.getAddrOfCXXStructor(GlobalDecl(CD, Ctor_Complete));
   CGCallee Callee =
       CGCallee::forDirect(CalleePtr, GlobalDecl(CD, Ctor_Complete));
   const CGFunctionInfo &CalleeInfo = CGM.getTypes().arrangeCXXConstructorCall(
@@ -4006,7 +4020,7 @@ llvm::Constant *MicrosoftCXXABI::getCatchableType(QualType T,
     if (CT == Ctor_CopyingClosure)
       CopyCtor = getAddrOfCXXCtorClosure(CD, Ctor_CopyingClosure);
     else
-      CopyCtor = CGM.getAddrOfCXXStructor(CD, StructorType::Complete);
+      CopyCtor = CGM.getAddrOfCXXStructor(GlobalDecl(CD, Ctor_Complete));
 
     CopyCtor = llvm::ConstantExpr::getBitCast(CopyCtor, CGM.Int8PtrTy);
   } else {
@@ -4219,7 +4233,7 @@ llvm::GlobalVariable *MicrosoftCXXABI::getThrowInfo(QualType T) {
     if (CXXDestructorDecl *DtorD = RD->getDestructor())
       if (!DtorD->isTrivial())
         CleanupFn = llvm::ConstantExpr::getBitCast(
-            CGM.getAddrOfCXXStructor(DtorD, StructorType::Complete),
+            CGM.getAddrOfCXXStructor(GlobalDecl(DtorD, Dtor_Complete)),
             CGM.Int8PtrTy);
   // This is unused as far as we can tell, initialize it to null.
   llvm::Constant *ForwardCompat =

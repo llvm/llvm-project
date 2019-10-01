@@ -1,16 +1,15 @@
 //===-- ASTMerge.cpp - AST Merging Frontend Action --------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTDiagnostic.h"
 #include "clang/AST/ASTImporter.h"
-#include "clang/AST/ASTImporterLookupTable.h"
+#include "clang/AST/ASTImporterSharedState.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendActions.h"
@@ -39,7 +38,7 @@ void ASTMergeAction::ExecuteAction() {
                                        &CI.getASTContext());
   IntrusiveRefCntPtr<DiagnosticIDs>
       DiagIDs(CI.getDiagnostics().getDiagnosticIDs());
-  ASTImporterLookupTable LookupTable(
+  auto SharedState = std::make_shared<ASTImporterSharedState>(
       *CI.getASTContext().getTranslationUnitDecl());
   for (unsigned I = 0, N = ASTFiles.size(); I != N; ++I) {
     IntrusiveRefCntPtr<DiagnosticsEngine>
@@ -56,7 +55,7 @@ void ASTMergeAction::ExecuteAction() {
 
     ASTImporter Importer(CI.getASTContext(), CI.getFileManager(),
                          Unit->getASTContext(), Unit->getFileManager(),
-                         /*MinimalImport=*/false, &LookupTable);
+                         /*MinimalImport=*/false, SharedState);
 
     TranslationUnitDecl *TU = Unit->getASTContext().getTranslationUnitDecl();
     for (auto *D : TU->decls()) {
@@ -66,11 +65,13 @@ void ASTMergeAction::ExecuteAction() {
           if (II->isStr("__va_list_tag") || II->isStr("__builtin_va_list"))
             continue;
 
-      Decl *ToD = Importer.Import(D);
+      llvm::Expected<Decl *> ToDOrError = Importer.Import(D);
 
-      if (ToD) {
-        DeclGroupRef DGR(ToD);
+      if (ToDOrError) {
+        DeclGroupRef DGR(*ToDOrError);
         CI.getASTConsumer().HandleTopLevelDecl(DGR);
+      } else {
+        llvm::consumeError(ToDOrError.takeError());
       }
     }
   }

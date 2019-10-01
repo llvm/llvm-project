@@ -1,9 +1,8 @@
 //===--- CodeGenModule.h - Per-Module state for LLVM CodeGen ----*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -120,93 +119,93 @@ struct ObjCEntrypoints {
   ObjCEntrypoints() { memset(this, 0, sizeof(*this)); }
 
   /// void objc_alloc(id);
-  llvm::Constant *objc_alloc;
+  llvm::FunctionCallee objc_alloc;
 
   /// void objc_allocWithZone(id);
-  llvm::Constant *objc_allocWithZone;
+  llvm::FunctionCallee objc_allocWithZone;
 
   /// void objc_alloc_init(id);
-  llvm::Constant *objc_alloc_init;
+  llvm::FunctionCallee objc_alloc_init;
 
   /// void objc_autoreleasePoolPop(void*);
-  llvm::Constant *objc_autoreleasePoolPop;
+  llvm::FunctionCallee objc_autoreleasePoolPop;
 
   /// void objc_autoreleasePoolPop(void*);
   /// Note this method is used when we are using exception handling
-  llvm::Constant *objc_autoreleasePoolPopInvoke;
+  llvm::FunctionCallee objc_autoreleasePoolPopInvoke;
 
   /// void *objc_autoreleasePoolPush(void);
-  llvm::Constant *objc_autoreleasePoolPush;
+  llvm::Function *objc_autoreleasePoolPush;
 
   /// id objc_autorelease(id);
-  llvm::Constant *objc_autorelease;
+  llvm::Function *objc_autorelease;
 
   /// id objc_autorelease(id);
   /// Note this is the runtime method not the intrinsic.
-  llvm::Constant *objc_autoreleaseRuntimeFunction;
+  llvm::FunctionCallee objc_autoreleaseRuntimeFunction;
 
   /// id objc_autoreleaseReturnValue(id);
-  llvm::Constant *objc_autoreleaseReturnValue;
+  llvm::Function *objc_autoreleaseReturnValue;
 
   /// void objc_copyWeak(id *dest, id *src);
-  llvm::Constant *objc_copyWeak;
+  llvm::Function *objc_copyWeak;
 
   /// void objc_destroyWeak(id*);
-  llvm::Constant *objc_destroyWeak;
+  llvm::Function *objc_destroyWeak;
 
   /// id objc_initWeak(id*, id);
-  llvm::Constant *objc_initWeak;
+  llvm::Function *objc_initWeak;
 
   /// id objc_loadWeak(id*);
-  llvm::Constant *objc_loadWeak;
+  llvm::Function *objc_loadWeak;
 
   /// id objc_loadWeakRetained(id*);
-  llvm::Constant *objc_loadWeakRetained;
+  llvm::Function *objc_loadWeakRetained;
 
   /// void objc_moveWeak(id *dest, id *src);
-  llvm::Constant *objc_moveWeak;
+  llvm::Function *objc_moveWeak;
 
   /// id objc_retain(id);
-  llvm::Constant *objc_retain;
+  llvm::Function *objc_retain;
 
   /// id objc_retain(id);
   /// Note this is the runtime method not the intrinsic.
-  llvm::Constant *objc_retainRuntimeFunction;
+  llvm::FunctionCallee objc_retainRuntimeFunction;
 
   /// id objc_retainAutorelease(id);
-  llvm::Constant *objc_retainAutorelease;
+  llvm::Function *objc_retainAutorelease;
 
   /// id objc_retainAutoreleaseReturnValue(id);
-  llvm::Constant *objc_retainAutoreleaseReturnValue;
+  llvm::Function *objc_retainAutoreleaseReturnValue;
 
   /// id objc_retainAutoreleasedReturnValue(id);
-  llvm::Constant *objc_retainAutoreleasedReturnValue;
+  llvm::Function *objc_retainAutoreleasedReturnValue;
 
   /// id objc_retainBlock(id);
-  llvm::Constant *objc_retainBlock;
+  llvm::Function *objc_retainBlock;
 
   /// void objc_release(id);
-  llvm::Constant *objc_release;
+  llvm::Function *objc_release;
 
   /// void objc_release(id);
   /// Note this is the runtime method not the intrinsic.
-  llvm::Constant *objc_releaseRuntimeFunction;
+  llvm::FunctionCallee objc_releaseRuntimeFunction;
 
   /// void objc_storeStrong(id*, id);
-  llvm::Constant *objc_storeStrong;
+  llvm::Function *objc_storeStrong;
 
   /// id objc_storeWeak(id*, id);
-  llvm::Constant *objc_storeWeak;
+  llvm::Function *objc_storeWeak;
 
   /// id objc_unsafeClaimAutoreleasedReturnValue(id);
-  llvm::Constant *objc_unsafeClaimAutoreleasedReturnValue;
+  llvm::Function *objc_unsafeClaimAutoreleasedReturnValue;
 
   /// A void(void) inline asm to use to mark that the return value of
   /// a call will be immediately retain.
   llvm::InlineAsm *retainAutoreleasedReturnValueMarker;
 
   /// void clang.arc.use(...);
-  llvm::Constant *clang_arc_use;
+  llvm::Function *clang_arc_use;
 };
 
 /// This class records statistics on instrumentation based profiling.
@@ -255,7 +254,8 @@ public:
   /// have different helper functions.
   CharUnits Alignment;
 
-  BlockByrefHelpers(CharUnits alignment) : Alignment(alignment) {}
+  BlockByrefHelpers(CharUnits alignment)
+      : CopyHelper(nullptr), DisposeHelper(nullptr), Alignment(alignment) {}
   BlockByrefHelpers(const BlockByrefHelpers &) = default;
   virtual ~BlockByrefHelpers();
 
@@ -362,6 +362,10 @@ private:
   llvm::SmallVector<std::pair<llvm::GlobalValue *, llvm::Constant *>, 8>
     GlobalValReplacements;
 
+  /// Variables for which we've emitted globals containing their constant
+  /// values along with the corresponding globals, for opportunistic reuse.
+  llvm::DenseMap<const VarDecl*, llvm::GlobalVariable*> InitializerConstants;
+
   /// Set of global decls for which we already diagnosed mangled name conflict.
   /// Required to not issue a warning (on a mangling conflict) multiple times
   /// for the same decl.
@@ -455,7 +459,9 @@ private:
   SmallVector<GlobalInitData, 8> PrioritizedCXXGlobalInits;
 
   /// Global destructor functions and arguments that need to run on termination.
-  std::vector<std::pair<llvm::WeakTrackingVH, llvm::Constant *>> CXXGlobalDtors;
+  std::vector<
+      std::tuple<llvm::FunctionType *, llvm::WeakTrackingVH, llvm::Constant *>>
+      CXXGlobalDtors;
 
   /// The complete set of modules that has been imported.
   llvm::SetVector<clang::Module *> ImportedModules;
@@ -464,8 +470,11 @@ private:
   /// have been emitted.
   llvm::SmallPtrSet<clang::Module *, 16> EmittedModuleInitializers;
 
-  /// A vector of metadata strings.
+  /// A vector of metadata strings for linker options.
   SmallVector<llvm::MDNode *, 16> LinkerOptionsMetadata;
+
+  /// A vector of metadata strings for dependent libraries for ELF.
+  SmallVector<llvm::MDNode *, 16> ELFDependentLibraries;
 
   /// @name Cache for Objective-C runtime types
   /// @{
@@ -504,8 +513,8 @@ private:
   llvm::Constant *NSConcreteGlobalBlock = nullptr;
   llvm::Constant *NSConcreteStackBlock = nullptr;
 
-  llvm::Constant *BlockObjectAssign = nullptr;
-  llvm::Constant *BlockObjectDispose = nullptr;
+  llvm::FunctionCallee BlockObjectAssign = nullptr;
+  llvm::FunctionCallee BlockObjectDispose = nullptr;
 
   llvm::Type *BlockDescriptorType = nullptr;
   llvm::Type *GenericBlockLiteralType = nullptr;
@@ -515,10 +524,10 @@ private:
   } Block;
 
   /// void @llvm.lifetime.start(i64 %size, i8* nocapture <ptr>)
-  llvm::Constant *LifetimeStartFn = nullptr;
+  llvm::Function *LifetimeStartFn = nullptr;
 
   /// void @llvm.lifetime.end(i64 %size, i8* nocapture <ptr>)
-  llvm::Constant *LifetimeEndFn = nullptr;
+  llvm::Function *LifetimeEndFn = nullptr;
 
   GlobalDecl initializedGlobalDecl;
 
@@ -589,7 +598,7 @@ public:
 
   // Version checking function, used to implement ObjC's @available:
   // i32 @__isOSVersionAtLeast(i32, i32, i32)
-  llvm::Constant *IsOSVersionAtLeastFn = nullptr;
+  llvm::FunctionCallee IsOSVersionAtLeastFn = nullptr;
 
   InstrProfStats &getPGOStats() { return PGOStats; }
   llvm::IndexedInstrProfReader *getPGOReader() const { return PGOReader.get(); }
@@ -617,6 +626,9 @@ public:
                                       llvm::GlobalVariable *C) {
     StaticLocalDeclGuardMap[D] = C;
   }
+
+  Address createUnnamedGlobalFrom(const VarDecl &D, llvm::Constant *Constant,
+                                  CharUnits Align);
 
   bool lookupRepresentativeDecl(StringRef MangledName,
                                 GlobalDecl &Result) const;
@@ -754,9 +766,6 @@ public:
   /// Set the visibility for the given LLVM GlobalValue.
   void setGlobalVisibility(llvm::GlobalValue *GV, const NamedDecl *D) const;
 
-  void setGlobalVisibilityAndLocal(llvm::GlobalValue *GV,
-                                   const NamedDecl *D) const;
-
   void setDSOLocal(llvm::GlobalValue *GV) const;
 
   void setDLLImportDLLExport(llvm::GlobalValue *GV, GlobalDecl D) const;
@@ -765,6 +774,8 @@ public:
   /// This must be called after dllimport/dllexport is set.
   void setGVProperties(llvm::GlobalValue *GV, GlobalDecl GD) const;
   void setGVProperties(llvm::GlobalValue *GV, const NamedDecl *D) const;
+
+  void setGVPropertiesAux(llvm::GlobalValue *GV, const NamedDecl *D) const;
 
   /// Set the TLS mode for the given LLVM GlobalValue for the thread-local
   /// variable declaration D.
@@ -953,16 +964,24 @@ public:
   // Produce code for this constructor/destructor. This method doesn't try
   // to apply any ABI rules about which other constructors/destructors
   // are needed or if they are alias to each other.
-  llvm::Function *codegenCXXStructor(const CXXMethodDecl *MD,
-                                     StructorType Type);
+  llvm::Function *codegenCXXStructor(GlobalDecl GD);
 
   /// Return the address of the constructor/destructor of the given type.
   llvm::Constant *
-  getAddrOfCXXStructor(const CXXMethodDecl *MD, StructorType Type,
-                       const CGFunctionInfo *FnInfo = nullptr,
+  getAddrOfCXXStructor(GlobalDecl GD, const CGFunctionInfo *FnInfo = nullptr,
                        llvm::FunctionType *FnType = nullptr,
                        bool DontDefer = false,
-                       ForDefinition_t IsForDefinition = NotForDefinition);
+                       ForDefinition_t IsForDefinition = NotForDefinition) {
+    return cast<llvm::Constant>(getAddrAndTypeOfCXXStructor(GD, FnInfo, FnType,
+                                                            DontDefer,
+                                                            IsForDefinition)
+                                    .getCallee());
+  }
+
+  llvm::FunctionCallee getAddrAndTypeOfCXXStructor(
+      GlobalDecl GD, const CGFunctionInfo *FnInfo = nullptr,
+      llvm::FunctionType *FnType = nullptr, bool DontDefer = false,
+      ForDefinition_t IsForDefinition = NotForDefinition);
 
   /// Given a builtin id for a function like "__builtin_fabsf", return a
   /// Function* for "fabsf".
@@ -1002,20 +1021,18 @@ public:
   void addCompilerUsedGlobal(llvm::GlobalValue *GV);
 
   /// Add a destructor and object to add to the C++ global destructor function.
-  void AddCXXDtorEntry(llvm::Constant *DtorFn, llvm::Constant *Object) {
-    CXXGlobalDtors.emplace_back(DtorFn, Object);
+  void AddCXXDtorEntry(llvm::FunctionCallee DtorFn, llvm::Constant *Object) {
+    CXXGlobalDtors.emplace_back(DtorFn.getFunctionType(), DtorFn.getCallee(),
+                                Object);
   }
 
-  /// Create a new runtime function with the specified type and name.
-  llvm::Constant *
+  /// Create or return a runtime function declaration with the specified type
+  /// and name.
+  llvm::FunctionCallee
   CreateRuntimeFunction(llvm::FunctionType *Ty, StringRef Name,
                         llvm::AttributeList ExtraAttrs = llvm::AttributeList(),
                         bool Local = false);
 
-  /// Create a new compiler builtin function with the specified type and name.
-  llvm::Constant *
-  CreateBuiltinFunction(llvm::FunctionType *Ty, StringRef Name,
-                        llvm::AttributeList ExtraAttrs = llvm::AttributeList());
   /// Create a new runtime global variable with the specified type and name.
   llvm::Constant *CreateRuntimeVariable(llvm::Type *Ty,
                                         StringRef Name);
@@ -1025,13 +1042,13 @@ public:
 
   llvm::Constant *getNSConcreteGlobalBlock();
   llvm::Constant *getNSConcreteStackBlock();
-  llvm::Constant *getBlockObjectAssign();
-  llvm::Constant *getBlockObjectDispose();
+  llvm::FunctionCallee getBlockObjectAssign();
+  llvm::FunctionCallee getBlockObjectDispose();
 
   ///@}
 
-  llvm::Constant *getLLVMLifetimeStartFn();
-  llvm::Constant *getLLVMLifetimeEndFn();
+  llvm::Function *getLLVMLifetimeStartFn();
+  llvm::Function *getLLVMLifetimeEndFn();
 
   // Make sure that this type is translated.
   void UpdateCompletedType(const TagDecl *TD);
@@ -1145,11 +1162,9 @@ public:
   /// Appends a detect mismatch command to the linker options.
   void AddDetectMismatch(StringRef Name, StringRef Value);
 
-  /// Appends a dependent lib to the "llvm.linker.options" metadata
-  /// value.
+  /// Appends a dependent lib to the appropriate metadata value.
   void AddDependentLib(StringRef Lib);
 
-  void AddELFLibDirective(StringRef Lib);
 
   llvm::GlobalVariable::LinkageTypes getFunctionLinkage(GlobalDecl GD);
 
@@ -1247,6 +1262,10 @@ public:
   void EmitOMPDeclareReduction(const OMPDeclareReductionDecl *D,
                                CodeGenFunction *CGF = nullptr);
 
+  /// Emit a code for declare mapper construct.
+  void EmitOMPDeclareMapper(const OMPDeclareMapperDecl *D,
+                            CodeGenFunction *CGF = nullptr);
+
   /// Emit a code for requires directive.
   /// \param D Requires declaration
   void EmitOMPRequiresDecl(const OMPRequiresDecl *D);
@@ -1297,12 +1316,26 @@ public:
   getMostBaseClasses(const CXXRecordDecl *RD);
 
   /// Get the declaration of std::terminate for the platform.
-  llvm::Constant *getTerminateFn();
+  llvm::FunctionCallee getTerminateFn();
 
   llvm::SanitizerStatReport &getSanStats();
 
   llvm::Value *
   createOpenCLIntToSamplerConversion(const Expr *E, CodeGenFunction &CGF);
+
+  /// OpenCL v1.2 s5.6.4.6 allows the compiler to store kernel argument
+  /// information in the program executable. The argument information stored
+  /// includes the argument name, its type, the address and access qualifiers
+  /// used. This helper can be used to generate metadata for source code kernel
+  /// function as well as generated implicitly kernels. If a kernel is generated
+  /// implicitly null value has to be passed to the last two parameters,
+  /// otherwise all parameters must have valid non-null values.
+  /// \param FN is a pointer to IR function being generated.
+  /// \param FD is a pointer to function declaration if any.
+  /// \param CGF is a pointer to CodeGenFunction that generates this function.
+  void GenOpenCLArgMetadata(llvm::Function *FN,
+                            const FunctionDecl *FD = nullptr,
+                            CodeGenFunction *CGF = nullptr);
 
   /// Get target specific null pointer.
   /// \param T is the LLVM type of the null pointer.

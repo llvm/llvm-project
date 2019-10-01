@@ -24,7 +24,7 @@ struct X {
     T::foo<T::bar < 1>(); // expected-error{{missing 'template' keyword prior to dependent template name 'foo'}}
     T::foo < T::bar<1>(); // expected-error{{missing 'template' keyword prior to dependent template name 'bar'}}
 
-    // Prefer to diagonse a missing 'template' keyword rather than finding a non-template name.
+    // Prefer to diagnose a missing 'template' keyword rather than finding a non-template name.
     xyz < T::foo < 1 > (); // expected-error{{missing 'template' keyword prior to dependent template name 'foo'}}
     T::foo < xyz < 1 > (); // expected-error{{missing 'template' keyword prior to dependent template name 'foo'}}
 

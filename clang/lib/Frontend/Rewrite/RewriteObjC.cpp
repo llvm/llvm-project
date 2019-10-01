@@ -1,9 +1,8 @@
 //===--- RewriteObjC.cpp - Playground for the code rewriter ---------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -3794,9 +3793,8 @@ Stmt *RewriteObjC::SynthesizeBlockCall(CallExpr *Exp, const Expr *BlockExp) {
                                     Context->VoidPtrTy, nullptr,
                                     /*BitWidth=*/nullptr, /*Mutable=*/true,
                                     ICIS_NoInit);
-  MemberExpr *ME =
-      new (Context) MemberExpr(PE, true, SourceLocation(), FD, SourceLocation(),
-                               FD->getType(), VK_LValue, OK_Ordinary);
+  MemberExpr *ME = MemberExpr::CreateImplicit(
+      *Context, PE, true, FD, FD->getType(), VK_LValue, OK_Ordinary);
 
   CastExpr *FunkCast = NoTypeInfoCStyleCastExpr(Context, PtrToFuncCastType,
                                                 CK_BitCast, ME);
@@ -3841,9 +3839,9 @@ Stmt *RewriteObjC::RewriteBlockDeclRefExpr(DeclRefExpr *DeclRefExp) {
                                     Context->VoidPtrTy, nullptr,
                                     /*BitWidth=*/nullptr, /*Mutable=*/true,
                                     ICIS_NoInit);
-  MemberExpr *ME = new (Context)
-      MemberExpr(DeclRefExp, isArrow, SourceLocation(), FD, SourceLocation(),
-                 FD->getType(), VK_LValue, OK_Ordinary);
+  MemberExpr *ME =
+      MemberExpr::CreateImplicit(*Context, DeclRefExp, isArrow, FD,
+                                 FD->getType(), VK_LValue, OK_Ordinary);
 
   StringRef Name = VD->getName();
   FD = FieldDecl::Create(*Context, nullptr, SourceLocation(), SourceLocation(),
@@ -3851,9 +3849,8 @@ Stmt *RewriteObjC::RewriteBlockDeclRefExpr(DeclRefExpr *DeclRefExp) {
                          Context->VoidPtrTy, nullptr,
                          /*BitWidth=*/nullptr, /*Mutable=*/true,
                          ICIS_NoInit);
-  ME =
-      new (Context) MemberExpr(ME, true, SourceLocation(), FD, SourceLocation(),
-                               DeclRefExp->getType(), VK_LValue, OK_Ordinary);
+  ME = MemberExpr::CreateImplicit(*Context, ME, true, FD, DeclRefExp->getType(),
+                                  VK_LValue, OK_Ordinary);
 
   // Need parens to enforce precedence.
   ParenExpr *PE = new (Context) ParenExpr(DeclRefExp->getExprLoc(),
@@ -5831,10 +5828,10 @@ Stmt *RewriteObjCFragileABI::RewriteObjCIvarRefExpr(ObjCIvarRefExpr *IV) {
                                               OldRange.getEnd(),
                                               castExpr);
       if (IV->isFreeIvar() &&
-          declaresSameEntity(CurMethodDef->getClassInterface(), iFaceDecl->getDecl())) {
-        MemberExpr *ME = new (Context)
-            MemberExpr(PE, true, SourceLocation(), D, IV->getLocation(),
-                       D->getType(), VK_LValue, OK_Ordinary);
+          declaresSameEntity(CurMethodDef->getClassInterface(),
+                             iFaceDecl->getDecl())) {
+        MemberExpr *ME = MemberExpr::CreateImplicit(
+            *Context, PE, true, D, D->getType(), VK_LValue, OK_Ordinary);
         Replacement = ME;
       } else {
         IV->setBase(PE);

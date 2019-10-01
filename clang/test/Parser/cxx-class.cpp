@@ -272,6 +272,30 @@ class BadExceptionSpec {
           ));
 };
 
+namespace PR41192 {
+extern struct A a;
+struct A {} ::PR41192::a; // ok, no missing ';' here  expected-warning {{extra qualification}}
+
+#if __cplusplus >= 201103L
+struct C;
+struct D { static C c; };
+struct C {} decltype(D())::c; // expected-error {{'decltype' cannot be used to name a declaration}}
+#endif
+}
+
+namespace ArrayMemberAccess {
+  struct A {
+    int x;
+    template<typename T> int f() const;
+  };
+  void f(const A (&a)[]) {
+    // OK: not a template-id.
+    bool cond = a->x < 10 && a->x > 0;
+    // OK: a template-id.
+    a->f<int>();
+  }
+}
+
 // PR11109 must appear at the end of the source file
 class pr11109r3 { // expected-note{{to match this '{'}}
   public // expected-error{{expected ':'}} expected-error{{expected '}'}} expected-error{{expected ';' after class}}

@@ -6,13 +6,9 @@ add_clang_library(clangDirectoryWatcher
   DirectoryWatcher.cpp
   )
 
-if(BUILD_SHARED_LIBS)
-  if(APPLE)
-    check_include_files("CoreServices/CoreServices.h" HAVE_CORESERVICES_H)
-    if(HAVE_CORESERVICES_H)
-      set(DIRECTORY_WATCHER_FLAGS "${DIRECTORY_WATCHER_FLAGS} -framework CoreServices")
-    endif()
-    set_property(TARGET clangDirectoryWatcher APPEND_STRING PROPERTY
-                 LINK_FLAGS ${DIRECTORY_WATCHER_FLAGS})
+if(APPLE)
+  check_include_files("CoreServices/CoreServices.h" HAVE_CORESERVICES_H)
+  if(HAVE_CORESERVICES_H)
+    target_link_libraries(clangDirectoryWatcher PRIVATE "-framework CoreServices")
   endif()
 endif()

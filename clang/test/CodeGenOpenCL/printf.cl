@@ -12,28 +12,26 @@ int printf(__constant const char* st, ...) __attribute__((format(printf, 1, 2)))
 
 
 // ALL-LABEL: @test_printf_float2(
-// FP64: %conv = fpext <2 x float> %0 to <2 x double>
-// FP64: %call = call spir_func i32 (i8 addrspace(2)*, ...) @printf(i8 addrspace(2)* getelementptr inbounds ([5 x i8], [5 x i8] addrspace(2)* @.str, i32 0, i32 0), <2 x double> %conv)
+// FP64: %call = call spir_func i32 (i8 addrspace(2)*, ...) @printf(i8 addrspace(2)* getelementptr inbounds ([7 x i8], [7 x i8] addrspace(2)* @.str, i32 0, i32 0), <2 x float> %0)
 
-// NOFP64:  call spir_func i32 (i8 addrspace(2)*, ...) @printf(i8 addrspace(2)* getelementptr inbounds ([5 x i8], [5 x i8] addrspace(2)* @.str, i32 0, i32 0), <2 x float> %0)
+
+// NOFP64:  call spir_func i32 (i8 addrspace(2)*, ...) @printf(i8 addrspace(2)* getelementptr inbounds ([7 x i8], [7 x i8] addrspace(2)* @.str, i32 0, i32 0), <2 x float> %0)
 kernel void test_printf_float2(float2 arg) {
-  printf("%v2f", arg);
+  printf("%v2hlf", arg);
 }
 
 // ALL-LABEL: @test_printf_half2(
-// FP64: %conv = fpext <2 x half> %0 to <2 x double>
-// FP64:  %call = call spir_func i32 (i8 addrspace(2)*, ...) @printf(i8 addrspace(2)* getelementptr inbounds ([5 x i8], [5 x i8] addrspace(2)* @.str, i32 0, i32 0), <2 x double> %conv) #2
+// FP64:  %call = call spir_func i32 (i8 addrspace(2)*, ...) @printf(i8 addrspace(2)* getelementptr inbounds ([6 x i8], [6 x i8] addrspace(2)* @.str.1, i32 0, i32 0), <2 x half> %0)
 
-// NOFP64: %conv = fpext <2 x half> %0 to <2 x float>
-// NOFP64:  %call = call spir_func i32 (i8 addrspace(2)*, ...) @printf(i8 addrspace(2)* getelementptr inbounds ([5 x i8], [5 x i8] addrspace(2)* @.str, i32 0, i32 0), <2 x float> %conv) #2
+// NOFP64:  %call = call spir_func i32 (i8 addrspace(2)*, ...) @printf(i8 addrspace(2)* getelementptr inbounds ([6 x i8], [6 x i8] addrspace(2)* @.str.1, i32 0, i32 0), <2 x half> %0)
 kernel void test_printf_half2(half2 arg) {
-  printf("%v2f", arg);
+  printf("%v2hf", arg);
 }
 
 #ifdef cl_khr_fp64
 // FP64-LABEL: @test_printf_double2(
-// FP64: call spir_func i32 (i8 addrspace(2)*, ...) @printf(i8 addrspace(2)* getelementptr inbounds ([5 x i8], [5 x i8] addrspace(2)* @.str, i32 0, i32 0), <2 x double> %0) #2
+// FP64: call spir_func i32 (i8 addrspace(2)*, ...) @printf(i8 addrspace(2)* getelementptr inbounds ([6 x i8], [6 x i8] addrspace(2)* @.str.2, i32 0, i32 0), <2 x double> %0)
 kernel void test_printf_double2(double2 arg) {
-  printf("%v2f", arg);
+  printf("%v2lf", arg);
 }
 #endif

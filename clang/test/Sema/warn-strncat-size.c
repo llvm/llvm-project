@@ -39,7 +39,7 @@ void test(char *src) {
   strncat(dest, "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", sizeof(dest) - strlen(dest)); // expected-warning{{the value of the size argument in 'strncat' is too large, might lead to a buffer overflow}} expected-note {{change the argument to be the free space in the destination buffer minus the terminating null byte}}
 
   strncat((*s5)->f2[x], s2, sizeof(s2)); // expected-warning {{size argument in 'strncat' call appears to be size of the source}} expected-note {{change the argument to be the free space in the destination buffer minus the terminating null byte}}
-  strncat(s1+3, s2, sizeof(s2)); // expected-warning {{size argument in 'strncat' call appears to be size of the source}}
+  strncat(s1+3, s2, sizeof(s2)); // expected-warning {{size argument in 'strncat' call appears to be size of the source}} expected-warning {{strncat' size argument is too large; destination buffer has size 97, but size argument is 200}}
   strncat(s4.f1, s2, sizeof(s2)); // expected-warning {{size argument in 'strncat' call appears to be size of the source}} expected-note {{change the argument to be the free space in the destination buffer minus the terminating null byte}}
 }
 

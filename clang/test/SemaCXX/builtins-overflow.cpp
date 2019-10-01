@@ -2,6 +2,7 @@
 // expected-no-diagnostics
 
 #include <limits.h>
+#include <stdint.h>
 
 int a() {
   const int x = 3;
@@ -50,6 +51,7 @@ constexpr Result<RET> sub(LHS &&lhs, RHS &&rhs) {
 static_assert(sub<unsigned char>(static_cast<char>(0),static_cast<char>(1)) == Result<unsigned char>{true, UCHAR_MAX});
 static_assert(sub<char>(static_cast<unsigned char>(0),static_cast<unsigned char>(1)) == Result<char>{false, -1});
 static_assert(sub<unsigned short>(static_cast<short>(0),static_cast<short>(1)) == Result<unsigned short>{true, USHRT_MAX});
+static_assert(sub<uint8_t>(static_cast<uint8_t>(255),static_cast<int>(100)) == Result<uint8_t>{false, 155});
 
 static_assert(sub<int>(17,22) == Result<int>{false, -5});
 static_assert(sub<int>(INT_MAX - 22, -23) == Result<int>{true, INT_MIN});
@@ -91,3 +93,4 @@ constexpr Result<int> smul(int lhs, int rhs) {
 static_assert(smul(17,22) == Result<int>{false, 374});
 static_assert(smul(INT_MAX / 22, 23) == Result<int>{true, -2049870757});
 static_assert(smul(INT_MIN / 22, -23) == Result<int>{true, -2049870757});
+

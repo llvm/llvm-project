@@ -19,7 +19,7 @@ struct S {
 // CL20-DAG: @g_static_var = internal addrspace(1) global float 0.000000e+00
 
 #ifdef CL20
-// CL20-DAG: @g_s = common {{(dso_local )?}}addrspace(1) global %struct.S zeroinitializer
+// CL20-DAG: @g_s = {{(common )?}}{{(dso_local )?}}addrspace(1) global %struct.S zeroinitializer
 struct S g_s;
 #endif
 
@@ -55,7 +55,7 @@ void fc(constant int *arg) {}
 int i;
 // CL20-DAG: @i = common {{(dso_local )?}}addrspace(1) global i32 0
 int *ptr;
-// CL20SPIR-DAG: @ptr = common {{(dso_local )?}}addrspace(1) global i32 addrspace(4)* null
+// CL20SPIR-DAG: @ptr = {{(common )?}}{{(dso_local )?}}addrspace(1) global i32 addrspace(4)* null
 // CL20AMDGCN-DAG: @ptr = common {{(dso_local )?}}addrspace(1) global i32* null
 #endif
 

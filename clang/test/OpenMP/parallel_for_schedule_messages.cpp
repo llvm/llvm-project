@@ -50,6 +50,8 @@ T tmain(T argc, S **argv) {
   for (int i = ST; i < N; i++) argv[0][i] = argv[0][i] - argv[0][i-ST];
   #pragma omp parallel for schedule (static, N) // expected-error {{argument to 'schedule' clause must be a strictly positive integer value}}
   for (T i = ST; i < N; i++) argv[0][i] = argv[0][i] - argv[0][i-ST];
+  #pragma omp parallel for schedule (static, argc+argv[0][0]) default(none) // expected-error 2 {{variable 'argv' must have explicitly specified data sharing attributes}} expected-error 2 {{variable 'argc' must have explicitly specified data sharing attributes}} expected-note 4 {{explicit data sharing attribute requested here}}
+  for (T i = ST; i < N; i++) argv[0][i] = argv[0][i] - argv[0][i-ST];
   return argc;
 }
 

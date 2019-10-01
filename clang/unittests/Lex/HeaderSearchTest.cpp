@@ -1,9 +1,8 @@
 //===- unittests/Lex/HeaderSearchTest.cpp ------ HeaderSearch tests -------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -40,9 +39,9 @@ protected:
   void addSearchDir(llvm::StringRef Dir) {
     VFS->addFile(Dir, 0, llvm::MemoryBuffer::getMemBuffer(""), /*User=*/None,
                  /*Group=*/None, llvm::sys::fs::file_type::directory_file);
-    const DirectoryEntry *DE = FileMgr.getDirectory(Dir);
+    auto DE = FileMgr.getOptionalDirectoryRef(Dir);
     assert(DE);
-    auto DL = DirectoryLookup(DE, SrcMgr::C_User, /*isFramework=*/false);
+    auto DL = DirectoryLookup(*DE, SrcMgr::C_User, /*isFramework=*/false);
     Search.AddSearchPath(DL, /*isAngled=*/false);
   }
 
@@ -89,6 +88,29 @@ TEST_F(HeaderSearchTest, Dots) {
   addSearchDir("a/.././c/");
   EXPECT_EQ(Search.suggestPathToFileForDiagnostics("/m/n/./c/z",
                                                    /*WorkingDir=*/"/m/n/"),
+            "z");
+}
+
+#ifdef _WIN32
+TEST_F(HeaderSearchTest, BackSlash) {
+  addSearchDir("C:\\x\\y\\");
+  EXPECT_EQ(Search.suggestPathToFileForDiagnostics("C:\\x\\y\\z\\t",
+                                                   /*WorkingDir=*/""),
+            "z/t");
+}
+
+TEST_F(HeaderSearchTest, BackSlashWithDotDot) {
+  addSearchDir("..\\y");
+  EXPECT_EQ(Search.suggestPathToFileForDiagnostics("C:\\x\\y\\z\\t",
+                                                   /*WorkingDir=*/"C:/x/y/"),
+            "z/t");
+}
+#endif
+
+TEST_F(HeaderSearchTest, DotDotsWithAbsPath) {
+  addSearchDir("/x/../y/");
+  EXPECT_EQ(Search.suggestPathToFileForDiagnostics("/y/z",
+                                                   /*WorkingDir=*/""),
             "z");
 }
 

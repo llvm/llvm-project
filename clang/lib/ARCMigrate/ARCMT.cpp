@@ -1,9 +1,8 @@
 //===--- ARCMT.cpp - Migration to ARC mode --------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -36,10 +35,10 @@ bool CapturedDiagList::clearDiagnostic(ArrayRef<unsigned> IDs,
   while (I != List.end()) {
     FullSourceLoc diagLoc = I->getLocation();
     if ((IDs.empty() || // empty means clear all diagnostics in the range.
-         std::find(IDs.begin(), IDs.end(), I->getID()) != IDs.end()) &&
+         llvm::is_contained(IDs, I->getID())) &&
         !diagLoc.isBeforeInTranslationUnitThan(range.getBegin()) &&
         (diagLoc == range.getEnd() ||
-           diagLoc.isBeforeInTranslationUnitThan(range.getEnd()))) {
+         diagLoc.isBeforeInTranslationUnitThan(range.getEnd()))) {
       cleared = true;
       ListTy::iterator eraseS = I++;
       if (eraseS->getLevel() != DiagnosticsEngine::Note)
@@ -65,10 +64,10 @@ bool CapturedDiagList::hasDiagnostic(ArrayRef<unsigned> IDs,
   while (I != List.end()) {
     FullSourceLoc diagLoc = I->getLocation();
     if ((IDs.empty() || // empty means any diagnostic in the range.
-         std::find(IDs.begin(), IDs.end(), I->getID()) != IDs.end()) &&
+         llvm::find(IDs, I->getID()) != IDs.end()) &&
         !diagLoc.isBeforeInTranslationUnitThan(range.getBegin()) &&
         (diagLoc == range.getEnd() ||
-           diagLoc.isBeforeInTranslationUnitThan(range.getEnd()))) {
+         diagLoc.isBeforeInTranslationUnitThan(range.getEnd()))) {
       return true;
     }
 

@@ -1,9 +1,8 @@
 // AnalysisDeclContext.h - Analysis context for Path Sens analysis -*- C++ -*-//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -275,11 +274,17 @@ public:
   virtual void Profile(llvm::FoldingSetNodeID &ID) = 0;
 
   void dumpStack(
-      raw_ostream &OS, StringRef Indent = {}, const char *NL = "\n",
-      const char *Sep = "",
+      raw_ostream &Out, const char *NL = "\n",
       std::function<void(const LocationContext *)> printMoreInfoPerContext =
           [](const LocationContext *) {}) const;
-  void dumpStack() const;
+
+  void printJson(
+      raw_ostream &Out, const char *NL = "\n", unsigned int Space = 0,
+      bool IsDot = false,
+      std::function<void(const LocationContext *)> printMoreInfoPerContext =
+          [](const LocationContext *) {}) const;
+
+  void dump() const;
 
 public:
   static void ProfileCommon(llvm::FoldingSetNodeID &ID,
@@ -460,6 +465,7 @@ public:
                              bool addCXXNewAllocator = true,
                              bool addRichCXXConstructors = true,
                              bool markElidedCXXConstructors = true,
+                             bool addVirtualBaseBranches = true,
                              CodeInjector *injector = nullptr);
 
   AnalysisDeclContext *getContext(const Decl *D);

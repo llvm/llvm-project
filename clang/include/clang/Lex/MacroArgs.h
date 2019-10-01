@@ -1,9 +1,8 @@
 //===--- MacroArgs.h - Formal argument info for Macros ----------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -113,18 +112,19 @@ public:
   bool isVarargsElidedUse() const { return VarargsElided; }
 
   /// Returns true if the macro was defined with a variadic (ellipsis) parameter
-  /// AND was invoked with at least one token supplied as a variadic argument.
+  /// AND was invoked with at least one token supplied as a variadic argument
+  /// (after pre-expansion).
   ///
   /// \code
   ///   #define F(a)  a
   ///   #define V(a, ...) __VA_OPT__(a)
-  ///   F()    <-- returns false on this invocation.
-  ///   V(,a)  <-- returns true on this invocation.
-  ///   V(,)   <-- returns false on this invocation.
+  ///   F()     <-- returns false on this invocation.
+  ///   V(,a)   <-- returns true on this invocation.
+  ///   V(,)    <-- returns false on this invocation.
+  ///   V(,F()) <-- returns false on this invocation.
   /// \endcode
   ///
-
-  bool invokedWithVariadicArgument(const MacroInfo *const MI) const;
+  bool invokedWithVariadicArgument(const MacroInfo *const MI, Preprocessor &PP);
 
   /// StringifyArgument - Implement C99 6.10.3.2p2, converting a sequence of
   /// tokens into the literal string token that should be produced by the C #

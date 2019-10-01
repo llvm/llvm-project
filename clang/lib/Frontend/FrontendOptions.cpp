@@ -1,35 +1,35 @@
 //===- FrontendOptions.cpp ------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "clang/Frontend/FrontendOptions.h"
+#include "clang/Basic/LangStandard.h"
 #include "llvm/ADT/StringSwitch.h"
 
 using namespace clang;
 
 InputKind FrontendOptions::getInputKindForExtension(StringRef Extension) {
   return llvm::StringSwitch<InputKind>(Extension)
-    .Cases("ast", "pcm", InputKind(InputKind::Unknown, InputKind::Precompiled))
-    .Case("c", InputKind::C)
-    .Cases("S", "s", InputKind::Asm)
-    .Case("i", InputKind(InputKind::C).getPreprocessed())
-    .Case("ii", InputKind(InputKind::CXX).getPreprocessed())
-    .Case("cui", InputKind(InputKind::CUDA).getPreprocessed())
-    .Case("m", InputKind::ObjC)
-    .Case("mi", InputKind(InputKind::ObjC).getPreprocessed())
-    .Cases("mm", "M", InputKind::ObjCXX)
-    .Case("mii", InputKind(InputKind::ObjCXX).getPreprocessed())
-    .Cases("C", "cc", "cp", InputKind::CXX)
-    .Cases("cpp", "CPP", "c++", "cxx", "hpp", InputKind::CXX)
-    .Case("cppm", InputKind::CXX)
-    .Case("iim", InputKind(InputKind::CXX).getPreprocessed())
-    .Case("cl", InputKind::OpenCL)
-    .Case("cu", InputKind::CUDA)
-    .Cases("ll", "bc", InputKind::LLVM_IR)
-    .Default(InputKind::Unknown);
+      .Cases("ast", "pcm", InputKind(Language::Unknown, InputKind::Precompiled))
+      .Case("c", Language::C)
+      .Cases("S", "s", Language::Asm)
+      .Case("i", InputKind(Language::C).getPreprocessed())
+      .Case("ii", InputKind(Language::CXX).getPreprocessed())
+      .Case("cui", InputKind(Language::CUDA).getPreprocessed())
+      .Case("m", Language::ObjC)
+      .Case("mi", InputKind(Language::ObjC).getPreprocessed())
+      .Cases("mm", "M", Language::ObjCXX)
+      .Case("mii", InputKind(Language::ObjCXX).getPreprocessed())
+      .Cases("C", "cc", "cp", Language::CXX)
+      .Cases("cpp", "CPP", "c++", "cxx", "hpp", Language::CXX)
+      .Case("cppm", Language::CXX)
+      .Case("iim", InputKind(Language::CXX).getPreprocessed())
+      .Case("cl", Language::OpenCL)
+      .Case("cu", Language::CUDA)
+      .Cases("ll", "bc", Language::LLVM_IR)
+      .Default(Language::Unknown);
 }

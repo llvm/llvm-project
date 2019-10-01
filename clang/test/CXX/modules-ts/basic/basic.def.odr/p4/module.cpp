@@ -3,7 +3,6 @@
 
 // CHECK-DAG: @extern_var_exported = external {{(dso_local )?}}global
 // CHECK-DAG: @inline_var_exported = linkonce_odr {{(dso_local )?}}global
-// CHECK-DAG: @_ZW6ModuleE19static_var_exported = available_externally {{(dso_local )?}}global i32 0,
 // CHECK-DAG: @const_var_exported = available_externally {{(dso_local )?}}constant i32 3,
 //
 // CHECK-DAG: @_ZW6ModuleE25extern_var_module_linkage = external {{(dso_local )?}}global
@@ -21,7 +20,6 @@ void use() {
 
   (void)&extern_var_exported;
   (void)&inline_var_exported;
-  (void)&static_var_exported; // FIXME: Should not be exported.
   (void)&const_var_exported;
 
   // FIXME: This symbol should not be visible here.

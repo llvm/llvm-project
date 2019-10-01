@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -std=c++14 -fsyntax-only -verify %s
 
 using nullptr_t = decltype(nullptr);
 

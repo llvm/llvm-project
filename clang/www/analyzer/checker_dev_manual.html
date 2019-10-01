@@ -675,6 +675,111 @@ to:</p>
     (gdb) <b>p C.getPredecessor()->getCodeDecl().getBody()->dump()</b>
 </pre>
 
+<h2 id=links>Making Your Checker Better</h2>
+<ul>
+<li>User facing documentation is important for adoption! Make sure the <a href="/available_checks.html">checker list </a>is updated
+    at the homepage of the analyzer. Also ensure the description is clear to
+    non-analyzer-developers in <tt>Checkers.td</tt>.</li>
+<li>Warning and note messages should be clear and easy to understand, even if a bit long.</li>
+<ul>
+  <li>Messages should start with a capital letter (unlike Clang warnings!) and should not
+      end with <tt>.</tt>.</li>
+  <li>Articles are usually omitted, eg. <tt>Dereference of a null pointer</tt> ->
+      <tt>Dereference of null pointer</tt>.</li>
+  <li>Introduce <tt>BugReporterVisitor</tt>s to emit additional notes that explain the warning
+      to the user better. There are some existing visitors that might be useful for your check,
+      e.g. <tt>trackNullOrUndefValue</tt>. For example, SimpleStreamChecker should highlight
+      the event of opening the file when reporting a file descriptor leak.</li>
+</ul>
+<li>If the check tracks anything in the program state, it needs to implement the
+    <tt>checkDeadSymbols</tt>callback to clean the state up.</li>
+<li>The check should conservatively assume that the program is correct when a tracked symbol
+    is passed to a function that is unknown to the analyzer.
+    <tt>checkPointerEscape</tt> callback could help you handle that case.</li>
+<li>Use safe and convenient APIs!</li>
+<ul>
+  <li>Always use <tt>CheckerContext::generateErrorNode</tt> and
+    <tt>CheckerContext::generateNonFatalErrorNode</tt> for emitting bug reports.
+    Most importantly, never emit report against <tt>CheckerContext::getPredecessor</tt>.</li>
+  <li>Prefer <tt>checkPreCall</tt> and <tt>checkPostCall</tt> to
+    <tt>checkPreStmt&lt;CallExpr&gt;</tt> and <tt>checkPostStmt&lt;CallExpr&gt;</tt>.</li>
+  <li>Use <tt>CallDescription</tt> to detect hardcoded API calls in the program.</li>
+  <li>Simplify <tt>C.getState()->getSVal(E, C.getLocationContext())</tt> to <tt>C.getSVal(E)</tt>.</li>
+</ul>
+<li>Common sources of crashes:</li>
+<ul>
+  <li><tt>CallEvent::getOriginExpr</tt> is nullable - for example, it returns null for an
+    automatic destructor of a variable. The same applies to some values generated while the
+    call was modeled, eg. <tt>SymbolConjured::getStmt</tt> is nullable.</li>
+  <li><tt>CallEvent::getDecl</tt> is nullable - for example, it returns null for a
+      call of symbolic function pointer.</li>
+  <li><tt>addTransition</tt>, <tt>generateSink</tt>, <tt>generateNonFatalErrorNode</tt>,
+    <tt>generateErrorNode</tt> are nullable because you can transition to a node that you have already visited.</li>
+  <li>Methods of <tt>CallExpr</tt>/<tt>FunctionDecl</tt>/<tt>CallEvent</tt> that
+    return arguments crash when the argument is out-of-bounds. If you checked the function name,
+    it doesn't mean that the function has the expected number of arguments!
+    Which is why you should use <tt>CallDescription</tt>.</li>
+  <li>Nullability of different entities within different kinds of symbols and regions is usually
+      documented via assertions in their constructors.</li>
+  <li><tt>NamedDecl::getName</tt> will fail if the name of the declaration is not a single token,
+    e.g. for destructors. You could use <tt>NamedDecl::getNameAsString</tt> for those cases.
+    Note that this method is much slower and should be used sparringly, e.g. only when generating reports
+    but not during analysis.</li>
+  <li>Is <tt>-analyzer-checker=core</tt> included in all test <tt>RUN:</tt> lines? It was never supported
+    to run the analyzer with the core checks disabled. It might cause unexpected behavior and
+    crashes. You should do all your testing with the core checks enabled.</li>
+</ul>
+</ul>
+<li>Patterns that you should most likely avoid even if they're not technically wrong:</li>
+<ul>
+  <li><tt>BugReporterVisitor</tt> should most likely not match the AST of the current program point
+      to decide when to emit a note. It is much easier to determine that by observing changes in
+      the program state.</li>
+  <li>In <tt>State->getSVal(Region)</tt>, if <tt>Region</tt> is not known to be a <tt>TypedValueRegion</tt>
+      and the optional type argument is not specified, the checker may accidentally try to dereference a
+      void pointer.</li>
+  <li>Checker logic should not depend on whether a certain value is a <tt>Loc</tt> or <tt>NonLoc</tt>.
+    It should be immediately obvious whether the <tt>SVal</tt> is a <tt>Loc</tt> or a
+    <tt>NonLoc</tt> depending on the AST that is being checked. Checking whether a value
+    is <tt>Loc</tt> or <tt>Unknown</tt>/<tt>Undefined</tt> or whether the value is
+    <tt>NonLoc</tt> or <tt>Unknown</tt>/<tt>Undefined</tt> is totally fine.</li>
+  <li>New symbols should not be constructed in the checker via direct calls to <tt>SymbolManager</tt>,
+    unless they are of <tt>SymbolMetadata</tt> class tagged by the checker,
+    or they represent newly created values such as the return value in <tt>evalCall</tt>.
+    For modeling arithmetic/bitwise/comparison operations, <tt>SValBuilder</tt> should be used.</li>
+  <li>Custom <tt>ProgramPointTag</tt>s should not be created within the checker. There is usually
+    no good reason for a checker to chain multiple nodes together, because checkers aren't worklists.</li>
+</ul>
+<li>Checkers are encouraged to actively participate in the analysis by sharing
+  their knowledge about the program state with the rest of the analyzer,
+  but they should not be disrupting the analysis unnecessarily:</li>
+<ul>
+  <li>If a checker splits program state, this must be based on knowledge that
+    the newly appearing branches are definitely possible and worth exploring
+    from the user's perspective. Otherwise the state split should be delayed
+    until there's an indication that one of the paths is taken, or one of the
+    paths needs to be dropped entirely. For example, it is fine to eagerly split
+    paths while modeling <tt>isalpha(x)</tt> as long as <tt>x</tt> is constrained accordingly on
+    each path. At the same time, it is not a good idea to split paths over the
+    return value of <tt>printf()</tt> while modeling the call because nobody ever checks
+    for errors in <tt>printf</tt>; at best, it'd just double the remaining analysis time.
+  </li>
+  <li>Caution is advised when using <tt>CheckerContext::generateNonFatalErrorNode</tt>
+    because it generates an independent transition, much like <tt>addTransition</tt>.
+    It is easy to accidentally split paths while using it. Ideally, try to
+    structure the code so that it was obvious that every <tt>addTransition</tt> or
+    <tt>generateNonFatalErrorNode</tt> (or sequence of such if the split is intended) is
+    immediately followed by return from the checker callback.</li>
+  <li>Multiple implementations of <tt>evalCall</tt> in different checkers should not conflict.</li>
+  <li>When implementing <tt>evalAssume</tt>, the checker should always return a non-null state
+      for either the true assumption or the false assumption (or both).</li>
+  <li>Checkers shall not mutate values of expressions, i.e. use the <tt>ProgramState::BindExpr</tt> API,
+    unless they are fully responsible for computing the value.
+    Under no circumstances should they change non-<tt>Unknown</tt> values of expressions.
+    Currently the only valid use case for this API in checkers is to model the return value in the <tt>evalCall</tt> callback.
+    If expression values are incorrect, <tt>ExprEngine</tt> needs to be fixed instead.</li>
+</ul>
+
 <h2 id=additioninformation>Additional Sources of Information</h2>
 
 Here are some additional resources that are useful when working on the Clang
@@ -684,11 +789,11 @@ Static Analyzer:
 <li><a href="http://lcs.ios.ac.cn/~xuzb/canalyze/memmodel.pdf">Xu, Zhongxing &
 Kremenek, Ted & Zhang, Jian. (2010). A Memory Model for Static Analysis of C
 Programs.</a></li>
-<li><a href="https://github.com/llvm-mirror/clang/blob/master/lib/StaticAnalyzer/README.txt">
+<li><a href="https://github.com/llvm/llvm-project/blob/master/clang/lib/StaticAnalyzer/README.txt">
 The Clang Static Analyzer README</a></li>
-<li><a href="https://github.com/llvm-mirror/clang/blob/master/docs/analyzer/RegionStore.txt">
+<li><a href="https://github.com/llvm/llvm-project/blob/master/clang/docs/analyzer/RegionStore.txt">
 Documentation for how the Store works</a></li>
-<li><a href="https://github.com/llvm-mirror/clang/blob/master/docs/analyzer/IPA.txt">
+<li><a href="https://github.com/llvm/llvm-project/blob/master/clang/docs/analyzer/IPA.txt">
 Documentation about inlining</a></li>
 <li> The "Building a Checker in 24 hours" presentation given at the <a
 href="http://llvm.org/devmtg/2012-11">November 2012 LLVM Developer's

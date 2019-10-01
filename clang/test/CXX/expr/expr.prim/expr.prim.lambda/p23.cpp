@@ -1,5 +1,6 @@
-// RUN: %clang_cc1 -fsyntax-only -std=c++11 %s -verify -Wno-c++1y-extensions
-// RUN: %clang_cc1 -fsyntax-only -std=c++1y %s -verify
+// RUN: %clang_cc1 -fsyntax-only -std=c++11 %s -verify -Wno-c++1y-extensions -Wno-c++2a-extensions
+// RUN: %clang_cc1 -fsyntax-only -std=c++1y %s -verify -Wno-c++2a-extensions
+// RUN: %clang_cc1 -fsyntax-only -std=c++2a %s -verify
 
 void print();
 
@@ -60,8 +61,25 @@ template void variadic_lambda(int*, float*, double*);
 
 template<typename ...Args>
 void init_capture_pack_err(Args ...args) {
-  [as(args)...] {} (); // expected-error {{expected ','}}
-  [as...(args)]{} (); // expected-error {{expected ','}}
+  [...as(args)]{} ();
+  [as(args)...] {} (); // expected-error {{ellipsis in pack init-capture must appear before the name of the capture}}
+  [as...(args)]{} (); // expected-error {{ellipsis in pack init-capture must appear before the name of the capture}}
+  [...as{args}]{} ();
+  [as{args}...] {} (); // expected-error {{ellipsis in pack init-capture must appear before the name of the capture}}
+  [as...{args}]{} (); // expected-error {{ellipsis in pack init-capture must appear before the name of the capture}}
+  [...as = args]{} ();
+  [as = args...] {} (); // expected-error {{ellipsis in pack init-capture must appear before the name of the capture}}
+  [as... = args]{} (); // expected-error {{ellipsis in pack init-capture must appear before the name of the capture}}
+
+  [&...as(args)]{} ();
+  [...&as(args)]{} (); // expected-error {{ellipsis in pack init-capture must appear before the name of the capture}}
+
+  [args...] {} ();
+  [...args] {} (); // expected-error {{ellipsis in pack capture must appear after the name of the capture}}
+
+  [&args...] {} ();
+  [...&args] {} (); // expected-error {{ellipsis in pack capture must appear after the name of the capture}}
+  [&...args] {} (); // expected-error {{ellipsis in pack capture must appear after the name of the capture}}
 }
 
 template<typename ...Args>

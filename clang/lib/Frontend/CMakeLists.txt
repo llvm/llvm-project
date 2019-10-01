@@ -31,7 +31,6 @@ add_clang_library(clangFrontend
   HeaderIncludeGen.cpp
   InitHeaderSearch.cpp
   InitPreprocessor.cpp
-  LangStandards.cpp
   LayoutOverrideSource.cpp
   LogDiagnosticPrinter.cpp
   ModuleDependencyCollector.cpp

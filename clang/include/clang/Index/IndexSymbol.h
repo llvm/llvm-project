@@ -1,9 +1,8 @@
 //===- IndexSymbol.h - Types and functions for indexing symbols -*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -143,8 +142,12 @@ enum class SymbolRole : uint32_t {
   RelationContainedBy = 1 << 17,
   RelationIBTypeOf = 1 << 18,
   RelationSpecializationOf = 1 << 19,
+
+  // Symbol only references the name of the object as written. For example, a
+  // constructor references the class declaration using that role.
+  NameReference = 1 << 20,
 };
-static const unsigned SymbolRoleBitNum = 20;
+static const unsigned SymbolRoleBitNum = 21;
 typedef unsigned SymbolRoleSet;
 
 /// Represents a relation to another symbol for a symbol occurrence.

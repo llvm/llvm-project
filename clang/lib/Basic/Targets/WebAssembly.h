@@ -1,9 +1,8 @@
 //=== WebAssembly.h - Declare WebAssembly target feature support *- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -28,16 +27,21 @@ class LLVM_LIBRARY_VISIBILITY WebAssemblyTargetInfo : public TargetInfo {
   enum SIMDEnum {
     NoSIMD,
     SIMD128,
-  } SIMDLevel;
+    UnimplementedSIMD128,
+  } SIMDLevel = NoSIMD;
 
-  bool HasNontrappingFPToInt;
-  bool HasSignExt;
-  bool HasExceptionHandling;
+  bool HasNontrappingFPToInt = false;
+  bool HasSignExt = false;
+  bool HasExceptionHandling = false;
+  bool HasBulkMemory = false;
+  bool HasAtomics = false;
+  bool HasMutableGlobals = false;
+  bool HasMultivalue = false;
+  bool HasTailCall = false;
 
 public:
   explicit WebAssemblyTargetInfo(const llvm::Triple &T, const TargetOptions &)
-      : TargetInfo(T), SIMDLevel(NoSIMD), HasNontrappingFPToInt(false),
-        HasSignExt(false), HasExceptionHandling(false) {
+      : TargetInfo(T) {
     NoAsmVariants = true;
     SuitableAlign = 128;
     LargeArrayMinWidth = 128;
@@ -59,18 +63,12 @@ protected:
                         MacroBuilder &Builder) const override;
 
 private:
+  static void setSIMDLevel(llvm::StringMap<bool> &Features, SIMDEnum Level);
+
   bool
   initFeatureMap(llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags,
                  StringRef CPU,
-                 const std::vector<std::string> &FeaturesVec) const override {
-    if (CPU == "bleeding-edge") {
-      Features["simd128"] = true;
-      Features["nontrapping-fptoint"] = true;
-      Features["sign-ext"] = true;
-    }
-    return TargetInfo::initFeatureMap(Features, Diags, CPU, FeaturesVec);
-  }
-
+                 const std::vector<std::string> &FeaturesVec) const override;
   bool hasFeature(StringRef Feature) const final;
 
   bool handleTargetFeatures(std::vector<std::string> &Features,

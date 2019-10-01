@@ -1,9 +1,8 @@
 //===---- TargetInfo.cpp - Encapsulate target details -----------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -310,10 +309,9 @@ static Address emitVoidPtrDirectVAArg(CodeGenFunction &CGF,
 
   // Advance the pointer past the argument, then store that back.
   CharUnits FullDirectSize = DirectSize.alignTo(SlotSize);
-  llvm::Value *NextPtr =
-    CGF.Builder.CreateConstInBoundsByteGEP(Addr.getPointer(), FullDirectSize,
-                                           "argp.next");
-  CGF.Builder.CreateStore(NextPtr, VAListAddr);
+  Address NextPtr =
+      CGF.Builder.CreateConstInBoundsByteGEP(Addr, FullDirectSize, "argp.next");
+  CGF.Builder.CreateStore(NextPtr.getPointer(), VAListAddr);
 
   // If the argument is smaller than a slot, and this is a big-endian
   // target, the argument will be right-adjusted in its slot.
@@ -464,8 +462,11 @@ TargetCodeGenInfo::performAddrSpaceCast(CodeGenModule &CGM, llvm::Constant *Src,
 }
 
 llvm::SyncScope::ID
-TargetCodeGenInfo::getLLVMSyncScopeID(SyncScope S, llvm::LLVMContext &C) const {
-  return C.getOrInsertSyncScopeID(""); /* default sync scope */
+TargetCodeGenInfo::getLLVMSyncScopeID(const LangOptions &LangOpts,
+                                      SyncScope Scope,
+                                      llvm::AtomicOrdering Ordering,
+                                      llvm::LLVMContext &Ctx) const {
+  return Ctx.getOrInsertSyncScopeID(""); /* default sync scope */
 }
 
 static bool isEmptyRecord(ASTContext &Context, QualType T, bool AllowArrays);
@@ -761,6 +762,22 @@ public:
 
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
                            CodeGen::CodeGenModule &CGM) const override {
+    TargetCodeGenInfo::setTargetAttributes(D, GV, CGM);
+    if (const auto *FD = dyn_cast_or_null<FunctionDecl>(D)) {
+      if (const auto *Attr = FD->getAttr<WebAssemblyImportModuleAttr>()) {
+        llvm::Function *Fn = cast<llvm::Function>(GV);
+        llvm::AttrBuilder B;
+        B.addAttribute("wasm-import-module", Attr->getImportModule());
+        Fn->addAttributes(llvm::AttributeList::FunctionIndex, B);
+      }
+      if (const auto *Attr = FD->getAttr<WebAssemblyImportNameAttr>()) {
+        llvm::Function *Fn = cast<llvm::Function>(GV);
+        llvm::AttrBuilder B;
+        B.addAttribute("wasm-import-name", Attr->getImportName());
+        Fn->addAttributes(llvm::AttributeList::FunctionIndex, B);
+      }
+    }
+
     if (auto *FD = dyn_cast_or_null<FunctionDecl>(D)) {
       llvm::Function *Fn = cast<llvm::Function>(GV);
       if (!FD->doesThisDeclarationHaveABody() && !FD->hasPrototype())
@@ -898,14 +915,6 @@ ABIArgInfo PNaClABIInfo::classifyReturnType(QualType RetTy) const {
                                            : ABIArgInfo::getDirect());
 }
 
-/// IsX86_MMXType - Return true if this is an MMX type.
-bool IsX86_MMXType(llvm::Type *IRType) {
-  // Return true if the type is an MMX type <2 x i32>, <4 x i16>, or <8 x i8>.
-  return IRType->isVectorTy() && IRType->getPrimitiveSizeInBits() == 64 &&
-    cast<llvm::VectorType>(IRType)->getElementType()->isIntegerTy() &&
-    IRType->getScalarSizeInBits() != 64;
-}
-
 static llvm::Type* X86AdjustInlineAsmType(CodeGen::CodeGenFunction &CGF,
                                           StringRef Constraint,
                                           llvm::Type* Ty) {
@@ -994,6 +1003,7 @@ class X86_32ABIInfo : public SwiftABIInfo {
   bool IsSoftFloatABI;
   bool IsMCUABI;
   unsigned DefaultNumRegisterParameters;
+  bool IsMMXEnabled;
 
   static bool isRegisterSize(unsigned Size) {
     return (Size == 8 || Size == 16 || Size == 32 || Size == 64);
@@ -1053,13 +1063,15 @@ public:
 
   X86_32ABIInfo(CodeGen::CodeGenTypes &CGT, bool DarwinVectorABI,
                 bool RetSmallStructInRegABI, bool Win32StructABI,
-                unsigned NumRegisterParameters, bool SoftFloatABI)
+                unsigned NumRegisterParameters, bool SoftFloatABI,
+                bool MMXEnabled)
     : SwiftABIInfo(CGT), IsDarwinVectorABI(DarwinVectorABI),
       IsRetSmallStructInRegABI(RetSmallStructInRegABI),
       IsWin32StructABI(Win32StructABI),
       IsSoftFloatABI(SoftFloatABI),
       IsMCUABI(CGT.getTarget().getTriple().isOSIAMCU()),
-      DefaultNumRegisterParameters(NumRegisterParameters) {}
+      DefaultNumRegisterParameters(NumRegisterParameters),
+      IsMMXEnabled(MMXEnabled) {}
 
   bool shouldPassIndirectlyForSwift(ArrayRef<llvm::Type*> scalars,
                                     bool asReturnValue) const override {
@@ -1074,16 +1086,30 @@ public:
     // x86-32 lowering does not support passing swifterror in a register.
     return false;
   }
+
+  bool isPassInMMXRegABI() const {
+    // The System V i386 psABI requires __m64 to be passed in MMX registers.
+    // Clang historically had a bug where it failed to apply this rule, and
+    // some platforms (e.g. Darwin, PS4, and FreeBSD) have opted to maintain
+    // compatibility with the old Clang behavior, so we only apply it on
+    // platforms that have specifically requested it (currently just Linux and
+    // NetBSD).
+    const llvm::Triple &T = getTarget().getTriple();
+    if (IsMMXEnabled && (T.isOSLinux() || T.isOSNetBSD()))
+      return true;
+    return false;
+  }
 };
 
 class X86_32TargetCodeGenInfo : public TargetCodeGenInfo {
 public:
   X86_32TargetCodeGenInfo(CodeGen::CodeGenTypes &CGT, bool DarwinVectorABI,
                           bool RetSmallStructInRegABI, bool Win32StructABI,
-                          unsigned NumRegisterParameters, bool SoftFloatABI)
+                          unsigned NumRegisterParameters, bool SoftFloatABI,
+                          bool MMXEnabled = false)
       : TargetCodeGenInfo(new X86_32ABIInfo(
             CGT, DarwinVectorABI, RetSmallStructInRegABI, Win32StructABI,
-            NumRegisterParameters, SoftFloatABI)) {}
+            NumRegisterParameters, SoftFloatABI, MMXEnabled)) {}
 
   static bool isStructReturnInRegABI(
       const llvm::Triple &Triple, const CodeGenOptions &Opts);
@@ -1369,10 +1395,9 @@ ABIArgInfo X86_32ABIInfo::classifyReturnType(QualType RetTy,
   }
 
   if (const VectorType *VT = RetTy->getAs<VectorType>()) {
+    uint64_t Size = getContext().getTypeSize(RetTy);
     // On Darwin, some vectors are returned in registers.
     if (IsDarwinVectorABI) {
-      uint64_t Size = getContext().getTypeSize(RetTy);
-
       // 128-bit vectors are a special case; they are returned in
       // registers and we need to make sure to pick a type the LLVM
       // backend will like.
@@ -1389,6 +1414,10 @@ ABIArgInfo X86_32ABIInfo::classifyReturnType(QualType RetTy,
 
       return getIndirectReturnResult(RetTy, State);
     }
+
+    if (VT->getElementType()->isIntegerType() && Size == 64 &&
+        isPassInMMXRegABI())
+      return ABIArgInfo::getDirect(llvm::Type::getX86_MMXTy(getVMContext()));
 
     return ABIArgInfo::getDirect();
   }
@@ -1684,22 +1713,25 @@ ABIArgInfo X86_32ABIInfo::classifyArgumentType(QualType Ty,
   }
 
   if (const VectorType *VT = Ty->getAs<VectorType>()) {
+    uint64_t Size = getContext().getTypeSize(Ty);
     // On Darwin, some vectors are passed in memory, we handle this by passing
     // it as an i8/i16/i32/i64.
     if (IsDarwinVectorABI) {
-      uint64_t Size = getContext().getTypeSize(Ty);
       if ((Size == 8 || Size == 16 || Size == 32) ||
           (Size == 64 && VT->getNumElements() == 1))
         return ABIArgInfo::getDirect(llvm::IntegerType::get(getVMContext(),
                                                             Size));
     }
 
-    if (IsX86_MMXType(CGT.ConvertType(Ty)))
-      return ABIArgInfo::getDirect(llvm::IntegerType::get(getVMContext(), 64));
-
+    if (VT->getElementType()->isIntegerType() && Size == 64) {
+      if (isPassInMMXRegABI())
+        return ABIArgInfo::getDirect(llvm::Type::getX86_MMXTy(getVMContext()));
+      else
+        return ABIArgInfo::getDirect(
+          llvm::IntegerType::get(getVMContext(), 64));
+    }
     return ABIArgInfo::getDirect();
   }
-
 
   if (const EnumType *EnumTy = Ty->getAs<EnumType>())
     Ty = EnumTy->getDecl()->getIntegerType();
@@ -2328,22 +2360,6 @@ public:
         Fn->setCallingConv(llvm::CallingConv::X86_INTR);
       }
     }
-  }
-};
-
-class PS4TargetCodeGenInfo : public X86_64TargetCodeGenInfo {
-public:
-  PS4TargetCodeGenInfo(CodeGen::CodeGenTypes &CGT, X86AVXABILevel AVXLevel)
-    : X86_64TargetCodeGenInfo(CGT, AVXLevel) {}
-
-  void getDependentLibraryOption(llvm::StringRef Lib,
-                                 llvm::SmallString<24> &Opt) const override {
-    Opt = "\01";
-    // If the argument contains a space, enclose it in quotes.
-    if (Lib.find(" ") != StringRef::npos)
-      Opt += "\"" + Lib.str() + "\"";
-    else
-      Opt += Lib;
   }
 };
 
@@ -3633,8 +3649,8 @@ void X86_64ABIInfo::computeInfo(CGFunctionInfo &FI) const {
 
 static Address EmitX86_64VAArgFromMemory(CodeGenFunction &CGF,
                                          Address VAListAddr, QualType Ty) {
-  Address overflow_arg_area_p = CGF.Builder.CreateStructGEP(
-      VAListAddr, 2, CharUnits::fromQuantity(8), "overflow_arg_area_p");
+  Address overflow_arg_area_p =
+      CGF.Builder.CreateStructGEP(VAListAddr, 2, "overflow_arg_area_p");
   llvm::Value *overflow_arg_area =
     CGF.Builder.CreateLoad(overflow_arg_area_p, "overflow_arg_area");
 
@@ -3705,18 +3721,14 @@ Address X86_64ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   Address gp_offset_p = Address::invalid(), fp_offset_p = Address::invalid();
   llvm::Value *gp_offset = nullptr, *fp_offset = nullptr;
   if (neededInt) {
-    gp_offset_p =
-        CGF.Builder.CreateStructGEP(VAListAddr, 0, CharUnits::Zero(),
-                                    "gp_offset_p");
+    gp_offset_p = CGF.Builder.CreateStructGEP(VAListAddr, 0, "gp_offset_p");
     gp_offset = CGF.Builder.CreateLoad(gp_offset_p, "gp_offset");
     InRegs = llvm::ConstantInt::get(CGF.Int32Ty, 48 - neededInt * 8);
     InRegs = CGF.Builder.CreateICmpULE(gp_offset, InRegs, "fits_in_gp");
   }
 
   if (neededSSE) {
-    fp_offset_p =
-        CGF.Builder.CreateStructGEP(VAListAddr, 1, CharUnits::fromQuantity(4),
-                                    "fp_offset_p");
+    fp_offset_p = CGF.Builder.CreateStructGEP(VAListAddr, 1, "fp_offset_p");
     fp_offset = CGF.Builder.CreateLoad(fp_offset_p, "fp_offset");
     llvm::Value *FitsInFP =
       llvm::ConstantInt::get(CGF.Int32Ty, 176 - neededSSE * 16);
@@ -3745,8 +3757,7 @@ Address X86_64ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   // loads than necessary. Can we clean this up?
   llvm::Type *LTy = CGF.ConvertTypeForMem(Ty);
   llvm::Value *RegSaveArea = CGF.Builder.CreateLoad(
-      CGF.Builder.CreateStructGEP(VAListAddr, 3, CharUnits::fromQuantity(16)),
-                                  "reg_save_area");
+      CGF.Builder.CreateStructGEP(VAListAddr, 3), "reg_save_area");
 
   Address RegAddr = Address::invalid();
   if (neededInt && neededSSE) {
@@ -3772,16 +3783,13 @@ Address X86_64ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
     llvm::Value *V = CGF.Builder.CreateAlignedLoad(
         TyLo, CGF.Builder.CreateBitCast(RegLoAddr, PTyLo),
         CharUnits::fromQuantity(getDataLayout().getABITypeAlignment(TyLo)));
-    CGF.Builder.CreateStore(V,
-                    CGF.Builder.CreateStructGEP(Tmp, 0, CharUnits::Zero()));
+    CGF.Builder.CreateStore(V, CGF.Builder.CreateStructGEP(Tmp, 0));
 
     // Copy the second element.
     V = CGF.Builder.CreateAlignedLoad(
         TyHi, CGF.Builder.CreateBitCast(RegHiAddr, PTyHi),
         CharUnits::fromQuantity(getDataLayout().getABITypeAlignment(TyHi)));
-    CharUnits Offset = CharUnits::fromQuantity(
-                   getDataLayout().getStructLayout(ST)->getElementOffset(1));
-    CGF.Builder.CreateStore(V, CGF.Builder.CreateStructGEP(Tmp, 1, Offset));
+    CGF.Builder.CreateStore(V, CGF.Builder.CreateStructGEP(Tmp, 1));
 
     RegAddr = CGF.Builder.CreateElementBitCast(Tmp, LTy);
   } else if (neededInt) {
@@ -3828,12 +3836,10 @@ Address X86_64ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
     Tmp = CGF.Builder.CreateElementBitCast(Tmp, ST);
     V = CGF.Builder.CreateLoad(CGF.Builder.CreateElementBitCast(
         RegAddrLo, ST->getStructElementType(0)));
-    CGF.Builder.CreateStore(V,
-                   CGF.Builder.CreateStructGEP(Tmp, 0, CharUnits::Zero()));
+    CGF.Builder.CreateStore(V, CGF.Builder.CreateStructGEP(Tmp, 0));
     V = CGF.Builder.CreateLoad(CGF.Builder.CreateElementBitCast(
         RegAddrHi, ST->getStructElementType(1)));
-    CGF.Builder.CreateStore(V,
-          CGF.Builder.CreateStructGEP(Tmp, 1, CharUnits::fromQuantity(8)));
+    CGF.Builder.CreateStore(V, CGF.Builder.CreateStructGEP(Tmp, 1));
 
     RegAddr = CGF.Builder.CreateElementBitCast(Tmp, LTy);
   }
@@ -4175,9 +4181,9 @@ Address PPC32_SVR4_ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAList,
   // The calling convention either uses 1-2 GPRs or 1 FPR.
   Address NumRegsAddr = Address::invalid();
   if (isInt || IsSoftFloatABI) {
-    NumRegsAddr = Builder.CreateStructGEP(VAList, 0, CharUnits::Zero(), "gpr");
+    NumRegsAddr = Builder.CreateStructGEP(VAList, 0, "gpr");
   } else {
-    NumRegsAddr = Builder.CreateStructGEP(VAList, 1, CharUnits::One(), "fpr");
+    NumRegsAddr = Builder.CreateStructGEP(VAList, 1, "fpr");
   }
 
   llvm::Value *NumRegs = Builder.CreateLoad(NumRegsAddr, "numUsedRegs");
@@ -4205,8 +4211,7 @@ Address PPC32_SVR4_ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAList,
   {
     CGF.EmitBlock(UsingRegs);
 
-    Address RegSaveAreaPtr =
-      Builder.CreateStructGEP(VAList, 4, CharUnits::fromQuantity(8));
+    Address RegSaveAreaPtr = Builder.CreateStructGEP(VAList, 4);
     RegAddr = Address(Builder.CreateLoad(RegSaveAreaPtr),
                       CharUnits::fromQuantity(8));
     assert(RegAddr.getElementType() == CGF.Int8Ty);
@@ -4254,8 +4259,7 @@ Address PPC32_SVR4_ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAList,
       Size = CGF.getPointerSize();
     }
 
-    Address OverflowAreaAddr =
-      Builder.CreateStructGEP(VAList, 3, CharUnits::fromQuantity(4));
+    Address OverflowAreaAddr = Builder.CreateStructGEP(VAList, 3);
     Address OverflowArea(Builder.CreateLoad(OverflowAreaAddr, "argp.cur"),
                          OverflowAreaAlign);
     // Round up address of argument to alignment
@@ -5289,31 +5293,24 @@ Address AArch64ABIInfo::EmitAAPCSVAArg(Address VAListAddr,
   llvm::BasicBlock *OnStackBlock = CGF.createBasicBlock("vaarg.on_stack");
   llvm::BasicBlock *ContBlock = CGF.createBasicBlock("vaarg.end");
 
-  auto TyInfo = getContext().getTypeInfoInChars(Ty);
-  CharUnits TyAlign = TyInfo.second;
+  CharUnits TySize = getContext().getTypeSizeInChars(Ty);
+  CharUnits TyAlign = getContext().getTypeUnadjustedAlignInChars(Ty);
 
   Address reg_offs_p = Address::invalid();
   llvm::Value *reg_offs = nullptr;
   int reg_top_index;
-  CharUnits reg_top_offset;
-  int RegSize = IsIndirect ? 8 : TyInfo.first.getQuantity();
+  int RegSize = IsIndirect ? 8 : TySize.getQuantity();
   if (!IsFPR) {
     // 3 is the field number of __gr_offs
-    reg_offs_p =
-        CGF.Builder.CreateStructGEP(VAListAddr, 3, CharUnits::fromQuantity(24),
-                                    "gr_offs_p");
+    reg_offs_p = CGF.Builder.CreateStructGEP(VAListAddr, 3, "gr_offs_p");
     reg_offs = CGF.Builder.CreateLoad(reg_offs_p, "gr_offs");
     reg_top_index = 1; // field number for __gr_top
-    reg_top_offset = CharUnits::fromQuantity(8);
     RegSize = llvm::alignTo(RegSize, 8);
   } else {
     // 4 is the field number of __vr_offs.
-    reg_offs_p =
-        CGF.Builder.CreateStructGEP(VAListAddr, 4, CharUnits::fromQuantity(28),
-                                    "vr_offs_p");
+    reg_offs_p = CGF.Builder.CreateStructGEP(VAListAddr, 4, "vr_offs_p");
     reg_offs = CGF.Builder.CreateLoad(reg_offs_p, "vr_offs");
     reg_top_index = 2; // field number for __vr_top
-    reg_top_offset = CharUnits::fromQuantity(16);
     RegSize = 16 * NumRegs;
   }
 
@@ -5375,8 +5372,8 @@ Address AArch64ABIInfo::EmitAAPCSVAArg(Address VAListAddr,
   CGF.EmitBlock(InRegBlock);
 
   llvm::Value *reg_top = nullptr;
-  Address reg_top_p = CGF.Builder.CreateStructGEP(VAListAddr, reg_top_index,
-                                                  reg_top_offset, "reg_top_p");
+  Address reg_top_p =
+      CGF.Builder.CreateStructGEP(VAListAddr, reg_top_index, "reg_top_p");
   reg_top = CGF.Builder.CreateLoad(reg_top_p, "reg_top");
   Address BaseAddr(CGF.Builder.CreateInBoundsGEP(reg_top, reg_offs),
                    CharUnits::fromQuantity(IsFPR ? 16 : 8));
@@ -5416,8 +5413,7 @@ Address AArch64ABIInfo::EmitAAPCSVAArg(Address VAListAddr,
         CGF.Builder.CreateConstInBoundsByteGEP(BaseAddr, BaseOffset);
       LoadAddr = CGF.Builder.CreateElementBitCast(LoadAddr, BaseTy);
 
-      Address StoreAddr =
-        CGF.Builder.CreateConstArrayGEP(Tmp, i, BaseTyInfo.first);
+      Address StoreAddr = CGF.Builder.CreateConstArrayGEP(Tmp, i);
 
       llvm::Value *Elem = CGF.Builder.CreateLoad(LoadAddr);
       CGF.Builder.CreateStore(Elem, StoreAddr);
@@ -5431,8 +5427,8 @@ Address AArch64ABIInfo::EmitAAPCSVAArg(Address VAListAddr,
     CharUnits SlotSize = BaseAddr.getAlignment();
     if (CGF.CGM.getDataLayout().isBigEndian() && !IsIndirect &&
         (IsHFA || !isAggregateTypeForABI(Ty)) &&
-        TyInfo.first < SlotSize) {
-      CharUnits Offset = SlotSize - TyInfo.first;
+        TySize < SlotSize) {
+      CharUnits Offset = SlotSize - TySize;
       BaseAddr = CGF.Builder.CreateConstInBoundsByteGEP(BaseAddr, Offset);
     }
 
@@ -5446,8 +5442,7 @@ Address AArch64ABIInfo::EmitAAPCSVAArg(Address VAListAddr,
   //=======================================
   CGF.EmitBlock(OnStackBlock);
 
-  Address stack_p = CGF.Builder.CreateStructGEP(VAListAddr, 0,
-                                                CharUnits::Zero(), "stack_p");
+  Address stack_p = CGF.Builder.CreateStructGEP(VAListAddr, 0, "stack_p");
   llvm::Value *OnStackPtr = CGF.Builder.CreateLoad(stack_p, "stack");
 
   // Again, stack arguments may need realignment. In this case both integer and
@@ -5475,7 +5470,7 @@ Address AArch64ABIInfo::EmitAAPCSVAArg(Address VAListAddr,
   if (IsIndirect)
     StackSize = StackSlotSize;
   else
-    StackSize = TyInfo.first.alignTo(StackSlotSize);
+    StackSize = TySize.alignTo(StackSlotSize);
 
   llvm::Value *StackSizeC = CGF.Builder.getSize(StackSize);
   llvm::Value *NewStack =
@@ -5485,8 +5480,8 @@ Address AArch64ABIInfo::EmitAAPCSVAArg(Address VAListAddr,
   CGF.Builder.CreateStore(NewStack, stack_p);
 
   if (CGF.CGM.getDataLayout().isBigEndian() && !isAggregateTypeForABI(Ty) &&
-      TyInfo.first < StackSlotSize) {
-    CharUnits Offset = StackSlotSize - TyInfo.first;
+      TySize < StackSlotSize) {
+    CharUnits Offset = StackSlotSize - TySize;
     OnStackAddr = CGF.Builder.CreateConstInBoundsByteGEP(OnStackAddr, Offset);
   }
 
@@ -5504,7 +5499,7 @@ Address AArch64ABIInfo::EmitAAPCSVAArg(Address VAListAddr,
 
   if (IsIndirect)
     return Address(CGF.Builder.CreateLoad(ResAddr, "vaarg.addr"),
-                   TyInfo.second);
+                   TyAlign);
 
   return ResAddr;
 }
@@ -5604,16 +5599,21 @@ public:
   ABIKind getABIKind() const { return Kind; }
 
 private:
-  ABIArgInfo classifyReturnType(QualType RetTy, bool isVariadic) const;
-  ABIArgInfo classifyArgumentType(QualType RetTy, bool isVariadic) const;
+  ABIArgInfo classifyReturnType(QualType RetTy, bool isVariadic,
+                                unsigned functionCallConv) const;
+  ABIArgInfo classifyArgumentType(QualType RetTy, bool isVariadic,
+                                  unsigned functionCallConv) const;
   ABIArgInfo classifyHomogeneousAggregate(QualType Ty, const Type *Base,
                                           uint64_t Members) const;
   ABIArgInfo coerceIllegalVector(QualType Ty) const;
   bool isIllegalVectorType(QualType Ty) const;
+  bool containsAnyFP16Vectors(QualType Ty) const;
 
   bool isHomogeneousAggregateBaseType(QualType Ty) const override;
   bool isHomogeneousAggregateSmallEnough(const Type *Ty,
                                          uint64_t Members) const override;
+
+  bool isEffectivelyAAPCS_VFP(unsigned callConvention, bool acceptHalf) const;
 
   void computeInfo(CGFunctionInfo &FI) const override;
 
@@ -5735,11 +5735,13 @@ void WindowsARMTargetCodeGenInfo::setTargetAttributes(
 
 void ARMABIInfo::computeInfo(CGFunctionInfo &FI) const {
   if (!::classifyReturnType(getCXXABI(), FI, *this))
-    FI.getReturnInfo() =
-        classifyReturnType(FI.getReturnType(), FI.isVariadic());
+    FI.getReturnInfo() = classifyReturnType(FI.getReturnType(), FI.isVariadic(),
+                                            FI.getCallingConvention());
 
   for (auto &I : FI.arguments())
-    I.info = classifyArgumentType(I.type, FI.isVariadic());
+    I.info = classifyArgumentType(I.type, FI.isVariadic(),
+                                  FI.getCallingConvention());
+
 
   // Always honor user-specified calling convention.
   if (FI.getCallingConvention() != llvm::CallingConv::C)
@@ -5805,9 +5807,7 @@ ABIArgInfo ARMABIInfo::classifyHomogeneousAggregate(QualType Ty,
   // Base can be a floating-point or a vector.
   if (const VectorType *VT = Base->getAs<VectorType>()) {
     // FP16 vectors should be converted to integer vectors
-    if (!getTarget().hasLegalHalfType() &&
-        (VT->getElementType()->isFloat16Type() ||
-          VT->getElementType()->isHalfType())) {
+    if (!getTarget().hasLegalHalfType() && containsAnyFP16Vectors(Ty)) {
       uint64_t Size = getContext().getTypeSize(VT);
       llvm::Type *NewVecTy = llvm::VectorType::get(
           llvm::Type::getInt32Ty(getVMContext()), Size / 32);
@@ -5818,8 +5818,8 @@ ABIArgInfo ARMABIInfo::classifyHomogeneousAggregate(QualType Ty,
   return ABIArgInfo::getDirect(nullptr, 0, nullptr, false);
 }
 
-ABIArgInfo ARMABIInfo::classifyArgumentType(QualType Ty,
-                                            bool isVariadic) const {
+ABIArgInfo ARMABIInfo::classifyArgumentType(QualType Ty, bool isVariadic,
+                                            unsigned functionCallConv) const {
   // 6.1.2.1 The following argument types are VFP CPRCs:
   //   A single-precision floating-point type (including promoted
   //   half-precision types); A double-precision floating-point type;
@@ -5827,7 +5827,9 @@ ABIArgInfo ARMABIInfo::classifyArgumentType(QualType Ty,
   //   with a Base Type of a single- or double-precision floating-point type,
   //   64-bit containerized vectors or 128-bit containerized vectors with one
   //   to four Elements.
-  bool IsEffectivelyAAPCS_VFP = getABIKind() == AAPCS_VFP && !isVariadic;
+  // Variadic functions should always marshal to the base standard.
+  bool IsAAPCS_VFP =
+      !isVariadic && isEffectivelyAAPCS_VFP(functionCallConv, /* AAPCS16 */ false);
 
   Ty = useFirstFieldIfTransparentUnion(Ty);
 
@@ -5840,7 +5842,7 @@ ABIArgInfo ARMABIInfo::classifyArgumentType(QualType Ty,
   // half type natively, and does not need to interwork with AAPCS code.
   if ((Ty->isFloat16Type() || Ty->isHalfType()) &&
       !getContext().getLangOpts().NativeHalfArgsAndReturns) {
-    llvm::Type *ResType = IsEffectivelyAAPCS_VFP ?
+    llvm::Type *ResType = IsAAPCS_VFP ?
       llvm::Type::getFloatTy(getVMContext()) :
       llvm::Type::getInt32Ty(getVMContext());
     return ABIArgInfo::getDirect(ResType);
@@ -5864,7 +5866,7 @@ ABIArgInfo ARMABIInfo::classifyArgumentType(QualType Ty,
   if (isEmptyRecord(getContext(), Ty, true))
     return ABIArgInfo::getIgnore();
 
-  if (IsEffectivelyAAPCS_VFP) {
+  if (IsAAPCS_VFP) {
     // Homogeneous Aggregates need to be expanded when we can fit the aggregate
     // into VFP registers.
     const Type *Base = nullptr;
@@ -6021,10 +6023,12 @@ static bool isIntegerLikeType(QualType Ty, ASTContext &Context,
   return true;
 }
 
-ABIArgInfo ARMABIInfo::classifyReturnType(QualType RetTy,
-                                          bool isVariadic) const {
-  bool IsEffectivelyAAPCS_VFP =
-      (getABIKind() == AAPCS_VFP || getABIKind() == AAPCS16_VFP) && !isVariadic;
+ABIArgInfo ARMABIInfo::classifyReturnType(QualType RetTy, bool isVariadic,
+                                          unsigned functionCallConv) const {
+
+  // Variadic functions should always marshal to the base standard.
+  bool IsAAPCS_VFP =
+      !isVariadic && isEffectivelyAAPCS_VFP(functionCallConv, /* AAPCS16 */ true);
 
   if (RetTy->isVoidType())
     return ABIArgInfo::getIgnore();
@@ -6045,7 +6049,7 @@ ABIArgInfo ARMABIInfo::classifyReturnType(QualType RetTy,
   // half type natively, and does not need to interwork with AAPCS code.
   if ((RetTy->isFloat16Type() || RetTy->isHalfType()) &&
       !getContext().getLangOpts().NativeHalfArgsAndReturns) {
-    llvm::Type *ResType = IsEffectivelyAAPCS_VFP ?
+    llvm::Type *ResType = IsAAPCS_VFP ?
       llvm::Type::getFloatTy(getVMContext()) :
       llvm::Type::getInt32Ty(getVMContext());
     return ABIArgInfo::getDirect(ResType);
@@ -6094,7 +6098,7 @@ ABIArgInfo ARMABIInfo::classifyReturnType(QualType RetTy,
     return ABIArgInfo::getIgnore();
 
   // Check for homogeneous aggregates with AAPCS-VFP.
-  if (IsEffectivelyAAPCS_VFP) {
+  if (IsAAPCS_VFP) {
     const Type *Base = nullptr;
     uint64_t Members = 0;
     if (isHomogeneousAggregate(RetTy, Base, Members))
@@ -6164,6 +6168,37 @@ bool ARMABIInfo::isIllegalVectorType(QualType Ty) const {
   return false;
 }
 
+/// Return true if a type contains any 16-bit floating point vectors
+bool ARMABIInfo::containsAnyFP16Vectors(QualType Ty) const {
+  if (const ConstantArrayType *AT = getContext().getAsConstantArrayType(Ty)) {
+    uint64_t NElements = AT->getSize().getZExtValue();
+    if (NElements == 0)
+      return false;
+    return containsAnyFP16Vectors(AT->getElementType());
+  } else if (const RecordType *RT = Ty->getAs<RecordType>()) {
+    const RecordDecl *RD = RT->getDecl();
+
+    // If this is a C++ record, check the bases first.
+    if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD))
+      if (llvm::any_of(CXXRD->bases(), [this](const CXXBaseSpecifier &B) {
+            return containsAnyFP16Vectors(B.getType());
+          }))
+        return true;
+
+    if (llvm::any_of(RD->fields(), [this](FieldDecl *FD) {
+          return FD && containsAnyFP16Vectors(FD->getType());
+        }))
+      return true;
+
+    return false;
+  } else {
+    if (const VectorType *VT = Ty->getAs<VectorType>())
+      return (VT->getElementType()->isFloat16Type() ||
+              VT->getElementType()->isHalfType());
+    return false;
+  }
+}
+
 bool ARMABIInfo::isLegalVectorTypeForSwift(CharUnits vectorSize,
                                            llvm::Type *eltTy,
                                            unsigned numElts) const {
@@ -6199,6 +6234,16 @@ bool ARMABIInfo::isHomogeneousAggregateSmallEnough(const Type *Base,
   return Members <= 4;
 }
 
+bool ARMABIInfo::isEffectivelyAAPCS_VFP(unsigned callConvention,
+                                        bool acceptHalf) const {
+  // Give precedence to user-specified calling conventions.
+  if (callConvention != llvm::CallingConv::C)
+    return (callConvention == llvm::CallingConv::ARM_AAPCS_VFP);
+  else
+    return (getABIKind() == AAPCS_VFP) ||
+           (acceptHalf && (getABIKind() == AAPCS16_VFP));
+}
+
 Address ARMABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
                               QualType Ty) const {
   CharUnits SlotSize = CharUnits::fromQuantity(4);
@@ -6210,19 +6255,19 @@ Address ARMABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
     return Addr;
   }
 
-  auto TyInfo = getContext().getTypeInfoInChars(Ty);
-  CharUnits TyAlignForABI = TyInfo.second;
+  CharUnits TySize = getContext().getTypeSizeInChars(Ty);
+  CharUnits TyAlignForABI = getContext().getTypeUnadjustedAlignInChars(Ty);
 
   // Use indirect if size of the illegal vector is bigger than 16 bytes.
   bool IsIndirect = false;
   const Type *Base = nullptr;
   uint64_t Members = 0;
-  if (TyInfo.first > CharUnits::fromQuantity(16) && isIllegalVectorType(Ty)) {
+  if (TySize > CharUnits::fromQuantity(16) && isIllegalVectorType(Ty)) {
     IsIndirect = true;
 
   // ARMv7k passes structs bigger than 16 bytes indirectly, in space
   // allocated by the caller.
-  } else if (TyInfo.first > CharUnits::fromQuantity(16) &&
+  } else if (TySize > CharUnits::fromQuantity(16) &&
              getABIKind() == ARMABIInfo::AAPCS16_VFP &&
              !isHomogeneousAggregate(Ty, Base, Members)) {
     IsIndirect = true;
@@ -6242,8 +6287,8 @@ Address ARMABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   } else {
     TyAlignForABI = CharUnits::fromQuantity(4);
   }
-  TyInfo.second = TyAlignForABI;
 
+  std::pair<CharUnits, CharUnits> TyInfo = { TySize, TyAlignForABI };
   return emitVoidPtrVAArg(CGF, VAListAddr, Ty, IsIndirect, TyInfo,
                           SlotSize, /*AllowHigherAlign*/ true);
 }
@@ -6281,9 +6326,57 @@ private:
   static void addNVVMMetadata(llvm::Function *F, StringRef Name, int Operand);
 };
 
+/// Checks if the type is unsupported directly by the current target.
+static bool isUnsupportedType(ASTContext &Context, QualType T) {
+  if (!Context.getTargetInfo().hasFloat16Type() && T->isFloat16Type())
+    return true;
+  if (!Context.getTargetInfo().hasFloat128Type() &&
+      (T->isFloat128Type() ||
+       (T->isRealFloatingType() && Context.getTypeSize(T) == 128)))
+    return true;
+  if (!Context.getTargetInfo().hasInt128Type() && T->isIntegerType() &&
+      Context.getTypeSize(T) > 64)
+    return true;
+  if (const auto *AT = T->getAsArrayTypeUnsafe())
+    return isUnsupportedType(Context, AT->getElementType());
+  const auto *RT = T->getAs<RecordType>();
+  if (!RT)
+    return false;
+  const RecordDecl *RD = RT->getDecl();
+
+  // If this is a C++ record, check the bases first.
+  if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD))
+    for (const CXXBaseSpecifier &I : CXXRD->bases())
+      if (isUnsupportedType(Context, I.getType()))
+        return true;
+
+  for (const FieldDecl *I : RD->fields())
+    if (isUnsupportedType(Context, I->getType()))
+      return true;
+  return false;
+}
+
+/// Coerce the given type into an array with maximum allowed size of elements.
+static ABIArgInfo coerceToIntArrayWithLimit(QualType Ty, ASTContext &Context,
+                                            llvm::LLVMContext &LLVMContext,
+                                            unsigned MaxSize) {
+  // Alignment and Size are measured in bits.
+  const uint64_t Size = Context.getTypeSize(Ty);
+  const uint64_t Alignment = Context.getTypeAlign(Ty);
+  const unsigned Div = std::min<unsigned>(MaxSize, Alignment);
+  llvm::Type *IntType = llvm::Type::getIntNTy(LLVMContext, Div);
+  const uint64_t NumElements = (Size + Div - 1) / Div;
+  return ABIArgInfo::getDirect(llvm::ArrayType::get(IntType, NumElements));
+}
+
 ABIArgInfo NVPTXABIInfo::classifyReturnType(QualType RetTy) const {
   if (RetTy->isVoidType())
     return ABIArgInfo::getIgnore();
+
+  if (getContext().getLangOpts().OpenMP &&
+      getContext().getLangOpts().OpenMPIsDevice &&
+      isUnsupportedType(getContext(), RetTy))
+    return coerceToIntArrayWithLimit(RetTy, getContext(), getVMContext(), 64);
 
   // note: this is different from default ABI
   if (!RetTy->isScalarType())
@@ -6590,8 +6683,7 @@ Address SystemZABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
     // Vector arguments are always passed in the high bits of a
     // single (8 byte) or double (16 byte) stack slot.
     Address OverflowArgAreaPtr =
-      CGF.Builder.CreateStructGEP(VAListAddr, 2, CharUnits::fromQuantity(16),
-                                  "overflow_arg_area_ptr");
+        CGF.Builder.CreateStructGEP(VAListAddr, 2, "overflow_arg_area_ptr");
     Address OverflowArgArea =
       Address(CGF.Builder.CreateLoad(OverflowArgAreaPtr, "overflow_arg_area"),
               TyInfo.second);
@@ -6623,9 +6715,8 @@ Address SystemZABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
     RegPadding = Padding; // values are passed in the low bits of a GPR
   }
 
-  Address RegCountPtr = CGF.Builder.CreateStructGEP(
-      VAListAddr, RegCountField, RegCountField * CharUnits::fromQuantity(8),
-      "reg_count_ptr");
+  Address RegCountPtr =
+      CGF.Builder.CreateStructGEP(VAListAddr, RegCountField, "reg_count_ptr");
   llvm::Value *RegCount = CGF.Builder.CreateLoad(RegCountPtr, "reg_count");
   llvm::Value *MaxRegsV = llvm::ConstantInt::get(IndexTy, MaxRegs);
   llvm::Value *InRegs = CGF.Builder.CreateICmpULT(RegCount, MaxRegsV,
@@ -6648,8 +6739,7 @@ Address SystemZABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   llvm::Value *RegOffset =
     CGF.Builder.CreateAdd(ScaledRegCount, RegBase, "reg_offset");
   Address RegSaveAreaPtr =
-      CGF.Builder.CreateStructGEP(VAListAddr, 3, CharUnits::fromQuantity(24),
-                                  "reg_save_area_ptr");
+      CGF.Builder.CreateStructGEP(VAListAddr, 3, "reg_save_area_ptr");
   llvm::Value *RegSaveArea =
     CGF.Builder.CreateLoad(RegSaveAreaPtr, "reg_save_area");
   Address RawRegAddr(CGF.Builder.CreateGEP(RegSaveArea, RegOffset,
@@ -6669,8 +6759,8 @@ Address SystemZABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   CGF.EmitBlock(InMemBlock);
 
   // Work out the address of a stack argument.
-  Address OverflowArgAreaPtr = CGF.Builder.CreateStructGEP(
-      VAListAddr, 2, CharUnits::fromQuantity(16), "overflow_arg_area_ptr");
+  Address OverflowArgAreaPtr =
+      CGF.Builder.CreateStructGEP(VAListAddr, 2, "overflow_arg_area_ptr");
   Address OverflowArgArea =
     Address(CGF.Builder.CreateLoad(OverflowArgAreaPtr, "overflow_arg_area"),
             PaddedSize);
@@ -6780,21 +6870,19 @@ void MSP430TargetCodeGenInfo::setTargetAttributes(
   if (GV->isDeclaration())
     return;
   if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D)) {
-    if (const MSP430InterruptAttr *attr = FD->getAttr<MSP430InterruptAttr>()) {
-      // Handle 'interrupt' attribute:
-      llvm::Function *F = cast<llvm::Function>(GV);
+    const auto *InterruptAttr = FD->getAttr<MSP430InterruptAttr>();
+    if (!InterruptAttr)
+      return;
 
-      // Step 1: Set ISR calling convention.
-      F->setCallingConv(llvm::CallingConv::MSP430_INTR);
+    // Handle 'interrupt' attribute:
+    llvm::Function *F = cast<llvm::Function>(GV);
 
-      // Step 2: Add attributes goodness.
-      F->addFnAttr(llvm::Attribute::NoInline);
+    // Step 1: Set ISR calling convention.
+    F->setCallingConv(llvm::CallingConv::MSP430_INTR);
 
-      // Step 3: Emit ISR vector alias.
-      unsigned Num = attr->getNumber() / 2;
-      llvm::GlobalAlias::create(llvm::Function::ExternalLinkage,
-                                "__isr_" + Twine(Num), F);
-    }
+    // Step 2: Add attributes goodness.
+    F->addFnAttr(llvm::Attribute::NoInline);
+    F->addFnAttr("interrupt", llvm::utostr(InterruptAttr->getNumber()));
   }
 }
 
@@ -7770,8 +7858,10 @@ public:
   }
   LangAS getGlobalVarAddressSpace(CodeGenModule &CGM,
                                   const VarDecl *D) const override;
-  llvm::SyncScope::ID getLLVMSyncScopeID(SyncScope S,
-                                         llvm::LLVMContext &C) const override;
+  llvm::SyncScope::ID getLLVMSyncScopeID(const LangOptions &LangOpts,
+                                         SyncScope Scope,
+                                         llvm::AtomicOrdering Ordering,
+                                         llvm::LLVMContext &Ctx) const override;
   llvm::Function *
   createEnqueuedBlockKernel(CodeGenFunction &CGF,
                             llvm::Function *BlockInvokeFunc,
@@ -7781,8 +7871,24 @@ public:
 };
 }
 
+static bool requiresAMDGPUProtectedVisibility(const Decl *D,
+                                              llvm::GlobalValue *GV) {
+  if (GV->getVisibility() != llvm::GlobalValue::HiddenVisibility)
+    return false;
+
+  return D->hasAttr<OpenCLKernelAttr>() ||
+         (isa<FunctionDecl>(D) && D->hasAttr<CUDAGlobalAttr>()) ||
+         (isa<VarDecl>(D) &&
+          (D->hasAttr<CUDADeviceAttr>() || D->hasAttr<CUDAConstantAttr>()));
+}
+
 void AMDGPUTargetCodeGenInfo::setTargetAttributes(
     const Decl *D, llvm::GlobalValue *GV, CodeGen::CodeGenModule &M) const {
+  if (requiresAMDGPUProtectedVisibility(D, GV)) {
+    GV->setVisibility(llvm::GlobalValue::ProtectedVisibility);
+    GV->setDSOLocal(true);
+  }
+
   if (GV->isDeclaration())
     return;
   const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D);
@@ -7794,14 +7900,23 @@ void AMDGPUTargetCodeGenInfo::setTargetAttributes(
   const auto *ReqdWGS = M.getLangOpts().OpenCL ?
     FD->getAttr<ReqdWorkGroupSizeAttr>() : nullptr;
 
-  if (M.getLangOpts().OpenCL && FD->hasAttr<OpenCLKernelAttr>() &&
+  if (((M.getLangOpts().OpenCL && FD->hasAttr<OpenCLKernelAttr>()) ||
+      (M.getLangOpts().HIP && FD->hasAttr<CUDAGlobalAttr>())) &&
       (M.getTriple().getOS() == llvm::Triple::AMDHSA))
     F->addFnAttr("amdgpu-implicitarg-num-bytes", "48");
 
   const auto *FlatWGS = FD->getAttr<AMDGPUFlatWorkGroupSizeAttr>();
   if (ReqdWGS || FlatWGS) {
-    unsigned Min = FlatWGS ? FlatWGS->getMin() : 0;
-    unsigned Max = FlatWGS ? FlatWGS->getMax() : 0;
+    unsigned Min = 0;
+    unsigned Max = 0;
+    if (FlatWGS) {
+      Min = FlatWGS->getMin()
+                ->EvaluateKnownConstInt(M.getContext())
+                .getExtValue();
+      Max = FlatWGS->getMax()
+                ->EvaluateKnownConstInt(M.getContext())
+                .getExtValue();
+    }
     if (ReqdWGS && Min == 0 && Max == 0)
       Min = Max = ReqdWGS->getXDim() * ReqdWGS->getYDim() * ReqdWGS->getZDim();
 
@@ -7815,8 +7930,12 @@ void AMDGPUTargetCodeGenInfo::setTargetAttributes(
   }
 
   if (const auto *Attr = FD->getAttr<AMDGPUWavesPerEUAttr>()) {
-    unsigned Min = Attr->getMin();
-    unsigned Max = Attr->getMax();
+    unsigned Min =
+        Attr->getMin()->EvaluateKnownConstInt(M.getContext()).getExtValue();
+    unsigned Max = Attr->getMax() ? Attr->getMax()
+                                        ->EvaluateKnownConstInt(M.getContext())
+                                        .getExtValue()
+                                  : 0;
 
     if (Min != 0) {
       assert((Max == 0 || Min <= Max) && "Min must be less than or equal Max");
@@ -7890,10 +8009,12 @@ AMDGPUTargetCodeGenInfo::getGlobalVarAddressSpace(CodeGenModule &CGM,
 }
 
 llvm::SyncScope::ID
-AMDGPUTargetCodeGenInfo::getLLVMSyncScopeID(SyncScope S,
-                                            llvm::LLVMContext &C) const {
-  StringRef Name;
-  switch (S) {
+AMDGPUTargetCodeGenInfo::getLLVMSyncScopeID(const LangOptions &LangOpts,
+                                            SyncScope Scope,
+                                            llvm::AtomicOrdering Ordering,
+                                            llvm::LLVMContext &Ctx) const {
+  std::string Name;
+  switch (Scope) {
   case SyncScope::OpenCLWorkGroup:
     Name = "workgroup";
     break;
@@ -7904,9 +8025,17 @@ AMDGPUTargetCodeGenInfo::getLLVMSyncScopeID(SyncScope S,
     Name = "";
     break;
   case SyncScope::OpenCLSubGroup:
-    Name = "subgroup";
+    Name = "wavefront";
   }
-  return C.getOrInsertSyncScopeID(Name);
+
+  if (Ordering != llvm::AtomicOrdering::SequentiallyConsistent) {
+    if (!Name.empty())
+      Name = Twine(Twine(Name) + Twine("-")).str();
+
+    Name = Twine(Twine(Name) + Twine("one-as")).str();
+  }
+
+  return Ctx.getOrInsertSyncScopeID(Name);
 }
 
 bool AMDGPUTargetCodeGenInfo::shouldEmitStaticExternCAliases() const {
@@ -8204,9 +8333,8 @@ Address SparcV9ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   }
 
   // Update VAList.
-  llvm::Value *NextPtr =
-    Builder.CreateConstInBoundsByteGEP(Addr.getPointer(), Stride, "ap.next");
-  Builder.CreateStore(NextPtr, VAListAddr);
+  Address NextPtr = Builder.CreateConstInBoundsByteGEP(Addr, Stride, "ap.next");
+  Builder.CreateStore(NextPtr.getPointer(), VAListAddr);
 
   return Builder.CreateBitCast(ArgAddr, ArgPtrTy, "arg.addr");
 }
@@ -8559,9 +8687,8 @@ Address XCoreABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
 
   // Increment the VAList.
   if (!ArgSize.isZero()) {
-    llvm::Value *APN =
-      Builder.CreateConstInBoundsByteGEP(AP.getPointer(), ArgSize);
-    Builder.CreateStore(APN, VAListAddr);
+    Address APN = Builder.CreateConstInBoundsByteGEP(AP, ArgSize);
+    Builder.CreateStore(APN.getPointer(), VAListAddr);
   }
 
   return Val;
@@ -9381,10 +9508,11 @@ const TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() {
           Types, IsDarwinVectorABI, RetSmallStructInRegABI,
           IsWin32FloatStructABI, CodeGenOpts.NumRegisterParameters));
     } else {
+      bool EnableMMX = getContext().getTargetInfo().getABI() != "no-mmx";
       return SetCGInfo(new X86_32TargetCodeGenInfo(
           Types, IsDarwinVectorABI, RetSmallStructInRegABI,
           IsWin32FloatStructABI, CodeGenOpts.NumRegisterParameters,
-          CodeGenOpts.FloatABI == "soft"));
+          CodeGenOpts.FloatABI == "soft", EnableMMX));
     }
   }
 
@@ -9398,8 +9526,6 @@ const TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() {
     switch (Triple.getOS()) {
     case llvm::Triple::Win32:
       return SetCGInfo(new WinX86_64TargetCodeGenInfo(Types, AVXLevel));
-    case llvm::Triple::PS4:
-      return SetCGInfo(new PS4TargetCodeGenInfo(Types, AVXLevel));
     default:
       return SetCGInfo(new X86_64TargetCodeGenInfo(Types, AVXLevel));
     }

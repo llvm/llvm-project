@@ -1,9 +1,8 @@
 //===--- CGVTables.cpp - Emit LLVM Code for C++ vtables -------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -231,7 +230,7 @@ void CodeGenFunction::StartThunk(llvm::Function *Fn, GlobalDecl GD,
 
   // Build FunctionArgs.
   const CXXMethodDecl *MD = cast<CXXMethodDecl>(GD.getDecl());
-  QualType ThisType = MD->getThisType(getContext());
+  QualType ThisType = MD->getThisType();
   const FunctionProtoType *FPT = MD->getType()->getAs<FunctionProtoType>();
   QualType ResultType;
   if (IsUnprototyped)
@@ -279,7 +278,7 @@ void CodeGenFunction::FinishThunk() {
   FinishFunction();
 }
 
-void CodeGenFunction::EmitCallAndReturnForThunk(llvm::Constant *CalleePtr,
+void CodeGenFunction::EmitCallAndReturnForThunk(llvm::FunctionCallee Callee,
                                                 const ThunkInfo *Thunk,
                                                 bool IsUnprototyped) {
   assert(isa<CXXMethodDecl>(CurGD.getDecl()) &&
@@ -304,13 +303,13 @@ void CodeGenFunction::EmitCallAndReturnForThunk(llvm::Constant *CalleePtr,
         CGM.ErrorUnsupported(
             MD, "non-trivial argument copy for return-adjusting thunk");
     }
-    EmitMustTailThunk(CurGD, AdjustedThisPtr, CalleePtr);
+    EmitMustTailThunk(CurGD, AdjustedThisPtr, Callee);
     return;
   }
 
   // Start building CallArgs.
   CallArgList CallArgs;
-  QualType ThisType = MD->getThisType(getContext());
+  QualType ThisType = MD->getThisType();
   CallArgs.add(RValue::get(AdjustedThisPtr), ThisType);
 
   if (isa<CXXDestructorDecl>(MD))
@@ -327,7 +326,7 @@ void CodeGenFunction::EmitCallAndReturnForThunk(llvm::Constant *CalleePtr,
 
 #ifndef NDEBUG
   const CGFunctionInfo &CallFnInfo = CGM.getTypes().arrangeCXXMethodCall(
-      CallArgs, FPT, RequiredArgs::forPrototypePlus(FPT, 1, MD), PrefixArgs);
+      CallArgs, FPT, RequiredArgs::forPrototypePlus(FPT, 1), PrefixArgs);
   assert(CallFnInfo.getRegParm() == CurFnInfo->getRegParm() &&
          CallFnInfo.isNoReturn() == CurFnInfo->isNoReturn() &&
          CallFnInfo.getCallingConvention() == CurFnInfo->getCallingConvention());
@@ -354,9 +353,9 @@ void CodeGenFunction::EmitCallAndReturnForThunk(llvm::Constant *CalleePtr,
     Slot = ReturnValueSlot(ReturnValue, ResultType.isVolatileQualified());
 
   // Now emit our call.
-  llvm::Instruction *CallOrInvoke;
-  CGCallee Callee = CGCallee::forDirect(CalleePtr, CurGD);
-  RValue RV = EmitCall(*CurFnInfo, Callee, Slot, CallArgs, &CallOrInvoke);
+  llvm::CallBase *CallOrInvoke;
+  RValue RV = EmitCall(*CurFnInfo, CGCallee::forDirect(Callee, CurGD), Slot,
+                       CallArgs, &CallOrInvoke);
 
   // Consider return adjustment if we have ThunkInfo.
   if (Thunk && !Thunk->Return.isEmpty())
@@ -376,7 +375,7 @@ void CodeGenFunction::EmitCallAndReturnForThunk(llvm::Constant *CalleePtr,
 
 void CodeGenFunction::EmitMustTailThunk(GlobalDecl GD,
                                         llvm::Value *AdjustedThisPtr,
-                                        llvm::Value *CalleePtr) {
+                                        llvm::FunctionCallee Callee) {
   // Emitting a musttail call thunk doesn't use any of the CGCall.cpp machinery
   // to translate AST arguments into LLVM IR arguments.  For thunks, we know
   // that the caller prototype more or less matches the callee prototype with
@@ -405,14 +404,14 @@ void CodeGenFunction::EmitMustTailThunk(GlobalDecl GD,
 
   // Emit the musttail call manually.  Even if the prologue pushed cleanups, we
   // don't actually want to run them.
-  llvm::CallInst *Call = Builder.CreateCall(CalleePtr, Args);
+  llvm::CallInst *Call = Builder.CreateCall(Callee, Args);
   Call->setTailCallKind(llvm::CallInst::TCK_MustTail);
 
   // Apply the standard set of call attributes.
   unsigned CallingConv;
   llvm::AttributeList Attrs;
-  CGM.ConstructAttributeList(CalleePtr->getName(), *CurFnInfo, GD, Attrs,
-                             CallingConv, /*AttrOnCallSite=*/true);
+  CGM.ConstructAttributeList(Callee.getCallee()->getName(), *CurFnInfo, GD,
+                             Attrs, CallingConv, /*AttrOnCallSite=*/true);
   Call->setAttributes(Attrs);
   Call->setCallingConv(static_cast<llvm::CallingConv::ID>(CallingConv));
 
@@ -450,7 +449,8 @@ void CodeGenFunction::generateThunk(llvm::Function *Fn,
     Callee = llvm::ConstantExpr::getBitCast(Callee, Fn->getType());
 
   // Make the call and return the result.
-  EmitCallAndReturnForThunk(Callee, &Thunk, IsUnprototyped);
+  EmitCallAndReturnForThunk(llvm::FunctionCallee(Fn->getFunctionType(), Callee),
+                            &Thunk, IsUnprototyped);
 }
 
 static bool shouldEmitVTableThunk(CodeGenModule &CGM, const CXXMethodDecl *MD,
@@ -649,7 +649,8 @@ void CodeGenVTables::addVTableComponent(
     auto getSpecialVirtualFn = [&](StringRef name) {
       llvm::FunctionType *fnTy =
           llvm::FunctionType::get(CGM.VoidTy, /*isVarArg=*/false);
-      llvm::Constant *fn = CGM.CreateRuntimeFunction(fnTy, name);
+      llvm::Constant *fn = cast<llvm::Constant>(
+          CGM.CreateRuntimeFunction(fnTy, name).getCallee());
       if (auto f = dyn_cast<llvm::Function>(fn))
         f->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
       return llvm::ConstantExpr::getBitCast(fn, CGM.Int8PtrTy);
@@ -760,7 +761,6 @@ CodeGenVTables::GenerateConstructionVTable(const CXXRecordDecl *RD,
   // Create the variable that will hold the construction vtable.
   llvm::GlobalVariable *VTable =
       CGM.CreateOrReplaceCXXRuntimeVariable(Name, VTType, Linkage, Align);
-  CGM.setGVProperties(VTable, RD);
 
   // V-tables are always unnamed_addr.
   VTable->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
@@ -773,6 +773,11 @@ CodeGenVTables::GenerateConstructionVTable(const CXXRecordDecl *RD,
   auto components = builder.beginStruct();
   createVTableInitializer(components, *VTLayout, RTTI);
   components.finishAndSetAsInitializer(VTable);
+
+  // Set properties only after the initializer has been set to ensure that the
+  // GV is treated as definition and not declaration.
+  assert(!VTable->isDeclaration() && "Shouldn't set properties on declaration");
+  CGM.setGVProperties(VTable, RD);
 
   CGM.EmitVTableTypeMetadata(VTable, *VTLayout.get());
 

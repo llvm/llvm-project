@@ -1,9 +1,8 @@
 //===- SemaTemplate.h - C++ Templates ---------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //===----------------------------------------------------------------------===//
 //
 // This file provides types used in the semantic analysis of C++ templates.
@@ -228,7 +227,7 @@ class VarDecl;
   class LocalInstantiationScope {
   public:
     /// A set of declarations.
-    using DeclArgumentPack = SmallVector<ParmVarDecl *, 4>;
+    using DeclArgumentPack = SmallVector<VarDecl *, 4>;
 
   private:
     /// Reference to the semantic analysis that is performing
@@ -379,7 +378,7 @@ class VarDecl;
     findInstantiationOf(const Decl *D);
 
     void InstantiatedLocal(const Decl *D, Decl *Inst);
-    void InstantiatedLocalPackArg(const Decl *D, ParmVarDecl *Inst);
+    void InstantiatedLocalPackArg(const Decl *D, VarDecl *Inst);
     void MakeInstantiatedLocalArgPack(const Decl *D);
 
     /// Note that the given parameter pack has been partially substituted
@@ -476,7 +475,8 @@ class VarDecl;
     // A few supplemental visitor functions.
     Decl *VisitCXXMethodDecl(CXXMethodDecl *D,
                              TemplateParameterList *TemplateParams,
-                             bool IsClassScopeSpecialization = false);
+                             Optional<const ASTTemplateArgumentListInfo *>
+                                 ClassScopeSpecializationArgs = llvm::None);
     Decl *VisitFunctionDecl(FunctionDecl *D,
                             TemplateParameterList *TemplateParams);
     Decl *VisitDecl(Decl *D);
@@ -545,7 +545,8 @@ class VarDecl;
     Decl *VisitVarTemplateSpecializationDecl(
         VarTemplateDecl *VarTemplate, VarDecl *FromVar, void *InsertPos,
         const TemplateArgumentListInfo &TemplateArgsInfo,
-        ArrayRef<TemplateArgument> Converted);
+        ArrayRef<TemplateArgument> Converted,
+        VarTemplateSpecializationDecl *PrevDecl = nullptr);
 
     Decl *InstantiateTypedefNameDecl(TypedefNameDecl *D, bool IsTypeAlias);
     ClassTemplatePartialSpecializationDecl *

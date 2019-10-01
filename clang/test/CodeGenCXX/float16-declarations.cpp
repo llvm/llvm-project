@@ -1,5 +1,4 @@
 // RUN: %clang -std=c++11 --target=aarch64-arm--eabi -S -emit-llvm %s -o - | FileCheck %s  --check-prefix=CHECK --check-prefix=CHECK-AARCH64
-// RUN: %clang -std=c++11 --target=x86_64 -S -emit-llvm %s -o - | FileCheck %s  --check-prefix=CHECK --check-prefix=CHECK-X86
 
 /*  Various contexts where type _Float16 can appear. */
 
@@ -15,7 +14,6 @@ namespace {
 
   _Float16 arr1n[10];
 // CHECK-AARCH64-DAG: @_ZN12_GLOBAL__N_15arr1nE = internal global [10 x half] zeroinitializer, align 2
-// CHECK-X86-DAG:     @_ZN12_GLOBAL__N_15arr1nE = internal global [10 x half] zeroinitializer, align 16
 
   _Float16 arr2n[] = { 1.2, 3.0, 3.e4 };
 // CHECK-DAG: @_ZN12_GLOBAL__N_15arr2nE = internal global [3 x half] [half 0xH3CCD, half 0xH4200, half 0xH7753], align 2
@@ -30,14 +28,12 @@ namespace {
 
 _Float16 f1f;
 // CHECK-AARCH64-DAG: @f1f = dso_local global half 0xH0000, align 2
-// CHECK-X86-DAG: @f1f = dso_local global half 0xH0000, align 2
 
 _Float16 f2f = 32.4;
 // CHECK-DAG: @f2f = dso_local global half 0xH500D, align 2
 
 _Float16 arr1f[10];
 // CHECK-AARCH64-DAG: @arr1f = dso_local global [10 x half] zeroinitializer, align 2
-// CHECK-X86-DAG: @arr1f = dso_local global [10 x half] zeroinitializer, align 16
 
 _Float16 arr2f[] = { -1.2, -3.0, -3.e4 };
 // CHECK-DAG: @arr2f = dso_local global [3 x half] [half 0xHBCCD, half 0xHC200, half 0xHF753], align 2
@@ -137,8 +133,6 @@ int main(void) {
   long double cvtld = f2n;
 //CHECK-AARCh64-DAG: [[H2LD:%[a-z0-9]+]] = fpext half {{%[0-9]+}} to fp128
 //CHECK-AARCh64-DAG: store fp128 [[H2LD]], fp128* %{{.*}}, align 16
-//CHECK-X86-DAG:     [[H2LD:%[a-z0-9]+]] = fpext half {{%[0-9]+}} to x86_fp80
-//CHECK-X86-DAG:     store x86_fp80 [[H2LD]], x86_fp80* %{{.*}}, align 16
 
   _Float16 f2h = 42.0f;
 //CHECK-DAG: store half 0xH5140, half* %{{.*}}, align 2

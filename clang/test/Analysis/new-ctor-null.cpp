@@ -1,4 +1,6 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -analyzer-config c++-allocator-inlining=true -std=c++11 -verify %s
+// RUN: %clang_analyze_cc1 \
+// RUN:  -analyzer-checker=core,debug.ExprInspection \
+// RUN:  -verify %s
 
 void clang_analyzer_eval(bool);
 void clang_analyzer_warnIfReached();
@@ -24,7 +26,8 @@ struct S {
 
 void testArrays() {
   S *s = new S[10]; // no-crash
-  s[0].x = 2; // expected-warning{{Dereference of null pointer}}
+  s[0].x = 2;
+  // no-warning: 'Dereference of null pointer' suppressed by ReturnVisitor.
 }
 
 int global;

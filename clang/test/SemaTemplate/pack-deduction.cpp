@@ -166,3 +166,22 @@ namespace substitution_vs_function_deduction {
     A<int>().g(f); // expected-error {{no match}}
   }
 }
+
+namespace Nested_Explicit_Specialization {
+template <typename>
+struct Outer {
+
+  template <int>
+  struct Inner;
+
+  template <>
+  struct Inner<0> {
+    template <typename... Args>
+    void Test(Args...) {}
+  };
+};
+
+void Run() {
+  Outer<void>::Inner<0>().Test(1,1);
+}
+}

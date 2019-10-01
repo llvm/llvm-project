@@ -479,12 +479,21 @@ namespace dr647 { // dr647: yes
   // This is partially superseded by dr1358.
   struct A {
     constexpr virtual void f() const;
-    constexpr virtual void g() const {} // expected-error {{virtual function cannot be constexpr}}
+    constexpr virtual void g() const {}
+#if __cplusplus <= 201703L
+    // expected-error@-2 {{virtual function cannot be constexpr}}
+#endif
   };
 
-  struct X { virtual void f() const; }; // expected-note {{overridden}}
+  struct X { virtual void f() const; };
+#if __cplusplus <= 201703L
+  // expected-note@-2 {{overridden}}
+#endif
   struct B : X {
-    constexpr void f() const {} // expected-error {{virtual function cannot be constexpr}}
+    constexpr void f() const {}
+#if __cplusplus <= 201703L
+    // expected-error@-2 {{virtual function cannot be constexpr}}
+#endif
   };
 
   struct NonLiteral { NonLiteral() {} }; // expected-note {{not an aggregate and has no constexpr constructors}}
@@ -839,7 +848,7 @@ namespace dr673 { // dr673: yes
   F *f; // expected-error {{unknown type name}}
 }
 
-namespace dr674 { // dr674: no
+namespace dr674 { // dr674: 8
   template<typename T> int f(T);
 
   int g(int);
@@ -849,22 +858,50 @@ namespace dr674 { // dr674: no
   template<typename T> int h(T);
 
   class X {
-    // FIXME: This should deduce dr674::f<int>.
-    friend int dr674::f(int); // expected-error {{does not match any}}
+    friend int dr674::f(int);
     friend int dr674::g(int);
     friend int dr674::h<>(int);
-    int n;
+    int n; // expected-note 2{{private}}
   };
 
   template<typename T> int f(T) { return X().n; }
   int g(int) { return X().n; }
-  template<typename T> int g(T) { return X().n; }
-  int h(int) { return X().n; }
+  template<typename T> int g(T) { return X().n; } // expected-error {{private}}
+  int h(int) { return X().n; } // expected-error {{private}}
   template<typename T> int h(T) { return X().n; }
 
   template int f(int);
-  template int g(int);
+  template int g(int); // expected-note {{in instantiation of}}
   template int h(int);
+
+
+  struct Y {
+    template<typename T> int f(T);
+
+    int g(int);
+    template<typename T> int g(T);
+
+    int h(int);
+    template<typename T> int h(T);
+  };
+
+  class Z {
+    friend int Y::f(int);
+    friend int Y::g(int);
+    friend int Y::h<>(int);
+    int n; // expected-note 2{{private}}
+  };
+
+  template<typename T> int Y::f(T) { return Z().n; }
+  int Y::g(int) { return Z().n; }
+  template<typename T> int Y::g(T) { return Z().n; } // expected-error {{private}}
+  int Y::h(int) { return Z().n; } // expected-error {{private}}
+  template<typename T> int Y::h(T) { return Z().n; }
+
+  // FIXME: Should the <> be required here?
+  template int Y::f<>(int);
+  template int Y::g<>(int); // expected-note {{in instantiation of}}
+  template int Y::h<>(int);
 }
 
 namespace dr675 { // dr675: dup 739
@@ -1020,10 +1057,13 @@ namespace dr686 { // dr686: yes
   template<struct R {} *> struct Y; // expected-error {{cannot be defined in a type specifier}}
 }
 
-namespace dr687 { // dr687 still open
+namespace dr687 { // dr687 (9 c++20, but the issue is still considered open)
   template<typename T> void f(T a) {
-    // FIXME: This is valid in C++20.
-    g<int>(a); // expected-error {{undeclared}} expected-error {{'('}}
+    // This is valid in C++20.
+    g<int>(a);
+#if __cplusplus <= 201703L
+    // expected-error@-2 {{C++2a extension}}
+#endif
 
     // This is not.
     template g<int>(a); // expected-error {{expected expression}}
@@ -1090,5 +1130,22 @@ namespace dr692 { // dr692: no
     template<class T, class... U> void f(T*, U...){} // expected-note {{candidate}} expected-error 0-1{{C++11}}
     template<class T> void f(T){} // expected-note {{candidate}}
     template void f(int*); // expected-error {{ambiguous}}
+  }
+}
+
+namespace dr696 { // dr696: yes
+  void f(const int*);
+  void g() {
+    const int N = 10; // expected-note 1+{{here}}
+    struct A {
+      void h() {
+        int arr[N]; (void)arr;
+        f(&N); // expected-error {{declared in enclosing}}
+      }
+    };
+#if __cplusplus >= 201103L
+    (void) [] { int arr[N]; (void)arr; };
+    (void) [] { f(&N); }; // expected-error {{cannot be implicitly captured}} expected-note {{here}}
+#endif
   }
 }

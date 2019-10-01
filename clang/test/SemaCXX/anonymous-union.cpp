@@ -81,7 +81,7 @@ union { // expected-error{{anonymous unions at namespace or global scope must be
 };
 
 extern "C++" {
-union { }; // expected-error{{anonymous unions at namespace or global scope must be declared 'static'}}
+union { int extern_cxx; }; // expected-error{{anonymous unions at namespace or global scope must be declared 'static'}}
 }
 
 static union {

@@ -444,3 +444,15 @@
 // RUN:     -mginv -mno-ginv 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-NO-GINV %s
 // CHECK-NO-GINV: "-target-feature" "-ginv"
+//
+// -mrelax-pic-calls
+// RUN: %clang -target mips-unknown-linux-gnu -### -c %s \
+// RUN:     -mno-relax-pic-calls -mrelax-pic-calls 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-RELAX-PIC-CALLS %s
+// CHECK-RELAX-PIC-CALLS-NOT: "-mllvm" "-mips-jalr-reloc=0"
+//
+// -mno-relax-pic-calls
+// RUN: %clang -target mips-unknown-linux-gnu -### -c %s \
+// RUN:     -mrelax-pic-calls -mno-relax-pic-calls 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-NO-RELAX-PIC-CALLS %s
+// CHECK-NO-RELAX-PIC-CALLS: "-mllvm" "-mips-jalr-reloc=0"

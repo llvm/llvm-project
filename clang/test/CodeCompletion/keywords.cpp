@@ -34,7 +34,7 @@ struct Struct {
 // RUN: %clang_cc1 -std=c++11 -code-completion-at=%s:11:1 %s | FileCheck --check-prefix=CHECK-TOP-LEVEL %s
 // CHECK-TOP-LEVEL: alignas(<#expression#>)
 // CHECK-TOP-LEVEL: constexpr
-// CHECK-TOP-LEVEL: static_assert(<#expression#>, <#message#>)
+// CHECK-TOP-LEVEL: static_assert(<#expression#>, <#message#>);
 // CHECK-TOP-LEVEL: thread_local
 // CHECK-TOP-LEVEL-NOT: final
 // CHECK-TOP-LEVEL-NOT: noexcept

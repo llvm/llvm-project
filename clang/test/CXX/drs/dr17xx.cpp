@@ -76,3 +76,30 @@ namespace dr1758 { // dr1758: 3.7
   A a{b};
 #endif
 }
+
+namespace dr1722 { // dr1722: 9
+#if __cplusplus >= 201103L
+void f() {
+  const auto lambda = [](int x) { return x + 1; };
+  // Without the DR applied, this static_assert would fail.
+  static_assert(
+      noexcept((int (*)(int))(lambda)),
+      "Lambda-to-function-pointer conversion is expected to be noexcept");
+}
+#endif
+} // namespace dr1722
+
+namespace dr1778 { // dr1778: 9
+  // Superseded by P1286R2.
+#if __cplusplus >= 201103L
+  struct A { A() noexcept(true) = default; };
+  struct B { B() noexcept(false) = default; };
+  static_assert(noexcept(A()), "");
+  static_assert(!noexcept(B()), "");
+
+  struct C { A a; C() noexcept(false) = default; };
+  struct D { B b; D() noexcept(true) = default; };
+  static_assert(!noexcept(C()), "");
+  static_assert(noexcept(D()), "");
+#endif
+}

@@ -1,11 +1,8 @@
 //===------- QualTypeNames.cpp - Generate Complete QualType Names ---------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-//===----------------------------------------------------------------------===//
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -377,6 +374,19 @@ QualType getFullyQualifiedType(QualType QT, const ASTContext &Ctx,
     Qualifiers Quals = QT.getQualifiers();
     QT = getFullyQualifiedType(QT->getPointeeType(), Ctx, WithGlobalNsPrefix);
     QT = Ctx.getPointerType(QT);
+    // Add back the qualifiers.
+    QT = Ctx.getQualifiedType(QT, Quals);
+    return QT;
+  }
+
+  if (auto *MPT = dyn_cast<MemberPointerType>(QT.getTypePtr())) {
+    // Get the qualifiers.
+    Qualifiers Quals = QT.getQualifiers();
+    // Fully qualify the pointee and class types.
+    QT = getFullyQualifiedType(QT->getPointeeType(), Ctx, WithGlobalNsPrefix);
+    QualType Class = getFullyQualifiedType(QualType(MPT->getClass(), 0), Ctx,
+                                           WithGlobalNsPrefix);
+    QT = Ctx.getMemberPointerType(QT, Class.getTypePtr());
     // Add back the qualifiers.
     QT = Ctx.getQualifiedType(QT, Quals);
     return QT;

@@ -1,9 +1,8 @@
 //===--- CheckerBase.td - Checker TableGen classes ------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -11,14 +10,68 @@
 //
 //===----------------------------------------------------------------------===//
 
+/// Describes a checker or package option type. This is important for validating
+/// user supplied inputs.
+/// New option types can be added by modifying this enum. Note that this
+/// requires changes in the TableGen emitter file ClangSACheckersEmitter.cpp.
+class CmdLineOptionTypeEnum<bits<2> val> {
+  bits<2> Type = val;
+}
+def Integer : CmdLineOptionTypeEnum<0>;
+def String : CmdLineOptionTypeEnum<1>;
+def Boolean : CmdLineOptionTypeEnum<2>;
+
+/// Describes the state of the entry. We wouldn't like to display, for example,
+/// developer only entries for a list meant for end users.
+class DevelopmentStageEnum<bits<1> val> {
+  bits<1> Val = val;
+}
+
+/// Alpha entries are under development, might be incomplet, inkorrekt and
+/// unstable.
+def InAlpha : DevelopmentStageEnum<0>;
+
+/// Released entries are stable, produce minimal, if any false positives,
+/// and emits reports that explain the occurance of the bug understandably and
+/// thoroughly.
+def Released : DevelopmentStageEnum<1>;
+
+/// Marks the entry hidden. Hidden entries won't be displayed in
+/// -analyzer-checker-option-help.
+class HiddenEnum<bit val> {
+  bit Val = val;
+}
+def DontHide : HiddenEnum<0>;
+def Hide : HiddenEnum<1>;
+
+/// Describes an option for a checker or a package.
+class CmdLineOption<CmdLineOptionTypeEnum type, string cmdFlag, string desc,
+                    string defaultVal, DevelopmentStageEnum stage,
+                    HiddenEnum isHidden = DontHide> {
+  bits<2> Type = type.Type;
+  string  CmdFlag = cmdFlag;
+  string  Desc = desc;
+  string  DefaultVal = defaultVal;
+  bits<1> DevelopmentStage = stage.Val;
+  bit     Hidden = isHidden.Val;
+}
+
+/// Describes a list of package options.
+class PackageOptions<list<CmdLineOption> opts> {
+  list<CmdLineOption> PackageOptions = opts;
+}
+
 /// Describes a package. Every checker is a part of a package, for example,
 /// 'NullDereference' is part of the 'core' package, hence it's full name is
 /// 'core.NullDereference'.
 /// Example:
 ///   def Core : Package<"core">;
 class Package<string name> {
-  string       PackageName = name;
-  Package ParentPackage;
+  string              PackageName = name;
+  // This field is optional.
+  list<CmdLineOption> PackageOptions;
+  Package             ParentPackage;
+  bit                 Hidden = 0;
 }
 
 /// Describes a 'super' package that holds another package inside it. This is
@@ -53,11 +106,20 @@ class Documentation<DocumentationEnum val> {
 ///   def DereferenceChecker : Checker<"NullDereference">,
 ///     HelpText<"Check for dereferences of null pointers">;
 class Checker<string name = ""> {
-  string        CheckerName = name;
-  string        HelpText;
-  list<Checker> Dependencies;
-  bits<2>       Documentation;
-  Package       ParentPackage;
+  string              CheckerName = name;
+  string              HelpText;
+  // This field is optional.
+  list<CmdLineOption> CheckerOptions;
+  // This field is optional.
+  list<Checker>       Dependencies;
+  bits<2>             Documentation;
+  Package             ParentPackage;
+  bit                 Hidden = 0;
+}
+
+/// Describes a list of checker options.
+class CheckerOptions<list<CmdLineOption> opts> {
+  list<CmdLineOption> CheckerOptions = opts;
 }
 
 /// Describes dependencies in between checkers. For example, InnerPointerChecker
@@ -70,3 +132,7 @@ class Checker<string name = ""> {
 class Dependencies<list<Checker> Deps = []> {
   list<Checker> Dependencies = Deps;
 }
+
+/// Marks a checker or a package hidden. Hidden entries are meant for developers
+/// only, and aren't exposed to end users.
+class Hidden { bit Hidden = 1; }

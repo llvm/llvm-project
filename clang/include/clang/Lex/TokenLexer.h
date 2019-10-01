@@ -1,9 +1,8 @@
 //===- TokenLexer.h - Lex from a token buffer -------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -97,6 +96,10 @@ class TokenLexer {
   /// should not be subject to further macro expansion.
   bool DisableMacroExpansion : 1;
 
+  /// When true, the produced tokens have Token::IsReinjected flag set.
+  /// See the flag documentation for details.
+  bool IsReinject : 1;
+
 public:
   /// Create a TokenLexer for the specified macro with the specified actual
   /// arguments.  Note that this ctor takes ownership of the ActualArgs pointer.
@@ -112,9 +115,9 @@ public:
   /// specified, this takes ownership of the tokens and delete[]'s them when
   /// the token lexer is empty.
   TokenLexer(const Token *TokArray, unsigned NumToks, bool DisableExpansion,
-             bool ownsTokens, Preprocessor &pp)
+             bool ownsTokens, bool isReinject, Preprocessor &pp)
       : PP(pp), OwnsTokens(false) {
-    Init(TokArray, NumToks, DisableExpansion, ownsTokens);
+    Init(TokArray, NumToks, DisableExpansion, ownsTokens, isReinject);
   }
 
   TokenLexer(const TokenLexer &) = delete;
@@ -133,8 +136,8 @@ public:
   ///
   /// DisableExpansion is true when macro expansion of tokens lexed from this
   /// stream should be disabled.
-  void Init(const Token *TokArray, unsigned NumToks,
-            bool DisableMacroExpansion, bool OwnsTokens);
+  void Init(const Token *TokArray, unsigned NumToks, bool DisableMacroExpansion,
+            bool OwnsTokens, bool IsReinject);
 
   /// If the next token lexed will pop this macro off the
   /// expansion stack, return 2.  If the next unexpanded token is a '(', return

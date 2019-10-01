@@ -1,9 +1,8 @@
 //===- CXCursor.cpp - Routines for manipulating CXCursors -----------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -79,6 +78,10 @@ static CXCursorKind GetCursorKind(const Attr *A) {
     case attr::ObjCRuntimeVisible: return CXCursor_ObjCRuntimeVisible;
     case attr::ObjCBoxable: return CXCursor_ObjCBoxable;
     case attr::FlagEnum: return CXCursor_FlagEnum;
+    case attr::Convergent: return CXCursor_ConvergentAttr;
+    case attr::WarnUnused: return CXCursor_WarnUnusedAttr;
+    case attr::WarnUnusedResult: return CXCursor_WarnUnusedResultAttr;
+    case attr::Aligned: return CXCursor_AlignedAttr;
   }
 
   return CXCursor_UnexposedAttr;
@@ -106,8 +109,8 @@ CXCursor cxcursor::MakeCXCursor(const Decl *D, CXTranslationUnit TU,
         RegionOfInterest.getBegin() == RegionOfInterest.getEnd()) {
       SmallVector<SourceLocation, 16> SelLocs;
       cast<ObjCMethodDecl>(D)->getSelectorLocs(SelLocs);
-      SmallVectorImpl<SourceLocation>::iterator
-        I=std::find(SelLocs.begin(), SelLocs.end(),RegionOfInterest.getBegin());
+      SmallVectorImpl<SourceLocation>::iterator I =
+          llvm::find(SelLocs, RegionOfInterest.getBegin());
       if (I != SelLocs.end())
         SelectorIdIndex = I - SelLocs.begin();
     }
@@ -279,6 +282,7 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
   case Stmt::ParenListExprClass:
   case Stmt::PredefinedExprClass:
   case Stmt::ShuffleVectorExprClass:
+  case Stmt::SourceLocExprClass:
   case Stmt::ConvertVectorExprClass:
   case Stmt::VAArgExprClass:
   case Stmt::ObjCArrayLiteralClass:
@@ -559,8 +563,8 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
         RegionOfInterest.getBegin() == RegionOfInterest.getEnd()) {
       SmallVector<SourceLocation, 16> SelLocs;
       cast<ObjCMessageExpr>(S)->getSelectorLocs(SelLocs);
-      SmallVectorImpl<SourceLocation>::iterator
-        I=std::find(SelLocs.begin(), SelLocs.end(),RegionOfInterest.getBegin());
+      SmallVectorImpl<SourceLocation>::iterator I =
+          llvm::find(SelLocs, RegionOfInterest.getBegin());
       if (I != SelLocs.end())
         SelectorIdIndex = I - SelLocs.begin();
     }

@@ -1,7 +1,7 @@
 // We run clang in completion mode to force skipping of function bodies and
 // check if the function bodies were skipped by observing the warnings that
 // clang produces.
-// RUN: not %clang_cc1 -fsyntax-only -code-completion-at=%s:60:1 %s -o - 2>&1 | FileCheck %s
+// RUN: not %clang_cc1 -std=c++14 -fsyntax-only -code-completion-at=%s:60:1 %s -o - 2>&1 | FileCheck %s
 template <class T>
 auto not_skipped() {
   int x;

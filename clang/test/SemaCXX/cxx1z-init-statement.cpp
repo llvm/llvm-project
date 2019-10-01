@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++1z -verify %s
-// RUN: %clang_cc1 -std=c++17 -verify %s
+// RUN: %clang_cc1 -std=c++1z -Wno-unused-value -verify %s
+// RUN: %clang_cc1 -std=c++17 -Wno-unused-value -verify %s
 
 void testIf() {
   int x = 0;
@@ -12,7 +12,7 @@ void testIf() {
     int x = 0; // expected-error {{redefinition of 'x'}}
 
   if (x; int a = 0) ++a;
-  if (x, +x; int a = 0) // expected-note 2 {{previous definition is here}} expected-warning {{unused}}
+  if (x, +x; int a = 0) // expected-note 2 {{previous definition is here}}
     int a = 0; // expected-error {{redefinition of 'a'}}
   else
     int a = 0; // expected-error {{redefinition of 'a'}}
@@ -48,7 +48,7 @@ void testSwitch() {
       ++a;
   }
 
-  switch (x, +x; int a = 0) { // expected-note {{previous definition is here}} expected-warning {{unused}}
+  switch (x, +x; int a = 0) { // expected-note {{previous definition is here}}
     case 0:
       int a = 0; // expected-error {{redefinition of 'a'}} // expected-note {{previous definition is here}}
     case 1:

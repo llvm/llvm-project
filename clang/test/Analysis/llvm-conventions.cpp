@@ -152,8 +152,6 @@ inline bool operator>(StringRef LHS, StringRef RHS);
 inline bool operator>=(StringRef LHS, StringRef RHS);
 inline std::string &operator+=(std::string &buffer, StringRef string);
 hash_code hash_value(StringRef S);
-template <typename T> struct isPodLike;
-template <> struct isPodLike<StringRef> { static const bool value = true; };
 
 } // end of namespace llvm
 

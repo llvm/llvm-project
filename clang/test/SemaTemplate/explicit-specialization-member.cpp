@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s -fcxx-exceptions
+// RUN: %clang_cc1 -fsyntax-only -std=c++17 -verify %s -fcxx-exceptions
 template<typename T>
 struct X0 {
   typedef T* type;
@@ -61,4 +61,35 @@ namespace SpecLoc {
   };
   template<> float A<int>::n; // expected-error {{different type}}
   template<> void A<int>::f() throw(); // expected-error {{does not match}}
+}
+
+namespace PR41607 {
+  template<int N> struct Outer {
+    template<typename...> struct Inner;
+    template<> struct Inner<> {
+      static constexpr int f() { return N; }
+    };
+
+    template<typename...> static int a;
+    template<> static constexpr int a<> = N;
+
+    template<typename...> static inline int b;
+    template<> static inline constexpr int b<> = N;
+
+    template<typename...> static constexpr int f();
+    template<> static constexpr int f() {
+      return N;
+    }
+  };
+  static_assert(Outer<123>::Inner<>::f() == 123, "");
+  static_assert(Outer<123>::Inner<>::f() != 125, "");
+
+  static_assert(Outer<123>::a<> == 123, "");
+  static_assert(Outer<123>::a<> != 125, "");
+
+  static_assert(Outer<123>::b<> == 123, "");
+  static_assert(Outer<123>::b<> != 125, "");
+
+  static_assert(Outer<123>::f<>() == 123, "");
+  static_assert(Outer<123>::f<>() != 125, "");
 }

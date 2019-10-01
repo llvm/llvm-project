@@ -22,7 +22,7 @@ __attribute__((objc_root_class))
 
 #define AVAIL_ATTR __attribute__((availability(macos, introduced=1000)))
 
-typedef int AVAIL_ATTR unavail_int; // expected-note {{marked}}
+typedef int AVAIL_ATTR unavail_int; // expected-note {{marked as being introduced}}
 
 @interface I4 @end // expected-note {{annotate}}
 @implementation I4 {

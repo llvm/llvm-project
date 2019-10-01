@@ -1,6 +1,6 @@
 // RUN: %clang_analyze_cc1 %s -analyzer-checker=core.NullDereference,core.DivideZero -fblocks -analyzer-output=text -analyzer-config suppress-null-return-paths=false -verify -analyzer-config eagerly-assume=false %s
 // RUN: %clang_analyze_cc1 -analyzer-config eagerly-assume=false %s -analyzer-checker=core.NullDereference,core.DivideZero -fblocks -analyzer-output=plist -analyzer-config suppress-null-return-paths=false -o %t
-// RUN: cat %t | %diff_plist %S/Inputs/expected-plists/inline-plist.c.plist -
+// RUN: %normalize_plist <%t | diff -ub %S/Inputs/expected-plists/inline-plist.c.plist -
 
 // <rdar://problem/10967815>
 void mmm(int y) {
@@ -43,7 +43,8 @@ void bar(int *p) {
   }
 
   if (p == 0) {
-    // expected-note@-1 {{Taking true branch}}
+    // expected-note@-1 {{'p' is equal to null}}
+    // expected-note@-2 {{Taking true branch}}
     triggers_bug(p);
     // expected-note@-1 {{Passing null pointer value via 1st parameter 'p'}}
     // expected-note@-2 {{Calling 'triggers_bug'}}

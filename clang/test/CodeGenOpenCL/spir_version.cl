@@ -5,6 +5,9 @@
 // RUN: %clang_cc1 %s -triple "spir64-unknown-unknown" -emit-llvm -o - -cl-std=CL1.2 | FileCheck %s --check-prefix=CHECK-SPIR-CL12
 // RUN: %clang_cc1 %s -triple "spir64-unknown-unknown" -emit-llvm -o - -cl-std=CL2.0 | FileCheck %s --check-prefix=CHECK-SPIR-CL20
 
+
+// RUN: %clang_cc1 %s -triple "spir64-unknown-unknown" -emit-llvm -o - -cl-std=c++ | FileCheck %s --check-prefix=CHECK-SPIR-CL20
+
 // RUN: %clang_cc1 %s -triple "amdgcn--amdhsa" -emit-llvm -o - | FileCheck %s --check-prefix=CHECK-AMDGCN-CL10
 // RUN: %clang_cc1 %s -triple "amdgcn--amdhsa" -emit-llvm -o - -cl-std=CL1.2 | FileCheck %s --check-prefix=CHECK-AMDGCN-CL12
 // RUN: %clang_cc1 %s -triple "amdgcn--amdhsa" -emit-llvm -o - -cl-std=CL2.0 | FileCheck %s --check-prefix=CHECK-AMDGCN-CL20

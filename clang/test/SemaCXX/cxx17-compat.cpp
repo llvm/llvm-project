@@ -63,3 +63,28 @@ void ForRangeInit() {
     // expected-warning@-4 {{range-based for loop initialization statements are incompatible with C++ standards before C++2a}}
 #endif
 }
+
+struct ConstexprVirtual {
+  virtual constexpr void f() {}
+#if __cplusplus <= 201703L
+    // expected-error@-2 {{virtual function cannot be constexpr}}
+#else
+    // expected-warning@-4 {{virtual constexpr functions are incompatible with C++ standards before C++2a}}
+#endif
+};
+
+struct C { int x, y, z; };
+static auto [cx, cy, cz] = C();
+#if __cplusplus <= 201703L
+    // expected-warning@-2 {{decomposition declaration declared 'static' is a C++2a extension}}
+#else
+    // expected-warning@-4 {{decomposition declaration declared 'static' is incompatible with C++ standards before C++2a}}
+#endif
+void f() {
+  static thread_local auto [cx, cy, cz] = C();
+#if __cplusplus <= 201703L
+    // expected-warning@-2 {{decomposition declaration declared with 'static thread_local' specifiers is a C++2a extension}}
+#else
+    // expected-warning@-4 {{decomposition declaration declared with 'static thread_local' specifiers is incompatible with C++ standards before C++2a}}
+#endif
+}

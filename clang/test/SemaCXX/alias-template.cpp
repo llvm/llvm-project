@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -verify -std=c++11 %s
+// RUN: %clang_cc1 -verify -std=c++14 -fcxx-exceptions %s
 
 namespace RedeclAliasTypedef {
   template<typename U> using T = int;
@@ -112,11 +112,8 @@ namespace StdExample {
   template<typename T> using handler_t = void (*)(T);
   extern handler_t<int> ignore;
   extern void (*ignore)(int);
-  // FIXME: we recover as if cell is an undeclared variable. the diagnostics are terrible!
-  template<typename T> using cell = pair<T*, cell<T>*>; // expected-error {{use of undeclared identifier 'cell'}} \
-                                                           expected-error {{'T' does not refer to a value}} \
-                                                           expected-note {{declared here}} \
-                                                           expected-error {{expected ';' after alias declaration}}
+  // FIXME: we recover as if cell is an undeclared variable template
+  template<typename T> using cell = pair<T*, cell<T>*>; // expected-error {{use of undeclared identifier 'cell'}} expected-error {{expected expression}}
 }
 
 namespace Access {
@@ -188,4 +185,8 @@ template <class T, class = void_t<typename T::wait_what>>
 int sfinae_me() { return 0; } // expected-note{{candidate template ignored: substitution failure}}
 
 int g = sfinae_me<int>(); // expected-error{{no matching function for call to 'sfinae_me'}}
+}
+
+namespace NullExceptionDecl {
+template<int... I> auto get = []() { try { } catch(...) {}; return I; }; // expected-error{{initializer contains unexpanded parameter pack 'I'}}
 }

@@ -9,7 +9,7 @@ template<typename T, typename U>
 struct X1 : T::apply<U> { }; // expected-error{{use 'template' keyword to treat 'apply' as a dependent template name}}
 
 template<typename T>
-struct X2 : vector<T> { }; // expected-error{{unknown template name 'vector'}}
+struct X2 : vector<T> { }; // expected-error{{no template named 'vector'}}
 
 namespace PR6031 {
   template<typename T>

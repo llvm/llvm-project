@@ -805,6 +805,68 @@
         <key>end</key>
          <array>
           <dict>
+           <key>line</key><integer>38</integer>
+           <key>col</key><integer>11</integer>
+           <key>file</key><integer>0</integer>
+          </dict>
+          <dict>
+           <key>line</key><integer>38</integer>
+           <key>col</key><integer>20</integer>
+           <key>file</key><integer>0</integer>
+          </dict>
+         </array>
+       </dict>
+      </array>
+    </dict>
+    <dict>
+     <key>kind</key><string>pop-up</string>
+     <key>location</key>
+     <dict>
+      <key>line</key><integer>38</integer>
+      <key>col</key><integer>11</integer>
+      <key>file</key><integer>0</integer>
+     </dict>
+     <key>ranges</key>
+     <array>
+       <array>
+        <dict>
+         <key>line</key><integer>38</integer>
+         <key>col</key><integer>11</integer>
+         <key>file</key><integer>0</integer>
+        </dict>
+        <dict>
+         <key>line</key><integer>38</integer>
+         <key>col</key><integer>37</integer>
+         <key>file</key><integer>0</integer>
+        </dict>
+       </array>
+     </array>
+     <key>extended_message</key>
+     <string>&apos;traitValue&apos; is equal to &apos;newTraitValue&apos;</string>
+     <key>message</key>
+     <string>&apos;traitValue&apos; is equal to &apos;newTraitValue&apos;</string>
+    </dict>
+    <dict>
+     <key>kind</key><string>control</string>
+     <key>edges</key>
+      <array>
+       <dict>
+        <key>start</key>
+         <array>
+          <dict>
+           <key>line</key><integer>38</integer>
+           <key>col</key><integer>11</integer>
+           <key>file</key><integer>0</integer>
+          </dict>
+          <dict>
+           <key>line</key><integer>38</integer>
+           <key>col</key><integer>20</integer>
+           <key>file</key><integer>0</integer>
+          </dict>
+         </array>
+        <key>end</key>
+         <array>
+          <dict>
            <key>line</key><integer>41</integer>
            <key>col</key><integer>7</integer>
            <key>file</key><integer>0</integer>

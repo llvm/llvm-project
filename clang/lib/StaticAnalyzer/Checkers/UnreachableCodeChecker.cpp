@@ -1,9 +1,8 @@
 //==- UnreachableCodeChecker.cpp - Generalized dead code checker -*- C++ -*-==//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 // This file implements a generalized unreachable code checker using a
@@ -205,7 +204,7 @@ const Stmt *UnreachableCodeChecker::getUnreachableStmt(const CFGBlock *CB) {
         return S->getStmt();
     }
   }
-  if (const Stmt *S = CB->getTerminator())
+  if (const Stmt *S = CB->getTerminatorStmt())
     return S;
   else
     return nullptr;
@@ -251,7 +250,7 @@ bool UnreachableCodeChecker::isInvalidPath(const CFGBlock *CB,
 bool UnreachableCodeChecker::isEmptyCFGBlock(const CFGBlock *CB) {
   return CB->getLabel() == nullptr // No labels
       && CB->size() == 0           // No statements
-      && !CB->getTerminator();     // No terminator
+      && !CB->getTerminatorStmt(); // No terminator
 }
 
 void ento::registerUnreachableCodeChecker(CheckerManager &mgr) {

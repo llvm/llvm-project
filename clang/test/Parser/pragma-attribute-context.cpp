@@ -10,17 +10,17 @@
 
 extern "C" {
 BEGIN_PRAGMA
-int f(); // expected-note{{marked}}
+int f(); // expected-note{{'f' has been marked as being introduced in macOS 1000 here}}
 END_PRAGMA
 }
 
 namespace my_ns {
 BEGIN_PRAGMA
-int g(); // expected-note{{marked}}
+int g(); // expected-note{{'g' has been marked as being introduced in macOS 1000 here}}
 END_PRAGMA
 namespace nested {
 BEGIN_PRAGMA
-int h(); // expected-note{{marked}}
+int h(); // expected-note{{'h' has been marked as being introduced in macOS 1000 here}}
 END_PRAGMA
 }
 }

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm -o - -fblocks %s -O1 -triple x86_64-apple-darwin10.0.0 -fobjc-runtime=macosx-fragile-10.5 | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -o - -fblocks %s -O1 -fno-experimental-new-pass-manager -triple x86_64-apple-darwin10.0.0 -fobjc-runtime=macosx-fragile-10.5 | FileCheck %s
 
 // PR10835 / <rdar://problem/10050178>
 struct X {

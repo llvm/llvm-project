@@ -15,7 +15,7 @@ int main(int argc, char **argv) {
 #pragma omp target parallel for simd default() // expected-error {{expected 'none' or 'shared' in OpenMP clause 'default'}}
   for (i = 0; i < argc; ++i)
     foo();
-#pragma omp target parallel for simd default(none // expected-error {{expected ')'}} expected-note {{to match this '('}}
+#pragma omp target parallel for simd default(none // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-note {{explicit data sharing attribute requested here}}
   for (i = 0; i < argc; ++i) // expected-error {{variable 'argc' must have explicitly specified data sharing attributes}}
     foo();
 #pragma omp target parallel for simd default(shared), default(shared) // expected-error {{directive '#pragma omp target parallel for simd' cannot contain more than one 'default' clause}}
@@ -25,7 +25,7 @@ int main(int argc, char **argv) {
   for (i = 0; i < argc; ++i)
     foo();
 
-#pragma omp target parallel for simd default(none)
+#pragma omp target parallel for simd default(none) // expected-note {{explicit data sharing attribute requested here}}
   for (i = 0; i < argc; ++i)  // expected-error {{variable 'argc' must have explicitly specified data sharing attributes}}
     foo();
 

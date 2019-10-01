@@ -1,9 +1,8 @@
 //===- DynamicTypePropagation.cpp ------------------------------*- C++ -*--===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -115,8 +114,8 @@ public:
 void DynamicTypePropagation::checkDeadSymbols(SymbolReaper &SR,
                                               CheckerContext &C) const {
   ProgramStateRef State = C.getState();
-  DynamicTypeMapImpl TypeMap = State->get<DynamicTypeMap>();
-  for (DynamicTypeMapImpl::iterator I = TypeMap.begin(), E = TypeMap.end();
+  DynamicTypeMapTy TypeMap = State->get<DynamicTypeMap>();
+  for (DynamicTypeMapTy::iterator I = TypeMap.begin(), E = TypeMap.end();
        I != E; ++I) {
     if (!SR.isLiveRegion(I->first)) {
       State = State->remove<DynamicTypeMap>(I->first);

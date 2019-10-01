@@ -1,9 +1,8 @@
 //===- USRGeneration.cpp - Routines for USR generation --------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -112,7 +111,12 @@ public:
   }
 
   void VisitUsingDecl(const UsingDecl *D) {
-    IgnoreResults = true;
+    VisitDeclContext(D->getDeclContext());
+    Out << "@UD@";
+
+    bool EmittedDeclName = !EmitDeclName(D);
+    assert(EmittedDeclName && "EmitDeclName can not fail for UsingDecls");
+    (void)EmittedDeclName;
   }
 
   bool ShouldGenerateLocation(const NamedDecl *D);
@@ -271,7 +275,7 @@ void USRGenerator::VisitFunctionDecl(const FunctionDecl *D) {
     if (MD->isStatic())
       Out << 'S';
     // FIXME: OpenCL: Need to consider address spaces
-    if (unsigned quals = MD->getTypeQualifiers().getCVRUQualifiers())
+    if (unsigned quals = MD->getMethodQualifiers().getCVRUQualifiers())
       Out << (char)('0' + quals);
     switch (MD->getRefQualifier()) {
     case RQ_None: break;
@@ -720,6 +724,9 @@ void USRGenerator::VisitType(QualType T) {
         case BuiltinType::OCLQueue:
         case BuiltinType::OCLReserveID:
         case BuiltinType::OCLSampler:
+#define SVE_TYPE(Name, Id, SingletonId) \
+        case BuiltinType::Id:
+#include "clang/Basic/AArch64SVEACLETypes.def"
         case BuiltinType::ShortAccum:
         case BuiltinType::Accum:
         case BuiltinType::LongAccum:

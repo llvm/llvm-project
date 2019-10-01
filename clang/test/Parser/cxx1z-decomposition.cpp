@@ -67,8 +67,8 @@ namespace BadSpecifiers {
   struct S { int n; } s;
   void f() {
     // storage-class-specifiers
-    static auto &[a] = n; // expected-error {{cannot be declared 'static'}}
-    thread_local auto &[b] = n; // expected-error {{cannot be declared 'thread_local'}}
+    static auto &[a] = n; // expected-warning {{declared 'static' is a C++2a extension}}
+    thread_local auto &[b] = n; // expected-warning {{declared 'thread_local' is a C++2a extension}}
     extern auto &[c] = n; // expected-error {{cannot be declared 'extern'}} expected-error {{cannot have an initializer}}
     struct S {
       mutable auto &[d] = n; // expected-error {{not permitted in this context}}
@@ -82,9 +82,11 @@ namespace BadSpecifiers {
     };
     typedef auto &[h] = n; // expected-error {{cannot be declared 'typedef'}}
     constexpr auto &[i] = n; // expected-error {{cannot be declared 'constexpr'}}
-
-    static constexpr thread_local auto &[j] = n; // expected-error {{cannot be declared with 'static thread_local constexpr' specifiers}}
   }
+
+  static constexpr inline thread_local auto &[j1] = n; // expected-error {{cannot be declared with 'constexpr inline' specifiers}}
+  static thread_local auto &[j2] = n; // expected-warning {{declared with 'static thread_local' specifiers is a C++2a extension}}
+
   inline auto &[k] = n; // expected-error {{cannot be declared 'inline'}}
 
   const int K = 5;

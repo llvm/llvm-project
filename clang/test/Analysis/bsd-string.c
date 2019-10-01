@@ -1,4 +1,8 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.cstring.NullArg,alpha.unix.cstring,debug.ExprInspection -analyzer-store=region -verify %s
+// RUN: %clang_analyze_cc1 -verify %s \
+// RUN:   -analyzer-checker=core \
+// RUN:   -analyzer-checker=unix.cstring.NullArg \
+// RUN:   -analyzer-checker=alpha.unix.cstring \
+// RUN:   -analyzer-checker=debug.ExprInspection
 
 #define NULL ((void *)0)
 
@@ -15,6 +19,7 @@ void f1() {
 void f2() {
   char buf[5];
   strlcpy(buf, "abcd", sizeof(buf)); // expected-no-warning
+  // FIXME: This should not warn. The string is safely truncated.
   strlcat(buf, "efgh", sizeof(buf)); // expected-warning{{Size argument is greater than the free space in the destination buffer}}
 }
 

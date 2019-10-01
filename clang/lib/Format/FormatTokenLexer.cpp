@@ -1,9 +1,8 @@
 //===--- FormatTokenLexer.cpp - Lex FormatTokens -------------*- C++ ----*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -40,6 +39,10 @@ FormatTokenLexer::FormatTokenLexer(const SourceManager &SourceMgr, FileID ID,
     Macros.insert({&IdentTable.get(ForEachMacro), TT_ForEachMacro});
   for (const std::string &StatementMacro : Style.StatementMacros)
     Macros.insert({&IdentTable.get(StatementMacro), TT_StatementMacro});
+  for (const std::string &TypenameMacro : Style.TypenameMacros)
+    Macros.insert({&IdentTable.get(TypenameMacro), TT_TypenameMacro});
+  for (const std::string &NamespaceMacro : Style.NamespaceMacros)
+    Macros.insert({&IdentTable.get(NamespaceMacro), TT_NamespaceMacro});
 }
 
 ArrayRef<FormatToken *> FormatTokenLexer::lex() {
@@ -67,6 +70,21 @@ void FormatTokenLexer::tryMergePreviousTokens() {
     return;
   if (tryMergeLessLess())
     return;
+
+  if (Style.isCSharp()) {
+    if (tryMergeCSharpKeywordVariables())
+      return;
+    if (tryMergeCSharpVerbatimStringLiteral())
+      return;
+    if (tryMergeCSharpDoubleQuestion())
+      return;
+    if (tryMergeCSharpNullConditionals())
+      return;
+    static const tok::TokenKind JSRightArrow[] = {tok::equal, tok::greater};
+    if (tryMergeTokens(JSRightArrow, TT_JsFatArrow))
+      return;
+  }
+
   if (tryMergeNSStringLiteral())
     return;
 
@@ -96,6 +114,8 @@ void FormatTokenLexer::tryMergePreviousTokens() {
       Tokens.back()->Tok.setKind(tok::starequal);
       return;
     }
+    if (tryMergeJSPrivateIdentifier())
+      return;
   }
 
   if (Style.Language == FormatStyle::LK_Java) {
@@ -118,6 +138,118 @@ bool FormatTokenLexer::tryMergeNSStringLiteral() {
                             String->TokenText.end() - At->TokenText.begin());
   At->ColumnWidth += String->ColumnWidth;
   At->Type = TT_ObjCStringLiteral;
+  Tokens.erase(Tokens.end() - 1);
+  return true;
+}
+
+bool FormatTokenLexer::tryMergeJSPrivateIdentifier() {
+  // Merges #idenfier into a single identifier with the text #identifier
+  // but the token tok::identifier.
+  if (Tokens.size() < 2)
+    return false;
+  auto &Hash = *(Tokens.end() - 2);
+  auto &Identifier = *(Tokens.end() - 1);
+  if (!Hash->is(tok::hash) || !Identifier->is(tok::identifier))
+    return false;
+  Hash->Tok.setKind(tok::identifier);
+  Hash->TokenText =
+      StringRef(Hash->TokenText.begin(),
+                Identifier->TokenText.end() - Hash->TokenText.begin());
+  Hash->ColumnWidth += Identifier->ColumnWidth;
+  Hash->Type = TT_JsPrivateIdentifier;
+  Tokens.erase(Tokens.end() - 1);
+  return true;
+}
+
+// Search for verbatim or interpolated string literals @"ABC" or
+// $"aaaaa{abc}aaaaa" i and mark the token as TT_CSharpStringLiteral, and to
+// prevent splitting of @, $ and ".
+bool FormatTokenLexer::tryMergeCSharpVerbatimStringLiteral() {
+  if (Tokens.size() < 2)
+    return false;
+  auto &At = *(Tokens.end() - 2);
+  auto &String = *(Tokens.end() - 1);
+
+  // Look for $"aaaaaa" @"aaaaaa".
+  if (!(At->is(tok::at) || At->TokenText == "$") ||
+      !String->is(tok::string_literal))
+    return false;
+
+  if (Tokens.size() >= 2 && At->is(tok::at)) {
+    auto &Dollar = *(Tokens.end() - 3);
+    if (Dollar->TokenText == "$") {
+      // This looks like $@"aaaaa" so we need to combine all 3 tokens.
+      Dollar->Tok.setKind(tok::string_literal);
+      Dollar->TokenText =
+          StringRef(Dollar->TokenText.begin(),
+                    String->TokenText.end() - Dollar->TokenText.begin());
+      Dollar->ColumnWidth += (At->ColumnWidth + String->ColumnWidth);
+      Dollar->Type = TT_CSharpStringLiteral;
+      Tokens.erase(Tokens.end() - 2);
+      Tokens.erase(Tokens.end() - 1);
+      return true;
+    }
+  }
+
+  // Convert back into just a string_literal.
+  At->Tok.setKind(tok::string_literal);
+  At->TokenText = StringRef(At->TokenText.begin(),
+                            String->TokenText.end() - At->TokenText.begin());
+  At->ColumnWidth += String->ColumnWidth;
+  At->Type = TT_CSharpStringLiteral;
+  Tokens.erase(Tokens.end() - 1);
+  return true;
+}
+
+bool FormatTokenLexer::tryMergeCSharpDoubleQuestion() {
+  if (Tokens.size() < 2)
+    return false;
+  auto &FirstQuestion = *(Tokens.end() - 2);
+  auto &SecondQuestion = *(Tokens.end() - 1);
+  if (!FirstQuestion->is(tok::question) || !SecondQuestion->is(tok::question))
+    return false;
+  FirstQuestion->Tok.setKind(tok::question);
+  FirstQuestion->TokenText = StringRef(FirstQuestion->TokenText.begin(),
+                                       SecondQuestion->TokenText.end() -
+                                           FirstQuestion->TokenText.begin());
+  FirstQuestion->ColumnWidth += SecondQuestion->ColumnWidth;
+  FirstQuestion->Type = TT_CSharpNullCoalescing;
+  Tokens.erase(Tokens.end() - 1);
+  return true;
+}
+
+bool FormatTokenLexer::tryMergeCSharpKeywordVariables() {
+  if (Tokens.size() < 2)
+    return false;
+  auto &At = *(Tokens.end() - 2);
+  auto &Keyword = *(Tokens.end() - 1);
+  if (!At->is(tok::at))
+    return false;
+  if (!Keywords.isCSharpKeyword(*Keyword))
+    return false;
+
+  At->Tok.setKind(tok::identifier);
+  At->TokenText = StringRef(At->TokenText.begin(),
+                            Keyword->TokenText.end() - At->TokenText.begin());
+  At->ColumnWidth += Keyword->ColumnWidth;
+  At->Type = Keyword->Type;
+  Tokens.erase(Tokens.end() - 1);
+  return true;
+}
+
+// In C# merge the Identifier and the ? together e.g. arg?.
+bool FormatTokenLexer::tryMergeCSharpNullConditionals() {
+  if (Tokens.size() < 2)
+    return false;
+  auto &Identifier = *(Tokens.end() - 2);
+  auto &Question = *(Tokens.end() - 1);
+  if (!Identifier->isOneOf(tok::r_square, tok::identifier) ||
+      !Question->is(tok::question))
+    return false;
+  Identifier->TokenText =
+      StringRef(Identifier->TokenText.begin(),
+                Question->TokenText.end() - Identifier->TokenText.begin());
+  Identifier->ColumnWidth += Question->ColumnWidth;
   Tokens.erase(Tokens.end() - 1);
   return true;
 }

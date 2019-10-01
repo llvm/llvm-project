@@ -57,15 +57,15 @@
 // RUN: %clang -target riscv64-unknown-linux-gnu -### -S -O3 %s -o %t.s 2>&1 | FileCheck -check-prefix=CHECK3-64 %s
 // RUN: %clang -target riscv64-unknown-linux-gnu -### -S -Os %s -o %t.s 2>&1 | FileCheck -check-prefix=CHECKs-64 %s
 
-// CHECK0-32: -mdisable-fp-elim
-// CHECK1-32-NOT: -mdisable-fp-elim
-// CHECK2-32-NOT: -mdisable-fp-elim
-// CHECK3-32-NOT: -mdisable-fp-elim
-// CHECKs-32-NOT: -mdisable-fp-elim
+// CHECK0-32: -mframe-pointer=all
+// CHECK1-32-NOT: -mframe-pointer=all
+// CHECK2-32-NOT: -mframe-pointer=all
+// CHECK3-32-NOT: -mframe-pointer=all
+// CHECKs-32-NOT: -mframe-pointer=all
 
-// CHECK0-64: -mdisable-fp-elim
-// CHECK1-64-NOT: -mdisable-fp-elim
-// CHECK2-64-NOT: -mdisable-fp-elim
-// CHECK3-64-NOT: -mdisable-fp-elim
-// CHECKs-64-NOT: -mdisable-fp-elim
-// CHECK-MACHO-64: -mdisable-fp-elim
+// CHECK0-64: -mframe-pointer=all
+// CHECK1-64-NOT: -mframe-pointer=all
+// CHECK2-64-NOT: -mframe-pointer=all
+// CHECK3-64-NOT: -mframe-pointer=all
+// CHECKs-64-NOT: -mframe-pointer=all
+// CHECK-MACHO-64: -mframe-pointer=all

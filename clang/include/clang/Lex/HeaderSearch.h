@@ -1,9 +1,8 @@
 //===- HeaderSearch.h - Resolve Header File Locations -----------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -396,7 +395,7 @@ public:
   /// found in any of searched SearchDirs. Will be set to false if a framework
   /// is found only through header maps. Doesn't guarantee the requested file is
   /// found.
-  const FileEntry *LookupFile(
+  Optional<FileEntryRef> LookupFile(
       StringRef Filename, SourceLocation IncludeLoc, bool isAngled,
       const DirectoryLookup *FromDir, const DirectoryLookup *&CurDir,
       ArrayRef<std::pair<const FileEntry *, const DirectoryEntry *>> Includers,
@@ -411,7 +410,7 @@ public:
   /// within ".../Carbon.framework/Headers/Carbon.h", check to see if
   /// HIToolbox is a subframework within Carbon.framework.  If so, return
   /// the FileEntry for the designated file, otherwise return null.
-  const FileEntry *LookupSubframeworkHeader(
+  Optional<FileEntryRef> LookupSubframeworkHeader(
       StringRef Filename, const FileEntry *ContextFileEnt,
       SmallVectorImpl<char> *SearchPath, SmallVectorImpl<char> *RelativePath,
       Module *RequestingModule, ModuleMap::KnownHeader *SuggestedModule);
@@ -650,7 +649,7 @@ private:
 
   /// Look up the file with the specified name and determine its owning
   /// module.
-  const FileEntry *
+  Optional<FileEntryRef>
   getFileAndSuggestModule(StringRef FileName, SourceLocation IncludeLoc,
                           const DirectoryEntry *Dir, bool IsSystemHeaderDir,
                           Module *RequestingModule,
@@ -708,16 +707,18 @@ public:
   /// Retrieve a uniqued framework name.
   StringRef getUniqueFrameworkName(StringRef Framework);
 
-  /// Suggest a path by which the specified file could be found, for
-  /// use in diagnostics to suggest a #include.
+  /// Suggest a path by which the specified file could be found, for use in
+  /// diagnostics to suggest a #include. Returned path will only contain forward
+  /// slashes as separators.
   ///
   /// \param IsSystem If non-null, filled in to indicate whether the suggested
   ///        path is relative to a system header directory.
   std::string suggestPathToFileForDiagnostics(const FileEntry *File,
                                               bool *IsSystem = nullptr);
 
-  /// Suggest a path by which the specified file could be found, for
-  /// use in diagnostics to suggest a #include.
+  /// Suggest a path by which the specified file could be found, for use in
+  /// diagnostics to suggest a #include. Returned path will only contain forward
+  /// slashes as separators.
   ///
   /// \param WorkingDir If non-empty, this will be prepended to search directory
   /// paths that are relative.

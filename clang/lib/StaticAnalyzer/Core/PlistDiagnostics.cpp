@@ -1,9 +1,8 @@
 //===--- PlistDiagnostics.cpp - Plist Diagnostics for Paths -----*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -23,6 +22,7 @@
 #include "clang/StaticAnalyzer/Core/IssueHash.h"
 #include "clang/StaticAnalyzer/Core/PathDiagnosticConsumers.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
 
@@ -120,6 +120,9 @@ private:
       case PathDiagnosticPiece::Note:
         ReportNote(o, cast<PathDiagnosticNotePiece>(P), indent);
         break;
+      case PathDiagnosticPiece::PopUp:
+        ReportPopUp(o, cast<PathDiagnosticPopUpPiece>(P), indent);
+        break;
     }
   }
 
@@ -138,6 +141,9 @@ private:
                             unsigned indent, unsigned depth);
   void ReportNote(raw_ostream &o, const PathDiagnosticNotePiece& P,
                   unsigned indent);
+
+  void ReportPopUp(raw_ostream &o, const PathDiagnosticPopUpPiece &P,
+                   unsigned indent);
 };
 
 } // end of anonymous namespace
@@ -395,6 +401,34 @@ void PlistPrinter::ReportNote(raw_ostream &o, const PathDiagnosticNotePiece& P,
   // Finish up.
   --indent;
   Indent(o, indent); o << "</dict>\n";
+}
+
+void PlistPrinter::ReportPopUp(raw_ostream &o,
+                               const PathDiagnosticPopUpPiece &P,
+                               unsigned indent) {
+  const SourceManager &SM = PP.getSourceManager();
+
+  Indent(o, indent) << "<dict>\n";
+  ++indent;
+
+  Indent(o, indent) << "<key>kind</key><string>pop-up</string>\n";
+
+  // Output the location.
+  FullSourceLoc L = P.getLocation().asLocation();
+
+  Indent(o, indent) << "<key>location</key>\n";
+  EmitLocation(o, SM, L, FM, indent);
+
+  // Output the ranges (if any).
+  ArrayRef<SourceRange> Ranges = P.getRanges();
+  EmitRanges(o, Ranges, indent);
+
+  // Output the text.
+  EmitMessage(o, P.getString(), indent);
+
+  // Finish up.
+  --indent;
+  Indent(o, indent) << "</dict>\n";
 }
 
 //===----------------------------------------------------------------------===//
@@ -714,7 +748,7 @@ void PlistDiagnostics::FlushDiagnosticsImpl(
   }
 
   // Finish.
-  o << "</dict>\n</plist>";
+  o << "</dict>\n</plist>\n";
 }
 
 //===----------------------------------------------------------------------===//
@@ -777,10 +811,20 @@ public:
 /// As we expand the last line, we'll immediately replace PRINT(str) with
 /// print(x). The information that both 'str' and 'x' refers to the same string
 /// is an information we have to forward, hence the argument \p PrevArgs.
-static std::string getMacroNameAndPrintExpansion(TokenPrinter &Printer,
-                                                 SourceLocation MacroLoc,
-                                                 const Preprocessor &PP,
-                                                 const MacroArgMap &PrevArgs);
+///
+/// To avoid infinite recursion we maintain the already processed tokens in
+/// a set. This is carried as a parameter through the recursive calls. The set
+/// is extended with the currently processed token and after processing it, the
+/// token is removed. If the token is already in the set, then recursion stops:
+///
+/// #define f(y) x
+/// #define x f(x)
+static std::string getMacroNameAndPrintExpansion(
+    TokenPrinter &Printer,
+    SourceLocation MacroLoc,
+    const Preprocessor &PP,
+    const MacroArgMap &PrevArgs,
+    llvm::SmallPtrSet<IdentifierInfo *, 8> &AlreadyProcessedTokens);
 
 /// Retrieves the name of the macro and what it's arguments expand into
 /// at \p ExpanLoc.
@@ -829,19 +873,38 @@ static ExpansionInfo getExpandedMacro(SourceLocation MacroLoc,
   llvm::SmallString<200> ExpansionBuf;
   llvm::raw_svector_ostream OS(ExpansionBuf);
   TokenPrinter Printer(OS, PP);
+  llvm::SmallPtrSet<IdentifierInfo*, 8> AlreadyProcessedTokens;
+
   std::string MacroName =
-            getMacroNameAndPrintExpansion(Printer, MacroLoc, PP, MacroArgMap{});
+            getMacroNameAndPrintExpansion(Printer, MacroLoc, PP, MacroArgMap{},
+                                         AlreadyProcessedTokens);
   return { MacroName, OS.str() };
 }
 
-static std::string getMacroNameAndPrintExpansion(TokenPrinter &Printer,
-                                                 SourceLocation MacroLoc,
-                                                 const Preprocessor &PP,
-                                                 const MacroArgMap &PrevArgs) {
+static std::string getMacroNameAndPrintExpansion(
+    TokenPrinter &Printer,
+    SourceLocation MacroLoc,
+    const Preprocessor &PP,
+    const MacroArgMap &PrevArgs,
+    llvm::SmallPtrSet<IdentifierInfo *, 8> &AlreadyProcessedTokens) {
 
   const SourceManager &SM = PP.getSourceManager();
 
   MacroNameAndArgs Info = getMacroNameAndArgs(SM.getExpansionLoc(MacroLoc), PP);
+  IdentifierInfo* IDInfo = PP.getIdentifierInfo(Info.Name);
+
+  // TODO: If the macro definition contains another symbol then this function is
+  // called recursively. In case this symbol is the one being defined, it will
+  // be an infinite recursion which is stopped by this "if" statement. However,
+  // in this case we don't get the full expansion text in the Plist file. See
+  // the test file where "value" is expanded to "garbage_" instead of
+  // "garbage_value".
+  if (AlreadyProcessedTokens.find(IDInfo) != AlreadyProcessedTokens.end())
+    return Info.Name;
+  AlreadyProcessedTokens.insert(IDInfo);
+
+  if (!Info.MI)
+    return Info.Name;
 
   // Manually expand its arguments from the previous macro.
   Info.Args.expandFromPrevMacro(PrevArgs);
@@ -863,14 +926,15 @@ static std::string getMacroNameAndPrintExpansion(TokenPrinter &Printer,
 
     // If this token is a macro that should be expanded inside the current
     // macro.
-    if (const MacroInfo *MI =
-                         getMacroInfoForLocation(PP, SM, II, T.getLocation())) {
-      getMacroNameAndPrintExpansion(Printer, T.getLocation(), PP, Info.Args);
+    if (getMacroInfoForLocation(PP, SM, II, T.getLocation())) {
+      getMacroNameAndPrintExpansion(Printer, T.getLocation(), PP, Info.Args,
+                                    AlreadyProcessedTokens);
 
       // If this is a function-like macro, skip its arguments, as
       // getExpandedMacro() already printed them. If this is the case, let's
       // first jump to the '(' token.
-      if (MI->getNumParams() != 0)
+      auto N = std::next(It);
+      if (N != E && N->is(tok::l_paren))
         It = getMatchingRParen(++It, E);
       continue;
     }
@@ -897,8 +961,17 @@ static std::string getMacroNameAndPrintExpansion(TokenPrinter &Printer,
         }
 
         getMacroNameAndPrintExpansion(Printer, ArgIt->getLocation(), PP,
-                                      Info.Args);
-        if (MI->getNumParams() != 0)
+                                      Info.Args, AlreadyProcessedTokens);
+        // Peek the next token if it is a tok::l_paren. This way we can decide
+        // if this is the application or just a reference to a function maxro
+        // symbol:
+        //
+        // #define apply(f) ...
+        // #define func(x) ...
+        // apply(func)
+        // apply(func(42))
+        auto N = std::next(ArgIt);
+        if (N != ArgEnd && N->is(tok::l_paren))
           ArgIt = getMatchingRParen(++ArgIt, ArgEnd);
       }
       continue;
@@ -908,6 +981,8 @@ static std::string getMacroNameAndPrintExpansion(TokenPrinter &Printer,
     // unexpanded macro argument that we need to handle, print it.
     Printer.printToken(T);
   }
+
+  AlreadyProcessedTokens.erase(IDInfo);
 
   return Info.Name;
 }
@@ -937,7 +1012,14 @@ static MacroNameAndArgs getMacroNameAndArgs(SourceLocation ExpanLoc,
   assert(II && "Failed to acquire the IndetifierInfo for the macro!");
 
   const MacroInfo *MI = getMacroInfoForLocation(PP, SM, II, ExpanLoc);
-  assert(MI && "The macro must've been defined at it's expansion location!");
+  // assert(MI && "The macro must've been defined at it's expansion location!");
+  //
+  // We should always be able to obtain the MacroInfo in a given TU, but if
+  // we're running the analyzer with CTU, the Preprocessor won't contain the
+  // directive history (or anything for that matter) from another TU.
+  // TODO: assert when we're not running with CTU.
+  if (!MI)
+    return { MacroName, MI, {} };
 
   // Acquire the macro's arguments.
   //
@@ -951,8 +1033,16 @@ static MacroNameAndArgs getMacroNameAndArgs(SourceLocation ExpanLoc,
     return { MacroName, MI, {} };
 
   RawLexer.LexFromRawLexer(TheTok);
-  assert(TheTok.is(tok::l_paren) &&
-         "The token after the macro's identifier token should be '('!");
+  // When this is a token which expands to another macro function then its
+  // parentheses are not at its expansion locaiton. For example:
+  //
+  // #define foo(x) int bar() { return x; }
+  // #define apply_zero(f) f(0)
+  // apply_zero(foo)
+  //               ^
+  //               This is not a tok::l_paren, but foo is a function.
+  if (TheTok.isNot(tok::l_paren))
+    return { MacroName, MI, {} };
 
   MacroArgMap Args;
 

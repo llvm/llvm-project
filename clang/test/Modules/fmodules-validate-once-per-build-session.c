@@ -51,8 +51,8 @@
 // RUN: not diff %t/modules-to-compare/Foo-before-user.pcm %t/modules-to-compare/Foo-after-user.pcm
 
 // ===
-// Recompile the module if the today's date is before 01 January 2030.
-// RUN: %clang_cc1 -cc1 -fmodules -fimplicit-module-maps -fdisable-module-hash -fmodules-cache-path=%t/modules-cache -fsyntax-only -isystem %t/Inputs -fbuild-session-timestamp=1893456000 -fmodules-validate-once-per-build-session %s
+// Recompile the module if the today's date is before 01 January 2100.
+// RUN: %clang_cc1 -cc1 -fmodules -fimplicit-module-maps -fdisable-module-hash -fmodules-cache-path=%t/modules-cache -fsyntax-only -isystem %t/Inputs -fbuild-session-timestamp=4102441200 -fmodules-validate-once-per-build-session %s
 // RUN: ls -R %t/modules-cache | grep Foo.pcm.timestamp
 // RUN: cp %t/modules-cache/Foo.pcm %t/modules-to-compare/Foo-after.pcm
 

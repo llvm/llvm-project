@@ -1,7 +1,12 @@
 // RUN: %clang_cc1 -triple i386-pc-solaris -dM -E %s -o - | FileCheck %s -check-prefix CHECK-SOLARIS
 // CHECK-SOLARIS-DAG: #define __WCHAR_MAX__ 2147483647
-// CHECK-SOLARIS-DAG: #define __WCHAR_TYPE__ int
+// CHECK-SOLARIS-DAG: #define __WCHAR_TYPE__ long int
 // CHECK-SOLARIS-NOT: #define __WCHAR_UNSIGNED__ 0
+
+// RUN: %clang_cc1 -triple x86_64-pc-solaris -dM -E %s -o - | FileCheck %s -check-prefix CHECK-SOLARIS64
+// CHECK-SOLARIS64-DAG: #define __WCHAR_MAX__ 2147483647
+// CHECK-SOLARIS64-DAG: #define __WCHAR_TYPE__ int
+// CHECK-SOLARIS64-NOT: #define __WCHAR_UNSIGNED__ 0
 
 // RUN: %clang_cc1 -triple avr-unknown-unknown -fwchar-type=int -fsigned-wchar -dM -E %s -o - | FileCheck %s -check-prefix CHECK-AVR
 // CHECK-AVR-DAG: #define __WCHAR_MAX__ 32767

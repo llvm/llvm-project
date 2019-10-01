@@ -1,9 +1,8 @@
 //=== RecordLayoutBuilder.cpp - Helper class for building record layouts ---==//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -239,7 +238,7 @@ EmptySubobjectMap::CanPlaceSubobjectAtOffset(const CXXRecordDecl *RD,
     return true;
 
   const ClassVectorTy &Classes = I->second;
-  if (std::find(Classes.begin(), Classes.end(), RD) == Classes.end())
+  if (llvm::find(Classes, RD) == Classes.end())
     return true;
 
   // There is already an empty class of the same type at this offset.
@@ -255,7 +254,7 @@ void EmptySubobjectMap::AddSubobjectAtOffset(const CXXRecordDecl *RD,
   // If we have empty structures inside a union, we can assign both
   // the same offset. Just avoid pushing them twice in the list.
   ClassVectorTy &Classes = EmptyClassOffsets[Offset];
-  if (std::find(Classes.begin(), Classes.end(), RD) != Classes.end())
+  if (llvm::is_contained(Classes, RD))
     return;
 
   Classes.push_back(RD);
@@ -2693,7 +2692,8 @@ void MicrosoftRecordLayoutBuilder::layoutBitField(const FieldDecl *FD) {
     auto FieldBitOffset = External.getExternalFieldOffset(FD);
     placeFieldAtBitOffset(FieldBitOffset);
     auto NewSize = Context.toCharUnitsFromBits(
-        llvm::alignTo(FieldBitOffset + Width, Context.getCharWidth()));
+        llvm::alignDown(FieldBitOffset, Context.toBits(Info.Alignment)) +
+        Context.toBits(Info.Size));
     Size = std::max(Size, NewSize);
     Alignment = std::max(Alignment, Info.Alignment);
   } else if (IsUnion) {
@@ -2742,12 +2742,17 @@ void MicrosoftRecordLayoutBuilder::injectVBPtr(const CXXRecordDecl *RD) {
   CharUnits InjectionSite = VBPtrOffset;
   // But before we do, make sure it's properly aligned.
   VBPtrOffset = VBPtrOffset.alignTo(PointerInfo.Alignment);
-  // Shift everything after the vbptr down, unless we're using an external
-  // layout.
-  if (UseExternalLayout)
-    return;
   // Determine where the first field should be laid out after the vbptr.
   CharUnits FieldStart = VBPtrOffset + PointerInfo.Size;
+  // Shift everything after the vbptr down, unless we're using an external
+  // layout.
+  if (UseExternalLayout) {
+    // It is possible that there were no fields or bases located after vbptr,
+    // so the size was not adjusted before.
+    if (Size < FieldStart)
+      Size = FieldStart;
+    return;
+  }
   // Make sure that the amount we push the fields back by is a multiple of the
   // alignment.
   CharUnits Offset = (FieldStart - InjectionSite)
@@ -2772,8 +2777,14 @@ void MicrosoftRecordLayoutBuilder::injectVFPtr(const CXXRecordDecl *RD) {
   if (HasVBPtr)
     VBPtrOffset += Offset;
 
-  if (UseExternalLayout)
+  if (UseExternalLayout) {
+    // The class may have no bases or fields, but still have a vfptr
+    // (e.g. it's an interface class). The size was not correctly set before
+    // in this case.
+    if (FieldOffsets.empty() && Bases.empty())
+      Size += Offset;
     return;
+  }
 
   Size += Offset;
 
@@ -3276,10 +3287,10 @@ static void DumpRecordLayout(raw_ostream &OS, const RecordDecl *RD,
     }
 
     // Sort nvbases by offset.
-    std::stable_sort(Bases.begin(), Bases.end(),
-                     [&](const CXXRecordDecl *L, const CXXRecordDecl *R) {
-      return Layout.getBaseClassOffset(L) < Layout.getBaseClassOffset(R);
-    });
+    llvm::stable_sort(
+        Bases, [&](const CXXRecordDecl *L, const CXXRecordDecl *R) {
+          return Layout.getBaseClassOffset(L) < Layout.getBaseClassOffset(R);
+        });
 
     // Dump (non-virtual) bases
     for (const CXXRecordDecl *Base : Bases) {

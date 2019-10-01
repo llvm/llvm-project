@@ -1,9 +1,8 @@
 //===--- Mips.cpp - Implement Mips target feature support -----------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -214,6 +213,14 @@ bool MipsTargetInfo::hasFeature(StringRef Feature) const {
 ArrayRef<Builtin::Info> MipsTargetInfo::getTargetBuiltins() const {
   return llvm::makeArrayRef(BuiltinInfo, clang::Mips::LastTSBuiltin -
                                              Builtin::FirstTSBuiltin);
+}
+
+unsigned MipsTargetInfo::getUnwindWordWidth() const {
+  return llvm::StringSwitch<unsigned>(ABI)
+      .Case("o32", 32)
+      .Case("n32", 64)
+      .Case("n64", 64)
+      .Default(getPointerWidth(0));
 }
 
 bool MipsTargetInfo::validateTarget(DiagnosticsEngine &Diags) const {

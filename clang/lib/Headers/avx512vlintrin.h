@@ -1,22 +1,8 @@
 /*===---- avx512vlintrin.h - AVX512VL intrinsics ---------------------------===
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
+ * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+ * See https://llvm.org/LICENSE.txt for license information.
+ * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  *===-----------------------------------------------------------------------===
  */
@@ -3484,162 +3470,162 @@ _mm256_maskz_scalef_ps (__mmask8 __U, __m256 __A, __m256 __B) {
 }
 
 #define _mm_i64scatter_pd(addr, index, v1, scale) \
-  __builtin_ia32_scatterdiv2df((double *)(addr), (__mmask8)-1, \
+  __builtin_ia32_scatterdiv2df((void *)(addr), (__mmask8)-1, \
                                (__v2di)(__m128i)(index), \
                                (__v2df)(__m128d)(v1), (int)(scale))
 
 #define _mm_mask_i64scatter_pd(addr, mask, index, v1, scale) \
-  __builtin_ia32_scatterdiv2df((double *)(addr), (__mmask8)(mask), \
+  __builtin_ia32_scatterdiv2df((void *)(addr), (__mmask8)(mask), \
                                (__v2di)(__m128i)(index), \
                                (__v2df)(__m128d)(v1), (int)(scale))
 
 #define _mm_i64scatter_epi64(addr, index, v1, scale) \
-  __builtin_ia32_scatterdiv2di((long long *)(addr), (__mmask8)-1, \
+  __builtin_ia32_scatterdiv2di((void *)(addr), (__mmask8)-1, \
                                (__v2di)(__m128i)(index), \
                                (__v2di)(__m128i)(v1), (int)(scale))
 
 #define _mm_mask_i64scatter_epi64(addr, mask, index, v1, scale) \
-  __builtin_ia32_scatterdiv2di((long long *)(addr), (__mmask8)(mask), \
+  __builtin_ia32_scatterdiv2di((void *)(addr), (__mmask8)(mask), \
                                (__v2di)(__m128i)(index), \
                                (__v2di)(__m128i)(v1), (int)(scale))
 
 #define _mm256_i64scatter_pd(addr, index, v1, scale) \
-  __builtin_ia32_scatterdiv4df((double *)(addr), (__mmask8)-1, \
+  __builtin_ia32_scatterdiv4df((void *)(addr), (__mmask8)-1, \
                                (__v4di)(__m256i)(index), \
                                (__v4df)(__m256d)(v1), (int)(scale))
 
 #define _mm256_mask_i64scatter_pd(addr, mask, index, v1, scale) \
-  __builtin_ia32_scatterdiv4df((double *)(addr), (__mmask8)(mask), \
+  __builtin_ia32_scatterdiv4df((void *)(addr), (__mmask8)(mask), \
                                (__v4di)(__m256i)(index), \
                                (__v4df)(__m256d)(v1), (int)(scale))
 
 #define _mm256_i64scatter_epi64(addr, index, v1, scale) \
-  __builtin_ia32_scatterdiv4di((long long *)(addr), (__mmask8)-1, \
+  __builtin_ia32_scatterdiv4di((void *)(addr), (__mmask8)-1, \
                                (__v4di)(__m256i)(index), \
                                (__v4di)(__m256i)(v1), (int)(scale))
 
 #define _mm256_mask_i64scatter_epi64(addr, mask, index, v1, scale) \
-  __builtin_ia32_scatterdiv4di((long long *)(addr), (__mmask8)(mask), \
+  __builtin_ia32_scatterdiv4di((void *)(addr), (__mmask8)(mask), \
                                (__v4di)(__m256i)(index), \
                                (__v4di)(__m256i)(v1), (int)(scale))
 
 #define _mm_i64scatter_ps(addr, index, v1, scale) \
-  __builtin_ia32_scatterdiv4sf((float *)(addr), (__mmask8)-1, \
+  __builtin_ia32_scatterdiv4sf((void *)(addr), (__mmask8)-1, \
                                (__v2di)(__m128i)(index), (__v4sf)(__m128)(v1), \
                                (int)(scale))
 
 #define _mm_mask_i64scatter_ps(addr, mask, index, v1, scale) \
-  __builtin_ia32_scatterdiv4sf((float *)(addr), (__mmask8)(mask), \
+  __builtin_ia32_scatterdiv4sf((void *)(addr), (__mmask8)(mask), \
                                (__v2di)(__m128i)(index), (__v4sf)(__m128)(v1), \
                                (int)(scale))
 
 #define _mm_i64scatter_epi32(addr, index, v1, scale) \
-  __builtin_ia32_scatterdiv4si((int *)(addr), (__mmask8)-1, \
+  __builtin_ia32_scatterdiv4si((void *)(addr), (__mmask8)-1, \
                                (__v2di)(__m128i)(index), \
                                (__v4si)(__m128i)(v1), (int)(scale))
 
 #define _mm_mask_i64scatter_epi32(addr, mask, index, v1, scale) \
-  __builtin_ia32_scatterdiv4si((int *)(addr), (__mmask8)(mask), \
+  __builtin_ia32_scatterdiv4si((void *)(addr), (__mmask8)(mask), \
                                (__v2di)(__m128i)(index), \
                                (__v4si)(__m128i)(v1), (int)(scale))
 
 #define _mm256_i64scatter_ps(addr, index, v1, scale) \
-  __builtin_ia32_scatterdiv8sf((float *)(addr), (__mmask8)-1, \
+  __builtin_ia32_scatterdiv8sf((void *)(addr), (__mmask8)-1, \
                                (__v4di)(__m256i)(index), (__v4sf)(__m128)(v1), \
                                (int)(scale))
 
 #define _mm256_mask_i64scatter_ps(addr, mask, index, v1, scale) \
-  __builtin_ia32_scatterdiv8sf((float *)(addr), (__mmask8)(mask), \
+  __builtin_ia32_scatterdiv8sf((void *)(addr), (__mmask8)(mask), \
                                (__v4di)(__m256i)(index), (__v4sf)(__m128)(v1), \
                                (int)(scale))
 
 #define _mm256_i64scatter_epi32(addr, index, v1, scale) \
-  __builtin_ia32_scatterdiv8si((int *)(addr), (__mmask8)-1, \
+  __builtin_ia32_scatterdiv8si((void *)(addr), (__mmask8)-1, \
                                (__v4di)(__m256i)(index), \
                                (__v4si)(__m128i)(v1), (int)(scale))
 
 #define _mm256_mask_i64scatter_epi32(addr, mask, index, v1, scale) \
-  __builtin_ia32_scatterdiv8si((int *)(addr), (__mmask8)(mask), \
+  __builtin_ia32_scatterdiv8si((void *)(addr), (__mmask8)(mask), \
                                (__v4di)(__m256i)(index), \
                                (__v4si)(__m128i)(v1), (int)(scale))
 
 #define _mm_i32scatter_pd(addr, index, v1, scale) \
-  __builtin_ia32_scattersiv2df((double *)(addr), (__mmask8)-1, \
+  __builtin_ia32_scattersiv2df((void *)(addr), (__mmask8)-1, \
                                (__v4si)(__m128i)(index), \
                                (__v2df)(__m128d)(v1), (int)(scale))
 
 #define _mm_mask_i32scatter_pd(addr, mask, index, v1, scale) \
-    __builtin_ia32_scattersiv2df((double *)(addr), (__mmask8)(mask), \
+    __builtin_ia32_scattersiv2df((void *)(addr), (__mmask8)(mask), \
                                  (__v4si)(__m128i)(index), \
                                  (__v2df)(__m128d)(v1), (int)(scale))
 
 #define _mm_i32scatter_epi64(addr, index, v1, scale) \
-    __builtin_ia32_scattersiv2di((long long *)(addr), (__mmask8)-1, \
+    __builtin_ia32_scattersiv2di((void *)(addr), (__mmask8)-1, \
                                  (__v4si)(__m128i)(index), \
                                  (__v2di)(__m128i)(v1), (int)(scale))
 
 #define _mm_mask_i32scatter_epi64(addr, mask, index, v1, scale) \
-    __builtin_ia32_scattersiv2di((long long *)(addr), (__mmask8)(mask), \
+    __builtin_ia32_scattersiv2di((void *)(addr), (__mmask8)(mask), \
                                  (__v4si)(__m128i)(index), \
                                  (__v2di)(__m128i)(v1), (int)(scale))
 
 #define _mm256_i32scatter_pd(addr, index, v1, scale) \
-    __builtin_ia32_scattersiv4df((double *)(addr), (__mmask8)-1, \
+    __builtin_ia32_scattersiv4df((void *)(addr), (__mmask8)-1, \
                                  (__v4si)(__m128i)(index), \
                                  (__v4df)(__m256d)(v1), (int)(scale))
 
 #define _mm256_mask_i32scatter_pd(addr, mask, index, v1, scale) \
-    __builtin_ia32_scattersiv4df((double *)(addr), (__mmask8)(mask), \
+    __builtin_ia32_scattersiv4df((void *)(addr), (__mmask8)(mask), \
                                  (__v4si)(__m128i)(index), \
                                  (__v4df)(__m256d)(v1), (int)(scale))
 
 #define _mm256_i32scatter_epi64(addr, index, v1, scale) \
-    __builtin_ia32_scattersiv4di((long long *)(addr), (__mmask8)-1, \
+    __builtin_ia32_scattersiv4di((void *)(addr), (__mmask8)-1, \
                                  (__v4si)(__m128i)(index), \
                                  (__v4di)(__m256i)(v1), (int)(scale))
 
 #define _mm256_mask_i32scatter_epi64(addr, mask, index, v1, scale) \
-    __builtin_ia32_scattersiv4di((long long *)(addr), (__mmask8)(mask), \
+    __builtin_ia32_scattersiv4di((void *)(addr), (__mmask8)(mask), \
                                  (__v4si)(__m128i)(index), \
                                  (__v4di)(__m256i)(v1), (int)(scale))
 
 #define _mm_i32scatter_ps(addr, index, v1, scale) \
-    __builtin_ia32_scattersiv4sf((float *)(addr), (__mmask8)-1, \
+    __builtin_ia32_scattersiv4sf((void *)(addr), (__mmask8)-1, \
                                  (__v4si)(__m128i)(index), (__v4sf)(__m128)(v1), \
                                  (int)(scale))
 
 #define _mm_mask_i32scatter_ps(addr, mask, index, v1, scale) \
-    __builtin_ia32_scattersiv4sf((float *)(addr), (__mmask8)(mask), \
+    __builtin_ia32_scattersiv4sf((void *)(addr), (__mmask8)(mask), \
                                  (__v4si)(__m128i)(index), (__v4sf)(__m128)(v1), \
                                  (int)(scale))
 
 #define _mm_i32scatter_epi32(addr, index, v1, scale) \
-    __builtin_ia32_scattersiv4si((int *)(addr), (__mmask8)-1, \
+    __builtin_ia32_scattersiv4si((void *)(addr), (__mmask8)-1, \
                                  (__v4si)(__m128i)(index), \
                                  (__v4si)(__m128i)(v1), (int)(scale))
 
 #define _mm_mask_i32scatter_epi32(addr, mask, index, v1, scale) \
-    __builtin_ia32_scattersiv4si((int *)(addr), (__mmask8)(mask), \
+    __builtin_ia32_scattersiv4si((void *)(addr), (__mmask8)(mask), \
                                  (__v4si)(__m128i)(index), \
                                  (__v4si)(__m128i)(v1), (int)(scale))
 
 #define _mm256_i32scatter_ps(addr, index, v1, scale) \
-    __builtin_ia32_scattersiv8sf((float *)(addr), (__mmask8)-1, \
+    __builtin_ia32_scattersiv8sf((void *)(addr), (__mmask8)-1, \
                                  (__v8si)(__m256i)(index), (__v8sf)(__m256)(v1), \
                                  (int)(scale))
 
 #define _mm256_mask_i32scatter_ps(addr, mask, index, v1, scale) \
-    __builtin_ia32_scattersiv8sf((float *)(addr), (__mmask8)(mask), \
+    __builtin_ia32_scattersiv8sf((void *)(addr), (__mmask8)(mask), \
                                  (__v8si)(__m256i)(index), (__v8sf)(__m256)(v1), \
                                  (int)(scale))
 
 #define _mm256_i32scatter_epi32(addr, index, v1, scale) \
-    __builtin_ia32_scattersiv8si((int *)(addr), (__mmask8)-1, \
+    __builtin_ia32_scattersiv8si((void *)(addr), (__mmask8)-1, \
                                  (__v8si)(__m256i)(index), \
                                  (__v8si)(__m256i)(v1), (int)(scale))
 
 #define _mm256_mask_i32scatter_epi32(addr, mask, index, v1, scale) \
-    __builtin_ia32_scattersiv8si((int *)(addr), (__mmask8)(mask), \
+    __builtin_ia32_scattersiv8si((void *)(addr), (__mmask8)(mask), \
                                  (__v8si)(__m256i)(index), \
                                  (__v8si)(__m256i)(v1), (int)(scale))
 
@@ -5513,7 +5499,7 @@ static __inline __m128i __DEFAULT_FN_ATTRS128
 _mm_loadu_epi64 (void const *__P)
 {
   struct __loadu_epi64 {
-    __m128i __v;
+    __m128i_u __v;
   } __attribute__((__packed__, __may_alias__));
   return ((struct __loadu_epi64*)__P)->__v;
 }
@@ -5539,7 +5525,7 @@ static __inline __m256i __DEFAULT_FN_ATTRS256
 _mm256_loadu_epi64 (void const *__P)
 {
   struct __loadu_epi64 {
-    __m256i __v;
+    __m256i_u __v;
   } __attribute__((__packed__, __may_alias__));
   return ((struct __loadu_epi64*)__P)->__v;
 }
@@ -5565,7 +5551,7 @@ static __inline __m128i __DEFAULT_FN_ATTRS128
 _mm_loadu_epi32 (void const *__P)
 {
   struct __loadu_epi32 {
-    __m128i __v;
+    __m128i_u __v;
   } __attribute__((__packed__, __may_alias__));
   return ((struct __loadu_epi32*)__P)->__v;
 }
@@ -5591,7 +5577,7 @@ static __inline __m256i __DEFAULT_FN_ATTRS256
 _mm256_loadu_epi32 (void const *__P)
 {
   struct __loadu_epi32 {
-    __m256i __v;
+    __m256i_u __v;
   } __attribute__((__packed__, __may_alias__));
   return ((struct __loadu_epi32*)__P)->__v;
 }
@@ -5717,7 +5703,7 @@ static __inline void __DEFAULT_FN_ATTRS128
 _mm_storeu_epi64 (void *__P, __m128i __A)
 {
   struct __storeu_epi64 {
-    __m128i __v;
+    __m128i_u __v;
   } __attribute__((__packed__, __may_alias__));
   ((struct __storeu_epi64*)__P)->__v = __A;
 }
@@ -5734,7 +5720,7 @@ static __inline void __DEFAULT_FN_ATTRS256
 _mm256_storeu_epi64 (void *__P, __m256i __A)
 {
   struct __storeu_epi64 {
-    __m256i __v;
+    __m256i_u __v;
   } __attribute__((__packed__, __may_alias__));
   ((struct __storeu_epi64*)__P)->__v = __A;
 }
@@ -5751,7 +5737,7 @@ static __inline void __DEFAULT_FN_ATTRS128
 _mm_storeu_epi32 (void *__P, __m128i __A)
 {
   struct __storeu_epi32 {
-    __m128i __v;
+    __m128i_u __v;
   } __attribute__((__packed__, __may_alias__));
   ((struct __storeu_epi32*)__P)->__v = __A;
 }
@@ -5768,7 +5754,7 @@ static __inline void __DEFAULT_FN_ATTRS256
 _mm256_storeu_epi32 (void *__P, __m256i __A)
 {
   struct __storeu_epi32 {
-    __m256i __v;
+    __m256i_u __v;
   } __attribute__((__packed__, __may_alias__));
   ((struct __storeu_epi32*)__P)->__v = __A;
 }
@@ -7984,97 +7970,97 @@ _mm256_mask_cvtepi64_storeu_epi16 (void * __P, __mmask8 __M, __m256i __A)
 
 #define _mm_mmask_i64gather_pd(v1_old, mask, index, addr, scale) \
   (__m128d)__builtin_ia32_gather3div2df((__v2df)(__m128d)(v1_old), \
-                                        (double const *)(addr), \
+                                        (void const *)(addr), \
                                         (__v2di)(__m128i)(index), \
                                         (__mmask8)(mask), (int)(scale))
 
 #define _mm_mmask_i64gather_epi64(v1_old, mask, index, addr, scale) \
   (__m128i)__builtin_ia32_gather3div2di((__v2di)(__m128i)(v1_old), \
-                                        (long long const *)(addr), \
+                                        (void const *)(addr), \
                                         (__v2di)(__m128i)(index), \
                                         (__mmask8)(mask), (int)(scale))
 
 #define _mm256_mmask_i64gather_pd(v1_old, mask, index, addr, scale) \
   (__m256d)__builtin_ia32_gather3div4df((__v4df)(__m256d)(v1_old), \
-                                        (double const *)(addr), \
+                                        (void const *)(addr), \
                                         (__v4di)(__m256i)(index), \
                                         (__mmask8)(mask), (int)(scale))
 
 #define _mm256_mmask_i64gather_epi64(v1_old, mask, index, addr, scale) \
   (__m256i)__builtin_ia32_gather3div4di((__v4di)(__m256i)(v1_old), \
-                                        (long long const *)(addr), \
+                                        (void const *)(addr), \
                                         (__v4di)(__m256i)(index), \
                                         (__mmask8)(mask), (int)(scale))
 
 #define _mm_mmask_i64gather_ps(v1_old, mask, index, addr, scale) \
   (__m128)__builtin_ia32_gather3div4sf((__v4sf)(__m128)(v1_old), \
-                                       (float const *)(addr), \
+                                       (void const *)(addr), \
                                        (__v2di)(__m128i)(index), \
                                        (__mmask8)(mask), (int)(scale))
 
 #define _mm_mmask_i64gather_epi32(v1_old, mask, index, addr, scale) \
   (__m128i)__builtin_ia32_gather3div4si((__v4si)(__m128i)(v1_old), \
-                                        (int const *)(addr), \
+                                        (void const *)(addr), \
                                         (__v2di)(__m128i)(index), \
                                         (__mmask8)(mask), (int)(scale))
 
 #define _mm256_mmask_i64gather_ps(v1_old, mask, index, addr, scale) \
   (__m128)__builtin_ia32_gather3div8sf((__v4sf)(__m128)(v1_old), \
-                                       (float const *)(addr), \
+                                       (void const *)(addr), \
                                        (__v4di)(__m256i)(index), \
                                        (__mmask8)(mask), (int)(scale))
 
 #define _mm256_mmask_i64gather_epi32(v1_old, mask, index, addr, scale) \
   (__m128i)__builtin_ia32_gather3div8si((__v4si)(__m128i)(v1_old), \
-                                        (int const *)(addr), \
+                                        (void const *)(addr), \
                                         (__v4di)(__m256i)(index), \
                                         (__mmask8)(mask), (int)(scale))
 
 #define _mm_mmask_i32gather_pd(v1_old, mask, index, addr, scale) \
   (__m128d)__builtin_ia32_gather3siv2df((__v2df)(__m128d)(v1_old), \
-                                        (double const *)(addr), \
+                                        (void const *)(addr), \
                                         (__v4si)(__m128i)(index), \
                                         (__mmask8)(mask), (int)(scale))
 
 #define _mm_mmask_i32gather_epi64(v1_old, mask, index, addr, scale) \
   (__m128i)__builtin_ia32_gather3siv2di((__v2di)(__m128i)(v1_old), \
-                                        (long long const *)(addr), \
+                                        (void const *)(addr), \
                                         (__v4si)(__m128i)(index), \
                                         (__mmask8)(mask), (int)(scale))
 
 #define _mm256_mmask_i32gather_pd(v1_old, mask, index, addr, scale) \
   (__m256d)__builtin_ia32_gather3siv4df((__v4df)(__m256d)(v1_old), \
-                                        (double const *)(addr), \
+                                        (void const *)(addr), \
                                         (__v4si)(__m128i)(index), \
                                         (__mmask8)(mask), (int)(scale))
 
 #define _mm256_mmask_i32gather_epi64(v1_old, mask, index, addr, scale) \
   (__m256i)__builtin_ia32_gather3siv4di((__v4di)(__m256i)(v1_old), \
-                                        (long long const *)(addr), \
+                                        (void const *)(addr), \
                                         (__v4si)(__m128i)(index), \
                                         (__mmask8)(mask), (int)(scale))
 
 #define _mm_mmask_i32gather_ps(v1_old, mask, index, addr, scale) \
   (__m128)__builtin_ia32_gather3siv4sf((__v4sf)(__m128)(v1_old), \
-                                       (float const *)(addr), \
+                                       (void const *)(addr), \
                                        (__v4si)(__m128i)(index), \
                                        (__mmask8)(mask), (int)(scale))
 
 #define _mm_mmask_i32gather_epi32(v1_old, mask, index, addr, scale) \
   (__m128i)__builtin_ia32_gather3siv4si((__v4si)(__m128i)(v1_old), \
-                                        (int const *)(addr), \
+                                        (void const *)(addr), \
                                         (__v4si)(__m128i)(index), \
                                         (__mmask8)(mask), (int)(scale))
 
 #define _mm256_mmask_i32gather_ps(v1_old, mask, index, addr, scale) \
   (__m256)__builtin_ia32_gather3siv8sf((__v8sf)(__m256)(v1_old), \
-                                       (float const *)(addr), \
+                                       (void const *)(addr), \
                                        (__v8si)(__m256i)(index), \
                                        (__mmask8)(mask), (int)(scale))
 
 #define _mm256_mmask_i32gather_epi32(v1_old, mask, index, addr, scale) \
   (__m256i)__builtin_ia32_gather3siv8si((__v8si)(__m256i)(v1_old), \
-                                        (int const *)(addr), \
+                                        (void const *)(addr), \
                                         (__v8si)(__m256i)(index), \
                                         (__mmask8)(mask), (int)(scale))
 

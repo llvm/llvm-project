@@ -121,8 +121,8 @@ struct g22 {int x;} __attribute((packed));
 struct g23 {char a; short b; char c; struct g22 d;};
 struct g23 g24 = {1,2,3,4};
 
-// CHECK: @g25.g26 = internal global i8* getelementptr inbounds ([4 x i8], [4 x i8]* @__func__.g25, i32 0, i32 0)
-// CHECK: @__func__.g25 = private unnamed_addr constant [4 x i8] c"g25\00"
+// CHECK: @g25.g26 = internal global i8* getelementptr inbounds ([4 x i8], [4 x i8]* @[[FUNC:.*]], i32 0, i32 0)
+// CHECK: @[[FUNC]] = private unnamed_addr constant [4 x i8] c"g25\00"
 int g25() {
   static const char *g26 = __func__;
   return *g26;
@@ -153,7 +153,7 @@ void g29() {
       DCC_PASSWD passwd;
   } DCC_SRVR_NM;
   // CHECK: @g29.a = internal global %struct.DCC_SRVR_NM { [2 x i8] c"@\00" }, align 1
-  // CHECK: @g29.b = internal global [1 x i32] [i32 ptrtoint ([5 x i8]* @.str to i32)], align 4
+  // CHECK: @g29.b = internal global [1 x i32] [i32 ptrtoint ([5 x i8]* @.str.1 to i32)], align 4
   // CHECK: @g29.c = internal global [1 x i32] [i32 97], align 4
   static DCC_SRVR_NM a = { {"@"} };
   static int b[1] = { "asdf" }; // expected-warning {{incompatible pointer to integer conversion initializing 'int' with an expression of type 'char [5]'}}

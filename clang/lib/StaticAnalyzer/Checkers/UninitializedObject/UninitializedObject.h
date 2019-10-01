@@ -1,9 +1,8 @@
 //===----- UninitializedObject.h ---------------------------------*- C++ -*-==//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -18,7 +17,7 @@
 //     won't emit warnings for objects that don't have at least one initialized
 //     field. This may be set with
 //
-//     `-analyzer-config alpha.cplusplus.UninitializedObject:Pedantic=true`.
+//     `-analyzer-config optin.cplusplus.UninitializedObject:Pedantic=true`.
 //
 //   - "NotesAsWarnings" (boolean). If set to true, the checker will emit a
 //     warning for each uninitialized field, as opposed to emitting one warning
@@ -26,27 +25,34 @@
 //     to it in notes. Defaults to false.
 //
 //     `-analyzer-config \
-//         alpha.cplusplus.UninitializedObject:NotesAsWarnings=true`.
+//         optin.cplusplus.UninitializedObject:NotesAsWarnings=true`.
 //
 //   - "CheckPointeeInitialization" (boolean). If set to false, the checker will
 //     not analyze the pointee of pointer/reference fields, and will only check
 //     whether the object itself is initialized. Defaults to false.
 //
 //     `-analyzer-config \
-//         alpha.cplusplus.UninitializedObject:CheckPointeeInitialization=true`.
-//
-//   - "IgnoreRecordsWithField" (string). If supplied, the checker will not
-//     analyze structures that have a field with a name or type name that
-//     matches the given pattern. Defaults to "".
-//
-//     `-analyzer-config \
-// alpha.cplusplus.UninitializedObject:IgnoreRecordsWithField="[Tt]ag|[Kk]ind"`.
+//         optin.cplusplus.UninitializedObject:CheckPointeeInitialization=true`.
 //
 //     TODO: With some clever heuristics, some pointers should be dereferenced
 //     by default. For example, if the pointee is constructed within the
 //     constructor call, it's reasonable to say that no external object
 //     references it, and we wouldn't generate multiple report on the same
 //     pointee.
+//
+//   - "IgnoreRecordsWithField" (string). If supplied, the checker will not
+//     analyze structures that have a field with a name or type name that
+//     matches the given pattern. Defaults to "".
+//
+//     `-analyzer-config \
+// optin.cplusplus.UninitializedObject:IgnoreRecordsWithField="[Tt]ag|[Kk]ind"`.
+//
+//   - "IgnoreGuardedFields" (boolean). If set to true, the checker will analyze
+//     _syntactically_ whether the found uninitialized object is used without a
+//     preceding assert call. Defaults to false.
+//
+//     `-analyzer-config \
+//         optin.cplusplus.UninitializedObject:IgnoreGuardedFields=true`.
 //
 // Most of the following methods as well as the checker itself is defined in
 // UninitializedObjectChecker.cpp.
@@ -69,6 +75,7 @@ struct UninitObjCheckerOptions {
   bool ShouldConvertNotesToWarnings = false;
   bool CheckPointeeInitialization = false;
   std::string IgnoredRecordsWithFieldPattern;
+  bool IgnoreGuardedFields = false;
 };
 
 /// A lightweight polymorphic wrapper around FieldRegion *. We'll use this
@@ -316,8 +323,8 @@ private:
 /// needs to be analyzed as much as checking whether their value is undefined.
 inline bool isPrimitiveType(const QualType &T) {
   return T->isBuiltinType() || T->isEnumeralType() ||
-         T->isMemberPointerType() || T->isBlockPointerType() ||
-         T->isFunctionType();
+         T->isFunctionType() || T->isAtomicType() ||
+         T->isVectorType() || T->isScalarType();
 }
 
 inline bool isDereferencableType(const QualType &T) {

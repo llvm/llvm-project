@@ -19,32 +19,34 @@ kernel void test_exceptions() {
 // Test that only __-prefixed address space qualifiers are accepted.
 struct test_address_space_qualifiers {
   global int *g;
-  // expected-error@-1 {{unknown type name 'global'}}
-  // expected-error@-2 {{expected member name or ';' after declaration specifiers}}
   __global int *uug;
-  int global; // should be fine in OpenCL C++
+  int global; // expected-warning{{declaration does not declare anything}}
 
   local int *l;
-  // expected-error@-1 {{unknown type name 'local'}}
-  // expected-error@-2 {{expected member name or ';' after declaration specifiers}}
   __local int *uul;
-  int local; // should be fine in OpenCL C++
+  int local; // expected-warning{{declaration does not declare anything}}
 
   private int *p;
-  // expected-error@-1 {{expected ':'}}
   __private int *uup;
-  int private; // 'private' is a keyword in C++14 and thus in OpenCL C++
-  // expected-error@-1 {{expected member name or ';' after declaration specifiers}}
+  int private; // expected-warning{{declaration does not declare anything}}
 
   constant int *c;
-  // expected-error@-1 {{unknown type name 'constant'}}
-  // expected-error@-2 {{expected member name or ';' after declaration specifiers}}
   __constant int *uuc;
-  int constant; // should be fine in OpenCL C++
+  int constant; // expected-warning{{declaration does not declare anything}}
 
   generic int *ge;
-  // expected-error@-1 {{unknown type name 'generic'}}
-  // expected-error@-2 {{expected member name or ';' after declaration specifiers}}
   __generic int *uuge;
-  int generic; // should be fine in OpenCL C++
+  int generic; // expected-warning{{declaration does not declare anything}}
 };
+
+// Test that 'private' can be parsed as an access qualifier and an address space too.
+class A{
+  private:
+  private int i; //expected-error{{field may not be qualified with an address space}}
+};
+
+private ::A i; //expected-error{{program scope variable must reside in global or constant address space}}
+
+void foo(private int i);
+
+private int bar(); //expected-error{{return value cannot be qualified with address space}}

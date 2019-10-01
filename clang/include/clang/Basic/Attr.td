@@ -1,9 +1,8 @@
 //==--- Attr.td - attribute definitions -----------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -17,6 +16,8 @@ def DocCatFunction : DocumentationCategory<"Function Attributes">;
 def DocCatVariable : DocumentationCategory<"Variable Attributes">;
 def DocCatType : DocumentationCategory<"Type Attributes">;
 def DocCatStmt : DocumentationCategory<"Statement Attributes">;
+def DocCatDecl : DocumentationCategory<"Declaration Attributes">;
+
 // Attributes listed under the Undocumented category do not generate any public
 // documentation. Ideally, this category should be used for internal-only
 // attributes which contain no spellings.
@@ -187,6 +188,9 @@ class VariadicIdentifierArgument<string name> : Argument<name, 1>;
 // Like VariadicUnsignedArgument except values are ParamIdx.
 class VariadicParamIdxArgument<string name> : Argument<name, 1>;
 
+// A list of identifiers matching parameters or ParamIdx indices.
+class VariadicParamOrParamIdxArgument<string name> : Argument<name, 1>;
+
 // Like VariadicParamIdxArgument but for a single function parameter index.
 class ParamIdxArgument<string name, bit opt = 0> : Argument<name, opt>;
 
@@ -287,23 +291,28 @@ class SubjectList<list<AttrSubject> subjects, SubjectDiag diag = WarnDiag,
   string CustomDiag = customDiag;
 }
 
-class LangOpt<string name, bit negated = 0, string customCode = ""> {
+class LangOpt<string name, code customCode = [{}]> {
   string Name = name;
-  bit Negated = negated;
-  string CustomCode = customCode;
+
+  // A custom predicate, written as an expression evaluated in a context with
+  // "LangOpts" bound.
+  code CustomCode = customCode;
 }
 def MicrosoftExt : LangOpt<"MicrosoftExt">;
 def Borland : LangOpt<"Borland">;
 def CUDA : LangOpt<"CUDA">;
-def COnly : LangOpt<"CPlusPlus", 1>;
+def COnly : LangOpt<"COnly", "!LangOpts.CPlusPlus">;
 def CPlusPlus : LangOpt<"CPlusPlus">;
 def OpenCL : LangOpt<"OpenCL">;
 def RenderScript : LangOpt<"RenderScript">;
 def ObjC : LangOpt<"ObjC">;
 def BlocksSupported : LangOpt<"Blocks">;
 def ObjCAutoRefCount : LangOpt<"ObjCAutoRefCount">;
-def ObjCNonFragileRuntime : LangOpt<"ObjCNonFragileRuntime", 0,
+def ObjCNonFragileRuntime : LangOpt<"ObjCNonFragileRuntime",
                                     "LangOpts.ObjCRuntime.allowsClassStubs()">;
+
+// Language option for CMSE extensions
+def Cmse : LangOpt<"Cmse">;
 
 // Defines targets for target-specific attributes. Empty lists are unchecked.
 class TargetSpec {
@@ -332,6 +341,7 @@ def TargetMSP430 : TargetArch<["msp430"]>;
 def TargetRISCV : TargetArch<["riscv32", "riscv64"]>;
 def TargetX86 : TargetArch<["x86"]>;
 def TargetAnyX86 : TargetArch<["x86", "x86_64"]>;
+def TargetWebAssembly : TargetArch<["wasm32", "wasm64"]>;
 def TargetWindows : TargetArch<["x86", "x86_64", "arm", "thumb", "aarch64"]> {
   let OSes = ["Win32"];
 }
@@ -712,9 +722,25 @@ def AVRSignal : InheritableAttr, TargetSpecificAttr<TargetAVR> {
 
 def AsmLabel : InheritableAttr {
   let Spellings = [Keyword<"asm">, Keyword<"__asm__">];
-  let Args = [StringArgument<"Label">];
+  let Args = [
+    // Label specifies the mangled name for the decl.
+    StringArgument<"Label">,
+
+    // IsLiteralLabel specifies whether the label is literal (i.e. suppresses
+    // the global C symbol prefix) or not. If not, the mangle-suppression prefix
+    // ('\01') is omitted from the decl name at the LLVM IR level.
+    //
+    // Non-literal labels are used by some external AST sources like LLDB.
+    BoolArgument<"IsLiteralLabel", /*optional=*/0, /*fake=*/1>
+  ];
   let SemaHandler = 0;
-  let Documentation = [Undocumented];
+  let Documentation = [AsmLabelDocs];
+  let AdditionalMembers =
+[{
+bool isEquivalent(AsmLabelAttr *Other) const {
+  return getLabel() == Other->getLabel() && getIsLiteralLabel() == Other->getIsLiteralLabel();
+}
+}];
 }
 
 def Availability : InheritableAttr {
@@ -1218,6 +1244,13 @@ def FormatArg : InheritableAttr {
   let Documentation = [Undocumented];
 }
 
+def Callback : InheritableAttr {
+  let Spellings = [Clang<"callback">];
+  let Args = [VariadicParamOrParamIdxArgument<"Encoding">];
+  let Subjects = SubjectList<[Function]>;
+  let Documentation = [CallbackDocs];
+}
+
 def GNUInline : InheritableAttr {
   let Spellings = [GCC<"gnu_inline">];
   let Subjects = SubjectList<[Function]>;
@@ -1424,7 +1457,7 @@ def NoCommon : InheritableAttr {
 
 def NoDebug : InheritableAttr {
   let Spellings = [GCC<"nodebug">];
-  let Subjects = SubjectList<[FunctionLike, ObjCMethod, NonParmVar]>;
+  let Subjects = SubjectList<[TypedefName, FunctionLike, ObjCMethod, NonParmVar]>;
   let Documentation = [NoDebugDocs];
 }
 
@@ -1488,14 +1521,14 @@ def RISCVInterrupt : InheritableAttr, TargetSpecificAttr<TargetRISCV> {
 
 def AMDGPUFlatWorkGroupSize : InheritableAttr {
   let Spellings = [Clang<"amdgpu_flat_work_group_size", 0>];
-  let Args = [UnsignedArgument<"Min">, UnsignedArgument<"Max">];
+  let Args = [ExprArgument<"Min">, ExprArgument<"Max">];
   let Documentation = [AMDGPUFlatWorkGroupSizeDocs];
   let Subjects = SubjectList<[Function], ErrorDiag, "kernel functions">;
 }
 
 def AMDGPUWavesPerEU : InheritableAttr {
   let Spellings = [Clang<"amdgpu_waves_per_eu", 0>];
-  let Args = [UnsignedArgument<"Min">, UnsignedArgument<"Max", 1>];
+  let Args = [ExprArgument<"Min">, ExprArgument<"Max", 1>];
   let Documentation = [AMDGPUWavesPerEUDocs];
   let Subjects = SubjectList<[Function], ErrorDiag, "kernel functions">;
 }
@@ -1512,6 +1545,22 @@ def AMDGPUNumVGPR : InheritableAttr {
   let Args = [UnsignedArgument<"NumVGPR">];
   let Documentation = [AMDGPUNumSGPRNumVGPRDocs];
   let Subjects = SubjectList<[Function], ErrorDiag, "kernel functions">;
+}
+
+def WebAssemblyImportModule : InheritableAttr,
+                              TargetSpecificAttr<TargetWebAssembly> {
+  let Spellings = [Clang<"import_module">];
+  let Args = [StringArgument<"ImportModule">];
+  let Documentation = [WebAssemblyImportModuleDocs];
+  let Subjects = SubjectList<[Function], ErrorDiag>;
+}
+
+def WebAssemblyImportName : InheritableAttr,
+                            TargetSpecificAttr<TargetWebAssembly> {
+  let Spellings = [Clang<"import_name">];
+  let Args = [StringArgument<"ImportName">];
+  let Documentation = [WebAssemblyImportNameDocs];
+  let Subjects = SubjectList<[Function], ErrorDiag>;
 }
 
 def NoSplitStack : InheritableAttr {
@@ -1631,7 +1680,7 @@ def NoStackProtector : InheritableAttr {
 
 def NoThrow : InheritableAttr {
   let Spellings = [GCC<"nothrow">, Declspec<"nothrow">];
-  let Subjects = SubjectList<[Function]>;
+  let Subjects = SubjectList<[FunctionLike]>;
   let Documentation = [NoThrowDocs];
 }
 
@@ -2463,7 +2512,7 @@ def NoSanitize : InheritableAttr {
   let Documentation = [NoSanitizeDocs];
   let AdditionalMembers = [{
     SanitizerMask getMask() const {
-      SanitizerMask Mask = 0;
+      SanitizerMask Mask;
       for (auto SanitizerName : sanitizers()) {
         SanitizerMask ParsedMask =
             parseSanitizerValue(SanitizerName, /*AllowGroups=*/true);
@@ -2859,6 +2908,12 @@ def : IgnoredAttr {
   let Spellings = [Declspec<"property">];
 }
 
+def MSAllocator : InheritableAttr {
+  let Spellings = [Declspec<"allocator">];
+  let Subjects = SubjectList<[Function]>;
+  let Documentation = [MSAllocatorDocs];
+}
+
 def MSStruct : InheritableAttr {
   let Spellings = [GCC<"ms_struct">];
   let Subjects = SubjectList<[Record]>;
@@ -3017,7 +3072,9 @@ def LoopHint : Attr {
   /// unroll_count: unrolls loop 'Value' times.
   /// unroll_and_jam: attempt to unroll and jam loop if State == Enable.
   /// unroll_and_jam_count: unroll and jams loop 'Value' times.
-  /// distribute: attempt to distribute loop if State == Enable
+  /// distribute: attempt to distribute loop if State == Enable.
+  /// pipeline: disable pipelining loop if State == Disable.
+  /// pipeline_initiation_interval: create loop schedule with initiation interval equal to 'Value'.
 
   /// #pragma unroll <argument> directive
   /// <no arg>: fully unrolls loop.
@@ -3032,10 +3089,10 @@ def LoopHint : Attr {
   let Args = [EnumArgument<"Option", "OptionType",
                           ["vectorize", "vectorize_width", "interleave", "interleave_count",
                            "unroll", "unroll_count", "unroll_and_jam", "unroll_and_jam_count",
-                           "distribute"],
+                           "pipeline", "pipeline_initiation_interval", "distribute"],
                           ["Vectorize", "VectorizeWidth", "Interleave", "InterleaveCount",
                            "Unroll", "UnrollCount", "UnrollAndJam", "UnrollAndJamCount",
-                           "Distribute"]>,
+                           "PipelineDisabled", "PipelineInitiationInterval", "Distribute"]>,
               EnumArgument<"State", "LoopHintState",
                            ["enable", "disable", "numeric", "assume_safety", "full"],
                            ["Enable", "Disable", "Numeric", "AssumeSafety", "Full"]>,
@@ -3052,6 +3109,8 @@ def LoopHint : Attr {
     case UnrollCount: return "unroll_count";
     case UnrollAndJam: return "unroll_and_jam";
     case UnrollAndJamCount: return "unroll_and_jam_count";
+    case PipelineDisabled: return "pipeline";
+    case PipelineInitiationInterval: return "pipeline_initiation_interval";
     case Distribute: return "distribute";
     }
     llvm_unreachable("Unhandled LoopHint option.");
@@ -3245,6 +3304,29 @@ def OMPDeclareTargetDecl : InheritableAttr {
   }];
 }
 
+def OMPAllocateDecl : InheritableAttr {
+  // This attribute has no spellings as it is only ever created implicitly.
+  let Spellings = [];
+  let SemaHandler = 0;
+  let Args = [
+    EnumArgument<"AllocatorType", "AllocatorTypeTy",
+                 [
+                   "omp_default_mem_alloc", "omp_large_cap_mem_alloc",
+                   "omp_const_mem_alloc", "omp_high_bw_mem_alloc",
+                   "omp_low_lat_mem_alloc", "omp_cgroup_mem_alloc",
+                   "omp_pteam_mem_alloc", "omp_thread_mem_alloc", ""
+                 ],
+                 [
+                   "OMPDefaultMemAlloc", "OMPLargeCapMemAlloc",
+                   "OMPConstMemAlloc", "OMPHighBWMemAlloc", "OMPLowLatMemAlloc",
+                   "OMPCGroupMemAlloc", "OMPPTeamMemAlloc", "OMPThreadMemAlloc",
+                   "OMPUserDefinedMemAlloc"
+                 ]>,
+    ExprArgument<"Allocator">
+  ];
+  let Documentation = [Undocumented];
+}
+
 def InternalLinkage : InheritableAttr {
   let Spellings = [Clang<"internal_linkage">];
   let Subjects = SubjectList<[Var, Function, CXXRecord]>;
@@ -3280,6 +3362,12 @@ def SpeculativeLoadHardening : InheritableAttr {
   let Spellings = [Clang<"speculative_load_hardening">];
   let Subjects = SubjectList<[Function, ObjCMethod], ErrorDiag>;
   let Documentation = [SpeculativeLoadHardeningDocs];
+}
+
+def NoSpeculativeLoadHardening : InheritableAttr {
+  let Spellings = [Clang<"no_speculative_load_hardening">];
+  let Subjects = SubjectList<[Function, ObjCMethod], ErrorDiag>;
+  let Documentation = [NoSpeculativeLoadHardeningDocs];
 }
 
 def Uninitialized : InheritableAttr {

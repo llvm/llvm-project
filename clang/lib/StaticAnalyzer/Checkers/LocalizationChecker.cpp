@@ -1,9 +1,8 @@
 //=- LocalizationChecker.cpp -------------------------------------*- C++ -*-==//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -1141,7 +1140,7 @@ void EmptyLocalizationContextChecker::MethodCrawler::VisitObjCMessageExpr(
   }
 
   bool Invalid = false;
-  llvm::MemoryBuffer *BF =
+  const llvm::MemoryBuffer *BF =
       Mgr.getSourceManager().getBuffer(SLInfo.first, SL, &Invalid);
   if (Invalid)
     return;
@@ -1398,8 +1397,8 @@ void ento::registerNonLocalizedStringChecker(CheckerManager &mgr) {
   NonLocalizedStringChecker *checker =
       mgr.registerChecker<NonLocalizedStringChecker>();
   checker->IsAggressive =
-      mgr.getAnalyzerOptions().getCheckerBooleanOption("AggressiveReport",
-                                                       false, checker);
+      mgr.getAnalyzerOptions().getCheckerBooleanOption(
+          checker, "AggressiveReport");
 }
 
 bool ento::shouldRegisterNonLocalizedStringChecker(const LangOptions &LO) {
@@ -1410,7 +1409,8 @@ void ento::registerEmptyLocalizationContextChecker(CheckerManager &mgr) {
   mgr.registerChecker<EmptyLocalizationContextChecker>();
 }
 
-bool ento::shouldRegisterEmptyLocalizationContextChecker(const LangOptions &LO) {
+bool ento::shouldRegisterEmptyLocalizationContextChecker(
+                                                        const LangOptions &LO) {
   return true;
 }
 

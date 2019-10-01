@@ -121,11 +121,11 @@ late_delete::late_delete() = default; // expected-error {{would delete it}}
 
 // See also rdar://problem/8125400.
 namespace empty {
-  static union {};
-  static union { union {}; };
-  static union { struct {}; };
-  static union { union { union {}; }; };
-  static union { union { struct {}; }; };
-  static union { struct { union {}; }; };
-  static union { struct { struct {}; }; };
+  static union {}; // expected-warning {{does not declare anything}}
+  static union { union {}; }; // expected-warning {{does not declare anything}}
+  static union { struct {}; }; // expected-warning {{does not declare anything}}
+  static union { union { union {}; }; }; // expected-warning {{does not declare anything}}
+  static union { union { struct {}; }; }; // expected-warning {{does not declare anything}}
+  static union { struct { union {}; }; }; // expected-warning {{does not declare anything}}
+  static union { struct { struct {}; }; }; // expected-warning {{does not declare anything}}
 }

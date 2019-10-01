@@ -554,7 +554,7 @@ namespace InitFromConst {
     // CHECK: call void @_ZN13InitFromConst7consumeIMNS_1SEiEEvT_(i64 0)
     consume(mp);
 
-    // CHECK: call void @_ZN13InitFromConst7consumeIPKiEEvT_(i32* getelementptr inbounds ([3 x i32], [3 x i32]* @_ZN13InitFromConstL1aE, i32 0, i32 0))
+    // CHECK: call void @_ZN13InitFromConst7consumeIPKiEEvT_(i32* getelementptr inbounds ([3 x i32], [3 x i32]* @_ZN13InitFromConstL1aE, i64 0, i64 0))
     consume(a);
   }
 }

@@ -60,33 +60,32 @@ namespace pr16225add {
   template<int N1, int N2> struct ABC2 {};
 
   template<class T1, typename T2> struct foo :
-    UnknownBase<T1,T2> // expected-error {{unknown template name 'UnknownBase'}}
+    UnknownBase<T1,T2> // expected-error {{no template named 'UnknownBase'}}
   { };
 
   template<class T1, typename T2> struct foo2 :
-    UnknownBase<T1,T2>, // expected-error {{unknown template name 'UnknownBase'}}
+    UnknownBase<T1,T2>, // expected-error {{no template named 'UnknownBase'}}
     Known<T1>  // expected-error {{too few template arguments for class template 'Known'}}
   { };
 
   template<class T1, typename T2> struct foo3 :
-    UnknownBase<T1,T2,ABC<T2,T1> > // expected-error {{unknown template name 'UnknownBase'}}
+    UnknownBase<T1,T2,ABC<T2,T1> > // expected-error {{no template named 'UnknownBase'}}
   { };
 
   template<class T1, typename T2> struct foo4 :
-    UnknownBase<T1,ABC<T2> >, // expected-error {{unknown template name 'UnknownBase'}} \
-                              // expected-error {{too few template arguments for class template 'ABC'}}
+    UnknownBase<T1,ABC<T2> >, // expected-error {{too few template arguments for class template 'ABC'}}
     Known<T1>  // expected-error {{too few template arguments for class template 'Known'}}
   { };
 
   template<class T1, typename T2> struct foo5 :
-    UnknownBase<T1,T2,ABC<T2,T1>> // expected-error {{unknown template name 'UnknownBase'}}
+    UnknownBase<T1,T2,ABC<T2,T1>> // expected-error {{no template named 'UnknownBase'}}
 #if __cplusplus <= 199711L
     // expected-error@-2 {{use '> >'}}
 #endif
   { };
 
   template<class T1, typename T2> struct foo6 :
-    UnknownBase<T1,ABC<T2,T1>>, // expected-error {{unknown template name 'UnknownBase'}}
+    UnknownBase<T1,ABC<T2,T1>>, // expected-error {{no template named 'UnknownBase'}}
 #if __cplusplus <= 199711L
     // expected-error@-2 {{use '> >'}}
 #endif
@@ -94,32 +93,32 @@ namespace pr16225add {
   { };
 
   template<class T1, typename T2, int N> struct foo7 :
-    UnknownBase<T1,T2,(N>1)> // expected-error {{unknown template name 'UnknownBase'}}
+    UnknownBase<T1,T2,(N>1)> // expected-error {{no template named 'UnknownBase'}}
   { };
 
   template<class T1, typename T2> struct foo8 :
-    UnknownBase<X<int,int>,X<int,int>> // expected-error {{unknown template name 'UnknownBase'}}
+    UnknownBase<X<int,int>,X<int,int>> // expected-error {{no template named 'UnknownBase'}}
 #if __cplusplus <= 199711L
     // expected-error@-2 {{use '> >'}}
 #endif
   { };
 
   template<class T1, typename T2> struct foo9 :
-    UnknownBase<Known<int,int>,X<int,int>> // expected-error {{unknown template name 'UnknownBase'}}
+    UnknownBase<Known<int,int>,X<int,int>> // expected-error {{no template named 'UnknownBase'}}
 #if __cplusplus <= 199711L
     // expected-error@-2 {{use '> >'}}
 #endif
   { };
 
   template<class T1, typename T2> struct foo10 :
-    UnknownBase<Known<int,int>,X<int,X<int,int>>> // expected-error {{unknown template name 'UnknownBase'}}
+    UnknownBase<Known<int,int>,X<int,X<int,int>>> // expected-error {{no template named 'UnknownBase'}}
 #if __cplusplus <= 199711L
     // expected-error@-2 {{use '> >'}}
 #endif
   { };
 
   template<int N1, int N2> struct foo11 :
-    UnknownBase<2<N1,N2<4> // expected-error {{unknown template name 'UnknownBase'}}
+    UnknownBase<2<N1,N2<4> // expected-error {{no template named 'UnknownBase'}}
   { };
 
 }
@@ -127,4 +126,15 @@ namespace pr16225add {
 namespace PR18793 {
   template<typename T, T> struct S {};
   template<typename T> int g(S<T, (T())> *);
+}
+
+namespace r360308_regression {
+  template<typename> struct S1 { static int const n = 0; };
+  template<int, typename> struct S2 { typedef int t; };
+  template<typename T> struct S3 { typename S2<S1<T>::n < 0, int>::t n; };
+
+  template<typename FT> bool f(FT p) {
+    const bool a = p.first<FT(0), b = p.second>FT(0);
+    return a == b;
+  }
 }

@@ -20,6 +20,10 @@ extern "C" void __fastcall f4(void) {}
 // WIN: define dso_local x86_fastcallcc void @"\01@f4@0"
 // ITANIUM: define dso_local x86_fastcallcc void @"\01@f4@0"
 
+void __pascal f5(void) {}
+// WIN: define dso_local void @"?f5@@YCXXZ"
+// ITANIUM: define dso_local void @_Z2f5v
+
 struct Foo {
   void __stdcall foo();
   static void __stdcall bar();

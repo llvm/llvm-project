@@ -1,9 +1,8 @@
 //===--- tools/clang-check/ClangCheck.cpp - Clang check tool --------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -91,9 +90,6 @@ public:
   }
 
   std::string RewriteFilename(const std::string& filename, int &fd) override {
-    assert(llvm::sys::path::is_absolute(filename) &&
-           "clang-fixit expects absolute paths only.");
-
     // We don't need to do permission checking here since clang will diagnose
     // any I/O errors itself.
 
@@ -138,11 +134,11 @@ public:
     if (ASTList)
       return clang::CreateASTDeclNodeLister();
     if (ASTDump)
-      return clang::CreateASTDumper(nullptr /*Dump to stdout.*/,
-                                    ASTDumpFilter,
+      return clang::CreateASTDumper(nullptr /*Dump to stdout.*/, ASTDumpFilter,
                                     /*DumpDecls=*/true,
                                     /*Deserialize=*/false,
-                                    /*DumpLookups=*/false);
+                                    /*DumpLookups=*/false,
+                                    clang::ADOF_Default);
     if (ASTPrint)
       return clang::CreateASTPrinter(nullptr, ASTDumpFilter);
     return llvm::make_unique<clang::ASTConsumer>();
@@ -167,6 +163,7 @@ int main(int argc, const char **argv) {
   // Clear adjusters because -fsyntax-only is inserted by the default chain.
   Tool.clearArgumentsAdjusters();
   Tool.appendArgumentsAdjuster(getClangStripOutputAdjuster());
+  Tool.appendArgumentsAdjuster(getClangStripDependencyFileAdjuster());
 
   // Running the analyzer requires --analyze. Other modes can work with the
   // -fsyntax-only option.

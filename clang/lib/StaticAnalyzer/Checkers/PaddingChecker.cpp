@@ -1,9 +1,8 @@
 //=======- PaddingChecker.cpp ------------------------------------*- C++ -*-==//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -17,6 +16,7 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
@@ -33,17 +33,14 @@ namespace {
 class PaddingChecker : public Checker<check::ASTDecl<TranslationUnitDecl>> {
 private:
   mutable std::unique_ptr<BugType> PaddingBug;
-  mutable int64_t AllowedPad;
   mutable BugReporter *BR;
 
 public:
+  int64_t AllowedPad;
+
   void checkASTDecl(const TranslationUnitDecl *TUD, AnalysisManager &MGR,
                     BugReporter &BRArg) const {
     BR = &BRArg;
-    AllowedPad =
-        MGR.getAnalyzerOptions()
-          .getCheckerIntegerOption("AllowedPad", 24, this);
-    assert(AllowedPad >= 0 && "AllowedPad option should be non-negative");
 
     // The calls to checkAST* from AnalysisConsumer don't
     // visit template instantiations or lambda classes. We
@@ -349,7 +346,12 @@ public:
 } // namespace
 
 void ento::registerPaddingChecker(CheckerManager &Mgr) {
-  Mgr.registerChecker<PaddingChecker>();
+  auto *Checker = Mgr.registerChecker<PaddingChecker>();
+  Checker->AllowedPad = Mgr.getAnalyzerOptions()
+          .getCheckerIntegerOption(Checker, "AllowedPad");
+  if (Checker->AllowedPad < 0)
+    Mgr.reportInvalidCheckerOptionValue(
+        Checker, "AllowedPad", "a non-negative value");
 }
 
 bool ento::shouldRegisterPaddingChecker(const LangOptions &LO) {

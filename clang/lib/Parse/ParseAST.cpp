@@ -1,9 +1,8 @@
 //===--- ParseAST.cpp - Provide the clang::ParseAST method ----------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -23,6 +22,7 @@
 #include "clang/Sema/SemaConsumer.h"
 #include "clang/Sema/TemplateInstCallback.h"
 #include "llvm/Support/CrashRecoveryContext.h"
+#include "llvm/Support/TimeProfiler.h"
 #include <cstdio>
 #include <memory>
 
@@ -151,6 +151,7 @@ void clang::ParseAST(Sema &S, bool PrintStats, bool SkipFunctionBodies) {
   bool HaveLexer = S.getPreprocessor().getCurrentLexer();
 
   if (HaveLexer) {
+    llvm::TimeTraceScope TimeScope("Frontend", StringRef(""));
     P.Initialize();
     Parser::DeclGroupPtrTy ADecl;
     for (bool AtEOF = P.ParseFirstTopLevelDecl(ADecl); !AtEOF;

@@ -1,9 +1,8 @@
 //===- ThreadSafety.cpp ---------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -816,7 +815,7 @@ static void findBlockLocations(CFG *CFGraph,
 
     // Find the source location of the last statement in the block, if the
     // block is not empty.
-    if (const Stmt *S = CurrBlock->getTerminator()) {
+    if (const Stmt *S = CurrBlock->getTerminatorStmt()) {
       CurrBlockInfo->EntryLoc = CurrBlockInfo->ExitLoc = S->getBeginLoc();
     } else {
       for (CFGBlock::const_reverse_iterator BI = CurrBlock->rbegin(),
@@ -874,7 +873,7 @@ public:
   void handleLock(FactSet &FSet, FactManager &FactMan, const FactEntry &entry,
                   ThreadSafetyHandler &Handler,
                   StringRef DiagKind) const override {
-    Handler.handleDoubleLock(DiagKind, entry.toString(), entry.loc());
+    Handler.handleDoubleLock(DiagKind, entry.toString(), loc(), entry.loc());
   }
 
   void handleUnlock(FactSet &FSet, FactManager &FactMan,
@@ -982,12 +981,13 @@ private:
   void lock(FactSet &FSet, FactManager &FactMan, const CapabilityExpr &Cp,
             LockKind kind, SourceLocation loc, ThreadSafetyHandler *Handler,
             StringRef DiagKind) const {
-    if (!FSet.findLock(FactMan, Cp)) {
+    if (const FactEntry *Fact = FSet.findLock(FactMan, Cp)) {
+      if (Handler)
+        Handler->handleDoubleLock(DiagKind, Cp.toString(), Fact->loc(), loc);
+    } else {
       FSet.removeLock(FactMan, !Cp);
       FSet.addLock(FactMan,
                    llvm::make_unique<LockableFactEntry>(Cp, kind, loc));
-    } else if (Handler) {
-      Handler->handleDoubleLock(DiagKind, Cp.toString(), loc);
     }
   }
 
@@ -1335,8 +1335,8 @@ void ThreadSafetyAnalyzer::removeLock(FactSet &FSet, const CapabilityExpr &Cp,
   // Generic lock removal doesn't care about lock kind mismatches, but
   // otherwise diagnose when the lock kinds are mismatched.
   if (ReceivedKind != LK_Generic && LDat->kind() != ReceivedKind) {
-    Handler.handleIncorrectUnlockKind(DiagKind, Cp.toString(),
-                                      LDat->kind(), ReceivedKind, UnlockLoc);
+    Handler.handleIncorrectUnlockKind(DiagKind, Cp.toString(), LDat->kind(),
+                                      ReceivedKind, LDat->loc(), UnlockLoc);
   }
 
   LDat->handleUnlock(FSet, FactMan, Cp, UnlockLoc, FullyRemove, Handler,
@@ -1499,7 +1499,7 @@ void ThreadSafetyAnalyzer::getEdgeLockset(FactSet& Result,
 
   const Stmt *Cond = PredBlock->getTerminatorCondition();
   // We don't acquire try-locks on ?: branches, only when its result is used.
-  if (!Cond || isa<ConditionalOperator>(PredBlock->getTerminator()))
+  if (!Cond || isa<ConditionalOperator>(PredBlock->getTerminatorStmt()))
     return;
 
   bool Negate = false;
@@ -2402,7 +2402,7 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
       // a difference in locksets is probably due to a bug in that block, rather
       // than in some other predecessor. In that case, keep the other
       // predecessor's lockset.
-      if (const Stmt *Terminator = (*PI)->getTerminator()) {
+      if (const Stmt *Terminator = (*PI)->getTerminatorStmt()) {
         if (isa<ContinueStmt>(Terminator) || isa<BreakStmt>(Terminator)) {
           SpecialBlocks.push_back(*PI);
           continue;
@@ -2441,7 +2441,7 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
         // it might also be part of a switch. Also, a subsequent destructor
         // might add to the lockset, in which case the real issue might be a
         // double lock on the other path.
-        const Stmt *Terminator = PrevBlock->getTerminator();
+        const Stmt *Terminator = PrevBlock->getTerminatorStmt();
         bool IsLoop = Terminator && isa<ContinueStmt>(Terminator);
 
         FactSet PrevLockset;

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -Wunused -fdouble-square-bracket-attributes -verify %s
+// RUN: %clang_cc1 -fsyntax-only -Wunused -std=c2x -verify %s
 
 struct [[maybe_unused]] S1 { // ok
   int a [[maybe_unused]];

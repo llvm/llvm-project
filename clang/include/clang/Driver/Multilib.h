@@ -1,9 +1,8 @@
 //===- Multilib.h -----------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -35,10 +34,11 @@ private:
   std::string OSSuffix;
   std::string IncludeSuffix;
   flags_list Flags;
+  int Priority;
 
 public:
   Multilib(StringRef GCCSuffix = {}, StringRef OSSuffix = {},
-           StringRef IncludeSuffix = {});
+           StringRef IncludeSuffix = {}, int Priority = 0);
 
   /// Get the detected GCC installation path suffix for the multi-arch
   /// target variant. Always starts with a '/', unless empty
@@ -77,6 +77,10 @@ public:
   /// All elements begin with either '+' or '-'
   const flags_list &flags() const { return Flags; }
   flags_list &flags() { return Flags; }
+
+  /// Returns the multilib priority. When more than one multilib matches flags,
+  /// the one with the highest priority is selected, with 0 being the default.
+  int priority() const { return Priority; }
 
   /// Add a flag to the flags list
   /// \p Flag must be a flag accepted by the driver with its leading '-' removed,

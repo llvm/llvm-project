@@ -1,9 +1,8 @@
 //===- Lexer.cpp - C Language Family Lexer --------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -217,6 +216,15 @@ Lexer *Lexer::Create_PragmaLexer(SourceLocation SpellingLoc,
   // This lexer really is for _Pragma.
   L->Is_PragmaLexer = true;
   return L;
+}
+
+bool Lexer::skipOver(unsigned NumBytes) {
+  IsAtPhysicalStartOfLine = true;
+  IsAtStartOfLine = true;
+  if ((BufferPtr + NumBytes) > BufferEnd)
+    return true;
+  BufferPtr += NumBytes;
+  return false;
 }
 
 template <typename T> static void StringifyImpl(T &Str, char Quote) {
@@ -2102,7 +2110,7 @@ bool Lexer::LexAngledStringLiteral(Token &Result, const char *CurPtr) {
 
   // Update the location of token as well as BufferPtr.
   const char *TokStart = BufferPtr;
-  FormTokenWithChars(Result, CurPtr, tok::angle_string_literal);
+  FormTokenWithChars(Result, CurPtr, tok::header_name);
   Result.setLiteralData(TokStart);
   return true;
 }
@@ -3495,7 +3503,9 @@ LexNextToken:
   case '"':
     // Notify MIOpt that we read a non-whitespace/non-comment token.
     MIOpt.ReadToken();
-    return LexStringLiteral(Result, CurPtr, tok::string_literal);
+    return LexStringLiteral(Result, CurPtr,
+                            ParsingFilename ? tok::header_name
+                                            : tok::string_literal);
 
   // C99 6.4.6: Punctuators.
   case '?':

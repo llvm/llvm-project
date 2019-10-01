@@ -1,5 +1,9 @@
 # This file sets up a CMakeCache for a simple distribution bootstrap build.
 
+#Enable LLVM projects and runtimes
+set(LLVM_ENABLE_PROJECTS "clang;clang-tools-extra;lld" CACHE STRING "")
+set(LLVM_ENABLE_RUNTIMES "compiler-rt;libcxx;libcxxabi" CACHE STRING "")
+
 # Only build the native target in stage1 since it is a throwaway build.
 set(LLVM_TARGETS_TO_BUILD Native CACHE STRING "")
 
@@ -12,6 +16,11 @@ set(PACKAGE_VENDOR LLVM.org CACHE STRING "")
 # Setting up the stage2 LTO option needs to be done on the stage1 build so that
 # the proper LTO library dependencies can be connected.
 set(BOOTSTRAP_LLVM_ENABLE_LTO ON CACHE BOOL "")
+
+if (NOT APPLE)
+  # Since LLVM_ENABLE_LTO is ON we need a LTO capable linker
+  set(BOOTSTRAP_LLVM_ENABLE_LLD ON CACHE BOOL "")
+endif()
 
 # Expose stage2 targets through the stage1 build configuration.
 set(CLANG_BOOTSTRAP_TARGETS

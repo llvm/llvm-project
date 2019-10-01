@@ -27,7 +27,7 @@ typedef struct test_struct {
 kernel void test_single(int_single input, global int* output) {
 // CHECK: spir_kernel
 // AMDGCN: define amdgpu_kernel void @test_single
-// CHECK: struct.int_single* byval nocapture
+// CHECK: struct.int_single* nocapture {{.*}} byval(%struct.int_single)
 // CHECK: i32* nocapture %output
  output[0] = input.a;
 }
@@ -35,7 +35,7 @@ kernel void test_single(int_single input, global int* output) {
 kernel void test_pair(int_pair input, global int* output) {
 // CHECK: spir_kernel
 // AMDGCN: define amdgpu_kernel void @test_pair
-// CHECK: struct.int_pair* byval nocapture
+// CHECK: struct.int_pair* nocapture {{.*}} byval(%struct.int_pair)
 // CHECK: i32* nocapture %output
  output[0] = (int)input.a;
  output[1] = (int)input.b;
@@ -44,7 +44,7 @@ kernel void test_pair(int_pair input, global int* output) {
 kernel void test_kernel(test_struct input, global int* output) {
 // CHECK: spir_kernel
 // AMDGCN: define amdgpu_kernel void @test_kernel
-// CHECK: struct.test_struct* byval nocapture
+// CHECK: struct.test_struct* nocapture {{.*}} byval(%struct.test_struct)
 // CHECK: i32* nocapture %output
  output[0] = input.elementA;
  output[1] = input.elementB;

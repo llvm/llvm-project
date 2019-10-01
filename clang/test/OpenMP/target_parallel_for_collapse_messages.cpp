@@ -39,7 +39,7 @@ T tmain(T argc, S **argv) { //expected-note 2 {{declared here}}
   #pragma omp target parallel for collapse ((ST > 0) ? 1 + ST : 2) // expected-note 2 {{as specified in 'collapse' clause}}
   for (int i = ST; i < N; i++) argv[0][i] = argv[0][i] - argv[0][i-ST]; // expected-error 2 {{expected 2 for loops after '#pragma omp target parallel for', but found only 1}}
   // expected-error@+3 2 {{directive '#pragma omp target parallel for' cannot contain more than one 'collapse' clause}}
-  // expected-error@+2 2 {{argument to 'collapse' clause must be a strictly positive integer value}}
+  // expected-error@+2 {{argument to 'collapse' clause must be a strictly positive integer value}}
   // expected-error@+1 2 {{expression is not an integral constant expression}}
   #pragma omp target parallel for collapse (foobool(argc)), collapse (true), collapse (-5)
 #if __cplusplus >= 201103L
@@ -82,7 +82,7 @@ int main(int argc, char **argv) {
   for (int i = 4; i < 12; i++) argv[0][i] = argv[0][i] - argv[0][i-4];
   // expected-error@+3 {{expression is not an integral constant expression}}
   // expected-error@+2 2 {{directive '#pragma omp target parallel for' cannot contain more than one 'collapse' clause}}
-  // expected-error@+1 2 {{argument to 'collapse' clause must be a strictly positive integer value}}
+  // expected-error@+1 {{argument to 'collapse' clause must be a strictly positive integer value}}
   #pragma omp target parallel for collapse (foobool(argc)), collapse (true), collapse (-5) 
 #if __cplusplus >= 201103L
 // expected-note@-2 {{non-constexpr function 'foobool' cannot be used in a constant expression}}

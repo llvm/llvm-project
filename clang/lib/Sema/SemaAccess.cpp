@@ -1,9 +1,8 @@
 //===---- SemaAccess.cpp - C++ Access Control -------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -127,8 +126,7 @@ struct EffectiveContext {
 
   bool includesClass(const CXXRecordDecl *R) const {
     R = R->getCanonicalDecl();
-    return std::find(Records.begin(), Records.end(), R)
-             != Records.end();
+    return llvm::find(Records, R) != Records.end();
   }
 
   /// Retrieves the innermost "useful" context.  Can be null if we're

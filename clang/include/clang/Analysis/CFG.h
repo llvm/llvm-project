@@ -1,9 +1,8 @@
 //===- CFG.h - Classes for representing and building CFGs -------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -495,33 +494,51 @@ private:
 
 /// Represents CFGBlock terminator statement.
 ///
-/// TemporaryDtorsBranch bit is set to true if the terminator marks a branch
-/// in control flow of destructors of temporaries. In this case terminator
-/// statement is the same statement that branches control flow in evaluation
-/// of matching full expression.
 class CFGTerminator {
-  llvm::PointerIntPair<Stmt *, 1> Data;
+public:
+  enum Kind {
+    /// A branch that corresponds to a statement in the code,
+    /// such as an if-statement.
+    StmtBranch,
+    /// A branch in control flow of destructors of temporaries. In this case
+    /// terminator statement is the same statement that branches control flow
+    /// in evaluation of matching full expression.
+    TemporaryDtorsBranch,
+    /// A shortcut around virtual base initializers. It gets taken when
+    /// virtual base classes have already been initialized by the constructor
+    /// of the most derived class while we're in the base class.
+    VirtualBaseBranch,
+
+    /// Number of different kinds, for sanity checks. We subtract 1 so that
+    /// to keep receiving compiler warnings when we don't cover all enum values
+    /// in a switch.
+    NumKindsMinusOne = VirtualBaseBranch
+  };
+
+private:
+  static constexpr int KindBits = 2;
+  static_assert((1 << KindBits) > NumKindsMinusOne,
+                "Not enough room for kind!");
+  llvm::PointerIntPair<Stmt *, KindBits> Data;
 
 public:
-  CFGTerminator() = default;
-  CFGTerminator(Stmt *S, bool TemporaryDtorsBranch = false)
-      : Data(S, TemporaryDtorsBranch) {}
+  CFGTerminator() { assert(!isValid()); }
+  CFGTerminator(Stmt *S, Kind K = StmtBranch) : Data(S, K) {}
 
+  bool isValid() const { return Data.getOpaqueValue() != nullptr; }
   Stmt *getStmt() { return Data.getPointer(); }
   const Stmt *getStmt() const { return Data.getPointer(); }
+  Kind getKind() const { return static_cast<Kind>(Data.getInt()); }
 
-  bool isTemporaryDtorsBranch() const { return Data.getInt(); }
-
-  operator Stmt *() { return getStmt(); }
-  operator const Stmt *() const { return getStmt(); }
-
-  Stmt *operator->() { return getStmt(); }
-  const Stmt *operator->() const { return getStmt(); }
-
-  Stmt &operator*() { return *getStmt(); }
-  const Stmt &operator*() const { return *getStmt(); }
-
-  explicit operator bool() const { return getStmt(); }
+  bool isStmtBranch() const {
+    return getKind() == StmtBranch;
+  }
+  bool isTemporaryDtorsBranch() const {
+    return getKind() == TemporaryDtorsBranch;
+  }
+  bool isVirtualBaseBranch() const {
+    return getKind() == VirtualBaseBranch;
+  }
 };
 
 /// Represents a single basic block in a source-level CFG.
@@ -542,11 +559,12 @@ public:
 /// Successors: the order in the set of successors is NOT arbitrary.  We
 ///  currently have the following orderings based on the terminator:
 ///
-///     Terminator       Successor Ordering
-///  -----------------------------------------------------
-///       if            Then Block;  Else Block
-///     ? operator      LHS expression;  RHS expression
-///     &&, ||          expression that uses result of && or ||, RHS
+///     Terminator     |   Successor Ordering
+///  ------------------|------------------------------------
+///       if           |  Then Block;  Else Block
+///     ? operator     |  LHS expression;  RHS expression
+///     logical and/or |  expression that consumes the op, RHS
+///     vbase inits    |  already handled by the most derived class; not yet
 ///
 /// But note that any of that may be NULL in case of optimized-out edges.
 class CFGBlock {
@@ -837,8 +855,10 @@ public:
   void setLoopTarget(const Stmt *loopTarget) { LoopTarget = loopTarget; }
   void setHasNoReturnElement() { HasNoReturnElement = true; }
 
-  CFGTerminator getTerminator() { return Terminator; }
-  const CFGTerminator getTerminator() const { return Terminator; }
+  CFGTerminator getTerminator() const { return Terminator; }
+
+  Stmt *getTerminatorStmt() { return Terminator.getStmt(); }
+  const Stmt *getTerminatorStmt() const { return Terminator.getStmt(); }
 
   Stmt *getTerminatorCondition(bool StripParens = true);
 
@@ -862,7 +882,11 @@ public:
   void dump(const CFG *cfg, const LangOptions &LO, bool ShowColors = false) const;
   void print(raw_ostream &OS, const CFG* cfg, const LangOptions &LO,
              bool ShowColors) const;
+
   void printTerminator(raw_ostream &OS, const LangOptions &LO) const;
+  void printTerminatorJson(raw_ostream &Out, const LangOptions &LO,
+                           bool AddQuotes) const;
+  
   void printAsOperand(raw_ostream &OS, bool /*PrintType*/) {
     OS << "BB#" << getBlockID();
   }
@@ -1027,6 +1051,7 @@ public:
     bool AddCXXDefaultInitExprInCtors = false;
     bool AddRichCXXConstructors = false;
     bool MarkElidedCXXConstructors = false;
+    bool AddVirtualBaseBranches = false;
 
     BuildOptions() = default;
 

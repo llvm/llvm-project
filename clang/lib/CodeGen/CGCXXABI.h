@@ -1,9 +1,8 @@
 //===----- CGCXXABI.h - Interface to C++ ABIs -------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -136,10 +135,6 @@ public:
     /// Pass it as a pointer to temporary memory.
     RAA_Indirect
   };
-
-  /// Returns true if C++ allows us to copy the memory of an object of type RD
-  /// when it is passed as an argument.
-  bool canCopyArgument(const CXXRecordDecl *RD) const;
 
   /// Returns how an argument of the given record type should be passed.
   virtual RecordArgABI getRecordArgABI(const CXXRecordDecl *RD) const = 0;
@@ -310,7 +305,7 @@ public:
   /// adding any required parameters.  For convenience, ArgTys has been
   /// initialized with the type of 'this'.
   virtual AddedStructorArgs
-  buildStructorSignature(const CXXMethodDecl *MD, StructorType T,
+  buildStructorSignature(GlobalDecl GD,
                          SmallVectorImpl<CanQualType> &ArgTys) = 0;
 
   /// Returns true if the given destructor type should be emitted as a linkonce
@@ -557,7 +552,7 @@ public:
   /// \param Dtor - a function taking a single pointer argument
   /// \param Addr - a pointer to pass to the destructor function.
   virtual void registerGlobalDtor(CodeGenFunction &CGF, const VarDecl &D,
-                                  llvm::Constant *Dtor,
+                                  llvm::FunctionCallee Dtor,
                                   llvm::Constant *Addr) = 0;
 
   /*************************** thread_local initialization ********************/
@@ -589,7 +584,7 @@ public:
 
   /// Emit a single constructor/destructor with the given type from a C++
   /// constructor Decl.
-  virtual void emitCXXStructor(const CXXMethodDecl *MD, StructorType Type) = 0;
+  virtual void emitCXXStructor(GlobalDecl GD) = 0;
 
   /// Load a vtable from This, an object of polymorphic type RD, or from one of
   /// its virtual bases if it does not have its own vtable. Returns the vtable

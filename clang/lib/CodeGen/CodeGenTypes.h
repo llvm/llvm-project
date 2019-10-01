@@ -1,9 +1,8 @@
 //===--- CodeGenTypes.h - Type translation for LLVM CodeGen -----*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -55,65 +54,6 @@ class CGRecordLayout;
 class CodeGenModule;
 class RequiredArgs;
 
-enum class StructorType {
-  Complete, // constructor or destructor
-  Base,     // constructor or destructor
-  Deleting  // destructor only
-};
-
-inline CXXCtorType toCXXCtorType(StructorType T) {
-  switch (T) {
-  case StructorType::Complete:
-    return Ctor_Complete;
-  case StructorType::Base:
-    return Ctor_Base;
-  case StructorType::Deleting:
-    llvm_unreachable("cannot have a deleting ctor");
-  }
-  llvm_unreachable("not a StructorType");
-}
-
-inline StructorType getFromCtorType(CXXCtorType T) {
-  switch (T) {
-  case Ctor_Complete:
-    return StructorType::Complete;
-  case Ctor_Base:
-    return StructorType::Base;
-  case Ctor_Comdat:
-    llvm_unreachable("not expecting a COMDAT");
-  case Ctor_CopyingClosure:
-  case Ctor_DefaultClosure:
-    llvm_unreachable("not expecting a closure");
-  }
-  llvm_unreachable("not a CXXCtorType");
-}
-
-inline CXXDtorType toCXXDtorType(StructorType T) {
-  switch (T) {
-  case StructorType::Complete:
-    return Dtor_Complete;
-  case StructorType::Base:
-    return Dtor_Base;
-  case StructorType::Deleting:
-    return Dtor_Deleting;
-  }
-  llvm_unreachable("not a StructorType");
-}
-
-inline StructorType getFromDtorType(CXXDtorType T) {
-  switch (T) {
-  case Dtor_Deleting:
-    return StructorType::Deleting;
-  case Dtor_Complete:
-    return StructorType::Complete;
-  case Dtor_Base:
-    return StructorType::Base;
-  case Dtor_Comdat:
-    llvm_unreachable("not expecting a COMDAT");
-  }
-  llvm_unreachable("not a CXXDtorType");
-}
-
 /// This class organizes the cross-module state that is used while lowering
 /// AST types to LLVM types.
 class CodeGenTypes {
@@ -163,6 +103,9 @@ class CodeGenTypes {
 
   llvm::SmallSet<const Type *, 8> RecordsWithOpaqueMemberPointers;
 
+  /// Helper for ConvertType.
+  llvm::Type *ConvertFunctionTypeInternal(QualType FT);
+
 public:
   CodeGenTypes(CodeGenModule &cgm);
   ~CodeGenTypes();
@@ -180,16 +123,12 @@ public:
   /// Convert clang calling convention to LLVM callilng convention.
   unsigned ClangCallConvToLLVMCallConv(CallingConv CC);
 
+  /// Derives the 'this' type for codegen purposes, i.e. ignoring method CVR
+  /// qualification.
+  CanQualType DeriveThisType(const CXXRecordDecl *RD, const CXXMethodDecl *MD);
+
   /// ConvertType - Convert type T into a llvm::Type.
   llvm::Type *ConvertType(QualType T);
-
-  /// Converts the GlobalDecl into an llvm::Type. This should be used
-  /// when we know the target of the function we want to convert.  This is
-  /// because some functions (explicitly, those with pass_object_size
-  /// parameters) may not have the same signature as their type portrays, and
-  /// can only be called directly.
-  llvm::Type *ConvertFunctionType(QualType FT,
-                                  const FunctionDecl *FD = nullptr);
 
   /// ConvertTypeForMem - Convert type T into a llvm::Type.  This differs from
   /// ConvertType in that it is used to convert to the memory representation for
@@ -263,8 +202,7 @@ public:
   const CGFunctionInfo &arrangeFreeFunctionCall(const CallArgList &Args,
                                                 const FunctionType *Ty,
                                                 bool ChainCall);
-  const CGFunctionInfo &arrangeFreeFunctionType(CanQual<FunctionProtoType> Ty,
-                                                const FunctionDecl *FD);
+  const CGFunctionInfo &arrangeFreeFunctionType(CanQual<FunctionProtoType> Ty);
   const CGFunctionInfo &arrangeFreeFunctionType(CanQual<FunctionNoProtoType> Ty);
 
   /// A nullary function is a freestanding function of type 'void ()'.
@@ -299,8 +237,7 @@ public:
 
   /// C++ methods have some special rules and also have implicit parameters.
   const CGFunctionInfo &arrangeCXXMethodDeclaration(const CXXMethodDecl *MD);
-  const CGFunctionInfo &arrangeCXXStructorDeclaration(const CXXMethodDecl *MD,
-                                                      StructorType Type);
+  const CGFunctionInfo &arrangeCXXStructorDeclaration(GlobalDecl GD);
   const CGFunctionInfo &arrangeCXXConstructorCall(const CallArgList &Args,
                                                   const CXXConstructorDecl *D,
                                                   CXXCtorType CtorKind,

@@ -16,13 +16,13 @@ extern void
 ATSFontGetPostScriptName(int flags) __attribute__((availability(macosx,introduced=8.0,obsoleted=9.0, message="use ATSFontGetFullPostScriptName"))); // expected-note {{'ATSFontGetPostScriptName' has been explicitly marked unavailable here}}
 
 #if defined(WARN_PARTIAL)
-// expected-note@+3 {{has been explicitly marked partial here}}
+// expected-note@+3 {{'PartiallyAvailable' has been marked as being introduced in macOS 10.8 here, but the deployment target is macOS 10.5.0}}
 #endif
 extern void
 PartiallyAvailable() __attribute__((availability(macosx,introduced=10.8)));
 
 #ifdef WARN_PARTIAL
-// expected-note@+2 2 {{marked partial here}}
+// expected-note@+2 2 {{'PartialEnum' has been marked as being introduced in macOS 10.8 here, but the deployment target is macOS 10.5.0}}
 #endif
 enum __attribute__((availability(macosx,introduced=10.8))) PartialEnum {
   kPartialEnumConstant,
@@ -41,7 +41,7 @@ void test_10095131() {
 #ifdef WARN_PARTIAL
 // FIXME: This note should point to the declaration with the availability
 // attribute.
-// expected-note@+2 {{marked partial here}}
+// expected-note@+2 {{'PartiallyAvailable' has been marked as being introduced in macOS 10.8 here, but the deployment target is macOS 10.5.0}}
 #endif
 extern void PartiallyAvailable() ;
 void with_redeclaration() {

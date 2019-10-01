@@ -20,3 +20,8 @@
 // RUN:     -B %S/Inputs/B_opt_tree/dir2 2>&1 -fuse-ld=ld \
 // RUN:   | FileCheck --check-prefix=CHECK-B-OPT-MULT %s
 // CHECK-B-OPT-MULT: "{{.*}}/Inputs/B_opt_tree/dir3{{/|\\\\}}prefix-ld"
+//
+// RUN: %clang -B %S/Inputs/does_not_exist -print-search-dirs \
+// RUN:     -target aarch64-linux-gnu \
+// RUN:   | FileCheck --check-prefix=CHECK-B-OPT-INVALID %s
+// CHECK-B-OPT-INVALID-NOT: /..//bin

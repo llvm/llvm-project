@@ -179,7 +179,7 @@ __has_include
 #if __has_include(<stdint.h>
 #endif
 
-// expected-error@+1 {{expected "FILENAME" or <FILENAME>}} // expected-error@+1 {{expected value in expression}}
+// expected-error@+1 {{expected '>'}} expected-note@+1 {{to match this '<'}} // expected-error@+1 {{expected value in expression}}
 #if __has_include(<stdint.h)
 #endif
 

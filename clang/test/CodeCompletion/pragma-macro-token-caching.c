@@ -12,7 +12,7 @@ void completeParam(int param) {
 
 void completeParamPragmaError(int param) {
     Outer(__extension__({ _Pragma(2) })); // expected-error {{_Pragma takes a parenthesized string literal}}
-    param;
+    param; // expected-warning {{expression result unused}}
 }
 
 // RUN: %clang_cc1 -fsyntax-only -verify -code-completion-at=%s:16:1 %s | FileCheck %s

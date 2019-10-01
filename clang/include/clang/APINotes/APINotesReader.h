@@ -206,61 +206,6 @@ public:
   ///
   /// \returns information about the typedef, if known.
   VersionedInfo<TypedefInfo> lookupTypedef(StringRef name);
-
-  /// Visitor used when walking the contents of the API notes file.
-  class Visitor {
-  public:
-    virtual ~Visitor();
-
-    /// Visit an Objective-C class.
-    virtual void visitObjCClass(ContextID contextID, StringRef name,
-                                const ObjCContextInfo &info,
-                                llvm::VersionTuple swiftVersion);
-
-    /// Visit an Objective-C protocol.
-    virtual void visitObjCProtocol(ContextID contextID, StringRef name,
-                                   const ObjCContextInfo &info,
-                                   llvm::VersionTuple swiftVersion);
-
-    /// Visit an Objective-C method.
-    virtual void visitObjCMethod(ContextID contextID, StringRef selector,
-                                 bool isInstanceMethod,
-                                 const ObjCMethodInfo &info,
-                                 llvm::VersionTuple swiftVersion);
-
-    /// Visit an Objective-C property.
-    virtual void visitObjCProperty(ContextID contextID, StringRef name,
-                                   bool isInstance,
-                                   const ObjCPropertyInfo &info,
-                                   llvm::VersionTuple swiftVersion);
-
-    /// Visit a global variable.
-    virtual void visitGlobalVariable(StringRef name,
-                                     const GlobalVariableInfo &info,
-                                     llvm::VersionTuple swiftVersion);
-
-    /// Visit a global function.
-    virtual void visitGlobalFunction(StringRef name,
-                                     const GlobalFunctionInfo &info,
-                                     llvm::VersionTuple swiftVersion);
-
-    /// Visit an enumerator.
-    virtual void visitEnumConstant(StringRef name,
-                                   const EnumConstantInfo &info,
-                                   llvm::VersionTuple swiftVersion);
-
-    /// Visit a tag.
-    virtual void visitTag(StringRef name, const TagInfo &info,
-                          llvm::VersionTuple swiftVersion);
-
-    /// Visit a typedef.
-    virtual void visitTypedef(StringRef name, const TypedefInfo &info,
-                              llvm::VersionTuple swiftVersion);
-  };
-
-  /// Visit the contents of the API notes file, passing each entity to the
-  /// given visitor.
-  void visit(Visitor &visitor);
 };
 
 } // end namespace api_notes

@@ -1,9 +1,8 @@
 //==- CGObjCRuntime.cpp - Interface to Shared Objective-C Runtime Features ==//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -22,7 +21,6 @@
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/StmtObjC.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/Support/SaveAndRestore.h"
 
 using namespace clang;
@@ -127,10 +125,10 @@ namespace {
   };
 
   struct CallObjCEndCatch final : EHScopeStack::Cleanup {
-    CallObjCEndCatch(bool MightThrow, llvm::Value *Fn)
+    CallObjCEndCatch(bool MightThrow, llvm::FunctionCallee Fn)
         : MightThrow(MightThrow), Fn(Fn) {}
     bool MightThrow;
-    llvm::Value *Fn;
+    llvm::FunctionCallee Fn;
 
     void Emit(CodeGenFunction &CGF, Flags flags) override {
       if (MightThrow)
@@ -141,12 +139,11 @@ namespace {
   };
 }
 
-
 void CGObjCRuntime::EmitTryCatchStmt(CodeGenFunction &CGF,
                                      const ObjCAtTryStmt &S,
-                                     llvm::Constant *beginCatchFn,
-                                     llvm::Constant *endCatchFn,
-                                     llvm::Constant *exceptionRethrowFn) {
+                                     llvm::FunctionCallee beginCatchFn,
+                                     llvm::FunctionCallee endCatchFn,
+                                     llvm::FunctionCallee exceptionRethrowFn) {
   // Jump destination for falling out of catch bodies.
   CodeGenFunction::JumpDest Cont;
   if (S.getNumCatchStmts())
@@ -313,10 +310,10 @@ void CGObjCRuntime::EmitInitOfCatchParam(CodeGenFunction &CGF,
 
 namespace {
   struct CallSyncExit final : EHScopeStack::Cleanup {
-    llvm::Value *SyncExitFn;
+    llvm::FunctionCallee SyncExitFn;
     llvm::Value *SyncArg;
-    CallSyncExit(llvm::Value *SyncExitFn, llvm::Value *SyncArg)
-      : SyncExitFn(SyncExitFn), SyncArg(SyncArg) {}
+    CallSyncExit(llvm::FunctionCallee SyncExitFn, llvm::Value *SyncArg)
+        : SyncExitFn(SyncExitFn), SyncArg(SyncArg) {}
 
     void Emit(CodeGenFunction &CGF, Flags flags) override {
       CGF.EmitNounwindRuntimeCall(SyncExitFn, SyncArg);
@@ -326,8 +323,8 @@ namespace {
 
 void CGObjCRuntime::EmitAtSynchronizedStmt(CodeGenFunction &CGF,
                                            const ObjCAtSynchronizedStmt &S,
-                                           llvm::Function *syncEnterFn,
-                                           llvm::Function *syncExitFn) {
+                                           llvm::FunctionCallee syncEnterFn,
+                                           llvm::FunctionCallee syncExitFn) {
   CodeGenFunction::RunCleanupsScope cleanups(CGF);
 
   // Evaluate the lock operand.  This is guaranteed to dominate the

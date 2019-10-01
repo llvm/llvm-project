@@ -1,4 +1,16 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=optin.performance -analyzer-config optin.performance.Padding:AllowedPad=2 -verify %s
+// RUN: %clang_analyze_cc1 -verify %s \
+// RUN:   -analyzer-checker=optin.performance \
+// RUN:   -analyzer-config optin.performance.Padding:AllowedPad=2
+
+// RUN: not %clang_analyze_cc1 -verify %s \
+// RUN:   -analyzer-checker=core \
+// RUN:   -analyzer-checker=optin.performance.Padding \
+// RUN:   -analyzer-config optin.performance.Padding:AllowedPad=-10 \
+// RUN:   2>&1 | FileCheck %s -check-prefix=CHECK-PAD-NEGATIVE-VALUE
+
+// CHECK-PAD-NEGATIVE-VALUE: (frontend): invalid input for checker option
+// CHECK-PAD-NEGATIVE-VALUE-SAME: 'optin.performance.Padding:AllowedPad', that
+// CHECK-PAD-NEGATIVE-VALUE-SAME: expects a non-negative value
 
 #if __has_include(<stdalign.h>)
 #include <stdalign.h>

@@ -94,8 +94,8 @@ template<class T> struct S {
 // CHECK: T val;
 // CHECK: T lin = 0;
 // CHECK: T &ref = res;
-    #pragma omp simd private(val)  safelen(7) linear(lin : -5) lastprivate(res) simdlen(5) linear(ref(ref))
-// CHECK-NEXT: #pragma omp simd private(val) safelen(7) linear(lin: -5) lastprivate(res) simdlen(5) linear(ref(ref))
+    #pragma omp simd allocate(res) private(val)  safelen(7) linear(lin : -5) lastprivate(res) simdlen(5) linear(ref(ref))
+// CHECK-NEXT: #pragma omp simd allocate(res) private(val) safelen(7) linear(lin: -5) lastprivate(res) simdlen(5) linear(ref(ref))
     for (T i = 7; i < m_a; ++i) {
       val = v[i-7] + m_a;
       res = val;
@@ -121,7 +121,7 @@ template<class T> struct S {
 template<int LEN> struct S2 {
   static void func(int n, float *a, float *b, float *c) {
     int k1 = 0, k2 = 0;
-#pragma omp simd safelen(LEN) linear(k1,k2:LEN) aligned(a:LEN) simdlen(LEN)
+#pragma omp simd safelen(LEN) linear(k1,k2:LEN) aligned(a:LEN) simdlen(LEN) allocate(k1)
     for(int i = 0; i < n; i++) {
       c[i] = a[i] + b[i];
       c[k1] = a[k1] + b[k1];
@@ -136,7 +136,7 @@ template<int LEN> struct S2 {
 // CHECK: template<> struct S2<4> {
 // CHECK-NEXT: static void func(int n, float *a, float *b, float *c)     {
 // CHECK-NEXT:   int k1 = 0, k2 = 0;
-// CHECK-NEXT: #pragma omp simd safelen(4) linear(k1,k2: 4) aligned(a: 4) simdlen(4)
+// CHECK-NEXT: #pragma omp simd safelen(4) linear(k1,k2: 4) aligned(a: 4) simdlen(4) allocate(k1)
 // CHECK-NEXT:   for (int i = 0; i < n; i++) {
 // CHECK-NEXT:     c[i] = a[i] + b[i];
 // CHECK-NEXT:     c[k1] = a[k1] + b[k1];

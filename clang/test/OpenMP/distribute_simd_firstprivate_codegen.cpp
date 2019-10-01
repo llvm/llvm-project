@@ -109,7 +109,7 @@ int main() {
       // LAMBDA-DAG: [[G_VAL:%.+]] = load{{.+}} double, double* [[G_ADDR_VAL]],
       // LAMBDA-DAG: store double [[G_VAL]], double* [[G_PRIVATE]],
       // LAMBDA-DAG: [[G1_VAL_REF:%.+]] = load double*, double** [[G1_REF]],
-      // LAMBDA-DAG: [[G1_VAL:%.+]] = load{{.+}} double, double* [[G1_VAL_REF]],
+      // LAMBDA-DAG: [[G1_VAL:%.+]] = load{{.+}} double, double* %
       // LAMBDA-DAG: store double [[G1_VAL]], double* [[G1_PRIVATE]],
       // LAMBDA-DAG: store double* [[G1_PRIVATE]], double** [[TMP_PRIVATE]],
       // LAMBDA-DAG: [[SVAR_VAL:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[SVAR_ADDR_VAL]],
@@ -284,7 +284,7 @@ int main() {
 // CHECK-DAG: store{{.+}} [[VAR_ADDR_VAL]],{{.+}} [[TMP]],
 // CHECK-DAG: [[TMP_VAL:%.+]] = load [[S_FLOAT_TY]]*, [[S_FLOAT_TY]]** [[TMP]],
 // CHECK-DAG: [[VAR_PRIV_BCAST:%.+]] = bitcast [[S_FLOAT_TY]]* [[VAR_PRIV]] to{{.+}}
-// CHECK-DAG: [[TMP_BCAST:%.+]] = bitcast [[S_FLOAT_TY]]* [[TMP_VAL]] to{{.+}}
+// CHECK-DAG: [[TMP_BCAST:%.+]] = bitcast [[S_FLOAT_TY]]* %{{.+}} to{{.+}}
 // CHECK-DAG: call{{.+}} @llvm.memcpy.{{.+}}({{.+}}* align {{[0-9]+}} [[VAR_PRIV_BCAST]], {{.+}}* align {{[0-9]+}} [[TMP_BCAST]],{{.+}})
 // CHECK-DAG: store [[S_FLOAT_TY]]* [[VAR_PRIV]], [[S_FLOAT_TY]]** [[TMP_PRIV]],
 
@@ -379,7 +379,7 @@ int main() {
 // CHECK-DAG: store{{.+}} [[VAR_ADDR_VAL]],{{.+}} [[TMP]],
 // CHECK-DAG: [[TMP_VAL:%.+]] = load [[S_INT_TY]]*, [[S_INT_TY]]** [[TMP]],
 // CHECK-DAG: [[VAR_PRIV_BCAST:%.+]] = bitcast [[S_INT_TY]]* [[VAR_PRIV]] to{{.+}}
-// CHECK-DAG: [[TMP_BCAST:%.+]] = bitcast [[S_INT_TY]]* [[TMP_VAL]] to{{.+}}
+// CHECK-DAG: [[TMP_BCAST:%.+]] = bitcast [[S_INT_TY]]* %{{.+}} to{{.+}}
 // CHECK-DAG: call{{.+}} @llvm.memcpy.{{.+}}({{.+}}* align {{[0-9]+}} [[VAR_PRIV_BCAST]], {{.+}}* align {{[0-9]+}} [[TMP_BCAST]],{{.+}})
 // CHECK-DAG: store [[S_INT_TY]]* [[VAR_PRIV]], [[S_INT_TY]]** [[TMP_PRIV]],
 

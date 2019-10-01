@@ -31,7 +31,7 @@ struct S {
 
   void f2a(
     // T3<int> here is a parameter type, so must be declared before it is used.
-    int k1 = c < b, T3 < int > x = 0 // expected-error {{unexpected end of default argument expression}}
+    int k1 = c < b, T3 < int > x = 0 // expected-error {{no template named 'T3'}}
   );
 
   template<typename, int=0> struct T3 { T3(int); operator int(); };

@@ -1,6 +1,9 @@
 # This file sets up a CMakeCache for the second stage of a simple distribution
 # bootstrap build.
 
+set(LLVM_ENABLE_PROJECTS "clang;clang-tools-extra;lld" CACHE STRING "")
+set(LLVM_ENABLE_RUNTIMES "compiler-rt;libcxx;libcxxabi" CACHE STRING "")
+
 set(LLVM_TARGETS_TO_BUILD X86;ARM;AArch64 CACHE STRING "")
 
 set(CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING "")
@@ -23,7 +26,7 @@ set(LLVM_DISTRIBUTION_COMPONENTS
   clang
   LTO
   clang-format
-  clang-headers
+  clang-resource-headers
   builtins
   runtimes
   ${LLVM_TOOLCHAIN_TOOLS}

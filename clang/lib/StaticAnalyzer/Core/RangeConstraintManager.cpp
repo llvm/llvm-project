@@ -1,9 +1,8 @@
 //== RangeConstraintManager.cpp - Manage range constraints.------*- C++ -*--==//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -12,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Basic/JsonSupport.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/APSIntType.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
@@ -262,8 +262,8 @@ public:
   ProgramStateRef removeDeadBindings(ProgramStateRef State,
                                      SymbolReaper &SymReaper) override;
 
-  void print(ProgramStateRef State, raw_ostream &Out, const char *nl,
-             const char *sep) override;
+  void printJson(raw_ostream &Out, ProgramStateRef State, const char *NL = "\n",
+                 unsigned int Space = 0, bool IsDot = false) const override;
 
   //===------------------------------------------------------------------===//
   // Implementation for interface from RangedConstraintManager.
@@ -755,25 +755,35 @@ ProgramStateRef RangeConstraintManager::assumeSymOutsideInclusiveRange(
   return New.isEmpty() ? nullptr : State->set<ConstraintRange>(Sym, New);
 }
 
-//===------------------------------------------------------------------------===
+//===----------------------------------------------------------------------===//
 // Pretty-printing.
-//===------------------------------------------------------------------------===/
+//===----------------------------------------------------------------------===//
 
-void RangeConstraintManager::print(ProgramStateRef St, raw_ostream &Out,
-                                   const char *nl, const char *sep) {
+void RangeConstraintManager::printJson(raw_ostream &Out, ProgramStateRef State,
+                                       const char *NL, unsigned int Space,
+                                       bool IsDot) const {
+  ConstraintRangeTy Constraints = State->get<ConstraintRange>();
 
-  ConstraintRangeTy Ranges = St->get<ConstraintRange>();
-
-  if (Ranges.isEmpty()) {
-    Out << nl << sep << "Ranges are empty." << nl;
+  Indent(Out, Space, IsDot) << "\"constraints\": ";
+  if (Constraints.isEmpty()) {
+    Out << "null," << NL;
     return;
   }
 
-  Out << nl << sep << "Ranges of symbol values:";
-  for (ConstraintRangeTy::iterator I = Ranges.begin(), E = Ranges.end(); I != E;
-       ++I) {
-    Out << nl << ' ' << I.getKey() << " : ";
+  ++Space;
+  Out << '[' << NL;
+  for (ConstraintRangeTy::iterator I = Constraints.begin();
+       I != Constraints.end(); ++I) {
+    Indent(Out, Space, IsDot)
+        << "{ \"symbol\": \"" << I.getKey() << "\", \"range\": \"";
     I.getData().print(Out);
+    Out << "\" }";
+
+    if (std::next(I) != Constraints.end())
+      Out << ',';
+    Out << NL;
   }
-  Out << nl;
+
+  --Space;
+  Indent(Out, Space, IsDot) << "]," << NL;
 }

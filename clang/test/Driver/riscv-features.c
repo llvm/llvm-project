@@ -9,5 +9,5 @@
 
 // RELAX: "-target-feature" "+relax"
 // NO-RELAX: "-target-feature" "-relax"
-// DEFAULT-NOT: "-target-feature" "+relax"
+// DEFAULT: "-target-feature" "+relax"
 // DEFAULT-NOT: "-target-feature" "-relax"

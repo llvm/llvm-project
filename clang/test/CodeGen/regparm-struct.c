@@ -170,7 +170,7 @@ struct s13 {
   } y;
 };
 __attribute__((regparm(3))) void f18(struct s13 a, int b, int c, int d);
-// CHECK: declare void @f18(%struct.s13* byval align 4, i32 inreg, i32 inreg, i32 inreg)
+// CHECK: declare void @f18(%struct.s13* byval(%struct.s13) align 4, i32 inreg, i32 inreg, i32 inreg)
 void g18(void) {
   struct s13 x = {{41}};
   f18(x, 42, 43, 44);

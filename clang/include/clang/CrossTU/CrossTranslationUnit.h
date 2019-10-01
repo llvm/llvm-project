@@ -1,9 +1,8 @@
 //===--- CrossTranslationUnit.h - -------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -15,7 +14,7 @@
 #ifndef LLVM_CLANG_CROSSTU_CROSSTRANSLATIONUNIT_H
 #define LLVM_CLANG_CROSSTU_CROSSTRANSLATIONUNIT_H
 
-#include "clang/AST/ASTImporterLookupTable.h"
+#include "clang/AST/ASTImporterSharedState.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -29,6 +28,7 @@ class ASTImporter;
 class ASTUnit;
 class DeclContext;
 class FunctionDecl;
+class VarDecl;
 class NamedDecl;
 class TranslationUnitDecl;
 
@@ -44,7 +44,8 @@ enum class index_error_code {
   failed_to_get_external_ast,
   failed_to_generate_usr,
   triple_mismatch,
-  lang_mismatch
+  lang_mismatch,
+  lang_dialect_mismatch
 };
 
 class IndexError : public llvm::ErrorInfo<IndexError> {
@@ -87,6 +88,9 @@ parseCrossTUIndex(StringRef IndexPath, StringRef CrossTUDir);
 
 std::string createCrossTUIndexString(const llvm::StringMap<std::string> &Index);
 
+// Returns true if the variable or any field of a record variable is const.
+bool containsConst(const VarDecl *VD, const ASTContext &ACtx);
+
 /// This class is used for tools that requires cross translation
 ///        unit capability.
 ///
@@ -102,16 +106,16 @@ public:
   CrossTranslationUnitContext(CompilerInstance &CI);
   ~CrossTranslationUnitContext();
 
-  /// This function loads a function definition from an external AST
-  ///        file and merge it into the original AST.
+  /// This function loads a function or variable definition from an
+  ///        external AST file and merges it into the original AST.
   ///
-  /// This method should only be used on functions that have no definitions in
+  /// This method should only be used on functions that have no definitions or
+  /// variables that have no initializer in
   /// the current translation unit. A function definition with the same
   /// declaration will be looked up in the index file which should be in the
   /// \p CrossTUDir directory, called \p IndexName. In case the declaration is
   /// found in the index the corresponding AST file will be loaded and the
-  /// definition of the function will be merged into the original AST using
-  /// the AST Importer.
+  /// definition will be merged into the original AST using the AST Importer.
   ///
   /// \return The declaration with the definition will be returned.
   /// If no suitable definition is found in the index file or multiple
@@ -121,17 +125,20 @@ public:
   llvm::Expected<const FunctionDecl *>
   getCrossTUDefinition(const FunctionDecl *FD, StringRef CrossTUDir,
                        StringRef IndexName, bool DisplayCTUProgress = false);
+  llvm::Expected<const VarDecl *>
+  getCrossTUDefinition(const VarDecl *VD, StringRef CrossTUDir,
+                       StringRef IndexName, bool DisplayCTUProgress = false);
 
-  /// This function loads a function definition from an external AST
-  ///        file.
+  /// This function loads a definition from an external AST file.
   ///
-  /// A function definition with the same declaration will be looked up in the
+  /// A definition with the same declaration will be looked up in the
   /// index file which should be in the \p CrossTUDir directory, called
   /// \p IndexName. In case the declaration is found in the index the
   /// corresponding AST file will be loaded.
   ///
-  /// \return Returns an ASTUnit that contains the definition of the looked up
-  /// function.
+  /// \return Returns a pointer to the ASTUnit that contains the definition of
+  /// the looked up name or an Error.
+  /// The returned pointer is never a nullptr.
   ///
   /// Note that the AST files should also be in the \p CrossTUDir.
   llvm::Expected<ASTUnit *> loadExternalAST(StringRef LookupName,
@@ -145,27 +152,36 @@ public:
   ///
   /// \return Returns the resulting definition or an error.
   llvm::Expected<const FunctionDecl *> importDefinition(const FunctionDecl *FD);
+  llvm::Expected<const VarDecl *> importDefinition(const VarDecl *VD);
 
-  /// Get a name to identify a function.
+  /// Get a name to identify a named decl.
   static std::string getLookupName(const NamedDecl *ND);
 
   /// Emit diagnostics for the user for potential configuration errors.
   void emitCrossTUDiagnostics(const IndexError &IE);
 
 private:
-  void lazyInitLookupTable(TranslationUnitDecl *ToTU);
+  void lazyInitImporterSharedSt(TranslationUnitDecl *ToTU);
   ASTImporter &getOrCreateASTImporter(ASTContext &From);
-  const FunctionDecl *findFunctionInDeclContext(const DeclContext *DC,
-                                                StringRef LookupFnName);
+  template <typename T>
+  llvm::Expected<const T *> getCrossTUDefinitionImpl(const T *D,
+                                                     StringRef CrossTUDir,
+                                                     StringRef IndexName,
+                                                     bool DisplayCTUProgress);
+  template <typename T>
+  const T *findDefInDeclContext(const DeclContext *DC,
+                                StringRef LookupName);
+  template <typename T>
+  llvm::Expected<const T *> importDefinitionImpl(const T *D);
 
   llvm::StringMap<std::unique_ptr<clang::ASTUnit>> FileASTUnitMap;
-  llvm::StringMap<clang::ASTUnit *> FunctionASTUnitMap;
-  llvm::StringMap<std::string> FunctionFileMap;
+  llvm::StringMap<clang::ASTUnit *> NameASTUnitMap;
+  llvm::StringMap<std::string> NameFileMap;
   llvm::DenseMap<TranslationUnitDecl *, std::unique_ptr<ASTImporter>>
       ASTUnitImporterMap;
   CompilerInstance &CI;
   ASTContext &Context;
-  std::unique_ptr<ASTImporterLookupTable> LookupTable;
+  std::shared_ptr<ASTImporterSharedState> ImporterSharedSt;
 };
 
 } // namespace cross_tu

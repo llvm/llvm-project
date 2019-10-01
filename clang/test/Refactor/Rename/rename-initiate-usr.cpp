@@ -17,4 +17,4 @@ void foo() {
 // CHECK-ERROR1: error: could not rename symbol with the given USR
 
 // RUN: not clang-refactor-test rename-initiate-usr -new-name=Foo %s 2>&1 | FileCheck --check-prefix=CHECK-ERROR2 %s
-// CHECK-ERROR2: for the -usr option: must be specified at least once
+// CHECK-ERROR2: for the --usr option: must be specified at least once

@@ -32,7 +32,7 @@
 @end
 // CHECK: <Declaration>@protocol MyProto\n@end</Declaration>
 // CHECK: <Declaration>- (unsigned int)MethodMyProto:(nullable id)anObject inRange:(unsigned int)range;</Declaration>
-// CHECK: <Declaration>@optional\n@property(readwrite, copy, atomic, nonnull) id PropertyMyProto;</Declaration>
+// CHECK: <Declaration>@optional\n@property(atomic, copy, readwrite, nonnull) id PropertyMyProto;</Declaration>
 // CHECK: <Declaration>+ (id)ClassMethodMyProto;</Declaration>
 
 /**
@@ -77,7 +77,7 @@
 // CHECK: <Declaration>id IvarMyClass</Declaration>
 // CHECK: <Declaration>- (id)MethodMyClass;</Declaration>
 // CHECK: <Declaration>+ (id)ClassMethodMyClass;</Declaration>
-// CHECK: <Declaration>@property(readwrite, copy, atomic) id PropertyMyClass;</Declaration
+// CHECK: <Declaration>@property(atomic, copy, readwrite) id PropertyMyClass;</Declaration
 
 /**
  * \brief - This is class extension of MyClass
@@ -110,7 +110,7 @@
 @end
 // CHECK: <Declaration>@interface MyClass (Category)\n@end</Declaration>
 // CHECK: <Declaration>- (void)MethodMyClassCategory;</Declaration>
-// CHECK: <Declaration>@property(readwrite, copy, atomic) id PropertyMyClassCategory;</Declaration>
+// CHECK: <Declaration>@property(atomic, copy, readwrite) id PropertyMyClassCategory;</Declaration>
 // CHECK: <Declaration>- (id)PropertyMyClassCategory;</Declaration>
 // CHECK: <Declaration>- (void)setPropertyMyClassCategory:(id)arg;</Declaration>
 

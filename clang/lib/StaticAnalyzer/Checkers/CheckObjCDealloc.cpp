@@ -1,9 +1,8 @@
 //==- CheckObjCDealloc.cpp - Check ObjC -dealloc implementation --*- C++ -*-==//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -1087,14 +1086,10 @@ bool ObjCDeallocChecker::isNibLoadedIvarWithoutRetain(
 }
 
 void ento::registerObjCDeallocChecker(CheckerManager &Mgr) {
-  const LangOptions &LangOpts = Mgr.getLangOpts();
-  // These checker only makes sense under MRR.
-  if (LangOpts.getGC() == LangOptions::GCOnly || LangOpts.ObjCAutoRefCount)
-    return;
-
   Mgr.registerChecker<ObjCDeallocChecker>();
 }
 
 bool ento::shouldRegisterObjCDeallocChecker(const LangOptions &LO) {
-  return true;
+  // These checker only makes sense under MRR.
+  return LO.getGC() != LangOptions::GCOnly && !LO.ObjCAutoRefCount;
 }

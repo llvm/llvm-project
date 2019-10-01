@@ -1,9 +1,8 @@
 //===- TypoCorrection.h - Class for typo correction results -----*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -313,6 +312,13 @@ public:
                : InvalidDistance;
   }
 
+  /// Clone this CorrectionCandidateCallback. CorrectionCandidateCallbacks are
+  /// initially stack-allocated. However in case where delayed typo-correction
+  /// is done we need to move the callback to storage with a longer lifetime.
+  /// Every class deriving from CorrectionCandidateCallback must implement
+  /// this method.
+  virtual std::unique_ptr<CorrectionCandidateCallback> clone() = 0;
+
   void setTypoName(IdentifierInfo *II) { Typo = II; }
   void setTypoNNS(NestedNameSpecifier *NNS) { TypoNNS = NNS; }
 
@@ -343,13 +349,27 @@ protected:
   NestedNameSpecifier *TypoNNS;
 };
 
+class DefaultFilterCCC final : public CorrectionCandidateCallback {
+public:
+  explicit DefaultFilterCCC(IdentifierInfo *Typo = nullptr,
+                            NestedNameSpecifier *TypoNNS = nullptr)
+      : CorrectionCandidateCallback(Typo, TypoNNS) {}
+
+  std::unique_ptr<CorrectionCandidateCallback> clone() override {
+    return llvm::make_unique<DefaultFilterCCC>(*this);
+  }
+};
+
 /// Simple template class for restricting typo correction candidates
 /// to ones having a single Decl* of the given type.
 template <class C>
-class DeclFilterCCC : public CorrectionCandidateCallback {
+class DeclFilterCCC final : public CorrectionCandidateCallback {
 public:
   bool ValidateCandidate(const TypoCorrection &candidate) override {
     return candidate.getCorrectionDeclAs<C>();
+  }
+  std::unique_ptr<CorrectionCandidateCallback> clone() override {
+    return llvm::make_unique<DeclFilterCCC>(*this);
   }
 };
 
@@ -363,6 +383,9 @@ public:
                         MemberExpr *ME = nullptr);
 
   bool ValidateCandidate(const TypoCorrection &candidate) override;
+  std::unique_ptr<CorrectionCandidateCallback> clone() override {
+    return llvm::make_unique<FunctionCallFilterCCC>(*this);
+  }
 
 private:
   unsigned NumArgs;
@@ -372,7 +395,7 @@ private:
 };
 
 // Callback class that effectively disabled typo correction
-class NoTypoCorrectionCCC : public CorrectionCandidateCallback {
+class NoTypoCorrectionCCC final : public CorrectionCandidateCallback {
 public:
   NoTypoCorrectionCCC() {
     WantTypeSpecifiers = false;
@@ -384,6 +407,9 @@ public:
 
   bool ValidateCandidate(const TypoCorrection &candidate) override {
     return false;
+  }
+  std::unique_ptr<CorrectionCandidateCallback> clone() override {
+    return llvm::make_unique<NoTypoCorrectionCCC>(*this);
   }
 };
 

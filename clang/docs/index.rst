@@ -23,6 +23,7 @@ Using Clang as a Compiler
    AttributeReference
    DiagnosticsReference
    CrossCompilation
+   ClangStaticAnalyzer
    ThreadSafetyAnalysis
    AddressSanitizer
    ThreadSanitizer
@@ -42,6 +43,7 @@ Using Clang as a Compiler
    MSVCCompatibility
    OpenMPSupport
    ThinLTO
+   APINotes
    CommandGuide/index
    FAQ
 

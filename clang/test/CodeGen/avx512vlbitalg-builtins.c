@@ -80,25 +80,27 @@ __m128i test_mm_maskz_popcnt_epi8(__mmask16 __U, __m128i __B) {
 
 __mmask32 test_mm256_mask_bitshuffle_epi64_mask(__mmask32 __U, __m256i __A, __m256i __B) {
   // CHECK-LABEL: @test_mm256_mask_bitshuffle_epi64_mask
-  // CHECK: @llvm.x86.avx512.mask.vpshufbitqmb.256
+  // CHECK: @llvm.x86.avx512.vpshufbitqmb.256
+  // CHECK: and <32 x i1> %{{.*}}, %{{.*}}
   return _mm256_mask_bitshuffle_epi64_mask(__U, __A, __B);
 }
 
 __mmask32 test_mm256_bitshuffle_epi64_mask(__m256i __A, __m256i __B) {
   // CHECK-LABEL: @test_mm256_bitshuffle_epi64_mask
-  // CHECK: @llvm.x86.avx512.mask.vpshufbitqmb.256
+  // CHECK: @llvm.x86.avx512.vpshufbitqmb.256
   return _mm256_bitshuffle_epi64_mask(__A, __B);
 }
 
 __mmask16 test_mm_mask_bitshuffle_epi64_mask(__mmask16 __U, __m128i __A, __m128i __B) {
   // CHECK-LABEL: @test_mm_mask_bitshuffle_epi64_mask
-  // CHECK: @llvm.x86.avx512.mask.vpshufbitqmb.128
+  // CHECK: @llvm.x86.avx512.vpshufbitqmb.128
+  // CHECK: and <16 x i1> %{{.*}}, %{{.*}}
   return _mm_mask_bitshuffle_epi64_mask(__U, __A, __B);
 }
 
 __mmask16 test_mm_bitshuffle_epi64_mask(__m128i __A, __m128i __B) {
   // CHECK-LABEL: @test_mm_bitshuffle_epi64_mask
-  // CHECK: @llvm.x86.avx512.mask.vpshufbitqmb.128
+  // CHECK: @llvm.x86.avx512.vpshufbitqmb.128
   return _mm_bitshuffle_epi64_mask(__A, __B);
 }
 

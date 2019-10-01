@@ -287,6 +287,26 @@ int test_iteration_spaces() {
     c[ii] = a[ii];
 
 #pragma omp parallel
+// expected-error@+3 {{the loop initializer expression depends on the current loop control variable}}
+// expected-error@+2 2 {{the loop condition expression depends on the current loop control variable}}
+#pragma omp for
+  for (ii = ii * 10 + 25; ii < ii / ii - 23; ii += 1)
+    c[ii] = a[ii];
+
+// expected-error@+3 {{expected loop invariant expression or '<invariant1> * ii + <invariant2>' kind of expression}}
+#pragma omp for collapse(2)
+    for (ii = 10 + 25; ii < 1000; ii += 1)
+      for (kk = ii * 10 + 25; kk < ii / ii - 23; kk += 1)
+        ;
+
+// expected-error@+4 {{expected loop invariant expression or '<invariant1> * ii + <invariant2>' kind of expression}}
+#pragma omp for collapse(3)
+    for (ii = 10 + 25; ii < 1000; ii += 1)
+      for (jj = 10 + 25; jj < 1000; jj += 1)
+        for (kk = ii * 10 + 25; kk < jj - 23; kk += 1)
+          ;
+
+#pragma omp parallel
 // expected-note@+2  {{defined as firstprivate}}
 // expected-error@+2 {{loop iteration variable in the associated loop of 'omp for' directive may not be firstprivate, predetermined as private}}
 #pragma omp for firstprivate(ii)
@@ -588,6 +608,14 @@ int test_with_random_access_iterator() {
   for (Iter1 I; I < end1; ++I) {
   }
   GoodIter1 I1, E1;
+// expected-error@+4 {{expected an integer or a pointer type of the outer loop counter 'I' for non-rectangular nests}}
+// expected-error@+4 {{expected an integer or a pointer type of the outer loop counter 'I' for non-rectangular nests}}
+#pragma omp for collapse(3)
+  for (GoodIter1 I = I1; I < E1; I++) // expected-note 2 {{'I' declared here}}
+    for (int i = (I - I1) * 10 + 25; i < 23; i += 1)
+      for (int j = 10 + 25; j < 23 + (I - E1); j += 1)
+        ;
+
 #pragma omp for
   for (GoodIter1 I = I1; I < E1; I++)
     ;
@@ -596,8 +624,35 @@ int test_with_random_access_iterator() {
 
 template <typename IT, int ST>
 class TC {
+  int ii, iii, kk;
 public:
   int dotest_lt(IT begin, IT end) {
+#pragma omp parallel
+// expected-error@+3 3 {{the loop initializer expression depends on the current loop control variable}}
+// expected-error@+2 6 {{the loop condition expression depends on the current loop control variable}}
+#pragma omp for
+  for (ii = ii * 10 + 25; ii < ii / ii - 23; ii += 1)
+    ;
+
+#pragma omp parallel
+// expected-error@+4 2 {{expected loop invariant expression or '<invariant1> * ii + <invariant2>' kind of expression}}
+// expected-error@+3 {{expected loop invariant expression or '<invariant1> * TC::ii + <invariant2>' kind of expression}}
+#pragma omp for collapse(2)
+    for (ii = 10 + 25; ii < 1000; ii += 1)
+      for (iii = ii * 10 + 25; iii < ii / ii - 23; iii += 1)
+        ;
+
+#pragma omp parallel
+// expected-error@+6 2 {{expected loop invariant expression or '<invariant1> * ii + <invariant2>' kind of expression}}
+// expected-error@+5 {{expected loop invariant expression or '<invariant1> * TC::ii + <invariant2>' kind of expression}}
+// expected-error@+5 2 {{expected loop invariant expression or '<invariant1> * ii + <invariant2>' kind of expression}}
+// expected-error@+4 {{expected loop invariant expression or '<invariant1> * TC::ii + <invariant2>' kind of expression}}
+#pragma omp for collapse(3)
+    for (ii = 10 + 25; ii < 1000; ii += 1)
+      for (iii = ii * 10 + 25; iii < ii / ii - 23; iii += 1)
+        for (kk = ii * 10 + 25; kk < iii - 23; kk += 1)
+          ;
+
 #pragma omp parallel
 // expected-note@+3 {{loop step is expected to be positive due to this condition}}
 // expected-error@+2 {{increment expression must cause 'I' to increase on each iteration of OpenMP for loop}}
@@ -659,7 +714,7 @@ void test_with_template() {
   GoodIter begin, end;
   TC<GoodIter, 100> t1;
   TC<GoodIter, -100> t2;
-  t1.dotest_lt(begin, end);
+  t1.dotest_lt(begin, end);         // expected-note {{in instantiation of member function 'TC<GoodIter, 100>::dotest_lt' requested here}}
   t2.dotest_lt(begin, end);         // expected-note {{in instantiation of member function 'TC<GoodIter, -100>::dotest_lt' requested here}}
   dotest_gt(begin, end);            // expected-note {{in instantiation of function template specialization 'dotest_gt<GoodIter, 0>' requested here}}
   dotest_gt<unsigned, 10>(0, 100);  // expected-note {{in instantiation of function template specialization 'dotest_gt<unsigned int, 10>' requested here}}

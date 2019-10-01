@@ -1,0 +1,53 @@
+//RUN: %clang_cc1 %s -triple spir -cl-std=c++ -emit-llvm -O0 -o - | FileCheck %s
+
+enum E {
+  a,
+  b,
+};
+
+class C {
+public:
+  void Assign(E e) { me = e; }
+  void OrAssign(E e) { mi |= e; }
+  E me;
+  int mi;
+};
+
+__global E globE;
+volatile __global int globVI;
+__global int globI;
+//CHECK-LABEL: define spir_func void @_Z3barv()
+void bar() {
+  C c;
+  //CHECK: addrspacecast %class.C* %c to %class.C addrspace(4)*
+  //CHECK: call void @_ZNU3AS41C6AssignE1E(%class.C addrspace(4)* %{{[0-9]+}}, i32 0)
+  c.Assign(a);
+  //CHECK: addrspacecast %class.C* %c to %class.C addrspace(4)*
+  //CHECK: call void @_ZNU3AS41C8OrAssignE1E(%class.C addrspace(4)* %{{[0-9]+}}, i32 0)
+  c.OrAssign(a);
+
+  E e;
+  //CHECK: store i32 1, i32* %e
+  e = b;
+  //CHECK: store i32 0, i32 addrspace(1)* @globE
+  globE = a;
+  //CHECK: store i32 %or, i32 addrspace(1)* @globI
+  globI |= b;
+  //CHECK: store i32 %add, i32 addrspace(1)* @globI
+  globI += a;
+  //CHECK: store volatile i32 %and, i32 addrspace(1)* @globVI
+  globVI &= b;
+  //CHECK: store volatile i32 %sub, i32 addrspace(1)* @globVI
+  globVI -= a;
+}
+
+//CHECK: define linkonce_odr void @_ZNU3AS41C6AssignE1E(%class.C addrspace(4)* %this, i32 %e)
+//CHECK: [[E:%[0-9]+]] = load i32, i32* %e.addr
+//CHECK: %me = getelementptr inbounds %class.C, %class.C addrspace(4)* %this1, i32 0, i32 0
+//CHECK: store i32 [[E]], i32 addrspace(4)* %me
+
+//CHECK define linkonce_odr void @_ZNU3AS41C8OrAssignE1E(%class.C addrspace(4)* %this, i32 %e)
+//CHECK: [[E:%[0-9]+]] = load i32, i32* %e.addr
+//CHECK: %mi = getelementptr inbounds %class.C, %class.C addrspace(4)* %this1, i32 0, i32 1
+//CHECK: [[MI:%[0-9]+]] = load i32, i32 addrspace(4)* %mi
+//CHECK: %or = or i32 [[MI]], [[E]]

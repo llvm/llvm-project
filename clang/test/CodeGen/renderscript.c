@@ -131,7 +131,7 @@ sLong2Char retLong2Char() { sLong2Char r; return r;}
 
 typedef struct {long l1, l2, l3, l4, l5, l6, l7, l8, l9; } sLong9;
 
-// CHECK-RS32: void @argLong9(%struct.sLong9* byval align 8 %s)
+// CHECK-RS32: void @argLong9(%struct.sLong9* byval(%struct.sLong9) align 8 %s)
 // CHECK-RS64: void @argLong9(%struct.sLong9* %s)
 void argLong9(sLong9 s) {}
 

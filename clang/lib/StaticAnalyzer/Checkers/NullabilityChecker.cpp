@@ -1,9 +1,8 @@
-//== Nullabilityhecker.cpp - Nullability checker ----------------*- C++ -*--==//
+//===-- NullabilityChecker.cpp - Nullability checker ----------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -1209,7 +1208,7 @@ bool ento::shouldRegisterNullabilityBase(const LangOptions &LO) {
     checker->NoDiagnoseCallsToSystemHeaders =                                  \
         checker->NoDiagnoseCallsToSystemHeaders ||                             \
         mgr.getAnalyzerOptions().getCheckerBooleanOption(                      \
-                      "NoDiagnoseCallsToSystemHeaders", false, checker, true); \
+                      checker, "NoDiagnoseCallsToSystemHeaders", true);        \
   }                                                                            \
                                                                                \
   bool ento::shouldRegister##name##Checker(const LangOptions &LO) {            \

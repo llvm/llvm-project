@@ -167,8 +167,14 @@ sum = 0.0;
 // CHECK: [[ORIG_PTR_ADDR:%.+]] = call i8* @__kmpc_threadprivate_cached(
 // CHECK: [[ORIG_PTR_REF:%.+]] = bitcast i8* [[ORIG_PTR_ADDR]] to i8**
 // CHECK: load i8*, i8** [[ORIG_PTR_REF]],
-// CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(
+// CHECK: call void [[OMP_INIT1:@.+]](
 // CHECK: ret void
+
+// CHECK: define internal void [[OMP_COMB1:@.+]](%struct.S* noalias, %struct.S* noalias)
+// CHECK: fadd float %
+
+// CHECK: define internal void [[OMP_INIT1]](%struct.S* noalias, %struct.S* noalias)
+// CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(
 
 // CHECK: define internal void @[[RED_FINI2]](i8*)
 // CHECK: call i8* @__kmpc_threadprivate_cached(
@@ -177,8 +183,7 @@ sum = 0.0;
 
 // CHECK: define internal void @[[RED_COMB2]](i8*, i8*)
 // CHECK: call i8* @__kmpc_threadprivate_cached(
-// CHECK: fadd float %
-// CHECK: store float %{{.+}}, float* %
+// CHECK: call void [[OMP_COMB1]](
 // CHECK: ret void
 
 // CHECK: define internal void @[[RED_INIT3]](i8*)

@@ -6,21 +6,61 @@
 // should be 'internal global' and not 'linkonce_odr global'.
 
 template <typename T> int x = 42;
-
+// CHECK-DAG: @_Z1xIiE = linkonce_odr global
 // CHECK-DAG: @_Z1xIZL3foovE3FooE = internal global
 
+// 'static' affects the linkage of the global
+template <typename T> static int y = 42;
+// CHECK-DAG: @_ZL1yIiE = internal global
+// CHECK-DAG: @_ZL1yIZL3foovE3FooE = internal global
+
+// 'const' does not
+template <typename T> const int z = 42;
+// CHECK-DAG: @_Z1zIiE = linkonce_odr constant
+// CHECK-DAG: @_Z1zIZL3foovE3FooE = internal constant
+
+template <typename T> T t = 42;
+// CHECK-DAG: @_Z1tIiE = linkonce_odr global
+// CHECK-DAG: @_Z1tIKiE = linkonce_odr constant
+
+int mode;
+
 // CHECK-DAG: define internal dereferenceable(4) i32* @_ZL3foov(
-static int &foo() {
+static const int &foo() {
    struct Foo { };
-   
-   // CHECK-DAG: ret i32* @_Z1xIZL3foovE3FooE
-   return x<Foo>;
+
+   switch (mode) {
+   case 0:
+     // CHECK-DAG: @_Z1xIiE
+     return x<int>;
+   case 1:
+     // CHECK-DAG: @_Z1xIZL3foovE3FooE
+     return x<Foo>;
+   case 2:
+     // CHECK-DAG: @_ZL1yIiE
+     return y<int>;
+   case 3:
+     // CHECK-DAG: @_ZL1yIZL3foovE3FooE
+     return y<Foo>;
+   case 4:
+     // CHECK-DAG: @_Z1zIiE
+     return z<int>;
+   case 5:
+     // CHECK-DAG: @_Z1zIZL3foovE3FooE
+     return z<Foo>;
+   case 6:
+     // CHECK-DAG: @_Z1tIiE
+     return t<int>;
+   case 7:
+     // CHECK-DAG: @_Z1tIKiE
+     return t<const int>;
+   }
 }
 
 
 #if !__has_feature(cxx_exceptions) // File A
 // CHECKA-DAG: define dereferenceable(4) i32* @_Z3barv(
-int &bar() { 
+const int &bar() {
 	// CHECKA-DAG: call dereferenceable(4) i32* @_ZL3foov()
 	return foo();
 }
@@ -28,7 +68,7 @@ int &bar() {
 #else // File B
 
 // CHECKB-DAG: declare dereferenceable(4) i32* @_Z3barv(
-int &bar();
+const int &bar();
 
 int main() {
 	// CHECKB-DAG: call dereferenceable(4) i32* @_Z3barv()

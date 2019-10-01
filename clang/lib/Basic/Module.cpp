@@ -1,9 +1,8 @@
 //===- Module.cpp - Describe a module -------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -115,7 +114,7 @@ static bool hasFeature(StringRef Feature, const LangOptions &LangOpts,
   bool HasFeature = llvm::StringSwitch<bool>(Feature)
                         .Case("altivec", LangOpts.AltiVec)
                         .Case("blocks", LangOpts.Blocks)
-                        .Case("coroutines", LangOpts.CoroutinesTS)
+                        .Case("coroutines", LangOpts.Coroutines)
                         .Case("cplusplus", LangOpts.CPlusPlus)
                         .Case("cplusplus11", LangOpts.CPlusPlus11)
                         .Case("cplusplus14", LangOpts.CPlusPlus14)
@@ -253,8 +252,8 @@ ArrayRef<const FileEntry *> Module::getTopHeaders(FileManager &FileMgr) {
   if (!TopHeaderNames.empty()) {
     for (std::vector<std::string>::iterator
            I = TopHeaderNames.begin(), E = TopHeaderNames.end(); I != E; ++I) {
-      if (const FileEntry *FE = FileMgr.getFile(*I))
-        TopHeaders.insert(FE);
+      if (auto FE = FileMgr.getFile(*I))
+        TopHeaders.insert(*FE);
     }
     TopHeaderNames.clear();
   }
@@ -326,6 +325,21 @@ Module *Module::findSubmodule(StringRef Name) const {
     return nullptr;
 
   return SubModules[Pos->getValue()];
+}
+
+Module *Module::findOrInferSubmodule(StringRef Name) {
+  llvm::StringMap<unsigned>::const_iterator Pos = SubModuleIndex.find(Name);
+  if (Pos != SubModuleIndex.end())
+    return SubModules[Pos->getValue()];
+  if (!InferSubmodules)
+    return nullptr;
+  Module *Result = new Module(Name, SourceLocation(), this, false, InferExplicitSubmodules, 0);
+  Result->InferExplicitSubmodules = InferExplicitSubmodules;
+  Result->InferSubmodules = InferSubmodules;
+  Result->InferExportWildcard = InferExportWildcard;
+  if (Result->InferExportWildcard)
+    Result->Exports.push_back(Module::ExportDecl(nullptr, true));
+  return Result;
 }
 
 void Module::getExportedModules(SmallVectorImpl<Module *> &Exported) const {

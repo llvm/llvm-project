@@ -1,5 +1,6 @@
 // RUN: %clang -target le32-unknown-nacl -### %s -emit-llvm-only -c 2>&1 | FileCheck %s -check-prefix=ECHO
 // RUN: %clang -target le32-unknown-nacl %s -emit-llvm -S -c -o - | FileCheck %s
+// RUN: %clang -target le32-unknown-nacl -fexperimental-new-pass-manager %s -emit-llvm -S -c -o - | FileCheck %s
 // RUN: %clang -target le32-unknown-nacl %s -emit-llvm -S -c -pthread -o - | FileCheck %s -check-prefix=THREADS
 
 // ECHO: {{.*}} "-cc1" {{.*}}le32-unknown-nacl.c

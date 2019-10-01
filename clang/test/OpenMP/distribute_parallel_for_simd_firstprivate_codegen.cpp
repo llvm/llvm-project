@@ -108,6 +108,8 @@ int main() {
 
       // g1
       // LAMBDA-DAG: [[TMP_REF:%.+]] = load {{.+}}*, {{.+}}** [[G1_REF]],
+      // LAMBDA-DAG: store {{.+}} [[TMP_REF]], {{.+}}* [[TMP:%.+]],
+      // LAMBDA-DAG: [[TMP_REF:%.+]] = load {{.+}}*, {{.+}}** [[TMP]],
       // LAMBDA-DAG: [[TMP_VAL:%.+]] = load {{.+}}, {{.+}}* [[TMP_REF]],
       // LAMBDA-DAG: store {{.+}} [[TMP_VAL]], {{.+}}* [[G1_PRIV]]
       // LAMBDA-DAG: store {{.+}}* [[G1_PRIV]], {{.+}}** [[TMP_PRIV]],
@@ -341,6 +343,8 @@ int main() {
 
 // var
 // CHECK-DAG: [[TMP_REF:%.+]] = load {{.+}}*, {{.+}}* [[TMP]],
+// CHECK-DAG: store {{.+}} [[TMP_REF]], {{.+}}* [[TMP1:%.+]],
+// CHECK-DAG: [[TMP_REF:%.+]] = load {{.+}}*, {{.+}}** [[TMP1]],
 // CHECK-DAG: [[VAR_PRIV_BCAST:%.+]] = bitcast {{.+}}* [[VAR_PRIV]] to
 // CHECK-DAG: [[TMP_REF_BCAST:%.+]] = bitcast {{.+}}* [[TMP_REF]] to
 // CHECK-DAG: call void @llvm.memcpy.{{.+}}({{.+}}* align {{[0-9]+}} [[VAR_PRIV_BCAST]], {{.+}}* align {{[0-9]+}} [[TMP_REF_BCAST]],
@@ -434,6 +438,8 @@ int main() {
 
 // var
 // CHECK-DAG: [[VAR_ADDR_REF:%.+]] = load {{.+}}*, {{.+}}* [[VAR_ADDR]],
+// CHECK-DAG: store {{.+}} [[VAR_ADDR_REF]], {{.+}}* [[TMP1:%.+]],
+// CHECK-DAG: [[VAR_ADDR_REF:%.+]] = load {{.+}}*, {{.+}}** [[TMP1]],
 // CHECK-DAG: [[VAR_PRIV_BCAST:%.+]] = bitcast {{.+}}* [[VAR_PRIV]] to
 // CHECK-DAG: [[VAR_ADDR_BCAST:%.+]] = bitcast {{.+}}* [[VAR_ADDR_REF]] to
 // CHECK-DAG: call void @llvm.memcpy.{{.+}}({{.+}}* align {{[0-9]+}} [[VAR_PRIV_BCAST]], {{.+}}* align {{[0-9]+}} [[VAR_ADDR_BCAST]],
@@ -523,6 +529,8 @@ int main() {
 
 // var
 // CHECK-DAG: [[TMP_REF:%.+]] = load {{.+}}*, {{.+}}* [[TMP]],
+// CHECK-DAG: store {{.+}} [[TMP_REF]], {{.+}}* [[TMP1:%.+]],
+// CHECK-DAG: [[TMP_REF:%.+]] = load {{.+}}*, {{.+}}** [[TMP1]],
 // CHECK-DAG: [[VAR_PRIV_BCAST:%.+]] = bitcast {{.+}}* [[VAR_PRIV]] to
 // CHECK-DAG: [[TMP_REF_BCAST:%.+]] = bitcast {{.+}}* [[TMP_REF]] to
 // CHECK-DAG: call void @llvm.memcpy.{{.+}}({{.+}}* align {{[0-9]+}} [[VAR_PRIV_BCAST]], {{.+}}* align {{[0-9]+}} [[TMP_REF_BCAST]],
@@ -604,6 +612,8 @@ int main() {
 
 // var
 // CHECK-DAG: [[VAR_ADDR_REF:%.+]] = load {{.+}}*, {{.+}}* [[VAR_ADDR]],
+// CHECK-DAG: store {{.+}} [[VAR_ADDR_REF]], {{.+}}* [[TMP1:%.+]],
+// CHECK-DAG: [[VAR_ADDR_REF:%.+]] = load {{.+}}*, {{.+}}** [[TMP1]],
 // CHECK-DAG: [[VAR_PRIV_BCAST:%.+]] = bitcast {{.+}}* [[VAR_PRIV]] to
 // CHECK-DAG: [[VAR_ADDR_BCAST:%.+]] = bitcast {{.+}}* [[VAR_ADDR_REF]] to
 // CHECK-DAG: call void @llvm.memcpy.{{.+}}({{.+}}* align {{[0-9]+}} [[VAR_PRIV_BCAST]], {{.+}}* align {{[0-9]+}} [[VAR_ADDR_BCAST]],

@@ -99,37 +99,41 @@ __m256i test_mm256_maskz_permutex2var_epi8(__mmask32 __U, __m256i __A, __m256i _
 
 __m128i test_mm_mask_multishift_epi64_epi8(__m128i __W, __mmask16 __M, __m128i __X, __m128i __Y) {
   // CHECK-LABEL: @test_mm_mask_multishift_epi64_epi8
-  // CHECK: @llvm.x86.avx512.mask.pmultishift.qb.128
+  // CHECK: @llvm.x86.avx512.pmultishift.qb.128
+  // CHECK: select <16 x i1> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}}
   return _mm_mask_multishift_epi64_epi8(__W, __M, __X, __Y); 
 }
 
 __m128i test_mm_maskz_multishift_epi64_epi8(__mmask16 __M, __m128i __X, __m128i __Y) {
   // CHECK-LABEL: @test_mm_maskz_multishift_epi64_epi8
-  // CHECK: @llvm.x86.avx512.mask.pmultishift.qb.128
+  // CHECK: @llvm.x86.avx512.pmultishift.qb.128
+  // CHECK: select <16 x i1> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}}
   return _mm_maskz_multishift_epi64_epi8(__M, __X, __Y); 
 }
 
 __m128i test_mm_multishift_epi64_epi8(__m128i __X, __m128i __Y) {
   // CHECK-LABEL: @test_mm_multishift_epi64_epi8
-  // CHECK: @llvm.x86.avx512.mask.pmultishift.qb.128
+  // CHECK: @llvm.x86.avx512.pmultishift.qb.128
   return _mm_multishift_epi64_epi8(__X, __Y); 
 }
 
 __m256i test_mm256_mask_multishift_epi64_epi8(__m256i __W, __mmask32 __M, __m256i __X, __m256i __Y) {
   // CHECK-LABEL: @test_mm256_mask_multishift_epi64_epi8
-  // CHECK: @llvm.x86.avx512.mask.pmultishift.qb.256
+  // CHECK: @llvm.x86.avx512.pmultishift.qb.256
+  // CHECK: select <32 x i1> %{{.*}}, <32 x i8> %{{.*}}, <32 x i8> %{{.*}}
   return _mm256_mask_multishift_epi64_epi8(__W, __M, __X, __Y); 
 }
 
 __m256i test_mm256_maskz_multishift_epi64_epi8(__mmask32 __M, __m256i __X, __m256i __Y) {
   // CHECK-LABEL: @test_mm256_maskz_multishift_epi64_epi8
-  // CHECK: @llvm.x86.avx512.mask.pmultishift.qb.256
+  // CHECK: @llvm.x86.avx512.pmultishift.qb.256
+  // CHECK: select <32 x i1> %{{.*}}, <32 x i8> %{{.*}}, <32 x i8> %{{.*}}
   return _mm256_maskz_multishift_epi64_epi8(__M, __X, __Y); 
 }
 
 __m256i test_mm256_multishift_epi64_epi8(__m256i __X, __m256i __Y) {
   // CHECK-LABEL: @test_mm256_multishift_epi64_epi8
-  // CHECK: @llvm.x86.avx512.mask.pmultishift.qb.256
+  // CHECK: @llvm.x86.avx512.pmultishift.qb.256
   return _mm256_multishift_epi64_epi8(__X, __Y); 
 }
 

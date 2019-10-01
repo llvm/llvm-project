@@ -1,9 +1,8 @@
 //===--- InclusionRewriter.cpp - Rewrite includes into their expansions ---===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -71,7 +70,7 @@ private:
   void FileChanged(SourceLocation Loc, FileChangeReason Reason,
                    SrcMgr::CharacteristicKind FileType,
                    FileID PrevFID) override;
-  void FileSkipped(const FileEntry &SkippedFile, const Token &FilenameTok,
+  void FileSkipped(const FileEntryRef &SkippedFile, const Token &FilenameTok,
                    SrcMgr::CharacteristicKind FileType) override;
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                           StringRef FileName, bool IsAngled,
@@ -170,8 +169,8 @@ void InclusionRewriter::FileChanged(SourceLocation Loc,
 
 /// Called whenever an inclusion is skipped due to canonical header protection
 /// macros.
-void InclusionRewriter::FileSkipped(const FileEntry &/*SkippedFile*/,
-                                    const Token &/*FilenameTok*/,
+void InclusionRewriter::FileSkipped(const FileEntryRef & /*SkippedFile*/,
+                                    const Token & /*FilenameTok*/,
                                     SrcMgr::CharacteristicKind /*FileType*/) {
   assert(LastInclusionLocation.isValid() &&
          "A file, that wasn't found via an inclusion directive, was skipped");
@@ -413,11 +412,11 @@ bool InclusionRewriter::HandleHasInclude(
       Includers;
   Includers.push_back(std::make_pair(FileEnt, FileEnt->getDir()));
   // FIXME: Why don't we call PP.LookupFile here?
-  const FileEntry *File = PP.getHeaderSearchInfo().LookupFile(
+  Optional<FileEntryRef> File = PP.getHeaderSearchInfo().LookupFile(
       Filename, SourceLocation(), isAngled, Lookup, CurDir, Includers, nullptr,
       nullptr, nullptr, nullptr, nullptr, nullptr);
 
-  FileExists = File != nullptr;
+  FileExists = File.hasValue();
   return true;
 }
 

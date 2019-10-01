@@ -92,7 +92,7 @@ The compiler relies on co-operation from the linker in order to assemble
 the bit vectors for the whole program. It currently does this using LLVM's
 `type metadata`_ mechanism together with link-time optimization.
 
-.. _address point: http://itanium-cxx-abi.github.io/cxx-abi/abi.html#vtable-general
+.. _address point: https://itanium-cxx-abi.github.io/cxx-abi/abi.html#vtable-general
 .. _type metadata: https://llvm.org/docs/TypeMetadata.html
 .. _ByteArrayBuilder: https://llvm.org/docs/doxygen/html/structllvm_1_1ByteArrayBuilder.html
 
@@ -196,7 +196,7 @@ those sub-hierarchies need to be (see "Stripping Leading/Trailing Zeros in Bit
 Vectors" above). The `GlobalLayoutBuilder`_ class is responsible for laying
 out the globals efficiently to minimize the sizes of the underlying bitsets.
 
-.. _GlobalLayoutBuilder: https://llvm.org/viewvc/llvm-project/llvm/trunk/include/llvm/Transforms/IPO/LowerTypeTests.h?view=markup
+.. _GlobalLayoutBuilder: https://github.com/llvm/llvm-project/blob/master/llvm/include/llvm/Transforms/IPO/LowerTypeTests.h
 
 Alignment
 ~~~~~~~~~
@@ -300,7 +300,7 @@ The interleaving scheme, however, can only work with individual virtual tables s
 In comparison, the old scheme does not require the splitting but it is more efficient when the combined virtual tables have been split.
 The `GlobalSplit`_ pass is responsible for splitting combined virtual tables into individual ones. 
 
-.. _GlobalSplit: https://llvm.org/viewvc/llvm-project/llvm/trunk/lib/Transforms/IPO/GlobalSplit.cpp?view=markup
+.. _GlobalSplit: https://github.com/llvm/llvm-project/blob/master/llvm/lib/Transforms/IPO/GlobalSplit.cpp
 
 Order virtual tables by a pre-order traversal of the class hierarchy 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -746,7 +746,7 @@ RCFI does not protect `RET` instructions:
   * embedded into other instructions (e.g. `0f4fc3 cmovg %ebx,%eax`).
 
 .. _SafeStack: https://clang.llvm.org/docs/SafeStack.html
-.. _RFG: http://xlab.tencent.com/en/2016/11/02/return-flow-guard
+.. _RFG: https://xlab.tencent.com/en/2016/11/02/return-flow-guard
 .. _Intel CET: https://software.intel.com/en-us/blogs/2016/06/09/intel-release-new-technology-specifications-protect-rop-attacks
 
 Hardware support

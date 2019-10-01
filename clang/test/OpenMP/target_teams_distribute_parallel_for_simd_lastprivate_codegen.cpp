@@ -83,7 +83,7 @@ int main() {
       // LAMBDA: [[SVAR_ADDR:%.+]] = alloca {{.+}},
       // LAMBDA: [[SFVAR_ADDR:%.+]] = alloca {{.+}},
       // LAMBDA: [[G_ADDR:%.+]] = alloca {{.+}},
-      // LAMBDA-64: [[G1_REF:%.+]] = alloca double*,
+      // LAMBDA: [[G1_REF:%.+]] = alloca double*,
       // loop variables
       // LAMBDA: {{.+}} = alloca i{{[0-9]+}},
       // LAMBDA: {{.+}} = alloca i{{[0-9]+}},
@@ -99,8 +99,7 @@ int main() {
 
       // LAMBDA-64-DAG: [[G_TGT:%.+]] = bitcast {{.+}} [[G_ADDR]] to
       // LAMBDA-32-DAG: [[G_TGT:%.+]] = load {{.+}}, {{.+}} [[G_ADDR]],
-      // LAMBDA-64-DAG: [[G1_TGT:%.+]] = load {{.+}}, {{.+}} [[G1_REF]],
-      // LAMBDA-32-DAG: [[G1_TGT:%.+]] = load {{.+}}, {{.+}} [[G1_ADDR]],
+      // LAMBDA-DAG: [[G1_TGT:%.+]] = load {{.+}}, {{.+}} [[G1_REF]],
       // LAMBDA-64-DAG: [[SVAR_TGT:%.+]] = bitcast {{.+}} [[SVAR_ADDR]] to
       // LAMBDA-DAG: [[SFVAR_TGT:%.+]] = bitcast {{.+}} [[SFVAR_ADDR]] to
 
@@ -136,7 +135,7 @@ int main() {
       // LAMBDA: [[SVAR_ADDR:%.+]] = alloca {{.+}},
       // LAMBDA: [[SFVAR_ADDR:%.+]] = alloca {{.+}},
       // LAMBDA: [[G_ADDR:%.+]] = alloca {{.+}},
-      // LAMBDA-64: [[G1_REF:%.+]] = alloca double*,
+      // LAMBDA: [[G1_REF:%.+]] = alloca double*,
       // loop variables
       // LAMBDA: {{.+}} = alloca i{{[0-9]+}},
       // LAMBDA: {{.+}} = alloca i{{[0-9]+}},
@@ -152,8 +151,7 @@ int main() {
 
       // LAMBDA-64-DAG: [[G_TGT:%.+]] = bitcast {{.+}} [[G_ADDR]] to
       // LAMBDA-32-DAG: [[G_TGT:%.+]] = load {{.+}}, {{.+}} [[G_ADDR]],
-      // LAMBDA-64-DAG: [[G1_TGT:%.+]] = load {{.+}}, {{.+}} [[G1_REF]],
-      // LAMBDA-32-DAG: [[G1_TGT:%.+]] = load {{.+}}, {{.+}} [[G1_ADDR]],
+      // LAMBDA-DAG: [[G1_TGT:%.+]] = load {{.+}}, {{.+}} [[G1_REF]],
       // LAMBDA-64-DAG: [[SVAR_TGT:%.+]] = bitcast {{.+}} [[SVAR_ADDR]] to
       // LAMBDA-DAG: [[SFVAR_TGT:%.+]] = bitcast {{.+}} [[SFVAR_ADDR]] to
 
@@ -239,6 +237,7 @@ int main() {
 // CHECK: [[S_ARR_ADDR:%.+]] = alloca [2 x [[S_FLOAT_TY]]]*,
 // CHECK: [[VAR_ADDR:%.+]] = alloca [[S_FLOAT_TY]]*,
 // CHECK: [[SVAR_ADDR:%.+]] = alloca i{{[0-9]+}},
+// CHECK: [[TMP_VAR_ADDR:%.+]] = alloca [[S_FLOAT_TY]]*,
 // skip loop variables
 // CHECK: {{.+}} = alloca i{{[0-9]+}},
 // CHECK: {{.+}} = alloca i{{[0-9]+}},
@@ -258,7 +257,7 @@ int main() {
 // CHECK-64-DAG: [[TVAR_TGT:%.+]] = bitcast {{.+}} [[T_VAR_ADDR]] to
 // CHECK-DAG: [[VEC_TGT:%.+]] = load {{.+}}, {{.+}} [[VEC_ADDR]],
 // CHECK-DAG: [[S_ARR_TGT:%.+]] = load {{.+}}, {{.+}} [[S_ARR_ADDR]],
-// CHECK-DAG: [[VAR_TGT:%.+]] = load {{.+}}, {{.+}} [[VAR_ADDR]],
+// CHECK-DAG: [[VAR_TGT:%.+]] = load {{.+}}, {{.+}} [[TMP_VAR_ADDR]],
 // CHECK-64-DAG: [[SVAR_TGT:%.+]] = bitcast {{.+}} [[SVAR_ADDR]] to
 
 // the distribute loop
@@ -297,6 +296,7 @@ int main() {
 // CHECK: [[S_ARR_ADDR:%.+]] = alloca [2 x [[S_FLOAT_TY]]]*,
 // CHECK: [[VAR_ADDR:%.+]] = alloca [[S_FLOAT_TY]]*,
 // CHECK: [[SVAR_ADDR:%.+]] = alloca i{{[0-9]+}},
+// CHECK: [[TMP_VAR_ADDR:%.+]] = alloca [[S_FLOAT_TY]]*,
 // skip loop variables
 // CHECK: {{.+}} = alloca i{{[0-9]+}},
 // CHECK: {{.+}} = alloca i{{[0-9]+}},
@@ -316,7 +316,7 @@ int main() {
 // CHECK-64-DAG: [[TVAR_TGT:%.+]] = bitcast {{.+}} [[T_VAR_ADDR]] to
 // CHECK-DAG: [[VEC_TGT:%.+]] = load {{.+}}, {{.+}} [[VEC_ADDR]],
 // CHECK-DAG: [[S_ARR_TGT:%.+]] = load {{.+}}, {{.+}} [[S_ARR_ADDR]],
-// CHECK-DAG: [[VAR_TGT:%.+]] = load {{.+}}, {{.+}} [[VAR_ADDR]],
+// CHECK-DAG: [[VAR_TGT:%.+]] = load {{.+}}, {{.+}} [[TMP_VAR_ADDR]],
 // CHECK-64-DAG: [[SVAR_TGT:%.+]] = bitcast {{.+}} [[SVAR_ADDR]] to
 
 // the distribute loop
@@ -362,6 +362,7 @@ int main() {
 // CHECK: [[T_VAR_ADDR1:%.+]] = alloca i{{[0-9]+}},
 // CHECK: [[S_ARR_ADDR1:%.+]] = alloca [2 x [[S_INT_TY]]]*,
 // CHECK: [[VAR_ADDR1:%.+]] = alloca [[S_INT_TY]]*,
+// CHECK: [[TMP_VAR_ADDR1:%.+]] = alloca [[S_INT_TY]]*,
 // skip loop variables
 // CHECK: {{.+}} = alloca i{{[0-9]+}},
 // CHECK: {{.+}} = alloca i{{[0-9]+}},
@@ -380,7 +381,7 @@ int main() {
 // CHECK-64-DAG: [[T_VAR_TGT:%.+]] = bitcast {{.+}} [[T_VAR_ADDR1]] to
 // CHECK-DAG: [[VEC_TGT:%.+]] = load {{.+}}, {{.+}} [[VEC_ADDR1]],
 // CHECK-DAG: [[S_ARR_TGT:%.+]] = load {{.+}}, {{.+}} [[S_ARR_ADDR1]],
-// CHECK-DAG: [[VAR_TGT:%.+]] = load {{.+}}, {{.+}} [[VAR_ADDR1]],
+// CHECK-DAG: [[VAR_TGT:%.+]] = load {{.+}}, {{.+}} [[TMP_VAR_ADDR1]],
 
 // CHECK: call void @__kmpc_for_static_init_4(
 // CHECK: call void {{.*}} @__kmpc_fork_call({{.+}}, {{.+}}, {{.+}} @[[TPAR_OUTL:.+]] to
@@ -413,6 +414,7 @@ int main() {
 // CHECK: [[T_VAR_ADDR1:%.+]] = alloca i{{[0-9]+}},
 // CHECK: [[S_ARR_ADDR1:%.+]] = alloca [2 x [[S_INT_TY]]]*,
 // CHECK: [[VAR_ADDR1:%.+]] = alloca [[S_INT_TY]]*,
+// CHECK: [[TMP_VAR_ADDR1:%.+]] = alloca [[S_INT_TY]]*,
 // skip loop variables
 // CHECK: {{.+}} = alloca i{{[0-9]+}},
 // CHECK: {{.+}} = alloca i{{[0-9]+}},
@@ -431,7 +433,7 @@ int main() {
 // CHECK-64-DAG: [[T_VAR_TGT:%.+]] = bitcast {{.+}} [[T_VAR_ADDR1]] to
 // CHECK-DAG: [[VEC_TGT:%.+]] = load {{.+}}, {{.+}} [[VEC_ADDR1]],
 // CHECK-DAG: [[S_ARR_TGT:%.+]] = load {{.+}}, {{.+}} [[S_ARR_ADDR1]],
-// CHECK-DAG: [[VAR_TGT:%.+]] = load {{.+}}, {{.+}} [[VAR_ADDR1]],
+// CHECK-DAG: [[VAR_TGT:%.+]] = load {{.+}}, {{.+}} [[TMP_VAR_ADDR1]],
 
 // CHECK: call void @__kmpc_for_static_init_4(
 // skip body: code generation routine is same as distribute parallel for lastprivate

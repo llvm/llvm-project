@@ -1,5 +1,5 @@
 // RUN: %clang_analyze_cc1 -analyzer-output=plist -analyzer-config notes-as-events=true -o %t.plist -std=c++11 -analyzer-checker=alpha.clone.CloneChecker -analyzer-config alpha.clone.CloneChecker:MinimumCloneComplexity=10 -verify %s
-// RUN: cat %t.plist | %diff_plist %S/Inputs/expected-plists/plist-diagnostics-notes-as-events.cpp.plist -
+// RUN: %normalize_plist <%t.plist | diff -ub %S/Inputs/expected-plists/plist-diagnostics-notes-as-events.cpp.plist -
 
 void log();
 

@@ -24,6 +24,8 @@ int main(int argc, char **argv) {
 // CHECK: define weak void @__omp_offloading_{{.*}}_main_l16(i{{64|32}} %{{[^,].*}}, i32* dereferenceable{{[^,]*}}, i{{64|32}} %{{[^,)]*}})
 // CHECK: call void @__kmpc_spmd_kernel_init(
 // CHECK: [[TID:%.+]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @
+// CHECK: call void @__kmpc_spmd_kernel_deinit_v2(i16 0)
+
 // CHECK: call void @__kmpc_for_static_init_4(
 
 // CHECK: call void [[PARALLEL:@.+]](i32* %{{.*}}, i32* %{{.+}}, i{{64|32}} %{{.+}}, i{{64|32}} %{{.*}}, i{{64|32}} %{{.*}}, i32* %{{.*}})
@@ -31,8 +33,6 @@ int main(int argc, char **argv) {
 
 
 // CHECK: call void @__kmpc_for_static_fini(%struct.ident_t* @
-
-// CHECK: call void @__kmpc_spmd_kernel_deinit_v2(i16 0)
 
 // CHECK: define internal void [[PARALLEL]](i32* noalias %{{.+}}, i32* noalias %{{.+}}, i{{64|32}} %{{.+}}, i{{64|32}} %{{.+}}, i{{64|32}} [[ARGC:%.+]], i32* dereferenceable{{.*}})
 // CHECK-NOT: call i8* @__kmpc_data_sharing_push_stack(

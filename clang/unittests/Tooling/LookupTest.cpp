@@ -1,9 +1,8 @@
 //===- unittest/Tooling/LookupTest.cpp ------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -45,8 +44,8 @@ TEST(LookupTest, replaceNestedFunctionName) {
     const auto *Callee = cast<DeclRefExpr>(Expr->getCallee()->IgnoreImplicit());
     const ValueDecl *FD = Callee->getDecl();
     return tooling::replaceNestedName(
-        Callee->getQualifier(), Visitor.DeclStack.back()->getDeclContext(), FD,
-        ReplacementString);
+        Callee->getQualifier(), Callee->getLocation(),
+        Visitor.DeclStack.back()->getDeclContext(), FD, ReplacementString);
   };
 
   Visitor.OnCall = [&](CallExpr *Expr) {
@@ -130,20 +129,38 @@ TEST(LookupTest, replaceNestedFunctionName) {
 
   // If the shortest name is ambiguous, we need to add more qualifiers.
   Visitor.OnCall = [&](CallExpr *Expr) {
-    EXPECT_EQ("::a::y::bar", replaceCallExpr(Expr, "::a::y::bar"));
+    EXPECT_EQ("a::y::bar", replaceCallExpr(Expr, "::a::y::bar"));
   };
   Visitor.runOver(R"(
     namespace a {
-    namespace b {
-    namespace x { void foo() {} }
-    namespace y { void foo() {} }
-    }
+     namespace b {
+      namespace x { void foo() {} }
+      namespace y { void foo() {} }
+     }
     }
 
     namespace a {
-    namespace b {
-    void f() { x::foo(); }
+     namespace b {
+      void f() { x::foo(); }
+     }
+    })");
+
+  Visitor.OnCall = [&](CallExpr *Expr) {
+    // y::bar would be ambiguous due to "a::b::y".
+    EXPECT_EQ("::y::bar", replaceCallExpr(Expr, "::y::bar"));
+  };
+  Visitor.runOver(R"(
+    namespace a {
+     namespace b {
+      void foo() {}
+      namespace y { }
+     }
     }
+
+    namespace a {
+     namespace b {
+      void f() { foo(); }
+     }
     })");
 
   Visitor.OnCall = [&](CallExpr *Expr) {
@@ -164,12 +181,12 @@ TEST(LookupTest, replaceNestedFunctionName) {
 TEST(LookupTest, replaceNestedClassName) {
   GetDeclsVisitor Visitor;
 
-  auto replaceRecordTypeLoc = [&](RecordTypeLoc Loc,
+  auto replaceRecordTypeLoc = [&](RecordTypeLoc TLoc,
                                   StringRef ReplacementString) {
-    const auto *FD = cast<CXXRecordDecl>(Loc.getDecl());
+    const auto *FD = cast<CXXRecordDecl>(TLoc.getDecl());
     return tooling::replaceNestedName(
-        nullptr, Visitor.DeclStack.back()->getDeclContext(), FD,
-        ReplacementString);
+        nullptr, TLoc.getBeginLoc(), Visitor.DeclStack.back()->getDeclContext(),
+        FD, ReplacementString);
   };
 
   Visitor.OnRecordTypeLoc = [&](RecordTypeLoc Type) {
@@ -194,6 +211,41 @@ TEST(LookupTest, replaceNestedClassName) {
   };
   Visitor.runOver("namespace a { namespace b { class Foo {}; } }\n"
                   "namespace c { using a::b::Foo; Foo f();; }\n");
+
+  // Rename TypeLoc `x::y::Old` to new name `x::Foo` at [0] and check that the
+  // type is replaced with "Foo" instead of "x::Foo". Although there is a symbol
+  // `x::y::Foo` in c.cc [1], it should not make "Foo" at [0] ambiguous because
+  // it's not visible at [0].
+  Visitor.OnRecordTypeLoc = [&](RecordTypeLoc Type) {
+    if (Type.getDecl()->getQualifiedNameAsString() == "x::y::Old") {
+      EXPECT_EQ("Foo", replaceRecordTypeLoc(Type, "::x::Foo"));
+    }
+  };
+  Visitor.runOver(R"(
+    // a.h
+    namespace x {
+     namespace y {
+      class Old {};
+      class Other {};
+     }
+    }
+
+    // b.h
+    namespace x {
+     namespace y {
+      // This is to be renamed to x::Foo
+      // The expected replacement is "Foo".
+      Old f;  // [0].
+     }
+    }
+
+    // c.cc
+    namespace x {
+    namespace y {
+     using Foo = ::x::y::Other; // [1]
+    }
+    }
+    )");
 }
 
 } // end anonymous namespace

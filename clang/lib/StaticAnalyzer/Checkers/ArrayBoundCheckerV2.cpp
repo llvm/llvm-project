@@ -1,9 +1,8 @@
 //== ArrayBoundCheckerV2.cpp ------------------------------------*- C++ -*--==//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -12,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Taint.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
@@ -25,6 +25,7 @@
 
 using namespace clang;
 using namespace ento;
+using namespace taint;
 
 namespace {
 class ArrayBoundCheckerV2 :
@@ -205,7 +206,7 @@ void ArrayBoundCheckerV2::checkLocation(SVal location, bool isLoad,
     // If we are under constrained and the index variables are tainted, report.
     if (state_exceedsUpperBound && state_withinUpperBound) {
       SVal ByteOffset = rawOffset.getByteOffset();
-      if (state->isTainted(ByteOffset)) {
+      if (isTainted(state, ByteOffset)) {
         reportOOB(checkerContext, state_exceedsUpperBound, OOB_Tainted,
                   llvm::make_unique<TaintBugVisitor>(ByteOffset));
         return;

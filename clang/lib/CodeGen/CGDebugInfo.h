@@ -1,9 +1,8 @@
 //===--- CGDebugInfo.h - DebugInfo for LLVM CodeGen -------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -42,6 +41,7 @@ class ObjCInterfaceDecl;
 class ObjCIvarDecl;
 class UsingDecl;
 class VarDecl;
+enum class DynamicInitKind : unsigned;
 
 namespace CodeGen {
 class CodeGenModule;
@@ -426,6 +426,9 @@ public:
                                                    llvm::Value *AI,
                                                    CGBuilderTy &Builder);
 
+  /// Emit call to \c llvm.dbg.label for an label.
+  void EmitLabel(const LabelDecl *D, CGBuilderTy &Builder);
+
   /// Emit call to \c llvm.dbg.declare for an imported variable
   /// declaration in a block.
   void EmitDeclareOfBlockDeclRefVariable(
@@ -473,6 +476,10 @@ public:
 
   /// Emit standalone debug info for a type.
   llvm::DIType *getOrCreateStandaloneType(QualType Ty, SourceLocation Loc);
+
+  /// Add heapallocsite metadata for MSAllocator calls.
+  void addHeapAllocSiteMetadata(llvm::Instruction *CallSite, QualType Ty,
+                                SourceLocation Loc);
 
   void completeType(const EnumDecl *ED);
   void completeType(const RecordDecl *RD);
@@ -641,6 +648,12 @@ private:
 
   /// Get the vtable name for the given class.
   StringRef getVTableName(const CXXRecordDecl *Decl);
+
+  /// Get the name to use in the debug info for a dynamic initializer or atexit
+  /// stub function.
+  StringRef getDynamicInitializerName(const VarDecl *VD,
+                                      DynamicInitKind StubKind,
+                                      llvm::Function *InitFn);
 
   /// Get line number for the location. If location is invalid
   /// then use current location.

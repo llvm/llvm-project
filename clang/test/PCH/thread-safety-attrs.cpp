@@ -213,7 +213,7 @@ void sls_fun_bad_1() {
 }
 
 void sls_fun_bad_2() {
-  sls_mu.Lock();
+  sls_mu.Lock(); // expected-note{{mutex acquired here}}
   sls_mu.Lock(); // \
     // expected-warning{{acquiring mutex 'sls_mu' that is already held}}
   sls_mu.Unlock();

@@ -1,9 +1,8 @@
 //===--- ParseCXXInlineMethods.cpp - C++ class inline methods parsing------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -111,7 +110,7 @@ NamedDecl *Parser::ParseCXXInlineMethodDef(
   // the tokens and store them for parsing at the end of the translation unit.
   if (getLangOpts().DelayedTemplateParsing &&
       D.getFunctionDefinitionKind() == FDK_Definition &&
-      !D.getDeclSpec().isConstexprSpecified() &&
+      !D.getDeclSpec().hasConstexprSpecifier() &&
       !(FnD && FnD->getAsFunction() &&
         FnD->getAsFunction()->getReturnType()->getContainedAutoType()) &&
       ((Actions.CurContext->isDependentContext() ||
@@ -325,7 +324,7 @@ void Parser::ParseLexedMethodDeclaration(LateParsedMethodDeclaration &LM) {
 
       // Parse the default argument from its saved token stream.
       Toks->push_back(Tok); // So that the current token doesn't get lost
-      PP.EnterTokenStream(*Toks, true);
+      PP.EnterTokenStream(*Toks, true, /*IsReinject*/ true);
 
       // Consume the previously-pushed token.
       ConsumeAnyToken();
@@ -398,7 +397,7 @@ void Parser::ParseLexedMethodDeclaration(LateParsedMethodDeclaration &LM) {
 
     // Parse the default argument from its saved token stream.
     Toks->push_back(Tok); // So that the current token doesn't get lost
-    PP.EnterTokenStream(*Toks, true);
+    PP.EnterTokenStream(*Toks, true, /*IsReinject*/true);
 
     // Consume the previously-pushed token.
     ConsumeAnyToken();
@@ -417,7 +416,7 @@ void Parser::ParseLexedMethodDeclaration(LateParsedMethodDeclaration &LM) {
       Method = cast<CXXMethodDecl>(LM.Method);
 
     Sema::CXXThisScopeRAII ThisScope(Actions, Method->getParent(),
-                                     Method->getTypeQualifiers(),
+                                     Method->getMethodQualifiers(),
                                      getLangOpts().CPlusPlus11);
 
     // Parse the exception-specification.
@@ -505,7 +504,7 @@ void Parser::ParseLexedMethodDef(LexedMethod &LM) {
   // Append the current token at the end of the new token stream so that it
   // doesn't get lost.
   LM.Toks.push_back(Tok);
-  PP.EnterTokenStream(LM.Toks, true);
+  PP.EnterTokenStream(LM.Toks, true, /*IsReinject*/true);
 
   // Consume the previously pushed token.
   ConsumeAnyToken(/*ConsumeCodeCompletionTok=*/true);
@@ -619,7 +618,7 @@ void Parser::ParseLexedMemberInitializer(LateParsedMemberInitializer &MI) {
   // Append the current token at the end of the new token stream so that it
   // doesn't get lost.
   MI.Toks.push_back(Tok);
-  PP.EnterTokenStream(MI.Toks, true);
+  PP.EnterTokenStream(MI.Toks, true, /*IsReinject*/true);
 
   // Consume the previously pushed token.
   ConsumeAnyToken(/*ConsumeCodeCompletionTok=*/true);
@@ -991,7 +990,8 @@ public:
       auto Buffer = llvm::make_unique<Token[]>(Toks.size());
       std::copy(Toks.begin() + 1, Toks.end(), Buffer.get());
       Buffer[Toks.size() - 1] = Self.Tok;
-      Self.PP.EnterTokenStream(std::move(Buffer), Toks.size(), true);
+      Self.PP.EnterTokenStream(std::move(Buffer), Toks.size(), true,
+                               /*IsReinject*/ true);
 
       Self.Tok = Toks.front();
     }

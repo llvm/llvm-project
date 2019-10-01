@@ -189,3 +189,17 @@ void bad_comparison(std::vector<int> &v1, std::vector<int> &v2) {
     *v1.cbegin();
   }
 }
+
+std::vector<int> &return_vector_ref();
+
+void ignore_conjured1() {
+  std::vector<int> &v1 = return_vector_ref(), &v2 = return_vector_ref();
+
+  v2.erase(v1.cbegin()); // no-warning
+}
+
+void ignore_conjured2() {
+  std::vector<int> &v1 = return_vector_ref(), &v2 = return_vector_ref();
+
+  if (v1.cbegin() == v2.cbegin()) {} //no-warning
+}

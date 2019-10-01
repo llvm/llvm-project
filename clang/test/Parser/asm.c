@@ -1,5 +1,9 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
+#if !__has_extension(gnu_asm)
+#error Extension 'gnu_asm' should be available by default
+#endif
+
 void f1() {
   // PR7673: Some versions of GCC support an empty clobbers section.
   asm ("ret" : : :);

@@ -57,6 +57,11 @@ struct I : virtual H {};
 struct J : I {};
 J j;
 
+struct K {
+  virtual void func() {
+  }
+};
+
 struct A {
   int one;
   static const int HdrSize = 52;
@@ -72,6 +77,8 @@ void f1() {
   E y;
   int i = F::i;
   F::inner z;
+  K k;
+  k.func();
 }
 
 int main(int argc, char **argv) {
@@ -83,12 +90,12 @@ int main(int argc, char **argv) {
   return 0;
 }
 
-// RUN: %clang_cc1 -triple x86_64-unknown_unknown -emit-llvm -debug-info-kind=limited -fexceptions -std=c++98 %s -o - | FileCheck -check-prefix=CHECK98 %s
-// RUN: %clang_cc1 -triple i686-cygwin -emit-llvm -debug-info-kind=limited -fexceptions -std=c++98 %s -o - | FileCheck -check-prefix=CHECK98 %s
-// RUN: %clang_cc1 -triple armv7l-unknown-linux-gnueabihf -emit-llvm -debug-info-kind=limited -fexceptions -std=c++98 %s -o - | FileCheck -check-prefix=CHECK98 %s
-// RUN: %clang_cc1 -triple x86_64-unknown_unknown -emit-llvm -debug-info-kind=limited -fexceptions -std=c++11 %s -o - | FileCheck -check-prefix=CHECK11 %s
-// RUN: %clang_cc1 -triple i686-cygwin -emit-llvm -debug-info-kind=limited -fexceptions -std=c++11 %s -o - | FileCheck -check-prefix=CHECK11 %s
-// RUN: %clang_cc1 -triple armv7l-unknown-linux-gnueabihf -emit-llvm -debug-info-kind=limited -fexceptions -std=c++11 %s -o - | FileCheck -check-prefix=CHECK11 %s
+// RUN: %clang_cc1 -triple x86_64-unknown_unknown -emit-llvm -debug-info-kind=limited -fexceptions -std=c++98 %s -o - | FileCheck -check-prefix=CHECK98 -check-prefix=CHECK %s
+// RUN: %clang_cc1 -triple i686-cygwin -emit-llvm -debug-info-kind=limited -fexceptions -std=c++98 %s -o - | FileCheck -check-prefix=CHECK98 -check-prefix=CHECK %s
+// RUN: %clang_cc1 -triple armv7l-unknown-linux-gnueabihf -emit-llvm -debug-info-kind=limited -fexceptions -std=c++98 %s -o - | FileCheck -check-prefix=CHECK98 -check-prefix=CHECK %s
+// RUN: %clang_cc1 -triple x86_64-unknown_unknown -emit-llvm -debug-info-kind=limited -fexceptions -std=c++11 %s -o - | FileCheck -check-prefix=CHECK11 -check-prefix=CHECK %s
+// RUN: %clang_cc1 -triple i686-cygwin -emit-llvm -debug-info-kind=limited -fexceptions -std=c++11 %s -o - | FileCheck -check-prefix=CHECK11 -check-prefix=CHECK %s
+// RUN: %clang_cc1 -triple armv7l-unknown-linux-gnueabihf -emit-llvm -debug-info-kind=limited -fexceptions -std=c++11 %s -o - | FileCheck -check-prefix=CHECK11 -check-prefix=CHECK %s
 
 // CHECK98: invoke {{.+}} @_ZN1BD1Ev(%class.B* %b)
 // CHECK98-NEXT: unwind label %{{.+}}, !dbg ![[EXCEPTLOC:.*]]
@@ -98,7 +105,8 @@ int main(int argc, char **argv) {
 
 // CHECK: [[F:![0-9]*]] = !DICompositeType(tag: DW_TAG_structure_type, name: "F"
 // CHECK-SAME:                             DIFlagFwdDecl
-// CHECK-SAME:                             identifier: "_ZTS1F"
+// CHECK-NOT:                             identifier:
+// CHECK-SAME:                            ){{$}}
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "I"
 // CHECK-NOT:              DIFlagFwdDecl
 // CHECK-SAME:             ){{$}}
@@ -117,7 +125,8 @@ int main(int argc, char **argv) {
 // CHECK-NOT:                              DIFlagFwdDecl
 // CHECK-SAME:                             elements: [[C_MEM:![0-9]*]]
 // CHECK-SAME:                             vtableHolder: [[C]]
-// CHECK-SAME:                             identifier: "_ZTS1C"
+// CHECK-NOT:                              identifier:
+// CHECK-SAME:                             ){{$}}
 // CHECK: [[C_MEM]] = !{[[C_VPTR:![0-9]*]], [[C_S:![0-9]*]], [[C_DTOR:![0-9]*]]}
 // CHECK: [[C_VPTR]] = !DIDerivedType(tag: DW_TAG_member, name: "_vptr$C"
 // CHECK-SAME:                        DIFlagArtificial
@@ -129,16 +138,21 @@ int main(int argc, char **argv) {
 // CHECK: [[D:![0-9]+]] = !DICompositeType(tag: DW_TAG_structure_type, name: "D"
 // CHECK-NOT:              size:
 // CHECK-SAME:             DIFlagFwdDecl
-// CHECK-SAME:             identifier: "_ZTS1D"
+// CHECK-NOT:              identifier:
+// CHECK-SAME:             ){{$}}
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "E"
 // CHECK-SAME:             DIFlagFwdDecl
-// CHECK-SAME:             identifier: "_ZTS1E"
+// CHECK-NOT:              identifier:
+// CHECK-SAME:             ){{$}}
+
+// CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "K"
+// CHECK-SAME:             identifier: "_ZTS1K"
+// CHECK-SAME:             ){{$}}
 
 // CHECK: !DISubprogram(name: "func",{{.*}} scope: [[D]]
-// CHECK-SAME:          isDefinition: true
+// CHECK-SAME:          DISPFlagDefinition
 // CHECK-SAME:          declaration: [[D_FUNC_DECL:![0-9]*]]
 // CHECK: [[D_FUNC_DECL]] = !DISubprogram(name: "func",{{.*}} scope: [[D]]
-// CHECK-SAME:                            isDefinition: false
 
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "inner",{{.*}} line: 50
 // CHECK-NOT: DIFlagFwdDecl
@@ -147,7 +161,8 @@ int main(int argc, char **argv) {
 
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "G"
 // CHECK-SAME:             DIFlagFwdDecl
-// CHECK-SAME:             identifier: "_ZTS1G"
+// CHECK-NOT:              identifier:
+// CHECK-SAME:             ){{$}}
 // CHECK: [[G_INNER_MEM]] = !{[[G_INNER_I:![0-9]*]]}
 // CHECK: [[G_INNER_I]] = !DIDerivedType(tag: DW_TAG_member, name: "j"
 // CHECK-SAME:                           baseType: ![[INT]]
@@ -155,5 +170,5 @@ int main(int argc, char **argv) {
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "A"
 // CHECK: !DIDerivedType(tag: DW_TAG_member, name: "HdrSize"
 //
-// CHECK: ![[EXCEPTLOC]] = !DILocation(line: 84,
-// CHECK: ![[RETLOC]] = !DILocation(line: 83,
+// CHECK: ![[EXCEPTLOC]] = !DILocation(line: 91,
+// CHECK: ![[RETLOC]] = !DILocation(line: 90,

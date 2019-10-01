@@ -1,9 +1,9 @@
 /*===-- clang-c/Index.h - Indexing Public C Interface -------------*- C -*-===*\
 |*                                                                            *|
-|*                     The LLVM Compiler Infrastructure                       *|
-|*                                                                            *|
-|* This file is distributed under the University of Illinois Open Source      *|
-|* License. See LICENSE.TXT for details.                                      *|
+|* Part of the LLVM Project, under the Apache License v2.0 with LLVM          *|
+|* Exceptions.                                                                *|
+|* See https://llvm.org/LICENSE.txt for license information.                  *|
+|* SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception                    *|
 |*                                                                            *|
 |*===----------------------------------------------------------------------===*|
 |*                                                                            *|
@@ -32,7 +32,7 @@
  * compatible, thus CINDEX_VERSION_MAJOR is expected to remain stable.
  */
 #define CINDEX_VERSION_MAJOR 0
-#define CINDEX_VERSION_MINOR 50
+#define CINDEX_VERSION_MINOR 59
 
 #define CINDEX_VERSION_ENCODE(major, minor) ( \
       ((major) * 10000)                       \
@@ -221,7 +221,12 @@ enum CXCursor_ExceptionSpecificationKind {
   /**
    * The exception specification has not been parsed yet.
    */
-  CXCursor_ExceptionSpecificationKind_Unparsed
+  CXCursor_ExceptionSpecificationKind_Unparsed,
+
+  /**
+   * The cursor has a __declspec(nothrow) exception specification.
+   */
+  CXCursor_ExceptionSpecificationKind_NoThrow
 };
 
 /**
@@ -1341,7 +1346,17 @@ enum CXTranslationUnit_Flags {
   /**
    * Used to indicate that implicit attributes should be visited.
    */
-  CXTranslationUnit_VisitImplicitAttributes = 0x2000
+  CXTranslationUnit_VisitImplicitAttributes = 0x2000,
+
+  /**
+   * Used to indicate that non-errors from included files should be ignored.
+   *
+   * If set, clang_getDiagnosticSetFromTU() will not report e.g. warnings from
+   * included files anymore. This speeds up clang_getDiagnosticSetFromTU() for
+   * the case where these warnings are not of interest, as for an IDE for
+   * example, which typically shows only the diagnostics in the main file.
+   */
+  CXTranslationUnit_IgnoreNonErrorsFromIncludedFiles = 0x4000
 };
 
 /**
@@ -2586,7 +2601,11 @@ enum CXCursorKind {
   CXCursor_ObjCRuntimeVisible            = 435,
   CXCursor_ObjCBoxable                   = 436,
   CXCursor_FlagEnum                      = 437,
-  CXCursor_LastAttr                      = CXCursor_FlagEnum,
+  CXCursor_ConvergentAttr                = 438,
+  CXCursor_WarnUnusedAttr                = 439,
+  CXCursor_WarnUnusedResultAttr          = 440,
+  CXCursor_AlignedAttr                   = 441,
+  CXCursor_LastAttr                      = CXCursor_AlignedAttr,
 
   /* Preprocessing */
   CXCursor_PreprocessingDirective        = 500,
@@ -3311,7 +3330,9 @@ enum CXTypeKind {
   CXType_OCLIntelSubgroupAVCImeResultDualRefStreamout = 173,
   CXType_OCLIntelSubgroupAVCImeSingleRefStreamin = 174,
 
-  CXType_OCLIntelSubgroupAVCImeDualRefStreamin = 175
+  CXType_OCLIntelSubgroupAVCImeDualRefStreamin = 175,
+
+  CXType_ExtVector = 176
 };
 
 /**
@@ -3838,7 +3859,11 @@ enum CXTypeLayoutError {
   /**
    * The Field name is not valid for this record.
    */
-  CXTypeLayoutError_InvalidFieldName = -5
+  CXTypeLayoutError_InvalidFieldName = -5,
+  /**
+   * The type is undeduced.
+   */
+  CXTypeLayoutError_Undeduced = -6
 };
 
 /**
@@ -3911,10 +3936,22 @@ CINDEX_LINKAGE CXType clang_Type_getModifiedType(CXType T);
 CINDEX_LINKAGE long long clang_Cursor_getOffsetOfField(CXCursor C);
 
 /**
+ * Determine whether the given cursor represents an anonymous
+ * tag or namespace
+ */
+CINDEX_LINKAGE unsigned clang_Cursor_isAnonymous(CXCursor C);
+
+/**
  * Determine whether the given cursor represents an anonymous record
  * declaration.
  */
-CINDEX_LINKAGE unsigned clang_Cursor_isAnonymous(CXCursor C);
+CINDEX_LINKAGE unsigned clang_Cursor_isAnonymousRecordDecl(CXCursor C);
+
+/**
+ * Determine whether the given cursor represents an inline namespace
+ * declaration.
+ */
+CINDEX_LINKAGE unsigned clang_Cursor_isInlineNamespace(CXCursor C);
 
 enum CXRefQualifierKind {
   /** No ref-qualifier was provided. */

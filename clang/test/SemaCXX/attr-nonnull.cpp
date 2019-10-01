@@ -52,3 +52,35 @@ void test(const X& x) {
   (void)(x != 0);  // expected-warning{{null passed}}
 }
 }
+
+namespace test5 {
+
+constexpr int c = 0;
+
+__attribute__((nonnull))
+constexpr int f1(const int*, const int*) {
+  return 0;
+}
+constexpr int i1 = f1(&c, &c);
+constexpr int i12 = f1(&c, 0); //expected-error {{constant expression}} expected-note {{null passed}}
+
+constexpr int f2(const int*, const int*) {
+  return 0;
+}
+constexpr int i2 = f2(0, 0);
+
+__attribute__((nonnull(2)))
+constexpr int f3(const int*, const int*) {
+  return 0;
+}
+constexpr int i3 = f3(&c, 0); //expected-error {{constant expression}} expected-note {{null passed}}
+constexpr int i32 = f3(0, &c);
+
+__attribute__((nonnull(4))) __attribute__((nonnull)) //expected-error {{out of bounds}}
+constexpr int f4(const int*, const int*) {
+  return 0;
+}
+constexpr int i4 = f4(&c, 0); //expected-error {{constant expression}} expected-note {{null passed}}
+constexpr int i42 = f4(0, &c); //expected-error {{constant expression}} expected-note {{null passed}}
+
+}

@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +sse -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %clang_cc1 -fms-extensions -fms-compatibility -ffreestanding %s -triple=x86_64-windows-msvc -target-feature +sse -emit-llvm -o - -Wall -Werror | FileCheck %s
 
 
 #include <immintrin.h>

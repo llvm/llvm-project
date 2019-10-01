@@ -1,9 +1,8 @@
 //===--- SemaType.cpp - Semantic Analysis for Types -----------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -183,6 +182,10 @@ namespace {
     SmallVector<TypeAttrPair, 8> AttrsForTypes;
     bool AttrsForTypesSorted = true;
 
+    /// MacroQualifiedTypes mapping to macro expansion locations that will be
+    /// stored in a MacroQualifiedTypeLoc.
+    llvm::DenseMap<const MacroQualifiedType *, SourceLocation> LocsForMacros;
+
     /// Flag to indicate we parsed a noderef attribute. This is used for
     /// validating that noderef was used on a pointer or array.
     bool parsedNoDeref;
@@ -276,10 +279,7 @@ namespace {
     /// Extract and remove the Attr* for a given attributed type.
     const Attr *takeAttrForAttributedType(const AttributedType *AT) {
       if (!AttrsForTypesSorted) {
-        std::stable_sort(AttrsForTypes.begin(), AttrsForTypes.end(),
-                         [](const TypeAttrPair &A, const TypeAttrPair &B) {
-                           return A.first < B.first;
-                         });
+        llvm::stable_sort(AttrsForTypes, llvm::less_first());
         AttrsForTypesSorted = true;
       }
 
@@ -297,6 +297,19 @@ namespace {
       }
 
       llvm_unreachable("no Attr* for AttributedType*");
+    }
+
+    SourceLocation
+    getExpansionLocForMacroQualifiedType(const MacroQualifiedType *MQT) const {
+      auto FoundLoc = LocsForMacros.find(MQT);
+      assert(FoundLoc != LocsForMacros.end() &&
+             "Unable to find macro expansion location for MacroQualifedType");
+      return FoundLoc->second;
+    }
+
+    void setExpansionLocForMacroQualifiedType(const MacroQualifiedType *MQT,
+                                              SourceLocation Loc) {
+      LocsForMacros[MQT] = Loc;
     }
 
     void setParsedNoDeref(bool parsed) { parsedNoDeref = parsed; }
@@ -741,12 +754,8 @@ static void maybeSynthesizeBlockSignature(TypeProcessingState &state,
       /*NumArgs=*/0,
       /*EllipsisLoc=*/NoLoc,
       /*RParenLoc=*/NoLoc,
-      /*TypeQuals=*/0,
       /*RefQualifierIsLvalueRef=*/true,
       /*RefQualifierLoc=*/NoLoc,
-      /*ConstQualifierLoc=*/NoLoc,
-      /*VolatileQualifierLoc=*/NoLoc,
-      /*RestrictQualifierLoc=*/NoLoc,
       /*MutableLoc=*/NoLoc, EST_None,
       /*ESpecRange=*/SourceRange(),
       /*Exceptions=*/nullptr,
@@ -754,8 +763,7 @@ static void maybeSynthesizeBlockSignature(TypeProcessingState &state,
       /*NumExceptions=*/0,
       /*NoexceptExpr=*/nullptr,
       /*ExceptionSpecTokens=*/nullptr,
-      /*DeclsInPrototype=*/None,
-      loc, loc, declarator));
+      /*DeclsInPrototype=*/None, loc, loc, declarator));
 
   // For consistency, make sure the state still has us as processing
   // the decl spec.
@@ -1334,7 +1342,7 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
       // "At least one type specifier shall be given in the declaration
       // specifiers in each declaration, and in the specifier-qualifier list in
       // each struct declaration and type name."
-      if (S.getLangOpts().CPlusPlus) {
+      if (S.getLangOpts().CPlusPlus && !DS.isTypeSpecPipe()) {
         S.Diag(DeclLoc, diag::err_missing_type_specifier)
           << DS.getSourceRange();
 
@@ -1342,7 +1350,9 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
         // value being declared, poison it as invalid so we don't get chains of
         // errors.
         declarator.setInvalidType(true);
-      } else if (S.getLangOpts().OpenCLVersion >= 200 && DS.isTypeSpecPipe()){
+      } else if ((S.getLangOpts().OpenCLVersion >= 200 ||
+                  S.getLangOpts().OpenCLCPlusPlus) &&
+                 DS.isTypeSpecPipe()) {
         S.Diag(DeclLoc, diag::err_missing_actual_pipe_type)
           << DS.getSourceRange();
         declarator.setInvalidType(true);
@@ -1442,7 +1452,8 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     break;
   }
   case DeclSpec::TST_int128:
-    if (!S.Context.getTargetInfo().hasInt128Type())
+    if (!S.Context.getTargetInfo().hasInt128Type() &&
+        !(S.getLangOpts().OpenMP && S.getLangOpts().OpenMPIsDevice))
       S.Diag(DS.getTypeSpecTypeLoc(), diag::err_type_unsupported)
         << "__int128";
     if (DS.getTypeSpecSign() == DeclSpec::TSS_unsigned)
@@ -1450,7 +1461,16 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     else
       Result = Context.Int128Ty;
     break;
-  case DeclSpec::TST_float16: Result = Context.Float16Ty; break;
+  case DeclSpec::TST_float16:
+    // CUDA host and device may have different _Float16 support, therefore
+    // do not diagnose _Float16 usage to avoid false alarm.
+    // ToDo: more precise diagnostics for CUDA.
+    if (!S.Context.getTargetInfo().hasFloat16Type() && !S.getLangOpts().CUDA &&
+        !(S.getLangOpts().OpenMP && S.getLangOpts().OpenMPIsDevice))
+      S.Diag(DS.getTypeSpecTypeLoc(), diag::err_type_unsupported)
+        << "_Float16";
+    Result = Context.Float16Ty;
+    break;
   case DeclSpec::TST_half:    Result = Context.HalfTy; break;
   case DeclSpec::TST_float:   Result = Context.FloatTy; break;
   case DeclSpec::TST_double:
@@ -1460,7 +1480,8 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
       Result = Context.DoubleTy;
     break;
   case DeclSpec::TST_float128:
-    if (!S.Context.getTargetInfo().hasFloat128Type())
+    if (!S.Context.getTargetInfo().hasFloat128Type() &&
+        !(S.getLangOpts().OpenMP && S.getLangOpts().OpenMPIsDevice))
       S.Diag(DS.getTypeSpecTypeLoc(), diag::err_type_unsupported)
         << "__float128";
     Result = Context.Float128Ty;
@@ -1876,7 +1897,7 @@ static QualType inferARCLifetimeForPointee(Sema &S, QualType type,
 }
 
 static std::string getFunctionQualifiersAsString(const FunctionProtoType *FnTy){
-  std::string Quals = FnTy->getTypeQuals().getAsString();
+  std::string Quals = FnTy->getMethodQuals().getAsString();
 
   switch (FnTy->getRefQualifier()) {
   case RQ_None:
@@ -1918,7 +1939,7 @@ static bool checkQualifiedFunction(Sema &S, QualType T, SourceLocation Loc,
                                    QualifiedFunctionKind QFK) {
   // Does T refer to a function type with a cv-qualifier or a ref-qualifier?
   const FunctionProtoType *FPT = T->getAs<FunctionProtoType>();
-  if (!FPT || (FPT->getTypeQuals().empty() && FPT->getRefQualifier() == RQ_None))
+  if (!FPT || (FPT->getMethodQuals().empty() && FPT->getRefQualifier() == RQ_None))
     return false;
 
   S.Diag(Loc, diag::err_compound_qualified_function_type)
@@ -2251,15 +2272,13 @@ QualType Sema::BuildArrayType(QualType T, ArrayType::ArraySizeModifier ASM,
   }
 
   if (T->isVariableArrayType() && !Context.getTargetInfo().isVLASupported()) {
-    if (getLangOpts().CUDA) {
-      // CUDA device code doesn't support VLAs.
-      CUDADiagIfDeviceCode(Loc, diag::err_cuda_vla) << CurrentCUDATarget();
-    } else if (!getLangOpts().OpenMP ||
-               shouldDiagnoseTargetSupportFromOpenMP()) {
-      // Some targets don't support VLAs.
-      Diag(Loc, diag::err_vla_unsupported);
-      return QualType();
-    }
+    // CUDA device code and some other targets don't support VLAs.
+    targetDiag(Loc, (getLangOpts().CUDA && getLangOpts().CUDAIsDevice)
+                        ? diag::err_cuda_vla
+                        : diag::err_vla_unsupported)
+        << ((getLangOpts().CUDA && getLangOpts().CUDAIsDevice)
+                ? CurrentCUDATarget()
+                : CFT_InvalidTarget);
   }
 
   // If this is not C99, extwarn about VLA's and C99 array size modifiers.
@@ -2921,7 +2940,7 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
         sema::LambdaScopeInfo *LSI = SemaRef.getCurLambda();
         assert(LSI && "No LambdaScopeInfo on the stack!");
         const unsigned TemplateParameterDepth = LSI->AutoTemplateParameterDepth;
-        const unsigned AutoParameterPosition = LSI->AutoTemplateParams.size();
+        const unsigned AutoParameterPosition = LSI->TemplateParams.size();
         const bool IsParameterPack = D.hasEllipsis();
 
         // Create the TemplateTypeParmDecl here to retrieve the corresponding
@@ -2933,7 +2952,8 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
                 /*KeyLoc*/ SourceLocation(), /*NameLoc*/ D.getBeginLoc(),
                 TemplateParameterDepth, AutoParameterPosition,
                 /*Identifier*/ nullptr, false, IsParameterPack);
-        LSI->AutoTemplateParams.push_back(CorrespondingTemplateParam);
+        CorrespondingTemplateParam->setImplicit();
+        LSI->TemplateParams.push_back(CorrespondingTemplateParam);
         // Replace the 'auto' in the function parameter with this invented
         // template type parameter.
         // FIXME: Retain some type sugar to indicate that this was written
@@ -3928,6 +3948,25 @@ static Attr *createNullabilityAttr(ASTContext &Ctx, ParsedAttr &Attr,
   llvm_unreachable("unknown NullabilityKind");
 }
 
+// Diagnose whether this is a case with the multiple addr spaces.
+// Returns true if this is an invalid case.
+// ISO/IEC TR 18037 S5.3 (amending C99 6.7.3): "No type shall be qualified
+// by qualifiers for two or more different address spaces."
+static bool DiagnoseMultipleAddrSpaceAttributes(Sema &S, LangAS ASOld,
+                                                LangAS ASNew,
+                                                SourceLocation AttrLoc) {
+  if (ASOld != LangAS::Default) {
+    if (ASOld != ASNew) {
+      S.Diag(AttrLoc, diag::err_attribute_address_multiple_qualifiers);
+      return true;
+    }
+    // Emit a warning if they are identical; it's likely unintended.
+    S.Diag(AttrLoc,
+           diag::warn_attribute_address_multiple_identical_qualifiers);
+  }
+  return false;
+}
+
 static TypeSourceInfo *
 GetTypeSourceInfoForDeclarator(TypeProcessingState &State,
                                QualType T, TypeSourceInfo *ReturnTypeInfo);
@@ -3956,7 +3995,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
 
   // Does T refer to a function type with a cv-qualifier or a ref-qualifier?
   bool IsQualifiedFunction = T->isFunctionProtoType() &&
-      (!T->castAs<FunctionProtoType>()->getTypeQuals().empty() ||
+      (!T->castAs<FunctionProtoType>()->getMethodQuals().empty() ||
        T->castAs<FunctionProtoType>()->getRefQualifier() != RQ_None);
 
   // If T is 'decltype(auto)', the only declarators we can have are parens
@@ -4467,8 +4506,9 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       // If the function declarator has a prototype (i.e. it is not () and
       // does not have a K&R-style identifier list), then the arguments are part
       // of the type, otherwise the argument list is ().
-      const DeclaratorChunk::FunctionTypeInfo &FTI = DeclType.Fun;
-      IsQualifiedFunction = FTI.TypeQuals || FTI.hasRefQualifier();
+      DeclaratorChunk::FunctionTypeInfo &FTI = DeclType.Fun;
+      IsQualifiedFunction =
+          FTI.hasMethodTypeQualifiers() || FTI.hasRefQualifier();
 
       // Check for auto functions and trailing return type and adjust the
       // return type accordingly.
@@ -4570,7 +4610,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         if (FTI.isVariadic &&
             !(D.getIdentifier() &&
               ((D.getIdentifier()->getName() == "printf" &&
-                LangOpts.OpenCLVersion >= 120) ||
+                (LangOpts.OpenCLCPlusPlus || LangOpts.OpenCLVersion >= 120)) ||
                D.getIdentifier()->getName().startswith("__")))) {
           S.Diag(D.getIdentifierLoc(), diag::err_opencl_variadic_function);
           D.setInvalidType(true);
@@ -4706,7 +4746,9 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         EPI.ExtInfo = EI;
         EPI.Variadic = FTI.isVariadic;
         EPI.HasTrailingReturn = FTI.hasTrailingReturnType();
-        EPI.TypeQuals.addCVRUQualifiers(FTI.TypeQuals);
+        EPI.TypeQuals.addCVRUQualifiers(
+            FTI.MethodQualifiers ? FTI.MethodQualifiers->getTypeQualifiers()
+                                 : 0);
         EPI.RefQualifier = !FTI.hasRefQualifier()? RQ_None
                     : FTI.RefQualifierIsLValueRef? RQ_LValue
                     : RQ_RValue;
@@ -4833,24 +4875,38 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
                                       Exceptions,
                                       EPI.ExceptionSpec);
 
-        const auto &Spec = D.getCXXScopeSpec();
+        // FIXME: Set address space from attrs for C++ mode here.
         // OpenCLCPlusPlus: A class member function has an address space.
-        if (state.getSema().getLangOpts().OpenCLCPlusPlus &&
-            ((!Spec.isEmpty() &&
-              Spec.getScopeRep()->getKind() == NestedNameSpecifier::TypeSpec) ||
-             state.getDeclarator().getContext() ==
-                 DeclaratorContext::MemberContext)) {
-          LangAS CurAS = EPI.TypeQuals.getAddressSpace();
+        auto IsClassMember = [&]() {
+          return (!state.getDeclarator().getCXXScopeSpec().isEmpty() &&
+                  state.getDeclarator()
+                          .getCXXScopeSpec()
+                          .getScopeRep()
+                          ->getKind() == NestedNameSpecifier::TypeSpec) ||
+                 state.getDeclarator().getContext() ==
+                     DeclaratorContext::MemberContext;
+        };
+
+        if (state.getSema().getLangOpts().OpenCLCPlusPlus && IsClassMember()) {
+          LangAS ASIdx = LangAS::Default;
+          // Take address space attr if any and mark as invalid to avoid adding
+          // them later while creating QualType.
+          if (FTI.MethodQualifiers)
+            for (ParsedAttr &attr : FTI.MethodQualifiers->getAttributes()) {
+              LangAS ASIdxNew = attr.asOpenCLLangAS();
+              if (DiagnoseMultipleAddrSpaceAttributes(S, ASIdx, ASIdxNew,
+                                                      attr.getLoc()))
+                D.setInvalidType(true);
+              else
+                ASIdx = ASIdxNew;
+            }
           // If a class member function's address space is not set, set it to
           // __generic.
           LangAS AS =
-              (CurAS == LangAS::Default ? LangAS::opencl_generic : CurAS);
+              (ASIdx == LangAS::Default ? LangAS::opencl_generic : ASIdx);
           EPI.TypeQuals.addAddressSpace(AS);
-          T = Context.getFunctionType(T, ParamTys, EPI);
-          T = state.getSema().Context.getAddrSpaceQualType(T, AS);
-        } else {
-          T = Context.getFunctionType(T, ParamTys, EPI);
         }
+        T = Context.getFunctionType(T, ParamTys, EPI);
       }
       break;
     }
@@ -4932,11 +4988,8 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
     processTypeAttrs(state, T, TAL_DeclChunk, DeclType.getAttrs());
 
     if (DeclType.Kind != DeclaratorChunk::Paren) {
-      if (ExpectNoDerefChunk) {
-        if (!IsNoDerefableChunk(DeclType))
-          S.Diag(DeclType.Loc, diag::warn_noderef_on_non_pointer_or_array);
-        ExpectNoDerefChunk = false;
-      }
+      if (ExpectNoDerefChunk && !IsNoDerefableChunk(DeclType))
+        S.Diag(DeclType.Loc, diag::warn_noderef_on_non_pointer_or_array);
 
       ExpectNoDerefChunk = state.didParseNoDeref();
     }
@@ -4963,7 +5016,10 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         break;
       case DeclaratorChunk::Function: {
         const DeclaratorChunk::FunctionTypeInfo &FTI = DeclType.Fun;
-        if (FTI.NumParams == 0 && !FTI.isVariadic)
+        // We supress the warning when there's no LParen location, as this
+        // indicates the declaration was an implicit declaration, which gets
+        // warned about separately via -Wimplicit-function-declaration.
+        if (FTI.NumParams == 0 && !FTI.isVariadic && FTI.getLParenLoc().isValid())
           S.Diag(DeclType.Loc, diag::warn_strict_prototypes)
               << IsBlock
               << FixItHint::CreateInsertion(FTI.getRParenLoc(), "void");
@@ -5033,14 +5089,15 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         SmallVector<SourceLocation, 4> RemovalLocs;
         const DeclaratorChunk &Chunk = D.getTypeObject(I);
         assert(Chunk.Kind == DeclaratorChunk::Function);
+
         if (Chunk.Fun.hasRefQualifier())
           RemovalLocs.push_back(Chunk.Fun.getRefQualifierLoc());
-        if (Chunk.Fun.TypeQuals & Qualifiers::Const)
-          RemovalLocs.push_back(Chunk.Fun.getConstQualifierLoc());
-        if (Chunk.Fun.TypeQuals & Qualifiers::Volatile)
-          RemovalLocs.push_back(Chunk.Fun.getVolatileQualifierLoc());
-        if (Chunk.Fun.TypeQuals & Qualifiers::Restrict)
-          RemovalLocs.push_back(Chunk.Fun.getRestrictQualifierLoc());
+
+        if (Chunk.Fun.hasMethodTypeQualifiers())
+          Chunk.Fun.MethodQualifiers->forEachQualifier(
+              [&](DeclSpec::TQ TypeQual, StringRef QualName,
+                  SourceLocation SL) { RemovalLocs.push_back(SL); });
+
         if (!RemovalLocs.empty()) {
           llvm::sort(RemovalLocs,
                      BeforeThanCompare<SourceLocation>(S.getSourceManager()));
@@ -5079,7 +5136,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
   // C++0x [dcl.constexpr]p9:
   //  A constexpr specifier used in an object declaration declares the object
   //  as const.
-  if (D.getDeclSpec().isConstexprSpecified() && T->isObjectType()) {
+  if (D.getDeclSpec().hasConstexprSpecifier() && T->isObjectType()) {
     T.addConst();
   }
 
@@ -5322,6 +5379,11 @@ namespace {
     void VisitAttributedTypeLoc(AttributedTypeLoc TL) {
       Visit(TL.getModifiedLoc());
       fillAttributedTypeLoc(TL, State);
+    }
+    void VisitMacroQualifiedTypeLoc(MacroQualifiedTypeLoc TL) {
+      Visit(TL.getInnerLoc());
+      TL.setExpansionLoc(
+          State.getExpansionLocForMacroQualifiedType(TL.getTypePtr()));
     }
     void VisitQualifiedTypeLoc(QualifiedTypeLoc TL) {
       Visit(TL.getUnqualifiedLoc());
@@ -5596,6 +5658,9 @@ namespace {
       assert(Chunk.Kind == DeclaratorChunk::Pipe);
       TL.setKWLoc(Chunk.Loc);
     }
+    void VisitMacroQualifiedTypeLoc(MacroQualifiedTypeLoc TL) {
+      TL.setExpansionLoc(Chunk.Loc);
+    }
 
     void VisitTypeLoc(TypeLoc TL) {
       llvm_unreachable("unsupported TypeLoc kind in declarator!");
@@ -5672,6 +5737,12 @@ GetTypeSourceInfoForDeclarator(TypeProcessingState &State,
     if (AtomicTypeLoc ATL = CurrTL.getAs<AtomicTypeLoc>()) {
       fillAtomicQualLoc(ATL, D.getTypeObject(i));
       CurrTL = ATL.getValueLoc().getUnqualifiedLoc();
+    }
+
+    while (MacroQualifiedTypeLoc TL = CurrTL.getAs<MacroQualifiedTypeLoc>()) {
+      TL.setExpansionLoc(
+          State.getExpansionLocForMacroQualifiedType(TL.getTypePtr()));
+      CurrTL = TL.getNextTypeLoc().getUnqualifiedLoc();
     }
 
     while (AttributedTypeLoc TL = CurrTL.getAs<AttributedTypeLoc>()) {
@@ -5765,28 +5836,27 @@ ParsedType Sema::ActOnObjCInstanceType(SourceLocation Loc) {
 // Type Attribute Processing
 //===----------------------------------------------------------------------===//
 
-/// BuildAddressSpaceAttr - Builds a DependentAddressSpaceType if an expression
-/// is uninstantiated. If instantiated it will apply the appropriate address space
-/// to the type. This function allows dependent template variables to be used in
-/// conjunction with the address_space attribute
-QualType Sema::BuildAddressSpaceAttr(QualType &T, Expr *AddrSpace,
-                                     SourceLocation AttrLoc) {
+/// Build an AddressSpace index from a constant expression and diagnose any
+/// errors related to invalid address_spaces. Returns true on successfully
+/// building an AddressSpace index.
+static bool BuildAddressSpaceIndex(Sema &S, LangAS &ASIdx,
+                                   const Expr *AddrSpace,
+                                   SourceLocation AttrLoc) {
   if (!AddrSpace->isValueDependent()) {
-
     llvm::APSInt addrSpace(32);
-    if (!AddrSpace->isIntegerConstantExpr(addrSpace, Context)) {
-      Diag(AttrLoc, diag::err_attribute_argument_type)
+    if (!AddrSpace->isIntegerConstantExpr(addrSpace, S.Context)) {
+      S.Diag(AttrLoc, diag::err_attribute_argument_type)
           << "'address_space'" << AANT_ArgumentIntegerConstant
           << AddrSpace->getSourceRange();
-      return QualType();
+      return false;
     }
 
     // Bounds checking.
     if (addrSpace.isSigned()) {
       if (addrSpace.isNegative()) {
-        Diag(AttrLoc, diag::err_attribute_address_space_negative)
+        S.Diag(AttrLoc, diag::err_attribute_address_space_negative)
             << AddrSpace->getSourceRange();
-        return QualType();
+        return false;
       }
       addrSpace.setIsSigned(false);
     }
@@ -5795,27 +5865,31 @@ QualType Sema::BuildAddressSpaceAttr(QualType &T, Expr *AddrSpace,
     max =
         Qualifiers::MaxAddressSpace - (unsigned)LangAS::FirstTargetAddressSpace;
     if (addrSpace > max) {
-      Diag(AttrLoc, diag::err_attribute_address_space_too_high)
+      S.Diag(AttrLoc, diag::err_attribute_address_space_too_high)
           << (unsigned)max.getZExtValue() << AddrSpace->getSourceRange();
-      return QualType();
+      return false;
     }
 
-    LangAS ASIdx =
+    ASIdx =
         getLangASFromTargetAS(static_cast<unsigned>(addrSpace.getZExtValue()));
+    return true;
+  }
 
-    // If this type is already address space qualified with a different
-    // address space, reject it.
-    // ISO/IEC TR 18037 S5.3 (amending C99 6.7.3): "No type shall be qualified
-    // by qualifiers for two or more different address spaces."
-    if (T.getAddressSpace() != LangAS::Default) {
-      if (T.getAddressSpace() != ASIdx) {
-        Diag(AttrLoc, diag::err_attribute_address_multiple_qualifiers);
-        return QualType();
-      } else
-        // Emit a warning if they are identical; it's likely unintended.
-        Diag(AttrLoc,
-             diag::warn_attribute_address_multiple_identical_qualifiers);
-    }
+  // Default value for DependentAddressSpaceTypes
+  ASIdx = LangAS::Default;
+  return true;
+}
+
+/// BuildAddressSpaceAttr - Builds a DependentAddressSpaceType if an expression
+/// is uninstantiated. If instantiated it will apply the appropriate address
+/// space to the type. This function allows dependent template variables to be
+/// used in conjunction with the address_space attribute
+QualType Sema::BuildAddressSpaceAttr(QualType &T, LangAS ASIdx, Expr *AddrSpace,
+                                     SourceLocation AttrLoc) {
+  if (!AddrSpace->isValueDependent()) {
+    if (DiagnoseMultipleAddrSpaceAttributes(*this, T.getAddressSpace(), ASIdx,
+                                            AttrLoc))
+      return QualType();
 
     return Context.getAddrSpaceQualType(T, ASIdx);
   }
@@ -5831,6 +5905,14 @@ QualType Sema::BuildAddressSpaceAttr(QualType &T, Expr *AddrSpace,
   }
 
   return Context.getDependentAddressSpaceType(T, AddrSpace, AttrLoc);
+}
+
+QualType Sema::BuildAddressSpaceAttr(QualType &T, Expr *AddrSpace,
+                                     SourceLocation AttrLoc) {
+  LangAS ASIdx;
+  if (!BuildAddressSpaceIndex(*this, ASIdx, AddrSpace, AttrLoc))
+    return QualType();
+  return BuildAddressSpaceAttr(T, ASIdx, AddrSpace, AttrLoc);
 }
 
 /// HandleAddressSpaceTypeAttribute - Process an address_space attribute on the
@@ -5869,7 +5951,8 @@ static void HandleAddressSpaceTypeAttribute(QualType &Type,
       id.setIdentifier(Attr.getArgAsIdent(0)->Ident, Attr.getLoc());
 
       ExprResult AddrSpace = S.ActOnIdExpression(
-          S.getCurScope(), SS, TemplateKWLoc, id, false, false);
+          S.getCurScope(), SS, TemplateKWLoc, id, /*HasTrailingLParen=*/false,
+          /*IsAddressOfOperand=*/false);
       if (AddrSpace.isInvalid())
         return;
 
@@ -5878,49 +5961,51 @@ static void HandleAddressSpaceTypeAttribute(QualType &Type,
       ASArgExpr = static_cast<Expr *>(Attr.getArgAsExpr(0));
     }
 
-    // Create the DependentAddressSpaceType or append an address space onto
-    // the type.
-    QualType T = S.BuildAddressSpaceAttr(Type, ASArgExpr, Attr.getLoc());
-
-    if (!T.isNull()) {
-      ASTContext &Ctx = S.Context;
-      auto *ASAttr = ::new (Ctx) AddressSpaceAttr(
-          Attr.getRange(), Ctx, Attr.getAttributeSpellingListIndex(),
-          static_cast<unsigned>(T.getQualifiers().getAddressSpace()));
-      Type = State.getAttributedType(ASAttr, T, T);
-    } else {
+    LangAS ASIdx;
+    if (!BuildAddressSpaceIndex(S, ASIdx, ASArgExpr, Attr.getLoc())) {
       Attr.setInvalid();
-    }
-  } else {
-    // The keyword-based type attributes imply which address space to use.
-    switch (Attr.getKind()) {
-    case ParsedAttr::AT_OpenCLGlobalAddressSpace:
-      ASIdx = LangAS::opencl_global; break;
-    case ParsedAttr::AT_OpenCLLocalAddressSpace:
-      ASIdx = LangAS::opencl_local; break;
-    case ParsedAttr::AT_OpenCLConstantAddressSpace:
-      ASIdx = LangAS::opencl_constant; break;
-    case ParsedAttr::AT_OpenCLGenericAddressSpace:
-      ASIdx = LangAS::opencl_generic; break;
-    case ParsedAttr::AT_OpenCLPrivateAddressSpace:
-      ASIdx = LangAS::opencl_private; break;
-    default:
-      llvm_unreachable("Invalid address space");
+      return;
     }
 
-    // If this type is already address space qualified with a different
-    // address space, reject it.
-    // ISO/IEC TR 18037 S5.3 (amending C99 6.7.3): "No type shall be qualified by
-    // qualifiers for two or more different address spaces."
-    if (Type.getAddressSpace() != LangAS::Default) {
-      if (Type.getAddressSpace() != ASIdx) {
-        S.Diag(Attr.getLoc(), diag::err_attribute_address_multiple_qualifiers);
+    ASTContext &Ctx = S.Context;
+    auto *ASAttr = ::new (Ctx) AddressSpaceAttr(
+        Attr.getRange(), Ctx, Attr.getAttributeSpellingListIndex(),
+        static_cast<unsigned>(ASIdx));
+
+    // If the expression is not value dependent (not templated), then we can
+    // apply the address space qualifiers just to the equivalent type.
+    // Otherwise, we make an AttributedType with the modified and equivalent
+    // type the same, and wrap it in a DependentAddressSpaceType. When this
+    // dependent type is resolved, the qualifier is added to the equivalent type
+    // later.
+    QualType T;
+    if (!ASArgExpr->isValueDependent()) {
+      QualType EquivType =
+          S.BuildAddressSpaceAttr(Type, ASIdx, ASArgExpr, Attr.getLoc());
+      if (EquivType.isNull()) {
         Attr.setInvalid();
         return;
-      } else
-        // Emit a warning if they are identical; it's likely unintended.
-        S.Diag(Attr.getLoc(),
-               diag::warn_attribute_address_multiple_identical_qualifiers);
+      }
+      T = State.getAttributedType(ASAttr, Type, EquivType);
+    } else {
+      T = State.getAttributedType(ASAttr, Type, Type);
+      T = S.BuildAddressSpaceAttr(T, ASIdx, ASArgExpr, Attr.getLoc());
+    }
+
+    if (!T.isNull())
+      Type = T;
+    else
+      Attr.setInvalid();
+  } else {
+    // The keyword-based type attributes imply which address space to use.
+    ASIdx = Attr.asOpenCLLangAS();
+    if (ASIdx == LangAS::Default)
+      llvm_unreachable("Invalid address space");
+
+    if (DiagnoseMultipleAddrSpaceAttributes(S, Type.getAddressSpace(), ASIdx,
+                                            Attr.getLoc())) {
+      Attr.setInvalid();
+      return;
     }
 
     Type = S.Context.getAddrSpaceQualType(Type, ASIdx);
@@ -6896,6 +6981,57 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
     return true;
   }
 
+  if (attr.getKind() == ParsedAttr::AT_NoThrow) {
+    // Delay if this is not a function type.
+    if (!unwrapped.isFunctionType())
+      return false;
+
+    if (S.CheckAttrNoArgs(attr)) {
+      attr.setInvalid();
+      return true;
+    }
+
+    // Otherwise we can process right away.
+    auto *Proto = unwrapped.get()->castAs<FunctionProtoType>();
+
+    // MSVC ignores nothrow if it is in conflict with an explicit exception
+    // specification.
+    if (Proto->hasExceptionSpec()) {
+      switch (Proto->getExceptionSpecType()) {
+      case EST_None:
+        llvm_unreachable("This doesn't have an exception spec!");
+
+      case EST_DynamicNone:
+      case EST_BasicNoexcept:
+      case EST_NoexceptTrue:
+      case EST_NoThrow:
+        // Exception spec doesn't conflict with nothrow, so don't warn.
+        LLVM_FALLTHROUGH;
+      case EST_Unparsed:
+      case EST_Uninstantiated:
+      case EST_DependentNoexcept:
+      case EST_Unevaluated:
+        // We don't have enough information to properly determine if there is a
+        // conflict, so suppress the warning.
+        break;
+      case EST_Dynamic:
+      case EST_MSAny:
+      case EST_NoexceptFalse:
+        S.Diag(attr.getLoc(), diag::warn_nothrow_attribute_ignored);
+        break;
+      }
+      return true;
+    }
+
+    type = unwrapped.wrap(
+        S, S.Context
+               .getFunctionTypeWithExceptionSpec(
+                   QualType{Proto, 0},
+                   FunctionProtoType::ExceptionSpecInfo{EST_NoThrow})
+               ->getAs<FunctionType>());
+    return true;
+  }
+
   // Delay if the type didn't work out to a function.
   if (!unwrapped.isFunctionType()) return false;
 
@@ -6930,19 +7066,16 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
   if (!supportsVariadicCall(CC)) {
     const FunctionProtoType *FnP = dyn_cast<FunctionProtoType>(fn);
     if (FnP && FnP->isVariadic()) {
-      unsigned DiagID = diag::err_cconv_varargs;
-
       // stdcall and fastcall are ignored with a warning for GCC and MS
       // compatibility.
-      bool IsInvalid = true;
-      if (CC == CC_X86StdCall || CC == CC_X86FastCall) {
-        DiagID = diag::warn_cconv_varargs;
-        IsInvalid = false;
-      }
+      if (CC == CC_X86StdCall || CC == CC_X86FastCall)
+        return S.Diag(attr.getLoc(), diag::warn_cconv_ignored)
+               << FunctionType::getNameForCallConv(CC)
+               << (int)Sema::CallingConventionIgnoredReason::VariadicFunction;
 
-      S.Diag(attr.getLoc(), DiagID) << FunctionType::getNameForCallConv(CC);
-      if (IsInvalid) attr.setInvalid();
-      return true;
+      attr.setInvalid();
+      return S.Diag(attr.getLoc(), diag::err_cconv_varargs)
+             << FunctionType::getNameForCallConv(CC);
     }
   }
 
@@ -6969,12 +7102,16 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
   return true;
 }
 
-bool Sema::hasExplicitCallingConv(QualType &T) {
-  QualType R = T.IgnoreParens();
-  while (const AttributedType *AT = dyn_cast<AttributedType>(R)) {
+bool Sema::hasExplicitCallingConv(QualType T) {
+  const AttributedType *AT;
+
+  // Stop if we'd be stripping off a typedef sugar node to reach the
+  // AttributedType.
+  while ((AT = T->getAs<AttributedType>()) &&
+         AT->getAs<TypedefType>() == T->getAs<TypedefType>()) {
     if (AT->isCallingConv())
       return true;
-    R = AT->getModifiedType().IgnoreParens();
+    T = AT->getModifiedType();
   }
   return false;
 }
@@ -6997,8 +7134,9 @@ void Sema::adjustMemberFunctionCC(QualType &T, bool IsStatic, bool IsCtorOrDtor,
     // Issue a warning on ignored calling convention -- except of __stdcall.
     // Again, this is what MS compiler does.
     if (CurCC != CC_X86StdCall)
-      Diag(Loc, diag::warn_cconv_structors)
-          << FunctionType::getNameForCallConv(CurCC);
+      Diag(Loc, diag::warn_cconv_ignored)
+          << FunctionType::getNameForCallConv(CurCC)
+          << (int)Sema::CallingConventionIgnoredReason::ConstructorDestructor;
   // Default adjustment.
   } else {
     // Only adjust types with the default convention.  For example, on Windows
@@ -7045,7 +7183,8 @@ static void HandleVectorSizeAttr(QualType &CurType, const ParsedAttr &Attr,
     Id.setIdentifier(Attr.getArgAsIdent(0)->Ident, Attr.getLoc());
 
     ExprResult Size = S.ActOnIdExpression(S.getCurScope(), SS, TemplateKWLoc,
-                                          Id, false, false);
+                                          Id, /*HasTrailingLParen=*/false,
+                                          /*IsAddressOfOperand=*/false);
 
     if (Size.isInvalid())
       return;
@@ -7082,7 +7221,8 @@ static void HandleExtVectorTypeAttr(QualType &CurType, const ParsedAttr &Attr,
     id.setIdentifier(Attr.getArgAsIdent(0)->Ident, Attr.getLoc());
 
     ExprResult Size = S.ActOnIdExpression(S.getCurScope(), SS, TemplateKWLoc,
-                                          id, false, false);
+                                          id, /*HasTrailingLParen=*/false,
+                                          /*IsAddressOfOperand=*/false);
     if (Size.isInvalid())
       return;
 
@@ -7293,8 +7433,13 @@ static void deduceOpenCLImplicitAddrSpace(TypeProcessingState &State,
        // otherwise it will fail some sema check.
       IsFuncReturnType || IsFuncType ||
       // Do not deduce addr space for member types of struct, except the pointee
-      // type of a pointer member type.
-      (D.getContext() == DeclaratorContext::MemberContext && !IsPointee) ||
+      // type of a pointer member type or static data members.
+      (D.getContext() == DeclaratorContext::MemberContext &&
+       (!IsPointee &&
+        D.getDeclSpec().getStorageClassSpec() != DeclSpec::SCS_static)) ||
+      // Do not deduce addr space of non-pointee in type alias because it
+      // doesn't define any object.
+      (D.getContext() == DeclaratorContext::AliasDeclContext && !IsPointee) ||
       // Do not deduce addr space for types used to define a typedef and the
       // typedef itself, except the pointee type of a pointer type which is used
       // to define the typedef.
@@ -7303,9 +7448,26 @@ static void deduceOpenCLImplicitAddrSpace(TypeProcessingState &State,
       // Do not deduce addr space of the void type, e.g. in f(void), otherwise
       // it will fail some sema check.
       (T->isVoidType() && !IsPointee) ||
-      // Do not deduce address spaces for dependent types because they might end
+      // Do not deduce addr spaces for dependent types because they might end
       // up instantiating to a type with an explicit address space qualifier.
-      T->isDependentType())
+      T->isDependentType() ||
+      // Do not deduce addr space of decltype because it will be taken from
+      // its argument.
+      T->isDecltypeType() ||
+      // OpenCL spec v2.0 s6.9.b:
+      // The sampler type cannot be used with the __local and __global address
+      // space qualifiers.
+      // OpenCL spec v2.0 s6.13.14:
+      // Samplers can also be declared as global constants in the program
+      // source using the following syntax.
+      //   const sampler_t <sampler name> = <value>
+      // In codegen, file-scope sampler type variable has special handing and
+      // does not rely on address space qualifier. On the other hand, deducing
+      // address space of const sampler file-scope variable as global address
+      // space causes spurious diagnostic about __global address space
+      // qualifier, therefore do not deduce address space of file-scope sampler
+      // type variable.
+      (D.getContext() == DeclaratorContext::FileContext && T->isSamplerT()))
     return;
 
   LangAS ImpAddr = LangAS::Default;
@@ -7397,9 +7559,11 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
           if (!IsTypeAttr)
             continue;
         }
-      } else if (TAL != TAL_DeclChunk) {
+      } else if (TAL != TAL_DeclChunk &&
+                 attr.getKind() != ParsedAttr::AT_AddressSpace) {
         // Otherwise, only consider type processing for a C++11 attribute if
         // it's actually been applied to a type.
+        // We also allow C++11 address_space attributes to pass through.
         continue;
       }
     }
@@ -7503,7 +7667,7 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
             state.getDeclarator().isPrototypeContext() &&
             !hasOuterPointerLikeChunk(state.getDeclarator(), endIndex);
         if (checkNullabilityTypeSpecifier(
-              state, 
+              state,
               type,
               attr,
               allowOnArrayType)) {
@@ -7536,6 +7700,12 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
         attr.setInvalid();
       break;
 
+    case ParsedAttr::AT_NoThrow:
+    // Exception Specifications aren't generally supported in C mode throughout
+    // clang, so revert to attribute-based handling for C.
+      if (!state.getSema().getLangOpts().CPlusPlus)
+        break;
+      LLVM_FALLTHROUGH;
     FUNCTION_TYPE_ATTRS_CASELIST:
       attr.setUsedAsTypeAttr();
 
@@ -7548,6 +7718,20 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
       else if (!handleFunctionTypeAttr(state, attr, type))
         distributeFunctionTypeAttr(state, attr, type);
       break;
+    }
+
+    // Handle attributes that are defined in a macro. We do not want this to be
+    // applied to ObjC builtin attributes.
+    if (isa<AttributedType>(type) && attr.hasMacroIdentifier() &&
+        !type.getQualifiers().hasObjCLifetime() &&
+        !type.getQualifiers().hasObjCGCAttr() &&
+        attr.getKind() != ParsedAttr::AT_ObjCGC &&
+        attr.getKind() != ParsedAttr::AT_ObjCOwnership) {
+      const IdentifierInfo *MacroII = attr.getMacroIdentifier();
+      type = state.getSema().Context.getMacroQualifiedType(type, MacroII);
+      state.setExpansionLocForMacroQualifiedType(
+          cast<MacroQualifiedType>(type.getTypePtr()),
+          attr.getMacroExpansionLoc());
     }
   }
 

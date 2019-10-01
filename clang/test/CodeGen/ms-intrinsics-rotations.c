@@ -12,17 +12,10 @@
 // RUN:         | FileCheck %s --check-prefixes CHECK,CHECK-32BIT-LONG
 // RUN: %clang_cc1 -ffreestanding -fms-extensions -fms-compatibility -fms-compatibility-version=17.00 \
 // RUN:         -triple x86_64--linux -emit-llvm %s -o - \
-// RUN:         | FileCheck %s --check-prefixes CHECK,CHECK-32BIT-LONG
+// RUN:         | FileCheck %s --check-prefixes CHECK,CHECK-64BIT-LONG
 // RUN: %clang_cc1 -ffreestanding -fms-extensions \
 // RUN:         -triple x86_64--darwin -emit-llvm %s -o - \
-// RUN:         | FileCheck %s --check-prefixes CHECK,CHECK-32BIT-LONG
-
-// LP64 targets use 'long' as 'int' for MS intrinsics (-fms-extensions)
-#ifdef __LP64__
-#define LONG int
-#else
-#define LONG long
-#endif
+// RUN:         | FileCheck %s --check-prefixes CHECK,CHECK-64BIT-LONG
 
 // rotate left
 
@@ -47,12 +40,15 @@ unsigned int test_rotl(unsigned int value, int shift) {
 // CHECK:   [[R:%.*]] = call i32 @llvm.fshl.i32(i32 [[X:%.*]], i32 [[X]], i32 [[Y:%.*]])
 // CHECK:   ret i32 [[R]]
 
-unsigned LONG test_lrotl(unsigned LONG value, int shift) {
+unsigned long test_lrotl(unsigned long value, int shift) {
   return _lrotl(value, shift);
 }
 // CHECK-32BIT-LONG: i32 @test_lrotl
 // CHECK-32BIT-LONG:   [[R:%.*]] = call i32 @llvm.fshl.i32(i32 [[X:%.*]], i32 [[X]], i32 [[Y:%.*]])
 // CHECK-32BIT-LONG:   ret i32 [[R]]
+// CHECK-64BIT-LONG: i64 @test_lrotl
+// CHECK-64BIT-LONG:   [[R:%.*]] = call i64 @llvm.fshl.i64(i64 [[X:%.*]], i64 [[X]], i64 [[Y:%.*]])
+// CHECK-64BIT-LONG:   ret i64 [[R]]
 
 unsigned __int64 test_rotl64(unsigned __int64 value, int shift) {
   return _rotl64(value, shift);
@@ -84,12 +80,15 @@ unsigned int test_rotr(unsigned int value, int shift) {
 // CHECK:   [[R:%.*]] = call i32 @llvm.fshr.i32(i32 [[X:%.*]], i32 [[X]], i32 [[Y:%.*]])
 // CHECK:   ret i32 [[R]]
 
-unsigned LONG test_lrotr(unsigned LONG value, int shift) {
+unsigned long test_lrotr(unsigned long value, int shift) {
   return _lrotr(value, shift);
 }
 // CHECK-32BIT-LONG: i32 @test_lrotr
 // CHECK-32BIT-LONG:   [[R:%.*]] = call i32 @llvm.fshr.i32(i32 [[X:%.*]], i32 [[X]], i32 [[Y:%.*]])
 // CHECK-32BIT-LONG:   ret i32 [[R]]
+// CHECK-64BIT-LONG: i64 @test_lrotr
+// CHECK-64BIT-LONG:   [[R:%.*]] = call i64 @llvm.fshr.i64(i64 [[X:%.*]], i64 [[X]], i64 [[Y:%.*]])
+// CHECK-64BIT-LONG:   ret i64 [[R]]
 
 unsigned __int64 test_rotr64(unsigned __int64 value, int shift) {
   return _rotr64(value, shift);

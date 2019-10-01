@@ -70,13 +70,13 @@ T tmain(T argc) {
 // CHECK: static T a;
   static T g;
 #pragma omp threadprivate(g)
-#pragma omp parallel for schedule(dynamic) default(none) copyin(g) linear(a)
-  // CHECK: #pragma omp parallel for schedule(dynamic) default(none) copyin(g) linear(a)
+#pragma omp parallel for schedule(dynamic) default(none) copyin(g) linear(a) allocate(a)
+  // CHECK: #pragma omp parallel for schedule(dynamic) default(none) copyin(g) linear(a) allocate(a)
   for (int i = 0; i < 2; ++i)
     a = 2;
 // CHECK-NEXT: for (int i = 0; i < 2; ++i)
 // CHECK-NEXT: a = 2;
-#pragma omp parallel for private(argc, b), firstprivate(c, d), lastprivate(d, f) collapse(N) schedule(static, N) ordered(N) if (parallel :argc) num_threads(N) default(shared) shared(e) reduction(+ : h)
+#pragma omp parallel for allocate(argc) private(argc, b), firstprivate(c, d), lastprivate(d, f) collapse(N) schedule(static, N) ordered(N) if (parallel :argc) num_threads(N) default(shared) shared(e) reduction(+ : h)
   for (int i = 0; i < 2; ++i)
     for (int j = 0; j < 2; ++j)
       for (int j = 0; j < 2; ++j)
@@ -88,7 +88,7 @@ T tmain(T argc) {
         for (int j = 0; j < 2; ++j)
           for (int j = 0; j < 2; ++j)
             foo();
-  // CHECK-NEXT: #pragma omp parallel for private(argc,b) firstprivate(c,d) lastprivate(d,f) collapse(N) schedule(static, N) ordered(N) if(parallel: argc) num_threads(N) default(shared) shared(e) reduction(+: h)
+  // CHECK-NEXT: #pragma omp parallel for allocate(argc) private(argc,b) firstprivate(c,d) lastprivate(d,f) collapse(N) schedule(static, N) ordered(N) if(parallel: argc) num_threads(N) default(shared) shared(e) reduction(+: h)
   // CHECK-NEXT: for (int i = 0; i < 2; ++i)
   // CHECK-NEXT: for (int j = 0; j < 2; ++j)
   // CHECK-NEXT: for (int j = 0; j < 2; ++j)
@@ -132,8 +132,8 @@ int main(int argc, char **argv) {
 // CHECK: static int a;
   static float g;
 #pragma omp threadprivate(g)
-#pragma omp parallel for schedule(guided, argc) default(none) copyin(g) linear(a)
-  // CHECK: #pragma omp parallel for schedule(guided, argc) default(none) copyin(g) linear(a)
+#pragma omp parallel for schedule(guided, argc) default(none) copyin(g) linear(a) shared(argc)
+  // CHECK: #pragma omp parallel for schedule(guided, argc) default(none) copyin(g) linear(a) shared(argc)
   for (int i = 0; i < 2; ++i)
     a = 2;
 // CHECK-NEXT: for (int i = 0; i < 2; ++i)

@@ -1,9 +1,8 @@
 //===--- CGStmt.cpp - Emit LLVM Code from Statements ----------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -20,7 +19,6 @@
 #include "clang/Basic/PrettyStackTrace.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Intrinsics.h"
@@ -393,26 +391,35 @@ CodeGenFunction::EmitCompoundStmtWithoutScope(const CompoundStmt &S,
     // at the end of a statement expression, they yield the value of their
     // subexpression.  Handle this by walking through all labels we encounter,
     // emitting them before we evaluate the subexpr.
+    // Similar issues arise for attributed statements.
     const Stmt *LastStmt = S.body_back();
-    while (const LabelStmt *LS = dyn_cast<LabelStmt>(LastStmt)) {
-      EmitLabel(LS->getDecl());
-      LastStmt = LS->getSubStmt();
+    while (!isa<Expr>(LastStmt)) {
+      if (const auto *LS = dyn_cast<LabelStmt>(LastStmt)) {
+        EmitLabel(LS->getDecl());
+        LastStmt = LS->getSubStmt();
+      } else if (const auto *AS = dyn_cast<AttributedStmt>(LastStmt)) {
+        // FIXME: Update this if we ever have attributes that affect the
+        // semantics of an expression.
+        LastStmt = AS->getSubStmt();
+      } else {
+        llvm_unreachable("unknown value statement");
+      }
     }
 
     EnsureInsertPoint();
 
-    QualType ExprTy = cast<Expr>(LastStmt)->getType();
+    const Expr *E = cast<Expr>(LastStmt);
+    QualType ExprTy = E->getType();
     if (hasAggregateEvaluationKind(ExprTy)) {
-      EmitAggExpr(cast<Expr>(LastStmt), AggSlot);
+      EmitAggExpr(E, AggSlot);
     } else {
       // We can't return an RValue here because there might be cleanups at
       // the end of the StmtExpr.  Because of that, we have to emit the result
       // here into a temporary alloca.
       RetAlloca = CreateMemTemp(ExprTy);
-      EmitAnyExprToMem(cast<Expr>(LastStmt), RetAlloca, Qualifiers(),
-                       /*IsInit*/false);
+      EmitAnyExprToMem(E, RetAlloca, Qualifiers(),
+                       /*IsInit*/ false);
     }
-
   }
 
   return RetAlloca;
@@ -529,6 +536,16 @@ void CodeGenFunction::EmitLabel(const LabelDecl *D) {
   }
 
   EmitBlock(Dest.getBlock());
+
+  // Emit debug info for labels.
+  if (CGDebugInfo *DI = getDebugInfo()) {
+    if (CGM.getCodeGenOpts().getDebugInfo() >=
+        codegenoptions::LimitedDebugInfo) {
+      DI->setLocation(D->getLocation());
+      DI->EmitLabel(D, Builder);
+    }
+  }
+
   incrementProfileCounter(D->getStmt());
 }
 
@@ -1821,8 +1838,15 @@ llvm::Value* CodeGenFunction::EmitAsmInput(
   // (immediate or symbolic), try to emit it as such.
   if (!Info.allowsRegister() && !Info.allowsMemory()) {
     if (Info.requiresImmediateConstant()) {
-      llvm::APSInt AsmConst = InputExpr->EvaluateKnownConstInt(getContext());
-      return llvm::ConstantInt::get(getLLVMContext(), AsmConst);
+      Expr::EvalResult EVResult;
+      InputExpr->EvaluateAsRValue(EVResult, getContext(), true);
+
+      llvm::APSInt IntResult;
+      if (!EVResult.Val.toIntegralConstant(IntResult, InputExpr->getType(),
+                                           getContext()))
+        llvm_unreachable("Invalid immediate constant!");
+
+      return llvm::ConstantInt::get(getLLVMContext(), IntResult);
     }
 
     Expr::EvalResult Result;
@@ -1872,6 +1896,55 @@ static llvm::MDNode *getAsmSrcLocInfo(const StringLiteral *Str,
   return llvm::MDNode::get(CGF.getLLVMContext(), Locs);
 }
 
+static void UpdateAsmCallInst(llvm::CallBase &Result, bool HasSideEffect,
+                              bool ReadOnly, bool ReadNone, const AsmStmt &S,
+                              const std::vector<llvm::Type *> &ResultRegTypes,
+                              CodeGenFunction &CGF,
+                              std::vector<llvm::Value *> &RegResults) {
+  Result.addAttribute(llvm::AttributeList::FunctionIndex,
+                      llvm::Attribute::NoUnwind);
+  // Attach readnone and readonly attributes.
+  if (!HasSideEffect) {
+    if (ReadNone)
+      Result.addAttribute(llvm::AttributeList::FunctionIndex,
+                          llvm::Attribute::ReadNone);
+    else if (ReadOnly)
+      Result.addAttribute(llvm::AttributeList::FunctionIndex,
+                          llvm::Attribute::ReadOnly);
+  }
+
+  // Slap the source location of the inline asm into a !srcloc metadata on the
+  // call.
+  if (const auto *gccAsmStmt = dyn_cast<GCCAsmStmt>(&S))
+    Result.setMetadata("srcloc",
+                       getAsmSrcLocInfo(gccAsmStmt->getAsmString(), CGF));
+  else {
+    // At least put the line number on MS inline asm blobs.
+    llvm::Constant *Loc = llvm::ConstantInt::get(CGF.Int32Ty,
+                                        S.getAsmLoc().getRawEncoding());
+    Result.setMetadata("srcloc",
+                       llvm::MDNode::get(CGF.getLLVMContext(),
+                                         llvm::ConstantAsMetadata::get(Loc)));
+  }
+
+  if (CGF.getLangOpts().assumeFunctionsAreConvergent())
+    // Conservatively, mark all inline asm blocks in CUDA or OpenCL as
+    // convergent (meaning, they may call an intrinsically convergent op, such
+    // as bar.sync, and so can't have certain optimizations applied around
+    // them).
+    Result.addAttribute(llvm::AttributeList::FunctionIndex,
+                        llvm::Attribute::Convergent);
+  // Extract all of the register value results from the asm.
+  if (ResultRegTypes.size() == 1) {
+    RegResults.push_back(&Result);
+  } else {
+    for (unsigned i = 0, e = ResultRegTypes.size(); i != e; ++i) {
+      llvm::Value *Tmp = CGF.Builder.CreateExtractValue(&Result, i, "asmresult");
+      RegResults.push_back(Tmp);
+    }
+  }
+}
+
 void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
   // Assemble the final asm string.
   std::string AsmString = S.generateAsmString(getContext());
@@ -1915,6 +1988,9 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
   std::vector<llvm::Value*> InOutArgs;
   std::vector<llvm::Type*> InOutArgTypes;
 
+  // Keep track of out constraints for tied input operand.
+  std::vector<std::string> OutputConstraints;
+
   // An inline asm can be marked readonly if it meets the following conditions:
   //  - it doesn't have any sideeffects
   //  - it doesn't clobber memory
@@ -1937,7 +2013,7 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
     OutputConstraint = AddVariableConstraints(OutputConstraint, *OutExpr,
                                               getTarget(), CGM, S,
                                               Info.earlyClobber());
-
+    OutputConstraints.push_back(OutputConstraint);
     LValue Dest = EmitLValue(OutExpr);
     if (!Constraints.empty())
       Constraints += ',';
@@ -2055,6 +2131,7 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
         InputConstraint, *InputExpr->IgnoreParenNoopCasts(getContext()),
         getTarget(), CGM, S, false /* No EarlyClobber */);
 
+    std::string ReplaceConstraint (InputConstraint);
     llvm::Value *Arg = EmitAsmInput(Info, InputExpr, Constraints);
 
     // If this input argument is tied to a larger output result, extend the
@@ -2082,9 +2159,11 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
           Arg = Builder.CreateFPExt(Arg, OutputTy);
         }
       }
+      // Deal with the tied operands' constraint code in adjustInlineAsmType.
+      ReplaceConstraint = OutputConstraints[Output];
     }
     if (llvm::Type* AdjTy =
-              getTargetHooks().adjustInlineAsmType(*this, InputConstraint,
+          getTargetHooks().adjustInlineAsmType(*this, ReplaceConstraint,
                                                    Arg->getType()))
       Arg = Builder.CreateBitCast(Arg, AdjTy);
     else
@@ -2107,6 +2186,29 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
     Args.push_back(InOutArgs[i]);
   }
   Constraints += InOutConstraints;
+
+  // Labels
+  SmallVector<llvm::BasicBlock *, 16> Transfer;
+  llvm::BasicBlock *Fallthrough = nullptr;
+  bool IsGCCAsmGoto = false;
+  if (const auto *GS =  dyn_cast<GCCAsmStmt>(&S)) {
+    IsGCCAsmGoto = GS->isAsmGoto();
+    if (IsGCCAsmGoto) {
+      for (auto *E : GS->labels()) {
+        JumpDest Dest = getJumpDestForLabel(E->getLabel());
+        Transfer.push_back(Dest.getBlock());
+        llvm::BlockAddress *BA =
+            llvm::BlockAddress::get(CurFn, Dest.getBlock());
+        Args.push_back(BA);
+        ArgTypes.push_back(BA->getType());
+        if (!Constraints.empty())
+          Constraints += ',';
+        Constraints += 'X';
+      }
+      StringRef Name = "asm.fallthrough";
+      Fallthrough = createBasicBlock(Name);
+    }
+  }
 
   // Clobbers
   for (unsigned i = 0, e = S.getNumClobbers(); i != e; i++) {
@@ -2150,52 +2252,18 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
   llvm::InlineAsm *IA =
     llvm::InlineAsm::get(FTy, AsmString, Constraints, HasSideEffect,
                          /* IsAlignStack */ false, AsmDialect);
-  llvm::CallInst *Result =
-      Builder.CreateCall(IA, Args, getBundlesForFunclet(IA));
-  Result->addAttribute(llvm::AttributeList::FunctionIndex,
-                       llvm::Attribute::NoUnwind);
-
-  // Attach readnone and readonly attributes.
-  if (!HasSideEffect) {
-    if (ReadNone)
-      Result->addAttribute(llvm::AttributeList::FunctionIndex,
-                           llvm::Attribute::ReadNone);
-    else if (ReadOnly)
-      Result->addAttribute(llvm::AttributeList::FunctionIndex,
-                           llvm::Attribute::ReadOnly);
-  }
-
-  // Slap the source location of the inline asm into a !srcloc metadata on the
-  // call.
-  if (const GCCAsmStmt *gccAsmStmt = dyn_cast<GCCAsmStmt>(&S)) {
-    Result->setMetadata("srcloc", getAsmSrcLocInfo(gccAsmStmt->getAsmString(),
-                                                   *this));
-  } else {
-    // At least put the line number on MS inline asm blobs.
-    auto Loc = llvm::ConstantInt::get(Int32Ty, S.getAsmLoc().getRawEncoding());
-    Result->setMetadata("srcloc",
-                        llvm::MDNode::get(getLLVMContext(),
-                                          llvm::ConstantAsMetadata::get(Loc)));
-  }
-
-  if (getLangOpts().assumeFunctionsAreConvergent()) {
-    // Conservatively, mark all inline asm blocks in CUDA or OpenCL as
-    // convergent (meaning, they may call an intrinsically convergent op, such
-    // as bar.sync, and so can't have certain optimizations applied around
-    // them).
-    Result->addAttribute(llvm::AttributeList::FunctionIndex,
-                         llvm::Attribute::Convergent);
-  }
-
-  // Extract all of the register value results from the asm.
   std::vector<llvm::Value*> RegResults;
-  if (ResultRegTypes.size() == 1) {
-    RegResults.push_back(Result);
+  if (IsGCCAsmGoto) {
+    llvm::CallBrInst *Result =
+        Builder.CreateCallBr(IA, Fallthrough, Transfer, Args);
+    UpdateAsmCallInst(cast<llvm::CallBase>(*Result), HasSideEffect, ReadOnly,
+                      ReadNone, S, ResultRegTypes, *this, RegResults);
+    EmitBlock(Fallthrough);
   } else {
-    for (unsigned i = 0, e = ResultRegTypes.size(); i != e; ++i) {
-      llvm::Value *Tmp = Builder.CreateExtractValue(Result, i, "asmresult");
-      RegResults.push_back(Tmp);
-    }
+    llvm::CallInst *Result =
+        Builder.CreateCall(IA, Args, getBundlesForFunclet(IA));
+    UpdateAsmCallInst(cast<llvm::CallBase>(*Result), HasSideEffect, ReadOnly,
+                      ReadNone, S, ResultRegTypes, *this, RegResults);
   }
 
   assert(RegResults.size() == ResultRegTypes.size());

@@ -1,9 +1,8 @@
 //===--- PrintPreprocessedOutput.cpp - Implement the -E mode --------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -144,6 +143,8 @@ public:
                      ArrayRef<int> Ids) override;
   void PragmaWarningPush(SourceLocation Loc, int Level) override;
   void PragmaWarningPop(SourceLocation Loc) override;
+  void PragmaExecCharsetPush(SourceLocation Loc, StringRef Str) override;
+  void PragmaExecCharsetPop(SourceLocation Loc) override;
   void PragmaAssumeNonNullBegin(SourceLocation Loc) override;
   void PragmaAssumeNonNullEnd(SourceLocation Loc) override;
 
@@ -554,6 +555,24 @@ void PrintPPOutputPPCallbacks::PragmaWarningPop(SourceLocation Loc) {
   setEmittedDirectiveOnThisLine();
 }
 
+void PrintPPOutputPPCallbacks::PragmaExecCharsetPush(SourceLocation Loc,
+                                                     StringRef Str) {
+  startNewLineIfNeeded();
+  MoveToLine(Loc);
+  OS << "#pragma character_execution_set(push";
+  if (!Str.empty())
+    OS << ", " << Str;
+  OS << ')';
+  setEmittedDirectiveOnThisLine();
+}
+
+void PrintPPOutputPPCallbacks::PragmaExecCharsetPop(SourceLocation Loc) {
+  startNewLineIfNeeded();
+  MoveToLine(Loc);
+  OS << "#pragma character_execution_set(pop)";
+  setEmittedDirectiveOnThisLine();
+}
+
 void PrintPPOutputPPCallbacks::
 PragmaAssumeNonNullBegin(SourceLocation Loc) {
   startNewLineIfNeeded();
@@ -645,7 +664,7 @@ struct UnknownPragmaHandler : public PragmaHandler {
                        bool RequireTokenExpansion)
       : Prefix(prefix), Callbacks(callbacks),
         ShouldExpandTokens(RequireTokenExpansion) {}
-  void HandlePragma(Preprocessor &PP, PragmaIntroducerKind Introducer,
+  void HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer,
                     Token &PragmaTok) override {
     // Figure out what line we went to and insert the appropriate number of
     // newline characters.
@@ -659,7 +678,8 @@ struct UnknownPragmaHandler : public PragmaHandler {
       auto Toks = llvm::make_unique<Token[]>(1);
       Toks[0] = PragmaTok;
       PP.EnterTokenStream(std::move(Toks), /*NumToks=*/1,
-                          /*DisableMacroExpansion=*/false);
+                          /*DisableMacroExpansion=*/false,
+                          /*IsReinject=*/false);
       PP.Lex(PragmaTok);
     }
     Token PrevToken;
@@ -750,6 +770,15 @@ static void PrintPreprocessedTokens(Preprocessor &PP, Token &Tok,
           reinterpret_cast<Module *>(Tok.getAnnotationValue()));
       PP.Lex(Tok);
       continue;
+    } else if (Tok.is(tok::annot_header_unit)) {
+      // This is a header-name that has been (effectively) converted into a
+      // module-name.
+      // FIXME: The module name could contain non-identifier module name
+      // components. We don't have a good way to round-trip those.
+      Module *M = reinterpret_cast<Module *>(Tok.getAnnotationValue());
+      std::string Name = M->getFullModuleName();
+      OS.write(Name.data(), Name.size());
+      Callbacks->HandleNewlinesInToken(Name.data(), Name.size());
     } else if (Tok.isAnnotation()) {
       // Ignore annotation tokens created by pragmas - the pragmas themselves
       // will be reproduced in the preprocessed output.
@@ -771,12 +800,12 @@ static void PrintPreprocessedTokens(Preprocessor &PP, Token &Tok,
         Callbacks->HandleNewlinesInToken(TokPtr, Len);
     } else {
       std::string S = PP.getSpelling(Tok);
-      OS.write(&S[0], S.size());
+      OS.write(S.data(), S.size());
 
       // Tokens that can contain embedded newlines need to adjust our current
       // line number.
       if (Tok.getKind() == tok::comment || Tok.getKind() == tok::unknown)
-        Callbacks->HandleNewlinesInToken(&S[0], S.size());
+        Callbacks->HandleNewlinesInToken(S.data(), S.size());
     }
     Callbacks->setEmittedTokensOnThisLine();
 

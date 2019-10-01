@@ -50,6 +50,13 @@ void nesting() {
     [=] () mutable {
       ^ {
         int i = array[2]; // expected-error{{cannot refer to declaration with an array type inside block}}
+        i += array[3];
+      }();
+    }();
+
+    [=] () mutable {
+      ^ {
+        int i = 0;
         i += array[3]; // expected-error{{cannot refer to declaration with an array type inside block}}
       }();
     }();

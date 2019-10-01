@@ -11,12 +11,12 @@ Standalone Tool
 ===============
 
 :program:`clang-format` is located in `clang/tools/clang-format` and can be used
-to format C/C++/Java/JavaScript/Objective-C/Protobuf code.
+to format C/C++/Java/JavaScript/Objective-C/Protobuf/C# code.
 
 .. code-block:: console
 
   $ clang-format -help
-  OVERVIEW: A tool to format C/C++/Java/JavaScript/Objective-C/Protobuf code.
+  OVERVIEW: A tool to format C/C++/Java/JavaScript/Objective-C/Protobuf/C# code.
 
   If no arguments are specified, it formats the code from standard input
   and writes the result to the standard output.
@@ -163,6 +163,19 @@ With this integration you can select the script from the Script menu and
 :program:`clang-format` will format the selection. Note that you can rename the
 menu item by renaming the script, and can assign the menu item a keyboard
 shortcut in the BBEdit preferences, under Menus & Shortcuts.
+
+
+CLion Integration
+==================
+
+:program:`clang-format` is integrated into `CLion <https://www.jetbrains
+.com/clion/>`_ as an alternative code formatter. It is disabled by default and
+can be turned on in Settings/Preferences | Editor | Code Style.
+
+If :program:`clang-format` support is enabled, CLion detects config files when
+opening a project and suggests overriding the current IDE settings. Code style
+rules from the ``.clang-format`` files are then applied automatically to all
+editor actions, including auto-completion, code generation, and refactorings.
 
 
 Visual Studio Integration

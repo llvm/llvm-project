@@ -41,7 +41,7 @@ void f() {
         expected = [
           "{'int', ResultType} | {'test1', TypedText} || Priority: 50 || Availability: Available || Brief comment: Aaa.",
           "{'void', ResultType} | {'test2', TypedText} | {'(', LeftParen} | {')', RightParen} || Priority: 50 || Availability: Available || Brief comment: Bbb.",
-          "{'return', TypedText} || Priority: 40 || Availability: Available || Brief comment: None"
+          "{'return', TypedText} | {';', SemiColon} || Priority: 40 || Availability: Available || Brief comment: None"
         ]
         self.check_completion_results(cr, expected)
 
@@ -67,7 +67,7 @@ void f() {
         expected = [
           "{'int', ResultType} | {'test1', TypedText} || Priority: 50 || Availability: Available || Brief comment: Aaa.",
           "{'void', ResultType} | {'test2', TypedText} | {'(', LeftParen} | {')', RightParen} || Priority: 50 || Availability: Available || Brief comment: Bbb.",
-          "{'return', TypedText} || Priority: 40 || Availability: Available || Brief comment: None"
+          "{'return', TypedText} | {';', SemiColon} || Priority: 40 || Availability: Available || Brief comment: None"
         ]
         self.check_completion_results(cr, expected)
 

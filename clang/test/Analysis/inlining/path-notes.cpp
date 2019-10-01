@@ -1,6 +1,6 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core -analyzer-output=text -analyzer-config c++-inlining=destructors -std=c++11 -verify -Wno-tautological-undefined-compare %s
 // RUN: %clang_analyze_cc1 -analyzer-checker=core -analyzer-output=plist-multi-file -analyzer-config c++-inlining=destructors -std=c++11 %s -o %t.plist -Wno-tautological-undefined-compare
-// RUN: cat %t.plist | %diff_plist %S/Inputs/expected-plists/path-notes.cpp.plist -
+// RUN: %normalize_plist <%t.plist | diff -ub %S/Inputs/expected-plists/path-notes.cpp.plist -
 
 class Foo {
 public:
@@ -231,7 +231,7 @@ struct Owner {
 };
 
 void Owner::testGetDerefExprOnMemberExprWithADot() {
-	if (arr)  // expected-note {{Assuming pointer value is null}}
+	if (arr)  // expected-note {{Assuming field 'arr' is null}}
             // expected-note@-1 {{Taking false branch}}
 	  ;
 	arr[1].x = 1; //expected-warning {{Dereference of null pointer}}

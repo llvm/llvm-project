@@ -1,9 +1,8 @@
 //===--- SemaCUDA.cpp - Semantic Analysis for CUDA constructs -------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 /// \file
@@ -14,6 +13,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/Basic/Cuda.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Sema.h"
@@ -42,16 +42,15 @@ ExprResult Sema::ActOnCUDAExecConfigExpr(Scope *S, SourceLocation LLLLoc,
                                          SourceLocation GGGLoc) {
   FunctionDecl *ConfigDecl = Context.getcudaConfigureCallDecl();
   if (!ConfigDecl)
-    return ExprError(
-        Diag(LLLLoc, diag::err_undeclared_var_use)
-        << (getLangOpts().HIP ? "hipConfigureCall" : "cudaConfigureCall"));
+    return ExprError(Diag(LLLLoc, diag::err_undeclared_var_use)
+                     << getCudaConfigureFuncName());
   QualType ConfigQTy = ConfigDecl->getType();
 
   DeclRefExpr *ConfigDR = new (Context)
       DeclRefExpr(Context, ConfigDecl, false, ConfigQTy, VK_LValue, LLLLoc);
   MarkFunctionReferenced(LLLLoc, ConfigDecl);
 
-  return ActOnCallExpr(S, ConfigDR, LLLLoc, ExecConfig, GGGLoc, nullptr,
+  return BuildCallExpr(S, ConfigDR, LLLLoc, ExecConfig, GGGLoc, nullptr,
                        /*IsExecConfig=*/true);
 }
 
@@ -587,78 +586,6 @@ void Sema::maybeAddCUDAHostDeviceAttrs(FunctionDecl *NewD,
   NewD->addAttr(CUDADeviceAttr::CreateImplicit(Context));
 }
 
-// In CUDA, there are some constructs which may appear in semantically-valid
-// code, but trigger errors if we ever generate code for the function in which
-// they appear.  Essentially every construct you're not allowed to use on the
-// device falls into this category, because you are allowed to use these
-// constructs in a __host__ __device__ function, but only if that function is
-// never codegen'ed on the device.
-//
-// To handle semantic checking for these constructs, we keep track of the set of
-// functions we know will be emitted, either because we could tell a priori that
-// they would be emitted, or because they were transitively called by a
-// known-emitted function.
-//
-// We also keep a partial call graph of which not-known-emitted functions call
-// which other not-known-emitted functions.
-//
-// When we see something which is illegal if the current function is emitted
-// (usually by way of CUDADiagIfDeviceCode, CUDADiagIfHostCode, or
-// CheckCUDACall), we first check if the current function is known-emitted.  If
-// so, we immediately output the diagnostic.
-//
-// Otherwise, we "defer" the diagnostic.  It sits in Sema::CUDADeferredDiags
-// until we discover that the function is known-emitted, at which point we take
-// it out of this map and emit the diagnostic.
-
-Sema::CUDADiagBuilder::CUDADiagBuilder(Kind K, SourceLocation Loc,
-                                       unsigned DiagID, FunctionDecl *Fn,
-                                       Sema &S)
-    : S(S), Loc(Loc), DiagID(DiagID), Fn(Fn),
-      ShowCallStack(K == K_ImmediateWithCallStack || K == K_Deferred) {
-  switch (K) {
-  case K_Nop:
-    break;
-  case K_Immediate:
-  case K_ImmediateWithCallStack:
-    ImmediateDiag.emplace(S.Diag(Loc, DiagID));
-    break;
-  case K_Deferred:
-    assert(Fn && "Must have a function to attach the deferred diag to.");
-    PartialDiag.emplace(S.PDiag(DiagID));
-    break;
-  }
-}
-
-// Print notes showing how we can reach FD starting from an a priori
-// known-callable function.
-static void EmitCallStackNotes(Sema &S, FunctionDecl *FD) {
-  auto FnIt = S.CUDAKnownEmittedFns.find(FD);
-  while (FnIt != S.CUDAKnownEmittedFns.end()) {
-    DiagnosticBuilder Builder(
-        S.Diags.Report(FnIt->second.Loc, diag::note_called_by));
-    Builder << FnIt->second.FD;
-    Builder.setForceEmit();
-
-    FnIt = S.CUDAKnownEmittedFns.find(FnIt->second.FD);
-  }
-}
-
-Sema::CUDADiagBuilder::~CUDADiagBuilder() {
-  if (ImmediateDiag) {
-    // Emit our diagnostic and, if it was a warning or error, output a callstack
-    // if Fn isn't a priori known-emitted.
-    bool IsWarningOrError = S.getDiagnostics().getDiagnosticLevel(
-                                DiagID, Loc) >= DiagnosticsEngine::Warning;
-    ImmediateDiag.reset(); // Emit the immediate diag.
-    if (IsWarningOrError && ShowCallStack)
-      EmitCallStackNotes(S, Fn);
-  } else if (PartialDiag) {
-    assert(ShowCallStack && "Must always show call stack for deferred diags.");
-    S.CUDADeferredDiags[Fn].push_back({Loc, std::move(*PartialDiag)});
-  }
-}
-
 // Do we know that we will eventually codegen the given function?
 static bool IsKnownEmitted(Sema &S, FunctionDecl *FD) {
   // Templates are emitted when they're instantiated.
@@ -690,152 +617,69 @@ static bool IsKnownEmitted(Sema &S, FunctionDecl *FD) {
 
   // Otherwise, the function is known-emitted if it's in our set of
   // known-emitted functions.
-  return S.CUDAKnownEmittedFns.count(FD) > 0;
+  return S.DeviceKnownEmittedFns.count(FD) > 0;
 }
 
-Sema::CUDADiagBuilder Sema::CUDADiagIfDeviceCode(SourceLocation Loc,
-                                                 unsigned DiagID) {
+Sema::DeviceDiagBuilder Sema::CUDADiagIfDeviceCode(SourceLocation Loc,
+                                                   unsigned DiagID) {
   assert(getLangOpts().CUDA && "Should only be called during CUDA compilation");
-  CUDADiagBuilder::Kind DiagKind = [&] {
+  DeviceDiagBuilder::Kind DiagKind = [this] {
     switch (CurrentCUDATarget()) {
     case CFT_Global:
     case CFT_Device:
-      return CUDADiagBuilder::K_Immediate;
+      return DeviceDiagBuilder::K_Immediate;
     case CFT_HostDevice:
       // An HD function counts as host code if we're compiling for host, and
       // device code if we're compiling for device.  Defer any errors in device
       // mode until the function is known-emitted.
       if (getLangOpts().CUDAIsDevice) {
         return IsKnownEmitted(*this, dyn_cast<FunctionDecl>(CurContext))
-                   ? CUDADiagBuilder::K_ImmediateWithCallStack
-                   : CUDADiagBuilder::K_Deferred;
+                   ? DeviceDiagBuilder::K_ImmediateWithCallStack
+                   : DeviceDiagBuilder::K_Deferred;
       }
-      return CUDADiagBuilder::K_Nop;
+      return DeviceDiagBuilder::K_Nop;
 
     default:
-      return CUDADiagBuilder::K_Nop;
+      return DeviceDiagBuilder::K_Nop;
     }
   }();
-  return CUDADiagBuilder(DiagKind, Loc, DiagID,
-                         dyn_cast<FunctionDecl>(CurContext), *this);
+  return DeviceDiagBuilder(DiagKind, Loc, DiagID,
+                           dyn_cast<FunctionDecl>(CurContext), *this);
 }
 
-Sema::CUDADiagBuilder Sema::CUDADiagIfHostCode(SourceLocation Loc,
-                                               unsigned DiagID) {
+Sema::DeviceDiagBuilder Sema::CUDADiagIfHostCode(SourceLocation Loc,
+                                                 unsigned DiagID) {
   assert(getLangOpts().CUDA && "Should only be called during CUDA compilation");
-  CUDADiagBuilder::Kind DiagKind = [&] {
+  DeviceDiagBuilder::Kind DiagKind = [this] {
     switch (CurrentCUDATarget()) {
     case CFT_Host:
-      return CUDADiagBuilder::K_Immediate;
+      return DeviceDiagBuilder::K_Immediate;
     case CFT_HostDevice:
       // An HD function counts as host code if we're compiling for host, and
       // device code if we're compiling for device.  Defer any errors in device
       // mode until the function is known-emitted.
       if (getLangOpts().CUDAIsDevice)
-        return CUDADiagBuilder::K_Nop;
+        return DeviceDiagBuilder::K_Nop;
 
       return IsKnownEmitted(*this, dyn_cast<FunctionDecl>(CurContext))
-                 ? CUDADiagBuilder::K_ImmediateWithCallStack
-                 : CUDADiagBuilder::K_Deferred;
+                 ? DeviceDiagBuilder::K_ImmediateWithCallStack
+                 : DeviceDiagBuilder::K_Deferred;
     default:
-      return CUDADiagBuilder::K_Nop;
+      return DeviceDiagBuilder::K_Nop;
     }
   }();
-  return CUDADiagBuilder(DiagKind, Loc, DiagID,
-                         dyn_cast<FunctionDecl>(CurContext), *this);
-}
-
-// Emit any deferred diagnostics for FD and erase them from the map in which
-// they're stored.
-static void EmitDeferredDiags(Sema &S, FunctionDecl *FD) {
-  auto It = S.CUDADeferredDiags.find(FD);
-  if (It == S.CUDADeferredDiags.end())
-    return;
-  bool HasWarningOrError = false;
-  for (PartialDiagnosticAt &PDAt : It->second) {
-    const SourceLocation &Loc = PDAt.first;
-    const PartialDiagnostic &PD = PDAt.second;
-    HasWarningOrError |= S.getDiagnostics().getDiagnosticLevel(
-                             PD.getDiagID(), Loc) >= DiagnosticsEngine::Warning;
-    DiagnosticBuilder Builder(S.Diags.Report(Loc, PD.getDiagID()));
-    Builder.setForceEmit();
-    PD.Emit(Builder);
-  }
-  S.CUDADeferredDiags.erase(It);
-
-  // FIXME: Should this be called after every warning/error emitted in the loop
-  // above, instead of just once per function?  That would be consistent with
-  // how we handle immediate errors, but it also seems like a bit much.
-  if (HasWarningOrError)
-    EmitCallStackNotes(S, FD);
-}
-
-// Indicate that this function (and thus everything it transtively calls) will
-// be codegen'ed, and emit any deferred diagnostics on this function and its
-// (transitive) callees.
-static void MarkKnownEmitted(Sema &S, FunctionDecl *OrigCaller,
-                             FunctionDecl *OrigCallee, SourceLocation OrigLoc) {
-  // Nothing to do if we already know that FD is emitted.
-  if (IsKnownEmitted(S, OrigCallee)) {
-    assert(!S.CUDACallGraph.count(OrigCallee));
-    return;
-  }
-
-  // We've just discovered that OrigCallee is known-emitted.  Walk our call
-  // graph to see what else we can now discover also must be emitted.
-
-  struct CallInfo {
-    FunctionDecl *Caller;
-    FunctionDecl *Callee;
-    SourceLocation Loc;
-  };
-  llvm::SmallVector<CallInfo, 4> Worklist = {{OrigCaller, OrigCallee, OrigLoc}};
-  llvm::SmallSet<CanonicalDeclPtr<FunctionDecl>, 4> Seen;
-  Seen.insert(OrigCallee);
-  while (!Worklist.empty()) {
-    CallInfo C = Worklist.pop_back_val();
-    assert(!IsKnownEmitted(S, C.Callee) &&
-           "Worklist should not contain known-emitted functions.");
-    S.CUDAKnownEmittedFns[C.Callee] = {C.Caller, C.Loc};
-    EmitDeferredDiags(S, C.Callee);
-
-    // If this is a template instantiation, explore its callgraph as well:
-    // Non-dependent calls are part of the template's callgraph, while dependent
-    // calls are part of to the instantiation's call graph.
-    if (auto *Templ = C.Callee->getPrimaryTemplate()) {
-      FunctionDecl *TemplFD = Templ->getAsFunction();
-      if (!Seen.count(TemplFD) && !S.CUDAKnownEmittedFns.count(TemplFD)) {
-        Seen.insert(TemplFD);
-        Worklist.push_back(
-            {/* Caller = */ C.Caller, /* Callee = */ TemplFD, C.Loc});
-      }
-    }
-
-    // Add all functions called by Callee to our worklist.
-    auto CGIt = S.CUDACallGraph.find(C.Callee);
-    if (CGIt == S.CUDACallGraph.end())
-      continue;
-
-    for (std::pair<CanonicalDeclPtr<FunctionDecl>, SourceLocation> FDLoc :
-         CGIt->second) {
-      FunctionDecl *NewCallee = FDLoc.first;
-      SourceLocation CallLoc = FDLoc.second;
-      if (Seen.count(NewCallee) || IsKnownEmitted(S, NewCallee))
-        continue;
-      Seen.insert(NewCallee);
-      Worklist.push_back(
-          {/* Caller = */ C.Callee, /* Callee = */ NewCallee, CallLoc});
-    }
-
-    // C.Callee is now known-emitted, so we no longer need to maintain its list
-    // of callees in CUDACallGraph.
-    S.CUDACallGraph.erase(CGIt);
-  }
+  return DeviceDiagBuilder(DiagKind, Loc, DiagID,
+                           dyn_cast<FunctionDecl>(CurContext), *this);
 }
 
 bool Sema::CheckCUDACall(SourceLocation Loc, FunctionDecl *Callee) {
   assert(getLangOpts().CUDA && "Should only be called during CUDA compilation");
   assert(Callee && "Callee may not be null.");
+
+  auto &ExprEvalCtx = ExprEvalContexts.back();
+  if (ExprEvalCtx.isUnevaluated() || ExprEvalCtx.isConstantEvaluated())
+    return true;
+
   // FIXME: Is bailing out early correct here?  Should we instead assume that
   // the caller is a global initializer?
   FunctionDecl *Caller = dyn_cast<FunctionDecl>(CurContext);
@@ -849,7 +693,7 @@ bool Sema::CheckCUDACall(SourceLocation Loc, FunctionDecl *Callee) {
     // Host-side references to a __global__ function refer to the stub, so the
     // function itself is never emitted and therefore should not be marked.
     if (getLangOpts().CUDAIsDevice || IdentifyCUDATarget(Callee) != CFT_Global)
-      MarkKnownEmitted(*this, Caller, Callee, Loc);
+      markKnownEmitted(*this, Caller, Callee, Loc, IsKnownEmitted);
   } else {
     // If we have
     //   host fn calls kernel fn calls host+device,
@@ -858,26 +702,27 @@ bool Sema::CheckCUDACall(SourceLocation Loc, FunctionDecl *Callee) {
     // that, when compiling for host, only HD functions actually called from the
     // host get marked as known-emitted.
     if (getLangOpts().CUDAIsDevice || IdentifyCUDATarget(Callee) != CFT_Global)
-      CUDACallGraph[Caller].insert({Callee, Loc});
+      DeviceCallGraph[Caller].insert({Callee, Loc});
   }
 
-  CUDADiagBuilder::Kind DiagKind = [&] {
+  DeviceDiagBuilder::Kind DiagKind = [this, Caller, Callee,
+                                      CallerKnownEmitted] {
     switch (IdentifyCUDAPreference(Caller, Callee)) {
     case CFP_Never:
-      return CUDADiagBuilder::K_Immediate;
+      return DeviceDiagBuilder::K_Immediate;
     case CFP_WrongSide:
       assert(Caller && "WrongSide calls require a non-null caller");
       // If we know the caller will be emitted, we know this wrong-side call
       // will be emitted, so it's an immediate error.  Otherwise, defer the
       // error until we know the caller is emitted.
-      return CallerKnownEmitted ? CUDADiagBuilder::K_ImmediateWithCallStack
-                                : CUDADiagBuilder::K_Deferred;
+      return CallerKnownEmitted ? DeviceDiagBuilder::K_ImmediateWithCallStack
+                                : DeviceDiagBuilder::K_Deferred;
     default:
-      return CUDADiagBuilder::K_Nop;
+      return DeviceDiagBuilder::K_Nop;
     }
   }();
 
-  if (DiagKind == CUDADiagBuilder::K_Nop)
+  if (DiagKind == DeviceDiagBuilder::K_Nop)
     return true;
 
   // Avoid emitting this error twice for the same location.  Using a hashtable
@@ -887,13 +732,13 @@ bool Sema::CheckCUDACall(SourceLocation Loc, FunctionDecl *Callee) {
   if (!LocsWithCUDACallDiags.insert({Caller, Loc}).second)
     return true;
 
-  CUDADiagBuilder(DiagKind, Loc, diag::err_ref_bad_target, Caller, *this)
+  DeviceDiagBuilder(DiagKind, Loc, diag::err_ref_bad_target, Caller, *this)
       << IdentifyCUDATarget(Callee) << Callee << IdentifyCUDATarget(Caller);
-  CUDADiagBuilder(DiagKind, Callee->getLocation(), diag::note_previous_decl,
-                  Caller, *this)
+  DeviceDiagBuilder(DiagKind, Callee->getLocation(), diag::note_previous_decl,
+                    Caller, *this)
       << Callee;
-  return DiagKind != CUDADiagBuilder::K_Immediate &&
-         DiagKind != CUDADiagBuilder::K_ImmediateWithCallStack;
+  return DiagKind != DeviceDiagBuilder::K_Immediate &&
+         DiagKind != DeviceDiagBuilder::K_ImmediateWithCallStack;
 }
 
 void Sema::CUDASetLambdaAttrs(CXXMethodDecl *Method) {
@@ -957,4 +802,17 @@ void Sema::inheritCUDATargetAttrs(FunctionDecl *FD,
   copyAttrIfPresent<CUDAGlobalAttr>(*this, FD, TemplateFD);
   copyAttrIfPresent<CUDAHostAttr>(*this, FD, TemplateFD);
   copyAttrIfPresent<CUDADeviceAttr>(*this, FD, TemplateFD);
+}
+
+std::string Sema::getCudaConfigureFuncName() const {
+  if (getLangOpts().HIP)
+    return "hipConfigureCall";
+
+  // New CUDA kernel launch sequence.
+  if (CudaFeatureEnabled(Context.getTargetInfo().getSDKVersion(),
+                         CudaFeature::CUDA_USES_NEW_LAUNCH))
+    return "__cudaPushCallConfiguration";
+
+  // Legacy CUDA kernel configuration call
+  return "cudaConfigureCall";
 }

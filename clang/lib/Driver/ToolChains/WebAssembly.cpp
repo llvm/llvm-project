@@ -1,18 +1,20 @@
 //===--- WebAssembly.cpp - WebAssembly ToolChain Implementation -*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "WebAssembly.h"
 #include "CommonArgs.h"
+#include "clang/Config/config.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Option/ArgList.h"
 
 using namespace clang::driver;
@@ -21,12 +23,33 @@ using namespace clang::driver::toolchains;
 using namespace clang;
 using namespace llvm::opt;
 
-wasm::Linker::Linker(const ToolChain &TC)
-    : GnuTool("wasm::Linker", "lld", TC) {}
+/// Following the conventions in https://wiki.debian.org/Multiarch/Tuples,
+/// we remove the vendor field to form the multiarch triple.
+static std::string getMultiarchTriple(const Driver &D,
+                                      const llvm::Triple &TargetTriple,
+                                      StringRef SysRoot) {
+    return (TargetTriple.getArchName() + "-" +
+            TargetTriple.getOSAndEnvironmentName()).str();
+}
 
-bool wasm::Linker::isLinkJob() const { return true; }
+std::string wasm::Linker::getLinkerPath(const ArgList &Args) const {
+  const ToolChain &ToolChain = getToolChain();
+  if (const Arg* A = Args.getLastArg(options::OPT_fuse_ld_EQ)) {
+    StringRef UseLinker = A->getValue();
+    if (!UseLinker.empty()) {
+      if (llvm::sys::path::is_absolute(UseLinker) &&
+          llvm::sys::fs::can_execute(UseLinker))
+        return UseLinker;
 
-bool wasm::Linker::hasIntegratedCPP() const { return false; }
+      // Accept 'lld', and 'ld' as aliases for the default linker
+      if (UseLinker != "lld" && UseLinker != "ld")
+        ToolChain.getDriver().Diag(diag::err_drv_invalid_linker_name)
+            << A->getAsString(Args);
+    }
+  }
+
+  return ToolChain.GetProgramPath(ToolChain.getDefaultLinker());
+}
 
 void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                 const InputInfo &Output,
@@ -35,7 +58,7 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                 const char *LinkingOutput) const {
 
   const ToolChain &ToolChain = getToolChain();
-  const char *Linker = Args.MakeArgString(ToolChain.GetLinkerPath());
+  const char *Linker = Args.MakeArgString(getLinkerPath(Args));
   ArgStringList CmdArgs;
 
   if (Args.hasArg(options::OPT_s))
@@ -54,8 +77,10 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     if (ToolChain.ShouldLinkCXXStdlib(Args))
       ToolChain.AddCXXStdlibLibArgs(Args, CmdArgs);
 
-    if (Args.hasArg(options::OPT_pthread))
+    if (Args.hasArg(options::OPT_pthread)) {
       CmdArgs.push_back("-lpthread");
+      CmdArgs.push_back("--shared-memory");
+    }
 
     CmdArgs.push_back("-lc");
     AddRunTimeLibs(ToolChain, ToolChain.getDriver(), CmdArgs, Args);
@@ -75,7 +100,17 @@ WebAssembly::WebAssembly(const Driver &D, const llvm::Triple &Triple,
 
   getProgramPaths().push_back(getDriver().getInstalledDir());
 
-  getFilePaths().push_back(getDriver().SysRoot + "/lib");
+  if (getTriple().getOS() == llvm::Triple::UnknownOS) {
+    // Theoretically an "unknown" OS should mean no standard libraries, however
+    // it could also mean that a custom set of libraries is in use, so just add
+    // /lib to the search path. Disable multiarch in this case, to discourage
+    // paths containing "unknown" from acquiring meanings.
+    getFilePaths().push_back(getDriver().SysRoot + "/lib");
+  } else {
+    const std::string MultiarchTriple =
+        getMultiarchTriple(getDriver(), Triple, getDriver().SysRoot);
+    getFilePaths().push_back(getDriver().SysRoot + "/lib/" + MultiarchTriple);
+  }
 }
 
 bool WebAssembly::IsMathErrnoDefault() const { return false; }
@@ -105,6 +140,18 @@ void WebAssembly::addClangTargetOptions(const ArgList &DriverArgs,
   if (DriverArgs.hasFlag(clang::driver::options::OPT_fuse_init_array,
                          options::OPT_fno_use_init_array, true))
     CC1Args.push_back("-fuse-init-array");
+
+  // '-pthread' implies '-target-feature +atomics'
+  if (DriverArgs.hasFlag(options::OPT_pthread, options::OPT_no_pthread,
+                         false)) {
+    if (DriverArgs.hasFlag(options::OPT_mno_atomics, options::OPT_matomics,
+                           false))
+      getDriver().Diag(diag::err_drv_argument_not_allowed_with)
+          << "-pthread"
+          << "-mno-atomics";
+    CC1Args.push_back("-target-feature");
+    CC1Args.push_back("+atomics");
+  }
 }
 
 ToolChain::RuntimeLibType WebAssembly::GetDefaultRuntimeLibType() const {
@@ -124,16 +171,55 @@ WebAssembly::GetCXXStdlibType(const ArgList &Args) const {
 
 void WebAssembly::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
                                             ArgStringList &CC1Args) const {
-  if (!DriverArgs.hasArg(options::OPT_nostdinc))
-    addSystemInclude(DriverArgs, CC1Args, getDriver().SysRoot + "/include");
+  if (DriverArgs.hasArg(clang::driver::options::OPT_nostdinc))
+    return;
+
+  const Driver &D = getDriver();
+
+  if (!DriverArgs.hasArg(options::OPT_nobuiltininc)) {
+    SmallString<128> P(D.ResourceDir);
+    llvm::sys::path::append(P, "include");
+    addSystemInclude(DriverArgs, CC1Args, P);
+  }
+
+  if (DriverArgs.hasArg(options::OPT_nostdlibinc))
+    return;
+
+  // Check for configure-time C include directories.
+  StringRef CIncludeDirs(C_INCLUDE_DIRS);
+  if (CIncludeDirs != "") {
+    SmallVector<StringRef, 5> dirs;
+    CIncludeDirs.split(dirs, ":");
+    for (StringRef dir : dirs) {
+      StringRef Prefix =
+          llvm::sys::path::is_absolute(dir) ? StringRef(D.SysRoot) : "";
+      addExternCSystemInclude(DriverArgs, CC1Args, Prefix + dir);
+    }
+    return;
+  }
+
+  if (getTriple().getOS() != llvm::Triple::UnknownOS) {
+    const std::string MultiarchTriple =
+        getMultiarchTriple(D, getTriple(), D.SysRoot);
+    addSystemInclude(DriverArgs, CC1Args, D.SysRoot + "/include/" + MultiarchTriple);
+  }
+  addSystemInclude(DriverArgs, CC1Args, D.SysRoot + "/include");
 }
 
 void WebAssembly::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
                                                ArgStringList &CC1Args) const {
   if (!DriverArgs.hasArg(options::OPT_nostdlibinc) &&
-      !DriverArgs.hasArg(options::OPT_nostdincxx))
+      !DriverArgs.hasArg(options::OPT_nostdincxx)) {
+    if (getTriple().getOS() != llvm::Triple::UnknownOS) {
+      const std::string MultiarchTriple =
+          getMultiarchTriple(getDriver(), getTriple(), getDriver().SysRoot);
+      addSystemInclude(DriverArgs, CC1Args,
+                       getDriver().SysRoot + "/include/" + MultiarchTriple +
+                           "/c++/v1");
+    }
     addSystemInclude(DriverArgs, CC1Args,
                      getDriver().SysRoot + "/include/c++/v1");
+  }
 }
 
 void WebAssembly::AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,
@@ -149,12 +235,12 @@ void WebAssembly::AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,
   }
 }
 
-std::string WebAssembly::getThreadModel() const {
-  // The WebAssembly MVP does not yet support threads; for now, use the
-  // "single" threading model, which lowers atomics to non-atomic operations.
-  // When threading support is standardized and implemented in popular engines,
-  // this override should be removed.
-  return "single";
+SanitizerMask WebAssembly::getSupportedSanitizers() const {
+  SanitizerMask Res = ToolChain::getSupportedSanitizers();
+  if (getTriple().isOSEmscripten()) {
+    Res |= SanitizerKind::Vptr | SanitizerKind::Leak;
+  }
+  return Res;
 }
 
 Tool *WebAssembly::buildLinker() const {

@@ -396,3 +396,55 @@ C<D> func3(D const &d) {
 }
 
 } // end namespace PR34728
+
+namespace ClassScopeExplicitSpecializations {
+  template<int> struct A {
+    template<int> constexpr int f() const { return 1; }
+    template<> constexpr int f<0>() const { return 2; }
+  };
+
+  template<> template<int> constexpr int A<0>::f() const { return 3; }
+  template<> template<> constexpr int A<0>::f<0>() const { return 4; }
+  template<> template<> constexpr int A<0>::f<1>() const { return 5; }
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Winstantiation-after-specialization"
+  template int A<2>::f<0>() const;
+#pragma clang diagnostic pop
+  template int A<2>::f<1>() const;
+  extern template int A<3>::f<0>() const;
+  extern template int A<3>::f<1>() const;
+
+  template<int> struct B {
+    template<typename> static const int v = 1;
+    template<typename T> static const int v<T*> = 2;
+    template<> static const int v<int> = 3;
+
+    template<typename> static constexpr int w = 1;
+    template<typename T> static constexpr int w<T*> = 2;
+    template<> static constexpr int w<int> = 3;
+  };
+
+  template<> template<typename> constexpr int B<0>::v = 4;
+  template<> template<typename T> constexpr int B<0>::v<T*> = 5;
+  template<> template<typename T> constexpr int B<0>::v<T&> = 6;
+  // This is ill-formed: the initializer of v<int> is instantiated with the
+  // class.
+  //template<> template<> constexpr int B<0>::v<int> = 7;
+  template<> template<> constexpr int B<0>::v<float> = 8;
+
+  template<> template<typename> constexpr int B<0>::w = 4;
+  template<> template<typename T> constexpr int B<0>::w<T*> = 5;
+  template<> template<typename T> constexpr int B<0>::w<T&> = 6;
+  template<> template<> constexpr int B<0>::w<int> = 7;
+  template<> template<> constexpr int B<0>::w<float> = 8;
+}
+
+namespace DependentMemberExpr {
+  struct Base {
+    constexpr int setstate() { return 0; }
+  };
+  template<typename T> struct A : Base {
+    constexpr int f() { return Base::setstate(); }
+  };
+}

@@ -514,16 +514,12 @@ namespace test17 {
 }
 
 namespace test18 {
-  template <class T> class A {};
-  class B : A<int> {
+  template <class T> class A {}; // expected-note {{member is declared here}}
+  class B : A<int> { // expected-note {{constrained by implicitly private inheritance here}}
     A<int> member;
   };
-
-  // FIXME: this access to A should be forbidden (because C++ is dumb),
-  // but LookupResult can't express the necessary information to do
-  // the check, so we aggressively suppress access control.
   class C : B {
-    A<int> member;
+    A<int> member; // expected-error {{'A' is a private member of 'test18::A<int>'}}
   };
 }
 

@@ -42,13 +42,14 @@ __m512i test_mm512_maskz_popcnt_epi8(__mmask64 __U, __m512i __B) {
 
 __mmask64 test_mm512_mask_bitshuffle_epi64_mask(__mmask64 __U, __m512i __A, __m512i __B) {
   // CHECK-LABEL: @test_mm512_mask_bitshuffle_epi64_mask
-  // CHECK: @llvm.x86.avx512.mask.vpshufbitqmb.512
+  // CHECK: @llvm.x86.avx512.vpshufbitqmb.512
+  // CHECK: and <64 x i1> %{{.*}}, %{{.*}}
   return _mm512_mask_bitshuffle_epi64_mask(__U, __A, __B);
 }
 
 __mmask64 test_mm512_bitshuffle_epi64_mask(__m512i __A, __m512i __B) {
   // CHECK-LABEL: @test_mm512_bitshuffle_epi64_mask
-  // CHECK: @llvm.x86.avx512.mask.vpshufbitqmb.512
+  // CHECK: @llvm.x86.avx512.vpshufbitqmb.512
   return _mm512_bitshuffle_epi64_mask(__A, __B);
 }
 

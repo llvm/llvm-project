@@ -43,9 +43,8 @@
 
   <div class="submenu">
     <label>The Code</label>
-    <a href="/get_started.html#build">Check Out SVN</a>
-    <a href="http://llvm.org/svn/llvm-project/cfe/trunk/">Browse SVN</a>
-    <a href="http://llvm.org/viewvc/llvm-project/cfe/trunk/">Browse ViewVC</a>
+    <a href="/get_started.html#build">Check Out Sources</a>
+    <a href="https://github.com/llvm/llvm-project/tree/master/clang/">Browse Sources</a>
     <a href="http://clang.llvm.org/doxygen/">doxygen</a>
   </div>
 

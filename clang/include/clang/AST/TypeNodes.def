@@ -1,9 +1,8 @@
 //===-- TypeNodes.def - Metadata about Type AST nodes -----------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -83,6 +82,7 @@ TYPE(FunctionNoProto, FunctionType)
 DEPENDENT_TYPE(UnresolvedUsing, Type)
 NON_CANONICAL_TYPE(Paren, Type)
 NON_CANONICAL_TYPE(Typedef, Type)
+NON_CANONICAL_TYPE(MacroQualified, Type)
 NON_CANONICAL_TYPE(Adjusted, Type)
 NON_CANONICAL_TYPE(Decayed, AdjustedType)
 NON_CANONICAL_UNLESS_DEPENDENT_TYPE(TypeOfExpr, Type)

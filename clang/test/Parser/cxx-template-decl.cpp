@@ -128,8 +128,13 @@ void f2() {
 
 
 // PR3844
-template <> struct S<int> { }; // expected-error{{explicit specialization of non-template struct 'S'}}
-template <> union U<int> { }; // expected-error{{explicit specialization of non-template union 'U'}}
+template <> struct S<int> { }; // expected-error{{explicit specialization of undeclared template struct 'S'}}
+template <> union U<int> { }; // expected-error{{explicit specialization of undeclared template union 'U'}}
+
+struct SS;
+union UU;
+template <> struct SS<int> { }; // expected-error{{explicit specialization of non-template struct 'SS'}}
+template <> union UU<int> { }; // expected-error{{explicit specialization of non-template union 'UU'}}
 
 namespace PR6184 {
   namespace N {
@@ -230,11 +235,11 @@ struct base { };
 
 struct t1 : base<int,
   public:  // expected-error {{expected expression}}
-};  // expected-error {{expected class name}}
+};
 // expected-error@-1 {{expected '{' after base class list}}
 struct t2 : base<int,
   public  // expected-error {{expected expression}}
-};  // expected-error {{expected class name}}
+};
 // expected-error@-1 {{expected '{' after base class list}}
 
 }
@@ -247,4 +252,12 @@ namespace class_scope_instantiation {
     extern template // expected-error {{expected member name or ';'}}
       void f(double);
   };
+}
+
+namespace PR42071 {
+  template<int SomeTemplateName<void>> struct A; // expected-error {{parameter name cannot have template arguments}}
+  template<int operator+> struct B; // expected-error {{'operator+' cannot be the name of a parameter}}
+  struct Q {};
+  template<int Q::N> struct C; // expected-error {{parameter declarator cannot be qualified}}
+  template<int f(int a = 0)> struct D; // expected-error {{default arguments can only be specified for parameters in a function declaration}}
 }

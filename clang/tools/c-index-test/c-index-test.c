@@ -88,6 +88,8 @@ static unsigned getDefaultParsingOptions() {
     options |= CXTranslationUnit_IncludeAttributedTypes;
   if (getenv("CINDEXTEST_VISIT_IMPLICIT_ATTRIBUTES"))
     options |= CXTranslationUnit_VisitImplicitAttributes;
+  if (getenv("CINDEXTEST_IGNORE_NONERRORS_FROM_INCLUDED_FILES"))
+    options |= CXTranslationUnit_IgnoreNonErrorsFromIncludedFiles;
 
   return options;
 }
@@ -1658,19 +1660,61 @@ static enum CXChildVisitResult PrintType(CXCursor cursor, CXCursor p,
         if (numFields != 0) {
           printf(" [nbFields=%d]", numFields);
         }
-        /* Print if it is an anonymous record. */
-        {
-          unsigned isAnon = clang_Cursor_isAnonymous(cursor);
-          if (isAnon != 0) {
-            printf(" [isAnon=%d]", isAnon);
-          }
-        }
       }
+    }
+
+    /* Print if it is an anonymous record or namespace. */
+    {
+      unsigned isAnon = clang_Cursor_isAnonymous(cursor);
+      if (isAnon != 0) {
+        printf(" [isAnon=%d]", isAnon);
+      }
+    }
+
+    /* Print if it is an anonymous record decl */
+    {
+      unsigned isAnonRecDecl = clang_Cursor_isAnonymousRecordDecl(cursor);
+      printf(" [isAnonRecDecl=%d]", isAnonRecDecl);
+    }
+
+    /* Print if it is an inline namespace decl */
+    {
+      unsigned isInlineNamespace = clang_Cursor_isInlineNamespace(cursor);
+      if (isInlineNamespace != 0)
+        printf(" [isInlineNamespace=%d]", isInlineNamespace);
     }
 
     printf("\n");
   }
   return CXChildVisit_Recurse;
+}
+
+static void PrintSingleTypeSize(CXType T, const char *TypeKindFormat,
+                                const char *SizeFormat,
+                                const char *AlignFormat) {
+  PrintTypeAndTypeKind(T, TypeKindFormat);
+  /* Print the type sizeof if applicable. */
+  {
+    long long Size = clang_Type_getSizeOf(T);
+    if (Size >= 0 || Size < -1 ) {
+      printf(SizeFormat, Size);
+    }
+  }
+  /* Print the type alignof if applicable. */
+  {
+    long long Align = clang_Type_getAlignOf(T);
+    if (Align >= 0 || Align < -1) {
+      printf(AlignFormat, Align);
+    }
+  }
+
+  /* Print the return type if it exists. */
+  {
+    CXType RT = clang_getResultType(T);
+    if (RT.kind != CXType_Invalid)
+      PrintSingleTypeSize(RT, " [resulttype=%s] [resulttypekind=%s]",
+                              " [resultsizeof=%lld]", " [resultalignof=%lld]");
+  }
 }
 
 static enum CXChildVisitResult PrintTypeSize(CXCursor cursor, CXCursor p,
@@ -1681,21 +1725,8 @@ static enum CXChildVisitResult PrintTypeSize(CXCursor cursor, CXCursor p,
     return CXChildVisit_Recurse;
   T = clang_getCursorType(cursor);
   PrintCursor(cursor, NULL);
-  PrintTypeAndTypeKind(T, " [type=%s] [typekind=%s]");
-  /* Print the type sizeof if applicable. */
-  {
-    long long Size = clang_Type_getSizeOf(T);
-    if (Size >= 0 || Size < -1 ) {
-      printf(" [sizeof=%lld]", Size);
-    }
-  }
-  /* Print the type alignof if applicable. */
-  {
-    long long Align = clang_Type_getAlignOf(T);
-    if (Align >= 0 || Align < -1) {
-      printf(" [alignof=%lld]", Align);
-    }
-  }
+  PrintSingleTypeSize(T, " [type=%s] [typekind=%s]", " [sizeof=%lld]",
+                      " [alignof=%lld]");
   /* Print the record field offset if applicable. */
   {
     CXString FieldSpelling = clang_getCursorSpelling(cursor);
@@ -1733,7 +1764,9 @@ static enum CXChildVisitResult PrintTypeSize(CXCursor cursor, CXCursor p,
     if (IsBitfield)
       printf(" [BitFieldSize=%d]", clang_getFieldDeclBitWidth(cursor));
   }
+
   printf("\n");
+
   return CXChildVisit_Recurse;
 }
 

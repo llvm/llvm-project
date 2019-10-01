@@ -53,6 +53,7 @@ add_clang_library(clangDriver
   ToolChains/MipsLinux.cpp
   ToolChains/MinGW.cpp
   ToolChains/Minix.cpp
+  ToolChains/MSP430.cpp
   ToolChains/MSVC.cpp
   ToolChains/Myriad.cpp
   ToolChains/NaCl.cpp
@@ -64,6 +65,7 @@ add_clang_library(clangDriver
   ToolChains/TCE.cpp
   ToolChains/WebAssembly.cpp
   ToolChains/XCore.cpp
+  ToolChains/PPCLinux.cpp
   Types.cpp
   XRayArgs.cpp
 

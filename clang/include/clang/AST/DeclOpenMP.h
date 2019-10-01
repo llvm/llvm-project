@@ -1,9 +1,8 @@
 //===- DeclOpenMP.h - Classes for representing OpenMP directives -*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -207,6 +206,102 @@ public:
   }
 };
 
+/// This represents '#pragma omp declare mapper ...' directive. Map clauses are
+/// allowed to use with this directive. The following example declares a user
+/// defined mapper for the type 'struct vec'. This example instructs the fields
+/// 'len' and 'data' should be mapped when mapping instances of 'struct vec'.
+///
+/// \code
+/// #pragma omp declare mapper(mid: struct vec v) map(v.len, v.data[0:N])
+/// \endcode
+class OMPDeclareMapperDecl final : public ValueDecl, public DeclContext {
+  friend class ASTDeclReader;
+
+  /// Clauses associated with this mapper declaration
+  MutableArrayRef<OMPClause *> Clauses;
+
+  /// Mapper variable, which is 'v' in the example above
+  Expr *MapperVarRef = nullptr;
+
+  /// Name of the mapper variable
+  DeclarationName VarName;
+
+  LazyDeclPtr PrevDeclInScope;
+
+  virtual void anchor();
+
+  OMPDeclareMapperDecl(Kind DK, DeclContext *DC, SourceLocation L,
+                       DeclarationName Name, QualType Ty,
+                       DeclarationName VarName,
+                       OMPDeclareMapperDecl *PrevDeclInScope)
+      : ValueDecl(DK, DC, L, Name, Ty), DeclContext(DK), VarName(VarName),
+        PrevDeclInScope(PrevDeclInScope) {}
+
+  void setPrevDeclInScope(OMPDeclareMapperDecl *Prev) {
+    PrevDeclInScope = Prev;
+  }
+
+  /// Sets an array of clauses to this mapper declaration
+  void setClauses(ArrayRef<OMPClause *> CL);
+
+public:
+  /// Creates declare mapper node.
+  static OMPDeclareMapperDecl *Create(ASTContext &C, DeclContext *DC,
+                                      SourceLocation L, DeclarationName Name,
+                                      QualType T, DeclarationName VarName,
+                                      OMPDeclareMapperDecl *PrevDeclInScope);
+  /// Creates deserialized declare mapper node.
+  static OMPDeclareMapperDecl *CreateDeserialized(ASTContext &C, unsigned ID,
+                                                  unsigned N);
+
+  /// Creates an array of clauses to this mapper declaration and intializes
+  /// them.
+  void CreateClauses(ASTContext &C, ArrayRef<OMPClause *> CL);
+
+  using clauselist_iterator = MutableArrayRef<OMPClause *>::iterator;
+  using clauselist_const_iterator = ArrayRef<const OMPClause *>::iterator;
+  using clauselist_range = llvm::iterator_range<clauselist_iterator>;
+  using clauselist_const_range =
+      llvm::iterator_range<clauselist_const_iterator>;
+
+  unsigned clauselist_size() const { return Clauses.size(); }
+  bool clauselist_empty() const { return Clauses.empty(); }
+
+  clauselist_range clauselists() {
+    return clauselist_range(clauselist_begin(), clauselist_end());
+  }
+  clauselist_const_range clauselists() const {
+    return clauselist_const_range(clauselist_begin(), clauselist_end());
+  }
+  clauselist_iterator clauselist_begin() { return Clauses.begin(); }
+  clauselist_iterator clauselist_end() { return Clauses.end(); }
+  clauselist_const_iterator clauselist_begin() const { return Clauses.begin(); }
+  clauselist_const_iterator clauselist_end() const { return Clauses.end(); }
+
+  /// Get the variable declared in the mapper
+  Expr *getMapperVarRef() { return MapperVarRef; }
+  const Expr *getMapperVarRef() const { return MapperVarRef; }
+  /// Set the variable declared in the mapper
+  void setMapperVarRef(Expr *MapperVarRefE) { MapperVarRef = MapperVarRefE; }
+
+  /// Get the name of the variable declared in the mapper
+  DeclarationName getVarName() { return VarName; }
+
+  /// Get reference to previous declare mapper construct in the same
+  /// scope with the same name.
+  OMPDeclareMapperDecl *getPrevDeclInScope();
+  const OMPDeclareMapperDecl *getPrevDeclInScope() const;
+
+  static bool classof(const Decl *D) { return classofKind(D->getKind()); }
+  static bool classofKind(Kind K) { return K == OMPDeclareMapper; }
+  static DeclContext *castToDeclContext(const OMPDeclareMapperDecl *D) {
+    return static_cast<DeclContext *>(const_cast<OMPDeclareMapperDecl *>(D));
+  }
+  static OMPDeclareMapperDecl *castFromDeclContext(const DeclContext *DC) {
+    return static_cast<OMPDeclareMapperDecl *>(const_cast<DeclContext *>(DC));
+  }
+};
+
 /// Pseudo declaration for capturing expressions. Also is used for capturing of
 /// non-static data members in non-static member functions.
 ///
@@ -310,6 +405,119 @@ public:
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == OMPRequires; }
 };
+
+/// This represents '#pragma omp allocate ...' directive.
+/// For example, in the following, the default allocator is used for both 'a'
+/// and 'A::b':
+///
+/// \code
+/// int a;
+/// #pragma omp allocate(a)
+/// struct A {
+///   static int b;
+/// #pragma omp allocate(b)
+/// };
+/// \endcode
+///
+class OMPAllocateDecl final
+    : public Decl,
+      private llvm::TrailingObjects<OMPAllocateDecl, Expr *, OMPClause *> {
+  friend class ASTDeclReader;
+  friend TrailingObjects;
+
+  /// Number of variable within the allocate directive.
+  unsigned NumVars = 0;
+  /// Number of clauses associated with the allocate directive.
+  unsigned NumClauses = 0;
+
+  size_t numTrailingObjects(OverloadToken<Expr *>) const {
+    return NumVars;
+  }
+  size_t numTrailingObjects(OverloadToken<OMPClause *>) const {
+    return NumClauses;
+  }
+
+  virtual void anchor();
+
+  OMPAllocateDecl(Kind DK, DeclContext *DC, SourceLocation L)
+      : Decl(DK, DC, L) {}
+
+  ArrayRef<const Expr *> getVars() const {
+    return llvm::makeArrayRef(getTrailingObjects<Expr *>(), NumVars);
+  }
+
+  MutableArrayRef<Expr *> getVars() {
+    return MutableArrayRef<Expr *>(getTrailingObjects<Expr *>(), NumVars);
+  }
+
+  void setVars(ArrayRef<Expr *> VL);
+
+  /// Returns an array of immutable clauses associated with this directive.
+  ArrayRef<OMPClause *> getClauses() const {
+    return llvm::makeArrayRef(getTrailingObjects<OMPClause *>(), NumClauses);
+  }
+
+  /// Returns an array of clauses associated with this directive.
+  MutableArrayRef<OMPClause *> getClauses() {
+    return MutableArrayRef<OMPClause *>(getTrailingObjects<OMPClause *>(),
+                                        NumClauses);
+  }
+
+  /// Sets an array of clauses to this requires declaration
+  void setClauses(ArrayRef<OMPClause *> CL);
+
+public:
+  static OMPAllocateDecl *Create(ASTContext &C, DeclContext *DC,
+                                 SourceLocation L, ArrayRef<Expr *> VL,
+                                 ArrayRef<OMPClause *> CL);
+  static OMPAllocateDecl *CreateDeserialized(ASTContext &C, unsigned ID,
+                                             unsigned NVars, unsigned NClauses);
+
+  typedef MutableArrayRef<Expr *>::iterator varlist_iterator;
+  typedef ArrayRef<const Expr *>::iterator varlist_const_iterator;
+  typedef llvm::iterator_range<varlist_iterator> varlist_range;
+  typedef llvm::iterator_range<varlist_const_iterator> varlist_const_range;
+  using clauselist_iterator = MutableArrayRef<OMPClause *>::iterator;
+  using clauselist_const_iterator = ArrayRef<const OMPClause *>::iterator;
+  using clauselist_range = llvm::iterator_range<clauselist_iterator>;
+  using clauselist_const_range = llvm::iterator_range<clauselist_const_iterator>;
+
+
+  unsigned varlist_size() const { return NumVars; }
+  bool varlist_empty() const { return NumVars == 0; }
+  unsigned clauselist_size() const { return NumClauses; }
+  bool clauselist_empty() const { return NumClauses == 0; }
+
+  varlist_range varlists() {
+    return varlist_range(varlist_begin(), varlist_end());
+  }
+  varlist_const_range varlists() const {
+    return varlist_const_range(varlist_begin(), varlist_end());
+  }
+  varlist_iterator varlist_begin() { return getVars().begin(); }
+  varlist_iterator varlist_end() { return getVars().end(); }
+  varlist_const_iterator varlist_begin() const { return getVars().begin(); }
+  varlist_const_iterator varlist_end() const { return getVars().end(); }
+
+  clauselist_range clauselists() {
+    return clauselist_range(clauselist_begin(), clauselist_end());
+  }
+  clauselist_const_range clauselists() const {
+    return clauselist_const_range(clauselist_begin(), clauselist_end());
+  }
+  clauselist_iterator clauselist_begin() { return getClauses().begin(); }
+  clauselist_iterator clauselist_end() { return getClauses().end(); }
+  clauselist_const_iterator clauselist_begin() const {
+    return getClauses().begin();
+  }
+  clauselist_const_iterator clauselist_end() const {
+    return getClauses().end();
+  }
+
+  static bool classof(const Decl *D) { return classofKind(D->getKind()); }
+  static bool classofKind(Kind K) { return K == OMPAllocate; }
+};
+
 } // end namespace clang
 
 #endif

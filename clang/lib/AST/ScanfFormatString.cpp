@@ -1,9 +1,8 @@
 //= ScanfFormatString.cpp - Analysis of printf format strings --*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -262,8 +261,10 @@ ArgType ScanfSpecifier::getArgType(ASTContext &Ctx) const {
         case LengthModifier::AsInt32:
         case LengthModifier::AsInt3264:
         case LengthModifier::AsWide:
+        case LengthModifier::AsShortLong:
           return ArgType::Invalid();
       }
+      llvm_unreachable("Unsupported LengthModifier Type");
 
     // Unsigned int.
     case ConversionSpecifier::oArg:
@@ -301,8 +302,10 @@ ArgType ScanfSpecifier::getArgType(ASTContext &Ctx) const {
         case LengthModifier::AsInt32:
         case LengthModifier::AsInt3264:
         case LengthModifier::AsWide:
+        case LengthModifier::AsShortLong:
           return ArgType::Invalid();
       }
+      llvm_unreachable("Unsupported LengthModifier Type");
 
     // Float.
     case ConversionSpecifier::aArg:
@@ -395,6 +398,7 @@ ArgType ScanfSpecifier::getArgType(ASTContext &Ctx) const {
         case LengthModifier::AsInt32:
         case LengthModifier::AsInt3264:
         case LengthModifier::AsWide:
+        case LengthModifier::AsShortLong:
           return ArgType::Invalid();
         }
 
@@ -500,7 +504,7 @@ bool ScanfSpecifier::fixType(QualType QT, QualType RawQT,
     namedTypeToLengthModifier(PT, LM);
 
   // If fixing the length modifier was enough, we are done.
-  if (hasValidLengthModifier(Ctx.getTargetInfo())) {
+  if (hasValidLengthModifier(Ctx.getTargetInfo(), LangOpt)) {
     const analyze_scanf::ArgType &AT = getArgType(Ctx);
     if (AT.isValid() && AT.matchesType(Ctx, QT))
       return true;

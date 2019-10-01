@@ -1,9 +1,8 @@
 //===--- opencl-c.h - OpenCL C language builtin function header -----------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -23,9 +22,6 @@
 #endif //__OPENCL_C_VERSION__ < CL_VERSION_2_0
 
 #if __OPENCL_C_VERSION__ >= CL_VERSION_1_2
-#ifndef cl_intel_planar_yuv
-#define cl_intel_planar_yuv
-#endif // cl_intel_planar_yuv
 #pragma OPENCL EXTENSION cl_intel_planar_yuv : begin
 #pragma OPENCL EXTENSION cl_intel_planar_yuv : end
 #endif // __OPENCL_C_VERSION__ >= CL_VERSION_1_2
@@ -14610,6 +14606,7 @@ int4 __purefn __ovld read_imagei(read_only image3d_t image, sampler_t sampler, f
 uint4 __purefn __ovld read_imageui(read_only image3d_t image, sampler_t sampler, int4 coord);
 uint4 __purefn __ovld read_imageui(read_only image3d_t image, sampler_t sampler, float4 coord);
 
+#if __OPENCL_C_VERSION__ >= CL_VERSION_1_2
 float4 __purefn __ovld read_imagef(read_only image2d_array_t image_array, sampler_t sampler, int4 coord);
 float4 __purefn __ovld read_imagef(read_only image2d_array_t image_array, sampler_t sampler, float4 coord);
 
@@ -14617,6 +14614,7 @@ int4 __purefn __ovld read_imagei(read_only image2d_array_t image_array, sampler_
 int4 __purefn __ovld read_imagei(read_only image2d_array_t image_array, sampler_t sampler, float4 coord);
 uint4 __purefn __ovld read_imageui(read_only image2d_array_t image_array, sampler_t sampler, int4 coord);
 uint4 __purefn __ovld read_imageui(read_only image2d_array_t image_array, sampler_t sampler, float4 coord);
+#endif // __OPENCL_C_VERSION__ >= CL_VERSION_1_2
 
 float4 __purefn __ovld read_imagef(read_only image1d_t image, sampler_t sampler, int coord);
 float4 __purefn __ovld read_imagef(read_only image1d_t image, sampler_t sampler, float coord);
@@ -14626,6 +14624,7 @@ int4 __purefn __ovld read_imagei(read_only image1d_t image, sampler_t sampler, f
 uint4 __purefn __ovld read_imageui(read_only image1d_t image, sampler_t sampler, int coord);
 uint4 __purefn __ovld read_imageui(read_only image1d_t image, sampler_t sampler, float coord);
 
+#if __OPENCL_C_VERSION__ >= CL_VERSION_1_2
 float4 __purefn __ovld read_imagef(read_only image1d_array_t image_array, sampler_t sampler, int2 coord);
 float4 __purefn __ovld read_imagef(read_only image1d_array_t image_array, sampler_t sampler, float2 coord);
 
@@ -14633,6 +14632,7 @@ int4 __purefn __ovld read_imagei(read_only image1d_array_t image_array, sampler_
 int4 __purefn __ovld read_imagei(read_only image1d_array_t image_array, sampler_t sampler, float2 coord);
 uint4 __purefn __ovld read_imageui(read_only image1d_array_t image_array, sampler_t sampler, int2 coord);
 uint4 __purefn __ovld read_imageui(read_only image1d_array_t image_array, sampler_t sampler, float2 coord);
+#endif // __OPENCL_C_VERSION__ >= CL_VERSION_1_2
 
 #ifdef cl_khr_depth_images
 float __purefn __ovld read_imagef(read_only image2d_depth_t image, sampler_t sampler, float2 coord);
@@ -14735,6 +14735,8 @@ uint4 __purefn __ovld read_imageui(read_only image3d_t image, sampler_t sampler,
 #endif //cl_khr_mipmap_image
 #endif //__OPENCL_C_VERSION__ >= CL_VERSION_2_0
 
+#if __OPENCL_C_VERSION__ >= CL_VERSION_1_2
+
 /**
 * Sampler-less Image Access
 */
@@ -14768,24 +14770,31 @@ float4 __purefn __ovld read_imagef(read_only image3d_t image, int4 coord);
 int4 __purefn __ovld read_imagei(read_only image3d_t image, int4 coord);
 uint4 __purefn __ovld read_imageui(read_only image3d_t image, int4 coord);
 
+#endif // __OPENCL_C_VERSION__ >= CL_VERSION_1_2
+
 // Image read functions returning half4 type
 #ifdef cl_khr_fp16
 half4 __purefn __ovld read_imageh(read_only image1d_t image, sampler_t sampler, int coord);
 half4 __purefn __ovld read_imageh(read_only image1d_t image, sampler_t sampler, float coord);
-half4 __purefn __ovld read_imageh(read_only image1d_array_t image, sampler_t sampler, int2 coord);
-half4 __purefn __ovld read_imageh(read_only image1d_array_t image, sampler_t sampler, float2 coord);
 half4 __purefn __ovld read_imageh(read_only image2d_t image, sampler_t sampler, int2 coord);
 half4 __purefn __ovld read_imageh(read_only image2d_t image, sampler_t sampler, float2 coord);
 half4 __purefn __ovld read_imageh(read_only image3d_t image, sampler_t sampler, int4 coord);
 half4 __purefn __ovld read_imageh(read_only image3d_t image, sampler_t sampler, float4 coord);
+#if __OPENCL_C_VERSION__ >= CL_VERSION_1_2
+half4 __purefn __ovld read_imageh(read_only image1d_array_t image, sampler_t sampler, int2 coord);
+half4 __purefn __ovld read_imageh(read_only image1d_array_t image, sampler_t sampler, float2 coord);
 half4 __purefn __ovld read_imageh(read_only image2d_array_t image, sampler_t sampler, int4 coord);
 half4 __purefn __ovld read_imageh(read_only image2d_array_t image, sampler_t sampler, float4 coord);
+/**
+ * Sampler-less Image Access
+ */
 half4 __purefn __ovld read_imageh(read_only image1d_t image, int coord);
 half4 __purefn __ovld read_imageh(read_only image2d_t image, int2 coord);
 half4 __purefn __ovld read_imageh(read_only image3d_t image, int4 coord);
 half4 __purefn __ovld read_imageh(read_only image1d_array_t image, int2 coord);
 half4 __purefn __ovld read_imageh(read_only image2d_array_t image, int4 coord);
 half4 __purefn __ovld read_imageh(read_only image1d_buffer_t image, int coord);
+#endif // __OPENCL_C_VERSION__ >= CL_VERSION_1_2
 #endif //cl_khr_fp16
 
 // Image read functions for read_write images
@@ -17020,6 +17029,34 @@ uint4 __ovld amd_sadw(uint4 src0, uint4 src1, uint4 src2);
 uint8 __ovld amd_sadw(uint8 src0, uint8 src1, uint8 src2);
 uint16 __ovld amd_sadw(uint16 src0, uint16 src1, uint16 src2);
 #endif // cl_amd_media_ops2
+
+#if defined(cl_arm_integer_dot_product_int8)
+#pragma OPENCL EXTENSION cl_arm_integer_dot_product_int8 : begin
+uint __ovld arm_dot(uchar4 a, uchar4 b);
+int __ovld arm_dot(char4 a, char4 b);
+#pragma OPENCL EXTENSION cl_arm_integer_dot_product_int8 : end
+#endif // defined(cl_arm_integer_dot_product_int8)
+
+#if defined(cl_arm_integer_dot_product_accumulate_int8)
+#pragma OPENCL EXTENSION cl_arm_integer_dot_product_accumulate_int8 : begin
+uint __ovld arm_dot_acc(uchar4 a, uchar4 b, uint c);
+int __ovld arm_dot_acc(char4 a, char4 b, int c);
+#pragma OPENCL EXTENSION cl_arm_integer_dot_product_accumulate_int8 : end
+#endif // defined(cl_arm_integer_dot_product_accumulate_int8)
+
+#if defined(cl_arm_integer_dot_product_accumulate_int16)
+#pragma OPENCL EXTENSION cl_arm_integer_dot_product_accumulate_int16 : begin
+uint __ovld arm_dot_acc(ushort2 a, ushort2 b, uint c);
+int __ovld arm_dot_acc(short2 a, short2 b, int c);
+#pragma OPENCL EXTENSION cl_arm_integer_dot_product_accumulate_int16 : end
+#endif // defined(cl_arm_integer_dot_product_accumulate_int16)
+
+#if defined(cl_arm_integer_dot_product_accumulate_saturate_int8)
+#pragma OPENCL EXTENSION cl_arm_integer_dot_product_accumulate_saturate_int8 : begin
+uint __ovld arm_dot_acc_sat(uchar4 a, uchar4 b, uint c);
+int __ovld arm_dot_acc_sat(char4 a, char4 b, int c);
+#pragma OPENCL EXTENSION cl_arm_integer_dot_product_accumulate_saturate_int8 : end
+#endif // defined(cl_arm_integer_dot_product_accumulate_saturate_int8)
 
 // Disable any extensions we may have enabled previously.
 #pragma OPENCL EXTENSION all : disable

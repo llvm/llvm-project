@@ -1,4 +1,8 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core,unix,alpha.unix -std=gnu99 -analyzer-store=region -verify %s
+// RUN: %clang_analyze_cc1 -verify %s -std=gnu99 \
+// RUN:  -analyzer-checker=core \
+// RUN:  -analyzer-checker=alpha.core \
+// RUN:  -analyzer-checker=unix \
+// RUN:  -analyzer-checker=alpha.unix
 
 #include "Inputs/system-header-simulator.h"
 
@@ -51,7 +55,7 @@ void testHeapSymbol() {
 
 void testStackArrayOutOfBound() {
   char buf[1];
-  memset(buf, 0, 1024); // expected-warning {{Memory set function accesses out-of-bound array element}}
+  memset(buf, 0, 1024); // expected-warning {{Memory set function accesses out-of-bound array element}} expected-warning {{'memset' will always overflow; destination buffer has size 1, but size argument is 1024}}
 }
 
 void testHeapSymbolOutOfBound() {

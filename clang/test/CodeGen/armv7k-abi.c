@@ -4,7 +4,7 @@
 
 // Make sure 64 and 128 bit types are naturally aligned by the v7k ABI:
 
-// CHECK: target datalayout = "e-m:o-p:32:32-i64:64-a:0:32-n32-S128"
+// CHECK: target datalayout = "e-m:o-p:32:32-Fi8-i64:64-a:0:32-n32-S128"
 
 typedef struct {
   float arr[4];

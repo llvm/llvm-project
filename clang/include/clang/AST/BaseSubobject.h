@@ -1,9 +1,8 @@
 //===- BaseSubobject.h - BaseSubobject class --------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -79,11 +78,6 @@ template<> struct DenseMapInfo<clang::BaseSubobject> {
                       const clang::BaseSubobject &RHS) {
     return LHS == RHS;
   }
-};
-
-// It's OK to treat BaseSubobject as a POD type.
-template <> struct isPodLike<clang::BaseSubobject> {
-  static const bool value = true;
 };
 
 } // namespace llvm

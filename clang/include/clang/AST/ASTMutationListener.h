@@ -1,9 +1,8 @@
 //===--- ASTMutationListener.h - AST Mutation Interface --------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -127,6 +126,11 @@ public:
   /// \param Attr the added attribute.
   virtual void DeclarationMarkedOpenMPDeclareTarget(const Decl *D,
                                                     const Attr *Attr) {}
+
+  /// A declaration is marked as a variable with OpenMP allocator.
+  ///
+  /// \param D the declaration marked as a variable with OpenMP allocator.
+  virtual void DeclarationMarkedOpenMPAllocate(const Decl *D, const Attr *A) {}
 
   /// A definition has been made visible by being redefined locally.
   ///

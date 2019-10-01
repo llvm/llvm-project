@@ -17,10 +17,10 @@ T tmain(T argc) {
   T b = argc, c, d, e, f, g;
   static T a;
 // CHECK: static T a;
-#pragma omp taskgroup task_reduction(+: d)
-#pragma omp taskloop if(taskloop: argc > N) default(shared) untied priority(N) grainsize(N) reduction(+:g) in_reduction(+: d)
-  // CHECK-NEXT: #pragma omp taskgroup task_reduction(+: d)
-  // CHECK-NEXT: #pragma omp taskloop if(taskloop: argc > N) default(shared) untied priority(N) grainsize(N) reduction(+: g) in_reduction(+: d){{$}}
+#pragma omp taskgroup allocate(d) task_reduction(+: d)
+#pragma omp taskloop if(taskloop: argc > N) default(shared) untied priority(N) grainsize(N) reduction(+:g) in_reduction(+: d) allocate(d)
+  // CHECK-NEXT: #pragma omp taskgroup allocate(d) task_reduction(+: d)
+  // CHECK-NEXT: #pragma omp taskloop if(taskloop: argc > N) default(shared) untied priority(N) grainsize(N) reduction(+: g) in_reduction(+: d) allocate(d){{$}}
   for (int i = 0; i < 2; ++i)
     a = 2;
 // CHECK-NEXT: for (int i = 0; i < 2; ++i)

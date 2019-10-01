@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 %s -verify -fsyntax-only -std=gnu++98 -triple x86_64-pc-linux-gnu
+// RUN: %clang_cc1 %s -verify -fsyntax-only -std=gnu++2a -triple x86_64-pc-linux-gnu
+
 typedef unsigned long long uint64_t;
 typedef unsigned int uint32_t;
 
@@ -13,7 +15,7 @@ uint64_t f2(uint64_t, ...);
 
 static const uint64_t overflow = 1 * 4608 * 1024 * 1024; // expected-warning {{overflow in expression; result is 536870912 with type 'int'}}
 
-uint64_t check_integer_overflows(int i) { //expected-note {{declared here}}
+uint64_t check_integer_overflows(int i) { //expected-note 0+{{declared here}}
 // expected-warning@+1 {{overflow in expression; result is 536870912 with type 'int'}}
   uint64_t overflow = 4608 * 1024 * 1024,
 // expected-warning@+1 {{overflow in expression; result is 536870912 with type 'int'}}
@@ -72,6 +74,7 @@ uint64_t check_integer_overflows(int i) { //expected-note {{declared here}}
   if ((uint64_t)((uint64_t)(4608 * 1024 * 1024) * (uint64_t)(4608 * 1024 * 1024)))
     return 5;
 
+#if __cplusplus < 201103L
   switch (i) {
 // expected-warning@+1 {{overflow in expression; result is 536870912 with type 'int'}}
   case 4608 * 1024 * 1024:
@@ -94,6 +97,7 @@ uint64_t check_integer_overflows(int i) { //expected-note {{declared here}}
   case ((uint64_t)((uint64_t)(4608 * 1024 * 1024) * (uint64_t)(4608 * 1024 * 1024))):
     return 10;
   }
+#endif
 
 // expected-warning@+1 {{overflow in expression; result is 536870912 with type 'int'}}
   while (4608 * 1024 * 1024);
@@ -160,11 +164,13 @@ uint64_t check_integer_overflows(int i) { //expected-note {{declared here}}
 // expected-warning@+1 {{overflow in expression; result is 536870912 with type 'int'}}
   (__imag__ x) = 4608 * 1024 * 1024;
 
-// expected-warning@+4 {{overflow in expression; result is 536870912 with type 'int'}}
-// expected-warning@+3 {{array index 536870912 is past the end of the array (which contains 10 elements)}}
-// expected-note@+1 {{array 'a' declared here}}
+// expected-warning@+2 {{overflow in expression; result is 536870912 with type 'int'}}
   uint64_t a[10];
   a[4608 * 1024 * 1024] = 1;
+#if __cplusplus < 201103L
+// expected-warning@-2 {{array index 536870912 is past the end of the array (which contains 10 elements)}}
+// expected-note@-4 {{array 'a' declared here}}
+#endif
 
 // expected-warning@+1 2{{overflow in expression; result is 536870912 with type 'int'}}
   return ((4608 * 1024 * 1024) + ((uint64_t)(4608 * 1024 * 1024)));
@@ -183,4 +189,23 @@ void check_integer_overflows_in_function_calls() {
 
 // expected-warning@+1 {{overflow in expression; result is 536870912 with type 'int'}}
   (void)f2(0, f0(4608 * 1024 * 1024));
+}
+
+// Tests that ensure that evaluation-for-overflow of random expressions doesn't
+// crash.
+namespace EvaluationCrashes {
+  namespace VirtualCallWithVbase {
+    struct A {};
+    struct B : virtual A {
+      virtual bool f(const void *, int);
+    };
+    struct C : B {
+      bool f(const void *, int);
+    };
+    int d;
+    bool e(C c) {
+      if (c.f(&d, d)) {}
+      return true;
+    }
+  }
 }

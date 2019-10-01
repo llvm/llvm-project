@@ -1,9 +1,8 @@
 //===--- OperationKinds.def - Operations Database ---------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -200,6 +199,14 @@ CAST_OPERATION(IntegralToFloating)
 /// CK_FixedPointCast - Fixed point to fixed point.
 ///    (_Accum) 0.5r
 CAST_OPERATION(FixedPointCast)
+
+/// CK_FixedPointToIntegral - Fixed point to integral.
+///    (int) 2.0k
+CAST_OPERATION(FixedPointToIntegral)
+
+/// CK_IntegralToFixedPoint - Integral to a fixed point.
+///    (_Accum) 2
+CAST_OPERATION(IntegralToFixedPoint)
 
 /// CK_FixedPointToBoolean - Fixed point to boolean.
 ///    (bool) 0.5r

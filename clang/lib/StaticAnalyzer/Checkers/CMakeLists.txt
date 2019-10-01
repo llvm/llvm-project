@@ -75,6 +75,8 @@ add_clang_library(clangStaticAnalyzerCheckers
   OSObjectCStyleCast.cpp
   PaddingChecker.cpp
   PointerArithChecker.cpp
+  PointerIterationChecker.cpp
+  PointerSortingChecker.cpp
   PointerSubChecker.cpp
   PthreadLockChecker.cpp
   RetainCountChecker/RetainCountChecker.cpp
@@ -87,6 +89,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   StackAddrEscapeChecker.cpp
   StdLibraryFunctionsChecker.cpp
   StreamChecker.cpp
+  Taint.cpp
   TaintTesterChecker.cpp
   TestAfterDivZeroChecker.cpp
   TraversalChecker.cpp

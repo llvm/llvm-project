@@ -259,7 +259,7 @@ void implicit_maps_nested_integer (int a){
   // CK4: define internal void [[KERNELP1]](i32* {{[^,]+}}, i32* {{[^,]+}}, i32* {{[^,]+}})
   #pragma omp parallel
   {
-    // CK4-DAG: call i32 @__tgt_target(i64 {{.+}}, i8* {{.+}}, i32 1, i8** [[BPGEP:%[0-9]+]], i8** [[PGEP:%[0-9]+]], {{.+}}[[SIZES]]{{.+}}, {{.+}}[[TYPES]]{{.+}})
+    // CK4-DAG: call i32 @__tgt_target_teams(i64 {{.+}}, i8* {{.+}}, i32 1, i8** [[BPGEP:%[0-9]+]], i8** [[PGEP:%[0-9]+]], {{.+}}[[SIZES]]{{.+}}, {{.+}}[[TYPES]]{{.+}}, i32 1, i32 0)
     // CK4-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BPS:%[^,]+]], i32 0, i32 0
     // CK4-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[PS:%[^,]+]], i32 0, i32 0
     // CK4-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BPS]], i32 0, i32 0
@@ -1516,7 +1516,7 @@ void explicit_maps_single (int ii){
   int b = a;
 
   // Region 00n
-  // CK19-DAG: call i32 @__tgt_target(i64 {{[^,]+}}, i8* {{[^,]+}}, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE00n]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE00n]]{{.+}})
+  // CK19-DAG: call i32 @__tgt_target_teams(i64 {{[^,]+}}, i8* {{[^,]+}}, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE00n]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE00n]]{{.+}}, i32 1, i32 0)
   // CK19-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
   // CK19-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
 
@@ -4581,11 +4581,15 @@ struct CC {
 // CK26: define {{.+}}[[CALL00]]({{.*}}i32*{{.*}}[[PVTARG:%.+]])
 // CK26: store i32* [[PVTARG]], i32** [[PVTADDR:%.+]],
 // CK26: [[ADDR:%.+]] = load i32*, i32** [[PVTADDR]],
+// CK26: store i32* [[ADDR]], i32** [[PVTADDR:%.+]],
+// CK26: [[ADDR:%.+]] = load i32*, i32** [[PVTADDR]],
 // CK26: [[VAL:%.+]] = load i32, i32* [[ADDR]],
 // CK26: add nsw i32 [[VAL]], 1
 
 // CK26: define {{.+}}[[CALL01]]({{.*}}float*{{.*}}[[PVTARG:%.+]])
 // CK26: store float* [[PVTARG]], float** [[PVTADDR:%.+]],
+// CK26: [[ADDR:%.+]] = load float*, float** [[PVTADDR]],
+// CK26: store float* [[ADDR]], float** [[PVTADDR:%.+]],
 // CK26: [[ADDR:%.+]] = load float*, float** [[PVTADDR]],
 // CK26: [[VAL:%.+]] = load float, float* [[ADDR]],
 // CK26: [[EXT:%.+]] = fpext float [[VAL]] to double
@@ -4594,11 +4598,15 @@ struct CC {
 // CK26: define {{.+}}[[CALL02]]({{.*}}i32*{{.*}}[[PVTARG:%.+]])
 // CK26: store i32* [[PVTARG]], i32** [[PVTADDR:%.+]],
 // CK26: [[ADDR:%.+]] = load i32*, i32** [[PVTADDR]],
+// CK26: store i32* [[ADDR]], i32** [[PVTADDR:%.+]],
+// CK26: [[ADDR:%.+]] = load i32*, i32** [[PVTADDR]],
 // CK26: [[VAL:%.+]] = load i32, i32* [[ADDR]],
 // CK26: add nsw i32 [[VAL]], 1
 
 // CK26: define {{.+}}[[CALL03]]({{.*}}float*{{.*}}[[PVTARG:%.+]])
 // CK26: store float* [[PVTARG]], float** [[PVTADDR:%.+]],
+// CK26: [[ADDR:%.+]] = load float*, float** [[PVTADDR]],
+// CK26: store float* [[ADDR]], float** [[PVTADDR:%.+]],
 // CK26: [[ADDR:%.+]] = load float*, float** [[PVTADDR]],
 // CK26: [[VAL:%.+]] = load float, float* [[ADDR]],
 // CK26: [[EXT:%.+]] = fpext float [[VAL]] to double

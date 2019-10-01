@@ -1,9 +1,8 @@
 //===--- ExecuteCompilerInvocation.cpp ------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -118,6 +117,8 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
   case RunAnalysis:            Action = "RunAnalysis"; break;
 #endif
   case RunPreprocessorOnly:    return llvm::make_unique<PreprocessOnlyAction>();
+  case PrintDependencyDirectivesSourceMinimizerOutput:
+    return llvm::make_unique<PrintDependencyDirectivesSourceMinimizerAction>();
   }
 
 #if !CLANG_ENABLE_ARCMT || !CLANG_ENABLE_STATIC_ANALYZER \
@@ -241,28 +242,42 @@ bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
   }
 
 #if CLANG_ENABLE_STATIC_ANALYZER
-  // Honor -analyzer-checker-help.
-  // This should happen AFTER plugins have been loaded!
-  if (Clang->getAnalyzerOpts()->ShowCheckerHelp) {
+  // These should happen AFTER plugins have been loaded!
+
+  AnalyzerOptions &AnOpts = *Clang->getAnalyzerOpts();
+  // Honor -analyzer-checker-help and -analyzer-checker-help-hidden.
+  if (AnOpts.ShowCheckerHelp || AnOpts.ShowCheckerHelpAlpha ||
+      AnOpts.ShowCheckerHelpDeveloper) {
     ento::printCheckerHelp(llvm::outs(),
                            Clang->getFrontendOpts().Plugins,
-                           *Clang->getAnalyzerOpts(),
+                           AnOpts,
                            Clang->getDiagnostics(),
                            Clang->getLangOpts());
     return true;
   }
 
+  // Honor -analyzer-checker-option-help.
+  if (AnOpts.ShowCheckerOptionList || AnOpts.ShowCheckerOptionAlphaList ||
+      AnOpts.ShowCheckerOptionDeveloperList) {
+    ento::printCheckerConfigList(llvm::outs(),
+                                 Clang->getFrontendOpts().Plugins,
+                                 *Clang->getAnalyzerOpts(),
+                                 Clang->getDiagnostics(),
+                                 Clang->getLangOpts());
+    return true;
+  }
+
   // Honor -analyzer-list-enabled-checkers.
-  if (Clang->getAnalyzerOpts()->ShowEnabledCheckerList) {
+  if (AnOpts.ShowEnabledCheckerList) {
     ento::printEnabledCheckerList(llvm::outs(),
                                   Clang->getFrontendOpts().Plugins,
-                                  *Clang->getAnalyzerOpts(),
+                                  AnOpts,
                                   Clang->getDiagnostics(),
                                   Clang->getLangOpts());
   }
 
   // Honor -analyzer-config-help.
-  if (Clang->getAnalyzerOpts()->ShowConfigOptionsList) {
+  if (AnOpts.ShowConfigOptionsList) {
     ento::printAnalyzerConfigList(llvm::outs());
     return true;
   }

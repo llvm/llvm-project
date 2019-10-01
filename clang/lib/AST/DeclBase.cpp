@@ -1,9 +1,8 @@
 //===- DeclBase.cpp - Declaration AST Node Implementation -----------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -209,8 +208,8 @@ bool Decl::isTemplateParameterPack() const {
 }
 
 bool Decl::isParameterPack() const {
-  if (const auto *Parm = dyn_cast<ParmVarDecl>(this))
-    return Parm->isParameterPack();
+  if (const auto *Var = dyn_cast<VarDecl>(this))
+    return Var->isParameterPack();
 
   return isTemplateParameterPack();
 }
@@ -355,7 +354,8 @@ bool Decl::isInAnonymousNamespace() const {
 }
 
 bool Decl::isInStdNamespace() const {
-  return getDeclContext()->isStdNamespace();
+  const DeclContext *DC = getDeclContext();
+  return DC && DC->isStdNamespace();
 }
 
 TranslationUnitDecl *Decl::getTranslationUnitDecl() {
@@ -428,22 +428,6 @@ bool Decl::isReferenced() const {
     if (I->Referenced)
       return true;
 
-  return false;
-}
-
-bool Decl::isExported() const {
-  if (isModulePrivate())
-    return false;
-  // Namespaces are always exported.
-  if (isa<TranslationUnitDecl>(this) || isa<NamespaceDecl>(this))
-    return true;
-  // Otherwise, this is a strictly lexical check.
-  for (auto *DC = getLexicalDeclContext(); DC; DC = DC->getLexicalParent()) {
-    if (cast<Decl>(DC)->isModulePrivate())
-      return false;
-    if (isa<ExportDecl>(DC))
-      return true;
-  }
   return false;
 }
 
@@ -781,6 +765,9 @@ unsigned Decl::getIdentifierNamespaceForKind(Kind DeclKind) {
     case OMPDeclareReduction:
       return IDNS_OMPReduction;
 
+    case OMPDeclareMapper:
+      return IDNS_OMPMapper;
+
     // Never have names.
     case Friend:
     case FriendTemplate:
@@ -810,6 +797,7 @@ unsigned Decl::getIdentifierNamespaceForKind(Kind DeclKind) {
     case ObjCCategoryImpl:
     case Import:
     case OMPThreadPrivate:
+    case OMPAllocate:
     case OMPRequires:
     case OMPCapturedExpr:
     case Empty:
@@ -932,6 +920,7 @@ bool Decl::AccessDeclContextSanity() const {
   if (isa<TranslationUnitDecl>(this) ||
       isa<TemplateTypeParmDecl>(this) ||
       isa<NonTypeTemplateParmDecl>(this) ||
+      !getDeclContext() ||
       !isa<CXXRecordDecl>(getDeclContext()) ||
       isInvalidDecl() ||
       isa<StaticAssertDecl>(this) ||
@@ -969,6 +958,8 @@ const FunctionType *Decl::getFunctionType(bool BlocksToo) const {
 
   if (Ty->isFunctionPointerType())
     Ty = Ty->getAs<PointerType>()->getPointeeType();
+  else if (Ty->isFunctionReferenceType())
+    Ty = Ty->getAs<ReferenceType>()->getPointeeType();
   else if (BlocksToo && Ty->isBlockPointerType())
     Ty = Ty->getAs<BlockPointerType>()->getPointeeType();
 
@@ -1176,6 +1167,7 @@ DeclContext *DeclContext::getPrimaryContext() {
   case Decl::Block:
   case Decl::Captured:
   case Decl::OMPDeclareReduction:
+  case Decl::OMPDeclareMapper:
     // There is only one DeclContext for these entities.
     return this;
 
@@ -1187,13 +1179,15 @@ DeclContext *DeclContext::getPrimaryContext() {
     return this;
 
   case Decl::ObjCInterface:
-    if (auto *Def = cast<ObjCInterfaceDecl>(this)->getDefinition())
-      return Def;
+    if (auto *OID = dyn_cast<ObjCInterfaceDecl>(this))
+      if (auto *Def = OID->getDefinition())
+        return Def;
     return this;
 
   case Decl::ObjCProtocol:
-    if (auto *Def = cast<ObjCProtocolDecl>(this)->getDefinition())
-      return Def;
+    if (auto *OPD = dyn_cast<ObjCProtocolDecl>(this))
+      if (auto *Def = OPD->getDefinition())
+        return Def;
     return this;
 
   case Decl::ObjCCategory:
@@ -1415,6 +1409,12 @@ static bool shouldBeHidden(NamedDecl *D) {
   // context.
   if ((D->getIdentifierNamespace() == 0 && !isa<UsingDirectiveDecl>(D)) ||
       D->isTemplateParameter())
+    return true;
+
+  // Skip friends and local extern declarations unless they're the first
+  // declaration of the entity.
+  if ((D->isLocalExternDecl() || D->getFriendObjectKind()) &&
+      D != D->getCanonicalDecl())
     return true;
 
   // Skip template specializations.

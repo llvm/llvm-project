@@ -1,9 +1,8 @@
-//===--- SemaCoroutines.cpp - Semantic Analysis for Coroutines ------------===//
+//===-- SemaCoroutine.cpp - Semantic Analysis for Coroutines --------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -84,8 +83,7 @@ static QualType lookupPromiseType(Sema &S, const FunctionDecl *FD,
       //      ref-qualifier or with the & ref-qualifier
       //  -- "rvalue reference to cv X" for functions declared with the &&
       //      ref-qualifier
-      QualType T =
-          MD->getThisType(S.Context)->getAs<PointerType>()->getPointeeType();
+      QualType T = MD->getThisType()->getAs<PointerType>()->getPointeeType();
       T = FnType->getRefQualifier() == RQ_RValue
               ? S.Context.getRValueReferenceType(T)
               : S.Context.getLValueReferenceType(T, /*SpelledAsLValue*/ true);
@@ -187,21 +185,8 @@ static QualType lookupCoroutineHandleType(Sema &S, QualType PromiseType,
 
 static bool isValidCoroutineContext(Sema &S, SourceLocation Loc,
                                     StringRef Keyword) {
-  // 'co_await' and 'co_yield' are not permitted in unevaluated operands,
-  // such as subexpressions of \c sizeof.
-  //
-  // [expr.await]p2, emphasis added: "An await-expression shall appear only in
-  // a *potentially evaluated* expression within the compound-statement of a
-  // function-body outside of a handler [...] A context within a function where
-  // an await-expression can appear is called a suspension context of the
-  // function." And per [expr.yield]p1: "A yield-expression shall appear only
-  // within a suspension context of a function."
-  if (S.isUnevaluatedContext()) {
-    S.Diag(Loc, diag::err_coroutine_unevaluated_context) << Keyword;
-    return false;
-  }
-
-  // Per [expr.await]p2, any other usage must be within a function.
+  // [expr.await]p2 dictates that 'co_await' and 'co_yield' must be used within
+  // a function body.
   // FIXME: This also covers [expr.await]p2: "An await-expression shall not
   // appear in a default argument." But the diagnostic QoI here could be
   // improved to inform the user that default arguments specifically are not
@@ -225,6 +210,7 @@ static bool isValidCoroutineContext(Sema &S, SourceLocation Loc,
     DiagConstexpr,
     DiagAutoRet,
     DiagVarargs,
+    DiagConsteval,
   };
   bool Diagnosed = false;
   auto DiagInvalid = [&](InvalidFuncDiag ID) {
@@ -259,7 +245,7 @@ static bool isValidCoroutineContext(Sema &S, SourceLocation Loc,
   // evaluation of e [...] would evaluate one of the following expressions:
   // [...] an await-expression [...] a yield-expression."
   if (FD->isConstexpr())
-    DiagInvalid(DiagConstexpr);
+    DiagInvalid(FD->isConsteval() ? DiagConsteval : DiagConstexpr);
   // [dcl.spec.auto]p15: "A function declared with a return type that uses a
   // placeholder type shall not be a coroutine."
   if (FD->getReturnType()->isUndeducedType())
@@ -327,7 +313,7 @@ static Expr *buildBuiltinCall(Sema &S, SourceLocation Loc, Builtin::ID Id,
   assert(DeclRef.isUsable() && "Builtin reference cannot fail");
 
   ExprResult Call =
-      S.ActOnCallExpr(/*Scope=*/nullptr, DeclRef.get(), Loc, CallArgs, Loc);
+      S.BuildCallExpr(/*Scope=*/nullptr, DeclRef.get(), Loc, CallArgs, Loc);
 
   assert(!Call.isInvalid() && "Call to builtin cannot fail!");
   return Call.get();
@@ -357,7 +343,7 @@ static ExprResult buildCoroutineHandle(Sema &S, QualType PromiseType,
   if (FromAddr.isInvalid())
     return ExprError();
 
-  return S.ActOnCallExpr(nullptr, FromAddr.get(), Loc, FramePtr, Loc);
+  return S.BuildCallExpr(nullptr, FromAddr.get(), Loc, FramePtr, Loc);
 }
 
 struct ReadySuspendResumeResult {
@@ -389,7 +375,7 @@ static ExprResult buildMemberCall(Sema &S, Expr *Base, SourceLocation Loc,
     return ExprError();
   }
 
-  return S.ActOnCallExpr(nullptr, Result.get(), Loc, Args, Loc, nullptr);
+  return S.BuildCallExpr(nullptr, Result.get(), Loc, Args, Loc, nullptr);
 }
 
 // See if return type is coroutine-handle and if so, invoke builtin coro-resume
@@ -506,7 +492,7 @@ VarDecl *Sema::buildCoroutinePromise(SourceLocation Loc) {
   auto *FD = cast<FunctionDecl>(CurContext);
   bool IsThisDependentType = [&] {
     if (auto *MD = dyn_cast_or_null<CXXMethodDecl>(FD))
-      return MD->isInstance() && MD->getThisType(Context)->isDependentType();
+      return MD->isInstance() && MD->getThisType()->isDependentType();
     else
       return false;
   }();
@@ -647,7 +633,7 @@ bool Sema::ActOnCoroutineBodyStart(Scope *SC, SourceLocation KWLoc,
       return StmtError();
     Suspend = BuildResolvedCoawaitExpr(Loc, Suspend.get(),
                                        /*IsImplicit*/ true);
-    Suspend = ActOnFinishFullExpr(Suspend.get());
+    Suspend = ActOnFinishFullExpr(Suspend.get(), /*DiscardedValue*/ false);
     if (Suspend.isInvalid()) {
       Diag(Loc, diag::note_coroutine_promise_suspend_implicitly_required)
           << ((Name == "initial_suspend") ? 0 : 1);
@@ -670,11 +656,56 @@ bool Sema::ActOnCoroutineBodyStart(Scope *SC, SourceLocation KWLoc,
   return true;
 }
 
+// Recursively walks up the scope hierarchy until either a 'catch' or a function
+// scope is found, whichever comes first.
+static bool isWithinCatchScope(Scope *S) {
+  // 'co_await' and 'co_yield' keywords are disallowed within catch blocks, but
+  // lambdas that use 'co_await' are allowed. The loop below ends when a
+  // function scope is found in order to ensure the following behavior:
+  //
+  // void foo() {      // <- function scope
+  //   try {           //
+  //     co_await x;   // <- 'co_await' is OK within a function scope
+  //   } catch {       // <- catch scope
+  //     co_await x;   // <- 'co_await' is not OK within a catch scope
+  //     []() {        // <- function scope
+  //       co_await x; // <- 'co_await' is OK within a function scope
+  //     }();
+  //   }
+  // }
+  while (S && !(S->getFlags() & Scope::FnScope)) {
+    if (S->getFlags() & Scope::CatchScope)
+      return true;
+    S = S->getParent();
+  }
+  return false;
+}
+
+// [expr.await]p2, emphasis added: "An await-expression shall appear only in
+// a *potentially evaluated* expression within the compound-statement of a
+// function-body *outside of a handler* [...] A context within a function
+// where an await-expression can appear is called a suspension context of the
+// function."
+static void checkSuspensionContext(Sema &S, SourceLocation Loc,
+                                   StringRef Keyword) {
+  // First emphasis of [expr.await]p2: must be a potentially evaluated context.
+  // That is, 'co_await' and 'co_yield' cannot appear in subexpressions of
+  // \c sizeof.
+  if (S.isUnevaluatedContext())
+    S.Diag(Loc, diag::err_coroutine_unevaluated_context) << Keyword;
+
+  // Second emphasis of [expr.await]p2: must be outside of an exception handler.
+  if (isWithinCatchScope(S.getCurScope()))
+    S.Diag(Loc, diag::err_coroutine_within_handler) << Keyword;
+}
+
 ExprResult Sema::ActOnCoawaitExpr(Scope *S, SourceLocation Loc, Expr *E) {
   if (!ActOnCoroutineBodyStart(S, Loc, "co_await")) {
     CorrectDelayedTyposInExpr(E);
     return ExprError();
   }
+
+  checkSuspensionContext(*this, Loc, "co_await");
 
   if (E->getType()->isPlaceholderType()) {
     ExprResult R = CheckPlaceholderExpr(E);
@@ -773,6 +804,8 @@ ExprResult Sema::ActOnCoyieldExpr(Scope *S, SourceLocation Loc, Expr *E) {
     return ExprError();
   }
 
+  checkSuspensionContext(*this, Loc, "co_yield");
+
   // Build yield_value call.
   ExprResult Awaitable = buildPromiseCall(
       *this, getCurFunction()->CoroutinePromise, Loc, "yield_value", E);
@@ -868,7 +901,7 @@ StmtResult Sema::BuildCoreturnStmt(SourceLocation Loc, Expr *E,
   if (PC.isInvalid())
     return StmtError();
 
-  Expr *PCE = ActOnFinishFullExpr(PC.get()).get();
+  Expr *PCE = ActOnFinishFullExpr(PC.get(), /*DiscardedValue*/ false).get();
 
   Stmt *Res = new (Context) CoreturnStmt(Loc, E, PCE, IsImplicit);
   return Res;
@@ -1073,7 +1106,7 @@ bool CoroutineStmtBuilder::makeReturnOnAllocFailure() {
     return false;
 
   ExprResult ReturnObjectOnAllocationFailure =
-      S.ActOnCallExpr(nullptr, DeclNameExpr.get(), Loc, {}, Loc);
+      S.BuildCallExpr(nullptr, DeclNameExpr.get(), Loc, {}, Loc);
   if (ReturnObjectOnAllocationFailure.isInvalid())
     return false;
 
@@ -1236,8 +1269,8 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
     NewArgs.push_back(Arg);
 
   ExprResult NewExpr =
-      S.ActOnCallExpr(S.getCurScope(), NewRef.get(), Loc, NewArgs, Loc);
-  NewExpr = S.ActOnFinishFullExpr(NewExpr.get());
+      S.BuildCallExpr(S.getCurScope(), NewRef.get(), Loc, NewArgs, Loc);
+  NewExpr = S.ActOnFinishFullExpr(NewExpr.get(), /*DiscardedValue*/ false);
   if (NewExpr.isInvalid())
     return false;
 
@@ -1262,8 +1295,9 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
     DeleteArgs.push_back(FrameSize);
 
   ExprResult DeleteExpr =
-      S.ActOnCallExpr(S.getCurScope(), DeleteRef.get(), Loc, DeleteArgs, Loc);
-  DeleteExpr = S.ActOnFinishFullExpr(DeleteExpr.get());
+      S.BuildCallExpr(S.getCurScope(), DeleteRef.get(), Loc, DeleteArgs, Loc);
+  DeleteExpr =
+      S.ActOnFinishFullExpr(DeleteExpr.get(), /*DiscardedValue*/ false);
   if (DeleteExpr.isInvalid())
     return false;
 
@@ -1348,7 +1382,8 @@ bool CoroutineStmtBuilder::makeOnException() {
 
   ExprResult UnhandledException = buildPromiseCall(S, Fn.CoroutinePromise, Loc,
                                                    "unhandled_exception", None);
-  UnhandledException = S.ActOnFinishFullExpr(UnhandledException.get(), Loc);
+  UnhandledException = S.ActOnFinishFullExpr(UnhandledException.get(), Loc,
+                                             /*DiscardedValue*/ false);
   if (UnhandledException.isInvalid())
     return false;
 
@@ -1401,7 +1436,8 @@ bool CoroutineStmtBuilder::makeGroDeclAndReturnStmt() {
          "get_return_object type must no longer be dependent");
 
   if (FnRetType->isVoidType()) {
-    ExprResult Res = S.ActOnFinishFullExpr(this->ReturnValue, Loc);
+    ExprResult Res =
+        S.ActOnFinishFullExpr(this->ReturnValue, Loc, /*DiscardedValue*/ false);
     if (Res.isInvalid())
       return false;
 
@@ -1433,7 +1469,7 @@ bool CoroutineStmtBuilder::makeGroDeclAndReturnStmt() {
   if (Res.isInvalid())
     return false;
 
-  Res = S.ActOnFinishFullExpr(Res.get());
+  Res = S.ActOnFinishFullExpr(Res.get(), /*DiscardedValue*/ false);
   if (Res.isInvalid())
     return false;
 

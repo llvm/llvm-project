@@ -262,7 +262,7 @@ int k;
 #pragma omp ordered simd depend(source) // expected-error {{'depend' clauses cannot be mixed with 'simd' clause}}
 #pragma omp ordered depend(source) depend(source) // expected-error {{directive '#pragma omp ordered' cannot contain more than one 'depend' clause with 'source' dependence}}
 #pragma omp ordered depend(in : i) // expected-error {{expected 'source' or 'sink' in OpenMP clause 'depend'}} expected-error {{'ordered' directive without any clauses cannot be closely nested inside ordered region with specified parameter}}
-#pragma omp ordered depend(sink : i, j)
+#pragma omp ordered depend(sink : i, j) allocate(i) // expected-error {{unexpected OpenMP clause 'allocate' in directive '#pragma omp ordered'}}
 #pragma omp ordered depend(sink : j, i) // expected-error {{expected 'i' loop iteration variable}} expected-error {{expected 'j' loop iteration variable}}
 #pragma omp ordered depend(sink : i, j, k) // expected-error {{unexpected expression: number of expressions is larger than the number of associated loops}}
 #pragma omp ordered depend(sink : i+foo(), j/4) // expected-error {{expression is not an integral constant expression}} expected-error {{expected '+' or '-' operation}}

@@ -1,9 +1,8 @@
 //===- DeclTemplate.cpp - Template Declaration AST Node Implementation ----===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -688,22 +687,20 @@ TemplateArgumentList::CreateCopy(ASTContext &Context,
   return new (Mem) TemplateArgumentList(Args);
 }
 
-FunctionTemplateSpecializationInfo *
-FunctionTemplateSpecializationInfo::Create(ASTContext &C, FunctionDecl *FD,
-                                           FunctionTemplateDecl *Template,
-                                           TemplateSpecializationKind TSK,
-                                       const TemplateArgumentList *TemplateArgs,
-                          const TemplateArgumentListInfo *TemplateArgsAsWritten,
-                                           SourceLocation POI) {
+FunctionTemplateSpecializationInfo *FunctionTemplateSpecializationInfo::Create(
+    ASTContext &C, FunctionDecl *FD, FunctionTemplateDecl *Template,
+    TemplateSpecializationKind TSK, const TemplateArgumentList *TemplateArgs,
+    const TemplateArgumentListInfo *TemplateArgsAsWritten, SourceLocation POI,
+    MemberSpecializationInfo *MSInfo) {
   const ASTTemplateArgumentListInfo *ArgsAsWritten = nullptr;
   if (TemplateArgsAsWritten)
     ArgsAsWritten = ASTTemplateArgumentListInfo::Create(C,
                                                         *TemplateArgsAsWritten);
 
-  return new (C) FunctionTemplateSpecializationInfo(FD, Template, TSK,
-                                                    TemplateArgs,
-                                                    ArgsAsWritten,
-                                                    POI);
+  void *Mem =
+      C.Allocate(totalSizeToAlloc<MemberSpecializationInfo *>(MSInfo ? 1 : 0));
+  return new (Mem) FunctionTemplateSpecializationInfo(
+      FD, Template, TSK, TemplateArgs, ArgsAsWritten, POI, MSInfo);
 }
 
 //===----------------------------------------------------------------------===//
@@ -936,7 +933,7 @@ ClassScopeFunctionSpecializationDecl *
 ClassScopeFunctionSpecializationDecl::CreateDeserialized(ASTContext &C,
                                                          unsigned ID) {
   return new (C, ID) ClassScopeFunctionSpecializationDecl(
-      nullptr, SourceLocation(), nullptr, false, TemplateArgumentListInfo());
+      nullptr, SourceLocation(), nullptr, nullptr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -957,6 +954,7 @@ VarTemplateDecl *VarTemplateDecl::Create(ASTContext &C, DeclContext *DC,
                                          SourceLocation L, DeclarationName Name,
                                          TemplateParameterList *Params,
                                          VarDecl *Decl) {
+  AdoptTemplateParameterList(Params, DC);
   return new (C, DC) VarTemplateDecl(C, DC, L, Name, Params, Decl);
 }
 

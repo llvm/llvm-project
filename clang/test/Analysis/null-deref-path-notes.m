@@ -1,6 +1,6 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core -analyzer-store=region -analyzer-output=text -fblocks -verify -Wno-objc-root-class %s
 // RUN: %clang_analyze_cc1 -analyzer-checker=core -analyzer-store=region -analyzer-output=plist-multi-file -fblocks -Wno-objc-root-class %s -o %t
-// RUN: cat %t | %diff_plist %S/Inputs/expected-plists/null-deref-path-notes.m.plist -
+// RUN: %normalize_plist <%t | diff -ub %S/Inputs/expected-plists/null-deref-path-notes.m.plist -
 
 @interface Root {
 @public

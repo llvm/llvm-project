@@ -27,23 +27,23 @@ public:
   S7(typename T::type v) : a(v) {
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute simd private(a) private(this->a) private(T::a)
+#pragma omp distribute simd private(a) private(this->a) private(T::a) allocate(T::a)
     for (int k = 0; k < a.a; ++k)
       ++this->a.a;
   }
   S7 &operator=(S7 &s) {
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute simd private(a) private(this->a)
+#pragma omp distribute simd allocate(a) private(a) private(this->a)
     for (int k = 0; k < s.a.a; ++k)
       ++s.a.a;
     return *this;
   }
 };
 
-// CHECK: #pragma omp distribute simd private(this->a) private(this->a) private(T::a){{$}}
-// CHECK: #pragma omp distribute simd private(this->a) private(this->a)
-// CHECK: #pragma omp distribute simd private(this->a) private(this->a) private(this->S::a)
+// CHECK: #pragma omp distribute simd private(this->a) private(this->a) private(T::a) allocate(T::a){{$}}
+// CHECK: #pragma omp distribute simd allocate(this->a) private(this->a) private(this->a)
+// CHECK: #pragma omp distribute simd private(this->a) private(this->a) private(this->S::a) allocate(this->S::a)
 
 class S8 : public S7<S> {
   S8() {}

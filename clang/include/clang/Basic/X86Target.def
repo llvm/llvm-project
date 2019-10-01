@@ -1,9 +1,8 @@
 //===--- X86Target.def - X86 Feature/Processor Database ---------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -67,7 +66,7 @@ PROC(PentiumMMX, "pentium-mmx", PROC_32_BIT)
 /// i686-generation processors, P6 / Pentium M microarchitecture based.
 //@{
 PROC(PentiumPro, "pentiumpro", PROC_32_BIT)
-PROC_ALIAS(PentiumPro, "i686")
+PROC(i686, "i686", PROC_32_BIT)
 PROC(Pentium2, "pentium2", PROC_32_BIT)
 PROC(Pentium3, "pentium3", PROC_32_BIT)
 PROC_ALIAS(Pentium3, "pentium3m")
@@ -158,6 +157,10 @@ PROC_ALIAS(SkylakeServer, "skx")
 /// Cascadelake Server microarchitecture based processors.
 PROC_WITH_FEAT(Cascadelake, "cascadelake", PROC_64_BIT, FEATURE_AVX512VNNI)
 
+/// \name Cooperlake Server
+/// Cooperlake Server microarchitecture based processors.
+PROC_WITH_FEAT(Cooperlake, "cooperlake", PROC_64_BIT, FEATURE_AVX512BF16)
+
 /// \name Cannonlake Client
 /// Cannonlake client microarchitecture based processors.
 PROC_WITH_FEAT(Cannonlake, "cannonlake", PROC_64_BIT, FEATURE_AVX512VBMI)
@@ -237,6 +240,7 @@ PROC_WITH_FEAT(BDVER4, "bdver4", PROC_64_BIT, FEATURE_AVX2)
 /// Zen architecture processors.
 //@{
 PROC_WITH_FEAT(ZNVER1, "znver1", PROC_64_BIT, FEATURE_AVX2)
+PROC_WITH_FEAT(ZNVER2, "znver2", PROC_64_BIT, FEATURE_AVX2)
 //@}
 
 /// This specification is deprecated and will be removed in the future.
@@ -292,6 +296,7 @@ FEATURE(FEATURE_GFNI)
 FEATURE(FEATURE_VPCLMULQDQ)
 FEATURE(FEATURE_AVX512VNNI)
 FEATURE(FEATURE_AVX512BITALG)
+FEATURE(FEATURE_AVX512BF16)
 
 
 // FIXME: When commented out features are supported in LLVM, enable them here.
@@ -301,7 +306,7 @@ CPU_SPECIFIC("pentium_pro", 'C', "+cmov")
 CPU_SPECIFIC("pentium_mmx", 'D', "+mmx")
 CPU_SPECIFIC("pentium_ii", 'E', "+cmov,+mmx")
 CPU_SPECIFIC("pentium_iii", 'H', "+cmov,+mmx,+sse")
-CPU_SPECIFIC("pentium_iii_no_xmm_regs", 'H',"+cmov,+sse")
+CPU_SPECIFIC_ALIAS("pentium_iii_no_xmm_regs", "pentium_iii")
 CPU_SPECIFIC("pentium_4", 'J', "+cmov,+mmx,+sse,+sse2")
 CPU_SPECIFIC("pentium_m", 'K', "+cmov,+mmx,+sse,+sse2")
 CPU_SPECIFIC("pentium_4_sse3", 'L', "+cmov,+mmx,+sse,+sse2,+sse3")

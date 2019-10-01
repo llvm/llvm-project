@@ -7,6 +7,8 @@
 // RUN: %clang -### -target arm-linux-eabi -march=armv8.2a+dotprod %s 2>&1 | FileCheck %s
 // RUN: %clang -### -target arm-linux-eabi -march=armv8.3a+dotprod %s 2>&1 | FileCheck %s
 // RUN: %clang -### -target arm-linux-eabi -mcpu=cortex-a75 %s 2>&1 | FileCheck %s
+// RUN: %clang -### -target arm-linux-eabi -mcpu=cortex-a76 %s 2>&1 | FileCheck %s
+// RUN: %clang -### -target arm-linux-eabi -mcpu=cortex-a76ae %s 2>&1 | FileCheck %s
 // RUN: %clang -### -target arm-linux-eabi -mcpu=cortex-a55 %s 2>&1 | FileCheck %s
 // CHECK: "+dotprod"
 
@@ -16,6 +18,10 @@
 // RUN: %clang -### -target arm -march=armv8.3a+dotprod %s 2>&1 \
 // RUN: | FileCheck %s --check-prefix=CHECK-NO-DOTPROD
 // RUN: %clang -### -target arm -mcpu=cortex-a75 %s 2>&1 \
+// RUN: | FileCheck %s --check-prefix=CHECK-NO-DOTPROD
+// RUN: %clang -### -target arm -mcpu=cortex-a76 %s 2>&1 \
+// RUN: | FileCheck %s --check-prefix=CHECK-NO-DOTPROD
+// RUN: %clang -### -target arm -mcpu=cortex-a76ae %s 2>&1 \
 // RUN: | FileCheck %s --check-prefix=CHECK-NO-DOTPROD
 // RUN: %clang -### -target arm -mcpu=cortex-a55 %s 2>&1 \
 // RUN: | FileCheck %s --check-prefix=CHECK-NO-DOTPROD

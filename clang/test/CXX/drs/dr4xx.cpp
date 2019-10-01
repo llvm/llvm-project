@@ -318,8 +318,8 @@ namespace dr420 { // dr420: yes
     q->~id<int>();
     p->id<int>::~id<int>();
     q->id<int>::~id<int>();
-    p->template id<int>::~id<int>(); // expected-error {{'template' keyword not permitted here}} expected-error {{base type 'int' is not a struct}}
-    q->template id<int>::~id<int>(); // expected-error {{'template' keyword not permitted here}} expected-error {{base type 'int' is not a struct}}
+    p->template id<int>::~id<int>(); // OK since dr2292
+    q->template id<int>::~id<int>(); // OK since dr2292
     p->A::template id<int>::~id<int>();
     q->A::template id<int>::~id<int>();
   }

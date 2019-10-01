@@ -1,4 +1,4 @@
-// RUN: %clang %s -S -m64 -o -
+// RUN: %clang %s -S -o -
 
 @class NSString;
 

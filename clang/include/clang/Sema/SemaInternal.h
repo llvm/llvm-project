@@ -1,9 +1,8 @@
 //===--- SemaInternal.h - Internal Sema Interfaces --------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -39,15 +38,6 @@ FTIHasNonVoidParameters(const DeclaratorChunk::FunctionTypeInfo &FTI) {
   return FTI.NumParams && !FTIHasSingleVoidParameter(FTI);
 }
 
-// This requires the variable to be non-dependent and the initializer
-// to not be value dependent.
-inline bool IsVariableAConstantExpression(VarDecl *Var, ASTContext &Context) {
-  const VarDecl *DefVD = nullptr;
-  return !isa<ParmVarDecl>(Var) &&
-    Var->isUsableInConstantExpressions(Context) &&
-    Var->getAnyInitializer(DefVD) && DefVD->checkInitIsICE();
-}
-
 // Helper function to check whether D's attributes match current CUDA mode.
 // Decls with mismatched attributes and related diagnostics may have to be
 // ignored during this CUDA compilation pass.
@@ -58,36 +48,6 @@ inline bool DeclAttrsMatchCUDAMode(const LangOptions &LangOpts, Decl *D) {
                           D->hasAttr<CUDASharedAttr>() ||
                           D->hasAttr<CUDAGlobalAttr>();
   return isDeviceSideDecl == LangOpts.CUDAIsDevice;
-}
-
-// Directly mark a variable odr-used. Given a choice, prefer to use
-// MarkVariableReferenced since it does additional checks and then
-// calls MarkVarDeclODRUsed.
-// If the variable must be captured:
-//  - if FunctionScopeIndexToStopAt is null, capture it in the CurContext
-//  - else capture it in the DeclContext that maps to the
-//    *FunctionScopeIndexToStopAt on the FunctionScopeInfo stack.
-inline void MarkVarDeclODRUsed(VarDecl *Var,
-    SourceLocation Loc, Sema &SemaRef,
-    const unsigned *const FunctionScopeIndexToStopAt) {
-  // Keep track of used but undefined variables.
-  // FIXME: We shouldn't suppress this warning for static data members.
-  if (Var->hasDefinition(SemaRef.Context) == VarDecl::DeclarationOnly &&
-      (!Var->isExternallyVisible() || Var->isInline() ||
-       SemaRef.isExternalWithNoLinkageType(Var)) &&
-      !(Var->isStaticDataMember() && Var->hasInit())) {
-    SourceLocation &old = SemaRef.UndefinedButUsed[Var->getCanonicalDecl()];
-    if (old.isInvalid())
-      old = Loc;
-  }
-  QualType CaptureType, DeclRefType;
-  SemaRef.tryCaptureVariable(Var, Loc, Sema::TryCapture_Implicit,
-    /*EllipsisLoc*/ SourceLocation(),
-    /*BuildAndDiagnose*/ true,
-    CaptureType, DeclRefType,
-    FunctionScopeIndexToStopAt);
-
-  Var->markUsed(SemaRef.Context);
 }
 
 /// Return a DLL attribute from the declaration.

@@ -1,9 +1,8 @@
 //===--- CommentToXML.cpp - Convert comments to XML representation --------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -189,11 +188,8 @@ FullCommentParts::FullCommentParts(const FullComment *C,
   // Sort params in order they are declared in the function prototype.
   // Unresolved parameters are put at the end of the list in the same order
   // they were seen in the comment.
-  std::stable_sort(Params.begin(), Params.end(),
-                   ParamCommandCommentCompareIndex());
-
-  std::stable_sort(TParams.begin(), TParams.end(),
-                   TParamCommandCommentComparePosition());
+  llvm::stable_sort(Params, ParamCommandCommentCompareIndex());
+  llvm::stable_sort(TParams, TParamCommandCommentComparePosition());
 }
 
 void printHTMLStartTagComment(const HTMLStartTagComment *C,

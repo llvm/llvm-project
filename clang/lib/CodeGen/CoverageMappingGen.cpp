@@ -1,9 +1,8 @@
 //===--- CoverageMappingGen.cpp - Coverage mapping generation ---*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -244,7 +243,7 @@ public:
         ++Depth;
       FileLocs.push_back(std::make_pair(Loc, Depth));
     }
-    std::stable_sort(FileLocs.begin(), FileLocs.end(), llvm::less_second());
+    llvm::stable_sort(FileLocs, llvm::less_second());
 
     for (const auto &FL : FileLocs) {
       SourceLocation Loc = FL.first;
@@ -1389,10 +1388,19 @@ void CoverageMappingModuleGen::emit() {
   std::string FilenamesAndCoverageMappings;
   llvm::raw_string_ostream OS(FilenamesAndCoverageMappings);
   CoverageFilenamesSectionWriter(FilenameRefs).write(OS);
-  std::string RawCoverageMappings =
-      llvm::join(CoverageMappings.begin(), CoverageMappings.end(), "");
-  OS << RawCoverageMappings;
-  size_t CoverageMappingSize = RawCoverageMappings.size();
+
+  // Stream the content of CoverageMappings to OS while keeping
+  // memory consumption under control.
+  size_t CoverageMappingSize = 0;
+  for (auto &S : CoverageMappings) {
+    CoverageMappingSize += S.size();
+    OS << S;
+    S.clear();
+    S.shrink_to_fit();
+  }
+  CoverageMappings.clear();
+  CoverageMappings.shrink_to_fit();
+
   size_t FilenamesSize = OS.str().size() - CoverageMappingSize;
   // Append extra zeroes if necessary to ensure that the size of the filenames
   // and coverage mappings is a multiple of 8.

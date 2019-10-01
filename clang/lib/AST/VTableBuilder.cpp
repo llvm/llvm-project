@@ -1,9 +1,8 @@
 //===--- VTableBuilder.cpp - C++ vtable layout builder --------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -480,7 +479,7 @@ static bool HasSameVirtualSignature(const CXXMethodDecl *LHS,
   // Force the signatures to match.  We can't rely on the overrides
   // list here because there isn't necessarily an inheritance
   // relationship between the two methods.
-  if (LT->getTypeQuals() != RT->getTypeQuals())
+  if (LT->getMethodQuals() != RT->getMethodQuals())
     return false;
   return LT->getParamTypes() == RT->getParamTypes();
 }
@@ -847,6 +846,8 @@ private:
       : BaseOffset(CharUnits::Zero()),
       BaseOffsetInLayoutClass(CharUnits::Zero()),
       VTableIndex(0) { }
+
+    MethodInfo(MethodInfo const&) = default;
   };
 
   typedef llvm::DenseMap<const CXXMethodDecl *, MethodInfo> MethodInfoMapTy;
@@ -1061,8 +1062,7 @@ void ItaniumVTableBuilder::AddThunk(const CXXMethodDecl *MD,
   SmallVectorImpl<ThunkInfo> &ThunksVector = Thunks[MD];
 
   // Check if we have this thunk already.
-  if (std::find(ThunksVector.begin(), ThunksVector.end(), Thunk) !=
-      ThunksVector.end())
+  if (llvm::find(ThunksVector, Thunk) != ThunksVector.end())
     return;
 
   ThunksVector.push_back(Thunk);
@@ -2451,8 +2451,7 @@ private:
     SmallVector<ThunkInfo, 1> &ThunksVector = Thunks[MD];
 
     // Check if we have this thunk already.
-    if (std::find(ThunksVector.begin(), ThunksVector.end(), Thunk) !=
-        ThunksVector.end())
+    if (llvm::find(ThunksVector, Thunk) != ThunksVector.end())
       return;
 
     ThunksVector.push_back(Thunk);
@@ -3189,8 +3188,8 @@ void VFTableBuilder::dumpLayout(raw_ostream &Out) {
       const CXXMethodDecl *MD = MethodNameAndDecl.second;
 
       ThunkInfoVectorTy ThunksVector = Thunks[MD];
-      std::stable_sort(ThunksVector.begin(), ThunksVector.end(),
-                       [](const ThunkInfo &LHS, const ThunkInfo &RHS) {
+      llvm::stable_sort(ThunksVector, [](const ThunkInfo &LHS,
+                                         const ThunkInfo &RHS) {
         // Keep different thunks with the same adjustments in the order they
         // were put into the vector.
         return std::tie(LHS.This, LHS.Return) < std::tie(RHS.This, RHS.Return);

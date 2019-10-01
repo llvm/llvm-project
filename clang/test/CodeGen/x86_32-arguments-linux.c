@@ -2,22 +2,22 @@
 // RUN: FileCheck < %t %s
 
 // CHECK-LABEL: define void @f56(
-// CHECK: i8 signext %a0, %struct.s56_0* byval align 4 %a1,
-// CHECK: i64 %a2.coerce, %struct.s56_1* byval align 4,
-// CHECK: <1 x double> %a4, %struct.s56_2* byval align 4,
-// CHECK: <4 x i32> %a6, %struct.s56_3* byval align 4,
-// CHECK: <2 x double> %a8, %struct.s56_4* byval align 4,
-// CHECK: <8 x i32> %a10, %struct.s56_5* byval align 4,
-// CHECK: <4 x double> %a12, %struct.s56_6* byval align 4)
+// CHECK: i8 signext %a0, %struct.s56_0* byval(%struct.s56_0) align 4 %a1,
+// CHECK: x86_mmx %a2.coerce, %struct.s56_1* byval(%struct.s56_1) align 4,
+// CHECK: <1 x double> %a4, %struct.s56_2* byval(%struct.s56_2) align 4,
+// CHECK: <4 x i32> %a6, %struct.s56_3* byval(%struct.s56_3) align 4,
+// CHECK: <2 x double> %a8, %struct.s56_4* byval(%struct.s56_4) align 4,
+// CHECK: <8 x i32> %a10, %struct.s56_5* byval(%struct.s56_5) align 4,
+// CHECK: <4 x double> %a12, %struct.s56_6* byval(%struct.s56_6) align 4)
 
 // CHECK: call void (i32, ...) @f56_0(i32 1,
-// CHECK: i32 %{{.*}}, %struct.s56_0* byval align 4 %{{[^ ]*}},
-// CHECK: i64 %{{[^ ]*}}, %struct.s56_1* byval align 4 %{{[^ ]*}},
-// CHECK: <1 x double> %{{[^ ]*}}, %struct.s56_2* byval align 4 %{{[^ ]*}},
-// CHECK: <4 x i32> %{{[^ ]*}}, %struct.s56_3* byval align 4 %{{[^ ]*}},
-// CHECK: <2 x double> %{{[^ ]*}}, %struct.s56_4* byval align 4 %{{[^ ]*}},
-// CHECK: <8 x i32> %{{[^ ]*}}, %struct.s56_5* byval align 4 %{{[^ ]*}},
-// CHECK: <4 x double> %{{[^ ]*}}, %struct.s56_6* byval align 4 %{{[^ ]*}})
+// CHECK: i32 %{{.*}}, %struct.s56_0* byval(%struct.s56_0) align 4 %{{[^ ]*}},
+// CHECK: x86_mmx %{{[^ ]*}}, %struct.s56_1* byval(%struct.s56_1) align 4 %{{[^ ]*}},
+// CHECK: <1 x double> %{{[^ ]*}}, %struct.s56_2* byval(%struct.s56_2) align 4 %{{[^ ]*}},
+// CHECK: <4 x i32> %{{[^ ]*}}, %struct.s56_3* byval(%struct.s56_3) align 4 %{{[^ ]*}},
+// CHECK: <2 x double> %{{[^ ]*}}, %struct.s56_4* byval(%struct.s56_4) align 4 %{{[^ ]*}},
+// CHECK: <8 x i32> %{{[^ ]*}}, %struct.s56_5* byval(%struct.s56_5) align 4 %{{[^ ]*}},
+// CHECK: <4 x double> %{{[^ ]*}}, %struct.s56_6* byval(%struct.s56_6) align 4 %{{[^ ]*}})
 // CHECK: }
 //
 // <rdar://problem/7964854> [i386] clang misaligns long double in structures

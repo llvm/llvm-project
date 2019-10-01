@@ -1,9 +1,8 @@
 //===- ExprObjC.cpp - (ObjC) Expression AST Node Implementation -----------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -316,6 +315,7 @@ QualType ObjCMessageExpr::getCallReturnType(ASTContext &Ctx) const {
   case VK_RValue:
     return QT;
   }
+  llvm_unreachable("Unsupported ExprValueKind");
 }
 
 SourceRange ObjCMessageExpr::getReceiverRange() const {
@@ -375,6 +375,11 @@ Stmt::child_range ObjCMessageExpr::children() {
     begin = reinterpret_cast<Stmt **>(getArgs());
   return child_range(begin,
                      reinterpret_cast<Stmt **>(getArgs() + getNumArgs()));
+}
+
+Stmt::const_child_range ObjCMessageExpr::children() const {
+  auto Children = const_cast<ObjCMessageExpr *>(this)->children();
+  return const_child_range(Children.begin(), Children.end());
 }
 
 StringRef ObjCBridgedCastExpr::getBridgeKindName() const {

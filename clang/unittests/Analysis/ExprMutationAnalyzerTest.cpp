@@ -1,9 +1,8 @@
 //===---------- ExprMutationAnalyzerTest.cpp ------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -11,6 +10,7 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Tooling/Tooling.h"
+#include "llvm/ADT/SmallString.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <cctype>
@@ -32,7 +32,9 @@ using StmtMatcher = internal::Matcher<Stmt>;
 std::unique_ptr<ASTUnit>
 buildASTFromCodeWithArgs(const Twine &Code,
                          const std::vector<std::string> &Args) {
-  auto AST = tooling::buildASTFromCodeWithArgs(Code, Args);
+  SmallString<1024> CodeStorage;
+  auto AST =
+      tooling::buildASTFromCodeWithArgs(Code.toStringRef(CodeStorage), Args);
   EXPECT_FALSE(AST->getDiagnostics().hasErrorOccurred());
   return AST;
 }
@@ -879,6 +881,137 @@ TEST(ExprMutationAnalyzerTest, CastToConstRef) {
   EXPECT_FALSE(isMutated(Results, AST.get()));
 }
 
+TEST(ExprMutationAnalyzerTest, CommaExprWithAnAssigment) {
+  const auto AST =
+      buildASTFromCodeWithArgs("void f() { int x; int y; (x, y) = 5; }",
+                               {"-Wno-unused-value"});
+  const auto Results =
+      match(withEnclosingCompound(declRefTo("y")), AST->getASTContext());
+  EXPECT_TRUE(isMutated(Results, AST.get()));
+}
+
+TEST(ExprMutationAnalyzerTest, CommaExprWithDecOp) {
+  const auto AST =
+      buildASTFromCodeWithArgs("void f() { int x; int y; (x, y)++; }",
+                               {"-Wno-unused-value"});
+  const auto Results =
+      match(withEnclosingCompound(declRefTo("y")), AST->getASTContext());
+  EXPECT_TRUE(isMutated(Results, AST.get()));
+}
+
+TEST(ExprMutationAnalyzerTest, CommaExprWithNonConstMemberCall) {
+  const auto AST =
+      buildASTFromCodeWithArgs("class A { public: int mem; void f() { mem ++; } };"
+                               "void fn() { A o1, o2; (o1, o2).f(); }",
+                               {"-Wno-unused-value"});
+  const auto Results =
+      match(withEnclosingCompound(declRefTo("o2")), AST->getASTContext());
+  EXPECT_TRUE(isMutated(Results, AST.get()));
+}
+
+TEST(ExprMutationAnalyzerTest, CommaExprWithConstMemberCall) {
+  const auto AST =
+      buildASTFromCodeWithArgs("class A { public: int mem; void f() const  { } };"
+                               "void fn() { A o1, o2; (o1, o2).f(); }",
+                               {"-Wno-unused-value"});
+  const auto Results =
+      match(withEnclosingCompound(declRefTo("o2")), AST->getASTContext());
+  EXPECT_FALSE(isMutated(Results, AST.get()));
+}
+
+TEST(ExprMutationAnalyzerTest, CommaExprWithCallExpr) {
+  const auto AST =
+      buildASTFromCodeWithArgs("class A { public: int mem; void f(A &O1) {} };"
+                               "void fn() { A o1, o2; o2.f((o2, o1)); }",
+                               {"-Wno-unused-value"});
+  const auto Results =
+      match(withEnclosingCompound(declRefTo("o1")), AST->getASTContext());
+  EXPECT_TRUE(isMutated(Results, AST.get()));
+}
+
+TEST(ExprMutationAnalyzerTest, CommaExprWithCallUnresolved) {
+  auto AST = buildASTFromCodeWithArgs(
+      "template <class T> struct S;"
+      "template <class T> void f() { S<T> s; int x, y; s.mf((y, x)); }",
+      {"-fno-delayed-template-parsing", "-Wno-unused-value"});
+  auto Results =
+      match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_TRUE(isMutated(Results, AST.get()));
+
+  AST = buildASTFromCodeWithArgs(
+      "template <class T> void f(T t) { int x, y; g(t, (y, x)); }",
+      {"-fno-delayed-template-parsing", "-Wno-unused-value"});
+  Results = match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_TRUE(isMutated(Results, AST.get()));
+}
+
+TEST(ExprMutationAnalyzerTest, CommaExprParmRef) {
+  const auto AST =
+      buildASTFromCodeWithArgs("class A { public: int mem;};"
+                               "extern void fn(A &o1);"
+                               "void fn2 () { A o1, o2; fn((o2, o1)); } ",
+                               {"-Wno-unused-value"});
+  const auto Results =
+      match(withEnclosingCompound(declRefTo("o1")), AST->getASTContext());
+  EXPECT_TRUE(isMutated(Results, AST.get()));
+}
+
+TEST(ExprMutationAnalyzerTest, CommaExprWithAmpersandOp) {
+  const auto AST =
+      buildASTFromCodeWithArgs("class A { public: int mem;};"
+                               "void fn () { A o1, o2;"
+                               "void *addr = &(o2, o1); } ",
+                               {"-Wno-unused-value"});
+  const auto Results =
+      match(withEnclosingCompound(declRefTo("o1")), AST->getASTContext());
+  EXPECT_TRUE(isMutated(Results, AST.get()));
+}
+
+TEST(ExprMutationAnalyzerTest, CommaExprAsReturnAsValue) {
+  auto AST = buildASTFromCodeWithArgs("int f() { int x, y; return (x, y); }",
+                                      {"-Wno-unused-value"});
+  auto Results =
+      match(withEnclosingCompound(declRefTo("y")), AST->getASTContext());
+  EXPECT_FALSE(isMutated(Results, AST.get()));
+}
+
+TEST(ExprMutationAnalyzerTest, CommaEpxrAsReturnAsNonConstRef) {
+  const auto AST =
+      buildASTFromCodeWithArgs("int& f() { int x, y; return (y, x); }",
+                               {"-Wno-unused-value"});
+  const auto Results =
+      match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_TRUE(isMutated(Results, AST.get()));
+}
+
+TEST(ExprMutationAnalyzerTest, CommaExprAsArrayToPointerDecay) {
+  const auto AST =
+      buildASTFromCodeWithArgs("void g(int*); "
+                               "void f() { int x[2], y[2]; g((y, x)); }",
+                               {"-Wno-unused-value"});
+  const auto Results =
+      match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_TRUE(isMutated(Results, AST.get()));
+}
+
+TEST(ExprMutationAnalyzerTest, CommaExprAsUniquePtr) {
+  const std::string UniquePtrDef =
+      "template <class T> struct UniquePtr {"
+      "  UniquePtr();"
+      "  UniquePtr(const UniquePtr&) = delete;"
+      "  T& operator*() const;"
+      "  T* operator->() const;"
+      "};";
+  const auto AST = buildASTFromCodeWithArgs(
+      UniquePtrDef + "template <class T> void f() "
+                     "{ UniquePtr<T> x; UniquePtr<T> y;"
+                     " (y, x)->mf(); }",
+      {"-fno-delayed-template-parsing", "-Wno-unused-value"});
+  const auto Results =
+      match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_TRUE(isMutated(Results, AST.get()));
+}
+
 TEST(ExprMutationAnalyzerTest, LambdaDefaultCaptureByValue) {
   const auto AST = buildASTFromCode("void f() { int x; [=]() { x; }; }");
   const auto Results =
@@ -1106,4 +1239,23 @@ TEST(ExprMutationAnalyzerTest, UniquePtr) {
   EXPECT_THAT(mutatedBy(Results, AST.get()), ElementsAre("x->mf()"));
 }
 
+TEST(ExprMutationAnalyzerTest, ReproduceFailureMinimal) {
+  const std::string Reproducer =
+      "namespace std {"
+      "template <class T> T forward(T & A) { return static_cast<T&&>(A); }"
+      "template <class T> struct __bind {"
+      "  T f;"
+      "  template <class V> __bind(T v, V &&) : f(forward(v)) {}"
+      "};"
+      "}"
+      "void f() {"
+      "  int x = 42;"
+      "  auto Lambda = [] {};"
+      "  std::__bind<decltype(Lambda)>(Lambda, x);"
+      "}";
+  auto AST11 = buildASTFromCodeWithArgs(Reproducer, {"-std=c++11"});
+  auto Results11 =
+      match(withEnclosingCompound(declRefTo("x")), AST11->getASTContext());
+  EXPECT_FALSE(isMutated(Results11, AST11.get()));
+}
 } // namespace clang

@@ -20,7 +20,7 @@ Introduction
 This document describes the language extensions provided by Clang.  In addition
 to the language extensions listed here, Clang aims to support a broad range of
 GCC extensions.  Please see the `GCC manual
-<http://gcc.gnu.org/onlinedocs/gcc/C-Extensions.html>`_ for more information on
+<https://gcc.gnu.org/onlinedocs/gcc/C-Extensions.html>`_ for more information on
 these extensions.
 
 .. _langext-feature_check:
@@ -479,44 +479,58 @@ Half-Precision Floating Point
 =============================
 
 Clang supports two half-precision (16-bit) floating point types: ``__fp16`` and
-``_Float16``. ``__fp16`` is defined in the ARM C Language Extensions (`ACLE
-<http://infocenter.arm.com/help/topic/com.arm.doc.ihi0053d/IHI0053D_acle_2_1.pdf>`_)
-and ``_Float16`` in ISO/IEC TS 18661-3:2015.
+``_Float16``.  These types are supported in all language modes.
 
-``__fp16`` is a storage and interchange format only. This means that values of
-``__fp16`` promote to (at least) float when used in arithmetic operations.
-There are two ``__fp16`` formats. Clang supports the IEEE 754-2008 format and
-not the ARM alternative format.
+``__fp16`` is supported on every target, as it is purely a storage format; see below.
+``_Float16`` is currently only supported on the following targets, with further
+targets pending ABI standardization:
+- 32-bit ARM
+- 64-bit ARM (AArch64)
+- SPIR
+``_Float16`` will be supported on more targets as they define ABIs for it.
 
-ISO/IEC TS 18661-3:2015 defines C support for additional floating point types.
-``_FloatN`` is defined as a binary floating type, where the N suffix denotes
-the number of bits and is 16, 32, 64, or greater and equal to 128 and a
-multiple of 32. Clang supports ``_Float16``. The difference from ``__fp16`` is
-that arithmetic on ``_Float16`` is performed in half-precision, thus it is not
-a storage-only format. ``_Float16`` is available as a source language type in
-both C and C++ mode.
+``__fp16`` is a storage and interchange format only.  This means that values of
+``__fp16`` are immediately promoted to (at least) ``float`` when used in arithmetic
+operations, so that e.g. the result of adding two ``__fp16`` values has type ``float``.
+The behavior of ``__fp16`` is specified by the ARM C Language Extensions (`ACLE <http://infocenter.arm.com/help/topic/com.arm.doc.ihi0053d/IHI0053D_acle_2_1.pdf>`_).
+Clang uses the ``binary16`` format from IEEE 754-2008 for ``__fp16``, not the ARM
+alternative format.
 
-It is recommended that portable code use the ``_Float16`` type because
-``__fp16`` is an ARM C-Language Extension (ACLE), whereas ``_Float16`` is
-defined by the C standards committee, so using ``_Float16`` will not prevent
-code from being ported to architectures other than Arm.  Also, ``_Float16``
-arithmetic and operations will directly map on half-precision instructions when
-they are available (e.g. Armv8.2-A), avoiding conversions to/from
-single-precision, and thus will result in more performant code. If
-half-precision instructions are unavailable, values will be promoted to
-single-precision, similar to the semantics of ``__fp16`` except that the
-results will be stored in single-precision.
+``_Float16`` is an extended floating-point type.  This means that, just like arithmetic on
+``float`` or ``double``, arithmetic on ``_Float16`` operands is formally performed in the
+``_Float16`` type, so that e.g. the result of adding two ``_Float16`` values has type
+``_Float16``.  The behavior of ``_Float16`` is specified by ISO/IEC TS 18661-3:2015
+("Floating-point extensions for C").  As with ``__fp16``, Clang uses the ``binary16``
+format from IEEE 754-2008 for ``_Float16``.
 
-In an arithmetic operation where one operand is of ``__fp16`` type and the
-other is of ``_Float16`` type, the ``_Float16`` type is first converted to
-``__fp16`` type and then the operation is completed as if both operands were of
-``__fp16`` type.
+``_Float16`` arithmetic will be performed using native half-precision support
+when available on the target (e.g. on ARMv8.2a); otherwise it will be performed
+at a higher precision (currently always ``float``) and then truncated down to
+``_Float16``.  Note that C and C++ allow intermediate floating-point operands
+of an expression to be computed with greater precision than is expressible in
+their type, so Clang may avoid intermediate truncations in certain cases; this may
+lead to results that are inconsistent with native arithmetic.
 
-To define a ``_Float16`` literal, suffix ``f16`` can be appended to the compile-time
-constant declaration. There is no default argument promotion for ``_Float16``; this
-applies to the standard floating types only. As a consequence, for example, an
-explicit cast is required for printing a ``_Float16`` value (there is no string
-format specifier for ``_Float16``).
+It is recommended that portable code use ``_Float16`` instead of ``__fp16``,
+as it has been defined by the C standards committee and has behavior that is
+more familiar to most programmers.
+
+Because ``__fp16`` operands are always immediately promoted to ``float``, the
+common real type of ``__fp16`` and ``_Float16`` for the purposes of the usual
+arithmetic conversions is ``float``.
+
+A literal can be given ``_Float16`` type using the suffix ``f16``; for example:
+```
+3.14f16
+```
+
+Because default argument promotion only applies to the standard floating-point
+types, ``_Float16`` values are not promoted to ``double`` when passed as variadic
+or untyped arguments.  As a consequence, some caution must be taken when using
+certain library facilities with ``_Float16``; for example, there is no ``printf`` format
+specifier for ``_Float16``, and (unlike ``float``) it will not be implicitly promoted to
+``double`` when passed to ``printf``, so the programmer must explicitly cast it to
+``double`` before using it with an ``%f`` or similar specifier.
 
 Messages on ``deprecated`` and ``unavailable`` Attributes
 =========================================================
@@ -1041,9 +1055,9 @@ the supported set of system headers, currently:
 * The Microsoft standard C++ library
 
 Clang supports the `GNU C++ type traits
-<http://gcc.gnu.org/onlinedocs/gcc/Type-Traits.html>`_ and a subset of the
+<https://gcc.gnu.org/onlinedocs/gcc/Type-Traits.html>`_ and a subset of the
 `Microsoft Visual C++ Type traits
-<http://msdn.microsoft.com/en-us/library/ms177194(v=VS.100).aspx>`_.
+<https://msdn.microsoft.com/en-us/library/ms177194(v=VS.100).aspx>`_.
 
 Feature detection is supported only for some of the primitives at present. User
 code should not use these checks because they bear no direct relation to the
@@ -1359,7 +1373,7 @@ Objective-C retaining behavior attributes
 
 In Objective-C, functions and methods are generally assumed to follow the
 `Cocoa Memory Management 
-<http://developer.apple.com/library/mac/#documentation/Cocoa/Conceptual/MemoryMgmt/Articles/mmRules.html>`_
+<https://developer.apple.com/library/mac/#documentation/Cocoa/Conceptual/MemoryMgmt/Articles/mmRules.html>`_
 conventions for ownership of object arguments and
 return values. However, there are exceptions, and so Clang provides attributes
 to allow these exceptions to be documented. This are used by ARC and the
@@ -1782,7 +1796,7 @@ the arguments. Both arguments and the result have the bitwidth specified
 by the name of the builtin.
 
 ``__builtin_rotateright``
-_------------------------
+-------------------------
 
 * ``__builtin_rotateright8``
 * ``__builtin_rotateright16``
@@ -2223,7 +2237,7 @@ C++ Coroutines support builtins
   guaranteed.
 
 Clang provides experimental builtins to support C++ Coroutines as defined by
-http://wg21.link/P0057. The following four are intended to be used by the
+https://wg21.link/P0057. The following four are intended to be used by the
 standard library to implement `std::experimental::coroutine_handle` type.
 
 **Syntax**:
@@ -2291,6 +2305,61 @@ automatically will insert one if the first argument to `llvm.coro.suspend` is
 token `none`. If a user calls `__builin_suspend`, clang will insert `token none`
 as the first argument to the intrinsic.
 
+Source location builtins
+------------------------
+
+Clang provides experimental builtins to support C++ standard library implementation
+of ``std::experimental::source_location`` as specified in  http://wg21.link/N4600.
+With the exception of ``__builtin_COLUMN``, these builtins are also implemented by
+GCC.
+
+**Syntax**:
+
+.. code-block:: c
+
+  const char *__builtin_FILE();
+  const char *__builtin_FUNCTION();
+  unsigned    __builtin_LINE();
+  unsigned    __builtin_COLUMN(); // Clang only
+
+**Example of use**:
+
+.. code-block:: c++
+
+  void my_assert(bool pred, int line = __builtin_LINE(), // Captures line of caller
+                 const char* file = __builtin_FILE(),
+                 const char* function = __builtin_FUNCTION()) {
+    if (pred) return;
+    printf("%s:%d assertion failed in function %s\n", file, line, function);
+    std::abort();
+  }
+
+  struct MyAggregateType {
+    int x;
+    int line = __builtin_LINE(); // captures line where aggregate initialization occurs
+  };
+  static_assert(MyAggregateType{42}.line == __LINE__);
+
+  struct MyClassType {
+    int line = __builtin_LINE(); // captures line of the constructor used during initialization
+    constexpr MyClassType(int) { assert(line == __LINE__); }
+  };
+
+**Description**:
+
+The builtins ``__builtin_LINE``, ``__builtin_FUNCTION``, and ``__builtin_FILE`` return
+the values, at the "invocation point", for ``__LINE__``, ``__FUNCTION__``, and
+``__FILE__`` respectively. These builtins are constant expressions.
+
+When the builtins appear as part of a default function argument the invocation
+point is the location of the caller. When the builtins appear as part of a
+default member initializer, the invocation point is the location of the
+constructor or aggregate initialization used to create the object. Otherwise
+the invocation point is the same as the location of the builtin.
+
+When the invocation point of ``__builtin_FUNCTION`` is not a function scope the
+empty string is returned.
+
 Non-standard C++11 Attributes
 =============================
 
@@ -2301,10 +2370,10 @@ Clang supports GCC's ``gnu`` attribute namespace. All GCC attributes which
 are accepted with the ``__attribute__((foo))`` syntax are also accepted as
 ``[[gnu::foo]]``. This only extends to attributes which are specified by GCC
 (see the list of `GCC function attributes
-<http://gcc.gnu.org/onlinedocs/gcc/Function-Attributes.html>`_, `GCC variable
-attributes <http://gcc.gnu.org/onlinedocs/gcc/Variable-Attributes.html>`_, and
+<https://gcc.gnu.org/onlinedocs/gcc/Function-Attributes.html>`_, `GCC variable
+attributes <https://gcc.gnu.org/onlinedocs/gcc/Variable-Attributes.html>`_, and
 `GCC type attributes
-<http://gcc.gnu.org/onlinedocs/gcc/Type-Attributes.html>`_). As with the GCC
+<https://gcc.gnu.org/onlinedocs/gcc/Type-Attributes.html>`_). As with the GCC
 implementation, these attributes must appertain to the *declarator-id* in a
 declaration, which means they must go either at the start of the declaration or
 immediately after the name being declared.
@@ -2366,6 +2435,103 @@ Which compiles to (on X86-32):
           movl    4(%esp), %eax
           movl    %gs:(%eax), %eax
           ret
+
+PowerPC Language Extensions
+------------------------------
+
+Set the Floating Point Rounding Mode
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+PowerPC64/PowerPC64le supports the builtin function ``__builtin_setrnd`` to set
+the floating point rounding mode. This function will use the least significant
+two bits of integer argument to set the floating point rounding mode.
+
+.. code-block:: c++
+
+  double __builtin_setrnd(int mode);
+
+The effective values for mode are:
+
+    - 0 - round to nearest
+    - 1 - round to zero
+    - 2 - round to +infinity
+    - 3 - round to -infinity
+
+Note that the mode argument will modulo 4, so if the int argument is greater 
+than 3, it will only use the least significant two bits of the mode. 
+Namely, ``__builtin_setrnd(102))`` is equal to ``__builtin_setrnd(2)``.
+
+PowerPC Language Extensions
+------------------------------
+
+Set the Floating Point Rounding Mode
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+PowerPC64/PowerPC64le supports the builtin function ``__builtin_setrnd`` to set
+the floating point rounding mode. This function will use the least significant
+two bits of integer argument to set the floating point rounding mode.
+
+.. code-block:: c++
+
+  double __builtin_setrnd(int mode);
+
+The effective values for mode are:
+
+    - 0 - round to nearest
+    - 1 - round to zero
+    - 2 - round to +infinity
+    - 3 - round to -infinity
+
+Note that the mode argument will modulo 4, so if the integer argument is greater
+than 3, it will only use the least significant two bits of the mode. 
+Namely, ``__builtin_setrnd(102))`` is equal to ``__builtin_setrnd(2)``.
+
+PowerPC Language Extensions
+------------------------------
+
+Set the Floating Point Rounding Mode
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+PowerPC64/PowerPC64le supports the builtin function ``__builtin_setrnd`` to set
+the floating point rounding mode. This function will use the least significant
+two bits of integer argument to set the floating point rounding mode.
+
+.. code-block:: c++
+
+  double __builtin_setrnd(int mode);
+
+The effective values for mode are:
+
+    - 0 - round to nearest
+    - 1 - round to zero
+    - 2 - round to +infinity
+    - 3 - round to -infinity
+
+Note that the mode argument will modulo 4, so if the integer argument is greater
+than 3, it will only use the least significant two bits of the mode. 
+Namely, ``__builtin_setrnd(102))`` is equal to ``__builtin_setrnd(2)``.
+
+PowerPC cache builtins
+^^^^^^^^^^^^^^^^^^^^^^
+
+The PowerPC architecture specifies instructions implementing cache operations.
+Clang provides builtins that give direct programmer access to these cache
+instructions.
+
+Currently the following builtins are implemented in clang:
+
+``__builtin_dcbf`` copies the contents of a modified block from the data cache
+to main memory and flushes the copy from the data cache.
+
+**Syntax**:
+
+.. code-block:: c
+
+  void __dcbf(const void* addr); /* Data Cache Block Flush */
+
+**Example of Use**:
+
+.. code-block:: c
+
+  int a = 1;
+  __builtin_dcbf (&a);
 
 Extensions for Static Analysis
 ==============================
@@ -2730,7 +2896,9 @@ same namespace. For instance:
 Without the namespaces on the macros, ``other_function`` will be annotated with
 ``[[noreturn]]`` instead of ``__attribute__((unavailable))``. This may seem like
 a contrived example, but its very possible for this kind of situation to appear
-in real code if the pragmas are spread out across a large file.
+in real code if the pragmas are spread out across a large file. You can test if
+your version of clang supports namespaces on ``#pragma clang attribute`` with
+``__has_extension(pragma_clang_attribute_namespaces)``.
 
 Subject Match Rules
 -------------------

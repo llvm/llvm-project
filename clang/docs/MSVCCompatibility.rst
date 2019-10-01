@@ -68,8 +68,8 @@ The status of major ABI-impacting C++ features:
   base class`_.  Clang does not yet support this.
 
 .. _#pragma pointers_to_members:
-  http://msdn.microsoft.com/en-us/library/83cch5a6.aspx
-.. _/vm: http://msdn.microsoft.com/en-us/library/yad46a6z.aspx
+  https://msdn.microsoft.com/en-us/library/83cch5a6.aspx
+.. _/vm: https://msdn.microsoft.com/en-us/library/yad46a6z.aspx
 .. _pointer to a member of a virtual base class: https://llvm.org/PR15713
 
 * Debug info: :good:`Mostly complete`.  Clang emits relatively complete CodeView

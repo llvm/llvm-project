@@ -16,23 +16,16 @@ Step 0: Obtaining Clang
 =======================
 
 As Clang is part of the LLVM project, you'll need to download LLVM's
-source code first. Both Clang and LLVM are maintained as Subversion
-repositories, but we'll be accessing them through the git mirror. For
-further information, see the `getting started
-guide <https://llvm.org/docs/GettingStarted.html>`_.
+source code first. Both Clang and LLVM are in the same git repository,
+under different directories. For further information, see the `getting
+started guide <https://llvm.org/docs/GettingStarted.html>`_.
 
 .. code-block:: console
 
-      mkdir ~/clang-llvm && cd ~/clang-llvm
-      git clone https://llvm.org/git/llvm.git
-      cd llvm/tools
-      git clone https://llvm.org/git/clang.git
-      cd clang/tools
-      git clone https://llvm.org/git/clang-tools-extra.git extra
+      cd ~/clang-llvm
+      git clone https://github.com/llvm/llvm-project.git
 
-Next you need to obtain the CMake build system and Ninja build tool. You
-may already have CMake installed, but current binary versions of CMake
-aren't built with Ninja support.
+Next you need to obtain the CMake build system and Ninja build tool.
 
 .. code-block:: console
 
@@ -57,7 +50,7 @@ Okay. Now we'll build Clang!
 
       cd ~/clang-llvm
       mkdir build && cd build
-      cmake -G Ninja ../llvm -DLLVM_BUILD_TESTS=ON  # Enable tests; default is off.
+      cmake -G Ninja ../llvm -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra" -DLLVM_BUILD_TESTS=ON  # Enable tests; default is off.
       ninja
       ninja check       # Test LLVM only.
       ninja clang-test  # Test Clang only.
@@ -65,9 +58,7 @@ Okay. Now we'll build Clang!
 
 And we're live.
 
-All of the tests should pass, though there is a (very) small chance that
-you can catch LLVM and Clang out of sync. Running ``'git svn rebase'``
-in both the llvm and clang directories should fix any problems.
+All of the tests should pass.
 
 Finally, we want to set Clang as its own compiler.
 
@@ -94,14 +85,14 @@ going on.
 
 First, we'll need to create a new directory for our tool and tell CMake
 that it exists. As this is not going to be a core clang tool, it will
-live in the ``tools/extra`` repository.
+live in the ``clang-tools-extra`` repository.
 
 .. code-block:: console
 
-      cd ~/clang-llvm/llvm/tools/clang
-      mkdir tools/extra/loop-convert
-      echo 'add_subdirectory(loop-convert)' >> tools/extra/CMakeLists.txt
-      vim tools/extra/loop-convert/CMakeLists.txt
+      cd ~/clang-llvm
+      mkdir clang-tools-extra/loop-convert
+      echo 'add_subdirectory(loop-convert)' >> clang-tools-extra/CMakeLists.txt
+      vim clang-tools-extra/loop-convert/CMakeLists.txt
 
 CMakeLists.txt should have the following contents:
 
@@ -121,7 +112,7 @@ CMakeLists.txt should have the following contents:
 
 With that done, Ninja will be able to compile our tool. Let's give it
 something to compile! Put the following into
-``tools/extra/loop-convert/LoopConvert.cpp``. A detailed explanation of
+``clang-tools-extra/loop-convert/LoopConvert.cpp``. A detailed explanation of
 why the different parts are needed can be found in the `LibTooling
 documentation <LibTooling.html>`_.
 

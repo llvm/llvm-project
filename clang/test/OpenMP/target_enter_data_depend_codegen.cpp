@@ -63,7 +63,7 @@ void foo(int arg) {
   // CK1: [[CAP_DEVICE:%.+]] = getelementptr inbounds %struct.anon, %struct.anon* [[CAPTURES:%.+]], i32 0, i32 0
   // CK1: [[DEVICE:%.+]] = load i32, i32* %{{.+}}
   // CK1: store i32 [[DEVICE]], i32* [[CAP_DEVICE]],
-  // CK1: [[RES:%.+]] = call i8* @__kmpc_omp_task_alloc(%struct.ident_t* {{.+}}, i32 {{.+}}, i32 1, i[[sz]] [[sz]], i[[sz]] 4, i32 (i32, i8*)* bitcast (i32 (i32, %struct.kmp_task_t_with_privates*)* [[TASK_ENTRY0:@.+]] to i32 (i32, i8*)*))
+  // CK1: [[RES:%.+]] = call i8* @__kmpc_omp_target_task_alloc(%struct.ident_t* {{.+}}, i32 {{.+}}, i32 1, i[[sz]] [[sz]], i[[sz]] 4, i32 (i32, i8*)* bitcast (i32 (i32, %struct.kmp_task_t_with_privates*)* [[TASK_ENTRY0:@.+]] to i32 (i32, i8*)*), i64
   // CK1: [[BC:%.+]] = bitcast i8* [[RES]] to %struct.kmp_task_t_with_privates*
   // CK1: [[TASK_T:%.+]] = getelementptr inbounds %struct.kmp_task_t_with_privates, %struct.kmp_task_t_with_privates* [[BC]], i32 0, i32 0
   // CK1: [[SHAREDS:%.+]] = getelementptr inbounds %struct.kmp_task_t, %struct.kmp_task_t* [[TASK_T]], i32 0, i32 0
@@ -90,7 +90,7 @@ void foo(int arg) {
   // CK1: store i[[sz]] 4, i[[sz]]* [[DEP_SIZE]],
   // CK1: [[DEP_ATTRS:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP]], i32 0, i32 2
   // CK1: store i8 1, i8* [[DEP_ATTRS]]
-  // CK1: [[DEP:%.+]] = getelementptr inbounds [1 x %struct.kmp_depend_info], [1 x %struct.kmp_depend_info]* [[MAIN_DEP]], i32 0, i32 0
+  // CK1: [[DEP:%.+]] = getelementptr inbounds [1 x %struct.kmp_depend_info], [1 x %struct.kmp_depend_info]* [[MAIN_DEP]], i[[sz]] 0, i[[sz]] 0
   // CK1: [[BC:%.+]] = bitcast %struct.kmp_depend_info* [[DEP]] to i8*
   // CK1: = call i32 @__kmpc_omp_task_with_deps(%struct.ident_t* @{{.+}}, i32 %{{.+}}, i8* [[RES]], i32 1, i8* [[BC]], i32 0, i8* null)
 
@@ -161,7 +161,7 @@ void foo(int arg) {
   // CK1: store i[[sz]] 800, i[[sz]]* [[DEP_SIZE]],
   // CK1: [[DEP_ATTRS:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP]], i32 0, i32 2
   // CK1: store i8 3, i8* [[DEP_ATTRS]]
-  // CK1: [[DEP:%.+]] = getelementptr inbounds [3 x %struct.kmp_depend_info], [3 x %struct.kmp_depend_info]* [[MAIN_DEP]], i32 0, i32 0
+  // CK1: [[DEP:%.+]] = getelementptr inbounds [3 x %struct.kmp_depend_info], [3 x %struct.kmp_depend_info]* [[MAIN_DEP]], i[[sz]] 0, i[[sz]] 0
   // CK1: [[BC:%.+]] = bitcast %struct.kmp_depend_info* [[DEP]] to i8*
   // CK1: call void @__kmpc_omp_wait_deps(%struct.ident_t* @{{.+}}, i32 %{{.+}}, i32 3, i8* [[BC]], i32 0, i8* null)
   // CK1: call void @__kmpc_omp_task_begin_if0(%struct.ident_t* @{{.+}}, i32 %{{.+}}, i8* [[RES]])
@@ -239,7 +239,7 @@ void foo(int arg) {
   // CK1: store i[[sz]] 800, i[[sz]]* [[DEP_SIZE]],
   // CK1: [[DEP_ATTRS:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP]], i32 0, i32 2
   // CK1: store i8 3, i8* [[DEP_ATTRS]]
-  // CK1: [[DEP:%.+]] = getelementptr inbounds [4 x %struct.kmp_depend_info], [4 x %struct.kmp_depend_info]* [[MAIN_DEP]], i32 0, i32 0
+  // CK1: [[DEP:%.+]] = getelementptr inbounds [4 x %struct.kmp_depend_info], [4 x %struct.kmp_depend_info]* [[MAIN_DEP]], i[[sz]] 0, i[[sz]] 0
   // CK1: [[BC:%.+]] = bitcast %struct.kmp_depend_info* [[DEP]] to i8*
   // CK1: call void @__kmpc_omp_wait_deps(%struct.ident_t* @{{.+}}, i32 %{{.+}}, i32 4, i8* [[BC]], i32 0, i8* null)
   // CK1: call void @__kmpc_omp_task_begin_if0(%struct.ident_t* @{{.+}}, i32 %{{.+}}, i8* [[RES]])
@@ -320,7 +320,7 @@ void foo(int arg) {
   // CK1: store i[[sz]] 4, i[[sz]]* [[DEP_SIZE]],
   // CK1: [[DEP_ATTRS:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP]], i32 0, i32 2
   // CK1: store i8 1, i8* [[DEP_ATTRS]]
-  // CK1: [[DEP:%.+]] = getelementptr inbounds [5 x %struct.kmp_depend_info], [5 x %struct.kmp_depend_info]* [[MAIN_DEP]], i32 0, i32 0
+  // CK1: [[DEP:%.+]] = getelementptr inbounds [5 x %struct.kmp_depend_info], [5 x %struct.kmp_depend_info]* [[MAIN_DEP]], i[[sz]] 0, i[[sz]] 0
   // CK1: [[BC:%.+]] = bitcast %struct.kmp_depend_info* [[DEP]] to i8*
   // CK1: call void @__kmpc_omp_wait_deps(%struct.ident_t* @{{.+}}, i32 %{{.+}}, i32 5, i8* [[BC]], i32 0, i8* null)
   // CK1: call void @__kmpc_omp_task_begin_if0(%struct.ident_t* @{{.+}}, i32 %{{.+}}, i8* [[RES]])

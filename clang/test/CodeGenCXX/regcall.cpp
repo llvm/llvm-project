@@ -99,7 +99,7 @@ void force_gen() {
 long double _Complex __regcall foo(long double _Complex f) {
   return f;
 }
-// CHECK-LIN64-DAG: define x86_regcallcc void @_Z15__regcall3__fooCe({ x86_fp80, x86_fp80 }* noalias sret %agg.result, { x86_fp80, x86_fp80 }* byval align 16 %f)
-// CHECK-LIN32-DAG: define x86_regcallcc void @_Z15__regcall3__fooCe({ x86_fp80, x86_fp80 }* inreg noalias sret %agg.result, { x86_fp80, x86_fp80 }* byval align 4 %f)
+// CHECK-LIN64-DAG: define x86_regcallcc void @_Z15__regcall3__fooCe({ x86_fp80, x86_fp80 }* noalias sret %agg.result, { x86_fp80, x86_fp80 }* byval({ x86_fp80, x86_fp80 }) align 16 %f)
+// CHECK-LIN32-DAG: define x86_regcallcc void @_Z15__regcall3__fooCe({ x86_fp80, x86_fp80 }* inreg noalias sret %agg.result, { x86_fp80, x86_fp80 }* byval({ x86_fp80, x86_fp80 }) align 4 %f)
 // CHECK-WIN64-DAG: define dso_local x86_regcallcc { double, double } @"?foo@@YwU?$_Complex@O@__clang@@U12@@Z"(double %f.0, double %f.1)
 // CHECK-WIN32-DAG: define dso_local x86_regcallcc { double, double } @"?foo@@YwU?$_Complex@O@__clang@@U12@@Z"(double %f.0, double %f.1)

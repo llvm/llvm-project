@@ -1,9 +1,8 @@
 //===- unittest/Format/FormatTestJS.cpp - Formatting unit tests for JS ----===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -599,6 +598,8 @@ TEST_F(FormatTestJS, GoogModules) {
   verifyFormat("goog.provide('this.is.really.absurdly.long');",
                getGoogleJSStyleWithColumns(40));
   verifyFormat("var long = goog.require('this.is.really.absurdly.long');",
+               getGoogleJSStyleWithColumns(40));
+  verifyFormat("const X = goog.requireType('this.is.really.absurdly.long');",
                getGoogleJSStyleWithColumns(40));
   verifyFormat("goog.forwardDeclare('this.is.really.absurdly.long');",
                getGoogleJSStyleWithColumns(40));
@@ -1961,6 +1962,12 @@ TEST_F(FormatTestJS, NestedTemplateStrings) {
 TEST_F(FormatTestJS, TaggedTemplateStrings) {
   verifyFormat("var x = html`<ul>`;");
   verifyFormat("yield `hello`;");
+  verifyFormat("var f = {\n"
+               "  param: longTagName`This is a ${\n"
+               "                    'really'} long line`\n"
+               "};",
+               "var f = {param: longTagName`This is a ${'really'} long line`};",
+               getGoogleJSStyleWithColumns(40));
 }
 
 TEST_F(FormatTestJS, CastSyntax) {
@@ -2327,5 +2334,27 @@ TEST_F(FormatTestJS, ConditionalTypes) {
       "                     never) extends((k: infer I) => void) ? I : never;");
 }
 
-} // end namespace tooling
+TEST_F(FormatTestJS, SupportPrivateFieldsAndMethods) {
+  verifyFormat("class Example {\n"
+               "  pub = 1;\n"
+               "  #priv = 2;\n"
+               "  static pub2 = 'foo';\n"
+               "  static #priv2 = 'bar';\n"
+               "  method() {\n"
+               "    this.#priv = 5;\n"
+               "  }\n"
+               "  static staticMethod() {\n"
+               "    switch (this.#priv) {\n"
+               "      case '1':\n"
+               "        #priv = 3;\n"
+               "        break;\n"
+               "    }\n"
+               "  }\n"
+               "  #privateMethod() {\n"
+               "    this.#privateMethod();  // infinite loop\n"
+               "  }\n"
+               "  static #staticPrivateMethod() {}\n");
+}
+
+} // namespace format
 } // end namespace clang

@@ -1,9 +1,8 @@
 //===---- ParseStmtAsm.cpp - Assembly Statement Parser --------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -214,7 +213,8 @@ ExprResult Parser::ParseMSAsmIdentifier(llvm::SmallVectorImpl<Token> &LineToks,
   // Also copy the current token over.
   LineToks.push_back(Tok);
 
-  PP.EnterTokenStream(LineToks, /*DisableMacroExpansions*/ true);
+  PP.EnterTokenStream(LineToks, /*DisableMacroExpansions*/ true,
+                      /*IsReinject*/ true);
 
   // Clear the current token and advance to the first token in LineToks.
   ConsumeAnyToken();
@@ -637,7 +637,7 @@ StmtResult Parser::ParseMicrosoftAsmStatement(SourceLocation AsmLoc) {
   // Filter out "fpsw" and "mxcsr". They aren't valid GCC asm clobber
   // constraints. Clang always adds fpsr to the clobber list anyway.
   llvm::erase_if(Clobbers, [](const std::string &C) {
-    return C == "fpsw" || C == "mxcsr";
+    return C == "fpsr" || C == "mxcsr";
   });
 
   // Build the vector of clobber StringRefs.
@@ -710,12 +710,12 @@ StmtResult Parser::ParseAsmStatement(bool &msAsm) {
 
   // Remember if this was a volatile asm.
   bool isVolatile = DS.getTypeQualifiers() & DeclSpec::TQ_volatile;
+  // Remember if this was a goto asm.
+  bool isGotoAsm = false;
 
-  // TODO: support "asm goto" constructs (PR#9295).
   if (Tok.is(tok::kw_goto)) {
-    Diag(Tok, diag::err_asm_goto_not_supported_yet);
-    SkipUntil(tok::r_paren, StopAtSemi);
-    return StmtError();
+    isGotoAsm = true;
+    ConsumeToken();
   }
 
   if (Tok.isNot(tok::l_paren)) {
@@ -753,7 +753,8 @@ StmtResult Parser::ParseAsmStatement(bool &msAsm) {
     return Actions.ActOnGCCAsmStmt(AsmLoc, /*isSimple*/ true, isVolatile,
                                    /*NumOutputs*/ 0, /*NumInputs*/ 0, nullptr,
                                    Constraints, Exprs, AsmString.get(),
-                                   Clobbers, T.getCloseLocation());
+                                   Clobbers, /*NumLabels*/ 0,
+                                   T.getCloseLocation());
   }
 
   // Parse Outputs, if present.
@@ -762,6 +763,12 @@ StmtResult Parser::ParseAsmStatement(bool &msAsm) {
     // In C++ mode, parse "::" like ": :".
     AteExtraColon = Tok.is(tok::coloncolon);
     ConsumeToken();
+
+    if (!AteExtraColon && isGotoAsm && Tok.isNot(tok::colon)) {
+      Diag(Tok, diag::err_asm_goto_cannot_have_output);
+      SkipUntil(tok::r_paren, StopAtSemi);
+      return StmtError();
+    }
 
     if (!AteExtraColon && ParseAsmOperandsOpt(Names, Constraints, Exprs))
       return StmtError();
@@ -789,12 +796,15 @@ StmtResult Parser::ParseAsmStatement(bool &msAsm) {
   unsigned NumInputs = Names.size() - NumOutputs;
 
   // Parse the clobbers, if present.
-  if (AteExtraColon || Tok.is(tok::colon)) {
-    if (!AteExtraColon)
+  if (AteExtraColon || Tok.is(tok::colon) || Tok.is(tok::coloncolon)) {
+    if (AteExtraColon)
+      AteExtraColon = false;
+    else {
+      AteExtraColon = Tok.is(tok::coloncolon);
       ConsumeToken();
-
+    }
     // Parse the asm-string list for clobbers if present.
-    if (Tok.isNot(tok::r_paren)) {
+    if (!AteExtraColon && isTokenStringLiteral()) {
       while (1) {
         ExprResult Clobber(ParseAsmStringLiteral());
 
@@ -808,11 +818,49 @@ StmtResult Parser::ParseAsmStatement(bool &msAsm) {
       }
     }
   }
+  if (!isGotoAsm && (Tok.isNot(tok::r_paren) || AteExtraColon)) {
+    Diag(Tok, diag::err_expected) << tok::r_paren;
+    SkipUntil(tok::r_paren, StopAtSemi);
+    return StmtError();
+  }
 
+  // Parse the goto label, if present.
+  unsigned NumLabels = 0;
+  if (AteExtraColon || Tok.is(tok::colon)) {
+    if (!AteExtraColon)
+      ConsumeToken();
+
+    while (true) {
+      if (Tok.isNot(tok::identifier)) {
+        Diag(Tok, diag::err_expected) << tok::identifier;
+        SkipUntil(tok::r_paren, StopAtSemi);
+        return StmtError();
+      }
+      LabelDecl *LD = Actions.LookupOrCreateLabel(Tok.getIdentifierInfo(),
+                                                  Tok.getLocation());
+      Names.push_back(Tok.getIdentifierInfo());
+      if (!LD) {
+        SkipUntil(tok::r_paren, StopAtSemi);
+        return StmtError();
+      }
+      ExprResult Res =
+          Actions.ActOnAddrLabel(Tok.getLocation(), Tok.getLocation(), LD);
+      Exprs.push_back(Res.get());
+      NumLabels++;
+      ConsumeToken();
+      if (!TryConsumeToken(tok::comma))
+        break;
+    }
+  } else if (isGotoAsm) {
+    Diag(Tok, diag::err_expected) << tok::colon;
+    SkipUntil(tok::r_paren, StopAtSemi);
+    return StmtError();
+  }
   T.consumeClose();
   return Actions.ActOnGCCAsmStmt(
       AsmLoc, false, isVolatile, NumOutputs, NumInputs, Names.data(),
-      Constraints, Exprs, AsmString.get(), Clobbers, T.getCloseLocation());
+      Constraints, Exprs, AsmString.get(), Clobbers, NumLabels,
+      T.getCloseLocation());
 }
 
 /// ParseAsmOperands - Parse the asm-operands production as used by

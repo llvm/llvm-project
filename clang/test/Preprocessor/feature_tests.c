@@ -20,6 +20,15 @@
 #error Clang should have these
 #endif
 
+// These are technically implemented as keywords, but __has_builtin should
+// still return true.
+#if !__has_builtin(__builtin_LINE) || \
+    !__has_builtin(__builtin_FILE) || \
+    !__has_builtin(__builtin_FUNCTION) || \
+    !__has_builtin(__builtin_COLUMN)
+#error Clang should have these
+#endif
+
 #if __has_builtin(__builtin_insanity)
 #error Clang should not have this
 #endif

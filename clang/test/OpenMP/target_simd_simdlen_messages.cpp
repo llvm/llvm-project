@@ -46,7 +46,7 @@ T tmain(T argc, S **argv) { //expected-note 2 {{declared here}}
   for (int i = ST; i < N; i++) argv[0][i] = argv[0][i] - argv[0][i-ST];
 
   // expected-error@+6 2 {{directive '#pragma omp target simd' cannot contain more than one 'simdlen' clause}}
-  // expected-error@+5 2 {{argument to 'simdlen' clause must be a strictly positive integer value}}
+  // expected-error@+5 {{argument to 'simdlen' clause must be a strictly positive integer value}}
   // expected-error@+4 2 {{expression is not an integral constant expression}}
 #if __cplusplus >= 201103L
   // expected-note@+2 2 {{non-constexpr function 'foobool' cannot be used in a constant expression}}
@@ -111,7 +111,7 @@ int main(int argc, char **argv) {
   // expected-note@+4 {{non-constexpr function 'foobool' cannot be used in a constant expression}}
 #endif
 // expected-error@+2 2 {{directive '#pragma omp target simd' cannot contain more than one 'simdlen' clause}}
-// expected-error@+1 2 {{argument to 'simdlen' clause must be a strictly positive integer value}}
+// expected-error@+1 {{argument to 'simdlen' clause must be a strictly positive integer value}}
 #pragma omp target simd simdlen (foobool(argc)), simdlen (true), simdlen (-5) 
   for (int i = 4; i < 12; i++) argv[0][i] = argv[0][i] - argv[0][i-4];
 

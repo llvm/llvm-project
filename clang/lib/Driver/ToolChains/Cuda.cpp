@@ -1,9 +1,8 @@
 //===--- Cuda.cpp - Cuda Tool and ToolChain Implementations -----*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -61,6 +60,8 @@ static CudaVersion ParseCudaVersionFile(llvm::StringRef V) {
     return CudaVersion::CUDA_92;
   if (Major == 10 && Minor == 0)
     return CudaVersion::CUDA_100;
+  if (Major == 10 && Minor == 1)
+    return CudaVersion::CUDA_101;
   return CudaVersion::UNKNOWN;
 }
 
@@ -453,7 +454,8 @@ void NVPTX::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   assert(TC.getTriple().isNVPTX() && "Wrong platform");
 
   ArgStringList CmdArgs;
-  CmdArgs.push_back("--cuda");
+  if (TC.CudaInstallation.version() <= CudaVersion::CUDA_100)
+    CmdArgs.push_back("--cuda");
   CmdArgs.push_back(TC.getTriple().isArch64Bit() ? "-64" : "-32");
   CmdArgs.push_back(Args.MakeArgString("--create"));
   CmdArgs.push_back(Args.MakeArgString(Output.getFilename()));
@@ -643,28 +645,41 @@ void CudaToolChain::addClangTargetOptions(
   CC1Args.push_back("-mlink-builtin-bitcode");
   CC1Args.push_back(DriverArgs.MakeArgString(LibDeviceFile));
 
-  // Libdevice in CUDA-7.0 requires PTX version that's more recent than LLVM
-  // defaults to. Use PTX4.2 by default, which is the PTX version that came with
-  // CUDA-7.0.
-  const char *PtxFeature = "+ptx42";
-  // TODO(tra): CUDA-10+ needs PTX 6.3 to support new features. However that
-  // requires fair amount of work on LLVM side. We'll keep using PTX 6.1 until
-  // all prerequisites are in place.
-  if (CudaInstallation.version() >= CudaVersion::CUDA_91) {
-    // CUDA-9.1 uses new instructions that are only available in PTX6.1+
-    PtxFeature = "+ptx61";
-  } else if (CudaInstallation.version() >= CudaVersion::CUDA_90) {
-    // CUDA-9.0 uses new instructions that are only available in PTX6.0+
-    PtxFeature = "+ptx60";
+  // New CUDA versions often introduce new instructions that are only supported
+  // by new PTX version, so we need to raise PTX level to enable them in NVPTX
+  // back-end.
+  const char *PtxFeature = nullptr;
+  switch(CudaInstallation.version()) {
+    case CudaVersion::CUDA_101:
+      PtxFeature = "+ptx64";
+      break;
+    case CudaVersion::CUDA_100:
+      PtxFeature = "+ptx63";
+      break;
+    case CudaVersion::CUDA_92:
+      PtxFeature = "+ptx61";
+      break;
+    case CudaVersion::CUDA_91:
+      PtxFeature = "+ptx61";
+      break;
+    case CudaVersion::CUDA_90:
+      PtxFeature = "+ptx60";
+      break;
+    default:
+      PtxFeature = "+ptx42";
   }
   CC1Args.append({"-target-feature", PtxFeature});
   if (DriverArgs.hasFlag(options::OPT_fcuda_short_ptr,
                          options::OPT_fno_cuda_short_ptr, false))
     CC1Args.append({"-mllvm", "--nvptx-short-ptr"});
 
+  if (CudaInstallation.version() >= CudaVersion::UNKNOWN)
+    CC1Args.push_back(DriverArgs.MakeArgString(
+        Twine("-target-sdk-version=") +
+        CudaVersionToString(CudaInstallation.version())));
+
   if (DeviceOffloadingKind == Action::OFK_OpenMP) {
     SmallVector<StringRef, 8> LibraryPaths;
-
     if (const Arg *A = DriverArgs.getLastArg(options::OPT_libomptarget_nvptx_path_EQ))
       LibraryPaths.push_back(A->getValue());
 

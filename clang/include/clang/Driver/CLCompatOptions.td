@@ -1,9 +1,8 @@
 //===--- CLCompatOptions.td - Options for clang-cl ------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -116,14 +115,14 @@ def _SLASH_J : CLFlag<"J">, HelpText<"Make char type unsigned">,
 // The _SLASH_O option handles all the /O flags, but we also provide separate
 // aliased options to provide separate help messages.
 def _SLASH_O : CLJoined<"O">,
-  HelpText<"Set multiple /O flags at once; e.g. '/O2y-' is the same as '/O2 /y-'">,
+  HelpText<"Set multiple /O flags at once; e.g. '/O2y-' for '/O2 /Oy-'">,
   MetaVarName<"<flags>">;
 // FIXME: Not sure why we have -O0 here; MSVC doesn't support that.
 def : CLFlag<"O0">, Alias<O0>, HelpText<"Disable optimization">;
 def : CLFlag<"O1">, Alias<_SLASH_O>, AliasArgs<["1"]>,
-  HelpText<"Optimize for size (equivalent to /Og /Os /Oy /Ob2 /GF /Gy)">;
+  HelpText<"Optimize for size  (same as /Og     /Os /Oy /Ob2 /GF /Gy)">;
 def : CLFlag<"O2">, Alias<_SLASH_O>, AliasArgs<["2"]>,
-  HelpText<"Optimize for speed (equivalent to /Og /Oi /Ot /Oy /Ob2 /GF /Gy)">;
+  HelpText<"Optimize for speed (same as /Og /Oi /Ot /Oy /Ob2 /GF /Gy)">;
 def : CLFlag<"Ob0">, Alias<_SLASH_O>, AliasArgs<["b0"]>,
   HelpText<"Disable function inlining">;
 def : CLFlag<"Ob1">, Alias<_SLASH_O>, AliasArgs<["b1"]>,
@@ -143,7 +142,7 @@ def : CLFlag<"Os">, Alias<_SLASH_O>, AliasArgs<["s"]>,
 def : CLFlag<"Ot">, Alias<_SLASH_O>, AliasArgs<["t"]>,
   HelpText<"Optimize for speed">;
 def : CLFlag<"Ox">, Alias<_SLASH_O>, AliasArgs<["x"]>,
-  HelpText<"Deprecated (equivalent to /Og /Oi /Ot /Oy /Ob2); use /O2 instead">;
+  HelpText<"Deprecated (same as /Og /Oi /Ot /Oy /Ob2); use /O2 instead">;
 def : CLFlag<"Oy">, Alias<_SLASH_O>, AliasArgs<["y"]>,
   HelpText<"Enable frame pointer omission (x86 only)">;
 def : CLFlag<"Oy-">, Alias<_SLASH_O>, AliasArgs<["y-"]>,
@@ -167,7 +166,7 @@ def _SLASH_source_charset : CLCompileJoined<"source-charset:">,
 def _SLASH_execution_charset : CLCompileJoined<"execution-charset:">,
   HelpText<"Runtime encoding, supports only UTF-8">, Alias<fexec_charset_EQ>;
 def _SLASH_std : CLCompileJoined<"std:">,
-  HelpText<"Language standard to compile for">;
+  HelpText<"Language standard to compile for (c++14,c++17,c++latest)">;
 def _SLASH_U : CLJoinedOrSeparate<"U">, HelpText<"Undefine macro">,
   MetaVarName<"<macro>">, Alias<U>;
 def _SLASH_validate_charset : CLFlag<"validate-charset">,
@@ -207,6 +206,18 @@ def _SLASH_Zc_sizedDealloc : CLFlag<"Zc:sizedDealloc">,
 def _SLASH_Zc_sizedDealloc_ : CLFlag<"Zc:sizedDealloc-">,
   HelpText<"Disable C++14 sized global deallocation functions">,
   Alias<fno_sized_deallocation>;
+def _SLASH_Zc_alignedNew : CLFlag<"Zc:alignedNew">,
+  HelpText<"Enable C++17 aligned allocation functions">,
+  Alias<faligned_allocation>;
+def _SLASH_Zc_alignedNew_ : CLFlag<"Zc:alignedNew-">,
+  HelpText<"Disable C++17 aligned allocation functions">,
+  Alias<fno_aligned_allocation>;
+def _SLASH_Zc_char8_t : CLFlag<"Zc:char8_t">,
+  HelpText<"Enable char8_t from C++2a">,
+  Alias<fchar8__t>;
+def _SLASH_Zc_char8_t_ : CLFlag<"Zc:char8_t-">,
+  HelpText<"Disable char8_t from c++2a">,
+  Alias<fno_char8__t>;
 def _SLASH_Zc_strictStrings : CLFlag<"Zc:strictStrings">,
   HelpText<"Treat string literals as const">, Alias<W_Joined>,
   AliasArgs<["error=c++11-compat-deprecated-writable-strings"]>;
@@ -389,14 +400,17 @@ def _SLASH_Zo_ : CLIgnoredFlag<"Zo-">;
 
 // Unsupported:
 
-def _SLASH_AI : CLJoined<"AI">;
+def _SLASH_await : CLFlag<"await">;
+def _SLASH_constexpr : CLJoined<"constexpr:">;
+def _SLASH_AI : CLJoinedOrSeparate<"AI">;
 def _SLASH_Bt : CLFlag<"Bt">;
 def _SLASH_Bt_plus : CLFlag<"Bt+">;
 def _SLASH_clr : CLJoined<"clr">;
+def _SLASH_d2 : CLJoined<"d2">;
 def _SLASH_doc : CLJoined<"doc">;
 def _SLASH_FA_joined : CLJoined<"FA">;
 def _SLASH_favor : CLJoined<"favor">;
-def _SLASH_F : CLFlag<"F">;
+def _SLASH_F : CLJoinedOrSeparate<"F">;
 def _SLASH_Fm : CLJoined<"Fm">;
 def _SLASH_Fr : CLJoined<"Fr">;
 def _SLASH_FR : CLJoined<"FR">;
@@ -420,10 +434,14 @@ def _SLASH_kernel : CLFlag<"kernel">;
 def _SLASH_LN : CLFlag<"LN">;
 def _SLASH_MP : CLJoined<"MP">;
 def _SLASH_openmp : CLFlag<"openmp">;
+def _SLASH_openmp_experimental : CLFlag<"openmp:experimental">;
 def _SLASH_Qfast_transcendentals : CLFlag<"Qfast_transcendentals">;
 def _SLASH_QIfist : CLFlag<"QIfist">;
 def _SLASH_Qimprecise_fwaits : CLFlag<"Qimprecise_fwaits">;
 def _SLASH_Qpar : CLFlag<"Qpar">;
+def _SLASH_Qpar_report : CLJoined<"Qpar-report">;
+def _SLASH_Qsafe_fp_loads : CLFlag<"Qsafe_fp_loads">;
+def _SLASH_Qspectre : CLFlag<"Qspectre">;
 def _SLASH_Qvec_report : CLJoined<"Qvec-report">;
 def _SLASH_u : CLFlag<"u">;
 def _SLASH_V : CLFlag<"V">;

@@ -125,3 +125,9 @@ bool Foo::isGood() { // expected-error {{out-of-line definition of 'isGood' does
 }
 void Foo::beEvil() {} // expected-error {{out-of-line definition of 'beEvil' does not match any declaration in namespace 'redecl_typo::Foo'; did you mean 'BeEvil'?}}
 }
+
+struct CVQualFun {
+  void func(int a, int &b); // expected-note {{type of 2nd parameter of member declaration does not match definition ('int &' vs 'int')}}
+};
+
+void CVQualFun::func(const int a, int b) {} // expected-error {{out-of-line definition of 'func' does not match any declaration in 'CVQualFun'}}

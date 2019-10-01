@@ -3,7 +3,6 @@
 <plist version="1.0">
 <dict>
  <key>clang_version</key>
-<string>clang version 8.0.0 </string>
  <key>diagnostics</key>
  <array>
   <dict>
@@ -4271,9 +4270,9 @@
      </array>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
-     <string>Assuming pointer value is null</string>
+     <string>Assuming field &apos;arr&apos; is null</string>
      <key>message</key>
-     <string>Assuming pointer value is null</string>
+     <string>Assuming field &apos;arr&apos; is null</string>
     </dict>
     <dict>
      <key>kind</key><string>control</string>
@@ -5221,7 +5220,6 @@
  </array>
  <key>files</key>
  <array>
-   <string>/clang/test/Analysis/inlining/path-notes.cpp</string>
  </array>
 </dict>
 </plist>

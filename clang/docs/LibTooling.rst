@@ -187,8 +187,8 @@ Clang tools need their builtin headers and search for them the same way Clang
 does.  Thus, the default location to look for builtin headers is in a path
 ``$(dirname /path/to/tool)/../lib/clang/3.3/include`` relative to the tool
 binary.  This works out-of-the-box for tools running from llvm's toplevel
-binary directory after building clang-headers, or if the tool is running from
-the binary directory of a clang install next to the clang binary.
+binary directory after building clang-resource-headers, or if the tool is
+running from the binary directory of a clang install next to the clang binary.
 
 Tips: if your tool fails to find ``stddef.h`` or similar headers, call the tool
 with ``-v`` and look at the search paths it looks through.
@@ -196,6 +196,6 @@ with ``-v`` and look at the search paths it looks through.
 Linking
 ^^^^^^^
 
-For a list of libraries to link, look at one of the tools' Makefiles (for
-example `clang-check/Makefile
-<https://llvm.org/viewvc/llvm-project/cfe/trunk/tools/clang-check/Makefile?view=markup>`_).
+For a list of libraries to link, look at one of the tools' CMake files (for
+example `clang-check/CMakeList.txt
+<https://github.com/llvm/llvm-project/blob/master/clang/tools/clang-check/CMakeLists.txt>`_).

@@ -19,7 +19,7 @@
 
 //! This is a property to get the Name.
 @property (copy) NSString *Name;
-// CHECK: <Declaration>@property(readwrite, copy, atomic) NSString *Name;</Declaration>
+// CHECK: <Declaration>@property(atomic, copy, readwrite) NSString *Name;</Declaration>
 @end
 
 @implementation NSMutableArray

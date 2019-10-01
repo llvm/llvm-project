@@ -1,6 +1,6 @@
 // RUN: rm -f %t
 // RUN: %clang_analyze_cc1 -fblocks -analyzer-checker=core,unix.Malloc -analyzer-output=plist -verify -o %t -analyzer-config eagerly-assume=false %s
-// RUN: tail -n +11 %t | diff -u -w -I "<string>/" -I "<string>.:" -I "version" - %S/Inputs/expected-plists/malloc-plist.c.plist
+// RUN: tail -n +11 %t | %normalize_plist | diff -ub %S/Inputs/expected-plists/malloc-plist.c.plist -
 
 typedef __typeof(sizeof(int)) size_t;
 void *malloc(size_t);

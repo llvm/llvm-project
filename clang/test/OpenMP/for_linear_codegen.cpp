@@ -14,6 +14,19 @@
 #ifndef HEADER
 #define HEADER
 
+enum omp_allocator_handle_t {
+  omp_null_allocator = 0,
+  omp_default_mem_alloc = 1,
+  omp_large_cap_mem_alloc = 2,
+  omp_const_mem_alloc = 3,
+  omp_high_bw_mem_alloc = 4,
+  omp_low_lat_mem_alloc = 5,
+  omp_cgroup_mem_alloc = 6,
+  omp_pteam_mem_alloc = 7,
+  omp_thread_mem_alloc = 8,
+  KMP_ALLOCATOR_MAX_HANDLE = __UINTPTR_MAX__
+};
+
 template <class T>
 struct S {
   T f;
@@ -344,7 +357,7 @@ int main() {
   float *pvar = &test.f;
   long long lvar = 0;
 #pragma omp parallel
-#pragma omp for linear(pvar, lvar : 3)
+#pragma omp for linear(pvar, lvar : 3) allocate(omp_low_lat_mem_alloc: lvar)
   for (int i = 0; i < 2; ++i) {
     pvar += 3, lvar += 3;
   }
@@ -370,7 +383,6 @@ int main() {
 // CHECK: alloca i{{[0-9]+}},
 // CHECK: alloca i{{[0-9]+}},
 // CHECK: [[PVAR_PRIV:%.+]] = alloca float*,
-// CHECK: [[LVAR_PRIV:%.+]] = alloca i64,
 // CHECK: store i{{[0-9]+}}* [[GTID_ADDR]], i{{[0-9]+}}** [[GTID_ADDR_REF:%.+]]
 
 // Check for default initialization.
@@ -380,7 +392,9 @@ int main() {
 // CHECK: store float* [[PVAR_VAL]], float** [[PVAR_START]],
 // CHECK: [[LVAR_VAL:%.+]] = load i64, i64* [[LVAR_REF]],
 // CHECK: store i64 [[LVAR_VAL]], i64* [[LVAR_START]],
-// CHECK: call {{.+}} @__kmpc_for_static_init_4(%{{.+}}* @{{.+}}, i32 [[GTID:%.+]], i32 34, i32* [[IS_LAST_ADDR:%.+]], i32* %{{.+}}, i32* %{{.+}}, i32* %{{.+}}, i32 1, i32 1)
+// CHECK: [[LVAR_VOID_PTR:%.+]] = call i8* @__kmpc_alloc(i32 [[GTID:%.+]], i64 8, i8* inttoptr (i64 5 to i8*))
+// CHECK: [[LVAR_PRIV:%.+]] = bitcast i8* [[LVAR_VOID_PTR]] to i64*
+// CHECK: call {{.+}} @__kmpc_for_static_init_4(%{{.+}}* @{{.+}}, i32 [[GTID]], i32 34, i32* [[IS_LAST_ADDR:%.+]], i32* %{{.+}}, i32* %{{.+}}, i32* %{{.+}}, i32 1, i32 1)
 // CHECK: [[PVAR_VAL:%.+]] = load float*, float** [[PVAR_START]],
 // CHECK: [[CNT:%.+]] = load i32, i32*
 // CHECK: [[MUL:%.+]] = mul nsw i32 [[CNT]], 3
@@ -400,6 +414,7 @@ int main() {
 // CHECK: [[ADD:%.+]] = add nsw i64 [[LVAR_VAL]], 3
 // CHECK: store i64 [[ADD]], i64* [[LVAR_PRIV]],
 // CHECK: call void @__kmpc_for_static_fini(%{{.+}}* @{{.+}}, i32 %{{.+}})
+// CHECK: call void @__kmpc_free(i32 [[GTID]], i8* [[LVAR_VOID_PTR]], i8* inttoptr (i64 5 to i8*))
 // CHECK: call void @__kmpc_barrier(%{{.+}}* [[IMPLICIT_BARRIER_LOC]], i{{[0-9]+}} [[GTID]])
 // CHECK: ret void
 

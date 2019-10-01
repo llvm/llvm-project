@@ -1,9 +1,8 @@
 //===- unittest/Format/FormatTestRawStrings.cpp - Formatting unit tests ---===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -982,6 +981,20 @@ int f() {
 })test", Style));
 }
 
+TEST_F(FormatTestRawStrings, IndentsLastParamAfterNewline) {
+  FormatStyle Style = getRawStringPbStyleWithColumns(60);
+  expect_eq(R"test(
+fffffffffffffffffffff("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                      R"pb(
+                        b: c
+                      )pb");)test",
+            format(R"test(
+fffffffffffffffffffff("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                      R"pb(
+                      b: c
+                      )pb");)test",
+                   Style));
+}
 } // end namespace
 } // end namespace format
 } // end namespace clang

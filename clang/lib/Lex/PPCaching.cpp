@@ -1,9 +1,8 @@
 //===--- PPCaching.cpp - Handle caching lexed tokens ----------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -24,6 +23,7 @@ using namespace clang;
 // be called multiple times and CommitBacktrackedTokens/Backtrack calls will
 // be combined with the EnableBacktrackAtThisPos calls in reverse order.
 void Preprocessor::EnableBacktrackAtThisPos() {
+  assert(LexLevel == 0 && "cannot use lookahead while lexing");
   BacktrackPositions.push_back(CachedLexPos);
   EnterCachingLexMode();
 }
@@ -33,29 +33,6 @@ void Preprocessor::CommitBacktrackedTokens() {
   assert(!BacktrackPositions.empty()
          && "EnableBacktrackAtThisPos was not called!");
   BacktrackPositions.pop_back();
-}
-
-Preprocessor::CachedTokensRange Preprocessor::LastCachedTokenRange() {
-  assert(isBacktrackEnabled());
-  auto PrevCachedLexPos = BacktrackPositions.back();
-  return CachedTokensRange{PrevCachedLexPos, CachedLexPos};
-}
-
-void Preprocessor::EraseCachedTokens(CachedTokensRange TokenRange) {
-  assert(TokenRange.Begin <= TokenRange.End);
-  if (CachedLexPos == TokenRange.Begin && TokenRange.Begin != TokenRange.End) {
-    // We have backtracked to the start of the token range as we want to consume
-    // them again. Erase the tokens only after consuming then.
-    assert(!CachedTokenRangeToErase);
-    CachedTokenRangeToErase = TokenRange;
-    return;
-  }
-  // The cached tokens were committed, so they should be erased now.
-  assert(TokenRange.End == CachedLexPos);
-  CachedTokens.erase(CachedTokens.begin() + TokenRange.Begin,
-                     CachedTokens.begin() + TokenRange.End);
-  CachedLexPos = TokenRange.Begin;
-  ExitCachingLexMode();
 }
 
 // Make Preprocessor re-lex the tokens that were lexed since
@@ -72,15 +49,13 @@ void Preprocessor::CachingLex(Token &Result) {
   if (!InCachingLexMode())
     return;
 
+  // The assert in EnterCachingLexMode should prevent this from happening.
+  assert(LexLevel == 1 &&
+         "should not use token caching within the preprocessor");
+
   if (CachedLexPos < CachedTokens.size()) {
     Result = CachedTokens[CachedLexPos++];
-    // Erase the some of the cached tokens after they are consumed when
-    // asked to do so.
-    if (CachedTokenRangeToErase &&
-        CachedTokenRangeToErase->End == CachedLexPos) {
-      EraseCachedTokens(*CachedTokenRangeToErase);
-      CachedTokenRangeToErase = None;
-    }
+    Result.setFlag(Token::IsReinjected);
     return;
   }
 
@@ -89,14 +64,14 @@ void Preprocessor::CachingLex(Token &Result) {
 
   if (isBacktrackEnabled()) {
     // Cache the lexed token.
-    EnterCachingLexMode();
+    EnterCachingLexModeUnchecked();
     CachedTokens.push_back(Result);
     ++CachedLexPos;
     return;
   }
 
   if (CachedLexPos < CachedTokens.size()) {
-    EnterCachingLexMode();
+    EnterCachingLexModeUnchecked();
   } else {
     // All cached tokens were consumed.
     CachedTokens.clear();
@@ -105,11 +80,23 @@ void Preprocessor::CachingLex(Token &Result) {
 }
 
 void Preprocessor::EnterCachingLexMode() {
+  // The caching layer sits on top of all the other lexers, so it's incorrect
+  // to cache tokens while inside a nested lex action. The cached tokens would
+  // be retained after returning to the enclosing lex action and, at best,
+  // would appear at the wrong position in the token stream.
+  assert(LexLevel == 0 &&
+         "entered caching lex mode while lexing something else");
+
   if (InCachingLexMode()) {
     assert(CurLexerKind == CLK_CachingLexer && "Unexpected lexer kind");
     return;
   }
 
+  EnterCachingLexModeUnchecked();
+}
+
+void Preprocessor::EnterCachingLexModeUnchecked() {
+  assert(CurLexerKind != CLK_CachingLexer && "already in caching lex mode");
   PushIncludeMacroStack();
   CurLexerKind = CLK_CachingLexer;
 }

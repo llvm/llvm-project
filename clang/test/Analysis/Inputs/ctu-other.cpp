@@ -24,32 +24,37 @@ namespace embed_ns {
 int fens(int x) {
   return x - 3;
 }
-}
+} // namespace embed_ns
 
 class embed_cls {
 public:
-  int fecl(int x) {
-    return x - 7;
-  }
+  int fecl(int x);
 };
+int embed_cls::fecl(int x) {
+  return x - 7;
 }
+} // namespace myns
 
 class mycls {
 public:
-  int fcl(int x) {
-    return x + 5;
-  }
-  static int fscl(int x) {
-    return x + 6;
-  }
+  int fcl(int x);
+  static int fscl(int x);
 
   class embed_cls2 {
   public:
-    int fecl2(int x) {
-      return x - 11;
-    }
+    int fecl2(int x);
   };
 };
+
+int mycls::fcl(int x) {
+  return x + 5;
+}
+int mycls::fscl(int x) {
+  return x + 6;
+}
+int mycls::embed_cls2::fecl2(int x) {
+  return x - 11;
+}
 
 namespace chns {
 int chf2(int x);
@@ -75,3 +80,41 @@ int other_macro_diag(int x) {
   MACRODIAG();
   return x;
 }
+
+extern const int extInt = 2;
+namespace intns {
+extern const int extInt = 3;
+}
+struct S {
+  int a;
+};
+extern const S extS = {.a = 4};
+struct A {
+  static const int a;
+};
+const int A::a = 3;
+struct SC {
+  const int a;
+};
+SC extSC = {.a = 8};
+struct ST {
+  static struct SC sc;
+};
+struct SC ST::sc = {.a = 2};
+struct SCNest {
+  struct SCN {
+    const int a;
+  } scn;
+};
+SCNest extSCN = {.scn = {.a = 9}};
+SCNest::SCN extSubSCN = {.a = 1};
+struct SCC {
+  SCC(int c) : a(c) {}
+  const int a;
+};
+SCC extSCC{7};
+union U {
+  const int a;
+  const unsigned int b;
+};
+U extU = {.a = 4};

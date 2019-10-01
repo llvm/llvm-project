@@ -1,9 +1,8 @@
 //===---- TargetInfo.h - Encapsulate target details -------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -269,8 +268,10 @@ public:
                                                llvm::Type *DestTy) const;
 
   /// Get the syncscope used in LLVM IR.
-  virtual llvm::SyncScope::ID getLLVMSyncScopeID(SyncScope S,
-                                                 llvm::LLVMContext &C) const;
+  virtual llvm::SyncScope::ID getLLVMSyncScopeID(const LangOptions &LangOpts,
+                                                 SyncScope Scope,
+                                                 llvm::AtomicOrdering Ordering,
+                                                 llvm::LLVMContext &Ctx) const;
 
   /// Interface class for filling custom fields of a block literal for OpenCL.
   class TargetOpenCLBlockHelper {

@@ -1,22 +1,8 @@
 /* ===-------- intrin.h ---------------------------------------------------===
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
+ * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+ * See https://llvm.org/LICENSE.txt for license information.
+ * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  *===-----------------------------------------------------------------------===
  */
@@ -200,10 +186,6 @@ __attribute__((__deprecated__("use other intrinsics or C++11 atomics instead")))
 _WriteBarrier(void);
 unsigned __int32 xbegin(void);
 void _xend(void);
-static __inline__
-#define _XCR_XFEATURE_ENABLED_MASK 0
-unsigned __int64 __cdecl _xgetbv(unsigned int);
-void __cdecl _xsetbv(unsigned int, unsigned __int64);
 
 /* These additional intrinsics are turned on in x64/amd64/x86_64 mode. */
 #ifdef __x86_64__
@@ -539,16 +521,13 @@ __cpuidex(int __info[4], int __level, int __ecx) {
   __asm__ ("cpuid" : "=a"(__info[0]), "=b" (__info[1]), "=c"(__info[2]), "=d"(__info[3])
                    : "a"(__level), "c"(__ecx));
 }
-static __inline__ unsigned __int64 __cdecl __DEFAULT_FN_ATTRS
-_xgetbv(unsigned int __xcr_no) {
-  unsigned int __eax, __edx;
-  __asm__ ("xgetbv" : "=a" (__eax), "=d" (__edx) : "c" (__xcr_no));
-  return ((unsigned __int64)__edx << 32) | __eax;
-}
 static __inline__ void __DEFAULT_FN_ATTRS
 __halt(void) {
   __asm__ volatile ("hlt");
 }
+#endif
+
+#if defined(__i386__) || defined(__x86_64__) || defined(__aarch64__)
 static __inline__ void __DEFAULT_FN_ATTRS
 __nop(void) {
   __asm__ volatile ("nop");
@@ -561,8 +540,12 @@ __nop(void) {
 #if defined(__aarch64__)
 unsigned __int64 __getReg(int);
 long _InterlockedAdd(long volatile *Addend, long Value);
-int _ReadStatusReg(int);
-void _WriteStatusReg(int, int);
+__int64 _ReadStatusReg(int);
+void _WriteStatusReg(int, __int64);
+
+unsigned short __cdecl _byteswap_ushort(unsigned short val);
+unsigned long __cdecl _byteswap_ulong (unsigned long val);
+unsigned __int64 __cdecl _byteswap_uint64(unsigned __int64 val);
 #endif
 
 /*----------------------------------------------------------------------------*\

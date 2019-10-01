@@ -1,9 +1,8 @@
 //===- HTMLDiagnostics.cpp - HTML Diagnostics for Paths -------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -91,8 +90,9 @@ public:
                              const PathDiagnosticMacroPiece& P,
                              unsigned num);
 
-  void HandlePiece(Rewriter& R, FileID BugFileID,
-                   const PathDiagnosticPiece& P, unsigned num, unsigned max);
+  void HandlePiece(Rewriter &R, FileID BugFileID, const PathDiagnosticPiece &P,
+                   const std::vector<SourceRange> &PopUpRanges, unsigned num,
+                   unsigned max);
 
   void HighlightRange(Rewriter& R, FileID BugFileID, SourceRange Range,
                       const char *HighlightStart = "<span class=\"mrange\">",
@@ -274,7 +274,7 @@ std::string HTMLDiagnostics::GenerateHTML(const PathDiagnostic& D, Rewriter &R,
   std::vector<FileID> FileIDs;
   for (auto I : path) {
     FileID FID = I->getLocation().asLocation().getExpansionLoc().getFileID();
-    if (std::find(FileIDs.begin(), FileIDs.end(), FID) != FileIDs.end())
+    if (llvm::is_contained(FileIDs, FID))
       continue;
 
     FileIDs.push_back(FID);
@@ -606,6 +606,53 @@ window.addEventListener("keydown", function (event) {
 )<<<";
 }
 
+static void
+HandlePopUpPieceStartTag(Rewriter &R,
+                         const std::vector<SourceRange> &PopUpRanges) {
+  for (const auto &Range : PopUpRanges) {
+    html::HighlightRange(R, Range.getBegin(), Range.getEnd(), "",
+                         "<table class='variable_popup'><tbody>",
+                         /*IsTokenRange=*/false);
+  }
+}
+
+static void HandlePopUpPieceEndTag(Rewriter &R,
+                                   const PathDiagnosticPopUpPiece &Piece,
+                                   std::vector<SourceRange> &PopUpRanges,
+                                   unsigned int LastReportedPieceIndex,
+                                   unsigned int PopUpPieceIndex) {
+  SmallString<256> Buf;
+  llvm::raw_svector_ostream Out(Buf);
+
+  SourceRange Range(Piece.getLocation().asRange());
+
+  // Write out the path indices with a right arrow and the message as a row.
+  Out << "<tr><td valign='top'><div class='PathIndex PathIndexPopUp'>"
+      << LastReportedPieceIndex;
+
+  // Also annotate the state transition with extra indices.
+  Out << '.' << PopUpPieceIndex;
+
+  Out << "</div></td><td>" << Piece.getString() << "</td></tr>";
+
+  // If no report made at this range mark the variable and add the end tags.
+  if (std::find(PopUpRanges.begin(), PopUpRanges.end(), Range) ==
+      PopUpRanges.end()) {
+    // Store that we create a report at this range.
+    PopUpRanges.push_back(Range);
+
+    Out << "</tbody></table></span>";
+    html::HighlightRange(R, Range.getBegin(), Range.getEnd(),
+                         "<span class='variable'>", Buf.c_str(),
+                         /*IsTokenRange=*/false);
+
+  // Otherwise inject just the new row at the end of the range.
+  } else {
+    html::HighlightRange(R, Range.getBegin(), Range.getEnd(), "", Buf.c_str(),
+                         /*IsTokenRange=*/false);
+  }
+}
+
 void HTMLDiagnostics::RewriteFile(Rewriter &R,
                                   const PathPieces& path, FileID FID) {
   // Process the path.
@@ -616,39 +663,80 @@ void HTMLDiagnostics::RewriteFile(Rewriter &R,
                     [](const std::shared_ptr<PathDiagnosticPiece> &p) {
                       return isa<PathDiagnosticNotePiece>(*p);
                     });
+  unsigned PopUpPieceCount =
+      std::count_if(path.begin(), path.end(),
+                    [](const std::shared_ptr<PathDiagnosticPiece> &p) {
+                      return isa<PathDiagnosticPopUpPiece>(*p);
+                    });
 
-  unsigned TotalRegularPieces = TotalPieces - TotalNotePieces;
+  unsigned TotalRegularPieces = TotalPieces - TotalNotePieces - PopUpPieceCount;
   unsigned NumRegularPieces = TotalRegularPieces;
   unsigned NumNotePieces = TotalNotePieces;
+  // Stores the count of the regular piece indices.
+  std::map<int, int> IndexMap;
 
+  // Stores the different ranges where we have reported something.
+  std::vector<SourceRange> PopUpRanges;
   for (auto I = path.rbegin(), E = path.rend(); I != E; ++I) {
-    if (isa<PathDiagnosticNotePiece>(I->get())) {
+    const auto &Piece = *I->get();
+
+    if (isa<PathDiagnosticPopUpPiece>(Piece)) {
+      ++IndexMap[NumRegularPieces];
+    } else if (isa<PathDiagnosticNotePiece>(Piece)) {
       // This adds diagnostic bubbles, but not navigation.
       // Navigation through note pieces would be added later,
       // as a separate pass through the piece list.
-      HandlePiece(R, FID, **I, NumNotePieces, TotalNotePieces);
+      HandlePiece(R, FID, Piece, PopUpRanges, NumNotePieces, TotalNotePieces);
       --NumNotePieces;
     } else {
-      HandlePiece(R, FID, **I, NumRegularPieces, TotalRegularPieces);
+      HandlePiece(R, FID, Piece, PopUpRanges, NumRegularPieces,
+                  TotalRegularPieces);
       --NumRegularPieces;
     }
   }
 
-  // Add line numbers, header, footer, etc.
+  // Secondary indexing if we are having multiple pop-ups between two notes.
+  // (e.g. [(13) 'a' is 'true'];  [(13.1) 'b' is 'false'];  [(13.2) 'c' is...)
+  NumRegularPieces = TotalRegularPieces;
+  for (auto I = path.rbegin(), E = path.rend(); I != E; ++I) {
+    const auto &Piece = *I->get();
 
+    if (const auto *PopUpP = dyn_cast<PathDiagnosticPopUpPiece>(&Piece)) {
+      int PopUpPieceIndex = IndexMap[NumRegularPieces];
+
+      // Pop-up pieces needs the index of the last reported piece and its count
+      // how many times we report to handle multiple reports on the same range.
+      // This marks the variable, adds the </table> end tag and the message
+      // (list element) as a row. The <table> start tag will be added after the
+      // rows has been written out. Note: It stores every different range.
+      HandlePopUpPieceEndTag(R, *PopUpP, PopUpRanges, NumRegularPieces,
+                             PopUpPieceIndex);
+
+      if (PopUpPieceIndex > 0)
+        --IndexMap[NumRegularPieces];
+
+    } else if (!isa<PathDiagnosticNotePiece>(Piece)) {
+      --NumRegularPieces;
+    }
+  }
+
+  // Add the <table> start tag of pop-up pieces based on the stored ranges.
+  HandlePopUpPieceStartTag(R, PopUpRanges);
+
+  // Add line numbers, header, footer, etc.
   html::EscapeText(R, FID);
   html::AddLineNumbers(R, FID);
 
   // If we have a preprocessor, relex the file and syntax highlight.
   // We might not have a preprocessor if we come from a deserialized AST file,
   // for example.
-
   html::SyntaxHighlight(R, FID, PP);
   html::HighlightMacros(R, FID, PP);
 }
 
-void HTMLDiagnostics::HandlePiece(Rewriter& R, FileID BugFileID,
-                                  const PathDiagnosticPiece& P,
+void HTMLDiagnostics::HandlePiece(Rewriter &R, FileID BugFileID,
+                                  const PathDiagnosticPiece &P,
+                                  const std::vector<SourceRange> &PopUpRanges,
                                   unsigned num, unsigned max) {
   // For now, just draw a box above the line in question, and emit the
   // warning.
@@ -690,9 +778,7 @@ void HTMLDiagnostics::HandlePiece(Rewriter& R, FileID BugFileID,
   bool IsNote = false;
   bool SuppressIndex = (max == 1);
   switch (P.getKind()) {
-  case PathDiagnosticPiece::Call:
-      llvm_unreachable("Calls and extra notes should already be handled");
-  case PathDiagnosticPiece::Event:  Kind = "Event"; break;
+  case PathDiagnosticPiece::Event: Kind = "Event"; break;
   case PathDiagnosticPiece::ControlFlow: Kind = "Control"; break;
     // Setting Kind to "Control" is intentional.
   case PathDiagnosticPiece::Macro: Kind = "Control"; break;
@@ -701,6 +787,9 @@ void HTMLDiagnostics::HandlePiece(Rewriter& R, FileID BugFileID,
     IsNote = true;
     SuppressIndex = true;
     break;
+  case PathDiagnosticPiece::Call:
+  case PathDiagnosticPiece::PopUp:
+    llvm_unreachable("Calls and extra notes should already be handled");
   }
 
   std::string sbuf;
@@ -860,8 +949,14 @@ void HTMLDiagnostics::HandlePiece(Rewriter& R, FileID BugFileID,
 
   // Now highlight the ranges.
   ArrayRef<SourceRange> Ranges = P.getRanges();
-  for (const auto &Range : Ranges)
+  for (const auto &Range : Ranges) {
+    // If we have already highlighted the range as a pop-up there is no work.
+    if (std::find(PopUpRanges.begin(), PopUpRanges.end(), Range) !=
+        PopUpRanges.end())
+      continue;
+
     HighlightRange(R, LPosInfo.first, Range);
+  }
 }
 
 static void EmitAlphaCounter(raw_ostream &os, unsigned n) {

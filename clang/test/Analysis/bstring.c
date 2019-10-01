@@ -1,7 +1,30 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.cstring,alpha.unix.cstring,debug.ExprInspection -analyzer-store=region -verify -analyzer-config eagerly-assume=false %s
-// RUN: %clang_analyze_cc1 -DUSE_BUILTINS -analyzer-checker=core,unix.cstring,alpha.unix.cstring,debug.ExprInspection -analyzer-store=region -verify -analyzer-config eagerly-assume=false %s
-// RUN: %clang_analyze_cc1 -DVARIANT -analyzer-checker=core,unix.cstring,alpha.unix.cstring,debug.ExprInspection -analyzer-store=region -verify -analyzer-config eagerly-assume=false %s
-// RUN: %clang_analyze_cc1 -DUSE_BUILTINS -DVARIANT -analyzer-checker=core,unix.cstring,alpha.unix.cstring,debug.ExprInspection -analyzer-store=region -verify -analyzer-config eagerly-assume=false %s
+// RUN: %clang_analyze_cc1 -verify %s \
+// RUN:   -analyzer-checker=core \
+// RUN:   -analyzer-checker=unix.cstring \
+// RUN:   -analyzer-checker=alpha.unix.cstring \
+// RUN:   -analyzer-checker=debug.ExprInspection \
+// RUN:   -analyzer-config eagerly-assume=false
+//
+// RUN: %clang_analyze_cc1 -verify %s -DUSE_BUILTINS \
+// RUN:   -analyzer-checker=core \
+// RUN:   -analyzer-checker=unix.cstring \
+// RUN:   -analyzer-checker=alpha.unix.cstring \
+// RUN:   -analyzer-checker=debug.ExprInspection \
+// RUN:   -analyzer-config eagerly-assume=false
+//
+// RUN: %clang_analyze_cc1 -verify %s -DVARIANT \
+// RUN:   -analyzer-checker=core \
+// RUN:   -analyzer-checker=unix.cstring \
+// RUN:   -analyzer-checker=alpha.unix.cstring \
+// RUN:   -analyzer-checker=debug.ExprInspection \
+// RUN:   -analyzer-config eagerly-assume=false
+//
+// RUN: %clang_analyze_cc1 -verify %s -DUSE_BUILTINS -DVARIANT \
+// RUN:   -analyzer-checker=core \
+// RUN:   -analyzer-checker=unix.cstring \
+// RUN:   -analyzer-checker=alpha.unix.cstring \
+// RUN:   -analyzer-checker=debug.ExprInspection \
+// RUN:   -analyzer-config eagerly-assume=false
 
 //===----------------------------------------------------------------------===
 // Declarations
@@ -72,7 +95,10 @@ void memcpy2 () {
   char src[] = {1, 2, 3, 4};
   char dst[1];
 
-  memcpy(dst, src, 4); // expected-warning{{Memory copy function overflows destination buffer}}
+  memcpy(dst, src, 4);  // expected-warning{{Memory copy function overflows destination buffer}}
+#ifndef VARIANT
+  // expected-warning@-2{{memcpy' will always overflow; destination buffer has size 1, but size argument is 4}}
+#endif
 }
 
 void memcpy3 () {
@@ -94,6 +120,9 @@ void memcpy5() {
   char dst[3];
 
   memcpy(dst+2, src+2, 2); // expected-warning{{Memory copy function overflows destination buffer}}
+#ifndef VARIANT
+  // expected-warning@-2{{memcpy' will always overflow; destination buffer has size 1, but size argument is 2}}
+#endif
 }
 
 void memcpy6() {
@@ -351,7 +380,10 @@ void memmove2 () {
   char src[] = {1, 2, 3, 4};
   char dst[1];
 
-  memmove(dst, src, 4); // expected-warning{{overflow}}
+  memmove(dst, src, 4); // expected-warning{{Memory copy function overflows destination buffer}}
+#ifndef VARIANT
+  // expected-warning@-2{{memmove' will always overflow; destination buffer has size 1, but size argument is 4}}
+#endif
 }
 
 //===----------------------------------------------------------------------===
@@ -361,8 +393,7 @@ void memmove2 () {
 #ifdef VARIANT
 
 #define bcmp BUILTIN(bcmp)
-// __builtin_bcmp is not defined with const in Builtins.def.
-int bcmp(/*const*/ void *s1, /*const*/ void *s2, size_t n);
+int bcmp(const void *s1, const void *s2, size_t n);
 #define memcmp bcmp
 // 
 #else /* VARIANT */

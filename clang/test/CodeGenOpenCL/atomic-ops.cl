@@ -41,7 +41,7 @@ void fi1(atomic_int *i) {
   // CHECK: load atomic i32, i32* %{{[.0-9A-Z_a-z]+}} seq_cst
   x = __opencl_atomic_load(i, memory_order_seq_cst, memory_scope_all_svm_devices);
 
-  // CHECK: load atomic i32, i32* %{{[.0-9A-Z_a-z]+}} syncscope("subgroup") seq_cst
+  // CHECK: load atomic i32, i32* %{{[.0-9A-Z_a-z]+}} syncscope("wavefront") seq_cst
   x = __opencl_atomic_load(i, memory_order_seq_cst, memory_scope_sub_group);
 }
 
@@ -83,7 +83,7 @@ void fi3(atomic_int *i, atomic_uint *ui) {
 
 bool fi4(atomic_int *i) {
   // CHECK-LABEL: @fi4(
-  // CHECK: [[PAIR:%[.0-9A-Z_a-z]+]] = cmpxchg i32* [[PTR:%[.0-9A-Z_a-z]+]], i32 [[EXPECTED:%[.0-9A-Z_a-z]+]], i32 [[DESIRED:%[.0-9A-Z_a-z]+]] syncscope("workgroup") acquire acquire
+  // CHECK: [[PAIR:%[.0-9A-Z_a-z]+]] = cmpxchg i32* [[PTR:%[.0-9A-Z_a-z]+]], i32 [[EXPECTED:%[.0-9A-Z_a-z]+]], i32 [[DESIRED:%[.0-9A-Z_a-z]+]] syncscope("workgroup-one-as") acquire acquire
   // CHECK: [[OLD:%[.0-9A-Z_a-z]+]] = extractvalue { i32, i1 } [[PAIR]], 0
   // CHECK: [[CMP:%[.0-9A-Z_a-z]+]] = extractvalue { i32, i1 } [[PAIR]], 1
   // CHECK: br i1 [[CMP]], label %[[STORE_EXPECTED:[.0-9A-Z_a-z]+]], label %[[CONTINUE:[.0-9A-Z_a-z]+]]
@@ -109,7 +109,7 @@ void fi5(atomic_int *i, int scope) {
   // CHECK: load atomic i32, i32* %{{.*}} seq_cst
   // CHECK: br label %[[continue]]
   // CHECK: [[opencl_subgroup]]:
-  // CHECK: load atomic i32, i32* %{{.*}} syncscope("subgroup") seq_cst
+  // CHECK: load atomic i32, i32* %{{.*}} syncscope("wavefront") seq_cst
   // CHECK: br label %[[continue]]
   // CHECK: [[continue]]:
   int x = __opencl_atomic_load(i, memory_order_seq_cst, scope);
@@ -141,21 +141,21 @@ void fi6(atomic_int *i, int order, int scope) {
   // CHECK-NEXT: i32 4, label %[[SEQ_SUB:.*]]
   // CHECK-NEXT: ]
   // CHECK: [[MON_WG]]:
-  // CHECK: load atomic i32, i32* %{{.*}} syncscope("workgroup") monotonic
+  // CHECK: load atomic i32, i32* %{{.*}} syncscope("workgroup-one-as") monotonic
   // CHECK: [[MON_DEV]]:
-  // CHECK: load atomic i32, i32* %{{.*}} syncscope("agent") monotonic
+  // CHECK: load atomic i32, i32* %{{.*}} syncscope("agent-one-as") monotonic
   // CHECK: [[MON_ALL]]:
   // CHECK: load atomic i32, i32* %{{.*}} monotonic
   // CHECK: [[MON_SUB]]:
-  // CHECK: load atomic i32, i32* %{{.*}} syncscope("subgroup") monotonic
+  // CHECK: load atomic i32, i32* %{{.*}} syncscope("wavefront-one-as") monotonic
   // CHECK: [[ACQ_WG]]:
-  // CHECK: load atomic i32, i32* %{{.*}} syncscope("workgroup") acquire
+  // CHECK: load atomic i32, i32* %{{.*}} syncscope("workgroup-one-as") acquire
   // CHECK: [[ACQ_DEV]]:
-  // CHECK: load atomic i32, i32* %{{.*}} syncscope("agent") acquire
+  // CHECK: load atomic i32, i32* %{{.*}} syncscope("agent-one-as") acquire
   // CHECK: [[ACQ_ALL]]:
   // CHECK: load atomic i32, i32* %{{.*}} acquire
   // CHECK: [[ACQ_SUB]]:
-  // CHECK: load atomic i32, i32* %{{.*}} syncscope("subgroup") acquire
+  // CHECK: load atomic i32, i32* %{{.*}} syncscope("wavefront-one-as") acquire
   // CHECK: [[SEQ_WG]]:
   // CHECK: load atomic i32, i32* %{{.*}} syncscope("workgroup") seq_cst
   // CHECK: [[SEQ_DEV]]:
@@ -163,19 +163,19 @@ void fi6(atomic_int *i, int order, int scope) {
   // CHECK: [[SEQ_ALL]]:
   // CHECK: load atomic i32, i32* %{{.*}} seq_cst
   // CHECK: [[SEQ_SUB]]:
-  // CHECK: load atomic i32, i32* %{{.*}} syncscope("subgroup") seq_cst
+  // CHECK: load atomic i32, i32* %{{.*}} syncscope("wavefront") seq_cst
   int x = __opencl_atomic_load(i, order, scope);
 }
 
 float ff1(global atomic_float *d) {
   // CHECK-LABEL: @ff1
-  // CHECK: load atomic i32, i32 addrspace(1)* {{.*}} syncscope("workgroup") monotonic
+  // CHECK: load atomic i32, i32 addrspace(1)* {{.*}} syncscope("workgroup-one-as") monotonic
   return __opencl_atomic_load(d, memory_order_relaxed, memory_scope_work_group);
 }
 
 void ff2(atomic_float *d) {
   // CHECK-LABEL: @ff2
-  // CHECK: store atomic i32 {{.*}} syncscope("workgroup") release
+  // CHECK: store atomic i32 {{.*}} syncscope("workgroup-one-as") release
   __opencl_atomic_store(d, 1, memory_order_release, memory_scope_work_group);
 }
 
@@ -198,7 +198,7 @@ void atomic_init_foo()
 
 // CHECK-LABEL: @failureOrder
 void failureOrder(atomic_int *ptr, int *ptr2) {
-  // CHECK: cmpxchg i32* {{%[0-9A-Za-z._]+}}, i32 {{%[0-9A-Za-z._]+}}, i32 {{%[0-9A-Za-z_.]+}} syncscope("workgroup") acquire monotonic
+  // CHECK: cmpxchg i32* {{%[0-9A-Za-z._]+}}, i32 {{%[0-9A-Za-z._]+}}, i32 {{%[0-9A-Za-z_.]+}} syncscope("workgroup-one-as") acquire monotonic
   __opencl_atomic_compare_exchange_strong(ptr, ptr2, 43, memory_order_acquire, memory_order_relaxed, memory_scope_work_group);
 
   // CHECK: cmpxchg weak i32* {{%[0-9A-Za-z._]+}}, i32 {{%[0-9A-Za-z._]+}}, i32 {{%[0-9A-Za-z_.]+}} syncscope("workgroup") seq_cst acquire

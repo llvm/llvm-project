@@ -22,25 +22,25 @@ int gi, gj;
 
 // CHECK-LABEL: define void @test1
 void test1() {
-  // CHECK:     = call i8* @__strcpy_chk(i8* getelementptr inbounds ([63 x i8], [63 x i8]* @gbuf, i64 0, i64 4), i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str, i32 0, i32 0), i64 59)
+  // CHECK:     = call i8* @__strcpy_chk(i8* getelementptr inbounds ([63 x i8], [63 x i8]* @gbuf, i64 0, i64 4), i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str, i64 0, i64 0), i64 59)
   strcpy(&gbuf[4], "Hi there");
 }
 
 // CHECK-LABEL: define void @test2
 void test2() {
-  // CHECK:     = call i8* @__strcpy_chk(i8* getelementptr inbounds ([63 x i8], [63 x i8]* @gbuf, i32 0, i32 0), i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str, i32 0, i32 0), i64 63)
+  // CHECK:     = call i8* @__strcpy_chk(i8* getelementptr inbounds ([63 x i8], [63 x i8]* @gbuf, i64 0, i64 0), i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str, i64 0, i64 0), i64 63)
   strcpy(gbuf, "Hi there");
 }
 
 // CHECK-LABEL: define void @test3
 void test3() {
-  // CHECK:     = call i8* @__strcpy_chk(i8* getelementptr inbounds ([63 x i8], [63 x i8]* @gbuf, i64 1, i64 37), i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str, i32 0, i32 0), i64 0)
+  // CHECK:     = call i8* @__strcpy_chk(i8* getelementptr inbounds ([63 x i8], [63 x i8]* @gbuf, i64 1, i64 37), i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str, i64 0, i64 0), i64 0)
   strcpy(&gbuf[100], "Hi there");
 }
 
 // CHECK-LABEL: define void @test4
 void test4() {
-  // CHECK:     = call i8* @__strcpy_chk(i8* getelementptr inbounds ([63 x i8], [63 x i8]* @gbuf, i64 0, i64 -1), i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str, i32 0, i32 0), i64 0)
+  // CHECK:     = call i8* @__strcpy_chk(i8* getelementptr inbounds ([63 x i8], [63 x i8]* @gbuf, i64 0, i64 -1), i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str, i64 0, i64 0), i64 0)
   strcpy((char*)(void*)&gbuf[-1], "Hi there");
 }
 
@@ -55,7 +55,7 @@ void test5() {
 void test6() {
   char buf[57];
 
-  // CHECK:       = call i8* @__strcpy_chk(i8* %{{.*}}, i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str, i32 0, i32 0), i64 53)
+  // CHECK:       = call i8* @__strcpy_chk(i8* %{{.*}}, i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str, i64 0, i64 0), i64 53)
   strcpy(&buf[4], "Hi there");
 }
 
@@ -65,7 +65,7 @@ void test7() {
   // Ensure we only evaluate the side-effect once.
   // CHECK:     = add
   // CHECK-NOT: = add
-  // CHECK:     = call i8* @__strcpy_chk(i8* getelementptr inbounds ([63 x i8], [63 x i8]* @gbuf, i32 0, i32 0), i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str, i32 0, i32 0), i64 63)
+  // CHECK:     = call i8* @__strcpy_chk(i8* getelementptr inbounds ([63 x i8], [63 x i8]* @gbuf, i64 0, i64 0), i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str, i64 0, i64 0), i64 63)
   strcpy((++i, gbuf), "Hi there");
 }
 
@@ -73,14 +73,14 @@ void test7() {
 void test8() {
   char *buf[50];
   // CHECK-NOT:   __strcpy_chk
-  // CHECK:       = call i8* @__inline_strcpy_chk(i8* %{{.*}}, i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str, i32 0, i32 0))
+  // CHECK:       = call i8* @__inline_strcpy_chk(i8* %{{.*}}, i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str, i64 0, i64 0))
   strcpy(buf[++gi], "Hi there");
 }
 
 // CHECK-LABEL: define void @test9
 void test9() {
   // CHECK-NOT:   __strcpy_chk
-  // CHECK:       = call i8* @__inline_strcpy_chk(i8* %{{.*}}, i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str, i32 0, i32 0))
+  // CHECK:       = call i8* @__inline_strcpy_chk(i8* %{{.*}}, i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str, i64 0, i64 0))
   strcpy((char *)((++gi) + gj), "Hi there");
 }
 
@@ -88,49 +88,49 @@ void test9() {
 char **p;
 void test10() {
   // CHECK-NOT:   __strcpy_chk
-  // CHECK:       = call i8* @__inline_strcpy_chk(i8* %{{.*}}, i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str, i32 0, i32 0))
+  // CHECK:       = call i8* @__inline_strcpy_chk(i8* %{{.*}}, i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str, i64 0, i64 0))
   strcpy(*(++p), "Hi there");
 }
 
 // CHECK-LABEL: define void @test11
 void test11() {
   // CHECK-NOT:   __strcpy_chk
-  // CHECK:       = call i8* @__inline_strcpy_chk(i8* getelementptr inbounds ([63 x i8], [63 x i8]* @gbuf, i32 0, i32 0), i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str, i32 0, i32 0))
+  // CHECK:       = call i8* @__inline_strcpy_chk(i8* getelementptr inbounds ([63 x i8], [63 x i8]* @gbuf, i64 0, i64 0), i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str, i64 0, i64 0))
   strcpy(gp = gbuf, "Hi there");
 }
 
 // CHECK-LABEL: define void @test12
 void test12() {
   // CHECK-NOT:   __strcpy_chk
-  // CHECK:       = call i8* @__inline_strcpy_chk(i8* %{{.*}}, i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str, i32 0, i32 0))
+  // CHECK:       = call i8* @__inline_strcpy_chk(i8* %{{.*}}, i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str, i64 0, i64 0))
   strcpy(++gp, "Hi there");
 }
 
 // CHECK-LABEL: define void @test13
 void test13() {
   // CHECK-NOT:   __strcpy_chk
-  // CHECK:       = call i8* @__inline_strcpy_chk(i8* %{{.*}}, i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str, i32 0, i32 0))
+  // CHECK:       = call i8* @__inline_strcpy_chk(i8* %{{.*}}, i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str, i64 0, i64 0))
   strcpy(gp++, "Hi there");
 }
 
 // CHECK-LABEL: define void @test14
 void test14() {
   // CHECK-NOT:   __strcpy_chk
-  // CHECK:       = call i8* @__inline_strcpy_chk(i8* %{{.*}}, i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str, i32 0, i32 0))
+  // CHECK:       = call i8* @__inline_strcpy_chk(i8* %{{.*}}, i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str, i64 0, i64 0))
   strcpy(--gp, "Hi there");
 }
 
 // CHECK-LABEL: define void @test15
 void test15() {
   // CHECK-NOT:   __strcpy_chk
-  // CHECK:       = call i8* @__inline_strcpy_chk(i8* %{{..*}}, i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str, i32 0, i32 0))
+  // CHECK:       = call i8* @__inline_strcpy_chk(i8* %{{..*}}, i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str, i64 0, i64 0))
   strcpy(gp--, "Hi there");
 }
 
 // CHECK-LABEL: define void @test16
 void test16() {
   // CHECK-NOT:   __strcpy_chk
-  // CHECK:       = call i8* @__inline_strcpy_chk(i8* %{{.*}}, i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str, i32 0, i32 0))
+  // CHECK:       = call i8* @__inline_strcpy_chk(i8* %{{.*}}, i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str, i64 0, i64 0))
   strcpy(gp += 1, "Hi there");
 }
 

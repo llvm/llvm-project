@@ -1,9 +1,8 @@
 //===- Environment.h - Map from Stmt* to Locations/Values -------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -92,9 +91,9 @@ public:
     return ExprBindings == RHS.ExprBindings;
   }
 
-  void print(raw_ostream &Out, const char *NL, const char *Sep,
-             const ASTContext &Context,
-             const LocationContext *WithLC = nullptr) const;
+  void printJson(raw_ostream &Out, const ASTContext &Ctx,
+                 const LocationContext *LCtx = nullptr, const char *NL = "\n",
+                 unsigned int Space = 0, bool IsDot = false) const;
 };
 
 class EnvironmentManager {

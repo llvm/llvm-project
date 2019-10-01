@@ -198,6 +198,7 @@
 // V8M_BASELINE: #define __ARM_ARCH_ISA_THUMB 1
 // V8M_BASELINE: #define __ARM_ARCH_PROFILE 'M'
 // V8M_BASELINE-NOT: __ARM_FEATURE_CRC32
+// V8M_BASELINE: #define __ARM_FEATURE_CMSE 1
 // V8M_BASELINE-NOT: __ARM_FEATURE_DSP
 // V8M_BASELINE-NOT: __ARM_FP 0x{{.*}}
 // V8M_BASELINE-NOT: __GCC_HAVE_SYNC_COMPARE_AND_SWAP_1
@@ -210,6 +211,7 @@
 // V8M_MAINLINE: #define __ARM_ARCH_ISA_THUMB 2
 // V8M_MAINLINE: #define __ARM_ARCH_PROFILE 'M'
 // V8M_MAINLINE-NOT: __ARM_FEATURE_CRC32
+// V8M_MAINLINE: #define __ARM_FEATURE_CMSE 1
 // V8M_MAINLINE-NOT: __ARM_FEATURE_DSP
 // V8M_MAINLINE-NOT: #define __ARM_FP 0x
 // V8M_MAINLINE: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_1 1
@@ -534,6 +536,8 @@
 // RUN: %clang -target armv8 -mthumb -mcpu=exynos-m3 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=ARMV8 %s
 // RUN: %clang -target armv8 -mcpu=exynos-m4 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=ARMV8 %s
 // RUN: %clang -target armv8 -mthumb -mcpu=exynos-m4 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=ARMV8 %s
+// RUN: %clang -target armv8 -mcpu=exynos-m5 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=ARMV8 %s
+// RUN: %clang -target armv8 -mthumb -mcpu=exynos-m5 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=ARMV8 %s
 // ARMV8:#define __ARM_ARCH_EXT_IDIV__ 1
 // ARMV8:#define __ARM_FEATURE_DSP 1
 // ARMV8-NOT:#define __ARM_FP 0x
@@ -560,6 +564,8 @@
 // RUN: %clang -target armv8-eabi -mthumb -mcpu=exynos-m3 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=ARMV8-ALLOW-FP-INSTR %s
 // RUN: %clang -target armv8-eabi -mcpu=exynos-m4 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=ARMV8-ALLOW-FP-INSTR %s
 // RUN: %clang -target armv8-eabi -mthumb -mcpu=exynos-m4 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=ARMV8-ALLOW-FP-INSTR %s
+// RUN: %clang -target armv8-eabi -mcpu=exynos-m5 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=ARMV8-ALLOW-FP-INSTR %s
+// RUN: %clang -target armv8-eabi -mthumb -mcpu=exynos-m5 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=ARMV8-ALLOW-FP-INSTR %s
 // ARMV8-ALLOW-FP-INSTR:#define __ARM_ARCH_EXT_IDIV__ 1
 // ARMV8-ALLOW-FP-INSTR:#define __ARM_FEATURE_DSP 1
 // ARMV8-ALLOW-FP-INSTR:#define __ARM_FP 0xe
@@ -671,6 +677,24 @@
 // M7-THUMB-ALLOW-FP-INSTR:#define __ARM_FP 0xe
 // M7-THUMB-ALLOW-FP-INSTR:#define __ARM_FPV5__ 1
 
+// Check that -mcmse (security extension) option works correctly for v8-M targets
+// RUN: %clang -target armv8m.base-none-linux-gnu -mcmse -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=V8M_CMSE %s
+// RUN: %clang -target armv8m.main-none-linux-gnu -mcmse -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=V8M_CMSE %s
+// RUN: %clang -target arm-none-linux-gnu -mcpu=cortex-m33 -mcmse -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=V8M_CMSE %s
+// RUN: %clang -target arm -mcpu=cortex-m23 -mcmse -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=V8M_CMSE %s
+// V8M_CMSE-NOT: __ARM_FEATURE_CMSE 1
+// V8M_CMSE: #define __ARM_FEATURE_CMSE 3
+
+// Check that CMSE is not defined on architectures w/o support for security extension
+// RUN: %clang -target arm-arm-none-gnueabi -mcpu=cortex-a5 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=NOTV8M_CMSE %s
+// RUN: %clang -target armv8a-none-linux-gnu -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=NOTV8M_CMSE %s
+// RUN: %clang -target armv8.1a-none-none-eabi -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=NOTV8M_CMSE %s
+// NOTV8M_CMSE-NOT: __ARM_FEATURE_CMSE
+
+// Check that -mcmse option gives error on non v8-M targets
+// RUN: not %clang -target arm-arm-none-eabi -mthumb -mcmse -mcpu=cortex-m7 -x c -E -dM %s -o - 2>&1 | FileCheck -match-full-lines --check-prefix=NOTV8MCMSE_OPT %s
+// NOTV8MCMSE_OPT: error: -mcmse is not supported for cortex-m7
+
 // Test whether predefines are as expected when targeting v8m cores
 // RUN: %clang -target arm -mcpu=cortex-m23 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=M23 %s
 // M23: #define __ARM_ARCH 8
@@ -724,6 +748,27 @@
 // KRAIT-ALLOW-FP-INSTR:#define __ARM_FEATURE_DSP 1
 // KRAIT-ALLOW-FP-INSTR:#define  __ARM_VFPV4__ 1
 
+// RUN: %clang -target arm-arm-none-eabi -march=armv8.1-m.main -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-V81M %s
+// CHECK-V81M: #define __ARM_ARCH 8
+// CHECK-V81M: #define __ARM_ARCH_8_1M_MAIN__ 1
+// CHECK-V81M: #define __ARM_ARCH_ISA_THUMB 2
+// CHECK-V81M: #define __ARM_ARCH_PROFILE 'M'
+// CHECK-V81M-NOT: #define __ARM_FEATURE_DSP
+// CHECK-V81M-NOT: #define __ARM_FEATURE_MVE
+// CHECK-V81M-NOT: #define __ARM_FEATURE_SIMD32
+
+// RUN: %clang -target arm-arm-none-eabi -march=armv8.1-m.main+mve -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-V81M-MVE %s
+// CHECK-V81M-MVE: #define __ARM_FEATURE_DSP 1
+// CHECK-V81M-MVE: #define __ARM_FEATURE_MVE 1
+// CHECK-V81M-MVE: #define __ARM_FEATURE_SIMD32 1
+
+// RUN: %clang -target arm-arm-none-eabi -march=armv8.1-m.main+mve.fp -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-V81M-MVE-FP %s
+// CHECK-V81M-MVE-FP: #define __ARM_FEATURE_DSP 1
+// CHECK-V81M-MVE-FP: #define __ARM_FEATURE_FP16_SCALAR_ARITHMETIC 1
+// CHECK-V81M-MVE-FP: #define __ARM_FEATURE_MVE 3
+// CHECK-V81M-MVE-FP: #define __ARM_FEATURE_SIMD32 1
+// CHECK-V81M-MVE-FP: #define __ARM_FPV5__ 1
+
 // RUN: %clang -target armv8.1a-none-none-eabi -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-V81A %s
 // CHECK-V81A: #define __ARM_ARCH 8
 // CHECK-V81A: #define __ARM_ARCH_8_1A__ 1
@@ -752,3 +797,6 @@
 // CHECK-V85A: #define __ARM_ARCH 8
 // CHECK-V85A: #define __ARM_ARCH_8_5A__ 1
 // CHECK-V85A: #define __ARM_ARCH_PROFILE 'A'
+
+// RUN: %clang -target arm-none-none-eabi -march=armv7-m -mfpu=softvfp -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SOFTVFP %s
+// CHECK-SOFTVFP-NOT: #define __ARM_FP 0x

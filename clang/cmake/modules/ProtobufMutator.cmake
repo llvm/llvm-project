@@ -1,3 +1,4 @@
+include(ExternalProject)
 set(PBM_PREFIX protobuf_mutator)
 set(PBM_PATH ${CMAKE_CURRENT_BINARY_DIR}/${PBM_PREFIX}/src/${PBM_PREFIX})
 set(PBM_LIB_PATH ${PBM_PATH}-build/src/libprotobuf-mutator.a)

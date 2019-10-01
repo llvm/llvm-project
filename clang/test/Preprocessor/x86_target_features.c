@@ -348,9 +348,13 @@
 
 // NOTBM-NOT: #define __TBM__ 1
 
-// RUN: %clang -target i386-unknown-unknown -march=pentiumpro -mcx16 -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=MCX16 %s
+// RUN: %clang -target i386-unknown-unknown -march=pentiumpro -mcx16 -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=MCX16-32 %s
 
-// MCX16: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_16 1
+// MCX16-32-NOT: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_16 1
+
+// RUN: %clang -target x86_64-unknown-unknown -march=x86-64 -mcx16 -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=MCX16-64 %s
+
+// MCX16-64: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_16 1
 
 // RUN: %clang -target i386-unknown-unknown -march=atom -mprfchw -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=PRFCHW %s
 
@@ -439,3 +443,35 @@
 // RUN: %clang -target i386-unknown-unknown -march=atom -mrdpid -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=RDPID %s
 
 // RDPID: #define __RDPID__ 1
+
+// RUN: %clang -target i386-unknown-unknown -march=atom -mavx512bf16 -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=AVX512BF16 %s
+
+// AVX512BF16: #define __AVX512BF16__ 1
+// AVX512BF16: #define __AVX512BW__ 1
+// AVX512BF16-NOT: #define __AVX512VL__ 1
+
+// RUN: %clang -target i386-unknown-unknown -march=atom -mavx512bf16 -mno-avx512bw -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=AVX512BF16_NOAVX512BW %s
+
+// AVX512BF16_NOAVX512BW-NOT: #define __AVX512BF16__ 1
+
+// RUN: %clang -target i386-unknown-unknown -march=atom -mavx512bf16 -mno-avx512vl -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=AVX512BF16_NOAVX512VL %s
+
+// AVX512BF16_NOAVX512VL: #define __AVX512BF16__ 1
+
+// RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mavx512vp2intersect -x c -E -dM -o - %s | FileCheck  -check-prefix=VP2INTERSECT %s
+
+// VP2INTERSECT: #define __AVX512F__ 1
+// VP2INTERSECT: #define __AVX512VP2INTERSECT__ 1
+
+// RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mno-avx512vp2intersect -x c -E -dM -o - %s | FileCheck  -check-prefix=NOVP2INTERSECT %s
+// RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mavx512vp2intersect -mno-avx512f -x c -E -dM -o - %s | FileCheck  -check-prefix=NOVP2INTERSECT %s
+
+// NOVP2INTERSECT-NOT: #define __AVX512VP2INTERSECT__ 1
+
+// RUN: %clang -target i386-unknown-unknown -march=atom -menqcmd -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=ENQCMD %s
+
+// ENQCMD: #define __ENQCMD__ 1
+
+// RUN: %clang -target i386-unknown-unknown -march=atom -mno-enqcmd -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=NOENQCMD %s
+
+// NOENQCMD-NOT: #define __ENQCMD__ 1

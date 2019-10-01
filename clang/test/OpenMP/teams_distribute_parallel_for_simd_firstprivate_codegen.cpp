@@ -370,6 +370,7 @@ int main() {
 // CHECK-DAG: [[TS_ARR_TE_PAR:%.+]] = load [2 x [[S_INT_TY]]]*, [2 x [[S_INT_TY]]]** [[TS_ARR_PRIV]],
 // CHECK-DAG: [[TVAR_TE_PAR:%.+]] = load [[S_INT_TY]]*, [[S_INT_TY]]** [[TVAR_PRIV]],
 
+// CHECK: [[TVAR_TE_PAR:%.+]] = load [[S_INT_TY]]*, [[S_INT_TY]]** %
 // CHECK: call void {{.+}} @__kmpc_fork_teams({{.+}}, i32 4, {{.+}} @[[TOUTL1:.+]] to {{.+}}, [2 x i{{[0-9]+}}]* [[TVEC_TE_PAR]], i{{[0-9]+}} [[TT_VAR_TE_PAR]], [2 x [[S_INT_TY]]]* [[TS_ARR_TE_PAR]], [[S_INT_TY]]* [[TVAR_TE_PAR]])
 // CHECK: ret void
 
@@ -381,6 +382,7 @@ int main() {
 // CHECK: [[T_VAR_ADDR:%.+]] = alloca i{{[0-9]+}},
 // CHECK: [[S_ARR_ADDR:%.+]] = alloca [2 x [[S_INT_TY]]]*,
 // CHECK: [[VAR_ADDR:%.+]] = alloca [[S_INT_TY]]*,
+// CHECK: [[TMP_VAR_ADDR:%.+]] = alloca [[S_INT_TY]]*,
 // Skip temp vars for loop
 // CHECK: alloca i{{[0-9]+}},
 // CHECK: alloca i{{[0-9]+}},
@@ -406,8 +408,8 @@ int main() {
 // CHECK: [[S_ARR_ADDR_REF:%.+]] = load [2 x [[S_INT_TY]]]*, [2 x [[S_INT_TY]]]** [[S_ARR_ADDR]],
 
 // firstprivate vec(vec): copy from *_addr into priv1 and then from priv1 into priv2
-// CHECK-DAG: [[VEC_DEST_PRIV:%.+]] = bitcast [2 x i{{[0-9]+}}]* [[VEC_PRIV]] to i8* 
-// CHECK-DAG: [[VEC_SRC:%.+]] = bitcast [2 x i{{[0-9]+}}]* [[VEC_ADDR_VAL]] to i8* 
+// CHECK-DAG: [[VEC_DEST_PRIV:%.+]] = bitcast [2 x i{{[0-9]+}}]* [[VEC_PRIV]] to i8*
+// CHECK-DAG: [[VEC_SRC:%.+]] = bitcast [2 x i{{[0-9]+}}]* [[VEC_ADDR_VAL]] to i8*
 // CHECK: call void @llvm.memcpy.{{.+}}(i8* align {{[0-9]+}} [[VEC_DEST_PRIV]], i8* align {{[0-9]+}} [[VEC_SRC]], {{.+}})
 
 // firstprivate(s_arr)
@@ -423,7 +425,7 @@ int main() {
 // CHECK-DAG: [[S_ARR_SRC]] = getelementptr {{.+}} [[S_ARR_SRC_COPY]],
 
 // firstprivate(var)
-// CHECK-DAG: [[VAR_ADDR_REF:%.+]] = load{{.+}} [[VAR_ADDR]],
+// CHECK-DAG: [[VAR_ADDR_REF:%.+]] = load{{.+}} [[TMP_VAR_ADDR]],
 // CHECK-DAG: call void @{{.+}}({{.+}} [[AGG_TMP2]])
 // CHECK-DAG: call void @{{.+}}({{.+}} [[VAR_PRIV]], {{.+}} [[VAR_ADDR_REF]], {{.+}} [[AGG_TMP2]])
 // CHECK-DAG: call void @{{.+}}({{.+}} [[AGG_TMP2]])
@@ -467,8 +469,8 @@ int main() {
 // CHECK: [[S_ARR_ADDR_REF:%.+]] = load [2 x [[S_INT_TY]]]*, [2 x [[S_INT_TY]]]** [[S_ARR_ADDR]],
 
 // firstprivate vec(vec): copy from *_addr into priv1 and then from priv1 into priv2
-// CHECK-DAG: [[VEC_DEST_PRIV:%.+]] = bitcast [2 x i{{[0-9]+}}]* [[VEC_PRIV]] to i8* 
-// CHECK-DAG: [[VEC_SRC:%.+]] = bitcast [2 x i{{[0-9]+}}]* [[VEC_ADDR_VAL]] to i8* 
+// CHECK-DAG: [[VEC_DEST_PRIV:%.+]] = bitcast [2 x i{{[0-9]+}}]* [[VEC_PRIV]] to i8*
+// CHECK-DAG: [[VEC_SRC:%.+]] = bitcast [2 x i{{[0-9]+}}]* [[VEC_ADDR_VAL]] to i8*
 // CHECK: call void @llvm.memcpy.{{.+}}(i8* align {{[0-9]+}} [[VEC_DEST_PRIV]], i8* align {{[0-9]+}} [[VEC_SRC]], {{.+}})
 
 // firstprivate(s_arr)
@@ -484,7 +486,7 @@ int main() {
 // CHECK-DAG: [[S_ARR_SRC]] = getelementptr {{.+}} [[S_ARR_SRC_COPY]],
 
 // firstprivate(var)
-// CHECK-DAG: [[VAR_ADDR_REF:%.+]] = load{{.+}} [[VAR_ADDR]],
+// CHECK-DAG: [[VAR_ADDR_REF:%.+]] = load{{.+}} [[TMP_VAR_ADDR]],
 // CHECK-DAG: call void @{{.+}}({{.+}} [[AGG_TMP2]])
 // CHECK-DAG: call void @{{.+}}({{.+}} [[VAR_PRIV]], {{.+}} [[VAR_ADDR_REF]], {{.+}} [[AGG_TMP2]])
 // CHECK-DAG: call void @{{.+}}({{.+}} [[AGG_TMP2]])

@@ -3,7 +3,7 @@
 // I386: "-S"
 // I386: "-disable-free"
 // I386: "-mrelocation-model" "static"
-// I386: "-mdisable-fp-elim"
+// I386: "-mframe-pointer=all"
 // I386: "-masm-verbose"
 // I386: "-munwind-tables"
 // I386: "-Os"
@@ -119,6 +119,36 @@
 // RUN: %clang -target arm-linux -### -S %s -arch armv7 2>&1 | \
 // RUN: FileCheck -check-prefix=ARMv7_THREAD_POINTER_NON %s
 // ARMv7_THREAD_POINTER_NON-NOT: "-target-feature" "+read-tp-hard"
+
+// RUN: %clang -target aarch64-linux -### -S %s -arch armv8a 2>&1 | \
+// RUN: FileCheck -check-prefix=ARMv8_THREAD_POINTER_NON %s
+// ARMv8_THREAD_POINTER_NON-NOT: "-target-feature" "+tpidr-el1"
+// ARMv8_THREAD_POINTER_NON-NOT: "-target-feature" "+tpidr-el2"
+// ARMv8_THREAD_POINTER_NON-NOT: "-target-feature" "+tpidr-el3"
+
+// RUN: %clang -target aarch64-linux -### -S %s -arch armv8a -mtp=el0 2>&1 | \
+// RUN: FileCheck -check-prefix=ARMv8_THREAD_POINTER_EL0 %s
+// ARMv8_THREAD_POINTER_EL0-NOT: "-target-feature" "+tpidr-el1"
+// ARMv8_THREAD_POINTER_EL0-NOT: "-target-feature" "+tpidr-el2"
+// ARMv8_THREAD_POINTER_EL0-NOT: "-target-feature" "+tpidr-el3"
+
+// RUN: %clang -target aarch64-linux -### -S %s -arch armv8a -mtp=el1 2>&1 | \
+// RUN: FileCheck -check-prefix=ARMv8_THREAD_POINTER_EL1 %s
+// ARMv8_THREAD_POINTER_EL1: "-target-feature" "+tpidr-el1"
+// ARMv8_THREAD_POINTER_EL1-NOT: "-target-feature" "+tpidr-el2"
+// ARMv8_THREAD_POINTER_EL1-NOT: "-target-feature" "+tpidr-el3"
+
+// RUN: %clang -target aarch64-linux -### -S %s -arch armv8a -mtp=el2 2>&1 | \
+// RUN: FileCheck -check-prefix=ARMv8_THREAD_POINTER_EL2 %s
+// ARMv8_THREAD_POINTER_EL2-NOT: "-target-feature" "+tpidr-el1"
+// ARMv8_THREAD_POINTER_EL2: "-target-feature" "+tpidr-el2"
+// ARMv8_THREAD_POINTER_EL2-NOT: "-target-feature" "+tpidr-el3"
+
+// RUN: %clang -target aarch64-linux -### -S %s -arch armv8a -mtp=el3 2>&1 | \
+// RUN: FileCheck -check-prefix=ARMv8_THREAD_POINTER_EL3 %s
+// ARMv8_THREAD_POINTER_EL3-NOT: "-target-feature" "+tpidr-el1"
+// ARMv8_THREAD_POINTER_EL3-NOT: "-target-feature" "+tpidr-el2"
+// ARMv8_THREAD_POINTER_EL3: "-target-feature" "+tpidr-el3"
 
 // RUN: %clang -target powerpc64-unknown-linux-gnu \
 // RUN: -### -S %s -mcpu=G5 2>&1 | FileCheck -check-prefix=PPCG5 %s

@@ -1,9 +1,8 @@
 //===- ASTReader.cpp - AST File Reader ------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -1441,6 +1440,7 @@ bool ASTReader::ReadSLocEntry(int ID) {
     }
     SrcMgr::CharacteristicKind
       FileCharacter = (SrcMgr::CharacteristicKind)Record[2];
+    // FIXME: The FileID should be created from the FileEntryRef.
     FileID FID = SourceMgr.createFileID(File, IncludeLoc, FileCharacter,
                                         ID, BaseOffset + Record[0]);
     SrcMgr::FileInfo &FileInfo =
@@ -1717,12 +1717,17 @@ bool HeaderFileInfoTrait::EqualKey(internal_key_ref a, internal_key_ref b) {
   // Determine whether the actual files are equivalent.
   FileManager &FileMgr = Reader.getFileManager();
   auto GetFile = [&](const internal_key_type &Key) -> const FileEntry* {
-    if (!Key.Imported)
-      return FileMgr.getFile(Key.Filename);
+    if (!Key.Imported) {
+      if (auto File = FileMgr.getFile(Key.Filename))
+        return *File;
+      return nullptr;
+    }
 
     std::string Resolved = Key.Filename;
     Reader.ResolveImportedPath(M, Resolved);
-    return FileMgr.getFile(Resolved);
+    if (auto File = FileMgr.getFile(Resolved))
+      return *File;
+    return nullptr;
   };
 
   const FileEntry *FEA = GetFile(a);
@@ -1799,7 +1804,7 @@ HeaderFileInfoTrait::ReadData(internal_key_ref key, const unsigned char *d,
     // FIXME: This is not always the right filename-as-written, but we're not
     // going to use this information to rebuild the module, so it doesn't make
     // a lot of difference.
-    Module::Header H = { key.Filename, FileMgr.getFile(Filename) };
+    Module::Header H = { key.Filename, *FileMgr.getFile(Filename) };
     ModMap.addHeader(Mod, H, HeaderRole, /*Imported*/true);
     HFI.isModuleHeader |= !(HeaderRole & ModuleMap::TextualHeader);
   }
@@ -2119,7 +2124,10 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
   bool Transient = FI.Transient;
   StringRef Filename = FI.Filename;
 
-  const FileEntry *File = FileMgr.getFile(Filename, /*OpenFile=*/false);
+  const FileEntry *File = nullptr;
+  if (auto FE = FileMgr.getFile(Filename, /*OpenFile=*/false))
+    File = *FE;
+
   // If we didn't find the file, resolve it relative to the
   // original directory from which this AST file was created.
   if (File == nullptr && !F.OriginalDir.empty() && !F.BaseDirectory.empty() &&
@@ -2127,7 +2135,8 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
     std::string Resolved = resolveFileRelativeToOriginalDir(
         Filename, F.OriginalDir, F.BaseDirectory);
     if (!Resolved.empty())
-      File = FileMgr.getFile(Resolved);
+      if (auto FE = FileMgr.getFile(Resolved))
+        File = *FE;
   }
 
   // For an overridden file, create a virtual file with the stored
@@ -2637,9 +2646,8 @@ ASTReader::ReadControlBlock(ModuleFile &F,
         // Don't emit module relocation error if we have -fno-validate-pch
         if (!PP.getPreprocessorOpts().DisablePCHValidation &&
             F.Kind != MK_ExplicitModule && F.Kind != MK_PrebuiltModule) {
-          const DirectoryEntry *BuildDir =
-              PP.getFileManager().getDirectory(Blob);
-          if (!BuildDir || BuildDir != M->Directory) {
+          auto BuildDir = PP.getFileManager().getDirectory(Blob);
+          if (!BuildDir || *BuildDir != M->Directory) {
             if ((ClientLoadCapabilities & ARR_OutOfDate) == 0)
               Diag(diag::err_imported_module_relocated)
                   << F.ModuleName << Blob << M->Directory->getName();
@@ -3615,8 +3623,8 @@ ASTReader::ReadModuleMapFileBlock(RecordData &Record, ModuleFile &F,
     assert(M->Name == F.ModuleName && "found module with different name");
 
     // Check the primary module map file.
-    const FileEntry *StoredModMap = FileMgr.getFile(F.ModuleMapPath);
-    if (StoredModMap == nullptr || StoredModMap != ModMap) {
+    auto StoredModMap = FileMgr.getFile(F.ModuleMapPath);
+    if (!StoredModMap || *StoredModMap != ModMap) {
       assert(ModMap && "found module is missing module map file");
       assert((ImportedBy || F.Kind == MK_ImplicitModule) &&
              "top-level import should be verified");
@@ -3632,14 +3640,13 @@ ASTReader::ReadModuleMapFileBlock(RecordData &Record, ModuleFile &F,
     for (unsigned I = 0, N = Record[Idx++]; I < N; ++I) {
       // FIXME: we should use input files rather than storing names.
       std::string Filename = ReadPath(F, Record, Idx);
-      const FileEntry *F =
-          FileMgr.getFile(Filename, false, false);
-      if (F == nullptr) {
+      auto F = FileMgr.getFile(Filename, false, false);
+      if (!F) {
         if ((ClientLoadCapabilities & ARR_OutOfDate) == 0)
           Error("could not find file '" + Filename +"' referenced by AST file");
         return OutOfDate;
       }
-      AdditionalStoredMaps.insert(F);
+      AdditionalStoredMaps.insert(*F);
     }
 
     // Check any additional module map files (e.g. module.private.modulemap)
@@ -5120,10 +5127,10 @@ ASTReader::ReadSubmoduleBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
     case SUBMODULE_UMBRELLA_HEADER: {
       std::string Filename = Blob;
       ResolveImportedPath(F, Filename);
-      if (auto *Umbrella = PP.getFileManager().getFile(Filename)) {
+      if (auto Umbrella = PP.getFileManager().getFile(Filename)) {
         if (!CurrentModule->getUmbrellaHeader())
-          ModMap.setUmbrellaHeader(CurrentModule, Umbrella, Blob);
-        else if (CurrentModule->getUmbrellaHeader().Entry != Umbrella) {
+          ModMap.setUmbrellaHeader(CurrentModule, *Umbrella, Blob);
+        else if (CurrentModule->getUmbrellaHeader().Entry != *Umbrella) {
           if ((ClientLoadCapabilities & ARR_OutOfDate) == 0)
             Error("mismatched umbrella headers in submodule");
           return OutOfDate;
@@ -5153,10 +5160,10 @@ ASTReader::ReadSubmoduleBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
     case SUBMODULE_UMBRELLA_DIR: {
       std::string Dirname = Blob;
       ResolveImportedPath(F, Dirname);
-      if (auto *Umbrella = PP.getFileManager().getDirectory(Dirname)) {
+      if (auto Umbrella = PP.getFileManager().getDirectory(Dirname)) {
         if (!CurrentModule->getUmbrellaDir())
-          ModMap.setUmbrellaDir(CurrentModule, Umbrella, Blob);
-        else if (CurrentModule->getUmbrellaDir().Entry != Umbrella) {
+          ModMap.setUmbrellaDir(CurrentModule, *Umbrella, Blob);
+        else if (CurrentModule->getUmbrellaDir().Entry != *Umbrella) {
           if ((ClientLoadCapabilities & ARR_OutOfDate) == 0)
             Error("mismatched umbrella directories in submodule");
           return OutOfDate;
@@ -5533,7 +5540,8 @@ PreprocessedEntity *ASTReader::ReadPreprocessedEntity(unsigned Index) {
     StringRef FullFileName(FullFileNameStart, Blob.size() - Record[0]);
     const FileEntry *File = nullptr;
     if (!FullFileName.empty())
-      File = PP.getFileManager().getFile(FullFileName);
+      if (auto FE = PP.getFileManager().getFile(FullFileName))
+        File = *FE;
 
     // FIXME: Stable encoding
     InclusionDirective::InclusionKind Kind
@@ -6146,8 +6154,13 @@ QualType ASTReader::readTypeRecord(unsigned Index) {
   case TYPE_AUTO: {
     QualType Deduced = readType(*Loc.F, Record, Idx);
     AutoTypeKeyword Keyword = (AutoTypeKeyword)Record[Idx++];
-    bool IsDependent = Deduced.isNull() ? Record[Idx++] : false;
-    return Context.getAutoType(Deduced, Keyword, IsDependent);
+    bool IsDependent = false, IsPack = false;
+    if (Deduced.isNull()) {
+      IsDependent = Record[Idx] > 0;
+      IsPack = Record[Idx] > 1;
+      ++Idx;
+    }
+    return Context.getAutoType(Deduced, Keyword, IsDependent, IsPack);
   }
 
   case TYPE_DEDUCED_TEMPLATE_SPECIALIZATION: {
@@ -6203,6 +6216,16 @@ QualType ASTReader::readTypeRecord(unsigned Index) {
     }
     QualType InnerType = readType(*Loc.F, Record, Idx);
     return Context.getParenType(InnerType);
+  }
+
+  case TYPE_MACRO_QUALIFIED: {
+    if (Record.size() != 2) {
+      Error("incorrect encoding of macro defined type");
+      return QualType();
+    }
+    QualType UnderlyingTy = readType(*Loc.F, Record, Idx);
+    IdentifierInfo *MacroII = GetIdentifierInfo(*Loc.F, Record, Idx);
+    return Context.getMacroQualifiedType(UnderlyingTy, MacroII);
   }
 
   case TYPE_PACK_EXPANSION: {
@@ -6524,6 +6547,10 @@ void TypeLocReader::VisitDecayedTypeLoc(DecayedTypeLoc TL) {
 
 void TypeLocReader::VisitAdjustedTypeLoc(AdjustedTypeLoc TL) {
   // nothing to do
+}
+
+void TypeLocReader::VisitMacroQualifiedTypeLoc(MacroQualifiedTypeLoc TL) {
+  TL.setExpansionLoc(ReadSourceLocation());
 }
 
 void TypeLocReader::VisitBlockPointerTypeLoc(BlockPointerTypeLoc TL) {
@@ -7023,6 +7050,11 @@ QualType ASTReader::GetType(TypeID ID) {
     case PREDEF_TYPE_OMP_ARRAY_SECTION:
       T = Context.OMPArraySectionTy;
       break;
+#define SVE_TYPE(Name, Id, SingletonId) \
+    case PREDEF_TYPE_##Id##_ID: \
+      T = Context.SingletonId; \
+      break;
+#include "clang/Basic/AArch64SVEACLETypes.def"
     }
 
     assert(!T.isNull() && "Unknown predefined type");
@@ -8533,7 +8565,7 @@ unsigned ASTReader::getModuleFileID(ModuleFile *F) {
     return ((F->BaseSubmoduleID + NUM_PREDEF_SUBMODULE_IDS) << 1) | 1;
 
   auto PCHModules = getModuleManager().pch_modules();
-  auto I = std::find(PCHModules.begin(), PCHModules.end(), F);
+  auto I = llvm::find(PCHModules, F);
   assert(I != PCHModules.end() && "emitting reference to unknown file");
   return (I - PCHModules.end()) << 1;
 }
@@ -8734,6 +8766,11 @@ ASTReader::ReadTemplateName(ModuleFile &F, const RecordData &Record,
       Decls.addDecl(ReadDeclAs<NamedDecl>(F, Record, Idx));
 
     return Context.getOverloadedTemplateName(Decls.begin(), Decls.end());
+  }
+
+  case TemplateName::AssumedTemplate: {
+    DeclarationName Name = ReadDeclarationName(F, Record, Idx);
+    return Context.getAssumedTemplateName(Name);
   }
 
   case TemplateName::QualifiedTemplate: {
@@ -9081,6 +9118,62 @@ ASTReader::ReadSourceRange(ModuleFile &F, const RecordData &Record,
   SourceLocation beg = ReadSourceLocation(F, Record, Idx);
   SourceLocation end = ReadSourceLocation(F, Record, Idx);
   return SourceRange(beg, end);
+}
+
+static FixedPointSemantics
+ReadFixedPointSemantics(const SmallVectorImpl<uint64_t> &Record,
+                        unsigned &Idx) {
+  unsigned Width = Record[Idx++];
+  unsigned Scale = Record[Idx++];
+  uint64_t Tmp = Record[Idx++];
+  bool IsSigned = Tmp & 0x1;
+  bool IsSaturated = Tmp & 0x2;
+  bool HasUnsignedPadding = Tmp & 0x4;
+  return FixedPointSemantics(Width, Scale, IsSigned, IsSaturated,
+                             HasUnsignedPadding);
+}
+
+APValue ASTReader::ReadAPValue(const RecordData &Record, unsigned &Idx) {
+  unsigned Kind = Record[Idx++];
+  switch (Kind) {
+  case APValue::None:
+    return APValue();
+  case APValue::Indeterminate:
+    return APValue::IndeterminateValue();
+  case APValue::Int:
+    return APValue(ReadAPSInt(Record, Idx));
+  case APValue::Float: {
+    const llvm::fltSemantics &FloatSema = llvm::APFloatBase::EnumToSemantics(
+        static_cast<llvm::APFloatBase::Semantics>(Record[Idx++]));
+    return APValue(ReadAPFloat(Record, FloatSema, Idx));
+  }
+  case APValue::FixedPoint: {
+    FixedPointSemantics FPSema = ReadFixedPointSemantics(Record, Idx);
+    return APValue(APFixedPoint(ReadAPInt(Record, Idx), FPSema));
+  }
+  case APValue::ComplexInt: {
+    llvm::APSInt First = ReadAPSInt(Record, Idx);
+    return APValue(std::move(First), ReadAPSInt(Record, Idx));
+  }
+  case APValue::ComplexFloat: {
+    const llvm::fltSemantics &FloatSema1 = llvm::APFloatBase::EnumToSemantics(
+        static_cast<llvm::APFloatBase::Semantics>(Record[Idx++]));
+    llvm::APFloat First = ReadAPFloat(Record, FloatSema1, Idx);
+    const llvm::fltSemantics &FloatSema2 = llvm::APFloatBase::EnumToSemantics(
+        static_cast<llvm::APFloatBase::Semantics>(Record[Idx++]));
+    return APValue(std::move(First), ReadAPFloat(Record, FloatSema2, Idx));
+  }
+  case APValue::LValue:
+  case APValue::Vector:
+  case APValue::Array:
+  case APValue::Struct:
+  case APValue::Union:
+  case APValue::MemberPointer:
+  case APValue::AddrLabelDiff:
+    // TODO : Handle all these APValue::ValueKind.
+    return APValue();
+  }
+  llvm_unreachable("Invalid APValue::ValueKind");
 }
 
 /// Read an integral value
@@ -11709,6 +11802,9 @@ OMPClause *OMPClauseReader::readClause() {
   case OMPC_simdlen:
     C = new (Context) OMPSimdlenClause();
     break;
+  case OMPC_allocator:
+    C = new (Context) OMPAllocatorClause();
+    break;
   case OMPC_collapse:
     C = new (Context) OMPCollapseClause();
     break;
@@ -11818,12 +11914,12 @@ OMPClause *OMPClauseReader::readClause() {
     C = new (Context) OMPDeviceClause();
     break;
   case OMPC_map: {
-    unsigned NumVars = Record.readInt();
-    unsigned NumDeclarations = Record.readInt();
-    unsigned NumLists = Record.readInt();
-    unsigned NumComponents = Record.readInt();
-    C = OMPMapClause::CreateEmpty(Context, NumVars, NumDeclarations, NumLists,
-                                  NumComponents);
+    OMPMappableExprListSizeTy Sizes;
+    Sizes.NumVars = Record.readInt();
+    Sizes.NumUniqueDeclarations = Record.readInt();
+    Sizes.NumComponentLists = Record.readInt();
+    Sizes.NumComponents = Record.readInt();
+    C = OMPMapClause::CreateEmpty(Context, Sizes);
     break;
   }
   case OMPC_num_teams:
@@ -11851,41 +11947,44 @@ OMPClause *OMPClauseReader::readClause() {
     C = new (Context) OMPDefaultmapClause();
     break;
   case OMPC_to: {
-    unsigned NumVars = Record.readInt();
-    unsigned NumDeclarations = Record.readInt();
-    unsigned NumLists = Record.readInt();
-    unsigned NumComponents = Record.readInt();
-    C = OMPToClause::CreateEmpty(Context, NumVars, NumDeclarations, NumLists,
-                                 NumComponents);
+    OMPMappableExprListSizeTy Sizes;
+    Sizes.NumVars = Record.readInt();
+    Sizes.NumUniqueDeclarations = Record.readInt();
+    Sizes.NumComponentLists = Record.readInt();
+    Sizes.NumComponents = Record.readInt();
+    C = OMPToClause::CreateEmpty(Context, Sizes);
     break;
   }
   case OMPC_from: {
-    unsigned NumVars = Record.readInt();
-    unsigned NumDeclarations = Record.readInt();
-    unsigned NumLists = Record.readInt();
-    unsigned NumComponents = Record.readInt();
-    C = OMPFromClause::CreateEmpty(Context, NumVars, NumDeclarations, NumLists,
-                                   NumComponents);
+    OMPMappableExprListSizeTy Sizes;
+    Sizes.NumVars = Record.readInt();
+    Sizes.NumUniqueDeclarations = Record.readInt();
+    Sizes.NumComponentLists = Record.readInt();
+    Sizes.NumComponents = Record.readInt();
+    C = OMPFromClause::CreateEmpty(Context, Sizes);
     break;
   }
   case OMPC_use_device_ptr: {
-    unsigned NumVars = Record.readInt();
-    unsigned NumDeclarations = Record.readInt();
-    unsigned NumLists = Record.readInt();
-    unsigned NumComponents = Record.readInt();
-    C = OMPUseDevicePtrClause::CreateEmpty(Context, NumVars, NumDeclarations,
-                                           NumLists, NumComponents);
+    OMPMappableExprListSizeTy Sizes;
+    Sizes.NumVars = Record.readInt();
+    Sizes.NumUniqueDeclarations = Record.readInt();
+    Sizes.NumComponentLists = Record.readInt();
+    Sizes.NumComponents = Record.readInt();
+    C = OMPUseDevicePtrClause::CreateEmpty(Context, Sizes);
     break;
   }
   case OMPC_is_device_ptr: {
-    unsigned NumVars = Record.readInt();
-    unsigned NumDeclarations = Record.readInt();
-    unsigned NumLists = Record.readInt();
-    unsigned NumComponents = Record.readInt();
-    C = OMPIsDevicePtrClause::CreateEmpty(Context, NumVars, NumDeclarations,
-                                          NumLists, NumComponents);
+    OMPMappableExprListSizeTy Sizes;
+    Sizes.NumVars = Record.readInt();
+    Sizes.NumUniqueDeclarations = Record.readInt();
+    Sizes.NumComponentLists = Record.readInt();
+    Sizes.NumComponents = Record.readInt();
+    C = OMPIsDevicePtrClause::CreateEmpty(Context, Sizes);
     break;
   }
+  case OMPC_allocate:
+    C = OMPAllocateClause::CreateEmpty(Context, Record.readInt());
+    break;
   }
   Visit(C);
   C->setLocStart(Record.readSourceLocation());
@@ -11931,6 +12030,11 @@ void OMPClauseReader::VisitOMPSafelenClause(OMPSafelenClause *C) {
 
 void OMPClauseReader::VisitOMPSimdlenClause(OMPSimdlenClause *C) {
   C->setSimdlen(Record.readSubExpr());
+  C->setLParenLoc(Record.readSourceLocation());
+}
+
+void OMPClauseReader::VisitOMPAllocatorClause(OMPAllocatorClause *C) {
+  C->setAllocator(Record.readExpr());
   C->setLParenLoc(Record.readSourceLocation());
 }
 
@@ -12322,6 +12426,10 @@ void OMPClauseReader::VisitOMPMapClause(OMPMapClause *C) {
         I, static_cast<OpenMPMapModifierKind>(Record.readInt()));
     C->setMapTypeModifierLoc(I, Record.readSourceLocation());
   }
+  C->setMapperQualifierLoc(Record.readNestedNameSpecifierLoc());
+  DeclarationNameInfo DNI;
+  Record.readDeclarationNameInfo(DNI);
+  C->setMapperIdInfo(DNI);
   C->setMapType(
      static_cast<OpenMPMapClauseKind>(Record.readInt()));
   C->setMapLoc(Record.readSourceLocation());
@@ -12334,8 +12442,14 @@ void OMPClauseReader::VisitOMPMapClause(OMPMapClause *C) {
   SmallVector<Expr *, 16> Vars;
   Vars.reserve(NumVars);
   for (unsigned i = 0; i != NumVars; ++i)
-    Vars.push_back(Record.readSubExpr());
+    Vars.push_back(Record.readExpr());
   C->setVarRefs(Vars);
+
+  SmallVector<Expr *, 16> UDMappers;
+  UDMappers.reserve(NumVars);
+  for (unsigned I = 0; I < NumVars; ++I)
+    UDMappers.push_back(Record.readExpr());
+  C->setUDMapperRefs(UDMappers);
 
   SmallVector<ValueDecl *, 16> Decls;
   Decls.reserve(UniqueDecls);
@@ -12358,12 +12472,24 @@ void OMPClauseReader::VisitOMPMapClause(OMPMapClause *C) {
   SmallVector<OMPClauseMappableExprCommon::MappableComponent, 32> Components;
   Components.reserve(TotalComponents);
   for (unsigned i = 0; i < TotalComponents; ++i) {
-    Expr *AssociatedExpr = Record.readSubExpr();
+    Expr *AssociatedExpr = Record.readExpr();
     auto *AssociatedDecl = Record.readDeclAs<ValueDecl>();
     Components.push_back(OMPClauseMappableExprCommon::MappableComponent(
         AssociatedExpr, AssociatedDecl));
   }
   C->setComponents(Components, ListSizes);
+}
+
+void OMPClauseReader::VisitOMPAllocateClause(OMPAllocateClause *C) {
+  C->setLParenLoc(Record.readSourceLocation());
+  C->setColonLoc(Record.readSourceLocation());
+  C->setAllocator(Record.readSubExpr());
+  unsigned NumVars = C->varlist_size();
+  SmallVector<Expr *, 16> Vars;
+  Vars.reserve(NumVars);
+  for (unsigned i = 0; i != NumVars; ++i)
+    Vars.push_back(Record.readSubExpr());
+  C->setVarRefs(Vars);
 }
 
 void OMPClauseReader::VisitOMPNumTeamsClause(OMPNumTeamsClause *C) {
@@ -12420,6 +12546,10 @@ void OMPClauseReader::VisitOMPDefaultmapClause(OMPDefaultmapClause *C) {
 
 void OMPClauseReader::VisitOMPToClause(OMPToClause *C) {
   C->setLParenLoc(Record.readSourceLocation());
+  C->setMapperQualifierLoc(Record.readNestedNameSpecifierLoc());
+  DeclarationNameInfo DNI;
+  Record.readDeclarationNameInfo(DNI);
+  C->setMapperIdInfo(DNI);
   auto NumVars = C->varlist_size();
   auto UniqueDecls = C->getUniqueDeclarationsNum();
   auto TotalLists = C->getTotalComponentListNum();
@@ -12430,6 +12560,12 @@ void OMPClauseReader::VisitOMPToClause(OMPToClause *C) {
   for (unsigned i = 0; i != NumVars; ++i)
     Vars.push_back(Record.readSubExpr());
   C->setVarRefs(Vars);
+
+  SmallVector<Expr *, 16> UDMappers;
+  UDMappers.reserve(NumVars);
+  for (unsigned I = 0; I < NumVars; ++I)
+    UDMappers.push_back(Record.readSubExpr());
+  C->setUDMapperRefs(UDMappers);
 
   SmallVector<ValueDecl *, 16> Decls;
   Decls.reserve(UniqueDecls);
@@ -12462,6 +12598,10 @@ void OMPClauseReader::VisitOMPToClause(OMPToClause *C) {
 
 void OMPClauseReader::VisitOMPFromClause(OMPFromClause *C) {
   C->setLParenLoc(Record.readSourceLocation());
+  C->setMapperQualifierLoc(Record.readNestedNameSpecifierLoc());
+  DeclarationNameInfo DNI;
+  Record.readDeclarationNameInfo(DNI);
+  C->setMapperIdInfo(DNI);
   auto NumVars = C->varlist_size();
   auto UniqueDecls = C->getUniqueDeclarationsNum();
   auto TotalLists = C->getTotalComponentListNum();
@@ -12472,6 +12612,12 @@ void OMPClauseReader::VisitOMPFromClause(OMPFromClause *C) {
   for (unsigned i = 0; i != NumVars; ++i)
     Vars.push_back(Record.readSubExpr());
   C->setVarRefs(Vars);
+
+  SmallVector<Expr *, 16> UDMappers;
+  UDMappers.reserve(NumVars);
+  for (unsigned I = 0; I < NumVars; ++I)
+    UDMappers.push_back(Record.readSubExpr());
+  C->setUDMapperRefs(UDMappers);
 
   SmallVector<ValueDecl *, 16> Decls;
   Decls.reserve(UniqueDecls);

@@ -116,3 +116,60 @@ void test_bitfield(A &a) {
   // CHECK: or i16 %{{.*}}, 5
   // CHECK: store i16 %{{.*}}, i16* %[[BITFIELD]],
 }
+
+// CHECK-LABEL: define {{.*}}@_Z18test_static_simple
+void test_static_simple() {
+  static auto [x1, x2] = make<A>();
+  // CHECK: load atomic {{.*}}i64* @_ZGVZ18test_static_simplevEDC2x12x2E
+  // CHECK: br i1
+  // CHECK: @__cxa_guard_acquire(
+  // CHECK: call {{.*}} @_Z4makeI1AERT_v(
+  // CHECK: memcpy{{.*}} @_ZZ18test_static_simplevEDC2x12x2E
+  // CHECK: @__cxa_guard_release(
+}
+
+// CHECK-LABEL: define {{.*}}@_Z17test_static_tuple
+int test_static_tuple() {
+  // Note that the desugaring specified for this construct requires three
+  // separate guarded initializations. It is possible for an exception to be
+  // thrown after the first initialization and before the second, and if that
+  // happens, we are not permitted to rerun the first initialization, so we
+  // can't combine these into a single guarded initialization in general.
+  static auto [x1, x2] = make<B>();
+
+  // Initialization of the implied variable.
+  // CHECK: load atomic {{.*}} @_ZGVZ17test_static_tuplevEDC2x12x2E
+  // CHECK: br i1
+  // CHECK: @__cxa_guard_acquire({{.*}} @_ZGVZ17test_static_tuplevEDC2x12x2E)
+  // CHECK: call {{.*}} @_Z4makeI1BERT_v(
+  // CHECK: @__cxa_guard_release({{.*}} @_ZGVZ17test_static_tuplevEDC2x12x2E)
+
+  // Initialization of the secret 'x1' variable.
+  // CHECK: load atomic {{.*}} @_ZGVZ17test_static_tuplevE2x1
+  // CHECK: br i1
+  // CHECK: @__cxa_guard_acquire({{.*}} @_ZGVZ17test_static_tuplevE2x1)
+  // CHECK: call {{.*}} @_Z3getILi0EEDa1B(
+  // CHECK: call {{.*}} @_ZN1XC1E1Y({{.*}} @_ZGRZ17test_static_tuplevE2x1_,
+  // CHECK: call {{.*}} @__cxa_atexit({{.*}} @_ZN1XD1Ev {{.*}} @_ZGRZ17test_static_tuplevE2x1_
+  // CHECK: store {{.*}} @_ZGRZ17test_static_tuplevE2x1_, {{.*}} @_ZZ17test_static_tuplevE2x1
+  // CHECK: call void @__cxa_guard_release({{.*}} @_ZGVZ17test_static_tuplevE2x1)
+
+  // Initialization of the secret 'x2' variable.
+  // CHECK: load atomic {{.*}} @_ZGVZ17test_static_tuplevE2x2
+  // CHECK: br i1
+  // CHECK: @__cxa_guard_acquire({{.*}} @_ZGVZ17test_static_tuplevE2x2)
+  // CHECK: call {{.*}} @_Z3getILi1EEDa1B(
+  // CHECK: store {{.*}}, {{.*}} @_ZGRZ17test_static_tuplevE2x2_
+  // CHECK: store {{.*}} @_ZGRZ17test_static_tuplevE2x2_, {{.*}} @_ZZ17test_static_tuplevE2x2
+  // CHECK: call void @__cxa_guard_release({{.*}} @_ZGVZ17test_static_tuplevE2x2)
+
+  struct Inner {
+    // CHECK-LABEL: define {{.*}}@_ZZ17test_static_tuplevEN5Inner1fEv(
+    // FIXME: This first load should be constant-folded to the _ZGV... temporary.
+    // CHECK: load {{.*}} @_ZZ17test_static_tuplevE2x2
+    // CHECK: load
+    // CHECK: ret
+    int f() { return x2; }
+  };
+  return Inner().f();
+}

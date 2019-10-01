@@ -1,9 +1,8 @@
 //===- Overload.h - C++ Overloading -----------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -706,6 +705,11 @@ class Sema;
     /// attribute disabled it.
     ovl_fail_enable_if,
 
+    /// This candidate constructor or conversion fonction
+    /// is used implicitly but the explicit(bool) specifier
+    /// was resolved to true
+    ovl_fail_explicit_resolved,
+
     /// This candidate was not viable because its address could not be taken.
     ovl_fail_addr_not_available,
 
@@ -962,13 +966,23 @@ class Sema;
     OverloadingResult BestViableFunction(Sema &S, SourceLocation Loc,
                                          OverloadCandidateSet::iterator& Best);
 
-    void NoteCandidates(Sema &S,
-                        OverloadCandidateDisplayKind OCD,
-                        ArrayRef<Expr *> Args,
+    SmallVector<OverloadCandidate *, 32> CompleteCandidates(
+        Sema &S, OverloadCandidateDisplayKind OCD, ArrayRef<Expr *> Args,
+        SourceLocation OpLoc = SourceLocation(),
+        llvm::function_ref<bool(OverloadCandidate &)> Filter =
+            [](OverloadCandidate &) { return true; });
+
+    void NoteCandidates(
+        PartialDiagnosticAt PA, Sema &S, OverloadCandidateDisplayKind OCD,
+        ArrayRef<Expr *> Args, StringRef Opc = "",
+        SourceLocation Loc = SourceLocation(),
+        llvm::function_ref<bool(OverloadCandidate &)> Filter =
+            [](OverloadCandidate &) { return true; });
+
+    void NoteCandidates(Sema &S, ArrayRef<Expr *> Args,
+                        ArrayRef<OverloadCandidate *> Cands,
                         StringRef Opc = "",
-                        SourceLocation Loc = SourceLocation(),
-                        llvm::function_ref<bool(OverloadCandidate&)> Filter =
-                          [](OverloadCandidate&) { return true; });
+                        SourceLocation OpLoc = SourceLocation());
   };
 
   bool isBetterOverloadCandidate(Sema &S,

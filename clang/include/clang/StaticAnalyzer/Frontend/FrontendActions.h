@@ -1,9 +1,8 @@
 //===-- FrontendActions.h - Useful Frontend Actions -------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -62,6 +61,10 @@ void printEnabledCheckerList(raw_ostream &OS, ArrayRef<std::string> plugins,
                              DiagnosticsEngine &diags,
                              const LangOptions &LangOpts);
 void printAnalyzerConfigList(raw_ostream &OS);
+void printCheckerConfigList(raw_ostream &OS, ArrayRef<std::string> plugins,
+                            AnalyzerOptions &opts,
+                            DiagnosticsEngine &diags,
+                            const LangOptions &LangOpts);
 
 } // end GR namespace
 

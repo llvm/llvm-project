@@ -24,7 +24,8 @@ llvm_canonicalize_cmake_booleans(
   CLANG_ENABLE_STATIC_ANALYZER
   ENABLE_BACKTRACES
   HAVE_LIBZ
-  LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
+  LLVM_ENABLE_PER_TARGET_RUNTIME_DIR
+  LLVM_ENABLE_PLUGINS)
 
 configure_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
@@ -46,9 +47,10 @@ if(CLANG_TEST_USE_VG)
 endif ()
 
 list(APPEND CLANG_TEST_DEPS
-  clang clang-headers
+  c-index-test
+  clang
+  clang-resource-headers
   clang-format
-  c-index-test diagtool
   clang-tblgen
   clang-offload-bundler
   clang-refactor-test
@@ -56,6 +58,8 @@ list(APPEND CLANG_TEST_DEPS
   clang-rename
   clang-refactor
   clang-diff
+  clang-scan-deps
+  diagtool
   hmaptool
   )
 
@@ -81,12 +85,6 @@ if (CLANG_BUILD_EXAMPLES)
     )
 endif ()
 
-if (CLANG_ENABLE_STATIC_ANALYZER AND CLANG_BUILD_EXAMPLES)
-  list(APPEND CLANG_TEST_DEPS
-    SampleAnalyzerPlugin
-    )
-endif ()
-
 set(CLANG_TEST_PARAMS
   clang_site_config=${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg
   USE_Z3_SOLVER=0
@@ -106,6 +104,7 @@ if( NOT CLANG_BUILT_STANDALONE )
     llvm-as
     llvm-bcanalyzer
     llvm-cat
+    llvm-cxxfilt
     llvm-dis
     llvm-lto2
     llvm-modextract
@@ -122,6 +121,16 @@ if( NOT CLANG_BUILT_STANDALONE )
   endif()
 endif()
 
+if (CLANG_ENABLE_STATIC_ANALYZER)
+  if (LLVM_ENABLE_PLUGINS)
+    list(APPEND CLANG_TEST_DEPS
+      SampleAnalyzerPlugin
+      CheckerDependencyHandlingAnalyzerPlugin
+      CheckerOptionHandlingAnalyzerPlugin
+      )
+  endif()
+endif()
+
 add_custom_target(clang-test-depends DEPENDS ${CLANG_TEST_DEPS})
 set_target_properties(clang-test-depends PROPERTIES FOLDER "Clang tests")
 
@@ -133,28 +142,6 @@ add_lit_testsuite(check-clang "Running the Clang regression tests"
   ARGS ${CLANG_TEST_EXTRA_ARGS}
   )
 set_target_properties(check-clang PROPERTIES FOLDER "Clang tests")
-
-if (CLANG_ENABLE_STATIC_ANALYZER)
-  # check-all would launch those tests via check-clang.
-  set(EXCLUDE_FROM_ALL ON)
-
-  add_lit_testsuite(check-clang-analyzer "Running the Clang analyzer tests"
-    ${CMAKE_CURRENT_BINARY_DIR}/Analysis
-    PARAMS ${ANALYZER_TEST_PARAMS}
-    DEPENDS ${CLANG_TEST_DEPS})
-  set_target_properties(check-clang-analyzer PROPERTIES FOLDER "Clang tests")
-
-
-  if (CLANG_ANALYZER_WITH_Z3)
-    add_lit_testsuite(check-clang-analyzer-z3 "Running the Clang analyzer tests, using Z3 as a solver"
-      ${CMAKE_CURRENT_BINARY_DIR}/Analysis
-      PARAMS ${ANALYZER_TEST_PARAMS_Z3}
-      DEPENDS ${CLANG_TEST_DEPS})
-    set_target_properties(check-clang-analyzer-z3 PROPERTIES FOLDER "Clang tests")
-  endif()
-
-  set(EXCLUDE_FROM_ALL OFF)
-endif()
 
 add_lit_testsuites(CLANG ${CMAKE_CURRENT_SOURCE_DIR}
   PARAMS ${CLANG_TEST_PARAMS}

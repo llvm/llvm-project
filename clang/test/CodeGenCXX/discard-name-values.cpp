@@ -10,7 +10,7 @@ bool test(bool pred) {
   // CHECK: br i1 %pred, label %if.then, label %if.end
 
   if (pred) {
-    // DISCARDVALUE: ; <label>:2:
+    // DISCARDVALUE: 2:
     // DISCARDVALUE-NEXT: tail call void @branch()
     // DISCARDVALUE-NEXT: br label %3
 
@@ -20,7 +20,7 @@ bool test(bool pred) {
     branch();
   }
 
-  // DISCARDVALUE: ; <label>:3:
+  // DISCARDVALUE: 3:
   // DISCARDVALUE-NEXT: ret i1 %0
 
   // CHECK: if.end:

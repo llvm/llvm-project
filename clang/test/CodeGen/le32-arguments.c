@@ -10,7 +10,7 @@ typedef struct {
   int bb;
 } s1;
 // Structs should be passed byval and not split up
-// CHECK-LABEL: define void @f1(%struct.s1* byval align 4 %i)
+// CHECK-LABEL: define void @f1(%struct.s1* byval(%struct.s1) align 4 %i)
 void f1(s1 i) {}
 
 typedef struct {
@@ -48,7 +48,7 @@ union simple_union {
   char b;
 };
 // Unions should be passed as byval structs
-// CHECK-LABEL: define void @f7(%union.simple_union* byval align 4 %s)
+// CHECK-LABEL: define void @f7(%union.simple_union* byval(%union.simple_union) align 4 %s)
 void f7(union simple_union s) {}
 
 typedef struct {
@@ -57,5 +57,5 @@ typedef struct {
   int b8 : 8;
 } bitfield1;
 // Bitfields should be passed as byval structs
-// CHECK-LABEL: define void @f8(%struct.bitfield1* byval align 4 %bf1)
+// CHECK-LABEL: define void @f8(%struct.bitfield1* byval(%struct.bitfield1) align 4 %bf1)
 void f8(bitfield1 bf1) {}

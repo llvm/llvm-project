@@ -1,9 +1,8 @@
 //== BodyFarm.cpp  - Factory for conjuring up fake bodies ----------*- C++ -*-//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -221,7 +220,7 @@ MemberExpr *ASTMaker::makeMemberExpression(Expr *base, ValueDecl *MemberDecl,
       SourceLocation(), MemberDecl, FoundDecl,
       DeclarationNameInfo(MemberDecl->getDeclName(), SourceLocation()),
       /* TemplateArgumentListInfo=*/ nullptr, MemberDecl->getType(), ValueKind,
-      OK_Ordinary);
+      OK_Ordinary, NOUR_None);
 }
 
 ValueDecl *ASTMaker::findMemberField(const RecordDecl *RD, StringRef Name) {

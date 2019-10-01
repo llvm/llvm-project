@@ -1,9 +1,8 @@
 //=- ClangSACheckersEmitter.cpp - Generate Clang SA checkers tables -*- C++ -*-
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -91,15 +90,88 @@ static std::string getCheckerDocs(const Record &R) {
       .str();
 }
 
+/// Retrieves the type from a CmdOptionTypeEnum typed Record object. Note that
+/// the class itself has to be modified for adding a new option type in
+/// CheckerBase.td.
+static std::string getCheckerOptionType(const Record &R) {
+  if (BitsInit *BI = R.getValueAsBitsInit("Type")) {
+    switch(getValueFromBitsInit(BI, R)) {
+    case 0:
+      return "int";
+    case 1:
+      return "string";
+    case 2:
+      return "bool";
+    }
+  }
+  PrintFatalError(R.getLoc(),
+                  "unable to parse command line option type for "
+                  + getCheckerFullName(&R));
+  return "";
+}
+
+static std::string getDevelopmentStage(const Record &R) {
+  if (BitsInit *BI = R.getValueAsBitsInit("DevelopmentStage")) {
+    switch(getValueFromBitsInit(BI, R)) {
+    case 0:
+      return "alpha";
+    case 1:
+      return "released";
+    }
+  }
+
+  PrintFatalError(R.getLoc(),
+                  "unable to parse command line option type for "
+                  + getCheckerFullName(&R));
+  return "";
+}
+
+static bool isHidden(const Record *R) {
+  if (R->getValueAsBit("Hidden"))
+    return true;
+
+  // Not declared as hidden, check the parent package if it is hidden.
+  if (DefInit *DI = dyn_cast<DefInit>(R->getValueInit("ParentPackage")))
+    return isHidden(DI->getDef());
+
+  return false;
+}
+
 static void printChecker(llvm::raw_ostream &OS, const Record &R) {
-    OS << "CHECKER(" << "\"";
-    OS.write_escaped(getCheckerFullName(&R)) << "\", ";
-    OS << R.getName() << ", ";
-    OS << "\"";
-    OS.write_escaped(getStringValue(R, "HelpText")) << "\", ";
-    OS << "\"";
-    OS.write_escaped(getCheckerDocs(R));
-    OS << "\"";
+  OS << "CHECKER(" << "\"";
+  OS.write_escaped(getCheckerFullName(&R)) << "\", ";
+  OS << R.getName() << ", ";
+  OS << "\"";
+  OS.write_escaped(getStringValue(R, "HelpText")) << "\", ";
+  OS << "\"";
+  OS.write_escaped(getCheckerDocs(R));
+  OS << "\", ";
+
+  if (!isHidden(&R))
+    OS << "false";
+  else
+    OS << "true";
+
+  OS << ")\n";
+}
+
+static void printOption(llvm::raw_ostream &OS, StringRef FullName,
+                        const Record &R) {
+  OS << "\"";
+  OS.write_escaped(getCheckerOptionType(R)) << "\", \"";
+  OS.write_escaped(FullName) << "\", ";
+  OS << '\"' << getStringValue(R, "CmdFlag") << "\", ";
+  OS << '\"';
+  OS.write_escaped(getStringValue(R, "Desc")) << "\", ";
+  OS << '\"';
+  OS.write_escaped(getStringValue(R, "DefaultVal")) << "\", ";
+  OS << '\"';
+  OS << getDevelopmentStage(R) << "\", ";
+
+  if (!R.getValueAsBit("Hidden"))
+    OS << "false";
+  else
+    OS << "true";
 }
 
 namespace clang {
@@ -135,6 +207,39 @@ void EmitClangSACheckers(RecordKeeper &Records, raw_ostream &OS) {
   OS << "#endif // GET_PACKAGES\n"
         "\n";
 
+  // Emit a package option.
+  //
+  // PACKAGE_OPTION(OPTIONTYPE, PACKAGENAME, OPTIONNAME, DESCRIPTION, DEFAULT)
+  //   - OPTIONTYPE: Type of the option, whether it's integer or boolean etc.
+  //                 This is important for validating user input. Note that
+  //                 it's a string, rather than an actual type: since we can
+  //                 load checkers runtime, we can't use template hackery for
+  //                 sorting this out compile-time.
+  //   - PACKAGENAME: Name of the package.
+  //   - OPTIONNAME: Name of the option.
+  //   - DESCRIPTION
+  //   - DEFAULT: The default value for this option.
+  //
+  // The full option can be specified in the command like like this:
+  //   -analyzer-config PACKAGENAME:OPTIONNAME=VALUE
+  OS << "\n"
+        "#ifdef GET_PACKAGE_OPTIONS\n";
+  for (const Record *Package : packages) {
+
+    if (Package->isValueUnset("PackageOptions"))
+      continue;
+
+    std::vector<Record *> PackageOptions = Package
+                                       ->getValueAsListOfDefs("PackageOptions");
+    for (Record *PackageOpt : PackageOptions) {
+      OS << "PACKAGE_OPTION(";
+      printOption(OS, getPackageFullName(Package), *PackageOpt);
+      OS << ")\n";
+    }
+  }
+  OS << "#endif // GET_PACKAGE_OPTIONS\n"
+        "\n";
+
   // Emit checkers.
   //
   // CHECKER(FULLNAME, CLASS, HELPTEXT)
@@ -148,7 +253,6 @@ void EmitClangSACheckers(RecordKeeper &Records, raw_ostream &OS) {
         "\n";
   for (const Record *checker : checkers) {
     printChecker(OS, *checker);
-    OS << ")\n";
   }
   OS << "\n"
         "#endif // GET_CHECKERS\n"
@@ -161,15 +265,15 @@ void EmitClangSACheckers(RecordKeeper &Records, raw_ostream &OS) {
   //   - DEPENDENCY: The full name of the checker FULLNAME depends on.
   OS << "\n"
         "#ifdef GET_CHECKER_DEPENDENCIES\n";
-  for (const Record *checker : checkers) {
-    if (checker->isValueUnset("Dependencies"))
+  for (const Record *Checker : checkers) {
+    if (Checker->isValueUnset("Dependencies"))
       continue;
 
     for (const Record *Dependency :
-                            checker->getValueAsListOfDefs("Dependencies")) {
+                            Checker->getValueAsListOfDefs("Dependencies")) {
       OS << "CHECKER_DEPENDENCY(";
       OS << '\"';
-      OS.write_escaped(getCheckerFullName(checker)) << "\", ";
+      OS.write_escaped(getCheckerFullName(Checker)) << "\", ";
       OS << '\"';
       OS.write_escaped(getCheckerFullName(Dependency)) << '\"';
       OS << ")\n";
@@ -177,5 +281,38 @@ void EmitClangSACheckers(RecordKeeper &Records, raw_ostream &OS) {
   }
   OS << "\n"
         "#endif // GET_CHECKER_DEPENDENCIES\n";
+
+  // Emit a package option.
+  //
+  // CHECKER_OPTION(OPTIONTYPE, CHECKERNAME, OPTIONNAME, DESCRIPTION, DEFAULT)
+  //   - OPTIONTYPE: Type of the option, whether it's integer or boolean etc.
+  //                 This is important for validating user input. Note that
+  //                 it's a string, rather than an actual type: since we can
+  //                 load checkers runtime, we can't use template hackery for
+  //                 sorting this out compile-time.
+  //   - CHECKERNAME: Name of the package.
+  //   - OPTIONNAME: Name of the option.
+  //   - DESCRIPTION
+  //   - DEFAULT: The default value for this option.
+  //
+  // The full option can be specified in the command like like this:
+  //   -analyzer-config CHECKERNAME:OPTIONNAME=VALUE
+  OS << "\n"
+        "#ifdef GET_CHECKER_OPTIONS\n";
+  for (const Record *Checker : checkers) {
+
+    if (Checker->isValueUnset("CheckerOptions"))
+      continue;
+
+    std::vector<Record *> CheckerOptions = Checker
+                                       ->getValueAsListOfDefs("CheckerOptions");
+    for (Record *CheckerOpt : CheckerOptions) {
+      OS << "CHECKER_OPTION(";
+      printOption(OS, getCheckerFullName(Checker), *CheckerOpt);
+      OS << ")\n";
+    }
+  }
+  OS << "#endif // GET_CHECKER_OPTIONS\n"
+        "\n";
 }
 } // end namespace clang

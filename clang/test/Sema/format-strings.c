@@ -277,8 +277,8 @@ typedef unsigned char uint8_t;
 
 void should_understand_small_integers() {
   printf("%hhu", (short) 10); // expected-warning{{format specifies type 'unsigned char' but the argument has type 'short'}}
-  printf("%hu\n", (unsigned char) 1); // expected-warning{{format specifies type 'unsigned short' but the argument has type 'unsigned char'}}
-  printf("%hu\n", (uint8_t)1); // expected-warning{{format specifies type 'unsigned short' but the argument has type 'uint8_t'}}
+  printf("%hu\n", (unsigned char)1); // warning with -Wformat-pedantic only
+  printf("%hu\n", (uint8_t)1);       // warning with -Wformat-pedantic only
 }
 
 void test11(void *p, char *s) {
@@ -329,7 +329,11 @@ void test_unicode_conversions(wchar_t *s) {
   printf("%S", s); // no-warning
   printf("%s", s); // expected-warning{{format specifies type 'char *' but the argument has type 'wchar_t *'}}
   printf("%C", s[0]); // no-warning
+#if defined(__sun) && !defined(__LP64__)
+  printf("%c", s[0]); // expected-warning{{format specifies type 'int' but the argument has type 'wchar_t' (aka 'long')}}
+#else
   printf("%c", s[0]);
+#endif
   // FIXME: This test reports inconsistent results. On Windows, '%C' expects
   // 'unsigned short'.
   // printf("%C", 10);
@@ -401,7 +405,7 @@ void bug7377_bad_length_mod_usage() {
 void pr7981(wint_t c, wchar_t c2) {
   printf("%lc", c); // no-warning
   printf("%lc", 1.0); // expected-warning{{the argument has type 'double'}}
-#if __WINT_WIDTH__ == 32
+#if __WINT_WIDTH__ == 32 && !(defined(__sun) && !defined(__LP64__))
   printf("%lc", (char) 1); // no-warning
 #else
   printf("%lc", (char) 1); // expected-warning{{the argument has type 'char'}}
@@ -617,6 +621,8 @@ void test_opencl_vector_format(int x) {
   printf("%v4d", x); // expected-warning{{invalid conversion specifier 'v'}}
   printf("%vd", x); // expected-warning{{invalid conversion specifier 'v'}}
   printf("%0vd", x); // expected-warning{{invalid conversion specifier 'v'}}
+  printf("%hlf", x); // expected-warning{{invalid conversion specifier 'l'}}
+  printf("%hld", x); // expected-warning{{invalid conversion specifier 'l'}}
 }
 
 // Test that we correctly merge the format in both orders.

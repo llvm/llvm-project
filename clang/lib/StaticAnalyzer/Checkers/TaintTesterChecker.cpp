@@ -1,15 +1,16 @@
 //== TaintTesterChecker.cpp ----------------------------------- -*- C++ -*--=//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
 // This checker can be used for testing how taint data is propagated.
 //
 //===----------------------------------------------------------------------===//
+
+#include "Taint.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
@@ -18,6 +19,7 @@
 
 using namespace clang;
 using namespace ento;
+using namespace taint;
 
 namespace {
 class TaintTesterChecker : public Checker< check::PostStmt<Expr> > {
@@ -47,7 +49,7 @@ void TaintTesterChecker::checkPostStmt(const Expr *E,
   if (!State)
     return;
 
-  if (State->isTainted(E, C.getLocationContext())) {
+  if (isTainted(State, E, C.getLocationContext())) {
     if (ExplodedNode *N = C.generateNonFatalErrorNode()) {
       initBugType();
       auto report = llvm::make_unique<BugReport>(*BT, "tainted",N);

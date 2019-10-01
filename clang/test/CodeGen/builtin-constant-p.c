@@ -177,3 +177,11 @@ void test17() {
   // CHECK: call void asm sideeffect "", {{.*}}(i32 -1) 
   __asm__ __volatile__("" :: "n"( (__builtin_constant_p(test17_v) || 0) ? 1 : -1));
 }
+
+int test18_f();
+// CHECK: define void @test18
+// CHECK-NOT: call {{.*}}test18_f
+void test18() {
+  int a, b;
+  (void)__builtin_constant_p((a = b, test18_f()));
+}

@@ -343,18 +343,13 @@ def runAnalyzePreprocessed(Args, Dir, SBOutputDir, Mode):
                 BuildScript))
         raise Exception()
 
-    CmdPrefix = Clang + " -cc1 "
+    CmdPrefix = Clang + " --analyze "
 
-    # For now, we assume the preprocessed files should be analyzed
-    # with the OS X SDK.
-    SDKPath = SATestUtils.getSDKPath("macosx")
-    if SDKPath is not None:
-        CmdPrefix += "-isysroot " + SDKPath + " "
-
-    CmdPrefix += "-analyze -analyzer-output=plist -w "
-    CmdPrefix += "-analyzer-checker=" + Checkers
+    CmdPrefix += "--analyzer-output plist "
+    CmdPrefix += " -Xclang -analyzer-checker=" + Checkers
     CmdPrefix += " -fcxx-exceptions -fblocks "
-    CmdPrefix += " -analyzer-config %s " % generateAnalyzerConfig(Args)
+    CmdPrefix += " -Xclang -analyzer-config -Xclang %s "\
+        % generateAnalyzerConfig(Args)
 
     if (Mode == 2):
         CmdPrefix += "-std=c++11 "

@@ -1,9 +1,8 @@
 //===- BugReporter.cpp - Generate PathDiagnostics for bugs ----------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -155,8 +154,6 @@ static void removeRedundantMsgs(PathPieces &path) {
       case PathDiagnosticPiece::Macro:
         removeRedundantMsgs(cast<PathDiagnosticMacroPiece>(*piece).subPieces);
         break;
-      case PathDiagnosticPiece::ControlFlow:
-        break;
       case PathDiagnosticPiece::Event: {
         if (i == N-1)
           break;
@@ -176,7 +173,9 @@ static void removeRedundantMsgs(PathPieces &path) {
         }
         break;
       }
+      case PathDiagnosticPiece::ControlFlow:
       case PathDiagnosticPiece::Note:
+      case PathDiagnosticPiece::PopUp:
         break;
     }
     path.push_back(std::move(piece));
@@ -231,9 +230,8 @@ static bool removeUnneededCalls(PathPieces &pieces, BugReport *R,
         break;
       }
       case PathDiagnosticPiece::ControlFlow:
-        break;
-
       case PathDiagnosticPiece::Note:
+      case PathDiagnosticPiece::PopUp:
         break;
     }
 
@@ -241,6 +239,16 @@ static bool removeUnneededCalls(PathPieces &pieces, BugReport *R,
   }
 
   return containsSomethingInteresting;
+}
+
+/// Same logic as above to remove extra pieces.
+static void removePopUpNotes(PathPieces &Path) {
+  for (unsigned int i = 0; i < Path.size(); ++i) {
+    auto Piece = std::move(Path.front());
+    Path.pop_front();
+    if (!isa<PathDiagnosticPopUpPiece>(*Piece))
+      Path.push_back(std::move(Piece));
+  }
 }
 
 /// Returns true if the given decl has been implicitly given a body, either by
@@ -679,7 +687,7 @@ void generateMinimalDiagForBlockEdge(const ExplodedNode *N, BlockEdge BE,
   const LocationContext *LC = N->getLocationContext();
   const CFGBlock *Src = BE.getSrc();
   const CFGBlock *Dst = BE.getDst();
-  const Stmt *T = Src->getTerminator();
+  const Stmt *T = Src->getTerminatorStmt();
   if (!T)
     return;
 
@@ -1204,7 +1212,7 @@ static void generatePathDiagnosticsForNode(const ExplodedNode *N,
     const CFGBlock *BSrc = BE->getSrc();
     ParentMap &PM = PDB.getParentMap();
 
-    if (const Stmt *Term = BSrc->getTerminator()) {
+    if (const Stmt *Term = BSrc->getTerminatorStmt()) {
       // Are we jumping past the loop body without ever executing the
       // loop (because the condition was false)?
       if (isLoop(Term)) {
@@ -1370,8 +1378,7 @@ static void addContextEdges(PathPieces &pieces, SourceManager &SM,
         break;
 
       // If the source is in the same context, we're already good.
-      if (std::find(SrcContexts.begin(), SrcContexts.end(), DstContext) !=
-          SrcContexts.end())
+      if (llvm::find(SrcContexts, DstContext) != SrcContexts.end())
         break;
 
       // Update the subexpression node to point to the context edge.
@@ -1982,6 +1989,10 @@ static std::unique_ptr<PathDiagnostic> generatePathDiagnosticForConsumer(
       assert(stillHasNotes);
       (void)stillHasNotes;
     }
+
+    // Remove pop-up notes if needed.
+    if (!Opts.ShouldAddPopUpNotes)
+      removePopUpNotes(PD->getMutablePieces());
 
     // Redirect all call pieces to have valid locations.
     adjustCallLocations(PD->getMutablePieces());
@@ -2612,7 +2623,7 @@ std::pair<BugReport*, std::unique_ptr<VisitorsDiagnosticsTy>> findValidReport(
     // Register additional node visitors.
     R->addVisitor(llvm::make_unique<NilReceiverBRVisitor>());
     R->addVisitor(llvm::make_unique<ConditionBRVisitor>());
-    R->addVisitor(llvm::make_unique<CXXSelfAssignmentBRVisitor>());
+    R->addVisitor(llvm::make_unique<TagVisitor>());
 
     BugReporterContext BRC(Reporter, ErrorGraph.BackMap);
 

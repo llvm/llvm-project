@@ -1,9 +1,8 @@
 //===--- SemaExprObjC.cpp - Semantic Analysis for ObjC Expressions --------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -1098,12 +1097,7 @@ ExprResult Sema::BuildObjCEncodeExpression(SourceLocation AtLoc,
 
     // The type of @encode is the same as the type of the corresponding string,
     // which is an array type.
-    StrTy = Context.CharTy;
-    // A C++ string literal has a const-qualified element type (C++ 2.13.4p1).
-    if (getLangOpts().CPlusPlus || getLangOpts().ConstStrings)
-      StrTy.addConst();
-    StrTy = Context.getConstantArrayType(StrTy, llvm::APInt(32, Str.size()+1),
-                                         ArrayType::Normal, 0);
+    StrTy = Context.getStringLiteralArrayType(Context.CharTy, Str.size());
   }
 
   return new (Context) ObjCEncodeExpr(StrTy, EncodedTypeInfo, AtLoc, RParenLoc);
@@ -1943,11 +1937,10 @@ HandleExprPropertyRefExpr(const ObjCObjectPointerType *OPT,
   }
 
   // Attempt to correct for typos in property names.
-  if (TypoCorrection Corrected =
-          CorrectTypo(DeclarationNameInfo(MemberName, MemberLoc),
-                      LookupOrdinaryName, nullptr, nullptr,
-                      llvm::make_unique<DeclFilterCCC<ObjCPropertyDecl>>(),
-                      CTK_ErrorRecovery, IFace, false, OPT)) {
+  DeclFilterCCC<ObjCPropertyDecl> CCC{};
+  if (TypoCorrection Corrected = CorrectTypo(
+          DeclarationNameInfo(MemberName, MemberLoc), LookupOrdinaryName,
+          nullptr, nullptr, CCC, CTK_ErrorRecovery, IFace, false, OPT)) {
     DeclarationName TypoResult = Corrected.getCorrection();
     if (TypoResult.isIdentifier() &&
         TypoResult.getAsIdentifierInfo() == Member) {
@@ -2104,7 +2097,7 @@ ActOnClassPropertyRefExpr(IdentifierInfo &receiverName,
 
 namespace {
 
-class ObjCInterfaceOrSuperCCC : public CorrectionCandidateCallback {
+class ObjCInterfaceOrSuperCCC final : public CorrectionCandidateCallback {
  public:
   ObjCInterfaceOrSuperCCC(ObjCMethodDecl *Method) {
     // Determine whether "super" is acceptable in the current context.
@@ -2115,6 +2108,10 @@ class ObjCInterfaceOrSuperCCC : public CorrectionCandidateCallback {
   bool ValidateCandidate(const TypoCorrection &candidate) override {
     return candidate.getCorrectionDeclAs<ObjCInterfaceDecl>() ||
         candidate.isKeyword("super");
+  }
+
+  std::unique_ptr<CorrectionCandidateCallback> clone() override {
+    return llvm::make_unique<ObjCInterfaceOrSuperCCC>(*this);
   }
 };
 
@@ -2191,9 +2188,9 @@ Sema::ObjCMessageKind Sema::getObjCMessageKind(Scope *S,
   }
   }
 
+  ObjCInterfaceOrSuperCCC CCC(getCurMethodDecl());
   if (TypoCorrection Corrected = CorrectTypo(
-          Result.getLookupNameInfo(), Result.getLookupKind(), S, nullptr,
-          llvm::make_unique<ObjCInterfaceOrSuperCCC>(getCurMethodDecl()),
+          Result.getLookupNameInfo(), Result.getLookupKind(), S, nullptr, CCC,
           CTK_ErrorRecovery, nullptr, false, nullptr, false)) {
     if (Corrected.isKeyword()) {
       // If we've found the keyword "super" (the only keyword that would be
@@ -4353,23 +4350,22 @@ Expr *Sema::stripARCUnbridgedCast(Expr *e) {
     assert(!gse->isResultDependent());
 
     unsigned n = gse->getNumAssocs();
-    SmallVector<Expr*, 4> subExprs(n);
-    SmallVector<TypeSourceInfo*, 4> subTypes(n);
-    for (unsigned i = 0; i != n; ++i) {
-      subTypes[i] = gse->getAssocTypeSourceInfo(i);
-      Expr *sub = gse->getAssocExpr(i);
-      if (i == gse->getResultIndex())
+    SmallVector<Expr *, 4> subExprs;
+    SmallVector<TypeSourceInfo *, 4> subTypes;
+    subExprs.reserve(n);
+    subTypes.reserve(n);
+    for (const GenericSelectionExpr::Association &assoc : gse->associations()) {
+      subTypes.push_back(assoc.getTypeSourceInfo());
+      Expr *sub = assoc.getAssociationExpr();
+      if (assoc.isSelected())
         sub = stripARCUnbridgedCast(sub);
-      subExprs[i] = sub;
+      subExprs.push_back(sub);
     }
 
-    return new (Context) GenericSelectionExpr(Context, gse->getGenericLoc(),
-                                              gse->getControllingExpr(),
-                                              subTypes, subExprs,
-                                              gse->getDefaultLoc(),
-                                              gse->getRParenLoc(),
-                                       gse->containsUnexpandedParameterPack(),
-                                              gse->getResultIndex());
+    return GenericSelectionExpr::Create(
+        Context, gse->getGenericLoc(), gse->getControllingExpr(), subTypes,
+        subExprs, gse->getDefaultLoc(), gse->getRParenLoc(),
+        gse->containsUnexpandedParameterPack(), gse->getResultIndex());
   } else {
     assert(isa<ImplicitCastExpr>(e) && "bad form of unbridged cast!");
     return cast<ImplicitCastExpr>(e)->getSubExpr();

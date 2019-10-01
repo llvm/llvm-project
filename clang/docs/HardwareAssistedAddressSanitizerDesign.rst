@@ -131,7 +131,8 @@ HWASAN:
     https://www.kernel.org/doc/Documentation/arm64/tagged-pointers.txt).
   * **Does not require redzones to detect buffer overflows**,
     but the buffer overflow detection is probabilistic, with roughly
-    `(2**TS-1)/(2**TS)` probability of catching a bug.
+    `1/(2**TS)` chance of missing a bug (6.25% or 0.39% with 4 and 8-bit TS
+    respectively).
   * **Does not require quarantine to detect heap-use-after-free,
     or stack-use-after-return**.
     The detection is similarly probabilistic.
@@ -162,7 +163,7 @@ Related Work
 * *TODO: add more "related work" links. Suggestions are welcome.*
 
 
-.. _Watchdog: http://www.cis.upenn.edu/acg/papers/isca12_watchdog.pdf
+.. _Watchdog: https://www.cis.upenn.edu/acg/papers/isca12_watchdog.pdf
 .. _Effective and Efficient Memory Protection Using Dynamic Tainting: https://www.cc.gatech.edu/~orso/papers/clause.doudalis.orso.prvulovic.pdf
 .. _SPARC ADI: https://lazytyped.blogspot.com/2017/09/getting-started-with-adi.html
 .. _AddressSanitizer paper: https://www.usenix.org/system/files/conference/atc12/atc12-final39.pdf

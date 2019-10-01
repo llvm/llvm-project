@@ -1,9 +1,8 @@
 //===----- CGObjCRuntime.h - Interface to ObjC Runtimes ---------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -96,11 +95,10 @@ protected:
   /// used to rethrow exceptions.  If the begin and end catch functions are
   /// NULL, then the function assumes that the EH personality function provides
   /// the thrown object directly.
-  void EmitTryCatchStmt(CodeGenFunction &CGF,
-                        const ObjCAtTryStmt &S,
-                        llvm::Constant *beginCatchFn,
-                        llvm::Constant *endCatchFn,
-                        llvm::Constant *exceptionRethrowFn);
+  void EmitTryCatchStmt(CodeGenFunction &CGF, const ObjCAtTryStmt &S,
+                        llvm::FunctionCallee beginCatchFn,
+                        llvm::FunctionCallee endCatchFn,
+                        llvm::FunctionCallee exceptionRethrowFn);
 
   void EmitInitOfCatchParam(CodeGenFunction &CGF, llvm::Value *exn,
                             const VarDecl *paramDecl);
@@ -110,9 +108,9 @@ protected:
   /// the object.  This function can be called by subclasses that use
   /// zero-cost exception handling.
   void EmitAtSynchronizedStmt(CodeGenFunction &CGF,
-                            const ObjCAtSynchronizedStmt &S,
-                            llvm::Function *syncEnterFn,
-                            llvm::Function *syncExitFn);
+                              const ObjCAtSynchronizedStmt &S,
+                              llvm::FunctionCallee syncEnterFn,
+                              llvm::FunctionCallee syncExitFn);
 
 public:
   virtual ~CGObjCRuntime();
@@ -208,25 +206,25 @@ public:
                                          const ObjCContainerDecl *CD) = 0;
 
   /// Return the runtime function for getting properties.
-  virtual llvm::Constant *GetPropertyGetFunction() = 0;
+  virtual llvm::FunctionCallee GetPropertyGetFunction() = 0;
 
   /// Return the runtime function for setting properties.
-  virtual llvm::Constant *GetPropertySetFunction() = 0;
+  virtual llvm::FunctionCallee GetPropertySetFunction() = 0;
 
   /// Return the runtime function for optimized setting properties.
-  virtual llvm::Constant *GetOptimizedPropertySetFunction(bool atomic,
-                                                          bool copy) = 0;
+  virtual llvm::FunctionCallee GetOptimizedPropertySetFunction(bool atomic,
+                                                               bool copy) = 0;
 
   // API for atomic copying of qualified aggregates in getter.
-  virtual llvm::Constant *GetGetStructFunction() = 0;
+  virtual llvm::FunctionCallee GetGetStructFunction() = 0;
   // API for atomic copying of qualified aggregates in setter.
-  virtual llvm::Constant *GetSetStructFunction() = 0;
+  virtual llvm::FunctionCallee GetSetStructFunction() = 0;
   /// API for atomic copying of qualified aggregates with non-trivial copy
   /// assignment (c++) in setter.
-  virtual llvm::Constant *GetCppAtomicObjectSetFunction() = 0;
+  virtual llvm::FunctionCallee GetCppAtomicObjectSetFunction() = 0;
   /// API for atomic copying of qualified aggregates with non-trivial copy
   /// assignment (c++) in getter.
-  virtual llvm::Constant *GetCppAtomicObjectGetFunction() = 0;
+  virtual llvm::FunctionCallee GetCppAtomicObjectGetFunction() = 0;
 
   /// GetClass - Return a reference to the class for the given
   /// interface decl.
@@ -240,7 +238,7 @@ public:
 
   /// EnumerationMutationFunction - Return the function that's called by the
   /// compiler when a mutation is detected during foreach iteration.
-  virtual llvm::Constant *EnumerationMutationFunction() = 0;
+  virtual llvm::FunctionCallee EnumerationMutationFunction() = 0;
 
   virtual void EmitSynchronizedStmt(CodeGen::CodeGenFunction &CGF,
                                     const ObjCAtSynchronizedStmt &S) = 0;

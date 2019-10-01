@@ -1,9 +1,8 @@
 //===--- CompilerInstance.cpp ---------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -15,6 +14,7 @@
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/FileManager.h"
+#include "clang/Basic/LangStandard.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Stack.h"
 #include "clang/Basic/TargetInfo.h"
@@ -49,6 +49,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Signals.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
 #include <sys/stat.h>
@@ -92,10 +93,6 @@ void CompilerInstance::setAuxTarget(TargetInfo *Value) { AuxTarget = Value; }
 
 void CompilerInstance::setFileManager(FileManager *Value) {
   FileMgr = Value;
-  if (Value)
-    VirtualFileSystem = Value->getVirtualFileSystem();
-  else
-    VirtualFileSystem.reset();
 }
 
 void CompilerInstance::setSourceManager(SourceManager *Value) {
@@ -167,7 +164,7 @@ static void collectIncludePCH(CompilerInstance &CI,
 
   StringRef PCHInclude = PPOpts.ImplicitPCHInclude;
   FileManager &FileMgr = CI.getFileManager();
-  const DirectoryEntry *PCHDir = FileMgr.getDirectory(PCHInclude);
+  auto PCHDir = FileMgr.getDirectory(PCHInclude);
   if (!PCHDir) {
     MDC->addFile(PCHInclude);
     return;
@@ -175,8 +172,8 @@ static void collectIncludePCH(CompilerInstance &CI,
 
   std::error_code EC;
   SmallString<128> DirNative;
-  llvm::sys::path::native(PCHDir->getName(), DirNative);
-  llvm::vfs::FileSystem &FS = *FileMgr.getVirtualFileSystem();
+  llvm::sys::path::native((*PCHDir)->getName(), DirNative);
+  llvm::vfs::FileSystem &FS = FileMgr.getVirtualFileSystem();
   SimpleASTReaderListener Validator(CI.getPreprocessor());
   for (llvm::vfs::directory_iterator Dir = FS.dir_begin(DirNative, EC), DirEnd;
        Dir != DirEnd && !EC; Dir.increment(EC)) {
@@ -304,13 +301,14 @@ CompilerInstance::createDiagnostics(DiagnosticOptions *Opts,
 
 // File Manager
 
-FileManager *CompilerInstance::createFileManager() {
-  if (!hasVirtualFileSystem()) {
-    IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS =
-        createVFSFromCompilerInvocation(getInvocation(), getDiagnostics());
-    setVirtualFileSystem(VFS);
-  }
-  FileMgr = new FileManager(getFileSystemOpts(), VirtualFileSystem);
+FileManager *CompilerInstance::createFileManager(
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS) {
+  if (!VFS)
+    VFS = FileMgr ? &FileMgr->getVirtualFileSystem()
+                  : createVFSFromCompilerInvocation(getInvocation(),
+                                                    getDiagnostics());
+  assert(VFS && "FileManager has no VFS?");
+  FileMgr = new FileManager(getFileSystemOpts(), std::move(VFS));
   return FileMgr.get();
 }
 
@@ -347,7 +345,7 @@ static void InitializeFileRemapping(DiagnosticsEngine &Diags,
   // Remap files in the source manager (with other files).
   for (const auto &RF : InitOpts.RemappedFiles) {
     // Find the file that we're mapping to.
-    const FileEntry *ToFile = FileMgr.getFile(RF.second);
+    auto ToFile = FileMgr.getFile(RF.second);
     if (!ToFile) {
       Diags.Report(diag::err_fe_remap_missing_to_file) << RF.first << RF.second;
       continue;
@@ -355,7 +353,7 @@ static void InitializeFileRemapping(DiagnosticsEngine &Diags,
 
     // Create the file entry for the file that we're mapping from.
     const FileEntry *FromFile =
-        FileMgr.getVirtualFile(RF.first, ToFile->getSize(), 0);
+        FileMgr.getVirtualFile(RF.first, (*ToFile)->getSize(), 0);
     if (!FromFile) {
       Diags.Report(diag::err_fe_remap_missing_from_file) << RF.first;
       continue;
@@ -363,7 +361,7 @@ static void InitializeFileRemapping(DiagnosticsEngine &Diags,
 
     // Override the contents of the "from" file with the contents of
     // the "to" file.
-    SourceMgr.overrideFileContents(FromFile, ToFile);
+    SourceMgr.overrideFileContents(FromFile, *ToFile);
   }
 
   SourceMgr.setOverridenFilesKeepOriginalName(
@@ -420,8 +418,7 @@ void CompilerInstance::createPreprocessor(TranslationUnitKind TUKind) {
   // Handle generating dependencies, if requested.
   const DependencyOutputOptions &DepOpts = getDependencyOutputOpts();
   if (!DepOpts.OutputFile.empty())
-    TheDependencyFileGenerator.reset(
-        DependencyFileGenerator::CreateAndAttachToPreprocessor(*PP, DepOpts));
+    addDependencyCollector(std::make_shared<DependencyFileGenerator>(DepOpts));
   if (!DepOpts.DOTOutputFile.empty())
     AttachDependencyGraphGen(*PP, DepOpts.DOTOutputFile,
                              getHeaderSearchOpts().Sysroot);
@@ -495,9 +492,9 @@ void CompilerInstance::createPCHExternalASTSource(
       Path, getHeaderSearchOpts().Sysroot, DisablePCHValidation,
       AllowPCHWithCompilerErrors, getPreprocessor(), getModuleCache(),
       getASTContext(), getPCHContainerReader(),
-      getFrontendOpts().ModuleFileExtensions, TheDependencyFileGenerator.get(),
-      DependencyCollectors, DeserializationListener, OwnDeserializationListener,
-      Preamble, getFrontendOpts().UseGlobalModuleIndex);
+      getFrontendOpts().ModuleFileExtensions, DependencyCollectors,
+      DeserializationListener, OwnDeserializationListener, Preamble,
+      getFrontendOpts().UseGlobalModuleIndex);
 }
 
 IntrusiveRefCntPtr<ASTReader> CompilerInstance::createPCHExternalASTSource(
@@ -506,7 +503,6 @@ IntrusiveRefCntPtr<ASTReader> CompilerInstance::createPCHExternalASTSource(
     InMemoryModuleCache &ModuleCache, ASTContext &Context,
     const PCHContainerReader &PCHContainerRdr,
     ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
-    DependencyFileGenerator *DependencyFile,
     ArrayRef<std::shared_ptr<DependencyCollector>> DependencyCollectors,
     void *DeserializationListener, bool OwnDeserializationListener,
     bool Preamble, bool UseGlobalModuleIndex) {
@@ -526,8 +522,6 @@ IntrusiveRefCntPtr<ASTReader> CompilerInstance::createPCHExternalASTSource(
       static_cast<ASTDeserializationListener *>(DeserializationListener),
       /*TakeOwnership=*/OwnDeserializationListener);
 
-  if (DependencyFile)
-    DependencyFile->AttachToASTReader(*Reader);
   for (auto &Listener : DependencyCollectors)
     Listener->attachToASTReader(*Reader);
 
@@ -567,7 +561,7 @@ static bool EnableCodeCompletion(Preprocessor &PP,
                                  unsigned Column) {
   // Tell the source manager to chop off the given file at a specific
   // line and column.
-  const FileEntry *Entry = PP.getFileManager().getFile(Filename);
+  auto Entry = PP.getFileManager().getFile(Filename);
   if (!Entry) {
     PP.getDiagnostics().Report(diag::err_fe_invalid_code_complete_file)
       << Filename;
@@ -575,7 +569,7 @@ static bool EnableCodeCompletion(Preprocessor &PP,
   }
 
   // Truncate the named file at the given line/column.
-  PP.SetCodeCompletionPoint(Entry, Line, Column);
+  PP.SetCodeCompletionPoint(*Entry, Line, Column);
   return false;
 }
 
@@ -593,12 +587,6 @@ void CompilerInstance::createCodeCompletionConsumer() {
                                   Loc.Line, Loc.Column)) {
     setCodeCompletionConsumer(nullptr);
     return;
-  }
-
-  if (CompletionConsumer->isOutputBinary() &&
-      llvm::sys::ChangeStdoutToBinary()) {
-    getPreprocessor().getDiagnostics().Report(diag::err_fe_stdout_binary);
-    setCodeCompletionConsumer(nullptr);
   }
 }
 
@@ -866,32 +854,39 @@ bool CompilerInstance::InitializeSourceManager(
 
   // Figure out where to get and map in the main file.
   if (InputFile != "-") {
-    const FileEntry *File = FileMgr.getFile(InputFile, /*OpenFile=*/true);
-    if (!File) {
+    auto FileOrErr = FileMgr.getFileRef(InputFile, /*OpenFile=*/true);
+    if (!FileOrErr) {
+      // FIXME: include the error in the diagnostic.
+      consumeError(FileOrErr.takeError());
       Diags.Report(diag::err_fe_error_reading) << InputFile;
       return false;
     }
+    FileEntryRef File = *FileOrErr;
 
     // The natural SourceManager infrastructure can't currently handle named
     // pipes, but we would at least like to accept them for the main
     // file. Detect them here, read them with the volatile flag so FileMgr will
     // pick up the correct size, and simply override their contents as we do for
     // STDIN.
-    if (File->isNamedPipe()) {
-      auto MB = FileMgr.getBufferForFile(File, /*isVolatile=*/true);
+    if (File.getFileEntry().isNamedPipe()) {
+      auto MB =
+          FileMgr.getBufferForFile(&File.getFileEntry(), /*isVolatile=*/true);
       if (MB) {
         // Create a new virtual file that will have the correct size.
-        File = FileMgr.getVirtualFile(InputFile, (*MB)->getBufferSize(), 0);
-        SourceMgr.overrideFileContents(File, std::move(*MB));
+        const FileEntry *FE =
+            FileMgr.getVirtualFile(InputFile, (*MB)->getBufferSize(), 0);
+        SourceMgr.overrideFileContents(FE, std::move(*MB));
+        SourceMgr.setMainFileID(
+            SourceMgr.createFileID(FE, SourceLocation(), Kind));
       } else {
         Diags.Report(diag::err_cannot_open_file) << InputFile
                                                  << MB.getError().message();
         return false;
       }
+    } else {
+      SourceMgr.setMainFileID(
+          SourceMgr.createFileID(File, SourceLocation(), Kind));
     }
-
-    SourceMgr.setMainFileID(
-        SourceMgr.createFileID(File, SourceLocation(), Kind));
   } else {
     llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> SBOrErr =
         llvm::MemoryBuffer::getSTDIN();
@@ -950,6 +945,9 @@ bool CompilerInstance::ExecuteAction(FrontendAction &Act) {
 
   // Adjust target options based on codegen options.
   getTarget().adjustTargetOptions(getCodeGenOpts(), getTargetOpts());
+
+  if (auto *Aux = getAuxTarget())
+    getTarget().setAuxTarget(Aux);
 
   // rewriter project will change target built-in bool type from its default.
   if (getFrontendOpts().ProgramAction == frontend::RewriteObjC)
@@ -1032,14 +1030,14 @@ bool CompilerInstance::ExecuteAction(FrontendAction &Act) {
 
 /// Determine the appropriate source input kind based on language
 /// options.
-static InputKind::Language getLanguageFromOptions(const LangOptions &LangOpts) {
+static Language getLanguageFromOptions(const LangOptions &LangOpts) {
   if (LangOpts.OpenCL)
-    return InputKind::OpenCL;
+    return Language::OpenCL;
   if (LangOpts.CUDA)
-    return InputKind::CUDA;
+    return Language::CUDA;
   if (LangOpts.ObjC)
-    return LangOpts.CPlusPlus ? InputKind::ObjCXX : InputKind::ObjC;
-  return LangOpts.CPlusPlus ? InputKind::CXX : InputKind::C;
+    return LangOpts.CPlusPlus ? Language::ObjCXX : Language::ObjC;
+  return LangOpts.CPlusPlus ? Language::CXX : Language::C;
 }
 
 /// Compile a module file for the given module, using the options
@@ -1053,6 +1051,8 @@ compileModuleImpl(CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
                       [](CompilerInstance &) {},
                   llvm::function_ref<void(CompilerInstance &)> PostBuildStep =
                       [](CompilerInstance &) {}) {
+  llvm::TimeTraceScope TimeScope("Module Compile", ModuleName);
+
   // Construct a compiler invocation for creating this module.
   auto Invocation =
       std::make_shared<CompilerInvocation>(ImportingInstance.getInvocation());
@@ -1128,8 +1128,6 @@ compileModuleImpl(CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
                                    ImportingInstance.getDiagnosticClient()),
                              /*ShouldOwnClient=*/true);
 
-  Instance.setVirtualFileSystem(&ImportingInstance.getVirtualFileSystem());
-
   // Note that this module is part of the module build stack, so that we
   // can detect cycles in the module graph.
   Instance.setFileManager(&ImportingInstance.getFileManager());
@@ -1197,7 +1195,9 @@ static const FileEntry *getPublicModuleMap(const FileEntry *File,
     llvm::sys::path::append(PublicFilename, "module.modulemap");
   else
     return nullptr;
-  return FileMgr.getFile(PublicFilename);
+  if (auto FE = FileMgr.getFile(PublicFilename))
+    return *FE;
+  return nullptr;
 }
 
 /// Compile a module file for the given module, using the options
@@ -1533,8 +1533,6 @@ void CompilerInstance::createModuleManager() {
     if (hasASTConsumer())
       ModuleManager->StartTranslationUnit(&getASTConsumer());
 
-    if (TheDependencyFileGenerator)
-      TheDependencyFileGenerator->AttachToASTReader(*ModuleManager);
     for (auto &Listener : DependencyCollectors)
       Listener->attachToASTReader(*ModuleManager);
   }
@@ -1743,6 +1741,7 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
       Timer.init("loading." + ModuleFileName, "Loading " + ModuleFileName,
                  *FrontendTimerGroup);
     llvm::TimeRegion TimeLoading(FrontendTimerGroup ? &Timer : nullptr);
+    llvm::TimeTraceScope TimeScope("Module Load", ModuleName);
 
     // Try to load the module file. If we are not trying to load from the
     // module cache, we don't know how to rebuild modules.
@@ -1762,8 +1761,9 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
       if (Source != ModuleCache && !Module) {
         Module = PP->getHeaderSearchInfo().lookupModule(ModuleName, true,
                                                         !IsInclusionDirective);
+        auto ModuleFile = FileMgr->getFile(ModuleFileName);
         if (!Module || !Module->getASTFile() ||
-            FileMgr->getFile(ModuleFileName) != Module->getASTFile()) {
+            !ModuleFile || (*ModuleFile != Module->getASTFile())) {
           // Error out if Module does not refer to the file in the prebuilt
           // module path.
           getDiagnostics().Report(ModuleNameLoc, diag::err_module_prebuilt)

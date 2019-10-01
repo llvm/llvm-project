@@ -514,3 +514,22 @@ namespace TypeOfFn {
 
   static_assert(is_same<__typeof__(foo)*, decltype(&foo)>::value, "");
 }
+
+namespace InConstantContext {
+void foo(const char *s) __attribute__((enable_if(((void)__builtin_constant_p(*s), true), "trap"))) {}
+
+void test() {
+  InConstantContext::foo("abc");
+}
+} // namespace InConstantContext
+
+namespace StringLiteralDetector {
+  void need_string_literal(const char *p) __attribute__((enable_if(__builtin_constant_p(p), "argument is not a string literal"))); // expected-note 2{{not a string literal}}
+  void test(const char *unknown) {
+    need_string_literal("foo");
+    need_string_literal(unknown); // expected-error {{no matching function}}
+    constexpr char str[] = "bar";
+    need_string_literal(str); // expected-error {{no matching function}}
+  }
+}
+

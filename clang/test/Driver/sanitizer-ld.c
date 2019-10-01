@@ -679,16 +679,6 @@
 // RUN:   | FileCheck --check-prefix=CHECK-NOLIB-PS4 %s
 // CHECK-NOLIB-PS4-NOT: SceDbgAddressSanitizer_stub_weak
 
-// RUN: %clang -fsanitize=efficiency-cache-frag %s -### -o %t.o 2>&1 \
-// RUN:     -target x86_64-unknown-linux -fuse-ld=ld \
-// RUN:   | FileCheck --check-prefix=CHECK-ESAN-LINUX %s
-// RUN: %clang -fsanitize=efficiency-working-set %s -### -o %t.o 2>&1 \
-// RUN:     -target x86_64-unknown-linux -fuse-ld=ld \
-// RUN:   | FileCheck --check-prefix=CHECK-ESAN-LINUX %s
-//
-// CHECK-ESAN-LINUX: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
-// CHECK-ESAN-LINUX: libclang_rt.esan-x86_64.a
-
 // RUN: %clang -fsanitize=scudo %s -### -o %t.o 2>&1 \
 // RUN:     -target i386-unknown-linux -fuse-ld=ld \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \

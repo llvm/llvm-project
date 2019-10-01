@@ -30,18 +30,18 @@ void test4 (int x, struct test4 y)
 {
 }
 
-// CHECK: define void @test5(i32 signext %x, %struct.test5* byval align 8 %y)
+// CHECK: define void @test5(i32 signext %x, %struct.test5* byval(%struct.test5) align 8 %y)
 void test5 (int x, struct test5 y)
 {
 }
 
-// CHECK: define void @test6(i32 signext %x, %struct.test6* byval align 16 %y)
+// CHECK: define void @test6(i32 signext %x, %struct.test6* byval(%struct.test6) align 16 %y)
 void test6 (int x, struct test6 y)
 {
 }
 
 // This case requires run-time realignment of the incoming struct
-// CHECK-LABEL: define void @test7(i32 signext %x, %struct.test7* byval align 16)
+// CHECK-LABEL: define void @test7(i32 signext %x, %struct.test7* byval(%struct.test7) align 16)
 // CHECK: %y = alloca %struct.test7, align 32
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64
 void test7 (int x, struct test7 y)

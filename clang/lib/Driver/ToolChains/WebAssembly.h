@@ -1,9 +1,8 @@
 //===--- WebAssembly.h - WebAssembly ToolChain Implementations --*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -21,9 +20,11 @@ namespace wasm {
 
 class LLVM_LIBRARY_VISIBILITY Linker : public GnuTool {
 public:
-  explicit Linker(const ToolChain &TC);
-  bool isLinkJob() const override;
-  bool hasIntegratedCPP() const override;
+  explicit Linker(const ToolChain &TC)
+      : GnuTool("wasm::Linker", "linker", TC) {}
+  bool isLinkJob() const override { return true; }
+  bool hasIntegratedCPP() const override { return false; }
+  std::string getLinkerPath(const llvm::opt::ArgList &Args) const;
   void ConstructJob(Compilation &C, const JobAction &JA,
                     const InputInfo &Output, const InputInfoList &Inputs,
                     const llvm::opt::ArgList &TCArgs,
@@ -65,7 +66,7 @@ private:
       llvm::opt::ArgStringList &CC1Args) const override;
   void AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,
                            llvm::opt::ArgStringList &CmdArgs) const override;
-  std::string getThreadModel() const override;
+  SanitizerMask getSupportedSanitizers() const override;
 
   const char *getDefaultLinker() const override { return "wasm-ld"; }
 

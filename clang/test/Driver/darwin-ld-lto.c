@@ -22,9 +22,9 @@
 // Check that -object_lto_path is passed correctly to ld64
 // RUN: %clang -target x86_64-apple-darwin10 %s -flto=full -### 2>&1 | \
 // RUN:   FileCheck -check-prefix=FULL_LTO_OBJECT_PATH %s
-// FULL_LTO_OBJECT_PATH: /usr/bin/ld
+// FULL_LTO_OBJECT_PATH: {{ld(.exe)?"}}
 // FULL_LTO_OBJECT_PATH-SAME: "-object_path_lto" "{{[a-zA-Z0-9_\/]+\/cc\-[a-zA-Z0-9_]+.o}}"
 // RUN: %clang -target x86_64-apple-darwin10 %s -flto=thin -### 2>&1 | \
 // RUN:   FileCheck -check-prefix=THIN_LTO_OBJECT_PATH %s
-// THIN_LTO_OBJECT_PATH: /usr/bin/ld
+// THIN_LTO_OBJECT_PATH: {{ld(.exe)?"}}
 // THIN_LTO_OBJECT_PATH-SAME: "-object_path_lto" "{{[a-zA-Z0-9_\/]+\/thinlto\-[a-zA-Z0-9_]+}}"

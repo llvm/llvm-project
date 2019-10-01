@@ -20,7 +20,7 @@ void f_struct_with_mdp(struct_with_mdp a) { (void)a; }
 struct struct_with_mdp_too_much {
   char *a; char *b; char *c; char *d; test_struct_mdp e;
 };
-// CHECK-LABEL: define void @{{.*}}f_struct_with_mdp_too_much{{.*}}({{.*}} byval {{.*}} %a)
+// CHECK-LABEL: define void @{{.*}}f_struct_with_mdp_too_much{{.*}}({{.*}} byval({{.*}} {{.*}} %a)
 void f_struct_with_mdp_too_much(struct_with_mdp_too_much a) {
   (void)a;
 }
@@ -35,7 +35,7 @@ void f_struct_with_mfp_0(struct_with_mfp_0 a) { (void)a; }
 struct struct_with_mfp_1 { char *a; char *b; test_struct_mfp c; };
 void f_struct_with_mfp_1(struct_with_mfp_1 a) { (void)a; }
 
-// CHECK-LABEL: define void @{{.*}}f_struct_with_mfp_too_much{{.*}}({{.*}} byval {{.*}} %a, i32 %x)
+// CHECK-LABEL: define void @{{.*}}f_struct_with_mfp_too_much{{.*}}({{.*}} byval({{.*}}) {{.*}} %a, i32 %x)
 struct struct_with_mfp_too_much {
   char *a; char *b; char *c; test_struct_mfp d;
 };

@@ -19,9 +19,11 @@ Supported Platforms
 
 ThreadSanitizer is supported on the following OS:
 
-* Linux
-* NetBSD
+* Android aarch64, x86_64
+* Darwin arm64, x86_64
 * FreeBSD
+* Linux aarch64, x86_64, powerpc64, powerpc64le
+* NetBSD
 
 Support for other 64-bit architectures is possible, contributions are welcome.
 Support for 32-bit platforms is problematic and is not planned.

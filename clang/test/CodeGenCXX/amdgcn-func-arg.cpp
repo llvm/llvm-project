@@ -57,7 +57,7 @@ void test_indirect_arg_global() {
   func_with_ref_arg(g_a);
 }
 
-// CHECK-LABEL: define void @_Z19func_with_byval_arg1B(%class.B addrspace(5)* byval align 4 %b)
+// CHECK-LABEL: define void @_Z19func_with_byval_arg1B(%class.B addrspace(5)* byval(%class.B) align 4 %b)
 // CHECK:  %p = alloca %class.B*, align 8, addrspace(5)
 // CHECK:  %[[r1:.+]] = addrspacecast %class.B* addrspace(5)* %p to %class.B**
 // CHECK:  %[[r0:.+]] = addrspacecast %class.B addrspace(5)* %b to %class.B*
@@ -73,7 +73,7 @@ void func_with_byval_arg(B b) {
 // CHECK:  %[[r1:.+]] = addrspacecast %class.B addrspace(5)* %agg.tmp to %class.B*
 // CHECK:  call void @llvm.memcpy.p0i8.p0i8.i64
 // CHECK:  %[[r4:.+]] = addrspacecast %class.B* %[[r1]] to %class.B addrspace(5)*
-// CHECK:  call void @_Z19func_with_byval_arg1B(%class.B addrspace(5)* byval align 4 %[[r4]])
+// CHECK:  call void @_Z19func_with_byval_arg1B(%class.B addrspace(5)* byval(%class.B) align 4 %[[r4]])
 // CHECK:  call void @_Z17func_with_ref_argR1B(%class.B* dereferenceable(400) %[[r0]])
 void test_byval_arg_auto() {
   B b;
@@ -86,7 +86,7 @@ void test_byval_arg_auto() {
 // CHECK:  %[[r0:.+]] = addrspacecast %class.B addrspace(5)* %agg.tmp to %class.B*
 // CHECK:  call void @llvm.memcpy.p0i8.p0i8.i64
 // CHECK:  %[[r2:.+]] = addrspacecast %class.B* %[[r0]] to %class.B addrspace(5)*
-// CHECK:  call void @_Z19func_with_byval_arg1B(%class.B addrspace(5)* byval align 4 %[[r2]])
+// CHECK:  call void @_Z19func_with_byval_arg1B(%class.B addrspace(5)* byval(%class.B) align 4 %[[r2]])
 // CHECK:  call void @_Z17func_with_ref_argR1B(%class.B* dereferenceable(400) addrspacecast (%class.B addrspace(1)* @g_b to %class.B*))
 void test_byval_arg_global() {
   func_with_byval_arg(g_b);

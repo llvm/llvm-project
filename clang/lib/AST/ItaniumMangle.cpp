@@ -1,9 +1,8 @@
 //===--- ItaniumMangle.cpp - Itanium C++ Name Mangling ----------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -61,7 +60,8 @@ static const DeclContext *getEffectiveDeclContext(const Decl *D) {
   }
 
   const DeclContext *DC = D->getDeclContext();
-  if (isa<CapturedDecl>(DC) || isa<OMPDeclareReductionDecl>(DC)) {
+  if (isa<CapturedDecl>(DC) || isa<OMPDeclareReductionDecl>(DC) ||
+      isa<OMPDeclareMapperDecl>(DC)) {
     return getEffectiveDeclContext(cast<Decl>(DC));
   }
 
@@ -486,6 +486,7 @@ private:
                        const AbiTagList *AdditionalAbiTags);
   void mangleBlockForPrefix(const BlockDecl *Block);
   void mangleUnqualifiedBlock(const BlockDecl *Block);
+  void mangleTemplateParamDecl(const NamedDecl *Decl);
   void mangleLambda(const CXXRecordDecl *Lambda);
   void mangleNestedName(const NamedDecl *ND, const DeclContext *DC,
                         const AbiTagList *AdditionalAbiTags,
@@ -537,6 +538,7 @@ private:
                         unsigned knownArity);
   void mangleCastExpression(const Expr *E, StringRef CastEncoding);
   void mangleInitListElements(const InitListExpr *InitList);
+  void mangleDeclRefExpr(const NamedDecl *D);
   void mangleExpression(const Expr *E, unsigned Arity = UnknownArity);
   void mangleCXXCtorType(CXXCtorType T, const CXXRecordDecl *InheritedFrom);
   void mangleCXXDtorType(CXXDtorType T);
@@ -1372,7 +1374,8 @@ void CXXNameMangler::mangleUnqualifiedName(const NamedDecl *ND,
     // <unnamed-type-name> ::= <closure-type-name>
     //
     // <closure-type-name> ::= Ul <lambda-sig> E [ <nonnegative number> ] _
-    // <lambda-sig> ::= <parameter-type>+   # Parameter types or 'v' for 'void'.
+    // <lambda-sig> ::= <template-param-decl>* <parameter-type>+
+    //     # Parameter types or 'v' for 'void'.
     if (const CXXRecordDecl *Record = dyn_cast<CXXRecordDecl>(TD)) {
       if (Record->isLambda() && Record->getLambdaManglingNumber()) {
         assert(!AdditionalAbiTags &&
@@ -1503,7 +1506,7 @@ void CXXNameMangler::mangleNestedName(const NamedDecl *ND,
 
   Out << 'N';
   if (const CXXMethodDecl *Method = dyn_cast<CXXMethodDecl>(ND)) {
-    Qualifiers MethodQuals = Method->getTypeQualifiers();
+    Qualifiers MethodQuals = Method->getMethodQualifiers();
     // We do not consider restrict a distinguishing attribute for overloading
     // purposes so we must not mangle it.
     MethodQuals.removeRestrict();
@@ -1678,6 +1681,24 @@ void CXXNameMangler::mangleUnqualifiedBlock(const BlockDecl *Block) {
   Out << '_';
 }
 
+// <template-param-decl>
+//   ::= Ty                              # template type parameter
+//   ::= Tn <type>                       # template non-type parameter
+//   ::= Tt <template-param-decl>* E     # template template parameter
+void CXXNameMangler::mangleTemplateParamDecl(const NamedDecl *Decl) {
+  if (isa<TemplateTypeParmDecl>(Decl)) {
+    Out << "Ty";
+  } else if (auto *Tn = dyn_cast<NonTypeTemplateParmDecl>(Decl)) {
+    Out << "Tn";
+    mangleType(Tn->getType());
+  } else if (auto *Tt = dyn_cast<TemplateTemplateParmDecl>(Decl)) {
+    Out << "Tt";
+    for (auto *Param : *Tt->getTemplateParameters())
+      mangleTemplateParamDecl(Param);
+    Out << "E";
+  }
+}
+
 void CXXNameMangler::mangleLambda(const CXXRecordDecl *Lambda) {
   // If the context of a closure type is an initializer for a class member
   // (static or nonstatic), it is encoded in a qualified name with a final
@@ -1705,6 +1726,8 @@ void CXXNameMangler::mangleLambda(const CXXRecordDecl *Lambda) {
   }
 
   Out << "Ul";
+  for (auto *D : Lambda->getLambdaExplicitTemplateParameters())
+    mangleTemplateParamDecl(D);
   const FunctionProtoType *Proto = Lambda->getLambdaTypeInfo()->getType()->
                                    getAs<FunctionProtoType>();
   mangleBareFunctionType(Proto, /*MangleReturnType=*/false,
@@ -1869,6 +1892,7 @@ void CXXNameMangler::mangleType(TemplateName TN) {
     break;
 
   case TemplateName::OverloadedTemplate:
+  case TemplateName::AssumedTemplate:
     llvm_unreachable("can't mangle an overloaded template name as a <type>");
 
   case TemplateName::DependentTemplate: {
@@ -1941,6 +1965,7 @@ bool CXXNameMangler::mangleUnresolvedTypeOrSimpleId(QualType Ty,
   case Type::ObjCTypeParam:
   case Type::Atomic:
   case Type::Pipe:
+  case Type::MacroQualified:
     llvm_unreachable("type is illegal as a nested name specifier");
 
   case Type::SubstTemplateTypeParmPack:
@@ -2007,6 +2032,7 @@ bool CXXNameMangler::mangleUnresolvedTypeOrSimpleId(QualType Ty,
     }
 
     case TemplateName::OverloadedTemplate:
+    case TemplateName::AssumedTemplate:
     case TemplateName::DependentTemplate:
       llvm_unreachable("invalid base for a template specialization type");
 
@@ -2581,17 +2607,33 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
   case BuiltinType::Double:
     Out << 'd';
     break;
-  case BuiltinType::LongDouble:
-    Out << (getASTContext().getTargetInfo().useFloat128ManglingForLongDouble()
-                ? 'g'
-                : 'e');
+  case BuiltinType::LongDouble: {
+    bool UseFloat128Mangling =
+        getASTContext().getTargetInfo().useFloat128ManglingForLongDouble();
+    if (getASTContext().getLangOpts().OpenMP &&
+        getASTContext().getLangOpts().OpenMPIsDevice) {
+      UseFloat128Mangling = getASTContext()
+                                .getAuxTargetInfo()
+                                ->useFloat128ManglingForLongDouble();
+    }
+    Out << (UseFloat128Mangling ? 'g' : 'e');
     break;
-  case BuiltinType::Float128:
-    if (getASTContext().getTargetInfo().useFloat128ManglingForLongDouble())
+  }
+  case BuiltinType::Float128: {
+    bool UseFloat128Mangling =
+        getASTContext().getTargetInfo().useFloat128ManglingForLongDouble();
+    if (getASTContext().getLangOpts().OpenMP &&
+        getASTContext().getLangOpts().OpenMPIsDevice) {
+      UseFloat128Mangling = getASTContext()
+                                .getAuxTargetInfo()
+                                ->useFloat128ManglingForLongDouble();
+    }
+    if (UseFloat128Mangling)
       Out << "U10__float128"; // Match the GCC mangling
     else
       Out << 'g';
     break;
+  }
   case BuiltinType::NullPtr:
     Out << "Dn";
     break;
@@ -2640,6 +2682,15 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
     Out << type_name.size() << type_name; \
     break;
 #include "clang/Basic/OpenCLExtensionTypes.def"
+  // The SVE types are effectively target-specific.  The mangling scheme
+  // is defined in the appendices to the Procedure Call Standard for the
+  // Arm Architecture.
+#define SVE_TYPE(Name, Id, SingletonId) \
+  case BuiltinType::Id: \
+    type_name = Name; \
+    Out << 'u' << type_name.size() << type_name; \
+    break;
+#include "clang/Basic/AArch64SVEACLETypes.def"
   }
 }
 
@@ -2735,7 +2786,7 @@ void CXXNameMangler::mangleType(const FunctionProtoType *T) {
 
   // Mangle CV-qualifiers, if present.  These are 'this' qualifiers,
   // e.g. "const" in "int (A::*)() const".
-  mangleQualifiers(T->getTypeQuals());
+  mangleQualifiers(T->getMethodQuals());
 
   // Mangle instantiation-dependent exception-specification, if present,
   // per cxx-abi-dev proposal on 2016-10-11.
@@ -3474,6 +3525,32 @@ void CXXNameMangler::mangleInitListElements(const InitListExpr *InitList) {
     mangleExpression(InitList->getInit(i));
 }
 
+void CXXNameMangler::mangleDeclRefExpr(const NamedDecl *D) {
+  switch (D->getKind()) {
+  default:
+    //  <expr-primary> ::= L <mangled-name> E # external name
+    Out << 'L';
+    mangle(D);
+    Out << 'E';
+    break;
+
+  case Decl::ParmVar:
+    mangleFunctionParam(cast<ParmVarDecl>(D));
+    break;
+
+  case Decl::EnumConstant: {
+    const EnumConstantDecl *ED = cast<EnumConstantDecl>(D);
+    mangleIntegerLiteral(ED->getType(), ED->getInitVal());
+    break;
+  }
+
+  case Decl::NonTypeTemplateParm:
+    const NonTypeTemplateParmDecl *PD = cast<NonTypeTemplateParmDecl>(D);
+    mangleTemplateParameter(PD->getIndex());
+    break;
+  }
+}
+
 void CXXNameMangler::mangleExpression(const Expr *E, unsigned Arity) {
   // <expression> ::= <unary operator-name> <expression>
   //              ::= <binary operator-name> <expression> <expression>
@@ -3564,6 +3641,7 @@ recurse:
   case Expr::AsTypeExprClass:
   case Expr::PseudoObjectExprClass:
   case Expr::AtomicExprClass:
+  case Expr::SourceLocExprClass:
   case Expr::FixedPointLiteralClass:
   {
     if (!NullOut) {
@@ -3899,13 +3977,14 @@ recurse:
       Diags.Report(DiagID);
       return;
     }
-    case UETT_OpenMPRequiredSimdAlign:
+    case UETT_OpenMPRequiredSimdAlign: {
       DiagnosticsEngine &Diags = Context.getDiags();
       unsigned DiagID = Diags.getCustomDiagID(
           DiagnosticsEngine::Error,
           "cannot yet mangle __builtin_omp_required_simd_align expression");
       Diags.Report(DiagID);
       return;
+    }
     }
     if (SAE->isArgumentType()) {
       Out << 't';
@@ -4063,37 +4142,9 @@ recurse:
     mangleExpression(cast<ParenExpr>(E)->getSubExpr(), Arity);
     break;
 
-  case Expr::DeclRefExprClass: {
-    const NamedDecl *D = cast<DeclRefExpr>(E)->getDecl();
-
-    switch (D->getKind()) {
-    default:
-      //  <expr-primary> ::= L <mangled-name> E # external name
-      Out << 'L';
-      mangle(D);
-      Out << 'E';
-      break;
-
-    case Decl::ParmVar:
-      mangleFunctionParam(cast<ParmVarDecl>(D));
-      break;
-
-    case Decl::EnumConstant: {
-      const EnumConstantDecl *ED = cast<EnumConstantDecl>(D);
-      mangleIntegerLiteral(ED->getType(), ED->getInitVal());
-      break;
-    }
-
-    case Decl::NonTypeTemplateParm: {
-      const NonTypeTemplateParmDecl *PD = cast<NonTypeTemplateParmDecl>(D);
-      mangleTemplateParameter(PD->getIndex());
-      break;
-    }
-
-    }
-
+  case Expr::DeclRefExprClass:
+    mangleDeclRefExpr(cast<DeclRefExpr>(E)->getDecl());
     break;
-  }
 
   case Expr::SubstNonTypeTemplateParmPackExprClass:
     // FIXME: not clear how to mangle this!
@@ -4107,7 +4158,7 @@ recurse:
     // FIXME: not clear how to mangle this!
     const FunctionParmPackExpr *FPPE = cast<FunctionParmPackExpr>(E);
     Out << "v110_SUBSTPACK";
-    mangleFunctionParam(FPPE->getParameterPack());
+    mangleDeclRefExpr(FPPE->getParameterPack());
     break;
   }
 

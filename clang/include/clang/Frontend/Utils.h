@@ -1,9 +1,8 @@
 //===- Utils.h - Misc utilities for the front-end ---------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -16,6 +15,7 @@
 
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Frontend/DependencyOutputOptions.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/StringMap.h"
@@ -47,7 +47,6 @@ namespace clang {
 class ASTReader;
 class CompilerInstance;
 class CompilerInvocation;
-class DependencyOutputOptions;
 class DiagnosticsEngine;
 class ExternalSemaSource;
 class FrontendOptions;
@@ -78,8 +77,7 @@ void DoPrintPreprocessedInput(Preprocessor &PP, raw_ostream *OS,
 /// An interface for collecting the dependencies of a compilation. Users should
 /// use \c attachToPreprocessor and \c attachToASTReader to get all of the
 /// dependencies.
-/// FIXME: Migrate DependencyFileGen and DependencyGraphGen to use this
-/// interface.
+/// FIXME: Migrate DependencyGraphGen to use this interface.
 class DependencyCollector {
 public:
   virtual ~DependencyCollector();
@@ -96,36 +94,60 @@ public:
                              bool IsSystem, bool IsModuleFile, bool IsMissing);
 
   /// Called when the end of the main file is reached.
-  virtual void finishedMainFile() {}
+  virtual void finishedMainFile(DiagnosticsEngine &Diags) {}
 
   /// Return true if system files should be passed to sawDependency().
   virtual bool needSystemDependencies() { return false; }
 
-  // implementation detail
   /// Add a dependency \p Filename if it has not been seen before and
   /// sawDependency() returns true.
-  void maybeAddDependency(StringRef Filename, bool FromModule, bool IsSystem,
-                          bool IsModuleFile, bool IsMissing);
+  virtual void maybeAddDependency(StringRef Filename, bool FromModule,
+                                  bool IsSystem, bool IsModuleFile,
+                                  bool IsMissing);
+
+protected:
+  /// Return true if the filename was added to the list of dependencies, false
+  /// otherwise.
+  bool addDependency(StringRef Filename);
 
 private:
   llvm::StringSet<> Seen;
   std::vector<std::string> Dependencies;
 };
 
-/// Builds a depdenency file when attached to a Preprocessor (for includes) and
+/// Builds a dependency file when attached to a Preprocessor (for includes) and
 /// ASTReader (for module imports), and writes it out at the end of processing
 /// a source file.  Users should attach to the ast reader whenever a module is
 /// loaded.
-class DependencyFileGenerator {
-  void *Impl; // Opaque implementation
-
-  DependencyFileGenerator(void *Impl);
-
+class DependencyFileGenerator : public DependencyCollector {
 public:
-  static DependencyFileGenerator *CreateAndAttachToPreprocessor(
-    Preprocessor &PP, const DependencyOutputOptions &Opts);
+  DependencyFileGenerator(const DependencyOutputOptions &Opts);
 
-  void AttachToASTReader(ASTReader &R);
+  void attachToPreprocessor(Preprocessor &PP) override;
+
+  void finishedMainFile(DiagnosticsEngine &Diags) override;
+
+  bool needSystemDependencies() final override { return IncludeSystemHeaders; }
+
+  bool sawDependency(StringRef Filename, bool FromModule, bool IsSystem,
+                     bool IsModuleFile, bool IsMissing) final override;
+
+protected:
+  void outputDependencyFile(llvm::raw_ostream &OS);
+
+private:
+  void outputDependencyFile(DiagnosticsEngine &Diags);
+
+  std::string OutputFile;
+  std::vector<std::string> Targets;
+  bool IncludeSystemHeaders;
+  bool PhonyTarget;
+  bool AddMissingHeaderDeps;
+  bool SeenMissingHeader;
+  bool IncludeModuleFiles;
+  bool SkipUnusedModuleMaps;
+  DependencyOutputFormat OutputFormat;
+  unsigned InputFileIndex;
 };
 
 /// Collects the dependencies for imported modules into a directory.  Users

@@ -1,9 +1,8 @@
 //===--- Cuda.h - Utilities for compiling CUDA code  ------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -12,6 +11,7 @@
 
 namespace llvm {
 class StringRef;
+class VersionTuple;
 } // namespace llvm
 
 namespace clang {
@@ -25,12 +25,12 @@ enum class CudaVersion {
   CUDA_91,
   CUDA_92,
   CUDA_100,
-  LATEST = CUDA_100,
+  CUDA_101,
+  LATEST = CUDA_101,
 };
 const char *CudaVersionToString(CudaVersion V);
-
-// No string -> CudaVersion conversion function because there's no canonical
-// spelling of the various CUDA versions.
+// Input is "Major.Minor"
+CudaVersion CudaStringToVersion(llvm::StringRef S);
 
 enum class CudaArch {
   UNKNOWN,
@@ -103,6 +103,17 @@ CudaVersion MinVersionForCudaArch(CudaArch A);
 
 /// Get the latest CudaVersion that supports the given CudaArch.
 CudaVersion MaxVersionForCudaArch(CudaArch A);
+
+//  Various SDK-dependent features that affect CUDA compilation
+enum class CudaFeature {
+  // CUDA-9.2+ uses a new API for launching kernels.
+  CUDA_USES_NEW_LAUNCH,
+  // CUDA-10.1+ needs explicit end of GPU binary registration.
+  CUDA_USES_FATBIN_REGISTER_END,
+};
+
+bool CudaFeatureEnabled(llvm::VersionTuple, CudaFeature);
+bool CudaFeatureEnabled(CudaVersion, CudaFeature);
 
 } // namespace clang
 

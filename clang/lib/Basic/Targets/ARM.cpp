@@ -1,9 +1,8 @@
 //===--- ARM.cpp - Implement ARM target feature support -------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -41,13 +40,14 @@ void ARMTargetInfo::setABIAAPCS() {
   // so set preferred for small types to 32.
   if (T.isOSBinFormatMachO()) {
     resetDataLayout(BigEndian
-                        ? "E-m:o-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
-                        : "e-m:o-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64");
+                        ? "E-m:o-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
+                        : "e-m:o-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64");
   } else if (T.isOSWindows()) {
     assert(!BigEndian && "Windows on ARM does not support big endian");
     resetDataLayout("e"
                     "-m:w"
                     "-p:32:32"
+                    "-Fi8"
                     "-i64:64"
                     "-v128:64:128"
                     "-a:0:32"
@@ -55,11 +55,11 @@ void ARMTargetInfo::setABIAAPCS() {
                     "-S64");
   } else if (T.isOSNaCl()) {
     assert(!BigEndian && "NaCl on ARM does not support big endian");
-    resetDataLayout("e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S128");
+    resetDataLayout("e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S128");
   } else {
     resetDataLayout(BigEndian
-                        ? "E-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
-                        : "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64");
+                        ? "E-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
+                        : "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64");
   }
 
   // FIXME: Enumerated types are variable width in straight AAPCS.
@@ -88,17 +88,17 @@ void ARMTargetInfo::setABIAPCS(bool IsAAPCS16) {
 
   if (T.isOSBinFormatMachO() && IsAAPCS16) {
     assert(!BigEndian && "AAPCS16 does not support big-endian");
-    resetDataLayout("e-m:o-p:32:32-i64:64-a:0:32-n32-S128");
+    resetDataLayout("e-m:o-p:32:32-Fi8-i64:64-a:0:32-n32-S128");
   } else if (T.isOSBinFormatMachO())
     resetDataLayout(
         BigEndian
-            ? "E-m:o-p:32:32-f64:32:64-v64:32:64-v128:32:128-a:0:32-n32-S32"
-            : "e-m:o-p:32:32-f64:32:64-v64:32:64-v128:32:128-a:0:32-n32-S32");
+            ? "E-m:o-p:32:32-Fi8-f64:32:64-v64:32:64-v128:32:128-a:0:32-n32-S32"
+            : "e-m:o-p:32:32-Fi8-f64:32:64-v64:32:64-v128:32:128-a:0:32-n32-S32");
   else
     resetDataLayout(
         BigEndian
-            ? "E-m:e-p:32:32-f64:32:64-v64:32:64-v128:32:128-a:0:32-n32-S32"
-            : "e-m:e-p:32:32-f64:32:64-v64:32:64-v128:32:128-a:0:32-n32-S32");
+            ? "E-m:e-p:32:32-Fi8-f64:32:64-v64:32:64-v128:32:128-a:0:32-n32-S32"
+            : "e-m:e-p:32:32-Fi8-f64:32:64-v64:32:64-v128:32:128-a:0:32-n32-S32");
 
   // FIXME: Override "preferred align" for double and long long.
 }
@@ -144,6 +144,14 @@ void ARMTargetInfo::setAtomic() {
     if (ShouldUseInlineAtomic)
       MaxAtomicInlineWidth = 64;
   }
+}
+
+bool ARMTargetInfo::hasMVE() const {
+  return ArchKind == llvm::ARM::ArchKind::ARMV8_1MMainline && MVE != 0;
+}
+
+bool ARMTargetInfo::hasMVEFloat() const {
+  return hasMVE() && (MVE & MVE_FP);
 }
 
 bool ARMTargetInfo::isThumb() const {
@@ -197,6 +205,8 @@ StringRef ARMTargetInfo::getCPUAttr() const {
     return "8M_MAIN";
   case llvm::ARM::ArchKind::ARMV8R:
     return "8R";
+  case llvm::ARM::ArchKind::ARMV8_1MMainline:
+    return "8_1M_MAIN";
   }
 }
 
@@ -313,6 +323,8 @@ ARMTargetInfo::ARMTargetInfo(const llvm::Triple &Triple,
     this->MCountName = Opts.EABIVersion == llvm::EABI::GNU
                            ? "\01__gnu_mcount_nc"
                            : "\01mcount";
+
+  SoftFloatABI = llvm::is_contained(Opts.FeaturesAsWritten, "+soft-float-abi");
 }
 
 StringRef ARMTargetInfo::getABI() const { return ABI; }
@@ -375,12 +387,21 @@ bool ARMTargetInfo::initFeatureMap(
 
   // Convert user-provided arm and thumb GNU target attributes to
   // [-|+]thumb-mode target features respectively.
-  std::vector<std::string> UpdatedFeaturesVec(FeaturesVec);
-  for (auto &Feature : UpdatedFeaturesVec) {
-    if (Feature.compare("+arm") == 0)
-      Feature = "-thumb-mode";
-    else if (Feature.compare("+thumb") == 0)
-      Feature = "+thumb-mode";
+  std::vector<std::string> UpdatedFeaturesVec;
+  for (const auto &Feature : FeaturesVec) {
+    // Skip soft-float-abi; it's something we only use to initialize a bit of
+    // class state, and is otherwise unrecognized.
+    if (Feature == "+soft-float-abi")
+      continue;
+
+    StringRef FixedFeature;
+    if (Feature == "+arm")
+      FixedFeature = "-thumb-mode";
+    else if (Feature == "+thumb")
+      FixedFeature = "+thumb-mode";
+    else
+      FixedFeature = Feature;
+    UpdatedFeaturesVec.push_back(FixedFeature.str());
   }
 
   return TargetInfo::initFeatureMap(Features, Diags, CPU, UpdatedFeaturesVec);
@@ -390,37 +411,49 @@ bool ARMTargetInfo::initFeatureMap(
 bool ARMTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
                                          DiagnosticsEngine &Diags) {
   FPU = 0;
+  MVE = 0;
   CRC = 0;
   Crypto = 0;
   DSP = 0;
   Unaligned = 1;
-  SoftFloat = SoftFloatABI = false;
+  SoftFloat = false;
+  // Note that SoftFloatABI is initialized in our constructor.
   HWDiv = 0;
   DotProd = 0;
+  HasFloat16 = true;
 
   // This does not diagnose illegal cases like having both
-  // "+vfpv2" and "+vfpv3" or having "+neon" and "+fp-only-sp".
-  uint32_t HW_FP_remove = 0;
+  // "+vfpv2" and "+vfpv3" or having "+neon" and "-fp64".
   for (const auto &Feature : Features) {
     if (Feature == "+soft-float") {
       SoftFloat = true;
-    } else if (Feature == "+soft-float-abi") {
-      SoftFloatABI = true;
-    } else if (Feature == "+vfp2") {
+    } else if (Feature == "+vfp2sp" || Feature == "+vfp2d16sp" ||
+               Feature == "+vfp2" || Feature == "+vfp2d16") {
       FPU |= VFP2FPU;
-      HW_FP |= HW_FP_SP | HW_FP_DP;
-    } else if (Feature == "+vfp3") {
+      HW_FP |= HW_FP_SP;
+      if (Feature == "+vfp2" || Feature == "+vfp2d16")
+          HW_FP |= HW_FP_DP;
+    } else if (Feature == "+vfp3sp" || Feature == "+vfp3d16sp" ||
+               Feature == "+vfp3" || Feature == "+vfp3d16") {
       FPU |= VFP3FPU;
-      HW_FP |= HW_FP_SP | HW_FP_DP;
-    } else if (Feature == "+vfp4") {
+      HW_FP |= HW_FP_SP;
+      if (Feature == "+vfp3" || Feature == "+vfp3d16")
+          HW_FP |= HW_FP_DP;
+    } else if (Feature == "+vfp4sp" || Feature == "+vfp4d16sp" ||
+               Feature == "+vfp4" || Feature == "+vfp4d16") {
       FPU |= VFP4FPU;
-      HW_FP |= HW_FP_SP | HW_FP_DP | HW_FP_HP;
-    } else if (Feature == "+fp-armv8") {
+      HW_FP |= HW_FP_SP | HW_FP_HP;
+      if (Feature == "+vfp4" || Feature == "+vfp4d16")
+          HW_FP |= HW_FP_DP;
+    } else if (Feature == "+fp-armv8sp" || Feature == "+fp-armv8d16sp" ||
+               Feature == "+fp-armv8" || Feature == "+fp-armv8d16") {
       FPU |= FPARMV8;
-      HW_FP |= HW_FP_SP | HW_FP_DP | HW_FP_HP;
+      HW_FP |= HW_FP_SP | HW_FP_HP;
+      if (Feature == "+fp-armv8" || Feature == "+fp-armv8d16")
+          HW_FP |= HW_FP_DP;
     } else if (Feature == "+neon") {
       FPU |= NeonFPU;
-      HW_FP |= HW_FP_SP | HW_FP_DP;
+      HW_FP |= HW_FP_SP;
     } else if (Feature == "+hwdiv") {
       HWDiv |= HWDivThumb;
     } else if (Feature == "+hwdiv-arm") {
@@ -431,8 +464,13 @@ bool ARMTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       Crypto = 1;
     } else if (Feature == "+dsp") {
       DSP = 1;
-    } else if (Feature == "+fp-only-sp") {
-      HW_FP_remove |= HW_FP_DP;
+    } else if (Feature == "+fp64") {
+      HW_FP |= HW_FP_DP;
+    } else if (Feature == "+8msecext") {
+      if (CPUProfile != "M" || ArchVersion != 8) {
+        Diags.Report(diag::err_target_unsupported_mcmse) << CPU;
+        return false;
+      }
     } else if (Feature == "+strict-align") {
       Unaligned = 0;
     } else if (Feature == "+fp16") {
@@ -441,9 +479,17 @@ bool ARMTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasLegalHalfType = true;
     } else if (Feature == "+dotprod") {
       DotProd = true;
+    } else if (Feature == "+mve") {
+      DSP = 1;
+      MVE |= MVE_INT;
+    } else if (Feature == "+mve.fp") {
+      DSP = 1;
+      HasLegalHalfType = true;
+      FPU |= FPARMV8;
+      MVE |= MVE_INT | MVE_FP;
+      HW_FP |= HW_FP_SP | HW_FP_HP;
     }
   }
-  HW_FP &= ~HW_FP_remove;
 
   switch (ArchVersion) {
   case 6:
@@ -474,11 +520,6 @@ bool ARMTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   else if (FPMath == FP_VFP)
     Features.push_back("-neonfp");
 
-  // Remove front-end specific options which the backend handles differently.
-  auto Feature = std::find(Features.begin(), Features.end(), "+soft-float-abi");
-  if (Feature != Features.end())
-    Features.erase(Feature);
-
   return true;
 }
 
@@ -492,6 +533,7 @@ bool ARMTargetInfo::hasFeature(StringRef Feature) const {
       .Case("vfp", FPU && !SoftFloat)
       .Case("hwdiv", HWDiv & HWDivThumb)
       .Case("hwdiv-arm", HWDiv & HWDivARM)
+      .Case("mve", hasMVE())
       .Default(false);
 }
 
@@ -652,6 +694,12 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
   if (SoftFloat)
     Builder.defineMacro("__SOFTFP__");
 
+  // ACLE position independent code macros.
+  if (Opts.ROPI)
+    Builder.defineMacro("__ARM_ROPI", "1");
+  if (Opts.RWPI)
+    Builder.defineMacro("__ARM_RWPI", "1");
+
   if (ArchKind == llvm::ARM::ArchKind::XSCALE)
     Builder.defineMacro("__XSCALE__");
 
@@ -701,10 +749,18 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
                         "0x" + Twine::utohexstr(HW_FP & ~HW_FP_DP));
   }
 
+  if (hasMVE()) {
+    Builder.defineMacro("__ARM_FEATURE_MVE", hasMVEFloat() ? "3" : "1");
+  }
+
   Builder.defineMacro("__ARM_SIZEOF_WCHAR_T",
                       Twine(Opts.WCharSize ? Opts.WCharSize : 4));
 
   Builder.defineMacro("__ARM_SIZEOF_MINIMAL_ENUM", Opts.ShortEnums ? "1" : "4");
+
+  // CMSE
+  if (ArchVersion == 8 && ArchProfile == llvm::ARM::ProfileKind::M)
+    Builder.defineMacro("__ARM_FEATURE_CMSE", Opts.Cmse ? "3" : "1");
 
   if (ArchVersion >= 6 && CPUAttr != "6M" && CPUAttr != "8M_BASE") {
     Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");
@@ -1049,7 +1105,7 @@ CygwinARMTargetInfo::CygwinARMTargetInfo(const llvm::Triple &Triple,
   this->WCharType = TargetInfo::UnsignedShort;
   TLSSupported = false;
   DoubleAlign = LongLongAlign = 64;
-  resetDataLayout("e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64");
+  resetDataLayout("e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64");
 }
 
 void CygwinARMTargetInfo::getTargetDefines(const LangOptions &Opts,

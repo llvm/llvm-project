@@ -72,7 +72,7 @@ Available checks
 Available checks are:
 
   -  ``-fsanitize=alignment``: Use of a misaligned pointer or creation
-     of a misaligned reference.
+     of a misaligned reference. Also sanitizes assume_aligned-like attributes.
   -  ``-fsanitize=bool``: Load of a ``bool`` value which is neither
      ``true`` nor ``false``.
   -  ``-fsanitize=builtin``: Passing invalid values to compiler builtins.
@@ -295,7 +295,7 @@ UndefinedBehaviorSanitizer is supported on the following operating systems:
 * NetBSD
 * FreeBSD
 * OpenBSD
-* OS X 10.6 onwards
+* macOS
 * Windows
 
 The runtime library is relatively portable and platform independent. If the OS
@@ -338,4 +338,4 @@ More Information
   <http://blog.llvm.org/2011/05/what-every-c-programmer-should-know.html>`_
 * From John Regehr's *Embedded in Academia* blog:
   `A Guide to Undefined Behavior in C and C++
-  <http://blog.regehr.org/archives/213>`_
+  <https://blog.regehr.org/archives/213>`_

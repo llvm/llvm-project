@@ -1412,7 +1412,7 @@ struct D : virtual C {
 // CHECK-35-NEXT:   13 | void Test28::B::b()
 //
 // CHECK-35:      VTable indices for 'Test28::E' (1 entries).
-// CHECK-35-NEXT :   0 | void Test28::E::e()
+// CHECK-35-NEXT:    0 | void Test28::E::e()
 
 // CHECK-35:      Construction vtable for ('Test28::D', 0) in 'Test28::E' (13 entries).
 // CHECK-35-NEXT:    0 | vbase_offset (8)

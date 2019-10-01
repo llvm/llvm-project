@@ -139,9 +139,6 @@
  </array>
  <key>files</key>
  <array>
-  <string>/clang/test/Analysis/diagnostics/plist-diagnostics-include-check.cpp</string>
-  <string>/clang/test/Analysis/diagnostics/Inputs/include/plist-diagnostics-include-check-macro.h</string>
-  <string>/clang/test/Analysis/diagnostics/Inputs/include/plist-diagnostics-include-check-macro.def</string>
  </array>
 </dict>
 </plist>

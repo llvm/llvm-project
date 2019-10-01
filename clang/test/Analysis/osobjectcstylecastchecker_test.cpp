@@ -28,8 +28,8 @@ unsigned no_warn_on_dynamic_cast(OSObject *obj) {
   return a->getCount();
 }
 
-unsigned long no_warn_on_primitive_conversion(OSArray *arr) {
-  return (unsigned long) arr;
+__SIZE_TYPE__ no_warn_on_primitive_conversion(OSArray *arr) {
+  return (__SIZE_TYPE__) arr;
 }
 
 unsigned no_warn_on_other_type_cast(A *a) {

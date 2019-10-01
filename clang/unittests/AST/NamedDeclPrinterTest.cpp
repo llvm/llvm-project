@@ -1,9 +1,8 @@
 //===- unittests/AST/NamedDeclPrinterTest.cpp --- NamedDecl printer tests -===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -116,6 +115,18 @@ PrintedWrittenNamedDeclCXX11Matches(StringRef Code, StringRef DeclName,
                                  "input.cc");
 }
 
+::testing::AssertionResult
+PrintedWrittenPropertyDeclObjCMatches(StringRef Code, StringRef DeclName,
+                                   StringRef ExpectedPrinted) {
+  std::vector<std::string> Args{"-std=c++11", "-xobjective-c++"};
+  return PrintedNamedDeclMatches(Code,
+                                 Args,
+                                 /*SuppressUnwrittenScope*/ true,
+                                 objcPropertyDecl(hasName(DeclName)).bind("id"),
+                                 ExpectedPrinted,
+                                 "input.m");
+}
+
 } // unnamed namespace
 
 TEST(NamedDeclPrinter, TestNamespace1) {
@@ -179,4 +190,36 @@ TEST(NamedDeclPrinter, TestLinkageInNamespace) {
     "namespace X { extern \"C\" { int A; } }",
     "A",
     "X::A"));
+}
+
+TEST(NamedDeclPrinter, TestObjCClassExtension) {
+  const char *Code =
+R"(
+  @interface Obj
+  @end
+
+  @interface Obj ()
+  @property(nonatomic) int property;
+  @end
+)";
+  ASSERT_TRUE(PrintedWrittenPropertyDeclObjCMatches(
+    Code,
+    "property",
+    "Obj::property"));
+}
+
+TEST(NamedDeclPrinter, TestObjCClassExtensionWithGetter) {
+  const char *Code =
+R"(
+  @interface Obj
+  @end
+
+  @interface Obj ()
+  @property(nonatomic, getter=myPropertyGetter) int property;
+  @end
+)";
+  ASSERT_TRUE(PrintedWrittenPropertyDeclObjCMatches(
+    Code,
+    "property",
+    "Obj::property"));
 }

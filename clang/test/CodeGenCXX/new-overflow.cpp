@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple i386-unknown-unknown %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -std=c++14 -triple i386-unknown-unknown %s -emit-llvm -o - | FileCheck %s
 
 // rdar://problem/9246208
 

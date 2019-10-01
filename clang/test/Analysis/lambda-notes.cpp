@@ -1,5 +1,5 @@
 // RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=core.DivideZero -analyzer-config inline-lambdas=true -analyzer-output plist -verify %s -o %t
-// RUN: tail -n +11 %t | diff -u -w -I "<string>/" -I "<string>.:" -I "version" - %S/Inputs/expected-plists/lambda-notes.cpp.plist
+// RUN: tail -n +11 %t | %normalize_plist | diff -ub %S/Inputs/expected-plists/lambda-notes.cpp.plist -
 
 
 // Diagnostic inside a lambda

@@ -55,7 +55,7 @@ registering it using ``PragmaHandlerRegistry::Add<>``:
   class ExamplePragmaHandler : public PragmaHandler {
   public:
     ExamplePragmaHandler() : PragmaHandler("example_pragma") { }
-    void HandlePragma(Preprocessor &PP, PragmaIntroducerKind Introducer,
+    void HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer,
                       Token &PragmaTok) {
       // Handle the pragma
     }
@@ -69,7 +69,7 @@ Putting it all together
 Let's look at an example plugin that prints top-level function names.  This
 example is checked into the clang repository; please take a look at
 the `latest version of PrintFunctionNames.cpp
-<https://llvm.org/viewvc/llvm-project/cfe/trunk/examples/PrintFunctionNames/PrintFunctionNames.cpp?view=markup>`_.
+<https://github.com/llvm/llvm-project/blob/master/clang/examples/PrintFunctionNames/PrintFunctionNames.cpp>`_.
 
 Running the plugin
 ==================
@@ -110,7 +110,7 @@ source tree:
             -plugin -Xclang print-fns
 
 Also see the print-function-name plugin example's
-`README <https://llvm.org/viewvc/llvm-project/cfe/trunk/examples/PrintFunctionNames/README.txt?view=markup>`_
+`README <https://github.com/llvm/llvm-project/blob/master/clang/examples/PrintFunctionNames/README.txt>`_
 
 
 Using the clang command line

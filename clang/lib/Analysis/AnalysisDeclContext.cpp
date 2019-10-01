@@ -1,9 +1,8 @@
 //===- AnalysisDeclContext.cpp - Analysis context for Path Sens analysis --===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -31,6 +30,7 @@
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/CFGStmtMap.h"
 #include "clang/Analysis/Support/BumpVector.h"
+#include "clang/Basic/JsonSupport.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
@@ -71,7 +71,7 @@ AnalysisDeclContextManager::AnalysisDeclContextManager(
     bool addLoopExit, bool addScopes, bool synthesizeBodies,
     bool addStaticInitBranch, bool addCXXNewAllocator,
     bool addRichCXXConstructors, bool markElidedCXXConstructors,
-    CodeInjector *injector)
+    bool addVirtualBaseBranches, CodeInjector *injector)
     : Injector(injector), FunctionBodyFarm(ASTCtx, injector),
       SynthesizeBodies(synthesizeBodies) {
   cfgBuildOptions.PruneTriviallyFalseEdges = !useUnoptimizedCFG;
@@ -85,6 +85,7 @@ AnalysisDeclContextManager::AnalysisDeclContextManager(
   cfgBuildOptions.AddCXXNewAllocator = addCXXNewAllocator;
   cfgBuildOptions.AddRichCXXConstructors = addRichCXXConstructors;
   cfgBuildOptions.MarkElidedCXXConstructors = markElidedCXXConstructors;
+  cfgBuildOptions.AddVirtualBaseBranches = addVirtualBaseBranches;
 }
 
 void AnalysisDeclContextManager::clear() { Contexts.clear(); }
@@ -463,17 +464,17 @@ bool LocationContext::isParentOf(const LocationContext *LC) const {
   return false;
 }
 
-static void printLocation(raw_ostream &OS, const SourceManager &SM,
-                          SourceLocation SLoc) {
-  if (SLoc.isFileID() && SM.isInMainFile(SLoc))
-    OS << "line " << SM.getExpansionLineNumber(SLoc);
+static void printLocation(raw_ostream &Out, const SourceManager &SM,
+                          SourceLocation Loc) {
+  if (Loc.isFileID() && SM.isInMainFile(Loc))
+    Out << SM.getExpansionLineNumber(Loc);
   else
-    SLoc.print(OS, SM);
+    Loc.print(Out, SM);
 }
 
-void LocationContext::dumpStack(
-    raw_ostream &OS, StringRef Indent, const char *NL, const char *Sep,
-    std::function<void(const LocationContext *)> printMoreInfoPerContext) const {
+void LocationContext::dumpStack(raw_ostream &Out, const char *NL,
+                                std::function<void(const LocationContext *)>
+                                    printMoreInfoPerContext) const {
   ASTContext &Ctx = getAnalysisDeclContext()->getASTContext();
   PrintingPolicy PP(Ctx.getLangOpts());
   PP.TerseOutput = 1;
@@ -485,37 +486,91 @@ void LocationContext::dumpStack(
   for (const LocationContext *LCtx = this; LCtx; LCtx = LCtx->getParent()) {
     switch (LCtx->getKind()) {
     case StackFrame:
-      OS << Indent << '#' << Frame << ' ';
+      Out << "\t#" << Frame << ' ';
       ++Frame;
       if (const auto *D = dyn_cast<NamedDecl>(LCtx->getDecl()))
-        OS << "Calling " << D->getQualifiedNameAsString();
+        Out << "Calling " << D->getQualifiedNameAsString();
       else
-        OS << "Calling anonymous code";
+        Out << "Calling anonymous code";
       if (const Stmt *S = cast<StackFrameContext>(LCtx)->getCallSite()) {
-        OS << " at ";
-        printLocation(OS, SM, S->getBeginLoc());
+        Out << " at line ";
+        printLocation(Out, SM, S->getBeginLoc());
       }
       break;
     case Scope:
-      OS << "Entering scope";
+      Out << "Entering scope";
       break;
     case Block:
-      OS << "Invoking block";
+      Out << "Invoking block";
       if (const Decl *D = cast<BlockInvocationContext>(LCtx)->getDecl()) {
-        OS << " defined at ";
-        printLocation(OS, SM, D->getBeginLoc());
+        Out << " defined at line ";
+        printLocation(Out, SM, D->getBeginLoc());
       }
       break;
     }
-    OS << NL;
+    Out << NL;
 
     printMoreInfoPerContext(LCtx);
   }
 }
 
-LLVM_DUMP_METHOD void LocationContext::dumpStack() const {
-  dumpStack(llvm::errs());
+void LocationContext::printJson(raw_ostream &Out, const char *NL,
+                                unsigned int Space, bool IsDot,
+                                std::function<void(const LocationContext *)>
+                                    printMoreInfoPerContext) const {
+  ASTContext &Ctx = getAnalysisDeclContext()->getASTContext();
+  PrintingPolicy PP(Ctx.getLangOpts());
+  PP.TerseOutput = 1;
+
+  const SourceManager &SM =
+      getAnalysisDeclContext()->getASTContext().getSourceManager();
+
+  unsigned Frame = 0;
+  for (const LocationContext *LCtx = this; LCtx; LCtx = LCtx->getParent()) {
+    Indent(Out, Space, IsDot) << "{ \"location_context\": \"";
+    switch (LCtx->getKind()) {
+    case StackFrame:
+      Out << '#' << Frame << " Call\", \"calling\": \"";
+      ++Frame;
+      if (const auto *D = dyn_cast<NamedDecl>(LCtx->getDecl()))
+        Out << D->getQualifiedNameAsString();
+      else
+        Out << "anonymous code";
+
+      Out << "\", \"call_line\": ";
+      if (const Stmt *S = cast<StackFrameContext>(LCtx)->getCallSite()) {
+        Out << '\"';
+        printLocation(Out, SM, S->getBeginLoc());
+	Out << '\"';
+      } else {
+        Out << "null";
+      }
+
+      Out << ", \"items\": ";
+      break;
+    case Scope:
+      Out << "Entering scope\" ";
+      break;
+    case Block:
+      Out << "Invoking block\" ";
+      if (const Decl *D = cast<BlockInvocationContext>(LCtx)->getDecl()) {
+        Out << ", \"decl_line\": ";
+        printLocation(Out, SM, D->getBeginLoc());
+        Out << ' ';
+      }
+      break;
+    }
+
+    printMoreInfoPerContext(LCtx);
+
+    Out << '}';
+    if (LCtx->getParent())
+      Out << ',';
+    Out << NL;
+  }
 }
+
+LLVM_DUMP_METHOD void LocationContext::dump() const { printJson(llvm::errs()); }
 
 //===----------------------------------------------------------------------===//
 // Lazily generated map to query the external variables referenced by a Block.

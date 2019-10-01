@@ -3,7 +3,6 @@
 <plist version="1.0">
 <dict>
  <key>clang_version</key>
-<string>clang version 8.0.0 </string>
  <key>diagnostics</key>
  <array>
   <dict>
@@ -1365,6 +1364,34 @@
       </array>
     </dict>
     <dict>
+     <key>kind</key><string>pop-up</string>
+     <key>location</key>
+     <dict>
+      <key>line</key><integer>69</integer>
+      <key>col</key><integer>3</integer>
+      <key>file</key><integer>0</integer>
+     </dict>
+     <key>ranges</key>
+     <array>
+       <array>
+        <dict>
+         <key>line</key><integer>69</integer>
+         <key>col</key><integer>3</integer>
+         <key>file</key><integer>0</integer>
+        </dict>
+        <dict>
+         <key>line</key><integer>69</integer>
+         <key>col</key><integer>16</integer>
+         <key>file</key><integer>0</integer>
+        </dict>
+       </array>
+     </array>
+     <key>extended_message</key>
+     <string>&apos;p&apos; is null</string>
+     <key>message</key>
+     <string>&apos;p&apos; is null</string>
+    </dict>
+    <dict>
      <key>kind</key><string>event</string>
      <key>location</key>
      <dict>
@@ -1525,7 +1552,7 @@
      <key>kind</key><string>event</string>
      <key>location</key>
      <dict>
-      <key>line</key><integer>83</integer>
+      <key>line</key><integer>87</integer>
       <key>col</key><integer>3</integer>
       <key>file</key><integer>0</integer>
      </dict>
@@ -1533,12 +1560,12 @@
      <array>
        <array>
         <dict>
-         <key>line</key><integer>83</integer>
+         <key>line</key><integer>87</integer>
          <key>col</key><integer>3</integer>
          <key>file</key><integer>0</integer>
         </dict>
         <dict>
-         <key>line</key><integer>83</integer>
+         <key>line</key><integer>87</integer>
          <key>col</key><integer>12</integer>
          <key>file</key><integer>0</integer>
         </dict>
@@ -1546,15 +1573,15 @@
      </array>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
-     <string>Passing null pointer value via 1st parameter &apos;a&apos;</string>
+     <string>Passing value via 1st parameter &apos;a&apos;</string>
      <key>message</key>
-     <string>Passing null pointer value via 1st parameter &apos;a&apos;</string>
+     <string>Passing value via 1st parameter &apos;a&apos;</string>
     </dict>
     <dict>
      <key>kind</key><string>event</string>
      <key>location</key>
      <dict>
-      <key>line</key><integer>83</integer>
+      <key>line</key><integer>87</integer>
       <key>col</key><integer>3</integer>
       <key>file</key><integer>0</integer>
      </dict>
@@ -1562,12 +1589,12 @@
      <array>
        <array>
         <dict>
-         <key>line</key><integer>83</integer>
+         <key>line</key><integer>87</integer>
          <key>col</key><integer>3</integer>
          <key>file</key><integer>0</integer>
         </dict>
         <dict>
-         <key>line</key><integer>83</integer>
+         <key>line</key><integer>87</integer>
          <key>col</key><integer>12</integer>
          <key>file</key><integer>0</integer>
         </dict>
@@ -1589,9 +1616,9 @@
      </dict>
      <key>depth</key><integer>1</integer>
      <key>extended_message</key>
-     <string>Entered call from &apos;test1&apos;</string>
+     <string>Entered call from &apos;test2&apos;</string>
      <key>message</key>
-     <string>Entered call from &apos;test1&apos;</string>
+     <string>Entered call from &apos;test2&apos;</string>
     </dict>
     <dict>
      <key>kind</key><string>control</string>
@@ -1642,6 +1669,69 @@
           <dict>
            <key>line</key><integer>77</integer>
            <key>col</key><integer>4</integer>
+           <key>file</key><integer>0</integer>
+          </dict>
+         </array>
+        <key>end</key>
+         <array>
+          <dict>
+           <key>line</key><integer>77</integer>
+           <key>col</key><integer>7</integer>
+           <key>file</key><integer>0</integer>
+          </dict>
+          <dict>
+           <key>line</key><integer>77</integer>
+           <key>col</key><integer>7</integer>
+           <key>file</key><integer>0</integer>
+          </dict>
+         </array>
+       </dict>
+      </array>
+    </dict>
+    <dict>
+     <key>kind</key><string>event</string>
+     <key>location</key>
+     <dict>
+      <key>line</key><integer>77</integer>
+      <key>col</key><integer>7</integer>
+      <key>file</key><integer>0</integer>
+     </dict>
+     <key>ranges</key>
+     <array>
+       <array>
+        <dict>
+         <key>line</key><integer>77</integer>
+         <key>col</key><integer>7</integer>
+         <key>file</key><integer>0</integer>
+        </dict>
+        <dict>
+         <key>line</key><integer>77</integer>
+         <key>col</key><integer>7</integer>
+         <key>file</key><integer>0</integer>
+        </dict>
+       </array>
+     </array>
+     <key>depth</key><integer>1</integer>
+     <key>extended_message</key>
+     <string>Assuming &apos;a&apos; is null</string>
+     <key>message</key>
+     <string>Assuming &apos;a&apos; is null</string>
+    </dict>
+    <dict>
+     <key>kind</key><string>control</string>
+     <key>edges</key>
+      <array>
+       <dict>
+        <key>start</key>
+         <array>
+          <dict>
+           <key>line</key><integer>77</integer>
+           <key>col</key><integer>7</integer>
+           <key>file</key><integer>0</integer>
+          </dict>
+          <dict>
+           <key>line</key><integer>77</integer>
+           <key>col</key><integer>7</integer>
            <key>file</key><integer>0</integer>
           </dict>
          </array>
@@ -1747,15 +1837,14 @@
     <integer>76</integer>
     <integer>77</integer>
     <integer>79</integer>
-    <integer>82</integer>
-    <integer>83</integer>
+    <integer>86</integer>
+    <integer>87</integer>
    </array>
   </dict>
   </dict>
  </array>
  <key>files</key>
  <array>
-   <string>/clang/test/Analysis/plist-macros.cpp</string>
  </array>
 </dict>
 </plist>

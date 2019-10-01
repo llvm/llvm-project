@@ -1,9 +1,8 @@
 //= CStringChecker.cpp - Checks calls to C string functions --------*- C++ -*-//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -1528,6 +1527,10 @@ void CStringChecker::evalStrncat(CheckerContext &C, const CallExpr *CE) const {
 void CStringChecker::evalStrlcat(CheckerContext &C, const CallExpr *CE) const {
   if (CE->getNumArgs() < 3)
     return;
+
+  // FIXME: strlcat() uses a different rule for bound checking, i.e. 'n' means
+  // a different thing as compared to strncat(). This currently causes
+  // false positives in the alpha string bound checker.
 
   //char *strlcat(char *s1, const char *s2, size_t n);
   evalStrcpyCommon(C, CE,

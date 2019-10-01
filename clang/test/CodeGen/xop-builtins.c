@@ -290,49 +290,57 @@ __m128i test_mm_sha_epi64(__m128i a, __m128i b) {
 
 __m128i test_mm_com_epu8(__m128i a, __m128i b) {
   // CHECK-LABEL: test_mm_com_epu8
-  // CHECK: call <16 x i8> @llvm.x86.xop.vpcomub(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i8 0)
+  // CHECK: icmp ult <16 x i8> %{{.*}}, %{{.*}}
+  // CHECK: sext <16 x i1> %{{.*}} to <16 x i8>
   return _mm_com_epu8(a, b, 0);
 }
 
 __m128i test_mm_com_epu16(__m128i a, __m128i b) {
   // CHECK-LABEL: test_mm_com_epu16
-  // CHECK: call <8 x i16> @llvm.x86.xop.vpcomuw(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i8 0)
+  // CHECK: icmp ult <8 x i16> %{{.*}}, %{{.*}}
+  // CHECK: sext <8 x i1> %{{.*}} to <8 x i16>
   return _mm_com_epu16(a, b, 0);
 }
 
 __m128i test_mm_com_epu32(__m128i a, __m128i b) {
   // CHECK-LABEL: test_mm_com_epu32
-  // CHECK: call <4 x i32> @llvm.x86.xop.vpcomud(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i8 0)
+  // CHECK: icmp ult <4 x i32> %{{.*}}, %{{.*}}
+  // CHECK: sext <4 x i1> %{{.*}} to <4 x i32>
   return _mm_com_epu32(a, b, 0);
 }
 
 __m128i test_mm_com_epu64(__m128i a, __m128i b) {
   // CHECK-LABEL: test_mm_com_epu64
-  // CHECK: call <2 x i64> @llvm.x86.xop.vpcomuq(<2 x i64> %{{.*}}, <2 x i64> %{{.*}}, i8 0)
+  // CHECK: icmp ult <2 x i64> %{{.*}}, %{{.*}}
+  // CHECK: sext <2 x i1> %{{.*}} to <2 x i64>
   return _mm_com_epu64(a, b, 0);
 }
 
 __m128i test_mm_com_epi8(__m128i a, __m128i b) {
   // CHECK-LABEL: test_mm_com_epi8
-  // CHECK: call <16 x i8> @llvm.x86.xop.vpcomb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i8 0)
+  // CHECK: icmp slt <16 x i8> %{{.*}}, %{{.*}}
+  // CHECK: sext <16 x i1> %{{.*}} to <16 x i8>
   return _mm_com_epi8(a, b, 0);
 }
 
 __m128i test_mm_com_epi16(__m128i a, __m128i b) {
   // CHECK-LABEL: test_mm_com_epi16
-  // CHECK: call <8 x i16> @llvm.x86.xop.vpcomw(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i8 0)
+  // CHECK: icmp slt <8 x i16> %{{.*}}, %{{.*}}
+  // CHECK: sext <8 x i1> %{{.*}} to <8 x i16>
   return _mm_com_epi16(a, b, 0);
 }
 
 __m128i test_mm_com_epi32(__m128i a, __m128i b) {
   // CHECK-LABEL: test_mm_com_epi32
-  // CHECK: call <4 x i32> @llvm.x86.xop.vpcomd(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i8 0)
+  // CHECK: icmp slt <4 x i32> %{{.*}}, %{{.*}}
+  // CHECK: sext <4 x i1> %{{.*}} to <4 x i32>
   return _mm_com_epi32(a, b, 0);
 }
 
 __m128i test_mm_com_epi64(__m128i a, __m128i b) {
   // CHECK-LABEL: test_mm_com_epi64
-  // CHECK: call <2 x i64> @llvm.x86.xop.vpcomq(<2 x i64> %{{.*}}, <2 x i64> %{{.*}}, i8 0)
+  // CHECK: icmp slt <2 x i64> %{{.*}}, %{{.*}}
+  // CHECK: sext <2 x i1> %{{.*}} to <2 x i64>
   return _mm_com_epi64(a, b, 0);
 }
 

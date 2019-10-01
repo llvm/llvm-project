@@ -12,11 +12,11 @@ int f(int i) {
 }
 
 // Test enums.
-enum B { x = 42,
-         l,
-         s };
+enum B { x2 = 42,
+         y2,
+         z2 };
 int enumCheck(void) {
-  return x;
+  return x2;
 }
 
 // Test reporting an error in macro definition

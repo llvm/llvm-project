@@ -181,8 +181,8 @@ union Empty {
 } constexpr empty1;
 
 struct EmptyVariant {
-  union {};
-  struct {};
+  union {}; // expected-warning {{does not declare anything}}
+  struct {}; // expected-warning {{does not declare anything}}
   constexpr EmptyVariant() {} // ok
 } constexpr empty2;
 
@@ -328,7 +328,7 @@ namespace PR14503 {
       int n;
       struct {
         int x,
-            y;
+            y; // expected-note {{subobject declared here}}
       };
     };
     constexpr V() : x(0) {}

@@ -224,28 +224,28 @@ void test_lerp(global int* out, int a, int b, int c)
 }
 
 // CHECK-LABEL: @test_sicmp_i32
-// CHECK: call i64 @llvm.amdgcn.icmp.i32(i32 %a, i32 %b, i32 32)
+// CHECK: call i64 @llvm.amdgcn.icmp.i64.i32(i32 %a, i32 %b, i32 32)
 void test_sicmp_i32(global ulong* out, int a, int b)
 {
   *out = __builtin_amdgcn_sicmp(a, b, 32);
 }
 
 // CHECK-LABEL: @test_uicmp_i32
-// CHECK: call i64 @llvm.amdgcn.icmp.i32(i32 %a, i32 %b, i32 32)
+// CHECK: call i64 @llvm.amdgcn.icmp.i64.i32(i32 %a, i32 %b, i32 32)
 void test_uicmp_i32(global ulong* out, uint a, uint b)
 {
   *out = __builtin_amdgcn_uicmp(a, b, 32);
 }
 
 // CHECK-LABEL: @test_sicmp_i64
-// CHECK: call i64 @llvm.amdgcn.icmp.i64(i64 %a, i64 %b, i32 38)
+// CHECK: call i64 @llvm.amdgcn.icmp.i64.i64(i64 %a, i64 %b, i32 38)
 void test_sicmp_i64(global ulong* out, long a, long b)
 {
   *out = __builtin_amdgcn_sicmpl(a, b, 39-1);
 }
 
 // CHECK-LABEL: @test_uicmp_i64
-// CHECK: call i64 @llvm.amdgcn.icmp.i64(i64 %a, i64 %b, i32 35)
+// CHECK: call i64 @llvm.amdgcn.icmp.i64.i64(i64 %a, i64 %b, i32 35)
 void test_uicmp_i64(global ulong* out, ulong a, ulong b)
 {
   *out = __builtin_amdgcn_uicmpl(a, b, 30+5);
@@ -287,14 +287,14 @@ void test_readlane(global int* out, int a, int b)
 }
 
 // CHECK-LABEL: @test_fcmp_f32
-// CHECK: call i64 @llvm.amdgcn.fcmp.f32(float %a, float %b, i32 5)
+// CHECK: call i64 @llvm.amdgcn.fcmp.i64.f32(float %a, float %b, i32 5)
 void test_fcmp_f32(global ulong* out, float a, float b)
 {
   *out = __builtin_amdgcn_fcmpf(a, b, 5);
 }
 
 // CHECK-LABEL: @test_fcmp_f64
-// CHECK: call i64 @llvm.amdgcn.fcmp.f64(double %a, double %b, i32 6)
+// CHECK: call i64 @llvm.amdgcn.fcmp.i64.f64(double %a, double %b, i32 6)
 void test_fcmp_f64(global ulong* out, double a, double b)
 {
   *out = __builtin_amdgcn_fcmp(a, b, 3+3);
@@ -534,6 +534,30 @@ void test_fmed3_f32(global float* out, float a, float b, float c)
 void test_s_getpc(global ulong* out)
 {
   *out = __builtin_amdgcn_s_getpc();
+}
+
+// CHECK-LABEL: @test_ds_append_lds(
+// CHECK: call i32 @llvm.amdgcn.ds.append.p3i32(i32 addrspace(3)* %ptr, i1 false)
+kernel void test_ds_append_lds(global int* out, local int* ptr) {
+  *out = __builtin_amdgcn_ds_append(ptr);
+}
+
+// CHECK-LABEL: @test_ds_consume_lds(
+// CHECK: call i32 @llvm.amdgcn.ds.consume.p3i32(i32 addrspace(3)* %ptr, i1 false)
+kernel void test_ds_consume_lds(global int* out, local int* ptr) {
+  *out = __builtin_amdgcn_ds_consume(ptr);
+}
+
+// CHECK-LABEL: @test_gws_init(
+// CHECK: call void @llvm.amdgcn.ds.gws.init(i32 %value, i32 %id)
+kernel void test_gws_init(uint value, uint id) {
+  __builtin_amdgcn_ds_gws_init(value, id);
+}
+
+// CHECK-LABEL: @test_gws_barrier(
+// CHECK: call void @llvm.amdgcn.ds.gws.barrier(i32 %value, i32 %id)
+kernel void test_gws_barrier(uint value, uint id) {
+  __builtin_amdgcn_ds_gws_barrier(value, id);
 }
 
 // CHECK-DAG: [[$WI_RANGE]] = !{i32 0, i32 1024}

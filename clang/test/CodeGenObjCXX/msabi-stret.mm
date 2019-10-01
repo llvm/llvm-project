@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple i686-unknown-windows-msvc -fobjc-runtime=ios-6.0 -Os -S -emit-llvm -o - %s -mdisable-fp-elim | FileCheck %s
+// RUN: %clang_cc1 -triple i686-unknown-windows-msvc -fobjc-runtime=ios-6.0 -Os -S -emit-llvm -o - %s -mframe-pointer=all | FileCheck %s
 
 struct S {
   S() = default;
@@ -13,6 +13,5 @@ S f() {
   return [I m:S()];
 }
 
-// CHECK: declare dllimport void @objc_msgSend_stret(i8*, i8*, ...)
+// CHECK: declare dso_local void @objc_msgSend_stret(i8*, i8*, ...)
 // CHECK-NOT: declare dllimport void @objc_msgSend(i8*, i8*, ...)
-

@@ -1,9 +1,8 @@
 //===--- SortJavaScriptImports.cpp - Sort ES6 Imports -----------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -142,10 +141,9 @@ public:
     SmallVector<unsigned, 16> Indices;
     for (unsigned i = 0, e = References.size(); i != e; ++i)
       Indices.push_back(i);
-    std::stable_sort(Indices.begin(), Indices.end(),
-                     [&](unsigned LHSI, unsigned RHSI) {
-                       return References[LHSI] < References[RHSI];
-                     });
+    llvm::stable_sort(Indices, [&](unsigned LHSI, unsigned RHSI) {
+      return References[LHSI] < References[RHSI];
+    });
     bool ReferencesInOrder = std::is_sorted(Indices.begin(), Indices.end());
 
     std::string ReferencesText;
@@ -247,9 +245,8 @@ private:
     // Sort the individual symbols within the import.
     // E.g. `import {b, a} from 'x';` -> `import {a, b} from 'x';`
     SmallVector<JsImportedSymbol, 1> Symbols = Reference.Symbols;
-    std::stable_sort(
-        Symbols.begin(), Symbols.end(),
-        [&](const JsImportedSymbol &LHS, const JsImportedSymbol &RHS) {
+    llvm::stable_sort(
+        Symbols, [&](const JsImportedSymbol &LHS, const JsImportedSymbol &RHS) {
           return LHS.Symbol.compare_lower(RHS.Symbol) < 0;
         });
     if (Symbols == Reference.Symbols) {

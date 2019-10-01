@@ -4411,7 +4411,7 @@ uint32x2_t test_vpadd_u32(uint32x2_t a, uint32x2_t b) {
 // CHECK-LABEL: @test_vpadd_f32(
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x float> %a to <8 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <2 x float> %b to <8 x i8>
-// CHECK:   [[VPADD_V2_I:%.*]] = call <2 x float> @llvm.aarch64.neon.addp.v2f32(<2 x float> %a, <2 x float> %b)
+// CHECK:   [[VPADD_V2_I:%.*]] = call <2 x float> @llvm.aarch64.neon.faddp.v2f32(<2 x float> %a, <2 x float> %b)
 // CHECK:   [[VPADD_V3_I:%.*]] = bitcast <2 x float> [[VPADD_V2_I]] to <8 x i8>
 // CHECK:   ret <2 x float> [[VPADD_V2_I]]
 float32x2_t test_vpadd_f32(float32x2_t a, float32x2_t b) {
@@ -4475,7 +4475,7 @@ uint32x4_t test_vpaddq_u32(uint32x4_t a, uint32x4_t b) {
 // CHECK-LABEL: @test_vpaddq_f32(
 // CHECK:   [[TMP0:%.*]] = bitcast <4 x float> %a to <16 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <4 x float> %b to <16 x i8>
-// CHECK:   [[VPADDQ_V2_I:%.*]] = call <4 x float> @llvm.aarch64.neon.addp.v4f32(<4 x float> %a, <4 x float> %b)
+// CHECK:   [[VPADDQ_V2_I:%.*]] = call <4 x float> @llvm.aarch64.neon.faddp.v4f32(<4 x float> %a, <4 x float> %b)
 // CHECK:   [[VPADDQ_V3_I:%.*]] = bitcast <4 x float> [[VPADDQ_V2_I]] to <16 x i8>
 // CHECK:   ret <4 x float> [[VPADDQ_V2_I]]
 float32x4_t test_vpaddq_f32(float32x4_t a, float32x4_t b) {
@@ -4485,7 +4485,7 @@ float32x4_t test_vpaddq_f32(float32x4_t a, float32x4_t b) {
 // CHECK-LABEL: @test_vpaddq_f64(
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x double> %a to <16 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <2 x double> %b to <16 x i8>
-// CHECK:   [[VPADDQ_V2_I:%.*]] = call <2 x double> @llvm.aarch64.neon.addp.v2f64(<2 x double> %a, <2 x double> %b)
+// CHECK:   [[VPADDQ_V2_I:%.*]] = call <2 x double> @llvm.aarch64.neon.faddp.v2f64(<2 x double> %a, <2 x double> %b)
 // CHECK:   [[VPADDQ_V3_I:%.*]] = bitcast <2 x double> [[VPADDQ_V2_I]] to <16 x i8>
 // CHECK:   ret <2 x double> [[VPADDQ_V2_I]]
 float64x2_t test_vpaddq_f64(float64x2_t a, float64x2_t b) {

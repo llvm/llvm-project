@@ -25,6 +25,6 @@ typedef struct _GLKMatrix4 GLKMatrix4;
 @end
 
 // CHECK: [[M:%.*]] = getelementptr inbounds %struct._GLKMatrix4, %struct._GLKMatrix4* [[TMP:%.*]], i32 0, i32 0
-// CHECK: [[ARRAYDECAY:%.*]] = getelementptr inbounds [16 x float], [16 x float]* [[M]], i32 0, i32 0
+// CHECK: [[ARRAYDECAY:%.*]] = getelementptr inbounds [16 x float], [16 x float]* [[M]], i64 0, i64 0
 // CHECK: [[SIX:%.*]] = load i8*, i8** @OBJC_SELECTOR_REFERENCES
 // CHECK:  call void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*, float*)*)(i8* [[SEVEN:%.*]], i8* [[SIX]], float* [[ARRAYDECAY]])

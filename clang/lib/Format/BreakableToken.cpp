@@ -1,9 +1,8 @@
 //===--- BreakableToken.cpp - Format C++ code -----------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -63,12 +62,11 @@ static StringRef getLineCommentIndentPrefix(StringRef Comment,
   return LongestPrefix;
 }
 
-static BreakableToken::Split getCommentSplit(StringRef Text,
-                                             unsigned ContentStartColumn,
-                                             unsigned ColumnLimit,
-                                             unsigned TabWidth,
-                                             encoding::Encoding Encoding,
-                                             const FormatStyle &Style) {
+static BreakableToken::Split
+getCommentSplit(StringRef Text, unsigned ContentStartColumn,
+                unsigned ColumnLimit, unsigned TabWidth,
+                encoding::Encoding Encoding, const FormatStyle &Style,
+                bool DecorationEndsWithStar = false) {
   LLVM_DEBUG(llvm::dbgs() << "Comment split: \"" << Text
                           << "\", Column limit: " << ColumnLimit
                           << ", Content start: " << ContentStartColumn << "\n");
@@ -126,7 +124,10 @@ static BreakableToken::Split getCommentSplit(StringRef Text,
     if (SpaceOffset == 1 && Text[SpaceOffset - 1] == '*')
       return BreakableToken::Split(StringRef::npos, 0);
     StringRef BeforeCut = Text.substr(0, SpaceOffset).rtrim(Blanks);
-    StringRef AfterCut = Text.substr(SpaceOffset).ltrim(Blanks);
+    StringRef AfterCut = Text.substr(SpaceOffset);
+    // Don't trim the leading blanks if it would create a */ after the break.
+    if (!DecorationEndsWithStar || AfterCut.size() <= 1 || AfterCut[1] != '/')
+      AfterCut = AfterCut.ltrim(Blanks);
     return BreakableToken::Split(BeforeCut.size(),
                                  AfterCut.begin() - BeforeCut.end());
   }
@@ -192,7 +193,7 @@ bool switchesFormatting(const FormatToken &Token) {
 
 unsigned
 BreakableToken::getLengthAfterCompression(unsigned RemainingTokenColumns,
-                                              Split Split) const {
+                                          Split Split) const {
   // Example: consider the content
   // lala  lala
   // - RemainingTokenColumns is the original number of columns, 10;
@@ -332,7 +333,7 @@ static bool mayReflowContent(StringRef Content) {
 BreakableBlockComment::BreakableBlockComment(
     const FormatToken &Token, unsigned StartColumn,
     unsigned OriginalStartColumn, bool FirstInLine, bool InPPDirective,
-    encoding::Encoding Encoding, const FormatStyle &Style)
+    encoding::Encoding Encoding, const FormatStyle &Style, bool UseCRLF)
     : BreakableComment(Token, StartColumn, InPPDirective, Encoding, Style),
       DelimitersOnNewline(false),
       UnbreakableTailLength(Token.UnbreakableTailLength) {
@@ -341,7 +342,8 @@ BreakableBlockComment::BreakableBlockComment(
 
   StringRef TokenText(Tok.TokenText);
   assert(TokenText.startswith("/*") && TokenText.endswith("*/"));
-  TokenText.substr(2, TokenText.size() - 4).split(Lines, "\n");
+  TokenText.substr(2, TokenText.size() - 4).split(Lines,
+                                                  UseCRLF ? "\r\n" : "\n");
 
   int IndentDelta = StartColumn - OriginalStartColumn;
   Content.resize(Lines.size());
@@ -454,6 +456,18 @@ BreakableBlockComment::BreakableBlockComment(
   });
 }
 
+BreakableToken::Split
+BreakableBlockComment::getSplit(unsigned LineIndex, unsigned TailOffset,
+                           unsigned ColumnLimit, unsigned ContentStartColumn,
+                           llvm::Regex &CommentPragmasRegex) const {
+  // Don't break lines matching the comment pragmas regex.
+  if (CommentPragmasRegex.match(Content[LineIndex]))
+    return Split(StringRef::npos, 0);
+  return getCommentSplit(Content[LineIndex].substr(TailOffset),
+                         ContentStartColumn, ColumnLimit, Style.TabWidth,
+                         Encoding, Style, Decoration.endswith("*"));
+}
+
 void BreakableBlockComment::adjustWhitespace(unsigned LineIndex,
                                              int IndentDelta) {
   // When in a preprocessor directive, the trailing backslash in a block comment
@@ -475,7 +489,7 @@ void BreakableBlockComment::adjustWhitespace(unsigned LineIndex,
   // Calculate the start of the non-whitespace text in the current line.
   size_t StartOfLine = Lines[LineIndex].find_first_not_of(Blanks);
   if (StartOfLine == StringRef::npos)
-    StartOfLine = Lines[LineIndex].rtrim("\r\n").size();
+    StartOfLine = Lines[LineIndex].size();
 
   StringRef Whitespace = Lines[LineIndex].substr(0, StartOfLine);
   // Adjust Lines to only contain relevant text.
@@ -871,23 +885,20 @@ void BreakableLineCommentSection::reflow(unsigned LineIndex,
     // the next line.
     unsigned WhitespaceLength =
         Lines[LineIndex].data() - tokenAt(LineIndex).TokenText.data() - Offset;
-    Whitespaces.replaceWhitespaceInToken(*Tokens[LineIndex],
-                                         Offset,
+    Whitespaces.replaceWhitespaceInToken(*Tokens[LineIndex], Offset,
                                          /*ReplaceChars=*/WhitespaceLength,
                                          /*PreviousPostfix=*/"",
                                          /*CurrentPrefix=*/"",
                                          /*InPPDirective=*/false,
                                          /*Newlines=*/0,
                                          /*Spaces=*/0);
-
   }
   // Replace the indent and prefix of the token with the reflow prefix.
   unsigned Offset =
       Lines[LineIndex].data() - tokenAt(LineIndex).TokenText.data();
   unsigned WhitespaceLength =
       Content[LineIndex].data() - Lines[LineIndex].data();
-  Whitespaces.replaceWhitespaceInToken(*Tokens[LineIndex],
-                                       Offset,
+  Whitespaces.replaceWhitespaceInToken(*Tokens[LineIndex], Offset,
                                        /*ReplaceChars=*/WhitespaceLength,
                                        /*PreviousPostfix=*/"",
                                        /*CurrentPrefix=*/ReflowPrefix,

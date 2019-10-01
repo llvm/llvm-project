@@ -125,6 +125,11 @@
 // VBMI2: "-target-feature" "+avx512vbmi2"
 // NO-VBMI2: "-target-feature" "-avx512vbmi2"
 
+// RUN: %clang -target i386-linux-gnu -mavx512vp2intersect %s -### -o %t.o 2>&1 | FileCheck -check-prefix=VP2INTERSECT %s
+// RUN: %clang -target i386-linux-gnu -mno-avx512vp2intersect %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-VP2INTERSECT %s
+// VP2INTERSECT: "-target-feature" "+avx512vp2intersect"
+// NO-VP2INTERSECT: "-target-feature" "-avx512vp2intersect"
+
 // RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mrdpid %s -### -o %t.o 2>&1 | FileCheck -check-prefix=RDPID %s
 // RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mno-rdpid %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-RDPID %s
 // RDPID: "-target-feature" "+rdpid"
@@ -178,3 +183,13 @@
 // RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mno-invpcid %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-INVPCID %s
 // INVPCID: "-target-feature" "+invpcid"
 // NO-INVPCID: "-target-feature" "-invpcid"
+
+// RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mavx512bf16 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=AVX512BF16 %s
+// RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mno-avx512bf16 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-AVX512BF16 %s
+// AVX512BF16: "-target-feature" "+avx512bf16"
+// NO-AVX512BF16: "-target-feature" "-avx512bf16"
+
+// RUN: %clang -target i386-unknown-linux-gnu -march=i386 -menqcmd %s -### -o %t.o 2>&1 | FileCheck --check-prefix=ENQCMD %s
+// RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mno-enqcmd %s -### -o %t.o 2>&1 | FileCheck --check-prefix=NO-ENQCMD %s
+// ENQCMD: "-target-feature" "+enqcmd"
+// NO-ENQCMD: "-target-feature" "-enqcmd"

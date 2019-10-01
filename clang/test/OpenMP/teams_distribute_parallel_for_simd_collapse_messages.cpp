@@ -63,7 +63,7 @@ T tmain(T argc, S **argv) { //expected-note 2 {{declared here}}
 // expected-note@+6 2 {{non-constexpr function 'foobool' cannot be used}}
 #endif
 // expected-error@+4 2 {{directive '#pragma omp teams distribute parallel for simd' cannot contain more than one 'collapse' clause}}
-// expected-error@+3 2 {{argument to 'collapse' clause must be a strictly positive integer value}}
+// expected-error@+3 {{argument to 'collapse' clause must be a strictly positive integer value}}
 // expected-error@+2 2 {{expression is not an integral constant expression}}
 #pragma omp target
 #pragma omp teams distribute parallel for simd collapse (foobool(argc)), collapse (true), collapse (-5)
@@ -139,7 +139,7 @@ int main(int argc, char **argv) {
 #endif
 // expected-error@+4 {{expression is not an integral constant expression}}
 // expected-error@+3 2 {{directive '#pragma omp teams distribute parallel for simd' cannot contain more than one 'collapse' clause}}
-// expected-error@+2 2 {{argument to 'collapse' clause must be a strictly positive integer value}}
+// expected-error@+2 {{argument to 'collapse' clause must be a strictly positive integer value}}
 #pragma omp target
 #pragma omp teams distribute parallel for simd collapse (foobool(argc)), collapse (true), collapse (-5) 
   for (int i = 4; i < 12; i++)

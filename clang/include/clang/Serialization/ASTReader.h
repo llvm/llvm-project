@@ -1,9 +1,8 @@
 //===- ASTReader.h - AST File Reader ----------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -2213,6 +2212,9 @@ public:
   llvm::APFloat ReadAPFloat(const RecordData &Record,
                             const llvm::fltSemantics &Sem, unsigned &Idx);
 
+  /// Read an APValue
+  APValue ReadAPValue(const RecordData &Record, unsigned &Idx);
+
   // Read a string
   static std::string ReadString(const RecordData &Record, unsigned &Idx);
 
@@ -2423,6 +2425,14 @@ public:
                                                  ID);
   }
 
+  ExplicitSpecifier readExplicitSpec() {
+    uint64_t Kind = readInt();
+    bool HasExpr = Kind & 0x1;
+    Kind = Kind >> 1;
+    return ExplicitSpecifier(HasExpr ? readExpr() : nullptr,
+                             static_cast<ExplicitSpecKind>(Kind));
+  }
+
   void readExceptionSpec(SmallVectorImpl<QualType> &ExceptionStorage,
                          FunctionProtoType::ExceptionSpecInfo &ESI) {
     return Reader->readExceptionSpec(*F, ExceptionStorage, ESI, Record, Idx);
@@ -2596,6 +2606,8 @@ public:
   SourceRange readSourceRange() {
     return Reader->ReadSourceRange(*F, Record, Idx);
   }
+
+  APValue readAPValue() { return Reader->ReadAPValue(Record, Idx); }
 
   /// Read an integral value, advancing Idx.
   llvm::APInt readAPInt() {

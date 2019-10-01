@@ -14,6 +14,7 @@ typedef NonPOD NonPODArMB[10][2];
 enum Enum { EV };
 struct POD { Enum e; int i; float f; NonPOD* p; };
 struct Empty {};
+struct IncompleteStruct;
 typedef Empty EmptyAr[10];
 typedef Empty EmptyArNB[];
 typedef Empty EmptyArMB[1][2];
@@ -1914,6 +1915,20 @@ void is_base_of() {
   { int arr[T(__is_base_of(Base, DerivedTemp<int>))]; }
   { int arr[F(__is_base_of(Base, NonderivedTemp<int>))]; }
   { int arr[F(__is_base_of(Base, UndefinedTemp<int>))]; } // expected-error {{implicit instantiation of undefined template 'UndefinedTemp<int>'}}
+
+  { int arr[F(__is_base_of(IncompleteUnion, IncompleteUnion))]; }
+  { int arr[F(__is_base_of(Union, IncompleteUnion))]; }
+  { int arr[F(__is_base_of(IncompleteUnion, Union))]; }
+  { int arr[F(__is_base_of(IncompleteStruct, IncompleteUnion))]; }
+  { int arr[F(__is_base_of(IncompleteUnion, IncompleteStruct))]; }
+  { int arr[F(__is_base_of(Empty, IncompleteUnion))]; }
+  { int arr[F(__is_base_of(IncompleteUnion, Empty))]; }
+  { int arr[F(__is_base_of(int, IncompleteUnion))]; }
+  { int arr[F(__is_base_of(IncompleteUnion, int))]; }
+  { int arr[F(__is_base_of(Empty, Union))]; }
+  { int arr[F(__is_base_of(Union, Empty))]; }
+  { int arr[F(__is_base_of(int, Empty))]; }
+  { int arr[F(__is_base_of(Union, int))]; }
 
   isBaseOfT<Base, Derived>();
   isBaseOfF<Derived, Base>();

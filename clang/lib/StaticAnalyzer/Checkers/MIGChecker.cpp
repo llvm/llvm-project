@@ -104,47 +104,15 @@ public:
     checkReturnAux(RS, C);
   }
 
-  class Visitor : public BugReporterVisitor {
-  public:
-    void Profile(llvm::FoldingSetNodeID &ID) const {
-      static int X = 0;
-      ID.AddPointer(&X);
-    }
-
-    std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *N,
-        BugReporterContext &BRC, BugReport &R);
-  };
 };
 } // end anonymous namespace
 
-// The last parameter that was deallocated on the current execution path.
-// FIXME: It's a 'const ParmVarDecl *' but there's no ready-made GDM traits
-// specialization for this sort of types.
-REGISTER_TRAIT_WITH_PROGRAMSTATE(ReleasedParameter, const void *)
+// A flag that says that the programmer has called a MIG destructor
+// for at least one parameter.
+REGISTER_TRAIT_WITH_PROGRAMSTATE(ReleasedParameter, bool)
 // A set of parameters for which the check is suppressed because
 // reference counting is being performed.
 REGISTER_SET_WITH_PROGRAMSTATE(RefCountedParameters, const ParmVarDecl *)
-
-std::shared_ptr<PathDiagnosticPiece>
-MIGChecker::Visitor::VisitNode(const ExplodedNode *N, BugReporterContext &BRC,
-                               BugReport &R) {
-  const auto *NewPVD = static_cast<const ParmVarDecl *>(
-      N->getState()->get<ReleasedParameter>());
-  const auto *OldPVD = static_cast<const ParmVarDecl *>(
-      N->getFirstPred()->getState()->get<ReleasedParameter>());
-  if (OldPVD == NewPVD)
-    return nullptr;
-
-  assert(NewPVD && "What is deallocated cannot be un-deallocated!");
-  SmallString<64> Str;
-  llvm::raw_svector_ostream OS(Str);
-  OS << "Value passed through parameter '" << NewPVD->getName()
-     << "' is deallocated";
-
-  PathDiagnosticLocation Loc =
-      PathDiagnosticLocation::create(N->getLocation(), BRC.getSourceManager());
-  return std::make_shared<PathDiagnosticEventPiece>(Loc, OS.str());
-}
 
 static const ParmVarDecl *getOriginParam(SVal V, CheckerContext &C,
                                          bool IncludeBaseRegions = false) {
@@ -176,6 +144,8 @@ static const ParmVarDecl *getOriginParam(SVal V, CheckerContext &C,
 
 static bool isInMIGCall(CheckerContext &C) {
   const LocationContext *LC = C.getLocationContext();
+  assert(LC && "Unknown location context");
+
   const StackFrameContext *SFC;
   // Find the top frame.
   while (LC) {
@@ -225,10 +195,10 @@ void MIGChecker::checkPostCall(const CallEvent &Call, CheckerContext &C) const {
   if (!isInMIGCall(C))
     return;
 
-  auto I = std::find_if(Deallocators.begin(), Deallocators.end(),
-                        [&](const std::pair<CallDescription, unsigned> &Item) {
-                          return Call.isCalled(Item.first);
-                        });
+  auto I = llvm::find_if(Deallocators,
+                         [&](const std::pair<CallDescription, unsigned> &Item) {
+                           return Call.isCalled(Item.first);
+                         });
   if (I == Deallocators.end())
     return;
 
@@ -239,7 +209,16 @@ void MIGChecker::checkPostCall(const CallEvent &Call, CheckerContext &C) const {
   if (!PVD || State->contains<RefCountedParameters>(PVD))
     return;
 
-  C.addTransition(State->set<ReleasedParameter>(PVD));
+  const NoteTag *T = C.getNoteTag([this, PVD](BugReport &BR) -> std::string {
+    if (&BR.getBugType() != &BT)
+      return "";
+    SmallString<64> Str;
+    llvm::raw_svector_ostream OS(Str);
+    OS << "Value passed through parameter '" << PVD->getName()
+       << "\' is deallocated";
+    return OS.str();
+  });
+  C.addTransition(State->set<ReleasedParameter>(true), T);
 }
 
 // Returns true if V can potentially represent a "successful" kern_return_t.
@@ -304,7 +283,6 @@ void MIGChecker::checkReturnAux(const ReturnStmt *RS, CheckerContext &C) const {
 
   R->addRange(RS->getSourceRange());
   bugreporter::trackExpressionValue(N, RS->getRetValue(), *R, false);
-  R->addVisitor(llvm::make_unique<Visitor>());
   C.emitReport(std::move(R));
 }
 

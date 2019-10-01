@@ -79,15 +79,15 @@ T tmain(T argc) {
 #pragma omp threadprivate(g)
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute parallel for simd dist_schedule(static, a) schedule(dynamic) default(none) copyin(g) firstprivate(a)
-  // CHECK: #pragma omp distribute parallel for simd dist_schedule(static, a) schedule(dynamic) default(none) copyin(g)
+#pragma omp distribute parallel for simd dist_schedule(static, a) schedule(dynamic) default(none) copyin(g) firstprivate(a) allocate(a)
+  // CHECK: #pragma omp distribute parallel for simd dist_schedule(static, a) schedule(dynamic) default(none) copyin(g) firstprivate(a) allocate(a)
   for (int i = 0; i < 2; ++i)
     a = 2;
 // CHECK-NEXT: for (int i = 0; i < 2; ++i)
 // CHECK-NEXT: a = 2;
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute parallel for simd private(argc, b), firstprivate(c, d), lastprivate(f) collapse(N) schedule(static, N) if (parallel :argc) num_threads(N) default(shared) shared(e) reduction(+ : h) dist_schedule(static,N)
+#pragma omp distribute parallel for simd allocate(argc) private(argc, b), firstprivate(c, d), lastprivate(f) collapse(N) schedule(static, N) if (parallel :argc) num_threads(N) default(shared) shared(e) reduction(+ : h) dist_schedule(static,N)
   for (int i = 0; i < 2; ++i)
     for (int j = 0; j < 2; ++j)
       for (int j = 0; j < 2; ++j)
@@ -99,7 +99,7 @@ T tmain(T argc) {
         for (int j = 0; j < 2; ++j)
           for (int j = 0; j < 2; ++j)
             a++;
-  // CHECK: #pragma omp distribute parallel for simd private(argc,b) firstprivate(c,d) lastprivate(f) collapse(N) schedule(static, N) if(parallel: argc) num_threads(N) default(shared) shared(e) reduction(+: h) dist_schedule(static, N)
+  // CHECK: #pragma omp distribute parallel for simd allocate(argc) private(argc,b) firstprivate(c,d) lastprivate(f) collapse(N) schedule(static, N) if(parallel: argc) num_threads(N) default(shared) shared(e) reduction(+: h) dist_schedule(static, N)
   // CHECK-NEXT: for (int i = 0; i < 2; ++i)
   // CHECK-NEXT: for (int j = 0; j < 2; ++j)
   // CHECK-NEXT: for (int j = 0; j < 2; ++j)
@@ -123,8 +123,8 @@ int main(int argc, char **argv) {
 #pragma omp threadprivate(g)
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute parallel for simd schedule(guided, argc) default(none) copyin(g) dist_schedule(static, a) private(a)
-  // CHECK: #pragma omp distribute parallel for simd schedule(guided, argc) default(none) copyin(g) dist_schedule(static, a) private(a)
+#pragma omp distribute parallel for simd schedule(guided, argc) default(none) copyin(g) dist_schedule(static, a) private(a) shared(argc)
+  // CHECK: #pragma omp distribute parallel for simd schedule(guided, argc) default(none) copyin(g) dist_schedule(static, a) private(a) shared(argc)
   for (int i = 0; i < 2; ++i)
     a = 2;
 // CHECK-NEXT: for (int i = 0; i < 2; ++i)

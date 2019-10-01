@@ -1,9 +1,8 @@
 //===----- CGCUDARuntime.h - Interface to CUDA Runtimes ---------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -16,6 +15,8 @@
 #ifndef LLVM_CLANG_LIB_CODEGEN_CGCUDARUNTIME_H
 #define LLVM_CLANG_LIB_CODEGEN_CGCUDARUNTIME_H
 
+#include "llvm/ADT/StringRef.h"
+
 namespace llvm {
 class Function;
 class GlobalVariable;
@@ -24,6 +25,7 @@ class GlobalVariable;
 namespace clang {
 
 class CUDAKernelCallExpr;
+class VarDecl;
 
 namespace CodeGen {
 
@@ -53,7 +55,8 @@ public:
 
   /// Emits a kernel launch stub.
   virtual void emitDeviceStub(CodeGenFunction &CGF, FunctionArgList &Args) = 0;
-  virtual void registerDeviceVar(llvm::GlobalVariable &Var, unsigned Flags) = 0;
+  virtual void registerDeviceVar(const VarDecl *VD, llvm::GlobalVariable &Var,
+                                 unsigned Flags) = 0;
 
   /// Constructs and returns a module initialization function or nullptr if it's
   /// not needed. Must be called after all kernels have been emitted.
@@ -62,6 +65,9 @@ public:
   /// Returns a module cleanup function or nullptr if it's not needed.
   /// Must be called after ModuleCtorFunction
   virtual llvm::Function *makeModuleDtorFunction() = 0;
+
+  /// Construct and return the stub name of a kernel.
+  virtual std::string getDeviceStubName(llvm::StringRef Name) const = 0;
 };
 
 /// Creates an instance of a CUDA runtime class.

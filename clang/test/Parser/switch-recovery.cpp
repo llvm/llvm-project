@@ -105,7 +105,7 @@ void test9(int x) { // expected-note {{'x' declared here}}
               expected-error {{expected expression}}
     8:: x; // expected-error {{expected ';' after expression}} \
               expected-error {{no member named 'x' in the global namespace; did you mean simply 'x'?}} \
-              expected-warning 2 {{expression result unused}}
+              expected-warning {{expression result unused}}
     9:: :y; // expected-error {{expected ';' after expression}} \
                expected-error {{expected unqualified-id}} \
                expected-warning {{expression result unused}}

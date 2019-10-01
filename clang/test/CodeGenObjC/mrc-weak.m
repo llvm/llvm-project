@@ -15,7 +15,7 @@
 // CHECK-MODERN: @"OBJC_IVAR_$_HighlyAlignedSubclass.ivar2" = global i64 24,
 // CHECK-MODERN: @"OBJC_IVAR_$_HighlyAlignedSubclass.ivar" = global i64 16,
 // CHECK-MODERN: @OBJC_CLASS_NAME_{{.*}} = {{.*}} c"\02\00"
-// CHECK-MODERN: @"\01l_OBJC_CLASS_RO_$_HighlyAlignedSubclass" = {{.*}} {
+// CHECK-MODERN: @"_OBJC_CLASS_RO_$_HighlyAlignedSubclass" = {{.*}} {
 // CHECK-FRAGILE: @OBJC_INSTANCE_VARIABLES_HighlyAlignedSubclass = {{.*}}, i32 8 }, {{.*}}, i32 12 }]
 // CHECK-FRAGILE: @OBJC_CLASS_NAME_{{.*}} = {{.*}} c"\02\00"
 // CHECK-FRAGILE: @OBJC_CLASS_HighlyAlignedSubclass
@@ -27,7 +27,7 @@
 @implementation HighlyAlignedSubclass @end
 
 // CHECK-MODERN: @OBJC_CLASS_NAME_{{.*}} = {{.*}} c"\01\00"
-// CHECK-MODERN: @"\01l_OBJC_CLASS_RO_$_Foo" = {{.*}} { i32 772
+// CHECK-MODERN: @"_OBJC_CLASS_RO_$_Foo" = {{.*}} { i32 772
 //   772 == 0x304
 //            ^ HasMRCWeakIvars
 //            ^ HasCXXDestructorOnly

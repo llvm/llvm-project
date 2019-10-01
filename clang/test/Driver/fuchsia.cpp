@@ -1,4 +1,5 @@
 // RUN: %clangxx %s -### -no-canonical-prefixes --target=x86_64-fuchsia \
+// RUN:     -ccc-install-dir %S/Inputs/basic_fuchsia_tree/bin \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     --sysroot=%S/platform -fuse-ld=lld 2>&1 | FileCheck %s
 // CHECK: {{.*}}clang{{.*}}" "-cc1"
@@ -22,7 +23,7 @@
 // CHECK: "-lc++"
 // CHECK: "-lm"
 // CHECK: "--pop-state"
-// CHECK: "[[RESOURCE_DIR]]{{/|\\\\}}x86_64-fuchsia{{/|\\\\}}lib{{/|\\\\}}libclang_rt.builtins.a"
+// CHECK: "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}x86_64-fuchsia{{/|\\\\}}libclang_rt.builtins.a"
 // CHECK: "-lc"
 // CHECK-NOT: crtend.o
 // CHECK-NOT: crtn.o
@@ -43,3 +44,34 @@
 // CHECK-STATIC: "-lm"
 // CHECK-STATIC: "--pop-state"
 // CHECK-STATIC: "-lc"
+
+// RUN: %clangxx %s -### --target=x86_64-fuchsia -nostdlib++ -fuse-ld=lld 2>&1 \
+// RUN:     | FileCheck %s -check-prefix=CHECK-NOSTDLIBXX
+// CHECK-NOSTDLIBXX-NOT: "-lc++"
+// CHECK-NOSTDLIBXX-NOT: "-lm"
+// CHECK-NOSTDLIBXX: "-lc"
+
+// RUN: %clangxx %s -### --target=x86_64-fuchsia \
+// RUN:     -ccc-install-dir %S/Inputs/basic_fuchsia_tree/bin \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     -fuse-ld=lld 2>&1\
+// RUN:     | FileCheck %s -check-prefixes=CHECK-MULTILIB-X86
+// RUN: %clangxx %s -### --target=x86_64-fuchsia -fsanitize=address \
+// RUN:     -ccc-install-dir %S/Inputs/basic_fuchsia_tree/bin \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     -fuse-ld=lld 2>&1\
+// RUN:     | FileCheck %s -check-prefixes=CHECK-MULTILIB-X86,CHECK-MULTILIB-ASAN-X86
+// RUN: %clangxx %s -### --target=x86_64-fuchsia -fno-exceptions \
+// RUN:     -ccc-install-dir %S/Inputs/basic_fuchsia_tree/bin \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     -fuse-ld=lld 2>&1\
+// RUN:     | FileCheck %s -check-prefixes=CHECK-MULTILIB-X86,CHECK-MULTILIB-NOEXCEPT-X86
+// RUN: %clangxx %s -### --target=x86_64-fuchsia -fsanitize=address -fno-exceptions \
+// RUN:     -ccc-install-dir %S/Inputs/basic_fuchsia_tree/bin \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     -fuse-ld=lld 2>&1\
+// RUN:     | FileCheck %s -check-prefixes=CHECK-MULTILIB-X86,CHECK-MULTILIB-ASAN-X86
+// CHECK-MULTILIB-X86: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
+// CHECK-MULTILIB-ASAN-X86: "-L{{.*}}{{/|\\\\}}..{{/|\\\\}}lib{{/|\\\\}}x86_64-fuchsia{{/|\\\\}}c++{{/|\\\\}}asan"
+// CHECK-MULTILIB-NOEXCEPT-X86: "-L{{.*}}{{/|\\\\}}..{{/|\\\\}}lib{{/|\\\\}}x86_64-fuchsia{{/|\\\\}}c++{{/|\\\\}}noexcept"
+// CHECK-MULTILIB-X86: "-L{{.*}}{{/|\\\\}}..{{/|\\\\}}lib{{/|\\\\}}x86_64-fuchsia{{/|\\\\}}c++"

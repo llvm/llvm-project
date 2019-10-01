@@ -57,8 +57,11 @@
 // RUN: %clang -target armv7r-eabi -x c -E -dM %s -o - | FileCheck %s -check-prefix CHECK-NO-FMA
 // RUN: %clang -target armv7r-eabi -mfpu=vfpv4 -x c -E -dM %s -o - | FileCheck %s -check-prefix CHECK-FMA
 // RUN: %clang -target armv7em-eabi -x c -E -dM %s -o - | FileCheck %s -check-prefix CHECK-FMA
-// RUN: %clang -target armv8-eabi -x c -E -dM %s -o - | FileCheck %s -check-prefix CHECK-NO-FMA
+
+// (armv8 defaults to fp-armv8 > vfpv4, so we *should* expect FMA unless we downgrade to pre-vfpv4)
+// RUN: %clang -target armv8-eabi -mfpu=vfpv3 -x c -E -dM %s -o - | FileCheck %s -check-prefix CHECK-NO-FMA
 // RUN: %clang -target armv8-eabi -mfpu=vfpv4 -x c -E -dM %s -o - | FileCheck %s -check-prefix CHECK-FMA
+// RUN: %clang -target armv8-eabi -x c -E -dM %s -o - | FileCheck %s -check-prefix CHECK-FMA
 
 // CHECK-FMA: __ARM_FEATURE_FMA 1
 

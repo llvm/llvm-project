@@ -30,9 +30,8 @@ public:
   /// The set of search paths where we API notes can be found for
   /// particular modules.
   ///
-  /// The API notes in this directory are stored as
-  /// <ModuleName>.apinotes or <ModuleName>.apinotesc, and are only
-  /// applied when building the module <ModuleName>.
+  /// The API notes in this directory are stored as <ModuleName>.apinotes,
+  /// and are only applied when building the module <ModuleName>.
   std::vector<std::string> ModuleSearchPaths;
 };
 

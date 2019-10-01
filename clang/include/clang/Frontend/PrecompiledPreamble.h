@@ -1,9 +1,8 @@
 //===--- PrecompiledPreamble.h - Build precompiled preambles ----*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -284,13 +283,16 @@ public:
   /// Creates wrapper class for PPCallbacks so we can also process information
   /// about includes that are inside of a preamble
   virtual std::unique_ptr<PPCallbacks> createPPCallbacks();
+  /// The returned CommentHandler will be added to the preprocessor if not null.
+  virtual CommentHandler *getCommentHandler();
 };
 
 enum class BuildPreambleError {
   CouldntCreateTempFile = 1,
   CouldntCreateTargetInfo,
   BeginSourceFileFailed,
-  CouldntEmitPCH
+  CouldntEmitPCH,
+  BadInputs
 };
 
 class BuildPreambleErrorCategory final : public std::error_category {

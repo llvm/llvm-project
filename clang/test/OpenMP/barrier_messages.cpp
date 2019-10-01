@@ -6,6 +6,7 @@ template <class T>
 T tmain(T argc) {
 #pragma omp barrier
   ;
+#pragma omp barrier allocate(argc)  // expected-error {{unexpected OpenMP clause 'allocate' in directive '#pragma omp barrier'}}
 #pragma omp barrier untied  // expected-error {{unexpected OpenMP clause 'untied' in directive '#pragma omp barrier'}}
 #pragma omp barrier unknown // expected-warning {{extra tokens at the end of '#pragma omp barrier' are ignored}}
   if (argc)
@@ -29,7 +30,7 @@ T tmain(T argc) {
 #pragma omp barrier // expected-error {{'#pragma omp barrier' cannot be an immediate substatement}}
     switch (argc)
     case 1:
-#pragma omp barrier
+#pragma omp barrier // expected-error {{'#pragma omp barrier' cannot be an immediate substatement}}
   switch (argc)
   case 1: {
 #pragma omp barrier
@@ -49,7 +50,7 @@ T tmain(T argc) {
 #pragma omp barrier
     }
 label:
-#pragma omp barrier // expected-error {{'#pragma omp barrier' cannot be an immediate substatement}}
+#pragma omp barrier
 label1 : {
 #pragma omp barrier
 }
@@ -83,7 +84,7 @@ int main(int argc, char **argv) {
 #pragma omp barrier // expected-error {{'#pragma omp barrier' cannot be an immediate substatement}}
     switch (argc)
     case 1:
-#pragma omp barrier
+#pragma omp barrier // expected-error {{'#pragma omp barrier' cannot be an immediate substatement}}
   switch (argc)
   case 1: {
 #pragma omp barrier
@@ -103,7 +104,7 @@ int main(int argc, char **argv) {
 #pragma omp barrier
     }
 label:
-#pragma omp barrier // expected-error {{'#pragma omp barrier' cannot be an immediate substatement}}
+#pragma omp barrier
 label1 : {
 #pragma omp barrier
 }

@@ -1,9 +1,8 @@
 //===- AttrIterator.h - Classes for attribute iteration ---------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -25,25 +24,6 @@ namespace clang {
 
 class ASTContext;
 class Attr;
-
-} // namespace clang
-
-// Defined in ASTContext.h
-void *operator new(size_t Bytes, const clang::ASTContext &C,
-                   size_t Alignment = 8);
-
-// FIXME: Being forced to not have a default argument here due to redeclaration
-//        rules on default arguments sucks
-void *operator new[](size_t Bytes, const clang::ASTContext &C,
-                     size_t Alignment);
-
-// It is good practice to pair new/delete operators.  Also, MSVC gives many
-// warnings if a matching delete overload is not declared, even though the
-// throw() spec guarantees it will not be implicitly called.
-void operator delete(void *Ptr, const clang::ASTContext &C, size_t);
-void operator delete[](void *Ptr, const clang::ASTContext &C, size_t);
-
-namespace clang {
 
 /// AttrVec - A vector of Attr, which is how they are stored on the AST.
 using AttrVec = SmallVector<Attr *, 4>;

@@ -50,7 +50,7 @@ int add(int x, int y) {
 }
 
 // CHECK-PRINT: inline int add_int_slowly_twice 
-// CHECK-PRINT: lambda = [] (type-parameter-0-0 z
+// CHECK-PRINT: lambda = [](auto z
 
 // CHECK-PRINT: init_capture
 // CHECK-PRINT: [&, x(t)]

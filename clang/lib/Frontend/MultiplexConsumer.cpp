@@ -1,9 +1,8 @@
 //===- MultiplexConsumer.cpp - AST Consumer for PCH Generation --*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -104,6 +103,7 @@ public:
                                     const ObjCInterfaceDecl *IFD) override;
   void DeclarationMarkedUsed(const Decl *D) override;
   void DeclarationMarkedOpenMPThreadPrivate(const Decl *D) override;
+  void DeclarationMarkedOpenMPAllocate(const Decl *D, const Attr *A) override;
   void DeclarationMarkedOpenMPDeclareTarget(const Decl *D,
                                             const Attr *Attr) override;
   void RedefinedHiddenDefinition(const NamedDecl *D, Module *M) override;
@@ -208,6 +208,11 @@ void MultiplexASTMutationListener::DeclarationMarkedOpenMPThreadPrivate(
     const Decl *D) {
   for (size_t i = 0, e = Listeners.size(); i != e; ++i)
     Listeners[i]->DeclarationMarkedOpenMPThreadPrivate(D);
+}
+void MultiplexASTMutationListener::DeclarationMarkedOpenMPAllocate(
+    const Decl *D, const Attr *A) {
+  for (ASTMutationListener *L : Listeners)
+    L->DeclarationMarkedOpenMPAllocate(D, A);
 }
 void MultiplexASTMutationListener::DeclarationMarkedOpenMPDeclareTarget(
     const Decl *D, const Attr *Attr) {

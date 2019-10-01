@@ -1,9 +1,8 @@
 //===- Module.h - Describe a module -----------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -78,9 +77,11 @@ public:
     /// This is a C++ Modules TS module interface unit.
     ModuleInterfaceUnit,
 
-    /// This is a fragment of the global module within some C++ Modules
-    /// TS module.
+    /// This is a fragment of the global module within some C++ module.
     GlobalModuleFragment,
+
+    /// This is the private module fragment within some C++ module.
+    PrivateModuleFragment,
   };
 
   /// The kind of this module.
@@ -111,6 +112,11 @@ public:
   /// The module through which entities defined in this module will
   /// eventually be exposed, for use in "private" modules.
   std::string ExportAsModule;
+
+  /// Does this Module scope describe part of the purview of a named C++ module?
+  bool isModulePurview() const {
+    return Kind == ModuleInterfaceUnit || Kind == PrivateModuleFragment;
+  }
 
 private:
   /// The submodules of this module, indexed by name.
@@ -538,6 +544,7 @@ public:
   ///
   /// \returns The submodule if found, or NULL otherwise.
   Module *findSubmodule(StringRef Name) const;
+  Module *findOrInferSubmodule(StringRef Name);
 
   /// Determine whether the specified module would be visible to
   /// a lookup at the end of this module.

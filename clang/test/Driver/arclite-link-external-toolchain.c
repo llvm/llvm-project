@@ -5,4 +5,4 @@
 // RUN:   %s 2>&1 | FileCheck %s
 
 // CHECK: -lfoo
-// CHECK: .tmpdir/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/arc/libarclite_macosx.a
+// CHECK: .tmpdir/Xcode.app/{{.*}}libarclite_macosx.a

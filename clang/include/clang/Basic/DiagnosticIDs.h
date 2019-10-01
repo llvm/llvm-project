@@ -1,9 +1,8 @@
 //===--- DiagnosticIDs.h - Diagnostic IDs Handling --------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -34,10 +33,10 @@ namespace clang {
       DIAG_SIZE_SERIALIZATION =  120,
       DIAG_SIZE_LEX           =  400,
       DIAG_SIZE_PARSE         =  500,
-      DIAG_SIZE_AST           =  150,
+      DIAG_SIZE_AST           =  200,
       DIAG_SIZE_COMMENT       =  100,
       DIAG_SIZE_CROSSTU       =  100,
-      DIAG_SIZE_SEMA          = 3500,
+      DIAG_SIZE_SEMA          = 4000,
       DIAG_SIZE_ANALYSIS      =  100,
       DIAG_SIZE_REFACTORING   = 1000,
     };
@@ -51,8 +50,8 @@ namespace clang {
       DIAG_START_PARSE         = DIAG_START_LEX           + DIAG_SIZE_LEX,
       DIAG_START_AST           = DIAG_START_PARSE         + DIAG_SIZE_PARSE,
       DIAG_START_COMMENT       = DIAG_START_AST           + DIAG_SIZE_AST,
-      DIAG_START_CROSSTU       = DIAG_START_COMMENT       + DIAG_SIZE_CROSSTU,
-      DIAG_START_SEMA          = DIAG_START_CROSSTU       + DIAG_SIZE_COMMENT,
+      DIAG_START_CROSSTU       = DIAG_START_COMMENT       + DIAG_SIZE_COMMENT,
+      DIAG_START_SEMA          = DIAG_START_CROSSTU       + DIAG_SIZE_CROSSTU,
       DIAG_START_ANALYSIS      = DIAG_START_SEMA          + DIAG_SIZE_SEMA,
       DIAG_START_REFACTORING   = DIAG_START_ANALYSIS      + DIAG_SIZE_ANALYSIS,
       DIAG_UPPER_LIMIT         = DIAG_START_REFACTORING   + DIAG_SIZE_REFACTORING

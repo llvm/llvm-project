@@ -1,9 +1,8 @@
 //===--- Mangle.cpp - Mangle C++ Names --------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -120,15 +119,21 @@ void MangleContext::mangleName(const NamedDecl *D, raw_ostream &Out) {
   if (const AsmLabelAttr *ALA = D->getAttr<AsmLabelAttr>()) {
     // If we have an asm name, then we use it as the mangling.
 
+    // If the label isn't literal, or if this is an alias for an LLVM intrinsic,
+    // do not add a "\01" prefix.
+    if (!ALA->getIsLiteralLabel() || ALA->getLabel().startswith("llvm.")) {
+      Out << ALA->getLabel();
+      return;
+    }
+
     // Adding the prefix can cause problems when one file has a "foo" and
     // another has a "\01foo". That is known to happen on ELF with the
     // tricks normally used for producing aliases (PR9177). Fortunately the
     // llvm mangler on ELF is a nop, so we can just avoid adding the \01
-    // marker.  We also avoid adding the marker if this is an alias for an
-    // LLVM intrinsic.
+    // marker.
     char GlobalPrefix =
         getASTContext().getTargetInfo().getDataLayout().getGlobalPrefix();
-    if (GlobalPrefix && !ALA->getLabel().startswith("llvm."))
+    if (GlobalPrefix)
       Out << '\01'; // LLVM IR Marker for __asm("foo")
 
     Out << ALA->getLabel();

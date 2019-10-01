@@ -1,6 +1,6 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core -analyzer-output=text -verify %s
 // RUN: %clang_analyze_cc1 -analyzer-checker=core -analyzer-output=plist-multi-file  %s -o %t.plist
-// RUN: cat %t.plist | %diff_plist %S/Inputs/expected-plists/deref-track-symbolic-region.c.plist -
+// RUN: %normalize_plist <%t.plist | diff -ub %S/Inputs/expected-plists/deref-track-symbolic-region.c.plist -
 
 struct S {
   int *x;
@@ -15,8 +15,8 @@ void test(struct S syz, int *pp) {
 
   struct S *ps = &syz;
   if (ps->x)
-    //expected-note@-1{{Taking false branch}}
-    //expected-note@-2{{Assuming pointer value is null}}
+    //expected-note@-1{{Assuming field 'x' is null}}
+    //expected-note@-2{{Taking false branch}}
 
     m++;
 
@@ -30,8 +30,8 @@ void testTrackConstraintBRVisitorIsTrackingTurnedOn(struct S syz, int *pp) {
 
   struct S *ps = &syz;
   if (ps->x)
-    //expected-note@-1{{Taking false branch}}
-    //expected-note@-2{{Assuming pointer value is null}}
+    //expected-note@-1{{Assuming field 'x' is null}}
+    //expected-note@-2{{Taking false branch}}
 
     m++;
   int *p = syz.x; //expected-note {{'p' initialized to a null pointer value}}

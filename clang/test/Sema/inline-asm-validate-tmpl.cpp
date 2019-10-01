@@ -23,3 +23,13 @@ template <int N> void	testc(int value)
 	asm("rol %1, %0" :"=r"(value): "I"(N + 1));
 }
 int	foo() { testc<2>(10); }
+
+// these should compile without error
+template <int N> bool testd()
+{
+  __asm goto ("" : : : : lab);
+  return true;
+lab:
+  return false;
+}
+bool foox() { return testd<0> (); }

@@ -1,9 +1,8 @@
 //===--- Lookup.cpp - Framework for clang refactoring tools ---------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -15,6 +14,8 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclarationName.h"
+#include "clang/Basic/SourceLocation.h"
+#include "llvm/ADT/SmallVector.h"
 using namespace clang;
 using namespace clang::tooling;
 
@@ -115,38 +116,72 @@ static bool isFullyQualified(const NestedNameSpecifier *NNS) {
   return false;
 }
 
-// Returns true if spelling symbol \p QName as \p Spelling in \p UseContext is
-// ambiguous. For example, if QName is "::y::bar" and the spelling is "y::bar"
-// in `UseContext` "a" that contains a nested namespace "a::y", then "y::bar"
-// can be resolved to ::a::y::bar, which can cause compile error.
+// Adds more scope specifier to the spelled name until the spelling is not
+// ambiguous. A spelling is ambiguous if the resolution of the symbol is
+// ambiguous. For example, if QName is "::y::bar", the spelling is "y::bar", and
+// context contains a nested namespace "a::y", then "y::bar" can be resolved to
+// ::a::y::bar in the context, which can cause compile error.
 // FIXME: consider using namespaces.
-static bool isAmbiguousNameInScope(StringRef Spelling, StringRef QName,
-                                   const DeclContext &UseContext) {
+static std::string disambiguateSpellingInScope(StringRef Spelling,
+                                               StringRef QName,
+                                               const DeclContext &UseContext,
+                                               SourceLocation UseLoc) {
   assert(QName.startswith("::"));
+  assert(QName.endswith(Spelling));
   if (Spelling.startswith("::"))
-    return false;
+    return Spelling;
 
-  // Lookup the first component of Spelling in all enclosing namespaces and
-  // check if there is any existing symbols with the same name but in different
-  // scope.
-  StringRef Head = Spelling.split("::").first;
+  auto UnspelledSpecifier = QName.drop_back(Spelling.size());
+  llvm::SmallVector<llvm::StringRef, 2> UnspelledScopes;
+  UnspelledSpecifier.split(UnspelledScopes, "::", /*MaxSplit=*/-1,
+                           /*KeepEmpty=*/false);
 
-  llvm::SmallVector<const NamespaceDecl *, 4> UseNamespaces =
+  llvm::SmallVector<const NamespaceDecl *, 4> EnclosingNamespaces =
       getAllNamedNamespaces(&UseContext);
   auto &AST = UseContext.getParentASTContext();
   StringRef TrimmedQName = QName.substr(2);
-  for (const auto *NS : UseNamespaces) {
-    auto LookupRes = NS->lookup(DeclarationName(&AST.Idents.get(Head)));
-    if (!LookupRes.empty()) {
-      for (const NamedDecl *Res : LookupRes)
-        if (!TrimmedQName.startswith(Res->getQualifiedNameAsString()))
-          return true;
+  const auto &SM = UseContext.getParentASTContext().getSourceManager();
+  UseLoc = SM.getSpellingLoc(UseLoc);
+
+  auto IsAmbiguousSpelling = [&](const llvm::StringRef CurSpelling) {
+    if (CurSpelling.startswith("::"))
+      return false;
+    // Lookup the first component of Spelling in all enclosing namespaces
+    // and check if there is any existing symbols with the same name but in
+    // different scope.
+    StringRef Head = CurSpelling.split("::").first;
+    for (const auto *NS : EnclosingNamespaces) {
+      auto LookupRes = NS->lookup(DeclarationName(&AST.Idents.get(Head)));
+      if (!LookupRes.empty()) {
+        for (const NamedDecl *Res : LookupRes)
+          // If `Res` is not visible in `UseLoc`, we don't consider it
+          // ambiguous. For example, a reference in a header file should not be
+          // affected by a potentially ambiguous name in some file that includes
+          // the header.
+          if (!TrimmedQName.startswith(Res->getQualifiedNameAsString()) &&
+              SM.isBeforeInTranslationUnit(
+                  SM.getSpellingLoc(Res->getLocation()), UseLoc))
+            return true;
+      }
+    }
+    return false;
+  };
+
+  // Add more qualifiers until the spelling is not ambiguous.
+  std::string Disambiguated = Spelling;
+  while (IsAmbiguousSpelling(Disambiguated)) {
+    if (UnspelledScopes.empty()) {
+      Disambiguated = "::" + Disambiguated;
+    } else {
+      Disambiguated = (UnspelledScopes.back() + "::" + Disambiguated).str();
+      UnspelledScopes.pop_back();
     }
   }
-  return false;
+  return Disambiguated;
 }
 
 std::string tooling::replaceNestedName(const NestedNameSpecifier *Use,
+                                       SourceLocation UseLoc,
                                        const DeclContext *UseContext,
                                        const NamedDecl *FromDecl,
                                        StringRef ReplacementString) {
@@ -180,12 +215,7 @@ std::string tooling::replaceNestedName(const NestedNameSpecifier *Use,
   // specific).
   StringRef Suggested = getBestNamespaceSubstr(UseContext, ReplacementString,
                                                isFullyQualified(Use));
-  // Use the fully qualified name if the suggested name is ambiguous.
-  // FIXME: consider re-shortening the name until the name is not ambiguous. We
-  // are not doing this because ambiguity is pretty bad and we should not try to
-  // be clever in handling such cases. Making this noticeable to users seems to
-  // be a better option.
-  return isAmbiguousNameInScope(Suggested, ReplacementString, *UseContext)
-             ? ReplacementString
-             : Suggested;
+
+  return disambiguateSpellingInScope(Suggested, ReplacementString, *UseContext,
+                                     UseLoc);
 }

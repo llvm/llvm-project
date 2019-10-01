@@ -117,7 +117,7 @@ int ginitlist[] = {EnumVal};
 /* when indexing implicit instantiations
   [indexEntityReference]: kind: struct-template-spec | name: TS | USR: c:@S@TS>#I | {{.*}} | loc: 55:3
 */
-// CHECK-NEXT: [indexEntityReference]: kind: c++-class-template | name: TS | USR: c:@ST>2#T#T@TS | {{.*}} | loc: 55:3
+// CHECK-NEXT: [indexEntityReference]: kind: struct-template-partial-spec | name: TS | USR: c:@SP>1#T@TS>#t0.0#I | {{.*}} | loc: 55:3
 
 // CHECK:      [indexEntityReference]: kind: variable | name: array_size | {{.*}} | loc: 59:22
 // CHECK:      [indexEntityReference]: kind: variable | name: default_param | {{.*}} | loc: 62:19 | {{.*}} | role: ref read

@@ -15,6 +15,7 @@ add_clang_unittest(ToolingTests
   CastExprTest.cpp
   CommentHandlerTest.cpp
   CompilationDatabaseTest.cpp
+  DependencyScannerTest.cpp
   DiagnosticsYamlTest.cpp
   ExecutionTest.cpp
   FixItTest.cpp
@@ -22,6 +23,7 @@ add_clang_unittest(ToolingTests
   LexicallyOrderedRecursiveASTVisitorTest.cpp
   LookupTest.cpp
   QualTypeNamesTest.cpp
+  RangeSelectorTest.cpp
   RecursiveASTVisitorTests/Attr.cpp
   RecursiveASTVisitorTests/Class.cpp
   RecursiveASTVisitorTests/ConstructExpr.cpp
@@ -49,7 +51,10 @@ add_clang_unittest(ToolingTests
   RefactoringTest.cpp
   ReplacementsYamlTest.cpp
   RewriterTest.cpp
+  SourceCodeTest.cpp
+  StencilTest.cpp
   ToolingTest.cpp
+  TransformerTest.cpp
   )
 
 target_link_libraries(ToolingTests
@@ -65,6 +70,9 @@ target_link_libraries(ToolingTests
   clangTooling
   clangToolingCore
   clangToolingInclusions
-  clangToolingRefactor
   clangToolingRefactoring
+  LLVMTestingSupport
   )
+
+
+add_subdirectory(Syntax)

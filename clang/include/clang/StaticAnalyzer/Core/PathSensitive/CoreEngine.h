@@ -1,9 +1,8 @@
 //===- CoreEngine.h - Path-Sensitive Dataflow Engine ------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -20,6 +19,7 @@
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/ProgramPoint.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/BlockCounter.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExplodedGraph.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState_Fwd.h"
@@ -96,6 +96,10 @@ private:
   /// (This data is owned by AnalysisConsumer.)
   FunctionSummariesTy *FunctionSummaries;
 
+  /// Add path note tags along the path when we see that something interesting
+  /// is happening. This field is the allocator for such tags.
+  NoteTag::Factory NoteTags;
+
   void generateNode(const ProgramPoint &Loc,
                     ProgramStateRef State,
                     ExplodedNode *Pred);
@@ -116,6 +120,8 @@ private:
   /// Handle conditional logic for running static initializers.
   void HandleStaticInit(const DeclStmt *DS, const CFGBlock *B,
                         ExplodedNode *Pred);
+
+  void HandleVirtualBaseBranch(const CFGBlock *B, ExplodedNode *Pred);
 
 private:
   ExplodedNode *generateCallExitBeginNode(ExplodedNode *N,
@@ -193,9 +199,11 @@ public:
 
   /// Enqueue a single node created as a result of statement processing.
   void enqueueStmtNode(ExplodedNode *N, const CFGBlock *Block, unsigned Idx);
+
+  NoteTag::Factory &getNoteTags() { return NoteTags; }
 };
 
-// TODO: Turn into a calss.
+// TODO: Turn into a class.
 struct NodeBuilderContext {
   const CoreEngine &Eng;
   const CFGBlock *Block;

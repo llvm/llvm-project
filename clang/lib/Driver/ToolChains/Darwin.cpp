@@ -1,9 +1,8 @@
 //===--- Darwin.cpp - Darwin Tool and ToolChain Implementations -*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -12,6 +11,7 @@
 #include "CommonArgs.h"
 #include "clang/Basic/AlignedAllocation.h"
 #include "clang/Basic/ObjCRuntime.h"
+#include "clang/Config/config.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
@@ -466,6 +466,7 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // For LTO, pass the name of the optimization record file and other
   // opt-remarks flags.
   if (Args.hasFlag(options::OPT_fsave_optimization_record,
+                   options::OPT_fsave_optimization_record_EQ,
                    options::OPT_fno_save_optimization_record, false)) {
     CmdArgs.push_back("-mllvm");
     CmdArgs.push_back("-lto-pass-remarks-output");
@@ -473,7 +474,13 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
     SmallString<128> F;
     F = Output.getFilename();
-    F += ".opt.yaml";
+    F += ".opt.";
+    if (const Arg *A =
+            Args.getLastArg(options::OPT_fsave_optimization_record_EQ))
+      F += A->getValue();
+    else
+      F += "yaml";
+
     CmdArgs.push_back(Args.MakeArgString(F));
 
     if (getLastProfileUseArg(Args)) {
@@ -487,6 +494,22 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
             std::string("-lto-pass-remarks-hotness-threshold=") + A->getValue();
         CmdArgs.push_back(Args.MakeArgString(Opt));
       }
+    }
+
+    if (const Arg *A =
+            Args.getLastArg(options::OPT_foptimization_record_passes_EQ)) {
+      CmdArgs.push_back("-mllvm");
+      std::string Passes =
+          std::string("-lto-pass-remarks-filter=") + A->getValue();
+      CmdArgs.push_back(Args.MakeArgString(Passes));
+    }
+
+    if (const Arg *A =
+            Args.getLastArg(options::OPT_fsave_optimization_record_EQ)) {
+      CmdArgs.push_back("-mllvm");
+      std::string Format =
+          std::string("-lto-pass-remarks-format=") + A->getValue();
+      CmdArgs.push_back(Args.MakeArgString(Format));
     }
   }
 
@@ -509,6 +532,14 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-mllvm");
       CmdArgs.push_back("-enable-machine-outliner=never");
     }
+  }
+
+  // Setup statistics file output.
+  SmallString<128> StatsFile =
+      getStatsFileName(Args, Output, Inputs[0], getToolChain().getDriver());
+  if (!StatsFile.empty()) {
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back(Args.MakeArgString("-lto-stats-file=" + StatsFile.str()));
   }
 
   // It seems that the 'e' option is completely ignored for dynamic executables
@@ -582,15 +613,26 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (getToolChain().ShouldLinkCXXStdlib(Args))
     getToolChain().AddCXXStdlibLibArgs(Args, CmdArgs);
-  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
+
+  bool NoStdOrDefaultLibs =
+      Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs);
+  bool ForceLinkBuiltins = Args.hasArg(options::OPT_fapple_link_rtlib);
+  if (!NoStdOrDefaultLibs || ForceLinkBuiltins) {
     // link_ssp spec is empty.
 
-    // Let the tool chain choose which runtime library to link.
-    getMachOToolChain().AddLinkRuntimeLibArgs(Args, CmdArgs);
+    // If we have both -nostdlib/nodefaultlibs and -fapple-link-rtlib then
+    // we just want to link the builtins, not the other libs like libSystem.
+    if (NoStdOrDefaultLibs && ForceLinkBuiltins) {
+      getMachOToolChain().AddLinkRuntimeLib(Args, CmdArgs, "builtins");
+    } else {
+      // Let the tool chain choose which runtime library to link.
+      getMachOToolChain().AddLinkRuntimeLibArgs(Args, CmdArgs,
+                                                ForceLinkBuiltins);
 
-    // No need to do anything for pthreads. Claim argument to avoid warning.
-    Args.ClaimAllArgs(options::OPT_pthread);
-    Args.ClaimAllArgs(options::OPT_pthreads);
+      // No need to do anything for pthreads. Claim argument to avoid warning.
+      Args.ClaimAllArgs(options::OPT_pthread);
+      Args.ClaimAllArgs(options::OPT_pthreads);
+    }
   }
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles)) {
@@ -1091,7 +1133,6 @@ void Darwin::addProfileRTLibs(const ArgList &Args,
       addExportedSymbol(CmdArgs, "___llvm_profile_filename");
       addExportedSymbol(CmdArgs, "___llvm_profile_raw_version");
       addExportedSymbol(CmdArgs, "_lprofCurFilename");
-      addExportedSymbol(CmdArgs, "_lprofMergeValueProfData");
     }
     addExportedSymbol(CmdArgs, "_lprofDirMode");
   }
@@ -1118,7 +1159,8 @@ ToolChain::RuntimeLibType DarwinClang::GetRuntimeLibType(
 }
 
 void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
-                                        ArgStringList &CmdArgs) const {
+                                        ArgStringList &CmdArgs,
+                                        bool ForceLinkBuiltinRT) const {
   // Call once to ensure diagnostic is printed if wrong value was specified
   GetRuntimeLibType(Args);
 
@@ -1126,8 +1168,11 @@ void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
   // libraries with -static.
   if (Args.hasArg(options::OPT_static) ||
       Args.hasArg(options::OPT_fapple_kext) ||
-      Args.hasArg(options::OPT_mkernel))
+      Args.hasArg(options::OPT_mkernel)) {
+    if (ForceLinkBuiltinRT)
+      AddLinkRuntimeLib(Args, CmdArgs, "builtins");
     return;
+  }
 
   // Reject -static-libgcc for now, we can deal with this when and if someone
   // cares. This is useful in situations where someone wants to statically link
@@ -1159,8 +1204,6 @@ void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
     AddLinkRuntimeLib(Args, CmdArgs, "stats_client", RLO_AlwaysLink);
     AddLinkSanitizerLibArgs(Args, CmdArgs, "stats");
   }
-  if (Sanitize.needsEsanRt())
-    AddLinkSanitizerLibArgs(Args, CmdArgs, "esan");
 
   const XRayArgs &XRay = getXRayArgs();
   if (XRay.needsXRayRt()) {
@@ -1781,6 +1824,92 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
   }
 }
 
+// Returns the effective header sysroot path to use. This comes either from
+// -isysroot or --sysroot.
+llvm::StringRef DarwinClang::GetHeaderSysroot(const llvm::opt::ArgList &DriverArgs) const {
+  if(DriverArgs.hasArg(options::OPT_isysroot))
+    return DriverArgs.getLastArgValue(options::OPT_isysroot);
+  if (!getDriver().SysRoot.empty())
+    return getDriver().SysRoot;
+  return "/";
+}
+
+void DarwinClang::AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+                                            llvm::opt::ArgStringList &CC1Args) const {
+  const Driver &D = getDriver();
+
+  llvm::StringRef Sysroot = GetHeaderSysroot(DriverArgs);
+
+  bool NoStdInc = DriverArgs.hasArg(options::OPT_nostdinc);
+  bool NoStdlibInc = DriverArgs.hasArg(options::OPT_nostdlibinc);
+  bool NoBuiltinInc = DriverArgs.hasArg(options::OPT_nobuiltininc);
+
+  // Add <sysroot>/usr/local/include
+  if (!NoStdInc && !NoStdlibInc) {
+      SmallString<128> P(Sysroot);
+      llvm::sys::path::append(P, "usr", "local", "include");
+      addSystemInclude(DriverArgs, CC1Args, P);
+  }
+
+  // Add the Clang builtin headers (<resource>/include)
+  if (!NoStdInc && !NoBuiltinInc) {
+    SmallString<128> P(D.ResourceDir);
+    llvm::sys::path::append(P, "include");
+    addSystemInclude(DriverArgs, CC1Args, P);
+  }
+
+  if (NoStdInc || NoStdlibInc)
+    return;
+
+  // Check for configure-time C include directories.
+  llvm::StringRef CIncludeDirs(C_INCLUDE_DIRS);
+  if (!CIncludeDirs.empty()) {
+    llvm::SmallVector<llvm::StringRef, 5> dirs;
+    CIncludeDirs.split(dirs, ":");
+    for (llvm::StringRef dir : dirs) {
+      llvm::StringRef Prefix =
+          llvm::sys::path::is_absolute(dir) ? llvm::StringRef(Sysroot) : "";
+      addExternCSystemInclude(DriverArgs, CC1Args, Prefix + dir);
+    }
+  } else {
+    // Otherwise, add <sysroot>/usr/include.
+    SmallString<128> P(Sysroot);
+    llvm::sys::path::append(P, "usr", "include");
+    addExternCSystemInclude(DriverArgs, CC1Args, P.str());
+  }
+}
+
+bool DarwinClang::AddGnuCPlusPlusIncludePaths(const llvm::opt::ArgList &DriverArgs,
+                                              llvm::opt::ArgStringList &CC1Args,
+                                              llvm::SmallString<128> Base,
+                                              llvm::StringRef Version,
+                                              llvm::StringRef ArchDir,
+                                              llvm::StringRef BitDir) const {
+  llvm::sys::path::append(Base, Version);
+
+  // Add the base dir
+  addSystemInclude(DriverArgs, CC1Args, Base);
+
+  // Add the multilib dirs
+  {
+    llvm::SmallString<128> P = Base;
+    if (!ArchDir.empty())
+      llvm::sys::path::append(P, ArchDir);
+    if (!BitDir.empty())
+      llvm::sys::path::append(P, BitDir);
+    addSystemInclude(DriverArgs, CC1Args, P);
+  }
+
+  // Add the backward dir
+  {
+    llvm::SmallString<128> P = Base;
+    llvm::sys::path::append(P, "backward");
+    addSystemInclude(DriverArgs, CC1Args, P);
+  }
+
+  return getVFS().exists(Base);
+}
+
 void DarwinClang::AddClangCXXStdlibIncludeArgs(
     const llvm::opt::ArgList &DriverArgs,
     llvm::opt::ArgStringList &CC1Args) const {
@@ -1788,29 +1917,90 @@ void DarwinClang::AddClangCXXStdlibIncludeArgs(
   // CC1Args.
   // FIXME: this should not be necessary, remove usages in the frontend
   //        (e.g. HeaderSearchOptions::UseLibcxx) and don't pipe -stdlib.
+  //        Also check whether this is used for setting library search paths.
   ToolChain::AddClangCXXStdlibIncludeArgs(DriverArgs, CC1Args);
 
   if (DriverArgs.hasArg(options::OPT_nostdlibinc) ||
       DriverArgs.hasArg(options::OPT_nostdincxx))
     return;
 
+  llvm::StringRef Sysroot = GetHeaderSysroot(DriverArgs);
+
   switch (GetCXXStdlibType(DriverArgs)) {
   case ToolChain::CST_Libcxx: {
-    llvm::StringRef InstallDir = getDriver().getInstalledDir();
-    if (InstallDir.empty())
-      break;
-    // On Darwin, libc++ may be installed alongside the compiler in
-    // include/c++/v1.
-    // Get from 'foo/bin' to 'foo/include/c++/v1'.
-    SmallString<128> P = InstallDir;
-    // Note that InstallDir can be relative, so we have to '..' and not
-    // parent_path.
-    llvm::sys::path::append(P, "..", "include", "c++", "v1");
-    addSystemInclude(DriverArgs, CC1Args, P);
+    // On Darwin, libc++ is installed alongside the compiler in
+    // include/c++/v1, so get from '<install>/bin' to '<install>/include/c++/v1'.
+    {
+      llvm::SmallString<128> P = llvm::StringRef(getDriver().getInstalledDir());
+      // Note that P can be relative, so we have to '..' and not parent_path.
+      llvm::sys::path::append(P, "..", "include", "c++", "v1");
+      addSystemInclude(DriverArgs, CC1Args, P);
+    }
+    // Also add <sysroot>/usr/include/c++/v1 unless -nostdinc is used,
+    // to match the legacy behavior in CC1.
+    if (!DriverArgs.hasArg(options::OPT_nostdinc)) {
+      llvm::SmallString<128> P = Sysroot;
+      llvm::sys::path::append(P, "usr", "include", "c++", "v1");
+      addSystemInclude(DriverArgs, CC1Args, P);
+    }
     break;
   }
+
   case ToolChain::CST_Libstdcxx:
-    // FIXME: should we do something about it?
+    llvm::SmallString<128> UsrIncludeCxx = Sysroot;
+    llvm::sys::path::append(UsrIncludeCxx, "usr", "include", "c++");
+
+    llvm::Triple::ArchType arch = getTriple().getArch();
+    bool IsBaseFound = true;
+    switch (arch) {
+    default: break;
+
+    case llvm::Triple::ppc:
+    case llvm::Triple::ppc64:
+      IsBaseFound = AddGnuCPlusPlusIncludePaths(DriverArgs, CC1Args, UsrIncludeCxx,
+                                                "4.2.1",
+                                                "powerpc-apple-darwin10",
+                                                arch == llvm::Triple::ppc64 ? "ppc64" : "");
+      IsBaseFound |= AddGnuCPlusPlusIncludePaths(DriverArgs, CC1Args, UsrIncludeCxx,
+                                                "4.0.0", "powerpc-apple-darwin10",
+                                                 arch == llvm::Triple::ppc64 ? "ppc64" : "");
+      break;
+
+    case llvm::Triple::x86:
+    case llvm::Triple::x86_64:
+      IsBaseFound = AddGnuCPlusPlusIncludePaths(DriverArgs, CC1Args, UsrIncludeCxx,
+                                                "4.2.1",
+                                                "i686-apple-darwin10",
+                                                arch == llvm::Triple::x86_64 ? "x86_64" : "");
+      IsBaseFound |= AddGnuCPlusPlusIncludePaths(DriverArgs, CC1Args, UsrIncludeCxx,
+                                                "4.0.0", "i686-apple-darwin8",
+                                                 "");
+      break;
+
+    case llvm::Triple::arm:
+    case llvm::Triple::thumb:
+      IsBaseFound = AddGnuCPlusPlusIncludePaths(DriverArgs, CC1Args, UsrIncludeCxx,
+                                                "4.2.1",
+                                                "arm-apple-darwin10",
+                                                "v7");
+      IsBaseFound |= AddGnuCPlusPlusIncludePaths(DriverArgs, CC1Args, UsrIncludeCxx,
+                                                "4.2.1",
+                                                "arm-apple-darwin10",
+                                                 "v6");
+      break;
+
+    case llvm::Triple::aarch64:
+      IsBaseFound = AddGnuCPlusPlusIncludePaths(DriverArgs, CC1Args, UsrIncludeCxx,
+                                                "4.2.1",
+                                                "arm64-apple-darwin10",
+                                                "");
+      break;
+    }
+
+    if (!IsBaseFound) {
+      getDriver().Diag(diag::warn_drv_libstdcxx_not_found);
+    }
+
     break;
   }
 }
@@ -2098,7 +2288,8 @@ DerivedArgList *MachO::TranslateArgs(const DerivedArgList &Args,
 }
 
 void MachO::AddLinkRuntimeLibArgs(const ArgList &Args,
-                                  ArgStringList &CmdArgs) const {
+                                  ArgStringList &CmdArgs,
+                                  bool ForceLinkBuiltinRT) const {
   // Embedded targets are simple at the moment, not supporting sanitizers and
   // with different libraries for each member of the product { static, PIC } x
   // { hard-float, soft-float }
@@ -2404,6 +2595,8 @@ SanitizerMask Darwin::getSupportedSanitizers() const {
   const bool IsX86_64 = getTriple().getArch() == llvm::Triple::x86_64;
   SanitizerMask Res = ToolChain::getSupportedSanitizers();
   Res |= SanitizerKind::Address;
+  Res |= SanitizerKind::PointerCompare;
+  Res |= SanitizerKind::PointerSubtract;
   Res |= SanitizerKind::Leak;
   Res |= SanitizerKind::Fuzzer;
   Res |= SanitizerKind::FuzzerNoLink;

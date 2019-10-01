@@ -1,0 +1,8 @@
+
+*** Dumping AST Record Layout
+Type: struct S2
+
+Layout: <ASTRecordLayout
+  Size:64
+  Alignment:64
+  FieldOffsets: []>

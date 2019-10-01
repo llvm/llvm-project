@@ -1,9 +1,8 @@
 //===--- SemaExprMember.cpp - Semantic Analysis for Expressions -----------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -591,7 +590,7 @@ namespace {
 // Callback to only accept typo corrections that are either a ValueDecl or a
 // FunctionTemplateDecl and are declared in the current record or, for a C++
 // classes, one of its base classes.
-class RecordMemberExprValidatorCCC : public CorrectionCandidateCallback {
+class RecordMemberExprValidatorCCC final : public CorrectionCandidateCallback {
 public:
   explicit RecordMemberExprValidatorCCC(const RecordType *RTy)
       : Record(RTy->getDecl()) {
@@ -627,6 +626,10 @@ public:
     }
 
     return false;
+  }
+
+  std::unique_ptr<CorrectionCandidateCallback> clone() override {
+    return llvm::make_unique<RecordMemberExprValidatorCCC>(*this);
   }
 
 private:
@@ -697,9 +700,9 @@ static bool LookupMemberExprInRecord(Sema &SemaRef, LookupResult &R,
   };
   QueryState Q = {R.getSema(), R.getLookupNameInfo(), R.getLookupKind(),
                   R.redeclarationKind()};
+  RecordMemberExprValidatorCCC CCC(RTy);
   TE = SemaRef.CorrectTypoDelayed(
-      R.getLookupNameInfo(), R.getLookupKind(), nullptr, &SS,
-      llvm::make_unique<RecordMemberExprValidatorCCC>(RTy),
+      R.getLookupNameInfo(), R.getLookupKind(), nullptr, &SS, CCC,
       [=, &SemaRef](const TypoCorrection &TC) {
         if (TC) {
           assert(!TC.isKeyword() &&
@@ -890,18 +893,32 @@ BuildMSPropertyRefExpr(Sema &S, Expr *BaseExpr, bool IsArrow,
                                            NameInfo.getLoc());
 }
 
-/// Build a MemberExpr AST node.
-static MemberExpr *BuildMemberExpr(
-    Sema &SemaRef, ASTContext &C, Expr *Base, bool isArrow,
-    SourceLocation OpLoc, const CXXScopeSpec &SS, SourceLocation TemplateKWLoc,
-    ValueDecl *Member, DeclAccessPair FoundDecl,
-    const DeclarationNameInfo &MemberNameInfo, QualType Ty, ExprValueKind VK,
-    ExprObjectKind OK, const TemplateArgumentListInfo *TemplateArgs = nullptr) {
-  assert((!isArrow || Base->isRValue()) && "-> base must be a pointer rvalue");
-  MemberExpr *E = MemberExpr::Create(
-      C, Base, isArrow, OpLoc, SS.getWithLocInContext(C), TemplateKWLoc, Member,
-      FoundDecl, MemberNameInfo, TemplateArgs, Ty, VK, OK);
-  SemaRef.MarkMemberReferenced(E);
+MemberExpr *Sema::BuildMemberExpr(
+    Expr *Base, bool IsArrow, SourceLocation OpLoc, const CXXScopeSpec *SS,
+    SourceLocation TemplateKWLoc, ValueDecl *Member, DeclAccessPair FoundDecl,
+    bool HadMultipleCandidates, const DeclarationNameInfo &MemberNameInfo,
+    QualType Ty, ExprValueKind VK, ExprObjectKind OK,
+    const TemplateArgumentListInfo *TemplateArgs) {
+  NestedNameSpecifierLoc NNS =
+      SS ? SS->getWithLocInContext(Context) : NestedNameSpecifierLoc();
+  return BuildMemberExpr(Base, IsArrow, OpLoc, NNS, TemplateKWLoc, Member,
+                         FoundDecl, HadMultipleCandidates, MemberNameInfo, Ty,
+                         VK, OK, TemplateArgs);
+}
+
+MemberExpr *Sema::BuildMemberExpr(
+    Expr *Base, bool IsArrow, SourceLocation OpLoc, NestedNameSpecifierLoc NNS,
+    SourceLocation TemplateKWLoc, ValueDecl *Member, DeclAccessPair FoundDecl,
+    bool HadMultipleCandidates, const DeclarationNameInfo &MemberNameInfo,
+    QualType Ty, ExprValueKind VK, ExprObjectKind OK,
+    const TemplateArgumentListInfo *TemplateArgs) {
+  assert((!IsArrow || Base->isRValue()) && "-> base must be a pointer rvalue");
+  MemberExpr *E =
+      MemberExpr::Create(Context, Base, IsArrow, OpLoc, NNS, TemplateKWLoc,
+                         Member, FoundDecl, MemberNameInfo, TemplateArgs, Ty,
+                         VK, OK, getNonOdrUseReasonInCurrentContext(Member));
+  E->setHadMultipleCandidates(HadMultipleCandidates);
+  MarkMemberReferenced(E);
   return E;
 }
 
@@ -1089,8 +1106,7 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
     SourceLocation Loc = R.getNameLoc();
     if (SS.getRange().isValid())
       Loc = SS.getRange().getBegin();
-    CheckCXXThisCapture(Loc);
-    BaseExpr = new (Context) CXXThisExpr(Loc, BaseExprType,/*isImplicit=*/true);
+    BaseExpr = BuildCXXThisExpr(Loc, BaseExprType, /*isImplicit=*/true);
   }
 
   // Check the use of this member.
@@ -1113,10 +1129,10 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
                                                     OpLoc);
 
   if (VarDecl *Var = dyn_cast<VarDecl>(MemberDecl)) {
-    return BuildMemberExpr(*this, Context, BaseExpr, IsArrow, OpLoc, SS,
-                           TemplateKWLoc, Var, FoundDecl, MemberNameInfo,
-                           Var->getType().getNonReferenceType(), VK_LValue,
-                           OK_Ordinary);
+    return BuildMemberExpr(BaseExpr, IsArrow, OpLoc, &SS, TemplateKWLoc, Var,
+                           FoundDecl, /*MultipleCandidates=*/false,
+                           MemberNameInfo, Var->getType().getNonReferenceType(),
+                           VK_LValue, OK_Ordinary);
   }
 
   if (CXXMethodDecl *MemberFn = dyn_cast<CXXMethodDecl>(MemberDecl)) {
@@ -1130,24 +1146,25 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
       type = MemberFn->getType();
     }
 
-    return BuildMemberExpr(*this, Context, BaseExpr, IsArrow, OpLoc, SS,
-                           TemplateKWLoc, MemberFn, FoundDecl, MemberNameInfo,
-                           type, valueKind, OK_Ordinary);
+    return BuildMemberExpr(BaseExpr, IsArrow, OpLoc, &SS, TemplateKWLoc,
+                           MemberFn, FoundDecl, /*MultipleCandidates=*/false,
+                           MemberNameInfo, type, valueKind, OK_Ordinary);
   }
   assert(!isa<FunctionDecl>(MemberDecl) && "member function not C++ method?");
 
   if (EnumConstantDecl *Enum = dyn_cast<EnumConstantDecl>(MemberDecl)) {
-    return BuildMemberExpr(*this, Context, BaseExpr, IsArrow, OpLoc, SS,
-                           TemplateKWLoc, Enum, FoundDecl, MemberNameInfo,
-                           Enum->getType(), VK_RValue, OK_Ordinary);
+    return BuildMemberExpr(BaseExpr, IsArrow, OpLoc, &SS, TemplateKWLoc, Enum,
+                           FoundDecl, /*MultipleCandidates=*/false,
+                           MemberNameInfo, Enum->getType(), VK_RValue,
+                           OK_Ordinary);
   }
   if (VarTemplateDecl *VarTempl = dyn_cast<VarTemplateDecl>(MemberDecl)) {
     if (VarDecl *Var = getVarTemplateSpecialization(
             *this, VarTempl, TemplateArgs, MemberNameInfo, TemplateKWLoc))
-      return BuildMemberExpr(*this, Context, BaseExpr, IsArrow, OpLoc, SS,
-                             TemplateKWLoc, Var, FoundDecl, MemberNameInfo,
-                             Var->getType().getNonReferenceType(), VK_LValue,
-                             OK_Ordinary);
+      return BuildMemberExpr(
+          BaseExpr, IsArrow, OpLoc, &SS, TemplateKWLoc, Var, FoundDecl,
+          /*MultipleCandidates=*/false, MemberNameInfo,
+          Var->getType().getNonReferenceType(), VK_LValue, OK_Ordinary);
     return ExprError();
   }
 
@@ -1332,11 +1349,11 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
 
     if (!IV) {
       // Attempt to correct for typos in ivar names.
-      auto Validator = llvm::make_unique<DeclFilterCCC<ObjCIvarDecl>>();
-      Validator->IsObjCIvarLookup = IsArrow;
+      DeclFilterCCC<ObjCIvarDecl> Validator{};
+      Validator.IsObjCIvarLookup = IsArrow;
       if (TypoCorrection Corrected = S.CorrectTypo(
               R.getLookupNameInfo(), Sema::LookupMemberName, nullptr, nullptr,
-              std::move(Validator), Sema::CTK_ErrorRecovery, IDecl)) {
+              Validator, Sema::CTK_ErrorRecovery, IDecl)) {
         IV = Corrected.getCorrectionDeclAs<ObjCIvarDecl>();
         S.diagnoseTypo(
             Corrected,
@@ -1803,9 +1820,10 @@ Sema::BuildFieldReferenceExpr(Expr *BaseExpr, bool IsArrow,
     }
   }
 
-  return BuildMemberExpr(*this, Context, Base.get(), IsArrow, OpLoc, SS,
+  return BuildMemberExpr(Base.get(), IsArrow, OpLoc, &SS,
                          /*TemplateKWLoc=*/SourceLocation(), Field, FoundDecl,
-                         MemberNameInfo, MemberType, VK, OK);
+                         /*MultipleCandidates=*/false, MemberNameInfo,
+                         MemberType, VK, OK);
 }
 
 /// Builds an implicit member access expression.  The current context
@@ -1833,8 +1851,7 @@ Sema::BuildImplicitMemberExpr(const CXXScopeSpec &SS,
     SourceLocation Loc = R.getNameLoc();
     if (SS.getRange().isValid())
       Loc = SS.getRange().getBegin();
-    CheckCXXThisCapture(Loc);
-    baseExpr = new (Context) CXXThisExpr(loc, ThisTy, /*isImplicit=*/true);
+    baseExpr = BuildCXXThisExpr(loc, ThisTy, /*isImplicit=*/true);
   }
 
   return BuildMemberReferenceExpr(baseExpr, ThisTy,

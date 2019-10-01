@@ -1,9 +1,8 @@
 //===- ModuleManager.cpp - Module Manager ---------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -43,10 +42,10 @@ using namespace clang;
 using namespace serialization;
 
 ModuleFile *ModuleManager::lookupByFileName(StringRef Name) const {
-  const FileEntry *Entry = FileMgr.getFile(Name, /*openFile=*/false,
-                                           /*cacheFailure=*/false);
+  auto Entry = FileMgr.getFile(Name, /*OpenFile=*/false,
+                               /*CacheFailure=*/false);
   if (Entry)
-    return lookup(Entry);
+    return lookup(*Entry);
 
   return nullptr;
 }
@@ -69,9 +68,11 @@ ModuleFile *ModuleManager::lookup(const FileEntry *File) const {
 
 std::unique_ptr<llvm::MemoryBuffer>
 ModuleManager::lookupBuffer(StringRef Name) {
-  const FileEntry *Entry = FileMgr.getFile(Name, /*openFile=*/false,
-                                           /*cacheFailure=*/false);
-  return std::move(InMemoryBuffers[Entry]);
+  auto Entry = FileMgr.getFile(Name, /*OpenFile=*/false,
+                               /*CacheFailure=*/false);
+  if (!Entry)
+    return nullptr;
+  return std::move(InMemoryBuffers[*Entry]);
 }
 
 static bool checkSignature(ASTFileSignature Signature,
@@ -183,13 +184,9 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
     if (FileName == "-") {
       Buf = llvm::MemoryBuffer::getSTDIN();
     } else {
-      // Get a buffer of the file and close the file descriptor when done. Use
-      // IsVolatile=true since PCMs with same signature can have different sizes
-      // due to different content in the unhashed control block (e.g. diagnostic
-      // options). Tha said, concurrent creation & access of the same PCM
-      // filename can lead to reading past the buffer size otherwise.
+      // Get a buffer of the file and close the file descriptor when done.
       Buf = FileMgr.getBufferForFile(NewModule->File,
-                                     /*IsVolatile=*/true,
+                                     /*IsVolatile=*/false,
                                      /*ShouldClose=*/true);
     }
 
@@ -254,8 +251,7 @@ void ModuleManager::removeModules(
   // Remove the modules from the PCH chain.
   for (auto I = First; I != Last; ++I) {
     if (!I->isModule()) {
-      PCHChain.erase(std::find(PCHChain.begin(), PCHChain.end(), &*I),
-                     PCHChain.end());
+      PCHChain.erase(llvm::find(PCHChain, &*I), PCHChain.end());
       break;
     }
   }
@@ -448,9 +444,13 @@ bool ModuleManager::lookupModuleFile(StringRef FileName,
 
   // Open the file immediately to ensure there is no race between stat'ing and
   // opening the file.
-  File = FileMgr.getFile(FileName, /*openFile=*/true, /*cacheFailure=*/false);
-  if (!File)
+  auto FileOrErr = FileMgr.getFile(FileName, /*OpenFile=*/true, 
+                                   /*CacheFailure=*/false);
+  if (!FileOrErr) {
+    File = nullptr;
     return false;
+  }
+  File = *FileOrErr;
 
   if ((ExpectedSize && ExpectedSize != File->getSize()) ||
       (ExpectedModTime && ExpectedModTime != File->getModificationTime()))

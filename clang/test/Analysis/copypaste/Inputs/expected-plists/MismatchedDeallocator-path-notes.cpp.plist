@@ -297,7 +297,6 @@
  </array>
  <key>files</key>
  <array>
-  <string>/clang/test/Analysis/MismatchedDeallocator-path-notes.cpp</string>
  </array>
 </dict>
 </plist>

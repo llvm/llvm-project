@@ -1,9 +1,8 @@
 //===- PreprocessorLexer.cpp - C Language Family Lexer --------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -31,9 +30,7 @@ PreprocessorLexer::PreprocessorLexer(Preprocessor *pp, FileID fid)
 /// After the preprocessor has parsed a \#include, lex and
 /// (potentially) macro expand the filename.
 void PreprocessorLexer::LexIncludeFilename(Token &FilenameTok) {
-  assert(ParsingPreprocessorDirective &&
-         ParsingFilename == false &&
-         "Must be in a preprocessing directive!");
+  assert(ParsingFilename == false && "reentered LexIncludeFilename");
 
   // We are now parsing a filename!
   ParsingFilename = true;
@@ -46,10 +43,6 @@ void PreprocessorLexer::LexIncludeFilename(Token &FilenameTok) {
 
   // We should have obtained the filename now.
   ParsingFilename = false;
-
-  // No filename?
-  if (FilenameTok.is(tok::eod))
-    PP->Diag(FilenameTok.getLocation(), diag::err_pp_expects_filename);
 }
 
 /// getFileEntry - Return the FileEntry corresponding to this FileID.  Like

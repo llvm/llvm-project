@@ -1,9 +1,8 @@
 //===- DynamicTypeMap.h - Dynamic type map ----------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -30,12 +29,11 @@ class MemRegion;
 /// symbol to its most likely type.
 struct DynamicTypeMap {};
 
-using DynamicTypeMapImpl =
-    llvm::ImmutableMap<const MemRegion *, DynamicTypeInfo>;
+using DynamicTypeMapTy = llvm::ImmutableMap<const MemRegion *, DynamicTypeInfo>;
 
 template <>
 struct ProgramStateTrait<DynamicTypeMap>
-    : public ProgramStatePartialTrait<DynamicTypeMapImpl> {
+    : public ProgramStatePartialTrait<DynamicTypeMapTy> {
   static void *GDMIndex();
 };
 
@@ -55,8 +53,9 @@ inline ProgramStateRef setDynamicTypeInfo(ProgramStateRef State,
                             DynamicTypeInfo(NewTy, CanBeSubClassed));
 }
 
-void printDynamicTypeInfo(ProgramStateRef State, raw_ostream &Out,
-                          const char *NL, const char *Sep);
+void printDynamicTypeInfoJson(raw_ostream &Out, ProgramStateRef State,
+                              const char *NL = "\n", unsigned int Space = 0,
+                              bool IsDot = false);
 
 } // namespace ento
 } // namespace clang

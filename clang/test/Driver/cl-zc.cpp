@@ -18,6 +18,12 @@
 // RUN: %clang_cl /c -### /Zc:sizedDealloc- -- %s 2>&1 | FileCheck -check-prefix=SIZED-DEALLOC-OFF %s
 // SIZED-DEALLOC-OFF-NOT: "-fsized-deallocation"
 
+// RUN: %clang_cl /c /std:c++17 -### /Zc:alignedNew -- %s 2>&1 | FileCheck -check-prefix=ALIGNED-NEW-ON %s
+// ALIGNED-NEW-ON: "-faligned-allocation"
+
+// RUN: %clang_cl /c /std:c++17 -### /Zc:alignedNew- -- %s 2>&1 | FileCheck -check-prefix=ALIGNED-NEW-OFF %s
+// ALIGNED-NEW-OFF-NOT: "-faligned-allocation"
+
 // RUN: %clang_cl /c -### -- %s 2>&1 | FileCheck -check-prefix=STRICTSTRINGS-DEFAULT %s
 // STRICTSTRINGS-DEFAULT-NOT: -Werror=c++11-compat-deprecated-writable-strings
 // RUN: %clang_cl /c -### /Zc:strictStrings -- %s 2>&1 | FileCheck -check-prefix=STRICTSTRINGS-ON %s

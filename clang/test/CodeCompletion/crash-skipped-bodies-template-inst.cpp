@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:24:5 %s -o - 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++14 -code-completion-at=%s:24:5 %s -o - 2>&1 | FileCheck %s
 template <class T>
 auto make_func() {
   struct impl {

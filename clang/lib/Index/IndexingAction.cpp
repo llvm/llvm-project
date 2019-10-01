@@ -1,9 +1,8 @@
 //===- IndexingAction.cpp - Frontend index action -------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -502,13 +501,14 @@ private:
                      bool IsModuleFile, bool IsMissing) override {
     bool sawIt = DependencyCollector::sawDependency(
         Filename, FromModule, IsSystem, IsModuleFile, IsMissing);
-    if (auto *FE = SourceMgr->getFileManager().getFile(Filename)) {
+    if (llvm::ErrorOr<const clang::FileEntry *> FE =
+            SourceMgr->getFileManager().getFile(Filename)) {
       if (sawIt)
-        Entries.insert(FE);
+        Entries.insert(*FE);
       // Record system-ness for all files that we pass through.
-      if (IsSystemByUID.size() < FE->getUID() + 1)
-        IsSystemByUID.resize(FE->getUID() + 1);
-      IsSystemByUID[FE->getUID()] = IsSystem || isInSysroot(Filename);
+      if (IsSystemByUID.size() < (*FE)->getUID() + 1)
+        IsSystemByUID.resize((*FE)->getUID() + 1);
+      IsSystemByUID[(*FE)->getUID()] = IsSystem || isInSysroot(Filename);
     }
     return sawIt;
   }

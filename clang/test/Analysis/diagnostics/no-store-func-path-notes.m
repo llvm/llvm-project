@@ -10,7 +10,8 @@ extern int coin();
 
 @implementation I
 - (int)initVar:(int *)var param:(int)param {
-  if (param) { // expected-note{{Taking false branch}}
+  if (param) { // expected-note{{'param' is 0}}
+               // expected-note@-1{{Taking false branch}}
     *var = 1;
     return 0;
   }
@@ -22,14 +23,16 @@ int foo(I *i) {
   int x;                            //expected-note{{'x' declared without an initial value}}
   int out = [i initVar:&x param:0]; //expected-note{{Calling 'initVar:param:'}}
                                     //expected-note@-1{{Returning from 'initVar:param:'}}
-  if (out)                          // expected-note{{Taking true branch}}
+  if (out)                          //expected-note{{'out' is 1}}
+                                    //expected-note@-1{{Taking true branch}}
     return x;                       //expected-warning{{Undefined or garbage value returned to caller}}
                                     //expected-note@-1{{Undefined or garbage value returned to caller}}
   return 0;
 }
 
 int initializer1(int *p, int x) {
-  if (x) { // expected-note{{Taking false branch}}
+  if (x) { // expected-note{{'x' is 0}}
+           // expected-note@-1{{Taking false branch}}
     *p = 1;
     return 0;
   } else {

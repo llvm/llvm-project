@@ -1,9 +1,8 @@
 //===--- Diagnostic.h - Framework for clang diagnostics tools --*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -43,6 +42,9 @@ struct DiagnosticMessage {
   std::string Message;
   std::string FilePath;
   unsigned FileOffset;
+
+  /// Fixes for this diagnostic, grouped by file path.
+  llvm::StringMap<Replacements> Fix;
 };
 
 /// Represents the diagnostic with the level of severity and possible
@@ -59,7 +61,6 @@ struct Diagnostic {
              StringRef BuildDirectory);
 
   Diagnostic(llvm::StringRef DiagnosticName, const DiagnosticMessage &Message,
-             const llvm::StringMap<Replacements> &Fix,
              const SmallVector<DiagnosticMessage, 1> &Notes, Level DiagLevel,
              llvm::StringRef BuildDirectory);
 
@@ -68,9 +69,6 @@ struct Diagnostic {
 
   /// Message associated to the diagnostic.
   DiagnosticMessage Message;
-
-  /// Fixes to apply, grouped by file path.
-  llvm::StringMap<Replacements> Fix;
 
   /// Potential notes about the diagnostic.
   SmallVector<DiagnosticMessage, 1> Notes;
@@ -94,6 +92,10 @@ struct TranslationUnitDiagnostics {
   std::string MainSourceFile;
   std::vector<Diagnostic> Diagnostics;
 };
+
+/// Get the first fix to apply for this diagnostic.
+/// \returns nullptr if no fixes are attached to the diagnostic.
+const llvm::StringMap<Replacements> *selectFirstFix(const Diagnostic& D);
 
 } // end namespace tooling
 } // end namespace clang

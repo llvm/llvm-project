@@ -1,6 +1,7 @@
 // RUN: %clangxx -target x86_64-unknown-unknown -g %s -emit-llvm -S -o - | FileCheck %s
 // RUN: %clangxx -target x86_64-unknown-unknown -g -std=c++98 %s -emit-llvm -S -o - | FileCheck %s
 // RUN: %clangxx -target x86_64-unknown-unknown -g -std=c++11 %s -emit-llvm -S -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-windows-msvc -gcodeview -debug-info-kind=limited %s -emit-llvm -o - | FileCheck --check-prefix MSVC %s
 // PR14471
 
 // CHECK: @_ZN1C1aE = dso_local global i32 4, align 4, !dbg [[A:![0-9]+]]
@@ -35,6 +36,7 @@ public:
 // CHECK: [[A]] = !DIGlobalVariableExpression(var: [[AV:.*]], expr: !DIExpression())
 // CHECK: [[AV]] = distinct !DIGlobalVariable(name: "a",
 // CHECK-SAME:                                declaration: ![[DECL_A:[0-9]+]])
+// MSVC: distinct !DIGlobalVariable(name: "a"
 //
 // CHECK: !DICompositeType(tag: DW_TAG_enumeration_type, name: "X"{{.*}}, identifier: "_ZTS1X")
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "anon_static_decl_struct"
@@ -48,6 +50,7 @@ int C::a = 4;
 // CHECK: [[B]] = !DIGlobalVariableExpression(var: [[BV:.*]], expr: !DIExpression())
 // CHECK: [[BV]] = distinct !DIGlobalVariable(name: "b",
 // CHECK-SAME:                                declaration: ![[DECL_B:[0-9]+]])
+// MSVC: distinct !DIGlobalVariable(name: "b"
 // CHECK: ![[DECL_B]] = !DIDerivedType(tag: DW_TAG_member, name: "b"
 // CHECK-NOT:                                 size:
 // CHECK-NOT:                                 align:
@@ -95,6 +98,7 @@ int C::a = 4;
 int C::b = 2;
 // CHECK: [[C]] = !DIGlobalVariableExpression(var: [[CV:.*]], expr: !DIExpression())
 // CHECK: [[CV]] = distinct !DIGlobalVariable(name: "c", {{.*}} declaration: ![[DECL_C]])
+// MSVC: distinct !DIGlobalVariable(name: "c"
 int C::c = 1;
 
 int main()
@@ -114,10 +118,17 @@ struct anon_static_decl_struct {
 };
 }
 
-
 int ref() {
   return anon_static_decl_struct::anon_static_decl_var;
 }
+
+// In MSVC, static data members should be emitted as global variables when used.
+// MSVC: !DIGlobalVariableExpression(var: [[ANON_STATIC_DECL:![0-9]+]],
+// MSVC-SAME: !DIExpression(DW_OP_constu, 117, DW_OP_stack_value)
+// MSVC: [[ANON_STATIC_DECL]] = distinct !DIGlobalVariable(name: "anon_static_decl_var"
+// MSVC: !DIGlobalVariableExpression(var: [[STATIC_DECL_TEMPL:![0-9]+]]
+// MSVC-SAME: !DIExpression(DW_OP_constu, 7, DW_OP_stack_value)
+// MSVC: [[STATIC_DECL_TEMPL]] = distinct !DIGlobalVariable(name: "static_decl_templ_var"
 
 template<typename T>
 struct static_decl_templ {

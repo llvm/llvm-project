@@ -1,9 +1,8 @@
 //===- DeclContextInternals.h - DeclContext Representation ------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -114,12 +113,11 @@ public:
     }
 
     DeclsTy &Vec = *getAsVector();
-    DeclsTy::iterator I = std::find(Vec.begin(), Vec.end(), D);
+    DeclsTy::iterator I = llvm::find(Vec, D);
     assert(I != Vec.end() && "list does not contain decl");
     Vec.erase(I);
 
-    assert(std::find(Vec.begin(), Vec.end(), D)
-             == Vec.end() && "list still contains decl");
+    assert(llvm::find(Vec, D) == Vec.end() && "list still contains decl");
   }
 
   /// Remove any declarations which were imported from an external

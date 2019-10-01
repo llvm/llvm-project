@@ -1,15 +1,15 @@
 //===- lib/Tooling/AllTUsExecution.cpp - Execute actions on all TUs. ------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "clang/Tooling/AllTUsExecution.h"
 #include "clang/Tooling/ToolExecutorPluginRegistry.h"
 #include "llvm/Support/ThreadPool.h"
+#include "llvm/Support/VirtualFileSystem.h"
 
 namespace clang {
 namespace tooling {
@@ -115,25 +115,22 @@ llvm::Error AllTUsToolExecutor::execute(
   {
     llvm::ThreadPool Pool(ThreadCount == 0 ? llvm::hardware_concurrency()
                                            : ThreadCount);
-    llvm::SmallString<128> InitialWorkingDir;
-    if (auto EC = llvm::sys::fs::current_path(InitialWorkingDir)) {
-      InitialWorkingDir = "";
-      llvm::errs() << "Error while getting current working directory: "
-                   << EC.message() << "\n";
-    }
     for (std::string File : Files) {
       Pool.async(
           [&](std::string Path) {
             Log("[" + std::to_string(Count()) + "/" + TotalNumStr +
                 "] Processing file " + Path);
-            ClangTool Tool(Compilations, {Path});
+            // Each thread gets an indepent copy of a VFS to allow different
+            // concurrent working directories.
+            IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS =
+                llvm::vfs::createPhysicalFileSystem().release();
+            ClangTool Tool(Compilations, {Path},
+                           std::make_shared<PCHContainerOperations>(), FS);
             Tool.appendArgumentsAdjuster(Action.second);
             Tool.appendArgumentsAdjuster(getDefaultArgumentsAdjusters());
             for (const auto &FileAndContent : OverlayFiles)
               Tool.mapVirtualFile(FileAndContent.first(),
                                   FileAndContent.second);
-            // Do not restore working dir from multiple threads to avoid races.
-            Tool.setRestoreWorkingDir(false);
             if (Tool.run(Action.first.get()))
               AppendError(llvm::Twine("Failed to run action on ") + Path +
                           "\n");
@@ -142,11 +139,6 @@ llvm::Error AllTUsToolExecutor::execute(
     }
     // Make sure all tasks have finished before resetting the working directory.
     Pool.wait();
-    if (!InitialWorkingDir.empty()) {
-      if (auto EC = llvm::sys::fs::set_current_path(InitialWorkingDir))
-        llvm::errs() << "Error while restoring working directory: "
-                     << EC.message() << "\n";
-    }
   }
 
   if (!ErrorMsg.empty())

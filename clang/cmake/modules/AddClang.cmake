@@ -81,16 +81,26 @@ macro(add_clang_library name)
       )
   endif()
   if(ARG_SHARED)
-    set(ARG_ENABLE_SHARED SHARED)
+    set(LIBTYPE SHARED)
+  else()
+    # llvm_add_library ignores BUILD_SHARED_LIBS if STATIC is explicitly set,
+    # so we need to handle it here.
+    if(BUILD_SHARED_LIBS)
+      set(LIBTYPE SHARED OBJECT)
+    else()
+      set(LIBTYPE STATIC OBJECT)
+    endif()
+    set_property(GLOBAL APPEND PROPERTY CLANG_STATIC_LIBS ${name})
   endif()
-  llvm_add_library(${name} ${ARG_ENABLE_SHARED} ${ARG_UNPARSED_ARGUMENTS} ${srcs})
+  llvm_add_library(${name} ${LIBTYPE} ${ARG_UNPARSED_ARGUMENTS} ${srcs})
 
   if(TARGET ${name})
     target_link_libraries(${name} INTERFACE ${LLVM_COMMON_LIBS})
 
     if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY OR ${name} STREQUAL "libclang")
-
+      set(export_to_clangtargets)
       if(${name} IN_LIST LLVM_DISTRIBUTION_COMPONENTS OR
+          "clang-libraries" IN_LIST LLVM_DISTRIBUTION_COMPONENTS OR
           NOT LLVM_DISTRIBUTION_COMPONENTS)
         set(export_to_clangtargets EXPORT ClangTargets)
         set_property(GLOBAL PROPERTY CLANG_HAS_EXPORTS True)
@@ -103,11 +113,13 @@ macro(add_clang_library name)
         ARCHIVE DESTINATION lib${LLVM_LIBDIR_SUFFIX}
         RUNTIME DESTINATION bin)
 
-      if (${ARG_SHARED} AND NOT CMAKE_CONFIGURATION_TYPES)
+      if (NOT LLVM_ENABLE_IDE)
         add_llvm_install_targets(install-${name}
                                  DEPENDS ${name}
                                  COMPONENT ${name})
       endif()
+
+      set_property(GLOBAL APPEND PROPERTY CLANG_LIBS ${name})
     endif()
     set_property(GLOBAL APPEND PROPERTY CLANG_EXPORTS ${name})
   else()
@@ -131,9 +143,10 @@ macro(add_clang_tool name)
   endif()
 
   add_clang_executable(${name} ${ARGN})
-  add_dependencies(${name} clang-headers)
+  add_dependencies(${name} clang-resource-headers)
 
   if (CLANG_BUILD_TOOLS)
+    set(export_to_clangtargets)
     if(${name} IN_LIST LLVM_DISTRIBUTION_COMPONENTS OR
         NOT LLVM_DISTRIBUTION_COMPONENTS)
       set(export_to_clangtargets EXPORT ClangTargets)
@@ -145,7 +158,7 @@ macro(add_clang_tool name)
       RUNTIME DESTINATION bin
       COMPONENT ${name})
 
-    if(NOT CMAKE_CONFIGURATION_TYPES)
+    if(NOT LLVM_ENABLE_IDE)
       add_llvm_install_targets(install-${name}
                                DEPENDS ${name}
                                COMPONENT ${name})

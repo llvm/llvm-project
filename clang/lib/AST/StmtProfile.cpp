@@ -1,9 +1,8 @@
 //===---- StmtProfile.cpp - Profile implementation for Stmt ASTs ----------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -322,6 +321,9 @@ void StmtProfiler::VisitGCCAsmStmt(const GCCAsmStmt *S) {
   ID.AddInteger(S->getNumClobbers());
   for (unsigned I = 0, N = S->getNumClobbers(); I != N; ++I)
     VisitStringLiteral(S->getClobberStringLiteral(I));
+  ID.AddInteger(S->getNumLabels());
+  for (auto *L : S->labels())
+    VisitDecl(L->getLabel());
 }
 
 void StmtProfiler::VisitMSAsmStmt(const MSAsmStmt *S) {
@@ -456,6 +458,11 @@ void OMPClauseProfiler::VisitOMPSafelenClause(const OMPSafelenClause *C) {
 void OMPClauseProfiler::VisitOMPSimdlenClause(const OMPSimdlenClause *C) {
   if (C->getSimdlen())
     Profiler->VisitStmt(C->getSimdlen());
+}
+
+void OMPClauseProfiler::VisitOMPAllocatorClause(const OMPAllocatorClause *C) {
+  if (C->getAllocator())
+    Profiler->VisitStmt(C->getAllocator());
 }
 
 void OMPClauseProfiler::VisitOMPCollapseClause(const OMPCollapseClause *C) {
@@ -710,6 +717,11 @@ void OMPClauseProfiler::VisitOMPDeviceClause(const OMPDeviceClause *C) {
     Profiler->VisitStmt(C->getDevice());
 }
 void OMPClauseProfiler::VisitOMPMapClause(const OMPMapClause *C) {
+  VisitOMPClauseList(C);
+}
+void OMPClauseProfiler::VisitOMPAllocateClause(const OMPAllocateClause *C) {
+  if (Expr *Allocator = C->getAllocator())
+    Profiler->VisitStmt(Allocator);
   VisitOMPClauseList(C);
 }
 void OMPClauseProfiler::VisitOMPNumTeamsClause(const OMPNumTeamsClause *C) {
@@ -1260,13 +1272,14 @@ void StmtProfiler::VisitBlockExpr(const BlockExpr *S) {
 
 void StmtProfiler::VisitGenericSelectionExpr(const GenericSelectionExpr *S) {
   VisitExpr(S);
-  for (unsigned i = 0; i != S->getNumAssocs(); ++i) {
-    QualType T = S->getAssocType(i);
+  for (const GenericSelectionExpr::ConstAssociation &Assoc :
+       S->associations()) {
+    QualType T = Assoc.getType();
     if (T.isNull())
       ID.AddPointer(nullptr);
     else
       VisitType(T);
-    VisitExpr(S->getAssocExpr(i));
+    VisitExpr(Assoc.getAssociationExpr());
   }
 }
 
@@ -1869,6 +1882,10 @@ void StmtProfiler::VisitOpaqueValueExpr(const OpaqueValueExpr *E) {
 }
 
 void StmtProfiler::VisitTypoExpr(const TypoExpr *E) {
+  VisitExpr(E);
+}
+
+void StmtProfiler::VisitSourceLocExpr(const SourceLocExpr *E) {
   VisitExpr(E);
 }
 

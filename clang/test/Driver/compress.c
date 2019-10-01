@@ -16,19 +16,19 @@
 
 // RUN: %clang -### -fintegrated-as -gz -x assembler -c %s 2>&1 | FileCheck -check-prefix CHECK-OPT_GZ %s
 // RUN: %clang -### -fintegrated-as -gz -c %s 2>&1 | FileCheck -check-prefix CHECK-OPT_GZ %s
-// CHECK-OPT_GZ: "-compress-debug-sections"
+// CHECK-OPT_GZ: "--compress-debug-sections"
 
 // RUN: %clang -### -fintegrated-as -gz=none -x assembler -c %s 2>&1 | FileCheck -check-prefix CHECK-OPT_GZ_EQ_NONE %s
 // RUN: %clang -### -fintegrated-as -gz=none -c %s 2>&1 | FileCheck -check-prefix CHECK-OPT_GZ_EQ_NONE %s
-// CHECK-OPT_GZ_EQ_NONE: "-compress-debug-sections=none"
+// CHECK-OPT_GZ_EQ_NONE: "--compress-debug-sections=none"
 
 // RUN: %clang -### -fintegrated-as -gz=zlib -x assembler -c %s 2>&1 | FileCheck -check-prefix CHECK-OPT_GZ_EQ_ZLIB %s
 // RUN: %clang -### -fintegrated-as -gz=zlib -c %s 2>&1 | FileCheck -check-prefix CHECK-OPT_GZ_EQ_ZLIB %s
-// CHECK-OPT_GZ_EQ_ZLIB: "-compress-debug-sections=zlib"
+// CHECK-OPT_GZ_EQ_ZLIB: "--compress-debug-sections=zlib"
 
 // RUN: %clang -### -fintegrated-as -gz=zlib-gnu -x assembler -c %s 2>&1 | FileCheck -check-prefix CHECK-OPT_GZ_EQ_ZLIB_GNU %s
 // RUN: %clang -### -fintegrated-as -gz=zlib-gnu -c %s 2>&1 | FileCheck -check-prefix CHECK-OPT_GZ_EQ_ZLIB_GNU %s
-// CHECK-OPT_GZ_EQ_ZLIB_GNU: "-compress-debug-sections=zlib-gnu"
+// CHECK-OPT_GZ_EQ_ZLIB_GNU: "--compress-debug-sections=zlib-gnu"
 
 // RUN: %clang -### -fintegrated-as -gz=invalid -x assembler -c %s 2>&1 | FileCheck -check-prefix CHECK-OPT_GZ_EQ_INVALID %s
 // RUN: %clang -### -fintegrated-as -gz=invalid -c %s 2>&1 | FileCheck -check-prefix CHECK-OPT_GZ_EQ_INVALID %s

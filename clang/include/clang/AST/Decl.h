@@ -1,9 +1,8 @@
 //===- Decl.h - Classes for representing declarations -----------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -15,6 +14,7 @@
 #define LLVM_CLANG_AST_DECL_H
 
 #include "clang/AST/APValue.h"
+#include "clang/AST/ASTContextAllocate.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/ExternalASTSource.h"
@@ -1226,10 +1226,15 @@ public:
 
   void setInit(Expr *I);
 
-  /// Determine whether this variable's value can be used in a
+  /// Determine whether this variable's value might be usable in a
   /// constant expression, according to the relevant language standard.
   /// This only checks properties of the declaration, and does not check
   /// whether the initializer is in fact a constant expression.
+  bool mightBeUsableInConstantExpressions(ASTContext &C) const;
+
+  /// Determine whether this variable's value can be used in a
+  /// constant expression, according to the relevant language standard,
+  /// including checking whether it was initialized by a constant expression.
   bool isUsableInConstantExpressions(ASTContext &C) const;
 
   EvaluatedStmt *ensureEvaluatedStmt() const;
@@ -1395,6 +1400,10 @@ public:
     NonParmVarDeclBits.IsInitCapture = IC;
   }
 
+  /// Determine whether this variable is actually a function parameter pack or
+  /// init-capture pack.
+  bool isParameterPack() const;
+
   /// Whether this local extern variable declaration's previous declaration
   /// was declared in the same block scope. Only correct in C++.
   bool isPreviousDeclInSameBlockScope() const {
@@ -1433,6 +1442,12 @@ public:
   /// static data member of a class template, determine what kind of
   /// template specialization or instantiation this is.
   TemplateSpecializationKind getTemplateSpecializationKind() const;
+
+  /// Get the template specialization kind of this variable for the purposes of
+  /// template instantiation. This differs from getTemplateSpecializationKind()
+  /// for an instantiation of a class-scope explicit specialization.
+  TemplateSpecializationKind
+  getTemplateSpecializationKindForInstantiation() const;
 
   /// If this variable is an instantiation of a variable template or a
   /// static data member of a class template, determine its point of
@@ -1682,10 +1697,6 @@ public:
 
   QualType getOriginalType() const;
 
-  /// Determine whether this parameter is actually a function
-  /// parameter pack.
-  bool isParameterPack() const;
-
   /// Sets the function declaration that owns this
   /// ParmVarDecl. Since ParmVarDecls are often created before the
   /// FunctionDecls that own them, this routine is required to update
@@ -1742,10 +1753,19 @@ class FunctionDecl : public DeclaratorDecl,
 public:
   /// The kind of templated function a FunctionDecl can be.
   enum TemplatedKind {
+    // Not templated.
     TK_NonTemplate,
+    // The pattern in a function template declaration.
     TK_FunctionTemplate,
+    // A non-template function that is an instantiation or explicit
+    // specialization of a member of a templated class.
     TK_MemberSpecialization,
+    // An instantiation or explicit specialization of a function template.
+    // Note: this might have been instantiated from a templated class if it
+    // is a class-scope explicit specialization.
     TK_FunctionTemplateSpecialization,
+    // A function template specialization that hasn't yet been resolved to a
+    // particular specialized function template.
     TK_DependentFunctionTemplateSpecialization
   };
 
@@ -1841,7 +1861,7 @@ protected:
   FunctionDecl(Kind DK, ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
                const DeclarationNameInfo &NameInfo, QualType T,
                TypeSourceInfo *TInfo, StorageClass S, bool isInlineSpecified,
-               bool isConstexprSpecified);
+               ConstexprSpecKind ConstexprKind);
 
   using redeclarable_base = Redeclarable<FunctionDecl>;
 
@@ -1871,29 +1891,24 @@ public:
   using redeclarable_base::getMostRecentDecl;
   using redeclarable_base::isFirstDecl;
 
-  static FunctionDecl *Create(ASTContext &C, DeclContext *DC,
-                              SourceLocation StartLoc, SourceLocation NLoc,
-                              DeclarationName N, QualType T,
-                              TypeSourceInfo *TInfo,
-                              StorageClass SC,
-                              bool isInlineSpecified = false,
-                              bool hasWrittenPrototype = true,
-                              bool isConstexprSpecified = false) {
+  static FunctionDecl *
+  Create(ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
+         SourceLocation NLoc, DeclarationName N, QualType T,
+         TypeSourceInfo *TInfo, StorageClass SC, bool isInlineSpecified = false,
+         bool hasWrittenPrototype = true,
+         ConstexprSpecKind ConstexprKind = CSK_unspecified) {
     DeclarationNameInfo NameInfo(N, NLoc);
-    return FunctionDecl::Create(C, DC, StartLoc, NameInfo, T, TInfo,
-                                SC,
+    return FunctionDecl::Create(C, DC, StartLoc, NameInfo, T, TInfo, SC,
                                 isInlineSpecified, hasWrittenPrototype,
-                                isConstexprSpecified);
+                                ConstexprKind);
   }
 
   static FunctionDecl *Create(ASTContext &C, DeclContext *DC,
                               SourceLocation StartLoc,
-                              const DeclarationNameInfo &NameInfo,
-                              QualType T, TypeSourceInfo *TInfo,
-                              StorageClass SC,
-                              bool isInlineSpecified,
-                              bool hasWrittenPrototype,
-                              bool isConstexprSpecified = false);
+                              const DeclarationNameInfo &NameInfo, QualType T,
+                              TypeSourceInfo *TInfo, StorageClass SC,
+                              bool isInlineSpecified, bool hasWrittenPrototype,
+                              ConstexprSpecKind ConstexprKind);
 
   static FunctionDecl *CreateDeserialized(ASTContext &C, unsigned ID);
 
@@ -2090,8 +2105,21 @@ public:
   }
 
   /// Whether this is a (C++11) constexpr function or constexpr constructor.
-  bool isConstexpr() const { return FunctionDeclBits.IsConstexpr; }
-  void setConstexpr(bool IC) { FunctionDeclBits.IsConstexpr = IC; }
+  bool isConstexpr() const {
+    return FunctionDeclBits.ConstexprKind != CSK_unspecified;
+  }
+  void setConstexprKind(ConstexprSpecKind CSK) {
+    FunctionDeclBits.ConstexprKind = CSK;
+  }
+  ConstexprSpecKind getConstexprKind() const {
+    return static_cast<ConstexprSpecKind>(FunctionDeclBits.ConstexprKind);
+  }
+  bool isConstexprSpecified() const {
+    return FunctionDeclBits.ConstexprKind == CSK_constexpr;
+  }
+  bool isConsteval() const {
+    return FunctionDeclBits.ConstexprKind == CSK_consteval;
+  }
 
   /// Whether the instantiation of this function is pending.
   /// This bit is set when the decision to instantiate this function is made
@@ -2255,7 +2283,7 @@ public:
     return const_cast<FunctionDecl*>(this)->getCanonicalDecl();
   }
 
-  unsigned getBuiltinID() const;
+  unsigned getBuiltinID(bool ConsiderWrapperFunctions = false) const;
 
   // ArrayRef interface to parameters.
   ArrayRef<ParmVarDecl *> parameters() const {
@@ -2315,6 +2343,14 @@ public:
     return T->castAs<FunctionType>()->getReturnType();
   }
 
+  /// Gets the ExceptionSpecificationType as declared.
+  ExceptionSpecificationType getExceptionSpecType() const {
+    auto *TSI = getTypeSourceInfo();
+    QualType T = TSI ? TSI->getType() : getType();
+    const auto *FPT = T->getAs<FunctionProtoType>();
+    return FPT ? FPT->getExceptionSpecType() : EST_None;
+  }
+
   /// Attempt to compute an informative source range covering the
   /// function exception specification, if any.
   SourceRange getExceptionSpecSourceRange() const;
@@ -2353,16 +2389,6 @@ public:
   /// either marked "inline" or "constexpr" or is a member function of a class
   /// that was defined in the class body.
   bool isInlined() const { return FunctionDeclBits.IsInline; }
-
-  /// Whether this function is marked as explicit explicitly.
-  bool isExplicitSpecified() const {
-    return FunctionDeclBits.IsExplicitSpecified;
-  }
-
-  /// State that this function is marked as explicit explicitly.
-  void setExplicitSpecified(bool ExpSpec = true) {
-    FunctionDeclBits.IsExplicitSpecified = ExpSpec;
-  }
 
   bool isInlineDefinitionExternallyVisible() const;
 
@@ -2439,10 +2465,6 @@ public:
   bool isFunctionTemplateSpecialization() const {
     return getPrimaryTemplate() != nullptr;
   }
-
-  /// Retrieve the class scope template pattern that this function
-  ///  template specialization is instantiated from.
-  FunctionDecl *getClassScopeSpecializationPattern() const;
 
   /// If this function is actually a function template specialization,
   /// retrieve information about this function template specialization.
@@ -2529,6 +2551,11 @@ public:
   /// Determine what kind of template instantiation this function
   /// represents.
   TemplateSpecializationKind getTemplateSpecializationKind() const;
+
+  /// Determine the kind of template specialization this function represents
+  /// for the purpose of template instantiation.
+  TemplateSpecializationKind
+  getTemplateSpecializationKindForInstantiation() const;
 
   /// Determine what kind of template instantiation this function
   /// represents.
@@ -3851,7 +3878,7 @@ public:
   static bool classofKind(Kind K) { return K == FileScopeAsm; }
 };
 
-/// Pepresents a block literal declaration, which is like an
+/// Represents a block literal declaration, which is like an
 /// unnamed FunctionDecl.  For example:
 /// ^{ statement-body }   or   ^(int arg1, float arg2){ statement-body }
 class BlockDecl : public Decl, public DeclContext {
@@ -4239,8 +4266,10 @@ public:
   SourceLocation getRBraceLoc() const { return RBraceLoc; }
   void setRBraceLoc(SourceLocation L) { RBraceLoc = L; }
 
+  bool hasBraces() const { return RBraceLoc.isValid(); }
+
   SourceLocation getEndLoc() const LLVM_READONLY {
-    if (RBraceLoc.isValid())
+    if (hasBraces())
       return RBraceLoc;
     // No braces: get the end location of the (only) declaration in context
     // (if present).

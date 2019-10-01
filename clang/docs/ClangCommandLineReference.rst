@@ -610,6 +610,10 @@ C++ standard library to use
 
 Generate code for the given target
 
+.. option:: --print-supported-cpus
+
+Print supported cpu models for the given target
+
 .. option:: -time
 
 Time individual commands
@@ -2218,7 +2222,7 @@ Generate branches with extended addressability, usually via indirect jumps.
 
 .. option:: -mmacosx-version-min=<arg>, -mmacos-version-min=<arg>
 
-Set Mac OS X deployment target
+Set macOS deployment target
 
 .. option:: -mmcu=<arg>
 
@@ -2396,6 +2400,15 @@ Generate code which only uses the general purpose registers (AArch64 only)
 
 AMDGPU
 ------
+.. option:: -mcumode, -mno-cumode
+
+CU wavefront execution mode is used if enabled and WGP wavefront execution mode
+is used if disabled (AMDGPU only)
+
+.. option:: -mwavefrontsize64, -mno-wavefrontsize64
+
+Wavefront size 64 is used if enabled and wavefront size 32 if disabled (AMDGPU only)
+
 .. option:: -mxnack, -mno-xnack
 
 Enable XNACK (AMDGPU only)
@@ -2610,6 +2623,8 @@ X86
 
 .. option:: -mavx512bitalg, -mno-avx512bitalg
 
+.. option:: -mavx512bf16, -mno-avx512bf16
+
 .. option:: -mavx512bw, -mno-avx512bw
 
 .. option:: -mavx512cd, -mno-avx512cd
@@ -2632,6 +2647,8 @@ X86
 
 .. option:: -mavx512vnni, -mno-avx512vnni
 
+.. option:: -mavx512vp2intersect, -mno-avx512vp2intersect
+
 .. option:: -mavx512vpopcntdq, -mno-avx512vpopcntdq
 
 .. option:: -mbmi, -mno-bmi
@@ -2647,6 +2664,8 @@ X86
 .. option:: -mclzero, -mno-clzero
 
 .. option:: -mcx16, -mno-cx16
+
+.. option:: -menqcmd, -mno-enqcmd
 
 .. option:: -mf16c, -mno-f16c
 

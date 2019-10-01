@@ -1,9 +1,8 @@
 //===- GlobalDecl.h - Global declaration holder -----------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -27,6 +26,12 @@
 #include <cassert>
 
 namespace clang {
+
+enum class DynamicInitKind : unsigned {
+  NoStub = 0,
+  Initializer,
+  AtExit,
+};
 
 /// GlobalDecl - represents a global declaration. This can either be a
 /// CXXConstructorDecl and the constructor type (Base, Complete).
@@ -56,6 +61,8 @@ public:
   GlobalDecl(const OMPDeclareReductionDecl *D) { Init(D); }
   GlobalDecl(const CXXConstructorDecl *D, CXXCtorType Type) : Value(D, Type) {}
   GlobalDecl(const CXXDestructorDecl *D, CXXDtorType Type) : Value(D, Type) {}
+  GlobalDecl(const VarDecl *D, DynamicInitKind StubKind)
+      : Value(D, unsigned(StubKind)) {}
 
   GlobalDecl getCanonicalDecl() const {
     GlobalDecl CanonGD;
@@ -76,6 +83,13 @@ public:
   CXXDtorType getDtorType() const {
     assert(isa<CXXDestructorDecl>(getDecl()) && "Decl is not a dtor!");
     return static_cast<CXXDtorType>(Value.getInt());
+  }
+
+  DynamicInitKind getDynamicInitKind() const {
+    assert(isa<VarDecl>(getDecl()) &&
+           cast<VarDecl>(getDecl())->hasGlobalStorage() &&
+           "Decl is not a global variable!");
+    return static_cast<DynamicInitKind>(Value.getInt());
   }
 
   unsigned getMultiVersionIndex() const {
@@ -102,6 +116,20 @@ public:
   GlobalDecl getWithDecl(const Decl *D) {
     GlobalDecl Result(*this);
     Result.Value.setPointer(D);
+    return Result;
+  }
+
+  GlobalDecl getWithCtorType(CXXCtorType Type) {
+    assert(isa<CXXConstructorDecl>(getDecl()));
+    GlobalDecl Result(*this);
+    Result.Value.setInt(Type);
+    return Result;
+  }
+
+  GlobalDecl getWithDtorType(CXXDtorType Type) {
+    assert(isa<CXXDestructorDecl>(getDecl()));
+    GlobalDecl Result(*this);
+    Result.Value.setInt(Type);
     return Result;
   }
 
@@ -138,13 +166,6 @@ namespace llvm {
                         clang::GlobalDecl RHS) {
       return LHS == RHS;
     }
-  };
-
-  // GlobalDecl isn't *technically* a POD type. However, its copy constructor,
-  // copy assignment operator, and destructor are all trivial.
-  template <>
-  struct isPodLike<clang::GlobalDecl> {
-    static const bool value = true;
   };
 
 } // namespace llvm

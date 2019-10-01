@@ -1,9 +1,8 @@
 //===- Tooling.cpp - Running clang standalone tools -----------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -302,7 +301,7 @@ bool ToolInvocation::run() {
       DiagConsumer ? DiagConsumer : &DiagnosticPrinter, false);
 
   const std::unique_ptr<driver::Driver> Driver(
-      newDriver(&Diagnostics, BinaryName, Files->getVirtualFileSystem()));
+      newDriver(&Diagnostics, BinaryName, &Files->getVirtualFileSystem()));
   // The "input file not found" diagnostics from the driver are useful.
   // The driver is only aware of the VFS working directory, but some clients
   // change this at the FileManager level instead.
@@ -376,16 +375,20 @@ bool FrontendActionFactory::runInvocation(
 ClangTool::ClangTool(const CompilationDatabase &Compilations,
                      ArrayRef<std::string> SourcePaths,
                      std::shared_ptr<PCHContainerOperations> PCHContainerOps,
-                     IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS)
+                     IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
+                     IntrusiveRefCntPtr<FileManager> Files)
     : Compilations(Compilations), SourcePaths(SourcePaths),
       PCHContainerOps(std::move(PCHContainerOps)),
       OverlayFileSystem(new llvm::vfs::OverlayFileSystem(std::move(BaseFS))),
       InMemoryFileSystem(new llvm::vfs::InMemoryFileSystem),
-      Files(new FileManager(FileSystemOptions(), OverlayFileSystem)) {
+      Files(Files ? Files
+                  : new FileManager(FileSystemOptions(), OverlayFileSystem)) {
   OverlayFileSystem->pushOverlay(InMemoryFileSystem);
   appendArgumentsAdjuster(getClangStripOutputAdjuster());
   appendArgumentsAdjuster(getClangSyntaxOnlyAdjuster());
   appendArgumentsAdjuster(getClangStripDependencyFileAdjuster());
+  if (Files)
+    Files->setVirtualFileSystem(OverlayFileSystem);
 }
 
 ClangTool::~ClangTool() = default;
@@ -518,7 +521,8 @@ int ClangTool::run(ToolAction *Action) {
 
       if (!Invocation.run()) {
         // FIXME: Diagnostics should be used instead.
-        llvm::errs() << "Error while processing " << File << ".\n";
+        if (PrintErrorMessage)
+          llvm::errs() << "Error while processing " << File << ".\n";
         ProcessingFailed = true;
       }
     }
@@ -570,24 +574,24 @@ void ClangTool::setRestoreWorkingDir(bool RestoreCWD) {
   this->RestoreCWD = RestoreCWD;
 }
 
+void ClangTool::setPrintErrorMessage(bool PrintErrorMessage) {
+  this->PrintErrorMessage = PrintErrorMessage;
+}
+
 namespace clang {
 namespace tooling {
 
 std::unique_ptr<ASTUnit>
-buildASTFromCode(const Twine &Code, const Twine &FileName,
+buildASTFromCode(StringRef Code, StringRef FileName,
                  std::shared_ptr<PCHContainerOperations> PCHContainerOps) {
   return buildASTFromCodeWithArgs(Code, std::vector<std::string>(), FileName,
                                   "clang-tool", std::move(PCHContainerOps));
 }
 
 std::unique_ptr<ASTUnit> buildASTFromCodeWithArgs(
-    const Twine &Code, const std::vector<std::string> &Args,
-    const Twine &FileName, const Twine &ToolName,
-    std::shared_ptr<PCHContainerOperations> PCHContainerOps,
+    StringRef Code, const std::vector<std::string> &Args, StringRef FileName,
+    StringRef ToolName, std::shared_ptr<PCHContainerOperations> PCHContainerOps,
     ArgumentsAdjuster Adjuster) {
-  SmallString<16> FileNameStorage;
-  StringRef FileNameRef = FileName.toNullTerminatedStringRef(FileNameStorage);
-
   std::vector<std::unique_ptr<ASTUnit>> ASTs;
   ASTBuilderAction Action(ASTs);
   llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFileSystem(
@@ -599,13 +603,11 @@ std::unique_ptr<ASTUnit> buildASTFromCodeWithArgs(
       new FileManager(FileSystemOptions(), OverlayFileSystem));
 
   ToolInvocation Invocation(
-      getSyntaxOnlyToolArgs(ToolName, Adjuster(Args, FileNameRef), FileNameRef),
+      getSyntaxOnlyToolArgs(ToolName, Adjuster(Args, FileName), FileName),
       &Action, Files.get(), std::move(PCHContainerOps));
 
-  SmallString<1024> CodeStorage;
-  InMemoryFileSystem->addFile(FileNameRef, 0,
-                              llvm::MemoryBuffer::getMemBuffer(
-                                  Code.toNullTerminatedStringRef(CodeStorage)));
+  InMemoryFileSystem->addFile(FileName, 0,
+                              llvm::MemoryBuffer::getMemBufferCopy(Code));
   if (!Invocation.run())
     return nullptr;
 

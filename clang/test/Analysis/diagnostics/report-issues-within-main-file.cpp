@@ -1,5 +1,5 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,unix -analyzer-output=plist-multi-file -analyzer-config report-in-main-source-file=true %s -o %t.plist
-// RUN: cat %t.plist | %diff_plist %S/Inputs/expected-plists/report-issues-within-main-file.cpp.plist -
+// RUN: %normalize_plist <%t.plist | diff -ub %S/Inputs/expected-plists/report-issues-within-main-file.cpp.plist -
 #include "Inputs/include/report-issues-within-main-file.h"
 
 void mainPlusHeader() {

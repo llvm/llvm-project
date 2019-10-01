@@ -1,9 +1,8 @@
 // RetainCountDiagnostics.cpp - Checks for leaks and other issues -*- C++ -*--//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -183,7 +182,7 @@ static Optional<unsigned> findArgIdxOfSymbol(ProgramStateRef CurrSt,
   return None;
 }
 
-Optional<std::string> findMetaClassAlloc(const Expr *Callee) {
+static Optional<std::string> findMetaClassAlloc(const Expr *Callee) {
   if (const auto *ME = dyn_cast<MemberExpr>(Callee)) {
     if (ME->getMemberDecl()->getNameAsString() != "alloc")
       return None;
@@ -201,8 +200,7 @@ Optional<std::string> findMetaClassAlloc(const Expr *Callee) {
   return None;
 }
 
-std::string findAllocatedObjectName(const Stmt *S,
-                                    QualType QT) {
+static std::string findAllocatedObjectName(const Stmt *S, QualType QT) {
   if (const auto *CE = dyn_cast<CallExpr>(S))
     if (auto Out = findMetaClassAlloc(CE->getCallee()))
       return *Out;

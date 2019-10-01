@@ -1,9 +1,8 @@
 //===--- IndexSymbol.cpp - Types and functions for indexing symbols -------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -56,9 +55,6 @@ bool index::isFunctionLocalSymbol(const Decl *D) {
   if (isa<ParmVarDecl>(D))
     return true;
 
-  if (isa<TemplateTemplateParmDecl>(D))
-    return true;
-
   if (isa<ObjCTypeParamDecl>(D))
     return true;
 
@@ -98,6 +94,13 @@ SymbolInfo index::getSymbolInfo(const Decl *D) {
   }
   if (isa<ObjCProtocolDecl>(D->getDeclContext())) {
     Info.Properties |= (SymbolPropertySet)SymbolProperty::ProtocolInterface;
+  }
+
+  if (auto *VT = dyn_cast<VarTemplateDecl>(D)) {
+    Info.Properties |= (SymbolPropertySet)SymbolProperty::Generic;
+    Info.Lang = SymbolLanguage::CXX;
+    // All other fields are filled from the templated decl.
+    D = VT->getTemplatedDecl();
   }
 
   if (const TagDecl *TD = dyn_cast<TagDecl>(D)) {
@@ -172,6 +175,7 @@ SymbolInfo index::getSymbolInfo(const Decl *D) {
       Info.Kind = SymbolKind::Function;
       break;
     case Decl::Field:
+    case Decl::IndirectField:
       Info.Kind = SymbolKind::Field;
       if (const CXXRecordDecl *
             CXXRec = dyn_cast<CXXRecordDecl>(D->getDeclContext())) {
@@ -320,6 +324,10 @@ SymbolInfo index::getSymbolInfo(const Decl *D) {
       Info.Lang = SymbolLanguage::CXX;
       Info.Properties |= (SymbolPropertySet)SymbolProperty::Generic;
       break;
+    case Decl::Using:
+      Info.Kind = SymbolKind::Using;
+      Info.Lang = SymbolLanguage::CXX;
+      break;
     case Decl::Binding:
       Info.Kind = SymbolKind::Variable;
       Info.Lang = SymbolLanguage::CXX;
@@ -332,6 +340,23 @@ SymbolInfo index::getSymbolInfo(const Decl *D) {
           Info.Lang = SymbolLanguage::CXX;
       }
       break;
+    case Decl::ClassTemplatePartialSpecialization:
+    case Decl::ClassScopeFunctionSpecialization:
+    case Decl::ClassTemplateSpecialization:
+    case Decl::CXXRecord:
+    case Decl::Enum:
+    case Decl::Record:
+      llvm_unreachable("records handled before");
+      break;
+    case Decl::VarTemplateSpecialization:
+    case Decl::VarTemplatePartialSpecialization:
+    case Decl::ImplicitParam:
+    case Decl::ParmVar:
+    case Decl::Var:
+    case Decl::VarTemplate:
+      llvm_unreachable("variables handled before");
+      break;
+    // Other decls get the 'unknown' kind.
     default:
       break;
     }
@@ -396,6 +421,7 @@ bool index::applyForEachSymbolRoleInterruptible(SymbolRoleSet Roles,
   APPLY_FOR_ROLE(RelationContainedBy);
   APPLY_FOR_ROLE(RelationIBTypeOf);
   APPLY_FOR_ROLE(RelationSpecializationOf);
+  APPLY_FOR_ROLE(NameReference);
 
 #undef APPLY_FOR_ROLE
 
@@ -438,6 +464,7 @@ void index::printSymbolRoles(SymbolRoleSet Roles, raw_ostream &OS) {
     case SymbolRole::RelationContainedBy: OS << "RelCont"; break;
     case SymbolRole::RelationIBTypeOf: OS << "RelIBType"; break;
     case SymbolRole::RelationSpecializationOf: OS << "RelSpecialization"; break;
+    case SymbolRole::NameReference: OS << "NameReference"; break;
     }
   });
 }

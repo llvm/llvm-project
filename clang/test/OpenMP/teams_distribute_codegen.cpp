@@ -21,15 +21,19 @@
 int a[100];
 
 // CK1: define {{.*}}i32 @{{.+}}teams_argument_globali(
-int teams_argument_global(int n){  
+int teams_argument_global(int n){
   int te = n / 128;
   int th = 128;
   // discard n_addr
   // CK1: alloca i32,
   // CK1: [[TE:%.+]] = alloca i32,
   // CK1: [[TH:%.+]] = alloca i32,
+  // CK1: alloca i32,
+  // CK1: alloca i32,
+  // CK1: alloca i32,
   // CK1: [[TE_CAST:%.+]] = alloca i{{32|64}},
   // CK1: [[TH_CAST:%.+]] = alloca i{{32|64}},
+  // CK1: call void @__kmpc_push_target_tripcount(i64 -1, i64 %{{.+}})
   // CK1: [[TE_PAR:%.+]] = load{{.+}}, {{.+}} [[TE_CAST]],
   // CK1: [[TH_PAR:%.+]] = load{{.+}}, {{.+}} [[TH_CAST]],
 

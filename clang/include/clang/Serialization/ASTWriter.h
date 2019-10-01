@@ -1,9 +1,8 @@
 //===- ASTWriter.h - AST File Writer ----------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -739,6 +738,7 @@ private:
   void DeclarationMarkedOpenMPThreadPrivate(const Decl *D) override;
   void DeclarationMarkedOpenMPDeclareTarget(const Decl *D,
                                             const Attr *Attr) override;
+  void DeclarationMarkedOpenMPAllocate(const Decl *D, const Attr *A) override;
   void RedefinedHiddenDefinition(const NamedDecl *D, Module *M) override;
   void AddedAttributeToRecord(const Attr *Attr,
                               const RecordDecl *Record) override;
@@ -862,6 +862,9 @@ public:
 
   /// Emit a floating-point value.
   void AddAPFloat(const llvm::APFloat &Value);
+
+  /// Emit an APvalue.
+  void AddAPValue(const APValue &Value);
 
   /// Emit a reference to an identifier.
   void AddIdentifierRef(const IdentifierInfo *II) {

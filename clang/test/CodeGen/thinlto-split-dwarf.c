@@ -10,12 +10,14 @@
 
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu \
 // RUN:   -emit-obj -fthinlto-index=%t.o.thinlto.bc \
-// RUN:   -o %t.native.o -split-dwarf-file %t.native.dwo -x ir %t.o
+// RUN:   -o %t.native.o -split-dwarf-file %t.file.dwo \
+// RUN:   -split-dwarf-output %t.output.dwo -x ir %t.o
 
-// RUN: llvm-readobj -sections %t.native.o | FileCheck --check-prefix=O %s
-// RUN: llvm-readobj -sections %t.native.dwo | FileCheck --check-prefix=DWO %s
+// RUN: llvm-dwarfdump %t.native.o | FileCheck --check-prefix=O %s
+// RUN: llvm-dwarfdump %t.output.dwo | FileCheck --check-prefix=DWO %s
 
-// O-NOT: .dwo
-// DWO: .dwo
+// O: DW_AT_GNU_dwo_name ("{{.*}}.file.dwo")
+// O-NOT: DW_TAG_subprogram
+// DWO: DW_TAG_subprogram
 
 int main() {}

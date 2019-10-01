@@ -1,9 +1,8 @@
-//===--- MacroExpansion.cpp - Top level Macro Expansion -------------------===//
+//===--- PPMacroExpansion.cpp - Top level Macro Expansion -----------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -495,10 +494,13 @@ bool Preprocessor::HandleMacroExpandedIdentifier(Token &Identifier,
     // Preprocessor directives used inside macro arguments are not portable, and
     // this enables the warning.
     InMacroArgs = true;
+    ArgMacro = &Identifier;
+
     Args = ReadMacroCallArgumentList(Identifier, MI, ExpansionEnd);
 
     // Finished parsing args.
     InMacroArgs = false;
+    ArgMacro = nullptr;
 
     // If there was an error parsing the arguments, bail out.
     if (!Args) return true;
@@ -804,7 +806,7 @@ MacroArgs *Preprocessor::ReadMacroCallArgumentList(Token &MacroName,
         // Do not lose the EOF/EOD.
         auto Toks = llvm::make_unique<Token[]>(1);
         Toks[0] = Tok;
-        EnterTokenStream(std::move(Toks), 1, true);
+        EnterTokenStream(std::move(Toks), 1, true, /*IsReinject*/ false);
         break;
       } else if (Tok.is(tok::r_paren)) {
         // If we found the ) token, the macro arg list is done.
@@ -1153,8 +1155,11 @@ static bool EvaluateHasIncludeCommon(Token &Tok,
     return false;
   }
 
-  // Get '('.
-  PP.LexNonComment(Tok);
+  // Get '('. If we don't have a '(', try to form a header-name token.
+  do {
+    if (PP.LexHeaderName(Tok))
+      return false;
+  } while (Tok.getKind() == tok::comment);
 
   // Ensure we have a '('.
   if (Tok.isNot(tok::l_paren)) {
@@ -1163,57 +1168,26 @@ static bool EvaluateHasIncludeCommon(Token &Tok,
     PP.Diag(LParenLoc, diag::err_pp_expected_after) << II << tok::l_paren;
     // If the next token looks like a filename or the start of one,
     // assume it is and process it as such.
-    if (!Tok.is(tok::angle_string_literal) && !Tok.is(tok::string_literal) &&
-        !Tok.is(tok::less))
+    if (Tok.isNot(tok::header_name))
       return false;
   } else {
     // Save '(' location for possible missing ')' message.
     LParenLoc = Tok.getLocation();
+    if (PP.LexHeaderName(Tok))
+      return false;
+  }
 
-    if (PP.getCurrentLexer()) {
-      // Get the file name.
-      PP.getCurrentLexer()->LexIncludeFilename(Tok);
-    } else {
-      // We're in a macro, so we can't use LexIncludeFilename; just
-      // grab the next token.
-      PP.Lex(Tok);
-    }
+  if (Tok.isNot(tok::header_name)) {
+    PP.Diag(Tok.getLocation(), diag::err_pp_expects_filename);
+    return false;
   }
 
   // Reserve a buffer to get the spelling.
   SmallString<128> FilenameBuffer;
-  StringRef Filename;
-  SourceLocation EndLoc;
-
-  switch (Tok.getKind()) {
-  case tok::eod:
-    // If the token kind is EOD, the error has already been diagnosed.
+  bool Invalid = false;
+  StringRef Filename = PP.getSpelling(Tok, FilenameBuffer, &Invalid);
+  if (Invalid)
     return false;
-
-  case tok::angle_string_literal:
-  case tok::string_literal: {
-    bool Invalid = false;
-    Filename = PP.getSpelling(Tok, FilenameBuffer, &Invalid);
-    if (Invalid)
-      return false;
-    break;
-  }
-
-  case tok::less:
-    // This could be a <foo/bar.h> file coming from a macro expansion.  In this
-    // case, glue the tokens together into FilenameBuffer and interpret those.
-    FilenameBuffer.push_back('<');
-    if (PP.ConcatenateIncludeName(FilenameBuffer, EndLoc)) {
-      // Let the caller know a <eod> was found by changing the Token kind.
-      Tok.setKind(tok::eod);
-      return false;   // Found <eod> but no ">"?  Diagnostic already emitted.
-    }
-    Filename = FilenameBuffer;
-    break;
-  default:
-    PP.Diag(Tok.getLocation(), diag::err_pp_expects_filename);
-    return false;
-  }
 
   SourceLocation FilenameLoc = Tok.getLocation();
 
@@ -1236,19 +1210,20 @@ static bool EvaluateHasIncludeCommon(Token &Tok,
 
   // Search include directories.
   const DirectoryLookup *CurDir;
-  const FileEntry *File =
+  Optional<FileEntryRef> File =
       PP.LookupFile(FilenameLoc, Filename, isAngled, LookupFrom, LookupFromFile,
                     CurDir, nullptr, nullptr, nullptr, nullptr, nullptr);
 
   if (PPCallbacks *Callbacks = PP.getPPCallbacks()) {
     SrcMgr::CharacteristicKind FileType = SrcMgr::C_User;
     if (File)
-      FileType = PP.getHeaderSearchInfo().getFileDirFlavor(File);
+      FileType =
+          PP.getHeaderSearchInfo().getFileDirFlavor(&File->getFileEntry());
     Callbacks->HasInclude(FilenameLoc, Filename, isAngled, File, FileType);
   }
 
   // Get the result value.  A result of true means the file exists.
-  return File != nullptr;
+  return File.hasValue();
 }
 
 /// EvaluateHasInclude - Process a '__has_include("path")' expression.
@@ -1646,6 +1621,10 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
                       .Case("__is_target_vendor", true)
                       .Case("__is_target_os", true)
                       .Case("__is_target_environment", true)
+                      .Case("__builtin_LINE", true)
+                      .Case("__builtin_FILE", true)
+                      .Case("__builtin_FUNCTION", true)
+                      .Case("__builtin_COLUMN", true)
                       .Default(false);
         }
       });

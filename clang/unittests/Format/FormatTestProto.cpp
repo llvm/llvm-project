@@ -1,9 +1,8 @@
 //===- unittest/Format/FormatTestProto.cpp --------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -108,6 +107,12 @@ TEST_F(FormatTestProto, FormatsEnums) {
                "};");
 }
 
+TEST_F(FormatTestProto, EnumAsFieldName) {
+  verifyFormat("message SomeMessage {\n"
+               "  required int32 enum = 1;\n"
+               "}");
+}
+
 TEST_F(FormatTestProto, UnderstandsReturns) {
   verifyFormat("rpc Search(SearchRequest) returns (SearchResponse);");
 }
@@ -186,6 +191,10 @@ TEST_F(FormatTestProto, DoesntWrapFileOptions) {
       "\"some.really.long.package.that.exceeds.the.column.limit\";",
       format("option    java_package   =    "
              "\"some.really.long.package.that.exceeds.the.column.limit\";"));
+}
+
+TEST_F(FormatTestProto, TrailingCommentAfterFileOption) {
+  verifyFormat("option java_package = \"foo.pkg\";  // comment\n");
 }
 
 TEST_F(FormatTestProto, FormatsOptions) {
@@ -386,6 +395,16 @@ TEST_F(FormatTestProto, FormatsOptions) {
                "  headheadheadheadheadhead_id: 1\n"
                "  product_data { product { 1 } }\n"
                "};");
+}
+
+TEST_F(FormatTestProto, DoesntWrapPackageStatements) {
+  verifyFormat(
+      "package"
+      " some.really.long.package.that.exceeds.the.column.limit00000000;");
+}
+
+TEST_F(FormatTestProto, TrailingCommentAfterPackage) {
+  verifyFormat("package foo.pkg;  // comment\n");
 }
 
 TEST_F(FormatTestProto, FormatsService) {

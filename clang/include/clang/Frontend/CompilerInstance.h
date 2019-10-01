@@ -1,9 +1,8 @@
 //===-- CompilerInstance.h - Clang Compiler Instance ------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -83,9 +82,6 @@ class CompilerInstance : public ModuleLoader {
   /// Auxiliary Target info.
   IntrusiveRefCntPtr<TargetInfo> AuxTarget;
 
-  /// The virtual file system.
-  IntrusiveRefCntPtr<llvm::vfs::FileSystem> VirtualFileSystem;
-
   /// The file manager.
   IntrusiveRefCntPtr<FileManager> FileMgr;
 
@@ -127,9 +123,6 @@ class CompilerInstance : public ModuleLoader {
 
   /// The module provider.
   std::shared_ptr<PCHContainerOperations> ThePCHContainerOperations;
-
-  /// The dependency file generator.
-  std::unique_ptr<DependencyFileGenerator> TheDependencyFileGenerator;
 
   std::vector<std::shared_ptr<DependencyCollector>> DependencyCollectors;
 
@@ -396,20 +389,8 @@ public:
   /// @name Virtual File System
   /// {
 
-  bool hasVirtualFileSystem() const { return VirtualFileSystem != nullptr; }
-
   llvm::vfs::FileSystem &getVirtualFileSystem() const {
-    assert(hasVirtualFileSystem() &&
-           "Compiler instance has no virtual file system");
-    return *VirtualFileSystem;
-  }
-
-  /// Replace the current virtual file system.
-  ///
-  /// \note Most clients should use setFileManager, which will implicitly reset
-  /// the virtual file system to the one contained in the file manager.
-  void setVirtualFileSystem(IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS) {
-    VirtualFileSystem = std::move(FS);
+    return getFileManager().getVirtualFileSystem();
   }
 
   /// }
@@ -659,7 +640,8 @@ public:
   /// Create the file manager and replace any existing one with it.
   ///
   /// \return The new file manager on success, or null on failure.
-  FileManager *createFileManager();
+  FileManager *
+  createFileManager(IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS = nullptr);
 
   /// Create the source manager and replace any existing one with it.
   void createSourceManager(FileManager &FileMgr);
@@ -689,7 +671,6 @@ public:
       InMemoryModuleCache &ModuleCache, ASTContext &Context,
       const PCHContainerReader &PCHContainerRdr,
       ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
-      DependencyFileGenerator *DependencyFile,
       ArrayRef<std::shared_ptr<DependencyCollector>> DependencyCollectors,
       void *DeserializationListener, bool OwnDeserializationListener,
       bool Preamble, bool UseGlobalModuleIndex);

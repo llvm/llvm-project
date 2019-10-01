@@ -267,12 +267,48 @@ namespace dr1347 { // dr1347: yes
 #endif
 }
 
+namespace dr1358 { // dr1358: yes
+#if __cplusplus >= 201103L
+  struct Lit { constexpr operator int() const { return 0; } };
+  struct NonLit { NonLit(); operator int(); }; // expected-note 2{{no constexpr constructors}}
+  struct NonConstexprConv { constexpr operator int() const; };
+  struct Virt { virtual int f(int) const; };
+
+  template<typename T, typename U, typename V> struct A : V {
+    int member;
+    constexpr A(U u) : member(u) {}
+    constexpr T f(U u) const { return T(); }
+  };
+
+  constexpr A<Lit, Lit, Lit> ce = Lit();
+  constexpr int k = ce.f(Lit{});
+
+  // Can have a non-literal return type and parameter type.
+  // Constexpr function can be implicitly virtual.
+  A<NonLit, NonLit, Virt> a = NonLit();
+  void g() { a.f(NonLit()); }
+
+  // Constructor is still constexpr, so this is a literal type.
+  static_assert(__is_literal_type(decltype(a)), "");
+
+  // Constructor can call non-constexpr functions.
+  A<Lit, NonConstexprConv, Lit> b = NonConstexprConv();
+
+  // But the corresponding non-template cases are rejected.
+  struct B : Virt {
+    int member;
+    constexpr B(NonLit u) : member(u) {} // expected-error {{not a literal type}}
+    constexpr NonLit f(NonLit u) const { return NonLit(); } // expected-error {{not a literal type}}
+  };
+#endif
+}
+
 namespace dr1359 { // dr1359: 3.5
 #if __cplusplus >= 201103L
   union A { constexpr A() = default; };
   union B { constexpr B() = default; int a; }; // expected-error {{not constexpr}} expected-note 2{{candidate}}
   union C { constexpr C() = default; int a, b; }; // expected-error {{not constexpr}} expected-note 2{{candidate}}
-  struct X { constexpr X() = default; union {}; };
+  struct X { constexpr X() = default; union {}; }; // expected-error {{does not declare anything}}
   struct Y { constexpr Y() = default; union { int a; }; }; // expected-error {{not constexpr}} expected-note 2{{candidate}}
 
   constexpr A a = A();

@@ -33,6 +33,16 @@ __device__ int d_v_i = 1;
 // DEVICE: @d_v_i = addrspace(1) externally_initialized global i32 1,
 // HOST:   @d_v_i = internal global i32 undef,
 
+// For `static` device variables, assume they won't be addressed from the host
+// side.
+static __device__ int d_s_v_i = 1;
+// DEVICE: @_ZL7d_s_v_i = internal addrspace(1) global i32 1,
+
+// Dummy function to keep static variables referenced.
+__device__ int foo() {
+  return d_s_v_i;
+}
+
 // trivial constructor -- allowed
 __device__ T d_t;
 // DEVICE: @d_t = addrspace(1) externally_initialized global %struct.T zeroinitializer

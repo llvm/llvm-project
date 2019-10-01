@@ -52,6 +52,10 @@
 // RUN:   | FileCheck %s -check-prefix=cascadelake
 // cascadelake: "-target-cpu" "cascadelake"
 //
+// RUN: %clang -target x86_64-unknown-unknown -c -### %s -march=cooperlake 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=cooperlake
+// cooperlake: "-target-cpu" "cooperlake"
+//
 // RUN: %clang -target x86_64-unknown-unknown -c -### %s -march=knl 2>&1 \
 // RUN:   | FileCheck %s -check-prefix=knl
 // knl: "-target-cpu" "knl"
@@ -159,3 +163,7 @@
 // RUN: %clang -target x86_64-unknown-unknown -c -### %s -march=znver1 2>&1 \
 // RUN:   | FileCheck %s -check-prefix=znver1
 // znver1: "-target-cpu" "znver1"
+//
+// RUN: %clang -target x86_64-unknown-unknown -c -### %s -march=znver2 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=znver2
+// znver2: "-target-cpu" "znver2"

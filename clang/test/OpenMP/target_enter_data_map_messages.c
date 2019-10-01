@@ -12,7 +12,7 @@ int main(int argc, char **argv) {
   #pragma omp target enter data map(r) // expected-error {{map type must be specified for '#pragma omp target enter data'}}
   #pragma omp target enter data map(tofrom: r) // expected-error {{map type 'tofrom' is not allowed for '#pragma omp target enter data'}}
 
-  #pragma omp target enter data map(always, to: r)
+  #pragma omp target enter data map(always, to: r) allocate(r) // expected-error {{unexpected OpenMP clause 'allocate' in directive '#pragma omp target enter data'}}
   #pragma omp target enter data map(always, alloc: r)
   #pragma omp target enter data map(always, from: r) // expected-error {{map type 'from' is not allowed for '#pragma omp target enter data'}}
   #pragma omp target enter data map(release: r) // expected-error {{map type 'release' is not allowed for '#pragma omp target enter data'}}

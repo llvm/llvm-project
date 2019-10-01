@@ -29,7 +29,7 @@ dynamic_cast_result derived_ptr = d;
 // CHECK-NEXT: ParenExpr {{.*}} <col:{{.*}}, col:{{.*}}> 'Derived *'{{$}}
 // CHECK-NEXT: CXXDynamicCastExpr {{.*}} <col:{{.*}}, col:{{.*}}> 'Derived *' dynamic_cast<struct Derived *> <Dynamic>{{$}}
 // CHECK-NEXT: ImplicitCastExpr {{.*}} <col:{{.*}}> 'Base *' <LValueToRValue> part_of_explicit_cast{{$}}
-// CHECK-NEXT: DeclRefExpr {{.*}} <col:{{.*}}> 'Base *' lvalue Var {{.*}} 'base_ptr' 'Base *'{{$}}
+// CHECK-NEXT: DeclRefExpr {{.*}} <col:{{.*}}> 'Base *' lvalue Var {{.*}} 'base_ptr' 'Base *' non_odr_use_unevaluated{{$}}
 
 // CXXReinterpretCastExpr
 reinterpret_cast_result void_ptr2 = &integer;
@@ -46,7 +46,7 @@ const_cast_result char_ptr = &character;
 // CHECK-NEXT: ParenExpr {{.*}} <col:{{.*}}, col:{{.*}}> 'char *'{{$}}
 // CHECK-NEXT: CXXConstCastExpr {{.*}} <col:{{.*}}, col:{{.*}}> 'char *' const_cast<char *> <NoOp>{{$}}
 // CHECK-NEXT: ImplicitCastExpr {{.*}} <col:{{.*}}> 'const char *' <LValueToRValue> part_of_explicit_cast{{$}}
-// CHECK-NEXT: DeclRefExpr {{.*}} <col:{{.*}}> 'const char *' lvalue Var {{.*}} 'const_char_ptr_value' 'const char *'{{$}}
+// CHECK-NEXT: DeclRefExpr {{.*}} <col:{{.*}}> 'const char *' lvalue Var {{.*}} 'const_char_ptr_value' 'const char *' non_odr_use_unevaluated{{$}}
 
 // CXXFunctionalCastExpr
 functional_cast_result *double_ptr = &floating;
@@ -56,7 +56,7 @@ functional_cast_result *double_ptr = &floating;
 // CHECK-NEXT: CXXFunctionalCastExpr {{.*}} <col:{{.*}}, col:{{.*}}> 'double' functional cast to double <NoOp>{{$}}
 // CHECK-NEXT: ImplicitCastExpr {{.*}} <col:{{.*}}> 'double' <IntegralToFloating> part_of_explicit_cast{{$}}
 // CHECK-NEXT: ImplicitCastExpr {{.*}} <col:{{.*}}> 'int' <LValueToRValue> part_of_explicit_cast{{$}}
-// CHECK-NEXT: DeclRefExpr {{.*}} <col:{{.*}}> 'int' lvalue Var {{.*}} 'int_value' 'int'{{$}}
+// CHECK-NEXT: DeclRefExpr {{.*}} <col:{{.*}}> 'int' lvalue Var {{.*}} 'int_value' 'int' non_odr_use_unevaluated{{$}}
 
 // CXXBoolLiteralExpr
 bool_literal_result *bool_ptr = &boolean;

@@ -1,9 +1,8 @@
 //= ProgramState.cpp - Path-Sensitive "State" for tracking values --*- C++ -*--=
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -11,14 +10,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/Analysis/CFG.h"
+#include "clang/Basic/JsonSupport.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/DynamicTypeMap.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SubEngine.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/TaintManager.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/DynamicTypeMap.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace clang;
@@ -442,53 +441,40 @@ void ProgramState::setStore(const StoreRef &newStore) {
 //  State pretty-printing.
 //===----------------------------------------------------------------------===//
 
-void ProgramState::print(raw_ostream &Out,
-                         const char *NL, const char *Sep,
-                         const LocationContext *LC) const {
-  // Print the store.
+void ProgramState::printJson(raw_ostream &Out, const LocationContext *LCtx,
+                             const char *NL, unsigned int Space,
+                             bool IsDot) const {
+  Indent(Out, Space, IsDot) << "\"program_state\": {" << NL;
+  ++Space;
+
   ProgramStateManager &Mgr = getStateManager();
-  const ASTContext &Context = getStateManager().getContext();
-  Mgr.getStoreManager().print(getStore(), Out, NL);
+
+  // Print the store.
+  Mgr.getStoreManager().printJson(Out, getStore(), NL, Space, IsDot);
 
   // Print out the environment.
-  Env.print(Out, NL, Sep, Context, LC);
+  Env.printJson(Out, Mgr.getContext(), LCtx, NL, Space, IsDot);
 
   // Print out the constraints.
-  Mgr.getConstraintManager().print(this, Out, NL, Sep);
+  Mgr.getConstraintManager().printJson(Out, this, NL, Space, IsDot);
 
   // Print out the tracked dynamic types.
-  printDynamicTypeInfo(this, Out, NL, Sep);
-
-  // Print out tainted symbols.
-  printTaint(Out, NL);
+  printDynamicTypeInfoJson(Out, this, NL, Space, IsDot);
 
   // Print checker-specific data.
-  Mgr.getOwningEngine().printState(Out, this, NL, Sep, LC);
+  Mgr.getOwningEngine().printJson(Out, this, LCtx, NL, Space, IsDot);
+
+  --Space;
+  Indent(Out, Space, IsDot) << '}';
 }
 
-void ProgramState::printDOT(raw_ostream &Out,
-                            const LocationContext *LC) const {
-  print(Out, "\\l", "\\|", LC);
+void ProgramState::printDOT(raw_ostream &Out, const LocationContext *LCtx,
+                            unsigned int Space) const {
+  printJson(Out, LCtx, /*NL=*/"\\l", Space, /*IsDot=*/true);
 }
 
 LLVM_DUMP_METHOD void ProgramState::dump() const {
-  print(llvm::errs());
-}
-
-void ProgramState::printTaint(raw_ostream &Out,
-                              const char *NL) const {
-  TaintMapImpl TM = get<TaintMap>();
-
-  if (!TM.isEmpty())
-    Out <<"Tainted symbols:" << NL;
-
-  for (TaintMapImpl::iterator I = TM.begin(), E = TM.end(); I != E; ++I) {
-    Out << I->first << " : " << I->second << NL;
-  }
-}
-
-void ProgramState::dumpTaint() const {
-  printTaint(llvm::errs());
+  printJson(llvm::errs());
 }
 
 AnalysisManager& ProgramState::getAnalysisManager() const {
@@ -657,167 +643,4 @@ bool ProgramState::scanReachableSymbols(
       return false;
   }
   return true;
-}
-
-ProgramStateRef ProgramState::addTaint(const Stmt *S,
-                                           const LocationContext *LCtx,
-                                           TaintTagType Kind) const {
-  if (const Expr *E = dyn_cast_or_null<Expr>(S))
-    S = E->IgnoreParens();
-
-  return addTaint(getSVal(S, LCtx), Kind);
-}
-
-ProgramStateRef ProgramState::addTaint(SVal V,
-                                       TaintTagType Kind) const {
-  SymbolRef Sym = V.getAsSymbol();
-  if (Sym)
-    return addTaint(Sym, Kind);
-
-  // If the SVal represents a structure, try to mass-taint all values within the
-  // structure. For now it only works efficiently on lazy compound values that
-  // were conjured during a conservative evaluation of a function - either as
-  // return values of functions that return structures or arrays by value, or as
-  // values of structures or arrays passed into the function by reference,
-  // directly or through pointer aliasing. Such lazy compound values are
-  // characterized by having exactly one binding in their captured store within
-  // their parent region, which is a conjured symbol default-bound to the base
-  // region of the parent region.
-  if (auto LCV = V.getAs<nonloc::LazyCompoundVal>()) {
-    if (Optional<SVal> binding = getStateManager().StoreMgr->getDefaultBinding(*LCV)) {
-      if (SymbolRef Sym = binding->getAsSymbol())
-        return addPartialTaint(Sym, LCV->getRegion(), Kind);
-    }
-  }
-
-  const MemRegion *R = V.getAsRegion();
-  return addTaint(R, Kind);
-}
-
-ProgramStateRef ProgramState::addTaint(const MemRegion *R,
-                                           TaintTagType Kind) const {
-  if (const SymbolicRegion *SR = dyn_cast_or_null<SymbolicRegion>(R))
-    return addTaint(SR->getSymbol(), Kind);
-  return this;
-}
-
-ProgramStateRef ProgramState::addTaint(SymbolRef Sym,
-                                           TaintTagType Kind) const {
-  // If this is a symbol cast, remove the cast before adding the taint. Taint
-  // is cast agnostic.
-  while (const SymbolCast *SC = dyn_cast<SymbolCast>(Sym))
-    Sym = SC->getOperand();
-
-  ProgramStateRef NewState = set<TaintMap>(Sym, Kind);
-  assert(NewState);
-  return NewState;
-}
-
-ProgramStateRef ProgramState::addPartialTaint(SymbolRef ParentSym,
-                                              const SubRegion *SubRegion,
-                                              TaintTagType Kind) const {
-  // Ignore partial taint if the entire parent symbol is already tainted.
-  if (contains<TaintMap>(ParentSym) && *get<TaintMap>(ParentSym) == Kind)
-    return this;
-
-  // Partial taint applies if only a portion of the symbol is tainted.
-  if (SubRegion == SubRegion->getBaseRegion())
-    return addTaint(ParentSym, Kind);
-
-  const TaintedSubRegions *SavedRegs = get<DerivedSymTaint>(ParentSym);
-  TaintedSubRegions Regs =
-      SavedRegs ? *SavedRegs : stateMgr->TSRFactory.getEmptyMap();
-
-  Regs = stateMgr->TSRFactory.add(Regs, SubRegion, Kind);
-  ProgramStateRef NewState = set<DerivedSymTaint>(ParentSym, Regs);
-  assert(NewState);
-  return NewState;
-}
-
-bool ProgramState::isTainted(const Stmt *S, const LocationContext *LCtx,
-                             TaintTagType Kind) const {
-  if (const Expr *E = dyn_cast_or_null<Expr>(S))
-    S = E->IgnoreParens();
-
-  SVal val = getSVal(S, LCtx);
-  return isTainted(val, Kind);
-}
-
-bool ProgramState::isTainted(SVal V, TaintTagType Kind) const {
-  if (const SymExpr *Sym = V.getAsSymExpr())
-    return isTainted(Sym, Kind);
-  if (const MemRegion *Reg = V.getAsRegion())
-    return isTainted(Reg, Kind);
-  return false;
-}
-
-bool ProgramState::isTainted(const MemRegion *Reg, TaintTagType K) const {
-  if (!Reg)
-    return false;
-
-  // Element region (array element) is tainted if either the base or the offset
-  // are tainted.
-  if (const ElementRegion *ER = dyn_cast<ElementRegion>(Reg))
-    return isTainted(ER->getSuperRegion(), K) || isTainted(ER->getIndex(), K);
-
-  if (const SymbolicRegion *SR = dyn_cast<SymbolicRegion>(Reg))
-    return isTainted(SR->getSymbol(), K);
-
-  if (const SubRegion *ER = dyn_cast<SubRegion>(Reg))
-    return isTainted(ER->getSuperRegion(), K);
-
-  return false;
-}
-
-bool ProgramState::isTainted(SymbolRef Sym, TaintTagType Kind) const {
-  if (!Sym)
-    return false;
-
-  // Traverse all the symbols this symbol depends on to see if any are tainted.
-  for (SymExpr::symbol_iterator SI = Sym->symbol_begin(), SE =Sym->symbol_end();
-       SI != SE; ++SI) {
-    if (!isa<SymbolData>(*SI))
-      continue;
-
-    if (const TaintTagType *Tag = get<TaintMap>(*SI)) {
-      if (*Tag == Kind)
-        return true;
-    }
-
-    if (const SymbolDerived *SD = dyn_cast<SymbolDerived>(*SI)) {
-      // If this is a SymbolDerived with a tainted parent, it's also tainted.
-      if (isTainted(SD->getParentSymbol(), Kind))
-        return true;
-
-      // If this is a SymbolDerived with the same parent symbol as another
-      // tainted SymbolDerived and a region that's a sub-region of that tainted
-      // symbol, it's also tainted.
-      if (const TaintedSubRegions *Regs =
-              get<DerivedSymTaint>(SD->getParentSymbol())) {
-        const TypedValueRegion *R = SD->getRegion();
-        for (auto I : *Regs) {
-          // FIXME: The logic to identify tainted regions could be more
-          // complete. For example, this would not currently identify
-          // overlapping fields in a union as tainted. To identify this we can
-          // check for overlapping/nested byte offsets.
-          if (Kind == I.second && R->isSubRegionOf(I.first))
-            return true;
-        }
-      }
-    }
-
-    // If memory region is tainted, data is also tainted.
-    if (const SymbolRegionValue *SRV = dyn_cast<SymbolRegionValue>(*SI)) {
-      if (isTainted(SRV->getRegion(), Kind))
-        return true;
-    }
-
-    // If this is a SymbolCast from a tainted value, it's also tainted.
-    if (const SymbolCast *SC = dyn_cast<SymbolCast>(*SI)) {
-      if (isTainted(SC->getOperand(), Kind))
-        return true;
-    }
-  }
-
-  return false;
 }

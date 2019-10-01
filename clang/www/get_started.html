@@ -30,8 +30,6 @@ bugs in <a href="https://bugs.llvm.org/">LLVM Bugzilla</a>.</p>
 
 <h3 id="buildNix">On Unix-like Systems</h3>
 
-<p>Note: as an experimental setup, you can use a <b>single checkout</b> with all the projects, and an <b>easy CMake invocation</b>, see the LLVM Doc "<a href="https://llvm.org/docs/GettingStarted.html#for-developers-to-work-with-a-git-monorepo">For developers to work with a git monorepo</a>"</p>
-
 <p>If you would like to check out and build Clang, the current procedure is as
 follows:</p>
 
@@ -49,48 +47,18 @@ follows:</p>
       http://www.cmake.org/download</a></li>
   </ul>
 
-  <li>Check out LLVM:
+  <li>Check out the LLVM project:
   <ul>
     <li>Change directory to where you want the llvm directory placed.</li>
-    <li><tt>svn co http://llvm.org/svn/llvm-project/llvm/trunk llvm</tt></li>
-  </ul>
-  </li>
-  <li>Check out Clang:
-  <ul>
-    <li><tt>cd llvm/tools</tt></li>
-    <li><tt>svn co http://llvm.org/svn/llvm-project/cfe/trunk clang</tt></li>
-    <li><tt>cd ../..</tt></li>
-  </ul>
-  </li>
-  <li>Check out extra Clang tools: (optional)
-  <ul>
-    <li><tt>cd llvm/tools/clang/tools</tt></li>
-    <li><tt>svn co http://llvm.org/svn/llvm-project/clang-tools-extra/trunk
-        extra</tt></li>
-    <li><tt>cd ../../../..</tt></li>
-  </ul>
-  </li>
-  <li>Check out Compiler-RT (optional):
-  <ul>
-    <li><tt>cd llvm/projects</tt></li>
-    <li><tt>svn co http://llvm.org/svn/llvm-project/compiler-rt/trunk
-        compiler-rt</tt></li>
-    <li><tt>cd ../..</tt></li>
-  </ul>
-  </li>
-  <li>Check out libcxx: (only required to build and run Compiler-RT tests on OS X, optional otherwise)
-  <ul>
-    <li><tt>cd llvm/projects</tt></li>
-    <li><tt>svn co http://llvm.org/svn/llvm-project/libcxx/trunk
-        libcxx</tt></li>
-    <li><tt>cd ../..</tt></li>
+    <li><tt>git clone https://github.com/llvm/llvm-project.git</tt></li>
   </ul>
   </li>
   <li>Build LLVM and Clang:
   <ul>
+    <li><tt>cd llvm-project</tt></li>
     <li><tt>mkdir build</tt> (in-tree build is not supported)</li>
     <li><tt>cd build</tt></li>
-    <li><tt>cmake -G "Unix Makefiles" ../llvm</tt></li>
+    <li><tt>cmake -DLLVM_ENABLE_PROJECTS=clang -G "Unix Makefiles" ../llvm</tt></li>
     <li><tt>make</tt></li>
     <li>This builds both LLVM and Clang for debug mode.</li>
     <li>Note: For subsequent Clang development, you can just run
@@ -127,22 +95,6 @@ follows:</p>
   </li>
 </ol>
 
-<h3>Simultaneously Building Clang and LLVM:</h3>
-
-<p>Once you have checked out Clang into the llvm source tree it will build along
-with the rest of <tt>llvm</tt>. To build all of LLVM and Clang together all at
-once simply run <tt>make</tt> from the root LLVM directory.</p>
-
-<p>If you encounter problems while building Clang, make sure that your LLVM
-checkout is at the same revision as your Clang checkout. LLVM's interfaces
-change over time, and mismatched revisions are not expected to work
-together. We recommend writing a script to automatically run <tt>svn up</tt> in
-each repository to keep them synchronized. Alternatively, you may consider using
-the unofficial
-<a href="https://llvm.org/docs/GettingStarted.html#for-developers-to-work-with-a-git-monorepo">git monorepo</a>
-which automatically keeps everything in sync at the same revision and lets you
-commit changes atomically across multiple LLVM subprojects.</p>
-
 <h3 id="buildWindows">Using Visual Studio</h3>
 
 <p>The following details setting up for and building Clang on Windows using
@@ -151,9 +103,9 @@ Visual Studio:</p>
 <ol>
   <li>Get the required tools:
   <ul>
-    <li><b>Subversion</b>.  Source code control program.  Get it from:
-        <a href="https://subversion.apache.org/packages.html">
-        https://subversion.apache.org/packages.html</a></li>
+    <li><b>Git</b>.  Source code control program.  Get it from:
+        <a href="https://git-scm.com/download">
+        https://git-scm.com/download</a></li>
     <li><b>CMake</b>.  This is used for generating Visual Studio solution and
         project files.  Get it from:
         <a href="https://cmake.org/download/">
@@ -174,19 +126,14 @@ Visual Studio:</p>
   </ul>
   </li>
 
-  <li>Check out LLVM:
+  <li>Check out LLVM and Clang:
   <ul>
-    <li><tt>svn co https://llvm.org/svn/llvm-project/llvm/trunk llvm</tt></li>
+    <li><tt>git clone https://github.com/llvm/llvm-project.git</tt></li>
   </ul>
-  </li>
-  <li>Check out Clang:
-  <ul>
-     <li><tt>cd llvm\tools</tt>
-     <li><tt>svn co https://llvm.org/svn/llvm-project/cfe/trunk clang</tt></li>
-  </ul>
-  <p><em>Note</em>:  Some Clang tests are sensitive to the line endings.  Ensure
-     that checking out the files does not convert LF line endings to CR+LF.
-     If you use git-svn, make sure your <tt>core.autocrlf</tt> setting is false.</p>
+  <p><em>Note</em>: Some Clang tests are sensitive to the line endings.  Ensure
+     that checking out the files does not convert LF line endings to CR+LF.  If
+     you're using git on Windows, make sure your <tt>core.autocrlf</tt> setting
+     is false.</p>
   </li>
   <li>Run CMake to generate the Visual Studio solution and project files:
   <ul>
@@ -195,7 +142,7 @@ Visual Studio:</p>
     <li><tt>cd build</tt></li>
     <li>
       If you are using Visual Studio 2017:
-      <tt>cmake -G "Visual Studio 15 2017" -A x64 -Thost=x64 ..\llvm</tt><br/>
+      <tt>cmake -DLLVM_ENABLE_PROJECTS=clang -G "Visual Studio 15 2017" -A x64 -Thost=x64 ..\llvm</tt><br/>
       <tt>-Thost=x64</tt> is required, since the 32-bit linker will run out of memory.
     </li>
     <li>To generate x86 binaries instead of x64, pass <tt>-A Win32</tt>.</li>
@@ -218,10 +165,6 @@ Visual Studio:</p>
      Hacking on clang - Testing using Visual Studio on Windows</a> for information
      on running regression tests on Windows.</li>
 </ol>
-
-<p>Note that once you have checked out both llvm and clang, to synchronize
-to the latest code base, use the <tt>svn update</tt> command in both the
-llvm and llvm\tools\clang directories, as they are separate repositories.</p>
 
 <h3 id="buildWindowsNinja">Using Ninja alongside Visual Studio</h3>
 

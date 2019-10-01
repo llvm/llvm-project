@@ -1,9 +1,8 @@
 //===--- FreeBSD.cpp - FreeBSD ToolChain Implementations --------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -411,6 +410,8 @@ SanitizerMask FreeBSD::getSupportedSanitizers() const {
   const bool IsMIPS64 = getTriple().isMIPS64();
   SanitizerMask Res = ToolChain::getSupportedSanitizers();
   Res |= SanitizerKind::Address;
+  Res |= SanitizerKind::PointerCompare;
+  Res |= SanitizerKind::PointerSubtract;
   Res |= SanitizerKind::Vptr;
   if (IsX86_64 || IsMIPS64) {
     Res |= SanitizerKind::Leak;

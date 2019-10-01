@@ -1,4 +1,6 @@
-// RUN: %clang_cc1 -triple arm64-unknown-linux -disable-O0-optnone -emit-llvm -o - %s | opt -S -mem2reg | FileCheck %s
+// RUN: %clang_cc1 -triple arm64-unknown-linux -disable-O0-optnone -emit-llvm -o - %s | opt -S -mem2reg | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-LINUX
+// RUN: %clang_cc1 -triple aarch64-windows -disable-O0-optnone -S -emit-llvm -o - %s | opt -S -mem2reg | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-WIN
+#include <stdint.h>
 
 void f0(void *a, void *b) {
 	__clear_cache(a,b);
@@ -15,8 +17,15 @@ unsigned rbit(unsigned a) {
   return __builtin_arm_rbit(a);
 }
 
+// CHECK-WIN: [[A64:%[^ ]+]] = zext i32 %a to i64
+// CHECK-WIN: call i64 @llvm.bitreverse.i64(i64 [[A64]])
+// CHECK-LINUX: call i64 @llvm.bitreverse.i64(i64 %a)
+unsigned long rbitl(unsigned long a) {
+  return __builtin_arm_rbit64(a);
+}
+
 // CHECK: call {{.*}} @llvm.bitreverse.i64(i64 %a)
-unsigned long long rbit64(unsigned long long a) {
+uint64_t rbit64(uint64_t a) {
   return __builtin_arm_rbit64(a);
 }
 
@@ -49,13 +58,17 @@ void prefetch() {
 // CHECK: call {{.*}} @llvm.prefetch(i8* null, i32 0, i32 3, i32 0)
 }
 
-unsigned rsr() {
+__typeof__(__builtin_arm_rsr("1:2:3:4:5")) rsr(void);
+
+uint32_t rsr() {
   // CHECK: [[V0:[%A-Za-z0-9.]+]] = call i64 @llvm.read_register.i64(metadata ![[M0:[0-9]]])
   // CHECK-NEXT: trunc i64 [[V0]] to i32
   return __builtin_arm_rsr("1:2:3:4:5");
 }
 
-unsigned long rsr64() {
+__typeof__(__builtin_arm_rsr64("1:2:3:4:5")) rsr64(void);
+
+uint64_t rsr64(void) {
   // CHECK: call i64 @llvm.read_register.i64(metadata ![[M0:[0-9]]])
   return __builtin_arm_rsr64("1:2:3:4:5");
 }
@@ -66,13 +79,17 @@ void *rsrp() {
   return __builtin_arm_rsrp("1:2:3:4:5");
 }
 
+__typeof__(__builtin_arm_wsr("1:2:3:4:5", 0)) wsr(unsigned);
+
 void wsr(unsigned v) {
   // CHECK: [[V0:[%A-Za-z0-9.]+]] = zext i32 %v to i64
   // CHECK-NEXT: call void @llvm.write_register.i64(metadata ![[M0:[0-9]]], i64 [[V0]])
   __builtin_arm_wsr("1:2:3:4:5", v);
 }
 
-void wsr64(unsigned long v) {
+__typeof__(__builtin_arm_wsr64("1:2:3:4:5", 0)) wsr64(uint64_t);
+
+void wsr64(uint64_t v) {
   // CHECK: call void @llvm.write_register.i64(metadata ![[M0:[0-9]]], i64 %v)
   __builtin_arm_wsr64("1:2:3:4:5", v);
 }

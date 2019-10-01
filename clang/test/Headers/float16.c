@@ -1,7 +1,11 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c89 -ffreestanding %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c99 -ffreestanding %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c11 -ffreestanding %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 -x c++ -ffreestanding %s
+// RUN: %clang_cc1 -triple=aarch64-none-none -fsyntax-only -verify -std=c89 \
+// RUN:   -ffreestanding %s
+// RUN: %clang_cc1 -triple=aarch64-none-none -fsyntax-only -verify \
+// RUN:   -std=c99 -ffreestanding %s
+// RUN: %clang_cc1 -triple=aarch64-none-none -fsyntax-only -verify -std=c11 \
+// RUN:   -ffreestanding %s
+// RUN: %clang_cc1 -triple=aarch64-none-none -fsyntax-only -verify \
+// RUN:   -std=c++11 -x c++ -ffreestanding %s
 // expected-no-diagnostics
 
 #define __STDC_WANT_IEC_60559_TYPES_EXT__
@@ -9,7 +13,7 @@
 
 #ifndef FLT16_MIN_10_EXP
     #error "Macro FLT16_MIN_10_EXP is missing."
-#elif   FLT16_MIN_10_EXP > -13
+#elif   FLT16_MIN_10_EXP > -4
     #error "Macro FLT16_MIN_10_EXP is invalid."
 #endif
 
@@ -17,7 +21,7 @@ _Static_assert(FLT16_MIN_10_EXP == __FLT16_MIN_10_EXP__, "");
 
 #ifndef FLT16_MIN_EXP
     #error "Macro FLT16_MIN_EXP is missing."
-#elif   FLT16_MIN_EXP > -14
+#elif   FLT16_MIN_EXP > -13
     #error "Macro FLT16_MIN_EXP is invalid."
 #endif
 
@@ -33,7 +37,7 @@ _Static_assert(FLT16_MAX_10_EXP == __FLT16_MAX_10_EXP__, "");
 
 #ifndef FLT16_MAX_EXP
     #error "Macro FLT16_MAX_EXP is missing."
-#elif   FLT16_MAX_EXP < 15
+#elif   FLT16_MAX_EXP < 16
     #error "Macro FLT16_MAX_EXP is invalid."
 #endif
 

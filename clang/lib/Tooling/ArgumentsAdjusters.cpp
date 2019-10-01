@@ -1,9 +1,8 @@
 //===- ArgumentsAdjusters.cpp - Command line arguments adjuster -----------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -105,6 +104,28 @@ ArgumentsAdjuster combineAdjusters(ArgumentsAdjuster First,
     return First;
   return [First, Second](const CommandLineArguments &Args, StringRef File) {
     return Second(First(Args, File), File);
+  };
+}
+
+ArgumentsAdjuster getStripPluginsAdjuster() {
+  return [](const CommandLineArguments &Args, StringRef /*unused*/) {
+    CommandLineArguments AdjustedArgs;
+    for (size_t I = 0, E = Args.size(); I != E; I++) {
+      // According to https://clang.llvm.org/docs/ClangPlugins.html
+      // plugin arguments are in the form:
+      // -Xclang {-load, -plugin, -plugin-arg-<plugin-name>, -add-plugin}
+      // -Xclang <arbitrary-argument>
+      if (I + 4 < E && Args[I] == "-Xclang" &&
+          (Args[I + 1] == "-load" || Args[I + 1] == "-plugin" ||
+           llvm::StringRef(Args[I + 1]).startswith("-plugin-arg-") ||
+           Args[I + 1] == "-add-plugin") &&
+          Args[I + 2] == "-Xclang") {
+        I += 3;
+        continue;
+      }
+      AdjustedArgs.push_back(Args[I]);
+    }
+    return AdjustedArgs;
   };
 }
 

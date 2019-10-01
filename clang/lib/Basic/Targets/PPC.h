@@ -1,9 +1,8 @@
 //===--- PPC.h - Declare PPC target feature support -------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -54,6 +53,7 @@ class LLVM_LIBRARY_VISIBILITY PPCTargetInfo : public TargetInfo {
   static const char *const GCCRegNames[];
   static const TargetInfo::GCCRegAlias GCCRegAliases[];
   std::string CPU;
+  enum PPCFloatABI { HardFloat, SoftFloat } FloatABI;
 
   // Target cpu features.
   bool HasAltivec = false;
@@ -132,19 +132,18 @@ public:
                         ArchDefinePwr5 | ArchDefinePwr4 | ArchDefinePpcgr |
                         ArchDefinePpcsq)
               .Cases("power7", "pwr7",
-                    ArchDefinePwr7 | ArchDefinePwr6x | ArchDefinePwr6 |
-                        ArchDefinePwr5x | ArchDefinePwr5 | ArchDefinePwr4 |
-                        ArchDefinePpcgr | ArchDefinePpcsq)
+                     ArchDefinePwr7 | ArchDefinePwr6 | ArchDefinePwr5x |
+                         ArchDefinePwr5 | ArchDefinePwr4 | ArchDefinePpcgr |
+                         ArchDefinePpcsq)
               // powerpc64le automatically defaults to at least power8.
               .Cases("power8", "pwr8", "ppc64le",
-                    ArchDefinePwr8 | ArchDefinePwr7 | ArchDefinePwr6x |
-                        ArchDefinePwr6 | ArchDefinePwr5x | ArchDefinePwr5 |
-                        ArchDefinePwr4 | ArchDefinePpcgr | ArchDefinePpcsq)
+                     ArchDefinePwr8 | ArchDefinePwr7 | ArchDefinePwr6 |
+                         ArchDefinePwr5x | ArchDefinePwr5 | ArchDefinePwr4 |
+                         ArchDefinePpcgr | ArchDefinePpcsq)
               .Cases("power9", "pwr9",
-                    ArchDefinePwr9 | ArchDefinePwr8 | ArchDefinePwr7 |
-                        ArchDefinePwr6x | ArchDefinePwr6 | ArchDefinePwr5x |
-                        ArchDefinePwr5 | ArchDefinePwr4 | ArchDefinePpcgr |
-                        ArchDefinePpcsq)
+                     ArchDefinePwr9 | ArchDefinePwr8 | ArchDefinePwr7 |
+                         ArchDefinePwr6 | ArchDefinePwr5x | ArchDefinePwr5 |
+                         ArchDefinePwr4 | ArchDefinePpcgr | ArchDefinePpcsq)
               .Default(ArchDefineNone);
     }
     return CPUKnown;
@@ -185,8 +184,12 @@ public:
       return false;
     case 'O': // Zero
       break;
-    case 'b': // Base register
     case 'f': // Floating point register
+      // Don't use floating point registers on soft float ABI.
+      if (FloatABI == SoftFloat)
+        return false;
+      LLVM_FALLTHROUGH;
+    case 'b': // Base register
       Info.setAllowsRegister();
       break;
     // FIXME: The following are added to allow parsing.
@@ -194,6 +197,10 @@ public:
     // Also, is more specific checking needed?  I.e. specific registers?
     case 'd': // Floating point register (containing 64-bit value)
     case 'v': // Altivec vector register
+      // Don't use floating point and altivec vector registers
+      // on soft float ABI
+      if (FloatABI == SoftFloat)
+        return false;
       Info.setAllowsRegister();
       break;
     case 'w':
@@ -327,13 +334,27 @@ public:
       PtrDiffType = SignedInt;
       IntPtrType = SignedInt;
       break;
+    case llvm::Triple::AIX:
+      SizeType = UnsignedLong;
+      PtrDiffType = SignedLong;
+      IntPtrType = SignedLong;
+      SuitableAlign = 64;
+      break;
     default:
       break;
     }
 
-    if (getTriple().isOSFreeBSD()) {
+    switch (getTriple().getOS()) {
+    case llvm::Triple::FreeBSD:
+    case llvm::Triple::NetBSD:
+    case llvm::Triple::OpenBSD:
+    // FIXME: -mlong-double-128 is not yet supported on AIX.
+    case llvm::Triple::AIX:
       LongDoubleWidth = LongDoubleAlign = 64;
       LongDoubleFormat = &llvm::APFloat::IEEEdouble();
+      break;
+    default:
+      break;
     }
 
     // PPC32 supports atomics up to 4 bytes.
@@ -361,13 +382,19 @@ public:
       ABI = "elfv2";
     } else {
       resetDataLayout("E-m:e-i64:64-n32:64");
-      ABI = "elfv1";
+      ABI = Triple.getEnvironment() == llvm::Triple::ELFv2 ? "elfv2" : "elfv1";
     }
 
-    switch (getTriple().getOS()) {
+    switch (Triple.getOS()) {
     case llvm::Triple::FreeBSD:
       LongDoubleWidth = LongDoubleAlign = 64;
       LongDoubleFormat = &llvm::APFloat::IEEEdouble();
+      break;
+    case llvm::Triple::AIX:
+      // FIXME: -mlong-double-128 is not yet supported on AIX.
+      LongDoubleWidth = LongDoubleAlign = 64;
+      LongDoubleFormat = &llvm::APFloat::IEEEdouble();
+      SuitableAlign = 64;
       break;
     default:
       break;
@@ -425,6 +452,21 @@ public:
     HasAlignMac68kSupport = true;
     resetDataLayout("E-m:o-i64:64-n32:64");
   }
+};
+
+class LLVM_LIBRARY_VISIBILITY AIXPPC32TargetInfo :
+  public AIXTargetInfo<PPC32TargetInfo> {
+public:
+  using AIXTargetInfo::AIXTargetInfo;
+  BuiltinVaListKind getBuiltinVaListKind() const override {
+    return TargetInfo::CharPtrBuiltinVaList;
+  }
+};
+
+class LLVM_LIBRARY_VISIBILITY AIXPPC64TargetInfo :
+  public AIXTargetInfo<PPC64TargetInfo> {
+public:
+  using AIXTargetInfo::AIXTargetInfo;
 };
 
 } // namespace targets

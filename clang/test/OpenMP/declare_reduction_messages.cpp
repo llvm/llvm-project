@@ -147,7 +147,7 @@ struct A {
 
 int A_TEST() {
   A test;
-#pragma omp declare reduction(+ : A : omp_out) initializer(omp_priv = A())
+#pragma omp declare reduction(+ : A : omp_out) initializer(omp_priv = A()) allocate(test) // expected-warning {{extra tokens at the end of '#pragma omp declare reduction' are ignored}}
 #pragma omp parallel reduction(+ : test)
   {}
   return 0;

@@ -1,7 +1,8 @@
 // RUN: %clang_analyze_cc1 -x c++ -std=c++14 -analyzer-checker=core -analyzer-output=text -verify %s
 
 int initializer1(int &p, int x) {
-  if (x) { // expected-note{{Taking false branch}}
+  if (x) { // expected-note{{'x' is 0}}
+           // expected-note@-1{{Taking false branch}}
     p = 1;
     return 0;
   } else {
@@ -19,7 +20,8 @@ int param_not_initialized_by_func() {
 
 struct S {
   int initialize(int *p, int param) {
-    if (param) { //expected-note{{Taking false branch}}
+    if (param) { // expected-note{{'param' is 0}}
+                 // expected-note@-1{{Taking false branch}}
       *p = 1;
       return 1;
     }
@@ -100,7 +102,7 @@ struct C {
 
   C(int pX, int pY, bool Flag) {
     x = pX;
-    if (Flag) // expected-note{{Assuming 'Flag' is not equal to 0}}
+    if (Flag) // expected-note{{Assuming 'Flag' is true}}
               // expected-note@-1{{Taking true branch}}
       return; // expected-note{{Returning without writing to 'this->y'}}
     y = pY;

@@ -1,9 +1,8 @@
 //===-- ODRHash.cpp - Hashing to diagnose ODR failures ----------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -72,13 +71,8 @@ void ODRHash::AddDeclarationNameImpl(DeclarationName Name) {
     AddBoolean(S.isKeywordSelector());
     AddBoolean(S.isUnarySelector());
     unsigned NumArgs = S.getNumArgs();
-    ID.AddInteger(NumArgs);
     for (unsigned i = 0; i < NumArgs; ++i) {
-      const IdentifierInfo *II = S.getIdentifierInfoForSlot(i);
-      AddBoolean(II);
-      if (II) {
-        AddIdentifierInfo(II);
-      }
+      AddIdentifierInfo(S.getIdentifierInfoForSlot(i));
     }
     break;
   }
@@ -146,6 +140,7 @@ void ODRHash::AddTemplateName(TemplateName Name) {
     break;
   // TODO: Support these cases.
   case TemplateName::OverloadedTemplate:
+  case TemplateName::AssumedTemplate:
   case TemplateName::QualifiedTemplate:
   case TemplateName::DependentTemplate:
   case TemplateName::SubstTemplateTemplateParm:
@@ -709,14 +704,36 @@ public:
   void VisitType(const Type *T) {}
 
   void VisitAdjustedType(const AdjustedType *T) {
-    AddQualType(T->getOriginalType());
-    AddQualType(T->getAdjustedType());
+    QualType Original = T->getOriginalType();
+    QualType Adjusted = T->getAdjustedType();
+
+    // The original type and pointee type can be the same, as in the case of
+    // function pointers decaying to themselves.  Set a bool and only process
+    // the type once, to prevent doubling the work.
+    SplitQualType split = Adjusted.split();
+    if (auto Pointer = dyn_cast<PointerType>(split.Ty)) {
+      if (Pointer->getPointeeType() == Original) {
+        Hash.AddBoolean(true);
+        ID.AddInteger(split.Quals.getAsOpaqueValue());
+        AddQualType(Original);
+        VisitType(T);
+        return;
+      }
+    }
+
+    // The original type and pointee type are different, such as in the case
+    // of a array decaying to an element pointer.  Set a bool to false and
+    // process both types.
+    Hash.AddBoolean(false);
+    AddQualType(Original);
+    AddQualType(Adjusted);
+
     VisitType(T);
   }
 
   void VisitDecayedType(const DecayedType *T) {
-    AddQualType(T->getDecayedType());
-    AddQualType(T->getPointeeType());
+    // getDecayedType and getPointeeType are derived from getAdjustedType
+    // and don't need to be separately processed.
     VisitAdjustedType(T);
   }
 

@@ -1,9 +1,8 @@
 //===---------- IssueHash.cpp - Generate identification hashes --*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 #include "clang/StaticAnalyzer/Core/IssueHash.h"
@@ -121,7 +120,7 @@ static std::string GetEnclosingDeclContextSignature(const Decl *D) {
   return "";
 }
 
-static StringRef GetNthLineOfFile(llvm::MemoryBuffer *Buffer, int Line) {
+static StringRef GetNthLineOfFile(const llvm::MemoryBuffer *Buffer, int Line) {
   if (!Buffer)
     return "";
 
@@ -145,7 +144,7 @@ static std::string NormalizeLine(const SourceManager &SM, FullSourceLoc &L,
     col++;
   SourceLocation StartOfLine =
       SM.translateLineCol(SM.getFileID(L), L.getExpansionLineNumber(), col);
-  llvm::MemoryBuffer *Buffer =
+  const llvm::MemoryBuffer *Buffer =
       SM.getBuffer(SM.getFileID(StartOfLine), StartOfLine);
   if (!Buffer)
     return {};

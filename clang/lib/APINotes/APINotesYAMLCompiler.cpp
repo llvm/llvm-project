@@ -643,7 +643,6 @@ namespace {
     const Module &TheModule;
     const FileEntry *SourceFile;
     APINotesWriter *Writer;
-    OSType TargetOS;
     llvm::raw_ostream &OS;
     llvm::SourceMgr::DiagHandlerTy DiagHandler;
     void *DiagHandlerCtxt;
@@ -661,22 +660,12 @@ namespace {
   public:
     YAMLConverter(const Module &module,
                   const FileEntry *sourceFile,
-                  OSType targetOS,
                   llvm::raw_ostream &os,
                   llvm::SourceMgr::DiagHandlerTy diagHandler,
                   void *diagHandlerCtxt) :
-      TheModule(module), SourceFile(sourceFile), Writer(0), TargetOS(targetOS), OS(os),
+      TheModule(module), SourceFile(sourceFile), Writer(0), OS(os),
       DiagHandler(diagHandler), DiagHandlerCtxt(diagHandlerCtxt),
       ErrorOccured(false) {}
-
-    bool isAvailable(const AvailabilityItem &in) {
-      // Check if the API is available on the OS for which we are building.
-      if (in.Mode == APIAvailability::OSX && TargetOS != OSType::OSX)
-        return false;
-      if (in.Mode == APIAvailability::IOS && TargetOS != OSType::IOS)
-        return false;
-      return true;
-    }
 
     bool convertAvailability(const AvailabilityItem &in,
                              CommonEntityInfo &outInfo,
@@ -742,9 +731,6 @@ namespace {
     template<typename T>
     bool convertCommon(const T& common, CommonEntityInfo &info,
                        StringRef apiName) {
-      if (!isAvailable(common.Availability))
-        return true;
-
       convertAvailability(common.Availability, info, apiName);
       info.setSwiftPrivate(common.SwiftPrivate);
       info.SwiftName = common.SwiftName;
@@ -869,8 +855,6 @@ namespace {
 
         // Translate from Property into ObjCPropertyInfo.
         ObjCPropertyInfo pInfo;
-        if (!isAvailable(prop.Availability))
-          continue;
         convertAvailability(prop.Availability, pInfo, prop.Name);
         pInfo.setSwiftPrivate(prop.SwiftPrivate);
         pInfo.SwiftName = prop.SwiftName;
@@ -928,8 +912,6 @@ namespace {
         }
 
         GlobalVariableInfo info;
-        if (!isAvailable(global.Availability))
-          continue;
         convertAvailability(global.Availability, info, global.Name);
         info.setSwiftPrivate(global.SwiftPrivate);
         info.SwiftName = global.SwiftName;
@@ -950,8 +932,6 @@ namespace {
         }
 
         GlobalFunctionInfo info;
-        if (!isAvailable(function.Availability))
-          continue;
         convertAvailability(function.Availability, info, function.Name);
         info.setSwiftPrivate(function.SwiftPrivate);
         info.SwiftName = function.SwiftName;
@@ -975,8 +955,6 @@ namespace {
         }
 
         EnumConstantInfo info;
-        if (!isAvailable(enumConstant.Availability))
-          continue;
         convertAvailability(enumConstant.Availability, info, enumConstant.Name);
         info.setSwiftPrivate(enumConstant.SwiftPrivate);
         info.SwiftName = enumConstant.SwiftName;
@@ -1053,9 +1031,6 @@ namespace {
     }
 
     bool convertModule() {
-      if (!isAvailable(TheModule.Availability))
-        return false;
-
       // Set up the writer.
       // FIXME: This is kindof ugly.
       APINotesWriter writer(TheModule.Name, SourceFile);
@@ -1086,12 +1061,11 @@ namespace {
 static bool compile(const Module &module,
                     const FileEntry *sourceFile,
                     llvm::raw_ostream &os,
-                    api_notes::OSType targetOS,
                     llvm::SourceMgr::DiagHandlerTy diagHandler,
                     void *diagHandlerCtxt){
   using namespace api_notes;
 
-  YAMLConverter c(module, sourceFile, targetOS, os, diagHandler, diagHandlerCtxt);
+  YAMLConverter c(module, sourceFile, os, diagHandler, diagHandlerCtxt);
   return c.convertModule();
 }
 
@@ -1115,7 +1089,6 @@ static void printDiagnostic(const llvm::SMDiagnostic &diag, void *context) {
 bool api_notes::compileAPINotes(StringRef yamlInput,
                                 const FileEntry *sourceFile,
                                 llvm::raw_ostream &os,
-                                OSType targetOS,
                                 llvm::SourceMgr::DiagHandlerTy diagHandler,
                                 void *diagHandlerCtxt) {
   Module module;
@@ -1127,405 +1100,5 @@ bool api_notes::compileAPINotes(StringRef yamlInput,
   if (parseAPINotes(yamlInput, module, diagHandler, diagHandlerCtxt))
     return true;
 
-  return compile(module, sourceFile, os, targetOS, diagHandler, diagHandlerCtxt);
+  return compile(module, sourceFile, os, diagHandler, diagHandlerCtxt);
 }
-
-namespace {
-  // Deserialize the API notes file into a module.
-  class DecompileVisitor : public APINotesReader::Visitor {
-    /// Allocator used to clone those strings that need it.
-    llvm::BumpPtrAllocator Allocator;
-
-    /// The module we're building.
-    Module TheModule;
-
-    /// A known context, which tracks what we know about a context ID.
-    struct KnownContext {
-      /// Whether this is a protocol (vs. a class).
-      bool isProtocol;
-
-      /// The indices into the top-level items for this context at each
-      /// Swift version.
-      SmallVector<std::pair<VersionTuple, unsigned>, 1> indices;
-
-      Class &getContext(const VersionTuple &swiftVersion,
-                        TopLevelItems &items) {
-        ClassesSeq &seq = isProtocol ? items.Protocols : items.Classes;
-
-        for (auto &index : indices) {
-          if (index.first == swiftVersion)
-            return seq[index.second];
-        }
-
-        indices.push_back({swiftVersion, seq.size()});
-        seq.push_back(Class());
-        return seq.back();
-      }
-    };
-
-    /// A mapping from context ID to a pair (index, is-protocol) that indicates
-    /// the index of that class or protocol in the global "classes" or
-    /// "protocols" list.
-    llvm::DenseMap<unsigned, KnownContext> knownContexts;
-
-    /// Copy a string into allocated memory so it does disappear on us.
-    StringRef copyString(StringRef string) {
-      if (string.empty()) return StringRef();
-
-      void *ptr = Allocator.Allocate(string.size(), 1);
-      memcpy(ptr, string.data(), string.size());
-      return StringRef(reinterpret_cast<const char *>(ptr), string.size());
-    }
-
-    /// Copy an optional string into allocated memory so it does disappear on us.
-    Optional<StringRef> maybeCopyString(Optional<StringRef> string) {
-      if (!string) return None;
-
-      return copyString(*string);
-    }
-
-    /// Copy an optional string into allocated memory so it does disappear on us.
-    Optional<StringRef> maybeCopyString(Optional<std::string> string) {
-      if (!string) return None;
-
-      return copyString(*string);
-    }
-
-    template<typename T>
-    void handleCommon(T &record, const CommonEntityInfo &info) {
-      handleAvailability(record.Availability, info);
-      record.SwiftPrivate = info.isSwiftPrivate();
-      record.SwiftName = copyString(info.SwiftName);
-    }
-
-    template<typename T>
-    void handleCommonType(T &record, const CommonTypeInfo &info) {
-      handleCommon(record, info);
-      record.SwiftBridge = maybeCopyString(info.getSwiftBridge());
-      record.NSErrorDomain = maybeCopyString(info.getNSErrorDomain());
-    }
-
-    /// Map Objective-C context info.
-    void handleObjCContext(Class &record, StringRef name,
-                           const ObjCContextInfo &info) {
-      record.Name = name;
-
-      handleCommonType(record, info);
-      record.SwiftImportAsNonGeneric = info.getSwiftImportAsNonGeneric();
-      record.SwiftObjCMembers = info.getSwiftObjCMembers();
-
-      if (info.getDefaultNullability()) {
-        record.AuditedForNullability = true;
-      }
-    }
-
-    /// Map availability information, if present.
-    void handleAvailability(AvailabilityItem &availability,
-                            const CommonEntityInfo &info) {
-      if (info.Unavailable) {
-        availability.Mode = APIAvailability::None;
-        availability.Msg = copyString(info.UnavailableMsg);
-      }
-
-      if (info.UnavailableInSwift) {
-        availability.Mode = APIAvailability::NonSwift;
-        availability.Msg = copyString(info.UnavailableMsg);
-      }
-    }
-
-    /// Map parameter information for a function.
-    void handleParameters(ParamsSeq &params,
-                          const FunctionInfo &info) {
-      unsigned position = 0;
-      for (const auto &pi: info.Params) {
-        Param p;
-        p.Position = position++;
-        p.Nullability = pi.getNullability();
-        p.NoEscape = pi.isNoEscape();
-        p.Type = copyString(pi.getType());
-        p.RetainCountConvention = pi.getRetainCountConvention();
-        params.push_back(p);
-      }
-    }
-
-    /// Map nullability information for a function.
-    void handleNullability(NullabilitySeq &nullability,
-                           llvm::Optional<NullabilityKind> &nullabilityOfRet,
-                           const FunctionInfo &info,
-                           unsigned numParams) {
-      if (info.NullabilityAudited) {
-        nullabilityOfRet = info.getReturnTypeInfo();
-
-        // Figure out the number of parameters from the selector.
-        for (unsigned i = 0; i != numParams; ++i)
-          nullability.push_back(info.getParamTypeInfo(i));
-      }
-    }
-
-    TopLevelItems &getTopLevelItems(VersionTuple swiftVersion) {
-      if (!swiftVersion) return TheModule.TopLevel;
-
-      for (auto &versioned : TheModule.SwiftVersions) {
-        if (versioned.Version == swiftVersion)
-          return versioned.Items;
-      }
-
-      TheModule.SwiftVersions.push_back(Versioned());
-      TheModule.SwiftVersions.back().Version = swiftVersion;
-      return TheModule.SwiftVersions.back().Items;
-    }
-
-  public:
-    virtual void visitObjCClass(ContextID contextID, StringRef name,
-                                const ObjCContextInfo &info,
-                                VersionTuple swiftVersion) {
-      // Record this known context.
-      auto &items = getTopLevelItems(swiftVersion);
-      auto &known = knownContexts[contextID.Value];
-      known.isProtocol = false;
-
-      handleObjCContext(known.getContext(swiftVersion, items), name, info);
-    }
-
-    virtual void visitObjCProtocol(ContextID contextID, StringRef name,
-                                   const ObjCContextInfo &info,
-                                   VersionTuple swiftVersion) {
-      // Record this known context.
-      auto &items = getTopLevelItems(swiftVersion);
-      auto &known = knownContexts[contextID.Value];
-      known.isProtocol = true;
-
-      handleObjCContext(known.getContext(swiftVersion, items), name, info);
-    }
-
-    virtual void visitObjCMethod(ContextID contextID, StringRef selector,
-                                 bool isInstanceMethod,
-                                 const ObjCMethodInfo &info,
-                                 VersionTuple swiftVersion) {
-      Method method;
-      method.Selector = copyString(selector);
-      method.Kind = isInstanceMethod ? MethodKind::Instance : MethodKind::Class;
-
-      handleCommon(method, info);
-      handleParameters(method.Params, info);
-      handleNullability(method.Nullability, method.NullabilityOfRet, info,
-                        selector.count(':'));
-      method.DesignatedInit = info.DesignatedInit;
-      method.Required = info.Required;
-      method.ResultType = copyString(info.ResultType);
-      method.RetainCountConvention = info.getRetainCountConvention();
-      auto &items = getTopLevelItems(swiftVersion);
-      knownContexts[contextID.Value].getContext(swiftVersion, items)
-        .Methods.push_back(method);
-    }
-
-    virtual void visitObjCProperty(ContextID contextID, StringRef name,
-                                   bool isInstance,
-                                   const ObjCPropertyInfo &info,
-                                   VersionTuple swiftVersion) {
-      Property property;
-      property.Name = name;
-      property.Kind = isInstance ? MethodKind::Instance : MethodKind::Class;
-      handleCommon(property, info);
-
-      // FIXME: No way to represent "not audited for nullability".
-      if (auto nullability = info.getNullability()) {
-        property.Nullability = *nullability;
-      }
-
-      property.SwiftImportAsAccessors = info.getSwiftImportAsAccessors();
-
-      property.Type = copyString(info.getType());
-
-      auto &items = getTopLevelItems(swiftVersion);
-      knownContexts[contextID.Value].getContext(swiftVersion, items)
-        .Properties.push_back(property);
-    }
-
-    virtual void visitGlobalFunction(StringRef name,
-                                     const GlobalFunctionInfo &info,
-                                     VersionTuple swiftVersion) {
-      Function function;
-      function.Name = name;
-      handleCommon(function, info);
-      handleParameters(function.Params, info);
-      if (info.NumAdjustedNullable > 0)
-        handleNullability(function.Nullability, function.NullabilityOfRet,
-                          info, info.NumAdjustedNullable-1);
-      function.ResultType = copyString(info.ResultType);
-      function.RetainCountConvention = info.getRetainCountConvention();
-      auto &items = getTopLevelItems(swiftVersion);
-      items.Functions.push_back(function);
-    }
-
-    virtual void visitGlobalVariable(StringRef name,
-                                     const GlobalVariableInfo &info,
-                                     VersionTuple swiftVersion) {
-      GlobalVariable global;
-      global.Name = name;
-      handleCommon(global, info);
-
-      // FIXME: No way to represent "not audited for nullability".
-      if (auto nullability = info.getNullability()) {
-        global.Nullability = *nullability;
-      }
-      global.Type = copyString(info.getType());
-
-      auto &items = getTopLevelItems(swiftVersion);
-      items.Globals.push_back(global);
-    }
-
-    virtual void visitEnumConstant(StringRef name,
-                                   const EnumConstantInfo &info,
-                                   VersionTuple swiftVersion) {
-      EnumConstant enumConstant;
-      enumConstant.Name = name;
-      handleCommon(enumConstant, info);
-
-      auto &items = getTopLevelItems(swiftVersion);
-      items.EnumConstants.push_back(enumConstant);
-    }
-
-    virtual void visitTag(StringRef name, const TagInfo &info,
-                          VersionTuple swiftVersion) {
-      Tag tag;
-      tag.Name = name;
-      handleCommonType(tag, info);
-      tag.EnumExtensibility = info.EnumExtensibility;
-      tag.FlagEnum = info.isFlagEnum();
-      auto &items = getTopLevelItems(swiftVersion);
-      items.Tags.push_back(tag);
-    }
-
-    virtual void visitTypedef(StringRef name, const TypedefInfo &info,
-                              VersionTuple swiftVersion) {
-      Typedef td;
-      td.Name = name;
-      handleCommonType(td, info);
-      td.SwiftWrapper = info.SwiftWrapper;
-      auto &items = getTopLevelItems(swiftVersion);
-      items.Typedefs.push_back(td);
-    }
-
-    /// Retrieve the module.
-    Module &getModule() { return TheModule; }
-  };
-}
-
-/// Produce a flattened, numeric value for optional method/property kinds.
-static unsigned flattenPropertyKind(llvm::Optional<MethodKind> kind) {
-  return kind ? (*kind == MethodKind::Instance ? 2 : 1) : 0;
-}
-
-/// Sort the items in the given block of "top-level" items.
-static void sortTopLevelItems(TopLevelItems &items) {
-  // Sort classes.
-  std::sort(items.Classes.begin(), items.Classes.end(),
-            [](const Class &lhs, const Class &rhs) -> bool {
-              return lhs.Name < rhs.Name;
-            });
-
-  // Sort protocols.
-  std::sort(items.Protocols.begin(), items.Protocols.end(),
-            [](const Class &lhs, const Class &rhs) -> bool {
-              return lhs.Name < rhs.Name;
-            });
-
-  // Sort methods and properties within each class and protocol.
-  auto sortMembers = [](Class &record) {
-    // Sort properties.
-    std::sort(record.Properties.begin(), record.Properties.end(),
-              [](const Property &lhs, const Property &rhs) -> bool {
-                return lhs.Name < rhs.Name ||
-                (lhs.Name == rhs.Name &&
-                 flattenPropertyKind(lhs.Kind) <
-                 flattenPropertyKind(rhs.Kind));
-              });
-
-    // Sort methods.
-    std::sort(record.Methods.begin(), record.Methods.end(),
-              [](const Method &lhs, const Method &rhs) -> bool {
-                return lhs.Selector < rhs.Selector ||
-                (lhs.Selector == rhs.Selector &&
-                 static_cast<unsigned>(lhs.Kind)
-                 < static_cast<unsigned>(rhs.Kind));
-              });
-  };
-  std::for_each(items.Classes.begin(), items.Classes.end(), sortMembers);
-  std::for_each(items.Protocols.begin(), items.Protocols.end(), sortMembers);
-
-  // Sort functions.
-  std::sort(items.Functions.begin(), items.Functions.end(),
-            [](const Function &lhs, const Function &rhs) -> bool {
-              return lhs.Name < rhs.Name;
-            });
-
-  // Sort global variables.
-  std::sort(items.Globals.begin(), items.Globals.end(),
-            [](const GlobalVariable &lhs, const GlobalVariable &rhs) -> bool {
-              return lhs.Name < rhs.Name;
-            });
-
-  // Sort enum constants.
-  std::sort(items.EnumConstants.begin(), items.EnumConstants.end(),
-            [](const EnumConstant &lhs, const EnumConstant &rhs) -> bool {
-              return lhs.Name < rhs.Name;
-            });
-
-  // Sort tags.
-  std::sort(items.Tags.begin(), items.Tags.end(),
-            [](const Tag &lhs, const Tag &rhs) -> bool {
-              return lhs.Name < rhs.Name;
-            });
-
-  // Sort typedefs.
-  std::sort(items.Typedefs.begin(), items.Typedefs.end(),
-            [](const Typedef &lhs, const Typedef &rhs) -> bool {
-              return lhs.Name < rhs.Name;
-            });
-}
-
-bool api_notes::decompileAPINotes(std::unique_ptr<llvm::MemoryBuffer> input,
-                                  llvm::raw_ostream &os) {
-  // Try to read the file.
-  auto reader = APINotesReader::get(std::move(input), VersionTuple());
-  if (!reader) {
-    llvm::errs() << "not a well-formed API notes binary file\n";
-    return true;
-  }
-
-  DecompileVisitor decompileVisitor;
-  reader->visit(decompileVisitor);
-
-  // Sort the data in the module, because the API notes reader doesn't preserve
-  // order.
-  auto &module = decompileVisitor.getModule();
-
-  // Set module name.
-  module.Name = reader->getModuleName();
-
-  // Set module options
-  auto opts = reader->getModuleOptions();
-  if (opts.SwiftInferImportAsMember)
-    module.SwiftInferImportAsMember = true;
-
-  // Sort the top-level items.
-  sortTopLevelItems(module.TopLevel);
-
-  // Sort the Swift versions.
-  std::sort(module.SwiftVersions.begin(), module.SwiftVersions.end(),
-            [](const Versioned &lhs, const Versioned &rhs) -> bool {
-              return lhs.Version < rhs.Version;
-            });
-
-  // Sort the top-level items within each Swift version.
-  for (auto &versioned : module.SwiftVersions)
-    sortTopLevelItems(versioned.Items);
-
-  // Output the YAML representation.
-  Output yout(os);
-  yout << module;
-
-  return false;
-}
-

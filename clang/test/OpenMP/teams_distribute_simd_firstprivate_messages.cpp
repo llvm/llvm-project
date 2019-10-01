@@ -2,6 +2,7 @@
 
 // RUN: %clang_cc1 -verify -fopenmp-simd %s -Wno-openmp-target
 
+extern int omp_default_mem_alloc;
 void foo() {
 }
 
@@ -91,7 +92,7 @@ int main(int argc, char **argv) {
   for (i = 0; i < argc; ++i) foo();
 
 #pragma omp target
-#pragma omp teams distribute simd firstprivate (argc)
+#pragma omp teams distribute simd firstprivate (argc) allocate , allocate(, allocate(omp_default , allocate(omp_default_mem_alloc, allocate(omp_default_mem_alloc:, allocate(omp_default_mem_alloc: argc, allocate(omp_default_mem_alloc: argv), allocate(argv) // expected-error {{expected '(' after 'allocate'}} expected-error 2 {{expected expression}} expected-error 2 {{expected ')'}} expected-error {{use of undeclared identifier 'omp_default'}} expected-note 2 {{to match this '('}}
   for (i = 0; i < argc; ++i) foo();
 
 #pragma omp target

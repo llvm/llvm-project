@@ -1,9 +1,8 @@
-//===- CIndexHigh.cpp - Higher level API functions ------------------------===//
+//===- Indexing.cpp - Higher level API functions --------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -94,9 +93,6 @@ typedef llvm::DenseSet<PPRegion> PPRegionSetTy;
 } // end anonymous namespace
 
 namespace llvm {
-  template <> struct isPodLike<PPRegion> {
-    static const bool value = true;
-  };
 
   template <>
   struct DenseMapInfo<PPRegion> {
@@ -367,8 +363,9 @@ public:
     PreprocessorOptions &PPOpts = CI.getPreprocessorOpts();
 
     if (!PPOpts.ImplicitPCHInclude.empty()) {
-      DataConsumer->importedPCH(
-                        CI.getFileManager().getFile(PPOpts.ImplicitPCHInclude));
+      auto File = CI.getFileManager().getFile(PPOpts.ImplicitPCHInclude);
+      if (File)
+        DataConsumer->importedPCH(*File);
     }
 
     DataConsumer->setASTContext(CI.getASTContext());
@@ -447,10 +444,14 @@ static CXErrorCode clang_indexSourceFile_Impl(
   if (CXXIdx->isOptEnabled(CXGlobalOpt_ThreadBackgroundPriorityForIndexing))
     setThreadBackgroundPriority();
 
-  bool CaptureDiagnostics = !Logger::isLoggingEnabled();
+  CaptureDiagsKind CaptureDiagnostics = CaptureDiagsKind::All;
+  if (TU_options & CXTranslationUnit_IgnoreNonErrorsFromIncludedFiles)
+    CaptureDiagnostics = CaptureDiagsKind::AllWithoutNonErrorsFromIncludes;
+  if (Logger::isLoggingEnabled())
+    CaptureDiagnostics = CaptureDiagsKind::None;
 
   CaptureDiagnosticConsumer *CaptureDiag = nullptr;
-  if (CaptureDiagnostics)
+  if (CaptureDiagnostics != CaptureDiagsKind::None)
     CaptureDiag = new CaptureDiagnosticConsumer();
 
   // Configure the diagnostics.
@@ -677,9 +678,10 @@ static CXErrorCode clang_indexTranslationUnit_Impl(
 
   if (Unit->getOriginalSourceFileName().empty())
     DataConsumer.enteredMainFile(nullptr);
+  else if (auto MainFile = FileMgr.getFile(Unit->getOriginalSourceFileName()))
+    DataConsumer.enteredMainFile(*MainFile);
   else
-    DataConsumer.enteredMainFile(
-        FileMgr.getFile(Unit->getOriginalSourceFileName()));
+    DataConsumer.enteredMainFile(nullptr);
 
   DataConsumer.setASTContext(Unit->getASTContext());
   DataConsumer.startedTranslationUnit();

@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify %s -Wno-defaulted-function-deleted
 // RUN: %clang_cc1 -std=c++11 -fcxx-exceptions -DCXX_EXCEPTIONS -fsyntax-only -verify %s -Wno-defaulted-function-deleted
+// expected-no-diagnostics
 
 template <class _Tp> struct is_nothrow_move_constructible {
   static const bool value = false;
@@ -20,11 +21,6 @@ class basic_string {
 
 class Foo {
   Foo(Foo &&) noexcept = default;
-#ifdef CXX_EXCEPTIONS
-// expected-error@-2 {{does not match the calculated}}
-#else
-// expected-no-diagnostics
-#endif
   Foo &operator=(Foo &&) noexcept = default;
   basic_string<allocator<char> > vectorFoo_;
 };

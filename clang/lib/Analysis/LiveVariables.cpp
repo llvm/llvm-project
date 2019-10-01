@@ -1,9 +1,8 @@
 //=- LiveVariables.cpp - Live Variable Analysis for Source CFGs ----------*-==//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -502,7 +501,7 @@ LiveVariablesImpl::runOnBlock(const CFGBlock *block,
   TransferFunctions TF(*this, val, obs, block);
 
   // Visit the terminator (if any).
-  if (const Stmt *term = block->getTerminator())
+  if (const Stmt *term = block->getTerminatorStmt())
     TF.Visit(const_cast<Stmt*>(term));
 
   // Apply the transfer function for all Stmts in the block.

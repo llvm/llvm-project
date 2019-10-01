@@ -1,6 +1,6 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.MismatchedDeallocator -analyzer-output=text -verify %s
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.MismatchedDeallocator -analyzer-output=plist %s -o %t.plist
-// RUN: tail -n +11 %t.plist | diff -u -w -I "<string>/" -I "<string>.:" -I "version" - %S/copypaste/Inputs/expected-plists/MismatchedDeallocator-path-notes.cpp.plist
+// RUN: tail -n +11 %t.plist | %normalize_plist | diff -ub %S/copypaste/Inputs/expected-plists/MismatchedDeallocator-path-notes.cpp.plist -
 
 void changePointee(int *p);
 int *allocIntArray(unsigned c) {

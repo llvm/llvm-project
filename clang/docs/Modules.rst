@@ -360,7 +360,7 @@ The *module-id* should consist of only a single *identifier*, which provides the
 
 The ``explicit`` qualifier can only be applied to a submodule, i.e., a module that is nested within another module. The contents of explicit submodules are only made available when the submodule itself was explicitly named in an import declaration or was re-exported from an imported module.
 
-The ``framework`` qualifier specifies that this module corresponds to a Darwin-style framework. A Darwin-style framework (used primarily on Mac OS X and iOS) is contained entirely in directory ``Name.framework``, where ``Name`` is the name of the framework (and, therefore, the name of the module). That directory has the following layout:
+The ``framework`` qualifier specifies that this module corresponds to a Darwin-style framework. A Darwin-style framework (used primarily on macOS and iOS) is contained entirely in directory ``Name.framework``, where ``Name`` is the name of the framework (and, therefore, the name of the module). That directory has the following layout:
 
 .. parsed-literal::
 

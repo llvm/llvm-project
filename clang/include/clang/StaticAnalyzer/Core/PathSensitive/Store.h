@@ -1,9 +1,8 @@
 //===- Store.h - Interface for maps from Locations to Values ----*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -254,7 +253,8 @@ public:
   virtual bool scanReachableSymbols(Store S, const MemRegion *R,
                                     ScanReachableSymbols &Visitor) = 0;
 
-  virtual void print(Store store, raw_ostream &Out, const char* nl) = 0;
+  virtual void printJson(raw_ostream &Out, Store S, const char *NL,
+                         unsigned int Space, bool IsDot) const = 0;
 
   class BindingsHandler {
   public:

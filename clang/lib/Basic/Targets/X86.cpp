@@ -1,9 +1,8 @@
 //===--- X86.cpp - Implement X86 target feature support -------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -116,6 +115,11 @@ bool X86TargetInfo::initFeatureMap(
   if (Kind != CK_Lakemont)
     setFeatureEnabledImpl(Features, "x87", true);
 
+  // Enable cmpxchg8 for i586 and greater CPUs. Include generic for backwards
+  // compatibility.
+  if (Kind >= CK_i586 || Kind == CK_Generic)
+    setFeatureEnabledImpl(Features, "cx8", true);
+
   switch (Kind) {
   case CK_Generic:
   case CK_i386:
@@ -123,6 +127,7 @@ bool X86TargetInfo::initFeatureMap(
   case CK_i586:
   case CK_Pentium:
   case CK_PentiumPro:
+  case CK_i686:
   case CK_Lakemont:
     break;
 
@@ -132,6 +137,25 @@ bool X86TargetInfo::initFeatureMap(
   case CK_WinChipC6:
     setFeatureEnabledImpl(Features, "mmx", true);
     break;
+
+  case CK_Cooperlake:
+    // CPX inherits all CLX features plus AVX512BF16
+    setFeatureEnabledImpl(Features, "avx512bf16", true);
+    LLVM_FALLTHROUGH;
+  case CK_Cascadelake:
+    // CLX inherits all SKX features plus AVX512VNNI
+    setFeatureEnabledImpl(Features, "avx512vnni", true);
+    LLVM_FALLTHROUGH;
+  case CK_SkylakeServer:
+    setFeatureEnabledImpl(Features, "avx512f", true);
+    setFeatureEnabledImpl(Features, "avx512cd", true);
+    setFeatureEnabledImpl(Features, "avx512dq", true);
+    setFeatureEnabledImpl(Features, "avx512bw", true);
+    setFeatureEnabledImpl(Features, "avx512vl", true);
+    setFeatureEnabledImpl(Features, "clwb", true);
+    setFeatureEnabledImpl(Features, "pku", true);
+    // SkylakeServer cores inherits all SKL features, except SGX
+    goto SkylakeCommon;
 
   case CK_IcelakeServer:
     setFeatureEnabledImpl(Features, "pconfig", true);
@@ -143,38 +167,29 @@ bool X86TargetInfo::initFeatureMap(
     setFeatureEnabledImpl(Features, "vpclmulqdq", true);
     setFeatureEnabledImpl(Features, "avx512bitalg", true);
     setFeatureEnabledImpl(Features, "avx512vbmi2", true);
+    setFeatureEnabledImpl(Features, "avx512vnni", true);
     setFeatureEnabledImpl(Features, "avx512vpopcntdq", true);
     setFeatureEnabledImpl(Features, "rdpid", true);
+    setFeatureEnabledImpl(Features, "clwb", true);
     LLVM_FALLTHROUGH;
   case CK_Cannonlake:
-    setFeatureEnabledImpl(Features, "avx512ifma", true);
-    setFeatureEnabledImpl(Features, "avx512vbmi", true);
-    setFeatureEnabledImpl(Features, "sha", true);
-    LLVM_FALLTHROUGH;
-  case CK_Cascadelake:
-    //Cannonlake has no VNNI feature inside while Icelake has
-    if (Kind != CK_Cannonlake)
-      // CLK inherits all SKX features plus AVX512_VNNI
-      setFeatureEnabledImpl(Features, "avx512vnni", true);
-    LLVM_FALLTHROUGH;
-  case CK_SkylakeServer:
     setFeatureEnabledImpl(Features, "avx512f", true);
     setFeatureEnabledImpl(Features, "avx512cd", true);
     setFeatureEnabledImpl(Features, "avx512dq", true);
     setFeatureEnabledImpl(Features, "avx512bw", true);
     setFeatureEnabledImpl(Features, "avx512vl", true);
+    setFeatureEnabledImpl(Features, "avx512ifma", true);
+    setFeatureEnabledImpl(Features, "avx512vbmi", true);
     setFeatureEnabledImpl(Features, "pku", true);
-    if (Kind != CK_Cannonlake) // CNL inherits all SKX features, except CLWB
-      setFeatureEnabledImpl(Features, "clwb", true);
+    setFeatureEnabledImpl(Features, "sha", true);
     LLVM_FALLTHROUGH;
   case CK_SkylakeClient:
+    setFeatureEnabledImpl(Features, "sgx", true);
+    // SkylakeServer cores inherits all SKL features, except SGX
+SkylakeCommon:
     setFeatureEnabledImpl(Features, "xsavec", true);
     setFeatureEnabledImpl(Features, "xsaves", true);
     setFeatureEnabledImpl(Features, "mpx", true);
-    if (Kind != CK_SkylakeServer
-        && Kind != CK_Cascadelake)
-      // SKX/CLX inherits all SKL features, except SGX
-      setFeatureEnabledImpl(Features, "sgx", true);
     setFeatureEnabledImpl(Features, "clflushopt", true);
     setFeatureEnabledImpl(Features, "aes", true);
     LLVM_FALLTHROUGH;
@@ -215,11 +230,12 @@ bool X86TargetInfo::initFeatureMap(
     setFeatureEnabledImpl(Features, "ssse3", true);
     setFeatureEnabledImpl(Features, "sahf", true);
     LLVM_FALLTHROUGH;
+  case CK_Nocona:
+    setFeatureEnabledImpl(Features, "cx16", true);
+    LLVM_FALLTHROUGH;
   case CK_Yonah:
   case CK_Prescott:
-  case CK_Nocona:
     setFeatureEnabledImpl(Features, "sse3", true);
-    setFeatureEnabledImpl(Features, "cx16", true);
     LLVM_FALLTHROUGH;
   case CK_PentiumM:
   case CK_Pentium4:
@@ -348,6 +364,11 @@ bool X86TargetInfo::initFeatureMap(
     setFeatureEnabledImpl(Features, "sahf", true);
     break;
 
+  case CK_ZNVER2:
+    setFeatureEnabledImpl(Features, "clwb", true);
+    setFeatureEnabledImpl(Features, "rdpid", true);
+    setFeatureEnabledImpl(Features, "wbnoinvd", true);
+    LLVM_FALLTHROUGH;
   case CK_ZNVER1:
     setFeatureEnabledImpl(Features, "adx", true);
     setFeatureEnabledImpl(Features, "aes", true);
@@ -416,23 +437,20 @@ bool X86TargetInfo::initFeatureMap(
   // Enable popcnt if sse4.2 is enabled and popcnt is not explicitly disabled.
   auto I = Features.find("sse4.2");
   if (I != Features.end() && I->getValue() &&
-      std::find(FeaturesVec.begin(), FeaturesVec.end(), "-popcnt") ==
-          FeaturesVec.end())
+      llvm::find(FeaturesVec, "-popcnt") == FeaturesVec.end())
     Features["popcnt"] = true;
 
   // Enable prfchw if 3DNow! is enabled and prfchw is not explicitly disabled.
   I = Features.find("3dnow");
   if (I != Features.end() && I->getValue() &&
-      std::find(FeaturesVec.begin(), FeaturesVec.end(), "-prfchw") ==
-          FeaturesVec.end())
+      llvm::find(FeaturesVec, "-prfchw") == FeaturesVec.end())
     Features["prfchw"] = true;
 
   // Additionally, if SSE is enabled and mmx is not explicitly disabled,
   // then enable MMX.
   I = Features.find("sse");
   if (I != Features.end() && I->getValue() &&
-      std::find(FeaturesVec.begin(), FeaturesVec.end(), "-mmx") ==
-          FeaturesVec.end())
+      llvm::find(FeaturesVec, "-mmx") == FeaturesVec.end())
     Features["mmx"] = true;
 
   return true;
@@ -443,7 +461,9 @@ void X86TargetInfo::setSSELevel(llvm::StringMap<bool> &Features,
   if (Enabled) {
     switch (Level) {
     case AVX512F:
-      Features["avx512f"] = Features["fma"] = Features["f16c"] = true;
+      Features["avx512f"] = true;
+      Features["fma"] = true;
+      Features["f16c"] = true;
       LLVM_FALLTHROUGH;
     case AVX2:
       Features["avx2"] = true;
@@ -482,8 +502,8 @@ void X86TargetInfo::setSSELevel(llvm::StringMap<bool> &Features,
     Features["sse"] = false;
     LLVM_FALLTHROUGH;
   case SSE2:
-    Features["sse2"] = Features["pclmul"] = Features["aes"] = Features["sha"] =
-        Features["gfni"] = false;
+    Features["sse2"] = Features["pclmul"] = Features["aes"] = false;
+    Features["sha"] = Features["gfni"] = false;
     LLVM_FALLTHROUGH;
   case SSE3:
     Features["sse3"] = false;
@@ -499,20 +519,22 @@ void X86TargetInfo::setSSELevel(llvm::StringMap<bool> &Features,
     Features["sse4.2"] = false;
     LLVM_FALLTHROUGH;
   case AVX:
-    Features["fma"] = Features["avx"] = Features["f16c"] = Features["xsave"] =
-        Features["xsaveopt"] = Features["vaes"] = Features["vpclmulqdq"] = false;
+    Features["fma"] = Features["avx"] = Features["f16c"] = false;
+    Features["xsave"] = Features["xsaveopt"] = Features["vaes"] = false;
+    Features["vpclmulqdq"] = false;
     setXOPLevel(Features, FMA4, false);
     LLVM_FALLTHROUGH;
   case AVX2:
     Features["avx2"] = false;
     LLVM_FALLTHROUGH;
   case AVX512F:
-    Features["avx512f"] = Features["avx512cd"] = Features["avx512er"] =
-        Features["avx512pf"] = Features["avx512dq"] = Features["avx512bw"] =
-            Features["avx512vl"] = Features["avx512vbmi"] =
-                Features["avx512ifma"] = Features["avx512vpopcntdq"] =
-                    Features["avx512bitalg"] = Features["avx512vnni"] =
-                        Features["avx512vbmi2"] = false;
+    Features["avx512f"] = Features["avx512cd"] = Features["avx512er"] = false;
+    Features["avx512pf"] = Features["avx512dq"] = Features["avx512bw"] = false;
+    Features["avx512vl"] = Features["avx512vbmi"] = false;
+    Features["avx512ifma"] = Features["avx512vpopcntdq"] = false;
+    Features["avx512bitalg"] = Features["avx512vnni"] = false;
+    Features["avx512vbmi2"] = Features["avx512bf16"] = false;
+    Features["avx512vp2intersect"] = false;
     break;
   }
 }
@@ -640,20 +662,20 @@ void X86TargetInfo::setFeatureEnabledImpl(llvm::StringMap<bool> &Features,
     setSSELevel(Features, AVX2, Enabled);
   } else if (Name == "avx512f") {
     setSSELevel(Features, AVX512F, Enabled);
-  } else if (Name == "avx512cd" || Name == "avx512er" || Name == "avx512pf" ||
-             Name == "avx512dq" || Name == "avx512bw" || Name == "avx512vl" ||
-             Name == "avx512vbmi" || Name == "avx512ifma" ||
-             Name == "avx512vpopcntdq" || Name == "avx512bitalg" ||
-             Name == "avx512vnni" || Name == "avx512vbmi2") {
+  } else if (Name.startswith("avx512")) {
     if (Enabled)
       setSSELevel(Features, AVX512F, Enabled);
-    // Enable BWI instruction if VBMI/VBMI2/BITALG is being enabled.
-    if ((Name.startswith("avx512vbmi") || Name == "avx512bitalg") && Enabled)
+    // Enable BWI instruction if certain features are being enabled.
+    if ((Name == "avx512vbmi" || Name == "avx512vbmi2" ||
+         Name == "avx512bitalg" || Name == "avx512bf16") && Enabled)
       Features["avx512bw"] = true;
-    // Also disable VBMI/VBMI2/BITALG if BWI is being disabled.
-    if (Name == "avx512bw" && !Enabled)
-      Features["avx512vbmi"] = Features["avx512vbmi2"] =
+    // Also disable some features if BWI is being disabled.
+    if (Name == "avx512bw" && !Enabled) {
+      Features["avx512vbmi"] = false;
+      Features["avx512vbmi2"] = false;
       Features["avx512bitalg"] = false;
+      Features["avx512bf16"] = false;
+    }
   } else if (Name == "fma") {
     if (Enabled)
       setSSELevel(Features, AVX, Enabled);
@@ -743,6 +765,8 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasAVX512VPOPCNTDQ = true;
     } else if (Feature == "+avx512vnni") {
       HasAVX512VNNI = true;
+    } else if (Feature == "+avx512bf16") {
+      HasAVX512BF16 = true;
     } else if (Feature == "+avx512er") {
       HasAVX512ER = true;
     } else if (Feature == "+avx512pf") {
@@ -761,6 +785,8 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasAVX512VBMI2 = true;
     } else if (Feature == "+avx512ifma") {
       HasAVX512IFMA = true;
+    } else if (Feature == "+avx512vp2intersect") {
+      HasAVX512VP2INTERSECT = true;
     } else if (Feature == "+sha") {
       HasSHA = true;
     } else if (Feature == "+mpx") {
@@ -771,6 +797,8 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasMOVBE = true;
     } else if (Feature == "+sgx") {
       HasSGX = true;
+    } else if (Feature == "+cx8") {
+      HasCX8 = true;
     } else if (Feature == "+cx16") {
       HasCX16 = true;
     } else if (Feature == "+fxsr") {
@@ -817,6 +845,8 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasPTWRITE = true;
     } else if (Feature == "+invpcid") {
       HasINVPCID = true;
+    } else if (Feature == "+enqcmd") {
+      HasENQCMD = true;
     }
 
     X86SSEEnum Level = llvm::StringSwitch<X86SSEEnum>(Feature)
@@ -865,6 +895,9 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
 /// definitions for this particular subtarget.
 void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
                                      MacroBuilder &Builder) const {
+  // Inline assembly supports X86 flag outputs. 
+  Builder.defineMacro("__GCC_ASM_FLAG_OUTPUTS__");
+
   std::string CodeModel = getTargetOpts().CodeModel;
   if (CodeModel == "default")
     CodeModel = "small";
@@ -918,6 +951,7 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__tune_pentium2__");
     LLVM_FALLTHROUGH;
   case CK_PentiumPro:
+  case CK_i686:
     defineCPUMacros(Builder, "i686");
     defineCPUMacros(Builder, "pentiumpro");
     break;
@@ -957,6 +991,7 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
   case CK_SkylakeClient:
   case CK_SkylakeServer:
   case CK_Cascadelake:
+  case CK_Cooperlake:
   case CK_Cannonlake:
   case CK_IcelakeClient:
   case CK_IcelakeServer:
@@ -1027,6 +1062,9 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     break;
   case CK_ZNVER1:
     defineCPUMacros(Builder, "znver1");
+    break;
+  case CK_ZNVER2:
+    defineCPUMacros(Builder, "znver2");
     break;
   case CK_Geode:
     defineCPUMacros(Builder, "geode");
@@ -1124,6 +1162,8 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__AVX512VPOPCNTDQ__");
   if (HasAVX512VNNI)
     Builder.defineMacro("__AVX512VNNI__");
+  if (HasAVX512BF16)
+    Builder.defineMacro("__AVX512BF16__");
   if (HasAVX512ER)
     Builder.defineMacro("__AVX512ER__");
   if (HasAVX512PF)
@@ -1142,7 +1182,8 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__AVX512VBMI2__");
   if (HasAVX512IFMA)
     Builder.defineMacro("__AVX512IFMA__");
-
+  if (HasAVX512VP2INTERSECT)
+    Builder.defineMacro("__AVX512VP2INTERSECT__");
   if (HasSHA)
     Builder.defineMacro("__SHA__");
 
@@ -1190,6 +1231,8 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__PTWRITE__");
   if (HasINVPCID)
     Builder.defineMacro("__INVPCID__");
+  if (HasENQCMD)
+    Builder.defineMacro("__ENQCMD__");
 
   // Each case falls through to the previous one here.
   switch (SSELevel) {
@@ -1262,14 +1305,14 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     break;
   }
 
-  if (CPU >= CK_i486) {
+  if (CPU >= CK_i486 || CPU == CK_Generic) {
     Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");
     Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2");
     Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4");
   }
-  if (CPU >= CK_i586)
+  if (HasCX8)
     Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_8");
-  if (HasCX16)
+  if (HasCX16 && getTriple().getArch() == llvm::Triple::x86_64)
     Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_16");
 
   if (HasFloat128)
@@ -1288,6 +1331,7 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("avx512cd", true)
       .Case("avx512vpopcntdq", true)
       .Case("avx512vnni", true)
+      .Case("avx512bf16", true)
       .Case("avx512er", true)
       .Case("avx512pf", true)
       .Case("avx512dq", true)
@@ -1297,6 +1341,7 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("avx512vbmi", true)
       .Case("avx512vbmi2", true)
       .Case("avx512ifma", true)
+      .Case("avx512vp2intersect", true)
       .Case("bmi", true)
       .Case("bmi2", true)
       .Case("cldemote", true)
@@ -1304,6 +1349,7 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("clwb", true)
       .Case("clzero", true)
       .Case("cx16", true)
+      .Case("enqcmd", true)
       .Case("f16c", true)
       .Case("fma", true)
       .Case("fma4", true)
@@ -1366,6 +1412,7 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("avx512cd", HasAVX512CD)
       .Case("avx512vpopcntdq", HasAVX512VPOPCNTDQ)
       .Case("avx512vnni", HasAVX512VNNI)
+      .Case("avx512bf16", HasAVX512BF16)
       .Case("avx512er", HasAVX512ER)
       .Case("avx512pf", HasAVX512PF)
       .Case("avx512dq", HasAVX512DQ)
@@ -1375,13 +1422,16 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("avx512vbmi", HasAVX512VBMI)
       .Case("avx512vbmi2", HasAVX512VBMI2)
       .Case("avx512ifma", HasAVX512IFMA)
+      .Case("avx512vp2intersect", HasAVX512VP2INTERSECT)
       .Case("bmi", HasBMI)
       .Case("bmi2", HasBMI2)
       .Case("cldemote", HasCLDEMOTE)
       .Case("clflushopt", HasCLFLUSHOPT)
       .Case("clwb", HasCLWB)
       .Case("clzero", HasCLZERO)
+      .Case("cx8", HasCX8)
       .Case("cx16", HasCX16)
+      .Case("enqcmd", HasENQCMD)
       .Case("f16c", HasF16C)
       .Case("fma", HasFMA)
       .Case("fma4", XOPLevel >= FMA4)
@@ -1527,18 +1577,6 @@ void X86TargetInfo::getCPUSpecificCPUDispatchFeatures(
   WholeList.split(Features, ',', /*MaxSplit=*/-1, /*KeepEmpty=*/false);
 }
 
-std::string X86TargetInfo::getCPUKindCanonicalName(CPUKind Kind) const {
-  switch (Kind) {
-  case CK_Generic:
-    return "";
-#define PROC(ENUM, STRING, IS64BIT)                                            \
-  case CK_##ENUM:                                                              \
-    return STRING;
-#include "clang/Basic/X86Target.def"
-  }
-  llvm_unreachable("Invalid CPUKind");
-}
-
 // We can't use a generic validation scheme for the cpus accepted here
 // versus subtarget cpus accepted in the target attribute because the
 // variables intitialized by the runtime only support the below currently
@@ -1552,6 +1590,40 @@ bool X86TargetInfo::validateCpuIs(StringRef FeatureStr) const {
 #define X86_CPU_SUBTYPE_COMPAT(ARCHNAME, ENUM, STR) .Case(STR, true)
 #include "llvm/Support/X86TargetParser.def"
       .Default(false);
+}
+
+static unsigned matchAsmCCConstraint(const char *&Name) {
+  auto RV = llvm::StringSwitch<unsigned>(Name)
+                .Case("@cca", 4)
+                .Case("@ccae", 5)
+                .Case("@ccb", 4)
+                .Case("@ccbe", 5)
+                .Case("@ccc", 4)
+                .Case("@cce", 4)
+                .Case("@ccz", 4)
+                .Case("@ccg", 4)
+                .Case("@ccge", 5)
+                .Case("@ccl", 4)
+                .Case("@ccle", 5)
+                .Case("@ccna", 5)
+                .Case("@ccnae", 6)
+                .Case("@ccnb", 5)
+                .Case("@ccnbe", 6)
+                .Case("@ccnc", 5)
+                .Case("@ccne", 5)
+                .Case("@ccnz", 5)
+                .Case("@ccng", 5)
+                .Case("@ccnge", 6)
+                .Case("@ccnl", 5)
+                .Case("@ccnle", 6)
+                .Case("@ccno", 5)
+                .Case("@ccnp", 5)
+                .Case("@ccns", 5)
+                .Case("@cco", 4)
+                .Case("@ccp", 4)
+                .Case("@ccs", 4)
+                .Default(0);
+  return RV;
 }
 
 bool X86TargetInfo::validateAsmConstraint(
@@ -1636,6 +1708,14 @@ bool X86TargetInfo::validateAsmConstraint(
   case 'C': // SSE floating point constant.
   case 'G': // x87 floating point constant.
     return true;
+  case '@':
+    // CC condition changes.
+    if (auto Len = matchAsmCCConstraint(Name)) {
+      Name += Len - 1;
+      Info.setAllowsRegister();
+      return true;
+    }
+    return false;
   }
 }
 
@@ -1707,6 +1787,13 @@ bool X86TargetInfo::validateOperandSize(StringRef Constraint,
 
 std::string X86TargetInfo::convertConstraint(const char *&Constraint) const {
   switch (*Constraint) {
+  case '@':
+    if (auto Len = matchAsmCCConstraint(Constraint)) {
+      std::string Converted = "{" + std::string(Constraint, Len) + "}";
+      Constraint += Len - 1;
+      return Converted;
+    }
+    return std::string(1, *Constraint);
   case 'a':
     return std::string("{ax}");
   case 'b':
@@ -1769,10 +1856,9 @@ void X86TargetInfo::fillValidCPUList(SmallVectorImpl<StringRef> &Values) const {
 #define PROC(ENUM, STRING, IS64BIT)                                            \
   if (IS64BIT || getTriple().getArch() == llvm::Triple::x86)                   \
     Values.emplace_back(STRING);
-  // Go through CPUKind checking to ensure that the alias is de-aliased and
-  // 64 bit-ness is checked.
+  // For aliases we need to lookup the CPUKind to check get the 64-bit ness.
 #define PROC_ALIAS(ENUM, ALIAS)                                                \
-  if (checkCPUKind(getCPUKind(ALIAS)))                                         \
+  if (checkCPUKind(CK_##ENUM))                                                      \
     Values.emplace_back(ALIAS);
 #include "clang/Basic/X86Target.def"
 }

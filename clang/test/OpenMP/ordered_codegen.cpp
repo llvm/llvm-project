@@ -78,7 +78,8 @@ void dynamic1(float *a, float *b, float *c, float *d) {
 // CHECK: [[IV:%.+]] = load i64, i64* [[OMP_IV]]
 
 // CHECK-NEXT: [[UB:%.+]] = load i64, i64* [[OMP_UB]]
-// CHECK-NEXT: [[CMP:%.+]] = icmp ule i64 [[IV]], [[UB]]
+// CHECK-NEXT: [[BOUND:%.+]] = add i64 [[UB]], 1
+// CHECK-NEXT: [[CMP:%.+]] = icmp ult i64 [[IV]], [[BOUND]]
 // CHECK-NEXT: br i1 [[CMP]], label %[[LOOP1_BODY:[^,]+]], label %[[LOOP1_END:[^,]+]]
   for (unsigned long long i = 131071; i < 2147483647; i += 127) {
 // CHECK: [[LOOP1_BODY]]

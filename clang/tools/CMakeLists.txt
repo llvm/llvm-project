@@ -8,12 +8,16 @@ add_clang_subdirectory(clang-format-vs)
 add_clang_subdirectory(clang-fuzzer)
 add_clang_subdirectory(clang-import-test)
 add_clang_subdirectory(clang-offload-bundler)
+add_clang_subdirectory(clang-scan-deps)
 
 add_clang_subdirectory(c-index-test)
 add_clang_subdirectory(IndexStore)
 
 add_clang_subdirectory(clang-rename)
 add_clang_subdirectory(clang-refactor)
+if(UNIX)
+  add_clang_subdirectory(clang-shlib)
+endif()
 
 if(CLANG_ENABLE_ARCMT)
   add_clang_subdirectory(arcmt-test)
@@ -39,5 +43,3 @@ add_clang_subdirectory(libclang)
 
 add_clang_subdirectory(clang-refactor-test)
 
-# Support building the TAPI project as Clang tool.
-add_llvm_external_project(tapi)

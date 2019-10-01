@@ -1,9 +1,8 @@
 //===--- CGClass.cpp - Emit LLVM Code for C++ classes -----------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -303,7 +302,8 @@ Address CodeGenFunction::GetAddressOfBaseClass(
 
   // Get the base pointer type.
   llvm::Type *BasePtrTy =
-    ConvertType((PathEnd[-1])->getType())->getPointerTo();
+      ConvertType((PathEnd[-1])->getType())
+          ->getPointerTo(Value.getType()->getPointerAddressSpace());
 
   QualType DerivedTy = getContext().getRecordType(Derived);
   CharUnits DerivedAlign = CGM.getClassPointerAlignment(Derived);
@@ -526,8 +526,7 @@ static bool BaseInitializerUsesThis(ASTContext &C, const Expr *Init) {
 
 static void EmitBaseInitializer(CodeGenFunction &CGF,
                                 const CXXRecordDecl *ClassDecl,
-                                CXXCtorInitializer *BaseInit,
-                                CXXCtorType CtorType) {
+                                CXXCtorInitializer *BaseInit) {
   assert(BaseInit->isBaseInitializer() &&
          "Must have base initializer!");
 
@@ -538,10 +537,6 @@ static void EmitBaseInitializer(CodeGenFunction &CGF,
     cast<CXXRecordDecl>(BaseType->getAs<RecordType>()->getDecl());
 
   bool isBaseVirtual = BaseInit->isBaseVirtual();
-
-  // The base constructor doesn't construct virtual bases.
-  if (CtorType == Ctor_Base && isBaseVirtual)
-    return;
 
   // If the initializer for the base (other than the constructor
   // itself) accesses 'this' in any way, we need to initialize the
@@ -793,7 +788,7 @@ void CodeGenFunction::EmitAsanPrologueOrEpilogue(bool Prologue) {
   llvm::Type *Args[2] = {IntPtrTy, IntPtrTy};
   llvm::FunctionType *FTy =
       llvm::FunctionType::get(CGM.VoidTy, Args, false);
-  llvm::Constant *F = CGM.CreateRuntimeFunction(
+  llvm::FunctionCallee F = CGM.CreateRuntimeFunction(
       FTy, Prologue ? "__asan_poison_intra_object_redzone"
                     : "__asan_unpoison_intra_object_redzone");
 
@@ -1013,7 +1008,7 @@ namespace {
       if (FOffset < FirstFieldOffset) {
         FirstField = F;
         FirstFieldOffset = FOffset;
-      } else if (FOffset > LastFieldOffset) {
+      } else if (FOffset >= LastFieldOffset) {
         LastField = F;
         LastFieldOffset = FOffset;
       }
@@ -1264,24 +1259,37 @@ void CodeGenFunction::EmitCtorPrologue(const CXXConstructorDecl *CD,
   CXXConstructorDecl::init_const_iterator B = CD->init_begin(),
                                           E = CD->init_end();
 
+  // Virtual base initializers first, if any. They aren't needed if:
+  // - This is a base ctor variant
+  // - There are no vbases
+  // - The class is abstract, so a complete object of it cannot be constructed
+  //
+  // The check for an abstract class is necessary because sema may not have
+  // marked virtual base destructors referenced.
+  bool ConstructVBases = CtorType != Ctor_Base &&
+                         ClassDecl->getNumVBases() != 0 &&
+                         !ClassDecl->isAbstract();
+
+  // In the Microsoft C++ ABI, there are no constructor variants. Instead, the
+  // constructor of a class with virtual bases takes an additional parameter to
+  // conditionally construct the virtual bases. Emit that check here.
   llvm::BasicBlock *BaseCtorContinueBB = nullptr;
-  if (ClassDecl->getNumVBases() &&
+  if (ConstructVBases &&
       !CGM.getTarget().getCXXABI().hasConstructorVariants()) {
-    // The ABIs that don't have constructor variants need to put a branch
-    // before the virtual base initialization code.
     BaseCtorContinueBB =
-      CGM.getCXXABI().EmitCtorCompleteObjectHandler(*this, ClassDecl);
+        CGM.getCXXABI().EmitCtorCompleteObjectHandler(*this, ClassDecl);
     assert(BaseCtorContinueBB);
   }
 
   llvm::Value *const OldThis = CXXThisValue;
-  // Virtual base initializers first.
   for (; B != E && (*B)->isBaseInitializer() && (*B)->isBaseVirtual(); B++) {
+    if (!ConstructVBases)
+      continue;
     if (CGM.getCodeGenOpts().StrictVTablePointers &&
         CGM.getCodeGenOpts().OptimizationLevel > 0 &&
         isInitializerOfDynamicClass(*B))
       CXXThisValue = Builder.CreateLaunderInvariantGroup(LoadCXXThis());
-    EmitBaseInitializer(*this, ClassDecl, *B, CtorType);
+    EmitBaseInitializer(*this, ClassDecl, *B);
   }
 
   if (BaseCtorContinueBB) {
@@ -1298,7 +1306,7 @@ void CodeGenFunction::EmitCtorPrologue(const CXXConstructorDecl *CD,
         CGM.getCodeGenOpts().OptimizationLevel > 0 &&
         isInitializerOfDynamicClass(*B))
       CXXThisValue = Builder.CreateLaunderInvariantGroup(LoadCXXThis());
-    EmitBaseInitializer(*this, ClassDecl, *B, CtorType);
+    EmitBaseInitializer(*this, ClassDecl, *B);
   }
 
   CXXThisValue = OldThis;
@@ -1627,7 +1635,7 @@ namespace {
 
    llvm::FunctionType *FnType =
        llvm::FunctionType::get(CGF.VoidTy, ArgTypes, false);
-   llvm::Value *Fn =
+   llvm::FunctionCallee Fn =
        CGF.CGM.CreateRuntimeFunction(FnType, "__sanitizer_dtor_callback");
    CGF.EmitNounwindRuntimeCall(Fn, Args);
  }
@@ -1970,10 +1978,14 @@ void CodeGenFunction::EmitCXXAggrConstructorCall(const CXXConstructorDecl *ctor,
       pushRegularPartialArrayCleanup(arrayBegin, cur, type, eltAlignment,
                                      *destroyer);
     }
-
+    auto currAVS = AggValueSlot::forAddr(
+        curAddr, type.getQualifiers(), AggValueSlot::IsDestructed,
+        AggValueSlot::DoesNotNeedGCBarriers, AggValueSlot::IsNotAliased,
+        AggValueSlot::DoesNotOverlap, AggValueSlot::IsNotZeroed,
+        NewPointerIsChecked ? AggValueSlot::IsSanitizerChecked
+                            : AggValueSlot::IsNotSanitizerChecked);
     EmitCXXConstructorCall(ctor, Ctor_Complete, /*ForVirtualBase=*/false,
-                           /*Delegating=*/false, curAddr, E,
-                           AggValueSlot::DoesNotOverlap, NewPointerIsChecked);
+                           /*Delegating=*/false, currAVS, E);
   }
 
   // Go to the next element.
@@ -2007,16 +2019,16 @@ void CodeGenFunction::destroyCXXObject(CodeGenFunction &CGF,
 void CodeGenFunction::EmitCXXConstructorCall(const CXXConstructorDecl *D,
                                              CXXCtorType Type,
                                              bool ForVirtualBase,
-                                             bool Delegating, Address This,
-                                             const CXXConstructExpr *E,
-                                             AggValueSlot::Overlap_t Overlap,
-                                             bool NewPointerIsChecked) {
+                                             bool Delegating,
+                                             AggValueSlot ThisAVS,
+                                             const CXXConstructExpr *E) {
   CallArgList Args;
-
-  LangAS SlotAS = E->getType().getAddressSpace();
-  QualType ThisType = D->getThisType(getContext());
+  Address This = ThisAVS.getAddress();
+  LangAS SlotAS = ThisAVS.getQualifiers().getAddressSpace();
+  QualType ThisType = D->getThisType();
   LangAS ThisAS = ThisType.getTypePtr()->getPointeeType().getAddressSpace();
   llvm::Value *ThisPtr = This.getPointer();
+
   if (SlotAS != ThisAS) {
     unsigned TargetThisAS = getContext().getTargetAddressSpace(ThisAS);
     llvm::Type *NewType =
@@ -2024,8 +2036,9 @@ void CodeGenFunction::EmitCXXConstructorCall(const CXXConstructorDecl *D,
     ThisPtr = getTargetHooks().performAddrSpaceCast(*this, This.getPointer(),
                                                     ThisAS, SlotAS, NewType);
   }
+
   // Push the this ptr.
-  Args.add(RValue::get(ThisPtr), D->getThisType(getContext()));
+  Args.add(RValue::get(ThisPtr), D->getThisType());
 
   // If this is a trivial constructor, emit a memcpy now before we lose
   // the alignment information on the argument.
@@ -2037,7 +2050,7 @@ void CodeGenFunction::EmitCXXConstructorCall(const CXXConstructorDecl *D,
     LValue Src = EmitLValue(Arg);
     QualType DestTy = getContext().getTypeDeclType(D->getParent());
     LValue Dest = MakeAddrLValue(This, DestTy);
-    EmitAggregateCopyCtor(Dest, Src, Overlap);
+    EmitAggregateCopyCtor(Dest, Src, ThisAVS.mayOverlap());
     return;
   }
 
@@ -2050,7 +2063,8 @@ void CodeGenFunction::EmitCXXConstructorCall(const CXXConstructorDecl *D,
                /*ParamsToSkip*/ 0, Order);
 
   EmitCXXConstructorCall(D, Type, ForVirtualBase, Delegating, This, Args,
-                         Overlap, E->getExprLoc(), NewPointerIsChecked);
+                         ThisAVS.mayOverlap(), E->getExprLoc(),
+                         ThisAVS.isSanitizerChecked());
 }
 
 static bool canEmitDelegateCallArgs(CodeGenFunction &CGF,
@@ -2130,8 +2144,7 @@ void CodeGenFunction::EmitCXXConstructorCall(const CXXConstructorDecl *D,
                                                  Delegating, Args);
 
   // Emit the call.
-  llvm::Constant *CalleePtr =
-    CGM.getAddrOfCXXStructor(D, getFromCtorType(Type));
+  llvm::Constant *CalleePtr = CGM.getAddrOfCXXStructor(GlobalDecl(D, Type));
   const CGFunctionInfo &Info = CGM.getTypes().arrangeCXXConstructorCall(
       Args, D, Type, ExtraArgs.Prefix, ExtraArgs.Suffix, PassPrototypeArgs);
   CGCallee Callee = CGCallee::forDirect(CalleePtr, GlobalDecl(D, Type));
@@ -2159,7 +2172,7 @@ void CodeGenFunction::EmitInheritedCXXConstructorCall(
     const CXXConstructorDecl *D, bool ForVirtualBase, Address This,
     bool InheritedFromVBase, const CXXInheritedCtorInitExpr *E) {
   CallArgList Args;
-  CallArg ThisArg(RValue::get(This.getPointer()), D->getThisType(getContext()));
+  CallArg ThisArg(RValue::get(This.getPointer()), D->getThisType());
 
   // Forward the parameters.
   if (InheritedFromVBase &&
@@ -2284,7 +2297,7 @@ CodeGenFunction::EmitSynthesizedCXXCopyCtorCall(const CXXConstructorDecl *D,
   CallArgList Args;
 
   // Push the this ptr.
-  Args.add(RValue::get(This.getPointer()), D->getThisType(getContext()));
+  Args.add(RValue::get(This.getPointer()), D->getThisType());
 
   // Push the src ptr.
   QualType QT = *(FPT->param_type_begin());

@@ -1,9 +1,8 @@
 //===- unittests/AST/DeclTest.cpp --- Declaration tests -------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -12,12 +11,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "MatchVerifier.h"
+#include "clang/AST/ASTContext.h"
+#include "clang/AST/Mangle.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Basic/LLVM.h"
 #include "clang/Tooling/Tooling.h"
 #include "gtest/gtest.h"
 
 using namespace clang::ast_matchers;
 using namespace clang::tooling;
+using namespace clang;
 
 TEST(Decl, CleansUpAPValues) {
   MatchFinder Finder;
@@ -57,6 +60,51 @@ TEST(Decl, CleansUpAPValues) {
       Factory->create(),
       "constexpr _Complex __uint128_t c = 0xffffffffffffffff;",
       Args));
+}
+
+TEST(Decl, AsmLabelAttr) {
+  // Create two method decls: `f` and `g`.
+  StringRef Code = R"(
+    struct S {
+      void f() {}
+      void g() {}
+    };
+  )";
+  auto AST =
+      tooling::buildASTFromCodeWithArgs(Code, {"-target", "i386-apple-darwin"});
+  ASTContext &Ctx = AST->getASTContext();
+  assert(Ctx.getTargetInfo().getDataLayout().getGlobalPrefix() &&
+         "Expected target to have a global prefix");
+  DiagnosticsEngine &Diags = AST->getDiagnostics();
+  SourceManager &SM = AST->getSourceManager();
+  FileID MainFileID = SM.getMainFileID();
+
+  // Find the method decls within the AST.
+  SmallVector<Decl *, 1> Decls;
+  AST->findFileRegionDecls(MainFileID, Code.find('{'), 0, Decls);
+  ASSERT_TRUE(Decls.size() == 1);
+  CXXRecordDecl *DeclS = cast<CXXRecordDecl>(Decls[0]);
+  NamedDecl *DeclF = *DeclS->method_begin();
+  NamedDecl *DeclG = *(++DeclS->method_begin());
+
+  // Attach asm labels to the decls: one literal, and one not.
+  DeclF->addAttr(::new (Ctx) AsmLabelAttr(SourceRange(), Ctx, "foo",
+                                          /*LiteralLabel=*/true, 0));
+  DeclG->addAttr(::new (Ctx) AsmLabelAttr(SourceRange(), Ctx, "goo",
+                                          /*LiteralLabel=*/false, 0));
+
+  // Mangle the decl names.
+  std::string MangleF, MangleG;
+  MangleContext *MC = ItaniumMangleContext::create(Ctx, Diags);
+  {
+    llvm::raw_string_ostream OS_F(MangleF);
+    llvm::raw_string_ostream OS_G(MangleG);
+    MC->mangleName(DeclF, OS_F);
+    MC->mangleName(DeclG, OS_G);
+  }
+
+  ASSERT_TRUE(0 == MangleF.compare("\x01" "foo"));
+  ASSERT_TRUE(0 == MangleG.compare("goo"));
 }
 
 TEST(Decl, Availability) {

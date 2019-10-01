@@ -1,9 +1,8 @@
 //===--- ClangRefactor.cpp - Clang-based refactoring tool -----------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -117,8 +116,8 @@ public:
 
   bool forAllRanges(const SourceManager &SM,
                     llvm::function_ref<void(SourceRange R)> Callback) override {
-    const FileEntry *FE = SM.getFileManager().getFile(Range.FileName);
-    FileID FID = FE ? SM.translateFile(FE) : FileID();
+    auto FE = SM.getFileManager().getFile(Range.FileName);
+    FileID FID = FE ? SM.translateFile(*FE) : FileID();
     if (!FE || FID.isInvalid()) {
       llvm::errs() << "error: -selection=" << Range.FileName
                    << ":... : given file is not in the target TU\n";

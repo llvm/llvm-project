@@ -1,9 +1,8 @@
 //===- unittests/Frontend/CompilerInstanceTest.cpp - CI tests -------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -74,7 +73,10 @@ TEST(CompilerInstance, DefaultVFSOverlayFromInvocation) {
 
 TEST(CompilerInstance, AllowDiagnosticLogWithUnownedDiagnosticConsumer) {
   auto DiagOpts = new DiagnosticOptions();
-  DiagOpts->DiagnosticLogFile = "log.diags";
+  // Tell the diagnostics engine to emit the diagnostic log to STDERR. This
+  // ensures that a chained diagnostic consumer is created so that the test can
+  // exercise the unowned diagnostic consumer in a chained consumer.
+  DiagOpts->DiagnosticLogFile = "-";
 
   // Create the diagnostic engine with unowned consumer.
   std::string DiagnosticOutput;

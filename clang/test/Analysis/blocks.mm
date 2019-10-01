@@ -52,9 +52,10 @@ void testBlockWithCopyExpression(StructWithCopyConstructor s) {
 
 // CHECK: [B1]
 // CHECK-NEXT:   1: s
-// CHECK-NEXT:   2: [B1.1] (CXXConstructExpr, const struct StructWithCopyConstructor)
-// CHECK-NEXT:   3: ^{ }
-// CHECK-NEXT:   4: (void)([B1.3]) (CStyleCastExpr, ToVoid, void)
+// CHECK-NEXT:   2: [B1.1] (ImplicitCastExpr, NoOp, const struct StructWithCopyConstructor)
+// CHECK-NEXT:   3: [B1.2] (CXXConstructExpr, const struct StructWithCopyConstructor)
+// CHECK-NEXT:   4: ^{ }
+// CHECK-NEXT:   5: (void)([B1.4]) (CStyleCastExpr, ToVoid, void)
 // CHECK-NEXT:   Preds (1): B2
 // CHECK-NEXT:   Succs (1): B0
 

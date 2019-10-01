@@ -2,7 +2,7 @@
 
 union U {
   int x = 0; // expected-note {{previous initialization is here}}
-  union {};
+  union {}; // expected-warning {{does not declare anything}}
   union {
     int z;
     int y = 1; // expected-error {{initializing multiple members of union}}

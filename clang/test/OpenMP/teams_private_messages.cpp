@@ -2,6 +2,7 @@
 
 // RUN: %clang_cc1 -verify -fopenmp-simd %s
 
+extern int omp_default_mem_alloc;
 void foo() {
 }
 
@@ -24,9 +25,9 @@ class S3 {
 public:
   S3():a(0) { }
 };
-const S3 c; // expected-note {{global variable is predetermined as shared}}
-const S3 ca[5]; // expected-note {{global variable is predetermined as shared}}
-extern const int f; // expected-note {{global variable is predetermined as shared}}
+const S3 c; // expected-note {{'c' defined here}}
+const S3 ca[5]; // expected-note {{'ca' defined here}}
+extern const int f; // expected-note {{'f' declared here}}
 class S4 {
   int a;
   S4(); // expected-note {{implicitly declared private here}}
@@ -52,8 +53,8 @@ using A::x;
 }
 
 int main(int argc, char **argv) {
-  const int d = 5; // expected-note {{constant variable is predetermined as shared}}
-  const int da[5] = { 0 }; // expected-note {{constant variable is predetermined as shared}}
+  const int d = 5; // expected-note {{'d' defined here}}
+  const int da[5] = { 0 }; // expected-note {{'da' defined here}}
   S4 e(4);
   S5 g(5);
   int i;
@@ -83,19 +84,19 @@ int main(int argc, char **argv) {
   #pragma omp teams private (S1) // expected-error {{'S1' does not refer to a value}}
   foo();
   #pragma omp target
-  #pragma omp teams private (a, b, c, d, f) // expected-error {{a private variable with incomplete type 'S1'}} expected-error 3 {{shared variable cannot be private}}
+  #pragma omp teams private (a, b, c, d, f) // expected-error {{a private variable with incomplete type 'S1'}} expected-error 1 {{const-qualified variable without mutable fields cannot be private}} expected-error 2 {{const-qualified variable cannot be private}}
   foo();
   #pragma omp target
   #pragma omp teams private (argv[1]) // expected-error {{expected variable name}}
   foo();
   #pragma omp target
-  #pragma omp teams private(ba)
+  #pragma omp teams private(ba) allocate , allocate(, allocate(omp_default , allocate(omp_default_mem_alloc, allocate(omp_default_mem_alloc:, allocate(omp_default_mem_alloc: argc, allocate(omp_default_mem_alloc: argv), allocate(argv) // expected-error {{expected '(' after 'allocate'}} expected-error 2 {{expected expression}} expected-error 2 {{expected ')'}} expected-error {{use of undeclared identifier 'omp_default'}} expected-note 2 {{to match this '('}}
   foo();
   #pragma omp target
-  #pragma omp teams private(ca) // expected-error {{shared variable cannot be private}}
+  #pragma omp teams private(ca) // expected-error {{const-qualified variable without mutable fields cannot be private}}
   foo();
   #pragma omp target
-  #pragma omp teams private(da) // expected-error {{shared variable cannot be private}}
+  #pragma omp teams private(da) // expected-error {{const-qualified variable cannot be private}}
   foo();
   #pragma omp target
   #pragma omp teams private(S2::S2s) // expected-error {{shared variable cannot be private}}

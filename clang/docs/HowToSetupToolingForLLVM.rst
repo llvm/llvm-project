@@ -23,7 +23,7 @@ Setup Clang Tooling Using CMake and Make
 ========================================
 
 If you intend to use make to build LLVM, you should have CMake 2.8.6 or
-later installed (can be found `here <http://cmake.org>`_).
+later installed (can be found `here <https://cmake.org>`_).
 
 First, you need to generate Makefiles for LLVM with CMake. You need to
 make a build directory and run CMake from it:

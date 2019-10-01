@@ -357,3 +357,12 @@ void test12() {
   // CHECK: store i32 -1
   gi = OBJECT_SIZE_BUILTIN(my_signed_calloc(-2, 1), 0);
 }
+
+void *alloc_uchar(unsigned char) __attribute__((alloc_size(1)));
+
+// CHECK-LABEL: @test13
+void test13() {
+  // If 128 were incorrectly seen as negative, the result would become -1.
+  // CHECK: store i32 128,
+  gi = OBJECT_SIZE_BUILTIN(alloc_uchar(128), 0);
+}

@@ -423,6 +423,9 @@ Fix-it hints on errors and warnings need to obey these rules:
   driver, they should only be used when it's very likely they match the user's
   intent.
 * Clang must recover from errors as if the fix-it had been applied.
+* Fix-it hints on a warning must not change the meaning of the code.
+  However, a hint may clarify the meaning as intentional, for example by adding
+  parentheses when the precedence of operators isn't obvious.
 
 If a fix-it can't obey these rules, put the fix-it on a note.  Fix-its on notes
 are not applied automatically.
@@ -534,7 +537,7 @@ token.  This concept maps directly to the "spelling location" for the token.
 ``SourceRange`` and ``CharSourceRange``
 ---------------------------------------
 
-.. mostly taken from http://lists.llvm.org/pipermail/cfe-dev/2010-August/010595.html
+.. mostly taken from https://lists.llvm.org/pipermail/cfe-dev/2010-August/010595.html
 
 Clang represents most source ranges by [first, last], where "first" and "last"
 each point to the beginning of their respective tokens.  For example consider
@@ -827,6 +830,79 @@ wrappers.
 The AST Library
 ===============
 
+.. _ASTPhilosophy:
+
+Design philosophy
+-----------------
+
+Immutability
+^^^^^^^^^^^^
+
+Clang AST nodes (types, declarations, statements, expressions, and so on) are
+generally designed to be immutable once created. This provides a number of key
+benefits:
+
+  * Canonicalization of the "meaning" of nodes is possible as soon as the nodes
+    are created, and is not invalidated by later addition of more information.
+    For example, we :ref:`canonicalize types <CanonicalType>`, and use a
+    canonicalized representation of expressions when determining whether two
+    function template declarations involving dependent expressions declare the
+    same entity.
+  * AST nodes can be reused when they have the same meaning. For example, we
+    reuse ``Type`` nodes when representing the same type (but maintain separate
+    ``TypeLoc``\s for each instance where a type is written), and we reuse
+    non-dependent ``Stmt`` and ``Expr`` nodes across instantiations of a
+    template.
+  * Serialization and deserialization of the AST to/from AST files is simpler:
+    we do not need to track modifications made to AST nodes imported from AST
+    files and serialize separate "update records".
+
+There are unfortunately exceptions to this general approach, such as:
+
+  * A the first declaration of a redeclarable entity maintains a pointer to the
+    most recent declaration of that entity, which naturally needs to change as
+    more declarations are parsed.
+  * Name lookup tables in declaration contexts change after the namespace
+    declaration is formed.
+  * We attempt to maintain only a single declaration for an instantiation of a
+    template, rather than having distinct declarations for an instantiation of
+    the declaration versus the definition, so template instantiation often
+    updates parts of existing declarations.
+  * Some parts of declarations are required to be instantiated separately (this
+    includes default arguments and exception specifications), and such
+    instantiations update the existing declaration.
+
+These cases tend to be fragile; mutable AST state should be avoided where
+possible.
+
+As a consequence of this design principle, we typically do not provide setters
+for AST state. (Some are provided for short-term modifications intended to be
+used immediately after an AST node is created and before it's "published" as
+part of the complete AST, or where language semantics require after-the-fact
+updates.)
+
+Faithfulness
+^^^^^^^^^^^^
+
+The AST intends to provide a representation of the program that is faithful to
+the original source. We intend for it to be possible to write refactoring tools
+using only information stored in, or easily reconstructible from, the Clang AST.
+This means that the AST representation should either not desugar source-level
+constructs to simpler forms, or -- where made necessary by language semantics
+or a clear engineering tradeoff -- should desugar minimally and wrap the result
+in a construct representing the original source form.
+
+For example, ``CXXForRangeStmt`` directly represents the syntactic form of a
+range-based for statement, but also holds a semantic representation of the
+range declaration and iterator declarations. It does not contain a
+fully-desugared ``ForStmt``, however.
+
+Some AST nodes (for example, ``ParenExpr``) represent only syntax, and others
+(for example, ``ImplicitCastExpr``) represent only semantics, but most nodes
+will represent a combination of syntax and associated semantics. Inheritance
+is typically used when representing different (but related) syntaxes for nodes
+with the same or similar semantics.
+
 .. _Type:
 
 The ``Type`` class and its subclasses
@@ -888,6 +964,8 @@ with this: first, various semantic checks need to make judgements about the
 way to query whether two types are structurally identical to each other,
 ignoring typedefs.  The solution to both of these problems is the idea of
 canonical types.
+
+.. _CanonicalType:
 
 Canonical Types
 ^^^^^^^^^^^^^^^
@@ -1149,6 +1227,10 @@ the source code.  In the semantics-centric view, only the most recent "``f``"
 will be found by the lookup, since it effectively replaces the first
 declaration of "``f``".
 
+(Note that because ``f`` can be redeclared at block scope, or in a friend
+declaration, etc. it is possible that the declaration of ``f`` found by name
+lookup will not be the most recent one.)
+
 In the semantics-centric view, overloading of functions is represented
 explicitly.  For example, given two declarations of a function "``g``" that are
 overloaded, e.g.,
@@ -1313,7 +1395,7 @@ The transparent ``DeclContext``\ s are:
 Multiply-Defined Declaration Contexts
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-C++ namespaces have the interesting --- and, so far, unique --- property that
+C++ namespaces have the interesting property that
 the namespace can be defined multiple times, and the declarations provided by
 each namespace definition are effectively merged (from the semantic point of
 view).  For example, the following two code snippets are semantically
@@ -1353,6 +1435,18 @@ this context (which will be the only result, for non-namespace contexts) via
 internally within the lookup and insertion methods of the ``DeclContext``, so
 the vast majority of clients can ignore them.
 
+Because the same entity can be defined multiple times in different modules,
+it is also possible for there to be multiple definitions of (for instance)
+a ``CXXRecordDecl``, all of which describe a definition of the same class.
+In such a case, only one of those "definitions" is considered by Clang to be
+the definiition of the class, and the others are treated as non-defining
+declarations that happen to also contain member declarations. Corresponding
+members in each definition of such multiply-defined classes are identified
+either by redeclaration chains (if the members are ``Redeclarable``)
+or by simply a pointer to the canonical declaration (if the declarations
+are not ``Redeclarable`` -- in that case, a ``Mergeable`` base class is used
+instead).
+
 .. _CFG:
 
 The ``CFG`` class
@@ -1364,7 +1458,7 @@ constructed for function bodies (usually an instance of ``CompoundStmt``), but
 can also be instantiated to represent the control-flow of any class that
 subclasses ``Stmt``, which includes simple expressions.  Control-flow graphs
 are especially useful for performing `flow- or path-sensitive
-<http://en.wikipedia.org/wiki/Data_flow_analysis#Sensitivities>`_ program
+<https://en.wikipedia.org/wiki/Data_flow_analysis#Sensitivities>`_ program
 analyses on a given function.
 
 Basic Blocks
@@ -1686,7 +1780,7 @@ semantic checking for some attributes, etc.
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 The first step to adding a new attribute to Clang is to add its definition to
 `include/clang/Basic/Attr.td
-<https://llvm.org/viewvc/llvm-project/cfe/trunk/include/clang/Basic/Attr.td?view=markup>`_.
+<https://github.com/llvm/llvm-project/blob/master/clang/include/clang/Basic/Attr.td>`_.
 This tablegen definition must derive from the ``Attr`` (tablegen, not
 semantic) type, or one of its derivatives. Most attributes will derive from the
 ``InheritableAttr`` type, which specifies that the attribute can be inherited by
@@ -1748,10 +1842,10 @@ the ``SubjectList``. The diagnostics generated for subject list violations are
 either ``diag::warn_attribute_wrong_decl_type`` or
 ``diag::err_attribute_wrong_decl_type``, and the parameter enumeration is found
 in `include/clang/Sema/ParsedAttr.h
-<https://llvm.org/viewvc/llvm-project/cfe/trunk/include/clang/Sema/ParsedAttr.h?view=markup>`_
+<https://github.com/llvm/llvm-project/blob/master/clang/include/clang/Sema/ParsedAttr.h>`_
 If a previously unused Decl node is added to the ``SubjectList``, the logic used
 to automatically determine the diagnostic parameter in `utils/TableGen/ClangAttrEmitter.cpp
-<https://llvm.org/viewvc/llvm-project/cfe/trunk/utils/TableGen/ClangAttrEmitter.cpp?view=markup>`_
+<https://github.com/llvm/llvm-project/blob/master/clang/utils/TableGen/ClangAttrEmitter.cpp>`_
 may need to be updated.
 
 By default, all subjects in the SubjectList must either be a Decl node defined
@@ -1773,7 +1867,7 @@ All attributes must have some form of documentation associated with them.
 Documentation is table generated on the public web server by a server-side
 process that runs daily. Generally, the documentation for an attribute is a
 stand-alone definition in `include/clang/Basic/AttrDocs.td 
-<https://llvm.org/viewvc/llvm-project/cfe/trunk/include/clang/Basic/AttdDocs.td?view=markup>`_
+<https://github.com/llvm/llvm-project/blob/master/clang/include/clang/Basic/AttrDocs.td>`_
 that is named after the attribute being documented.
 
 If the attribute is not for public consumption, or is an implicitly-created
@@ -1824,7 +1918,7 @@ All arguments have a name and a flag that specifies whether the argument is
 optional. The associated C++ type of the argument is determined by the argument
 definition type. If the existing argument types are insufficient, new types can
 be created, but it requires modifying `utils/TableGen/ClangAttrEmitter.cpp
-<https://llvm.org/viewvc/llvm-project/cfe/trunk/utils/TableGen/ClangAttrEmitter.cpp?view=markup>`_
+<https://github.com/llvm/llvm-project/blob/master/clang/utils/TableGen/ClangAttrEmitter.cpp>`_
 to properly support the type.
 
 Other Properties
@@ -1836,7 +1930,7 @@ document, however a few deserve mention.
 If the parsed form of the attribute is more complex, or differs from the
 semantic form, the ``HasCustomParsing`` bit can be set to ``1`` for the class,
 and the parsing code in `Parser::ParseGNUAttributeArgs()
-<https://llvm.org/viewvc/llvm-project/cfe/trunk/lib/Parse/ParseDecl.cpp?view=markup>`_
+<https://github.com/llvm/llvm-project/blob/master/clang/lib/Parse/ParseDecl.cpp>`_
 can be updated for the special case. Note that this only applies to arguments
 with a GNU spelling -- attributes with a __declspec spelling currently ignore
 this flag and are handled by ``Parser::ParseMicrosoftDeclSpec``.
@@ -1899,7 +1993,7 @@ semantic attribute class object, with ``public`` access.
 Boilerplate
 ^^^^^^^^^^^
 All semantic processing of declaration attributes happens in `lib/Sema/SemaDeclAttr.cpp
-<https://llvm.org/viewvc/llvm-project/cfe/trunk/lib/Sema/SemaDeclAttr.cpp?view=markup>`_,
+<https://github.com/llvm/llvm-project/blob/master/clang/lib/Sema/SemaDeclAttr.cpp>`_,
 and generally starts in the ``ProcessDeclAttribute()`` function. If the
 attribute is a "simple" attribute -- meaning that it requires no custom semantic
 processing aside from what is automatically  provided, add a call to
@@ -1915,11 +2009,11 @@ correct minimum number of arguments are passed, etc.
 
 If the attribute adds additional warnings, define a ``DiagGroup`` in
 `include/clang/Basic/DiagnosticGroups.td
-<https://llvm.org/viewvc/llvm-project/cfe/trunk/include/clang/Basic/DiagnosticGroups.td?view=markup>`_
+<https://github.com/llvm/llvm-project/blob/master/clang/include/clang/Basic/DiagnosticGroups.td>`_
 named after the attribute's ``Spelling`` with "_"s replaced by "-"s. If there
 is only a single diagnostic, it is permissible to use ``InGroup<DiagGroup<"your-attribute">>``
 directly in `DiagnosticSemaKinds.td
-<https://llvm.org/viewvc/llvm-project/cfe/trunk/include/clang/Basic/DiagnosticSemaKinds.td?view=markup>`_
+<https://github.com/llvm/llvm-project/blob/master/clang/include/clang/Basic/DiagnosticSemaKinds.td>`_
 
 All semantic diagnostics generated for your attribute, including automatically-
 generated ones (such as subjects and argument counts), should have a

@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple i386-unknown-unknown -emit-llvm -O1 -fno-split-cold-code -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple i386-unknown-unknown -emit-llvm -O1 -fno-split-cold-code -fcxx-exceptions -fexceptions -std=c++03 -o - %s | FileCheck --check-prefixes=CHECK-EH,CHECK-EH-03 %s
-// RUN: %clang_cc1 -triple i386-unknown-unknown -emit-llvm -O1 -fno-split-cold-code -fcxx-exceptions -fexceptions -std=c++11 -o - %s | FileCheck --check-prefixes=CHECK-EH,CHECK-EH-11 %s
+// RUN: %clang_cc1 -triple i386-unknown-unknown -emit-llvm -O1 -fno-split-cold-code -fno-experimental-new-pass-manager -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple i386-unknown-unknown -emit-llvm -O1 -fno-split-cold-code -fno-experimental-new-pass-manager -fcxx-exceptions -fexceptions -std=c++03 -o - %s | FileCheck --check-prefixes=CHECK-EH,CHECK-EH-03 %s
+// RUN: %clang_cc1 -triple i386-unknown-unknown -emit-llvm -O1 -fno-split-cold-code -fno-experimental-new-pass-manager -fcxx-exceptions -fexceptions -std=c++11 -o - %s | FileCheck --check-prefixes=CHECK-EH,CHECK-EH-11 %s
 
 // Test code generation for the named return value optimization.
 class X {
@@ -59,7 +59,6 @@ X test2(bool B) {
   // CHECK-NEXT: {{.*}} getelementptr inbounds %class.X, %class.X* %y, i32 0, i32 0
   // CHECK-NEXT: call void @llvm.lifetime.start
   // CHECK-NEXT: call {{.*}} @_ZN1XC1Ev
-  // CHECK: call {{.*}} @_ZN1XC1ERKS_
   // CHECK: call {{.*}} @_ZN1XC1ERKS_
   // CHECK: call {{.*}} @_ZN1XD1Ev
   // CHECK-NEXT: call void @llvm.lifetime.end

@@ -15,7 +15,7 @@
 // CHECK-X86_64: @"OBJC_EHTYPE_$_MySecretNamespace.EH1" = weak global {{.*}}, align 8
 // CHECK-X86_64: @"OBJC_EHTYPE_$_MySecretNamespace.EH2" = external global
 // CHECK-X86_64: @"OBJC_EHTYPE_$_MySecretNamespace.EH3" = global {{.*}}, section "__DATA,__objc_const", align 8
-// CHECK-X86_64: @"OBJC_LABEL_CLASS_$" = private global {{.*}}, section "__DATA,__objc_classlist,regular,no_dead_strip", align 8
+// CHECK-X86_64: @"OBJC_LABEL_CLASS_$" = internal global {{.*}}, section "__DATA,__objc_classlist,regular,no_dead_strip", align 8
 // CHECK-X86_64: define internal void @"\01-[A im0]"
 // CHECK-X86_64: define internal void @"\01-[A(Cat) im1]"
 
@@ -39,7 +39,7 @@
 // CHECK-ARMV6: @"OBJC_EHTYPE_$_MySecretNamespace.EH1" = weak global {{.*}}, align 4
 // CHECK-ARMV6: @"OBJC_EHTYPE_$_MySecretNamespace.EH2" = external global
 // CHECK-ARMV6: @"OBJC_EHTYPE_$_MySecretNamespace.EH3" = global {{.*}}, section "__DATA,__objc_const", align 4
-// CHECK-ARMV6: @"OBJC_LABEL_CLASS_$" = private global {{.*}}, section "__DATA,__objc_classlist,regular,no_dead_strip", align 4
+// CHECK-ARMV6: @"OBJC_LABEL_CLASS_$" = internal global {{.*}}, section "__DATA,__objc_classlist,regular,no_dead_strip", align 4
 // CHECK-ARMV6: define internal void @"\01-[A im0]"
 // CHECK-ARMV6: define internal void @"\01-[A(Cat) im1]"
 

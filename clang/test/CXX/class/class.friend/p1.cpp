@@ -51,9 +51,9 @@ class A {
   friend class A::AInner; // this is okay as an extension
   friend class AInner; // okay, refers to ::AInner
 
-  friend void Derived::missing_member(); // expected-error {{no function named 'missing_member' with type 'void ()' was found in the specified scope}}
+  friend void Derived::missing_member(); // expected-error {{friend declaration of 'missing_member' does not match any declaration in 'Derived'}}
 
-  friend void Derived::base_member(); // expected-error {{no function named 'base_member' with type 'void ()' was found in the specified scope}}
+  friend void Derived::base_member(); // expected-error {{friend declaration of 'base_member' does not match any declaration in 'Derived'}}
 
   friend int Base::typedeffed_member(); // okay: should look through typedef
 

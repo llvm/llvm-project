@@ -56,8 +56,8 @@ constexpr S5::S5() = default;
 static_assert(S5().m == 4, "");
 
 
-// An explicitly-defaulted function may have an exception specification only if
-// it is compatible with the exception specification on an implicit declaration.
+// An explicitly-defaulted function may have a different exception specification
+// from the exception specification on an implicit declaration.
 struct E1 {
   E1() noexcept = default;
   E1(const E1&) noexcept = default;
@@ -67,13 +67,24 @@ struct E1 {
   ~E1() noexcept = default;
 };
 struct E2 {
-  E2() noexcept(false) = default; // expected-error {{exception specification of explicitly defaulted default constructor does not match the calculated one}}
-  E2(const E2&) noexcept(false) = default; // expected-error {{exception specification of explicitly defaulted copy constructor does not match the calculated one}}
-  E2(E2&&) noexcept(false) = default; // expected-error {{exception specification of explicitly defaulted move constructor does not match the calculated one}}
-  E2 &operator=(const E2&) noexcept(false) = default; // expected-error {{exception specification of explicitly defaulted copy assignment operator does not match the calculated one}}
-  E2 &operator=(E2&&) noexcept(false) = default; // expected-error {{exception specification of explicitly defaulted move assignment operator does not match the calculated one}}
-  ~E2() noexcept(false) = default; // expected-error {{exception specification of explicitly defaulted destructor does not match the calculated one}}
+  E2() noexcept(false) = default;
+  E2(const E2&) noexcept(false) = default;
+  E2(E2&&) noexcept(false) = default;
+  E2 &operator=(const E2&) noexcept(false) = default;
+  E2 &operator=(E2&&) noexcept(false) = default;
+  ~E2() noexcept(false) = default;
 };
+E2 e2;
+E2 make_e2() noexcept;
+void take_e2(E2&&) noexcept;
+static_assert(!noexcept(E2()), "");
+static_assert(!noexcept(E2(e2)), "");
+static_assert(!noexcept(E2(static_cast<E2&&>(e2))), "");
+static_assert(!noexcept(e2 = e2), "");
+static_assert(!noexcept(e2 = static_cast<E2&&>(e2)), "");
+// FIXME: This expression results in destruction of an E2 temporary; the
+// noexcept expression should evaluate to false.
+static_assert(noexcept(take_e2(make_e2())), "");
 
 // If a function is explicitly defaulted on its first declaration
 //   -- it is implicitly considered to have the same exception-specification as

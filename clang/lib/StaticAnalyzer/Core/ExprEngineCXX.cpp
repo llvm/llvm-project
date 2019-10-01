@@ -1,9 +1,8 @@
 //===- ExprEngineCXX.cpp - ExprEngine support for C++ -----------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -429,25 +428,20 @@ void ExprEngine::VisitCXXConstructExpr(const CXXConstructExpr *CE,
         prepareForObjectConstruction(CE, State, LCtx, CC, CallOpts);
     break;
   }
-  case CXXConstructExpr::CK_VirtualBase:
+  case CXXConstructExpr::CK_VirtualBase: {
     // Make sure we are not calling virtual base class initializers twice.
     // Only the most-derived object should initialize virtual base classes.
-    if (const Stmt *Outer = LCtx->getStackFrame()->getCallSite()) {
-      const CXXConstructExpr *OuterCtor = dyn_cast<CXXConstructExpr>(Outer);
-      if (OuterCtor) {
-        switch (OuterCtor->getConstructionKind()) {
-        case CXXConstructExpr::CK_NonVirtualBase:
-        case CXXConstructExpr::CK_VirtualBase:
-          // Bail out!
-          destNodes.Add(Pred);
-          return;
-        case CXXConstructExpr::CK_Complete:
-        case CXXConstructExpr::CK_Delegating:
-          break;
-        }
-      }
-    }
+    const auto *OuterCtor = dyn_cast_or_null<CXXConstructExpr>(
+        LCtx->getStackFrame()->getCallSite());
+    assert(
+        (!OuterCtor ||
+         OuterCtor->getConstructionKind() == CXXConstructExpr::CK_Complete ||
+         OuterCtor->getConstructionKind() == CXXConstructExpr::CK_Delegating) &&
+        ("This virtual base should have already been initialized by "
+         "the most derived class!"));
+    (void)OuterCtor;
     LLVM_FALLTHROUGH;
+  }
   case CXXConstructExpr::CK_NonVirtualBase:
     // In C++17, classes with non-virtual bases may be aggregates, so they would
     // be initialized as aggregates without a constructor call, so we may have

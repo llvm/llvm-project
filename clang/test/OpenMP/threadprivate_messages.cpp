@@ -19,7 +19,7 @@ struct CompleteSt1{
 
 int a; // expected-note {{'a' defined here}}
 
-#pragma omp threadprivate(a)
+#pragma omp threadprivate(a) allocate(a) // expected-warning {{extra tokens at the end of '#pragma omp threadprivate' are ignored}}
 #pragma omp threadprivate(u) // expected-error {{use of undeclared identifier 'u'}}
 #pragma omp threadprivate(d, a)
 int foo() { // expected-note {{declared here}}

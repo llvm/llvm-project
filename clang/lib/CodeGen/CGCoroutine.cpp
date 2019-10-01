@@ -1,9 +1,8 @@
 //===----- CGCoroutine.cpp - Emit LLVM Code for C++ coroutines ------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -733,10 +732,10 @@ RValue CodeGenFunction::EmitCoroutineIntrinsic(const CallExpr *E,
     Args.push_back(llvm::ConstantTokenNone::get(getLLVMContext()));
     break;
   }
-  for (auto &Arg : E->arguments())
+  for (const Expr *Arg : E->arguments())
     Args.push_back(EmitScalarExpr(Arg));
 
-  llvm::Value *F = CGM.getIntrinsic(IID);
+  llvm::Function *F = CGM.getIntrinsic(IID);
   llvm::CallInst *Call = Builder.CreateCall(F, Args);
 
   // Note: The following code is to enable to emit coro.id and coro.begin by

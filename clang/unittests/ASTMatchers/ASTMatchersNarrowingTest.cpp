@@ -1,9 +1,8 @@
 // unittests/ASTMatchers/ASTMatchersNarrowingTest.cpp - AST matcher unit tests//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -567,6 +566,74 @@ TEST(Matcher, BindMatchedNodes) {
                                        llvm::make_unique<VerifyIdIsBoundTo<CXXMemberCallExpr>>("x")));
 }
 
+TEST(Matcher, IgnoresElidableConstructors) {
+  EXPECT_TRUE(
+      matches("struct H {};"
+              "template<typename T> H B(T A);"
+              "void f() {"
+              "  H D1;"
+              "  D1 = B(B(1));"
+              "}",
+              cxxOperatorCallExpr(hasArgument(
+                  1, callExpr(hasArgument(
+                         0, ignoringElidableConstructorCall(callExpr()))))),
+              LanguageMode::Cxx11OrLater));
+  EXPECT_TRUE(
+      matches("struct H {};"
+              "template<typename T> H B(T A);"
+              "void f() {"
+              "  H D1;"
+              "  D1 = B(1);"
+              "}",
+              cxxOperatorCallExpr(hasArgument(
+                  1, callExpr(hasArgument(0, ignoringElidableConstructorCall(
+                                                 integerLiteral()))))),
+              LanguageMode::Cxx11OrLater));
+  EXPECT_TRUE(matches(
+      "struct H {};"
+      "H G();"
+      "void f() {"
+      "  H D = G();"
+      "}",
+      varDecl(hasInitializer(anyOf(
+          ignoringElidableConstructorCall(callExpr()),
+          exprWithCleanups(has(ignoringElidableConstructorCall(callExpr())))))),
+      LanguageMode::Cxx11OrLater));
+}
+
+TEST(Matcher, IgnoresElidableInReturn) {
+  auto matcher = expr(ignoringElidableConstructorCall(declRefExpr()));
+  EXPECT_TRUE(matches("struct H {};"
+                      "H f() {"
+                      "  H g;"
+                      "  return g;"
+                      "}",
+                      matcher, LanguageMode::Cxx11OrLater));
+  EXPECT_TRUE(notMatches("struct H {};"
+                         "H f() {"
+                         "  return H();"
+                         "}",
+                         matcher, LanguageMode::Cxx11OrLater));
+}
+
+TEST(Matcher, IgnoreElidableConstructorDoesNotMatchConstructors) {
+  EXPECT_TRUE(matches("struct H {};"
+                      "void f() {"
+                      "  H D;"
+                      "}",
+                      varDecl(hasInitializer(
+                          ignoringElidableConstructorCall(cxxConstructExpr()))),
+                      LanguageMode::Cxx11OrLater));
+}
+
+TEST(Matcher, IgnoresElidableDoesNotPreventMatches) {
+  EXPECT_TRUE(matches("void f() {"
+                      "  int D = 10;"
+                      "}",
+                      expr(ignoringElidableConstructorCall(integerLiteral())),
+                      LanguageMode::Cxx11OrLater));
+}
+
 TEST(Matcher, BindTheSameNameInAlternatives) {
   StatementMatcher matcher = anyOf(
     binaryOperator(hasOperatorName("+"),
@@ -915,10 +982,10 @@ TEST(isConstexpr, MatchesConstexprDeclarations) {
                       varDecl(hasName("foo"), isConstexpr())));
   EXPECT_TRUE(matches("constexpr int bar();",
                       functionDecl(hasName("bar"), isConstexpr())));
-  EXPECT_TRUE(matchesConditionally("void baz() { if constexpr(1 > 0) {} }",
-                                   ifStmt(isConstexpr()), true, "-std=c++17"));
-  EXPECT_TRUE(matchesConditionally("void baz() { if (1 > 0) {} }",
-                                   ifStmt(isConstexpr()), false, "-std=c++17"));
+  EXPECT_TRUE(matches("void baz() { if constexpr(1 > 0) {} }",
+                      ifStmt(isConstexpr()), LanguageMode::Cxx17OrLater));
+  EXPECT_TRUE(notMatches("void baz() { if (1 > 0) {} }", ifStmt(isConstexpr()),
+                         LanguageMode::Cxx17OrLater));
 }
 
 TEST(TemplateArgumentCountIs, Matches) {
@@ -2032,6 +2099,57 @@ TEST(NS, Anonymous) {
   EXPECT_TRUE(matches("namespace {}", namespaceDecl(isAnonymous())));
 }
 
+TEST(DeclarationMatcher, InStdNamespace) {
+  EXPECT_TRUE(notMatches("class vector {};"
+                         "namespace foo {"
+                         "  class vector {};"
+                         "}"
+                         "namespace foo {"
+                         "  namespace std {"
+                         "    class vector {};"
+                         "  }"
+                         "}",
+                         cxxRecordDecl(hasName("vector"), isInStdNamespace())));
+
+  EXPECT_TRUE(matches("namespace std {"
+                      "  class vector {};"
+                      "}",
+                      cxxRecordDecl(hasName("vector"), isInStdNamespace())));
+  EXPECT_TRUE(matches("namespace std {"
+                      "  inline namespace __1 {"
+                      "    class vector {};"
+                      "  }"
+                      "}",
+                      cxxRecordDecl(hasName("vector"), isInStdNamespace())));
+  EXPECT_TRUE(notMatches("namespace std {"
+                         "  inline namespace __1 {"
+                         "    inline namespace __fs {"
+                         "      namespace filesystem {"
+                         "        inline namespace v1 {"
+                         "          class path {};"
+                         "        }"
+                         "      }"
+                         "    }"
+                         "  }"
+                         "}",
+                         cxxRecordDecl(hasName("path"), isInStdNamespace())));
+  EXPECT_TRUE(
+      matches("namespace std {"
+              "  inline namespace __1 {"
+              "    inline namespace __fs {"
+              "      namespace filesystem {"
+              "        inline namespace v1 {"
+              "          class path {};"
+              "        }"
+              "      }"
+              "    }"
+              "  }"
+              "}",
+              cxxRecordDecl(hasName("path"),
+                            hasAncestor(namespaceDecl(hasName("filesystem"),
+                                                      isInStdNamespace())))));
+}
+
 TEST(EqualsBoundNodeMatcher, QualType) {
   EXPECT_TRUE(matches(
     "int i = 1;", varDecl(hasType(qualType().bind("type")),
@@ -2255,12 +2373,257 @@ TEST(IsAssignmentOperator, Basic) {
       notMatches("void x() { int a; if(a == 0) return; }", BinAsgmtOperator));
 }
 
+TEST(HasInit, Basic) {
+  EXPECT_TRUE(
+    matches("int x{0};",
+            initListExpr(hasInit(0, expr()))));
+  EXPECT_FALSE(
+    matches("int x{0};",
+            initListExpr(hasInit(1, expr()))));
+  EXPECT_FALSE(
+    matches("int x;",
+            initListExpr(hasInit(0, expr()))));
+}
+
 TEST(Matcher, isMain) {
   EXPECT_TRUE(
     matches("int main() {}", functionDecl(isMain())));
 
   EXPECT_TRUE(
     notMatches("int main2() {}", functionDecl(isMain())));
+}
+
+TEST(OMPExecutableDirective, isStandaloneDirective) {
+  auto Matcher = ompExecutableDirective(isStandaloneDirective());
+
+  const std::string Source0 = R"(
+void x() {
+#pragma omp parallel
+;
+})";
+  EXPECT_TRUE(notMatchesWithOpenMP(Source0, Matcher));
+
+  const std::string Source1 = R"(
+void x() {
+#pragma omp taskyield
+})";
+  EXPECT_TRUE(matchesWithOpenMP(Source1, Matcher));
+}
+
+TEST(Stmt, isOMPStructuredBlock) {
+  const std::string Source0 = R"(
+void x() {
+#pragma omp parallel
+;
+})";
+  EXPECT_TRUE(
+      matchesWithOpenMP(Source0, stmt(nullStmt(), isOMPStructuredBlock())));
+
+  const std::string Source1 = R"(
+void x() {
+#pragma omp parallel
+{;}
+})";
+  EXPECT_TRUE(
+      notMatchesWithOpenMP(Source1, stmt(nullStmt(), isOMPStructuredBlock())));
+  EXPECT_TRUE(
+      matchesWithOpenMP(Source1, stmt(compoundStmt(), isOMPStructuredBlock())));
+}
+
+TEST(OMPExecutableDirective, hasStructuredBlock) {
+  const std::string Source0 = R"(
+void x() {
+#pragma omp parallel
+;
+})";
+  EXPECT_TRUE(matchesWithOpenMP(
+      Source0, ompExecutableDirective(hasStructuredBlock(nullStmt()))));
+
+  const std::string Source1 = R"(
+void x() {
+#pragma omp parallel
+{;}
+})";
+  EXPECT_TRUE(notMatchesWithOpenMP(
+      Source1, ompExecutableDirective(hasStructuredBlock(nullStmt()))));
+  EXPECT_TRUE(matchesWithOpenMP(
+      Source1, ompExecutableDirective(hasStructuredBlock(compoundStmt()))));
+
+  const std::string Source2 = R"(
+void x() {
+#pragma omp taskyield
+{;}
+})";
+  EXPECT_TRUE(notMatchesWithOpenMP(
+      Source2, ompExecutableDirective(hasStructuredBlock(anything()))));
+}
+
+TEST(OMPExecutableDirective, hasClause) {
+  auto Matcher = ompExecutableDirective(hasAnyClause(anything()));
+
+  const std::string Source0 = R"(
+void x() {
+;
+})";
+  EXPECT_TRUE(notMatchesWithOpenMP(Source0, Matcher));
+
+  const std::string Source1 = R"(
+void x() {
+#pragma omp parallel
+;
+})";
+  EXPECT_TRUE(notMatchesWithOpenMP(Source1, Matcher));
+
+  const std::string Source2 = R"(
+void x() {
+#pragma omp parallel default(none)
+;
+})";
+  EXPECT_TRUE(matchesWithOpenMP(Source2, Matcher));
+
+  const std::string Source3 = R"(
+void x() {
+#pragma omp parallel default(shared)
+;
+})";
+  EXPECT_TRUE(matchesWithOpenMP(Source3, Matcher));
+
+  const std::string Source4 = R"(
+void x(int x) {
+#pragma omp parallel num_threads(x)
+;
+})";
+  EXPECT_TRUE(matchesWithOpenMP(Source4, Matcher));
+}
+
+TEST(OMPDefaultClause, isNoneKind) {
+  auto Matcher =
+      ompExecutableDirective(hasAnyClause(ompDefaultClause(isNoneKind())));
+
+  const std::string Source0 = R"(
+void x() {
+;
+})";
+  EXPECT_TRUE(notMatchesWithOpenMP(Source0, Matcher));
+
+  const std::string Source1 = R"(
+void x() {
+#pragma omp parallel
+;
+})";
+  EXPECT_TRUE(notMatchesWithOpenMP(Source1, Matcher));
+
+  const std::string Source2 = R"(
+void x() {
+#pragma omp parallel default(none)
+;
+})";
+  EXPECT_TRUE(matchesWithOpenMP(Source2, Matcher));
+
+  const std::string Source3 = R"(
+void x() {
+#pragma omp parallel default(shared)
+;
+})";
+  EXPECT_TRUE(notMatchesWithOpenMP(Source3, Matcher));
+
+  const std::string Source4 = R"(
+void x(int x) {
+#pragma omp parallel num_threads(x)
+;
+})";
+  EXPECT_TRUE(notMatchesWithOpenMP(Source4, Matcher));
+}
+
+TEST(OMPDefaultClause, isSharedKind) {
+  auto Matcher =
+      ompExecutableDirective(hasAnyClause(ompDefaultClause(isSharedKind())));
+
+  const std::string Source0 = R"(
+void x() {
+;
+})";
+  EXPECT_TRUE(notMatchesWithOpenMP(Source0, Matcher));
+
+  const std::string Source1 = R"(
+void x() {
+#pragma omp parallel
+;
+})";
+  EXPECT_TRUE(notMatchesWithOpenMP(Source1, Matcher));
+
+  const std::string Source2 = R"(
+void x() {
+#pragma omp parallel default(shared)
+;
+})";
+  EXPECT_TRUE(matchesWithOpenMP(Source2, Matcher));
+
+  const std::string Source3 = R"(
+void x() {
+#pragma omp parallel default(none)
+;
+})";
+  EXPECT_TRUE(notMatchesWithOpenMP(Source3, Matcher));
+
+  const std::string Source4 = R"(
+void x(int x) {
+#pragma omp parallel num_threads(x)
+;
+})";
+  EXPECT_TRUE(notMatchesWithOpenMP(Source4, Matcher));
+}
+
+TEST(OMPExecutableDirective, isAllowedToContainClauseKind) {
+  auto Matcher =
+      ompExecutableDirective(isAllowedToContainClauseKind(OMPC_default));
+
+  const std::string Source0 = R"(
+void x() {
+;
+})";
+  EXPECT_TRUE(notMatchesWithOpenMP(Source0, Matcher));
+
+  const std::string Source1 = R"(
+void x() {
+#pragma omp parallel
+;
+})";
+  EXPECT_TRUE(matchesWithOpenMP(Source1, Matcher));
+
+  const std::string Source2 = R"(
+void x() {
+#pragma omp parallel default(none)
+;
+})";
+  EXPECT_TRUE(matchesWithOpenMP(Source2, Matcher));
+
+  const std::string Source3 = R"(
+void x() {
+#pragma omp parallel default(shared)
+;
+})";
+  EXPECT_TRUE(matchesWithOpenMP(Source3, Matcher));
+
+  const std::string Source4 = R"(
+void x(int x) {
+#pragma omp parallel num_threads(x)
+;
+})";
+  EXPECT_TRUE(matchesWithOpenMP(Source4, Matcher));
+
+  const std::string Source5 = R"(
+void x() {
+#pragma omp taskyield
+})";
+  EXPECT_TRUE(notMatchesWithOpenMP(Source5, Matcher));
+
+  const std::string Source6 = R"(
+void x() {
+#pragma omp task
+;
+})";
+  EXPECT_TRUE(matchesWithOpenMP(Source6, Matcher));
 }
 
 } // namespace ast_matchers
