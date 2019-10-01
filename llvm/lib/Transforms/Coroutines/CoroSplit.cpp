@@ -1,9 +1,8 @@
 //===- CoroSplit.cpp - Converts a coroutine into a state machine ----------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 // This pass builds the coroutine frame and outlines resume and destroy parts
@@ -280,9 +279,9 @@ static void createResumeEntryBlock(Function &F, coro::Shape &Shape) {
   IRBuilder<> Builder(NewEntry);
   auto *FramePtr = Shape.FramePtr;
   auto *FrameTy = Shape.FrameTy;
-  auto *GepIndex = Builder.CreateStructGEP(
-      FrameTy, FramePtr, coro::Shape::SwitchFieldIndex::Index, "index.addr");
-  auto *Index = Builder.CreateLoad(GepIndex, "index");
+  auto *GepIndex = Builder.CreateConstInBoundsGEP2_32(
+      FrameTy, FramePtr, 0, coro::Shape::SwitchFieldIndex::Index, "index.addr");
+  auto *Index = Builder.CreateLoad(Shape.getIndexType(), GepIndex, "index");
   auto *Switch =
       Builder.CreateSwitch(Index, UnreachBB, Shape.CoroSuspends.size());
   Shape.SwitchLowering.ResumeSwitch = Switch;
@@ -379,11 +378,15 @@ void CoroCloner::handleFinalSuspend() {
     BasicBlock *OldSwitchBB = Switch->getParent();
     auto *NewSwitchBB = OldSwitchBB->splitBasicBlock(Switch, "Switch");
     Builder.SetInsertPoint(OldSwitchBB->getTerminator());
-    auto *GepIndex = Builder.CreateStructGEP(Shape.FrameTy, NewFramePtr,
-                                       coro::Shape::SwitchFieldIndex::Resume,
-                                             "ResumeFn.addr");
-    auto *Load = Builder.CreateLoad(GepIndex);
-    auto *Cond = Builder.CreateIsNull(Load);
+    auto *GepIndex = Builder.CreateConstInBoundsGEP2_32(
+        Shape.FrameTy, NewFramePtr, 0, coro::Shape::SwitchFieldIndex::Resume,
+        "ResumeFn.addr");
+    auto *Load = Builder.CreateLoad(
+        Shape.FrameTy->getElementType(coro::Shape::SwitchFieldIndex::Resume),
+        GepIndex);
+    auto *NullPtr =
+        ConstantPointerNull::get(cast<PointerType>(Load->getType()));
+    auto *Cond = Builder.CreateICmpEQ(Load, NullPtr);
     Builder.CreateCondBr(Cond, ResumeBB, NewSwitchBB);
     OldSwitchBB->getTerminator()->eraseFromParent();
   }
@@ -1428,9 +1431,7 @@ namespace {
 static void splitCoroutine(Function &F, CallGraph &CG, CallGraphSCC &SCC) {
   PrettyStackTraceFunction prettyStackTrace(F);
 
-  // The suspend-crossing algorithm in buildCoroutineFrame get tripped
-  // up by uses in unreachable blocks, so remove them as a first pass.
-  removeUnreachableBlocks(F);
+  EliminateUnreachableBlocks(F);
 
   coro::Shape Shape(F);
   if (!Shape.CoroBegin)
@@ -1467,6 +1468,7 @@ static void splitCoroutine(Function &F, CallGraph &CG, CallGraphSCC &SCC) {
 // split.
 static void prepareForSplit(Function &F, CallGraph &CG) {
   Module &M = *F.getParent();
+  LLVMContext &Context = F.getContext();
 #ifndef NDEBUG
   Function *DevirtFn = M.getFunction(CORO_DEVIRT_TRIGGER_FN);
   assert(DevirtFn && "coro.devirt.trigger function not found");
@@ -1481,10 +1483,12 @@ static void prepareForSplit(Function &F, CallGraph &CG) {
   //    call void %1(i8* null)
   coro::LowererBase Lowerer(M);
   Instruction *InsertPt = F.getEntryBlock().getTerminator();
-  auto *Null = ConstantPointerNull::get(Type::getInt8PtrTy(F.getContext()));
+  auto *Null = ConstantPointerNull::get(Type::getInt8PtrTy(Context));
   auto *DevirtFnAddr =
       Lowerer.makeSubFnCall(Null, CoroSubFnInst::RestartTrigger, InsertPt);
-  auto *IndirectCall = CallInst::Create(DevirtFnAddr, Null, "", InsertPt);
+  FunctionType *FnTy = FunctionType::get(Type::getVoidTy(Context),
+                                         {Type::getInt8PtrTy(Context)}, false);
+  auto *IndirectCall = CallInst::Create(FnTy, DevirtFnAddr, Null, "", InsertPt);
 
   // Update CG graph with an indirect call we just added.
   CG[&F]->addCalledFunction(IndirectCall, CG.getCallsExternalNode());
@@ -1543,10 +1547,12 @@ static void replacePrepare(CallInst *Prepare, CallGraph &CG) {
     // If so, we'll need to update the call graph.
     if (PrepareUserNode) {
       for (auto &Use : Cast->uses()) {
-        auto CS = CallSite(Use.getUser());
-        if (!CS || !CS.isCallee(&Use)) continue;
-        PrepareUserNode->removeCallEdgeFor(CS);
-        PrepareUserNode->addCalledFunction(CS, FnNode);
+        if (auto *CB = dyn_cast<CallBase>(Use.getUser())) {
+          if (!CB->isCallee(&Use))
+            continue;
+          PrepareUserNode->removeCallEdgeFor(*CB);
+          PrepareUserNode->addCalledFunction(CB, FnNode);
+        }
       }
     }
 
@@ -1669,7 +1675,12 @@ struct CoroSplit : public CallGraphSCCPass {
 
 char CoroSplit::ID = 0;
 
-INITIALIZE_PASS(
+INITIALIZE_PASS_BEGIN(
+    CoroSplit, "coro-split",
+    "Split coroutine into a set of functions driving its state machine", false,
+    false)
+INITIALIZE_PASS_DEPENDENCY(CallGraphWrapperPass)
+INITIALIZE_PASS_END(
     CoroSplit, "coro-split",
     "Split coroutine into a set of functions driving its state machine", false,
     false)

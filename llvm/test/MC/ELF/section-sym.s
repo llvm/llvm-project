@@ -1,4 +1,4 @@
-// RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s -o - | llvm-readobj -s -t -r --expand-relocs | FileCheck %s
+// RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s -o - | llvm-readobj -S --symbols -r --expand-relocs | FileCheck %s
 
 .section foo, "aG", @progbits, f1, comdat
 .section foo, "G", @progbits, f2, comdat
@@ -82,7 +82,7 @@
 // CHECK-NEXT:    Section: .group
 // CHECK-NEXT:  }
 // CHECK-NEXT:  Symbol {
-// CHECK-NEXT:    Name:  (0)
+// CHECK-NEXT:    Name:  foo (0)
 // CHECK-NEXT:    Value: 0x0
 // CHECK-NEXT:    Size: 0
 // CHECK-NEXT:    Binding: Local (0x0)

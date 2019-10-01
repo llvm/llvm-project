@@ -1,6 +1,6 @@
 ; RUN: %llc_dwarf -debugger-tune=lldb -asm-verbose -O1 -o - < %s | FileCheck %s
 ; RUN: %llc_dwarf -debugger-tune=gdb -asm-verbose -O1 -o - < %s | FileCheck %s --check-prefix=DISABLE
-; RUN: %llc_dwarf -disable-fp-elim -debugger-tune=lldb -asm-verbose -O1 -o - < %s | FileCheck %s --check-prefix=DISABLE
+; RUN: %llc_dwarf -frame-pointer=all -debugger-tune=lldb -asm-verbose -O1 -o - < %s | FileCheck %s --check-prefix=DISABLE
 
 ; CHECK: DW_AT_APPLE_omit_frame_ptr
 ; DISABLE-NOT: DW_AT_APPLE_omit_frame_ptr

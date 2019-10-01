@@ -5,9 +5,23 @@ fmaxv b0, p7, z31.b
 // CHECK-NEXT: fmaxv b0, p7, z31.b
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
+
+// ------------------------------------------------------------------------- //
+// Invalid predicate operand
+
 fmaxv h0, p8, z31.h
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: restricted predicate has range [0, 7].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid restricted predicate register, expected p0..p7 (without element suffix)
 // CHECK-NEXT: fmaxv h0, p8, z31.h
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+fmaxv h0, p7.b, z31.h
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid restricted predicate register, expected p0..p7 (without element suffix)
+// CHECK-NEXT: fmaxv h0, p7.b, z31.h
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+fmaxv h0, p7.q, z31.h
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid restricted predicate register, expected p0..p7 (without element suffix)
+// CHECK-NEXT: fmaxv h0, p7.q, z31.h
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 

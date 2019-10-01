@@ -58,15 +58,15 @@ loop:
 ; CHECK:  %iv.m1 = sub i32 %iv, 1
 ; CHECK-NEXT:  -->  {(-1 + %start)<nsw>,+,%step}<%loop> U: [-1,120) S: [-1,120)
 ; CHECK:  %iv.m2 = sub i32 %iv, 2
-; CHECK-NEXT:  -->  {(-2 + %start)<nsw>,+,%step}<%loop> U: [-2,119) S: [-2,119)
+; CHECK-NEXT:  -->  {(-2 + %start)<nsw>,+,%step}<%loop> U: [0,-1) S: [-2,119)
 ; CHECK:  %iv.m3 = sub i32 %iv, 3
 ; CHECK-NEXT:  -->  {(-3 + %start)<nsw>,+,%step}<%loop> U: [-3,118) S: [-3,118)
 ; CHECK:  %iv.m4 = sub i32 %iv, 4
-; CHECK-NEXT:  -->  {(-4 + %start)<nsw>,+,%step}<%loop> U: [-4,117) S: [-4,117)
+; CHECK-NEXT:  -->  {(-4 + %start)<nsw>,+,%step}<%loop> U: [0,-3) S: [-4,117)
 ; CHECK:  %iv.m5 = sub i32 %iv, 5
 ; CHECK-NEXT:  -->  {(-5 + %start)<nsw>,+,%step}<%loop> U: [-5,116) S: [-5,116)
 ; CHECK:  %iv.m6 = sub i32 %iv, 6
-; CHECK-NEXT:  -->  {(-6 + %start)<nsw>,+,%step}<%loop> U: [-6,115) S: [-6,115)
+; CHECK-NEXT:  -->  {(-6 + %start)<nsw>,+,%step}<%loop> U: [0,-1) S: [-6,115)
 ; CHECK:  %iv.m7 = sub i32 %iv, 7
 ; CHECK-NEXT:  -->  {(-7 + %start)<nsw>,+,%step}<%loop> U: [-7,114) S: [-7,114)
 
@@ -206,7 +206,7 @@ loop:
   %iv.next = add i32 %iv, %step.plus.one
   %iv.sext = sext i32 %iv to i64
 ; CHECK:   %iv.sext = sext i32 %iv to i64
-; CHECK-NEXT:  -->  {(sext i32 %start to i64),+,(1 + (sext i32 %step to i64))<nsw>}<nsw><%loop> U: [0,128) S: [0,128)
+; CHECK-NEXT:  -->  {(sext i32 %start to i64),+,(1 + (sext i32 %step to i64))<nuw><nsw>}<nsw><%loop> U: [0,128) S: [0,128)
   %loop.iv.inc = add i16 %loop.iv, 1
   %be.cond = icmp ne i16 %loop.iv.inc, 128
   br i1 %be.cond, label %loop, label %leave

@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=thumbv7-apple-darwin10 -relocation-model=pic -disable-fp-elim -mcpu=cortex-a8 | FileCheck %s
+; RUN: llc < %s -mtriple=thumbv7-apple-darwin10 -relocation-model=pic -frame-pointer=all -mcpu=cortex-a8 | FileCheck %s
 
 ; subs r4, #1
 ; cmp r4, 0
@@ -26,7 +26,7 @@ bb1:                                              ; preds = %bb
 
 bb2:                                              ; preds = %bb1, %entry
 ; CHECK: cmp [[REG]], #0
-; CHECK: ble
+; CHECK: bgt
   %indvar = phi i32 [ %indvar.next, %bb1 ], [ 0, %entry ]
   %tries.0 = sub i32 2147483647, %indvar
   %tmp1 = icmp sgt i32 %tries.0, 0

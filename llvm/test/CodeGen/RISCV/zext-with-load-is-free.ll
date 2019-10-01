@@ -6,7 +6,7 @@
 
 @bytes = global [5 x i8] zeroinitializer, align 1
 
-define i32 @test_zext_i8() {
+define i32 @test_zext_i8() nounwind {
 ; RV32I-LABEL: test_zext_i8:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lui a0, %hi(bytes)
@@ -41,7 +41,7 @@ if.end:
 
 @shorts = global [5 x i16] zeroinitializer, align 2
 
-define i32 @test_zext_i16() {
+define i32 @test_zext_i16() nounwind {
 ; RV32I-LABEL: test_zext_i16:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lui a0, %hi(shorts)

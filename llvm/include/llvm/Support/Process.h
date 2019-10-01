@@ -1,9 +1,8 @@
 //===- llvm/Support/Process.h -----------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 /// \file
@@ -29,6 +28,7 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/DataTypes.h"
+#include "llvm/Support/Error.h"
 #include <system_error>
 
 namespace llvm {
@@ -42,7 +42,25 @@ namespace sys {
 /// current executing process.
 class Process {
 public:
-  static unsigned getPageSize();
+  /// Get the process's page size.
+  /// This may fail if the underlying syscall returns an error. In most cases,
+  /// page size information is used for optimization, and this error can be
+  /// safely discarded by calling consumeError, and an estimated page size
+  /// substituted instead.
+  static Expected<unsigned> getPageSize();
+
+  /// Get the process's estimated page size.
+  /// This function always succeeds, but if the underlying syscall to determine
+  /// the page size fails then this will silently return an estimated page size.
+  /// The estimated page size is guaranteed to be a power of 2.
+  static unsigned getPageSizeEstimate() {
+    if (auto PageSize = getPageSize())
+      return *PageSize;
+    else {
+      consumeError(PageSize.takeError());
+      return 4096;
+    }
+  }
 
   /// Return process memory usage.
   /// This static function will return the total amount of memory allocated

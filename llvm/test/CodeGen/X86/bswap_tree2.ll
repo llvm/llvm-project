@@ -81,7 +81,7 @@ define i32 @test2(i32 %x) nounwind {
 ; CHECK64-NEXT:    andl $-16777216, %edi # imm = 0xFF000000
 ; CHECK64-NEXT:    andl $16711680, %eax # imm = 0xFF0000
 ; CHECK64-NEXT:    orl %edi, %eax
-; CHECK64-NEXT:    leal (%rax,%rcx), %eax
+; CHECK64-NEXT:    addl %ecx, %eax
 ; CHECK64-NEXT:    retq
   %byte1 = lshr i32 %x, 8
   %byte0 = shl  i32 %x, 8
@@ -103,13 +103,13 @@ define i32 @test3(float %x) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    subl $8, %esp
 ; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fnstcw {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    movw $3199, {{[0-9]+}}(%esp) # imm = 0xC7F
-; CHECK-NEXT:    fldcw {{[0-9]+}}(%esp)
+; CHECK-NEXT:    fnstcw (%esp)
+; CHECK-NEXT:    movzwl (%esp), %eax
+; CHECK-NEXT:    orl $3072, %eax # imm = 0xC00
 ; CHECK-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fistpl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fldcw {{[0-9]+}}(%esp)
+; CHECK-NEXT:    fistpl {{[0-9]+}}(%esp)
+; CHECK-NEXT:    fldcw (%esp)
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    movl %ecx, %edx
 ; CHECK-NEXT:    shll $8, %edx

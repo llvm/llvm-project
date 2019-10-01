@@ -1,9 +1,8 @@
 //===-- Core.cpp ----------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -15,7 +14,6 @@
 #include "llvm-c/Core.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/IR/Attributes.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -1038,6 +1036,16 @@ LLVMValueRef LLVMConstPointerNull(LLVMTypeRef Ty) {
 
 /*--.. Operations on metadata nodes ........................................--*/
 
+LLVMMetadataRef LLVMMDStringInContext2(LLVMContextRef C, const char *Str,
+                                       size_t SLen) {
+  return wrap(MDString::get(*unwrap(C), StringRef(Str, SLen)));
+}
+
+LLVMMetadataRef LLVMMDNodeInContext2(LLVMContextRef C, LLVMMetadataRef *MDs,
+                                     size_t Count) {
+  return wrap(MDNode::get(*unwrap(C), ArrayRef<Metadata*>(unwrap(MDs), Count)));
+}
+
 LLVMValueRef LLVMMDStringInContext(LLVMContextRef C, const char *Str,
                                    unsigned SLen) {
   LLVMContext &Context = *unwrap(C);
@@ -1201,15 +1209,17 @@ void LLVMAddNamedMetadataOperand(LLVMModuleRef M, const char *Name,
 const char *LLVMGetDebugLocDirectory(LLVMValueRef Val, unsigned *Length) {
   if (!Length) return nullptr;
   StringRef S;
-  if (const auto *I = unwrap<Instruction>(Val)) {
-    S = I->getDebugLoc()->getDirectory();
-  } else if (const auto *GV = unwrap<GlobalVariable>(Val)) {
+  if (const auto *I = dyn_cast<Instruction>(unwrap(Val))) {
+    if (const auto &DL = I->getDebugLoc()) {
+      S = DL->getDirectory();
+    }
+  } else if (const auto *GV = dyn_cast<GlobalVariable>(unwrap(Val))) {
     SmallVector<DIGlobalVariableExpression *, 1> GVEs;
     GV->getDebugInfo(GVEs);
     if (GVEs.size())
       if (const DIGlobalVariable *DGV = GVEs[0]->getVariable())
         S = DGV->getDirectory();
-  } else if (const auto *F = unwrap<Function>(Val)) {
+  } else if (const auto *F = dyn_cast<Function>(unwrap(Val))) {
     if (const DISubprogram *DSP = F->getSubprogram())
       S = DSP->getDirectory();
   } else {
@@ -1223,15 +1233,17 @@ const char *LLVMGetDebugLocDirectory(LLVMValueRef Val, unsigned *Length) {
 const char *LLVMGetDebugLocFilename(LLVMValueRef Val, unsigned *Length) {
   if (!Length) return nullptr;
   StringRef S;
-  if (const auto *I = unwrap<Instruction>(Val)) {
-    S = I->getDebugLoc()->getFilename();
-  } else if (const auto *GV = unwrap<GlobalVariable>(Val)) {
+  if (const auto *I = dyn_cast<Instruction>(unwrap(Val))) {
+    if (const auto &DL = I->getDebugLoc()) {
+      S = DL->getFilename();
+    }
+  } else if (const auto *GV = dyn_cast<GlobalVariable>(unwrap(Val))) {
     SmallVector<DIGlobalVariableExpression *, 1> GVEs;
     GV->getDebugInfo(GVEs);
     if (GVEs.size())
       if (const DIGlobalVariable *DGV = GVEs[0]->getVariable())
         S = DGV->getFilename();
-  } else if (const auto *F = unwrap<Function>(Val)) {
+  } else if (const auto *F = dyn_cast<Function>(unwrap(Val))) {
     if (const DISubprogram *DSP = F->getSubprogram())
       S = DSP->getFilename();
   } else {
@@ -1244,15 +1256,17 @@ const char *LLVMGetDebugLocFilename(LLVMValueRef Val, unsigned *Length) {
 
 unsigned LLVMGetDebugLocLine(LLVMValueRef Val) {
   unsigned L = 0;
-  if (const auto *I = unwrap<Instruction>(Val)) {
-    L = I->getDebugLoc()->getLine();
-  } else if (const auto *GV = unwrap<GlobalVariable>(Val)) {
+  if (const auto *I = dyn_cast<Instruction>(unwrap(Val))) {
+    if (const auto &DL = I->getDebugLoc()) {
+      L = DL->getLine();
+    }
+  } else if (const auto *GV = dyn_cast<GlobalVariable>(unwrap(Val))) {
     SmallVector<DIGlobalVariableExpression *, 1> GVEs;
     GV->getDebugInfo(GVEs);
     if (GVEs.size())
       if (const DIGlobalVariable *DGV = GVEs[0]->getVariable())
         L = DGV->getLine();
-  } else if (const auto *F = unwrap<Function>(Val)) {
+  } else if (const auto *F = dyn_cast<Function>(unwrap(Val))) {
     if (const DISubprogram *DSP = F->getSubprogram())
       L = DSP->getLine();
   } else {
@@ -1264,9 +1278,9 @@ unsigned LLVMGetDebugLocLine(LLVMValueRef Val) {
 
 unsigned LLVMGetDebugLocColumn(LLVMValueRef Val) {
   unsigned C = 0;
-  if (const auto *I = unwrap<Instruction>(Val))
-    if (const auto &L = I->getDebugLoc())
-      C = L->getColumn();
+  if (const auto *I = dyn_cast<Instruction>(unwrap(Val)))
+    if (const auto &DL = I->getDebugLoc())
+      C = DL->getColumn();
   return C;
 }
 
@@ -1618,17 +1632,21 @@ LLVMValueRef LLVMConstGEP(LLVMValueRef ConstantVal,
                           LLVMValueRef *ConstantIndices, unsigned NumIndices) {
   ArrayRef<Constant *> IdxList(unwrap<Constant>(ConstantIndices, NumIndices),
                                NumIndices);
-  return wrap(ConstantExpr::getGetElementPtr(
-      nullptr, unwrap<Constant>(ConstantVal), IdxList));
+  Constant *Val = unwrap<Constant>(ConstantVal);
+  Type *Ty =
+      cast<PointerType>(Val->getType()->getScalarType())->getElementType();
+  return wrap(ConstantExpr::getGetElementPtr(Ty, Val, IdxList));
 }
 
 LLVMValueRef LLVMConstInBoundsGEP(LLVMValueRef ConstantVal,
                                   LLVMValueRef *ConstantIndices,
                                   unsigned NumIndices) {
-  Constant* Val = unwrap<Constant>(ConstantVal);
   ArrayRef<Constant *> IdxList(unwrap<Constant>(ConstantIndices, NumIndices),
                                NumIndices);
-  return wrap(ConstantExpr::getInBoundsGetElementPtr(nullptr, Val, IdxList));
+  Constant *Val = unwrap<Constant>(ConstantVal);
+  Type *Ty =
+      cast<PointerType>(Val->getType()->getScalarType())->getElementType();
+  return wrap(ConstantExpr::getInBoundsGetElementPtr(Ty, Val, IdxList));
 }
 
 LLVMValueRef LLVMConstTrunc(LLVMValueRef ConstantVal, LLVMTypeRef ToType) {
@@ -2327,6 +2345,10 @@ const char *LLVMIntrinsicCopyOverloadedName(unsigned ID,
   return strdup(Str.c_str());
 }
 
+unsigned LLVMLookupIntrinsicID(const char *Name, size_t NameLen) {
+  return Function::lookupIntrinsicID({Name, NameLen});
+}
+
 LLVMBool LLVMIntrinsicIsOverloaded(unsigned ID) {
   auto IID = llvm_map_to_intrinsic_id(ID);
   return llvm::Intrinsic::isOverloaded(IID);
@@ -2461,6 +2483,71 @@ void LLVMSetParamAlignment(LLVMValueRef Arg, unsigned align) {
   A->addAttr(Attribute::getWithAlignment(A->getContext(), align));
 }
 
+/*--.. Operations on ifuncs ................................................--*/
+
+LLVMValueRef LLVMAddGlobalIFunc(LLVMModuleRef M,
+                                const char *Name, size_t NameLen,
+                                LLVMTypeRef Ty, unsigned AddrSpace,
+                                LLVMValueRef Resolver) {
+  return wrap(GlobalIFunc::create(unwrap(Ty), AddrSpace,
+                                  GlobalValue::ExternalLinkage,
+                                  StringRef(Name, NameLen),
+                                  unwrap<Constant>(Resolver), unwrap(M)));
+}
+
+LLVMValueRef LLVMGetNamedGlobalIFunc(LLVMModuleRef M,
+                                     const char *Name, size_t NameLen) {
+  return wrap(unwrap(M)->getNamedIFunc(StringRef(Name, NameLen)));
+}
+
+LLVMValueRef LLVMGetFirstGlobalIFunc(LLVMModuleRef M) {
+  Module *Mod = unwrap(M);
+  Module::ifunc_iterator I = Mod->ifunc_begin();
+  if (I == Mod->ifunc_end())
+    return nullptr;
+  return wrap(&*I);
+}
+
+LLVMValueRef LLVMGetLastGlobalIFunc(LLVMModuleRef M) {
+  Module *Mod = unwrap(M);
+  Module::ifunc_iterator I = Mod->ifunc_end();
+  if (I == Mod->ifunc_begin())
+    return nullptr;
+  return wrap(&*--I);
+}
+
+LLVMValueRef LLVMGetNextGlobalIFunc(LLVMValueRef IFunc) {
+  GlobalIFunc *GIF = unwrap<GlobalIFunc>(IFunc);
+  Module::ifunc_iterator I(GIF);
+  if (++I == GIF->getParent()->ifunc_end())
+    return nullptr;
+  return wrap(&*I);
+}
+
+LLVMValueRef LLVMGetPreviousGlobalIFunc(LLVMValueRef IFunc) {
+  GlobalIFunc *GIF = unwrap<GlobalIFunc>(IFunc);
+  Module::ifunc_iterator I(GIF);
+  if (I == GIF->getParent()->ifunc_begin())
+    return nullptr;
+  return wrap(&*--I);
+}
+
+LLVMValueRef LLVMGetGlobalIFuncResolver(LLVMValueRef IFunc) {
+  return wrap(unwrap<GlobalIFunc>(IFunc)->getResolver());
+}
+
+void LLVMSetGlobalIFuncResolver(LLVMValueRef IFunc, LLVMValueRef Resolver) {
+  unwrap<GlobalIFunc>(IFunc)->setResolver(unwrap<Constant>(Resolver));
+}
+
+void LLVMEraseGlobalIFunc(LLVMValueRef IFunc) {
+  unwrap<GlobalIFunc>(IFunc)->eraseFromParent();
+}
+
+void LLVMRemoveGlobalIFunc(LLVMValueRef IFunc) {
+  unwrap<GlobalIFunc>(IFunc)->removeFromParent();
+}
+
 /*--.. Operations on basic blocks ..........................................--*/
 
 LLVMValueRef LLVMBasicBlockAsValue(LLVMBasicBlockRef BB) {
@@ -2531,6 +2618,25 @@ LLVMBasicBlockRef LLVMGetPreviousBasicBlock(LLVMBasicBlockRef BB) {
   if (I == Block->getParent()->begin())
     return nullptr;
   return wrap(&*--I);
+}
+
+LLVMBasicBlockRef LLVMCreateBasicBlockInContext(LLVMContextRef C,
+                                                const char *Name) {
+  return wrap(llvm::BasicBlock::Create(*unwrap(C), Name));
+}
+
+void LLVMInsertExistingBasicBlockAfterInsertBlock(LLVMBuilderRef Builder,
+                                                  LLVMBasicBlockRef BB) {
+  BasicBlock *ToInsert = unwrap(BB);
+  BasicBlock *CurBB = unwrap(Builder)->GetInsertBlock();
+  assert(CurBB && "current insertion point is invalid!");
+  CurBB->getParent()->getBasicBlockList().insertAfter(CurBB->getIterator(),
+                                                      ToInsert);
+}
+
+void LLVMAppendExistingBasicBlock(LLVMValueRef Fn,
+                                  LLVMBasicBlockRef BB) {
+  unwrap<Function>(Fn)->getBasicBlockList().push_back(unwrap(BB));
 }
 
 LLVMBasicBlockRef LLVMAppendBasicBlockInContext(LLVMContextRef C,
@@ -2656,43 +2762,43 @@ unsigned LLVMGetNumArgOperands(LLVMValueRef Instr) {
   if (FuncletPadInst *FPI = dyn_cast<FuncletPadInst>(unwrap(Instr))) {
     return FPI->getNumArgOperands();
   }
-  return CallSite(unwrap<Instruction>(Instr)).getNumArgOperands();
+  return unwrap<CallBase>(Instr)->getNumArgOperands();
 }
 
 /*--.. Call and invoke instructions ........................................--*/
 
 unsigned LLVMGetInstructionCallConv(LLVMValueRef Instr) {
-  return CallSite(unwrap<Instruction>(Instr)).getCallingConv();
+  return unwrap<CallBase>(Instr)->getCallingConv();
 }
 
 void LLVMSetInstructionCallConv(LLVMValueRef Instr, unsigned CC) {
-  return CallSite(unwrap<Instruction>(Instr))
-    .setCallingConv(static_cast<CallingConv::ID>(CC));
+  return unwrap<CallBase>(Instr)->setCallingConv(
+      static_cast<CallingConv::ID>(CC));
 }
 
 void LLVMSetInstrParamAlignment(LLVMValueRef Instr, unsigned index,
                                 unsigned align) {
-  CallSite Call = CallSite(unwrap<Instruction>(Instr));
+  auto *Call = unwrap<CallBase>(Instr);
   Attribute AlignAttr = Attribute::getWithAlignment(Call->getContext(), align);
-  Call.addAttribute(index, AlignAttr);
+  Call->addAttribute(index, AlignAttr);
 }
 
 void LLVMAddCallSiteAttribute(LLVMValueRef C, LLVMAttributeIndex Idx,
                               LLVMAttributeRef A) {
-  CallSite(unwrap<Instruction>(C)).addAttribute(Idx, unwrap(A));
+  unwrap<CallBase>(C)->addAttribute(Idx, unwrap(A));
 }
 
 unsigned LLVMGetCallSiteAttributeCount(LLVMValueRef C,
                                        LLVMAttributeIndex Idx) {
-  auto CS = CallSite(unwrap<Instruction>(C));
-  auto AS = CS.getAttributes().getAttributes(Idx);
+  auto *Call = unwrap<CallBase>(C);
+  auto AS = Call->getAttributes().getAttributes(Idx);
   return AS.getNumAttributes();
 }
 
 void LLVMGetCallSiteAttributes(LLVMValueRef C, LLVMAttributeIndex Idx,
                                LLVMAttributeRef *Attrs) {
-  auto CS = CallSite(unwrap<Instruction>(C));
-  auto AS = CS.getAttributes().getAttributes(Idx);
+  auto *Call = unwrap<CallBase>(C);
+  auto AS = Call->getAttributes().getAttributes(Idx);
   for (auto A : AS)
     *Attrs++ = wrap(A);
 }
@@ -2700,30 +2806,32 @@ void LLVMGetCallSiteAttributes(LLVMValueRef C, LLVMAttributeIndex Idx,
 LLVMAttributeRef LLVMGetCallSiteEnumAttribute(LLVMValueRef C,
                                               LLVMAttributeIndex Idx,
                                               unsigned KindID) {
-  return wrap(CallSite(unwrap<Instruction>(C))
-    .getAttribute(Idx, (Attribute::AttrKind)KindID));
+  return wrap(
+      unwrap<CallBase>(C)->getAttribute(Idx, (Attribute::AttrKind)KindID));
 }
 
 LLVMAttributeRef LLVMGetCallSiteStringAttribute(LLVMValueRef C,
                                                 LLVMAttributeIndex Idx,
                                                 const char *K, unsigned KLen) {
-  return wrap(CallSite(unwrap<Instruction>(C))
-    .getAttribute(Idx, StringRef(K, KLen)));
+  return wrap(unwrap<CallBase>(C)->getAttribute(Idx, StringRef(K, KLen)));
 }
 
 void LLVMRemoveCallSiteEnumAttribute(LLVMValueRef C, LLVMAttributeIndex Idx,
                                      unsigned KindID) {
-  CallSite(unwrap<Instruction>(C))
-    .removeAttribute(Idx, (Attribute::AttrKind)KindID);
+  unwrap<CallBase>(C)->removeAttribute(Idx, (Attribute::AttrKind)KindID);
 }
 
 void LLVMRemoveCallSiteStringAttribute(LLVMValueRef C, LLVMAttributeIndex Idx,
                                        const char *K, unsigned KLen) {
-  CallSite(unwrap<Instruction>(C)).removeAttribute(Idx, StringRef(K, KLen));
+  unwrap<CallBase>(C)->removeAttribute(Idx, StringRef(K, KLen));
 }
 
 LLVMValueRef LLVMGetCalledValue(LLVMValueRef Instr) {
-  return wrap(CallSite(unwrap<Instruction>(Instr)).getCalledValue());
+  return wrap(unwrap<CallBase>(Instr)->getCalledValue());
+}
+
+LLVMTypeRef LLVMGetCalledFunctionType(LLVMValueRef Instr) {
+  return wrap(unwrap<CallBase>(Instr)->getFunctionType());
 }
 
 /*--.. Operations on call instructions (only) ..............................--*/
@@ -2914,6 +3022,17 @@ void LLVMDisposeBuilder(LLVMBuilderRef Builder) {
 
 /*--.. Metadata builders ...................................................--*/
 
+LLVMMetadataRef LLVMGetCurrentDebugLocation2(LLVMBuilderRef Builder) {
+  return wrap(unwrap(Builder)->getCurrentDebugLocation().getAsMDNode());
+}
+
+void LLVMSetCurrentDebugLocation2(LLVMBuilderRef Builder, LLVMMetadataRef Loc) {
+  if (Loc)
+    unwrap(Builder)->SetCurrentDebugLocation(DebugLoc(unwrap<MDNode>(Loc)));
+  else
+    unwrap(Builder)->SetCurrentDebugLocation(DebugLoc());
+}
+
 void LLVMSetCurrentDebugLocation(LLVMBuilderRef Builder, LLVMValueRef L) {
   MDNode *Loc =
       L ? cast<MDNode>(unwrap<MetadataAsValue>(L)->getMetadata()) : nullptr;
@@ -2930,6 +3049,17 @@ void LLVMSetInstDebugLocation(LLVMBuilderRef Builder, LLVMValueRef Inst) {
   unwrap(Builder)->SetInstDebugLocation(unwrap<Instruction>(Inst));
 }
 
+void LLVMBuilderSetDefaultFPMathTag(LLVMBuilderRef Builder,
+                                    LLVMMetadataRef FPMathTag) {
+
+  unwrap(Builder)->setDefaultFPMathTag(FPMathTag
+                                       ? unwrap<MDNode>(FPMathTag)
+                                       : nullptr);
+}
+
+LLVMMetadataRef LLVMBuilderGetDefaultFPMathTag(LLVMBuilderRef Builder) {
+  return wrap(unwrap(Builder)->getDefaultFPMathTag());
+}
 
 /*--.. Instruction builders ................................................--*/
 
@@ -2969,9 +3099,22 @@ LLVMValueRef LLVMBuildInvoke(LLVMBuilderRef B, LLVMValueRef Fn,
                              LLVMValueRef *Args, unsigned NumArgs,
                              LLVMBasicBlockRef Then, LLVMBasicBlockRef Catch,
                              const char *Name) {
-  return wrap(unwrap(B)->CreateInvoke(unwrap(Fn), unwrap(Then), unwrap(Catch),
-                                      makeArrayRef(unwrap(Args), NumArgs),
-                                      Name));
+  Value *V = unwrap(Fn);
+  FunctionType *FnT =
+      cast<FunctionType>(cast<PointerType>(V->getType())->getElementType());
+
+  return wrap(
+      unwrap(B)->CreateInvoke(FnT, unwrap(Fn), unwrap(Then), unwrap(Catch),
+                              makeArrayRef(unwrap(Args), NumArgs), Name));
+}
+
+LLVMValueRef LLVMBuildInvoke2(LLVMBuilderRef B, LLVMTypeRef Ty, LLVMValueRef Fn,
+                              LLVMValueRef *Args, unsigned NumArgs,
+                              LLVMBasicBlockRef Then, LLVMBasicBlockRef Catch,
+                              const char *Name) {
+  return wrap(unwrap(B)->CreateInvoke(
+      unwrap<FunctionType>(Ty), unwrap(Fn), unwrap(Then), unwrap(Catch),
+      makeArrayRef(unwrap(Args), NumArgs), Name));
 }
 
 LLVMValueRef LLVMBuildLandingPad(LLVMBuilderRef B, LLVMTypeRef Ty,
@@ -3327,7 +3470,15 @@ LLVMValueRef LLVMBuildFree(LLVMBuilderRef B, LLVMValueRef PointerVal) {
 
 LLVMValueRef LLVMBuildLoad(LLVMBuilderRef B, LLVMValueRef PointerVal,
                            const char *Name) {
-  return wrap(unwrap(B)->CreateLoad(unwrap(PointerVal), Name));
+  Value *V = unwrap(PointerVal);
+  PointerType *Ty = cast<PointerType>(V->getType());
+
+  return wrap(unwrap(B)->CreateLoad(Ty->getElementType(), V, Name));
+}
+
+LLVMValueRef LLVMBuildLoad2(LLVMBuilderRef B, LLVMTypeRef Ty,
+                            LLVMValueRef PointerVal, const char *Name) {
+  return wrap(unwrap(B)->CreateLoad(unwrap(Ty), unwrap(PointerVal), Name));
 }
 
 LLVMValueRef LLVMBuildStore(LLVMBuilderRef B, LLVMValueRef Val,
@@ -3382,20 +3533,50 @@ LLVMValueRef LLVMBuildGEP(LLVMBuilderRef B, LLVMValueRef Pointer,
                           LLVMValueRef *Indices, unsigned NumIndices,
                           const char *Name) {
   ArrayRef<Value *> IdxList(unwrap(Indices), NumIndices);
-  return wrap(unwrap(B)->CreateGEP(nullptr, unwrap(Pointer), IdxList, Name));
+  Value *Val = unwrap(Pointer);
+  Type *Ty =
+      cast<PointerType>(Val->getType()->getScalarType())->getElementType();
+  return wrap(unwrap(B)->CreateGEP(Ty, Val, IdxList, Name));
+}
+
+LLVMValueRef LLVMBuildGEP2(LLVMBuilderRef B, LLVMTypeRef Ty,
+                           LLVMValueRef Pointer, LLVMValueRef *Indices,
+                           unsigned NumIndices, const char *Name) {
+  ArrayRef<Value *> IdxList(unwrap(Indices), NumIndices);
+  return wrap(unwrap(B)->CreateGEP(unwrap(Ty), unwrap(Pointer), IdxList, Name));
 }
 
 LLVMValueRef LLVMBuildInBoundsGEP(LLVMBuilderRef B, LLVMValueRef Pointer,
                                   LLVMValueRef *Indices, unsigned NumIndices,
                                   const char *Name) {
   ArrayRef<Value *> IdxList(unwrap(Indices), NumIndices);
+  Value *Val = unwrap(Pointer);
+  Type *Ty =
+      cast<PointerType>(Val->getType()->getScalarType())->getElementType();
+  return wrap(unwrap(B)->CreateInBoundsGEP(Ty, Val, IdxList, Name));
+}
+
+LLVMValueRef LLVMBuildInBoundsGEP2(LLVMBuilderRef B, LLVMTypeRef Ty,
+                                   LLVMValueRef Pointer, LLVMValueRef *Indices,
+                                   unsigned NumIndices, const char *Name) {
+  ArrayRef<Value *> IdxList(unwrap(Indices), NumIndices);
   return wrap(
-      unwrap(B)->CreateInBoundsGEP(nullptr, unwrap(Pointer), IdxList, Name));
+      unwrap(B)->CreateInBoundsGEP(unwrap(Ty), unwrap(Pointer), IdxList, Name));
 }
 
 LLVMValueRef LLVMBuildStructGEP(LLVMBuilderRef B, LLVMValueRef Pointer,
                                 unsigned Idx, const char *Name) {
-  return wrap(unwrap(B)->CreateStructGEP(nullptr, unwrap(Pointer), Idx, Name));
+  Value *Val = unwrap(Pointer);
+  Type *Ty =
+      cast<PointerType>(Val->getType()->getScalarType())->getElementType();
+  return wrap(unwrap(B)->CreateStructGEP(Ty, Val, Idx, Name));
+}
+
+LLVMValueRef LLVMBuildStructGEP2(LLVMBuilderRef B, LLVMTypeRef Ty,
+                                 LLVMValueRef Pointer, unsigned Idx,
+                                 const char *Name) {
+  return wrap(
+      unwrap(B)->CreateStructGEP(unwrap(Ty), unwrap(Pointer), Idx, Name));
 }
 
 LLVMValueRef LLVMBuildGlobalString(LLVMBuilderRef B, const char *Str,
@@ -3537,6 +3718,13 @@ LLVMValueRef LLVMBuildPointerCast(LLVMBuilderRef B, LLVMValueRef Val,
   return wrap(unwrap(B)->CreatePointerCast(unwrap(Val), unwrap(DestTy), Name));
 }
 
+LLVMValueRef LLVMBuildIntCast2(LLVMBuilderRef B, LLVMValueRef Val,
+                               LLVMTypeRef DestTy, LLVMBool IsSigned,
+                               const char *Name) {
+  return wrap(
+      unwrap(B)->CreateIntCast(unwrap(Val), unwrap(DestTy), IsSigned, Name));
+}
+
 LLVMValueRef LLVMBuildIntCast(LLVMBuilderRef B, LLVMValueRef Val,
                               LLVMTypeRef DestTy, const char *Name) {
   return wrap(unwrap(B)->CreateIntCast(unwrap(Val), unwrap(DestTy),
@@ -3573,9 +3761,20 @@ LLVMValueRef LLVMBuildPhi(LLVMBuilderRef B, LLVMTypeRef Ty, const char *Name) {
 LLVMValueRef LLVMBuildCall(LLVMBuilderRef B, LLVMValueRef Fn,
                            LLVMValueRef *Args, unsigned NumArgs,
                            const char *Name) {
-  return wrap(unwrap(B)->CreateCall(unwrap(Fn),
-                                    makeArrayRef(unwrap(Args), NumArgs),
-                                    Name));
+  Value *V = unwrap(Fn);
+  FunctionType *FnT =
+      cast<FunctionType>(cast<PointerType>(V->getType())->getElementType());
+
+  return wrap(unwrap(B)->CreateCall(FnT, unwrap(Fn),
+                                    makeArrayRef(unwrap(Args), NumArgs), Name));
+}
+
+LLVMValueRef LLVMBuildCall2(LLVMBuilderRef B, LLVMTypeRef Ty, LLVMValueRef Fn,
+                            LLVMValueRef *Args, unsigned NumArgs,
+                            const char *Name) {
+  FunctionType *FTy = unwrap<FunctionType>(Ty);
+  return wrap(unwrap(B)->CreateCall(FTy, unwrap(Fn),
+                                    makeArrayRef(unwrap(Args), NumArgs), Name));
 }
 
 LLVMValueRef LLVMBuildSelect(LLVMBuilderRef B, LLVMValueRef If,

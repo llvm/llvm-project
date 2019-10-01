@@ -1,15 +1,13 @@
 //===-- HexagonAsmParser.cpp - Parse Hexagon asm to MCInst instructions----===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #define DEBUG_TYPE "mcasmparser"
 
-#include "Hexagon.h"
 #include "HexagonTargetStreamer.h"
 #include "MCTargetDesc/HexagonMCChecker.h"
 #include "MCTargetDesc/HexagonMCELFStreamer.h"
@@ -17,6 +15,7 @@
 #include "MCTargetDesc/HexagonMCInstrInfo.h"
 #include "MCTargetDesc/HexagonMCTargetDesc.h"
 #include "MCTargetDesc/HexagonShuffler.h"
+#include "TargetInfo/HexagonTargetInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -1684,8 +1683,8 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
     int64_t Value;
     MCExpr const &Expr = *Imm.getExpr();
     bool Absolute = Expr.evaluateAsAbsolute(Value);
-    assert(Absolute);
-    (void)Absolute;
+    if (!Absolute)
+      return Match_InvalidOperand;
     if (!HexagonMCInstrInfo::mustExtend(Expr) &&
         ((Value <= -256) || Value >= 256))
       return Match_InvalidOperand;
@@ -1707,8 +1706,8 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
     MCInst TmpInst;
     int64_t Value;
     bool Absolute = Imm.getExpr()->evaluateAsAbsolute(Value);
-    assert(Absolute);
-    (void)Absolute;
+    if (!Absolute)
+      return Match_InvalidOperand;
     if (Value == 0) { // convert to $Rd = $Rs
       TmpInst.setOpcode(Hexagon::A2_tfr);
       MCOperand &Rd = Inst.getOperand(0);
@@ -1737,8 +1736,8 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
     MCOperand &Imm = Inst.getOperand(2);
     int64_t Value;
     bool Absolute = Imm.getExpr()->evaluateAsAbsolute(Value);
-    assert(Absolute);
-    (void)Absolute;
+    if (!Absolute)
+      return Match_InvalidOperand;
     if (Value == 0) { // convert to $Rdd = combine ($Rs[0], $Rs[1])
       MCInst TmpInst;
       unsigned int RegPairNum = RI->getEncodingValue(Rss.getReg());
@@ -1861,8 +1860,8 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
     MCOperand &Imm = Inst.getOperand(2);
     int64_t Value;
     bool Absolute = Imm.getExpr()->evaluateAsAbsolute(Value);
-    assert(Absolute);
-    (void)Absolute;
+    if (!Absolute)
+      return Match_InvalidOperand;
     if (Value == 0)
       Inst.setOpcode(Hexagon::S2_vsathub);
     else {
@@ -1881,8 +1880,8 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
     MCOperand &Imm = Inst.getOperand(2);
     int64_t Value;
     bool Absolute = Imm.getExpr()->evaluateAsAbsolute(Value);
-    assert(Absolute);
-    (void)Absolute;
+    if (!Absolute)
+      return Match_InvalidOperand;
     if (Value == 0) {
       MCInst TmpInst;
       unsigned int RegPairNum = RI->getEncodingValue(Rss.getReg());

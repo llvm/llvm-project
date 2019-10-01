@@ -5,7 +5,7 @@
 ; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:     -m elf_x86_64 -o %t.exe %t.o \
 ; RUN:     --section-ordering-file=%t_order_lto.txt
-; RUN: llvm-readobj -elf-output-style=GNU -t %t.exe | FileCheck %s
+; RUN: llvm-readelf -s %t.exe | FileCheck %s
 
 ; Check that the order of the sections is tin -> _start -> pat.
 

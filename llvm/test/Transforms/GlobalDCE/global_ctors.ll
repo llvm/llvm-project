@@ -1,12 +1,12 @@
 ; RUN: opt -S -globaldce < %s | FileCheck %s
 
 ; Test that the presence of debug intrinsics isn't affecting GlobalDCE.
-; CHECK: @llvm.global_ctors = appending global [1 x { i32, void ()* }] [{ i32, void ()* } { i32 65535, void ()* @_notremovable }]
+; CHECK: @llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @_notremovable, i8* null }]
 ; CHECK-NOT: @_GLOBAL__I_a
 
 declare void @_notremovable()
 
-@llvm.global_ctors = appending global [3 x { i32, void ()* }] [{ i32, void ()* } { i32 65535, void ()* @_GLOBAL__I_a }, { i32, void ()* } { i32 65535, void ()* @_GLOBAL__I_b }, { i32, void ()* } { i32 65535, void ()* @_notremovable }]
+@llvm.global_ctors = appending global [3 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @_GLOBAL__I_a, i8* null }, { i32, void ()*, i8* } { i32 65535, void ()* @_GLOBAL__I_b, i8* null }, { i32, void ()*, i8* } { i32 65535, void ()* @_notremovable, i8* null }]
 
 @x = internal unnamed_addr constant i8 undef, align 1
 

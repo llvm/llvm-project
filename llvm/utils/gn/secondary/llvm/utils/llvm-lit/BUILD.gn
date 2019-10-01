@@ -1,19 +1,17 @@
+import("//clang-tools-extra/clangd/test/clangd_lit_site_cfg_files.gni")
+import("//clang-tools-extra/test/clang_tools_extra_lit_site_cfg_files.gni")
 import("//clang/test/clang_lit_site_cfg_files.gni")
 import("//lld/test/lld_lit_site_cfg_files.gni")
+import("//llvm/test/llvm_lit_site_cfg_files.gni")
+import("//llvm/utils/gn/build/write_cmake_config.gni")
 
-action("llvm-lit") {
-  script = "//llvm/utils/gn/build/write_cmake_config.py"
-
-  sources = [
-    "llvm-lit.in",
-  ]
-  outputs = [
-    "$root_out_dir/bin/llvm-lit",
-  ]
+write_cmake_config("llvm-lit") {
+  input = "llvm-lit.in"
+  output = "$root_out_dir/bin/llvm-lit"
 
   if (host_os == "win") {
     # llvm-lit needs suffix.py for multiprocess to find a main module.
-    outputs[0] = "${outputs[0]}.py"
+    output = "${output}.py"
   }
 
   # lit's lit/llvm/config.py shells out to llvm-config.
@@ -28,13 +26,29 @@ action("llvm-lit") {
   config_map = ""
 
   deps += [
+    "//clang-tools-extra/test:lit_site_cfg",
+    "//clang-tools-extra/test:lit_unit_site_cfg",
     "//clang/test:lit_site_cfg",
     "//clang/test:lit_unit_site_cfg",
     "//lld/test:lit_site_cfg",
     "//lld/test:lit_unit_site_cfg",
+    "//llvm/test:lit_site_cfg",
+    "//llvm/test:lit_unit_site_cfg",
   ]
 
   # Note: \n is converted into a newline by write_cmake_config.py, not by gn.
+  config_map +=
+      "map_config('" + rebase_path("//clang-tools-extra/test/lit.cfg.py") +
+      "', '" + rebase_path(clang_tools_extra_lit_site_cfg_file) + "')\n"
+  config_map +=
+      "map_config('" + rebase_path("//clang-tools-extra/test/Unit/lit.cfg.py") +
+      "', '" + rebase_path(clang_tools_extra_lit_unit_site_cfg_file) + "')\n"
+  config_map += "map_config('" +
+                rebase_path("//clang-tools-extra/clangd/test/lit.cfg.py") +
+                "', '" + rebase_path(clangd_lit_site_cfg_file) + "')\n"
+  config_map += "map_config('" +
+                rebase_path("//clang-tools-extra/clang/unittests/lit.cfg.py") +
+                "', '" + rebase_path(clangd_lit_unit_site_cfg_file) + "')\n"
   config_map += "map_config('" + rebase_path("//clang/test/lit.cfg.py") +
                 "', '" + rebase_path(clang_lit_site_cfg_file) + "')\n"
   config_map += "map_config('" + rebase_path("//clang/test/Unit/lit.cfg.py") +
@@ -43,12 +57,12 @@ action("llvm-lit") {
                 rebase_path(lld_lit_site_cfg_file) + "')\n"
   config_map += "map_config('" + rebase_path("//lld/test/Unit/lit.cfg.py") +
                 "', '" + rebase_path(lld_lit_unit_site_cfg_file) + "')\n"
+  config_map += "map_config('" + rebase_path("//llvm/test/lit.cfg.py") +
+                "', '" + rebase_path(llvm_lit_site_cfg_file) + "')\n"
+  config_map += "map_config('" + rebase_path("//llvm/test/Unit/lit.cfg.py") +
+                "', '" + rebase_path(llvm_lit_unit_site_cfg_file) + "')\n"
 
-  args = [
-    "-o",
-    rebase_path(outputs[0], root_out_dir),
-    rebase_path(sources[0], root_out_dir),
-
+  values = [
     "LLVM_SOURCE_DIR=" + rebase_path("//llvm"),
     "LLVM_BINARY_DIR=" +
         rebase_path(get_label_info("//llvm", "target_out_dir")),

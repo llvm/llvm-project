@@ -1,5 +1,5 @@
-; RUN: llc < %s -disable-fp-elim -mtriple=i686-- | FileCheck %s --check-prefix=CHECK-X86
-; RUN: llc < %s -disable-fp-elim -mtriple=x86_64-- | FileCheck %s --check-prefix=CHECK-X64
+; RUN: llc < %s -frame-pointer=all -mtriple=i686-- | FileCheck %s --check-prefix=CHECK-X86
+; RUN: llc < %s -frame-pointer=all -mtriple=x86_64-- | FileCheck %s --check-prefix=CHECK-X64
 
 define i8* @f() nounwind readnone optsize {
 entry:

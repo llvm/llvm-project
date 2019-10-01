@@ -1,9 +1,8 @@
 //===- STLExtrasTest.cpp - Unit tests for STL extras ----------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -445,6 +444,50 @@ TEST(STLExtrasTest, splat) {
 
   V.push_back(2);
   EXPECT_FALSE(is_splat(V));
+}
+
+TEST(STLExtrasTest, to_address) {
+  int *V1 = new int;
+  EXPECT_EQ(V1, to_address(V1));
+
+  // Check fancy pointer overload for unique_ptr
+  std::unique_ptr<int> V2 = make_unique<int>(0);
+  EXPECT_EQ(V2.get(), to_address(V2));
+
+  V2.reset(V1);
+  EXPECT_EQ(V1, to_address(V2));
+  V2.release();
+
+  // Check fancy pointer overload for shared_ptr
+  std::shared_ptr<int> V3 = std::make_shared<int>(0);
+  std::shared_ptr<int> V4 = V3;
+  EXPECT_EQ(V3.get(), V4.get());
+  EXPECT_EQ(V3.get(), to_address(V3));
+  EXPECT_EQ(V4.get(), to_address(V4));
+
+  V3.reset(V1);
+  EXPECT_EQ(V1, to_address(V3));
+}
+
+TEST(STLExtrasTest, bsearch) {
+  // Integer version.
+  EXPECT_EQ(7u, bsearch(5, 10, [](unsigned X) { return X >= 7; }));
+  EXPECT_EQ(5u, bsearch(5, 10, [](unsigned X) { return X >= 1; }));
+  EXPECT_EQ(10u, bsearch(5, 10, [](unsigned X) { return X >= 50; }));
+
+  // Iterator version.
+  std::vector<int> V = {1, 3, 5, 7, 9};
+  EXPECT_EQ(V.begin() + 3,
+            bsearch(V.begin(), V.end(), [](unsigned X) { return X >= 7; }));
+  EXPECT_EQ(V.begin(),
+            bsearch(V.begin(), V.end(), [](unsigned X) { return X >= 1; }));
+  EXPECT_EQ(V.end(),
+            bsearch(V.begin(), V.end(), [](unsigned X) { return X >= 50; }));
+
+  // Range version.
+  EXPECT_EQ(V.begin() + 3, bsearch(V, [](unsigned X) { return X >= 7; }));
+  EXPECT_EQ(V.begin(), bsearch(V, [](unsigned X) { return X >= 1; }));
+  EXPECT_EQ(V.end(), bsearch(V, [](unsigned X) { return X >= 50; }));
 }
 
 } // namespace

@@ -1,9 +1,8 @@
 //===-- Passes.h - Target independent code generation passes ----*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -346,8 +345,9 @@ namespace llvm {
   /// pointer or stack pointer index addressing.
   extern char &LocalStackSlotAllocationID;
 
-  /// ExpandISelPseudos - This pass expands pseudo-instructions.
-  extern char &ExpandISelPseudosID;
+  /// This pass expands pseudo-instructions, reserves registers and adjusts
+  /// machine frame information.
+  extern char &FinalizeISelID;
 
   /// UnpackMachineBundles - This pass unpack machine instruction bundles.
   extern char &UnpackMachineBundlesID;
@@ -446,6 +446,9 @@ namespace llvm {
 
   /// Creates CFI Instruction Inserter pass. \see CFIInstrInserter.cpp
   FunctionPass *createCFIInstrInserter();
+
+  /// Create Hardware Loop pass. \see HardwareLoops.cpp
+  FunctionPass *createHardwareLoopsPass();
 
 } // End llvm namespace
 

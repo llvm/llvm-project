@@ -17,7 +17,7 @@ attributes #0 = { norecurse nounwind readonly "target-cpu"="hexagonv60" }
 !llvm.module.flags = !{!6, !7, !8}
 !llvm.ident = !{!9}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 8.0.0 (http://llvm.org/git/clang.git 3fb90d137ea16e5c3a4580b9db5fd18d93df1a90) (http://llvm.org/git/llvm.git daf385e5698c00fdd693fac736acc96b95ccccd3)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !3)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 8.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !3)
 !1 = !DIFile(filename: "misaligned-const-store.c", directory: "/test")
 !2 = !{}
 !3 = !{!4}
@@ -26,7 +26,7 @@ attributes #0 = { norecurse nounwind readonly "target-cpu"="hexagonv60" }
 !6 = !{i32 2, !"Dwarf Version", i32 4}
 !7 = !{i32 2, !"Debug Info Version", i32 3}
 !8 = !{i32 1, !"wchar_size", i32 4}
-!9 = !{!"clang version 8.0.0 (http://llvm.org/git/clang.git 3fb90d137ea16e5c3a4580b9db5fd18d93df1a90) (http://llvm.org/git/llvm.git daf385e5698c00fdd693fac736acc96b95ccccd3)"}
+!9 = !{!"clang version 8.0.0"}
 !10 = distinct !DISubprogram(name: "bad_store", scope: !1, file: !1, line: 1, type: !11, isLocal: false, isDefinition: true, scopeLine: 1, isOptimized: true, unit: !0, retainedNodes: !2)
 !11 = !DISubroutineType(types: !12)
 !12 = !{!5}

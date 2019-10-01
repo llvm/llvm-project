@@ -912,6 +912,31 @@ A target implementation tells the legalizer which operations are not supported
 (and which of the above three actions to take) by calling the
 ``setOperationAction`` method in its ``TargetLowering`` constructor.
 
+If a target has legal vector types, it is expected to produce efficient machine
+code for common forms of the shufflevector IR instruction using those types.
+This may require custom legalization for SelectionDAG vector operations that
+are created from the shufflevector IR. The shufflevector forms that should be
+handled include:
+
+* Vector select --- Each element of the vector is chosen from either of the
+  corresponding elements of the 2 input vectors. This operation may also be
+  known as a "blend" or "bitwise select" in target assembly. This type of shuffle
+  maps directly to the ``shuffle_vector`` SelectionDAG node.
+
+* Insert subvector --- A vector is placed into a longer vector type starting
+  at index 0. This type of shuffle maps directly to the ``insert_subvector``
+  SelectionDAG node with the ``index`` operand set to 0.
+
+* Extract subvector --- A vector is pulled from a longer vector type starting
+  at index 0. This type of shuffle maps directly to the ``extract_subvector``
+  SelectionDAG node with the ``index`` operand set to 0.
+
+* Splat --- All elements of the vector have identical scalar elements. This
+  operation may also be known as a "broadcast" or "duplicate" in target assembly.
+  The shufflevector IR instruction may change the vector length, so this operation
+  may map to multiple SelectionDAG nodes including ``shuffle_vector``,
+  ``concat_vectors``, ``insert_subvector``, and ``extract_subvector``.
+
 Prior to the existence of the Legalize passes, we required that every target
 `selector`_ supported and handled every operator and type even if they are not
 natively supported.  The introduction of the Legalize phases allows all of the
@@ -2513,8 +2538,8 @@ When BPF_CLASS(code) == BPF_ALU or BPF_ALU64 or BPF_JMP,
 
 ::
 
-  BPF_X     0x0  use src_reg register as source operand
-  BPF_K     0x1  use 32 bit immediate as source operand
+  BPF_X     0x1  use src_reg register as source operand
+  BPF_K     0x0  use 32 bit immediate as source operand
 
 and four MSB bits store operation code
 

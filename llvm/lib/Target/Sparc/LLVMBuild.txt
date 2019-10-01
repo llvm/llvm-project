@@ -1,9 +1,8 @@
 ;===- ./lib/Target/Sparc/LLVMBuild.txt -------------------------*- Conf -*--===;
 ;
-;                     The LLVM Compiler Infrastructure
-;
-; This file is distributed under the University of Illinois Open Source
-; License. See LICENSE.TXT for details.
+; Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+; See https://llvm.org/LICENSE.txt for license information.
+; SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 ;
 ;===------------------------------------------------------------------------===;
 ;
@@ -16,7 +15,7 @@
 ;===------------------------------------------------------------------------===;
 
 [common]
-subdirectories = AsmParser Disassembler InstPrinter MCTargetDesc TargetInfo
+subdirectories = AsmParser Disassembler MCTargetDesc TargetInfo
 
 [component_0]
 type = TargetGroup
@@ -31,6 +30,6 @@ has_jit = 1
 type = Library
 name = SparcCodeGen
 parent = Sparc
-required_libraries = AsmPrinter CodeGen Core MC SelectionDAG SparcAsmPrinter
+required_libraries = AsmPrinter CodeGen Core MC SelectionDAG
                      SparcDesc SparcInfo Support Target
 add_to_library_groups = Sparc

@@ -1,0 +1,55 @@
+## Show that llvm-readobj/llvm-readelf tools can dump the .dynamic
+## section when it is not in a PT_DYNAMIC segment.
+
+# RUN: yaml2obj %s -o %t.o
+# RUN: llvm-readobj --dynamic-table %t.o 2>&1 \
+# RUN:   | FileCheck --check-prefixes=WARNING,LLVM %s
+# RUN: llvm-readelf --dynamic-table %t.o 2>&1 \
+# RUN:   | FileCheck --check-prefixes=WARNING,GNU %s
+
+# WARNING:   warning: The SHT_DYNAMIC section '.dynamic' is not contained within the PT_DYNAMIC segment
+
+# LLVM:      DynamicSection [ (2 entries)
+# LLVM-NEXT:   Tag                Type     Name/Value
+# LLVM-NEXT:   0x0000000000000018 BIND_NOW 0x1
+# LLVM-NEXT:   0x0000000000000000 NULL     0x0
+# LLVM-NEXT: ]
+
+# GNU:      Dynamic section at offset 0x{{.*}} contains 2 entries:
+# GNU-NEXT:   Tag                Type       Name/Value
+# GNU-NEXT:   0x0000000000000018 (BIND_NOW) 0x1
+# GNU-NEXT:   0x0000000000000000 (NULL)     0x0
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name: .dynamic
+    Type: SHT_DYNAMIC
+    Flags: [SHF_ALLOC]
+    Address: 0x1000
+    AddressAlign: 0x1000
+    Entries:
+      - Tag:   DT_BIND_NOW
+        Value: 0x1
+      - Tag:   DT_NULL
+        Value: 0x0
+  - Name: .text
+    Type: SHT_PROGBITS
+    Flags: [SHF_ALLOC]
+    Address: 0x1100
+    AddressAlign: 0x100
+    Content: "00"
+ProgramHeaders:
+  - Type: PT_LOAD
+    VAddr: 0x1000
+    Sections:
+      - Section: .dynamic
+      - Section: .text
+  - Type: PT_DYNAMIC
+    VAddr: 0x1000
+    Sections:
+      - Section: .text

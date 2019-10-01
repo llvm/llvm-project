@@ -172,9 +172,7 @@ define <4 x i32> @test_urem_both(<4 x i32> %X) nounwind readnone {
 define <4 x i32> @test_urem_div_undef(<4 x i32> %X) nounwind readnone {
 ; CHECK-LABEL: test_urem_div_undef:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmeq v0.4s, v0.4s, #0
-; CHECK-NEXT:    movi v1.4s, #1
-; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    ret
   %urem = urem <4 x i32> %X, <i32 5, i32 5, i32 undef, i32 5>
   %cmp = icmp eq <4 x i32> %urem, <i32 0, i32 0, i32 0, i32 0>
@@ -207,9 +205,7 @@ define <4 x i32> @test_urem_comp_undef(<4 x i32> %X) nounwind readnone {
 define <4 x i32> @test_urem_both_undef(<4 x i32> %X) nounwind readnone {
 ; CHECK-LABEL: test_urem_both_undef:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmeq v0.4s, v0.4s, #0
-; CHECK-NEXT:    movi v1.4s, #1
-; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    ret
   %urem = urem <4 x i32> %X, <i32 5, i32 5, i32 undef, i32 5>
   %cmp = icmp eq <4 x i32> %urem, <i32 0, i32 undef, i32 0, i32 0>

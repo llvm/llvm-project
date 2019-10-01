@@ -1,5 +1,5 @@
 // RUN: llvm-mc -triple i386-apple-darwin9 %s -filetype=obj -o %t
-// RUN: llvm-readobj -s -sd %t | FileCheck %s
+// RUN: llvm-readobj -S --sd %t | FileCheck %s
 
 .section __TEXT,__objc_opt_ro
 .long 0

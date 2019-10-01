@@ -166,6 +166,11 @@ dwo_str_TU_5_type:
         .byte 0x0b  # DW_FORM_data1
         .byte 0x00  # EOM(1)
         .byte 0x00  # EOM(2)
+        .byte 0x09  # Abbrev code
+        .byte 0x11  # DW_TAG_compile_unit
+        .byte 0x00  # DW_CHILDREN_no
+        .byte 0x00  # EOM(1)
+        .byte 0x00  # EOM(2)
         .byte 0x00  # EOM(3)
 
 # And a .dwo copy of a subset for the .dwo sections.
@@ -239,21 +244,38 @@ TypeDie:
 CU1_5_end:
 
 # DWARF v5 CU header
-        .long  CU2_5_end-CU2_5_version  # Length of Unit
+        .long 0xffffffff
+        .quad CU2_5_end-CU2_5_version  # Length of Unit
 CU2_5_version:
         .short 5               # DWARF version number
         .byte 1                # DWARF Unit Type
         .byte 8                # Address Size (in bytes)
-        .long .debug_abbrev    # Offset Into Abbrev. Section
+        .quad .debug_abbrev    # Offset Into Abbrev. Section
 # The compile-unit DIE, which has a DW_AT_producer, DW_AT_name, 
 # DW_AT_str_offsets and DW_AT_compdir.
         .byte 1                # Abbreviation code
         .byte 0                # The index of the producer string
         .byte 1                # The index of the CU name string
-        .long .debug_str_offsets_base1
+        .quad .debug_str_offsets_base1
         .byte 2                # The index of the comp dir string
         .byte 0 # NULL
 CU2_5_end:
+# DWARF v5 CU without str_offsets_base - this shouldn't produce an error/nor
+# prevent other str_offsets contributions from being dumped.
+	.long CU3_5_end-CU3_5_version  # Length of Unit
+CU3_5_version:
+        .short 5               # DWARF version number
+        .byte 1                # DWARF Unit Type
+        .byte 8                # Address Size (in bytes)
+        .long .debug_abbrev    # Offset Into Abbrev. Section
+# The compile-unit DIE with no attributes.
+        .byte 9                # Abbreviation code
+CU3_5_end:
+
+
+
+
+
 
         .section .debug_types,"",@progbits
 # DWARF v5 Type unit header.

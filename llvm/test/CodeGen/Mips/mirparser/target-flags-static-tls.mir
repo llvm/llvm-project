@@ -1,5 +1,5 @@
-# RUN: llc -march=mips64 -target-abi n64 -start-before=expand-isel-pseudos \
-# RUN:     -stop-after=expand-isel-pseudos -relocation-model=static  -o /dev/null %s
+# RUN: llc -march=mips64 -target-abi n64 -start-before=finalize-isel \
+# RUN:     -stop-after=finalize-isel -relocation-model=static  -o /dev/null %s
 
 # A simple test to show that we can parse the target specific flags: highest,
 # higher, hi, lo, tprel-lo, tprel-hi, gpoff-hi, gpoff-lo, gottprel.

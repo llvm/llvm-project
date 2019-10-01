@@ -1,9 +1,8 @@
 //===- X86DisassemblerTables.cpp - Disassembler tables ----------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -889,67 +888,44 @@ void DisassemblerTables::emitInstructionInfo(raw_ostream &o,
 }
 
 void DisassemblerTables::emitContextTable(raw_ostream &o, unsigned &i) const {
-  const unsigned int tableSize = 16384;
   o.indent(i * 2) << "static const uint8_t " CONTEXTS_STR
-                     "[" << tableSize << "] = {\n";
+                     "[" << ATTR_max << "] = {\n";
   i++;
 
-  for (unsigned index = 0; index < tableSize; ++index) {
+  for (unsigned index = 0; index < ATTR_max; ++index) {
     o.indent(i * 2);
 
-    if (index & ATTR_EVEX) {
-      o << "IC_EVEX";
-      if (index & ATTR_EVEXL2)
+    if ((index & ATTR_EVEX) || (index & ATTR_VEX) || (index & ATTR_VEXL)) {
+      if (index & ATTR_EVEX)
+        o << "IC_EVEX";
+      else
+        o << "IC_VEX";
+
+      if ((index & ATTR_EVEX) && (index & ATTR_EVEXL2))
         o << "_L2";
-      else if (index & ATTR_EVEXL)
+      else if (index & ATTR_VEXL)
         o << "_L";
+
       if (index & ATTR_REXW)
         o << "_W";
+
       if (index & ATTR_OPSIZE)
         o << "_OPSIZE";
       else if (index & ATTR_XD)
         o << "_XD";
       else if (index & ATTR_XS)
         o << "_XS";
-      if (index & ATTR_EVEXKZ)
-        o << "_KZ";
-      else if (index & ATTR_EVEXK)
-        o << "_K";
-      if (index & ATTR_EVEXB)
-        o << "_B";
+
+      if ((index & ATTR_EVEX)) {
+        if (index & ATTR_EVEXKZ)
+          o << "_KZ";
+        else if (index & ATTR_EVEXK)
+          o << "_K";
+
+        if (index & ATTR_EVEXB)
+          o << "_B";
+      }
     }
-    else if ((index & ATTR_VEXL) && (index & ATTR_REXW) && (index & ATTR_OPSIZE))
-      o << "IC_VEX_L_W_OPSIZE";
-    else if ((index & ATTR_VEXL) && (index & ATTR_REXW) && (index & ATTR_XD))
-      o << "IC_VEX_L_W_XD";
-    else if ((index & ATTR_VEXL) && (index & ATTR_REXW) && (index & ATTR_XS))
-      o << "IC_VEX_L_W_XS";
-    else if ((index & ATTR_VEXL) && (index & ATTR_REXW))
-      o << "IC_VEX_L_W";
-    else if ((index & ATTR_VEXL) && (index & ATTR_OPSIZE))
-      o << "IC_VEX_L_OPSIZE";
-    else if ((index & ATTR_VEXL) && (index & ATTR_XD))
-      o << "IC_VEX_L_XD";
-    else if ((index & ATTR_VEXL) && (index & ATTR_XS))
-      o << "IC_VEX_L_XS";
-    else if ((index & ATTR_VEX) && (index & ATTR_REXW) && (index & ATTR_OPSIZE))
-      o << "IC_VEX_W_OPSIZE";
-    else if ((index & ATTR_VEX) && (index & ATTR_REXW) && (index & ATTR_XD))
-      o << "IC_VEX_W_XD";
-    else if ((index & ATTR_VEX) && (index & ATTR_REXW) && (index & ATTR_XS))
-      o << "IC_VEX_W_XS";
-    else if (index & ATTR_VEXL)
-      o << "IC_VEX_L";
-    else if ((index & ATTR_VEX) && (index & ATTR_REXW))
-      o << "IC_VEX_W";
-    else if ((index & ATTR_VEX) && (index & ATTR_OPSIZE))
-      o << "IC_VEX_OPSIZE";
-    else if ((index & ATTR_VEX) && (index & ATTR_XD))
-      o << "IC_VEX_XD";
-    else if ((index & ATTR_VEX) && (index & ATTR_XS))
-      o << "IC_VEX_XS";
-    else if (index & ATTR_VEX)
-      o << "IC_VEX";
     else if ((index & ATTR_64BIT) && (index & ATTR_REXW) && (index & ATTR_XS))
       o << "IC_64BIT_REXW_XS";
     else if ((index & ATTR_64BIT) && (index & ATTR_REXW) && (index & ATTR_XD))
@@ -1004,12 +980,7 @@ void DisassemblerTables::emitContextTable(raw_ostream &o, unsigned &i) const {
     else
       o << "IC";
 
-    if (index < tableSize - 1)
-      o << ",";
-    else
-      o << " ";
-
-    o << " /* " << index << " */";
+    o << ", /* " << index << " */";
 
     o << "\n";
   }

@@ -7,8 +7,8 @@
 
 # RUN: yaml2obj %s > %t.original
 # RUN: llvm-strip %t.original -o %t.stripped
-# RUN: llvm-readobj -sections %t.original | FileCheck %s
-# RUN: llvm-readobj -sections %t.stripped | FileCheck %s
+# RUN: llvm-readobj --sections %t.original | FileCheck %s
+# RUN: llvm-readobj --sections %t.stripped | FileCheck %s
 
 !ELF
 FileHeader:

@@ -5,10 +5,12 @@ static_library("AsmPrinter") {
     "//llvm/lib/BinaryFormat",
     "//llvm/lib/CodeGen",
     "//llvm/lib/DebugInfo/CodeView",
+    "//llvm/lib/DebugInfo/DWARF",
     "//llvm/lib/DebugInfo/MSF",
     "//llvm/lib/IR",
     "//llvm/lib/MC",
     "//llvm/lib/MC/MCParser",
+    "//llvm/lib/Remarks",
     "//llvm/lib/Support",
     "//llvm/lib/Target",
   ]

@@ -14,16 +14,16 @@
 // 	 test_resource.res
 
 RUN: llvm-cvtres /machine:X86 /out:%t %p/Inputs/test_resource.res
-RUN: llvm-readobj -h -relocations %t | FileCheck %s -check-prefix=X86
+RUN: llvm-readobj -h -r %t | FileCheck %s -check-prefix=X86
 
 RUN: llvm-cvtres /machine:X64 /out:%t %p/Inputs/test_resource.res
-RUN: llvm-readobj -h -relocations %t | FileCheck %s -check-prefix=X64
+RUN: llvm-readobj -h -r %t | FileCheck %s -check-prefix=X64
 
 RUN: llvm-cvtres /machine:ARM /out:%t %p/Inputs/test_resource.res
-RUN: llvm-readobj -h -relocations %t | FileCheck %s -check-prefix=ARM
+RUN: llvm-readobj -h -r %t | FileCheck %s -check-prefix=ARM
 
 RUN: llvm-cvtres /machine:ARM64 /out:%t %p/Inputs/test_resource.res
-RUN: llvm-readobj -h -relocations %t | FileCheck %s -check-prefix=ARM64
+RUN: llvm-readobj -h -r %t | FileCheck %s -check-prefix=ARM64
 
 X86:         Machine: IMAGE_FILE_MACHINE_I386 (0x14C)
 X86-DAG:   Relocations [

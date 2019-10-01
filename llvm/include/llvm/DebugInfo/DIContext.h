@@ -1,9 +1,8 @@
 //===- DIContext.h ----------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -81,7 +80,7 @@ class DIInliningInfo {
 public:
   DIInliningInfo() = default;
 
-  DILineInfo getFrame(unsigned Index) const {
+  const DILineInfo & getFrame(unsigned Index) const {
     assert(Index < Frames.size());
     return Frames[Index];
   }
@@ -97,6 +96,10 @@ public:
 
   void addFrame(const DILineInfo &Frame) {
     Frames.push_back(Frame);
+  }
+
+  void resize(unsigned i) {
+    Frames.resize(i);
   }
 };
 
@@ -153,7 +156,8 @@ enum DIDumpType : unsigned {
 /// dumped.
 struct DIDumpOptions {
   unsigned DumpType = DIDT_All;
-  unsigned RecurseDepth = -1U;
+  unsigned ChildRecurseDepth = -1U;
+  unsigned ParentRecurseDepth = -1U;
   uint16_t Version = 0; // DWARF version to assume when extracting.
   uint8_t AddrSize = 4; // Address byte size to assume when extracting.
   bool ShowAddresses = true;
@@ -167,15 +171,18 @@ struct DIDumpOptions {
   /// Return default option set for printing a single DIE without children.
   static DIDumpOptions getForSingleDIE() {
     DIDumpOptions Opts;
-    Opts.RecurseDepth = 0;
+    Opts.ChildRecurseDepth = 0;
+    Opts.ParentRecurseDepth = 0;
     return Opts;
   }
 
   /// Return the options with RecurseDepth set to 0 unless explicitly required.
   DIDumpOptions noImplicitRecursion() const {
     DIDumpOptions Opts = *this;
-    if (RecurseDepth == -1U && !ShowChildren)
-      Opts.RecurseDepth = 0;
+    if (ChildRecurseDepth == -1U && !ShowChildren)
+      Opts.ChildRecurseDepth = 0;
+    if (ParentRecurseDepth == -1U && !ShowParents)
+      Opts.ParentRecurseDepth = 0;
     return Opts;
   }
 };
@@ -199,11 +206,14 @@ public:
     return true;
   }
 
-  virtual DILineInfo getLineInfoForAddress(uint64_t Address,
+  virtual DILineInfo getLineInfoForAddress(
+      object::SectionedAddress Address,
       DILineInfoSpecifier Specifier = DILineInfoSpecifier()) = 0;
-  virtual DILineInfoTable getLineInfoForAddressRange(uint64_t Address,
-      uint64_t Size, DILineInfoSpecifier Specifier = DILineInfoSpecifier()) = 0;
-  virtual DIInliningInfo getInliningInfoForAddress(uint64_t Address,
+  virtual DILineInfoTable getLineInfoForAddressRange(
+      object::SectionedAddress Address, uint64_t Size,
+      DILineInfoSpecifier Specifier = DILineInfoSpecifier()) = 0;
+  virtual DIInliningInfo getInliningInfoForAddress(
+      object::SectionedAddress Address,
       DILineInfoSpecifier Specifier = DILineInfoSpecifier()) = 0;
 
 private:

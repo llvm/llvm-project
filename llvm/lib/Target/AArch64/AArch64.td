@@ -1,9 +1,8 @@
 //=- AArch64.td - Describe the AArch64 Target Machine --------*- tablegen -*-=//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -104,6 +103,21 @@ def FeatureCCPP : SubtargetFeature<"ccpp", "HasCCPP",
 def FeatureSVE : SubtargetFeature<"sve", "HasSVE", "true",
   "Enable Scalable Vector Extension (SVE) instructions">;
 
+def FeatureSVE2 : SubtargetFeature<"sve2", "HasSVE2", "true",
+  "Enable Scalable Vector Extension 2 (SVE2) instructions", [FeatureSVE]>;
+
+def FeatureSVE2AES : SubtargetFeature<"sve2-aes", "HasSVE2AES", "true",
+  "Enable AES SVE2 instructions", [FeatureSVE2, FeatureAES]>;
+
+def FeatureSVE2SM4 : SubtargetFeature<"sve2-sm4", "HasSVE2SM4", "true",
+  "Enable SM4 SVE2 instructions", [FeatureSVE2, FeatureSM4]>;
+
+def FeatureSVE2SHA3 : SubtargetFeature<"sve2-sha3", "HasSVE2SHA3", "true",
+  "Enable SHA3 SVE2 instructions", [FeatureSVE2, FeatureSHA3]>;
+
+def FeatureSVE2BitPerm : SubtargetFeature<"bitperm", "HasSVE2BitPerm", "true",
+  "Enable bit permutation SVE2 instructions", [FeatureSVE2]>;
+
 def FeatureZCRegMove : SubtargetFeature<"zcm", "HasZeroCycleRegMove", "true",
                                         "Has zero-cycle register moves">;
 def FeatureZCZeroingGP : SubtargetFeature<"zcz-gp", "HasZeroCycleZeroingGP", "true",
@@ -127,7 +141,7 @@ def FeatureStrictAlign : SubtargetFeature<"strict-align",
                                           "Disallow all unaligned memory "
                                           "access">;
 
-foreach i = {1-7,18,20} in
+foreach i = {1-7,9-15,18,20-28} in
     def FeatureReserveX#i : SubtargetFeature<"reserve-x"#i, "ReserveXRegister["#i#"]", "true",
                                              "Reserve X"#i#", making it unavailable "
                                              "as a GPR">;
@@ -188,13 +202,17 @@ def FeatureFuseAES : SubtargetFeature<
     "fuse-aes", "HasFuseAES", "true",
     "CPU fuses AES crypto operations">;
 
-def FeatureFuseCryptoEOR : SubtargetFeature<
-    "fuse-crypto-eor", "HasFuseCryptoEOR", "true",
-    "CPU fuses AES/PMULL and EOR operations">;
+def FeatureFuseArithmeticLogic : SubtargetFeature<
+    "fuse-arith-logic", "HasFuseArithmeticLogic", "true",
+    "CPU fuses arithmetic and logic operations">;
 
 def FeatureFuseCCSelect : SubtargetFeature<
     "fuse-csel", "HasFuseCCSelect", "true",
     "CPU fuses conditional select operations">;
+
+def FeatureFuseCryptoEOR : SubtargetFeature<
+    "fuse-crypto-eor", "HasFuseCryptoEOR", "true",
+    "CPU fuses AES/PMULL and EOR operations">;
 
 def FeatureFuseLiterals : SubtargetFeature<
     "fuse-literals", "HasFuseLiterals", "true",
@@ -312,8 +330,8 @@ def FeatureSB : SubtargetFeature<"sb", "HasSB",
 def FeatureSSBS : SubtargetFeature<"ssbs", "HasSSBS",
   "true", "Enable Speculative Store Bypass Safe bit" >;
 
-def FeaturePredCtrl : SubtargetFeature<"predctrl", "HasPredCtrl", "true",
-  "Enable execution and data prediction invalidation instructions" >;
+def FeaturePredRes : SubtargetFeature<"predres", "HasPredRes", "true",
+  "Enable v8.5a execution and data prediction invalidation instructions" >;
 
 def FeatureCacheDeepPersist : SubtargetFeature<"ccdp", "HasCCDP",
     "true", "Enable v8.5 Cache Clean to Point of Deep Persistence" >;
@@ -352,7 +370,7 @@ def HasV8_4aOps : SubtargetFeature<"v8.4a", "HasV8_4aOps", "true",
 def HasV8_5aOps : SubtargetFeature<
   "v8.5a", "HasV8_5aOps", "true", "Support ARM v8.5a instructions",
   [HasV8_4aOps, FeatureAltFPCmp, FeatureFRInt3264, FeatureSpecRestrict,
-   FeatureSSBS, FeatureSB, FeaturePredCtrl, FeatureCacheDeepPersist,
+   FeatureSSBS, FeatureSB, FeaturePredRes, FeatureCacheDeepPersist,
    FeatureBranchTargetId]
 >;
 
@@ -382,8 +400,28 @@ def AArch64InstrInfo : InstrInfo;
 include "AArch64SystemOperands.td"
 
 //===----------------------------------------------------------------------===//
+// Access to privileged registers
+//===----------------------------------------------------------------------===//
+
+foreach i = 1-3 in
+def FeatureUseEL#i#ForTP : SubtargetFeature<"tpidr-el"#i, "UseEL"#i#"ForTP",
+  "true", "Permit use of TPIDR_EL"#i#" for the TLS base">;
+
+//===----------------------------------------------------------------------===//
 // AArch64 Processors supported.
 //
+
+//===----------------------------------------------------------------------===//
+// Unsupported features to disable for scheduling models
+//===----------------------------------------------------------------------===//
+
+class AArch64Unsupported { list<Predicate> F; }
+
+def SVEUnsupported : AArch64Unsupported {
+  let F = [HasSVE, HasSVE2, HasSVE2AES, HasSVE2SM4, HasSVE2SHA3,
+           HasSVE2BitPerm];
+}
+
 include "AArch64SchedA53.td"
 include "AArch64SchedA57.td"
 include "AArch64SchedCyclone.td"
@@ -391,6 +429,7 @@ include "AArch64SchedFalkor.td"
 include "AArch64SchedKryo.td"
 include "AArch64SchedExynosM1.td"
 include "AArch64SchedExynosM3.td"
+include "AArch64SchedExynosM4.td"
 include "AArch64SchedThunderX.td"
 include "AArch64SchedThunderX2T99.td"
 
@@ -478,6 +517,18 @@ def ProcA75     : SubtargetFeature<"a75", "ARMProcFamily", "CortexA75",
                                    FeaturePerfMon
                                    ]>;
 
+def ProcA76     : SubtargetFeature<"a76", "ARMProcFamily", "CortexA76",
+                                   "Cortex-A76 ARM processors", [
+                                    HasV8_2aOps,
+                                    FeatureFPARMv8,
+                                    FeatureNEON,
+                                    FeatureRCPC,
+                                    FeatureCrypto,
+                                    FeatureFullFP16,
+                                    FeatureDotProd,
+                                    FeatureSSBS
+                                    ]>;
+
 // Note that cyclone does not fuse AES instructions, but newer apple chips do
 // perform the fusion and cyclone is used by default when targetting apple OSes.
 def ProcCyclone : SubtargetFeature<"cyclone", "ARMProcFamily", "Cyclone",
@@ -539,6 +590,26 @@ def ProcExynosM3 : SubtargetFeature<"exynosm3", "ARMProcFamily", "ExynosM3",
                                      FeaturePostRAScheduler,
                                      FeaturePredictableSelectIsExpensive,
                                      FeatureZCZeroingFP]>;
+
+def ProcExynosM4 : SubtargetFeature<"exynosm4", "ARMProcFamily", "ExynosM3",
+                                    "Samsung Exynos-M4 processors",
+                                    [HasV8_2aOps,
+                                     FeatureArithmeticBccFusion,
+                                     FeatureArithmeticCbzFusion,
+                                     FeatureCrypto,
+                                     FeatureDotProd,
+                                     FeatureExynosCheapAsMoveHandling,
+                                     FeatureForce32BitJumpTables,
+                                     FeatureFullFP16,
+                                     FeatureFuseAddress,
+                                     FeatureFuseAES,
+                                     FeatureFuseArithmeticLogic,
+                                     FeatureFuseCCSelect,
+                                     FeatureFuseLiterals,
+                                     FeatureLSLFast,
+                                     FeaturePerfMon,
+                                     FeaturePostRAScheduler,
+                                     FeatureZCZeroing]>;
 
 def ProcKryo    : SubtargetFeature<"kryo", "ARMProcFamily", "Kryo",
                                    "Qualcomm Kryo processors", [
@@ -669,15 +740,17 @@ def : ProcessorModel<"cortex-a35", CortexA53Model, [ProcA35]>;
 def : ProcessorModel<"cortex-a53", CortexA53Model, [ProcA53]>;
 def : ProcessorModel<"cortex-a55", CortexA53Model, [ProcA55]>;
 def : ProcessorModel<"cortex-a57", CortexA57Model, [ProcA57]>;
-// FIXME: Cortex-A72, Cortex-A73 and Cortex-A75 are currently modeled as a Cortex-A57.
 def : ProcessorModel<"cortex-a72", CortexA57Model, [ProcA72]>;
 def : ProcessorModel<"cortex-a73", CortexA57Model, [ProcA73]>;
 def : ProcessorModel<"cortex-a75", CortexA57Model, [ProcA75]>;
+def : ProcessorModel<"cortex-a76", CortexA57Model, [ProcA76]>;
+def : ProcessorModel<"cortex-a76ae", CortexA57Model, [ProcA76]>;
 def : ProcessorModel<"cyclone", CycloneModel, [ProcCyclone]>;
 def : ProcessorModel<"exynos-m1", ExynosM1Model, [ProcExynosM1]>;
 def : ProcessorModel<"exynos-m2", ExynosM1Model, [ProcExynosM2]>;
 def : ProcessorModel<"exynos-m3", ExynosM3Model, [ProcExynosM3]>;
-def : ProcessorModel<"exynos-m4", ExynosM3Model, [ProcExynosM3]>;
+def : ProcessorModel<"exynos-m4", ExynosM4Model, [ProcExynosM4]>;
+def : ProcessorModel<"exynos-m5", ExynosM4Model, [ProcExynosM4]>;
 def : ProcessorModel<"falkor", FalkorModel, [ProcFalkor]>;
 def : ProcessorModel<"saphira", FalkorModel, [ProcSaphira]>;
 def : ProcessorModel<"kryo", KryoModel, [ProcKryo]>;

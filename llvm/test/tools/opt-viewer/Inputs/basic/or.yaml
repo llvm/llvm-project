@@ -225,3 +225,14 @@ Args:
   - InterleaveCount: '2'
   - String:          ')'
 ...
+--- !Passed
+Pass:            multiline
+Name:            ShowMultiLine
+DebugLoc:        { File: basic/or.c, Line: 10, Column: 3 }
+Function:        Test
+Args:
+  - String:   |
+      This is a remark with
+      multiple
+        lines
+...

@@ -1,9 +1,8 @@
 //==- WebAssemblyAsmParser.cpp - Assembler for WebAssembly -*- C++ -*-==//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -16,12 +15,15 @@
 
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "MCTargetDesc/WebAssemblyTargetStreamer.h"
+#include "TargetInfo/WebAssemblyTargetInfo.h"
 #include "WebAssembly.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
+#include "llvm/MC/MCSectionWasm.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
@@ -170,6 +172,8 @@ class WebAssemblyAsmParser final : public MCTargetAsmParser {
     FunctionStart,
     FunctionLocals,
     Instructions,
+    EndFunction,
+    DataSection,
   } CurrentState = FileStart;
 
   // For ensuring blocks are properly nested.
@@ -187,6 +191,7 @@ class WebAssemblyAsmParser final : public MCTargetAsmParser {
   // We track this to see if a .functype following a label is the same,
   // as this is how we recognize the start of a function.
   MCSymbol *LastLabel = nullptr;
+  MCSymbol *LastFunctionLabel = nullptr;
 
 public:
   WebAssemblyAsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
@@ -250,13 +255,13 @@ public:
   }
 
   bool ensureEmptyNestingStack() {
-    auto err = !NestingStack.empty();
+    auto Err = !NestingStack.empty();
     while (!NestingStack.empty()) {
       error(Twine("Unmatched block construct(s) at function end: ") +
             nestingString(NestingStack.back()).first);
       NestingStack.pop_back();
     }
-    return err;
+    return Err;
   }
 
   bool isNext(AsmToken::TokenKind Kind) {
@@ -298,6 +303,8 @@ public:
         Type == "i32x4" || Type == "i64x2" || Type == "f32x4" ||
         Type == "f64x2")
       return wasm::ValType::V128;
+    if (Type == "except_ref")
+      return wasm::ValType::EXCEPT_REF;
     return Optional<wasm::ValType>();
   }
 
@@ -317,7 +324,7 @@ public:
     while (Lexer.is(AsmToken::Identifier)) {
       auto Type = parseType(Lexer.getTok().getString());
       if (!Type)
-        return true;
+        return error("unknown type: ", Lexer.getTok());
       Types.push_back(Type.getValue());
       Parser.Lex();
       if (!isNext(AsmToken::Comma))
@@ -343,8 +350,7 @@ public:
     // FIXME: there is probably a cleaner way to do this.
     auto IsLoadStore = InstName.startswith("load") ||
                        InstName.startswith("store") ||
-                       InstName.startswith("atomic_load") ||
-                       InstName.startswith("atomic_store");
+                       InstName.startswith("atomic");
     if (IsLoadStore) {
       // Parse load/store operands of the form: offset align
       auto &Offset = Lexer.getTok();
@@ -444,6 +450,7 @@ public:
       if (pop(BaseName, Block))
         return true;
     } else if (BaseName == "end_function") {
+      CurrentState = EndFunction;
       if (pop(BaseName, Function) || ensureEmptyNestingStack())
         return true;
     }
@@ -547,6 +554,17 @@ public:
     return false;
   }
 
+  bool CheckDataSection() {
+    if (CurrentState != DataSection) {
+      auto WS = cast<MCSectionWasm>(getStreamer().getCurrentSection().first);
+      if (WS && WS->getKind().isText())
+        return error("data directive must occur in a data segment: ",
+                     Lexer.getTok());
+    }
+    CurrentState = DataSection;
+    return false;
+  }
+
   // This function processes wasm-specific directives streamed to
   // WebAssemblyTargetStreamer, all others go to the generic parser
   // (see WasmAsmParser).
@@ -561,6 +579,7 @@ public:
     auto &Out = getStreamer();
     auto &TOut =
         reinterpret_cast<WebAssemblyTargetStreamer &>(*Out.getTargetStreamer());
+    auto &Ctx = Out.getContext();
 
     // TODO: any time we return an error, at least one token must have been
     // consumed, otherwise this will not signal an error to the caller.
@@ -578,8 +597,7 @@ public:
       if (!Type)
         return error("Unknown type in .globaltype directive: ", TypeTok);
       // Now set this symbol with the correct type.
-      auto WasmSym = cast<MCSymbolWasm>(
-          TOut.getStreamer().getContext().getOrCreateSymbol(SymName));
+      auto WasmSym = cast<MCSymbolWasm>(Ctx.getOrCreateSymbol(SymName));
       WasmSym->setType(wasm::WASM_SYMBOL_TYPE_GLOBAL);
       WasmSym->setGlobalType(
           wasm::WasmGlobalType{uint8_t(Type.getValue()), true});
@@ -597,13 +615,13 @@ public:
       auto SymName = expectIdent();
       if (SymName.empty())
         return true;
-      auto WasmSym = cast<MCSymbolWasm>(
-          TOut.getStreamer().getContext().getOrCreateSymbol(SymName));
+      auto WasmSym = cast<MCSymbolWasm>(Ctx.getOrCreateSymbol(SymName));
       if (CurrentState == Label && WasmSym == LastLabel) {
         // This .functype indicates a start of a function.
         if (ensureEmptyNestingStack())
           return true;
         CurrentState = FunctionStart;
+        LastFunctionLabel = LastLabel;
         push(Function);
       }
       auto Signature = make_unique<wasm::WasmSignature>();
@@ -621,8 +639,7 @@ public:
       auto SymName = expectIdent();
       if (SymName.empty())
         return true;
-      auto WasmSym = cast<MCSymbolWasm>(
-          TOut.getStreamer().getContext().getOrCreateSymbol(SymName));
+      auto WasmSym = cast<MCSymbolWasm>(Ctx.getOrCreateSymbol(SymName));
       auto Signature = make_unique<wasm::WasmSignature>();
       if (parseRegTypeList(Signature->Params))
         return true;
@@ -643,6 +660,25 @@ public:
         return true;
       TOut.emitLocal(Locals);
       CurrentState = FunctionLocals;
+      return expect(AsmToken::EndOfStatement, "EOL");
+    }
+
+    if (DirectiveID.getString() == ".int8") {
+      if (CheckDataSection()) return true;
+      int64_t V;
+      if (Parser.parseAbsoluteExpression(V))
+        return error("Cannot parse int8 constant: ", Lexer.getTok());
+      // TODO: error if value doesn't fit?
+      Out.EmitIntValue(static_cast<uint64_t>(V), 1);
+      return expect(AsmToken::EndOfStatement, "EOL");
+    }
+
+    if (DirectiveID.getString() == ".asciz") {
+      if (CheckDataSection()) return true;
+      std::string S;
+      if (Parser.parseEscapedString(S))
+        return error("Cannot parse string constant: ", Lexer.getTok());
+      Out.EmitBytes(StringRef(S.c_str(), S.length() + 1));
       return expect(AsmToken::EndOfStatement, "EOL");
     }
 
@@ -667,8 +703,12 @@ public:
             *Out.getTargetStreamer());
         TOut.emitLocal(SmallVector<wasm::ValType, 0>());
       }
-      CurrentState = Instructions;
       Out.EmitInstruction(Inst, getSTI());
+      if (CurrentState == EndFunction) {
+        onEndOfFunction();
+      } else {
+        CurrentState = Instructions;
+      }
       return false;
     }
     case Match_MissingFeature:
@@ -692,6 +732,31 @@ public:
     }
     }
     llvm_unreachable("Implement any new match types added!");
+  }
+
+  void doBeforeLabelEmit(MCSymbol *Symbol) override {
+    // Start a new section for the next function automatically, since our
+    // object writer expects each function to have its own section. This way
+    // The user can't forget this "convention".
+    auto SymName = Symbol->getName();
+    if (SymName.startswith(".L"))
+      return; // Local Symbol.
+    auto SecName = ".text." + SymName;
+    auto WS = getContext().getWasmSection(SecName, SectionKind::getText());
+    getStreamer().SwitchSection(WS);
+  }
+
+  void onEndOfFunction() {
+    // Automatically output a .size directive, so it becomes optional for the
+    // user.
+    if (!LastFunctionLabel) return;
+    auto TempSym = getContext().createLinkerPrivateTempSymbol();
+    getStreamer().EmitLabel(TempSym);
+    auto Start = MCSymbolRefExpr::create(LastFunctionLabel, getContext());
+    auto End = MCSymbolRefExpr::create(TempSym, getContext());
+    auto Expr =
+        MCBinaryExpr::create(MCBinaryExpr::Sub, End, Start, getContext());
+    getStreamer().emitELFSize(LastFunctionLabel, Expr);
   }
 
   void onEndOfFile() override { ensureEmptyNestingStack(); }

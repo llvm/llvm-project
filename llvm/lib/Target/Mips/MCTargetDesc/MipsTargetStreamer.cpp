@@ -1,9 +1,8 @@
 //===-- MipsTargetStreamer.cpp - Mips Target Streamer Methods -------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -12,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MipsTargetStreamer.h"
-#include "InstPrinter/MipsInstPrinter.h"
+#include "MipsInstPrinter.h"
 #include "MCTargetDesc/MipsABIInfo.h"
 #include "MipsELFStreamer.h"
 #include "MipsMCExpr.h"
@@ -248,7 +247,11 @@ void MipsTargetStreamer::emitEmptyDelaySlot(bool hasShortDelaySlot, SMLoc IDLoc,
 }
 
 void MipsTargetStreamer::emitNop(SMLoc IDLoc, const MCSubtargetInfo *STI) {
-  emitRRI(Mips::SLL, Mips::ZERO, Mips::ZERO, 0, IDLoc, STI);
+  const FeatureBitset &Features = STI->getFeatureBits();
+  if (Features[Mips::FeatureMicroMips])
+    emitRR(Mips::MOVE16_MM, Mips::ZERO, Mips::ZERO, IDLoc, STI);
+  else
+    emitRRI(Mips::SLL, Mips::ZERO, Mips::ZERO, 0, IDLoc, STI);
 }
 
 /// Emit the $gp restore operation for .cprestore.
@@ -696,8 +699,11 @@ void MipsTargetAsmStreamer::emitDirectiveCpreturn(unsigned SaveLocation,
 }
 
 void MipsTargetAsmStreamer::emitDirectiveModuleFP() {
-  OS << "\t.module\tfp=";
-  OS << ABIFlagsSection.getFpABIString(ABIFlagsSection.getFpABI()) << "\n";
+  MipsABIFlagsSection::FpABIKind FpABI = ABIFlagsSection.getFpABI();
+  if (FpABI == MipsABIFlagsSection::FpABIKind::SOFT)
+    OS << "\t.module\tsoftfloat\n";
+  else
+    OS << "\t.module\tfp=" << ABIFlagsSection.getFpABIString(FpABI) << "\n";
 }
 
 void MipsTargetAsmStreamer::emitDirectiveSetFp(

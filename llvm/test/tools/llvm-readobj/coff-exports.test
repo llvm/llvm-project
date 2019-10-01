@@ -1,6 +1,6 @@
-RUN: llvm-readobj -coff-exports %p/Inputs/export-x86.dll | FileCheck %s -check-prefix CHECK -check-prefix CHECK-X86
-RUN: llvm-readobj -coff-exports %p/Inputs/export-x64.dll | FileCheck %s -check-prefix CHECK -check-prefix CHECK-X64
-RUN: llvm-readobj -coff-exports %p/Inputs/export-arm.dll | FileCheck %s -check-prefix CHECK -check-prefix CHECK-ARM
+RUN: llvm-readobj --coff-exports %p/Inputs/export-x86.dll | FileCheck %s -check-prefix CHECK -check-prefix CHECK-X86
+RUN: llvm-readobj --coff-exports %p/Inputs/export-x64.dll | FileCheck %s -check-prefix CHECK -check-prefix CHECK-X64
+RUN: llvm-readobj --coff-exports %p/Inputs/export-arm.dll | FileCheck %s -check-prefix CHECK -check-prefix CHECK-ARM
 
 CHECK: Export {
 CHECK:   Ordinal: 1

@@ -1,3 +1,0 @@
-RUN: yaml2obj %p/Inputs/COFF/long-file-symbol.yaml | obj2yaml | FileCheck %s --check-prefix COFF-I386
-
-COFF-I386: File:            filename_with_22_chars

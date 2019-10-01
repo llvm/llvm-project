@@ -28,6 +28,12 @@ if(WIN32)
   add_definitions(-DGTEST_OS_WINDOWS=1)
 endif()
 
+# Google Test requires headers which need _ALL_SOURCE to build on AIX
+if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+  remove_definitions("-D_XOPEN_SOURCE=700")
+  add_definitions("-D_ALL_SOURCE")
+endif()
+
 if(SUPPORTS_VARIADIC_MACROS_FLAG)
   add_definitions("-Wno-variadic-macros")
 endif()

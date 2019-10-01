@@ -1,6 +1,6 @@
 # RUN: yaml2obj %s > %t
-# RUN: llvm-objcopy -remove-section=.text.bar %t %t2
-# RUN: llvm-readobj -elf-section-groups %t2 | FileCheck %s
+# RUN: llvm-objcopy --remove-section=.text.bar %t %t2
+# RUN: llvm-readobj --elf-section-groups %t2 | FileCheck %s
 
 # In this test the section .text.bar is getting removed, as a result, 
 # the indices of the sections which go after .text.bar will change, 
@@ -38,19 +38,19 @@ Sections:
     Flags:           [ SHF_ALLOC, SHF_EXECINSTR, SHF_GROUP ]
     AddressAlign:    0x0000000000000010
 Symbols:
-  Local:           
-    - Name:            .text.bar
-      Type:            STT_SECTION
-      Section:         .text.bar
-    - Name:            .text.foo
-      Type:            STT_SECTION
-      Section:         .text.foo         
-  Weak:            
-    - Name:            bar
-      Type:            STT_FUNC
-      Section:         .text.bar
-      Size:            0x0000000000000000
-    - Name:            foo
-      Type:            STT_FUNC
-      Section:         .text.foo
-      Size:            0x0000000000000000
+  - Name:            .text.bar
+    Type:            STT_SECTION
+    Section:         .text.bar
+  - Name:            .text.foo
+    Type:            STT_SECTION
+    Section:         .text.foo
+  - Name:            bar
+    Type:            STT_FUNC
+    Section:         .text.bar
+    Size:            0x0000000000000000
+    Binding:         STB_WEAK
+  - Name:            foo
+    Type:            STT_FUNC
+    Section:         .text.foo
+    Size:            0x0000000000000000
+    Binding:         STB_WEAK

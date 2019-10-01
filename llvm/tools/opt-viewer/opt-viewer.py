@@ -120,12 +120,26 @@ class SourceFileRenderer:
         indent = line[:max(r.Column, 1) - 1]
         indent = re.sub('\S', ' ', indent)
 
+        # Create expanded message and link if we have a multiline message.
+        lines = r.message.split('\n')
+        if len(lines) > 1:
+            expand_link = '<a style="text-decoration: none;" href="" onclick="toggleExpandedMessage(this); return false;">+</a>'
+            message = lines[0]
+            expand_message = u'''
+<div class="full-info" style="display:none;">
+  <div class="col-left"><pre style="display:inline">{}</pre></div>
+  <div class="expanded col-left"><pre>{}</pre></div>
+</div>'''.format(indent, '\n'.join(lines[1:]))
+        else:
+            expand_link = ''
+            expand_message = ''
+            message = r.message
         print(u'''
 <tr>
 <td></td>
 <td>{r.RelativeHotness}</td>
 <td class=\"column-entry-{r.color}\">{r.PassWithDiffPrefix}</td>
-<td><pre style="display:inline">{indent}</pre><span class=\"column-entry-yellow\"> {r.message}&nbsp;</span></td>
+<td><pre style="display:inline">{indent}</pre><span class=\"column-entry-yellow\">{expand_link} {message}&nbsp;</span>{expand_message}</td>
 <td class=\"column-entry-yellow\">{inlining_context}</td>
 </tr>'''.format(**locals()), file=self.stream)
 
@@ -139,6 +153,23 @@ class SourceFileRenderer:
 <meta charset="utf-8" />
 <head>
 <link rel='stylesheet' type='text/css' href='style.css'>
+<script type="text/javascript">
+/* Simple helper to show/hide the expanded message of a remark. */
+function toggleExpandedMessage(e) {{
+  var FullTextElems = e.parentElement.parentElement.getElementsByClassName("full-info");
+  if (!FullTextElems || FullTextElems.length < 1) {{
+      return false;
+  }}
+  var FullText = FullTextElems[0];
+  if (FullText.style.display == 'none') {{
+    e.innerHTML = '-';
+    FullText.style.display = 'block';
+  }} else {{
+    e.innerHTML = '+';
+    FullText.style.display = 'none';
+  }}
+}}
+</script>
 </head>
 <body>
 <div class="centered">
@@ -208,7 +239,7 @@ class IndexRenderer:
 </html>''', file=self.stream)
 
 
-def _render_file(source_dir, output_dir, ctx, no_highlight, entry):
+def _render_file(source_dir, output_dir, ctx, no_highlight, entry, filter_):
     global context
     context = ctx
     filename, remarks = entry
@@ -313,6 +344,11 @@ def main():
         '--demangler',
         help='Set the demangler to be used (defaults to %s)' % optrecord.Remark.default_demangler)
 
+    parser.add_argument(
+        '--filter',
+        default='',
+        help='Only display remarks from passes matching filter expression')
+
     # Do not make this a global variable.  Values needed to be propagated through
     # to individual classes and functions to be portable with multiprocessing across
     # Windows and non-Windows.
@@ -328,7 +364,7 @@ def main():
         sys.exit(1)
 
     all_remarks, file_remarks, should_display_hotness = \
-        optrecord.gather_results(files, args.jobs, print_progress)
+        optrecord.gather_results(files, args.jobs, print_progress, args.filter)
 
     map_remarks(all_remarks)
 

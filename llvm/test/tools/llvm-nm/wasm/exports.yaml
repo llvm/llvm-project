@@ -30,14 +30,14 @@ Sections:
   - Type:            DATA
     Segments:
       - SectionOffset:   6
-        MemoryIndex:     0
+        InitFlags:       0
         Offset:
           Opcode:          I32_CONST
           Value:           0
         Content:         '616263'
   - Type:            CUSTOM
     Name:            linking
-    Version:         1
+    Version:         2
     SymbolTable:
        - Index:           0
          Kind:            FUNCTION
@@ -62,5 +62,5 @@ Sections:
         Flags:           [  ]
 
 # CHECK:      00000000 D dexport
-# CHECK-NEXT: 00000000 T fexport
+# CHECK-NEXT: 00000001 T fexport
 # CHECK-NEXT: 00000000 D gexport

@@ -2,18 +2,34 @@
 ; RUN: llc < %s -mtriple=i686-unknown -mattr=+avx512cd | FileCheck %s --check-prefixes=CHECK,X86
 ; RUN: llc < %s -mtriple=x86_64-unknown -mattr=+avx512cd | FileCheck %s --check-prefixes=CHECK,X64
 
-declare <16 x i32> @llvm.x86.avx512.mask.conflict.d.512(<16 x i32>, <16 x i32>, i16) nounwind readonly
-
-define <8 x i64> @test_conflict_q(<8 x i64> %a) {
-; CHECK-LABEL: test_conflict_q:
+define <16 x i32> @test_conflict_d(<16 x i32> %a) {
+; CHECK-LABEL: test_conflict_d:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpconflictq %zmm0, %zmm0
+; CHECK-NEXT:    vpconflictd %zmm0, %zmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
-  %res = call <8 x i64> @llvm.x86.avx512.mask.conflict.q.512(<8 x i64> %a, <8 x i64> zeroinitializer, i8 -1)
-  ret <8 x i64> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.conflict.d.512(<16 x i32> %a)
+  ret <16 x i32> %1
 }
 
-declare <8 x i64> @llvm.x86.avx512.mask.conflict.q.512(<8 x i64>, <8 x i64>, i8) nounwind readonly
+define <16 x i32> @test_mask_conflict_d(<16 x i32> %a, <16 x i32> %b, i16 %mask) {
+; X86-LABEL: test_mask_conflict_d:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
+; X86-NEXT:    vpconflictd %zmm0, %zmm1 {%k1}
+; X86-NEXT:    vmovdqa64 %zmm1, %zmm0
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_mask_conflict_d:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vpconflictd %zmm0, %zmm1 {%k1}
+; X64-NEXT:    vmovdqa64 %zmm1, %zmm0
+; X64-NEXT:    retq
+  %1 = call <16 x i32> @llvm.x86.avx512.conflict.d.512(<16 x i32> %a)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> %b
+  ret <16 x i32> %3
+}
 
 define <16 x i32> @test_maskz_conflict_d(<16 x i32> %a, i16 %mask) {
 ; X86-LABEL: test_maskz_conflict_d:
@@ -27,8 +43,19 @@ define <16 x i32> @test_maskz_conflict_d(<16 x i32> %a, i16 %mask) {
 ; X64-NEXT:    kmovw %edi, %k1
 ; X64-NEXT:    vpconflictd %zmm0, %zmm0 {%k1} {z}
 ; X64-NEXT:    retq
-  %res = call <16 x i32> @llvm.x86.avx512.mask.conflict.d.512(<16 x i32> %a, <16 x i32> zeroinitializer, i16 %mask)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.conflict.d.512(<16 x i32> %a)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> zeroinitializer
+  ret <16 x i32> %3
+}
+
+define <8 x i64> @test_conflict_q(<8 x i64> %a) {
+; CHECK-LABEL: test_conflict_q:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpconflictq %zmm0, %zmm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %1 = call <8 x i64> @llvm.x86.avx512.conflict.q.512(<8 x i64> %a)
+  ret <8 x i64> %1
 }
 
 define <8 x i64> @test_mask_conflict_q(<8 x i64> %a, <8 x i64> %b, i8 %mask) {
@@ -46,8 +73,29 @@ define <8 x i64> @test_mask_conflict_q(<8 x i64> %a, <8 x i64> %b, i8 %mask) {
 ; X64-NEXT:    vpconflictq %zmm0, %zmm1 {%k1}
 ; X64-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; X64-NEXT:    retq
-  %res = call <8 x i64> @llvm.x86.avx512.mask.conflict.q.512(<8 x i64> %a, <8 x i64> %b, i8 %mask)
-  ret <8 x i64> %res
+  %1 = call <8 x i64> @llvm.x86.avx512.conflict.q.512(<8 x i64> %a)
+  %2 = bitcast i8 %mask to <8 x i1>
+  %3 = select <8 x i1> %2, <8 x i64> %1, <8 x i64> %b
+  ret <8 x i64> %3
+}
+
+define <8 x i64> @test_maskz_conflict_q(<8 x i64> %a, i8 %mask) {
+; X86-LABEL: test_maskz_conflict_q:
+; X86:       # %bb.0:
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    kmovw %eax, %k1
+; X86-NEXT:    vpconflictq %zmm0, %zmm0 {%k1} {z}
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_maskz_conflict_q:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vpconflictq %zmm0, %zmm0 {%k1} {z}
+; X64-NEXT:    retq
+  %1 = call <8 x i64> @llvm.x86.avx512.conflict.q.512(<8 x i64> %a)
+  %2 = bitcast i8 %mask to <8 x i1>
+  %3 = select <8 x i1> %2, <8 x i64> %1, <8 x i64> zeroinitializer
+  ret <8 x i64> %3
 }
 
 define <16 x i32> @test_lzcnt_d(<16 x i32> %a) {
@@ -110,3 +158,6 @@ define <8 x i64> @test_mask_lzcnt_q(<8 x i64> %a, <8 x i64> %b, i8 %mask) {
   %3 = select <8 x i1> %2, <8 x i64> %1, <8 x i64> %b
   ret <8 x i64> %3
 }
+
+declare <16 x i32> @llvm.x86.avx512.conflict.d.512(<16 x i32>)
+declare <8 x i64> @llvm.x86.avx512.conflict.q.512(<8 x i64>)

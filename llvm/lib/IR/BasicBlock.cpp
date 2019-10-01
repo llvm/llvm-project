@@ -1,9 +1,8 @@
 //===-- BasicBlock.cpp - Implement BasicBlock related methods -------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -300,7 +299,7 @@ iterator_range<BasicBlock::phi_iterator> BasicBlock::phis() {
 /// called while the predecessor still refers to this block.
 ///
 void BasicBlock::removePredecessor(BasicBlock *Pred,
-                                   bool DontDeleteUselessPHIs) {
+                                   bool KeepOneInputPHIs) {
   assert((hasNUsesOrMore(16)||// Reduce cost of this assertion for complex CFGs.
           find(pred_begin(this), pred_end(this), Pred) != pred_end(this)) &&
          "removePredecessor: BB is not a predecessor!");
@@ -331,11 +330,11 @@ void BasicBlock::removePredecessor(BasicBlock *Pred,
   }
 
   // <= Two predecessors BEFORE I remove one?
-  if (max_idx <= 2 && !DontDeleteUselessPHIs) {
+  if (max_idx <= 2 && !KeepOneInputPHIs) {
     // Yup, loop through and nuke the PHI nodes
     while (PHINode *PN = dyn_cast<PHINode>(&front())) {
       // Remove the predecessor first.
-      PN->removeIncomingValue(Pred, !DontDeleteUselessPHIs);
+      PN->removeIncomingValue(Pred, !KeepOneInputPHIs);
 
       // If the PHI _HAD_ two uses, replace PHI node with its now *single* value
       if (max_idx == 2) {
@@ -360,7 +359,7 @@ void BasicBlock::removePredecessor(BasicBlock *Pred,
       // If all incoming values to the Phi are the same, we can replace the Phi
       // with that value.
       Value* PNV = nullptr;
-      if (!DontDeleteUselessPHIs && (PNV = PN->hasConstantValue()))
+      if (!KeepOneInputPHIs && (PNV = PN->hasConstantValue()))
         if (PNV != PN) {
           PN->replaceAllUsesWith(PNV);
           PN->eraseFromParent();
@@ -426,41 +425,37 @@ BasicBlock *BasicBlock::splitBasicBlock(iterator I, const Twine &BBName) {
   // Now we must loop through all of the successors of the New block (which
   // _were_ the successors of the 'this' block), and update any PHI nodes in
   // successors.  If there were PHI nodes in the successors, then they need to
-  // know that incoming branches will be from New, not from Old.
+  // know that incoming branches will be from New, not from Old (this).
   //
-  for (succ_iterator I = succ_begin(New), E = succ_end(New); I != E; ++I) {
-    // Loop over any phi nodes in the basic block, updating the BB field of
-    // incoming values...
-    BasicBlock *Successor = *I;
-    for (auto &PN : Successor->phis()) {
-      int Idx = PN.getBasicBlockIndex(this);
-      while (Idx != -1) {
-        PN.setIncomingBlock((unsigned)Idx, New);
-        Idx = PN.getBasicBlockIndex(this);
-      }
-    }
-  }
+  New->replaceSuccessorsPhiUsesWith(this, New);
   return New;
 }
 
-void BasicBlock::replaceSuccessorsPhiUsesWith(BasicBlock *New) {
+void BasicBlock::replacePhiUsesWith(BasicBlock *Old, BasicBlock *New) {
+  // N.B. This might not be a complete BasicBlock, so don't assume
+  // that it ends with a non-phi instruction.
+  for (iterator II = begin(), IE = end(); II != IE; ++II) {
+    PHINode *PN = dyn_cast<PHINode>(II);
+    if (!PN)
+      break;
+    PN->replaceIncomingBlockWith(Old, New);
+  }
+}
+
+void BasicBlock::replaceSuccessorsPhiUsesWith(BasicBlock *Old,
+                                              BasicBlock *New) {
   Instruction *TI = getTerminator();
   if (!TI)
     // Cope with being called on a BasicBlock that doesn't have a terminator
     // yet. Clang's CodeGenFunction::EmitReturnBlock() likes to do this.
     return;
-  for (BasicBlock *Succ : successors(TI)) {
-    // N.B. Succ might not be a complete BasicBlock, so don't assume
-    // that it ends with a non-phi instruction.
-    for (iterator II = Succ->begin(), IE = Succ->end(); II != IE; ++II) {
-      PHINode *PN = dyn_cast<PHINode>(II);
-      if (!PN)
-        break;
-      int i;
-      while ((i = PN->getBasicBlockIndex(this)) >= 0)
-        PN->setIncomingBlock(i, New);
-    }
-  }
+  llvm::for_each(successors(TI), [Old, New](BasicBlock *Succ) {
+    Succ->replacePhiUsesWith(Old, New);
+  });
+}
+
+void BasicBlock::replaceSuccessorsPhiUsesWith(BasicBlock *New) {
+  this->replaceSuccessorsPhiUsesWith(this, New);
 }
 
 /// Return true if this basic block is a landing pad. I.e., it's

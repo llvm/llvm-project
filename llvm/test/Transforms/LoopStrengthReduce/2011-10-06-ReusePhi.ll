@@ -3,7 +3,7 @@
 ; Test LSR's intelligence regarding phi reuse.
 ; Verify that scaled GEPs are not reused. rdar://5064068
 
-target triple = "x86-apple-darwin"
+target triple = "x86_64-apple-darwin"
 
 ; Provide legal integer types.
 target datalayout = "n8:16:32:64"
@@ -12,8 +12,8 @@ target datalayout = "n8:16:32:64"
 ; CHECK-LABEL: @test(
 ; multiplies are hoisted out of the loop
 ; CHECK: while.body.lr.ph:
-; CHECK: shl i64
-; CHECK: shl i64
+; CHECK: shl nsw i64
+; CHECK: shl nsw i64
 ; GEPs are ugly
 ; CHECK: while.body:
 ; CHECK: phi

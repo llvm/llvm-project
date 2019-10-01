@@ -56,7 +56,7 @@ define void @foobar(i32* %x) {
 ; CHECK: %[[POS:.*]] = alloca i32
 ; CHECK: %[[VAL:.*]] = load i32, i32* %x
 ; CHECK: store i32 %[[VAL]], i32* %[[POS]]
-; CHECK: tail call void @ext2(i32* byval nonnull %[[POS]]
+; CHECK: tail call void @ext2(i32* nonnull byval %[[POS]]
 ; CHECK: ret void
   tail call void @bar2(i32* byval %x)
   ret void
@@ -67,7 +67,7 @@ define void @barfoo() {
 ; CHECK: %[[POS:.*]] = alloca i32
 ; CHECK: %[[VAL:.*]] = load i32, i32* %x
 ; CHECK: store i32 %[[VAL]], i32* %[[POS]]
-; CHECK: tail call void @ext2(i32* byval nonnull %[[POS]]
+; CHECK: tail call void @ext2(i32* nonnull byval %[[POS]]
 ; CHECK: ret void
   %x = alloca i32
   tail call void @bar2(i32* byval %x)

@@ -1,0 +1,26 @@
+# RUN: llvm-mc -disassemble -triple=thumbv8.1m.main-none-eabi -mattr=+8msecext -show-encoding %s 2>&1 | FileCheck %s
+
+
+[0x9f 0xec 0x04 0x0a]
+# CHECK: vscclrm {s0, s1, s2, s3, vpr}
+
+[0xdf,0xec,0x06,0x1a]
+# CHECK: vscclrm            {s3, s4, s5, s6, s7, s8, vpr} @ encoding: [0xdf,0xec,0x06,0x1a]
+
+[0x9f 0xec 0x0c 0x9a]
+# CHECK: vscclrm {s18, s19, s20, s21, s22, s23, s24, s25, s26, s27, s28, s29, vpr}
+
+[0xdf 0xec 0x01 0xfa]
+# CHECK: vscclrm {s31, vpr}
+
+[0x9f,0xec,0x04,0x0b]
+# CHECK: vscclrm            {d0, d1, vpr}  @ encoding: [0x9f,0xec,0x04,0x0b]
+
+[0x9f,0xec,0x06,0x5b]
+# CHECK: vscclrm            {d5, d6, d7, vpr}  @ encoding: [0x9f,0xec,0x06,0x5b]
+
+[0x88 0xbf]
+# CHECK: it    hi
+
+[0xdf 0xec 0x1d 0x1a]
+# CHECK: vscclrmhi    {s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15, s16, s17, s18, s19, s20, s21, s22, s23, s24, s25, s26, s27, s28, s29, s30, s31, vpr}

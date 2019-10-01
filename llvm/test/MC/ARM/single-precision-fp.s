@@ -1,4 +1,4 @@
-@ RUN: not llvm-mc < %s -triple thumbv8-unknown-unknown -show-encoding -mattr=+fp-only-sp,-neon 2> %t > %t2
+@ RUN: not llvm-mc < %s -triple thumbv8-unknown-unknown -show-encoding -mattr=-fp64,-fpregs64,-neon 2> %t > %t2
 @ RUN:     FileCheck %s < %t --check-prefix=CHECK-ERRORS
 @ RUN:     FileCheck %s < %t2
 
@@ -72,7 +72,7 @@
         @ FIXME: overlapping aliases and a probable TableGen indeterminacy mean
         @ that the actual reason can vary by platform.
         vmov.f64 d11, d10
-@ CHECK-ERRORS: instruction requires: NEON
+@ CHECK-ERRORS: instruction requires: 64-bit fp registers
 @ CHECK-ERRORS-NEXT: vmov.f64 d11, d10
 
         vcvt.f64.s32 d9, s8

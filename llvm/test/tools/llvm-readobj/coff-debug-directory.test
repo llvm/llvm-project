@@ -1,4 +1,4 @@
-RUN: llvm-readobj -coff-debug-directory %p/Inputs/has_pdb.exe | FileCheck %s
+RUN: llvm-readobj --coff-debug-directory %p/Inputs/has_pdb.exe | FileCheck %s
 
 CHECK: DebugDirectory [
 CHECK:   DebugEntry {

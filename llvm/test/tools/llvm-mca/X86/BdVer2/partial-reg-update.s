@@ -13,7 +13,7 @@ add  %ecx, %ebx
 # CHECK:      Dispatch Width:    4
 # CHECK-NEXT: uOps Per Cycle:    0.33
 # CHECK-NEXT: IPC:               0.33
-# CHECK-NEXT: Block RThroughput: 1.0
+# CHECK-NEXT: Block RThroughput: 2.0
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -24,9 +24,9 @@ add  %ecx, %ebx
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      4     1.00                        imulw	%ax, %cx
-# CHECK-NEXT:  1      1     0.50                        addb	%al, %cl
-# CHECK-NEXT:  1      1     0.50                        addl	%ecx, %ebx
+# CHECK-NEXT:  1      4     2.00                        imulw	%ax, %cx
+# CHECK-NEXT:  1      1     1.00                        addb	%al, %cl
+# CHECK-NEXT:  1      1     1.00                        addl	%ecx, %ebx
 
 # CHECK:      Timeline view:
 # CHECK-NEXT: Index     012345678

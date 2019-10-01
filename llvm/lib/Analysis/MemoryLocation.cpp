@@ -1,9 +1,8 @@
 //===- MemoryLocation.cpp - Memory location descriptions -------------------==//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -125,15 +124,15 @@ MemoryLocation MemoryLocation::getForDest(const AnyMemIntrinsic *MI) {
   return MemoryLocation(MI->getRawDest(), Size, AATags);
 }
 
-MemoryLocation MemoryLocation::getForArgument(ImmutableCallSite CS,
+MemoryLocation MemoryLocation::getForArgument(const CallBase *Call,
                                               unsigned ArgIdx,
                                               const TargetLibraryInfo *TLI) {
   AAMDNodes AATags;
-  CS->getAAMetadata(AATags);
-  const Value *Arg = CS.getArgument(ArgIdx);
+  Call->getAAMetadata(AATags);
+  const Value *Arg = Call->getArgOperand(ArgIdx);
 
   // We may be able to produce an exact size for known intrinsics.
-  if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(CS.getInstruction())) {
+  if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(Call)) {
     const DataLayout &DL = II->getModule()->getDataLayout();
 
     switch (II->getIntrinsicID()) {
@@ -193,19 +192,20 @@ MemoryLocation MemoryLocation::getForArgument(ImmutableCallSite CS,
   // LoopIdiomRecognizer likes to turn loops into calls to memset_pattern16
   // whenever possible.
   LibFunc F;
-  if (TLI && CS.getCalledFunction() &&
-      TLI->getLibFunc(*CS.getCalledFunction(), F) &&
+  if (TLI && Call->getCalledFunction() &&
+      TLI->getLibFunc(*Call->getCalledFunction(), F) &&
       F == LibFunc_memset_pattern16 && TLI->has(F)) {
     assert((ArgIdx == 0 || ArgIdx == 1) &&
            "Invalid argument index for memset_pattern16");
     if (ArgIdx == 1)
       return MemoryLocation(Arg, LocationSize::precise(16), AATags);
-    if (const ConstantInt *LenCI = dyn_cast<ConstantInt>(CS.getArgument(2)))
+    if (const ConstantInt *LenCI =
+            dyn_cast<ConstantInt>(Call->getArgOperand(2)))
       return MemoryLocation(Arg, LocationSize::precise(LenCI->getZExtValue()),
                             AATags);
   }
   // FIXME: Handle memset_pattern4 and memset_pattern8 also.
 
-  return MemoryLocation(CS.getArgument(ArgIdx), LocationSize::unknown(),
+  return MemoryLocation(Call->getArgOperand(ArgIdx), LocationSize::unknown(),
                         AATags);
 }

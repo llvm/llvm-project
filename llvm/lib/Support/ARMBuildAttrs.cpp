@@ -1,9 +1,8 @@
 //===-- ARMBuildAttrs.cpp - ARM Build Attributes --------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -29,6 +28,7 @@ const struct {
   { ARMBuildAttrs::FP_arch, "Tag_FP_arch" },
   { ARMBuildAttrs::WMMX_arch, "Tag_WMMX_arch" },
   { ARMBuildAttrs::Advanced_SIMD_arch, "Tag_Advanced_SIMD_arch" },
+  { ARMBuildAttrs::MVE_arch, "Tag_MVE_arch" },
   { ARMBuildAttrs::PCS_config, "Tag_PCS_config" },
   { ARMBuildAttrs::ABI_PCS_R9_use, "Tag_ABI_PCS_R9_use" },
   { ARMBuildAttrs::ABI_PCS_RW_data, "Tag_ABI_PCS_RW_data" },

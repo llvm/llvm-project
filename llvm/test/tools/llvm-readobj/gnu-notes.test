@@ -1,25 +1,27 @@
-# RUN: yaml2obj %s > %t.so
-# RUN: llvm-readobj -elf-output-style GNU --notes %t.so | FileCheck %s --check-prefix=GNU
-# RUN: llvm-readobj -elf-output-style LLVM --notes %t.so | FileCheck %s --check-prefix=LLVM
+## Test tools are able to dump different types of notes.
 
-# GNU:      Displaying notes found at file offset 0x00000340 with length 0x00000020:
+# RUN: yaml2obj --docnum=1 %s > %t1.so
+# RUN: llvm-readelf --notes %t1.so | FileCheck %s --check-prefix=GNU
+# RUN: llvm-readobj --notes %t1.so | FileCheck %s --check-prefix=LLVM
+
+# GNU:      Displaying notes found at file offset 0x00000200 with length 0x00000020:
 # GNU-NEXT:   Owner                 Data size       Description
 # GNU-NEXT:   GNU                   0x00000010      NT_GNU_ABI_TAG (ABI version tag)
 # GNU-NEXT:     OS: Linux, ABI: 2.6.32
 
-# GNU:      Displaying notes found at file offset 0x00000360 with length 0x00000020:
+# GNU:      Displaying notes found at file offset 0x00000220 with length 0x00000020:
 # GNU-NEXT:   Owner                 Data size       Description
 # GNU-NEXT:   GNU                  0x00000010       NT_GNU_BUILD_ID (unique build ID bitstring)
 # GNU-NEXT:     Build ID: 4fcb712aa6387724a9f465a32cd8c14b
 
-# GNU:      Displaying notes found at file offset 0x000003cc with length 0x0000001c:
+# GNU:      Displaying notes found at file offset 0x00000240 with length 0x0000001c:
 # GNU-NEXT:   Owner                 Data size       Description
 # GNU-NEXT:   GNU                  0x00000009       NT_GNU_GOLD_VERSION (gold version)
 # GNU-NEXT:     Version: gold 1.11
 
 # LLVM:      Notes [
 # LLVM-NEXT:   NoteSection {
-# LLVM-NEXT:     Offset: 0x340
+# LLVM-NEXT:     Offset: 0x200
 # LLVM-NEXT:     Size: 0x20
 # LLVM-NEXT:     Note {
 # LLVM-NEXT:       Owner: GNU
@@ -30,7 +32,7 @@
 # LLVM-NEXT:     }
 # LLVM-NEXT:   }
 # LLVM-NEXT:   NoteSection {
-# LLVM-NEXT:     Offset: 0x360
+# LLVM-NEXT:     Offset: 0x220
 # LLVM-NEXT:     Size: 0x20
 # LLVM-NEXT:     Note {
 # LLVM-NEXT:       Owner: GNU
@@ -40,7 +42,7 @@
 # LLVM-NEXT:     }
 # LLVM-NEXT:   }
 # LLVM-NEXT:   NoteSection {
-# LLVM-NEXT:     Offset: 0x3CC
+# LLVM-NEXT:     Offset: 0x240
 # LLVM-NEXT:     Size: 0x1C
 # LLVM-NEXT:     Note {
 # LLVM-NEXT:       Owner: GNU
@@ -53,68 +55,110 @@
 
 --- !ELF
 FileHeader:
-  Class:           ELFCLASS64
-  Data:            ELFDATA2LSB
-  Type:            ET_EXEC
-  Machine:         EM_X86_64
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
 Sections:
-  - Name:            .note.ABI-tag
-    Type:            SHT_NOTE
-    AddressAlign:    0x0000000000000004
-    Content:         040000001000000001000000474E550000000000020000000600000020000000
-  - Name:            .note.gnu.build-id
-    Type:            SHT_NOTE
-    Flags:           [ SHF_ALLOC ]
-    Address:         0x0000000000400120
-    AddressAlign:    0x0000000000000004
-    Content:         040000001000000003000000474E55004FCB712AA6387724A9F465A32CD8C14B
-  - Name:            .text
-    Type:            SHT_PROGBITS
-    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
-    Address:         0x0000000000400140
-    AddressAlign:    0x0000000000000001
-    Content:         31C0C3
-  - Name:            .eh_frame
-    Type:            SHT_PROGBITS
-    Flags:           [ SHF_ALLOC ]
-    Address:         0x0000000000400148
-    AddressAlign:    0x0000000000000008
-    Content:         1400000000000000017A5200017810011B0C070890010000140000001C000000D8FFFFFF030000000000000000000000
-  - Name:            .data
-    Type:            SHT_PROGBITS
-    Flags:           [ SHF_WRITE, SHF_ALLOC ]
-    Address:         0x0000000000401000
-    AddressAlign:    0x0000000000000001
-    Content:         ''
-  - Name:            .bss
-    Type:            SHT_NOBITS
-    Flags:           [ SHF_WRITE, SHF_ALLOC ]
-    Address:         0x0000000000401000
-    AddressAlign:    0x0000000000000001
-  - Name:            .comment
-    Type:            SHT_PROGBITS
-    Flags:           [ SHF_MERGE, SHF_STRINGS ]
-    AddressAlign:    0x0000000000000001
-    Content:         004743433A2028474E552920352E342E3000
-  - Name:            .note.gnu.gold-version
-    Type:            SHT_NOTE
-    AddressAlign:    0x0000000000000004
-    Content:         040000000900000004000000474E5500676F6C6420312E3131000000
-Symbols:
-  Local:
-    - Name:            reduced.c
-      Type:            STT_FILE
-    - Type:            STT_FILE
-  Global:
-    - Name:            main
-      Type:            STT_FUNC
-      Section:         .text
-      Value:           0x0000000000400140
-      Size:            0x0000000000000003
-    - Name:            _edata
-      Value:           0x0000000000401000
-    - Name:            __bss_start
-      Value:           0x0000000000401000
-    - Name:            _end
-      Value:           0x0000000000401000
-...
+  - Name:         .note.ABI-tag
+    Type:         SHT_NOTE
+    AddressAlign: 0x0000000000000004
+    Content:      040000001000000001000000474E550000000000020000000600000020000000
+  - Name:         .note.gnu.build-id
+    Type:         SHT_NOTE
+    Flags:        [ SHF_ALLOC ]
+    Address:      0x0000000000400120
+    AddressAlign: 0x0000000000000004
+    Content:      040000001000000003000000474E55004FCB712AA6387724A9F465A32CD8C14B
+  - Name:         .note.gnu.gold-version
+    Type:         SHT_NOTE
+    AddressAlign: 0x0000000000000004
+    Content:      040000000900000004000000474E5500676F6C6420312E3131000000
+
+## Test tools report an error if a note section has an invalid offset
+## that goes past the end of file.
+
+# RUN: yaml2obj --docnum=2 %s > %t2.so
+# RUN: not llvm-readelf --notes %t2.so 2>&1 | FileCheck %s --check-prefix=ERR1
+# RUN: not llvm-readobj --notes %t2.so 2>&1 | FileCheck %s --check-prefix=ERR1
+
+# ERR1: error: SHT_NOTE section [index 1] has invalid offset (0xffff0000) or size (0x0)
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:     .note
+    Type:     SHT_NOTE
+    ShOffset: 0xffff0000
+
+## Test tools report an error if a note section has invalid size
+## that goes past the end of file.
+
+# RUN: yaml2obj --docnum=3 %s > %t3.so
+# RUN: not llvm-readelf --notes %t3.so 2>&1 | FileCheck %s --check-prefix=ERR2
+# RUN: not llvm-readobj --notes %t3.so 2>&1 | FileCheck %s --check-prefix=ERR2
+
+# ERR2: error: SHT_NOTE section [index 1] has invalid offset (0x180) or size (0xffff0000)
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:   .note
+    Type:   SHT_NOTE
+    ShSize: 0xffff0000
+
+## Test tools report an error if a note program header has an invalid offset that
+## goes past the end of file.
+
+# RUN: yaml2obj --docnum=4 %s > %t4.so
+# RUN: not llvm-readelf --notes %t4.so 2>&1 | FileCheck %s --check-prefix=ERR3
+# RUN: not llvm-readobj --notes %t4.so 2>&1 | FileCheck %s --check-prefix=ERR3
+
+# ERR3: error: PT_NOTE header has invalid offset (0xffff0000) or size (0x0)
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_CORE
+  Machine: EM_X86_64
+Sections:
+  - Name: .note
+    Type: SHT_NOTE
+ProgramHeaders:
+  - Type: PT_NOTE
+    Offset: 0xffff0000
+    Sections:
+      - Section: .note
+
+## Test tools report an error if a note program header has an invalid size that
+## goes past the end of file.
+
+# RUN: yaml2obj --docnum=5 %s > %t5.so
+# RUN: not llvm-readelf --notes %t5.so 2>&1 | FileCheck %s --check-prefix=ERR4
+# RUN: not llvm-readobj --notes %t5.so 2>&1 | FileCheck %s --check-prefix=ERR4
+
+# ERR4: error: PT_NOTE header has invalid offset (0x1b8) or size (0xffff0000)
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_CORE
+  Machine: EM_X86_64
+Sections:
+  - Name: .note
+    Type: SHT_NOTE
+ProgramHeaders:
+  - Type: PT_NOTE
+    FileSize: 0xffff0000
+    Sections:
+      - Section: .note

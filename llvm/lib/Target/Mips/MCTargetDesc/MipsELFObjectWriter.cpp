@@ -1,9 +1,8 @@
 //===-- MipsELFObjectWriter.cpp - Mips ELF Writer -------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -223,7 +222,7 @@ unsigned MipsELFObjectWriter::getRelocType(MCContext &Ctx,
   unsigned Kind = (unsigned)Fixup.getKind();
 
   switch (Kind) {
-  case Mips::fixup_Mips_NONE:
+  case FK_NONE:
     return ELF::R_MIPS_NONE;
   case FK_Data_1:
     Ctx.reportError(Fixup.getLoc(),

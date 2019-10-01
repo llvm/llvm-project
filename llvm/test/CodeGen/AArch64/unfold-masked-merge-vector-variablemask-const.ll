@@ -34,7 +34,6 @@ define <4 x i32> @in_constant_varx_mone(<4 x i32> %x, <4 x i32> %y, <4 x i32> %m
 define <4 x i32> @out_constant_varx_mone_invmask(<4 x i32> %x, <4 x i32> %y, <4 x i32> %mask) {
 ; CHECK-LABEL: out_constant_varx_mone_invmask:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    bic v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    orr v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    ret
   %notmask = xor <4 x i32> %mask, <i32 -1, i32 -1, i32 -1, i32 -1>
@@ -119,8 +118,7 @@ define <4 x i32> @in_constant_varx_42_invmask(<4 x i32> %x, <4 x i32> %y, <4 x i
 define <4 x i32> @out_constant_mone_vary(<4 x i32> %x, <4 x i32> %y, <4 x i32> %mask) {
 ; CHECK-LABEL: out_constant_mone_vary:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    bic v0.16b, v1.16b, v2.16b
-; CHECK-NEXT:    orr v0.16b, v2.16b, v0.16b
+; CHECK-NEXT:    orr v0.16b, v1.16b, v2.16b
 ; CHECK-NEXT:    ret
   %notmask = xor <4 x i32> %mask, <i32 -1, i32 -1, i32 -1, i32 -1>
   %mx = and <4 x i32> %mask, <i32 -1, i32 -1, i32 -1, i32 -1>
@@ -132,8 +130,7 @@ define <4 x i32> @out_constant_mone_vary(<4 x i32> %x, <4 x i32> %y, <4 x i32> %
 define <4 x i32> @in_constant_mone_vary(<4 x i32> %x, <4 x i32> %y, <4 x i32> %mask) {
 ; CHECK-LABEL: in_constant_mone_vary:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    bic v0.16b, v1.16b, v2.16b
-; CHECK-NEXT:    orr v0.16b, v2.16b, v0.16b
+; CHECK-NEXT:    orr v0.16b, v1.16b, v2.16b
 ; CHECK-NEXT:    ret
   %n0 = xor <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>, %y ; %x
   %n1 = and <4 x i32> %n0, %mask

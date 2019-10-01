@@ -13,5 +13,5 @@ define void @ctor1() {
 }
 
 @llvm.global_ctors = appending constant
-  [1 x { i32, void ()* }]
-  [ { i32, void ()* } { i32 65535, void ()* @ctor1 } ]
+  [1 x { i32, void ()*, i8* }]
+  [ { i32, void ()*, i8* } { i32 65535, void ()* @ctor1, i8* null } ]

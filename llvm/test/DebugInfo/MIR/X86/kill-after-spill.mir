@@ -124,9 +124,6 @@
   declare i8* @memset(i8*, i32, i64) local_unnamed_addr
 
   ; Function Attrs: nounwind readnone speculatable
-  declare i64 @llvm.objectsize.i64.p0i8(i8*, i1, i1) #1
-
-  ; Function Attrs: nounwind readnone speculatable
   declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
   ; Function Attrs: nounwind
@@ -231,25 +228,25 @@ frameInfo:
   savePoint:       ''
   restorePoint:    ''
 fixedStack:
-  - { id: 0, type: spill-slot, offset: -56, size: 8, alignment: 8, stack-id: 0,
+  - { id: 0, type: spill-slot, offset: -56, size: 8, alignment: 8, stack-id: default,
       callee-saved-register: '$rbx', callee-saved-restored: true }
-  - { id: 1, type: spill-slot, offset: -48, size: 8, alignment: 16, stack-id: 0,
+  - { id: 1, type: spill-slot, offset: -48, size: 8, alignment: 16, stack-id: default,
       callee-saved-register: '$r12', callee-saved-restored: true }
-  - { id: 2, type: spill-slot, offset: -40, size: 8, alignment: 8, stack-id: 0,
+  - { id: 2, type: spill-slot, offset: -40, size: 8, alignment: 8, stack-id: default,
       callee-saved-register: '$r13', callee-saved-restored: true }
-  - { id: 3, type: spill-slot, offset: -32, size: 8, alignment: 16, stack-id: 0,
+  - { id: 3, type: spill-slot, offset: -32, size: 8, alignment: 16, stack-id: default,
       callee-saved-register: '$r14', callee-saved-restored: true }
-  - { id: 4, type: spill-slot, offset: -24, size: 8, alignment: 8, stack-id: 0,
+  - { id: 4, type: spill-slot, offset: -24, size: 8, alignment: 8, stack-id: default,
       callee-saved-register: '$r15', callee-saved-restored: true }
-  - { id: 5, type: spill-slot, offset: -16, size: 8, alignment: 16, stack-id: 0,
+  - { id: 5, type: spill-slot, offset: -16, size: 8, alignment: 16, stack-id: default,
       callee-saved-register: '', callee-saved-restored: true }
 stack:
   - { id: 0, name: '', type: spill-slot, offset: -64, size: 4, alignment: 4,
-      stack-id: 0, callee-saved-register: '', callee-saved-restored: true,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '',
       debug-info-location: '' }
   - { id: 1, name: '', type: spill-slot, offset: -60, size: 4, alignment: 4,
-      stack-id: 0, callee-saved-register: '', callee-saved-restored: true,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '',
       debug-info-location: '' }
 constants:
@@ -286,7 +283,7 @@ body:             |
     $r13 = MOV64rr $rax
     renamable $ecx = XOR32rr undef $ecx, undef $ecx, implicit-def dead $eflags
     renamable $r13 = AND64rr killed renamable $r13, renamable $r14, implicit-def $eflags
-    JE_1 %bb.9, implicit $eflags
+    JCC_1 %bb.9, 4, implicit $eflags
 
   bb.1.if.end:
     successors: %bb.2(0x30000000), %bb.3(0x50000000)
@@ -304,7 +301,7 @@ body:             |
     $r12 = MOV64rr $rax
     $r15 = MOV64rr $r12
     renamable $r15 = AND64ri8 killed renamable $r15, -123, implicit-def $eflags
-    JE_1 %bb.2, implicit $eflags
+    JCC_1 %bb.2, 4, implicit $eflags
 
   bb.3.private.exit:
     successors: %bb.9(0x30000000), %bb.4(0x50000000)
@@ -319,7 +316,7 @@ body:             |
     CALL64pcrel32 @func4, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp, implicit-def $eax
     renamable $ecx = MOV32ri 1
     TEST32rr killed renamable $eax, renamable $eax, implicit-def $eflags
-    JE_1 %bb.9, implicit $eflags
+    JCC_1 %bb.9, 4, implicit $eflags
 
   bb.4.if.then8:
     successors: %bb.8(0x30000000), %bb.5(0x50000000)
@@ -330,21 +327,21 @@ body:             |
     CALL64pcrel32 @func5, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit $esi, implicit-def $rsp, implicit-def $ssp
     renamable $rax = MOV64rm killed renamable $r13, 1, $noreg, 8, $noreg :: (load 8 from %ir.13)
     TEST64rr renamable $rax, renamable $rax, implicit-def $eflags
-    JE_1 %bb.8, implicit $eflags
+    JCC_1 %bb.8, 4, implicit $eflags
 
   bb.5.land.lhs.true:
     successors: %bb.6(0x30000000), %bb.7(0x50000000)
     liveins: $rax, $r12, $r15
 
     CMP32mi8 renamable $r15, 1, $noreg, 0, $noreg, 0, implicit-def $eflags :: (load 4 from %ir.tot_perf2, align 8)
-    JNE_1 %bb.7, implicit $eflags
+    JCC_1 %bb.7, 5, implicit $eflags
 
   bb.6.lor.lhs.false:
     successors: %bb.8(0x30000000), %bb.7(0x50000000)
     liveins: $rax, $r12, $r15
 
     CMP32mi8 killed renamable $r15, 1, $noreg, 4, $noreg, 0, implicit-def $eflags :: (load 4 from %ir.tot_bw)
-    JE_1 %bb.8, implicit $eflags
+    JCC_1 %bb.8, 4, implicit $eflags
 
   bb.7.if.then14:
     successors: %bb.8(0x80000000)

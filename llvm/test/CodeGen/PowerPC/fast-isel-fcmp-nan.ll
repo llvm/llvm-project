@@ -1,4 +1,4 @@
-; RUN: llc -mtriple powerpc64le-unknown-linux-gnu -fast-isel -O0 < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mtriple powerpc64le-unknown-linux-gnu -fast-isel -O0 < %s | FileCheck %s
 
 define i1 @TestULT(double %t0) {
 ; CHECK-LABEL: TestULT:
@@ -17,7 +17,7 @@ good:
 
 define i1 @TestULE(double %t0) {
 ; CHECK-LABEL: TestULE:
-; CHECK: fcmpu
+; CHECK: xscmpudp
 ; CHECK-NEXT: ble
 ; CHECK: blr
 entry:
@@ -33,7 +33,7 @@ good:
 
 define i1 @TestUNE(double %t0) {
 ; CHECK-LABEL: TestUNE:
-; CHECK: fcmpu
+; CHECK: xscmpudp
 ; CHECK-NEXT: bne
 ; CHECK: blr
 entry:
@@ -79,7 +79,7 @@ good:
 
 define i1 @TestUGE(double %t0) {
 ; CHECK-LABEL: TestUGE:
-; CHECK: fcmpu
+; CHECK: xscmpudp
 ; CHECK-NEXT: bge
 ; CHECK: blr
 entry:
@@ -95,7 +95,7 @@ good:
 
 define i1 @TestOLT(double %t0) {
 ; CHECK-LABEL: TestOLT:
-; CHECK: fcmpu
+; CHECK: xscmpudp
 ; CHECK-NEXT: blt
 ; CHECK: blr
 entry:
@@ -141,7 +141,7 @@ good:
 
 define i1 @TestOEQ(double %t0) {
 ; CHECK-LABEL: TestOEQ:
-; CHECK: fcmpu
+; CHECK: xscmpudp
 ; CHECK-NEXT: beq
 ; CHECK: blr
 entry:
@@ -157,7 +157,7 @@ good:
 
 define i1 @TestOGT(double %t0) {
 ; CHECK-LABEL: TestOGT:
-; CHECK: fcmpu
+; CHECK: xscmpudp
 ; CHECK-NEXT: bgt
 ; CHECK: blr
 entry:

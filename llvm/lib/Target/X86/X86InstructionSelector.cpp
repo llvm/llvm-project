@@ -1,9 +1,8 @@
 //===- X86InstructionSelector.cpp -----------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 /// \file
@@ -419,18 +418,22 @@ unsigned X86InstructionSelector::getLoadStoreOp(const LLT &Ty,
     if (X86::GPRRegBankID == RB.getID())
       return Isload ? X86::MOV32rm : X86::MOV32mr;
     if (X86::VECRRegBankID == RB.getID())
-      return Isload ? (HasAVX512 ? X86::VMOVSSZrm
-                                 : HasAVX ? X86::VMOVSSrm : X86::MOVSSrm)
-                    : (HasAVX512 ? X86::VMOVSSZmr
-                                 : HasAVX ? X86::VMOVSSmr : X86::MOVSSmr);
+      return Isload ? (HasAVX512 ? X86::VMOVSSZrm_alt :
+                       HasAVX    ? X86::VMOVSSrm_alt :
+                                   X86::MOVSSrm_alt)
+                    : (HasAVX512 ? X86::VMOVSSZmr :
+                       HasAVX    ? X86::VMOVSSmr :
+                                   X86::MOVSSmr);
   } else if (Ty == LLT::scalar(64) || Ty == LLT::pointer(0, 64)) {
     if (X86::GPRRegBankID == RB.getID())
       return Isload ? X86::MOV64rm : X86::MOV64mr;
     if (X86::VECRRegBankID == RB.getID())
-      return Isload ? (HasAVX512 ? X86::VMOVSDZrm
-                                 : HasAVX ? X86::VMOVSDrm : X86::MOVSDrm)
-                    : (HasAVX512 ? X86::VMOVSDZmr
-                                 : HasAVX ? X86::VMOVSDmr : X86::MOVSDmr);
+      return Isload ? (HasAVX512 ? X86::VMOVSDZrm_alt :
+                       HasAVX    ? X86::VMOVSDrm_alt :
+                                   X86::MOVSDrm_alt)
+                    : (HasAVX512 ? X86::VMOVSDZmr :
+                       HasAVX    ? X86::VMOVSDmr :
+                                   X86::MOVSDmr);
   } else if (Ty.isVector() && Ty.getSizeInBits() == 128) {
     if (Alignment >= 16)
       return Isload ? (HasVLX ? X86::VMOVAPSZ128rm
@@ -513,10 +516,22 @@ bool X86InstructionSelector::selectLoadStoreOp(MachineInstr &I,
   LLT Ty = MRI.getType(DefReg);
   const RegisterBank &RB = *RBI.getRegBank(DefReg, MRI, TRI);
 
+  assert(I.hasOneMemOperand());
   auto &MemOp = **I.memoperands_begin();
-  if (MemOp.getOrdering() != AtomicOrdering::NotAtomic) {
-    LLVM_DEBUG(dbgs() << "Atomic load/store not supported yet\n");
-    return false;
+  if (MemOp.isAtomic()) {
+    // Note: for unordered operations, we rely on the fact the appropriate MMO
+    // is already on the instruction we're mutating, and thus we don't need to
+    // make any changes.  So long as we select an opcode which is capable of
+    // loading or storing the appropriate size atomically, the rest of the
+    // backend is required to respect the MMO state. 
+    if (!MemOp.isUnordered()) {
+      LLVM_DEBUG(dbgs() << "Atomic ordering not supported yet\n");
+      return false;
+    }
+    if (MemOp.getAlignment() < Ty.getSizeInBits()/8) {
+      LLVM_DEBUG(dbgs() << "Unaligned atomics not supported yet\n");
+      return false;
+    }
   }
 
   unsigned NewOpc = getLoadStoreOp(Ty, RB, Opc, MemOp.getAlignment());
@@ -936,7 +951,6 @@ bool X86InstructionSelector::selectCmp(MachineInstr &I,
   bool SwapArgs;
   std::tie(CC, SwapArgs) = X86::getX86ConditionCode(
       (CmpInst::Predicate)I.getOperand(1).getPredicate());
-  unsigned OpSet = X86::getSETFromCond(CC);
 
   unsigned LHS = I.getOperand(2).getReg();
   unsigned RHS = I.getOperand(3).getReg();
@@ -970,7 +984,7 @@ bool X86InstructionSelector::selectCmp(MachineInstr &I,
            .addReg(RHS);
 
   MachineInstr &SetInst = *BuildMI(*I.getParent(), I, I.getDebugLoc(),
-                                   TII.get(OpSet), I.getOperand(0).getReg());
+                                   TII.get(X86::SETCCr), I.getOperand(0).getReg()).addImm(CC);
 
   constrainSelectedInstRegOperands(CmpInst, TII, TRI, RBI);
   constrainSelectedInstRegOperands(SetInst, TII, TRI, RBI);
@@ -991,8 +1005,8 @@ bool X86InstructionSelector::selectFCmp(MachineInstr &I,
 
   // FCMP_OEQ and FCMP_UNE cannot be checked with a single instruction.
   static const uint16_t SETFOpcTable[2][3] = {
-      {X86::SETEr, X86::SETNPr, X86::AND8rr},
-      {X86::SETNEr, X86::SETPr, X86::OR8rr}};
+      {X86::COND_E, X86::COND_NP, X86::AND8rr},
+      {X86::COND_NE, X86::COND_P, X86::OR8rr}};
   const uint16_t *SETFOpc = nullptr;
   switch (Predicate) {
   default:
@@ -1032,9 +1046,9 @@ bool X86InstructionSelector::selectFCmp(MachineInstr &I,
     unsigned FlagReg1 = MRI.createVirtualRegister(&X86::GR8RegClass);
     unsigned FlagReg2 = MRI.createVirtualRegister(&X86::GR8RegClass);
     MachineInstr &Set1 = *BuildMI(*I.getParent(), I, I.getDebugLoc(),
-                                  TII.get(SETFOpc[0]), FlagReg1);
+                                  TII.get(X86::SETCCr), FlagReg1).addImm(SETFOpc[0]);
     MachineInstr &Set2 = *BuildMI(*I.getParent(), I, I.getDebugLoc(),
-                                  TII.get(SETFOpc[1]), FlagReg2);
+                                  TII.get(X86::SETCCr), FlagReg2).addImm(SETFOpc[1]);
     MachineInstr &Set3 = *BuildMI(*I.getParent(), I, I.getDebugLoc(),
                                   TII.get(SETFOpc[2]), ResultReg)
                               .addReg(FlagReg1)
@@ -1052,7 +1066,6 @@ bool X86InstructionSelector::selectFCmp(MachineInstr &I,
   bool SwapArgs;
   std::tie(CC, SwapArgs) = X86::getX86ConditionCode(Predicate);
   assert(CC <= X86::LAST_VALID_COND && "Unexpected condition code.");
-  unsigned Opc = X86::getSETFromCond(CC);
 
   if (SwapArgs)
     std::swap(LhsReg, RhsReg);
@@ -1064,7 +1077,7 @@ bool X86InstructionSelector::selectFCmp(MachineInstr &I,
            .addReg(RhsReg);
 
   MachineInstr &Set =
-      *BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(Opc), ResultReg);
+      *BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(X86::SETCCr), ResultReg).addImm(CC);
   constrainSelectedInstRegOperands(CmpInst, TII, TRI, RBI);
   constrainSelectedInstRegOperands(Set, TII, TRI, RBI);
   I.eraseFromParent();
@@ -1409,8 +1422,8 @@ bool X86InstructionSelector::selectCondBranch(MachineInstr &I,
       *BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(X86::TEST8ri))
            .addReg(CondReg)
            .addImm(1);
-  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(X86::JNE_1))
-      .addMBB(DestMBB);
+  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(X86::JCC_1))
+      .addMBB(DestMBB).addImm(X86::COND_NE);
 
   constrainSelectedInstRegOperands(TestInst, TII, TRI, RBI);
 
@@ -1530,15 +1543,14 @@ bool X86InstructionSelector::selectShift(MachineInstr &I,
 
   const static struct ShiftEntry {
     unsigned SizeInBits;
-    unsigned CReg;
     unsigned OpLSHR;
     unsigned OpASHR;
     unsigned OpSHL;
   } OpTable[] = {
-      {8, X86::CL, X86::SHR8rCL, X86::SAR8rCL, X86::SHL8rCL},      // i8
-      {16, X86::CX, X86::SHR16rCL, X86::SAR16rCL, X86::SHL16rCL},  // i16
-      {32, X86::ECX, X86::SHR32rCL, X86::SAR32rCL, X86::SHL32rCL}, // i32
-      {64, X86::RCX, X86::SHR64rCL, X86::SAR64rCL, X86::SHL64rCL}  // i64
+      {8, X86::SHR8rCL, X86::SAR8rCL, X86::SHL8rCL},     // i8
+      {16, X86::SHR16rCL, X86::SAR16rCL, X86::SHL16rCL}, // i16
+      {32, X86::SHR32rCL, X86::SAR32rCL, X86::SHL32rCL}, // i32
+      {64, X86::SHR64rCL, X86::SAR64rCL, X86::SHL64rCL}  // i64
   };
 
   if (DstRB.getID() != X86::GPRRegBankID)
@@ -1551,7 +1563,6 @@ bool X86InstructionSelector::selectShift(MachineInstr &I,
   if (ShiftEntryIt == std::end(OpTable))
     return false;
 
-  unsigned CReg = ShiftEntryIt->CReg;
   unsigned Opcode = 0;
   switch (I.getOpcode()) {
   case TargetOpcode::G_SHL:
@@ -1570,16 +1581,11 @@ bool X86InstructionSelector::selectShift(MachineInstr &I,
   unsigned Op0Reg = I.getOperand(1).getReg();
   unsigned Op1Reg = I.getOperand(2).getReg();
 
-  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(TargetOpcode::COPY),
-          ShiftEntryIt->CReg)
-      .addReg(Op1Reg);
+  assert(MRI.getType(Op1Reg).getSizeInBits() == 8);
 
-  // The shift instruction uses X86::CL. If we defined a super-register
-  // of X86::CL, emit a subreg KILL to precisely describe what we're doing here.
-  if (CReg != X86::CL)
-    BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(TargetOpcode::KILL),
-            X86::CL)
-        .addReg(CReg, RegState::Kill);
+  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(TargetOpcode::COPY),
+          X86::CL)
+    .addReg(Op1Reg);
 
   MachineInstr &ShiftInst =
       *BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(Opcode), DstReg)
@@ -1608,8 +1614,8 @@ bool X86InstructionSelector::selectDivRem(MachineInstr &I,
   assert(RegTy == MRI.getType(Op1Reg) && RegTy == MRI.getType(Op2Reg) &&
          "Arguments and return value types must match");
 
-  const RegisterBank &RegRB = *RBI.getRegBank(DstReg, MRI, TRI);
-  if (RegRB.getID() != X86::GPRRegBankID)
+  const RegisterBank *RegRB = RBI.getRegBank(DstReg, MRI, TRI);
+  if (!RegRB || RegRB->getID() != X86::GPRRegBankID)
     return false;
 
   const static unsigned NumTypes = 4; // i8, i16, i32, i64
@@ -1707,7 +1713,7 @@ bool X86InstructionSelector::selectDivRem(MachineInstr &I,
   const DivRemEntry &TypeEntry = *OpEntryIt;
   const DivRemEntry::DivRemResult &OpEntry = TypeEntry.ResultTable[OpIndex];
 
-  const TargetRegisterClass *RegRC = getRegClass(RegTy, RegRB);
+  const TargetRegisterClass *RegRC = getRegClass(RegTy, *RegRB);
   if (!RBI.constrainGenericRegister(Op1Reg, *RegRC, MRI) ||
       !RBI.constrainGenericRegister(Op2Reg, *RegRC, MRI) ||
       !RBI.constrainGenericRegister(DstReg, *RegRC, MRI)) {

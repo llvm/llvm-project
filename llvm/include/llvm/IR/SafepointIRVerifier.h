@@ -1,9 +1,8 @@
 //===- SafepointIRVerifier.h - Checks for GC relocation problems *- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -19,6 +18,8 @@
 #ifndef LLVM_IR_SAFEPOINT_IR_VERIFIER
 #define LLVM_IR_SAFEPOINT_IR_VERIFIER
 
+#include "llvm/IR/PassManager.h"
+
 namespace llvm {
 
 class Function;
@@ -30,6 +31,16 @@ void verifySafepointIR(Function &F);
 /// Create an instance of the safepoint verifier pass which can be added to
 /// a pass pipeline to check for relocation bugs.
 FunctionPass *createSafepointIRVerifierPass();
+
+/// Create an instance of the safepoint verifier pass which can be added to
+/// a pass pipeline to check for relocation bugs.
+class SafepointIRVerifierPass : public PassInfoMixin<SafepointIRVerifierPass> {
+
+public:
+  explicit SafepointIRVerifierPass() {}
+
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
 }
 
 #endif // LLVM_IR_SAFEPOINT_IR_VERIFIER

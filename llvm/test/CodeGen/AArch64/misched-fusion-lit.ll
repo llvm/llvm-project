@@ -3,6 +3,7 @@
 ; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=cortex-a57      | FileCheck %s --check-prefix=CHECK --check-prefix=CHECKFUSE
 ; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=exynos-m3       | FileCheck %s --check-prefix=CHECK --check-prefix=CHECKFUSE
 ; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=exynos-m4       | FileCheck %s --check-prefix=CHECK --check-prefix=CHECKFUSE
+; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=exynos-m5       | FileCheck %s --check-prefix=CHECK --check-prefix=CHECKFUSE
 
 @g = common local_unnamed_addr global i8* null, align 8
 
@@ -45,4 +46,19 @@ entry:
 ; CHECK: movk [[R]], {{#[0-9]+}}, lsl #32
 ; CHECKDONT-NEXT: add {{x[0-9]+}}, {{x[0-9]+}}, {{x[0-9]+}}
 ; CHECKFUSE-NEXT: movk [[R]], {{#[0-9]+}}, lsl #48
+}
+
+; Function Attrs: norecurse nounwind readnone
+define double @litf() {
+entry:
+  ret double 0x400921FB54442D18
+
+; CHECK-LABEL: litf:
+; CHECK-DONT:      adrp [[ADDR:x[0-9]+]], [[CSTLABEL:.LCP.*]]
+; CHECK-DONT-NEXT: ldr  {{d[0-9]+}}, {{[[]}}[[ADDR]], :lo12:[[CSTLABEL]]{{[]]}}
+; CHECK-FUSE:      mov  [[R:x[0-9]+]], #11544
+; CHECK-FUSE:      movk [[R]], #21572, lsl #16
+; CHECK-FUSE:      movk [[R]], #8699, lsl #32
+; CHECK-FUSE:      movk [[R]], #16393, lsl #48
+; CHECK-FUSE:      fmov {{d[0-9]+}}, [[R]]
 }

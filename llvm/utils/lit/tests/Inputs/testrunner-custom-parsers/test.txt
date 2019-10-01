@@ -9,5 +9,11 @@
 //
 // MY_CUSTOM: a b c
 //
+// MY_BOOL: a && (\
+// MY_BOOL: b)
+// MY_BOOL: d
+//
+// MY_BOOL_UNTERMINATED: a \
+//
 // END.
 // MY_LIST: five

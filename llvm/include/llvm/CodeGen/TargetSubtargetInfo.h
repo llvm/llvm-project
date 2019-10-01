@@ -1,9 +1,8 @@
 //===- llvm/CodeGen/TargetSubtargetInfo.h - Target Information --*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -43,6 +42,7 @@ class RegisterBankInfo;
 class SDep;
 class SelectionDAGTargetInfo;
 struct SubtargetFeatureKV;
+struct SubtargetSubTypeKV;
 struct SubtargetInfoKV;
 class SUnit;
 class TargetFrameLowering;
@@ -63,8 +63,7 @@ class TargetSubtargetInfo : public MCSubtargetInfo {
 protected: // Can only create subclasses...
   TargetSubtargetInfo(const Triple &TT, StringRef CPU, StringRef FS,
                       ArrayRef<SubtargetFeatureKV> PF,
-                      ArrayRef<SubtargetFeatureKV> PD,
-                      const SubtargetInfoKV *ProcSched,
+                      ArrayRef<SubtargetSubTypeKV> PD,
                       const MCWriteProcResEntry *WPR,
                       const MCWriteLatencyEntry *WL,
                       const MCReadAdvanceEntry *RA, const InstrStage *IS,
@@ -190,12 +189,12 @@ public:
   /// TargetLowering preference). It does not yet disable the postRA scheduler.
   virtual bool enableMachineScheduler() const;
 
-  /// Support printing of [latency:throughput] comment in output .S file.
-  virtual bool supportPrintSchedInfo() const { return false; }
-
   /// True if the machine scheduler should disable the TLI preference
   /// for preRA scheduling with the source level scheduler.
   virtual bool enableMachineSchedDefaultSched() const { return true; }
+
+  /// True if the subtarget should run MachinePipeliner
+  virtual bool enableMachinePipeliner() const { return true; };
 
   /// True if the subtarget should enable joining global copies.
   ///
@@ -250,6 +249,10 @@ public:
       std::vector<std::unique_ptr<ScheduleDAGMutation>> &Mutations) const {
   }
 
+  /// Default to DFA for resource management, return false when target will use
+  /// ProcResource in InstrSchedModel instead.
+  virtual bool useDFAforSMS() const { return true; }
+
   // For use with PostRAScheduling: get the minimum optimization level needed
   // to enable post-RA scheduling.
   virtual CodeGenOpt::Level getOptLevelToEnablePostRAScheduler() const {
@@ -285,10 +288,6 @@ public:
   /// Please use MachineRegisterInfo::subRegLivenessEnabled() instead where
   /// possible.
   virtual bool enableSubRegLiveness() const { return false; }
-
-  /// Returns string representation of scheduler comment
-  std::string getSchedInfoStr(const MachineInstr &MI) const;
-  std::string getSchedInfoStr(MCInst const &MCI) const override;
 
   /// This is called after a .mir file was loaded.
   virtual void mirFileLoaded(MachineFunction &MF) const;

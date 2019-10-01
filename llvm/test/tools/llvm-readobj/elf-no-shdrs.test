@@ -1,0 +1,33 @@
+# Show that llvm-readobj can handle ELF files where the section header table has
+# been stripped, both for GNU and LLVM style output.
+
+# RUN: yaml2obj %s -o %t.raw
+# RUN: llvm-objcopy --strip-sections %t.raw %t.o
+# RUN: llvm-readobj --file-headers --section-headers --symbols %t.o | FileCheck %s --check-prefix=LLVM
+# RUN: llvm-readelf --file-headers --section-headers --symbols %t.o | FileCheck %s --check-prefix=GNU --allow-empty
+
+# LLVM:      SectionHeaderCount:      0
+# LLVM:      StringTableSectionIndex: 0
+# LLVM:      Sections [
+# LLVM-NEXT: ]
+# LLVM-NEXT: Symbols [
+# LLVM-NEXT: ]
+
+# GNU:     Number of section headers:         0
+# GNU:     Section header string table index: 0
+# GNU:     There are 0 section headers
+# GNU-NOT: Symbol table '{{.*}}' contains {{.*}} entries
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+Symbols:
+  - Name:    foobar
+    Section: .text
+    Binding: STB_GLOBAL

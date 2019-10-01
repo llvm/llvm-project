@@ -1,9 +1,8 @@
 //===---- MachineCombiner.cpp - Instcombining on SSA form machine code ----===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -559,16 +558,15 @@ bool MachineCombiner::combineInstructions(MachineBasicBlock *MBB) {
         continue;
 
       LLVM_DEBUG(if (dump_intrs) {
-        dbgs() << "\tFor the Pattern (" << (int)P << ") these instructions could be removed\n";
-        for (auto const *InstrPtr : DelInstrs) {
-          dbgs() << "\t\t" << STI->getSchedInfoStr(*InstrPtr) << ": ";
-          InstrPtr->print(dbgs(), false, false, false, TII);
-        }
+        dbgs() << "\tFor the Pattern (" << (int)P
+               << ") these instructions could be removed\n";
+        for (auto const *InstrPtr : DelInstrs)
+          InstrPtr->print(dbgs(), /*IsStandalone*/false, /*SkipOpers*/false,
+                          /*SkipDebugLoc*/false, /*AddNewLine*/true, TII);
         dbgs() << "\tThese instructions could replace the removed ones\n";
-        for (auto const *InstrPtr : InsInstrs) {
-          dbgs() << "\t\t" << STI->getSchedInfoStr(*InstrPtr) << ": ";
-          InstrPtr->print(dbgs(), false, false, false, TII);
-        }
+        for (auto const *InstrPtr : InsInstrs)
+          InstrPtr->print(dbgs(), /*IsStandalone*/false, /*SkipOpers*/false,
+                          /*SkipDebugLoc*/false, /*AddNewLine*/true, TII);
       });
 
       bool SubstituteAlways = false;
@@ -641,7 +639,7 @@ bool MachineCombiner::runOnMachineFunction(MachineFunction &MF) {
   MLI = &getAnalysis<MachineLoopInfo>();
   Traces = &getAnalysis<MachineTraceMetrics>();
   MinInstr = nullptr;
-  OptSize = MF.getFunction().optForSize();
+  OptSize = MF.getFunction().hasOptSize();
 
   LLVM_DEBUG(dbgs() << getPassName() << ": " << MF.getName() << '\n');
   if (!TII->useMachineCombiner()) {

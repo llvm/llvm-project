@@ -1,0 +1,15 @@
+import("//llvm/utils/unittest/unittest.gni")
+
+unittest("ProfileDataTests") {
+  deps = [
+    "//llvm/lib/IR",
+    "//llvm/lib/ProfileData",
+    "//llvm/lib/ProfileData/Coverage",
+    "//llvm/lib/Testing/Support",
+  ]
+  sources = [
+    "CoverageMappingTest.cpp",
+    "InstrProfTest.cpp",
+    "SampleProfTest.cpp",
+  ]
+}

@@ -1,0 +1,32 @@
+# RUN: yaml2obj %s > %t.o
+# RUN: llvm-nm --debug-syms %t.o | FileCheck %s --implicit-check-not U
+# RUN: llvm-nm -a %t.o | FileCheck %s --implicit-check-not U
+
+!ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_ARM
+Sections:
+  - Name: section
+    Type: SHT_PROGBITS
+Symbols:
+  - Name:    ""
+    Type:    STT_SECTION
+    Section: section
+  - Name:    file_sym
+    Type:    STT_FILE
+    Index:   SHN_ABS
+  - Name:    $d
+    Section: section
+  - Name:    $t
+    Section: section
+  - Name:    $a
+    Section: section
+
+# CHECK:      $a
+# CHECK-NEXT: $d
+# CHECK-NEXT: $t
+# CHECK-NEXT: file_sym
+# CHECK-NEXT: section

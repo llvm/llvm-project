@@ -1,9 +1,8 @@
 //===----------- VectorUtils.cpp - Vectorizer utility functions -----------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -49,6 +48,12 @@ bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   case Intrinsic::cttz:
   case Intrinsic::fshl:
   case Intrinsic::fshr:
+  case Intrinsic::sadd_sat:
+  case Intrinsic::ssub_sat:
+  case Intrinsic::uadd_sat:
+  case Intrinsic::usub_sat:
+  case Intrinsic::smul_fix:
+  case Intrinsic::umul_fix:
   case Intrinsic::sqrt: // Begin floating-point.
   case Intrinsic::sin:
   case Intrinsic::cos:
@@ -74,10 +79,6 @@ bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   case Intrinsic::fmuladd:
   case Intrinsic::powi:
   case Intrinsic::canonicalize:
-  case Intrinsic::sadd_sat:
-  case Intrinsic::ssub_sat:
-  case Intrinsic::uadd_sat:
-  case Intrinsic::usub_sat:
     return true;
   default:
     return false;
@@ -93,6 +94,9 @@ bool llvm::hasVectorInstrinsicScalarOpd(Intrinsic::ID ID,
   case Intrinsic::cttz:
   case Intrinsic::powi:
     return (ScalarOpdIdx == 1);
+  case Intrinsic::smul_fix:
+  case Intrinsic::umul_fix:
+    return (ScalarOpdIdx == 2);
   default:
     return false;
   }
@@ -300,30 +304,60 @@ Value *llvm::findScalarElement(Value *V, unsigned EltNo) {
 
 /// Get splat value if the input is a splat vector or return nullptr.
 /// This function is not fully general. It checks only 2 cases:
-/// the input value is (1) a splat constants vector or (2) a sequence
-/// of instructions that broadcast a single value into a vector.
-///
+/// the input value is (1) a splat constant vector or (2) a sequence
+/// of instructions that broadcasts a scalar at element 0.
 const llvm::Value *llvm::getSplatValue(const Value *V) {
-
-  if (auto *C = dyn_cast<Constant>(V))
-    if (isa<VectorType>(V->getType()))
+  if (isa<VectorType>(V->getType()))
+    if (auto *C = dyn_cast<Constant>(V))
       return C->getSplatValue();
 
-  auto *ShuffleInst = dyn_cast<ShuffleVectorInst>(V);
-  if (!ShuffleInst)
-    return nullptr;
-  // All-zero (or undef) shuffle mask elements.
-  for (int MaskElt : ShuffleInst->getShuffleMask())
-    if (MaskElt != 0 && MaskElt != -1)
-      return nullptr;
-  // The first shuffle source is 'insertelement' with index 0.
-  auto *InsertEltInst =
-    dyn_cast<InsertElementInst>(ShuffleInst->getOperand(0));
-  if (!InsertEltInst || !isa<ConstantInt>(InsertEltInst->getOperand(2)) ||
-      !cast<ConstantInt>(InsertEltInst->getOperand(2))->isZero())
-    return nullptr;
+  // shuf (inselt ?, Splat, 0), ?, <0, undef, 0, ...>
+  Value *Splat;
+  if (match(V, m_ShuffleVector(m_InsertElement(m_Value(), m_Value(Splat),
+                                               m_ZeroInt()),
+                               m_Value(), m_ZeroInt())))
+    return Splat;
 
-  return InsertEltInst->getOperand(1);
+  return nullptr;
+}
+
+// This setting is based on its counterpart in value tracking, but it could be
+// adjusted if needed.
+const unsigned MaxDepth = 6;
+
+bool llvm::isSplatValue(const Value *V, unsigned Depth) {
+  assert(Depth <= MaxDepth && "Limit Search Depth");
+
+  if (isa<VectorType>(V->getType())) {
+    if (isa<UndefValue>(V))
+      return true;
+    // FIXME: Constant splat analysis does not allow undef elements.
+    if (auto *C = dyn_cast<Constant>(V))
+      return C->getSplatValue() != nullptr;
+  }
+
+  // FIXME: Constant splat analysis does not allow undef elements.
+  Constant *Mask;
+  if (match(V, m_ShuffleVector(m_Value(), m_Value(), m_Constant(Mask))))
+    return Mask->getSplatValue() != nullptr;
+
+  // The remaining tests are all recursive, so bail out if we hit the limit.
+  if (Depth++ == MaxDepth)
+    return false;
+
+  // If both operands of a binop are splats, the result is a splat.
+  Value *X, *Y, *Z;
+  if (match(V, m_BinOp(m_Value(X), m_Value(Y))))
+    return isSplatValue(X, Depth) && isSplatValue(Y, Depth);
+
+  // If all operands of a select are splats, the result is a splat.
+  if (match(V, m_Select(m_Value(X), m_Value(Y), m_Value(Z))))
+    return isSplatValue(X, Depth) && isSplatValue(Y, Depth) &&
+           isSplatValue(Z, Depth);
+
+  // TODO: Add support for unary ops (fneg), casts, intrinsics (overflow ops).
+
+  return false;
 }
 
 MapVector<Instruction *, uint64_t>
@@ -711,6 +745,52 @@ Value *llvm::concatenateVectors(IRBuilder<> &Builder, ArrayRef<Value *> Vecs) {
   return ResList[0];
 }
 
+bool llvm::maskIsAllZeroOrUndef(Value *Mask) {
+  auto *ConstMask = dyn_cast<Constant>(Mask);
+  if (!ConstMask)
+    return false;
+  if (ConstMask->isNullValue() || isa<UndefValue>(ConstMask))
+    return true;
+  for (unsigned I = 0, E = ConstMask->getType()->getVectorNumElements(); I != E;
+       ++I) {
+    if (auto *MaskElt = ConstMask->getAggregateElement(I))
+      if (MaskElt->isNullValue() || isa<UndefValue>(MaskElt))
+        continue;
+    return false;
+  }
+  return true;
+}
+
+
+bool llvm::maskIsAllOneOrUndef(Value *Mask) {
+  auto *ConstMask = dyn_cast<Constant>(Mask);
+  if (!ConstMask)
+    return false;
+  if (ConstMask->isAllOnesValue() || isa<UndefValue>(ConstMask))
+    return true;
+  for (unsigned I = 0, E = ConstMask->getType()->getVectorNumElements(); I != E;
+       ++I) {
+    if (auto *MaskElt = ConstMask->getAggregateElement(I))
+      if (MaskElt->isAllOnesValue() || isa<UndefValue>(MaskElt))
+        continue;
+    return false;
+  }
+  return true;
+}
+
+/// TODO: This is a lot like known bits, but for
+/// vectors.  Is there something we can common this with?
+APInt llvm::possiblyDemandedEltsInMask(Value *Mask) {
+
+  const unsigned VWidth = cast<VectorType>(Mask->getType())->getNumElements();
+  APInt DemandedElts = APInt::getAllOnesValue(VWidth);
+  if (auto *CV = dyn_cast<ConstantVector>(Mask))
+    for (unsigned i = 0; i < VWidth; i++)
+      if (CV->getAggregateElement(i)->isNullValue())
+        DemandedElts.clearBit(i);
+  return DemandedElts;
+}
+
 bool InterleavedAccessInfo::isStrided(int Stride) {
   unsigned Factor = std::abs(Stride);
   return Factor >= 2 && Factor <= MaxInterleaveGroupFactor;
@@ -992,7 +1072,7 @@ void InterleavedAccessInfo::analyzeInterleaving(
     // that all the pointers in the group don't wrap.
     // So we check only group member 0 (which is always guaranteed to exist),
     // and group member Factor - 1; If the latter doesn't exist we rely on
-    // peeling (if it is a non-reveresed accsess -- see Case 3).
+    // peeling (if it is a non-reversed accsess -- see Case 3).
     Value *FirstMemberPtr = getLoadStorePointerOperand(Group->getMember(0));
     if (!getPtrStride(PSE, FirstMemberPtr, TheLoop, Strides, /*Assume=*/false,
                       /*ShouldCheckWrap=*/true)) {

@@ -1,9 +1,8 @@
 //=- WebAssemblyFixupKinds.h - WebAssembly Specific Fixup Entries -*- C++ -*-=//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -15,9 +14,9 @@
 namespace llvm {
 namespace WebAssembly {
 enum Fixups {
-  fixup_code_sleb128_i32 = FirstTargetFixupKind, // 32-bit signed
-  fixup_code_sleb128_i64,                        // 64-bit signed
-  fixup_code_uleb128_i32,                        // 32-bit unsigned
+  fixup_sleb128_i32 = FirstTargetFixupKind, // 32-bit signed
+  fixup_sleb128_i64,                        // 64-bit signed
+  fixup_uleb128_i32,                        // 32-bit unsigned
 
   // Marker
   LastTargetFixupKind,

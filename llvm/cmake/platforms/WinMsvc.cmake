@@ -92,7 +92,9 @@
 # won't see the value of any arguments the user passed via -D.  Since these are
 # necessary to properly configure MSVC in both the top-level configuration as well as
 # all feature-test invocations, we set environment variables with the values so that
-# these environments get inherited by child invocations.
+# these environments get inherited by child invocations. We can switch to
+# CMAKE_TRY_COMPILE_PLATFORM_VARIABLES once our minimum supported CMake version
+# is 3.6 or greater.
 function(init_user_prop prop)
   if(${prop})
     set(ENV{_${prop}} "${${prop}}")

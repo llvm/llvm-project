@@ -1,9 +1,8 @@
 //===- ModuleSummaryAnalysis.cpp - Module summary index builder -----------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -70,6 +69,11 @@ cl::opt<FunctionSummary::ForceSummaryHotnessType, true> FSEC(
                clEnumValN(FunctionSummary::FSHT_AllNonCritical,
                           "all-non-critical", "All non-critical edges."),
                clEnumValN(FunctionSummary::FSHT_All, "all", "All edges.")));
+
+cl::opt<std::string> ModuleSummaryDotFile(
+    "module-summary-dot-file", cl::init(""), cl::Hidden,
+    cl::value_desc("filename"),
+    cl::desc("File to emit dot graph of new summary into."));
 
 // Walk through the operands of a given User via worklist iteration and populate
 // the set of GlobalValue references encountered. Invoked either on an
@@ -387,7 +391,8 @@ static void computeFunctionSummary(ModuleSummaryIndex &Index, const Module &M,
   bool NotEligibleForImport =
       NonRenamableLocal || HasInlineAsmMaybeReferencingInternal;
   GlobalValueSummary::GVFlags Flags(F.getLinkage(), NotEligibleForImport,
-                                    /* Live = */ false, F.isDSOLocal());
+                                    /* Live = */ false, F.isDSOLocal(),
+                                    F.hasLinkOnceODRLinkage() && F.hasGlobalUnnamedAddr());
   FunctionSummary::FFlags FunFlags{
       F.hasFnAttribute(Attribute::ReadNone),
       F.hasFnAttribute(Attribute::ReadOnly),
@@ -414,7 +419,8 @@ computeVariableSummary(ModuleSummaryIndex &Index, const GlobalVariable &V,
   bool HasBlockAddress = findRefEdges(Index, &V, RefEdges, Visited);
   bool NonRenamableLocal = isNonRenamableLocal(V);
   GlobalValueSummary::GVFlags Flags(V.getLinkage(), NonRenamableLocal,
-                                    /* Live = */ false, V.isDSOLocal());
+                                    /* Live = */ false, V.isDSOLocal(),
+                                    V.hasLinkOnceODRLinkage() && V.hasGlobalUnnamedAddr());
 
   // Don't mark variables we won't be able to internalize as read-only.
   GlobalVarSummary::GVarFlags VarFlags(
@@ -434,12 +440,15 @@ computeAliasSummary(ModuleSummaryIndex &Index, const GlobalAlias &A,
                     DenseSet<GlobalValue::GUID> &CantBePromoted) {
   bool NonRenamableLocal = isNonRenamableLocal(A);
   GlobalValueSummary::GVFlags Flags(A.getLinkage(), NonRenamableLocal,
-                                    /* Live = */ false, A.isDSOLocal());
+                                    /* Live = */ false, A.isDSOLocal(),
+                                    A.hasLinkOnceODRLinkage() && A.hasGlobalUnnamedAddr());
   auto AS = llvm::make_unique<AliasSummary>(Flags);
   auto *Aliasee = A.getBaseObject();
-  auto *AliaseeSummary = Index.getGlobalValueSummary(*Aliasee);
-  assert(AliaseeSummary && "Alias expects aliasee summary to be parsed");
-  AS->setAliasee(AliaseeSummary);
+  auto AliaseeVI = Index.getValueInfo(Aliasee->getGUID());
+  assert(AliaseeVI && "Alias expects aliasee summary to be available");
+  assert(AliaseeVI.getSummaryList().size() == 1 &&
+         "Expected a single entry per aliasee in per-module index");
+  AS->setAliasee(AliaseeVI, AliaseeVI.getSummaryList()[0].get());
   if (NonRenamableLocal)
     CantBePromoted.insert(A.getGUID());
   Index.addGlobalValueSummary(A, std::move(AS));
@@ -457,7 +466,11 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
     std::function<BlockFrequencyInfo *(const Function &F)> GetBFICallback,
     ProfileSummaryInfo *PSI) {
   assert(PSI);
-  ModuleSummaryIndex Index(/*HaveGVs=*/true);
+  bool EnableSplitLTOUnit = false;
+  if (auto *MD = mdconst::extract_or_null<ConstantInt>(
+          M.getModuleFlag("EnableSplitLTOUnit")))
+    EnableSplitLTOUnit = MD->getZExtValue();
+  ModuleSummaryIndex Index(/*HaveGVs=*/true, EnableSplitLTOUnit);
 
   // Identify the local values in the llvm.used and llvm.compiler.used sets,
   // which should not be exported as they would then require renaming and
@@ -503,7 +516,8 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
           GlobalValueSummary::GVFlags GVFlags(GlobalValue::InternalLinkage,
                                               /* NotEligibleToImport = */ true,
                                               /* Live = */ true,
-                                              /* Local */ GV->isDSOLocal());
+                                              /* Local */ GV->isDSOLocal(),
+                                              GV->hasLinkOnceODRLinkage() && GV->hasGlobalUnnamedAddr());
           CantBePromoted.insert(GV->getGUID());
           // Create the appropriate summary type.
           if (Function *F = dyn_cast<Function>(GV)) {
@@ -620,6 +634,15 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
       if (!AllCallsCanBeExternallyReferenced)
         Summary->setNotEligibleToImport();
     }
+  }
+
+  if (!ModuleSummaryDotFile.empty()) {
+    std::error_code EC;
+    raw_fd_ostream OSDot(ModuleSummaryDotFile, EC, sys::fs::OpenFlags::F_None);
+    if (EC)
+      report_fatal_error(Twine("Failed to open dot file ") +
+                         ModuleSummaryDotFile + ": " + EC.message() + "\n");
+    Index.exportToDot(OSDot);
   }
 
   return Index;

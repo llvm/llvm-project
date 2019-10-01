@@ -1,9 +1,8 @@
 //===- BinaryStreamWriter.h - Writes objects to a BinaryStream ---*- C++-*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -79,6 +78,20 @@ public:
     using U = typename std::underlying_type<T>::type;
     return writeInteger<U>(static_cast<U>(Num));
   }
+
+  /// Write the unsigned integer Value to the underlying stream using ULEB128
+  /// encoding.
+  ///
+  /// \returns a success error code if the data was successfully written,
+  /// otherwise returns an appropriate error code.
+  Error writeULEB128(uint64_t Value);
+
+  /// Write the unsigned integer Value to the underlying stream using ULEB128
+  /// encoding.
+  ///
+  /// \returns a success error code if the data was successfully written,
+  /// otherwise returns an appropriate error code.
+  Error writeSLEB128(int64_t Value);
 
   /// Write the string \p Str to the underlying stream followed by a null
   /// terminator.  On success, updates the offset so that subsequent writes

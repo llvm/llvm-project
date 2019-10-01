@@ -1,9 +1,8 @@
 //===- CodeGen/Analysis.h - CodeGen LLVM IR Analysis Utilities --*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -26,6 +25,7 @@
 
 namespace llvm {
 class GlobalValue;
+class LLT;
 class MachineBasicBlock;
 class MachineFunction;
 class TargetLoweringBase;
@@ -73,6 +73,25 @@ void ComputeValueVTs(const TargetLowering &TLI, const DataLayout &DL, Type *Ty,
                      SmallVectorImpl<EVT> &ValueVTs,
                      SmallVectorImpl<uint64_t> *Offsets = nullptr,
                      uint64_t StartingOffset = 0);
+
+/// Variant of ComputeValueVTs that also produces the memory VTs.
+void ComputeValueVTs(const TargetLowering &TLI, const DataLayout &DL, Type *Ty,
+                     SmallVectorImpl<EVT> &ValueVTs,
+                     SmallVectorImpl<EVT> *MemVTs,
+                     SmallVectorImpl<uint64_t> *Offsets = nullptr,
+                     uint64_t StartingOffset = 0);
+
+/// computeValueLLTs - Given an LLVM IR type, compute a sequence of
+/// LLTs that represent all the individual underlying
+/// non-aggregate types that comprise it.
+///
+/// If Offsets is non-null, it points to a vector to be filled in
+/// with the in-memory offsets of each of the individual values.
+///
+void computeValueLLTs(const DataLayout &DL, Type &Ty,
+                      SmallVectorImpl<LLT> &ValueTys,
+                      SmallVectorImpl<uint64_t> *Offsets = nullptr,
+                      uint64_t StartingOffset = 0);
 
 /// ExtractTypeInfo - Returns the type info, possibly bitcast, encoded in V.
 GlobalValue *ExtractTypeInfo(Value *V);

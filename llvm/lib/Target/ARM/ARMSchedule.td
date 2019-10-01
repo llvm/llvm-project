@@ -1,9 +1,8 @@
 //===-- ARMSchedule.td - ARM Scheduling Definitions --------*- tablegen -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //===----------------------------------------------------------------------===//
@@ -425,4 +424,4 @@ include "ARMScheduleA9.td"
 include "ARMScheduleSwift.td"
 include "ARMScheduleR52.td"
 include "ARMScheduleA57.td"
-include "ARMScheduleM3.td"
+include "ARMScheduleM4.td"

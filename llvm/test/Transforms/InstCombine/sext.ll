@@ -78,7 +78,7 @@ define i64 @test6(i32 %x) {
 define i64 @test7(i32 %x) {
 ; CHECK-LABEL: @test7(
 ; CHECK-NEXT:    [[T:%.*]] = and i32 %x, 511
-; CHECK-NEXT:    [[U:%.*]] = sub nsw i32 20000, [[T]]
+; CHECK-NEXT:    [[U:%.*]] = sub nuw nsw i32 20000, [[T]]
 ; CHECK-NEXT:    [[S1:%.*]] = zext i32 [[U]] to i64
 ; CHECK-NEXT:    ret i64 [[S1]]
 ;

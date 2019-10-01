@@ -1,9 +1,8 @@
 //===-- llvm/CodeGen/DebugHandlerBase.h -----------------------*- C++ -*--===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -130,7 +129,7 @@ public:
   const MCExpr *getFunctionLocalOffsetAfterInsn(const MachineInstr *MI);
 
   /// If this type is derived from a base type then return base type size.
-  static uint64_t getBaseTypeSize(const DITypeRef TyRef);
+  static uint64_t getBaseTypeSize(const DIType *Ty);
 };
 
 }

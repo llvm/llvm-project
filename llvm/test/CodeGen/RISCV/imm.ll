@@ -142,8 +142,8 @@ define i64 @imm64_2() nounwind {
 define i64 @imm64_3() nounwind {
 ; RV32I-LABEL: imm64_3:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi a1, zero, 1
 ; RV32I-NEXT:    mv a0, zero
+; RV32I-NEXT:    addi a1, zero, 1
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: imm64_3:
@@ -157,8 +157,8 @@ define i64 @imm64_3() nounwind {
 define i64 @imm64_4() nounwind {
 ; RV32I-LABEL: imm64_4:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lui a1, 524288
 ; RV32I-NEXT:    mv a0, zero
+; RV32I-NEXT:    lui a1, 524288
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: imm64_4:
@@ -172,8 +172,8 @@ define i64 @imm64_4() nounwind {
 define i64 @imm64_5() nounwind {
 ; RV32I-LABEL: imm64_5:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lui a1, 524288
 ; RV32I-NEXT:    mv a0, zero
+; RV32I-NEXT:    lui a1, 524288
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: imm64_5:
@@ -249,7 +249,7 @@ define i64 @imm64_9() nounwind {
 ; RV32I-LABEL: imm64_9:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi a0, zero, -1
-; RV32I-NEXT:    mv a1, a0
+; RV32I-NEXT:    addi  a1, zero, -1
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: imm64_9:

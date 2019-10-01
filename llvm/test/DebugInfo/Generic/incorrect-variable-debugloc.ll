@@ -52,7 +52,7 @@
 %struct.B = type { i32 }
 %struct.A = type { i8 }
 
-@llvm.global_ctors = appending global [1 x { i32, void ()* }] [{ i32, void ()* } { i32 1, void ()* @asan.module_ctor }]
+@llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 1, void ()* @asan.module_ctor, i8* null }]
 @__asan_option_detect_stack_use_after_return = external global i32
 @___asan_gen_ = private unnamed_addr constant [11 x i8] c"1 32 8 1 A\00", align 1
 @___asan_gen_1 = private unnamed_addr constant [13 x i8] c"1 32 1 3 tmp\00", align 1

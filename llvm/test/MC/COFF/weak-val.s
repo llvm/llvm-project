@@ -1,5 +1,5 @@
 // RUN: llvm-mc -filetype=obj -triple x86_64-pc-win32 %s -o %t.o
-// RUN: llvm-readobj -t %t.o | FileCheck %s
+// RUN: llvm-readobj --symbols %t.o | FileCheck %s
 
 // test that b and .weak.b have the correct values.
 
@@ -19,7 +19,7 @@ b:
 // CHECK-NEXT:   AuxSymbolCount: 1
 // CHECK-NEXT:   AuxWeakExternal {
 // CHECK-NEXT:     Linked: .weak.b.default (8)
-// CHECK-NEXT:     Search: Alias (0x3)
+// CHECK-NEXT:     Search: Library (0x2)
 // CHECK-NEXT:   }
 // CHECK-NEXT: }
 // CHECK-NEXT: Symbol {

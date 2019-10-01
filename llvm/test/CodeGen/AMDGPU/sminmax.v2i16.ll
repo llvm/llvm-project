@@ -14,9 +14,9 @@
 ; CIVI: s_max_i32
 ; CIVI: s_max_i32
 ; CIVI: s_add_i32
-; CIVI: s_add_i32
-; CIVI: s_and_b32
-; CIVI: s_or_b32
+; CIVI-DAG: s_add_i32
+; CIVI-DAG: s_and_b32
+; CIVI-DAG: s_or_b32
 define amdgpu_kernel void @s_abs_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> %val) #0 {
   %neg = sub <2 x i16> zeroinitializer, %val
   %cond = icmp sgt <2 x i16> %val, %neg
@@ -45,14 +45,14 @@ define amdgpu_kernel void @s_abs_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> %
 
 ; CI: buffer_load_dword v
 ; CI: v_lshrrev_b32_e32
-; CI: v_sub_i32_e32
-; CI: v_bfe_i32
-; CI: v_bfe_i32
-; CI: v_max_i32
-; CI: v_max_i32
-; CI: v_add_i32
-; CI: v_add_i32
-; CI: v_or_b32
+; CI-DAG: v_sub_i32_e32
+; CI-DAG: v_bfe_i32
+; CI-DAG: v_bfe_i32
+; CI-DAG: v_max_i32
+; CI-DAG: v_max_i32
+; CI-DAG: v_add_i32
+; CI-DAG: v_add_i32
+; CI-DAG: v_or_b32
 define amdgpu_kernel void @v_abs_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %src) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.in = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %src, i32 %tid

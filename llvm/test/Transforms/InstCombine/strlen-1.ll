@@ -128,7 +128,7 @@ define i32 @test_simplify10(i32 %x) {
 define i32 @test_simplify11(i32 %x) {
 ; CHECK-LABEL: @test_simplify11(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 %x, 7
-; CHECK-NEXT:    [[TMP1:%.*]] = sub nsw i32 9, [[AND]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub nuw nsw i32 9, [[AND]]
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %and = and i32 %x, 7

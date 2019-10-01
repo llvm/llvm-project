@@ -1,4 +1,4 @@
-; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -disable-block-placement -wasm-disable-explicit-locals -wasm-keep-registers | FileCheck %s
+; RUN: llc < %s -O0 -asm-verbose=false -verify-machineinstrs -disable-block-placement -wasm-disable-explicit-locals -wasm-keep-registers | FileCheck %s
 
 ; Test irreducible CFG handling.
 
@@ -16,24 +16,24 @@ bb:
   %tmp = icmp eq i32 %arg2, 0
   br i1 %tmp, label %bb6, label %bb3
 
-bb3:
+bb3:                                              ; preds = %bb
   %tmp4 = getelementptr double, double* %arg, i32 %arg3
   %tmp5 = load double, double* %tmp4, align 4
   br label %bb13
 
-bb6:
+bb6:                                              ; preds = %bb13, %bb
   %tmp7 = phi i32 [ %tmp18, %bb13 ], [ 0, %bb ]
   %tmp8 = icmp slt i32 %tmp7, %arg1
   br i1 %tmp8, label %bb9, label %bb19
 
-bb9:
+bb9:                                              ; preds = %bb6
   %tmp10 = getelementptr double, double* %arg, i32 %tmp7
   %tmp11 = load double, double* %tmp10, align 4
   %tmp12 = fmul double %tmp11, 2.300000e+00
   store double %tmp12, double* %tmp10, align 4
   br label %bb13
 
-bb13:
+bb13:                                             ; preds = %bb9, %bb3
   %tmp14 = phi double [ %tmp5, %bb3 ], [ %tmp12, %bb9 ]
   %tmp15 = phi i32 [ undef, %bb3 ], [ %tmp7, %bb9 ]
   %tmp16 = getelementptr double, double* %arg, i32 %tmp15
@@ -42,7 +42,7 @@ bb13:
   %tmp18 = add nsw i32 %tmp15, 1
   br label %bb6
 
-bb19:
+bb19:                                             ; preds = %bb6
   ret void
 }
 
@@ -57,30 +57,30 @@ bb:
   %tmp = icmp eq i32 %arg2, 0
   br i1 %tmp, label %bb6, label %bb3
 
-bb3:
+bb3:                                              ; preds = %bb
   %tmp4 = getelementptr double, double* %arg, i32 %arg3
   %tmp5 = load double, double* %tmp4, align 4
   br label %bb13
 
-bb6:
+bb6:                                              ; preds = %bb13, %bb
   %tmp7 = phi i32 [ %tmp18, %bb13 ], [ 0, %bb ]
   %tmp8 = icmp slt i32 %tmp7, %arg1
   br i1 %tmp8, label %bb9, label %bb19
 
-bb9:
+bb9:                                              ; preds = %bb6
   %tmp10 = getelementptr double, double* %arg, i32 %tmp7
   %tmp11 = load double, double* %tmp10, align 4
   %tmp12 = fmul double %tmp11, 2.300000e+00
   store double %tmp12, double* %tmp10, align 4
   br label %bb10
 
-bb10:
+bb10:                                             ; preds = %bb10, %bb9
   %p = phi i32 [ 0, %bb9 ], [ %pn, %bb10 ]
   %pn = add i32 %p, 1
   %c = icmp slt i32 %pn, 256
   br i1 %c, label %bb10, label %bb13
 
-bb13:
+bb13:                                             ; preds = %bb10, %bb3
   %tmp14 = phi double [ %tmp5, %bb3 ], [ %tmp12, %bb10 ]
   %tmp15 = phi i32 [ undef, %bb3 ], [ %tmp7, %bb10 ]
   %tmp16 = getelementptr double, double* %arg, i32 %tmp15
@@ -89,31 +89,37 @@ bb13:
   %tmp18 = add nsw i32 %tmp15, 1
   br label %bb6
 
-bb19:
+bb19:                                             ; preds = %bb6
   ret void
 }
 
-; A simple loop 2 blocks that are both entries.
+; A simple loop 2 blocks that are both entries: A1 and A2.
+; Even though A1 and A2 both have 3 predecessors (A0, A1, and A2), not 6 but
+; only 4 new routing blocks to the dispatch block should be generated.
 
 ; CHECK-LABEL: test2:
 ; CHECK: br_if
 ; CHECK: i32.const $[[REG:[^,]+]]=
+; CHECK: i32.const $[[REG]]=
 ; CHECK: br_table  $[[REG]],
-define internal i32 @test2(i32) noinline {
+; CHECK: i32.const $[[REG]]=
+; CHECK: i32.const $[[REG]]=
+; CHECK-NOT: i32.const $[[REG]]=
+define i32 @test2(i32) {
 entry:
   br label %A0
 
-A0:
+A0:                                               ; preds = %entry
   %a0a = tail call i32 @test2(i32 1)
   %a0b = icmp eq i32 %a0a, 0
   br i1 %a0b, label %A1, label %A2
 
-A1:
+A1:                                               ; preds = %A2, %A1, %A0
   %a1a = tail call i32 @test2(i32 2)
   %a1b = icmp eq i32 %a1a, 0
   br i1 %a1b, label %A1, label %A2
 
-A2:
+A2:                                               ; preds = %A2, %A1, %A0
   %a2a = tail call i32 @test2(i32 3)
   %a2b = icmp eq i32 %a2a, 0
   br i1 %a2b, label %A1, label %A2
@@ -217,3 +223,104 @@ return:                                           ; preds = %entry
   ret void
 }
 
+; A more complx case of irreducible control flow, two interacting loops.
+; CHECK: ps_hints_apply
+; CHECK: br_table
+define void @ps_hints_apply() {
+entry:
+  br label %psh
+
+psh:                                              ; preds = %entry
+  br i1 undef, label %for.cond, label %for.body
+
+for.body:                                         ; preds = %psh
+  br label %do.body
+
+do.body:                                          ; preds = %do.cond, %for.body
+  %cmp118 = icmp eq i32* undef, undef
+  br i1 %cmp118, label %Skip, label %do.cond
+
+do.cond:                                          ; preds = %do.body
+  br label %do.body
+
+for.cond:                                         ; preds = %Skip, %psh
+  br label %for.body39
+
+for.body39:                                       ; preds = %for.cond
+  br i1 undef, label %Skip, label %do.body45
+
+do.body45:                                        ; preds = %for.body39
+  unreachable
+
+Skip:                                             ; preds = %for.body39, %do.body
+  br label %for.cond
+}
+
+; A simple sequence of loops with blocks in between, that should not be
+; misinterpreted as irreducible control flow.
+; CHECK: fannkuch_worker
+; CHECK-NOT: br_table
+define i32 @fannkuch_worker(i8* %_arg) {
+for.cond:
+  br label %do.body
+
+do.body:                                          ; preds = %do.cond, %for.cond
+  br label %for.cond1
+
+for.cond1:                                        ; preds = %for.cond1, %do.body
+  br i1 true, label %for.cond1, label %for.end
+
+for.end:                                          ; preds = %for.cond1
+  br label %do.cond
+
+do.cond:                                          ; preds = %for.end
+  br i1 true, label %do.body, label %do.end
+
+do.end:                                           ; preds = %do.cond
+  br label %for.cond2
+
+for.cond2:                                        ; preds = %for.end6, %do.end
+  br label %for.cond3
+
+for.cond3:                                        ; preds = %for.cond3, %for.cond2
+  br i1 true, label %for.cond3, label %for.end6
+
+for.end6:                                         ; preds = %for.cond3
+  br label %for.cond2
+
+return:                                           ; No predecessors!
+  ret i32 1
+}
+
+; Test an interesting pattern of nested irreducibility.
+
+; CHECK: func_2:
+; CHECK: br_table
+define void @func_2() {
+entry:
+  br i1 undef, label %lbl_937, label %if.else787
+
+lbl_937:                                          ; preds = %for.body978, %entry
+  br label %if.end965
+
+if.else787:                                       ; preds = %entry
+  br label %if.end965
+
+if.end965:                                        ; preds = %if.else787, %lbl_937
+  br label %for.cond967
+
+for.cond967:                                      ; preds = %for.end1035, %if.end965
+  br label %for.cond975
+
+for.cond975:                                      ; preds = %if.end984, %for.cond967
+  br i1 undef, label %for.body978, label %for.end1035
+
+for.body978:                                      ; preds = %for.cond975
+  br i1 undef, label %lbl_937, label %if.end984
+
+if.end984:                                        ; preds = %for.body978
+  br label %for.cond975
+
+for.end1035:                                      ; preds = %for.cond975
+  br label %for.cond967
+}

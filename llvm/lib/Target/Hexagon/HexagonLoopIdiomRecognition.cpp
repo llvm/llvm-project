@@ -1,9 +1,8 @@
 //===- HexagonLoopIdiomRecognition.cpp ------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -1001,6 +1000,7 @@ bool PolynomialMultiplyRecognize::isPromotableTo(Value *Val,
 void PolynomialMultiplyRecognize::promoteTo(Instruction *In,
       IntegerType *DestTy, BasicBlock *LoopB) {
   Type *OrigTy = In->getType();
+  assert(!OrigTy->isVoidTy() && "Invalid instruction to promote");
 
   // Leave boolean values alone.
   if (!In->getType()->isIntegerTy(1))
@@ -1081,7 +1081,8 @@ bool PolynomialMultiplyRecognize::promoteTypes(BasicBlock *LoopB,
   std::transform(LoopB->begin(), LoopB->end(), std::back_inserter(LoopIns),
                  [](Instruction &In) { return &In; });
   for (Instruction *In : LoopIns)
-    promoteTo(In, DestTy, LoopB);
+    if (!In->isTerminator())
+      promoteTo(In, DestTy, LoopB);
 
   // Fix up the PHI nodes in the exit block.
   Instruction *EndI = ExitB->getFirstNonPHI();
@@ -1522,7 +1523,7 @@ Value *PolynomialMultiplyRecognize::generate(BasicBlock::iterator At,
       ParsedValues &PV) {
   IRBuilder<> B(&*At);
   Module *M = At->getParent()->getParent()->getParent();
-  Value *PMF = Intrinsic::getDeclaration(M, Intrinsic::hexagon_M4_pmpyw);
+  Function *PMF = Intrinsic::getDeclaration(M, Intrinsic::hexagon_M4_pmpyw);
 
   Value *P = PV.P, *Q = PV.Q, *P0 = P;
   unsigned IC = PV.IterCount;
@@ -2252,10 +2253,8 @@ CleanupAndExit:
       Type *Int32PtrTy = Type::getInt32PtrTy(Ctx);
       Type *VoidTy = Type::getVoidTy(Ctx);
       Module *M = Func->getParent();
-      Constant *CF = M->getOrInsertFunction(HexagonVolatileMemcpyName, VoidTy,
-                                            Int32PtrTy, Int32PtrTy, Int32Ty);
-      Function *Fn = cast<Function>(CF);
-      Fn->setLinkage(Function::ExternalLinkage);
+      FunctionCallee Fn = M->getOrInsertFunction(
+          HexagonVolatileMemcpyName, VoidTy, Int32PtrTy, Int32PtrTy, Int32Ty);
 
       const SCEV *OneS = SE->getConstant(Int32Ty, 1);
       const SCEV *BECount32 = SE->getTruncateOrZeroExtend(BECount, Int32Ty);

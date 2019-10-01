@@ -1,4 +1,4 @@
-; RUN: llvm-rc /FO %t %p/Inputs/memoryflags-stringtable.rc
+; RUN: llvm-rc /FO %t -- %p/Inputs/memoryflags-stringtable.rc
 ; RUN: llvm-readobj %t | FileCheck %s
 
 ; CHECK:      Resource type (int): 6

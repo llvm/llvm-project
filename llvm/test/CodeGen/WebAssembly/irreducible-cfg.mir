@@ -1,0 +1,84 @@
+# RUN: llc -mtriple=wasm32-unknown-unknown -run-pass wasm-fix-irreducible-control-flow %s -o - | FileCheck %s
+
+# This tests if we correctly create at most 2 routing blocks per entry block,
+# and also whether those routing blocks are generated in the correct place. If
+# one of the predecessor is the layout predecessor of an entry, a routing block
+# for the entry should be generated right after the layout predecessor.
+
+--- |
+  target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
+  target triple = "wasm32-unknown-unknown"
+
+  define void @test0() {
+  pred0:
+    ret void
+  pred1:
+    ret void
+  entry0:
+    ret void
+  entry1:
+    ret void
+  }
+...
+
+---
+# CHECK-LABEL: test0
+name: test0
+liveins:
+  - { reg: '$arguments' }
+body: |
+  bb.0.pred0:
+    successors: %bb.1, %bb.2
+    liveins: $arguments
+    %0:i32 = CONST_I32 100, implicit-def $arguments
+    BR_IF %bb.2, %0:i32, implicit-def $arguments
+  ; CHECK: bb.0.pred0:
+    ; CHECK: BR_IF %bb.2, %0, implicit-def $arguments
+
+  bb.1.pred1:
+  ; predecessors: %bb.1
+    successors: %bb.2, %bb.3
+    BR_IF %bb.3, %0:i32, implicit-def $arguments
+  ; CHECK: bb.1.pred1:
+    ; CHECK: BR_IF %bb.7, %0, implicit-def $arguments
+    ; This falls through to bb.2, so we don't need an additional BR here
+    ; CHECK-NOT: BR
+
+  ; Routing block for entry0, when predecessor is outside the loop
+  ; This routing block is shared between the two predecessors: pred0 and pred1.
+  ; CHECK: bb.2:
+    ; CHECK: %1:i32 = CONST_I32 0, implicit-def $arguments
+    ; CHECK: BR %bb.6, implicit-def $arguments
+
+  bb.2.entry0:
+  ; predecessors: %bb.0, %bb.1, %bb.1
+    successors: %bb.3
+    BR %bb.3, implicit-def $arguments
+  ; CHECK: bb.3.entry0:
+    ; CHECK: BR %bb.4, implicit-def $arguments
+
+  ; Routing block for entry1, when predecessor is inside the loop
+  ; CHECK: bb.4:
+    ; CHECK: %1:i32 = CONST_I32 1, implicit-def $arguments
+    ; CHECK: BR %bb.6, implicit-def $arguments
+
+  bb.3.entry1:
+  ; predecessors: %bb.1, %bb.2
+    successors: %bb.2
+    BR %bb.2, implicit-def $arguments
+  ; CHECK: bb.5.entry1:
+    ; CHECK: BR %bb.8, implicit-def $arguments
+
+  ; Dispatch block
+  ; CHECK: bb.6:
+    ; CHECK: BR_TABLE_I32 %1, %bb.3, %bb.5, %bb.5, implicit-def $arguments
+
+  ; Routing block for entry1, when predecessor is outside the loop
+  ; CHECK: bb.7:
+    ; CHECK: %1:i32 = CONST_I32 1, implicit-def $arguments
+    ; CHECK: BR %bb.6, implicit-def $arguments
+
+  ; Routing block for entry0, when predecessor is inside the loop
+  ; CHECK: bb.8:
+    ; CHECK: %1:i32 = CONST_I32 0, implicit-def $arguments
+    ; CHECK: BR %bb.6, implicit-def $arguments

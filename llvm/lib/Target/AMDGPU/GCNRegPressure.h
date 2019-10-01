@@ -1,9 +1,8 @@
 //===- GCNRegPressure.h -----------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -191,6 +190,50 @@ GCNRPTracker::LiveRegSet getLiveRegs(SlotIndex SI,
                                      const LiveIntervals &LIS,
                                      const MachineRegisterInfo &MRI);
 
+/// creates a map MachineInstr -> LiveRegSet
+/// R - range of iterators on instructions
+/// After - upon entry or exit of every instruction
+/// Note: there is no entry in the map for instructions with empty live reg set
+/// Complexity = O(NumVirtRegs * averageLiveRangeSegmentsPerReg * lg(R))
+template <typename Range>
+DenseMap<MachineInstr*, GCNRPTracker::LiveRegSet>
+getLiveRegMap(Range &&R, bool After, LiveIntervals &LIS) {
+  std::vector<SlotIndex> Indexes;
+  Indexes.reserve(std::distance(R.begin(), R.end()));
+  auto &SII = *LIS.getSlotIndexes();
+  for (MachineInstr *I : R) {
+    auto SI = SII.getInstructionIndex(*I);
+    Indexes.push_back(After ? SI.getDeadSlot() : SI.getBaseIndex());
+  }
+  std::sort(Indexes.begin(), Indexes.end());
+
+  auto &MRI = (*R.begin())->getParent()->getParent()->getRegInfo();
+  DenseMap<MachineInstr *, GCNRPTracker::LiveRegSet> LiveRegMap;
+  SmallVector<SlotIndex, 32> LiveIdxs, SRLiveIdxs;
+  for (unsigned I = 0, E = MRI.getNumVirtRegs(); I != E; ++I) {
+    auto Reg = TargetRegisterInfo::index2VirtReg(I);
+    if (!LIS.hasInterval(Reg))
+      continue;
+    auto &LI = LIS.getInterval(Reg);
+    LiveIdxs.clear();
+    if (!LI.findIndexesLiveAt(Indexes, std::back_inserter(LiveIdxs)))
+      continue;
+    if (!LI.hasSubRanges()) {
+      for (auto SI : LiveIdxs)
+        LiveRegMap[SII.getInstructionFromIndex(SI)][Reg] =
+          MRI.getMaxLaneMaskForVReg(Reg);
+    } else
+      for (const auto &S : LI.subranges()) {
+        // constrain search for subranges by indexes live at main range
+        SRLiveIdxs.clear();
+        S.findIndexesLiveAt(LiveIdxs, std::back_inserter(SRLiveIdxs));
+        for (auto SI : SRLiveIdxs)
+          LiveRegMap[SII.getInstructionFromIndex(SI)][Reg] |= S.LaneMask;
+      }
+  }
+  return LiveRegMap;
+}
+
 inline GCNRPTracker::LiveRegSet getLiveRegsAfter(const MachineInstr &MI,
                                                  const LiveIntervals &LIS) {
   return getLiveRegs(LIS.getInstructionIndex(MI).getDeadSlot(), LIS,
@@ -211,6 +254,9 @@ GCNRegPressure getRegPressure(const MachineRegisterInfo &MRI,
     Res.inc(RM.first, LaneBitmask::getNone(), RM.second, MRI);
   return Res;
 }
+
+bool isEqual(const GCNRPTracker::LiveRegSet &S1,
+             const GCNRPTracker::LiveRegSet &S2);
 
 void printLivesAt(SlotIndex SI,
                   const LiveIntervals &LIS,

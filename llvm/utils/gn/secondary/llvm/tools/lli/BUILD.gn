@@ -22,7 +22,7 @@ executable("lli") {
   sources = [
     "lli.cpp",
   ]
-  if (host_os == "linux") {
+  if (host_os != "mac" && host_os != "win") {
     # Corresponds to export_executable_symbols() in cmake.
     ldflags = [ "-rdynamic" ]
   }

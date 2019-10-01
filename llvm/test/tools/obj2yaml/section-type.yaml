@@ -1,0 +1,28 @@
+# RUN: yaml2obj %s -o %t
+# RUN: obj2yaml %t | FileCheck %s
+
+# CHECK:      Sections:
+# CHECK-NEXT:   - Name: known_type
+# CHECK-NEXT:     Type: SHT_PROGBITS
+# CHECK:        - Name: unknown_type
+# CHECK-NEXT:     Type: 0x0000ABCD
+# CHECK:        - Name: machine_specific
+# CHECK-NEXT:     Type: SHT_X86_64_UNWIND
+# CHECK:        - Name: unknown_machine_specific
+# CHECK-NEXT:     Type: 0x70000000
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:  known_type
+    Type:  SHT_PROGBITS
+  - Name:  unknown_type
+    Type:  0xabcd
+  - Name:  machine_specific
+    Type:  SHT_X86_64_UNWIND
+  - Name:  unknown_machine_specific
+    Type:  0x70000000

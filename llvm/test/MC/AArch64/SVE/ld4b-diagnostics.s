@@ -54,10 +54,10 @@ ld4b { z0.b, z1.b, z2.b, z3.b }, p0/z, [x0, w0, uxtw]
 
 
 // --------------------------------------------------------------------------//
-// error: restricted predicate has range [0, 7].
+// error: invalid restricted predicate register, expected p0..p7 (without element suffix)
 
 ld4b {z2.b, z3.b, z4.b, z5.b}, p8/z, [x15, #10, MUL VL]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: restricted predicate has range [0, 7].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid restricted predicate register, expected p0..p7 (without element suffix)
 // CHECK-NEXT: ld4b {z2.b, z3.b, z4.b, z5.b}, p8/z, [x15, #10, MUL VL]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

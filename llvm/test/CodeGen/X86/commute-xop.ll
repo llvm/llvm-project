@@ -74,12 +74,12 @@ define <4 x i32> @commute_fold_vpcomud(<4 x i32>* %a0, <4 x i32> %a1) {
 ; X32-LABEL: commute_fold_vpcomud:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    vpcomequd (%eax), %xmm0, %xmm0
+; X32-NEXT:    vpcomeqd (%eax), %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: commute_fold_vpcomud:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpcomequd (%rdi), %xmm0, %xmm0
+; X64-NEXT:    vpcomeqd (%rdi), %xmm0, %xmm0
 ; X64-NEXT:    retq
   %1 = load <4 x i32>, <4 x i32>* %a0
   %2 = call <4 x i32> @llvm.x86.xop.vpcomud(<4 x i32> %1, <4 x i32> %a1, i8 4) ; vpcomequd
@@ -91,12 +91,12 @@ define <2 x i64> @commute_fold_vpcomuq(<2 x i64>* %a0, <2 x i64> %a1) {
 ; X32-LABEL: commute_fold_vpcomuq:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    vpcomnequq (%eax), %xmm0, %xmm0
+; X32-NEXT:    vpcomneqq (%eax), %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: commute_fold_vpcomuq:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpcomnequq (%rdi), %xmm0, %xmm0
+; X64-NEXT:    vpcomneqq (%rdi), %xmm0, %xmm0
 ; X64-NEXT:    retq
   %1 = load <2 x i64>, <2 x i64>* %a0
   %2 = call <2 x i64> @llvm.x86.xop.vpcomuq(<2 x i64> %1, <2 x i64> %a1, i8 5) ; vpcomnequq
@@ -107,13 +107,12 @@ declare <2 x i64> @llvm.x86.xop.vpcomuq(<2 x i64>, <2 x i64>, i8) nounwind readn
 define <8 x i16> @commute_fold_vpcomuw(<8 x i16>* %a0, <8 x i16> %a1) {
 ; X32-LABEL: commute_fold_vpcomuw:
 ; X32:       # %bb.0:
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    vpcomfalseuw (%eax), %xmm0, %xmm0
+; X32-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: commute_fold_vpcomuw:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpcomfalseuw (%rdi), %xmm0, %xmm0
+; X64-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; X64-NEXT:    retq
   %1 = load <8 x i16>, <8 x i16>* %a0
   %2 = call <8 x i16> @llvm.x86.xop.vpcomuw(<8 x i16> %1, <8 x i16> %a1, i8 6) ; vpcomfalseuw
@@ -124,13 +123,12 @@ declare <8 x i16> @llvm.x86.xop.vpcomuw(<8 x i16>, <8 x i16>, i8) nounwind readn
 define <8 x i16> @commute_fold_vpcomw(<8 x i16>* %a0, <8 x i16> %a1) {
 ; X32-LABEL: commute_fold_vpcomw:
 ; X32:       # %bb.0:
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    vpcomtruew (%eax), %xmm0, %xmm0
+; X32-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: commute_fold_vpcomw:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpcomtruew (%rdi), %xmm0, %xmm0
+; X64-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
 ; X64-NEXT:    retq
   %1 = load <8 x i16>, <8 x i16>* %a0
   %2 = call <8 x i16> @llvm.x86.xop.vpcomw(<8 x i16> %1, <8 x i16> %a1, i8 7) ; vpcomtruew

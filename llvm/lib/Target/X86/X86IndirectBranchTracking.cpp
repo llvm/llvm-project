@@ -1,9 +1,8 @@
 //===---- X86IndirectBranchTracking.cpp - Enables CET IBT mechanism -------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -58,7 +57,7 @@ private:
   /// The function will not add it if already exists.
   /// It will add ENDBR32 or ENDBR64 opcode, depending on the target.
   /// \returns true if the ENDBR was added and false otherwise.
-  bool addENDBR(MachineBasicBlock &MBB) const;
+  bool addENDBR(MachineBasicBlock &MBB, MachineBasicBlock::iterator I) const;
 };
 
 } // end anonymous namespace
@@ -69,20 +68,31 @@ FunctionPass *llvm::createX86IndirectBranchTrackingPass() {
   return new X86IndirectBranchTrackingPass();
 }
 
-bool X86IndirectBranchTrackingPass::addENDBR(MachineBasicBlock &MBB) const {
+bool X86IndirectBranchTrackingPass::addENDBR(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator I) const {
   assert(TII && "Target instruction info was not initialized");
   assert((X86::ENDBR64 == EndbrOpcode || X86::ENDBR32 == EndbrOpcode) &&
          "Unexpected Endbr opcode");
 
-  auto MI = MBB.begin();
-  // If the MBB is empty or the first instruction is not ENDBR,
-  // add the ENDBR instruction to the beginning of the MBB.
-  if (MI == MBB.end() || EndbrOpcode != MI->getOpcode()) {
-    BuildMI(MBB, MI, MBB.findDebugLoc(MI), TII->get(EndbrOpcode));
-    NumEndBranchAdded++;
+  // If the MBB/I is empty or the current instruction is not ENDBR,
+  // insert ENDBR instruction to the location of I.
+  if (I == MBB.end() || I->getOpcode() != EndbrOpcode) {
+    BuildMI(MBB, I, MBB.findDebugLoc(I), TII->get(EndbrOpcode));
+    ++NumEndBranchAdded;
     return true;
   }
+  return false;
+}
 
+bool IsCallReturnTwice(llvm::MachineOperand &MOp) {
+  if (!MOp.isGlobal())
+    return false;
+  auto *CalleeFn = dyn_cast<Function>(MOp.getGlobal());
+  if (!CalleeFn)
+    return false;
+  AttributeList Attrs = CalleeFn->getAttributes();
+  if (Attrs.hasAttribute(AttributeList::FunctionIndex, Attribute::ReturnsTwice))
+    return true;
   return false;
 }
 
@@ -108,14 +118,21 @@ bool X86IndirectBranchTrackingPass::runOnMachineFunction(MachineFunction &MF) {
        !MF.getFunction().hasLocalLinkage()) &&
       !MF.getFunction().doesNoCfCheck()) {
     auto MBB = MF.begin();
-    Changed |= addENDBR(*MBB);
+    Changed |= addENDBR(*MBB, MBB->begin());
   }
 
-  for (auto &MBB : MF)
+  for (auto &MBB : MF) {
     // Find all basic blocks that their address was taken (for example
     // in the case of indirect jump) and add ENDBR instruction.
     if (MBB.hasAddressTaken())
-      Changed |= addENDBR(MBB);
+      Changed |= addENDBR(MBB, MBB.begin());
 
+    for (MachineBasicBlock::iterator I = MBB.begin(); I != MBB.end(); ++I) {
+      if (!I->isCall())
+        continue;
+      if (IsCallReturnTwice(I->getOperand(0)))
+        Changed |= addENDBR(MBB, std::next(I));
+    }
+  }
   return Changed;
 }

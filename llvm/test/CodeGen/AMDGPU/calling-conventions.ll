@@ -171,9 +171,9 @@ define amdgpu_ps <2 x half> @ps_mesa_inreg_v2f16(<2 x half> inreg %arg0) {
 
 ; SI: v_lshlrev_b32_e32 v1, 16, v1
 ; SI: v_add_i32_e32 v0, vcc, 1, v0
-; SI: v_add_i32_e32 v1, vcc, 0x10000, v1
 ; SI: v_and_b32
 ; SI: v_or_b32
+; SI: v_add_i32_e32 v0, vcc, 0x10000, v0
 define amdgpu_ps void @ps_mesa_v2i16(<2 x i16> %arg0) {
   %add = add <2 x i16> %arg0, <i16 1, i16 1>
   store <2 x i16> %add, <2 x i16> addrspace(1)* undef
@@ -181,23 +181,112 @@ define amdgpu_ps void @ps_mesa_v2i16(<2 x i16> %arg0) {
 }
 
 ; GCN-LABEL: {{^}}ps_mesa_inreg_v2i16:
-; VI: s_lshr_b32 s1, s0, 16
-; VI: s_add_i32 s1, s1, 1
+; VI: s_and_b32 s1, s0, 0xffff0000
 ; VI: s_add_i32 s0, s0, 1
 ; VI: s_and_b32 s0, s0, 0xffff
-; VI: s_lshl_b32 s1, s1, 16
-; VI: s_or_b32 s0, s0, s1
+; VI: s_or_b32 s0, s1, s0
+; VI: s_add_i32 s0, s0, 0x10000
 ; VI: v_mov_b32_e32 v0, s0
 
 ; SI: s_lshl_b32 s1, s1, 16
 ; SI: s_add_i32 s0, s0, 1
-; SI: s_add_i32 s1, s1, 0x10000
 ; SI: s_and_b32 s0, s0, 0xffff
-; SI: s_or_b32 s0, s0, s1
+; SI: s_or_b32 s0, s1, s0
+; SI: s_add_i32 s0, s0, 0x10000
 define amdgpu_ps void @ps_mesa_inreg_v2i16(<2 x i16> inreg %arg0) {
   %add = add <2 x i16> %arg0, <i16 1, i16 1>
   store <2 x i16> %add, <2 x i16> addrspace(1)* undef
   ret void
 }
+
+; GCN-LABEL: {{^}}ps_mesa_inreg_v3i32:
+; GCN-DAG: s_add_i32 s0, s0, 1
+; GCN-DAG: s_add_i32 s{{[0-9]*}}, s1, 2
+; GCN-DAG: s_add_i32 s{{[0-9]*}}, s2, 3
+define amdgpu_ps void @ps_mesa_inreg_v3i32(<3 x i32> inreg %arg0) {
+  %add = add <3 x i32> %arg0, <i32 1, i32 2, i32 3>
+  store <3 x i32> %add, <3 x i32> addrspace(1)* undef
+  ret void
+}
+
+; GCN-LABEL: {{^}}ps_mesa_inreg_v3f32:
+; GCN-DAG: v_add_f32{{.*}}, s0, 1.0
+; GCN-DAG: v_add_f32{{.*}}, s1, 2.0
+; GCN-DAG: v_add_f32{{.*}}, s2, 4.0
+define amdgpu_ps void @ps_mesa_inreg_v3f32(<3 x float> inreg %arg0) {
+  %add = fadd <3 x float> %arg0, <float 1.0, float 2.0, float 4.0>
+  store <3 x float> %add, <3 x float> addrspace(1)* undef
+  ret void
+}
+
+; GCN-LABEL: {{^}}ps_mesa_inreg_v5i32:
+; GCN-DAG: s_add_i32 s0, s0, 1
+; GCN-DAG: s_add_i32 s{{[0-9]*}}, s1, 2
+; GCN-DAG: s_add_i32 s{{[0-9]*}}, s2, 3
+; GCN-DAG: s_add_i32 s{{[0-9]*}}, s3, 4
+; GCN-DAG: s_add_i32 s{{[0-9]*}}, s4, 5
+define amdgpu_ps void @ps_mesa_inreg_v5i32(<5 x i32> inreg %arg0) {
+  %add = add <5 x i32> %arg0, <i32 1, i32 2, i32 3, i32 4, i32 5>
+  store <5 x i32> %add, <5 x i32> addrspace(1)* undef
+  ret void
+}
+
+; GCN-LABEL: {{^}}ps_mesa_inreg_v5f32:
+; GCN-DAG: v_add_f32{{.*}}, s0, 1.0
+; GCN-DAG: v_add_f32{{.*}}, s1, 2.0
+; GCN-DAG: v_add_f32{{.*}}, s2, 4.0
+; GCN-DAG: v_add_f32{{.*}}, s3, -1.0
+; GCN-DAG: v_add_f32{{.*}}, s4, 0.5
+define amdgpu_ps void @ps_mesa_inreg_v5f32(<5 x float> inreg %arg0) {
+  %add = fadd <5 x float> %arg0, <float 1.0, float 2.0, float 4.0, float -1.0, float 0.5>
+  store <5 x float> %add, <5 x float> addrspace(1)* undef
+  ret void
+}
+
+; GCN-LABEL: {{^}}ps_mesa_v3i32:
+; GCN-DAG: v_add_{{.*}}, 1, v0
+; GCN-DAG: v_add_{{.*}}, 2, v1
+; GCN-DAG: v_add_{{.*}}, 3, v2
+define amdgpu_ps void @ps_mesa_v3i32(<3 x i32> %arg0) {
+  %add = add <3 x i32> %arg0, <i32 1, i32 2, i32 3>
+  store <3 x i32> %add, <3 x i32> addrspace(1)* undef
+  ret void
+}
+
+; GCN-LABEL: {{^}}ps_mesa_v3f32:
+; GCN-DAG: v_add_{{.*}}, 1.0, v0
+; GCN-DAG: v_add_{{.*}}, 2.0, v1
+; GCN-DAG: v_add_{{.*}}, 4.0, v2
+define amdgpu_ps void @ps_mesa_v3f32(<3 x float> %arg0) {
+  %add = fadd <3 x float> %arg0, <float 1.0, float 2.0, float 4.0>
+  store <3 x float> %add, <3 x float> addrspace(1)* undef
+  ret void
+}
+
+; GCN-LABEL: {{^}}ps_mesa_v5i32:
+; GCN-DAG: v_add_{{.*}}, 1, v0
+; GCN-DAG: v_add_{{.*}}, 2, v1
+; GCN-DAG: v_add_{{.*}}, 3, v2
+; GCN-DAG: v_add_{{.*}}, 4, v3
+; GCN-DAG: v_add_{{.*}}, 5, v4
+define amdgpu_ps void @ps_mesa_v5i32(<5 x i32> %arg0) {
+  %add = add <5 x i32> %arg0, <i32 1, i32 2, i32 3, i32 4, i32 5>
+  store <5 x i32> %add, <5 x i32> addrspace(1)* undef
+  ret void
+}
+
+; GCN-LABEL: {{^}}ps_mesa_v5f32:
+; GCN-DAG: v_add_f32{{.*}}, 1.0, v0
+; GCN-DAG: v_add_f32{{.*}}, 2.0, v1
+; GCN-DAG: v_add_f32{{.*}}, 4.0, v2
+; GCN-DAG: v_add_f32{{.*}}, -1.0, v3
+; GCN-DAG: v_add_f32{{.*}}, 0.5, v4
+define amdgpu_ps void @ps_mesa_v5f32(<5 x float> %arg0) {
+  %add = fadd <5 x float> %arg0, <float 1.0, float 2.0, float 4.0, float -1.0, float 0.5>
+  store <5 x float> %add, <5 x float> addrspace(1)* undef
+  ret void
+}
+
+
 
 attributes #0 = { nounwind noinline }

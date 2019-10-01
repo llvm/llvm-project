@@ -266,7 +266,7 @@ from the same generated trace:
 ::
 
   $ llvm-xray convert -symbolize -instr_map=./bin/llc \
-    -output_format=trace_event xray-log.llc.5rqxkU \
+    -output-format=trace_event xray-log.llc.5rqxkU \
       | gzip > llc-trace.txt.gz
 
 From a Chrome browser, navigating to ``chrome:///tracing`` allows us to load

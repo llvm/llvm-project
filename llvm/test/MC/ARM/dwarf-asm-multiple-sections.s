@@ -2,9 +2,9 @@
 // RUN: llvm-dwarfdump -v %t | FileCheck -check-prefix DWARF -check-prefix DWARF45 %s
 // RUN: llvm-dwarfdump --debug-line %t | FileCheck -check-prefix DWARF-DL -check-prefix DWARF-DL-5 -DDWVER=5 -DDWFILE=0 %s
 // RUN: llvm-objdump -r %t | FileCheck -check-prefix RELOC -check-prefix RELOC5 %s
-// RUN: llvm-mc < %s -triple=armv7-linux-gnueabi -filetype=obj -o %t -g -fdebug-compilation-dir=/tmp
+// RUN: llvm-mc < %s -triple=armv7-linux-gnueabi -filetype=obj -o %t -g -dwarf-version 4 -fdebug-compilation-dir=/tmp
 // RUN: llvm-dwarfdump -v %t | FileCheck -check-prefix DWARF -check-prefix DWARF45 %s
-// RUN: llvm-dwarfdump --debug-line %t | FileCheck -check-prefix DWARF-DL -DDWVER=4 -DDWFILE=1 %s
+// RUN: llvm-dwarfdump --debug-line %t | FileCheck -check-prefix DWARF-DL -check-prefix DWARF-DL-4 -DDWVER=4 -DDWFILE=1 %s
 // RUN: llvm-objdump -r %t | FileCheck -check-prefix RELOC -check-prefix RELOC4 %s
 // RUN: llvm-mc < %s -triple=armv7-linux-gnueabi -filetype=obj -o %t -g -dwarf-version 3 -fdebug-compilation-dir=/tmp
 // RUN: llvm-dwarfdump -v %t | FileCheck -check-prefix DWARF -check-prefix DWARF3 %s
@@ -57,10 +57,14 @@ b:
 // DWARF-DL-5:    include_directories[  0] = "/tmp"
 // DWARF-DL:      file_names[  [[DWFILE]]]:
 // DWARF-DL:      name: "{{(<stdin>|-)}}"
-// DWARF-DL:      0x0000000000000000     17      0      1   0   0  is_stmt
-// DWARF-DL-NEXT: 0x0000000000000004     17      0      1   0   0  is_stmt end_sequence
-// DWARF-DL-NEXT: 0x0000000000000000     21      0      1   0   0  is_stmt
-// DWARF-DL-NEXT: 0x0000000000000004     21      0      1   0   0  is_stmt end_sequence
+// DWARF-DL-5:      0x0000000000000000     17      0      0   0   0  is_stmt
+// DWARF-DL-5-NEXT: 0x0000000000000004     17      0      0   0   0  is_stmt end_sequence
+// DWARF-DL-5-NEXT: 0x0000000000000000     21      0      0   0   0  is_stmt
+// DWARF-DL-5-NEXT: 0x0000000000000004     21      0      0   0   0  is_stmt end_sequence
+// DWARF-DL-4:      0x0000000000000000     17      0      1   0   0  is_stmt
+// DWARF-DL-4-NEXT: 0x0000000000000004     17      0      1   0   0  is_stmt end_sequence
+// DWARF-DL-4-NEXT: 0x0000000000000000     21      0      1   0   0  is_stmt
+// DWARF-DL-4-NEXT: 0x0000000000000004     21      0      1   0   0  is_stmt end_sequence
 
 
 // DWARF: .debug_ranges contents:
@@ -73,7 +77,7 @@ b:
 
 
 // Offsets are different in DWARF v5 due to different header layout.
-// RELOC: RELOCATION RECORDS FOR [.rel.debug_info]:
+// RELOC: RELOCATION RECORDS FOR [.debug_info]:
 // RELOC4-NEXT: 00000006 R_ARM_ABS32 .debug_abbrev
 // RELOC4-NEXT: 0000000c R_ARM_ABS32 .debug_line
 // RELOC4-NEXT: 00000010 R_ARM_ABS32 .debug_ranges
@@ -83,11 +87,11 @@ b:
 // RELOC-NEXT: R_ARM_ABS32 .text
 // RELOC-NEXT: R_ARM_ABS32 foo
 
-// RELOC: RELOCATION RECORDS FOR [.rel.debug_ranges]:
+// RELOC: RELOCATION RECORDS FOR [.debug_ranges]:
 // RELOC-NEXT: 00000004 R_ARM_ABS32 .text
 // RELOC-NEXT: 00000014 R_ARM_ABS32 foo
 
-// RELOC: RELOCATION RECORDS FOR [.rel.debug_aranges]:
+// RELOC: RELOCATION RECORDS FOR [.debug_aranges]:
 // RELOC-NEXT: 00000006 R_ARM_ABS32 .debug_info
 // RELOC-NEXT: 00000010 R_ARM_ABS32 .text
 // RELOC-NEXT: 00000018 R_ARM_ABS32 foo

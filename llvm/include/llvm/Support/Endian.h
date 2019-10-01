@@ -1,9 +1,8 @@
 //===- Endian.h - Utilities for IO with endian specific data ----*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -204,10 +203,14 @@ inline void writeAtBitAlignment(void *memory, value_type value,
 
 namespace detail {
 
-template<typename value_type,
-         endianness endian,
-         std::size_t alignment>
+template<typename ValueType,
+         endianness Endian,
+         std::size_t Alignment>
 struct packed_endian_specific_integral {
+  using value_type = ValueType;
+  static constexpr endianness endian = Endian;
+  static constexpr std::size_t alignment = Alignment;
+
   packed_endian_specific_integral() = default;
 
   explicit packed_endian_specific_integral(value_type val) { *this = val; }
@@ -334,6 +337,17 @@ using unaligned_int32_t =
     detail::packed_endian_specific_integral<int32_t, native, unaligned>;
 using unaligned_int64_t =
     detail::packed_endian_specific_integral<int64_t, native, unaligned>;
+
+template <typename T>
+using little_t = detail::packed_endian_specific_integral<T, little, unaligned>;
+template <typename T>
+using big_t = detail::packed_endian_specific_integral<T, big, unaligned>;
+
+template <typename T>
+using aligned_little_t =
+    detail::packed_endian_specific_integral<T, little, aligned>;
+template <typename T>
+using aligned_big_t = detail::packed_endian_specific_integral<T, big, aligned>;
 
 namespace endian {
 

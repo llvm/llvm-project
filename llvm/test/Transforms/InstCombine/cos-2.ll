@@ -15,6 +15,13 @@ define float @test_no_simplify1(double %d) {
   ret float %cos
 }
 
+define float @test_no_simplify2(double %d) {
+; CHECK-LABEL: @test_no_simplify2(
+  %neg = fneg double %d
+  %cos = call float @cos(double %neg)
+; CHECK: call float @cos(double %neg)
+  ret float %cos
+}
 
 define i8 @bogus_sqrt() {
   %fake_sqrt = call signext i8 (...) @sqrt()

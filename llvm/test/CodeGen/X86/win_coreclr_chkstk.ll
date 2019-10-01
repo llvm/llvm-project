@@ -21,7 +21,7 @@ entry:
 ; WIN_X64:# %bb.1:
 ; WIN_X64:	andq	$-4096, %rdx
 ; WIN_X64:.LBB0_2:
-; WIN_X64:	leaq	-4096(%rcx), %rcx
+; WIN_X64:	addq	$-4096, %rcx
 ; WIN_X64:	movb	$0, (%rcx)
 ; WIN_X64:	cmpq	%rcx, %rdx
 ; WIN_X64:	jne	.LBB0_2

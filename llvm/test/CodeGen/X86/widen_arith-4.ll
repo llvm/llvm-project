@@ -10,15 +10,19 @@ define void @update(<5 x i16>* %dst, <5 x i16>* %src, i32 %n) nounwind {
 ; SSE2-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
 ; SSE2-NEXT:    movq %rsi, -{{[0-9]+}}(%rsp)
 ; SSE2-NEXT:    movl %edx, -{{[0-9]+}}(%rsp)
-; SSE2-NEXT:    movq {{.*}}(%rip), %rax
+; SSE2-NEXT:    movabsq $4295032833, %rax # imm = 0x100010001
 ; SSE2-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
 ; SSE2-NEXT:    movw $0, -{{[0-9]+}}(%rsp)
 ; SSE2-NEXT:    movl $0, -{{[0-9]+}}(%rsp)
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm0 = <271,271,271,271,271,u,u,u>
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = <2,4,2,2,2,u,u,u>
-; SSE2-NEXT:    jmp .LBB0_1
 ; SSE2-NEXT:    .p2align 4, 0x90
-; SSE2-NEXT:  .LBB0_2: # %forbody
+; SSE2-NEXT:  .LBB0_1: # %forcond
+; SSE2-NEXT:    # =>This Inner Loop Header: Depth=1
+; SSE2-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
+; SSE2-NEXT:    cmpl -{{[0-9]+}}(%rsp), %eax
+; SSE2-NEXT:    jge .LBB0_3
+; SSE2-NEXT:  # %bb.2: # %forbody
 ; SSE2-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; SSE2-NEXT:    movslq -{{[0-9]+}}(%rsp), %rax
 ; SSE2-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
@@ -31,12 +35,8 @@ define void @update(<5 x i16>* %dst, <5 x i16>* %src, i32 %n) nounwind {
 ; SSE2-NEXT:    pextrw $4, %xmm2, %edx
 ; SSE2-NEXT:    movw %dx, 8(%rcx,%rax)
 ; SSE2-NEXT:    incl -{{[0-9]+}}(%rsp)
-; SSE2-NEXT:  .LBB0_1: # %forcond
-; SSE2-NEXT:    # =>This Inner Loop Header: Depth=1
-; SSE2-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
-; SSE2-NEXT:    cmpl -{{[0-9]+}}(%rsp), %eax
-; SSE2-NEXT:    jl .LBB0_2
-; SSE2-NEXT:  # %bb.3: # %afterfor
+; SSE2-NEXT:    jmp .LBB0_1
+; SSE2-NEXT:  .LBB0_3: # %afterfor
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: update:
@@ -44,14 +44,18 @@ define void @update(<5 x i16>* %dst, <5 x i16>* %src, i32 %n) nounwind {
 ; SSE41-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
 ; SSE41-NEXT:    movq %rsi, -{{[0-9]+}}(%rsp)
 ; SSE41-NEXT:    movl %edx, -{{[0-9]+}}(%rsp)
-; SSE41-NEXT:    movq {{.*}}(%rip), %rax
+; SSE41-NEXT:    movabsq $4295032833, %rax # imm = 0x100010001
 ; SSE41-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
 ; SSE41-NEXT:    movw $0, -{{[0-9]+}}(%rsp)
 ; SSE41-NEXT:    movl $0, -{{[0-9]+}}(%rsp)
 ; SSE41-NEXT:    movdqa {{.*#+}} xmm0 = <271,271,271,271,271,u,u,u>
-; SSE41-NEXT:    jmp .LBB0_1
 ; SSE41-NEXT:    .p2align 4, 0x90
-; SSE41-NEXT:  .LBB0_2: # %forbody
+; SSE41-NEXT:  .LBB0_1: # %forcond
+; SSE41-NEXT:    # =>This Inner Loop Header: Depth=1
+; SSE41-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
+; SSE41-NEXT:    cmpl -{{[0-9]+}}(%rsp), %eax
+; SSE41-NEXT:    jge .LBB0_3
+; SSE41-NEXT:  # %bb.2: # %forbody
 ; SSE41-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; SSE41-NEXT:    movslq -{{[0-9]+}}(%rsp), %rax
 ; SSE41-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
@@ -66,12 +70,8 @@ define void @update(<5 x i16>* %dst, <5 x i16>* %src, i32 %n) nounwind {
 ; SSE41-NEXT:    pextrw $4, %xmm1, 8(%rcx,%rax)
 ; SSE41-NEXT:    movq %xmm2, (%rcx,%rax)
 ; SSE41-NEXT:    incl -{{[0-9]+}}(%rsp)
-; SSE41-NEXT:  .LBB0_1: # %forcond
-; SSE41-NEXT:    # =>This Inner Loop Header: Depth=1
-; SSE41-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
-; SSE41-NEXT:    cmpl -{{[0-9]+}}(%rsp), %eax
-; SSE41-NEXT:    jl .LBB0_2
-; SSE41-NEXT:  # %bb.3: # %afterfor
+; SSE41-NEXT:    jmp .LBB0_1
+; SSE41-NEXT:  .LBB0_3: # %afterfor
 ; SSE41-NEXT:    retq
 entry:
 	%dst.addr = alloca <5 x i16>*

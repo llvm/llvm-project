@@ -2,7 +2,7 @@
 // RUN: llvm-objdump -s -j .rodata %t | FileCheck --check-prefix=OBJDUMP %s
 
 // big endian not supported
-// XFAIL: powerpc-, powerpc64-, s390x, mips-, mips64-, sparc
+// XFAIL: host-byteorder-big-endian
 
 // Check that SGPR init bug on gfx803 is corrected by the assembler, setting
 // GRANULATED_WAVEFRONT_SGPR_COUNT to 11.

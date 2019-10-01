@@ -1,4 +1,4 @@
-; RUN: llc < %s -prefetch-hints-file=%S/insert-prefetch-inline.afdo | FileCheck %s
+; RUN: llc < %s -x86-discriminate-memops -prefetch-hints-file=%S/insert-prefetch-inline.afdo | FileCheck %s
 ;
 ; Verify we can insert prefetch instructions in code belonging to inlined
 ; functions.

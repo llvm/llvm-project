@@ -1,9 +1,8 @@
 //===- CallPromotionUtils.cpp - Utilities for call promotion ----*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -367,8 +366,9 @@ Instruction *llvm::promoteCall(CallSite CS, Function *Callee,
                                CastInst **RetBitCast) {
   assert(!CS.getCalledFunction() && "Only indirect call sites can be promoted");
 
-  // Set the called function of the call site to be the given callee.
-  CS.setCalledFunction(Callee);
+  // Set the called function of the call site to be the given callee (but don't
+  // change the type).
+  cast<CallBase>(CS.getInstruction())->setCalledOperand(Callee);
 
   // Since the call site will no longer be direct, we must clear metadata that
   // is only appropriate for indirect calls. This includes !prof and !callees

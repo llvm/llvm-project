@@ -1,7 +1,7 @@
 # RUN: llc -o - %s -mtriple=aarch64-windows -start-after=prologepilog \
 # RUN:   -disable-branch-fold  -filetype=obj \
-# RUN: | llvm-readobj -unwind | FileCheck %s
-# Check that multiple epilgoues are correctly placed in .xdata.
+# RUN: | llvm-readobj --unwind | FileCheck %s
+# Check that identical multiple epilgoues are correctly shared in .xdata.
 
 # CHECK:        ExceptionData {
 # CHECK-NEXT:      FunctionLength: 164
@@ -9,7 +9,7 @@
 # CHECK-NEXT:      ExceptionData: No
 # CHECK-NEXT:      EpiloguePacked: No
 # CHECK-NEXT:      EpilogueScopes: 2
-# CHECK-NEXT:      ByteCodeLength: 48
+# CHECK-NEXT:      ByteCodeLength: 32
 # CHECK-NEXT:      Prologue [
 # CHECK-NEXT:        0xc80c              ; stp x19, x20, [sp, #96]
 # CHECK-NEXT:        0xc88a              ; stp x21, x22, [sp, #80]
@@ -37,7 +37,7 @@
 # CHECK-NEXT:        }
 # CHECK-NEXT:        EpilogueScope {
 # CHECK-NEXT:          StartOffset: 33
-# CHECK-NEXT:          EpilogueStartIndex: 30
+# CHECK-NEXT:          EpilogueStartIndex: 15
 # CHECK-NEXT:          Opcodes [
 # CHECK-NEXT:            0xc80c              ; ldp x19, x20, [sp, #96]
 # CHECK-NEXT:            0xc88a              ; ldp x21, x22, [sp, #80]
@@ -86,46 +86,46 @@ frameInfo:
 fixedStack:
 stack:
   - { id: 0, name: '', type: spill-slot, offset: -8, size: 8, alignment: 8,
-      stack-id: 0, callee-saved-register: '$x19', callee-saved-restored: true,
+      stack-id: default, callee-saved-register: '$x19', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
   - { id: 1, name: '', type: spill-slot, offset: -16, size: 8, alignment: 8,
-      stack-id: 0, callee-saved-register: '$x20', callee-saved-restored: true,
+      stack-id: default, callee-saved-register: '$x20', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
   - { id: 2, name: '', type: spill-slot, offset: -24, size: 8, alignment: 8,
-      stack-id: 0, callee-saved-register: '$x21', callee-saved-restored: true,
+      stack-id: default, callee-saved-register: '$x21', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
   - { id: 3, name: '', type: spill-slot, offset: -32, size: 8, alignment: 8,
-      stack-id: 0, callee-saved-register: '$x22', callee-saved-restored: true,
+      stack-id: default, callee-saved-register: '$x22', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
   - { id: 4, name: '', type: spill-slot, offset: -40, size: 8, alignment: 8,
-      stack-id: 0, callee-saved-register: '$x23', callee-saved-restored: true,
+      stack-id: default, callee-saved-register: '$x23', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
   - { id: 5, name: '', type: spill-slot, offset: -48, size: 8, alignment: 8,
-      stack-id: 0, callee-saved-register: '$x24', callee-saved-restored: true,
+      stack-id: default, callee-saved-register: '$x24', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
   - { id: 6, name: '', type: spill-slot, offset: -56, size: 8, alignment: 8,
-      stack-id: 0, callee-saved-register: '$x25', callee-saved-restored: true,
+      stack-id: default, callee-saved-register: '$x25', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
   - { id: 7, name: '', type: spill-slot, offset: -64, size: 8, alignment: 8,
-      stack-id: 0, callee-saved-register: '$x26', callee-saved-restored: true,
+      stack-id: default, callee-saved-register: '$x26', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
   - { id: 8, name: '', type: spill-slot, offset: -72, size: 8, alignment: 8,
-      stack-id: 0, callee-saved-register: '$x27', callee-saved-restored: true,
+      stack-id: default, callee-saved-register: '$x27', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
   - { id: 9, name: '', type: spill-slot, offset: -80, size: 8, alignment: 8,
-      stack-id: 0, callee-saved-register: '$x28', callee-saved-restored: true,
+      stack-id: default, callee-saved-register: '$x28', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
   - { id: 10, name: '', type: spill-slot, offset: -88, size: 8, alignment: 8,
-      stack-id: 0, callee-saved-register: '$d8', callee-saved-restored: true,
+      stack-id: default, callee-saved-register: '$d8', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
   - { id: 11, name: '', type: spill-slot, offset: -96, size: 8, alignment: 8,
-      stack-id: 0, callee-saved-register: '$d9', callee-saved-restored: true,
+      stack-id: default, callee-saved-register: '$d9', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
   - { id: 12, name: '', type: spill-slot, offset: -104, size: 8, alignment: 8,
-      stack-id: 0, callee-saved-register: '$d10', callee-saved-restored: true,
+      stack-id: default, callee-saved-register: '$d10', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
   - { id: 13, name: '', type: spill-slot, offset: -112, size: 8, alignment: 8,
-      stack-id: 0, callee-saved-register: '$d11', callee-saved-restored: true,
+      stack-id: default, callee-saved-register: '$d11', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
 constants:
 body:             |

@@ -28,6 +28,13 @@ module asm "classical GAS"
 @aliased4 = weak alias i32, i32* @var
 @aliased5 = weak_odr alias i32, i32* @var
 
+@ifunc = ifunc i32 (i32), i64 ()* @ifunc_resolver
+
+define i64 @ifunc_resolver() {
+entry:
+  ret i64 0
+}
+
 define { i64, %S* } @unpackrepack(%S %s) {
   %1 = extractvalue %S %s, 0
   %2 = extractvalue %S %s, 1

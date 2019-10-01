@@ -5,6 +5,18 @@
 ; RUN: llc -dwarf-version=5 -O0 %s -mtriple=x86_64-unknown-linux-gnu -filetype=obj -o %t
 ; RUN: llvm-dwarfdump -v %t | FileCheck --check-prefix=V5RNGLISTS %s
 
+; RUN: llc -O0 %s -mtriple=x86_64-unknown-linux-gnu -stop-after=livedebugvalues -o -| FileCheck --check-prefix=CHECK-MIR %s
+
+; LiveDebugValues should produce DBG_VALUEs for variable "b" in successive
+; blocks once we recognize that it is spilled.
+; CHECK-MIR: ![[BDIVAR:[0-9]+]] = !DILocalVariable(name: "b"
+; CHECK-MIR: DBG_VALUE $rsp, 0, ![[BDIVAR]], !DIExpression(DW_OP_constu, 32, DW_OP_minus)
+; CHECK-MIR-LABEL: bb.6.for.inc13:
+; CHECK-MIR: DBG_VALUE $rsp, 0, ![[BDIVAR]], !DIExpression(DW_OP_constu, 32, DW_OP_minus)
+; CHECK-MIR-LABEL: bb.7.for.inc16:
+; CHECK-MIR: DBG_VALUE $rsp, 0, ![[BDIVAR]], !DIExpression(DW_OP_constu, 32, DW_OP_minus)
+
+
 ; CHECK: .debug_info contents:
 ; CHECK: DW_TAG_compile_unit
 ; CHECK-NEXT: DW_AT_stmt_list
@@ -12,9 +24,14 @@
 ; CHECK-NEXT: DW_AT_GNU_dwo_name
 ; CHECK-NEXT: DW_AT_GNU_dwo_id
 ; CHECK-NEXT: DW_AT_GNU_ranges_base
+; CHECK-NEXT: DW_AT_low_pc
+; CHECK-NEXT: DW_AT_high_pc
 ; CHECK-NEXT: DW_AT_GNU_addr_base [DW_FORM_sec_offset]                   (0x00000000)
 
 ; CHECK: .debug_info.dwo contents:
+; CHECK:      DW_TAG_formal_parameter
+; CHECK-NEXT:   DW_AT_const_value [DW_FORM_sdata] (1)
+; CHECK-NEXT:   DW_AT_name {{.*}} "p")
 ; CHECK: DW_AT_location [DW_FORM_sec_offset]   ([[A:0x[0-9a-z]*]]
 ; CHECK: DW_AT_location [DW_FORM_sec_offset]   ([[E:0x[0-9a-z]*]]
 ; CHECK: DW_AT_location [DW_FORM_sec_offset]   ([[B:0x[0-9a-z]*]]
@@ -29,22 +46,26 @@
 
 ; CHECK:      [[A]]:
 ; CHECK-NEXT:   Addr idx 2 (w/ length 169): DW_OP_consts +0, DW_OP_stack_value
-; CHECK-NEXT:   Addr idx 3 (w/ length 25): DW_OP_reg0 RAX
+; CHECK-NEXT:   Addr idx 3 (w/ length 15): DW_OP_reg0 RAX
+; CHECK-NEXT:   Addr idx 4 (w/ length 18): DW_OP_breg7 RSP-8
 ; CHECK:      [[E]]:
-; CHECK-NEXT:   Addr idx 4 (w/ length 19): DW_OP_reg0 RAX
+; CHECK-NEXT:   Addr idx 5 (w/ length 9): DW_OP_reg0 RAX
+; CHECK-NEXT:   Addr idx 6 (w/ length 98): DW_OP_breg7 RSP-44
 ; CHECK:      [[B]]:
-; CHECK-NEXT:   Addr idx 5 (w/ length 17): DW_OP_reg0 RAX
+; CHECK-NEXT:   Addr idx 7 (w/ length 15): DW_OP_reg0 RAX
+; CHECK-NEXT:   Addr idx 8 (w/ length 66): DW_OP_breg7 RSP-32
 ; CHECK:      [[D]]:
-; CHECK-NEXT:   Addr idx 6 (w/ length 17): DW_OP_reg0 RAX
+; CHECK-NEXT:   Addr idx 9 (w/ length 15): DW_OP_reg0 RAX
+; CHECK-NEXT:   Addr idx 10 (w/ length 42): DW_OP_breg7 RSP-20
 
 ; Make sure we don't produce any relocations in any .dwo section (though in particular, debug_info.dwo)
 ; HDR-NOT: .rela.{{.*}}.dwo
 
 ; Make sure we have enough stuff in the debug_addr to cover the address indexes
-; (6 is the last index in debug_loc.dwo, making 7 entries of 8 bytes each, 7 * 8
-; == 56 base 10 == 38 base 16)
+; (10 is the last index in debug_loc.dwo, making 11 entries of 8 bytes each,
+; 11 * 8 == 88 base 10 == 58 base 16)
 
-; HDR: .debug_addr 00000038
+; HDR: .debug_addr 00000058
 ; HDR-NOT: .rela.{{.*}}.dwo
 
 ; Check for the existence of a DWARF v5-style range list table in the .debug_rnglists
@@ -132,19 +153,19 @@ for.body9:                                        ; preds = %for.body9, %for.con
   tail call void @llvm.dbg.value(metadata i32* @c, metadata !19, metadata !DIExpression()), !dbg !40
   %and = and i32 %and2, 1, !dbg !32
   %inc = add i32 %e.01, 1, !dbg !39
-  tail call void @llvm.dbg.value(metadata i32 %inc, metadata !18, metadata !DIExpression()), !dbg !39
+  tail call void @llvm.dbg.value(metadata i32 %inc, metadata !18, metadata !DIExpression()), !dbg !42
   %exitcond = icmp eq i32 %inc, 30, !dbg !39
   br i1 %exitcond, label %for.inc10, label %for.body9, !dbg !39
 
 for.inc10:                                        ; preds = %for.body9
   %inc11 = add nsw i32 %b.03, 1, !dbg !38
-  tail call void @llvm.dbg.value(metadata i32 %inc11, metadata !15, metadata !DIExpression()), !dbg !38
+  tail call void @llvm.dbg.value(metadata i32 %inc11, metadata !15, metadata !DIExpression()), !dbg !42
   %exitcond11 = icmp eq i32 %inc11, 30, !dbg !38
   br i1 %exitcond11, label %for.inc13, label %for.cond7.preheader, !dbg !38
 
 for.inc13:                                        ; preds = %for.inc10
   %inc14 = add i32 %d.06, 1, !dbg !37
-  tail call void @llvm.dbg.value(metadata i32 %inc14, metadata !16, metadata !DIExpression()), !dbg !37
+  tail call void @llvm.dbg.value(metadata i32 %inc14, metadata !16, metadata !DIExpression()), !dbg !42
   %exitcond12 = icmp eq i32 %inc14, 30, !dbg !37
   br i1 %exitcond12, label %for.inc16, label %for.cond4.preheader, !dbg !37
 

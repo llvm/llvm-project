@@ -1,9 +1,8 @@
 //===- FunctionAttrs.cpp - Pass which marks functions attributes ----------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -130,16 +129,15 @@ static MemoryAccessKind checkFunctionMemoryAccess(Function &F, bool ThisBody,
 
     // Some instructions can be ignored even if they read or write memory.
     // Detect these now, skipping to the next instruction if one is found.
-    CallSite CS(cast<Value>(I));
-    if (CS) {
+    if (auto *Call = dyn_cast<CallBase>(I)) {
       // Ignore calls to functions in the same SCC, as long as the call sites
       // don't have operand bundles.  Calls with operand bundles are allowed to
       // have memory effects not described by the memory effects of the call
       // target.
-      if (!CS.hasOperandBundles() && CS.getCalledFunction() &&
-          SCCNodes.count(CS.getCalledFunction()))
+      if (!Call->hasOperandBundles() && Call->getCalledFunction() &&
+          SCCNodes.count(Call->getCalledFunction()))
         continue;
-      FunctionModRefBehavior MRB = AAR.getModRefBehavior(CS);
+      FunctionModRefBehavior MRB = AAR.getModRefBehavior(Call);
       ModRefInfo MRI = createModRefInfo(MRB);
 
       // If the call doesn't access memory, we're done.
@@ -158,7 +156,7 @@ static MemoryAccessKind checkFunctionMemoryAccess(Function &F, bool ThisBody,
 
       // Check whether all pointer arguments point to local memory, and
       // ignore calls that only access local memory.
-      for (CallSite::arg_iterator CI = CS.arg_begin(), CE = CS.arg_end();
+      for (CallSite::arg_iterator CI = Call->arg_begin(), CE = Call->arg_end();
            CI != CE; ++CI) {
         Value *Arg = *CI;
         if (!Arg->getType()->isPtrOrPtrVectorTy())
@@ -1302,7 +1300,7 @@ static bool addNoRecurseAttrs(const SCCNodeSet &SCCNodes) {
     return false;
 
   Function *F = *SCCNodes.begin();
-  if (!F || F->isDeclaration() || F->doesNotRecurse())
+  if (!F || !F->hasExactDefinition() || F->doesNotRecurse())
     return false;
 
   // If all of the calls in F are identifiable and are to norecurse functions, F
@@ -1368,8 +1366,7 @@ PreservedAnalyses PostOrderFunctionAttrsPass::run(LazyCallGraph::SCC &C,
   bool HasUnknownCall = false;
   for (LazyCallGraph::Node &N : C) {
     Function &F = N.getFunction();
-    if (F.hasFnAttribute(Attribute::OptimizeNone) ||
-        F.hasFnAttribute(Attribute::Naked)) {
+    if (F.hasOptNone() || F.hasFnAttribute(Attribute::Naked)) {
       // Treat any function we're trying not to optimize as if it were an
       // indirect call and omit it from the node set used below.
       HasUnknownCall = true;
@@ -1442,8 +1439,7 @@ static bool runImpl(CallGraphSCC &SCC, AARGetterT AARGetter) {
   bool ExternalNode = false;
   for (CallGraphNode *I : SCC) {
     Function *F = I->getFunction();
-    if (!F || F->hasFnAttribute(Attribute::OptimizeNone) ||
-        F->hasFnAttribute(Attribute::Naked)) {
+    if (!F || F->hasOptNone() || F->hasFnAttribute(Attribute::Naked)) {
       // External node or function we're trying not to optimize - we both avoid
       // transform them and avoid leveraging information they provide.
       ExternalNode = true;

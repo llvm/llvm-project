@@ -10,6 +10,7 @@ static_library("LibDriver") {
   deps = [
     ":Options",
     "//llvm/lib/BinaryFormat",
+    "//llvm/lib/Bitcode/Reader",
     "//llvm/lib/Object",
     "//llvm/lib/Option",
     "//llvm/lib/Support",

@@ -1,9 +1,8 @@
 //===- TGLexer.cpp - Lexer for TableGen -----------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -37,6 +36,7 @@ struct {
   const char *Word;
 } PreprocessorDirs[] = {
   { tgtok::Ifdef, "ifdef" },
+  { tgtok::Ifndef, "ifndef" },
   { tgtok::Else, "else" },
   { tgtok::Endif, "endif" },
   { tgtok::Define, "define" }
@@ -545,6 +545,7 @@ tgtok::TokKind TGLexer::LexExclaim() {
     .Case("ge", tgtok::XGe)
     .Case("gt", tgtok::XGt)
     .Case("if", tgtok::XIf)
+    .Case("cond", tgtok::XCond)
     .Case("isa", tgtok::XIsA)
     .Case("head", tgtok::XHead)
     .Case("tail", tgtok::XTail)
@@ -552,6 +553,7 @@ tgtok::TokKind TGLexer::LexExclaim() {
     .Case("con", tgtok::XConcat)
     .Case("dag", tgtok::XDag)
     .Case("add", tgtok::XADD)
+    .Case("mul", tgtok::XMUL)
     .Case("and", tgtok::XAND)
     .Case("or", tgtok::XOR)
     .Case("shl", tgtok::XSHL)
@@ -563,6 +565,7 @@ tgtok::TokKind TGLexer::LexExclaim() {
     .Case("foldl", tgtok::XFoldl)
     .Case("foreach", tgtok::XForEach)
     .Case("listconcat", tgtok::XListConcat)
+    .Case("listsplat", tgtok::XListSplat)
     .Case("strconcat", tgtok::XStrConcat)
     .Default(tgtok::Error);
 
@@ -674,12 +677,19 @@ tgtok::TokKind TGLexer::lexPreprocessor(
     PrintFatalError("lexPreprocessor() called for unknown "
                     "preprocessor directive");
 
-  if (Kind == tgtok::Ifdef) {
+  if (Kind == tgtok::Ifdef || Kind == tgtok::Ifndef) {
     StringRef MacroName = prepLexMacroName();
+    StringRef IfTokName = Kind == tgtok::Ifdef ? "#ifdef" : "#ifndef";
     if (MacroName.empty())
-      return ReturnError(TokStart, "Expected macro name after #ifdef");
+      return ReturnError(TokStart, "Expected macro name after " + IfTokName);
 
     bool MacroIsDefined = DefinedMacros.count(MacroName) != 0;
+
+    // Canonicalize ifndef to ifdef equivalent
+    if (Kind == tgtok::Ifndef) {
+      MacroIsDefined = !MacroIsDefined;
+      Kind = tgtok::Ifdef;
+    }
 
     // Regardless of whether we are processing tokens or not,
     // we put the #ifdef control on stack.
@@ -687,8 +697,8 @@ tgtok::TokKind TGLexer::lexPreprocessor(
         {Kind, MacroIsDefined, SMLoc::getFromPointer(TokStart)});
 
     if (!prepSkipDirectiveEnd())
-      return ReturnError(CurPtr,
-                         "Only comments are supported after #ifdef NAME");
+      return ReturnError(CurPtr, "Only comments are supported after " +
+                                     IfTokName + " NAME");
 
     // If we were not processing tokens before this #ifdef,
     // then just return back to the lines skipping code.
@@ -712,7 +722,7 @@ tgtok::TokKind TGLexer::lexPreprocessor(
     // Check if this #else is correct before calling prepSkipDirectiveEnd(),
     // which will move CurPtr away from the beginning of #else.
     if (PrepIncludeStack.back()->empty())
-      return ReturnError(TokStart, "#else without #ifdef");
+      return ReturnError(TokStart, "#else without #ifdef or #ifndef");
 
     PreprocessorControlDesc IfdefEntry = PrepIncludeStack.back()->back();
 

@@ -1,9 +1,8 @@
 //===-- llvm-dwarfdump.cpp - Debug info dumping utility for llvm ----------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -142,10 +141,9 @@ static list<std::string>
               "-name option can be used instead."),
          value_desc("name"), cat(DwarfDumpCategory));
 static alias FindAlias("f", desc("Alias for -find."), aliasopt(Find));
-static opt<bool>
-    IgnoreCase("ignore-case",
-               desc("Ignore case distinctions in when searching by name."),
-               value_desc("i"), cat(DwarfDumpCategory));
+static opt<bool> IgnoreCase("ignore-case",
+                            desc("Ignore case distinctions when searching."),
+                            value_desc("i"), cat(DwarfDumpCategory));
 static alias IgnoreCaseAlias("i", desc("Alias for -ignore-case."),
                              aliasopt(IgnoreCase));
 static list<std::string> Name(
@@ -155,17 +153,17 @@ static list<std::string> Name(
          "the -regex option <pattern> is interpreted as a regular expression."),
     value_desc("pattern"), cat(DwarfDumpCategory));
 static alias NameAlias("n", desc("Alias for -name"), aliasopt(Name));
-static opt<unsigned long long> Lookup("lookup",
+static opt<uint64_t>
+    Lookup("lookup",
            desc("Lookup <address> in the debug information and print out any "
                 "available file, function, block and line table details."),
            value_desc("address"), cat(DwarfDumpCategory));
 static opt<std::string>
-    OutputFilename("out-file", cl::init(""),
+    OutputFilename("o", cl::init("-"),
                    cl::desc("Redirect output to the specified file."),
-                   cl::value_desc("filename"));
-static alias OutputFilenameAlias("o", desc("Alias for -out-file."),
-                                 aliasopt(OutputFilename),
-                                 cat(DwarfDumpCategory));
+                   cl::value_desc("filename"), cat(DwarfDumpCategory));
+static alias OutputFilenameAlias("out-file", desc("Alias for -o."),
+                                 aliasopt(OutputFilename));
 static opt<bool>
     UseRegex("regex",
              desc("Treat any <pattern> strings as regular expressions when "
@@ -175,14 +173,14 @@ static alias RegexAlias("x", desc("Alias for -regex"), aliasopt(UseRegex));
 static opt<bool>
     ShowChildren("show-children",
                  desc("Show a debug info entry's children when selectively "
-                      "printing with the =<offset> option."),
+                      "printing entries."),
                  cat(DwarfDumpCategory));
 static alias ShowChildrenAlias("c", desc("Alias for -show-children."),
                                aliasopt(ShowChildren));
 static opt<bool>
     ShowParents("show-parents",
                 desc("Show a debug info entry's parents when selectively "
-                     "printing with the =<offset> option."),
+                     "printing entries."),
                 cat(DwarfDumpCategory));
 static alias ShowParentsAlias("p", desc("Alias for -show-parents."),
                               aliasopt(ShowParents));
@@ -192,13 +190,18 @@ static opt<bool>
              cat(DwarfDumpCategory));
 static alias ShowFormAlias("F", desc("Alias for -show-form."),
                            aliasopt(ShowForm), cat(DwarfDumpCategory));
-static opt<unsigned> RecurseDepth(
-    "recurse-depth",
-    desc("Only recurse to a depth of N when displaying debug info entries."),
-    cat(DwarfDumpCategory), init(-1U), value_desc("N"));
-static alias RecurseDepthAlias("r", desc("Alias for -recurse-depth."),
-                               aliasopt(RecurseDepth));
-
+static opt<unsigned>
+    ChildRecurseDepth("recurse-depth",
+                      desc("Only recurse to a depth of N when displaying "
+                           "children of debug info entries."),
+                      cat(DwarfDumpCategory), init(-1U), value_desc("N"));
+static alias ChildRecurseDepthAlias("r", desc("Alias for -recurse-depth."),
+                                    aliasopt(ChildRecurseDepth));
+static opt<unsigned>
+    ParentRecurseDepth("parent-recurse-depth",
+                       desc("Only recurse to a depth of N when displaying "
+                            "parents of debug info entries."),
+                       cat(DwarfDumpCategory), init(-1U), value_desc("N"));
 static opt<bool>
     SummarizeTypes("summarize-types",
                    desc("Abbreviate the description of type unit entries."),
@@ -233,7 +236,8 @@ static void error(StringRef Prefix, std::error_code EC) {
 static DIDumpOptions getDumpOpts() {
   DIDumpOptions DumpOpts;
   DumpOpts.DumpType = DumpType;
-  DumpOpts.RecurseDepth = RecurseDepth;
+  DumpOpts.ChildRecurseDepth = ChildRecurseDepth;
+  DumpOpts.ParentRecurseDepth = ParentRecurseDepth;
   DumpOpts.ShowAddresses = !Diff;
   DumpOpts.ShowChildren = ShowChildren;
   DumpOpts.ShowParents = ShowParents;
@@ -377,14 +381,19 @@ static void filterByAccelName(ArrayRef<std::string> Names, DWARFContext &DICtx,
 
 /// Handle the --lookup option and dump the DIEs and line info for the given
 /// address.
-static bool lookup(DWARFContext &DICtx, uint64_t Address, raw_ostream &OS) {
+/// TODO: specified Address for --lookup option could relate for several
+/// different sections(in case not-linked object file). llvm-dwarfdump
+/// need to do something with this: extend lookup option with section
+/// information or probably display all matched entries, or something else...
+static bool lookup(ObjectFile &Obj, DWARFContext &DICtx, uint64_t Address,
+                   raw_ostream &OS) {
   auto DIEsForAddr = DICtx.getDIEsForAddress(Lookup);
 
   if (!DIEsForAddr)
     return false;
 
   DIDumpOptions DumpOpts = getDumpOpts();
-  DumpOpts.RecurseDepth = 0;
+  DumpOpts.ChildRecurseDepth = 0;
   DIEsForAddr.CompileUnit->dump(OS, DumpOpts);
   if (DIEsForAddr.FunctionDIE) {
     DIEsForAddr.FunctionDIE.dump(OS, 2, DumpOpts);
@@ -392,7 +401,10 @@ static bool lookup(DWARFContext &DICtx, uint64_t Address, raw_ostream &OS) {
       DIEsForAddr.BlockDIE.dump(OS, 4, DumpOpts);
   }
 
-  if (DILineInfo LineInfo = DICtx.getLineInfoForAddress(Lookup))
+  // TODO: it is neccessary to set proper SectionIndex here.
+  // object::SectionedAddress::UndefSection works for only absolute addresses.
+  if (DILineInfo LineInfo = DICtx.getLineInfoForAddress(
+          {Lookup, object::SectionedAddress::UndefSection}))
     LineInfo.dump(OS);
 
   return true;
@@ -411,7 +423,7 @@ static bool dumpObjectFile(ObjectFile &Obj, DWARFContext &DICtx, Twine Filename,
 
   // Handle the --lookup option.
   if (Lookup)
-    return lookup(DICtx, Lookup, OS);
+    return lookup(Obj, DICtx, Lookup, OS);
 
   // Handle the --name option.
   if (!Name.empty()) {
@@ -576,17 +588,12 @@ int main(int argc, char **argv) {
     return 0;
   }
 
-  std::unique_ptr<ToolOutputFile> OutputFile;
-  if (!OutputFilename.empty()) {
-    std::error_code EC;
-    OutputFile = llvm::make_unique<ToolOutputFile>(OutputFilename, EC,
-                                                     sys::fs::F_None);
-    error("Unable to open output file" + OutputFilename, EC);
-    // Don't remove output file if we exit with an error.
-    OutputFile->keep();
-  }
+  std::error_code EC;
+  ToolOutputFile OutputFile(OutputFilename, EC, sys::fs::OF_None);
+  error("Unable to open output file" + OutputFilename, EC);
+  // Don't remove output file if we exit with an error.
+  OutputFile.keep();
 
-  raw_ostream &OS = OutputFile ? OutputFile->os() : outs();
   bool OffsetRequested = false;
 
   // Defaults to dumping all sections, unless brief mode is specified in which
@@ -630,15 +637,15 @@ int main(int argc, char **argv) {
   if (Verify) {
     // If we encountered errors during verify, exit with a non-zero exit status.
     if (!all_of(Objects, [&](std::string Object) {
-          return handleFile(Object, verifyObjectFile, OS);
+          return handleFile(Object, verifyObjectFile, OutputFile.os());
         }))
-      exit(1);
+      return 1;
   } else if (Statistics)
     for (auto Object : Objects)
-      handleFile(Object, collectStatsForObjectFile, OS);
+      handleFile(Object, collectStatsForObjectFile, OutputFile.os());
   else
     for (auto Object : Objects)
-      handleFile(Object, dumpObjectFile, OS);
+      handleFile(Object, dumpObjectFile, OutputFile.os());
 
   return EXIT_SUCCESS;
 }

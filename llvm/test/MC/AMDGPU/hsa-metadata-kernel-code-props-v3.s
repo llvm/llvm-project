@@ -2,23 +2,23 @@
 // RUN: llvm-mc -mattr=+code-object-v3 -triple=amdgcn-amd-amdhsa -mcpu=gfx800 -show-encoding %s | FileCheck --check-prefix=CHECK --check-prefix=GFX800 %s
 // RUN: llvm-mc -mattr=+code-object-v3 -triple=amdgcn-amd-amdhsa -mcpu=gfx900 -show-encoding %s | FileCheck --check-prefix=CHECK --check-prefix=GFX900 %s
 
-// CHECK:  .amdgpu_metadata
-// CHECK:    amdhsa.kernels:
-// CHECK:      - .sgpr_count: 40
-// CHECK:        .max_flat_workgroup_size:    256
-// CHECK:        .symbol: 'test_kernel@kd'
-// CHECK:        .kernarg_segment_size:      24
-// CHECK:        .group_segment_fixed_size:   24
-// CHECK:        .private_segment_fixed_size: 16
-// CHECK:        .vgpr_count: 14
-// CHECK:        .vgpr_spill_count: 1
-// CHECK:        .kernarg_segment_align:     16
-// CHECK:        .sgpr_spill_count: 1
-// CHECK:        .wavefront_size:           64
-// CHECK:        .name:       test_kernel
-// CHECK:    amdhsa.version:
-// CHECK-NEXT: - 1
-// CHECK-NEXT: - 0
+// CHECK:      	.amdgpu_metadata
+// CHECK:      amdhsa.kernels:  
+// CHECK:        - .group_segment_fixed_size: 24
+// CHECK:          .kernarg_segment_align: 16
+// CHECK:          .kernarg_segment_size: 24
+// CHECK:          .max_flat_workgroup_size: 256
+// CHECK:          .name:           test_kernel
+// CHECK:          .private_segment_fixed_size: 16
+// CHECK:          .sgpr_count:     40
+// CHECK:          .sgpr_spill_count: 1
+// CHECK:          .symbol:         'test_kernel@kd'
+// CHECK:          .vgpr_count:     14
+// CHECK:          .vgpr_spill_count: 1
+// CHECK:          .wavefront_size: 64
+// CHECK:      amdhsa.version:  
+// CHECK-NEXT:   - 1
+// CHECK-NEXT:   - 0
 .amdgpu_metadata
   amdhsa.version:
     - 1

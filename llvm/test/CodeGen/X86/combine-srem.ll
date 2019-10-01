@@ -61,7 +61,7 @@ define i32 @combine_srem_by_minsigned(i32 %x) {
 ; CHECK-NEXT:    shrl %eax
 ; CHECK-NEXT:    addl %edi, %eax
 ; CHECK-NEXT:    andl $-2147483648, %eax # imm = 0x80000000
-; CHECK-NEXT:    leal (%rax,%rdi), %eax
+; CHECK-NEXT:    addl %edi, %eax
 ; CHECK-NEXT:    retq
   %1 = srem i32 %x, -2147483648
   ret i32 %1

@@ -10,6 +10,8 @@
 // RUN: not llvm-mc -arch=amdgcn -mcpu=fiji -show-encoding %s 2>&1 | FileCheck --check-prefix=NOSICIVI --check-prefix=NOVI --check-prefix=NOGFX89 %s
 // RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 -show-encoding %s 2>&1 | FileCheck --check-prefix=NOGFX89 %s
 
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 -show-encoding 2>&1 %s | FileCheck --check-prefix=GFX10-ERR %s
+
 s_add_u32 s1, s2, s3
 // GCN: s_add_u32 s1, s2, s3 ; encoding: [0x02,0x03,0x01,0x80]
 
@@ -49,6 +51,14 @@ s_cselect_b64 s[2:3], s[4:5], s[6:7]
 s_and_b32 s2, s4, s6
 // SICI: s_and_b32 s2, s4, s6 ; encoding: [0x04,0x06,0x02,0x87]
 // GFX89: s_and_b32 s2, s4, s6 ; encoding: [0x04,0x06,0x02,0x86]
+
+s_and_b32 s2, 1234, 1234
+// SICI: s_and_b32 s2, 0x4d2, 0x4d2 ; encoding: [0xff,0xff,0x02,0x87,0xd2,0x04,0x00,0x00]
+// GFX89: s_and_b32 s2, 0x4d2, 0x4d2 ; encoding: [0xff,0xff,0x02,0x86,0xd2,0x04,0x00,0x00]
+
+s_and_b32 s2, 0xFFFF0000, -65536
+// SICI: s_and_b32 s2, 0xffff0000, 0xffff0000 ; encoding: [0xff,0xff,0x02,0x87,0x00,0x00,0xff,0xff]
+// GFX89: s_and_b32 s2, 0xffff0000, 0xffff0000 ; encoding: [0xff,0xff,0x02,0x86,0x00,0x00,0xff,0xff]
 
 s_and_b64 s[2:3], s[4:5], s[6:7]
 // SICI: s_and_b64 s[2:3], s[4:5], s[6:7] ; encoding: [0x04,0x06,0x82,0x87]
@@ -134,6 +144,10 @@ s_ashr_i64 s[2:3], s[4:5], s6
 // SICI: s_ashr_i64 s[2:3], s[4:5], s6 ; encoding: [0x04,0x06,0x82,0x91]
 // GFX89: s_ashr_i64 s[2:3], s[4:5], s6 ; encoding: [0x04,0x06,0x82,0x90]
 
+s_ashr_i64 s[2:3], -65536, 0xFFFF0000
+// SICI: s_ashr_i64 s[2:3], 0xffff0000, 0xffff0000 ; encoding: [0xff,0xff,0x82,0x91,0x00,0x00,0xff,0xff]
+// GFX89: s_ashr_i64 s[2:3], 0xffff0000, 0xffff0000 ; encoding: [0xff,0xff,0x82,0x90,0x00,0x00,0xff,0xff]
+
 s_bfm_b32 s2, s4, s6
 // SICI: s_bfm_b32 s2, s4, s6 ; encoding: [0x04,0x06,0x02,0x92]
 // GFX89: s_bfm_b32 s2, s4, s6 ; encoding: [0x04,0x06,0x02,0x91]
@@ -165,14 +179,17 @@ s_bfe_i64 s[2:3], s[4:5], s6
 s_cbranch_g_fork s[4:5], s[6:7]
 // SICI: s_cbranch_g_fork s[4:5], s[6:7] ; encoding: [0x04,0x06,0x80,0x95]
 // GFX89: s_cbranch_g_fork s[4:5], s[6:7] ; encoding: [0x04,0x06,0x80,0x94]
+// GFX10-ERR: error: instruction not supported on this GPU
 
 s_cbranch_g_fork 1, s[6:7]
 // SICI: s_cbranch_g_fork 1, s[6:7] ; encoding: [0x81,0x06,0x80,0x95]
 // GFX89: s_cbranch_g_fork 1, s[6:7] ; encoding: [0x81,0x06,0x80,0x94]
+// GFX10-ERR: error: instruction not supported on this GPU
 
 s_cbranch_g_fork s[6:7], 2
 // SICI: s_cbranch_g_fork s[6:7], 2 ; encoding: [0x06,0x82,0x80,0x95]
 // GFX89: s_cbranch_g_fork s[6:7], 2 ; encoding: [0x06,0x82,0x80,0x94]
+// GFX10-ERR: error: instruction not supported on this GPU
 
 s_absdiff_i32 s2, s4, s6
 // SICI: s_absdiff_i32 s2, s4, s6 ; encoding: [0x04,0x06,0x02,0x96]

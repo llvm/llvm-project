@@ -69,7 +69,7 @@ declare <8 x i32> @llvm.masked.gather.v8i32.v8p0i32(<8 x i32*> , i32, <8 x i1> ,
 ; SCALAR-NEXT: br label %else
 ; SCALAR: else:
 ; SCALAR-NEXT:  %res.phi.else = phi
-; SCALAR-NEXT:  %Mask1 = extractelement <16 x i1> %imask, i32 1
+; SCALAR-NEXT:  %Mask1 = extractelement <16 x i1> %imask, i64 1
 ; SCALAR-NEXT:  br i1 %Mask1, label %cond.load1, label %else2
 
 define <16 x float> @test2(float* %base, <16 x i32> %ind, i16 %mask) {
@@ -211,15 +211,15 @@ define <16 x i32> @test4(i32* %base, <16 x i32> %ind, i16 %mask) {
 
 
 ; SCALAR-LABEL: test5
-; SCALAR:        %Mask0 = extractelement <16 x i1> %imask, i32 0
+; SCALAR:        %Mask0 = extractelement <16 x i1> %imask, i64 0
 ; SCALAR-NEXT:   br i1 %Mask0, label %cond.store, label %else
 ; SCALAR: cond.store:
-; SCALAR-NEXT:  %Elt0 = extractelement <16 x i32> %val, i32 0
-; SCALAR-NEXT:  %Ptr0 = extractelement <16 x i32*> %gep.random, i32 0
+; SCALAR-NEXT:  %Elt0 = extractelement <16 x i32> %val, i64 0
+; SCALAR-NEXT:  %Ptr0 = extractelement <16 x i32*> %gep.random, i64 0
 ; SCALAR-NEXT:  store i32 %Elt0, i32* %Ptr0, align 4
 ; SCALAR-NEXT:  br label %else
 ; SCALAR: else:
-; SCALAR-NEXT: %Mask1 = extractelement <16 x i1> %imask, i32 1
+; SCALAR-NEXT: %Mask1 = extractelement <16 x i1> %imask, i64 1
 ; SCALAR-NEXT:  br i1 %Mask1, label %cond.store1, label %else2
 
 define void @test5(i32* %base, <16 x i32> %ind, i16 %mask, <16 x i32>%val) {
@@ -277,11 +277,11 @@ declare void @llvm.masked.scatter.v16i32.v16p0i32(<16 x i32> , <16 x i32*> , i32
 
 ; SCALAR-LABEL: test6
 ; SCALAR:        store i32 %Elt0, i32* %Ptr01, align 4
-; SCALAR-NEXT:   %Elt1 = extractelement <8 x i32> %a1, i32 1
-; SCALAR-NEXT:   %Ptr12 = extractelement <8 x i32*> %ptr, i32 1
+; SCALAR-NEXT:   %Elt1 = extractelement <8 x i32> %a1, i64 1
+; SCALAR-NEXT:   %Ptr12 = extractelement <8 x i32*> %ptr, i64 1
 ; SCALAR-NEXT:   store i32 %Elt1, i32* %Ptr12, align 4
-; SCALAR-NEXT:   %Elt2 = extractelement <8 x i32> %a1, i32 2
-; SCALAR-NEXT:   %Ptr23 = extractelement <8 x i32*> %ptr, i32 2
+; SCALAR-NEXT:   %Elt2 = extractelement <8 x i32> %a1, i64 2
+; SCALAR-NEXT:   %Ptr23 = extractelement <8 x i32*> %ptr, i64 2
 ; SCALAR-NEXT:   store i32 %Elt2, i32* %Ptr23, align 4
 
 define <8 x i32> @test6(<8 x i32>%a1, <8 x i32*> %ptr) {
@@ -1743,7 +1743,7 @@ define <3 x i32> @test30(<3 x i32*> %base, <3 x i32> %ind, <3 x i1> %mask, <3 x 
 ; SKX-NEXT:    vmovq %xmm0, %rax
 ; SKX-NEXT:    vpinsrd $0, (%rax), %xmm3, %xmm3
 ; SKX-NEXT:  .LBB31_2: # %else
-; SKX-NEXT:    kshiftrw $1, %k0, %k1
+; SKX-NEXT:    kshiftrb $1, %k0, %k1
 ; SKX-NEXT:    kmovw %k1, %eax
 ; SKX-NEXT:    testb $1, %al
 ; SKX-NEXT:    je .LBB31_4
@@ -1751,7 +1751,7 @@ define <3 x i32> @test30(<3 x i32*> %base, <3 x i32> %ind, <3 x i1> %mask, <3 x 
 ; SKX-NEXT:    vpextrq $1, %xmm0, %rax
 ; SKX-NEXT:    vpinsrd $1, (%rax), %xmm3, %xmm3
 ; SKX-NEXT:  .LBB31_4: # %else2
-; SKX-NEXT:    kshiftrw $2, %k0, %k0
+; SKX-NEXT:    kshiftrb $2, %k0, %k0
 ; SKX-NEXT:    kmovw %k0, %eax
 ; SKX-NEXT:    testb $1, %al
 ; SKX-NEXT:    je .LBB31_6
@@ -1781,7 +1781,7 @@ define <3 x i32> @test30(<3 x i32*> %base, <3 x i32> %ind, <3 x i1> %mask, <3 x 
 ; SKX_32-NEXT:    vmovd %xmm1, %eax
 ; SKX_32-NEXT:    vpinsrd $0, (%eax), %xmm0, %xmm0
 ; SKX_32-NEXT:  .LBB31_2: # %else
-; SKX_32-NEXT:    kshiftrw $1, %k0, %k1
+; SKX_32-NEXT:    kshiftrb $1, %k0, %k1
 ; SKX_32-NEXT:    kmovw %k1, %eax
 ; SKX_32-NEXT:    testb $1, %al
 ; SKX_32-NEXT:    je .LBB31_4
@@ -1789,7 +1789,7 @@ define <3 x i32> @test30(<3 x i32*> %base, <3 x i32> %ind, <3 x i1> %mask, <3 x 
 ; SKX_32-NEXT:    vpextrd $1, %xmm1, %eax
 ; SKX_32-NEXT:    vpinsrd $1, (%eax), %xmm0, %xmm0
 ; SKX_32-NEXT:  .LBB31_4: # %else2
-; SKX_32-NEXT:    kshiftrw $2, %k0, %k0
+; SKX_32-NEXT:    kshiftrb $2, %k0, %k0
 ; SKX_32-NEXT:    kmovw %k0, %eax
 ; SKX_32-NEXT:    testb $1, %al
 ; SKX_32-NEXT:    je .LBB31_6
@@ -2645,9 +2645,9 @@ define <8 x float> @sext_v8i8_index(float* %base, <8 x i8> %ind) {
 ; SKX_32:       # %bb.0:
 ; SKX_32-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; SKX_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SKX_32-NEXT:    kxnorw %k0, %k0, %k1
 ; SKX_32-NEXT:    vpslld $24, %ymm0, %ymm0
 ; SKX_32-NEXT:    vpsrad $24, %ymm0, %ymm1
-; SKX_32-NEXT:    kxnorw %k0, %k0, %k1
 ; SKX_32-NEXT:    vgatherdps (%eax,%ymm1,4), %ymm0 {%k1}
 ; SKX_32-NEXT:    retl
 
@@ -2963,4 +2963,12 @@ define <16 x float> @test_sext_cse(float* %base, <16 x i32> %ind, <16 x i32>* %f
   %res2 = call <16 x float> @llvm.masked.gather.v16f32.v16p0f32(<16 x float*> %gep.random2, i32 4, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <16 x float> undef)
   %res3 = fadd <16 x float> %res2, %res
   ret <16 x float>%res3
+}
+
+define void @zero_mask(<2 x double>%a1, <2 x double*> %ptr) {
+; ALL-LABEL: zero_mask:
+; ALL:       # %bb.0:
+; ALL-NEXT:    ret{{[l|q]}}
+  call void @llvm.masked.scatter.v2f64.v2p0f64(<2 x double> %a1, <2 x double*> %ptr, i32 4, <2 x i1> zeroinitializer)
+  ret void
 }

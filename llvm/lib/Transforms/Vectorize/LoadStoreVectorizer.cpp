@@ -1,9 +1,8 @@
 //===- LoadStoreVectorizer.cpp - GPU Load & Store Vectorizer --------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -927,7 +926,7 @@ bool Vectorizer::vectorizeStoreChain(
   StoreInst *S0 = cast<StoreInst>(Chain[0]);
 
   // If the vector has an int element, default to int for the whole store.
-  Type *StoreTy;
+  Type *StoreTy = nullptr;
   for (Instruction *I : Chain) {
     StoreTy = cast<StoreInst>(I)->getValueOperand()->getType();
     if (StoreTy->isIntOrIntVectorTy())
@@ -939,6 +938,7 @@ bool Vectorizer::vectorizeStoreChain(
       break;
     }
   }
+  assert(StoreTy && "Failed to find store type");
 
   unsigned Sz = DL.getTypeSizeInBits(StoreTy);
   unsigned AS = S0->getPointerAddressSpace();
@@ -1182,7 +1182,7 @@ bool Vectorizer::vectorizeLoadChain(
 
   Value *Bitcast =
       Builder.CreateBitCast(L0->getPointerOperand(), VecTy->getPointerTo(AS));
-  LoadInst *LI = Builder.CreateAlignedLoad(Bitcast, Alignment);
+  LoadInst *LI = Builder.CreateAlignedLoad(VecTy, Bitcast, Alignment);
   propagateMetadata(LI, Chain);
 
   if (VecLoadTy) {

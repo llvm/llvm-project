@@ -1,9 +1,8 @@
 //===-- RTDyldMemoryManager.cpp - Memory manager for MC-JIT -----*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -33,8 +32,9 @@ namespace llvm {
 RTDyldMemoryManager::~RTDyldMemoryManager() {}
 
 // Determine whether we can register EH tables.
-#if (defined(__GNUC__) && !defined(__ARM_EABI__) && !defined(__ia64__) && \
-     !defined(__SEH__) && !defined(__USING_SJLJ_EXCEPTIONS__))
+#if (defined(__GNUC__) && !defined(__ARM_EABI__) && !defined(__ia64__) &&      \
+     !(defined(_AIX) && defined(__ibmxl__)) && !defined(__SEH__) &&            \
+     !defined(__USING_SJLJ_EXCEPTIONS__))
 #define HAVE_EHTABLE_SUPPORT 1
 #else
 #define HAVE_EHTABLE_SUPPORT 0
@@ -48,7 +48,7 @@ extern "C" void __deregister_frame(void *);
 // it may be found at runtime in a dynamically-loaded library.
 // For example, this happens when building LLVM with Visual C++
 // but using the MingW runtime.
-void __register_frame(void *p) {
+static void __register_frame(void *p) {
   static bool Searched = false;
   static void((*rf)(void *)) = 0;
 
@@ -61,7 +61,7 @@ void __register_frame(void *p) {
     rf(p);
 }
 
-void __deregister_frame(void *p) {
+static void __deregister_frame(void *p) {
   static bool Searched = false;
   static void((*df)(void *)) = 0;
 

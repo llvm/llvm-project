@@ -1,9 +1,8 @@
 //===-- llvm/IntrinsicInst.h - Intrinsic Instruction Wrappers ---*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -239,6 +238,8 @@ namespace llvm {
       case Intrinsic::experimental_constrained_fdiv:
       case Intrinsic::experimental_constrained_frem:
       case Intrinsic::experimental_constrained_fma:
+      case Intrinsic::experimental_constrained_fptrunc:
+      case Intrinsic::experimental_constrained_fpext:
       case Intrinsic::experimental_constrained_sqrt:
       case Intrinsic::experimental_constrained_pow:
       case Intrinsic::experimental_constrained_powi:
@@ -259,6 +260,84 @@ namespace llvm {
       case Intrinsic::experimental_constrained_trunc:
         return true;
       default: return false;
+      }
+    }
+    static bool classof(const Value *V) {
+      return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+    }
+  };
+
+  /// This class represents an intrinsic that is based on a binary operation.
+  /// This includes op.with.overflow and saturating add/sub intrinsics.
+  class BinaryOpIntrinsic : public IntrinsicInst {
+  public:
+    static bool classof(const IntrinsicInst *I) {
+      switch (I->getIntrinsicID()) {
+      case Intrinsic::uadd_with_overflow:
+      case Intrinsic::sadd_with_overflow:
+      case Intrinsic::usub_with_overflow:
+      case Intrinsic::ssub_with_overflow:
+      case Intrinsic::umul_with_overflow:
+      case Intrinsic::smul_with_overflow:
+      case Intrinsic::uadd_sat:
+      case Intrinsic::sadd_sat:
+      case Intrinsic::usub_sat:
+      case Intrinsic::ssub_sat:
+        return true;
+      default:
+        return false;
+      }
+    }
+    static bool classof(const Value *V) {
+      return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+    }
+
+    Value *getLHS() const { return const_cast<Value*>(getArgOperand(0)); }
+    Value *getRHS() const { return const_cast<Value*>(getArgOperand(1)); }
+
+    /// Returns the binary operation underlying the intrinsic.
+    Instruction::BinaryOps getBinaryOp() const;
+
+    /// Whether the intrinsic is signed or unsigned.
+    bool isSigned() const;
+
+    /// Returns one of OBO::NoSignedWrap or OBO::NoUnsignedWrap.
+    unsigned getNoWrapKind() const;
+  };
+
+  /// Represents an op.with.overflow intrinsic.
+  class WithOverflowInst : public BinaryOpIntrinsic {
+  public:
+    static bool classof(const IntrinsicInst *I) {
+      switch (I->getIntrinsicID()) {
+      case Intrinsic::uadd_with_overflow:
+      case Intrinsic::sadd_with_overflow:
+      case Intrinsic::usub_with_overflow:
+      case Intrinsic::ssub_with_overflow:
+      case Intrinsic::umul_with_overflow:
+      case Intrinsic::smul_with_overflow:
+        return true;
+      default:
+        return false;
+      }
+    }
+    static bool classof(const Value *V) {
+      return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+    }
+  };
+
+  /// Represents a saturating add/sub intrinsic.
+  class SaturatingInst : public BinaryOpIntrinsic {
+  public:
+    static bool classof(const IntrinsicInst *I) {
+      switch (I->getIntrinsicID()) {
+      case Intrinsic::uadd_sat:
+      case Intrinsic::sadd_sat:
+      case Intrinsic::usub_sat:
+      case Intrinsic::ssub_sat:
+        return true;
+      default:
+        return false;
       }
     }
     static bool classof(const Value *V) {

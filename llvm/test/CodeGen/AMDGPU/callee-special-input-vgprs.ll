@@ -230,12 +230,11 @@ define amdgpu_kernel void @kern_indirect_other_arg_use_workitem_id_z() #1 {
 }
 
 ; GCN-LABEL: {{^}}too_many_args_use_workitem_id_x:
-; GCN: s_mov_b32 s5, s32
-; GCN: buffer_store_dword v32, off, s[0:3], s5 offset:8 ; 4-byte Folded Spill
-; GCN: buffer_load_dword v32, off, s[0:3], s5 offset:4{{$}}
+; GCN: buffer_store_dword v32, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
+; GCN: buffer_load_dword v32, off, s[0:3], s32{{$}}
 ; GCN: flat_store_dword v{{\[[0-9]+:[0-9]+]}}, v32
 
-; GCN: buffer_load_dword v32, off, s[0:3], s5 offset:8 ; 4-byte Folded Reload
+; GCN: buffer_load_dword v32, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
 define void @too_many_args_use_workitem_id_x(
@@ -290,7 +289,7 @@ define void @too_many_args_use_workitem_id_x(
 
 ; GCN: s_mov_b32 s33, s7
 ; GCN: s_mov_b32 s32, s33
-; GCN: buffer_store_dword v0, off, s[0:3], s32 offset:4
+; GCN: buffer_store_dword v0, off, s[0:3], s32{{$}}
 ; GCN: s_mov_b32 s4, s33
 ; GCN: s_swappc_b64
 define amdgpu_kernel void @kern_call_too_many_args_use_workitem_id_x() #1 {
@@ -308,7 +307,7 @@ define amdgpu_kernel void @kern_call_too_many_args_use_workitem_id_x() #1 {
 
 ; GCN-LABEL: {{^}}func_call_too_many_args_use_workitem_id_x:
 ; GCN: s_mov_b32 s5, s32
-; GCN: buffer_store_dword v1, off, s[0:3], s32 offset:
+; GCN: buffer_store_dword v1, off, s[0:3], s32{{$}}
 ; GCN: s_swappc_b64
 define void @func_call_too_many_args_use_workitem_id_x(i32 %arg0) #1 {
   store volatile i32 %arg0, i32 addrspace(1)* undef
@@ -326,15 +325,15 @@ define void @func_call_too_many_args_use_workitem_id_x(i32 %arg0) #1 {
 
 ; Requires loading and storing to stack slot.
 ; GCN-LABEL: {{^}}too_many_args_call_too_many_args_use_workitem_id_x:
-; GCN: buffer_store_dword v32, off, s[0:3], s5 offset:8 ; 4-byte Folded Spill
 ; GCN: s_add_u32 s32, s32, 0x400{{$}}
-; GCN: buffer_load_dword v32, off, s[0:3], s5 offset:4
+; GCN: buffer_store_dword v32, off, s[0:3], s5 offset:4 ; 4-byte Folded Spill
+; GCN: buffer_load_dword v32, off, s[0:3], s5{{$}}
 
-; GCN: buffer_store_dword v32, off, s[0:3], s32 offset:4{{$}}
+; GCN: buffer_store_dword v32, off, s[0:3], s32{{$}}
 
 ; GCN: s_swappc_b64
 
-; GCN: buffer_load_dword v32, off, s[0:3], s5 offset:8 ; 4-byte Folded Reload
+; GCN: buffer_load_dword v32, off, s[0:3], s5 offset:4 ; 4-byte Folded Reload
 ; GCN: s_sub_u32 s32, s32, 0x400{{$}}
 ; GCN: s_setpc_b64
 define void @too_many_args_call_too_many_args_use_workitem_id_x(
@@ -351,18 +350,17 @@ define void @too_many_args_call_too_many_args_use_workitem_id_x(
 }
 
 ; stack layout:
-; frame[0] = emergency stack slot
-; frame[1] = byval arg32
-; frame[2] = stack passed workitem ID x
-; frame[3] = VGPR spill slot
+; frame[0] = byval arg32
+; frame[1] = stack passed workitem ID x
+; frame[2] = VGPR spill slot
 
 ; GCN-LABEL: {{^}}too_many_args_use_workitem_id_x_byval:
-; GCN: buffer_store_dword v32, off, s[0:3], s5 offset:12 ; 4-byte Folded Spill
-; GCN: buffer_load_dword v32, off, s[0:3], s5 offset:8
+; GCN: buffer_store_dword v32, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
+; GCN: buffer_load_dword v32, off, s[0:3], s32 offset:4
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, v32
-; GCN: buffer_load_dword v0, off, s[0:3], s5 offset:4
-; GCN: buffer_load_dword v32, off, s[0:3], s5 offset:12 ; 4-byte Folded Reload
+; GCN: buffer_load_dword v0, off, s[0:3], s32{{$}}
+; GCN: buffer_load_dword v32, off, s[0:3], s32 offset:8 ; 4-byte Folded Reload
 ; GCN: s_setpc_b64
 define void @too_many_args_use_workitem_id_x_byval(
   i32 %arg0, i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4, i32 %arg5, i32 %arg6, i32 %arg7,
@@ -411,13 +409,9 @@ define void @too_many_args_use_workitem_id_x_byval(
   ret void
 }
 
-; frame[0] = emergency stack slot
-; frame[1] =
-
-; sp[0] = callee emergency stack slot reservation
-; sp[1] = byval
-; sp[2] = ??
-; sp[3] = stack passed workitem ID x
+; sp[0] = byval
+; sp[1] = ??
+; sp[2] = stack passed workitem ID x
 
 ; GCN-LABEL: {{^}}kern_call_too_many_args_use_workitem_id_x_byval:
 ; GCN: enable_vgpr_workitem_id = 0
@@ -428,10 +422,10 @@ define void @too_many_args_use_workitem_id_x_byval(
 ; GCN-NOT: s32
 ; GCN-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 0x3e7{{$}}
 ; GCN: buffer_store_dword [[K]], off, s[0:3], s33 offset:4
-; GCN: buffer_store_dword v0, off, s[0:3], s32 offset:8
+; GCN: buffer_store_dword v0, off, s[0:3], s32 offset:4
 
 ; GCN: buffer_load_dword [[RELOAD_BYVAL:v[0-9]+]], off, s[0:3], s33 offset:4
-; GCN: buffer_store_dword [[RELOAD_BYVAL]], off, s[0:3], s32 offset:4{{$}}
+; GCN: buffer_store_dword [[RELOAD_BYVAL]], off, s[0:3], s32{{$}}
 ; GCN: v_mov_b32_e32 [[RELOAD_BYVAL]],
 ; GCN: s_swappc_b64
 define amdgpu_kernel void @kern_call_too_many_args_use_workitem_id_x_byval() #1 {
@@ -452,11 +446,11 @@ define amdgpu_kernel void @kern_call_too_many_args_use_workitem_id_x_byval() #1 
 
 ; GCN-LABEL: {{^}}func_call_too_many_args_use_workitem_id_x_byval:
 ; GCN: v_mov_b32_e32 [[K:v[0-9]+]], 0x3e7{{$}}
-; GCN: buffer_store_dword [[K]], off, s[0:3], s5 offset:4
-; GCN: buffer_store_dword v0, off, s[0:3], s32 offset:8
+; GCN: buffer_store_dword [[K]], off, s[0:3], s5{{$}}
+; GCN: buffer_store_dword v0, off, s[0:3], s32 offset:4
 
-; GCN: buffer_load_dword [[RELOAD_BYVAL:v[0-9]+]], off, s[0:3], s5 offset:4
-; GCN: buffer_store_dword [[RELOAD_BYVAL]], off, s[0:3], s32 offset:4{{$}}
+; GCN: buffer_load_dword [[RELOAD_BYVAL:v[0-9]+]], off, s[0:3], s5{{$}}
+; GCN: buffer_store_dword [[RELOAD_BYVAL]], off, s[0:3], s32{{$}}
 ; GCN: v_mov_b32_e32 [[RELOAD_BYVAL]],
 ; GCN: s_swappc_b64
 define void @func_call_too_many_args_use_workitem_id_x_byval() #1 {
@@ -476,16 +470,15 @@ define void @func_call_too_many_args_use_workitem_id_x_byval() #1 {
 }
 
 ; GCN-LABEL: {{^}}too_many_args_use_workitem_id_xyz:
-; GCN: s_mov_b32 s5, s32
-; GCN: buffer_store_dword v32, off, s[0:3], s5 offset:16 ; 4-byte Folded Spill
-; GCN: buffer_load_dword v32, off, s[0:3], s5 offset:4{{$}}
+; GCN: buffer_store_dword v32, off, s[0:3], s32 offset:12 ; 4-byte Folded Spill
+; GCN: buffer_load_dword v32, off, s[0:3], s32{{$}}
 ; GCN: flat_store_dword v{{\[[0-9]+:[0-9]+]}}, v32
-; GCN: buffer_load_dword v32, off, s[0:3], s5 offset:8{{$}}
+; GCN: buffer_load_dword v32, off, s[0:3], s32 offset:4{{$}}
 ; GCN: flat_store_dword v{{\[[0-9]+:[0-9]+]}}, v32
-; GCN: buffer_load_dword v32, off, s[0:3], s5 offset:12{{$}}
+; GCN: buffer_load_dword v32, off, s[0:3], s32 offset:8{{$}}
 ; GCN: flat_store_dword v{{\[[0-9]+:[0-9]+]}}, v32
 
-; GCN: buffer_load_dword v32, off, s[0:3], s5 offset:16 ; 4-byte Folded Reload
+; GCN: buffer_load_dword v32, off, s[0:3], s32 offset:12 ; 4-byte Folded Reload
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
 define void @too_many_args_use_workitem_id_xyz(
@@ -539,10 +532,9 @@ define void @too_many_args_use_workitem_id_xyz(
   ret void
 }
 
-; frame[0] = callee emergency stack slot
-; frame[1] = ID X
-; frame[2] = ID Y
-; frame[3] = ID Z
+; frame[0] = ID X
+; frame[1] = ID Y
+; frame[2] = ID Z
 
 ; GCN-LABEL: {{^}}kern_call_too_many_args_use_workitem_id_xyz:
 ; GCN: enable_vgpr_workitem_id = 2
@@ -550,9 +542,9 @@ define void @too_many_args_use_workitem_id_xyz(
 ; GCN: s_mov_b32 s33, s7
 ; GCN: s_mov_b32 s32, s33
 
-; GCN-DAG: buffer_store_dword v0, off, s[0:3], s32 offset:4
-; GCN-DAG: buffer_store_dword v1, off, s[0:3], s32 offset:8
-; GCN-DAG: buffer_store_dword v2, off, s[0:3], s32 offset:12
+; GCN-DAG: buffer_store_dword v0, off, s[0:3], s32{{$}}
+; GCN-DAG: buffer_store_dword v1, off, s[0:3], s32 offset:4
+; GCN-DAG: buffer_store_dword v2, off, s[0:3], s32 offset:8
 ; GCN: s_swappc_b64
 define amdgpu_kernel void @kern_call_too_many_args_use_workitem_id_xyz() #1 {
   call void @too_many_args_use_workitem_id_xyz(
@@ -569,16 +561,14 @@ define amdgpu_kernel void @kern_call_too_many_args_use_workitem_id_xyz() #1 {
 
 ; workitem ID X in register, yz on stack
 ; v31 = workitem ID X
-; frame[0] = emergency slot
-; frame[1] = workitem Y
-; frame[2] = workitem Z
+; frame[0] = workitem Y
+; frame[1] = workitem Z
 
 ; GCN-LABEL: {{^}}too_many_args_use_workitem_id_x_stack_yz:
-; GCN: s_mov_b32 s5, s32
 ; GCN: flat_store_dword v{{\[[0-9]+:[0-9]+]}}, v31
-; GCN: buffer_load_dword v31, off, s[0:3], s5 offset:4{{$}}
+; GCN: buffer_load_dword v31, off, s[0:3], s32{{$}}
 ; GCN: flat_store_dword v{{\[[0-9]+:[0-9]+]}}, v31
-; GCN: buffer_load_dword v31, off, s[0:3], s5 offset:8{{$}}
+; GCN: buffer_load_dword v31, off, s[0:3], s32 offset:4{{$}}
 ; GCN: flat_store_dword v{{\[[0-9]+:[0-9]+]}}, v31
 
 ; GCN: s_waitcnt
@@ -634,9 +624,8 @@ define void @too_many_args_use_workitem_id_x_stack_yz(
   ret void
 }
 
-; frame[0] = callee emergency stack slot
-; frame[1] = ID Y
-; frame[2] = ID Z
+; frame[0] = ID Y
+; frame[1] = ID Z
 
 ; GCN-LABEL: {{^}}kern_call_too_many_args_use_workitem_id_x_stack_yz:
 ; GCN: enable_vgpr_workitem_id = 2
@@ -645,8 +634,8 @@ define void @too_many_args_use_workitem_id_x_stack_yz(
 ; GCN: s_mov_b32 s32, s33
 
 ; GCN-DAG: v_mov_b32_e32 v31, v0
-; GCN-DAG: buffer_store_dword v1, off, s[0:3], s32 offset:4
-; GCN-DAG: buffer_store_dword v2, off, s[0:3], s32 offset:8
+; GCN-DAG: buffer_store_dword v1, off, s[0:3], s32{{$}}
+; GCN-DAG: buffer_store_dword v2, off, s[0:3], s32 offset:4
 ; GCN: s_swappc_b64
 define amdgpu_kernel void @kern_call_too_many_args_use_workitem_id_x_stack_yz() #1 {
   call void @too_many_args_use_workitem_id_x_stack_yz(

@@ -61,11 +61,11 @@
 
 @ga = external global i32, align 4
 @gb = external global i32, align 4
-
 define signext i32 @test(i32 (i32)* nocapture %FP) local_unnamed_addr #0 {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addis 4, 2, .LC0@toc@ha
+; CHECK-NEXT:    mflr 0
+; CHECK:         addis 4, 2, .LC0@toc@ha
 ; CHECK-NEXT:    addis 5, 2, .LC1@toc@ha
 ; CHECK-NEXT:    mr 12, 3
 ; CHECK-NEXT:    ld 4, .LC0@toc@l(4)

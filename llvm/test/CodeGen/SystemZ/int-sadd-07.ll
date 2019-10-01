@@ -151,12 +151,12 @@ define zeroext i1 @f9(i64 %dummy, i64 %a, i64 *%res) {
   ret i1 %obit
 }
 
-; Check the next value down, which must use register addition instead.
+; Check the next value down, which can use register subtraction instead.
 define zeroext i1 @f10(i64 %dummy, i64 %a, i64 *%res) {
 ; CHECK-LABEL: f10:
-; CHECK: llihf [[REG1:%r[0-9]+]], 4294967295
-; CHECK: agr [[REG1]], %r3
-; CHECK-DAG: stg [[REG1]], 0(%r4)
+; CHECK: llilf [[REG1:%r[0-9]+]], 2147483649
+; CHECK: sgr %r3, [[REG1]]
+; CHECK-DAG: stg %r3, 0(%r4)
 ; CHECK-DAG: ipm [[REG:%r[0-5]]]
 ; CHECK-DAG: afi [[REG]], 1342177280
 ; CHECK-DAG: risbg %r2, [[REG]], 63, 191, 33
@@ -168,9 +168,60 @@ define zeroext i1 @f10(i64 %dummy, i64 %a, i64 *%res) {
   ret i1 %obit
 }
 
-; Check using the overflow result for a branch.
-define void @f11(i64 %dummy, i64 %a, i64 *%res) {
+; We may be able to use LLILH instead of LLILF.
+define zeroext i1 @f11(i64 %dummy, i64 %a, i64 *%res) {
 ; CHECK-LABEL: f11:
+; CHECK: llilh [[REG1:%r[0-9]+]], 32769
+; CHECK: sgr %r3, [[REG1]]
+; CHECK-DAG: stg %r3, 0(%r4)
+; CHECK-DAG: ipm [[REG:%r[0-5]]]
+; CHECK-DAG: afi [[REG]], 1342177280
+; CHECK-DAG: risbg %r2, [[REG]], 63, 191, 33
+; CHECK: br %r14
+  %t = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a, i64 -2147549184)
+  %val = extractvalue {i64, i1} %t, 0
+  %obit = extractvalue {i64, i1} %t, 1
+  store i64 %val, i64 *%res
+  ret i1 %obit
+}
+
+; Check low end of the LLILF/SGR range.
+define zeroext i1 @f12(i64 %dummy, i64 %a, i64 *%res) {
+; CHECK-LABEL: f12:
+; CHECK: llilf [[REG1:%r[0-9]+]], 4294967295
+; CHECK: sgr %r3, [[REG1]]
+; CHECK-DAG: stg %r3, 0(%r4)
+; CHECK-DAG: ipm [[REG:%r[0-5]]]
+; CHECK-DAG: afi [[REG]], 1342177280
+; CHECK-DAG: risbg %r2, [[REG]], 63, 191, 33
+; CHECK: br %r14
+  %t = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a, i64 -4294967295)
+  %val = extractvalue {i64, i1} %t, 0
+  %obit = extractvalue {i64, i1} %t, 1
+  store i64 %val, i64 *%res
+  ret i1 %obit
+}
+
+; Check the next value down, which must use register addition instead.
+define zeroext i1 @f13(i64 %dummy, i64 %a, i64 *%res) {
+; CHECK-LABEL: f13:
+; CHECK: llihf [[REG1:%r[0-9]+]], 4294967295
+; CHECK: agr [[REG1]], %r3
+; CHECK-DAG: stg [[REG1]], 0(%r4)
+; CHECK-DAG: ipm [[REG:%r[0-5]]]
+; CHECK-DAG: afi [[REG]], 1342177280
+; CHECK-DAG: risbg %r2, [[REG]], 63, 191, 33
+; CHECK: br %r14
+  %t = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a, i64 -4294967296)
+  %val = extractvalue {i64, i1} %t, 0
+  %obit = extractvalue {i64, i1} %t, 1
+  store i64 %val, i64 *%res
+  ret i1 %obit
+}
+
+; Check using the overflow result for a branch.
+define void @f14(i64 %dummy, i64 %a, i64 *%res) {
+; CHECK-LABEL: f14:
 ; CHECK: aghi %r3, 1
 ; CHECK: stg %r3, 0(%r4)
 ; CHECK: {{jgo foo@PLT|bnor %r14}}
@@ -190,8 +241,8 @@ exit:
 }
 
 ; ... and the same with the inverted direction.
-define void @f12(i64 %dummy, i64 %a, i64 *%res) {
-; CHECK-LABEL: f12:
+define void @f15(i64 %dummy, i64 %a, i64 *%res) {
+; CHECK-LABEL: f15:
 ; CHECK: aghi %r3, 1
 ; CHECK: stg %r3, 0(%r4)
 ; CHECK: {{jgno foo@PLT|bor %r14}}

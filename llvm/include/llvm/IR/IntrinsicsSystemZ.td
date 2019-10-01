@@ -1,9 +1,8 @@
 //===- IntrinsicsSystemZ.td - Defines SystemZ intrinsics ---*- tablegen -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -39,7 +38,8 @@ class SystemZBinaryConvCC<LLVMType result, LLVMType arg>
   : Intrinsic<[result, llvm_i32_ty], [arg, arg], [IntrNoMem]>;
 
 class SystemZBinaryConvIntCC<LLVMType result, LLVMType arg>
-  : Intrinsic<[result, llvm_i32_ty], [arg, llvm_i32_ty], [IntrNoMem]>;
+  : Intrinsic<[result, llvm_i32_ty], [arg, llvm_i32_ty],
+              [IntrNoMem, ImmArg<1>]>;
 
 class SystemZBinaryCC<LLVMType type>
   : SystemZBinaryConvCC<type, type>;
@@ -53,18 +53,20 @@ class SystemZTernary<string name, LLVMType type>
 
 class SystemZTernaryInt<string name, LLVMType type>
   : GCCBuiltin<"__builtin_s390_" ## name>,
-    Intrinsic<[type], [type, type, llvm_i32_ty], [IntrNoMem]>;
+    Intrinsic<[type], [type, type, llvm_i32_ty], [IntrNoMem, ImmArg<2>]>;
 
 class SystemZTernaryIntCC<LLVMType type>
-  : Intrinsic<[type, llvm_i32_ty], [type, type, llvm_i32_ty], [IntrNoMem]>;
+  : Intrinsic<[type, llvm_i32_ty], [type, type, llvm_i32_ty],
+              [IntrNoMem, ImmArg<2>]>;
 
 class SystemZQuaternaryInt<string name, LLVMType type>
   : GCCBuiltin<"__builtin_s390_" ## name>,
-    Intrinsic<[type], [type, type, type, llvm_i32_ty], [IntrNoMem]>;
+    Intrinsic<[type], [type, type, type, llvm_i32_ty],
+    [IntrNoMem, ImmArg<3>]>;
 
 class SystemZQuaternaryIntCC<LLVMType type>
   : Intrinsic<[type, llvm_i32_ty], [type, type, type, llvm_i32_ty],
-              [IntrNoMem]>;
+              [IntrNoMem, ImmArg<3>]>;
 
 multiclass SystemZUnaryExtBHF<string name> {
   def b : SystemZUnaryConv<name##"b", llvm_v8i16_ty, llvm_v16i8_ty>;
@@ -180,7 +182,8 @@ multiclass SystemZQuaternaryIntBHF<string name> {
   def f : SystemZQuaternaryInt<name##"f", llvm_v4i32_ty>;
 }
 
-multiclass SystemZQuaternaryIntBHFG<string name> : SystemZQuaternaryIntBHF<name> {
+multiclass SystemZQuaternaryIntBHFG<string name> :
+  SystemZQuaternaryIntBHF<name> {
   def g : SystemZQuaternaryInt<name##"g", llvm_v2i64_ty>;
 }
 
@@ -232,11 +235,11 @@ let TargetPrefix = "s390" in {
 let TargetPrefix = "s390" in {
   def int_s390_lcbb : GCCBuiltin<"__builtin_s390_lcbb">,
                       Intrinsic<[llvm_i32_ty], [llvm_ptr_ty, llvm_i32_ty],
-                                [IntrNoMem]>;
+                                [IntrNoMem, ImmArg<1>]>;
 
   def int_s390_vlbb : GCCBuiltin<"__builtin_s390_vlbb">,
                       Intrinsic<[llvm_v16i8_ty], [llvm_ptr_ty, llvm_i32_ty],
-                                [IntrReadMem, IntrArgMemOnly]>;
+                                [IntrReadMem, IntrArgMemOnly, ImmArg<1>]>;
 
   def int_s390_vll : GCCBuiltin<"__builtin_s390_vll">,
                      Intrinsic<[llvm_v16i8_ty], [llvm_i32_ty, llvm_ptr_ty],
@@ -245,7 +248,7 @@ let TargetPrefix = "s390" in {
   def int_s390_vpdi : GCCBuiltin<"__builtin_s390_vpdi">,
                       Intrinsic<[llvm_v2i64_ty],
                                 [llvm_v2i64_ty, llvm_v2i64_ty, llvm_i32_ty],
-                                [IntrNoMem]>;
+                                [IntrNoMem, ImmArg<2>]>;
 
   def int_s390_vperm : GCCBuiltin<"__builtin_s390_vperm">,
                        Intrinsic<[llvm_v16i8_ty],
@@ -311,7 +314,7 @@ let TargetPrefix = "s390" in {
   def int_s390_vsldb : GCCBuiltin<"__builtin_s390_vsldb">,
                        Intrinsic<[llvm_v16i8_ty],
                                  [llvm_v16i8_ty, llvm_v16i8_ty, llvm_i32_ty],
-                                 [IntrNoMem]>;
+                                 [IntrNoMem, ImmArg<2>]>;
 
   defm int_s390_vscbi : SystemZBinaryBHFG<"vscbi">;
 
@@ -370,7 +373,7 @@ let TargetPrefix = "s390" in {
 
   def int_s390_vfidb : Intrinsic<[llvm_v2f64_ty],
                                  [llvm_v2f64_ty, llvm_i32_ty, llvm_i32_ty],
-                                 [IntrNoMem]>;
+                                 [IntrNoMem, ImmArg<1>, ImmArg<2>]>;
 
   // Instructions from the Vector Enhancements Facility 1
   def int_s390_vbperm : SystemZBinaryConv<"vbperm", llvm_v2i64_ty,
@@ -379,20 +382,20 @@ let TargetPrefix = "s390" in {
   def int_s390_vmslg  : GCCBuiltin<"__builtin_s390_vmslg">,
                         Intrinsic<[llvm_v16i8_ty],
                                   [llvm_v2i64_ty, llvm_v2i64_ty, llvm_v16i8_ty,
-                                   llvm_i32_ty], [IntrNoMem]>;
+                                   llvm_i32_ty], [IntrNoMem, ImmArg<3>]>;
 
   def int_s390_vfmaxdb : Intrinsic<[llvm_v2f64_ty],
                                    [llvm_v2f64_ty, llvm_v2f64_ty, llvm_i32_ty],
-                                   [IntrNoMem]>;
+                                   [IntrNoMem, ImmArg<2>]>;
   def int_s390_vfmindb : Intrinsic<[llvm_v2f64_ty],
                                    [llvm_v2f64_ty, llvm_v2f64_ty, llvm_i32_ty],
-                                   [IntrNoMem]>;
+                                   [IntrNoMem, ImmArg<2>]>;
   def int_s390_vfmaxsb : Intrinsic<[llvm_v4f32_ty],
                                    [llvm_v4f32_ty, llvm_v4f32_ty, llvm_i32_ty],
-                                   [IntrNoMem]>;
+                                   [IntrNoMem, ImmArg<2>]>;
   def int_s390_vfminsb : Intrinsic<[llvm_v4f32_ty],
                                    [llvm_v4f32_ty, llvm_v4f32_ty, llvm_i32_ty],
-                                   [IntrNoMem]>;
+                                   [IntrNoMem, ImmArg<2>]>;
 
   def int_s390_vfcesbs  : SystemZBinaryConvCC<llvm_v4i32_ty, llvm_v4f32_ty>;
   def int_s390_vfchsbs  : SystemZBinaryConvCC<llvm_v4i32_ty, llvm_v4f32_ty>;
@@ -402,7 +405,7 @@ let TargetPrefix = "s390" in {
 
   def int_s390_vfisb : Intrinsic<[llvm_v4f32_ty],
                                  [llvm_v4f32_ty, llvm_i32_ty, llvm_i32_ty],
-                                 [IntrNoMem]>;
+                                 [IntrNoMem, ImmArg<1>, ImmArg<2>]>;
 
   // Instructions from the Vector Packed Decimal Facility
   def int_s390_vlrl : GCCBuiltin<"__builtin_s390_vlrl">,

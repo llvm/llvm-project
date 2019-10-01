@@ -37,6 +37,16 @@ incp x0, p0.q
 // CHECK-NEXT: incp x0, p0.q
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
+incp z0.d, p0.b
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid predicate register
+// CHECK-NEXT: incp z0.d, p0.b
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+incp z0.d, p0.q
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid predicate register
+// CHECK-NEXT: incp z0.d, p0.q
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
 
 // --------------------------------------------------------------------------//
 // Negative tests for instructions that are incompatible with movprfx

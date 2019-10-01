@@ -44,6 +44,7 @@ add_llvm_target(MipsCodeGen
   MipsModuleISelDAGToDAG.cpp
   MipsOptimizePICCall.cpp
   MipsOs16.cpp
+  MipsPreLegalizerCombiner.cpp
   MipsRegisterBankInfo.cpp
   MipsRegisterInfo.cpp
   MipsSEFrameLowering.cpp
@@ -59,6 +60,5 @@ add_llvm_target(MipsCodeGen
 
 add_subdirectory(AsmParser)
 add_subdirectory(Disassembler)
-add_subdirectory(InstPrinter)
 add_subdirectory(MCTargetDesc)
 add_subdirectory(TargetInfo)

@@ -1,9 +1,8 @@
 //===- ARCInstrFormats.td - ARC Instruction Formats --------*- tablegen -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -56,6 +55,44 @@ def GPR32Reduced : Operand<iAny> {
   let DecoderMethod = "DecodeGBR32ShortRegister";
 }
 
+// Helper classes for load/store instructions
+class DataSizeMode<bits<2> mode, string instSfx, string asmSfx> {
+  bits<2> Value = mode;
+  string  InstSuffix = instSfx;
+  string  AsmSuffix  = asmSfx;
+}
+class ExtMode<bit mode, string instSfx, string asmSfx> {
+  bit     Value = mode;
+  string  InstSuffix = instSfx;
+  string  AsmSuffix  = asmSfx;
+}
+
+class AddrMode<bits<2> mode, string instSfx, string asmSfx> {
+  bits<2> Value = mode;
+  string  InstSuffix = instSfx;
+  string  AsmSuffix  = asmSfx;
+}
+
+class CacheMode<bit mode, string instSfx, string asmSfx> {
+  bit     Value = mode;
+  string  InstSuffix = instSfx;
+  string  AsmSuffix  = asmSfx;
+}
+
+def ByteSM : DataSizeMode<0b01, "B", "b">;
+def HalfSM : DataSizeMode<0b10, "H", "h">;
+def WordSM : DataSizeMode<0b00,  "",  "">;
+
+def NoEM      : ExtMode<0,   "",   "">;
+def SignedEM  : ExtMode<1, "_X", ".x">;
+
+def NoAM      : AddrMode<0b00, "", "">;
+def PreIncAM  : AddrMode<0b01, "_AW", ".aw">;
+def PostIncAM : AddrMode<0b10, "_AB", ".ab">;
+
+def NoCC       : CacheMode<0b0,    "",    "">;
+def UncachedCC : CacheMode<0b1, "_DI", ".di">;
+
 class InstARC<int sz, dag outs, dag ins, string asmstr, list<dag> pattern>
     : Instruction, Encoding64 {
 
@@ -65,6 +102,18 @@ class InstARC<int sz, dag outs, dag ins, string asmstr, list<dag> pattern>
   let AsmString = asmstr;
   let Pattern = pattern;
   let Size = sz;
+
+  // Load/Store instruction properties
+  DataSizeMode ZZ = WordSM;
+  ExtMode X = NoEM;
+  AddrMode AA = NoAM;
+  CacheMode DI = NoCC;
+
+  // Field used for relation models
+  string BaseOpcode = "";
+
+  //TSFlags
+  let TSFlags{1-0} = AA.Value;
 }
 
 // ARC pseudo instructions format
@@ -355,6 +404,8 @@ class F32_LD_RS9<bit x, bits<2> aa, bit di, bits<2> zz, dag outs, dag ins,
   let Inst{8-7} = zz;
   let Inst{6} = x;
   let Inst{5-0} = A;
+
+  let BaseOpcode = "ld_rs9";
 }
 
 class F32_LD_ADDR<bit x, bits<2> aa, bit di, bits<2> zz, dag outs, dag ins,
@@ -364,6 +415,8 @@ class F32_LD_ADDR<bit x, bits<2> aa, bit di, bits<2> zz, dag outs, dag ins,
 
   let B = addr{14-9};
   let S9 = addr{8-0};
+
+  let BaseOpcode = "ld_rs9";
 }
 
 
@@ -388,6 +441,8 @@ class F32_LD_LIMM<bit x, bit di, bits<2> zz, dag outs, dag ins,
   let Inst{6} = x;
   let Inst{5-0} = A;
   let DecoderMethod = "DecodeLdLImmInstruction";
+
+  let BaseOpcode = "ld_limm";
 }
 
 // Register + LImm load.  The 32-bit immediate address is in Inst[63-32].
@@ -416,6 +471,8 @@ class F32_LD_RLIMM<bit x, bits<2> aa, bit di, bits<2> zz, dag outs, dag ins,
   let Inst{11-6} = LImmReg;
   let Inst{5-0} = A;
   let DecoderMethod = "DecodeLdRLImmInstruction";
+
+  let BaseOpcode = "ld_rlimm";
 }
 
 // Register + S9 Store. (B + S9)
@@ -438,6 +495,8 @@ class F32_ST_RS9<bits<2> aa, bit di, bits<2> zz, dag outs, dag ins,
   let Inst{4-3} = aa;
   let Inst{2-1} = zz;
   let Inst{0} = 0;
+
+  let BaseOpcode = "st_rs9";
 }
 
 class F32_ST_ADDR<bits<2> aa, bit di, bits<2> zz, dag outs, dag ins,
@@ -447,6 +506,8 @@ class F32_ST_ADDR<bits<2> aa, bit di, bits<2> zz, dag outs, dag ins,
 
   let B = addr{14-9};
   let S9 = addr{8-0};
+
+  let BaseOpcode = "st_rs9";
 }
 
 // LImm Store.
@@ -470,6 +531,8 @@ class F32_ST_LIMM<bit di, bits<2> zz, dag outs, dag ins,
   let Inst{2-1} = zz;
   let Inst{0} = 0;
   let DecoderMethod = "DecodeStLImmInstruction";
+
+  let BaseOpcode = "st_limm";
 }
 
 // Compact Move/Load.

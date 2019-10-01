@@ -1,26 +1,33 @@
-# RUN: llvm-mc < %s -triple=i686-pc-win32 -filetype=obj | llvm-readobj - -codeview | FileCheck %s
+# RUN: llvm-mc %s -triple=i686-pc-win32 -filetype=obj -o %t.obj
+# RUN: llvm-objdump -d %t.obj | FileCheck %s --check-prefix=ASM
+# RUN: llvm-pdbutil dump -il -symbols %t.obj | FileCheck %s --check-prefix=CODEVIEW
 
 # Based on the other cv-loc-unreachable-2.s, but with other code in the same
 # section afterwards. We had negative label difference assertions when .cv_loc
 # bound tightly to the next instruction.
 
-# CHECK-LABEL: InlineeSourceLine {
-# CHECK:   Inlinee: do_exit (0x1002)
-# CHECK:   FileID: C:\src\llvm-project\build\t.cpp (0x0)
-# CHECK:   SourceLineNum: 3
-# CHECK: }
+# ASM:      00000000 _callit:
+#   begin inline {
+# ASM-NEXT:        0: e8 00 00 00 00                calll   0 <_callit+0x5>
+# ASM-NEXT:        5: 85 c0                         testl   %eax, %eax
+# ASM-NEXT:        7: 75 01                         jne     1 <_callit+0xa>
+#   } end inline
+# ASM-NEXT:        9: c3                            retl
+#   begin inline {
+# ASM-NEXT:        a: 6a 20                         pushl   $32
+# ASM-NEXT:        c: ff 15 00 00 00 00             calll   *0
+#   } end inline
 
-# CHECK-LABEL: InlineSiteSym {
-# CHECK:   Kind: S_INLINESITE (0x114D)
-# CHECK:   Inlinee: do_exit (0x1002)
-# CHECK:   BinaryAnnotations [
-# CHECK-NEXT:     ChangeLineOffset: 1
-# CHECK-NEXT:     ChangeCodeLength: 0x9
-# CHECK-NEXT:     ChangeCodeOffsetAndLineOffset: {CodeOffset: 0x1, LineOffset: 1}
-# CHECK-NEXT:     ChangeCodeOffsetAndLineOffset: {CodeOffset: 0x8, LineOffset: 1}
-# CHECK-NEXT:     ChangeCodeLength: 0x0
-# CHECK-NEXT:   ]
-# CHECK: }
+# CODEVIEW: Inlinee |  Line | Source File
+# CODEVIEW:  0x1002 |     3 | C:\src\llvm-project\build\t.cpp (MD5: 0BC092F354CE14FDC2FA78F8EDE7426E)
+
+# CODEVIEW:      S_INLINESITE [size = 26]
+# CODEVIEW-NEXT: inlinee = 0x1002 (do_exit), parent = 0, end = 0
+# CODEVIEW-NEXT:   0602      line 1 (+1)
+# CODEVIEW-NEXT:   0409      code end 0x9 (+0x9)
+# CODEVIEW-NEXT:   0B21      code 0xA (+0x1) line 2 (+1)
+# CODEVIEW-NEXT:   0B28      code 0x12 (+0x8) line 3 (+1)
+# CODEVIEW-NEXT:   0400      code end 0x12 (+0x0)
 
 	.text
 	.def	 _callit; .scl	2; .type	32; .endef

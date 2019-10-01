@@ -1,9 +1,8 @@
 //=======-- PPCInstrSPE.td - The PowerPC SPE Extension -*- tablegen -*-=======//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -512,7 +511,7 @@ def EVLWWSPLATX    : EVXForm_1<792, (outs sperc:$RT), (ins memrr:$src),
 
 def EVMERGEHI      : EVXForm_1<556, (outs sperc:$RT), (ins sperc:$RA, sperc:$RB),
                                "evmergehi $RT, $RA, $RB", IIC_VecGeneral, []>;
-def EVMERGELO      : EVXForm_1<557, (outs sperc:$RT), (ins sperc:$RA, sperc:$RB),
+def EVMERGELO      : EVXForm_1<557, (outs sperc:$RT), (ins gprc:$RA, gprc:$RB),
                                "evmergelo $RT, $RA, $RB", IIC_VecGeneral, []>;
 def EVMERGEHILO    : EVXForm_1<558, (outs sperc:$RT), (ins sperc:$RA, sperc:$RB),
                                "evmergehilo $RT, $RA, $RB", IIC_VecGeneral, []>;
@@ -887,4 +886,14 @@ def : Pat<(f64 (selectcc i1:$lhs, i1:$rhs, f64:$tval, f64:$fval, SETUGT)),
           (SELECT_SPE (CRANDC $lhs, $rhs), $tval, $fval)>;
 def : Pat<(f64 (selectcc i1:$lhs, i1:$rhs, f64:$tval, f64:$fval, SETNE)),
           (SELECT_SPE (CRXOR $lhs, $rhs), $tval, $fval)>;
+
+
+def : Pat<(f64 (PPCbuild_spe64 i32:$rB, i32:$rA)),
+          (f64 (COPY_TO_REGCLASS (EVMERGELO $rA, $rB), SPERC))>;
+
+def : Pat<(i32 (PPCextract_spe f64:$rA, 1)),
+          (i32 (EXTRACT_SUBREG (EVMERGEHI $rA, $rA), sub_32))>;
+def : Pat<(i32 (PPCextract_spe f64:$rA, 0)),
+          (i32 (EXTRACT_SUBREG $rA, sub_32))>;
+
 }

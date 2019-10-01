@@ -83,7 +83,7 @@ body:             |
 
   bb.9:
     successors: %bb.10(0x80000000)
-    %19:vreg_128 = BUFFER_LOAD_FORMAT_XYZW_IDXEN killed %18, undef %20:sreg_128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 16 from constant-pool, align 1, addrspace 4)
+    %19:vreg_128 = BUFFER_LOAD_FORMAT_XYZW_IDXEN killed %18, undef %20:sreg_128, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 16 from constant-pool, align 1, addrspace 4)
     %21:sreg_64 = V_CMP_NE_U32_e64 target-flags(amdgpu-gotprel) 0, killed %19.sub0, implicit $exec
     %22:sreg_64 = COPY $exec, implicit-def $exec
     %23:sreg_64 = S_AND_B64 %22, %21, implicit-def dead $scc
@@ -129,5 +129,5 @@ body:             |
     %29:vgpr_32 = V_ADD_F32_e32 0, killed %28, implicit $exec
     $m0 = S_MOV_B32 -1
     DS_WRITE_B32 undef %30:vgpr_32, killed %29, 0, 0, implicit $m0, implicit $exec :: (store 4 into `i32 addrspace(3)* undef`, addrspace 3)
-    S_ENDPGM
+    S_ENDPGM 0
 ...

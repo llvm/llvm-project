@@ -186,14 +186,14 @@ define void @fpext_frommem8(<8 x float>* %in, <8 x double>* %out) {
 ; X32-SSE:       # %bb.0: # %entry
 ; X32-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x08]
 ; X32-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx # encoding: [0x8b,0x4c,0x24,0x04]
-; X32-SSE-NEXT:    cvtps2pd (%ecx), %xmm0 # encoding: [0x0f,0x5a,0x01]
-; X32-SSE-NEXT:    cvtps2pd 8(%ecx), %xmm1 # encoding: [0x0f,0x5a,0x49,0x08]
-; X32-SSE-NEXT:    cvtps2pd 16(%ecx), %xmm2 # encoding: [0x0f,0x5a,0x51,0x10]
-; X32-SSE-NEXT:    cvtps2pd 24(%ecx), %xmm3 # encoding: [0x0f,0x5a,0x59,0x18]
-; X32-SSE-NEXT:    movups %xmm3, 48(%eax) # encoding: [0x0f,0x11,0x58,0x30]
-; X32-SSE-NEXT:    movups %xmm2, 32(%eax) # encoding: [0x0f,0x11,0x50,0x20]
-; X32-SSE-NEXT:    movups %xmm1, 16(%eax) # encoding: [0x0f,0x11,0x48,0x10]
-; X32-SSE-NEXT:    movups %xmm0, (%eax) # encoding: [0x0f,0x11,0x00]
+; X32-SSE-NEXT:    cvtps2pd 8(%ecx), %xmm0 # encoding: [0x0f,0x5a,0x41,0x08]
+; X32-SSE-NEXT:    cvtps2pd (%ecx), %xmm1 # encoding: [0x0f,0x5a,0x09]
+; X32-SSE-NEXT:    cvtps2pd 24(%ecx), %xmm2 # encoding: [0x0f,0x5a,0x51,0x18]
+; X32-SSE-NEXT:    cvtps2pd 16(%ecx), %xmm3 # encoding: [0x0f,0x5a,0x59,0x10]
+; X32-SSE-NEXT:    movups %xmm3, 32(%eax) # encoding: [0x0f,0x11,0x58,0x20]
+; X32-SSE-NEXT:    movups %xmm2, 48(%eax) # encoding: [0x0f,0x11,0x50,0x30]
+; X32-SSE-NEXT:    movups %xmm1, (%eax) # encoding: [0x0f,0x11,0x08]
+; X32-SSE-NEXT:    movups %xmm0, 16(%eax) # encoding: [0x0f,0x11,0x40,0x10]
 ; X32-SSE-NEXT:    retl # encoding: [0xc3]
 ;
 ; X32-AVX-LABEL: fpext_frommem8:
@@ -218,14 +218,14 @@ define void @fpext_frommem8(<8 x float>* %in, <8 x double>* %out) {
 ;
 ; X64-SSE-LABEL: fpext_frommem8:
 ; X64-SSE:       # %bb.0: # %entry
-; X64-SSE-NEXT:    cvtps2pd (%rdi), %xmm0 # encoding: [0x0f,0x5a,0x07]
-; X64-SSE-NEXT:    cvtps2pd 8(%rdi), %xmm1 # encoding: [0x0f,0x5a,0x4f,0x08]
-; X64-SSE-NEXT:    cvtps2pd 16(%rdi), %xmm2 # encoding: [0x0f,0x5a,0x57,0x10]
-; X64-SSE-NEXT:    cvtps2pd 24(%rdi), %xmm3 # encoding: [0x0f,0x5a,0x5f,0x18]
-; X64-SSE-NEXT:    movups %xmm3, 48(%rsi) # encoding: [0x0f,0x11,0x5e,0x30]
-; X64-SSE-NEXT:    movups %xmm2, 32(%rsi) # encoding: [0x0f,0x11,0x56,0x20]
-; X64-SSE-NEXT:    movups %xmm1, 16(%rsi) # encoding: [0x0f,0x11,0x4e,0x10]
-; X64-SSE-NEXT:    movups %xmm0, (%rsi) # encoding: [0x0f,0x11,0x06]
+; X64-SSE-NEXT:    cvtps2pd 8(%rdi), %xmm0 # encoding: [0x0f,0x5a,0x47,0x08]
+; X64-SSE-NEXT:    cvtps2pd (%rdi), %xmm1 # encoding: [0x0f,0x5a,0x0f]
+; X64-SSE-NEXT:    cvtps2pd 24(%rdi), %xmm2 # encoding: [0x0f,0x5a,0x57,0x18]
+; X64-SSE-NEXT:    cvtps2pd 16(%rdi), %xmm3 # encoding: [0x0f,0x5a,0x5f,0x10]
+; X64-SSE-NEXT:    movups %xmm3, 32(%rsi) # encoding: [0x0f,0x11,0x5e,0x20]
+; X64-SSE-NEXT:    movups %xmm2, 48(%rsi) # encoding: [0x0f,0x11,0x56,0x30]
+; X64-SSE-NEXT:    movups %xmm1, (%rsi) # encoding: [0x0f,0x11,0x0e]
+; X64-SSE-NEXT:    movups %xmm0, 16(%rsi) # encoding: [0x0f,0x11,0x46,0x10]
 ; X64-SSE-NEXT:    retq # encoding: [0xc3]
 ;
 ; X64-AVX-LABEL: fpext_frommem8:
@@ -297,4 +297,50 @@ entry:
   %1  = insertelement <2 x float> %0, float -2.0, i32 1
   %2  = fpext <2 x float> %1 to <2 x double>
   ret <2 x double> %2
+}
+
+; Make sure we don't narrow a volatile load.
+define <2 x double> @PR42079(<4 x float>* %x) {
+; X32-SSE-LABEL: PR42079:
+; X32-SSE:       # %bb.0:
+; X32-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
+; X32-SSE-NEXT:    movaps (%eax), %xmm0 # encoding: [0x0f,0x28,0x00]
+; X32-SSE-NEXT:    cvtps2pd %xmm0, %xmm0 # encoding: [0x0f,0x5a,0xc0]
+; X32-SSE-NEXT:    retl # encoding: [0xc3]
+;
+; X32-AVX-LABEL: PR42079:
+; X32-AVX:       # %bb.0:
+; X32-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
+; X32-AVX-NEXT:    vmovaps (%eax), %xmm0 # encoding: [0xc5,0xf8,0x28,0x00]
+; X32-AVX-NEXT:    vcvtps2pd %xmm0, %xmm0 # encoding: [0xc5,0xf8,0x5a,0xc0]
+; X32-AVX-NEXT:    retl # encoding: [0xc3]
+;
+; X32-AVX512VL-LABEL: PR42079:
+; X32-AVX512VL:       # %bb.0:
+; X32-AVX512VL-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
+; X32-AVX512VL-NEXT:    vmovaps (%eax), %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x28,0x00]
+; X32-AVX512VL-NEXT:    vcvtps2pd %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x5a,0xc0]
+; X32-AVX512VL-NEXT:    retl # encoding: [0xc3]
+;
+; X64-SSE-LABEL: PR42079:
+; X64-SSE:       # %bb.0:
+; X64-SSE-NEXT:    movaps (%rdi), %xmm0 # encoding: [0x0f,0x28,0x07]
+; X64-SSE-NEXT:    cvtps2pd %xmm0, %xmm0 # encoding: [0x0f,0x5a,0xc0]
+; X64-SSE-NEXT:    retq # encoding: [0xc3]
+;
+; X64-AVX-LABEL: PR42079:
+; X64-AVX:       # %bb.0:
+; X64-AVX-NEXT:    vmovaps (%rdi), %xmm0 # encoding: [0xc5,0xf8,0x28,0x07]
+; X64-AVX-NEXT:    vcvtps2pd %xmm0, %xmm0 # encoding: [0xc5,0xf8,0x5a,0xc0]
+; X64-AVX-NEXT:    retq # encoding: [0xc3]
+;
+; X64-AVX512VL-LABEL: PR42079:
+; X64-AVX512VL:       # %bb.0:
+; X64-AVX512VL-NEXT:    vmovaps (%rdi), %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x28,0x07]
+; X64-AVX512VL-NEXT:    vcvtps2pd %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x5a,0xc0]
+; X64-AVX512VL-NEXT:    retq # encoding: [0xc3]
+  %a = load volatile <4 x float>, <4 x float>* %x
+  %b = shufflevector <4 x float> %a, <4 x float> %a, <2 x i32> <i32 0, i32 1>
+  %c = fpext <2 x float> %b to <2 x double>
+  ret <2 x double> %c
 }

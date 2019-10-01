@@ -1,9 +1,8 @@
 //===- AddDiscriminators.cpp - Insert DWARF path discriminators -----------===//
 //
-//                      The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -209,7 +208,7 @@ static bool addDiscriminators(Function &F) {
       // Only the lowest 7 bits are used to represent a discriminator to fit
       // it in 1 byte ULEB128 representation.
       unsigned Discriminator = R.second ? ++LDM[L] : LDM[L];
-      auto NewDIL = DIL->setBaseDiscriminator(Discriminator);
+      auto NewDIL = DIL->cloneWithBaseDiscriminator(Discriminator);
       if (!NewDIL) {
         LLVM_DEBUG(dbgs() << "Could not encode discriminator: "
                           << DIL->getFilename() << ":" << DIL->getLine() << ":"
@@ -232,22 +231,21 @@ static bool addDiscriminators(Function &F) {
   for (BasicBlock &B : F) {
     LocationSet CallLocations;
     for (auto &I : B.getInstList()) {
-      CallInst *Current = dyn_cast<CallInst>(&I);
       // We bypass intrinsic calls for the following two reasons:
       //  1) We want to avoid a non-deterministic assigment of
       //     discriminators.
       //  2) We want to minimize the number of base discriminators used.
-      if (!Current || isa<IntrinsicInst>(&I))
+      if (!isa<InvokeInst>(I) && (!isa<CallInst>(I) || isa<IntrinsicInst>(I)))  
         continue;
 
-      DILocation *CurrentDIL = Current->getDebugLoc();
+      DILocation *CurrentDIL = I.getDebugLoc();
       if (!CurrentDIL)
         continue;
       Location L =
           std::make_pair(CurrentDIL->getFilename(), CurrentDIL->getLine());
       if (!CallLocations.insert(L).second) {
         unsigned Discriminator = ++LDM[L];
-        auto NewDIL = CurrentDIL->setBaseDiscriminator(Discriminator);
+        auto NewDIL = CurrentDIL->cloneWithBaseDiscriminator(Discriminator);
         if (!NewDIL) {
           LLVM_DEBUG(dbgs()
                      << "Could not encode discriminator: "
@@ -255,7 +253,7 @@ static bool addDiscriminators(Function &F) {
                      << CurrentDIL->getLine() << ":" << CurrentDIL->getColumn()
                      << ":" << Discriminator << " " << I << "\n");
         } else {
-          Current->setDebugLoc(NewDIL.getValue());
+          I.setDebugLoc(NewDIL.getValue());
           Changed = true;
         }
       }

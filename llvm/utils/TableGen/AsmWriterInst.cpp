@@ -1,9 +1,8 @@
 //===- AsmWriterInst.h - Classes encapsulating a printable inst -----------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -94,8 +93,10 @@ AsmWriterInst::AsmWriterInst(const CodeGenInstruction &CGI, unsigned CGIIndex,
                    != std::string::npos) {
           AddLiteralString(std::string(1, AsmString[DollarPos+1]));
         } else {
-          PrintFatalError("Non-supported escaped character found in instruction '" +
-            CGI.TheDef->getName() + "'!");
+          PrintFatalError(
+              CGI.TheDef->getLoc(),
+              "Non-supported escaped character found in instruction '" +
+                  CGI.TheDef->getName() + "'!");
         }
         LastEmitted = DollarPos+2;
         continue;
@@ -132,15 +133,19 @@ AsmWriterInst::AsmWriterInst(const CodeGenInstruction &CGI, unsigned CGIIndex,
       // brace.
       if (hasCurlyBraces) {
         if (VarEnd >= AsmString.size())
-          PrintFatalError("Reached end of string before terminating curly brace in '"
-            + CGI.TheDef->getName() + "'");
+          PrintFatalError(
+              CGI.TheDef->getLoc(),
+              "Reached end of string before terminating curly brace in '" +
+                  CGI.TheDef->getName() + "'");
 
         // Look for a modifier string.
         if (AsmString[VarEnd] == ':') {
           ++VarEnd;
           if (VarEnd >= AsmString.size())
-            PrintFatalError("Reached end of string before terminating curly brace in '"
-              + CGI.TheDef->getName() + "'");
+            PrintFatalError(
+                CGI.TheDef->getLoc(),
+                "Reached end of string before terminating curly brace in '" +
+                    CGI.TheDef->getName() + "'");
 
           std::string::size_type ModifierStart = VarEnd;
           while (VarEnd < AsmString.size() && isIdentChar(AsmString[VarEnd]))
@@ -148,17 +153,22 @@ AsmWriterInst::AsmWriterInst(const CodeGenInstruction &CGI, unsigned CGIIndex,
           Modifier = std::string(AsmString.begin()+ModifierStart,
                                  AsmString.begin()+VarEnd);
           if (Modifier.empty())
-            PrintFatalError("Bad operand modifier name in '"+ CGI.TheDef->getName() + "'");
+            PrintFatalError(CGI.TheDef->getLoc(),
+                            "Bad operand modifier name in '" +
+                                CGI.TheDef->getName() + "'");
         }
 
         if (AsmString[VarEnd] != '}')
-          PrintFatalError("Variable name beginning with '{' did not end with '}' in '"
-            + CGI.TheDef->getName() + "'");
+          PrintFatalError(
+              CGI.TheDef->getLoc(),
+              "Variable name beginning with '{' did not end with '}' in '" +
+                  CGI.TheDef->getName() + "'");
         ++VarEnd;
       }
       if (VarName.empty() && Modifier.empty())
-        PrintFatalError("Stray '$' in '" + CGI.TheDef->getName() +
-          "' asm string, maybe you want $$?");
+        PrintFatalError(CGI.TheDef->getLoc(),
+                        "Stray '$' in '" + CGI.TheDef->getName() +
+                            "' asm string, maybe you want $$?");
 
       if (VarName.empty()) {
         // Just a modifier, pass this into PrintSpecial.

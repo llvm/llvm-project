@@ -78,7 +78,7 @@ define <4 x i32> @add_mul_v4i32(<4 x i32> %a, <4 x i32> %b) {
 ; SSE-LABEL: @add_mul_v4i32(
 ; SSE-NEXT:    [[TMP1:%.*]] = mul <4 x i32> [[A:%.*]], [[B:%.*]]
 ; SSE-NEXT:    [[TMP2:%.*]] = add <4 x i32> [[A]], [[B]]
-; SSE-NEXT:    [[R3:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> [[TMP1]], <4 x i32> <i32 4, i32 1, i32 2, i32 7>
+; SSE-NEXT:    [[R3:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> [[TMP2]], <4 x i32> <i32 0, i32 5, i32 6, i32 3>
 ; SSE-NEXT:    ret <4 x i32> [[R3]]
 ;
 ; SLM-LABEL: @add_mul_v4i32(
@@ -103,13 +103,13 @@ define <4 x i32> @add_mul_v4i32(<4 x i32> %a, <4 x i32> %b) {
 ; AVX-LABEL: @add_mul_v4i32(
 ; AVX-NEXT:    [[TMP1:%.*]] = mul <4 x i32> [[A:%.*]], [[B:%.*]]
 ; AVX-NEXT:    [[TMP2:%.*]] = add <4 x i32> [[A]], [[B]]
-; AVX-NEXT:    [[R3:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> [[TMP1]], <4 x i32> <i32 4, i32 1, i32 2, i32 7>
+; AVX-NEXT:    [[R3:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> [[TMP2]], <4 x i32> <i32 0, i32 5, i32 6, i32 3>
 ; AVX-NEXT:    ret <4 x i32> [[R3]]
 ;
 ; AVX512-LABEL: @add_mul_v4i32(
 ; AVX512-NEXT:    [[TMP1:%.*]] = mul <4 x i32> [[A:%.*]], [[B:%.*]]
 ; AVX512-NEXT:    [[TMP2:%.*]] = add <4 x i32> [[A]], [[B]]
-; AVX512-NEXT:    [[R3:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> [[TMP1]], <4 x i32> <i32 4, i32 1, i32 2, i32 7>
+; AVX512-NEXT:    [[R3:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> [[TMP2]], <4 x i32> <i32 0, i32 5, i32 6, i32 3>
 ; AVX512-NEXT:    ret <4 x i32> [[R3]]
 ;
   %a0 = extractelement <4 x i32> %a, i32 0
@@ -523,6 +523,42 @@ define <8 x i32> @sdiv_v8i32_undefs(<8 x i32> %a) {
   %ab5 = sdiv i32 %a5, 4
   %ab6 = sdiv i32 %a6, 8
   %ab7 = sdiv i32 %a7, 16
+  %r0 = insertelement <8 x i32> undef, i32 %ab0, i32 0
+  %r1 = insertelement <8 x i32>   %r0, i32 %ab1, i32 1
+  %r2 = insertelement <8 x i32>   %r1, i32 %ab2, i32 2
+  %r3 = insertelement <8 x i32>   %r2, i32 %ab3, i32 3
+  %r4 = insertelement <8 x i32>   %r3, i32 %ab4, i32 4
+  %r5 = insertelement <8 x i32>   %r4, i32 %ab5, i32 5
+  %r6 = insertelement <8 x i32>   %r5, i32 %ab6, i32 6
+  %r7 = insertelement <8 x i32>   %r6, i32 %ab7, i32 7
+  ret <8 x i32> %r7
+}
+
+define <8 x i32> @add_sub_v8i32_splat(<8 x i32> %a, i32 %b) {
+; CHECK-LABEL: @add_sub_v8i32_splat(
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i32> undef, i32 [[B:%.*]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> undef, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = add <8 x i32> [[TMP2]], [[A:%.*]]
+; CHECK-NEXT:    [[TMP4:%.*]] = sub <8 x i32> [[TMP2]], [[A]]
+; CHECK-NEXT:    [[R7:%.*]] = shufflevector <8 x i32> [[TMP3]], <8 x i32> [[TMP4]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    ret <8 x i32> [[R7]]
+;
+  %a0 = extractelement <8 x i32> %a, i32 0
+  %a1 = extractelement <8 x i32> %a, i32 1
+  %a2 = extractelement <8 x i32> %a, i32 2
+  %a3 = extractelement <8 x i32> %a, i32 3
+  %a4 = extractelement <8 x i32> %a, i32 4
+  %a5 = extractelement <8 x i32> %a, i32 5
+  %a6 = extractelement <8 x i32> %a, i32 6
+  %a7 = extractelement <8 x i32> %a, i32 7
+  %ab0 = add i32 %a0, %b
+  %ab1 = add i32 %b, %a1
+  %ab2 = add i32 %a2, %b
+  %ab3 = add i32 %b, %a3
+  %ab4 = sub i32 %b, %a4
+  %ab5 = sub i32 %b, %a5
+  %ab6 = sub i32 %b, %a6
+  %ab7 = sub i32 %b, %a7
   %r0 = insertelement <8 x i32> undef, i32 %ab0, i32 0
   %r1 = insertelement <8 x i32>   %r0, i32 %ab1, i32 1
   %r2 = insertelement <8 x i32>   %r1, i32 %ab2, i32 2

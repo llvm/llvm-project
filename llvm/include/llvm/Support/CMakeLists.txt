@@ -1,38 +1,21 @@
-find_first_existing_vc_file(llvm_vc "${LLVM_MAIN_SRC_DIR}")
+find_first_existing_vc_file("${LLVM_MAIN_SRC_DIR}" llvm_vc)
 
 # The VC revision include that we want to generate.
 set(version_inc "${CMAKE_CURRENT_BINARY_DIR}/VCSRevision.h")
 
-set(get_svn_script "${LLVM_CMAKE_PATH}/GenerateVersionFromCVS.cmake")
+set(generate_vcs_version_script "${LLVM_CMAKE_PATH}/GenerateVersionFromVCS.cmake")
 
-file(WRITE "${version_inc}.undef" "#undef LLVM_REVISION\n")
-if((DEFINED llvm_vc) AND LLVM_APPEND_VC_REV)
-
-  execute_process(COMMAND ${CMAKE_COMMAND} -E compare_files
-      "${version_inc}.undef" "${version_inc}"
-      RESULT_VARIABLE files_not_equal
-      OUTPUT_QUIET
-      ERROR_QUIET)
-  # Remove ${version_inc} if it doesn't define a revision. This will force it
-  # to be regenerated when toggling LLVM_APPEND_VC_REV from OFF to ON.
-  if(NOT files_not_equal)
-    file(REMOVE "${version_inc}")
-  endif()
-
-  # Create custom target to generate the VC revision include.
-  add_custom_command(OUTPUT "${version_inc}"
-    DEPENDS "${llvm_vc}" "${get_svn_script}"
-    COMMAND
-    ${CMAKE_COMMAND} "-DSOURCE_DIR=${LLVM_MAIN_SRC_DIR}"
-                     "-DNAME=LLVM_REVISION"
-                     "-DHEADER_FILE=${version_inc}"
-                     -P "${get_svn_script}")
-else()
-  # Make sure ${version_inc} doesn't define a revision
-  execute_process(COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    "${version_inc}.undef" "${version_inc}")
+if(llvm_vc AND LLVM_APPEND_VC_REV)
+  set(llvm_source_dir ${LLVM_MAIN_SRC_DIR})
 endif()
-file(REMOVE "${version_inc}.undef")
+
+# Create custom target to generate the VC revision include.
+add_custom_command(OUTPUT "${version_inc}"
+  DEPENDS "${llvm_vc}" "${generate_vcs_version_script}"
+  COMMAND ${CMAKE_COMMAND} "-DNAMES=LLVM"
+                           "-DLLVM_SOURCE_DIR=${llvm_source_dir}"
+                           "-DHEADER_FILE=${version_inc}"
+                           -P "${generate_vcs_version_script}")
 
 # Mark the generated header as being generated.
 set_source_files_properties("${version_inc}"

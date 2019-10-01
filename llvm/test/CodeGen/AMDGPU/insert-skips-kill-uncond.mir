@@ -18,10 +18,10 @@
 
 # CHECK: bb.3:
 # CHECK-NEXT: EXP_DONE
-# CHECK: S_ENDPGM
+# CHECK: S_ENDPGM 0
 
 # CHECK: bb.2:
-# CHECK: S_ENDPGM
+# CHECK: S_ENDPGM 0
 
 name: kill_uncond_branch
 
@@ -37,4 +37,4 @@ body: |
     S_BRANCH %bb.2
 
   bb.2:
-    S_ENDPGM
+    S_ENDPGM 0

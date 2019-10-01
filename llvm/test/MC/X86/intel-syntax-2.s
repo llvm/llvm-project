@@ -18,14 +18,14 @@ _test2:
 
 _test3:
 fadd 
-// CHECK: faddp %st(1)
+// CHECK: faddp %st, %st(1)
 fmul
-// CHECK: fmulp %st(1)
+// CHECK: fmulp %st, %st(1)
 fsub
-// CHECK: fsubp %st(1)
+// CHECK: fsubp %st, %st(1)
 fsubr
-// CHECK: fsubrp %st(1)
+// CHECK: fsubrp %st, %st(1)
 fdiv
-// CHECK: fdivp %st(1)
+// CHECK: fdivp %st, %st(1)
 fdivr
-// CHECK: fdivrp %st(1)
+// CHECK: fdivrp %st, %st(1)

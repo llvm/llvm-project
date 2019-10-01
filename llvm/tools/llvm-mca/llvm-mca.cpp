@@ -1,9 +1,8 @@
 //===-- llvm-mca.cpp - Machine Code Analyzer -------------------*- C++ -* -===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -24,6 +23,7 @@
 #include "CodeRegion.h"
 #include "CodeRegionGenerator.h"
 #include "PipelinePrinter.h"
+#include "Views/BottleneckAnalysis.h"
 #include "Views/DispatchStatistics.h"
 #include "Views/InstructionInfoView.h"
 #include "Views/RegisterFileStatistics.h"
@@ -68,8 +68,9 @@ static cl::opt<std::string> OutputFilename("o", cl::desc("Output filename"),
                                            cl::value_desc("filename"));
 
 static cl::opt<std::string>
-    ArchName("march", cl::desc("Target architecture. "
-                               "See -version for available targets"),
+    ArchName("march",
+             cl::desc("Target architecture. "
+                      "See -version for available targets"),
              cl::cat(ToolOptions));
 
 static cl::opt<std::string>
@@ -100,6 +101,17 @@ static cl::opt<unsigned>
                      cl::desc("Maximum number of physical registers which can "
                               "be used for register mappings"),
                      cl::cat(ToolOptions), cl::init(0));
+
+static cl::opt<unsigned>
+    MicroOpQueue("micro-op-queue-size", cl::Hidden,
+                 cl::desc("Number of entries in the micro-op queue"),
+                 cl::cat(ToolOptions), cl::init(0));
+
+static cl::opt<unsigned>
+    DecoderThroughput("decoder-throughput", cl::Hidden,
+                      cl::desc("Maximum throughput from the decoders "
+                               "(instructions per cycle)"),
+                      cl::cat(ToolOptions), cl::init(0));
 
 static cl::opt<bool>
     PrintRegisterFileStats("register-file-stats",
@@ -176,6 +188,11 @@ static cl::opt<bool>
                    cl::desc("Print all views including hardware statistics"),
                    cl::cat(ViewOptions), cl::init(false));
 
+static cl::opt<bool> EnableBottleneckAnalysis(
+    "bottleneck-analysis",
+    cl::desc("Enable bottleneck analysis (disabled by default)"),
+    cl::cat(ViewOptions), cl::init(false));
+
 namespace {
 
 const Target *getTarget(const char *ProgName) {
@@ -220,6 +237,7 @@ static void processViewOptions() {
 
   if (EnableAllViews.getNumOccurrences()) {
     processOptionImpl(PrintSummaryView, EnableAllViews);
+    processOptionImpl(EnableBottleneckAnalysis, EnableAllViews);
     processOptionImpl(PrintResourcePressureView, EnableAllViews);
     processOptionImpl(PrintTimelineView, EnableAllViews);
     processOptionImpl(PrintInstructionInfoView, EnableAllViews);
@@ -348,6 +366,11 @@ int main(int argc, char **argv) {
     return 1;
   }
   const mca::CodeRegions &Regions = *RegionsOrErr;
+
+  // Early exit if errors were found by the code region parsing logic.
+  if (!Regions.isValid())
+    return 1;
+
   if (Regions.empty()) {
     WithColor::error() << "no assembly instructions found.\n";
     return 1;
@@ -377,18 +400,15 @@ int main(int argc, char **argv) {
 
   const MCSchedModel &SM = STI->getSchedModel();
 
-  unsigned Width = SM.IssueWidth;
-  if (DispatchWidth)
-    Width = DispatchWidth;
-
   // Create an instruction builder.
   mca::InstrBuilder IB(*STI, *MCII, *MRI, MCIA.get());
 
   // Create a context to control ownership of the pipeline hardware.
   mca::Context MCA(*MRI, *STI);
 
-  mca::PipelineOptions PO(Width, RegisterFileSize, LoadQueueSize,
-                          StoreQueueSize, AssumeNoAlias);
+  mca::PipelineOptions PO(MicroOpQueue, DecoderThroughput, DispatchWidth,
+                          RegisterFileSize, LoadQueueSize, StoreQueueSize,
+                          AssumeNoAlias, EnableBottleneckAnalysis);
 
   // Number each region in the sequence.
   unsigned RegionIdx = 0;
@@ -423,8 +443,8 @@ int main(int argc, char **argv) {
                   WithColor::error() << IE.Message << '\n';
                   IP->printInst(&IE.Inst, SS, "", *STI);
                   SS.flush();
-                  WithColor::note() << "instruction: " << InstructionStr
-                                    << '\n';
+                  WithColor::note()
+                      << "instruction: " << InstructionStr << '\n';
                 })) {
           // Default case.
           WithColor::error() << toString(std::move(NewE));
@@ -464,7 +484,13 @@ int main(int argc, char **argv) {
     mca::PipelinePrinter Printer(*P);
 
     if (PrintSummaryView)
-      Printer.addView(llvm::make_unique<mca::SummaryView>(SM, Insts, Width));
+      Printer.addView(
+          llvm::make_unique<mca::SummaryView>(SM, Insts, DispatchWidth));
+
+    if (EnableBottleneckAnalysis) {
+      Printer.addView(llvm::make_unique<mca::BottleneckAnalysis>(
+          *STI, *IP, Insts, S.getNumIterations()));
+    }
 
     if (PrintInstructionInfoView)
       Printer.addView(

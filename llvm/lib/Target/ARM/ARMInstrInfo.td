@@ -1,9 +1,8 @@
 //===- ARMInstrInfo.td - Target Description for ARM Target -*- tablegen -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -215,190 +214,6 @@ def ARMsmlaltb      : SDNode<"ARMISD::SMLALTB", SDT_LongMac, []>;
 def ARMsmlaltt      : SDNode<"ARMISD::SMLALTT", SDT_LongMac, []>;
 
 //===----------------------------------------------------------------------===//
-// ARM Instruction Predicate Definitions.
-//
-def HasV4T           : Predicate<"Subtarget->hasV4TOps()">,
-                                 AssemblerPredicate<"HasV4TOps", "armv4t">;
-def NoV4T            : Predicate<"!Subtarget->hasV4TOps()">;
-def HasV5T           : Predicate<"Subtarget->hasV5TOps()">,
-                                 AssemblerPredicate<"HasV5TOps", "armv5t">;
-def NoV5T            : Predicate<"!Subtarget->hasV5TOps()">;
-def HasV5TE          : Predicate<"Subtarget->hasV5TEOps()">,
-                                 AssemblerPredicate<"HasV5TEOps", "armv5te">;
-def HasV6            : Predicate<"Subtarget->hasV6Ops()">,
-                                 AssemblerPredicate<"HasV6Ops", "armv6">;
-def NoV6             : Predicate<"!Subtarget->hasV6Ops()">;
-def HasV6M           : Predicate<"Subtarget->hasV6MOps()">,
-                                 AssemblerPredicate<"HasV6MOps",
-                                                    "armv6m or armv6t2">;
-def HasV8MBaseline   : Predicate<"Subtarget->hasV8MBaselineOps()">,
-                                 AssemblerPredicate<"HasV8MBaselineOps",
-                                                    "armv8m.base">;
-def HasV8MMainline   : Predicate<"Subtarget->hasV8MMainlineOps()">,
-                                 AssemblerPredicate<"HasV8MMainlineOps",
-                                                    "armv8m.main">;
-def HasV6T2          : Predicate<"Subtarget->hasV6T2Ops()">,
-                                 AssemblerPredicate<"HasV6T2Ops", "armv6t2">;
-def NoV6T2           : Predicate<"!Subtarget->hasV6T2Ops()">;
-def HasV6K           : Predicate<"Subtarget->hasV6KOps()">,
-                                 AssemblerPredicate<"HasV6KOps", "armv6k">;
-def NoV6K            : Predicate<"!Subtarget->hasV6KOps()">;
-def HasV7            : Predicate<"Subtarget->hasV7Ops()">,
-                                 AssemblerPredicate<"HasV7Ops", "armv7">;
-def HasV8            : Predicate<"Subtarget->hasV8Ops()">,
-                                 AssemblerPredicate<"HasV8Ops", "armv8">;
-def PreV8            : Predicate<"!Subtarget->hasV8Ops()">,
-                                 AssemblerPredicate<"!HasV8Ops", "armv7 or earlier">;
-def HasV8_1a         : Predicate<"Subtarget->hasV8_1aOps()">,
-                                 AssemblerPredicate<"HasV8_1aOps", "armv8.1a">;
-def HasV8_2a         : Predicate<"Subtarget->hasV8_2aOps()">,
-                                 AssemblerPredicate<"HasV8_2aOps", "armv8.2a">;
-def HasV8_3a         : Predicate<"Subtarget->hasV8_3aOps()">,
-                                 AssemblerPredicate<"HasV8_3aOps", "armv8.3a">;
-def HasV8_4a         : Predicate<"Subtarget->hasV8_4aOps()">,
-                                 AssemblerPredicate<"HasV8_4aOps", "armv8.4a">;
-def HasV8_5a         : Predicate<"Subtarget->hasV8_5aOps()">,
-                                 AssemblerPredicate<"HasV8_5aOps", "armv8.5a">;
-def NoVFP            : Predicate<"!Subtarget->hasVFP2()">;
-def HasVFP2          : Predicate<"Subtarget->hasVFP2()">,
-                                 AssemblerPredicate<"FeatureVFP2", "VFP2">;
-def HasVFP3          : Predicate<"Subtarget->hasVFP3()">,
-                                 AssemblerPredicate<"FeatureVFP3", "VFP3">;
-def HasVFP4          : Predicate<"Subtarget->hasVFP4()">,
-                                 AssemblerPredicate<"FeatureVFP4", "VFP4">;
-def HasDPVFP         : Predicate<"!Subtarget->isFPOnlySP()">,
-                                 AssemblerPredicate<"!FeatureVFPOnlySP",
-                                                    "double precision VFP">;
-def HasFPARMv8       : Predicate<"Subtarget->hasFPARMv8()">,
-                                 AssemblerPredicate<"FeatureFPARMv8", "FPARMv8">;
-def HasNEON          : Predicate<"Subtarget->hasNEON()">,
-                                 AssemblerPredicate<"FeatureNEON", "NEON">;
-def HasSHA2          : Predicate<"Subtarget->hasSHA2()">,
-                                 AssemblerPredicate<"FeatureSHA2", "sha2">;
-def HasAES           : Predicate<"Subtarget->hasAES()">,
-                                 AssemblerPredicate<"FeatureAES", "aes">;
-def HasCrypto        : Predicate<"Subtarget->hasCrypto()">,
-                                 AssemblerPredicate<"FeatureCrypto", "crypto">;
-def HasDotProd       : Predicate<"Subtarget->hasDotProd()">,
-                                 AssemblerPredicate<"FeatureDotProd", "dotprod">;
-def HasCRC           : Predicate<"Subtarget->hasCRC()">,
-                                 AssemblerPredicate<"FeatureCRC", "crc">;
-def HasRAS           : Predicate<"Subtarget->hasRAS()">,
-                                 AssemblerPredicate<"FeatureRAS", "ras">;
-def HasFP16          : Predicate<"Subtarget->hasFP16()">,
-                                 AssemblerPredicate<"FeatureFP16","half-float conversions">;
-def HasFullFP16      : Predicate<"Subtarget->hasFullFP16()">,
-                                 AssemblerPredicate<"FeatureFullFP16","full half-float">;
-def HasFP16FML       : Predicate<"Subtarget->hasFP16FML()">,
-                                 AssemblerPredicate<"FeatureFP16FML","full half-float fml">;
-def HasDivideInThumb : Predicate<"Subtarget->hasDivideInThumbMode()">,
-                                 AssemblerPredicate<"FeatureHWDivThumb", "divide in THUMB">;
-def HasDivideInARM   : Predicate<"Subtarget->hasDivideInARMMode()">,
-                                 AssemblerPredicate<"FeatureHWDivARM", "divide in ARM">;
-def HasDSP           : Predicate<"Subtarget->hasDSP()">,
-                                 AssemblerPredicate<"FeatureDSP", "dsp">;
-def HasDB            : Predicate<"Subtarget->hasDataBarrier()">,
-                                 AssemblerPredicate<"FeatureDB",
-                                                    "data-barriers">;
-def HasDFB           : Predicate<"Subtarget->hasFullDataBarrier()">,
-                                 AssemblerPredicate<"FeatureDFB",
-                                                    "full-data-barrier">;
-def HasV7Clrex  : Predicate<"Subtarget->hasV7Clrex()">,
-                            AssemblerPredicate<"FeatureV7Clrex",
-                                               "v7 clrex">;
-def HasAcquireRelease : Predicate<"Subtarget->hasAcquireRelease()">,
-                                  AssemblerPredicate<"FeatureAcquireRelease",
-                                                     "acquire/release">;
-def HasMP            : Predicate<"Subtarget->hasMPExtension()">,
-                                 AssemblerPredicate<"FeatureMP",
-                                                    "mp-extensions">;
-def HasVirtualization: Predicate<"false">,
-                                 AssemblerPredicate<"FeatureVirtualization",
-                                                   "virtualization-extensions">;
-def HasTrustZone     : Predicate<"Subtarget->hasTrustZone()">,
-                                 AssemblerPredicate<"FeatureTrustZone",
-                                                    "TrustZone">;
-def Has8MSecExt      : Predicate<"Subtarget->has8MSecExt()">,
-                                 AssemblerPredicate<"Feature8MSecExt",
-                                                    "ARMv8-M Security Extensions">;
-def HasZCZ           : Predicate<"Subtarget->hasZeroCycleZeroing()">;
-def UseNEONForFP     : Predicate<"Subtarget->useNEONForSinglePrecisionFP()">;
-def DontUseNEONForFP : Predicate<"!Subtarget->useNEONForSinglePrecisionFP()">;
-def IsThumb          : Predicate<"Subtarget->isThumb()">,
-                                 AssemblerPredicate<"ModeThumb", "thumb">;
-def IsThumb1Only     : Predicate<"Subtarget->isThumb1Only()">;
-def IsThumb2         : Predicate<"Subtarget->isThumb2()">,
-                                 AssemblerPredicate<"ModeThumb,FeatureThumb2",
-                                                    "thumb2">;
-def IsMClass         : Predicate<"Subtarget->isMClass()">,
-                                 AssemblerPredicate<"FeatureMClass", "armv*m">;
-def IsNotMClass      : Predicate<"!Subtarget->isMClass()">,
-                                 AssemblerPredicate<"!FeatureMClass",
-                                                    "!armv*m">;
-def IsARM            : Predicate<"!Subtarget->isThumb()">,
-                                 AssemblerPredicate<"!ModeThumb", "arm-mode">;
-def IsMachO          : Predicate<"Subtarget->isTargetMachO()">;
-def IsNotMachO       : Predicate<"!Subtarget->isTargetMachO()">;
-def IsNaCl           : Predicate<"Subtarget->isTargetNaCl()">;
-def IsWindows        : Predicate<"Subtarget->isTargetWindows()">;
-def IsNotWindows     : Predicate<"!Subtarget->isTargetWindows()">;
-def IsReadTPHard     : Predicate<"Subtarget->isReadTPHard()">;
-def IsReadTPSoft     : Predicate<"!Subtarget->isReadTPHard()">;
-def UseNaClTrap      : Predicate<"Subtarget->useNaClTrap()">,
-                                 AssemblerPredicate<"FeatureNaClTrap", "NaCl">;
-def DontUseNaClTrap  : Predicate<"!Subtarget->useNaClTrap()">;
-
-def UseNegativeImmediates :
-  Predicate<"false">,
-            AssemblerPredicate<"!FeatureNoNegativeImmediates",
-                               "NegativeImmediates">;
-
-// FIXME: Eventually this will be just "hasV6T2Ops".
-let RecomputePerFunction = 1 in {
-  def UseMovt          : Predicate<"Subtarget->useMovt(*MF)">;
-  def DontUseMovt      : Predicate<"!Subtarget->useMovt(*MF)">;
-  def UseMovtInPic     : Predicate<"Subtarget->useMovt(*MF) && Subtarget->allowPositionIndependentMovt()">;
-  def DontUseMovtInPic : Predicate<"!Subtarget->useMovt(*MF) || !Subtarget->allowPositionIndependentMovt()">;
-
-  def UseFPVMLx: Predicate<"((Subtarget->useFPVMLx() &&"
-                           "  TM.Options.AllowFPOpFusion != FPOpFusion::Fast) ||"
-                           "MF->getFunction().optForMinSize())">;
-}
-def UseMulOps        : Predicate<"Subtarget->useMulOps()">;
-
-// Prefer fused MAC for fp mul + add over fp VMLA / VMLS if they are available.
-// But only select them if more precision in FP computation is allowed, and when
-// they are not slower than a mul + add sequence.
-// Do not use them for Darwin platforms.
-def UseFusedMAC      : Predicate<"(TM.Options.AllowFPOpFusion =="
-                                 " FPOpFusion::Fast && "
-                                 " Subtarget->hasVFP4()) && "
-                                 "!Subtarget->isTargetDarwin() &&"
-                                 "Subtarget->useFPVMLx()">;
-
-def HasFastVGETLNi32 : Predicate<"!Subtarget->hasSlowVGETLNi32()">;
-def HasSlowVGETLNi32 : Predicate<"Subtarget->hasSlowVGETLNi32()">;
-
-def HasFastVDUP32 : Predicate<"!Subtarget->hasSlowVDUP32()">;
-def HasSlowVDUP32 : Predicate<"Subtarget->hasSlowVDUP32()">;
-
-def UseVMOVSR : Predicate<"Subtarget->preferVMOVSR() ||"
-                          "!Subtarget->useNEONForSinglePrecisionFP()">;
-def DontUseVMOVSR : Predicate<"!Subtarget->preferVMOVSR() &&"
-                              "Subtarget->useNEONForSinglePrecisionFP()">;
-
-let RecomputePerFunction = 1 in {
-  def IsLE             : Predicate<"MF->getDataLayout().isLittleEndian()">;
-  def IsBE             : Predicate<"MF->getDataLayout().isBigEndian()">;
-}
-
-def GenExecuteOnly : Predicate<"Subtarget->genExecuteOnly()">;
-
-// Armv8.5-A extensions
-def HasSB            : Predicate<"Subtarget->hasSB()">,
-                       AssemblerPredicate<"FeatureSB", "sb">;
-
-//===----------------------------------------------------------------------===//
 // ARM Flag Definitions.
 
 class RegConstraint<string C> {
@@ -426,24 +241,22 @@ def imm16_31 : ImmLeaf<i32, [{
 
 // sext_16_node predicate - True if the SDNode is sign-extended 16 or more bits.
 def sext_16_node : PatLeaf<(i32 GPR:$a), [{
-  if (CurDAG->ComputeNumSignBits(SDValue(N,0)) >= 17)
-    return true;
-
-  if (N->getOpcode() != ISD::SRA)
-    return false;
-  if (N->getOperand(0).getOpcode() != ISD::SHL)
-    return false;
-
-  auto *ShiftVal = dyn_cast<ConstantSDNode>(N->getOperand(1));
-  if (!ShiftVal || ShiftVal->getZExtValue() != 16)
-    return false;
-
-  ShiftVal = dyn_cast<ConstantSDNode>(N->getOperand(0)->getOperand(1));
-  if (!ShiftVal || ShiftVal->getZExtValue() != 16)
-    return false;
-
-  return true;
+  return CurDAG->ComputeNumSignBits(SDValue(N,0)) >= 17;
 }]>;
+
+def sext_bottom_16 : PatFrag<(ops node:$a),
+                             (sext_inreg node:$a, i16)>;
+def sext_top_16 : PatFrag<(ops node:$a),
+                          (i32 (sra node:$a, (i32 16)))>;
+
+def bb_mul : PatFrag<(ops node:$a, node:$b),
+                     (mul (sext_bottom_16 node:$a), (sext_bottom_16 node:$b))>;
+def bt_mul : PatFrag<(ops node:$a, node:$b),
+                     (mul (sext_bottom_16 node:$a), (sra node:$b, (i32 16)))>;
+def tb_mul : PatFrag<(ops node:$a, node:$b),
+                     (mul (sra node:$a, (i32 16)), (sext_bottom_16 node:$b))>;
+def tt_mul : PatFrag<(ops node:$a, node:$b),
+                     (mul (sra node:$a, (i32 16)), (sra node:$b, (i32 16)))>;
 
 /// Split a 32-bit immediate into two 16 bit parts.
 def hi16 : SDNodeXForm<imm, [{
@@ -554,6 +367,16 @@ def reglist : Operand<i32> {
   let DecoderMethod = "DecodeRegListOperand";
 }
 
+// A list of general purpose registers and APSR separated by comma.
+// Used by CLRM
+def RegListWithAPSRAsmOperand : AsmOperandClass { let Name = "RegListWithAPSR"; }
+def reglist_with_apsr : Operand<i32> {
+  let EncoderMethod = "getRegisterListOpValue";
+  let ParserMatchClass = RegListWithAPSRAsmOperand;
+  let PrintMethod = "printRegisterList";
+  let DecoderMethod = "DecodeRegListOperand";
+}
+
 def GPRPairOp : RegisterOperand<GPRPair, "printGPRPairOperand">;
 
 def DPRRegListAsmOperand : AsmOperandClass {
@@ -576,6 +399,21 @@ def spr_reglist : Operand<i32> {
   let ParserMatchClass = SPRRegListAsmOperand;
   let PrintMethod = "printRegisterList";
   let DecoderMethod = "DecodeSPRRegListOperand";
+}
+
+def FPSRegListWithVPRAsmOperand : AsmOperandClass { let Name =
+    "FPSRegListWithVPR"; }
+def fp_sreglist_with_vpr : Operand<i32> {
+  let EncoderMethod = "getRegisterListOpValue";
+  let ParserMatchClass = FPSRegListWithVPRAsmOperand;
+  let PrintMethod = "printRegisterList";
+}
+def FPDRegListWithVPRAsmOperand : AsmOperandClass { let Name =
+    "FPDRegListWithVPR"; }
+def fp_dreglist_with_vpr : Operand<i32> {
+  let EncoderMethod = "getRegisterListOpValue";
+  let ParserMatchClass = FPDRegListWithVPRAsmOperand;
+  let PrintMethod = "printRegisterList";
 }
 
 // An operand for the CONSTPOOL_ENTRY pseudo-instruction.
@@ -720,10 +558,10 @@ def mod_imm_neg : Operand<i32>, PatLeaf<(imm), [{
 }
 
 /// arm_i32imm - True for +V6T2, or when isSOImmTwoParVal()
-def arm_i32imm : PatLeaf<(imm), [{
-  if (Subtarget->useMovt(*MF))
+def arm_i32imm : IntImmLeaf<i32, [{
+  if (Subtarget->useMovt())
     return true;
-  return ARM_AM::isSOImmTwoPartVal((unsigned)N->getZExtValue());
+  return ARM_AM::isSOImmTwoPartVal(Imm.getZExtValue());
 }]>;
 
 /// imm0_1 predicate - Immediate in the range [0,1].
@@ -939,6 +777,32 @@ def imm1_16 : Operand<i32>, ImmLeaf<i32, [{
     imm1_16_XFORM> {
   let PrintMethod = "printImmPlusOneOperand";
   let ParserMatchClass = Imm1_16AsmOperand;
+}
+
+def MVEShiftImm1_7AsmOperand: ImmAsmOperand<1,7> {
+  let Name = "MVEShiftImm1_7";
+  // Reason we're doing this is because instruction vshll.s8 t1 encoding
+  // accepts 1,7 but the t2 encoding accepts 8.  By doing this we can get a
+  // better diagnostic message if someone uses bigger immediate than the t1/t2
+  // encodings allow.
+  let DiagnosticString = "operand must be an immediate in the range [1,8]";
+}
+def mve_shift_imm1_7 : Operand<i32> {
+  let ParserMatchClass = MVEShiftImm1_7AsmOperand;
+  let EncoderMethod = "getMVEShiftImmOpValue";
+}
+
+def MVEShiftImm1_15AsmOperand: ImmAsmOperand<1,15> {
+  let Name = "MVEShiftImm1_15";
+  // Reason we're doing this is because instruction vshll.s16 t1 encoding
+  // accepts 1,15 but the t2 encoding accepts 16.  By doing this we can get a
+  // better diagnostic message if someone uses bigger immediate than the t1/t2
+  // encodings allow.
+  let DiagnosticString = "operand must be an immediate in the range [1,16]";
+}
+def mve_shift_imm1_15 : Operand<i32> {
+  let ParserMatchClass = MVEShiftImm1_15AsmOperand;
+  let EncoderMethod = "getMVEShiftImmOpValue";
 }
 
 // Define ARM specific addressing modes.
@@ -4241,29 +4105,25 @@ def SMMLSR : AMul2Ia <0b0111010, 0b1111, (outs GPR:$Rd),
 multiclass AI_smul<string opc> {
   def BB : AMulxyI<0b0001011, 0b00, (outs GPR:$Rd), (ins GPR:$Rn, GPR:$Rm),
               IIC_iMUL16, !strconcat(opc, "bb"), "\t$Rd, $Rn, $Rm",
-              [(set GPR:$Rd, (mul (sext_inreg GPR:$Rn, i16),
-                                      (sext_inreg GPR:$Rm, i16)))]>,
+              [(set GPR:$Rd, (bb_mul GPR:$Rn, GPR:$Rm))]>,
            Requires<[IsARM, HasV5TE]>,
            Sched<[WriteMUL16, ReadMUL, ReadMUL]>;
 
   def BT : AMulxyI<0b0001011, 0b10, (outs GPR:$Rd), (ins GPR:$Rn, GPR:$Rm),
               IIC_iMUL16, !strconcat(opc, "bt"), "\t$Rd, $Rn, $Rm",
-              [(set GPR:$Rd, (mul (sext_inreg GPR:$Rn, i16),
-                                      (sra GPR:$Rm, (i32 16))))]>,
+              [(set GPR:$Rd, (bt_mul GPR:$Rn, GPR:$Rm))]>,
            Requires<[IsARM, HasV5TE]>,
            Sched<[WriteMUL16, ReadMUL, ReadMUL]>;
 
   def TB : AMulxyI<0b0001011, 0b01, (outs GPR:$Rd), (ins GPR:$Rn, GPR:$Rm),
               IIC_iMUL16, !strconcat(opc, "tb"), "\t$Rd, $Rn, $Rm",
-              [(set GPR:$Rd, (mul (sra GPR:$Rn, (i32 16)),
-                                      (sext_inreg GPR:$Rm, i16)))]>,
+              [(set GPR:$Rd, (tb_mul GPR:$Rn, GPR:$Rm))]>,
            Requires<[IsARM, HasV5TE]>,
            Sched<[WriteMUL16, ReadMUL, ReadMUL]>;
 
   def TT : AMulxyI<0b0001011, 0b11, (outs GPR:$Rd), (ins GPR:$Rn, GPR:$Rm),
               IIC_iMUL16, !strconcat(opc, "tt"), "\t$Rd, $Rn, $Rm",
-              [(set GPR:$Rd, (mul (sra GPR:$Rn, (i32 16)),
-                                      (sra GPR:$Rm, (i32 16))))]>,
+              [(set GPR:$Rd, (tt_mul GPR:$Rn, GPR:$Rm))]>,
             Requires<[IsARM, HasV5TE]>,
            Sched<[WriteMUL16, ReadMUL, ReadMUL]>;
 
@@ -4287,35 +4147,31 @@ multiclass AI_smla<string opc> {
               (ins GPRnopc:$Rn, GPRnopc:$Rm, GPR:$Ra),
               IIC_iMAC16, !strconcat(opc, "bb"), "\t$Rd, $Rn, $Rm, $Ra",
               [(set GPRnopc:$Rd, (add GPR:$Ra,
-                               (mul (sext_inreg GPRnopc:$Rn, i16),
-                                       (sext_inreg GPRnopc:$Rm, i16))))]>,
+                                      (bb_mul GPRnopc:$Rn, GPRnopc:$Rm)))]>,
            Requires<[IsARM, HasV5TE, UseMulOps]>,
            Sched<[WriteMAC16, ReadMUL, ReadMUL, ReadMAC]>;
 
   def BT : AMulxyIa<0b0001000, 0b10, (outs GPRnopc:$Rd),
               (ins GPRnopc:$Rn, GPRnopc:$Rm, GPR:$Ra),
               IIC_iMAC16, !strconcat(opc, "bt"), "\t$Rd, $Rn, $Rm, $Ra",
-              [(set GPRnopc:$Rd,
-                    (add GPR:$Ra, (mul (sext_inreg GPRnopc:$Rn, i16),
-                                          (sra GPRnopc:$Rm, (i32 16)))))]>,
+              [(set GPRnopc:$Rd, (add GPR:$Ra,
+                                      (bt_mul GPRnopc:$Rn, GPRnopc:$Rm)))]>,
            Requires<[IsARM, HasV5TE, UseMulOps]>,
            Sched<[WriteMAC16, ReadMUL, ReadMUL, ReadMAC]>;
 
   def TB : AMulxyIa<0b0001000, 0b01, (outs GPRnopc:$Rd),
               (ins GPRnopc:$Rn, GPRnopc:$Rm, GPR:$Ra),
               IIC_iMAC16, !strconcat(opc, "tb"), "\t$Rd, $Rn, $Rm, $Ra",
-              [(set GPRnopc:$Rd,
-                    (add GPR:$Ra, (mul (sra GPRnopc:$Rn, (i32 16)),
-                                          (sext_inreg GPRnopc:$Rm, i16))))]>,
+              [(set GPRnopc:$Rd, (add GPR:$Ra,
+                                      (tb_mul GPRnopc:$Rn, GPRnopc:$Rm)))]>,
            Requires<[IsARM, HasV5TE, UseMulOps]>,
            Sched<[WriteMAC16, ReadMUL, ReadMUL, ReadMAC]>;
 
   def TT : AMulxyIa<0b0001000, 0b11, (outs GPRnopc:$Rd),
               (ins GPRnopc:$Rn, GPRnopc:$Rm, GPR:$Ra),
               IIC_iMAC16, !strconcat(opc, "tt"), "\t$Rd, $Rn, $Rm, $Ra",
-             [(set GPRnopc:$Rd,
-                   (add GPR:$Ra, (mul (sra GPRnopc:$Rn, (i32 16)),
-                                         (sra GPRnopc:$Rm, (i32 16)))))]>,
+             [(set GPRnopc:$Rd, (add GPR:$Ra,
+                                     (tt_mul GPRnopc:$Rn, GPRnopc:$Rm)))]>,
             Requires<[IsARM, HasV5TE, UseMulOps]>,
             Sched<[WriteMAC16, ReadMUL, ReadMUL, ReadMAC]>;
 
@@ -5816,26 +5672,21 @@ def : ARMPat<(extloadi16 addrmodepc:$addr), (PICLDRH addrmodepc:$addr)>;
 
 // smul* and smla*
 def : ARMV5TEPat<(mul sext_16_node:$a, sext_16_node:$b),
-                 (SMULBB GPR:$a, GPR:$b)>,
-      Sched<[WriteMUL32, ReadMUL, ReadMUL]>;
-def : ARMV5TEPat<(mul sext_16_node:$a, (sra GPR:$b, (i32 16))),
-                 (SMULBT GPR:$a, GPR:$b)>,
-      Sched<[WriteMUL32, ReadMUL, ReadMUL]>;
-def : ARMV5TEPat<(mul (sra GPR:$a, (i32 16)), sext_16_node:$b),
-                (SMULTB GPR:$a, GPR:$b)>,
-      Sched<[WriteMUL32, ReadMUL, ReadMUL]>;
-def : ARMV5MOPat<(add GPR:$acc,
-                      (mul sext_16_node:$a, sext_16_node:$b)),
-                 (SMLABB GPR:$a, GPR:$b, GPR:$acc)>,
-      Sched<[WriteMUL32, ReadMUL, ReadMUL]>;
-def : ARMV5MOPat<(add GPR:$acc,
-                      (mul sext_16_node:$a, (sra GPR:$b, (i32 16)))),
-                 (SMLABT GPR:$a, GPR:$b, GPR:$acc)>,
-      Sched<[WriteMUL32, ReadMUL, ReadMUL]>;
-def : ARMV5MOPat<(add GPR:$acc,
-                      (mul (sra GPR:$a, (i32 16)), sext_16_node:$b)),
-                 (SMLATB GPR:$a, GPR:$b, GPR:$acc)>,
-      Sched<[WriteMUL32, ReadMUL, ReadMUL]>;
+                 (SMULBB GPR:$a, GPR:$b)>;
+def : ARMV5TEPat<(mul sext_16_node:$a, (sext_bottom_16 GPR:$b)),
+                 (SMULBB GPR:$a, GPR:$b)>;
+def : ARMV5TEPat<(mul sext_16_node:$a, (sext_top_16 GPR:$b)),
+                 (SMULBT GPR:$a, GPR:$b)>;
+def : ARMV5TEPat<(mul (sext_top_16 GPR:$a), sext_16_node:$b),
+                 (SMULTB GPR:$a, GPR:$b)>;
+def : ARMV5MOPat<(add GPR:$acc, (mul sext_16_node:$a, sext_16_node:$b)),
+                 (SMLABB GPR:$a, GPR:$b, GPR:$acc)>;
+def : ARMV5MOPat<(add GPR:$acc, (mul sext_16_node:$a, (sext_bottom_16 GPR:$b))),
+                 (SMLABB GPR:$a, GPR:$b, GPR:$acc)>;
+def : ARMV5MOPat<(add GPR:$acc, (mul sext_16_node:$a, (sext_top_16 GPR:$b))),
+                 (SMLABT GPR:$a, GPR:$b, GPR:$acc)>;
+def : ARMV5MOPat<(add GPR:$acc, (mul (sext_top_16 GPR:$a), sext_16_node:$b)),
+                 (SMLATB GPR:$a, GPR:$b, GPR:$acc)>;
 
 def : ARMV5TEPat<(int_arm_smulbb GPR:$a, GPR:$b),
                  (SMULBB GPR:$a, GPR:$b)>;
@@ -5932,6 +5783,12 @@ include "ARMInstrVFP.td"
 //
 
 include "ARMInstrNEON.td"
+
+//===----------------------------------------------------------------------===//
+// MVE Support
+//
+
+include "ARMInstrMVE.td"
 
 //===----------------------------------------------------------------------===//
 // Assembler aliases

@@ -1,5 +1,5 @@
 @ RUN: llvm-mc -triple armv7-eabi -filetype obj -o - %s \
-@ RUN:   | llvm-readobj -arm-attributes | FileCheck %s
+@ RUN:   | llvm-readobj --arm-attributes | FileCheck %s
 
 	.syntax unified
 

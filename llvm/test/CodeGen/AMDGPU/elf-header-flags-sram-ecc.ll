@@ -1,11 +1,11 @@
-; RUN: llc -filetype=obj -march=amdgcn -mcpu=gfx902 < %s | llvm-readobj -file-headers - | FileCheck --check-prefixes=NO-SRAM-ECC-GFX902 %s
-; RUN: llc -filetype=obj -march=amdgcn -mcpu=gfx902 -mattr=-sram-ecc < %s | llvm-readobj -file-headers - | FileCheck --check-prefixes=NO-SRAM-ECC-GFX902 %s
-; RUN: llc -filetype=obj -march=amdgcn -mcpu=gfx902 -mattr=+sram-ecc < %s | llvm-readobj -file-headers - | FileCheck --check-prefixes=SRAM-ECC-GFX902 %s
+; RUN: llc -filetype=obj -march=amdgcn -mcpu=gfx902 < %s | llvm-readobj --file-headers - | FileCheck --check-prefixes=NO-SRAM-ECC-GFX902 %s
+; RUN: llc -filetype=obj -march=amdgcn -mcpu=gfx902 -mattr=-sram-ecc < %s | llvm-readobj --file-headers - | FileCheck --check-prefixes=NO-SRAM-ECC-GFX902 %s
+; RUN: llc -filetype=obj -march=amdgcn -mcpu=gfx902 -mattr=+sram-ecc < %s | llvm-readobj --file-headers - | FileCheck --check-prefixes=SRAM-ECC-GFX902 %s
 
-; RUN: llc -filetype=obj -march=amdgcn -mcpu=gfx906 < %s | llvm-readobj -file-headers - | FileCheck --check-prefixes=SRAM-ECC-GFX906 %s
-; RUN: llc -filetype=obj -march=amdgcn -mcpu=gfx906 -mattr=-sram-ecc < %s | llvm-readobj -file-headers - | FileCheck --check-prefixes=NO-SRAM-ECC-GFX906 %s
-; RUN: llc -filetype=obj -march=amdgcn -mcpu=gfx906 -mattr=+sram-ecc < %s | llvm-readobj -file-headers - | FileCheck --check-prefixes=SRAM-ECC-GFX906 %s
-; RUN: llc -filetype=obj -march=amdgcn -mcpu=gfx906 -mattr=+sram-ecc,+xnack < %s | llvm-readobj -file-headers - | FileCheck --check-prefixes=SRAM-ECC-XNACK-GFX906 %s
+; RUN: llc -filetype=obj -march=amdgcn -mcpu=gfx906 < %s | llvm-readobj --file-headers - | FileCheck --check-prefixes=NO-SRAM-ECC-GFX906 %s
+; RUN: llc -filetype=obj -march=amdgcn -mcpu=gfx906 -mattr=-sram-ecc < %s | llvm-readobj --file-headers - | FileCheck --check-prefixes=NO-SRAM-ECC-GFX906 %s
+; RUN: llc -filetype=obj -march=amdgcn -mcpu=gfx906 -mattr=+sram-ecc < %s | llvm-readobj --file-headers - | FileCheck --check-prefixes=SRAM-ECC-GFX906 %s
+; RUN: llc -filetype=obj -march=amdgcn -mcpu=gfx906 -mattr=+sram-ecc,+xnack < %s | llvm-readobj --file-headers - | FileCheck --check-prefixes=SRAM-ECC-XNACK-GFX906 %s
 
 ; NO-SRAM-ECC-GFX902:      Flags [
 ; NO-SRAM-ECC-GFX902-NEXT:   EF_AMDGPU_MACH_AMDGCN_GFX902 (0x2D)

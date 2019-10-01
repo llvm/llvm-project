@@ -1,7 +1,7 @@
 # RUN: yaml2obj %s > %t
 # RUN: printf 0000 > %t.blob
-# RUN: llvm-objcopy -add-gnu-debuglink=%t.blob %t %t2
-# RUN: llvm-readobj -sections -section-data %t2 | FileCheck %s
+# RUN: llvm-objcopy --add-gnu-debuglink=%t.blob %t %t2
+# RUN: llvm-readobj --sections --section-data %t2 | FileCheck %s
 
 !ELF
 FileHeader:

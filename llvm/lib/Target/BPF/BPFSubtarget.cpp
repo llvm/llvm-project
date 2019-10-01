@@ -1,9 +1,8 @@
 //===-- BPFSubtarget.cpp - BPF Subtarget Information ----------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -36,6 +35,7 @@ BPFSubtarget &BPFSubtarget::initializeSubtargetDependencies(StringRef CPU,
 
 void BPFSubtarget::initializeEnvironment() {
   HasJmpExt = false;
+  HasJmp32 = false;
   HasAlu32 = false;
   UseDwarfRIS = false;
 }
@@ -47,6 +47,11 @@ void BPFSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
     return;
   if (CPU == "v2") {
     HasJmpExt = true;
+    return;
+  }
+  if (CPU == "v3") {
+    HasJmpExt = true;
+    HasJmp32 = true;
     return;
   }
 }

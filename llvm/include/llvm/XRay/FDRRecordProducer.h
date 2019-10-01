@@ -1,9 +1,8 @@
 //===- FDRRecordProducer.h - XRay FDR Mode Record Producer ----------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 #ifndef LLVM_INCLUDE_LLVM_XRAY_FDRRECORDPRODUCER_H_
@@ -28,7 +27,7 @@ public:
 class FileBasedRecordProducer : public RecordProducer {
   const XRayFileHeader &Header;
   DataExtractor &E;
-  uint32_t &OffsetPtr;
+  uint64_t &OffsetPtr;
   uint32_t CurrentBufferBytes = 0;
 
   // Helper function which gets the next record by speculatively reading through
@@ -37,7 +36,7 @@ class FileBasedRecordProducer : public RecordProducer {
 
 public:
   FileBasedRecordProducer(const XRayFileHeader &FH, DataExtractor &DE,
-                          uint32_t &OP)
+                          uint64_t &OP)
       : Header(FH), E(DE), OffsetPtr(OP) {}
 
   /// This producer encapsulates the logic for loading a File-backed

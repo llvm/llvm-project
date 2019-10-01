@@ -55,6 +55,6 @@ attributes #0 = { ssp uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "d
 
 !llvm.ident = !{!0}
 
-!0 = !{!"clang version 5.0.0 (http://llvm.org/git/clang.git a8b933d4d1d133594fdaed35ee5814514b738f6d) (/Users/dannyb/sources/llvm-clean fc630a9b5613f544c07a8f16abcc173793df62cf)"}
+!0 = !{!"clang version 5.0.0"}
 !1 = distinct !{!1, !2}
 !2 = !{!"llvm.loop.unroll.disable"}

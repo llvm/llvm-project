@@ -25,6 +25,22 @@
   define void @indirectbranch(i32 %a, i32 %b) speculative_load_hardening {
    ret void
   }
+  ; Also check that a non-default temporary register gets picked correctly to
+  ; transfer the SP to to and it with the taint register when the default
+  ; temporary isn't available.
+  define void @indirect_call_x17(i32 %a, i32 %b) speculative_load_hardening {
+   ret void
+  }
+  @g = common dso_local local_unnamed_addr global i64 (...)* null, align 8
+  define void @indirect_tailcall_x17(i32 %a, i32 %b) speculative_load_hardening {
+   ret void
+  }
+  define void @indirect_call_lr(i32 %a, i32 %b) speculative_load_hardening {
+   ret void
+  }
+  define void @RS_cannot_find_available_regs() speculative_load_hardening {
+   ret void
+  }
 ...
 ---
 name:            nobranch_fallthrough
@@ -114,4 +130,73 @@ body:             |
    liveins: $x0
   ; CHECK-NOT: csel
    RET undef $lr, implicit $x0
+...
+---
+name:            indirect_call_x17
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $x17
+    ; CHECK-LABEL: indirect_call_x17
+    ; CHECK:       mov x0, sp
+    ; CHECK:       and x0, x0, x16
+    ; CHECK:       mov sp, x0
+    ; CHECK:       blr x17
+    BLR killed renamable $x17, implicit-def dead $lr, implicit $sp
+    RET undef $lr, implicit undef $w0
+...
+---
+name:           indirect_tailcall_x17
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $x0
+    ; CHECK-LABEL: indirect_tailcall_x17
+    ; CHECK:       mov x1, sp
+    ; CHECK:       and x1, x1, x16
+    ; CHECK:       mov sp, x1
+    ; CHECK:       br x17
+    $x8 = ADRP target-flags(aarch64-page) @g
+    $x17 = LDRXui killed $x8, target-flags(aarch64-pageoff, aarch64-nc) @g
+    TCRETURNri killed $x17, 0, implicit $sp, implicit $x0
+...
+---
+name:           indirect_call_lr
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: indirect_call_lr
+    ; CHECK:            mov x1, sp
+    ; CHECK-NEXT:       and x1, x1, x16
+    ; CHECK-NEXT:       mov sp, x1
+    ; CHECK-NEXT:       blr x30
+    liveins: $x0, $lr
+    BLR killed renamable $lr, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $w0
+    $w0 = nsw ADDWri killed $w0, 1, 0
+    RET undef $lr, implicit $w0
+...
+---
+name:           RS_cannot_find_available_regs
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; In the rare case when no free temporary register is available for the
+    ; propagate taint-to-sp operation, just put in a full speculation barrier
+    ; (isb+dsb sy) at the start of the basic block. And don't put masks on
+    ; instructions for the rest of the basic block, since speculation in that
+    ; basic block was already done, so no need to do masking.
+    ; CHECK-LABEL: RS_cannot_find_available_regs
+    ; CHECK:       dsb sy
+    ; CHECK-NEXT:  isb
+    ; CHECK-NEXT:  ldr x0, [x0]
+    ; The following 2 instructions come from propagating the taint encoded in
+    ; sp at function entry to x16. It turns out the taint info in x16 is not
+    ; used in this function, so those instructions could be optimized away. An
+    ; optimization for later if it turns out this situation occurs often enough.
+    ; CHECK-NEXT:  cmp sp, #0
+    ; CHECK-NEXT:  csetm x16, ne
+    ; CHECK-NEXT:  ret
+    liveins: $x0, $x1, $x2, $x3, $x4, $x5, $x6, $x7, $x8, $x9, $x10, $x11, $x12, $x13, $x14, $x15, $x17, $x18, $x19, $x20, $x21, $x22, $x23, $x24, $x25, $x26, $x27, $x28, $fp, $lr
+     $x0 = LDRXui killed $x0, 0
+     RET undef $lr, implicit $x0
 ...

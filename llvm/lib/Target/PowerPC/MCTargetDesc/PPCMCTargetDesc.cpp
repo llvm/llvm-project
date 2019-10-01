@@ -1,9 +1,8 @@
 //===-- PPCMCTargetDesc.cpp - PowerPC Target Descriptions -----------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -12,9 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/PPCMCTargetDesc.h"
-#include "InstPrinter/PPCInstPrinter.h"
+#include "MCTargetDesc/PPCInstPrinter.h"
 #include "MCTargetDesc/PPCMCAsmInfo.h"
 #include "PPCTargetStreamer.h"
+#include "TargetInfo/PowerPCTargetInfo.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -182,16 +183,33 @@ public:
 
   void emitAssignment(MCSymbol *S, const MCExpr *Value) override {
     auto *Symbol = cast<MCSymbolELF>(S);
+
     // When encoding an assignment to set symbol A to symbol B, also copy
     // the st_other bits encoding the local entry point offset.
-    if (Value->getKind() != MCExpr::SymbolRef)
-      return;
-    const auto &RhsSym = cast<MCSymbolELF>(
-        static_cast<const MCSymbolRefExpr *>(Value)->getSymbol());
-    unsigned Other = Symbol->getOther();
+    if (copyLocalEntry(Symbol, Value))
+      UpdateOther.insert(Symbol);
+    else
+      UpdateOther.erase(Symbol);
+  }
+
+  void finish() override {
+    for (auto *Sym : UpdateOther)
+      copyLocalEntry(Sym, Sym->getVariableValue());
+  }
+
+private:
+  SmallPtrSet<MCSymbolELF *, 32> UpdateOther;
+
+  bool copyLocalEntry(MCSymbolELF *D, const MCExpr *S) {
+    auto *Ref = dyn_cast<const MCSymbolRefExpr>(S);
+    if (!Ref)
+      return false;
+    const auto &RhsSym = cast<MCSymbolELF>(Ref->getSymbol());
+    unsigned Other = D->getOther();
     Other &= ~ELF::STO_PPC64_LOCAL_MASK;
     Other |= RhsSym.getOther() & ELF::STO_PPC64_LOCAL_MASK;
-    Symbol->setOther(Other);
+    D->setOther(Other);
+    return true;
   }
 };
 

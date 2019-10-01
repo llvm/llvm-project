@@ -174,5 +174,123 @@ entry:
   ret <4 x i64> %6
 }
 
+define <2 x i64> @test_mm_mask_multishift_epi64_epi8(<2 x i64> %__W, i16 zeroext %__M, <2 x i64> %__X, <2 x i64> %__Y) {
+; X86-LABEL: test_mm_mask_multishift_epi64_epi8:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
+; X86-NEXT:    vpmultishiftqb %xmm2, %xmm1, %xmm0 {%k1}
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_mm_mask_multishift_epi64_epi8:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovd %edi, %k1
+; X64-NEXT:    vpmultishiftqb %xmm2, %xmm1, %xmm0 {%k1}
+; X64-NEXT:    retq
+entry:
+  %0 = bitcast <2 x i64> %__X to <16 x i8>
+  %1 = bitcast <2 x i64> %__Y to <16 x i8>
+  %2 = tail call <16 x i8> @llvm.x86.avx512.pmultishift.qb.128(<16 x i8> %0, <16 x i8> %1)
+  %3 = bitcast <2 x i64> %__W to <16 x i8>
+  %4 = bitcast i16 %__M to <16 x i1>
+  %5 = select <16 x i1> %4, <16 x i8> %2, <16 x i8> %3
+  %6 = bitcast <16 x i8> %5 to <2 x i64>
+  ret <2 x i64> %6
+}
+
+define <2 x i64> @test_mm_maskz_multishift_epi64_epi8(i16 zeroext %__M, <2 x i64> %__X, <2 x i64> %__Y) {
+; X86-LABEL: test_mm_maskz_multishift_epi64_epi8:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
+; X86-NEXT:    vpmultishiftqb %xmm1, %xmm0, %xmm0 {%k1} {z}
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_mm_maskz_multishift_epi64_epi8:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovd %edi, %k1
+; X64-NEXT:    vpmultishiftqb %xmm1, %xmm0, %xmm0 {%k1} {z}
+; X64-NEXT:    retq
+entry:
+  %0 = bitcast <2 x i64> %__X to <16 x i8>
+  %1 = bitcast <2 x i64> %__Y to <16 x i8>
+  %2 = tail call <16 x i8> @llvm.x86.avx512.pmultishift.qb.128(<16 x i8> %0, <16 x i8> %1)
+  %3 = bitcast i16 %__M to <16 x i1>
+  %4 = select <16 x i1> %3, <16 x i8> %2, <16 x i8> zeroinitializer
+  %5 = bitcast <16 x i8> %4 to <2 x i64>
+  ret <2 x i64> %5
+}
+
+define <2 x i64> @test_mm_multishift_epi64_epi8(<2 x i64> %__X, <2 x i64> %__Y) {
+; CHECK-LABEL: test_mm_multishift_epi64_epi8:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vpmultishiftqb %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    ret{{[l|q]}}
+entry:
+  %0 = bitcast <2 x i64> %__X to <16 x i8>
+  %1 = bitcast <2 x i64> %__Y to <16 x i8>
+  %2 = tail call <16 x i8> @llvm.x86.avx512.pmultishift.qb.128(<16 x i8> %0, <16 x i8> %1)
+  %3 = bitcast <16 x i8> %2 to <2 x i64>
+  ret <2 x i64> %3
+}
+
+define <4 x i64> @test_mm256_mask_multishift_epi64_epi8(<4 x i64> %__W, i32 %__M, <4 x i64> %__X, <4 x i64> %__Y) {
+; X86-LABEL: test_mm256_mask_multishift_epi64_epi8:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
+; X86-NEXT:    vpmultishiftqb %ymm2, %ymm1, %ymm0 {%k1}
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_mm256_mask_multishift_epi64_epi8:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovd %edi, %k1
+; X64-NEXT:    vpmultishiftqb %ymm2, %ymm1, %ymm0 {%k1}
+; X64-NEXT:    retq
+entry:
+  %0 = bitcast <4 x i64> %__X to <32 x i8>
+  %1 = bitcast <4 x i64> %__Y to <32 x i8>
+  %2 = tail call <32 x i8> @llvm.x86.avx512.pmultishift.qb.256(<32 x i8> %0, <32 x i8> %1)
+  %3 = bitcast <4 x i64> %__W to <32 x i8>
+  %4 = bitcast i32 %__M to <32 x i1>
+  %5 = select <32 x i1> %4, <32 x i8> %2, <32 x i8> %3
+  %6 = bitcast <32 x i8> %5 to <4 x i64>
+  ret <4 x i64> %6
+}
+
+define <4 x i64> @test_mm256_maskz_multishift_epi64_epi8(i32 %__M, <4 x i64> %__X, <4 x i64> %__Y) {
+; X86-LABEL: test_mm256_maskz_multishift_epi64_epi8:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
+; X86-NEXT:    vpmultishiftqb %ymm1, %ymm0, %ymm0 {%k1} {z}
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_mm256_maskz_multishift_epi64_epi8:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovd %edi, %k1
+; X64-NEXT:    vpmultishiftqb %ymm1, %ymm0, %ymm0 {%k1} {z}
+; X64-NEXT:    retq
+entry:
+  %0 = bitcast <4 x i64> %__X to <32 x i8>
+  %1 = bitcast <4 x i64> %__Y to <32 x i8>
+  %2 = tail call <32 x i8> @llvm.x86.avx512.pmultishift.qb.256(<32 x i8> %0, <32 x i8> %1) #3
+  %3 = bitcast i32 %__M to <32 x i1>
+  %4 = select <32 x i1> %3, <32 x i8> %2, <32 x i8> zeroinitializer
+  %5 = bitcast <32 x i8> %4 to <4 x i64>
+  ret <4 x i64> %5
+}
+
+define <4 x i64> @test_mm256_multishift_epi64_epi8(<4 x i64> %__X, <4 x i64> %__Y) {
+; CHECK-LABEL: test_mm256_multishift_epi64_epi8:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vpmultishiftqb %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    ret{{[l|q]}}
+entry:
+  %0 = bitcast <4 x i64> %__X to <32 x i8>
+  %1 = bitcast <4 x i64> %__Y to <32 x i8>
+  %2 = tail call <32 x i8> @llvm.x86.avx512.pmultishift.qb.256(<32 x i8> %0, <32 x i8> %1)
+  %3 = bitcast <32 x i8> %2 to <4 x i64>
+  ret <4 x i64> %3
+}
+
 declare <16 x i8> @llvm.x86.avx512.vpermi2var.qi.128(<16 x i8>, <16 x i8>, <16 x i8>)
 declare <32 x i8> @llvm.x86.avx512.vpermi2var.qi.256(<32 x i8>, <32 x i8>, <32 x i8>)
+declare <16 x i8> @llvm.x86.avx512.pmultishift.qb.128(<16 x i8>, <16 x i8>)
+declare <32 x i8> @llvm.x86.avx512.pmultishift.qb.256(<32 x i8>, <32 x i8>)

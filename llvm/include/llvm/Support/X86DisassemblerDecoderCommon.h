@@ -1,9 +1,8 @@
 //===-- X86DisassemblerDecoderCommon.h - Disassembler decoder ---*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -47,29 +46,23 @@ namespace X86Disassembler {
 // Attributes of an instruction that must be known before the opcode can be
 // processed correctly.  Most of these indicate the presence of particular
 // prefixes, but ATTR_64BIT is simply an attribute of the decoding context.
-#define ATTRIBUTE_BITS                  \
-  ENUM_ENTRY(ATTR_NONE,   0x00)         \
-  ENUM_ENTRY(ATTR_64BIT,  (0x1 << 0))   \
-  ENUM_ENTRY(ATTR_XS,     (0x1 << 1))   \
-  ENUM_ENTRY(ATTR_XD,     (0x1 << 2))   \
-  ENUM_ENTRY(ATTR_REXW,   (0x1 << 3))   \
-  ENUM_ENTRY(ATTR_OPSIZE, (0x1 << 4))   \
-  ENUM_ENTRY(ATTR_ADSIZE, (0x1 << 5))   \
-  ENUM_ENTRY(ATTR_VEX,    (0x1 << 6))   \
-  ENUM_ENTRY(ATTR_VEXL,   (0x1 << 7))   \
-  ENUM_ENTRY(ATTR_EVEX,   (0x1 << 8))   \
-  ENUM_ENTRY(ATTR_EVEXL,  (0x1 << 9))   \
-  ENUM_ENTRY(ATTR_EVEXL2, (0x1 << 10))  \
-  ENUM_ENTRY(ATTR_EVEXK,  (0x1 << 11))  \
-  ENUM_ENTRY(ATTR_EVEXKZ, (0x1 << 12))  \
-  ENUM_ENTRY(ATTR_EVEXB,  (0x1 << 13))
-
-#define ENUM_ENTRY(n, v) n = v,
 enum attributeBits {
-  ATTRIBUTE_BITS
-  ATTR_max
+  ATTR_NONE   = 0x00,
+  ATTR_64BIT  = 0x1 << 0,
+  ATTR_XS     = 0x1 << 1,
+  ATTR_XD     = 0x1 << 2,
+  ATTR_REXW   = 0x1 << 3,
+  ATTR_OPSIZE = 0x1 << 4,
+  ATTR_ADSIZE = 0x1 << 5,
+  ATTR_VEX    = 0x1 << 6,
+  ATTR_VEXL   = 0x1 << 7,
+  ATTR_EVEX   = 0x1 << 8,
+  ATTR_EVEXL2 = 0x1 << 9,
+  ATTR_EVEXK  = 0x1 << 10,
+  ATTR_EVEXKZ = 0x1 << 11,
+  ATTR_EVEXB  = 0x1 << 12,
+  ATTR_max    = 0x1 << 13,
 };
-#undef ENUM_ENTRY
 
 // Combinations of the above attributes that are relevant to instruction
 // decode. Although other combinations are possible, they can be reduced to
@@ -394,6 +387,7 @@ enum ModRMDecisionType {
   ENUM_ENTRY(ENCODING_IRC,    "Immediate for static rounding control")         \
   ENUM_ENTRY(ENCODING_Rv,     "Register code of operand size added to the "    \
                               "opcode byte")                                   \
+  ENUM_ENTRY(ENCODING_CC,     "Condition code encoded in opcode")              \
   ENUM_ENTRY(ENCODING_DUP,    "Duplicate of another operand; ID is encoded "   \
                               "in type")                                       \
   ENUM_ENTRY(ENCODING_SI,     "Source index; encoded in OpSize/Adsize prefix") \
@@ -415,9 +409,6 @@ enum OperandEncoding {
   ENUM_ENTRY(TYPE_R32,        "4-byte")                                        \
   ENUM_ENTRY(TYPE_R64,        "8-byte")                                        \
   ENUM_ENTRY(TYPE_IMM,        "immediate operand")                             \
-  ENUM_ENTRY(TYPE_IMM3,       "1-byte immediate operand between 0 and 7")      \
-  ENUM_ENTRY(TYPE_IMM5,       "1-byte immediate operand between 0 and 31")     \
-  ENUM_ENTRY(TYPE_AVX512ICC,  "1-byte immediate operand for AVX512 icmp")      \
   ENUM_ENTRY(TYPE_UIMM8,      "1-byte unsigned immediate operand")             \
   ENUM_ENTRY(TYPE_M,          "Memory operand")                                \
   ENUM_ENTRY(TYPE_MVSIBX,     "Memory operand using XMM index")                \
@@ -432,6 +423,7 @@ enum OperandEncoding {
   ENUM_ENTRY(TYPE_YMM,        "32-byte")                                       \
   ENUM_ENTRY(TYPE_ZMM,        "64-byte")                                       \
   ENUM_ENTRY(TYPE_VK,         "mask register")                                 \
+  ENUM_ENTRY(TYPE_VK_PAIR,    "mask register pair")                            \
   ENUM_ENTRY(TYPE_SEGMENTREG, "Segment register operand")                      \
   ENUM_ENTRY(TYPE_DEBUGREG,   "Debug register operand")                        \
   ENUM_ENTRY(TYPE_CONTROLREG, "Control register operand")                      \

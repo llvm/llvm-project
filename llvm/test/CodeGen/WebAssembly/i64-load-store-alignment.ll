@@ -47,7 +47,7 @@ define i64 @ldi64_a8(i64 *%p) {
   ret i64 %v
 }
 
-; The default alignment in LLVM is the same as the defualt alignment in wasm.
+; The default alignment in LLVM is the same as the default alignment in wasm.
 
 ; CHECK-LABEL: ldi64:
 ; CHECK-NEXT: .functype ldi64 (i32) -> (i64){{$}}
@@ -205,7 +205,7 @@ define void @sti64_a8(i64 *%p, i64 %v) {
   ret void
 }
 
-; The default alignment in LLVM is the same as the defualt alignment in wasm.
+; The default alignment in LLVM is the same as the default alignment in wasm.
 
 ; CHECK-LABEL: sti64:
 ; CHECK-NEXT: .functype sti64 (i32, i64) -> (){{$}}

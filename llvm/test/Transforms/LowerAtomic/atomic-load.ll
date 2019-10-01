@@ -35,3 +35,25 @@ define i8 @min() {
   ret i8 %j
 ; CHECK: ret i8 [[INST]]
 }
+
+define float @fadd() {
+; CHECK-LABEL: @fadd(
+  %i = alloca float
+  %j = atomicrmw fadd float* %i, float 42.0 monotonic
+; CHECK: [[INST:%[a-z0-9]+]] = load
+; CHECK-NEXT: fadd
+; CHECK-NEXT: store
+  ret float %j
+; CHECK: ret float [[INST]]
+}
+
+define float @fsub() {
+; CHECK-LABEL: @fsub(
+  %i = alloca float
+  %j = atomicrmw fsub float* %i, float 42.0 monotonic
+; CHECK: [[INST:%[a-z0-9]+]] = load
+; CHECK-NEXT: fsub
+; CHECK-NEXT: store
+  ret float %j
+; CHECK: ret float [[INST]]
+}

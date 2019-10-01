@@ -107,18 +107,16 @@ define <2 x i8> @PR39893(<2 x i32> %x, <8 x i8> %y) {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pxor %xmm2, %xmm2
 ; SSE-NEXT:    psubd %xmm0, %xmm2
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[0,2,2,3]
-; SSE-NEXT:    psrld $16, %xmm0
-; SSE-NEXT:    movsd {{.*#+}} xmm1 = xmm0[0],xmm1[1]
-; SSE-NEXT:    movapd %xmm1, %xmm0
+; SSE-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1],xmm2[2],xmm0[2],xmm2[3],xmm0[3],xmm2[4],xmm0[4],xmm2[5],xmm0[5],xmm2[6],xmm0[6],xmm2[7],xmm0[7]
+; SSE-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,1],xmm1[2,3]
+; SSE-NEXT:    movaps %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: PR39893:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX1-NEXT:    vpsubd %xmm0, %xmm2, %xmm0
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; AVX1-NEXT:    vpsrld $16, %xmm0, %xmm0
+; AVX1-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[2],zero,xmm0[3],zero,xmm0[2],zero,xmm0[3],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm1[4,5,6,7]
 ; AVX1-NEXT:    retq
 ;
@@ -126,8 +124,7 @@ define <2 x i8> @PR39893(<2 x i32> %x, <8 x i8> %y) {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX2-NEXT:    vpsubd %xmm0, %xmm2, %xmm0
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; AVX2-NEXT:    vpsrld $16, %xmm0, %xmm0
+; AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[2],zero,xmm0[3],zero,xmm0[2],zero,xmm0[3],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero
 ; AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
 ; AVX2-NEXT:    retq
 ;
@@ -135,8 +132,7 @@ define <2 x i8> @PR39893(<2 x i32> %x, <8 x i8> %y) {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX512-NEXT:    vpsubd %xmm0, %xmm2, %xmm0
-; AVX512-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; AVX512-NEXT:    vpsrld $16, %xmm0, %xmm0
+; AVX512-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[2],zero,xmm0[3],zero,xmm0[2],zero,xmm0[3],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero
 ; AVX512-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
 ; AVX512-NEXT:    retq
   %sub = sub <2 x i32> <i32 0, i32 undef>, %x
@@ -165,5 +161,54 @@ define <2 x i8> @PR39893_2(<2 x float> %x) {
   %bc = bitcast <2 x float> %fsub to <8 x i8>
   %shuffle = shufflevector <8 x i8> %bc, <8 x i8> undef, <2 x i32> <i32 0, i32 1>
   ret <2 x i8> %shuffle
+}
+
+define <4 x double> @fmul_v2f64(<2 x  double> %x, <2 x double> %y) {
+; SSE-LABEL: fmul_v2f64:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movapd %xmm1, %xmm2
+; SSE-NEXT:    unpcklpd {{.*#+}} xmm2 = xmm2[0],xmm0[0]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
+; SSE-NEXT:    mulpd %xmm0, %xmm0
+; SSE-NEXT:    mulpd %xmm2, %xmm2
+; SSE-NEXT:    addpd %xmm0, %xmm2
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1,1]
+; SSE-NEXT:    movapd %xmm2, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: fmul_v2f64:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vunpcklpd {{.*#+}} xmm2 = xmm1[0],xmm0[0]
+; AVX1-NEXT:    vunpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
+; AVX1-NEXT:    vmulpd %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    vmulpd %xmm2, %xmm2, %xmm1
+; AVX1-NEXT:    vaddpd %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: fmul_v2f64:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vunpcklpd {{.*#+}} xmm2 = xmm1[0],xmm0[0]
+; AVX2-NEXT:    vunpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
+; AVX2-NEXT:    vmulpd %xmm0, %xmm0, %xmm0
+; AVX2-NEXT:    vmulpd %xmm2, %xmm2, %xmm1
+; AVX2-NEXT:    vaddpd %xmm0, %xmm1, %xmm0
+; AVX2-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: fmul_v2f64:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vunpckhpd {{.*#+}} xmm2 = xmm0[1],xmm1[1]
+; AVX512-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX512-NEXT:    vmulpd %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vfmadd231pd {{.*#+}} xmm0 = (xmm2 * xmm2) + xmm0
+; AVX512-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; AVX512-NEXT:    retq
+  %s = shufflevector <2 x double> %x, <2 x double> %y, <4 x i32> <i32 2, i32 0, i32 1, i32 3>
+  %bo = fmul fast <4 x double> %s, %s
+  %ext = shufflevector <4 x double> %bo, <4 x double> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+  %add = fadd fast <4 x double> %bo, %ext
+  %rdx = shufflevector <4 x double> %add, <4 x double> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+  ret <4 x double> %rdx
 }
 

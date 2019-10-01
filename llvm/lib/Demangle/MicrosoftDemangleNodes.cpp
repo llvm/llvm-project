@@ -1,9 +1,8 @@
 //===- MicrosoftDemangle.cpp ----------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -12,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Demangle/MicrosoftDemangleNodes.h"
-#include "llvm/Demangle/Compiler.h"
+#include "llvm/Demangle/DemangleConfig.h"
 #include "llvm/Demangle/Utility.h"
 #include <cctype>
 #include <string>
@@ -35,21 +34,20 @@ static void outputSpaceIfNecessary(OutputStream &OS) {
     OS << " ";
 }
 
-static bool outputSingleQualifier(OutputStream &OS, Qualifiers Q) {
+static void outputSingleQualifier(OutputStream &OS, Qualifiers Q) {
   switch (Q) {
   case Q_Const:
     OS << "const";
-    return true;
+    break;
   case Q_Volatile:
     OS << "volatile";
-    return true;
+    break;
   case Q_Restrict:
     OS << "__restrict";
-    return true;
+    break;
   default:
     break;
   }
-  return false;
 }
 
 static bool outputQualifierIfPresent(OutputStream &OS, Qualifiers Q,
@@ -131,6 +129,7 @@ void PrimitiveTypeNode::outputPre(OutputStream &OS, OutputFlags Flags) const {
     OUTPUT_ENUM_CLASS_VALUE(PrimitiveKind, Char, "char");
     OUTPUT_ENUM_CLASS_VALUE(PrimitiveKind, Schar, "signed char");
     OUTPUT_ENUM_CLASS_VALUE(PrimitiveKind, Uchar, "unsigned char");
+    OUTPUT_ENUM_CLASS_VALUE(PrimitiveKind, Char8, "char8_t");
     OUTPUT_ENUM_CLASS_VALUE(PrimitiveKind, Char16, "char16_t");
     OUTPUT_ENUM_CLASS_VALUE(PrimitiveKind, Char32, "char32_t");
     OUTPUT_ENUM_CLASS_VALUE(PrimitiveKind, Short, "short");
@@ -338,8 +337,9 @@ void IntrinsicFunctionIdentifierNode::output(OutputStream &OS,
                             "`vector vbase copy constructor iterator'");
     OUTPUT_ENUM_CLASS_VALUE(IntrinsicFunctionKind, ManVectorVbaseCopyCtorIter,
                             "`managed vector vbase copy constructor iterator'");
-    OUTPUT_ENUM_CLASS_VALUE(IntrinsicFunctionKind, CoAwait, "co_await");
-    OUTPUT_ENUM_CLASS_VALUE(IntrinsicFunctionKind, Spaceship, "operator <=>");
+    OUTPUT_ENUM_CLASS_VALUE(IntrinsicFunctionKind, CoAwait,
+                            "operator co_await");
+    OUTPUT_ENUM_CLASS_VALUE(IntrinsicFunctionKind, Spaceship, "operator<=>");
   case IntrinsicFunctionKind::MaxIntrinsic:
   case IntrinsicFunctionKind::None:
     break;
@@ -349,7 +349,10 @@ void IntrinsicFunctionIdentifierNode::output(OutputStream &OS,
 
 void LocalStaticGuardIdentifierNode::output(OutputStream &OS,
                                             OutputFlags Flags) const {
-  OS << "`local static guard'";
+  if (IsThread)
+    OS << "`local static thread guard'";
+  else
+    OS << "`local static guard'";
   if (ScopeIndex > 0)
     OS << "{" << ScopeIndex << "}";
 }
@@ -411,6 +414,12 @@ void FunctionSignatureNode::outputPost(OutputStream &OS,
       Params->output(OS, Flags);
     else
       OS << "void";
+
+    if (IsVariadic) {
+      if (OS.back() != '(')
+        OS << ", ";
+      OS << "...";
+    }
     OS << ")";
   }
 
@@ -422,6 +431,9 @@ void FunctionSignatureNode::outputPost(OutputStream &OS,
     OS << " __restrict";
   if (Quals & Q_Unaligned)
     OS << " __unaligned";
+
+  if (IsNoexcept)
+    OS << " noexcept";
 
   if (RefQualifier == FunctionRefQualifier::Reference)
     OS << " &";

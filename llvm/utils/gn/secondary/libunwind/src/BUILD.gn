@@ -1,0 +1,124 @@
+import("//clang/runtimes.gni")
+
+declare_args() {
+  # Build libunwind as a shared library.
+  libunwind_enable_shared = true
+
+  # Build libunwind as a static library.
+  libunwind_enable_static = true
+
+  # Do not export any symbols from the static library.
+  libunwind_hermetic_static_library = true
+}
+
+unwind_headers = [
+  "../include/libunwind.h",
+  "../include/unwind.h",
+]
+if (target_os == "mac") {
+  unwind_headers += [
+    # This comment prevents `gn format` from putting the file on the same line
+    # as `sources +=`, for sync_source_lists_from_cmake.py.
+    "../include/mach-o/compact_unwind_encoding.h",
+  ]
+}
+
+unwind_sources = [
+  "libunwind.cpp",
+  "Unwind-EHABI.cpp",
+  "Unwind-seh.cpp",
+  "UnwindLevel1.c",
+  "UnwindLevel1-gcc-ext.c",
+  "Unwind-sjlj.c",
+  "UnwindRegistersRestore.S",
+  "UnwindRegistersSave.S",
+  "AddressSpace.hpp",
+  "assembly.h",
+  "CompactUnwinder.hpp",
+  "config.h",
+  "dwarf2.h",
+  "DwarfInstructions.hpp",
+  "DwarfParser.hpp",
+  "libunwind_ext.h",
+  "Registers.hpp",
+  "RWMutex.hpp",
+  "UnwindCursor.hpp",
+]
+if (target_os == "mac") {
+  unwind_sources += [ "src/Unwind_AppleExtras.cpp" ]
+}
+
+config("unwind_config") {
+  cflags = []
+  cflags_c = [ "-std=c99" ]
+  cflags_cc = [ "-fno-rtti" ]
+  include_dirs = [ "//libunwind/include" ]
+  if (target_os == "mac") {
+    cflags += [ "-U__STRICT_ANSI__" ]
+  }
+}
+
+if (libunwind_enable_shared) {
+  shared_library("unwind_shared") {
+    output_dir = runtimes_dir
+    output_name = "unwind"
+    if (target_os == "linux" || target_os == "mac") {
+      cflags = [ "-fPIC" ]
+      ldflags = [ "-nostdlib++" ]
+      libs = [
+        "dl",
+        "pthread",
+      ]
+    }
+    if (target_os == "mac") {
+      ldflags += [
+        "-compatibility_version 1",
+        "-install_name /usr/lib/libunwind.1.dylib",
+      ]
+    }
+    sources = unwind_sources
+    public = unwind_headers
+    deps = [
+      "//compiler-rt/lib/builtins",
+    ]
+    configs += [ ":unwind_config" ]
+    configs -= [
+      "//llvm/utils/gn/build:no_exceptions",
+      "//llvm/utils/gn/build:no_rtti",
+    ]
+  }
+}
+
+if (libunwind_enable_static) {
+  static_library("unwind_static") {
+    output_dir = runtimes_dir
+    output_name = "unwind"
+    complete_static_lib = true
+    configs -= [ "//llvm/utils/gn/build:thin_archive" ]
+    sources = unwind_sources
+    public = unwind_headers
+    if (libunwind_hermetic_static_library) {
+      cflags = [ "-fvisibility=hidden" ]
+      cflags_cc = [ "-fvisibility-global-new-delete-hidden" ]
+      defines = [ "_LIBUNWIND_DISABLE_VISIBILITY_ANNOTATIONS" ]
+    }
+    deps = [
+      "//compiler-rt/lib/builtins",
+    ]
+    configs += [ ":unwind_config" ]
+    configs -= [
+      "//llvm/utils/gn/build:no_exceptions",
+      "//llvm/utils/gn/build:no_rtti",
+    ]
+  }
+}
+
+group("src") {
+  deps = []
+  if (libunwind_enable_shared) {
+    deps += [ ":unwind_shared" ]
+  }
+  if (libunwind_enable_static) {
+    deps += [ ":unwind_static" ]
+  }
+}

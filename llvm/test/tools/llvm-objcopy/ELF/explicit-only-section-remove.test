@@ -1,6 +1,6 @@
 # RUN: yaml2obj %s > %t
-# RUN: llvm-objcopy -R=.test -only-section=.test %t %t2
-# RUN: llvm-readobj -file-headers -sections %t2 | FileCheck %s
+# RUN: llvm-objcopy -R=.test --only-section=.test %t %t2
+# RUN: llvm-readobj --file-headers --sections %t2 | FileCheck %s
 
 !ELF
 FileHeader:

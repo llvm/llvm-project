@@ -16,7 +16,7 @@ body: |
     %0:sgpr(s32) = COPY $sgpr0
     %1:vgpr(s32) = COPY $vgpr0
     %2:vgpr(s32) = COPY $vgpr1
-    %3:vgpr(s64) = COPY $vgpr3_vgpr4
+    %3:vgpr(p1) = COPY $vgpr3_vgpr4
 
     ; fadd vs
     ; GCN: V_ADD_F32_e64

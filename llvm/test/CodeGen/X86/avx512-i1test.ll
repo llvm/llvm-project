@@ -15,16 +15,15 @@ define void @func() {
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB0_1: # %bb56
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    jmp .LBB0_2
 ; CHECK-NEXT:    .p2align 4, 0x90
-; CHECK-NEXT:  .LBB0_3: # %bb35
-; CHECK-NEXT:    # in Loop: Header=BB0_2 Depth=1
-; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:  .LBB0_2: # %bb33
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB0_2
-; CHECK-NEXT:    jmp .LBB0_3
+; CHECK-NEXT:  # %bb.3: # %bb35
+; CHECK-NEXT:    # in Loop: Header=BB0_2 Depth=1
+; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    jmp .LBB0_2
 bb1:
   br i1 undef, label %L_10, label %L_10
 

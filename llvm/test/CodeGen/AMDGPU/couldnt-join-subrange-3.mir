@@ -291,7 +291,7 @@ body:             |
   bb.3..lr.ph3410.preheader:
     successors: %bb.4(0x80000000)
 
-    dead %22:vreg_128 = BUFFER_LOAD_FORMAT_XYZW_IDXEN killed %53.sub3, undef %24:sreg_128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 16 from constant-pool, align 1, addrspace 4)
+    dead %22:vreg_128 = BUFFER_LOAD_FORMAT_XYZW_IDXEN killed %53.sub3, undef %24:sreg_128, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 16 from constant-pool, align 1, addrspace 4)
     dead %60:vgpr_32 = V_MOV_B32_e32 -1, implicit $exec
     %36:sreg_64 = S_AND_B64 $exec, -1, implicit-def dead $scc
     dead %67:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
@@ -311,9 +311,9 @@ body:             |
     %44:vgpr_32 = V_MAD_F32 0, killed %43, 0, 0, 0, 0, 0, 0, implicit $exec
     %45:vgpr_32 = V_CVT_PKRTZ_F16_F32_e64 0, killed %44, 0, undef %46:vgpr_32, 0, 0, implicit $exec
     EXP_DONE 0, killed %45, undef %47:vgpr_32, undef %48:vgpr_32, undef %49:vgpr_32, -1, -1, 15, implicit $exec
-    S_ENDPGM
+    S_ENDPGM 0
 
   bb.6.DummyReturnBlock:
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...

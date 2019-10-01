@@ -1,9 +1,8 @@
 //===- gcov.cpp - GCOV compatible LLVM coverage tool ----------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -125,6 +124,11 @@ int gcovMain(int argc, const char *argv[]) {
                                       "(requires -b)"));
   cl::alias UncondBranchA("unconditional-branches", cl::aliasopt(UncondBranch));
 
+  cl::opt<bool> HashFilenames("x", cl::Grouping, cl::init(false),
+                              cl::desc("Hash long pathnames"));
+  cl::alias HashFilenamesA("hash-filenames", cl::aliasopt(HashFilenames));
+
+
   cl::OptionCategory DebugCat("Internal and debugging options");
   cl::opt<bool> DumpGCOV("dump", cl::init(false), cl::cat(DebugCat),
                          cl::desc("Dump the gcov file to stderr"));
@@ -136,7 +140,8 @@ int gcovMain(int argc, const char *argv[]) {
   cl::ParseCommandLineOptions(argc, argv, "LLVM code coverage tool\n");
 
   GCOV::Options Options(AllBlocks, BranchProb, BranchCount, FuncSummary,
-                        PreservePaths, UncondBranch, LongNames, NoOutput);
+                        PreservePaths, UncondBranch, LongNames, NoOutput,
+                        HashFilenames);
 
   for (const auto &SourceFile : SourceFiles)
     reportCoverage(SourceFile, ObjectDir, InputGCNO, InputGCDA, DumpGCOV,

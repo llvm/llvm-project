@@ -1,0 +1,5 @@
+RUN: llvm-symbolizer --obj=%p/Inputs/macho-universal 0x1f84 | FileCheck %s
+
+CHECK-NOT: main
+CHECK: ??
+CHECK-NOT: main

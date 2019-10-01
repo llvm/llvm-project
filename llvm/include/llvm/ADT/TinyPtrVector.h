@@ -1,9 +1,8 @@
 //===- llvm/ADT/TinyPtrVector.h - 'Normally tiny' vectors -------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -32,6 +31,10 @@ class TinyPtrVector {
 public:
   using VecTy = SmallVector<EltTy, 4>;
   using value_type = typename VecTy::value_type;
+  // EltTy must be the first pointer type so that is<EltTy> is true for the
+  // default-constructed PtrUnion. This allows an empty TinyPtrVector to
+  // naturally vend a begin/end iterator of type EltTy* without an additional
+  // check for the empty state.
   using PtrUnion = PointerUnion<EltTy, VecTy *>;
 
 private:
@@ -97,14 +100,14 @@ public:
       if (RHS.Val.template is<EltTy>()) {
         V->clear();
         V->push_back(RHS.front());
-        RHS.Val = (EltTy)nullptr;
+        RHS.Val = EltTy();
         return *this;
       }
       delete V;
     }
 
     Val = RHS.Val;
-    RHS.Val = (EltTy)nullptr;
+    RHS.Val = EltTy();
     return *this;
   }
 
@@ -214,9 +217,9 @@ public:
 
   EltTy operator[](unsigned i) const {
     assert(!Val.isNull() && "can't index into an empty vector");
-    if (EltTy V = Val.template dyn_cast<EltTy>()) {
+    if (Val.template is<EltTy>()) {
       assert(i == 0 && "tinyvector index out of range");
-      return V;
+      return Val.template get<EltTy>();
     }
 
     assert(i < Val.template get<VecTy*>()->size() &&
@@ -226,29 +229,29 @@ public:
 
   EltTy front() const {
     assert(!empty() && "vector empty");
-    if (EltTy V = Val.template dyn_cast<EltTy>())
-      return V;
+    if (Val.template is<EltTy>())
+      return Val.template get<EltTy>();
     return Val.template get<VecTy*>()->front();
   }
 
   EltTy back() const {
     assert(!empty() && "vector empty");
-    if (EltTy V = Val.template dyn_cast<EltTy>())
-      return V;
+    if (Val.template is<EltTy>())
+      return Val.template get<EltTy>();
     return Val.template get<VecTy*>()->back();
   }
 
   void push_back(EltTy NewVal) {
-    assert(NewVal && "Can't add a null value");
-
     // If we have nothing, add something.
     if (Val.isNull()) {
       Val = NewVal;
+      assert(!Val.isNull() && "Can't add a null value");
       return;
     }
 
     // If we have a single value, convert to a vector.
-    if (EltTy V = Val.template dyn_cast<EltTy>()) {
+    if (Val.template is<EltTy>()) {
+      EltTy V = Val.template get<EltTy>();
       Val = new VecTy();
       Val.template get<VecTy*>()->push_back(V);
     }
@@ -268,7 +271,7 @@ public:
   void clear() {
     // If we have a single value, convert to empty.
     if (Val.template is<EltTy>()) {
-      Val = (EltTy)nullptr;
+      Val = EltTy();
     } else if (VecTy *Vec = Val.template dyn_cast<VecTy*>()) {
       // If we have a vector form, just clear it.
       Vec->clear();
@@ -283,7 +286,7 @@ public:
     // If we have a single value, convert to empty.
     if (Val.template is<EltTy>()) {
       if (I == begin())
-        Val = (EltTy)nullptr;
+        Val = EltTy();
     } else if (VecTy *Vec = Val.template dyn_cast<VecTy*>()) {
       // multiple items in a vector; just do the erase, there is no
       // benefit to collapsing back to a pointer
@@ -299,7 +302,7 @@ public:
 
     if (Val.template is<EltTy>()) {
       if (S == begin() && S != E)
-        Val = (EltTy)nullptr;
+        Val = EltTy();
     } else if (VecTy *Vec = Val.template dyn_cast<VecTy*>()) {
       return Vec->erase(S, E);
     }
@@ -314,7 +317,8 @@ public:
       return std::prev(end());
     }
     assert(!Val.isNull() && "Null value with non-end insert iterator.");
-    if (EltTy V = Val.template dyn_cast<EltTy>()) {
+    if (Val.template is<EltTy>()) {
+      EltTy V = Val.template get<EltTy>();
       assert(I == begin());
       Val = Elt;
       push_back(V);
@@ -340,7 +344,8 @@ public:
       }
 
       Val = new VecTy();
-    } else if (EltTy V = Val.template dyn_cast<EltTy>()) {
+    } else if (Val.template is<EltTy>()) {
+      EltTy V = Val.template get<EltTy>();
       Val = new VecTy();
       Val.template get<VecTy*>()->push_back(V);
     }

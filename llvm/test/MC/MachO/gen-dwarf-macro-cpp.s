@@ -12,8 +12,5 @@
 
 // We check that the source name "foo.S" is picked up
 // CHECK: file_names[  1]:
-// CHECK-NEXT: name: "gen-dwarf-macro-cpp.s"
-// CHECK-NEXT: dir_index: 1
-// CHECK: file_names[  2]:
 // CHECK-NEXT: name: "foo.S"
 // CHECK-NEXT: dir_index: 0

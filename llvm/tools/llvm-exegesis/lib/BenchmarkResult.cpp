@@ -1,17 +1,18 @@
 //===-- BenchmarkResult.cpp -------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "BenchmarkResult.h"
 #include "BenchmarkRunner.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/bit.h"
+#include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/bit.h"
 #include "llvm/ObjectYAML/YAML.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/FileSystem.h"
@@ -21,6 +22,7 @@
 static constexpr const char kIntegerPrefix[] = "i_0x";
 static constexpr const char kDoublePrefix[] = "f_";
 static constexpr const char kInvalidOperand[] = "INVALID";
+static constexpr llvm::StringLiteral kNoRegister("%noreg");
 
 namespace llvm {
 
@@ -30,7 +32,30 @@ namespace {
 // serialization process to encode/decode registers and instructions.
 struct YamlContext {
   YamlContext(const exegesis::LLVMState &State)
-      : State(&State), ErrorStream(LastError) {}
+      : State(&State), ErrorStream(LastError),
+        OpcodeNameToOpcodeIdx(
+            generateOpcodeNameToOpcodeIdxMapping(State.getInstrInfo())),
+        RegNameToRegNo(generateRegNameToRegNoMapping(State.getRegInfo())) {}
+
+  static llvm::StringMap<unsigned>
+  generateOpcodeNameToOpcodeIdxMapping(const llvm::MCInstrInfo &InstrInfo) {
+    llvm::StringMap<unsigned> Map(InstrInfo.getNumOpcodes());
+    for (unsigned I = 0, E = InstrInfo.getNumOpcodes(); I < E; ++I)
+      Map[InstrInfo.getName(I)] = I;
+    assert(Map.size() == InstrInfo.getNumOpcodes() && "Size prediction failed");
+    return Map;
+  };
+
+  llvm::StringMap<unsigned>
+  generateRegNameToRegNoMapping(const llvm::MCRegisterInfo &RegInfo) {
+    llvm::StringMap<unsigned> Map(RegInfo.getNumRegs());
+    // Special-case RegNo 0, which would otherwise be spelled as ''.
+    Map[kNoRegister] = 0;
+    for (unsigned I = 1, E = RegInfo.getNumRegs(); I < E; ++I)
+      Map[RegInfo.getName(I)] = I;
+    assert(Map.size() == RegInfo.getNumRegs() && "Size prediction failed");
+    return Map;
+  };
 
   void serializeMCInst(const llvm::MCInst &MCInst, llvm::raw_ostream &OS) {
     OS << getInstrName(MCInst.getOpcode());
@@ -41,10 +66,10 @@ struct YamlContext {
   }
 
   void deserializeMCInst(llvm::StringRef String, llvm::MCInst &Value) {
-    llvm::SmallVector<llvm::StringRef, 8> Pieces;
+    llvm::SmallVector<llvm::StringRef, 16> Pieces;
     String.split(Pieces, " ", /* MaxSplit */ -1, /* KeepEmpty */ false);
     if (Pieces.empty()) {
-      ErrorStream << "Unknown Instruction: '" << String << "'";
+      ErrorStream << "Unknown Instruction: '" << String << "'\n";
       return;
     }
     bool ProcessOpcode = true;
@@ -62,19 +87,21 @@ struct YamlContext {
   llvm::raw_string_ostream &getErrorStream() { return ErrorStream; }
 
   llvm::StringRef getRegName(unsigned RegNo) {
+    // Special case: RegNo 0 is NoRegister. We have to deal with it explicitly.
+    if (RegNo == 0)
+      return kNoRegister;
     const llvm::StringRef RegName = State->getRegInfo().getName(RegNo);
     if (RegName.empty())
-      ErrorStream << "No register with enum value" << RegNo;
+      ErrorStream << "No register with enum value '" << RegNo << "'\n";
     return RegName;
   }
 
-  unsigned getRegNo(llvm::StringRef RegName) {
-    const llvm::MCRegisterInfo &RegInfo = State->getRegInfo();
-    for (unsigned E = RegInfo.getNumRegs(), I = 0; I < E; ++I)
-      if (RegInfo.getName(I) == RegName)
-        return I;
-    ErrorStream << "No register with name " << RegName;
-    return 0;
+  llvm::Optional<unsigned> getRegNo(llvm::StringRef RegName) {
+    auto Iter = RegNameToRegNo.find(RegName);
+    if (Iter != RegNameToRegNo.end())
+      return Iter->second;
+    ErrorStream << "No register with name '" << RegName << "'\n";
+    return llvm::None;
   }
 
 private:
@@ -122,32 +149,33 @@ private:
       return llvm::MCOperand::createImm(IntValue);
     if (tryDeserializeFPOperand(String, DoubleValue))
       return llvm::MCOperand::createFPImm(DoubleValue);
-    if (unsigned RegNo = getRegNo(String))
-      return llvm::MCOperand::createReg(RegNo);
+    if (auto RegNo = getRegNo(String))
+      return llvm::MCOperand::createReg(*RegNo);
     if (String != kInvalidOperand)
-      ErrorStream << "Unknown Operand: '" << String << "'";
+      ErrorStream << "Unknown Operand: '" << String << "'\n";
     return {};
   }
 
   llvm::StringRef getInstrName(unsigned InstrNo) {
     const llvm::StringRef InstrName = State->getInstrInfo().getName(InstrNo);
     if (InstrName.empty())
-      ErrorStream << "No opcode with enum value" << InstrNo;
+      ErrorStream << "No opcode with enum value '" << InstrNo << "'\n";
     return InstrName;
   }
 
   unsigned getInstrOpcode(llvm::StringRef InstrName) {
-    const llvm::MCInstrInfo &InstrInfo = State->getInstrInfo();
-    for (unsigned E = InstrInfo.getNumOpcodes(), I = 0; I < E; ++I)
-      if (InstrInfo.getName(I) == InstrName)
-        return I;
-    ErrorStream << "No opcode with name " << InstrName;
+    auto Iter = OpcodeNameToOpcodeIdx.find(InstrName);
+    if (Iter != OpcodeNameToOpcodeIdx.end())
+      return Iter->second;
+    ErrorStream << "No opcode with name '" << InstrName << "'\n";
     return 0;
   }
 
   const llvm::exegesis::LLVMState *State;
   std::string LastError;
   llvm::raw_string_ostream ErrorStream;
+  const llvm::StringMap<unsigned> OpcodeNameToOpcodeIdx;
+  const llvm::StringMap<unsigned> RegNameToRegNo;
 };
 } // namespace
 
@@ -210,6 +238,8 @@ struct ScalarEnumerationTraits<exegesis::InstructionBenchmark::ModeE> {
     Io.enumCase(Value, "", exegesis::InstructionBenchmark::Unknown);
     Io.enumCase(Value, "latency", exegesis::InstructionBenchmark::Latency);
     Io.enumCase(Value, "uops", exegesis::InstructionBenchmark::Uops);
+    Io.enumCase(Value, "inverse_throughput",
+                exegesis::InstructionBenchmark::InverseThroughput);
   }
 };
 
@@ -235,8 +265,9 @@ template <> struct ScalarTraits<exegesis::RegisterValue> {
     String.split(Pieces, "=0x", /* MaxSplit */ -1,
                  /* KeepEmpty */ false);
     YamlContext &Context = getTypedContext(Ctx);
-    if (Pieces.size() == 2) {
-      RV.Register = Context.getRegNo(Pieces[0]);
+    llvm::Optional<unsigned> RegNo;
+    if (Pieces.size() == 2 && (RegNo = Context.getRegNo(Pieces[0]))) {
+      RV.Register = *RegNo;
       const unsigned BitsNeeded = llvm::APInt::getBitsNeeded(Pieces[1], kRadix);
       RV.Value = llvm::APInt(BitsNeeded, Pieces[1], kRadix);
     } else {
@@ -342,27 +373,35 @@ InstructionBenchmark::readYamls(const LLVMState &State,
   }
 }
 
-void InstructionBenchmark::writeYamlTo(const LLVMState &State,
-                                       llvm::raw_ostream &OS) {
+llvm::Error InstructionBenchmark::writeYamlTo(const LLVMState &State,
+                                              llvm::raw_ostream &OS) {
+  auto Cleanup = make_scope_exit([&] { OS.flush(); });
   llvm::yaml::Output Yout(OS, nullptr /*Ctx*/, 200 /*WrapColumn*/);
   YamlContext Context(State);
   Yout.beginDocuments();
   llvm::yaml::yamlize(Yout, *this, /*unused*/ true, Context);
+  if (!Context.getLastError().empty())
+    return llvm::make_error<BenchmarkFailure>(Context.getLastError());
   Yout.endDocuments();
+  return Error::success();
 }
 
-void InstructionBenchmark::readYamlFrom(const LLVMState &State,
-                                        llvm::StringRef InputContent) {
+llvm::Error InstructionBenchmark::readYamlFrom(const LLVMState &State,
+                                               llvm::StringRef InputContent) {
   llvm::yaml::Input Yin(InputContent);
   YamlContext Context(State);
   if (Yin.setCurrentDocument())
     llvm::yaml::yamlize(Yin, *this, /*unused*/ true, Context);
+  if (!Context.getLastError().empty())
+    return llvm::make_error<BenchmarkFailure>(Context.getLastError());
+  return Error::success();
 }
 
 llvm::Error InstructionBenchmark::writeYaml(const LLVMState &State,
                                             const llvm::StringRef Filename) {
   if (Filename == "-") {
-    writeYamlTo(State, llvm::outs());
+    if (auto Err = writeYamlTo(State, llvm::outs()))
+      return Err;
   } else {
     int ResultFD = 0;
     if (auto E = llvm::errorCodeToError(
@@ -371,7 +410,8 @@ llvm::Error InstructionBenchmark::writeYaml(const LLVMState &State,
       return E;
     }
     llvm::raw_fd_ostream Ostr(ResultFD, true /*shouldClose*/);
-    writeYamlTo(State, Ostr);
+    if (auto Err = writeYamlTo(State, Ostr))
+      return Err;
   }
   return llvm::Error::success();
 }

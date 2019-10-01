@@ -1,9 +1,8 @@
 //===-- AVRRegisterInfo.cpp - AVR Register Information --------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -17,6 +16,7 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 
@@ -271,6 +271,20 @@ void AVRRegisterInfo::splitReg(unsigned Reg,
 
     LoReg = getSubReg(Reg, AVR::sub_lo);
     HiReg = getSubReg(Reg, AVR::sub_hi);
+}
+
+bool AVRRegisterInfo::shouldCoalesce(MachineInstr *MI,
+                                     const TargetRegisterClass *SrcRC,
+                                     unsigned SubReg,
+                                     const TargetRegisterClass *DstRC,
+                                     unsigned DstSubReg,
+                                     const TargetRegisterClass *NewRC,
+                                     LiveIntervals &LIS) const {
+  if(this->getRegClass(AVR::PTRDISPREGSRegClassID)->hasSubClassEq(NewRC)) {
+    return false;
+  }
+
+  return TargetRegisterInfo::shouldCoalesce(MI, SrcRC, SubReg, DstRC, DstSubReg, NewRC, LIS);
 }
 
 } // end of namespace llvm

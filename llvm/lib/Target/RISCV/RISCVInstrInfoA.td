@@ -1,9 +1,8 @@
 //===-- RISCVInstrInfoA.td - RISC-V 'A' instructions -------*- tablegen -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -235,7 +234,7 @@ def : PseudoMaskedAMOPat<int_riscv_masked_atomicrmw_umin_i32,
 
 class PseudoCmpXchg
     : Pseudo<(outs GPR:$res, GPR:$scratch),
-             (ins GPR:$addr, GPR:$cmpval, GPR:$newval, i32imm:$ordering), []> {
+             (ins GPR:$addr, GPR:$cmpval, GPR:$newval, ixlenimm:$ordering), []> {
   let Constraints = "@earlyclobber $res,@earlyclobber $scratch";
   let mayLoad = 1;
   let mayStore = 1;
@@ -263,7 +262,7 @@ defm : PseudoCmpXchgPat<"atomic_cmp_swap_32", PseudoCmpXchg32>;
 def PseudoMaskedCmpXchg32
     : Pseudo<(outs GPR:$res, GPR:$scratch),
              (ins GPR:$addr, GPR:$cmpval, GPR:$newval, GPR:$mask,
-              i32imm:$ordering), []> {
+              ixlenimm:$ordering), []> {
   let Constraints = "@earlyclobber $res,@earlyclobber $scratch";
   let mayLoad = 1;
   let mayStore = 1;
@@ -276,3 +275,79 @@ def : Pat<(int_riscv_masked_cmpxchg_i32
             GPR:$addr, GPR:$cmpval, GPR:$newval, GPR:$mask, imm:$ordering)>;
 
 } // Predicates = [HasStdExtA]
+
+let Predicates = [HasStdExtA, IsRV64] in {
+
+/// 64-bit atomic loads and stores
+
+// Fences will be inserted for atomic load/stores according to the logic in
+// RISCVTargetLowering::{emitLeadingFence,emitTrailingFence}.
+defm : LdPat<atomic_load_64, LD>;
+defm : AtomicStPat<atomic_store_64, SD, GPR>;
+
+defm : AMOPat<"atomic_swap_64", "AMOSWAP_D">;
+defm : AMOPat<"atomic_load_add_64", "AMOADD_D">;
+defm : AMOPat<"atomic_load_and_64", "AMOAND_D">;
+defm : AMOPat<"atomic_load_or_64", "AMOOR_D">;
+defm : AMOPat<"atomic_load_xor_64", "AMOXOR_D">;
+defm : AMOPat<"atomic_load_max_64", "AMOMAX_D">;
+defm : AMOPat<"atomic_load_min_64", "AMOMIN_D">;
+defm : AMOPat<"atomic_load_umax_64", "AMOMAXU_D">;
+defm : AMOPat<"atomic_load_umin_64", "AMOMINU_D">;
+
+/// 64-bit AMOs
+
+def : Pat<(atomic_load_sub_64_monotonic GPR:$addr, GPR:$incr),
+          (AMOADD_D GPR:$addr, (SUB X0, GPR:$incr))>;
+def : Pat<(atomic_load_sub_64_acquire GPR:$addr, GPR:$incr),
+          (AMOADD_D_AQ GPR:$addr, (SUB X0, GPR:$incr))>;
+def : Pat<(atomic_load_sub_64_release GPR:$addr, GPR:$incr),
+          (AMOADD_D_RL GPR:$addr, (SUB X0, GPR:$incr))>;
+def : Pat<(atomic_load_sub_64_acq_rel GPR:$addr, GPR:$incr),
+          (AMOADD_D_AQ_RL GPR:$addr, (SUB X0, GPR:$incr))>;
+def : Pat<(atomic_load_sub_64_seq_cst GPR:$addr, GPR:$incr),
+          (AMOADD_D_AQ_RL GPR:$addr, (SUB X0, GPR:$incr))>;
+
+/// 64-bit pseudo AMOs
+
+def PseudoAtomicLoadNand64 : PseudoAMO;
+// Ordering constants must be kept in sync with the AtomicOrdering enum in
+// AtomicOrdering.h.
+def : Pat<(atomic_load_nand_64_monotonic GPR:$addr, GPR:$incr),
+          (PseudoAtomicLoadNand64 GPR:$addr, GPR:$incr, 2)>;
+def : Pat<(atomic_load_nand_64_acquire GPR:$addr, GPR:$incr),
+          (PseudoAtomicLoadNand64 GPR:$addr, GPR:$incr, 4)>;
+def : Pat<(atomic_load_nand_64_release GPR:$addr, GPR:$incr),
+          (PseudoAtomicLoadNand64 GPR:$addr, GPR:$incr, 5)>;
+def : Pat<(atomic_load_nand_64_acq_rel GPR:$addr, GPR:$incr),
+          (PseudoAtomicLoadNand64 GPR:$addr, GPR:$incr, 6)>;
+def : Pat<(atomic_load_nand_64_seq_cst GPR:$addr, GPR:$incr),
+          (PseudoAtomicLoadNand64 GPR:$addr, GPR:$incr, 7)>;
+
+def : PseudoMaskedAMOPat<int_riscv_masked_atomicrmw_xchg_i64,
+                         PseudoMaskedAtomicSwap32>;
+def : PseudoMaskedAMOPat<int_riscv_masked_atomicrmw_add_i64,
+                         PseudoMaskedAtomicLoadAdd32>;
+def : PseudoMaskedAMOPat<int_riscv_masked_atomicrmw_sub_i64,
+                         PseudoMaskedAtomicLoadSub32>;
+def : PseudoMaskedAMOPat<int_riscv_masked_atomicrmw_nand_i64,
+                         PseudoMaskedAtomicLoadNand32>;
+def : PseudoMaskedAMOMinMaxPat<int_riscv_masked_atomicrmw_max_i64,
+                               PseudoMaskedAtomicLoadMax32>;
+def : PseudoMaskedAMOMinMaxPat<int_riscv_masked_atomicrmw_min_i64,
+                               PseudoMaskedAtomicLoadMin32>;
+def : PseudoMaskedAMOPat<int_riscv_masked_atomicrmw_umax_i64,
+                         PseudoMaskedAtomicLoadUMax32>;
+def : PseudoMaskedAMOPat<int_riscv_masked_atomicrmw_umin_i64,
+                         PseudoMaskedAtomicLoadUMin32>;
+
+/// 64-bit compare and exchange
+
+def PseudoCmpXchg64 : PseudoCmpXchg;
+defm : PseudoCmpXchgPat<"atomic_cmp_swap_64", PseudoCmpXchg64>;
+
+def : Pat<(int_riscv_masked_cmpxchg_i64
+            GPR:$addr, GPR:$cmpval, GPR:$newval, GPR:$mask, imm:$ordering),
+          (PseudoMaskedCmpXchg32
+            GPR:$addr, GPR:$cmpval, GPR:$newval, GPR:$mask, imm:$ordering)>;
+} // Predicates = [HasStdExtA, IsRV64]

@@ -12,16 +12,14 @@ define void @t0(<8 x i16>* %dest, <8 x i16>* %old) nounwind {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl $1, %edx
-; X86-NEXT:    movd %edx, %xmm0
+; X86-NEXT:    movdqa {{.*#+}} xmm0 = [1,1,1,1]
 ; X86-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
 ; X86-NEXT:    movdqa %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: t0:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movl $1, %eax
-; X64-NEXT:    movd %eax, %xmm0
+; X64-NEXT:    movdqa {{.*#+}} xmm0 = [1,1,1,1]
 ; X64-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
 ; X64-NEXT:    movdqa %xmm0, (%rdi)
 ; X64-NEXT:    retq
@@ -396,14 +394,14 @@ entry:
 define <4 x i32> @t17() nounwind {
 ; X86-LABEL: t17:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movddup {{.*#+}} xmm0 = mem[0,0]
-; X86-NEXT:    andpd {{\.LCPI.*}}, %xmm0
+; X86-NEXT:    pshufd {{.*#+}} xmm0 = mem[0,1,0,1]
+; X86-NEXT:    pand {{\.LCPI.*}}, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: t17:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movddup {{.*#+}} xmm0 = mem[0,0]
-; X64-NEXT:    andpd {{.*}}(%rip), %xmm0
+; X64-NEXT:    pshufd {{.*#+}} xmm0 = mem[0,1,0,1]
+; X64-NEXT:    pand {{.*}}(%rip), %xmm0
 ; X64-NEXT:    retq
 entry:
   %tmp1 = load <4 x float>, <4 x float>* undef, align 16

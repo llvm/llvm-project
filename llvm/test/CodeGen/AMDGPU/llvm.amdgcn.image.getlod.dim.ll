@@ -1,8 +1,10 @@
-; RUN: llc < %s -march=amdgcn -mcpu=verde -verify-machineinstrs | FileCheck --check-prefix=GCN %s
-; RUN: llc < %s -march=amdgcn -mcpu=gfx900 -verify-machineinstrs | FileCheck --check-prefix=GCN %s
+; RUN: llc < %s -march=amdgcn -mcpu=verde -verify-machineinstrs | FileCheck --check-prefixes=GCN,PRE-GFX10 %s
+; RUN: llc < %s -march=amdgcn -mcpu=gfx900 -verify-machineinstrs | FileCheck --check-prefixes=GCN,PRE-GFX10 %s
+; RUN: llc < %s -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs | FileCheck --check-prefixes=GCN,GFX10 %s
 
 ; GCN-LABEL: {{^}}getlod_1d:
-; GCN: image_get_lod v[0:3], v0, s[0:7], s[8:11] dmask:0xf{{$}}
+; PRE-GFX10: image_get_lod v[0:3], v0, s[0:7], s[8:11] dmask:0xf{{$}}
+; GFX10: image_get_lod v[0:3], v0, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
 ; GCN: s_waitcnt vmcnt(0)
 define amdgpu_ps <4 x float> @getlod_1d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %s) {
 main_body:
@@ -11,7 +13,8 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}getlod_2d:
-; GCN: image_get_lod v[0:1], v[0:1], s[0:7], s[8:11] dmask:0x3{{$}}
+; PRE-GFX10: image_get_lod v[0:1], v[0:1], s[0:7], s[8:11] dmask:0x3{{$}}
+; GFX10: image_get_lod v[0:1], v[0:1], s[0:7], s[8:11] dmask:0x3 dim:SQ_RSRC_IMG_2D
 ; GCN: s_waitcnt vmcnt(0)
 define amdgpu_ps <2 x float> @getlod_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %s, float %t) {
 main_body:

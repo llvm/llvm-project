@@ -1,9 +1,8 @@
 //===-- KnownBits.cpp - Stores known zeros/ones ---------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -16,18 +15,14 @@
 
 using namespace llvm;
 
-KnownBits KnownBits::computeForAddSub(bool Add, bool NSW,
-                                      const KnownBits &LHS, KnownBits RHS) {
-  // Carry in a 1 for a subtract, rather than 0.
-  bool CarryIn = false;
-  if (!Add) {
-    // Sum = LHS + ~RHS + 1
-    std::swap(RHS.Zero, RHS.One);
-    CarryIn = true;
-  }
+static KnownBits computeForAddCarry(
+    const KnownBits &LHS, const KnownBits &RHS,
+    bool CarryZero, bool CarryOne) {
+  assert(!(CarryZero && CarryOne) &&
+         "Carry can't be zero and one at the same time");
 
-  APInt PossibleSumZero = ~LHS.Zero + ~RHS.Zero + CarryIn;
-  APInt PossibleSumOne = LHS.One + RHS.One + CarryIn;
+  APInt PossibleSumZero = ~LHS.Zero + ~RHS.Zero + !CarryZero;
+  APInt PossibleSumOne = LHS.One + RHS.One + CarryOne;
 
   // Compute known bits of the carry.
   APInt CarryKnownZero = ~(PossibleSumZero ^ LHS.Zero ^ RHS.Zero);
@@ -46,9 +41,32 @@ KnownBits KnownBits::computeForAddSub(bool Add, bool NSW,
   KnownBits KnownOut;
   KnownOut.Zero = ~std::move(PossibleSumZero) & Known;
   KnownOut.One = std::move(PossibleSumOne) & Known;
+  return KnownOut;
+}
+
+KnownBits KnownBits::computeForAddCarry(
+    const KnownBits &LHS, const KnownBits &RHS, const KnownBits &Carry) {
+  assert(Carry.getBitWidth() == 1 && "Carry must be 1-bit");
+  return ::computeForAddCarry(
+      LHS, RHS, Carry.Zero.getBoolValue(), Carry.One.getBoolValue());
+}
+
+KnownBits KnownBits::computeForAddSub(bool Add, bool NSW,
+                                      const KnownBits &LHS, KnownBits RHS) {
+  KnownBits KnownOut;
+  if (Add) {
+    // Sum = LHS + RHS + 0
+    KnownOut = ::computeForAddCarry(
+        LHS, RHS, /*CarryZero*/true, /*CarryOne*/false);
+  } else {
+    // Sum = LHS + ~RHS + 1
+    std::swap(RHS.Zero, RHS.One);
+    KnownOut = ::computeForAddCarry(
+        LHS, RHS, /*CarryZero*/false, /*CarryOne*/true);
+  }
 
   // Are we still trying to solve for the sign bit?
-  if (!Known.isSignBitSet()) {
+  if (!KnownOut.isNegative() && !KnownOut.isNonNegative()) {
     if (NSW) {
       // Adding two non-negative numbers, or subtracting a negative number from
       // a non-negative one, can't wrap into negative.

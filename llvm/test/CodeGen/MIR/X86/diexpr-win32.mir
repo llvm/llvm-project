@@ -1,4 +1,4 @@
-# RUN: llc -start-after=prologepilog -filetype=obj -O0 %s -o - | llvm-readobj -codeview | FileCheck %s
+# RUN: llc -start-after=prologepilog -filetype=obj -O0 %s -o - | llvm-readobj --codeview | FileCheck %s
 
 # Offsets are now CFA, or VFRAME, relative. Both the NRVO sret pointer and the
 # string* parameter are on the stack, NRVO at offset 4 (after RA), and Str at
@@ -177,11 +177,11 @@ frameInfo:
   savePoint:       ''
   restorePoint:    ''
 fixedStack:
-  - { id: 0, type: spill-slot, offset: -8, size: 4, alignment: 4, stack-id: 0,
+  - { id: 0, type: spill-slot, offset: -8, size: 4, alignment: 4, stack-id: default,
       callee-saved-register: '$esi' }
-  - { id: 1, type: default, offset: 4, size: 4, alignment: 4, stack-id: 0,
+  - { id: 1, type: default, offset: 4, size: 4, alignment: 4, stack-id: default,
       isImmutable: true, isAliased: false, callee-saved-register: '' }
-  - { id: 2, type: default, offset: 0, size: 4, alignment: 4, stack-id: 0,
+  - { id: 2, type: default, offset: 0, size: 4, alignment: 4, stack-id: default,
       isImmutable: true, isAliased: false, callee-saved-register: '' }
 stack:
 constants:
@@ -235,9 +235,9 @@ frameInfo:
   savePoint:       ''
   restorePoint:    ''
 fixedStack:
-  - { id: 0, type: default, offset: 4, size: 4, alignment: 4, stack-id: 0,
+  - { id: 0, type: default, offset: 4, size: 4, alignment: 4, stack-id: default,
       isImmutable: true, isAliased: false, callee-saved-register: '' }
-  - { id: 1, type: default, offset: 0, size: 4, alignment: 4, stack-id: 0,
+  - { id: 1, type: default, offset: 0, size: 4, alignment: 4, stack-id: default,
       isImmutable: true, isAliased: false, callee-saved-register: '' }
 stack:
 constants:

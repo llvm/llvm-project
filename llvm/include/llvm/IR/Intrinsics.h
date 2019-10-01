@@ -1,9 +1,8 @@
-//===-- llvm/Instrinsics.h - LLVM Intrinsic Function Handling ---*- C++ -*-===//
+//===- Intrinsics.h - LLVM Intrinsic Function Handling ----------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -100,7 +99,8 @@ namespace Intrinsic {
       Void, VarArg, MMX, Token, Metadata, Half, Float, Double, Quad,
       Integer, Vector, Pointer, Struct,
       Argument, ExtendArgument, TruncArgument, HalfVecArgument,
-      SameVecWidthArgument, PtrToArgument, PtrToElt, VecOfAnyPtrsToElt
+      SameVecWidthArgument, PtrToArgument, PtrToElt, VecOfAnyPtrsToElt,
+      VecElementArgument
     } Kind;
 
     union {
@@ -117,20 +117,22 @@ namespace Intrinsic {
       AK_AnyInteger,
       AK_AnyFloat,
       AK_AnyVector,
-      AK_AnyPointer
+      AK_AnyPointer,
+      AK_MatchType = 7
     };
 
     unsigned getArgumentNumber() const {
       assert(Kind == Argument || Kind == ExtendArgument ||
              Kind == TruncArgument || Kind == HalfVecArgument ||
              Kind == SameVecWidthArgument || Kind == PtrToArgument ||
-             Kind == PtrToElt);
+             Kind == PtrToElt || Kind == VecElementArgument);
       return Argument_Info >> 3;
     }
     ArgKind getArgumentKind() const {
       assert(Kind == Argument || Kind == ExtendArgument ||
              Kind == TruncArgument || Kind == HalfVecArgument ||
-             Kind == SameVecWidthArgument || Kind == PtrToArgument);
+             Kind == SameVecWidthArgument || Kind == PtrToArgument ||
+             Kind == VecElementArgument);
       return (ArgKind)(Argument_Info & 7);
     }
 
@@ -162,14 +164,21 @@ namespace Intrinsic {
   /// of IITDescriptors.
   void getIntrinsicInfoTableEntries(ID id, SmallVectorImpl<IITDescriptor> &T);
 
-  /// Match the specified type (which comes from an intrinsic argument or return
-  /// value) with the type constraints specified by the .td file. If the given
-  /// type is an overloaded type it is pushed to the ArgTys vector.
+  enum MatchIntrinsicTypesResult {
+    MatchIntrinsicTypes_Match = 0,
+    MatchIntrinsicTypes_NoMatchRet = 1,
+    MatchIntrinsicTypes_NoMatchArg = 2,
+  };
+
+  /// Match the specified function type with the type constraints specified by
+  /// the .td file. If the given type is an overloaded type it is pushed to the
+  /// ArgTys vector.
   ///
   /// Returns false if the given type matches with the constraints, true
   /// otherwise.
-  bool matchIntrinsicType(Type *Ty, ArrayRef<IITDescriptor> &Infos,
-                          SmallVectorImpl<Type*> &ArgTys);
+  MatchIntrinsicTypesResult
+  matchIntrinsicSignature(FunctionType *FTy, ArrayRef<IITDescriptor> &Infos,
+                          SmallVectorImpl<Type *> &ArgTys);
 
   /// Verify if the intrinsic has variable arguments. This method is intended to
   /// be called after all the fixed arguments have been matched first.

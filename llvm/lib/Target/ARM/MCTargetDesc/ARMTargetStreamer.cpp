@@ -1,9 +1,8 @@
 //===- ARMTargetStreamer.cpp - ARMTargetStreamer class --*- C++ -*---------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -125,7 +124,9 @@ static ARMBuildAttrs::CPUArch getArchForCPU(const MCSubtargetInfo &STI) {
     if (STI.hasFeature(ARM::FeatureRClass))
       return ARMBuildAttrs::v8_R;
     return ARMBuildAttrs::v8_A;
-  } else if (STI.hasFeature(ARM::HasV8MMainlineOps))
+  } else if (STI.hasFeature(ARM::HasV8_1MMainlineOps))
+    return ARMBuildAttrs::v8_1_M_Main;
+  else if (STI.hasFeature(ARM::HasV8MMainlineOps))
     return ARMBuildAttrs::v8_M_Main;
   else if (STI.hasFeature(ARM::HasV7Ops)) {
     if (STI.hasFeature(ARM::FeatureMClass) && STI.hasFeature(ARM::FeatureDSP))
@@ -223,37 +224,37 @@ void ARMTargetStreamer::emitTargetAttributes(const MCSubtargetInfo &STI) {
                         ? ARMBuildAttrs::AllowNeonARMv8_1a
                         : ARMBuildAttrs::AllowNeonARMv8);
   } else {
-    if (STI.hasFeature(ARM::FeatureFPARMv8))
+    if (STI.hasFeature(ARM::FeatureFPARMv8_D16_SP))
       // FPv5 and FP-ARMv8 have the same instructions, so are modeled as one
       // FPU, but there are two different names for it depending on the CPU.
-      emitFPU(STI.hasFeature(ARM::FeatureD16)
-                  ? (STI.hasFeature(ARM::FeatureVFPOnlySP) ? ARM::FK_FPV5_SP_D16
-                                                           : ARM::FK_FPV5_D16)
-                  : ARM::FK_FP_ARMV8);
-    else if (STI.hasFeature(ARM::FeatureVFP4))
-      emitFPU(STI.hasFeature(ARM::FeatureD16)
-                  ? (STI.hasFeature(ARM::FeatureVFPOnlySP) ? ARM::FK_FPV4_SP_D16
-                                                           : ARM::FK_VFPV4_D16)
-                  : ARM::FK_VFPV4);
-    else if (STI.hasFeature(ARM::FeatureVFP3))
+      emitFPU(STI.hasFeature(ARM::FeatureD32)
+                  ? ARM::FK_FP_ARMV8
+                  : (STI.hasFeature(ARM::FeatureFP64) ? ARM::FK_FPV5_D16
+                                                      : ARM::FK_FPV5_SP_D16));
+    else if (STI.hasFeature(ARM::FeatureVFP4_D16_SP))
+      emitFPU(STI.hasFeature(ARM::FeatureD32)
+                  ? ARM::FK_VFPV4
+                  : (STI.hasFeature(ARM::FeatureFP64) ? ARM::FK_VFPV4_D16
+                                                      : ARM::FK_FPV4_SP_D16));
+    else if (STI.hasFeature(ARM::FeatureVFP3_D16_SP))
       emitFPU(
-          STI.hasFeature(ARM::FeatureD16)
-              // +d16
-              ? (STI.hasFeature(ARM::FeatureVFPOnlySP)
-                     ? (STI.hasFeature(ARM::FeatureFP16) ? ARM::FK_VFPV3XD_FP16
-                                                         : ARM::FK_VFPV3XD)
-                     : (STI.hasFeature(ARM::FeatureFP16)
+          STI.hasFeature(ARM::FeatureD32)
+              // +d32
+              ? (STI.hasFeature(ARM::FeatureFP16) ? ARM::FK_VFPV3_FP16
+                                                  : ARM::FK_VFPV3)
+              // -d32
+              : (STI.hasFeature(ARM::FeatureFP64)
+                     ? (STI.hasFeature(ARM::FeatureFP16)
                             ? ARM::FK_VFPV3_D16_FP16
-                            : ARM::FK_VFPV3_D16))
-              // -d16
-              : (STI.hasFeature(ARM::FeatureFP16) ? ARM::FK_VFPV3_FP16
-                                                  : ARM::FK_VFPV3));
-    else if (STI.hasFeature(ARM::FeatureVFP2))
+                            : ARM::FK_VFPV3_D16)
+                     : (STI.hasFeature(ARM::FeatureFP16) ? ARM::FK_VFPV3XD_FP16
+                                                         : ARM::FK_VFPV3XD)));
+    else if (STI.hasFeature(ARM::FeatureVFP2_D16_SP))
       emitFPU(ARM::FK_VFPV2);
   }
 
   // ABI_HardFP_use attribute to indicate single precision FP.
-  if (STI.hasFeature(ARM::FeatureVFPOnlySP))
+  if (STI.hasFeature(ARM::FeatureVFP2_D16_SP) && !STI.hasFeature(ARM::FeatureFP64))
     emitAttribute(ARMBuildAttrs::ABI_HardFP_use,
                   ARMBuildAttrs::HardFPSinglePrecision);
 
@@ -262,6 +263,11 @@ void ARMTargetStreamer::emitTargetAttributes(const MCSubtargetInfo &STI) {
 
   if (STI.hasFeature(ARM::FeatureMP))
     emitAttribute(ARMBuildAttrs::MPextension_use, ARMBuildAttrs::AllowMP);
+
+  if (STI.hasFeature(ARM::HasMVEFloatOps))
+    emitAttribute(ARMBuildAttrs::MVE_arch, ARMBuildAttrs::AllowMVEIntegerAndFloat);
+  else if (STI.hasFeature(ARM::HasMVEIntegerOps))
+    emitAttribute(ARMBuildAttrs::MVE_arch, ARMBuildAttrs::AllowMVEInteger);
 
   // Hardware divide in ARM mode is part of base arch, starting from ARMv8.
   // If only Thumb hwdiv is present, it must also be in base arch (ARMv7-R/M).

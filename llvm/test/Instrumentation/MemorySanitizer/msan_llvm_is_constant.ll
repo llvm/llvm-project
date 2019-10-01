@@ -1,6 +1,9 @@
 ; Make sure MSan doesn't insert shadow checks for @llvm.is.constant.* arguments.
 
+; RUN: opt < %s -msan-kernel=1 -S -passes=msan 2>&1 | FileCheck                \
+; RUN: -check-prefixes=CHECK %s
 ; RUN: opt < %s -msan -msan-kernel=1 -S | FileCheck -check-prefixes=CHECK %s
+; RUN: opt < %s -S -passes=msan 2>&1 | FileCheck -check-prefixes=CHECK %s
 ; RUN: opt < %s -msan -S | FileCheck -check-prefixes=CHECK %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

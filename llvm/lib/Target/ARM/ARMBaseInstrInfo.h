@@ -1,9 +1,8 @@
 //===-- ARMBaseInstrInfo.h - ARM Base Instruction Information ---*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -399,6 +398,11 @@ private:
 
   void expandMEMCPY(MachineBasicBlock::iterator) const;
 
+  /// Identify instructions that can be folded into a MOVCC instruction, and
+  /// return the defining instruction.
+  MachineInstr *canFoldIntoMOVCC(unsigned Reg, const MachineRegisterInfo &MRI,
+                                 const TargetInstrInfo *TII) const;
+
 private:
   /// Modeling special VFP / NEON fp MLA / MLS hazards.
 
@@ -478,6 +482,21 @@ bool isUncondBranchOpcode(int Opc) {
   return Opc == ARM::B || Opc == ARM::tB || Opc == ARM::t2B;
 }
 
+static inline bool isVPTOpcode(int Opc) {
+  return Opc == ARM::MVE_VPTv16i8 || Opc == ARM::MVE_VPTv16u8 ||
+         Opc == ARM::MVE_VPTv16s8 || Opc == ARM::MVE_VPTv8i16 ||
+         Opc == ARM::MVE_VPTv8u16 || Opc == ARM::MVE_VPTv8s16 ||
+         Opc == ARM::MVE_VPTv4i32 || Opc == ARM::MVE_VPTv4u32 ||
+         Opc == ARM::MVE_VPTv4s32 || Opc == ARM::MVE_VPTv4f32 ||
+         Opc == ARM::MVE_VPTv8f16 || Opc == ARM::MVE_VPTv16i8r ||
+         Opc == ARM::MVE_VPTv16u8r || Opc == ARM::MVE_VPTv16s8r ||
+         Opc == ARM::MVE_VPTv8i16r || Opc == ARM::MVE_VPTv8u16r ||
+         Opc == ARM::MVE_VPTv8s16r || Opc == ARM::MVE_VPTv4i32r ||
+         Opc == ARM::MVE_VPTv4u32r || Opc == ARM::MVE_VPTv4s32r ||
+         Opc == ARM::MVE_VPTv4f32r || Opc == ARM::MVE_VPTv8f16r ||
+         Opc == ARM::MVE_VPST;
+}
+
 static inline
 bool isCondBranchOpcode(int Opc) {
   return Opc == ARM::Bcc || Opc == ARM::tBcc || Opc == ARM::t2Bcc;
@@ -511,12 +530,6 @@ static inline bool isPushOpcode(int Opc) {
 ARMCC::CondCodes getInstrPredicate(const MachineInstr &MI, unsigned &PredReg);
 
 unsigned getMatchingCondBranchOpcode(unsigned Opc);
-
-/// Determine if MI can be folded into an ARM MOVCC instruction, and return the
-/// opcode of the SSA instruction representing the conditional MI.
-unsigned canFoldARMInstrIntoMOVCC(unsigned Reg,
-                                  MachineInstr *&MI,
-                                  const MachineRegisterInfo &MRI);
 
 /// Map pseudo instructions that imply an 'S' bit onto real opcodes. Whether
 /// the instruction is encoded with an 'S' bit is determined by the optional
@@ -567,6 +580,16 @@ bool rewriteARMFrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
 bool rewriteT2FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
                          unsigned FrameReg, int &Offset,
                          const ARMBaseInstrInfo &TII);
+
+/// Return true if Reg is defd between From and To
+bool registerDefinedBetween(unsigned Reg, MachineBasicBlock::iterator From,
+                            MachineBasicBlock::iterator To,
+                            const TargetRegisterInfo *TRI);
+
+/// Search backwards from a tBcc to find a tCMPi8 against 0, meaning
+/// we can convert them to a tCBZ or tCBNZ. Return nullptr if not found.
+MachineInstr *findCMPToFoldIntoCBZ(MachineInstr *Br,
+                                   const TargetRegisterInfo *TRI);
 
 } // end namespace llvm
 

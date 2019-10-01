@@ -11,7 +11,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "b", scope: !2, file: !3, line: 1, type: !6, isLocal: false, isDefinition: true)
-!2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang version 7.0.0 (https://git.llvm.org/git/clang.git/ c12b573f9ac61655cce52628b34235f58edaf984) (https://scott.linder@llvm.org/git/llvm.git 90c4822e8541eb07891cd03e614c530c30f8aa12)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !5)
+!2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang version 7.0.0", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !5)
 !3 = !DIFile(filename: "b.c", directory: "/home/slinder1/test/link", source: "int b;\0A")
 !4 = !{}
 !5 = !{!0}
@@ -19,4 +19,4 @@ target triple = "x86_64-unknown-linux-gnu"
 !7 = !{i32 2, !"Dwarf Version", i32 4}
 !8 = !{i32 2, !"Debug Info Version", i32 3}
 !9 = !{i32 1, !"wchar_size", i32 4}
-!10 = !{!"clang version 7.0.0 (https://git.llvm.org/git/clang.git/ c12b573f9ac61655cce52628b34235f58edaf984) (https://scott.linder@llvm.org/git/llvm.git 90c4822e8541eb07891cd03e614c530c30f8aa12)"}
+!10 = !{!"clang version 7.0.0"}

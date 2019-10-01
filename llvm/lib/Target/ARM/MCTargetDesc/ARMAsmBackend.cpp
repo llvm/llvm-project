@@ -1,9 +1,8 @@
 //===-- ARMAsmBackend.cpp - ARM Assembler Backend -------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -30,6 +29,7 @@
 #include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCValue.h"
+#include "llvm/MC/MCAsmLayout.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -46,6 +46,13 @@ public:
                                 /*HasRelocationAddend*/ false) {}
 };
 } // end anonymous namespace
+
+Optional<MCFixupKind> ARMAsmBackend::getFixupKind(StringRef Name) const {
+  if (STI.getTargetTriple().isOSBinFormatELF() && Name == "R_ARM_NONE")
+    return FK_NONE;
+
+  return MCAsmBackend::getFixupKind(Name);
+}
 
 const MCFixupKindInfo &ARMAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   const static MCFixupKindInfo InfosLE[ARM::NumTargetFixupKinds] = {
@@ -98,6 +105,13 @@ const MCFixupKindInfo &ARMAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       {"fixup_t2_movw_lo16", 0, 20, 0},
       {"fixup_arm_mod_imm", 0, 12, 0},
       {"fixup_t2_so_imm", 0, 26, 0},
+      {"fixup_bf_branch", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
+      {"fixup_bf_target", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
+      {"fixup_bfl_target", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
+      {"fixup_bfc_target", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
+      {"fixup_bfcsel_else_target", 0, 32, 0},
+      {"fixup_wls", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
+      {"fixup_le", 0, 32, MCFixupKindInfo::FKF_IsPCRel}
   };
   const static MCFixupKindInfo InfosBE[ARM::NumTargetFixupKinds] = {
       // This table *must* be in the order that the fixup_* kinds are defined in
@@ -149,6 +163,13 @@ const MCFixupKindInfo &ARMAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       {"fixup_t2_movw_lo16", 12, 20, 0},
       {"fixup_arm_mod_imm", 20, 12, 0},
       {"fixup_t2_so_imm", 26, 6, 0},
+      {"fixup_bf_branch", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
+      {"fixup_bf_target", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
+      {"fixup_bfl_target", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
+      {"fixup_bfc_target", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
+      {"fixup_bfcsel_else_target", 0, 32, 0},
+      {"fixup_wls", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
+      {"fixup_le", 0, 32, MCFixupKindInfo::FKF_IsPCRel}
   };
 
   if (Kind < FirstTargetFixupKind)
@@ -203,6 +224,13 @@ bool ARMAsmBackend::mayNeedRelaxation(const MCInst &Inst,
   return false;
 }
 
+static const char *checkPCRelOffset(uint64_t Value, int64_t Min, int64_t Max) {
+  int64_t Offset = int64_t(Value) - 4;
+  if (Offset < Min || Offset > Max)
+    return "out of range pc-relative fixup value";
+  return nullptr;
+}
+
 const char *ARMAsmBackend::reasonForFixupRelaxation(const MCFixup &Fixup,
                                                     uint64_t Value) const {
   switch ((unsigned)Fixup.getKind()) {
@@ -250,6 +278,32 @@ const char *ARMAsmBackend::reasonForFixupRelaxation(const MCFixup &Fixup,
       return "will be converted to nop";
     break;
   }
+  case ARM::fixup_bf_branch:
+    return checkPCRelOffset(Value, 0, 30);
+  case ARM::fixup_bf_target:
+    return checkPCRelOffset(Value, -0x10000, +0xfffe);
+  case ARM::fixup_bfl_target:
+    return checkPCRelOffset(Value, -0x40000, +0x3fffe);
+  case ARM::fixup_bfc_target:
+    return checkPCRelOffset(Value, -0x1000, +0xffe);
+  case ARM::fixup_wls:
+    return checkPCRelOffset(Value, 0, +0xffe);
+  case ARM::fixup_le:
+    // The offset field in the LE and LETP instructions is an 11-bit
+    // value shifted left by 2 (i.e. 0,2,4,...,4094), and it is
+    // interpreted as a negative offset from the value read from pc,
+    // i.e. from instruction_address+4.
+    //
+    // So an LE instruction can in principle address the instruction
+    // immediately after itself, or (not very usefully) the address
+    // half way through the 4-byte LE.
+    return checkPCRelOffset(Value, -0xffe, 0);
+  case ARM::fixup_bfcsel_else_target: {
+    if (Value != 2 && Value != 4)
+      return "out of range label-relative fixup value";
+    break;
+  }
+
   default:
     llvm_unreachable("Unexpected fixup kind in reasonForFixupRelaxation()!");
   }
@@ -384,6 +438,7 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
   default:
     Ctx.reportError(Fixup.getLoc(), "bad relocation fixup type");
     return 0;
+  case FK_NONE:
   case FK_Data_1:
   case FK_Data_2:
   case FK_Data_4:
@@ -753,6 +808,60 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
     EncValue |= (Value & 0xff);
     return swapHalfWords(EncValue, Endian == support::little);
   }
+  case ARM::fixup_bf_branch: {
+    const char *FixupDiagnostic = reasonForFixupRelaxation(Fixup, Value);
+    if (FixupDiagnostic) {
+      Ctx.reportError(Fixup.getLoc(), FixupDiagnostic);
+      return 0;
+    }
+    uint32_t out = (((Value - 4) >> 1) & 0xf) << 23;
+    return swapHalfWords(out, Endian == support::little);
+  }
+  case ARM::fixup_bf_target:
+  case ARM::fixup_bfl_target:
+  case ARM::fixup_bfc_target: {
+    const char *FixupDiagnostic = reasonForFixupRelaxation(Fixup, Value);
+    if (FixupDiagnostic) {
+      Ctx.reportError(Fixup.getLoc(), FixupDiagnostic);
+      return 0;
+    }
+    uint32_t out = 0;
+    uint32_t HighBitMask = (Kind == ARM::fixup_bf_target ? 0xf800 :
+                            Kind == ARM::fixup_bfl_target ? 0x3f800 : 0x800);
+    out |= (((Value - 4) >> 1) & 0x1) << 11;
+    out |= (((Value - 4) >> 1) & 0x7fe);
+    out |= (((Value - 4) >> 1) & HighBitMask) << 5;
+    return swapHalfWords(out, Endian == support::little);
+  }
+  case ARM::fixup_bfcsel_else_target: {
+    // If this is a fixup of a branch future's else target then it should be a
+    // constant MCExpr representing the distance between the branch targetted
+    // and the instruction after that same branch.
+    Value = Target.getConstant();
+
+    const char *FixupDiagnostic = reasonForFixupRelaxation(Fixup, Value);
+    if (FixupDiagnostic) {
+      Ctx.reportError(Fixup.getLoc(), FixupDiagnostic);
+      return 0;
+    }
+    uint32_t out = ((Value >> 2) & 1) << 17;
+    return swapHalfWords(out, Endian == support::little);
+  }
+  case ARM::fixup_wls:
+  case ARM::fixup_le: {
+    const char *FixupDiagnostic = reasonForFixupRelaxation(Fixup, Value);
+    if (FixupDiagnostic) {
+      Ctx.reportError(Fixup.getLoc(), FixupDiagnostic);
+      return 0;
+    }
+    uint64_t real_value = Value - 4;
+    uint32_t out = 0;
+    if (Kind == ARM::fixup_le)
+      real_value = -real_value;
+    out |= ((real_value >> 1) & 0x1) << 11;
+    out |= ((real_value >> 1) & 0x7fe);
+    return swapHalfWords(out, Endian == support::little);
+  }
   }
 }
 
@@ -762,7 +871,9 @@ bool ARMAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
   const MCSymbolRefExpr *A = Target.getSymA();
   const MCSymbol *Sym = A ? &A->getSymbol() : nullptr;
   const unsigned FixupKind = Fixup.getKind() ;
-  if ((unsigned)Fixup.getKind() == ARM::fixup_arm_thumb_bl) {
+  if (FixupKind == FK_NONE)
+    return true;
+  if (FixupKind == ARM::fixup_arm_thumb_bl) {
     assert(Sym && "How did we resolve this?");
 
     // If the symbol is external the linker will handle it.
@@ -804,6 +915,9 @@ static unsigned getFixupKindNumBytes(unsigned Kind) {
   default:
     llvm_unreachable("Unknown fixup kind!");
 
+  case FK_NONE:
+    return 0;
+
   case FK_Data_1:
   case ARM::fixup_arm_thumb_bcc:
   case ARM::fixup_arm_thumb_cp:
@@ -842,6 +956,13 @@ static unsigned getFixupKindNumBytes(unsigned Kind) {
   case ARM::fixup_t2_movt_hi16:
   case ARM::fixup_t2_movw_lo16:
   case ARM::fixup_t2_so_imm:
+  case ARM::fixup_bf_branch:
+  case ARM::fixup_bf_target:
+  case ARM::fixup_bfl_target:
+  case ARM::fixup_bfc_target:
+  case ARM::fixup_bfcsel_else_target:
+  case ARM::fixup_wls:
+  case ARM::fixup_le:
     return 4;
 
   case FK_SecRel_2:
@@ -857,6 +978,9 @@ static unsigned getFixupKindContainerSizeBytes(unsigned Kind) {
   switch (Kind) {
   default:
     llvm_unreachable("Unknown fixup kind!");
+
+  case FK_NONE:
+    return 0;
 
   case FK_Data_1:
     return 1;
@@ -895,6 +1019,13 @@ static unsigned getFixupKindContainerSizeBytes(unsigned Kind) {
   case ARM::fixup_t2_movw_lo16:
   case ARM::fixup_arm_mod_imm:
   case ARM::fixup_t2_so_imm:
+  case ARM::fixup_bf_branch:
+  case ARM::fixup_bf_target:
+  case ARM::fixup_bfl_target:
+  case ARM::fixup_bfc_target:
+  case ARM::fixup_bfcsel_else_target:
+  case ARM::fixup_wls:
+  case ARM::fixup_le:
     // Instruction size is 4 bytes.
     return 4;
   }

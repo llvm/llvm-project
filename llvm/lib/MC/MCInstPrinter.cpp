@@ -1,9 +1,8 @@
 //===- MCInstPrinter.cpp - Convert an MCInst to target assembly syntax ----===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -22,10 +21,14 @@ using namespace llvm;
 
 void llvm::dumpBytes(ArrayRef<uint8_t> bytes, raw_ostream &OS) {
   static const char hex_rep[] = "0123456789abcdef";
+  bool First = true;
   for (char i: bytes) {
+    if (First)
+      First = false;
+    else
+      OS << ' ';
     OS << hex_rep[(i & 0xF0) >> 4];
     OS << hex_rep[i & 0xF];
-    OS << ' ';
   }
 }
 
@@ -86,24 +89,25 @@ format_object<int64_t> MCInstPrinter::formatDec(int64_t Value) const {
 }
 
 format_object<int64_t> MCInstPrinter::formatHex(int64_t Value) const {
-  switch(PrintHexStyle) {
+  switch (PrintHexStyle) {
   case HexStyle::C:
-    if (Value < 0)
+    if (Value < 0) {
+      if (Value == std::numeric_limits<int64_t>::min())
+        return format<int64_t>("-0x8000000000000000", Value);
       return format("-0x%" PRIx64, -Value);
-    else
-      return format("0x%" PRIx64, Value);
+    }
+    return format("0x%" PRIx64, Value);
   case HexStyle::Asm:
     if (Value < 0) {
-      if (needsLeadingZero((uint64_t)(-Value)))
+      if (Value == std::numeric_limits<int64_t>::min())
+        return format<int64_t>("-8000000000000000h", Value);
+      if (needsLeadingZero(-(uint64_t)(Value)))
         return format("-0%" PRIx64 "h", -Value);
-      else
-        return format("-%" PRIx64 "h", -Value);
-    } else {
-      if (needsLeadingZero((uint64_t)(Value)))
-        return format("0%" PRIx64 "h", Value);
-      else
-        return format("%" PRIx64 "h", Value);
+      return format("-%" PRIx64 "h", -Value);
     }
+    if (needsLeadingZero((uint64_t)(Value)))
+      return format("0%" PRIx64 "h", Value);
+    return format("%" PRIx64 "h", Value);
   }
   llvm_unreachable("unsupported print style");
 }

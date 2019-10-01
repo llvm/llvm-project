@@ -1,9 +1,8 @@
 //===- llvm-cat.cpp - LLVM module concatenation utility -------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -33,17 +32,23 @@
 
 using namespace llvm;
 
+cl::OptionCategory CatCategory("llvm-cat Options");
+
 static cl::opt<bool>
-    BinaryCat("b", cl::desc("Whether to perform binary concatenation"));
+    BinaryCat("b", cl::desc("Whether to perform binary concatenation"),
+              cl::cat(CatCategory));
 
 static cl::opt<std::string> OutputFilename("o", cl::Required,
                                            cl::desc("Output filename"),
-                                           cl::value_desc("filename"));
+                                           cl::value_desc("filename"),
+                                           cl::cat(CatCategory));
 
 static cl::list<std::string> InputFilenames(cl::Positional, cl::ZeroOrMore,
-                                            cl::desc("<input  files>"));
+                                            cl::desc("<input  files>"),
+                                            cl::cat(CatCategory));
 
 int main(int argc, char **argv) {
+  cl::HideUnrelatedOptions(CatCategory);
   cl::ParseCommandLineOptions(argc, argv, "Module concatenation");
 
   ExitOnError ExitOnErr("llvm-cat: ");

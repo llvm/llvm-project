@@ -86,8 +86,8 @@ define amdgpu_kernel void @local_store_i55(i55 addrspace(3)* %ptr, i55 %arg) #0 
 ; GFX9-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX9-NEXT:    ds_write_b16 v1, v2 offset:4
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_and_b32_e32 v0, 0x7f0000, v0
-; GFX9-NEXT:    ds_write_b8_d16_hi v1, v0 offset:6
+; GFX9-NEXT:    v_bfe_u32 v0, v0, 16, 7
+; GFX9-NEXT:    ds_write_b8 v1, v0 offset:6
 ; GFX9-NEXT:    ds_write_b32 v1, v3
 ; GFX9-NEXT:    s_endpgm
   store i55 %arg, i55 addrspace(3)* %ptr, align 8

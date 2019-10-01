@@ -112,7 +112,10 @@ entry:
 ; GCN-NOT: buffer_
 ; GCN:     s_lshl_b32 [[SEL:s[0-9]+]], s{{[0-9]+}}, 4
 ; GCN:     s_lshl_b64 s[{{[0-9:]+}}], s[{{[0-9:]+}}], [[SEL]]
-; GCN:     s_and_b32 s{{[0-9]+}}, s{{[0-9]+}}, 0x3c00
+; GCN:     s_mov_b32 [[K:s[0-9]+]], 0x3c003c00
+; GCN:     v_mov_b32_e32 [[V:v[0-9]+]], [[K]]
+; GCN:     v_bfi_b32 v{{[0-9]+}}, s{{[0-9]+}}, [[V]], v{{[0-9]+}}
+; GCN:     v_bfi_b32 v{{[0-9]+}}, s{{[0-9]+}}, [[V]], v{{[0-9]+}}
 define amdgpu_kernel void @half4_inselt(<4 x half> addrspace(1)* %out, <4 x half> %vec, i32 %sel) {
 entry:
   %v = insertelement <4 x half> %vec, half 1.000000e+00, i32 %sel
@@ -168,9 +171,10 @@ entry:
 ; GCN-NOT: v_cndmask_b32
 ; GCN-NOT: v_movrel
 ; GCN-NOT: buffer_
+; GCN:     v_mov_b32_e32 [[K:v[0-9]+]], 0x10001
 ; GCN:     s_lshl_b32 [[SEL:s[0-9]+]], s{{[0-9]+}}, 4
 ; GCN:     s_lshl_b32 [[V:s[0-9]+]], 0xffff, [[SEL]]
-; GCN:     v_bfi_b32 v{{[0-9]+}}, [[V]], 1, v{{[0-9]+}}
+; GCN:     v_bfi_b32 v{{[0-9]+}}, [[V]], [[K]], v{{[0-9]+}}
 define amdgpu_kernel void @short2_inselt(<2 x i16> addrspace(1)* %out, <2 x i16> %vec, i32 %sel) {
 entry:
   %v = insertelement <2 x i16> %vec, i16 1, i32 %sel
@@ -184,7 +188,10 @@ entry:
 ; GCN-NOT: buffer_
 ; GCN:     s_lshl_b32 [[SEL:s[0-9]+]], s{{[0-9]+}}, 4
 ; GCN:     s_lshl_b64 s[{{[0-9:]+}}], s[{{[0-9:]+}}], [[SEL]]
-; GCN:     s_and_b32 s{{[0-9]+}}, s{{[0-9]+}}, 1
+; GCN:     s_mov_b32 [[K:s[0-9]+]], 0x10001
+; GCN:     v_mov_b32_e32 [[V:v[0-9]+]], [[K]]
+; GCN:     v_bfi_b32 v{{[0-9]+}}, s{{[0-9]+}}, [[V]], v{{[0-9]+}}
+; GCN:     v_bfi_b32 v{{[0-9]+}}, s{{[0-9]+}}, [[V]], v{{[0-9]+}}
 define amdgpu_kernel void @short4_inselt(<4 x i16> addrspace(1)* %out, <4 x i16> %vec, i32 %sel) {
 entry:
   %v = insertelement <4 x i16> %vec, i16 1, i32 %sel
@@ -197,7 +204,11 @@ entry:
 ; GCN-NOT: buffer_
 ; GCN:     s_lshl_b32 [[SEL:s[0-9]+]], s{{[0-9]+}}, 3
 ; GCN:     s_lshl_b64 s[{{[0-9:]+}}], s[{{[0-9:]+}}], [[SEL]]
-; GCN:     s_and_b32 s{{[0-9]+}}, s{{[0-9]+}}, 1
+; GCN:     s_mov_b32 [[K:s[0-9]+]], 0x1010101
+; GCN:     s_and_b32 s3, s1, [[K]]
+; GCN:     s_and_b32 s{{[0-9]+}}, s{{[0-9]+}}, [[K]]
+; GCN:     s_andn2_b64 s[{{[0-9:]+}}], s[{{[0-9:]+}}], s[{{[0-9:]+}}]
+; GCN:     s_or_b64 s[{{[0-9:]+}}], s[{{[0-9:]+}}], s[{{[0-9:]+}}]
 define amdgpu_kernel void @byte8_inselt(<8 x i8> addrspace(1)* %out, <8 x i8> %vec, i32 %sel) {
 entry:
   %v = insertelement <8 x i8> %vec, i8 1, i32 %sel

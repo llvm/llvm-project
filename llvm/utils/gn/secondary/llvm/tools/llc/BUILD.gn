@@ -21,7 +21,7 @@ executable("llc") {
 
   # Support plugins.
   # FIXME: Disable dead stripping once other binaries are dead-stripped.
-  if (host_os == "linux") {
+  if (host_os != "mac" && host_os != "win") {
     # Corresponds to export_executable_symbols() in cmake.
     ldflags = [ "-rdynamic" ]
   }

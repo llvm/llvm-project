@@ -1,9 +1,8 @@
 //===-- UnrollLoopRuntime.cpp - Runtime Loop unrolling utilities ----------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -125,11 +124,10 @@ static void ConnectProlog(Loop *L, Value *BECount, unsigned Count,
       // Update the existing PHI node operand with the value from the
       // new PHI node.  How this is done depends on if the existing
       // PHI node is in the original loop block, or the exit block.
-      if (L->contains(&PN)) {
-        PN.setIncomingValue(PN.getBasicBlockIndex(NewPreHeader), NewPN);
-      } else {
+      if (L->contains(&PN))
+        PN.setIncomingValueForBlock(NewPreHeader, NewPN);
+      else
         PN.addIncoming(NewPN, PrologExit);
-      }
     }
   }
 
@@ -265,7 +263,7 @@ static void ConnectEpilog(Loop *L, Value *ModVal, BasicBlock *NewExit,
       // Update the existing PHI node operand with the value from the new PHI
       // node.  Corresponding instruction in epilog loop should be PHI.
       PHINode *VPN = cast<PHINode>(VMap[&PN]);
-      VPN->setIncomingValue(VPN->getBasicBlockIndex(EpilogPreHeader), NewPN);
+      VPN->setIncomingValueForBlock(EpilogPreHeader, NewPN);
     }
   }
 
@@ -554,10 +552,10 @@ static bool canProfitablyUnrollMultiExitLoop(
 bool llvm::UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,
                                       bool AllowExpensiveTripCount,
                                       bool UseEpilogRemainder,
-                                      bool UnrollRemainder, LoopInfo *LI,
-                                      ScalarEvolution *SE, DominatorTree *DT,
-                                      AssumptionCache *AC, bool PreserveLCSSA,
-                                      Loop **ResultLoop) {
+                                      bool UnrollRemainder, bool ForgetAllSCEV,
+                                      LoopInfo *LI, ScalarEvolution *SE,
+                                      DominatorTree *DT, AssumptionCache *AC,
+                                      bool PreserveLCSSA, Loop **ResultLoop) {
   LLVM_DEBUG(dbgs() << "Trying runtime unrolling on Loop: \n");
   LLVM_DEBUG(L->dump());
   LLVM_DEBUG(UseEpilogRemainder ? dbgs() << "Using epilog remainder.\n"
@@ -805,10 +803,7 @@ bool llvm::UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,
   // Now the loop blocks are cloned and the other exiting blocks from the
   // remainder are connected to the original Loop's exit blocks. The remaining
   // work is to update the phi nodes in the original loop, and take in the
-  // values from the cloned region. Also update the dominator info for
-  // OtherExits and their immediate successors, since we have new edges into
-  // OtherExits.
-  SmallPtrSet<BasicBlock*, 8> ImmediateSuccessorsOfExitBlocks;
+  // values from the cloned region.
   for (auto *BB : OtherExits) {
    for (auto &II : *BB) {
 
@@ -843,27 +838,30 @@ bool llvm::UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,
              "Breaks the definition of dedicated exits!");
     }
 #endif
-   // Update the dominator info because the immediate dominator is no longer the
-   // header of the original Loop. BB has edges both from L and remainder code.
-   // Since the preheader determines which loop is run (L or directly jump to
-   // the remainder code), we set the immediate dominator as the preheader.
-   if (DT) {
-     DT->changeImmediateDominator(BB, PreHeader);
-     // Also update the IDom for immediate successors of BB.  If the current
-     // IDom is the header, update the IDom to be the preheader because that is
-     // the nearest common dominator of all predecessors of SuccBB.  We need to
-     // check for IDom being the header because successors of exit blocks can
-     // have edges from outside the loop, and we should not incorrectly update
-     // the IDom in that case.
-     for (BasicBlock *SuccBB: successors(BB))
-       if (ImmediateSuccessorsOfExitBlocks.insert(SuccBB).second) {
-         if (DT->getNode(SuccBB)->getIDom()->getBlock() == Header) {
-           assert(!SuccBB->getSinglePredecessor() &&
-                  "BB should be the IDom then!");
-           DT->changeImmediateDominator(SuccBB, PreHeader);
-         }
-       }
+  }
+
+  // Update the immediate dominator of the exit blocks and blocks that are
+  // reachable from the exit blocks. This is needed because we now have paths
+  // from both the original loop and the remainder code reaching the exit
+  // blocks. While the IDom of these exit blocks were from the original loop,
+  // now the IDom is the preheader (which decides whether the original loop or
+  // remainder code should run).
+  if (DT && !L->getExitingBlock()) {
+    SmallVector<BasicBlock *, 16> ChildrenToUpdate;
+    // NB! We have to examine the dom children of all loop blocks, not just
+    // those which are the IDom of the exit blocks. This is because blocks
+    // reachable from the exit blocks can have their IDom as the nearest common
+    // dominator of the exit blocks.
+    for (auto *BB : L->blocks()) {
+      auto *DomNodeBB = DT->getNode(BB);
+      for (auto *DomChild : DomNodeBB->getChildren()) {
+        auto *DomChildBB = DomChild->getBlock();
+        if (!L->contains(LI->getLoopFor(DomChildBB)))
+          ChildrenToUpdate.push_back(DomChildBB);
+      }
     }
+    for (auto *BB : ChildrenToUpdate)
+      DT->changeImmediateDominator(BB, PreHeader);
   }
 
   // Loop structure should be the following:
@@ -939,23 +937,24 @@ bool llvm::UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,
   if (OtherExits.size() > 0) {
     // Generate dedicated exit blocks for the original loop, to preserve
     // LoopSimplifyForm.
-    formDedicatedExitBlocks(L, DT, LI, PreserveLCSSA);
+    formDedicatedExitBlocks(L, DT, LI, nullptr, PreserveLCSSA);
     // Generate dedicated exit blocks for the remainder loop if one exists, to
     // preserve LoopSimplifyForm.
     if (remainderLoop)
-      formDedicatedExitBlocks(remainderLoop, DT, LI, PreserveLCSSA);
+      formDedicatedExitBlocks(remainderLoop, DT, LI, nullptr, PreserveLCSSA);
   }
 
   auto UnrollResult = LoopUnrollResult::Unmodified;
   if (remainderLoop && UnrollRemainder) {
     LLVM_DEBUG(dbgs() << "Unrolling remainder loop\n");
     UnrollResult =
-        UnrollLoop(remainderLoop, /*Count*/ Count - 1, /*TripCount*/ Count - 1,
-                   /*Force*/ false, /*AllowRuntime*/ false,
-                   /*AllowExpensiveTripCount*/ false, /*PreserveCondBr*/ true,
-                   /*PreserveOnlyFirst*/ false, /*TripMultiple*/ 1,
-                   /*PeelCount*/ 0, /*UnrollRemainder*/ false, LI, SE, DT, AC,
-                   /*ORE*/ nullptr, PreserveLCSSA);
+        UnrollLoop(remainderLoop,
+                   {/*Count*/ Count - 1, /*TripCount*/ Count - 1,
+                    /*Force*/ false, /*AllowRuntime*/ false,
+                    /*AllowExpensiveTripCount*/ false, /*PreserveCondBr*/ true,
+                    /*PreserveOnlyFirst*/ false, /*TripMultiple*/ 1,
+                    /*PeelCount*/ 0, /*UnrollRemainder*/ false, ForgetAllSCEV},
+                   LI, SE, DT, AC, /*ORE*/ nullptr, PreserveLCSSA);
   }
 
   if (ResultLoop && UnrollResult != LoopUnrollResult::FullyUnrolled)

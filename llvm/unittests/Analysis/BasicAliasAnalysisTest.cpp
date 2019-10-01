@@ -1,9 +1,8 @@
 //===- BasicAliasAnalysisTest.cpp - Unit tests for BasicAA ----------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -45,17 +44,19 @@ protected:
     DominatorTree DT;
     AssumptionCache AC;
     BasicAAResult BAA;
+    AAQueryInfo AAQI;
 
     TestAnalyses(BasicAATest &Test)
-        : DT(*Test.F), AC(*Test.F), BAA(Test.DL, *Test.F, Test.TLI, AC, &DT) {}
+        : DT(*Test.F), AC(*Test.F), BAA(Test.DL, *Test.F, Test.TLI, AC, &DT),
+          AAQI() {}
   };
 
   llvm::Optional<TestAnalyses> Analyses;
 
-  BasicAAResult &setupAnalyses() {
+  TestAnalyses &setupAnalyses() {
     assert(F);
     Analyses.emplace(*this);
-    return Analyses->BAA;
+    return Analyses.getValue();
   }
 
 public:
@@ -84,15 +85,17 @@ TEST_F(BasicAATest, AliasInstWithObjectOfImpreciseSize) {
   GlobalPtr->setLinkage(GlobalValue::LinkageTypes::InternalLinkage);
   GlobalPtr->setInitializer(B.getInt8(0));
 
-  BasicAAResult &BasicAA = setupAnalyses();
+  auto &AllAnalyses = setupAnalyses();
+  BasicAAResult &BasicAA = AllAnalyses.BAA;
+  AAQueryInfo &AAQI = AllAnalyses.AAQI;
   ASSERT_EQ(
       BasicAA.alias(MemoryLocation(IncomingI32Ptr, LocationSize::precise(4)),
-                    MemoryLocation(GlobalPtr, LocationSize::precise(1))),
+                    MemoryLocation(GlobalPtr, LocationSize::precise(1)), AAQI),
       AliasResult::NoAlias);
 
   ASSERT_EQ(
       BasicAA.alias(MemoryLocation(IncomingI32Ptr, LocationSize::upperBound(4)),
-                    MemoryLocation(GlobalPtr, LocationSize::precise(1))),
+                    MemoryLocation(GlobalPtr, LocationSize::precise(1)), AAQI),
       AliasResult::MayAlias);
 }
 
@@ -109,16 +112,20 @@ TEST_F(BasicAATest, AliasInstWithFullObjectOfImpreciseSize) {
   Value *ArbitraryI32 = F->arg_begin();
   AllocaInst *I8 = B.CreateAlloca(B.getInt8Ty(), B.getInt32(2));
   auto *I8AtUncertainOffset =
-      cast<GetElementPtrInst>(B.CreateGEP(I8, ArbitraryI32));
+      cast<GetElementPtrInst>(B.CreateGEP(B.getInt8Ty(), I8, ArbitraryI32));
 
-  BasicAAResult &BasicAA = setupAnalyses();
+  auto &AllAnalyses = setupAnalyses();
+  BasicAAResult &BasicAA = AllAnalyses.BAA;
+  AAQueryInfo &AAQI = AllAnalyses.AAQI;
   ASSERT_EQ(BasicAA.alias(
                 MemoryLocation(I8, LocationSize::precise(2)),
-                MemoryLocation(I8AtUncertainOffset, LocationSize::precise(1))),
+                MemoryLocation(I8AtUncertainOffset, LocationSize::precise(1)),
+                AAQI),
             AliasResult::PartialAlias);
 
   ASSERT_EQ(BasicAA.alias(
                 MemoryLocation(I8, LocationSize::upperBound(2)),
-                MemoryLocation(I8AtUncertainOffset, LocationSize::precise(1))),
+                MemoryLocation(I8AtUncertainOffset, LocationSize::precise(1)),
+                AAQI),
             AliasResult::MayAlias);
 }

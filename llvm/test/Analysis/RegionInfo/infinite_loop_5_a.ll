@@ -1,19 +1,19 @@
 ; RUN: opt -regions -analyze < %s | FileCheck %s
 
 define void @normal_condition() nounwind {
-0:
+"0":
     br label %"7"
-7:
+"7":
     br i1 1, label %"1", label %"8"
-1:
+"1":
     br i1 1, label %"6", label %"3"
-6:
+"6":
     br label %"8"
-8:
+"8":
     br label %"8"
-3:
+"3":
     br label %"4"
-4:
+"4":
     ret void
 }
 

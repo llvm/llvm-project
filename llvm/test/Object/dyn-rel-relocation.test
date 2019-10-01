@@ -1,4 +1,4 @@
-// Check that 'llvm-readobj -dyn-relocations' shows dynamic relocations
+// Check that 'llvm-readobj --dyn-relocations' shows dynamic relocations
 // if they have REL record format.
 
 // dyn-rel.so.elf-mips
@@ -23,7 +23,7 @@
 // % llvm-mc -filetype=obj -triple=mips-unknown-linux -o test.o test.s
 // % ld  -m elf32btsmip -shared -o dyn-rel.so.elf-mips test.o
 
-RUN: llvm-readobj -relocations -dyn-relocations -expand-relocs \
+RUN: llvm-readobj -r --dyn-relocations --expand-relocs \
 RUN:   %p/Inputs/dyn-rel.so.elf-mips | FileCheck %s
 
 // CHECK:      Relocations [

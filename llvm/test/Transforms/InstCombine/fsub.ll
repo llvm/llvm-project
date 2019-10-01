@@ -14,6 +14,17 @@ define float @test1(float %x, float %y) {
   ret float %t2
 }
 
+define float @test1_unary(float %x, float %y) {
+; CHECK-LABEL: @test1_unary(
+; CHECK-NEXT:    [[T1:%.*]] = fsub float [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[T2:%.*]] = fneg float [[T1]]
+; CHECK-NEXT:    ret float [[T2]]
+;
+  %t1 = fsub float %x, %y
+  %t2 = fneg float %t1
+  ret float %t2
+}
+
 ; Can't do anything with the test above because -0.0 - 0.0 = -0.0, but if we have nsz:
 ; -(X - Y) --> Y - X
 
@@ -24,6 +35,16 @@ define float @neg_sub_nsz(float %x, float %y) {
 ;
   %t1 = fsub float %x, %y
   %t2 = fsub nsz float -0.0, %t1
+  ret float %t2
+}
+
+define float @unary_neg_sub_nsz(float %x, float %y) {
+; CHECK-LABEL: @unary_neg_sub_nsz(
+; CHECK-NEXT:    [[T2:%.*]] = fsub nsz float [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    ret float [[T2]]
+;
+  %t1 = fsub float %x, %y
+  %t2 = fneg nsz float %t1
   ret float %t2
 }
 
@@ -47,6 +68,19 @@ define float @neg_sub_nsz_extra_use(float %x, float %y) {
   ret float %t2
 }
 
+define float @unary_neg_sub_nsz_extra_use(float %x, float %y) {
+; CHECK-LABEL: @unary_neg_sub_nsz_extra_use(
+; CHECK-NEXT:    [[T1:%.*]] = fsub float [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[T2:%.*]] = fneg nsz float [[T1]]
+; CHECK-NEXT:    call void @use(float [[T1]])
+; CHECK-NEXT:    ret float [[T2]]
+;
+  %t1 = fsub float %x, %y
+  %t2 = fneg nsz float %t1
+  call void @use(float %t1)
+  ret float %t2
+}
+
 ; With nsz: Z - (X - Y) --> Z + (Y - X)
 
 define float @sub_sub_nsz(float %x, float %y, float %z) {
@@ -64,8 +98,8 @@ define float @sub_sub_nsz(float %x, float %y, float %z) {
 
 define float @sub_add_neg_x(float %x, float %y) {
 ; CHECK-LABEL: @sub_add_neg_x(
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc nsz float [[X:%.*]], -5.000000e+00
-; CHECK-NEXT:    ret float [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = fmul reassoc nsz float [[X:%.*]], -5.000000e+00
+; CHECK-NEXT:    ret float [[R]]
 ;
   %mul = fmul float %x, 5.000000e+00
   %add = fadd float %mul, %y
@@ -121,7 +155,7 @@ define <2 x float> @constant_op1_vec(<2 x float> %x, <2 x float> %y) {
 
 define <2 x float> @constant_op1_vec_undef(<2 x float> %x, <2 x float> %y) {
 ; CHECK-LABEL: @constant_op1_vec_undef(
-; CHECK-NEXT:    [[R:%.*]] = fadd <2 x float> [[X:%.*]], <float 0x7FF8000000000000, float 4.200000e+01>
+; CHECK-NEXT:    [[R:%.*]] = fadd <2 x float> [[X:%.*]], <float undef, float 4.200000e+01>
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
   %r = fsub <2 x float> %x, <float undef, float -42.0>
@@ -140,12 +174,32 @@ define float @neg_op1(float %x, float %y) {
   ret float %r
 }
 
+define float @unary_neg_op1(float %x, float %y) {
+; CHECK-LABEL: @unary_neg_op1(
+; CHECK-NEXT:    [[R:%.*]] = fadd float [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %negy = fneg float %y
+  %r = fsub float %x, %negy
+  ret float %r
+}
+
 define <2 x float> @neg_op1_vec(<2 x float> %x, <2 x float> %y) {
 ; CHECK-LABEL: @neg_op1_vec(
 ; CHECK-NEXT:    [[R:%.*]] = fadd <2 x float> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
   %negy = fsub <2 x float> <float -0.0, float -0.0>, %y
+  %r = fsub <2 x float> %x, %negy
+  ret <2 x float> %r
+}
+
+define <2 x float> @unary_neg_op1_vec(<2 x float> %x, <2 x float> %y) {
+; CHECK-LABEL: @unary_neg_op1_vec(
+; CHECK-NEXT:    [[R:%.*]] = fadd <2 x float> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %negy = fneg <2 x float> %y
   %r = fsub <2 x float> %x, %negy
   ret <2 x float> %r
 }
@@ -174,6 +228,18 @@ define double @neg_ext_op1(float %a, double %b) {
   ret double %t3
 }
 
+define double @unary_neg_ext_op1(float %a, double %b) {
+; CHECK-LABEL: @unary_neg_ext_op1(
+; CHECK-NEXT:    [[TMP1:%.*]] = fpext float [[A:%.*]] to double
+; CHECK-NEXT:    [[T3:%.*]] = fadd double [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    ret double [[T3]]
+;
+  %t1 = fneg float %a
+  %t2 = fpext float %t1 to double
+  %t3 = fsub double %b, %t2
+  ret double %t3
+}
+
 ; Verify that vectors work too.
 
 define <2 x float> @neg_trunc_op1(<2 x double> %a, <2 x float> %b) {
@@ -183,6 +249,18 @@ define <2 x float> @neg_trunc_op1(<2 x double> %a, <2 x float> %b) {
 ; CHECK-NEXT:    ret <2 x float> [[T3]]
 ;
   %t1 = fsub <2 x double> <double -0.0, double -0.0>, %a
+  %t2 = fptrunc <2 x double> %t1 to <2 x float>
+  %t3 = fsub <2 x float> %b, %t2
+  ret <2 x float> %t3
+}
+
+define <2 x float> @unary_neg_trunc_op1(<2 x double> %a, <2 x float> %b) {
+; CHECK-LABEL: @unary_neg_trunc_op1(
+; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc <2 x double> [[A:%.*]] to <2 x float>
+; CHECK-NEXT:    [[T3:%.*]] = fadd <2 x float> [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    ret <2 x float> [[T3]]
+;
+  %t1 = fneg <2 x double> %a
   %t2 = fptrunc <2 x double> %t1 to <2 x float>
   %t3 = fsub <2 x float> %b, %t2
   ret <2 x float> %t3
@@ -202,6 +280,18 @@ define double @neg_ext_op1_fast(float %a, double %b) {
   ret double %t3
 }
 
+define double @unary_neg_ext_op1_fast(float %a, double %b) {
+; CHECK-LABEL: @unary_neg_ext_op1_fast(
+; CHECK-NEXT:    [[TMP1:%.*]] = fpext float [[A:%.*]] to double
+; CHECK-NEXT:    [[T3:%.*]] = fadd fast double [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    ret double [[T3]]
+;
+  %t1 = fneg float %a
+  %t2 = fpext float %t1 to double
+  %t3 = fsub fast double %b, %t2
+  ret double %t3
+}
+
 ; Extra use should prevent the transform.
 
 define float @neg_ext_op1_extra_use(half %a, float %b) {
@@ -213,6 +303,21 @@ define float @neg_ext_op1_extra_use(half %a, float %b) {
 ; CHECK-NEXT:    ret float [[T3]]
 ;
   %t1 = fsub half -0.0, %a
+  %t2 = fpext half %t1 to float
+  %t3 = fsub float %b, %t2
+  call void @use(float %t2)
+  ret float %t3
+}
+
+define float @unary_neg_ext_op1_extra_use(half %a, float %b) {
+; CHECK-LABEL: @unary_neg_ext_op1_extra_use(
+; CHECK-NEXT:    [[T1:%.*]] = fneg half [[A:%.*]]
+; CHECK-NEXT:    [[T2:%.*]] = fpext half [[T1]] to float
+; CHECK-NEXT:    [[T3:%.*]] = fsub float [[B:%.*]], [[T2]]
+; CHECK-NEXT:    call void @use(float [[T2]])
+; CHECK-NEXT:    ret float [[T3]]
+;
+  %t1 = fneg half %a
   %t2 = fpext half %t1 to float
   %t3 = fsub float %b, %t2
   call void @use(float %t2)
@@ -238,6 +343,21 @@ define float @neg_trunc_op1_extra_use(double %a, float %b) {
   ret float %t3
 }
 
+define float @unary_neg_trunc_op1_extra_use(double %a, float %b) {
+; CHECK-LABEL: @unary_neg_trunc_op1_extra_use(
+; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc double [[A:%.*]] to float
+; CHECK-NEXT:    [[T2:%.*]] = fneg float [[TMP1]]
+; CHECK-NEXT:    [[T3:%.*]] = fadd float [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    call void @use(float [[T2]])
+; CHECK-NEXT:    ret float [[T3]]
+;
+  %t1 = fneg double %a
+  %t2 = fptrunc double %t1 to float
+  %t3 = fsub float %b, %t2
+  call void @use(float %t2)
+  ret float %t3
+}
+
 ; Extra uses should prevent the transform.
 
 define float @neg_trunc_op1_extra_uses(double %a, float %b) {
@@ -249,6 +369,21 @@ define float @neg_trunc_op1_extra_uses(double %a, float %b) {
 ; CHECK-NEXT:    ret float [[T3]]
 ;
   %t1 = fsub double -0.0, %a
+  %t2 = fptrunc double %t1 to float
+  %t3 = fsub float %b, %t2
+  call void @use2(float %t2, double %t1)
+  ret float %t3
+}
+
+define float @unary_neg_trunc_op1_extra_uses(double %a, float %b) {
+; CHECK-LABEL: @unary_neg_trunc_op1_extra_uses(
+; CHECK-NEXT:    [[T1:%.*]] = fneg double [[A:%.*]]
+; CHECK-NEXT:    [[T2:%.*]] = fptrunc double [[T1]] to float
+; CHECK-NEXT:    [[T3:%.*]] = fsub float [[B:%.*]], [[T2]]
+; CHECK-NEXT:    call void @use2(float [[T2]], double [[T1]])
+; CHECK-NEXT:    ret float [[T3]]
+;
+  %t1 = fneg double %a
   %t2 = fptrunc double %t1 to float
   %t3 = fsub float %b, %t2
   call void @use2(float %t2, double %t1)

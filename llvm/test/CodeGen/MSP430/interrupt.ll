@@ -13,6 +13,9 @@ target triple = "msp430-generic-generic"
 ; instruction RETI, which restores the SR register and branches to the PC where
 ; the interrupt occurred.
 
+; CHECK:      .section	__interrupt_vector_2,"ax",@progbits
+; CHECK-NEXT:	.short	ISR
+
 @g = global float 0.0
 
 define msp430_intrcc void @ISR() #0 {
@@ -47,3 +50,4 @@ entry:
   ret void
 }
 
+attributes #0 = { noinline nounwind optnone "interrupt"="2" }

@@ -1,9 +1,8 @@
 //===- llvm/CodeGen/GlobalISel/RegisterBankInfo.h ---------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -161,6 +160,10 @@ public:
     const PartialMapping *begin() const { return BreakDown; }
     const PartialMapping *end() const { return BreakDown + NumBreakDowns; }
 
+    /// \return true if all partial mappings are the same size and register
+    /// bank.
+    bool partsAllUniform() const;
+
     /// Check if this ValueMapping is valid.
     bool isValid() const { return BreakDown && NumBreakDowns; }
 
@@ -190,7 +193,7 @@ public:
     unsigned Cost = 0;
 
     /// Mapping of all the operands.
-    const ValueMapping *OperandsMapping;
+    const ValueMapping *OperandsMapping = nullptr;
 
     /// Number of operands.
     unsigned NumOperands = 0;
@@ -207,15 +210,11 @@ public:
     /// The rationale is that it is more efficient for the optimizers
     /// to be able to assume that the mapping of the ith operand is
     /// at the index i.
-    ///
-    /// \pre ID != InvalidMappingID
     InstructionMapping(unsigned ID, unsigned Cost,
                        const ValueMapping *OperandsMapping,
                        unsigned NumOperands)
         : ID(ID), Cost(Cost), OperandsMapping(OperandsMapping),
           NumOperands(NumOperands) {
-      assert(getID() != InvalidMappingID &&
-             "Use the default constructor for invalid mapping");
     }
 
     /// Default constructor.
@@ -616,6 +615,21 @@ public:
     // Otherwise assume a non-zero cost of 1. The targets are supposed
     // to override that properly anyway if they care.
     return &A != &B;
+  }
+
+  /// \returns true if emitting a copy from \p Src to \p Dst is impossible.
+  bool cannotCopy(const RegisterBank &Dst, const RegisterBank &Src,
+                  unsigned Size) const {
+    return copyCost(Dst, Src, Size) == std::numeric_limits<unsigned>::max();
+  }
+
+  /// Get the cost of using \p ValMapping to decompose a register. This is
+  /// similar to ::copyCost, except for cases where multiple copy-like
+  /// operations need to be inserted. If the register is used as a source
+  /// operand and already has a bank assigned, \p CurBank is non-null.
+  virtual unsigned getBreakDownCost(const ValueMapping &ValMapping,
+                                    const RegisterBank *CurBank = nullptr) const {
+    return std::numeric_limits<unsigned>::max();
   }
 
   /// Constrain the (possibly generic) virtual register \p Reg to \p RC.

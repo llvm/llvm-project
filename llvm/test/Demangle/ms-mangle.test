@@ -103,6 +103,12 @@
 ?funptr@@YAP6AHXZXZ
 ; CHECK: int (__cdecl * __cdecl funptr(void))(void)
 
+?m@@3PRfoo@@DR1@
+; CHECK: char const foo::*m
+
+?m@@3PERfoo@@DER1@
+; CHECK: char const foo::*m
+
 ?k@@3PTfoo@@DT1@
 ; CHECK: char const volatile foo::*k
 
@@ -393,5 +399,33 @@
 ??0?$L@V?$H@PAH@PR26029@@@PR26029@@QAE@XZ
 ; CHECK: __thiscall PR26029::L<class PR26029::H<int *>>::L<class PR26029::H<int *>>(void)
 
-; ??$emplace_back@ABH@?$vector@HV?$allocator@H@std@@@std@@QAE?A?<decltype-auto>@@ABH@Z
-<decltype-auto> __thiscall std::vector<int, class std::allocator<int>>::emplace_back<int const &>(int const &)
+??$emplace_back@ABH@?$vector@HV?$allocator@H@std@@@std@@QAE?A?<decltype-auto>@@ABH@Z
+; CHECK: <decltype-auto> __thiscall std::vector<int, class std::allocator<int>>::emplace_back<int const &>(int const &)
+
+
+?pub_foo@S@@QAEXXZ
+; CHECK: public: void __thiscall S::pub_foo(void)
+
+?pub_stat_foo@S@@SAXXZ
+; CHECK: public: static void __cdecl S::pub_stat_foo(void)
+
+?pub_virt_foo@S@@UAEXXZ
+; CHECK: public: virtual void __thiscall S::pub_virt_foo(void)
+
+?prot_foo@S@@IAEXXZ
+; CHECK: protected: void __thiscall S::prot_foo(void)
+
+?prot_stat_foo@S@@KAXXZ
+; CHECK: protected: static void __cdecl S::prot_stat_foo(void)
+
+?prot_virt_foo@S@@MAEXXZ
+; CHECK: protected: virtual void __thiscall S::prot_virt_foo(void)
+
+?priv_foo@S@@AAEXXZ
+; CHECK: private: void __thiscall S::priv_foo(void)
+
+?priv_stat_foo@S@@CAXXZ
+; CHECK: private: static void __cdecl S::priv_stat_foo(void)
+
+?priv_virt_foo@S@@EAEXXZ
+; CHECK: private: virtual void __thiscall S::priv_virt_foo(void)

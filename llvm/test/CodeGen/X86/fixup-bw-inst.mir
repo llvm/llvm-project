@@ -97,7 +97,7 @@ body:             |
     liveins: $rdi
 
     TEST64rr $rdi, $rdi, implicit-def $eflags
-    JE_1 %bb.1, implicit $eflags
+    JCC_1 %bb.1, 4, implicit $eflags
 
   bb.2.if.then:
     liveins: $rdi

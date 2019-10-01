@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple=arm64-eabi -mattr=crypto -aarch64-neon-syntax=apple -o - %s | FileCheck %s
+; RUN: llc -mtriple=arm64-eabi -global-isel -global-isel-abort=2 -pass-remarks-missed=gisel* -mattr=crypto -aarch64-neon-syntax=apple -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,FALLBACK
 
 declare <16 x i8> @llvm.aarch64.crypto.aese(<16 x i8> %data, <16 x i8> %key)
 declare <16 x i8> @llvm.aarch64.crypto.aesd(<16 x i8> %data, <16 x i8> %key)
@@ -77,6 +78,7 @@ define <4 x i32> @test_sha1m(<4 x i32> %hash_abcd, i32 %hash_e, <4 x i32> %wk) {
   ret <4 x i32> %res
 }
 
+; FALLBACK-NOT: remark{{.*}}test_sha1h
 define i32 @test_sha1h(i32 %hash_e) {
 ; CHECK-LABEL: test_sha1h:
 ; CHECK: fmov [[HASH_E:s[0-9]+]], w0

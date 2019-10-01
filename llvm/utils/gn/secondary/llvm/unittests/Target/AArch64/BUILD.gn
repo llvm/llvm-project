@@ -1,0 +1,20 @@
+import("//llvm/utils/unittest/unittest.gni")
+
+unittest("AArch64Tests") {
+  deps = [
+    "//llvm/lib/CodeGen",
+    "//llvm/lib/CodeGen/GlobalISel",
+    "//llvm/lib/CodeGen/MIRParser",
+    "//llvm/lib/CodeGen/SelectionDAG",
+    "//llvm/lib/Support",
+    "//llvm/lib/Target",
+    "//llvm/lib/Target/AArch64:LLVMAArch64CodeGen",
+    "//llvm/lib/Target/AArch64/MCTargetDesc",
+    "//llvm/lib/Target/AArch64/TargetInfo",
+    "//llvm/lib/Target/AArch64/Utils",
+  ]
+  include_dirs = [ "//llvm/lib/Target/AArch64" ]
+  sources = [
+    "InstSizes.cpp",
+  ]
+}

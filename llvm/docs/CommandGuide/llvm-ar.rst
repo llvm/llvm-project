@@ -229,7 +229,7 @@ STANDARDS
 
 The **llvm-ar** utility is intended to provide a superset of the IEEE Std 1003.2
 (POSIX.2) functionality for ``ar``. **llvm-ar** can read both SVR4 and BSD4.4 (or
-Mac OS X) archives. If the ``f`` modifier is given to the ``x`` or ``r`` operations
+macOS) archives. If the ``f`` modifier is given to the ``x`` or ``r`` operations
 then **llvm-ar** will write SVR4 compatible archives. Without this modifier,
 **llvm-ar** will write BSD4.4 compatible archives that have long names
 immediately after the header and indicated using the "#1/ddd" notation for the
@@ -240,7 +240,7 @@ FILE FORMAT
 -----------
 
 
-The file format for LLVM Archive files is similar to that of BSD 4.4 or Mac OSX
+The file format for LLVM Archive files is similar to that of BSD 4.4 or macOS
 archive files. In fact, except for the symbol table, the ``ar`` commands on those
 operating systems should be able to read LLVM archive files. The details of the
 file format follow.

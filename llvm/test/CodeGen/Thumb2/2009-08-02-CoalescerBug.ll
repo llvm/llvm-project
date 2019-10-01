@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=thumbv7-apple-darwin9 -mcpu=cortex-a8 -relocation-model=pic -disable-fp-elim
+; RUN: llc < %s -mtriple=thumbv7-apple-darwin9 -mcpu=cortex-a8 -relocation-model=pic -frame-pointer=all
 
 	%0 = type { void (%"struct.xalanc_1_8::FormatterToXML"*, i16)*, i32 }		; type %0
 	%1 = type { void (%"struct.xalanc_1_8::FormatterToXML"*, i16*)*, i32 }		; type %1

@@ -1,0 +1,23 @@
+RUN: rm -rf %t && mkdir -p %t/addlib/
+
+RUN: yaml2obj %S/Inputs/elf.yaml -o %t/elf.o
+RUN: cp %t/elf.o %t/addlib/elf.o
+RUN: cp %t/elf.o %t/delete.o
+
+RUN: cd %t && llvm-ar rTc addlib/addlib.ar addlib/elf.o
+
+RUN: echo "createthin %t/archive.ar" > %t/mri.script
+RUN: echo "addmod elf.o" >> %t/mri.script
+RUN: echo "addlib addlib/addlib.ar" >> %t/mri.script
+RUN: echo "addmod delete.o" >> %t/mri.script
+RUN: echo "delete delete.o" >> %t/mri.script
+RUN: echo "save" >> %t/mri.script
+RUN: echo "end" >> %t/mri.script
+
+RUN: cd %t && llvm-ar -M < mri.script
+RUN: FileCheck -input-file=%t/archive.ar %s
+
+CHECK: !<thin>
+CHECK: elf.o
+CHECK-NEXT: addlib/elf.o/
+CHECK-NOT: delete.o

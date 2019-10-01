@@ -1,9 +1,8 @@
 //===-- BPFInstrFormats.td - BPF Instruction Formats -------*- tablegen -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -17,6 +16,7 @@ def BPF_ST    : BPFOpClass<0x2>;
 def BPF_STX   : BPFOpClass<0x3>;
 def BPF_ALU   : BPFOpClass<0x4>;
 def BPF_JMP   : BPFOpClass<0x5>;
+def BPF_JMP32 : BPFOpClass<0x6>;
 def BPF_ALU64 : BPFOpClass<0x7>;
 
 class BPFSrcType<bits<1> val> {

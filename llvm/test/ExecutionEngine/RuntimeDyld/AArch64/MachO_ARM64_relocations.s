@@ -51,9 +51,9 @@ ldr1:
 # adrp instruction and the GOT entry for ptr. ldr encodes the offset of the GOT
 # entry within the page. The ldr instruction perfroms an implicit shift on the
 # encoded immediate (imm<<3).
-# rtdyld-check:  *{8}(stub_addr(foo.o, __text, _ptr)) = _ptr
-# rtdyld-check:  decode_operand(adrp2, 1) = (stub_addr(foo.o, __text, _ptr)[32:12] - adrp2[32:12])
-# rtdyld-check:  decode_operand(ldr2, 2) = stub_addr(foo.o, __text, _ptr)[11:3]
+# rtdyld-check:  *{8}(stub_addr(foo.o/__text, _ptr)) = _ptr
+# rtdyld-check:  decode_operand(adrp2, 1) = (stub_addr(foo.o/__text, _ptr)[32:12] - adrp2[32:12])
+# rtdyld-check:  decode_operand(ldr2, 2) = stub_addr(foo.o/__text, _ptr)[11:3]
     .globl  _test_adrp_ldr
     .align  2
 _test_got_adrp_ldr:
@@ -92,12 +92,12 @@ _subtractor_result:
     .quad _test_branch_reloc - _foo
 
 # Test 32-bit relative ARM64_RELOC_POINTER_TO_GOT
-# rtdyld-check: *{4}_pointer_to_got_32_rel = (stub_addr(foo.o, __data, _dummy1) - _pointer_to_got_32_rel)
+# rtdyld-check: *{4}_pointer_to_got_32_rel = (stub_addr(foo.o/__data, _dummy1) - _pointer_to_got_32_rel)
 _pointer_to_got_32_rel:
     .long _dummy1@got - .
 
 # Test 64-bit absolute ARM64_RELOC_POINTER_TO_GOT
-# rtdyld-check: *{8}_pointer_to_got_64_abs = stub_addr(foo.o, __data, _dummy1)
+# rtdyld-check: *{8}_pointer_to_got_64_abs = stub_addr(foo.o/__data, _dummy1)
 _pointer_to_got_64_abs:
     .quad _dummy1@got
 

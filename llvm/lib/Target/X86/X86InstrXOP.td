@@ -1,9 +1,8 @@
 //===-- X86InstrXOP.td - XOP Instruction Set ---------------*- tablegen -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -247,36 +246,22 @@ multiclass xopvpcom<bits<8> opc, string Suffix, SDNode OpNode, ValueType vt128,
   let ExeDomain = SSEPackedInt in { // SSE integer instructions
     let isCommutable = 1 in
     def ri : IXOPi8<opc, MRMSrcReg, (outs VR128:$dst),
-             (ins VR128:$src1, VR128:$src2, XOPCC:$cc),
-             !strconcat("vpcom${cc}", Suffix,
-             "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
+             (ins VR128:$src1, VR128:$src2, u8imm:$cc),
+             !strconcat("vpcom", Suffix,
+             "\t{$cc, $src2, $src1, $dst|$dst, $src1, $src2, $cc}"),
              [(set VR128:$dst,
                 (vt128 (OpNode (vt128 VR128:$src1), (vt128 VR128:$src2),
                                imm:$cc)))]>,
              XOP_4V, Sched<[sched]>;
     def mi : IXOPi8<opc, MRMSrcMem, (outs VR128:$dst),
-             (ins VR128:$src1, i128mem:$src2, XOPCC:$cc),
-             !strconcat("vpcom${cc}", Suffix,
-             "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
+             (ins VR128:$src1, i128mem:$src2, u8imm:$cc),
+             !strconcat("vpcom", Suffix,
+             "\t{$cc, $src2, $src1, $dst|$dst, $src1, $src2, $cc}"),
              [(set VR128:$dst,
                 (vt128 (OpNode (vt128 VR128:$src1),
                                (vt128 (load addr:$src2)),
                                 imm:$cc)))]>,
              XOP_4V, Sched<[sched.Folded, sched.ReadAfterFold]>;
-    let isAsmParserOnly = 1, hasSideEffects = 0 in {
-      def ri_alt : IXOPi8<opc, MRMSrcReg, (outs VR128:$dst),
-                   (ins VR128:$src1, VR128:$src2, u8imm:$src3),
-                   !strconcat("vpcom", Suffix,
-                   "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
-                   []>, XOP_4V, Sched<[sched]>, NotMemoryFoldable;
-      let mayLoad = 1 in
-      def mi_alt : IXOPi8<opc, MRMSrcMem, (outs VR128:$dst),
-                   (ins VR128:$src1, i128mem:$src2, u8imm:$src3),
-                   !strconcat("vpcom", Suffix,
-                   "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
-                   []>, XOP_4V, Sched<[sched.Folded, sched.ReadAfterFold]>,
-                   NotMemoryFoldable;
-    }
   }
 
   def : Pat<(OpNode (load addr:$src2),

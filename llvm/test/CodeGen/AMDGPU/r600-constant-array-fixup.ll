@@ -1,4 +1,4 @@
-; RUN: llc -filetype=obj -march=r600 -mcpu=cypress -verify-machineinstrs < %s | llvm-readobj -relocations -symbols | FileCheck %s
+; RUN: llc -filetype=obj -march=r600 -mcpu=cypress -verify-machineinstrs < %s | llvm-readobj -r --symbols | FileCheck %s
 
 @arr = internal unnamed_addr addrspace(4) constant [4 x i32] [i32 4, i32 5, i32 6, i32 7], align 4
 

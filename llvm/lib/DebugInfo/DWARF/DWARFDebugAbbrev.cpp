@@ -1,9 +1,8 @@
 //===- DWARFDebugAbbrev.cpp -----------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -27,9 +26,9 @@ void DWARFAbbreviationDeclarationSet::clear() {
 }
 
 bool DWARFAbbreviationDeclarationSet::extract(DataExtractor Data,
-                                              uint32_t *OffsetPtr) {
+                                              uint64_t *OffsetPtr) {
   clear();
-  const uint32_t BeginOffset = *OffsetPtr;
+  const uint64_t BeginOffset = *OffsetPtr;
   Offset = BeginOffset;
   DWARFAbbreviationDeclaration AbbrDecl;
   uint32_t PrevAbbrCode = 0;
@@ -83,13 +82,13 @@ void DWARFDebugAbbrev::extract(DataExtractor Data) {
 void DWARFDebugAbbrev::parse() const {
   if (!Data)
     return;
-  uint32_t Offset = 0;
-  DWARFAbbreviationDeclarationSet AbbrDecls;
+  uint64_t Offset = 0;
   auto I = AbbrDeclSets.begin();
   while (Data->isValidOffset(Offset)) {
     while (I != AbbrDeclSets.end() && I->first < Offset)
       ++I;
-    uint32_t CUAbbrOffset = Offset;
+    uint64_t CUAbbrOffset = Offset;
+    DWARFAbbreviationDeclarationSet AbbrDecls;
     if (!AbbrDecls.extract(*Data, &Offset))
       break;
     AbbrDeclSets.insert(I, std::make_pair(CUAbbrOffset, std::move(AbbrDecls)));
@@ -125,7 +124,7 @@ DWARFDebugAbbrev::getAbbreviationDeclarationSet(uint64_t CUAbbrOffset) const {
   }
 
   if (Data && CUAbbrOffset < Data->getData().size()) {
-    uint32_t Offset = CUAbbrOffset;
+    uint64_t Offset = CUAbbrOffset;
     DWARFAbbreviationDeclarationSet AbbrDecls;
     if (!AbbrDecls.extract(*Data, &Offset))
       return nullptr;

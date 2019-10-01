@@ -221,14 +221,24 @@
 ??_R4Base@@6B@
 ; CHECK: const Base::`RTTI Complete Object Locator'
 
+; Generated for `int Foo = f(4);` at global scope.
 ??__EFoo@@YAXXZ
 ; CHECK: void __cdecl `dynamic initializer for 'Foo''(void)
+
+; Generated for
+;   class C {  static int i; };
+;   int C::i = f(5);
+??__E?i@C@@0HA@@YAXXZ
+; CHECK: void __cdecl `dynamic initializer for `private: static int C::i''(void)
 
 ??__FFoo@@YAXXZ
 ; CHECK: void __cdecl `dynamic atexit destructor for 'Foo''(void)
 
 ??__F_decisionToDFA@XPathLexer@@0V?$vector@VDFA@dfa@antlr4@@V?$allocator@VDFA@dfa@antlr4@@@std@@@std@@A@YAXXZ
 ; CHECK: void __cdecl `dynamic atexit destructor for `private: static class std::vector<class antlr4::dfa::DFA, class std::allocator<class antlr4::dfa::DFA>> XPathLexer::_decisionToDFA''(void)
+
+??__J?1??f@@YAAAUS@@XZ@51
+; CHECK: `struct S & __cdecl f(void)'::`2'::`local static thread guard'{2}
 
 ??__K_deg@@YAHO@Z
 ; CHECK: int __cdecl operator ""_deg(long double)

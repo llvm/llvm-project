@@ -5,8 +5,8 @@
 // type records, we can regenerate the test using it instead.
 
 // RUNX: cl -GR- -Z7 -c -TP %s -Fo%S/Inputs/codeview-types.obj
-// RUN: llvm-readobj -codeview %S/Inputs/codeview-types.obj | FileCheck %s
-// RUN: llvm-readobj -codeview-merged-types %S/Inputs/codeview-types.obj | FileCheck %s
+// RUN: llvm-readobj --codeview %S/Inputs/codeview-types.obj | FileCheck %s
+// RUN: llvm-readobj --codeview-merged-types %S/Inputs/codeview-types.obj | FileCheck %s
 
 // TYPE_RECORD
 // CHECK-DAG: {{^ *Pointer (.*) {$}}

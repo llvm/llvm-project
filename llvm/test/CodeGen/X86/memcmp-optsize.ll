@@ -10,6 +10,7 @@
 @.str = private constant [65 x i8] c"0123456789012345678901234567890123456789012345678901234567890123\00", align 1
 
 declare i32 @memcmp(i8*, i8*, i64)
+declare i32 @bcmp(i8*, i8*, i64)
 
 define i32 @length2(i8* %X, i8* %Y) nounwind optsize {
 ; X86-LABEL: length2:
@@ -728,11 +729,9 @@ define i1 @length24_eq_const(i8* %X) nounwind optsize {
 ; X64-SSE2:       # %bb.0:
 ; X64-SSE2-NEXT:    movdqu (%rdi), %xmm0
 ; X64-SSE2-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
-; X64-SSE2-NEXT:    movabsq $3689065127958034230, %rax # imm = 0x3332313039383736
-; X64-SSE2-NEXT:    movq %rax, %xmm2
-; X64-SSE2-NEXT:    pcmpeqb %xmm1, %xmm2
+; X64-SSE2-NEXT:    pcmpeqb {{.*}}(%rip), %xmm1
 ; X64-SSE2-NEXT:    pcmpeqb {{.*}}(%rip), %xmm0
-; X64-SSE2-NEXT:    pand %xmm2, %xmm0
+; X64-SSE2-NEXT:    pand %xmm1, %xmm0
 ; X64-SSE2-NEXT:    pmovmskb %xmm0, %eax
 ; X64-SSE2-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
 ; X64-SSE2-NEXT:    setne %al
@@ -742,9 +741,7 @@ define i1 @length24_eq_const(i8* %X) nounwind optsize {
 ; X64-AVX2:       # %bb.0:
 ; X64-AVX2-NEXT:    vmovdqu (%rdi), %xmm0
 ; X64-AVX2-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; X64-AVX2-NEXT:    movabsq $3689065127958034230, %rax # imm = 0x3332313039383736
-; X64-AVX2-NEXT:    vmovq %rax, %xmm2
-; X64-AVX2-NEXT:    vpcmpeqb %xmm2, %xmm1, %xmm1
+; X64-AVX2-NEXT:    vpcmpeqb {{.*}}(%rip), %xmm1, %xmm1
 ; X64-AVX2-NEXT:    vpcmpeqb {{.*}}(%rip), %xmm0, %xmm0
 ; X64-AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; X64-AVX2-NEXT:    vpmovmskb %xmm0, %eax
@@ -984,5 +981,33 @@ define i1 @length64_eq_const(i8* %X) nounwind optsize {
   %m = tail call i32 @memcmp(i8* %X, i8* getelementptr inbounds ([65 x i8], [65 x i8]* @.str, i32 0, i32 0), i64 64) nounwind
   %c = icmp eq i32 %m, 0
   ret i1 %c
+}
+
+define i32 @bcmp_length2(i8* %X, i8* %Y) nounwind optsize {
+; X86-LABEL: bcmp_length2:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movzwl (%ecx), %ecx
+; X86-NEXT:    movzwl (%eax), %edx
+; X86-NEXT:    rolw $8, %cx
+; X86-NEXT:    rolw $8, %dx
+; X86-NEXT:    movzwl %cx, %eax
+; X86-NEXT:    movzwl %dx, %ecx
+; X86-NEXT:    subl %ecx, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: bcmp_length2:
+; X64:       # %bb.0:
+; X64-NEXT:    movzwl (%rdi), %eax
+; X64-NEXT:    movzwl (%rsi), %ecx
+; X64-NEXT:    rolw $8, %ax
+; X64-NEXT:    rolw $8, %cx
+; X64-NEXT:    movzwl %ax, %eax
+; X64-NEXT:    movzwl %cx, %ecx
+; X64-NEXT:    subl %ecx, %eax
+; X64-NEXT:    retq
+  %m = tail call i32 @bcmp(i8* %X, i8* %Y, i64 2) nounwind
+  ret i32 %m
 }
 

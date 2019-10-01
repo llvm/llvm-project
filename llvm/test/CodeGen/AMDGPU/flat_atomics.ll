@@ -703,6 +703,16 @@ entry:
   ret void
 }
 
+; GCN-LABEL: {{^}}atomic_xchg_f32_offset:
+; CIVI: flat_atomic_swap v[{{[0-9]+:[0-9]+}}], v{{[0-9]+$}}
+; GFX9: flat_atomic_swap v[{{[0-9]+:[0-9]+}}], v{{[0-9]+}} offset:16{{$}}
+define amdgpu_kernel void @atomic_xchg_f32_offset(float* %out, float %in) {
+entry:
+  %gep = getelementptr float, float* %out, i32 4
+  %val = atomicrmw volatile xchg float* %gep, float %in seq_cst
+  ret void
+}
+
 ; GCN-LABEL: {{^}}atomic_xchg_i32_ret_offset:
 ; CIVI: flat_atomic_swap [[RET:v[0-9]+]], v[{{[0-9]+:[0-9]+}}], v{{[0-9]+}} glc{{$}}
 ; GFX9: flat_atomic_swap [[RET:v[0-9]+]], v[{{[0-9]+:[0-9]+}}], v{{[0-9]+}} offset:16 glc{{$}}

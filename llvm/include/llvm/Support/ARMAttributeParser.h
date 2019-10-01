@@ -1,9 +1,8 @@
 //===--- ARMAttributeParser.h - ARM Attribute Information Printer ---------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -54,6 +53,8 @@ class ARMAttributeParser {
                  uint32_t &Offset);
   void Advanced_SIMD_arch(ARMBuildAttrs::AttrType Tag, const uint8_t *Data,
                           uint32_t &Offset);
+  void MVE_arch(ARMBuildAttrs::AttrType Tag, const uint8_t *Data,
+                uint32_t &Offset);
   void PCS_config(ARMBuildAttrs::AttrType Tag, const uint8_t *Data,
                   uint32_t &Offset);
   void ABI_PCS_R9_use(ARMBuildAttrs::AttrType Tag, const uint8_t *Data,

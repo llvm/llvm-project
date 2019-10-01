@@ -1,0 +1,21 @@
+# RUN: yaml2obj %s -o %t
+# RUN: obj2yaml %t | FileCheck %s
+
+## Check obj2yaml is able to dump sh_entsize field of a section.
+
+# CHECK:      - Name:            .rodata.cst4
+# CHECK-NEXT:   Type:            SHT_PROGBITS
+# CHECK-NEXT:   Flags:           [ SHF_ALLOC, SHF_MERGE ]
+# CHECK-NEXT:   EntSize:         0x0000000000000004
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .rodata.cst4
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_MERGE ]
+    EntSize:         0x0000000000000004

@@ -47,7 +47,7 @@ body: |
 
     $eax = COPY $edi
     CMP32rr $eax, killed $esi, implicit-def $eflags
-    JL_1 %bb.2, implicit killed $eflags
+    JCC_1 %bb.2, 12, implicit killed $eflags
 
   bb.1:
     successors: %bb.3

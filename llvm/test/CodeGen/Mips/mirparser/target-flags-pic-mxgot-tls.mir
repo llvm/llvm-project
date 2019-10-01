@@ -1,5 +1,5 @@
-# RUN: llc -march=mips64 -target-abi n64 -start-before=expand-isel-pseudos \
-# RUN:     -stop-after=expand-isel-pseudos -relocation-model=pic -mxgot \
+# RUN: llc -march=mips64 -target-abi n64 -start-before=finalize-isel \
+# RUN:     -stop-after=finalize-isel -relocation-model=pic -mxgot \
 # RUN:     -o /dev/null %s
 
 # A simple test to show that we can parse the target specific flags: gpoff-hi,

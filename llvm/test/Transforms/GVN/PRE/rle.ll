@@ -546,6 +546,130 @@ out:
   ret i8 %R
 }
 
+declare void @use_i32(i32) readonly
+
+; indirectbr currently prevents MergeBlockIntoPredecessor from merging latch
+; into header. Make sure we translate the address for %l1 correctly where
+; parts of the address computations are in different basic blocks.
+define i32 @phi_trans6(i32* noalias nocapture readonly %x, i1 %cond) {
+; CHECK-LABEL: define i32 @phi_trans6(
+; CHECK-LABEL: entry:
+; CHECK-NEXT:   %l0 = load i32, i32* %x
+;
+; CHECK-LABEL: header:
+; CHECK-NEXT:    %l1 = phi i32 [ %l0, %entry ], [ %l1.pre, %latch.header_crit_edge ]
+; CHECK-NEXT:    %iv = phi i32 [ 0, %entry ], [ %iv.next, %latch.header_crit_edge ]
+; CHECK-NEXT:    indirectbr i8* blockaddress(@phi_trans6, %latch), [label %latch]
+;
+; CHECK-LABEL: latch:
+; CHECK-NEXT:    %iv.next = add i32 %iv, 1
+; CHECK-NEXT:    br i1 %cond, label %exit, label %latch.header_crit_edge
+;
+; CHECK-LABEL: latch.header_crit_edge:
+; CHECK-NEXT:    %gep.1.phi.trans.insert.phi.trans.insert = getelementptr i32, i32* %x, i32 %iv.next
+; CHECK-NEXT:    %l1.pre = load i32, i32* %gep.1.phi.trans.insert.phi.trans.insert
+; CHECK-LABEL:   br label %header
+;
+entry:
+  %l0 = load i32, i32* %x
+  call void @use_i32(i32 %l0)
+  br label %header
+
+header:
+  %iv = phi i32 [0, %entry], [ %iv.next, %latch]
+  indirectbr i8* blockaddress(@phi_trans6, %latch), [label %latch]
+
+latch:
+  %gep.1 = getelementptr i32, i32* %x, i32 %iv
+  %l1 = load i32, i32* %gep.1
+  %iv.next = add i32 %iv, 1
+  br i1 %cond, label %exit, label %header
+
+exit:
+  ret i32 %l1
+}
+
+; FIXME: Currently we fail to translate the PHI in this case.
+define i32 @phi_trans7(i32* noalias nocapture readonly %x, i1 %cond) {
+; CHECK-LABEL: define i32 @phi_trans7(
+; CHECK-LABEL: entry:
+; CHECK-NEXT:   %l0 = load i32, i32* %x
+;
+; CHECK-LABEL: header:
+; CHECK-NEXT:    %iv = phi i32 [ 2, %entry ], [ %iv.next, %latch.header_crit_edge ]
+; CHECK-NEXT:    %offset = add i32 %iv, -2
+; CHECK-NEXT:    indirectbr i8* blockaddress(@phi_trans7, %latch), [label %latch]
+;
+; CHECK-LABEL: latch:
+; CHECK-NEXT:    %gep.1 = getelementptr i32, i32* %x, i32 %offset
+; CHECK-NEXT:    %l1 = load i32, i32* %gep.1
+; CHECK-NEXT:    %iv.next = add i32 %iv, 1
+; CHECK-NEXT:    br i1 %cond, label %exit, label %latch.header_crit_edge
+;
+; CHECK-LABEL: latch.header_crit_edge:
+; CHECK-LABEL:   br label %header
+;
+entry:
+  %l0 = load i32, i32* %x
+  call void @use_i32(i32 %l0)
+  br label %header
+
+header:
+  %iv = phi i32 [2, %entry], [ %iv.next, %latch]
+  %offset = add i32 %iv, -2
+  indirectbr i8* blockaddress(@phi_trans7, %latch), [label %latch]
+
+latch:
+  %gep.1 = getelementptr i32, i32* %x, i32 %offset
+  %l1 = load i32, i32* %gep.1
+  %iv.next = add i32 %iv, 1
+  br i1 %cond, label %exit, label %header
+
+exit:
+  ret i32 %l1
+}
+
+; FIXME: Currently we fail to translate the PHI in this case.
+define i32 @phi_trans8(i32* noalias nocapture readonly %x, i1 %cond) {
+; CHECK-LABEL: define i32 @phi_trans8(
+; CHECK-LABEL: entry:
+; CHECK-NEXT:   %l0 = load i32, i32* %x
+;
+; CHECK-LABEL: header:
+; CHECK-NEXT:    %iv = phi i32 [ 2, %entry ], [ %iv.next, %latch.header_crit_edge ]
+; CHECK-NEXT:    indirectbr i8* blockaddress(@phi_trans8, %latch), [label %latch]
+;
+; CHECK-LABEL: latch:
+; CHECK-NEXT:    %offset = add i32 %iv, -2
+; CHECK-NEXT:    %gep.1 = getelementptr i32, i32* %x, i32 %offset
+; CHECK-NEXT:    %l1 = load i32, i32* %gep.1
+; CHECK-NEXT:    %iv.next = add i32 %iv, 1
+; CHECK-NEXT:    br i1 %cond, label %exit, label %latch.header_crit_edge
+;
+; CHECK-LABEL: latch.header_crit_edge:
+; CHECK-LABEL:   br label %header
+;
+entry:
+  %l0 = load i32, i32* %x
+  call void @use_i32(i32 %l0)
+  br label %header
+
+header:
+  %iv = phi i32 [2, %entry], [ %iv.next, %latch]
+  indirectbr i8* blockaddress(@phi_trans8, %latch), [label %latch]
+
+latch:
+  %offset = add i32 %iv, -2
+  %gep.1 = getelementptr i32, i32* %x, i32 %offset
+  %l1 = load i32, i32* %gep.1
+  %iv.next = add i32 %iv, 1
+  br i1 %cond, label %exit, label %header
+
+exit:
+  ret i32 %l1
+}
+
+
 
 ; PR6642
 define i32 @memset_to_load() nounwind readnone {
@@ -660,6 +784,7 @@ entry:
 ; CHECK-NOT: load
 ; CHECK: ret i32
 }
+
 
 declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1) nounwind
 

@@ -1,9 +1,8 @@
 //===-- RISCVMCInstLower.cpp - Convert RISCV MachineInstr to an MCInst ------=//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -37,11 +36,41 @@ static MCOperand lowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym,
   case RISCVII::MO_None:
     Kind = RISCVMCExpr::VK_RISCV_None;
     break;
+  case RISCVII::MO_CALL:
+    Kind = RISCVMCExpr::VK_RISCV_CALL;
+    break;
+  case RISCVII::MO_PLT:
+    Kind = RISCVMCExpr::VK_RISCV_CALL_PLT;
+    break;
   case RISCVII::MO_LO:
     Kind = RISCVMCExpr::VK_RISCV_LO;
     break;
   case RISCVII::MO_HI:
     Kind = RISCVMCExpr::VK_RISCV_HI;
+    break;
+  case RISCVII::MO_PCREL_LO:
+    Kind = RISCVMCExpr::VK_RISCV_PCREL_LO;
+    break;
+  case RISCVII::MO_PCREL_HI:
+    Kind = RISCVMCExpr::VK_RISCV_PCREL_HI;
+    break;
+  case RISCVII::MO_GOT_HI:
+    Kind = RISCVMCExpr::VK_RISCV_GOT_HI;
+    break;
+  case RISCVII::MO_TPREL_LO:
+    Kind = RISCVMCExpr::VK_RISCV_TPREL_LO;
+    break;
+  case RISCVII::MO_TPREL_HI:
+    Kind = RISCVMCExpr::VK_RISCV_TPREL_HI;
+    break;
+  case RISCVII::MO_TPREL_ADD:
+    Kind = RISCVMCExpr::VK_RISCV_TPREL_ADD;
+    break;
+  case RISCVII::MO_TLS_GOT_HI:
+    Kind = RISCVMCExpr::VK_RISCV_TLS_GOT_HI;
+    break;
+  case RISCVII::MO_TLS_GD_HI:
+    Kind = RISCVMCExpr::VK_RISCV_TLS_GD_HI;
     break;
   }
 

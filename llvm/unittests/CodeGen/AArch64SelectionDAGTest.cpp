@@ -1,9 +1,8 @@
 //===- llvm/unittest/CodeGen/AArch64SelectionDAGTest.cpp -------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -156,6 +155,48 @@ TEST_F(AArch64SelectionDAGTest, SimplifyDemandedVectorElts_EXTRACT_SUBVECTOR) {
   EXPECT_EQ(TL.SimplifyDemandedVectorElts(Op, DemandedElts, KnownUndef,
                                           KnownZero, TLO),
             false);
+}
+
+// Piggy-backing on the AArch64 tests to verify SelectionDAG::computeKnownBits.
+TEST_F(AArch64SelectionDAGTest, ComputeKnownBits_ADD) {
+  if (!TM)
+    return;
+  SDLoc Loc;
+  auto IntVT = EVT::getIntegerVT(Context, 8);
+  auto UnknownOp = DAG->getRegister(0, IntVT);
+  auto Mask = DAG->getConstant(0x8A, Loc, IntVT);
+  auto N0 = DAG->getNode(ISD::AND, Loc, IntVT, Mask, UnknownOp);
+  auto N1 = DAG->getConstant(0x55, Loc, IntVT);
+  auto Op = DAG->getNode(ISD::ADD, Loc, IntVT, N0, N1);
+  // N0 = ?000?0?0
+  // N1 = 01010101
+  //  =>
+  // Known.One  = 01010101 (0x55)
+  // Known.Zero = 00100000 (0x20)
+  KnownBits Known = DAG->computeKnownBits(Op);
+  EXPECT_EQ(Known.Zero, APInt(8, 0x20));
+  EXPECT_EQ(Known.One, APInt(8, 0x55));
+}
+
+// Piggy-backing on the AArch64 tests to verify SelectionDAG::computeKnownBits.
+TEST_F(AArch64SelectionDAGTest, ComputeKnownBits_SUB) {
+  if (!TM)
+    return;
+  SDLoc Loc;
+  auto IntVT = EVT::getIntegerVT(Context, 8);
+  auto N0 = DAG->getConstant(0x55, Loc, IntVT);
+  auto UnknownOp = DAG->getRegister(0, IntVT);
+  auto Mask = DAG->getConstant(0x2e, Loc, IntVT);
+  auto N1 = DAG->getNode(ISD::AND, Loc, IntVT, Mask, UnknownOp);
+  auto Op = DAG->getNode(ISD::SUB, Loc, IntVT, N0, N1);
+  // N0 = 01010101
+  // N1 = 00?0???0
+  //  =>
+  // Known.One  = 00000001 (0x1)
+  // Known.Zero = 10000000 (0x80)
+  KnownBits Known = DAG->computeKnownBits(Op);
+  EXPECT_EQ(Known.Zero, APInt(8, 0x80));
+  EXPECT_EQ(Known.One, APInt(8, 0x1));
 }
 
 } // end anonymous namespace

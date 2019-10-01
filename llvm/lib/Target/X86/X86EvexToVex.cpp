@@ -1,10 +1,9 @@
 //===- X86EvexToVex.cpp ---------------------------------------------------===//
 // Compress EVEX instructions to VEX encoding when possible to reduce code size
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -13,15 +12,15 @@
 /// are encoded using the EVEX prefix and if possible replaces them by their
 /// corresponding VEX encoding which is usually shorter by 2 bytes.
 /// EVEX instructions may be encoded via the VEX prefix when the AVX-512
-/// instruction has a corresponding AVX/AVX2 opcode and when it does not
-/// use the xmm or the mask registers or xmm/ymm registers with indexes
-/// higher than 15.
+/// instruction has a corresponding AVX/AVX2 opcode, when vector length 
+/// accessed by instruction is less than 512 bits and when it does not use 
+//  the xmm or the mask registers or xmm/ymm registers with indexes higher than 15.
 /// The pass applies code reduction on the generated code for AVX-512 instrs.
 //
 //===----------------------------------------------------------------------===//
 
-#include "InstPrinter/X86InstComments.h"
 #include "MCTargetDesc/X86BaseInfo.h"
+#include "MCTargetDesc/X86InstComments.h"
 #include "X86.h"
 #include "X86InstrInfo.h"
 #include "X86Subtarget.h"
@@ -69,9 +68,7 @@ class EvexToVexInstPass : public MachineFunctionPass {
 public:
   static char ID;
 
-  EvexToVexInstPass() : MachineFunctionPass(ID) {
-    initializeEvexToVexInstPassPass(*PassRegistry::getPassRegistry());
-  }
+  EvexToVexInstPass() : MachineFunctionPass(ID) { }
 
   StringRef getPassName() const override { return EVEX2VEX_DESC; }
 

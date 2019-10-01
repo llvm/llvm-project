@@ -1,9 +1,8 @@
 //===- SubtargetEmitter.cpp - Generate subtarget enumerations -------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -74,9 +73,11 @@ class SubtargetEmitter {
   CodeGenSchedModels &SchedModels;
   std::string Target;
 
-  void Enumeration(raw_ostream &OS);
-  unsigned FeatureKeyValues(raw_ostream &OS);
-  unsigned CPUKeyValues(raw_ostream &OS);
+  void Enumeration(raw_ostream &OS, DenseMap<Record *, unsigned> &FeatureMap);
+  unsigned FeatureKeyValues(raw_ostream &OS,
+                            const DenseMap<Record *, unsigned> &FeatureMap);
+  unsigned CPUKeyValues(raw_ostream &OS,
+                        const DenseMap<Record *, unsigned> &FeatureMap);
   void FormItineraryStageString(const std::string &Names,
                                 Record *ItinData, std::string &ItinString,
                                 unsigned &NStages);
@@ -138,7 +139,8 @@ public:
 //
 // Enumeration - Emit the specified class as an enumeration.
 //
-void SubtargetEmitter::Enumeration(raw_ostream &OS) {
+void SubtargetEmitter::Enumeration(raw_ostream &OS,
+                                   DenseMap<Record *, unsigned> &FeatureMap) {
   // Get all records of class and sort
   std::vector<Record*> DefList =
     Records.getAllDerivedDefinitions("SubtargetFeature");
@@ -147,7 +149,7 @@ void SubtargetEmitter::Enumeration(raw_ostream &OS) {
   unsigned N = DefList.size();
   if (N == 0)
     return;
-  if (N > MAX_SUBTARGET_FEATURES)
+  if (N + 1 > MAX_SUBTARGET_FEATURES)
     PrintFatalError("Too many subtarget features! Bump MAX_SUBTARGET_FEATURES.");
 
   OS << "namespace " << Target << " {\n";
@@ -162,18 +164,42 @@ void SubtargetEmitter::Enumeration(raw_ostream &OS) {
 
     // Get and emit name
     OS << "  " << Def->getName() << " = " << i << ",\n";
+
+    // Save the index for this feature.
+    FeatureMap[Def] = i;
   }
+
+  OS << "  "
+     << "NumSubtargetFeatures = " << N << "\n";
 
   // Close enumeration and namespace
   OS << "};\n";
   OS << "} // end namespace " << Target << "\n";
 }
 
+static void printFeatureMask(raw_ostream &OS, RecVec &FeatureList,
+                             const DenseMap<Record *, unsigned> &FeatureMap) {
+  std::array<uint64_t, MAX_SUBTARGET_WORDS> Mask = {};
+  for (unsigned j = 0, M = FeatureList.size(); j < M; ++j) {
+    unsigned Bit = FeatureMap.lookup(FeatureList[j]);
+    Mask[Bit / 64] |= 1ULL << (Bit % 64);
+  }
+
+  OS << "{ { { ";
+  for (unsigned i = 0; i != Mask.size(); ++i) {
+    OS << "0x";
+    OS.write_hex(Mask[i]);
+    OS << "ULL, ";
+  }
+  OS << "} } }";
+}
+
 //
 // FeatureKeyValues - Emit data of all the subtarget features.  Used by the
 // command line.
 //
-unsigned SubtargetEmitter::FeatureKeyValues(raw_ostream &OS) {
+unsigned SubtargetEmitter::FeatureKeyValues(
+    raw_ostream &OS, const DenseMap<Record *, unsigned> &FeatureMap) {
   // Gather and sort all the features
   std::vector<Record*> FeatureList =
                            Records.getAllDerivedDefinitions("SubtargetFeature");
@@ -204,16 +230,13 @@ unsigned SubtargetEmitter::FeatureKeyValues(raw_ostream &OS) {
     OS << "  { "
        << "\"" << CommandLineName << "\", "
        << "\"" << Desc << "\", "
-       << "{ " << Target << "::" << Name << " }, ";
+       << Target << "::" << Name << ", ";
 
     RecVec ImpliesList = Feature->getValueAsListOfDefs("Implies");
 
-    OS << "{";
-    for (unsigned j = 0, M = ImpliesList.size(); j < M;) {
-      OS << " " << Target << "::" << ImpliesList[j]->getName();
-      if (++j < M) OS << ",";
-    }
-    OS << " } },\n";
+    printFeatureMask(OS, ImpliesList, FeatureMap);
+
+    OS << " },\n";
     ++NumFeatures;
   }
 
@@ -227,7 +250,9 @@ unsigned SubtargetEmitter::FeatureKeyValues(raw_ostream &OS) {
 // CPUKeyValues - Emit data of all the subtarget processors.  Used by command
 // line.
 //
-unsigned SubtargetEmitter::CPUKeyValues(raw_ostream &OS) {
+unsigned
+SubtargetEmitter::CPUKeyValues(raw_ostream &OS,
+                               const DenseMap<Record *, unsigned> &FeatureMap) {
   // Gather and sort processor information
   std::vector<Record*> ProcessorList =
                           Records.getAllDerivedDefinitions("Processor");
@@ -235,7 +260,7 @@ unsigned SubtargetEmitter::CPUKeyValues(raw_ostream &OS) {
 
   // Begin processor table
   OS << "// Sorted (by key) array of values for CPU subtype.\n"
-     << "extern const llvm::SubtargetFeatureKV " << Target
+     << "extern const llvm::SubtargetSubTypeKV " << Target
      << "SubTypeKV[] = {\n";
 
   // For each processor
@@ -243,18 +268,16 @@ unsigned SubtargetEmitter::CPUKeyValues(raw_ostream &OS) {
     StringRef Name = Processor->getValueAsString("Name");
     RecVec FeatureList = Processor->getValueAsListOfDefs("Features");
 
-    // Emit as { "cpu", "description", { f1 , f2 , ... fn } },
-    OS << "  { "
-       << "\"" << Name << "\", "
-       << "\"Select the " << Name << " processor\", ";
+    // Emit as { "cpu", "description", 0, { f1 , f2 , ... fn } },
+    OS << " { "
+       << "\"" << Name << "\", ";
 
-    OS << "{";
-    for (unsigned j = 0, M = FeatureList.size(); j < M;) {
-      OS << " " << Target << "::" << FeatureList[j]->getName();
-      if (++j < M) OS << ",";
-    }
-    // The { } is for the "implies" section of this data structure.
-    OS << " }, { } },\n";
+    printFeatureMask(OS, FeatureList, FeatureMap);
+
+    // Emit the scheduler model pointer.
+    const std::string &ProcModelName =
+      SchedModels.getModelForProc(Processor).ModelName;
+    OS << ", &" << ProcModelName << " },\n";
   }
 
   // End processor table
@@ -1369,33 +1392,6 @@ void SubtargetEmitter::EmitProcessorModels(raw_ostream &OS) {
 }
 
 //
-// EmitProcessorLookup - generate cpu name to sched model lookup tables.
-//
-void SubtargetEmitter::EmitProcessorLookup(raw_ostream &OS) {
-  // Gather and sort processor information
-  std::vector<Record*> ProcessorList =
-                          Records.getAllDerivedDefinitions("Processor");
-  llvm::sort(ProcessorList, LessRecordFieldName());
-
-  // Begin processor->sched model table
-  OS << "\n";
-  OS << "// Sorted (by key) array of sched model for CPU subtype.\n"
-     << "extern const llvm::SubtargetInfoKV " << Target
-     << "ProcSchedKV[] = {\n";
-  // For each processor
-  for (Record *Processor : ProcessorList) {
-    StringRef Name = Processor->getValueAsString("Name");
-    const std::string &ProcModelName =
-      SchedModels.getModelForProc(Processor).ModelName;
-
-    // Emit as { "cpu", procinit },
-    OS << "  { \"" << Name << "\", (const void *)&" << ProcModelName << " },\n";
-  }
-  // End processor->sched model table
-  OS << "};\n";
-}
-
-//
 // EmitSchedModel - Emits all scheduling model tables, folding common patterns.
 //
 void SubtargetEmitter::EmitSchedModel(raw_ostream &OS) {
@@ -1423,12 +1419,10 @@ void SubtargetEmitter::EmitSchedModel(raw_ostream &OS) {
   }
   EmitSchedClassTables(SchedTables, OS);
 
+  OS << "\n#undef DBGFIELD\n";
+
   // Emit the processor machine model
   EmitProcessorModels(OS);
-  // Emit the processor lookup data
-  EmitProcessorLookup(OS);
-
-  OS << "\n#undef DBGFIELD";
 }
 
 static void emitPredicateProlog(const RecordKeeper &Records, raw_ostream &OS) {
@@ -1740,13 +1734,12 @@ void SubtargetEmitter::emitGenMCSubtargetInfo(raw_ostream &OS) {
      << "GenMCSubtargetInfo : public MCSubtargetInfo {\n";
   OS << "  " << Target << "GenMCSubtargetInfo(const Triple &TT, \n"
      << "    StringRef CPU, StringRef FS, ArrayRef<SubtargetFeatureKV> PF,\n"
-     << "    ArrayRef<SubtargetFeatureKV> PD,\n"
-     << "    const SubtargetInfoKV *ProcSched,\n"
+     << "    ArrayRef<SubtargetSubTypeKV> PD,\n"
      << "    const MCWriteProcResEntry *WPR,\n"
      << "    const MCWriteLatencyEntry *WL,\n"
      << "    const MCReadAdvanceEntry *RA, const InstrStage *IS,\n"
      << "    const unsigned *OC, const unsigned *FP) :\n"
-     << "      MCSubtargetInfo(TT, CPU, FS, PF, PD, ProcSched,\n"
+     << "      MCSubtargetInfo(TT, CPU, FS, PF, PD,\n"
      << "                      WPR, WL, RA, IS, OC, FP) { }\n\n"
      << "  unsigned resolveVariantSchedClass(unsigned SchedClass,\n"
      << "      const MCInst *MI, unsigned CPUID) const override {\n"
@@ -1790,8 +1783,10 @@ void SubtargetEmitter::run(raw_ostream &OS) {
   OS << "\n#ifdef GET_SUBTARGETINFO_ENUM\n";
   OS << "#undef GET_SUBTARGETINFO_ENUM\n\n";
 
+  DenseMap<Record *, unsigned> FeatureMap;
+
   OS << "namespace llvm {\n";
-  Enumeration(OS);
+  Enumeration(OS, FeatureMap);
   OS << "} // end namespace llvm\n\n";
   OS << "#endif // GET_SUBTARGETINFO_ENUM\n\n";
 
@@ -1802,11 +1797,11 @@ void SubtargetEmitter::run(raw_ostream &OS) {
 #if 0
   OS << "namespace {\n";
 #endif
-  unsigned NumFeatures = FeatureKeyValues(OS);
-  OS << "\n";
-  unsigned NumProcs = CPUKeyValues(OS);
+  unsigned NumFeatures = FeatureKeyValues(OS, FeatureMap);
   OS << "\n";
   EmitSchedModel(OS);
+  OS << "\n";
+  unsigned NumProcs = CPUKeyValues(OS, FeatureMap);
   OS << "\n";
 #if 0
   OS << "} // end anonymous namespace\n\n";
@@ -1828,8 +1823,7 @@ void SubtargetEmitter::run(raw_ostream &OS) {
   else
     OS << "None, ";
   OS << '\n'; OS.indent(22);
-  OS << Target << "ProcSchedKV, "
-     << Target << "WriteProcResTable, "
+  OS << Target << "WriteProcResTable, "
      << Target << "WriteLatencyTable, "
      << Target << "ReadAdvanceTable, ";
   OS << '\n'; OS.indent(22);
@@ -1895,8 +1889,7 @@ void SubtargetEmitter::run(raw_ostream &OS) {
   OS << "#include \"llvm/CodeGen/TargetSchedule.h\"\n\n";
   OS << "namespace llvm {\n";
   OS << "extern const llvm::SubtargetFeatureKV " << Target << "FeatureKV[];\n";
-  OS << "extern const llvm::SubtargetFeatureKV " << Target << "SubTypeKV[];\n";
-  OS << "extern const llvm::SubtargetInfoKV " << Target << "ProcSchedKV[];\n";
+  OS << "extern const llvm::SubtargetSubTypeKV " << Target << "SubTypeKV[];\n";
   OS << "extern const llvm::MCWriteProcResEntry "
      << Target << "WriteProcResTable[];\n";
   OS << "extern const llvm::MCWriteLatencyEntry "
@@ -1922,8 +1915,7 @@ void SubtargetEmitter::run(raw_ostream &OS) {
   else
     OS << "None, ";
   OS << '\n'; OS.indent(24);
-  OS << Target << "ProcSchedKV, "
-     << Target << "WriteProcResTable, "
+  OS << Target << "WriteProcResTable, "
      << Target << "WriteLatencyTable, "
      << Target << "ReadAdvanceTable, ";
   OS << '\n'; OS.indent(24);

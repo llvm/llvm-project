@@ -1,9 +1,8 @@
 //===-- llvm/RuntimeLibcalls.def - File that describes libcalls -*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -255,6 +254,26 @@ HANDLE_LIBCALL(FMAX_F64, "fmax")
 HANDLE_LIBCALL(FMAX_F80, "fmaxl")
 HANDLE_LIBCALL(FMAX_F128, "fmaxl")
 HANDLE_LIBCALL(FMAX_PPCF128, "fmaxl")
+HANDLE_LIBCALL(LROUND_F32, "lroundf")
+HANDLE_LIBCALL(LROUND_F64, "lround")
+HANDLE_LIBCALL(LROUND_F80, "lroundl")
+HANDLE_LIBCALL(LROUND_F128, "lroundl")
+HANDLE_LIBCALL(LROUND_PPCF128, "lroundl")
+HANDLE_LIBCALL(LLROUND_F32, "llroundf")
+HANDLE_LIBCALL(LLROUND_F64, "llround")
+HANDLE_LIBCALL(LLROUND_F80, "llroundl")
+HANDLE_LIBCALL(LLROUND_F128, "llroundl")
+HANDLE_LIBCALL(LLROUND_PPCF128, "llroundl")
+HANDLE_LIBCALL(LRINT_F32, "lrintf")
+HANDLE_LIBCALL(LRINT_F64, "lrint")
+HANDLE_LIBCALL(LRINT_F80, "lrintl")
+HANDLE_LIBCALL(LRINT_F128, "lrintl")
+HANDLE_LIBCALL(LRINT_PPCF128, "lrintl")
+HANDLE_LIBCALL(LLRINT_F32, "llrintf")
+HANDLE_LIBCALL(LLRINT_F64, "llrint")
+HANDLE_LIBCALL(LLRINT_F80, "llrintl")
+HANDLE_LIBCALL(LLRINT_F128, "llrintl")
+HANDLE_LIBCALL(LLRINT_PPCF128, "llrintl")
 
 // Conversion
 HANDLE_LIBCALL(FPEXT_F32_PPCF128, "__gcc_stoq")
@@ -529,6 +548,9 @@ HANDLE_LIBCALL(STACKPROTECTOR_CHECK_FAIL, "__stack_chk_fail")
 
 // Deoptimization
 HANDLE_LIBCALL(DEOPTIMIZE, "__llvm_deoptimize")
+
+// Return address
+HANDLE_LIBCALL(RETURN_ADDRESS, nullptr)
 
 HANDLE_LIBCALL(UNKNOWN_LIBCALL, nullptr)
 

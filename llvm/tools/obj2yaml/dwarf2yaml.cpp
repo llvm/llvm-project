@@ -1,9 +1,8 @@
 //===------ dwarf2yaml.cpp - obj2yaml conversion tool -----------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -17,7 +16,7 @@
 
 using namespace llvm;
 
-void dumpInitialLength(DataExtractor &Data, uint32_t &Offset,
+void dumpInitialLength(DataExtractor &Data, uint64_t &Offset,
                        DWARFYAML::InitialLength &InitialLength) {
   InitialLength.TotalLength = Data.getU32(&Offset);
   if (InitialLength.isDWARF64())
@@ -60,7 +59,7 @@ void dumpDebugStrings(DWARFContext &DCtx, DWARFYAML::Data &Y) {
 void dumpDebugARanges(DWARFContext &DCtx, DWARFYAML::Data &Y) {
   DataExtractor ArangesData(DCtx.getDWARFObj().getARangeSection(),
                             DCtx.isLittleEndian(), 0);
-  uint32_t Offset = 0;
+  uint64_t Offset = 0;
   DWARFDebugArangeSet Set;
 
   while (Set.extract(ArangesData, &Offset)) {
@@ -84,7 +83,7 @@ void dumpPubSection(DWARFContext &DCtx, DWARFYAML::PubSection &Y,
                     DWARFSection Section) {
   DWARFDataExtractor PubSectionData(DCtx.getDWARFObj(), Section,
                                     DCtx.isLittleEndian(), 0);
-  uint32_t Offset = 0;
+  uint64_t Offset = 0;
   dumpInitialLength(PubSectionData, Offset, Y.Length);
   Y.Version = PubSectionData.getU16(&Offset);
   Y.UnitOffset = PubSectionData.getU32(&Offset);
@@ -126,7 +125,7 @@ void dumpDebugInfo(DWARFContext &DCtx, DWARFYAML::Data &Y) {
     for (auto DIE : CU->dies()) {
       DWARFYAML::Entry NewEntry;
       DataExtractor EntryData = CU->getDebugInfoExtractor();
-      uint32_t offset = DIE.getOffset();
+      uint64_t offset = DIE.getOffset();
 
       assert(EntryData.isValidOffset(offset) && "Invalid DIE Offset");
       if (!EntryData.isValidOffset(offset))
@@ -227,7 +226,7 @@ void dumpDebugInfo(DWARFContext &DCtx, DWARFYAML::Data &Y) {
   }
 }
 
-bool dumpFileEntry(DataExtractor &Data, uint32_t &Offset,
+bool dumpFileEntry(DataExtractor &Data, uint64_t &Offset,
                    DWARFYAML::File &File) {
   File.Name = Data.getCStr(&Offset);
   if (File.Name.empty())
@@ -248,7 +247,7 @@ void dumpDebugLines(DWARFContext &DCtx, DWARFYAML::Data &Y) {
       DWARFYAML::LineTable DebugLines;
       DataExtractor LineData(DCtx.getDWARFObj().getLineSection().Data,
                              DCtx.isLittleEndian(), CU->getAddressByteSize());
-      uint32_t Offset = *StmtOffset;
+      uint64_t Offset = *StmtOffset;
       dumpInitialLength(LineData, Offset, DebugLines.Length);
       uint64_t LineTableLength = DebugLines.Length.getLength();
       uint64_t SizeOfPrologueLength = DebugLines.Length.isDWARF64() ? 8 : 4;

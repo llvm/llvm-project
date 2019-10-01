@@ -1,9 +1,8 @@
 //===- PassManager.h - Pass management infrastructure -----------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 /// \file
@@ -285,6 +284,13 @@ public:
     bool preserved() {
       return !IsAbandoned && (PA.PreservedIDs.count(&AllAnalysesKey) ||
                               PA.PreservedIDs.count(ID));
+    }
+
+    /// Return true if the checker's analysis was not abandoned, i.e. it was not
+    /// explicitly invalidated. Even if the analysis is not explicitly
+    /// preserved, if the analysis is known stateless, then it is preserved.
+    bool preservedWhenStateless() {
+      return !IsAbandoned;
     }
 
     /// Returns true if the checker's analysis was not abandoned and either

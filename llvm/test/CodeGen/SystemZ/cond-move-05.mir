@@ -38,7 +38,7 @@
   
   !llvm.ident = !{!0}
   
-  !0 = !{!"clang version 6.0.0 (http://llvm.org/git/clang.git d80246686d6ad2a749d11470afbbd1bbe4d1b561) (http://llvm.org/git/llvm.git 1693ef38604a3ad9c3da656d2b58a77312207b01)"}
+  !0 = !{!"clang version 6.0.0"}
 
 ...
 

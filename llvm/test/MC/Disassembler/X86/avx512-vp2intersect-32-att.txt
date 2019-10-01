@@ -1,0 +1,16 @@
+# RUN: llvm-mc --disassemble %s -triple=i686-apple-darwin9 | FileCheck %s
+
+# Coverage
+#CHECK: vp2intersectq  %zmm2, %zmm1, %k0
+0x62 0xf2 0xf7 0x48 0x68 0xc2
+
+# Instruction encodes k1, but we print k0 anyways.
+# Not sure if GNU binutils does the same.
+#CHECK: vp2intersectq  %zmm2, %zmm1, %k0
+0x62 0xf2 0xf7 0x48 0x68 0xca
+
+#CHECK: vp2intersectq  (%esi){1to8}, %zmm4, %k6
+0x62 0xf2 0xdf 0x58 0x68 0x36
+
+#CHECK: vp2intersectd  %xmm7, %xmm4, %k6
+0x62 0xf2 0x5f 0x08 0x68 0xff

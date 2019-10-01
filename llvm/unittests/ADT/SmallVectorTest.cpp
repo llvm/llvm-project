@@ -1,9 +1,8 @@
 //===- llvm/unittest/ADT/SmallVectorTest.cpp ------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -909,63 +908,69 @@ TEST(SmallVectorTest, EmplaceBack) {
   EmplaceableArg<3> A3(true);
   {
     SmallVector<Emplaceable, 3> V;
-    V.emplace_back();
+    Emplaceable &back = V.emplace_back();
+    EXPECT_TRUE(&back == &V.back());
     EXPECT_TRUE(V.size() == 1);
-    EXPECT_TRUE(V.back().State == ES_Emplaced);
-    EXPECT_TRUE(V.back().A0.State == EAS_Defaulted);
-    EXPECT_TRUE(V.back().A1.State == EAS_Defaulted);
-    EXPECT_TRUE(V.back().A2.State == EAS_Defaulted);
-    EXPECT_TRUE(V.back().A3.State == EAS_Defaulted);
+    EXPECT_TRUE(back.State == ES_Emplaced);
+    EXPECT_TRUE(back.A0.State == EAS_Defaulted);
+    EXPECT_TRUE(back.A1.State == EAS_Defaulted);
+    EXPECT_TRUE(back.A2.State == EAS_Defaulted);
+    EXPECT_TRUE(back.A3.State == EAS_Defaulted);
   }
   {
     SmallVector<Emplaceable, 3> V;
-    V.emplace_back(std::move(A0));
+    Emplaceable &back = V.emplace_back(std::move(A0));
+    EXPECT_TRUE(&back == &V.back());
     EXPECT_TRUE(V.size() == 1);
-    EXPECT_TRUE(V.back().State == ES_Emplaced);
-    EXPECT_TRUE(V.back().A0.State == EAS_RValue);
-    EXPECT_TRUE(V.back().A1.State == EAS_Defaulted);
-    EXPECT_TRUE(V.back().A2.State == EAS_Defaulted);
-    EXPECT_TRUE(V.back().A3.State == EAS_Defaulted);
+    EXPECT_TRUE(back.State == ES_Emplaced);
+    EXPECT_TRUE(back.A0.State == EAS_RValue);
+    EXPECT_TRUE(back.A1.State == EAS_Defaulted);
+    EXPECT_TRUE(back.A2.State == EAS_Defaulted);
+    EXPECT_TRUE(back.A3.State == EAS_Defaulted);
   }
   {
     SmallVector<Emplaceable, 3> V;
-    V.emplace_back(A0);
+    Emplaceable &back = V.emplace_back(A0);
+    EXPECT_TRUE(&back == &V.back());
     EXPECT_TRUE(V.size() == 1);
-    EXPECT_TRUE(V.back().State == ES_Emplaced);
-    EXPECT_TRUE(V.back().A0.State == EAS_LValue);
-    EXPECT_TRUE(V.back().A1.State == EAS_Defaulted);
-    EXPECT_TRUE(V.back().A2.State == EAS_Defaulted);
-    EXPECT_TRUE(V.back().A3.State == EAS_Defaulted);
+    EXPECT_TRUE(back.State == ES_Emplaced);
+    EXPECT_TRUE(back.A0.State == EAS_LValue);
+    EXPECT_TRUE(back.A1.State == EAS_Defaulted);
+    EXPECT_TRUE(back.A2.State == EAS_Defaulted);
+    EXPECT_TRUE(back.A3.State == EAS_Defaulted);
   }
   {
     SmallVector<Emplaceable, 3> V;
-    V.emplace_back(A0, A1);
+    Emplaceable &back = V.emplace_back(A0, A1);
+    EXPECT_TRUE(&back == &V.back());
     EXPECT_TRUE(V.size() == 1);
-    EXPECT_TRUE(V.back().State == ES_Emplaced);
-    EXPECT_TRUE(V.back().A0.State == EAS_LValue);
-    EXPECT_TRUE(V.back().A1.State == EAS_LValue);
-    EXPECT_TRUE(V.back().A2.State == EAS_Defaulted);
-    EXPECT_TRUE(V.back().A3.State == EAS_Defaulted);
+    EXPECT_TRUE(back.State == ES_Emplaced);
+    EXPECT_TRUE(back.A0.State == EAS_LValue);
+    EXPECT_TRUE(back.A1.State == EAS_LValue);
+    EXPECT_TRUE(back.A2.State == EAS_Defaulted);
+    EXPECT_TRUE(back.A3.State == EAS_Defaulted);
   }
   {
     SmallVector<Emplaceable, 3> V;
-    V.emplace_back(std::move(A0), std::move(A1));
+    Emplaceable &back = V.emplace_back(std::move(A0), std::move(A1));
+    EXPECT_TRUE(&back == &V.back());
     EXPECT_TRUE(V.size() == 1);
-    EXPECT_TRUE(V.back().State == ES_Emplaced);
-    EXPECT_TRUE(V.back().A0.State == EAS_RValue);
-    EXPECT_TRUE(V.back().A1.State == EAS_RValue);
-    EXPECT_TRUE(V.back().A2.State == EAS_Defaulted);
-    EXPECT_TRUE(V.back().A3.State == EAS_Defaulted);
+    EXPECT_TRUE(back.State == ES_Emplaced);
+    EXPECT_TRUE(back.A0.State == EAS_RValue);
+    EXPECT_TRUE(back.A1.State == EAS_RValue);
+    EXPECT_TRUE(back.A2.State == EAS_Defaulted);
+    EXPECT_TRUE(back.A3.State == EAS_Defaulted);
   }
   {
     SmallVector<Emplaceable, 3> V;
-    V.emplace_back(std::move(A0), A1, std::move(A2), A3);
+    Emplaceable &back = V.emplace_back(std::move(A0), A1, std::move(A2), A3);
+    EXPECT_TRUE(&back == &V.back());
     EXPECT_TRUE(V.size() == 1);
-    EXPECT_TRUE(V.back().State == ES_Emplaced);
-    EXPECT_TRUE(V.back().A0.State == EAS_RValue);
-    EXPECT_TRUE(V.back().A1.State == EAS_LValue);
-    EXPECT_TRUE(V.back().A2.State == EAS_RValue);
-    EXPECT_TRUE(V.back().A3.State == EAS_LValue);
+    EXPECT_TRUE(back.State == ES_Emplaced);
+    EXPECT_TRUE(back.A0.State == EAS_RValue);
+    EXPECT_TRUE(back.A1.State == EAS_LValue);
+    EXPECT_TRUE(back.A2.State == EAS_RValue);
+    EXPECT_TRUE(back.A3.State == EAS_LValue);
   }
   {
     SmallVector<int, 1> V;

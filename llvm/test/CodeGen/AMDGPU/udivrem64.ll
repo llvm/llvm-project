@@ -168,3 +168,17 @@ define amdgpu_kernel void @test_urem2364(i64 addrspace(1)* %out, i64 %x, i64 %y)
   store i64 %result, i64 addrspace(1)* %out
   ret void
 }
+
+;FUNC-LABEL: {{^}}test_udiv_k:
+;GCN: v_mul{{.+}} v{{[0-9]+}}, v{{[0-9]+}}, 24
+;GCN: v_mul{{.+}} v{{[0-9]+}}, v{{[0-9]+}}, 24
+;GCN: v_mul{{.+}} v{{[0-9]+}}, v{{[0-9]+}}, 24
+;GCN: v_add
+;GCN: v_addc
+;GCN: v_addc
+;GCN: s_endpgm
+define amdgpu_kernel void @test_udiv_k(i64 addrspace(1)* %out, i64 %x) {
+  %result = udiv i64 24, %x
+  store i64 %result, i64 addrspace(1)* %out
+  ret void
+}

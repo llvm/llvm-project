@@ -1,0 +1,32 @@
+RUN: rm -rf %t
+RUN: mkdir -p %t
+
+RUN: cp %p/Inputs/split-dwarf-test.dwo %t
+
+RUN: cd %t
+RUN: llvm-symbolizer --functions=linkage --inlining --demangle=false \
+RUN:    --obj=%p/Inputs/split-dwarf-test 0x400504 0x4004f4 | FileCheck --check-prefix=CHECK --check-prefix=SPLIT --check-prefix=DWO %s
+
+Ensure we get the same results in the absence of gmlt-like data in the executable but the presence of a .dwo file
+
+RUN: echo "%p/Inputs/split-dwarf-test-nogmlt 0x400504" >> %t.input
+RUN: echo "%p/Inputs/split-dwarf-test-nogmlt 0x4004f4" >> %t.input
+RUN: llvm-symbolizer --functions=linkage --inlining --demangle=false \
+RUN:    --default-arch=i386 --obj=%p/Inputs/split-dwarf-test-nogmlt 0x400504 0x4004f4 | FileCheck --check-prefix=SPLIT --check-prefix=DWO %s
+
+Ensure we get gmlt like results in the absence of a .dwo file but the presence of gmlt-like data in the executable
+
+RUN: rm %t/split-dwarf-test.dwo
+RUN: echo "%p/Inputs/split-dwarf-test 0x400504" >> %t.input
+RUN: echo "%p/Inputs/split-dwarf-test 0x4004f4" >> %t.input
+RUN: llvm-symbolizer --functions=linkage --inlining --demangle=false \
+RUN:    --default-arch=i386 --obj=%p/Inputs/split-dwarf-test 0x400504 0x4004f4 | FileCheck --check-prefix=SPLIT --check-prefix=NODWO %s
+
+DWO: _Z2f2v
+NODWO: {{^f2$}}
+SPLIT-NEXT: {{.*}}split-dwarf-test.cpp
+SPLIT-NEXT: main
+SPLIT-NEXT: {{.*}}split-dwarf-test.cpp
+
+SPLIT: _Z2f1v
+SPLIT-NEXT: {{.*}}split-dwarf-test.cpp

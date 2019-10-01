@@ -1,9 +1,8 @@
 //===---- IndirectionUtils.cpp - Utilities for call indirection in Orc ----===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -38,8 +37,8 @@ private:
   void materialize(MaterializationResponsibility R) override {
     SymbolMap Result;
     Result[Name] = JITEvaluatedSymbol(Compile(), JITSymbolFlags::Exported);
-    R.resolve(Result);
-    R.emit();
+    R.notifyResolved(Result);
+    R.notifyEmitted();
   }
 
   void discard(const JITDylib &JD, const SymbolStringPtr &Name) override {
@@ -238,11 +237,11 @@ void makeStub(Function &F, Value &ImplPointer) {
   Module &M = *F.getParent();
   BasicBlock *EntryBlock = BasicBlock::Create(M.getContext(), "entry", &F);
   IRBuilder<> Builder(EntryBlock);
-  LoadInst *ImplAddr = Builder.CreateLoad(&ImplPointer);
+  LoadInst *ImplAddr = Builder.CreateLoad(F.getType(), &ImplPointer);
   std::vector<Value*> CallArgs;
   for (auto &A : F.args())
     CallArgs.push_back(&A);
-  CallInst *Call = Builder.CreateCall(ImplAddr, CallArgs);
+  CallInst *Call = Builder.CreateCall(F.getFunctionType(), ImplAddr, CallArgs);
   Call->setTailCall();
   Call->setAttributes(F.getAttributes());
   if (F.getReturnType()->isVoidTy())

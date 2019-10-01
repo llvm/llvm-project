@@ -1,9 +1,8 @@
 //===-- X86BaseInfo.h - Top level definitions for X86 -------- --*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -49,7 +48,8 @@ namespace X86 {
     TO_NEG_INF = 1,
     TO_POS_INF = 2,
     TO_ZERO = 3,
-    CUR_DIRECTION = 4
+    CUR_DIRECTION = 4,
+    NO_EXC = 8
   };
 
   /// The constants to describe instr prefixes if there are
@@ -60,9 +60,46 @@ namespace X86 {
     IP_HAS_REPEAT_NE = 4,
     IP_HAS_REPEAT = 8,
     IP_HAS_LOCK = 16,
-    NO_SCHED_INFO = 32, // Don't add sched comment to the current instr because
-                        // it was already added
-    IP_HAS_NOTRACK = 64
+    IP_HAS_NOTRACK = 32,
+    IP_USE_VEX3 = 64,
+  };
+
+  enum OperandType : unsigned {
+    /// AVX512 embedded rounding control. This should only have values 0-3.
+    OPERAND_ROUNDING_CONTROL = MCOI::OPERAND_FIRST_TARGET,
+    OPERAND_COND_CODE,
+  };
+
+  // X86 specific condition code. These correspond to X86_*_COND in
+  // X86InstrInfo.td. They must be kept in synch.
+  enum CondCode {
+    COND_O = 0,
+    COND_NO = 1,
+    COND_B = 2,
+    COND_AE = 3,
+    COND_E = 4,
+    COND_NE = 5,
+    COND_BE = 6,
+    COND_A = 7,
+    COND_S = 8,
+    COND_NS = 9,
+    COND_P = 10,
+    COND_NP = 11,
+    COND_L = 12,
+    COND_GE = 13,
+    COND_LE = 14,
+    COND_G = 15,
+    LAST_VALID_COND = COND_G,
+
+    // Artificial condition codes. These are used by AnalyzeBranch
+    // to indicate a block terminated with two conditional branches that together
+    // form a compound condition. They occur in code using FCMP_OEQ or FCMP_UNE,
+    // which can't be represented on x86 with a single condition. These
+    // are never used in MachineInstrs and are inverses of one another.
+    COND_NE_OR_P,
+    COND_E_AND_NP,
+
+    COND_INVALID
   };
 } // end namespace X86;
 
@@ -285,6 +322,10 @@ namespace X86II {
     /// manual, this operand is described as pntr16:32 and pntr16:16
     RawFrmImm16 = 8,
 
+    /// AddCCFrm - This form is used for Jcc that encode the condition code
+    /// in the lower 4 bits of the opcode.
+    AddCCFrm = 9,
+
     /// MRM[0-7][rm] - These forms are used to represent instructions that use
     /// a Mod/RM byte, and use the middle field to hold extended opcode
     /// information.  In the intel manual these are represented as /0, /1, ...
@@ -310,10 +351,21 @@ namespace X86II {
     ///
     MRMSrcMemOp4   = 35,
 
+    /// MRMSrcMemCC - This form is used for instructions that use the Mod/RM
+    /// byte to specify the operands and also encodes a condition code.
+    ///
+    MRMSrcMemCC    = 36,
+
+    /// MRMXm - This form is used for instructions that use the Mod/RM byte
+    /// to specify a memory source, but doesn't use the middle field. And has
+    /// a condition code.
+    ///
+    MRMXmCC = 38,
+
     /// MRMXm - This form is used for instructions that use the Mod/RM byte
     /// to specify a memory source, but doesn't use the middle field.
     ///
-    MRMXm = 39, // Instruction that uses Mod/RM but not the middle field.
+    MRMXm = 39,
 
     // Next, instructions that operate on a memory r/m operand...
     MRM0m = 40,  MRM1m = 41,  MRM2m = 42,  MRM3m = 43, // Format /0 /1 /2 /3
@@ -339,10 +391,21 @@ namespace X86II {
     ///
     MRMSrcRegOp4   = 51,
 
+    /// MRMSrcRegCC - This form is used for instructions that use the Mod/RM
+    /// byte to specify the operands and also encodes a condition code
+    ///
+    MRMSrcRegCC    = 52,
+
+    /// MRMXCCr - This form is used for instructions that use the Mod/RM byte
+    /// to specify a register source, but doesn't use the middle field. And has
+    /// a condition code.
+    ///
+    MRMXrCC = 54,
+
     /// MRMXr - This form is used for instructions that use the Mod/RM byte
     /// to specify a register source, but doesn't use the middle field.
     ///
-    MRMXr = 55, // Instruction that uses Mod/RM but not the middle field.
+    MRMXr = 55,
 
     // Instructions that operate on a register r/m operand...
     MRM0r = 56,  MRM1r = 57,  MRM2r = 58,  MRM3r = 59, // Format /0 /1 /2 /3
@@ -681,8 +744,7 @@ namespace X86II {
       // has it as the last op.
       if (NumOps == 9 && Desc.getOperandConstraint(2, MCOI::TIED_TO) == 0 &&
           (Desc.getOperandConstraint(3, MCOI::TIED_TO) == 1 ||
-           Desc.getOperandConstraint(8, MCOI::TIED_TO) == 1) &&
-          "Instruction with 2 defs isn't gather?")
+           Desc.getOperandConstraint(8, MCOI::TIED_TO) == 1))
         return 2;
       return 0;
     }
@@ -711,6 +773,7 @@ namespace X86II {
     case X86II::RawFrmSrc:
     case X86II::RawFrmDst:
     case X86II::RawFrmDstSrc:
+    case X86II::AddCCFrm:
       return -1;
     case X86II::MRMDestMem:
       return 0;
@@ -724,16 +787,23 @@ namespace X86II {
     case X86II::MRMSrcMemOp4:
       // Skip registers encoded in reg, VEX_VVVV, and I8IMM.
       return 3;
+    case X86II::MRMSrcMemCC:
+      // Start from 1, skip any registers encoded in VEX_VVVV or I8IMM, or a
+      // mask register.
+      return 1;
     case X86II::MRMDestReg:
     case X86II::MRMSrcReg:
     case X86II::MRMSrcReg4VOp3:
     case X86II::MRMSrcRegOp4:
+    case X86II::MRMSrcRegCC:
+    case X86II::MRMXrCC:
     case X86II::MRMXr:
     case X86II::MRM0r: case X86II::MRM1r:
     case X86II::MRM2r: case X86II::MRM3r:
     case X86II::MRM4r: case X86II::MRM5r:
     case X86II::MRM6r: case X86II::MRM7r:
       return -1;
+    case X86II::MRMXmCC:
     case X86II::MRMXm:
     case X86II::MRM0m: case X86II::MRM1m:
     case X86II::MRM2m: case X86II::MRM3m:

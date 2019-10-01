@@ -17,10 +17,10 @@
 ; particularly variables that are described as constants and passed
 ; by reference.
 ;
-; CHECK: DEBUG_VALUE: foo:i <- [DW_OP_deref] $vrdepot
 ; CHECK: DEBUG_VALUE: foo:i <- 3
 ; CHECK: DEBUG_VALUE: foo:i <- 7
 ; CHECK: DEBUG_VALUE: foo:i <- %
+; CHECK: DEBUG_VALUE: foo:i <- [DW_OP_deref] $vrdepot
 
 ; Function Attrs: nounwind ssp uwtable
 define i32 @foo() #0 !dbg !4 {

@@ -1,8 +1,8 @@
 ; Check call to mcount in case of long/short call options.
 ; RUN: llc -march=mips -target-abi o32 --mattr=+long-calls,+noabicalls < %s \
-; RUN:   | FileCheck -check-prefixes=CHECK,LONG %s
+; RUN:   -mips-jalr-reloc=false | FileCheck -check-prefixes=CHECK,LONG %s
 ; RUN: llc -march=mips -target-abi o32 --mattr=-long-calls,+noabicalls < %s \
-; RUN:   | FileCheck -check-prefixes=CHECK,SHORT %s
+; RUN:   -mips-jalr-reloc=false | FileCheck -check-prefixes=CHECK,SHORT %s
 
 ; Function Attrs: noinline nounwind optnone
 define void @foo() #0 {

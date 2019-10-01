@@ -20,11 +20,10 @@ Sections:
     AddressAlign:    0x0000000000000001
     Content:         ''
 Symbols:
-  Global:
-    - Name:     lib2
-      Index:    SHN_ABS
-      Value:    0x1234
-  Local:
-    - Name:            '-'
-      Type:            STT_FILE
+  - Name:    '-'
+    Type:    STT_FILE
+  - Name:    lib2
+    Index:   SHN_ABS
+    Value:   0x1234
+    Binding: STB_GLOBAL
 ...

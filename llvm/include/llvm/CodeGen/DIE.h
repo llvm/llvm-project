@@ -1,9 +1,8 @@
 //===- lib/CodeGen/DIE.h - DWARF Info Entries -------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -39,6 +38,7 @@ namespace llvm {
 class AsmPrinter;
 class DIE;
 class DIEUnit;
+class DwarfCompileUnit;
 class MCExpr;
 class MCSection;
 class MCSymbol;
@@ -231,6 +231,25 @@ public:
 };
 
 //===--------------------------------------------------------------------===//
+/// A BaseTypeRef DIE.
+class DIEBaseTypeRef {
+  const DwarfCompileUnit *CU;
+  const uint64_t Index;
+  static constexpr unsigned ULEB128PadSize = 4;
+
+public:
+  explicit DIEBaseTypeRef(const DwarfCompileUnit *TheCU, uint64_t Idx)
+    : CU(TheCU), Index(Idx) {}
+
+  /// EmitValue - Emit base type reference.
+  void EmitValue(const AsmPrinter *AP, dwarf::Form Form) const;
+  /// SizeOf - Determine size of the base type reference in bytes.
+  unsigned SizeOf(const AsmPrinter *AP, dwarf::Form Form) const;
+
+  void print(raw_ostream &O) const;
+};
+
+//===--------------------------------------------------------------------===//
 /// A simple label difference DIE.
 ///
 class DIEDelta {
@@ -350,7 +369,7 @@ private:
   /// should be stored by reference instead of by value.
   using ValTy = AlignedCharArrayUnion<DIEInteger, DIEString, DIEExpr, DIELabel,
                                       DIEDelta *, DIEEntry, DIEBlock *,
-                                      DIELoc *, DIELocList>;
+                                      DIELoc *, DIELocList, DIEBaseTypeRef *>;
 
   static_assert(sizeof(ValTy) <= sizeof(uint64_t) ||
                     sizeof(ValTy) <= sizeof(void *),
@@ -502,6 +521,18 @@ struct IntrusiveBackListBase {
     }
     Last = &N;
   }
+
+  void push_front(Node &N) {
+    assert(N.Next.getPointer() == &N && "Expected unlinked node");
+    assert(N.Next.getInt() == true && "Expected unlinked node");
+
+    if (Last) {
+      N.Next.setPointerAndInt(Last->Next.getPointer(), false);
+      Last->Next.setPointerAndInt(&N, true);
+    } else {
+      Last = &N;
+    }
+  }
 };
 
 template <class T> class IntrusiveBackList : IntrusiveBackListBase {
@@ -509,8 +540,15 @@ public:
   using IntrusiveBackListBase::empty;
 
   void push_back(T &N) { IntrusiveBackListBase::push_back(N); }
+  void push_front(T &N) { IntrusiveBackListBase::push_front(N); }
   T &back() { return *static_cast<T *>(Last); }
   const T &back() const { return *static_cast<T *>(Last); }
+  T &front() {
+    return *static_cast<T *>(Last ? Last->Next.getPointer() : nullptr);
+  }
+  const T &front() const {
+    return *static_cast<T *>(Last ? Last->Next.getPointer() : nullptr);
+  }
 
   class const_iterator;
   class iterator
@@ -760,7 +798,7 @@ public:
   ///
   /// \returns the DIEUnit that represents the compile or type unit that owns
   /// this DIE, or NULL if this DIE hasn't been added to a unit DIE.
-  const DIEUnit *getUnit() const;
+  DIEUnit *getUnit() const;
 
   void setOffset(unsigned O) { Offset = O; }
   void setSize(unsigned S) { Size = S; }
@@ -771,6 +809,13 @@ public:
     Child->Owner = this;
     Children.push_back(*Child);
     return Children.back();
+  }
+
+  DIE &addChildFront(DIE *Child) {
+    assert(!Child->getParent() && "Child should be orphaned");
+    Child->Owner = this;
+    Children.push_front(*Child);
+    return Children.front();
   }
 
   /// Find a value in the DIE with the attribute given.
@@ -800,7 +845,7 @@ class DIEUnit {
   const uint16_t Version; /// The Dwarf version number for this unit.
   const uint8_t AddrSize; /// The size in bytes of an address for this unit.
 protected:
-  ~DIEUnit() = default;
+  virtual ~DIEUnit() = default;
 
 public:
   DIEUnit(uint16_t Version, uint8_t AddrSize, dwarf::Tag UnitTag);

@@ -36,6 +36,6 @@ attributes #0 = { norecurse nounwind readnone "disable-tail-calls"="false" "less
 
 !0 = !{i32 1, !"wchar_size", i32 4}
 !1 = !{i32 1, !"min_enum_size", i32 4}
-!2 = !{!"clang version 3.8.0 (http://llvm.org/git/clang.git b7441a0f42c43a8eea9e3e706be187252db747fa)"}
+!2 = !{!"clang version 3.8.0"}
 !3 = distinct !{!3, !4}
 !4 = !{!"llvm.loop.unroll.full"}

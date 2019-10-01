@@ -1,9 +1,8 @@
 //===- AArch64InstrInfo.h - AArch64 Instruction Information -----*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -16,6 +15,7 @@
 
 #include "AArch64.h"
 #include "AArch64RegisterInfo.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/CodeGen/MachineCombinerPattern.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 
@@ -54,7 +54,8 @@ public:
                              unsigned &DstReg, unsigned &SubIdx) const override;
 
   bool
-  areMemAccessesTriviallyDisjoint(MachineInstr &MIa, MachineInstr &MIb,
+  areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
+                                  const MachineInstr &MIb,
                                   AliasAnalysis *AA = nullptr) const override;
 
   unsigned isLoadFromStackSlot(const MachineInstr &MI,
@@ -84,6 +85,14 @@ public:
     return isUnscaledLdSt(MI.getOpcode());
   }
 
+  /// Returns the unscaled load/store for the scaled load/store opcode,
+  /// if there is a corresponding unscaled variant available.
+  static Optional<unsigned> getUnscaledLdSt(unsigned Opc);
+
+
+  /// Returns the index for the immediate for a given instruction.
+  static unsigned getLoadStoreImmIdx(unsigned Opc);
+
   /// Return true if pairing the given load or store may be paired with another.
   static bool isPairableLdStInst(const MachineInstr &MI);
 
@@ -92,16 +101,18 @@ public:
   static unsigned convertToFlagSettingOpc(unsigned Opc, bool &Is64Bit);
 
   /// Return true if this is a load/store that can be potentially paired/merged.
-  bool isCandidateToMergeOrPair(MachineInstr &MI) const;
+  bool isCandidateToMergeOrPair(const MachineInstr &MI) const;
 
   /// Hint that pairing the given load or store is unprofitable.
   static void suppressLdStPair(MachineInstr &MI);
 
-  bool getMemOperandWithOffset(MachineInstr &MI, MachineOperand *&BaseOp,
+  bool getMemOperandWithOffset(const MachineInstr &MI,
+                               const MachineOperand *&BaseOp,
                                int64_t &Offset,
                                const TargetRegisterInfo *TRI) const override;
 
-  bool getMemOperandWithOffsetWidth(MachineInstr &MI, MachineOperand *&BaseOp,
+  bool getMemOperandWithOffsetWidth(const MachineInstr &MI,
+                                    const MachineOperand *&BaseOp,
                                     int64_t &Offset, unsigned &Width,
                                     const TargetRegisterInfo *TRI) const;
 
@@ -112,16 +123,21 @@ public:
   /// \p Scale, \p Width, \p MinOffset, and \p MaxOffset accordingly.
   ///
   /// For unscaled instructions, \p Scale is set to 1.
-  bool getMemOpInfo(unsigned Opcode, unsigned &Scale, unsigned &Width,
-                    int64_t &MinOffset, int64_t &MaxOffset) const;
+  static bool getMemOpInfo(unsigned Opcode, unsigned &Scale, unsigned &Width,
+                           int64_t &MinOffset, int64_t &MaxOffset);
 
-  bool shouldClusterMemOps(MachineOperand &BaseOp1, MachineOperand &BaseOp2,
+  bool shouldClusterMemOps(const MachineOperand &BaseOp1,
+                           const MachineOperand &BaseOp2,
                            unsigned NumLoads) const override;
 
   void copyPhysRegTuple(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
                         const DebugLoc &DL, unsigned DestReg, unsigned SrcReg,
                         bool KillSrc, unsigned Opcode,
                         llvm::ArrayRef<unsigned> Indices) const;
+  void copyGPRRegTuple(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
+                       DebugLoc DL, unsigned DestReg, unsigned SrcReg,
+                       bool KillSrc, unsigned Opcode, unsigned ZeroReg,
+                       llvm::ArrayRef<unsigned> Indices) const;
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
                    const DebugLoc &DL, unsigned DestReg, unsigned SrcReg,
                    bool KillSrc) const override;
@@ -146,7 +162,8 @@ public:
   foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
                         ArrayRef<unsigned> Ops,
                         MachineBasicBlock::iterator InsertPt, int FrameIndex,
-                        LiveIntervals *LIS = nullptr) const override;
+                        LiveIntervals *LIS = nullptr,
+                        VirtRegMap *VRM = nullptr) const override;
 
   /// \returns true if a branch from an instruction with opcode \p BranchOpc
   ///  bytes is capable of jumping to a position \p BrOffset bytes away.
@@ -251,6 +268,13 @@ public:
 #define GET_INSTRINFO_HELPER_DECLS
 #include "AArch64GenInstrInfo.inc"
 
+protected:
+  /// If the specific machine instruction is a instruction that moves/copies
+  /// value from one register to another register return true along with
+  /// @Source machine operand and @Destination machine operand.
+  bool isCopyInstrImpl(const MachineInstr &MI, const MachineOperand *&Source,
+                       const MachineOperand *&Destination) const override;
+
 private:
   /// Sets the offsets on outlined instructions in \p MBB which use SP
   /// so that they will be valid post-outlining.
@@ -277,7 +301,8 @@ void emitFrameOffset(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                      const DebugLoc &DL, unsigned DestReg, unsigned SrcReg,
                      int Offset, const TargetInstrInfo *TII,
                      MachineInstr::MIFlag = MachineInstr::NoFlags,
-                     bool SetNZCV = false,  bool NeedsWinCFI = false);
+                     bool SetNZCV = false, bool NeedsWinCFI = false,
+                     bool *HasWinCFI = nullptr);
 
 /// rewriteAArch64FrameIndex - Rewrite MI to access 'Offset' bytes from the
 /// FP. Return false if the offset could not be handled directly in MI, and

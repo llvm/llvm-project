@@ -1,9 +1,8 @@
 //===-- Globals.cpp - Implement the GlobalValue & GlobalVariable class ----===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -68,6 +67,7 @@ void GlobalValue::copyAttributesFrom(const GlobalValue *Src) {
   setUnnamedAddr(Src->getUnnamedAddr());
   setDLLStorageClass(Src->getDLLStorageClass());
   setDSOLocal(Src->isDSOLocal());
+  setPartition(Src->getPartition());
 }
 
 void GlobalValue::removeFromParent() {
@@ -181,6 +181,28 @@ const Comdat *GlobalValue::getComdat() const {
   return cast<GlobalObject>(this)->getComdat();
 }
 
+StringRef GlobalValue::getPartition() const {
+  if (!hasPartition())
+    return "";
+  return getContext().pImpl->GlobalValuePartitions[this];
+}
+
+void GlobalValue::setPartition(StringRef S) {
+  // Do nothing if we're clearing the partition and it is already empty.
+  if (!hasPartition() && S.empty())
+    return;
+
+  // Get or create a stable partition name string and put it in the table in the
+  // context.
+  if (!S.empty())
+    S = getContext().pImpl->Saver.save(S);
+  getContext().pImpl->GlobalValuePartitions[this] = S;
+
+  // Update the HasPartition field. Setting the partition to the empty string
+  // means this global no longer has a partition.
+  HasPartition = !S.empty();
+}
+
 StringRef GlobalObject::getSectionImpl() const {
   assert(hasSection());
   return getContext().pImpl->GlobalObjectSections[this];
@@ -193,9 +215,8 @@ void GlobalObject::setSection(StringRef S) {
 
   // Get or create a stable section name string and put it in the table in the
   // context.
-  if (!S.empty()) {
-    S = getContext().pImpl->SectionStrings.insert(S).first->first();
-  }
+  if (!S.empty())
+    S = getContext().pImpl->Saver.save(S);
   getContext().pImpl->GlobalObjectSections[this] = S;
 
   // Update the HasSectionHashEntryBit. Setting the section to the empty string

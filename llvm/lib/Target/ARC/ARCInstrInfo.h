@@ -1,9 +1,8 @@
 //===- ARCInstrInfo.h - ARC Instruction Information -------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -81,6 +80,16 @@ public:
 
   bool
   reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const override;
+
+
+  bool isPostIncrement(const MachineInstr &MI) const override;
+
+  // ARC-specific
+  bool isPreIncrement(const MachineInstr &MI) const;
+
+  virtual bool getBaseAndOffsetPosition(const MachineInstr &MI,
+                                        unsigned &BasePos,
+                                        unsigned &OffsetPos) const override;
 
   // Emit code before MBBI to load immediate value into physical register Reg.
   // Returns an iterator to the new instruction.

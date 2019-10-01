@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=thumbv7m-none-macho %s -o - -relocation-model=pic -disable-fp-elim | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-NON-FAST
-; RUN: llc -mtriple=thumbv7m-none-macho -O0 %s -o - -relocation-model=pic -disable-fp-elim | FileCheck %s
+; RUN: llc -mtriple=thumbv7m-none-macho %s -o - -relocation-model=pic -frame-pointer=all | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-NON-FAST
+; RUN: llc -mtriple=thumbv7m-none-macho -O0 %s -o - -relocation-model=pic -frame-pointer=all | FileCheck %s
 ; RUN: llc -mtriple=thumbv7m-none-macho -filetype=obj %s -o /dev/null
 
 @var = external global i32

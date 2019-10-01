@@ -1,9 +1,8 @@
 //===- BTFDebug.cpp - BTF Generator ---------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -19,8 +18,7 @@
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
-#include <fstream>
-#include <sstream>
+#include "llvm/Support/LineIterator.h"
 
 using namespace llvm;
 
@@ -67,7 +65,7 @@ void BTFTypeDerived::completeType(BTFDebug &BDebug) {
   BTFType.NameOff = BDebug.addString(DTy->getName());
 
   // The base type for PTR/CONST/VOLATILE could be void.
-  const DIType *ResolvedType = DTy->getBaseType().resolve();
+  const DIType *ResolvedType = DTy->getBaseType();
   if (!ResolvedType) {
     assert((Kind == BTF::BTF_KIND_PTR || Kind == BTF::BTF_KIND_CONST ||
             Kind == BTF::BTF_KIND_VOLATILE) &&
@@ -159,45 +157,24 @@ void BTFTypeEnum::emitType(MCStreamer &OS) {
   }
 }
 
-BTFTypeArray::BTFTypeArray(const DICompositeType *ATy) : ATy(ATy) {
+BTFTypeArray::BTFTypeArray(uint32_t ElemTypeId, uint32_t NumElems) {
   Kind = BTF::BTF_KIND_ARRAY;
+  BTFType.NameOff = 0;
   BTFType.Info = Kind << 24;
-}
-
-/// Represent a BTF array. BTF does not record array dimensions,
-/// so conceptually a BTF array is a one-dimensional array.
-void BTFTypeArray::completeType(BTFDebug &BDebug) {
-  BTFType.NameOff = BDebug.addString(ATy->getName());
   BTFType.Size = 0;
 
-  auto *BaseType = ATy->getBaseType().resolve();
-  ArrayInfo.ElemType = BDebug.getTypeId(BaseType);
+  ArrayInfo.ElemType = ElemTypeId;
+  ArrayInfo.Nelems = NumElems;
+}
+
+/// Represent a BTF array.
+void BTFTypeArray::completeType(BTFDebug &BDebug) {
 
   // The IR does not really have a type for the index.
   // A special type for array index should have been
   // created during initial type traversal. Just
   // retrieve that type id.
   ArrayInfo.IndexType = BDebug.getArrayIndexTypeId();
-
-  // Get the number of array elements.
-  // If the array size is 0, set the number of elements as 0.
-  // Otherwise, recursively traverse the base types to
-  // find the element size. The number of elements is
-  // the totoal array size in bits divided by
-  // element size in bits.
-  uint64_t ArraySizeInBits = ATy->getSizeInBits();
-  if (!ArraySizeInBits) {
-    ArrayInfo.Nelems = 0;
-  } else {
-    uint32_t BaseTypeSize = BaseType->getSizeInBits();
-    while (!BaseTypeSize) {
-      const auto *DDTy = cast<DIDerivedType>(BaseType);
-      BaseType = DDTy->getBaseType().resolve();
-      assert(BaseType);
-      BaseTypeSize = BaseType->getSizeInBits();
-    }
-    ArrayInfo.Nelems = ATy->getSizeInBits() / BaseTypeSize;
-  }
 }
 
 void BTFTypeArray::emitType(MCStreamer &OS) {
@@ -232,7 +209,7 @@ void BTFTypeStruct::completeType(BTFDebug &BDebug) {
     } else {
       BTFMember.Offset = DDTy->getOffsetInBits();
     }
-    BTFMember.Type = BDebug.getTypeId(DDTy->getBaseType().resolve());
+    BTFMember.Type = BDebug.getTypeId(DDTy->getBaseType());
     Members.push_back(BTFMember);
   }
 }
@@ -262,7 +239,7 @@ BTFTypeFuncProto::BTFTypeFuncProto(
 
 void BTFTypeFuncProto::completeType(BTFDebug &BDebug) {
   DITypeRefArray Elements = STy->getTypeArray();
-  auto RetType = Elements[0].resolve();
+  auto RetType = Elements[0];
   BTFType.Type = RetType ? BDebug.getTypeId(RetType) : 0;
   BTFType.NameOff = 0;
 
@@ -270,7 +247,7 @@ void BTFTypeFuncProto::completeType(BTFDebug &BDebug) {
   // to represent the vararg, encode the NameOff/Type to be 0.
   for (unsigned I = 1, N = Elements.size(); I < N; ++I) {
     struct BTF::BTFParam Param;
-    auto Element = Elements[I].resolve();
+    auto Element = Elements[I];
     if (Element) {
       Param.NameOff = BDebug.addString(FuncArgNames[I]);
       Param.Type = BDebug.getTypeId(Element);
@@ -303,6 +280,45 @@ void BTFTypeFunc::completeType(BTFDebug &BDebug) {
 
 void BTFTypeFunc::emitType(MCStreamer &OS) { BTFTypeBase::emitType(OS); }
 
+BTFKindVar::BTFKindVar(StringRef VarName, uint32_t TypeId, uint32_t VarInfo)
+    : Name(VarName) {
+  Kind = BTF::BTF_KIND_VAR;
+  BTFType.Info = Kind << 24;
+  BTFType.Type = TypeId;
+  Info = VarInfo;
+}
+
+void BTFKindVar::completeType(BTFDebug &BDebug) {
+  BTFType.NameOff = BDebug.addString(Name);
+}
+
+void BTFKindVar::emitType(MCStreamer &OS) {
+  BTFTypeBase::emitType(OS);
+  OS.EmitIntValue(Info, 4);
+}
+
+BTFKindDataSec::BTFKindDataSec(AsmPrinter *AsmPrt, std::string SecName)
+    : Asm(AsmPrt), Name(SecName) {
+  Kind = BTF::BTF_KIND_DATASEC;
+  BTFType.Info = Kind << 24;
+  BTFType.Size = 0;
+}
+
+void BTFKindDataSec::completeType(BTFDebug &BDebug) {
+  BTFType.NameOff = BDebug.addString(Name);
+  BTFType.Info |= Vars.size();
+}
+
+void BTFKindDataSec::emitType(MCStreamer &OS) {
+  BTFTypeBase::emitType(OS);
+
+  for (const auto &V : Vars) {
+    OS.EmitIntValue(std::get<0>(V), 4);
+    Asm->EmitLabelReference(std::get<1>(V), 4);
+    OS.EmitIntValue(std::get<2>(V), 4);
+  }
+}
+
 uint32_t BTFStringTable::addString(StringRef S) {
   // Check whether the string already exists.
   for (auto &OffsetM : OffsetToIdMap) {
@@ -323,11 +339,13 @@ BTFDebug::BTFDebug(AsmPrinter *AP)
   addString("\0");
 }
 
-void BTFDebug::addType(std::unique_ptr<BTFTypeBase> TypeEntry,
-                       const DIType *Ty) {
+uint32_t BTFDebug::addType(std::unique_ptr<BTFTypeBase> TypeEntry,
+                           const DIType *Ty) {
   TypeEntry->setId(TypeEntries.size() + 1);
-  DIToIdMap[Ty] = TypeEntry->getId();
+  uint32_t Id = TypeEntry->getId();
+  DIToIdMap[Ty] = Id;
   TypeEntries.push_back(std::move(TypeEntry));
+  return Id;
 }
 
 uint32_t BTFDebug::addType(std::unique_ptr<BTFTypeBase> TypeEntry) {
@@ -337,7 +355,7 @@ uint32_t BTFDebug::addType(std::unique_ptr<BTFTypeBase> TypeEntry) {
   return Id;
 }
 
-void BTFDebug::visitBasicType(const DIBasicType *BTy) {
+void BTFDebug::visitBasicType(const DIBasicType *BTy, uint32_t &TypeId) {
   // Only int types are supported in BTF.
   uint32_t Encoding = BTy->getEncoding();
   if (Encoding != dwarf::DW_ATE_boolean && Encoding != dwarf::DW_ATE_signed &&
@@ -350,7 +368,7 @@ void BTFDebug::visitBasicType(const DIBasicType *BTy) {
   // DIToIdMap for cross-type reference check.
   auto TypeEntry = llvm::make_unique<BTFTypeInt>(
       Encoding, BTy->getSizeInBits(), BTy->getOffsetInBits(), BTy->getName());
-  addType(std::move(TypeEntry), BTy);
+  TypeId = addType(std::move(TypeEntry), BTy);
 }
 
 /// Handle subprogram or subroutine types.
@@ -371,16 +389,17 @@ void BTFDebug::visitSubroutineType(
   if (ForSubprog)
     TypeId = addType(std::move(TypeEntry)); // For subprogram
   else
-    addType(std::move(TypeEntry), STy); // For func ptr
+    TypeId = addType(std::move(TypeEntry), STy); // For func ptr
 
   // Visit return type and func arg types.
   for (const auto Element : Elements) {
-    visitTypeEntry(Element.resolve());
+    visitTypeEntry(Element);
   }
 }
 
 /// Handle structure/union types.
-void BTFDebug::visitStructType(const DICompositeType *CTy, bool IsStruct) {
+void BTFDebug::visitStructType(const DICompositeType *CTy, bool IsStruct,
+                               uint32_t &TypeId) {
   const DINodeArray Elements = CTy->getElements();
   uint32_t VLen = Elements.size();
   if (VLen > BTF::MAX_VLEN)
@@ -398,16 +417,42 @@ void BTFDebug::visitStructType(const DICompositeType *CTy, bool IsStruct) {
 
   auto TypeEntry =
       llvm::make_unique<BTFTypeStruct>(CTy, IsStruct, HasBitField, VLen);
-  addType(std::move(TypeEntry), CTy);
+  TypeId = addType(std::move(TypeEntry), CTy);
 
   // Visit all struct members.
   for (const auto *Element : Elements)
     visitTypeEntry(cast<DIDerivedType>(Element));
 }
 
-void BTFDebug::visitArrayType(const DICompositeType *CTy) {
-  auto TypeEntry = llvm::make_unique<BTFTypeArray>(CTy);
-  addType(std::move(TypeEntry), CTy);
+void BTFDebug::visitArrayType(const DICompositeType *CTy, uint32_t &TypeId) {
+  // Visit array element type.
+  uint32_t ElemTypeId;
+  visitTypeEntry(CTy->getBaseType(), ElemTypeId);
+
+  if (!CTy->getSizeInBits()) {
+    auto TypeEntry = llvm::make_unique<BTFTypeArray>(ElemTypeId, 0);
+    ElemTypeId = addType(std::move(TypeEntry), CTy);
+  } else {
+    // Visit array dimensions.
+    DINodeArray Elements = CTy->getElements();
+    for (int I = Elements.size() - 1; I >= 0; --I) {
+      if (auto *Element = dyn_cast_or_null<DINode>(Elements[I]))
+        if (Element->getTag() == dwarf::DW_TAG_subrange_type) {
+          const DISubrange *SR = cast<DISubrange>(Element);
+          auto *CI = SR->getCount().dyn_cast<ConstantInt *>();
+          int64_t Count = CI->getSExtValue();
+
+          auto TypeEntry = llvm::make_unique<BTFTypeArray>(ElemTypeId, Count);
+          if (I == 0)
+            ElemTypeId = addType(std::move(TypeEntry), CTy);
+          else
+            ElemTypeId = addType(std::move(TypeEntry));
+        }
+    }
+  }
+
+  // The array TypeId is the type id of the outermost dimension.
+  TypeId = ElemTypeId;
 
   // The IR does not have a type for array index while BTF wants one.
   // So create an array index type if there is none.
@@ -416,77 +461,83 @@ void BTFDebug::visitArrayType(const DICompositeType *CTy) {
                                                    0, "__ARRAY_SIZE_TYPE__");
     ArrayIndexTypeId = addType(std::move(TypeEntry));
   }
-
-  // Visit array element type.
-  visitTypeEntry(CTy->getBaseType().resolve());
 }
 
-void BTFDebug::visitEnumType(const DICompositeType *CTy) {
+void BTFDebug::visitEnumType(const DICompositeType *CTy, uint32_t &TypeId) {
   DINodeArray Elements = CTy->getElements();
   uint32_t VLen = Elements.size();
   if (VLen > BTF::MAX_VLEN)
     return;
 
   auto TypeEntry = llvm::make_unique<BTFTypeEnum>(CTy, VLen);
-  addType(std::move(TypeEntry), CTy);
+  TypeId = addType(std::move(TypeEntry), CTy);
   // No need to visit base type as BTF does not encode it.
 }
 
 /// Handle structure/union forward declarations.
-void BTFDebug::visitFwdDeclType(const DICompositeType *CTy, bool IsUnion) {
+void BTFDebug::visitFwdDeclType(const DICompositeType *CTy, bool IsUnion,
+                                uint32_t &TypeId) {
   auto TypeEntry = llvm::make_unique<BTFTypeFwd>(CTy->getName(), IsUnion);
-  addType(std::move(TypeEntry), CTy);
+  TypeId = addType(std::move(TypeEntry), CTy);
 }
 
 /// Handle structure, union, array and enumeration types.
-void BTFDebug::visitCompositeType(const DICompositeType *CTy) {
+void BTFDebug::visitCompositeType(const DICompositeType *CTy,
+                                  uint32_t &TypeId) {
   auto Tag = CTy->getTag();
   if (Tag == dwarf::DW_TAG_structure_type || Tag == dwarf::DW_TAG_union_type) {
     // Handle forward declaration differently as it does not have members.
     if (CTy->isForwardDecl())
-      visitFwdDeclType(CTy, Tag == dwarf::DW_TAG_union_type);
+      visitFwdDeclType(CTy, Tag == dwarf::DW_TAG_union_type, TypeId);
     else
-      visitStructType(CTy, Tag == dwarf::DW_TAG_structure_type);
+      visitStructType(CTy, Tag == dwarf::DW_TAG_structure_type, TypeId);
   } else if (Tag == dwarf::DW_TAG_array_type)
-    visitArrayType(CTy);
+    visitArrayType(CTy, TypeId);
   else if (Tag == dwarf::DW_TAG_enumeration_type)
-    visitEnumType(CTy);
+    visitEnumType(CTy, TypeId);
 }
 
 /// Handle pointer, typedef, const, volatile, restrict and member types.
-void BTFDebug::visitDerivedType(const DIDerivedType *DTy) {
+void BTFDebug::visitDerivedType(const DIDerivedType *DTy, uint32_t &TypeId) {
   unsigned Tag = DTy->getTag();
 
   if (Tag == dwarf::DW_TAG_pointer_type || Tag == dwarf::DW_TAG_typedef ||
       Tag == dwarf::DW_TAG_const_type || Tag == dwarf::DW_TAG_volatile_type ||
       Tag == dwarf::DW_TAG_restrict_type) {
     auto TypeEntry = llvm::make_unique<BTFTypeDerived>(DTy, Tag);
-    addType(std::move(TypeEntry), DTy);
+    TypeId = addType(std::move(TypeEntry), DTy);
   } else if (Tag != dwarf::DW_TAG_member) {
     return;
   }
 
   // Visit base type of pointer, typedef, const, volatile, restrict or
   // struct/union member.
-  visitTypeEntry(DTy->getBaseType().resolve());
+  uint32_t TempTypeId = 0;
+  visitTypeEntry(DTy->getBaseType(), TempTypeId);
 }
 
-void BTFDebug::visitTypeEntry(const DIType *Ty) {
-  if (!Ty || DIToIdMap.find(Ty) != DIToIdMap.end())
+void BTFDebug::visitTypeEntry(const DIType *Ty, uint32_t &TypeId) {
+  if (!Ty || DIToIdMap.find(Ty) != DIToIdMap.end()) {
+    TypeId = DIToIdMap[Ty];
     return;
+  }
 
-  uint32_t TypeId;
   if (const auto *BTy = dyn_cast<DIBasicType>(Ty))
-    visitBasicType(BTy);
+    visitBasicType(BTy, TypeId);
   else if (const auto *STy = dyn_cast<DISubroutineType>(Ty))
     visitSubroutineType(STy, false, std::unordered_map<uint32_t, StringRef>(),
                         TypeId);
   else if (const auto *CTy = dyn_cast<DICompositeType>(Ty))
-    visitCompositeType(CTy);
+    visitCompositeType(CTy, TypeId);
   else if (const auto *DTy = dyn_cast<DIDerivedType>(Ty))
-    visitDerivedType(DTy);
+    visitDerivedType(DTy, TypeId);
   else
     llvm_unreachable("Unknown DIType");
+}
+
+void BTFDebug::visitTypeEntry(const DIType *Ty) {
+  uint32_t TypeId;
+  visitTypeEntry(Ty, TypeId);
 }
 
 /// Read file contents from the actual file or from the source
@@ -494,7 +545,7 @@ std::string BTFDebug::populateFileContent(const DISubprogram *SP) {
   auto File = SP->getFile();
   std::string FileName;
 
-  if (File->getDirectory().size())
+  if (!File->getFilename().startswith("/") && File->getDirectory().size())
     FileName = File->getDirectory().str() + "/" + File->getFilename().str();
   else
     FileName = File->getFilename();
@@ -507,16 +558,16 @@ std::string BTFDebug::populateFileContent(const DISubprogram *SP) {
   std::string Line;
   Content.push_back(Line); // Line 0 for empty string
 
+  std::unique_ptr<MemoryBuffer> Buf;
   auto Source = File->getSource();
-  if (Source) {
-    std::istringstream InputString(Source.getValue());
-    while (std::getline(InputString, Line))
-      Content.push_back(Line);
-  } else {
-    std::ifstream InputFile(FileName);
-    while (std::getline(InputFile, Line))
-      Content.push_back(Line);
-  }
+  if (Source)
+    Buf = MemoryBuffer::getMemBufferCopy(*Source);
+  else if (ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
+               MemoryBuffer::getFile(FileName))
+    Buf = std::move(*BufOrErr);
+  if (Buf)
+    for (line_iterator I(*Buf, false), E; I != E; ++I)
+      Content.push_back(*I);
 
   FileContent[FileName] = Content;
   return FileName;
@@ -547,6 +598,10 @@ void BTFDebug::emitCommonHeader() {
 }
 
 void BTFDebug::emitBTFSection() {
+  // Do not emit section if no types and only "" string.
+  if (!TypeEntries.size() && StringTable.getSize() == 1)
+    return;
+
   MCContext &Ctx = OS.getContext();
   OS.SwitchSection(Ctx.getELFSection(".BTF", ELF::SHT_PROGBITS, 0));
 
@@ -579,6 +634,10 @@ void BTFDebug::emitBTFSection() {
 }
 
 void BTFDebug::emitBTFExtSection() {
+  // Do not emit section if empty FuncInfoTable and LineInfoTable.
+  if (!FuncInfoTable.size() && !LineInfoTable.size())
+    return;
+
   MCContext &Ctx = OS.getContext();
   OS.SwitchSection(Ctx.getELFSection(".BTF.ext", ELF::SHT_PROGBITS, 0));
 
@@ -651,12 +710,12 @@ void BTFDebug::beginFunctionImpl(const MachineFunction *MF) {
   std::unordered_map<uint32_t, StringRef> FuncArgNames;
   for (const DINode *DN : SP->getRetainedNodes()) {
     if (const auto *DV = dyn_cast<DILocalVariable>(DN)) {
-      visitTypeEntry(DV->getType().resolve());
-
       // Collect function arguments for subprogram func type.
       uint32_t Arg = DV->getArg();
-      if (Arg)
+      if (Arg) {
+        visitTypeEntry(DV->getType());
         FuncArgNames[Arg] = DV->getName();
+      }
     }
   }
 
@@ -739,15 +798,74 @@ void BTFDebug::beginInstruction(const MachineInstr *MI) {
   PrevInstLoc = DL;
 }
 
-void BTFDebug::endModule() {
+void BTFDebug::processGlobals() {
   // Collect all types referenced by globals.
   const Module *M = MMI->getModule();
-  for (const DICompileUnit *CUNode : M->debug_compile_units()) {
-    for (const auto *GVE : CUNode->getGlobalVariables()) {
-      DIGlobalVariable *GV = GVE->getVariable();
-      visitTypeEntry(GV->getType().resolve());
+  for (const GlobalVariable &Global : M->globals()) {
+    // Ignore external globals for now.
+    if (!Global.hasInitializer() && Global.hasExternalLinkage())
+      continue;
+
+    SmallVector<DIGlobalVariableExpression *, 1> GVs;
+    Global.getDebugInfo(GVs);
+    uint32_t GVTypeId = 0;
+    for (auto *GVE : GVs) {
+      visitTypeEntry(GVE->getVariable()->getType(), GVTypeId);
+      break;
     }
+
+    // Only support the following globals:
+    //  . static variables
+    //  . non-static global variables with section attributes
+    // Essentially means:
+    //  . .bcc/.data/.rodata DataSec entities only contain static data
+    //  . Other DataSec entities contain static or initialized global data.
+    //    Initialized global data are mostly used for finding map key/value type
+    //    id's. Whether DataSec is readonly or not can be found from
+    //    corresponding ELF section flags.
+    auto Linkage = Global.getLinkage();
+    if (Linkage != GlobalValue::InternalLinkage &&
+        (Linkage != GlobalValue::ExternalLinkage || !Global.hasSection()))
+      continue;
+
+    uint32_t GVarInfo = Linkage == GlobalValue::ExternalLinkage
+                            ? BTF::VAR_GLOBAL_ALLOCATED
+                            : BTF::VAR_STATIC;
+    auto VarEntry =
+        llvm::make_unique<BTFKindVar>(Global.getName(), GVTypeId, GVarInfo);
+    uint32_t VarId = addType(std::move(VarEntry));
+
+    // Decide the section name.
+    std::string SecName;
+    if (Global.hasSection()) {
+      SecName = Global.getSection().str();
+    } else {
+      // data, bss, or readonly sections
+      if (Global.isConstant())
+        SecName += ".rodata";
+      else
+        SecName += Global.getInitializer()->isZeroValue() ? ".bss" : ".data";
+    }
+
+    // Find or create a DataSec
+    if (DataSecEntries.find(SecName) == DataSecEntries.end()) {
+      DataSecEntries[SecName] = llvm::make_unique<BTFKindDataSec>(Asm, SecName);
+    }
+
+    // Calculate symbol size
+    const DataLayout &DL = Global.getParent()->getDataLayout();
+    uint32_t Size = DL.getTypeAllocSize(Global.getType()->getElementType());
+
+    DataSecEntries[SecName]->addVar(VarId, Asm->getSymbol(&Global), Size);
   }
+
+  for (auto &DataSec : DataSecEntries)
+    addType(std::move(DataSec.second));
+}
+
+void BTFDebug::endModule() {
+  // Collect all global types/variables.
+  processGlobals();
 
   // Complete BTF type cross refereences.
   for (const auto &TypeEntry : TypeEntries)

@@ -1,9 +1,8 @@
 //===-- ASanStackFrameLayout.cpp - helper for AddressSanitizer ------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -63,7 +62,7 @@ ComputeASanStackFrameLayout(SmallVectorImpl<ASanStackVariableDescription> &Vars,
   for (size_t i = 0; i < NumVars; i++)
     Vars[i].Alignment = std::max(Vars[i].Alignment, kMinAlignment);
 
-  std::stable_sort(Vars.begin(), Vars.end(), CompareVars);
+  llvm::stable_sort(Vars, CompareVars);
 
   ASanStackFrameLayout Layout;
   Layout.Granularity = Granularity;

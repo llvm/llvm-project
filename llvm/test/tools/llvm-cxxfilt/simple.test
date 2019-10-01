@@ -1,4 +1,10 @@
 RUN: llvm-cxxfilt _Z1fi abc | FileCheck %s
+RUN: echo "Mangled _Z1fi and _Z3foov in string." | llvm-cxxfilt \
+RUN:   | FileCheck %s --check-prefix=CHECK-STRING
+RUN: llvm-cxxfilt "CLI remains mangled _Z1fi" \
+RUN:   | FileCheck %s --check-prefix=CHECK-MANGLED
 
 CHECK: f(int)
 CHECK-NEXT: abc
+CHECK-STRING: Mangled f(int) and foo() in string.
+CHECK-MANGLED: CLI remains mangled _Z1fi

@@ -6,7 +6,7 @@
 ; low_pc for the compile unit.
 ; CHECK-NOT: .rela.debug_ranges
 
-@llvm.global_ctors = appending global [1 x { i32, void ()* }] [{ i32, void ()* } { i32 0, void ()* @__msan_init }]
+@llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 0, void ()* @__msan_init, i8* null }]
 @str = private unnamed_addr constant [4 x i8] c"zzz\00"
 @__msan_retval_tls = external thread_local(initialexec) global [8 x i64]
 @__msan_retval_origin_tls = external thread_local(initialexec) global i32

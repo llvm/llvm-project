@@ -1,9 +1,8 @@
 //===- LiveIntervals.h - Live Interval Analysis -----------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -416,6 +415,15 @@ class VirtRegMap;
     void removeRegUnit(unsigned Unit) {
       delete RegUnitRanges[Unit];
       RegUnitRanges[Unit] = nullptr;
+    }
+
+    /// Remove associated live ranges for the register units associated with \p
+    /// Reg. Subsequent uses should rely on on-demand recomputation.  \note This
+    /// method can result in inconsistent liveness tracking if multiple phyical
+    /// registers share a regunit, and should be used cautiously.
+    void removeAllRegUnitsForPhysReg(unsigned Reg) {
+      for (MCRegUnitIterator Units(Reg, TRI); Units.isValid(); ++Units)
+        removeRegUnit(*Units);
     }
 
     /// Remove value numbers and related live segments starting at position

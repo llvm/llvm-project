@@ -45,7 +45,7 @@ attributes #0 = { nounwind "less-precise-fpmad"="false" "no-frame-pointer-elim"=
 !9 = !{i32 2, !"Debug Info Version", i32 3}
 !10 = !{i32 1, !"wchar_size", i32 4}
 !11 = !{i32 1, !"min_enum_size", i32 4}
-!12 = !{!"clang version 3.7.0 (http://llvm.org/git/clang.git 9b0abb9df531ef7928c8182120e1869affca17d5) (http://llvm.org/git/llvm.git b1e759524dd94f7ce1e24935daed8383927e96c1)"}
+!12 = !{!"clang version 3.7.0"}
 !13 = distinct !DISubprogram(name: "proc", scope: !3, file: !3, line: 4, type: !14, isLocal: false, isDefinition: true, scopeLine: 5, flags: DIFlagPrototyped, isOptimized: false, unit: !2, retainedNodes: !16)
 !14 = !DISubroutineType(types: !15)
 !15 = !{null}

@@ -1,9 +1,8 @@
 //===- CoverageMapping.h - Code coverage mapping support --------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -302,7 +301,12 @@ public:
 struct FunctionRecord {
   /// Raw function name.
   std::string Name;
-  /// Associated files.
+  /// Mapping from FileID (i.e. vector index) to filename. Used to support
+  /// macro expansions within a function in which the macro and function are
+  /// defined in separate files.
+  ///
+  /// TODO: Uniquing filenames across all function records may be a performance
+  /// optimization.
   std::vector<std::string> Filenames;
   /// Regions in the function along with their counts.
   std::vector<CountedRegion> CountedRegions;
@@ -509,6 +513,7 @@ public:
 class CoverageMapping {
   DenseMap<size_t, DenseSet<size_t>> RecordProvenance;
   std::vector<FunctionRecord> Functions;
+  DenseMap<size_t, SmallVector<unsigned, 0>> FilenameHash2RecordIndices;
   std::vector<std::pair<std::string, uint64_t>> FuncHashMismatches;
 
   CoverageMapping() = default;
@@ -516,6 +521,13 @@ class CoverageMapping {
   /// Add a function record corresponding to \p Record.
   Error loadFunctionRecord(const CoverageMappingRecord &Record,
                            IndexedInstrProfReader &ProfileReader);
+
+  /// Look up the indices for function records which are at least partially
+  /// defined in the specified file. This is guaranteed to return a superset of
+  /// such records: extra records not in the file may be included if there is
+  /// a hash collision on the filename. Clients must be robust to collisions.
+  ArrayRef<unsigned>
+  getImpreciseRecordIndicesForFilename(StringRef Filename) const;
 
 public:
   CoverageMapping(const CoverageMapping &) = delete;

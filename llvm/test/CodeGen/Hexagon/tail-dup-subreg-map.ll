@@ -14,10 +14,10 @@ target triple = "hexagon"
 
 declare hidden fastcc void @foo(%struct.0* noalias nocapture, i8 signext, i8 zeroext, i32, i64, i64) unnamed_addr #0
 
-define void @fred(%struct.0* noalias nocapture sret %agg.result, %struct.1* byval nocapture readonly align 8 %a) #1 {
+define void @fred(%struct.0* noalias nocapture sret %agg.result, %struct.1* byval nocapture readonly align 8 %a, i32 %a0) #1 {
 entry:
   %0 = load i64, i64* undef, align 8
-  switch i32 undef, label %if.else [
+  switch i32 %a0, label %if.else [
     i32 32767, label %if.then
     i32 0, label %if.then7
   ]

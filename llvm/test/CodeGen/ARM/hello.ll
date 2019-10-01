@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=arm-eabi %s -o /dev/null
 ; RUN: llc -mtriple=armv6-linux-gnueabi %s -o - | FileCheck %s
 
-; RUN: llc -mtriple=armv6-linux-gnu --disable-fp-elim %s -o - \
+; RUN: llc -mtriple=armv6-linux-gnu --frame-pointer=all %s -o - \
 ; RUN:  | FileCheck %s -check-prefix CHECK-FP-ELIM
 
 ; RUN: llc -mtriple=armv6-apple-ios %s -o - \

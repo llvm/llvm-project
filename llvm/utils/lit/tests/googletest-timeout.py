@@ -1,4 +1,4 @@
-# REQUIRES: python-psutil
+# REQUIRES: lit-max-individual-test-time
 
 # Check that the per test timeout is enforced when running GTest tests.
 #

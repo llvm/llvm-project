@@ -18,7 +18,7 @@
 # CHECK-NEXT: line 2: failed test output on stdout
 # CHECK: Command Output (stderr):
 # CHECK-NEXT: --
-# CHECK-NEXT: cat{{(\.exe)?}}: does-not-exist: No such file or directory
+# CHECK-NEXT: cat{{(\.exe)?}}: {{cannot open does-not-exist|does-not-exist: No such file or directory}}
 # CHECK: --
 
 # CHECK: FAIL: shtest-format :: external_shell/fail_with_bad_encoding.txt
@@ -80,7 +80,7 @@
 # CHECK: shtest-format :: external_shell/fail_with_bad_encoding.txt
 # CHECK: shtest-format :: fail.txt
 
-# CHECK: Expected Passes    : 7
+# CHECK: Expected Passes    : 8
 # CHECK: Expected Failures  : 4
 # CHECK: Unsupported Tests  : 5
 # CHECK: Unresolved Tests   : 3
@@ -90,7 +90,7 @@
 
 # XUNIT: <?xml version="1.0" encoding="UTF-8" ?>
 # XUNIT-NEXT: <testsuites>
-# XUNIT-NEXT: <testsuite name="shtest-format" tests="23" failures="7" skipped="5">
+# XUNIT-NEXT: <testsuite name="shtest-format" tests="24" failures="7" skipped="5">
 
 # XUNIT: <testcase classname="shtest-format.shtest-format" name="argv0.txt" time="{{[0-9]+\.[0-9]+}}"/>
 

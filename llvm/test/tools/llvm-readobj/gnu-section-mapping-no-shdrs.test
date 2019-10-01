@@ -1,0 +1,15 @@
+RUN: llvm-objcopy --strip-sections %p/Inputs/phdrs-elf.exe-x86_64 %t.o
+RUN: llvm-readelf --section-mapping %t.o | FileCheck %s
+CHECK:      Section to Segment mapping:
+CHECK-NEXT:   Segment Sections...
+CHECK-NEXT:    00 {{$}}
+CHECK-NEXT:    01 {{$}}
+CHECK-NEXT:    02 {{$}}
+CHECK-NEXT:    03 {{$}}
+CHECK-NEXT:    04 {{$}}
+CHECK-NEXT:    05 {{$}}
+CHECK-NEXT:    06 {{$}}
+CHECK-NEXT:    07 {{$}}
+CHECK-NEXT:    08 {{$}}
+CHECK-NEXT:    09 {{$}}
+CHECK-NOT: {{.}}

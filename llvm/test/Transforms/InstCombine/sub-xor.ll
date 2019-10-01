@@ -39,7 +39,7 @@ define i32 @test2(i32 %x) nounwind {
 define i32 @test3(i32 %x) {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 %x, 31
-; CHECK-NEXT:    [[ADD:%.*]] = sub nsw i32 73, [[AND]]
+; CHECK-NEXT:    [[ADD:%.*]] = sub nuw nsw i32 73, [[AND]]
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
   %and = and i32 %x, 31

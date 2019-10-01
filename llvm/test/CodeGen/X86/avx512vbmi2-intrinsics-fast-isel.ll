@@ -308,22 +308,22 @@ define <8 x i64> @test_mm512_mask_shldi_epi64(<8 x i64> %__S, i8 zeroext %__U, <
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    kmovd %eax, %k1
-; X86-NEXT:    vpshldq $127, %zmm2, %zmm1, %zmm0 {%k1}
+; X86-NEXT:    vpshldq $47, %zmm2, %zmm1, %zmm0 {%k1}
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm512_mask_shldi_epi64:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovd %edi, %k1
-; X64-NEXT:    vpshldq $127, %zmm2, %zmm1, %zmm0 {%k1}
+; X64-NEXT:    vpshldq $47, %zmm2, %zmm1, %zmm0 {%k1}
 ; X64-NEXT:    retq
 entry:
-  %0 = tail call <8 x i64> @llvm.x86.avx512.vpshld.q.512(<8 x i64> %__A, <8 x i64> %__B, i32 127)
+  %0 = tail call <8 x i64> @llvm.fshl.v8i64(<8 x i64> %__A, <8 x i64> %__B, <8 x i64> <i64 47, i64 47, i64 47, i64 47, i64 47, i64 47, i64 47, i64 47>)
   %1 = bitcast i8 %__U to <8 x i1>
   %2 = select <8 x i1> %1, <8 x i64> %0, <8 x i64> %__S
   ret <8 x i64> %2
 }
 
-declare <8 x i64> @llvm.x86.avx512.vpshld.q.512(<8 x i64>, <8 x i64>, i32)
+declare <8 x i64> @llvm.fshl.v8i64(<8 x i64>, <8 x i64>, <8 x i64>)
 
 define <8 x i64> @test_mm512_maskz_shldi_epi64(i8 zeroext %__U, <8 x i64> %__A, <8 x i64> %__B) {
 ; X86-LABEL: test_mm512_maskz_shldi_epi64:
@@ -339,7 +339,7 @@ define <8 x i64> @test_mm512_maskz_shldi_epi64(i8 zeroext %__U, <8 x i64> %__A, 
 ; X64-NEXT:    vpshldq $63, %zmm1, %zmm0, %zmm0 {%k1} {z}
 ; X64-NEXT:    retq
 entry:
-  %0 = tail call <8 x i64> @llvm.x86.avx512.vpshld.q.512(<8 x i64> %__A, <8 x i64> %__B, i32 63)
+  %0 = tail call <8 x i64> @llvm.fshl.v8i64(<8 x i64> %__A, <8 x i64> %__B, <8 x i64> <i64 63, i64 63, i64 63, i64 63, i64 63, i64 63, i64 63, i64 63>)
   %1 = bitcast i8 %__U to <8 x i1>
   %2 = select <8 x i1> %1, <8 x i64> %0, <8 x i64> zeroinitializer
   ret <8 x i64> %2
@@ -351,7 +351,7 @@ define <8 x i64> @test_mm512_shldi_epi64(<8 x i64> %__A, <8 x i64> %__B) {
 ; CHECK-NEXT:    vpshldq $31, %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
 entry:
-  %0 = tail call <8 x i64> @llvm.x86.avx512.vpshld.q.512(<8 x i64> %__A, <8 x i64> %__B, i32 31)
+  %0 = tail call <8 x i64> @llvm.fshl.v8i64(<8 x i64> %__A, <8 x i64> %__B, <8 x i64> <i64 31, i64 31, i64 31, i64 31, i64 31, i64 31, i64 31, i64 31>)
   ret <8 x i64> %0
 }
 
@@ -359,18 +359,18 @@ define <8 x i64> @test_mm512_mask_shldi_epi32(<8 x i64> %__S, i16 zeroext %__U, 
 ; X86-LABEL: test_mm512_mask_shldi_epi32:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
-; X86-NEXT:    vpshldd $127, %zmm2, %zmm1, %zmm0 {%k1}
+; X86-NEXT:    vpshldd $7, %zmm2, %zmm1, %zmm0 {%k1}
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm512_mask_shldi_epi32:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovd %edi, %k1
-; X64-NEXT:    vpshldd $127, %zmm2, %zmm1, %zmm0 {%k1}
+; X64-NEXT:    vpshldd $7, %zmm2, %zmm1, %zmm0 {%k1}
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__A to <16 x i32>
   %1 = bitcast <8 x i64> %__B to <16 x i32>
-  %2 = tail call <16 x i32> @llvm.x86.avx512.vpshld.d.512(<16 x i32> %0, <16 x i32> %1, i32 127)
+  %2 = tail call <16 x i32> @llvm.fshl.v16i32(<16 x i32> %0, <16 x i32> %1, <16 x i32> <i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>)
   %3 = bitcast <8 x i64> %__S to <16 x i32>
   %4 = bitcast i16 %__U to <16 x i1>
   %5 = select <16 x i1> %4, <16 x i32> %2, <16 x i32> %3
@@ -378,24 +378,24 @@ entry:
   ret <8 x i64> %6
 }
 
-declare <16 x i32> @llvm.x86.avx512.vpshld.d.512(<16 x i32>, <16 x i32>, i32)
+declare <16 x i32> @llvm.fshl.v16i32(<16 x i32>, <16 x i32>, <16 x i32>)
 
 define <8 x i64> @test_mm512_maskz_shldi_epi32(i16 zeroext %__U, <8 x i64> %__A, <8 x i64> %__B) {
 ; X86-LABEL: test_mm512_maskz_shldi_epi32:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
-; X86-NEXT:    vpshldd $63, %zmm1, %zmm0, %zmm0 {%k1} {z}
+; X86-NEXT:    vpshldd $15, %zmm1, %zmm0, %zmm0 {%k1} {z}
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm512_maskz_shldi_epi32:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovd %edi, %k1
-; X64-NEXT:    vpshldd $63, %zmm1, %zmm0, %zmm0 {%k1} {z}
+; X64-NEXT:    vpshldd $15, %zmm1, %zmm0, %zmm0 {%k1} {z}
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__A to <16 x i32>
   %1 = bitcast <8 x i64> %__B to <16 x i32>
-  %2 = tail call <16 x i32> @llvm.x86.avx512.vpshld.d.512(<16 x i32> %0, <16 x i32> %1, i32 63)
+  %2 = tail call <16 x i32> @llvm.fshl.v16i32(<16 x i32> %0, <16 x i32> %1, <16 x i32> <i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15>)
   %3 = bitcast i16 %__U to <16 x i1>
   %4 = select <16 x i1> %3, <16 x i32> %2, <16 x i32> zeroinitializer
   %5 = bitcast <16 x i32> %4 to <8 x i64>
@@ -410,7 +410,7 @@ define <8 x i64> @test_mm512_shldi_epi32(<8 x i64> %__A, <8 x i64> %__B) {
 entry:
   %0 = bitcast <8 x i64> %__A to <16 x i32>
   %1 = bitcast <8 x i64> %__B to <16 x i32>
-  %2 = tail call <16 x i32> @llvm.x86.avx512.vpshld.d.512(<16 x i32> %0, <16 x i32> %1, i32 31)
+  %2 = tail call <16 x i32> @llvm.fshl.v16i32(<16 x i32> %0, <16 x i32> %1, <16 x i32> <i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31>)
   %3 = bitcast <16 x i32> %2 to <8 x i64>
   ret <8 x i64> %3
 }
@@ -419,18 +419,18 @@ define <8 x i64> @test_mm512_mask_shldi_epi16(<8 x i64> %__S, i32 %__U, <8 x i64
 ; X86-LABEL: test_mm512_mask_shldi_epi16:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
-; X86-NEXT:    vpshldw $127, %zmm2, %zmm1, %zmm0 {%k1}
+; X86-NEXT:    vpshldw $3, %zmm2, %zmm1, %zmm0 {%k1}
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm512_mask_shldi_epi16:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovd %edi, %k1
-; X64-NEXT:    vpshldw $127, %zmm2, %zmm1, %zmm0 {%k1}
+; X64-NEXT:    vpshldw $3, %zmm2, %zmm1, %zmm0 {%k1}
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__A to <32 x i16>
   %1 = bitcast <8 x i64> %__B to <32 x i16>
-  %2 = tail call <32 x i16> @llvm.x86.avx512.vpshld.w.512(<32 x i16> %0, <32 x i16> %1, i32 127)
+  %2 = tail call <32 x i16> @llvm.fshl.v32i16(<32 x i16> %0, <32 x i16> %1, <32 x i16> <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>)
   %3 = bitcast <8 x i64> %__S to <32 x i16>
   %4 = bitcast i32 %__U to <32 x i1>
   %5 = select <32 x i1> %4, <32 x i16> %2, <32 x i16> %3
@@ -438,24 +438,24 @@ entry:
   ret <8 x i64> %6
 }
 
-declare <32 x i16> @llvm.x86.avx512.vpshld.w.512(<32 x i16>, <32 x i16>, i32)
+declare <32 x i16> @llvm.fshl.v32i16(<32 x i16>, <32 x i16>, <32 x i16>)
 
 define <8 x i64> @test_mm512_maskz_shldi_epi16(i32 %__U, <8 x i64> %__A, <8 x i64> %__B) {
 ; X86-LABEL: test_mm512_maskz_shldi_epi16:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
-; X86-NEXT:    vpshldw $63, %zmm1, %zmm0, %zmm0 {%k1} {z}
+; X86-NEXT:    vpshldw $7, %zmm1, %zmm0, %zmm0 {%k1} {z}
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm512_maskz_shldi_epi16:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovd %edi, %k1
-; X64-NEXT:    vpshldw $63, %zmm1, %zmm0, %zmm0 {%k1} {z}
+; X64-NEXT:    vpshldw $7, %zmm1, %zmm0, %zmm0 {%k1} {z}
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__A to <32 x i16>
   %1 = bitcast <8 x i64> %__B to <32 x i16>
-  %2 = tail call <32 x i16> @llvm.x86.avx512.vpshld.w.512(<32 x i16> %0, <32 x i16> %1, i32 63)
+  %2 = tail call <32 x i16> @llvm.fshl.v32i16(<32 x i16> %0, <32 x i16> %1, <32 x i16> <i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7>)
   %3 = bitcast i32 %__U to <32 x i1>
   %4 = select <32 x i1> %3, <32 x i16> %2, <32 x i16> zeroinitializer
   %5 = bitcast <32 x i16> %4 to <8 x i64>
@@ -465,12 +465,12 @@ entry:
 define <8 x i64> @test_mm512_shldi_epi16(<8 x i64> %__A, <8 x i64> %__B) {
 ; CHECK-LABEL: test_mm512_shldi_epi16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vpshldw $31, %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    vpshldw $15, %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
 entry:
   %0 = bitcast <8 x i64> %__A to <32 x i16>
   %1 = bitcast <8 x i64> %__B to <32 x i16>
-  %2 = tail call <32 x i16> @llvm.x86.avx512.vpshld.w.512(<32 x i16> %0, <32 x i16> %1, i32 31)
+  %2 = tail call <32 x i16> @llvm.fshl.v32i16(<32 x i16> %0, <32 x i16> %1, <32 x i16> <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>)
   %3 = bitcast <32 x i16> %2 to <8 x i64>
   ret <8 x i64> %3
 }
@@ -480,22 +480,22 @@ define <8 x i64> @test_mm512_mask_shrdi_epi64(<8 x i64> %__S, i8 zeroext %__U, <
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    kmovd %eax, %k1
-; X86-NEXT:    vpshrdq $127, %zmm2, %zmm1, %zmm0 {%k1}
+; X86-NEXT:    vpshrdq $47, %zmm2, %zmm1, %zmm0 {%k1}
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm512_mask_shrdi_epi64:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovd %edi, %k1
-; X64-NEXT:    vpshrdq $127, %zmm2, %zmm1, %zmm0 {%k1}
+; X64-NEXT:    vpshrdq $47, %zmm2, %zmm1, %zmm0 {%k1}
 ; X64-NEXT:    retq
 entry:
-  %0 = tail call <8 x i64> @llvm.x86.avx512.vpshrd.q.512(<8 x i64> %__A, <8 x i64> %__B, i32 127)
+  %0 = tail call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %__B, <8 x i64> %__A, <8 x i64> <i64 47, i64 47, i64 47, i64 47, i64 47, i64 47, i64 47, i64 47>)
   %1 = bitcast i8 %__U to <8 x i1>
   %2 = select <8 x i1> %1, <8 x i64> %0, <8 x i64> %__S
   ret <8 x i64> %2
 }
 
-declare <8 x i64> @llvm.x86.avx512.vpshrd.q.512(<8 x i64>, <8 x i64>, i32)
+declare <8 x i64> @llvm.fshr.v8i64(<8 x i64>, <8 x i64>, <8 x i64>)
 
 define <8 x i64> @test_mm512_maskz_shrdi_epi64(i8 zeroext %__U, <8 x i64> %__A, <8 x i64> %__B) {
 ; X86-LABEL: test_mm512_maskz_shrdi_epi64:
@@ -511,7 +511,7 @@ define <8 x i64> @test_mm512_maskz_shrdi_epi64(i8 zeroext %__U, <8 x i64> %__A, 
 ; X64-NEXT:    vpshrdq $63, %zmm1, %zmm0, %zmm0 {%k1} {z}
 ; X64-NEXT:    retq
 entry:
-  %0 = tail call <8 x i64> @llvm.x86.avx512.vpshrd.q.512(<8 x i64> %__A, <8 x i64> %__B, i32 63)
+  %0 = tail call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %__B, <8 x i64> %__A, <8 x i64> <i64 63, i64 63, i64 63, i64 63, i64 63, i64 63, i64 63, i64 63>)
   %1 = bitcast i8 %__U to <8 x i1>
   %2 = select <8 x i1> %1, <8 x i64> %0, <8 x i64> zeroinitializer
   ret <8 x i64> %2
@@ -523,7 +523,7 @@ define <8 x i64> @test_mm512_shrdi_epi64(<8 x i64> %__A, <8 x i64> %__B) {
 ; CHECK-NEXT:    vpshrdq $31, %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
 entry:
-  %0 = tail call <8 x i64> @llvm.x86.avx512.vpshrd.q.512(<8 x i64> %__A, <8 x i64> %__B, i32 31)
+  %0 = tail call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %__B, <8 x i64> %__A, <8 x i64> <i64 31, i64 31, i64 31, i64 31, i64 31, i64 31, i64 31, i64 31>)
   ret <8 x i64> %0
 }
 
@@ -531,18 +531,18 @@ define <8 x i64> @test_mm512_mask_shrdi_epi32(<8 x i64> %__S, i16 zeroext %__U, 
 ; X86-LABEL: test_mm512_mask_shrdi_epi32:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
-; X86-NEXT:    vpshrdd $127, %zmm2, %zmm1, %zmm0 {%k1}
+; X86-NEXT:    vpshrdd $7, %zmm2, %zmm1, %zmm0 {%k1}
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm512_mask_shrdi_epi32:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovd %edi, %k1
-; X64-NEXT:    vpshrdd $127, %zmm2, %zmm1, %zmm0 {%k1}
+; X64-NEXT:    vpshrdd $7, %zmm2, %zmm1, %zmm0 {%k1}
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__A to <16 x i32>
   %1 = bitcast <8 x i64> %__B to <16 x i32>
-  %2 = tail call <16 x i32> @llvm.x86.avx512.vpshrd.d.512(<16 x i32> %0, <16 x i32> %1, i32 127)
+  %2 = tail call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %1, <16 x i32> %0, <16 x i32> <i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>)
   %3 = bitcast <8 x i64> %__S to <16 x i32>
   %4 = bitcast i16 %__U to <16 x i1>
   %5 = select <16 x i1> %4, <16 x i32> %2, <16 x i32> %3
@@ -550,24 +550,24 @@ entry:
   ret <8 x i64> %6
 }
 
-declare <16 x i32> @llvm.x86.avx512.vpshrd.d.512(<16 x i32>, <16 x i32>, i32)
+declare <16 x i32> @llvm.fshr.v16i32(<16 x i32>, <16 x i32>, <16 x i32>)
 
 define <8 x i64> @test_mm512_maskz_shrdi_epi32(i16 zeroext %__U, <8 x i64> %__A, <8 x i64> %__B) {
 ; X86-LABEL: test_mm512_maskz_shrdi_epi32:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
-; X86-NEXT:    vpshrdd $63, %zmm1, %zmm0, %zmm0 {%k1} {z}
+; X86-NEXT:    vpshrdd $15, %zmm1, %zmm0, %zmm0 {%k1} {z}
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm512_maskz_shrdi_epi32:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovd %edi, %k1
-; X64-NEXT:    vpshrdd $63, %zmm1, %zmm0, %zmm0 {%k1} {z}
+; X64-NEXT:    vpshrdd $15, %zmm1, %zmm0, %zmm0 {%k1} {z}
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__A to <16 x i32>
   %1 = bitcast <8 x i64> %__B to <16 x i32>
-  %2 = tail call <16 x i32> @llvm.x86.avx512.vpshrd.d.512(<16 x i32> %0, <16 x i32> %1, i32 63)
+  %2 = tail call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %1, <16 x i32> %0, <16 x i32> <i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15>)
   %3 = bitcast i16 %__U to <16 x i1>
   %4 = select <16 x i1> %3, <16 x i32> %2, <16 x i32> zeroinitializer
   %5 = bitcast <16 x i32> %4 to <8 x i64>
@@ -582,7 +582,7 @@ define <8 x i64> @test_mm512_shrdi_epi32(<8 x i64> %__A, <8 x i64> %__B) {
 entry:
   %0 = bitcast <8 x i64> %__A to <16 x i32>
   %1 = bitcast <8 x i64> %__B to <16 x i32>
-  %2 = tail call <16 x i32> @llvm.x86.avx512.vpshrd.d.512(<16 x i32> %0, <16 x i32> %1, i32 31)
+  %2 = tail call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %1, <16 x i32> %0, <16 x i32> <i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31>)
   %3 = bitcast <16 x i32> %2 to <8 x i64>
   ret <8 x i64> %3
 }
@@ -591,18 +591,18 @@ define <8 x i64> @test_mm512_mask_shrdi_epi16(<8 x i64> %__S, i32 %__U, <8 x i64
 ; X86-LABEL: test_mm512_mask_shrdi_epi16:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
-; X86-NEXT:    vpshrdw $127, %zmm2, %zmm1, %zmm0 {%k1}
+; X86-NEXT:    vpshrdw $3, %zmm2, %zmm1, %zmm0 {%k1}
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm512_mask_shrdi_epi16:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovd %edi, %k1
-; X64-NEXT:    vpshrdw $127, %zmm2, %zmm1, %zmm0 {%k1}
+; X64-NEXT:    vpshrdw $3, %zmm2, %zmm1, %zmm0 {%k1}
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__A to <32 x i16>
   %1 = bitcast <8 x i64> %__B to <32 x i16>
-  %2 = tail call <32 x i16> @llvm.x86.avx512.vpshrd.w.512(<32 x i16> %0, <32 x i16> %1, i32 127)
+  %2 = tail call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %1, <32 x i16> %0, <32 x i16> <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>)
   %3 = bitcast <8 x i64> %__S to <32 x i16>
   %4 = bitcast i32 %__U to <32 x i1>
   %5 = select <32 x i1> %4, <32 x i16> %2, <32 x i16> %3
@@ -610,24 +610,24 @@ entry:
   ret <8 x i64> %6
 }
 
-declare <32 x i16> @llvm.x86.avx512.vpshrd.w.512(<32 x i16>, <32 x i16>, i32)
+declare <32 x i16> @llvm.fshr.v32i16(<32 x i16>, <32 x i16>, <32 x i16>)
 
 define <8 x i64> @test_mm512_maskz_shrdi_epi16(i32 %__U, <8 x i64> %__A, <8 x i64> %__B) {
 ; X86-LABEL: test_mm512_maskz_shrdi_epi16:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
-; X86-NEXT:    vpshrdw $63, %zmm1, %zmm0, %zmm0 {%k1} {z}
+; X86-NEXT:    vpshrdw $15, %zmm1, %zmm0, %zmm0 {%k1} {z}
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm512_maskz_shrdi_epi16:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovd %edi, %k1
-; X64-NEXT:    vpshrdw $63, %zmm1, %zmm0, %zmm0 {%k1} {z}
+; X64-NEXT:    vpshrdw $15, %zmm1, %zmm0, %zmm0 {%k1} {z}
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__A to <32 x i16>
   %1 = bitcast <8 x i64> %__B to <32 x i16>
-  %2 = tail call <32 x i16> @llvm.x86.avx512.vpshrd.w.512(<32 x i16> %0, <32 x i16> %1, i32 63)
+  %2 = tail call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %1, <32 x i16> %0, <32 x i16> <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>)
   %3 = bitcast i32 %__U to <32 x i1>
   %4 = select <32 x i1> %3, <32 x i16> %2, <32 x i16> zeroinitializer
   %5 = bitcast <32 x i16> %4 to <8 x i64>
@@ -637,12 +637,12 @@ entry:
 define <8 x i64> @test_mm512_shrdi_epi16(<8 x i64> %__A, <8 x i64> %__B) {
 ; CHECK-LABEL: test_mm512_shrdi_epi16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vpshrdw $31, %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    vpshrdw $15, %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
 entry:
   %0 = bitcast <8 x i64> %__A to <32 x i16>
   %1 = bitcast <8 x i64> %__B to <32 x i16>
-  %2 = tail call <32 x i16> @llvm.x86.avx512.vpshrd.w.512(<32 x i16> %0, <32 x i16> %1, i32 31)
+  %2 = tail call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %1, <32 x i16> %0, <32 x i16> <i16 31, i16 31, i16 31, i16 31, i16 31, i16 31, i16 31, i16 31, i16 31, i16 31, i16 31, i16 31, i16 31, i16 31, i16 31, i16 31, i16 31, i16 31, i16 31, i16 31, i16 31, i16 31, i16 31, i16 31, i16 31, i16 31, i16 31, i16 31, i16 31, i16 31, i16 31, i16 31>)
   %3 = bitcast <32 x i16> %2 to <8 x i64>
   ret <8 x i64> %3
 }
@@ -661,8 +661,10 @@ define <8 x i64> @test_mm512_mask_shldv_epi64(<8 x i64> %__S, i8 zeroext %__U, <
 ; X64-NEXT:    vpshldvq %zmm2, %zmm1, %zmm0 {%k1}
 ; X64-NEXT:    retq
 entry:
-  %0 = tail call <8 x i64> @llvm.x86.avx512.mask.vpshldv.q.512(<8 x i64> %__S, <8 x i64> %__A, <8 x i64> %__B, i8 %__U)
-  ret <8 x i64> %0
+  %0 = tail call <8 x i64> @llvm.fshl.v8i64(<8 x i64> %__S, <8 x i64> %__A, <8 x i64> %__B)
+  %1 = bitcast i8 %__U to <8 x i1>
+  %2 = select <8 x i1> %1, <8 x i64> %0, <8 x i64> %__S
+  ret <8 x i64> %2
 }
 
 define <8 x i64> @test_mm512_maskz_shldv_epi64(i8 zeroext %__U, <8 x i64> %__S, <8 x i64> %__A, <8 x i64> %__B) {
@@ -679,8 +681,10 @@ define <8 x i64> @test_mm512_maskz_shldv_epi64(i8 zeroext %__U, <8 x i64> %__S, 
 ; X64-NEXT:    vpshldvq %zmm2, %zmm1, %zmm0 {%k1} {z}
 ; X64-NEXT:    retq
 entry:
-  %0 = tail call <8 x i64> @llvm.x86.avx512.maskz.vpshldv.q.512(<8 x i64> %__S, <8 x i64> %__A, <8 x i64> %__B, i8 %__U)
-  ret <8 x i64> %0
+  %0 = tail call <8 x i64> @llvm.fshl.v8i64(<8 x i64> %__S, <8 x i64> %__A, <8 x i64> %__B)
+  %1 = bitcast i8 %__U to <8 x i1>
+  %2 = select <8 x i1> %1, <8 x i64> %0, <8 x i64> zeroinitializer
+  ret <8 x i64> %2
 }
 
 define <8 x i64> @test_mm512_shldv_epi64(<8 x i64> %__S, <8 x i64> %__A, <8 x i64> %__B) {
@@ -689,7 +693,7 @@ define <8 x i64> @test_mm512_shldv_epi64(<8 x i64> %__S, <8 x i64> %__A, <8 x i6
 ; CHECK-NEXT:    vpshldvq %zmm2, %zmm1, %zmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
 entry:
-  %0 = tail call <8 x i64> @llvm.x86.avx512.mask.vpshldv.q.512(<8 x i64> %__S, <8 x i64> %__A, <8 x i64> %__B, i8 -1)
+  %0 = tail call <8 x i64> @llvm.fshl.v8i64(<8 x i64> %__S, <8 x i64> %__A, <8 x i64> %__B)
   ret <8 x i64> %0
 }
 
@@ -709,9 +713,11 @@ entry:
   %0 = bitcast <8 x i64> %__S to <16 x i32>
   %1 = bitcast <8 x i64> %__A to <16 x i32>
   %2 = bitcast <8 x i64> %__B to <16 x i32>
-  %3 = tail call <16 x i32> @llvm.x86.avx512.mask.vpshldv.d.512(<16 x i32> %0, <16 x i32> %1, <16 x i32> %2, i16 %__U)
-  %4 = bitcast <16 x i32> %3 to <8 x i64>
-  ret <8 x i64> %4
+  %3 = tail call <16 x i32> @llvm.fshl.v16i32(<16 x i32> %0, <16 x i32> %1, <16 x i32> %2)
+  %4 = bitcast i16 %__U to <16 x i1>
+  %5 = select <16 x i1> %4, <16 x i32> %3, <16 x i32> %0
+  %6 = bitcast <16 x i32> %5 to <8 x i64>
+  ret <8 x i64> %6
 }
 
 define <8 x i64> @test_mm512_maskz_shldv_epi32(i16 zeroext %__U, <8 x i64> %__S, <8 x i64> %__A, <8 x i64> %__B) {
@@ -730,9 +736,11 @@ entry:
   %0 = bitcast <8 x i64> %__S to <16 x i32>
   %1 = bitcast <8 x i64> %__A to <16 x i32>
   %2 = bitcast <8 x i64> %__B to <16 x i32>
-  %3 = tail call <16 x i32> @llvm.x86.avx512.maskz.vpshldv.d.512(<16 x i32> %0, <16 x i32> %1, <16 x i32> %2, i16 %__U)
-  %4 = bitcast <16 x i32> %3 to <8 x i64>
-  ret <8 x i64> %4
+  %3 = tail call <16 x i32> @llvm.fshl.v16i32(<16 x i32> %0, <16 x i32> %1, <16 x i32> %2)
+  %4 = bitcast i16 %__U to <16 x i1>
+  %5 = select <16 x i1> %4, <16 x i32> %3, <16 x i32> zeroinitializer
+  %6 = bitcast <16 x i32> %5 to <8 x i64>
+  ret <8 x i64> %6
 }
 
 define <8 x i64> @test_mm512_shldv_epi32(<8 x i64> %__S, <8 x i64> %__A, <8 x i64> %__B) {
@@ -744,7 +752,7 @@ entry:
   %0 = bitcast <8 x i64> %__S to <16 x i32>
   %1 = bitcast <8 x i64> %__A to <16 x i32>
   %2 = bitcast <8 x i64> %__B to <16 x i32>
-  %3 = tail call <16 x i32> @llvm.x86.avx512.mask.vpshldv.d.512(<16 x i32> %0, <16 x i32> %1, <16 x i32> %2, i16 -1)
+  %3 = tail call <16 x i32> @llvm.fshl.v16i32(<16 x i32> %0, <16 x i32> %1, <16 x i32> %2)
   %4 = bitcast <16 x i32> %3 to <8 x i64>
   ret <8 x i64> %4
 }
@@ -765,9 +773,11 @@ entry:
   %0 = bitcast <8 x i64> %__S to <32 x i16>
   %1 = bitcast <8 x i64> %__A to <32 x i16>
   %2 = bitcast <8 x i64> %__B to <32 x i16>
-  %3 = tail call <32 x i16> @llvm.x86.avx512.mask.vpshldv.w.512(<32 x i16> %0, <32 x i16> %1, <32 x i16> %2, i32 %__U)
-  %4 = bitcast <32 x i16> %3 to <8 x i64>
-  ret <8 x i64> %4
+  %3 = tail call <32 x i16> @llvm.fshl.v32i16(<32 x i16> %0, <32 x i16> %1, <32 x i16> %2)
+  %4 = bitcast i32 %__U to <32 x i1>
+  %5 = select <32 x i1> %4, <32 x i16> %3, <32 x i16> %0
+  %6 = bitcast <32 x i16> %5 to <8 x i64>
+  ret <8 x i64> %6
 }
 
 define <8 x i64> @test_mm512_maskz_shldv_epi16(i32 %__U, <8 x i64> %__S, <8 x i64> %__A, <8 x i64> %__B) {
@@ -786,9 +796,11 @@ entry:
   %0 = bitcast <8 x i64> %__S to <32 x i16>
   %1 = bitcast <8 x i64> %__A to <32 x i16>
   %2 = bitcast <8 x i64> %__B to <32 x i16>
-  %3 = tail call <32 x i16> @llvm.x86.avx512.maskz.vpshldv.w.512(<32 x i16> %0, <32 x i16> %1, <32 x i16> %2, i32 %__U)
-  %4 = bitcast <32 x i16> %3 to <8 x i64>
-  ret <8 x i64> %4
+  %3 = tail call <32 x i16> @llvm.fshl.v32i16(<32 x i16> %0, <32 x i16> %1, <32 x i16> %2)
+  %4 = bitcast i32 %__U to <32 x i1>
+  %5 = select <32 x i1> %4, <32 x i16> %3, <32 x i16> zeroinitializer
+  %6 = bitcast <32 x i16> %5 to <8 x i64>
+  ret <8 x i64> %6
 }
 
 define <8 x i64> @test_mm512_shldv_epi16(<8 x i64> %__S, <8 x i64> %__A, <8 x i64> %__B) {
@@ -800,7 +812,7 @@ entry:
   %0 = bitcast <8 x i64> %__S to <32 x i16>
   %1 = bitcast <8 x i64> %__A to <32 x i16>
   %2 = bitcast <8 x i64> %__B to <32 x i16>
-  %3 = tail call <32 x i16> @llvm.x86.avx512.mask.vpshldv.w.512(<32 x i16> %0, <32 x i16> %1, <32 x i16> %2, i32 -1)
+  %3 = tail call <32 x i16> @llvm.fshl.v32i16(<32 x i16> %0, <32 x i16> %1, <32 x i16> %2)
   %4 = bitcast <32 x i16> %3 to <8 x i64>
   ret <8 x i64> %4
 }
@@ -819,8 +831,10 @@ define <8 x i64> @test_mm512_mask_shrdv_epi64(<8 x i64> %__S, i8 zeroext %__U, <
 ; X64-NEXT:    vpshrdvq %zmm2, %zmm1, %zmm0 {%k1}
 ; X64-NEXT:    retq
 entry:
-  %0 = tail call <8 x i64> @llvm.x86.avx512.mask.vpshrdv.q.512(<8 x i64> %__S, <8 x i64> %__A, <8 x i64> %__B, i8 %__U)
-  ret <8 x i64> %0
+  %0 = tail call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %__A, <8 x i64> %__S, <8 x i64> %__B)
+  %1 = bitcast i8 %__U to <8 x i1>
+  %2 = select <8 x i1> %1, <8 x i64> %0, <8 x i64> %__S
+  ret <8 x i64> %2
 }
 
 define <8 x i64> @test_mm512_maskz_shrdv_epi64(i8 zeroext %__U, <8 x i64> %__S, <8 x i64> %__A, <8 x i64> %__B) {
@@ -837,8 +851,10 @@ define <8 x i64> @test_mm512_maskz_shrdv_epi64(i8 zeroext %__U, <8 x i64> %__S, 
 ; X64-NEXT:    vpshrdvq %zmm2, %zmm1, %zmm0 {%k1} {z}
 ; X64-NEXT:    retq
 entry:
-  %0 = tail call <8 x i64> @llvm.x86.avx512.maskz.vpshrdv.q.512(<8 x i64> %__S, <8 x i64> %__A, <8 x i64> %__B, i8 %__U)
-  ret <8 x i64> %0
+  %0 = tail call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %__A, <8 x i64> %__S, <8 x i64> %__B)
+  %1 = bitcast i8 %__U to <8 x i1>
+  %2 = select <8 x i1> %1, <8 x i64> %0, <8 x i64> zeroinitializer
+  ret <8 x i64> %2
 }
 
 define <8 x i64> @test_mm512_shrdv_epi64(<8 x i64> %__S, <8 x i64> %__A, <8 x i64> %__B) {
@@ -847,7 +863,7 @@ define <8 x i64> @test_mm512_shrdv_epi64(<8 x i64> %__S, <8 x i64> %__A, <8 x i6
 ; CHECK-NEXT:    vpshrdvq %zmm2, %zmm1, %zmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
 entry:
-  %0 = tail call <8 x i64> @llvm.x86.avx512.mask.vpshrdv.q.512(<8 x i64> %__S, <8 x i64> %__A, <8 x i64> %__B, i8 -1)
+  %0 = tail call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %__A, <8 x i64> %__S, <8 x i64> %__B)
   ret <8 x i64> %0
 }
 
@@ -867,9 +883,11 @@ entry:
   %0 = bitcast <8 x i64> %__S to <16 x i32>
   %1 = bitcast <8 x i64> %__A to <16 x i32>
   %2 = bitcast <8 x i64> %__B to <16 x i32>
-  %3 = tail call <16 x i32> @llvm.x86.avx512.mask.vpshrdv.d.512(<16 x i32> %0, <16 x i32> %1, <16 x i32> %2, i16 %__U)
-  %4 = bitcast <16 x i32> %3 to <8 x i64>
-  ret <8 x i64> %4
+  %3 = tail call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %1, <16 x i32> %0, <16 x i32> %2)
+  %4 = bitcast i16 %__U to <16 x i1>
+  %5 = select <16 x i1> %4, <16 x i32> %3, <16 x i32> %0
+  %6 = bitcast <16 x i32> %5 to <8 x i64>
+  ret <8 x i64> %6
 }
 
 define <8 x i64> @test_mm512_maskz_shrdv_epi32(i16 zeroext %__U, <8 x i64> %__S, <8 x i64> %__A, <8 x i64> %__B) {
@@ -888,9 +906,11 @@ entry:
   %0 = bitcast <8 x i64> %__S to <16 x i32>
   %1 = bitcast <8 x i64> %__A to <16 x i32>
   %2 = bitcast <8 x i64> %__B to <16 x i32>
-  %3 = tail call <16 x i32> @llvm.x86.avx512.maskz.vpshrdv.d.512(<16 x i32> %0, <16 x i32> %1, <16 x i32> %2, i16 %__U)
-  %4 = bitcast <16 x i32> %3 to <8 x i64>
-  ret <8 x i64> %4
+  %3 = tail call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %1, <16 x i32> %0, <16 x i32> %2)
+  %4 = bitcast i16 %__U to <16 x i1>
+  %5 = select <16 x i1> %4, <16 x i32> %3, <16 x i32> zeroinitializer
+  %6 = bitcast <16 x i32> %5 to <8 x i64>
+  ret <8 x i64> %6
 }
 
 define <8 x i64> @test_mm512_shrdv_epi32(<8 x i64> %__S, <8 x i64> %__A, <8 x i64> %__B) {
@@ -902,7 +922,7 @@ entry:
   %0 = bitcast <8 x i64> %__S to <16 x i32>
   %1 = bitcast <8 x i64> %__A to <16 x i32>
   %2 = bitcast <8 x i64> %__B to <16 x i32>
-  %3 = tail call <16 x i32> @llvm.x86.avx512.mask.vpshrdv.d.512(<16 x i32> %0, <16 x i32> %1, <16 x i32> %2, i16 -1)
+  %3 = tail call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %1, <16 x i32> %0, <16 x i32> %2)
   %4 = bitcast <16 x i32> %3 to <8 x i64>
   ret <8 x i64> %4
 }
@@ -923,9 +943,11 @@ entry:
   %0 = bitcast <8 x i64> %__S to <32 x i16>
   %1 = bitcast <8 x i64> %__A to <32 x i16>
   %2 = bitcast <8 x i64> %__B to <32 x i16>
-  %3 = tail call <32 x i16> @llvm.x86.avx512.mask.vpshrdv.w.512(<32 x i16> %0, <32 x i16> %1, <32 x i16> %2, i32 %__U)
-  %4 = bitcast <32 x i16> %3 to <8 x i64>
-  ret <8 x i64> %4
+  %3 = tail call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %1, <32 x i16> %0, <32 x i16> %2)
+  %4 = bitcast i32 %__U to <32 x i1>
+  %5 = select <32 x i1> %4, <32 x i16> %3, <32 x i16> %0
+  %6 = bitcast <32 x i16> %5 to <8 x i64>
+  ret <8 x i64> %6
 }
 
 define <8 x i64> @test_mm512_maskz_shrdv_epi16(i32 %__U, <8 x i64> %__S, <8 x i64> %__A, <8 x i64> %__B) {
@@ -944,9 +966,11 @@ entry:
   %0 = bitcast <8 x i64> %__S to <32 x i16>
   %1 = bitcast <8 x i64> %__A to <32 x i16>
   %2 = bitcast <8 x i64> %__B to <32 x i16>
-  %3 = tail call <32 x i16> @llvm.x86.avx512.maskz.vpshrdv.w.512(<32 x i16> %0, <32 x i16> %1, <32 x i16> %2, i32 %__U)
-  %4 = bitcast <32 x i16> %3 to <8 x i64>
-  ret <8 x i64> %4
+  %3 = tail call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %1, <32 x i16> %0, <32 x i16> %2)
+  %4 = bitcast i32 %__U to <32 x i1>
+  %5 = select <32 x i1> %4, <32 x i16> %3, <32 x i16> zeroinitializer
+  %6 = bitcast <32 x i16> %5 to <8 x i64>
+  ret <8 x i64> %6
 }
 
 define <8 x i64> @test_mm512_shrdv_epi16(<8 x i64> %__S, <8 x i64> %__A, <8 x i64> %__B) {
@@ -958,7 +982,7 @@ entry:
   %0 = bitcast <8 x i64> %__S to <32 x i16>
   %1 = bitcast <8 x i64> %__A to <32 x i16>
   %2 = bitcast <8 x i64> %__B to <32 x i16>
-  %3 = tail call <32 x i16> @llvm.x86.avx512.mask.vpshrdv.w.512(<32 x i16> %0, <32 x i16> %1, <32 x i16> %2, i32 -1)
+  %3 = tail call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %1, <32 x i16> %0, <32 x i16> %2)
   %4 = bitcast <32 x i16> %3 to <8 x i64>
   ret <8 x i64> %4
 }
@@ -971,15 +995,3 @@ declare <32 x i16> @llvm.x86.avx512.mask.expand.w.512(<32 x i16>, <32 x i16>, i3
 declare <64 x i8> @llvm.x86.avx512.mask.expand.b.512(<64 x i8>, <64 x i8>, i64)
 declare <32 x i16> @llvm.masked.expandload.v32i16(i16*, <32 x i1>, <32 x i16>)
 declare <64 x i8> @llvm.masked.expandload.v64i8(i8*, <64 x i1>, <64 x i8>)
-declare <8 x i64> @llvm.x86.avx512.mask.vpshldv.q.512(<8 x i64>, <8 x i64>, <8 x i64>, i8)
-declare <8 x i64> @llvm.x86.avx512.maskz.vpshldv.q.512(<8 x i64>, <8 x i64>, <8 x i64>, i8)
-declare <16 x i32> @llvm.x86.avx512.mask.vpshldv.d.512(<16 x i32>, <16 x i32>, <16 x i32>, i16)
-declare <16 x i32> @llvm.x86.avx512.maskz.vpshldv.d.512(<16 x i32>, <16 x i32>, <16 x i32>, i16)
-declare <32 x i16> @llvm.x86.avx512.mask.vpshldv.w.512(<32 x i16>, <32 x i16>, <32 x i16>, i32)
-declare <32 x i16> @llvm.x86.avx512.maskz.vpshldv.w.512(<32 x i16>, <32 x i16>, <32 x i16>, i32)
-declare <8 x i64> @llvm.x86.avx512.mask.vpshrdv.q.512(<8 x i64>, <8 x i64>, <8 x i64>, i8)
-declare <8 x i64> @llvm.x86.avx512.maskz.vpshrdv.q.512(<8 x i64>, <8 x i64>, <8 x i64>, i8)
-declare <16 x i32> @llvm.x86.avx512.mask.vpshrdv.d.512(<16 x i32>, <16 x i32>, <16 x i32>, i16)
-declare <16 x i32> @llvm.x86.avx512.maskz.vpshrdv.d.512(<16 x i32>, <16 x i32>, <16 x i32>, i16)
-declare <32 x i16> @llvm.x86.avx512.mask.vpshrdv.w.512(<32 x i16>, <32 x i16>, <32 x i16>, i32)
-declare <32 x i16> @llvm.x86.avx512.maskz.vpshrdv.w.512(<32 x i16>, <32 x i16>, <32 x i16>, i32)

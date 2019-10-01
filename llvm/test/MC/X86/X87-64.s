@@ -31,7 +31,7 @@ faddl 64(%rdx,%rax)
 // CHECK: encoding: [0xdc,0x02]        
 faddl (%rdx) 
 
-// CHECK: faddp %st(4) 
+// CHECK: faddp %st, %st(4) 
 // CHECK: encoding: [0xde,0xc4]        
 faddp %st(4) 
 
@@ -59,11 +59,11 @@ fadds 64(%rdx,%rax)
 // CHECK: encoding: [0xd8,0x02]        
 fadds (%rdx) 
 
-// CHECK: fadd %st(0), %st(4) 
+// CHECK: fadd %st, %st(4) 
 // CHECK: encoding: [0xdc,0xc4]       
-fadd %st(0), %st(4) 
+fadd %st, %st(4) 
 
-// CHECK: fadd %st(4) 
+// CHECK: fadd %st(4), %st
 // CHECK: encoding: [0xd8,0xc4]        
 fadd %st(4) 
 
@@ -259,7 +259,7 @@ fdivl 64(%rdx,%rax)
 // CHECK: encoding: [0xdc,0x32]        
 fdivl (%rdx) 
 
-// CHECK: fdivp %st(4) 
+// CHECK: fdivp %st, %st(4) 
 // CHECK: encoding: [0xde,0xf4]        
 fdivp %st(4) 
 
@@ -287,7 +287,7 @@ fdivrl 64(%rdx,%rax)
 // CHECK: encoding: [0xdc,0x3a]        
 fdivrl (%rdx) 
 
-// CHECK: fdivrp %st(4) 
+// CHECK: fdivrp %st, %st(4) 
 // CHECK: encoding: [0xde,0xfc]        
 fdivrp %st(4) 
 
@@ -315,11 +315,11 @@ fdivrs 64(%rdx,%rax)
 // CHECK: encoding: [0xd8,0x3a]        
 fdivrs (%rdx) 
 
-// CHECK: fdivr %st(0), %st(4) 
+// CHECK: fdivr %st, %st(4) 
 // CHECK: encoding: [0xdc,0xfc]       
-fdivr %st(0), %st(4) 
+fdivr %st, %st(4) 
 
-// CHECK: fdivr %st(4) 
+// CHECK: fdivr %st(4), %st
 // CHECK: encoding: [0xd8,0xfc]        
 fdivr %st(4) 
 
@@ -347,11 +347,11 @@ fdivs 64(%rdx,%rax)
 // CHECK: encoding: [0xd8,0x32]        
 fdivs (%rdx) 
 
-// CHECK: fdiv %st(0), %st(4) 
+// CHECK: fdiv %st, %st(4) 
 // CHECK: encoding: [0xdc,0xf4]       
-fdiv %st(0), %st(4) 
+fdiv %st, %st(4) 
 
-// CHECK: fdiv %st(4) 
+// CHECK: fdiv %st(4), %st
 // CHECK: encoding: [0xd8,0xf4]        
 fdiv %st(4) 
 
@@ -1119,7 +1119,7 @@ fmull 64(%rdx,%rax)
 // CHECK: encoding: [0xdc,0x0a]        
 fmull (%rdx) 
 
-// CHECK: fmulp %st(4) 
+// CHECK: fmulp %st, %st(4) 
 // CHECK: encoding: [0xde,0xcc]        
 fmulp %st(4) 
 
@@ -1147,9 +1147,9 @@ fmuls 64(%rdx,%rax)
 // CHECK: encoding: [0xd8,0x0a]        
 fmuls (%rdx) 
 
-// CHECK: fmul %st(0), %st(4) 
+// CHECK: fmul %st, %st(4) 
 // CHECK: encoding: [0xdc,0xcc]       
-fmul %st(0), %st(4) 
+fmul %st, %st(4) 
 
 // CHECK: fmul %st(4) 
 // CHECK: encoding: [0xd8,0xcc]        
@@ -1479,7 +1479,7 @@ fsubl 64(%rdx,%rax)
 // CHECK: encoding: [0xdc,0x22]        
 fsubl (%rdx) 
 
-// CHECK: fsubp %st(4) 
+// CHECK: fsubp %st, %st(4) 
 // CHECK: encoding: [0xde,0xe4]        
 fsubp %st(4) 
 
@@ -1507,7 +1507,7 @@ fsubrl 64(%rdx,%rax)
 // CHECK: encoding: [0xdc,0x2a]        
 fsubrl (%rdx) 
 
-// CHECK: fsubrp %st(4) 
+// CHECK: fsubrp %st, %st(4) 
 // CHECK: encoding: [0xde,0xec]        
 fsubrp %st(4) 
 
@@ -1535,11 +1535,11 @@ fsubrs 64(%rdx,%rax)
 // CHECK: encoding: [0xd8,0x2a]        
 fsubrs (%rdx) 
 
-// CHECK: fsubr %st(0), %st(4) 
+// CHECK: fsubr %st, %st(4) 
 // CHECK: encoding: [0xdc,0xec]       
-fsubr %st(0), %st(4) 
+fsubr %st, %st(4) 
 
-// CHECK: fsubr %st(4) 
+// CHECK: fsubr %st(4), %st
 // CHECK: encoding: [0xd8,0xec]        
 fsubr %st(4) 
 
@@ -1567,11 +1567,11 @@ fsubs 64(%rdx,%rax)
 // CHECK: encoding: [0xd8,0x22]        
 fsubs (%rdx) 
 
-// CHECK: fsub %st(0), %st(4) 
+// CHECK: fsub %st, %st(4) 
 // CHECK: encoding: [0xdc,0xe4]       
-fsub %st(0), %st(4) 
+fsub %st, %st(4) 
 
-// CHECK: fsub %st(4) 
+// CHECK: fsub %st(4), %st
 // CHECK: encoding: [0xd8,0xe4]        
 fsub %st(4) 
 

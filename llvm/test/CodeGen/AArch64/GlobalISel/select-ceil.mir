@@ -1,5 +1,6 @@
 # RUN: llc -verify-machineinstrs -mtriple aarch64--- \
-# RUN: -run-pass=instruction-select -global-isel %s -o - | FileCheck %s
+# RUN: -run-pass=instruction-select -mattr=+fullfp16 -global-isel %s -o - \
+# RUN: | FileCheck %s
 ...
 ---
 name:            ceil_float
@@ -89,5 +90,41 @@ body:             |
     %0:fpr(<2 x s64>) = COPY $q0
     %1:fpr(<2 x s64>) = G_FCEIL %0
     $q0 = COPY %1(<2 x s64>)
+
+...
+---
+name:            ceil_v4f16
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: fpr }
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name:            ceil_v4f16
+    ; CHECK: %{{[0-9]+}}:fpr64 = FRINTPv4f16 %{{[0-9]+}}
+    liveins: $d0
+    %0:fpr(<4 x s16>) = COPY $d0
+    %1:fpr(<4 x s16>) = G_FCEIL %0
+    $d0 = COPY %1(<4 x s16>)
+
+...
+---
+name:            ceil_v8f16
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: fpr }
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name:            ceil_v8f16
+    ; CHECK: %{{[0-9]+}}:fpr128 = FRINTPv8f16 %{{[0-9]+}}
+    liveins: $q0
+    %0:fpr(<8 x s16>) = COPY $q0
+    %1:fpr(<8 x s16>) = G_FCEIL %0
+    $q0 = COPY %1(<8 x s16>)
 
 ...

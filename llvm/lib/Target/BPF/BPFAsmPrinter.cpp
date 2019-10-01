@@ -1,9 +1,8 @@
 //===-- BPFAsmPrinter.cpp - BPF LLVM assembly writer ----------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -17,7 +16,8 @@
 #include "BPFMCInstLower.h"
 #include "BPFTargetMachine.h"
 #include "BTFDebug.h"
-#include "InstPrinter/BPFInstPrinter.h"
+#include "MCTargetDesc/BPFInstPrinter.h"
+#include "TargetInfo/BPFTargetInfo.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -44,11 +44,9 @@ public:
   bool doInitialization(Module &M) override;
   void printOperand(const MachineInstr *MI, int OpNum, raw_ostream &O);
   bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                       unsigned AsmVariant, const char *ExtraCode,
-                       raw_ostream &O) override;
+                       const char *ExtraCode, raw_ostream &O) override;
   bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNum,
-                             unsigned AsmVariant, const char *ExtraCode,
-                             raw_ostream &O) override;
+                             const char *ExtraCode, raw_ostream &O) override;
 
   void EmitInstruction(const MachineInstr *MI) override;
 };
@@ -57,10 +55,10 @@ public:
 bool BPFAsmPrinter::doInitialization(Module &M) {
   AsmPrinter::doInitialization(M);
 
-  if (MAI->doesSupportDebugInformation()) {
-    Handlers.push_back(HandlerInfo(new BTFDebug(this), "emit",
-                                   "Debug Info Emission", "BTF",
-                                   "BTF Emission"));
+  // Only emit BTF when debuginfo available.
+  if (MAI->doesSupportDebugInformation() && !empty(M.debug_compile_units())) {
+    Handlers.emplace_back(llvm::make_unique<BTFDebug>(this), "emit",
+                          "Debug Info Emission", "BTF", "BTF Emission");
   }
 
   return false;
@@ -105,18 +103,16 @@ void BPFAsmPrinter::printOperand(const MachineInstr *MI, int OpNum,
 }
 
 bool BPFAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                                    unsigned /*AsmVariant*/,
                                     const char *ExtraCode, raw_ostream &O) {
   if (ExtraCode && ExtraCode[0])
-    return true; // BPF does not have special modifiers
+    return AsmPrinter::PrintAsmOperand(MI, OpNo, ExtraCode, O);
 
   printOperand(MI, OpNo, O);
   return false;
 }
 
 bool BPFAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
-                                          unsigned OpNum, unsigned AsmVariant,
-                                          const char *ExtraCode,
+                                          unsigned OpNum, const char *ExtraCode,
                                           raw_ostream &O) {
   assert(OpNum + 1 < MI->getNumOperands() && "Insufficient operands");
   const MachineOperand &BaseMO = MI->getOperand(OpNum);

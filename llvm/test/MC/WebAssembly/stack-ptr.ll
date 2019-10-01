@@ -19,5 +19,5 @@ entry:
 ; CHECK:         GlobalMutable:   true
 ; CHECK:   - Type:            CODE
 ; CHECK:     Relocations:
-; CHECK:       - Type:            R_WEBASSEMBLY_GLOBAL_INDEX_LEB
+; CHECK:       - Type:            R_WASM_GLOBAL_INDEX_LEB
 ; CHECK:         Index:           0

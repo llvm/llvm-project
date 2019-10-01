@@ -7,7 +7,7 @@
 
 define float @undef1() {
 ; CHECK-LABEL: @undef1(
-; CHECK-NEXT:    ret float fadd (float bitcast (i32 ptrtoint (i32* @g to i32) to float), float fadd (float bitcast (i32 ptrtoint (i32* @g to i32) to float), float fadd (float fsub (float -0.000000e+00, float bitcast (i32 ptrtoint (i32* @g to i32) to float)), float fsub (float -0.000000e+00, float bitcast (i32 ptrtoint (i32* @g to i32) to float)))))
+; CHECK-NEXT:    ret float fadd (float bitcast (i32 ptrtoint (i32* @g to i32) to float), float fadd (float bitcast (i32 ptrtoint (i32* @g to i32) to float), float fadd (float fneg (float bitcast (i32 ptrtoint (i32* @g to i32) to float)), float fneg (float bitcast (i32 ptrtoint (i32* @g to i32) to float)))))
 ;
   %t0 = fadd fast float bitcast (i32 ptrtoint (i32* @g to i32) to float), bitcast (i32 ptrtoint (i32* @g to i32) to float)
   %t1 = fsub fast float bitcast (i32 ptrtoint (i32* @g to i32) to float), %t0

@@ -70,7 +70,7 @@ entry:
 !llvm.module.flags = !{!22, !23, !24}
 !llvm.ident = !{!25}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.9.0 (https://github.com/llvm-mirror/clang 89dda3855cda574f355e6defa1d77bdae5053994) (llvm/trunk 257891)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.9.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
 !1 = !DIFile(filename: "<stdin>", directory: "/home/ubuntu/bugs")
 !2 = !{}
 !4 = distinct !DISubprogram(name: "parse_config_file", scope: !5, file: !5, line: 22, type: !6, isLocal: false, isDefinition: true, scopeLine: 23, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !9)
@@ -94,7 +94,7 @@ entry:
 !22 = !{i32 2, !"Debug Info Version", i32 3}
 !23 = !{i32 1, !"wchar_size", i32 4}
 !24 = !{i32 1, !"min_enum_size", i32 4}
-!25 = !{!"clang version 3.9.0 (https://github.com/llvm-mirror/clang 89dda3855cda574f355e6defa1d77bdae5053994) (llvm/trunk 257891)"}
+!25 = !{!"clang version 3.9.0"}
 !26 = !DIExpression()
 !27 = !DILocation(line: 11, scope: !11, inlinedAt: !28)
 !28 = distinct !DILocation(line: 26, scope: !4)

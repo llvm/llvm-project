@@ -45,15 +45,15 @@ define void @test_256_load(double* nocapture %d, float* nocapture %f, <4 x i64>*
 ; CHECK_O0-NEXT:    movq %rsi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK_O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK_O0-NEXT:    callq dummy
-; CHECK_O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
+; CHECK_O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
 ; CHECK_O0-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
-; CHECK_O0-NEXT:    vmovapd %ymm0, (%rdx)
-; CHECK_O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; CHECK_O0-NEXT:    vmovapd %ymm0, (%rax)
+; CHECK_O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
 ; CHECK_O0-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm1 # 32-byte Reload
-; CHECK_O0-NEXT:    vmovaps %ymm1, (%rsi)
-; CHECK_O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi # 8-byte Reload
+; CHECK_O0-NEXT:    vmovaps %ymm1, (%rcx)
+; CHECK_O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
 ; CHECK_O0-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm2 # 32-byte Reload
-; CHECK_O0-NEXT:    vmovdqa %ymm2, (%rdi)
+; CHECK_O0-NEXT:    vmovdqa %ymm2, (%rdx)
 ; CHECK_O0-NEXT:    addq $152, %rsp
 ; CHECK_O0-NEXT:    vzeroupper
 ; CHECK_O0-NEXT:    retq
@@ -85,11 +85,6 @@ define <8 x float> @mov00(<8 x float> %v, float * %ptr) nounwind {
 ; CHECK_O0-LABEL: mov00:
 ; CHECK_O0:       # %bb.0:
 ; CHECK_O0-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK_O0-NEXT:    # implicit-def: $ymm1
-; CHECK_O0-NEXT:    vmovaps %xmm0, %xmm1
-; CHECK_O0-NEXT:    vmovaps %xmm1, %xmm0
-; CHECK_O0-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; CHECK_O0-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3]
 ; CHECK_O0-NEXT:    # kill: def $ymm0 killed $xmm0
 ; CHECK_O0-NEXT:    retq
   %val = load float, float* %ptr
@@ -106,11 +101,6 @@ define <4 x double> @mov01(<4 x double> %v, double * %ptr) nounwind {
 ; CHECK_O0-LABEL: mov01:
 ; CHECK_O0:       # %bb.0:
 ; CHECK_O0-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; CHECK_O0-NEXT:    # implicit-def: $ymm1
-; CHECK_O0-NEXT:    vmovaps %xmm0, %xmm1
-; CHECK_O0-NEXT:    vmovaps %xmm1, %xmm0
-; CHECK_O0-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; CHECK_O0-NEXT:    vblendpd {{.*#+}} xmm0 = xmm0[0],xmm2[1]
 ; CHECK_O0-NEXT:    # kill: def $ymm0 killed $xmm0
 ; CHECK_O0-NEXT:    retq
   %val = load double, double* %ptr
@@ -194,6 +184,28 @@ define void @double_save(<4 x i32> %A, <4 x i32> %B, <8 x i32>* %P) nounwind ssp
   ret void
 }
 
+define void @double_save_volatile(<4 x i32> %A, <4 x i32> %B, <8 x i32>* %P) nounwind {
+; CHECK-LABEL: double_save_volatile:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; CHECK-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; CHECK-NEXT:    vmovups %ymm0, (%rdi)
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+;
+; CHECK_O0-LABEL: double_save_volatile:
+; CHECK_O0:       # %bb.0:
+; CHECK_O0-NEXT:    # implicit-def: $ymm2
+; CHECK_O0-NEXT:    vmovaps %xmm0, %xmm2
+; CHECK_O0-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm2
+; CHECK_O0-NEXT:    vmovdqu %ymm2, (%rdi)
+; CHECK_O0-NEXT:    vzeroupper
+; CHECK_O0-NEXT:    retq
+  %Z = shufflevector <4 x i32>%A, <4 x i32>%B, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  store volatile <8 x i32> %Z, <8 x i32>* %P, align 16
+  ret void
+}
+
 declare void @llvm.x86.avx.maskstore.ps.256(i8*, <8 x i32>, <8 x float>) nounwind
 
 define void @f_f() nounwind {
@@ -201,38 +213,38 @@ define void @f_f() nounwind {
 ; CHECK:       # %bb.0: # %allocas
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    jne .LBB8_2
+; CHECK-NEXT:    jne .LBB9_2
 ; CHECK-NEXT:  # %bb.1: # %cif_mask_all
-; CHECK-NEXT:  .LBB8_2: # %cif_mask_mixed
+; CHECK-NEXT:  .LBB9_2: # %cif_mask_mixed
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    jne .LBB8_4
+; CHECK-NEXT:    jne .LBB9_4
 ; CHECK-NEXT:  # %bb.3: # %cif_mixed_test_all
 ; CHECK-NEXT:    movl $-1, %eax
 ; CHECK-NEXT:    vmovd %eax, %xmm0
 ; CHECK-NEXT:    vmaskmovps %ymm0, %ymm0, (%rax)
-; CHECK-NEXT:  .LBB8_4: # %cif_mixed_test_any_check
+; CHECK-NEXT:  .LBB9_4: # %cif_mixed_test_any_check
 ;
 ; CHECK_O0-LABEL: f_f:
 ; CHECK_O0:       # %bb.0: # %allocas
 ; CHECK_O0-NEXT:    # implicit-def: $al
 ; CHECK_O0-NEXT:    testb $1, %al
-; CHECK_O0-NEXT:    jne .LBB8_1
-; CHECK_O0-NEXT:    jmp .LBB8_2
-; CHECK_O0-NEXT:  .LBB8_1: # %cif_mask_all
-; CHECK_O0-NEXT:  .LBB8_2: # %cif_mask_mixed
+; CHECK_O0-NEXT:    jne .LBB9_1
+; CHECK_O0-NEXT:    jmp .LBB9_2
+; CHECK_O0-NEXT:  .LBB9_1: # %cif_mask_all
+; CHECK_O0-NEXT:  .LBB9_2: # %cif_mask_mixed
 ; CHECK_O0-NEXT:    # implicit-def: $al
 ; CHECK_O0-NEXT:    testb $1, %al
-; CHECK_O0-NEXT:    jne .LBB8_3
-; CHECK_O0-NEXT:    jmp .LBB8_4
-; CHECK_O0-NEXT:  .LBB8_3: # %cif_mixed_test_all
+; CHECK_O0-NEXT:    jne .LBB9_3
+; CHECK_O0-NEXT:    jmp .LBB9_4
+; CHECK_O0-NEXT:  .LBB9_3: # %cif_mixed_test_all
 ; CHECK_O0-NEXT:    movl $-1, %eax
 ; CHECK_O0-NEXT:    vmovd %eax, %xmm0
 ; CHECK_O0-NEXT:    vmovaps %xmm0, %xmm1
 ; CHECK_O0-NEXT:    # implicit-def: $rcx
 ; CHECK_O0-NEXT:    # implicit-def: $ymm2
 ; CHECK_O0-NEXT:    vmaskmovps %ymm2, %ymm1, (%rcx)
-; CHECK_O0-NEXT:  .LBB8_4: # %cif_mixed_test_any_check
+; CHECK_O0-NEXT:  .LBB9_4: # %cif_mixed_test_any_check
 allocas:
   br i1 undef, label %cif_mask_all, label %cif_mask_mixed
 
@@ -255,8 +267,8 @@ define void @add8i32(<8 x i32>* %ret, <8 x i32>* %bp) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups (%rsi), %xmm0
 ; CHECK-NEXT:    vmovups 16(%rsi), %xmm1
-; CHECK-NEXT:    vmovups %xmm0, (%rdi)
 ; CHECK-NEXT:    vmovups %xmm1, 16(%rdi)
+; CHECK-NEXT:    vmovups %xmm0, (%rdi)
 ; CHECK-NEXT:    retq
 ;
 ; CHECK_O0-LABEL: add8i32:
@@ -300,8 +312,8 @@ define void @add4i64a16(<4 x i64>* %ret, <4 x i64>* %bp) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovaps (%rsi), %xmm0
 ; CHECK-NEXT:    vmovaps 16(%rsi), %xmm1
-; CHECK-NEXT:    vmovaps %xmm0, (%rdi)
 ; CHECK-NEXT:    vmovaps %xmm1, 16(%rdi)
+; CHECK-NEXT:    vmovaps %xmm0, (%rdi)
 ; CHECK-NEXT:    retq
 ;
 ; CHECK_O0-LABEL: add4i64a16:

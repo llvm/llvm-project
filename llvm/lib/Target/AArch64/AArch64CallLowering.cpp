@@ -1,9 +1,8 @@
 //===--- AArch64CallLowering.cpp - Call lowering --------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -44,6 +43,8 @@
 #include <cassert>
 #include <cstdint>
 #include <iterator>
+
+#define DEBUG_TYPE "aarch64-call-lowering"
 
 using namespace llvm;
 
@@ -86,9 +87,10 @@ struct IncomingArgHandler : public CallLowering::ValueHandler {
 
   void assignValueToAddress(unsigned ValVReg, unsigned Addr, uint64_t Size,
                             MachinePointerInfo &MPO, CCValAssign &VA) override {
+    // FIXME: Get alignment
     auto MMO = MIRBuilder.getMF().getMachineMemOperand(
         MPO, MachineMemOperand::MOLoad | MachineMemOperand::MOInvariant, Size,
-        0);
+        1);
     MIRBuilder.buildLoad(ValVReg, Addr, *MMO);
   }
 
@@ -96,6 +98,8 @@ struct IncomingArgHandler : public CallLowering::ValueHandler {
   /// parameters (it's a basic-block live-in), and a call instruction
   /// (it's an implicit-def of the BL).
   virtual void markPhysRegUsed(unsigned PhysReg) = 0;
+
+  bool isArgumentHandler() const override { return true; }
 
   uint64_t StackUsed;
 };
@@ -162,7 +166,7 @@ struct OutgoingArgHandler : public CallLowering::ValueHandler {
                     .getReg();
     }
     auto MMO = MIRBuilder.getMF().getMachineMemOperand(
-        MPO, MachineMemOperand::MOStore, Size, 0);
+        MPO, MachineMemOperand::MOStore, Size, 1);
     MIRBuilder.buildStore(ValVReg, Addr, *MMO);
   }
 
@@ -228,7 +232,8 @@ void AArch64CallLowering::splitToValueTypes(
 
 bool AArch64CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
                                       const Value *Val,
-                                      ArrayRef<unsigned> VRegs) const {
+                                      ArrayRef<unsigned> VRegs,
+                                      unsigned SwiftErrorVReg) const {
   auto MIB = MIRBuilder.buildInstrNoInsert(AArch64::RET_ReallyLR);
   assert(((Val && !VRegs.empty()) || (!Val && VRegs.empty())) &&
          "Return value without a vreg");
@@ -250,18 +255,83 @@ bool AArch64CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
            "For each split Type there should be exactly one VReg.");
 
     SmallVector<ArgInfo, 8> SplitArgs;
+    CallingConv::ID CC = F.getCallingConv();
+
     for (unsigned i = 0; i < SplitEVTs.size(); ++i) {
-      // We zero-extend i1s to i8.
-      unsigned CurVReg = VRegs[i];
-      if (MRI.getType(VRegs[i]).getSizeInBits() == 1) {
-        CurVReg = MIRBuilder.buildZExt(LLT::scalar(8), CurVReg)
-                       ->getOperand(0)
-                       .getReg();
+      if (TLI.getNumRegistersForCallingConv(Ctx, CC, SplitEVTs[i]) > 1) {
+        LLVM_DEBUG(dbgs() << "Can't handle extended arg types which need split");
+        return false;
       }
 
+      unsigned CurVReg = VRegs[i];
       ArgInfo CurArgInfo = ArgInfo{CurVReg, SplitEVTs[i].getTypeForEVT(Ctx)};
       setArgFlags(CurArgInfo, AttributeList::ReturnIndex, DL, F);
-      splitToValueTypes(CurArgInfo, SplitArgs, DL, MRI, F.getCallingConv(),
+
+      // i1 is a special case because SDAG i1 true is naturally zero extended
+      // when widened using ANYEXT. We need to do it explicitly here.
+      if (MRI.getType(CurVReg).getSizeInBits() == 1) {
+        CurVReg = MIRBuilder.buildZExt(LLT::scalar(8), CurVReg).getReg(0);
+      } else {
+        // Some types will need extending as specified by the CC.
+        MVT NewVT = TLI.getRegisterTypeForCallingConv(Ctx, CC, SplitEVTs[i]);
+        if (EVT(NewVT) != SplitEVTs[i]) {
+          unsigned ExtendOp = TargetOpcode::G_ANYEXT;
+          if (F.getAttributes().hasAttribute(AttributeList::ReturnIndex,
+                                             Attribute::SExt))
+            ExtendOp = TargetOpcode::G_SEXT;
+          else if (F.getAttributes().hasAttribute(AttributeList::ReturnIndex,
+                                                  Attribute::ZExt))
+            ExtendOp = TargetOpcode::G_ZEXT;
+
+          LLT NewLLT(NewVT);
+          LLT OldLLT(MVT::getVT(CurArgInfo.Ty));
+          CurArgInfo.Ty = EVT(NewVT).getTypeForEVT(Ctx);
+          // Instead of an extend, we might have a vector type which needs
+          // padding with more elements, e.g. <2 x half> -> <4 x half>.
+          if (NewVT.isVector()) {
+            if (OldLLT.isVector()) {
+              if (NewLLT.getNumElements() > OldLLT.getNumElements()) {
+                // We don't handle VA types which are not exactly twice the
+                // size, but can easily be done in future.
+                if (NewLLT.getNumElements() != OldLLT.getNumElements() * 2) {
+                  LLVM_DEBUG(dbgs() << "Outgoing vector ret has too many elts");
+                  return false;
+                }
+                auto Undef = MIRBuilder.buildUndef({OldLLT});
+                CurVReg =
+                    MIRBuilder.buildMerge({NewLLT}, {CurVReg, Undef.getReg(0)})
+                        .getReg(0);
+              } else {
+                // Just do a vector extend.
+                CurVReg = MIRBuilder.buildInstr(ExtendOp, {NewLLT}, {CurVReg})
+                              .getReg(0);
+              }
+            } else if (NewLLT.getNumElements() == 2) {
+              // We need to pad a <1 x S> type to <2 x S>. Since we don't have
+              // <1 x S> vector types in GISel we use a build_vector instead
+              // of a vector merge/concat.
+              auto Undef = MIRBuilder.buildUndef({OldLLT});
+              CurVReg =
+                  MIRBuilder
+                      .buildBuildVector({NewLLT}, {CurVReg, Undef.getReg(0)})
+                      .getReg(0);
+            } else {
+              LLVM_DEBUG(dbgs() << "Could not handle ret ty");
+              return false;
+            }
+          } else {
+            // A scalar extend.
+            CurVReg =
+                MIRBuilder.buildInstr(ExtendOp, {NewLLT}, {CurVReg}).getReg(0);
+          }
+        }
+      }
+      if (CurVReg != CurArgInfo.Reg) {
+        CurArgInfo.Reg = CurVReg;
+        // Reset the arg flags after modifying CurVReg.
+        setArgFlags(CurArgInfo, AttributeList::ReturnIndex, DL, F);
+      }
+     splitToValueTypes(CurArgInfo, SplitArgs, DL, MRI, CC,
                         [&](unsigned Reg, uint64_t Offset) {
                           MIRBuilder.buildExtract(Reg, CurVReg, Offset);
                         });
@@ -269,6 +339,11 @@ bool AArch64CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
 
     OutgoingArgHandler Handler(MIRBuilder, MRI, MIB, AssignFn, AssignFn);
     Success = handleAssignments(MIRBuilder, SplitArgs, Handler);
+  }
+
+  if (SwiftErrorVReg) {
+    MIB.addUse(AArch64::X21, RegState::Implicit);
+    MIRBuilder.buildCopy(AArch64::X21, SwiftErrorVReg);
   }
 
   MIRBuilder.insertInstr(MIB);
@@ -351,7 +426,8 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                                     CallingConv::ID CallConv,
                                     const MachineOperand &Callee,
                                     const ArgInfo &OrigRet,
-                                    ArrayRef<ArgInfo> OrigArgs) const {
+                                    ArrayRef<ArgInfo> OrigArgs,
+                                    unsigned SwiftErrorVReg) const {
   MachineFunction &MF = MIRBuilder.getMF();
   const Function &F = MF.getFunction();
   MachineRegisterInfo &MRI = MF.getRegInfo();
@@ -363,6 +439,9 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                       [&](unsigned Reg, uint64_t Offset) {
                         MIRBuilder.buildExtract(Reg, OrigArg.Reg, Offset);
                       });
+    // AAPCS requires that we zero-extend i1 to 8 bits by the caller.
+    if (OrigArg.Ty->isIntegerTy(1))
+      SplitArgs.back().Flags.setZExt();
   }
 
   // Find out which ABI gets to decide where things go.
@@ -429,6 +508,11 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
     if (!RegOffsets.empty())
       MIRBuilder.buildSequence(OrigRet.Reg, SplitRegs, RegOffsets);
+  }
+
+  if (SwiftErrorVReg) {
+    MIB.addDef(AArch64::X21, RegState::Implicit);
+    MIRBuilder.buildCopy(SwiftErrorVReg, AArch64::X21);
   }
 
   CallSeqStart.addImm(Handler.StackSize).addImm(0);

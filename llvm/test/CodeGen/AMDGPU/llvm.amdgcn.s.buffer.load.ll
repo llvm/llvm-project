@@ -108,6 +108,45 @@ main_body:
   ret void
 }
 
+;CHECK-LABEL: {{^}}s_buffer_load_index_across_bb:
+;CHECK-NOT: s_waitcnt;
+;CHECK: v_or_b32
+;CHECK: buffer_load_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 offen
+define amdgpu_ps void @s_buffer_load_index_across_bb(<4 x i32> inreg %desc, i32 %index) {
+main_body:
+  %tmp = shl i32 %index, 4
+  br label %bb1
+
+bb1:                                              ; preds = %main_body
+  %tmp1 = or i32 %tmp, 8
+  %load = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> %desc, i32 %tmp1, i32 0)
+  %bitcast = bitcast i32 %load to float
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %bitcast, float undef, float undef, float undef, i1 true, i1 true)
+  ret void
+}
+
+;CHECK-LABEL: {{^}}s_buffer_load_index_across_bb_merged:
+;CHECK-NOT: s_waitcnt;
+;CHECK: v_or_b32
+;CHECK: v_or_b32
+;CHECK: buffer_load_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 offen
+;CHECK: buffer_load_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 offen
+define amdgpu_ps void @s_buffer_load_index_across_bb_merged(<4 x i32> inreg %desc, i32 %index) {
+main_body:
+  %tmp = shl i32 %index, 4
+  br label %bb1
+
+bb1:                                              ; preds = %main_body
+  %tmp1 = or i32 %tmp, 8
+  %load = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> %desc, i32 %tmp1, i32 0)
+  %tmp2 = or i32 %tmp1, 4
+  %load2 = tail call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> %desc, i32 %tmp2, i32 0)
+  %bitcast = bitcast i32 %load to float
+  %bitcast2 = bitcast i32 %load2 to float
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %bitcast, float %bitcast2, float undef, float undef, i1 true, i1 true)
+  ret void
+}
+
 declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1)
 declare i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32>, i32, i32)
 declare <2 x i32> @llvm.amdgcn.s.buffer.load.v2i32(<4 x i32>, i32, i32)

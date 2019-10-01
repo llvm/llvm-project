@@ -82,27 +82,27 @@ define fp128 @testStruct_03(%struct.With9fp128params* byval nocapture readonly
                             align 16 %a) {
 ; CHECK-LABEL: testStruct_03:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    std r10, 88(r1)
-; CHECK-NEXT:    std r9, 80(r1)
-; CHECK-NEXT:    std r8, 72(r1)
-; CHECK-NEXT:    std r7, 64(r1)
-; CHECK-NEXT:    std r6, 56(r1)
-; CHECK-NEXT:    std r5, 48(r1)
-; CHECK-NEXT:    std r4, 40(r1)
-; CHECK-NEXT:    std r3, 32(r1)
+; CHECK-DAG:    std r10, 88(r1)
+; CHECK-DAG:    std r9, 80(r1)
+; CHECK-DAG:    std r8, 72(r1)
+; CHECK-DAG:    std r7, 64(r1)
+; CHECK-DAG:    std r6, 56(r1)
+; CHECK-DAG:    std r5, 48(r1)
+; CHECK-DAG:    std r4, 40(r1)
+; CHECK-DAG:    std r3, 32(r1)
 ; CHECK-NEXT:    lxv v2, 128(r1)
 ; CHECK-NEXT:    blr
 
 ; CHECK-BE-LABEL: testStruct_03:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    std r10, 104(r1)
-; CHECK-BE-NEXT:    std r9, 96(r1)
-; CHECK-BE-NEXT:    std r8, 88(r1)
-; CHECK-BE-NEXT:    std r7, 80(r1)
-; CHECK-BE-NEXT:    std r6, 72(r1)
-; CHECK-BE-NEXT:    std r5, 64(r1)
-; CHECK-BE-NEXT:    std r4, 56(r1)
-; CHECK-BE-NEXT:    std r3, 48(r1)
+; CHECK-BE-DAG:    std r10, 104(r1)
+; CHECK-BE-DAG:    std r9, 96(r1)
+; CHECK-BE-DAG:    std r8, 88(r1)
+; CHECK-BE-DAG:    std r7, 80(r1)
+; CHECK-BE-DAG:    std r6, 72(r1)
+; CHECK-BE-DAG:    std r5, 64(r1)
+; CHECK-BE-DAG:    std r4, 56(r1)
+; CHECK-BE-DAG:    std r3, 48(r1)
 ; CHECK-BE-NEXT:    lxv v2, 144(r1)
 ; CHECK-BE-NEXT:    blr
 entry:
@@ -256,27 +256,27 @@ entry:
 define fp128 @testNestedAggregate(%struct.MixedC* byval nocapture readonly align 16 %a) {
 ; CHECK-LABEL: testNestedAggregate:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    std r8, 72(r1)
-; CHECK-NEXT:    std r7, 64(r1)
-; CHECK-NEXT:    std r10, 88(r1)
-; CHECK-NEXT:    std r9, 80(r1)
-; CHECK-NEXT:    std r6, 56(r1)
-; CHECK-NEXT:    std r5, 48(r1)
-; CHECK-NEXT:    std r4, 40(r1)
-; CHECK-NEXT:    std r3, 32(r1)
+; CHECK-DAG:     std r10, 88(r1)
+; CHECK-DAG:     std r9, 80(r1)
+; CHECK-DAG:     std r8, 72(r1)
+; CHECK-DAG:     std r7, 64(r1)
+; CHECK-DAG:     std r6, 56(r1)
+; CHECK-DAG:     std r5, 48(r1)
+; CHECK-DAG:     std r4, 40(r1)
+; CHECK-DAG:     std r3, 32(r1)
 ; CHECK-NEXT:    lxv v2, 64(r1)
 ; CHECK-NEXT:    blr
 
 ; CHECK-BE-LABEL: testNestedAggregate:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    std r8, 88(r1)
-; CHECK-BE-NEXT:    std r7, 80(r1)
-; CHECK-BE-NEXT:    std r10, 104(r1)
-; CHECK-BE-NEXT:    std r9, 96(r1)
-; CHECK-BE-NEXT:    std r6, 72(r1)
-; CHECK-BE-NEXT:    std r5, 64(r1)
-; CHECK-BE-NEXT:    std r4, 56(r1)
-; CHECK-BE-NEXT:    std r3, 48(r1)
+; CHECK-BE-DAG:     std r8, 88(r1)
+; CHECK-BE-DAG:     std r7, 80(r1)
+; CHECK-BE-DAG:     std r10, 104(r1)
+; CHECK-BE-DAG:     std r9, 96(r1)
+; CHECK-BE-DAG:     std r6, 72(r1)
+; CHECK-BE-DAG:     std r5, 64(r1)
+; CHECK-BE-DAG:     std r4, 56(r1)
+; CHECK-BE-DAG:     std r3, 48(r1)
 ; CHECK-BE-NEXT:    lxv v2, 80(r1)
 ; CHECK-BE-NEXT:    blr
 entry:
@@ -337,17 +337,17 @@ entry:
 define fp128 @sum_float128(i32 signext %count, ...) {
 ; CHECK-LABEL: sum_float128:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    std r10, 88(r1)
-; CHECK-NEXT:    std r9, 80(r1)
-; CHECK-NEXT:    std r8, 72(r1)
-; CHECK-NEXT:    std r7, 64(r1)
-; CHECK-NEXT:    std r6, 56(r1)
-; CHECK-NEXT:    cmpwi cr0, r3, 1
-; CHECK-NEXT:    std r4, 40(r1)
-; CHECK-NEXT:    addis [[REG:r[0-9]+]], r2, .LCPI17_0@toc@ha
-; CHECK-NEXT:    addi [[REG1:r[0-9]+]], [[REG]], .LCPI17_0@toc@l
-; CHECK-NEXT:    lxvx v2, 0, [[REG1]]
-; CHECK-NEXT:    std r5, 48(r1)
+; CHECK-DAG:     std r10, 88(r1)
+; CHECK-DAG:     std r9, 80(r1)
+; CHECK-DAG:     std r8, 72(r1)
+; CHECK-DAG:     std r7, 64(r1)
+; CHECK-DAG:     std r6, 56(r1)
+; CHECK-DAG:     std r4, 40(r1)
+; CHECK-DAG:     cmpwi cr0, r3, 1
+; CHECK-DAG:     std r5, 48(r1)
+; CHECK-DAG:     addis [[REG:r[0-9]+]], r2, .LCPI17_0@toc@ha
+; CHECK-DAG:     addi [[REG1:r[0-9]+]], [[REG]], .LCPI17_0@toc@l
+; CHECK-DAG:     lxvx v2, 0, [[REG1]]
 ; CHECK-NEXT:    bltlr cr0
 ; CHECK-NEXT:  # %bb.1: # %if.end
 ; CHECK-NEXT:    addi r3, r1, 40

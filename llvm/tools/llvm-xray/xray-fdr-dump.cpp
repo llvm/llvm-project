@@ -1,9 +1,8 @@
 //===- xray-fdr-dump.cpp: XRay FDR Trace Dump Tool ------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -51,7 +50,7 @@ static CommandRegistration Unused(&Dump, []() -> Error {
       Fd, sys::fs::mapped_file_region::mapmode::readonly, FileSize, 0, EC);
 
   DataExtractor DE(StringRef(MappedFile.data(), MappedFile.size()), true, 8);
-  uint32_t OffsetPtr = 0;
+  uint64_t OffsetPtr = 0;
 
   auto FileHeaderOrError = readBinaryFormatHeader(DE, OffsetPtr);
   if (!FileHeaderOrError)

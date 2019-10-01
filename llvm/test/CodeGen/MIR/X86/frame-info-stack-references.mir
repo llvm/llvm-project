@@ -65,7 +65,7 @@ body: |
     dead $eax = MOV32r0 implicit-def dead $eflags, implicit-def $al
     CALL64pcrel32 @printf, csr_64, implicit $rsp, implicit $rdi, implicit $rsi, implicit $al, implicit-def $rsp, implicit-def $eax
     CMP64rm killed $rbx, $rsp, 1, _, 24, _, implicit-def $eflags
-    JNE_1 %bb.2.entry, implicit $eflags
+    JCC_1 %bb.2.entry, 5, implicit $eflags
 
   bb.1.entry:
     liveins: $eax

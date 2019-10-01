@@ -1,4 +1,4 @@
-; RUN: llc < %s -stack-symbol-ordering=0 -disable-fp-elim -mtriple=x86_64-pc-linux-gnu -mcpu=corei7 -o - | FileCheck %s
+; RUN: llc < %s -stack-symbol-ordering=0 -frame-pointer=all -mtriple=x86_64-pc-linux-gnu -mcpu=corei7 -o - | FileCheck %s
 ;  This test is fairly fragile.  The goal is to ensure that "large" stack
 ;  objects are allocated closest to the stack protector (i.e., farthest away 
 ;  from the Stack Pointer.)  In standard SSP mode this means that large (>=
@@ -11,7 +11,7 @@
 ;  and that the groups have the correct relative stack offset.  The ordering
 ;  within a group is not relevant to this test.  Unfortunately, there is not
 ;  an elegant way to do this, so just match the offset for each object.
-; RUN: llc < %s -disable-fp-elim -mtriple=x86_64-unknown-unknown -O0 -mcpu=corei7 -o - \
+; RUN: llc < %s -frame-pointer=all -mtriple=x86_64-unknown-unknown -O0 -mcpu=corei7 -o - \
 ; RUN:   | FileCheck --check-prefix=FAST-NON-LIN %s
 ; FastISel was not setting the StackProtectorIndex when lowering
 ; Intrinsic::stackprotector and as a result the stack re-arrangement code was

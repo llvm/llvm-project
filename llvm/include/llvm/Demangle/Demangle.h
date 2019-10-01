@@ -1,9 +1,8 @@
 //===--- Demangle.h ---------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -11,6 +10,7 @@
 #define LLVM_DEMANGLE_DEMANGLE_H
 
 #include <cstddef>
+#include <string>
 
 namespace llvm {
 /// This is a llvm local version of __cxa_demangle. Other than the name and
@@ -35,6 +35,13 @@ char *itaniumDemangle(const char *mangled_name, char *buf, size_t *n,
 enum MSDemangleFlags { MSDF_None = 0, MSDF_DumpBackrefs = 1 << 0 };
 char *microsoftDemangle(const char *mangled_name, char *buf, size_t *n,
                         int *status, MSDemangleFlags Flags = MSDF_None);
+
+/// Attempt to demangle a string using different demangling schemes.
+/// The function uses heuristics to determine which demangling scheme to use.
+/// \param MangledName - reference to string to demangle.
+/// \returns - the demangled string, or a copy of the input string if no
+/// demangling occurred.
+std::string demangle(const std::string &MangledName);
 
 /// "Partial" demangler. This supports demangling a string into an AST
 /// (typically an intermediate stage in itaniumDemangle) and querying certain

@@ -27,6 +27,7 @@ add_llvm_library(LLVMAnalysis
   DependenceAnalysis.cpp
   DivergenceAnalysis.cpp
   DomPrinter.cpp
+  DomTreeUpdater.cpp
   DominanceFrontier.cpp
   EHPersonalities.cpp
   GlobalsModRef.cpp

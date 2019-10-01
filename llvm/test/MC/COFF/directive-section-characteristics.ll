@@ -1,4 +1,4 @@
-; RUN: llc -mtriple i686-windows -filetype obj -o - %s | llvm-readobj -sections \
+; RUN: llc -mtriple i686-windows -filetype obj -o - %s | llvm-readobj --sections \
 ; RUN:    | FileCheck %s
 
 define dllexport void @function() {

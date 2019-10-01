@@ -20,12 +20,12 @@ add_llvm_target(ARCCodeGen
   ARCISelLowering.cpp
   ARCMachineFunctionInfo.cpp
   ARCMCInstLower.cpp
+  ARCOptAddrMode.cpp
   ARCRegisterInfo.cpp
   ARCSubtarget.cpp
   ARCTargetMachine.cpp
   )
 
 add_subdirectory(Disassembler)
-add_subdirectory(InstPrinter)
 add_subdirectory(MCTargetDesc)
 add_subdirectory(TargetInfo)

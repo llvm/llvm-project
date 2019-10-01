@@ -1,5 +1,8 @@
-@ RUN: llvm-mc -triple armv7-linux-eabi -filetype obj -o - %s \
-@ RUN:    | llvm-readobj -u | FileCheck %s
+@ RUN: llvm-mc -triple armv7-linux-eabi -filetype obj %s -o %t
+@ RUN: llvm-readobj -u %t | FileCheck --check-prefixes=CHECK,SYM %s
+
+@@ If .symtab doesn't exist, we can still dump some information.
+@ RUN: llvm-objcopy --allow-broken-links --strip-all %t - | llvm-readobj -u - | FileCheck %s
 
 	.syntax unified
 
@@ -151,7 +154,7 @@ spare:
 @ CHECK:     Entries [
 @ CHECK:       Entry {
 @ CHECK:         FunctionAddress: 0x0
-@ CHECK:         FunctionName: __personality
+@ SYM:           FunctionName: __personality
 @ CHECK:         Model: Compact (Inline)
 @ CHECK:         PersonalityIndex: 0
 @ CHECK:         Opcodes [
@@ -167,7 +170,7 @@ spare:
 @ CHECK:     Entries [
 @ CHECK:       Entry {
 @ CHECK:         FunctionAddress: 0x0
-@ CHECK:         FunctionName: personality0
+@ SYM:           FunctionName: personality0
 @ CHECK:         Model: Compact (Inline)
 @ CHECK:         PersonalityIndex: 0
 @ CHECK:         Opcodes [
@@ -183,18 +186,18 @@ spare:
 @ CHECK:     Entries [
 @ CHECK:       Entry {
 @ CHECK:         FunctionAddress: 0x0
-@ CHECK:         FunctionName: personality1
-@ CHECK:         ExceptionHandlingTable: .ARM.extab.personality1
-@ CHECK:         TableEntryOffset: 0x0
-@ CHECK:         Model: Compact
-@ CHECK:         PersonalityIndex: 1
-@ CHECK:         Opcodes [
-@ CHECK:           0xB1 0x0F ; pop {r0, r1, r2, r3}
-@ CHECK:           0xA7      ; pop {r4, r5, r6, r7, r8, r9, r10, fp}
-@ CHECK:           0x3F      ; vsp = vsp + 256
-@ CHECK:           0xB0      ; finish
-@ CHECK:           0xB0      ; finish
-@ CHECK:         ]
+@ SYM:           FunctionName: personality1
+@ SYM:           ExceptionHandlingTable: .ARM.extab.personality1
+@ SYM:           TableEntryOffset: 0x0
+@ SYM:           Model: Compact
+@ SYM:           PersonalityIndex: 1
+@ SYM:           Opcodes [
+@ SYM:             0xB1 0x0F ; pop {r0, r1, r2, r3}
+@ SYM:             0xA7      ; pop {r4, r5, r6, r7, r8, r9, r10, fp}
+@ SYM:             0x3F      ; vsp = vsp + 256
+@ SYM:             0xB0      ; finish
+@ SYM:             0xB0      ; finish
+@ SYM:           ]
 @ CHECK:       }
 @ CHECK:     ]
 @ CHECK:   }
@@ -203,11 +206,11 @@ spare:
 @ CHECK:     Entries [
 @ CHECK:       Entry {
 @ CHECK:         FunctionAddress: 0x0
-@ CHECK:         FunctionName: custom_personality
-@ CHECK:         ExceptionHandlingTable: .ARM.extab.custom_personality
-@ CHECK:         TableEntryOffset: 0x0
-@ CHECK:         Model: Generic
-@ CHECK:         PersonalityRoutineAddress: 0x0
+@ SYM:           FunctionName: custom_personality
+@ SYM:           ExceptionHandlingTable: .ARM.extab.custom_personality
+@ SYM:           TableEntryOffset: 0x0
+@ SYM:           Model: Generic
+@ SYM:           PersonalityRoutineAddress: 0x0
 @ CHECK:       }
 @ CHECK:     ]
 @ CHECK:   }
@@ -216,7 +219,7 @@ spare:
 @ CHECK:     Entries [
 @ CHECK:       Entry {
 @ CHECK:         FunctionAddress: 0x0
-@ CHECK:         FunctionName: opcodes
+@ SYM:           FunctionName: opcodes
 @ CHECK:         Model: Compact (Inline)
 @ CHECK:         PersonalityIndex: 0
 @ CHECK:         Opcodes [
@@ -231,7 +234,7 @@ spare:
 @ CHECK:     Entries [
 @ CHECK:       Entry {
 @ CHECK:         FunctionAddress: 0x0
-@ CHECK:         FunctionName: function0
+@ SYM:           FunctionName: function0
 @ CHECK:         Model: Compact (Inline)
 @ CHECK:         PersonalityIndex: 0
 @ CHECK:         Opcodes [
@@ -242,14 +245,14 @@ spare:
 @ CHECK:       }
 @ CHECK:       Entry {
 @ CHECK:         FunctionAddress: 0x4
-@ CHECK:         FunctionName: function1
-@ CHECK:         ExceptionHandlingTable: .ARM.extab.multiple
-@ CHECK:         Model: Generic
-@ CHECK:         PersonalityRoutineAddress: 0x0
+@ SYM:           FunctionName: function1
+@ SYM:           ExceptionHandlingTable: .ARM.extab.multiple
+@ SYM:           Model: Generic
+@ SYM:           PersonalityRoutineAddress: 0x0
 @ CHECK:       }
 @ CHECK:       Entry {
 @ CHECK:         FunctionAddress: 0x8
-@ CHECK:         FunctionName: function2
+@ SYM:           FunctionName: function2
 @ CHECK:         Model: Compact (Inline)
 @ CHECK:         PersonalityIndex: 0
 @ CHECK:         Opcodes [
@@ -263,63 +266,63 @@ spare:
 @ CHECK:   UnwindIndexTable {
 @ CHECK:     SectionName: .ARM.exidx.raw
 @ CHECK:     Entries [
-@ CHECK:       Opcodes [
-@ CHECK:         0xD7      ; pop {d8, d9, d10, d11, d12, d13, d14, d15}
-@ CHECK:         0xC9 0x02 ; pop {d0, d1, d2}
-@ CHECK:         0xC8 0x02 ; pop {d16, d17, d18}
-@ CHECK:         0xC7 0x03 ; pop {wCGR0, wCGR1}
-@ CHECK:         0xC6 0x02 ; pop {wR0, wR1, wR2}
-@ CHECK:         0xC2      ; pop {wR10, wR11, wR12}
-@ CHECK:         0xBA      ; pop {d8, d9, d10}
-@ CHECK:         0xB3 0x12 ; pop {d1, d2, d3}
-@ CHECK:         0xB2 0x80 0x04 ; vsp = vsp + 2564
-@ CHECK:         0xB1 0x01 ; pop {r0}
-@ CHECK:         0xB0      ; finish
-@ CHECK:         0xA9      ; pop {r4, r5, lr}
-@ CHECK:         0xA1      ; pop {r4, r5}
-@ CHECK:         0x91      ; vsp = r1
-@ CHECK:         0x84 0xC0 ; pop {r10, fp, lr}
-@ CHECK:         0x80 0xC0 ; pop {r10, fp}
-@ CHECK:         0x80 0x01 ; pop {r4}
-@ CHECK:         0x81 0x00 ; pop {ip}
-@ CHECK:         0x80 0x00 ; refuse to unwind
-@ CHECK:         0x42      ; vsp = vsp - 12
-@ CHECK:         0x02      ; vsp = vsp + 12
-@ CHECK:       ]
+@ SYM:         Opcodes [
+@ SYM:           0xD7      ; pop {d8, d9, d10, d11, d12, d13, d14, d15}
+@ SYM:           0xC9 0x02 ; pop {d0, d1, d2}
+@ SYM:           0xC8 0x02 ; pop {d16, d17, d18}
+@ SYM:           0xC7 0x03 ; pop {wCGR0, wCGR1}
+@ SYM:           0xC6 0x02 ; pop {wR0, wR1, wR2}
+@ SYM:           0xC2      ; pop {wR10, wR11, wR12}
+@ SYM:           0xBA      ; pop {d8, d9, d10}
+@ SYM:           0xB3 0x12 ; pop {d1, d2, d3}
+@ SYM:           0xB2 0x80 0x04 ; vsp = vsp + 2564
+@ SYM:           0xB1 0x01 ; pop {r0}
+@ SYM:           0xB0      ; finish
+@ SYM:           0xA9      ; pop {r4, r5, lr}
+@ SYM:           0xA1      ; pop {r4, r5}
+@ SYM:           0x91      ; vsp = r1
+@ SYM:           0x84 0xC0 ; pop {r10, fp, lr}
+@ SYM:           0x80 0xC0 ; pop {r10, fp}
+@ SYM:           0x80 0x01 ; pop {r4}
+@ SYM:           0x81 0x00 ; pop {ip}
+@ SYM:           0x80 0x00 ; refuse to unwind
+@ SYM:           0x42      ; vsp = vsp - 12
+@ SYM:           0x02      ; vsp = vsp + 12
+@ SYM:         ]
 @ CHECK:     ]
 @ CHECK:   }
 @ CHECK:   UnwindIndexTable {
 @ CHECK:     SectionName: .ARM.exidx.spare
 @ CHECK:     Entries [
-@ CHECK:       Opcodes [
-@ CHECK:         0xD8      ; spare
-@ CHECK:         0xD0      ; pop {d8}
-@ CHECK:         0xCA      ; spare
-@ CHECK:         0xC9 0x00 ; pop {d0}
-@ CHECK:         0xC8 0x00 ; pop {d16}
-@ CHECK:         0xC7 0x10 ; spare
-@ CHECK:         0xC7 0x01 ; pop {wCGR0}
-@ CHECK:         0xC7 0x00 ; spare
-@ CHECK:         0xC6 0x00 ; pop {wR0}
-@ CHECK:         0xC0      ; pop {wR10}
-@ CHECK:         0xB8      ; pop {d8}
-@ CHECK:         0xB4      ; spare
-@ CHECK:         0xB3 0x00 ; pop {d0}
-@ CHECK:         0xB2 0x00 ; vsp = vsp + 516
-@ CHECK:         0xB1 0x10 ; spare
-@ CHECK:         0xB1 0x01 ; pop {r0}
-@ CHECK:         0xB1 0x00 ; spare
-@ CHECK:         0xB0      ; finish
-@ CHECK:         0xA8      ; pop {r4, lr}
-@ CHECK:         0xA0      ; pop {r4}
-@ CHECK:         0x9F      ; reserved (WiMMX MOVrr)
-@ CHECK:         0x9D      ; reserved (ARM MOVrr)
-@ CHECK:         0x91      ; vsp = r1
-@ CHECK:         0x88 0x00 ; pop {pc}
-@ CHECK:         0x80 0x00 ; refuse to unwind
-@ CHECK:         0x40      ; vsp = vsp - 4
-@ CHECK:         0x00      ; vsp = vsp + 4
-@ CHECK:       ]
+@ SYM:         Opcodes [
+@ SYM:           0xD8      ; spare
+@ SYM:           0xD0      ; pop {d8}
+@ SYM:           0xCA      ; spare
+@ SYM:           0xC9 0x00 ; pop {d0}
+@ SYM:           0xC8 0x00 ; pop {d16}
+@ SYM:           0xC7 0x10 ; spare
+@ SYM:           0xC7 0x01 ; pop {wCGR0}
+@ SYM:           0xC7 0x00 ; spare
+@ SYM:           0xC6 0x00 ; pop {wR0}
+@ SYM:           0xC0      ; pop {wR10}
+@ SYM:           0xB8      ; pop {d8}
+@ SYM:           0xB4      ; spare
+@ SYM:           0xB3 0x00 ; pop {d0}
+@ SYM:           0xB2 0x00 ; vsp = vsp + 516
+@ SYM:           0xB1 0x10 ; spare
+@ SYM:           0xB1 0x01 ; pop {r0}
+@ SYM:           0xB1 0x00 ; spare
+@ SYM:           0xB0      ; finish
+@ SYM:           0xA8      ; pop {r4, lr}
+@ SYM:           0xA0      ; pop {r4}
+@ SYM:           0x9F      ; reserved (WiMMX MOVrr)
+@ SYM:           0x9D      ; reserved (ARM MOVrr)
+@ SYM:           0x91      ; vsp = r1
+@ SYM:           0x88 0x00 ; pop {pc}
+@ SYM:           0x80 0x00 ; refuse to unwind
+@ SYM:           0x40      ; vsp = vsp - 4
+@ SYM:           0x00      ; vsp = vsp + 4
+@ SYM:         ]
 @ CHECK:     ]
 @ CHECK:   }
 @ CHECK: }

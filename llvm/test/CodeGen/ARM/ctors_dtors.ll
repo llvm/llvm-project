@@ -11,8 +11,8 @@
 ; GNUEABI: .section .init_array,"aw",%init_array
 ; GNUEABI: .section .fini_array,"aw",%fini_array
 
-@llvm.global_ctors = appending global [1 x { i32, void ()* }] [ { i32, void ()* } { i32 65535, void ()* @__mf_init } ]                ; <[1 x { i32, void ()* }]*> [#uses=0]
-@llvm.global_dtors = appending global [1 x { i32, void ()* }] [ { i32, void ()* } { i32 65535, void ()* @__mf_fini } ]                ; <[1 x { i32, void ()* }]*> [#uses=0]
+@llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [ { i32, void ()*, i8* } { i32 65535, void ()* @__mf_init, i8* null } ]                ; <[1 x { i32, void ()*, i8* }]*> [#uses=0]
+@llvm.global_dtors = appending global [1 x { i32, void ()*, i8* }] [ { i32, void ()*, i8* } { i32 65535, void ()* @__mf_fini, i8* null } ]                ; <[1 x { i32, void ()*, i8* }]*> [#uses=0]
 
 define void @__mf_init() {
 entry:

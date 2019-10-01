@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=x86_64-apple-macosx10.10.0 -mattr=+sse2 | FileCheck %s --check-prefix=SSE2 --check-prefix=CHECK
-; RUN: llc < %s -mtriple=x86_64-apple-macosx10.10.0 -mattr=+avx | FileCheck %s --check-prefix=AVX --check-prefix=CHECK
+; RUN: llc < %s -mtriple=x86_64-apple-macosx10.10.0 -mattr=+sse2 | FileCheck %s --check-prefixes=CHECK,SSE2
+; RUN: llc < %s -mtriple=x86_64-apple-macosx10.10.0 -mattr=+avx | FileCheck %s --check-prefixes=CHECK,AVX
 
 ; Assertions have been enhanced from utils/update_llc_test_checks.py to show the constant pool values.
 ; Use a macosx triple to make sure the format of those constant strings is exact.
@@ -35,12 +35,6 @@ define <4 x float> @v4f32(<4 x float> %a, <4 x float> %b) nounwind {
   ret <4 x float> %tmp
 }
 
-; SSE2:       [[SIGNMASK2:L.+]]:
-; SSE2-NEXT:  .long 2147483648
-; SSE2-NEXT:  .long 2147483648
-; SSE2-NEXT:  .long 2147483648
-; SSE2-NEXT:  .long 2147483648
-
 ; SSE2:       [[MAGMASK2:L.+]]:
 ; SSE2-NEXT:  .long 2147483647
 ; SSE2-NEXT:  .long 2147483647
@@ -70,14 +64,14 @@ define <4 x float> @v4f32(<4 x float> %a, <4 x float> %b) nounwind {
 define <8 x float> @v8f32(<8 x float> %a, <8 x float> %b) nounwind {
 ; SSE2-LABEL: v8f32:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movaps [[SIGNMASK2]](%rip), %xmm4
-; SSE2-NEXT:    andps %xmm4, %xmm2
-; SSE2-NEXT:    movaps [[MAGMASK2]](%rip), %xmm5
-; SSE2-NEXT:    andps %xmm5, %xmm0
-; SSE2-NEXT:    orps %xmm2, %xmm0
-; SSE2-NEXT:    andps %xmm4, %xmm3
-; SSE2-NEXT:    andps %xmm5, %xmm1
-; SSE2-NEXT:    orps %xmm3, %xmm1
+; SSE2-NEXT:    movaps [[MAGMASK2]](%rip), %xmm4
+; SSE2-NEXT:    movaps %xmm4, %xmm5
+; SSE2-NEXT:    andnps %xmm2, %xmm5
+; SSE2-NEXT:    andps %xmm4, %xmm0
+; SSE2-NEXT:    orps %xmm5, %xmm0
+; SSE2-NEXT:    andps %xmm4, %xmm1
+; SSE2-NEXT:    andnps %xmm3, %xmm4
+; SSE2-NEXT:    orps %xmm4, %xmm1
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: v8f32:
@@ -118,10 +112,6 @@ define <2 x double> @v2f64(<2 x double> %a, <2 x double> %b) nounwind {
   ret <2 x double> %tmp
 }
 
-; SSE2:        [[SIGNMASK4:L.+]]:
-; SSE2-NEXT:   .quad -9223372036854775808
-; SSE2-NEXT:   .quad -9223372036854775808
-
 ; SSE2:        [[MAGMASK4:L.+]]:
 ; SSE2-NEXT:   .quad 9223372036854775807
 ; SSE2-NEXT:   .quad 9223372036854775807
@@ -141,14 +131,14 @@ define <2 x double> @v2f64(<2 x double> %a, <2 x double> %b) nounwind {
 define <4 x double> @v4f64(<4 x double> %a, <4 x double> %b) nounwind {
 ; SSE2-LABEL: v4f64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movaps [[SIGNMASK4]](%rip), %xmm4
-; SSE2-NEXT:    andps %xmm4, %xmm2
-; SSE2-NEXT:    movaps [[MAGMASK4]](%rip), %xmm5
-; SSE2-NEXT:    andps %xmm5, %xmm0
-; SSE2-NEXT:    orps %xmm2, %xmm0
-; SSE2-NEXT:    andps %xmm4, %xmm3
-; SSE2-NEXT:    andps %xmm5, %xmm1
-; SSE2-NEXT:    orps %xmm3, %xmm1
+; SSE2-NEXT:    movaps [[MAGMASK4]](%rip), %xmm4
+; SSE2-NEXT:    movaps %xmm4, %xmm5
+; SSE2-NEXT:    andnps %xmm2, %xmm5
+; SSE2-NEXT:    andps %xmm4, %xmm0
+; SSE2-NEXT:    orps %xmm5, %xmm0
+; SSE2-NEXT:    andps %xmm4, %xmm1
+; SSE2-NEXT:    andnps %xmm3, %xmm4
+; SSE2-NEXT:    orps %xmm4, %xmm1
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: v4f64:

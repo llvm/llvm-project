@@ -1,0 +1,5 @@
+group("libcxxabi") {
+  deps = [
+    "//libcxxabi/src(//llvm/utils/gn/build/toolchain:stage2_unix)",
+  ]
+}

@@ -1,9 +1,8 @@
 //=- WebAssemblySetP2AlignOperands.cpp - Set alignments on loads and stores -=//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -14,6 +13,7 @@
 
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "WebAssembly.h"
+#include "WebAssemblyInstrInfo.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
@@ -54,7 +54,7 @@ FunctionPass *llvm::createWebAssemblySetP2AlignOperands() {
   return new WebAssemblySetP2AlignOperands();
 }
 
-static void RewriteP2Align(MachineInstr &MI, unsigned OperandNo) {
+static void rewriteP2Align(MachineInstr &MI, unsigned OperandNo) {
   assert(MI.getOperand(OperandNo).getImm() == 0 &&
          "ISel should set p2align operands to 0");
   assert(MI.hasOneMemOperand() &&
@@ -84,114 +84,11 @@ bool WebAssemblySetP2AlignOperands::runOnMachineFunction(MachineFunction &MF) {
 
   for (auto &MBB : MF) {
     for (auto &MI : MBB) {
-      switch (MI.getOpcode()) {
-      case WebAssembly::LOAD_I32:
-      case WebAssembly::LOAD_I64:
-      case WebAssembly::LOAD_F32:
-      case WebAssembly::LOAD_F64:
-      case WebAssembly::LOAD_v16i8:
-      case WebAssembly::LOAD_v8i16:
-      case WebAssembly::LOAD_v4i32:
-      case WebAssembly::LOAD_v2i64:
-      case WebAssembly::LOAD_v4f32:
-      case WebAssembly::LOAD_v2f64:
-      case WebAssembly::LOAD8_S_I32:
-      case WebAssembly::LOAD8_U_I32:
-      case WebAssembly::LOAD16_S_I32:
-      case WebAssembly::LOAD16_U_I32:
-      case WebAssembly::LOAD8_S_I64:
-      case WebAssembly::LOAD8_U_I64:
-      case WebAssembly::LOAD16_S_I64:
-      case WebAssembly::LOAD16_U_I64:
-      case WebAssembly::LOAD32_S_I64:
-      case WebAssembly::LOAD32_U_I64:
-      case WebAssembly::ATOMIC_LOAD_I32:
-      case WebAssembly::ATOMIC_LOAD8_U_I32:
-      case WebAssembly::ATOMIC_LOAD16_U_I32:
-      case WebAssembly::ATOMIC_LOAD_I64:
-      case WebAssembly::ATOMIC_LOAD8_U_I64:
-      case WebAssembly::ATOMIC_LOAD16_U_I64:
-      case WebAssembly::ATOMIC_LOAD32_U_I64:
-      case WebAssembly::ATOMIC_RMW8_U_ADD_I32:
-      case WebAssembly::ATOMIC_RMW8_U_ADD_I64:
-      case WebAssembly::ATOMIC_RMW8_U_SUB_I32:
-      case WebAssembly::ATOMIC_RMW8_U_SUB_I64:
-      case WebAssembly::ATOMIC_RMW8_U_AND_I32:
-      case WebAssembly::ATOMIC_RMW8_U_AND_I64:
-      case WebAssembly::ATOMIC_RMW8_U_OR_I32:
-      case WebAssembly::ATOMIC_RMW8_U_OR_I64:
-      case WebAssembly::ATOMIC_RMW8_U_XOR_I32:
-      case WebAssembly::ATOMIC_RMW8_U_XOR_I64:
-      case WebAssembly::ATOMIC_RMW8_U_XCHG_I32:
-      case WebAssembly::ATOMIC_RMW8_U_XCHG_I64:
-      case WebAssembly::ATOMIC_RMW8_U_CMPXCHG_I32:
-      case WebAssembly::ATOMIC_RMW8_U_CMPXCHG_I64:
-      case WebAssembly::ATOMIC_RMW16_U_ADD_I32:
-      case WebAssembly::ATOMIC_RMW16_U_ADD_I64:
-      case WebAssembly::ATOMIC_RMW16_U_SUB_I32:
-      case WebAssembly::ATOMIC_RMW16_U_SUB_I64:
-      case WebAssembly::ATOMIC_RMW16_U_AND_I32:
-      case WebAssembly::ATOMIC_RMW16_U_AND_I64:
-      case WebAssembly::ATOMIC_RMW16_U_OR_I32:
-      case WebAssembly::ATOMIC_RMW16_U_OR_I64:
-      case WebAssembly::ATOMIC_RMW16_U_XOR_I32:
-      case WebAssembly::ATOMIC_RMW16_U_XOR_I64:
-      case WebAssembly::ATOMIC_RMW16_U_XCHG_I32:
-      case WebAssembly::ATOMIC_RMW16_U_XCHG_I64:
-      case WebAssembly::ATOMIC_RMW16_U_CMPXCHG_I32:
-      case WebAssembly::ATOMIC_RMW16_U_CMPXCHG_I64:
-      case WebAssembly::ATOMIC_RMW_ADD_I32:
-      case WebAssembly::ATOMIC_RMW32_U_ADD_I64:
-      case WebAssembly::ATOMIC_RMW_SUB_I32:
-      case WebAssembly::ATOMIC_RMW32_U_SUB_I64:
-      case WebAssembly::ATOMIC_RMW_AND_I32:
-      case WebAssembly::ATOMIC_RMW32_U_AND_I64:
-      case WebAssembly::ATOMIC_RMW_OR_I32:
-      case WebAssembly::ATOMIC_RMW32_U_OR_I64:
-      case WebAssembly::ATOMIC_RMW_XOR_I32:
-      case WebAssembly::ATOMIC_RMW32_U_XOR_I64:
-      case WebAssembly::ATOMIC_RMW_XCHG_I32:
-      case WebAssembly::ATOMIC_RMW32_U_XCHG_I64:
-      case WebAssembly::ATOMIC_RMW_CMPXCHG_I32:
-      case WebAssembly::ATOMIC_RMW32_U_CMPXCHG_I64:
-      case WebAssembly::ATOMIC_RMW_ADD_I64:
-      case WebAssembly::ATOMIC_RMW_SUB_I64:
-      case WebAssembly::ATOMIC_RMW_AND_I64:
-      case WebAssembly::ATOMIC_RMW_OR_I64:
-      case WebAssembly::ATOMIC_RMW_XOR_I64:
-      case WebAssembly::ATOMIC_RMW_XCHG_I64:
-      case WebAssembly::ATOMIC_RMW_CMPXCHG_I64:
-      case WebAssembly::ATOMIC_NOTIFY:
-      case WebAssembly::ATOMIC_WAIT_I32:
-      case WebAssembly::ATOMIC_WAIT_I64:
-        RewriteP2Align(MI, WebAssembly::LoadP2AlignOperandNo);
-        break;
-      case WebAssembly::STORE_I32:
-      case WebAssembly::STORE_I64:
-      case WebAssembly::STORE_F32:
-      case WebAssembly::STORE_F64:
-      case WebAssembly::STORE_v16i8:
-      case WebAssembly::STORE_v8i16:
-      case WebAssembly::STORE_v4i32:
-      case WebAssembly::STORE_v2i64:
-      case WebAssembly::STORE_v4f32:
-      case WebAssembly::STORE_v2f64:
-      case WebAssembly::STORE8_I32:
-      case WebAssembly::STORE16_I32:
-      case WebAssembly::STORE8_I64:
-      case WebAssembly::STORE16_I64:
-      case WebAssembly::STORE32_I64:
-      case WebAssembly::ATOMIC_STORE_I32:
-      case WebAssembly::ATOMIC_STORE8_I32:
-      case WebAssembly::ATOMIC_STORE16_I32:
-      case WebAssembly::ATOMIC_STORE_I64:
-      case WebAssembly::ATOMIC_STORE8_I64:
-      case WebAssembly::ATOMIC_STORE16_I64:
-      case WebAssembly::ATOMIC_STORE32_I64:
-        RewriteP2Align(MI, WebAssembly::StoreP2AlignOperandNo);
-        break;
-      default:
-        break;
+      int16_t P2AlignOpNum = WebAssembly::getNamedOperandIdx(
+          MI.getOpcode(), WebAssembly::OpName::p2align);
+      if (P2AlignOpNum != -1) {
+        rewriteP2Align(MI, P2AlignOpNum);
+        Changed = true;
       }
     }
   }

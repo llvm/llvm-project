@@ -1,0 +1,18 @@
+import("//llvm/triples.gni")
+import("//llvm/utils/gn/build/toolchain/compiler.gni")
+
+target_flags = []
+target_ldflags = []
+
+if (current_os == "android") {
+  target_flags += [
+    "--target=$llvm_current_triple",
+    "--sysroot=$android_ndk_path/toolchains/llvm/prebuilt/linux-x86_64/sysroot",
+    "-B$android_ndk_path/toolchains/llvm/prebuilt/linux-x86_64",
+  ]
+  target_ldflags += [ "-static-libstdc++" ]
+}
+
+if (current_cpu == "x86") {
+  target_flags = [ "-m32" ]
+}

@@ -12,10 +12,10 @@
 // .globl foo
 // foo:
 
-RUN: llvm-readobj -gnu-hash-table %p/Inputs/gnuhash.so.elf-i386   | FileCheck %s -check-prefix I386
-RUN: llvm-readobj -gnu-hash-table %p/Inputs/gnuhash.so.elf-x86_64 | FileCheck %s -check-prefix X86_64
-RUN: llvm-readobj -gnu-hash-table %p/Inputs/gnuhash.so.elf-ppc    | FileCheck %s -check-prefix PPC
-RUN: llvm-readobj -gnu-hash-table %p/Inputs/gnuhash.so.elf-ppc64  | FileCheck %s -check-prefix PPC64
+RUN: llvm-readobj --gnu-hash-table %p/Inputs/gnuhash.so.elf-i386   | FileCheck %s -check-prefix I386
+RUN: llvm-readobj --gnu-hash-table %p/Inputs/gnuhash.so.elf-x86_64 | FileCheck %s -check-prefix X86_64
+RUN: llvm-readobj --gnu-hash-table %p/Inputs/gnuhash.so.elf-ppc    | FileCheck %s -check-prefix PPC
+RUN: llvm-readobj --gnu-hash-table %p/Inputs/gnuhash.so.elf-ppc64  | FileCheck %s -check-prefix PPC64
 
 I386:      Arch: i386
 I386:      GnuHashTable {

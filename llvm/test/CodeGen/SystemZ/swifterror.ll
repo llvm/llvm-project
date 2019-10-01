@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=s390x-linux-gnu| FileCheck %s
-; RUN: llc < %s -O0 -mtriple=s390x-linux-gnu | FileCheck --check-prefix=CHECK-O0 %s
+; RUN: llc < %s -mtriple=s390x-linux-gnu -disable-block-placement | FileCheck %s
+; RUN: llc < %s -O0 -mtriple=s390x-linux-gnu -disable-block-placement | FileCheck --check-prefix=CHECK-O0 %s
 
 declare i8* @malloc(i64)
 declare void @free(i8*)
@@ -16,7 +16,7 @@ define float @foo(%swift_error** swifterror %error_ptr_ref) {
 ; CHECK-O0-LABEL: foo:
 ; CHECK-O0: lghi %r2, 16
 ; CHECK-O0: brasl %r14, malloc
-; CHECK-O0: lgr %r14, %r2
+; CHECK-O0: lgr %r0, %r2
 ; CHECK-O0: mvi 8(%r2), 1
 entry:
   %call = call i8* @malloc(i64 16)

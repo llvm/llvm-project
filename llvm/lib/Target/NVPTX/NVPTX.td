@@ -1,9 +1,8 @@
 //===- NVPTX.td - Describe the NVPTX Target Machine -----------*- tblgen -*-==//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 // This is the top level entry point for the NVPTX target.
@@ -76,6 +75,8 @@ def PTX61 : SubtargetFeature<"ptx61", "PTXVersion", "61",
                              "Use PTX version 6.1">;
 def PTX63 : SubtargetFeature<"ptx63", "PTXVersion", "63",
                              "Use PTX version 6.3">;
+def PTX64 : SubtargetFeature<"ptx64", "PTXVersion", "64",
+                             "Use PTX version 6.4">;
 
 //===----------------------------------------------------------------------===//
 // NVPTX supported processors.

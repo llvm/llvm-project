@@ -16,6 +16,7 @@
 ; CHECK-NEXT: <FUNCTION op0=4 op1=4
 ; CHECK:       <GLOBALVAL_SUMMARY_BLOCK
 ; CHECK-NEXT:    <VERSION
+; CHECK-NEXT:    <FLAGS
 ; See if the call to func is registered, using the expected hotness type.
 ; CHECK-NEXT:    <PERMODULE_PROFILE {{.*}} op6=1 op7=2/>
 ; CHECK-NEXT:  </GLOBALVAL_SUMMARY_BLOCK>

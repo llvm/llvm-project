@@ -44,7 +44,7 @@ entry:
 define void @indexed_store_merge(i64 %p, i8* %v) {
 ; CHECK-LABEL: indexed_store_merge:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movl $0, 2(%rsi,%rdi)
+; CHECK-NEXT:    movl $0, 2(%rdi,%rsi)
 ; CHECK-NEXT:    movb $0, (%rsi)
 ; CHECK-NEXT:    retq
 entry:

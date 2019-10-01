@@ -1,9 +1,8 @@
 //===- DWARFRelocMap.h ------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -11,6 +10,7 @@
 #define LLVM_DEBUGINFO_DWARF_DWARFRELOCMAP_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/Object/RelocationResolver.h"
 #include <cstdint>
 
 namespace llvm {
@@ -19,7 +19,11 @@ namespace llvm {
 /// Section index is -1LL if relocation points to absolute symbol.
 struct RelocAddrEntry {
   uint64_t SectionIndex;
-  uint64_t Value;
+  object::RelocationRef Reloc;
+  uint64_t SymbolValue;
+  Optional<object::RelocationRef> Reloc2;
+  uint64_t SymbolValue2;
+  object::RelocationResolver Resolver;
 };
 
 /// In place of applying the relocations to the data we've read from disk we use

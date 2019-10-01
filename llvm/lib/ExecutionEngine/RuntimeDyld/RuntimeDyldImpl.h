@@ -1,9 +1,8 @@
 //===-- RuntimeDyldImpl.h - Run-time dynamic linker for MC-JIT --*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -241,7 +240,6 @@ typedef StringMap<SymbolTableEntry> RTDyldSymbolTable;
 
 class RuntimeDyldImpl {
   friend class RuntimeDyld::LoadedObjectInfo;
-  friend class RuntimeDyldCheckerImpl;
 protected:
   static const unsigned AbsoluteSymbolSection = ~0U;
 
@@ -250,9 +248,6 @@ protected:
 
   // The symbol resolver to use for external symbols.
   JITSymbolResolver &Resolver;
-
-  // Attached RuntimeDyldChecker instance. Null if no instance attached.
-  RuntimeDyldCheckerImpl *Checker;
 
   // A list of all sections emitted by the dynamic linker.  These sections are
   // referenced in the code by means of their index in this list - SectionID.
@@ -313,19 +308,15 @@ protected:
   // the end of the list while the list is being processed.
   sys::Mutex lock;
 
-  virtual unsigned getMaxStubSize() = 0;
+  using NotifyStubEmittedFunction =
+    RuntimeDyld::NotifyStubEmittedFunction;
+  NotifyStubEmittedFunction NotifyStubEmitted;
+
+  virtual unsigned getMaxStubSize() const = 0;
   virtual unsigned getStubAlignment() = 0;
 
   bool HasError;
   std::string ErrorStr;
-
-  uint64_t getSectionLoadAddress(unsigned SectionID) const {
-    return Sections[SectionID].getLoadAddress();
-  }
-
-  uint8_t *getSectionAddress(unsigned SectionID) const {
-    return Sections[SectionID].getAddress();
-  }
 
   void writeInt16BE(uint8_t *Addr, uint16_t Value) {
     if (IsTargetLittleEndian)
@@ -472,7 +463,7 @@ protected:
 public:
   RuntimeDyldImpl(RuntimeDyld::MemoryManager &MemMgr,
                   JITSymbolResolver &Resolver)
-    : MemMgr(MemMgr), Resolver(Resolver), Checker(nullptr),
+    : MemMgr(MemMgr), Resolver(Resolver),
       ProcessAllSections(false), HasError(false) {
   }
 
@@ -482,12 +473,21 @@ public:
     this->ProcessAllSections = ProcessAllSections;
   }
 
-  void setRuntimeDyldChecker(RuntimeDyldCheckerImpl *Checker) {
-    this->Checker = Checker;
-  }
-
   virtual std::unique_ptr<RuntimeDyld::LoadedObjectInfo>
   loadObject(const object::ObjectFile &Obj) = 0;
+
+  uint64_t getSectionLoadAddress(unsigned SectionID) const {
+    return Sections[SectionID].getLoadAddress();
+  }
+
+  uint8_t *getSectionAddress(unsigned SectionID) const {
+    return Sections[SectionID].getAddress();
+  }
+
+  StringRef getSectionContent(unsigned SectionID) const {
+    return StringRef(reinterpret_cast<char *>(Sections[SectionID].getAddress()),
+                     Sections[SectionID].getStubOffset() + getMaxStubSize());
+  }
 
   uint8_t* getSymbolLocalAddress(StringRef Name) const {
     // FIXME: Just look up as a function for now. Overly simple of course.
@@ -500,6 +500,13 @@ public:
     if (SymInfo.getSectionID() == AbsoluteSymbolSection)
       return nullptr;
     return getSectionAddress(SymInfo.getSectionID()) + SymInfo.getOffset();
+  }
+
+  unsigned getSymbolSectionID(StringRef Name) const {
+    auto GSTItr = GlobalSymbolTable.find(Name);
+    if (GSTItr == GlobalSymbolTable.end())
+      return ~0U;
+    return GSTItr->second.getSectionID();
   }
 
   JITEvaluatedSymbol getSymbol(StringRef Name) const {
@@ -559,6 +566,10 @@ public:
   StringRef getErrorString() { return ErrorStr; }
 
   virtual bool isCompatibleFile(const ObjectFile &Obj) const = 0;
+
+  void setNotifyStubEmitted(NotifyStubEmittedFunction NotifyStubEmitted) {
+    this->NotifyStubEmitted = std::move(NotifyStubEmitted);
+  }
 
   virtual void registerEHFrames();
 

@@ -1,9 +1,8 @@
 //===-- MipsSEISelDAGToDAG.cpp - A Dag to Dag Inst Selector for MipsSE ----===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -76,18 +75,8 @@ void MipsSEDAGToDAGISel::addDSPCtrlRegOperands(bool IsDef, MachineInstr &MI,
 }
 
 unsigned MipsSEDAGToDAGISel::getMSACtrlReg(const SDValue RegIdx) const {
-  switch (cast<ConstantSDNode>(RegIdx)->getZExtValue()) {
-  default:
-    llvm_unreachable("Could not map int to register");
-  case 0: return Mips::MSAIR;
-  case 1: return Mips::MSACSR;
-  case 2: return Mips::MSAAccess;
-  case 3: return Mips::MSASave;
-  case 4: return Mips::MSAModify;
-  case 5: return Mips::MSARequest;
-  case 6: return Mips::MSAMap;
-  case 7: return Mips::MSAUnmap;
-  }
+  uint64_t RegNum = cast<ConstantSDNode>(RegIdx)->getZExtValue();
+  return Mips::MSACtrlRegClass.getRegister(RegNum);
 }
 
 bool MipsSEDAGToDAGISel::replaceUsesWithZeroReg(MachineRegisterInfo *MRI,
@@ -135,97 +124,8 @@ bool MipsSEDAGToDAGISel::replaceUsesWithZeroReg(MachineRegisterInfo *MRI,
   return true;
 }
 
-void MipsSEDAGToDAGISel::initGlobalBaseReg(MachineFunction &MF) {
-  MipsFunctionInfo *MipsFI = MF.getInfo<MipsFunctionInfo>();
-
-  if (!MipsFI->globalBaseRegSet())
-    return;
-
-  MachineBasicBlock &MBB = MF.front();
-  MachineBasicBlock::iterator I = MBB.begin();
-  MachineRegisterInfo &RegInfo = MF.getRegInfo();
-  const TargetInstrInfo &TII = *Subtarget->getInstrInfo();
-  DebugLoc DL;
-  unsigned V0, V1, GlobalBaseReg = MipsFI->getGlobalBaseReg();
-  const TargetRegisterClass *RC;
-  const MipsABIInfo &ABI = static_cast<const MipsTargetMachine &>(TM).getABI();
-  RC = (ABI.IsN64()) ? &Mips::GPR64RegClass : &Mips::GPR32RegClass;
-
-  V0 = RegInfo.createVirtualRegister(RC);
-  V1 = RegInfo.createVirtualRegister(RC);
-
-  if (ABI.IsN64()) {
-    MF.getRegInfo().addLiveIn(Mips::T9_64);
-    MBB.addLiveIn(Mips::T9_64);
-
-    // lui $v0, %hi(%neg(%gp_rel(fname)))
-    // daddu $v1, $v0, $t9
-    // daddiu $globalbasereg, $v1, %lo(%neg(%gp_rel(fname)))
-    const GlobalValue *FName = &MF.getFunction();
-    BuildMI(MBB, I, DL, TII.get(Mips::LUi64), V0)
-      .addGlobalAddress(FName, 0, MipsII::MO_GPOFF_HI);
-    BuildMI(MBB, I, DL, TII.get(Mips::DADDu), V1).addReg(V0)
-      .addReg(Mips::T9_64);
-    BuildMI(MBB, I, DL, TII.get(Mips::DADDiu), GlobalBaseReg).addReg(V1)
-      .addGlobalAddress(FName, 0, MipsII::MO_GPOFF_LO);
-    return;
-  }
-
-  if (!MF.getTarget().isPositionIndependent()) {
-    // Set global register to __gnu_local_gp.
-    //
-    // lui   $v0, %hi(__gnu_local_gp)
-    // addiu $globalbasereg, $v0, %lo(__gnu_local_gp)
-    BuildMI(MBB, I, DL, TII.get(Mips::LUi), V0)
-      .addExternalSymbol("__gnu_local_gp", MipsII::MO_ABS_HI);
-    BuildMI(MBB, I, DL, TII.get(Mips::ADDiu), GlobalBaseReg).addReg(V0)
-      .addExternalSymbol("__gnu_local_gp", MipsII::MO_ABS_LO);
-    return;
-  }
-
-  MF.getRegInfo().addLiveIn(Mips::T9);
-  MBB.addLiveIn(Mips::T9);
-
-  if (ABI.IsN32()) {
-    // lui $v0, %hi(%neg(%gp_rel(fname)))
-    // addu $v1, $v0, $t9
-    // addiu $globalbasereg, $v1, %lo(%neg(%gp_rel(fname)))
-    const GlobalValue *FName = &MF.getFunction();
-    BuildMI(MBB, I, DL, TII.get(Mips::LUi), V0)
-      .addGlobalAddress(FName, 0, MipsII::MO_GPOFF_HI);
-    BuildMI(MBB, I, DL, TII.get(Mips::ADDu), V1).addReg(V0).addReg(Mips::T9);
-    BuildMI(MBB, I, DL, TII.get(Mips::ADDiu), GlobalBaseReg).addReg(V1)
-      .addGlobalAddress(FName, 0, MipsII::MO_GPOFF_LO);
-    return;
-  }
-
-  assert(ABI.IsO32());
-
-  // For O32 ABI, the following instruction sequence is emitted to initialize
-  // the global base register:
-  //
-  //  0. lui   $2, %hi(_gp_disp)
-  //  1. addiu $2, $2, %lo(_gp_disp)
-  //  2. addu  $globalbasereg, $2, $t9
-  //
-  // We emit only the last instruction here.
-  //
-  // GNU linker requires that the first two instructions appear at the beginning
-  // of a function and no instructions be inserted before or between them.
-  // The two instructions are emitted during lowering to MC layer in order to
-  // avoid any reordering.
-  //
-  // Register $2 (Mips::V0) is added to the list of live-in registers to ensure
-  // the value instruction 1 (addiu) defines is valid when instruction 2 (addu)
-  // reads it.
-  MF.getRegInfo().addLiveIn(Mips::V0);
-  MBB.addLiveIn(Mips::V0);
-  BuildMI(MBB, I, DL, TII.get(Mips::ADDu), GlobalBaseReg)
-    .addReg(Mips::V0).addReg(Mips::T9);
-}
-
 void MipsSEDAGToDAGISel::processFunctionAfterISel(MachineFunction &MF) {
-  initGlobalBaseReg(MF);
+  MF.getInfo<MipsFunctionInfo>()->initGlobalBaseReg();
 
   MachineRegisterInfo *MRI = &MF.getRegInfo();
 
@@ -794,6 +694,24 @@ bool MipsSEDAGToDAGISel::trySelect(SDNode *Node) {
   ///
   switch(Opcode) {
   default: break;
+
+  case Mips::PseudoD_SELECT_I:
+  case Mips::PseudoD_SELECT_I64: {
+    MVT VT = Subtarget->isGP64bit() ? MVT::i64 : MVT::i32;
+    SDValue cond = Node->getOperand(0);
+    SDValue Hi1 = Node->getOperand(1);
+    SDValue Lo1 = Node->getOperand(2);
+    SDValue Hi2 = Node->getOperand(3);
+    SDValue Lo2 = Node->getOperand(4);
+
+    SDValue ops[] = {cond, Hi1, Lo1, Hi2, Lo2};
+    EVT NodeTys[] = {VT, VT};
+    ReplaceNode(Node, CurDAG->getMachineNode(Subtarget->isGP64bit()
+                                                 ? Mips::PseudoD_SELECT_I64
+                                                 : Mips::PseudoD_SELECT_I,
+                                             DL, NodeTys, ops));
+    return true;
+  }
 
   case ISD::ADDE: {
     selectAddE(Node, DL);

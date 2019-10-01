@@ -1,9 +1,8 @@
 //===- OptimizePHIs.cpp - Optimize machine instruction PHIs ---------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -182,11 +181,12 @@ bool OptimizePHIs::OptimizeBB(MachineBasicBlock &MBB) {
       if (!MRI->constrainRegClass(SingleValReg, MRI->getRegClass(OldReg)))
         continue;
 
-      // for the case SingleValReg taken from copy instr
-      MRI->clearKillFlags(SingleValReg);
-
       MRI->replaceRegWith(OldReg, SingleValReg);
       MI->eraseFromParent();
+
+      // The kill flags on OldReg and SingleValReg may no longer be correct.
+      MRI->clearKillFlags(SingleValReg);
+
       ++NumPHICycles;
       Changed = true;
       continue;

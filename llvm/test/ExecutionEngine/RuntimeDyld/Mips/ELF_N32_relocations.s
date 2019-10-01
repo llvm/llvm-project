@@ -44,7 +44,7 @@ bar:
 	sd	$4, 8($fp)
 
 # Test R_MIPS_26 relocation.
-# rtdyld-check:  decode_operand(insn1, 0)[27:0] = stub_addr(test_ELF_N32.o, .text, foo)[27:0]
+# rtdyld-check:  decode_operand(insn1, 0)[27:0] = stub_addr(test_ELF_N32.o/.text, foo)[27:0]
 insn1:
 	.option pic0
 	jal   foo

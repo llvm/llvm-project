@@ -1,9 +1,8 @@
 //===- Signals.cpp - Signal Handling support --------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -132,8 +131,8 @@ static bool printSymbolizedStackTrace(StringRef Argv0, void **StackTrace,
   // If we don't know argv0 or the address of main() at this point, try
   // to guess it anyway (it's possible on some platforms).
   std::string MainExecutableName =
-      Argv0.empty() ? sys::fs::getMainExecutable(nullptr, nullptr)
-                    : (std::string)Argv0;
+      sys::fs::exists(Argv0) ? (std::string)Argv0
+                             : sys::fs::getMainExecutable(nullptr, nullptr);
   BumpPtrAllocator Allocator;
   StringSaver StrPool(Allocator);
   std::vector<const char *> Modules(Depth, nullptr);

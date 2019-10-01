@@ -1,9 +1,8 @@
 //===- Symbolize.h ----------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -36,38 +35,30 @@ using FunctionNameKind = DILineInfoSpecifier::FunctionNameKind;
 class LLVMSymbolizer {
 public:
   struct Options {
-    FunctionNameKind PrintFunctions;
-    bool UseSymbolTable : 1;
-    bool Demangle : 1;
-    bool RelativeAddresses : 1;
+    FunctionNameKind PrintFunctions = FunctionNameKind::LinkageName;
+    bool UseSymbolTable = true;
+    bool Demangle = true;
+    bool RelativeAddresses = false;
     std::string DefaultArch;
     std::vector<std::string> DsymHints;
     std::string FallbackDebugPath;
-
-    Options(FunctionNameKind PrintFunctions = FunctionNameKind::LinkageName,
-            bool UseSymbolTable = true, bool Demangle = true,
-            bool RelativeAddresses = false, std::string DefaultArch = "",
-            std::string FallbackDebugPath = "")
-        : PrintFunctions(PrintFunctions), UseSymbolTable(UseSymbolTable),
-          Demangle(Demangle), RelativeAddresses(RelativeAddresses),
-          DefaultArch(std::move(DefaultArch)),
-          FallbackDebugPath(std::move(FallbackDebugPath)) {}
+    std::string DWPName;
   };
 
-  LLVMSymbolizer(const Options &Opts = Options()) : Opts(Opts) {}
+  LLVMSymbolizer() = default;
+  LLVMSymbolizer(const Options &Opts) : Opts(Opts) {}
 
   ~LLVMSymbolizer() {
     flush();
   }
 
   Expected<DILineInfo> symbolizeCode(const std::string &ModuleName,
-                                     uint64_t ModuleOffset,
-                                     StringRef DWPName = "");
-  Expected<DIInliningInfo> symbolizeInlinedCode(const std::string &ModuleName,
-                                                uint64_t ModuleOffset,
-                                                StringRef DWPName = "");
+                                     object::SectionedAddress ModuleOffset);
+  Expected<DIInliningInfo>
+  symbolizeInlinedCode(const std::string &ModuleName,
+                       object::SectionedAddress ModuleOffset);
   Expected<DIGlobal> symbolizeData(const std::string &ModuleName,
-                                   uint64_t ModuleOffset);
+                                   object::SectionedAddress ModuleOffset);
   void flush();
 
   static std::string
@@ -84,7 +75,7 @@ private:
   /// only reported once. Subsequent calls to get module info for a module that
   /// failed to load will return nullptr.
   Expected<SymbolizableModule *>
-  getOrCreateModuleInfo(const std::string &ModuleName, StringRef DWPName = "");
+  getOrCreateModuleInfo(const std::string &ModuleName);
 
   ObjectFile *lookUpDsymFile(const std::string &Path,
                              const MachOObjectFile *ExeObj,

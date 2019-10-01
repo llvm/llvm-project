@@ -1,0 +1,61 @@
+## In this test case we check that we can override the default values for
+## e_shentsize, e_shoff, e_shnum and e_shstrndx fields in the YAML.
+
+## First we check the default values.
+
+# RUN: yaml2obj --docnum=1 %s -o %t1
+# RUN: llvm-readelf --file-headers %t1 | FileCheck %s --check-prefix=DEFAULT
+
+# DEFAULT:   Start of section headers:          64 (bytes into file)
+# DEFAULT:   Size of section headers:           64 (bytes)
+# DEFAULT:   Number of section headers:         4
+# DEFAULT:   Section header string table index: 3
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+
+## Override 3 fields: e_shoff, e_shnum and e_shstrndx. Check the output.
+
+# RUN: yaml2obj --docnum=2 %s -o %t2
+# RUN: llvm-readelf --file-headers %t2 | FileCheck %s --check-prefix=CUSTOM
+
+# CUSTOM: Start of section headers:          2 (bytes into file)
+# CUSTOM: Size of section headers:           64 (bytes)
+# CUSTOM: Number of section headers:         3
+# CUSTOM: Section header string table index: 4
+
+--- !ELF
+FileHeader:
+  Class:     ELFCLASS64
+  Data:      ELFDATA2LSB
+  Type:      ET_REL
+  Machine:   EM_X86_64
+  SHEntSize: 64
+  SHOffset:  2
+  SHNum:     3
+  SHStrNdx:  4
+
+## Finally, we use the same YAML as above, but set e_shentsize to 1.
+## Check the result using raw output from 'od' because llvm-readelf
+## is unable to dump such headers.
+
+# RUN: yaml2obj --docnum=3 %s -o %t3
+# RUN: od -t x1 -v -j 0x3a -N 1 %t3 | FileCheck %s --check-prefix=NEWSIZE
+# RUN: od -t x1 -v -j 0x3a -N 1 %t2 | FileCheck %s --check-prefix=OLDSIZE
+# NEWSIZE: 0000072 01
+# OLDSIZE: 0000072 40
+
+--- !ELF
+FileHeader:
+  Class:     ELFCLASS64
+  Data:      ELFDATA2LSB
+  Type:      ET_REL
+  Machine:   EM_X86_64
+  SHEntSize: 1
+  SHOffset:  2
+  SHNum:     3
+  SHStrNdx:  4

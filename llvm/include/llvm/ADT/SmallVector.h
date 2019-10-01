@@ -1,9 +1,8 @@
 //===- llvm/ADT/SmallVector.h - 'Normally small' vectors --------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -42,8 +41,8 @@ protected:
   unsigned Size = 0, Capacity;
 
   SmallVectorBase() = delete;
-  SmallVectorBase(void *FirstEl, size_t Capacity)
-      : BeginX(FirstEl), Capacity(Capacity) {}
+  SmallVectorBase(void *FirstEl, size_t TotalCapacity)
+      : BeginX(FirstEl), Capacity(TotalCapacity) {}
 
   /// This is an implementation of the grow() method which only works
   /// on POD-like data types and is out of line to reduce code duplication.
@@ -64,9 +63,9 @@ public:
   /// of the buffer when they know that more elements are available, and only
   /// update the size later. This avoids the cost of value initializing elements
   /// which will only be overwritten.
-  void set_size(size_t Size) {
-    assert(Size <= capacity());
-    this->Size = Size;
+  void set_size(size_t N) {
+    assert(N <= capacity());
+    Size = N;
   }
 };
 
@@ -125,13 +124,9 @@ public:
   using const_pointer = const T *;
 
   // forward iterator creation methods.
-  LLVM_ATTRIBUTE_ALWAYS_INLINE
   iterator begin() { return (iterator)this->BeginX; }
-  LLVM_ATTRIBUTE_ALWAYS_INLINE
   const_iterator begin() const { return (const_iterator)this->BeginX; }
-  LLVM_ATTRIBUTE_ALWAYS_INLINE
   iterator end() { return begin() + size(); }
-  LLVM_ATTRIBUTE_ALWAYS_INLINE
   const_iterator end() const { return begin() + size(); }
 
   // reverse iterator creation methods.
@@ -150,12 +145,10 @@ public:
   /// Return a pointer to the vector's buffer, even if empty().
   const_pointer data() const { return const_pointer(begin()); }
 
-  LLVM_ATTRIBUTE_ALWAYS_INLINE
   reference operator[](size_type idx) {
     assert(idx < size());
     return begin()[idx];
   }
-  LLVM_ATTRIBUTE_ALWAYS_INLINE
   const_reference operator[](size_type idx) const {
     assert(idx < size());
     return begin()[idx];
@@ -180,9 +173,9 @@ public:
   }
 };
 
-/// SmallVectorTemplateBase<isPodLike = false> - This is where we put method
+/// SmallVectorTemplateBase<TriviallyCopyable = false> - This is where we put method
 /// implementations that are designed to work with non-POD-like T's.
-template <typename T, bool = isPodLike<T>::value>
+template <typename T, bool = is_trivially_copyable<T>::value>
 class SmallVectorTemplateBase : public SmallVectorTemplateCommon<T> {
 protected:
   SmallVectorTemplateBase(size_t Size) : SmallVectorTemplateCommon<T>(Size) {}
@@ -236,8 +229,8 @@ public:
 };
 
 // Define this out-of-line to dissuade the C++ compiler from inlining it.
-template <typename T, bool isPodLike>
-void SmallVectorTemplateBase<T, isPodLike>::grow(size_t MinSize) {
+template <typename T, bool TriviallyCopyable>
+void SmallVectorTemplateBase<T, TriviallyCopyable>::grow(size_t MinSize) {
   if (MinSize > UINT32_MAX)
     report_bad_alloc_error("SmallVector capacity overflow during allocation");
 
@@ -260,9 +253,8 @@ void SmallVectorTemplateBase<T, isPodLike>::grow(size_t MinSize) {
   this->Capacity = NewCapacity;
 }
 
-
-/// SmallVectorTemplateBase<isPodLike = true> - This is where we put method
-/// implementations that are designed to work with POD-like T's.
+/// SmallVectorTemplateBase<TriviallyCopyable = true> - This is where we put
+/// method implementations that are designed to work with POD-like T's.
 template <typename T>
 class SmallVectorTemplateBase<T, true> : public SmallVectorTemplateCommon<T> {
 protected:
@@ -326,12 +318,13 @@ class SmallVectorImpl : public SmallVectorTemplateBase<T> {
 public:
   using iterator = typename SuperClass::iterator;
   using const_iterator = typename SuperClass::const_iterator;
+  using reference = typename SuperClass::reference;
   using size_type = typename SuperClass::size_type;
 
 protected:
   // Default ctor - Initialize to empty.
   explicit SmallVectorImpl(unsigned N)
-      : SmallVectorTemplateBase<T, isPodLike<T>::value>(N) {}
+      : SmallVectorTemplateBase<T>(N) {}
 
 public:
   SmallVectorImpl(const SmallVectorImpl &) = delete;
@@ -393,22 +386,18 @@ public:
                 std::input_iterator_tag>::value>::type>
   void append(in_iter in_start, in_iter in_end) {
     size_type NumInputs = std::distance(in_start, in_end);
-    // Grow allocated space if needed.
     if (NumInputs > this->capacity() - this->size())
       this->grow(this->size()+NumInputs);
 
-    // Copy the new elements over.
     this->uninitialized_copy(in_start, in_end, this->end());
     this->set_size(this->size() + NumInputs);
   }
 
-  /// Add the specified range to the end of the SmallVector.
+  /// Append \p NumInputs copies of \p Elt to the end.
   void append(size_type NumInputs, const T &Elt) {
-    // Grow allocated space if needed.
     if (NumInputs > this->capacity() - this->size())
       this->grow(this->size()+NumInputs);
 
-    // Copy the new elements over.
     std::uninitialized_fill_n(this->end(), NumInputs, Elt);
     this->set_size(this->size() + NumInputs);
   }
@@ -649,11 +638,12 @@ public:
     insert(I, IL.begin(), IL.end());
   }
 
-  template <typename... ArgTypes> void emplace_back(ArgTypes &&... Args) {
+  template <typename... ArgTypes> reference emplace_back(ArgTypes &&... Args) {
     if (LLVM_UNLIKELY(this->size() >= this->capacity()))
       this->grow();
     ::new ((void *)this->end()) T(std::forward<ArgTypes>(Args)...);
     this->set_size(this->size() + 1);
+    return this->back();
   }
 
   SmallVectorImpl &operator=(const SmallVectorImpl &RHS);

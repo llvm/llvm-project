@@ -3,8 +3,8 @@
 
 
 ; OPT-LABEL: @annotate_unreachable(
-; OPT: call { i1, i64 } @llvm.amdgcn.if(
-; OPT-NOT: call void @llvm.amdgcn.end.cf(
+; OPT: call { i1, i64 } @llvm.amdgcn.if.i64(
+; OPT-NOT: call void @llvm.amdgcn.end.cf
 
 
 ; GCN-LABEL: {{^}}annotate_unreachable:

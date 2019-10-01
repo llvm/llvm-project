@@ -1,4 +1,4 @@
-# RUN: llvm-mc -filetype=obj -triple=msp430 %s | llvm-readobj -t - | FileCheck %s
+# RUN: llvm-mc -filetype=obj -triple=msp430 %s | llvm-readobj --symbols - | FileCheck %s
 
 foo:
   .refsym __hook

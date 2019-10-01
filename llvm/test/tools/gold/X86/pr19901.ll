@@ -2,7 +2,7 @@
 ; RUN: llvm-as %p/Inputs/pr19901-1.ll -o %t2.o
 ; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:     -shared -m elf_x86_64 -o %t.so %t2.o %t.o
-; RUN: llvm-readobj -t %t.so | FileCheck %s
+; RUN: llvm-readobj --symbols %t.so | FileCheck %s
 
 ; CHECK:       Symbol {
 ; CHECK:         Name: f

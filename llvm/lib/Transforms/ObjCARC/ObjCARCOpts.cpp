@@ -1,9 +1,8 @@
 //===- ObjCARCOpts.cpp - ObjC ARC Optimization ----------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -659,7 +658,7 @@ ObjCARCOpt::OptimizeRetainRVCall(Function &F, Instruction *RetainRV) {
                        "Old = "
                     << *RetainRV << "\n");
 
-  Constant *NewDecl = EP.get(ARCRuntimeEntryPointKind::Retain);
+  Function *NewDecl = EP.get(ARCRuntimeEntryPointKind::Retain);
   cast<CallInst>(RetainRV)->setCalledFunction(NewDecl);
 
   LLVM_DEBUG(dbgs() << "New = " << *RetainRV << "\n");
@@ -708,7 +707,7 @@ void ObjCARCOpt::OptimizeAutoreleaseRVCall(Function &F,
              << *AutoreleaseRV << "\n");
 
   CallInst *AutoreleaseRVCI = cast<CallInst>(AutoreleaseRV);
-  Constant *NewDecl = EP.get(ARCRuntimeEntryPointKind::Autorelease);
+  Function *NewDecl = EP.get(ARCRuntimeEntryPointKind::Autorelease);
   AutoreleaseRVCI->setCalledFunction(NewDecl);
   AutoreleaseRVCI->setTailCall(false); // Never tail call objc_autorelease.
   Class = ARCInstKind::Autorelease;
@@ -760,6 +759,19 @@ void ObjCARCOpt::OptimizeIndividualCalls(Function &F) {
     ARCInstKind Class = GetBasicARCInstKind(Inst);
 
     LLVM_DEBUG(dbgs() << "Visiting: Class: " << Class << "; " << *Inst << "\n");
+
+    // Some of the ARC calls can be deleted if their arguments are global
+    // variables that are inert in ARC.
+    if (IsNoopOnGlobal(Class)) {
+      Value *Opnd = Inst->getOperand(0);
+      if (auto *GV = dyn_cast<GlobalVariable>(Opnd->stripPointerCasts()))
+        if (GV->hasAttribute("objc_arc_inert")) {
+          if (!Inst->getType()->isVoidTy())
+            Inst->replaceAllUsesWith(Opnd);
+          Inst->eraseFromParent();
+          continue;
+        }
+    }
 
     switch (Class) {
     default: break;
@@ -847,7 +859,7 @@ void ObjCARCOpt::OptimizeIndividualCalls(Function &F) {
         // Create the declaration lazily.
         LLVMContext &C = Inst->getContext();
 
-        Constant *Decl = EP.get(ARCRuntimeEntryPointKind::Release);
+        Function *Decl = EP.get(ARCRuntimeEntryPointKind::Release);
         CallInst *NewCall = CallInst::Create(Decl, Call->getArgOperand(0), "",
                                              Call);
         NewCall->setMetadata(MDKindCache.get(ARCMDKindID::ImpreciseRelease),
@@ -1565,7 +1577,7 @@ void ObjCARCOpt::MoveCalls(Value *Arg, RRInfo &RetainsToMove,
   for (Instruction *InsertPt : ReleasesToMove.ReverseInsertPts) {
     Value *MyArg = ArgTy == ParamTy ? Arg :
                    new BitCastInst(Arg, ParamTy, "", InsertPt);
-    Constant *Decl = EP.get(ARCRuntimeEntryPointKind::Retain);
+    Function *Decl = EP.get(ARCRuntimeEntryPointKind::Retain);
     CallInst *Call = CallInst::Create(Decl, MyArg, "", InsertPt);
     Call->setDoesNotThrow();
     Call->setTailCall();
@@ -1578,7 +1590,7 @@ void ObjCARCOpt::MoveCalls(Value *Arg, RRInfo &RetainsToMove,
   for (Instruction *InsertPt : RetainsToMove.ReverseInsertPts) {
     Value *MyArg = ArgTy == ParamTy ? Arg :
                    new BitCastInst(Arg, ParamTy, "", InsertPt);
-    Constant *Decl = EP.get(ARCRuntimeEntryPointKind::Release);
+    Function *Decl = EP.get(ARCRuntimeEntryPointKind::Release);
     CallInst *Call = CallInst::Create(Decl, MyArg, "", InsertPt);
     // Attach a clang.imprecise_release metadata tag, if appropriate.
     if (MDNode *M = ReleasesToMove.ReleaseMetadata)
@@ -1914,7 +1926,7 @@ void ObjCARCOpt::OptimizeWeakCalls(Function &F) {
           Changed = true;
           // If the load has a builtin retain, insert a plain retain for it.
           if (Class == ARCInstKind::LoadWeakRetained) {
-            Constant *Decl = EP.get(ARCRuntimeEntryPointKind::Retain);
+            Function *Decl = EP.get(ARCRuntimeEntryPointKind::Retain);
             CallInst *CI = CallInst::Create(Decl, EarlierCall, "", Call);
             CI->setTailCall();
           }
@@ -1943,7 +1955,7 @@ void ObjCARCOpt::OptimizeWeakCalls(Function &F) {
           Changed = true;
           // If the load has a builtin retain, insert a plain retain for it.
           if (Class == ARCInstKind::LoadWeakRetained) {
-            Constant *Decl = EP.get(ARCRuntimeEntryPointKind::Retain);
+            Function *Decl = EP.get(ARCRuntimeEntryPointKind::Retain);
             CallInst *CI = CallInst::Create(Decl, EarlierCall, "", Call);
             CI->setTailCall();
           }

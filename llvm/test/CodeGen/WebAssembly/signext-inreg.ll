@@ -30,7 +30,7 @@ define i32 @i32_extend16_s(i16 %x) {
 
 ; CHECK-LABEL: i64_extend8_s:
 ; CHECK-NEXT: .functype i64_extend8_s (i32) -> (i64){{$}}
-; CHECK-NEXT: i64.extend_u/i32 $push[[NUM1:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: i64.extend_i32_u $push[[NUM1:[0-9]+]]=, $0{{$}}
 ; CHECK-NEXT: i64.extend8_s $push[[NUM2:[0-9]+]]=, $pop[[NUM1]]{{$}}
 ; CHECK-NEXT: return $pop[[NUM2]]{{$}}
 
@@ -43,7 +43,7 @@ define i64 @i64_extend8_s(i8 %x) {
 
 ; CHECK-LABEL: i64_extend16_s:
 ; CHECK-NEXT: .functype i64_extend16_s (i32) -> (i64){{$}}
-; CHECK-NEXT: i64.extend_u/i32 $push[[NUM1:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: i64.extend_i32_u $push[[NUM1:[0-9]+]]=, $0{{$}}
 ; CHECK-NEXT: i64.extend16_s $push[[NUM2:[0-9]+]]=, $pop[[NUM1]]{{$}}
 ; CHECK-NEXT: return $pop[[NUM2]]{{$}}
 
@@ -57,7 +57,7 @@ define i64 @i64_extend16_s(i16 %x) {
 ; No SIGN_EXTEND_INREG is needed for 32->64 extension.
 ; CHECK-LABEL: i64_extend32_s:
 ; CHECK-NEXT: .functype i64_extend32_s (i32) -> (i64){{$}}
-; CHECK-NEXT: i64.extend_s/i32 $push[[NUM:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: i64.extend_i32_s $push[[NUM:[0-9]+]]=, $0{{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i64 @i64_extend32_s(i32 %x) {
   %a = sext i32 %x to i64

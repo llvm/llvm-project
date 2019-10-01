@@ -1,14 +1,14 @@
 //===- llvm/unittest/IR/AttributesTest.cpp - Attributes unit tests --------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "gtest/gtest.h"
 using namespace llvm;
 
@@ -40,6 +40,10 @@ TEST(Attributes, Ordering) {
   EXPECT_TRUE(Align4 < Deref4);
   EXPECT_TRUE(Align4 < Deref5);
   EXPECT_TRUE(Align5 < Deref4);
+
+  Attribute ByVal = Attribute::get(C, Attribute::ByVal, Type::getInt32Ty(C));
+  EXPECT_FALSE(ByVal < Attribute::get(C, Attribute::ZExt));
+  EXPECT_TRUE(ByVal < Align4);
 
   AttributeList ASs[] = {AttributeList::get(C, 2, Attribute::ZExt),
                          AttributeList::get(C, 1, Attribute::SExt)};
@@ -165,6 +169,21 @@ TEST(Attributes, OverflowGet) {
                                              { AttributeList::FunctionIndex, Attribute::get(C, Attribute::ReadOnly) } };
   AttributeList AL = AttributeList::get(C, Attrs);
   EXPECT_EQ(2U, AL.getNumAttrSets());
+}
+
+TEST(Attributes, StringRepresentation) {
+  LLVMContext C;
+  StructType *Ty = StructType::create(Type::getInt32Ty(C), "mystruct");
+
+  // Insufficiently careful printing can result in byval(%mystruct = { i32 })
+  Attribute A = Attribute::getWithByValType(C, Ty);
+  EXPECT_EQ(A.getAsString(), "byval(%mystruct)");
+
+  A = Attribute::getWithByValType(C, nullptr);
+  EXPECT_EQ(A.getAsString(), "byval");
+
+  A = Attribute::getWithByValType(C, Type::getInt32Ty(C));
+  EXPECT_EQ(A.getAsString(), "byval(i32)");
 }
 
 } // end anonymous namespace

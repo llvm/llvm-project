@@ -11,7 +11,7 @@ define void @test1(i1 %c, i1 %c2) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[SEL2]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[TAKEN:%.*]], label [[UNTAKEN:%.*]]
 ; CHECK:       taken:
-; CHECK-NEXT:    call void @use() [ "deopt"(i64 [[SEL2]]) ]
+; CHECK-NEXT:    call void @use() [ "deopt"(i64 1) ]
 ; CHECK-NEXT:    ret void
 ; CHECK:       untaken:
 ; CHECK-NEXT:    ret void
@@ -37,7 +37,7 @@ define void @test1_assume(i1 %c, i1 %c2) {
 ; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[C2:%.*]], i64 [[SEL]], i64 0
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[SEL2]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    call void @use() [ "deopt"(i64 [[SEL2]]) ]
+; CHECK-NEXT:    call void @use() [ "deopt"(i64 1) ]
 ; CHECK-NEXT:    ret void
 ;
   %sel = select i1 %c, i64 -1, i64 1
@@ -55,7 +55,7 @@ define void @test1_guard(i1 %c, i1 %c2) {
 ; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[C2:%.*]], i64 [[SEL]], i64 0
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[SEL2]], 0
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[CMP]]) [ "deopt"(i64 [[SEL2]]) ]
-; CHECK-NEXT:    call void @use() [ "deopt"(i64 [[SEL2]]) ]
+; CHECK-NEXT:    call void @use() [ "deopt"(i64 1) ]
 ; CHECK-NEXT:    ret void
 ;
   %sel = select i1 %c, i64 -1, i64 1
@@ -76,7 +76,7 @@ define void @test2(i1 %c, i1 %c2) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[SEL2]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[TAKEN:%.*]], label [[UNTAKEN:%.*]]
 ; CHECK:       taken:
-; CHECK-NEXT:    call void @use() [ "deopt"(i64 [[SEL2]]) ]
+; CHECK-NEXT:    call void @use() [ "deopt"(i64 1) ]
 ; CHECK-NEXT:    ret void
 ; CHECK:       untaken:
 ; CHECK-NEXT:    ret void
@@ -98,7 +98,7 @@ define void @test3(i1 %c, i1 %c2) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[SEL2]], 1
 ; CHECK-NEXT:    br i1 [[CMP]], label [[TAKEN:%.*]], label [[UNTAKEN:%.*]]
 ; CHECK:       taken:
-; CHECK-NEXT:    call void @use() [ "deopt"(i64 [[SEL2]]) ]
+; CHECK-NEXT:    call void @use() [ "deopt"(i64 2) ]
 ; CHECK-NEXT:    ret void
 ; CHECK:       untaken:
 ; CHECK-NEXT:    ret void
@@ -120,10 +120,10 @@ define void @test4(i1 %c, i1 %c2) {
 ; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[C2:%.*]], i64 0, i64 1
 ; CHECK-NEXT:    [[ADD1:%.*]] = add i64 0, [[SEL]]
 ; CHECK-NEXT:    [[ADD2:%.*]] = add i64 [[ADD1]], [[SEL2]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[ADD2]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[ADD2]], 1
 ; CHECK-NEXT:    br i1 [[CMP]], label [[TAKEN:%.*]], label [[UNTAKEN:%.*]]
 ; CHECK:       taken:
-; CHECK-NEXT:    call void @use() [ "deopt"(i64 [[ADD2]]) ]
+; CHECK-NEXT:    call void @use() [ "deopt"(i64 2) ]
 ; CHECK-NEXT:    ret void
 ; CHECK:       untaken:
 ; CHECK-NEXT:    ret void
@@ -132,7 +132,7 @@ define void @test4(i1 %c, i1 %c2) {
   %sel2 = select i1 %c2, i64 0, i64 1
   %add1 = add i64 0, %sel
   %add2 = add i64 %add1, %sel2
-  %cmp = icmp sgt i64 %add2, 0
+  %cmp = icmp sgt i64 %add2, 1
   br i1 %cmp, label %taken, label %untaken
 taken:
   call void @use() ["deopt" (i64 %add2)]

@@ -38,10 +38,10 @@ define void @testCombineMultiplies([100 x i32]* nocapture %a, i32 %lll) nounwind
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    imull $400, %ecx, %edx # imm = 0x190
-; CHECK-NEXT:    leal (%eax,%edx), %esi
+; CHECK-NEXT:    leal (%edx,%eax), %esi
 ; CHECK-NEXT:    movl $11, 2020(%esi,%ecx,4)
-; CHECK-NEXT:    movl $22, 2080(%eax,%edx)
-; CHECK-NEXT:    movl $33, 10080(%eax,%edx)
+; CHECK-NEXT:    movl $22, 2080(%edx,%eax)
+; CHECK-NEXT:    movl $33, 10080(%edx,%eax)
 ; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    retl
 entry:

@@ -1,9 +1,8 @@
 //===- TypeDeserializer.h ---------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -59,7 +58,7 @@ public:
     TypeRecordKind K =
         static_cast<TypeRecordKind>(uint16_t(Prefix->RecordKind));
     T Record(K);
-    CVType CVT(static_cast<TypeLeafKind>(K), Data);
+    CVType CVT(Data);
     if (auto EC = deserializeAs<T>(CVT, Record))
       return std::move(EC);
     return Record;
@@ -112,14 +111,14 @@ class FieldListDeserializer : public TypeVisitorCallbacks {
 
 public:
   explicit FieldListDeserializer(BinaryStreamReader &Reader) : Mapping(Reader) {
-    CVType FieldList;
-    FieldList.Type = TypeLeafKind::LF_FIELDLIST;
+    RecordPrefix Pre(static_cast<uint16_t>(TypeLeafKind::LF_FIELDLIST));
+    CVType FieldList(&Pre, sizeof(Pre));
     consumeError(Mapping.Mapping.visitTypeBegin(FieldList));
   }
 
   ~FieldListDeserializer() override {
-    CVType FieldList;
-    FieldList.Type = TypeLeafKind::LF_FIELDLIST;
+    RecordPrefix Pre(static_cast<uint16_t>(TypeLeafKind::LF_FIELDLIST));
+    CVType FieldList(&Pre, sizeof(Pre));
     consumeError(Mapping.Mapping.visitTypeEnd(FieldList));
   }
 

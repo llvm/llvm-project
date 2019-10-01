@@ -1,9 +1,8 @@
 //===--------------------- Instruction.cpp ----------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -19,7 +18,16 @@
 namespace llvm {
 namespace mca {
 
-void ReadState::writeStartEvent(unsigned Cycles) {
+void WriteState::writeStartEvent(unsigned IID, unsigned RegID,
+                                 unsigned Cycles) {
+  CRD.IID = IID;
+  CRD.RegID = RegID;
+  CRD.Cycles = Cycles;
+  DependentWriteCyclesLeft = Cycles;
+  DependentWrite = nullptr;
+}
+
+void ReadState::writeStartEvent(unsigned IID, unsigned RegID, unsigned Cycles) {
   assert(DependentWrites);
   assert(CyclesLeft == UNKNOWN_CYCLES);
 
@@ -29,7 +37,12 @@ void ReadState::writeStartEvent(unsigned Cycles) {
   // The HW is forced to do some extra bookkeeping to track of all the
   // dependent writes, and implement a merging scheme for the partial writes.
   --DependentWrites;
-  TotalCycles = std::max(TotalCycles, Cycles);
+  if (TotalCycles < Cycles) {
+    CRD.IID = IID;
+    CRD.RegID = RegID;
+    CRD.Cycles = Cycles;
+    TotalCycles = Cycles;
+  }
 
   if (!DependentWrites) {
     CyclesLeft = TotalCycles;
@@ -37,7 +50,7 @@ void ReadState::writeStartEvent(unsigned Cycles) {
   }
 }
 
-void WriteState::onInstructionIssued() {
+void WriteState::onInstructionIssued(unsigned IID) {
   assert(CyclesLeft == UNKNOWN_CYCLES);
   // Update the number of cycles left based on the WriteDescriptor info.
   CyclesLeft = getLatency();
@@ -47,34 +60,30 @@ void WriteState::onInstructionIssued() {
   for (const std::pair<ReadState *, int> &User : Users) {
     ReadState *RS = User.first;
     unsigned ReadCycles = std::max(0, CyclesLeft - User.second);
-    RS->writeStartEvent(ReadCycles);
+    RS->writeStartEvent(IID, RegisterID, ReadCycles);
   }
 
   // Notify any writes that are in a false dependency with this write.
   if (PartialWrite)
-    PartialWrite->writeStartEvent(CyclesLeft);
+    PartialWrite->writeStartEvent(IID, RegisterID, CyclesLeft);
 }
 
-void WriteState::addUser(ReadState *User, int ReadAdvance) {
+void WriteState::addUser(unsigned IID, ReadState *User, int ReadAdvance) {
   // If CyclesLeft is different than -1, then we don't need to
   // update the list of users. We can just notify the user with
   // the actual number of cycles left (which may be zero).
   if (CyclesLeft != UNKNOWN_CYCLES) {
     unsigned ReadCycles = std::max(0, CyclesLeft - ReadAdvance);
-    User->writeStartEvent(ReadCycles);
+    User->writeStartEvent(IID, RegisterID, ReadCycles);
     return;
   }
 
-  if (llvm::find_if(Users, [&User](const std::pair<ReadState *, int> &Use) {
-        return Use.first == User;
-      }) == Users.end()) {
-    Users.emplace_back(User, ReadAdvance);
-  }
+  Users.emplace_back(User, ReadAdvance);
 }
 
-void WriteState::addUser(WriteState *User) {
+void WriteState::addUser(unsigned IID, WriteState *User) {
   if (CyclesLeft != UNKNOWN_CYCLES) {
-    User->writeStartEvent(std::max(0, CyclesLeft));
+    User->writeStartEvent(IID, RegisterID, std::max(0, CyclesLeft));
     return;
   }
 
@@ -126,16 +135,37 @@ void WriteRef::dump() const {
 }
 #endif
 
+const CriticalDependency &Instruction::computeCriticalRegDep() {
+  if (CriticalRegDep.Cycles)
+    return CriticalRegDep;
+
+  unsigned MaxLatency = 0;
+  for (const WriteState &WS : getDefs()) {
+    const CriticalDependency &WriteCRD = WS.getCriticalRegDep();
+    if (WriteCRD.Cycles > MaxLatency)
+      CriticalRegDep = WriteCRD;
+  }
+
+  for (const ReadState &RS : getUses()) {
+    const CriticalDependency &ReadCRD = RS.getCriticalRegDep();
+    if (ReadCRD.Cycles > MaxLatency)
+      CriticalRegDep = ReadCRD;
+  }
+
+  return CriticalRegDep;
+}
+
 void Instruction::dispatch(unsigned RCUToken) {
   assert(Stage == IS_INVALID);
-  Stage = IS_AVAILABLE;
+  Stage = IS_DISPATCHED;
   RCUTokenID = RCUToken;
 
   // Check if input operands are already available.
-  update();
+  if (updateDispatched())
+    updatePending();
 }
 
-void Instruction::execute() {
+void Instruction::execute(unsigned IID) {
   assert(Stage == IS_READY);
   Stage = IS_EXECUTING;
 
@@ -143,7 +173,7 @@ void Instruction::execute() {
   CyclesLeft = getLatency();
 
   for (WriteState &WS : getDefs())
-    WS.onInstructionIssued();
+    WS.onInstructionIssued(IID);
 
   // Transition to the "executed" stage if this is a zero-latency instruction.
   if (!CyclesLeft)
@@ -156,30 +186,49 @@ void Instruction::forceExecuted() {
   Stage = IS_EXECUTED;
 }
 
-void Instruction::update() {
-  assert(isDispatched() && "Unexpected instruction stage found!");
+bool Instruction::updatePending() {
+  assert(isPending() && "Unexpected instruction stage found!");
 
   if (!all_of(getUses(), [](const ReadState &Use) { return Use.isReady(); }))
-    return;
+    return false;
 
   // A partial register write cannot complete before a dependent write.
-  auto IsDefReady = [&](const WriteState &Def) {
-    if (!Def.getDependentWrite()) {
-      unsigned CyclesLeft = Def.getDependentWriteCyclesLeft();
-      return !CyclesLeft || CyclesLeft < getLatency();
-    }
+  if (!all_of(getDefs(), [](const WriteState &Def) { return Def.isReady(); }))
     return false;
-  };
 
-  if (all_of(getDefs(), IsDefReady))
-    Stage = IS_READY;
+  Stage = IS_READY;
+  return true;
+}
+
+bool Instruction::updateDispatched() {
+  assert(isDispatched() && "Unexpected instruction stage found!");
+
+  if (!all_of(getUses(), [](const ReadState &Use) {
+        return Use.isPending() || Use.isReady();
+      }))
+    return false;
+
+  // A partial register write cannot complete before a dependent write.
+  if (!all_of(getDefs(),
+              [](const WriteState &Def) { return !Def.getDependentWrite(); }))
+    return false;
+
+  Stage = IS_PENDING;
+  return true;
+}
+
+void Instruction::update() {
+  if (isDispatched())
+    updateDispatched();
+  if (isPending())
+    updatePending();
 }
 
 void Instruction::cycleEvent() {
   if (isReady())
     return;
 
-  if (isDispatched()) {
+  if (isDispatched() || isPending()) {
     for (ReadState &Use : getUses())
       Use.cycleEvent();
 

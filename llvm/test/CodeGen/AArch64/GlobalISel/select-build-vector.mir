@@ -20,6 +20,8 @@
     ret <2 x i64> undef
   }
 
+  define void @test_p0(i64 *%a, i64 *%b) { ret void }
+
 ...
 ---
 name:            test_f32
@@ -30,46 +32,6 @@ regBankSelected: true
 selected:        false
 failedISel:      false
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr, preferred-register: '' }
-  - { id: 1, class: fpr, preferred-register: '' }
-  - { id: 2, class: fpr, preferred-register: '' }
-  - { id: 3, class: fpr, preferred-register: '' }
-  - { id: 4, class: fpr, preferred-register: '' }
-  - { id: 5, class: _, preferred-register: '' }
-  - { id: 6, class: _, preferred-register: '' }
-  - { id: 7, class: _, preferred-register: '' }
-  - { id: 8, class: _, preferred-register: '' }
-  - { id: 9, class: _, preferred-register: '' }
-  - { id: 10, class: _, preferred-register: '' }
-  - { id: 11, class: _, preferred-register: '' }
-  - { id: 12, class: _, preferred-register: '' }
-  - { id: 13, class: gpr, preferred-register: '' }
-  - { id: 14, class: gpr, preferred-register: '' }
-  - { id: 15, class: gpr, preferred-register: '' }
-  - { id: 16, class: gpr, preferred-register: '' }
-liveins:
-frameInfo:
-  isFrameAddressTaken: false
-  isReturnAddressTaken: false
-  hasStackMap:     false
-  hasPatchPoint:   false
-  stackSize:       0
-  offsetAdjustment: 0
-  maxAlignment:    0
-  adjustsStack:    false
-  hasCalls:        false
-  stackProtector:  ''
-  maxCallFrameSize: 0
-  hasOpaqueSPAdjustment: false
-  hasVAStart:      false
-  hasMustTailInVarArgFunc: false
-  localFrameSize:  0
-  savePoint:       ''
-  restorePoint:    ''
-fixedStack:
-stack:
-constants:
 body:             |
   bb.0 (%ir-block.0):
     liveins: $s0, $s1, $s2, $s3
@@ -111,40 +73,6 @@ regBankSelected: true
 selected:        false
 failedISel:      false
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr, preferred-register: '' }
-  - { id: 1, class: fpr, preferred-register: '' }
-  - { id: 2, class: fpr, preferred-register: '' }
-  - { id: 3, class: fpr, preferred-register: '' }
-  - { id: 4, class: fpr, preferred-register: '' }
-  - { id: 5, class: _, preferred-register: '' }
-  - { id: 6, class: _, preferred-register: '' }
-  - { id: 7, class: _, preferred-register: '' }
-  - { id: 8, class: _, preferred-register: '' }
-  - { id: 9, class: gpr, preferred-register: '' }
-  - { id: 10, class: gpr, preferred-register: '' }
-liveins:
-frameInfo:
-  isFrameAddressTaken: false
-  isReturnAddressTaken: false
-  hasStackMap:     false
-  hasPatchPoint:   false
-  stackSize:       0
-  offsetAdjustment: 0
-  maxAlignment:    0
-  adjustsStack:    false
-  hasCalls:        false
-  stackProtector:  ''
-  maxCallFrameSize: 0
-  hasOpaqueSPAdjustment: false
-  hasVAStart:      false
-  hasMustTailInVarArgFunc: false
-  localFrameSize:  0
-  savePoint:       ''
-  restorePoint:    ''
-fixedStack:
-stack:
-constants:
 body:             |
   bb.0 (%ir-block.0):
     liveins: $d0, $d1, $d2, $d3
@@ -176,42 +104,6 @@ regBankSelected: true
 selected:        false
 failedISel:      false
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: gpr, preferred-register: '' }
-  - { id: 1, class: gpr, preferred-register: '' }
-  - { id: 2, class: gpr, preferred-register: '' }
-  - { id: 3, class: gpr, preferred-register: '' }
-  - { id: 4, class: fpr, preferred-register: '' }
-  - { id: 5, class: _, preferred-register: '' }
-  - { id: 6, class: _, preferred-register: '' }
-  - { id: 7, class: _, preferred-register: '' }
-  - { id: 8, class: _, preferred-register: '' }
-  - { id: 9, class: _, preferred-register: '' }
-  - { id: 10, class: _, preferred-register: '' }
-  - { id: 11, class: _, preferred-register: '' }
-  - { id: 12, class: _, preferred-register: '' }
-liveins:
-frameInfo:
-  isFrameAddressTaken: false
-  isReturnAddressTaken: false
-  hasStackMap:     false
-  hasPatchPoint:   false
-  stackSize:       0
-  offsetAdjustment: 0
-  maxAlignment:    0
-  adjustsStack:    false
-  hasCalls:        false
-  stackProtector:  ''
-  maxCallFrameSize: 0
-  hasOpaqueSPAdjustment: false
-  hasVAStart:      false
-  hasMustTailInVarArgFunc: false
-  localFrameSize:  0
-  savePoint:       ''
-  restorePoint:    ''
-fixedStack:
-stack:
-constants:
 body:             |
   bb.0 (%ir-block.0):
     liveins: $w0, $w1, $w2, $w3
@@ -247,44 +139,12 @@ regBankSelected: true
 selected:        false
 failedISel:      false
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: gpr, preferred-register: '' }
-  - { id: 1, class: gpr, preferred-register: '' }
-  - { id: 2, class: gpr, preferred-register: '' }
-  - { id: 3, class: gpr, preferred-register: '' }
-  - { id: 4, class: fpr, preferred-register: '' }
-  - { id: 5, class: _, preferred-register: '' }
-  - { id: 6, class: _, preferred-register: '' }
-  - { id: 7, class: _, preferred-register: '' }
-  - { id: 8, class: _, preferred-register: '' }
-liveins:
-frameInfo:
-  isFrameAddressTaken: false
-  isReturnAddressTaken: false
-  hasStackMap:     false
-  hasPatchPoint:   false
-  stackSize:       0
-  offsetAdjustment: 0
-  maxAlignment:    0
-  adjustsStack:    false
-  hasCalls:        false
-  stackProtector:  ''
-  maxCallFrameSize: 0
-  hasOpaqueSPAdjustment: false
-  hasVAStart:      false
-  hasMustTailInVarArgFunc: false
-  localFrameSize:  0
-  savePoint:       ''
-  restorePoint:    ''
-fixedStack:
-stack:
-constants:
 body:             |
   bb.0 (%ir-block.0):
-    liveins: $x0, $x1, $x2, $x3
+    liveins: $x0, $x1
 
     ; CHECK-LABEL: name: test_i64
-    ; CHECK: liveins: $x0, $x1, $x2, $x3
+    ; CHECK: liveins: $x0, $x1
     ; CHECK: [[COPY:%[0-9]+]]:gpr64all = COPY $x0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
     ; CHECK: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
@@ -296,6 +156,35 @@ body:             |
     %1:gpr(s64) = COPY $x1
     %4:fpr(<2 x s64>) = G_BUILD_VECTOR %0(s64), %1(s64)
     $q0 = COPY %4(<2 x s64>)
+    RET_ReallyLR implicit $q0
+
+...
+---
+name:            test_p0
+alignment:       2
+exposesReturnsTwice: false
+legalized:       true
+regBankSelected: true
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: $x0, $x1
+
+    ; CHECK-LABEL: name: test_p0
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64all = COPY $x0
+    ; CHECK: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
+    ; CHECK: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
+    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.dsub
+    ; CHECK: [[INSvi64gpr:%[0-9]+]]:fpr128 = INSvi64gpr [[INSERT_SUBREG]], 1, [[COPY1]]
+    ; CHECK: $q0 = COPY [[INSvi64gpr]]
+    ; CHECK: RET_ReallyLR implicit $q0
+    %0:gpr(p0) = COPY $x0
+    %1:gpr(p0) = COPY $x1
+    %4:fpr(<2 x p0>) = G_BUILD_VECTOR %0(p0), %1(p0)
+    $q0 = COPY %4(<2 x p0>)
     RET_ReallyLR implicit $q0
 
 ...

@@ -1,5 +1,5 @@
 RUN: dsymutil -oso-prepend-path %p/.. %p/../Inputs/swift-ast.macho.x86_64 -o %T/swift-ast.dSYM -verbose -no-swiftmodule-timestamp | FileCheck %s --check-prefix=DSYMUTIL
-RUN: llvm-readobj -sections -section-data %T/swift-ast.dSYM/Contents/Resources/DWARF/swift-ast.macho.x86_64 | FileCheck %s --check-prefix=READOBJ
+RUN: llvm-readobj --sections --section-data %T/swift-ast.dSYM/Contents/Resources/DWARF/swift-ast.macho.x86_64 | FileCheck %s --check-prefix=READOBJ
 
 The tested object file has been created by the dummy Swift code:
 let x = 1

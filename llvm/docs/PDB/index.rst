@@ -52,7 +52,7 @@ File Layout
    ModiStream
    PublicStream
    GlobalStream
-   HashStream
+   HashTable
    CodeViewSymbols
    CodeViewTypes
 
@@ -60,13 +60,12 @@ File Layout
 
 The MSF Container
 -----------------
-A PDB file is really just a special case of an MSF (Multi-Stream Format) file.
-An MSF file is actually a miniature "file system within a file".  It contains
-multiple streams (aka files) which can represent arbitrary data, and these
-streams are divided into blocks which may not necessarily be contiguously
-laid out within the file (aka fragmented).  Additionally, the MSF contains a
-stream directory (aka MFT) which describes how the streams (files) are laid
-out within the MSF.
+A PDB file is an MSF (Multi-Stream Format) file.  An MSF file is a "file system
+within a file".  It contains multiple streams (aka files) which can represent
+arbitrary data, and these streams are divided into blocks which may not
+necessarily be contiguously laid out within the MSF container file.
+Additionally, the MSF contains a stream directory (aka MFT) which describes how
+the streams (files) are laid out within the MSF.
 
 For more information about the MSF container format, stream directory, and
 block layout, see :doc:`MsfFile`.
@@ -100,7 +99,8 @@ PDB file is as follows:
 |                    |                              | - Indices of public / global streams      |
 |                    |                              | - Section Contribution Information        |
 |                    |                              | - Source File Information                 |
-|                    |                              | - FPO / PGO Data                          |
+|                    |                              | - References to streams containing        |
+|                    |                              |   FPO / PGO Data                          |
 +--------------------+------------------------------+-------------------------------------------+
 | IPI Stream         | - Fixed Stream Index 4       | - CodeView Type Records                   |
 |                    |                              | - Index of IPI Hash Stream                |
@@ -108,8 +108,8 @@ PDB file is as follows:
 | /LinkInfo          | - Contained in PDB Stream    | - Unknown                                 |
 |                    |   Named Stream map           |                                           |
 +--------------------+------------------------------+-------------------------------------------+
-| /src/headerblock   | - Contained in PDB Stream    | - Unknown                                 |
-|                    |   Named Stream map           |                                           |
+| /src/headerblock   | - Contained in PDB Stream    | - Summary of embedded source file content |
+|                    |   Named Stream map           |   (e.g. natvis files)                     |
 +--------------------+------------------------------+-------------------------------------------+
 | /names             | - Contained in PDB Stream    | - PDB-wide global string table used for   |
 |                    |   Named Stream map           |   string de-duplication                   |
@@ -120,7 +120,7 @@ PDB file is as follows:
 | Public Stream      | - Contained in DBI Stream    | - Public (Exported) Symbol Records        |
 |                    |                              | - Index of Public Hash Stream             |
 +--------------------+------------------------------+-------------------------------------------+
-| Global Stream      | - Contained in DBI Stream    | - Global Symbol Records                   |
+| Global Stream      | - Contained in DBI Stream    | - Single combined master symbol-table     |
 |                    |                              | - Index of Global Hash Stream             |
 +--------------------+------------------------------+-------------------------------------------+
 | TPI Hash Stream    | - Contained in TPI Stream    | - Hash table for looking up TPI records   |
@@ -153,9 +153,9 @@ following pages:
 :doc:`GlobalStream`
    Information about the Global Symbol Stream.
 
-:doc:`HashStream`
-   Information about the Hash Table stream, and how it can be used to quickly look up records
-   by name.
+:doc:`HashTable`
+   Information about the serialized hash table format used internally to represent things such
+   as the Named Stream Map and the Hash Adjusters in the :doc:`TPI/IPI Stream <TpiStream>`.
 
 CodeView
 ========

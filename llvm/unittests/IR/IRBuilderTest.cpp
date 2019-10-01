@@ -1,9 +1,8 @@
 //===- llvm/unittest/IR/IRBuilderTest.cpp - IRBuilder tests ---------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -55,7 +54,7 @@ TEST_F(IRBuilderTest, Intrinsics) {
   CallInst *Call;
   IntrinsicInst *II;
 
-  V = Builder.CreateLoad(GV);
+  V = Builder.CreateLoad(GV->getValueType(), GV);
   I = cast<Instruction>(Builder.CreateFAdd(V, V));
   I->setHasNoInfs(true);
   I->setHasNoNaNs(false);
@@ -203,12 +202,34 @@ TEST_F(IRBuilderTest, GetIntTy) {
   delete DL;
 }
 
+TEST_F(IRBuilderTest, UnaryOperators) {
+  IRBuilder<NoFolder> Builder(BB);
+  Value *V = Builder.CreateLoad(GV->getValueType(), GV);
+
+  // Test CreateUnOp(X)
+  Value *U = Builder.CreateUnOp(Instruction::FNeg, V);
+  ASSERT_TRUE(isa<Instruction>(U));
+  ASSERT_TRUE(isa<FPMathOperator>(U));
+  ASSERT_TRUE(isa<UnaryOperator>(U));
+  ASSERT_FALSE(isa<BinaryOperator>(U));
+
+  // Test CreateFNegFMF(X)
+  Instruction *I = cast<Instruction>(V);
+  I->setHasNoSignedZeros(true);
+  I->setHasNoNaNs(true);
+  Value *VFMF = Builder.CreateFNegFMF(V, I);
+  Instruction *IFMF = cast<Instruction>(VFMF);
+  EXPECT_TRUE(IFMF->hasNoSignedZeros());
+  EXPECT_TRUE(IFMF->hasNoNaNs());
+  EXPECT_FALSE(IFMF->hasAllowReassoc());
+}
+
 TEST_F(IRBuilderTest, FastMathFlags) {
   IRBuilder<> Builder(BB);
   Value *F, *FC;
   Instruction *FDiv, *FAdd, *FCmp, *FCall;
 
-  F = Builder.CreateLoad(GV);
+  F = Builder.CreateLoad(GV->getValueType(), GV);
   F = Builder.CreateFAdd(F, F);
 
   EXPECT_FALSE(Builder.getFastMathFlags().any());
@@ -354,7 +375,7 @@ TEST_F(IRBuilderTest, FastMathFlags) {
   FCall = Builder.CreateCall(Callee, None);
   EXPECT_FALSE(FCall->hasNoNaNs());
 
-  Value *V = 
+  Function *V =
       Function::Create(CalleeTy, Function::ExternalLinkage, "", M.get());
   FCall = Builder.CreateCall(V, None);
   EXPECT_FALSE(FCall->hasNoNaNs());
@@ -375,7 +396,7 @@ TEST_F(IRBuilderTest, FastMathFlags) {
 
   Builder.clearFastMathFlags();
 
-  // To test a copy, make sure that a '0' and a '1' change state. 
+  // To test a copy, make sure that a '0' and a '1' change state.
   F = Builder.CreateFDiv(F, F);
   ASSERT_TRUE(isa<Instruction>(F));
   FDiv = cast<Instruction>(F);
@@ -395,7 +416,7 @@ TEST_F(IRBuilderTest, WrapFlags) {
   // Test instructions.
   GlobalVariable *G = new GlobalVariable(*M, Builder.getInt32Ty(), true,
                                          GlobalValue::ExternalLinkage, nullptr);
-  Value *V = Builder.CreateLoad(G);
+  Value *V = Builder.CreateLoad(G->getValueType(), G);
   EXPECT_TRUE(
       cast<BinaryOperator>(Builder.CreateNSWAdd(V, V))->hasNoSignedWrap());
   EXPECT_TRUE(
@@ -462,7 +483,7 @@ TEST_F(IRBuilderTest, RAIIHelpersTest) {
   EXPECT_FALSE(Builder.getFastMathFlags().allowReciprocal());
   EXPECT_EQ(FPMathA, Builder.getDefaultFPMathTag());
 
-  Value *F = Builder.CreateLoad(GV);
+  Value *F = Builder.CreateLoad(GV->getValueType(), GV);
 
   {
     IRBuilder<>::InsertPointGuard Guard(Builder);

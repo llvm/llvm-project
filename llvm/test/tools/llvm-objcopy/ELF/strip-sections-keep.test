@@ -1,5 +1,5 @@
 # RUN: yaml2obj %s > %t
-# RUN: llvm-objcopy -strip-sections -keep-section=.shstrtab %t %t2
+# RUN: llvm-objcopy --strip-sections --keep-section=.shstrtab %t %t2
 # RUN: od -Ax -t c %t2 | FileCheck %s
 
 !ELF

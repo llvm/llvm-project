@@ -1,9 +1,8 @@
 //- WebAssemblyISD.def - WebAssembly ISD ---------------------------*- C++ -*-//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -18,7 +17,11 @@ HANDLE_NODETYPE(CALL1)
 HANDLE_NODETYPE(CALL0)
 HANDLE_NODETYPE(RETURN)
 HANDLE_NODETYPE(ARGUMENT)
+// A wrapper node for TargetExternalSymbol, TargetGlobalAddress, and MCSymbol
 HANDLE_NODETYPE(Wrapper)
+// A special wapper used in PIC code for __memory_base/__table_base relcative
+// access.
+HANDLE_NODETYPE(WrapperPIC)
 HANDLE_NODETYPE(BR_IF)
 HANDLE_NODETYPE(BR_TABLE)
 HANDLE_NODETYPE(SHUFFLE)
@@ -26,5 +29,7 @@ HANDLE_NODETYPE(VEC_SHL)
 HANDLE_NODETYPE(VEC_SHR_S)
 HANDLE_NODETYPE(VEC_SHR_U)
 HANDLE_NODETYPE(THROW)
+HANDLE_NODETYPE(MEMORY_COPY)
+HANDLE_NODETYPE(MEMORY_FILL)
 
 // add memory opcodes starting at ISD::FIRST_TARGET_MEMORY_OPCODE here...

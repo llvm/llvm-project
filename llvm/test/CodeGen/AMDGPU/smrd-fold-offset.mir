@@ -19,7 +19,7 @@ body:             |
     %8:vgpr_32 = COPY %6
     %7:vgpr_32 = V_ADD_I32_e32 %4, killed %8, implicit-def dead $vcc, implicit $exec
     %10:sreg_32 = COPY %7
-    %9:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR killed %5, killed %10, 0
+    %9:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR killed %5, killed %10, 0, 0
     $vgpr0 = COPY %9
     SI_RETURN_TO_EPILOG $vgpr0
 ...
@@ -43,7 +43,7 @@ body:             |
     %8:vgpr_32 = COPY %6
     %7:vgpr_32 = V_ADD_U32_e32 %4, killed %8, implicit $exec
     %10:sreg_32 = COPY %7
-    %9:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR killed %5, killed %10, 0 :: (dereferenceable invariant load 4)
+    %9:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR killed %5, killed %10, 0, 0 :: (dereferenceable invariant load 4)
     $vgpr0 = COPY %9
     SI_RETURN_TO_EPILOG $vgpr0
 

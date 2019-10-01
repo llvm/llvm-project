@@ -1,5 +1,5 @@
-RUN: llvm-dwarfdump -h 2>&1 | FileCheck --check-prefix=HELP %s
-RUN: llvm-dwarfdump --help 2>&1 | FileCheck --check-prefix=HELP %s
+RUN: llvm-dwarfdump -h 2>&1 | FileCheck --check-prefix=HELP %s --implicit-check-not=out-file
+RUN: llvm-dwarfdump --help 2>&1 | FileCheck --check-prefix=HELP %s --implicit-check-not=out-file
 HELP: USAGE: llvm-dwarfdump{{[^ ]*}} [options] <input object files or .dSYM bundles>
 HELP-NOT: -reverse-iterate
 HELP: Color Options
@@ -13,6 +13,8 @@ HELP: -find
 HELP: -ignore-case
 HELP: -lookup
 HELP: -name
+HELP: -o=<filename>
+HELP: -parent-recurse-depth=<N>
 HELP: -recurse-depth=<N>
 HELP: -regex
 HELP: -show-children

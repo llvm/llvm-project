@@ -1,9 +1,8 @@
 //===- X86DiscriminateMemOps.cpp - Unique IDs for Mem Ops -----------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -26,6 +25,22 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "x86-discriminate-memops"
+
+static cl::opt<bool> EnableDiscriminateMemops(
+    DEBUG_TYPE, cl::init(false),
+    cl::desc("Generate unique debug info for each instruction with a memory "
+             "operand. Should be enabled for profile-drived cache prefetching, "
+             "both in the build of the binary being profiled, as well as in "
+             "the build of the binary consuming the profile."),
+    cl::Hidden);
+
+static cl::opt<bool> BypassPrefetchInstructions(
+    "x86-bypass-prefetch-instructions", cl::init(true),
+    cl::desc("When discriminating instructions with memory operands, ignore "
+             "prefetch instructions. This ensures the other memory operand "
+             "instructions have the same identifiers after inserting "
+             "prefetches, allowing for successive insertions."),
+    cl::Hidden);
 
 namespace {
 
@@ -55,6 +70,10 @@ public:
   X86DiscriminateMemOps();
 };
 
+bool IsPrefetchOpcode(unsigned Opcode) {
+  return Opcode == X86::PREFETCHNTA || Opcode == X86::PREFETCHT0 ||
+         Opcode == X86::PREFETCHT1 || Opcode == X86::PREFETCHT2;
+}
 } // end anonymous namespace
 
 //===----------------------------------------------------------------------===//
@@ -67,6 +86,9 @@ char X86DiscriminateMemOps::ID = 0;
 X86DiscriminateMemOps::X86DiscriminateMemOps() : MachineFunctionPass(ID) {}
 
 bool X86DiscriminateMemOps::runOnMachineFunction(MachineFunction &MF) {
+  if (!EnableDiscriminateMemops)
+    return false;
+
   DISubprogram *FDI = MF.getFunction().getSubprogram();
   if (!FDI || !FDI->getUnit()->getDebugInfoForProfiling())
     return false;
@@ -75,7 +97,7 @@ bool X86DiscriminateMemOps::runOnMachineFunction(MachineFunction &MF) {
   // have any debug info.
   const DILocation *ReferenceDI =
       DILocation::get(FDI->getContext(), FDI->getLine(), 0, FDI);
-
+  assert(ReferenceDI && "ReferenceDI should not be nullptr");
   DenseMap<Location, unsigned> MemOpDiscriminators;
   MemOpDiscriminators[diToLocation(ReferenceDI)] = 0;
 
@@ -87,6 +109,8 @@ bool X86DiscriminateMemOps::runOnMachineFunction(MachineFunction &MF) {
     for (auto &MI : MBB) {
       const auto &DI = MI.getDebugLoc();
       if (!DI)
+        continue;
+      if (BypassPrefetchInstructions && IsPrefetchOpcode(MI.getDesc().Opcode))
         continue;
       Location Loc = diToLocation(DI);
       MemOpDiscriminators[Loc] =
@@ -104,15 +128,18 @@ bool X86DiscriminateMemOps::runOnMachineFunction(MachineFunction &MF) {
     for (auto &MI : MBB) {
       if (X86II::getMemoryOperandNo(MI.getDesc().TSFlags) < 0)
         continue;
+      if (BypassPrefetchInstructions && IsPrefetchOpcode(MI.getDesc().Opcode))
+        continue;
       const DILocation *DI = MI.getDebugLoc();
-      if (!DI) {
+      bool HasDebug = DI;
+      if (!HasDebug) {
         DI = ReferenceDI;
       }
       Location L = diToLocation(DI);
       DenseSet<unsigned> &Set = Seen[L];
       const std::pair<DenseSet<unsigned>::iterator, bool> TryInsert =
           Set.insert(DI->getBaseDiscriminator());
-      if (!TryInsert.second) {
+      if (!TryInsert.second || !HasDebug) {
         unsigned BF, DF, CI = 0;
         DILocation::decodeDiscriminator(DI->getDiscriminator(), BF, DF, CI);
         Optional<unsigned> EncodedDiscriminator = DILocation::encodeDiscriminator(
@@ -133,6 +160,7 @@ bool X86DiscriminateMemOps::runOnMachineFunction(MachineFunction &MF) {
         // Since we were able to encode, bump the MemOpDiscriminators.
         ++MemOpDiscriminators[L];
         DI = DI->cloneWithDiscriminator(EncodedDiscriminator.getValue());
+        assert(DI && "DI should not be nullptr");
         updateDebugInfo(&MI, DI);
         Changed = true;
         std::pair<DenseSet<unsigned>::iterator, bool> MustInsert =

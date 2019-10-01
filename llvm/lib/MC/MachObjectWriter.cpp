@@ -1,9 +1,8 @@
 //===- lib/MC/MachObjectWriter.cpp - Mach-O File Writer -------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -14,6 +13,7 @@
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCAssembler.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixupKindInfo.h"
@@ -449,11 +449,25 @@ void MachObjectWriter::writeLinkerOptionsLoadCommand(
   assert(W.OS.tell() - Start == Size);
 }
 
+static bool isFixupTargetValid(const MCValue &Target) {
+  // Target is (LHS - RHS + cst).
+  // We don't support the form where LHS is null: -RHS + cst
+  if (!Target.getSymA() && Target.getSymB())
+    return false;
+  return true;
+}
+
 void MachObjectWriter::recordRelocation(MCAssembler &Asm,
                                         const MCAsmLayout &Layout,
                                         const MCFragment *Fragment,
                                         const MCFixup &Fixup, MCValue Target,
                                         uint64_t &FixedValue) {
+  if (!isFixupTargetValid(Target)) {
+    Asm.getContext().reportError(Fixup.getLoc(),
+                                 "unsupported relocation expression");
+    return;
+  }
+
   TargetObjectWriter->recordRelocation(this, Asm, Layout, Fragment, Fixup,
                                        Target, FixedValue);
 }

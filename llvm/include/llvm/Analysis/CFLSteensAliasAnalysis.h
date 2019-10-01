@@ -1,9 +1,8 @@
 //==- CFLSteensAliasAnalysis.h - Unification-based Alias Analysis -*- C++-*-==//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 /// \file
@@ -70,7 +69,8 @@ public:
 
   AliasResult query(const MemoryLocation &LocA, const MemoryLocation &LocB);
 
-  AliasResult alias(const MemoryLocation &LocA, const MemoryLocation &LocB) {
+  AliasResult alias(const MemoryLocation &LocA, const MemoryLocation &LocB,
+                    AAQueryInfo &AAQI) {
     if (LocA.Ptr == LocB.Ptr)
       return MustAlias;
 
@@ -80,11 +80,11 @@ public:
     // ConstantExpr, but every query needs to have at least one Value tied to a
     // Function, and neither GlobalValues nor ConstantExprs are.
     if (isa<Constant>(LocA.Ptr) && isa<Constant>(LocB.Ptr))
-      return AAResultBase::alias(LocA, LocB);
+      return AAResultBase::alias(LocA, LocB, AAQI);
 
     AliasResult QueryResult = query(LocA, LocB);
     if (QueryResult == MayAlias)
-      return AAResultBase::alias(LocA, LocB);
+      return AAResultBase::alias(LocA, LocB, AAQI);
 
     return QueryResult;
   }

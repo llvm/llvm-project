@@ -15,23 +15,19 @@ define float @f(<8 x i16>* %a) {
 ; CHECK-NEXT:    .cfi_def_cfa_register 30
 ; CHECK-NEXT:    addiu $1, $zero, -16
 ; CHECK-NEXT:    and $sp, $sp, $1
-; CHECK-NEXT:    lw $1, 8($4)
-; CHECK-NEXT:    lw $2, 4($4)
-; CHECK-NEXT:    lw $3, 12($4)
-; CHECK-NEXT:    sw $3, 12($sp)
-; CHECK-NEXT:    sw $1, 8($sp)
-; CHECK-NEXT:    sw $2, 4($sp)
-; CHECK-NEXT:    lw $1, 0($4)
-; CHECK-NEXT:    sw $1, 0($sp)
-; CHECK-NEXT:    mtc1 $1, $f0
+; CHECK-NEXT:    lw $1, 12($4)
+; CHECK-NEXT:    lw $2, 0($4)
+; CHECK-NEXT:    lw $3, 8($4)
+; CHECK-NEXT:    sw $3, 8($sp)
+; CHECK-NEXT:    sw $1, 12($sp)
+; CHECK-NEXT:    sw $2, 0($sp)
+; CHECK-NEXT:    lw $1, 4($4)
+; CHECK-NEXT:    sw $1, 4($sp)
+; CHECK-NEXT:    mtc1 $2, $f0
 ; CHECK-NEXT:    move $sp, $fp
 ; CHECK-NEXT:    lw $fp, 28($sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 32
-; CHECK-NEXT:    .set at
-; CHECK-NEXT:    .set macro
-; CHECK-NEXT:    .set reorder
-; CHECK-NEXT:    .end f
 entry:
   %m = alloca <8 x i16>
   %0 = load <8 x i16>, <8 x i16>* %a

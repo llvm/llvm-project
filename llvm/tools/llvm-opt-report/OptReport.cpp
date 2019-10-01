@@ -1,9 +1,8 @@
 //===------------------ llvm-opt-report/OptReport.cpp ---------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -14,7 +13,9 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "llvm-c/Remarks.h"
 #include "llvm/Demangle/Demangle.h"
+#include "llvm/Remarks/RemarkParser.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorOr.h"
@@ -28,15 +29,12 @@
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm-c/OptRemarks.h"
 #include <cstdlib>
 #include <map>
 #include <set>
 
 using namespace llvm;
 using namespace llvm::yaml;
-
-static cl::opt<bool> Help("h", cl::desc("Alias for -help"), cl::Hidden);
 
 // Mark all our options with this category, everything else (except for -version
 // and -help) will be hidden.
@@ -152,39 +150,43 @@ static bool readLocationInfo(LocationInfoTy &LocationInfo) {
     return false;
   }
 
-  StringRef Buffer = (*Buf)->getBuffer();
-  LLVMOptRemarkParserRef Parser =
-      LLVMOptRemarkParserCreate(Buffer.data(), Buffer.size());
+  remarks::Parser Parser((*Buf)->getBuffer());
 
-  LLVMOptRemarkEntry *Remark = nullptr;
-  while ((Remark = LLVMOptRemarkParserGetNext(Parser))) {
-    bool Transformed =
-        StringRef(Remark->RemarkType.Str, Remark->RemarkType.Len) == "!Passed";
-    StringRef Pass(Remark->PassName.Str, Remark->PassName.Len);
-    StringRef File(Remark->DebugLoc.SourceFile.Str,
-                   Remark->DebugLoc.SourceFile.Len);
-    StringRef Function(Remark->FunctionName.Str, Remark->FunctionName.Len);
-    uint32_t Line = Remark->DebugLoc.SourceLineNumber;
-    uint32_t Column = Remark->DebugLoc.SourceColumnNumber;
-    ArrayRef<LLVMOptRemarkArg> Args(Remark->Args, Remark->NumArgs);
+  while (true) {
+    Expected<const remarks::Remark *> RemarkOrErr = Parser.getNext();
+    if (!RemarkOrErr) {
+      handleAllErrors(RemarkOrErr.takeError(), [&](const ErrorInfoBase &PE) {
+        PE.log(WithColor::error());
+      });
+      return false;
+    }
+    if (!*RemarkOrErr) // End of file.
+      break;
+
+    const remarks::Remark &Remark = **RemarkOrErr;
+
+    bool Transformed = Remark.RemarkType == remarks::Type::Passed;
 
     int VectorizationFactor = 1;
     int InterleaveCount = 1;
     int UnrollCount = 1;
 
-    for (const LLVMOptRemarkArg &Arg : Args) {
-      StringRef ArgKeyName(Arg.Key.Str, Arg.Key.Len);
-      StringRef ArgValue(Arg.Value.Str, Arg.Value.Len);
-      if (ArgKeyName == "VectorizationFactor")
-        ArgValue.getAsInteger(10, VectorizationFactor);
-      else if (ArgKeyName == "InterleaveCount")
-        ArgValue.getAsInteger(10, InterleaveCount);
-      else if (ArgKeyName == "UnrollCount")
-        ArgValue.getAsInteger(10, UnrollCount);
+    for (const remarks::Argument &Arg : Remark.Args) {
+      if (Arg.Key == "VectorizationFactor")
+        Arg.Val.getAsInteger(10, VectorizationFactor);
+      else if (Arg.Key == "InterleaveCount")
+        Arg.Val.getAsInteger(10, InterleaveCount);
+      else if (Arg.Key == "UnrollCount")
+        Arg.Val.getAsInteger(10, UnrollCount);
     }
 
-    if (Line < 1 || File.empty())
+    const Optional<remarks::RemarkLocation> &Loc = Remark.Loc;
+    if (!Loc)
       continue;
+
+    StringRef File = Loc->SourceFilePath;
+    unsigned Line = Loc->SourceLine;
+    unsigned Column = Loc->SourceColumn;
 
     // We track information on both actual and potential transformations. This
     // way, if there are multiple possible things on a line that are, or could
@@ -195,27 +197,22 @@ static bool readLocationInfo(LocationInfoTy &LocationInfo) {
         LLII.Transformed = true;
     };
 
-    if (Pass == "inline") {
-      auto &LI = LocationInfo[File][Line][Function][Column];
+    if (Remark.PassName == "inline") {
+      auto &LI = LocationInfo[File][Line][Remark.FunctionName][Column];
       UpdateLLII(LI.Inlined);
-    } else if (Pass == "loop-unroll") {
-      auto &LI = LocationInfo[File][Line][Function][Column];
+    } else if (Remark.PassName == "loop-unroll") {
+      auto &LI = LocationInfo[File][Line][Remark.FunctionName][Column];
       LI.UnrollCount = UnrollCount;
       UpdateLLII(LI.Unrolled);
-    } else if (Pass == "loop-vectorize") {
-      auto &LI = LocationInfo[File][Line][Function][Column];
+    } else if (Remark.PassName == "loop-vectorize") {
+      auto &LI = LocationInfo[File][Line][Remark.FunctionName][Column];
       LI.VectorizationFactor = VectorizationFactor;
       LI.InterleaveCount = InterleaveCount;
       UpdateLLII(LI.Vectorized);
     }
   }
 
-  bool HasError = LLVMOptRemarkParserHasError(Parser);
-  if (HasError)
-    WithColor::error() << LLVMOptRemarkParserGetErrorMessage(Parser) << "\n";
-
-  LLVMOptRemarkParserDispose(Parser);
-  return !HasError;
+  return true;
 }
 
 static bool writeReport(LocationInfoTy &LocationInfo) {
@@ -231,13 +228,8 @@ static bool writeReport(LocationInfoTy &LocationInfo) {
   bool FirstFile = true;
   for (auto &FI : LocationInfo) {
     SmallString<128> FileName(FI.first);
-    if (!InputRelDir.empty()) {
-      if (std::error_code EC = sys::fs::make_absolute(InputRelDir, FileName)) {
-        WithColor::error() << "Can't resolve file path to " << FileName << ": "
-                           << EC.message() << "\n";
-        return false;
-      }
-    }
+    if (!InputRelDir.empty())
+      sys::fs::make_absolute(InputRelDir, FileName);
 
     const auto &FileInfo = FI.second;
 
@@ -445,11 +437,6 @@ int main(int argc, const char **argv) {
       argc, argv,
       "A tool to generate an optimization report from YAML optimization"
       " record files.\n");
-
-  if (Help) {
-    cl::PrintHelpMessage();
-    return 0;
-  }
 
   LocationInfoTy LocationInfo;
   if (!readLocationInfo(LocationInfo))

@@ -1,7 +1,7 @@
 ; RUN: llc -O0 -mtriple mips-unknown-linux-gnu -relocation-model=static < %s | FileCheck %s -check-prefix=STATIC
-; RUN: llc -O0 -mtriple mips-unknown-linux-gnu -relocation-model=static -disable-fp-elim < %s | FileCheck %s -check-prefix=STATIC-FP
+; RUN: llc -O0 -mtriple mips-unknown-linux-gnu -relocation-model=static -frame-pointer=all < %s | FileCheck %s -check-prefix=STATIC-FP
 ; RUN: llc -O0 -mtriple mips-unknown-linux-gnu -relocation-model=pic < %s | FileCheck %s -check-prefix=PIC
-; RUN: llc -O0 -mtriple mips-unknown-linux-gnu -relocation-model=pic -disable-fp-elim < %s | FileCheck %s -check-prefix=PIC-FP
+; RUN: llc -O0 -mtriple mips-unknown-linux-gnu -relocation-model=pic -frame-pointer=all < %s | FileCheck %s -check-prefix=PIC-FP
 
 ; Generated using clang -O0 -emit-llvm -S -target mipsel-unknown-linux -g test.c -o test.ll
 ; test.c:

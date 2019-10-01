@@ -1,9 +1,8 @@
 //===-- WindowsResource.h ---------------------------------------*- C++-*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===---------------------------------------------------------------------===//
 //
@@ -38,11 +37,14 @@
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/ScopedPrinter.h"
 
 #include <map>
 
 namespace llvm {
+
+class raw_ostream;
+class ScopedPrinter;
+
 namespace object {
 
 class WindowsResource;
@@ -118,6 +120,7 @@ private:
                                            const WindowsResource *Owner);
 
   BinaryStreamReader Reader;
+  const WindowsResource *Owner;
   bool IsStringType;
   ArrayRef<UTF16> Type;
   uint16_t TypeID;
@@ -149,7 +152,7 @@ class WindowsResourceParser {
 public:
   class TreeNode;
   WindowsResourceParser();
-  Error parse(WindowsResource *WR);
+  Error parse(WindowsResource *WR, std::vector<std::string> &Duplicates);
   void printTree(raw_ostream &OS) const;
   const TreeNode &getTree() const { return Root; }
   const ArrayRef<std::vector<uint8_t>> getData() const { return Data; }
@@ -185,21 +188,25 @@ public:
     static std::unique_ptr<TreeNode> createIDNode();
     static std::unique_ptr<TreeNode> createDataNode(uint16_t MajorVersion,
                                                     uint16_t MinorVersion,
-                                                    uint32_t Characteristics);
+                                                    uint32_t Characteristics,
+                                                    uint32_t Origin);
 
     explicit TreeNode(bool IsStringNode);
     TreeNode(uint16_t MajorVersion, uint16_t MinorVersion,
-             uint32_t Characteristics);
+             uint32_t Characteristics, uint32_t Origin);
 
-    void addEntry(const ResourceEntryRef &Entry, bool &IsNewTypeString,
-                  bool &IsNewNameString);
+    bool addEntry(const ResourceEntryRef &Entry, uint32_t Origin,
+                  bool &IsNewTypeString, bool &IsNewNameString,
+                  TreeNode *&Result);
     TreeNode &addTypeNode(const ResourceEntryRef &Entry, bool &IsNewTypeString);
     TreeNode &addNameNode(const ResourceEntryRef &Entry, bool &IsNewNameString);
-    TreeNode &addLanguageNode(const ResourceEntryRef &Entry);
-    TreeNode &addChild(uint32_t ID, bool IsDataNode = false,
-                       uint16_t MajorVersion = 0, uint16_t MinorVersion = 0,
-                       uint32_t Characteristics = 0);
-    TreeNode &addChild(ArrayRef<UTF16> NameRef, bool &IsNewString);
+    bool addLanguageNode(const ResourceEntryRef &Entry, uint32_t Origin,
+                         TreeNode *&Result);
+    bool addDataChild(uint32_t ID, uint16_t MajorVersion, uint16_t MinorVersion,
+                      uint32_t Characteristics, uint32_t Origin,
+                      TreeNode *&Result);
+    TreeNode &addIDChild(uint32_t ID);
+    TreeNode &addNameChild(ArrayRef<UTF16> NameRef, bool &IsNewString);
 
     bool IsDataNode = false;
     uint32_t StringIndex;
@@ -209,18 +216,26 @@ public:
     uint16_t MajorVersion = 0;
     uint16_t MinorVersion = 0;
     uint32_t Characteristics = 0;
+
+    // The .res file that defined this TreeNode, for diagnostics.
+    // Index into InputFilenames.
+    uint32_t Origin;
   };
 
 private:
   TreeNode Root;
   std::vector<std::vector<uint8_t>> Data;
   std::vector<std::vector<UTF16>> StringTable;
+
+  std::vector<std::string> InputFilenames;
 };
 
 Expected<std::unique_ptr<MemoryBuffer>>
 writeWindowsResourceCOFF(llvm::COFF::MachineTypes MachineType,
-                         const WindowsResourceParser &Parser);
+                         const WindowsResourceParser &Parser,
+                         uint32_t TimeDateStamp);
 
+void printResourceTypeName(uint16_t TypeID, raw_ostream &OS);
 } // namespace object
 } // namespace llvm
 

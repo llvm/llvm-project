@@ -1,4 +1,4 @@
-# RUN: llvm-mc < %s -triple=x86_64-pc-win32 -filetype=obj | llvm-readobj - -codeview | FileCheck %s
+# RUN: llvm-mc < %s -triple=x86_64-pc-win32 -filetype=obj | llvm-readobj - --codeview | FileCheck %s
 
 .section .debug$S
 .long 4

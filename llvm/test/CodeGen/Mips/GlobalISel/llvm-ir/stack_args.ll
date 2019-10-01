@@ -13,8 +13,7 @@ define  i32 @g(i32  %x1, i32 %x2, i32 %x3, i32 %x4, i32 %x5){
 ; MIPS32-NEXT:    addiu $1, $sp, 48
 ; MIPS32-NEXT:    lw $1, 0($1)
 ; MIPS32-NEXT:    move $2, $sp
-; MIPS32-NEXT:    lui $3, 0
-; MIPS32-NEXT:    ori $3, $3, 16
+; MIPS32-NEXT:    ori $3, $zero, 16
 ; MIPS32-NEXT:    addu $2, $2, $3
 ; MIPS32-NEXT:    sw $1, 0($2)
 ; MIPS32-NEXT:    jal f

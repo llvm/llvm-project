@@ -1,9 +1,8 @@
 //===- StackColoring.cpp --------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -1221,11 +1220,12 @@ bool StackColoring::runOnMachineFunction(MachineFunction &Func) {
 
   // Sort the slots according to their size. Place unused slots at the end.
   // Use stable sort to guarantee deterministic code generation.
-  std::stable_sort(SortedSlots.begin(), SortedSlots.end(),
-                   [this](int LHS, int RHS) {
+  llvm::stable_sort(SortedSlots, [this](int LHS, int RHS) {
     // We use -1 to denote a uninteresting slot. Place these slots at the end.
-    if (LHS == -1) return false;
-    if (RHS == -1) return true;
+    if (LHS == -1)
+      return false;
+    if (RHS == -1)
+      return true;
     // Sort according to size.
     return MFI->getObjectSize(LHS) > MFI->getObjectSize(RHS);
   });

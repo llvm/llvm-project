@@ -1,9 +1,8 @@
 //===--------------------- SIFrameLowering.h --------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -38,6 +37,8 @@ public:
   void determineCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,
                             RegScavenger *RS = nullptr) const override;
 
+  bool isSupportedStackID(TargetStackID::Value ID) const override;
+
   void processFunctionBeforeFrameFinalized(
     MachineFunction &MF,
     RegScavenger *RS = nullptr) const override;
@@ -59,15 +60,9 @@ private:
     SIMachineFunctionInfo *MFI,
     MachineFunction &MF) const;
 
-  std::pair<unsigned, unsigned> getReservedPrivateSegmentWaveByteOffsetReg(
-    const GCNSubtarget &ST,
-    const SIInstrInfo *TII,
-    const SIRegisterInfo *TRI,
-    SIMachineFunctionInfo *MFI,
-    MachineFunction &MF) const;
-
-  /// Emits debugger prologue.
-  void emitDebuggerPrologue(MachineFunction &MF, MachineBasicBlock &MBB) const;
+  unsigned getReservedPrivateSegmentWaveByteOffsetReg(
+      const GCNSubtarget &ST, const SIInstrInfo *TII, const SIRegisterInfo *TRI,
+      SIMachineFunctionInfo *MFI, MachineFunction &MF) const;
 
   // Emit scratch setup code for AMDPAL or Mesa, assuming ResourceRegUsed is set.
   void emitEntryFunctionScratchSetup(const GCNSubtarget &ST, MachineFunction &MF,
@@ -77,7 +72,6 @@ private:
 
 public:
   bool hasFP(const MachineFunction &MF) const override;
-  bool hasSP(const MachineFunction &MF) const;
 };
 
 } // end namespace llvm

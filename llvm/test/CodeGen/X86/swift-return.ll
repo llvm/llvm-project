@@ -28,10 +28,11 @@ define i16 @test(i32 %key) {
 ; CHECK-O0-NEXT:    movl %edi, {{[0-9]+}}(%rsp)
 ; CHECK-O0-NEXT:    movl {{[0-9]+}}(%rsp), %edi
 ; CHECK-O0-NEXT:    callq gen
-; CHECK-O0-NEXT:    movswl %ax, %edi
-; CHECK-O0-NEXT:    movsbl %dl, %ecx
-; CHECK-O0-NEXT:    addl %ecx, %edi
-; CHECK-O0-NEXT:    movw %di, %ax
+; CHECK-O0-NEXT:    movswl %ax, %ecx
+; CHECK-O0-NEXT:    movsbl %dl, %esi
+; CHECK-O0-NEXT:    addl %esi, %ecx
+; CHECK-O0-NEXT:    # kill: def $cx killed $cx killed $ecx
+; CHECK-O0-NEXT:    movw %cx, %ax
 ; CHECK-O0-NEXT:    popq %rcx
 ; CHECK-O0-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-O0-NEXT:    retq
@@ -79,16 +80,16 @@ define i32 @test2(i32 %key) #0 {
 ; CHECK-O0-NEXT:    movl {{[0-9]+}}(%rsp), %edi
 ; CHECK-O0-NEXT:    movq %rsp, %rax
 ; CHECK-O0-NEXT:    callq gen2
-; CHECK-O0-NEXT:    movl {{[0-9]+}}(%rsp), %edi
 ; CHECK-O0-NEXT:    movl {{[0-9]+}}(%rsp), %ecx
 ; CHECK-O0-NEXT:    movl {{[0-9]+}}(%rsp), %edx
-; CHECK-O0-NEXT:    movl (%rsp), %esi
+; CHECK-O0-NEXT:    movl {{[0-9]+}}(%rsp), %esi
+; CHECK-O0-NEXT:    movl (%rsp), %edi
 ; CHECK-O0-NEXT:    movl {{[0-9]+}}(%rsp), %r8d
-; CHECK-O0-NEXT:    addl %r8d, %esi
-; CHECK-O0-NEXT:    addl %edx, %esi
-; CHECK-O0-NEXT:    addl %ecx, %esi
-; CHECK-O0-NEXT:    addl %edi, %esi
-; CHECK-O0-NEXT:    movl %esi, %eax
+; CHECK-O0-NEXT:    addl %r8d, %edi
+; CHECK-O0-NEXT:    addl %esi, %edi
+; CHECK-O0-NEXT:    addl %edx, %edi
+; CHECK-O0-NEXT:    addl %ecx, %edi
+; CHECK-O0-NEXT:    movl %edi, %eax
 ; CHECK-O0-NEXT:    addq $24, %rsp
 ; CHECK-O0-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-O0-NEXT:    retq
@@ -464,11 +465,11 @@ define swiftcc { i8, i8, i8, i8 } @gen9(i8 %key) {
 ;
 ; CHECK-O0-LABEL: gen9:
 ; CHECK-O0:       # %bb.0:
+; CHECK-O0-NEXT:    # kill: def $dil killed $dil killed $edi
 ; CHECK-O0-NEXT:    movb %dil, %al
-; CHECK-O0-NEXT:    movb %al, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
-; CHECK-O0-NEXT:    movb {{[-0-9]+}}(%r{{[sb]}}p), %dl # 1-byte Reload
-; CHECK-O0-NEXT:    movb {{[-0-9]+}}(%r{{[sb]}}p), %cl # 1-byte Reload
-; CHECK-O0-NEXT:    movb {{[-0-9]+}}(%r{{[sb]}}p), %r8b # 1-byte Reload
+; CHECK-O0-NEXT:    movb %dil, %dl
+; CHECK-O0-NEXT:    movb %dil, %cl
+; CHECK-O0-NEXT:    movb %dil, %r8b
 ; CHECK-O0-NEXT:    retq
   %v0 = insertvalue { i8, i8, i8, i8 } undef, i8 %key, 0
   %v1 = insertvalue { i8, i8, i8, i8 } %v0, i8 %key, 1

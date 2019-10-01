@@ -1,9 +1,8 @@
 //===- CVSymbolVisitor.cpp --------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -21,7 +20,7 @@ CVSymbolVisitor::CVSymbolVisitor(SymbolVisitorCallbacks &Callbacks)
 template <typename T>
 static Error visitKnownRecord(CVSymbol &Record,
                               SymbolVisitorCallbacks &Callbacks) {
-  SymbolRecordKind RK = static_cast<SymbolRecordKind>(Record.Type);
+  SymbolRecordKind RK = static_cast<SymbolRecordKind>(Record.kind());
   T KnownRecord(RK);
   if (auto EC = Callbacks.visitKnownRecord(Record, KnownRecord))
     return EC;
@@ -30,7 +29,7 @@ static Error visitKnownRecord(CVSymbol &Record,
 
 static Error finishVisitation(CVSymbol &Record,
                               SymbolVisitorCallbacks &Callbacks) {
-  switch (Record.Type) {
+  switch (Record.kind()) {
   default:
     if (auto EC = Callbacks.visitUnknownSymbol(Record))
       return EC;

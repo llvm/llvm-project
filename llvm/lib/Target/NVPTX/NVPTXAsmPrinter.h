@@ -1,9 +1,8 @@
 //===-- NVPTXAsmPrinter.h - NVPTX LLVM assembly writer ----------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -213,8 +212,6 @@ private:
   MCOperand GetSymbolRef(const MCSymbol *Symbol);
   unsigned encodeVirtualRegister(unsigned Reg);
 
-  void printVecModifiedImmediate(const MachineOperand &MO, const char *Modifier,
-                                 raw_ostream &O);
   void printMemOperand(const MachineInstr *MI, int opNum, raw_ostream &O,
                        const char *Modifier = nullptr);
   void printModuleLevelGV(const GlobalVariable *GVar, raw_ostream &O,
@@ -231,13 +228,10 @@ private:
   void printReturnValStr(const Function *, raw_ostream &O);
   void printReturnValStr(const MachineFunction &MF, raw_ostream &O);
   bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                       unsigned AsmVariant, const char *ExtraCode,
-                       raw_ostream &) override;
-  void printOperand(const MachineInstr *MI, int opNum, raw_ostream &O,
-                    const char *Modifier = nullptr);
+                       const char *ExtraCode, raw_ostream &) override;
+  void printOperand(const MachineInstr *MI, int opNum, raw_ostream &O);
   bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
-                             unsigned AsmVariant, const char *ExtraCode,
-                             raw_ostream &) override;
+                             const char *ExtraCode, raw_ostream &) override;
 
   const MCExpr *lowerConstantForGV(const Constant *CV, bool ProcessingGeneric);
   void printMCExpr(const MCExpr &Expr, raw_ostream &OS);

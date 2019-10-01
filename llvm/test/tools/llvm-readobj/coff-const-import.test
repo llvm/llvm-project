@@ -1,4 +1,4 @@
-RUN: llvm-readobj -coff-exports %S/Inputs/const-import.lib | FileCheck %s
+RUN: llvm-readobj --coff-exports %S/Inputs/const-import.lib | FileCheck %s
 
 CHECK: Type: const
 CHECK: Name type: noprefix

@@ -1,14 +1,12 @@
 //===- HexagonMCCodeEmitter.cpp - Hexagon Target Descriptions -------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/HexagonMCCodeEmitter.h"
-#include "Hexagon.h"
 #include "MCTargetDesc/HexagonBaseInfo.h"
 #include "MCTargetDesc/HexagonFixupKinds.h"
 #include "MCTargetDesc/HexagonMCExpr.h"
@@ -378,7 +376,7 @@ void HexagonMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
   State.Bundle = &MI;
   State.Index = 0;
   size_t Last = HexagonMCInstrInfo::bundleSize(HMB) - 1;
-  uint64_t Features = computeAvailableFeatures(STI.getFeatureBits());
+  FeatureBitset Features = computeAvailableFeatures(STI.getFeatureBits());
 
   for (auto &I : HexagonMCInstrInfo::bundleInstructions(HMB)) {
     MCInst &HMI = const_cast<MCInst &>(*I.getInst());

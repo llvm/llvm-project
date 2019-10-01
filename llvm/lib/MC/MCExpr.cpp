@@ -1,9 +1,8 @@
 //===- MCExpr.cpp - Assembly Level Expression Implementation --------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -303,15 +302,16 @@ StringRef MCSymbolRefExpr::getVariantKindName(VariantKind Kind) {
   case VK_Hexagon_LD_PLT: return "LDPLT";
   case VK_Hexagon_IE: return "IE";
   case VK_Hexagon_IE_GOT: return "IEGOT";
-  case VK_WebAssembly_FUNCTION: return "FUNCTION";
-  case VK_WebAssembly_GLOBAL: return "GLOBAL";
-  case VK_WebAssembly_TYPEINDEX: return "TYPEINDEX";
-  case VK_WebAssembly_EVENT: return "EVENT";
+  case VK_WASM_TYPEINDEX: return "TYPEINDEX";
+  case VK_WASM_MBREL: return "MBREL";
+  case VK_WASM_TBREL: return "TBREL";
   case VK_AMDGPU_GOTPCREL32_LO: return "gotpcrel32@lo";
   case VK_AMDGPU_GOTPCREL32_HI: return "gotpcrel32@hi";
   case VK_AMDGPU_REL32_LO: return "rel32@lo";
   case VK_AMDGPU_REL32_HI: return "rel32@hi";
   case VK_AMDGPU_REL64: return "rel64";
+  case VK_AMDGPU_ABS32_LO: return "abs32@lo";
+  case VK_AMDGPU_ABS32_HI: return "abs32@hi";
   }
   llvm_unreachable("Invalid variant kind");
 }
@@ -419,15 +419,16 @@ MCSymbolRefExpr::getVariantKindForName(StringRef Name) {
     .Case("lo8", VK_AVR_LO8)
     .Case("hi8", VK_AVR_HI8)
     .Case("hlo8", VK_AVR_HLO8)
-    .Case("function", VK_WebAssembly_FUNCTION)
-    .Case("global", VK_WebAssembly_GLOBAL)
-    .Case("typeindex", VK_WebAssembly_TYPEINDEX)
-    .Case("event", VK_WebAssembly_EVENT)
+    .Case("typeindex", VK_WASM_TYPEINDEX)
+    .Case("tbrel", VK_WASM_TBREL)
+    .Case("mbrel", VK_WASM_MBREL)
     .Case("gotpcrel32@lo", VK_AMDGPU_GOTPCREL32_LO)
     .Case("gotpcrel32@hi", VK_AMDGPU_GOTPCREL32_HI)
     .Case("rel32@lo", VK_AMDGPU_REL32_LO)
     .Case("rel32@hi", VK_AMDGPU_REL32_HI)
     .Case("rel64", VK_AMDGPU_REL64)
+    .Case("abs32@lo", VK_AMDGPU_ABS32_LO)
+    .Case("abs32@hi", VK_AMDGPU_ABS32_HI)
     .Default(VK_Invalid);
 }
 
@@ -557,6 +558,11 @@ static void AttemptToFoldSymbolOffsetDifference(
   // Pointers to Thumb symbols need to have their low-bit set to allow
   // for interworking.
   if (Asm->isThumbFunc(&SA))
+    Addend |= 1;
+
+  // If symbol is labeled as micromips, we set low-bit to ensure
+  // correct offset in .gcc_except_table
+  if (Asm->getBackend().isMicroMips(&SA))
     Addend |= 1;
 
   // Clear the symbol expr pointers to indicate we have folded these

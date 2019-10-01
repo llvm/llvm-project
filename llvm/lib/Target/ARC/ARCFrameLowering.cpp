@@ -1,9 +1,8 @@
 //===- ARCFrameLowering.cpp - ARC Frame Information -------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -65,6 +64,8 @@ static void generateStackAdjustment(MachineBasicBlock &MBB,
   assert((AbsAmount % 4 == 0) && "Stack adjustments must be 4-byte aligned.");
   if (isUInt<6>(AbsAmount))
     AdjOp = Positive ? ARC::ADD_rru6 : ARC::SUB_rru6;
+  else if (isInt<12>(AbsAmount))
+    AdjOp = Positive ? ARC::ADD_rrs12 : ARC::SUB_rrs12;
   else
     AdjOp = Positive ? ARC::ADD_rrlimm : ARC::SUB_rrlimm;
 
@@ -134,8 +135,12 @@ void ARCFrameLowering::emitPrologue(MachineFunction &MF,
     // Add in the varargs area here first.
     LLVM_DEBUG(dbgs() << "Varargs\n");
     unsigned VarArgsBytes = MFI.getObjectSize(AFI->getVarArgsFrameIndex());
-    BuildMI(MBB, MBBI, dl, TII->get(ARC::SUB_rru6))
-        .addReg(ARC::SP)
+    unsigned Opc = ARC::SUB_rrlimm;
+    if (isUInt<6>(VarArgsBytes))
+      Opc = ARC::SUB_rru6;
+    else if (isInt<12>(VarArgsBytes))
+      Opc = ARC::SUB_rrs12;
+    BuildMI(MBB, MBBI, dl, TII->get(Opc), ARC::SP)
         .addReg(ARC::SP)
         .addImm(VarArgsBytes);
   }
@@ -247,7 +252,10 @@ void ARCFrameLowering::emitEpilogue(MachineFunction &MF,
   // Then, replace the frame pointer by (new) [sp,StackSize-4].
   // Then, move the stack pointer the rest of the way (sp = sp + StackSize).
   if (hasFP(MF)) {
-    BuildMI(MBB, MBBI, DebugLoc(), TII->get(ARC::SUB_rru6), ARC::SP)
+    unsigned Opc = ARC::SUB_rrlimm;
+    if (isUInt<6>(StackSize))
+      Opc = ARC::SUB_rru6;
+    BuildMI(MBB, MBBI, DebugLoc(), TII->get(Opc), ARC::SP)
         .addReg(ARC::FP)
         .addImm(StackSize);
     AmountAboveFunclet += 4;
@@ -271,19 +279,28 @@ void ARCFrameLowering::emitEpilogue(MachineFunction &MF,
   }
 
   // Move the stack pointer up to the point of the funclet.
-  if (StackSize - AmountAboveFunclet) {
-    BuildMI(MBB, MBBI, MBB.findDebugLoc(MBBI), TII->get(ARC::ADD_rru6))
-        .addReg(ARC::SP)
+  if (unsigned MoveAmount = StackSize - AmountAboveFunclet) {
+    unsigned Opc = ARC::ADD_rrlimm;
+    if (isUInt<6>(MoveAmount))
+      Opc = ARC::ADD_rru6;
+    else if (isInt<12>(MoveAmount))
+      Opc = ARC::ADD_rrs12;
+    BuildMI(MBB, MBBI, MBB.findDebugLoc(MBBI), TII->get(Opc), ARC::SP)
         .addReg(ARC::SP)
         .addImm(StackSize - AmountAboveFunclet);
   }
 
   if (StackSlotsUsedByFunclet) {
+    // This part of the adjustment will always be < 64 bytes.
     BuildMI(MBB, MBBI, MBB.findDebugLoc(MBBI), TII->get(ARC::BL))
         .addExternalSymbol(load_funclet_name[Last - ARC::R15])
         .addReg(ARC::BLINK, RegState::Implicit | RegState::Kill);
-    BuildMI(MBB, MBBI, MBB.findDebugLoc(MBBI), TII->get(ARC::ADD_rru6))
-        .addReg(ARC::SP)
+    unsigned Opc = ARC::ADD_rrlimm;
+    if (isUInt<6>(4 * StackSlotsUsedByFunclet))
+      Opc = ARC::ADD_rru6;
+    else if (isInt<12>(4 * StackSlotsUsedByFunclet))
+      Opc = ARC::ADD_rrs12;
+    BuildMI(MBB, MBBI, MBB.findDebugLoc(MBBI), TII->get(Opc), ARC::SP)
         .addReg(ARC::SP)
         .addImm(4 * (StackSlotsUsedByFunclet));
   }
@@ -294,8 +311,8 @@ void ARCFrameLowering::emitEpilogue(MachineFunction &MF,
   // Now, pop fp if necessary.
   if (hasFP(MF)) {
     BuildMI(MBB, MBBI, MBB.findDebugLoc(MBBI), TII->get(ARC::LD_AB_rs9))
-        .addReg(ARC::SP, RegState::Define)
         .addReg(ARC::FP, RegState::Define)
+        .addReg(ARC::SP, RegState::Define)
         .addReg(ARC::SP)
         .addImm(4);
   }
@@ -305,7 +322,12 @@ void ARCFrameLowering::emitEpilogue(MachineFunction &MF,
     // Add in the varargs area here first.
     LLVM_DEBUG(dbgs() << "Varargs\n");
     unsigned VarArgsBytes = MFI.getObjectSize(AFI->getVarArgsFrameIndex());
-    BuildMI(MBB, MBBI, MBB.findDebugLoc(MBBI), TII->get(ARC::ADD_rru6))
+    unsigned Opc = ARC::ADD_rrlimm;
+    if (isUInt<6>(VarArgsBytes))
+      Opc = ARC::ADD_rru6;
+    else if (isInt<12>(VarArgsBytes))
+      Opc = ARC::ADD_rrs12;
+    BuildMI(MBB, MBBI, MBB.findDebugLoc(MBBI), TII->get(Opc))
         .addReg(ARC::SP)
         .addReg(ARC::SP)
         .addImm(VarArgsBytes);
@@ -431,7 +453,14 @@ static void emitRegUpdate(MachineBasicBlock &MBB,
                           MachineBasicBlock::iterator &MBBI, DebugLoc dl,
                           unsigned Reg, int NumBytes, bool IsAdd,
                           const ARCInstrInfo *TII) {
-  unsigned Opc = IsAdd ? ARC::ADD_rru6 : ARC::SUB_rru6;
+  unsigned Opc;
+  if (isUInt<6>(NumBytes))
+    Opc = IsAdd ? ARC::ADD_rru6 : ARC::SUB_rru6;
+  else if (isInt<12>(NumBytes))
+    Opc = IsAdd ? ARC::ADD_rrs12 : ARC::SUB_rrs12;
+  else
+    Opc = IsAdd ? ARC::ADD_rrlimm : ARC::SUB_rrlimm;
+
   BuildMI(MBB, MBBI, dl, TII->get(Opc), Reg)
       .addReg(Reg, RegState::Kill)
       .addImm(NumBytes);

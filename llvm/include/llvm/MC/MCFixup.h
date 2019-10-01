@@ -1,9 +1,8 @@
 //===-- llvm/MC/MCFixup.h - Instruction Relocation and Patching -*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -21,34 +20,38 @@ class MCExpr;
 
 /// Extensible enumeration to represent the type of a fixup.
 enum MCFixupKind {
-  FK_Data_1 = 0, ///< A one-byte fixup.
-  FK_Data_2,     ///< A two-byte fixup.
-  FK_Data_4,     ///< A four-byte fixup.
-  FK_Data_8,     ///< A eight-byte fixup.
-  FK_PCRel_1,    ///< A one-byte pc relative fixup.
-  FK_PCRel_2,    ///< A two-byte pc relative fixup.
-  FK_PCRel_4,    ///< A four-byte pc relative fixup.
-  FK_PCRel_8,    ///< A eight-byte pc relative fixup.
-  FK_GPRel_1,    ///< A one-byte gp relative fixup.
-  FK_GPRel_2,    ///< A two-byte gp relative fixup.
-  FK_GPRel_4,    ///< A four-byte gp relative fixup.
-  FK_GPRel_8,    ///< A eight-byte gp relative fixup.
-  FK_DTPRel_4,   ///< A four-byte dtp relative fixup.
-  FK_DTPRel_8,   ///< A eight-byte dtp relative fixup.
-  FK_TPRel_4,    ///< A four-byte tp relative fixup.
-  FK_TPRel_8,    ///< A eight-byte tp relative fixup.
-  FK_SecRel_1,   ///< A one-byte section relative fixup.
-  FK_SecRel_2,   ///< A two-byte section relative fixup.
-  FK_SecRel_4,   ///< A four-byte section relative fixup.
-  FK_SecRel_8,   ///< A eight-byte section relative fixup.
-  FK_Data_Add_1, ///< A one-byte add fixup.
-  FK_Data_Add_2, ///< A two-byte add fixup.
-  FK_Data_Add_4, ///< A four-byte add fixup.
-  FK_Data_Add_8, ///< A eight-byte add fixup.
-  FK_Data_Sub_1, ///< A one-byte sub fixup.
-  FK_Data_Sub_2, ///< A two-byte sub fixup.
-  FK_Data_Sub_4, ///< A four-byte sub fixup.
-  FK_Data_Sub_8, ///< A eight-byte sub fixup.
+  FK_NONE = 0,    ///< A no-op fixup.
+  FK_Data_1,      ///< A one-byte fixup.
+  FK_Data_2,      ///< A two-byte fixup.
+  FK_Data_4,      ///< A four-byte fixup.
+  FK_Data_8,      ///< A eight-byte fixup.
+  FK_Data_6b,     ///< A six-bits fixup.
+  FK_PCRel_1,     ///< A one-byte pc relative fixup.
+  FK_PCRel_2,     ///< A two-byte pc relative fixup.
+  FK_PCRel_4,     ///< A four-byte pc relative fixup.
+  FK_PCRel_8,     ///< A eight-byte pc relative fixup.
+  FK_GPRel_1,     ///< A one-byte gp relative fixup.
+  FK_GPRel_2,     ///< A two-byte gp relative fixup.
+  FK_GPRel_4,     ///< A four-byte gp relative fixup.
+  FK_GPRel_8,     ///< A eight-byte gp relative fixup.
+  FK_DTPRel_4,    ///< A four-byte dtp relative fixup.
+  FK_DTPRel_8,    ///< A eight-byte dtp relative fixup.
+  FK_TPRel_4,     ///< A four-byte tp relative fixup.
+  FK_TPRel_8,     ///< A eight-byte tp relative fixup.
+  FK_SecRel_1,    ///< A one-byte section relative fixup.
+  FK_SecRel_2,    ///< A two-byte section relative fixup.
+  FK_SecRel_4,    ///< A four-byte section relative fixup.
+  FK_SecRel_8,    ///< A eight-byte section relative fixup.
+  FK_Data_Add_1,  ///< A one-byte add fixup.
+  FK_Data_Add_2,  ///< A two-byte add fixup.
+  FK_Data_Add_4,  ///< A four-byte add fixup.
+  FK_Data_Add_8,  ///< A eight-byte add fixup.
+  FK_Data_Add_6b, ///< A six-bits add fixup.
+  FK_Data_Sub_1,  ///< A one-byte sub fixup.
+  FK_Data_Sub_2,  ///< A two-byte sub fixup.
+  FK_Data_Sub_4,  ///< A four-byte sub fixup.
+  FK_Data_Sub_8,  ///< A eight-byte sub fixup.
+  FK_Data_Sub_6b, ///< A six-bits sub fixup.
 
   FirstTargetFixupKind = 128,
 
@@ -129,13 +132,37 @@ public:
 
   /// Return the generic fixup kind for a value with the given size. It
   /// is an error to pass an unsupported size.
-  static MCFixupKind getKindForSize(unsigned Size, bool isPCRel) {
+  static MCFixupKind getKindForSize(unsigned Size, bool IsPCRel) {
     switch (Size) {
     default: llvm_unreachable("Invalid generic fixup size!");
-    case 1: return isPCRel ? FK_PCRel_1 : FK_Data_1;
-    case 2: return isPCRel ? FK_PCRel_2 : FK_Data_2;
-    case 4: return isPCRel ? FK_PCRel_4 : FK_Data_4;
-    case 8: return isPCRel ? FK_PCRel_8 : FK_Data_8;
+    case 1:
+      return IsPCRel ? FK_PCRel_1 : FK_Data_1;
+    case 2:
+      return IsPCRel ? FK_PCRel_2 : FK_Data_2;
+    case 4:
+      return IsPCRel ? FK_PCRel_4 : FK_Data_4;
+    case 8:
+      return IsPCRel ? FK_PCRel_8 : FK_Data_8;
+    }
+  }
+
+  /// Return the generic fixup kind for a value with the given size in bits.
+  /// It is an error to pass an unsupported size.
+  static MCFixupKind getKindForSizeInBits(unsigned Size, bool IsPCRel) {
+    switch (Size) {
+    default:
+      llvm_unreachable("Invalid generic fixup size!");
+    case 6:
+      assert(!IsPCRel && "Invalid pc-relative fixup size!");
+      return FK_Data_6b;
+    case 8:
+      return IsPCRel ? FK_PCRel_1 : FK_Data_1;
+    case 16:
+      return IsPCRel ? FK_PCRel_2 : FK_Data_2;
+    case 32:
+      return IsPCRel ? FK_PCRel_4 : FK_Data_4;
+    case 64:
+      return IsPCRel ? FK_PCRel_8 : FK_Data_8;
     }
   }
 
@@ -148,6 +175,7 @@ public:
     case FK_Data_2: return FK_Data_Add_2;
     case FK_Data_4: return FK_Data_Add_4;
     case FK_Data_8: return FK_Data_Add_8;
+    case FK_Data_6b: return FK_Data_Add_6b;
     }
   }
 
@@ -160,6 +188,7 @@ public:
     case FK_Data_2: return FK_Data_Sub_2;
     case FK_Data_4: return FK_Data_Sub_4;
     case FK_Data_8: return FK_Data_Sub_8;
+    case FK_Data_6b: return FK_Data_Sub_6b;
     }
   }
 

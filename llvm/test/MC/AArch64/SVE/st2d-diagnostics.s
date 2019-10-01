@@ -59,11 +59,21 @@ st2d { z0.d, z1.d }, p0, [x0, w0, uxtw]
 
 
 // --------------------------------------------------------------------------//
-// error: restricted predicate has range [0, 7].
+// Invalid predicate
 
 st2d {z2.d, z3.d}, p8, [x15, #10, MUL VL]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: restricted predicate has range [0, 7].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid restricted predicate register, expected p0..p7 (without element suffix)
 // CHECK-NEXT: st2d {z2.d, z3.d}, p8, [x15, #10, MUL VL]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+st2d {z2.d, z3.d}, p7.b, [x15, #10, MUL VL]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid restricted predicate register, expected p0..p7 (without element suffix)
+// CHECK-NEXT: st2d {z2.d, z3.d}, p7.b, [x15, #10, MUL VL]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+st2d {z2.d, z3.d}, p7.q, [x15, #10, MUL VL]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid restricted predicate register, expected p0..p7 (without element suffix)
+// CHECK-NEXT: st2d {z2.d, z3.d}, p7.q, [x15, #10, MUL VL]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 

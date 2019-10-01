@@ -1,9 +1,8 @@
 //==-- llvm/Support/CheckedArithmetic.h - Safe arithmetical operations *- C++ //
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -48,6 +47,15 @@ template <typename T>
 typename std::enable_if<std::is_signed<T>::value, llvm::Optional<T>>::type
 checkedAdd(T LHS, T RHS) {
   return checkedOp(LHS, RHS, &llvm::APInt::sadd_ov);
+}
+
+/// Subtract two signed integers \p LHS and \p RHS.
+/// \return Optional of sum if no signed overflow occurred,
+/// \c None otherwise.
+template <typename T>
+typename std::enable_if<std::is_signed<T>::value, llvm::Optional<T>>::type
+checkedSub(T LHS, T RHS) {
+  return checkedOp(LHS, RHS, &llvm::APInt::ssub_ov);
 }
 
 /// Multiply two signed integers \p LHS and \p RHS.

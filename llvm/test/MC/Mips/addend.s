@@ -1,5 +1,5 @@
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux -mcpu=mips32r6 %s -o %t.o
-# RUN: llvm-readobj -s -section-data %t.o | FileCheck %s
+# RUN: llvm-readobj -S --section-data %t.o | FileCheck %s
 
 # CHECK:      Name: .text
 # CHECK-NEXT: Type:

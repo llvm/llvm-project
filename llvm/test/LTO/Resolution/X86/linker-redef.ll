@@ -1,6 +1,6 @@
 ; RUN: llvm-as %s -o %t.o
 ; RUN: llvm-lto2 run -o %t1.o %t.o -r %t.o,bar,pr
-; RUN: llvm-readobj -t %t1.o.0 | FileCheck %s
+; RUN: llvm-readobj --symbols %t1.o.0 | FileCheck %s
 
 ; CHECK: Name: bar
 ; CHECK-NEXT: Value:

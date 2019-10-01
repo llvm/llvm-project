@@ -1,9 +1,8 @@
 //===- ELFYAML.h - ELF YAMLIO implementation --------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -44,6 +43,8 @@ LLVM_YAML_STRONG_TYPEDEF(uint8_t, ELF_ELFDATA)
 LLVM_YAML_STRONG_TYPEDEF(uint8_t, ELF_ELFOSABI)
 // Just use 64, since it can hold 32-bit values too.
 LLVM_YAML_STRONG_TYPEDEF(uint64_t, ELF_EF)
+// Just use 64, since it can hold 32-bit values too.
+LLVM_YAML_STRONG_TYPEDEF(uint64_t, ELF_DYNTAG)
 LLVM_YAML_STRONG_TYPEDEF(uint32_t, ELF_PF)
 LLVM_YAML_STRONG_TYPEDEF(uint32_t, ELF_SHT)
 LLVM_YAML_STRONG_TYPEDEF(uint32_t, ELF_REL)
@@ -51,6 +52,7 @@ LLVM_YAML_STRONG_TYPEDEF(uint8_t, ELF_RSS)
 // Just use 64, since it can hold 32-bit values too.
 LLVM_YAML_STRONG_TYPEDEF(uint64_t, ELF_SHF)
 LLVM_YAML_STRONG_TYPEDEF(uint16_t, ELF_SHN)
+LLVM_YAML_STRONG_TYPEDEF(uint8_t, ELF_STB)
 LLVM_YAML_STRONG_TYPEDEF(uint8_t, ELF_STT)
 LLVM_YAML_STRONG_TYPEDEF(uint8_t, ELF_STV)
 LLVM_YAML_STRONG_TYPEDEF(uint8_t, ELF_STO)
@@ -73,6 +75,11 @@ struct FileHeader {
   ELF_EM Machine;
   ELF_EF Flags;
   llvm::yaml::Hex64 Entry;
+
+  Optional<llvm::yaml::Hex16> SHEntSize;
+  Optional<llvm::yaml::Hex64> SHOffset;
+  Optional<llvm::yaml::Hex16> SHNum;
+  Optional<llvm::yaml::Hex16> SHStrNdx;
 };
 
 struct SectionName {
@@ -85,53 +92,87 @@ struct ProgramHeader {
   llvm::yaml::Hex64 VAddr;
   llvm::yaml::Hex64 PAddr;
   Optional<llvm::yaml::Hex64> Align;
+  Optional<llvm::yaml::Hex64> FileSize;
+  Optional<llvm::yaml::Hex64> MemSize;
+  Optional<llvm::yaml::Hex64> Offset;
   std::vector<SectionName> Sections;
 };
 
 struct Symbol {
   StringRef Name;
+  Optional<uint32_t> NameIndex;
   ELF_STT Type;
   StringRef Section;
   Optional<ELF_SHN> Index;
+  ELF_STB Binding;
   llvm::yaml::Hex64 Value;
   llvm::yaml::Hex64 Size;
   uint8_t Other;
-};
-
-struct LocalGlobalWeakSymbols {
-  std::vector<Symbol> Local;
-  std::vector<Symbol> Global;
-  std::vector<Symbol> Weak;
 };
 
 struct SectionOrType {
   StringRef sectionNameOrType;
 };
 
+struct DynamicEntry {
+  ELF_DYNTAG Tag;
+  llvm::yaml::Hex64 Val;
+};
+
 struct Section {
   enum class SectionKind {
+    Dynamic,
     Group,
     RawContent,
     Relocation,
     NoBits,
+    Verdef,
+    Verneed,
+    SymtabShndxSection,
+    Symver,
     MipsABIFlags
   };
   SectionKind Kind;
   StringRef Name;
   ELF_SHT Type;
-  ELF_SHF Flags;
+  Optional<ELF_SHF> Flags;
   llvm::yaml::Hex64 Address;
   StringRef Link;
-  StringRef Info;
   llvm::yaml::Hex64 AddressAlign;
   Optional<llvm::yaml::Hex64> EntSize;
 
-  Section(SectionKind Kind) : Kind(Kind) {}
+  // This can be used to override the sh_offset field. It does not place the
+  // section data at the offset specified. Useful for creating invalid objects.
+  Optional<llvm::yaml::Hex64> ShOffset;
+
+  // This can be used to override the sh_size field. It does not affect the
+  // content written.
+  Optional<llvm::yaml::Hex64> ShSize;
+
+  // Usually sections are not created implicitly, but loaded from YAML.
+  // When they are, this flag is used to signal about that.
+  bool IsImplicit;
+
+  Section(SectionKind Kind, bool IsImplicit = false)
+      : Kind(Kind), IsImplicit(IsImplicit) {}
   virtual ~Section();
 };
+
+struct DynamicSection : Section {
+  std::vector<DynamicEntry> Entries;
+  Optional<yaml::BinaryRef> Content;
+
+  DynamicSection() : Section(SectionKind::Dynamic) {}
+
+  static bool classof(const Section *S) {
+    return S->Kind == SectionKind::Dynamic;
+  }
+};
+
 struct RawContentSection : Section {
-  yaml::BinaryRef Content;
-  llvm::yaml::Hex64 Size;
+  Optional<yaml::BinaryRef> Content;
+  Optional<llvm::yaml::Hex64> Size;
+  Optional<llvm::yaml::Hex64> Info;
 
   RawContentSection() : Section(SectionKind::RawContent) {}
 
@@ -150,10 +191,64 @@ struct NoBitsSection : Section {
   }
 };
 
+struct VernauxEntry {
+  uint32_t Hash;
+  uint16_t Flags;
+  uint16_t Other;
+  StringRef Name;
+};
+
+struct VerneedEntry {
+  uint16_t Version;
+  StringRef File;
+  std::vector<VernauxEntry> AuxV;
+};
+
+struct VerneedSection : Section {
+  std::vector<VerneedEntry> VerneedV;
+  llvm::yaml::Hex64 Info;
+
+  VerneedSection() : Section(SectionKind::Verneed) {}
+
+  static bool classof(const Section *S) {
+    return S->Kind == SectionKind::Verneed;
+  }
+};
+
+struct SymverSection : Section {
+  std::vector<uint16_t> Entries;
+
+  SymverSection() : Section(SectionKind::Symver) {}
+
+  static bool classof(const Section *S) {
+    return S->Kind == SectionKind::Symver;
+  }
+};
+
+struct VerdefEntry {
+  uint16_t Version;
+  uint16_t Flags;
+  uint16_t VersionNdx;
+  uint32_t Hash;
+  std::vector<StringRef> VerNames;
+};
+
+struct VerdefSection : Section {
+  std::vector<VerdefEntry> Entries;
+  llvm::yaml::Hex64 Info;
+
+  VerdefSection() : Section(SectionKind::Verdef) {}
+
+  static bool classof(const Section *S) {
+    return S->Kind == SectionKind::Verdef;
+  }
+};
+
 struct Group : Section {
   // Members of a group contain a flag and a list of section indices
   // that are part of the group.
   std::vector<SectionOrType> Members;
+  StringRef Signature; /* Info */
 
   Group() : Section(SectionKind::Group) {}
 
@@ -171,11 +266,22 @@ struct Relocation {
 
 struct RelocationSection : Section {
   std::vector<Relocation> Relocations;
+  StringRef RelocatableSec; /* Info */
 
   RelocationSection() : Section(SectionKind::Relocation) {}
 
   static bool classof(const Section *S) {
     return S->Kind == SectionKind::Relocation;
+  }
+};
+
+struct SymtabShndxSection : Section {
+  std::vector<uint32_t> Entries;
+
+  SymtabShndxSection() : Section(SectionKind::SymtabShndxSection) {}
+
+  static bool classof(const Section *S) {
+    return S->Kind == SectionKind::SymtabShndxSection;
   }
 };
 
@@ -208,16 +314,20 @@ struct Object {
   // cleaner and nicer if we read them from the YAML as a separate
   // top-level key, which automatically ensures that invariants like there
   // being a single SHT_SYMTAB section are upheld.
-  LocalGlobalWeakSymbols Symbols;
-  LocalGlobalWeakSymbols DynamicSymbols;
+  std::vector<Symbol> Symbols;
+  std::vector<Symbol> DynamicSymbols;
 };
 
 } // end namespace ELFYAML
 } // end namespace llvm
 
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::DynamicEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::ProgramHeader)
 LLVM_YAML_IS_SEQUENCE_VECTOR(std::unique_ptr<llvm::ELFYAML::Section>)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::Symbol)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::VerdefEntry)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::VernauxEntry)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::VerneedEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::Relocation)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::SectionOrType)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::SectionName)
@@ -277,6 +387,10 @@ template <> struct ScalarEnumerationTraits<ELFYAML::ELF_SHN> {
   static void enumeration(IO &IO, ELFYAML::ELF_SHN &Value);
 };
 
+template <> struct ScalarEnumerationTraits<ELFYAML::ELF_STB> {
+  static void enumeration(IO &IO, ELFYAML::ELF_STB &Value);
+};
+
 template <>
 struct ScalarEnumerationTraits<ELFYAML::ELF_STT> {
   static void enumeration(IO &IO, ELFYAML::ELF_STT &Value);
@@ -295,6 +409,11 @@ struct ScalarBitSetTraits<ELFYAML::ELF_STO> {
 template <>
 struct ScalarEnumerationTraits<ELFYAML::ELF_REL> {
   static void enumeration(IO &IO, ELFYAML::ELF_REL &Value);
+};
+
+template <>
+struct ScalarEnumerationTraits<ELFYAML::ELF_DYNTAG> {
+  static void enumeration(IO &IO, ELFYAML::ELF_DYNTAG &Value);
 };
 
 template <>
@@ -347,9 +466,20 @@ struct MappingTraits<ELFYAML::Symbol> {
   static StringRef validate(IO &IO, ELFYAML::Symbol &Symbol);
 };
 
-template <>
-struct MappingTraits<ELFYAML::LocalGlobalWeakSymbols> {
-  static void mapping(IO &IO, ELFYAML::LocalGlobalWeakSymbols &Symbols);
+template <> struct MappingTraits<ELFYAML::DynamicEntry> {
+  static void mapping(IO &IO, ELFYAML::DynamicEntry &Rel);
+};
+
+template <> struct MappingTraits<ELFYAML::VerdefEntry> {
+  static void mapping(IO &IO, ELFYAML::VerdefEntry &E);
+};
+
+template <> struct MappingTraits<ELFYAML::VerneedEntry> {
+  static void mapping(IO &IO, ELFYAML::VerneedEntry &E);
+};
+
+template <> struct MappingTraits<ELFYAML::VernauxEntry> {
+  static void mapping(IO &IO, ELFYAML::VernauxEntry &E);
 };
 
 template <> struct MappingTraits<ELFYAML::Relocation> {

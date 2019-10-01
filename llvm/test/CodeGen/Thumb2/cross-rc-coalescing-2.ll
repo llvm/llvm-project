@@ -64,7 +64,7 @@ bb8:                                              ; preds = %bb8, %bb7
   %32 = fsub float %30, %31                       ; <float> [#uses=1]
   %33 = fsub float %10, %32                       ; <float> [#uses=1]
   store float %33, float* undef, align 4
-  %34 = icmp slt i32 undef, undef                 ; <i1> [#uses=1]
+  %34 = icmp slt i32 %tmp54, %tmp80               ; <i1> [#uses=1]
   br i1 %34, label %bb8, label %bb9
 
 bb9:                                              ; preds = %bb8

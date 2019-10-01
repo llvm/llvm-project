@@ -134,7 +134,7 @@ define arm_aapcscc double @dbl_gprs_matching_spec_reg_in_op_soft(double %d1, dou
   ret double %add
 }
 
-attributes #0 = { nounwind "target-features"="+d16,+vfp2,+vfp3,-fp-only-sp" "use-soft-float"="true" }
+attributes #0 = { nounwind "target-features"="-d32,+vfp2,+vfp3" "use-soft-float"="true" }
 
 
 ; Check support for returning a float in GPR with hard float ABI
@@ -304,4 +304,4 @@ define %struct.twodouble @dbl_gprs_matching_spec_reg_in_op_hard(double %d1, doub
   ret %struct.twodouble %res
 }
 
-attributes #1 = { nounwind "target-features"="+d16,+vfp2,+vfp3,-fp-only-sp" "use-soft-float"="false" }
+attributes #1 = { nounwind "target-features"="-d32,+vfp2,+vfp3" "use-soft-float"="false" }

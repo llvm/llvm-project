@@ -1,8 +1,0 @@
-RUN: echo "%p/Inputs/llvm-symbolizer-tu.elf-x86-64 0x0" \
-RUN:   | llvm-symbolizer | FileCheck %s
-
-Built from the following source:
-
-...
-
-CHECK: b.cpp:3:0

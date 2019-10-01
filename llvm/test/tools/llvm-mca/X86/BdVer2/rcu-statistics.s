@@ -26,7 +26,7 @@
 # CHECK:      Dispatch Width:    4
 # CHECK-NEXT: uOps Per Cycle:    0.73
 # CHECK-NEXT: IPC:               0.73
-# CHECK-NEXT: Block RThroughput: 18.0
+# CHECK-NEXT: Block RThroughput: 15.0
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -37,7 +37,7 @@
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      9     10.50                       vsqrtps	%xmm0, %xmm2
+# CHECK-NEXT:  1      9     4.50                        vsqrtps	%xmm0, %xmm2
 # CHECK-NEXT:  1      5     1.00                        vaddps	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  1      5     1.00                        vaddps	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  1      5     1.00                        vaddps	%xmm0, %xmm1, %xmm2

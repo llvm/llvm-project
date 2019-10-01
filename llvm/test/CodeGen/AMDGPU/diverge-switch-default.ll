@@ -38,8 +38,8 @@ sw.epilog:
 ; CHECK: load i8
 ; CHECK-NOT: {{ br }}
 ; CHECK: [[ICMP:%[a-zA-Z0-9._]+]] = icmp eq
-; CHECK: [[IF:%[a-zA-Z0-9._]+]]   = call i64 @llvm.amdgcn.if.break(i1 [[ICMP]], i64 [[PHI]])
-; CHECK: [[LOOP:%[a-zA-Z0-9._]+]] = call i1 @llvm.amdgcn.loop(i64 [[IF]])
+; CHECK: [[IF:%[a-zA-Z0-9._]+]]   = call i64 @llvm.amdgcn.if.break.i64.i64(i1 [[ICMP]], i64 [[PHI]])
+; CHECK: [[LOOP:%[a-zA-Z0-9._]+]] = call i1 @llvm.amdgcn.loop.i64(i64 [[IF]])
 ; CHECK: br i1 [[LOOP]]
 
 sw.while:

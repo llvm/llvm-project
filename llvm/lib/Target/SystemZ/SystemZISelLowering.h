@@ -1,9 +1,8 @@
 //===-- SystemZISelLowering.h - SystemZ DAG lowering interface --*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -16,6 +15,7 @@
 #define LLVM_LIB_TARGET_SYSTEMZ_SYSTEMZISELLOWERING_H
 
 #include "SystemZ.h"
+#include "SystemZInstrInfo.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -396,10 +396,12 @@ public:
       return TypeWidenVector;
     return TargetLoweringBase::getPreferredVectorAction(VT);
   }
+  bool isCheapToSpeculateCtlz() const override { return true; }
   EVT getSetCCResultType(const DataLayout &DL, LLVMContext &,
                          EVT) const override;
   bool isFMAFasterThanFMulAndFAdd(EVT VT) const override;
-  bool isFPImmLegal(const APFloat &Imm, EVT VT) const override;
+  bool isFPImmLegal(const APFloat &Imm, EVT VT,
+                    bool ForCodeSize) const override;
   bool isLegalICmpImmediate(int64_t Imm) const override;
   bool isLegalAddImmediate(int64_t Imm) const override;
   bool isLegalAddressingMode(const DataLayout &DL, const AddrMode &AM, Type *Ty,
@@ -407,6 +409,7 @@ public:
                              Instruction *I = nullptr) const override;
   bool allowsMisalignedMemoryAccesses(EVT VT, unsigned AS,
                                       unsigned Align,
+                                      MachineMemOperand::Flags Flags,
                                       bool *Fast) const override;
   bool isTruncateFree(Type *, Type *) const override;
   bool isTruncateFree(EVT, EVT) const override;
@@ -599,6 +602,8 @@ private:
   SDValue combineGET_CCMASK(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineIntDIVREM(SDNode *N, DAGCombinerInfo &DCI) const;
 
+  SDValue unwrapAddress(SDValue N) const override;
+
   // If the last instruction before MBBI in MBB was some form of COMPARE,
   // try to replace it with a COMPARE AND BRANCH just before MBBI.
   // CCMask and Target are the BRC-like operands for the branch.
@@ -639,8 +644,27 @@ private:
                                          MachineBasicBlock *MBB,
                                          unsigned Opcode) const;
 
+  MachineMemOperand::Flags getMMOFlags(const Instruction &I) const override;
   const TargetRegisterClass *getRepRegClassFor(MVT VT) const override;
 };
+
+struct SystemZVectorConstantInfo {
+private:
+  APInt IntBits;             // The 128 bits as an integer.
+  APInt SplatBits;           // Smallest splat value.
+  APInt SplatUndef;          // Bits correspoding to undef operands of the BVN.
+  unsigned SplatBitSize = 0;
+  bool isFP128 = false;
+
+public:
+  unsigned Opcode = 0;
+  SmallVector<unsigned, 2> OpVals;
+  MVT VecVT;
+  SystemZVectorConstantInfo(APFloat FPImm);
+  SystemZVectorConstantInfo(BuildVectorSDNode *BVN);
+  bool isVectorConstantLegal(const SystemZSubtarget &Subtarget);
+};
+
 } // end namespace llvm
 
 #endif

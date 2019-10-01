@@ -151,10 +151,8 @@ define i8 @select05_mem(<8 x i1>* %a.0, <8 x i1>* %m) {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movzbl (%ecx), %ecx
-; X86-NEXT:    kmovw %ecx, %k0
-; X86-NEXT:    movzbl (%eax), %eax
-; X86-NEXT:    kmovw %eax, %k1
+; X86-NEXT:    kmovw (%ecx), %k0
+; X86-NEXT:    kmovw (%eax), %k1
 ; X86-NEXT:    korw %k1, %k0, %k0
 ; X86-NEXT:    kmovw %k0, %eax
 ; X86-NEXT:    # kill: def $al killed $al killed $eax
@@ -162,10 +160,8 @@ define i8 @select05_mem(<8 x i1>* %a.0, <8 x i1>* %m) {
 ;
 ; X64-LABEL: select05_mem:
 ; X64:       # %bb.0:
-; X64-NEXT:    movzbl (%rsi), %eax
-; X64-NEXT:    kmovw %eax, %k0
-; X64-NEXT:    movzbl (%rdi), %eax
-; X64-NEXT:    kmovw %eax, %k1
+; X64-NEXT:    kmovw (%rsi), %k0
+; X64-NEXT:    kmovw (%rdi), %k1
 ; X64-NEXT:    korw %k1, %k0, %k0
 ; X64-NEXT:    kmovw %k0, %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
@@ -202,10 +198,8 @@ define i8 @select06_mem(<8 x i1>* %a.0, <8 x i1>* %m) {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movzbl (%ecx), %ecx
-; X86-NEXT:    kmovw %ecx, %k0
-; X86-NEXT:    movzbl (%eax), %eax
-; X86-NEXT:    kmovw %eax, %k1
+; X86-NEXT:    kmovw (%ecx), %k0
+; X86-NEXT:    kmovw (%eax), %k1
 ; X86-NEXT:    kandw %k1, %k0, %k0
 ; X86-NEXT:    kmovw %k0, %eax
 ; X86-NEXT:    # kill: def $al killed $al killed $eax
@@ -213,10 +207,8 @@ define i8 @select06_mem(<8 x i1>* %a.0, <8 x i1>* %m) {
 ;
 ; X64-LABEL: select06_mem:
 ; X64:       # %bb.0:
-; X64-NEXT:    movzbl (%rsi), %eax
-; X64-NEXT:    kmovw %eax, %k0
-; X64-NEXT:    movzbl (%rdi), %eax
-; X64-NEXT:    kmovw %eax, %k1
+; X64-NEXT:    kmovw (%rsi), %k0
+; X64-NEXT:    kmovw (%rdi), %k1
 ; X64-NEXT:    kandw %k1, %k0, %k0
 ; X64-NEXT:    kmovw %k0, %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax

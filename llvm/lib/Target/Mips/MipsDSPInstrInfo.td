@@ -1,9 +1,8 @@
 //===- MipsDSPInstrInfo.td - DSP ASE instructions -*- tablegen ------------*-=//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -1314,7 +1313,9 @@ def PseudoCMPU_LE_QB : PseudoCMP<CMPU_LE_QB>;
 def PseudoPICK_PH : PseudoPICK<PICK_PH>;
 def PseudoPICK_QB : PseudoPICK<PICK_QB>;
 
-def PseudoMTLOHI_DSP : PseudoMTLOHI<ACC64DSP, GPR32>;
+let AdditionalPredicates = [HasDSP] in {
+  def PseudoMTLOHI_DSP : PseudoMTLOHI<ACC64DSP, GPR32>;
+}
 
 // Patterns.
 class DSPPat<dag pattern, dag result, Predicate pred = HasDSP> :

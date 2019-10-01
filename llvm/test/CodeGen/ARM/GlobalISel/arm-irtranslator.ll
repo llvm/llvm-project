@@ -1,6 +1,5 @@
 ; RUN: llc -mtriple arm-unknown -mattr=+vfp2,+v4t -global-isel -stop-after=irtranslator -verify-machineinstrs %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=LITTLE
 ; RUN: llc -mtriple armeb-unknown -mattr=+vfp2,+v4t -global-isel -global-isel-abort=0 -stop-after=irtranslator -verify-machineinstrs %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=BIG
-; XFAIL: armeb
 
 define void @test_void_return() {
 ; CHECK-LABEL: name: test_void_return
@@ -543,4 +542,21 @@ define i32 @test_constantstruct_v2s32_s32_s32() {
   %vec = extractvalue %struct.v2s32.s32.s32 {<2 x i32><i32 1, i32 2>, i32 3, i32 4}, 0
   %elt = extractelement <2 x i32> %vec, i32 0
   ret i32 %elt
+}
+
+define void @test_load_store_struct({i32, i32} *%addr) {
+; Make sure the IRTranslator doesn't use an unnecessarily large GEP index type
+; when breaking up loads and stores of aggregates.
+; CHECK-LABEL: name: test_load_store_struct
+; CHECK: [[ADDR1:%[0-9]+]]:_(p0) = COPY $r0
+; CHECK-DAG: [[VAL1:%[0-9]+]]:_(s32) = G_LOAD [[ADDR1]](p0) :: (load 4 from %ir.addr)
+; CHECK-DAG: [[OFFSET:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
+; CHECK-DAG: [[ADDR2:%[0-9]+]]:_(p0) = G_GEP [[ADDR1]], [[OFFSET]](s32)
+; CHECK-DAG: [[VAL2:%[0-9]+]]:_(s32) = G_LOAD [[ADDR2]](p0) :: (load 4 from %ir.addr + 4)
+; CHECK-DAG: G_STORE [[VAL1]](s32), [[ADDR1]](p0) :: (store 4 into %ir.addr)
+; CHECK-DAG: [[ADDR2:%[0-9]+]]:_(p0) = G_GEP [[ADDR1]], [[OFFSET]](s32)
+; CHECK-DAG: G_STORE [[VAL2]](s32), [[ADDR2]](p0) :: (store 4 into %ir.addr + 4)
+  %val = load {i32, i32}, {i32, i32} *%addr, align 4
+  store {i32, i32} %val, {i32, i32} *%addr, align 4
+  ret void
 }

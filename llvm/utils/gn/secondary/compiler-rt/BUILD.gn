@@ -1,0 +1,5 @@
+group("compiler-rt") {
+  deps = [
+    "//compiler-rt/lib(//llvm/utils/gn/build/toolchain:stage2_unix)",
+  ]
+}

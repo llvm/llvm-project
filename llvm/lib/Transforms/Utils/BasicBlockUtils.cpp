@@ -1,9 +1,8 @@
 //===- BasicBlockUtils.cpp - BasicBlock Utilities --------------------------==//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -18,6 +17,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/CFG.h"
+#include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryDependenceAnalysis.h"
 #include "llvm/Analysis/MemorySSAUpdater.h"
@@ -26,7 +26,6 @@
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
-#include "llvm/IR/DomTreeUpdater.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstrTypes.h"
@@ -39,6 +38,8 @@
 #include "llvm/IR/Value.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <cassert>
 #include <cstdint>
@@ -48,47 +49,91 @@
 
 using namespace llvm;
 
-void llvm::DeleteDeadBlock(BasicBlock *BB, DomTreeUpdater *DTU) {
-  assert((pred_begin(BB) == pred_end(BB) ||
-         // Can delete self loop.
-         BB->getSinglePredecessor() == BB) && "Block is not dead!");
-  Instruction *BBTerm = BB->getTerminator();
-  std::vector<DominatorTree::UpdateType> Updates;
+#define DEBUG_TYPE "basicblock-utils"
 
-  // Loop through all of our successors and make sure they know that one
-  // of their predecessors is going away.
+void llvm::DetatchDeadBlocks(
+    ArrayRef<BasicBlock *> BBs,
+    SmallVectorImpl<DominatorTree::UpdateType> *Updates,
+    bool KeepOneInputPHIs) {
+  for (auto *BB : BBs) {
+    // Loop through all of our successors and make sure they know that one
+    // of their predecessors is going away.
+    SmallPtrSet<BasicBlock *, 4> UniqueSuccessors;
+    for (BasicBlock *Succ : successors(BB)) {
+      Succ->removePredecessor(BB, KeepOneInputPHIs);
+      if (Updates && UniqueSuccessors.insert(Succ).second)
+        Updates->push_back({DominatorTree::Delete, BB, Succ});
+    }
+
+    // Zap all the instructions in the block.
+    while (!BB->empty()) {
+      Instruction &I = BB->back();
+      // If this instruction is used, replace uses with an arbitrary value.
+      // Because control flow can't get here, we don't care what we replace the
+      // value with.  Note that since this block is unreachable, and all values
+      // contained within it must dominate their uses, that all uses will
+      // eventually be removed (they are themselves dead).
+      if (!I.use_empty())
+        I.replaceAllUsesWith(UndefValue::get(I.getType()));
+      BB->getInstList().pop_back();
+    }
+    new UnreachableInst(BB->getContext(), BB);
+    assert(BB->getInstList().size() == 1 &&
+           isa<UnreachableInst>(BB->getTerminator()) &&
+           "The successor list of BB isn't empty before "
+           "applying corresponding DTU updates.");
+  }
+}
+
+void llvm::DeleteDeadBlock(BasicBlock *BB, DomTreeUpdater *DTU,
+                           bool KeepOneInputPHIs) {
+  DeleteDeadBlocks({BB}, DTU, KeepOneInputPHIs);
+}
+
+void llvm::DeleteDeadBlocks(ArrayRef <BasicBlock *> BBs, DomTreeUpdater *DTU,
+                            bool KeepOneInputPHIs) {
+#ifndef NDEBUG
+  // Make sure that all predecessors of each dead block is also dead.
+  SmallPtrSet<BasicBlock *, 4> Dead(BBs.begin(), BBs.end());
+  assert(Dead.size() == BBs.size() && "Duplicating blocks?");
+  for (auto *BB : Dead)
+    for (BasicBlock *Pred : predecessors(BB))
+      assert(Dead.count(Pred) && "All predecessors must be dead!");
+#endif
+
+  SmallVector<DominatorTree::UpdateType, 4> Updates;
+  DetatchDeadBlocks(BBs, DTU ? &Updates : nullptr, KeepOneInputPHIs);
+
   if (DTU)
-    Updates.reserve(BBTerm->getNumSuccessors());
-  for (BasicBlock *Succ : successors(BBTerm)) {
-    Succ->removePredecessor(BB);
+    DTU->applyUpdatesPermissive(Updates);
+
+  for (BasicBlock *BB : BBs)
     if (DTU)
-      Updates.push_back({DominatorTree::Delete, BB, Succ});
-  }
+      DTU->deleteBB(BB);
+    else
+      BB->eraseFromParent();
+}
 
-  // Zap all the instructions in the block.
-  while (!BB->empty()) {
-    Instruction &I = BB->back();
-    // If this instruction is used, replace uses with an arbitrary value.
-    // Because control flow can't get here, we don't care what we replace the
-    // value with.  Note that since this block is unreachable, and all values
-    // contained within it must dominate their uses, that all uses will
-    // eventually be removed (they are themselves dead).
-    if (!I.use_empty())
-      I.replaceAllUsesWith(UndefValue::get(I.getType()));
-    BB->getInstList().pop_back();
-  }
-  new UnreachableInst(BB->getContext(), BB);
-  assert(BB->getInstList().size() == 1 &&
-         isa<UnreachableInst>(BB->getTerminator()) &&
-         "The successor list of BB isn't empty before "
-         "applying corresponding DTU updates.");
+bool llvm::EliminateUnreachableBlocks(Function &F, DomTreeUpdater *DTU,
+                                      bool KeepOneInputPHIs) {
+  df_iterator_default_set<BasicBlock*> Reachable;
 
-  if (DTU) {
-    DTU->applyUpdates(Updates, /*ForceRemoveDuplicates*/ true);
-    DTU->deleteBB(BB);
-  } else {
-    BB->eraseFromParent(); // Zap the block!
-  }
+  // Mark all reachable blocks.
+  for (BasicBlock *BB : depth_first_ext(&F, Reachable))
+    (void)BB/* Mark all reachable blocks */;
+
+  // Collect all dead blocks.
+  std::vector<BasicBlock*> DeadBlocks;
+  for (Function::iterator I = F.begin(), E = F.end(); I != E; ++I)
+    if (!Reachable.count(&*I)) {
+      BasicBlock *BB = &*I;
+      DeadBlocks.push_back(BB);
+    }
+
+  // Delete the dead blocks.
+  DeleteDeadBlocks(DeadBlocks, DTU, KeepOneInputPHIs);
+
+  return !DeadBlocks.empty();
 }
 
 void llvm::FoldSingleEntryPHINodes(BasicBlock *BB,
@@ -149,6 +194,9 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU,
       if (IncValue == &PN)
         return false;
 
+  LLVM_DEBUG(dbgs() << "Merging: " << BB->getName() << " into "
+                    << PredBB->getName() << "\n");
+
   // Begin by getting rid of unneeded PHIs.
   SmallVector<AssertingVH<Value>, 4> IncomingValues;
   if (isa<PHINode>(BB->front())) {
@@ -164,11 +212,19 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU,
   std::vector<DominatorTree::UpdateType> Updates;
   if (DTU) {
     Updates.reserve(1 + (2 * succ_size(BB)));
-    Updates.push_back({DominatorTree::Delete, PredBB, BB});
-    for (auto I = succ_begin(BB), E = succ_end(BB); I != E; ++I) {
+    // Add insert edges first. Experimentally, for the particular case of two
+    // blocks that can be merged, with a single successor and single predecessor
+    // respectively, it is beneficial to have all insert updates first. Deleting
+    // edges first may lead to unreachable blocks, followed by inserting edges
+    // making the blocks reachable again. Such DT updates lead to high compile
+    // times. We add inserts before deletes here to reduce compile time.
+    for (auto I = succ_begin(BB), E = succ_end(BB); I != E; ++I)
+      // This successor of BB may already have PredBB as a predecessor.
+      if (llvm::find(successors(PredBB), *I) == succ_end(PredBB))
+        Updates.push_back({DominatorTree::Insert, PredBB, *I});
+    for (auto I = succ_begin(BB), E = succ_end(BB); I != E; ++I)
       Updates.push_back({DominatorTree::Delete, BB, *I});
-      Updates.push_back({DominatorTree::Insert, PredBB, *I});
-    }
+    Updates.push_back({DominatorTree::Delete, PredBB, BB});
   }
 
   if (MSSAU)
@@ -216,7 +272,7 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU,
            isa<UnreachableInst>(BB->getTerminator()) &&
            "The successor list of BB isn't empty before "
            "applying corresponding DTU updates.");
-    DTU->applyUpdates(Updates, /*ForceRemoveDuplicates*/ true);
+    DTU->applyUpdatesPermissive(Updates);
     DTU->deleteBB(BB);
   }
 
@@ -309,11 +365,13 @@ llvm::SplitAllCriticalEdges(Function &F,
 
 BasicBlock *llvm::SplitBlock(BasicBlock *Old, Instruction *SplitPt,
                              DominatorTree *DT, LoopInfo *LI,
-                             MemorySSAUpdater *MSSAU) {
+                             MemorySSAUpdater *MSSAU, const Twine &BBName) {
   BasicBlock::iterator SplitIt = SplitPt->getIterator();
   while (isa<PHINode>(SplitIt) || SplitIt->isEHPad())
     ++SplitIt;
-  BasicBlock *New = Old->splitBasicBlock(SplitIt, Old->getName()+".split");
+  std::string Name = BBName.str();
+  BasicBlock *New = Old->splitBasicBlock(
+      SplitIt, Name.empty() ? Old->getName() + ".split" : Name);
 
   // The new block lives in whichever loop the old one did. This preserves
   // LCSSA as well, because we force the split point to be after any PHI nodes.
@@ -532,6 +590,8 @@ BasicBlock *llvm::SplitBlockPredecessors(BasicBlock *BB,
     // all BlockAddress uses would need to be updated.
     assert(!isa<IndirectBrInst>(Preds[i]->getTerminator()) &&
            "Cannot split an edge from an IndirectBrInst");
+    assert(!isa<CallBrInst>(Preds[i]->getTerminator()) &&
+           "Cannot split an edge from a CallBrInst");
     Preds[i]->getTerminator()->replaceUsesOfWith(BB, NewBB);
   }
 
@@ -700,7 +760,7 @@ ReturnInst *llvm::FoldReturnIntoUncondBranch(ReturnInst *RI, BasicBlock *BB,
   UncondBranch->eraseFromParent();
 
   if (DTU)
-    DTU->deleteEdge(Pred, BB);
+    DTU->applyUpdates({{DominatorTree::Delete, Pred, BB}});
 
   return cast<ReturnInst>(NewRet);
 }
@@ -709,18 +769,23 @@ Instruction *llvm::SplitBlockAndInsertIfThen(Value *Cond,
                                              Instruction *SplitBefore,
                                              bool Unreachable,
                                              MDNode *BranchWeights,
-                                             DominatorTree *DT, LoopInfo *LI) {
+                                             DominatorTree *DT, LoopInfo *LI,
+                                             BasicBlock *ThenBlock) {
   BasicBlock *Head = SplitBefore->getParent();
   BasicBlock *Tail = Head->splitBasicBlock(SplitBefore->getIterator());
   Instruction *HeadOldTerm = Head->getTerminator();
   LLVMContext &C = Head->getContext();
-  BasicBlock *ThenBlock = BasicBlock::Create(C, "", Head->getParent(), Tail);
   Instruction *CheckTerm;
-  if (Unreachable)
-    CheckTerm = new UnreachableInst(C, ThenBlock);
-  else
-    CheckTerm = BranchInst::Create(Tail, ThenBlock);
-  CheckTerm->setDebugLoc(SplitBefore->getDebugLoc());
+  bool CreateThenBlock = (ThenBlock == nullptr);
+  if (CreateThenBlock) {
+    ThenBlock = BasicBlock::Create(C, "", Head->getParent(), Tail);
+    if (Unreachable)
+      CheckTerm = new UnreachableInst(C, ThenBlock);
+    else
+      CheckTerm = BranchInst::Create(Tail, ThenBlock);
+    CheckTerm->setDebugLoc(SplitBefore->getDebugLoc());
+  } else
+    CheckTerm = ThenBlock->getTerminator();
   BranchInst *HeadNewTerm =
     BranchInst::Create(/*ifTrue*/ThenBlock, /*ifFalse*/Tail, Cond);
   HeadNewTerm->setMetadata(LLVMContext::MD_prof, BranchWeights);
@@ -735,7 +800,10 @@ Instruction *llvm::SplitBlockAndInsertIfThen(Value *Cond,
         DT->changeImmediateDominator(Child, NewNode);
 
       // Head dominates ThenBlock.
-      DT->addNewBlock(ThenBlock, Head);
+      if (CreateThenBlock)
+        DT->addNewBlock(ThenBlock, Head);
+      else
+        DT->changeImmediateDominator(ThenBlock, Head);
     }
   }
 

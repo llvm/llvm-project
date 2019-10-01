@@ -102,8 +102,13 @@ and from the command line.
 
 .. option:: -D<VAR=VALUE>
 
-  Sets a filecheck variable ``VAR`` with value ``VALUE`` that can be used in
-  ``CHECK:`` lines.
+  Sets a filecheck pattern variable ``VAR`` with value ``VALUE`` that can be
+  used in ``CHECK:`` lines.
+
+.. option:: -D#<NUMVAR>=<VALUE>
+
+  Sets a filecheck numeric variable ``NUMVAR`` to ``<VALUE>`` that can be used
+  in ``CHECK:`` lines.
 
 .. option:: -version
 
@@ -111,13 +116,16 @@ and from the command line.
 
 .. option:: -v
 
-  Print directive pattern matches.
+  Print good directive pattern matches.  However, if ``-input-dump=fail`` or
+  ``-input-dump=always``, add those matches as input annotations instead.
 
 .. option:: -vv
 
   Print information helpful in diagnosing internal FileCheck issues, such as
   discarded overlapping ``CHECK-DAG:`` matches, implicit EOF pattern matches,
   and ``CHECK-NOT:`` patterns that do not have matches.  Implies ``-v``.
+  However, if ``-input-dump=fail`` or ``-input-dump=always``, just add that
+  information as input annotations instead.
 
 .. option:: --allow-deprecated-dag-overlap
 
@@ -491,8 +499,8 @@ simply uniquely match a single line in the file being verified.
 
 ``CHECK-LABEL:`` directives cannot contain variable definitions or uses.
 
-FileCheck Pattern Matching Syntax
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+FileCheck Regex Matching Syntax
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 All FileCheck directives take a pattern to match.
 For most uses of FileCheck, fixed string matching is perfectly sufficient.  For
@@ -517,14 +525,15 @@ braces like you would in C.  In the rare case that you want to match double
 braces explicitly from the input, you can use something ugly like
 ``{{[{][{]}}`` as your pattern.
 
-FileCheck Variables
-~~~~~~~~~~~~~~~~~~~
+FileCheck String Substitution Blocks
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 It is often useful to match a pattern and then verify that it occurs again
-later in the file.  For codegen tests, this can be useful to allow any register,
-but verify that that register is used consistently later.  To do this,
-:program:`FileCheck` allows named variables to be defined and substituted into
-patterns.  Here is a simple example:
+later in the file.  For codegen tests, this can be useful to allow any
+register, but verify that that register is used consistently later.  To do
+this, :program:`FileCheck` supports string substitution blocks that allow
+string variables to be defined and substituted into patterns.  Here is a simple
+example:
 
 .. code-block:: llvm
 
@@ -533,15 +542,16 @@ patterns.  Here is a simple example:
    ; CHECK:    andw	{{.*}}[[REGISTER]]
 
 The first check line matches a regex ``%[a-z]+`` and captures it into the
-variable ``REGISTER``.  The second line verifies that whatever is in
-``REGISTER`` occurs later in the file after an "``andw``".  :program:`FileCheck`
-variable references are always contained in ``[[ ]]`` pairs, and their names can
-be formed with the regex ``[a-zA-Z_][a-zA-Z0-9_]*``.  If a colon follows the name,
-then it is a definition of the variable; otherwise, it is a use.
+string variable ``REGISTER``.  The second line verifies that whatever is in
+``REGISTER`` occurs later in the file after an "``andw``". :program:`FileCheck`
+string substitution blocks are always contained in ``[[ ]]`` pairs, and string
+variable names can be formed with the regex ``[a-zA-Z_][a-zA-Z0-9_]*``.  If a
+colon follows the name, then it is a definition of the variable; otherwise, it
+is a substitution.
 
-:program:`FileCheck` variables can be defined multiple times, and uses always
-get the latest value.  Variables can also be used later on the same line they
-were defined on. For example:
+:program:`FileCheck` variables can be defined multiple times, and substitutions
+always get the latest value.  Variables can also be substituted later on the
+same line they were defined on. For example:
 
 .. code-block:: llvm
 
@@ -557,30 +567,98 @@ CHECK-LABEL block. Global variables are not affected by CHECK-LABEL.
 This makes it easier to ensure that individual tests are not affected
 by variables set in preceding tests.
 
-FileCheck Expressions
-~~~~~~~~~~~~~~~~~~~~~
+FileCheck Numeric Substitution Blocks
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Sometimes there's a need to verify output which refers line numbers of the
+:program:`FileCheck` also supports numeric substitution blocks that allow
+defining numeric variables and checking for numeric values that satisfy a
+numeric expression constraint based on those variables via a numeric
+substitution. This allows ``CHECK:`` directives to verify a numeric relation
+between two numbers, such as the need for consecutive registers to be used.
+
+The syntax to define a numeric variable is ``[[#<NUMVAR>:]]`` where
+``<NUMVAR>`` is the name of the numeric variable to define to the matching
+value.
+
+For example:
+
+.. code-block:: llvm
+
+    ; CHECK: mov r[[#REG:]], 42
+
+would match ``mov r5, 42`` and set ``REG`` to the value ``5``.
+
+The syntax of a numeric substitution is ``[[#<NUMVAR><op><offset>]]`` where:
+
+* ``<NUMVAR>`` is the name of a defined numeric variable.
+
+* ``<op>`` is an optional numeric operation to perform on the value of
+  ``<NUMVAR>``. Currently supported numeric operations are ``+`` and ``-``.
+
+* ``<offset>`` is the immediate value that constitutes the second operand of
+  the numeric operation <op>. It must be present if ``<op>`` is present,
+  absent otherwise.
+
+Spaces are accepted before, after and between any of these elements.
+
+For example:
+
+.. code-block:: llvm
+
+    ; CHECK: load r[[#REG:]], [r0]
+    ; CHECK: load r[[#REG+1]], [r1]
+
+The above example would match the text:
+
+.. code-block:: gas
+
+    load r5, [r0]
+    load r6, [r1]
+
+but would not match the text:
+
+.. code-block:: gas
+
+    load r5, [r0]
+    load r7, [r1]
+
+due to ``7`` being unequal to ``5 + 1``.
+
+The ``--enable-var-scope`` option has the same effect on numeric variables as
+on string variables.
+
+Important note: In its current implementation, a numeric expression cannot use
+a numeric variable defined on the same line.
+
+FileCheck Pseudo Numeric Variables
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Sometimes there's a need to verify output that contains line numbers of the
 match file, e.g. when testing compiler diagnostics.  This introduces a certain
 fragility of the match file structure, as "``CHECK:``" lines contain absolute
 line numbers in the same file, which have to be updated whenever line numbers
 change due to text addition or deletion.
 
-To support this case, FileCheck allows using ``[[@LINE]]``,
-``[[@LINE+<offset>]]``, ``[[@LINE-<offset>]]`` expressions in patterns. These
-expressions expand to a number of the line where a pattern is located (with an
-optional integer offset).
+To support this case, FileCheck numeric expressions understand the ``@LINE``
+pseudo numeric variable which evaluates to the line number of the CHECK pattern
+where it is found.
 
 This way match patterns can be put near the relevant test lines and include
 relative line number references, for example:
 
 .. code-block:: c++
 
-   // CHECK: test.cpp:[[@LINE+4]]:6: error: expected ';' after top level declarator
+   // CHECK: test.cpp:[[# @LINE + 4]]:6: error: expected ';' after top level declarator
    // CHECK-NEXT: {{^int a}}
    // CHECK-NEXT: {{^     \^}}
    // CHECK-NEXT: {{^     ;}}
    int a
+
+To support legacy uses of ``@LINE`` as a special string variable,
+:program:`FileCheck` also accepts the following uses of ``@LINE`` with string
+substitution block syntax: ``[[@LINE]]``, ``[[@LINE+<offset>]]`` and
+``[[@LINE-<offset>]]`` without any spaces inside the brackets and where
+``offset`` is an integer.
 
 Matching Newline Characters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

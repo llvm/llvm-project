@@ -1,5 +1,5 @@
 # RUN: llvm-mc -triple mips-unknown-linux -filetype=obj \
-# RUN:     -mips-round-section-sizes %s | llvm-readobj -sections | FileCheck %s
+# RUN:     -mips-round-section-sizes %s | llvm-readobj --sections | FileCheck %s
 	.section ".talign1", "ax"
 	.p2align 4
 t1:	.byte 1

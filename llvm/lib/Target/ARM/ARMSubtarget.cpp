@@ -1,9 +1,8 @@
 //===-- ARMSubtarget.cpp - ARM Subtarget Information ----------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -93,10 +92,12 @@ ARMFrameLowering *ARMSubtarget::initializeFrameLowering(StringRef CPU,
 
 ARMSubtarget::ARMSubtarget(const Triple &TT, const std::string &CPU,
                            const std::string &FS,
-                           const ARMBaseTargetMachine &TM, bool IsLittle)
+                           const ARMBaseTargetMachine &TM, bool IsLittle,
+                           bool MinSize)
     : ARMGenSubtargetInfo(TT, CPU, FS), UseMulOps(UseFusedMulOps),
-      CPUString(CPU), IsLittle(IsLittle), TargetTriple(TT), Options(TM.Options),
-      TM(TM), FrameLowering(initializeFrameLowering(CPU, FS)),
+      CPUString(CPU), OptMinSize(MinSize), IsLittle(IsLittle),
+      TargetTriple(TT), Options(TM.Options), TM(TM),
+      FrameLowering(initializeFrameLowering(CPU, FS)),
       // At this point initializeSubtargetDependencies has been called so
       // we can query directly.
       InstrInfo(isThumb1Only()
@@ -283,6 +284,7 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
   case CortexA72:
   case CortexA73:
   case CortexA75:
+  case CortexA76:
   case CortexR4:
   case CortexR4F:
   case CortexR5:
@@ -359,6 +361,13 @@ unsigned ARMSubtarget::getMispredictionPenalty() const {
 }
 
 bool ARMSubtarget::enableMachineScheduler() const {
+  // The MachineScheduler can increase register usage, so we use more high
+  // registers and end up with more T2 instructions that cannot be converted to
+  // T1 instructions. At least until we do better at converting to thumb1
+  // instructions, on cortex-m at Oz where we are size-paranoid, don't use the
+  // Machine scheduler, relying on the DAG register pressure scheduler instead.
+  if (isMClass() && hasMinSize())
+    return false;
   // Enable the MachineScheduler before register allocation for subtargets
   // with the use-misched feature.
   return useMachineScheduler();
@@ -374,20 +383,20 @@ bool ARMSubtarget::enablePostRAScheduler() const {
 
 bool ARMSubtarget::enableAtomicExpand() const { return hasAnyDataBarrier(); }
 
-bool ARMSubtarget::useStride4VFPs(const MachineFunction &MF) const {
+bool ARMSubtarget::useStride4VFPs() const {
   // For general targets, the prologue can grow when VFPs are allocated with
   // stride 4 (more vpush instructions). But WatchOS uses a compact unwind
   // format which it's more important to get right.
   return isTargetWatchABI() ||
-         (useWideStrideVFP() && !MF.getFunction().optForMinSize());
+         (useWideStrideVFP() && !OptMinSize);
 }
 
-bool ARMSubtarget::useMovt(const MachineFunction &MF) const {
+bool ARMSubtarget::useMovt() const {
   // NOTE Windows on ARM needs to use mov.w/mov.t pairs to materialise 32-bit
   // immediates as it is inherently position independent, and may be out of
   // range otherwise.
   return !NoMovt && hasV8MBaselineOps() &&
-         (isTargetWindows() || !MF.getFunction().optForMinSize() || genExecuteOnly());
+         (isTargetWindows() || !OptMinSize || genExecuteOnly());
 }
 
 bool ARMSubtarget::useFastISel() const {

@@ -1,9 +1,8 @@
 //===-- X86TargetFrameLowering.h - Define frame lowering for X86 -*- C++ -*-==//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -171,6 +170,10 @@ public:
   int getInitialCFAOffset(const MachineFunction &MF) const override;
 
   unsigned getInitialCFARegister(const MachineFunction &MF) const override;
+
+  /// Return true if the function has a redzone (accessible bytes past the
+  /// frame of the top of stack function) as part of it's ABI.  
+  bool has128ByteRedZone(const MachineFunction& MF) const;
 
 private:
   uint64_t calculateMaxStackAlign(const MachineFunction &MF) const;

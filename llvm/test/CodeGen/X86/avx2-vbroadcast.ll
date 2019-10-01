@@ -189,12 +189,12 @@ define <2 x i64> @Q64(i64* %ptr) nounwind uwtable readnone ssp {
 ; X32-LABEL: Q64:
 ; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    vpbroadcastq (%eax), %xmm0
+; X32-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: Q64:
 ; X64:       ## %bb.0: ## %entry
-; X64-NEXT:    vpbroadcastq (%rdi), %xmm0
+; X64-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; X64-NEXT:    retq
 entry:
   %q = load i64, i64* %ptr, align 4
@@ -207,8 +207,7 @@ define <4 x i64> @QQ64(i64* %ptr) nounwind uwtable readnone ssp {
 ; X32-LABEL: QQ64:
 ; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X32-NEXT:    vbroadcastsd %xmm0, %ymm0
+; X32-NEXT:    vbroadcastsd (%eax), %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: QQ64:
@@ -233,7 +232,7 @@ define <8 x i16> @broadcast_mem_v4i16_v8i16(<4 x i16>* %ptr) {
 ;
 ; X64-LABEL: broadcast_mem_v4i16_v8i16:
 ; X64:       ## %bb.0:
-; X64-NEXT:    vpbroadcastq (%rdi), %xmm0
+; X64-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; X64-NEXT:    retq
   %load = load <4 x i16>, <4 x i16>* %ptr
   %shuf = shufflevector <4 x i16> %load, <4 x i16> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
@@ -244,8 +243,7 @@ define <16 x i16> @broadcast_mem_v4i16_v16i16(<4 x i16>* %ptr) {
 ; X32-LABEL: broadcast_mem_v4i16_v16i16:
 ; X32:       ## %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X32-NEXT:    vbroadcastsd %xmm0, %ymm0
+; X32-NEXT:    vbroadcastsd (%eax), %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: broadcast_mem_v4i16_v16i16:
@@ -472,7 +470,7 @@ define <2 x i64> @load_splat_2i64_2i64_1111(<2 x i64>* %ptr) nounwind uwtable re
 ;
 ; X64-LABEL: load_splat_2i64_2i64_1111:
 ; X64:       ## %bb.0: ## %entry
-; X64-NEXT:    vpbroadcastq 8(%rdi), %xmm0
+; X64-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; X64-NEXT:    retq
 entry:
   %ld = load <2 x i64>, <2 x i64>* %ptr
@@ -866,12 +864,12 @@ define   <4 x i64> @_inreg4xi64(<4 x i64> %a) {
 define   <2 x i64> @_inreg2xi64(<2 x i64> %a) {
 ; X32-LABEL: _inreg2xi64:
 ; X32:       ## %bb.0:
-; X32-NEXT:    vpbroadcastq %xmm0, %xmm0
+; X32-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: _inreg2xi64:
 ; X64:       ## %bb.0:
-; X64-NEXT:    vpbroadcastq %xmm0, %xmm0
+; X64-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
 ; X64-NEXT:    retq
   %b = shufflevector <2 x i64> %a, <2 x i64> undef, <2 x i32> zeroinitializer
   ret <2 x i64> %b
@@ -1037,6 +1035,48 @@ define <4 x double> @splat_concat4(double %d) {
   %4 = insertelement <2 x double> %3, double %d, i32 1
   %5 = shufflevector <2 x double> %2, <2 x double> %4, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   ret <4 x double> %5
+}
+
+define void @broadcast_v16i32(i32* %a, <16 x i32>* %b) {
+; X32-AVX2-LABEL: broadcast_v16i32:
+; X32-AVX2:       ## %bb.0:
+; X32-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-AVX2-NEXT:    vbroadcastss (%ecx), %ymm0
+; X32-AVX2-NEXT:    vmovups %ymm0, 32(%eax)
+; X32-AVX2-NEXT:    vmovups %ymm0, (%eax)
+; X32-AVX2-NEXT:    vzeroupper
+; X32-AVX2-NEXT:    retl
+;
+; X64-AVX2-LABEL: broadcast_v16i32:
+; X64-AVX2:       ## %bb.0:
+; X64-AVX2-NEXT:    vbroadcastss (%rdi), %ymm0
+; X64-AVX2-NEXT:    vmovups %ymm0, 32(%rsi)
+; X64-AVX2-NEXT:    vmovups %ymm0, (%rsi)
+; X64-AVX2-NEXT:    vzeroupper
+; X64-AVX2-NEXT:    retq
+;
+; X32-AVX512VL-LABEL: broadcast_v16i32:
+; X32-AVX512VL:       ## %bb.0:
+; X32-AVX512VL-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-AVX512VL-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-AVX512VL-NEXT:    vbroadcastss (%ecx), %zmm0
+; X32-AVX512VL-NEXT:    vmovups %zmm0, (%eax)
+; X32-AVX512VL-NEXT:    vzeroupper
+; X32-AVX512VL-NEXT:    retl
+;
+; X64-AVX512VL-LABEL: broadcast_v16i32:
+; X64-AVX512VL:       ## %bb.0:
+; X64-AVX512VL-NEXT:    vbroadcastss (%rdi), %zmm0
+; X64-AVX512VL-NEXT:    vmovups %zmm0, (%rsi)
+; X64-AVX512VL-NEXT:    vzeroupper
+; X64-AVX512VL-NEXT:    retq
+  %1 = load i32, i32* %a, align 4
+  %2 = insertelement <8 x i32> undef, i32 %1, i32 0
+  %3 = shufflevector <8 x i32> %2, <8 x i32> undef, <8 x i32> zeroinitializer
+  %4 = shufflevector <8 x i32> undef, <8 x i32> %3, <16 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11, i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
+  store <16 x i32> %4, <16 x i32>* %b, align 4
+  ret void
 }
 
 ; Test cases for <rdar://problem/16074331>.
@@ -1328,9 +1368,9 @@ define void @isel_crash_2q(i64* %cV_R.addr) {
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; X32-NEXT:    vmovaps %xmm0, (%esp)
-; X32-NEXT:    vpbroadcastq (%eax), %xmm1
+; X32-NEXT:    vmovddup {{.*#+}} xmm1 = mem[0,0]
 ; X32-NEXT:    vmovaps %xmm0, {{[0-9]+}}(%esp)
-; X32-NEXT:    vmovdqa %xmm1, {{[0-9]+}}(%esp)
+; X32-NEXT:    vmovaps %xmm1, {{[0-9]+}}(%esp)
 ; X32-NEXT:    addl $60, %esp
 ; X32-NEXT:    retl
 ;
@@ -1338,9 +1378,9 @@ define void @isel_crash_2q(i64* %cV_R.addr) {
 ; X64:       ## %bb.0: ## %entry
 ; X64-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; X64-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    vpbroadcastq (%rdi), %xmm1
+; X64-NEXT:    vmovddup {{.*#+}} xmm1 = mem[0,0]
 ; X64-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    vmovdqa %xmm1, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    vmovaps %xmm1, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    retq
 entry:
   %__a.addr.i = alloca <2 x i64>, align 16
@@ -1369,8 +1409,7 @@ define void @isel_crash_4q(i64* %cV_R.addr) {
 ; X32-NEXT:    movl 8(%ebp), %eax
 ; X32-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; X32-NEXT:    vmovaps %ymm0, (%esp)
-; X32-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; X32-NEXT:    vbroadcastsd %xmm1, %ymm1
+; X32-NEXT:    vbroadcastsd (%eax), %ymm1
 ; X32-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%esp)
 ; X32-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%esp)
 ; X32-NEXT:    movl %ebp, %esp

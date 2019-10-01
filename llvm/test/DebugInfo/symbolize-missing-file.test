@@ -1,0 +1,3 @@
+RUN: llvm-symbolizer --obj=unexisting-file 0x1234 2>&1 | FileCheck %s
+
+CHECK: LLVMSymbolizer: error reading file: {{[Nn]}}o such file or directory

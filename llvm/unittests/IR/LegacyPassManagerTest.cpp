@@ -1,9 +1,8 @@
 //===- llvm/unittest/IR/LegacyPassManager.cpp - Legacy PassManager tests --===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -401,7 +400,12 @@ namespace llvm {
     struct CustomOptPassGate : public OptPassGate {
       bool Skip;
       CustomOptPassGate(bool Skip) : Skip(Skip) { }
-      bool shouldRunPass(const Pass *P, const Module &U) { return !Skip; }
+      bool shouldRunPass(const Pass *P, StringRef IRDescription) {
+        if (P->getPassKind() == PT_Module)
+          return !Skip;
+        return OptPassGate::shouldRunPass(P, IRDescription);
+      }
+      bool isEnabled() const { return true; }
     };
 
     // Optional module pass.

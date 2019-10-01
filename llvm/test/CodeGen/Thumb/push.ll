@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=thumb-apple-darwin -disable-fp-elim | FileCheck %s
+; RUN: llc < %s -mtriple=thumb-apple-darwin -frame-pointer=all | FileCheck %s
 ; rdar://7268481
 
 define void @t() nounwind {

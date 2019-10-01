@@ -1,9 +1,8 @@
 //===- CodeGenInstruction.cpp - CodeGen Instruction Class Wrapper ---------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -34,18 +33,24 @@ CGIOperandList::CGIOperandList(Record *R) : TheDef(R) {
 
   if (DefInit *Init = dyn_cast<DefInit>(OutDI->getOperator())) {
     if (Init->getDef()->getName() != "outs")
-      PrintFatalError(R->getName() + ": invalid def name for output list: use 'outs'");
+      PrintFatalError(R->getLoc(),
+                      R->getName() +
+                          ": invalid def name for output list: use 'outs'");
   } else
-    PrintFatalError(R->getName() + ": invalid output list: use 'outs'");
+    PrintFatalError(R->getLoc(),
+                    R->getName() + ": invalid output list: use 'outs'");
 
   NumDefs = OutDI->getNumArgs();
 
   DagInit *InDI = R->getValueAsDag("InOperandList");
   if (DefInit *Init = dyn_cast<DefInit>(InDI->getOperator())) {
     if (Init->getDef()->getName() != "ins")
-      PrintFatalError(R->getName() + ": invalid def name for input list: use 'ins'");
+      PrintFatalError(R->getLoc(),
+                      R->getName() +
+                          ": invalid def name for input list: use 'ins'");
   } else
-    PrintFatalError(R->getName() + ": invalid input list: use 'ins'");
+    PrintFatalError(R->getLoc(),
+                    R->getName() + ": invalid input list: use 'ins'");
 
   unsigned MIOperandNo = 0;
   std::set<std::string> OperandNames;
@@ -64,7 +69,8 @@ CGIOperandList::CGIOperandList(Record *R) : TheDef(R) {
 
     DefInit *Arg = dyn_cast<DefInit>(ArgInit);
     if (!Arg)
-      PrintFatalError("Illegal operand for the '" + R->getName() + "' instruction!");
+      PrintFatalError(R->getLoc(), "Illegal operand for the '" + R->getName() +
+                                       "' instruction!");
 
     Record *Rec = Arg->getDef();
     std::string PrintMethod = "printOperand";
@@ -89,8 +95,9 @@ CGIOperandList::CGIOperandList(Record *R) : TheDef(R) {
       // Verify that MIOpInfo has an 'ops' root value.
       if (!isa<DefInit>(MIOpInfo->getOperator()) ||
           cast<DefInit>(MIOpInfo->getOperator())->getDef()->getName() != "ops")
-        PrintFatalError("Bad value for MIOperandInfo in operand '" + Rec->getName() +
-          "'\n");
+        PrintFatalError(R->getLoc(),
+                        "Bad value for MIOperandInfo in operand '" +
+                            Rec->getName() + "'\n");
 
       // If we have MIOpInfo, then we have #operands equal to number of entries
       // in MIOperandInfo.
@@ -108,16 +115,20 @@ CGIOperandList::CGIOperandList(Record *R) : TheDef(R) {
       OperandType = "OPERAND_REGISTER";
     } else if (!Rec->isSubClassOf("PointerLikeRegClass") &&
                !Rec->isSubClassOf("unknown_class"))
-      PrintFatalError("Unknown operand class '" + Rec->getName() +
-        "' in '" + R->getName() + "' instruction!");
+      PrintFatalError(R->getLoc(), "Unknown operand class '" + Rec->getName() +
+                                       "' in '" + R->getName() +
+                                       "' instruction!");
 
     // Check that the operand has a name and that it's unique.
     if (ArgName.empty())
-      PrintFatalError("In instruction '" + R->getName() + "', operand #" +
-                      Twine(i) + " has no name!");
+      PrintFatalError(R->getLoc(), "In instruction '" + R->getName() +
+                                       "', operand #" + Twine(i) +
+                                       " has no name!");
     if (!OperandNames.insert(ArgName).second)
-      PrintFatalError("In instruction '" + R->getName() + "', operand #" +
-                      Twine(i) + " has the same name as a previous operand!");
+      PrintFatalError(R->getLoc(),
+                      "In instruction '" + R->getName() + "', operand #" +
+                          Twine(i) +
+                          " has the same name as a previous operand!");
 
     OperandList.emplace_back(Rec, ArgName, PrintMethod, EncoderMethod,
                              OperandNamespace + "::" + OperandType, MIOperandNo,
@@ -139,9 +150,11 @@ CGIOperandList::CGIOperandList(Record *R) : TheDef(R) {
 ///
 unsigned CGIOperandList::getOperandNamed(StringRef Name) const {
   unsigned OpIdx;
-  if (hasOperandNamed(Name, OpIdx)) return OpIdx;
-  PrintFatalError("'" + TheDef->getName() +
-                  "' does not have an operand named '$" + Name + "'!");
+  if (hasOperandNamed(Name, OpIdx))
+    return OpIdx;
+  PrintFatalError(TheDef->getLoc(), "'" + TheDef->getName() +
+                                        "' does not have an operand named '$" +
+                                        Name + "'!");
 }
 
 /// hasOperandNamed - Query whether the instruction has an operand of the
@@ -160,7 +173,8 @@ bool CGIOperandList::hasOperandNamed(StringRef Name, unsigned &OpIdx) const {
 std::pair<unsigned,unsigned>
 CGIOperandList::ParseOperandName(const std::string &Op, bool AllowWholeOp) {
   if (Op.empty() || Op[0] != '$')
-    PrintFatalError(TheDef->getName() + ": Illegal operand name: '" + Op + "'");
+    PrintFatalError(TheDef->getLoc(),
+                    TheDef->getName() + ": Illegal operand name: '" + Op + "'");
 
   std::string OpName = Op.substr(1);
   std::string SubOpName;
@@ -170,7 +184,9 @@ CGIOperandList::ParseOperandName(const std::string &Op, bool AllowWholeOp) {
   if (DotIdx != std::string::npos) {
     SubOpName = OpName.substr(DotIdx+1);
     if (SubOpName.empty())
-      PrintFatalError(TheDef->getName() + ": illegal empty suboperand name in '" +Op +"'");
+      PrintFatalError(TheDef->getLoc(),
+                      TheDef->getName() +
+                          ": illegal empty suboperand name in '" + Op + "'");
     OpName = OpName.substr(0, DotIdx);
   }
 
@@ -180,8 +196,11 @@ CGIOperandList::ParseOperandName(const std::string &Op, bool AllowWholeOp) {
     // If one was needed, throw.
     if (OperandList[OpIdx].MINumOperands > 1 && !AllowWholeOp &&
         SubOpName.empty())
-      PrintFatalError(TheDef->getName() + ": Illegal to refer to"
-        " whole operand part of complex operand '" + Op + "'");
+      PrintFatalError(TheDef->getLoc(),
+                      TheDef->getName() +
+                          ": Illegal to refer to"
+                          " whole operand part of complex operand '" +
+                          Op + "'");
 
     // Otherwise, return the operand.
     return std::make_pair(OpIdx, 0U);
@@ -190,7 +209,9 @@ CGIOperandList::ParseOperandName(const std::string &Op, bool AllowWholeOp) {
   // Find the suboperand number involved.
   DagInit *MIOpInfo = OperandList[OpIdx].MIOperandInfo;
   if (!MIOpInfo)
-    PrintFatalError(TheDef->getName() + ": unknown suboperand name in '" + Op + "'");
+    PrintFatalError(TheDef->getLoc(), TheDef->getName() +
+                                          ": unknown suboperand name in '" +
+                                          Op + "'");
 
   // Find the operand with the right name.
   for (unsigned i = 0, e = MIOpInfo->getNumArgs(); i != e; ++i)
@@ -198,7 +219,9 @@ CGIOperandList::ParseOperandName(const std::string &Op, bool AllowWholeOp) {
       return std::make_pair(OpIdx, i);
 
   // Otherwise, didn't find it!
-  PrintFatalError(TheDef->getName() + ": unknown suboperand name in '" + Op + "'");
+  PrintFatalError(TheDef->getLoc(), TheDef->getName() +
+                                        ": unknown suboperand name in '" + Op +
+                                        "'");
   return std::make_pair(0U, 0U);
 }
 
@@ -354,7 +377,8 @@ CodeGenInstruction::CodeGenInstruction(Record *R)
   isAdd        = R->getValueAsBit("isAdd");
   isTrap       = R->getValueAsBit("isTrap");
   canFoldAsLoad = R->getValueAsBit("canFoldAsLoad");
-  isPredicable = Operands.isPredicable || R->getValueAsBit("isPredicable");
+  isPredicable = !R->getValueAsBit("isUnpredicable") && (
+      Operands.isPredicable || R->getValueAsBit("isPredicable"));
   isConvertibleToThreeAddress = R->getValueAsBit("isConvertibleToThreeAddress");
   isCommutable = R->getValueAsBit("isCommutable");
   isTerminator = R->getValueAsBit("isTerminator");
@@ -377,6 +401,7 @@ CodeGenInstruction::CodeGenInstruction(Record *R)
   mayLoad_Unset = Unset;
   mayStore     = R->getValueAsBitOrUnset("mayStore", Unset);
   mayStore_Unset = Unset;
+  mayRaiseFPException = R->getValueAsBit("mayRaiseFPException");
   hasSideEffects = R->getValueAsBitOrUnset("hasSideEffects", Unset);
   hasSideEffects_Unset = Unset;
 

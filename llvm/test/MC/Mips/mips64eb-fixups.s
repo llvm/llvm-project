@@ -1,4 +1,4 @@
-# RUN: llvm-mc -filetype=obj -triple mips64eb-unknown-freebsd %s -o - | llvm-readobj -s -sd | FileCheck %s
+# RUN: llvm-mc -filetype=obj -triple mips64eb-unknown-freebsd %s -o - | llvm-readobj -S --sd | FileCheck %s
 
         .section        .fixups,"",@progbits
         .byte   0xff

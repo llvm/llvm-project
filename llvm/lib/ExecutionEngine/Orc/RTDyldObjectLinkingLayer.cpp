@@ -1,9 +1,8 @@
 //===-- RTDyldObjectLinkingLayer.cpp - RuntimeDyld backed ORC ObjectLayer -===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -42,9 +41,6 @@ public:
           OnResolved(Result);
         };
 
-    // We're not waiting for symbols to be ready. Just log any errors.
-    auto OnReady = [&ES](Error Err) { ES.reportError(std::move(Err)); };
-
     // Register dependencies for all symbols contained in this set.
     auto RegisterDependencies = [&](const SymbolDependenceMap &Deps) {
       MR.addDependenciesForAll(Deps);
@@ -53,8 +49,8 @@ public:
     JITDylibSearchList SearchOrder;
     MR.getTargetJITDylib().withSearchOrderDo(
         [&](const JITDylibSearchList &JDs) { SearchOrder = JDs; });
-    ES.lookup(SearchOrder, InternedSymbols, OnResolvedWithUnwrap, OnReady,
-              RegisterDependencies);
+    ES.lookup(SearchOrder, InternedSymbols, SymbolState::Resolved,
+              OnResolvedWithUnwrap, RegisterDependencies);
   }
 
   Expected<LookupSet> getResponsibilitySet(const LookupSet &Symbols) {
@@ -78,11 +74,8 @@ namespace llvm {
 namespace orc {
 
 RTDyldObjectLinkingLayer::RTDyldObjectLinkingLayer(
-    ExecutionSession &ES, GetMemoryManagerFunction GetMemoryManager,
-    NotifyLoadedFunction NotifyLoaded, NotifyEmittedFunction NotifyEmitted)
-    : ObjectLayer(ES), GetMemoryManager(GetMemoryManager),
-      NotifyLoaded(std::move(NotifyLoaded)),
-      NotifyEmitted(std::move(NotifyEmitted)) {}
+    ExecutionSession &ES, GetMemoryManagerFunction GetMemoryManager)
+    : ObjectLayer(ES), GetMemoryManager(GetMemoryManager) {}
 
 void RTDyldObjectLinkingLayer::emit(MaterializationResponsibility R,
                                     std::unique_ptr<MemoryBuffer> O) {
@@ -96,7 +89,13 @@ void RTDyldObjectLinkingLayer::emit(MaterializationResponsibility R,
 
   auto &ES = getExecutionSession();
 
-  auto Obj = object::ObjectFile::createObjectFile(*O);
+  // Create a MemoryBufferRef backed MemoryBuffer (i.e. shallow) copy of the
+  // the underlying buffer to pass into RuntimeDyld. This allows us to hold
+  // ownership of the real underlying buffer and return it to the user once
+  // the object has been emitted.
+  auto ObjBuffer = MemoryBuffer::getMemBuffer(O->getMemBufferRef(), false);
+
+  auto Obj = object::ObjectFile::createObjectFile(*ObjBuffer);
 
   if (!Obj) {
     getExecutionSession().reportError(Obj.takeError());
@@ -134,13 +133,8 @@ void RTDyldObjectLinkingLayer::emit(MaterializationResponsibility R,
 
   JITDylibSearchOrderResolver Resolver(*SharedR);
 
-  /* Thoughts on proper cross-dylib weak symbol handling:
-   *
-   * Change selection of canonical defs to be a manually triggered process, and
-   * add a 'canonical' bit to symbol definitions. When canonical def selection
-   * is triggered, sweep the JITDylibs to mark defs as canonical, discard
-   * duplicate defs.
-   */
+  // FIXME: Switch to move-capture for the 'O' buffer once we have c++14.
+  MemoryBuffer *UnownedObjBuffer = O.release();
   jitLinkForORC(
       **Obj, std::move(O), *MemMgr, Resolver, ProcessAllSections,
       [this, K, SharedR, &Obj, InternalSymbols](
@@ -149,8 +143,9 @@ void RTDyldObjectLinkingLayer::emit(MaterializationResponsibility R,
         return onObjLoad(K, *SharedR, **Obj, std::move(LoadedObjInfo),
                          ResolvedSymbols, *InternalSymbols);
       },
-      [this, K, SharedR](Error Err) {
-        onObjEmit(K, *SharedR, std::move(Err));
+      [this, K, SharedR, UnownedObjBuffer](Error Err) {
+        std::unique_ptr<MemoryBuffer> ObjBuffer(UnownedObjBuffer);
+        onObjEmit(K, std::move(ObjBuffer), *SharedR, std::move(Err));
       });
 }
 
@@ -177,7 +172,7 @@ Error RTDyldObjectLinkingLayer::onObjLoad(
       auto I = R.getSymbols().find(InternedName);
 
       if (OverrideObjectFlags && I != R.getSymbols().end())
-        Flags = JITSymbolFlags::stripTransientFlags(I->second);
+        Flags = I->second;
       else if (AutoClaimObjectSymbols && I == R.getSymbols().end())
         ExtraSymbolsToClaim[InternedName] = Flags;
     }
@@ -189,7 +184,7 @@ Error RTDyldObjectLinkingLayer::onObjLoad(
     if (auto Err = R.defineMaterializing(ExtraSymbolsToClaim))
       return Err;
 
-  R.resolve(Symbols);
+  R.notifyResolved(Symbols);
 
   if (NotifyLoaded)
     NotifyLoaded(K, Obj, *LoadedObjInfo);
@@ -197,19 +192,19 @@ Error RTDyldObjectLinkingLayer::onObjLoad(
   return Error::success();
 }
 
-void RTDyldObjectLinkingLayer::onObjEmit(VModuleKey K,
-                                          MaterializationResponsibility &R,
-                                          Error Err) {
+void RTDyldObjectLinkingLayer::onObjEmit(
+    VModuleKey K, std::unique_ptr<MemoryBuffer> ObjBuffer,
+    MaterializationResponsibility &R, Error Err) {
   if (Err) {
     getExecutionSession().reportError(std::move(Err));
     R.failMaterialization();
     return;
   }
 
-  R.emit();
+  R.notifyEmitted();
 
   if (NotifyEmitted)
-    NotifyEmitted(K);
+    NotifyEmitted(K, std::move(ObjBuffer));
 }
 
 } // End namespace orc.

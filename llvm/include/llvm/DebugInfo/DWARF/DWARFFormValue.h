@@ -1,9 +1,8 @@
 //===- DWARFFormValue.h -----------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -71,7 +70,7 @@ public:
   static DWARFFormValue createFromBlockValue(dwarf::Form F,
                                              ArrayRef<uint8_t> D);
   static DWARFFormValue createFromUnit(dwarf::Form F, const DWARFUnit *Unit,
-                                       uint32_t *OffsetPtr);
+                                       uint64_t *OffsetPtr);
 
   dwarf::Form getForm() const { return Form; }
   uint64_t getRawUValue() const { return Value.uval; }
@@ -80,7 +79,7 @@ public:
   const DWARFUnit *getUnit() const { return U; }
   void dump(raw_ostream &OS, DIDumpOptions DumpOpts = DIDumpOptions()) const;
   void dumpSectionedAddress(raw_ostream &OS, DIDumpOptions DumpOpts,
-                            SectionedAddress SA) const;
+                            object::SectionedAddress SA) const;
   static void dumpAddressSection(const DWARFObject &Obj, raw_ostream &OS,
                                  DIDumpOptions DumpOpts, uint64_t SectionIndex);
 
@@ -88,12 +87,12 @@ public:
   /// in \p FormParams is needed to interpret some forms. The optional
   /// \p Context and \p Unit allows extracting information if the form refers
   /// to other sections (e.g., .debug_str).
-  bool extractValue(const DWARFDataExtractor &Data, uint32_t *OffsetPtr,
+  bool extractValue(const DWARFDataExtractor &Data, uint64_t *OffsetPtr,
                     dwarf::FormParams FormParams,
                     const DWARFContext *Context = nullptr,
                     const DWARFUnit *Unit = nullptr);
 
-  bool extractValue(const DWARFDataExtractor &Data, uint32_t *OffsetPtr,
+  bool extractValue(const DWARFDataExtractor &Data, uint64_t *OffsetPtr,
                     dwarf::FormParams FormParams, const DWARFUnit *U) {
     return extractValue(Data, OffsetPtr, FormParams, nullptr, U);
   }
@@ -105,11 +104,16 @@ public:
   /// getAsFoo functions below return the extracted value as Foo if only
   /// DWARFFormValue has form class is suitable for representing Foo.
   Optional<uint64_t> getAsReference() const;
+  struct UnitOffset {
+    DWARFUnit *Unit;
+    uint64_t Offset;
+  };
+  Optional<UnitOffset> getAsRelativeReference() const;
   Optional<uint64_t> getAsUnsignedConstant() const;
   Optional<int64_t> getAsSignedConstant() const;
   Optional<const char *> getAsCString() const;
   Optional<uint64_t> getAsAddress() const;
-  Optional<SectionedAddress> getAsSectionedAddress() const;
+  Optional<object::SectionedAddress> getAsSectionedAddress() const;
   Optional<uint64_t> getAsSectionOffset() const;
   Optional<ArrayRef<uint8_t>> getAsBlock() const;
   Optional<uint64_t> getAsCStringOffset() const;
@@ -124,7 +128,7 @@ public:
   /// \param OffsetPtr A reference to the offset that will be updated.
   /// \param Params DWARF parameters to help interpret forms.
   /// \returns true on success, false if the form was not skipped.
-  bool skipValue(DataExtractor DebugInfoData, uint32_t *OffsetPtr,
+  bool skipValue(DataExtractor DebugInfoData, uint64_t *OffsetPtr,
                  const dwarf::FormParams Params) const {
     return DWARFFormValue::skipValue(Form, DebugInfoData, OffsetPtr, Params);
   }
@@ -140,7 +144,7 @@ public:
   /// \param FormParams DWARF parameters to help interpret forms.
   /// \returns true on success, false if the form was not skipped.
   static bool skipValue(dwarf::Form Form, DataExtractor DebugInfoData,
-                        uint32_t *OffsetPtr,
+                        uint64_t *OffsetPtr,
                         const dwarf::FormParams FormParams);
 
 private:
@@ -260,7 +264,7 @@ inline Optional<uint64_t> toAddress(const Optional<DWARFFormValue> &V) {
   return None;
 }
 
-inline Optional<SectionedAddress>
+inline Optional<object::SectionedAddress>
 toSectionedAddress(const Optional<DWARFFormValue> &V) {
   if (V)
     return V->getAsSectionedAddress();

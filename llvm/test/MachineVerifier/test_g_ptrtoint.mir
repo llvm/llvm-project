@@ -1,0 +1,45 @@
+#RUN: not llc -o -  -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
+# REQUIRES: global-isel, aarch64-registered-target
+
+---
+name:            test_ptrtoint
+legalized:       true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:
+body:             |
+  bb.0:
+
+    %0:_(s64) = G_IMPLICIT_DEF
+    %1:_(p0) = G_IMPLICIT_DEF
+    %2:_(<2 x s64>) = G_IMPLICIT_DEF
+    %3:_(<2 x p0>) = G_IMPLICIT_DEF
+
+    ; CHECK: Bad machine code: Too few operands
+    %4:_(s64) = G_PTRTOINT
+
+    ; CHECK: Bad machine code: Too few operands
+    ; CHECK: Bad machine code: Explicit definition marked as use
+    G_PTRTOINT %1
+
+    ; CHECK: Bad machine code: ptrtoint result type must not be a pointer
+    %5:_(p0) = G_PTRTOINT %1
+
+    ; CHECK: Bad machine code: ptrtoint result type must not be a pointer
+    %6:_(<2 x p0>) = G_PTRTOINT %0
+
+    ; CHECK: Bad machine code: ptrtoint source type must be a pointer
+    %7:_(<2 x s64>) = G_PTRTOINT %2
+
+    ; CHECK: Bad machine code: operand types must be all-vector or all-scalar
+    %8:_(s64) = G_PTRTOINT %3
+
+    ; CHECK: Bad machine code: operand types must preserve number of vector elements
+    %9:_(<4 x s64>) = G_INTTOPTR %3
+
+    ; CHECK: Bad machine code: operand types must preserve number of vector elements
+    %10:_(<4 x p0>) = G_IMPLICIT_DEF
+    %11:_(<2 x s64>) = G_PTRTOINT %10
+
+...

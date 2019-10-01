@@ -64,37 +64,37 @@ cmovpl %r13d, %r13d
 // CHECK: encoding: [0x45,0x0f,0x48,0xed]        
 cmovsl %r13d, %r13d 
 
-// CHECK: fcmovbe %st(4), %st(0) 
+// CHECK: fcmovbe %st(4), %st 
 // CHECK: encoding: [0xda,0xd4]        
-fcmovbe %st(4), %st(0) 
+fcmovbe %st(4), %st 
 
-// CHECK: fcmovb %st(4), %st(0) 
+// CHECK: fcmovb %st(4), %st 
 // CHECK: encoding: [0xda,0xc4]        
-fcmovb %st(4), %st(0) 
+fcmovb %st(4), %st 
 
-// CHECK: fcmove %st(4), %st(0) 
+// CHECK: fcmove %st(4), %st 
 // CHECK: encoding: [0xda,0xcc]        
-fcmove %st(4), %st(0) 
+fcmove %st(4), %st 
 
-// CHECK: fcmovnbe %st(4), %st(0) 
+// CHECK: fcmovnbe %st(4), %st 
 // CHECK: encoding: [0xdb,0xd4]        
-fcmovnbe %st(4), %st(0) 
+fcmovnbe %st(4), %st 
 
-// CHECK: fcmovnb %st(4), %st(0) 
+// CHECK: fcmovnb %st(4), %st 
 // CHECK: encoding: [0xdb,0xc4]        
-fcmovnb %st(4), %st(0) 
+fcmovnb %st(4), %st 
 
-// CHECK: fcmovne %st(4), %st(0) 
+// CHECK: fcmovne %st(4), %st 
 // CHECK: encoding: [0xdb,0xcc]        
-fcmovne %st(4), %st(0) 
+fcmovne %st(4), %st 
 
-// CHECK: fcmovnu %st(4), %st(0) 
+// CHECK: fcmovnu %st(4), %st 
 // CHECK: encoding: [0xdb,0xdc]        
-fcmovnu %st(4), %st(0) 
+fcmovnu %st(4), %st 
 
-// CHECK: fcmovu %st(4), %st(0) 
+// CHECK: fcmovu %st(4), %st 
 // CHECK: encoding: [0xda,0xdc]        
-fcmovu %st(4), %st(0) 
+fcmovu %st(4), %st 
 
 // CHECK: fcomi %st(4) 
 // CHECK: encoding: [0xdb,0xf4]         

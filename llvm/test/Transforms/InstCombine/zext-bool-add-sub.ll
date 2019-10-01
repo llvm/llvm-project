@@ -5,9 +5,9 @@
 
 define i32 @a(i1 zeroext %x, i1 zeroext %y) {
 ; CHECK-LABEL: @a(
-; CHECK-NEXT:    [[CONV3_NEG:%.*]] = sext i1 [[Y:%.*]] to i32
 ; CHECK-NEXT:    [[SUB:%.*]] = select i1 [[X:%.*]], i32 2, i32 1
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[SUB]], [[CONV3_NEG]]
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i1 [[Y:%.*]] to i32
+; CHECK-NEXT:    [[ADD:%.*]] = sub nsw i32 [[SUB]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
   %conv = zext i1 %x to i32
@@ -313,5 +313,92 @@ define i8 @sext_sub_nuw(i8 %x, i1 %y) {
   %sext = sext i1 %y to i8
   %sub = sub nuw i8 %x, %sext
   ret i8 %sub
+}
+
+define i32 @sextbool_add(i1 %c, i32 %x) {
+; CHECK-LABEL: @sextbool_add(
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i1 [[C:%.*]] to i32
+; CHECK-NEXT:    [[S:%.*]] = sub i32 [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i32 [[S]]
+;
+  %b = sext i1 %c to i32
+  %s = add i32 %b, %x
+  ret i32 %s
+}
+
+define i32 @sextbool_add_commute(i1 %c, i32 %px) {
+; CHECK-LABEL: @sextbool_add_commute(
+; CHECK-NEXT:    [[X:%.*]] = urem i32 [[PX:%.*]], 42
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i1 [[C:%.*]] to i32
+; CHECK-NEXT:    [[S:%.*]] = sub nsw i32 [[X]], [[TMP1]]
+; CHECK-NEXT:    ret i32 [[S]]
+;
+  %x = urem i32 %px, 42 ; thwart complexity-based canonicalization
+  %b = sext i1 %c to i32
+  %s = add i32 %x, %b
+  ret i32 %s
+}
+
+; Negative test - extra use prevents canonicalization.
+
+declare void @use32(i32)
+
+define i32 @sextbool_add_uses(i1 %c, i32 %x) {
+; CHECK-LABEL: @sextbool_add_uses(
+; CHECK-NEXT:    [[B:%.*]] = sext i1 [[C:%.*]] to i32
+; CHECK-NEXT:    call void @use32(i32 [[B]])
+; CHECK-NEXT:    [[S:%.*]] = add i32 [[B]], [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[S]]
+;
+  %b = sext i1 %c to i32
+  call void @use32(i32 %b)
+  %s = add i32 %b, %x
+  ret i32 %s
+}
+
+define <4 x i32> @sextbool_add_vector(<4 x i1> %c, <4 x i32> %x) {
+; CHECK-LABEL: @sextbool_add_vector(
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <4 x i1> [[C:%.*]] to <4 x i32>
+; CHECK-NEXT:    [[S:%.*]] = sub <4 x i32> [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret <4 x i32> [[S]]
+;
+  %b = sext <4 x i1> %c to <4 x i32>
+  %s = add <4 x i32> %x, %b
+  ret <4 x i32> %s
+}
+
+define i32 @zextbool_sub(i1 %c, i32 %x) {
+; CHECK-LABEL: @zextbool_sub(
+; CHECK-NEXT:    [[B:%.*]] = zext i1 [[C:%.*]] to i32
+; CHECK-NEXT:    [[S:%.*]] = sub i32 [[B]], [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[S]]
+;
+  %b = zext i1 %c to i32
+  %s = sub i32 %b, %x
+  ret i32 %s
+}
+
+define i32 @zextbool_sub_uses(i1 %c, i32 %x) {
+; CHECK-LABEL: @zextbool_sub_uses(
+; CHECK-NEXT:    [[B:%.*]] = zext i1 [[C:%.*]] to i32
+; CHECK-NEXT:    call void @use32(i32 [[B]])
+; CHECK-NEXT:    [[S:%.*]] = sub i32 [[X:%.*]], [[B]]
+; CHECK-NEXT:    ret i32 [[S]]
+;
+  %b = zext i1 %c to i32
+  call void @use32(i32 %b)
+  %s = sub i32 %x, %b
+  ret i32 %s
+}
+
+define <4 x i32> @zextbool_sub_vector(<4 x i1> %c, <4 x i32> %x) {
+; CHECK-LABEL: @zextbool_sub_vector(
+; CHECK-NEXT:    [[B:%.*]] = zext <4 x i1> [[C:%.*]] to <4 x i32>
+; CHECK-NEXT:    [[S:%.*]] = sub <4 x i32> [[X:%.*]], [[B]]
+; CHECK-NEXT:    ret <4 x i32> [[S]]
+;
+  %b = zext <4 x i1> %c to <4 x i32>
+  %s = sub <4 x i32> %x, %b
+  ret <4 x i32> %s
 }
 

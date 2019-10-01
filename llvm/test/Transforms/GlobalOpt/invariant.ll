@@ -52,8 +52,8 @@ define void @ctor4() {
 
 
 @llvm.global_ctors = appending constant
-  [4 x { i32, void ()* }]
-  [ { i32, void ()* } { i32 65535, void ()* @ctor1 },
-    { i32, void ()* } { i32 65535, void ()* @ctor2 },
-    { i32, void ()* } { i32 65535, void ()* @ctor3 },
-    { i32, void ()* } { i32 65535, void ()* @ctor4 } ]
+  [4 x { i32, void ()*, i8* }]
+  [ { i32, void ()*, i8* } { i32 65535, void ()* @ctor1, i8* null },
+    { i32, void ()*, i8* } { i32 65535, void ()* @ctor2, i8* null },
+    { i32, void ()*, i8* } { i32 65535, void ()* @ctor3, i8* null },
+    { i32, void ()*, i8* } { i32 65535, void ()* @ctor4, i8* null } ]

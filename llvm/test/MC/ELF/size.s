@@ -1,4 +1,4 @@
-// RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux < %s | llvm-readobj -t | FileCheck %s
+// RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux < %s | llvm-readobj --symbols | FileCheck %s
 
 foo:
 bar = .

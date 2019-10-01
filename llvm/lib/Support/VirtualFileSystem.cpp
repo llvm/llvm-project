@@ -1,9 +1,8 @@
 //===- VirtualFileSystem.cpp - Virtual File System Layer ------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -67,19 +66,19 @@ Status::Status(const file_status &Status)
       User(Status.getUser()), Group(Status.getGroup()), Size(Status.getSize()),
       Type(Status.type()), Perms(Status.permissions()) {}
 
-Status::Status(StringRef Name, UniqueID UID, sys::TimePoint<> MTime,
+Status::Status(const Twine &Name, UniqueID UID, sys::TimePoint<> MTime,
                uint32_t User, uint32_t Group, uint64_t Size, file_type Type,
                perms Perms)
-    : Name(Name), UID(UID), MTime(MTime), User(User), Group(Group), Size(Size),
-      Type(Type), Perms(Perms) {}
+    : Name(Name.str()), UID(UID), MTime(MTime), User(User), Group(Group),
+      Size(Size), Type(Type), Perms(Perms) {}
 
-Status Status::copyWithNewName(const Status &In, StringRef NewName) {
+Status Status::copyWithNewName(const Status &In, const Twine &NewName) {
   return Status(NewName, In.getUniqueID(), In.getLastModificationTime(),
                 In.getUser(), In.getGroup(), In.getSize(), In.getType(),
                 In.getPermissions());
 }
 
-Status Status::copyWithNewName(const file_status &In, StringRef NewName) {
+Status Status::copyWithNewName(const file_status &In, const Twine &NewName) {
   return Status(NewName, In.getUniqueID(), In.getLastModificationTime(),
                 In.getUser(), In.getGroup(), In.getSize(), In.type(),
                 In.permissions());
@@ -128,7 +127,8 @@ std::error_code FileSystem::makeAbsolute(SmallVectorImpl<char> &Path) const {
   if (!WorkingDir)
     return WorkingDir.getError();
 
-  return llvm::sys::fs::make_absolute(WorkingDir.get(), Path);
+  llvm::sys::fs::make_absolute(WorkingDir.get(), Path);
+  return {};
 }
 
 std::error_code FileSystem::getRealPath(const Twine &Path,
@@ -228,9 +228,28 @@ std::error_code RealFile::close() {
 
 namespace {
 
-/// The file system according to your operating system.
+/// A file system according to your operating system.
+/// This may be linked to the process's working directory, or maintain its own.
+///
+/// Currently, its own working directory is emulated by storing the path and
+/// sending absolute paths to llvm::sys::fs:: functions.
+/// A more principled approach would be to push this down a level, modelling
+/// the working dir as an llvm::sys::fs::WorkingDir or similar.
+/// This would enable the use of openat()-style functions on some platforms.
 class RealFileSystem : public FileSystem {
 public:
+  explicit RealFileSystem(bool LinkCWDToProcess) {
+    if (!LinkCWDToProcess) {
+      SmallString<128> PWD, RealPWD;
+      if (llvm::sys::fs::current_path(PWD))
+        return; // Awful, but nothing to do here.
+      if (llvm::sys::fs::real_path(PWD, RealPWD))
+        WD = {PWD, PWD};
+      else
+        WD = {PWD, RealPWD};
+    }
+  }
+
   ErrorOr<Status> status(const Twine &Path) override;
   ErrorOr<std::unique_ptr<File>> openFileForRead(const Twine &Path) override;
   directory_iterator dir_begin(const Twine &Dir, std::error_code &EC) override;
@@ -242,70 +261,92 @@ public:
                               SmallVectorImpl<char> &Output) const override;
 
 private:
-  mutable std::mutex CWDMutex;
-  mutable std::string CWDCache;
+  // If this FS has its own working dir, use it to make Path absolute.
+  // The returned twine is safe to use as long as both Storage and Path live.
+  Twine adjustPath(const Twine &Path, SmallVectorImpl<char> &Storage) const {
+    if (!WD)
+      return Path;
+    Path.toVector(Storage);
+    sys::fs::make_absolute(WD->Resolved, Storage);
+    return Storage;
+  }
+
+  struct WorkingDirectory {
+    // The current working directory, without symlinks resolved. (echo $PWD).
+    SmallString<128> Specified;
+    // The current working directory, with links resolved. (readlink .).
+    SmallString<128> Resolved;
+  };
+  Optional<WorkingDirectory> WD;
 };
 
 } // namespace
 
 ErrorOr<Status> RealFileSystem::status(const Twine &Path) {
+  SmallString<256> Storage;
   sys::fs::file_status RealStatus;
-  if (std::error_code EC = sys::fs::status(Path, RealStatus))
+  if (std::error_code EC =
+          sys::fs::status(adjustPath(Path, Storage), RealStatus))
     return EC;
-  return Status::copyWithNewName(RealStatus, Path.str());
+  return Status::copyWithNewName(RealStatus, Path);
 }
 
 ErrorOr<std::unique_ptr<File>>
 RealFileSystem::openFileForRead(const Twine &Name) {
   int FD;
-  SmallString<256> RealName;
-  if (std::error_code EC =
-          sys::fs::openFileForRead(Name, FD, sys::fs::OF_None, &RealName))
+  SmallString<256> RealName, Storage;
+  if (std::error_code EC = sys::fs::openFileForRead(
+          adjustPath(Name, Storage), FD, sys::fs::OF_None, &RealName))
     return EC;
   return std::unique_ptr<File>(new RealFile(FD, Name.str(), RealName.str()));
 }
 
 llvm::ErrorOr<std::string> RealFileSystem::getCurrentWorkingDirectory() const {
-  std::lock_guard<std::mutex> Lock(CWDMutex);
-  if (!CWDCache.empty())
-    return CWDCache;
-  SmallString<256> Dir;
+  if (WD)
+    return WD->Specified.str();
+
+  SmallString<128> Dir;
   if (std::error_code EC = llvm::sys::fs::current_path(Dir))
     return EC;
-  CWDCache = Dir.str();
-  return CWDCache;
+  return Dir.str();
 }
 
 std::error_code RealFileSystem::setCurrentWorkingDirectory(const Twine &Path) {
-  // FIXME: chdir is thread hostile; on the other hand, creating the same
-  // behavior as chdir is complex: chdir resolves the path once, thus
-  // guaranteeing that all subsequent relative path operations work
-  // on the same path the original chdir resulted in. This makes a
-  // difference for example on network filesystems, where symlinks might be
-  // switched during runtime of the tool. Fixing this depends on having a
-  // file system abstraction that allows openat() style interactions.
-  if (auto EC = llvm::sys::fs::set_current_path(Path))
-    return EC;
+  if (!WD)
+    return llvm::sys::fs::set_current_path(Path);
 
-  // Invalidate cache.
-  std::lock_guard<std::mutex> Lock(CWDMutex);
-  CWDCache.clear();
+  SmallString<128> Absolute, Resolved, Storage;
+  adjustPath(Path, Storage).toVector(Absolute);
+  bool IsDir;
+  if (auto Err = llvm::sys::fs::is_directory(Absolute, IsDir))
+    return Err;
+  if (!IsDir)
+    return std::make_error_code(std::errc::not_a_directory);
+  if (auto Err = llvm::sys::fs::real_path(Absolute, Resolved))
+    return Err;
+  WD = {Absolute, Resolved};
   return std::error_code();
 }
 
 std::error_code RealFileSystem::isLocal(const Twine &Path, bool &Result) {
-  return llvm::sys::fs::is_local(Path, Result);
+  SmallString<256> Storage;
+  return llvm::sys::fs::is_local(adjustPath(Path, Storage), Result);
 }
 
 std::error_code
 RealFileSystem::getRealPath(const Twine &Path,
                             SmallVectorImpl<char> &Output) const {
-  return llvm::sys::fs::real_path(Path, Output);
+  SmallString<256> Storage;
+  return llvm::sys::fs::real_path(adjustPath(Path, Storage), Output);
 }
 
 IntrusiveRefCntPtr<FileSystem> vfs::getRealFileSystem() {
-  static IntrusiveRefCntPtr<FileSystem> FS = new RealFileSystem();
+  static IntrusiveRefCntPtr<FileSystem> FS(new RealFileSystem(true));
   return FS;
+}
+
+std::unique_ptr<FileSystem> vfs::createPhysicalFileSystem() {
+  return llvm::make_unique<RealFileSystem>(false);
 }
 
 namespace {
@@ -333,7 +374,9 @@ public:
 
 directory_iterator RealFileSystem::dir_begin(const Twine &Dir,
                                              std::error_code &EC) {
-  return directory_iterator(std::make_shared<RealFSDirIter>(Dir, EC));
+  SmallString<128> Storage;
+  return directory_iterator(
+      std::make_shared<RealFSDirIter>(adjustPath(Dir, Storage), EC));
 }
 
 //===-----------------------------------------------------------------------===/
@@ -510,7 +553,7 @@ public:
   /// Return the \p Status for this node. \p RequestedName should be the name
   /// through which the caller referred to this node. It will override
   /// \p Status::Name in the return value, to mimic the behavior of \p RealFile.
-  Status getStatus(StringRef RequestedName) const {
+  Status getStatus(const Twine &RequestedName) const {
     return Status::copyWithNewName(Stat, RequestedName);
   }
   llvm::MemoryBuffer *getBuffer() const { return Buffer.get(); }
@@ -584,7 +627,7 @@ public:
   /// Return the \p Status for this node. \p RequestedName should be the name
   /// through which the caller referred to this node. It will override
   /// \p Status::Name in the return value, to mimic the behavior of \p RealFile.
-  Status getStatus(StringRef RequestedName) const {
+  Status getStatus(const Twine &RequestedName) const {
     return Status::copyWithNewName(Stat, RequestedName);
   }
   InMemoryNode *getChild(StringRef Name) {
@@ -618,7 +661,7 @@ public:
 };
 
 namespace {
-Status getNodeStatus(const InMemoryNode *Node, StringRef RequestedName) {
+Status getNodeStatus(const InMemoryNode *Node, const Twine &RequestedName) {
   if (auto Dir = dyn_cast<detail::InMemoryDirectory>(Node))
     return Dir->getStatus(RequestedName);
   if (auto File = dyn_cast<detail::InMemoryFile>(Node))
@@ -816,7 +859,7 @@ bool InMemoryFileSystem::addHardLink(const Twine &FromPath,
 llvm::ErrorOr<Status> InMemoryFileSystem::status(const Twine &Path) {
   auto Node = lookupInMemoryNode(*this, Root.get(), Path);
   if (Node)
-    return detail::getNodeStatus(*Node, Path.str());
+    return detail::getNodeStatus(*Node, Path);
   return Node.getError();
 }
 
@@ -1236,7 +1279,7 @@ class llvm::vfs::RedirectingFileSystemParser {
         EntryArrayContents;
     std::string ExternalContentsPath;
     std::string Name;
-    yaml::Node *NameValueNode;
+    yaml::Node *NameValueNode = nullptr;
     auto UseExternalName =
         RedirectingFileSystem::RedirectingFileEntry::NK_NotSet;
     RedirectingFileSystem::EntryKind Kind;
@@ -1632,7 +1675,7 @@ static Status getRedirectedFileStatus(const Twine &Path, bool UseExternalNames,
                                       Status ExternalStatus) {
   Status S = ExternalStatus;
   if (!UseExternalNames)
-    S = Status::copyWithNewName(S, Path.str());
+    S = Status::copyWithNewName(S, Path);
   S.IsVFSMapped = true;
   return S;
 }
@@ -1649,7 +1692,7 @@ ErrorOr<Status> RedirectingFileSystem::status(const Twine &Path,
     return S;
   } else { // directory
     auto *DE = cast<RedirectingFileSystem::RedirectingDirectoryEntry>(E);
-    return Status::copyWithNewName(DE->getStatus(), Path.str());
+    return Status::copyWithNewName(DE->getStatus(), Path);
   }
 }
 

@@ -1,9 +1,8 @@
 //===- InstrEmitter.h - Emit MachineInstrs for the SelectionDAG -*- C++ -*--==//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -43,11 +42,6 @@ class LLVM_LIBRARY_VISIBILITY InstrEmitter {
                        unsigned SrcReg,
                        DenseMap<SDValue, unsigned> &VRBaseMap);
 
-  /// getDstOfCopyToRegUse - If the only use of the specified result number of
-  /// node is a CopyToReg, return its destination register. Return 0 otherwise.
-  unsigned getDstOfOnlyCopyToRegUse(SDNode *Node,
-                                    unsigned ResNo) const;
-
   void CreateVirtualRegisters(SDNode *Node,
                               MachineInstrBuilder &MIB,
                               const MCInstrDesc &II,
@@ -84,7 +78,7 @@ class LLVM_LIBRARY_VISIBILITY InstrEmitter {
   /// supports SubIdx sub-registers.  Emit a copy if that isn't possible.
   /// Return the virtual register to use.
   unsigned ConstrainForSubReg(unsigned VReg, unsigned SubIdx, MVT VT,
-                              const DebugLoc &DL);
+                              bool isDivergent, const DebugLoc &DL);
 
   /// EmitSubregNode - Generate machine code for subreg nodes.
   ///

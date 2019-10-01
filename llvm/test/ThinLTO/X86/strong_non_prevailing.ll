@@ -12,5 +12,5 @@ $__llvm_profile_filename = comdat any
 
 @__llvm_profile_filename = constant [19 x i8] c"default_%m.profraw\00", comdat
 
-; EXPORTED: N __llvm_profile_filename
-; NOT_EXPORTED-NOT: N __llvm_profile_filename
+; EXPORTED: R __llvm_profile_filename
+; NOT_EXPORTED-NOT: R __llvm_profile_filename

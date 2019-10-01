@@ -1,0 +1,44 @@
+# RUN: yaml2obj %s > %t.o
+# RUN: llvm-nm %t.o | FileCheck %s --check-prefix=DEFAULT
+# RUN: llvm-nm --numeric-sort %t.o | FileCheck %s --check-prefix=NUMERIC
+# RUN: llvm-nm -n %t.o | FileCheck %s --check-prefix=NUMERIC
+# RUN: llvm-nm -v %t.o | FileCheck %s --check-prefix=NUMERIC
+
+!ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+Symbols:
+  - Name:    symbol_a
+    Section: .text
+    Binding: STB_LOCAL
+    Value:   0x100
+  - Name:    symbol_b
+    Section: .text
+    Binding: STB_LOCAL
+    Value:   0x25
+  - Name:    symbol_d
+    Section: .text
+    Binding: STB_LOCAL
+    Value:   0x25
+  - Name:    symbol_c
+    Section: .text
+    Binding: STB_LOCAL
+    Value:   0x50
+
+# The default is to sort by symbol name.
+# DEFAULT:      0000000000000100 n symbol_a
+# DEFAULT-NEXT: 0000000000000025 n symbol_b
+# DEFAULT-NEXT: 0000000000000050 n symbol_c
+# DEFAULT-NEXT: 0000000000000025 n symbol_d
+
+# --numeric-sort sorts the symbols by value.
+# NUMERIC:      0000000000000025 n symbol_b
+# NUMERIC-NEXT: 0000000000000025 n symbol_d
+# NUMERIC-NEXT: 0000000000000050 n symbol_c
+# NUMERIC-NEXT: 0000000000000100 n symbol_a

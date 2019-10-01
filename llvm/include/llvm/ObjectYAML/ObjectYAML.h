@@ -1,9 +1,8 @@
 //===- ObjectYAML.h ---------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -13,6 +12,7 @@
 #include "llvm/ObjectYAML/COFFYAML.h"
 #include "llvm/ObjectYAML/ELFYAML.h"
 #include "llvm/ObjectYAML/MachOYAML.h"
+#include "llvm/ObjectYAML/MinidumpYAML.h"
 #include "llvm/ObjectYAML/WasmYAML.h"
 #include "llvm/Support/YAMLTraits.h"
 #include <memory>
@@ -27,6 +27,7 @@ struct YamlObjectFile {
   std::unique_ptr<COFFYAML::Object> Coff;
   std::unique_ptr<MachOYAML::Object> MachO;
   std::unique_ptr<MachOYAML::UniversalBinary> FatMachO;
+  std::unique_ptr<MinidumpYAML::Object> Minidump;
   std::unique_ptr<WasmYAML::Object> Wasm;
 };
 

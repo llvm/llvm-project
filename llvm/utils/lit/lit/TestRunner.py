@@ -49,7 +49,7 @@ kDevNull = "/dev/null"
 # This regex captures ARG.  ARG must not contain a right parenthesis, which
 # terminates %dbg.  ARG must not contain quotes, in which ARG might be enclosed
 # during expansion.
-kPdbgRegex = '%dbg\(([^)\'"]*)\)'
+kPdbgRegex = '%dbg\\(([^)\'"]*)\\)'
 
 class ShellEnvironment(object):
 
@@ -617,10 +617,10 @@ def executeBuiltinRm(cmd, cmd_shenv):
                     # NOTE: use ctypes to access `SHFileOperationsW` on Windows to
                     # use the NT style path to get access to long file paths which
                     # cannot be removed otherwise.
-                    from ctypes.wintypes import BOOL, HWND, LPCWSTR, POINTER, UINT, WORD
-                    from ctypes import c_void_p, byref
+                    from ctypes.wintypes import BOOL, HWND, LPCWSTR, UINT, WORD
+                    from ctypes import addressof, byref, c_void_p, create_unicode_buffer
                     from ctypes import Structure
-                    from ctypes import windll, WinError
+                    from ctypes import windll, WinError, POINTER
 
                     class SHFILEOPSTRUCTW(Structure):
                         _fields_ = [
@@ -634,7 +634,7 @@ def executeBuiltinRm(cmd, cmd_shenv):
                                 ('lpszProgressTitle', LPCWSTR),
                         ]
 
-                    FO_MOVE, FO_COPY, FO_DELETE, FO_RENAME = xrange(1, 5)
+                    FO_MOVE, FO_COPY, FO_DELETE, FO_RENAME = range(1, 5)
 
                     FOF_SILENT = 4
                     FOF_NOCONFIRMATION = 16
@@ -648,8 +648,10 @@ def executeBuiltinRm(cmd, cmd_shenv):
 
                     path = os.path.abspath(path)
 
+                    pFrom = create_unicode_buffer(path, len(path) + 2)
+                    pFrom[len(path)] = pFrom[len(path) + 1] = '\0'
                     operation = SHFILEOPSTRUCTW(wFunc=UINT(FO_DELETE),
-                                                pFrom=LPCWSTR(unicode(path + '\0')),
+                                                pFrom=LPCWSTR(addressof(pFrom)),
                                                 fFlags=FOF_NO_UI)
                     result = SHFileOperationW(byref(operation))
                     if result:
@@ -989,6 +991,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
     for i,f in stderrTempFiles:
         f.seek(0, 0)
         procData[i] = (procData[i][0], f.read())
+        f.close()
 
     exitCode = None
     for i,(out,err) in enumerate(procData):
@@ -1131,9 +1134,12 @@ def executeScript(test, litConfig, tmpBase, commands, cwd):
 
     # Write script file
     mode = 'w'
+    open_kwargs = {}
     if litConfig.isWindows and not isWin32CMDEXE:
-      mode += 'b'  # Avoid CRLFs when writing bash scripts.
-    f = open(script, mode)
+        mode += 'b'  # Avoid CRLFs when writing bash scripts.
+    elif sys.version_info > (3,0):
+        open_kwargs['encoding'] = 'utf-8'
+    f = open(script, mode, **open_kwargs)
     if isWin32CMDEXE:
         for i, ln in enumerate(commands):
             commands[i] = re.sub(kPdbgRegex, "echo '\\1' > nul && ", ln)
@@ -1418,14 +1424,14 @@ class IntegratedTestKeywordParser(object):
         # Trim trailing whitespace.
         line = line.rstrip()
         # Substitute line number expressions
-        line = re.sub('%\(line\)', str(line_number), line)
+        line = re.sub(r'%\(line\)', str(line_number), line)
 
         def replace_line_number(match):
             if match.group(1) == '+':
                 return str(line_number + int(match.group(2)))
             if match.group(1) == '-':
                 return str(line_number - int(match.group(2)))
-        line = re.sub('%\(line *([\+-]) *(\d+)\)', replace_line_number, line)
+        line = re.sub(r'%\(line *([\+-]) *(\d+)\)', replace_line_number, line)
         # Collapse lines with trailing '\\'.
         if output and output[-1][-1] == '\\':
             output[-1] = output[-1][:-1] + line
@@ -1454,13 +1460,17 @@ class IntegratedTestKeywordParser(object):
     @staticmethod
     def _handleBooleanExpr(line_number, line, output):
         """A parser for BOOLEAN_EXPR type keywords"""
+        parts = [s.strip() for s in line.split(',') if s.strip() != '']
+        if output and output[-1][-1] == '\\':
+            output[-1] = output[-1][:-1] + parts[0]
+            del parts[0]
         if output is None:
             output = []
-        output.extend([s.strip() for s in line.split(',')])
+        output.extend(parts)
         # Evaluate each expression to verify syntax.
         # We don't want any results, just the raised ValueError.
         for s in output:
-            if s != '*':
+            if s != '*' and not s.endswith('\\'):
                 BooleanExpression.evaluate(s, [])
         return output
 
@@ -1538,6 +1548,15 @@ def parseIntegratedTestScript(test, additional_parsers=[],
     if script and script[-1][-1] == '\\':
         return lit.Test.Result(Test.UNRESOLVED,
                                "Test has unterminated run lines (with '\\')")
+
+    # Check boolean expressions for unterminated lines.
+    for key in keyword_parsers:
+        kp = keyword_parsers[key]
+        if kp.kind != ParserKind.BOOLEAN_EXPR:
+            continue
+        value = kp.getValue()
+        if value and value[-1][-1] == '\\':
+            raise ValueError("Test has unterminated %s lines (with '\\')" % key)
 
     # Enforce REQUIRES:
     missing_required_features = test.getMissingRequiredFeatures()

@@ -25,7 +25,7 @@ loopexit:               ; preds = %loopentry
 ; CHECK-LABEL: @test2
 ; CHECK: [[VAR1:%.+]] = add i32 %arg, -11
 ; CHECK: [[VAR2:%.+]] = lshr i32 [[VAR1]], 1
-; CHECK: [[VAR3:%.+]] = add i32 [[VAR2]], 1
+; CHECK: [[VAR3:%.+]] = add nuw i32 [[VAR2]], 1
 ; CHECK: [[VAR4:%.+]] = phi i32 [ 0, %bb ], [ [[VAR3]], %bb1.preheader ]
 ; CHECK: ret i32 [[VAR4]]
 define i32 @test2(i32 %arg) {

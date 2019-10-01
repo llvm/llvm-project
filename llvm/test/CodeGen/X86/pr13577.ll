@@ -14,7 +14,7 @@ define x86_fp80 @foo(x86_fp80 %a) {
 ; CHECK-NEXT:    testb $-128, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    flds {{.*}}(%rip)
 ; CHECK-NEXT:    flds {{.*}}(%rip)
-; CHECK-NEXT:    fcmovne %st(1), %st(0)
+; CHECK-NEXT:    fcmovne %st(1), %st
 ; CHECK-NEXT:    fstp %st(1)
 ; CHECK-NEXT:    retq
   %1 = tail call x86_fp80 @copysignl(x86_fp80 0xK7FFF8000000000000000, x86_fp80 %a) nounwind readnone

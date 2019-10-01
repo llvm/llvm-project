@@ -2,7 +2,7 @@
 
 ; Test CFI through the thin link and backend.
 
-; RUN: opt -thinlto-bc -o %t.o %s
+; RUN: opt -thinlto-bc -thinlto-split-lto-unit -o %t.o %s
 
 ; Legacy PM
 ; RUN: llvm-lto2 run -save-temps %t.o \

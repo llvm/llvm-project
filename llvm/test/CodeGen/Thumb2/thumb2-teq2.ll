@@ -5,7 +5,7 @@
 
 define i32 @f2(i32 %a, i32 %b) {
 ; CHECK: f2
-; CHECK: teq.w {{.*}}, r1
+; CHECK: eors {{.*}}, r1
     %tmp = xor i32 %a, %b
     %tmp1 = icmp eq i32 %tmp, 0
     %ret = select i1 %tmp1, i32 42, i32 24
@@ -14,7 +14,7 @@ define i32 @f2(i32 %a, i32 %b) {
 
 define i32 @f4(i32 %a, i32 %b) {
 ; CHECK: f4
-; CHECK: teq.w  {{.*}}, r1
+; CHECK: eors  {{.*}}, r1
     %tmp = xor i32 %a, %b
     %tmp1 = icmp eq i32 0, %tmp
     %ret = select i1 %tmp1, i32 42, i32 24

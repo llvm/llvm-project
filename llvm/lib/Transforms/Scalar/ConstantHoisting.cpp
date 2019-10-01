@@ -1,9 +1,8 @@
 //===- ConstantHoisting.cpp - Prepare code for expensive constants --------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -42,6 +41,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
+#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/IR/BasicBlock.h"
@@ -61,6 +61,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Utils/SizeOpts.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -112,10 +113,9 @@ public:
     if (ConstHoistWithBlockFrequency)
       AU.addRequired<BlockFrequencyInfoWrapperPass>();
     AU.addRequired<DominatorTreeWrapperPass>();
+    AU.addRequired<ProfileSummaryInfoWrapperPass>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
   }
-
-  void releaseMemory() override { Impl.releaseMemory(); }
 
 private:
   ConstantHoistingPass Impl;
@@ -129,6 +129,7 @@ INITIALIZE_PASS_BEGIN(ConstantHoistingLegacyPass, "consthoist",
                       "Constant Hoisting", false, false)
 INITIALIZE_PASS_DEPENDENCY(BlockFrequencyInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_END(ConstantHoistingLegacyPass, "consthoist",
                     "Constant Hoisting", false, false)
@@ -151,7 +152,8 @@ bool ConstantHoistingLegacyPass::runOnFunction(Function &Fn) {
                    ConstHoistWithBlockFrequency
                        ? &getAnalysis<BlockFrequencyInfoWrapperPass>().getBFI()
                        : nullptr,
-                   Fn.getEntryBlock());
+                   Fn.getEntryBlock(),
+                   &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI());
 
   if (MadeChange) {
     LLVM_DEBUG(dbgs() << "********** Function after Constant Hoisting: "
@@ -211,6 +213,9 @@ static void findBestInsertionSet(DominatorTree &DT, BlockFrequencyInfo &BFI,
   // in the dominator tree from Entry to 'BB'.
   SmallPtrSet<BasicBlock *, 16> Candidates;
   for (auto BB : BBs) {
+    // Ignore unreachable basic blocks.
+    if (!DT.isReachableFromEntry(BB))
+      continue;
     Path.clear();
     // Walk up the dominator tree until Entry or another BB in BBs
     // is reached. Insert the nodes on the way to the Path.
@@ -548,7 +553,9 @@ ConstantHoistingPass::maximizeConstantsInRange(ConstCandVecType::iterator S,
                                            ConstCandVecType::iterator &MaxCostItr) {
   unsigned NumUses = 0;
 
-  if(!Entry->getParent()->optForSize() || std::distance(S,E) > 100) {
+  bool OptForSize = Entry->getParent()->hasOptSize() ||
+                    llvm::shouldOptimizeForSize(Entry->getParent(), PSI, BFI);
+  if (!OptForSize || std::distance(S,E) > 100) {
     for (auto ConstCand = S; ConstCand != E; ++ConstCand) {
       NumUses += ConstCand->Uses.size();
       if (ConstCand->CumulativeCost > MaxCostItr->CumulativeCost)
@@ -640,8 +647,8 @@ void ConstantHoistingPass::findBaseConstants(GlobalVariable *BaseGV) {
       ConstGEPInfoMap[BaseGV] : ConstIntInfoVec;
 
   // Sort the constants by value and type. This invalidates the mapping!
-  std::stable_sort(ConstCandVec.begin(), ConstCandVec.end(),
-             [](const ConstantCandidate &LHS, const ConstantCandidate &RHS) {
+  llvm::stable_sort(ConstCandVec, [](const ConstantCandidate &LHS,
+                                     const ConstantCandidate &RHS) {
     if (LHS.ConstInt->getType() != RHS.ConstInt->getType())
       return LHS.ConstInt->getType()->getBitWidth() <
              RHS.ConstInt->getType()->getBitWidth();
@@ -824,7 +831,9 @@ bool ConstantHoistingPass::emitBaseConstants(GlobalVariable *BaseGV) {
       BaseGV ? ConstGEPInfoMap[BaseGV] : ConstIntInfoVec;
   for (auto const &ConstInfo : ConstInfoVec) {
     SmallPtrSet<Instruction *, 8> IPSet = findConstantInsertionPoint(ConstInfo);
-    assert(!IPSet.empty() && "IPSet is empty");
+    // We can have an empty set if the function contains unreachable blocks.
+    if (IPSet.empty())
+      continue;
 
     unsigned UsesNum = 0;
     unsigned ReBasesNum = 0;
@@ -917,13 +926,14 @@ void ConstantHoistingPass::deleteDeadCastInst() const {
 /// Optimize expensive integer constants in the given function.
 bool ConstantHoistingPass::runImpl(Function &Fn, TargetTransformInfo &TTI,
                                    DominatorTree &DT, BlockFrequencyInfo *BFI,
-                                   BasicBlock &Entry) {
+                                   BasicBlock &Entry, ProfileSummaryInfo *PSI) {
   this->TTI = &TTI;
   this->DT = &DT;
   this->BFI = BFI;
   this->DL = &Fn.getParent()->getDataLayout();
   this->Ctx = &Fn.getContext();
   this->Entry = &Entry;
+  this->PSI = PSI;
   // Collect all constant candidates.
   collectConstantCandidates(Fn);
 
@@ -948,6 +958,8 @@ bool ConstantHoistingPass::runImpl(Function &Fn, TargetTransformInfo &TTI,
   // Cleanup dead instructions.
   deleteDeadCastInst();
 
+  cleanup();
+
   return MadeChange;
 }
 
@@ -958,7 +970,9 @@ PreservedAnalyses ConstantHoistingPass::run(Function &F,
   auto BFI = ConstHoistWithBlockFrequency
                  ? &AM.getResult<BlockFrequencyAnalysis>(F)
                  : nullptr;
-  if (!runImpl(F, TTI, DT, BFI, F.getEntryBlock()))
+  auto &MAM = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F).getManager();
+  auto *PSI = MAM.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
+  if (!runImpl(F, TTI, DT, BFI, F.getEntryBlock(), PSI))
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA;

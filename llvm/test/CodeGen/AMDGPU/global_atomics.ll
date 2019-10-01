@@ -839,6 +839,17 @@ entry:
   ret void
 }
 
+; GCN-LABEL: {{^}}atomic_xchg_f32_offset:
+; SIVI: buffer_atomic_swap v{{[0-9]+}}, off, s[{{[0-9]+}}:{{[0-9]+}}], 0 offset:16{{$}}
+
+; GFX9: global_atomic_swap v[{{[0-9]+:[0-9]+}}], v{{[0-9]+}}, off offset:16{{$}}
+define amdgpu_kernel void @atomic_xchg_f32_offset(float addrspace(1)* %out, float %in) {
+entry:
+  %gep = getelementptr float, float addrspace(1)* %out, i64 4
+  %val = atomicrmw volatile xchg float addrspace(1)* %gep, float %in seq_cst
+  ret void
+}
+
 ; GCN-LABEL: {{^}}atomic_xchg_i32_ret_offset:
 ; SIVI: buffer_atomic_swap [[RET:v[0-9]+]], off, s[{{[0-9]+}}:{{[0-9]+}}], 0 offset:16 glc{{$}}
 ; SIVI: buffer_store_dword [[RET]]

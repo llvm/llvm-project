@@ -1,4 +1,4 @@
-; RUN: llc < %s -filetype=obj | llvm-readobj - -codeview | FileCheck %s
+; RUN: llc < %s -filetype=obj | llvm-readobj - --codeview | FileCheck %s
 
 ; Command to generate enum-co.ll
 ; $ clang++ enum-co.cpp -S -emit-llvm -g -gcodeview -o enum-co.ll
@@ -130,7 +130,7 @@ attributes #1 = { nounwind readnone speculatable }
 !llvm.module.flags = !{!25, !26, !27, !28}
 !llvm.ident = !{!29}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 8.0.0 (https://github.com/llvm-mirror/clang.git 9884fc1d0881576784e9b50da9eb61a5eb427f1c) (https://github.com/llvm-mirror/llvm.git 33b1a96b81ba4e33cfc4a129ce43b5331e16936b)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, nameTableKind: None)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 8.0.0", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, nameTableKind: None)
 !1 = !DIFile(filename: "enum-co.cpp", directory: "D:\5Cupstream\5Cllvm\5Ctest\5CDebugInfo\5CCOFF", checksumkind: CSK_MD5, checksum: "2e53b90441669acca735bad28ed3a1ab")
 !2 = !{!3, !8, !13, !18}
 !3 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "Enum", file: !1, line: 4, baseType: !4, size: 32, elements: !5, identifier: ".?AW4Enum@@")
@@ -138,7 +138,7 @@ attributes #1 = { nounwind readnone speculatable }
 !5 = !{!6, !7}
 !6 = !DIEnumerator(name: "ON", value: 0)
 !7 = !DIEnumerator(name: "OFF", value: 1)
-!8 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "EnumClass", file: !1, line: 7, baseType: !4, size: 32, flags: DIFlagFixedEnum, elements: !9, identifier: ".?AW4EnumClass@@")
+!8 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "EnumClass", file: !1, line: 7, baseType: !4, size: 32, flags: DIFlagEnumClass, elements: !9, identifier: ".?AW4EnumClass@@")
 !9 = !{!10, !11, !12}
 !10 = !DIEnumerator(name: "RED", value: 0)
 !11 = !DIEnumerator(name: "BLUE", value: 1)
@@ -149,8 +149,8 @@ attributes #1 = { nounwind readnone speculatable }
 !16 = !{null}
 !17 = !{}
 !18 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "NestedEnum", scope: !19, file: !1, line: 16, baseType: !4, size: 32, elements: !24, identifier: ".?AW4NestedEnum@Union@Struct@?1??Func@@YAXXZ@")
-!19 = distinct !DICompositeType(tag: DW_TAG_union_type, name: "Union", scope: !20, file: !1, line: 15, size: 8, flags: DIFlagTypePassByValue | DIFlagTrivial, elements: !23, identifier: ".?ATUnion@Struct@?1??Func@@YAXXZ@")
-!20 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "Struct", scope: !14, file: !1, line: 14, size: 8, flags: DIFlagTypePassByValue | DIFlagTrivial, elements: !21, identifier: ".?AUStruct@?1??Func@@YAXXZ@")
+!19 = distinct !DICompositeType(tag: DW_TAG_union_type, name: "Union", scope: !20, file: !1, line: 15, size: 8, flags: DIFlagTypePassByValue, elements: !23, identifier: ".?ATUnion@Struct@?1??Func@@YAXXZ@")
+!20 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "Struct", scope: !14, file: !1, line: 14, size: 8, flags: DIFlagTypePassByValue, elements: !21, identifier: ".?AUStruct@?1??Func@@YAXXZ@")
 !21 = !{!19, !22}
 !22 = !DIDerivedType(tag: DW_TAG_member, name: "U", scope: !20, file: !1, line: 18, baseType: !19, size: 8)
 !23 = !{!18}
@@ -159,7 +159,7 @@ attributes #1 = { nounwind readnone speculatable }
 !26 = !{i32 2, !"Debug Info Version", i32 3}
 !27 = !{i32 1, !"wchar_size", i32 2}
 !28 = !{i32 7, !"PIC Level", i32 2}
-!29 = !{!"clang version 8.0.0 (https://github.com/llvm-mirror/clang.git 9884fc1d0881576784e9b50da9eb61a5eb427f1c) (https://github.com/llvm-mirror/llvm.git 33b1a96b81ba4e33cfc4a129ce43b5331e16936b)"}
+!29 = !{!"clang version 8.0.0"}
 !30 = distinct !DISubprogram(name: "Func_Enum", linkageName: "?Func_Enum@@YA?AW4Enum@@AEAW41@@Z", scope: !1, file: !1, line: 5, type: !31, isLocal: false, isDefinition: true, scopeLine: 5, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !17)
 !31 = !DISubroutineType(types: !32)
 !32 = !{!3, !33}

@@ -1,9 +1,8 @@
 //===-- MipsFixupKinds.h - Mips Specific Fixup Entries ----------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -23,11 +22,8 @@ namespace Mips {
   // in MipsAsmBackend.cpp.
   //
   enum Fixups {
-    // Branch fixups resulting in R_MIPS_NONE.
-    fixup_Mips_NONE = FirstTargetFixupKind,
-
     // Branch fixups resulting in R_MIPS_16.
-    fixup_Mips_16,
+    fixup_Mips_16 = FirstTargetFixupKind,
 
     // Pure 32 bit data fixup resulting in - R_MIPS_32.
     fixup_Mips_32,

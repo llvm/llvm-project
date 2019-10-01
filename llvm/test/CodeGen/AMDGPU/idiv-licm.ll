@@ -6,7 +6,7 @@
 ; GCN:     v_mul_f32_e32 v{{[0-9]+}}, 0x4f800000,
 ; GCN:     v_cvt_u32_f32_e32
 ; GCN-DAG: v_mul_hi_u32
-; GCN-DAG: v_mul_lo_i32
+; GCN-DAG: v_mul_lo_u32
 ; GCN-DAG: v_sub_i32_e32
 ; GCN-DAG: v_cmp_eq_u32_e64
 ; GCN-DAG: v_cndmask_b32_e64
@@ -42,7 +42,7 @@ bb3:                                              ; preds = %bb3, %bb
 ; GCN:     v_mul_f32_e32 v{{[0-9]+}}, 0x4f800000,
 ; GCN:     v_cvt_u32_f32_e32
 ; GCN-DAG: v_mul_hi_u32
-; GCN-DAG: v_mul_lo_i32
+; GCN-DAG: v_mul_lo_u32
 ; GCN-DAG: v_sub_i32_e32
 ; GCN-DAG: v_cmp_eq_u32_e64
 ; GCN-DAG: v_cndmask_b32_e64
@@ -78,7 +78,7 @@ bb3:                                              ; preds = %bb3, %bb
 ; GCN:     v_mul_f32_e32 v{{[0-9]+}}, 0x4f800000,
 ; GCN:     v_cvt_u32_f32_e32
 ; GCN-DAG: v_mul_hi_u32
-; GCN-DAG: v_mul_lo_i32
+; GCN-DAG: v_mul_lo_u32
 ; GCN-DAG: v_sub_i32_e32
 ; GCN-DAG: v_cmp_eq_u32_e64
 ; GCN-DAG: v_cndmask_b32_e64
@@ -114,7 +114,7 @@ bb3:                                              ; preds = %bb3, %bb
 ; GCN:     v_mul_f32_e32 v{{[0-9]+}}, 0x4f800000,
 ; GCN:     v_cvt_u32_f32_e32
 ; GCN-DAG: v_mul_hi_u32
-; GCN-DAG: v_mul_lo_i32
+; GCN-DAG: v_mul_lo_u32
 ; GCN-DAG: v_sub_i32_e32
 ; GCN-DAG: v_cmp_eq_u32_e64
 ; GCN-DAG: v_cndmask_b32_e64

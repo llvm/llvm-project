@@ -1,6 +1,6 @@
 // This test ensures functions in custom sections get unwind info emitted in a
 // distinct .xdata section.
-// RUN: llvm-mc -filetype=obj -triple x86_64-pc-win32 %s | llvm-readobj -s -sd | FileCheck %s
+// RUN: llvm-mc -filetype=obj -triple x86_64-pc-win32 %s | llvm-readobj -S --sd | FileCheck %s
 
 // CHECK:      Name: .xdata
 // CHECK-NEXT: VirtualSize

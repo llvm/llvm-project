@@ -1,9 +1,8 @@
 //===-- PPC.td - Describe the PowerPC Target Machine -------*- tablegen -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -136,6 +135,9 @@ def FeatureQPX       : SubtargetFeature<"qpx","HasQPX", "true",
 def FeatureVSX       : SubtargetFeature<"vsx","HasVSX", "true",
                                         "Enable VSX instructions",
                                         [FeatureAltivec]>;
+def FeatureTwoConstNR :
+  SubtargetFeature<"two-const-nr", "NeedsTwoConstNR", "true",
+                   "Requires two constant Newton-Raphson computation">;
 def FeatureP8Altivec : SubtargetFeature<"power8-altivec", "HasP8Altivec", "true",
                                         "Enable POWER8 Altivec instructions",
                                         [FeatureAltivec]>;
@@ -164,6 +166,12 @@ def FeatureMFTB   : SubtargetFeature<"", "FeatureMFTB", "true",
                                         "Implement mftb using the mfspr instruction">;
 def FeatureFusion : SubtargetFeature<"fusion", "HasFusion", "true",
                                      "Target supports add/load integer fusion.">;
+def FeaturePPCPreRASched:
+  SubtargetFeature<"ppc-prera-sched", "UsePPCPreRASchedStrategy", "true",
+                   "Use PowerPC pre-RA scheduling strategy">;
+def FeaturePPCPostRASched:
+  SubtargetFeature<"ppc-postra-sched", "UsePPCPostRASchedStrategy", "true",
+                   "Use PowerPC post-RA scheduling strategy">;
 def FeatureFloat128 :
   SubtargetFeature<"float128", "HasFloat128", "true",
                    "Enable the __float128 data type for IEEE-754R Binary128.",
@@ -191,6 +199,13 @@ def FeatureP9Vector  : SubtargetFeature<"power9-vector", "HasP9Vector", "true",
                                         "Enable POWER9 vector instructions",
                                         [FeatureISA3_0, FeatureP8Vector,
                                          FeatureP9Altivec]>;
+// A separate feature for this even though it is equivalent to P9Vector
+// because this is a feature of the implementation rather than the architecture
+// and may go away with future CPU's.
+def FeatureVectorsUseTwoUnits : SubtargetFeature<"vectors-use-two-units",
+                                                 "VectorsUseTwoUnits",
+                                                 "true",
+                                                 "Vectors use two units">;
 
 // Since new processors generally contain a superset of features of those that
 // came before them, the idea is to make implementations of new processors
@@ -215,7 +230,7 @@ def ProcessorFeatures {
        FeaturePOPCNTD, FeatureCMPB, FeatureLDBRX,
        Feature64Bit /*, Feature64BitRegs */,
        FeatureBPERMD, FeatureExtDiv,
-       FeatureMFTB, DeprecatedDST];
+       FeatureMFTB, DeprecatedDST, FeatureTwoConstNR];
   list<SubtargetFeature> Power8SpecificFeatures =
       [DirectivePwr8, FeatureP8Altivec, FeatureP8Vector, FeatureP8Crypto,
        FeatureHTM, FeatureDirectMove, FeatureICBT, FeaturePartwordAtomic,
@@ -223,7 +238,8 @@ def ProcessorFeatures {
   list<SubtargetFeature> Power8FeatureList =
       !listconcat(Power7FeatureList, Power8SpecificFeatures);
   list<SubtargetFeature> Power9SpecificFeatures =
-      [DirectivePwr9, FeatureP9Altivec, FeatureP9Vector, FeatureISA3_0];
+      [DirectivePwr9, FeatureP9Altivec, FeatureP9Vector, FeatureISA3_0,
+       FeatureVectorsUseTwoUnits, FeaturePPCPreRASched, FeaturePPCPostRASched];
   list<SubtargetFeature> Power9FeatureList =
       !listconcat(Power8FeatureList, Power9SpecificFeatures);
 }

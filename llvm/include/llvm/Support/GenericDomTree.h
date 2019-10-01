@@ -1,9 +1,8 @@
 //===- GenericDomTree.h - Generic dominator trees for graphs ----*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 /// \file
@@ -670,14 +669,12 @@ protected:
 
     // The postdom tree can have a null root if there are no returns.
     if (getRootNode()) PrintDomTree<NodeT>(getRootNode(), O, 1);
-    if (IsPostDominator) {
-      O << "Roots: ";
-      for (const NodePtr Block : Roots) {
-        Block->printAsOperand(O, false);
-        O << " ";
-      }
-      O << "\n";
+    O << "Roots: ";
+    for (const NodePtr Block : Roots) {
+      Block->printAsOperand(O, false);
+      O << " ";
     }
+    O << "\n";
   }
 
 public:

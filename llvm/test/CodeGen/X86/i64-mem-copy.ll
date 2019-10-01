@@ -158,9 +158,9 @@ define void @PR23476(<5 x i64> %in, i64* %out, i32 %index) nounwind {
 ; X32AVX-NEXT:    movl %esp, %ebp
 ; X32AVX-NEXT:    andl $-64, %esp
 ; X32AVX-NEXT:    subl $128, %esp
+; X32AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; X32AVX-NEXT:    movl 52(%ebp), %eax
 ; X32AVX-NEXT:    andl $7, %eax
-; X32AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; X32AVX-NEXT:    movl 48(%ebp), %ecx
 ; X32AVX-NEXT:    vmovups 8(%ebp), %ymm1
 ; X32AVX-NEXT:    vmovaps %ymm1, (%esp)

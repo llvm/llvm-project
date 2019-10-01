@@ -1,13 +1,13 @@
 //===------ utils/obj2yaml.cpp - obj2yaml conversion tool -------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "obj2yaml.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/DebugInfo/CodeView/DebugChecksumsSubsection.h"
 #include "llvm/DebugInfo/CodeView/DebugStringTableSubsection.h"
 #include "llvm/DebugInfo/CodeView/StringsAndChecksums.h"
@@ -56,8 +56,6 @@ COFFDumper::COFFDumper(const object::COFFObjectFile &Obj) : Obj(Obj) {
 
 template <typename T> void COFFDumper::dumpOptionalHeader(T OptionalHeader) {
   YAMLObj.OptionalHeader = COFFYAML::PEHeader();
-  YAMLObj.OptionalHeader->Header.AddressOfEntryPoint =
-      OptionalHeader->AddressOfEntryPoint;
   YAMLObj.OptionalHeader->Header.AddressOfEntryPoint =
       OptionalHeader->AddressOfEntryPoint;
   YAMLObj.OptionalHeader->Header.ImageBase = OptionalHeader->ImageBase;
@@ -122,7 +120,7 @@ initializeFileAndStringTable(const llvm::object::COFFObjectFile &Obj,
 
     const object::coff_section *COFFSection = Obj.getCOFFSection(S);
 
-    Obj.getSectionContents(COFFSection, sectionData);
+    cantFail(Obj.getSectionContents(COFFSection, sectionData));
 
     BinaryStreamReader Reader(sectionData, support::little);
     uint32_t Magic;
@@ -141,6 +139,18 @@ void COFFDumper::dumpSections(unsigned NumSections) {
   std::vector<COFFYAML::Section> &YAMLSections = YAMLObj.Sections;
   codeview::StringsAndChecksumsRef SC;
   initializeFileAndStringTable(Obj, SC);
+
+  StringMap<bool> SymbolUnique;
+  for (const auto &S : Obj.symbols()) {
+    object::COFFSymbolRef Symbol = Obj.getCOFFSymbol(S);
+    StringRef Name;
+    Obj.getSymbolName(Symbol, Name);
+    StringMap<bool>::iterator It;
+    bool Inserted;
+    std::tie(It, Inserted) = SymbolUnique.insert(std::make_pair(Name, true));
+    if (!Inserted)
+      It->second = false;
+  }
 
   for (const auto &ObjSection : Obj.sections()) {
     const object::coff_section *COFFSection = Obj.getCOFFSection(ObjSection);
@@ -165,7 +175,7 @@ void COFFDumper::dumpSections(unsigned NumSections) {
 
     ArrayRef<uint8_t> sectionData;
     if (!ObjSection.isBSS())
-      Obj.getSectionContents(COFFSection, sectionData);
+      cantFail(Obj.getSectionContents(COFFSection, sectionData));
     NewYAMLSection.SectionData = yaml::BinaryRef(sectionData);
 
     if (NewYAMLSection.Name == ".debug$S")
@@ -192,7 +202,10 @@ void COFFDumper::dumpSections(unsigned NumSections) {
        OS.flush();
        report_fatal_error(Buf);
       }
-      Rel.SymbolName = *SymbolNameOrErr;
+      if (SymbolUnique.lookup(*SymbolNameOrErr))
+        Rel.SymbolName = *SymbolNameOrErr;
+      else
+        Rel.SymbolTableIndex = reloc->SymbolTableIndex;
       Rel.VirtualAddress = reloc->VirtualAddress;
       Rel.Type = reloc->Type;
       Relocations.push_back(Rel);

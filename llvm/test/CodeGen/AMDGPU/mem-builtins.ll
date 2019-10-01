@@ -1,12 +1,12 @@
 ; RUN: not llc -march=r600 < %s 2>&1 | FileCheck -check-prefix=ERROR %s
 ; RUN: llc -march=amdgcn < %s | FileCheck -check-prefix=GCN %s
 
-declare i32 @memcmp(i8 addrspace(1)* readonly nocapture, i8 addrspace(1)* readonly nocapture, i64) #0
-declare i8 addrspace(1)* @memchr(i8 addrspace(1)* readonly nocapture, i32, i64) #1
-declare i8* @strcpy(i8* nocapture, i8* readonly nocapture) #0
-declare i32 @strlen(i8* nocapture) #1
-declare i32 @strnlen(i8* nocapture, i32) #1
-declare i32 @strcmp(i8* nocapture, i8* nocapture) #1
+declare hidden i32 @memcmp(i8 addrspace(1)* readonly nocapture, i8 addrspace(1)* readonly nocapture, i64) #0
+declare hidden i8 addrspace(1)* @memchr(i8 addrspace(1)* readonly nocapture, i32, i64) #1
+declare hidden i8* @strcpy(i8* nocapture, i8* readonly nocapture) #0
+declare hidden i32 @strlen(i8* nocapture) #1
+declare hidden i32 @strnlen(i8* nocapture, i32) #1
+declare hidden i32 @strcmp(i8* nocapture, i8* nocapture) #1
 
 
 ; ERROR: error: <unknown>:0:0: in function test_memcmp void (i8 addrspace(1)*, i8 addrspace(1)*, i32*): unsupported call to function memcmp

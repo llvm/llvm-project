@@ -16,9 +16,11 @@ static_library("IR") {
     ":AttributesCompatFunc",
     "//llvm/include/llvm/IR:IntrinsicImpl",
     "//llvm/lib/BinaryFormat",
+    "//llvm/lib/Remarks",
     "//llvm/lib/Support",
   ]
   sources = [
+    "AbstractCallSite.cpp",
     "AsmWriter.cpp",
     "Attributes.cpp",
     "AutoUpgrade.cpp",
@@ -36,7 +38,6 @@ static_library("IR") {
     "DiagnosticHandler.cpp",
     "DiagnosticInfo.cpp",
     "DiagnosticPrinter.cpp",
-    "DomTreeUpdater.cpp",
     "Dominators.cpp",
     "Function.cpp",
     "GVMaterializer.cpp",
@@ -63,6 +64,7 @@ static_library("IR") {
     "PassRegistry.cpp",
     "PassTimingInfo.cpp",
     "ProfileSummary.cpp",
+    "RemarkStreamer.cpp",
     "SafepointIRVerifier.cpp",
     "Statepoint.cpp",
     "Type.cpp",

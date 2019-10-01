@@ -25,9 +25,9 @@ define <2 x float> @uitofp_2i32_cvt_buildvector(i32 %x, i32 %y, <2 x float> %v) 
 ; X64-LABEL: uitofp_2i32_cvt_buildvector:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    cvtsi2ssq %rax, %xmm1
+; X64-NEXT:    cvtsi2ss %rax, %xmm1
 ; X64-NEXT:    movl %esi, %eax
-; X64-NEXT:    cvtsi2ssq %rax, %xmm2
+; X64-NEXT:    cvtsi2ss %rax, %xmm2
 ; X64-NEXT:    insertps {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[2,3]
 ; X64-NEXT:    mulps %xmm1, %xmm0
 ; X64-NEXT:    retq

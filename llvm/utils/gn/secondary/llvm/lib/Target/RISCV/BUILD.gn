@@ -1,0 +1,78 @@
+import("//llvm/utils/TableGen/tablegen.gni")
+
+# RISCV is the only target that has a "compress instr emitter", and it's
+# a bit strange in that it defines static functions depending on which
+# defines are set. Instead of housing these functions in one library,
+# various libraries include the generated .inc file with different defines set.
+tablegen("RISCVGenCompressInstEmitter") {
+  visibility = [
+    ":LLVMRISCVCodeGen",
+    "AsmParser",
+    "MCTargetDesc",
+  ]
+  args = [ "-gen-compress-inst-emitter" ]
+  td_file = "RISCV.td"
+}
+
+tablegen("RISCVGenDAGISel") {
+  visibility = [ ":LLVMRISCVCodeGen" ]
+  args = [ "-gen-dag-isel" ]
+  td_file = "RISCV.td"
+}
+
+tablegen("RISCVGenMCPseudoLowering") {
+  visibility = [ ":LLVMRISCVCodeGen" ]
+  args = [ "-gen-pseudo-lowering" ]
+  td_file = "RISCV.td"
+}
+
+static_library("LLVMRISCVCodeGen") {
+  deps = [
+    ":RISCVGenCompressInstEmitter",
+    ":RISCVGenDAGISel",
+    ":RISCVGenMCPseudoLowering",
+    "MCTargetDesc",
+    "TargetInfo",
+    "Utils",
+    "//llvm/include/llvm/Config:llvm-config",
+    "//llvm/lib/CodeGen",
+    "//llvm/lib/CodeGen/AsmPrinter",
+    "//llvm/lib/CodeGen/SelectionDAG",
+    "//llvm/lib/IR",
+    "//llvm/lib/MC",
+    "//llvm/lib/Support",
+    "//llvm/lib/Target",
+  ]
+  include_dirs = [ "." ]
+  sources = [
+    "RISCVAsmPrinter.cpp",
+    "RISCVExpandPseudoInsts.cpp",
+    "RISCVFrameLowering.cpp",
+    "RISCVISelDAGToDAG.cpp",
+    "RISCVISelLowering.cpp",
+    "RISCVInstrInfo.cpp",
+    "RISCVMCInstLower.cpp",
+    "RISCVMergeBaseOffset.cpp",
+    "RISCVRegisterInfo.cpp",
+    "RISCVSubtarget.cpp",
+    "RISCVTargetMachine.cpp",
+    "RISCVTargetObjectFile.cpp",
+  ]
+}
+
+# This is a bit different from most build files: Due to this group
+# having the directory's name, "//llvm/lib/Target/RISCV" will refer to this
+# target, which pulls in the code in this directory *and all subdirectories*.
+# For most other directories, "//llvm/lib/Foo" only pulls in the code directly
+# in "llvm/lib/Foo". The forwarding targets in //llvm/lib/Target expect this
+# different behavior.
+group("RISCV") {
+  deps = [
+    ":LLVMRISCVCodeGen",
+    "AsmParser",
+    "Disassembler",
+    "MCTargetDesc",
+    "TargetInfo",
+    "Utils",
+  ]
+}

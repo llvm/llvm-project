@@ -1,9 +1,8 @@
 //==-- AArch64CompressJumpTables.cpp - Compress jump tables for AArch64 --====//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 // This pass looks at the basic blocks each jump-table refers to and works out
 // whether they can be emitted in a compressed form (with 8 or 16-bit
@@ -108,6 +107,7 @@ bool AArch64CompressJumpTables::compressJumpTable(MachineInstr &MI,
       MinBlock = Block;
     }
   }
+  assert(MinBlock && "Failed to find minimum offset block");
 
   // The ADR instruction needed to calculate the address of the first reachable
   // basic block can address +/-1MB.
@@ -141,7 +141,7 @@ bool AArch64CompressJumpTables::runOnMachineFunction(MachineFunction &MFIn) {
   const auto &ST = MF->getSubtarget<AArch64Subtarget>();
   TII = ST.getInstrInfo();
 
-  if (ST.force32BitJumpTables() && !MF->getFunction().optForMinSize())
+  if (ST.force32BitJumpTables() && !MF->getFunction().hasMinSize())
     return false;
 
   scanFunction();

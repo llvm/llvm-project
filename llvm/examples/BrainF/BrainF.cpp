@@ -1,9 +1,8 @@
 //===-- BrainF.cpp - BrainF compiler example ------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -73,19 +72,18 @@ void BrainF::header(LLVMContext& C) {
                                                     Tys);
 
   //declare i32 @getchar()
-  getchar_func = cast<Function>(module->
-    getOrInsertFunction("getchar", IntegerType::getInt32Ty(C)));
+  getchar_func =
+      module->getOrInsertFunction("getchar", IntegerType::getInt32Ty(C));
 
   //declare i32 @putchar(i32)
-  putchar_func = cast<Function>(module->
-    getOrInsertFunction("putchar", IntegerType::getInt32Ty(C),
-                        IntegerType::getInt32Ty(C)));
+  putchar_func = module->getOrInsertFunction(
+      "putchar", IntegerType::getInt32Ty(C), IntegerType::getInt32Ty(C));
 
   //Function header
 
   //define void @brainf()
-  brainf_func = cast<Function>(module->
-    getOrInsertFunction("brainf", Type::getVoidTy(C)));
+  brainf_func = Function::Create(FunctionType::get(Type::getVoidTy(C), false),
+                                 Function::ExternalLinkage, "brainf", module);
 
   builder = new IRBuilder<>(BasicBlock::Create(C, label, brainf_func));
 
@@ -154,9 +152,9 @@ void BrainF::header(LLVMContext& C) {
       "aberrormsg");
 
     //declare i32 @puts(i8 *)
-    Function *puts_func = cast<Function>(module->
-      getOrInsertFunction("puts", IntegerType::getInt32Ty(C),
-                      PointerType::getUnqual(IntegerType::getInt8Ty(C))));
+    FunctionCallee puts_func = module->getOrInsertFunction(
+        "puts", IntegerType::getInt32Ty(C),
+        PointerType::getUnqual(IntegerType::getInt8Ty(C)));
 
     //brainf.aberror:
     aberrorbb = BasicBlock::Create(C, label, brainf_func);

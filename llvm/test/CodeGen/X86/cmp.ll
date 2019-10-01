@@ -483,3 +483,42 @@ define { i64, i64 } @pr39968(i64, i64, i32) {
   %9 = insertvalue { i64, i64 } %8, i64 %6, 1
   ret { i64, i64 } %9
 }
+
+; Make sure we use a 32-bit comparison without an extend based on the input
+; being pre-sign extended by caller.
+define i32 @pr42189(i16 signext %c) {
+; CHECK-LABEL: pr42189:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    cmpl $32767, %edi # encoding: [0x81,0xff,0xff,0x7f,0x00,0x00]
+; CHECK-NEXT:    # imm = 0x7FFF
+; CHECK-NEXT:    jne .LBB26_2 # encoding: [0x75,A]
+; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB26_2-1, kind: FK_PCRel_1
+; CHECK-NEXT:  # %bb.1: # %if.then
+; CHECK-NEXT:    jmp g # TAILCALL
+; CHECK-NEXT:    # encoding: [0xeb,A]
+; CHECK-NEXT:    # fixup A - offset: 1, value: g-1, kind: FK_PCRel_1
+; CHECK-NEXT:  .LBB26_2: # %if.end
+; CHECK-NEXT:    jmp f # TAILCALL
+; CHECK-NEXT:    # encoding: [0xeb,A]
+; CHECK-NEXT:    # fixup A - offset: 1, value: f-1, kind: FK_PCRel_1
+entry:
+  %cmp = icmp eq i16 %c, 32767
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:                                          ; preds = %entry
+  %call = tail call i32 @g()
+  br label %return
+
+if.end:                                           ; preds = %entry
+  %call2 = tail call i32 @f()
+  br label %return
+
+return:                                           ; preds = %if.end, %if.then
+  %retval.0 = phi i32 [ %call, %if.then ], [ %call2, %if.end ]
+  ret i32 %retval.0
+}
+
+declare i32 @g()
+
+declare i32 @f()
+

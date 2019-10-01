@@ -1,4 +1,4 @@
-# RUN: llvm-mc -triple=x86_64-pc-win32 -filetype=obj < %s | llvm-readobj -codeview | FileCheck %s
+# RUN: llvm-mc -triple=x86_64-pc-win32 -filetype=obj < %s | llvm-readobj --codeview | FileCheck %s
 
 # This tries to test defrange gap edge cases.
 
@@ -120,8 +120,8 @@ f:                                      # @f
 	.short	0                       # Flags
 	.asciz	"p"
 .Ltmp19:
-	.cv_def_range	 .Lbegin0 .Lend0 .Lbegin1 .Lend1 .Lbegin2 .Lend2 .Lbegin3 .Lend3, "A\021\027\000\000\000"
-	.cv_def_range	 .Lbegin4 .Lend4 .Lbegin5 .Lend5, "A\021\027\000\000\000"
+	.cv_def_range	 .Lbegin0 .Lend0 .Lbegin1 .Lend1 .Lbegin2 .Lend2 .Lbegin3 .Lend3, reg, 23
+	.cv_def_range	 .Lbegin4 .Lend4 .Lbegin5 .Lend5, reg, 23
 	.short	2                       # Record length
 	.short	4431                    # Record kind: S_PROC_ID_END
 .Ltmp15:

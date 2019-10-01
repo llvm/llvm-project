@@ -1,9 +1,8 @@
 //===-- PPCSubtarget.h - Define Subtarget for the PPC ----------*- C++ -*--===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -99,6 +98,7 @@ protected:
   bool HasSPE;
   bool HasQPX;
   bool HasVSX;
+  bool NeedsTwoConstNR;
   bool HasP8Vector;
   bool HasP8Altivec;
   bool HasP8Crypto;
@@ -136,6 +136,9 @@ protected:
   bool IsISA3_0;
   bool UseLongCalls;
   bool SecurePlt;
+  bool VectorsUseTwoUnits;
+  bool UsePPCPreRASchedStrategy;
+  bool UsePPCPostRASchedStrategy;
 
   POPCNTDKind HasPOPCNTD;
 
@@ -244,6 +247,7 @@ public:
   bool hasFPU() const { return HasFPU; }
   bool hasQPX() const { return HasQPX; }
   bool hasVSX() const { return HasVSX; }
+  bool needsTwoConstNR() const { return NeedsTwoConstNR; }
   bool hasP8Vector() const { return HasP8Vector; }
   bool hasP8Altivec() const { return HasP8Altivec; }
   bool hasP8Crypto() const { return HasP8Crypto; }
@@ -260,6 +264,7 @@ public:
   bool isPPC4xx() const { return IsPPC4xx; }
   bool isPPC6xx() const { return IsPPC6xx; }
   bool isSecurePlt() const {return SecurePlt; }
+  bool vectorsUseTwoUnits() const {return VectorsUseTwoUnits; }
   bool isE500() const { return IsE500; }
   bool isFeatureMFTB() const { return FeatureMFTB; }
   bool isDeprecatedDST() const { return DeprecatedDST; }
@@ -267,6 +272,8 @@ public:
   bool hasInvariantFunctionDescriptors() const {
     return HasInvariantFunctionDescriptors;
   }
+  bool usePPCPreRASchedStrategy() const { return UsePPCPreRASchedStrategy; }
+  bool usePPCPostRASchedStrategy() const { return UsePPCPostRASchedStrategy; }
   bool hasPartwordAtomics() const { return HasPartwordAtomics; }
   bool hasDirectMove() const { return HasDirectMove; }
 
@@ -307,16 +314,21 @@ public:
   bool isTargetLinux() const { return TargetTriple.isOSLinux(); }
 
   bool isDarwinABI() const { return isTargetMachO() || isDarwin(); }
-  bool isSVR4ABI() const { return !isDarwinABI(); }
+  bool isAIXABI() const { return TargetTriple.isOSAIX(); }
+  bool isSVR4ABI() const { return !isDarwinABI() && !isAIXABI(); }
   bool isELFv2ABI() const;
 
   /// Originally, this function return hasISEL(). Now we always enable it,
   /// but may expand the ISEL instruction later.
   bool enableEarlyIfConversion() const override { return true; }
 
-  // Scheduling customization.
+  /// Scheduling customization.
   bool enableMachineScheduler() const override;
-  // This overrides the PostRAScheduler bit in the SchedModel for each CPU.
+  /// Pipeliner customization.
+  bool enableMachinePipeliner() const override;
+  /// Machine Pipeliner customization
+  bool useDFAforSMS() const override;
+  /// This overrides the PostRAScheduler bit in the SchedModel for each CPU.
   bool enablePostRAScheduler() const override;
   AntiDepBreakMode getAntiDepBreakMode() const override;
   void getCriticalPathRCs(RegClassVector &CriticalPathRCs) const override;

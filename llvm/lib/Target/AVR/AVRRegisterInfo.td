@@ -1,9 +1,8 @@
 //===-- AVRRegisterInfo.td - AVR Register defs -------------*- tablegen -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -166,14 +165,14 @@ def DREGS : RegisterClass<"AVR", [i16], 8,
 // cannot use Z; it's simply a workaround a regalloc bug.
 //
 // More information can be found in PR39553.
-def DREGS_WITHOUT_Z_WORKAROUND : RegisterClass<"AVR", [i16], 8,
+def DREGS_WITHOUT_YZ_WORKAROUND : RegisterClass<"AVR", [i16], 8,
   (
     // Return value and arguments.
     add R25R24, R19R18, R21R20, R23R22,
     // Scratch registers.
     R27R26,
     // Callee saved registers.
-    R29R28, R17R16, R15R14, R13R12, R11R10,
+    R17R16, R15R14, R13R12, R11R10,
     R9R8, R7R6, R5R4, R3R2, R1R0
   )>;
 

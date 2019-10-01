@@ -1,9 +1,8 @@
 //===-- NVPTXMCAsmInfo.cpp - NVPTX asm properties -------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -38,12 +37,11 @@ NVPTXMCAsmInfo::NVPTXMCAsmInfo(const Triple &TheTriple) {
   HiddenDeclarationVisibilityAttr = HiddenVisibilityAttr = MCSA_Invalid;
   ProtectedVisibilityAttr = MCSA_Invalid;
 
-  // FIXME: remove comment once debug info is properly supported.
-  Data8bitsDirective = "// .b8 ";
+  Data8bitsDirective = ".b8 ";
   Data16bitsDirective = nullptr; // not supported
-  Data32bitsDirective = "// .b32 ";
-  Data64bitsDirective = "// .b64 ";
-  ZeroDirective = "// .b8";
+  Data32bitsDirective = ".b32 ";
+  Data64bitsDirective = ".b64 ";
+  ZeroDirective = ".b8";
   AsciiDirective = nullptr; // not supported
   AscizDirective = nullptr; // not supported
   SupportsQuotedNames = false;

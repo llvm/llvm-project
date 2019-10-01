@@ -1,9 +1,8 @@
 //===- R600MergeVectorRegisters.cpp ---------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -57,17 +56,12 @@ using namespace llvm;
 
 #define DEBUG_TYPE "vec-merger"
 
-static bool
-isImplicitlyDef(MachineRegisterInfo &MRI, unsigned Reg) {
-  for (MachineRegisterInfo::def_instr_iterator It = MRI.def_instr_begin(Reg),
-      E = MRI.def_instr_end(); It != E; ++It) {
-    return (*It).isImplicitDef();
-  }
-  if (MRI.isReserved(Reg)) {
+static bool isImplicitlyDef(MachineRegisterInfo &MRI, unsigned Reg) {
+  assert(MRI.isSSA());
+  if (TargetRegisterInfo::isPhysicalRegister(Reg))
     return false;
-  }
-  llvm_unreachable("Reg without a def");
-  return false;
+  const MachineInstr *MI = MRI.getUniqueVRegDef(Reg);
+  return MI && MI->isImplicitDef();
 }
 
 namespace {

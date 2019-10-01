@@ -1,5 +1,5 @@
 ; RUN: lli -jit-kind=orc-mcjit -extra-module %p/Inputs/weak-function-2.ll %s
-; REQUIRES: not_COFF
+; UNSUPPORTED: uses_COFF
 ;
 ; Check that functions in two different modules agree on the address of weak
 ; function 'baz'.

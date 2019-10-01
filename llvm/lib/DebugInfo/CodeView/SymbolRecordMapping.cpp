@@ -1,9 +1,8 @@
 //===- SymbolRecordMapping.cpp -----------------------------------*- C++-*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -230,7 +229,7 @@ Error SymbolRecordMapping::visitKnownRecord(CVSymbol &CVR, DataSym &Data) {
 Error SymbolRecordMapping::visitKnownRecord(
     CVSymbol &CVR, DefRangeFramePointerRelSym &DefRangeFramePointerRel) {
 
-  error(IO.mapInteger(DefRangeFramePointerRel.Offset));
+  error(IO.mapObject(DefRangeFramePointerRel.Hdr.Offset));
   error(mapLocalVariableAddrRange(IO, DefRangeFramePointerRel.Range));
   error(IO.mapVectorTail(DefRangeFramePointerRel.Gaps, MapGap()));
 
@@ -468,6 +467,18 @@ Error SymbolRecordMapping::visitKnownRecord(CVSymbol &CVR,
                                             UsingNamespaceSym &UN) {
 
   error(IO.mapStringZ(UN.Name));
+
+  return Error::success();
+}
+
+Error SymbolRecordMapping::visitKnownRecord(CVSymbol &CVR,
+                                            AnnotationSym &Annot) {
+
+  error(IO.mapInteger(Annot.CodeOffset));
+  error(IO.mapInteger(Annot.Segment));
+  error(IO.mapVectorN<uint16_t>(
+      Annot.Strings,
+      [](CodeViewRecordIO &IO, StringRef &S) { return IO.mapStringZ(S); }));
 
   return Error::success();
 }

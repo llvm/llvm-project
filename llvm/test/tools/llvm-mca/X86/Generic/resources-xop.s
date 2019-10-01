@@ -239,22 +239,22 @@ vpshlw %xmm0, (%rax), %xmm3
 # CHECK-NEXT:  1      1     1.00                        vpcmov	%ymm0, %ymm1, %ymm2, %ymm3
 # CHECK-NEXT:  2      8     1.00    *                   vpcmov	(%rax), %ymm0, %ymm1, %ymm3
 # CHECK-NEXT:  2      8     1.00    *                   vpcmov	%ymm0, (%rax), %ymm1, %ymm3
-# CHECK-NEXT:  1      1     0.50                        vpcomb	$0, %xmm0, %xmm1, %xmm3
-# CHECK-NEXT:  2      7     0.50    *                   vpcomb	$0, (%rax), %xmm0, %xmm3
-# CHECK-NEXT:  1      1     0.50                        vpcomd	$0, %xmm0, %xmm1, %xmm3
-# CHECK-NEXT:  2      7     0.50    *                   vpcomd	$0, (%rax), %xmm0, %xmm3
-# CHECK-NEXT:  1      1     0.50                        vpcomq	$0, %xmm0, %xmm1, %xmm3
-# CHECK-NEXT:  2      7     0.50    *                   vpcomq	$0, (%rax), %xmm0, %xmm3
-# CHECK-NEXT:  1      1     0.50                        vpcomub	$0, %xmm0, %xmm1, %xmm3
-# CHECK-NEXT:  2      7     0.50    *                   vpcomub	$0, (%rax), %xmm0, %xmm3
-# CHECK-NEXT:  1      1     0.50                        vpcomud	$0, %xmm0, %xmm1, %xmm3
-# CHECK-NEXT:  2      7     0.50    *                   vpcomud	$0, (%rax), %xmm0, %xmm3
-# CHECK-NEXT:  1      1     0.50                        vpcomuq	$0, %xmm0, %xmm1, %xmm3
-# CHECK-NEXT:  2      7     0.50    *                   vpcomuq	$0, (%rax), %xmm0, %xmm3
-# CHECK-NEXT:  1      1     0.50                        vpcomuw	$0, %xmm0, %xmm1, %xmm3
-# CHECK-NEXT:  2      7     0.50    *                   vpcomuw	$0, (%rax), %xmm0, %xmm3
-# CHECK-NEXT:  1      1     0.50                        vpcomw	$0, %xmm0, %xmm1, %xmm3
-# CHECK-NEXT:  2      7     0.50    *                   vpcomw	$0, (%rax), %xmm0, %xmm3
+# CHECK-NEXT:  1      1     0.50                        vpcomltb	%xmm0, %xmm1, %xmm3
+# CHECK-NEXT:  2      7     0.50    *                   vpcomltb	(%rax), %xmm0, %xmm3
+# CHECK-NEXT:  1      1     0.50                        vpcomltd	%xmm0, %xmm1, %xmm3
+# CHECK-NEXT:  2      7     0.50    *                   vpcomltd	(%rax), %xmm0, %xmm3
+# CHECK-NEXT:  1      1     0.50                        vpcomltq	%xmm0, %xmm1, %xmm3
+# CHECK-NEXT:  2      7     0.50    *                   vpcomltq	(%rax), %xmm0, %xmm3
+# CHECK-NEXT:  1      1     0.50                        vpcomltub	%xmm0, %xmm1, %xmm3
+# CHECK-NEXT:  2      7     0.50    *                   vpcomltub	(%rax), %xmm0, %xmm3
+# CHECK-NEXT:  1      1     0.50                        vpcomltud	%xmm0, %xmm1, %xmm3
+# CHECK-NEXT:  2      7     0.50    *                   vpcomltud	(%rax), %xmm0, %xmm3
+# CHECK-NEXT:  1      1     0.50                        vpcomltuq	%xmm0, %xmm1, %xmm3
+# CHECK-NEXT:  2      7     0.50    *                   vpcomltuq	(%rax), %xmm0, %xmm3
+# CHECK-NEXT:  1      1     0.50                        vpcomltuw	%xmm0, %xmm1, %xmm3
+# CHECK-NEXT:  2      7     0.50    *                   vpcomltuw	(%rax), %xmm0, %xmm3
+# CHECK-NEXT:  1      1     0.50                        vpcomltw	%xmm0, %xmm1, %xmm3
+# CHECK-NEXT:  2      7     0.50    *                   vpcomltw	(%rax), %xmm0, %xmm3
 # CHECK-NEXT:  1      1     1.00                        vpermil2pd	$0, %xmm0, %xmm1, %xmm2, %xmm3
 # CHECK-NEXT:  2      7     1.00    *                   vpermil2pd	$0, (%rax), %xmm0, %xmm1, %xmm3
 # CHECK-NEXT:  2      7     1.00    *                   vpermil2pd	$0, %xmm0, (%rax), %xmm1, %xmm3
@@ -403,22 +403,22 @@ vpshlw %xmm0, (%rax), %xmm3
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vpcmov	%ymm0, %ymm1, %ymm2, %ymm3
 # CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   vpcmov	(%rax), %ymm0, %ymm1, %ymm3
 # CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   vpcmov	%ymm0, (%rax), %ymm1, %ymm3
-# CHECK-NEXT:  -      -      -     0.50    -     0.50    -      -     vpcomb	$0, %xmm0, %xmm1, %xmm3
-# CHECK-NEXT:  -      -      -     0.50    -     0.50   0.50   0.50   vpcomb	$0, (%rax), %xmm0, %xmm3
-# CHECK-NEXT:  -      -      -     0.50    -     0.50    -      -     vpcomd	$0, %xmm0, %xmm1, %xmm3
-# CHECK-NEXT:  -      -      -     0.50    -     0.50   0.50   0.50   vpcomd	$0, (%rax), %xmm0, %xmm3
-# CHECK-NEXT:  -      -      -     0.50    -     0.50    -      -     vpcomq	$0, %xmm0, %xmm1, %xmm3
-# CHECK-NEXT:  -      -      -     0.50    -     0.50   0.50   0.50   vpcomq	$0, (%rax), %xmm0, %xmm3
-# CHECK-NEXT:  -      -      -     0.50    -     0.50    -      -     vpcomub	$0, %xmm0, %xmm1, %xmm3
-# CHECK-NEXT:  -      -      -     0.50    -     0.50   0.50   0.50   vpcomub	$0, (%rax), %xmm0, %xmm3
-# CHECK-NEXT:  -      -      -     0.50    -     0.50    -      -     vpcomud	$0, %xmm0, %xmm1, %xmm3
-# CHECK-NEXT:  -      -      -     0.50    -     0.50   0.50   0.50   vpcomud	$0, (%rax), %xmm0, %xmm3
-# CHECK-NEXT:  -      -      -     0.50    -     0.50    -      -     vpcomuq	$0, %xmm0, %xmm1, %xmm3
-# CHECK-NEXT:  -      -      -     0.50    -     0.50   0.50   0.50   vpcomuq	$0, (%rax), %xmm0, %xmm3
-# CHECK-NEXT:  -      -      -     0.50    -     0.50    -      -     vpcomuw	$0, %xmm0, %xmm1, %xmm3
-# CHECK-NEXT:  -      -      -     0.50    -     0.50   0.50   0.50   vpcomuw	$0, (%rax), %xmm0, %xmm3
-# CHECK-NEXT:  -      -      -     0.50    -     0.50    -      -     vpcomw	$0, %xmm0, %xmm1, %xmm3
-# CHECK-NEXT:  -      -      -     0.50    -     0.50   0.50   0.50   vpcomw	$0, (%rax), %xmm0, %xmm3
+# CHECK-NEXT:  -      -      -     0.50    -     0.50    -      -     vpcomltb	%xmm0, %xmm1, %xmm3
+# CHECK-NEXT:  -      -      -     0.50    -     0.50   0.50   0.50   vpcomltb	(%rax), %xmm0, %xmm3
+# CHECK-NEXT:  -      -      -     0.50    -     0.50    -      -     vpcomltd	%xmm0, %xmm1, %xmm3
+# CHECK-NEXT:  -      -      -     0.50    -     0.50   0.50   0.50   vpcomltd	(%rax), %xmm0, %xmm3
+# CHECK-NEXT:  -      -      -     0.50    -     0.50    -      -     vpcomltq	%xmm0, %xmm1, %xmm3
+# CHECK-NEXT:  -      -      -     0.50    -     0.50   0.50   0.50   vpcomltq	(%rax), %xmm0, %xmm3
+# CHECK-NEXT:  -      -      -     0.50    -     0.50    -      -     vpcomltub	%xmm0, %xmm1, %xmm3
+# CHECK-NEXT:  -      -      -     0.50    -     0.50   0.50   0.50   vpcomltub	(%rax), %xmm0, %xmm3
+# CHECK-NEXT:  -      -      -     0.50    -     0.50    -      -     vpcomltud	%xmm0, %xmm1, %xmm3
+# CHECK-NEXT:  -      -      -     0.50    -     0.50   0.50   0.50   vpcomltud	(%rax), %xmm0, %xmm3
+# CHECK-NEXT:  -      -      -     0.50    -     0.50    -      -     vpcomltuq	%xmm0, %xmm1, %xmm3
+# CHECK-NEXT:  -      -      -     0.50    -     0.50   0.50   0.50   vpcomltuq	(%rax), %xmm0, %xmm3
+# CHECK-NEXT:  -      -      -     0.50    -     0.50    -      -     vpcomltuw	%xmm0, %xmm1, %xmm3
+# CHECK-NEXT:  -      -      -     0.50    -     0.50   0.50   0.50   vpcomltuw	(%rax), %xmm0, %xmm3
+# CHECK-NEXT:  -      -      -     0.50    -     0.50    -      -     vpcomltw	%xmm0, %xmm1, %xmm3
+# CHECK-NEXT:  -      -      -     0.50    -     0.50   0.50   0.50   vpcomltw	(%rax), %xmm0, %xmm3
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vpermil2pd	$0, %xmm0, %xmm1, %xmm2, %xmm3
 # CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   vpermil2pd	$0, (%rax), %xmm0, %xmm1, %xmm3
 # CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   vpermil2pd	$0, %xmm0, (%rax), %xmm1, %xmm3

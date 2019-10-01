@@ -1,9 +1,8 @@
 //===- DWARFAbbreviationDeclaration.cpp -----------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -39,9 +38,9 @@ DWARFAbbreviationDeclaration::DWARFAbbreviationDeclaration() {
 
 bool
 DWARFAbbreviationDeclaration::extract(DataExtractor Data,
-                                      uint32_t* OffsetPtr) {
+                                      uint64_t* OffsetPtr) {
   clear();
-  const uint32_t Offset = *OffsetPtr;
+  const uint64_t Offset = *OffsetPtr;
   Code = Data.getULEB128(OffsetPtr);
   if (Code == 0) {
     return false;
@@ -149,7 +148,7 @@ DWARFAbbreviationDeclaration::findAttributeIndex(dwarf::Attribute Attr) const {
 }
 
 Optional<DWARFFormValue> DWARFAbbreviationDeclaration::getAttributeValue(
-    const uint32_t DIEOffset, const dwarf::Attribute Attr,
+    const uint64_t DIEOffset, const dwarf::Attribute Attr,
     const DWARFUnit &U) const {
   Optional<uint32_t> MatchAttrIndex = findAttributeIndex(Attr);
   if (!MatchAttrIndex)
@@ -159,7 +158,7 @@ Optional<DWARFFormValue> DWARFAbbreviationDeclaration::getAttributeValue(
 
   // Add the byte size of ULEB that for the abbrev Code so we can start
   // skipping the attribute data.
-  uint32_t Offset = DIEOffset + CodeByteSize;
+  uint64_t Offset = DIEOffset + CodeByteSize;
   uint32_t AttrIndex = 0;
   for (const auto &Spec : AttributeSpecs) {
     if (*MatchAttrIndex == AttrIndex) {

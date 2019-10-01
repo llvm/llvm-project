@@ -1,9 +1,8 @@
 //===- AsmWriterEmitter.cpp - Generate an assembly writer -----------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -586,11 +585,20 @@ void AsmWriterEmitter::EmitGetRegisterName(raw_ostream &O) {
       O << "  case ";
       if (!Namespace.empty())
         O << Namespace << "::";
-      O << AltName << ":\n"
-        << "    assert(*(AsmStrs" << AltName << "+RegAsmOffset" << AltName
-        << "[RegNo-1]) &&\n"
-        << "           \"Invalid alt name index for register!\");\n"
-        << "    return AsmStrs" << AltName << "+RegAsmOffset" << AltName
+      O << AltName << ":\n";
+      if (R->isValueUnset("FallbackRegAltNameIndex"))
+        O << "    assert(*(AsmStrs" << AltName << "+RegAsmOffset" << AltName
+          << "[RegNo-1]) &&\n"
+          << "           \"Invalid alt name index for register!\");\n";
+      else {
+        O << "    if (!*(AsmStrs" << AltName << "+RegAsmOffset" << AltName
+          << "[RegNo-1]))\n"
+          << "      return getRegisterName(RegNo, ";
+        if (!Namespace.empty())
+          O << Namespace << "::";
+        O << R->getValueAsDef("FallbackRegAltNameIndex")->getName() << ");\n";
+      }
+      O << "    return AsmStrs" << AltName << "+RegAsmOffset" << AltName
         << "[RegNo-1];\n";
     }
     O << "  }\n";

@@ -1,9 +1,8 @@
 //===- utils/TableGen/X86EVEX2VEXTablesEmitter.cpp - X86 backend-*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -69,23 +68,6 @@ void X86EVEX2VEXTablesEmitter::printTable(const std::vector<Entry> &Table,
 }
 
 // Return true if the 2 BitsInits are equal
-static inline bool equalBitsInits(const BitsInit *B1, const BitsInit *B2) {
-  if (B1->getNumBits() != B2->getNumBits())
-    PrintFatalError("Comparing two BitsInits with different sizes!");
-
-  for (unsigned i = 0, e = B1->getNumBits(); i != e; ++i) {
-    if (BitInit *Bit1 = dyn_cast<BitInit>(B1->getBit(i))) {
-      if (BitInit *Bit2 = dyn_cast<BitInit>(B2->getBit(i))) {
-        if (Bit1->getValue() != Bit2->getValue())
-          return false;
-      } else
-        PrintFatalError("Invalid BitsInit bit");
-    } else
-      PrintFatalError("Invalid BitsInit bit");
-  }
-  return true;
-}
-
 // Calculates the integer value residing BitsInit object
 static inline uint64_t getValueFromBitsInit(const BitsInit *B) {
   uint64_t Value = 0;
@@ -109,26 +91,25 @@ public:
   bool operator()(const CodeGenInstruction *VEXInst) {
     Record *RecE = EVEXInst->TheDef;
     Record *RecV = VEXInst->TheDef;
-    uint64_t EVEX_W =
-        getValueFromBitsInit(RecE->getValueAsBitsInit("VEX_WPrefix"));
-    uint64_t VEX_W =
-        getValueFromBitsInit(RecV->getValueAsBitsInit("VEX_WPrefix"));
+    bool EVEX_W = RecE->getValueAsBit("HasVEX_W");
+    bool VEX_W  = RecV->getValueAsBit("HasVEX_W");
+    bool VEX_WIG  = RecV->getValueAsBit("IgnoresVEX_W");
+    bool EVEX_WIG = RecE->getValueAsBit("IgnoresVEX_W");
+    bool EVEX_W1_VEX_W0 = RecE->getValueAsBit("EVEX_W1_VEX_W0");
 
     if (RecV->getValueAsDef("OpEnc")->getName().str() != "EncVEX" ||
         // VEX/EVEX fields
         RecV->getValueAsDef("OpPrefix") != RecE->getValueAsDef("OpPrefix") ||
         RecV->getValueAsDef("OpMap") != RecE->getValueAsDef("OpMap") ||
         RecV->getValueAsBit("hasVEX_4V") != RecE->getValueAsBit("hasVEX_4V") ||
-        !equalBitsInits(RecV->getValueAsBitsInit("EVEX_LL"),
-                        RecE->getValueAsBitsInit("EVEX_LL")) ||
+        RecV->getValueAsBit("hasEVEX_L2") != RecE->getValueAsBit("hasEVEX_L2") ||
+        RecV->getValueAsBit("hasVEX_L") != RecE->getValueAsBit("hasVEX_L") ||
         // Match is allowed if either is VEX_WIG, or they match, or EVEX
         // is VEX_W1X and VEX is VEX_W0.
-        (!(EVEX_W == 2 || VEX_W == 2 || EVEX_W == VEX_W ||
-           (EVEX_W == 3 && VEX_W == 0))) ||
+        (!(VEX_WIG || (!EVEX_WIG && EVEX_W == VEX_W) ||
+           (EVEX_W1_VEX_W0 && EVEX_W && !VEX_W))) ||
         // Instruction's format
-        RecV->getValueAsDef("Form") != RecE->getValueAsDef("Form") ||
-        RecV->getValueAsBit("isAsmParserOnly") !=
-            RecE->getValueAsBit("isAsmParserOnly"))
+        RecV->getValueAsDef("Form") != RecE->getValueAsDef("Form"))
       return false;
 
     // This is needed for instructions with intrinsic version (_Int).
@@ -150,8 +131,9 @@ public:
       } else if (isMemoryOperand(OpRec1) && isMemoryOperand(OpRec2)) {
         return false;
       } else if (isImmediateOperand(OpRec1) && isImmediateOperand(OpRec2)) {
-        if (OpRec1->getValueAsDef("Type") != OpRec2->getValueAsDef("Type"))
+        if (OpRec1->getValueAsDef("Type") != OpRec2->getValueAsDef("Type")) {
           return false;
+        }
       } else
         return false;
     }
@@ -207,8 +189,7 @@ void X86EVEX2VEXTablesEmitter::run(raw_ostream &OS) {
     else if (Inst->TheDef->getValueAsDef("OpEnc")->getName() == "EncEVEX" &&
              !Inst->TheDef->getValueAsBit("hasEVEX_K") &&
              !Inst->TheDef->getValueAsBit("hasEVEX_B") &&
-             getValueFromBitsInit(Inst->TheDef->
-                                        getValueAsBitsInit("EVEX_LL")) != 2 &&
+             !Inst->TheDef->getValueAsBit("hasEVEX_L2") &&
              !Inst->TheDef->getValueAsBit("notEVEX2VEXConvertible"))
       EVEXInsts.push_back(Inst);
   }
@@ -236,17 +217,10 @@ void X86EVEX2VEXTablesEmitter::run(raw_ostream &OS) {
       continue;
 
     // In case a match is found add new entry to the appropriate table
-    switch (getValueFromBitsInit(
-        EVEXInst->TheDef->getValueAsBitsInit("EVEX_LL"))) {
-    case 0:
-      EVEX2VEX128.push_back(std::make_pair(EVEXInst, VEXInst)); // {0,0}
-      break;
-    case 1:
+    if (EVEXInst->TheDef->getValueAsBit("hasVEX_L"))
       EVEX2VEX256.push_back(std::make_pair(EVEXInst, VEXInst)); // {0,1}
-      break;
-    default:
-      llvm_unreachable("Instruction's size not fit for the mapping!");
-    }
+    else
+      EVEX2VEX128.push_back(std::make_pair(EVEXInst, VEXInst)); // {0,0}
   }
 
   // Print both tables

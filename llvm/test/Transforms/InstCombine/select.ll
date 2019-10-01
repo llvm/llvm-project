@@ -694,8 +694,8 @@ define i32 @test41(i1 %cond, i32 %x, i32 %y) {
 define i32 @test42(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test42(
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[B:%.*]] = sext i1 [[COND]] to i32
-; CHECK-NEXT:    [[C:%.*]] = add i32 [[B]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i1 [[COND]] to i32
+; CHECK-NEXT:    [[C:%.*]] = sub i32 [[Y:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
   %b = add i32 %y, -1
@@ -707,8 +707,8 @@ define i32 @test42(i32 %x, i32 %y) {
 define <2 x i32> @test42vec(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @test42vec(
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq <2 x i32> [[X:%.*]], zeroinitializer
-; CHECK-NEXT:    [[B:%.*]] = sext <2 x i1> [[COND]] to <2 x i32>
-; CHECK-NEXT:    [[C:%.*]] = add <2 x i32> [[B]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <2 x i1> [[COND]] to <2 x i32>
+; CHECK-NEXT:    [[C:%.*]] = sub <2 x i32> [[Y:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret <2 x i32> [[C]]
 ;
   %b = add <2 x i32> %y, <i32 -1, i32 -1>
@@ -1141,7 +1141,7 @@ define i32 @test82(i1 %flag) {
 ; CHECK-NEXT:    [[Y:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[X1:%.*]] = bitcast float* [[X]] to i32*
 ; CHECK-NEXT:    [[Y1:%.*]] = bitcast i32* [[Y]] to float*
-; CHECK-NEXT:    call void @scribble_on_i32(i32* [[X1]])
+; CHECK-NEXT:    call void @scribble_on_i32(i32* nonnull [[X1]])
 ; CHECK-NEXT:    call void @scribble_on_i32(i32* nonnull [[Y]])
 ; CHECK-NEXT:    [[TMP:%.*]] = load float, float* [[X]], align 4
 ; CHECK-NEXT:    store float [[TMP]], float* [[Y1]], align 4
@@ -1172,8 +1172,8 @@ define i8* @test83(i1 %flag) {
 ; CHECK-NEXT:    [[Y:%.*]] = alloca i8*, align 8
 ; CHECK-NEXT:    [[TMPCAST:%.*]] = bitcast i8** [[Y]] to i64*
 ; CHECK-NEXT:    [[X1:%.*]] = bitcast i8** [[X]] to i64*
-; CHECK-NEXT:    call void @scribble_on_i64(i64* [[X1]])
-; CHECK-NEXT:    call void @scribble_on_i64(i64* [[TMPCAST]])
+; CHECK-NEXT:    call void @scribble_on_i64(i64* nonnull [[X1]])
+; CHECK-NEXT:    call void @scribble_on_i64(i64* nonnull [[TMPCAST]])
 ; CHECK-NEXT:    [[TMP:%.*]] = load i64, i64* [[X1]], align 8
 ; CHECK-NEXT:    store i64 [[TMP]], i64* [[TMPCAST]], align 8
 ; CHECK-NEXT:    [[V:%.*]] = inttoptr i64 [[TMP]] to i8*
@@ -1200,8 +1200,8 @@ define i64 @test84(i1 %flag) {
 ; CHECK-NEXT:    [[Y:%.*]] = alloca i8*, align 8
 ; CHECK-NEXT:    [[TMPCAST:%.*]] = bitcast i8** [[Y]] to i64*
 ; CHECK-NEXT:    [[X1:%.*]] = bitcast i8** [[X]] to i64*
-; CHECK-NEXT:    call void @scribble_on_i64(i64* [[X1]])
-; CHECK-NEXT:    call void @scribble_on_i64(i64* [[TMPCAST]])
+; CHECK-NEXT:    call void @scribble_on_i64(i64* nonnull [[X1]])
+; CHECK-NEXT:    call void @scribble_on_i64(i64* nonnull [[TMPCAST]])
 ; CHECK-NEXT:    [[TMP:%.*]] = load i8*, i8** [[X]], align 8
 ; CHECK-NEXT:    store i8* [[TMP]], i8** [[Y]], align 8
 ; CHECK-NEXT:    [[V:%.*]] = ptrtoint i8* [[TMP]] to i64
@@ -1230,7 +1230,7 @@ define i8* @test85(i1 %flag) {
 ; CHECK-NEXT:    [[X1_SUB:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[X1]], i64 0, i64 0
 ; CHECK-NEXT:    [[X2:%.*]] = bitcast [2 x i8*]* [[X1]] to i128*
 ; CHECK-NEXT:    [[Y1:%.*]] = bitcast i128* [[Y]] to i8**
-; CHECK-NEXT:    call void @scribble_on_i128(i128* [[X2]])
+; CHECK-NEXT:    call void @scribble_on_i128(i128* nonnull [[X2]])
 ; CHECK-NEXT:    call void @scribble_on_i128(i128* nonnull [[Y]])
 ; CHECK-NEXT:    [[TMP:%.*]] = load i128, i128* [[X2]], align 8
 ; CHECK-NEXT:    store i128 [[TMP]], i128* [[Y]], align 8
@@ -1263,7 +1263,7 @@ define i128 @test86(i1 %flag) {
 ; CHECK-NEXT:    [[X1_SUB:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[X1]], i64 0, i64 0
 ; CHECK-NEXT:    [[X2:%.*]] = bitcast [2 x i8*]* [[X1]] to i128*
 ; CHECK-NEXT:    [[Y1:%.*]] = bitcast i128* [[Y]] to i8**
-; CHECK-NEXT:    call void @scribble_on_i128(i128* [[X2]])
+; CHECK-NEXT:    call void @scribble_on_i128(i128* nonnull [[X2]])
 ; CHECK-NEXT:    call void @scribble_on_i128(i128* nonnull [[Y]])
 ; CHECK-NEXT:    [[TMP:%.*]] = load i8*, i8** [[X1_SUB]], align 8
 ; CHECK-NEXT:    store i8* [[TMP]], i8** [[Y1]], align 8

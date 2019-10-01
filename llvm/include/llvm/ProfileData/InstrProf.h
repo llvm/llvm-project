@@ -1,9 +1,8 @@
 //===- InstrProf.h - Instrumented profiling format support ------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -235,7 +234,7 @@ bool isIRPGOFlagSet(const Module *M);
 bool canRenameComdatFunc(const Function &F, bool CheckAddressTaken = false);
 
 enum InstrProfValueKind : uint32_t {
-#define VALUE_PROF_KIND(Enumerator, Value) Enumerator = Value,
+#define VALUE_PROF_KIND(Enumerator, Value, Descr) Enumerator = Value,
 #include "llvm/ProfileData/InstrProfData.inc"
 };
 
@@ -591,6 +590,70 @@ StringRef InstrProfSymtab::getOrigFuncName(uint64_t FuncMD5Hash) {
   return PGOName.drop_front(S + 1);
 }
 
+// To store the sums of profile count values, or the percentage of
+// the sums of the total count values.
+struct CountSumOrPercent {
+  uint64_t NumEntries;
+  double CountSum;
+  double ValueCounts[IPVK_Last - IPVK_First + 1];
+  CountSumOrPercent() : NumEntries(0), CountSum(0.0f), ValueCounts() {}
+  void reset() {
+    NumEntries = 0;
+    CountSum = 0.0f;
+    for (unsigned I = 0; I < IPVK_Last - IPVK_First + 1; I++)
+      ValueCounts[I] = 0.0f;
+  }
+};
+
+// Function level or program level overlap information.
+struct OverlapStats {
+  enum OverlapStatsLevel { ProgramLevel, FunctionLevel };
+  // Sum of the total count values for the base profile.
+  CountSumOrPercent Base;
+  // Sum of the total count values for the test profile.
+  CountSumOrPercent Test;
+  // Overlap lap score. Should be in range of [0.0f to 1.0f].
+  CountSumOrPercent Overlap;
+  CountSumOrPercent Mismatch;
+  CountSumOrPercent Unique;
+  OverlapStatsLevel Level;
+  const std::string *BaseFilename;
+  const std::string *TestFilename;
+  StringRef FuncName;
+  uint64_t FuncHash;
+  bool Valid;
+
+  OverlapStats(OverlapStatsLevel L = ProgramLevel)
+      : Level(L), BaseFilename(nullptr), TestFilename(nullptr), FuncHash(0),
+        Valid(false) {}
+
+  void dump(raw_fd_ostream &OS) const;
+
+  void setFuncInfo(StringRef Name, uint64_t Hash) {
+    FuncName = Name;
+    FuncHash = Hash;
+  }
+
+  Error accumuateCounts(const std::string &BaseFilename,
+                        const std::string &TestFilename, bool IsCS);
+  void addOneMismatch(const CountSumOrPercent &MismatchFunc);
+  void addOneUnique(const CountSumOrPercent &UniqueFunc);
+
+  static inline double score(uint64_t Val1, uint64_t Val2, double Sum1,
+                             double Sum2) {
+    if (Sum1 < 1.0f || Sum2 < 1.0f)
+      return 0.0f;
+    return std::min(Val1 / Sum1, Val2 / Sum2);
+  }
+};
+
+// This is used to filter the functions whose overlap information
+// to be output.
+struct OverlapFuncFilters {
+  uint64_t ValueCutoff;
+  const std::string NameFilter;
+};
+
 struct InstrProfValueSiteRecord {
   /// Value profiling data pairs at a given value site.
   std::list<InstrProfValueData> ValueData;
@@ -616,6 +679,10 @@ struct InstrProfValueSiteRecord {
              function_ref<void(instrprof_error)> Warn);
   /// Scale up value profile data counts.
   void scale(uint64_t Weight, function_ref<void(instrprof_error)> Warn);
+
+  /// Compute the overlap b/w this record and Input record.
+  void overlap(InstrProfValueSiteRecord &Input, uint32_t ValueKind,
+               OverlapStats &Overlap, OverlapStats &FuncLevelOverlap);
 };
 
 /// Profiling information for a single function.
@@ -704,6 +771,18 @@ struct InstrProfRecord {
   /// Clear value data entries
   void clearValueData() { ValueData = nullptr; }
 
+  /// Compute the sums of all counts and store in Sum.
+  void accumuateCounts(CountSumOrPercent &Sum) const;
+
+  /// Compute the overlap b/w this IntrprofRecord and Other.
+  void overlap(InstrProfRecord &Other, OverlapStats &Overlap,
+               OverlapStats &FuncLevelOverlap, uint64_t ValueCutoff);
+
+  /// Compute the overlap of value profile counts.
+  void overlapValueProfData(uint32_t ValueKind, InstrProfRecord &Src,
+                            OverlapStats &Overlap,
+                            OverlapStats &FuncLevelOverlap);
+
 private:
   struct ValueProfData {
     std::vector<InstrProfValueSiteRecord> IndirectCallSites;
@@ -768,10 +847,20 @@ struct NamedInstrProfRecord : InstrProfRecord {
   StringRef Name;
   uint64_t Hash;
 
+  // We reserve this bit as the flag for context sensitive profile record.
+  static const int CS_FLAG_IN_FUNC_HASH = 60;
+
   NamedInstrProfRecord() = default;
   NamedInstrProfRecord(StringRef Name, uint64_t Hash,
                        std::vector<uint64_t> Counts)
       : InstrProfRecord(std::move(Counts)), Name(Name), Hash(Hash) {}
+
+  static bool hasCSFlagInHash(uint64_t FuncHash) {
+    return ((FuncHash >> CS_FLAG_IN_FUNC_HASH) & 1);
+  }
+  static void setCSFlagInHash(uint64_t &FuncHash) {
+    FuncHash |= ((uint64_t)1 << CS_FLAG_IN_FUNC_HASH);
+  }
 };
 
 uint32_t InstrProfRecord::getNumValueKinds() const {
@@ -1005,6 +1094,8 @@ namespace RawInstrProf {
 // from control data struct is changed from raw pointer to Name's MD5 value.
 // Version 4: ValueDataBegin and ValueDataSizes fields are removed from the
 // raw header.
+// Version 5: Bit 60 of FuncHash is reserved for the flag for the context
+// sensitive records.
 const uint64_t Version = INSTR_PROF_RAW_VERSION;
 
 template <class IntPtrT> inline uint64_t getMagic();
@@ -1041,6 +1132,12 @@ struct Header {
 void getMemOPSizeRangeFromOption(StringRef Str, int64_t &RangeStart,
                                  int64_t &RangeLast);
 
-} // end namespace llvm
+// Create a COMDAT variable INSTR_PROF_RAW_VERSION_VAR to make the runtime
+// aware this is an ir_level profile so it can set the version flag.
+void createIRLevelProfileFlagVar(Module &M, bool IsCS);
 
+// Create the variable for the profile file name.
+void createProfileFileNameVar(Module &M, StringRef InstrProfileOutput);
+
+} // end namespace llvm
 #endif // LLVM_PROFILEDATA_INSTRPROF_H

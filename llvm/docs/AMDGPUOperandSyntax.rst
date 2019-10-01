@@ -523,22 +523,22 @@ Floating-point *inline constants* are converted to
 :ref:`expected operand type<amdgpu_syn_instruction_type>`
 as described :ref:`here<amdgpu_synid_fp_const_conv>`.
 
-    ================================== ===================================================== ==================
-    Value                              Note                                                  Availability
-    ================================== ===================================================== ==================
-    0.0                                The same as integer constant 0.                       All GPUs
-    0.5                                Floating-point constant 0.5                           All GPUs
-    1.0                                Floating-point constant 1.0                           All GPUs
-    2.0                                Floating-point constant 2.0                           All GPUs
-    4.0                                Floating-point constant 4.0                           All GPUs
-    -0.5                               Floating-point constant -0.5                          All GPUs
-    -1.0                               Floating-point constant -1.0                          All GPUs
-    -2.0                               Floating-point constant -2.0                          All GPUs
-    -4.0                               Floating-point constant -4.0                          All GPUs
-    0.1592                             1.0/(2.0*pi). Use only for 16-bit operands.           GFX8, GFX9
-    0.15915494                         1.0/(2.0*pi). Use only for 16- and 32-bit operands.   GFX8, GFX9
-    0.159154943091895317852646485335   1.0/(2.0*pi).                                         GFX8, GFX9
-    ================================== ===================================================== ==================
+    ===================== ===================================================== ==================
+    Value                 Note                                                  Availability
+    ===================== ===================================================== ==================
+    0.0                   The same as integer constant 0.                       All GPUs
+    0.5                   Floating-point constant 0.5                           All GPUs
+    1.0                   Floating-point constant 1.0                           All GPUs
+    2.0                   Floating-point constant 2.0                           All GPUs
+    4.0                   Floating-point constant 4.0                           All GPUs
+    -0.5                  Floating-point constant -0.5                          All GPUs
+    -1.0                  Floating-point constant -1.0                          All GPUs
+    -2.0                  Floating-point constant -2.0                          All GPUs
+    -4.0                  Floating-point constant -4.0                          All GPUs
+    0.1592                1.0/(2.0*pi). Use only for 16-bit operands.           GFX8, GFX9
+    0.15915494            1.0/(2.0*pi). Use only for 16- and 32-bit operands.   GFX8, GFX9
+    0.15915494309189532   1.0/(2.0*pi).                                         GFX8, GFX9
+    ===================== ===================================================== ==================
 
 .. WARNING:: GFX7 does not support inline constants for *f16* operands.
 

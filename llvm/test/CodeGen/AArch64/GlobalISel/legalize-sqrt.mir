@@ -1,0 +1,86 @@
+# RUN: llc -mtriple=arm64-unknown-unknown -global-isel -O0 -mattr=-fullfp16 -run-pass=legalizer %s -o - | FileCheck %s
+
+--- |
+  define <8 x half> @test_v8f16.sqrt(<8 x half> %a) {
+    ret <8 x half> %a
+  }
+
+  define <4 x half> @test_v4f16.sqrt(<4 x half> %a) {
+    ret <4 x half> %a
+  }
+
+...
+---
+name:            test_v8f16.sqrt
+alignment:       2
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: $q0
+    ; CHECK-LABEL: name:            test_v8f16.sqrt
+    %0:_(<8 x s16>) = COPY $q0
+    ; CHECK: %{{[0-9]+}}:_(s16), %{{[0-9]+}}:_(s16), %{{[0-9]+}}:_(s16), %{{[0-9]+}}:_(s16), %{{[0-9]+}}:_(s16), %{{[0-9]+}}:_(s16), %{{[0-9]+}}:_(s16), %{{[0-9]+}}:_(s16) = G_UNMERGE_VALUES %{{[0-9]+}}(<8 x s16>)
+    ; CHECK: %{{[0-9]+}}:_(s32) = G_FPEXT %{{[0-9]+}}(s16)
+    ; CHECK: %{{[0-9]+}}:_(s32) = G_FSQRT %{{[0-9]+}}
+    ; CHECK: %{{[0-9]+}}:_(s16) = G_FPTRUNC %{{[0-9]+}}(s32)
+    ; CHECK: %{{[0-9]+}}:_(s32) = G_FPEXT %{{[0-9]+}}(s16)
+    ; CHECK: %{{[0-9]+}}:_(s32) = G_FSQRT %{{[0-9]+}}
+    ; CHECK: %{{[0-9]+}}:_(s16) = G_FPTRUNC %{{[0-9]+}}(s32)
+    ; CHECK: %{{[0-9]+}}:_(s32) = G_FPEXT %{{[0-9]+}}(s16)
+    ; CHECK: %{{[0-9]+}}:_(s32) = G_FSQRT %{{[0-9]+}}
+    ; CHECK: %{{[0-9]+}}:_(s16) = G_FPTRUNC %{{[0-9]+}}(s32)
+    ; CHECK: %{{[0-9]+}}:_(s32) = G_FPEXT %{{[0-9]+}}(s16)
+    ; CHECK: %{{[0-9]+}}:_(s32) = G_FSQRT %{{[0-9]+}}
+    ; CHECK: %{{[0-9]+}}:_(s16) = G_FPTRUNC %{{[0-9]+}}(s32)
+    ; CHECK: %{{[0-9]+}}:_(s32) = G_FPEXT %{{[0-9]+}}(s16)
+    ; CHECK: %{{[0-9]+}}:_(s32) = G_FSQRT %{{[0-9]+}}
+    ; CHECK: %{{[0-9]+}}:_(s16) = G_FPTRUNC %{{[0-9]+}}(s32)
+    ; CHECK: %{{[0-9]+}}:_(s32) = G_FPEXT %{{[0-9]+}}(s16)
+    ; CHECK: %{{[0-9]+}}:_(s32) = G_FSQRT %{{[0-9]+}}
+    ; CHECK: %{{[0-9]+}}:_(s16) = G_FPTRUNC %{{[0-9]+}}(s32)
+    ; CHECK: %{{[0-9]+}}:_(s32) = G_FPEXT %{{[0-9]+}}(s16)
+    ; CHECK: %{{[0-9]+}}:_(s32) = G_FSQRT %{{[0-9]+}}
+    ; CHECK: %{{[0-9]+}}:_(s16) = G_FPTRUNC %{{[0-9]+}}(s32)
+    ; CHECK: %{{[0-9]+}}:_(s32) = G_FPEXT %{{[0-9]+}}(s16)
+    ; CHECK: %{{[0-9]+}}:_(s32) = G_FSQRT %{{[0-9]+}}
+    ; CHECK: %{{[0-9]+}}:_(s16) = G_FPTRUNC %{{[0-9]+}}(s32)
+    ; CHECK: %{{[0-9]+}}:_(<8 x s16>) = G_BUILD_VECTOR %{{[0-9]+}}(s16), %{{[0-9]+}}(s16), %{{[0-9]+}}(s16), %{{[0-9]+}}(s16), %{{[0-9]+}}(s16), %{{[0-9]+}}(s16), %{{[0-9]+}}(s16), %{{[0-9]+}}(s16)
+    %1:_(<8 x s16>) = G_FSQRT %0
+    $q0 = COPY %1(<8 x s16>)
+    RET_ReallyLR implicit $q0
+
+...
+---
+name:            test_v4f16.sqrt
+alignment:       2
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: $d0
+    ; CHECK-LABEL: name:            test_v4f16.sqrt
+    %0:_(<4 x s16>) = COPY $d0
+    ; CHECK: %{{[0-9]+}}:_(s16), %{{[0-9]+}}:_(s16), %{{[0-9]+}}:_(s16)  = G_UNMERGE_VALUES %{{[0-9]+}}(<4 x s16>)
+    ; CHECK: %{{[0-9]+}}:_(s32) = G_FPEXT %{{[0-9]+}}(s16)
+    ; CHECK: %{{[0-9]+}}:_(s32) = G_FSQRT %{{[0-9]+}}
+    ; CHECK: %{{[0-9]+}}:_(s16) = G_FPTRUNC %{{[0-9]+}}(s32)
+    ; CHECK: %{{[0-9]+}}:_(s32) = G_FPEXT %{{[0-9]+}}(s16)
+    ; CHECK: %{{[0-9]+}}:_(s32) = G_FSQRT %{{[0-9]+}}
+    ; CHECK: %{{[0-9]+}}:_(s16) = G_FPTRUNC %{{[0-9]+}}(s32)
+    ; CHECK: %{{[0-9]+}}:_(s32) = G_FPEXT %{{[0-9]+}}(s16)
+    ; CHECK: %{{[0-9]+}}:_(s32) = G_FSQRT %{{[0-9]+}}
+    ; CHECK: %{{[0-9]+}}:_(s16) = G_FPTRUNC %{{[0-9]+}}(s32)
+    ; CHECK: %{{[0-9]+}}:_(s32) = G_FPEXT %{{[0-9]+}}(s16)
+    ; CHECK: %{{[0-9]+}}:_(s32) = G_FSQRT %{{[0-9]+}}
+    ; CHECK: %{{[0-9]+}}:_(s16) = G_FPTRUNC %{{[0-9]+}}(s32)
+    ; CHECK: %{{[0-9]+}}:_(<4 x s16>) = G_BUILD_VECTOR %{{[0-9]+}}(s16), %{{[0-9]+}}(s16), %{{[0-9]+}}(s16), %{{[0-9]+}}(s16)
+    %1:_(<4 x s16>) = G_FSQRT %0
+    $d0 = COPY %1(<4 x s16>)
+    RET_ReallyLR implicit $d0
+
+...

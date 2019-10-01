@@ -1,9 +1,8 @@
 //===- HexagonTargetTransformInfo.cpp - Hexagon specific TTI pass ---------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 /// \file
 /// This file implements a TargetTransformInfo analysis pass specific to the
@@ -161,14 +160,15 @@ unsigned HexagonTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
     unsigned VecWidth = VecTy->getBitWidth();
     if (useHVX() && isTypeForHVX(VecTy)) {
       unsigned RegWidth = getRegisterBitWidth(true);
-      Alignment = std::min(Alignment, RegWidth/8);
+      assert(RegWidth && "Non-zero vector register width expected");
       // Cost of HVX loads.
       if (VecWidth % RegWidth == 0)
         return VecWidth / RegWidth;
       // Cost of constructing HVX vector from scalar loads.
+      Alignment = std::min(Alignment, RegWidth / 8);
       unsigned AlignWidth = 8 * std::max(1u, Alignment);
       unsigned NumLoads = alignTo(VecWidth, AlignWidth) / AlignWidth;
-      return 3*NumLoads;
+      return 3 * NumLoads;
     }
 
     // Non-HVX vectors.

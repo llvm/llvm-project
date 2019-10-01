@@ -61,9 +61,7 @@ bb4:
 ; CHECK-PIC-NEXT: cmpeq
 ; CHECK-PIC-NEXT: beq
 ; CHECK-PIC: %bb6
-; CHECK-PIC-NEXT: movs
-; CHECK-PIC-NEXT: add
-; CHECK-PIC-NEXT: pop
+; CHECK-PIC: mov
   ret i32 0
 
 bb6:

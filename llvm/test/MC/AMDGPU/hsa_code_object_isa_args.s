@@ -1,9 +1,9 @@
 // RUN: llvm-mc -triple amdgcn--amdhsa -mcpu=kaveri -mattr=-code-object-v3 -show-encoding %s | FileCheck %s --check-prefix=ASM --check-prefix=ASM_700
 // RUN: llvm-mc -triple amdgcn--amdhsa -mcpu=gfx803 -mattr=-code-object-v3 -show-encoding %s | FileCheck %s --check-prefix=ASM --check-prefix=ASM_803
 // RUN: llvm-mc -triple amdgcn--amdhsa -mcpu=stoney -mattr=-code-object-v3 -show-encoding %s | FileCheck %s --check-prefix=ASM --check-prefix=ASM_810
-// RUN: llvm-mc -filetype=obj -triple amdgcn--amdhsa -mcpu=kaveri -mattr=-code-object-v3 -show-encoding %s | llvm-readobj -s -sd | FileCheck %s --check-prefix=ELF --check-prefix=ELF_700
-// RUN: llvm-mc -filetype=obj -triple amdgcn--amdhsa -mcpu=gfx803 -mattr=-code-object-v3 -show-encoding %s | llvm-readobj -s -sd | FileCheck %s --check-prefix=ELF --check-prefix=ELF_803
-// RUN: llvm-mc -filetype=obj -triple amdgcn--amdhsa -mcpu=stoney -mattr=-code-object-v3 -show-encoding %s | llvm-readobj -s -sd | FileCheck %s --check-prefix=ELF --check-prefix=ELF_810
+// RUN: llvm-mc -filetype=obj -triple amdgcn--amdhsa -mcpu=kaveri -mattr=-code-object-v3 -show-encoding %s | llvm-readobj -S --sd | FileCheck %s --check-prefix=ELF --check-prefix=ELF_700
+// RUN: llvm-mc -filetype=obj -triple amdgcn--amdhsa -mcpu=gfx803 -mattr=-code-object-v3 -show-encoding %s | llvm-readobj -S --sd | FileCheck %s --check-prefix=ELF --check-prefix=ELF_803
+// RUN: llvm-mc -filetype=obj -triple amdgcn--amdhsa -mcpu=stoney -mattr=-code-object-v3 -show-encoding %s | llvm-readobj -S --sd | FileCheck %s --check-prefix=ELF --check-prefix=ELF_810
 
 // ELF: SHT_NOTE
 // ELF: 0000: 04000000 08000000 01000000 414D4400

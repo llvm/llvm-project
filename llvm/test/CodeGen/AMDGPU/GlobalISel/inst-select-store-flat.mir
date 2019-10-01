@@ -1,8 +1,6 @@
 # RUN: llc -march=amdgcn -mcpu=hawaii -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=GCN
 # RUN: llc -march=amdgcn -mcpu=fiji -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=GCN
 
-# REQUIRES: global-isel
-
 --- |
   define amdgpu_kernel void @global_addrspace(i32 addrspace(1)* %global0,
                                               i64 addrspace(1)* %global1,

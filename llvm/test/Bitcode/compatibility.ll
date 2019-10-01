@@ -160,6 +160,10 @@ $comdat.samesize = comdat samesize
 @g.section = global i32 0, section "_DATA"
 ; CHECK: @g.section = global i32 0, section "_DATA"
 
+; Global Variables -- partition
+@g.partition = global i32 0, partition "part"
+; CHECK: @g.partition = global i32 0, partition "part"
+
 ; Global Variables -- comdat
 @comdat.any = global i32 0, comdat
 ; CHECK: @comdat.any = global i32 0, comdat
@@ -251,6 +255,10 @@ declare void @g.f1()
 @a.local_unnamed_addr = local_unnamed_addr alias i32, i32* @g.local_unnamed_addr
 ; CHECK: @a.local_unnamed_addr = local_unnamed_addr alias i32, i32* @g.local_unnamed_addr
 
+; Aliases -- partition
+; CHECK: @alias.partition = alias i32, i32* @g.partition, partition "part"
+@alias.partition = alias i32, i32* @g.partition, partition "part"
+
 ;; IFunc
 ; Format @<Name> = [Linkage] [Visibility] ifunc <IFuncTy>,
 ;                  <ResolverTy>* @<Resolver>
@@ -270,6 +278,10 @@ declare void @g.f1()
 ; CHECK: @ifunc.hidden = hidden ifunc void (), i8* ()* @ifunc_resolver
 @ifunc.protected = protected ifunc void (), i8* ()* @ifunc_resolver
 ; CHECK: @ifunc.protected = protected ifunc void (), i8* ()* @ifunc_resolver
+
+; IFunc -- partition
+; CHECK: @ifunc.partition = ifunc void (), i8* ()* @ifunc_resolver, partition "part"
+@ifunc.partition = ifunc void (), i8* ()* @ifunc_resolver, partition "part"
 
 define i8* @ifunc_resolver() {
 entry:
@@ -517,7 +529,7 @@ declare void @f.param.signext(i8 signext)
 declare void @f.param.inreg(i8 inreg)
 ; CHECK: declare void @f.param.inreg(i8 inreg)
 declare void @f.param.byval({ i8, i8 }* byval)
-; CHECK: declare void @f.param.byval({ i8, i8 }* byval)
+; CHECK: declare void @f.param.byval({ i8, i8 }* byval({ i8, i8 }))
 declare void @f.param.inalloca(i8* inalloca)
 ; CHECK: declare void @f.param.inalloca(i8* inalloca)
 declare void @f.param.sret(i8* sret)
@@ -619,6 +631,12 @@ declare void @f.strictfp() #35
 ; Functions -- section
 declare void @f.section() section "80"
 ; CHECK: declare void @f.section() section "80"
+
+; Functions -- partition
+define void @f.partition() partition "part" {
+; CHECK: define void @f.partition() partition "part"
+  ret void
+}
 
 ; Functions -- comdat
 define void @f.comdat_any() comdat($comdat.any) {
@@ -761,6 +779,19 @@ define void @atomics(i32* %word) {
   ret void
 }
 
+define void @fp_atomics(float* %word) {
+; CHECK: %atomicrmw.xchg = atomicrmw xchg float* %word, float 1.000000e+00 monotonic
+  %atomicrmw.xchg = atomicrmw xchg float* %word, float 1.0 monotonic
+
+; CHECK: %atomicrmw.fadd = atomicrmw fadd float* %word, float 1.000000e+00 monotonic
+  %atomicrmw.fadd = atomicrmw fadd float* %word, float 1.0 monotonic
+
+; CHECK: %atomicrmw.fsub = atomicrmw fsub float* %word, float 1.000000e+00 monotonic
+  %atomicrmw.fsub = atomicrmw fsub float* %word, float 1.0 monotonic
+
+  ret void
+}
+
 ;; Fast Math Flags
 define void @fastmathflags_unop(float %op1) {
   %f.nnan = fneg nnan float %op1
@@ -799,6 +830,34 @@ define void @fastmathflags_binops(float %op1, float %op2) {
   ; CHECK: %f.reassoc = fadd reassoc float %op1, %op2
   %f.fast = fadd fast float %op1, %op2
   ; CHECK: %f.fast = fadd fast float %op1, %op2
+  ret void
+}
+
+define void @fastmathflags_select(i1 %cond, float %op1, float %op2) {
+  %f.nnan = select nnan i1 %cond, float %op1, float %op2
+  ; CHECK: %f.nnan = select nnan i1 %cond, float %op1, float %op2
+  %f.ninf = select ninf i1 %cond, float %op1, float %op2
+  ; CHECK: %f.ninf = select ninf i1 %cond, float %op1, float %op2
+  %f.nsz = select nsz i1 %cond, float %op1, float %op2
+  ; CHECK: %f.nsz = select nsz i1 %cond, float %op1, float %op2
+  %f.arcp = select arcp i1 %cond, float %op1, float %op2
+  ; CHECK: %f.arcp = select arcp i1 %cond, float %op1, float %op2
+  %f.contract = select contract i1 %cond, float %op1, float %op2
+  ; CHECK: %f.contract = select contract i1 %cond, float %op1, float %op2
+  %f.afn = select afn i1 %cond, float %op1, float %op2
+  ; CHECK: %f.afn = select afn i1 %cond, float %op1, float %op2
+  %f.reassoc = select reassoc i1 %cond, float %op1, float %op2
+  ; CHECK: %f.reassoc = select reassoc i1 %cond, float %op1, float %op2
+  %f.fast = select fast i1 %cond, float %op1, float %op2
+  ; CHECK: %f.fast = select fast i1 %cond, float %op1, float %op2
+  ret void
+}
+
+define void @fastmathflags_vector_select(<2 x i1> %cond, <2 x double> %op1, <2 x double> %op2) {
+  %f.nnan.nsz = select nnan nsz <2 x i1> %cond, <2 x double> %op1, <2 x double> %op2
+  ; CHECK: %f.nnan.nsz = select nnan nsz <2 x i1> %cond, <2 x double> %op1, <2 x double> %op2
+  %f.fast = select fast <2 x i1> %cond, <2 x double> %op1, <2 x double> %op2
+  ; CHECK: %f.fast = select fast <2 x i1> %cond, <2 x double> %op1, <2 x double> %op2
   ret void
 }
 
@@ -858,6 +917,10 @@ define void @typesystem() {
   ; CHECK: %t7 = alloca x86_mmx
   %t8 = alloca %opaquety*
   ; CHECK: %t8 = alloca %opaquety*
+  %t9 = alloca <4 x i32>
+  ; CHECK: %t9 = alloca <4 x i32>
+  %t10 = alloca <vscale x 4 x i32>
+  ; CHECK: %t10 = alloca <vscale x 4 x i32>
 
   ret void
 }
@@ -1667,6 +1730,19 @@ define i8** @constexpr() {
   ; CHECK: ret i8** getelementptr inbounds ({ [4 x i8*], [4 x i8*] }, { [4 x i8*], [4 x i8*] }* null, i32 0, inrange i32 1, i32 2)
   ret i8** getelementptr inbounds ({ [4 x i8*], [4 x i8*] }, { [4 x i8*], [4 x i8*] }* null, i32 0, inrange i32 1, i32 2)
 }
+
+; immarg attribute
+declare void @llvm.test.immarg.intrinsic(i32 immarg)
+; CHECK: declare void @llvm.test.immarg.intrinsic(i32 immarg)
+
+; byval attribute with type
+%named_type = type [8 x i8]
+declare void @byval_type(i32* byval(i32) align 2)
+declare void @byval_type2({ i8, i8* }* byval({ i8, i8* }))
+declare void @byval_named_type(%named_type* byval(%named_type))
+; CHECK: declare void @byval_type(i32* byval(i32) align 2)
+; CHECK: declare void @byval_type2({ i8, i8* }* byval({ i8, i8* }))
+; CHECK: declare void @byval_named_type([8 x i8]* byval([8 x i8]))
 
 ; CHECK: attributes #0 = { alignstack=4 }
 ; CHECK: attributes #1 = { alignstack=8 }

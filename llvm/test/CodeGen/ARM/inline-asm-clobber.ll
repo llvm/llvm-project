@@ -3,7 +3,7 @@
 ; RUN: llc <%s -mtriple=arm-none-eabi -relocation-model=rwpi 2>&1 \
 ; RUN:   | FileCheck %s -check-prefix=RWPI
 
-; RUN: llc <%s -mtriple=arm-none-eabi --disable-fp-elim 2>&1 \
+; RUN: llc <%s -mtriple=arm-none-eabi --frame-pointer=all 2>&1 \
 ; RUN:   | FileCheck %s -check-prefix=NO_FP_ELIM
 
 ; CHECK: warning: inline asm clobber list contains reserved registers: SP, PC

@@ -146,8 +146,8 @@ define <64 x i8> @test_div7_64i8(<64 x i8> %a) nounwind {
 ; AVX512F-NEXT:    vpand %ymm5, %ymm0, %ymm0
 ; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm6 = [32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32]
 ; AVX512F-NEXT:    vpxor %ymm6, %ymm0, %ymm0
-; AVX512F-NEXT:    vpsubb %ymm6, %ymm0, %ymm0
 ; AVX512F-NEXT:    vpaddb %ymm2, %ymm0, %ymm0
+; AVX512F-NEXT:    vpsubb %ymm6, %ymm0, %ymm0
 ; AVX512F-NEXT:    vextracti128 $1, %ymm1, %xmm2
 ; AVX512F-NEXT:    vpmovsxbw %xmm2, %ymm2
 ; AVX512F-NEXT:    vpmullw %ymm3, %ymm2, %ymm2
@@ -163,8 +163,8 @@ define <64 x i8> @test_div7_64i8(<64 x i8> %a) nounwind {
 ; AVX512F-NEXT:    vpsrlw $2, %ymm1, %ymm1
 ; AVX512F-NEXT:    vpand %ymm5, %ymm1, %ymm1
 ; AVX512F-NEXT:    vpxor %ymm6, %ymm1, %ymm1
-; AVX512F-NEXT:    vpsubb %ymm6, %ymm1, %ymm1
 ; AVX512F-NEXT:    vpaddb %ymm2, %ymm1, %ymm1
+; AVX512F-NEXT:    vpsubb %ymm6, %ymm1, %ymm1
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: test_div7_64i8:
@@ -185,10 +185,10 @@ define <64 x i8> @test_div7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpandq {{.*}}(%rip), %zmm1, %zmm1
 ; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32]
 ; AVX512BW-NEXT:    vpxorq %zmm2, %zmm1, %zmm1
-; AVX512BW-NEXT:    vpsubb %zmm2, %zmm1, %zmm1
 ; AVX512BW-NEXT:    vpsrlw $7, %zmm0, %zmm0
 ; AVX512BW-NEXT:    vpandq {{.*}}(%rip), %zmm0, %zmm0
 ; AVX512BW-NEXT:    vpaddb %zmm0, %zmm1, %zmm0
+; AVX512BW-NEXT:    vpsubb %zmm2, %zmm0, %zmm0
 ; AVX512BW-NEXT:    retq
   %res = sdiv <64 x i8> %a, <i8 7, i8 7, i8 7, i8 7,i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7,i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7,i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7,i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7,i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7,i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7,i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7,i8 7, i8 7, i8 7, i8 7>
   ret <64 x i8> %res
@@ -486,8 +486,8 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512F-NEXT:    vpand %ymm6, %ymm2, %ymm2
 ; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm7 = [32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32]
 ; AVX512F-NEXT:    vpxor %ymm7, %ymm2, %ymm2
-; AVX512F-NEXT:    vpsubb %ymm7, %ymm2, %ymm2
 ; AVX512F-NEXT:    vpaddb %ymm4, %ymm2, %ymm2
+; AVX512F-NEXT:    vpsubb %ymm7, %ymm2, %ymm2
 ; AVX512F-NEXT:    vpsllw $3, %ymm2, %ymm4
 ; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm8 = [248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248]
 ; AVX512F-NEXT:    vpand %ymm8, %ymm4, %ymm4
@@ -508,8 +508,8 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512F-NEXT:    vpsrlw $2, %ymm2, %ymm2
 ; AVX512F-NEXT:    vpand %ymm6, %ymm2, %ymm2
 ; AVX512F-NEXT:    vpxor %ymm7, %ymm2, %ymm2
-; AVX512F-NEXT:    vpsubb %ymm7, %ymm2, %ymm2
 ; AVX512F-NEXT:    vpaddb %ymm3, %ymm2, %ymm2
+; AVX512F-NEXT:    vpsubb %ymm7, %ymm2, %ymm2
 ; AVX512F-NEXT:    vpsllw $3, %ymm2, %ymm3
 ; AVX512F-NEXT:    vpand %ymm8, %ymm3, %ymm3
 ; AVX512F-NEXT:    vpsubb %ymm3, %ymm2, %ymm2
@@ -534,10 +534,10 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpandq {{.*}}(%rip), %zmm2, %zmm2
 ; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32]
 ; AVX512BW-NEXT:    vpxorq %zmm3, %zmm2, %zmm2
-; AVX512BW-NEXT:    vpsubb %zmm3, %zmm2, %zmm2
 ; AVX512BW-NEXT:    vpsrlw $7, %zmm1, %zmm1
 ; AVX512BW-NEXT:    vpandq {{.*}}(%rip), %zmm1, %zmm1
 ; AVX512BW-NEXT:    vpaddb %zmm1, %zmm2, %zmm1
+; AVX512BW-NEXT:    vpsubb %zmm3, %zmm1, %zmm1
 ; AVX512BW-NEXT:    vpsllw $3, %zmm1, %zmm2
 ; AVX512BW-NEXT:    vpandq {{.*}}(%rip), %zmm2, %zmm2
 ; AVX512BW-NEXT:    vpsubb %zmm2, %zmm1, %zmm1

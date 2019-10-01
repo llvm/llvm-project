@@ -1,4 +1,4 @@
-; RUN: opt -thinlto-bc -thin-link-bitcode-file=%t2 -o %t %s
+; RUN: opt -thinlto-bc -thin-link-bitcode-file=%t2 -thinlto-split-lto-unit -o %t %s
 ; RUN: llvm-dis -o - %t | FileCheck %s
 ; RUN: llvm-bcanalyzer -dump %t | FileCheck --check-prefix=BCA %s
 ; When not splitting the module, the thin link bitcode file should simply be a
@@ -9,7 +9,7 @@
 ; BCA-NOT: <GLOBALVAL_SUMMARY_BLOCK
 
 ; CHECK: @llvm.global_ctors = appending global
-@llvm.global_ctors = appending global [1 x { i32, void ()* }] [{ i32, void ()* } { i32 65535, void ()* @f }]
+@llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @f, i8* null }]
 
 ; CHECK: @g = internal global i8 42, !type !0
 @g = internal global i8 42, !type !0
@@ -28,7 +28,8 @@ define void @h() comdat {
   ret void
 }
 
-; CHECK: !llvm.module.flags = !{![[FLAG:[0-9]+]]}
-; CHECK: ![[FLAG]] = !{i32 1, !"ThinLTO", i32 0}
+; CHECK: !llvm.module.flags = !{![[FLAG1:[0-9]+]], ![[FLAG2:[0-9]+]]}
+; CHECK: ![[FLAG1]] = !{i32 1, !"EnableSplitLTOUnit", i32 1}
+; CHECK: ![[FLAG2]] = !{i32 1, !"ThinLTO", i32 0}
 
 !0 = !{i32 0, !"typeid"}

@@ -1,4 +1,4 @@
-; RUN: llc < %s -filetype=obj | llvm-readobj - -codeview | FileCheck %s
+; RUN: llc < %s -filetype=obj | llvm-readobj - --codeview | FileCheck %s
 
 ; Use character types for all 8-bit integers. The VS debugger doesn't cope well
 ; with the T_[U]INT1 types. Non-C language frontends are likely use the normal

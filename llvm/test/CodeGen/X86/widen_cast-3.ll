@@ -11,8 +11,7 @@ define void @convert(<12 x i8>* %dst.addr, <3 x i32> %src) nounwind {
 ; X86-NEXT:    pcmpeqd %xmm1, %xmm1
 ; X86-NEXT:    psubd %xmm1, %xmm0
 ; X86-NEXT:    pextrd $2, %xmm0, 8(%eax)
-; X86-NEXT:    pextrd $1, %xmm0, 4(%eax)
-; X86-NEXT:    movd %xmm0, (%eax)
+; X86-NEXT:    movq %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: convert:

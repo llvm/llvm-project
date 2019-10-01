@@ -1,9 +1,8 @@
 //===- BitstreamReader.h - Low-level bitstream reader interface -*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -104,8 +103,7 @@ public:
   explicit SimpleBitstreamCursor(ArrayRef<uint8_t> BitcodeBytes)
       : BitcodeBytes(BitcodeBytes) {}
   explicit SimpleBitstreamCursor(StringRef BitcodeBytes)
-      : BitcodeBytes(reinterpret_cast<const uint8_t *>(BitcodeBytes.data()),
-                     BitcodeBytes.size()) {}
+      : BitcodeBytes(arrayRefFromStringRef(BitcodeBytes)) {}
   explicit SimpleBitstreamCursor(MemoryBufferRef BitcodeBytes)
       : SimpleBitstreamCursor(BitcodeBytes.getBuffer()) {}
 

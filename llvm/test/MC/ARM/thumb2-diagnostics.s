@@ -151,3 +151,17 @@ foo2:
         adds r0
 @ CHECK-ERRORS: error: too few operands for instruction
 @ CHECK-ERRORS: error: too few operands for instruction
+
+        tst sp, #3
+        tst sp, r5
+        tst sp, r5, lsl #3
+@ CHECK-ERRORS-V7: error: operand must be a register in range [r0, r12] or r14
+@ CHECK-ERRORS-V7: operand must be a register in range [r0, r12] or r14
+@ CHECK-ERRORS-V7: operand must be a register in range [r0, r12] or r14
+
+        teq sp, #5
+        teq sp, r7
+        teq sp, r9, lsl #2
+@ CHECK-ERRORS-V7: error: operand must be a register in range [r0, r12] or r14
+@ CHECK-ERRORS-V7: operand must be a register in range [r0, r12] or r14
+@ CHECK-ERRORS-V7: operand must be a register in range [r0, r12] or r14

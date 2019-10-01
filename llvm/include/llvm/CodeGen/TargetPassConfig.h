@@ -1,9 +1,8 @@
 //===- TargetPassConfig.h - Code Generation pass options --------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -25,6 +24,7 @@ class LLVMTargetMachine;
 struct MachineSchedContext;
 class PassConfigImpl;
 class ScheduleDAGInstrs;
+class CSEConfigBase;
 
 // The old pass manager infrastructure is hidden in a legacy namespace now.
 namespace legacy {
@@ -75,9 +75,6 @@ public:
   }
 };
 
-template <> struct isPodLike<IdentifyingPassPtr> {
-  static const bool value = true;
-};
 
 /// Target-Independent Code Generator Pass Configuration Options.
 ///
@@ -319,6 +316,13 @@ public:
   /// when GlobalISel failed and isGlobalISelAbortEnabled is false.
   virtual bool reportDiagnosticWhenGlobalISelFallback() const;
 
+  /// Check whether continuous CSE should be enabled in GISel passes.
+  /// By default, it's enabled for non O0 levels.
+  virtual bool isGISelCSEEnabled() const;
+
+  /// Returns the CSEConfig object to use for the current optimization level.
+  virtual std::unique_ptr<CSEConfigBase> getCSEConfig() const;
+
 protected:
   // Helper to verify the analysis is really immutable.
   void setOpt(bool &Opt, bool Val);
@@ -360,11 +364,11 @@ protected:
 
   /// addFastRegAlloc - Add the minimum set of target-independent passes that
   /// are required for fast register allocation.
-  virtual void addFastRegAlloc(FunctionPass *RegAllocPass);
+  virtual void addFastRegAlloc();
 
   /// addOptimizedRegAlloc - Add passes related to register allocation.
   /// LLVMTargetMachine provides standard regalloc passes for most targets.
-  virtual void addOptimizedRegAlloc(FunctionPass *RegAllocPass);
+  virtual void addOptimizedRegAlloc();
 
   /// addPreRewrite - Add passes to the optimized register allocation pipeline
   /// after register allocation is complete, but before virtual registers are
@@ -374,9 +378,17 @@ protected:
   /// after RABasic or RAGreedy, they should take advantage of LiveRegMatrix.
   /// When these passes run, VirtRegMap contains legal physreg assignments for
   /// all virtual registers.
+  ///
+  /// Note if the target overloads addRegAssignAndRewriteOptimized, this may not
+  /// be honored. This is also not generally used for the the fast variant,
+  /// where the allocation and rewriting are done in one pass.
   virtual bool addPreRewrite() {
     return false;
   }
+
+  /// Add passes to be run immediately after virtual registers are rewritten
+  /// to physical registers.
+  virtual void addPostRewrite() { }
 
   /// This method may be implemented by targets that want to run passes after
   /// register allocation pass pipeline but before prolog-epilog insertion.
@@ -431,7 +443,12 @@ protected:
 
   /// addMachinePasses helper to create the target-selected or overriden
   /// regalloc pass.
-  FunctionPass *createRegAllocPass(bool Optimized);
+  virtual FunctionPass *createRegAllocPass(bool Optimized);
+
+  /// Add core register alloator passes which do the actual register assignment
+  /// and rewriting. \returns true if any passes were added.
+  virtual bool addRegAssignmentFast();
+  virtual bool addRegAssignmentOptimized();
 };
 
 } // end namespace llvm

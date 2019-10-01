@@ -1,9 +1,8 @@
 //===- llvm/CodeGen/VirtRegMap.cpp - Virtual Register Map -----------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -385,7 +384,7 @@ void VirtRegRewriter::handleIdentityCopy(MachineInstr &MI) const {
   // give us additional liveness information: The target (super-)register
   // must not be valid before this point. Replace the COPY with a KILL
   // instruction to maintain this information.
-  if (MI.getOperand(0).isUndef() || MI.getNumOperands() > 2) {
+  if (MI.getOperand(1).isUndef() || MI.getNumOperands() > 2) {
     MI.setDesc(TII->get(TargetOpcode::KILL));
     LLVM_DEBUG(dbgs() << "  replace by: " << MI);
     return;

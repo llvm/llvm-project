@@ -34,16 +34,31 @@ stnt1h z0.d, p0, [x0]
 
 
 // --------------------------------------------------------------------------//
-// invalid predicate
+// Invalid predicate
 
 stnt1h z27.h, p8, [x0]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: restricted predicate has range [0, 7].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid restricted predicate register, expected p0..p7 (without element suffix)
 // CHECK-NEXT: stnt1h z27.h, p8, [x0]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 stnt1h z0.h, p0/z, [x0]
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // CHECK-NEXT: stnt1h z0.h, p0/z, [x0]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+stnt1h z0.h, p0/m, [x0]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK-NEXT: stnt1h z0.h, p0/m, [x0]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+stnt1h z0.h, p7.b, [x0]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid restricted predicate register, expected p0..p7 (without element suffix)
+// CHECK-NEXT: stnt1h z0.h, p7.b, [x0]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+stnt1h z0.h, p7.q, [x0]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid restricted predicate register, expected p0..p7 (without element suffix)
+// CHECK-NEXT: stnt1h z0.h, p7.q, [x0]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 

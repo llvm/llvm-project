@@ -1,9 +1,8 @@
 //===- X86ScheduleAtom.td - X86 Atom Scheduling Definitions -*- tablegen -*-==//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -46,6 +45,8 @@ def : ReadAdvance<ReadAfterLd, 3>;
 def : ReadAdvance<ReadAfterVecLd, 3>;
 def : ReadAdvance<ReadAfterVecXLd, 3>;
 def : ReadAdvance<ReadAfterVecYLd, 3>;
+
+def : ReadAdvance<ReadInt2Fpu, 0>;
 
 // Many SchedWrites are defined in pairs with and without a folded load.
 // Instructions with folded loads are usually micro-fused, so they only appear
@@ -112,7 +113,6 @@ defm : AtomWriteResPair<WriteIDiv64, [AtomPort01], [AtomPort01],130,130,[130],[1
 defm : X86WriteResPairUnsupported<WriteCRC32>;
 
 defm : AtomWriteResPair<WriteCMOV,  [AtomPort01], [AtomPort0]>;
-defm : AtomWriteResPair<WriteCMOV2, [AtomPort01], [AtomPort0]>;
 defm : X86WriteRes<WriteFCMOV, [AtomPort01], 9, [9], 1>; // x87 conditional move.
 
 def  : WriteRes<WriteSETCC, [AtomPort01]>;
@@ -740,7 +740,7 @@ def AtomWrite01_45 : SchedWriteRes<[AtomPort01]> {
   let Latency = 45;
   let ResourceCycles = [45];
 }
-def : InstRW<[AtomWrite01_45], (instrs MONITORrrr)>;
+def : InstRW<[AtomWrite01_45], (instrs MONITOR32rrr, MONITOR64rrr)>;
 
 def AtomWrite01_46 : SchedWriteRes<[AtomPort01]> {
   let Latency = 46;

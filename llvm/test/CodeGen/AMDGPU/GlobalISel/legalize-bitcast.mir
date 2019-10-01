@@ -2,17 +2,181 @@
 # RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=fiji -run-pass=legalizer %s -o - | FileCheck %s
 
 ---
-name:            test_bitcast
+name: test_bitcast_s32_to_v2s16
 body: |
   bb.0:
     liveins: $vgpr0
 
-    ; CHECK-LABEL: name: test_bitcast
+    ; CHECK-LABEL: name: test_bitcast_s32_to_v2s16
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK: [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY]](s32)
-    ; CHECK: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[BITCAST]](<2 x s16>)
+    ; CHECK: $vgpr0 = COPY [[BITCAST]](<2 x s16>)
     %0:_(s32) = COPY $vgpr0
     %1:_(<2 x s16>) = G_BITCAST %0
-    %2:_(s32) = G_BITCAST %1
-    $vgpr0 = COPY %2
+    $vgpr0 = COPY %1
+...
+
+---
+name: test_bitcast_v2s16_to_s32
+body: |
+  bb.0:
+    liveins: $vgpr0
+
+    ; CHECK-LABEL: name: test_bitcast_v2s16_to_s32
+    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
+    ; CHECK: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[COPY]](<2 x s16>)
+    ; CHECK: $vgpr0 = COPY [[BITCAST]](s32)
+    %0:_(<2 x s16>) = COPY $vgpr0
+    %1:_(s32) = G_BITCAST %0
+    $vgpr0 = COPY %1
+...
+
+---
+name: test_bitcast_v2s32_to_s64
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+
+    ; CHECK-LABEL: name: test_bitcast_v2s32_to_s64
+    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    ; CHECK: [[BITCAST:%[0-9]+]]:_(s64) = G_BITCAST [[COPY]](<2 x s32>)
+    ; CHECK: $vgpr0_vgpr1 = COPY [[BITCAST]](s64)
+    %0:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    %1:_(s64) = G_BITCAST %0
+    $vgpr0_vgpr1 = COPY %1
+...
+
+---
+name: test_bitcast_s64_to_v2s32
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+
+    ; CHECK-LABEL: name: test_bitcast_s64_to_v2s32
+    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; CHECK: [[BITCAST:%[0-9]+]]:_(<2 x s32>) = G_BITCAST [[COPY]](s64)
+    ; CHECK: $vgpr0_vgpr1 = COPY [[BITCAST]](<2 x s32>)
+    %0:_(s64) = COPY $vgpr0_vgpr1
+    %1:_(<2 x s32>) = G_BITCAST %0
+    $vgpr0_vgpr1 = COPY %1
+...
+
+---
+name: test_bitcast_v2s64_to_v4s32
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3
+
+    ; CHECK-LABEL: name: test_bitcast_v2s64_to_v4s32
+    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK: [[BITCAST:%[0-9]+]]:_(<4 x s32>) = G_BITCAST [[COPY]](<2 x s64>)
+    ; CHECK: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BITCAST]](<4 x s32>)
+    %0:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    %1:_(<4 x s32>) = G_BITCAST %0
+    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %1
+...
+
+---
+name: test_bitcast_v4s32_to_v2s64
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3
+
+    ; CHECK-LABEL: name: test_bitcast_v4s32_to_v2s64
+    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK: [[BITCAST:%[0-9]+]]:_(<2 x s64>) = G_BITCAST [[COPY]](<4 x s32>)
+    ; CHECK: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BITCAST]](<2 x s64>)
+    %0:_(<4 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    %1:_(<2 x s64>) = G_BITCAST %0
+    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %1
+...
+
+---
+name: test_bitcast_v4s16_to_s64
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+
+    ; CHECK-LABEL: name: test_bitcast_v4s16_to_s64
+    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $vgpr0_vgpr1
+    ; CHECK: [[BITCAST:%[0-9]+]]:_(s64) = G_BITCAST [[COPY]](<4 x s16>)
+    ; CHECK: $vgpr0_vgpr1 = COPY [[BITCAST]](s64)
+    %0:_(<4 x s16>) = COPY $vgpr0_vgpr1
+    %1:_(s64) = G_BITCAST %0
+    $vgpr0_vgpr1 = COPY %1
+...
+
+---
+name: test_bitcast_s64_to_v4s16
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+
+    ; CHECK-LABEL: name: test_bitcast_s64_to_v4s16
+    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; CHECK: [[BITCAST:%[0-9]+]]:_(<4 x s16>) = G_BITCAST [[COPY]](s64)
+    ; CHECK: $vgpr0_vgpr1 = COPY [[BITCAST]](<4 x s16>)
+    %0:_(s64) = COPY $vgpr0_vgpr1
+    %1:_(<4 x s16>) = G_BITCAST %0
+    $vgpr0_vgpr1 = COPY %1
+...
+
+---
+name: test_bitcast_p0_to_p1
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+
+    ; CHECK-LABEL: name: test_bitcast_p0_to_p1
+    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; CHECK: [[BITCAST:%[0-9]+]]:_(p1) = G_BITCAST [[COPY]](p0)
+    ; CHECK: $vgpr0_vgpr1 = COPY [[BITCAST]](p1)
+    %0:_(p0) = COPY $vgpr0_vgpr1
+    %1:_(p1) = G_BITCAST %0
+    $vgpr0_vgpr1 = COPY %1
+...
+
+---
+name: test_bitcast_p1_to_p0
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+
+    ; CHECK-LABEL: name: test_bitcast_p1_to_p0
+    ; CHECK: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
+    ; CHECK: [[BITCAST:%[0-9]+]]:_(p0) = G_BITCAST [[COPY]](p1)
+    ; CHECK: $vgpr0_vgpr1 = COPY [[BITCAST]](p0)
+    %0:_(p1) = COPY $vgpr0_vgpr1
+    %1:_(p0) = G_BITCAST %0
+    $vgpr0_vgpr1 = COPY %1
+...
+
+---
+name: test_bitcast_p999_to_p0
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+
+    ; CHECK-LABEL: name: test_bitcast_p999_to_p0
+    ; CHECK: [[COPY:%[0-9]+]]:_(p999) = COPY $vgpr0_vgpr1
+    ; CHECK: [[BITCAST:%[0-9]+]]:_(p0) = G_BITCAST [[COPY]](p999)
+    ; CHECK: $vgpr0_vgpr1 = COPY [[BITCAST]](p0)
+    %0:_(p999) = COPY $vgpr0_vgpr1
+    %1:_(p0) = G_BITCAST %0
+    $vgpr0_vgpr1 = COPY %1
+...
+
+---
+name: test_bitcast_p123_to_p999
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+
+    ; CHECK-LABEL: name: test_bitcast_p123_to_p999
+    ; CHECK: [[COPY:%[0-9]+]]:_(p123) = COPY $vgpr0_vgpr1
+    ; CHECK: [[BITCAST:%[0-9]+]]:_(p999) = G_BITCAST [[COPY]](p123)
+    ; CHECK: $vgpr0_vgpr1 = COPY [[BITCAST]](p999)
+    %0:_(p123) = COPY $vgpr0_vgpr1
+    %1:_(p999) = G_BITCAST %0
+    $vgpr0_vgpr1 = COPY %1
 ...

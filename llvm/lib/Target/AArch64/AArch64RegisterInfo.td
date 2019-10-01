@@ -1,9 +1,8 @@
 //=- AArch64RegisterInfo.td - Describe the AArch64 Registers -*- tablegen -*-=//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -188,6 +187,10 @@ def GPR64z : RegisterOperand<GPR64> {
   let GIZeroRegister = XZR;
 }
 
+// GPR argument registers.
+def GPR32arg : RegisterClass<"AArch64", [i32], 32, (sequence "W%u", 0, 7)>;
+def GPR64arg : RegisterClass<"AArch64", [i64], 64, (sequence "X%u", 0, 7)>;
+
 // GPR register classes which include WZR/XZR AND SP/WSP. This is not a
 // constraint used by any instructions, it is used as a common super-class.
 def GPR32all : RegisterClass<"AArch64", [i32], 32, (add GPR32common, WZR, WSP)>;
@@ -205,6 +208,11 @@ def tcGPR64 : RegisterClass<"AArch64", [i64], 64, (sub GPR64common, X19, X20, X2
 // indirectly branch (not call) to the "BTI c" instruction at the start of a
 // BTI-protected function.
 def rtcGPR64 : RegisterClass<"AArch64", [i64], 64, (add X16, X17)>;
+
+// Register set that excludes registers that are reserved for procedure calls.
+// This is used for pseudo-instructions that are actually implemented using a
+// procedure call.
+def GPR64noip : RegisterClass<"AArch64", [i64], 64, (sub GPR64, X16, X17, LR)>;
 
 // GPR register classes for post increment amount of vector load/store that
 // has alternate printing when Rm=31 and prints a constant immediate value
@@ -649,10 +657,12 @@ def FPR128Op : RegisterOperand<FPR128, "printOperand"> {
 // ARMv8.1a atomic CASP register operands
 
 
-def WSeqPairs : RegisterTuples<[sube32, subo32], 
-                               [(rotl GPR32, 0), (rotl GPR32, 1)]>;
-def XSeqPairs : RegisterTuples<[sube64, subo64], 
-                               [(rotl GPR64, 0), (rotl GPR64, 1)]>;
+def WSeqPairs : RegisterTuples<[sube32, subo32],
+                               [(decimate (rotl GPR32, 0), 2),
+                                (decimate (rotl GPR32, 1), 2)]>;
+def XSeqPairs : RegisterTuples<[sube64, subo64],
+                               [(decimate (rotl GPR64, 0), 2),
+                                (decimate (rotl GPR64, 1), 2)]>;
 
 def WSeqPairsClass   : RegisterClass<"AArch64", [untyped], 32, 
                                      (add WSeqPairs)>{

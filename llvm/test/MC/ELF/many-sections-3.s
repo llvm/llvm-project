@@ -1,5 +1,5 @@
 // RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s -o %t
-// RUN: llvm-readobj -t %t | FileCheck --check-prefix=SYMBOLS %s
+// RUN: llvm-readobj --symbols %t | FileCheck --check-prefix=SYMBOLS %s
 // RUN: llvm-nm %t | FileCheck --check-prefix=NM %s
 
 // Test that symbol a has a section that could be confused with common (0xFFF2)

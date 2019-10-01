@@ -270,11 +270,23 @@ define arm_aapcs_vfpcc float @t9(%0* nocapture, %3* nocapture) nounwind {
 
 ; PR7162
 define arm_aapcs_vfpcc i32 @t10(float %x) nounwind {
-entry:
 ; CHECK-LABEL: t10:
-; CHECK: vmov.i32 q[[Q0:[0-9]+]], #0x3f000000
-; CHECK: vmul.f32 q8, q8, d[[DREG:[0-1]+]]
-; CHECK: vadd.f32 q8, q8, q8
+; CHECK:       vdup.32	[[Q0:q[0-9]+]], d0[0]
+; CHECK:       vmov.i32	[[Q9:q[0-9]+]], #0x3f000000
+; CHECK:       vmul.f32	[[Q8:q[0-9]+]], [[Q0]], [[Q0]]
+; CHECK-NEXT:  vadd.f32	[[Q8]], [[Q8]], [[Q8]]
+; CHECK-NEXT:  vadd.f32	[[Q1:q[0-9]+]], [[Q8]], [[Q8]]
+; CHECK-NEXT:  vmul.f32	[[Q8]], [[Q9]], d1[0]
+; CHECK-NEXT:  vmul.f32	[[Q8]], [[Q8]], [[Q8]]
+; CHECK-NEXT:  vadd.f32	[[Q8]], [[Q8]], [[Q8]]
+; CHECK-NEXT:  vmul.f32	[[Q8]], [[Q8]], [[Q8]]
+; CHECK-NEXT:  vst1.32	{d17[1]}, [r0:32]
+; CHECK-NEXT:  mov	r0, #0
+; CHECK-NEXT:  cmp	r0, #0
+; CHECK-NEXT:  movne	r0, #0
+; CHECK-NEXT:  bxne	lr
+; CHECK-NEXT:  trap
+entry:
   %0 = shufflevector <4 x float> zeroinitializer, <4 x float> undef, <4 x i32> zeroinitializer ; <<4 x float>> [#uses=1]
   %1 = insertelement <4 x float> %0, float %x, i32 1 ; <<4 x float>> [#uses=1]
   %2 = insertelement <4 x float> %1, float %x, i32 2 ; <<4 x float>> [#uses=1]

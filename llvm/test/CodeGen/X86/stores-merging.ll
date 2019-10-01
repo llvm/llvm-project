@@ -26,9 +26,8 @@ define void @redundant_stores_merging() {
 define void @redundant_stores_merging_reverse() {
 ; CHECK-LABEL: redundant_stores_merging_reverse:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movabsq $528280977409, %rax # imm = 0x7B00000001
+; CHECK-NEXT:    movabsq $1958505086977, %rax # imm = 0x1C800000001
 ; CHECK-NEXT:    movq %rax, e+{{.*}}(%rip)
-; CHECK-NEXT:    movl $456, e+{{.*}}(%rip) # imm = 0x1C8
 ; CHECK-NEXT:    retq
   store i32 123, i32* getelementptr inbounds (%structTy, %structTy* @e, i64 0, i32 2), align 4
   store i32 456, i32* getelementptr inbounds (%structTy, %structTy* @e, i64 0, i32 2), align 4

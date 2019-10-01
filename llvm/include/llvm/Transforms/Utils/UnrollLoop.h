@@ -1,9 +1,8 @@
 //===- llvm/Transforms/Utils/UnrollLoop.h - Unrolling utilities -*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -25,11 +24,13 @@ namespace llvm {
 
 class AssumptionCache;
 class BasicBlock;
+class BlockFrequencyInfo;
 class DependenceInfo;
 class DominatorTree;
 class Loop;
 class LoopInfo;
 class MDNode;
+class ProfileSummaryInfo;
 class OptimizationRemarkEmitter;
 class ScalarEvolution;
 
@@ -63,22 +64,31 @@ enum class LoopUnrollResult {
   FullyUnrolled
 };
 
-LoopUnrollResult UnrollLoop(Loop *L, unsigned Count, unsigned TripCount,
-                            bool Force, bool AllowRuntime,
-                            bool AllowExpensiveTripCount, bool PreserveCondBr,
-                            bool PreserveOnlyFirst, unsigned TripMultiple,
-                            unsigned PeelCount, bool UnrollRemainder,
-                            LoopInfo *LI, ScalarEvolution *SE,
-                            DominatorTree *DT, AssumptionCache *AC,
-                            OptimizationRemarkEmitter *ORE, bool PreserveLCSSA,
-                            Loop **RemainderLoop = nullptr);
+struct UnrollLoopOptions {
+  unsigned Count;
+  unsigned TripCount;
+  bool Force;
+  bool AllowRuntime;
+  bool AllowExpensiveTripCount;
+  bool PreserveCondBr;
+  bool PreserveOnlyFirst;
+  unsigned TripMultiple;
+  unsigned PeelCount;
+  bool UnrollRemainder;
+  bool ForgetAllSCEV;
+};
+
+LoopUnrollResult UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
+                            ScalarEvolution *SE, DominatorTree *DT,
+                            AssumptionCache *AC, OptimizationRemarkEmitter *ORE,
+                            bool PreserveLCSSA, Loop **RemainderLoop = nullptr);
 
 bool UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,
                                 bool AllowExpensiveTripCount,
                                 bool UseEpilogRemainder, bool UnrollRemainder,
-                                LoopInfo *LI, ScalarEvolution *SE,
-                                DominatorTree *DT, AssumptionCache *AC,
-                                bool PreserveLCSSA,
+                                bool ForgetAllSCEV, LoopInfo *LI,
+                                ScalarEvolution *SE, DominatorTree *DT,
+                                AssumptionCache *AC, bool PreserveLCSSA,
                                 Loop **ResultLoop = nullptr);
 
 void computePeelCount(Loop *L, unsigned LoopSize,
@@ -109,9 +119,6 @@ bool computeUnrollCount(Loop *L, const TargetTransformInfo &TTI,
                         TargetTransformInfo::UnrollingPreferences &UP,
                         bool &UseUpperBound);
 
-BasicBlock *foldBlockIntoPredecessor(BasicBlock *BB, LoopInfo *LI,
-                                     ScalarEvolution *SE, DominatorTree *DT);
-
 void remapInstruction(Instruction *I, ValueToValueMapTy &VMap);
 
 void simplifyLoopAfterUnroll(Loop *L, bool SimplifyIVs, LoopInfo *LI,
@@ -121,7 +128,8 @@ void simplifyLoopAfterUnroll(Loop *L, bool SimplifyIVs, LoopInfo *LI,
 MDNode *GetUnrollMetadata(MDNode *LoopID, StringRef Name);
 
 TargetTransformInfo::UnrollingPreferences gatherUnrollingPreferences(
-    Loop *L, ScalarEvolution &SE, const TargetTransformInfo &TTI, int OptLevel,
+    Loop *L, ScalarEvolution &SE, const TargetTransformInfo &TTI,
+    BlockFrequencyInfo *BFI, ProfileSummaryInfo *PSI, int OptLevel,
     Optional<unsigned> UserThreshold, Optional<unsigned> UserCount,
     Optional<bool> UserAllowPartial, Optional<bool> UserRuntime,
     Optional<bool> UserUpperBound, Optional<bool> UserAllowPeeling);

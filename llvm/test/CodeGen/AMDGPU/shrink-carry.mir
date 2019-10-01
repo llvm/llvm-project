@@ -20,7 +20,8 @@ body:             |
     %1 = IMPLICIT_DEF
     %2 = IMPLICIT_DEF
     %3 = V_CMP_GT_U32_e64 %0, %1, implicit $exec
-    %4, %5 = V_SUBBREV_U32_e64 0, %0, %3, implicit $exec
+    %4, %5 = V_SUBBREV_U32_e64 0, %0, %3, 0, implicit $exec
+    GLOBAL_STORE_DWORD undef $vgpr0_vgpr1, %4, 0, 0, 0, 0, implicit $exec
 
 ...
 
@@ -44,7 +45,8 @@ body:             |
     %1 = IMPLICIT_DEF
     %2 = IMPLICIT_DEF
     %3 = V_CMP_GT_U32_e64 %0, %1, implicit $exec
-    %4, %5 = V_SUBB_U32_e64 %0, 0, %3, implicit $exec
+    %4, %5 = V_SUBB_U32_e64 %0, 0, %3, 0, implicit $exec
+    GLOBAL_STORE_DWORD undef $vgpr0_vgpr1, %4, 0, 0, 0, 0, implicit $exec
 
 ...
 
@@ -68,7 +70,8 @@ body:             |
     %1 = IMPLICIT_DEF
     %2 = IMPLICIT_DEF
     %3 = V_CMP_GT_U32_e64 %0, %1, implicit $exec
-    %4, %5 = V_ADDC_U32_e64 0, %0, %3, implicit $exec
+    %4, %5 = V_ADDC_U32_e64 0, %0, %3, 0, implicit $exec
+    GLOBAL_STORE_DWORD undef $vgpr0_vgpr1, %4, 0, 0, 0, 0, implicit $exec
 
 ...
 
@@ -92,6 +95,7 @@ body:             |
     %1 = IMPLICIT_DEF
     %2 = IMPLICIT_DEF
     %3 = V_CMP_GT_U32_e64 %0, %1, implicit $exec
-    %4, %5 = V_ADDC_U32_e64 %0, 0, %3, implicit $exec
+    %4, %5 = V_ADDC_U32_e64 %0, 0, %3, 0, implicit $exec
+    GLOBAL_STORE_DWORD undef $vgpr0_vgpr1, %4, 0, 0, 0, 0, implicit $exec
 
 ...

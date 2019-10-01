@@ -1,5 +1,7 @@
 ; RUN: opt < %s -basicaa -licm -S | FileCheck %s
 ; RUN: opt < %s -debugify -basicaa -licm -S | FileCheck %s -check-prefix=DEBUGIFY
+; RUN: opt < %s -basicaa -licm -S -enable-mssa-loop-dependency=true -verify-memoryssa | FileCheck %s
+
 
 declare i32 @strlen(i8*) readonly nounwind
 
@@ -358,50 +360,7 @@ exit:
   ret i32 %lcssa
 }
 
-; Can't sink stores out of exit blocks containing indirectbr instructions
-; because loop simplify does not create dedicated exits for such blocks. Test
-; that by sinking the store from lab21 to lab22, but not further.
-define void @test12() {
-; CHECK-LABEL: @test12
-  br label %lab4
-
-lab4:
-  br label %lab20
-
-lab5:
-  br label %lab20
-
-lab6:
-  br label %lab4
-
-lab7:
-  br i1 undef, label %lab8, label %lab13
-
-lab8:
-  br i1 undef, label %lab13, label %lab10
-
-lab10:
-  br label %lab7
-
-lab13:
-  ret void
-
-lab20:
-  br label %lab21
-
-lab21:
-; CHECK: lab21:
-; CHECK-NOT: store
-; CHECK: br i1 false, label %lab21, label %lab22
-  store i32 36127957, i32* undef, align 4
-  br i1 undef, label %lab21, label %lab22
-
-lab22:
-; CHECK: lab22:
-; CHECK: store
-; CHECK-NEXT: indirectbr i8* undef
-  indirectbr i8* undef, [label %lab5, label %lab6, label %lab7]
-}
+; @test12 moved to sink-promote.ll, as it tests sinking and promotion.
 
 ; Test that we don't crash when trying to sink stores and there's no preheader
 ; available (which is used for creating loads that may be used by the SSA

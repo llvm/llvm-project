@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple i386-apple-darwin9 %s -filetype=obj -o - | llvm-readobj -s -sd | FileCheck %s
+// RUN: llvm-mc -triple i386-apple-darwin9 %s -filetype=obj -o - | llvm-readobj -S --sd | FileCheck %s
 
 // FIXME: This is a horrible way of checking the output, we need an llvm-mc
 // based 'otool'. Use:

@@ -1,4 +1,4 @@
-@ RUN: llvm-mc -mcpu=cortex-a8 -triple thumbv7-apple-darwin10 -filetype=obj -o - < %s | llvm-readobj -relocations -expand-relocs | FileCheck %s
+@ RUN: llvm-mc -mcpu=cortex-a8 -triple thumbv7-apple-darwin10 -filetype=obj -o - < %s | llvm-readobj -r --expand-relocs | FileCheck %s
 
 @ rdar://10038370
 

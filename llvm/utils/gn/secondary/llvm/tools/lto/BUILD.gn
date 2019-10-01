@@ -1,0 +1,39 @@
+import("//llvm/version.gni")
+
+lto_target_type = "shared_library"
+if (host_os != "mac" && host_os != "win") {
+  # ELF targets need -fPIC to build shared libs but they aren't on by default.
+  # For now, make libclang a static lib there.
+  lto_target_type = "static_library"
+}
+
+target(lto_target_type, "lto") {
+  output_name = "LTO"
+  deps = [
+    "//llvm/lib/Bitcode/Reader",
+    "//llvm/lib/IR",
+    "//llvm/lib/LTO",
+    "//llvm/lib/MC",
+    "//llvm/lib/MC/MCDisassembler",
+    "//llvm/lib/Support",
+    "//llvm/lib/Target",
+    "//llvm/lib/Target:TargetsToBuild",
+  ]
+  sources = [
+    "LTODisassembler.cpp",
+    "lto.cpp",
+  ]
+
+  if (host_os == "mac") {
+    ldflags = [
+      "-Wl,-compatibility_version,1",
+      "-Wl,-current_version,$llvm_version",
+
+      # See llvm_setup_rpath() in CMake.
+      "-Wl,-install_name,@rpath/libLTO.dylib",
+      "-Wl,-rpath,@loader_path/../lib",
+    ]
+  }
+
+  # FIXME: Use lto.exports
+}

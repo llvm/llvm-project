@@ -1,9 +1,8 @@
 //===- llvm/unittest/IR/ConstantsTest.cpp - Constants unit tests ----------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -230,7 +229,7 @@ TEST(ConstantsTest, AsInstructionsTest) {
   #define P6STR "bitcast (i32 ptrtoint (i32** @dummy2 to i32) to <2 x i16>)"
 
   CHECK(ConstantExpr::getNeg(P0), "sub i32 0, " P0STR);
-  CHECK(ConstantExpr::getFNeg(P1), "fsub float -0.000000e+00, " P1STR);
+  CHECK(ConstantExpr::getFNeg(P1), "fneg float " P1STR);
   CHECK(ConstantExpr::getNot(P0), "xor i32 " P0STR ", -1");
   CHECK(ConstantExpr::getAdd(P0, P0), "add i32 " P0STR ", " P0STR);
   CHECK(ConstantExpr::getAdd(P0, P0, false, true), "add nsw i32 " P0STR ", "
@@ -474,6 +473,114 @@ TEST(ConstantsTest, BitcastToGEP) {
   auto *PtrTy = PointerType::get(i32, 0);
   auto *C = ConstantExpr::getBitCast(G, PtrTy);
   ASSERT_EQ(cast<ConstantExpr>(C)->getOpcode(), Instruction::BitCast);
+}
+
+bool foldFuncPtrAndConstToNull(LLVMContext &Context, Module *TheModule,
+                               uint64_t AndValue, unsigned FunctionAlign = 0) {
+  Type *VoidType(Type::getVoidTy(Context));
+  FunctionType *FuncType(FunctionType::get(VoidType, false));
+  Function *Func(Function::Create(
+      FuncType, GlobalValue::ExternalLinkage, "", TheModule));
+
+  if (FunctionAlign) Func->setAlignment(FunctionAlign);
+
+  IntegerType *ConstantIntType(Type::getInt32Ty(Context));
+  ConstantInt *TheConstant(ConstantInt::get(ConstantIntType, AndValue));
+
+  Constant *TheConstantExpr(
+      ConstantExpr::getPtrToInt(Func, ConstantIntType));
+
+
+  bool result = ConstantExpr::get(Instruction::And, TheConstantExpr,
+                           TheConstant)->isNullValue();
+
+  if (!TheModule) {
+    // If the Module exists then it will delete the Function.
+    delete Func;
+  }
+
+  return result;
+}
+
+TEST(ConstantsTest, FoldFunctionPtrAlignUnknownAnd2) {
+  LLVMContext Context;
+  Module TheModule("TestModule", Context);
+  // When the DataLayout doesn't specify a function pointer alignment we
+  // assume in this case that it is 4 byte aligned. This is a bug but we can't
+  // fix it directly because it causes a code size regression on X86.
+  // FIXME: This test should be changed once existing targets have
+  // appropriate defaults. See associated FIXME in ConstantFoldBinaryInstruction
+  ASSERT_TRUE(foldFuncPtrAndConstToNull(Context, &TheModule, 2));
+}
+
+TEST(ConstantsTest, DontFoldFunctionPtrAlignUnknownAnd4) {
+  LLVMContext Context;
+  Module TheModule("TestModule", Context);
+  ASSERT_FALSE(foldFuncPtrAndConstToNull(Context, &TheModule, 4));
+}
+
+TEST(ConstantsTest, FoldFunctionPtrAlign4) {
+  LLVMContext Context;
+  Module TheModule("TestModule", Context);
+  const char* AlignmentStrings[] = { "Fi32", "Fn32" };
+
+  for (unsigned AndValue = 1; AndValue <= 2; ++AndValue) {
+    for (const char *AlignmentString : AlignmentStrings) {
+      TheModule.setDataLayout(AlignmentString);
+      ASSERT_TRUE(foldFuncPtrAndConstToNull(Context, &TheModule, AndValue));
+    }
+  }
+}
+
+TEST(ConstantsTest, DontFoldFunctionPtrAlign1) {
+  LLVMContext Context;
+  Module TheModule("TestModule", Context);
+  const char* AlignmentStrings[] = { "Fi8", "Fn8" };
+
+  for (const char* AlignmentString : AlignmentStrings) {
+    TheModule.setDataLayout(AlignmentString);
+    ASSERT_FALSE(foldFuncPtrAndConstToNull(Context, &TheModule, 2));
+  }
+}
+
+TEST(ConstantsTest, FoldFunctionAlign4PtrAlignMultiple) {
+  LLVMContext Context;
+  Module TheModule("TestModule", Context);
+  TheModule.setDataLayout("Fn8");
+  ASSERT_TRUE(foldFuncPtrAndConstToNull(Context, &TheModule, 2, 4));
+}
+
+TEST(ConstantsTest, DontFoldFunctionAlign4PtrAlignIndependent) {
+  LLVMContext Context;
+  Module TheModule("TestModule", Context);
+  TheModule.setDataLayout("Fi8");
+  ASSERT_FALSE(foldFuncPtrAndConstToNull(Context, &TheModule, 2, 4));
+}
+
+TEST(ConstantsTest, DontFoldFunctionPtrIfNoModule) {
+  LLVMContext Context;
+  // Even though the function is explicitly 4 byte aligned, in the absence of a
+  // DataLayout we can't assume that the function pointer is aligned.
+  ASSERT_FALSE(foldFuncPtrAndConstToNull(Context, nullptr, 2, 4));
+}
+
+TEST(ConstantsTest, FoldGlobalVariablePtr) {
+  LLVMContext Context;
+
+  IntegerType *IntType(Type::getInt32Ty(Context));
+
+  std::unique_ptr<GlobalVariable> Global(
+      new GlobalVariable(IntType, true, GlobalValue::ExternalLinkage));
+
+  Global->setAlignment(4);
+
+  ConstantInt *TheConstant(ConstantInt::get(IntType, 2));
+
+  Constant *TheConstantExpr(
+      ConstantExpr::getPtrToInt(Global.get(), IntType));
+
+  ASSERT_TRUE(ConstantExpr::get( \
+      Instruction::And, TheConstantExpr, TheConstant)->isNullValue());
 }
 
 }  // end anonymous namespace

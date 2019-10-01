@@ -174,15 +174,10 @@ Language-Specific Optimizations
 -------------------------------
 
 One thing about LLVM that turns off many people is that it does not
-solve all the world's problems in one system (sorry 'world hunger',
-someone else will have to solve you some other day). One specific
+solve all the world's problems in one system.  One specific
 complaint is that people perceive LLVM as being incapable of performing
 high-level language-specific optimization: LLVM "loses too much
-information".
-
-Unfortunately, this is really not the place to give you a full and
-unified version of "Chris Lattner's theory of compiler design". Instead,
-I'll make a few observations:
+information".  Here are a few observations about this:
 
 First, you're right that LLVM does lose information. For example, as of
 this writing, there is no way to distinguish in the LLVM IR whether an

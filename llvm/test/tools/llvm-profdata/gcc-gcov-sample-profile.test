@@ -1,7 +1,7 @@
 The input gcov file has been generated on a little endian machine. Expect
 failures on big endian systems.
 
-XFAIL: powerpc-, powerpc64-, s390x, mips-, mips64-, sparc
+XFAIL: host-byteorder-big-endian
 
 Tests for sample profiles encoded in GCC's gcov format.
 

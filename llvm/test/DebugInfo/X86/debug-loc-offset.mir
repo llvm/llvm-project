@@ -42,7 +42,7 @@
 # CHECK: DW_TAG_formal_parameter
 # CHECK-NOT: DW_TAG
 # CHECK:       DW_AT_location [DW_FORM_sec_offset]   ({{.*}}
-# CHECK-NEXT:    [0x00000020, 0x00000037): DW_OP_breg0 EAX+0, DW_OP_deref
+# CHECK-NEXT:    [0x00000029, 0x00000037): DW_OP_breg0 EAX+0, DW_OP_deref
 # CHECK-NEXT:    [0x00000037, 0x00000063): DW_OP_breg5 EBP-8, DW_OP_deref, DW_OP_deref
 # CHECK-NEXT:  DW_AT_name [DW_FORM_strp]{{.*}}"a"
 #
@@ -70,7 +70,7 @@
 # CHECK-NEXT:    [0x00000000, 0x0000000a): DW_OP_consts +0, DW_OP_stack_value
 # CHECK-NEXT:    [0x0000000a, 0x00000017): DW_OP_consts +1, DW_OP_stack_value
 # CHECK:       0x00000022:
-# CHECK-NEXT:    [0x00000000, 0x00000017): DW_OP_breg0 EAX+0, DW_OP_deref
+# CHECK-NEXT:    [0x00000009, 0x00000017): DW_OP_breg0 EAX+0, DW_OP_deref
 # CHECK-NEXT:    [0x00000017, 0x00000043): DW_OP_breg5 EBP-8, DW_OP_deref, DW_OP_deref
 --- |
   target triple = "i386-unknown-linux-gnu"
@@ -185,10 +185,10 @@ frameInfo:
   maxAlignment:    4
   maxCallFrameSize: 0
 fixedStack:      
-  - { id: 0, type: spill-slot, offset: -8, size: 4, alignment: 8, stack-id: 0 }
-  - { id: 1, size: 4, alignment: 16, stack-id: 0 }
+  - { id: 0, type: spill-slot, offset: -8, size: 4, alignment: 8, stack-id: default }
+  - { id: 1, size: 4, alignment: 16, stack-id: default }
 stack:           
-  - { id: 0, type: spill-slot, offset: -12, size: 4, alignment: 4, stack-id: 0 }
+  - { id: 0, type: spill-slot, offset: -12, size: 4, alignment: 4, stack-id: default }
 body:             |
   bb.0.entry:
     frame-setup PUSH32r killed $ebp, implicit-def $esp, implicit $esp
@@ -222,13 +222,13 @@ frameInfo:
   hasCalls:        true
   maxCallFrameSize: 4
 fixedStack:      
-  - { id: 0, type: spill-slot, offset: -8, size: 4, alignment: 8, stack-id: 0 }
-  - { id: 1, size: 4, alignment: 16, stack-id: 0, isImmutable: true }
+  - { id: 0, type: spill-slot, offset: -8, size: 4, alignment: 8, stack-id: default }
+  - { id: 1, size: 4, alignment: 16, stack-id: default, isImmutable: true }
 stack:           
-  - { id: 0, name: z, offset: -12, size: 4, alignment: 4, stack-id: 0, 
+  - { id: 0, name: z, offset: -12, size: 4, alignment: 4, stack-id: default,
       debug-info-variable: '!22', debug-info-expression: '!DIExpression()', 
       debug-info-location: '!23' }
-  - { id: 1, type: spill-slot, offset: -16, size: 4, alignment: 4, stack-id: 0 }
+  - { id: 1, type: spill-slot, offset: -16, size: 4, alignment: 4, stack-id: default }
 body:             |
   bb.0.entry:
     frame-setup PUSH32r killed $ebp, implicit-def $esp, implicit $esp
@@ -243,7 +243,7 @@ body:             |
     CMP32mi8 renamable $eax, 1, $noreg, 4, $noreg, 2, implicit-def $eflags, debug-location !24 :: (load 4 from %ir.var)
     MOV32mr $ebp, 1, $noreg, -8, $noreg, killed $eax :: (store 4 into %stack.1)
     DBG_VALUE $ebp, 0, !20, !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_deref, DW_OP_deref), debug-location !21
-    JLE_1 %bb.2, implicit $eflags, debug-location !24
+    JCC_1 %bb.2, 14, implicit $eflags, debug-location !24
   
   bb.1.if.then:
     DBG_VALUE $ebp, 0, !20, !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_deref, DW_OP_deref), debug-location !21
@@ -258,7 +258,7 @@ body:             |
     CALLpcrel32 @_ZN1A3fooEv, csr_32, implicit $esp, implicit $ssp, implicit-def $al, debug-location !27
     renamable $ecx = MOVSX32rr8 killed renamable $al, debug-location !27
     CMP32ri8 killed renamable $ecx, 97, implicit-def $eflags, debug-location !27
-    JNE_1 %bb.4, implicit $eflags, debug-location !27
+    JCC_1 %bb.4, 5, implicit $eflags, debug-location !27
   
   bb.3.if.then2:
     DBG_VALUE $ebp, 0, !20, !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_deref, DW_OP_deref), debug-location !21

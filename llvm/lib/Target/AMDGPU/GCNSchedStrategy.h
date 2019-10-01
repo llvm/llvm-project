@@ -1,9 +1,8 @@
 //===-- GCNSchedStrategy.h - GCN Scheduler Strategy -*- C++ -*-------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -27,7 +26,7 @@ class GCNSubtarget;
 /// and the GenericScheduler is that GCNSchedStrategy uses different
 /// heuristics to determine excess/critical pressure sets.  Its goal is to
 /// maximize kernel occupancy (i.e. maximum number of waves per simd).
-class GCNMaxOccupancySchedStrategy : public GenericScheduler {
+class GCNMaxOccupancySchedStrategy final : public GenericScheduler {
   friend class GCNScheduleDAGMILive;
 
   SUnit *pickNodeBidirectional(bool &IsTopNode);
@@ -60,7 +59,7 @@ public:
   void setTargetOccupancy(unsigned Occ) { TargetOccupancy = Occ; }
 };
 
-class GCNScheduleDAGMILive : public ScheduleDAGMILive {
+class GCNScheduleDAGMILive final : public ScheduleDAGMILive {
 
   const GCNSubtarget &ST;
 
@@ -78,7 +77,7 @@ class GCNScheduleDAGMILive : public ScheduleDAGMILive {
   // Current region index.
   size_t RegionIdx;
 
-  // Vecor of regions recorder for later rescheduling
+  // Vector of regions recorder for later rescheduling
   SmallVector<std::pair<MachineBasicBlock::iterator,
                         MachineBasicBlock::iterator>, 32> Regions;
 
@@ -90,6 +89,9 @@ class GCNScheduleDAGMILive : public ScheduleDAGMILive {
 
   // Temporary basic block live-in cache.
   DenseMap<const MachineBasicBlock*, GCNRPTracker::LiveRegSet> MBBLiveIns;
+
+  DenseMap<MachineInstr *, GCNRPTracker::LiveRegSet> BBLiveInMap;
+  DenseMap<MachineInstr *, GCNRPTracker::LiveRegSet> getBBLiveInMap() const;
 
   // Return current region pressure.
   GCNRegPressure getRealRegPressure() const;

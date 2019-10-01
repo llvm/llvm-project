@@ -1,6 +1,6 @@
 RUN: rm -rf %t && mkdir -p %t
-RUN: llvm-ar -format gnu crs %t/inner.a %S/Inputs/abcd
-RUN: llvm-ar -format gnu crs %t/outer.a %t/inner.a
+RUN: llvm-ar --format=gnu crs %t/inner.a %S/Inputs/abcd
+RUN: llvm-ar --format=gnu crs %t/outer.a %t/inner.a
 RUN: llvm-strings %t/outer.a | FileCheck %s
 
 CHECK: !<arch>

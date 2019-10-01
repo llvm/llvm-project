@@ -1,9 +1,8 @@
 //===-- SIFormMemoryClauses.cpp -------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -119,6 +118,17 @@ static bool isValidClauseInst(const MachineInstr &MI, bool IsVMEMClause) {
     return false;
   if (!IsVMEMClause && !isSMEMClauseInst(MI))
     return false;
+  // If this is a load instruction where the result has been coalesced with an operand, then we cannot clause it.
+  for (const MachineOperand &ResMO : MI.defs()) {
+    unsigned ResReg = ResMO.getReg();
+    for (const MachineOperand &MO : MI.uses()) {
+      if (!MO.isReg() || MO.isDef())
+        continue;
+      if (MO.getReg() == ResReg)
+        return false;
+    }
+    break; // Only check the first def.
+  }
   return true;
 }
 
@@ -309,6 +319,8 @@ bool SIFormMemoryClauses::runOnMachineFunction(MachineFunction &MF) {
 
   MaxVGPRs = TRI->getAllocatableSet(MF, &AMDGPU::VGPR_32RegClass).count();
   MaxSGPRs = TRI->getAllocatableSet(MF, &AMDGPU::SGPR_32RegClass).count();
+  unsigned FuncMaxClause = AMDGPU::getIntegerAttribute(
+      MF.getFunction(), "amdgpu-max-memory-clause", MaxClause);
 
   for (MachineBasicBlock &MBB : MF) {
     MachineBasicBlock::instr_iterator Next;
@@ -329,7 +341,7 @@ bool SIFormMemoryClauses::runOnMachineFunction(MachineFunction &MF) {
         continue;
 
       unsigned Length = 1;
-      for ( ; Next != E && Length < MaxClause; ++Next) {
+      for ( ; Next != E && Length < FuncMaxClause; ++Next) {
         if (!isValidClauseInst(*Next, IsVMEM))
           break;
 

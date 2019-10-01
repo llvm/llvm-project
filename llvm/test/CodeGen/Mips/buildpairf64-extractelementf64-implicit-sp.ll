@@ -1,16 +1,16 @@
 ; RUN: llc -o - %s -mtriple=mips-unknown-linux-gnu \
 ; RUN:     -mcpu=mips32 -mattr=+fpxx \
-; RUN:     -stop-after=expand-isel-pseudos | \
+; RUN:     -stop-after=finalize-isel | \
 ; RUN:     FileCheck %s -check-prefix=FPXX-IMPLICIT-SP
 
 ; RUN: llc -o - %s -mtriple=mips-unknown-linux-gnu \
 ; RUN:     -mcpu=mips32r6 -mattr=+fp64,+nooddspreg \
-; RUN:     -stop-after=expand-isel-pseudos | \
+; RUN:     -stop-after=finalize-isel | \
 ; RUN:     FileCheck %s -check-prefix=FP64-IMPLICIT-SP
 
 ; RUN: llc -o - %s -mtriple=mips-unknown-linux-gnu \
 ; RUN:     -mcpu=mips32r2 -mattr=+fpxx \
-; RUN:     -stop-after=expand-isel-pseudos | \
+; RUN:     -stop-after=finalize-isel | \
 ; RUN:     FileCheck %s -check-prefix=NO-IMPLICIT-SP
 
 define double @foo2(i32 signext %v1, double %d1) {

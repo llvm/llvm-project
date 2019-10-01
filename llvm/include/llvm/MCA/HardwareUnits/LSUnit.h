@@ -1,9 +1,8 @@
 //===------------------------- LSUnit.h --------------------------*- C++-*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 /// \file
@@ -16,21 +15,298 @@
 #ifndef LLVM_MCA_LSUNIT_H
 #define LLVM_MCA_LSUNIT_H
 
-#include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCSchedule.h"
 #include "llvm/MCA/HardwareUnits/HardwareUnit.h"
+#include "llvm/MCA/Instruction.h"
 
 namespace llvm {
 namespace mca {
 
-class InstRef;
 class Scheduler;
 
-/// A Load/Store Unit implementing a load and store queues.
+/// A node of a memory dependency graph. A MemoryGroup describes a set of
+/// instructions with same memory dependencies.
 ///
-/// This class implements a load queue and a store queue to emulate the
-/// out-of-order execution of memory operations.
-/// Each load (or store) consumes an entry in the load (or store) queue.
+/// By construction, instructions of a MemoryGroup don't depend on each other.
+/// At dispatch stage, instructions are mapped by the LSUnit to MemoryGroups.
+/// A Memory group identifier is then stored as a "token" in field
+/// Instruction::LSUTokenID of each dispatched instructions. That token is used
+/// internally by the LSUnit to track memory dependencies.
+class MemoryGroup {
+  unsigned NumPredecessors;
+  unsigned NumExecutingPredecessors;
+  unsigned NumExecutedPredecessors;
+
+  unsigned NumInstructions;
+  unsigned NumExecuting;
+  unsigned NumExecuted;
+  SmallVector<MemoryGroup *, 4> Succ;
+
+  CriticalDependency CriticalPredecessor;
+  InstRef CriticalMemoryInstruction;
+
+  MemoryGroup(const MemoryGroup &) = delete;
+  MemoryGroup &operator=(const MemoryGroup &) = delete;
+
+public:
+  MemoryGroup()
+      : NumPredecessors(0), NumExecutingPredecessors(0),
+        NumExecutedPredecessors(0), NumInstructions(0), NumExecuting(0),
+        NumExecuted(0), CriticalPredecessor(), CriticalMemoryInstruction() {}
+  MemoryGroup(MemoryGroup &&) = default;
+
+  ArrayRef<MemoryGroup *> getSuccessors() const { return Succ; }
+  unsigned getNumSuccessors() const { return Succ.size(); }
+  unsigned getNumPredecessors() const { return NumPredecessors; }
+  unsigned getNumExecutingPredecessors() const {
+    return NumExecutingPredecessors;
+  }
+  unsigned getNumExecutedPredecessors() const {
+    return NumExecutedPredecessors;
+  }
+  unsigned getNumInstructions() const { return NumInstructions; }
+  unsigned getNumExecuting() const { return NumExecuting; }
+  unsigned getNumExecuted() const { return NumExecuted; }
+
+  const InstRef &getCriticalMemoryInstruction() const {
+    return CriticalMemoryInstruction;
+  }
+  const CriticalDependency &getCriticalPredecessor() const {
+    return CriticalPredecessor;
+  }
+
+  void addSuccessor(MemoryGroup *Group) {
+    Group->NumPredecessors++;
+    assert(!isExecuted() && "Should have been removed!");
+    if (isExecuting())
+      Group->onGroupIssued(CriticalMemoryInstruction);
+    Succ.emplace_back(Group);
+  }
+
+  bool isWaiting() const {
+    return NumPredecessors >
+           (NumExecutingPredecessors + NumExecutedPredecessors);
+  }
+  bool isPending() const {
+    return NumExecutingPredecessors &&
+           ((NumExecutedPredecessors + NumExecutingPredecessors) ==
+            NumPredecessors);
+  }
+  bool isReady() const { return NumExecutedPredecessors == NumPredecessors; }
+  bool isExecuting() const {
+    return NumExecuting && (NumExecuting == (NumInstructions - NumExecuted));
+  }
+  bool isExecuted() const { return NumInstructions == NumExecuted; }
+
+  void onGroupIssued(const InstRef &IR) {
+    assert(!isReady() && "Unexpected group-start event!");
+    NumExecutingPredecessors++;
+
+    unsigned Cycles = IR.getInstruction()->getCyclesLeft();
+    if (CriticalPredecessor.Cycles < Cycles) {
+      CriticalPredecessor.IID = IR.getSourceIndex();
+      CriticalPredecessor.Cycles = Cycles;
+    }
+  }
+
+  void onGroupExecuted() {
+    assert(!isReady() && "Inconsistent state found!");
+    NumExecutingPredecessors--;
+    NumExecutedPredecessors++;
+  }
+
+  void onInstructionIssued(const InstRef &IR) {
+    assert(!isExecuting() && "Invalid internal state!");
+    ++NumExecuting;
+
+    // update the CriticalMemDep.
+    const Instruction &IS = *IR.getInstruction();
+    if ((bool)CriticalMemoryInstruction) {
+      const Instruction &OtherIS = *CriticalMemoryInstruction.getInstruction();
+      if (OtherIS.getCyclesLeft() < IS.getCyclesLeft())
+        CriticalMemoryInstruction = IR;
+    } else {
+      CriticalMemoryInstruction = IR;
+    }
+
+    if (!isExecuting())
+      return;
+
+    // Notify successors that this group started execution.
+    for (MemoryGroup *MG : Succ)
+      MG->onGroupIssued(CriticalMemoryInstruction);
+  }
+
+  void onInstructionExecuted() {
+    assert(isReady() && !isExecuted() && "Invalid internal state!");
+    --NumExecuting;
+    ++NumExecuted;
+
+    if (!isExecuted())
+      return;
+
+    // Notify successors that this group has finished execution.
+    for (MemoryGroup *MG : Succ)
+      MG->onGroupExecuted();
+  }
+
+  void addInstruction() {
+    assert(!getNumSuccessors() && "Cannot add instructions to this group!");
+    ++NumInstructions;
+  }
+
+  void cycleEvent() {
+    if (isWaiting() && CriticalPredecessor.Cycles)
+      CriticalPredecessor.Cycles--;
+  }
+};
+
+/// Abstract base interface for LS (load/store) units in llvm-mca.
+class LSUnitBase : public HardwareUnit {
+  /// Load queue size.
+  ///
+  /// A value of zero for this field means that the load queue is unbounded.
+  /// Processor models can declare the size of a load queue via tablegen (see
+  /// the definition of tablegen class LoadQueue in
+  /// llvm/Target/TargetSchedule.td).
+  unsigned LQSize;
+
+  /// Load queue size.
+  ///
+  /// A value of zero for this field means that the store queue is unbounded.
+  /// Processor models can declare the size of a store queue via tablegen (see
+  /// the definition of tablegen class StoreQueue in
+  /// llvm/Target/TargetSchedule.td).
+  unsigned SQSize;
+
+  unsigned UsedLQEntries;
+  unsigned UsedSQEntries;
+
+  /// True if loads don't alias with stores.
+  ///
+  /// By default, the LS unit assumes that loads and stores don't alias with
+  /// eachother. If this field is set to false, then loads are always assumed to
+  /// alias with stores.
+  const bool NoAlias;
+
+  /// Used to map group identifiers to MemoryGroups.
+  DenseMap<unsigned, std::unique_ptr<MemoryGroup>> Groups;
+  unsigned NextGroupID;
+
+public:
+  LSUnitBase(const MCSchedModel &SM, unsigned LoadQueueSize,
+             unsigned StoreQueueSize, bool AssumeNoAlias);
+
+  virtual ~LSUnitBase();
+
+  /// Returns the total number of entries in the load queue.
+  unsigned getLoadQueueSize() const { return LQSize; }
+
+  /// Returns the total number of entries in the store queue.
+  unsigned getStoreQueueSize() const { return SQSize; }
+
+  unsigned getUsedLQEntries() const { return UsedLQEntries; }
+  unsigned getUsedSQEntries() const { return UsedSQEntries; }
+  unsigned assignLQSlot() { return UsedLQEntries++; }
+  unsigned assignSQSlot() { return UsedSQEntries++; }
+
+  bool assumeNoAlias() const { return NoAlias; }
+
+  enum Status {
+    LSU_AVAILABLE = 0,
+    LSU_LQUEUE_FULL, // Load Queue unavailable
+    LSU_SQUEUE_FULL  // Store Queue unavailable
+  };
+
+  /// This method checks the availability of the load/store buffers.
+  ///
+  /// Returns LSU_AVAILABLE if there are enough load/store queue entries to
+  /// accomodate instruction IR. By default, LSU_AVAILABLE is returned if IR is
+  /// not a memory operation.
+  virtual Status isAvailable(const InstRef &IR) const = 0;
+
+  /// Allocates LS resources for instruction IR.
+  ///
+  /// This method assumes that a previous call to `isAvailable(IR)` succeeded
+  /// with a LSUnitBase::Status value of LSU_AVAILABLE.
+  /// Returns the GroupID associated with this instruction. That value will be
+  /// used to set the LSUTokenID field in class Instruction.
+  virtual unsigned dispatch(const InstRef &IR) = 0;
+
+  bool isSQEmpty() const { return !UsedSQEntries; }
+  bool isLQEmpty() const { return !UsedLQEntries; }
+  bool isSQFull() const { return SQSize && SQSize == UsedSQEntries; }
+  bool isLQFull() const { return LQSize && LQSize == UsedLQEntries; }
+
+  bool isValidGroupID(unsigned Index) const {
+    return Index && (Groups.find(Index) != Groups.end());
+  }
+
+  /// Check if a peviously dispatched instruction IR is now ready for execution.
+  bool isReady(const InstRef &IR) const {
+    unsigned GroupID = IR.getInstruction()->getLSUTokenID();
+    const MemoryGroup &Group = getGroup(GroupID);
+    return Group.isReady();
+  }
+
+  /// Check if instruction IR only depends on memory instructions that are
+  /// currently executing.
+  bool isPending(const InstRef &IR) const {
+    unsigned GroupID = IR.getInstruction()->getLSUTokenID();
+    const MemoryGroup &Group = getGroup(GroupID);
+    return Group.isPending();
+  }
+
+  /// Check if instruction IR is still waiting on memory operations, and the
+  /// wait time is still unknown.
+  bool isWaiting(const InstRef &IR) const {
+    unsigned GroupID = IR.getInstruction()->getLSUTokenID();
+    const MemoryGroup &Group = getGroup(GroupID);
+    return Group.isWaiting();
+  }
+
+  bool hasDependentUsers(const InstRef &IR) const {
+    unsigned GroupID = IR.getInstruction()->getLSUTokenID();
+    const MemoryGroup &Group = getGroup(GroupID);
+    return !Group.isExecuted() && Group.getNumSuccessors();
+  }
+
+  const MemoryGroup &getGroup(unsigned Index) const {
+    assert(isValidGroupID(Index) && "Group doesn't exist!");
+    return *Groups.find(Index)->second;
+  }
+
+  MemoryGroup &getGroup(unsigned Index) {
+    assert(isValidGroupID(Index) && "Group doesn't exist!");
+    return *Groups.find(Index)->second;
+  }
+
+  unsigned createMemoryGroup() {
+    Groups.insert(
+        std::make_pair(NextGroupID, llvm::make_unique<MemoryGroup>()));
+    return NextGroupID++;
+  }
+
+  // Instruction executed event handlers.
+  virtual void onInstructionExecuted(const InstRef &IR);
+
+  virtual void onInstructionIssued(const InstRef &IR) {
+    unsigned GroupID = IR.getInstruction()->getLSUTokenID();
+    Groups[GroupID]->onInstructionIssued(IR);
+  }
+
+  virtual void cycleEvent();
+
+#ifndef NDEBUG
+  void dump() const;
+#endif
+};
+
+/// Default Load/Store Unit (LS Unit) for simulated processors.
+///
+/// Each load (or store) consumes one entry in the load (or store) queue.
 ///
 /// Rules are:
 /// 1) A younger load is allowed to pass an older load only if there are no
@@ -89,26 +365,7 @@ class Scheduler;
 /// A load/store barrier is "executed" when it becomes the oldest entry in
 /// the load/store queue(s). That also means, all the older loads/stores have
 /// already been executed.
-class LSUnit : public HardwareUnit {
-  // Load queue size.
-  // LQ_Size == 0 means that there are infinite slots in the load queue.
-  unsigned LQ_Size;
-
-  // Store queue size.
-  // SQ_Size == 0 means that there are infinite slots in the store queue.
-  unsigned SQ_Size;
-
-  // If true, loads will never alias with stores. This is the default.
-  bool NoAlias;
-
-  // When a `MayLoad` instruction is dispatched to the schedulers for execution,
-  // the LSUnit reserves an entry in the `LoadQueue` for it.
-  //
-  // LoadQueue keeps track of all the loads that are in-flight. A load
-  // instruction is eventually removed from the LoadQueue when it reaches
-  // completion stage. That means, a load leaves the queue whe it is 'executed',
-  // and its value can be forwarded on the data path to outside units.
-  //
+class LSUnit : public LSUnitBase {
   // This class doesn't know about the latency of a load instruction. So, it
   // conservatively/pessimistically assumes that the latency of a load opcode
   // matches the instruction latency.
@@ -139,66 +396,50 @@ class LSUnit : public HardwareUnit {
   // alternative approaches that let instructions specify the number of
   // load/store queue entries which they consume at dispatch stage (See
   // PR39830).
-  SmallSet<unsigned, 16> LoadQueue;
-  SmallSet<unsigned, 16> StoreQueue;
-
-  void assignLQSlot(unsigned Index);
-  void assignSQSlot(unsigned Index);
-  bool isReadyNoAlias(unsigned Index) const;
-
+  //
   // An instruction that both 'mayStore' and 'HasUnmodeledSideEffects' is
   // conservatively treated as a store barrier. It forces older store to be
   // executed before newer stores are issued.
-  SmallSet<unsigned, 8> StoreBarriers;
-
+  //
   // An instruction that both 'MayLoad' and 'HasUnmodeledSideEffects' is
   // conservatively treated as a load barrier. It forces older loads to execute
   // before newer loads are issued.
-  SmallSet<unsigned, 8> LoadBarriers;
-
-  bool isSQEmpty() const { return StoreQueue.empty(); }
-  bool isLQEmpty() const { return LoadQueue.empty(); }
-  bool isSQFull() const { return SQ_Size != 0 && StoreQueue.size() == SQ_Size; }
-  bool isLQFull() const { return LQ_Size != 0 && LoadQueue.size() == LQ_Size; }
+  unsigned CurrentLoadGroupID;
+  unsigned CurrentLoadBarrierGroupID;
+  unsigned CurrentStoreGroupID;
 
 public:
-  LSUnit(const MCSchedModel &SM, unsigned LQ = 0, unsigned SQ = 0,
-         bool AssumeNoAlias = false);
+  LSUnit(const MCSchedModel &SM)
+      : LSUnit(SM, /* LQSize */ 0, /* SQSize */ 0, /* NoAlias */ false) {}
+  LSUnit(const MCSchedModel &SM, unsigned LQ, unsigned SQ)
+      : LSUnit(SM, LQ, SQ, /* NoAlias */ false) {}
+  LSUnit(const MCSchedModel &SM, unsigned LQ, unsigned SQ, bool AssumeNoAlias)
+      : LSUnitBase(SM, LQ, SQ, AssumeNoAlias), CurrentLoadGroupID(0),
+        CurrentLoadBarrierGroupID(0), CurrentStoreGroupID(0) {}
 
-#ifndef NDEBUG
-  void dump() const;
-#endif
+  /// Returns LSU_AVAILABLE if there are enough load/store queue entries to
+  /// accomodate instruction IR.
+  Status isAvailable(const InstRef &IR) const override;
 
-  enum Status { LSU_AVAILABLE = 0, LSU_LQUEUE_FULL, LSU_SQUEUE_FULL };
+  /// Allocates LS resources for instruction IR.
+  ///
+  /// This method assumes that a previous call to `isAvailable(IR)` succeeded
+  /// returning LSU_AVAILABLE.
+  ///
+  /// Rules are:
+  /// By default, rules are:
+  /// 1. A store may not pass a previous store.
+  /// 2. A load may not pass a previous store unless flag 'NoAlias' is set.
+  /// 3. A load may pass a previous load.
+  /// 4. A store may not pass a previous load (regardless of flag 'NoAlias').
+  /// 5. A load has to wait until an older load barrier is fully executed.
+  /// 6. A store has to wait until an older store barrier is fully executed.
+  unsigned dispatch(const InstRef &IR) override;
 
-  // Returns LSU_AVAILABLE if there are enough load/store queue entries to serve
-  // IR. It also returns LSU_AVAILABLE if IR is not a memory operation.
-  Status isAvailable(const InstRef &IR) const;
-
-  // Allocates load/store queue resources for IR.
-  //
-  // This method assumes that a previous call to `isAvailable(IR)` returned
-  // LSU_AVAILABLE, and that IR is a memory operation.
-  void dispatch(const InstRef &IR);
-
-  // By default, rules are:
-  // 1. A store may not pass a previous store.
-  // 2. A load may not pass a previous store unless flag 'NoAlias' is set.
-  // 3. A load may pass a previous load.
-  // 4. A store may not pass a previous load (regardless of flag 'NoAlias').
-  // 5. A load has to wait until an older load barrier is fully executed.
-  // 6. A store has to wait until an older store barrier is fully executed.
-  virtual bool isReady(const InstRef &IR) const;
-
-  // Load and store instructions are tracked by their corresponding queues from
-  // dispatch until the "instruction executed" event.
-  // Only when a load instruction reaches the 'Executed' stage, its value
-  // becomes available to the users. At that point, the load no longer needs to
-  // be tracked by the load queue.
   // FIXME: For simplicity, we optimistically assume a similar behavior for
   // store instructions. In practice, store operations don't tend to leave the
   // store queue until they reach the 'Retired' stage (See PR39830).
-  void onInstructionExecuted(const InstRef &IR);
+  void onInstructionExecuted(const InstRef &IR) override;
 };
 
 } // namespace mca

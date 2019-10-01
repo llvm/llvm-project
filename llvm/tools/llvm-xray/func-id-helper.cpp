@@ -1,9 +1,8 @@
 //===- xray-fc-account.cpp: XRay Function Call Accounting Tool ------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -30,7 +29,12 @@ std::string FuncIdConversionHelper::SymbolOrNumber(int32_t FuncId) const {
     return F.str();
   }
 
-  if (auto ResOrErr = Symbolizer.symbolizeCode(BinaryInstrMap, It->second)) {
+  object::SectionedAddress ModuleAddress;
+  ModuleAddress.Address = It->second;
+  // TODO: set proper section index here.
+  // object::SectionedAddress::UndefSection works for only absolute addresses.
+  ModuleAddress.SectionIndex = object::SectionedAddress::UndefSection;
+  if (auto ResOrErr = Symbolizer.symbolizeCode(BinaryInstrMap, ModuleAddress)) {
     auto &DI = *ResOrErr;
     if (DI.FunctionName == "<invalid>")
       F << "@(" << std::hex << It->second << ")";
@@ -52,7 +56,12 @@ std::string FuncIdConversionHelper::FileLineAndColumn(int32_t FuncId) const {
     return "(unknown)";
 
   std::ostringstream F;
-  auto ResOrErr = Symbolizer.symbolizeCode(BinaryInstrMap, It->second);
+  object::SectionedAddress ModuleAddress;
+  ModuleAddress.Address = It->second;
+  // TODO: set proper section index here.
+  // object::SectionedAddress::UndefSection works for only absolute addresses.
+  ModuleAddress.SectionIndex = object::SectionedAddress::UndefSection;
+  auto ResOrErr = Symbolizer.symbolizeCode(BinaryInstrMap, ModuleAddress);
   if (!ResOrErr) {
     consumeError(ResOrErr.takeError());
     return "(unknown)";

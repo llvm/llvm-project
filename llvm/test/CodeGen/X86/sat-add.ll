@@ -10,12 +10,9 @@
 define i8 @unsigned_sat_constant_i8_using_min(i8 %x) {
 ; ANY-LABEL: unsigned_sat_constant_i8_using_min:
 ; ANY:       # %bb.0:
-; ANY-NEXT:    movl %edi, %eax
-; ANY-NEXT:    cmpb $-43, %al
-; ANY-NEXT:    jb .LBB0_2
-; ANY-NEXT:  # %bb.1:
-; ANY-NEXT:    movb $-43, %al
-; ANY-NEXT:  .LBB0_2:
+; ANY-NEXT:    cmpb $-43, %dil
+; ANY-NEXT:    movl $213, %eax
+; ANY-NEXT:    cmovbl %edi, %eax
 ; ANY-NEXT:    addb $42, %al
 ; ANY-NEXT:    # kill: def $al killed $al killed $eax
 ; ANY-NEXT:    retq
@@ -29,11 +26,10 @@ define i8 @unsigned_sat_constant_i8_using_cmp_sum(i8 %x) {
 ; ANY-LABEL: unsigned_sat_constant_i8_using_cmp_sum:
 ; ANY:       # %bb.0:
 ; ANY-NEXT:    addb $42, %dil
-; ANY-NEXT:    movb $-1, %al
-; ANY-NEXT:    jb .LBB1_2
-; ANY-NEXT:  # %bb.1:
-; ANY-NEXT:    movl %edi, %eax
-; ANY-NEXT:  .LBB1_2:
+; ANY-NEXT:    movzbl %dil, %ecx
+; ANY-NEXT:    movl $255, %eax
+; ANY-NEXT:    cmovael %ecx, %eax
+; ANY-NEXT:    # kill: def $al killed $al killed $eax
 ; ANY-NEXT:    retq
   %a = add i8 %x, 42
   %c = icmp ugt i8 %x, %a
@@ -45,11 +41,10 @@ define i8 @unsigned_sat_constant_i8_using_cmp_notval(i8 %x) {
 ; ANY-LABEL: unsigned_sat_constant_i8_using_cmp_notval:
 ; ANY:       # %bb.0:
 ; ANY-NEXT:    addb $42, %dil
-; ANY-NEXT:    movb $-1, %al
-; ANY-NEXT:    jb .LBB2_2
-; ANY-NEXT:  # %bb.1:
-; ANY-NEXT:    movl %edi, %eax
-; ANY-NEXT:  .LBB2_2:
+; ANY-NEXT:    movzbl %dil, %ecx
+; ANY-NEXT:    movl $255, %eax
+; ANY-NEXT:    cmovael %ecx, %eax
+; ANY-NEXT:    # kill: def $al killed $al killed $eax
 ; ANY-NEXT:    retq
   %a = add i8 %x, 42
   %c = icmp ugt i8 %x, -43
@@ -183,14 +178,11 @@ define i64 @unsigned_sat_constant_i64_using_cmp_notval(i64 %x) {
 define i8 @unsigned_sat_variable_i8_using_min(i8 %x, i8 %y) {
 ; ANY-LABEL: unsigned_sat_variable_i8_using_min:
 ; ANY:       # %bb.0:
-; ANY-NEXT:    movl %edi, %eax
-; ANY-NEXT:    movl %esi, %ecx
-; ANY-NEXT:    notb %cl
-; ANY-NEXT:    cmpb %cl, %al
-; ANY-NEXT:    jb .LBB12_2
-; ANY-NEXT:  # %bb.1:
-; ANY-NEXT:    movl %ecx, %eax
-; ANY-NEXT:  .LBB12_2:
+; ANY-NEXT:    movl %esi, %eax
+; ANY-NEXT:    notb %al
+; ANY-NEXT:    cmpb %al, %dil
+; ANY-NEXT:    movzbl %al, %eax
+; ANY-NEXT:    cmovbl %edi, %eax
 ; ANY-NEXT:    addb %sil, %al
 ; ANY-NEXT:    # kill: def $al killed $al killed $eax
 ; ANY-NEXT:    retq
@@ -205,11 +197,10 @@ define i8 @unsigned_sat_variable_i8_using_cmp_sum(i8 %x, i8 %y) {
 ; ANY-LABEL: unsigned_sat_variable_i8_using_cmp_sum:
 ; ANY:       # %bb.0:
 ; ANY-NEXT:    addb %sil, %dil
-; ANY-NEXT:    movb $-1, %al
-; ANY-NEXT:    jb .LBB13_2
-; ANY-NEXT:  # %bb.1:
-; ANY-NEXT:    movl %edi, %eax
-; ANY-NEXT:  .LBB13_2:
+; ANY-NEXT:    movzbl %dil, %ecx
+; ANY-NEXT:    movl $255, %eax
+; ANY-NEXT:    cmovael %ecx, %eax
+; ANY-NEXT:    # kill: def $al killed $al killed $eax
 ; ANY-NEXT:    retq
   %a = add i8 %x, %y
   %c = icmp ugt i8 %x, %a
@@ -220,15 +211,15 @@ define i8 @unsigned_sat_variable_i8_using_cmp_sum(i8 %x, i8 %y) {
 define i8 @unsigned_sat_variable_i8_using_cmp_notval(i8 %x, i8 %y) {
 ; ANY-LABEL: unsigned_sat_variable_i8_using_cmp_notval:
 ; ANY:       # %bb.0:
-; ANY-NEXT:    movl %esi, %eax
-; ANY-NEXT:    notb %al
-; ANY-NEXT:    cmpb %al, %dil
-; ANY-NEXT:    movb $-1, %al
-; ANY-NEXT:    ja .LBB14_2
-; ANY-NEXT:  # %bb.1:
-; ANY-NEXT:    addb %sil, %dil
-; ANY-NEXT:    movl %edi, %eax
-; ANY-NEXT:  .LBB14_2:
+; ANY-NEXT:    # kill: def $esi killed $esi def $rsi
+; ANY-NEXT:    # kill: def $edi killed $edi def $rdi
+; ANY-NEXT:    leal (%rdi,%rsi), %eax
+; ANY-NEXT:    notb %sil
+; ANY-NEXT:    cmpb %sil, %dil
+; ANY-NEXT:    movzbl %al, %ecx
+; ANY-NEXT:    movl $255, %eax
+; ANY-NEXT:    cmovbel %ecx, %eax
+; ANY-NEXT:    # kill: def $al killed $al killed $eax
 ; ANY-NEXT:    retq
   %noty = xor i8 %y, -1
   %a = add i8 %x, %y
@@ -245,7 +236,7 @@ define i16 @unsigned_sat_variable_i16_using_min(i16 %x, i16 %y) {
 ; ANY-NEXT:    notl %eax
 ; ANY-NEXT:    cmpw %ax, %di
 ; ANY-NEXT:    cmovbl %edi, %eax
-; ANY-NEXT:    leal (%rax,%rsi), %eax
+; ANY-NEXT:    addl %esi, %eax
 ; ANY-NEXT:    # kill: def $ax killed $ax killed $eax
 ; ANY-NEXT:    retq
   %noty = xor i16 %y, -1
@@ -296,7 +287,7 @@ define i32 @unsigned_sat_variable_i32_using_min(i32 %x, i32 %y) {
 ; ANY-NEXT:    notl %eax
 ; ANY-NEXT:    cmpl %eax, %edi
 ; ANY-NEXT:    cmovbl %edi, %eax
-; ANY-NEXT:    leal (%rax,%rsi), %eax
+; ANY-NEXT:    addl %esi, %eax
 ; ANY-NEXT:    retq
   %noty = xor i32 %y, -1
   %c = icmp ult i32 %x, %noty
@@ -343,7 +334,7 @@ define i64 @unsigned_sat_variable_i64_using_min(i64 %x, i64 %y) {
 ; ANY-NEXT:    notq %rax
 ; ANY-NEXT:    cmpq %rax, %rdi
 ; ANY-NEXT:    cmovbq %rdi, %rax
-; ANY-NEXT:    leaq (%rax,%rsi), %rax
+; ANY-NEXT:    addq %rsi, %rax
 ; ANY-NEXT:    retq
   %noty = xor i64 %y, -1
   %c = icmp ult i64 %x, %noty
@@ -533,6 +524,31 @@ define <4 x i32> @unsigned_sat_constant_v4i32_using_cmp_notval(<4 x i32> %x) {
 ; SSE41-NEXT:    retq
   %a = add <4 x i32> %x, <i32 42, i32 42, i32 42, i32 42>
   %c = icmp ugt <4 x i32> %x, <i32 -43, i32 -43, i32 -43, i32 -43>
+  %r = select <4 x i1> %c, <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>, <4 x i32> %a
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @unsigned_sat_constant_v4i32_using_cmp_notval_nonsplat(<4 x i32> %x) {
+; SSE2-LABEL: unsigned_sat_constant_v4i32_using_cmp_notval_nonsplat:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [43,44,45,46]
+; SSE2-NEXT:    paddd %xmm0, %xmm1
+; SSE2-NEXT:    pxor {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    pcmpgtd {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    por %xmm1, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: unsigned_sat_constant_v4i32_using_cmp_notval_nonsplat:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [43,44,45,46]
+; SSE41-NEXT:    paddd %xmm0, %xmm1
+; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [4294967253,4294967252,4294967251,4294967250]
+; SSE41-NEXT:    pmaxud %xmm0, %xmm2
+; SSE41-NEXT:    pcmpeqd %xmm2, %xmm0
+; SSE41-NEXT:    por %xmm1, %xmm0
+; SSE41-NEXT:    retq
+  %a = add <4 x i32> %x, <i32 43, i32 44, i32 45, i32 46>
+  %c = icmp ugt <4 x i32> %x, <i32 -44, i32 -45, i32 -46, i32 -47>
   %r = select <4 x i1> %c, <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>, <4 x i32> %a
   ret <4 x i32> %r
 }

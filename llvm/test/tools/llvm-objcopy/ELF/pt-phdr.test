@@ -2,7 +2,7 @@
 # segments.
 
 # RUN: llvm-objcopy %p/Inputs/pt-phdr.elf %t
-# RUN: llvm-readobj -program-headers %t | FileCheck %s
+# RUN: llvm-readobj --program-headers %t | FileCheck %s
 
 #CHECK: ProgramHeaders [
 #CHECK-NEXT:  ProgramHeader {

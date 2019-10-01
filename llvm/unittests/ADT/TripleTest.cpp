@@ -1,9 +1,8 @@
 //===----------- Triple.cpp - Triple unit tests ---------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -253,10 +252,22 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::UnknownOS, T.getOS());
   EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
 
+  T = Triple("wasm32-unknown-wasi");
+  EXPECT_EQ(Triple::wasm32, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::WASI, T.getOS());
+  EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
+
   T = Triple("wasm64-unknown-unknown");
   EXPECT_EQ(Triple::wasm64, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::UnknownOS, T.getOS());
+  EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
+
+  T = Triple("wasm64-unknown-wasi");
+  EXPECT_EQ(Triple::wasm64, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::WASI, T.getOS());
   EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
 
   T = Triple("avr-unknown-unknown");
@@ -541,6 +552,13 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::OpenEmbedded, T.getVendor());
   EXPECT_EQ(Triple::Linux, T.getOS());
   EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
+  EXPECT_TRUE(T.isArch64Bit());
+
+  T = Triple("arm64_32-apple-ios");
+  EXPECT_EQ(Triple::aarch64_32, T.getArch());
+  EXPECT_EQ(Triple::IOS, T.getOS());
+  EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
+  EXPECT_TRUE(T.isArch32Bit());
 
   T = Triple("huh");
   EXPECT_EQ(Triple::UnknownArch, T.getArch());
@@ -691,6 +709,10 @@ TEST(TripleTest, Normalization) {
             Triple::normalize("i686-linux")); // i686-pc-linux-gnu
   EXPECT_EQ("arm-none-unknown-eabi",
             Triple::normalize("arm-none-eabi")); // arm-none-eabi
+  EXPECT_EQ("wasm32-unknown-wasi",
+            Triple::normalize("wasm32-wasi")); // wasm32-unknown-wasi
+  EXPECT_EQ("wasm64-unknown-wasi",
+            Triple::normalize("wasm64-wasi")); // wasm64-unknown-wasi
 }
 
 TEST(TripleTest, MutateName) {
@@ -1246,11 +1268,28 @@ TEST(TripleTest, FileFormat) {
 
   EXPECT_EQ(Triple::Wasm, Triple("wasm32-unknown-unknown").getObjectFormat());
   EXPECT_EQ(Triple::Wasm, Triple("wasm64-unknown-unknown").getObjectFormat());
+  EXPECT_EQ(Triple::Wasm, Triple("wasm32-wasi").getObjectFormat());
+  EXPECT_EQ(Triple::Wasm, Triple("wasm64-wasi").getObjectFormat());
+  EXPECT_EQ(Triple::Wasm, Triple("wasm32-unknown-wasi").getObjectFormat());
+  EXPECT_EQ(Triple::Wasm, Triple("wasm64-unknown-wasi").getObjectFormat());
 
   EXPECT_EQ(Triple::Wasm,
             Triple("wasm32-unknown-unknown-wasm").getObjectFormat());
   EXPECT_EQ(Triple::Wasm,
             Triple("wasm64-unknown-unknown-wasm").getObjectFormat());
+  EXPECT_EQ(Triple::Wasm,
+            Triple("wasm32-wasi-wasm").getObjectFormat());
+  EXPECT_EQ(Triple::Wasm,
+            Triple("wasm64-wasi-wasm").getObjectFormat());
+  EXPECT_EQ(Triple::Wasm,
+            Triple("wasm32-unknown-wasi-wasm").getObjectFormat());
+  EXPECT_EQ(Triple::Wasm,
+            Triple("wasm64-unknown-wasi-wasm").getObjectFormat());
+
+  EXPECT_EQ(Triple::XCOFF, Triple("powerpc-ibm-aix").getObjectFormat());
+  EXPECT_EQ(Triple::XCOFF, Triple("powerpc64-ibm-aix").getObjectFormat());
+  EXPECT_EQ(Triple::XCOFF, Triple("powerpc---xcoff").getObjectFormat());
+  EXPECT_EQ(Triple::XCOFF, Triple("powerpc64---xcoff").getObjectFormat());
 
   Triple MSVCNormalized(Triple::normalize("i686-pc-windows-msvc-elf"));
   EXPECT_EQ(Triple::ELF, MSVCNormalized.getObjectFormat());
@@ -1270,6 +1309,9 @@ TEST(TripleTest, FileFormat) {
 
   T.setObjectFormat(Triple::MachO);
   EXPECT_EQ(Triple::MachO, T.getObjectFormat());
+
+  T.setObjectFormat(Triple::XCOFF);
+  EXPECT_EQ(Triple::XCOFF, T.getObjectFormat());
 }
 
 TEST(TripleTest, NormalizeWindows) {
@@ -1432,6 +1474,10 @@ TEST(TripleTest, ParseARMArch) {
   {
     Triple T = Triple("arm64");
     EXPECT_EQ(Triple::aarch64, T.getArch());
+  }
+  {
+    Triple T = Triple("arm64_32");
+    EXPECT_EQ(Triple::aarch64_32, T.getArch());
   }
   {
     Triple T = Triple("aarch64");

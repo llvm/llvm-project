@@ -1,9 +1,8 @@
 //===- ScheduleDAGInstrs.h - MachineInstr Scheduling ------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -235,6 +234,11 @@ namespace llvm {
     /// For an unanalyzable memory access, this Value is used in maps.
     UndefValue *UnknownValue;
 
+
+    /// Topo - A topological ordering for SUnits which permits fast IsReachable
+    /// and similar queries.
+    ScheduleDAGTopologicalSort Topo;
+
     using DbgValueVector =
         std::vector<std::pair<MachineInstr *, MachineInstr *>>;
     /// Remember instruction that precedes DBG_VALUE.
@@ -338,6 +342,17 @@ namespace llvm {
 
     /// Fixes register kill flags that scheduling has made invalid.
     void fixupKills(MachineBasicBlock &MBB);
+
+    /// True if an edge can be added from PredSU to SuccSU without creating
+    /// a cycle.
+    bool canAddEdge(SUnit *SuccSU, SUnit *PredSU);
+
+    /// Add a DAG edge to the given SU with the given predecessor
+    /// dependence data.
+    ///
+    /// \returns true if the edge may be added without creating a cycle OR if an
+    /// equivalent edge already existed (false indicates failure).
+    bool addEdge(SUnit *SuccSU, const SDep &PredDep);
 
   protected:
     void initSUnits();

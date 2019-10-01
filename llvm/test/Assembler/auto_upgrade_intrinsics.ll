@@ -80,7 +80,7 @@ declare void @llvm.masked.store.v2f64(<2 x double> %val, <2 x double>* %ptrs, i3
 define void @tests.masked.store(<2 x double>* %ptr, <2 x i1> %mask, <2 x double> %val)  {
 ; CHECK-LABEL: @tests.masked.store(
 ; CHECK: @llvm.masked.store.v2f64.p0v2f64
-  call void @llvm.masked.store.v2f64(<2 x double> %val, <2 x double>* %ptr, i32 3, <2 x i1> %mask)
+  call void @llvm.masked.store.v2f64(<2 x double> %val, <2 x double>* %ptr, i32 4, <2 x i1> %mask)
   ret void
 }
 
@@ -146,5 +146,5 @@ define void @tests.lifetime.start.end() {
 ; CHECK: declare i32 @llvm.objectsize.i32.p0i8
 
 
-; CHECK: declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture)
-; CHECK: declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture)
+; CHECK: declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture)
+; CHECK: declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture)

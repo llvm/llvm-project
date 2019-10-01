@@ -28,7 +28,7 @@
 # CHECK: "_cmd"
 # CHECK: DW_TAG_formal_parameter
 # CHECK-NEXT: DW_AT_location
-# CHECK-NEXT:   [0x{{0*}}, 0x{{.*}}):
+# CHECK-NEXT:   [0x{{.*}}, 0x{{.*}}):
 # CHECK-NOT:    DW_AT_
 # CHECK:        [0x{{.*}}, [[FN_END]]):
 # CHECK-NEXT: DW_AT_name {{.*}}"imageSize"
@@ -364,42 +364,42 @@ frameInfo:
   localFrameSize:  144
 stack:           
   - { id: 0, name: StackGuardSlot, offset: -40, size: 8, alignment: 8, 
-      stack-id: 0, local-offset: -8 }
-  - { id: 1, name: self.addr, offset: -168, size: 8, alignment: 8, stack-id: 0, 
+      stack-id: default, local-offset: -8 }
+  - { id: 1, name: self.addr, offset: -168, size: 8, alignment: 8, stack-id: default,
       local-offset: -136, debug-info-variable: '!45', debug-info-expression: '!DIExpression()', 
       debug-info-location: '!47' }
-  - { id: 2, name: _cmd.addr, offset: -176, size: 8, alignment: 8, stack-id: 0, 
+  - { id: 2, name: _cmd.addr, offset: -176, size: 8, alignment: 8, stack-id: default,
       local-offset: -144, debug-info-variable: '!48', debug-info-expression: '!DIExpression()', 
       debug-info-location: '!47' }
-  - { id: 3, name: MyAlloca, offset: -160, size: 96, alignment: 32, stack-id: 0, 
+  - { id: 3, name: MyAlloca, offset: -160, size: 96, alignment: 32, stack-id: default,
       local-offset: -128 }
-  - { id: 4, type: spill-slot, offset: -184, size: 8, alignment: 8, stack-id: 0 }
-  - { id: 5, type: spill-slot, offset: -192, size: 8, alignment: 8, stack-id: 0 }
-  - { id: 6, type: spill-slot, offset: -200, size: 8, alignment: 8, stack-id: 0 }
-  - { id: 7, type: spill-slot, offset: -208, size: 8, alignment: 8, stack-id: 0 }
-  - { id: 8, type: spill-slot, offset: -216, size: 8, alignment: 8, stack-id: 0 }
-  - { id: 9, type: spill-slot, offset: -224, size: 8, alignment: 8, stack-id: 0 }
-  - { id: 10, type: spill-slot, offset: -232, size: 8, alignment: 8, stack-id: 0 }
-  - { id: 11, type: spill-slot, offset: -240, size: 8, alignment: 8, stack-id: 0 }
-  - { id: 12, type: spill-slot, offset: -248, size: 8, alignment: 8, stack-id: 0 }
-  - { id: 13, type: spill-slot, offset: -256, size: 8, alignment: 8, stack-id: 0 }
-  - { id: 14, type: spill-slot, offset: -264, size: 8, alignment: 8, stack-id: 0 }
-  - { id: 15, type: spill-slot, offset: -272, size: 8, alignment: 8, stack-id: 0 }
-  - { id: 16, type: spill-slot, offset: -280, size: 8, alignment: 8, stack-id: 0 }
-  - { id: 17, type: spill-slot, offset: -288, size: 8, alignment: 8, stack-id: 0 }
-  - { id: 18, type: spill-slot, offset: -296, size: 8, alignment: 8, stack-id: 0 }
-  - { id: 19, type: spill-slot, offset: -304, size: 8, alignment: 8, stack-id: 0 }
-  - { id: 20, type: spill-slot, offset: -312, size: 8, alignment: 8, stack-id: 0 }
-  - { id: 21, type: spill-slot, offset: -320, size: 8, alignment: 8, stack-id: 0 }
-  - { id: 22, type: spill-slot, offset: -328, size: 8, alignment: 8, stack-id: 0 }
-  - { id: 23, type: spill-slot, offset: -336, size: 8, alignment: 8, stack-id: 0 }
-  - { id: 24, type: spill-slot, offset: -8, size: 8, alignment: 8, stack-id: 0, 
+  - { id: 4, type: spill-slot, offset: -184, size: 8, alignment: 8, stack-id: default }
+  - { id: 5, type: spill-slot, offset: -192, size: 8, alignment: 8, stack-id: default }
+  - { id: 6, type: spill-slot, offset: -200, size: 8, alignment: 8, stack-id: default }
+  - { id: 7, type: spill-slot, offset: -208, size: 8, alignment: 8, stack-id: default }
+  - { id: 8, type: spill-slot, offset: -216, size: 8, alignment: 8, stack-id: default }
+  - { id: 9, type: spill-slot, offset: -224, size: 8, alignment: 8, stack-id: default }
+  - { id: 10, type: spill-slot, offset: -232, size: 8, alignment: 8, stack-id: default }
+  - { id: 11, type: spill-slot, offset: -240, size: 8, alignment: 8, stack-id: default }
+  - { id: 12, type: spill-slot, offset: -248, size: 8, alignment: 8, stack-id: default }
+  - { id: 13, type: spill-slot, offset: -256, size: 8, alignment: 8, stack-id: default }
+  - { id: 14, type: spill-slot, offset: -264, size: 8, alignment: 8, stack-id: default }
+  - { id: 15, type: spill-slot, offset: -272, size: 8, alignment: 8, stack-id: default }
+  - { id: 16, type: spill-slot, offset: -280, size: 8, alignment: 8, stack-id: default }
+  - { id: 17, type: spill-slot, offset: -288, size: 8, alignment: 8, stack-id: default }
+  - { id: 18, type: spill-slot, offset: -296, size: 8, alignment: 8, stack-id: default }
+  - { id: 19, type: spill-slot, offset: -304, size: 8, alignment: 8, stack-id: default }
+  - { id: 20, type: spill-slot, offset: -312, size: 8, alignment: 8, stack-id: default }
+  - { id: 21, type: spill-slot, offset: -320, size: 8, alignment: 8, stack-id: default }
+  - { id: 22, type: spill-slot, offset: -328, size: 8, alignment: 8, stack-id: default }
+  - { id: 23, type: spill-slot, offset: -336, size: 8, alignment: 8, stack-id: default }
+  - { id: 24, type: spill-slot, offset: -8, size: 8, alignment: 8, stack-id: default,
       callee-saved-register: '$lr' }
-  - { id: 25, type: spill-slot, offset: -16, size: 8, alignment: 8, stack-id: 0, 
+  - { id: 25, type: spill-slot, offset: -16, size: 8, alignment: 8, stack-id: default,
       callee-saved-register: '$fp' }
-  - { id: 26, type: spill-slot, offset: -24, size: 8, alignment: 8, stack-id: 0, 
+  - { id: 26, type: spill-slot, offset: -24, size: 8, alignment: 8, stack-id: default,
       callee-saved-register: '$x27' }
-  - { id: 27, type: spill-slot, offset: -32, size: 8, alignment: 8, stack-id: 0, 
+  - { id: 27, type: spill-slot, offset: -32, size: 8, alignment: 8, stack-id: default,
       callee-saved-register: '$x28' }
 body:             |
   bb.0.entry:
@@ -662,9 +662,9 @@ frameInfo:
   hasCalls:        true
   maxCallFrameSize: 0
 stack:           
-  - { id: 0, type: spill-slot, offset: -8, size: 8, alignment: 8, stack-id: 0, 
+  - { id: 0, type: spill-slot, offset: -8, size: 8, alignment: 8, stack-id: default,
       callee-saved-register: '$lr' }
-  - { id: 1, type: spill-slot, offset: -16, size: 8, alignment: 8, stack-id: 0, 
+  - { id: 1, type: spill-slot, offset: -16, size: 8, alignment: 8, stack-id: default,
       callee-saved-register: '$fp' }
 body:             |
   bb.0 (%ir-block.0):

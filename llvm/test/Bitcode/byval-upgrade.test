@@ -1,0 +1,7 @@
+RUN: llvm-dis %p/Inputs/byval-upgrade.bc -o - | FileCheck %s
+
+Make sure we upgrade old-stile IntAttribute byval records to a fully typed
+version correctly.
+
+CHECK: call void @bar({ i32*, i8 }* byval({ i32*, i8 }) %ptr)
+CHECK: invoke void @bar({ i32*, i8 }* byval({ i32*, i8 }) %ptr)

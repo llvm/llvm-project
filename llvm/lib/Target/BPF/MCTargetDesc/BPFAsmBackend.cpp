@@ -1,9 +1,8 @@
 //===-- BPFAsmBackend.cpp - BPF Assembler Backend -------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -73,12 +72,12 @@ void BPFAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                                bool IsResolved,
                                const MCSubtargetInfo *STI) const {
   if (Fixup.getKind() == FK_SecRel_4 || Fixup.getKind() == FK_SecRel_8) {
-    if (Value) {
-      MCContext &Ctx = Asm.getContext();
-      Ctx.reportError(Fixup.getLoc(),
-                      "Unsupported relocation: try to compile with -O2 or above, "
-                      "or check your static variable usage");
-    }
+    // The Value is 0 for global variables, and the in-section offset
+    // for static variables. Write to the immediate field of the inst.
+    assert(Value <= UINT32_MAX);
+    support::endian::write<uint32_t>(&Data[Fixup.getOffset() + 4],
+                                     static_cast<uint32_t>(Value),
+                                     Endian);
   } else if (Fixup.getKind() == FK_Data_4) {
     support::endian::write<uint32_t>(&Data[Fixup.getOffset()], Value, Endian);
   } else if (Fixup.getKind() == FK_Data_8) {

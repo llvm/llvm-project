@@ -1,9 +1,8 @@
 //===-- llvm/Argument.h - Definition of the Argument class ------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -79,6 +78,9 @@ public:
   /// If this is a byval or inalloca argument, return its alignment.
   unsigned getParamAlignment() const;
 
+  /// If this is a byval argument, return its type.
+  Type *getParamByValType() const;
+
   /// Return true if this argument has the nest attribute.
   bool hasNestAttr() const;
 
@@ -90,6 +92,9 @@ public:
 
   /// Return true if this argument has the sret attribute.
   bool hasStructRetAttr() const;
+
+  /// Return true if this argument has the inreg attribute.
+  bool hasInRegAttr() const;
 
   /// Return true if this argument has the returned attribute.
   bool hasReturnedAttr() const;
@@ -118,6 +123,8 @@ public:
 
   /// Check if an argument has a given attribute.
   bool hasAttribute(Attribute::AttrKind Kind) const;
+
+  Attribute getAttribute(Attribute::AttrKind Kind) const;
 
   /// Method for support type inquiry through isa, cast, and dyn_cast.
   static bool classof(const Value *V) {

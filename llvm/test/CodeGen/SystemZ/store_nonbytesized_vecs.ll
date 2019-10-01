@@ -75,17 +75,17 @@ define void @fun2(<8 x i32> %src, <8 x i31>* %p)
 ; CHECK-NEXT:    stmg %r14, %r15, 112(%r15)
 ; CHECK-NEXT:    .cfi_offset %r14, -48
 ; CHECK-NEXT:    .cfi_offset %r15, -40
-; CHECK-NEXT:    vlgvf %r3, %v26, 1
-; CHECK-NEXT:    vlgvf %r1, %v26, 2
-; CHECK-NEXT:    risbgn %r4, %r3, 0, 129, 62
-; CHECK-NEXT:    rosbg %r4, %r1, 2, 32, 31
+; CHECK-DAG:     vlgvf [[REG11:%r[0-9]+]], %v26, 1
+; CHECK-DAG:     vlgvf [[REG12:%r[0-9]+]], %v26, 2
+; CHECK-DAG:     risbgn [[REG13:%r[0-9]+]], [[REG11]], 0, 129, 62
+; CHECK-DAG:     rosbg [[REG13]], [[REG12]], 2, 32, 31
 ; CHECK-DAG:     vlgvf %r0, %v26, 3
-; CHECK-DAG:     rosbg %r4, %r0, 33, 63, 0
+; CHECK-DAG:     rosbg [[REG13]], %r0, 33, 63, 0
 ; CHECK-DAG:     stc %r0, 30(%r2)
-; CHECK-DAG:     srl %r0, 8
+; CHECK-DAG:     srlk %r1, %r0, 8
 ; CHECK-DAG:     vlgvf [[REG0:%r[0-9]+]], %v24, 1
 ; CHECK-DAG:     vlgvf [[REG1:%r[0-9]+]], %v24, 0
-; CHECK-DAG:     sth %r0, 28(%r2)
+; CHECK-DAG:     sth %r1, 28(%r2)
 ; CHECK-DAG:     vlgvf [[REG2:%r[0-9]+]], %v24, 2
 ; CHECK-DAG:     risbgn [[REG3:%r[0-9]+]], [[REG0]], 0, 133, 58
 ; CHECK-DAG:     rosbg [[REG3]], [[REG2]], 6, 36, 27
@@ -95,18 +95,18 @@ define void @fun2(<8 x i32> %src, <8 x i31>* %p)
 ; CHECK-DAG:     rosbg [[REG3]], [[REG5]], 37, 63, 60
 ; CHECK-DAG:     sllg [[REG6:%r[0-9]+]], [[REG4]], 8
 ; CHECK-DAG:     rosbg [[REG6]], [[REG3]], 56, 63, 8
-; CHECK-NEXT:    stg [[REG6]], 0(%r2)
-; CHECK-NEXT:    srlg [[REG7:%r[0-9]+]], %r4, 24
-; CHECK-NEXT:    st [[REG7]], 24(%r2)
-; CHECK-NEXT:    vlgvf [[REG8:%r[0-9]+]], %v26, 0
-; CHECK-NEXT:    risbgn [[REG10:%r[0-9]+]], [[REG5]], 0, 131, 60
-; CHECK-NEXT:    rosbg [[REG10]], [[REG8]], 4, 34, 29
-; CHECK-NEXT:    sllg [[REG9:%r[0-9]+]], [[REG3]], 8
-; CHECK-NEXT:    rosbg [[REG10]], %r3, 35, 63, 62
-; CHECK-NEXT:    rosbg [[REG9]], [[REG10]], 56, 63, 8
-; CHECK-NEXT:    stg [[REG9]], 8(%r2)
-; CHECK-NEXT:    sllg %r0, [[REG10]], 8
-; CHECK-NEXT:    rosbg %r0, %r4, 56, 63, 8
+; CHECK-DAG:     stg [[REG6]], 0(%r2)
+; CHECK-DAG:     srlg [[REG7:%r[0-9]+]], [[REG13]], 24
+; CHECK-DAG:     st [[REG7]], 24(%r2)
+; CHECK-DAG:     vlgvf [[REG8:%r[0-9]+]], %v26, 0
+; CHECK-DAG:     risbgn [[REG10:%r[0-9]+]], [[REG5]], 0, 131, 60
+; CHECK-DAG:     rosbg [[REG10]], [[REG8]], 4, 34, 29
+; CHECK-DAG:     sllg [[REG9:%r[0-9]+]], [[REG3]], 8
+; CHECK-DAG:     rosbg [[REG10]], [[REG11]], 35, 63, 62
+; CHECK-DAG:     rosbg [[REG9]], [[REG10]], 56, 63, 8
+; CHECK-DAG:     stg [[REG9]], 8(%r2)
+; CHECK-DAG:     sllg %r0, [[REG10]], 8
+; CHECK-DAG:     rosbg %r0, [[REG13]], 56, 63, 8
 ; CHECK-NEXT:    stg %r0, 16(%r2)
 ; CHECK-NEXT:    lmg %r14, %r15, 112(%r15)
 ; CHECK-NEXT:    br %r14

@@ -1,9 +1,8 @@
 //===- CallGraph.h - Build a Module's call graph ----------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 /// \file
@@ -48,8 +47,8 @@
 
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ValueHandle.h"
@@ -230,11 +229,11 @@ public:
   }
 
   /// Adds a function to the list of functions called by this one.
-  void addCalledFunction(CallSite CS, CallGraphNode *M) {
-    assert(!CS.getInstruction() || !CS.getCalledFunction() ||
-           !CS.getCalledFunction()->isIntrinsic() ||
-           !Intrinsic::isLeaf(CS.getCalledFunction()->getIntrinsicID()));
-    CalledFunctions.emplace_back(CS.getInstruction(), M);
+  void addCalledFunction(CallBase *Call, CallGraphNode *M) {
+    assert(!Call || !Call->getCalledFunction() ||
+           !Call->getCalledFunction()->isIntrinsic() ||
+           !Intrinsic::isLeaf(Call->getCalledFunction()->getIntrinsicID()));
+    CalledFunctions.emplace_back(Call, M);
     M->AddRef();
   }
 
@@ -247,7 +246,7 @@ public:
   /// Removes the edge in the node for the specified call site.
   ///
   /// Note that this method takes linear time, so it should be used sparingly.
-  void removeCallEdgeFor(CallSite CS);
+  void removeCallEdgeFor(CallBase &Call);
 
   /// Removes all call edges from this node to the specified callee
   /// function.
@@ -264,7 +263,8 @@ public:
   /// new one.
   ///
   /// Note that this method takes linear time, so it should be used sparingly.
-  void replaceCallEdge(CallSite CS, CallSite NewCS, CallGraphNode *NewNode);
+  void replaceCallEdge(CallBase &Call, CallBase &NewCall,
+                       CallGraphNode *NewNode);
 
 private:
   friend class CallGraph;

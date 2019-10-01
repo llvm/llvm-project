@@ -1,9 +1,8 @@
 //===-- AArch64TargetObjectFile.h - AArch64 Object Info -*- C++ ---------*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -36,7 +35,8 @@ public:
                                     const TargetMachine &TM,
                                     MachineModuleInfo *MMI) const override;
 
-  const MCExpr *getIndirectSymViaGOTPCRel(const MCSymbol *Sym,
+  const MCExpr *getIndirectSymViaGOTPCRel(const GlobalValue *GV,
+                                          const MCSymbol *Sym,
                                           const MCValue &MV, int64_t Offset,
                                           MachineModuleInfo *MMI,
                                           MCStreamer &Streamer) const override;

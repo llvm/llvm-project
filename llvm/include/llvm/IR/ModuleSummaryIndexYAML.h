@@ -1,9 +1,8 @@
 //===-- llvm/ModuleSummaryIndexYAML.h - YAML I/O for summary ----*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -137,7 +136,7 @@ template <> struct MappingTraits<TypeIdSummary> {
 
 struct FunctionSummaryYaml {
   unsigned Linkage;
-  bool NotEligibleToImport, Live, IsLocal;
+  bool NotEligibleToImport, Live, IsLocal, CanAutoHide;
   std::vector<uint64_t> Refs;
   std::vector<uint64_t> TypeTests;
   std::vector<FunctionSummary::VFuncId> TypeTestAssumeVCalls,
@@ -181,6 +180,7 @@ template <> struct MappingTraits<FunctionSummaryYaml> {
     io.mapOptional("NotEligibleToImport", summary.NotEligibleToImport);
     io.mapOptional("Live", summary.Live);
     io.mapOptional("Local", summary.IsLocal);
+    io.mapOptional("CanAutoHide", summary.CanAutoHide);
     io.mapOptional("Refs", summary.Refs);
     io.mapOptional("TypeTests", summary.TypeTests);
     io.mapOptional("TypeTestAssumeVCalls", summary.TypeTestAssumeVCalls);
@@ -223,7 +223,7 @@ template <> struct CustomMappingTraits<GlobalValueSummaryMapTy> {
       Elem.SummaryList.push_back(llvm::make_unique<FunctionSummary>(
           GlobalValueSummary::GVFlags(
               static_cast<GlobalValue::LinkageTypes>(FSum.Linkage),
-              FSum.NotEligibleToImport, FSum.Live, FSum.IsLocal),
+              FSum.NotEligibleToImport, FSum.Live, FSum.IsLocal, FSum.CanAutoHide),
           /*NumInsts=*/0, FunctionSummary::FFlags{}, /*EntryCount=*/0, Refs,
           ArrayRef<FunctionSummary::EdgeTy>{}, std::move(FSum.TypeTests),
           std::move(FSum.TypeTestAssumeVCalls),
@@ -244,7 +244,8 @@ template <> struct CustomMappingTraits<GlobalValueSummaryMapTy> {
               FSum->flags().Linkage,
               static_cast<bool>(FSum->flags().NotEligibleToImport),
               static_cast<bool>(FSum->flags().Live),
-              static_cast<bool>(FSum->flags().DSOLocal), Refs,
+              static_cast<bool>(FSum->flags().DSOLocal),
+              static_cast<bool>(FSum->flags().CanAutoHide), Refs,
               FSum->type_tests(), FSum->type_test_assume_vcalls(),
               FSum->type_checked_load_vcalls(),
               FSum->type_test_assume_const_vcalls(),

@@ -1,9 +1,8 @@
 //===-- CodeGen/MachineFrameInfo.h - Abstract Stack Frame Rep. --*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -471,7 +470,10 @@ public:
     assert(unsigned(ObjectIdx+NumFixedObjects) < Objects.size() &&
            "Invalid Object Idx!");
     Objects[ObjectIdx+NumFixedObjects].Alignment = Align;
-    ensureMaxAlignment(Align);
+
+    // Only ensure max alignment for the default stack.
+    if (getStackID(ObjectIdx) == 0)
+      ensureMaxAlignment(Align);
   }
 
   /// Return the underlying Alloca of the specified
@@ -698,6 +700,8 @@ public:
     assert(unsigned(ObjectIdx+NumFixedObjects) < Objects.size() &&
            "Invalid Object Idx!");
     Objects[ObjectIdx+NumFixedObjects].StackID = ID;
+    // If ID > 0, MaxAlignment may now be overly conservative.
+    // If ID == 0, MaxAlignment will need to be updated separately.
   }
 
   /// Returns true if the specified index corresponds to a dead object.

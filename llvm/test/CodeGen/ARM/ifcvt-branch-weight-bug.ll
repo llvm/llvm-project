@@ -9,7 +9,7 @@
 %classG = type { %classL* }
 %classM2 = type { %classL }
 
-define zeroext i1 @test(%classK* %this, %classM2* nocapture readnone %p1, %classM2* nocapture readnone %p2) align 2 {
+define zeroext i1 @test(%classK* %this, %classL* nocapture readnone %p0, %classM2* nocapture readnone %p1, %classM2* nocapture readnone %p2, i32 %a0) align 2 {
 entry:
   br i1 undef, label %for.end, label %for.body
 
@@ -27,11 +27,11 @@ for.body:
   br i1 undef, label %for.cond.backedge, label %lor.lhs.false.i, !prof !1
 
 for.cond.backedge:
-  %tobool = icmp eq %classL* undef, null
+  %tobool = icmp eq %classL* %p0, null
   br i1 %tobool, label %for.end, label %for.body
 
 lor.lhs.false.i:
-  %tobool.i.i7 = icmp eq i32 undef, 0
+  %tobool.i.i7 = icmp eq i32 %a0, 0
   br i1 %tobool.i.i7, label %for.cond.backedge, label %cond.false.i
 
 cond.false.i:
@@ -39,7 +39,8 @@ cond.false.i:
   unreachable
 
 for.end:
-  br i1 undef, label %if.else.i.i, label %if.then.i.i
+  %tobool.i.i9 = icmp eq i32 %a0, 32
+  br i1 %tobool.i.i9, label %if.else.i.i, label %if.then.i.i
 
 if.then.i.i:
   store %classL* null, %classL** undef, align 4

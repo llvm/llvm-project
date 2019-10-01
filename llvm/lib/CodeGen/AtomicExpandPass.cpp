@@ -1,9 +1,8 @@
 //===- AtomicExpandPass.cpp - Expand atomic instructions ------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -361,7 +360,7 @@ bool AtomicExpand::bracketInstWithFences(Instruction *I, AtomicOrdering Order) {
 /// Get the iX type with the same bitwidth as T.
 IntegerType *AtomicExpand::getCorrespondingIntegerType(Type *T,
                                                        const DataLayout &DL) {
-  EVT VT = TLI->getValueType(DL, T);
+  EVT VT = TLI->getMemValueType(DL, T);
   unsigned BitWidth = VT.getStoreSizeInBits();
   assert(BitWidth == VT.getSizeInBits() && "must be a power of two");
   return IntegerType::get(T->getContext(), BitWidth);
@@ -382,7 +381,7 @@ LoadInst *AtomicExpand::convertAtomicLoadToIntegerType(LoadInst *LI) {
                               Addr->getType()->getPointerAddressSpace());
   Value *NewAddr = Builder.CreateBitCast(Addr, PT);
 
-  auto *NewLI = Builder.CreateLoad(NewAddr);
+  auto *NewLI = Builder.CreateLoad(NewTy, NewAddr);
   NewLI->setAlignment(LI->getAlignment());
   NewLI->setVolatile(LI->isVolatile());
   NewLI->setAtomic(LI->getOrdering(), LI->getSyncScopeID());
@@ -431,6 +430,9 @@ bool AtomicExpand::expandAtomicLoadToLL(LoadInst *LI) {
 bool AtomicExpand::expandAtomicLoadToCmpXchg(LoadInst *LI) {
   IRBuilder<> Builder(LI);
   AtomicOrdering Order = LI->getOrdering();
+  if (Order == AtomicOrdering::Unordered)
+    Order = AtomicOrdering::Monotonic;
+
   Value *Addr = LI->getPointerOperand();
   Type *Ty = cast<PointerType>(Addr->getType())->getElementType();
   Constant *DummyVal = Constant::getNullValue(Ty);
@@ -496,11 +498,26 @@ static void createCmpXchgInstFun(IRBuilder<> &Builder, Value *Addr,
                                  Value *Loaded, Value *NewVal,
                                  AtomicOrdering MemOpOrder,
                                  Value *&Success, Value *&NewLoaded) {
+  Type *OrigTy = NewVal->getType();
+
+  // This code can go away when cmpxchg supports FP types.
+  bool NeedBitcast = OrigTy->isFloatingPointTy();
+  if (NeedBitcast) {
+    IntegerType *IntTy = Builder.getIntNTy(OrigTy->getPrimitiveSizeInBits());
+    unsigned AS = Addr->getType()->getPointerAddressSpace();
+    Addr = Builder.CreateBitCast(Addr, IntTy->getPointerTo(AS));
+    NewVal = Builder.CreateBitCast(NewVal, IntTy);
+    Loaded = Builder.CreateBitCast(Loaded, IntTy);
+  }
+
   Value* Pair = Builder.CreateAtomicCmpXchg(
       Addr, Loaded, NewVal, MemOpOrder,
       AtomicCmpXchgInst::getStrongestFailureOrdering(MemOpOrder));
   Success = Builder.CreateExtractValue(Pair, 1, "success");
   NewLoaded = Builder.CreateExtractValue(Pair, 0, "newloaded");
+
+  if (NeedBitcast)
+    NewLoaded = Builder.CreateBitCast(NewLoaded, OrigTy);
 }
 
 /// Emit IR to implement the given atomicrmw operation on values in registers,
@@ -535,6 +552,10 @@ static Value *performAtomicOp(AtomicRMWInst::BinOp Op, IRBuilder<> &Builder,
   case AtomicRMWInst::UMin:
     NewVal = Builder.CreateICmpULE(Loaded, Inc);
     return Builder.CreateSelect(NewVal, Loaded, Inc, "new");
+  case AtomicRMWInst::FAdd:
+    return Builder.CreateFAdd(Loaded, Inc, "new");
+  case AtomicRMWInst::FSub:
+    return Builder.CreateFSub(Loaded, Inc, "new");
   default:
     llvm_unreachable("Unknown atomic op");
   }
@@ -564,6 +585,10 @@ bool AtomicExpand::tryExpandAtomicRMW(AtomicRMWInst *AI) {
     unsigned MinCASSize = TLI->getMinCmpXchgSizeInBits() / 8;
     unsigned ValueSize = getAtomicOpSize(AI);
     if (ValueSize < MinCASSize) {
+      // TODO: Handle atomicrmw fadd/fsub
+      if (AI->getType()->isFloatingPointTy())
+        return false;
+
       expandPartwordAtomicRMW(AI,
                               TargetLoweringBase::AtomicExpansionKind::CmpXChg);
     } else {
@@ -1090,11 +1115,11 @@ bool AtomicExpand::expandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
   bool HasReleasedLoadBB = !CI->isWeak() && ShouldInsertFencesForAtomic &&
                            SuccessOrder != AtomicOrdering::Monotonic &&
                            SuccessOrder != AtomicOrdering::Acquire &&
-                           !F->optForMinSize();
+                           !F->hasMinSize();
 
   // There's no overhead for sinking the release barrier in a weak cmpxchg, so
   // do it even on minsize.
-  bool UseUnconditionalReleaseBarrier = F->optForMinSize() && !CI->isWeak();
+  bool UseUnconditionalReleaseBarrier = F->hasMinSize() && !CI->isWeak();
 
   // Given: cmpxchg some_op iN* %addr, iN %desired, iN %new success_ord fail_ord
   //
@@ -1533,6 +1558,8 @@ static ArrayRef<RTLIB::Libcall> GetRMWLibcall(AtomicRMWInst::BinOp Op) {
   case AtomicRMWInst::Min:
   case AtomicRMWInst::UMax:
   case AtomicRMWInst::UMin:
+  case AtomicRMWInst::FAdd:
+  case AtomicRMWInst::FSub:
     // No atomic libcalls are available for max/min/umax/umin.
     return {};
   }
@@ -1671,16 +1698,25 @@ bool AtomicExpand::expandAtomicOpToLibcall(
   }
 
   // 'ptr' argument.
-  Value *PtrVal =
-      Builder.CreateBitCast(PointerOperand, Type::getInt8PtrTy(Ctx));
+  // note: This assumes all address spaces share a common libfunc
+  // implementation and that addresses are convertable.  For systems without
+  // that property, we'd need to extend this mechanism to support AS-specific
+  // families of atomic intrinsics.
+  auto PtrTypeAS = PointerOperand->getType()->getPointerAddressSpace();
+  Value *PtrVal = Builder.CreateBitCast(PointerOperand,
+                                        Type::getInt8PtrTy(Ctx, PtrTypeAS));
+  PtrVal = Builder.CreateAddrSpaceCast(PtrVal, Type::getInt8PtrTy(Ctx));
   Args.push_back(PtrVal);
 
   // 'expected' argument, if present.
   if (CASExpected) {
     AllocaCASExpected = AllocaBuilder.CreateAlloca(CASExpected->getType());
     AllocaCASExpected->setAlignment(AllocaAlignment);
+    unsigned AllocaAS =  AllocaCASExpected->getType()->getPointerAddressSpace();
+
     AllocaCASExpected_i8 =
-        Builder.CreateBitCast(AllocaCASExpected, Type::getInt8PtrTy(Ctx));
+      Builder.CreateBitCast(AllocaCASExpected,
+                            Type::getInt8PtrTy(Ctx, AllocaAS));
     Builder.CreateLifetimeStart(AllocaCASExpected_i8, SizeVal64);
     Builder.CreateAlignedStore(CASExpected, AllocaCASExpected, AllocaAlignment);
     Args.push_back(AllocaCASExpected_i8);
@@ -1707,8 +1743,9 @@ bool AtomicExpand::expandAtomicOpToLibcall(
   if (!CASExpected && HasResult && !UseSizedLibcall) {
     AllocaResult = AllocaBuilder.CreateAlloca(I->getType());
     AllocaResult->setAlignment(AllocaAlignment);
+    unsigned AllocaAS =  AllocaResult->getType()->getPointerAddressSpace();
     AllocaResult_i8 =
-        Builder.CreateBitCast(AllocaResult, Type::getInt8PtrTy(Ctx));
+      Builder.CreateBitCast(AllocaResult, Type::getInt8PtrTy(Ctx, AllocaAS));
     Builder.CreateLifetimeStart(AllocaResult_i8, SizeVal64);
     Args.push_back(AllocaResult_i8);
   }
@@ -1734,7 +1771,7 @@ bool AtomicExpand::expandAtomicOpToLibcall(
   for (Value *Arg : Args)
     ArgTys.push_back(Arg->getType());
   FunctionType *FnType = FunctionType::get(ResultTy, ArgTys, false);
-  Constant *LibcallFn =
+  FunctionCallee LibcallFn =
       M->getOrInsertFunction(TLI->getLibcallName(RTLibType), FnType, Attr);
   CallInst *Call = Builder.CreateCall(LibcallFn, Args);
   Call->setAttributes(Attr);
@@ -1749,8 +1786,8 @@ bool AtomicExpand::expandAtomicOpToLibcall(
     // from call}
     Type *FinalResultTy = I->getType();
     Value *V = UndefValue::get(FinalResultTy);
-    Value *ExpectedOut =
-        Builder.CreateAlignedLoad(AllocaCASExpected, AllocaAlignment);
+    Value *ExpectedOut = Builder.CreateAlignedLoad(
+        CASExpected->getType(), AllocaCASExpected, AllocaAlignment);
     Builder.CreateLifetimeEnd(AllocaCASExpected_i8, SizeVal64);
     V = Builder.CreateInsertValue(V, ExpectedOut, 0);
     V = Builder.CreateInsertValue(V, Result, 1);
@@ -1760,7 +1797,8 @@ bool AtomicExpand::expandAtomicOpToLibcall(
     if (UseSizedLibcall)
       V = Builder.CreateBitOrPointerCast(Result, I->getType());
     else {
-      V = Builder.CreateAlignedLoad(AllocaResult, AllocaAlignment);
+      V = Builder.CreateAlignedLoad(I->getType(), AllocaResult,
+                                    AllocaAlignment);
       Builder.CreateLifetimeEnd(AllocaResult_i8, SizeVal64);
     }
     I->replaceAllUsesWith(V);

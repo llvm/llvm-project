@@ -17,6 +17,13 @@ add %eax, %eax
 # ALL-NEXT:        IPC:               0.97
 # ALL-NEXT:        Block RThroughput: 0.5
 
+# ALL:             Cycles with backend pressure increase [ 76.70% ]
+# ALL-NEXT:        Throughput Bottlenecks:
+# ALL-NEXT:          Resource Pressure       [ 0.00% ]
+# ALL-NEXT:          Data Dependencies:      [ 76.70% ]
+# ALL-NEXT:          - Register Dependencies [ 76.70% ]
+# ALL-NEXT:          - Memory Dependencies   [ 0.00% ]
+
 # ALL:             Instruction Info:
 # ALL-NEXT:        [1]: #uOps
 # ALL-NEXT:        [2]: Latency
@@ -42,7 +49,7 @@ add %eax, %eax
 # ALL-NEXT:         1,              62  (60.2%)
 # ALL-NEXT:         2,              19  (18.4%)
 
-# ALL:             Schedulers - number of cycles where we saw N instructions issued:
+# ALL:             Schedulers - number of cycles where we saw N micro opcodes issued:
 # ALL-NEXT:        [# issued], [# cycles]
 # ALL-NEXT:         0,          3  (2.9%)
 # ALL-NEXT:         1,          100  (97.1%)

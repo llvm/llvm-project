@@ -1,9 +1,8 @@
 //===-- X86Schedule.td - X86 Scheduling Definitions --------*- tablegen -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -17,6 +16,12 @@ def ReadAfterLd : SchedRead;
 def ReadAfterVecLd : SchedRead;
 def ReadAfterVecXLd : SchedRead;
 def ReadAfterVecYLd : SchedRead;
+
+// Instructions that move data between general purpose registers and vector
+// registers may be subject to extra latency due to data bypass delays.
+// This SchedRead describes a bypass delay caused by data being moved from the
+// integer unit to the floating point unit.
+def ReadInt2Fpu : SchedRead;
 
 // Instructions with both a load and a store folded are modeled as a folded
 // load + WriteRMW.
@@ -158,7 +163,6 @@ defm WritePOPCNT : X86SchedWritePair; // Bit population count.
 defm WriteLZCNT : X86SchedWritePair; // Leading zero count.
 defm WriteTZCNT : X86SchedWritePair; // Trailing zero count.
 defm WriteCMOV  : X86SchedWritePair; // Conditional move.
-defm WriteCMOV2 : X86SchedWritePair; // Conditional (CF + ZF flag) move.
 def  WriteFCMOV : SchedWrite; // X87 conditional move.
 def  WriteSETCC : SchedWrite; // Set register based on condition code.
 def  WriteSETCCStore : SchedWrite;

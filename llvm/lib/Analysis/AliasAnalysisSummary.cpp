@@ -73,28 +73,28 @@ AliasAttrs getExternallyVisibleAttrs(AliasAttrs Attr) {
 }
 
 Optional<InstantiatedValue> instantiateInterfaceValue(InterfaceValue IValue,
-                                                      CallSite CS) {
+                                                      CallBase &Call) {
   auto Index = IValue.Index;
-  auto Value = (Index == 0) ? CS.getInstruction() : CS.getArgument(Index - 1);
-  if (Value->getType()->isPointerTy())
-    return InstantiatedValue{Value, IValue.DerefLevel};
+  auto *V = (Index == 0) ? &Call : Call.getArgOperand(Index - 1);
+  if (V->getType()->isPointerTy())
+    return InstantiatedValue{V, IValue.DerefLevel};
   return None;
 }
 
 Optional<InstantiatedRelation>
-instantiateExternalRelation(ExternalRelation ERelation, CallSite CS) {
-  auto From = instantiateInterfaceValue(ERelation.From, CS);
+instantiateExternalRelation(ExternalRelation ERelation, CallBase &Call) {
+  auto From = instantiateInterfaceValue(ERelation.From, Call);
   if (!From)
     return None;
-  auto To = instantiateInterfaceValue(ERelation.To, CS);
+  auto To = instantiateInterfaceValue(ERelation.To, Call);
   if (!To)
     return None;
   return InstantiatedRelation{*From, *To, ERelation.Offset};
 }
 
 Optional<InstantiatedAttr> instantiateExternalAttribute(ExternalAttribute EAttr,
-                                                        CallSite CS) {
-  auto Value = instantiateInterfaceValue(EAttr.IValue, CS);
+                                                        CallBase &Call) {
+  auto Value = instantiateInterfaceValue(EAttr.IValue, Call);
   if (!Value)
     return None;
   return InstantiatedAttr{*Value, EAttr.Attr};

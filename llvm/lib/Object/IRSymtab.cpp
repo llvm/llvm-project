@@ -1,9 +1,8 @@
 //===- IRSymtab.cpp - implementation of IR symbol tables ------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -90,6 +89,8 @@ struct Builder {
   std::string COFFLinkerOpts;
   raw_string_ostream COFFLinkerOptsOS{COFFLinkerOpts};
 
+  std::vector<storage::Str> DependentLibraries;
+
   void setStr(storage::Str &S, StringRef Value) {
     S.Offset = StrtabBuilder.add(Value);
     S.Size = Value.size();
@@ -138,6 +139,20 @@ Error Builder::addModule(Module *M) {
       for (MDNode *MDOptions : LinkerOptions->operands())
         for (const MDOperand &MDOption : cast<MDNode>(MDOptions)->operands())
           COFFLinkerOptsOS << " " << cast<MDString>(MDOption)->getString();
+    }
+  }
+
+  if (TT.isOSBinFormatELF()) {
+    if (auto E = M->materializeMetadata())
+      return E;
+    if (NamedMDNode *N = M->getNamedMetadata("llvm.dependent-libraries")) {
+      for (MDNode *MDOptions : N->operands()) {
+        const auto OperandStr =
+            cast<MDString>(cast<MDNode>(MDOptions)->getOperand(0))->getString();
+        storage::Str Specifier;
+        setStr(Specifier, OperandStr);
+        DependentLibraries.emplace_back(Specifier);
+      }
     }
   }
 
@@ -313,7 +328,7 @@ Error Builder::build(ArrayRef<Module *> IRMods) {
   writeRange(Hdr.Comdats, Comdats);
   writeRange(Hdr.Symbols, Syms);
   writeRange(Hdr.Uncommons, Uncommons);
-
+  writeRange(Hdr.DependentLibraries, DependentLibraries);
   *reinterpret_cast<storage::Header *>(Symtab.data()) = Hdr;
   return Error::success();
 }

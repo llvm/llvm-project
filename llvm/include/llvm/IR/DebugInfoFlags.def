@@ -1,9 +1,8 @@
 //===- llvm/IR/DebugInfoFlags.def - Debug info flag definitions -*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -51,12 +50,11 @@ HANDLE_DI_FLAG((3 << 16), VirtualInheritance)
 HANDLE_DI_FLAG((1 << 18), IntroducedVirtual)
 HANDLE_DI_FLAG((1 << 19), BitField)
 HANDLE_DI_FLAG((1 << 20), NoReturn)
-HANDLE_DI_FLAG((1 << 21), MainSubprogram)
 HANDLE_DI_FLAG((1 << 22), TypePassByValue)
 HANDLE_DI_FLAG((1 << 23), TypePassByReference)
-HANDLE_DI_FLAG((1 << 24), FixedEnum)
+HANDLE_DI_FLAG((1 << 24), EnumClass)
 HANDLE_DI_FLAG((1 << 25), Thunk)
-HANDLE_DI_FLAG((1 << 26), Trivial)
+HANDLE_DI_FLAG((1 << 26), NonTrivial)
 HANDLE_DI_FLAG((1 << 27), BigEndian)
 HANDLE_DI_FLAG((1 << 28), LittleEndian)
 HANDLE_DI_FLAG((1 << 29), AllCallsDescribed)
@@ -85,11 +83,15 @@ HANDLE_DISP_FLAG(2u, PureVirtual)
 HANDLE_DISP_FLAG((1u << 2), LocalToUnit)
 HANDLE_DISP_FLAG((1u << 3), Definition)
 HANDLE_DISP_FLAG((1u << 4), Optimized)
+HANDLE_DISP_FLAG((1u << 5), Pure)
+HANDLE_DISP_FLAG((1u << 6), Elemental)
+HANDLE_DISP_FLAG((1u << 7), Recursive)
+HANDLE_DISP_FLAG((1u << 8), MainSubprogram)
 
 #ifdef DISP_FLAG_LARGEST_NEEDED
 // Intended to be used with ADT/BitmaskEnum.h.
 // NOTE: Always must be equal to largest flag, check this when adding new flags.
-HANDLE_DISP_FLAG((1 << 4), Largest)
+HANDLE_DISP_FLAG((1 << 8), Largest)
 #undef DISP_FLAG_LARGEST_NEEDED
 #endif
 

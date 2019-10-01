@@ -1,9 +1,8 @@
 //===- FDRRecordProducer.cpp - XRay FDR Mode Record Producer --------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 #include "llvm/XRay/FDRRecordProducer.h"
@@ -90,7 +89,7 @@ FileBasedRecordProducer::findNextBufferExtent() {
     if (OffsetPtr == PreReadOffset)
       return createStringError(
           std::make_error_code(std::errc::executable_format_error),
-          "Failed reading one byte from offset %d.", OffsetPtr);
+          "Failed reading one byte from offset %" PRId64 ".", OffsetPtr);
 
     if (isMetadataIntroducer(FirstByte)) {
       auto LoadedType = FirstByte >> 1;
@@ -152,7 +151,7 @@ Expected<std::unique_ptr<Record>> FileBasedRecordProducer::produce() {
   if (OffsetPtr == PreReadOffset)
     return createStringError(
         std::make_error_code(std::errc::executable_format_error),
-        "Failed reading one byte from offset %d.", OffsetPtr);
+        "Failed reading one byte from offset %" PRId64 ".", OffsetPtr);
 
   // For metadata records, handle especially here.
   if (isMetadataIntroducer(FirstByte)) {
@@ -163,7 +162,8 @@ Expected<std::unique_ptr<Record>> FileBasedRecordProducer::produce() {
           MetadataRecordOrErr.takeError(),
           createStringError(
               std::make_error_code(std::errc::executable_format_error),
-              "Encountered an unsupported metadata record (%d) at offset %d.",
+              "Encountered an unsupported metadata record (%d) "
+              "at offset %" PRId64 ".",
               LoadedType, PreReadOffset));
     R = std::move(MetadataRecordOrErr.get());
   } else {
@@ -183,8 +183,8 @@ Expected<std::unique_ptr<Record>> FileBasedRecordProducer::produce() {
     if (OffsetPtr - PreReadOffset > CurrentBufferBytes)
       return createStringError(
           std::make_error_code(std::errc::executable_format_error),
-          "Buffer over-read at offset %d (over-read by %d bytes); Record Type "
-          "= %s.",
+          "Buffer over-read at offset %" PRId64 " (over-read by %" PRId64
+          " bytes); Record Type = %s.",
           OffsetPtr, (OffsetPtr - PreReadOffset) - CurrentBufferBytes,
           Record::kindToString(R->getRecordType()).data());
 

@@ -1,9 +1,8 @@
 //===- InterleavedLoadCombine.cpp - Combine Interleaved Loads ---*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -961,6 +960,7 @@ public:
     if (!PtrTy) {
       Result = Polynomial();
       BasePtr = nullptr;
+      return;
     }
     unsigned PointerBits =
         DL.getIndexSizeInBits(PtrTy->getPointerAddressSpace());
@@ -1219,7 +1219,7 @@ bool InterleavedLoadCombineImpl::combine(std::list<VectorInfo> &InterleavedLoad,
                                       "interleaved.wide.ptrcast");
 
   // Create the wide load and update the MemorySSA.
-  auto LI = Builder.CreateAlignedLoad(CI, InsertionPoint->getAlignment(),
+  auto LI = Builder.CreateAlignedLoad(ILTy, CI, InsertionPoint->getAlignment(),
                                       "interleaved.wide.load");
   auto MSSAU = MemorySSAUpdater(&MSSA);
   MemoryUse *MSSALoad = cast<MemoryUse>(MSSAU.createMemoryAccessBefore(

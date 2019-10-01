@@ -1,9 +1,8 @@
 //===-- SystemZOperands.td - SystemZ instruction operands ----*- tblgen-*--===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -186,6 +185,17 @@ def LF32 : SDNodeXForm<imm, [{
 // High 32 bits.
 def HF32 : SDNodeXForm<imm, [{
   uint64_t Value = N->getZExtValue() >> 32;
+  return CurDAG->getTargetConstant(Value, SDLoc(N), MVT::i64);
+}]>;
+
+// Negated variants.
+def NEGLH16 : SDNodeXForm<imm, [{
+  uint64_t Value = (-N->getZExtValue() & 0x00000000FFFF0000ULL) >> 16;
+  return CurDAG->getTargetConstant(Value, SDLoc(N), MVT::i64);
+}]>;
+
+def NEGLF32 : SDNodeXForm<imm, [{
+  uint64_t Value = -N->getZExtValue() & 0x00000000FFFFFFFFULL;
   return CurDAG->getTargetConstant(Value, SDLoc(N), MVT::i64);
 }]>;
 
@@ -430,6 +440,15 @@ def imm64lf32c : Immediate<i64, [{
 def imm64hf32c : Immediate<i64, [{
   return SystemZ::isImmHF(uint64_t(~N->getZExtValue()));
 }], HF32, "U32Imm">;
+
+// Negated immediates that fit LF32 or LH16.
+def imm64lh16n : Immediate<i64, [{
+  return SystemZ::isImmLH(uint64_t(-N->getZExtValue()));
+}], NEGLH16, "U16Imm">;
+
+def imm64lf32n : Immediate<i64, [{
+  return SystemZ::isImmLF(uint64_t(-N->getZExtValue()));
+}], NEGLF32, "U32Imm">;
 
 // Short immediates.
 def imm64sx8 : Immediate<i64, [{

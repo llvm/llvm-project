@@ -1,9 +1,8 @@
 //===- ELFAsmParser.cpp - ELF Assembly Parser -----------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -616,6 +615,10 @@ EndStmt:
       Type = ELF::SHT_LLVM_LINKER_OPTIONS;
     else if (TypeName == "llvm_call_graph_profile")
       Type = ELF::SHT_LLVM_CALL_GRAPH_PROFILE;
+    else if (TypeName == "llvm_dependent_libraries")
+      Type = ELF::SHT_LLVM_DEPENDENT_LIBRARIES;
+    else if (TypeName == "llvm_sympart")
+      Type = ELF::SHT_LLVM_SYMPART;
     else if (TypeName.getAsInteger(0, Type))
       return TokError("unknown section type");
   }

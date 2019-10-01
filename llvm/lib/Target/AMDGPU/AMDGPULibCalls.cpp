@@ -1,9 +1,8 @@
 //===- AMDGPULibCalls.cpp -------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -16,6 +15,7 @@
 
 #include "AMDGPU.h"
 #include "AMDGPULibFunc.h"
+#include "AMDGPUSubtarget.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/ADT/StringSet.h"
@@ -23,6 +23,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
@@ -30,6 +31,7 @@
 #include "llvm/IR/ValueSymbolTable.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include <vector>
 #include <cmath>
@@ -66,6 +68,8 @@ private:
 
   typedef llvm::AMDGPULibFunc FuncInfo;
 
+  const TargetMachine *TM;
+
   // -fuse-native.
   bool AllNative = false;
 
@@ -73,7 +77,7 @@ private:
 
   // Return a pointer (pointer expr) to the function if function defintion with
   // "FuncName" exists. It may create a new function prototype in pre-link mode.
-  Constant *getFunction(Module *M, const FuncInfo& fInfo);
+  FunctionCallee getFunction(Module *M, const FuncInfo &fInfo);
 
   // Replace a normal function with its native version.
   bool replaceWithNative(CallInst *CI, const FuncInfo &FInfo);
@@ -135,12 +139,15 @@ private:
   // __read_pipe/__write_pipe
   bool fold_read_write_pipe(CallInst *CI, IRBuilder<> &B, FuncInfo &FInfo);
 
+  // llvm.amdgcn.wavefrontsize
+  bool fold_wavefrontsize(CallInst *CI, IRBuilder<> &B);
+
   // Get insertion point at entry.
   BasicBlock::iterator getEntryIns(CallInst * UI);
   // Insert an Alloc instruction.
   AllocaInst* insertAlloca(CallInst * UI, IRBuilder<> &B, const char *prefix);
   // Get a scalar native builtin signle argument FP function
-  Constant* getNativeFunction(Module* M, const FuncInfo &FInfo);
+  FunctionCallee getNativeFunction(Module *M, const FuncInfo &FInfo);
 
 protected:
   CallInst *CI;
@@ -153,6 +160,8 @@ protected:
   }
 
 public:
+  AMDGPULibCalls(const TargetMachine *TM_ = nullptr) : TM(TM_) {}
+
   bool fold(CallInst *CI, AliasAnalysis *AA = nullptr);
 
   void initNativeFuncs();
@@ -167,15 +176,16 @@ namespace {
 
   class AMDGPUSimplifyLibCalls : public FunctionPass {
 
-  AMDGPULibCalls Simplifier;
-
   const TargetOptions Options;
+
+  AMDGPULibCalls Simplifier;
 
   public:
     static char ID; // Pass identification
 
-    AMDGPUSimplifyLibCalls(const TargetOptions &Opt = TargetOptions())
-      : FunctionPass(ID), Options(Opt) {
+    AMDGPUSimplifyLibCalls(const TargetOptions &Opt = TargetOptions(),
+                           const TargetMachine *TM = nullptr)
+      : FunctionPass(ID), Options(Opt), Simplifier(TM) {
       initializeAMDGPUSimplifyLibCallsPass(*PassRegistry::getPassRegistry());
     }
 
@@ -217,19 +227,19 @@ INITIALIZE_PASS(AMDGPUUseNativeCalls, "amdgpu-usenative",
                 false, false)
 
 template <typename IRB>
-static CallInst *CreateCallEx(IRB &B, Value *Callee, Value *Arg,
+static CallInst *CreateCallEx(IRB &B, FunctionCallee Callee, Value *Arg,
                               const Twine &Name = "") {
   CallInst *R = B.CreateCall(Callee, Arg, Name);
-  if (Function* F = dyn_cast<Function>(Callee))
+  if (Function *F = dyn_cast<Function>(Callee.getCallee()))
     R->setCallingConv(F->getCallingConv());
   return R;
 }
 
 template <typename IRB>
-static CallInst *CreateCallEx2(IRB &B, Value *Callee, Value *Arg1, Value *Arg2,
-                               const Twine &Name = "") {
+static CallInst *CreateCallEx2(IRB &B, FunctionCallee Callee, Value *Arg1,
+                               Value *Arg2, const Twine &Name = "") {
   CallInst *R = B.CreateCall(Callee, {Arg1, Arg2}, Name);
-  if (Function* F = dyn_cast<Function>(Callee))
+  if (Function *F = dyn_cast<Function>(Callee.getCallee()))
     R->setCallingConv(F->getCallingConv());
   return R;
 }
@@ -472,7 +482,7 @@ static inline AMDGPULibFunc::EType getArgType(const AMDGPULibFunc& FInfo) {
   return (AMDGPULibFunc::EType)FInfo.getLeads()[0].ArgType;
 }
 
-Constant *AMDGPULibCalls::getFunction(Module *M, const FuncInfo& fInfo) {
+FunctionCallee AMDGPULibCalls::getFunction(Module *M, const FuncInfo &fInfo) {
   // If we are doing PreLinkOpt, the function is external. So it is safe to
   // use getOrInsertFunction() at this stage.
 
@@ -519,11 +529,11 @@ bool AMDGPULibCalls::sincosUseNative(CallInst *aCI, const FuncInfo &FInfo) {
 
     nf.setPrefix(AMDGPULibFunc::NATIVE);
     nf.setId(AMDGPULibFunc::EI_SIN);
-    Constant *sinExpr = getFunction(M, nf);
+    FunctionCallee sinExpr = getFunction(M, nf);
 
     nf.setPrefix(AMDGPULibFunc::NATIVE);
     nf.setId(AMDGPULibFunc::EI_COS);
-    Constant *cosExpr = getFunction(M, nf);
+    FunctionCallee cosExpr = getFunction(M, nf);
     if (sinExpr && cosExpr) {
       Value *sinval = CallInst::Create(sinExpr, opr0, "splitsin", aCI);
       Value *cosval = CallInst::Create(cosExpr, opr0, "splitcos", aCI);
@@ -555,7 +565,7 @@ bool AMDGPULibCalls::useNative(CallInst *aCI) {
     return sincosUseNative(aCI, FInfo);
 
   FInfo.setPrefix(AMDGPULibFunc::NATIVE);
-  Constant *F = getFunction(aCI->getModule(), FInfo);
+  FunctionCallee F = getFunction(aCI->getModule(), FInfo);
   if (!F)
     return false;
 
@@ -613,7 +623,7 @@ bool AMDGPULibCalls::fold_read_write_pipe(CallInst *CI, IRBuilder<> &B,
   auto *FTy = FunctionType::get(Callee->getReturnType(),
                                 ArrayRef<Type *>(ArgTys), false);
   AMDGPULibFunc NewLibFunc(Name, FTy);
-  auto *F = AMDGPULibFunc::getOrInsertFunction(M, NewLibFunc);
+  FunctionCallee F = AMDGPULibFunc::getOrInsertFunction(M, NewLibFunc);
   if (!F)
     return false;
 
@@ -640,14 +650,6 @@ bool AMDGPULibCalls::fold(CallInst *CI, AliasAnalysis *AA) {
   // Ignore indirect calls.
   if (Callee == 0) return false;
 
-  FuncInfo FInfo;
-  if (!parseFunctionName(Callee->getName(), &FInfo))
-    return false;
-
-  // Further check the number of arguments to see if they match.
-  if (CI->getNumArgOperands() != FInfo.getNumArgs())
-    return false;
-
   BasicBlock *BB = CI->getParent();
   LLVMContext &Context = CI->getParent()->getContext();
   IRBuilder<> B(Context);
@@ -658,6 +660,21 @@ bool AMDGPULibCalls::fold(CallInst *CI, AliasAnalysis *AA) {
   // Copy fast flags from the original call.
   if (const FPMathOperator *FPOp = dyn_cast<const FPMathOperator>(CI))
     B.setFastMathFlags(FPOp->getFastMathFlags());
+
+  switch (Callee->getIntrinsicID()) {
+  default:
+    break;
+  case Intrinsic::amdgcn_wavefrontsize:
+    return !EnablePreLink && fold_wavefrontsize(CI, B);
+  }
+
+  FuncInfo FInfo;
+  if (!parseFunctionName(Callee->getName(), &FInfo))
+    return false;
+
+  // Further check the number of arguments to see if they match.
+  if (CI->getNumArgOperands() != FInfo.getNumArgs())
+    return false;
 
   if (TDOFold(CI, FInfo))
     return true;
@@ -795,7 +812,7 @@ bool AMDGPULibCalls::replaceWithNative(CallInst *CI, const FuncInfo &FInfo) {
 
   AMDGPULibFunc nf = FInfo;
   nf.setPrefix(AMDGPULibFunc::NATIVE);
-  if (Constant *FPExpr = getFunction(M, nf)) {
+  if (FunctionCallee FPExpr = getFunction(M, nf)) {
     LLVM_DEBUG(dbgs() << "AMDIC: " << *CI << " ---> ");
 
     CI->setCalledFunction(FPExpr);
@@ -934,9 +951,10 @@ bool AMDGPULibCalls::fold_pow(CallInst *CI, IRBuilder<> &B,
   if (CF && (CF->isExactlyValue(0.5) || CF->isExactlyValue(-0.5))) {
     // pow[r](x, [-]0.5) = sqrt(x)
     bool issqrt = CF->isExactlyValue(0.5);
-    if (Constant *FPExpr = getFunction(M,
-        AMDGPULibFunc(issqrt ? AMDGPULibFunc::EI_SQRT
-                             : AMDGPULibFunc::EI_RSQRT, FInfo))) {
+    if (FunctionCallee FPExpr =
+            getFunction(M, AMDGPULibFunc(issqrt ? AMDGPULibFunc::EI_SQRT
+                                                : AMDGPULibFunc::EI_RSQRT,
+                                         FInfo))) {
       LLVM_DEBUG(errs() << "AMDIC: " << *CI << " ---> "
                         << FInfo.getName().c_str() << "(" << *opr0 << ")\n");
       Value *nval = CreateCallEx(B,FPExpr, opr0, issqrt ? "__pow2sqrt"
@@ -1003,8 +1021,8 @@ bool AMDGPULibCalls::fold_pow(CallInst *CI, IRBuilder<> &B,
 
   // powr ---> exp2(y * log2(x))
   // pown/pow ---> powr(fabs(x), y) | (x & ((int)y << 31))
-  Constant *ExpExpr = getFunction(M, AMDGPULibFunc(AMDGPULibFunc::EI_EXP2,
-                                                   FInfo));
+  FunctionCallee ExpExpr =
+      getFunction(M, AMDGPULibFunc(AMDGPULibFunc::EI_EXP2, FInfo));
   if (!ExpExpr)
     return false;
 
@@ -1090,8 +1108,8 @@ bool AMDGPULibCalls::fold_pow(CallInst *CI, IRBuilder<> &B,
 
   Value *nval;
   if (needabs) {
-    Constant *AbsExpr = getFunction(M, AMDGPULibFunc(AMDGPULibFunc::EI_FABS,
-                                                     FInfo));
+    FunctionCallee AbsExpr =
+        getFunction(M, AMDGPULibFunc(AMDGPULibFunc::EI_FABS, FInfo));
     if (!AbsExpr)
       return false;
     nval = CreateCallEx(B, AbsExpr, opr0, "__fabs");
@@ -1099,8 +1117,8 @@ bool AMDGPULibCalls::fold_pow(CallInst *CI, IRBuilder<> &B,
     nval = cnval ? cnval : opr0;
   }
   if (needlog) {
-    Constant *LogExpr = getFunction(M, AMDGPULibFunc(AMDGPULibFunc::EI_LOG2,
-                                                     FInfo));
+    FunctionCallee LogExpr =
+        getFunction(M, AMDGPULibFunc(AMDGPULibFunc::EI_LOG2, FInfo));
     if (!LogExpr)
       return false;
     nval = CreateCallEx(B,LogExpr, nval, "__log2");
@@ -1159,8 +1177,8 @@ bool AMDGPULibCalls::fold_rootn(CallInst *CI, IRBuilder<> &B,
     std::vector<const Type*> ParamsTys;
     ParamsTys.push_back(opr0->getType());
     Module *M = CI->getModule();
-    if (Constant *FPExpr = getFunction(M, AMDGPULibFunc(AMDGPULibFunc::EI_SQRT,
-                                                        FInfo))) {
+    if (FunctionCallee FPExpr =
+            getFunction(M, AMDGPULibFunc(AMDGPULibFunc::EI_SQRT, FInfo))) {
       LLVM_DEBUG(errs() << "AMDIC: " << *CI << " ---> sqrt(" << *opr0 << ")\n");
       Value *nval = CreateCallEx(B,FPExpr, opr0, "__rootn2sqrt");
       replaceCall(nval);
@@ -1168,8 +1186,8 @@ bool AMDGPULibCalls::fold_rootn(CallInst *CI, IRBuilder<> &B,
     }
   } else if (ci_opr1 == 3) { // rootn(x, 3) = cbrt(x)
     Module *M = CI->getModule();
-    if (Constant *FPExpr = getFunction(M, AMDGPULibFunc(AMDGPULibFunc::EI_CBRT,
-                                                        FInfo))) {
+    if (FunctionCallee FPExpr =
+            getFunction(M, AMDGPULibFunc(AMDGPULibFunc::EI_CBRT, FInfo))) {
       LLVM_DEBUG(errs() << "AMDIC: " << *CI << " ---> cbrt(" << *opr0 << ")\n");
       Value *nval = CreateCallEx(B,FPExpr, opr0, "__rootn2cbrt");
       replaceCall(nval);
@@ -1186,8 +1204,8 @@ bool AMDGPULibCalls::fold_rootn(CallInst *CI, IRBuilder<> &B,
     std::vector<const Type*> ParamsTys;
     ParamsTys.push_back(opr0->getType());
     Module *M = CI->getModule();
-    if (Constant *FPExpr = getFunction(M, AMDGPULibFunc(AMDGPULibFunc::EI_RSQRT,
-                                                        FInfo))) {
+    if (FunctionCallee FPExpr =
+            getFunction(M, AMDGPULibFunc(AMDGPULibFunc::EI_RSQRT, FInfo))) {
       LLVM_DEBUG(errs() << "AMDIC: " << *CI << " ---> rsqrt(" << *opr0
                         << ")\n");
       Value *nval = CreateCallEx(B,FPExpr, opr0, "__rootn2rsqrt");
@@ -1243,7 +1261,8 @@ bool AMDGPULibCalls::fold_fma_mad(CallInst *CI, IRBuilder<> &B,
 }
 
 // Get a scalar native builtin signle argument FP function
-Constant* AMDGPULibCalls::getNativeFunction(Module* M, const FuncInfo& FInfo) {
+FunctionCallee AMDGPULibCalls::getNativeFunction(Module *M,
+                                                 const FuncInfo &FInfo) {
   if (getArgType(FInfo) == AMDGPULibFunc::F64 || !HasNative(FInfo.getId()))
     return nullptr;
   FuncInfo nf = FInfo;
@@ -1256,8 +1275,8 @@ bool AMDGPULibCalls::fold_sqrt(CallInst *CI, IRBuilder<> &B,
                                const FuncInfo &FInfo) {
   if (getArgType(FInfo) == AMDGPULibFunc::F32 && (getVecSize(FInfo) == 1) &&
       (FInfo.getPrefix() != AMDGPULibFunc::NATIVE)) {
-    if (Constant *FPExpr = getNativeFunction(
-        CI->getModule(), AMDGPULibFunc(AMDGPULibFunc::EI_SQRT, FInfo))) {
+    if (FunctionCallee FPExpr = getNativeFunction(
+            CI->getModule(), AMDGPULibFunc(AMDGPULibFunc::EI_SQRT, FInfo))) {
       Value *opr0 = CI->getArgOperand(0);
       LLVM_DEBUG(errs() << "AMDIC: " << *CI << " ---> "
                         << "sqrt(" << *opr0 << ")\n");
@@ -1334,7 +1353,7 @@ bool AMDGPULibCalls::fold_sincos(CallInst *CI, IRBuilder<> &B,
   // function.
   AMDGPULibFunc nf(AMDGPULibFunc::EI_SINCOS, fInfo);
   nf.getLeads()[0].PtrKind = AMDGPULibFunc::getEPtrKindFromAddrSpace(AMDGPUAS::FLAT_ADDRESS);
-  Function *Fsincos = dyn_cast_or_null<Function>(getFunction(M, nf));
+  FunctionCallee Fsincos = getFunction(M, nf);
   if (!Fsincos) return false;
 
   BasicBlock::iterator ItOld = B.GetInsertPoint();
@@ -1342,7 +1361,7 @@ bool AMDGPULibCalls::fold_sincos(CallInst *CI, IRBuilder<> &B,
   B.SetInsertPoint(UI);
 
   Value *P = Alloc;
-  Type *PTy = Fsincos->getFunctionType()->getParamType(1);
+  Type *PTy = Fsincos.getFunctionType()->getParamType(1);
   // The allocaInst allocates the memory in private address space. This need
   // to be bitcasted to point to the address space of cos pointer type.
   // In OpenCL 2.0 this is generic, while in 1.2 that is private.
@@ -1356,17 +1375,40 @@ bool AMDGPULibCalls::fold_sincos(CallInst *CI, IRBuilder<> &B,
   if (!isSin) { // CI->cos, UI->sin
     B.SetInsertPoint(&*ItOld);
     UI->replaceAllUsesWith(&*Call);
-    Instruction *Reload = B.CreateLoad(Alloc);
+    Instruction *Reload = B.CreateLoad(Alloc->getAllocatedType(), Alloc);
     CI->replaceAllUsesWith(Reload);
     UI->eraseFromParent();
     CI->eraseFromParent();
   } else { // CI->sin, UI->cos
-    Instruction *Reload = B.CreateLoad(Alloc);
+    Instruction *Reload = B.CreateLoad(Alloc->getAllocatedType(), Alloc);
     UI->replaceAllUsesWith(Reload);
     CI->replaceAllUsesWith(Call);
     UI->eraseFromParent();
     CI->eraseFromParent();
   }
+  return true;
+}
+
+bool AMDGPULibCalls::fold_wavefrontsize(CallInst *CI, IRBuilder<> &B) {
+  if (!TM)
+    return false;
+
+  StringRef CPU = TM->getTargetCPU();
+  StringRef Features = TM->getTargetFeatureString();
+  if ((CPU.empty() || CPU.equals_lower("generic")) &&
+      (Features.empty() ||
+       Features.find_lower("wavefrontsize") == StringRef::npos))
+    return false;
+
+  Function *F = CI->getParent()->getParent();
+  const GCNSubtarget &ST = TM->getSubtarget<GCNSubtarget>(*F);
+  unsigned N = ST.getWavefrontSize();
+
+  LLVM_DEBUG(errs() << "AMDIC: fold_wavefrontsize (" << *CI << ") with "
+               << N << "\n");
+
+  CI->replaceAllUsesWith(ConstantInt::get(B.getInt32Ty(), N));
+  CI->eraseFromParent();
   return true;
 }
 
@@ -1679,8 +1721,9 @@ bool AMDGPULibCalls::evaluateCall(CallInst *aCI, FuncInfo &FInfo) {
 }
 
 // Public interface to the Simplify LibCalls pass.
-FunctionPass *llvm::createAMDGPUSimplifyLibCallsPass(const TargetOptions &Opt) {
-  return new AMDGPUSimplifyLibCalls(Opt);
+FunctionPass *llvm::createAMDGPUSimplifyLibCallsPass(const TargetOptions &Opt,
+                                                     const TargetMachine *TM) {
+  return new AMDGPUSimplifyLibCalls(Opt, TM);
 }
 
 FunctionPass *llvm::createAMDGPUUseNativeCallsPass() {

@@ -1,9 +1,8 @@
 //===- NamedStreamMap.cpp - PDB Named Stream Map --------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -35,6 +34,7 @@ uint16_t NamedStreamMapTraits::hashLookupKey(StringRef S) const {
   // Here, the type HASH is a typedef of unsigned short.
   // ** It is not a bug that we truncate the result of hashStringV1, in fact
   //    it is a bug if we do not! **
+  // See NMTNI::hash() in the reference implementation.
   return static_cast<uint16_t>(hashStringV1(S));
 }
 

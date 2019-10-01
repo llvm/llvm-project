@@ -1,9 +1,8 @@
 //===------ utils/obj2yaml.cpp - obj2yaml conversion tool -------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -11,21 +10,27 @@
 #include "Error.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/COFF.h"
+#include "llvm/Object/Minidump.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
 
 using namespace llvm;
 using namespace llvm::object;
 
-static std::error_code dumpObject(const ObjectFile &Obj) {
+static Error dumpObject(const ObjectFile &Obj) {
   if (Obj.isCOFF())
-    return coff2yaml(outs(), cast<COFFObjectFile>(Obj));
+    return errorCodeToError(coff2yaml(outs(), cast<COFFObjectFile>(Obj)));
+
+  if (Obj.isXCOFF())
+    return errorCodeToError(xcoff2yaml(outs(), cast<XCOFFObjectFile>(Obj)));
+
   if (Obj.isELF())
     return elf2yaml(outs(), Obj);
-  if (Obj.isWasm())
-    return wasm2yaml(outs(), cast<WasmObjectFile>(Obj));
 
-  return obj2yaml_error::unsupported_obj_file_format;
+  if (Obj.isWasm())
+    return errorCodeToError(wasm2yaml(outs(), cast<WasmObjectFile>(Obj)));
+
+  return errorCodeToError(obj2yaml_error::unsupported_obj_file_format);
 }
 
 static Error dumpInput(StringRef File) {
@@ -40,7 +45,9 @@ static Error dumpInput(StringRef File) {
     return errorCodeToError(macho2yaml(outs(), Binary));
   // TODO: If this is an archive, then burst it and dump each entry
   if (ObjectFile *Obj = dyn_cast<ObjectFile>(&Binary))
-    return errorCodeToError(dumpObject(*Obj));
+    return dumpObject(*Obj);
+  if (MinidumpFile *Minidump = dyn_cast<MinidumpFile>(&Binary))
+    return minidump2yaml(outs(), *Minidump);
 
   return Error::success();
 }

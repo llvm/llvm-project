@@ -30,7 +30,7 @@ body:             |
   bb.0.entry:
     liveins: $f0s, $r2d
 
-    LTEBRCompare $f0s, $f0s, implicit-def $cc
+    LTEBRCompare $f0s, $f0s, implicit-def $cc, implicit $fpc
     $f2s = LER $f0s
     INLINEASM &"blah $0", 1, 9, $f2s
     CondReturn 15, 4, implicit $f0s, implicit $cc

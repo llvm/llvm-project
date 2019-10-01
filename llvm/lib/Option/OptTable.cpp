@@ -1,9 +1,8 @@
 //===- OptTable.cpp - Option Table Implementation -------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -252,59 +251,69 @@ unsigned OptTable::findNearest(StringRef Option, std::string &NearestString,
                                unsigned MinimumLength) const {
   assert(!Option.empty());
 
-  // Consider each option as a candidate, finding the closest match.
+  // Consider each [option prefix + option name] pair as a candidate, finding
+  // the closest match.
   unsigned BestDistance = UINT_MAX;
   for (const Info &CandidateInfo :
        ArrayRef<Info>(OptionInfos).drop_front(FirstSearchableIndex)) {
     StringRef CandidateName = CandidateInfo.Name;
 
-    // Ignore option candidates with empty names, such as "--", or names
-    // that do not meet the minimum length.
+    // We can eliminate some option prefix/name pairs as candidates right away:
+    // * Ignore option candidates with empty names, such as "--", or names
+    //   that do not meet the minimum length.
     if (CandidateName.empty() || CandidateName.size() < MinimumLength)
       continue;
 
-    // If FlagsToInclude were specified, ignore options that don't include
-    // those flags.
+    // * If FlagsToInclude were specified, ignore options that don't include
+    //   those flags.
     if (FlagsToInclude && !(CandidateInfo.Flags & FlagsToInclude))
       continue;
-    // Ignore options that contain the FlagsToExclude.
+    // * Ignore options that contain the FlagsToExclude.
     if (CandidateInfo.Flags & FlagsToExclude)
       continue;
 
-    // Ignore positional argument option candidates (which do not
-    // have prefixes).
+    // * Ignore positional argument option candidates (which do not
+    //   have prefixes).
     if (!CandidateInfo.Prefixes)
       continue;
-    // Find the most appropriate prefix. For example, if a user asks for
-    // "--helm", suggest "--help" over "-help".
-    StringRef Prefix = CandidateInfo.Prefixes[0];
-    for (int P = 1; CandidateInfo.Prefixes[P]; P++) {
-      if (Option.startswith(CandidateInfo.Prefixes[P]))
-        Prefix = CandidateInfo.Prefixes[P];
-    }
 
-    // Check if the candidate ends with a character commonly used when
+    // Now check if the candidate ends with a character commonly used when
     // delimiting an option from its value, such as '=' or ':'. If it does,
     // attempt to split the given option based on that delimiter.
-    std::string Delimiter = "";
-    char Last = CandidateName.back();
-    if (Last == '=' || Last == ':')
-      Delimiter = std::string(1, Last);
-
     StringRef LHS, RHS;
-    if (Delimiter.empty())
-      LHS = Option;
-    else
+    char Last = CandidateName.back();
+    bool CandidateHasDelimiter = Last == '=' || Last == ':';
+    std::string NormalizedName = Option;
+    if (CandidateHasDelimiter) {
       std::tie(LHS, RHS) = Option.split(Last);
+      NormalizedName = LHS;
+      if (Option.find(Last) == LHS.size())
+        NormalizedName += Last;
+    }
 
-    std::string NormalizedName =
-        (LHS.drop_front(Prefix.size()) + Delimiter).str();
-    unsigned Distance =
-        CandidateName.edit_distance(NormalizedName, /*AllowReplacements=*/true,
-                                    /*MaxEditDistance=*/BestDistance);
-    if (Distance < BestDistance) {
-      BestDistance = Distance;
-      NearestString = (Prefix + CandidateName + RHS).str();
+    // Consider each possible prefix for each candidate to find the most
+    // appropriate one. For example, if a user asks for "--helm", suggest
+    // "--help" over "-help".
+    for (int P = 0;
+         const char *const CandidatePrefix = CandidateInfo.Prefixes[P]; P++) {
+      std::string Candidate = (CandidatePrefix + CandidateName).str();
+      StringRef CandidateRef = Candidate;
+      unsigned Distance =
+          CandidateRef.edit_distance(NormalizedName, /*AllowReplacements=*/true,
+                                     /*MaxEditDistance=*/BestDistance);
+      if (RHS.empty() && CandidateHasDelimiter) {
+        // The Candidate ends with a = or : delimiter, but the option passed in
+        // didn't contain the delimiter (or doesn't have anything after it).
+        // In that case, penalize the correction: `-nodefaultlibs` is more
+        // likely to be a spello for `-nodefaultlib` than `-nodefaultlib:` even
+        // though both have an unmodified editing distance of 1, since the
+        // latter would need an argument.
+        ++Distance;
+      }
+      if (Distance < BestDistance) {
+        BestDistance = Distance;
+        NearestString = (Candidate + RHS).str();
+      }
     }
   }
   return BestDistance;

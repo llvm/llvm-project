@@ -1,9 +1,8 @@
 //===- llvm/Analysis/TargetTransformInfo.cpp ------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -41,6 +40,91 @@ struct NoTTIImpl : TargetTransformInfoImplCRTPBase<NoTTIImpl> {
 };
 }
 
+bool HardwareLoopInfo::isHardwareLoopCandidate(ScalarEvolution &SE,
+                                               LoopInfo &LI, DominatorTree &DT,
+                                               bool ForceNestedLoop,
+                                               bool ForceHardwareLoopPHI) {
+  SmallVector<BasicBlock *, 4> ExitingBlocks;
+  L->getExitingBlocks(ExitingBlocks);
+
+  for (SmallVectorImpl<BasicBlock *>::iterator I = ExitingBlocks.begin(),
+                                               IE = ExitingBlocks.end();
+       I != IE; ++I) {
+    BasicBlock *BB = *I;
+
+    // If we pass the updated counter back through a phi, we need to know
+    // which latch the updated value will be coming from.
+    if (!L->isLoopLatch(BB)) {
+      if (ForceHardwareLoopPHI || CounterInReg)
+        continue;
+    }
+
+    const SCEV *EC = SE.getExitCount(L, BB);
+    if (isa<SCEVCouldNotCompute>(EC))
+      continue;
+    if (const SCEVConstant *ConstEC = dyn_cast<SCEVConstant>(EC)) {
+      if (ConstEC->getValue()->isZero())
+        continue;
+    } else if (!SE.isLoopInvariant(EC, L))
+      continue;
+
+    if (SE.getTypeSizeInBits(EC->getType()) > CountType->getBitWidth())
+      continue;
+
+    // If this exiting block is contained in a nested loop, it is not eligible
+    // for insertion of the branch-and-decrement since the inner loop would
+    // end up messing up the value in the CTR.
+    if (!IsNestingLegal && LI.getLoopFor(BB) != L && !ForceNestedLoop)
+      continue;
+
+    // We now have a loop-invariant count of loop iterations (which is not the
+    // constant zero) for which we know that this loop will not exit via this
+    // existing block.
+
+    // We need to make sure that this block will run on every loop iteration.
+    // For this to be true, we must dominate all blocks with backedges. Such
+    // blocks are in-loop predecessors to the header block.
+    bool NotAlways = false;
+    for (pred_iterator PI = pred_begin(L->getHeader()),
+                       PIE = pred_end(L->getHeader());
+         PI != PIE; ++PI) {
+      if (!L->contains(*PI))
+        continue;
+
+      if (!DT.dominates(*I, *PI)) {
+        NotAlways = true;
+        break;
+      }
+    }
+
+    if (NotAlways)
+      continue;
+
+    // Make sure this blocks ends with a conditional branch.
+    Instruction *TI = BB->getTerminator();
+    if (!TI)
+      continue;
+
+    if (BranchInst *BI = dyn_cast<BranchInst>(TI)) {
+      if (!BI->isConditional())
+        continue;
+
+      ExitBranch = BI;
+    } else
+      continue;
+
+    // Note that this block may not be the loop latch block, even if the loop
+    // has a latch block.
+    ExitBlock = *I;
+    ExitCount = EC;
+    break;
+  }
+
+  if (!ExitBlock)
+    return false;
+  return true;
+}
+
 TargetTransformInfo::TargetTransformInfo(const DataLayout &DL)
     : TTIImpl(new Model<NoTTIImpl>(NoTTIImpl(DL))) {}
 
@@ -61,15 +145,17 @@ int TargetTransformInfo::getOperationCost(unsigned Opcode, Type *Ty,
   return Cost;
 }
 
-int TargetTransformInfo::getCallCost(FunctionType *FTy, int NumArgs) const {
-  int Cost = TTIImpl->getCallCost(FTy, NumArgs);
+int TargetTransformInfo::getCallCost(FunctionType *FTy, int NumArgs,
+                                     const User *U) const {
+  int Cost = TTIImpl->getCallCost(FTy, NumArgs, U);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }
 
 int TargetTransformInfo::getCallCost(const Function *F,
-                                     ArrayRef<const Value *> Arguments) const {
-  int Cost = TTIImpl->getCallCost(F, Arguments);
+                                     ArrayRef<const Value *> Arguments,
+                                     const User *U) const {
+  int Cost = TTIImpl->getCallCost(F, Arguments, U);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }
@@ -89,8 +175,9 @@ int TargetTransformInfo::getExtCost(const Instruction *I,
 }
 
 int TargetTransformInfo::getIntrinsicCost(
-    Intrinsic::ID IID, Type *RetTy, ArrayRef<const Value *> Arguments) const {
-  int Cost = TTIImpl->getIntrinsicCost(IID, RetTy, Arguments);
+    Intrinsic::ID IID, Type *RetTy, ArrayRef<const Value *> Arguments,
+    const User *U) const {
+  int Cost = TTIImpl->getIntrinsicCost(IID, RetTy, Arguments, U);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }
@@ -128,6 +215,12 @@ bool TargetTransformInfo::isLoweredToCall(const Function *F) const {
   return TTIImpl->isLoweredToCall(F);
 }
 
+bool TargetTransformInfo::isHardwareLoopProfitable(
+  Loop *L, ScalarEvolution &SE, AssumptionCache &AC,
+  TargetLibraryInfo *LibInfo, HardwareLoopInfo &HWLoopInfo) const {
+  return TTIImpl->isHardwareLoopProfitable(L, SE, AC, LibInfo, HWLoopInfo);
+}
+
 void TargetTransformInfo::getUnrollingPreferences(
     Loop *L, ScalarEvolution &SE, UnrollingPreferences &UP) const {
   return TTIImpl->getUnrollingPreferences(L, SE, UP);
@@ -163,6 +256,10 @@ bool TargetTransformInfo::shouldFavorPostInc() const {
   return TTIImpl->shouldFavorPostInc();
 }
 
+bool TargetTransformInfo::shouldFavorBackedgeIndex(const Loop *L) const {
+  return TTIImpl->shouldFavorBackedgeIndex(L);
+}
+
 bool TargetTransformInfo::isLegalMaskedStore(Type *DataType) const {
   return TTIImpl->isLegalMaskedStore(DataType);
 }
@@ -171,12 +268,30 @@ bool TargetTransformInfo::isLegalMaskedLoad(Type *DataType) const {
   return TTIImpl->isLegalMaskedLoad(DataType);
 }
 
+bool TargetTransformInfo::isLegalNTStore(Type *DataType,
+                                         unsigned Alignment) const {
+  return TTIImpl->isLegalNTStore(DataType, Alignment);
+}
+
+bool TargetTransformInfo::isLegalNTLoad(Type *DataType,
+                                        unsigned Alignment) const {
+  return TTIImpl->isLegalNTLoad(DataType, Alignment);
+}
+
 bool TargetTransformInfo::isLegalMaskedGather(Type *DataType) const {
   return TTIImpl->isLegalMaskedGather(DataType);
 }
 
 bool TargetTransformInfo::isLegalMaskedScatter(Type *DataType) const {
   return TTIImpl->isLegalMaskedScatter(DataType);
+}
+
+bool TargetTransformInfo::isLegalMaskedCompressStore(Type *DataType) const {
+  return TTIImpl->isLegalMaskedCompressStore(DataType);
+}
+
+bool TargetTransformInfo::isLegalMaskedExpandLoad(Type *DataType) const {
+  return TTIImpl->isLegalMaskedExpandLoad(DataType);
 }
 
 bool TargetTransformInfo::hasDivRemOp(Type *DataType, bool IsSigned) const {
@@ -570,6 +685,12 @@ int TargetTransformInfo::getAddressComputationCost(Type *Tp,
   return Cost;
 }
 
+int TargetTransformInfo::getMemcpyCost(const Instruction *I) const {
+  int Cost = TTIImpl->getMemcpyCost(I);
+  assert(Cost >= 0 && "TTI should not produce negative costs!");
+  return Cost;
+}
+
 int TargetTransformInfo::getArithmeticReductionCost(unsigned Opcode, Type *Ty,
                                                     bool IsPairwiseForm) const {
   int Cost = TTIImpl->getArithmeticReductionCost(Opcode, Ty, IsPairwiseForm);
@@ -623,6 +744,12 @@ void TargetTransformInfo::getMemcpyLoopResidualLoweringType(
 bool TargetTransformInfo::areInlineCompatible(const Function *Caller,
                                               const Function *Callee) const {
   return TTIImpl->areInlineCompatible(Caller, Callee);
+}
+
+bool TargetTransformInfo::areFunctionArgsABICompatible(
+    const Function *Caller, const Function *Callee,
+    SmallPtrSetImpl<Argument *> &Args) const {
+  return TTIImpl->areFunctionArgsABICompatible(Caller, Callee, Args);
 }
 
 bool TargetTransformInfo::isIndexedLoadLegal(MemIndexedMode Mode,
@@ -680,6 +807,10 @@ bool TargetTransformInfo::useReductionIntrinsic(unsigned Opcode,
 
 bool TargetTransformInfo::shouldExpandReduction(const IntrinsicInst *II) const {
   return TTIImpl->shouldExpandReduction(II);
+}
+
+unsigned TargetTransformInfo::getGISelRematGlobalCost() const {
+  return TTIImpl->getGISelRematGlobalCost();
 }
 
 int TargetTransformInfo::getInstructionLatency(const Instruction *I) const {
@@ -1013,6 +1144,16 @@ int TargetTransformInfo::getInstructionThroughput(const Instruction *I) const {
     TargetTransformInfo::OperandValueProperties Op1VP, Op2VP;
     Op1VK = getOperandInfo(I->getOperand(0), Op1VP);
     Op2VK = getOperandInfo(I->getOperand(1), Op2VP);
+    SmallVector<const Value *, 2> Operands(I->operand_values());
+    return getArithmeticInstrCost(I->getOpcode(), I->getType(), Op1VK, Op2VK,
+                                  Op1VP, Op2VP, Operands);
+  }
+  case Instruction::FNeg: {
+    TargetTransformInfo::OperandValueKind Op1VK, Op2VK;
+    TargetTransformInfo::OperandValueProperties Op1VP, Op2VP;
+    Op1VK = getOperandInfo(I->getOperand(0), Op1VP);
+    Op2VK = OK_AnyValue;
+    Op2VP = OP_None;
     SmallVector<const Value *, 2> Operands(I->operand_values());
     return getArithmeticInstrCost(I->getOpcode(), I->getType(), Op1VK, Op2VK,
                                   Op1VP, Op2VP, Operands);

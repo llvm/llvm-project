@@ -1,9 +1,8 @@
 //===- StackSlotColoring.cpp - Stack slot coloring pass. ------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -243,7 +242,7 @@ void StackSlotColoring::InitializeSlots() {
   LLVM_DEBUG(dbgs() << '\n');
 
   // Sort them by weight.
-  std::stable_sort(SSIntervals.begin(), SSIntervals.end(), IntervalSorter());
+  llvm::stable_sort(SSIntervals, IntervalSorter());
 
   NextColors.resize(AllColors.size());
 
@@ -348,7 +347,7 @@ bool StackSlotColoring::ColorSlots(MachineFunction &MF) {
     li->weight = SlotWeights[SS];
   }
   // Sort them by new weight.
-  std::stable_sort(SSIntervals.begin(), SSIntervals.end(), IntervalSorter());
+  llvm::stable_sort(SSIntervals, IntervalSorter());
 
 #ifndef NDEBUG
   for (unsigned i = 0, e = SSIntervals.size(); i != e; ++i)

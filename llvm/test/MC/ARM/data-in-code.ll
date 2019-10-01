@@ -1,10 +1,10 @@
 ;; RUN: llc -verify-machineinstrs \
 ;; RUN:   -mtriple=armv7-linux-gnueabi -filetype=obj %s -o - | \
-;; RUN:   llvm-readobj -t | FileCheck -check-prefix=ARM %s
+;; RUN:   llvm-readobj --symbols | FileCheck -check-prefix=ARM %s
 
 ;; RUN: llc -verify-machineinstrs \
 ;; RUN:   -mtriple=thumbv7-linux-gnueabi -filetype=obj %s -o - | \
-;; RUN:   llvm-readobj -t | FileCheck -check-prefix=TMB %s
+;; RUN:   llvm-readobj --symbols | FileCheck -check-prefix=TMB %s
 
 ;; Ensure that if a jump table is generated that it has Mapping Symbols
 ;; marking the data-in-code region.

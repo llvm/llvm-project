@@ -1,5 +1,4 @@
 ; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -disable-block-placement -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 | FileCheck %s
-; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -tail-dup-placement=0 -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 | FileCheck -check-prefix=OPT %s
 
 ; Test the CFG stackifier pass.
 
@@ -19,24 +18,14 @@ declare void @something()
 ; CHECK:      i32.lt_s
 ; CHECK-NEXT: br_if
 ; CHECK-NEXT: return
-; CHECK-NEXT: .LBB0_3:
+; CHECK-NEXT: .LBB{{[0-9]+}}_3:
 ; CHECK-NEXT: end_block
 ; CHECK-NEXT: i32.const
 ; CHECK-NEXT: i32.add
 ; CHECK-NEXT: call
 ; CHECK-NEXT: br
-; CHECK-NEXT: .LBB0_4:
+; CHECK-NEXT: .LBB{{[0-9]+}}_4:
 ; CHECK-NEXT: end_loop
-; OPT-LABEL: test0:
-; OPT: loop
-; OPT:      i32.ge_s
-; OPT-NEXT: br_if
-; OPT-NEXT: i32.const
-; OPT-NEXT: i32.add
-; OPT-NOT: br
-; OPT: call
-; OPT: br 0{{$}}
-; OPT: return{{$}}
 define void @test0(i32 %n) {
 entry:
   br label %header
@@ -64,24 +53,14 @@ back:
 ; CHECK:      i32.lt_s
 ; CHECK-NEXT: br_if
 ; CHECK-NEXT: return
-; CHECK-NEXT: .LBB1_3:
+; CHECK-NEXT: .LBB{{[0-9]+}}_3:
 ; CHECK-NEXT: end_block
 ; CHECK-NEXT: i32.const
 ; CHECK-NEXT: i32.add
 ; CHECK-NEXT: call
 ; CHECK-NEXT: br
-; CHECK-NEXT: .LBB1_4:
+; CHECK-NEXT: .LBB{{[0-9]+}}_4:
 ; CHECK-NEXT: end_loop
-; OPT-LABEL: test1:
-; OPT: loop
-; OPT:      i32.ge_s
-; OPT-NEXT: br_if
-; OPT-NEXT: i32.const
-; OPT-NEXT: i32.add
-; OPT-NOT: br
-; OPT: call
-; OPT: br 0{{$}}
-; OPT: return{{$}}
 define void @test1(i32 %n) {
 entry:
   br label %header
@@ -107,24 +86,13 @@ back:
 ; CHECK-NOT: local
 ; CHECK: block   {{$}}
 ; CHECK: br_if 0, {{[^,]+}}{{$}}
-; CHECK: .LBB2_{{[0-9]+}}:
+; CHECK: .LBB{{[0-9]+}}_{{[0-9]+}}:
 ; CHECK: loop
 ; CHECK: br_if 0, $pop{{[0-9]+}}{{$}}
-; CHECK: .LBB2_{{[0-9]+}}:
+; CHECK: .LBB{{[0-9]+}}_{{[0-9]+}}:
 ; CHECK: end_loop
 ; CHECK: end_block
 ; CHECK: return{{$}}
-; OPT-LABEL: test2:
-; OPT-NOT: local
-; OPT: block   {{$}}
-; OPT: br_if 0, {{[^,]+}}{{$}}
-; OPT: .LBB2_{{[0-9]+}}:
-; OPT: loop
-; OPT: br_if 0, $pop{{[0-9]+}}{{$}}
-; OPT: .LBB2_{{[0-9]+}}:
-; OPT: end_loop
-; OPT: end_block
-; OPT: return{{$}}
 define void @test2(double* nocapture %p, i32 %n) {
 entry:
   %cmp.4 = icmp sgt i32 %n, 0
@@ -155,31 +123,17 @@ for.end:
 ; CHECK-NEXT: block   {{$}}
 ; CHECK: br_if 0, ${{[^,]+}}{{$}}
 ; CHECK: br 1{{$}}
-; CHECK: .LBB3_2:
+; CHECK: .LBB{{[0-9]+}}_2:
 ; CHECK-NEXT: end_block{{$}}
 ; CHECK: block   {{$}}
 ; CHECK: br_if 0, ${{[^,]+}}{{$}}
 ; CHECK: br 1{{$}}
-; CHECK: .LBB3_4:
+; CHECK: .LBB{{[0-9]+}}_4:
 ; CHECK-NEXT: end_block{{$}}
-; CHECK: .LBB3_5:
+; CHECK: .LBB{{[0-9]+}}_5:
 ; CHECK-NEXT: end_block{{$}}
 ; CHECK: i32.const $push{{[0-9]+}}=, 0{{$}}
 ; CHECK-NEXT: return $pop{{[0-9]+}}{{$}}
-; OPT-LABEL: doublediamond:
-; OPT:      block   {{$}}
-; OPT-NEXT: block   {{$}}
-; OPT-NEXT: block   {{$}}
-; OPT:      br_if 0, ${{[^,]+}}{{$}}
-; OPT:      br_if 1, ${{[^,]+}}{{$}}
-; OPT:      br 2{{$}}
-; OPT-NEXT: .LBB3_3:
-; OPT-NEXT: end_block
-; OPT:      br 1{{$}}
-; OPT-NEXT: .LBB3_4:
-; OPT:      .LBB3_5:
-; OPT-NEXT: end_block
-; OPT:      return $pop{{[0-9]+}}{{$}}
 define i32 @doublediamond(i32 %a, i32 %b, i32* %p) {
 entry:
   %c = icmp eq i32 %a, 0
@@ -206,13 +160,8 @@ exit:
 ; CHECK-LABEL: triangle:
 ; CHECK: block   {{$}}
 ; CHECK: br_if 0, $1{{$}}
-; CHECK: .LBB4_2:
+; CHECK: .LBB{{[0-9]+}}_2:
 ; CHECK: return
-; OPT-LABEL: triangle:
-; OPT: block   {{$}}
-; OPT: br_if 0, $1{{$}}
-; OPT: .LBB4_2:
-; OPT: return
 define i32 @triangle(i32* %p, i32 %a) {
 entry:
   %c = icmp eq i32 %a, 0
@@ -231,19 +180,10 @@ exit:
 ; CHECK: block   {{$}}
 ; CHECK: br_if 0, $1{{$}}
 ; CHECK: br 1{{$}}
-; CHECK: .LBB5_2:
-; CHECK: .LBB5_3:
+; CHECK: .LBB{{[0-9]+}}_2:
+; CHECK: .LBB{{[0-9]+}}_3:
 ; CHECK: i32.const $push{{[0-9]+}}=, 0{{$}}
 ; CHECK-NEXT: return $pop{{[0-9]+}}{{$}}
-; OPT-LABEL: diamond:
-; OPT: block   {{$}}
-; OPT: block   {{$}}
-; OPT: br_if 0, {{[^,]+}}{{$}}
-; OPT: br 1{{$}}
-; OPT: .LBB5_2:
-; OPT: .LBB5_3:
-; OPT: i32.const $push{{[0-9]+}}=, 0{{$}}
-; OPT-NEXT: return $pop{{[0-9]+}}{{$}}
 define i32 @diamond(i32* %p, i32 %a) {
 entry:
   %c = icmp eq i32 %a, 0
@@ -263,9 +203,6 @@ exit:
 ; CHECK-LABEL: single_block:
 ; CHECK-NOT: br
 ; CHECK: return $pop{{[0-9]+}}{{$}}
-; OPT-LABEL: single_block:
-; OPT-NOT: br
-; OPT: return $pop{{[0-9]+}}{{$}}
 define i32 @single_block(i32* %p) {
 entry:
   store volatile i32 0, i32* %p
@@ -274,18 +211,11 @@ entry:
 
 ; CHECK-LABEL: minimal_loop:
 ; CHECK-NOT: br
-; CHECK: .LBB7_1:
+; CHECK: .LBB{{[0-9]+}}_1:
 ; CHECK: loop i32
 ; CHECK: i32.store 0($0), $pop{{[0-9]+}}{{$}}
 ; CHECK: br 0{{$}}
-; CHECK: .LBB7_2:
-; OPT-LABEL: minimal_loop:
-; OPT-NOT: br
-; OPT: .LBB7_1:
-; OPT: loop i32
-; OPT: i32.store 0($0), $pop{{[0-9]+}}{{$}}
-; OPT: br 0{{$}}
-; OPT: .LBB7_2:
+; CHECK: .LBB{{[0-9]+}}_2:
 define i32 @minimal_loop(i32* %p) {
 entry:
   store volatile i32 0, i32* %p
@@ -297,20 +227,12 @@ loop:
 
 ; CHECK-LABEL: simple_loop:
 ; CHECK-NOT: br
-; CHECK: .LBB8_1:
+; CHECK: .LBB{{[0-9]+}}_1:
 ; CHECK: loop    {{$}}
 ; CHECK: br_if 0, $pop{{[0-9]+}}{{$}}
 ; CHECK-NEXT: end_loop{{$}}
 ; CHECK: i32.const $push{{[0-9]+}}=, 0{{$}}
 ; CHECK-NEXT: return $pop{{[0-9]+}}{{$}}
-; OPT-LABEL: simple_loop:
-; OPT-NOT: br
-; OPT: .LBB8_1:
-; OPT: loop    {{$}}
-; OPT: br_if 0, {{[^,]+}}{{$}}
-; OPT-NEXT: end_loop{{$}}
-; OPT: i32.const $push{{[0-9]+}}=, 0{{$}}
-; OPT-NEXT: return $pop{{[0-9]+}}{{$}}
 define i32 @simple_loop(i32* %p, i32 %a) {
 entry:
   %c = icmp eq i32 %a, 0
@@ -329,17 +251,9 @@ exit:
 ; CHECK: br_if 0, $0{{$}}
 ; CHECK: block   {{$}}
 ; CHECK: br_if 0, $1{{$}}
-; CHECK: .LBB9_3:
-; CHECK: .LBB9_4:
+; CHECK: .LBB{{[0-9]+}}_3:
+; CHECK: .LBB{{[0-9]+}}_4:
 ; CHECK: return
-; OPT-LABEL: doubletriangle:
-; OPT: block   {{$}}
-; OPT: br_if 0, $0{{$}}
-; OPT: block   {{$}}
-; OPT: br_if 0, $1{{$}}
-; OPT: .LBB9_3:
-; OPT: .LBB9_4:
-; OPT: return
 define i32 @doubletriangle(i32 %a, i32 %b, i32* %p) {
 entry:
   %c = icmp eq i32 %a, 0
@@ -365,21 +279,11 @@ exit:
 ; CHECK: block   {{$}}
 ; CHECK: br_if 0, $0{{$}}
 ; CHECK: br 1{{$}}
-; CHECK: .LBB10_2:
+; CHECK: .LBB{{[0-9]+}}_2:
 ; CHECK: br_if 0, $1{{$}}
-; CHECK: .LBB10_4:
+; CHECK: .LBB{{[0-9]+}}_4:
 ; CHECK: i32.const $push{{[0-9]+}}=, 0{{$}}
 ; CHECK-NEXT: return $pop{{[0-9]+}}{{$}}
-; OPT-LABEL: ifelse_earlyexits:
-; OPT: block   {{$}}
-; OPT: block   {{$}}
-; OPT: br_if 0, {{[^,]+}}{{$}}
-; OPT: br_if 1, $1{{$}}
-; OPT: br 1{{$}}
-; OPT: .LBB10_3:
-; OPT: .LBB10_4:
-; OPT: i32.const $push{{[0-9]+}}=, 0{{$}}
-; OPT-NEXT: return $pop{{[0-9]+}}{{$}}
 define i32 @ifelse_earlyexits(i32 %a, i32 %b, i32* %p) {
 entry:
   %c = icmp eq i32 %a, 0
@@ -401,36 +305,20 @@ exit:
 }
 
 ; CHECK-LABEL: doublediamond_in_a_loop:
-; CHECK: .LBB11_1:
+; CHECK: .LBB{{[0-9]+}}_1:
 ; CHECK: loop i32{{$}}
 ; CHECK: block   {{$}}
 ; CHECK: br_if           0, $0{{$}}
 ; CHECK: br              1{{$}}
-; CHECK: .LBB11_3:
+; CHECK: .LBB{{[0-9]+}}_3:
 ; CHECK: end_block{{$}}
 ; CHECK: block   {{$}}
 ; CHECK: br_if           0, $1{{$}}
 ; CHECK: br              1{{$}}
-; CHECK: .LBB11_5:
+; CHECK: .LBB{{[0-9]+}}_5:
 ; CHECK: br              0{{$}}
-; CHECK: .LBB11_6:
+; CHECK: .LBB{{[0-9]+}}_6:
 ; CHECK-NEXT: end_loop{{$}}
-; OPT-LABEL: doublediamond_in_a_loop:
-; OPT:      .LBB11_1:
-; OPT:      loop i32{{$}}
-; OPT:      block   {{$}}
-; OPT:      br_if           0, {{[^,]+}}{{$}}
-; OPT:      block   {{$}}
-; OPT:      br_if           0, {{[^,]+}}{{$}}
-; OPT:      br              2{{$}}
-; OPT-NEXT: .LBB11_4:
-; OPT-NEXT: end_block{{$}}
-; OPT:      br              1{{$}}
-; OPT:      .LBB11_5:
-; OPT-NEXT: end_block{{$}}
-; OPT:      br              0{{$}}
-; OPT:      .LBB11_6:
-; OPT-NEXT: end_loop{{$}}
 define i32 @doublediamond_in_a_loop(i32 %a, i32 %b, i32* %p) {
 entry:
   br label %header
@@ -463,29 +351,8 @@ exit:
 ; CHECK-NEXT: br_if
 ; CHECK-NEXT: .LBB{{[0-9]+}}_{{[0-9]+}}:
 ; CHECK-NEXT: loop
-; OPT-LABEL: test3:
-; OPT: block
-; OPT: br_if
-; OPT: .LBB{{[0-9]+}}_{{[0-9]+}}:
-; OPT-NEXT: loop
-; OPT-NEXT: block
-; OPT-NEXT: block
-; OPT-NEXT: br_if
-; OPT-NEXT: .LBB{{[0-9]+}}_{{[0-9]+}}:
-; OPT-NEXT: loop
-; OPT: br_if
-; OPT-NEXT: br
-; OPT-NEXT: .LBB{{[0-9]+}}_{{[0-9]+}}:
-; OPT-NEXT: end_loop
-; OPT-NEXT: end_block
-; OPT-NEXT: unreachable
-; OPT-NEXT: .LBB{{[0-9]+}}_{{[0-9]+}}:
-; OPT-NEXT: end_block
-; OPT: br
-; OPT-NEXT: .LBB{{[0-9]+}}_{{[0-9]+}}:
-; OPT-NEXT: end_loop
 declare void @bar()
-define void @test3(i32 %w)  {
+define void @test3(i32 %w, i32 %x)  {
 entry:
   br i1 undef, label %outer.ph, label %exit
 
@@ -493,14 +360,14 @@ outer.ph:
   br label %outer
 
 outer:
-  %tobool = icmp eq i32 undef, 0
+  %tobool = icmp eq i32 %x, 0
   br i1 %tobool, label %inner, label %unreachable
 
 unreachable:
   unreachable
 
 inner:
-  %c = icmp eq i32 undef, %w
+  %c = icmp eq i32 %x, %w
   br i1 %c, label %if.end, label %inner
 
 exit:
@@ -517,38 +384,14 @@ if.end:
 ; CHECK-NEXT: .functype test4 (i32) -> (){{$}}
 ; CHECK:      block   {{$}}
 ; CHECK-NEXT: block   {{$}}
-; CHECK:      br_if       0, $pop{{[0-9]+}}{{$}}
-; CHECK:      br_if       1, $pop{{[0-9]+}}{{$}}
-; CHECK:      br          1{{$}}
-; CHECK-NEXT: .LBB13_3:
+; CHECK:      br_if     0, $pop{{[0-9]+}}{{$}}
+; CHECK:      br        1{{$}}
+; CHECK-NEXT: .LBB{{[0-9]+}}_2:
 ; CHECK-NEXT: end_block{{$}}
-; CHECK-NEXT: block   {{$}}
-; CHECK:      br_if 0, $pop{{[0-9]+}}{{$}}
-; CHECK:      br_if 1, $pop{{[0-9]+}}{{$}}
-; CHECK-NEXT: .LBB13_5:
+; CHECK-NEXT: br_table   $0, 0, 0, 0, 0, 0, 0{{$}}
+; CHECK-NEXT: .LBB{{[0-9]+}}_3:
 ; CHECK-NEXT: end_block{{$}}
 ; CHECK-NEXT: return{{$}}
-; CHECK-NEXT: .LBB13_6:
-; CHECK-NEXT: end_block{{$}}
-; CHECK-NEXT: return{{$}}
-; OPT-LABEL: test4:
-; OPT-NEXT: .functype test4 (i32) -> (){{$}}
-; OPT:      block   {{$}}
-; OPT-NEXT: block   {{$}}
-; OPT:      br_if       0, $pop{{[0-9]+}}{{$}}
-; OPT:      br_if       1, $pop{{[0-9]+}}{{$}}
-; OPT:      br          1{{$}}
-; OPT-NEXT: .LBB13_3:
-; OPT-NEXT: end_block{{$}}
-; OPT-NEXT: block   {{$}}
-; OPT:      br_if       0, $pop{{[0-9]+}}{{$}}
-; OPT:      br_if       1, $pop{{[0-9]+}}{{$}}
-; OPT-NEXT: .LBB13_5:
-; OPT-NEXT: end_block{{$}}
-; OPT-NEXT: return{{$}}
-; OPT-NEXT: .LBB13_6:
-; OPT-NEXT: end_block{{$}}
-; OPT-NEXT: return{{$}}
 define void @test4(i32 %t) {
 entry:
   switch i32 %t, label %default [
@@ -575,25 +418,15 @@ default:
 ; same basic block.
 
 ; CHECK-LABEL: test5:
-; CHECK:       .LBB14_1:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:  block   {{$}}
 ; CHECK-NEXT:  loop    {{$}}
 ; CHECK:       br_if 1, {{[^,]+}}{{$}}
 ; CHECK:       br_if 0, {{[^,]+}}{{$}}
 ; CHECK-NEXT:  end_loop{{$}}
 ; CHECK:       return{{$}}
-; CHECK-NEXT:  .LBB14_4:
+; CHECK-NEXT:  .LBB{{[0-9]+}}_4:
 ; CHECK:       return{{$}}
-; OPT-LABEL: test5:
-; OPT:       .LBB14_1:
-; OPT-NEXT:  block   {{$}}
-; OPT-NEXT:  loop    {{$}}
-; OPT:       br_if 1, {{[^,]+}}{{$}}
-; OPT:       br_if 0, {{[^,]+}}{{$}}
-; OPT-NEXT:  end_loop{{$}}
-; OPT:       return{{$}}
-; OPT-NEXT:  .LBB14_4:
-; OPT:       return{{$}}
 define void @test5(i1 %p, i1 %q) {
 entry:
   br label %header
@@ -620,7 +453,7 @@ return:
 ; which has another predecessor.
 
 ; CHECK-LABEL: test6:
-; CHECK:       .LBB15_1:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:  block   {{$}}
 ; CHECK-NEXT:  block   {{$}}
 ; CHECK-NEXT:  loop    {{$}}
@@ -633,34 +466,13 @@ return:
 ; CHECK-NEXT:  end_loop{{$}}
 ; CHECK-NOT:   block
 ; CHECK:       return{{$}}
-; CHECK-NEXT:  .LBB15_5:
+; CHECK-NEXT:  .LBB{{[0-9]+}}_5:
 ; CHECK-NEXT:  end_block{{$}}
 ; CHECK-NOT:   block
-; CHECK:       .LBB15_6:
+; CHECK:       .LBB{{[0-9]+}}_6:
 ; CHECK-NEXT:  end_block{{$}}
 ; CHECK-NOT:   block
 ; CHECK:       return{{$}}
-; OPT-LABEL: test6:
-; OPT:       .LBB15_1:
-; OPT-NEXT:  block   {{$}}
-; OPT-NEXT:  block   {{$}}
-; OPT-NEXT:  loop    {{$}}
-; OPT-NOT:   block
-; OPT:       br_if 2, {{[^,]+}}{{$}}
-; OPT-NOT:   block
-; OPT:       br_if 1, {{[^,]+}}{{$}}
-; OPT-NOT:   block
-; OPT:       br_if 0, {{[^,]+}}{{$}}
-; OPT-NEXT:  end_loop{{$}}
-; OPT-NOT:   block
-; OPT:       return{{$}}
-; OPT-NEXT:  .LBB15_5:
-; OPT-NEXT:  end_block{{$}}
-; OPT-NOT:   block
-; OPT:       .LBB15_6:
-; OPT-NEXT:  end_block{{$}}
-; OPT-NOT:   block
-; OPT:       return{{$}}
 define void @test6(i1 %p, i1 %q) {
 entry:
   br label %header
@@ -694,7 +506,7 @@ second:
 ; that end in unreachable.
 
 ; CHECK-LABEL: test7:
-; CHECK:       .LBB16_1:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:  loop    {{$}}
 ; CHECK-NOT:   block
 ; CHECK:       block   {{$}}
@@ -703,35 +515,13 @@ second:
 ; CHECK:       br_if 1, {{[^,]+}}{{$}}
 ; CHECK-NOT:   block
 ; CHECK:       unreachable
-; CHECK-NEXT:  .LBB16_4:
+; CHECK-NEXT:  .LBB{{[0-9]+}}_4:
 ; CHECK-NEXT:  end_block{{$}}
 ; CHECK-NOT:   block
 ; CHECK:       br_if 0, {{[^,]+}}{{$}}
 ; CHECK-NEXT:  end_loop{{$}}
 ; CHECK-NOT:   block
 ; CHECK:       unreachable
-; OPT-LABEL: test7:
-; OPT:       .LBB16_1:
-; OPT-NEXT:  block
-; OPT-NEXT:  loop    {{$}}
-; OPT-NOT:   block
-; OPT:       block   {{$}}
-; OPT-NOT:   block
-; OPT:       br_if 0, {{[^,]+}}{{$}}
-; OPT-NOT:   block
-; OPT:       br_if 1, {{[^,]+}}{{$}}
-; OPT:       br 2{{$}}
-; OPT-NEXT:  .LBB16_3:
-; OPT-NEXT:  end_block
-; OPT-NOT:   block
-; OPT:       br_if 0, {{[^,]+}}{{$}}
-; OPT-NEXT:  end_loop
-; OPT-NOT:   block
-; OPT:       unreachable
-; OPT-NEXT:  .LBB16_5:
-; OPT-NEXT:  end_block
-; OPT-NOT:   block
-; OPT:       unreachable
 define void @test7(i1 %tobool2, i1 %tobool9) {
 entry:
   store volatile i32 0, i32* null
@@ -761,21 +551,13 @@ u1:
 ; Test an interesting case using nested loops and switches.
 
 ; CHECK-LABEL: test8:
-; CHECK:       .LBB17_1:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:  loop i32{{$}}
 ; CHECK-NEXT:  i32.const $push{{[^,]+}}, 0{{$}}
 ; CHECK-NEXT:  br_if    0, {{[^,]+}}{{$}}
 ; CHECK-NEXT:  br       0{{$}}
-; CHECK-NEXT:  .LBB17_2:
+; CHECK-NEXT:  .LBB{{[0-9]+}}_2:
 ; CHECK-NEXT:  end_loop{{$}}
-; OPT-LABEL: test8:
-; OPT:       .LBB17_1:
-; OPT-NEXT:  loop i32{{$}}
-; OPT-NEXT:  i32.const $push{{[^,]+}}, 0{{$}}
-; OPT-NEXT:  br_if    0, {{[^,]+}}{{$}}
-; OPT-NEXT:  br       0{{$}}
-; OPT-NEXT:  .LBB17_2:
-; OPT-NEXT:  end_loop{{$}}
 define i32 @test8() {
 bb:
   br label %bb1
@@ -797,12 +579,12 @@ bb3:
 ; Test an interesting case using nested loops that share a bottom block.
 
 ; CHECK-LABEL: test9:
-; CHECK:       .LBB18_1:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:  block   {{$}}
 ; CHECK-NEXT:  loop    {{$}}
 ; CHECK-NOT:   block
 ; CHECK:       br_if     1, {{[^,]+}}{{$}}
-; CHECK-NEXT:  .LBB18_2:
+; CHECK-NEXT:  .LBB{{[0-9]+}}_2:
 ; CHECK-NEXT:  loop    {{$}}
 ; CHECK-NOT:   block
 ; CHECK:       block   {{$}}
@@ -811,41 +593,16 @@ bb3:
 ; CHECK-NOT:   block
 ; CHECK:       br_if     2, {{[^,]+}}{{$}}
 ; CHECK-NEXT:  br        1{{$}}
-; CHECK-NEXT:  .LBB18_4:
+; CHECK-NEXT:  .LBB{{[0-9]+}}_4:
 ; CHECK-NEXT:  end_block{{$}}
 ; CHECK-NOT:   block
 ; CHECK:       br_if     1, {{[^,]+}}{{$}}
 ; CHECK-NEXT:  br        0{{$}}
-; CHECK-NEXT:  .LBB18_5:
+; CHECK-NEXT:  .LBB{{[0-9]+}}_5:
 ; CHECK-NOT:   block
 ; CHECK:       end_block
 ; CHECK-NOT:   block
 ; CHECK:       return{{$}}
-; OPT-LABEL: test9:
-; OPT:       .LBB18_1:
-; OPT-NEXT:  block   {{$}}
-; OPT-NEXT:  loop    {{$}}
-; OPT-NOT:   block
-; OPT:       br_if     1, {{[^,]+}}{{$}}
-; OPT-NEXT:  .LBB18_2:
-; OPT-NEXT:  loop    {{$}}
-; OPT-NOT:   block
-; OPT:       block   {{$}}
-; OPT-NOT:   block
-; OPT:       br_if     0, {{[^,]+}}{{$}}
-; OPT-NOT:   block
-; OPT:       br_if     1, {{[^,]+}}{{$}}
-; OPT-NEXT:  br        2{{$}}
-; OPT-NEXT:  .LBB18_4:
-; OPT-NEXT:  end_block{{$}}
-; OPT-NOT:   block
-; OPT:       br_if     0, {{[^,]+}}{{$}}
-; OPT-NEXT:  br        1{{$}}
-; OPT-NEXT:  .LBB18_5:
-; OPT-NOT:   block
-; OPT:       end_block
-; OPT-NOT:   block
-; OPT:       return{{$}}
 declare i1 @a()
 define void @test9() {
 entry:
@@ -881,57 +638,32 @@ end:
 ; and loop exits to a block with unreachable.
 
 ; CHECK-LABEL: test10:
-; CHECK:       .LBB19_1:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:  loop    {{$}}
-; CHECK-NOT:   block
-; CHECK:       br_if    0, {{[^,]+}}{{$}}
-; CHECK:       .LBB19_3:
+; CHECK:       br_if     0, {{[^,]+}}{{$}}
+; CHECK:       .LBB{{[0-9]+}}_3:
 ; CHECK-NEXT:  block   {{$}}
 ; CHECK-NEXT:  loop    {{$}}
-; CHECK-NOT:   block
-; CHECK:       .LBB19_4:
+; CHECK:       .LBB{{[0-9]+}}_4:
 ; CHECK-NEXT:  loop    {{$}}
-; CHECK-NOT:   block
-; CHECK:       br_if    0, {{[^,]+}}{{$}}
+; CHECK:       br_if     0, {{[^,]+}}{{$}}
 ; CHECK-NEXT:  end_loop{{$}}
-; CHECK:       br_if    1, {{[^,]+}}{{$}}
-; CHECK-NOT:   block
-; CHECK:       br_if    0, {{[^,]+}}{{$}}
-; CHECK-NEXT:  end_loop{{$}}
-; CHECK-NOT:   block
-; CHECK:       br_if    1, {{[^,]+}}{{$}}
-; CHECK-NEXT:  return{{$}}
-; CHECK-NEXT:  .LBB19_9:
+; CHECK-NEXT:  block   {{$}}
+; CHECK:       br_if     0, {{[^,]+}}{{$}}
+; CHECK:       br        3{{$}}
+; CHECK-NEXT:  .LBB{{[0-9]+}}_7:
 ; CHECK-NEXT:  end_block{{$}}
-; CHECK-NOT:   block
-; CHECK:       br       0{{$}}
-; CHECK-NEXT:  .LBB19_10:
-; OPT-LABEL: test10:
-; OPT:       .LBB19_1:
-; OPT-NEXT:  loop    {{$}}
-; OPT-NOT:   block
-; OPT:       br_if    0, {{[^,]+}}{{$}}
-; OPT:       .LBB19_3:
-; OPT-NEXT:  block   {{$}}
-; OPT-NEXT:  loop    {{$}}
-; OPT-NOT:   block
-; OPT:       .LBB19_4:
-; OPT-NEXT:  loop    {{$}}
-; OPT-NOT:   block
-; OPT:       br_if    0, {{[^,]+}}{{$}}
-; OPT-NEXT:  end_loop{{$}}
-; OPT:       br_if    1, {{[^,]+}}{{$}}
-; OPT-NOT:   block
-; OPT:       br_if    0, {{[^,]+}}{{$}}
-; OPT-NEXT:  end_loop{{$}}
-; OPT-NOT:   block
-; OPT:       br_if    1, {{[^,]+}}{{$}}
-; OPT-NEXT:  return{{$}}
-; OPT-NEXT:  .LBB19_9:
-; OPT-NEXT:  end_block{{$}}
-; OPT-NOT:   block
-; OPT:       br       0{{$}}
-; OPT-NEXT:  .LBB19_10:
+; CHECK:       block   {{$}}
+; CHECK-NEXT:  br_table   $0, 0, 3, 1, 2, 0
+; CHECK-NEXT:  .LBB{{[0-9]+}}_8:
+; CHECK-NEXT:  end_block{{$}}
+; CHECK-NEXT:  end_loop{{$}}
+; CHECK-NEXT:  return{{$}}
+; CHECK-NEXT:  .LBB{{[0-9]+}}_9:
+; CHECK-NEXT:  end_block{{$}}
+; CHECK:       br        0{{$}}
+; CHECK-NEXT:  .LBB{{[0-9]+}}_10:
+; CHECK-NEXT:  end_loop{{$}}
 define void @test10() {
 bb0:
   br label %bb1
@@ -981,60 +713,28 @@ bb6:
 ; CHECK-NEXT:  br_if        0, {{[^,]+}}{{$}}
 ; CHECK-NOT:   block
 ; CHECK:       br_if        2, {{[^,]+}}{{$}}
-; CHECK-NEXT:  .LBB20_3:
+; CHECK-NEXT:  .LBB{{[0-9]+}}_3:
 ; CHECK-NEXT:  end_block{{$}}
 ; CHECK-NOT:   block
 ; CHECK:       return{{$}}
-; CHECK-NEXT:  .LBB20_4:
+; CHECK-NEXT:  .LBB{{[0-9]+}}_4:
 ; CHECK-NEXT:  end_block{{$}}
 ; CHECK-NOT:   block
 ; CHECK:       br_if        1, {{[^,]+}}{{$}}
 ; CHECK-NOT:   block
 ; CHECK:       br_if        2, {{[^,]+}}{{$}}
-; CHECK-NEXT:  .LBB20_6:
+; CHECK-NEXT:  .LBB{{[0-9]+}}_6:
 ; CHECK-NEXT:  end_block{{$}}
 ; CHECK-NOT:   block
 ; CHECK:       return{{$}}
-; CHECK-NEXT:  .LBB20_7:
+; CHECK-NEXT:  .LBB{{[0-9]+}}_7:
 ; CHECK-NEXT:  end_block{{$}}
 ; CHECK-NOT:   block
 ; CHECK:       return{{$}}
-; CHECK-NEXT:  .LBB20_8:
+; CHECK-NEXT:  .LBB{{[0-9]+}}_8:
 ; CHECK-NEXT:  end_block{{$}}
 ; CHECK-NOT:   block
 ; CHECK:       return{{$}}
-; OPT-LABEL: test11:
-; OPT:       block   {{$}}
-; OPT-NEXT:  block   {{$}}
-; OPT:       br_if        0, $pop{{[0-9]+}}{{$}}
-; OPT-NOT:   block
-; OPT:       block   {{$}}
-; OPT-NEXT:  i32.const
-; OPT-NEXT:  br_if        0, {{[^,]+}}{{$}}
-; OPT-NOT:   block
-; OPT:       br_if        2, {{[^,]+}}{{$}}
-; OPT-NEXT:  .LBB20_3:
-; OPT-NEXT:  end_block{{$}}
-; OPT-NOT:   block
-; OPT:       return{{$}}
-; OPT-NEXT:  .LBB20_4:
-; OPT-NEXT:  end_block{{$}}
-; OPT-NOT:   block
-; OPT:       block   {{$}}
-; OPT-NOT:   block
-; OPT:       br_if        0, $pop{{[0-9]+}}{{$}}
-; OPT-NOT:   block
-; OPT:       return{{$}}
-; OPT-NEXT:  .LBB20_6:
-; OPT-NEXT:  end_block{{$}}
-; OPT-NOT:   block
-; OPT:       br_if        0, $pop{{[0-9]+}}{{$}}
-; OPT-NOT:   block
-; OPT:       return{{$}}
-; OPT-NEXT:  .LBB20_8:
-; OPT-NEXT:  end_block{{$}}
-; OPT-NOT:   block
-; OPT:       return{{$}}
 define void @test11() {
 bb0:
   store volatile i32 0, i32* null
@@ -1066,58 +766,26 @@ bb8:
 }
 
 ; CHECK-LABEL: test12:
-; CHECK:       .LBB21_1:
-; CHECK-NEXT:  block   {{$}}
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:  loop    {{$}}
-; CHECK-NOT:   block
-; CHECK:       block   {{$}}
 ; CHECK-NEXT:  block   {{$}}
-; CHECK:       br_if       0, {{[^,]+}}{{$}}
-; CHECK-NOT:   block
-; CHECK:       br_if       1, {{[^,]+}}{{$}}
-; CHECK-NOT:   block
-; CHECK:       br_if       1, {{[^,]+}}{{$}}
-; CHECK-NEXT:  br          3{{$}}
-; CHECK-NEXT:  .LBB21_4:
+; CHECK-NEXT:  block   {{$}}
+; CHECK-NEXT:  block   {{$}}
+; CHECK:       br_if     0, {{[^,]+}}{{$}}
+; CHECK:       br_if     2, {{[^,]+}}{{$}}
+; CHECK:       br_if     1, {{[^,]+}}{{$}}
+; CHECK-NEXT:  br        2{{$}}
+; CHECK-NEXT:  .LBB{{[0-9]+}}_4:
 ; CHECK-NEXT:  end_block{{$}}
-; CHECK-NOT:   block
-; CHECK:       br_if       0, {{[^,]+}}{{$}}
-; CHECK-NOT:   block
-; CHECK:       br_if       2, {{[^,]+}}{{$}}
-; CHECK-NEXT:  .LBB21_6:
-; CHECK-NEXT:  end_block{{$}}
-; CHECK-NOT:   block
-; CHECK:       br          0{{$}}
-; CHECK-NEXT:  .LBB21_7:
-; CHECK-NEXT:  end_loop{{$}}
+; CHECK-NEXT:  br_table   $2, 1, 0, 0, 0, 1, 1{{$}}
+; CHECK-NEXT:  .LBB{{[0-9]+}}_5:
 ; CHECK-NEXT:  end_block{{$}}
 ; CHECK-NEXT:  return{{$}}
-; OPT-LABEL: test12:
-; OPT:       .LBB21_1:
-; OPT-NEXT:  block   {{$}}
-; OPT-NEXT:  loop    {{$}}
-; OPT-NOT:   block
-; OPT:       block   {{$}}
-; OPT-NEXT:  block   {{$}}
-; OPT:       br_if       0, {{[^,]+}}{{$}}
-; OPT-NOT:   block
-; OPT:       br_if       1, {{[^,]+}}{{$}}
-; OPT-NOT:   block
-; OPT:       br_if       1, {{[^,]+}}{{$}}
-; OPT-NEXT:  br          3{{$}}
-; OPT-NEXT:  .LBB21_4:
-; OPT-NEXT:  end_block{{$}}
-; OPT-NOT:   block
-; OPT:       br_if       0, {{[^,]+}}{{$}}
-; OPT-NOT:   block
-; OPT:       br_if       2, {{[^,]+}}{{$}}
-; OPT-NEXT:  .LBB21_6:
-; OPT-NEXT:  end_block{{$}}
-; OPT:       br          0{{$}}
-; OPT-NEXT:  .LBB21_7:
-; OPT-NEXT:  end_loop{{$}}
-; OPT-NEXT:  end_block{{$}}
-; OPT-NEXT:  return{{$}}
+; CHECK-NEXT:  .LBB{{[0-9]+}}_6:
+; CHECK-NEXT:  end_block{{$}}
+; CHECK:       br        0{{$}}
+; CHECK-NEXT:  .LBB{{[0-9]+}}_7:
+; CHECK-NEXT:  end_loop{{$}}
 define void @test12(i8* %arg) {
 bb:
   br label %bb1
@@ -1151,32 +819,16 @@ bb7:
 ; CHECK:       br_if 0, $pop0{{$}}
 ; CHECK:       block   {{$}}
 ; CHECK:       br_if 0, $pop3{{$}}
-; CHECK:       .LBB22_3:
+; CHECK:       .LBB{{[0-9]+}}_3:
 ; CHECK-NEXT:  end_block{{$}}
 ; CHECK:       br_if 1, $pop{{[0-9]+}}{{$}}
 ; CHECK-NEXT:  br 1{{$}}
-; CHECK-NEXT:  .LBB22_4:
+; CHECK-NEXT:  .LBB{{[0-9]+}}_4:
 ; CHECK-NEXT:  end_block{{$}}
 ; CHECK-NEXT:  return{{$}}
-; CHECK-NEXT:  .LBB22_5:
+; CHECK-NEXT:  .LBB{{[0-9]+}}_5:
 ; CHECK-NEXT:  end_block{{$}}
 ; CHECK-NEXT:  unreachable{{$}}
-; OPT-LABEL: test13:
-; OPT:       block   {{$}}
-; OPT-NEXT:  block   {{$}}
-; OPT:       br_if 0, $pop0{{$}}
-; OPT:       block   {{$}}
-; OPT:       br_if 0, $pop3{{$}}
-; OPT:       .LBB22_3:
-; OPT-NEXT:  end_block{{$}}
-; OPT:       br_if 1, $pop{{[0-9]+}}{{$}}
-; OPT-NEXT:  br 1{{$}}
-; OPT-NEXT:  .LBB22_4:
-; OPT-NEXT:  end_block
-; OPT-NEXT:  return
-; OPT-NEXT:  .LBB22_5:
-; OPT-NEXT:  end_block{{$}}
-; OPT-NEXT:  unreachable{{$}}
 define void @test13() noinline optnone {
 bb:
   br i1 undef, label %bb5, label %bb2
@@ -1198,12 +850,12 @@ bb5:
 ; before the loop for the second.
 
 ; CHECK-LABEL: test14:
-; CHECK:      .LBB23_1:{{$}}
+; CHECK:      .LBB{{[0-9]+}}_1:{{$}}
 ; CHECK-NEXT:     loop    {{$}}
 ; CHECK-NEXT:     i32.const   $push0=, 0{{$}}
 ; CHECK-NEXT:     br_if       0, $pop0{{$}}
 ; CHECK-NEXT:     end_loop{{$}}
-; CHECK-NEXT: .LBB23_3:{{$}}
+; CHECK-NEXT: .LBB{{[0-9]+}}_3:{{$}}
 ; CHECK-NEXT:     loop    {{$}}
 ; CHECK-NEXT:     i32.const   $push1=, 0{{$}}
 ; CHECK-NEXT:     br_if       0, $pop1{{$}}
@@ -1262,39 +914,24 @@ bb50:
 ; CHECK:        block
 ; CHECK-NEXT:   block
 ; CHECK:        br_if       0, $pop{{.*}}{{$}}
-; CHECK:        .LBB24_2:
+; CHECK:        .LBB{{[0-9]+}}_2:
 ; CHECK-NEXT:   block   {{$}}
 ; CHECK-NEXT:   block   {{$}}
 ; CHECK-NEXT:   loop    {{$}}
 ; CHECK:        br_if       1, $pop{{.*}}{{$}}
 ; CHECK:        br_if       0, ${{.*}}{{$}}
 ; CHECK-NEXT:   br          2{{$}}
-; CHECK-NEXT:   .LBB24_4:
+; CHECK-NEXT:   .LBB{{[0-9]+}}_4:
 ; CHECK-NEXT:   end_loop{{$}}
-; CHECK:        .LBB24_5:
+; CHECK:        .LBB{{[0-9]+}}_5:
 ; CHECK-NEXT:   end_block{{$}}
 ; CHECK:        br_if       1, $pop{{.*}}{{$}}
 ; CHECK:        return{{$}}
-; CHECK:        .LBB24_7:
+; CHECK:        .LBB{{[0-9]+}}_7:
 ; CHECK-NEXT:   end_block{{$}}
-; CHECK:        .LBB24_8:
+; CHECK:        .LBB{{[0-9]+}}_8:
 ; CHECK-NEXT:   end_block{{$}}
 ; CHECK-NEXT:   return{{$}}
-; OPT-LABEL: test15:
-; OPT:        block
-; OPT:        block
-; OPT-NEXT:   i32.const   $push
-; OPT-NEXT:   i32.eqz     $push{{.*}}=, $pop{{.*}}{{$}}
-; OPT-NEXT:   br_if       0, $pop{{.*}}{{$}}
-; OPT-NEXT:   call        test15_callee1@FUNCTION{{$}}
-; OPT-NEXT:   br          1{{$}}
-; OPT-NEXT: .LBB24_2:
-; OPT-NEXT:   end_block
-; OPT-NEXT:   i32.const
-; OPT-NEXT: .LBB24_3:
-; OPT-NEXT:   block
-; OPT-NEXT:   block
-; OPT-NEXT:   loop
 %0 = type { i8, i32 }
 declare void @test15_callee0()
 declare void @test15_callee1()

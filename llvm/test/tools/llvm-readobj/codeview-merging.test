@@ -17,9 +17,9 @@
 # #endif
 # $ cl -c -DCONFIG1 -Z7 t.cpp -Fot1.obj && cl -c -Z7 t.cpp -Fot2.obj
 
-RUN: llvm-readobj -codeview %S/Inputs/codeview-merging-1.obj | FileCheck %s --check-prefix=OBJ1
-RUN: llvm-readobj -codeview %S/Inputs/codeview-merging-2.obj | FileCheck %s --check-prefix=OBJ2
-RUN: llvm-readobj -codeview-merged-types %S/Inputs/codeview-merging-1.obj %S/Inputs/codeview-merging-2.obj | FileCheck %s
+RUN: llvm-readobj --codeview %S/Inputs/codeview-merging-1.obj | FileCheck %s --check-prefix=OBJ1
+RUN: llvm-readobj --codeview %S/Inputs/codeview-merging-2.obj | FileCheck %s --check-prefix=OBJ2
+RUN: llvm-readobj --codeview-merged-types %S/Inputs/codeview-merging-1.obj %S/Inputs/codeview-merging-2.obj | FileCheck %s
 
 OBJ1:       Procedure ({{.*}}) {
 OBJ1-NEXT:    TypeLeafKind: LF_PROCEDURE (0x1008)

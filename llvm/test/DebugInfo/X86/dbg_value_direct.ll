@@ -19,7 +19,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 @__asan_mapping_offset = linkonce_odr constant i64 2147450880
 @__asan_mapping_scale = linkonce_odr constant i64 3
-@llvm.global_ctors = appending global [1 x { i32, void ()* }] [{ i32, void ()* } { i32 1, void ()* @asan.module_ctor }]
+@llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 1, void ()* @asan.module_ctor, i8* null }]
 @___asan_gen_ = private unnamed_addr constant [16 x i8] c"1 32 4 5 .addr \00", align 1
 
 ; Function Attrs: sanitize_address uwtable

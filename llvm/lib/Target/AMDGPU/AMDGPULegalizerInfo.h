@@ -1,9 +1,8 @@
 //===- AMDGPULegalizerInfo ---------------------------------------*- C++ -*-==//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 /// \file
@@ -28,6 +27,25 @@ class AMDGPULegalizerInfo : public LegalizerInfo {
 public:
   AMDGPULegalizerInfo(const GCNSubtarget &ST,
                       const GCNTargetMachine &TM);
+
+  bool legalizeCustom(MachineInstr &MI, MachineRegisterInfo &MRI,
+                      MachineIRBuilder &MIRBuilder,
+                      GISelChangeObserver &Observer) const override;
+
+  unsigned getSegmentAperture(unsigned AddrSpace,
+                              MachineRegisterInfo &MRI,
+                              MachineIRBuilder &MIRBuilder) const;
+
+  bool legalizeAddrSpaceCast(MachineInstr &MI, MachineRegisterInfo &MRI,
+                             MachineIRBuilder &MIRBuilder) const;
+  bool legalizeFrint(MachineInstr &MI, MachineRegisterInfo &MRI,
+                     MachineIRBuilder &MIRBuilder) const;
+  bool legalizeFceil(MachineInstr &MI, MachineRegisterInfo &MRI,
+                     MachineIRBuilder &MIRBuilder) const;
+  bool legalizeIntrinsicTrunc(MachineInstr &MI, MachineRegisterInfo &MRI,
+                              MachineIRBuilder &MIRBuilder) const;
+  bool legalizeITOFP(MachineInstr &MI, MachineRegisterInfo &MRI,
+                     MachineIRBuilder &MIRBuilder, bool Signed) const;
 };
 } // End llvm namespace.
 #endif

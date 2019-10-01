@@ -1,9 +1,8 @@
 //===- llvm-extract.cpp - LLVM function extraction utility ----------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -34,86 +33,99 @@
 #include <memory>
 using namespace llvm;
 
+cl::OptionCategory ExtractCat("llvm-extract Options");
+
 // InputFilename - The filename to read from.
-static cl::opt<std::string>
-InputFilename(cl::Positional, cl::desc("<input bitcode file>"),
-              cl::init("-"), cl::value_desc("filename"));
+static cl::opt<std::string> InputFilename(cl::Positional,
+                                          cl::desc("<input bitcode file>"),
+                                          cl::init("-"),
+                                          cl::value_desc("filename"));
 
-static cl::opt<std::string>
-OutputFilename("o", cl::desc("Specify output filename"),
-               cl::value_desc("filename"), cl::init("-"));
+static cl::opt<std::string> OutputFilename("o",
+                                           cl::desc("Specify output filename"),
+                                           cl::value_desc("filename"),
+                                           cl::init("-"), cl::cat(ExtractCat));
+
+static cl::opt<bool> Force("f", cl::desc("Enable binary output on terminals"),
+                           cl::cat(ExtractCat));
+
+static cl::opt<bool> DeleteFn("delete",
+                              cl::desc("Delete specified Globals from Module"),
+                              cl::cat(ExtractCat));
 
 static cl::opt<bool>
-Force("f", cl::desc("Enable binary output on terminals"));
-
-static cl::opt<bool>
-DeleteFn("delete", cl::desc("Delete specified Globals from Module"));
-
-static cl::opt<bool>
-    Recursive("recursive",
-              cl::desc("Recursively extract all called functions"));
+    Recursive("recursive", cl::desc("Recursively extract all called functions"),
+              cl::cat(ExtractCat));
 
 // ExtractFuncs - The functions to extract from the module.
 static cl::list<std::string>
-ExtractFuncs("func", cl::desc("Specify function to extract"),
-             cl::ZeroOrMore, cl::value_desc("function"));
+    ExtractFuncs("func", cl::desc("Specify function to extract"),
+                 cl::ZeroOrMore, cl::value_desc("function"),
+                 cl::cat(ExtractCat));
 
 // ExtractRegExpFuncs - The functions, matched via regular expression, to
 // extract from the module.
 static cl::list<std::string>
-ExtractRegExpFuncs("rfunc", cl::desc("Specify function(s) to extract using a "
-                                     "regular expression"),
-                   cl::ZeroOrMore, cl::value_desc("rfunction"));
+    ExtractRegExpFuncs("rfunc",
+                       cl::desc("Specify function(s) to extract using a "
+                                "regular expression"),
+                       cl::ZeroOrMore, cl::value_desc("rfunction"),
+                       cl::cat(ExtractCat));
 
 // ExtractBlocks - The blocks to extract from the module.
-static cl::list<std::string>
-    ExtractBlocks("bb",
-                  cl::desc("Specify <function, basic block> pairs to extract"),
-                  cl::ZeroOrMore, cl::value_desc("function:bb"));
+static cl::list<std::string> ExtractBlocks(
+    "bb", cl::desc("Specify <function, basic block> pairs to extract"),
+    cl::ZeroOrMore, cl::value_desc("function:bb"), cl::cat(ExtractCat));
 
 // ExtractAlias - The alias to extract from the module.
 static cl::list<std::string>
-ExtractAliases("alias", cl::desc("Specify alias to extract"),
-               cl::ZeroOrMore, cl::value_desc("alias"));
-
+    ExtractAliases("alias", cl::desc("Specify alias to extract"),
+                   cl::ZeroOrMore, cl::value_desc("alias"),
+                   cl::cat(ExtractCat));
 
 // ExtractRegExpAliases - The aliases, matched via regular expression, to
 // extract from the module.
 static cl::list<std::string>
-ExtractRegExpAliases("ralias", cl::desc("Specify alias(es) to extract using a "
-                                        "regular expression"),
-                     cl::ZeroOrMore, cl::value_desc("ralias"));
+    ExtractRegExpAliases("ralias",
+                         cl::desc("Specify alias(es) to extract using a "
+                                  "regular expression"),
+                         cl::ZeroOrMore, cl::value_desc("ralias"),
+                         cl::cat(ExtractCat));
 
 // ExtractGlobals - The globals to extract from the module.
 static cl::list<std::string>
-ExtractGlobals("glob", cl::desc("Specify global to extract"),
-               cl::ZeroOrMore, cl::value_desc("global"));
+    ExtractGlobals("glob", cl::desc("Specify global to extract"),
+                   cl::ZeroOrMore, cl::value_desc("global"),
+                   cl::cat(ExtractCat));
 
 // ExtractRegExpGlobals - The globals, matched via regular expression, to
 // extract from the module...
 static cl::list<std::string>
-ExtractRegExpGlobals("rglob", cl::desc("Specify global(s) to extract using a "
-                                       "regular expression"),
-                     cl::ZeroOrMore, cl::value_desc("rglobal"));
+    ExtractRegExpGlobals("rglob",
+                         cl::desc("Specify global(s) to extract using a "
+                                  "regular expression"),
+                         cl::ZeroOrMore, cl::value_desc("rglobal"),
+                         cl::cat(ExtractCat));
 
-static cl::opt<bool>
-OutputAssembly("S",
-               cl::desc("Write output as LLVM assembly"), cl::Hidden);
+static cl::opt<bool> OutputAssembly("S",
+                                    cl::desc("Write output as LLVM assembly"),
+                                    cl::Hidden, cl::cat(ExtractCat));
 
 static cl::opt<bool> PreserveBitcodeUseListOrder(
     "preserve-bc-uselistorder",
     cl::desc("Preserve use-list order when writing LLVM bitcode."),
-    cl::init(true), cl::Hidden);
+    cl::init(true), cl::Hidden, cl::cat(ExtractCat));
 
 static cl::opt<bool> PreserveAssemblyUseListOrder(
     "preserve-ll-uselistorder",
     cl::desc("Preserve use-list order when writing LLVM assembly."),
-    cl::init(false), cl::Hidden);
+    cl::init(false), cl::Hidden, cl::cat(ExtractCat));
 
 int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
 
   LLVMContext Context;
+  cl::HideUnrelatedOptions(ExtractCat);
   cl::ParseCommandLineOptions(argc, argv, "llvm extractor\n");
 
   // Use lazy loading, since we only care about selected global values.
@@ -230,7 +242,7 @@ int main(int argc, char **argv) {
   }
 
   // Figure out which BasicBlocks we should extract.
-  SmallVector<BasicBlock *, 4> BBs;
+  SmallVector<SmallVector<BasicBlock *, 16>, 4> GroupOfBBs;
   for (StringRef StrPair : ExtractBlocks) {
     auto BBInfo = StrPair.split(':');
     // Get the function.
@@ -242,17 +254,24 @@ int main(int argc, char **argv) {
     }
     // Do not materialize this function.
     GVs.insert(F);
-    // Get the basic block.
-    auto Res = llvm::find_if(*F, [&](const BasicBlock &BB) {
-      return BB.getName().equals(BBInfo.second);
-    });
-    if (Res == F->end()) {
-      errs() << argv[0] << ": function " << F->getName()
-             << " doesn't contain a basic block named '" << BBInfo.second
-             << "'!\n";
-      return 1;
+    // Get the basic blocks.
+    SmallVector<BasicBlock *, 16> BBs;
+    SmallVector<StringRef, 16> BBNames;
+    BBInfo.second.split(BBNames, ';', /*MaxSplit=*/-1,
+                        /*KeepEmpty=*/false);
+    for (StringRef BBName : BBNames) {
+      auto Res = llvm::find_if(*F, [&](const BasicBlock &BB) {
+        return BB.getName().equals(BBName);
+      });
+      if (Res == F->end()) {
+        errs() << argv[0] << ": function " << F->getName()
+               << " doesn't contain a basic block named '" << BBInfo.second
+               << "'!\n";
+        return 1;
+      }
+      BBs.push_back(&*Res);
     }
-    BBs.push_back(&*Res);
+    GroupOfBBs.push_back(BBs);
   }
 
   // Use *argv instead of argv[0] to work around a wrong GCC warning.
@@ -271,10 +290,10 @@ int main(int argc, char **argv) {
       ExitOnErr(F->materialize());
       for (auto &BB : *F) {
         for (auto &I : BB) {
-          auto *CI = dyn_cast<CallInst>(&I);
-          if (!CI)
+          CallBase *CB = dyn_cast<CallBase>(&I);
+          if (!CB)
             continue;
-          Function *CF = CI->getCalledFunction();
+          Function *CF = CB->getCalledFunction();
           if (!CF)
             continue;
           if (CF->isDeclaration() || GVs.count(CF))
@@ -317,7 +336,7 @@ int main(int argc, char **argv) {
   // functions.
   if (!ExtractBlocks.empty()) {
     legacy::PassManager PM;
-    PM.add(createBlockExtractorPass(BBs, true));
+    PM.add(createBlockExtractorPass(GroupOfBBs, true));
     PM.run(*M);
   }
 

@@ -5,6 +5,9 @@
 shared_binary_target_configs = [
   "//llvm/utils/gn/build:compiler_defaults",
   "//llvm/utils/gn/build:llvm_code",
+  "//llvm/utils/gn/build:no_exceptions",
+  "//llvm/utils/gn/build:no_rtti",
+  "//llvm/utils/gn/build:thin_archive",
   "//llvm/utils/gn/build:warn_covered_switch_default",
 ]
 
@@ -25,8 +28,24 @@ set_defaults("source_set") {
   configs = shared_binary_target_configs
 }
 
-if (host_os == "win") {
-  set_default_toolchain("//llvm/utils/gn/build/toolchain:win")
-} else {
-  set_default_toolchain("//llvm/utils/gn/build/toolchain:unix")
+if (target_os == "") {
+  target_os = host_os
 }
+if (current_os == "") {
+  current_os = target_os
+}
+
+if (target_cpu == "") {
+  target_cpu = host_cpu
+}
+if (current_cpu == "") {
+  current_cpu = target_cpu
+}
+
+if (host_os == "win") {
+  host_toolchain = "//llvm/utils/gn/build/toolchain:win"
+} else {
+  host_toolchain = "//llvm/utils/gn/build/toolchain:unix"
+}
+
+set_default_toolchain(host_toolchain)

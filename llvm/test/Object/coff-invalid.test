@@ -1,4 +1,4 @@
-RUN: llvm-readobj -s %p/Inputs/invalid-bad-section-address.coff 2>&1 | \
+RUN: llvm-readobj -S %p/Inputs/invalid-bad-section-address.coff 2>&1 | \
 RUN: FileCheck --check-prefix=SECTIONS %s
 
 SECTIONS:      Section {

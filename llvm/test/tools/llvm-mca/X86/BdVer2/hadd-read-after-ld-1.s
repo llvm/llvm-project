@@ -12,7 +12,7 @@ vhaddps (%rdi), %xmm1, %xmm2
 # CHECK:      Dispatch Width:    4
 # CHECK-NEXT: uOps Per Cycle:    0.25
 # CHECK-NEXT: IPC:               0.10
-# CHECK-NEXT: Block RThroughput: 1.3
+# CHECK-NEXT: Block RThroughput: 3.5
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -23,8 +23,8 @@ vhaddps (%rdi), %xmm1, %xmm2
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      2     0.50                        vshufps	$0, %xmm0, %xmm1, %xmm1
-# CHECK-NEXT:  4      16    1.00    *                   vhaddps	(%rdi), %xmm1, %xmm2
+# CHECK-NEXT:  1      2     1.00                        vshufps	$0, %xmm0, %xmm1, %xmm1
+# CHECK-NEXT:  4      16    2.50    *                   vhaddps	(%rdi), %xmm1, %xmm2
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     0123456789

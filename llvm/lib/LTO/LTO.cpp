@@ -1,9 +1,8 @@
 //===-LTO.cpp - LLVM Link Time Optimizer ----------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -21,9 +20,11 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/AutoUpgrade.h"
 #include "llvm/IR/DiagnosticPrinter.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/RemarkStreamer.h"
 #include "llvm/LTO/LTOBackend.h"
 #include "llvm/LTO/SummaryBasedOptimizations.h"
 #include "llvm/Linker/IRMover.h"
@@ -186,6 +187,7 @@ void llvm::computeLTOCacheKey(
   auto AddUsedThings = [&](GlobalValueSummary *GS) {
     if (!GS) return;
     AddUnsigned(GS->isLive());
+    AddUnsigned(GS->canAutoHide());
     for (const ValueInfo &VI : GS->refs()) {
       AddUnsigned(VI.isDSOLocal());
       AddUsedCfiGlobal(VI.getGUID());
@@ -294,13 +296,13 @@ void llvm::computeLTOCacheKey(
 }
 
 static void thinLTOResolvePrevailingGUID(
-    GlobalValueSummaryList &GVSummaryList, GlobalValue::GUID GUID,
-    DenseSet<GlobalValueSummary *> &GlobalInvolvedWithAlias,
+    ValueInfo VI, DenseSet<GlobalValueSummary *> &GlobalInvolvedWithAlias,
     function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
         isPrevailing,
     function_ref<void(StringRef, GlobalValue::GUID, GlobalValue::LinkageTypes)>
-        recordNewLinkage) {
-  for (auto &S : GVSummaryList) {
+        recordNewLinkage,
+    const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols) {
+  for (auto &S : VI.getSummaryList()) {
     GlobalValue::LinkageTypes OriginalLinkage = S->linkage();
     // Ignore local and appending linkage values since the linker
     // doesn't resolve them.
@@ -315,17 +317,29 @@ static void thinLTOResolvePrevailingGUID(
     // ensure a copy is kept to satisfy the exported reference.
     // FIXME: We may want to split the compile time and correctness
     // aspects into separate routines.
-    if (isPrevailing(GUID, S.get())) {
-      if (GlobalValue::isLinkOnceLinkage(OriginalLinkage))
+    if (isPrevailing(VI.getGUID(), S.get())) {
+      if (GlobalValue::isLinkOnceLinkage(OriginalLinkage)) {
         S->setLinkage(GlobalValue::getWeakLinkage(
             GlobalValue::isLinkOnceODRLinkage(OriginalLinkage)));
+        // The kept copy is eligible for auto-hiding (hidden visibility) if all
+        // copies were (i.e. they were all linkonce_odr global unnamed addr).
+        // If any copy is not (e.g. it was originally weak_odr), then the symbol
+        // must remain externally available (e.g. a weak_odr from an explicitly
+        // instantiated template). Additionally, if it is in the
+        // GUIDPreservedSymbols set, that means that it is visibile outside
+        // the summary (e.g. in a native object or a bitcode file without
+        // summary), and in that case we cannot hide it as it isn't possible to
+        // check all copies.
+        S->setCanAutoHide(VI.canAutoHide() &&
+                          !GUIDPreservedSymbols.count(VI.getGUID()));
+      }
     }
     // Alias and aliasee can't be turned into available_externally.
     else if (!isa<AliasSummary>(S.get()) &&
              !GlobalInvolvedWithAlias.count(S.get()))
       S->setLinkage(GlobalValue::AvailableExternallyLinkage);
     if (S->linkage() != OriginalLinkage)
-      recordNewLinkage(S->modulePath(), GUID, S->linkage());
+      recordNewLinkage(S->modulePath(), VI.getGUID(), S->linkage());
   }
 }
 
@@ -340,7 +354,8 @@ void llvm::thinLTOResolvePrevailingInIndex(
     function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
         isPrevailing,
     function_ref<void(StringRef, GlobalValue::GUID, GlobalValue::LinkageTypes)>
-        recordNewLinkage) {
+        recordNewLinkage,
+    const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols) {
   // We won't optimize the globals that are referenced by an alias for now
   // Ideally we should turn the alias into a global and duplicate the definition
   // when needed.
@@ -351,9 +366,17 @@ void llvm::thinLTOResolvePrevailingInIndex(
         GlobalInvolvedWithAlias.insert(&AS->getAliasee());
 
   for (auto &I : Index)
-    thinLTOResolvePrevailingGUID(I.second.SummaryList, I.first,
-                                 GlobalInvolvedWithAlias, isPrevailing,
-                                 recordNewLinkage);
+    thinLTOResolvePrevailingGUID(Index.getValueInfo(I), GlobalInvolvedWithAlias,
+                                 isPrevailing, recordNewLinkage,
+                                 GUIDPreservedSymbols);
+}
+
+static bool isWeakWriteableObject(GlobalValueSummary *GVS) {
+  if (auto *VarSummary = dyn_cast<GlobalVarSummary>(GVS->getBaseObject()))
+    return !VarSummary->isReadOnly() &&
+           (VarSummary->linkage() == GlobalValue::WeakODRLinkage ||
+            VarSummary->linkage() == GlobalValue::LinkOnceODRLinkage);
+  return false;
 }
 
 static void thinLTOInternalizeAndPromoteGUID(
@@ -370,7 +393,12 @@ static void thinLTOInternalizeAndPromoteGUID(
                S->linkage() != GlobalValue::AppendingLinkage &&
                // We can't internalize available_externally globals because this
                // can break function pointer equality.
-               S->linkage() != GlobalValue::AvailableExternallyLinkage)
+               S->linkage() != GlobalValue::AvailableExternallyLinkage &&
+               // Functions and read-only variables with linkonce_odr and weak_odr 
+               // linkage can be internalized. We can't internalize linkonce_odr
+               // and weak_odr variables which are modified somewhere in the
+               // program because reads and writes will become inconsistent.
+               !isWeakWriteableObject(S.get()))
       S->setLinkage(GlobalValue::InternalLinkage);
   }
 }
@@ -397,6 +425,7 @@ Expected<std::unique_ptr<InputFile>> InputFile::create(MemoryBufferRef Object) {
   File->TargetTriple = FOrErr->TheReader.getTargetTriple();
   File->SourceFileName = FOrErr->TheReader.getSourceFileName();
   File->COFFLinkerOpts = FOrErr->TheReader.getCOFFLinkerOpts();
+  File->DependentLibraries = FOrErr->TheReader.getDependentLibraries();
   File->ComdatTable = FOrErr->TheReader.getComdatTable();
 
   for (unsigned I = 0; I != FOrErr->Mods.size(); ++I) {
@@ -417,6 +446,11 @@ Expected<std::unique_ptr<InputFile>> InputFile::create(MemoryBufferRef Object) {
 
 StringRef InputFile::getName() const {
   return Mods[0].getModuleIdentifier();
+}
+
+BitcodeModule &InputFile::getSingleBitcodeModule() {
+  assert(Mods.size() == 1 && "Expect only one bitcode module");
+  return Mods[0];
 }
 
 LTO::RegularLTOState::RegularLTOState(unsigned ParallelCodeGenParallelismLevel,
@@ -545,6 +579,15 @@ Error LTO::addModule(InputFile &Input, unsigned ModI,
   Expected<BitcodeLTOInfo> LTOInfo = Input.Mods[ModI].getLTOInfo();
   if (!LTOInfo)
     return LTOInfo.takeError();
+
+  if (EnableSplitLTOUnit.hasValue()) {
+    // If only some modules were split, flag this in the index so that
+    // we can skip or error on optimizations that need consistently split
+    // modules (whole program devirt and lower type tests).
+    if (EnableSplitLTOUnit.getValue() != LTOInfo->EnableSplitLTOUnit)
+      ThinLTO.CombinedIndex.setPartiallySplitLTOUnits();
+  } else
+    EnableSplitLTOUnit = LTOInfo->EnableSplitLTOUnit;
 
   BitcodeModule BM = Input.Mods[ModI];
   auto ModSyms = Input.module_symbols(ModI);
@@ -800,6 +843,45 @@ unsigned LTO::getMaxTasks() const {
   return RegularLTO.ParallelCodeGenParallelismLevel + ThinLTO.ModuleMap.size();
 }
 
+// If only some of the modules were split, we cannot correctly handle
+// code that contains type tests or type checked loads.
+Error LTO::checkPartiallySplit() {
+  if (!ThinLTO.CombinedIndex.partiallySplitLTOUnits())
+    return Error::success();
+
+  Function *TypeTestFunc = RegularLTO.CombinedModule->getFunction(
+      Intrinsic::getName(Intrinsic::type_test));
+  Function *TypeCheckedLoadFunc = RegularLTO.CombinedModule->getFunction(
+      Intrinsic::getName(Intrinsic::type_checked_load));
+
+  // First check if there are type tests / type checked loads in the
+  // merged regular LTO module IR.
+  if ((TypeTestFunc && !TypeTestFunc->use_empty()) ||
+      (TypeCheckedLoadFunc && !TypeCheckedLoadFunc->use_empty()))
+    return make_error<StringError>(
+        "inconsistent LTO Unit splitting (recompile with -fsplit-lto-unit)",
+        inconvertibleErrorCode());
+
+  // Otherwise check if there are any recorded in the combined summary from the
+  // ThinLTO modules.
+  for (auto &P : ThinLTO.CombinedIndex) {
+    for (auto &S : P.second.SummaryList) {
+      auto *FS = dyn_cast<FunctionSummary>(S.get());
+      if (!FS)
+        continue;
+      if (!FS->type_test_assume_vcalls().empty() ||
+          !FS->type_checked_load_vcalls().empty() ||
+          !FS->type_test_assume_const_vcalls().empty() ||
+          !FS->type_checked_load_const_vcalls().empty() ||
+          !FS->type_tests().empty())
+        return make_error<StringError>(
+            "inconsistent LTO Unit splitting (recompile with -fsplit-lto-unit)",
+            inconvertibleErrorCode());
+    }
+  }
+  return Error::success();
+}
+
 Error LTO::run(AddStreamFn AddStream, NativeObjectCache Cache) {
   // Compute "dead" symbols, we don't want to import/export these!
   DenseSet<GlobalValue::GUID> GUIDPreservedSymbols;
@@ -831,20 +913,25 @@ Error LTO::run(AddStreamFn AddStream, NativeObjectCache Cache) {
                                   isPrevailing, Conf.OptLevel > 0);
 
   // Setup output file to emit statistics.
-  std::unique_ptr<ToolOutputFile> StatsFile = nullptr;
-  if (!Conf.StatsFile.empty()) {
-    EnableStatistics(false);
-    std::error_code EC;
-    StatsFile =
-        llvm::make_unique<ToolOutputFile>(Conf.StatsFile, EC, sys::fs::F_None);
-    if (EC)
-      return errorCodeToError(EC);
-    StatsFile->keep();
-  }
+  auto StatsFileOrErr = setupStatsFile(Conf.StatsFile);
+  if (!StatsFileOrErr)
+    return StatsFileOrErr.takeError();
+  std::unique_ptr<ToolOutputFile> StatsFile = std::move(StatsFileOrErr.get());
+
+  // Finalize linking of regular LTO modules containing summaries now that
+  // we have computed liveness information.
+  for (auto &M : RegularLTO.ModsWithSummaries)
+    if (Error Err = linkRegularLTO(std::move(M),
+                                   /*LivenessFromIndex=*/true))
+      return Err;
+
+  // Ensure we don't have inconsistently split LTO units with type tests.
+  if (Error Err = checkPartiallySplit())
+    return Err;
 
   Error Result = runRegularLTO(AddStream);
   if (!Result)
-    Result = runThinLTO(AddStream, Cache);
+    Result = runThinLTO(AddStream, Cache, GUIDPreservedSymbols);
 
   if (StatsFile)
     PrintStatisticsJSON(StatsFile->os());
@@ -853,11 +940,6 @@ Error LTO::run(AddStreamFn AddStream, NativeObjectCache Cache) {
 }
 
 Error LTO::runRegularLTO(AddStreamFn AddStream) {
-  for (auto &M : RegularLTO.ModsWithSummaries)
-    if (Error Err = linkRegularLTO(std::move(M),
-                                   /*LivenessFromIndex=*/true))
-      return Err;
-
   // Make sure commons have the right size/alignment: we kept the largest from
   // all the prevailing when adding the inputs, and we apply it here.
   const DataLayout &DL = RegularLTO.CombinedModule->getDataLayout();
@@ -1152,7 +1234,8 @@ ThinBackend lto::createWriteIndexesThinBackend(
   };
 }
 
-Error LTO::runThinLTO(AddStreamFn AddStream, NativeObjectCache Cache) {
+Error LTO::runThinLTO(AddStreamFn AddStream, NativeObjectCache Cache,
+                      const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols) {
   if (ThinLTO.ModuleMap.empty())
     return Error::success();
 
@@ -1234,7 +1317,7 @@ Error LTO::runThinLTO(AddStreamFn AddStream, NativeObjectCache Cache) {
     ResolvedODR[ModuleIdentifier][GUID] = NewLinkage;
   };
   thinLTOResolvePrevailingInIndex(ThinLTO.CombinedIndex, isPrevailing,
-                                  recordNewLinkage);
+                                  recordNewLinkage, GUIDPreservedSymbols);
 
   std::unique_ptr<ThinBackendProc> BackendProc =
       ThinLTO.Backend(Conf, ThinLTO.CombinedIndex, ModuleToDefinedGVSummaries,
@@ -1255,25 +1338,37 @@ Error LTO::runThinLTO(AddStreamFn AddStream, NativeObjectCache Cache) {
 }
 
 Expected<std::unique_ptr<ToolOutputFile>>
-lto::setupOptimizationRemarks(LLVMContext &Context,
-                              StringRef LTORemarksFilename,
-                              bool LTOPassRemarksWithHotness, int Count) {
-  if (LTOPassRemarksWithHotness)
-    Context.setDiagnosticsHotnessRequested(true);
-  if (LTORemarksFilename.empty())
-    return nullptr;
-
-  std::string Filename = LTORemarksFilename;
-  if (Count != -1)
+lto::setupOptimizationRemarks(LLVMContext &Context, StringRef RemarksFilename,
+                              StringRef RemarksPasses, StringRef RemarksFormat,
+                              bool RemarksWithHotness, int Count) {
+  std::string Filename = RemarksFilename;
+  if (!Filename.empty() && Count != -1)
     Filename += ".thin." + llvm::utostr(Count) + ".yaml";
 
+  auto ResultOrErr = llvm::setupOptimizationRemarks(
+      Context, Filename, RemarksPasses, RemarksFormat, RemarksWithHotness);
+  if (Error E = ResultOrErr.takeError())
+    return std::move(E);
+
+  if (*ResultOrErr)
+    (*ResultOrErr)->keep();
+
+  return ResultOrErr;
+}
+
+Expected<std::unique_ptr<ToolOutputFile>>
+lto::setupStatsFile(StringRef StatsFilename) {
+  // Setup output file to emit statistics.
+  if (StatsFilename.empty())
+    return nullptr;
+
+  llvm::EnableStatistics(false);
   std::error_code EC;
-  auto DiagnosticFile =
-      llvm::make_unique<ToolOutputFile>(Filename, EC, sys::fs::F_None);
+  auto StatsFile =
+      llvm::make_unique<ToolOutputFile>(StatsFilename, EC, sys::fs::F_None);
   if (EC)
     return errorCodeToError(EC);
-  Context.setDiagnosticsOutputFile(
-      llvm::make_unique<yaml::Output>(DiagnosticFile->os()));
-  DiagnosticFile->keep();
-  return std::move(DiagnosticFile);
+
+  StatsFile->keep();
+  return std::move(StatsFile);
 }

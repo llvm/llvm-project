@@ -66,7 +66,7 @@ lee1.exit:                                        ; preds = %lee1.exit.loopexit,
 ; Function Attrs: nounwind readnone
 declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
 
-attributes #0 = { nounwind readnone "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="arm7tdmi" "target-features"="+neon,+strict-align,+vfp3,-crypto,-d16,-fp-armv8,-fp-only-sp,-fp16,-vfp4" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind readnone "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="arm7tdmi" "target-features"="+neon,+strict-align,+vfp3,-crypto,-fp-armv8,-fp16,-vfp4" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone }
 
 !llvm.dbg.cu = !{!0}
@@ -112,8 +112,8 @@ attributes #1 = { nounwind readnone }
 !36 = !DILocation(line: 6, column: 7, scope: !32, inlinedAt: !27)
 !37 = !DILocation(line: 5, column: 28, scope: !32, inlinedAt: !27)
 !38 = distinct !{!38, !39, !40}
-!39 = !DILocation(line: 5, column: 3, scope: !24)
-!40 = !DILocation(line: 6, column: 14, scope: !24)
+!39 = !DILocation(line: 5, column: 3, scope: !24, inlinedAt: !27)
+!40 = !DILocation(line: 6, column: 14, scope: !24, inlinedAt: !27)
 !41 = !DILocation(line: 11, column: 12, scope: !42, inlinedAt: !46)
 !42 = distinct !DISubprogram(name: "lee2", scope: !1, file: !1, line: 10, type: !9, isLocal: true, isDefinition: true, scopeLine: 10, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !43)
 !43 = !{!44, !45}

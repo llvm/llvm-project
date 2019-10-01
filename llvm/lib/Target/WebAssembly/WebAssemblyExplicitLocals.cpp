@@ -1,9 +1,8 @@
 //===-- WebAssemblyExplicitLocals.cpp - Make Locals Explicit --------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -11,7 +10,7 @@
 /// This file converts any remaining registers into WebAssembly locals.
 ///
 /// After register stackification and register coloring, convert non-stackified
-/// registers into locals, inserting explicit get_local and set_local
+/// registers into locals, inserting explicit local.get and local.set
 /// instructions.
 ///
 //===----------------------------------------------------------------------===//
@@ -96,54 +95,54 @@ static unsigned getDropOpcode(const TargetRegisterClass *RC) {
   llvm_unreachable("Unexpected register class");
 }
 
-/// Get the appropriate get_local opcode for the given register class.
-static unsigned getGetLocalOpcode(const TargetRegisterClass *RC) {
+/// Get the appropriate local.get opcode for the given register class.
+static unsigned getLocalGetOpcode(const TargetRegisterClass *RC) {
   if (RC == &WebAssembly::I32RegClass)
-    return WebAssembly::GET_LOCAL_I32;
+    return WebAssembly::LOCAL_GET_I32;
   if (RC == &WebAssembly::I64RegClass)
-    return WebAssembly::GET_LOCAL_I64;
+    return WebAssembly::LOCAL_GET_I64;
   if (RC == &WebAssembly::F32RegClass)
-    return WebAssembly::GET_LOCAL_F32;
+    return WebAssembly::LOCAL_GET_F32;
   if (RC == &WebAssembly::F64RegClass)
-    return WebAssembly::GET_LOCAL_F64;
+    return WebAssembly::LOCAL_GET_F64;
   if (RC == &WebAssembly::V128RegClass)
-    return WebAssembly::GET_LOCAL_V128;
+    return WebAssembly::LOCAL_GET_V128;
   if (RC == &WebAssembly::EXCEPT_REFRegClass)
-    return WebAssembly::GET_LOCAL_EXCEPT_REF;
+    return WebAssembly::LOCAL_GET_EXCEPT_REF;
   llvm_unreachable("Unexpected register class");
 }
 
-/// Get the appropriate set_local opcode for the given register class.
-static unsigned getSetLocalOpcode(const TargetRegisterClass *RC) {
+/// Get the appropriate local.set opcode for the given register class.
+static unsigned getLocalSetOpcode(const TargetRegisterClass *RC) {
   if (RC == &WebAssembly::I32RegClass)
-    return WebAssembly::SET_LOCAL_I32;
+    return WebAssembly::LOCAL_SET_I32;
   if (RC == &WebAssembly::I64RegClass)
-    return WebAssembly::SET_LOCAL_I64;
+    return WebAssembly::LOCAL_SET_I64;
   if (RC == &WebAssembly::F32RegClass)
-    return WebAssembly::SET_LOCAL_F32;
+    return WebAssembly::LOCAL_SET_F32;
   if (RC == &WebAssembly::F64RegClass)
-    return WebAssembly::SET_LOCAL_F64;
+    return WebAssembly::LOCAL_SET_F64;
   if (RC == &WebAssembly::V128RegClass)
-    return WebAssembly::SET_LOCAL_V128;
+    return WebAssembly::LOCAL_SET_V128;
   if (RC == &WebAssembly::EXCEPT_REFRegClass)
-    return WebAssembly::SET_LOCAL_EXCEPT_REF;
+    return WebAssembly::LOCAL_SET_EXCEPT_REF;
   llvm_unreachable("Unexpected register class");
 }
 
-/// Get the appropriate tee_local opcode for the given register class.
-static unsigned getTeeLocalOpcode(const TargetRegisterClass *RC) {
+/// Get the appropriate local.tee opcode for the given register class.
+static unsigned getLocalTeeOpcode(const TargetRegisterClass *RC) {
   if (RC == &WebAssembly::I32RegClass)
-    return WebAssembly::TEE_LOCAL_I32;
+    return WebAssembly::LOCAL_TEE_I32;
   if (RC == &WebAssembly::I64RegClass)
-    return WebAssembly::TEE_LOCAL_I64;
+    return WebAssembly::LOCAL_TEE_I64;
   if (RC == &WebAssembly::F32RegClass)
-    return WebAssembly::TEE_LOCAL_F32;
+    return WebAssembly::LOCAL_TEE_F32;
   if (RC == &WebAssembly::F64RegClass)
-    return WebAssembly::TEE_LOCAL_F64;
+    return WebAssembly::LOCAL_TEE_F64;
   if (RC == &WebAssembly::V128RegClass)
-    return WebAssembly::TEE_LOCAL_V128;
+    return WebAssembly::LOCAL_TEE_V128;
   if (RC == &WebAssembly::EXCEPT_REFRegClass)
-    return WebAssembly::TEE_LOCAL_EXCEPT_REF;
+    return WebAssembly::LOCAL_TEE_EXCEPT_REF;
   llvm_unreachable("Unexpected register class");
 }
 
@@ -233,8 +232,8 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
       if (MI.isDebugInstr() || MI.isLabel())
         continue;
 
-      // Replace tee instructions with tee_local. The difference is that tee
-      // instructions have two defs, while tee_local instructions have one def
+      // Replace tee instructions with local.tee. The difference is that tee
+      // instructions have two defs, while local.tee instructions have one def
       // and an index of a local to write to.
       if (WebAssembly::isTee(MI)) {
         assert(MFI.isVRegStackified(MI.getOperand(0).getReg()));
@@ -246,17 +245,17 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
         if (!MFI.isVRegStackified(OldReg)) {
           unsigned LocalId = getLocalId(Reg2Local, CurLocal, OldReg);
           unsigned NewReg = MRI.createVirtualRegister(RC);
-          unsigned Opc = getGetLocalOpcode(RC);
+          unsigned Opc = getLocalGetOpcode(RC);
           BuildMI(MBB, &MI, MI.getDebugLoc(), TII->get(Opc), NewReg)
               .addImm(LocalId);
           MI.getOperand(2).setReg(NewReg);
           MFI.stackifyVReg(NewReg);
         }
 
-        // Replace the TEE with a TEE_LOCAL.
+        // Replace the TEE with a LOCAL_TEE.
         unsigned LocalId =
             getLocalId(Reg2Local, CurLocal, MI.getOperand(1).getReg());
-        unsigned Opc = getTeeLocalOpcode(RC);
+        unsigned Opc = getLocalTeeOpcode(RC);
         BuildMI(MBB, &MI, MI.getDebugLoc(), TII->get(Opc),
                 MI.getOperand(0).getReg())
             .addImm(LocalId)
@@ -267,7 +266,7 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
         continue;
       }
 
-      // Insert set_locals for any defs that aren't stackified yet. Currently
+      // Insert local.sets for any defs that aren't stackified yet. Currently
       // we handle at most one def.
       assert(MI.getDesc().getNumDefs() <= 1);
       if (MI.getDesc().getNumDefs() == 1) {
@@ -275,7 +274,7 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
         if (!MFI.isVRegStackified(OldReg)) {
           const TargetRegisterClass *RC = MRI.getRegClass(OldReg);
           unsigned NewReg = MRI.createVirtualRegister(RC);
-          auto InsertPt = std::next(MachineBasicBlock::iterator(&MI));
+          auto InsertPt = std::next(MI.getIterator());
           if (MI.getOpcode() == WebAssembly::IMPLICIT_DEF) {
             MI.eraseFromParent();
             Changed = true;
@@ -290,14 +289,14 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
             Drop->getOperand(0).setIsKill();
           } else {
             unsigned LocalId = getLocalId(Reg2Local, CurLocal, OldReg);
-            unsigned Opc = getSetLocalOpcode(RC);
+            unsigned Opc = getLocalSetOpcode(RC);
             BuildMI(MBB, InsertPt, MI.getDebugLoc(), TII->get(Opc))
                 .addImm(LocalId)
                 .addReg(NewReg);
           }
           MI.getOperand(0).setReg(NewReg);
           // This register operand of the original instruction is now being used
-          // by the inserted drop or set_local instruction, so make it not dead
+          // by the inserted drop or local.set instruction, so make it not dead
           // yet.
           MI.getOperand(0).setIsDead(false);
           MFI.stackifyVReg(NewReg);
@@ -305,7 +304,7 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
         }
       }
 
-      // Insert get_locals for any uses that aren't stackified yet.
+      // Insert local.gets for any uses that aren't stackified yet.
       MachineInstr *InsertPt = &MI;
       for (MachineOperand &MO : reverse(MI.explicit_uses())) {
         if (!MO.isReg())
@@ -317,7 +316,7 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
         // with inline asm register operands is to provide local indices as
         // immediates.
         if (MO.isDef()) {
-          assert(MI.getOpcode() == TargetOpcode::INLINEASM);
+          assert(MI.isInlineAsm());
           unsigned LocalId = getLocalId(Reg2Local, CurLocal, OldReg);
           // If this register operand is tied to another operand, we can't
           // change it to an immediate. Untie it first.
@@ -327,7 +326,7 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
         }
 
         // If we see a stackified register, prepare to insert subsequent
-        // get_locals before the start of its tree.
+        // local.gets before the start of its tree.
         if (MFI.isVRegStackified(OldReg)) {
           InsertPt = findStartOfTree(MO, MRI, MFI);
           continue;
@@ -335,7 +334,7 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
 
         // Our contract with inline asm register operands is to provide local
         // indices as immediates.
-        if (MI.getOpcode() == TargetOpcode::INLINEASM) {
+        if (MI.isInlineAsm()) {
           unsigned LocalId = getLocalId(Reg2Local, CurLocal, OldReg);
           // Untie it first if this reg operand is tied to another operand.
           MI.untieRegOperand(MI.getOperandNo(&MO));
@@ -343,11 +342,11 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
           continue;
         }
 
-        // Insert a get_local.
+        // Insert a local.get.
         unsigned LocalId = getLocalId(Reg2Local, CurLocal, OldReg);
         const TargetRegisterClass *RC = MRI.getRegClass(OldReg);
         unsigned NewReg = MRI.createVirtualRegister(RC);
-        unsigned Opc = getGetLocalOpcode(RC);
+        unsigned Opc = getLocalGetOpcode(RC);
         InsertPt =
             BuildMI(MBB, InsertPt, MI.getDebugLoc(), TII->get(Opc), NewReg)
                 .addImm(LocalId);

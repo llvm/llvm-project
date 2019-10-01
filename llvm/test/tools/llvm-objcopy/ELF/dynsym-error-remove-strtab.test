@@ -1,3 +1,15 @@
-# RUN: not llvm-objcopy -R .dynstr %p/Inputs/dynsym.so %t 2>&1 >/dev/null | FileCheck %s
+# RUN: not llvm-objcopy -R .dynstr %p/Inputs/dynsym.so %t 2>&1 >/dev/null | FileCheck %s --check-prefix=ERR1 -DINPUT=%p/Inputs/dynsym.so
+# RUN: cp  %p/Inputs/dynsym.so %t2
+# RUN: not llvm-strip --no-strip-all -R .dynstr %t2 2>&1 >/dev/null | FileCheck %s --check-prefix=ERR2 -DINPUT=%t2
 
-# CHECK: Section .dynstr cannot be removed because it is referenced by the section .dynsym
+# ERR1: error: '[[INPUT]]': section '.dynstr' cannot be removed because it is referenced by the section '.dynsym'
+# ERR2: error: '[[INPUT]]': section '.dynstr' cannot be removed because it is referenced by the section '.dynsym'
+
+# RUN: llvm-objcopy --allow-broken-links -R .dynstr %p/Inputs/dynsym.so %t3
+# RUN: llvm-objdump --section-headers %t3 | FileCheck %s --check-prefix=SECTIONS --implicit-check-not=.dynstr
+# RUN: cp  %p/Inputs/dynsym.so %t4
+# RUN: llvm-strip --no-strip-all --allow-broken-links -R .dynstr %t4
+# RUN: llvm-objdump --section-headers %t4 | FileCheck %s --check-prefix=SECTIONS --implicit-check-not=.dynstr
+
+# SECTIONS: .dynsym
+# SECTIONS: .dynamic

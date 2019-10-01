@@ -28,8 +28,8 @@ Sections:
         Symbol:          _start
         Type:            0xFF
 Symbols:
-  Global:
-    - Name:     _start
-      Type:     STT_FUNC
-      Section:  .text
-      Value:    0x0
+  - Name:     _start
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0x0
+    Binding:  STB_GLOBAL

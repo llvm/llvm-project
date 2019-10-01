@@ -1,9 +1,8 @@
 //===- InstrProfReader.cpp - Instrumented profiling reader ----------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -163,7 +162,10 @@ Error TextInstrProfReader::readHeader() {
     IsIRInstr = true;
   else if (Str.equals_lower("fe"))
     IsIRInstr = false;
-  else
+  else if (Str.equals_lower("csir")) {
+    IsIRInstr = true;
+    HasCSIRLevelProfile = true;
+  } else
     return error(instrprof_error::bad_header);
 
   ++Line;
@@ -734,7 +736,7 @@ bool IndexedInstrProfReader::hasFormat(const MemoryBuffer &DataBuffer) {
 
 const unsigned char *
 IndexedInstrProfReader::readSummary(IndexedInstrProf::ProfVersion Version,
-                                    const unsigned char *Cur) {
+                                    const unsigned char *Cur, bool UseCS) {
   using namespace IndexedInstrProf;
   using namespace support;
 
@@ -761,10 +763,13 @@ IndexedInstrProfReader::readSummary(IndexedInstrProf::ProfVersion Version,
       DetailedSummary.emplace_back((uint32_t)Ent.Cutoff, Ent.MinBlockCount,
                                    Ent.NumBlocks);
     }
+    std::unique_ptr<llvm::ProfileSummary> &Summary =
+        UseCS ? this->CS_Summary : this->Summary;
+
     // initialize InstrProfSummary using the SummaryData from disk.
-    this->Summary = llvm::make_unique<ProfileSummary>(
-        ProfileSummary::PSK_Instr, DetailedSummary,
-        SummaryData->get(Summary::TotalBlockCount),
+    Summary = llvm::make_unique<ProfileSummary>(
+        UseCS ? ProfileSummary::PSK_CSInstr : ProfileSummary::PSK_Instr,
+        DetailedSummary, SummaryData->get(Summary::TotalBlockCount),
         SummaryData->get(Summary::MaxBlockCount),
         SummaryData->get(Summary::MaxInternalBlockCount),
         SummaryData->get(Summary::MaxFunctionCount),
@@ -806,7 +811,11 @@ Error IndexedInstrProfReader::readHeader() {
       IndexedInstrProf::ProfVersion::CurrentVersion)
     return error(instrprof_error::unsupported_version);
 
-  Cur = readSummary((IndexedInstrProf::ProfVersion)FormatVersion, Cur);
+  Cur = readSummary((IndexedInstrProf::ProfVersion)FormatVersion, Cur,
+                    /* UseCS */ false);
+  if (FormatVersion & VARIANT_MASK_CSIR_PROF)
+    Cur = readSummary((IndexedInstrProf::ProfVersion)FormatVersion, Cur,
+                      /* UseCS */ true);
 
   // Read the hash type and start offset.
   IndexedInstrProf::HashT HashType = static_cast<IndexedInstrProf::HashT>(
@@ -890,4 +899,18 @@ Error IndexedInstrProfReader::readNextRecord(NamedInstrProfRecord &Record) {
     RecordIndex = 0;
   }
   return success();
+}
+
+void InstrProfReader::accumuateCounts(CountSumOrPercent &Sum, bool IsCS) {
+  uint64_t NumFuncs = 0;
+  for (const auto &Func : *this) {
+    if (isIRLevelProfile()) {
+      bool FuncIsCS = NamedInstrProfRecord::hasCSFlagInHash(Func.Hash);
+      if (FuncIsCS != IsCS)
+        continue;
+    }
+    Func.accumuateCounts(Sum);
+    ++NumFuncs;
+  }
+  Sum.NumEntries = NumFuncs;
 }

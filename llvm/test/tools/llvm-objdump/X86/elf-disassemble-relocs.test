@@ -1,0 +1,42 @@
+## Show that --disassemble + --reloc prints relocations inline and does not dump
+## the relocation sections.
+
+# RUN: yaml2obj %s -o %t.o
+# RUN: llvm-objdump %t.o -d -r | FileCheck %s --implicit-check-not="RELOCATION RECORDS"
+
+# CHECK:      0: e8 00 00 00 00                callq   0 <.text+0x5>
+# CHECK-NEXT:          0000000000000001:  R_X86_64_PC32        foo-4
+# CHECK-NEXT:          0000000000000002:  R_X86_64_NONE        bar+8
+# CHECK-NEXT: 5: e8 00 00 00 00                callq   0 <.text+0xa>
+# CHECK-NEXT:          0000000000000006:  R_X86_64_PLT32       foo+1
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [SHF_ALLOC, SHF_EXECINSTR]
+    Content: 'e800000000e800000000'
+  - Name:    .rela.text
+    Type:    SHT_RELA
+    Info:    .text
+    Relocations:
+      - Offset: 1
+        Symbol: foo
+        Type:   R_X86_64_PC32
+        Addend: -4
+      - Offset: 2
+        Symbol: bar
+        Type:   R_X86_64_NONE
+        Addend: 8
+      - Offset: 6
+        Symbol: foo
+        Type:   R_X86_64_PLT32
+        Addend: 1
+Symbols:
+  - Name: foo
+  - Name: bar

@@ -5,8 +5,8 @@
 ; RUN: llc -asm-verbose=false -mattr=+vfp3 -meabi=gnu -mtriple=arm-eabi < %s | FileCheck %s -check-prefix=CHECK-SOFTFP
 ; RUN: llc -asm-verbose=false -mattr=+vfp3 -float-abi=hard -mtriple=arm-eabi < %s | FileCheck %s -check-prefix=CHECK-HARDFP-SP -check-prefix=CHECK-HARDFP-DP
 ; RUN: llc -asm-verbose=false -mattr=+vfp3 -float-abi=hard -meabi=gnu -mtriple=arm-eabi < %s | FileCheck %s -check-prefix=CHECK-HARDFP-SP -check-prefix=CHECK-HARDFP-DP
-; RUN: llc -asm-verbose=false -mattr=+vfp3,+fp-only-sp -float-abi=hard -mtriple=arm-eabi < %s | FileCheck %s -check-prefix=CHECK-HARDFP-SP -check-prefix=CHECK-HARDFP-SPONLY
-; RUN: llc -asm-verbose=false -mattr=+vfp3,+fp-only-sp -float-abi=hard -mtriple=arm-eabi -meabi=gnu < %s | FileCheck %s -check-prefix=CHECK-HARDFP-SP -check-prefix=CHECK-HARDFP-SPONLY
+; RUN: llc -asm-verbose=false -mattr=+vfp3,-fp64 -float-abi=hard -mtriple=arm-eabi < %s | FileCheck %s -check-prefix=CHECK-HARDFP-SP -check-prefix=CHECK-HARDFP-SPONLY
+; RUN: llc -asm-verbose=false -mattr=+vfp3,-fp64 -float-abi=hard -mtriple=arm-eabi -meabi=gnu < %s | FileCheck %s -check-prefix=CHECK-HARDFP-SP -check-prefix=CHECK-HARDFP-SPONLY
 
 ; The Runtime ABI for the ARM Architecture IHI0043 section 4.1.2 The
 ; floating-point helper functions to always use the base AAPCS (soft-float)

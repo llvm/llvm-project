@@ -33,8 +33,9 @@ define <4 x i32> @add_zext_ifpos_vec_splat(<4 x i32> %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pcmpeqd %xmm1, %xmm1
 ; CHECK-NEXT:    pcmpgtd %xmm1, %xmm0
-; CHECK-NEXT:    psrld $31, %xmm0
-; CHECK-NEXT:    por {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [42,42,42,42]
+; CHECK-NEXT:    psubd %xmm0, %xmm1
+; CHECK-NEXT:    movdqa %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %c = icmp sgt <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
   %e = zext <4 x i1> %c to <4 x i32>

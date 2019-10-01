@@ -1,9 +1,8 @@
 //===-- ARMMCTargetDesc.cpp - ARM Target Descriptions ---------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -13,8 +12,9 @@
 
 #include "ARMMCTargetDesc.h"
 #include "ARMBaseInfo.h"
+#include "ARMInstPrinter.h"
 #include "ARMMCAsmInfo.h"
-#include "InstPrinter/ARMInstPrinter.h"
+#include "TargetInfo/ARMTargetInfo.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCCodeEmitter.h"
@@ -277,14 +277,29 @@ class ThumbMCInstrAnalysis : public ARMMCInstrAnalysis {
 public:
   ThumbMCInstrAnalysis(const MCInstrInfo *Info) : ARMMCInstrAnalysis(Info) {}
 
-  bool evaluateBranch(const MCInst &Inst, uint64_t Addr,
-                      uint64_t Size, uint64_t &Target) const override {
+  bool evaluateBranch(const MCInst &Inst, uint64_t Addr, uint64_t Size,
+                      uint64_t &Target) const override {
+    unsigned OpId;
+    switch (Inst.getOpcode()) {
+    default:
+      OpId = 0;
+      break;
+    case ARM::t2WLS:
+    case ARM::t2LEUpdate:
+      OpId = 2;
+      break;
+    case ARM::t2LE:
+      OpId = 1;
+      break;
+    }
+
     // We only handle PCRel branches for now.
-    if (Info->get(Inst.getOpcode()).OpInfo[0].OperandType!=MCOI::OPERAND_PCREL)
+    if (Info->get(Inst.getOpcode()).OpInfo[OpId].OperandType !=
+        MCOI::OPERAND_PCREL)
       return false;
 
-    int64_t Imm = Inst.getOperand(0).getImm();
-    Target = Addr+Imm+4; // In Thumb mode the PC is always off by 4 bytes.
+    // In Thumb mode the PC is always off by 4 bytes.
+    Target = Addr + Inst.getOperand(OpId).getImm() + 4;
     return true;
   }
 };

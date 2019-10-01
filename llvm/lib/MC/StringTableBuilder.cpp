@@ -1,9 +1,8 @@
 //===- StringTableBuilder.cpp - String table building utility -------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -160,6 +159,13 @@ void StringTableBuilder::finalizeStringTable(bool Optimize) {
 
   if (K == MachO)
     Size = alignTo(Size, 4); // Pad to multiple of 4.
+
+  // The first byte in an ELF string table must be null, according to the ELF
+  // specification. In 'initSize()' we reserved the first byte to hold null for
+  // this purpose and here we actually add the string to allow 'getOffset()' to
+  // be called on an empty string.
+  if (K == ELF)
+    StringIndexMap[CachedHashStringRef("")] = 0;
 }
 
 void StringTableBuilder::clear() {

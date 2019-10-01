@@ -1,9 +1,8 @@
 //===--- RTDyldObjectLinkingLayerTest.cpp - RTDyld linking layer tests ---===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -62,12 +61,11 @@ static bool testSetProcessAllSections(std::unique_ptr<MemoryBuffer> Obj,
     cantFail(std::move(R));
   };
 
-  auto OnReadyDoNothing = [](Error Err) { cantFail(std::move(Err)); };
-
   ObjLayer.setProcessAllSections(ProcessAllSections);
   cantFail(ObjLayer.add(JD, std::move(Obj), ES.allocateVModule()));
-  ES.lookup(JITDylibSearchList({{&JD, false}}), {Foo}, OnResolveDoNothing,
-            OnReadyDoNothing, NoDependenciesToRegister);
+  ES.lookup(JITDylibSearchList({{&JD, false}}), {Foo}, SymbolState::Resolved,
+            OnResolveDoNothing, NoDependenciesToRegister);
+
   return DebugSectionSeen;
 }
 
@@ -131,13 +129,17 @@ TEST(RTDyldObjectLinkingLayerTest, TestOverrideObjectFlags) {
     ModuleBuilder MB(*TSCtx.getContext(), TM->getTargetTriple().str(), "dummy");
     MB.getModule()->setDataLayout(TM->createDataLayout());
 
-    Function *FooImpl = MB.createFunctionDecl<void()>("foo");
+    Function *FooImpl = MB.createFunctionDecl(
+        FunctionType::get(Type::getVoidTy(*TSCtx.getContext()), {}, false),
+        "foo");
     BasicBlock *FooEntry =
         BasicBlock::Create(*TSCtx.getContext(), "entry", FooImpl);
     IRBuilder<> B1(FooEntry);
     B1.CreateRetVoid();
 
-    Function *BarImpl = MB.createFunctionDecl<void()>("bar");
+    Function *BarImpl = MB.createFunctionDecl(
+        FunctionType::get(Type::getVoidTy(*TSCtx.getContext()), {}, false),
+        "bar");
     BasicBlock *BarEntry =
         BasicBlock::Create(*TSCtx.getContext(), "entry", BarImpl);
     IRBuilder<> B2(BarEntry);
@@ -157,10 +159,10 @@ TEST(RTDyldObjectLinkingLayerTest, TestOverrideObjectFlags) {
   ObjLayer.setOverrideObjectFlagsWithResponsibilityFlags(true);
 
   cantFail(CompileLayer.add(JD, std::move(M), ES.allocateVModule()));
-  ES.lookup(JITDylibSearchList({{&JD, false}}), {Foo},
-            [](Expected<SymbolMap> R) { cantFail(std::move(R)); },
-            [](Error Err) { cantFail(std::move(Err)); },
-            NoDependenciesToRegister);
+  ES.lookup(
+      JITDylibSearchList({{&JD, false}}), {Foo}, SymbolState::Resolved,
+      [](Expected<SymbolMap> R) { cantFail(std::move(R)); },
+      NoDependenciesToRegister);
 }
 
 TEST(RTDyldObjectLinkingLayerTest, TestAutoClaimResponsibilityForSymbols) {
@@ -181,9 +183,9 @@ TEST(RTDyldObjectLinkingLayerTest, TestAutoClaimResponsibilityForSymbols) {
     FunkySimpleCompiler(TargetMachine &TM) : SimpleCompiler(TM) {}
 
     CompileResult operator()(Module &M) {
-      Function *BarImpl =
-          Function::Create(TypeBuilder<void(), false>::get(M.getContext()),
-                           GlobalValue::ExternalLinkage, "bar", &M);
+      Function *BarImpl = Function::Create(
+          FunctionType::get(Type::getVoidTy(M.getContext()), {}, false),
+          GlobalValue::ExternalLinkage, "bar", &M);
       BasicBlock *BarEntry =
           BasicBlock::Create(M.getContext(), "entry", BarImpl);
       IRBuilder<> B(BarEntry);
@@ -200,7 +202,9 @@ TEST(RTDyldObjectLinkingLayerTest, TestAutoClaimResponsibilityForSymbols) {
     ModuleBuilder MB(*TSCtx.getContext(), TM->getTargetTriple().str(), "dummy");
     MB.getModule()->setDataLayout(TM->createDataLayout());
 
-    Function *FooImpl = MB.createFunctionDecl<void()>("foo");
+    Function *FooImpl = MB.createFunctionDecl(
+        FunctionType::get(Type::getVoidTy(*TSCtx.getContext()), {}, false),
+        "foo");
     BasicBlock *FooEntry =
         BasicBlock::Create(*TSCtx.getContext(), "entry", FooImpl);
     IRBuilder<> B(FooEntry);
@@ -220,10 +224,10 @@ TEST(RTDyldObjectLinkingLayerTest, TestAutoClaimResponsibilityForSymbols) {
   ObjLayer.setAutoClaimResponsibilityForObjectSymbols(true);
 
   cantFail(CompileLayer.add(JD, std::move(M), ES.allocateVModule()));
-  ES.lookup(JITDylibSearchList({{&JD, false}}), {Foo},
-            [](Expected<SymbolMap> R) { cantFail(std::move(R)); },
-            [](Error Err) { cantFail(std::move(Err)); },
-            NoDependenciesToRegister);
+  ES.lookup(
+      JITDylibSearchList({{&JD, false}}), {Foo}, SymbolState::Resolved,
+      [](Expected<SymbolMap> R) { cantFail(std::move(R)); },
+      NoDependenciesToRegister);
 }
 
 } // end anonymous namespace

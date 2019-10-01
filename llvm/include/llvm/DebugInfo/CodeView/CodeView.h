@@ -1,9 +1,8 @@
 //===- CodeView.h -----------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -305,6 +304,9 @@ enum class ModifierOptions : uint16_t {
 };
 CV_DEFINE_ENUM_CLASS_FLAGS_OPERATORS(ModifierOptions)
 
+// If the subsection kind has this bit set, then the linker should ignore it.
+enum : uint32_t { SubsectionIgnoreFlag = 0x80000000 };
+
 enum class DebugSubsectionKind : uint32_t {
   None = 0,
   Symbols = 0xf1,
@@ -510,9 +512,23 @@ enum class FrameCookieKind : uint8_t {
 
 // Corresponds to CV_HREG_e enum.
 enum class RegisterId : uint16_t {
+#define CV_REGISTERS_ALL
 #define CV_REGISTER(name, value) name = value,
 #include "CodeViewRegisters.def"
 #undef CV_REGISTER
+#undef CV_REGISTERS_ALL
+};
+
+// Register Ids are shared between architectures in CodeView. CPUType is needed
+// to map register Id to name.
+struct CPURegister {
+  CPURegister() = delete;
+  CPURegister(CPUType Cpu, codeview::RegisterId Reg) {
+    this->Cpu = Cpu;
+    this->Reg = Reg;
+  }
+  CPUType Cpu;
+  RegisterId Reg;
 };
 
 /// Two-bit value indicating which register is the designated frame pointer

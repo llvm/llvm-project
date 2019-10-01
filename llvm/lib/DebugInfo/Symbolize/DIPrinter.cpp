@@ -1,9 +1,8 @@
 //===- lib/DebugInfo/Symbolize/DIPrinter.cpp ------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -82,7 +81,10 @@ void DIPrinter::print(const DILineInfo &Info, bool Inlined) {
   else if (Basenames)
     Filename = llvm::sys::path::filename(Filename);
   if (!Verbose) {
-    OS << Filename << ":" << Info.Line << ":" << Info.Column << "\n";
+    OS << Filename << ":" << Info.Line;
+    if (Style == OutputStyle::LLVM)
+      OS << ":" << Info.Column;
+    OS << "\n";
     printContext(Filename, Info.Line);
     return;
   }

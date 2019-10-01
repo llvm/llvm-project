@@ -11,45 +11,45 @@ define <4 x float> @bar(<4 x float>* %a1p, <4 x float>* %a2p, <4 x float> %a3, <
 ; CHECK-NEXT:    subq $72, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 80
 ; CHECK-NEXT:    vmovaps %xmm1, %xmm8
+; CHECK-NEXT:    vbroadcastsd {{.*#+}} zmm0 = [85899345925,85899345925,85899345925,85899345925,85899345925,85899345925,85899345925,85899345925]
+; CHECK-NEXT:    vpermi2ps %zmm3, %zmm2, %zmm0
 ; CHECK-NEXT:    vextractf128 $1, %ymm3, %xmm1
-; CHECK-NEXT:    vextractf128 $1, %ymm2, %xmm5
-; CHECK-NEXT:    vunpcklps {{.*#+}} xmm10 = xmm5[0],xmm1[0],xmm5[1],xmm1[1]
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm10[0,1],xmm2[1],xmm10[3]
-; CHECK-NEXT:    vblendps {{.*#+}} xmm9 = xmm5[0],xmm1[1],xmm5[2,3]
-; CHECK-NEXT:    vmovshdup {{.*#+}} xmm6 = xmm5[1,1,3,3]
-; CHECK-NEXT:    vunpcklps {{.*#+}} xmm6 = xmm6[0],xmm1[0],xmm6[1],xmm1[1]
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm11 = xmm6[0,1],xmm2[1],xmm6[3]
+; CHECK-NEXT:    vextractf128 $1, %ymm2, %xmm4
+; CHECK-NEXT:    vunpcklps {{.*#+}} xmm10 = xmm4[0],xmm1[0],xmm4[1],xmm1[1]
+; CHECK-NEXT:    vinsertps {{.*#+}} xmm14 = xmm10[0,1],xmm2[1],xmm10[3]
+; CHECK-NEXT:    vblendps {{.*#+}} xmm9 = xmm4[0],xmm1[1],xmm4[2,3]
+; CHECK-NEXT:    vinsertps {{.*#+}} xmm11 = xmm0[0,1],xmm2[1],xmm0[3]
 ; CHECK-NEXT:    vextractf32x4 $3, %zmm3, %xmm7
-; CHECK-NEXT:    vunpcklps {{.*#+}} xmm4 = xmm5[0],xmm7[0],xmm5[1],xmm7[1]
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0,1],xmm2[1],xmm4[3]
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0,1,2],xmm3[1]
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm6 = xmm11[0,1,2],xmm3[1]
-; CHECK-NEXT:    vaddps %xmm4, %xmm6, %xmm12
-; CHECK-NEXT:    vpermilpd {{.*#+}} xmm4 = xmm1[1,0]
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm7 = xmm5[0],xmm7[2],zero,zero
+; CHECK-NEXT:    vunpcklps {{.*#+}} xmm5 = xmm4[0],xmm7[0],xmm4[1],xmm7[1]
+; CHECK-NEXT:    vinsertps {{.*#+}} xmm5 = xmm5[0,1],xmm2[1],xmm5[3]
+; CHECK-NEXT:    vinsertps {{.*#+}} xmm5 = xmm5[0,1,2],xmm3[1]
+; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm11[0,1,2],xmm3[1]
+; CHECK-NEXT:    vaddps %xmm5, %xmm0, %xmm12
+; CHECK-NEXT:    vpermilpd {{.*#+}} xmm5 = xmm1[1,0]
+; CHECK-NEXT:    vinsertps {{.*#+}} xmm7 = xmm4[0],xmm7[2],zero,zero
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm7 = xmm7[0,1],xmm2[1],xmm7[3]
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm13 = xmm7[0,1,2],xmm4[0]
-; CHECK-NEXT:    vpermilps {{.*#+}} xmm4 = xmm2[3,1,2,3]
-; CHECK-NEXT:    vunpcklps {{.*#+}} xmm4 = xmm4[0],xmm1[0],xmm4[1],xmm1[1]
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm7 = xmm5[0],xmm1[2],zero,zero
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm1 = xmm0[0,1,2],xmm3[1]
+; CHECK-NEXT:    vinsertps {{.*#+}} xmm13 = xmm7[0,1,2],xmm5[0]
+; CHECK-NEXT:    vpermilps {{.*#+}} xmm5 = xmm2[3,1,2,3]
+; CHECK-NEXT:    vunpcklps {{.*#+}} xmm5 = xmm5[0],xmm1[0],xmm5[1],xmm1[1]
+; CHECK-NEXT:    vinsertps {{.*#+}} xmm7 = xmm4[0],xmm1[2],zero,zero
+; CHECK-NEXT:    vinsertps {{.*#+}} xmm1 = xmm14[0,1,2],xmm3[1]
 ; CHECK-NEXT:    vmovaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm5 = xmm9[0,1],xmm2[1],xmm9[3]
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm6 = xmm5[0,1,2],xmm3[1]
+; CHECK-NEXT:    vinsertps {{.*#+}} xmm4 = xmm9[0,1],xmm2[1],xmm9[3]
+; CHECK-NEXT:    vinsertps {{.*#+}} xmm6 = xmm4[0,1,2],xmm3[1]
 ; CHECK-NEXT:    vmovaps %xmm6, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm5 = xmm4[0,1],xmm2[1],xmm4[3]
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm9 = xmm7[0,1],xmm2[1],xmm7[3]
+; CHECK-NEXT:    vinsertps {{.*#+}} xmm5 = xmm5[0,1],xmm2[1],xmm5[3]
+; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm7[0,1],xmm2[1],xmm7[3]
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm2 = xmm10[0,1],xmm2[3],xmm10[3]
 ; CHECK-NEXT:    vextractf32x4 $2, %zmm3, %xmm4
-; CHECK-NEXT:    vblendps {{.*#+}} xmm4 = xmm0[0,1,2],xmm4[3]
+; CHECK-NEXT:    vblendps {{.*#+}} xmm4 = xmm14[0,1,2],xmm4[3]
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm5 = xmm5[0,1,2],xmm3[1]
 ; CHECK-NEXT:    vblendps {{.*#+}} xmm7 = xmm11[0,1,2],xmm3[3]
-; CHECK-NEXT:    vblendps {{.*#+}} xmm10 = xmm0[0,1,2],xmm3[3]
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm9[0,1,2],xmm3[1]
+; CHECK-NEXT:    vblendps {{.*#+}} xmm9 = xmm14[0,1,2],xmm3[3]
+; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm3[1]
 ; CHECK-NEXT:    vpermilpd {{.*#+}} xmm3 = xmm3[1,0]
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1,2],xmm3[0]
 ; CHECK-NEXT:    vaddps %xmm0, %xmm2, %xmm2
-; CHECK-NEXT:    vaddps %xmm10, %xmm0, %xmm0
+; CHECK-NEXT:    vaddps %xmm9, %xmm0, %xmm0
 ; CHECK-NEXT:    vaddps %xmm13, %xmm1, %xmm9
 ; CHECK-NEXT:    vaddps %xmm12, %xmm0, %xmm0
 ; CHECK-NEXT:    vaddps %xmm1, %xmm1, %xmm3

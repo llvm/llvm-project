@@ -1,9 +1,8 @@
 //===-- LLVMSymbolize.cpp -------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -24,6 +23,7 @@
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/MachOUniversal.h"
+#include "llvm/Support/CRC.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/DataExtractor.h"
@@ -53,9 +53,9 @@ namespace symbolize {
 
 Expected<DILineInfo>
 LLVMSymbolizer::symbolizeCode(const std::string &ModuleName,
-                              uint64_t ModuleOffset, StringRef DWPName) {
+                              object::SectionedAddress ModuleOffset) {
   SymbolizableModule *Info;
-  if (auto InfoOrErr = getOrCreateModuleInfo(ModuleName, DWPName))
+  if (auto InfoOrErr = getOrCreateModuleInfo(ModuleName))
     Info = InfoOrErr.get();
   else
     return InfoOrErr.takeError();
@@ -68,7 +68,7 @@ LLVMSymbolizer::symbolizeCode(const std::string &ModuleName,
   // If the user is giving us relative addresses, add the preferred base of the
   // object to the offset before we do the query. It's what DIContext expects.
   if (Opts.RelativeAddresses)
-    ModuleOffset += Info->getModulePreferredBase();
+    ModuleOffset.Address += Info->getModulePreferredBase();
 
   DILineInfo LineInfo = Info->symbolizeCode(ModuleOffset, Opts.PrintFunctions,
                                             Opts.UseSymbolTable);
@@ -79,9 +79,9 @@ LLVMSymbolizer::symbolizeCode(const std::string &ModuleName,
 
 Expected<DIInliningInfo>
 LLVMSymbolizer::symbolizeInlinedCode(const std::string &ModuleName,
-                                     uint64_t ModuleOffset, StringRef DWPName) {
+                                     object::SectionedAddress ModuleOffset) {
   SymbolizableModule *Info;
-  if (auto InfoOrErr = getOrCreateModuleInfo(ModuleName, DWPName))
+  if (auto InfoOrErr = getOrCreateModuleInfo(ModuleName))
     Info = InfoOrErr.get();
   else
     return InfoOrErr.takeError();
@@ -94,7 +94,7 @@ LLVMSymbolizer::symbolizeInlinedCode(const std::string &ModuleName,
   // If the user is giving us relative addresses, add the preferred base of the
   // object to the offset before we do the query. It's what DIContext expects.
   if (Opts.RelativeAddresses)
-    ModuleOffset += Info->getModulePreferredBase();
+    ModuleOffset.Address += Info->getModulePreferredBase();
 
   DIInliningInfo InlinedContext = Info->symbolizeInlinedCode(
       ModuleOffset, Opts.PrintFunctions, Opts.UseSymbolTable);
@@ -107,8 +107,9 @@ LLVMSymbolizer::symbolizeInlinedCode(const std::string &ModuleName,
   return InlinedContext;
 }
 
-Expected<DIGlobal> LLVMSymbolizer::symbolizeData(const std::string &ModuleName,
-                                                 uint64_t ModuleOffset) {
+Expected<DIGlobal>
+LLVMSymbolizer::symbolizeData(const std::string &ModuleName,
+                              object::SectionedAddress ModuleOffset) {
   SymbolizableModule *Info;
   if (auto InfoOrErr = getOrCreateModuleInfo(ModuleName))
     Info = InfoOrErr.get();
@@ -124,7 +125,7 @@ Expected<DIGlobal> LLVMSymbolizer::symbolizeData(const std::string &ModuleName,
   // the object to the offset before we do the query. It's what DIContext
   // expects.
   if (Opts.RelativeAddresses)
-    ModuleOffset += Info->getModulePreferredBase();
+    ModuleOffset.Address += Info->getModulePreferredBase();
 
   DIGlobal Global = Info->symbolizeData(ModuleOffset);
   if (Opts.Demangle)
@@ -161,7 +162,7 @@ bool checkFileCRC(StringRef Path, uint32_t CRCHash) {
       MemoryBuffer::getFileOrSTDIN(Path);
   if (!MB)
     return false;
-  return !zlib::isAvailable() || CRCHash == zlib::crc32(MB.get()->getBuffer());
+  return CRCHash == llvm::crc32(0, MB.get()->getBuffer());
 }
 
 bool findDebugBinary(const std::string &OrigPath,
@@ -218,10 +219,13 @@ bool getGNUDebuglinkContents(const ObjectFile *Obj, std::string &DebugName,
     Section.getName(Name);
     Name = Name.substr(Name.find_first_not_of("._"));
     if (Name == "gnu_debuglink") {
-      StringRef Data;
-      Section.getContents(Data);
-      DataExtractor DE(Data, Obj->isLittleEndian(), 0);
-      uint32_t Offset = 0;
+      Expected<StringRef> ContentsOrErr = Section.getContents();
+      if (!ContentsOrErr) {
+        consumeError(ContentsOrErr.takeError());
+        return false;
+      }
+      DataExtractor DE(*ContentsOrErr, Obj->isLittleEndian(), 0);
+      uint64_t Offset = 0;
       if (const char *DebugNameStr = DE.getCStr(&Offset)) {
         // 4-byte align the offset.
         Offset = (Offset + 3) & ~0x3;
@@ -372,8 +376,7 @@ LLVMSymbolizer::getOrCreateObject(const std::string &Path,
 }
 
 Expected<SymbolizableModule *>
-LLVMSymbolizer::getOrCreateModuleInfo(const std::string &ModuleName,
-                                      StringRef DWPName) {
+LLVMSymbolizer::getOrCreateModuleInfo(const std::string &ModuleName) {
   const auto &I = Modules.find(ModuleName);
   if (I != Modules.end()) {
     return I->second.get();
@@ -419,9 +422,9 @@ LLVMSymbolizer::getOrCreateModuleInfo(const std::string &ModuleName,
     }
   }
   if (!Context)
-    Context = DWARFContext::create(*Objects.second, nullptr,
-                                   DWARFContext::defaultErrorHandler, DWPName);
-  assert(Context);
+    Context =
+        DWARFContext::create(*Objects.second, nullptr,
+                             DWARFContext::defaultErrorHandler, Opts.DWPName);
   auto InfoOrErr =
       SymbolizableObjectFile::create(Objects.first, std::move(Context));
   std::unique_ptr<SymbolizableModule> SymMod;

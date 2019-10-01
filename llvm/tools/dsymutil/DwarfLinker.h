@@ -1,9 +1,8 @@
 //===- tools/dsymutil/DwarfLinker.h - Dwarf debug info linker ---*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -83,12 +82,12 @@ private:
   /// Keeps track of relocations.
   class RelocationManager {
     struct ValidReloc {
-      uint32_t Offset;
+      uint64_t Offset;
       uint32_t Size;
       uint64_t Addend;
       const DebugMapObject::DebugMapEntry *Mapping;
 
-      ValidReloc(uint32_t Offset, uint32_t Size, uint64_t Addend,
+      ValidReloc(uint64_t Offset, uint32_t Size, uint64_t Addend,
                  const DebugMapObject::DebugMapEntry *Mapping)
           : Offset(Offset), Size(Size), Addend(Addend), Mapping(Mapping) {}
 
@@ -133,10 +132,10 @@ private:
                               const DebugMapObject &DMO);
     /// @}
 
-    bool hasValidRelocation(uint32_t StartOffset, uint32_t EndOffset,
+    bool hasValidRelocation(uint64_t StartOffset, uint64_t EndOffset,
                             CompileUnit::DIEInfo &Info);
 
-    bool applyValidRelocs(MutableArrayRef<char> Data, uint32_t BaseOffset,
+    bool applyValidRelocs(MutableArrayRef<char> Data, uint64_t BaseOffset,
                           bool IsLittleEndian);
   };
 

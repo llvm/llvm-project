@@ -1,10 +1,12 @@
-RUN: llvm-readobj -program-headers %p/../../Object/Inputs/program-headers.elf-i386 \
+RUN: llvm-readobj --program-headers %p/../../Object/Inputs/program-headers.elf-i386 \
 RUN:     | FileCheck %s -check-prefix ELF-I386
-RUN: llvm-readobj -program-headers %p/../../Object/Inputs/program-headers.elf-x86-64 \
+RUN: llvm-readobj -l %p/../../Object/Inputs/program-headers.elf-i386 \
+RUN:     | FileCheck %s -check-prefix ELF-I386
+RUN: llvm-readobj -l %p/../../Object/Inputs/program-headers.elf-x86-64 \
 RUN:     | FileCheck %s -check-prefix ELF-X86-64
-RUN: llvm-readobj -program-headers %p/../../Object/Inputs/program-headers.mips \
+RUN: llvm-readobj -l %p/../../Object/Inputs/program-headers.mips \
 RUN:     | FileCheck %s -check-prefix ELF-MIPS
-RUN: llvm-readobj -program-headers %p/../../Object/Inputs/program-headers.mips64 \
+RUN: llvm-readobj -l %p/../../Object/Inputs/program-headers.mips64 \
 RUN:     | FileCheck %s -check-prefix ELF-MIPS64
 
 ## openbsd-phdrs.elf-x86-64 was generated using GNU ld (GNU Binutils for Ubuntu) 2.26.1.
@@ -18,7 +20,7 @@ RUN:     | FileCheck %s -check-prefix ELF-MIPS64
 ##         0x65a3dbe7 is the value of PT_OPENBSD_WXNEEDED,
 ##         0x65a41be6 is the value of PT_OPENBSD_BOOTDATA
 ## SECTIONS { . = SIZEOF_HEADERS; .all : { *(.*) } : text }
-RUN: llvm-readobj -program-headers %p/../../Object/Inputs/openbsd-phdrs.elf-x86-64 \
+RUN: llvm-readobj -l %p/../../Object/Inputs/openbsd-phdrs.elf-x86-64 \
 RUN:     | FileCheck %s -check-prefix OPENBSD-X86-64
 
 ELF-I386:      ProgramHeaders [

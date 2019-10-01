@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i386-apple-darwin -relocation-model=pic -disable-fp-elim
+; RUN: llc < %s -mtriple=i386-apple-darwin -relocation-model=pic -frame-pointer=all
 
 	%struct..0objc_selector = type opaque
 	%struct.NSString = type opaque

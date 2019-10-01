@@ -1,4 +1,4 @@
-// RUN: llvm-mc -filetype=obj -triple mipsel-unknown-linux %s -o - | llvm-readobj -t | FileCheck %s
+// RUN: llvm-mc -filetype=obj -triple mipsel-unknown-linux %s -o - | llvm-readobj --symbols | FileCheck %s
 
 // Check that the appropriate symbols were created.
 

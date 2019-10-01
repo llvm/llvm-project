@@ -1,9 +1,8 @@
 //===-- WebAssemblyRegColoring.cpp - Register coloring --------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -66,11 +65,11 @@ FunctionPass *llvm::createWebAssemblyRegColoring() {
 static float computeWeight(const MachineRegisterInfo *MRI,
                            const MachineBlockFrequencyInfo *MBFI,
                            unsigned VReg) {
-  float weight = 0.0f;
+  float Weight = 0.0f;
   for (MachineOperand &MO : MRI->reg_nodbg_operands(VReg))
-    weight += LiveIntervals::getSpillWeight(MO.isDef(), MO.isUse(), MBFI,
+    Weight += LiveIntervals::getSpillWeight(MO.isDef(), MO.isUse(), MBFI,
                                             *MO.getParent());
-  return weight;
+  return Weight;
 }
 
 bool WebAssemblyRegColoring::runOnMachineFunction(MachineFunction &MF) {
@@ -98,8 +97,8 @@ bool WebAssemblyRegColoring::runOnMachineFunction(MachineFunction &MF) {
   SortedIntervals.reserve(NumVRegs);
 
   LLVM_DEBUG(dbgs() << "Interesting register intervals:\n");
-  for (unsigned i = 0; i < NumVRegs; ++i) {
-    unsigned VReg = TargetRegisterInfo::index2VirtReg(i);
+  for (unsigned I = 0; I < NumVRegs; ++I) {
+    unsigned VReg = TargetRegisterInfo::index2VirtReg(I);
     if (MFI.isVRegStackified(VReg))
       continue;
     // Skip unused registers, which can use $drop.
@@ -134,10 +133,10 @@ bool WebAssemblyRegColoring::runOnMachineFunction(MachineFunction &MF) {
       SortedIntervals.size());
   BitVector UsedColors(SortedIntervals.size());
   bool Changed = false;
-  for (size_t i = 0, e = SortedIntervals.size(); i < e; ++i) {
-    LiveInterval *LI = SortedIntervals[i];
+  for (size_t I = 0, E = SortedIntervals.size(); I < E; ++I) {
+    LiveInterval *LI = SortedIntervals[I];
     unsigned Old = LI->reg;
-    size_t Color = i;
+    size_t Color = I;
     const TargetRegisterClass *RC = MRI->getRegClass(Old);
 
     // Check if it's possible to reuse any of the used colors.
@@ -154,7 +153,7 @@ bool WebAssemblyRegColoring::runOnMachineFunction(MachineFunction &MF) {
       }
 
     unsigned New = SortedIntervals[Color]->reg;
-    SlotMapping[i] = New;
+    SlotMapping[I] = New;
     Changed |= Old != New;
     UsedColors.set(Color);
     Assignments[Color].push_back(LI);
@@ -166,9 +165,9 @@ bool WebAssemblyRegColoring::runOnMachineFunction(MachineFunction &MF) {
     return false;
 
   // Rewrite register operands.
-  for (size_t i = 0, e = SortedIntervals.size(); i < e; ++i) {
-    unsigned Old = SortedIntervals[i]->reg;
-    unsigned New = SlotMapping[i];
+  for (size_t I = 0, E = SortedIntervals.size(); I < E; ++I) {
+    unsigned Old = SortedIntervals[I]->reg;
+    unsigned New = SlotMapping[I];
     if (Old != New)
       MRI->replaceRegWith(Old, New);
   }

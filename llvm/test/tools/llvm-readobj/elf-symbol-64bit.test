@@ -1,0 +1,23 @@
+# Show that both GNU and LLVM styles can properly print symbol values and sizes
+# that do not fit in 32-bit integers.
+
+# RUN: yaml2obj %s > %t
+# RUN: llvm-readobj --symbols %t | FileCheck %s --check-prefix=LLVM
+# RUN: llvm-readelf --symbols %t | FileCheck %s --check-prefix=GNU
+
+# LLVM:      Name:  a_sym
+# LLVM-NEXT: Value: 0xFEDCBA9876543210
+# LLVM-NEXT: Size:  81985529216486895
+
+# GNU: 1: fedcba9876543210 81985529216486895 {{.*}} a_sym
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Symbols:
+  - Name:  a_sym
+    Value: 0xfedcba9876543210
+    Size:  0x0123456789abcdef

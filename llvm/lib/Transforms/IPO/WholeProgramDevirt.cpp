@@ -1,9 +1,8 @@
 //===- WholeProgramDevirt.cpp - Whole program virtual call optimization ---===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -882,7 +881,7 @@ void DevirtModule::tryICallBranchFunnel(
   }
 
   BasicBlock *BB = BasicBlock::Create(M.getContext(), "", JT, nullptr);
-  Constant *Intr =
+  Function *Intr =
       Intrinsic::getDeclaration(&M, llvm::Intrinsic::icall_branch_funnel, {});
 
   auto *CI = CallInst::Create(Intr, JTArgs, "", BB);
@@ -921,9 +920,10 @@ void DevirtModule::applyICallBranchFunnel(VTableSlotInfo &SlotInfo,
       NewArgs.push_back(Int8PtrTy);
       for (Type *T : CS.getFunctionType()->params())
         NewArgs.push_back(T);
-      PointerType *NewFT = PointerType::getUnqual(
+      FunctionType *NewFT =
           FunctionType::get(CS.getFunctionType()->getReturnType(), NewArgs,
-                            CS.getFunctionType()->isVarArg()));
+                            CS.getFunctionType()->isVarArg());
+      PointerType *NewFTPtr = PointerType::getUnqual(NewFT);
 
       IRBuilder<> IRB(CS.getInstruction());
       std::vector<Value *> Args;
@@ -933,10 +933,10 @@ void DevirtModule::applyICallBranchFunnel(VTableSlotInfo &SlotInfo,
 
       CallSite NewCS;
       if (CS.isCall())
-        NewCS = IRB.CreateCall(IRB.CreateBitCast(JT, NewFT), Args);
+        NewCS = IRB.CreateCall(NewFT, IRB.CreateBitCast(JT, NewFTPtr), Args);
       else
         NewCS = IRB.CreateInvoke(
-            IRB.CreateBitCast(JT, NewFT),
+            NewFT, IRB.CreateBitCast(JT, NewFTPtr),
             cast<InvokeInst>(CS.getInstruction())->getNormalDest(),
             cast<InvokeInst>(CS.getInstruction())->getUnwindDest(), Args);
       NewCS.setCallingConv(CS.getCallingConv());
@@ -1183,7 +1183,7 @@ void DevirtModule::applyVirtualConstProp(CallSiteInfo &CSInfo, StringRef FnName,
     Value *Addr =
         B.CreateGEP(Int8Ty, B.CreateBitCast(Call.VTable, Int8PtrTy), Byte);
     if (RetType->getBitWidth() == 1) {
-      Value *Bits = B.CreateLoad(Addr);
+      Value *Bits = B.CreateLoad(Int8Ty, Addr);
       Value *BitsAndBit = B.CreateAnd(Bits, Bit);
       auto IsBitSet = B.CreateICmpNE(BitsAndBit, ConstantInt::get(Int8Ty, 0));
       Call.replaceAndErase("virtual-const-prop-1-bit", FnName, RemarksEnabled,
@@ -1495,8 +1495,10 @@ void DevirtModule::importResolution(VTableSlot Slot, VTableSlotInfo &SlotInfo) {
   if (Res.TheKind == WholeProgramDevirtResolution::SingleImpl) {
     // The type of the function in the declaration is irrelevant because every
     // call site will cast it to the correct type.
-    auto *SingleImpl = M.getOrInsertFunction(
-        Res.SingleImplName, Type::getVoidTy(M.getContext()));
+    Constant *SingleImpl =
+        cast<Constant>(M.getOrInsertFunction(Res.SingleImplName,
+                                             Type::getVoidTy(M.getContext()))
+                           .getCallee());
 
     // This is the import phase so we should not be exporting anything.
     bool IsExported = false;
@@ -1538,8 +1540,12 @@ void DevirtModule::importResolution(VTableSlot Slot, VTableSlotInfo &SlotInfo) {
   }
 
   if (Res.TheKind == WholeProgramDevirtResolution::BranchFunnel) {
-    auto *JT = M.getOrInsertFunction(getGlobalName(Slot, {}, "branch_funnel"),
-                                     Type::getVoidTy(M.getContext()));
+    // The type of the function is irrelevant, because it's bitcast at calls
+    // anyhow.
+    Constant *JT = cast<Constant>(
+        M.getOrInsertFunction(getGlobalName(Slot, {}, "branch_funnel"),
+                              Type::getVoidTy(M.getContext()))
+            .getCallee());
     bool IsExported = false;
     applyICallBranchFunnel(SlotInfo, JT, IsExported);
     assert(!IsExported);
@@ -1557,6 +1563,14 @@ void DevirtModule::removeRedundantTypeTests() {
 }
 
 bool DevirtModule::run() {
+  // If only some of the modules were split, we cannot correctly perform
+  // this transformation. We already checked for the presense of type tests
+  // with partially split modules during the thin link, and would have emitted
+  // an error if any were found, so here we can simply return.
+  if ((ExportSummary && ExportSummary->partiallySplitLTOUnits()) ||
+      (ImportSummary && ImportSummary->partiallySplitLTOUnits()))
+    return false;
+
   Function *TypeTestFunc =
       M.getFunction(Intrinsic::getName(Intrinsic::type_test));
   Function *TypeCheckedLoadFunc =

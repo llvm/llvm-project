@@ -1,0 +1,23 @@
+import("//llvm/utils/TableGen/tablegen.gni")
+
+tablegen("WebAssemblyGenAsmMatcher") {
+  visibility = [ ":AsmParser" ]
+  args = [ "-gen-asm-matcher" ]
+  td_file = "../WebAssembly.td"
+}
+
+static_library("AsmParser") {
+  output_name = "LLVMWebAssemblyAsmParser"
+  deps = [
+    ":WebAssemblyGenAsmMatcher",
+    "//llvm/lib/MC",
+    "//llvm/lib/MC/MCParser",
+    "//llvm/lib/Support",
+    "//llvm/lib/Target/WebAssembly/MCTargetDesc",
+    "//llvm/lib/Target/WebAssembly/TargetInfo",
+  ]
+  include_dirs = [ ".." ]
+  sources = [
+    "WebAssemblyAsmParser.cpp",
+  ]
+}

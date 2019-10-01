@@ -8,13 +8,13 @@
 ; as the assembler takes a different path through LLVM, which is
 ; already covered by the fixups-expr.s test.
 
-define i32 @main() {
+define i32 @main() nounwind {
 entry:
   %retval = alloca i32, align 4
   store i32 0, i32* %retval, align 4
   ; RELAX: R_RISCV_ADD64 b
   ; RELAX: R_RISCV_SUB64 a
-  ; NORELAX-NOT: R_RISCV
+  ; NORELAX-NOT: R_RISCV_ADD
   call void asm sideeffect "a:\0Ab:\0A.dword b-a", ""()
   ret i32 0
 }

@@ -1,0 +1,29 @@
+RUN: echo "%p/Inputs/dwarfdump-test.elf-x86-64 0x40113f" > %t.input
+RUN: echo "%p/Inputs/dwarfdump-test.elf-x86-64 0x401020" >> %t.input
+RUN: echo "%p/Inputs/dwarfdump-test.elf-x86-64 0x40110e" >> %t.input
+RUN: echo "%p/Inputs/dwarfdump-test.elf-x86-64 0x401160" >> %t.input
+RUN: echo "%p/Inputs/dwarfdump-test2.elf-x86-64 0x4004e8" >> %t.input
+RUN: echo "%p/Inputs/dwarfdump-test2.elf-x86-64 0x4004f4" >> %t.input
+RUN: echo "%p/Inputs/dwarfdump-test4.elf-x86-64 0x62c" >> %t.input
+
+RUN: llvm-symbolizer < %t.input | FileCheck %s
+
+CHECK:       main
+CHECK-NEXT: /tmp/dbginfo{{[/\\]}}dwarfdump-test.cc:16
+
+CHECK:      _start
+
+CHECK:      f(int, int)
+CHECK-NEXT: /tmp/dbginfo{{[/\\]}}dwarfdump-test.cc:11
+
+CHECK:      DummyClass
+CHECK-NEXT: /tmp/dbginfo{{[/\\]}}dwarfdump-test.cc:4
+
+CHECK:      a
+CHECK-NEXT: /tmp/dbginfo{{[/\\]}}dwarfdump-test2-helper.cc:2
+
+CHECK:      main
+CHECK-NEXT: /tmp/dbginfo{{[/\\]}}dwarfdump-test2-main.cc:4
+
+CHECK:      c()
+CHECK-NEXT: /tmp/dbginfo{{[/\\]}}dwarfdump-test4-part1.cc:2

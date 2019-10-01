@@ -1,9 +1,8 @@
 //===- llvm/BasicBlock.h - Represent a basic block in the VM ----*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -363,7 +362,7 @@ public:
   /// This is actually not used to update the Predecessor list, but is actually
   /// used to update the PHI nodes that reside in the block.  Note that this
   /// should be called while the predecessor still refers to this block.
-  void removePredecessor(BasicBlock *Pred, bool DontDeleteUselessPHIs = false);
+  void removePredecessor(BasicBlock *Pred, bool KeepOneInputPHIs = false);
 
   bool canSplitPredecessors() const;
 
@@ -390,6 +389,14 @@ public:
   /// Returns true if there are any uses of this basic block other than
   /// direct branches, switches, etc. to it.
   bool hasAddressTaken() const { return getSubclassDataFromValue() != 0; }
+
+  /// Update all phi nodes in this basic block to refer to basic block \p New
+  /// instead of basic block \p Old.
+  void replacePhiUsesWith(BasicBlock *Old, BasicBlock *New);
+
+  /// Update all phi nodes in this basic block's successors to refer to basic
+  /// block \p New instead of basic block \p Old.
+  void replaceSuccessorsPhiUsesWith(BasicBlock *Old, BasicBlock *New);
 
   /// Update all phi nodes in this basic block's successors to refer to basic
   /// block \p New instead of to it.

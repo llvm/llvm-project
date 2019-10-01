@@ -1,6 +1,6 @@
-; RUN: llc < %s -verify-machineinstrs -mtriple=x86_64-apple-darwin | FileCheck --check-prefix=CHECK-APPLE %s
-; RUN: llc < %s -verify-machineinstrs -mtriple=x86_64-apple-darwin -O0 | FileCheck --check-prefix=CHECK-O0 %s
-; RUN: llc < %s -verify-machineinstrs -mtriple=i386-apple-darwin | FileCheck --check-prefix=CHECK-i386 %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=x86_64-apple-darwin -disable-block-placement | FileCheck --check-prefix=CHECK-APPLE %s
+; RUN: llc -verify-machineinstrs -O0 < %s -mtriple=x86_64-apple-darwin -disable-block-placement | FileCheck --check-prefix=CHECK-O0 %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=i386-apple-darwin -disable-block-placement | FileCheck --check-prefix=CHECK-i386 %s
 
 declare i8* @malloc(i64)
 declare void @free(i8*)
@@ -434,18 +434,18 @@ define swiftcc float @conditionally_forward_swifterror(%swift_error** swifterror
 ; CHECK-APPLE:  retq
 
 ; CHECK-O0-LABEL: conditionally_forward_swifterror:
-; CHECK-O0:  pushq [[REG1:%[a-z0-9]+]]
+; CHECK-O0: pushq [[REG1:%[a-z0-9]+]]
 ; CHECK-O0:  cmpl $0, %edi
-; CHECK-O0:  movq %r12, [[STK:[0-9]*]](%rsp)
+; CHECK-O0-DAG:  movq %r12, (%rsp)
 ; CHECK-O0:  je
 
-; CHECK-O0:  movq [[STK]](%rsp), [[REG:%[a-z0-9]+]]
+; CHECK-O0:  movq (%rsp), [[REG:%[a-z0-9]+]]
 ; CHECK-O0:  movq [[REG]], %r12
 ; CHECK-O0:  callq _moo
 ; CHECK-O0:  popq [[REG1]]
 ; CHECK-O0:  retq
 
-; CHECK-O0:  movq [[STK]](%rsp), [[REG:%[a-z0-9]+]]
+; CHECK-O0:  movq (%rsp), [[REG:%[a-z0-9]+]]
 ; CHECK-O0:  xorps %xmm0, %xmm0
 ; CHECK-O0:  movq [[REG]], %r12
 ; CHECK-O0:  popq [[REG1]]

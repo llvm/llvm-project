@@ -1,9 +1,8 @@
 //===- AArch64InstrFormats.td - AArch64 Instruction Formats --*- tblgen -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -355,6 +354,9 @@ def am_indexed7s16  : ComplexPattern<i64, 2, "SelectAddrModeIndexed7S16", []>;
 def am_indexed7s32  : ComplexPattern<i64, 2, "SelectAddrModeIndexed7S32", []>;
 def am_indexed7s64  : ComplexPattern<i64, 2, "SelectAddrModeIndexed7S64", []>;
 def am_indexed7s128 : ComplexPattern<i64, 2, "SelectAddrModeIndexed7S128", []>;
+
+def am_indexedu6s128 : ComplexPattern<i64, 2, "SelectAddrModeIndexedU6S128", []>;
+def am_indexeds9s128 : ComplexPattern<i64, 2, "SelectAddrModeIndexedS9S128", []>;
 
 // uimm5sN predicate - True if the immediate is a multiple of N in the range
 // [0 * N, 32 * N].
@@ -1818,6 +1820,14 @@ multiclass Shift<bits<2> shift_type, string asm, SDNode OpNode> {
 
   def : Pat<(i32 (OpNode GPR32:$Rn, (i64 (sext GPR32:$Rm)))),
             (!cast<Instruction>(NAME # "Wr") GPR32:$Rn, GPR32:$Rm)>;
+
+  def : Pat<(i64 (OpNode GPR64:$Rn, (i64 (sext GPR32:$Rm)))),
+            (!cast<Instruction>(NAME # "Xr") GPR64:$Rn,
+                (SUBREG_TO_REG (i32 0), GPR32:$Rm, sub_32))>;
+
+  def : Pat<(i64 (OpNode GPR64:$Rn, (i64 (zext GPR32:$Rm)))),
+            (!cast<Instruction>(NAME # "Xr") GPR64:$Rn,
+                (SUBREG_TO_REG (i32 0), GPR32:$Rm, sub_32))>;
 }
 
 class ShiftAlias<string asm, Instruction inst, RegisterClass regtype>
@@ -2332,7 +2342,7 @@ class AddSubG<bit isSub, string asm_inst, SDPatternOperator OpNode>
 }
 
 class SUBP<bit setsFlags, string asm_instr, SDPatternOperator OpNode>
-      : BaseTwoOperand<0b0000, GPR64, asm_instr, null_frag, GPR64sp, GPR64sp> {
+      : BaseTwoOperand<0b0000, GPR64, asm_instr, OpNode, GPR64sp, GPR64sp> {
   let Inst{31} = 1;
   let Inst{29} = setsFlags;
 }
@@ -4017,7 +4027,7 @@ class BaseMemTag<bits<2> opc1, bits<2> opc2, string asm_insn,
 class MemTagVector<bit Load, string asm_insn, string asm_opnds,
                    dag oops, dag iops>
     : BaseMemTag<{0b1, Load}, 0b00, asm_insn, asm_opnds,
-                 "$Rn = $wback,@earlyclobber $wback", oops, iops> {
+                  "", oops, iops> {
   bits<5> Rt;
 
   let Inst{20-12} = 0b000000000;
@@ -4027,8 +4037,9 @@ class MemTagVector<bit Load, string asm_insn, string asm_opnds,
 }
 
 class MemTagLoad<string asm_insn, string asm_opnds>
-    : BaseMemTag<0b01, 0b00, asm_insn, asm_opnds, "", (outs GPR64:$Rt),
-                 (ins GPR64sp:$Rn, simm9s16:$offset)> {
+    : BaseMemTag<0b01, 0b00, asm_insn, asm_opnds, "$Rt = $wback",
+                 (outs GPR64:$wback),
+                 (ins GPR64:$Rt, GPR64sp:$Rn, simm9s16:$offset)> {
   bits<5> Rt;
   bits<9> offset;
 
@@ -4045,29 +4056,28 @@ class BaseMemTagStore<bits<2> opc1, bits<2> opc2, string asm_insn,
   bits<9> offset;
 
   let Inst{20-12} = offset;
-  let Inst{4-0}   = 0b11111;
-  let Unpredictable{4-0} = 0b11111;
+  let Inst{4-0}   = Rt;
 
   let mayStore = 1;
 }
 
 multiclass MemTagStore<bits<2> opc1, string insn> {
   def Offset :
-    BaseMemTagStore<opc1, 0b10, insn, "\t[$Rn, $offset]", "",
-                    (outs), (ins GPR64sp:$Rn, simm9s16:$offset)>;
+    BaseMemTagStore<opc1, 0b10, insn, "\t$Rt, [$Rn, $offset]", "",
+                    (outs), (ins GPR64sp:$Rt, GPR64sp:$Rn, simm9s16:$offset)>;
   def PreIndex :
-    BaseMemTagStore<opc1, 0b11, insn, "\t[$Rn, $offset]!",
+    BaseMemTagStore<opc1, 0b11, insn, "\t$Rt, [$Rn, $offset]!",
                     "$Rn = $wback,@earlyclobber $wback",
                     (outs GPR64sp:$wback),
-                    (ins GPR64sp:$Rn, simm9s16:$offset)>;
+                    (ins GPR64sp:$Rt, GPR64sp:$Rn, simm9s16:$offset)>;
   def PostIndex :
-    BaseMemTagStore<opc1, 0b01, insn, "\t[$Rn], $offset",
+    BaseMemTagStore<opc1, 0b01, insn, "\t$Rt, [$Rn], $offset",
                     "$Rn = $wback,@earlyclobber $wback",
                     (outs GPR64sp:$wback),
-                    (ins GPR64sp:$Rn, simm9s16:$offset)>;
+                    (ins GPR64sp:$Rt, GPR64sp:$Rn, simm9s16:$offset)>;
 
-  def : InstAlias<insn # "\t[$Rn]",
-                  (!cast<Instruction>(NAME # "Offset") GPR64sp:$Rn, 0)>;
+  def : InstAlias<insn # "\t$Rt, [$Rn]",
+                  (!cast<Instruction>(NAME # "Offset") GPR64sp:$Rt, GPR64sp:$Rn, 0)>;
 }
 
 //---

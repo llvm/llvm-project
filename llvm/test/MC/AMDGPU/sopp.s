@@ -131,6 +131,30 @@ s_waitcnt lgkmcnt_sat(15)
 s_waitcnt lgkmcnt_sat(16)
 // GCN: s_waitcnt ; encoding: [0x7f,0x0f,0x8c,0xbf]
 
+x=1
+s_waitcnt lgkmcnt_sat(x+1)
+// GCN: s_waitcnt lgkmcnt(2)            ; encoding: [0x7f,0x02,0x8c,0xbf]
+
+s_waitcnt lgkmcnt_sat(1+x)
+// GCN: s_waitcnt lgkmcnt(2)            ; encoding: [0x7f,0x02,0x8c,0xbf]
+
+s_waitcnt x+1
+// GCN: s_waitcnt vmcnt(2) expcnt(0) lgkmcnt(0) ; encoding: [0x02,0x00,0x8c,0xbf]
+
+s_waitcnt 1+x
+// GCN: s_waitcnt vmcnt(2) expcnt(0) lgkmcnt(0) ; encoding: [0x02,0x00,0x8c,0xbf]
+
+lgkmcnt_sat=1
+s_waitcnt lgkmcnt_sat
+// GCN: s_waitcnt vmcnt(1) expcnt(0) lgkmcnt(0) ; encoding: [0x01,0x00,0x8c,0xbf]
+
+s_waitcnt lgkmcnt_sat+1
+// GCN: s_waitcnt vmcnt(2) expcnt(0) lgkmcnt(0) ; encoding: [0x02,0x00,0x8c,0xbf]
+
+//===----------------------------------------------------------------------===//
+// misc sopp instructions
+//===----------------------------------------------------------------------===//
+
 s_sethalt 9
 // GCN: s_sethalt 9 ; encoding: [0x09,0x00,0x8d,0xbf]
 
@@ -194,6 +218,9 @@ s_sendmsg sendmsg(MSG_GS_DONE, GS_OP_NOP)
 s_sendmsg 0x4
 // GCN: s_sendmsg 4 ; encoding: [0x04,0x00,0x90,0xbf]
 
+s_sendmsg 9
+// GCN: s_sendmsg 9 ; encoding: [0x09,0x00,0x90,0xbf]
+
 s_sendmsg 11
 // GCN: s_sendmsg 11 ; encoding: [0x0b,0x00,0x90,0xbf]
 
@@ -232,15 +259,23 @@ s_ttracedata
 
 s_set_gpr_idx_off
 // VI: 	s_set_gpr_idx_off ; encoding: [0x00,0x00,0x9c,0xbf]
-// NOSICI: error: instruction not supported on this GPU
+// NOSICI: error:
 
 s_set_gpr_idx_mode 0
-// VI: s_set_gpr_idx_mode 0 ; encoding: [0x00,0x00,0x9d,0xbf]
-// NOSICI: error: instruction not supported on this GPU
+// VI: s_set_gpr_idx_mode gpr_idx() ; encoding: [0x00,0x00,0x9d,0xbf]
+// NOSICI: error:
+
+s_set_gpr_idx_mode gpr_idx()
+// VI: s_set_gpr_idx_mode gpr_idx() ; encoding: [0x00,0x00,0x9d,0xbf]
+// NOSICI: error:
 
 s_set_gpr_idx_mode 15
-// VI: s_set_gpr_idx_mode dst src0 src1 src2 ; encoding: [0x0f,0x00,0x9d,0xbf]
-// NOSICI: error: instruction not supported on this GPU
+// VI: s_set_gpr_idx_mode gpr_idx(SRC0,SRC1,SRC2,DST) ; encoding: [0x0f,0x00,0x9d,0xbf]
+// NOSICI: error:
+
+s_set_gpr_idx_mode gpr_idx(SRC2,SRC1,SRC0,DST)
+// VI: s_set_gpr_idx_mode gpr_idx(SRC0,SRC1,SRC2,DST) ; encoding: [0x0f,0x00,0x9d,0xbf]
+// NOSICI: error:
 
 s_endpgm_saved
 // VI: s_endpgm_saved ; encoding: [0x00,0x00,0x9b,0xbf]

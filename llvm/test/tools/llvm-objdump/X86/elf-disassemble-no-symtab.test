@@ -1,0 +1,24 @@
+## Show that llvm-objdump can handle a missing symbol table when printing
+## references and labels.
+
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objcopy -R .symtab %t
+# RUN: llvm-objdump %t -d | FileCheck %s
+
+# CHECK:       Disassembly of section .text:
+# CHECK-EMPTY:
+# CHECK-NEXT:  0000000000004000 .text:
+# CHECK-NEXT:    4000: e8 42 00 00 00                callq   66 <.text+0x47>
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Address: 0x4000
+    Flags:   [SHF_ALLOC, SHF_EXECINSTR]
+    Content: 'e842000000'

@@ -132,13 +132,13 @@ define double @test7(double %a, double %b) nounwind {
 define float @fadd_const_multiuse_fmf(float %x) {
 ; CHECK-LABEL: fadd_const_multiuse_fmf:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI10_0
-; CHECK-NEXT:    adrp x9, .LCPI10_1
-; CHECK-NEXT:    ldr s1, [x8, :lo12:.LCPI10_0]
-; CHECK-NEXT:    ldr s2, [x9, :lo12:.LCPI10_1]
-; CHECK-NEXT:    fadd s1, s0, s1
-; CHECK-NEXT:    fadd s0, s0, s2
-; CHECK-NEXT:    fadd s0, s1, s0
+; CHECK-DAG:     mov  [[W59:w[0-9]+]], #1114374144
+; CHECK-DAG:     mov  [[W42:w[0-9]+]], #1109917696
+; CHECK-DAG:     fmov [[FP59:s[0-9]+]], [[W59]]
+; CHECK-DAG:     fmov [[FP42:s[0-9]+]], [[W42]]
+; CHECK-NEXT:    fadd [[TMP1:s[0-9]+]], s0, [[FP42]]
+; CHECK-NEXT:    fadd [[TMP2:s[0-9]+]], s0, [[FP59]]
+; CHECK-NEXT:    fadd s0, [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret
   %a1 = fadd float %x, 42.0
   %a2 = fadd nsz reassoc float %a1, 17.0
@@ -153,13 +153,13 @@ define float @fadd_const_multiuse_fmf(float %x) {
 define float @fadd_const_multiuse_attr(float %x) #0 {
 ; CHECK-LABEL: fadd_const_multiuse_attr:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x9, .LCPI11_1
-; CHECK-NEXT:    adrp x8, .LCPI11_0
-; CHECK-NEXT:    ldr s1, [x9, :lo12:.LCPI11_1]
-; CHECK-NEXT:    ldr s2, [x8, :lo12:.LCPI11_0]
-; CHECK-NEXT:    fadd s1, s0, s1
-; CHECK-NEXT:    fadd s1, s2, s1
-; CHECK-NEXT:    fadd s0, s0, s1
+; CHECK-DAG:     mov  [[W59:w[0-9]+]], #1114374144
+; CHECK-DAG:     mov  [[W17:w[0-9]+]], #1109917696
+; CHECK-NEXT:    fmov [[FP59:s[0-9]+]], [[W59]]
+; CHECK-NEXT:    fmov [[FP17:s[0-9]+]], [[W17]]
+; CHECK-NEXT:    fadd [[TMP1:s[0-9]+]], s0, [[FP59]]
+; CHECK-NEXT:    fadd [[TMP2:s[0-9]+]], [[FP17]], [[TMP1]]
+; CHECK-NEXT:    fadd s0, s0, [[TMP2]]
 ; CHECK-NEXT:    ret
   %a1 = fadd float %x, 42.0
   %a2 = fadd float %a1, 17.0

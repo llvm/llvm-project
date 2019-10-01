@@ -1,9 +1,8 @@
 //===- FunctionTest.cpp - Function unit tests -----------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -128,6 +127,31 @@ TEST(FunctionTest, setSection) {
   F->setSection(".text.test2");
   EXPECT_TRUE(F->getSection() == ".text.test2");
   EXPECT_TRUE(F->hasSection());
+}
+
+TEST(FunctionTest, GetPointerAlignment) {
+  LLVMContext Context;
+  Type *VoidType(Type::getVoidTy(Context));
+  FunctionType *FuncType(FunctionType::get(VoidType, false));
+  std::unique_ptr<Function> Func(Function::Create(
+      FuncType, GlobalValue::ExternalLinkage));
+  EXPECT_EQ(0U, Func->getPointerAlignment(DataLayout("")));
+  EXPECT_EQ(1U, Func->getPointerAlignment(DataLayout("Fi8")));
+  EXPECT_EQ(1U, Func->getPointerAlignment(DataLayout("Fn8")));
+  EXPECT_EQ(2U, Func->getPointerAlignment(DataLayout("Fi16")));
+  EXPECT_EQ(2U, Func->getPointerAlignment(DataLayout("Fn16")));
+  EXPECT_EQ(4U, Func->getPointerAlignment(DataLayout("Fi32")));
+  EXPECT_EQ(4U, Func->getPointerAlignment(DataLayout("Fn32")));
+
+  Func->setAlignment(4U);
+
+  EXPECT_EQ(0U, Func->getPointerAlignment(DataLayout("")));
+  EXPECT_EQ(1U, Func->getPointerAlignment(DataLayout("Fi8")));
+  EXPECT_EQ(4U, Func->getPointerAlignment(DataLayout("Fn8")));
+  EXPECT_EQ(2U, Func->getPointerAlignment(DataLayout("Fi16")));
+  EXPECT_EQ(4U, Func->getPointerAlignment(DataLayout("Fn16")));
+  EXPECT_EQ(4U, Func->getPointerAlignment(DataLayout("Fi32")));
+  EXPECT_EQ(4U, Func->getPointerAlignment(DataLayout("Fn32")));
 }
 
 } // end namespace

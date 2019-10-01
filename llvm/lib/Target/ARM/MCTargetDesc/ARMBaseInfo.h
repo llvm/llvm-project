@@ -1,9 +1,8 @@
 //===-- ARMBaseInfo.h - Top level definitions for ARM -------- --*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -203,6 +202,7 @@ namespace ARMII {
     AddrMode_i12    = 16,
     AddrMode5FP16   = 17,  // i8 * 2
     AddrModeT2_ldrex = 18, // i8 * 4, with unscaled offset in MCInst
+    AddrModeT2_i7s4 = 19, // i7 * 4
   };
 
   inline static const char *AddrModeToString(AddrMode addrmode) {
@@ -226,6 +226,7 @@ namespace ARMII {
     case AddrModeT2_i8s4: return "AddrModeT2_i8s4";
     case AddrMode_i12:    return "AddrMode_i12";
     case AddrModeT2_ldrex:return "AddrModeT2_ldrex";
+    case AddrModeT2_i7s4: return "AddrModeT2_i7s4";
     }
   }
 
@@ -386,16 +387,17 @@ namespace ARMII {
     // instruction. Used by the parser to determine whether to require the 'S'
     // suffix on the mnemonic (when not in an IT block) or preclude it (when
     // in an IT block).
-    ThumbArithFlagSetting = 1 << 18,
+    ThumbArithFlagSetting = 1 << 19,
 
     //===------------------------------------------------------------------===//
     // Code domain.
     DomainShift   = 15,
-    DomainMask    = 7 << DomainShift,
+    DomainMask    = 15 << DomainShift,
     DomainGeneral = 0 << DomainShift,
     DomainVFP     = 1 << DomainShift,
     DomainNEON    = 2 << DomainShift,
     DomainNEONA8  = 4 << DomainShift,
+    DomainMVE     = 8 << DomainShift,
 
     //===------------------------------------------------------------------===//
     // Field shifts - such shifts are used to set field while generating

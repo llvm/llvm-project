@@ -2,36 +2,46 @@
 
 ; Darwin has the apple tables unless we specifically tune for gdb
 ; RUN: llc -mtriple=x86_64-apple-darwin12 -filetype=obj < %s \
-; RUN:   | llvm-readobj -sections - | FileCheck --check-prefix=APPLE %s
+; RUN:   | llvm-readobj --sections - | FileCheck --check-prefix=APPLE %s
 ; RUN: llc -mtriple=x86_64-apple-darwin12 -filetype=obj -debugger-tune=gdb < %s \
-; RUN:   | llvm-readobj -sections - | FileCheck --check-prefix=NONE %s
+; RUN:   | llvm-readobj --sections - | FileCheck --check-prefix=PUB %s
 
 ; Linux does has debug_names tables only if we explicitly tune for lldb
 ; RUN: llc -mtriple=x86_64-pc-linux -filetype=obj < %s \
-; RUN:   | llvm-readobj -sections - | FileCheck --check-prefix=NONE %s
+; RUN:   | llvm-readobj --sections - | FileCheck --check-prefix=PUB %s
 ; RUN: llc -mtriple=x86_64-pc-linux -filetype=obj -debugger-tune=lldb < %s \
-; RUN:   | llvm-readobj -sections - | FileCheck --check-prefix=DEBUG_NAMES %s
+; RUN:   | llvm-readobj --sections - | FileCheck --check-prefix=DEBUG_NAMES %s
 
 ; No accelerator tables if type units are enabled, as DWARF v4 type units are
 ; not compatible with accelerator tables.
 ; RUN: llc -mtriple=x86_64-pc-linux -filetype=obj -generate-type-units -debugger-tune=lldb < %s \
-; RUN:   | llvm-readobj -sections - | FileCheck --check-prefix=NONE %s
+; RUN:   | llvm-readobj --sections - | FileCheck --check-prefix=NONE %s
 
 ; Debug types are ignored for non-ELF targets which means it shouldn't affect
 ; accelerator table generation.
 ; RUN: llc -mtriple=x86_64-apple-darwin12 -generate-type-units -filetype=obj < %s \
-; RUN:   | llvm-readobj -sections - | FileCheck --check-prefix=APPLE %s
+; RUN:   | llvm-readobj --sections - | FileCheck --check-prefix=APPLE %s
 
 ; APPLE-NOT: debug_names
+; APPLE-NOT: debug{{.*}}pub
 ; APPLE: apple_names
 ; APPLE-NOT: debug_names
+; APPLE-NOT: debug{{.*}}pub
+
+; PUB-NOT: apple_names
+; PUB-NOT: debug_names
+; PUB: pubnames
+; PUB-NOT: apple_names
+; PUB-NOT: debug_names
 
 ; NONE-NOT: apple_names
 ; NONE-NOT: debug_names
 
 ; DEBUG_NAMES-NOT: apple_names
+; DEBUG_NAMES-NOT: pubnames
 ; DEBUG_NAMES: debug_names
 ; DEBUG_NAMES-NOT: apple_names
+; DEBUG_NAMES-NOT: pubnames
 
 @var = thread_local global i32 0, align 4, !dbg !0
 

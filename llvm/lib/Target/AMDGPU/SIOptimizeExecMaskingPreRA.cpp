@@ -1,9 +1,8 @@
 //===-- SIOptimizeExecMaskingPreRA.cpp ------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -34,10 +33,22 @@ using namespace llvm;
 namespace {
 
 class SIOptimizeExecMaskingPreRA : public MachineFunctionPass {
+private:
+  const SIRegisterInfo *TRI;
+  const SIInstrInfo *TII;
+  MachineRegisterInfo *MRI;
+
+public:
+  MachineBasicBlock::iterator skipIgnoreExecInsts(
+    MachineBasicBlock::iterator I, MachineBasicBlock::iterator E) const;
+
+    MachineBasicBlock::iterator skipIgnoreExecInstsTrivialSucc(
+      MachineBasicBlock *&MBB,
+      MachineBasicBlock::iterator It) const;
+
 public:
   static char ID;
 
-public:
   SIOptimizeExecMaskingPreRA() : MachineFunctionPass(ID) {
     initializeSIOptimizeExecMaskingPreRAPass(*PassRegistry::getPassRegistry());
   }
@@ -71,37 +82,92 @@ FunctionPass *llvm::createSIOptimizeExecMaskingPreRAPass() {
   return new SIOptimizeExecMaskingPreRA();
 }
 
-static bool isEndCF(const MachineInstr& MI, const SIRegisterInfo* TRI) {
+static bool isEndCF(const MachineInstr &MI, const SIRegisterInfo *TRI,
+                    const GCNSubtarget &ST) {
+  if (ST.isWave32()) {
+    return MI.getOpcode() == AMDGPU::S_OR_B32 &&
+           MI.modifiesRegister(AMDGPU::EXEC_LO, TRI);
+  }
+
   return MI.getOpcode() == AMDGPU::S_OR_B64 &&
          MI.modifiesRegister(AMDGPU::EXEC, TRI);
 }
 
-static bool isFullExecCopy(const MachineInstr& MI) {
-  return MI.isFullCopy() && MI.getOperand(1).getReg() == AMDGPU::EXEC;
+static bool isFullExecCopy(const MachineInstr& MI, const GCNSubtarget& ST) {
+  unsigned Exec = ST.isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
+
+  if (MI.isCopy() && MI.getOperand(1).getReg() == Exec) {
+    assert(MI.isFullCopy());
+    return true;
+  }
+
+  return false;
 }
 
 static unsigned getOrNonExecReg(const MachineInstr &MI,
-                                const SIInstrInfo &TII) {
+                                const SIInstrInfo &TII,
+                                const GCNSubtarget& ST) {
+  unsigned Exec = ST.isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
   auto Op = TII.getNamedOperand(MI, AMDGPU::OpName::src1);
-  if (Op->isReg() && Op->getReg() != AMDGPU::EXEC)
+  if (Op->isReg() && Op->getReg() != Exec)
      return Op->getReg();
   Op = TII.getNamedOperand(MI, AMDGPU::OpName::src0);
-  if (Op->isReg() && Op->getReg() != AMDGPU::EXEC)
+  if (Op->isReg() && Op->getReg() != Exec)
      return Op->getReg();
   return AMDGPU::NoRegister;
 }
 
 static MachineInstr* getOrExecSource(const MachineInstr &MI,
                                      const SIInstrInfo &TII,
-                                     const MachineRegisterInfo &MRI) {
-  auto SavedExec = getOrNonExecReg(MI, TII);
+                                     const MachineRegisterInfo &MRI,
+                                     const GCNSubtarget& ST) {
+  auto SavedExec = getOrNonExecReg(MI, TII, ST);
   if (SavedExec == AMDGPU::NoRegister)
     return nullptr;
   auto SaveExecInst = MRI.getUniqueVRegDef(SavedExec);
-  if (!SaveExecInst || !isFullExecCopy(*SaveExecInst))
+  if (!SaveExecInst || !isFullExecCopy(*SaveExecInst, ST))
     return nullptr;
   return SaveExecInst;
 }
+
+/// Skip over instructions that don't care about the exec mask.
+MachineBasicBlock::iterator SIOptimizeExecMaskingPreRA::skipIgnoreExecInsts(
+  MachineBasicBlock::iterator I, MachineBasicBlock::iterator E) const {
+  for ( ; I != E; ++I) {
+    if (TII->mayReadEXEC(*MRI, *I))
+      break;
+  }
+
+  return I;
+}
+
+// Skip to the next instruction, ignoring debug instructions, and trivial block
+// boundaries (blocks that have one (typically fallthrough) successor, and the
+// successor has one predecessor.
+MachineBasicBlock::iterator
+SIOptimizeExecMaskingPreRA::skipIgnoreExecInstsTrivialSucc(
+  MachineBasicBlock *&MBB,
+  MachineBasicBlock::iterator It) const {
+
+  do {
+    It = skipIgnoreExecInsts(It, MBB->end());
+    if (It != MBB->end() || MBB->succ_size() != 1)
+      break;
+
+    // If there is one trivial successor, advance to the next block.
+    MachineBasicBlock *Succ = *MBB->succ_begin();
+
+    // TODO: Is this really necessary?
+    if (!MBB->isLayoutSuccessor(Succ))
+      break;
+
+    It = Succ->begin();
+    MBB = Succ;
+  } while (true);
+
+  return It;
+}
+
 
 // Optimize sequence
 //    %sel = V_CNDMASK_B32_e64 0, 1, %cc
@@ -125,10 +191,11 @@ static unsigned optimizeVcndVcmpPair(MachineBasicBlock &MBB,
                                      LiveIntervals *LIS) {
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
   const SIInstrInfo *TII = ST.getInstrInfo();
-  const unsigned AndOpc = AMDGPU::S_AND_B64;
-  const unsigned Andn2Opc = AMDGPU::S_ANDN2_B64;
-  const unsigned CondReg = AMDGPU::VCC;
-  const unsigned ExecReg = AMDGPU::EXEC;
+  bool Wave32 = ST.isWave32();
+  const unsigned AndOpc = Wave32 ? AMDGPU::S_AND_B32 : AMDGPU::S_AND_B64;
+  const unsigned Andn2Opc = Wave32 ? AMDGPU::S_ANDN2_B32 : AMDGPU::S_ANDN2_B64;
+  const unsigned CondReg = Wave32 ? AMDGPU::VCC_LO : AMDGPU::VCC;
+  const unsigned ExecReg = Wave32 ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
 
   auto I = llvm::find_if(MBB.terminators(), [](const MachineInstr &MI) {
                            unsigned Opc = MI.getOpcode();
@@ -172,6 +239,10 @@ static unsigned optimizeVcndVcmpPair(MachineBasicBlock &MBB,
   if (!Sel || Sel->getOpcode() != AMDGPU::V_CNDMASK_B32_e64)
     return AMDGPU::NoRegister;
 
+  if (TII->hasModifiersSet(*Sel, AMDGPU::OpName::src0_modifiers) ||
+      TII->hasModifiersSet(*Sel, AMDGPU::OpName::src1_modifiers))
+    return AMDGPU::NoRegister;
+
   Op1 = TII->getNamedOperand(*Sel, AMDGPU::OpName::src0);
   Op2 = TII->getNamedOperand(*Sel, AMDGPU::OpName::src1);
   MachineOperand *CC = TII->getNamedOperand(*Sel, AMDGPU::OpName::src2);
@@ -187,7 +258,7 @@ static unsigned optimizeVcndVcmpPair(MachineBasicBlock &MBB,
   MachineInstr *Andn2 = BuildMI(MBB, *And, And->getDebugLoc(),
                                 TII->get(Andn2Opc), And->getOperand(0).getReg())
                             .addReg(ExecReg)
-                            .addReg(CCReg, CC->getSubReg());
+                            .addReg(CCReg, 0, CC->getSubReg());
   And->eraseFromParent();
   LIS->InsertMachineInstrInMaps(*Andn2);
 
@@ -224,11 +295,14 @@ bool SIOptimizeExecMaskingPreRA::runOnMachineFunction(MachineFunction &MF) {
     return false;
 
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-  const SIRegisterInfo *TRI = ST.getRegisterInfo();
-  const SIInstrInfo *TII = ST.getInstrInfo();
+  TRI = ST.getRegisterInfo();
+  TII = ST.getInstrInfo();
+  MRI = &MF.getRegInfo();
+
   MachineRegisterInfo &MRI = MF.getRegInfo();
   LiveIntervals *LIS = &getAnalysis<LiveIntervals>();
   DenseSet<unsigned> RecalcRegs({AMDGPU::EXEC_LO, AMDGPU::EXEC_HI});
+  unsigned Exec = ST.isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
   bool Changed = false;
 
   for (MachineBasicBlock &MBB : MF) {
@@ -248,9 +322,10 @@ bool SIOptimizeExecMaskingPreRA::runOnMachineFunction(MachineFunction &MF) {
 
       // Skip this if the endpgm has any implicit uses, otherwise we would need
       // to be careful to update / remove them.
+      // S_ENDPGM always has a single imm operand that is not used other than to
+      // end up in the encoding
       MachineInstr &Term = MBB.back();
-      if (Term.getOpcode() != AMDGPU::S_ENDPGM ||
-          Term.getNumOperands() != 0)
+      if (Term.getOpcode() != AMDGPU::S_ENDPGM || Term.getNumOperands() != 1)
         continue;
 
       SmallVector<MachineBasicBlock*, 4> Blocks({&MBB});
@@ -304,32 +379,21 @@ bool SIOptimizeExecMaskingPreRA::runOnMachineFunction(MachineFunction &MF) {
     }
 
     // Try to collapse adjacent endifs.
-    auto Lead = MBB.begin(), E = MBB.end();
-    if (MBB.succ_size() != 1 || Lead == E || !isEndCF(*Lead, TRI))
+    auto E = MBB.end();
+    auto Lead = skipDebugInstructionsForward(MBB.begin(), E);
+    if (MBB.succ_size() != 1 || Lead == E || !isEndCF(*Lead, TRI, ST))
       continue;
 
-    const MachineBasicBlock* Succ = *MBB.succ_begin();
-    if (!MBB.isLayoutSuccessor(Succ))
-      continue;
-
-    auto I = std::next(Lead);
-
-    for ( ; I != E; ++I)
-      if (!TII->isSALU(*I) || I->readsRegister(AMDGPU::EXEC, TRI))
-        break;
-
-    if (I != E)
-      continue;
-
-    const auto NextLead = Succ->begin();
-    if (NextLead == Succ->end() || !isEndCF(*NextLead, TRI) ||
-        !getOrExecSource(*NextLead, *TII, MRI))
+    MachineBasicBlock *TmpMBB = &MBB;
+    auto NextLead = skipIgnoreExecInstsTrivialSucc(TmpMBB, std::next(Lead));
+    if (NextLead == TmpMBB->end() || !isEndCF(*NextLead, TRI, ST) ||
+        !getOrExecSource(*NextLead, *TII, MRI, ST))
       continue;
 
     LLVM_DEBUG(dbgs() << "Redundant EXEC = S_OR_B64 found: " << *Lead << '\n');
 
-    auto SaveExec = getOrExecSource(*Lead, *TII, MRI);
-    unsigned SaveExecReg = getOrNonExecReg(*Lead, *TII);
+    auto SaveExec = getOrExecSource(*Lead, *TII, MRI, ST);
+    unsigned SaveExecReg = getOrNonExecReg(*Lead, *TII, ST);
     for (auto &Op : Lead->operands()) {
       if (Op.isReg())
         RecalcRegs.insert(Op.getReg());
@@ -363,7 +427,7 @@ bool SIOptimizeExecMaskingPreRA::runOnMachineFunction(MachineFunction &MF) {
     if (SafeToReplace) {
       LIS->RemoveMachineInstrFromMaps(*SaveExec);
       SaveExec->eraseFromParent();
-      MRI.replaceRegWith(SavedExec, AMDGPU::EXEC);
+      MRI.replaceRegWith(SavedExec, Exec);
       LIS->removeInterval(SavedExec);
     }
   }
@@ -375,8 +439,7 @@ bool SIOptimizeExecMaskingPreRA::runOnMachineFunction(MachineFunction &MF) {
         if (!MRI.reg_empty(Reg))
           LIS->createAndComputeVirtRegInterval(Reg);
       } else {
-        for (MCRegUnitIterator U(Reg, TRI); U.isValid(); ++U)
-          LIS->removeRegUnit(*U);
+        LIS->removeAllRegUnitsForPhysReg(Reg);
       }
     }
   }

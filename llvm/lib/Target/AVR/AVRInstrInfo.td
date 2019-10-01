@@ -1,9 +1,8 @@
 //===-- AVRInstrInfo.td - AVR Instruction defs -------------*- tablegen -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -90,6 +89,22 @@ def imm0_63_neg : PatLeaf<(imm),
 
 def uimm6 : PatLeaf<(imm), [{ return isUInt<6>(N->getZExtValue()); }]>;
 
+// imm_com8_XFORM - Return the complement of a imm_com8 value
+def imm_com8_XFORM : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(~((uint8_t)N->getZExtValue()), SDLoc(N),
+                                   MVT::i8);
+}]>;
+
+// imm_com8 - Match an immediate that is a complement
+// of a 8-bit immediate.
+// Note: this pattern doesn't require an encoder method and such, as it's
+// only used on aliases (Pat<> and InstAlias<>). The actual encoding
+// is handled by the destination instructions, which use imm_com8.
+def imm_com8_asmoperand : AsmOperandClass { let Name = "ImmCom8"; }
+def imm_com8 : Operand<i8> {
+  let ParserMatchClass = imm_com8_asmoperand;
+}
+
 def ioaddr_XFORM : SDNodeXForm<imm,
 [{
   return CurDAG->getTargetConstant(uint8_t(N->getZExtValue()) - 0x20, SDLoc(N), MVT::i8);
@@ -155,13 +170,6 @@ def memri : Operand<iPTR>
 def memspi : Operand<iPTR>
 {
   let MIOperandInfo = (ops GPRSP, i16imm);
-}
-
-def imm_com8 : Operand<i8>
-{
-  let EncoderMethod = "encodeComplement";
-
-  let MIOperandInfo = (ops i8imm);
 }
 
 def relbrtarget_7 : Operand<OtherVT>
@@ -1151,11 +1159,11 @@ isReMaterializable = 1 in
   // LDW Rd+1:Rd, P
   //
   // Expands to:
-  // ld Rd,   P+
-  // ld Rd+1, P
+  // ld  Rd,   P
+  // ldd Rd+1, P+1
   let Constraints = "@earlyclobber $reg" in
   def LDWRdPtr : Pseudo<(outs DREGS:$reg),
-                        (ins PTRREGS:$ptrreg),
+                        (ins PTRDISPREGS:$ptrreg),
                         "ldw\t$reg, $ptrreg",
                         [(set i16:$reg, (load i16:$ptrreg))]>,
                  Requires<[HasSRAM]>;
@@ -1222,7 +1230,7 @@ isReMaterializable = 1 in
   // ldd Rd,   P+q
   // ldd Rd+1, P+q+1
   let Constraints = "@earlyclobber $dst" in
-  def LDDWRdPtrQ : Pseudo<(outs DREGS_WITHOUT_Z_WORKAROUND:$dst),
+  def LDDWRdPtrQ : Pseudo<(outs DREGS_WITHOUT_YZ_WORKAROUND:$dst),
                           (ins memri:$memri),
                           "lddw\t$dst, $memri",
                           [(set i16:$dst, (load addr:$memri))]>,
@@ -1729,20 +1737,7 @@ def BLD : FRdB<0b00,
                "bld\t$rd, $b",
                []>;
 
-// Set/clear bit in register operations.
-let Constraints = "$src = $rd",
-Defs = [SREG] in
-{
-  // CBR Rd, K
-  // Alias for `ANDI Rd, COM(K)` where COM(K) is the complement of K.
-  // FIXME: This uses the 'complement' encoder. We need it to also use the
-  // imm_ldi8 encoder. This will cause no fixups to be created on this instruction.
-  def CBRRdK : FRdK<0b0111,
-                    (outs LD8:$rd),
-                    (ins LD8:$src, imm_com8:$k),
-                    "cbr\t$rd, $k",
-                    []>;
-}
+def CBR : InstAlias<"cbr\t$rd, $k", (ANDIRdK LD8:$rd, imm_com8:$k), 0>;
 
 // CLR Rd
 // Alias for EOR Rd, Rd

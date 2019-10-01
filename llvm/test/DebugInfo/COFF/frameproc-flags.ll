@@ -216,7 +216,7 @@ __try.cont:                                       ; preds = %entry, %__except.re
 define internal i32 @"?filt$0@0@seh@@"() #8 !dbg !74 {
 entry:
   %0 = tail call i8* @llvm.frameaddress(i32 1)
-  %1 = tail call i8* @llvm.x86.seh.recoverfp(i8* bitcast (void ()* @seh to i8*), i8* %0)
+  %1 = tail call i8* @llvm.eh.recoverfp(i8* bitcast (void ()* @seh to i8*), i8* %0)
   %2 = tail call i8* @llvm.localrecover(i8* bitcast (void ()* @seh to i8*), i8* %1, i32 0)
   %__exception_code = bitcast i8* %2 to i32*
   %3 = getelementptr inbounds i8, i8* %0, i32 -20, !dbg !76
@@ -233,7 +233,7 @@ entry:
 declare i8* @llvm.frameaddress(i32) #9
 
 ; Function Attrs: nounwind readnone
-declare i8* @llvm.x86.seh.recoverfp(i8*, i8*) #9
+declare i8* @llvm.eh.recoverfp(i8*, i8*) #9
 
 ; Function Attrs: nounwind readnone
 declare i8* @llvm.localrecover(i8*, i8*, i32) #9
@@ -298,7 +298,7 @@ attributes #12 = { noinline }
 !8 = !{!0}
 !9 = !DIDerivedType(tag: DW_TAG_typedef, name: "jmp_buf", file: !3, line: 7, baseType: !10)
 !10 = !DICompositeType(tag: DW_TAG_array_type, baseType: !11, size: 2048, elements: !18)
-!11 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "_jmp_buf_str", file: !3, line: 4, size: 128, align: 128, flags: DIFlagTypePassByValue | DIFlagTrivial, elements: !12, identifier: ".?AU_jmp_buf_str@@")
+!11 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "_jmp_buf_str", file: !3, line: 4, size: 128, align: 128, flags: DIFlagTypePassByValue, elements: !12, identifier: ".?AU_jmp_buf_str@@")
 !12 = !{!13}
 !13 = !DIDerivedType(tag: DW_TAG_member, name: "Part", scope: !11, file: !3, line: 5, baseType: !14, size: 128)
 !14 = !DICompositeType(tag: DW_TAG_array_type, baseType: !15, size: 128, elements: !16)

@@ -4,12 +4,12 @@
 ; CHECK: bb.3.for.body.for.body_crit_edge:
 ; CHECK: [[REG:%[0-9]+]]:i32 = nsw ADD_I32 {{.*}} fib.c:7:7
 ; CHECK: DBG_VALUE [[REG]]:i32, $noreg, !"a", {{.*}} fib.c:5:13
-; CHECK: After WebAssembly Store Results:
+; CHECK: After WebAssembly Memory Intrinsic Results:
 
 ; ModuleID = 'fib.bc'
 source_filename = "fib.c"
 ; void swap(int* a, int* b);
-; 
+;
 ; __attribute__ ((visibility ("default")))
 ; int fib(int n) {
 ;   int i, t, a = 0, b = 1;

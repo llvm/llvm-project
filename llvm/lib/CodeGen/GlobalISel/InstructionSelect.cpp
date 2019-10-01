@@ -1,9 +1,8 @@
 //===- llvm/CodeGen/GlobalISel/InstructionSelect.cpp - InstructionSelect ---==//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 /// \file
@@ -50,9 +49,7 @@ INITIALIZE_PASS_END(InstructionSelect, DEBUG_TYPE,
                     "Select target instructions out of generic instructions",
                     false, false)
 
-InstructionSelect::InstructionSelect() : MachineFunctionPass(ID) {
-  initializeInstructionSelectPass(*PassRegistry::getPassRegistry());
-}
+InstructionSelect::InstructionSelect() : MachineFunctionPass(ID) { }
 
 void InstructionSelect::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<TargetPassConfig>();
@@ -90,10 +87,10 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
                          "instruction is not legal", *MI);
       return false;
     }
-#endif
   // FIXME: We could introduce new blocks and will need to fix the outer loop.
   // Until then, keep track of the number of blocks to assert that we don't.
   const size_t NumBlocks = MF.size();
+#endif
 
   for (MachineBasicBlock *MBB : post_order(&MF)) {
     if (MBB->empty())
@@ -145,8 +142,6 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
     }
   }
 
-  const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
-
   for (MachineBasicBlock &MBB : MF) {
     if (MBB.empty())
       continue;
@@ -178,6 +173,8 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
     }
   }
 
+#ifndef NDEBUG
+  const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
   // Now that selection is complete, there are no more generic vregs.  Verify
   // that the size of the now-constrained vreg is unchanged and that it has a
   // register class.
@@ -216,7 +213,7 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
     reportGISelFailure(MF, TPC, MORE, R);
     return false;
   }
-
+#endif
   auto &TLI = *MF.getSubtarget().getTargetLowering();
   TLI.finalizeLowering(MF);
 

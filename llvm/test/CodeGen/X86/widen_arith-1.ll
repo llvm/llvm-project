@@ -8,9 +8,13 @@ define void @update(<3 x i8>* %dst, <3 x i8>* %src, i32 %n) nounwind {
 ; CHECK-NEXT:    movl $0, (%esp)
 ; CHECK-NEXT:    pcmpeqd %xmm0, %xmm0
 ; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = <0,4,8,12,u,u,u,u,u,u,u,u,u,u,u,u>
-; CHECK-NEXT:    jmp .LBB0_1
 ; CHECK-NEXT:    .p2align 4, 0x90
-; CHECK-NEXT:  .LBB0_2: # %forbody
+; CHECK-NEXT:  .LBB0_1: # %forcond
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    movl (%esp), %eax
+; CHECK-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    jge .LBB0_3
+; CHECK-NEXT:  # %bb.2: # %forbody
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    movl (%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -21,12 +25,8 @@ define void @update(<3 x i8>* %dst, <3 x i8>* %src, i32 %n) nounwind {
 ; CHECK-NEXT:    pshufb %xmm1, %xmm2
 ; CHECK-NEXT:    pextrw $0, %xmm2, (%ecx,%eax,4)
 ; CHECK-NEXT:    incl (%esp)
-; CHECK-NEXT:  .LBB0_1: # %forcond
-; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    movl (%esp), %eax
-; CHECK-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    jl .LBB0_2
-; CHECK-NEXT:  # %bb.3: # %afterfor
+; CHECK-NEXT:    jmp .LBB0_1
+; CHECK-NEXT:  .LBB0_3: # %afterfor
 ; CHECK-NEXT:    addl $12, %esp
 ; CHECK-NEXT:    retl
 entry:

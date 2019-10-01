@@ -1,9 +1,8 @@
 //===- ScalarEvolutionAliasAnalysis.cpp - SCEV-based Alias Analysis -------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -23,7 +22,7 @@
 using namespace llvm;
 
 AliasResult SCEVAAResult::alias(const MemoryLocation &LocA,
-                                const MemoryLocation &LocB) {
+                                const MemoryLocation &LocB, AAQueryInfo &AAQI) {
   // If either of the memory references is empty, it doesn't matter what the
   // pointer values are. This allows the code below to ignore this special
   // case.
@@ -86,11 +85,12 @@ AliasResult SCEVAAResult::alias(const MemoryLocation &LocA,
                              AO ? AAMDNodes() : LocA.AATags),
               MemoryLocation(BO ? BO : LocB.Ptr,
                              BO ? LocationSize::unknown() : LocB.Size,
-                             BO ? AAMDNodes() : LocB.AATags)) == NoAlias)
+                             BO ? AAMDNodes() : LocB.AATags),
+              AAQI) == NoAlias)
       return NoAlias;
 
   // Forward the query to the next analysis.
-  return AAResultBase::alias(LocA, LocB);
+  return AAResultBase::alias(LocA, LocB, AAQI);
 }
 
 /// Given an expression, try to find a base value.

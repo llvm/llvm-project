@@ -1,4 +1,4 @@
-RUN: llvm-readobj -mips-reginfo %p/Inputs/reginfo.obj.elf-mipsel | FileCheck %s
+RUN: llvm-readobj --mips-reginfo %p/Inputs/reginfo.obj.elf-mipsel | FileCheck %s
 
 CHECK:      MIPS RegInfo {
 CHECK-NEXT:   GP: 0x7FEF

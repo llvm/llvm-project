@@ -1,9 +1,8 @@
 //===- RegAllocBase.cpp - Register Allocator Base Class -------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -20,6 +19,7 @@
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveRegMatrix.h"
 #include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/VirtRegMap.h"
@@ -119,16 +119,19 @@ void RegAllocBase::allocatePhysRegs() {
       for (MachineRegisterInfo::reg_instr_iterator
            I = MRI->reg_instr_begin(VirtReg->reg), E = MRI->reg_instr_end();
            I != E; ) {
-        MachineInstr *TmpMI = &*(I++);
-        if (TmpMI->isInlineAsm()) {
-          MI = TmpMI;
+        MI = &*(I++);
+        if (MI->isInlineAsm())
           break;
-        }
       }
-      if (MI)
+      if (MI && MI->isInlineAsm()) {
         MI->emitError("inline assembly requires more registers than available");
-      else
+      } else if (MI) {
+        LLVMContext &Context =
+            MI->getParent()->getParent()->getMMI().getModule()->getContext();
+        Context.emitError("ran out of registers during register allocation");
+      } else {
         report_fatal_error("ran out of registers during register allocation");
+      }
       // Keep going after reporting the error.
       VRM->assignVirt2Phys(VirtReg->reg,
                  RegClassInfo.getOrder(MRI->getRegClass(VirtReg->reg)).front());

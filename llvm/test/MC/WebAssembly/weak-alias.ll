@@ -62,7 +62,7 @@ entry:
 ; CHECK-NEXT:         Field:           __indirect_function_table
 ; CHECK-NEXT:         Kind:            TABLE
 ; CHECK-NEXT:         Table:
-; CHECK-NEXT:           ElemType:        ANYFUNC
+; CHECK-NEXT:           ElemType:        FUNCREF
 ; CHECK-NEXT:           Limits:
 ; CHECK-NEXT:             Initial:         0x00000001
 ; CHECK-NEXT:   - Type:            FUNCTION
@@ -73,24 +73,26 @@ entry:
 ; CHECK-NEXT:           Opcode:          I32_CONST
 ; CHECK-NEXT:           Value:           1
 ; CHECK-NEXT:         Functions:       [ 0 ]
+; CHECK-NEXT:   - Type:            DATACOUNT
+; CHECK-NEXT:     Count:           3
 ; CHECK-NEXT:   - Type:            CODE
 ; CHECK-NEXT:     Relocations:
-; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_FUNCTION_INDEX_LEB
+; CHECK-NEXT:       - Type:            R_WASM_FUNCTION_INDEX_LEB
 ; CHECK-NEXT:         Index:           0
 ; CHECK-NEXT:         Offset:          0x00000009
-; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_FUNCTION_INDEX_LEB
+; CHECK-NEXT:       - Type:            R_WASM_FUNCTION_INDEX_LEB
 ; CHECK-NEXT:         Index:           3
 ; CHECK-NEXT:         Offset:          0x00000012
-; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_MEMORY_ADDR_LEB
+; CHECK-NEXT:       - Type:            R_WASM_MEMORY_ADDR_LEB
 ; CHECK-NEXT:         Index:           5
 ; CHECK-NEXT:         Offset:          0x0000001E
-; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_TYPE_INDEX_LEB
+; CHECK-NEXT:       - Type:            R_WASM_TYPE_INDEX_LEB
 ; CHECK-NEXT:         Index:           0
 ; CHECK-NEXT:         Offset:          0x00000024
-; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_MEMORY_ADDR_LEB
+; CHECK-NEXT:       - Type:            R_WASM_MEMORY_ADDR_LEB
 ; CHECK-NEXT:         Index:           7
 ; CHECK-NEXT:         Offset:          0x00000031
-; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_TYPE_INDEX_LEB
+; CHECK-NEXT:       - Type:            R_WASM_TYPE_INDEX_LEB
 ; CHECK-NEXT:         Index:           0
 ; CHECK-NEXT:         Offset:          0x00000037
 ; CHECK-NEXT:     Functions:
@@ -111,34 +113,34 @@ entry:
 ; CHECK-NEXT:         Body:            410028029080808000118080808000000B
 ; CHECK-NEXT:   - Type:            DATA
 ; CHECK-NEXT:     Relocations:
-; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_TABLE_INDEX_I32
+; CHECK-NEXT:       - Type:            R_WASM_TABLE_INDEX_I32
 ; CHECK-NEXT:         Index:           0
 ; CHECK-NEXT:         Offset:          0x0000000F
-; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_TABLE_INDEX_I32
+; CHECK-NEXT:       - Type:            R_WASM_TABLE_INDEX_I32
 ; CHECK-NEXT:         Index:           3
 ; CHECK-NEXT:         Offset:          0x00000018
 ; CHECK-NEXT:     Segments:
 ; CHECK-NEXT:       - SectionOffset:   6
-; CHECK-NEXT:         MemoryIndex:     0
+; CHECK-NEXT:         InitFlags:       0
 ; CHECK-NEXT:         Offset:
 ; CHECK-NEXT:           Opcode:          I32_CONST
 ; CHECK-NEXT:           Value:           0
 ; CHECK-NEXT:         Content:         '07000000'
 ; CHECK-NEXT:       - SectionOffset:   15
-; CHECK-NEXT:         MemoryIndex:     0
+; CHECK-NEXT:         InitFlags:       0
 ; CHECK-NEXT:         Offset:
 ; CHECK-NEXT:           Opcode:          I32_CONST
 ; CHECK-NEXT:           Value:           8
 ; CHECK-NEXT:         Content:         '01000000'
 ; CHECK-NEXT:       - SectionOffset:   24
-; CHECK-NEXT:         MemoryIndex:     0
+; CHECK-NEXT:         InitFlags:       0
 ; CHECK-NEXT:         Offset:
 ; CHECK-NEXT:           Opcode:          I32_CONST
 ; CHECK-NEXT:           Value:           16
 ; CHECK-NEXT:         Content:         '01000000'
 ; CHECK-NEXT:   - Type:            CUSTOM
 ; CHECK-NEXT:     Name:            linking
-; CHECK-NEXT:     Version:         1
+; CHECK-NEXT:     Version:         2
 ; CHECK-NEXT:     SymbolTable:
 ; CHECK-NEXT:       - Index:           0
 ; CHECK-NEXT:         Kind:            FUNCTION
@@ -197,26 +199,26 @@ entry:
 ; CHECK-NEXT:     SegmentInfo:
 ; CHECK-NEXT:       - Index:           0
 ; CHECK-NEXT:         Name:            .data.bar
-; CHECK-NEXT:         Alignment:       8
+; CHECK-NEXT:         Alignment:       3
 ; CHECK-NEXT:         Flags:           [ ]
 ; CHECK-NEXT:       - Index:           1
 ; CHECK-NEXT:         Name:            .data.direct_address
-; CHECK-NEXT:         Alignment:       8
+; CHECK-NEXT:         Alignment:       3
 ; CHECK-NEXT:         Flags:           [ ]
 ; CHECK-NEXT:       - Index:           2
 ; CHECK-NEXT:         Name:            .data.alias_address
-; CHECK-NEXT:         Alignment:       8
+; CHECK-NEXT:         Alignment:       3
 ; CHECK-NEXT:         Flags:           [ ]
 ; CHECK-NEXT: ...
 
 ; CHECK-SYMS: SYMBOL TABLE:
-; CHECK-SYMS-NEXT: 00000000 g     F CODE	.hidden foo
-; CHECK-SYMS-NEXT: 00000001 g     F CODE	.hidden call_direct
-; CHECK-SYMS-NEXT: 00000002 g     F CODE	.hidden call_alias
-; CHECK-SYMS-NEXT: 00000000 gw    F CODE	.hidden foo_alias
-; CHECK-SYMS-NEXT: 00000003 g     F CODE	.hidden call_direct_ptr
+; CHECK-SYMS-NEXT: 00000001 g     F CODE	.hidden foo
+; CHECK-SYMS-NEXT: 00000006 g     F CODE	.hidden call_direct
+; CHECK-SYMS-NEXT: 0000000f g     F CODE	.hidden call_alias
+; CHECK-SYMS-NEXT: 00000001 gw    F CODE	.hidden foo_alias
+; CHECK-SYMS-NEXT: 00000018 g     F CODE	.hidden call_direct_ptr
 ; CHECK-SYMS-NEXT: 00000008 g     O DATA	direct_address
-; CHECK-SYMS-NEXT: 00000004 g     F CODE	.hidden call_alias_ptr
+; CHECK-SYMS-NEXT: 0000002b g     F CODE	.hidden call_alias_ptr
 ; CHECK-SYMS-NEXT: 00000010 g     O DATA	alias_address
 ; CHECK-SYMS-NEXT: 00000000 g     O DATA	bar
 ; CHECK-SYMS-NEXT: 00000000 gw    O DATA	.hidden bar_alias

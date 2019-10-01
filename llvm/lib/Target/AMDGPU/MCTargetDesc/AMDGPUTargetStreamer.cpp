@@ -1,9 +1,8 @@
 //===-- AMDGPUTargetStreamer.cpp - Mips Target Streamer Methods -----------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -19,7 +18,6 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/AMDGPUMetadataVerifier.h"
 #include "llvm/BinaryFormat/ELF.h"
-#include "llvm/BinaryFormat/MsgPackTypes.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Metadata.h"
@@ -52,51 +50,52 @@ bool AMDGPUTargetStreamer::EmitHSAMetadataV2(StringRef HSAMetadataString) {
 }
 
 bool AMDGPUTargetStreamer::EmitHSAMetadataV3(StringRef HSAMetadataString) {
-  std::shared_ptr<msgpack::Node> HSAMetadataRoot;
-  yaml::Input YIn(HSAMetadataString);
-  YIn >> HSAMetadataRoot;
-  if (YIn.error())
+  msgpack::Document HSAMetadataDoc;
+  if (!HSAMetadataDoc.fromYAML(HSAMetadataString))
     return false;
-  return EmitHSAMetadata(HSAMetadataRoot, false);
+  return EmitHSAMetadata(HSAMetadataDoc, false);
 }
 
 StringRef AMDGPUTargetStreamer::getArchNameFromElfMach(unsigned ElfMach) {
   AMDGPU::GPUKind AK;
 
   switch (ElfMach) {
-  case ELF::EF_AMDGPU_MACH_R600_R600:     AK = GK_R600;    break;
-  case ELF::EF_AMDGPU_MACH_R600_R630:     AK = GK_R630;    break;
-  case ELF::EF_AMDGPU_MACH_R600_RS880:    AK = GK_RS880;   break;
-  case ELF::EF_AMDGPU_MACH_R600_RV670:    AK = GK_RV670;   break;
-  case ELF::EF_AMDGPU_MACH_R600_RV710:    AK = GK_RV710;   break;
-  case ELF::EF_AMDGPU_MACH_R600_RV730:    AK = GK_RV730;   break;
-  case ELF::EF_AMDGPU_MACH_R600_RV770:    AK = GK_RV770;   break;
-  case ELF::EF_AMDGPU_MACH_R600_CEDAR:    AK = GK_CEDAR;   break;
-  case ELF::EF_AMDGPU_MACH_R600_CYPRESS:  AK = GK_CYPRESS; break;
-  case ELF::EF_AMDGPU_MACH_R600_JUNIPER:  AK = GK_JUNIPER; break;
-  case ELF::EF_AMDGPU_MACH_R600_REDWOOD:  AK = GK_REDWOOD; break;
-  case ELF::EF_AMDGPU_MACH_R600_SUMO:     AK = GK_SUMO;    break;
-  case ELF::EF_AMDGPU_MACH_R600_BARTS:    AK = GK_BARTS;   break;
-  case ELF::EF_AMDGPU_MACH_R600_CAICOS:   AK = GK_CAICOS;  break;
-  case ELF::EF_AMDGPU_MACH_R600_CAYMAN:   AK = GK_CAYMAN;  break;
-  case ELF::EF_AMDGPU_MACH_R600_TURKS:    AK = GK_TURKS;   break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX600: AK = GK_GFX600;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX601: AK = GK_GFX601;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX700: AK = GK_GFX700;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX701: AK = GK_GFX701;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX702: AK = GK_GFX702;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX703: AK = GK_GFX703;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX704: AK = GK_GFX704;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX801: AK = GK_GFX801;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX802: AK = GK_GFX802;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX803: AK = GK_GFX803;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX810: AK = GK_GFX810;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX900: AK = GK_GFX900;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX902: AK = GK_GFX902;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX904: AK = GK_GFX904;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX906: AK = GK_GFX906;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX909: AK = GK_GFX909;  break;
-  case ELF::EF_AMDGPU_MACH_NONE:          AK = GK_NONE;    break;
+  case ELF::EF_AMDGPU_MACH_R600_R600:      AK = GK_R600;    break;
+  case ELF::EF_AMDGPU_MACH_R600_R630:      AK = GK_R630;    break;
+  case ELF::EF_AMDGPU_MACH_R600_RS880:     AK = GK_RS880;   break;
+  case ELF::EF_AMDGPU_MACH_R600_RV670:     AK = GK_RV670;   break;
+  case ELF::EF_AMDGPU_MACH_R600_RV710:     AK = GK_RV710;   break;
+  case ELF::EF_AMDGPU_MACH_R600_RV730:     AK = GK_RV730;   break;
+  case ELF::EF_AMDGPU_MACH_R600_RV770:     AK = GK_RV770;   break;
+  case ELF::EF_AMDGPU_MACH_R600_CEDAR:     AK = GK_CEDAR;   break;
+  case ELF::EF_AMDGPU_MACH_R600_CYPRESS:   AK = GK_CYPRESS; break;
+  case ELF::EF_AMDGPU_MACH_R600_JUNIPER:   AK = GK_JUNIPER; break;
+  case ELF::EF_AMDGPU_MACH_R600_REDWOOD:   AK = GK_REDWOOD; break;
+  case ELF::EF_AMDGPU_MACH_R600_SUMO:      AK = GK_SUMO;    break;
+  case ELF::EF_AMDGPU_MACH_R600_BARTS:     AK = GK_BARTS;   break;
+  case ELF::EF_AMDGPU_MACH_R600_CAICOS:    AK = GK_CAICOS;  break;
+  case ELF::EF_AMDGPU_MACH_R600_CAYMAN:    AK = GK_CAYMAN;  break;
+  case ELF::EF_AMDGPU_MACH_R600_TURKS:     AK = GK_TURKS;   break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX600:  AK = GK_GFX600;  break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX601:  AK = GK_GFX601;  break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX700:  AK = GK_GFX700;  break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX701:  AK = GK_GFX701;  break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX702:  AK = GK_GFX702;  break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX703:  AK = GK_GFX703;  break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX704:  AK = GK_GFX704;  break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX801:  AK = GK_GFX801;  break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX802:  AK = GK_GFX802;  break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX803:  AK = GK_GFX803;  break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX810:  AK = GK_GFX810;  break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX900:  AK = GK_GFX900;  break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX902:  AK = GK_GFX902;  break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX904:  AK = GK_GFX904;  break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX906:  AK = GK_GFX906;  break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX909:  AK = GK_GFX909;  break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1010: AK = GK_GFX1010; break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1011: AK = GK_GFX1011; break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1012: AK = GK_GFX1012; break;
+  case ELF::EF_AMDGPU_MACH_NONE:           AK = GK_NONE;    break;
   }
 
   StringRef GPUName = getArchNameAMDGCN(AK);
@@ -143,6 +142,9 @@ unsigned AMDGPUTargetStreamer::getElfMach(StringRef GPU) {
   case GK_GFX904:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX904;
   case GK_GFX906:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX906;
   case GK_GFX909:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX909;
+  case GK_GFX1010: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1010;
+  case GK_GFX1011: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1011;
+  case GK_GFX1012: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1012;
   case GK_NONE:    return ELF::EF_AMDGPU_MACH_NONE;
   }
 
@@ -156,6 +158,14 @@ unsigned AMDGPUTargetStreamer::getElfMach(StringRef GPU) {
 AMDGPUTargetAsmStreamer::AMDGPUTargetAsmStreamer(MCStreamer &S,
                                                  formatted_raw_ostream &OS)
     : AMDGPUTargetStreamer(S), OS(OS) { }
+
+// A hook for emitting stuff at the end.
+// We use it for emitting the accumulated PAL metadata as directives.
+void AMDGPUTargetAsmStreamer::finish() {
+  std::string S;
+  getPALMetadata()->toString(S);
+  OS << S;
+}
 
 void AMDGPUTargetAsmStreamer::EmitDirectiveAMDGCNTarget(StringRef Target) {
   OS << "\t.amdgcn_target \"" << Target << "\"\n";
@@ -214,15 +224,14 @@ bool AMDGPUTargetAsmStreamer::EmitHSAMetadata(
 }
 
 bool AMDGPUTargetAsmStreamer::EmitHSAMetadata(
-    std::shared_ptr<msgpack::Node> &HSAMetadataRoot, bool Strict) {
+    msgpack::Document &HSAMetadataDoc, bool Strict) {
   V3::MetadataVerifier Verifier(Strict);
-  if (!Verifier.verify(*HSAMetadataRoot))
+  if (!Verifier.verify(HSAMetadataDoc.getRoot()))
     return false;
 
   std::string HSAMetadataString;
   raw_string_ostream StrOS(HSAMetadataString);
-  yaml::Output YOut(StrOS);
-  YOut << HSAMetadataRoot;
+  HSAMetadataDoc.toYAML(StrOS);
 
   OS << '\t' << V3::AssemblerDirectiveBegin << '\n';
   OS << StrOS.str() << '\n';
@@ -230,13 +239,10 @@ bool AMDGPUTargetAsmStreamer::EmitHSAMetadata(
   return true;
 }
 
-bool AMDGPUTargetAsmStreamer::EmitPALMetadata(
-    const PALMD::Metadata &PALMetadata) {
-  std::string PALMetadataString;
-  if (PALMD::toString(PALMetadata, PALMetadataString))
-    return false;
-
-  OS << '\t' << PALMD::AssemblerDirective << PALMetadataString << '\n';
+bool AMDGPUTargetAsmStreamer::EmitCodeEnd() {
+  const uint32_t Encoded_s_code_end = 0xbf9f0000;
+  OS << "\t.p2alignl 6, " << Encoded_s_code_end << '\n';
+  OS << "\t.fill 32, 4, " << Encoded_s_code_end << '\n';
   return true;
 }
 
@@ -278,6 +284,10 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
   PRINT_FIELD(OS, ".amdhsa_user_sgpr_private_segment_size", KD,
               kernel_code_properties,
               amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_SIZE);
+  if (IVersion.Major >= 10)
+    PRINT_FIELD(OS, ".amdhsa_wavefront_size32", KD,
+                kernel_code_properties,
+                amdhsa::KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32);
   PRINT_FIELD(
       OS, ".amdhsa_system_sgpr_private_segment_wavefront_offset", KD,
       compute_pgm_rsrc2,
@@ -331,6 +341,17 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
     PRINT_FIELD(OS, ".amdhsa_fp16_overflow", KD,
                 compute_pgm_rsrc1,
                 amdhsa::COMPUTE_PGM_RSRC1_FP16_OVFL);
+  if (IVersion.Major >= 10) {
+    PRINT_FIELD(OS, ".amdhsa_workgroup_processor_mode", KD,
+                compute_pgm_rsrc1,
+                amdhsa::COMPUTE_PGM_RSRC1_WGP_MODE);
+    PRINT_FIELD(OS, ".amdhsa_memory_ordered", KD,
+                compute_pgm_rsrc1,
+                amdhsa::COMPUTE_PGM_RSRC1_MEM_ORDERED);
+    PRINT_FIELD(OS, ".amdhsa_forward_progress", KD,
+                compute_pgm_rsrc1,
+                amdhsa::COMPUTE_PGM_RSRC1_FWD_PROGRESS);
+  }
   PRINT_FIELD(
       OS, ".amdhsa_exception_fp_ieee_invalid_op", KD,
       compute_pgm_rsrc2,
@@ -385,6 +406,19 @@ AMDGPUTargetELFStreamer::AMDGPUTargetELFStreamer(
 
 MCELFStreamer &AMDGPUTargetELFStreamer::getStreamer() {
   return static_cast<MCELFStreamer &>(Streamer);
+}
+
+// A hook for emitting stuff at the end.
+// We use it for emitting the accumulated PAL metadata as a .note record.
+void AMDGPUTargetELFStreamer::finish() {
+  std::string Blob;
+  const char *Vendor = getPALMetadata()->getVendor();
+  unsigned Type = getPALMetadata()->getType();
+  getPALMetadata()->toBlob(Type, Blob);
+  if (Blob.empty())
+    return;
+  EmitNote(Vendor, MCConstantExpr::create(Blob.size(), getContext()), Type,
+           [&](MCELFStreamer &OS) { OS.EmitBytes(Blob); });
 }
 
 void AMDGPUTargetELFStreamer::EmitNote(
@@ -482,16 +516,14 @@ bool AMDGPUTargetELFStreamer::EmitISAVersion(StringRef IsaVersionString) {
   return true;
 }
 
-bool AMDGPUTargetELFStreamer::EmitHSAMetadata(
-    std::shared_ptr<msgpack::Node> &HSAMetadataRoot, bool Strict) {
+bool AMDGPUTargetELFStreamer::EmitHSAMetadata(msgpack::Document &HSAMetadataDoc,
+                                              bool Strict) {
   V3::MetadataVerifier Verifier(Strict);
-  if (!Verifier.verify(*HSAMetadataRoot))
+  if (!Verifier.verify(HSAMetadataDoc.getRoot()))
     return false;
 
   std::string HSAMetadataString;
-  raw_string_ostream StrOS(HSAMetadataString);
-  msgpack::Writer MPWriter(StrOS);
-  HSAMetadataRoot->write(MPWriter);
+  HSAMetadataDoc.writeToBlob(HSAMetadataString);
 
   // Create two labels to mark the beginning and end of the desc field
   // and a MCExpr to calculate the size of the desc field.
@@ -505,7 +537,7 @@ bool AMDGPUTargetELFStreamer::EmitHSAMetadata(
   EmitNote(ElfNote::NoteNameV3, DescSZ, ELF::NT_AMDGPU_METADATA,
            [&](MCELFStreamer &OS) {
              OS.EmitLabel(DescBegin);
-             OS.EmitBytes(StrOS.str());
+             OS.EmitBytes(HSAMetadataString);
              OS.EmitLabel(DescEnd);
            });
   return true;
@@ -535,15 +567,15 @@ bool AMDGPUTargetELFStreamer::EmitHSAMetadata(
   return true;
 }
 
-bool AMDGPUTargetELFStreamer::EmitPALMetadata(
-    const PALMD::Metadata &PALMetadata) {
-  EmitNote(ElfNote::NoteNameV2,
-           MCConstantExpr::create(PALMetadata.size() * sizeof(uint32_t),
-                                  getContext()),
-           ELF::NT_AMD_AMDGPU_PAL_METADATA, [&](MCELFStreamer &OS) {
-             for (auto I : PALMetadata)
-               OS.EmitIntValue(I, sizeof(uint32_t));
-           });
+bool AMDGPUTargetELFStreamer::EmitCodeEnd() {
+  const uint32_t Encoded_s_code_end = 0xbf9f0000;
+
+  MCStreamer &OS = getStreamer();
+  OS.PushSection();
+  OS.EmitValueToAlignment(64, Encoded_s_code_end, 4);
+  for (unsigned I = 0; I < 32; ++I)
+    OS.EmitIntValue(Encoded_s_code_end, 4);
+  OS.PopSection();
   return true;
 }
 
@@ -555,16 +587,25 @@ void AMDGPUTargetELFStreamer::EmitAmdhsaKernelDescriptor(
   auto &Streamer = getStreamer();
   auto &Context = Streamer.getContext();
 
+  MCSymbolELF *KernelCodeSymbol = cast<MCSymbolELF>(
+      Context.getOrCreateSymbol(Twine(KernelName)));
   MCSymbolELF *KernelDescriptorSymbol = cast<MCSymbolELF>(
       Context.getOrCreateSymbol(Twine(KernelName) + Twine(".kd")));
-  KernelDescriptorSymbol->setBinding(ELF::STB_GLOBAL);
+
+  // Copy kernel descriptor symbol's binding, other and visibility from the
+  // kernel code symbol.
+  KernelDescriptorSymbol->setBinding(KernelCodeSymbol->getBinding());
+  KernelDescriptorSymbol->setOther(KernelCodeSymbol->getOther());
+  KernelDescriptorSymbol->setVisibility(KernelCodeSymbol->getVisibility());
+  // Kernel descriptor symbol's type and size are fixed.
   KernelDescriptorSymbol->setType(ELF::STT_OBJECT);
   KernelDescriptorSymbol->setSize(
       MCConstantExpr::create(sizeof(KernelDescriptor), Context));
 
-  MCSymbolELF *KernelCodeSymbol = cast<MCSymbolELF>(
-      Context.getOrCreateSymbol(Twine(KernelName)));
-  KernelCodeSymbol->setBinding(ELF::STB_LOCAL);
+  // The visibility of the kernel code symbol must be protected or less to allow
+  // static relocations from the kernel descriptor to be used.
+  if (KernelCodeSymbol->getVisibility() == ELF::STV_DEFAULT)
+    KernelCodeSymbol->setVisibility(ELF::STV_PROTECTED);
 
   Streamer.EmitLabel(KernelDescriptorSymbol);
   Streamer.EmitBytes(StringRef(

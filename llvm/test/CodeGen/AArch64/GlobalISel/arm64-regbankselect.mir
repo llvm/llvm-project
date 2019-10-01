@@ -941,7 +941,7 @@ registers:
 frameInfo:
   maxAlignment:    2
 stack:
-  - { id: 0, name: p.addr, size: 2, alignment: 2, stack-id: 0 }
+  - { id: 0, name: p.addr, size: 2, alignment: 2, stack-id: default }
 body:             |
   bb.1.entry:
     liveins: $h0

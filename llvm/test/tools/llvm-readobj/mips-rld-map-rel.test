@@ -1,6 +1,6 @@
 # Check DT_MIPS_RLD_MAP_REL .dynamic section tag reading
 
-RUN: llvm-readobj -dynamic-table %p/Inputs/mips-rld-map-rel.elf-mipsel | \
+RUN: llvm-readobj --dynamic-table %p/Inputs/mips-rld-map-rel.elf-mipsel | \
 RUN:   FileCheck %s
 
 CHECK:      DynamicSection [ (16 entries)

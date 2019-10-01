@@ -113,6 +113,6 @@ static_library("PDB") {
       "DIA/DIASourceFile.cpp",
       "DIA/DIATable.cpp",
     ]
-    # FIXME: Link against the right diaguids.lib too.
+    libs = [ "diaguids.lib" ]
   }
 }

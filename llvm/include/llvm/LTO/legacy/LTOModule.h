@@ -1,9 +1,8 @@
 //===-LTOModule.h - LLVM Link Time Optimizer ------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -18,6 +17,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/IR/Module.h"
+#include "llvm/LTO/LTO.h"
 #include "llvm/Object/IRObjectFile.h"
 #include "llvm/Object/ModuleSymbolTable.h"
 #include "llvm/Target/TargetMachine.h"
@@ -47,6 +47,8 @@ private:
   std::unique_ptr<LLVMContext> OwnedContext;
 
   std::string LinkerOpts;
+
+  std::string DependentLibraries;
 
   std::unique_ptr<Module> Mod;
   MemoryBufferRef MBRef;
@@ -156,9 +158,17 @@ public:
 
   const std::vector<StringRef> &getAsmUndefinedRefs() { return _asm_undefines; }
 
+  static lto::InputFile *createInputFile(const void *buffer, size_t buffer_size,
+                                         const char *path, std::string &out_error);
+
+  static size_t getDependentLibraryCount(lto::InputFile *input);
+
+  static const char *getDependentLibrary(lto::InputFile *input, size_t index, size_t *size);
+
 private:
   /// Parse metadata from the module
   // FIXME: it only parses "llvm.linker.options" metadata at the moment
+  // FIXME: can't access metadata in lazily loaded modules
   void parseMetadata();
 
   /// Parse the symbols from the module and model-level ASM and add them to

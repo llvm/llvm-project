@@ -1,9 +1,8 @@
 //===- CoverageMappingWriter.cpp - Code coverage mapping writer -----------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -24,6 +23,16 @@
 
 using namespace llvm;
 using namespace coverage;
+
+CoverageFilenamesSectionWriter::CoverageFilenamesSectionWriter(
+    ArrayRef<StringRef> Filenames)
+    : Filenames(Filenames) {
+#ifndef NDEBUG
+  StringSet<> NameSet;
+  for (StringRef Name : Filenames)
+    assert(NameSet.insert(Name).second && "Duplicate filename");
+#endif
+}
 
 void CoverageFilenamesSectionWriter::write(raw_ostream &OS) {
   encodeULEB128(Filenames.size(), OS);
@@ -125,15 +134,14 @@ void CoverageMappingWriter::write(raw_ostream &OS) {
 
   // Sort the regions in an ascending order by the file id and the starting
   // location. Sort by region kinds to ensure stable order for tests.
-  std::stable_sort(
-      MappingRegions.begin(), MappingRegions.end(),
-      [](const CounterMappingRegion &LHS, const CounterMappingRegion &RHS) {
-        if (LHS.FileID != RHS.FileID)
-          return LHS.FileID < RHS.FileID;
-        if (LHS.startLoc() != RHS.startLoc())
-          return LHS.startLoc() < RHS.startLoc();
-        return LHS.Kind < RHS.Kind;
-      });
+  llvm::stable_sort(MappingRegions, [](const CounterMappingRegion &LHS,
+                                       const CounterMappingRegion &RHS) {
+    if (LHS.FileID != RHS.FileID)
+      return LHS.FileID < RHS.FileID;
+    if (LHS.startLoc() != RHS.startLoc())
+      return LHS.startLoc() < RHS.startLoc();
+    return LHS.Kind < RHS.Kind;
+  });
 
   // Write out the fileid -> filename mapping.
   encodeULEB128(VirtualFileMapping.size(), OS);

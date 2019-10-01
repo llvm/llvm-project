@@ -20,7 +20,9 @@ define amdgpu_kernel void @add_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> add
 }
 
 ; CHECK: 'add_v3i32'
-; CHECK: estimated cost of 3 for {{.*}} add <3 x i32>
+; Allow for 4 when v3i32 is illegal and TargetLowering thinks it needs widening,
+; and 3 when it is legal.
+; CHECK: estimated cost of {{[34]}} for {{.*}} add <3 x i32>
 define amdgpu_kernel void @add_v3i32(<3 x i32> addrspace(1)* %out, <3 x i32> addrspace(1)* %vaddr, <3 x i32> %b) #0 {
   %vec = load <3 x i32>, <3 x i32> addrspace(1)* %vaddr
   %add = add <3 x i32> %vec, %b
@@ -34,6 +36,17 @@ define amdgpu_kernel void @add_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> add
   %vec = load <4 x i32>, <4 x i32> addrspace(1)* %vaddr
   %add = add <4 x i32> %vec, %b
   store <4 x i32> %add, <4 x i32> addrspace(1)* %out
+  ret void
+}
+
+; CHECK: 'add_v5i32'
+; Allow for 8 when v3i32 is illegal and TargetLowering thinks it needs widening,
+; and 5 when it is legal.
+; CHECK: estimated cost of {{[58]}} for {{.*}} add <5 x i32>
+define amdgpu_kernel void @add_v5i32(<5 x i32> addrspace(1)* %out, <5 x i32> addrspace(1)* %vaddr, <5 x i32> %b) #0 {
+  %vec = load <5 x i32>, <5 x i32> addrspace(1)* %vaddr
+  %add = add <5 x i32> %vec, %b
+  store <5 x i32> %add, <5 x i32> addrspace(1)* %out
   ret void
 }
 

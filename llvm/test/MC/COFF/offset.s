@@ -1,4 +1,4 @@
-// RUN: llvm-mc -filetype=obj -triple i686-pc-win32 %s -o - | llvm-readobj -t -r | FileCheck %s
+// RUN: llvm-mc -filetype=obj -triple i686-pc-win32 %s -o - | llvm-readobj --symbols -r | FileCheck %s
 
 	.data
 	.globl	test1_foo

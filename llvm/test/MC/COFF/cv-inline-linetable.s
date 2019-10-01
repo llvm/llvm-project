@@ -1,4 +1,7 @@
-# RUN: llvm-mc -triple=i686-pc-win32 -filetype=obj < %s | llvm-readobj -codeview | FileCheck %s
+# RUN: llvm-mc -triple=i686-pc-win32 -filetype=obj %s -o %t.o
+# RUN: llvm-readobj --codeview %t.o | FileCheck %s
+# RUN: llvm-objdump -d %t.o | FileCheck %s --check-prefix=ASM
+# RUN: llvm-pdbutil dump -symbols %t.o | FileCheck %s --check-prefix=PDB
 	.text
 	.def	 @feat.00;
 	.scl	3;
@@ -43,6 +46,40 @@ Lfunc_begin0:
 	retl
 Lfunc_end0:
 
+# Check the disassembly so we have accurate instruction offsets in hex.
+# ASM-LABEL: ?baz@@YAXXZ:
+# ASM-NEXT:       0: {{.*}} pushl   %eax
+# ASM-NEXT:       1: {{.*}} addl    $6, 0
+# ASM-NEXT:       8: {{.*}} addl    $4, 0
+# ASM-NEXT:       f: {{.*}} movl    $1, (%esp)
+# ASM-NEXT:      16: {{.*}} leal    (%esp), %eax
+# ASM-NEXT:      19: {{.*}} addl    %eax, 0
+# ASM-NEXT:      1f: {{.*}} addl    $2, 0
+# ASM-NEXT:      26: {{.*}} addl    $3, 0
+# ASM-NEXT:      2d: {{.*}} addl    $5, 0
+# ASM-NEXT:      34: {{.*}} addl    $7, 0
+# ASM-NEXT:      3b: {{.*}} popl    %eax
+# ASM-NEXT:      3c: {{.*}} retl
+
+# PDB: S_GPROC32_ID {{.*}} `baz`
+# PDB: S_INLINESITE
+# PDB-NEXT: inlinee = 0x1003 (bar), parent = 0, end = 0
+# PDB-NEXT:   0B08      code 0x8 (+0x8) line 0 (-0)
+# PDB-NEXT:   0B27      code 0xF (+0x7) line 1 (+1)
+# PDB-NEXT:   0602      line 2 (+1)
+# PDB-NEXT:   031E      code 0x2D (+0x1E)
+# PDB-NEXT:   0407      code end 0x34 (+0x7)
+# PDB: S_INLINESITE
+# PDB-NEXT: inlinee = 0x1004 (foo), parent = 0, end = 0
+# PDB-NEXT:    0B0F      code 0xF (+0xF) line 0 (-0)
+# PDB-NEXT:    0B2A      code 0x19 (+0xA) line 1 (+1)
+# PDB-NEXT:    0B26      code 0x1F (+0x6) line 2 (+1)
+# PDB-NEXT:    0B27      code 0x26 (+0x7) line 3 (+1)
+# PDB-NEXT:    0407      code end 0x2D (+0x7)
+# PEB: S_INLINESITE_END
+# PEB: S_INLINESITE_END
+# PEB: S_PROC_ID_END
+
 	.section	.debug$T,"dr"
 	.long	4
 	.short	6
@@ -86,7 +123,9 @@ Ltmp3:
 	.short	Ltmp5-Ltmp4
 Ltmp4:
 	.short	4429
-	.asciz	"\000\000\000\000\000\000\000\000\003\020\000"
+	.long 0 # parent
+	.long 0 # end
+	.long 0x1003 # inlinee, bar
 	.cv_inline_linetable	1 1 9 Lfunc_begin0 Lfunc_end0
 # CHECK:    InlineSiteSym {
 # CHECK:      PtrParent: 0x0

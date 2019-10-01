@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=thumbv7-apple-darwin -mcpu=cortex-a8 -relocation-model=pic -disable-fp-elim -O3
+; RUN: llc < %s -mtriple=thumbv7-apple-darwin -mcpu=cortex-a8 -relocation-model=pic -frame-pointer=all -O3
 
 	%0 = type { i16, i8, i8 }		; type %0
 	%1 = type { [2 x i32], [2 x i32] }		; type %1

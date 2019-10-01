@@ -1,9 +1,8 @@
 //===- tools/dsymutil/DwarfStreamer.cpp - Dwarf Streamer ------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -406,7 +405,7 @@ void DwarfStreamer::emitLocationsForUnit(
 
   SmallVector<uint8_t, 32> Buffer;
   for (const auto &Attr : Attributes) {
-    uint32_t Offset = Attr.first.get();
+    uint64_t Offset = Attr.first.get();
     Attr.first.set(LocSectionSize);
     // This is the quantity to add to the old location address to get
     // the correct address for the new one.
@@ -487,11 +486,11 @@ void DwarfStreamer::emitLineTableForUnit(MCDwarfLineTableParams Params,
       MS->EmitIntValue(dwarf::DW_LNS_extended_op, 1);
       MS->EmitULEB128IntValue(PointerSize + 1);
       MS->EmitIntValue(dwarf::DW_LNE_set_address, 1);
-      MS->EmitIntValue(Row.Address, PointerSize);
+      MS->EmitIntValue(Row.Address.Address, PointerSize);
       LineSectionSize += 2 + PointerSize + getULEB128Size(PointerSize + 1);
       AddressDelta = 0;
     } else {
-      AddressDelta = (Row.Address - Address) / MinInstLength;
+      AddressDelta = (Row.Address.Address - Address) / MinInstLength;
     }
 
     // FIXME: code copied and transformed from MCDwarf.cpp::EmitDwarfLineTable.
@@ -547,7 +546,7 @@ void DwarfStreamer::emitLineTableForUnit(MCDwarfLineTableParams Params,
       MS->EmitBytes(EncodingOS.str());
       LineSectionSize += EncodingBuffer.size();
       EncodingBuffer.resize(0);
-      Address = Row.Address;
+      Address = Row.Address.Address;
       LastLine = Row.Line;
       RowsSinceLastSequence++;
     } else {
@@ -585,8 +584,7 @@ void DwarfStreamer::emitLineTableForUnit(MCDwarfLineTableParams Params,
 
 /// Copy the debug_line over to the updated binary while unobfuscating the file
 /// names and directories.
-void DwarfStreamer::translateLineTable(DataExtractor Data, uint32_t Offset,
-                                       LinkOptions &Options) {
+void DwarfStreamer::translateLineTable(DataExtractor Data, uint64_t Offset) {
   MS->SwitchSection(MC->getObjectFileInfo()->getDwarfLineSection());
   StringRef Contents = Data.getData();
 
@@ -594,7 +592,7 @@ void DwarfStreamer::translateLineTable(DataExtractor Data, uint32_t Offset,
   // length fields that will need to be updated when we change the length of
   // the files and directories in there.
   unsigned UnitLength = Data.getU32(&Offset);
-  unsigned UnitEnd = Offset + UnitLength;
+  uint64_t UnitEnd = Offset + UnitLength;
   MCSymbol *BeginLabel = MC->createTempSymbol();
   MCSymbol *EndLabel = MC->createTempSymbol();
   unsigned Version = Data.getU16(&Offset);
@@ -617,7 +615,7 @@ void DwarfStreamer::translateLineTable(DataExtractor Data, uint32_t Offset,
   Offset += 4;
   LineSectionSize += 4;
 
-  uint32_t AfterHeaderLengthOffset = Offset;
+  uint64_t AfterHeaderLengthOffset = Offset;
   // Skip to the directories.
   Offset += (Version >= 4) ? 5 : 4;
   unsigned OpcodeBase = Data.getU8(&Offset);
@@ -647,7 +645,7 @@ void DwarfStreamer::translateLineTable(DataExtractor Data, uint32_t Offset,
     Asm->emitInt8(0);
     LineSectionSize += Translated.size() + 1;
 
-    uint32_t OffsetBeforeLEBs = Offset;
+    uint64_t OffsetBeforeLEBs = Offset;
     Asm->EmitULEB128(Data.getULEB128(&Offset));
     Asm->EmitULEB128(Data.getULEB128(&Offset));
     Asm->EmitULEB128(Data.getULEB128(&Offset));
@@ -668,10 +666,12 @@ void DwarfStreamer::translateLineTable(DataExtractor Data, uint32_t Offset,
 
 static void emitSectionContents(const object::ObjectFile &Obj,
                                 StringRef SecName, MCStreamer *MS) {
-  StringRef Contents;
-  if (auto Sec = getSectionByName(Obj, SecName))
-    if (!Sec->getContents(Contents))
-      MS->EmitBytes(Contents);
+  if (auto Sec = getSectionByName(Obj, SecName)) {
+    if (Expected<StringRef> E = Sec->getContents())
+      MS->EmitBytes(*E);
+    else
+      consumeError(E.takeError());
+  }
 }
 
 void DwarfStreamer::copyInvariantDebugSection(const object::ObjectFile &Obj) {

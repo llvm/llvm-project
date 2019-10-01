@@ -1,9 +1,8 @@
 //===--- lib/CodeGen/DIE.cpp - DWARF Info Entries -------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -212,7 +211,7 @@ const DIE *DIE::getUnitDie() const {
   return nullptr;
 }
 
-const DIEUnit *DIE::getUnit() const {
+DIEUnit *DIE::getUnit() const {
   const DIE *UnitDie = getUnitDie();
   if (UnitDie)
     return UnitDie->Owner.dyn_cast<DIEUnit*>();
@@ -505,6 +504,23 @@ unsigned DIELabel::SizeOf(const AsmPrinter *AP, dwarf::Form Form) const {
 
 LLVM_DUMP_METHOD
 void DIELabel::print(raw_ostream &O) const { O << "Lbl: " << Label->getName(); }
+
+//===----------------------------------------------------------------------===//
+// DIEBaseTypeRef Implementation
+//===----------------------------------------------------------------------===//
+
+void DIEBaseTypeRef::EmitValue(const AsmPrinter *AP, dwarf::Form Form) const {
+  uint64_t Offset = CU->ExprRefedBaseTypes[Index].Die->getOffset();
+  assert(Offset < (1ULL << (ULEB128PadSize * 7)) && "Offset wont fit");
+  AP->EmitULEB128(Offset, nullptr, ULEB128PadSize);
+}
+
+unsigned DIEBaseTypeRef::SizeOf(const AsmPrinter *AP, dwarf::Form Form) const {
+  return ULEB128PadSize;
+}
+
+LLVM_DUMP_METHOD
+void DIEBaseTypeRef::print(raw_ostream &O) const { O << "BaseTypeRef: " << Index; }
 
 //===----------------------------------------------------------------------===//
 // DIEDelta Implementation

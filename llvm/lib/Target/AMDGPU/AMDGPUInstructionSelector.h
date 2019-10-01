@@ -1,9 +1,8 @@
 //===- AMDGPUInstructionSelector --------------------------------*- C++ -*-==//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 /// \file
@@ -58,6 +57,7 @@ private:
     GEPInfo(const MachineInstr &GEP) : GEP(GEP), Imm(0) { }
   };
 
+  bool isInstrUniform(const MachineInstr &MI) const;
   /// tblgen-erated 'select' implementation.
   bool selectImpl(MachineInstr &I, CodeGenCoverage &CoverageInfo) const;
 
@@ -65,16 +65,20 @@ private:
   bool selectCOPY(MachineInstr &I) const;
   bool selectG_CONSTANT(MachineInstr &I) const;
   bool selectG_ADD(MachineInstr &I) const;
+  bool selectG_EXTRACT(MachineInstr &I) const;
   bool selectG_GEP(MachineInstr &I) const;
   bool selectG_IMPLICIT_DEF(MachineInstr &I) const;
+  bool selectG_INSERT(MachineInstr &I) const;
   bool selectG_INTRINSIC(MachineInstr &I, CodeGenCoverage &CoverageInfo) const;
   bool selectG_INTRINSIC_W_SIDE_EFFECTS(MachineInstr &I,
                                         CodeGenCoverage &CoverageInfo) const;
+  bool selectG_ICMP(MachineInstr &I) const;
   bool hasVgprParts(ArrayRef<GEPInfo> AddrInfo) const;
   void getAddrModeInfo(const MachineInstr &Load, const MachineRegisterInfo &MRI,
                        SmallVectorImpl<GEPInfo> &AddrInfo) const;
   bool selectSMRD(MachineInstr &I, ArrayRef<GEPInfo> AddrInfo) const;
   bool selectG_LOAD(MachineInstr &I) const;
+  bool selectG_SELECT(MachineInstr &I) const;
   bool selectG_STORE(MachineInstr &I) const;
 
   InstructionSelector::ComplexRendererFns
@@ -89,6 +93,13 @@ private:
   selectVOP3OMods(MachineOperand &Root) const;
   InstructionSelector::ComplexRendererFns
   selectVOP3Mods(MachineOperand &Root) const;
+
+  InstructionSelector::ComplexRendererFns
+  selectSmrdImm(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
+  selectSmrdImm32(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
+  selectSmrdSgpr(MachineOperand &Root) const;
 
   const SIInstrInfo &TII;
   const SIRegisterInfo &TRI;

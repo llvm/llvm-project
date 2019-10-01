@@ -1,9 +1,8 @@
 //===- Profile.cpp - XRay Profile Abstraction -----------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -50,9 +49,9 @@ struct BlockHeader {
 };
 
 static Expected<BlockHeader> readBlockHeader(DataExtractor &Extractor,
-                                             uint32_t &Offset) {
+                                             uint64_t &Offset) {
   BlockHeader H;
-  uint32_t CurrentOffset = Offset;
+  uint64_t CurrentOffset = Offset;
   H.Size = Extractor.getU32(&Offset);
   if (Offset == CurrentOffset)
     return make_error<StringError>(
@@ -77,7 +76,7 @@ static Expected<BlockHeader> readBlockHeader(DataExtractor &Extractor,
 }
 
 static Expected<std::vector<Profile::FuncID>> readPath(DataExtractor &Extractor,
-                                                       uint32_t &Offset) {
+                                                       uint64_t &Offset) {
   // We're reading a sequence of int32_t's until we find a 0.
   std::vector<Profile::FuncID> Path;
   auto CurrentOffset = Offset;
@@ -95,7 +94,7 @@ static Expected<std::vector<Profile::FuncID>> readPath(DataExtractor &Extractor,
 }
 
 static Expected<Profile::Data> readData(DataExtractor &Extractor,
-                                        uint32_t &Offset) {
+                                        uint64_t &Offset) {
   // We expect a certain number of elements for Data:
   //   - A 64-bit CallCount
   //   - A 64-bit CumulativeLocalTime counter
@@ -280,7 +279,7 @@ Expected<Profile> loadProfile(StringRef Filename) {
   StringRef Data(MappedFile.data(), MappedFile.size());
 
   Profile P;
-  uint32_t Offset = 0;
+  uint64_t Offset = 0;
   DataExtractor Extractor(Data, true, 8);
 
   // For each block we get from the file:

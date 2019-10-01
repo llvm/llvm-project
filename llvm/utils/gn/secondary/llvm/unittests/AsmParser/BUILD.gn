@@ -1,0 +1,12 @@
+import("//llvm/utils/unittest/unittest.gni")
+
+unittest("AsmParserTests") {
+  deps = [
+    "//llvm/lib/AsmParser",
+    "//llvm/lib/IR",
+    "//llvm/lib/Support",
+  ]
+  sources = [
+    "AsmParserTest.cpp",
+  ]
+}

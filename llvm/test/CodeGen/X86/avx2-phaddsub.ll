@@ -69,29 +69,15 @@ define <8 x i32> @phaddd2(<8 x i32> %x, <8 x i32> %y) {
 }
 
 define <8 x i32> @phaddd3(<8 x i32> %x) {
-; X32-SLOW-LABEL: phaddd3:
-; X32-SLOW:       # %bb.0:
-; X32-SLOW-NEXT:    vpshufd {{.*#+}} ymm1 = ymm0[0,2,2,3,4,6,6,7]
-; X32-SLOW-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[1,3,2,3,5,7,6,7]
-; X32-SLOW-NEXT:    vpaddd %ymm0, %ymm1, %ymm0
-; X32-SLOW-NEXT:    retl
+; X32-LABEL: phaddd3:
+; X32:       # %bb.0:
+; X32-NEXT:    vphaddd %ymm0, %ymm0, %ymm0
+; X32-NEXT:    retl
 ;
-; X32-FAST-LABEL: phaddd3:
-; X32-FAST:       # %bb.0:
-; X32-FAST-NEXT:    vphaddd %ymm0, %ymm0, %ymm0
-; X32-FAST-NEXT:    retl
-;
-; X64-SLOW-LABEL: phaddd3:
-; X64-SLOW:       # %bb.0:
-; X64-SLOW-NEXT:    vpshufd {{.*#+}} ymm1 = ymm0[0,2,2,3,4,6,6,7]
-; X64-SLOW-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[1,3,2,3,5,7,6,7]
-; X64-SLOW-NEXT:    vpaddd %ymm0, %ymm1, %ymm0
-; X64-SLOW-NEXT:    retq
-;
-; X64-FAST-LABEL: phaddd3:
-; X64-FAST:       # %bb.0:
-; X64-FAST-NEXT:    vphaddd %ymm0, %ymm0, %ymm0
-; X64-FAST-NEXT:    retq
+; X64-LABEL: phaddd3:
+; X64:       # %bb.0:
+; X64-NEXT:    vphaddd %ymm0, %ymm0, %ymm0
+; X64-NEXT:    retq
   %a = shufflevector <8 x i32> %x, <8 x i32> undef, <8 x i32> <i32 undef, i32 2, i32 8, i32 10, i32 4, i32 6, i32 undef, i32 14>
   %b = shufflevector <8 x i32> %x, <8 x i32> undef, <8 x i32> <i32 1, i32 3, i32 9, i32 undef, i32 5, i32 7, i32 13, i32 15>
   %r = add <8 x i32> %a, %b

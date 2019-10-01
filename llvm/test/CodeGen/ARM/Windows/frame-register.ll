@@ -1,4 +1,4 @@
-; RUN: llc -mtriple thumbv7-windows -disable-fp-elim -filetype asm -o - %s \
+; RUN: llc -mtriple thumbv7-windows -frame-pointer=all -filetype asm -o - %s \
 ; RUN:     | FileCheck %s
 
 declare void @callee(i32)

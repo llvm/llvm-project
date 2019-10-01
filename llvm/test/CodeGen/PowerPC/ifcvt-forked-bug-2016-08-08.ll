@@ -10,7 +10,8 @@ entry:
   br i1 undef, label %land.lhs.true, label %if.end
 
 ; CHECK: # %land.lhs.true
-; CHECK-NEXT: bclr
+; Test updated due D63152 where any load/store prevents shrink-wrapping
+; CHECK-NEXT: bc
 ; CHECK-NEXT: # %if.end4
 land.lhs.true:                                    ; preds = %entry
   br i1 undef, label %return, label %if.end4

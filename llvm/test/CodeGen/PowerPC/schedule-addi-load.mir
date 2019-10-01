@@ -1,0 +1,123 @@
+# RUN: llc -mcpu=pwr9 -mtriple powerpc64le-unknown-linux-gnu -start-before machine-scheduler -stop-after machine-scheduler -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mcpu=pwr9 -mtriple powerpc64le-unknown-linux-gnu -disable-ppc-sched-addi-load -start-before machine-scheduler -stop-after machine-scheduler \
+# RUN:   -verify-machineinstrs %s -o - | FileCheck --check-prefix=CHECK-DISABLE %s
+# RUN: llc -mcpu=pwr8 -mtriple powerpc64le-unknown-linux-gnu -start-before machine-scheduler -stop-after machine-scheduler -verify-machineinstrs %s -o - | FileCheck --check-prefix=CHECK-P8 %s
+
+# Test that if the scheduler moves the addi before the load.
+--- |
+  target datalayout = "e-m:e-i64:64-n32:64"
+  
+  define i64 @foo(i8* %p, i8* %q) {
+  entry:
+    br label %while.cond6.i
+  
+  while.cond6.i:                                    
+    %n.0 = phi i64 [ 0, %entry ], [ %n.1, %while.cond6.i ]
+    %conv = and i64 %n.0, 4294967295
+    %arrayidx = getelementptr inbounds i8, i8* %p, i64 %conv
+    %0 = load i8, i8* %arrayidx, align 1
+    %arrayidx4 = getelementptr inbounds i8, i8* %q, i64 %conv
+    %1 = load i8, i8* %arrayidx4, align 1
+    %cmp = icmp eq i8 %0, %1
+    %n.1 = add i64 %conv, 1
+    br i1 %cmp, label %while.cond6.i, label %while.end
+  
+  while.end:                                        
+    ret i64 %n.0
+  }
+  
+...
+---
+name:            foo
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:       
+  - { id: 0, class: g8rc, preferred-register: '' }
+  - { id: 1, class: g8rc, preferred-register: '' }
+  - { id: 2, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 3, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 4, class: g8rc, preferred-register: '' }
+  - { id: 5, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 6, class: gprc, preferred-register: '' }
+  - { id: 7, class: gprc, preferred-register: '' }
+  - { id: 8, class: crrc, preferred-register: '' }
+  - { id: 9, class: g8rc, preferred-register: '' }
+liveins:         
+  - { reg: '$x3', virtual-reg: '%2' }
+  - { reg: '$x4', virtual-reg: '%3' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x80000000)
+    liveins: $x3, $x4
+  
+    %3:g8rc_and_g8rc_nox0 = COPY $x4
+    %2:g8rc_and_g8rc_nox0 = COPY $x3
+    %9:g8rc = LI8 0
+  
+  bb.1.while.cond6.i:
+    successors: %bb.1(0x7c000000), %bb.2(0x04000000)
+  
+    %0:g8rc = COPY %9
+    %5:g8rc_and_g8rc_nox0 = RLDICL %0, 0, 32
+    %6:gprc = LBZX %2, %5 :: (load 1 from %ir.arrayidx)
+    %7:gprc = LBZX %3, %5 :: (load 1 from %ir.arrayidx4)
+    %9:g8rc = ADDI8 %5, 1
+    %8:crrc = CMPLW %6, %7
+    BCC 76, %8, %bb.1
+    B %bb.2
+    ; CHECK-LABEL: foo
+    ; CHECK: %5:g8rc_and_g8rc_nox0 = RLDICL %0, 0, 32
+    ; CHECK-NEXT: %9:g8rc = ADDI8 %5, 1
+    ; CHECK-NEXT: %6:gprc = LBZX %2, %5 :: (load 1 from %ir.arrayidx) 
+    ; CHECK-NEXT: %7:gprc = LBZX %3, %5 :: (load 1 from %ir.arrayidx4) 
+    ; CHECK-NEXT: %8:crrc = CMPLW %6, %7 
+    ; CHECK-NEXT: BCC 76, %8
+    ; CHECK-DISABLE-LABEL: foo
+    ; CHECK-DISABLE: %5:g8rc_and_g8rc_nox0 = RLDICL %0, 0, 32
+    ; CHECK-DISABLE-NEXT: %6:gprc = LBZX %2, %5 :: (load 1 from %ir.arrayidx) 
+    ; CHECK-DISABLE-NEXT: %7:gprc = LBZX %3, %5 :: (load 1 from %ir.arrayidx4) 
+    ; CHECK-DISABLE-NEXT: %9:g8rc = ADDI8 %5, 1
+    ; CHECK-DISABLE-NEXT: %8:crrc = CMPLW %6, %7 
+    ; CHECK-DISABLE-NEXT: BCC 76, %8
+    ; CHECK-P8-LABEL: foo
+    ; CHECK-P8: %5:g8rc_and_g8rc_nox0 = RLDICL %0, 0, 32
+    ; CHECK-P8-NEXT: %6:gprc = LBZX %2, %5 :: (load 1 from %ir.arrayidx)
+    ; CHECK-P8-NEXT: %7:gprc = LBZX %3, %5 :: (load 1 from %ir.arrayidx4)
+    ; CHECK-P8-NEXT: %8:crrc = CMPLW %6, %7
+    ; CHECK-P8-NEXT: %9:g8rc = ADDI8 %5, 1
+    ; CHECK-P8-NEXT: BCC 76, %8
+  
+  bb.2.while.end:
+    $x3 = COPY %0
+    BLR8 implicit $lr8, implicit $rm, implicit $x3
+
+...

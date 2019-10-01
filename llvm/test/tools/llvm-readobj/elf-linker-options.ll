@@ -1,4 +1,4 @@
-; RUN: llc -mtriple x86_64-elf -filetype obj -o - %s | llvm-readobj -elf-linker-options - | FileCheck %s
+; RUN: llc -mtriple x86_64-elf -filetype obj -o - %s | llvm-readobj --elf-linker-options - | FileCheck %s
 ; REQUIRES: x86-registered-target
 
 !llvm.linker.options = !{!0, !1}

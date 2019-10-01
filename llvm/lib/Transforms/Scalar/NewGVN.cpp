@@ -1,9 +1,8 @@
 //===- NewGVN.cpp - Global Value Numbering Pass ---------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -1167,9 +1166,9 @@ const Expression *NewGVN::createExpression(Instruction *I) const {
         SimplifyBinOp(E->getOpcode(), E->getOperand(0), E->getOperand(1), SQ);
     if (const Expression *SimplifiedE = checkSimplificationResults(E, I, V))
       return SimplifiedE;
-  } else if (auto *BI = dyn_cast<BitCastInst>(I)) {
+  } else if (auto *CI = dyn_cast<CastInst>(I)) {
     Value *V =
-        SimplifyCastInst(BI->getOpcode(), BI->getOperand(0), BI->getType(), SQ);
+        SimplifyCastInst(CI->getOpcode(), E->getOperand(0), CI->getType(), SQ);
     if (const Expression *SimplifiedE = checkSimplificationResults(E, I, V))
       return SimplifiedE;
   } else if (isa<GetElementPtrInst>(I)) {
@@ -1815,39 +1814,13 @@ NewGVN::performSymbolicPHIEvaluation(ArrayRef<ValPair> PHIOps,
 const Expression *
 NewGVN::performSymbolicAggrValueEvaluation(Instruction *I) const {
   if (auto *EI = dyn_cast<ExtractValueInst>(I)) {
-    auto *II = dyn_cast<IntrinsicInst>(EI->getAggregateOperand());
-    if (II && EI->getNumIndices() == 1 && *EI->idx_begin() == 0) {
-      unsigned Opcode = 0;
-      // EI might be an extract from one of our recognised intrinsics. If it
-      // is we'll synthesize a semantically equivalent expression instead on
-      // an extract value expression.
-      switch (II->getIntrinsicID()) {
-      case Intrinsic::sadd_with_overflow:
-      case Intrinsic::uadd_with_overflow:
-        Opcode = Instruction::Add;
-        break;
-      case Intrinsic::ssub_with_overflow:
-      case Intrinsic::usub_with_overflow:
-        Opcode = Instruction::Sub;
-        break;
-      case Intrinsic::smul_with_overflow:
-      case Intrinsic::umul_with_overflow:
-        Opcode = Instruction::Mul;
-        break;
-      default:
-        break;
-      }
-
-      if (Opcode != 0) {
-        // Intrinsic recognized. Grab its args to finish building the
-        // expression.
-        assert(II->getNumArgOperands() == 2 &&
-               "Expect two args for recognised intrinsics.");
-        return createBinaryExpression(Opcode, EI->getType(),
-                                      II->getArgOperand(0),
-                                      II->getArgOperand(1), I);
-      }
-    }
+    auto *WO = dyn_cast<WithOverflowInst>(EI->getAggregateOperand());
+    if (WO && EI->getNumIndices() == 1 && *EI->idx_begin() == 0)
+      // EI is an extract from one of our with.overflow intrinsics. Synthesize
+      // a semantically equivalent expression instead of an extract value
+      // expression.
+      return createBinaryExpression(WO->getBinaryOp(), EI->getType(),
+                                    WO->getLHS(), WO->getRHS(), I);
   }
 
   return createAggregateValueExpression(I);
@@ -2011,6 +1984,7 @@ NewGVN::performSymbolicEvaluation(Value *V,
       E = performSymbolicLoadEvaluation(I);
       break;
     case Instruction::BitCast:
+    case Instruction::AddrSpaceCast:
       E = createExpression(I);
       break;
     case Instruction::ICmp:
@@ -3503,7 +3477,7 @@ bool NewGVN::runGVN() {
            "BB containing ToErase deleted unexpectedly!");
     ToErase->eraseFromParent();
   }
-	Changed |= !InstructionsToErase.empty();
+  Changed |= !InstructionsToErase.empty();
 
   // Delete all unreachable blocks.
   auto UnreachableBlockPred = [&](const BasicBlock &BB) {

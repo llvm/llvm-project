@@ -8,6 +8,10 @@
 
 name:            foo
 tracksRegLiveness: true
+machineFunctionInfo:
+  scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
+  scratchWaveOffsetReg: $sgpr4
+  stackPtrOffsetReg: $sgpr32
 registers:
   - { id: 0, class: sreg_64 }
   - { id: 1100, class: sreg_128 }

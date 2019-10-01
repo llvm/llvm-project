@@ -1,9 +1,8 @@
 //===- ConstantRange.cpp - ConstantRange implementation -------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -32,6 +31,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/KnownBits.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -54,6 +54,26 @@ ConstantRange::ConstantRange(APInt L, APInt U)
          "Lower == Upper, but they aren't min or max value!");
 }
 
+ConstantRange ConstantRange::fromKnownBits(const KnownBits &Known,
+                                           bool IsSigned) {
+  assert(!Known.hasConflict() && "Expected valid KnownBits");
+
+  if (Known.isUnknown())
+    return getFull(Known.getBitWidth());
+
+  // For unsigned ranges, or signed ranges with known sign bit, create a simple
+  // range between the smallest and largest possible value.
+  if (!IsSigned || Known.isNegative() || Known.isNonNegative())
+    return ConstantRange(Known.One, ~Known.Zero + 1);
+
+  // If we don't know the sign bit, pick the lower bound as a negative number
+  // and the upper bound as a non-negative one.
+  APInt Lower = Known.One, Upper = ~Known.Zero;
+  Lower.setSignBit();
+  Upper.clearSignBit();
+  return ConstantRange(Lower, Upper + 1);
+}
+
 ConstantRange ConstantRange::makeAllowedICmpRegion(CmpInst::Predicate Pred,
                                                    const ConstantRange &CR) {
   if (CR.isEmptySet())
@@ -68,55 +88,39 @@ ConstantRange ConstantRange::makeAllowedICmpRegion(CmpInst::Predicate Pred,
   case CmpInst::ICMP_NE:
     if (CR.isSingleElement())
       return ConstantRange(CR.getUpper(), CR.getLower());
-    return ConstantRange(W);
+    return getFull(W);
   case CmpInst::ICMP_ULT: {
     APInt UMax(CR.getUnsignedMax());
     if (UMax.isMinValue())
-      return ConstantRange(W, /* empty */ false);
+      return getEmpty(W);
     return ConstantRange(APInt::getMinValue(W), std::move(UMax));
   }
   case CmpInst::ICMP_SLT: {
     APInt SMax(CR.getSignedMax());
     if (SMax.isMinSignedValue())
-      return ConstantRange(W, /* empty */ false);
+      return getEmpty(W);
     return ConstantRange(APInt::getSignedMinValue(W), std::move(SMax));
   }
-  case CmpInst::ICMP_ULE: {
-    APInt UMax(CR.getUnsignedMax());
-    if (UMax.isMaxValue())
-      return ConstantRange(W);
-    return ConstantRange(APInt::getMinValue(W), std::move(UMax) + 1);
-  }
-  case CmpInst::ICMP_SLE: {
-    APInt SMax(CR.getSignedMax());
-    if (SMax.isMaxSignedValue())
-      return ConstantRange(W);
-    return ConstantRange(APInt::getSignedMinValue(W), std::move(SMax) + 1);
-  }
+  case CmpInst::ICMP_ULE:
+    return getNonEmpty(APInt::getMinValue(W), CR.getUnsignedMax() + 1);
+  case CmpInst::ICMP_SLE:
+    return getNonEmpty(APInt::getSignedMinValue(W), CR.getSignedMax() + 1);
   case CmpInst::ICMP_UGT: {
     APInt UMin(CR.getUnsignedMin());
     if (UMin.isMaxValue())
-      return ConstantRange(W, /* empty */ false);
+      return getEmpty(W);
     return ConstantRange(std::move(UMin) + 1, APInt::getNullValue(W));
   }
   case CmpInst::ICMP_SGT: {
     APInt SMin(CR.getSignedMin());
     if (SMin.isMaxSignedValue())
-      return ConstantRange(W, /* empty */ false);
+      return getEmpty(W);
     return ConstantRange(std::move(SMin) + 1, APInt::getSignedMinValue(W));
   }
-  case CmpInst::ICMP_UGE: {
-    APInt UMin(CR.getUnsignedMin());
-    if (UMin.isMinValue())
-      return ConstantRange(W);
-    return ConstantRange(std::move(UMin), APInt::getNullValue(W));
-  }
-  case CmpInst::ICMP_SGE: {
-    APInt SMin(CR.getSignedMin());
-    if (SMin.isMinSignedValue())
-      return ConstantRange(W);
-    return ConstantRange(std::move(SMin), APInt::getSignedMinValue(W));
-  }
+  case CmpInst::ICMP_UGE:
+    return getNonEmpty(CR.getUnsignedMin(), APInt::getNullValue(W));
+  case CmpInst::ICMP_SGE:
+    return getNonEmpty(CR.getSignedMin(), APInt::getSignedMinValue(W));
   }
 }
 
@@ -176,144 +180,104 @@ bool ConstantRange::getEquivalentICmp(CmpInst::Predicate &Pred,
   return Success;
 }
 
+/// Exact mul nuw region for single element RHS.
+static ConstantRange makeExactMulNUWRegion(const APInt &V) {
+  unsigned BitWidth = V.getBitWidth();
+  if (V == 0)
+    return ConstantRange::getFull(V.getBitWidth());
+
+  return ConstantRange::getNonEmpty(
+      APIntOps::RoundingUDiv(APInt::getMinValue(BitWidth), V,
+                             APInt::Rounding::UP),
+      APIntOps::RoundingUDiv(APInt::getMaxValue(BitWidth), V,
+                             APInt::Rounding::DOWN) + 1);
+}
+
+/// Exact mul nsw region for single element RHS.
+static ConstantRange makeExactMulNSWRegion(const APInt &V) {
+  // Handle special case for 0, -1 and 1. See the last for reason why we
+  // specialize -1 and 1.
+  unsigned BitWidth = V.getBitWidth();
+  if (V == 0 || V.isOneValue())
+    return ConstantRange::getFull(BitWidth);
+
+  APInt MinValue = APInt::getSignedMinValue(BitWidth);
+  APInt MaxValue = APInt::getSignedMaxValue(BitWidth);
+  // e.g. Returning [-127, 127], represented as [-127, -128).
+  if (V.isAllOnesValue())
+    return ConstantRange(-MaxValue, MinValue);
+
+  APInt Lower, Upper;
+  if (V.isNegative()) {
+    Lower = APIntOps::RoundingSDiv(MaxValue, V, APInt::Rounding::UP);
+    Upper = APIntOps::RoundingSDiv(MinValue, V, APInt::Rounding::DOWN);
+  } else {
+    Lower = APIntOps::RoundingSDiv(MinValue, V, APInt::Rounding::UP);
+    Upper = APIntOps::RoundingSDiv(MaxValue, V, APInt::Rounding::DOWN);
+  }
+  // ConstantRange ctor take a half inclusive interval [Lower, Upper + 1).
+  // Upper + 1 is guaranteed not to overflow, because |divisor| > 1. 0, -1,
+  // and 1 are already handled as special cases.
+  return ConstantRange(Lower, Upper + 1);
+}
+
 ConstantRange
 ConstantRange::makeGuaranteedNoWrapRegion(Instruction::BinaryOps BinOp,
                                           const ConstantRange &Other,
                                           unsigned NoWrapKind) {
   using OBO = OverflowingBinaryOperator;
 
-  // Computes the intersection of CR0 and CR1.  It is different from
-  // intersectWith in that the ConstantRange returned will only contain elements
-  // in both CR0 and CR1 (i.e. SubsetIntersect(X, Y) is a *subset*, proper or
-  // not, of both X and Y).
-  auto SubsetIntersect =
-      [](const ConstantRange &CR0, const ConstantRange &CR1) {
-    return CR0.inverse().unionWith(CR1.inverse()).inverse();
-  };
-
   assert(Instruction::isBinaryOp(BinOp) && "Binary operators only!");
 
   assert((NoWrapKind == OBO::NoSignedWrap ||
-          NoWrapKind == OBO::NoUnsignedWrap ||
-          NoWrapKind == (OBO::NoUnsignedWrap | OBO::NoSignedWrap)) &&
+          NoWrapKind == OBO::NoUnsignedWrap) &&
          "NoWrapKind invalid!");
 
+  bool Unsigned = NoWrapKind == OBO::NoUnsignedWrap;
   unsigned BitWidth = Other.getBitWidth();
-  ConstantRange Result(BitWidth);
 
   switch (BinOp) {
   default:
-    // Conservative answer: empty set
-    return ConstantRange(BitWidth, false);
+    llvm_unreachable("Unsupported binary op");
 
-  case Instruction::Add:
-    if (auto *C = Other.getSingleElement())
-      if (C->isNullValue())
-        // Full set: nothing signed / unsigned wraps when added to 0.
-        return ConstantRange(BitWidth);
-    if (NoWrapKind & OBO::NoUnsignedWrap)
-      Result =
-          SubsetIntersect(Result, ConstantRange(APInt::getNullValue(BitWidth),
-                                                -Other.getUnsignedMax()));
-    if (NoWrapKind & OBO::NoSignedWrap) {
-      const APInt &SignedMin = Other.getSignedMin();
-      const APInt &SignedMax = Other.getSignedMax();
-      if (SignedMax.isStrictlyPositive())
-        Result = SubsetIntersect(
-            Result,
-            ConstantRange(APInt::getSignedMinValue(BitWidth),
-                          APInt::getSignedMinValue(BitWidth) - SignedMax));
-      if (SignedMin.isNegative())
-        Result = SubsetIntersect(
-            Result,
-            ConstantRange(APInt::getSignedMinValue(BitWidth) - SignedMin,
-                          APInt::getSignedMinValue(BitWidth)));
-    }
-    return Result;
-
-  case Instruction::Sub:
-    if (auto *C = Other.getSingleElement())
-      if (C->isNullValue())
-        // Full set: nothing signed / unsigned wraps when subtracting 0.
-        return ConstantRange(BitWidth);
-    if (NoWrapKind & OBO::NoUnsignedWrap)
-      Result =
-          SubsetIntersect(Result, ConstantRange(Other.getUnsignedMax(),
-                                                APInt::getMinValue(BitWidth)));
-    if (NoWrapKind & OBO::NoSignedWrap) {
-      const APInt &SignedMin = Other.getSignedMin();
-      const APInt &SignedMax = Other.getSignedMax();
-      if (SignedMax.isStrictlyPositive())
-        Result = SubsetIntersect(
-            Result,
-            ConstantRange(APInt::getSignedMinValue(BitWidth) + SignedMax,
-                          APInt::getSignedMinValue(BitWidth)));
-      if (SignedMin.isNegative())
-        Result = SubsetIntersect(
-            Result,
-            ConstantRange(APInt::getSignedMinValue(BitWidth),
-                          APInt::getSignedMinValue(BitWidth) + SignedMin));
-    }
-    return Result;
-  case Instruction::Mul: {
-    if (NoWrapKind == (OBO::NoSignedWrap | OBO::NoUnsignedWrap)) {
-      return SubsetIntersect(
-          makeGuaranteedNoWrapRegion(BinOp, Other, OBO::NoSignedWrap),
-          makeGuaranteedNoWrapRegion(BinOp, Other, OBO::NoUnsignedWrap));
-    }
-
-    // Equivalent to calling makeGuaranteedNoWrapRegion() on [V, V+1).
-    const bool Unsigned = NoWrapKind == OBO::NoUnsignedWrap;
-    const auto makeSingleValueRegion = [Unsigned,
-                                        BitWidth](APInt V) -> ConstantRange {
-      // Handle special case for 0, -1 and 1. See the last for reason why we
-      // specialize -1 and 1.
-      if (V == 0 || V.isOneValue())
-        return ConstantRange(BitWidth, true);
-
-      APInt MinValue, MaxValue;
-      if (Unsigned) {
-        MinValue = APInt::getMinValue(BitWidth);
-        MaxValue = APInt::getMaxValue(BitWidth);
-      } else {
-        MinValue = APInt::getSignedMinValue(BitWidth);
-        MaxValue = APInt::getSignedMaxValue(BitWidth);
-      }
-      // e.g. Returning [-127, 127], represented as [-127, -128).
-      if (!Unsigned && V.isAllOnesValue())
-        return ConstantRange(-MaxValue, MinValue);
-
-      APInt Lower, Upper;
-      if (!Unsigned && V.isNegative()) {
-        Lower = APIntOps::RoundingSDiv(MaxValue, V, APInt::Rounding::UP);
-        Upper = APIntOps::RoundingSDiv(MinValue, V, APInt::Rounding::DOWN);
-      } else if (Unsigned) {
-        Lower = APIntOps::RoundingUDiv(MinValue, V, APInt::Rounding::UP);
-        Upper = APIntOps::RoundingUDiv(MaxValue, V, APInt::Rounding::DOWN);
-      } else {
-        Lower = APIntOps::RoundingSDiv(MinValue, V, APInt::Rounding::UP);
-        Upper = APIntOps::RoundingSDiv(MaxValue, V, APInt::Rounding::DOWN);
-      }
-      if (Unsigned) {
-        Lower = Lower.zextOrSelf(BitWidth);
-        Upper = Upper.zextOrSelf(BitWidth);
-      } else {
-        Lower = Lower.sextOrSelf(BitWidth);
-        Upper = Upper.sextOrSelf(BitWidth);
-      }
-      // ConstantRange ctor take a half inclusive interval [Lower, Upper + 1).
-      // Upper + 1 is guanranteed not to overflow, because |divisor| > 1. 0, -1,
-      // and 1 are already handled as special cases.
-      return ConstantRange(Lower, Upper + 1);
-    };
-
+  case Instruction::Add: {
     if (Unsigned)
-      return makeSingleValueRegion(Other.getUnsignedMax());
+      return getNonEmpty(APInt::getNullValue(BitWidth),
+                         -Other.getUnsignedMax());
 
-    return SubsetIntersect(makeSingleValueRegion(Other.getSignedMin()),
-                           makeSingleValueRegion(Other.getSignedMax()));
+    APInt SignedMinVal = APInt::getSignedMinValue(BitWidth);
+    APInt SMin = Other.getSignedMin(), SMax = Other.getSignedMax();
+    return getNonEmpty(
+        SMin.isNegative() ? SignedMinVal - SMin : SignedMinVal,
+        SMax.isStrictlyPositive() ? SignedMinVal - SMax : SignedMinVal);
   }
+
+  case Instruction::Sub: {
+    if (Unsigned)
+      return getNonEmpty(Other.getUnsignedMax(), APInt::getMinValue(BitWidth));
+
+    APInt SignedMinVal = APInt::getSignedMinValue(BitWidth);
+    APInt SMin = Other.getSignedMin(), SMax = Other.getSignedMax();
+    return getNonEmpty(
+        SMax.isStrictlyPositive() ? SignedMinVal + SMax : SignedMinVal,
+        SMin.isNegative() ? SignedMinVal + SMin : SignedMinVal);
   }
+
+  case Instruction::Mul:
+    if (Unsigned)
+      return makeExactMulNUWRegion(Other.getUnsignedMax());
+
+    return makeExactMulNSWRegion(Other.getSignedMin())
+        .intersectWith(makeExactMulNSWRegion(Other.getSignedMax()));
+  }
+}
+
+ConstantRange ConstantRange::makeExactNoWrapRegion(Instruction::BinaryOps BinOp,
+                                                   const APInt &Other,
+                                                   unsigned NoWrapKind) {
+  // makeGuaranteedNoWrapRegion() is exact for single-element ranges, as
+  // "for all" and "for any" coincide in this case.
+  return makeGuaranteedNoWrapRegion(BinOp, ConstantRange(Other), NoWrapKind);
 }
 
 bool ConstantRange::isFullSet() const {
@@ -325,20 +289,19 @@ bool ConstantRange::isEmptySet() const {
 }
 
 bool ConstantRange::isWrappedSet() const {
+  return Lower.ugt(Upper) && !Upper.isNullValue();
+}
+
+bool ConstantRange::isUpperWrapped() const {
   return Lower.ugt(Upper);
 }
 
 bool ConstantRange::isSignWrappedSet() const {
-  return contains(APInt::getSignedMaxValue(getBitWidth())) &&
-         contains(APInt::getSignedMinValue(getBitWidth()));
+  return Lower.sgt(Upper) && !Upper.isMinSignedValue();
 }
 
-APInt ConstantRange::getSetSize() const {
-  if (isFullSet())
-    return APInt::getOneBitSet(getBitWidth()+1, getBitWidth());
-
-  // This is also correct for wrapped sets.
-  return (Upper - Lower).zext(getBitWidth()+1);
+bool ConstantRange::isUpperSignWrapped() const {
+  return Lower.sgt(Upper);
 }
 
 bool
@@ -362,26 +325,41 @@ ConstantRange::isSizeLargerThan(uint64_t MaxSize) const {
   return (Upper - Lower).ugt(MaxSize);
 }
 
+bool ConstantRange::isAllNegative() const {
+  // Empty set is all negative, full set is not.
+  if (isEmptySet())
+    return true;
+  if (isFullSet())
+    return false;
+
+  return !isUpperSignWrapped() && !Upper.isStrictlyPositive();
+}
+
+bool ConstantRange::isAllNonNegative() const {
+  // Empty and full set are automatically treated correctly.
+  return !isSignWrappedSet() && Lower.isNonNegative();
+}
+
 APInt ConstantRange::getUnsignedMax() const {
-  if (isFullSet() || isWrappedSet())
+  if (isFullSet() || isUpperWrapped())
     return APInt::getMaxValue(getBitWidth());
   return getUpper() - 1;
 }
 
 APInt ConstantRange::getUnsignedMin() const {
-  if (isFullSet() || (isWrappedSet() && !getUpper().isNullValue()))
+  if (isFullSet() || isWrappedSet())
     return APInt::getMinValue(getBitWidth());
   return getLower();
 }
 
 APInt ConstantRange::getSignedMax() const {
-  if (isFullSet() || Lower.sgt(Upper))
+  if (isFullSet() || isUpperSignWrapped())
     return APInt::getSignedMaxValue(getBitWidth());
   return getUpper() - 1;
 }
 
 APInt ConstantRange::getSignedMin() const {
-  if (isFullSet() || (Lower.sgt(Upper) && !getUpper().isMinSignedValue()))
+  if (isFullSet() || isSignWrappedSet())
     return APInt::getSignedMinValue(getBitWidth());
   return getLower();
 }
@@ -390,7 +368,7 @@ bool ConstantRange::contains(const APInt &V) const {
   if (Lower == Upper)
     return isFullSet();
 
-  if (!isWrappedSet())
+  if (!isUpperWrapped())
     return Lower.ule(V) && V.ult(Upper);
   return Lower.ule(V) || V.ult(Upper);
 }
@@ -399,14 +377,14 @@ bool ConstantRange::contains(const ConstantRange &Other) const {
   if (isFullSet() || Other.isEmptySet()) return true;
   if (isEmptySet() || Other.isFullSet()) return false;
 
-  if (!isWrappedSet()) {
-    if (Other.isWrappedSet())
+  if (!isUpperWrapped()) {
+    if (Other.isUpperWrapped())
       return false;
 
     return Lower.ule(Other.getLower()) && Other.getUpper().ule(Upper);
   }
 
-  if (!Other.isWrappedSet())
+  if (!Other.isUpperWrapped())
     return Other.getUpper().ule(Upper) ||
            Lower.ule(Other.getLower());
 
@@ -425,7 +403,28 @@ ConstantRange ConstantRange::difference(const ConstantRange &CR) const {
   return intersectWith(CR.inverse());
 }
 
-ConstantRange ConstantRange::intersectWith(const ConstantRange &CR) const {
+static ConstantRange getPreferredRange(
+    const ConstantRange &CR1, const ConstantRange &CR2,
+    ConstantRange::PreferredRangeType Type) {
+  if (Type == ConstantRange::Unsigned) {
+    if (!CR1.isWrappedSet() && CR2.isWrappedSet())
+      return CR1;
+    if (CR1.isWrappedSet() && !CR2.isWrappedSet())
+      return CR2;
+  } else if (Type == ConstantRange::Signed) {
+    if (!CR1.isSignWrappedSet() && CR2.isSignWrappedSet())
+      return CR1;
+    if (CR1.isSignWrappedSet() && !CR2.isSignWrappedSet())
+      return CR2;
+  }
+
+  if (CR1.isSizeStrictlySmallerThan(CR2))
+    return CR1;
+  return CR2;
+}
+
+ConstantRange ConstantRange::intersectWith(const ConstantRange &CR,
+                                           PreferredRangeType Type) const {
   assert(getBitWidth() == CR.getBitWidth() &&
          "ConstantRange types don't agree!");
 
@@ -433,100 +432,134 @@ ConstantRange ConstantRange::intersectWith(const ConstantRange &CR) const {
   if (   isEmptySet() || CR.isFullSet()) return *this;
   if (CR.isEmptySet() ||    isFullSet()) return CR;
 
-  if (!isWrappedSet() && CR.isWrappedSet())
-    return CR.intersectWith(*this);
+  if (!isUpperWrapped() && CR.isUpperWrapped())
+    return CR.intersectWith(*this, Type);
 
-  if (!isWrappedSet() && !CR.isWrappedSet()) {
+  if (!isUpperWrapped() && !CR.isUpperWrapped()) {
     if (Lower.ult(CR.Lower)) {
+      // L---U       : this
+      //       L---U : CR
       if (Upper.ule(CR.Lower))
-        return ConstantRange(getBitWidth(), false);
+        return getEmpty();
 
+      // L---U       : this
+      //   L---U     : CR
       if (Upper.ult(CR.Upper))
         return ConstantRange(CR.Lower, Upper);
 
+      // L-------U   : this
+      //   L---U     : CR
       return CR;
     }
+    //   L---U     : this
+    // L-------U   : CR
     if (Upper.ult(CR.Upper))
       return *this;
 
+    //   L-----U   : this
+    // L-----U     : CR
     if (Lower.ult(CR.Upper))
       return ConstantRange(Lower, CR.Upper);
 
-    return ConstantRange(getBitWidth(), false);
+    //       L---U : this
+    // L---U       : CR
+    return getEmpty();
   }
 
-  if (isWrappedSet() && !CR.isWrappedSet()) {
+  if (isUpperWrapped() && !CR.isUpperWrapped()) {
     if (CR.Lower.ult(Upper)) {
+      // ------U   L--- : this
+      //  L--U          : CR
       if (CR.Upper.ult(Upper))
         return CR;
 
+      // ------U   L--- : this
+      //  L------U      : CR
       if (CR.Upper.ule(Lower))
         return ConstantRange(CR.Lower, Upper);
 
-      if (isSizeStrictlySmallerThan(CR))
-        return *this;
-      return CR;
+      // ------U   L--- : this
+      //  L----------U  : CR
+      return getPreferredRange(*this, CR, Type);
     }
     if (CR.Lower.ult(Lower)) {
+      // --U      L---- : this
+      //     L--U       : CR
       if (CR.Upper.ule(Lower))
-        return ConstantRange(getBitWidth(), false);
+        return getEmpty();
 
+      // --U      L---- : this
+      //     L------U   : CR
       return ConstantRange(Lower, CR.Upper);
     }
+
+    // --U  L------ : this
+    //        L--U  : CR
     return CR;
   }
 
   if (CR.Upper.ult(Upper)) {
-    if (CR.Lower.ult(Upper)) {
-      if (isSizeStrictlySmallerThan(CR))
-        return *this;
-      return CR;
-    }
+    // ------U L-- : this
+    // --U L------ : CR
+    if (CR.Lower.ult(Upper))
+      return getPreferredRange(*this, CR, Type);
 
+    // ----U   L-- : this
+    // --U   L---- : CR
     if (CR.Lower.ult(Lower))
       return ConstantRange(Lower, CR.Upper);
 
+    // ----U L---- : this
+    // --U     L-- : CR
     return CR;
   }
   if (CR.Upper.ule(Lower)) {
+    // --U     L-- : this
+    // ----U L---- : CR
     if (CR.Lower.ult(Lower))
       return *this;
 
+    // --U   L---- : this
+    // ----U   L-- : CR
     return ConstantRange(CR.Lower, Upper);
   }
-  if (isSizeStrictlySmallerThan(CR))
-    return *this;
-  return CR;
+
+  // --U L------ : this
+  // ------U L-- : CR
+  return getPreferredRange(*this, CR, Type);
 }
 
-ConstantRange ConstantRange::unionWith(const ConstantRange &CR) const {
+ConstantRange ConstantRange::unionWith(const ConstantRange &CR,
+                                       PreferredRangeType Type) const {
   assert(getBitWidth() == CR.getBitWidth() &&
          "ConstantRange types don't agree!");
 
   if (   isFullSet() || CR.isEmptySet()) return *this;
   if (CR.isFullSet() ||    isEmptySet()) return CR;
 
-  if (!isWrappedSet() && CR.isWrappedSet()) return CR.unionWith(*this);
+  if (!isUpperWrapped() && CR.isUpperWrapped())
+    return CR.unionWith(*this, Type);
 
-  if (!isWrappedSet() && !CR.isWrappedSet()) {
-    if (CR.Upper.ult(Lower) || Upper.ult(CR.Lower)) {
-      // If the two ranges are disjoint, find the smaller gap and bridge it.
-      APInt d1 = CR.Lower - Upper, d2 = Lower - CR.Upper;
-      if (d1.ult(d2))
-        return ConstantRange(Lower, CR.Upper);
-      return ConstantRange(CR.Lower, Upper);
-    }
+  if (!isUpperWrapped() && !CR.isUpperWrapped()) {
+    //        L---U  and  L---U        : this
+    //  L---U                   L---U  : CR
+    // result in one of
+    //  L---------U
+    // -----U L-----
+    if (CR.Upper.ult(Lower) || Upper.ult(CR.Lower))
+      return getPreferredRange(
+          ConstantRange(Lower, CR.Upper), ConstantRange(CR.Lower, Upper), Type);
 
     APInt L = CR.Lower.ult(Lower) ? CR.Lower : Lower;
     APInt U = (CR.Upper - 1).ugt(Upper - 1) ? CR.Upper : Upper;
 
     if (L.isNullValue() && U.isNullValue())
-      return ConstantRange(getBitWidth());
+      return getFull();
 
     return ConstantRange(std::move(L), std::move(U));
   }
 
-  if (!CR.isWrappedSet()) {
+  if (!CR.isUpperWrapped()) {
     // ------U   L-----  and  ------U   L----- : this
     //   L--U                            L--U  : CR
     if (CR.Upper.ule(Upper) || CR.Lower.uge(Lower))
@@ -535,26 +568,25 @@ ConstantRange ConstantRange::unionWith(const ConstantRange &CR) const {
     // ------U   L----- : this
     //    L---------U   : CR
     if (CR.Lower.ule(Upper) && Lower.ule(CR.Upper))
-      return ConstantRange(getBitWidth());
+      return getFull();
 
     // ----U       L---- : this
     //       L---U       : CR
-    //    <d1>  <d2>
-    if (Upper.ule(CR.Lower) && CR.Upper.ule(Lower)) {
-      APInt d1 = CR.Lower - Upper, d2 = Lower - CR.Upper;
-      if (d1.ult(d2))
-        return ConstantRange(Lower, CR.Upper);
-      return ConstantRange(CR.Lower, Upper);
-    }
+    // results in one of
+    // ----------U L----
+    // ----U L----------
+    if (Upper.ult(CR.Lower) && CR.Upper.ult(Lower))
+      return getPreferredRange(
+          ConstantRange(Lower, CR.Upper), ConstantRange(CR.Lower, Upper), Type);
 
     // ----U     L----- : this
     //        L----U    : CR
-    if (Upper.ult(CR.Lower) && Lower.ult(CR.Upper))
+    if (Upper.ult(CR.Lower) && Lower.ule(CR.Upper))
       return ConstantRange(CR.Lower, Upper);
 
     // ------U    L---- : this
     //    L-----U       : CR
-    assert(CR.Lower.ult(Upper) && CR.Upper.ult(Lower) &&
+    assert(CR.Lower.ule(Upper) && CR.Upper.ult(Lower) &&
            "ConstantRange::unionWith missed a case with one range wrapped");
     return ConstantRange(Lower, CR.Upper);
   }
@@ -562,7 +594,7 @@ ConstantRange ConstantRange::unionWith(const ConstantRange &CR) const {
   // ------U    L----  and  ------U    L---- : this
   // -U  L-----------  and  ------------U  L : CR
   if (CR.Lower.ule(Upper) || Lower.ule(CR.Upper))
-    return ConstantRange(getBitWidth());
+    return getFull();
 
   APInt L = CR.Lower.ult(Lower) ? CR.Lower : Lower;
   APInt U = CR.Upper.ugt(Upper) ? CR.Upper : Upper;
@@ -588,7 +620,7 @@ ConstantRange ConstantRange::castOp(Instruction::CastOps CastOp,
     if (getBitWidth() == ResultBitWidth)
       return *this;
     else
-      return ConstantRange(getBitWidth(), /*isFullSet=*/true);
+      return getFull();
   case Instruction::UIToFP: {
     // TODO: use input range if available
     auto BW = getBitWidth();
@@ -608,17 +640,17 @@ ConstantRange ConstantRange::castOp(Instruction::CastOps CastOp,
   case Instruction::IntToPtr:
   case Instruction::PtrToInt:
   case Instruction::AddrSpaceCast:
-    // Conservatively return full set.
-    return ConstantRange(getBitWidth(), /*isFullSet=*/true);
+    // Conservatively return getFull set.
+    return getFull();
   };
 }
 
 ConstantRange ConstantRange::zeroExtend(uint32_t DstTySize) const {
-  if (isEmptySet()) return ConstantRange(DstTySize, /*isFullSet=*/false);
+  if (isEmptySet()) return getEmpty(DstTySize);
 
   unsigned SrcTySize = getBitWidth();
   assert(SrcTySize < DstTySize && "Not a value extension");
-  if (isFullSet() || isWrappedSet()) {
+  if (isFullSet() || isUpperWrapped()) {
     // Change into [0, 1 << src bit width)
     APInt LowerExt(DstTySize, 0);
     if (!Upper) // special case: [X, 0) -- not really wrapping around
@@ -631,7 +663,7 @@ ConstantRange ConstantRange::zeroExtend(uint32_t DstTySize) const {
 }
 
 ConstantRange ConstantRange::signExtend(uint32_t DstTySize) const {
-  if (isEmptySet()) return ConstantRange(DstTySize, /*isFullSet=*/false);
+  if (isEmptySet()) return getEmpty(DstTySize);
 
   unsigned SrcTySize = getBitWidth();
   assert(SrcTySize < DstTySize && "Not a value extension");
@@ -651,9 +683,9 @@ ConstantRange ConstantRange::signExtend(uint32_t DstTySize) const {
 ConstantRange ConstantRange::truncate(uint32_t DstTySize) const {
   assert(getBitWidth() > DstTySize && "Not a value truncation");
   if (isEmptySet())
-    return ConstantRange(DstTySize, /*isFullSet=*/false);
+    return getEmpty(DstTySize);
   if (isFullSet())
-    return ConstantRange(DstTySize, /*isFullSet=*/true);
+    return getFull(DstTySize);
 
   APInt LowerDiv(Lower), UpperDiv(Upper);
   ConstantRange Union(DstTySize, /*isFullSet=*/false);
@@ -661,12 +693,12 @@ ConstantRange ConstantRange::truncate(uint32_t DstTySize) const {
   // Analyze wrapped sets in their two parts: [0, Upper) \/ [Lower, MaxValue]
   // We use the non-wrapped set code to analyze the [Lower, MaxValue) part, and
   // then we do the union with [MaxValue, Upper)
-  if (isWrappedSet()) {
+  if (isUpperWrapped()) {
     // If Upper is greater than or equal to MaxValue(DstTy), it covers the whole
     // truncated range.
     if (Upper.getActiveBits() > DstTySize ||
         Upper.countTrailingOnes() == DstTySize)
-      return ConstantRange(DstTySize, /*isFullSet=*/true);
+      return getFull(DstTySize);
 
     Union = ConstantRange(APInt::getMaxValue(DstTySize),Upper.trunc(DstTySize));
     UpperDiv.setAllBits();
@@ -699,7 +731,7 @@ ConstantRange ConstantRange::truncate(uint32_t DstTySize) const {
                            UpperDiv.trunc(DstTySize)).unionWith(Union);
   }
 
-  return ConstantRange(DstTySize, /*isFullSet=*/true);
+  return getFull(DstTySize);
 }
 
 ConstantRange ConstantRange::zextOrTrunc(uint32_t DstTySize) const {
@@ -733,6 +765,12 @@ ConstantRange ConstantRange::binaryOp(Instruction::BinaryOps BinOp,
     return multiply(Other);
   case Instruction::UDiv:
     return udiv(Other);
+  case Instruction::SDiv:
+    return sdiv(Other);
+  case Instruction::URem:
+    return urem(Other);
+  case Instruction::SRem:
+    return srem(Other);
   case Instruction::Shl:
     return shl(Other);
   case Instruction::LShr:
@@ -752,39 +790,36 @@ ConstantRange ConstantRange::binaryOp(Instruction::BinaryOps BinOp,
   case Instruction::FMul:
     return multiply(Other);
   default:
-    // Conservatively return full set.
-    return ConstantRange(getBitWidth(), /*isFullSet=*/true);
+    // Conservatively return getFull set.
+    return getFull();
   }
 }
 
 ConstantRange
 ConstantRange::add(const ConstantRange &Other) const {
   if (isEmptySet() || Other.isEmptySet())
-    return ConstantRange(getBitWidth(), /*isFullSet=*/false);
+    return getEmpty();
   if (isFullSet() || Other.isFullSet())
-    return ConstantRange(getBitWidth(), /*isFullSet=*/true);
+    return getFull();
 
   APInt NewLower = getLower() + Other.getLower();
   APInt NewUpper = getUpper() + Other.getUpper() - 1;
   if (NewLower == NewUpper)
-    return ConstantRange(getBitWidth(), /*isFullSet=*/true);
+    return getFull();
 
   ConstantRange X = ConstantRange(std::move(NewLower), std::move(NewUpper));
   if (X.isSizeStrictlySmallerThan(*this) ||
       X.isSizeStrictlySmallerThan(Other))
     // We've wrapped, therefore, full set.
-    return ConstantRange(getBitWidth(), /*isFullSet=*/true);
+    return getFull();
   return X;
 }
 
 ConstantRange ConstantRange::addWithNoSignedWrap(const APInt &Other) const {
   // Calculate the subset of this range such that "X + Other" is
   // guaranteed not to wrap (overflow) for all X in this subset.
-  // makeGuaranteedNoWrapRegion will produce an exact NSW range since we are
-  // passing a single element range.
-  auto NSWRange = ConstantRange::makeGuaranteedNoWrapRegion(BinaryOperator::Add,
-                                      ConstantRange(Other),
-                                      OverflowingBinaryOperator::NoSignedWrap);
+  auto NSWRange = ConstantRange::makeExactNoWrapRegion(
+      BinaryOperator::Add, Other, OverflowingBinaryOperator::NoSignedWrap);
   auto NSWConstrainedRange = intersectWith(NSWRange);
 
   return NSWConstrainedRange.add(ConstantRange(Other));
@@ -793,20 +828,20 @@ ConstantRange ConstantRange::addWithNoSignedWrap(const APInt &Other) const {
 ConstantRange
 ConstantRange::sub(const ConstantRange &Other) const {
   if (isEmptySet() || Other.isEmptySet())
-    return ConstantRange(getBitWidth(), /*isFullSet=*/false);
+    return getEmpty();
   if (isFullSet() || Other.isFullSet())
-    return ConstantRange(getBitWidth(), /*isFullSet=*/true);
+    return getFull();
 
   APInt NewLower = getLower() - Other.getUpper() + 1;
   APInt NewUpper = getUpper() - Other.getLower();
   if (NewLower == NewUpper)
-    return ConstantRange(getBitWidth(), /*isFullSet=*/true);
+    return getFull();
 
   ConstantRange X = ConstantRange(std::move(NewLower), std::move(NewUpper));
   if (X.isSizeStrictlySmallerThan(*this) ||
       X.isSizeStrictlySmallerThan(Other))
     // We've wrapped, therefore, full set.
-    return ConstantRange(getBitWidth(), /*isFullSet=*/true);
+    return getFull();
   return X;
 }
 
@@ -818,7 +853,7 @@ ConstantRange::multiply(const ConstantRange &Other) const {
   // range according to the greatest power-of-two factor of the single element.
 
   if (isEmptySet() || Other.isEmptySet())
-    return ConstantRange(getBitWidth(), /*isFullSet=*/false);
+    return getEmpty();
 
   // Multiplication is signedness-independent. However different ranges can be
   // obtained depending on how the input ranges are treated. These different
@@ -840,7 +875,7 @@ ConstantRange::multiply(const ConstantRange &Other) const {
   // from one positive number to another which is as good as we can generate.
   // In this case, skip the extra work of generating signed ranges which aren't
   // going to be better than this range.
-  if (!UR.isWrappedSet() &&
+  if (!UR.isUpperWrapped() &&
       (UR.getUpper().isNonNegative() || UR.getUpper().isMinSignedValue()))
     return UR;
 
@@ -869,12 +904,10 @@ ConstantRange::smax(const ConstantRange &Other) const {
   // X smax Y is: range(smax(X_smin, Y_smin),
   //                    smax(X_smax, Y_smax))
   if (isEmptySet() || Other.isEmptySet())
-    return ConstantRange(getBitWidth(), /*isFullSet=*/false);
+    return getEmpty();
   APInt NewL = APIntOps::smax(getSignedMin(), Other.getSignedMin());
   APInt NewU = APIntOps::smax(getSignedMax(), Other.getSignedMax()) + 1;
-  if (NewU == NewL)
-    return ConstantRange(getBitWidth(), /*isFullSet=*/true);
-  return ConstantRange(std::move(NewL), std::move(NewU));
+  return getNonEmpty(std::move(NewL), std::move(NewU));
 }
 
 ConstantRange
@@ -882,12 +915,10 @@ ConstantRange::umax(const ConstantRange &Other) const {
   // X umax Y is: range(umax(X_umin, Y_umin),
   //                    umax(X_umax, Y_umax))
   if (isEmptySet() || Other.isEmptySet())
-    return ConstantRange(getBitWidth(), /*isFullSet=*/false);
+    return getEmpty();
   APInt NewL = APIntOps::umax(getUnsignedMin(), Other.getUnsignedMin());
   APInt NewU = APIntOps::umax(getUnsignedMax(), Other.getUnsignedMax()) + 1;
-  if (NewU == NewL)
-    return ConstantRange(getBitWidth(), /*isFullSet=*/true);
-  return ConstantRange(std::move(NewL), std::move(NewU));
+  return getNonEmpty(std::move(NewL), std::move(NewU));
 }
 
 ConstantRange
@@ -895,12 +926,10 @@ ConstantRange::smin(const ConstantRange &Other) const {
   // X smin Y is: range(smin(X_smin, Y_smin),
   //                    smin(X_smax, Y_smax))
   if (isEmptySet() || Other.isEmptySet())
-    return ConstantRange(getBitWidth(), /*isFullSet=*/false);
+    return getEmpty();
   APInt NewL = APIntOps::smin(getSignedMin(), Other.getSignedMin());
   APInt NewU = APIntOps::smin(getSignedMax(), Other.getSignedMax()) + 1;
-  if (NewU == NewL)
-    return ConstantRange(getBitWidth(), /*isFullSet=*/true);
-  return ConstantRange(std::move(NewL), std::move(NewU));
+  return getNonEmpty(std::move(NewL), std::move(NewU));
 }
 
 ConstantRange
@@ -908,20 +937,16 @@ ConstantRange::umin(const ConstantRange &Other) const {
   // X umin Y is: range(umin(X_umin, Y_umin),
   //                    umin(X_umax, Y_umax))
   if (isEmptySet() || Other.isEmptySet())
-    return ConstantRange(getBitWidth(), /*isFullSet=*/false);
+    return getEmpty();
   APInt NewL = APIntOps::umin(getUnsignedMin(), Other.getUnsignedMin());
   APInt NewU = APIntOps::umin(getUnsignedMax(), Other.getUnsignedMax()) + 1;
-  if (NewU == NewL)
-    return ConstantRange(getBitWidth(), /*isFullSet=*/true);
-  return ConstantRange(std::move(NewL), std::move(NewU));
+  return getNonEmpty(std::move(NewL), std::move(NewU));
 }
 
 ConstantRange
 ConstantRange::udiv(const ConstantRange &RHS) const {
   if (isEmptySet() || RHS.isEmptySet() || RHS.getUnsignedMax().isNullValue())
-    return ConstantRange(getBitWidth(), /*isFullSet=*/false);
-  if (RHS.isFullSet())
-    return ConstantRange(getBitWidth(), /*isFullSet=*/true);
+    return getEmpty();
 
   APInt Lower = getUnsignedMin().udiv(RHS.getUnsignedMax());
 
@@ -936,52 +961,186 @@ ConstantRange::udiv(const ConstantRange &RHS) const {
   }
 
   APInt Upper = getUnsignedMax().udiv(RHS_umin) + 1;
+  return getNonEmpty(std::move(Lower), std::move(Upper));
+}
 
-  // If the LHS is Full and the RHS is a wrapped interval containing 1 then
-  // this could occur.
-  if (Lower == Upper)
-    return ConstantRange(getBitWidth(), /*isFullSet=*/true);
+ConstantRange ConstantRange::sdiv(const ConstantRange &RHS) const {
+  // We split up the LHS and RHS into positive and negative components
+  // and then also compute the positive and negative components of the result
+  // separately by combining division results with the appropriate signs.
+  APInt Zero = APInt::getNullValue(getBitWidth());
+  APInt SignedMin = APInt::getSignedMinValue(getBitWidth());
+  ConstantRange PosFilter(APInt(getBitWidth(), 1), SignedMin);
+  ConstantRange NegFilter(SignedMin, Zero);
+  ConstantRange PosL = intersectWith(PosFilter);
+  ConstantRange NegL = intersectWith(NegFilter);
+  ConstantRange PosR = RHS.intersectWith(PosFilter);
+  ConstantRange NegR = RHS.intersectWith(NegFilter);
 
+  ConstantRange PosRes = getEmpty();
+  if (!PosL.isEmptySet() && !PosR.isEmptySet())
+    // pos / pos = pos.
+    PosRes = ConstantRange(PosL.Lower.sdiv(PosR.Upper - 1),
+                           (PosL.Upper - 1).sdiv(PosR.Lower) + 1);
+
+  if (!NegL.isEmptySet() && !NegR.isEmptySet()) {
+    // neg / neg = pos.
+    //
+    // We need to deal with one tricky case here: SignedMin / -1 is UB on the
+    // IR level, so we'll want to exclude this case when calculating bounds.
+    // (For APInts the operation is well-defined and yields SignedMin.) We
+    // handle this by dropping either SignedMin from the LHS or -1 from the RHS.
+    APInt Lo = (NegL.Upper - 1).sdiv(NegR.Lower);
+    if (NegL.Lower.isMinSignedValue() && NegR.Upper.isNullValue()) {
+      // Remove -1 from the LHS. Skip if it's the only element, as this would
+      // leave us with an empty set.
+      if (!NegR.Lower.isAllOnesValue()) {
+        APInt AdjNegRUpper;
+        if (RHS.Lower.isAllOnesValue())
+          // Negative part of [-1, X] without -1 is [SignedMin, X].
+          AdjNegRUpper = RHS.Upper;
+        else
+          // [X, -1] without -1 is [X, -2].
+          AdjNegRUpper = NegR.Upper - 1;
+
+        PosRes = PosRes.unionWith(
+            ConstantRange(Lo, NegL.Lower.sdiv(AdjNegRUpper - 1) + 1));
+      }
+
+      // Remove SignedMin from the RHS. Skip if it's the only element, as this
+      // would leave us with an empty set.
+      if (NegL.Upper != SignedMin + 1) {
+        APInt AdjNegLLower;
+        if (Upper == SignedMin + 1)
+          // Negative part of [X, SignedMin] without SignedMin is [X, -1].
+          AdjNegLLower = Lower;
+        else
+          // [SignedMin, X] without SignedMin is [SignedMin + 1, X].
+          AdjNegLLower = NegL.Lower + 1;
+
+        PosRes = PosRes.unionWith(
+            ConstantRange(std::move(Lo),
+                          AdjNegLLower.sdiv(NegR.Upper - 1) + 1));
+      }
+    } else {
+      PosRes = PosRes.unionWith(
+          ConstantRange(std::move(Lo), NegL.Lower.sdiv(NegR.Upper - 1) + 1));
+    }
+  }
+
+  ConstantRange NegRes = getEmpty();
+  if (!PosL.isEmptySet() && !NegR.isEmptySet())
+    // pos / neg = neg.
+    NegRes = ConstantRange((PosL.Upper - 1).sdiv(NegR.Upper - 1),
+                           PosL.Lower.sdiv(NegR.Lower) + 1);
+
+  if (!NegL.isEmptySet() && !PosR.isEmptySet())
+    // neg / pos = neg.
+    NegRes = NegRes.unionWith(
+        ConstantRange(NegL.Lower.sdiv(PosR.Lower),
+                      (NegL.Upper - 1).sdiv(PosR.Upper - 1) + 1));
+
+  // Prefer a non-wrapping signed range here.
+  ConstantRange Res = NegRes.unionWith(PosRes, PreferredRangeType::Signed);
+
+  // Preserve the zero that we dropped when splitting the LHS by sign.
+  if (contains(Zero) && (!PosR.isEmptySet() || !NegR.isEmptySet()))
+    Res = Res.unionWith(ConstantRange(Zero));
+  return Res;
+}
+
+ConstantRange ConstantRange::urem(const ConstantRange &RHS) const {
+  if (isEmptySet() || RHS.isEmptySet() || RHS.getUnsignedMax().isNullValue())
+    return getEmpty();
+
+  // L % R for L < R is L.
+  if (getUnsignedMax().ult(RHS.getUnsignedMin()))
+    return *this;
+
+  // L % R is <= L and < R.
+  APInt Upper = APIntOps::umin(getUnsignedMax(), RHS.getUnsignedMax() - 1) + 1;
+  return getNonEmpty(APInt::getNullValue(getBitWidth()), std::move(Upper));
+}
+
+ConstantRange ConstantRange::srem(const ConstantRange &RHS) const {
+  if (isEmptySet() || RHS.isEmptySet())
+    return getEmpty();
+
+  ConstantRange AbsRHS = RHS.abs();
+  APInt MinAbsRHS = AbsRHS.getUnsignedMin();
+  APInt MaxAbsRHS = AbsRHS.getUnsignedMax();
+
+  // Modulus by zero is UB.
+  if (MaxAbsRHS.isNullValue())
+    return getEmpty();
+
+  if (MinAbsRHS.isNullValue())
+    ++MinAbsRHS;
+
+  APInt MinLHS = getSignedMin(), MaxLHS = getSignedMax();
+
+  if (MinLHS.isNonNegative()) {
+    // L % R for L < R is L.
+    if (MaxLHS.ult(MinAbsRHS))
+      return *this;
+
+    // L % R is <= L and < R.
+    APInt Upper = APIntOps::umin(MaxLHS, MaxAbsRHS - 1) + 1;
+    return ConstantRange(APInt::getNullValue(getBitWidth()), std::move(Upper));
+  }
+
+  // Same basic logic as above, but the result is negative.
+  if (MaxLHS.isNegative()) {
+    if (MinLHS.ugt(-MinAbsRHS))
+      return *this;
+
+    APInt Lower = APIntOps::umax(MinLHS, -MaxAbsRHS + 1);
+    return ConstantRange(std::move(Lower), APInt(getBitWidth(), 1));
+  }
+
+  // LHS range crosses zero.
+  APInt Lower = APIntOps::umax(MinLHS, -MaxAbsRHS + 1);
+  APInt Upper = APIntOps::umin(MaxLHS, MaxAbsRHS - 1) + 1;
   return ConstantRange(std::move(Lower), std::move(Upper));
 }
 
 ConstantRange
 ConstantRange::binaryAnd(const ConstantRange &Other) const {
   if (isEmptySet() || Other.isEmptySet())
-    return ConstantRange(getBitWidth(), /*isFullSet=*/false);
+    return getEmpty();
 
   // TODO: replace this with something less conservative
 
   APInt umin = APIntOps::umin(Other.getUnsignedMax(), getUnsignedMax());
-  if (umin.isAllOnesValue())
-    return ConstantRange(getBitWidth(), /*isFullSet=*/true);
-  return ConstantRange(APInt::getNullValue(getBitWidth()), std::move(umin) + 1);
+  return getNonEmpty(APInt::getNullValue(getBitWidth()), std::move(umin) + 1);
 }
 
 ConstantRange
 ConstantRange::binaryOr(const ConstantRange &Other) const {
   if (isEmptySet() || Other.isEmptySet())
-    return ConstantRange(getBitWidth(), /*isFullSet=*/false);
+    return getEmpty();
 
   // TODO: replace this with something less conservative
 
   APInt umax = APIntOps::umax(getUnsignedMin(), Other.getUnsignedMin());
-  if (umax.isNullValue())
-    return ConstantRange(getBitWidth(), /*isFullSet=*/true);
-  return ConstantRange(std::move(umax), APInt::getNullValue(getBitWidth()));
+  return getNonEmpty(std::move(umax), APInt::getNullValue(getBitWidth()));
 }
 
 ConstantRange
 ConstantRange::shl(const ConstantRange &Other) const {
   if (isEmptySet() || Other.isEmptySet())
-    return ConstantRange(getBitWidth(), /*isFullSet=*/false);
+    return getEmpty();
 
   APInt max = getUnsignedMax();
   APInt Other_umax = Other.getUnsignedMax();
 
+  // If we are shifting by maximum amount of
+  // zero return return the original range.
+  if (Other_umax.isNullValue())
+    return *this;
   // there's overflow!
-  if (Other_umax.uge(max.countLeadingZeros()))
-    return ConstantRange(getBitWidth(), /*isFullSet=*/true);
+  if (Other_umax.ugt(max.countLeadingZeros()))
+    return getFull();
 
   // FIXME: implement the other tricky cases
 
@@ -995,20 +1154,17 @@ ConstantRange::shl(const ConstantRange &Other) const {
 ConstantRange
 ConstantRange::lshr(const ConstantRange &Other) const {
   if (isEmptySet() || Other.isEmptySet())
-    return ConstantRange(getBitWidth(), /*isFullSet=*/false);
+    return getEmpty();
 
   APInt max = getUnsignedMax().lshr(Other.getUnsignedMin()) + 1;
   APInt min = getUnsignedMin().lshr(Other.getUnsignedMax());
-  if (min == max)
-    return ConstantRange(getBitWidth(), /*isFullSet=*/true);
-
-  return ConstantRange(std::move(min), std::move(max));
+  return getNonEmpty(std::move(min), std::move(max));
 }
 
 ConstantRange
 ConstantRange::ashr(const ConstantRange &Other) const {
   if (isEmptySet() || Other.isEmptySet())
-    return ConstantRange(getBitWidth(), /*isFullSet=*/false);
+    return getEmpty();
 
   // May straddle zero, so handle both positive and negative cases.
   // 'PosMax' is the upper bound of the result of the ashr
@@ -1053,18 +1209,194 @@ ConstantRange::ashr(const ConstantRange &Other) const {
     min = NegMin;
     max = PosMax;
   }
-  if (min == max)
-    return ConstantRange(getBitWidth(), /*isFullSet=*/true);
+  return getNonEmpty(std::move(min), std::move(max));
+}
 
-  return ConstantRange(std::move(min), std::move(max));
+ConstantRange ConstantRange::uadd_sat(const ConstantRange &Other) const {
+  if (isEmptySet() || Other.isEmptySet())
+    return getEmpty();
+
+  APInt NewL = getUnsignedMin().uadd_sat(Other.getUnsignedMin());
+  APInt NewU = getUnsignedMax().uadd_sat(Other.getUnsignedMax()) + 1;
+  return getNonEmpty(std::move(NewL), std::move(NewU));
+}
+
+ConstantRange ConstantRange::sadd_sat(const ConstantRange &Other) const {
+  if (isEmptySet() || Other.isEmptySet())
+    return getEmpty();
+
+  APInt NewL = getSignedMin().sadd_sat(Other.getSignedMin());
+  APInt NewU = getSignedMax().sadd_sat(Other.getSignedMax()) + 1;
+  return getNonEmpty(std::move(NewL), std::move(NewU));
+}
+
+ConstantRange ConstantRange::usub_sat(const ConstantRange &Other) const {
+  if (isEmptySet() || Other.isEmptySet())
+    return getEmpty();
+
+  APInt NewL = getUnsignedMin().usub_sat(Other.getUnsignedMax());
+  APInt NewU = getUnsignedMax().usub_sat(Other.getUnsignedMin()) + 1;
+  return getNonEmpty(std::move(NewL), std::move(NewU));
+}
+
+ConstantRange ConstantRange::ssub_sat(const ConstantRange &Other) const {
+  if (isEmptySet() || Other.isEmptySet())
+    return getEmpty();
+
+  APInt NewL = getSignedMin().ssub_sat(Other.getSignedMax());
+  APInt NewU = getSignedMax().ssub_sat(Other.getSignedMin()) + 1;
+  return getNonEmpty(std::move(NewL), std::move(NewU));
 }
 
 ConstantRange ConstantRange::inverse() const {
   if (isFullSet())
-    return ConstantRange(getBitWidth(), /*isFullSet=*/false);
+    return getEmpty();
   if (isEmptySet())
-    return ConstantRange(getBitWidth(), /*isFullSet=*/true);
+    return getFull();
   return ConstantRange(Upper, Lower);
+}
+
+ConstantRange ConstantRange::abs() const {
+  if (isEmptySet())
+    return getEmpty();
+
+  if (isSignWrappedSet()) {
+    APInt Lo;
+    // Check whether the range crosses zero.
+    if (Upper.isStrictlyPositive() || !Lower.isStrictlyPositive())
+      Lo = APInt::getNullValue(getBitWidth());
+    else
+      Lo = APIntOps::umin(Lower, -Upper + 1);
+
+    // SignedMin is included in the result range.
+    return ConstantRange(Lo, APInt::getSignedMinValue(getBitWidth()) + 1);
+  }
+
+  APInt SMin = getSignedMin(), SMax = getSignedMax();
+
+  // All non-negative.
+  if (SMin.isNonNegative())
+    return *this;
+
+  // All negative.
+  if (SMax.isNegative())
+    return ConstantRange(-SMax, -SMin + 1);
+
+  // Range crosses zero.
+  return ConstantRange(APInt::getNullValue(getBitWidth()),
+                       APIntOps::umax(-SMin, SMax) + 1);
+}
+
+ConstantRange::OverflowResult ConstantRange::unsignedAddMayOverflow(
+    const ConstantRange &Other) const {
+  if (isEmptySet() || Other.isEmptySet())
+    return OverflowResult::MayOverflow;
+
+  APInt Min = getUnsignedMin(), Max = getUnsignedMax();
+  APInt OtherMin = Other.getUnsignedMin(), OtherMax = Other.getUnsignedMax();
+
+  // a u+ b overflows high iff a u> ~b.
+  if (Min.ugt(~OtherMin))
+    return OverflowResult::AlwaysOverflowsHigh;
+  if (Max.ugt(~OtherMax))
+    return OverflowResult::MayOverflow;
+  return OverflowResult::NeverOverflows;
+}
+
+ConstantRange::OverflowResult ConstantRange::signedAddMayOverflow(
+    const ConstantRange &Other) const {
+  if (isEmptySet() || Other.isEmptySet())
+    return OverflowResult::MayOverflow;
+
+  APInt Min = getSignedMin(), Max = getSignedMax();
+  APInt OtherMin = Other.getSignedMin(), OtherMax = Other.getSignedMax();
+
+  APInt SignedMin = APInt::getSignedMinValue(getBitWidth());
+  APInt SignedMax = APInt::getSignedMaxValue(getBitWidth());
+
+  // a s+ b overflows high iff a s>=0 && b s>= 0 && a s> smax - b.
+  // a s+ b overflows low iff a s< 0 && b s< 0 && a s< smin - b.
+  if (Min.isNonNegative() && OtherMin.isNonNegative() &&
+      Min.sgt(SignedMax - OtherMin))
+    return OverflowResult::AlwaysOverflowsHigh;
+  if (Max.isNegative() && OtherMax.isNegative() &&
+      Max.slt(SignedMin - OtherMax))
+    return OverflowResult::AlwaysOverflowsLow;
+
+  if (Max.isNonNegative() && OtherMax.isNonNegative() &&
+      Max.sgt(SignedMax - OtherMax))
+    return OverflowResult::MayOverflow;
+  if (Min.isNegative() && OtherMin.isNegative() &&
+      Min.slt(SignedMin - OtherMin))
+    return OverflowResult::MayOverflow;
+
+  return OverflowResult::NeverOverflows;
+}
+
+ConstantRange::OverflowResult ConstantRange::unsignedSubMayOverflow(
+    const ConstantRange &Other) const {
+  if (isEmptySet() || Other.isEmptySet())
+    return OverflowResult::MayOverflow;
+
+  APInt Min = getUnsignedMin(), Max = getUnsignedMax();
+  APInt OtherMin = Other.getUnsignedMin(), OtherMax = Other.getUnsignedMax();
+
+  // a u- b overflows low iff a u< b.
+  if (Max.ult(OtherMin))
+    return OverflowResult::AlwaysOverflowsLow;
+  if (Min.ult(OtherMax))
+    return OverflowResult::MayOverflow;
+  return OverflowResult::NeverOverflows;
+}
+
+ConstantRange::OverflowResult ConstantRange::signedSubMayOverflow(
+    const ConstantRange &Other) const {
+  if (isEmptySet() || Other.isEmptySet())
+    return OverflowResult::MayOverflow;
+
+  APInt Min = getSignedMin(), Max = getSignedMax();
+  APInt OtherMin = Other.getSignedMin(), OtherMax = Other.getSignedMax();
+
+  APInt SignedMin = APInt::getSignedMinValue(getBitWidth());
+  APInt SignedMax = APInt::getSignedMaxValue(getBitWidth());
+
+  // a s- b overflows high iff a s>=0 && b s< 0 && a s> smax + b.
+  // a s- b overflows low iff a s< 0 && b s>= 0 && a s< smin + b.
+  if (Min.isNonNegative() && OtherMax.isNegative() &&
+      Min.sgt(SignedMax + OtherMax))
+    return OverflowResult::AlwaysOverflowsHigh;
+  if (Max.isNegative() && OtherMin.isNonNegative() &&
+      Max.slt(SignedMin + OtherMin))
+    return OverflowResult::AlwaysOverflowsLow;
+
+  if (Max.isNonNegative() && OtherMin.isNegative() &&
+      Max.sgt(SignedMax + OtherMin))
+    return OverflowResult::MayOverflow;
+  if (Min.isNegative() && OtherMax.isNonNegative() &&
+      Min.slt(SignedMin + OtherMax))
+    return OverflowResult::MayOverflow;
+
+  return OverflowResult::NeverOverflows;
+}
+
+ConstantRange::OverflowResult ConstantRange::unsignedMulMayOverflow(
+    const ConstantRange &Other) const {
+  if (isEmptySet() || Other.isEmptySet())
+    return OverflowResult::MayOverflow;
+
+  APInt Min = getUnsignedMin(), Max = getUnsignedMax();
+  APInt OtherMin = Other.getUnsignedMin(), OtherMax = Other.getUnsignedMax();
+  bool Overflow;
+
+  (void) Min.umul_ov(OtherMin, Overflow);
+  if (Overflow)
+    return OverflowResult::AlwaysOverflowsHigh;
+
+  (void) Max.umul_ov(OtherMax, Overflow);
+  if (Overflow)
+    return OverflowResult::MayOverflow;
+
+  return OverflowResult::NeverOverflows;
 }
 
 void ConstantRange::print(raw_ostream &OS) const {

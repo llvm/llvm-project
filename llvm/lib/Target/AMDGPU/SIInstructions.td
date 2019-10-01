@@ -1,9 +1,8 @@
 //===-- SIInstructions.td - SI Instruction Defintions ---------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 // This file was originally auto-generated from a GPU register header file and
@@ -12,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 class GCNPat<dag pattern, dag result> : Pat<pattern, result>, GCNPredicateControl {
-  let SubtargetPredicate = isGCN;
+
 }
 
 include "SOPInstructions.td"
@@ -122,6 +121,13 @@ def WWM : PseudoInstSI <(outs unknown:$vdst), (ins unknown:$src0)>;
 
 } // End let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Uses = [EXEC]
 
+def ENTER_WWM : SPseudoInstSI <(outs SReg_64:$sdst), (ins i64imm:$src0)> {
+  let Defs = [EXEC];
+  let hasSideEffects = 0;
+  let mayLoad = 0;
+  let mayStore = 0;
+}
+
 def EXIT_WWM : SPseudoInstSI <(outs SReg_64:$sdst), (ins SReg_64:$src0)> {
   let hasSideEffects = 0;
   let mayLoad = 0;
@@ -161,7 +167,6 @@ def S_ADD_U64_CO_PSEUDO : SPseudoInstSI <
 def S_SUB_U64_CO_PSEUDO : SPseudoInstSI <
   (outs SReg_64:$vdst, VOPDstS64:$sdst), (ins SSrc_b64:$src0, SSrc_b64:$src1)
 >;
-
 } // End usesCustomInserter = 1, Defs = [SCC]
 
 let usesCustomInserter = 1 in {
@@ -169,23 +174,30 @@ def GET_GROUPSTATICSIZE : SPseudoInstSI <(outs SReg_32:$sdst), (ins),
   [(set SReg_32:$sdst, (int_amdgcn_groupstaticsize))]>;
 } // End let usesCustomInserter = 1, SALU = 1
 
-def S_MOV_B64_term : SPseudoInstSI<(outs SReg_64:$dst),
-   (ins SSrc_b64:$src0)> {
-  let isAsCheapAsAMove = 1;
+// Wrap an instruction by duplicating it, except for setting isTerminator.
+class WrapTerminatorInst<SOP_Pseudo base_inst> : SPseudoInstSI<
+      base_inst.OutOperandList,
+      base_inst.InOperandList> {
+  let Uses = base_inst.Uses;
+  let Defs = base_inst.Defs;
   let isTerminator = 1;
+  let isAsCheapAsAMove = base_inst.isAsCheapAsAMove;
+  let hasSideEffects = base_inst.hasSideEffects;
+  let UseNamedOperandTable = base_inst.UseNamedOperandTable;
+  let CodeSize = base_inst.CodeSize;
 }
 
-def S_XOR_B64_term : SPseudoInstSI<(outs SReg_64:$dst),
-   (ins SSrc_b64:$src0, SSrc_b64:$src1)> {
-  let isAsCheapAsAMove = 1;
-  let isTerminator = 1;
-  let Defs = [SCC];
+let WaveSizePredicate = isWave64 in {
+def S_MOV_B64_term : WrapTerminatorInst<S_MOV_B64>;
+def S_XOR_B64_term : WrapTerminatorInst<S_XOR_B64>;
+def S_ANDN2_B64_term : WrapTerminatorInst<S_ANDN2_B64>;
 }
 
-def S_ANDN2_B64_term : SPseudoInstSI<(outs SReg_64:$dst),
-   (ins SSrc_b64:$src0, SSrc_b64:$src1)> {
-  let isAsCheapAsAMove = 1;
-  let isTerminator = 1;
+let WaveSizePredicate = isWave32 in {
+def S_MOV_B32_term : WrapTerminatorInst<S_MOV_B32>;
+def S_XOR_B32_term : WrapTerminatorInst<S_XOR_B32>;
+def S_OR_B32_term : WrapTerminatorInst<S_OR_B32>;
+def S_ANDN2_B32_term : WrapTerminatorInst<S_ANDN2_B32>;
 }
 
 def WAVE_BARRIER : SPseudoInstSI<(outs), (ins),
@@ -195,7 +207,6 @@ def WAVE_BARRIER : SPseudoInstSI<(outs), (ins),
   let hasSideEffects = 1;
   let mayLoad = 1;
   let mayStore = 1;
-  let isBarrier = 1;
   let isConvergent = 1;
   let FixedSize = 1;
   let Size = 0;
@@ -340,6 +351,15 @@ def SI_INIT_EXEC : SPseudoInstSI <
   let Defs = [EXEC];
   let usesCustomInserter = 1;
   let isAsCheapAsAMove = 1;
+  let WaveSizePredicate = isWave64;
+}
+
+def SI_INIT_EXEC_LO : SPseudoInstSI <
+  (outs), (ins i32imm:$src), []> {
+  let Defs = [EXEC_LO];
+  let usesCustomInserter = 1;
+  let isAsCheapAsAMove = 1;
+  let WaveSizePredicate = isWave32;
 }
 
 def SI_INIT_EXEC_FROM_INPUT : SPseudoInstSI <
@@ -374,11 +394,14 @@ def SI_RETURN : SPseudoInstSI <
 // This version is only needed so we can fill in the output regiter in
 // the custom inserter.
 def SI_CALL_ISEL : SPseudoInstSI <
-  (outs), (ins SSrc_b64:$src0), [(AMDGPUcall i64:$src0)]> {
+  (outs), (ins SSrc_b64:$src0, unknown:$callee),
+  [(AMDGPUcall i64:$src0, tglobaladdr:$callee)]> {
   let Size = 4;
   let isCall = 1;
   let SchedRW = [WriteBranch];
   let usesCustomInserter = 1;
+  // TODO: Should really base this on the call target
+  let isConvergent = 1;
 }
 
 // Wrapper around s_swappc_b64 with extra $callee parameter to track
@@ -389,23 +412,14 @@ def SI_CALL : SPseudoInstSI <
   let isCall = 1;
   let UseNamedOperandTable = 1;
   let SchedRW = [WriteBranch];
+  // TODO: Should really base this on the call target
+  let isConvergent = 1;
 }
 
 // Tail call handling pseudo
-def SI_TCRETURN_ISEL : SPseudoInstSI<(outs),
-  (ins SSrc_b64:$src0, i32imm:$fpdiff),
-  [(AMDGPUtc_return i64:$src0, i32:$fpdiff)]> {
-  let isCall = 1;
-  let isTerminator = 1;
-  let isReturn = 1;
-  let isBarrier = 1;
-  let SchedRW = [WriteBranch];
-  let usesCustomInserter = 1;
-}
-
-def SI_TCRETURN : SPseudoInstSI <
-  (outs),
-  (ins SSrc_b64:$src0, unknown:$callee, i32imm:$fpdiff)> {
+def SI_TCRETURN : SPseudoInstSI <(outs),
+  (ins SSrc_b64:$src0, unknown:$callee, i32imm:$fpdiff),
+  [(AMDGPUtc_return i64:$src0, tglobaladdr:$callee, i32:$fpdiff)]> {
   let Size = 4;
   let isCall = 1;
   let isTerminator = 1;
@@ -413,6 +427,8 @@ def SI_TCRETURN : SPseudoInstSI <
   let isBarrier = 1;
   let UseNamedOperandTable = 1;
   let SchedRW = [WriteBranch];
+  // TODO: Should really base this on the call target
+  let isConvergent = 1;
 }
 
 
@@ -490,7 +506,9 @@ multiclass SI_SPILL_SGPR <RegisterClass sgpr_class> {
 // SI_SPILL_32_* instructions.
 defm SI_SPILL_S32  : SI_SPILL_SGPR <SReg_32>;
 defm SI_SPILL_S64  : SI_SPILL_SGPR <SReg_64>;
+defm SI_SPILL_S96  : SI_SPILL_SGPR <SReg_96>;
 defm SI_SPILL_S128 : SI_SPILL_SGPR <SReg_128>;
+defm SI_SPILL_S160 : SI_SPILL_SGPR <SReg_160>;
 defm SI_SPILL_S256 : SI_SPILL_SGPR <SReg_256>;
 defm SI_SPILL_S512 : SI_SPILL_SGPR <SReg_512>;
 
@@ -524,6 +542,7 @@ defm SI_SPILL_V32  : SI_SPILL_VGPR <VGPR_32>;
 defm SI_SPILL_V64  : SI_SPILL_VGPR <VReg_64>;
 defm SI_SPILL_V96  : SI_SPILL_VGPR <VReg_96>;
 defm SI_SPILL_V128 : SI_SPILL_VGPR <VReg_128>;
+defm SI_SPILL_V160 : SI_SPILL_VGPR <VReg_160>;
 defm SI_SPILL_V256 : SI_SPILL_VGPR <VReg_256>;
 defm SI_SPILL_V512 : SI_SPILL_VGPR <VReg_512>;
 
@@ -531,14 +550,28 @@ def SI_PC_ADD_REL_OFFSET : SPseudoInstSI <
   (outs SReg_64:$dst),
   (ins si_ga:$ptr_lo, si_ga:$ptr_hi),
   [(set SReg_64:$dst,
-   (i64 (SIpc_add_rel_offset (tglobaladdr:$ptr_lo), (tglobaladdr:$ptr_hi))))]> {
+      (i64 (SIpc_add_rel_offset tglobaladdr:$ptr_lo, tglobaladdr:$ptr_hi)))]> {
   let Defs = [SCC];
 }
 
 def : GCNPat <
+  (SIpc_add_rel_offset tglobaladdr:$ptr_lo, 0),
+  (SI_PC_ADD_REL_OFFSET $ptr_lo, (i32 0))
+>;
+
+def : GCNPat <
   (AMDGPUinit_exec i64:$src),
   (SI_INIT_EXEC (as_i64imm $src))
->;
+> {
+  let WaveSizePredicate = isWave64;
+}
+
+def : GCNPat <
+  (AMDGPUinit_exec i64:$src),
+  (SI_INIT_EXEC_LO (as_i32imm $src))
+> {
+  let WaveSizePredicate = isWave32;
+}
 
 def : GCNPat <
   (AMDGPUinit_exec_from_input i32:$input, i32:$shift),
@@ -583,11 +616,21 @@ def : Pat <
 
   // TODO: we could add more variants for other types of conditionals
 
+def : Pat <
+  (i64 (int_amdgcn_icmp i1:$src, (i1 0), (i32 33))),
+  (COPY $src) // Return the SGPRs representing i1 src
+>;
+
+def : Pat <
+  (i32 (int_amdgcn_icmp i1:$src, (i1 0), (i32 33))),
+  (COPY $src) // Return the SGPRs representing i1 src
+>;
+
 //===----------------------------------------------------------------------===//
 // VOP1 Patterns
 //===----------------------------------------------------------------------===//
 
-let SubtargetPredicate = isGCN, OtherPredicates = [UnsafeFPMath] in {
+let OtherPredicates = [UnsafeFPMath] in {
 
 //def : RcpPat<V_RCP_F64_e32, f64>;
 //defm : RsqPat<V_RSQ_F64_e32, f64>;
@@ -610,7 +653,7 @@ def : GCNPat <
   (V_FRACT_F64_e64 $mods, $x, DSTCLAMP.NONE, DSTOMOD.NONE)
 >;
 
-} // End SubtargetPredicate = isGCN, OtherPredicates = [UnsafeFPMath]
+} // End OtherPredicates = [UnsafeFPMath]
 
 
 // f16_to_fp patterns
@@ -704,7 +747,7 @@ def : FMADModsPat<V_MAD_F16, AMDGPUfmad_ftz, f16> {
 multiclass SelectPat <ValueType vt, Instruction inst> {
   def : GCNPat <
     (vt (select i1:$src0, vt:$src1, vt:$src2)),
-    (inst $src2, $src1, $src0)
+    (inst (i32 0), $src2, (i32 0), $src1, $src0)
   >;
 }
 
@@ -744,6 +787,22 @@ foreach Index = 0-2 in {
   >;
 }
 
+foreach Index = 0-2 in {
+  def Extract_Element_v3i32_#Index : Extract_Element <
+    i32, v3i32, Index, !cast<SubRegIndex>(sub#Index)
+  >;
+  def Insert_Element_v3i32_#Index : Insert_Element <
+    i32, v3i32, Index, !cast<SubRegIndex>(sub#Index)
+  >;
+
+  def Extract_Element_v3f32_#Index : Extract_Element <
+    f32, v3f32, Index, !cast<SubRegIndex>(sub#Index)
+  >;
+  def Insert_Element_v3f32_#Index : Insert_Element <
+    f32, v3f32, Index, !cast<SubRegIndex>(sub#Index)
+  >;
+}
+
 foreach Index = 0-3 in {
   def Extract_Element_v4i32_#Index : Extract_Element <
     i32, v4i32, Index, !cast<SubRegIndex>(sub#Index)
@@ -757,6 +816,22 @@ foreach Index = 0-3 in {
   >;
   def Insert_Element_v4f32_#Index : Insert_Element <
     f32, v4f32, Index, !cast<SubRegIndex>(sub#Index)
+  >;
+}
+
+foreach Index = 0-4 in {
+  def Extract_Element_v5i32_#Index : Extract_Element <
+    i32, v5i32, Index, !cast<SubRegIndex>(sub#Index)
+  >;
+  def Insert_Element_v5i32_#Index : Insert_Element <
+    i32, v5i32, Index, !cast<SubRegIndex>(sub#Index)
+  >;
+
+  def Extract_Element_v5f32_#Index : Extract_Element <
+    f32, v5f32, Index, !cast<SubRegIndex>(sub#Index)
+  >;
+  def Insert_Element_v5f32_#Index : Insert_Element <
+    f32, v5f32, Index, !cast<SubRegIndex>(sub#Index)
   >;
 }
 
@@ -812,8 +887,6 @@ def : Pat <
   (extract_subvector v4f16:$vec, (i32 2)),
   (v2f16 (EXTRACT_SUBREG v4f16:$vec, sub1))
 >;
-
-let SubtargetPredicate = isGCN in {
 
 // FIXME: Why do only some of these type combinations for SReg and
 // VReg?
@@ -877,6 +950,10 @@ def : BitConvert <i64, v4f16, VReg_64>;
 def : BitConvert <v4i32, v4f32, VReg_128>;
 def : BitConvert <v4f32, v4i32, VReg_128>;
 
+// 96-bit bitcast
+def : BitConvert <v3i32, v3f32, SGPR_96>;
+def : BitConvert <v3f32, v3i32, SGPR_96>;
+
 // 128-bit bitcast
 def : BitConvert <v2i64, v4i32, SReg_128>;
 def : BitConvert <v4i32, v2i64, SReg_128>;
@@ -887,6 +964,10 @@ def : BitConvert <v4i32, v2f64, VReg_128>;
 def : BitConvert <v2i64, v2f64, VReg_128>;
 def : BitConvert <v2f64, v2i64, VReg_128>;
 
+// 160-bit bitcast
+def : BitConvert <v5i32, v5f32, SGPR_160>;
+def : BitConvert <v5f32, v5i32, SGPR_160>;
+
 // 256-bit bitcast
 def : BitConvert <v8i32, v8f32, SReg_256>;
 def : BitConvert <v8f32, v8i32, SReg_256>;
@@ -896,8 +977,6 @@ def : BitConvert <v8f32, v8i32, VReg_256>;
 // 512-bit bitcast
 def : BitConvert <v16i32, v16f32, VReg_512>;
 def : BitConvert <v16f32, v16i32, VReg_512>;
-
-} // End SubtargetPredicate = isGCN
 
 /********** =================== **********/
 /********** Src & Dst modifiers **********/
@@ -1099,7 +1178,16 @@ def : GCNPat <
 def : GCNPat <
   (i1 imm:$imm),
   (S_MOV_B64 (i64 (as_i64imm $imm)))
->;
+> {
+  let WaveSizePredicate = isWave64;
+}
+
+def : GCNPat <
+  (i1 imm:$imm),
+  (S_MOV_B32 (i32 (as_i32imm $imm)))
+> {
+  let WaveSizePredicate = isWave32;
+}
 
 def : GCNPat <
   (f64 InlineFPImm<f64>:$imm),
@@ -1110,18 +1198,18 @@ def : GCNPat <
 /********** Intrinsic Patterns **********/
 /********** ================== **********/
 
-let SubtargetPredicate = isGCN in {
 def : POW_Common <V_LOG_F32_e32, V_EXP_F32_e32, V_MUL_LEGACY_F32_e32>;
-}
 
 def : GCNPat <
   (i32 (sext i1:$src0)),
-  (V_CNDMASK_B32_e64 (i32 0), (i32 -1), $src0)
+  (V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
+                     /*src1mod*/(i32 0), /*src1*/(i32 -1), $src0)
 >;
 
 class Ext32Pat <SDNode ext> : GCNPat <
   (i32 (ext i1:$src0)),
-  (V_CNDMASK_B32_e64 (i32 0), (i32 1), $src0)
+  (V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
+                     /*src1mod*/(i32 0), /*src1*/(i32 1), $src0)
 >;
 
 def : Ext32Pat <zext>;
@@ -1139,16 +1227,12 @@ def : GCNPat <
 // VOP3 Patterns
 //===----------------------------------------------------------------------===//
 
-let SubtargetPredicate = isGCN in {
-
 def : IMad24Pat<V_MAD_I32_I24, 1>;
 def : UMad24Pat<V_MAD_U32_U24, 1>;
 
 // FIXME: This should only be done for VALU inputs
 defm : BFIPatterns <V_BFI_B32, S_MOV_B32, SReg_64>;
 def : ROTRPattern <V_ALIGNBIT_B32>;
-
-}
 
 def : GCNPat<(i32 (trunc (srl i64:$src0, (and i32:$src1, (i32 31))))),
           (V_ALIGNBIT_B32 (i32 (EXTRACT_SUBREG (i64 $src0), sub1)),
@@ -1256,8 +1340,9 @@ def : GCNPat <
 class ZExt_i64_i1_Pat <SDNode ext> : GCNPat <
   (i64 (ext i1:$src)),
     (REG_SEQUENCE VReg_64,
-      (V_CNDMASK_B32_e64 (i32 0), (i32 1), $src), sub0,
-      (S_MOV_B32 (i32 0)), sub1)
+      (V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
+                         /*src1mod*/(i32 0), /*src1*/(i32 1), $src),
+      sub0, (S_MOV_B32 (i32 0)), sub1)
 >;
 
 
@@ -1275,8 +1360,10 @@ def : GCNPat <
 def : GCNPat <
   (i64 (sext i1:$src)),
   (REG_SEQUENCE VReg_64,
-    (V_CNDMASK_B32_e64 (i32 0), (i32 -1), $src), sub0,
-    (V_CNDMASK_B32_e64 (i32 0), (i32 -1), $src), sub1)
+    (V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
+                       /*src1mod*/(i32 0), /*src1*/(i32 -1), $src), sub0,
+    (V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
+                       /*src1mod*/(i32 0), /*src1*/(i32 -1), $src), sub1)
 >;
 
 class FPToI1Pat<Instruction Inst, int KOne, ValueType kone_type, ValueType vt, SDPatternOperator fp_to_int> : GCNPat <
@@ -1291,10 +1378,12 @@ def : FPToI1Pat<V_CMP_EQ_F64_e64, CONST.FP64_NEG_ONE, i64, f64, fp_to_sint>;
 
 // If we need to perform a logical operation on i1 values, we need to
 // use vector comparisons since there is only one SCC register. Vector
-// comparisons still write to a pair of SGPRs, so treat these as
-// 64-bit comparisons. When legalizing SGPR copies, instructions
-// resulting in the copies from SCC to these instructions will be
-// moved to the VALU.
+// comparisons may write to a pair of SGPRs or a single SGPR, so treat
+// these as 32 or 64-bit comparisons. When legalizing SGPR copies,
+// instructions resulting in the copies from SCC to these instructions
+// will be moved to the VALU.
+
+let WaveSizePredicate = isWave64 in {
 def : GCNPat <
   (i1 (and i1:$src0, i1:$src1)),
   (S_AND_B64 $src0, $src1)
@@ -1331,35 +1420,89 @@ def : GCNPat <
   (S_NOT_B64 $src0)
 >;
 }
+} // end isWave64
+
+let WaveSizePredicate = isWave32 in {
+def : GCNPat <
+  (i1 (and i1:$src0, i1:$src1)),
+  (S_AND_B32 $src0, $src1)
+>;
+
+def : GCNPat <
+  (i1 (or i1:$src0, i1:$src1)),
+  (S_OR_B32 $src0, $src1)
+>;
+
+def : GCNPat <
+  (i1 (xor i1:$src0, i1:$src1)),
+  (S_XOR_B32 $src0, $src1)
+>;
+
+def : GCNPat <
+  (i1 (add i1:$src0, i1:$src1)),
+  (S_XOR_B32 $src0, $src1)
+>;
+
+def : GCNPat <
+  (i1 (sub i1:$src0, i1:$src1)),
+  (S_XOR_B32 $src0, $src1)
+>;
+
+let AddedComplexity = 1 in {
+def : GCNPat <
+  (i1 (add i1:$src0, (i1 -1))),
+  (S_NOT_B32 $src0)
+>;
+
+def : GCNPat <
+  (i1 (sub i1:$src0, (i1 -1))),
+  (S_NOT_B32 $src0)
+>;
+}
+} // end isWave32
 
 def : GCNPat <
   (f16 (sint_to_fp i1:$src)),
-  (V_CVT_F16_F32_e32 (V_CNDMASK_B32_e64 (i32 0), (i32 CONST.FP32_NEG_ONE), $src))
+  (V_CVT_F16_F32_e32 (
+      V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
+                        /*src1mod*/(i32 0), /*src1*/(i32 CONST.FP32_NEG_ONE),
+                        $src))
 >;
 
 def : GCNPat <
   (f16 (uint_to_fp i1:$src)),
-  (V_CVT_F16_F32_e32 (V_CNDMASK_B32_e64 (i32 0), (i32 CONST.FP32_ONE), $src))
+  (V_CVT_F16_F32_e32 (
+      V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
+                        /*src1mod*/(i32 0), /*src1*/(i32 CONST.FP32_ONE),
+                        $src))
 >;
 
 def : GCNPat <
   (f32 (sint_to_fp i1:$src)),
-  (V_CNDMASK_B32_e64 (i32 0), (i32 CONST.FP32_NEG_ONE), $src)
+  (V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
+                        /*src1mod*/(i32 0), /*src1*/(i32 CONST.FP32_NEG_ONE),
+                        $src)
 >;
 
 def : GCNPat <
   (f32 (uint_to_fp i1:$src)),
-  (V_CNDMASK_B32_e64 (i32 0), (i32 CONST.FP32_ONE), $src)
+  (V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
+                        /*src1mod*/(i32 0), /*src1*/(i32 CONST.FP32_ONE),
+                        $src)
 >;
 
 def : GCNPat <
   (f64 (sint_to_fp i1:$src)),
-  (V_CVT_F64_I32_e32 (V_CNDMASK_B32_e64 (i32 0), (i32 -1), $src))
+  (V_CVT_F64_I32_e32 (V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
+                                        /*src1mod*/(i32 0), /*src1*/(i32 -1),
+                                        $src))
 >;
 
 def : GCNPat <
   (f64 (uint_to_fp i1:$src)),
-  (V_CVT_F64_U32_e32 (V_CNDMASK_B32_e64 (i32 0), (i32 1), $src))
+  (V_CVT_F64_U32_e32 (V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
+                                        /*src1mod*/(i32 0), /*src1*/(i32 1),
+                                        $src))
 >;
 
 //===----------------------------------------------------------------------===//
@@ -1412,7 +1555,7 @@ def : GCNPat<
 
 def : GCNPat<
   (fcanonicalize (v2f16 (VOP3PMods v2f16:$src, i32:$src_mods))),
-  (V_PK_MUL_F16 0, (i32 CONST.V2FP16_ONE), $src_mods, $src, DSTCLAMP.NONE)
+  (V_PK_MUL_F16 0, (i32 CONST.FP16_ONE), $src_mods, $src, DSTCLAMP.NONE)
 >;
 }
 
@@ -1473,6 +1616,14 @@ def : GCNPat <
 >;
 } // End OtherPredicates = [HasDLInsts]
 
+let SubtargetPredicate = isGFX10Plus in
+def : GCNPat <
+  (fma (f16 (VOP3Mods0 f32:$src0, i32:$src0_modifiers, i1:$clamp, i32:$omod)),
+       (f16 (VOP3Mods f32:$src1, i32:$src1_modifiers)),
+       (f16 (VOP3NoMods f32:$src2))),
+  (V_FMAC_F16_e64 $src0_modifiers, $src0, $src1_modifiers, $src1,
+                  SRCMODS.NONE, $src2, $clamp, $omod)
+>;
 
 // Allow integer inputs
 class ExpPattern<SDPatternOperator node, ValueType vt, Instruction Inst> : GCNPat<
@@ -1563,7 +1714,7 @@ def : GCNPat <
 // Fract Patterns
 //===----------------------------------------------------------------------===//
 
-let SubtargetPredicate = isSI in {
+let SubtargetPredicate = isGFX6 in {
 
 // V_FRACT is buggy on SI, so the F32 version is never used and (x-floor(x)) is
 // used instead. However, SI doesn't have V_FLOOR_F64, so the most efficient
@@ -1590,7 +1741,7 @@ def : GCNPat <
       DSTCLAMP.NONE, DSTOMOD.NONE)
 >;
 
-} // End SubtargetPredicates = isSI
+} // End SubtargetPredicates = isGFX6
 
 //============================================================================//
 // Miscellaneous Optimization Patterns
@@ -1604,6 +1755,13 @@ def : GCNPat<
   (S_SUB_I32 $src0, NegSubInlineConst32:$src1)
 >;
 
+// Avoid pointlessly materializing a constant in VGPR.
+// FIXME: Should also do this for readlane, but tablegen crashes on
+// the ignored src1.
+def : GCNPat<
+  (int_amdgcn_readfirstlane (i32 imm:$src)),
+  (S_MOV_B32 $src)
+>;
 
 multiclass BFMPatterns <ValueType vt, InstSI BFM, InstSI MOV> {
   def : GCNPat <
@@ -1617,8 +1775,6 @@ multiclass BFMPatterns <ValueType vt, InstSI BFM, InstSI MOV> {
   >;
 }
 
-let SubtargetPredicate = isGCN in {
-
 defm : BFMPatterns <i32, S_BFM_B32, S_MOV_B32>;
 // FIXME: defm : BFMPatterns <i64, S_BFM_B64, S_MOV_B64>;
 
@@ -1627,8 +1783,6 @@ defm : SHA256MaPattern <V_BFI_B32, V_XOR_B32_e64, SReg_64>;
 
 defm : IntMed3Pat<V_MED3_I32, smin, smax, smin_oneuse, smax_oneuse>;
 defm : IntMed3Pat<V_MED3_U32, umin, umax, umin_oneuse, umax_oneuse>;
-
-}
 
 // This matches 16 permutations of
 // max(min(x, y), min(max(x, y), z))
@@ -1678,8 +1832,8 @@ multiclass Int16Med3Pat<Instruction med3Inst,
 
 def : FPMed3Pat<f32, V_MED3_F32>;
 
-let OtherPredicates = [isGFX9] in {
+let OtherPredicates = [isGFX9Plus] in {
 def : FP16Med3Pat<f16, V_MED3_F16>;
 defm : Int16Med3Pat<V_MED3_I16, smin, smax, smax_oneuse, smin_oneuse>;
 defm : Int16Med3Pat<V_MED3_U16, umin, umax, umax_oneuse, umin_oneuse>;
-} // End Predicates = [isGFX9]
+} // End Predicates = [isGFX9Plus]

@@ -10,7 +10,7 @@ RUN: printf sub1/test > %T/sub1/test.o
 RUN: printf baz > %T/baz.o
 
 RUN: rm -f %t.a
-RUN: llvm-ar -format=darwin rcs %t.a %T/sub1/test.o %T/test.o %T/baz.o
+RUN: llvm-ar --format=darwin rcs %t.a %T/sub1/test.o %T/test.o %T/baz.o
 RUN: FileCheck -strict-whitespace %s < %t.a
 
 CHECK:#1/12           1           0     0     644     28        `

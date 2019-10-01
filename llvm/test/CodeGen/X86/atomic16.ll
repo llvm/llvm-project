@@ -2,6 +2,7 @@
 ; RUN: llc < %s -O0 -mtriple=i386-unknown-unknown -mcpu=corei7 -verify-machineinstrs | FileCheck %s --check-prefix X32
 
 @sc16 = external global i16
+@fsc16 = external global half
 
 define void @atomic_fetch_add16() nounwind {
 ; X64-LABEL:   atomic_fetch_add16
@@ -265,6 +266,17 @@ define void @atomic_fetch_store16(i16 %x) nounwind {
 
 define void @atomic_fetch_swap16(i16 %x) nounwind {
   %t1 = atomicrmw xchg i16* @sc16, i16 %x acquire
+; X64-NOT:   lock
+; X64:       xchgw
+; X32-NOT:   lock
+; X32:       xchgw
+  ret void
+; X64:       ret
+; X32:       ret
+}
+
+define void @atomic_fetch_swapf16(half %x) nounwind {
+  %t1 = atomicrmw xchg half* @fsc16, half %x acquire
 ; X64-NOT:   lock
 ; X64:       xchgw
 ; X32-NOT:   lock

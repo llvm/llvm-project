@@ -1,9 +1,8 @@
 //===- unittest/ProfileData/InstrProfTest.cpp -------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -176,7 +175,7 @@ TEST_F(InstrProfTest, get_profile_summary) {
     ASSERT_EQ(288230376151711744U, NinetyFivePerc->MinCount);
     ASSERT_EQ(72057594037927936U, NinetyNinePerc->MinCount);
   };
-  ProfileSummary &PS = Reader->getSummary();
+  ProfileSummary &PS = Reader->getSummary(/* IsCS */ false);
   VerifySummary(PS);
 
   // Test that conversion of summary to and from Metadata works.
@@ -190,8 +189,8 @@ TEST_F(InstrProfTest, get_profile_summary) {
 
   // Test that summary can be attached to and read back from module.
   Module M("my_module", Context);
-  M.setProfileSummary(MD);
-  MD = M.getProfileSummary();
+  M.setProfileSummary(MD, ProfileSummary::PSK_Instr);
+  MD = M.getProfileSummary(/* IsCS */ false);
   ASSERT_TRUE(MD);
   PSFromMD = ProfileSummary::getFromMD(MD);
   ASSERT_TRUE(PSFromMD);
@@ -802,7 +801,7 @@ TEST_P(MaybeSparseInstrProfTest, get_max_function_count) {
   auto Profile = Writer.writeBuffer();
   readProfile(std::move(Profile));
 
-  ASSERT_EQ(1ULL << 63, Reader->getMaximumFunctionCount());
+  ASSERT_EQ(1ULL << 63, Reader->getMaximumFunctionCount(/* IsCS */ false));
 }
 
 TEST_P(MaybeSparseInstrProfTest, get_weighted_function_counts) {

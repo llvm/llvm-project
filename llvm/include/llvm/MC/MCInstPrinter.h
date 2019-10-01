@@ -1,9 +1,8 @@
 //===- MCInstPrinter.h - MCInst to target assembly syntax -------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -64,6 +63,10 @@ public:
                 const MCRegisterInfo &mri) : MAI(mai), MII(mii), MRI(mri) {}
 
   virtual ~MCInstPrinter();
+
+  /// Customize the printer according to a command line option.
+  /// @return true if the option is recognized and applied.
+  virtual bool applyTargetSpecificCLOption(StringRef Opt) { return false; }
 
   /// Specify a stream to emit comments to.
   void setCommentStream(raw_ostream &OS) { CommentStream = &OS; }

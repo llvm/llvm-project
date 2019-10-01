@@ -1,7 +1,7 @@
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin | FileCheck -check-prefix=CHECK-NO-FP %s
-; RUN: llc < %s -mtriple=x86_64-apple-darwin -disable-fp-elim | FileCheck -check-prefix=CHECK-FP %s
+; RUN: llc < %s -mtriple=x86_64-apple-darwin -frame-pointer=all | FileCheck -check-prefix=CHECK-FP %s
 ; RUN: llc < %s -mtriple=x86_64-linux-gnu | FileCheck -check-prefix=LINUX-NO-FP %s
-; RUN: llc < %s -mtriple=x86_64-linux-gnu -disable-fp-elim | FileCheck -check-prefix=LINUX-FP %s
+; RUN: llc < %s -mtriple=x86_64-linux-gnu -frame-pointer=all | FileCheck -check-prefix=LINUX-FP %s
 
 define void @func() {
 entry:

@@ -617,6 +617,206 @@ out:
   ret i1 false
 }
 
+define void @abs1(i32 %a, i1* %p) {
+; CHECK-LABEL: @abs1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[A:%.*]], 10
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[A]], -20
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    br i1 [[AND]], label [[GUARD:%.*]], label [[EXIT:%.*]]
+; CHECK:       guard:
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 0, [[A]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[A]], 0
+; CHECK-NEXT:    [[ABS:%.*]] = select i1 [[CMP]], i32 [[SUB]], i32 [[A]]
+; CHECK-NEXT:    br label [[SPLIT:%.*]]
+; CHECK:       split:
+; CHECK-NEXT:    store i1 true, i1* [[P:%.*]]
+; CHECK-NEXT:    [[C2:%.*]] = icmp slt i32 [[ABS]], 19
+; CHECK-NEXT:    store i1 [[C2]], i1* [[P]]
+; CHECK-NEXT:    store i1 true, i1* [[P]]
+; CHECK-NEXT:    [[C4:%.*]] = icmp sge i32 [[ABS]], 1
+; CHECK-NEXT:    store i1 [[C4]], i1* [[P]]
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %cmp1 = icmp slt i32 %a, 10
+  %cmp2 = icmp sgt i32 %a, -20
+  %and = and i1 %cmp1, %cmp2
+  br i1 %and, label %guard, label %exit
+
+guard:
+  %sub = sub i32 0, %a
+  %cmp = icmp slt i32 %a, 0
+  %abs = select i1 %cmp, i32 %sub, i32 %a
+  br label %split
+
+split:
+  %c1 = icmp slt i32 %abs, 20
+  store i1 %c1, i1* %p
+  %c2 = icmp slt i32 %abs, 19
+  store i1 %c2, i1* %p
+  %c3 = icmp sge i32 %abs, 0
+  store i1 %c3, i1* %p
+  %c4 = icmp sge i32 %abs, 1
+  store i1 %c4, i1* %p
+  br label %exit
+
+exit:
+  ret void
+}
+
+define void @abs2(i32 %a, i1* %p) {
+; CHECK-LABEL: @abs2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[A:%.*]], 10
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[A]], -20
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    br i1 [[AND]], label [[GUARD:%.*]], label [[EXIT:%.*]]
+; CHECK:       guard:
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 0, [[A]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i32 [[A]], 0
+; CHECK-NEXT:    [[ABS:%.*]] = select i1 [[CMP]], i32 [[A]], i32 [[SUB]]
+; CHECK-NEXT:    br label [[SPLIT:%.*]]
+; CHECK:       split:
+; CHECK-NEXT:    store i1 true, i1* [[P:%.*]]
+; CHECK-NEXT:    [[C2:%.*]] = icmp slt i32 [[ABS]], 19
+; CHECK-NEXT:    store i1 [[C2]], i1* [[P]]
+; CHECK-NEXT:    store i1 true, i1* [[P]]
+; CHECK-NEXT:    [[C4:%.*]] = icmp sge i32 [[ABS]], 1
+; CHECK-NEXT:    store i1 [[C4]], i1* [[P]]
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %cmp1 = icmp slt i32 %a, 10
+  %cmp2 = icmp sgt i32 %a, -20
+  %and = and i1 %cmp1, %cmp2
+  br i1 %and, label %guard, label %exit
+
+guard:
+  %sub = sub i32 0, %a
+  %cmp = icmp sge i32 %a, 0
+  %abs = select i1 %cmp, i32 %a, i32 %sub
+  br label %split
+
+split:
+  %c1 = icmp slt i32 %abs, 20
+  store i1 %c1, i1* %p
+  %c2 = icmp slt i32 %abs, 19
+  store i1 %c2, i1* %p
+  %c3 = icmp sge i32 %abs, 0
+  store i1 %c3, i1* %p
+  %c4 = icmp sge i32 %abs, 1
+  store i1 %c4, i1* %p
+  br label %exit
+
+exit:
+  ret void
+}
+
+define void @nabs1(i32 %a, i1* %p) {
+; CHECK-LABEL: @nabs1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[A:%.*]], 10
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[A]], -20
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    br i1 [[AND]], label [[GUARD:%.*]], label [[EXIT:%.*]]
+; CHECK:       guard:
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 0, [[A]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[A]], 0
+; CHECK-NEXT:    [[NABS:%.*]] = select i1 [[CMP]], i32 [[SUB]], i32 [[A]]
+; CHECK-NEXT:    br label [[SPLIT:%.*]]
+; CHECK:       split:
+; CHECK-NEXT:    store i1 true, i1* [[P:%.*]]
+; CHECK-NEXT:    [[C2:%.*]] = icmp sgt i32 [[NABS]], -19
+; CHECK-NEXT:    store i1 [[C2]], i1* [[P]]
+; CHECK-NEXT:    store i1 true, i1* [[P]]
+; CHECK-NEXT:    [[C4:%.*]] = icmp sle i32 [[NABS]], -1
+; CHECK-NEXT:    store i1 [[C4]], i1* [[P]]
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %cmp1 = icmp slt i32 %a, 10
+  %cmp2 = icmp sgt i32 %a, -20
+  %and = and i1 %cmp1, %cmp2
+  br i1 %and, label %guard, label %exit
+
+guard:
+  %sub = sub i32 0, %a
+  %cmp = icmp sgt i32 %a, 0
+  %nabs = select i1 %cmp, i32 %sub, i32 %a
+  br label %split
+
+split:
+  %c1 = icmp sgt i32 %nabs, -20
+  store i1 %c1, i1* %p
+  %c2 = icmp sgt i32 %nabs, -19
+  store i1 %c2, i1* %p
+  %c3 = icmp sle i32 %nabs, 0
+  store i1 %c3, i1* %p
+  %c4 = icmp sle i32 %nabs, -1
+  store i1 %c4, i1* %p
+  br label %exit
+
+exit:
+  ret void
+}
+
+define void @nabs2(i32 %a, i1* %p) {
+; CHECK-LABEL: @nabs2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[A:%.*]], 10
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[A]], -20
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    br i1 [[AND]], label [[GUARD:%.*]], label [[EXIT:%.*]]
+; CHECK:       guard:
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 0, [[A]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[A]], 0
+; CHECK-NEXT:    [[NABS:%.*]] = select i1 [[CMP]], i32 [[A]], i32 [[SUB]]
+; CHECK-NEXT:    br label [[SPLIT:%.*]]
+; CHECK:       split:
+; CHECK-NEXT:    store i1 true, i1* [[P:%.*]]
+; CHECK-NEXT:    [[C2:%.*]] = icmp sgt i32 [[NABS]], -19
+; CHECK-NEXT:    store i1 [[C2]], i1* [[P]]
+; CHECK-NEXT:    store i1 true, i1* [[P]]
+; CHECK-NEXT:    [[C4:%.*]] = icmp sle i32 [[NABS]], -1
+; CHECK-NEXT:    store i1 [[C4]], i1* [[P]]
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %cmp1 = icmp slt i32 %a, 10
+  %cmp2 = icmp sgt i32 %a, -20
+  %and = and i1 %cmp1, %cmp2
+  br i1 %and, label %guard, label %exit
+
+guard:
+  %sub = sub i32 0, %a
+  %cmp = icmp slt i32 %a, 0
+  %nabs = select i1 %cmp, i32 %a, i32 %sub
+  br label %split
+
+split:
+  %c1 = icmp sgt i32 %nabs, -20
+  store i1 %c1, i1* %p
+  %c2 = icmp sgt i32 %nabs, -19
+  store i1 %c2, i1* %p
+  %c3 = icmp sle i32 %nabs, 0
+  store i1 %c3, i1* %p
+  %c4 = icmp sle i32 %nabs, -1
+  store i1 %c4, i1* %p
+  br label %exit
+
+exit:
+  ret void
+}
+
 define i1 @zext_unknown(i8 %a) {
 ; CHECK-LABEL: @zext_unknown(
 ; CHECK-NEXT:  entry:
@@ -723,3 +923,163 @@ entry:
 exit:
   ret i1 %cmp
 }
+
+define i1 @urem_unknown(i32 %a) {
+; CHECK-LABEL: @urem_unknown(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[UREM:%.*]] = urem i32 [[A:%.*]], 30
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[UREM]], 30
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i1 true
+;
+entry:
+  %urem = urem i32 %a, 30
+  %cmp = icmp ult i32 %urem, 30
+  br label %exit
+exit:
+  ret i1 %cmp
+}
+
+define i1 @srem_unknown(i32 %a) {
+; CHECK-LABEL: @srem_unknown(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SREM:%.*]] = srem i32 [[A:%.*]], 30
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[SREM]], 30
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[SREM]], -30
+; CHECK-NEXT:    br i1 undef, label [[EXIT1:%.*]], label [[EXIT2:%.*]]
+; CHECK:       exit1:
+; CHECK-NEXT:    ret i1 true
+; CHECK:       exit2:
+; CHECK-NEXT:    ret i1 true
+;
+entry:
+  %srem = srem i32 %a, 30
+  %cmp1 = icmp slt i32 %srem, 30
+  %cmp2 = icmp sgt i32 %srem, -30
+  br i1 undef, label %exit1, label %exit2
+exit1:
+  ret i1 %cmp1
+exit2:
+  ret i1 %cmp2
+}
+
+define i1 @sdiv_unknown(i32 %a) {
+; CHECK-LABEL: @sdiv_unknown(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SREM:%.*]] = sdiv i32 [[A:%.*]], 123
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[SREM]], 17459217
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[SREM]], -17459217
+; CHECK-NEXT:    br i1 undef, label [[EXIT1:%.*]], label [[EXIT2:%.*]]
+; CHECK:       exit1:
+; CHECK-NEXT:    ret i1 true
+; CHECK:       exit2:
+; CHECK-NEXT:    ret i1 true
+;
+entry:
+  %srem = sdiv i32 %a, 123
+  %cmp1 = icmp slt i32 %srem, 17459217
+  %cmp2 = icmp sgt i32 %srem, -17459217
+  br i1 undef, label %exit1, label %exit2
+exit1:
+  ret i1 %cmp1
+exit2:
+  ret i1 %cmp2
+}
+
+define i1 @uadd_sat_unknown(i32 %a) {
+; CHECK-LABEL: @uadd_sat_unknown(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[VAL:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[A:%.*]], i32 100)
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp uge i32 [[VAL]], 100
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ugt i32 [[VAL]], 100
+; CHECK-NEXT:    br i1 undef, label [[EXIT1:%.*]], label [[EXIT2:%.*]]
+; CHECK:       exit1:
+; CHECK-NEXT:    ret i1 true
+; CHECK:       exit2:
+; CHECK-NEXT:    ret i1 [[CMP2]]
+;
+entry:
+  %val = call i32 @llvm.uadd.sat.i32(i32 %a, i32 100)
+  %cmp1 = icmp uge i32 %val, 100
+  %cmp2 = icmp ugt i32 %val, 100
+  br i1 undef, label %exit1, label %exit2
+exit1:
+  ret i1 %cmp1
+exit2:
+  ret i1 %cmp2
+}
+
+define i1 @usub_sat_unknown(i32 %a) {
+; CHECK-LABEL: @usub_sat_unknown(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[VAL:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[A:%.*]], i32 100)
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ule i32 [[VAL]], -101
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[VAL]], -101
+; CHECK-NEXT:    br i1 undef, label [[EXIT1:%.*]], label [[EXIT2:%.*]]
+; CHECK:       exit1:
+; CHECK-NEXT:    ret i1 true
+; CHECK:       exit2:
+; CHECK-NEXT:    ret i1 [[CMP2]]
+;
+entry:
+  %val = call i32 @llvm.usub.sat.i32(i32 %a, i32 100)
+  %cmp1 = icmp ule i32 %val, 4294967195
+  %cmp2 = icmp ult i32 %val, 4294967195
+  br i1 undef, label %exit1, label %exit2
+exit1:
+  ret i1 %cmp1
+exit2:
+  ret i1 %cmp2
+}
+
+define i1 @sadd_sat_unknown(i32 %a) {
+; CHECK-LABEL: @sadd_sat_unknown(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[VAL:%.*]] = call i32 @llvm.sadd.sat.i32(i32 [[A:%.*]], i32 100)
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp sge i32 [[VAL]], -2147483548
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[VAL]], -2147483548
+; CHECK-NEXT:    br i1 undef, label [[EXIT1:%.*]], label [[EXIT2:%.*]]
+; CHECK:       exit1:
+; CHECK-NEXT:    ret i1 true
+; CHECK:       exit2:
+; CHECK-NEXT:    ret i1 [[CMP2]]
+;
+entry:
+  %val = call i32 @llvm.sadd.sat.i32(i32 %a, i32 100)
+  %cmp1 = icmp sge i32 %val, -2147483548
+  %cmp2 = icmp sgt i32 %val, -2147483548
+  br i1 undef, label %exit1, label %exit2
+exit1:
+  ret i1 %cmp1
+exit2:
+  ret i1 %cmp2
+}
+
+define i1 @ssub_sat_unknown(i32 %a) {
+; CHECK-LABEL: @ssub_sat_unknown(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[VAL:%.*]] = call i32 @llvm.ssub.sat.i32(i32 [[A:%.*]], i32 100)
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp sle i32 [[VAL]], 2147483547
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[VAL]], 2147483547
+; CHECK-NEXT:    br i1 undef, label [[EXIT1:%.*]], label [[EXIT2:%.*]]
+; CHECK:       exit1:
+; CHECK-NEXT:    ret i1 true
+; CHECK:       exit2:
+; CHECK-NEXT:    ret i1 [[CMP2]]
+;
+entry:
+  %val = call i32 @llvm.ssub.sat.i32(i32 %a, i32 100)
+  %cmp1 = icmp sle i32 %val, 2147483547
+  %cmp2 = icmp slt i32 %val, 2147483547
+  br i1 undef, label %exit1, label %exit2
+exit1:
+  ret i1 %cmp1
+exit2:
+  ret i1 %cmp2
+}
+
+declare i32 @llvm.uadd.sat.i32(i32, i32)
+declare i32 @llvm.usub.sat.i32(i32, i32)
+declare i32 @llvm.sadd.sat.i32(i32, i32)
+declare i32 @llvm.ssub.sat.i32(i32, i32)

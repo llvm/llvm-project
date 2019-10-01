@@ -1,9 +1,8 @@
 // WebAssemblyInstrInfo.td-Describe the WebAssembly Instructions-*- tablegen -*-
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -16,39 +15,52 @@
 // WebAssembly Instruction Predicate Definitions.
 //===----------------------------------------------------------------------===//
 
+def IsPIC     : Predicate<"TM.isPositionIndependent()">;
+def IsNotPIC  : Predicate<"!TM.isPositionIndependent()">;
+
 def HasAddr32 : Predicate<"!Subtarget->hasAddr64()">;
+
 def HasAddr64 : Predicate<"Subtarget->hasAddr64()">;
-def HasSIMD128 : Predicate<"Subtarget->hasSIMD128()">,
-                           AssemblerPredicate<"FeatureSIMD128", "simd128">;
-def HasUnimplementedSIMD : Predicate<"EnableUnimplementedWasmSIMDInstrs">;
-def HasAtomics : Predicate<"Subtarget->hasAtomics()">,
-                           AssemblerPredicate<"FeatureAtomics", "atomics">;
+
+def HasSIMD128 :
+    Predicate<"Subtarget->hasSIMD128()">,
+    AssemblerPredicate<"FeatureSIMD128", "simd128">;
+
+def HasUnimplementedSIMD128 :
+    Predicate<"Subtarget->hasUnimplementedSIMD128()">,
+    AssemblerPredicate<"FeatureUnimplementedSIMD128", "unimplemented-simd128">;
+
+def HasAtomics :
+    Predicate<"Subtarget->hasAtomics()">,
+    AssemblerPredicate<"FeatureAtomics", "atomics">;
+
+def HasMultivalue :
+    Predicate<"Subtarget->hasMultivalue()">,
+    AssemblerPredicate<"FeatureMultivalue", "multivalue">;
+
 def HasNontrappingFPToInt :
     Predicate<"Subtarget->hasNontrappingFPToInt()">,
-              AssemblerPredicate<"FeatureNontrappingFPToInt",
-                                 "nontrapping-fptoint">;
+    AssemblerPredicate<"FeatureNontrappingFPToInt", "nontrapping-fptoint">;
+
 def NotHasNontrappingFPToInt :
     Predicate<"!Subtarget->hasNontrappingFPToInt()">,
-              AssemblerPredicate<"!FeatureNontrappingFPToInt",
-                                 "nontrapping-fptoint">;
+    AssemblerPredicate<"!FeatureNontrappingFPToInt", "nontrapping-fptoint">;
+
 def HasSignExt :
     Predicate<"Subtarget->hasSignExt()">,
-              AssemblerPredicate<"FeatureSignExt",
-                                 "sign-ext">;
-def NotHasSignExt :
-    Predicate<"!Subtarget->hasSignExt()">,
-              AssemblerPredicate<"!FeatureSignExt",
-                                 "sign-ext">;
+    AssemblerPredicate<"FeatureSignExt", "sign-ext">;
+
+def HasTailCall :
+    Predicate<"Subtarget->hasTailCall()">,
+    AssemblerPredicate<"FeatureTailCall", "tail-call">;
 
 def HasExceptionHandling :
     Predicate<"Subtarget->hasExceptionHandling()">,
-              AssemblerPredicate<"FeatureExceptionHandling",
-                                 "exception-handling">;
+    AssemblerPredicate<"FeatureExceptionHandling", "exception-handling">;
 
-def NotHasExceptionHandling :
-    Predicate<"!Subtarget->hasExceptionHandling()">,
-              AssemblerPredicate<"!FeatureExceptionHandling",
-                                 "exception-handling">;
+def HasBulkMemory :
+    Predicate<"Subtarget->hasBulkMemory()">,
+    AssemblerPredicate<"FeatureBulkMemory", "bulk-memory">;
 
 //===----------------------------------------------------------------------===//
 // WebAssembly-specific DAG Node Types.
@@ -58,14 +70,16 @@ def SDT_WebAssemblyCallSeqStart : SDCallSeqStart<[SDTCisVT<0, iPTR>,
                                                   SDTCisVT<1, iPTR>]>;
 def SDT_WebAssemblyCallSeqEnd :
     SDCallSeqEnd<[SDTCisVT<0, iPTR>, SDTCisVT<1, iPTR>]>;
-def SDT_WebAssemblyCall0    : SDTypeProfile<0, -1, [SDTCisPtrTy<0>]>;
-def SDT_WebAssemblyCall1    : SDTypeProfile<1, -1, [SDTCisPtrTy<1>]>;
-def SDT_WebAssemblyBrTable  : SDTypeProfile<0, -1, [SDTCisPtrTy<0>]>;
-def SDT_WebAssemblyArgument : SDTypeProfile<1, 1, [SDTCisVT<1, i32>]>;
-def SDT_WebAssemblyReturn   : SDTypeProfile<0, -1, []>;
-def SDT_WebAssemblyWrapper  : SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>,
-                                                   SDTCisPtrTy<0>]>;
-def SDT_WebAssemblyThrow    : SDTypeProfile<0, 2, [SDTCisPtrTy<0>]>;
+def SDT_WebAssemblyCall0      : SDTypeProfile<0, -1, [SDTCisPtrTy<0>]>;
+def SDT_WebAssemblyCall1      : SDTypeProfile<1, -1, [SDTCisPtrTy<1>]>;
+def SDT_WebAssemblyBrTable    : SDTypeProfile<0, -1, [SDTCisPtrTy<0>]>;
+def SDT_WebAssemblyArgument   : SDTypeProfile<1, 1, [SDTCisVT<1, i32>]>;
+def SDT_WebAssemblyReturn     : SDTypeProfile<0, -1, []>;
+def SDT_WebAssemblyWrapper    : SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>,
+                                                     SDTCisPtrTy<0>]>;
+def SDT_WebAssemblyWrapperPIC : SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>,
+                                                     SDTCisPtrTy<0>]>;
+def SDT_WebAssemblyThrow      : SDTypeProfile<0, -1, [SDTCisPtrTy<0>]>;
 
 //===----------------------------------------------------------------------===//
 // WebAssembly-specific DAG Nodes.
@@ -92,8 +106,10 @@ def WebAssemblyreturn   : SDNode<"WebAssemblyISD::RETURN",
                                  SDT_WebAssemblyReturn, [SDNPHasChain]>;
 def WebAssemblywrapper  : SDNode<"WebAssemblyISD::Wrapper",
                                  SDT_WebAssemblyWrapper>;
+def WebAssemblywrapperPIC  : SDNode<"WebAssemblyISD::WrapperPIC",
+                                     SDT_WebAssemblyWrapperPIC>;
 def WebAssemblythrow : SDNode<"WebAssemblyISD::THROW", SDT_WebAssemblyThrow,
-                              [SDNPHasChain]>;
+                              [SDNPHasChain, SDNPVariadic]>;
 
 //===----------------------------------------------------------------------===//
 // WebAssembly-specific Operands.
@@ -150,11 +166,10 @@ def event_op : Operand<i32>;
 
 } // OperandType = "OPERAND_P2ALIGN"
 
-let OperandType = "OPERAND_SIGNATURE" in {
+let OperandType = "OPERAND_SIGNATURE" in
 def Signature : Operand<i32> {
   let PrintMethod = "printWebAssemblySignatureOperand";
 }
-} // OperandType = "OPERAND_SIGNATURE"
 
 let OperandType = "OPERAND_TYPEINDEX" in
 def TypeIndex : Operand<i32>;
@@ -185,8 +200,8 @@ include "WebAssemblyInstrFormats.td"
 //===----------------------------------------------------------------------===//
 
 multiclass ARGUMENT<WebAssemblyRegClass reg, ValueType vt> {
-  let hasSideEffects = 1, isCodeGenOnly = 1,
-      Defs = []<Register>, Uses = [ARGUMENTS] in
+  let hasSideEffects = 1, isCodeGenOnly = 1, Defs = []<Register>,
+      Uses = [ARGUMENTS] in
   defm ARGUMENT_#vt :
     I<(outs reg:$res), (ins i32imm:$argno), (outs), (ins i32imm:$argno),
       [(set (vt reg:$res), (WebAssemblyargument timm:$argno))]>;
@@ -197,49 +212,49 @@ defm "": ARGUMENT<F32, f32>;
 defm "": ARGUMENT<F64, f64>;
 defm "": ARGUMENT<EXCEPT_REF, ExceptRef>;
 
-// get_local and set_local are not generated by instruction selection; they
+// local.get and local.set are not generated by instruction selection; they
 // are implied by virtual register uses and defs.
 multiclass LOCAL<WebAssemblyRegClass vt> {
-let hasSideEffects = 0 in {
-  // COPY is not an actual instruction in wasm, but since we allow get_local and
-  // set_local to be implicit during most of codegen, we can have a COPY which
-  // is actually a no-op because all the work is done in the implied get_local
-  // and set_local. COPYs are eliminated (and replaced with
-  // get_local/set_local) in the ExplicitLocals pass.
+  let hasSideEffects = 0 in {
+  // COPY is not an actual instruction in wasm, but since we allow local.get and
+  // local.set to be implicit during most of codegen, we can have a COPY which
+  // is actually a no-op because all the work is done in the implied local.get
+  // and local.set. COPYs are eliminated (and replaced with
+  // local.get/local.set) in the ExplicitLocals pass.
   let isAsCheapAsAMove = 1, isCodeGenOnly = 1 in
   defm COPY_#vt : I<(outs vt:$res), (ins vt:$src), (outs), (ins), [],
-                    "copy_local\t$res, $src", "copy_local">;
+                    "local.copy\t$res, $src", "local.copy">;
 
   // TEE is similar to COPY, but writes two copies of its result. Typically
   // this would be used to stackify one result and write the other result to a
   // local.
   let isAsCheapAsAMove = 1, isCodeGenOnly = 1 in
   defm TEE_#vt : I<(outs vt:$res, vt:$also), (ins vt:$src), (outs), (ins), [],
-                   "tee_local\t$res, $also, $src", "tee_local">;
+                   "local.tee\t$res, $also, $src", "local.tee">;
 
-  // This is the actual get_local instruction in wasm. These are made explicit
+  // This is the actual local.get instruction in wasm. These are made explicit
   // by the ExplicitLocals pass. It has mayLoad because it reads from a wasm
   // local, which is a side effect not otherwise modeled in LLVM.
   let mayLoad = 1, isAsCheapAsAMove = 1 in
-  defm GET_LOCAL_#vt : I<(outs vt:$res), (ins local_op:$local),
+  defm LOCAL_GET_#vt : I<(outs vt:$res), (ins local_op:$local),
                          (outs), (ins local_op:$local), [],
-                         "get_local\t$res, $local", "get_local\t$local", 0x20>;
+                         "local.get\t$res, $local", "local.get\t$local", 0x20>;
 
-  // This is the actual set_local instruction in wasm. These are made explicit
+  // This is the actual local.set instruction in wasm. These are made explicit
   // by the ExplicitLocals pass. It has mayStore because it writes to a wasm
   // local, which is a side effect not otherwise modeled in LLVM.
   let mayStore = 1, isAsCheapAsAMove = 1 in
-  defm SET_LOCAL_#vt : I<(outs), (ins local_op:$local, vt:$src),
+  defm LOCAL_SET_#vt : I<(outs), (ins local_op:$local, vt:$src),
                          (outs), (ins local_op:$local), [],
-                         "set_local\t$local, $src", "set_local\t$local", 0x21>;
+                         "local.set\t$local, $src", "local.set\t$local", 0x21>;
 
-  // This is the actual tee_local instruction in wasm. TEEs are turned into
-  // TEE_LOCALs by the ExplicitLocals pass. It has mayStore for the same reason
-  // as SET_LOCAL.
+  // This is the actual local.tee instruction in wasm. TEEs are turned into
+  // LOCAL_TEEs by the ExplicitLocals pass. It has mayStore for the same reason
+  // as LOCAL_SET.
   let mayStore = 1, isAsCheapAsAMove = 1 in
-  defm TEE_LOCAL_#vt : I<(outs vt:$res), (ins local_op:$local, vt:$src),
+  defm LOCAL_TEE_#vt : I<(outs vt:$res), (ins local_op:$local, vt:$src),
                          (outs), (ins local_op:$local), [],
-                         "tee_local\t$res, $local, $src", "tee_local\t$local",
+                         "local.tee\t$res, $local, $src", "local.tee\t$local",
                          0x22>;
 
   // Unused values must be dropped in some contexts.
@@ -247,15 +262,15 @@ let hasSideEffects = 0 in {
                     "drop\t$src", "drop", 0x1a>;
 
   let mayLoad = 1 in
-  defm GET_GLOBAL_#vt : I<(outs vt:$res), (ins global_op:$local),
+  defm GLOBAL_GET_#vt : I<(outs vt:$res), (ins global_op:$local),
                           (outs), (ins global_op:$local), [],
-                          "get_global\t$res, $local", "get_global\t$local",
+                          "global.get\t$res, $local", "global.get\t$local",
                           0x23>;
 
   let mayStore = 1 in
-  defm SET_GLOBAL_#vt : I<(outs), (ins global_op:$local, vt:$src),
+  defm GLOBAL_SET_#vt : I<(outs), (ins global_op:$local, vt:$src),
                           (outs), (ins global_op:$local), [],
-                          "set_global\t$local, $src", "set_global\t$local",
+                          "global.set\t$local, $src", "global.set\t$local",
                           0x24>;
 
 } // hasSideEffects = 0
@@ -287,9 +302,20 @@ defm CONST_F64 : I<(outs F64:$res), (ins f64imm_op:$imm),
 } // isMoveImm = 1, isAsCheapAsAMove = 1, isReMaterializable = 1
 
 def : Pat<(i32 (WebAssemblywrapper tglobaladdr:$addr)),
-          (CONST_I32 tglobaladdr:$addr)>;
+          (CONST_I32 tglobaladdr:$addr)>, Requires<[IsNotPIC]>;
+
+def : Pat<(i32 (WebAssemblywrapper tglobaladdr:$addr)),
+          (GLOBAL_GET_I32 tglobaladdr:$addr)>, Requires<[IsPIC]>;
+
+def : Pat<(i32 (WebAssemblywrapperPIC tglobaladdr:$addr)),
+          (CONST_I32 tglobaladdr:$addr)>, Requires<[IsPIC]>;
+
 def : Pat<(i32 (WebAssemblywrapper texternalsym:$addr)),
-          (CONST_I32 texternalsym:$addr)>;
+          (GLOBAL_GET_I32 texternalsym:$addr)>, Requires<[IsPIC]>;
+
+def : Pat<(i32 (WebAssemblywrapper texternalsym:$addr)),
+          (CONST_I32 texternalsym:$addr)>, Requires<[IsNotPIC]>;
+
 def : Pat<(i32 (WebAssemblywrapper mcsym:$sym)), (CONST_I32 mcsym:$sym)>;
 def : Pat<(i64 (WebAssemblywrapper mcsym:$sym)), (CONST_I64 mcsym:$sym)>;
 
@@ -306,3 +332,4 @@ include "WebAssemblyInstrFloat.td"
 include "WebAssemblyInstrAtomics.td"
 include "WebAssemblyInstrSIMD.td"
 include "WebAssemblyInstrExceptRef.td"
+include "WebAssemblyInstrBulkMemory.td"

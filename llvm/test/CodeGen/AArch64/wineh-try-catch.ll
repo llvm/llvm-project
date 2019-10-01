@@ -1,6 +1,6 @@
 ; RUN: llc -o - %s -mtriple=aarch64-windows -verify-machineinstrs | FileCheck %s
 ; RUN: llc -o %t -filetype=obj %s -mtriple=aarch64-windows
-; RUN: llvm-readobj -unwind %t | FileCheck %s -check-prefix=UNWIND
+; RUN: llvm-readobj --unwind %t | FileCheck %s -check-prefix=UNWIND
 
 ; We test the following
 ; 1) That the unwind help object is created and that its offset from the stack
@@ -22,12 +22,12 @@
 ; CHECK:       add     x29, sp, #32
 ; CHECK:       sub     sp, sp, #624
 ; CHECK:       mov     x19, sp
-; CHECK:       orr     x1, xzr, #0xfffffffffffffffe
-; CHECK:       stur    x1, [x19]
+; CHECK:       mov     x0, #-2
+; CHECK:       stur    x0, [x19]
 
 ; Now check that x is stored at fp - 20.  We check that this is the same
 ; location accessed from the funclet to retrieve x.
-; CHECK:       orr     w8, wzr, #0x1
+; CHECK:       mov     w8, #1
 ; CHECK:       stur    w8, [x29, [[X_OFFSET:#-[1-9][0-9]+]]
 
 ; Check the offset off the frame pointer at which B is located.

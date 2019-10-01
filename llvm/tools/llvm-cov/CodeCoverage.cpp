@@ -1,9 +1,8 @@
 //===- CodeCoverage.cpp - Coverage tool based on profiling instrumentation-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -1007,9 +1006,22 @@ int CodeCoverageTool::doReport(int argc, const char **argv,
 int CodeCoverageTool::doExport(int argc, const char **argv,
                                CommandLineParserType commandLineParser) {
 
+  cl::OptionCategory ExportCategory("Exporting options");
+
+  cl::opt<bool> SkipExpansions("skip-expansions", cl::Optional,
+                               cl::desc("Don't export expanded source regions"),
+                               cl::cat(ExportCategory));
+
+  cl::opt<bool> SkipFunctions("skip-functions", cl::Optional,
+                              cl::desc("Don't export per-function data"),
+                              cl::cat(ExportCategory));
+
   auto Err = commandLineParser(argc, argv);
   if (Err)
     return Err;
+
+  ViewOpts.SkipExpansions = SkipExpansions;
+  ViewOpts.SkipFunctions = SkipFunctions;
 
   if (ViewOpts.Format != CoverageViewOptions::OutputFormat::Text &&
       ViewOpts.Format != CoverageViewOptions::OutputFormat::Lcov) {

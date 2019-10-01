@@ -1,9 +1,8 @@
 //===-- AArch64MachObjectWriter.cpp - ARM Mach Object Writer --------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -38,8 +37,8 @@ class AArch64MachObjectWriter : public MCMachObjectTargetWriter {
                                   unsigned &Log2Size, const MCAssembler &Asm);
 
 public:
-  AArch64MachObjectWriter(uint32_t CPUType, uint32_t CPUSubtype)
-      : MCMachObjectTargetWriter(true /* is64Bit */, CPUType, CPUSubtype) {}
+  AArch64MachObjectWriter(uint32_t CPUType, uint32_t CPUSubtype, bool IsILP32)
+      : MCMachObjectTargetWriter(!IsILP32 /* is64Bit */, CPUType, CPUSubtype) {}
 
   void recordRelocation(MachObjectWriter *Writer, MCAssembler &Asm,
                         const MCAsmLayout &Layout, const MCFragment *Fragment,
@@ -405,6 +404,8 @@ void AArch64MachObjectWriter::recordRelocation(
 }
 
 std::unique_ptr<MCObjectTargetWriter>
-llvm::createAArch64MachObjectWriter(uint32_t CPUType, uint32_t CPUSubtype) {
-  return llvm::make_unique<AArch64MachObjectWriter>(CPUType, CPUSubtype);
+llvm::createAArch64MachObjectWriter(uint32_t CPUType, uint32_t CPUSubtype,
+                                    bool IsILP32) {
+  return llvm::make_unique<AArch64MachObjectWriter>(CPUType, CPUSubtype,
+                                                    IsILP32);
 }

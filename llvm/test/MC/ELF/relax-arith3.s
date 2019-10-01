@@ -5,6 +5,7 @@
 
 bar:
 // CHECK:      Disassembly of section imul:
+// CHECK-EMPTY:
 // CHECK-NEXT: imul:
 // CHECK-NEXT:   0: 66 69 1d 00 00 00 00 00 00        imulw $0, (%rip), %bx
 // CHECK-NEXT:   9: 69 1d 00 00 00 00 00 00 00 00     imull $0, (%rip), %ebx
@@ -16,6 +17,7 @@ bar:
 
 
 // CHECK:      Disassembly of section and:
+// CHECK-EMPTY:
 // CHECK-NEXT: and:
 // CHECK-NEXT:   0: 66 81 25 00 00 00 00 00 00        andw $0, (%rip)
 // CHECK-NEXT:   9: 81 25 00 00 00 00 00 00 00 00     andl $0, (%rip)
@@ -26,6 +28,7 @@ bar:
         andq $foo, bar(%rip)
 
 // CHECK:      Disassembly of section or:
+// CHECK-EMPTY:
 // CHECK-NEXT: or:
 // CHECK-NEXT:   0: 66 81 0d 00 00 00 00 00 00        orw $0, (%rip)
 // CHECK-NEXT:   9: 81 0d 00 00 00 00 00 00 00 00     orl $0, (%rip)
@@ -36,6 +39,7 @@ bar:
         orq $foo, bar(%rip)
 
 // CHECK:      Disassembly of section xor:
+// CHECK-EMPTY:
 // CHECK-NEXT: xor:
 // CHECK-NEXT:   0: 66 81 35 00 00 00 00 00 00        xorw $0, (%rip)
 // CHECK-NEXT:   9: 81 35 00 00 00 00 00 00 00 00     xorl $0, (%rip)
@@ -46,6 +50,7 @@ bar:
         xorq $foo, bar(%rip)
 
 // CHECK:      Disassembly of section add:
+// CHECK-EMPTY:
 // CHECK-NEXT: add:
 // CHECK-NEXT:   0: 66 81 05 00 00 00 00 00 00        addw $0, (%rip)
 // CHECK-NEXT:   9: 81 05 00 00 00 00 00 00 00 00     addl $0, (%rip)
@@ -56,6 +61,7 @@ bar:
         addq $foo, bar(%rip)
 
 // CHECK:      Disassembly of section sub:
+// CHECK-EMPTY:
 // CHECK-NEXT: sub:
 // CHECK-NEXT:   0: 66 81 2d 00 00 00 00 00 00        subw $0, (%rip)
 // CHECK-NEXT:   9: 81 2d 00 00 00 00 00 00 00 00     subl $0, (%rip)
@@ -66,6 +72,7 @@ bar:
         subq $foo, bar(%rip)
 
 // CHECK:      Disassembly of section cmp:
+// CHECK-EMPTY:
 // CHECK-NEXT: cmp:
 // CHECK-NEXT:   0: 66 81 3d 00 00 00 00 00 00        cmpw $0, (%rip)
 // CHECK-NEXT:   9: 81 3d 00 00 00 00 00 00 00 00     cmpl $0, (%rip)

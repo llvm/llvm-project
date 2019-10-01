@@ -414,10 +414,9 @@ define <2 x i64> @cmpgt_zext_v2i64(<2 x i64> %a, <2 x i64> %b) {
 ; SSE2-NEXT:    pxor %xmm2, %xmm0
 ; SSE2-NEXT:    movdqa %xmm0, %xmm2
 ; SSE2-NEXT:    pcmpgtd %xmm1, %xmm2
-; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[0,0,2,2]
 ; SSE2-NEXT:    pcmpeqd %xmm1, %xmm0
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; SSE2-NEXT:    pand %xmm3, %xmm1
+; SSE2-NEXT:    pand %xmm2, %xmm1
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[1,1,3,3]
 ; SSE2-NEXT:    por %xmm1, %xmm0
 ; SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
@@ -541,4 +540,21 @@ define <8 x i16> @cmpne_knownzeros_zext_v8i32_v8i16(<8 x i32> %x) {
   %b = icmp ne <8 x i32> %a, zeroinitializer
   %c = zext <8 x i1> %b to <8 x i16>
   ret <8 x i16> %c
+}
+
+; PR26697
+define <4 x i32> @cmpeq_one_mask_bit(<4 x i32> %mask) {
+; SSE-LABEL: cmpeq_one_mask_bit:
+; SSE:       # %bb.0:
+; SSE-NEXT:    psrad $31, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: cmpeq_one_mask_bit:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpsrad $31, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %mask_signbit = and <4 x i32> %mask, <i32 2147483648, i32 2147483648, i32 2147483648, i32 2147483648>
+  %mask_bool = icmp ne <4 x i32> %mask_signbit, zeroinitializer
+  %mask_bool_ext = sext <4 x i1> %mask_bool to <4 x i32>
+  ret <4 x i32> %mask_bool_ext
 }

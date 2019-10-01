@@ -1,9 +1,8 @@
 //===-- llvm-cfi-verify.cpp - CFI Verification tool for LLVM --------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -131,8 +130,8 @@ void printIndirectCFInstructions(FileAnalysis &Analysis,
 
   std::map<unsigned, uint64_t> BlameCounter;
 
-  for (uint64_t Address : Analysis.getIndirectInstructions()) {
-    const auto &InstrMeta = Analysis.getInstructionOrDie(Address);
+  for (object::SectionedAddress Address : Analysis.getIndirectInstructions()) {
+    const auto &InstrMeta = Analysis.getInstructionOrDie(Address.Address);
     GraphResult Graph = GraphBuilder::buildFlowGraph(Analysis, Address);
 
     CFIProtectionStatus ProtectionStatus =
@@ -154,7 +153,7 @@ void printIndirectCFInstructions(FileAnalysis &Analysis,
 
     auto InliningInfo = Analysis.symbolizeInlinedCode(Address);
     if (!InliningInfo || InliningInfo->getNumberOfFrames() == 0) {
-      errs() << "Failed to symbolise " << format_hex(Address, 2)
+      errs() << "Failed to symbolise " << format_hex(Address.Address, 2)
              << " with line tables from " << InputFilename << "\n";
       exit(EXIT_FAILURE);
     }
@@ -165,9 +164,9 @@ void printIndirectCFInstructions(FileAnalysis &Analysis,
     if (!Summarize) {
       for (uint32_t i = 0; i < InliningInfo->getNumberOfFrames(); ++i) {
         const auto &Line = InliningInfo->getFrame(i);
-        outs() << "  " << format_hex(Address, 2) << " = " << Line.FileName
-               << ":" << Line.Line << ":" << Line.Column << " ("
-               << Line.FunctionName << ")\n";
+        outs() << "  " << format_hex(Address.Address, 2) << " = "
+               << Line.FileName << ":" << Line.Line << ":" << Line.Column
+               << " (" << Line.FunctionName << ")\n";
       }
     }
 

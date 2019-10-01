@@ -1,12 +1,14 @@
 ; RUN: llc %s -mtriple=i386-unknown-linux-gnu -filetype=asm -o - | FileCheck %s
 
 ; CHECK:   .section .debug_addr
-; CHECK:   .long   8 # Length of contribution
-; CHECK:   .short  5 # DWARF version number
-; CHECK:   .byte   4 # Address size
-; CHECK:   .byte   0 # Segment selector size
-; CHECK: .Laddr_table_base0:
-; CHECK:   .long   .Lfunc_begin0
+; CHECK-NEXT:   .long   .Ldebug_addr_end0-.Ldebug_addr_start0 # Length of contribution
+; CHECK-NEXT: .Ldebug_addr_start0:
+; CHECK-NEXT:   .short  5 # DWARF version number
+; CHECK-NEXT:   .byte   4 # Address size
+; CHECK-NEXT:   .byte   0 # Segment selector size
+; CHECK-NEXT: .Laddr_table_base0:
+; CHECK-NEXT:   .long   .Lfunc_begin0
+; CHECK-NEXT: .Ldebug_addr_end0:
  
 ; Function Attrs: noinline nounwind optnone uwtable
 define dso_local void @foo() #0 !dbg !7 {

@@ -67,7 +67,7 @@ define amdgpu_kernel void @test_bitcast_argument_and_return_types() #0 {
 ; GCN: s_waitcnt
 ; GCN-NEXT: v_add_i32_e32 v0, vcc, v1, v0
 ; GCN-NEXT: s_setpc_b64
-define i32 @use_workitem_id_x(i32 %arg0) #0 {
+define hidden i32 @use_workitem_id_x(i32 %arg0) #0 {
   %id = call i32 @llvm.amdgcn.workitem.id.x()
   %op = add i32 %id, %arg0
   ret i32 %op
@@ -121,15 +121,15 @@ continue:
 ; Callees appears last in source file to test that we still lower their
 ; arguments before we lower any calls to them.
 
-define i32 @ret_i32_noinline() #0 {
+define hidden i32 @ret_i32_noinline() #0 {
   ret i32 4
 }
 
-define i32 @ret_i32_alwaysinline() #1 {
+define hidden i32 @ret_i32_alwaysinline() #1 {
   ret i32 4
 }
 
-define i32 @ident_i32(i32 %i) #0 {
+define hidden i32 @ident_i32(i32 %i) #0 {
   ret i32 %i
 }
 

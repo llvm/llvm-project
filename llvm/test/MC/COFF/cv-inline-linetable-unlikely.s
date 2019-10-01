@@ -1,4 +1,6 @@
-# RUN: llvm-mc -triple=x86_64-windows -filetype=obj < %s | llvm-readobj -codeview | FileCheck %s
+# RUN: llvm-mc -triple=x86_64-windows -filetype=obj < %s -o %t.obj
+# RUN: llvm-objdump -d %t.obj | FileCheck %s --check-prefix=ASM
+# RUN: llvm-pdbutil dump -symbols %t.obj | FileCheck %s --check-prefix=CODEVIEW
 
 # C source to generate the assembly:
 # volatile int unlikely_cond = 0;
@@ -19,20 +21,27 @@
 # calls to __asan_report*, for which it is very important to have an accurate
 # stack trace.
 
-# CHECK:    GlobalProcIdSym {
-# CHECK:      FunctionType: g (0x1003)
-# CHECK:      CodeOffset: g+0x0
-# CHECK:      DisplayName: g
-# CHECK:      LinkageName: g
-# CHECK:    }
-# CHECK:    InlineSiteSym {
-# CHECK:      Inlinee: f (0x1002)
-# CHECK:      BinaryAnnotations [
-# CHECK-NEXT:   ChangeCodeOffsetAndLineOffset: {CodeOffset: 0xE, LineOffset: 1}
-# CHECK-NEXT:   ChangeCodeLength: 0x9
-# CHECK-NEXT:   ChangeCodeOffsetAndLineOffset: {CodeOffset: 0xF, LineOffset: 1}
-# CHECK-NEXT:   ChangeCodeLength: 0x7
-# CHECK-NEXT: ]
+# ASM:      0000000000000000 g:
+# ASM-NEXT:        0: 48 83 ec 28                   subq    $40, %rsp
+# ASM-NEXT:        4: c7 05 fc ff ff ff 00 00 00 00 movl    $0, -4(%rip)
+#  Begin inline loc (matches cv_loc below)
+# ASM-NEXT:        e: 83 3d ff ff ff ff 00          cmpl    $0, -1(%rip)
+# ASM-NEXT:       15: 75 0f                         jne     15 <g+0x26>
+#  End inline loc
+# ASM-NEXT:       17: c7 05 fc ff ff ff 00 00 00 00 movl    $0, -4(%rip)
+# ASM-NEXT:       21: 48 83 c4 28                   addq    $40, %rsp
+# ASM-NEXT:       25: c3                            retq
+#  Begin inline loc (matches cv_loc below)
+# ASM-NEXT:       26: e8 00 00 00 00                callq   0 <g+0x2b>
+# ASM-NEXT:       2b: 0f 0b                         ud2
+#  End inline loc
+
+# CODEVIEW:      S_INLINESITE [size = 24]
+# CODEVIEW-NEXT: inlinee = 0x1002 (f), parent = 0, end = 0
+# CODEVIEW-NEXT:   0B2E      code 0xE (+0xE) line 1 (+1)
+# CODEVIEW-NEXT:   0409      code end 0x17 (+0x9)
+# CODEVIEW-NEXT:   0B2F      code 0x26 (+0xF) line 2 (+1)
+# CODEVIEW-NEXT:   0407      code end 0x2D (+0x7)
 
 	.text
 	.globl	g

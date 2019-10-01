@@ -1,9 +1,8 @@
 //===- DbiModuleDescriptorBuilder.cpp - PDB Mod Info Creation ---*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -104,7 +103,6 @@ uint32_t DbiModuleDescriptorBuilder::calculateSerializedLength() const {
 }
 
 void DbiModuleDescriptorBuilder::finalize() {
-  Layout.SC.Imod = Layout.Mod;
   Layout.FileNameOffs = 0; // TODO: Fix this
   Layout.Flags = 0;        // TODO: Fix this
   Layout.C11Bytes = 0;
@@ -117,12 +115,15 @@ void DbiModuleDescriptorBuilder::finalize() {
 
   // This value includes both the signature field as well as the record bytes
   // from the symbol stream.
-  Layout.SymBytes = SymbolByteSize + sizeof(uint32_t);
+  Layout.SymBytes =
+      Layout.ModDiStream == kInvalidStreamIndex ? 0 : getNextSymbolOffset();
 }
 
 Error DbiModuleDescriptorBuilder::finalizeMsfLayout() {
   this->Layout.ModDiStream = kInvalidStreamIndex;
   uint32_t C13Size = calculateC13DebugInfoSize();
+  if (!C13Size && !SymbolByteSize)
+    return Error::success();
   auto ExpectedSN =
       MSF.addStream(calculateDiSymbolStreamSize(SymbolByteSize, C13Size));
   if (!ExpectedSN)

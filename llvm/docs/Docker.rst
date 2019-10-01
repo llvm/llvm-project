@@ -79,7 +79,7 @@ compiled by the system compiler in the debian8 image:
     ./llvm/utils/docker/build_docker_image.sh \
 	--source debian8 \
 	--docker-repository clang-debian8 --docker-tag "staging" \
-	-p clang -i install-clang -i install-clang-headers \
+	-p clang -i install-clang -i install-clang-resource-headers \
 	-- \
 	-DCMAKE_BUILD_TYPE=Release
 
@@ -95,11 +95,11 @@ this command will do that:
     ./build_docker_image.sh \
 	--source debian8 \
 	--docker-repository clang-debian8 --docker-tag "staging" \
-	-p clang -i stage2-install-clang -i stage2-install-clang-headers \
+	-p clang -i stage2-install-clang -i stage2-install-clang-resource-headers \
 	-- \
 	-DLLVM_TARGETS_TO_BUILD=Native -DCMAKE_BUILD_TYPE=Release \
 	-DBOOTSTRAP_CMAKE_BUILD_TYPE=Release \
-	-DCLANG_ENABLE_BOOTSTRAP=ON -DCLANG_BOOTSTRAP_TARGETS="install-clang;install-clang-headers"
+	-DCLANG_ENABLE_BOOTSTRAP=ON -DCLANG_BOOTSTRAP_TARGETS="install-clang;install-clang-resource-headers"
 	
 This will produce a new image ``clang-debian8:staging`` from the latest
 upstream revision.
@@ -165,7 +165,7 @@ debian8-based image using the latest ``google/stable`` sources for you:
     ./llvm/utils/docker/build_docker_image.sh \
 	-s debian8 --d clang-debian8 -t "staging" \
 	--branch branches/google/stable \
-	-p clang -i install-clang -i install-clang-headers \
+	-p clang -i install-clang -i install-clang-resource-headers \
 	-- \
 	-DCMAKE_BUILD_TYPE=Release
 

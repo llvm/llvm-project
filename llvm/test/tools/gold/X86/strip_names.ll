@@ -10,7 +10,7 @@
 ; RUN:    -m elf_x86_64 \
 ; RUN:    --plugin-opt=emit-llvm \
 ; RUN:    -shared %t.o -o %t2.o
-; RUN: llvm-dis %t2.o -o - | FileCheck ---check-prefix=NONAME %s
+; RUN: llvm-dis %t2.o -o - | FileCheck --check-prefix=NONAME %s
 
 ; CHECK: @GlobalValueName
 ; CHECK: @foo(i32 %in)

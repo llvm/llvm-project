@@ -1,9 +1,8 @@
 //===-- RISCVMCExpr.h - RISCV specific MC expression classes ----*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -29,7 +28,14 @@ public:
     VK_RISCV_HI,
     VK_RISCV_PCREL_LO,
     VK_RISCV_PCREL_HI,
+    VK_RISCV_GOT_HI,
+    VK_RISCV_TPREL_LO,
+    VK_RISCV_TPREL_HI,
+    VK_RISCV_TPREL_ADD,
+    VK_RISCV_TLS_GOT_HI,
+    VK_RISCV_TLS_GD_HI,
     VK_RISCV_CALL,
+    VK_RISCV_CALL_PLT,
     VK_RISCV_Invalid
   };
 
@@ -53,11 +59,11 @@ public:
 
   const MCExpr *getSubExpr() const { return Expr; }
 
-  /// Get the MCExpr of the VK_RISCV_PCREL_HI Fixup that the
-  /// VK_RISCV_PCREL_LO points to.
+  /// Get the corresponding PC-relative HI fixup that a VK_RISCV_PCREL_LO
+  /// points to.
   ///
   /// \returns nullptr if this isn't a VK_RISCV_PCREL_LO pointing to a
-  /// VK_RISCV_PCREL_HI.
+  /// known PC-relative HI fixup.
   const MCFixup *getPCRelHiFixup() const;
 
   void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
@@ -68,8 +74,7 @@ public:
     return getSubExpr()->findAssociatedFragment();
   }
 
-  // There are no TLS RISCVMCExprs at the moment.
-  void fixELFSymbolsInTLSFixups(MCAssembler &Asm) const override {}
+  void fixELFSymbolsInTLSFixups(MCAssembler &Asm) const override;
 
   bool evaluateAsConstant(int64_t &Res) const;
 

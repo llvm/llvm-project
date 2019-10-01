@@ -205,18 +205,18 @@ define   <16 x float> @_xmm16xfloat(<16 x float> %a) {
   ret <16 x float> %b
 }
 
-define <16 x i32> @test_vbroadcast() {
+define <16 x i32> @test_vbroadcast(<16 x float> %a0) {
 ; ALL-LABEL: test_vbroadcast:
 ; ALL:       # %bb.0: # %entry
-; ALL-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; ALL-NEXT:    vcmpunordps %zmm0, %zmm0, %k1
+; ALL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; ALL-NEXT:    vcmpunordps %zmm1, %zmm0, %k1
 ; ALL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
 ; ALL-NEXT:    knotw %k1, %k1
 ; ALL-NEXT:    vmovdqa32 %zmm0, %zmm0 {%k1} {z}
 ; ALL-NEXT:    retq
 entry:
   %0 = sext <16 x i1> zeroinitializer to <16 x i32>
-  %1 = fcmp uno <16 x float> undef, zeroinitializer
+  %1 = fcmp uno <16 x float> %a0, zeroinitializer
   %2 = sext <16 x i1> %1 to <16 x i32>
   %3 = select <16 x i1> %1, <16 x i32> %0, <16 x i32> %2
   ret <16 x i32> %3

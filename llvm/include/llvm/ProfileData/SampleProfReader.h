@@ -1,9 +1,8 @@
 //===- SampleProfReader.h - Read LLVM sample profile data -------*- C++ -*-===//
 //
-//                      The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -287,10 +286,11 @@ public:
 
   /// Return the samples collected for function \p F.
   FunctionSamples *getSamplesFor(const Function &F) {
-    // The function name may have been updated by adding suffix. In sample
-    // profile, the function names are all stripped, so we need to strip
-    // the function name suffix before matching with profile.
-    return getSamplesFor(F.getName().split('.').first);
+    // The function name may have been updated by adding suffix. Call
+    // a helper to (optionally) strip off suffixes so that we can
+    // match against the original function name in the profile.
+    StringRef CanonName = FunctionSamples::getCanonicalFnName(F);
+    return getSamplesFor(CanonName);
   }
 
   /// Return the samples collected for function \p F.

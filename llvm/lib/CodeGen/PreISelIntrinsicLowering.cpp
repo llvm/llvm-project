@@ -1,9 +1,8 @@
 //===- PreISelIntrinsicLowering.cpp - Pre-ISel intrinsic lowering pass ----===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -45,7 +44,7 @@ static bool lowerLoadRelative(Function &F) {
     Value *OffsetPtr =
         B.CreateGEP(Int8Ty, CI->getArgOperand(0), CI->getArgOperand(1));
     Value *OffsetPtrI32 = B.CreateBitCast(OffsetPtr, Int32PtrTy);
-    Value *OffsetI32 = B.CreateAlignedLoad(OffsetPtrI32, 4);
+    Value *OffsetI32 = B.CreateAlignedLoad(Int32Ty, OffsetPtrI32, 4);
 
     Value *ResultPtr = B.CreateGEP(Int8Ty, CI->getArgOperand(0), OffsetI32);
 
@@ -65,9 +64,9 @@ static bool lowerObjCCall(Function &F, const char *NewFn,
   // If we haven't already looked up this function, check to see if the
   // program already contains a function with this name.
   Module *M = F.getParent();
-  Constant* FCache = M->getOrInsertFunction(NewFn, F.getFunctionType());
+  FunctionCallee FCache = M->getOrInsertFunction(NewFn, F.getFunctionType());
 
-  if (Function* Fn = dyn_cast<Function>(FCache)) {
+  if (Function *Fn = dyn_cast<Function>(FCache.getCallee())) {
     Fn->setLinkage(F.getLinkage());
     if (setNonLazyBind && !Fn->isWeakForLinker()) {
       // If we have Native ARC, set nonlazybind attribute for these APIs for

@@ -1,9 +1,8 @@
 //===-- PPCFastISel.cpp - PowerPC FastISel implementation -----------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -152,6 +151,14 @@ class PPCFastISel final : public FastISel {
     bool isVSSRCRegClass(const TargetRegisterClass *RC) const {
       return RC->getID() == PPC::VSSRCRegClassID;
     }
+    unsigned copyRegToRegClass(const TargetRegisterClass *ToRC,
+                               unsigned SrcReg, unsigned Flag = 0,
+                               unsigned SubReg = 0) {
+      unsigned TmpReg = createResultReg(ToRC);
+      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
+              TII.get(TargetOpcode::COPY), TmpReg).addReg(SrcReg, Flag, SubReg);
+      return TmpReg;
+    }
     bool PPCEmitCmp(const Value *Src1Value, const Value *Src2Value,
                     bool isZExt, unsigned DestReg,
                     const PPC::Predicate Pred);
@@ -187,7 +194,6 @@ class PPCFastISel final : public FastISel {
                          unsigned &NumBytes,
                          bool IsVarArg);
     bool finishCall(MVT RetVT, CallLoweringInfo &CLI, unsigned &NumBytes);
-    LLVM_ATTRIBUTE_UNUSED CCAssignFn *usePPC32CCs(unsigned Flag);
 
   private:
   #include "PPCGenFastISel.inc"
@@ -195,23 +201,6 @@ class PPCFastISel final : public FastISel {
 };
 
 } // end anonymous namespace
-
-#include "PPCGenCallingConv.inc"
-
-// Function whose sole purpose is to kill compiler warnings
-// stemming from unused functions included from PPCGenCallingConv.inc.
-CCAssignFn *PPCFastISel::usePPC32CCs(unsigned Flag) {
-  if (Flag == 1)
-    return CC_PPC32_SVR4;
-  else if (Flag == 2)
-    return CC_PPC32_SVR4_ByVal;
-  else if (Flag == 3)
-    return CC_PPC32_SVR4_VarArg;
-  else if (Flag == 4)
-    return RetCC_PPC_Cold;
-  else
-    return RetCC_PPC;
-}
 
 static Optional<PPC::Predicate> getComparePred(CmpInst::Predicate Pred) {
   switch (Pred) {
@@ -861,8 +850,23 @@ bool PPCFastISel::PPCEmitCmp(const Value *SrcValue1, const Value *SrcValue2,
     }
   }
 
+  unsigned SrcReg1 = getRegForValue(SrcValue1);
+  if (SrcReg1 == 0)
+    return false;
+
+  unsigned SrcReg2 = 0;
+  if (!UseImm) {
+    SrcReg2 = getRegForValue(SrcValue2);
+    if (SrcReg2 == 0)
+      return false;
+  }
+
   unsigned CmpOpc;
   bool NeedsExt = false;
+
+  auto RC1 = MRI.getRegClass(SrcReg1);
+  auto RC2 = SrcReg2 != 0 ? MRI.getRegClass(SrcReg2) : nullptr;
+
   switch (SrcVT.SimpleTy) {
     default: return false;
     case MVT::f32:
@@ -879,8 +883,13 @@ bool PPCFastISel::PPCEmitCmp(const Value *SrcValue1, const Value *SrcValue2,
             CmpOpc = PPC::EFSCMPGT;
             break;
         }
-      } else
+      } else {
         CmpOpc = PPC::FCMPUS;
+        if (isVSSRCRegClass(RC1))
+          SrcReg1 = copyRegToRegClass(&PPC::F4RCRegClass, SrcReg1);
+        if (RC2 && isVSSRCRegClass(RC2))
+          SrcReg2 = copyRegToRegClass(&PPC::F4RCRegClass, SrcReg2);
+      }
       break;
     case MVT::f64:
       if (HasSPE) {
@@ -896,8 +905,11 @@ bool PPCFastISel::PPCEmitCmp(const Value *SrcValue1, const Value *SrcValue2,
             CmpOpc = PPC::EFDCMPGT;
             break;
         }
-      } else
+      } else if (isVSFRCRegClass(RC1) || (RC2 && isVSFRCRegClass(RC2))) {
+        CmpOpc = PPC::XSCMPUDP;
+      } else {
         CmpOpc = PPC::FCMPUD;
+      }
       break;
     case MVT::i1:
     case MVT::i8:
@@ -916,17 +928,6 @@ bool PPCFastISel::PPCEmitCmp(const Value *SrcValue1, const Value *SrcValue2,
       else
         CmpOpc = IsZExt ? PPC::CMPLDI : PPC::CMPDI;
       break;
-  }
-
-  unsigned SrcReg1 = getRegForValue(SrcValue1);
-  if (SrcReg1 == 0)
-    return false;
-
-  unsigned SrcReg2 = 0;
-  if (!UseImm) {
-    SrcReg2 = getRegForValue(SrcValue2);
-    if (SrcReg2 == 0)
-      return false;
   }
 
   if (NeedsExt) {
@@ -986,11 +987,16 @@ bool PPCFastISel::SelectFPTrunc(const Instruction *I) {
 
   // Round the result to single precision.
   unsigned DestReg;
-
+  auto RC = MRI.getRegClass(SrcReg);
   if (PPCSubTarget->hasSPE()) {
     DestReg = createResultReg(&PPC::SPE4RCRegClass);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
       TII.get(PPC::EFSCFD), DestReg)
+      .addReg(SrcReg);
+  } else if (isVSFRCRegClass(RC)) {
+    DestReg = createResultReg(&PPC::VSSRCRegClass);
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
+      TII.get(PPC::XSRSP), DestReg)
       .addReg(SrcReg);
   } else {
     DestReg = createResultReg(&PPC::F4RCRegClass);
@@ -1206,21 +1212,19 @@ bool PPCFastISel::SelectFPToI(const Instruction *I, bool IsSigned) {
   if (SrcReg == 0)
     return false;
 
-  // Convert f32 to f64 if necessary.  This is just a meaningless copy
-  // to get the register class right.
+  // Convert f32 to f64 or convert VSSRC to VSFRC if necessary. This is just a
+  // meaningless copy to get the register class right.
   const TargetRegisterClass *InRC = MRI.getRegClass(SrcReg);
-  if (InRC == &PPC::F4RCRegClass) {
-    unsigned TmpReg = createResultReg(&PPC::F8RCRegClass);
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
-            TII.get(TargetOpcode::COPY), TmpReg)
-      .addReg(SrcReg);
-    SrcReg = TmpReg;
-  }
+  if (InRC == &PPC::F4RCRegClass)
+    SrcReg = copyRegToRegClass(&PPC::F8RCRegClass, SrcReg);
+  else if (InRC == &PPC::VSSRCRegClass)
+    SrcReg = copyRegToRegClass(&PPC::VSFRCRegClass, SrcReg);
 
   // Determine the opcode for the conversion, which takes place
-  // entirely within FPRs.
+  // entirely within FPRs or VSRs.
   unsigned DestReg;
   unsigned Opc;
+  auto RC = MRI.getRegClass(SrcReg);
 
   if (PPCSubTarget->hasSPE()) {
     DestReg = createResultReg(&PPC::GPRCRegClass);
@@ -1228,6 +1232,12 @@ bool PPCFastISel::SelectFPToI(const Instruction *I, bool IsSigned) {
       Opc = InRC == &PPC::SPE4RCRegClass ? PPC::EFSCTSIZ : PPC::EFDCTSIZ;
     else
       Opc = InRC == &PPC::SPE4RCRegClass ? PPC::EFSCTUIZ : PPC::EFDCTUIZ;
+  } else if (isVSFRCRegClass(RC)) {
+    DestReg = createResultReg(&PPC::VSFRCRegClass);
+    if (DstVT == MVT::i32) 
+      Opc = IsSigned ? PPC::XSCVDPSXWS : PPC::XSCVDPUXWS;
+    else
+      Opc = IsSigned ? PPC::XSCVDPSXDS : PPC::XSCVDPUXDS;
   } else {
     DestReg = createResultReg(&PPC::F8RCRegClass);
     if (DstVT == MVT::i32)
@@ -1509,11 +1519,7 @@ bool PPCFastISel::finishCall(MVT RetVT, CallLoweringInfo &CLI, unsigned &NumByte
 
     if (RetVT == CopyVT) {
       const TargetRegisterClass *CpyRC = TLI.getRegClassFor(CopyVT);
-      ResultReg = createResultReg(CpyRC);
-
-      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
-              TII.get(TargetOpcode::COPY), ResultReg)
-        .addReg(SourcePhysReg);
+      ResultReg = copyRegToRegClass(CpyRC, SourcePhysReg);
 
     // If necessary, round the floating result to single precision.
     } else if (CopyVT == MVT::f64) {
@@ -1526,12 +1532,9 @@ bool PPCFastISel::finishCall(MVT RetVT, CallLoweringInfo &CLI, unsigned &NumByte
     // used along the fast-isel path (not lowered), and downstream logic
     // also doesn't like a direct subreg copy on a physical reg.)
     } else if (RetVT == MVT::i8 || RetVT == MVT::i16 || RetVT == MVT::i32) {
-      ResultReg = createResultReg(&PPC::GPRCRegClass);
       // Convert physical register from G8RC to GPRC.
       SourcePhysReg -= PPC::X0 - PPC::R0;
-      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
-              TII.get(TargetOpcode::COPY), ResultReg)
-        .addReg(SourcePhysReg);
+      ResultReg = copyRegToRegClass(&PPC::GPRCRegClass, SourcePhysReg);
     }
 
     assert(ResultReg && "ResultReg unset!");
@@ -1883,13 +1886,8 @@ bool PPCFastISel::SelectTrunc(const Instruction *I) {
     return false;
 
   // The only interesting case is when we need to switch register classes.
-  if (SrcVT == MVT::i64) {
-    unsigned ResultReg = createResultReg(&PPC::GPRCRegClass);
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
-            TII.get(TargetOpcode::COPY),
-            ResultReg).addReg(SrcReg, 0, PPC::sub_32);
-    SrcReg = ResultReg;
-  }
+  if (SrcVT == MVT::i64)
+    SrcReg = copyRegToRegClass(&PPC::GPRCRegClass, SrcReg, 0, PPC::sub_32);
 
   updateValueMap(I, SrcReg);
   return true;
@@ -1966,6 +1964,13 @@ bool PPCFastISel::fastSelectInstruction(const Instruction *I) {
     case Instruction::Sub:
       return SelectBinaryIntOp(I, ISD::SUB);
     case Instruction::Call:
+      // On AIX, call lowering uses the DAG-ISEL path currently so that the
+      // callee of the direct function call instruction will be mapped to the
+      // symbol for the function's entry point, which is distinct from the
+      // function descriptor symbol. The latter is the symbol whose XCOFF symbol
+      // name is the C-linkage name of the source level function.
+      if (TM.getTargetTriple().isOSAIX())
+        break;
       return selectCall(I);
     case Instruction::Ret:
       return SelectRet(I);

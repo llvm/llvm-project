@@ -1,5 +1,5 @@
-; RUN: llc -O0 -mtriple armv7-- -stop-before=expand-isel-pseudos < %s
-; RUN: llc -O0 -mtriple armv7-- -stop-before=expand-isel-pseudos -global-isel < %s
+; RUN: llc -O0 -mtriple armv7-- -stop-before=finalize-isel < %s
+; RUN: llc -O0 -mtriple armv7-- -stop-before=finalize-isel -global-isel < %s
 
 ; CHECK: PKHBT
 

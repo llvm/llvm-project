@@ -1,9 +1,8 @@
 //===- llvm/Analysis/IVDescriptors.h - IndVar Descriptors -------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -90,10 +89,12 @@ public:
   RecurrenceDescriptor() = default;
 
   RecurrenceDescriptor(Value *Start, Instruction *Exit, RecurrenceKind K,
-                       MinMaxRecurrenceKind MK, Instruction *UAI, Type *RT,
-                       bool Signed, SmallPtrSetImpl<Instruction *> &CI)
-      : StartValue(Start), LoopExitInstr(Exit), Kind(K), MinMaxKind(MK),
-        UnsafeAlgebraInst(UAI), RecurrenceType(RT), IsSigned(Signed) {
+                       FastMathFlags FMF, MinMaxRecurrenceKind MK,
+                       Instruction *UAI, Type *RT, bool Signed,
+                       SmallPtrSetImpl<Instruction *> &CI)
+      : StartValue(Start), LoopExitInstr(Exit), Kind(K), FMF(FMF),
+        MinMaxKind(MK), UnsafeAlgebraInst(UAI), RecurrenceType(RT),
+        IsSigned(Signed) {
     CastInsts.insert(CI.begin(), CI.end());
   }
 
@@ -199,6 +200,8 @@ public:
 
   MinMaxRecurrenceKind getMinMaxRecurrenceKind() { return MinMaxKind; }
 
+  FastMathFlags getFastMathFlags() { return FMF; }
+
   TrackingVH<Value> getRecurrenceStartValue() { return StartValue; }
 
   Instruction *getLoopExitInstr() { return LoopExitInstr; }
@@ -238,6 +241,9 @@ private:
   Instruction *LoopExitInstr = nullptr;
   // The kind of the recurrence.
   RecurrenceKind Kind = RK_NoRecurrence;
+  // The fast-math flags on the recurrent instructions.  We propagate these
+  // fast-math flags into the vectorized FP instructions we generate.
+  FastMathFlags FMF;
   // If this a min/max recurrence the kind of recurrence.
   MinMaxRecurrenceKind MinMaxKind = MRK_Invalid;
   // First occurrence of unasfe algebra in the PHI's use-chain.
@@ -309,12 +315,16 @@ public:
   /// not have the "fast-math" property. Such operation requires a relaxed FP
   /// mode.
   bool hasUnsafeAlgebra() {
-    return InductionBinOp && !cast<FPMathOperator>(InductionBinOp)->isFast();
+    return (IK == IK_FpInduction) && InductionBinOp &&
+           !cast<FPMathOperator>(InductionBinOp)->isFast();
   }
 
   /// Returns induction operator that does not have "fast-math" property
   /// and requires FP unsafe mode.
   Instruction *getUnsafeAlgebraInst() {
+    if (IK != IK_FpInduction)
+      return nullptr;
+
     if (!InductionBinOp || cast<FPMathOperator>(InductionBinOp)->isFast())
       return nullptr;
     return InductionBinOp;

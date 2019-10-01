@@ -1,9 +1,8 @@
 //===- llvm/unittest/DebugInfo/DWARFDebugInfoTest.cpp ---------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -42,7 +41,7 @@ namespace {
 
 template <uint16_t Version, class AddrType, class RefAddrType>
 void TestAllForms() {
-  Triple Triple = getHostTripleForAddrSize(sizeof(AddrType));
+  Triple Triple = getDefaultTargetTripleForAddrSize(sizeof(AddrType));
   if (!isConfigurationSupported(Triple))
     return;
 
@@ -456,7 +455,7 @@ TEST(DWARFDebugInfo, TestDWARF32Version5Addr8AllForms) {
 }
 
 template <uint16_t Version, class AddrType> void TestChildren() {
-  Triple Triple = getHostTripleForAddrSize(sizeof(AddrType));
+  Triple Triple = getDefaultTargetTripleForAddrSize(sizeof(AddrType));
   if (!isConfigurationSupported(Triple))
     return;
 
@@ -586,7 +585,7 @@ TEST(DWARFDebugInfo, TestDWARF32Version4Addr8Children) {
 }
 
 template <uint16_t Version, class AddrType> void TestReferences() {
-  Triple Triple = getHostTripleForAddrSize(sizeof(AddrType));
+  Triple Triple = getDefaultTargetTripleForAddrSize(sizeof(AddrType));
   if (!isConfigurationSupported(Triple))
     return;
 
@@ -836,7 +835,7 @@ TEST(DWARFDebugInfo, TestDWARF32Version4Addr8References) {
 }
 
 template <uint16_t Version, class AddrType> void TestAddresses() {
-  Triple Triple = getHostTripleForAddrSize(sizeof(AddrType));
+  Triple Triple = getDefaultTargetTripleForAddrSize(sizeof(AddrType));
   if (!isConfigurationSupported(Triple))
     return;
 
@@ -1008,7 +1007,7 @@ TEST(DWARFDebugInfo, TestDWARF32Version4Addr8Addresses) {
 }
 
 TEST(DWARFDebugInfo, TestStringOffsets) {
-  Triple Triple = getHostTripleForAddrSize(sizeof(void *));
+  Triple Triple = getNormalizedDefaultTargetTriple();
   if (!isConfigurationSupported(Triple))
     return;
 
@@ -1072,7 +1071,7 @@ TEST(DWARFDebugInfo, TestStringOffsets) {
 }
 
 TEST(DWARFDebugInfo, TestEmptyStringOffsets) {
-  Triple Triple = getHostTripleForAddrSize(sizeof(void *));
+  Triple Triple = getNormalizedDefaultTargetTriple();
   if (!isConfigurationSupported(Triple))
     return;
 
@@ -1101,7 +1100,7 @@ TEST(DWARFDebugInfo, TestEmptyStringOffsets) {
 }
 
 TEST(DWARFDebugInfo, TestRelations) {
-  Triple Triple = getHostTripleForAddrSize(sizeof(void *));
+  Triple Triple = getNormalizedDefaultTargetTriple();
   if (!isConfigurationSupported(Triple))
     return;
 
@@ -1288,7 +1287,7 @@ TEST(DWARFDebugInfo, TestDWARFDie) {
 }
 
 TEST(DWARFDebugInfo, TestChildIterators) {
-  Triple Triple = getHostTripleForAddrSize(sizeof(void *));
+  Triple Triple = getNormalizedDefaultTargetTriple();
   if (!isConfigurationSupported(Triple))
     return;
 
@@ -1402,7 +1401,7 @@ TEST(DWARFDebugInfo, TestEmptyChildren) {
 }
 
 TEST(DWARFDebugInfo, TestAttributeIterators) {
-  Triple Triple = getHostTripleForAddrSize(sizeof(void *));
+  Triple Triple = getNormalizedDefaultTargetTriple();
   if (!isConfigurationSupported(Triple))
     return;
 
@@ -1464,7 +1463,7 @@ TEST(DWARFDebugInfo, TestAttributeIterators) {
 }
 
 TEST(DWARFDebugInfo, TestFindRecurse) {
-  Triple Triple = getHostTripleForAddrSize(sizeof(void *));
+  Triple Triple = getNormalizedDefaultTargetTriple();
   if (!isConfigurationSupported(Triple))
     return;
 
@@ -1678,7 +1677,7 @@ TEST(DWARFDebugInfo, TestDwarfToFunctions) {
 }
 
 TEST(DWARFDebugInfo, TestFindAttrs) {
-  Triple Triple = getHostTripleForAddrSize(sizeof(void *));
+  Triple Triple = getNormalizedDefaultTargetTriple();
   if (!isConfigurationSupported(Triple))
     return;
 
@@ -1741,7 +1740,7 @@ TEST(DWARFDebugInfo, TestFindAttrs) {
 }
 
 TEST(DWARFDebugInfo, TestImplicitConstAbbrevs) {
-  Triple Triple = getHostTripleForAddrSize(sizeof(void *));
+  Triple Triple = getNormalizedDefaultTargetTriple();
   if (!isConfigurationSupported(Triple))
     return;
 
@@ -2984,72 +2983,34 @@ TEST(DWARFDebugInfo, TestDwarfVerifyNestedFunctions) {
   VerifySuccess(*DwarfContext);
 }
 
-TEST(DWARFDebugInfo, TestDwarfRangesContains) {
-  DWARFAddressRange R(0x10, 0x20);
-
-  //----------------------------------------------------------------------
-  // Test ranges that start before R...
-  //----------------------------------------------------------------------
-  // Other range ends before start of R
-  ASSERT_FALSE(R.contains({0x0f, 0x10}));
-  // Other range end address is start of a R
-  ASSERT_FALSE(R.contains({0x0f, 0x11}));
-  // Other range end address is at and of R
-  ASSERT_FALSE(R.contains({0x0f, 0x20}));
-  // Other range end address is past end of R
-  ASSERT_FALSE(R.contains({0x0f, 0x40}));
-
-  //----------------------------------------------------------------------
-  // Test ranges that start at R's start address
-  //----------------------------------------------------------------------
-  // Ensure empty ranges matches
-  ASSERT_TRUE(R.contains({0x10, 0x10}));
-  // 1 byte of Range
-  ASSERT_TRUE(R.contains({0x10, 0x11}));
-  // same as Range
-  ASSERT_TRUE(R.contains({0x10, 0x20}));
-  // 1 byte past Range
-  ASSERT_FALSE(R.contains({0x10, 0x21}));
-
-  //----------------------------------------------------------------------
-  // Test ranges that start inside Range
-  //----------------------------------------------------------------------
-  // empty in range
-  ASSERT_TRUE(R.contains({0x11, 0x11}));
-  // all in Range
-  ASSERT_TRUE(R.contains({0x11, 0x1f}));
-  // ends at end of Range
-  ASSERT_TRUE(R.contains({0x11, 0x20}));
-  // ends past Range
-  ASSERT_FALSE(R.contains({0x11, 0x21}));
-
-  //----------------------------------------------------------------------
-  // Test ranges that start at last bytes of Range
-  //----------------------------------------------------------------------
-  // ends at end of Range
-  ASSERT_TRUE(R.contains({0x1f, 0x20}));
-  // ends past Range
-  ASSERT_FALSE(R.contains({0x1f, 0x21}));
-
-  //----------------------------------------------------------------------
-  // Test ranges that start after Range
-  //----------------------------------------------------------------------
-  // empty considered in Range
-  ASSERT_TRUE(R.contains({0x20, 0x20}));
-  // valid past Range
-  ASSERT_FALSE(R.contains({0x20, 0x21}));
-}
-
 TEST(DWARFDebugInfo, TestDWARFDieRangeInfoContains) {
-  DWARFVerifier::DieRangeInfo Ranges({{0x10, 0x20}, {0x30, 0x40}});
+  DWARFVerifier::DieRangeInfo Empty;
+  ASSERT_TRUE(Empty.contains(Empty));
 
+  DWARFVerifier::DieRangeInfo Ranges(
+      {{0x10, 0x20}, {0x30, 0x40}, {0x40, 0x50}});
+
+  ASSERT_TRUE(Ranges.contains(Empty));
   ASSERT_FALSE(Ranges.contains({{{0x0f, 0x10}}}));
-  ASSERT_FALSE(Ranges.contains({{{0x20, 0x30}}}));
-  ASSERT_FALSE(Ranges.contains({{{0x40, 0x41}}}));
+  ASSERT_FALSE(Ranges.contains({{{0x0f, 0x20}}}));
+  ASSERT_FALSE(Ranges.contains({{{0x0f, 0x21}}}));
+
+  // Test ranges that start at R's start address
+  ASSERT_TRUE(Ranges.contains({{{0x10, 0x10}}}));
+  ASSERT_TRUE(Ranges.contains({{{0x10, 0x11}}}));
   ASSERT_TRUE(Ranges.contains({{{0x10, 0x20}}}));
+  ASSERT_FALSE(Ranges.contains({{{0x10, 0x21}}}));
+
   ASSERT_TRUE(Ranges.contains({{{0x11, 0x12}}}));
+
+  // Test ranges that start at last bytes of Range
   ASSERT_TRUE(Ranges.contains({{{0x1f, 0x20}}}));
-  ASSERT_TRUE(Ranges.contains({{{0x30, 0x40}}}));
+  ASSERT_FALSE(Ranges.contains({{{0x1f, 0x21}}}));
+
+  // Test ranges that start after Range
+  ASSERT_TRUE(Ranges.contains({{{0x20, 0x20}}}));
+  ASSERT_FALSE(Ranges.contains({{{0x20, 0x21}}}));
+
   ASSERT_TRUE(Ranges.contains({{{0x31, 0x32}}}));
   ASSERT_TRUE(Ranges.contains({{{0x3f, 0x40}}}));
   ASSERT_TRUE(Ranges.contains({{{0x10, 0x20}, {0x30, 0x40}}}));
@@ -3062,7 +3023,10 @@ TEST(DWARFDebugInfo, TestDWARFDieRangeInfoContains) {
                                  {0x31, 0x32},
                                  {0x32, 0x33}}}));
   ASSERT_FALSE(Ranges.contains(
-      {{{0x11, 0x12}, {0x12, 0x13}, {0x31, 0x32}, {0x32, 0x41}}}));
+      {{{0x11, 0x12}, {0x12, 0x13}, {0x31, 0x32}, {0x32, 0x51}}}));
+  ASSERT_TRUE(Ranges.contains({{{0x11, 0x12}, {0x30, 0x50}}}));
+  ASSERT_FALSE(Ranges.contains({{{0x30, 0x51}}}));
+  ASSERT_FALSE(Ranges.contains({{{0x50, 0x51}}}));
 }
 
 namespace {
@@ -3189,6 +3153,9 @@ TEST(DWARFDebugInfo, TestDWARFDieRangeInfoIntersects) {
   AssertRangesIntersect(Ranges, {{0x3f, 0x40}});
   // Test range that starts at end of second range
   AssertRangesDontIntersect(Ranges, {{0x40, 0x41}});
+
+  AssertRangesDontIntersect(Ranges, {{0x20, 0x21}, {0x2f, 0x30}});
+  AssertRangesIntersect(Ranges, {{0x20, 0x21}, {0x2f, 0x31}});
 }
 
 } // end anonymous namespace

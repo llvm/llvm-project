@@ -1,9 +1,8 @@
 //===-- PPCInstrAltivec.td - The PowerPC Altivec Extension -*- tablegen -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -822,7 +821,9 @@ def VCMPGTSWo : VCMPo<902, "vcmpgtsw. $vD, $vA, $vB", v4i32>;
 def VCMPGTUW  : VCMP <646, "vcmpgtuw $vD, $vA, $vB" , v4i32>;
 def VCMPGTUWo : VCMPo<646, "vcmpgtuw. $vD, $vA, $vB", v4i32>;
 
-let isCodeGenOnly = 1 in {
+let isCodeGenOnly = 1, isMoveImm = 1, isAsCheapAsAMove = 1,
+    isReMaterializable = 1 in {
+
 def V_SET0B : VXForm_setzero<1220, (outs vrrc:$vD), (ins),
                       "vxor $vD, $vD, $vD", IIC_VecFP,
                       [(set v16i8:$vD, (v16i8 immAllZerosV))]>;
@@ -898,6 +899,32 @@ def : Pat<(v1i128 (bitconvert (v8i16 VRRC:$src))), (v1i128 VRRC:$src)>;
 def : Pat<(v1i128 (bitconvert (v4i32 VRRC:$src))), (v1i128 VRRC:$src)>;
 def : Pat<(v1i128 (bitconvert (v4f32 VRRC:$src))), (v1i128 VRRC:$src)>;
 def : Pat<(v1i128 (bitconvert (v2i64 VRRC:$src))), (v1i128 VRRC:$src)>;
+
+// Max/Min
+def : Pat<(v16i8 (umax v16i8:$src1, v16i8:$src2)),
+          (v16i8 (VMAXUB $src1, $src2))>;
+def : Pat<(v16i8 (smax v16i8:$src1, v16i8:$src2)),
+          (v16i8 (VMAXSB $src1, $src2))>;
+def : Pat<(v8i16 (umax v8i16:$src1, v8i16:$src2)),
+          (v8i16 (VMAXUH $src1, $src2))>;
+def : Pat<(v8i16 (smax v8i16:$src1, v8i16:$src2)),
+          (v8i16 (VMAXSH $src1, $src2))>;
+def : Pat<(v4i32 (umax v4i32:$src1, v4i32:$src2)),
+          (v4i32 (VMAXUW $src1, $src2))>;
+def : Pat<(v4i32 (smax v4i32:$src1, v4i32:$src2)),
+          (v4i32 (VMAXSW $src1, $src2))>;
+def : Pat<(v16i8 (umin v16i8:$src1, v16i8:$src2)),
+          (v16i8 (VMINUB $src1, $src2))>;
+def : Pat<(v16i8 (smin v16i8:$src1, v16i8:$src2)),
+          (v16i8 (VMINSB $src1, $src2))>;
+def : Pat<(v8i16 (umin v8i16:$src1, v8i16:$src2)),
+          (v8i16 (VMINUH $src1, $src2))>;
+def : Pat<(v8i16 (smin v8i16:$src1, v8i16:$src2)),
+          (v8i16 (VMINSH $src1, $src2))>;
+def : Pat<(v4i32 (umin v4i32:$src1, v4i32:$src2)),
+          (v4i32 (VMINUW $src1, $src2))>;
+def : Pat<(v4i32 (smin v4i32:$src1, v4i32:$src2)),
+          (v4i32 (VMINSW $src1, $src2))>;
 
 // Shuffles.
 

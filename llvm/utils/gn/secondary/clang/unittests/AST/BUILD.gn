@@ -13,7 +13,11 @@ unittest("ASTTests") {
   ]
   sources = [
     "ASTContextParentMapTest.cpp",
+    "ASTImporterFixtures.cpp",
+    "ASTImporterGenericRedeclTest.cpp",
     "ASTImporterTest.cpp",
+    "ASTImporterVisibilityTest.cpp",
+    "ASTTraverserTest.cpp",
     "ASTTypeTraitsTest.cpp",
     "ASTVectorTest.cpp",
     "CommentLexer.cpp",
@@ -26,6 +30,7 @@ unittest("ASTTests") {
     "ExternalASTSourceTest.cpp",
     "Language.cpp",
     "NamedDeclPrinterTest.cpp",
+    "OMPStructuredBlockTest.cpp",
     "SourceLocationTest.cpp",
     "StmtPrinterTest.cpp",
     "StructuralEquivalenceTest.cpp",

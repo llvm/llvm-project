@@ -1,0 +1,15 @@
+## Test that if the source cannot be found that disassembly is still printed,
+## and that no source is printed.
+
+# RUN: sed -e "s,SRC_COMPDIR,%/t,g" %p/Inputs/source-interleave.ll > %t.ll
+# RUN: sed -e "s,SRC_COMPDIR,%/p/Inputs,g" %p/Inputs/source-interleave.ll > %t2.ll
+
+# RUN: llc -o %t.o -filetype=obj -mtriple=x86_64-pc-linux %t.ll
+# RUN: llc -o %t2.o -filetype=obj -mtriple=x86_64-pc-linux %t2.ll
+
+# RUN: llvm-objdump --source %t.o | FileCheck %s --implicit-check-not='main()'
+# RUN: llvm-objdump --source %t2.o | FileCheck %s --check-prefixes=CHECK,SOURCE
+
+# CHECK:       0000000000000010 main:
+# SOURCE-NEXT: ; int main() {
+# CHECK-NEXT:   10:   55                      pushq   %rbp

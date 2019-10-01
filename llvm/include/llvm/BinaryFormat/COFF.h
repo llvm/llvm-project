@@ -1,9 +1,8 @@
 //===-- llvm/BinaryFormat/COFF.h --------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -371,13 +370,15 @@ enum RelocationTypesARM : unsigned {
   IMAGE_REL_ARM_TOKEN = 0x0005,
   IMAGE_REL_ARM_BLX24 = 0x0008,
   IMAGE_REL_ARM_BLX11 = 0x0009,
+  IMAGE_REL_ARM_REL32 = 0x000A,
   IMAGE_REL_ARM_SECTION = 0x000E,
   IMAGE_REL_ARM_SECREL = 0x000F,
   IMAGE_REL_ARM_MOV32A = 0x0010,
   IMAGE_REL_ARM_MOV32T = 0x0011,
   IMAGE_REL_ARM_BRANCH20T = 0x0012,
   IMAGE_REL_ARM_BRANCH24T = 0x0014,
-  IMAGE_REL_ARM_BLX23T = 0x0015
+  IMAGE_REL_ARM_BLX23T = 0x0015,
+  IMAGE_REL_ARM_PAIR = 0x0016,
 };
 
 enum RelocationTypesARM64 : unsigned {
@@ -398,9 +399,10 @@ enum RelocationTypesARM64 : unsigned {
   IMAGE_REL_ARM64_ADDR64 = 0x000E,
   IMAGE_REL_ARM64_BRANCH19 = 0x000F,
   IMAGE_REL_ARM64_BRANCH14 = 0x0010,
+  IMAGE_REL_ARM64_REL32 = 0x0011,
 };
 
-enum COMDATType : unsigned {
+enum COMDATType : uint8_t {
   IMAGE_COMDAT_SELECT_NODUPLICATES = 1,
   IMAGE_COMDAT_SELECT_ANY,
   IMAGE_COMDAT_SELECT_SAME_SIZE,

@@ -23,7 +23,7 @@ declare i32 @llvm.hexagon.A2.addsat(i32, i32) #1
 ; Function Attrs: nounwind readnone
 declare i32 @llvm.hexagon.M2.mpy.sat.ll.s1(i32, i32) #1
 
-define void @f0() #0 align 2 {
+define void @f0(i32 %a0) #0 align 2 {
 b0:
   br label %b1
 
@@ -46,7 +46,7 @@ b2:                                               ; preds = %b2, %b1
   %v11 = trunc i32 %v7 to i16
   store i16 %v11, i16* %v0, align 2
   %v12 = add nsw i32 %v1, 1
-  %v13 = icmp slt i32 %v12, undef
+  %v13 = icmp slt i32 %v12, %a0
   %v14 = getelementptr i16, i16* %v0, i32 1
   br i1 %v13, label %b2, label %b3
 

@@ -1,9 +1,8 @@
 //===- PDBExtras.h - helper functions and classes for PDBs ------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -28,7 +27,8 @@ raw_ostream &operator<<(raw_ostream &OS, const PDB_VariantType &Value);
 raw_ostream &operator<<(raw_ostream &OS, const PDB_CallingConv &Conv);
 raw_ostream &operator<<(raw_ostream &OS, const PDB_BuiltinType &Type);
 raw_ostream &operator<<(raw_ostream &OS, const PDB_DataKind &Data);
-raw_ostream &operator<<(raw_ostream &OS, const codeview::RegisterId &Reg);
+raw_ostream &operator<<(raw_ostream &OS,
+                        const llvm::codeview::CPURegister &CpuReg);
 raw_ostream &operator<<(raw_ostream &OS, const PDB_LocType &Loc);
 raw_ostream &operator<<(raw_ostream &OS, const codeview::ThunkOrdinal &Thunk);
 raw_ostream &operator<<(raw_ostream &OS, const PDB_Checksum &Checksum);

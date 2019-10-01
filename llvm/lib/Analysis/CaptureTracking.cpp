@@ -1,9 +1,8 @@
 //===--- CaptureTracking.cpp - Determine whether a pointer is captured ----===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -23,7 +22,6 @@
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/OrderedBasicBlock.h"
 #include "llvm/Analysis/ValueTracking.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
@@ -103,14 +101,14 @@ namespace {
 
         SmallVector<BasicBlock*, 32> Worklist;
         Worklist.append(succ_begin(BB), succ_end(BB));
-        return !isPotentiallyReachableFromMany(Worklist, BB, DT);
+        return !isPotentiallyReachableFromMany(Worklist, BB, nullptr, DT);
       }
 
       // If the value is defined in the same basic block as use and BeforeHere,
       // there is no need to explore the use if BeforeHere dominates use.
       // Check whether there is a path from I to BeforeHere.
       if (BeforeHere != I && DT->dominates(BeforeHere, I) &&
-          !isPotentiallyReachable(I, BeforeHere, DT))
+          !isPotentiallyReachable(I, BeforeHere, nullptr, DT))
         return true;
 
       return false;
@@ -240,11 +238,12 @@ void llvm::PointerMayBeCaptured(const Value *V, CaptureTracker *Tracker,
     switch (I->getOpcode()) {
     case Instruction::Call:
     case Instruction::Invoke: {
-      CallSite CS(I);
+      auto *Call = cast<CallBase>(I);
       // Not captured if the callee is readonly, doesn't return a copy through
       // its return value and doesn't unwind (a readonly function can leak bits
       // by throwing an exception or not depending on the input value).
-      if (CS.onlyReadsMemory() && CS.doesNotThrow() && I->getType()->isVoidTy())
+      if (Call->onlyReadsMemory() && Call->doesNotThrow() &&
+          Call->getType()->isVoidTy())
         break;
 
       // The pointer is not captured if returned pointer is not captured.
@@ -252,14 +251,15 @@ void llvm::PointerMayBeCaptured(const Value *V, CaptureTracker *Tracker,
       // marked with nocapture do not capture. This means that places like
       // GetUnderlyingObject in ValueTracking or DecomposeGEPExpression
       // in BasicAA also need to know about this property.
-      if (isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(CS)) {
-        AddUses(I);
+      if (isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(Call,
+                                                                      true)) {
+        AddUses(Call);
         break;
       }
 
       // Volatile operations effectively capture the memory location that they
       // load and store to.
-      if (auto *MI = dyn_cast<MemIntrinsic>(I))
+      if (auto *MI = dyn_cast<MemIntrinsic>(Call))
         if (MI->isVolatile())
           if (Tracker->captured(U))
             return;
@@ -271,13 +271,14 @@ void llvm::PointerMayBeCaptured(const Value *V, CaptureTracker *Tracker,
       // that loading a value from a pointer does not cause the pointer to be
       // captured, even though the loaded value might be the pointer itself
       // (think of self-referential objects).
-      CallSite::data_operand_iterator B =
-        CS.data_operands_begin(), E = CS.data_operands_end();
-      for (CallSite::data_operand_iterator A = B; A != E; ++A)
-        if (A->get() == V && !CS.doesNotCapture(A - B))
+      for (auto IdxOpPair : enumerate(Call->data_ops())) {
+        int Idx = IdxOpPair.index();
+        Value *A = IdxOpPair.value();
+        if (A == V && !Call->doesNotCapture(Idx))
           // The parameter is not marked 'nocapture' - captured.
           if (Tracker->captured(U))
             return;
+      }
       break;
     }
     case Instruction::Load:
@@ -330,14 +331,32 @@ void llvm::PointerMayBeCaptured(const Value *V, CaptureTracker *Tracker,
       AddUses(I);
       break;
     case Instruction::ICmp: {
-      // Don't count comparisons of a no-alias return value against null as
-      // captures. This allows us to ignore comparisons of malloc results
-      // with null, for example.
-      if (ConstantPointerNull *CPN =
-          dyn_cast<ConstantPointerNull>(I->getOperand(1)))
+      if (auto *CPN = dyn_cast<ConstantPointerNull>(I->getOperand(1))) {
+        // Don't count comparisons of a no-alias return value against null as
+        // captures. This allows us to ignore comparisons of malloc results
+        // with null, for example.
         if (CPN->getType()->getAddressSpace() == 0)
           if (isNoAliasCall(V->stripPointerCasts()))
             break;
+        if (!I->getFunction()->nullPointerIsDefined()) {
+          auto *O = I->getOperand(0)->stripPointerCastsSameRepresentation();
+          // An inbounds GEP can either be a valid pointer (pointing into
+          // or to the end of an allocation), or be null in the default
+          // address space. So for an inbounds GEPs there is no way to let
+          // the pointer escape using clever GEP hacking because doing so
+          // would make the pointer point outside of the allocated object
+          // and thus make the GEP result a poison value.
+          if (auto *GEP = dyn_cast<GetElementPtrInst>(O))
+            if (GEP->isInBounds())
+              break;
+          // Comparing a dereferenceable_or_null argument against null
+          // cannot lead to pointer escapes, because if it is not null it
+          // must be a valid (in-bounds) pointer.
+          bool CanBeNull;
+          if (O->getPointerDereferenceableBytes(I->getModule()->getDataLayout(), CanBeNull))
+            break;
+        }
+      }
       // Comparison against value stored in global variable. Given the pointer
       // does not escape, its value cannot be guessed and stored separately in a
       // global variable.

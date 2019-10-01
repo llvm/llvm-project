@@ -1,24 +1,26 @@
 //===--- Utility.h ----------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+//===----------------------------------------------------------------------===//
 //
+// Provide some utility classes for use in the demangler(s).
 //
-// This file contains several utility classes used by the demangle library.
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEMANGLE_UTILITY_H
-#define LLVM_DEMANGLE_UTILITY_H
+#ifndef DEMANGLE_UTILITY_H
+#define DEMANGLE_UTILITY_H
 
 #include "StringView.h"
-
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
 #include <iterator>
 #include <limits>
+
+DEMANGLE_NAMESPACE_BEGIN
 
 // Stream that AST nodes write their string representation into after the AST
 // has been parsed.
@@ -183,5 +185,7 @@ inline bool initializeOutputStream(char *Buf, size_t *N, OutputStream &S,
   S.reset(Buf, BufferSize);
   return true;
 }
+
+DEMANGLE_NAMESPACE_END
 
 #endif

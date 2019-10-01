@@ -11,3 +11,9 @@ def READONLY : Flag<["/", "-"], "READONLY">, HelpText<"">;
 def VERBOSE : Flag<["/", "-"], "VERBOSE">, HelpText<"">;
 def HELP : Flag<["/", "-"], "HELP">;
 def H : Flag<["/", "-"], "H">, Alias<HELP>;
+def HELP_Q : Flag<["/?", "-?"], "">, Alias<HELP>;
+
+// Extensions.
+
+def TIMESTAMP : Joined<["/", "-"], "TIMESTAMP:">,
+    HelpText<"Timestamp for coff header, defaults to current time">;

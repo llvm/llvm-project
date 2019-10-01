@@ -1,9 +1,8 @@
 //===-- X86InstrShiftRotate.td - Shift and Rotate Instrs ---*- tablegen -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -31,11 +30,11 @@ def SHL64rCL : RI<0xD3, MRM4r, (outs GR64:$dst), (ins GR64:$src1),
                   [(set GR64:$dst, (shl GR64:$src1, CL))]>;
 } // Uses = [CL], SchedRW
 
+let isConvertibleToThreeAddress = 1 in {   // Can transform into LEA.
 def SHL8ri   : Ii8<0xC0, MRM4r, (outs GR8 :$dst), (ins GR8 :$src1, u8imm:$src2),
                    "shl{b}\t{$src2, $dst|$dst, $src2}",
                    [(set GR8:$dst, (shl GR8:$src1, (i8 imm:$src2)))]>;
 
-let isConvertibleToThreeAddress = 1 in {   // Can transform into LEA.
 def SHL16ri  : Ii8<0xC1, MRM4r, (outs GR16:$dst), (ins GR16:$src1, u8imm:$src2),
                    "shl{w}\t{$src2, $dst|$dst, $src2}",
                    [(set GR16:$dst, (shl GR16:$src1, (i8 imm:$src2)))]>,
@@ -473,17 +472,19 @@ def ROL64rCL : RI<0xD3, MRM0r, (outs GR64:$dst), (ins GR64:$src1),
 
 def ROL8ri   : Ii8<0xC0, MRM0r, (outs GR8 :$dst), (ins GR8 :$src1, u8imm:$src2),
                    "rol{b}\t{$src2, $dst|$dst, $src2}",
-                   [(set GR8:$dst, (rotl GR8:$src1, (i8 imm:$src2)))]>;
+                   [(set GR8:$dst, (rotl GR8:$src1, (i8 relocImm:$src2)))]>;
 def ROL16ri  : Ii8<0xC1, MRM0r, (outs GR16:$dst), (ins GR16:$src1, u8imm:$src2),
                    "rol{w}\t{$src2, $dst|$dst, $src2}",
-                   [(set GR16:$dst, (rotl GR16:$src1, (i8 imm:$src2)))]>, OpSize16;
+                   [(set GR16:$dst, (rotl GR16:$src1, (i8 relocImm:$src2)))]>,
+                   OpSize16;
 def ROL32ri  : Ii8<0xC1, MRM0r, (outs GR32:$dst), (ins GR32:$src1, u8imm:$src2),
                    "rol{l}\t{$src2, $dst|$dst, $src2}",
-                   [(set GR32:$dst, (rotl GR32:$src1, (i8 imm:$src2)))]>, OpSize32;
+                   [(set GR32:$dst, (rotl GR32:$src1, (i8 relocImm:$src2)))]>,
+                   OpSize32;
 def ROL64ri  : RIi8<0xC1, MRM0r, (outs GR64:$dst),
                     (ins GR64:$src1, u8imm:$src2),
                     "rol{q}\t{$src2, $dst|$dst, $src2}",
-                    [(set GR64:$dst, (rotl GR64:$src1, (i8 imm:$src2)))]>;
+                    [(set GR64:$dst, (rotl GR64:$src1, (i8 relocImm:$src2)))]>;
 
 // Rotate by 1
 def ROL8r1   : I<0xD0, MRM0r, (outs GR8 :$dst), (ins GR8 :$src1),
@@ -586,16 +587,16 @@ def ROR64ri  : RIi8<0xC1, MRM1r, (outs GR64:$dst),
 // Rotate by 1
 def ROR8r1   : I<0xD0, MRM1r, (outs GR8 :$dst), (ins GR8 :$src1),
                  "ror{b}\t$dst",
-                 [(set GR8:$dst, (rotl GR8:$src1, (i8 7)))]>;
+                 [(set GR8:$dst, (rotr GR8:$src1, (i8 1)))]>;
 def ROR16r1  : I<0xD1, MRM1r, (outs GR16:$dst), (ins GR16:$src1),
                  "ror{w}\t$dst",
-                 [(set GR16:$dst, (rotl GR16:$src1, (i8 15)))]>, OpSize16;
+                 [(set GR16:$dst, (rotr GR16:$src1, (i8 1)))]>, OpSize16;
 def ROR32r1  : I<0xD1, MRM1r, (outs GR32:$dst), (ins GR32:$src1),
                  "ror{l}\t$dst",
-                 [(set GR32:$dst, (rotl GR32:$src1, (i8 31)))]>, OpSize32;
+                 [(set GR32:$dst, (rotr GR32:$src1, (i8 1)))]>, OpSize32;
 def ROR64r1  : RI<0xD1, MRM1r, (outs GR64:$dst), (ins GR64:$src1),
                   "ror{q}\t$dst",
-                  [(set GR64:$dst, (rotl GR64:$src1, (i8 63)))]>;
+                  [(set GR64:$dst, (rotr GR64:$src1, (i8 1)))]>;
 } // Constraints = "$src = $dst", SchedRW
 
 let Uses = [CL], SchedRW = [WriteRotateCLLd, WriteRMW] in {
@@ -634,18 +635,18 @@ def ROR64mi  : RIi8<0xC1, MRM1m, (outs), (ins i64mem:$dst, u8imm:$src),
 // Rotate by 1
 def ROR8m1   : I<0xD0, MRM1m, (outs), (ins i8mem :$dst),
                  "ror{b}\t$dst",
-                 [(store (rotl (loadi8 addr:$dst), (i8 7)), addr:$dst)]>;
+                 [(store (rotr (loadi8 addr:$dst), (i8 1)), addr:$dst)]>;
 def ROR16m1  : I<0xD1, MRM1m, (outs), (ins i16mem:$dst),
                  "ror{w}\t$dst",
-                 [(store (rotl (loadi16 addr:$dst), (i8 15)), addr:$dst)]>,
+                 [(store (rotr (loadi16 addr:$dst), (i8 1)), addr:$dst)]>,
                  OpSize16;
 def ROR32m1  : I<0xD1, MRM1m, (outs), (ins i32mem:$dst),
                  "ror{l}\t$dst",
-                 [(store (rotl (loadi32 addr:$dst), (i8 31)), addr:$dst)]>,
+                 [(store (rotr (loadi32 addr:$dst), (i8 1)), addr:$dst)]>,
                  OpSize32;
 def ROR64m1  : RI<0xD1, MRM1m, (outs), (ins i64mem:$dst),
                  "ror{q}\t$dst",
-                 [(store (rotl (loadi64 addr:$dst), (i8 63)), addr:$dst)]>,
+                 [(store (rotr (loadi64 addr:$dst), (i8 1)), addr:$dst)]>,
                  Requires<[In64BitMode]>;
 } // SchedRW
 
@@ -807,13 +808,54 @@ def SHRD64mri8 : RIi8<0xAC, MRMDestMem,
 
 } // Defs = [EFLAGS]
 
+// Use the opposite rotate if allows us to use the rotate by 1 instruction.
+def : Pat<(rotl GR8:$src1,  (i8 7)),  (ROR8r1  GR8:$src1)>;
+def : Pat<(rotl GR16:$src1, (i8 15)), (ROR16r1 GR16:$src1)>;
+def : Pat<(rotl GR32:$src1, (i8 31)), (ROR32r1 GR32:$src1)>;
+def : Pat<(rotl GR64:$src1, (i8 63)), (ROR64r1 GR64:$src1)>;
+def : Pat<(rotr GR8:$src1,  (i8 7)),  (ROL8r1  GR8:$src1)>;
+def : Pat<(rotr GR16:$src1, (i8 15)), (ROL16r1 GR16:$src1)>;
+def : Pat<(rotr GR32:$src1, (i8 31)), (ROL32r1 GR32:$src1)>;
+def : Pat<(rotr GR64:$src1, (i8 63)), (ROL64r1 GR64:$src1)>;
+
+def : Pat<(store (rotl (loadi8 addr:$dst), (i8 7)), addr:$dst),
+          (ROR8m1 addr:$dst)>;
+def : Pat<(store (rotl (loadi16 addr:$dst), (i8 15)), addr:$dst),
+          (ROR16m1 addr:$dst)>;
+def : Pat<(store (rotl (loadi32 addr:$dst), (i8 31)), addr:$dst),
+          (ROR32m1 addr:$dst)>;
+def : Pat<(store (rotl (loadi64 addr:$dst), (i8 63)), addr:$dst),
+          (ROR64m1 addr:$dst)>, Requires<[In64BitMode]>;
+
+def : Pat<(store (rotr (loadi8 addr:$dst), (i8 7)), addr:$dst),
+          (ROL8m1 addr:$dst)>;
+def : Pat<(store (rotr (loadi16 addr:$dst), (i8 15)), addr:$dst),
+          (ROL16m1 addr:$dst)>;
+def : Pat<(store (rotr (loadi32 addr:$dst), (i8 31)), addr:$dst),
+          (ROL32m1 addr:$dst)>;
+def : Pat<(store (rotr (loadi64 addr:$dst), (i8 63)), addr:$dst),
+          (ROL64m1 addr:$dst)>, Requires<[In64BitMode]>;
+
 // Sandy Bridge and newer Intel processors support faster rotates using
 // SHLD to avoid a partial flag update on the normal rotate instructions.
-let Predicates = [HasFastSHLDRotate], AddedComplexity = 5 in {
-  def : Pat<(rotl GR32:$src, (i8 imm:$shamt)),
-            (SHLD32rri8 GR32:$src, GR32:$src, imm:$shamt)>;
-  def : Pat<(rotl GR64:$src, (i8 imm:$shamt)),
-            (SHLD64rri8 GR64:$src, GR64:$src, imm:$shamt)>;
+// Use a pseudo so that TwoInstructionPass and register allocation will see
+// this as unary instruction.
+let Predicates = [HasFastSHLDRotate], AddedComplexity = 5,
+    Defs = [EFLAGS], isPseudo = 1, SchedRW = [WriteSHDrri],
+    Constraints = "$src1 = $dst" in {
+  def SHLDROT32ri  : I<0, Pseudo, (outs GR32:$dst),
+                       (ins GR32:$src1, u8imm:$shamt), "",
+                     [(set GR32:$dst, (rotl GR32:$src1, (i8 imm:$shamt)))]>;
+  def SHLDROT64ri  : I<0, Pseudo, (outs GR64:$dst),
+                       (ins GR64:$src1, u8imm:$shamt), "",
+                     [(set GR64:$dst, (rotl GR64:$src1, (i8 imm:$shamt)))]>;
+
+  def SHRDROT32ri  : I<0, Pseudo, (outs GR32:$dst),
+                       (ins GR32:$src1, u8imm:$shamt), "",
+                     [(set GR32:$dst, (rotr GR32:$src1, (i8 imm:$shamt)))]>;
+  def SHRDROT64ri  : I<0, Pseudo, (outs GR64:$dst),
+                       (ins GR64:$src1, u8imm:$shamt), "",
+                     [(set GR64:$dst, (rotr GR64:$src1, (i8 imm:$shamt)))]>;
 }
 
 def ROT32L2R_imm8  : SDNodeXForm<imm, [{
@@ -871,11 +913,21 @@ let Predicates = [HasBMI2] in {
 
   // Prefer RORX which is non-destructive and doesn't update EFLAGS.
   let AddedComplexity = 10 in {
+    def : Pat<(rotr GR32:$src, (i8 imm:$shamt)),
+              (RORX32ri GR32:$src, imm:$shamt)>;
+    def : Pat<(rotr GR64:$src, (i8 imm:$shamt)),
+              (RORX64ri GR64:$src, imm:$shamt)>;
+
     def : Pat<(rotl GR32:$src, (i8 imm:$shamt)),
               (RORX32ri GR32:$src, (ROT32L2R_imm8 imm:$shamt))>;
     def : Pat<(rotl GR64:$src, (i8 imm:$shamt)),
               (RORX64ri GR64:$src, (ROT64L2R_imm8 imm:$shamt))>;
   }
+
+  def : Pat<(rotr (loadi32 addr:$src), (i8 imm:$shamt)),
+            (RORX32mi addr:$src, imm:$shamt)>;
+  def : Pat<(rotr (loadi64 addr:$src), (i8 imm:$shamt)),
+            (RORX64mi addr:$src, imm:$shamt)>;
 
   def : Pat<(rotl (loadi32 addr:$src), (i8 imm:$shamt)),
             (RORX32mi addr:$src, (ROT32L2R_imm8 imm:$shamt))>;
@@ -883,7 +935,7 @@ let Predicates = [HasBMI2] in {
             (RORX64mi addr:$src, (ROT64L2R_imm8 imm:$shamt))>;
 
   // Prefer SARX/SHRX/SHLX over SAR/SHR/SHL with variable shift BUT not
-  // immedidate shift, i.e. the following code is considered better
+  // immediate shift, i.e. the following code is considered better
   //
   //  mov %edi, %esi
   //  shl $imm, %esi

@@ -1,9 +1,8 @@
 //===---- llvm/MDBuilder.cpp - Builder for LLVM metadata ------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -69,9 +68,7 @@ MDNode *MDBuilder::createFunctionEntryCount(
   Ops.push_back(createConstant(ConstantInt::get(Int64Ty, Count)));
   if (Imports) {
     SmallVector<GlobalValue::GUID, 2> OrderID(Imports->begin(), Imports->end());
-    std::stable_sort(OrderID.begin(), OrderID.end(),
-      [] (GlobalValue::GUID A, GlobalValue::GUID B) {
-        return A < B;});
+    llvm::stable_sort(OrderID);
     for (auto ID : OrderID)
       Ops.push_back(createConstant(ConstantInt::get(Int64Ty, ID)));
   }
@@ -104,6 +101,52 @@ MDNode *MDBuilder::createCallees(ArrayRef<Function *> Callees) {
   SmallVector<Metadata *, 4> Ops;
   for (Function *F : Callees)
     Ops.push_back(createConstant(F));
+  return MDNode::get(Context, Ops);
+}
+
+MDNode *MDBuilder::createCallbackEncoding(unsigned CalleeArgNo,
+                                          ArrayRef<int> Arguments,
+                                          bool VarArgArePassed) {
+  SmallVector<Metadata *, 4> Ops;
+
+  Type *Int64 = Type::getInt64Ty(Context);
+  Ops.push_back(createConstant(ConstantInt::get(Int64, CalleeArgNo)));
+
+  for (int ArgNo : Arguments)
+    Ops.push_back(createConstant(ConstantInt::get(Int64, ArgNo, true)));
+
+  Type *Int1 = Type::getInt1Ty(Context);
+  Ops.push_back(createConstant(ConstantInt::get(Int1, VarArgArePassed)));
+
+  return MDNode::get(Context, Ops);
+}
+
+MDNode *MDBuilder::mergeCallbackEncodings(MDNode *ExistingCallbacks,
+                                          MDNode *NewCB) {
+  if (!ExistingCallbacks)
+    return MDNode::get(Context, {NewCB});
+
+  auto *NewCBCalleeIdxAsCM = cast<ConstantAsMetadata>(NewCB->getOperand(0));
+  uint64_t NewCBCalleeIdx =
+      cast<ConstantInt>(NewCBCalleeIdxAsCM->getValue())->getZExtValue();
+  (void)NewCBCalleeIdx;
+
+  SmallVector<Metadata *, 4> Ops;
+  unsigned NumExistingOps = ExistingCallbacks->getNumOperands();
+  Ops.resize(NumExistingOps + 1);
+
+  for (unsigned u = 0; u < NumExistingOps; u++) {
+    Ops[u] = ExistingCallbacks->getOperand(u);
+
+    auto *OldCBCalleeIdxAsCM = cast<ConstantAsMetadata>(Ops[u]);
+    uint64_t OldCBCalleeIdx =
+      cast<ConstantInt>(OldCBCalleeIdxAsCM->getValue())->getZExtValue();
+    (void)OldCBCalleeIdx;
+    assert(NewCBCalleeIdx != OldCBCalleeIdx &&
+           "Cannot map a callback callee index twice!");
+  }
+
+  Ops[NumExistingOps] = NewCB;
   return MDNode::get(Context, Ops);
 }
 

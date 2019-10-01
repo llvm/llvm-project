@@ -1,9 +1,8 @@
 //=-- Profilesummary.cpp - Profile summary support --------------------------=//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -21,8 +20,6 @@
 #include "llvm/Support/Casting.h"
 
 using namespace llvm;
-
-const char *ProfileSummary::KindStr[2] = {"InstrProf", "SampleProfile"};
 
 // Return an MDTuple with two elements. The first element is a string Key and
 // the second is a uint64_t Value.
@@ -69,6 +66,7 @@ Metadata *ProfileSummary::getDetailedSummaryMD(LLVMContext &Context) {
 // "SampleProfile"). The rest of the elements of the outer MDTuple are specific
 // to the kind of profile summary as returned by getFormatSpecificMD.
 Metadata *ProfileSummary::getMD(LLVMContext &Context) {
+  const char *KindStr[3] = {"InstrProf", "CSInstrProf", "SampleProfile"};
   Metadata *Components[] = {
     getKeyValMD(Context, "ProfileFormat", KindStr[PSK]),
     getKeyValMD(Context, "TotalCount", getTotalCount()),
@@ -154,6 +152,9 @@ ProfileSummary *ProfileSummary::getFromMD(Metadata *MD) {
   else if (isKeyValuePair(dyn_cast_or_null<MDTuple>(FormatMD), "ProfileFormat",
                           "InstrProf"))
     SummaryKind = PSK_Instr;
+  else if (isKeyValuePair(dyn_cast_or_null<MDTuple>(FormatMD), "ProfileFormat",
+                          "CSInstrProf"))
+    SummaryKind = PSK_CSInstr;
   else
     return nullptr;
 

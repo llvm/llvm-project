@@ -1,9 +1,8 @@
 //===-- NVPTXLowerArgs.cpp - Lower arguments ------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -92,6 +91,7 @@
 #include "NVPTX.h"
 #include "NVPTXTargetMachine.h"
 #include "NVPTXUtilities.h"
+#include "MCTargetDesc/NVPTXBaseInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
@@ -170,7 +170,8 @@ void NVPTXLowerArgs::handleByValParam(Argument *Arg) {
   Value *ArgInParam = new AddrSpaceCastInst(
       Arg, PointerType::get(StructType, ADDRESS_SPACE_PARAM), Arg->getName(),
       FirstInst);
-  LoadInst *LI = new LoadInst(ArgInParam, Arg->getName(), FirstInst);
+  LoadInst *LI =
+      new LoadInst(StructType, ArgInParam, Arg->getName(), FirstInst);
   new StoreInst(LI, AllocA, FirstInst);
 }
 

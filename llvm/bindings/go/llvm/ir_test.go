@@ -1,9 +1,8 @@
 //===- ir_test.go - Tests for ir ------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -31,7 +30,7 @@ func testAttribute(t *testing.T, name string) {
 	fn.AddFunctionAttr(attr)
 	newattr := fn.GetEnumFunctionAttribute(kind)
 	if attr != newattr {
-		t.Errorf("got attribute mask %d, want %d", newattr, attr)
+		t.Errorf("got attribute %p, want %p", newattr.C, attr.C)
 	}
 
 	text := mod.String()
@@ -42,7 +41,7 @@ func testAttribute(t *testing.T, name string) {
 	fn.RemoveEnumFunctionAttribute(kind)
 	newattr = fn.GetEnumFunctionAttribute(kind)
 	if !newattr.IsNil() {
-		t.Errorf("got attribute mask %d, want 0", newattr)
+		t.Errorf("got attribute %p, want 0", newattr.C)
 	}
 }
 
@@ -52,7 +51,6 @@ func TestAttributes(t *testing.T) {
 		"sanitize_address",
 		"alwaysinline",
 		"builtin",
-		"byval",
 		"convergent",
 		"inalloca",
 		"inlinehint",

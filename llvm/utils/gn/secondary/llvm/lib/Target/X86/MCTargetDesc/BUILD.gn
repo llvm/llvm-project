@@ -1,53 +1,67 @@
 import("//llvm/utils/TableGen/tablegen.gni")
 
+tablegen("X86GenAsmWriter") {
+  visibility = [ ":MCTargetDesc" ]
+  args = [ "-gen-asm-writer" ]
+  td_file = "../X86.td"
+}
+
+tablegen("X86GenAsmWriter1") {
+  visibility = [ ":MCTargetDesc" ]
+  args = [
+    "-gen-asm-writer",
+    "-asmwriternum=1",
+  ]
+  td_file = "../X86.td"
+}
+
 tablegen("X86GenInstrInfo") {
-  visibility = [ ":tablegen" ]
+  visibility = [ ":MCTargetDesc" ]
   args = [ "-gen-instr-info" ]
   td_file = "../X86.td"
 }
 
 tablegen("X86GenRegisterInfo") {
-  visibility = [ ":tablegen" ]
+  visibility = [ ":MCTargetDesc" ]
   args = [ "-gen-register-info" ]
   td_file = "../X86.td"
 }
 
 tablegen("X86GenSubtargetInfo") {
-  visibility = [ ":tablegen" ]
+  visibility = [ ":MCTargetDesc" ]
   args = [ "-gen-subtarget" ]
   td_file = "../X86.td"
 }
 
-group("tablegen") {
-  visibility = [
-    ":MCTargetDesc",
-    "../InstPrinter",
-    "../TargetInfo",
-  ]
+static_library("MCTargetDesc") {
+  output_name = "LLVMX86Desc"
+
+  # This should contain tablegen targets generating .inc files included
+  # by other targets. .inc files only used by .cpp files in this directory
+  # should be in deps instead.
   public_deps = [
     ":X86GenInstrInfo",
     ":X86GenRegisterInfo",
     ":X86GenSubtargetInfo",
   ]
-}
-
-static_library("MCTargetDesc") {
-  output_name = "LLVMX86Desc"
-  public_deps = [
-    ":tablegen",
-  ]
   deps = [
+    ":X86GenAsmWriter",
+    ":X86GenAsmWriter1",
     "//llvm/lib/MC",
     "//llvm/lib/MC/MCDisassembler",
     "//llvm/lib/Object",
     "//llvm/lib/Support",
-    "//llvm/lib/Target/X86/InstPrinter",
     "//llvm/lib/Target/X86/TargetInfo",
+    "//llvm/lib/Target/X86/Utils",
   ]
   include_dirs = [ ".." ]
   sources = [
+    "X86ATTInstPrinter.cpp",
     "X86AsmBackend.cpp",
     "X86ELFObjectWriter.cpp",
+    "X86InstComments.cpp",
+    "X86InstPrinterCommon.cpp",
+    "X86IntelInstPrinter.cpp",
     "X86MCAsmInfo.cpp",
     "X86MCCodeEmitter.cpp",
     "X86MCTargetDesc.cpp",

@@ -69,5 +69,7 @@ define linkonce_odr hidden void @__clang_call_terminate(i8*) #1 {
 declare void @_ZSt9terminatev()
 
 ; CHECK-LABEL: Contents of section .eh_frame:
+; CHECK-NEXT: {{^ 0000}}
+; CHECK-NEXT: {{^ 0010}}
 ; CHECK-NEXT: 0000 0000001c
 

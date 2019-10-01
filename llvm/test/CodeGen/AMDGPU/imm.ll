@@ -449,7 +449,7 @@ define amdgpu_kernel void @add_inline_imm_neg_4.0_f64(double addrspace(1)* %out,
 ; SI: v_add_f64 v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, v{{\[}}[[LO_VREG]]:[[HI_VREG]]{{\]}}
 
 ; VI: s_load_dwordx2 [[VAL:s\[[0-9]+:[0-9]+\]]], {{s\[[0-9]+:[0-9]+\]}}, 0x4c
-; VI: v_add_f64 [[REG:v\[[0-9]+:[0-9]+\]]], [[VAL]], 0.15915494{{$}}
+; VI: v_add_f64 [[REG:v\[[0-9]+:[0-9]+\]]], [[VAL]], 0.15915494309189532{{$}}
 ; VI: buffer_store_dwordx2 [[REG]]
 define amdgpu_kernel void @add_inline_imm_inv_2pi_f64(double addrspace(1)* %out, [8 x i32], double %x) {
   %y = fadd double %x, 0x3fc45f306dc9c882

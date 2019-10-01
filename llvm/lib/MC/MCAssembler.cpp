@@ -1,9 +1,8 @@
 //===- lib/MC/MCAssembler.cpp - Assembler Backend Implementation ----------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -323,6 +322,13 @@ uint64_t MCAssembler::computeFragmentSize(const MCAsmLayout &Layout,
     const MCAlignFragment &AF = cast<MCAlignFragment>(F);
     unsigned Offset = Layout.getFragmentOffset(&AF);
     unsigned Size = OffsetToAlignment(Offset, AF.getAlignment());
+
+    // Insert extra Nops for code alignment if the target define
+    // shouldInsertExtraNopBytesForCodeAlign target hook.
+    if (AF.getParent()->UseCodeAlign() && AF.hasEmitNops() &&
+        getBackend().shouldInsertExtraNopBytesForCodeAlign(AF, Size))
+      return Size;
+
     // If we are padding with nops, force the padding to be larger than the
     // minimum nop size.
     if (Size > 0 && AF.hasEmitNops()) {
@@ -805,7 +811,8 @@ void MCAssembler::layout(MCAsmLayout &Layout) {
       if (isa<MCEncodedFragment>(&Frag) &&
           isa<MCCompactEncodedInstFragment>(&Frag))
         continue;
-      if (!isa<MCEncodedFragment>(&Frag) && !isa<MCCVDefRangeFragment>(&Frag))
+      if (!isa<MCEncodedFragment>(&Frag) && !isa<MCCVDefRangeFragment>(&Frag) &&
+          !isa<MCAlignFragment>(&Frag))
         continue;
       ArrayRef<MCFixup> Fixups;
       MutableArrayRef<char> Contents;
@@ -824,6 +831,17 @@ void MCAssembler::layout(MCAsmLayout &Layout) {
         Fixups = FragWithFixups->getFixups();
         Contents = FragWithFixups->getContents();
       } else if (auto *FragWithFixups = dyn_cast<MCDwarfLineAddrFragment>(&Frag)) {
+        Fixups = FragWithFixups->getFixups();
+        Contents = FragWithFixups->getContents();
+      } else if (auto *AF = dyn_cast<MCAlignFragment>(&Frag)) {
+        // Insert fixup type for code alignment if the target define
+        // shouldInsertFixupForCodeAlign target hook.
+        if (Sec.UseCodeAlign() && AF->hasEmitNops()) {
+          getBackend().shouldInsertFixupForCodeAlign(*this, Layout, *AF);
+        }
+        continue;
+      } else if (auto *FragWithFixups =
+                     dyn_cast<MCDwarfCallFrameFragment>(&Frag)) {
         Fixups = FragWithFixups->getFixups();
         Contents = FragWithFixups->getContents();
       } else
@@ -955,13 +973,9 @@ bool MCAssembler::relaxDwarfLineAddr(MCAsmLayout &Layout,
   MCContext &Context = Layout.getAssembler().getContext();
   uint64_t OldSize = DF.getContents().size();
   int64_t AddrDelta;
-  bool Abs;
-  if (getBackend().requiresDiffExpressionRelocations())
-    Abs = DF.getAddrDelta().evaluateAsAbsolute(AddrDelta, Layout);
-  else {
-    Abs = DF.getAddrDelta().evaluateKnownAbsolute(AddrDelta, Layout);
-    assert(Abs && "We created a line delta with an invalid expression");
-  }
+  bool Abs = DF.getAddrDelta().evaluateKnownAbsolute(AddrDelta, Layout);
+  assert(Abs && "We created a line delta with an invalid expression");
+  (void)Abs;
   int64_t LineDelta;
   LineDelta = DF.getLineDelta();
   SmallVectorImpl<char> &Data = DF.getContents();
@@ -969,7 +983,7 @@ bool MCAssembler::relaxDwarfLineAddr(MCAsmLayout &Layout,
   raw_svector_ostream OSE(Data);
   DF.getFixups().clear();
 
-  if (Abs) {
+  if (!getBackend().requiresDiffExpressionRelocations()) {
     MCDwarfLineAddr::Encode(Context, getDWARFLinetableParams(), LineDelta,
                             AddrDelta, OSE);
   } else {
@@ -1003,10 +1017,25 @@ bool MCAssembler::relaxDwarfCallFrameFragment(MCAsmLayout &Layout,
   bool Abs = DF.getAddrDelta().evaluateKnownAbsolute(AddrDelta, Layout);
   assert(Abs && "We created call frame with an invalid expression");
   (void) Abs;
-  SmallString<8> &Data = DF.getContents();
+  SmallVectorImpl<char> &Data = DF.getContents();
   Data.clear();
   raw_svector_ostream OSE(Data);
-  MCDwarfFrameEmitter::EncodeAdvanceLoc(Context, AddrDelta, OSE);
+  DF.getFixups().clear();
+
+  if (getBackend().requiresDiffExpressionRelocations()) {
+    uint32_t Offset;
+    uint32_t Size;
+    MCDwarfFrameEmitter::EncodeAdvanceLoc(Context, AddrDelta, OSE, &Offset,
+                                          &Size);
+    if (Size) {
+      DF.getFixups().push_back(MCFixup::create(
+          Offset, &DF.getAddrDelta(),
+          MCFixup::getKindForSizeInBits(Size /*In bits.*/, false /*isPCRel*/)));
+    }
+  } else {
+    MCDwarfFrameEmitter::EncodeAdvanceLoc(Context, AddrDelta, OSE);
+  }
+
   return OldSize != Data.size();
 }
 

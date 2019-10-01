@@ -1,9 +1,8 @@
 //===- llvm/MC/MCDisassembler.h - Disassembler interface --------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -17,6 +16,7 @@
 namespace llvm {
 
 template <typename T> class ArrayRef;
+class StringRef;
 class MCContext;
 class MCInst;
 class MCSubtargetInfo;
@@ -79,6 +79,23 @@ public:
                                       ArrayRef<uint8_t> Bytes, uint64_t Address,
                                       raw_ostream &VStream,
                                       raw_ostream &CStream) const = 0;
+
+  /// May parse any prelude that precedes instructions after the start of a
+  /// symbol. Needed for some targets, e.g. WebAssembly.
+  ///
+  /// \param Name     - The name of the symbol.
+  /// \param Size     - The number of bytes consumed.
+  /// \param Address  - The address, in the memory space of region, of the first
+  ///                   byte of the symbol.
+  /// \param Bytes    - A reference to the actual bytes at the symbol location.
+  /// \param VStream  - The stream to print warnings and diagnostic messages on.
+  /// \param CStream  - The stream to print comments and annotations on.
+  /// \return         - MCDisassembler::Success if the bytes are valid,
+  ///                   MCDisassembler::Fail if the bytes were invalid.
+  virtual DecodeStatus onSymbolStart(StringRef Name, uint64_t &Size,
+                                     ArrayRef<uint8_t> Bytes, uint64_t Address,
+                                     raw_ostream &VStream,
+                                     raw_ostream &CStream) const;
 
 private:
   MCContext &Ctx;

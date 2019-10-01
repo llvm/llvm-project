@@ -948,3 +948,10 @@
 # CHECK-BE: mfvsrld 3, 34                      # encoding: [0x7c,0x43,0x02,0x67]
 # CHECK-LE: mfvsrld 3, 34                      # encoding: [0x67,0x02,0x43,0x7c]
             mfvsrld 3, 34
+
+# CHECK-BE: xvtstdcdp 63, 63, 65               # encoding: [0xf3,0xe1,0xff,0xeb]
+# CHECK-LE: xvtstdcdp 63, 63, 65               # encoding: [0xeb,0xff,0xe1,0xf3]
+            xvtstdcdp 63, 63, 65
+# CHECK-BE: xvtstdcsp 63, 63, 34               # encoding: [0xf3,0xe2,0xfe,0xaf]
+# CHECK-LE: xvtstdcsp 63, 63, 34               # encoding: [0xaf,0xfe,0xe2,0xf3]
+            xvtstdcsp 63, 63, 34

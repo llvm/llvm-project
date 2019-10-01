@@ -1,9 +1,8 @@
 //===-- WebAssemblyCFGSort.cpp - CFG Sorting ------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -34,6 +33,14 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "wasm-cfg-sort"
+
+// Option to disable EH pad first sorting. Only for testing unwind destination
+// mismatches in CFGStackify.
+static cl::opt<bool> WasmDisableEHPadSort(
+    "wasm-disable-ehpad-sort", cl::ReallyHidden,
+    cl::desc(
+        "WebAssembly: Disable EH pad-first sort order. Testing purpose only."),
+    cl::init(false));
 
 namespace {
 
@@ -133,7 +140,7 @@ FunctionPass *llvm::createWebAssemblyCFGSort() {
   return new WebAssemblyCFGSort();
 }
 
-static void MaybeUpdateTerminator(MachineBasicBlock *MBB) {
+static void maybeUpdateTerminator(MachineBasicBlock *MBB) {
 #ifndef NDEBUG
   bool AnyBarrier = false;
 #endif
@@ -188,10 +195,12 @@ namespace {
 struct CompareBlockNumbers {
   bool operator()(const MachineBasicBlock *A,
                   const MachineBasicBlock *B) const {
-    if (A->isEHPad() && !B->isEHPad())
-      return false;
-    if (!A->isEHPad() && B->isEHPad())
-      return true;
+    if (!WasmDisableEHPadSort) {
+      if (A->isEHPad() && !B->isEHPad())
+        return false;
+      if (!A->isEHPad() && B->isEHPad())
+        return true;
+    }
 
     return A->getNumber() > B->getNumber();
   }
@@ -200,11 +209,12 @@ struct CompareBlockNumbers {
 struct CompareBlockNumbersBackwards {
   bool operator()(const MachineBasicBlock *A,
                   const MachineBasicBlock *B) const {
-    // We give a higher priority to an EH pad
-    if (A->isEHPad() && !B->isEHPad())
-      return false;
-    if (!A->isEHPad() && B->isEHPad())
-      return true;
+    if (!WasmDisableEHPadSort) {
+      if (A->isEHPad() && !B->isEHPad())
+        return false;
+      if (!A->isEHPad() && B->isEHPad())
+        return true;
+    }
 
     return A->getNumber() < B->getNumber();
   }
@@ -228,7 +238,7 @@ struct Entry {
 /// interrupted by blocks not dominated by their header.
 /// TODO: There are many opportunities for improving the heuristics here.
 /// Explore them.
-static void SortBlocks(MachineFunction &MF, const MachineLoopInfo &MLI,
+static void sortBlocks(MachineFunction &MF, const MachineLoopInfo &MLI,
                        const WebAssemblyExceptionInfo &WEI,
                        const MachineDominatorTree &MDT) {
   // Prepare for a topological sort: Record the number of predecessors each
@@ -260,10 +270,10 @@ static void SortBlocks(MachineFunction &MF, const MachineLoopInfo &MLI,
                 CompareBlockNumbersBackwards>
       Ready;
 
-  RegionInfo SUI(MLI, WEI);
+  RegionInfo RI(MLI, WEI);
   SmallVector<Entry, 4> Entries;
   for (MachineBasicBlock *MBB = &MF.front();;) {
-    const Region *R = SUI.getRegionFor(MBB);
+    const Region *R = RI.getRegionFor(MBB);
     if (R) {
       // If MBB is a region header, add it to the active region list. We can't
       // put any blocks that it doesn't dominate until we see the end of the
@@ -320,7 +330,7 @@ static void SortBlocks(MachineFunction &MF, const MachineLoopInfo &MLI,
     if (!Next) {
       // If there are no more blocks to process, we're done.
       if (Ready.empty()) {
-        MaybeUpdateTerminator(MBB);
+        maybeUpdateTerminator(MBB);
         break;
       }
       for (;;) {
@@ -338,7 +348,7 @@ static void SortBlocks(MachineFunction &MF, const MachineLoopInfo &MLI,
     }
     // Move the next block into place and iterate.
     Next->moveAfter(MBB);
-    MaybeUpdateTerminator(MBB);
+    maybeUpdateTerminator(MBB);
     MBB = Next;
   }
   assert(Entries.empty() && "Active sort region list not finished");
@@ -354,7 +364,7 @@ static void SortBlocks(MachineFunction &MF, const MachineLoopInfo &MLI,
 
   for (auto &MBB : MF) {
     assert(MBB.getNumber() >= 0 && "Renumbered blocks should be non-negative.");
-    const Region *Region = SUI.getRegionFor(&MBB);
+    const Region *Region = RI.getRegionFor(&MBB);
 
     if (Region && &MBB == Region->getHeader()) {
       if (Region->isLoop()) {
@@ -379,7 +389,7 @@ static void SortBlocks(MachineFunction &MF, const MachineLoopInfo &MLI,
       for (auto Pred : MBB.predecessors())
         assert(Pred->getNumber() < MBB.getNumber() &&
                "Non-loop-header predecessors should be topologically sorted");
-      assert(OnStack.count(SUI.getRegionFor(&MBB)) &&
+      assert(OnStack.count(RI.getRegionFor(&MBB)) &&
              "Blocks must be nested in their regions");
     }
     while (OnStack.size() > 1 && &MBB == WebAssembly::getBottom(OnStack.back()))
@@ -404,7 +414,7 @@ bool WebAssemblyCFGSort::runOnMachineFunction(MachineFunction &MF) {
   MF.getRegInfo().invalidateLiveness();
 
   // Sort the blocks, with contiguous sort regions.
-  SortBlocks(MF, MLI, WEI, MDT);
+  sortBlocks(MF, MLI, WEI, MDT);
 
   return true;
 }

@@ -75,7 +75,7 @@ body: |
     liveins: $ebx
 
     CMP32ri8 $ebx, 10, implicit-def $eflags
-    JG_1 %bb.3.exit, implicit killed $eflags
+    JCC_1 %bb.3.exit, 15, implicit killed $eflags
     JMP_1 %bb.2.loop
 
   bb.2.loop:

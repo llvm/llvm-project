@@ -13,8 +13,8 @@ define hidden void @exception() personality i8* bitcast (i32 (...)* @__gxx_perso
 entry:
   invoke void @foo()
           to label %try.cont unwind label %lpad
-; EH:   call __invoke_void@FUNCTION
-; NONE: call foo@FUNCTION
+; EH:   call __invoke_void
+; NONE: call foo
 
 lpad:                                             ; preds = %entry
   %0 = landingpad { i8*, i32 }
@@ -39,10 +39,10 @@ entry:
   %arraydecay1 = getelementptr inbounds [1 x %struct.__jmp_buf_tag], [1 x %struct.__jmp_buf_tag]* %buf, i32 0, i32 0
   call void @longjmp(%struct.__jmp_buf_tag* %arraydecay1, i32 1) #1
   unreachable
-; SJLJ: i32.call saveSetjmp@FUNCTION
-; SJLJ: i32.call testSetjmp@FUNCTION
-; NONE: i32.call setjmp@FUNCTION
-; NONE: call longjmp@FUNCTION
+; SJLJ: i32.call saveSetjmp
+; SJLJ: i32.call testSetjmp
+; NONE: i32.call setjmp
+; NONE: call longjmp
 }
 
 declare void @foo()

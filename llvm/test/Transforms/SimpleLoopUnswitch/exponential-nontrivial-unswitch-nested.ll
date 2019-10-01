@@ -2,30 +2,30 @@
 ; There should be just a single copy of each loop when strictest mutiplier
 ; candidates formula (unscaled candidates == 0) is enforced:
 
-; RUN: opt < %s -enable-nontrivial-unswitch -enable-unswitch-cost-multiplier=true \
+; RUN: opt < %s -enable-unswitch-cost-multiplier=true \
 ; RUN:     -unswitch-num-initial-unscaled-candidates=0 -unswitch-siblings-toplevel-div=1 \
-; RUN:     -passes='loop(unswitch),print<loops>' -disable-output 2>&1 | FileCheck %s --check-prefixes=LOOP1
+; RUN:     -passes='loop(unswitch<nontrivial>),print<loops>' -disable-output 2>&1 | FileCheck %s --check-prefixes=LOOP1
 ;
-; RUN: opt < %s -enable-nontrivial-unswitch -enable-unswitch-cost-multiplier=true \
+; RUN: opt < %s -enable-unswitch-cost-multiplier=true \
 ; RUN:     -unswitch-num-initial-unscaled-candidates=0 -unswitch-siblings-toplevel-div=16 \
-; RUN:     -passes='loop(unswitch),print<loops>' -disable-output 2>&1 | FileCheck %s --check-prefixes=LOOP1
+; RUN:     -passes='loop(unswitch<nontrivial>),print<loops>' -disable-output 2>&1 | FileCheck %s --check-prefixes=LOOP1
 ;
 ;
 ; When we relax the candidates part of a multiplier formula
 ; (unscaled candidates == 4) we start getting  some unswitches,
 ; which leads to siblings multiplier kicking in.
 ;
-; RUN: opt < %s -enable-nontrivial-unswitch -enable-unswitch-cost-multiplier=true \
+; RUN: opt < %s -enable-unswitch-cost-multiplier=true \
 ; RUN:     -unswitch-num-initial-unscaled-candidates=4 -unswitch-siblings-toplevel-div=1 \
-; RUN:     -passes='loop(unswitch),print<loops>' -disable-output 2>&1 | \
+; RUN:     -passes='loop(unswitch<nontrivial>),print<loops>' -disable-output 2>&1 | \
 ; RUN:     sort -b -k 1 | FileCheck %s --check-prefixes=LOOP-UNSCALE4-DIV1
 ;
 ; NB: sort -b is essential here and below, otherwise blanks might lead to different
 ; order depending on locale.
 ;
-; RUN: opt < %s -enable-nontrivial-unswitch -enable-unswitch-cost-multiplier=true \
+; RUN: opt < %s -enable-unswitch-cost-multiplier=true \
 ; RUN:     -unswitch-num-initial-unscaled-candidates=4 -unswitch-siblings-toplevel-div=2 \
-; RUN:     -passes='loop(unswitch),print<loops>' -disable-output 2>&1 | \
+; RUN:     -passes='loop(unswitch<nontrivial>),print<loops>' -disable-output 2>&1 | \
 ; RUN:     sort -b -k 1 | FileCheck %s --check-prefixes=LOOP-UNSCALE4-DIV2
 ;
 ;
@@ -33,8 +33,8 @@
 ;    2^(num conds) == 2^5 = 32
 ; loop nests when cost multiplier is disabled:
 ;
-; RUN: opt < %s -enable-nontrivial-unswitch -enable-unswitch-cost-multiplier=false \
-; RUN:     -passes='loop(unswitch),print<loops>' -disable-output 2>&1 | \
+; RUN: opt < %s -enable-unswitch-cost-multiplier=false \
+; RUN:     -passes='loop(unswitch<nontrivial>),print<loops>' -disable-output 2>&1 | \
 ; RUN:	   sort -b -k 1 | FileCheck %s --check-prefixes=LOOP32
 ;
 ; Single loop nest, not unswitched

@@ -1,9 +1,8 @@
 //===- llvm/ModuleSummaryIndex.h - Module Summary Index ---------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -198,6 +197,9 @@ struct ValueInfo {
   }
 
   bool isDSOLocal() const;
+
+  /// Checks if all copies are eligible for auto-hiding (have flag set).
+  bool canAutoHide() const;
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS, const ValueInfo &VI) {
@@ -280,11 +282,23 @@ public:
     /// within the same linkage unit.
     unsigned DSOLocal : 1;
 
+    /// In the per-module summary, indicates that the global value is
+    /// linkonce_odr and global unnamed addr (so eligible for auto-hiding
+    /// via hidden visibility). In the combined summary, indicates that the
+    /// prevailing linkonce_odr copy can be auto-hidden via hidden visibility
+    /// when it is upgraded to weak_odr in the backend. This is legal when
+    /// all copies are eligible for auto-hiding (i.e. all copies were
+    /// linkonce_odr global unnamed addr. If any copy is not (e.g. it was
+    /// originally weak_odr, we cannot auto-hide the prevailing copy as it
+    /// means the symbol was externally visible.
+    unsigned CanAutoHide : 1;
+
     /// Convenience Constructors
     explicit GVFlags(GlobalValue::LinkageTypes Linkage,
-                     bool NotEligibleToImport, bool Live, bool IsLocal)
+                     bool NotEligibleToImport, bool Live, bool IsLocal,
+                     bool CanAutoHide)
         : Linkage(Linkage), NotEligibleToImport(NotEligibleToImport),
-          Live(Live), DSOLocal(IsLocal) {}
+          Live(Live), DSOLocal(IsLocal), CanAutoHide(CanAutoHide) {}
   };
 
 private:
@@ -365,6 +379,10 @@ public:
 
   bool isDSOLocal() const { return Flags.DSOLocal; }
 
+  void setCanAutoHide(bool CanAutoHide) { Flags.CanAutoHide = CanAutoHide; }
+
+  bool canAutoHide() const { return Flags.CanAutoHide; }
+
   /// Flag that this global value cannot be imported.
   void setNotEligibleToImport() { Flags.NotEligibleToImport = true; }
 
@@ -381,25 +399,35 @@ public:
 
 /// Alias summary information.
 class AliasSummary : public GlobalValueSummary {
+  ValueInfo AliaseeValueInfo;
+
+  /// This is the Aliasee in the same module as alias (could get from VI, trades
+  /// memory for time). Note that this pointer may be null (and the value info
+  /// empty) when we have a distributed index where the alias is being imported
+  /// (as a copy of the aliasee), but the aliasee is not.
   GlobalValueSummary *AliaseeSummary;
-  // AliaseeGUID is only set and accessed when we are building a combined index
-  // via the BitcodeReader.
-  GlobalValue::GUID AliaseeGUID;
 
 public:
   AliasSummary(GVFlags Flags)
       : GlobalValueSummary(AliasKind, Flags, ArrayRef<ValueInfo>{}),
-        AliaseeSummary(nullptr), AliaseeGUID(0) {}
+        AliaseeSummary(nullptr) {}
 
   /// Check if this is an alias summary.
   static bool classof(const GlobalValueSummary *GVS) {
     return GVS->getSummaryKind() == AliasKind;
   }
 
-  void setAliasee(GlobalValueSummary *Aliasee) { AliaseeSummary = Aliasee; }
-  void setAliaseeGUID(GlobalValue::GUID GUID) { AliaseeGUID = GUID; }
+  void setAliasee(ValueInfo &AliaseeVI, GlobalValueSummary *Aliasee) {
+    AliaseeValueInfo = AliaseeVI;
+    AliaseeSummary = Aliasee;
+  }
 
-  bool hasAliasee() const { return !!AliaseeSummary; }
+  bool hasAliasee() const {
+    assert(!!AliaseeSummary == (AliaseeValueInfo &&
+                                !AliaseeValueInfo.getSummaryList().empty()) &&
+           "Expect to have both aliasee summary and summary list or neither");
+    return !!AliaseeSummary;
+  }
 
   const GlobalValueSummary &getAliasee() const {
     assert(AliaseeSummary && "Unexpected missing aliasee summary");
@@ -410,10 +438,13 @@ public:
     return const_cast<GlobalValueSummary &>(
                          static_cast<const AliasSummary *>(this)->getAliasee());
   }
-  bool hasAliaseeGUID() const { return AliaseeGUID != 0; }
-  const GlobalValue::GUID &getAliaseeGUID() const {
-    assert(AliaseeGUID && "Unexpected missing aliasee GUID");
-    return AliaseeGUID;
+  ValueInfo getAliaseeVI() const {
+    assert(AliaseeValueInfo && "Unexpected missing aliasee");
+    return AliaseeValueInfo;
+  }
+  GlobalValue::GUID getAliaseeGUID() const {
+    assert(AliaseeValueInfo && "Unexpected missing aliasee");
+    return AliaseeValueInfo.getGUID();
   }
 };
 
@@ -500,7 +531,8 @@ public:
     return FunctionSummary(
         FunctionSummary::GVFlags(
             GlobalValue::LinkageTypes::AvailableExternallyLinkage,
-            /*NotEligibleToImport=*/true, /*Live=*/true, /*IsLocal=*/false),
+            /*NotEligibleToImport=*/true, /*Live=*/true, /*IsLocal=*/false,
+            /*CanAutoHide=*/false),
         /*InsCount=*/0, FunctionSummary::FFlags{}, /*EntryCount=*/0,
         std::vector<ValueInfo>(), std::move(Edges),
         std::vector<GlobalValue::GUID>(),
@@ -831,6 +863,13 @@ private:
   /// union.
   bool HaveGVs;
 
+  // True if the index was created for a module compiled with -fsplit-lto-unit.
+  bool EnableSplitLTOUnit;
+
+  // True if some of the modules were compiled with -fsplit-lto-unit and
+  // some were not. Set when the combined index is created during the thin link.
+  bool PartiallySplitLTOUnits = false;
+
   std::set<std::string> CfiFunctionDefs;
   std::set<std::string> CfiFunctionDecls;
 
@@ -850,7 +889,9 @@ private:
 
 public:
   // See HaveGVs variable comment.
-  ModuleSummaryIndex(bool HaveGVs) : HaveGVs(HaveGVs), Saver(Alloc) {}
+  ModuleSummaryIndex(bool HaveGVs, bool EnableSplitLTOUnit = false)
+      : HaveGVs(HaveGVs), EnableSplitLTOUnit(EnableSplitLTOUnit), Saver(Alloc) {
+  }
 
   bool haveGVs() const { return HaveGVs; }
 
@@ -939,6 +980,12 @@ public:
   void setSkipModuleByDistributedBackend() {
     SkipModuleByDistributedBackend = true;
   }
+
+  bool enableSplitLTOUnit() const { return EnableSplitLTOUnit; }
+  void setEnableSplitLTOUnit() { EnableSplitLTOUnit = true; }
+
+  bool partiallySplitLTOUnits() const { return PartiallySplitLTOUnits; }
+  void setPartiallySplitLTOUnits() { PartiallySplitLTOUnits = true; }
 
   bool isGlobalValueLive(const GlobalValueSummary *GVS) const {
     return !WithGlobalValueDeadStripping || GVS->isLive();
@@ -1029,22 +1076,28 @@ public:
       OidGuidMap[OrigGUID] = ValueGUID;
   }
 
+  /// Find the summary for ValueInfo \p VI in module \p ModuleId, or nullptr if
+  /// not found.
+  GlobalValueSummary *findSummaryInModule(ValueInfo VI, StringRef ModuleId) const {
+    auto SummaryList = VI.getSummaryList();
+    auto Summary =
+        llvm::find_if(SummaryList,
+                      [&](const std::unique_ptr<GlobalValueSummary> &Summary) {
+                        return Summary->modulePath() == ModuleId;
+                      });
+    if (Summary == SummaryList.end())
+      return nullptr;
+    return Summary->get();
+  }
+
   /// Find the summary for global \p GUID in module \p ModuleId, or nullptr if
   /// not found.
   GlobalValueSummary *findSummaryInModule(GlobalValue::GUID ValueGUID,
                                           StringRef ModuleId) const {
     auto CalleeInfo = getValueInfo(ValueGUID);
-    if (!CalleeInfo) {
+    if (!CalleeInfo)
       return nullptr; // This function does not have a summary
-    }
-    auto Summary =
-        llvm::find_if(CalleeInfo.getSummaryList(),
-                      [&](const std::unique_ptr<GlobalValueSummary> &Summary) {
-                        return Summary->modulePath() == ModuleId;
-                      });
-    if (Summary == CalleeInfo.getSummaryList().end())
-      return nullptr;
-    return Summary->get();
+    return findSummaryInModule(CalleeInfo, ModuleId);
   }
 
   /// Returns the first GlobalValueSummary for \p GV, asserting that there
@@ -1155,8 +1208,16 @@ public:
 
   /// Collect for each module the list of Summaries it defines (GUID ->
   /// Summary).
-  void collectDefinedGVSummariesPerModule(
-      StringMap<GVSummaryMapTy> &ModuleToDefinedGVSummaries) const;
+  template <class Map>
+  void
+  collectDefinedGVSummariesPerModule(Map &ModuleToDefinedGVSummaries) const {
+    for (auto &GlobalList : *this) {
+      auto GUID = GlobalList.first;
+      for (auto &Summary : GlobalList.second.SummaryList) {
+        ModuleToDefinedGVSummaries[Summary->modulePath()][GUID] = Summary.get();
+      }
+    }
+  }
 
   /// Print to an output stream.
   void print(raw_ostream &OS, bool IsForDebug = false) const;

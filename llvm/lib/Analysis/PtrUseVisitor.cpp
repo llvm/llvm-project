@@ -1,9 +1,8 @@
 //===- PtrUseVisitor.cpp - InstVisitors over a pointers uses --------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -35,5 +34,11 @@ bool detail::PtrUseVisitorBase::adjustOffsetForGEP(GetElementPtrInst &GEPI) {
   if (!IsOffsetKnown)
     return false;
 
-  return GEPI.accumulateConstantOffset(DL, Offset);
+  APInt TmpOffset(DL.getIndexTypeSizeInBits(GEPI.getType()), 0);
+  if (GEPI.accumulateConstantOffset(DL, TmpOffset)) {
+    Offset += TmpOffset.sextOrTrunc(Offset.getBitWidth());
+    return true;
+  }
+
+  return false;
 }

@@ -1,9 +1,8 @@
 //===- llvm/ADT/BreadthFirstIterator.h - Breadth First iterator -*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -125,7 +124,7 @@ public:
 
   const NodeRef &operator*() const { return VisitQueue.front()->first; }
 
-  // This is a nonstandard operator-> that dereferenfces the pointer an extra
+  // This is a nonstandard operator-> that dereferences the pointer an extra
   // time so that you can actually call methods on the node, because the
   // contained type is a pointer.
   NodeRef operator->() const { return **this; }

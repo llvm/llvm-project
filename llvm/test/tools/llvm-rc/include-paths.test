@@ -1,21 +1,21 @@
 ; Should find the bitmap if it is in the same folder as the rc file.
 ; RUN: rm -f %t.include.res
-; RUN: llvm-rc /FO %t.include.res %p/Inputs/include.rc
+; RUN: llvm-rc /FO %t.include.res -- %p/Inputs/include.rc
 ; RUN: llvm-readobj %t.include.res | FileCheck --check-prefix=FOUND %s
 
 ; Try including files without quotes.
 ; RUN: rm -f %t.noquotes.res
-; RUN: llvm-rc /FO %t.noquotes.res %p/Inputs/include-noquotes.rc
+; RUN: llvm-rc /FO %t.noquotes.res -- %p/Inputs/include-noquotes.rc
 ; RUN: llvm-readobj %t.noquotes.res | FileCheck --check-prefix=FOUND %s
 
 ; Should find the bitmap if the folder is explicitly specified.
 ; RUN: rm -f %t.nested-include.res
-; RUN: llvm-rc /FO %t.nested-include.res /I %p/Inputs/nested %p/Inputs/deep-include.rc
+; RUN: llvm-rc /FO %t.nested-include.res /I %p/Inputs/nested -- %p/Inputs/deep-include.rc
 ; RUN: llvm-readobj %t.nested-include.res | FileCheck --check-prefix=FOUND %s
 
 ; Otherwise, it should not find the bitmap.
 ; RUN: rm -f %t.nested-include.res
-; RUN: not llvm-rc /FO %t.nested-include.res %p/Inputs/deep-include.rc 2>&1 \
+; RUN: not llvm-rc /FO %t.nested-include.res -- %p/Inputs/deep-include.rc 2>&1 \
 ; RUN:   | FileCheck --check-prefix=MISSING %s
 
 ; Should find the bitmap if the process's current working directory
@@ -24,7 +24,7 @@
 ; failure of other tests if run first.
 ; RUN: rm -f %t.nested-include.res
 ; RUN: cd %p/Inputs/nested
-; RUN: llvm-rc /FO %t.nested-include.res %p/Inputs/include.rc
+; RUN: llvm-rc /FO %t.nested-include.res -- %p/Inputs/include.rc
 ; RUN: llvm-readobj %t.nested-include.res | FileCheck --check-prefix=FOUND %s
 
 FOUND:      Resource type (int): 2

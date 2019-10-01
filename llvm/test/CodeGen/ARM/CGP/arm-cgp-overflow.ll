@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=thumbv8m.main -mcpu=cortex-m33 %s -arm-disable-cgp=false -o - | FileCheck %s
+; RUN: llc -mtriple=thumbv8m.main -mcpu=cortex-m33 -mattr=-use-misched %s -arm-disable-cgp=false -o - | FileCheck %s
 
 ; CHECK: overflow_add
 ; CHECK: add
@@ -85,10 +85,11 @@ define i32 @overflow_add_positive_const_limit(i8 zeroext %a) {
 }
 
 ; CHECK-LABEL: unsafe_add_underflow:
-; CHECK:  subs r0, #2
-; CHECK:  uxtb [[EXT:r[0-9]+]], r0
-; CHECK:  cmp [[EXT]], #255
-; CHECK:  moveq r0, #8
+; CHECK: movs	r1, #16
+; CHECK: cmp	r0, #1
+; CHECK: it	eq
+; CHECK: moveq	r1, #8
+; CHECK: mov	r0, r1
 define i32 @unsafe_add_underflow(i8 zeroext %a) {
   %add = add i8 %a, -2
   %cmp = icmp ugt i8 %add, 254
@@ -193,7 +194,7 @@ entry:
 }
 
 ; CHECK-LABEL: safe_sub_var_imm
-; CHECK:      add.w [[ADD:r[0-9]+]], r0, #8
+; CHECK:      sub.w [[ADD:r[0-9]+]], r0, #248
 ; CHECK-NOT:  uxt
 ; CHECK:      cmp [[ADD]], #252
 define i32 @safe_sub_var_imm(i8* %b) {
@@ -219,7 +220,7 @@ entry:
 }
 
 ; CHECK-LABEL: safe_add_var_imm
-; CHECK:      sub.w [[SUB:r[0-9]+]], r0, #127
+; CHECK:      add.w [[SUB:r[0-9]+]], r0, #129
 ; CHECK-NOT:  uxt
 ; CHECK:      cmp [[SUB]], #127
 define i32 @safe_add_var_imm(i8* %b) {
@@ -229,4 +230,51 @@ entry:
   %cmp = icmp ugt i8 %add, 127
   %conv4 = zext i1 %cmp to i32
   ret i32 %conv4
+}
+
+; CHECK-LABEL: convert_add_order
+; CHECK: orr{{.*}}, #1
+; CHECK: sub{{.*}}, #40
+; CHECK-NOT: uxt
+define i8 @convert_add_order(i8 zeroext %arg) {
+  %mask.0 = and i8 %arg, 1
+  %mask.1 = and i8 %arg, 2
+  %shl = or i8 %arg, 1
+  %add = add nuw i8 %shl, 10
+  %cmp.0 = icmp ult i8 %add, 60
+  %sub = add nsw i8 %shl, -40
+  %cmp.1 = icmp ult i8 %sub, 20
+  %mask.sel = select i1 %cmp.1, i8 %mask.0, i8 %mask.1
+  %res = select i1 %cmp.0, i8 %mask.sel, i8 %arg
+  ret i8 %res
+}
+
+; CHECK-LABEL: underflow_if_sub
+; CHECK: add{{.}} [[ADD:r[0-9]+]], #245
+; CHECK: cmp [[ADD]], r1
+define i8 @underflow_if_sub(i32 %arg, i8 zeroext %arg1) {
+  %cmp = icmp sgt i32 %arg, 0
+  %conv = zext i1 %cmp to i32
+  %and = and i32 %arg, %conv
+  %trunc = trunc i32 %and to i8
+  %conv1 = add nuw nsw i8 %trunc, -11
+  %cmp.1 = icmp ult i8 %conv1, %arg1
+  %res = select i1 %cmp.1, i8 %conv1, i8 100
+  ret i8 %res
+}
+
+; CHECK-LABEL: underflow_if_sub_signext
+; CHECK: uxtb [[UXT1:r[0-9]+]], r1
+; CHECK: sub{{.*}} [[SUB:r[0-9]+]], #11
+; CHECK: uxtb [[UXT_SUB:r[0-9]+]], [[SUB]]
+; CHECK: cmp{{.*}}[[UXT_SUB]]
+define i8 @underflow_if_sub_signext(i32 %arg, i8 signext %arg1) {
+  %cmp = icmp sgt i32 %arg, 0
+  %conv = zext i1 %cmp to i32
+  %and = and i32 %arg, %conv
+  %trunc = trunc i32 %and to i8
+  %conv1 = add nuw nsw i8 %trunc, -11
+  %cmp.1 = icmp ugt i8 %arg1, %conv1
+  %res = select i1 %cmp.1, i8 %conv1, i8 100
+  ret i8 %res
 }

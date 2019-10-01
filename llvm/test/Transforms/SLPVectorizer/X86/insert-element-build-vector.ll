@@ -627,7 +627,7 @@ define <4 x double> @multi_tree(double %w, double %x, double %y, double %z) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x double> [[TMP1]], double [[Y:%.*]], i32 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x double> [[TMP2]], double [[Z:%.*]], i32 3
 ; CHECK-NEXT:    [[TMP4:%.*]] = fadd <4 x double> [[TMP3]], <double 0.000000e+00, double 1.000000e+00, double 2.000000e+00, double 3.000000e+00>
-; CHECK-NEXT:    [[TMP5:%.*]] = fmul <4 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul <4 x double> [[TMP4]], <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x double> [[TMP5]], i32 0
 ; CHECK-NEXT:    [[I1:%.*]] = insertelement <4 x double> undef, double [[TMP6]], i32 3
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x double> [[TMP5]], i32 1
@@ -645,7 +645,7 @@ define <4 x double> @multi_tree(double %w, double %x, double %y, double %z) {
 ; ZEROTHRESH-NEXT:    [[TMP2:%.*]] = insertelement <4 x double> [[TMP1]], double [[Y:%.*]], i32 2
 ; ZEROTHRESH-NEXT:    [[TMP3:%.*]] = insertelement <4 x double> [[TMP2]], double [[Z:%.*]], i32 3
 ; ZEROTHRESH-NEXT:    [[TMP4:%.*]] = fadd <4 x double> [[TMP3]], <double 0.000000e+00, double 1.000000e+00, double 2.000000e+00, double 3.000000e+00>
-; ZEROTHRESH-NEXT:    [[TMP5:%.*]] = fmul <4 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, [[TMP4]]
+; ZEROTHRESH-NEXT:    [[TMP5:%.*]] = fmul <4 x double> [[TMP4]], <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>
 ; ZEROTHRESH-NEXT:    [[TMP6:%.*]] = extractelement <4 x double> [[TMP5]], i32 0
 ; ZEROTHRESH-NEXT:    [[I1:%.*]] = insertelement <4 x double> undef, double [[TMP6]], i32 3
 ; ZEROTHRESH-NEXT:    [[TMP7:%.*]] = extractelement <4 x double> [[TMP5]], i32 1

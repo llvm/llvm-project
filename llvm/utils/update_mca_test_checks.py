@@ -551,7 +551,7 @@ def _write_output(test_path, input_lines, prefix_list, block_infos,  # noqa
         'Writing {} lines to {}...\n\n'.format(len(output_lines), test_path))
 
   with open(test_path, 'wb') as f:
-    f.writelines(['{}\n'.format(l).encode() for l in output_lines])
+    f.writelines(['{}\n'.format(l).encode('utf-8') for l in output_lines])
 
 def main():
   args = _parse_args()

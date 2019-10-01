@@ -1,9 +1,8 @@
 //===-- ARMTargetParser - Parser for ARM target features --------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -78,6 +77,7 @@ unsigned ARM::parseArchVersion(StringRef Arch) {
   case ArchKind::ARMV8R:
   case ArchKind::ARMV8MBaseline:
   case ArchKind::ARMV8MMainline:
+  case ArchKind::ARMV8_1MMainline:
     return 8;
   case ArchKind::INVALID:
     return 0;
@@ -94,6 +94,7 @@ ARM::ProfileKind ARM::parseArchProfile(StringRef Arch) {
   case ArchKind::ARMV7EM:
   case ArchKind::ARMV8MMainline:
   case ArchKind::ARMV8MBaseline:
+  case ArchKind::ARMV8_1MMainline:
     return ProfileKind::M;
   case ArchKind::ARMV7R:
   case ArchKind::ARMV8R:
@@ -152,6 +153,7 @@ StringRef ARM::getArchSynonym(StringRef Arch) {
       .Case("v8r", "v8-r")
       .Case("v8m.base", "v8-m.base")
       .Case("v8m.main", "v8-m.main")
+      .Case("v8.1m.main", "v8.1-m.main")
       .Default(Arch);
 }
 
@@ -160,77 +162,63 @@ bool ARM::getFPUFeatures(unsigned FPUKind, std::vector<StringRef> &Features) {
   if (FPUKind >= FK_LAST || FPUKind == FK_INVALID)
     return false;
 
-  // fp-only-sp and d16 subtarget features are independent of each other, so we
-  // must enable/disable both.
-  switch (FPUNames[FPUKind].Restriction) {
-  case FPURestriction::SP_D16:
-    Features.push_back("+fp-only-sp");
-    Features.push_back("+d16");
-    break;
-  case FPURestriction::D16:
-    Features.push_back("-fp-only-sp");
-    Features.push_back("+d16");
-    break;
-  case FPURestriction::None:
-    Features.push_back("-fp-only-sp");
-    Features.push_back("-d16");
-    break;
+  static const struct FPUFeatureNameInfo {
+    const char *PlusName, *MinusName;
+    FPUVersion MinVersion;
+    FPURestriction MaxRestriction;
+  } FPUFeatureInfoList[] = {
+    // We have to specify the + and - versions of the name in full so
+    // that we can return them as static StringRefs.
+    //
+    // Also, the SubtargetFeatures ending in just "sp" are listed here
+    // under FPURestriction::None, which is the only FPURestriction in
+    // which they would be valid (since FPURestriction::SP doesn't
+    // exist).
+
+    {"+fpregs", "-fpregs", FPUVersion::VFPV2, FPURestriction::SP_D16},
+    {"+vfp2", "-vfp2", FPUVersion::VFPV2, FPURestriction::None},
+    {"+vfp2d16", "-vfp2d16", FPUVersion::VFPV2, FPURestriction::D16},
+    {"+vfp2d16sp", "-vfp2d16sp", FPUVersion::VFPV2, FPURestriction::SP_D16},
+    {"+vfp2sp", "-vfp2sp", FPUVersion::VFPV2, FPURestriction::None},
+    {"+vfp3", "-vfp3", FPUVersion::VFPV3, FPURestriction::None},
+    {"+vfp3d16", "-vfp3d16", FPUVersion::VFPV3, FPURestriction::D16},
+    {"+vfp3d16sp", "-vfp3d16sp", FPUVersion::VFPV3, FPURestriction::SP_D16},
+    {"+vfp3sp", "-vfp3sp", FPUVersion::VFPV3, FPURestriction::None},
+    {"+fp16", "-fp16", FPUVersion::VFPV3_FP16, FPURestriction::SP_D16},
+    {"+vfp4", "-vfp4", FPUVersion::VFPV4, FPURestriction::None},
+    {"+vfp4d16", "-vfp4d16", FPUVersion::VFPV4, FPURestriction::D16},
+    {"+vfp4d16sp", "-vfp4d16sp", FPUVersion::VFPV4, FPURestriction::SP_D16},
+    {"+vfp4sp", "-vfp4sp", FPUVersion::VFPV4, FPURestriction::None},
+    {"+fp-armv8", "-fp-armv8", FPUVersion::VFPV5, FPURestriction::None},
+    {"+fp-armv8d16", "-fp-armv8d16", FPUVersion::VFPV5, FPURestriction::D16},
+    {"+fp-armv8d16sp", "-fp-armv8d16sp", FPUVersion::VFPV5, FPURestriction::SP_D16},
+    {"+fp-armv8sp", "-fp-armv8sp", FPUVersion::VFPV5, FPURestriction::None},
+    {"+fullfp16", "-fullfp16", FPUVersion::VFPV5_FULLFP16, FPURestriction::SP_D16},
+    {"+fp64", "-fp64", FPUVersion::VFPV2, FPURestriction::D16},
+    {"+d32", "-d32", FPUVersion::VFPV2, FPURestriction::None},
+  };
+
+  for (const auto &Info: FPUFeatureInfoList) {
+    if (FPUNames[FPUKind].FPUVer >= Info.MinVersion &&
+        FPUNames[FPUKind].Restriction <= Info.MaxRestriction)
+      Features.push_back(Info.PlusName);
+    else
+      Features.push_back(Info.MinusName);
   }
 
-  // FPU version subtarget features are inclusive of lower-numbered ones, so
-  // enable the one corresponding to this version and disable all that are
-  // higher. We also have to make sure to disable fp16 when vfp4 is disabled,
-  // as +vfp4 implies +fp16 but -vfp4 does not imply -fp16.
-  switch (FPUNames[FPUKind].FPUVer) {
-  case FPUVersion::VFPV5:
-    Features.push_back("+fp-armv8");
-    break;
-  case FPUVersion::VFPV4:
-    Features.push_back("+vfp4");
-    Features.push_back("-fp-armv8");
-    break;
-  case FPUVersion::VFPV3_FP16:
-    Features.push_back("+vfp3");
-    Features.push_back("+fp16");
-    Features.push_back("-vfp4");
-    Features.push_back("-fp-armv8");
-    break;
-  case FPUVersion::VFPV3:
-    Features.push_back("+vfp3");
-    Features.push_back("-fp16");
-    Features.push_back("-vfp4");
-    Features.push_back("-fp-armv8");
-    break;
-  case FPUVersion::VFPV2:
-    Features.push_back("+vfp2");
-    Features.push_back("-vfp3");
-    Features.push_back("-fp16");
-    Features.push_back("-vfp4");
-    Features.push_back("-fp-armv8");
-    break;
-  case FPUVersion::NONE:
-    Features.push_back("-vfp2");
-    Features.push_back("-vfp3");
-    Features.push_back("-fp16");
-    Features.push_back("-vfp4");
-    Features.push_back("-fp-armv8");
-    break;
-  }
+  static const struct NeonFeatureNameInfo {
+    const char *PlusName, *MinusName;
+    NeonSupportLevel MinSupportLevel;
+  } NeonFeatureInfoList[] = {
+    {"+neon", "-neon", NeonSupportLevel::Neon},
+    {"+crypto", "-crypto", NeonSupportLevel::Crypto},
+  };
 
-  // crypto includes neon, so we handle this similarly to FPU version.
-  switch (FPUNames[FPUKind].NeonSupport) {
-  case NeonSupportLevel::Crypto:
-    Features.push_back("+neon");
-    Features.push_back("+crypto");
-    break;
-  case NeonSupportLevel::Neon:
-    Features.push_back("+neon");
-    Features.push_back("-crypto");
-    break;
-  case NeonSupportLevel::None:
-    Features.push_back("-neon");
-    Features.push_back("-crypto");
-    break;
+  for (const auto &Info: NeonFeatureInfoList) {
+    if (FPUNames[FPUKind].NeonSupport >= Info.MinSupportLevel)
+      Features.push_back(Info.PlusName);
+    else
+      Features.push_back(Info.MinusName);
   }
 
   return true;
@@ -249,7 +237,7 @@ ARM::EndianKind ARM::parseArchEndian(StringRef Arch) {
       return EndianKind::LITTLE;
   }
 
-  if (Arch.startswith("aarch64"))
+  if (Arch.startswith("aarch64") || Arch.startswith("aarch64_32"))
     return EndianKind::LITTLE;
 
   return EndianKind::INVALID;
@@ -290,8 +278,12 @@ StringRef ARM::getCanonicalArchName(StringRef Arch) {
   StringRef Error = "";
 
   // Begins with "arm" / "thumb", move past it.
-  if (A.startswith("arm64"))
+  if (A.startswith("arm64_32"))
+    offset = 8;
+  else if (A.startswith("arm64"))
     offset = 5;
+  else if (A.startswith("aarch64_32"))
+    offset = 10;
   else if (A.startswith("arm"))
     offset = 3;
   else if (A.startswith("thumb"))
@@ -469,20 +461,83 @@ StringRef ARM::getArchExtName(unsigned ArchExtKind) {
   return StringRef();
 }
 
-StringRef ARM::getArchExtFeature(StringRef ArchExt) {
-  if (ArchExt.startswith("no")) {
-    StringRef ArchExtBase(ArchExt.substr(2));
-    for (const auto AE : ARCHExtNames) {
-      if (AE.NegFeature && ArchExtBase == AE.getName())
-        return StringRef(AE.NegFeature);
-    }
+static bool stripNegationPrefix(StringRef &Name) {
+  if (Name.startswith("no")) {
+    Name = Name.substr(2);
+    return true;
   }
+  return false;
+}
+
+StringRef ARM::getArchExtFeature(StringRef ArchExt) {
+  bool Negated = stripNegationPrefix(ArchExt);
   for (const auto AE : ARCHExtNames) {
     if (AE.Feature && ArchExt == AE.getName())
-      return StringRef(AE.Feature);
+      return StringRef(Negated ? AE.NegFeature : AE.Feature);
   }
 
   return StringRef();
+}
+
+static unsigned findDoublePrecisionFPU(unsigned InputFPUKind) {
+  const ARM::FPUName &InputFPU = ARM::FPUNames[InputFPUKind];
+
+  // If the input FPU already supports double-precision, then there
+  // isn't any different FPU we can return here.
+  //
+  // The current available FPURestriction values are None (no
+  // restriction), D16 (only 16 d-regs) and SP_D16 (16 d-regs
+  // and single precision only); there's no value representing
+  // SP restriction without D16. So this test just means 'is it
+  // SP only?'.
+  if (InputFPU.Restriction != ARM::FPURestriction::SP_D16)
+    return ARM::FK_INVALID;
+
+  // Otherwise, look for an FPU entry with all the same fields, except
+  // that SP_D16 has been replaced with just D16, representing adding
+  // double precision and not changing anything else.
+  for (const ARM::FPUName &CandidateFPU : ARM::FPUNames) {
+    if (CandidateFPU.FPUVer == InputFPU.FPUVer &&
+        CandidateFPU.NeonSupport == InputFPU.NeonSupport &&
+        CandidateFPU.Restriction == ARM::FPURestriction::D16) {
+      return CandidateFPU.ID;
+    }
+  }
+
+  // nothing found
+  return ARM::FK_INVALID;
+}
+
+bool ARM::appendArchExtFeatures(
+  StringRef CPU, ARM::ArchKind AK, StringRef ArchExt,
+  std::vector<StringRef> &Features) {
+  StringRef StandardFeature = getArchExtFeature(ArchExt);
+  if (!StandardFeature.empty()) {
+    Features.push_back(StandardFeature);
+    return true;
+  }
+
+  const bool Negated = stripNegationPrefix(ArchExt);
+
+  if (CPU == "")
+    CPU = "generic";
+
+  if (ArchExt == "fp" || ArchExt == "fp.dp") {
+    unsigned FPUKind;
+    if (ArchExt == "fp.dp") {
+      if (Negated) {
+        Features.push_back("-fp64");
+        return true;
+      }
+      FPUKind = findDoublePrecisionFPU(getDefaultFPU(CPU, AK));
+    } else if (Negated) {
+      FPUKind = ARM::FK_NONE;
+    } else {
+      FPUKind = getDefaultFPU(CPU, AK);
+    }
+    return ARM::getFPUFeatures(FPUKind, Features);
+  }
+  return false;
 }
 
 StringRef ARM::getHWDivName(unsigned HWDivKind) {

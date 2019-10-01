@@ -1,9 +1,8 @@
 //===- CodeViewYAMLSymbols.cpp - CodeView YAMLIO Symbol implementation ----===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -148,7 +147,7 @@ void ScalarEnumerationTraits<CPUType>::enumeration(IO &io, CPUType &Cpu) {
 }
 
 void ScalarEnumerationTraits<RegisterId>::enumeration(IO &io, RegisterId &Reg) {
-  auto RegNames = getRegisterNames();
+  auto RegNames = getRegisterNames(CPUType::X64);
   for (const auto &E : RegNames) {
     io.enumCase(Reg, E.Name.str().c_str(), static_cast<RegisterId>(E.Value));
   }
@@ -249,7 +248,7 @@ struct UnknownSymbolRecord : public SymbolRecordBase {
     uint8_t *Buffer = Allocator.Allocate<uint8_t>(TotalLen);
     ::memcpy(Buffer, &Prefix, sizeof(RecordPrefix));
     ::memcpy(Buffer + sizeof(RecordPrefix), Data.data(), Data.size());
-    return CVSymbol(Kind, ArrayRef<uint8_t>(Buffer, TotalLen));
+    return CVSymbol(ArrayRef<uint8_t>(Buffer, TotalLen));
   }
 
   Error fromCodeViewSymbol(CVSymbol CVS) override {
@@ -392,7 +391,7 @@ template <> void SymbolRecordImpl<DefRangeRegisterSym>::map(IO &IO) {
 }
 
 template <> void SymbolRecordImpl<DefRangeFramePointerRelSym>::map(IO &IO) {
-  IO.mapRequired("Offset", Symbol.Offset);
+  IO.mapRequired("Offset", Symbol.Hdr.Offset);
   IO.mapRequired("Range", Symbol.Range);
   IO.mapRequired("Gaps", Symbol.Gaps);
 }
@@ -552,6 +551,12 @@ template <> void SymbolRecordImpl<ThreadLocalDataSym>::map(IO &IO) {
 
 template <> void SymbolRecordImpl<UsingNamespaceSym>::map(IO &IO) {
   IO.mapRequired("Namespace", Symbol.Name);
+}
+
+template <> void SymbolRecordImpl<AnnotationSym>::map(IO &IO) {
+  IO.mapOptional("Offset", Symbol.CodeOffset, 0U);
+  IO.mapOptional("Segment", Symbol.Segment, uint16_t(0));
+  IO.mapRequired("Strings", Symbol.Strings);
 }
 
 } // end namespace detail

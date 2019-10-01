@@ -1,9 +1,8 @@
 //===- llvm-lto: a simple command-line program to link modules with LTO ---===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -158,8 +157,8 @@ static cl::opt<int>
     ThinLTOCachePruningInterval("thinlto-cache-pruning-interval",
     cl::init(1200), cl::desc("Set ThinLTO cache pruning interval."));
 
-static cl::opt<unsigned long long>
-    ThinLTOCacheMaxSizeBytes("thinlto-cache-max-size-bytes",
+static cl::opt<uint64_t> ThinLTOCacheMaxSizeBytes(
+    "thinlto-cache-max-size-bytes",
     cl::desc("Set ThinLTO cache pruning directory maximum size in bytes."));
 
 static cl::opt<int>
@@ -204,6 +203,10 @@ static cl::list<std::string>
 static cl::opt<bool> ListSymbolsOnly(
     "list-symbols-only", cl::init(false),
     cl::desc("Instead of running LTO, list the symbols in each IR file"));
+
+static cl::opt<bool> ListDependentLibrariesOnly(
+    "list-dependent-libraries-only", cl::init(false),
+    cl::desc("Instead of running LTO, list the dependent libraries in each IR file"));
 
 static cl::opt<bool> SetMergedModule(
     "set-merged-module", cl::init(false),
@@ -373,6 +376,34 @@ static void listSymbols(const TargetOptions &Options) {
   }
 }
 
+static std::unique_ptr<MemoryBuffer> loadFile(StringRef Filename) {
+    ExitOnError ExitOnErr("llvm-lto: error loading file '" + Filename.str() +
+        "': ");
+    return ExitOnErr(errorOrToExpected(MemoryBuffer::getFileOrSTDIN(Filename)));
+}
+
+static void listDependentLibraries() {
+  for (auto &Filename : InputFilenames) {
+    auto Buffer = loadFile(Filename);
+    std::string E;
+    std::unique_ptr<lto::InputFile> Input(LTOModule::createInputFile(
+        Buffer->getBufferStart(), Buffer->getBufferSize(), Filename.c_str(),
+        E));
+    if (!Input)
+      error(E);
+
+    // List the dependent libraries.
+    outs() << Filename << ":\n";
+    for (size_t I = 0, C = LTOModule::getDependentLibraryCount(Input.get());
+         I != C; ++I) {
+      size_t L = 0;
+      const char *S = LTOModule::getDependentLibrary(Input.get(), I, &L);
+      assert(S);
+      outs() << StringRef(S, L) << "\n";
+    }
+  }
+}
+
 /// Create a combined index file from the input IR files and write it.
 ///
 /// This is meant to enable testing of ThinLTO combined index generation,
@@ -450,22 +481,31 @@ std::unique_ptr<ModuleSummaryIndex> loadCombinedIndex() {
   return ExitOnErr(getModuleSummaryIndexForFile(ThinLTOIndex));
 }
 
-static std::unique_ptr<Module> loadModule(StringRef Filename,
-                                          LLVMContext &Ctx) {
-  SMDiagnostic Err;
-  std::unique_ptr<Module> M(parseIRFile(Filename, Err, Ctx));
-  if (!M) {
-    Err.print("llvm-lto", errs());
-    report_fatal_error("Can't load module for file " + Filename);
-  }
-  maybeVerifyModule(*M);
+static std::unique_ptr<lto::InputFile> loadInputFile(MemoryBufferRef Buffer) {
+  ExitOnError ExitOnErr("llvm-lto: error loading input '" +
+                        Buffer.getBufferIdentifier().str() + "': ");
+  return ExitOnErr(lto::InputFile::create(Buffer));
+}
 
+static std::unique_ptr<Module> loadModuleFromInput(lto::InputFile &File,
+                                                   LLVMContext &CTX) {
+  auto &Mod = File.getSingleBitcodeModule();
+  auto ModuleOrErr = Mod.parseModule(CTX);
+  if (!ModuleOrErr) {
+    handleAllErrors(ModuleOrErr.takeError(), [&](ErrorInfoBase &EIB) {
+      SMDiagnostic Err = SMDiagnostic(Mod.getModuleIdentifier(),
+                                      SourceMgr::DK_Error, EIB.message());
+      Err.print("llvm-lto", errs());
+    });
+    report_fatal_error("Can't load module, abort.");
+  }
+  maybeVerifyModule(**ModuleOrErr);
   if (ThinLTOModuleId.getNumOccurrences()) {
     if (InputFilenames.size() != 1)
       report_fatal_error("Can't override the module id for multiple files");
-    M->setModuleIdentifier(ThinLTOModuleId);
+    (*ModuleOrErr)->setModuleIdentifier(ThinLTOModuleId);
   }
-  return M;
+  return std::move(*ModuleOrErr);
 }
 
 static void writeModuleToFile(Module &TheModule, StringRef Filename) {
@@ -563,13 +603,15 @@ private:
     auto Index = loadCombinedIndex();
     for (auto &Filename : InputFilenames) {
       LLVMContext Ctx;
-      auto TheModule = loadModule(Filename, Ctx);
+      auto Buffer = loadFile(Filename);
+      auto Input = loadInputFile(Buffer->getMemBufferRef());
+      auto TheModule = loadModuleFromInput(*Input, Ctx);
 
       // Build a map of module to the GUIDs and summary objects that should
       // be written to its index.
       std::map<std::string, GVSummaryMapTy> ModuleToSummariesForIndex;
-      ThinGenerator.gatherImportedSummariesForModule(*TheModule, *Index,
-                                                     ModuleToSummariesForIndex);
+      ThinGenerator.gatherImportedSummariesForModule(
+          *TheModule, *Index, ModuleToSummariesForIndex, *Input);
 
       std::string OutputName = OutputFilename;
       if (OutputName.empty()) {
@@ -598,13 +640,16 @@ private:
     auto Index = loadCombinedIndex();
     for (auto &Filename : InputFilenames) {
       LLVMContext Ctx;
-      auto TheModule = loadModule(Filename, Ctx);
+      auto Buffer = loadFile(Filename);
+      auto Input = loadInputFile(Buffer->getMemBufferRef());
+      auto TheModule = loadModuleFromInput(*Input, Ctx);
       std::string OutputName = OutputFilename;
       if (OutputName.empty()) {
         OutputName = Filename + ".imports";
       }
-      OutputName = getThinLTOOutputFile(OutputName, OldPrefix, NewPrefix);
-      ThinGenerator.emitImports(*TheModule, OutputName, *Index);
+      OutputName =
+          getThinLTOOutputFile(OutputName, OldPrefix, NewPrefix);
+      ThinGenerator.emitImports(*TheModule, OutputName, *Index, *Input);
     }
   }
 
@@ -622,9 +667,11 @@ private:
     auto Index = loadCombinedIndex();
     for (auto &Filename : InputFilenames) {
       LLVMContext Ctx;
-      auto TheModule = loadModule(Filename, Ctx);
+      auto Buffer = loadFile(Filename);
+      auto Input = loadInputFile(Buffer->getMemBufferRef());
+      auto TheModule = loadModuleFromInput(*Input, Ctx);
 
-      ThinGenerator.promote(*TheModule, *Index);
+      ThinGenerator.promote(*TheModule, *Index, *Input);
 
       std::string OutputName = OutputFilename;
       if (OutputName.empty()) {
@@ -653,9 +700,11 @@ private:
 
     for (auto &Filename : InputFilenames) {
       LLVMContext Ctx;
-      auto TheModule = loadModule(Filename, Ctx);
+      auto Buffer = loadFile(Filename);
+      auto Input = loadInputFile(Buffer->getMemBufferRef());
+      auto TheModule = loadModuleFromInput(*Input, Ctx);
 
-      ThinGenerator.crossModuleImport(*TheModule, *Index);
+      ThinGenerator.crossModuleImport(*TheModule, *Index, *Input);
 
       std::string OutputName = OutputFilename;
       if (OutputName.empty()) {
@@ -684,9 +733,11 @@ private:
 
     for (auto &Filename : InputFilenames) {
       LLVMContext Ctx;
-      auto TheModule = loadModule(Filename, Ctx);
+      auto Buffer = loadFile(Filename);
+      auto Input = loadInputFile(Buffer->getMemBufferRef());
+      auto TheModule = loadModuleFromInput(*Input, Ctx);
 
-      ThinGenerator.internalize(*TheModule, *Index);
+      ThinGenerator.internalize(*TheModule, *Index, *Input);
 
       std::string OutputName = OutputFilename;
       if (OutputName.empty()) {
@@ -707,7 +758,9 @@ private:
 
     for (auto &Filename : InputFilenames) {
       LLVMContext Ctx;
-      auto TheModule = loadModule(Filename, Ctx);
+      auto Buffer = loadFile(Filename);
+      auto Input = loadInputFile(Buffer->getMemBufferRef());
+      auto TheModule = loadModuleFromInput(*Input, Ctx);
 
       ThinGenerator.optimize(*TheModule);
 
@@ -824,6 +877,11 @@ int main(int argc, char **argv) {
 
   if (ListSymbolsOnly) {
     listSymbols(Options);
+    return 0;
+  }
+
+  if (ListDependentLibrariesOnly) {
+    listDependentLibraries();
     return 0;
   }
 

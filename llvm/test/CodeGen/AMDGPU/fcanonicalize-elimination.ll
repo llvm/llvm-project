@@ -814,8 +814,8 @@ define half @v_test_canonicalize_extract_element_v2f16(<2 x half> %vec) {
 }
 
 ; GCN-LABEL: {{^}}v_test_canonicalize_insertelement_v2f16:
-; GFX9: v_pk_mul_f16
 ; GFX9: v_mul_f16_e32
+; GFX9: v_pk_mul_f16
 ; GFX9-NOT: v_max
 ; GFX9-NOT: v_pk_max
 define <2 x half> @v_test_canonicalize_insertelement_v2f16(<2 x half> %vec, half %val, i32 %idx) {

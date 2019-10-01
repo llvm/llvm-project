@@ -1,9 +1,8 @@
 //===-- LlvmState.cpp -------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -39,8 +38,11 @@ LLVMState::LLVMState(const std::string &Triple, const std::string &CpuName,
   }
   PfmCounters = &TheExegesisTarget->getPfmCounters(CpuName);
 
-  RATC.reset(new RegisterAliasingTrackerCache(
-      getRegInfo(), getFunctionReservedRegs(getTargetMachine())));
+  BitVector ReservedRegs = getFunctionReservedRegs(getTargetMachine());
+  for (const unsigned Reg : TheExegesisTarget->getUnavailableRegisters())
+    ReservedRegs.set(Reg);
+  RATC.reset(
+      new RegisterAliasingTrackerCache(getRegInfo(), std::move(ReservedRegs)));
   IC.reset(new InstructionsCache(getInstrInfo(), getRATC()));
 }
 

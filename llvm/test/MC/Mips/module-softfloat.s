@@ -2,7 +2,7 @@
 # RUN:   FileCheck %s -check-prefix=CHECK-ASM
 #
 # RUN: llvm-mc %s -arch=mips -mcpu=mips32 -filetype=obj -o - | \
-# RUN:   llvm-readobj -mips-abi-flags - | \
+# RUN:   llvm-readobj --mips-abi-flags - | \
 # RUN:     FileCheck %s -check-prefix=CHECK-OBJ
 
 # CHECK-ASM: .module softfloat

@@ -1,9 +1,8 @@
 //===---------- llvm/unittest/Support/Casting.cpp - Casting tests ---------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -117,6 +116,12 @@ TEST(CastingTest, isa) {
   EXPECT_TRUE(isa<foo>(B2));
   EXPECT_TRUE(isa<foo>(B3));
   EXPECT_TRUE(isa<foo>(B4));
+}
+
+TEST(CastingTest, isa_and_nonnull) {
+  EXPECT_TRUE(isa_and_nonnull<foo>(B2));
+  EXPECT_TRUE(isa_and_nonnull<foo>(B4));
+  EXPECT_FALSE(isa_and_nonnull<foo>(fub()));
 }
 
 TEST(CastingTest, cast) {

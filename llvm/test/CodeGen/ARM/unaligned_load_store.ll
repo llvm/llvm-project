@@ -13,14 +13,14 @@
 define void @t(i8* nocapture %a, i8* nocapture %b) nounwind {
 entry:
 ; EXPANDED-LABEL: t:
-; EXPANDED: ldrb [[R2:r[0-9]+]]
-; EXPANDED: ldrb [[R3:r[0-9]+]]
-; EXPANDED: ldrb [[R12:r[0-9]+]]
-; EXPANDED: ldrb [[R1:r[0-9]+]]
-; EXPANDED: strb [[R1]]
-; EXPANDED: strb [[R12]]
-; EXPANDED: strb [[R3]]
-; EXPANDED: strb [[R2]]
+; EXPANDED-DAG: ldrb [[R2:r[0-9]+]]
+; EXPANDED-DAG: ldrb [[R3:r[0-9]+]]
+; EXPANDED-DAG: ldrb [[R12:r[0-9]+]]
+; EXPANDED-DAG: ldrb [[R1:r[0-9]+]]
+; EXPANDED-DAG: strb [[R1]]
+; EXPANDED-DAG: strb [[R12]]
+; EXPANDED-DAG: strb [[R3]]
+; EXPANDED-DAG: strb [[R2]]
 
 ; UNALIGNED-LABEL: t:
 ; UNALIGNED: ldr r1

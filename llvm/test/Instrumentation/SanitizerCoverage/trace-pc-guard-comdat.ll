@@ -38,5 +38,4 @@ entry:
 ; CHECK_TRACE_PC_GUARD: call void @__sanitizer_cov_trace_pc_indir
 ; CHECK_TRACE_PC_GUARD: ret void
 
-; CHECK_TRACE_PC_GUARD-LABEL: define internal void @sancov.module_ctor() comdat
-
+; CHECK_TRACE_PC_GUARD-LABEL: define internal void @sancov.module_ctor_trace_pc_guard() comdat

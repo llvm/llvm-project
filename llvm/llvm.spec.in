@@ -2,7 +2,7 @@ Name: @PACKAGE_NAME@
 Version: @PACKAGE_VERSION@
 Release: 0
 Summary: LLVM (An Optimizing Compiler Infrastructure)
-License: University of Illinois/NCSA Open Source License
+License: Apache-2.0 with LLVM exception
 Vendor: None (open source)
 Group: Development/Compilers
 URL: http://llvm..org/

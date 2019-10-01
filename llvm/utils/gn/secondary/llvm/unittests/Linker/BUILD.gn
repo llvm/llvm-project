@@ -1,0 +1,12 @@
+import("//llvm/utils/unittest/unittest.gni")
+
+unittest("LinkerTests") {
+  deps = [
+    "//llvm/lib/AsmParser",
+    "//llvm/lib/IR",
+    "//llvm/lib/Linker",
+  ]
+  sources = [
+    "LinkModulesTest.cpp",
+  ]
+}

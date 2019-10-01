@@ -1,9 +1,8 @@
 //===-- lib/CodeGen/GlobalISel/GICombinerHelper.cpp -----------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
@@ -47,6 +46,13 @@ void CombinerHelper::replaceRegOpWith(MachineRegisterInfo &MRI,
 }
 
 bool CombinerHelper::tryCombineCopy(MachineInstr &MI) {
+  if (matchCombineCopy(MI)) {
+    applyCombineCopy(MI);
+    return true;
+  }
+  return false;
+}
+bool CombinerHelper::matchCombineCopy(MachineInstr &MI) {
   if (MI.getOpcode() != TargetOpcode::COPY)
     return false;
   unsigned DstReg = MI.getOperand(0).getReg();
@@ -55,20 +61,18 @@ bool CombinerHelper::tryCombineCopy(MachineInstr &MI) {
   LLT SrcTy = MRI.getType(SrcReg);
   // Simple Copy Propagation.
   // a(sx) = COPY b(sx) -> Replace all uses of a with b.
-  if (DstTy.isValid() && SrcTy.isValid() && DstTy == SrcTy) {
-    MI.eraseFromParent();
-    replaceRegWith(MRI, DstReg, SrcReg);
+  if (DstTy.isValid() && SrcTy.isValid() && DstTy == SrcTy)
     return true;
-  }
   return false;
+}
+void CombinerHelper::applyCombineCopy(MachineInstr &MI) {
+  unsigned DstReg = MI.getOperand(0).getReg();
+  unsigned SrcReg = MI.getOperand(1).getReg();
+  MI.eraseFromParent();
+  replaceRegWith(MRI, DstReg, SrcReg);
 }
 
 namespace {
-struct PreferredTuple {
-  LLT Ty;                // The result type of the extend.
-  unsigned ExtendOpcode; // G_ANYEXT/G_SEXT/G_ZEXT
-  MachineInstr *MI;
-};
 
 /// Select a preference between two uses. CurrentUse is the current preference
 /// while *ForCandidate is attributes of the candidate under consideration.
@@ -127,7 +131,8 @@ PreferredTuple ChoosePreferredUse(PreferredTuple &CurrentUse,
 /// want to try harder to find a dominating block.
 static void InsertInsnsWithoutSideEffectsBeforeUse(
     MachineIRBuilder &Builder, MachineInstr &DefMI, MachineOperand &UseMO,
-    std::function<void(MachineBasicBlock *, MachineBasicBlock::iterator)>
+    std::function<void(MachineBasicBlock *, MachineBasicBlock::iterator,
+                       MachineOperand &UseMO)>
         Inserter) {
   MachineInstr &UseMI = *UseMO.getParent();
 
@@ -143,26 +148,26 @@ static void InsertInsnsWithoutSideEffectsBeforeUse(
   // the def instead of at the start of the block.
   if (InsertBB == DefMI.getParent()) {
     MachineBasicBlock::iterator InsertPt = &DefMI;
-    Inserter(InsertBB, std::next(InsertPt));
+    Inserter(InsertBB, std::next(InsertPt), UseMO);
     return;
   }
 
   // Otherwise we want the start of the BB
-  Inserter(InsertBB, InsertBB->getFirstNonPHI());
+  Inserter(InsertBB, InsertBB->getFirstNonPHI(), UseMO);
 }
 } // end anonymous namespace
 
 bool CombinerHelper::tryCombineExtendingLoads(MachineInstr &MI) {
-  struct InsertionPoint {
-    MachineOperand *UseMO;
-    MachineBasicBlock *InsertIntoBB;
-    MachineBasicBlock::iterator InsertBefore;
-    InsertionPoint(MachineOperand *UseMO, MachineBasicBlock *InsertIntoBB,
-                   MachineBasicBlock::iterator InsertBefore)
-        : UseMO(UseMO), InsertIntoBB(InsertIntoBB), InsertBefore(InsertBefore) {
-    }
-  };
+  PreferredTuple Preferred;
+  if (matchCombineExtendingLoads(MI, Preferred)) {
+    applyCombineExtendingLoads(MI, Preferred);
+    return true;
+  }
+  return false;
+}
 
+bool CombinerHelper::matchCombineExtendingLoads(MachineInstr &MI,
+                                                PreferredTuple &Preferred) {
   // We match the loads and follow the uses to the extend instead of matching
   // the extends and following the def to the load. This is because the load
   // must remain in the same position for correctness (unless we also add code
@@ -182,6 +187,19 @@ bool CombinerHelper::tryCombineExtendingLoads(MachineInstr &MI) {
   if (!LoadValueTy.isScalar())
     return false;
 
+  // Most architectures are going to legalize <s8 loads into at least a 1 byte
+  // load, and the MMOs can only describe memory accesses in multiples of bytes.
+  // If we try to perform extload combining on those, we can end up with
+  // %a(s8) = extload %ptr (load 1 byte from %ptr)
+  // ... which is an illegal extload instruction.
+  if (LoadValueTy.getSizeInBits() < 8)
+    return false;
+
+  // For non power-of-2 types, they will very likely be legalized into multiple
+  // loads. Don't bother trying to match them into extending loads.
+  if (!isPowerOf2_32(LoadValueTy.getSizeInBits()))
+    return false;
+
   // Find the preferred type aside from the any-extends (unless it's the only
   // one) and non-extending ops. We'll emit an extending load to that type and
   // and emit a variant of (extend (trunc X)) for the others according to the
@@ -192,7 +210,7 @@ bool CombinerHelper::tryCombineExtendingLoads(MachineInstr &MI) {
                                  : MI.getOpcode() == TargetOpcode::G_SEXTLOAD
                                        ? TargetOpcode::G_SEXT
                                        : TargetOpcode::G_ZEXT;
-  PreferredTuple Preferred = {LLT(), PreferredOpcode, nullptr};
+  Preferred = {LLT(), PreferredOpcode, nullptr};
   for (auto &UseMI : MRI.use_instructions(LoadValue.getReg())) {
     if (UseMI.getOpcode() == TargetOpcode::G_SEXT ||
         UseMI.getOpcode() == TargetOpcode::G_ZEXT ||
@@ -211,9 +229,35 @@ bool CombinerHelper::tryCombineExtendingLoads(MachineInstr &MI) {
   assert(Preferred.Ty != LoadValueTy && "Extending to same type?");
 
   LLVM_DEBUG(dbgs() << "Preferred use is: " << *Preferred.MI);
+  return true;
+}
 
+void CombinerHelper::applyCombineExtendingLoads(MachineInstr &MI,
+                                                PreferredTuple &Preferred) {
   // Rewrite the load to the chosen extending load.
   unsigned ChosenDstReg = Preferred.MI->getOperand(0).getReg();
+
+  // Inserter to insert a truncate back to the original type at a given point
+  // with some basic CSE to limit truncate duplication to one per BB.
+  DenseMap<MachineBasicBlock *, MachineInstr *> EmittedInsns;
+  auto InsertTruncAt = [&](MachineBasicBlock *InsertIntoBB,
+                           MachineBasicBlock::iterator InsertBefore,
+                           MachineOperand &UseMO) {
+    MachineInstr *PreviouslyEmitted = EmittedInsns.lookup(InsertIntoBB);
+    if (PreviouslyEmitted) {
+      Observer.changingInstr(*UseMO.getParent());
+      UseMO.setReg(PreviouslyEmitted->getOperand(0).getReg());
+      Observer.changedInstr(*UseMO.getParent());
+      return;
+    }
+
+    Builder.setInsertPt(*InsertIntoBB, InsertBefore);
+    unsigned NewDstReg = MRI.cloneVirtualRegister(MI.getOperand(0).getReg());
+    MachineInstr *NewMI = Builder.buildTrunc(NewDstReg, ChosenDstReg);
+    EmittedInsns[InsertIntoBB] = NewMI;
+    replaceRegOpWith(MRI, UseMO, NewDstReg);
+  };
+
   Observer.changingInstr(MI);
   MI.setDesc(
       Builder.getTII().get(Preferred.ExtendOpcode == TargetOpcode::G_SEXT
@@ -223,10 +267,13 @@ bool CombinerHelper::tryCombineExtendingLoads(MachineInstr &MI) {
                                      : TargetOpcode::G_LOAD));
 
   // Rewrite all the uses to fix up the types.
-  SmallVector<MachineInstr *, 1> ScheduleForErase;
-  SmallVector<InsertionPoint, 4> ScheduleForInsert;
-  for (auto &UseMO : MRI.use_operands(LoadValue.getReg())) {
-    MachineInstr *UseMI = UseMO.getParent();
+  auto &LoadValue = MI.getOperand(0);
+  SmallVector<MachineOperand *, 4> Uses;
+  for (auto &UseMO : MRI.use_operands(LoadValue.getReg()))
+    Uses.push_back(&UseMO);
+
+  for (auto *UseMO : Uses) {
+    MachineInstr *UseMI = UseMO->getParent();
 
     // If the extend is compatible with the preferred extend then we should fix
     // up the type and extend so that it uses the preferred use.
@@ -247,7 +294,8 @@ bool CombinerHelper::tryCombineExtendingLoads(MachineInstr &MI) {
           //    %2:_(s32) = G_SEXTLOAD ...
           //    ... = ... %2(s32)
           replaceRegWith(MRI, UseDstReg, ChosenDstReg);
-          ScheduleForErase.push_back(UseMO.getParent());
+          Observer.erasingInstr(*UseMO->getParent());
+          UseMO->getParent()->eraseFromParent();
         } else if (Preferred.Ty.getSizeInBits() < UseDstTy.getSizeInBits()) {
           // If the preferred size is smaller, then keep the extend but extend
           // from the result of the extending load. For example:
@@ -272,60 +320,26 @@ bool CombinerHelper::tryCombineExtendingLoads(MachineInstr &MI) {
           //    %4:_(s8) = G_TRUNC %2:_(s32)
           //    %3:_(s64) = G_ZEXT %2:_(s8)
           //    ... = ... %3(s64)
-          InsertInsnsWithoutSideEffectsBeforeUse(
-              Builder, MI, UseMO,
-              [&](MachineBasicBlock *InsertIntoBB,
-                  MachineBasicBlock::iterator InsertBefore) {
-                ScheduleForInsert.emplace_back(&UseMO, InsertIntoBB, InsertBefore);
-              });
+          InsertInsnsWithoutSideEffectsBeforeUse(Builder, MI, *UseMO,
+                                                 InsertTruncAt);
         }
         continue;
       }
       // The use is (one of) the uses of the preferred use we chose earlier.
       // We're going to update the load to def this value later so just erase
       // the old extend.
-      ScheduleForErase.push_back(UseMO.getParent());
+      Observer.erasingInstr(*UseMO->getParent());
+      UseMO->getParent()->eraseFromParent();
       continue;
     }
 
     // The use isn't an extend. Truncate back to the type we originally loaded.
     // This is free on many targets.
-    InsertInsnsWithoutSideEffectsBeforeUse(
-        Builder, MI, UseMO,
-        [&](MachineBasicBlock *InsertIntoBB,
-            MachineBasicBlock::iterator InsertBefore) {
-          ScheduleForInsert.emplace_back(&UseMO, InsertIntoBB, InsertBefore);
-        });
+    InsertInsnsWithoutSideEffectsBeforeUse(Builder, MI, *UseMO, InsertTruncAt);
   }
 
-  DenseMap<MachineBasicBlock *, MachineInstr *> EmittedInsns;
-  for (auto &InsertionInfo : ScheduleForInsert) {
-    MachineOperand *UseMO = InsertionInfo.UseMO;
-    MachineBasicBlock *InsertIntoBB = InsertionInfo.InsertIntoBB;
-    MachineBasicBlock::iterator InsertBefore = InsertionInfo.InsertBefore;
-
-    MachineInstr *PreviouslyEmitted = EmittedInsns.lookup(InsertIntoBB);
-    if (PreviouslyEmitted) {
-      Observer.changingInstr(*UseMO->getParent());
-      UseMO->setReg(PreviouslyEmitted->getOperand(0).getReg());
-      Observer.changedInstr(*UseMO->getParent());
-      continue;
-    }
-
-    Builder.setInsertPt(*InsertIntoBB, InsertBefore);
-    unsigned NewDstReg = MRI.cloneVirtualRegister(MI.getOperand(0).getReg());
-    MachineInstr *NewMI = Builder.buildTrunc(NewDstReg, ChosenDstReg);
-    EmittedInsns[InsertIntoBB] = NewMI;
-    replaceRegOpWith(MRI, *UseMO, NewDstReg);
-  }
-  for (auto &EraseMI : ScheduleForErase) {
-    Observer.erasingInstr(*EraseMI);
-    EraseMI->eraseFromParent();
-  }
   MI.getOperand(0).setReg(ChosenDstReg);
   Observer.changedInstr(MI);
-
-  return true;
 }
 
 bool CombinerHelper::tryCombine(MachineInstr &MI) {

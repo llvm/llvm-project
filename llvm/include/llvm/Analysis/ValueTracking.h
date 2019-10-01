@@ -1,9 +1,8 @@
 //===- llvm/Analysis/ValueTracking.h - Walk computations --------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -17,6 +16,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instruction.h"
@@ -33,6 +33,7 @@ class DataLayout;
 class DominatorTree;
 class GEPOperator;
 class IntrinsicInst;
+class WithOverflowInst;
 struct KnownBits;
 class Loop;
 class LoopInfo;
@@ -296,20 +297,26 @@ class Value;
   uint64_t GetStringLength(const Value *V, unsigned CharSize = 8);
 
   /// This function returns call pointer argument that is considered the same by
-  /// aliasing rules. You CAN'T use it to replace one value with another.
-  const Value *getArgumentAliasingToReturnedPointer(ImmutableCallSite CS);
-  inline Value *getArgumentAliasingToReturnedPointer(CallSite CS) {
-    return const_cast<Value *>(
-        getArgumentAliasingToReturnedPointer(ImmutableCallSite(CS)));
+  /// aliasing rules. You CAN'T use it to replace one value with another. If
+  /// \p MustPreserveNullness is true, the call must preserve the nullness of
+  /// the pointer.
+  const Value *getArgumentAliasingToReturnedPointer(const CallBase *Call,
+                                                    bool MustPreserveNullness);
+  inline Value *
+  getArgumentAliasingToReturnedPointer(CallBase *Call,
+                                       bool MustPreserveNullness) {
+    return const_cast<Value *>(getArgumentAliasingToReturnedPointer(
+        const_cast<const CallBase *>(Call), MustPreserveNullness));
   }
 
-  // {launder,strip}.invariant.group returns pointer that aliases its argument,
-  // and it only captures pointer by returning it.
-  // These intrinsics are not marked as nocapture, because returning is
-  // considered as capture. The arguments are not marked as returned neither,
-  // because it would make it useless.
+  /// {launder,strip}.invariant.group returns pointer that aliases its argument,
+  /// and it only captures pointer by returning it.
+  /// These intrinsics are not marked as nocapture, because returning is
+  /// considered as capture. The arguments are not marked as returned neither,
+  /// because it would make it useless. If \p MustPreserveNullness is true,
+  /// the intrinsic must preserve the nullness of the pointer.
   bool isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(
-      ImmutableCallSite CS);
+      const CallBase *Call, bool MustPreserveNullness);
 
   /// This method strips off any GEP address adjustments and pointer casts from
   /// the specified value, returning the original object being addressed. Note
@@ -351,7 +358,8 @@ class Value;
   /// Since A[i] and A[i-1] are independent pointers, getUnderlyingObjects
   /// should not assume that Curr and Prev share the same underlying object thus
   /// it shouldn't look through the phi above.
-  void GetUnderlyingObjects(Value *V, SmallVectorImpl<Value *> &Objects,
+  void GetUnderlyingObjects(const Value *V,
+                            SmallVectorImpl<const Value *> &Objects,
                             const DataLayout &DL, LoopInfo *LI = nullptr,
                             unsigned MaxLookup = 6);
 
@@ -411,7 +419,16 @@ class Value;
   bool isValidAssumeForContext(const Instruction *I, const Instruction *CxtI,
                                const DominatorTree *DT = nullptr);
 
-  enum class OverflowResult { AlwaysOverflows, MayOverflow, NeverOverflows };
+  enum class OverflowResult {
+    /// Always overflows in the direction of signed/unsigned min value.
+    AlwaysOverflowsLow,
+    /// Always overflows in the direction of signed/unsigned max value.
+    AlwaysOverflowsHigh,
+    /// May or may not overflow.
+    MayOverflow,
+    /// Never overflows.
+    NeverOverflows,
+  };
 
   OverflowResult computeOverflowForUnsignedMul(const Value *LHS,
                                                const Value *RHS,
@@ -455,11 +472,16 @@ class Value;
                                              const Instruction *CxtI,
                                              const DominatorTree *DT);
 
-  /// Returns true if the arithmetic part of the \p II 's result is
+  /// Returns true if the arithmetic part of the \p WO 's result is
   /// used only along the paths control dependent on the computation
-  /// not overflowing, \p II being an <op>.with.overflow intrinsic.
-  bool isOverflowIntrinsicNoWrap(const IntrinsicInst *II,
+  /// not overflowing, \p WO being an <op>.with.overflow intrinsic.
+  bool isOverflowIntrinsicNoWrap(const WithOverflowInst *WO,
                                  const DominatorTree &DT);
+
+
+  /// Determine the possible constant range of an integer or vector of integer
+  /// value. This is intended as a cheap, non-recursive check.
+  ConstantRange computeConstantRange(const Value *V, bool UseInstrInfo = true);
 
   /// Return true if this function can prove that the instruction I will
   /// always transfer execution to one of its successors (including the next
@@ -505,6 +527,12 @@ class Value;
   /// undefined behavior if I is executed and that operand has a full-poison
   /// value (all bits poison).
   const Value *getGuaranteedNonFullPoisonOp(const Instruction *I);
+
+  /// Return true if the given instruction must trigger undefined behavior.
+  /// when I is executed with any operands which appear in KnownPoison holding
+  /// a full-poison value at the point of execution.
+  bool mustTriggerUB(const Instruction *I,
+                     const SmallSet<const Value *, 16>& KnownPoison);
 
   /// Return true if this function can prove that if PoisonI is executed
   /// and yields a full-poison value (all bits poison), then that will
@@ -583,6 +611,12 @@ class Value;
     RHS = R;
     return Result;
   }
+
+  /// Determine the pattern that a select with the given compare as its
+  /// predicate and given values as its true/false operands would match.
+  SelectPatternResult matchDecomposedSelectPattern(
+      CmpInst *CmpI, Value *TrueVal, Value *FalseVal, Value *&LHS, Value *&RHS,
+      Instruction::CastOps *CastOp = nullptr, unsigned Depth = 0);
 
   /// Return the canonical comparison predicate for the specified
   /// minimum/maximum flavor.

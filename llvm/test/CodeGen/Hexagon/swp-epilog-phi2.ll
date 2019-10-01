@@ -14,7 +14,7 @@
 %s.11 = type { i32, i32, i8* }
 
 ; Function Attrs: nounwind
-define void @f0(%s.0* %a0, i8* %a1, i16* %a2, i16** %a3, i16** %a4) #0 {
+define void @f0(%s.0* %a0, i8* %a1, i16* %a2, i16** %a3, i16** %a4, i32 %a5) #0 {
 b0:
   %v0 = load i8, i8* %a1, align 1, !tbaa !0
   %v1 = icmp eq i8 %v0, 1
@@ -47,7 +47,7 @@ b1:                                               ; preds = %b1, %b0
   store i16* %v17, i16** %a4, align 4, !tbaa !3
   store i16 0, i16* %v16, align 2, !tbaa !5
   %v18 = add nsw i32 %v3, 8
-  %v19 = icmp slt i32 %v18, undef
+  %v19 = icmp slt i32 %v18, %a5
   br i1 %v19, label %b1, label %b2
 
 b2:                                               ; preds = %b1, %b0

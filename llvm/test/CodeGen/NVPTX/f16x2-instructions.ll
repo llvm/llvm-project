@@ -1,15 +1,15 @@
 ; ## Full FP16 support enabled by default.
 ; RUN: llc < %s -mtriple=nvptx64-nvidia-cuda -mcpu=sm_53 -asm-verbose=false \
-; RUN:          -O0 -disable-post-ra -disable-fp-elim -verify-machineinstrs \
+; RUN:          -O0 -disable-post-ra -frame-pointer=all -verify-machineinstrs \
 ; RUN: | FileCheck -allow-deprecated-dag-overlap -check-prefixes CHECK,CHECK-F16 %s
 ; ## FP16 support explicitly disabled.
 ; RUN: llc < %s -mtriple=nvptx64-nvidia-cuda -mcpu=sm_53 -asm-verbose=false \
-; RUN:          -O0 -disable-post-ra -disable-fp-elim --nvptx-no-f16-math \
+; RUN:          -O0 -disable-post-ra -frame-pointer=all --nvptx-no-f16-math \
 ; RUN:           -verify-machineinstrs \
 ; RUN: | FileCheck -allow-deprecated-dag-overlap -check-prefixes CHECK,CHECK-NOF16 %s
 ; ## FP16 is not supported by hardware.
 ; RUN: llc < %s -O0 -mtriple=nvptx64-nvidia-cuda -mcpu=sm_52 -asm-verbose=false \
-; RUN:          -disable-post-ra -disable-fp-elim -verify-machineinstrs \
+; RUN:          -disable-post-ra -frame-pointer=all -verify-machineinstrs \
 ; RUN: | FileCheck -allow-deprecated-dag-overlap -check-prefixes CHECK,CHECK-NOF16 %s
 
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
@@ -1378,12 +1378,13 @@ define <2 x half> @test_nearbyint(<2 x half> %a) #0 {
 }
 
 ; CHECK-LABEL: test_round(
-; CHECK:      ld.param.b32    [[A:%hh[0-9]+]], [test_round_param_0];
-; CHECK-DAG:  mov.b32         {[[A0:%h[0-9]+]], [[A1:%h[0-9]+]]}, [[A]];
-; CHECK-DAG:  cvt.rni.f16.f16 [[R1:%h[0-9]+]], [[A1]];
-; CHECK-DAG:  cvt.rni.f16.f16 [[R0:%h[0-9]+]], [[A0]];
-; CHECK:      mov.b32         [[R:%hh[0-9]+]], {[[R0]], [[R1]]}
-; CHECK:      st.param.b32    [func_retval0+0], [[R]];
+; CHECK:      ld.param.b32    {{.*}}, [test_round_param_0];
+; check the use of sign mask and 0.5 to implement round
+; CHECK:      and.b32 [[R1:%r[0-9]+]], {{.*}}, -2147483648;
+; CHECK:      or.b32 {{.*}}, [[R1]], 1056964608;
+; CHECK:      and.b32 [[R2:%r[0-9]+]], {{.*}}, -2147483648;
+; CHECK:      or.b32 {{.*}}, [[R2]], 1056964608;
+; CHECK:      st.param.b32    [func_retval0+0], {{.*}};
 ; CHECK:      ret;
 define <2 x half> @test_round(<2 x half> %a) #0 {
   %r = call <2 x half> @llvm.round.f16(<2 x half> %a)

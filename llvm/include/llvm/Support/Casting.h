@@ -1,9 +1,8 @@
 //===- llvm/Support/Casting.h - Allow flexible, checked, casts --*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -142,6 +141,16 @@ struct isa_impl_wrap<To, FromTy, FromTy> {
 template <class X, class Y> LLVM_NODISCARD inline bool isa(const Y &Val) {
   return isa_impl_wrap<X, const Y,
                        typename simplify_type<const Y>::SimpleType>::doit(Val);
+}
+
+// isa_and_nonnull<X> - Functionally identical to isa, except that a null value
+// is accepted.
+//
+template <class X, class Y>
+LLVM_NODISCARD inline bool isa_and_nonnull(const Y &Val) {
+  if (!Val)
+    return false;
+  return isa<X>(Val);
 }
 
 //===----------------------------------------------------------------------===//

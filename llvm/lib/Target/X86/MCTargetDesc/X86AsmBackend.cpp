@@ -1,9 +1,8 @@
 //===-- X86AsmBackend.cpp - X86 Assembler Backend -------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -13,6 +12,7 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/MC/MCAsmBackend.h"
+#include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixupKindInfo.h"
@@ -26,18 +26,20 @@
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
-static unsigned getFixupKindLog2Size(unsigned Kind) {
+static unsigned getFixupKindSize(unsigned Kind) {
   switch (Kind) {
   default:
     llvm_unreachable("invalid fixup kind!");
+  case FK_NONE:
+    return 0;
   case FK_PCRel_1:
   case FK_SecRel_1:
   case FK_Data_1:
-    return 0;
+    return 1;
   case FK_PCRel_2:
   case FK_SecRel_2:
   case FK_Data_2:
-    return 1;
+    return 2;
   case FK_PCRel_4:
   case X86::reloc_riprel_4byte:
   case X86::reloc_riprel_4byte_relax:
@@ -49,12 +51,12 @@ static unsigned getFixupKindLog2Size(unsigned Kind) {
   case X86::reloc_branch_4byte_pcrel:
   case FK_SecRel_4:
   case FK_Data_4:
-    return 2;
+    return 4;
   case FK_PCRel_8:
   case FK_SecRel_8:
   case FK_Data_8:
   case X86::reloc_global_offset_table8:
-    return 3;
+    return 8;
   }
 }
 
@@ -76,6 +78,8 @@ public:
   unsigned getNumFixupKinds() const override {
     return X86::NumTargetFixupKinds;
   }
+
+  Optional<MCFixupKind> getFixupKind(StringRef Name) const override;
 
   const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override {
     const static MCFixupKindInfo Infos[X86::NumTargetFixupKinds] = {
@@ -99,11 +103,14 @@ public:
     return Infos[Kind - FirstTargetFixupKind];
   }
 
+  bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
+                             const MCValue &Target) override;
+
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,
                   uint64_t Value, bool IsResolved,
                   const MCSubtargetInfo *STI) const override {
-    unsigned Size = 1 << getFixupKindLog2Size(Fixup.getKind());
+    unsigned Size = getFixupKindSize(Fixup.getKind());
 
     assert(Fixup.getOffset() + Size <= Data.size() && "Invalid fixup offset!");
 
@@ -111,7 +118,7 @@ public:
     // Specifically ignore overflow/underflow as long as the leakage is
     // limited to the lower bits. This is to remain compatible with
     // other assemblers.
-    assert(isIntN(Size * 8 + 1, Value) &&
+    assert((Size == 0 || isIntN(Size * 8 + 1, Value)) &&
            "Value does not fit in the Fixup field");
 
     for (unsigned i = 0; i != Size; ++i)
@@ -137,40 +144,10 @@ static unsigned getRelaxedOpcodeBranch(const MCInst &Inst, bool is16BitMode) {
   switch (Op) {
   default:
     return Op;
-  case X86::JAE_1:
-    return (is16BitMode) ? X86::JAE_2 : X86::JAE_4;
-  case X86::JA_1:
-    return (is16BitMode) ? X86::JA_2 : X86::JA_4;
-  case X86::JBE_1:
-    return (is16BitMode) ? X86::JBE_2 : X86::JBE_4;
-  case X86::JB_1:
-    return (is16BitMode) ? X86::JB_2 : X86::JB_4;
-  case X86::JE_1:
-    return (is16BitMode) ? X86::JE_2 : X86::JE_4;
-  case X86::JGE_1:
-    return (is16BitMode) ? X86::JGE_2 : X86::JGE_4;
-  case X86::JG_1:
-    return (is16BitMode) ? X86::JG_2 : X86::JG_4;
-  case X86::JLE_1:
-    return (is16BitMode) ? X86::JLE_2 : X86::JLE_4;
-  case X86::JL_1:
-    return (is16BitMode) ? X86::JL_2 : X86::JL_4;
+  case X86::JCC_1:
+    return (is16BitMode) ? X86::JCC_2 : X86::JCC_4;
   case X86::JMP_1:
     return (is16BitMode) ? X86::JMP_2 : X86::JMP_4;
-  case X86::JNE_1:
-    return (is16BitMode) ? X86::JNE_2 : X86::JNE_4;
-  case X86::JNO_1:
-    return (is16BitMode) ? X86::JNO_2 : X86::JNO_4;
-  case X86::JNP_1:
-    return (is16BitMode) ? X86::JNP_2 : X86::JNP_4;
-  case X86::JNS_1:
-    return (is16BitMode) ? X86::JNS_2 : X86::JNS_4;
-  case X86::JO_1:
-    return (is16BitMode) ? X86::JO_2 : X86::JO_4;
-  case X86::JP_1:
-    return (is16BitMode) ? X86::JP_2 : X86::JP_4;
-  case X86::JS_1:
-    return (is16BitMode) ? X86::JS_2 : X86::JS_4;
   }
 }
 
@@ -264,6 +241,25 @@ static unsigned getRelaxedOpcode(const MCInst &Inst, bool is16BitMode) {
   if (R != Inst.getOpcode())
     return R;
   return getRelaxedOpcodeBranch(Inst, is16BitMode);
+}
+
+Optional<MCFixupKind> X86AsmBackend::getFixupKind(StringRef Name) const {
+  if (STI.getTargetTriple().isOSBinFormatELF()) {
+    if (STI.getTargetTriple().getArch() == Triple::x86_64) {
+      if (Name == "R_X86_64_NONE")
+        return FK_NONE;
+    } else {
+      if (Name == "R_386_NONE")
+        return FK_NONE;
+    }
+  }
+  return MCAsmBackend::getFixupKind(Name);
+}
+
+bool X86AsmBackend::shouldForceRelocation(const MCAssembler &,
+                                          const MCFixup &Fixup,
+                                          const MCValue &) {
+  return Fixup.getKind() == FK_NONE;
 }
 
 bool X86AsmBackend::mayNeedRelaxation(const MCInst &Inst,
@@ -540,7 +536,6 @@ protected:
     unsigned InstrOffset = 0;
     unsigned StackAdjust = 0;
     unsigned StackSize = 0;
-    unsigned PrevStackSize = 0;
     unsigned NumDefCFAOffsets = 0;
 
     for (unsigned i = 0, e = Instrs.size(); i != e; ++i) {
@@ -588,7 +583,6 @@ protected:
         //  L0:
         //     .cfi_def_cfa_offset 80
         //
-        PrevStackSize = StackSize;
         StackSize = std::abs(Inst.getOffset()) / StackDivide;
         ++NumDefCFAOffsets;
         break;

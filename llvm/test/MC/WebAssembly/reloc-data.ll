@@ -1,4 +1,4 @@
-; RUN: llc -O0 -filetype=obj %s -o - | llvm-readobj -r -expand-relocs | FileCheck %s
+; RUN: llc -O0 -filetype=obj %s -o - | llvm-readobj -r --expand-relocs | FileCheck %s
 
 target triple = "wasm32-unknown-unknown"
 
@@ -13,33 +13,33 @@ target triple = "wasm32-unknown-unknown"
 
 ; CHECK:      Format: WASM
 ; CHECK:      Relocations [
-; CHECK-NEXT:   Section (2) DATA {
+; CHECK-NEXT:   Section (3) DATA {
 ; CHECK-NEXT:     Relocation {
-; CHECK-NEXT:       Type: R_WEBASSEMBLY_MEMORY_ADDR_I32 (5)
+; CHECK-NEXT:       Type: R_WASM_MEMORY_ADDR_I32 (5)
 ; CHECK-NEXT:       Offset: 0x13
 ; CHECK-NEXT:       Symbol: foo
 ; CHECK-NEXT:       Addend: 8
 ; CHECK-NEXT:     }
 ; CHECK-NEXT:     Relocation {
-; CHECK-NEXT:       Type: R_WEBASSEMBLY_MEMORY_ADDR_I32 (5)
+; CHECK-NEXT:       Type: R_WASM_MEMORY_ADDR_I32 (5)
 ; CHECK-NEXT:       Offset: 0x1C
 ; CHECK-NEXT:       Symbol: bar
 ; CHECK-NEXT:       Addend: -16
 ; CHECK-NEXT:     }
 ; CHECK-NEXT:     Relocation {
-; CHECK-NEXT:       Type: R_WEBASSEMBLY_MEMORY_ADDR_I32 (5)
+; CHECK-NEXT:       Type: R_WASM_MEMORY_ADDR_I32 (5)
 ; CHECK-NEXT:       Offset: 0x25
 ; CHECK-NEXT:       Symbol: foo
 ; CHECK-NEXT:       Addend: 0
 ; CHECK-NEXT:     }
 ; CHECK-NEXT:     Relocation {
-; CHECK-NEXT:       Type: R_WEBASSEMBLY_MEMORY_ADDR_I32 (5)
+; CHECK-NEXT:       Type: R_WASM_MEMORY_ADDR_I32 (5)
 ; CHECK-NEXT:       Offset: 0x29
 ; CHECK-NEXT:       Symbol: foo
 ; CHECK-NEXT:       Addend: 0
 ; CHECK-NEXT:     }
 ; CHECK-NEXT:     Relocation {
-; CHECK-NEXT:       Type: R_WEBASSEMBLY_MEMORY_ADDR_I32 (5)
+; CHECK-NEXT:       Type: R_WASM_MEMORY_ADDR_I32 (5)
 ; CHECK-NEXT:       Offset: 0x2D
 ; CHECK-NEXT:       Symbol: foo
 ; CHECK-NEXT:       Addend: 0

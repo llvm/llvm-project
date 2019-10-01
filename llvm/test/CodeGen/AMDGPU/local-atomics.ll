@@ -36,6 +36,20 @@ define amdgpu_kernel void @lds_atomic_xchg_ret_i32_offset(i32 addrspace(1)* %out
   ret void
 }
 
+; FUNC-LABEL: {{^}}lds_atomic_xchg_ret_f32_offset:
+; SICIVI: s_mov_b32 m0
+; GFX9-NOT: m0
+
+; EG: LDS_WRXCHG_RET *
+; GCN: ds_wrxchg_rtn_b32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} offset:16
+; GCN: s_endpgm
+define amdgpu_kernel void @lds_atomic_xchg_ret_f32_offset(float addrspace(1)* %out, float addrspace(3)* %ptr) nounwind {
+  %gep = getelementptr float, float addrspace(3)* %ptr, i32 4
+  %result = atomicrmw xchg float addrspace(3)* %gep, float 4.0 seq_cst
+  store float %result, float addrspace(1)* %out, align 4
+  ret void
+}
+
 ; XXX - Is it really necessary to load 4 into VGPR?
 ; FUNC-LABEL: {{^}}lds_atomic_add_ret_i32:
 ; EG: LDS_ADD_RET *

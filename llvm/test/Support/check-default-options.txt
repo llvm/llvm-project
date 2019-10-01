@@ -1,0 +1,18 @@
+# RUN: llvm-objdump --help-hidden %t | FileCheck --check-prefix=CHECK-OBJDUMP %s
+# RUN: llvm-readobj --help-hidden %t | FileCheck --check-prefix=CHECK-READOBJ %s
+# RUN: llvm-tblgen --help-hidden %t | FileCheck --check-prefix=CHECK-TBLGEN %s
+# RUN: llvm-opt-report --help-hidden %t | FileCheck --check-prefix=CHECK-OPT-RPT %s
+# RUN: llvm-dwarfdump --help-hidden %t | FileCheck --check-prefix=CHECK-DWARF %s
+# RUN: llvm-dwarfdump -h %t | FileCheck --check-prefix=CHECK-DWARF-H %s
+
+
+# CHECK-OBJDUMP: -h  - Alias for --section-headers
+# CHECK-READOBJ: -h  - Alias for --file-headers
+# CHECK-TBLGEN:  -h  - Alias for --help
+# CHECK-OPT-RPT: -h  - Alias for --help
+# CHECK-DWARF:   -h  - Alias for -help
+
+# llvm-dwarfdump declares `-h` option and prints special help in that case,
+# which is weird, but makes for a good test, i.e., shows the default `-h`
+# wasn't used.
+# CHECK-DWARF-H-NOT: --help-list  - Display list of available options (--help-list-hidden for more)

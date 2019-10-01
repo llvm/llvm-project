@@ -769,6 +769,6 @@ declare <2 x half> @llvm.maxnum.v2f16(<2 x half>, <2 x half>) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
-attributes #2 = { nounwind "target-features"="-dx10-clamp,-fp-exceptions" "no-nans-fp-math"="false" }
-attributes #3 = { nounwind "target-features"="+dx10-clamp,+fp-exceptions" "no-nans-fp-math"="false" }
-attributes #4 = { nounwind "target-features"="-dx10-clamp,+fp-exceptions" "no-nans-fp-math"="false" }
+attributes #2 = { nounwind "amdgpu-dx10-clamp"="false" "target-features"="-fp-exceptions" "no-nans-fp-math"="false" }
+attributes #3 = { nounwind "amdgpu-dx10-clamp"="true" "target-features"="+fp-exceptions" "no-nans-fp-math"="false" }
+attributes #4 = { nounwind "amdgpu-dx10-clamp"="false" "target-features"="+fp-exceptions" "no-nans-fp-math"="false" }

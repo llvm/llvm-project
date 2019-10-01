@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-apple-darwin -relocation-model=pic -disable-fp-elim
+; RUN: llc < %s -mtriple=x86_64-apple-darwin -relocation-model=pic -frame-pointer=all
 
 %struct.DecRefPicMarking_t = type { i32, i32, i32, i32, i32, %struct.DecRefPicMarking_t* }
 %struct.FrameStore = type { i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, %struct.StorablePicture*, %struct.StorablePicture*, %struct.StorablePicture* }

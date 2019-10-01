@@ -1,9 +1,8 @@
 //===- GlobalTypeTableBuilder.cpp -----------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -53,14 +52,7 @@ Optional<TypeIndex> GlobalTypeTableBuilder::getNext(TypeIndex Prev) {
 }
 
 CVType GlobalTypeTableBuilder::getType(TypeIndex Index) {
-  CVType Type;
-  Type.RecordData = SeenRecords[Index.toArrayIndex()];
-  if (!Type.RecordData.empty()) {
-    assert(Type.RecordData.size() >= sizeof(RecordPrefix));
-    const RecordPrefix *P =
-        reinterpret_cast<const RecordPrefix *>(Type.RecordData.data());
-    Type.Type = static_cast<TypeLeafKind>(uint16_t(P->RecordKind));
-  }
+  CVType Type(SeenRecords[Index.toArrayIndex()]);
   return Type;
 }
 

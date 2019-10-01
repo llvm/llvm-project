@@ -1,9 +1,8 @@
 //===-- SIDefines.h - SI Helper Macros ----------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 /// \file
 //===----------------------------------------------------------------------===//
@@ -90,13 +89,16 @@ enum : uint64_t {
   // Is a D16 buffer instruction.
   D16Buf = UINT64_C(1) << 50,
 
+  // FLAT instruction accesses FLAT_GLBL or FLAT_SCRATCH segment.
+  IsNonFlatSeg = UINT64_C(1) << 51,
+
   // Uses floating point double precision rounding mode
-  FPDPRounding = UINT64_C(1) << 51
+  FPDPRounding = UINT64_C(1) << 52
 };
 
 // v_cmp_class_* etc. use a 10-bit mask for what operation is checked.
 // The result is true if any of these tests are true.
-enum ClassFlags {
+enum ClassFlags : unsigned {
   S_NAN = 1 << 0,        // Signaling NaN
   Q_NAN = 1 << 1,        // Quiet NaN
   N_INFINITY = 1 << 2,   // Negative infinity
@@ -111,7 +113,7 @@ enum ClassFlags {
 }
 
 namespace AMDGPU {
-  enum OperandType {
+  enum OperandType : unsigned {
     /// Operands with register or 32-bit immediate
     OPERAND_REG_IMM_INT32 = MCOI::OPERAND_FIRST_TARGET,
     OPERAND_REG_IMM_INT64,
@@ -119,6 +121,8 @@ namespace AMDGPU {
     OPERAND_REG_IMM_FP32,
     OPERAND_REG_IMM_FP64,
     OPERAND_REG_IMM_FP16,
+    OPERAND_REG_IMM_V2FP16,
+    OPERAND_REG_IMM_V2INT16,
 
     /// Operands with register or inline constant
     OPERAND_REG_INLINE_C_INT16,
@@ -131,7 +135,7 @@ namespace AMDGPU {
     OPERAND_REG_INLINE_C_V2INT16,
 
     OPERAND_REG_IMM_FIRST = OPERAND_REG_IMM_INT32,
-    OPERAND_REG_IMM_LAST = OPERAND_REG_IMM_FP16,
+    OPERAND_REG_IMM_LAST = OPERAND_REG_IMM_V2INT16,
 
     OPERAND_REG_INLINE_C_FIRST = OPERAND_REG_INLINE_C_INT16,
     OPERAND_REG_INLINE_C_LAST = OPERAND_REG_INLINE_C_V2INT16,
@@ -151,17 +155,10 @@ namespace AMDGPU {
   };
 }
 
-namespace SIStackID {
-enum StackTypes : uint8_t {
-  SCRATCH = 0,
-  SGPR_SPILL = 1
-};
-}
-
 // Input operand modifiers bit-masks
 // NEG and SEXT share same bit-mask because they can't be set simultaneously.
 namespace SISrcMods {
-  enum {
+  enum : unsigned {
    NEG = 1 << 0,   // Floating-point negate modifier
    ABS = 1 << 1,   // Floating-point absolute modifier
    SEXT = 1 << 0,  // Integer sign-extend modifier
@@ -173,7 +170,7 @@ namespace SISrcMods {
 }
 
 namespace SIOutMods {
-  enum {
+  enum : unsigned {
     NONE = 0,
     MUL2 = 1,
     MUL4 = 2,
@@ -181,17 +178,33 @@ namespace SIOutMods {
   };
 }
 
+namespace AMDGPU {
 namespace VGPRIndexMode {
-  enum {
-    SRC0_ENABLE = 1 << 0,
-    SRC1_ENABLE = 1 << 1,
-    SRC2_ENABLE = 1 << 2,
-    DST_ENABLE = 1 << 3
-  };
-}
+
+enum Id : unsigned { // id of symbolic names
+  ID_SRC0 = 0,
+  ID_SRC1,
+  ID_SRC2,
+  ID_DST,
+
+  ID_MIN = ID_SRC0,
+  ID_MAX = ID_DST
+};
+
+enum EncBits : unsigned {
+  OFF = 0,
+  SRC0_ENABLE = 1 << ID_SRC0,
+  SRC1_ENABLE = 1 << ID_SRC1,
+  SRC2_ENABLE = 1 << ID_SRC2,
+  DST_ENABLE = 1 << ID_DST,
+  ENABLE_MASK = SRC0_ENABLE | SRC1_ENABLE | SRC2_ENABLE | DST_ENABLE
+};
+
+} // namespace VGPRIndexMode
+} // namespace AMDGPU
 
 namespace AMDGPUAsmVariants {
-  enum {
+  enum : unsigned {
     DEFAULT = 0,
     VOP3 = 1,
     SDWA = 2,
@@ -203,13 +216,14 @@ namespace AMDGPUAsmVariants {
 namespace AMDGPU {
 namespace EncValues { // Encoding values of enum9/8/7 operands
 
-enum {
+enum : unsigned {
   SGPR_MIN = 0,
-  SGPR_MAX = 101,
+  SGPR_MAX_SI = 101,
+  SGPR_MAX_GFX10 = 105,
   TTMP_VI_MIN = 112,
   TTMP_VI_MAX = 123,
-  TTMP_GFX9_MIN = 108,
-  TTMP_GFX9_MAX = 123,
+  TTMP_GFX9_GFX10_MIN = 108,
+  TTMP_GFX9_GFX10_MAX = 123,
   INLINE_INTEGER_C_MIN = 128,
   INLINE_INTEGER_C_POSITIVE_MAX = 192, // 64
   INLINE_INTEGER_C_MAX = 208,
@@ -231,6 +245,7 @@ enum Id { // Message ID, width(4) [3:0].
   ID_INTERRUPT = 1,
   ID_GS,
   ID_GS_DONE,
+  ID_GS_ALLOC_REQ = 9,
   ID_SYSMSG = 15,
   ID_GAPS_LAST_, // Indicate that sequence has gaps.
   ID_GAPS_FIRST_ = ID_INTERRUPT,
@@ -262,7 +277,7 @@ enum Op { // Both GS and SYS operation IDs.
   OP_SYS_MASK_ = (((1 << OP_SYS_WIDTH_) - 1) << OP_SHIFT_)
 };
 
-enum StreamId { // Stream ID, (2) [9:8].
+enum StreamId : unsigned { // Stream ID, (2) [9:8].
   STREAM_ID_DEFAULT_ = 0,
   STREAM_ID_LAST_ = 4,
   STREAM_ID_FIRST_ = STREAM_ID_DEFAULT_,
@@ -287,13 +302,22 @@ enum Id { // HwRegCode, (6) [5:0]
   ID_IB_STS = 7,
   ID_MEM_BASES = 15,
   ID_SYMBOLIC_FIRST_GFX9_ = ID_MEM_BASES,
-  ID_SYMBOLIC_LAST_ = 16,
+  ID_TBA_LO = 16,
+  ID_SYMBOLIC_FIRST_GFX10_ = ID_TBA_LO,
+  ID_TBA_HI = 17,
+  ID_TMA_LO = 18,
+  ID_TMA_HI = 19,
+  ID_FLAT_SCR_LO = 20,
+  ID_FLAT_SCR_HI = 21,
+  ID_XNACK_MASK = 22,
+  ID_POPS_PACKER = 25,
+  ID_SYMBOLIC_LAST_ = 26,
   ID_SHIFT_ = 0,
   ID_WIDTH_ = 6,
   ID_MASK_ = (((1 << ID_WIDTH_) - 1) << ID_SHIFT_)
 };
 
-enum Offset { // Offset, (5) [10:6]
+enum Offset : unsigned { // Offset, (5) [10:6]
   OFFSET_DEFAULT_ = 0,
   OFFSET_SHIFT_ = 6,
   OFFSET_WIDTH_ = 5,
@@ -303,7 +327,7 @@ enum Offset { // Offset, (5) [10:6]
   OFFSET_SRC_PRIVATE_BASE = 0
 };
 
-enum WidthMinusOne { // WidthMinusOne, (5) [15:11]
+enum WidthMinusOne : unsigned { // WidthMinusOne, (5) [15:11]
   WIDTH_M1_DEFAULT_ = 31,
   WIDTH_M1_SHIFT_ = 11,
   WIDTH_M1_WIDTH_ = 5,
@@ -313,11 +337,16 @@ enum WidthMinusOne { // WidthMinusOne, (5) [15:11]
   WIDTH_M1_SRC_PRIVATE_BASE = 15
 };
 
+// Some values from WidthMinusOne mapped into Width domain.
+enum Width : unsigned {
+  WIDTH_DEFAULT_ = WIDTH_M1_DEFAULT_ + 1,
+};
+
 } // namespace Hwreg
 
 namespace Swizzle { // Encoding of swizzle macro used in ds_swizzle_b32.
 
-enum Id { // id of symbolic names
+enum Id : unsigned { // id of symbolic names
   ID_QUAD_PERM = 0,
   ID_BITMASK_PERM,
   ID_SWAP,
@@ -325,7 +354,7 @@ enum Id { // id of symbolic names
   ID_BROADCAST
 };
 
-enum EncBits {
+enum EncBits : unsigned {
 
   // swizzle mode encodings
 
@@ -357,7 +386,7 @@ enum EncBits {
 
 namespace SDWA {
 
-enum SdwaSel {
+enum SdwaSel : unsigned {
   BYTE_0 = 0,
   BYTE_1 = 1,
   BYTE_2 = 2,
@@ -367,13 +396,13 @@ enum SdwaSel {
   DWORD = 6,
 };
 
-enum DstUnused {
+enum DstUnused : unsigned {
   UNUSED_PAD = 0,
   UNUSED_SEXT = 1,
   UNUSED_PRESERVE = 2,
 };
 
-enum SDWA9EncValues{
+enum SDWA9EncValues : unsigned {
   SRC_SGPR_MASK = 0x100,
   SRC_VGPR_MASK = 0xFF,
   VOPC_DST_VCC_MASK = 0x80,
@@ -382,7 +411,8 @@ enum SDWA9EncValues{
   SRC_VGPR_MIN = 0,
   SRC_VGPR_MAX = 255,
   SRC_SGPR_MIN = 256,
-  SRC_SGPR_MAX = 357,
+  SRC_SGPR_MAX_SI = 357,
+  SRC_SGPR_MAX_GFX10 = 361,
   SRC_TTMP_MIN = 364,
   SRC_TTMP_MAX = 379,
 };
@@ -391,7 +421,7 @@ enum SDWA9EncValues{
 
 namespace DPP {
 
-enum DppCtrl {
+enum DppCtrl : unsigned {
   QUAD_PERM_FIRST   = 0,
   QUAD_PERM_LAST    = 0xFF,
   DPP_UNUSED1       = 0x100,
@@ -422,7 +452,20 @@ enum DppCtrl {
   ROW_HALF_MIRROR   = 0x141,
   BCAST15           = 0x142,
   BCAST31           = 0x143,
-  DPP_LAST          = BCAST31
+  DPP_UNUSED8_FIRST = 0x144,
+  DPP_UNUSED8_LAST  = 0x14F,
+  ROW_SHARE_FIRST   = 0x150,
+  ROW_SHARE_LAST    = 0x15F,
+  ROW_XMASK_FIRST   = 0x160,
+  ROW_XMASK_LAST    = 0x16F,
+  DPP_LAST          = ROW_XMASK_LAST
+};
+
+enum DppFiMode {
+  DPP_FI_0  = 0,
+  DPP_FI_1  = 1,
+  DPP8_FI_0 = 0xE9,
+  DPP8_FI_1 = 0xEA,
 };
 
 } // namespace DPP
@@ -505,6 +548,15 @@ enum DppCtrl {
 #define   S_00B848_IEEE_MODE(x)                                       (((x) & 0x1) << 23)
 #define   G_00B848_IEEE_MODE(x)                                       (((x) >> 23) & 0x1)
 #define   C_00B848_IEEE_MODE                                          0xFF7FFFFF
+#define   S_00B848_WGP_MODE(x)                                        (((x) & 0x1) << 29)
+#define   G_00B848_WGP_MODE(x)                                        (((x) >> 29) & 0x1)
+#define   C_00B848_WGP_MODE                                           0xDFFFFFFF
+#define   S_00B848_MEM_ORDERED(x)                                     (((x) & 0x1) << 30)
+#define   G_00B848_MEM_ORDERED(x)                                     (((x) >> 30) & 0x1)
+#define   C_00B848_MEM_ORDERED                                        0xBFFFFFFF
+#define   S_00B848_FWD_PROGRESS(x)                                    (((x) & 0x1) << 31)
+#define   G_00B848_FWD_PROGRESS(x)                                    (((x) >> 31) & 0x1)
+#define   C_00B848_FWD_PROGRESS                                       0x7FFFFFFF
 
 
 // Helpers for setting FLOAT_MODE
@@ -534,6 +586,15 @@ enum DppCtrl {
 
 #define R_0286E8_SPI_TMPRING_SIZE                                       0x0286E8
 #define   S_0286E8_WAVESIZE(x)                                        (((x) & 0x1FFF) << 12)
+
+#define R_028B54_VGT_SHADER_STAGES_EN                                 0x028B54
+#define   S_028B54_HS_W32_EN(x)                                       (((x) & 0x1) << 21)
+#define   S_028B54_GS_W32_EN(x)                                       (((x) & 0x1) << 22)
+#define   S_028B54_VS_W32_EN(x)                                       (((x) & 0x1) << 23)
+#define R_0286D8_SPI_PS_IN_CONTROL                                    0x0286D8
+#define   S_0286D8_PS_W32_EN(x)                                       (((x) & 0x1) << 15)
+#define R_00B800_COMPUTE_DISPATCH_INITIATOR                           0x00B800
+#define   S_00B800_CS_W32_EN(x)                                       (((x) & 0x1) << 15)
 
 #define R_SPILLED_SGPRS         0x4
 #define R_SPILLED_VGPRS         0x8

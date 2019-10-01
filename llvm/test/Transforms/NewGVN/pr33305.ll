@@ -176,7 +176,7 @@ attributes #3 = { noreturn nounwind optsize }
 
 !0 = !{i32 1, !"wchar_size", i32 4}
 !1 = !{i32 7, !"PIC Level", i32 2}
-!2 = !{!"clang version 5.0.0 (http://llvm.org/git/clang.git e97b4dda83fd49e0218ea06ba4e37796a81b2027) (/Users/dannyb/sources/llvm-clean b38f051979e4ac2aa6513e40046d120fd472cb96)"}
+!2 = !{!"clang version 5.0.0"}
 !3 = !{!4, !4, i64 0}
 !4 = !{!"int", !5, i64 0}
 !5 = !{!"omnipotent char", !6, i64 0}

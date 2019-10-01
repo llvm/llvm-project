@@ -1,0 +1,7 @@
+# Use address that can't fit in a 64-bit number. Show that llvm-symbolizer
+# simply echoes it as per other malformed input addresses.
+RUN: llvm-symbolizer --obj=addr.exe 0x10000000000000000 | FileCheck %s
+
+CHECK-NOT: {{.}}
+CHECK:     0x10000000000000000
+CHECK-NOT: {{.}}

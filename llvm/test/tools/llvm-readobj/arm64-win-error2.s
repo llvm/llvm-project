@@ -6,7 +6,7 @@
 
 // REQUIRES: aarch64-registered-target
 // RUN: llvm-mc -filetype=obj -triple aarch64-windows %s -o - \
-// RUN:   | not llvm-readobj -unwind - 2>&1 | FileCheck %s
+// RUN:   | not llvm-readobj --unwind - 2>&1 | FileCheck %s
 
 // CHECK: LLVM ERROR: Malformed unwind data
 

@@ -1,9 +1,8 @@
 //===- RegionPass.cpp - Region Pass and Region Pass Manager ---------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -279,12 +278,17 @@ Pass *RegionPass::createPrinterPass(raw_ostream &O,
   return new PrintRegionPass(Banner, O);
 }
 
+static std::string getDescription(const Region &R) {
+  return "region";
+}
+
 bool RegionPass::skipRegion(Region &R) const {
   Function &F = *R.getEntry()->getParent();
-  if (!F.getContext().getOptPassGate().shouldRunPass(this, R))
+  OptPassGate &Gate = F.getContext().getOptPassGate();
+  if (Gate.isEnabled() && !Gate.shouldRunPass(this, getDescription(R)))
     return true;
 
-  if (F.hasFnAttribute(Attribute::OptimizeNone)) {
+  if (F.hasOptNone()) {
     // Report this only once per function.
     if (R.getEntry() == &F.getEntryBlock())
       LLVM_DEBUG(dbgs() << "Skipping pass '" << getPassName()

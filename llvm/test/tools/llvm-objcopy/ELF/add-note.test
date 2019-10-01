@@ -1,0 +1,36 @@
+# Verify that --add-section can be used to add a note section which is
+# successfully interpreted by tools that read notes.
+
+# Add [namesz, descsz, type, name, desc] for a build id.
+# RUN: echo -e -n "\x04\x00\x00\x00" >  %t-note.bin
+# RUN: echo -e -n "\x10\x00\x00\x00" >> %t-note.bin
+# RUN: echo -e -n "\x03\x00\x00\x00" >> %t-note.bin
+# RUN: echo -e -n "GNU\x00"          >> %t-note.bin
+# RUN: echo -e -n "\x00\x01\x02\x03" >> %t-note.bin
+# RUN: echo -e -n "\x04\x05\x06\x07" >> %t-note.bin
+# RUN: echo -e -n "\x08\x09\x0a\x0b" >> %t-note.bin
+# RUN: echo -e -n "\x0c\x0d\x0e\x0f" >> %t-note.bin
+
+# RUN: yaml2obj %s > %t.o
+# RUN: llvm-objcopy --add-section=.note.gnu.build-id=%t-note.bin %t.o %t-with-note.o
+# RUN: llvm-readobj --notes %t-with-note.o | FileCheck %s
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+
+# CHECK:      Notes [
+# CHECK-NEXT:   NoteSection {
+# CHECK-NEXT:     Offset:
+# CHECK-NEXT:     Size:
+# CHECK-NEXT:     Note {
+# CHECK-NEXT:       Owner: GNU
+# CHECK-NEXT:       Data size: 0x10
+# CHECK-NEXT:       Type: NT_GNU_BUILD_ID
+# CHECK-NEXT:       Build ID: 000102030405060708090a0b0c0d0e0f
+# CHECK-NEXT:     }
+# CHECK-NEXT:   }
+# CHECK-NEXT: ]

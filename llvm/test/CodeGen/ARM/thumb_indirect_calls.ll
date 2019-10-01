@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=thumbv4t-eabi %s -o - | FileCheck ---check-prefix=CHECK -check-prefix=CHECK-V4T %s
-; RUN: llc -mtriple=thumbv5t-eabi %s -o - | FileCheck ---check-prefix=CHECK -check-prefix=CHECK-V5T %s
+; RUN: llc -mtriple=thumbv4t-eabi %s -o - | FileCheck --check-prefix=CHECK -check-prefix=CHECK-V4T %s
+; RUN: llc -mtriple=thumbv5t-eabi %s -o - | FileCheck --check-prefix=CHECK -check-prefix=CHECK-V5T %s
 
 @f = common global void (i32)* null, align 4
 

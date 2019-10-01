@@ -1,9 +1,8 @@
 //===-- CoalesceBranches.cpp - Coalesce blocks with the same condition ---===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -33,10 +32,6 @@ using namespace llvm;
 STATISTIC(NumBlocksCoalesced, "Number of blocks coalesced");
 STATISTIC(NumPHINotMoved, "Number of PHI Nodes that cannot be merged");
 STATISTIC(NumBlocksNotCoalesced, "Number of blocks not coalesced");
-
-namespace llvm {
-    void initializePPCBranchCoalescingPass(PassRegistry&);
-}
 
 //===----------------------------------------------------------------------===//
 //                               PPCBranchCoalescing

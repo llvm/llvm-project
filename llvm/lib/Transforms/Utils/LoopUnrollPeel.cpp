@@ -1,9 +1,8 @@
 //===- UnrollLoopPeel.cpp - Loop peeling utilities ------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -645,7 +644,7 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
     if (LatchInst && L->contains(LatchInst))
       NewVal = LVMap[LatchInst];
 
-    PHI->setIncomingValue(PHI->getBasicBlockIndex(NewPreHeader), NewVal);
+    PHI->setIncomingValueForBlock(NewPreHeader, NewVal);
   }
 
   // Adjust the branch weights on the loop exit.
@@ -665,16 +664,14 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
     LatchBR->setMetadata(LLVMContext::MD_prof, WeightNode);
   }
 
-  // If the loop is nested, we changed the parent loop, update SE.
-  if (Loop *ParentLoop = L->getParentLoop()) {
-    SE->forgetLoop(ParentLoop);
+  if (Loop *ParentLoop = L->getParentLoop())
+    L = ParentLoop;
 
-    // FIXME: Incrementally update loop-simplify
-    simplifyLoop(ParentLoop, DT, LI, SE, AC, PreserveLCSSA);
-  } else {
-    // FIXME: Incrementally update loop-simplify
-    simplifyLoop(L, DT, LI, SE, AC, PreserveLCSSA);
-  }
+  // We modified the loop, update SE.
+  SE->forgetTopmostLoop(L);
+
+  // FIXME: Incrementally update loop-simplify
+  simplifyLoop(L, DT, LI, SE, AC, nullptr, PreserveLCSSA);
 
   NumPeeled++;
 

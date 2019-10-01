@@ -24,35 +24,24 @@
 ; CHECK-NEXT:        .long   52
 ; CHECK-NEXT:        .long   52
 ; CHECK-NEXT:        .long   23
-; CHECK-NEXT:        .long   0                       # BTF_KIND_ARRAY(id = 1)
+; CHECK-NEXT:        .long   1                       # BTF_KIND_STRUCT(id = 1)
+; CHECK-NEXT:        .long   67108864                # 0x4000000
+; CHECK-NEXT:        .long   0
+; CHECK-NEXT:        .long   0                       # BTF_KIND_ARRAY(id = 2)
 ; CHECK-NEXT:        .long   50331648                # 0x3000000
 ; CHECK-NEXT:        .long   0
+; CHECK-NEXT:        .long   1
 ; CHECK-NEXT:        .long   3
-; CHECK-NEXT:        .long   2
 ; CHECK-NEXT:        .long   0
-; CHECK-NEXT:        .long   1                       # BTF_KIND_INT(id = 2)
+; CHECK-NEXT:        .long   3                       # BTF_KIND_INT(id = 3)
 ; CHECK-NEXT:        .long   16777216                # 0x1000000
 ; CHECK-NEXT:        .long   4
 ; CHECK-NEXT:        .long   32                      # 0x20
-; CHECK-NEXT:        .long   21                      # BTF_KIND_STRUCT(id = 3)
-; CHECK-NEXT:        .long   67108864                # 0x4000000
-; CHECK-NEXT:        .long   0
 ; CHECK-NEXT:        .byte   0                       # string offset=0
-; CHECK-NEXT:        .ascii  "__ARRAY_SIZE_TYPE__"   # string offset=1
+; CHECK-NEXT:        .byte   116                     # string offset=1
 ; CHECK-NEXT:        .byte   0
-; CHECK-NEXT:        .byte   116                     # string offset=21
+; CHECK-NEXT:        .ascii  "__ARRAY_SIZE_TYPE__"   # string offset=3
 ; CHECK-NEXT:        .byte   0
-; CHECK-NEXT:        .section        .BTF.ext,"",@progbits
-; CHECK-NEXT:        .short  60319                   # 0xeb9f
-; CHECK-NEXT:        .byte   1
-; CHECK-NEXT:        .byte   0
-; CHECK-NEXT:        .long   24
-; CHECK-NEXT:        .long   0
-; CHECK-NEXT:        .long   4
-; CHECK-NEXT:        .long   4
-; CHECK-NEXT:        .long   4
-; CHECK-NEXT:        .long   8                       # FuncInfo
-; CHECK-NEXT:        .long   16                      # LineInfo
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "a", scope: !2, file: !3, line: 2, type: !6, isLocal: false, isDefinition: true)

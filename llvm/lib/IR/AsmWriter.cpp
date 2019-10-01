@@ -1,9 +1,8 @@
 //===- AsmWriter.cpp - Printing LLVM as an assembly file ------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -36,7 +35,6 @@
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Comdat.h"
 #include "llvm/IR/Constant.h"
@@ -622,7 +620,10 @@ void TypePrinting::print(Type *Ty, raw_ostream &OS) {
   }
   case Type::VectorTyID: {
     VectorType *PTy = cast<VectorType>(Ty);
-    OS << "<" << PTy->getNumElements() << " x ";
+    OS << "<";
+    if (PTy->isScalable())
+      OS << "vscale x ";
+    OS << PTy->getNumElements() << " x ";
     print(PTy->getElementType(), OS);
     OS << '>';
     return;
@@ -998,9 +999,9 @@ void SlotTracker::processFunction() {
 
       // We allow direct calls to any llvm.foo function here, because the
       // target may not be linked into the optimizer.
-      if (auto CS = ImmutableCallSite(&I)) {
+      if (const auto *Call = dyn_cast<CallBase>(&I)) {
         // Add all the call attributes to the table.
-        AttributeSet Attrs = CS.getAttributes().getFnAttributes();
+        AttributeSet Attrs = Call->getAttributes().getFnAttributes();
         if (Attrs.hasAttributes())
           CreateAttributeSetSlot(Attrs);
       }
@@ -2003,6 +2004,19 @@ static void writeDINamespace(raw_ostream &Out, const DINamespace *N,
   Out << ")";
 }
 
+static void writeDICommonBlock(raw_ostream &Out, const DICommonBlock *N,
+                               TypePrinting *TypePrinter, SlotTracker *Machine,
+                               const Module *Context) {
+  Out << "!DICommonBlock(";
+  MDFieldPrinter Printer(Out, TypePrinter, Machine, Context);
+  Printer.printMetadata("scope", N->getRawScope(), false);
+  Printer.printMetadata("declaration", N->getRawDecl(), false);
+  Printer.printString("name", N->getName());
+  Printer.printMetadata("file", N->getRawFile());
+  Printer.printInt("line", N->getLineNo());
+  Out << ")";
+}
+
 static void writeDIMacro(raw_ostream &Out, const DIMacro *N,
                          TypePrinting *TypePrinter, SlotTracker *Machine,
                          const Module *Context) {
@@ -2125,8 +2139,13 @@ static void writeDIExpression(raw_ostream &Out, const DIExpression *N,
       assert(!OpStr.empty() && "Expected valid opcode");
 
       Out << FS << OpStr;
-      for (unsigned A = 0, AE = I->getNumArgs(); A != AE; ++A)
-        Out << FS << I->getArg(A);
+      if (I->getOp() == dwarf::DW_OP_LLVM_convert) {
+        Out << FS << I->getArg(0);
+        Out << FS << dwarf::AttributeEncodingString(I->getArg(1));
+      } else {
+        for (unsigned A = 0, AE = I->getNumArgs(); A != AE; ++A)
+          Out << FS << I->getArg(A);
+      }
     }
   } else {
     for (const auto &I : N->getElements())
@@ -2359,7 +2378,7 @@ public:
 
   void writeOperand(const Value *Op, bool PrintType);
   void writeParamOperand(const Value *Operand, AttributeSet Attrs);
-  void writeOperandBundles(ImmutableCallSite CS);
+  void writeOperandBundles(const CallBase *Call);
   void writeSyncScope(const LLVMContext &Context,
                       SyncScope::ID SSID);
   void writeAtomic(const LLVMContext &Context,
@@ -2510,15 +2529,15 @@ void AssemblyWriter::writeParamOperand(const Value *Operand,
   WriteAsOperandInternal(Out, Operand, &TypePrinter, &Machine, TheModule);
 }
 
-void AssemblyWriter::writeOperandBundles(ImmutableCallSite CS) {
-  if (!CS.hasOperandBundles())
+void AssemblyWriter::writeOperandBundles(const CallBase *Call) {
+  if (!Call->hasOperandBundles())
     return;
 
   Out << " [ ";
 
   bool FirstBundle = true;
-  for (unsigned i = 0, e = CS.getNumOperandBundles(); i != e; ++i) {
-    OperandBundleUse BU = CS.getOperandBundleAt(i);
+  for (unsigned i = 0, e = Call->getNumOperandBundles(); i != e; ++i) {
+    OperandBundleUse BU = Call->getOperandBundleAt(i);
 
     if (!FirstBundle)
       Out << ", ";
@@ -3025,6 +3044,7 @@ void AssemblyWriter::printSummary(const GlobalValueSummary &Summary) {
   Out << ", notEligibleToImport: " << GVFlags.NotEligibleToImport;
   Out << ", live: " << GVFlags.Live;
   Out << ", dsoLocal: " << GVFlags.DSOLocal;
+  Out << ", canAutoHide: " << GVFlags.CanAutoHide;
   Out << ")";
 
   if (Summary.getSummaryKind() == GlobalValueSummary::AliasKind)
@@ -3230,6 +3250,12 @@ void AssemblyWriter::printGlobal(const GlobalVariable *GV) {
     printEscapedString(GV->getSection(), Out);
     Out << '"';
   }
+  if (GV->hasPartition()) {
+    Out << ", partition \"";
+    printEscapedString(GV->getPartition(), Out);
+    Out << '"';
+  }
+
   maybePrintComdat(Out, *GV);
   if (GV->getAlignment())
     Out << ", align " << GV->getAlignment();
@@ -3279,6 +3305,12 @@ void AssemblyWriter::printIndirectSymbol(const GlobalIndirectSymbol *GIS) {
     Out << " <<NULL ALIASEE>>";
   } else {
     writeOperand(IS, !isa<ConstantExpr>(IS));
+  }
+
+  if (GIS->hasPartition()) {
+    Out << ", partition \"";
+    printEscapedString(GIS->getPartition(), Out);
+    Out << '"';
   }
 
   printInfoComment(*GIS);
@@ -3421,6 +3453,11 @@ void AssemblyWriter::printFunction(const Function *F) {
     printEscapedString(F->getSection(), Out);
     Out << '"';
   }
+  if (F->hasPartition()) {
+    Out << " partition \"";
+    printEscapedString(F->getPartition(), Out);
+    Out << '"';
+  }
   maybePrintComdat(Out, *F);
   if (F->getAlignment())
     Out << " align " << F->getAlignment();
@@ -3479,23 +3516,24 @@ void AssemblyWriter::printArgument(const Argument *Arg, AttributeSet Attrs) {
 
 /// printBasicBlock - This member is called for each basic block in a method.
 void AssemblyWriter::printBasicBlock(const BasicBlock *BB) {
+  bool IsEntryBlock = BB == &BB->getParent()->getEntryBlock();
   if (BB->hasName()) {              // Print out the label if it exists...
     Out << "\n";
     PrintLLVMName(Out, BB->getName(), LabelPrefix);
     Out << ':';
-  } else if (!BB->use_empty()) {      // Don't print block # of no uses...
-    Out << "\n; <label>:";
+  } else if (!IsEntryBlock) {
+    Out << "\n";
     int Slot = Machine.getLocalSlot(BB);
     if (Slot != -1)
       Out << Slot << ":";
     else
-      Out << "<badref>";
+      Out << "<badref>:";
   }
 
   if (!BB->getParent()) {
     Out.PadToColumn(50);
     Out << "; Error: Block without parent!";
-  } else if (BB != &BB->getParent()->getEntryBlock()) {  // Not the entry block?
+  } else if (!IsEntryBlock) {
     // Output predecessors for the block.
     Out.PadToColumn(50);
     Out << ";";
@@ -3838,6 +3876,51 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
     writeOperand(II->getNormalDest(), true);
     Out << " unwind ";
     writeOperand(II->getUnwindDest(), true);
+  } else if (const CallBrInst *CBI = dyn_cast<CallBrInst>(&I)) {
+    Operand = CBI->getCalledValue();
+    FunctionType *FTy = CBI->getFunctionType();
+    Type *RetTy = FTy->getReturnType();
+    const AttributeList &PAL = CBI->getAttributes();
+
+    // Print the calling convention being used.
+    if (CBI->getCallingConv() != CallingConv::C) {
+      Out << " ";
+      PrintCallingConv(CBI->getCallingConv(), Out);
+    }
+
+    if (PAL.hasAttributes(AttributeList::ReturnIndex))
+      Out << ' ' << PAL.getAsString(AttributeList::ReturnIndex);
+
+    // If possible, print out the short form of the callbr instruction. We can
+    // only do this if the first argument is a pointer to a nonvararg function,
+    // and if the return type is not a pointer to a function.
+    //
+    Out << ' ';
+    TypePrinter.print(FTy->isVarArg() ? FTy : RetTy, Out);
+    Out << ' ';
+    writeOperand(Operand, false);
+    Out << '(';
+    for (unsigned op = 0, Eop = CBI->getNumArgOperands(); op < Eop; ++op) {
+      if (op)
+        Out << ", ";
+      writeParamOperand(CBI->getArgOperand(op), PAL.getParamAttributes(op));
+    }
+
+    Out << ')';
+    if (PAL.hasAttributes(AttributeList::FunctionIndex))
+      Out << " #" << Machine.getAttributeGroupSlot(PAL.getFnAttributes());
+
+    writeOperandBundles(CBI);
+
+    Out << "\n          to ";
+    writeOperand(CBI->getDefaultDest(), true);
+    Out << " [";
+    for (unsigned i = 0, e = CBI->getNumIndirectDests(); i != e; ++i) {
+      if (i != 0)
+        Out << ", ";
+      writeOperand(CBI->getIndirectDest(i), true);
+    }
+    Out << ']';
   } else if (const AllocaInst *AI = dyn_cast<AllocaInst>(&I)) {
     Out << ' ';
     if (AI->isUsedWithInAlloca())

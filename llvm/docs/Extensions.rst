@@ -285,6 +285,26 @@ The following directives are specified:
     The paramter identifies an additional library search path to be considered
     when looking up libraries after the inclusion of this option.
 
+``SHT_LLVM_DEPENDENT_LIBRARIES`` Section (Dependent Libraries)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This section contains strings specifying libraries to be added to the link by
+the linker.
+
+The section should be consumed by the linker and not written to the output.
+
+The strings are encoded as standard null-terminated UTF-8 strings.
+
+For example:
+
+.. code-block:: gas
+
+  .section ".deplibs","MS",@llvm_dependent_libraries,1
+  .asciz "library specifier 1"
+  .asciz "library specifier 2"
+
+The interpretation of the library specifiers is defined by the consuming linker.
+
 ``SHT_LLVM_CALL_GRAPH_PROFILE`` Section (Call Graph Profile)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -358,6 +378,22 @@ this directive, all symbols are considered address-significant.
   .addrsig_sym sym
 
 This marks ``sym`` as address-significant.
+
+``SHT_LLVM_SYMPART`` Section (symbol partition specification)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This section is used to mark symbols with the `partition`_ that they
+belong to. An ``.llvm_sympart`` section consists of a null-terminated string
+specifying the name of the partition followed by a relocation referring to
+the symbol that belongs to the partition. It may be constructed as follows:
+
+.. code-block:: gas
+
+  .section ".llvm_sympart","",@llvm_sympart
+  .asciz "libpartition.so"
+  .word symbol_in_partition
+
+.. _partition: https://lld.llvm.org/Partitions.html
 
 CodeView-Dependent
 ------------------

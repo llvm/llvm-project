@@ -1,9 +1,8 @@
 //===-- NVPTXISelDAGToDAG.cpp - A dag to dag inst selector for NVPTX ------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -13,6 +12,7 @@
 
 #include "NVPTXISelDAGToDAG.h"
 #include "NVPTXUtilities.h"
+#include "MCTargetDesc/NVPTXBaseInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Instructions.h"
@@ -702,11 +702,11 @@ static bool canLowerToLDG(MemSDNode *N, const NVPTXSubtarget &Subtarget,
   // We use GetUnderlyingObjects() here instead of GetUnderlyingObject() mainly
   // because the former looks through phi nodes while the latter does not. We
   // need to look through phi nodes to handle pointer induction variables.
-  SmallVector<Value *, 8> Objs;
-  GetUnderlyingObjects(const_cast<Value *>(N->getMemOperand()->getValue()),
+  SmallVector<const Value *, 8> Objs;
+  GetUnderlyingObjects(N->getMemOperand()->getValue(),
                        Objs, F->getDataLayout());
 
-  return all_of(Objs, [&](Value *V) {
+  return all_of(Objs, [&](const Value *V) {
     if (auto *A = dyn_cast<const Argument>(V))
       return IsKernelFn && A->onlyReadsMemory() && A->hasNoAliasAttr();
     if (auto *GV = dyn_cast<const GlobalVariable>(V))

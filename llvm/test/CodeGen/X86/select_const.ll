@@ -193,9 +193,8 @@ define i32 @select_C_Cplus1_zeroext(i1 zeroext %cond) {
 define i32 @select_C_Cplus1_signext(i1 signext %cond) {
 ; CHECK-LABEL: select_C_Cplus1_signext:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andl $1, %edi
-; CHECK-NEXT:    movl $42, %eax
-; CHECK-NEXT:    subl %edi, %eax
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    leal 42(%rdi), %eax
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, i32 41, i32 42
   ret i32 %sel
@@ -329,9 +328,9 @@ define i32 @sel_neg1_1_32(i32 %x) {
 define i8 @select_pow2_diff(i1 zeroext %cond) {
 ; CHECK-LABEL: select_pow2_diff:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    shlb $4, %al
-; CHECK-NEXT:    orb $3, %al
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    shlb $4, %dil
+; CHECK-NEXT:    leal 3(%rdi), %eax
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, i8 19, i8 3
@@ -354,9 +353,9 @@ define i16 @select_pow2_diff_invert(i1 zeroext %cond) {
 define i32 @select_pow2_diff_neg(i1 zeroext %cond) {
 ; CHECK-LABEL: select_pow2_diff_neg:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    shlb $4, %dil
-; CHECK-NEXT:    movzbl %dil, %eax
-; CHECK-NEXT:    orl $-25, %eax
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    shll $4, %edi
+; CHECK-NEXT:    leal -25(%rdi), %eax
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, i32 -9, i32 -25
   ret i32 %sel
@@ -380,11 +379,10 @@ define i8 @sel_67_neg125(i32 %x) {
 ; CHECK-LABEL: sel_67_neg125:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cmpl $42, %edi
-; CHECK-NEXT:    movb $67, %al
-; CHECK-NEXT:    jg .LBB31_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    movb $-125, %al
-; CHECK-NEXT:  .LBB31_2:
+; CHECK-NEXT:    movl $67, %ecx
+; CHECK-NEXT:    movl $131, %eax
+; CHECK-NEXT:    cmovgl %ecx, %eax
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
   %cmp = icmp sgt i32 %x, 42
   %sel = select i1 %cmp, i8 67, i8 -125

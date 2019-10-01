@@ -29,4 +29,5 @@ if.end:                                           ; preds = %if.else, %if.then
 
 ; CHECK:      @foo
 ; CHECK:      if.end: ; preds = %if.else, %if.then
-; CHECK-NEXT:   %.sink = phi {{.*}} !dbg
+; CHECK-NEXT:   %.sink = phi {{.*}} !dbg ![[DBG:[0-9]+]]
+; CHECK: ![[DBG]] = !DILocation(line: 0,

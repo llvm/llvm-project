@@ -7,6 +7,8 @@ declare half @llvm.aarch64.neon.frsqrts.f16(half, half)
 declare half @llvm.aarch64.neon.frecps.f16(half, half)
 declare half @llvm.aarch64.neon.fmulx.f16(half, half)
 declare half @llvm.fabs.f16(half)
+declare i32 @llvm.aarch64.neon.facge.i32.f16(half, half)
+declare i32 @llvm.aarch64.neon.facgt.i32.f16(half, half)
 
 define dso_local half @t_vabdh_f16(half %a, half %b) {
 ; CHECK-LABEL: t_vabdh_f16:
@@ -317,4 +319,36 @@ define dso_local i32 @test_vcvth_n_u32_f16_16(half %a) {
 entry:
   %vcvth_n_u32_f16 = tail call i32 @llvm.aarch64.neon.vcvtfp2fxu.i32.f16(half %a, i32 16)
   ret i32 %vcvth_n_u32_f16
+}
+
+define dso_local i16 @vcageh_f16_test(half %a, half %b) {
+; CHECK-LABEL: vcageh_f16_test:
+; CHECK:        facge   h0, h0, h1
+; CHECK-NEXT:   fmov    w0, s0
+; CHECK-NEXT:   ret
+entry:
+  %facg = tail call i32 @llvm.aarch64.neon.facge.i32.f16(half %a, half %b)
+  %0 = trunc i32 %facg to i16
+  ret i16 %0
+}
+
+define dso_local i16 @vcagth_f16_test(half %a, half %b) {
+; CHECK-LABEL: vcagth_f16_test:
+; CHECK:        facgt   h0, h0, h1
+; CHECK-NEXT:   fmov    w0, s0
+; CHECK-NEXT:   ret
+entry:
+  %facg = tail call i32 @llvm.aarch64.neon.facgt.i32.f16(half %a, half %b)
+  %0 = trunc i32 %facg to i16
+  ret i16 %0
+}
+
+define dso_local half @vcvth_n_f16_s64_test(i64 %a) {
+; CHECK-LABEL: vcvth_n_f16_s64_test:
+; CHECK:       fmov    d0, x0
+; CHECK-NEXT:  scvtf   h0, h0, #16
+; CHECK-NEXT:  ret
+entry:
+  %vcvth_n_f16_s64 = tail call half @llvm.aarch64.neon.vcvtfxs2fp.f16.i64(i64 %a, i32 16)
+  ret half %vcvth_n_f16_s64
 }

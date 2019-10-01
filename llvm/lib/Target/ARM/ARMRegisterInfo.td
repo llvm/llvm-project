@@ -1,9 +1,8 @@
 //===-- ARMRegisterInfo.td - ARM Register defs -------------*- tablegen -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -14,7 +13,8 @@ include "ARMSystemRegister.td"
 //===----------------------------------------------------------------------===//
 
 // Registers are identified with 4-bit ID numbers.
-class ARMReg<bits<16> Enc, string n, list<Register> subregs = []> : Register<n> {
+class ARMReg<bits<16> Enc, string n, list<Register> subregs = [],
+             list<string> altNames = []> : Register<n, altNames> {
   let HWEncoding = Enc;
   let Namespace = "ARM";
   let SubRegs = subregs;
@@ -25,6 +25,11 @@ class ARMReg<bits<16> Enc, string n, list<Register> subregs = []> : Register<n> 
 class ARMFReg<bits<16> Enc, string n> : Register<n> {
   let HWEncoding = Enc;
   let Namespace = "ARM";
+}
+
+let Namespace = "ARM",
+    FallbackRegAltNameIndex = NoRegAltName in {
+  def RegNamesRaw : RegAltNameIndex;
 }
 
 // Subregister indices.
@@ -84,9 +89,11 @@ def R9  : ARMReg< 9, "r9">,  DwarfRegNum<[9]>;
 def R10 : ARMReg<10, "r10">, DwarfRegNum<[10]>;
 def R11 : ARMReg<11, "r11">, DwarfRegNum<[11]>;
 def R12 : ARMReg<12, "r12">, DwarfRegNum<[12]>;
-def SP  : ARMReg<13, "sp">,  DwarfRegNum<[13]>;
-def LR  : ARMReg<14, "lr">,  DwarfRegNum<[14]>;
-def PC  : ARMReg<15, "pc">,  DwarfRegNum<[15]>;
+let RegAltNameIndices = [RegNamesRaw] in {
+def SP  : ARMReg<13, "sp", [], ["r13"]>,  DwarfRegNum<[13]>;
+def LR  : ARMReg<14, "lr", [], ["r14"]>,  DwarfRegNum<[14]>;
+def PC  : ARMReg<15, "pc", [], ["r15"]>,  DwarfRegNum<[15]>;
+}
 }
 
 // Float registers
@@ -190,6 +197,17 @@ def MVFR0   : ARMReg<7,  "mvfr0">;
 def FPEXC   : ARMReg<8,  "fpexc">;
 def FPINST  : ARMReg<9,  "fpinst">;
 def FPINST2 : ARMReg<10, "fpinst2">;
+// These encodings aren't actual instruction encodings, their encoding depends
+// on the instruction they are used in and for VPR 32 was chosen such that it
+// always comes last in spr_reglist_with_vpr.
+def VPR     : ARMReg<32, "vpr">;
+def FPSCR_NZCVQC
+            : ARMReg<2, "fpscr_nzcvqc">;
+def P0      : ARMReg<13, "p0">;
+def FPCXTNS : ARMReg<14, "fpcxtns">;
+def FPCXTS  : ARMReg<15, "fpcxts">;
+
+def ZR  : ARMReg<15, "zr">,  DwarfRegNum<[15]>;
 
 // Register classes.
 //
@@ -238,6 +256,21 @@ def GPRwithAPSR : RegisterClass<"ARM", [i32], 32, (add (sub GPR, PC), APSR_NZCV)
   let DiagnosticString = "operand must be a register in range [r0, r14] or apsr_nzcv";
 }
 
+// GPRs without the PC and SP registers but with APSR. Used by CLRM instruction.
+def GPRwithAPSRnosp : RegisterClass<"ARM", [i32], 32, (add (sequence "R%u", 0, 12), LR, APSR)> {
+  let isAllocatable = 0;
+}
+
+def GPRwithZR : RegisterClass<"ARM", [i32], 32, (add (sequence "R%u", 0, 12),
+                                              LR, ZR)> {
+
+  let AltOrders = [(add LR, GPRwithZR), (trunc GPRwithZR, 8)];
+  let AltOrderSelect = [{
+      return 1 + MF.getSubtarget<ARMSubtarget>().isThumb1Only();
+  }];
+  let DiagnosticString = "operand must be a register in range [r0, r12] or r14 or zr";
+}
+
 // GPRsp - Only the SP is legal. Used by Thumb1 instructions that want the
 // implied SP argument list.
 // FIXME: It would be better to not use this at all and refactor the
@@ -247,12 +280,25 @@ def GPRsp : RegisterClass<"ARM", [i32], 32, (add SP)> {
   let DiagnosticString = "operand must be a register sp";
 }
 
+// GPRlr - Only LR is legal. Used by ARMv8.1-M Low Overhead Loop instructions
+// where LR is the only legal loop counter register.
+def GPRlr : RegisterClass<"ARM", [i32], 32, (add LR)>;
+
 // restricted GPR register class. Many Thumb2 instructions allow the full
 // register range for operands, but have undefined behaviours when PC
 // or SP (R13 or R15) are used. The ARM ISA refers to these operands
 // via the BadReg() pseudo-code description.
 def rGPR : RegisterClass<"ARM", [i32], 32, (sub GPR, SP, PC)> {
   let AltOrders = [(add LR, rGPR), (trunc rGPR, 8)];
+  let AltOrderSelect = [{
+      return 1 + MF.getSubtarget<ARMSubtarget>().isThumb1Only();
+  }];
+  let DiagnosticType = "rGPR";
+}
+
+// t2rGPR : All Thumb 2 registers with the exception of SP and PC.
+def t2rGPR : RegisterClass<"ARM", [i32], 32, (sub GPR, SP, PC)> {
+  let AltOrders = [(add LR, t2rGPR), (trunc t2rGPR, 8)];
   let AltOrderSelect = [{
       return 1 + MF.getSubtarget<ARMSubtarget>().isThumb1Only();
   }];
@@ -285,11 +331,34 @@ def tcGPR : RegisterClass<"ARM", [i32], 32, (add R0, R1, R2, R3, R12)> {
   }];
 }
 
+def tGPROdd : RegisterClass<"ARM", [i32], 32, (add R1, R3, R5, R7, R9, R11)> {
+  let AltOrders = [(and tGPROdd, tGPR)];
+  let AltOrderSelect = [{
+      return MF.getSubtarget<ARMSubtarget>().isThumb1Only();
+  }];
+}
+
+def tGPREven : RegisterClass<"ARM", [i32], 32, (add R0, R2, R4, R6, R8, R10, R12, LR)> {
+  let AltOrders = [(and tGPREven, tGPR)];
+  let AltOrderSelect = [{
+      return MF.getSubtarget<ARMSubtarget>().isThumb1Only();
+  }];
+}
+
 // Condition code registers.
 def CCR : RegisterClass<"ARM", [i32], 32, (add CPSR)> {
   let CopyCost = -1;  // Don't allow copying of status registers.
   let isAllocatable = 0;
 }
+
+// MVE Condition code register.
+def VCCR : RegisterClass<"ARM", [i32, v16i1, v8i1, v4i1], 32, (add VPR)> {
+//  let CopyCost = -1;  // Don't allow copying of status registers.
+}
+
+// FPSCR, when the flags at the top of it are used as the input or
+// output to an instruction such as MVE VADC.
+def cl_FPSCR_NZCV : RegisterClass<"ARM", [i32], 32, (add FPSCR_NZCV)>;
 
 // Scalar single precision floating point register class..
 // FIXME: Allocation order changed to s0, s2, ... or s0, s4, ... as a quick hack
@@ -302,7 +371,7 @@ def SPR : RegisterClass<"ARM", [f32], 32, (sequence "S%u", 0, 31)> {
                         (decimate (rotl SPR, 1), 4),
                         (decimate (rotl SPR, 1), 2))];
   let AltOrderSelect = [{
-    return 1 + MF.getSubtarget<ARMSubtarget>().useStride4VFPs(MF);
+    return 1 + MF.getSubtarget<ARMSubtarget>().useStride4VFPs();
   }];
   let DiagnosticString = "operand must be a register in range [s0, s31]";
 }
@@ -314,7 +383,7 @@ def HPR : RegisterClass<"ARM", [f16], 32, (sequence "S%u", 0, 31)> {
                         (decimate (rotl HPR, 1), 4),
                         (decimate (rotl HPR, 1), 2))];
   let AltOrderSelect = [{
-    return 1 + MF.getSubtarget<ARMSubtarget>().useStride4VFPs(MF);
+    return 1 + MF.getSubtarget<ARMSubtarget>().useStride4VFPs();
   }];
   let DiagnosticString = "operand must be a register in range [s0, s31]";
 }
@@ -336,9 +405,16 @@ def DPR : RegisterClass<"ARM", [f64, v8i8, v4i16, v2i32, v1i64, v2f32, v4f16], 6
   let AltOrders = [(rotl DPR, 16),
                    (add (decimate (rotl DPR, 16), 2), (rotl DPR, 16))];
   let AltOrderSelect = [{
-    return 1 + MF.getSubtarget<ARMSubtarget>().useStride4VFPs(MF);
+    return 1 + MF.getSubtarget<ARMSubtarget>().useStride4VFPs();
   }];
   let DiagnosticType = "DPR";
+}
+
+// Scalar single and double precision floating point and VPR register class,
+// this is only used for parsing, don't use it anywhere else as the size and
+// types don't match!
+def FPWithVPR : RegisterClass<"ARM", [f32], 32, (add SPR, DPR, VPR)> {
+    let isAllocatable = 0;
 }
 
 // Subset of DPR that are accessible with VFP2 (and so that also have
@@ -359,8 +435,10 @@ def DPR_8 : RegisterClass<"ARM", [f64, v8i8, v4i16, v2i32, v1i64, v2f32, v4f16],
 def QPR : RegisterClass<"ARM", [v16i8, v8i16, v4i32, v2i64, v4f32, v2f64, v8f16], 128,
                         (sequence "Q%u", 0, 15)> {
   // Allocate non-VFP2 aliases Q8-Q15 first.
-  let AltOrders = [(rotl QPR, 8)];
-  let AltOrderSelect = [{ return 1; }];
+  let AltOrders = [(rotl QPR, 8), (trunc QPR, 8)];
+  let AltOrderSelect = [{
+    return 1 + MF.getSubtarget<ARMSubtarget>().hasMVEIntegerOps();
+  }];
   let DiagnosticString = "operand must be a register in range [q0, q15]";
 }
 
@@ -375,6 +453,12 @@ def QPR_8 : RegisterClass<"ARM", [v16i8, v8i16, v4i32, v2i64, v4f32, v2f64],
                            128, (trunc QPR, 4)> {
   let DiagnosticString = "operand must be a register in range [q0, q3]";
 }
+
+// MVE 128-bit vector register class. This class is only really needed for
+// parsing assembly, since we still have to truncate the register set in the QPR
+// class anyway.
+def MQPR : RegisterClass<"ARM", [v16i8, v8i16, v4i32, v2i64, v4f32, v2f64, v8f16],
+                         128, (trunc QPR, 8)>;
 
 // Pseudo-registers representing odd-even pairs of D registers. The even-odd
 // pairs are already represented by the Q registers.

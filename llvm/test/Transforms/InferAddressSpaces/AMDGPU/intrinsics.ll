@@ -81,8 +81,8 @@ define i64 @atomicdec_group_to_flat_i64(i64 addrspace(3)* %group.ptr, i64 %y) #0
 }
 
 ; CHECK-LABEL: @volatile_atomicinc_group_to_flat_i64(
-; CHECK-NEXT: %1 = addrspacecast i64 addrspace(3)* %group.ptr to i64*
-; CHECK-NEXT: %ret = call i64 @llvm.amdgcn.atomic.inc.i64.p0i64(i64* %1, i64 %y, i32 0, i32 0, i1 true)
+; CHECK-NEXT: %cast = addrspacecast i64 addrspace(3)* %group.ptr to i64*
+; CHECK-NEXT: %ret = call i64 @llvm.amdgcn.atomic.inc.i64.p0i64(i64* %cast, i64 %y, i32 0, i32 0, i1 true)
 define i64 @volatile_atomicinc_group_to_flat_i64(i64 addrspace(3)* %group.ptr, i64 %y) #0 {
   %cast = addrspacecast i64 addrspace(3)* %group.ptr to i64*
   %ret = call i64 @llvm.amdgcn.atomic.inc.i64.p0i64(i64* %cast, i64 %y, i32 0, i32 0, i1 true)
@@ -90,8 +90,8 @@ define i64 @volatile_atomicinc_group_to_flat_i64(i64 addrspace(3)* %group.ptr, i
 }
 
 ; CHECK-LABEL: @volatile_atomicdec_global_to_flat_i32(
-; CHECK-NEXT: %1 = addrspacecast i32 addrspace(1)* %global.ptr to i32*
-; CHECK-NEXT: %ret = call i32 @llvm.amdgcn.atomic.dec.i32.p0i32(i32* %1, i32 %val, i32 0, i32 0, i1 true)
+; CHECK-NEXT: %cast = addrspacecast i32 addrspace(1)* %global.ptr to i32*
+; CHECK-NEXT: %ret = call i32 @llvm.amdgcn.atomic.dec.i32.p0i32(i32* %cast, i32 %val, i32 0, i32 0, i1 true)
 define i32 @volatile_atomicdec_global_to_flat_i32(i32 addrspace(1)* %global.ptr, i32 %val) #0 {
   %cast = addrspacecast i32 addrspace(1)* %global.ptr to i32*
   %ret = call i32 @llvm.amdgcn.atomic.dec.i32.p0i32(i32* %cast, i32 %val, i32 0, i32 0, i1 true)
@@ -99,8 +99,8 @@ define i32 @volatile_atomicdec_global_to_flat_i32(i32 addrspace(1)* %global.ptr,
 }
 
 ; CHECK-LABEL: @volatile_atomicdec_group_to_flat_i32(
-; CHECK-NEXT: %1 = addrspacecast i32 addrspace(3)* %group.ptr to i32*
-; CHECK-NEXT: %ret = call i32 @llvm.amdgcn.atomic.dec.i32.p0i32(i32* %1, i32 %val, i32 0, i32 0, i1 true)
+; CHECK-NEXT: %cast = addrspacecast i32 addrspace(3)* %group.ptr to i32*
+; CHECK-NEXT: %ret = call i32 @llvm.amdgcn.atomic.dec.i32.p0i32(i32* %cast, i32 %val, i32 0, i32 0, i1 true)
 define i32 @volatile_atomicdec_group_to_flat_i32(i32 addrspace(3)* %group.ptr, i32 %val) #0 {
   %cast = addrspacecast i32 addrspace(3)* %group.ptr to i32*
   %ret = call i32 @llvm.amdgcn.atomic.dec.i32.p0i32(i32* %cast, i32 %val, i32 0, i32 0, i1 true)
@@ -108,8 +108,8 @@ define i32 @volatile_atomicdec_group_to_flat_i32(i32 addrspace(3)* %group.ptr, i
 }
 
 ; CHECK-LABEL: @volatile_atomicdec_global_to_flat_i64(
-; CHECK-NEXT: %1 = addrspacecast i64 addrspace(1)* %global.ptr to i64*
-; CHECK-NEXT: %ret = call i64 @llvm.amdgcn.atomic.dec.i64.p0i64(i64* %1, i64 %y, i32 0, i32 0, i1 true)
+; CHECK-NEXT: %cast = addrspacecast i64 addrspace(1)* %global.ptr to i64*
+; CHECK-NEXT: %ret = call i64 @llvm.amdgcn.atomic.dec.i64.p0i64(i64* %cast, i64 %y, i32 0, i32 0, i1 true)
 define i64 @volatile_atomicdec_global_to_flat_i64(i64 addrspace(1)* %global.ptr, i64 %y) #0 {
   %cast = addrspacecast i64 addrspace(1)* %global.ptr to i64*
   %ret = call i64 @llvm.amdgcn.atomic.dec.i64.p0i64(i64* %cast, i64 %y, i32 0, i32 0, i1 true)
@@ -117,20 +117,11 @@ define i64 @volatile_atomicdec_global_to_flat_i64(i64 addrspace(1)* %global.ptr,
 }
 
 ; CHECK-LABEL: @volatile_atomicdec_group_to_flat_i64(
-; CHECK-NEXT: %1 = addrspacecast i64 addrspace(3)* %group.ptr to i64*
-; CHECK-NEXT: %ret = call i64 @llvm.amdgcn.atomic.dec.i64.p0i64(i64* %1, i64 %y, i32 0, i32 0, i1 true)
+; CHECK-NEXT: %cast = addrspacecast i64 addrspace(3)* %group.ptr to i64*
+; CHECK-NEXT: %ret = call i64 @llvm.amdgcn.atomic.dec.i64.p0i64(i64* %cast, i64 %y, i32 0, i32 0, i1 true)
 define i64 @volatile_atomicdec_group_to_flat_i64(i64 addrspace(3)* %group.ptr, i64 %y) #0 {
   %cast = addrspacecast i64 addrspace(3)* %group.ptr to i64*
   %ret = call i64 @llvm.amdgcn.atomic.dec.i64.p0i64(i64* %cast, i64 %y, i32 0, i32 0, i1 true)
-  ret i64 %ret
-}
-
-; CHECK-LABEL: @invalid_variable_volatile_atomicinc_group_to_flat_i64(
-; CHECK-NEXT: %1 = addrspacecast i64 addrspace(3)* %group.ptr to i64*
-; CHECK-NEXT: %ret = call i64 @llvm.amdgcn.atomic.inc.i64.p0i64(i64* %1, i64 %y, i32 0, i32 0, i1 %volatile.var)
-define i64 @invalid_variable_volatile_atomicinc_group_to_flat_i64(i64 addrspace(3)* %group.ptr, i64 %y, i1 %volatile.var) #0 {
-  %cast = addrspacecast i64 addrspace(3)* %group.ptr to i64*
-  %ret = call i64 @llvm.amdgcn.atomic.inc.i64.p0i64(i64* %cast, i64 %y, i32 0, i32 0, i1 %volatile.var)
   ret i64 %ret
 }
 

@@ -1,0 +1,107 @@
+## Check how llvm-readobj/llvm-readelf tools dump the flags of SHT_GNU_verneed
+## section entries.
+
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-readobj -V %t | FileCheck %s --check-prefix=LLVM-VERDEF
+# RUN: llvm-readelf -V %t | FileCheck %s --check-prefix=GNU-VERDEF
+
+# LLVM-VERDEF:      SHT_GNU_verneed {
+# LLVM-VERDEF-NEXT:   Dependency {
+# LLVM-VERDEF-NEXT:     Version: 1
+# LLVM-VERDEF-NEXT:     Count: 6
+# LLVM-VERDEF-NEXT:     FileName: dso.so.0
+# LLVM-VERDEF-NEXT:     Entries [
+# LLVM-VERDEF-NEXT:       Entry {
+# LLVM-VERDEF-NEXT:         Hash: 0
+# LLVM-VERDEF-NEXT:         Flags: Base (0x1)
+# LLVM-VERDEF-NEXT:         Index: 0
+# LLVM-VERDEF-NEXT:         Name: base
+# LLVM-VERDEF-NEXT:       }
+# LLVM-VERDEF-NEXT:       Entry {
+# LLVM-VERDEF-NEXT:         Hash: 0
+# LLVM-VERDEF-NEXT:         Flags: Weak (0x2)
+# LLVM-VERDEF-NEXT:         Index: 0
+# LLVM-VERDEF-NEXT:         Name: weak
+# LLVM-VERDEF-NEXT:       }
+# LLVM-VERDEF-NEXT:       Entry {
+# LLVM-VERDEF-NEXT:         Hash: 0
+# LLVM-VERDEF-NEXT:         Flags: Info (0x4)
+# LLVM-VERDEF-NEXT:         Index: 0
+# LLVM-VERDEF-NEXT:         Name: info
+# LLVM-VERDEF-NEXT:       }
+# LLVM-VERDEF-NEXT:       Entry {
+# LLVM-VERDEF-NEXT:         Hash: 0
+# LLVM-VERDEF-NEXT:         Flags: 0x7
+# LLVM-VERDEF-NEXT:         Index: 0
+# LLVM-VERDEF-NEXT:         Name: all
+# LLVM-VERDEF-NEXT:       }
+# LLVM-VERDEF-NEXT:       Entry {
+# LLVM-VERDEF-NEXT:         Hash: 0
+# LLVM-VERDEF-NEXT:         Flags: 0x8
+# LLVM-VERDEF-NEXT:         Index: 0
+# LLVM-VERDEF-NEXT:         Name: unknown
+# LLVM-VERDEF-NEXT:       }
+# LLVM-VERDEF-NEXT:       Entry {
+# LLVM-VERDEF-NEXT:         Hash: 0
+# LLVM-VERDEF-NEXT:         Flags: 0xF
+# LLVM-VERDEF-NEXT:         Index: 0
+# LLVM-VERDEF-NEXT:         Name: all_and_unknown
+# LLVM-VERDEF-NEXT:       }
+# LLVM-VERDEF-NEXT:     ]
+# LLVM-VERDEF-NEXT:   }
+# LLVM-VERDEF-NEXT: }
+
+# GNU-VERDEF:      Version needs section '.gnu.version_r' contains 1 entries:
+# GNU-VERDEF-NEXT:  Addr: 0000000000000000  Offset: 0x000200  Link: 6 (.dynstr)
+# GNU-VERDEF-NEXT:   0x0000: Version: 1  File: dso.so.0  Cnt: 6
+# GNU-VERDEF-NEXT:   0x0010:   Name: base  Flags: BASE  Version: 0
+# GNU-VERDEF-NEXT:   0x0020:   Name: weak  Flags: WEAK  Version: 0
+# GNU-VERDEF-NEXT:   0x0030:   Name: info  Flags: INFO  Version: 0
+# GNU-VERDEF-NEXT:   0x0040:   Name: all  Flags: BASE | WEAK | INFO  Version: 0
+# GNU-VERDEF-NEXT:   0x0050:   Name: unknown  Flags: <unknown>  Version: 0
+# GNU-VERDEF-NEXT:   0x0060:   Name: all_and_unknown  Flags: BASE | WEAK | INFO | <unknown>  Version: 0
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+  Entry:           0x0000000000201000
+Sections:
+  - Name:            .gnu.version_r
+    Type:            SHT_GNU_verneed
+    Link:            .dynstr
+    Info:            0x0000000000000001
+    Dependencies:
+      - Version:         1
+        File:            dso.so.0
+        Entries:
+          - Name:            base
+            Hash:            0
+            Flags:           0x1
+            Other:           0
+          - Name:            weak
+            Hash:            0
+            Flags:           0x2
+            Other:           0
+          - Name:            info
+            Hash:            0
+            Flags:           0x4
+            Other:           0
+          - Name:            all
+            Hash:            0
+            Flags:           0x7
+            Other:           0
+          - Name:            unknown
+            Hash:            0
+            Flags:           0x8
+            Other:           0
+          - Name:            all_and_unknown
+            Hash:            0
+            Flags:           0xf
+            Other:           0
+## Needed to trigger .dynstr creation, which is required by .gnu.version_r
+DynamicSymbols:
+  - Name:    f1
+    Binding: STB_GLOBAL

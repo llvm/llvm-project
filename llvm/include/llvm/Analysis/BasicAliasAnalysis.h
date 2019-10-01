@@ -1,9 +1,8 @@
 //===- BasicAliasAnalysis.h - Stateless, local Alias Analysis ---*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 /// \file
@@ -21,7 +20,7 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/MemoryLocation.h"
-#include "llvm/IR/CallSite.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include <algorithm>
@@ -82,20 +81,24 @@ public:
   bool invalidate(Function &Fn, const PreservedAnalyses &PA,
                   FunctionAnalysisManager::Invalidator &Inv);
 
-  AliasResult alias(const MemoryLocation &LocA, const MemoryLocation &LocB);
+  AliasResult alias(const MemoryLocation &LocA, const MemoryLocation &LocB,
+                    AAQueryInfo &AAQI);
 
-  ModRefInfo getModRefInfo(ImmutableCallSite CS, const MemoryLocation &Loc);
+  ModRefInfo getModRefInfo(const CallBase *Call, const MemoryLocation &Loc,
+                           AAQueryInfo &AAQI);
 
-  ModRefInfo getModRefInfo(ImmutableCallSite CS1, ImmutableCallSite CS2);
+  ModRefInfo getModRefInfo(const CallBase *Call1, const CallBase *Call2,
+                           AAQueryInfo &AAQI);
 
   /// Chases pointers until we find a (constant global) or not.
-  bool pointsToConstantMemory(const MemoryLocation &Loc, bool OrLocal);
+  bool pointsToConstantMemory(const MemoryLocation &Loc, AAQueryInfo &AAQI,
+                              bool OrLocal);
 
   /// Get the location associated with a pointer argument of a callsite.
-  ModRefInfo getArgModRefInfo(ImmutableCallSite CS, unsigned ArgIdx);
+  ModRefInfo getArgModRefInfo(const CallBase *Call, unsigned ArgIdx);
 
   /// Returns the behavior when calling the given call site.
-  FunctionModRefBehavior getModRefBehavior(ImmutableCallSite CS);
+  FunctionModRefBehavior getModRefBehavior(const CallBase *Call);
 
   /// Returns the behavior when calling the given function. For use when the
   /// call site is not known.
@@ -140,11 +143,6 @@ private:
     // Scaled variable (non-constant) indices.
     SmallVector<VariableGEPIndex, 4> VarIndices;
   };
-
-  /// Track alias queries to guard against recursion.
-  using LocPair = std::pair<MemoryLocation, MemoryLocation>;
-  using AliasCacheTy = SmallDenseMap<LocPair, AliasResult, 8>;
-  AliasCacheTy AliasCache;
 
   /// Tracks phi nodes we have visited.
   ///
@@ -200,22 +198,24 @@ private:
   AliasResult aliasGEP(const GEPOperator *V1, LocationSize V1Size,
                        const AAMDNodes &V1AAInfo, const Value *V2,
                        LocationSize V2Size, const AAMDNodes &V2AAInfo,
-                       const Value *UnderlyingV1, const Value *UnderlyingV2);
+                       const Value *UnderlyingV1, const Value *UnderlyingV2,
+                       AAQueryInfo &AAQI);
 
   AliasResult aliasPHI(const PHINode *PN, LocationSize PNSize,
                        const AAMDNodes &PNAAInfo, const Value *V2,
                        LocationSize V2Size, const AAMDNodes &V2AAInfo,
-                       const Value *UnderV2);
+                       const Value *UnderV2, AAQueryInfo &AAQI);
 
   AliasResult aliasSelect(const SelectInst *SI, LocationSize SISize,
                           const AAMDNodes &SIAAInfo, const Value *V2,
                           LocationSize V2Size, const AAMDNodes &V2AAInfo,
-                          const Value *UnderV2);
+                          const Value *UnderV2, AAQueryInfo &AAQI);
 
   AliasResult aliasCheck(const Value *V1, LocationSize V1Size,
                          AAMDNodes V1AATag, const Value *V2,
                          LocationSize V2Size, AAMDNodes V2AATag,
-                         const Value *O1 = nullptr, const Value *O2 = nullptr);
+                         AAQueryInfo &AAQI, const Value *O1 = nullptr,
+                         const Value *O2 = nullptr);
 };
 
 /// Analysis pass providing a never-invalidated alias analysis result.

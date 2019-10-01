@@ -1,9 +1,8 @@
 //===-- ControlHeightReduction.cpp - Control Height Reduction -------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -547,19 +546,25 @@ static std::set<Value *> getBaseValues(Value *V,
 static bool
 checkHoistValue(Value *V, Instruction *InsertPoint, DominatorTree &DT,
                 DenseSet<Instruction *> &Unhoistables,
-                DenseSet<Instruction *> *HoistStops) {
+                DenseSet<Instruction *> *HoistStops,
+                DenseMap<Instruction *, bool> &Visited) {
   assert(InsertPoint && "Null InsertPoint");
   if (auto *I = dyn_cast<Instruction>(V)) {
+    if (Visited.count(I)) {
+      return Visited[I];
+    }
     assert(DT.getNode(I->getParent()) && "DT must contain I's parent block");
     assert(DT.getNode(InsertPoint->getParent()) && "DT must contain Destination");
     if (Unhoistables.count(I)) {
       // Don't hoist if they are not to be hoisted.
+      Visited[I] = false;
       return false;
     }
     if (DT.dominates(I, InsertPoint)) {
       // We are already above the insert point. Stop here.
       if (HoistStops)
         HoistStops->insert(I);
+      Visited[I] = true;
       return true;
     }
     // We aren't not above the insert point, check if we can hoist it above the
@@ -569,7 +574,8 @@ checkHoistValue(Value *V, Instruction *InsertPoint, DominatorTree &DT,
       DenseSet<Instruction *> OpsHoistStops;
       bool AllOpsHoisted = true;
       for (Value *Op : I->operands()) {
-        if (!checkHoistValue(Op, InsertPoint, DT, Unhoistables, &OpsHoistStops)) {
+        if (!checkHoistValue(Op, InsertPoint, DT, Unhoistables, &OpsHoistStops,
+                             Visited)) {
           AllOpsHoisted = false;
           break;
         }
@@ -578,9 +584,11 @@ checkHoistValue(Value *V, Instruction *InsertPoint, DominatorTree &DT,
         CHR_DEBUG(dbgs() << "checkHoistValue " << *I << "\n");
         if (HoistStops)
           HoistStops->insert(OpsHoistStops.begin(), OpsHoistStops.end());
+        Visited[I] = true;
         return true;
       }
     }
+    Visited[I] = false;
     return false;
   }
   // Non-instructions are considered hoistable.
@@ -893,8 +901,9 @@ void CHR::checkScopeHoistable(CHRScope *Scope) {
         ++it;
         continue;
       }
+      DenseMap<Instruction *, bool> Visited;
       bool IsHoistable = checkHoistValue(SI->getCondition(), InsertPoint,
-                                         DT, Unhoistables, nullptr);
+                                         DT, Unhoistables, nullptr, Visited);
       if (!IsHoistable) {
         CHR_DEBUG(dbgs() << "Dropping select " << *SI << "\n");
         ORE.emit([&]() {
@@ -913,8 +922,9 @@ void CHR::checkScopeHoistable(CHRScope *Scope) {
     InsertPoint = getBranchInsertPoint(RI);
     CHR_DEBUG(dbgs() << "InsertPoint " << *InsertPoint << "\n");
     if (RI.HasBranch && InsertPoint != Branch) {
+      DenseMap<Instruction *, bool> Visited;
       bool IsHoistable = checkHoistValue(Branch->getCondition(), InsertPoint,
-                                         DT, Unhoistables, nullptr);
+                                         DT, Unhoistables, nullptr, Visited);
       if (!IsHoistable) {
         // If the branch isn't hoistable, drop the selects in the entry
         // block, preferring the branch, which makes the branch the hoist
@@ -945,15 +955,17 @@ void CHR::checkScopeHoistable(CHRScope *Scope) {
     if (RI.HasBranch) {
       assert(!DT.dominates(Branch, InsertPoint) &&
              "Branch can't be already above the hoist point");
+      DenseMap<Instruction *, bool> Visited;
       assert(checkHoistValue(Branch->getCondition(), InsertPoint,
-                             DT, Unhoistables, nullptr) &&
+                             DT, Unhoistables, nullptr, Visited) &&
              "checkHoistValue for branch");
     }
     for (auto *SI : Selects) {
       assert(!DT.dominates(SI, InsertPoint) &&
              "SI can't be already above the hoist point");
+      DenseMap<Instruction *, bool> Visited;
       assert(checkHoistValue(SI->getCondition(), InsertPoint, DT,
-                             Unhoistables, nullptr) &&
+                             Unhoistables, nullptr, Visited) &&
              "checkHoistValue for selects");
     }
     CHR_DEBUG(dbgs() << "Result\n");
@@ -1054,7 +1066,8 @@ static bool shouldSplit(Instruction *InsertPoint,
   assert(InsertPoint && "Null InsertPoint");
   // If any of Bases isn't hoistable to the hoist point, split.
   for (Value *V : ConditionValues) {
-    if (!checkHoistValue(V, InsertPoint, DT, Unhoistables, nullptr)) {
+    DenseMap<Instruction *, bool> Visited;
+    if (!checkHoistValue(V, InsertPoint, DT, Unhoistables, nullptr, Visited)) {
       CHR_DEBUG(dbgs() << "Split. checkHoistValue false " << *V << "\n");
       return true; // Not hoistable, split.
     }
@@ -1383,8 +1396,9 @@ void CHR::setCHRRegions(CHRScope *Scope, CHRScope *OutermostScope) {
              "Must be truthy or falsy");
       auto *BI = cast<BranchInst>(R->getEntry()->getTerminator());
       // Note checkHoistValue fills in HoistStops.
+      DenseMap<Instruction *, bool> Visited;
       bool IsHoistable = checkHoistValue(BI->getCondition(), InsertPoint, DT,
-                                         Unhoistables, &HoistStops);
+                                         Unhoistables, &HoistStops, Visited);
       assert(IsHoistable && "Must be hoistable");
       (void)(IsHoistable);  // Unused in release build
       IsHoisted = true;
@@ -1394,8 +1408,9 @@ void CHR::setCHRRegions(CHRScope *Scope, CHRScope *OutermostScope) {
               OutermostScope->FalseBiasedSelects.count(SI) > 0) &&
              "Must be true or false biased");
       // Note checkHoistValue fills in HoistStops.
+      DenseMap<Instruction *, bool> Visited;
       bool IsHoistable = checkHoistValue(SI->getCondition(), InsertPoint, DT,
-                                         Unhoistables, &HoistStops);
+                                         Unhoistables, &HoistStops, Visited);
       assert(IsHoistable && "Must be hoistable");
       (void)(IsHoistable);  // Unused in release build
       IsHoisted = true;
@@ -1417,7 +1432,7 @@ void CHR::sortScopes(SmallVectorImpl<CHRScope *> &Input,
                      SmallVectorImpl<CHRScope *> &Output) {
   Output.resize(Input.size());
   llvm::copy(Input, Output.begin());
-  std::stable_sort(Output.begin(), Output.end(), CHRScopeSorter);
+  llvm::stable_sort(Output, CHRScopeSorter);
 }
 
 // Return true if V is already hoisted or was hoisted (along with its operands)
@@ -1425,7 +1440,8 @@ void CHR::sortScopes(SmallVectorImpl<CHRScope *> &Input,
 static void hoistValue(Value *V, Instruction *HoistPoint, Region *R,
                        HoistStopMapTy &HoistStopMap,
                        DenseSet<Instruction *> &HoistedSet,
-                       DenseSet<PHINode *> &TrivialPHIs) {
+                       DenseSet<PHINode *> &TrivialPHIs,
+                       DominatorTree &DT) {
   auto IT = HoistStopMap.find(R);
   assert(IT != HoistStopMap.end() && "Region must be in hoist stop map");
   DenseSet<Instruction *> &HoistStops = IT->second;
@@ -1445,8 +1461,21 @@ static void hoistValue(Value *V, Instruction *HoistPoint, Region *R,
       // Already hoisted, return.
       return;
     assert(isHoistableInstructionType(I) && "Unhoistable instruction type");
+    assert(DT.getNode(I->getParent()) && "DT must contain I's block");
+    assert(DT.getNode(HoistPoint->getParent()) &&
+           "DT must contain HoistPoint block");
+    if (DT.dominates(I, HoistPoint))
+      // We are already above the hoist point. Stop here. This may be necessary
+      // when multiple scopes would independently hoist the same
+      // instruction. Since an outer (dominating) scope would hoist it to its
+      // entry before an inner (dominated) scope would to its entry, the inner
+      // scope may see the instruction already hoisted, in which case it
+      // potentially wrong for the inner scope to hoist it and could cause bad
+      // IR (non-dominating def), but safe to skip hoisting it instead because
+      // it's already in a block that dominates the inner scope.
+      return;
     for (Value *Op : I->operands()) {
-      hoistValue(Op, HoistPoint, R, HoistStopMap, HoistedSet, TrivialPHIs);
+      hoistValue(Op, HoistPoint, R, HoistStopMap, HoistedSet, TrivialPHIs, DT);
     }
     I->moveBefore(HoistPoint);
     HoistedSet.insert(I);
@@ -1457,7 +1486,8 @@ static void hoistValue(Value *V, Instruction *HoistPoint, Region *R,
 // Hoist the dependent condition values of the branches and the selects in the
 // scope to the insert point.
 static void hoistScopeConditions(CHRScope *Scope, Instruction *HoistPoint,
-                                 DenseSet<PHINode *> &TrivialPHIs) {
+                                 DenseSet<PHINode *> &TrivialPHIs,
+                                 DominatorTree &DT) {
   DenseSet<Instruction *> HoistedSet;
   for (const RegInfo &RI : Scope->CHRRegions) {
     Region *R = RI.R;
@@ -1466,7 +1496,7 @@ static void hoistScopeConditions(CHRScope *Scope, Instruction *HoistPoint,
     if (RI.HasBranch && (IsTrueBiased || IsFalseBiased)) {
       auto *BI = cast<BranchInst>(R->getEntry()->getTerminator());
       hoistValue(BI->getCondition(), HoistPoint, R, Scope->HoistStopMap,
-                 HoistedSet, TrivialPHIs);
+                 HoistedSet, TrivialPHIs, DT);
     }
     for (SelectInst *SI : RI.Selects) {
       bool IsTrueBiased = Scope->TrueBiasedSelects.count(SI);
@@ -1474,7 +1504,7 @@ static void hoistScopeConditions(CHRScope *Scope, Instruction *HoistPoint,
       if (!(IsTrueBiased || IsFalseBiased))
         continue;
       hoistValue(SI->getCondition(), HoistPoint, R, Scope->HoistStopMap,
-                 HoistedSet, TrivialPHIs);
+                 HoistedSet, TrivialPHIs, DT);
     }
   }
 }
@@ -1708,7 +1738,7 @@ void CHR::transformScopes(CHRScope *Scope, DenseSet<PHINode *> &TrivialPHIs) {
 #endif
 
   // Hoist the conditional values of the branches/selects.
-  hoistScopeConditions(Scope, PreEntryBlock->getTerminator(), TrivialPHIs);
+  hoistScopeConditions(Scope, PreEntryBlock->getTerminator(), TrivialPHIs, DT);
 
 #ifndef NDEBUG
   assertBranchOrSelectConditionHoisted(Scope, PreEntryBlock);

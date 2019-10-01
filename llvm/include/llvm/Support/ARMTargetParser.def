@@ -1,9 +1,8 @@
 //===- ARMTargetParser.def - ARM target parsing defines ---------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -32,6 +31,8 @@ ARM_FPU("fpv4-sp-d16", FK_FPV4_SP_D16, FPUVersion::VFPV4, NeonSupportLevel::None
 ARM_FPU("fpv5-d16", FK_FPV5_D16, FPUVersion::VFPV5, NeonSupportLevel::None, FPURestriction::D16)
 ARM_FPU("fpv5-sp-d16", FK_FPV5_SP_D16, FPUVersion::VFPV5, NeonSupportLevel::None, FPURestriction::SP_D16)
 ARM_FPU("fp-armv8", FK_FP_ARMV8, FPUVersion::VFPV5, NeonSupportLevel::None, FPURestriction::None)
+ARM_FPU("fp-armv8-fullfp16-d16", FK_FP_ARMV8_FULLFP16_D16, FPUVersion::VFPV5_FULLFP16, NeonSupportLevel::None, FPURestriction::D16)
+ARM_FPU("fp-armv8-fullfp16-sp-d16", FK_FP_ARMV8_FULLFP16_SP_D16, FPUVersion::VFPV5_FULLFP16, NeonSupportLevel::None, FPURestriction::SP_D16)
 ARM_FPU("neon", FK_NEON, FPUVersion::VFPV3, NeonSupportLevel::Neon, FPURestriction::None)
 ARM_FPU("neon-fp16", FK_NEON_FP16, FPUVersion::VFPV3_FP16, NeonSupportLevel::Neon, FPURestriction::None)
 ARM_FPU("neon-vfpv4", FK_NEON_VFPV4, FPUVersion::VFPV4, NeonSupportLevel::Neon, FPURestriction::None)
@@ -119,6 +120,8 @@ ARM_ARCH("armv8-m.base", ARMV8MBaseline, "8-M.Baseline", "v8m.base",
           ARMBuildAttrs::CPUArch::v8_M_Base, FK_NONE, ARM::AEK_HWDIVTHUMB)
 ARM_ARCH("armv8-m.main", ARMV8MMainline, "8-M.Mainline", "v8m.main",
           ARMBuildAttrs::CPUArch::v8_M_Main, FK_FPV5_D16, ARM::AEK_HWDIVTHUMB)
+ARM_ARCH("armv8.1-m.main", ARMV8_1MMainline, "8.1-M.Mainline", "v8.1m.main",
+          ARMBuildAttrs::CPUArch::v8_1_M_Main, FK_FP_ARMV8_FULLFP16_SP_D16, ARM::AEK_HWDIVTHUMB | ARM::AEK_RAS | ARM::AEK_LOB)
 // Non-standard Arch names.
 ARM_ARCH("iwmmxt", IWMMXT, "iwmmxt", "", ARMBuildAttrs::CPUArch::v5TE,
           FK_NONE, ARM::AEK_NONE)
@@ -145,6 +148,8 @@ ARM_ARCH_EXT_NAME("aes",      ARM::AEK_AES,      "+aes",   "-aes")
 ARM_ARCH_EXT_NAME("dotprod",  ARM::AEK_DOTPROD,  "+dotprod","-dotprod")
 ARM_ARCH_EXT_NAME("dsp",      ARM::AEK_DSP,      "+dsp",   "-dsp")
 ARM_ARCH_EXT_NAME("fp",       ARM::AEK_FP,       nullptr,  nullptr)
+ARM_ARCH_EXT_NAME("mve",      ARM::AEK_SIMD,     "+mve",   "-mve")
+ARM_ARCH_EXT_NAME("mve.fp",   (ARM::AEK_SIMD | ARM::AEK_FP), "+mve.fp", "-mve.fp")
 ARM_ARCH_EXT_NAME("idiv",     (ARM::AEK_HWDIVARM | ARM::AEK_HWDIVTHUMB), nullptr, nullptr)
 ARM_ARCH_EXT_NAME("mp",       ARM::AEK_MP,       nullptr,  nullptr)
 ARM_ARCH_EXT_NAME("simd",     ARM::AEK_SIMD,     nullptr,  nullptr)
@@ -159,6 +164,7 @@ ARM_ARCH_EXT_NAME("maverick", ARM::AEK_MAVERICK, nullptr,  nullptr)
 ARM_ARCH_EXT_NAME("xscale",   ARM::AEK_XSCALE,   nullptr,  nullptr)
 ARM_ARCH_EXT_NAME("fp16fml",  ARM::AEK_FP16FML,  "+fp16fml", "-fp16fml")
 ARM_ARCH_EXT_NAME("sb",       ARM::AEK_SB,       "+sb",      "-sb")
+ARM_ARCH_EXT_NAME("lob",      ARM::AEK_LOB,      "+lob",   "-lob")
 #undef ARM_ARCH_EXT_NAME
 
 #ifndef ARM_HW_DIV_NAME
@@ -252,6 +258,7 @@ ARM_CPU_NAME("cortex-m4", ARMV7EM, FK_FPV4_SP_D16, true, ARM::AEK_NONE)
 ARM_CPU_NAME("cortex-m7", ARMV7EM, FK_FPV5_D16, false, ARM::AEK_NONE)
 ARM_CPU_NAME("cortex-m23", ARMV8MBaseline, FK_NONE, false, ARM::AEK_NONE)
 ARM_CPU_NAME("cortex-m33", ARMV8MMainline, FK_FPV5_SP_D16, false, ARM::AEK_DSP)
+ARM_CPU_NAME("cortex-m35p", ARMV8MMainline, FK_FPV5_SP_D16, false, ARM::AEK_DSP)
 ARM_CPU_NAME("cortex-a32", ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false, ARM::AEK_CRC)
 ARM_CPU_NAME("cortex-a35", ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false, ARM::AEK_CRC)
 ARM_CPU_NAME("cortex-a53", ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false, ARM::AEK_CRC)
@@ -262,11 +269,18 @@ ARM_CPU_NAME("cortex-a72", ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false, ARM::AEK_CRC)
 ARM_CPU_NAME("cortex-a73", ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false, ARM::AEK_CRC)
 ARM_CPU_NAME("cortex-a75", ARMV8_2A, FK_CRYPTO_NEON_FP_ARMV8, false,
             (ARM::AEK_FP16 | ARM::AEK_DOTPROD))
+ARM_CPU_NAME("cortex-a76", ARMV8_2A, FK_CRYPTO_NEON_FP_ARMV8, false,
+            (ARM::AEK_FP16 | ARM::AEK_DOTPROD))
+ARM_CPU_NAME("cortex-a76ae", ARMV8_2A, FK_CRYPTO_NEON_FP_ARMV8, false,
+            (ARM::AEK_FP16 | ARM::AEK_DOTPROD))
 ARM_CPU_NAME("cyclone", ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false, ARM::AEK_CRC)
 ARM_CPU_NAME("exynos-m1", ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false, ARM::AEK_CRC)
 ARM_CPU_NAME("exynos-m2", ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false, ARM::AEK_CRC)
 ARM_CPU_NAME("exynos-m3", ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false, ARM::AEK_CRC)
-ARM_CPU_NAME("exynos-m4", ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false, ARM::AEK_CRC)
+ARM_CPU_NAME("exynos-m4", ARMV8_2A, FK_CRYPTO_NEON_FP_ARMV8, false,
+             (ARM::AEK_FP16 | ARM::AEK_DOTPROD))
+ARM_CPU_NAME("exynos-m5", ARMV8_2A, FK_CRYPTO_NEON_FP_ARMV8, false,
+             (ARM::AEK_FP16 | ARM::AEK_DOTPROD))
 ARM_CPU_NAME("kryo", ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false, ARM::AEK_CRC)
 // Non-standard Arch names.
 ARM_CPU_NAME("iwmmxt", IWMMXT, FK_NONE, true, ARM::AEK_NONE)

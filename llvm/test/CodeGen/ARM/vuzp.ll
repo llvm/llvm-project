@@ -270,11 +270,10 @@ define <8 x i16> @vuzp_lower_shufflemask_undef(<4 x i16>* %A, <4 x i16>* %B) {
 ; CHECK-LABEL: vuzp_lower_shufflemask_undef:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldr d17, [r1]
-; CHECK-NEXT:    vldr d16, [r0]
-; CHECK-NEXT:    vorr q9, q8, q8
-; CHECK-NEXT:    vuzp.16 q8, q9
-; CHECK-NEXT:    vmov r0, r1, d18
-; CHECK-NEXT:    vmov r2, r3, d19
+; CHECK-NEXT:    vldr d18, [r0]
+; CHECK-NEXT:    vuzp.16 d18, d17
+; CHECK-NEXT:    vmov r0, r1, d16
+; CHECK-NEXT:    vmov r2, r3, d17
 ; CHECK-NEXT:    mov pc, lr
 entry:
 	%tmp1 = load <4 x i16>, <4 x i16>* %A
@@ -286,13 +285,13 @@ entry:
 define <4 x i32> @vuzp_lower_shufflemask_zeroed(<2 x i32>* %A, <2 x i32>* %B) {
 ; CHECK-LABEL: vuzp_lower_shufflemask_zeroed:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vldr d18, [r0]
+; CHECK-NEXT:    vorr d19, d18, d18
 ; CHECK-NEXT:    vldr d17, [r1]
-; CHECK-NEXT:    vldr d16, [r0]
-; CHECK-NEXT:    vdup.32 q9, d16[0]
-; CHECK-NEXT:    vuzp.32 q8, q9
-; CHECK-NEXT:    vext.32 q8, q9, q9, #2
-; CHECK-NEXT:    vmov r0, r1, d16
+; CHECK-NEXT:    vtrn.32 d19, d17
+; CHECK-NEXT:    vdup.32 d16, d18[0]
 ; CHECK-NEXT:    vmov r2, r3, d17
+; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    mov pc, lr
 entry:
   %tmp1 = load <2 x i32>, <2 x i32>* %A
@@ -304,11 +303,10 @@ entry:
 define void @vuzp_rev_shufflemask_vtrn(<2 x i32>* %A, <2 x i32>* %B, <4 x i32>* %C) {
 ; CHECK-LABEL: vuzp_rev_shufflemask_vtrn:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldr d17, [r1]
-; CHECK-NEXT:    vldr d16, [r0]
-; CHECK-NEXT:    vrev64.32 q9, q8
-; CHECK-NEXT:    vuzp.32 q8, q9
-; CHECK-NEXT:    vst1.64 {d18, d19}, [r2]
+; CHECK-NEXT:    vldr d16, [r1]
+; CHECK-NEXT:    vldr d17, [r0]
+; CHECK-NEXT:    vtrn.32 d17, d16
+; CHECK-NEXT:    vst1.64 {d16, d17}, [r2]
 ; CHECK-NEXT:    mov pc, lr
 entry:
   %tmp1 = load <2 x i32>, <2 x i32>* %A

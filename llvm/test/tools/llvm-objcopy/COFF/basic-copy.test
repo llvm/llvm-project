@@ -40,3 +40,9 @@ RUN: llvm-objcopy %t.x86_64.exe %t.x86_64-copy.exe
 RUN: obj2yaml %t.x86_64.exe > %t.x86_64.exe.yaml
 RUN: obj2yaml %t.x86_64-copy.exe > %t.x86_64-copy.exe.yaml
 RUN: cmp %t.x86_64.exe.yaml %t.x86_64-copy.exe.yaml
+
+RUN: yaml2obj %p/Inputs/no-symbols.yaml > %t.no-symbols.o
+RUN: llvm-objcopy %t.no-symbols.o %t.no-symbols-copy.o
+RUN: obj2yaml %t.no-symbols.o > %t.no-symbols.o.yaml
+RUN: obj2yaml %t.no-symbols-copy.o > %t.no-symbols-copy.o.yaml
+RUN: cmp %t.no-symbols.o.yaml %t.no-symbols-copy.o.yaml

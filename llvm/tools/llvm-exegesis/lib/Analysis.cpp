@@ -1,9 +1,8 @@
 //===-- Analysis.cpp --------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -20,16 +19,6 @@ namespace llvm {
 namespace exegesis {
 
 static const char kCsvSep = ',';
-
-static unsigned resolveSchedClassId(const llvm::MCSubtargetInfo &STI,
-                                    unsigned SchedClassId,
-                                    const llvm::MCInst &MCI) {
-  const auto &SM = STI.getSchedModel();
-  while (SchedClassId && SM.getSchedClassDesc(SchedClassId)->isVariant())
-    SchedClassId =
-        STI.resolveVariantSchedClass(SchedClassId, &MCI, SM.getProcessorID());
-  return SchedClassId;
-}
 
 namespace {
 
@@ -150,10 +139,10 @@ void Analysis::printInstructionRowCsv(const size_t PointId,
   writeEscaped<kEscapeCsv>(OS, Point.Key.Config);
   OS << kCsvSep;
   assert(!Point.Key.Instructions.empty());
-  const llvm::MCInst &MCI = Point.Key.Instructions[0];
-  const unsigned SchedClassId = resolveSchedClassId(
-      *SubtargetInfo_, InstrInfo_->get(MCI.getOpcode()).getSchedClass(), MCI);
-
+  const llvm::MCInst &MCI = Point.keyInstruction();
+  unsigned SchedClassId;
+  std::tie(SchedClassId, std::ignore) = ResolvedSchedClass::resolveSchedClassId(
+      *SubtargetInfo_, *InstrInfo_, MCI);
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   const llvm::MCSchedClassDesc *const SCDesc =
       SubtargetInfo_->getSchedModel().getSchedClassDesc(SchedClassId);
@@ -169,13 +158,18 @@ void Analysis::printInstructionRowCsv(const size_t PointId,
 }
 
 Analysis::Analysis(const llvm::Target &Target,
-                   const InstructionBenchmarkClustering &Clustering)
-    : Clustering_(Clustering) {
+                   std::unique_ptr<llvm::MCInstrInfo> InstrInfo,
+                   const InstructionBenchmarkClustering &Clustering,
+                   double AnalysisInconsistencyEpsilon,
+                   bool AnalysisDisplayUnstableOpcodes)
+    : Clustering_(Clustering), InstrInfo_(std::move(InstrInfo)),
+      AnalysisInconsistencyEpsilonSquared_(AnalysisInconsistencyEpsilon *
+                                           AnalysisInconsistencyEpsilon),
+      AnalysisDisplayUnstableOpcodes_(AnalysisDisplayUnstableOpcodes) {
   if (Clustering.getPoints().empty())
     return;
 
   const InstructionBenchmark &FirstPoint = Clustering.getPoints().front();
-  InstrInfo_.reset(Target.createMCInstrInfo());
   RegInfo_.reset(Target.createMCRegInfo(FirstPoint.LLVMTriple));
   AsmInfo_.reset(Target.createMCAsmInfo(*RegInfo_, FirstPoint.LLVMTriple));
   SubtargetInfo_.reset(Target.createMCSubtargetInfo(FirstPoint.LLVMTriple,
@@ -234,12 +228,12 @@ Analysis::makePointsPerSchedClass() const {
     assert(!Point.Key.Instructions.empty());
     // FIXME: we should be using the tuple of classes for instructions in the
     // snippet as key.
-    const llvm::MCInst &MCI = Point.Key.Instructions[0];
-    unsigned SchedClassId = InstrInfo_->get(MCI.getOpcode()).getSchedClass();
-    const bool WasVariant = SchedClassId && SubtargetInfo_->getSchedModel()
-                                                .getSchedClassDesc(SchedClassId)
-                                                ->isVariant();
-    SchedClassId = resolveSchedClassId(*SubtargetInfo_, SchedClassId, MCI);
+    const llvm::MCInst &MCI = Point.keyInstruction();
+    unsigned SchedClassId;
+    bool WasVariant;
+    std::tie(SchedClassId, WasVariant) =
+        ResolvedSchedClass::resolveSchedClassId(*SubtargetInfo_, *InstrInfo_,
+                                                MCI);
     const auto IndexIt = SchedClassIdToIndex.find(SchedClassId);
     if (IndexIt == SchedClassIdToIndex.end()) {
       // Create a new entry.
@@ -300,7 +294,8 @@ void Analysis::printSchedClassClustersHtml(
   OS << "</tr>";
   for (const SchedClassCluster &Cluster : Clusters) {
     OS << "<tr class=\""
-       << (Cluster.measurementsMatch(*SubtargetInfo_, RSC, Clustering_)
+       << (Cluster.measurementsMatch(*SubtargetInfo_, RSC, Clustering_,
+                                     AnalysisInconsistencyEpsilonSquared_)
                ? "good-cluster"
                : "bad-cluster")
        << "\"><td>";
@@ -317,6 +312,7 @@ void Analysis::printSchedClassClustersHtml(
         writeLatencySnippetHtml(OS, Point.Key.Instructions, *InstrInfo_);
         break;
       case InstructionBenchmark::Uops:
+      case InstructionBenchmark::InverseThroughput:
         writeUopsSnippetHtml(OS, Point.Key.Instructions, *InstrInfo_);
         break;
       default:
@@ -327,7 +323,7 @@ void Analysis::printSchedClassClustersHtml(
       OS << "</span></li>";
     }
     OS << "</ul></td>";
-    for (const auto &Stats : Cluster.getRepresentative()) {
+    for (const auto &Stats : Cluster.getCentroid().getStats()) {
       OS << "<td class=\"measurement\">";
       writeMeasurementValue<kEscapeHtml>(OS, Stats.avg());
       OS << "<br><span class=\"minmax\">[";
@@ -341,188 +337,49 @@ void Analysis::printSchedClassClustersHtml(
   OS << "</table>";
 }
 
-// Return the non-redundant list of WriteProcRes used by the given sched class.
-// The scheduling model for LLVM is such that each instruction has a certain
-// number of uops which consume resources which are described by WriteProcRes
-// entries. Each entry describe how many cycles are spent on a specific ProcRes
-// kind.
-// For example, an instruction might have 3 uOps, one dispatching on P0
-// (ProcResIdx=1) and two on P06 (ProcResIdx = 7).
-// Note that LLVM additionally denormalizes resource consumption to include
-// usage of super resources by subresources. So in practice if there exists a
-// P016 (ProcResIdx=10), then the cycles consumed by P0 are also consumed by
-// P06 (ProcResIdx = 7) and P016 (ProcResIdx = 10), and the resources consumed
-// by P06 are also consumed by P016. In the figure below, parenthesized cycles
-// denote implied usage of superresources by subresources:
-//            P0      P06    P016
-//     uOp1    1      (1)     (1)
-//     uOp2            1      (1)
-//     uOp3            1      (1)
-//     =============================
-//             1       3       3
-// Eventually we end up with three entries for the WriteProcRes of the
-// instruction:
-//    {ProcResIdx=1,  Cycles=1}  // P0
-//    {ProcResIdx=7,  Cycles=3}  // P06
-//    {ProcResIdx=10, Cycles=3}  // P016
-//
-// Note that in this case, P016 does not contribute any cycles, so it would
-// be removed by this function.
-// FIXME: Move this to MCSubtargetInfo and use it in llvm-mca.
-static llvm::SmallVector<llvm::MCWriteProcResEntry, 8>
-getNonRedundantWriteProcRes(const llvm::MCSchedClassDesc &SCDesc,
-                            const llvm::MCSubtargetInfo &STI) {
-  llvm::SmallVector<llvm::MCWriteProcResEntry, 8> Result;
-  const auto &SM = STI.getSchedModel();
-  const unsigned NumProcRes = SM.getNumProcResourceKinds();
-
-  // This assumes that the ProcResDescs are sorted in topological order, which
-  // is guaranteed by the tablegen backend.
-  llvm::SmallVector<float, 32> ProcResUnitUsage(NumProcRes);
-  for (const auto *WPR = STI.getWriteProcResBegin(&SCDesc),
-                  *const WPREnd = STI.getWriteProcResEnd(&SCDesc);
-       WPR != WPREnd; ++WPR) {
-    const llvm::MCProcResourceDesc *const ProcResDesc =
-        SM.getProcResource(WPR->ProcResourceIdx);
-    if (ProcResDesc->SubUnitsIdxBegin == nullptr) {
-      // This is a ProcResUnit.
-      Result.push_back({WPR->ProcResourceIdx, WPR->Cycles});
-      ProcResUnitUsage[WPR->ProcResourceIdx] += WPR->Cycles;
-    } else {
-      // This is a ProcResGroup. First see if it contributes any cycles or if
-      // it has cycles just from subunits.
-      float RemainingCycles = WPR->Cycles;
-      for (const auto *SubResIdx = ProcResDesc->SubUnitsIdxBegin;
-           SubResIdx != ProcResDesc->SubUnitsIdxBegin + ProcResDesc->NumUnits;
-           ++SubResIdx) {
-        RemainingCycles -= ProcResUnitUsage[*SubResIdx];
-      }
-      if (RemainingCycles < 0.01f) {
-        // The ProcResGroup contributes no cycles of its own.
-        continue;
-      }
-      // The ProcResGroup contributes `RemainingCycles` cycles of its own.
-      Result.push_back({WPR->ProcResourceIdx,
-                        static_cast<uint16_t>(std::round(RemainingCycles))});
-      // Spread the remaining cycles over all subunits.
-      for (const auto *SubResIdx = ProcResDesc->SubUnitsIdxBegin;
-           SubResIdx != ProcResDesc->SubUnitsIdxBegin + ProcResDesc->NumUnits;
-           ++SubResIdx) {
-        ProcResUnitUsage[*SubResIdx] += RemainingCycles / ProcResDesc->NumUnits;
-      }
-    }
-  }
-  return Result;
-}
-
-Analysis::ResolvedSchedClass::ResolvedSchedClass(
-    const llvm::MCSubtargetInfo &STI, unsigned ResolvedSchedClassId,
-    bool WasVariant)
-    : SchedClassId(ResolvedSchedClassId), SCDesc(STI.getSchedModel().getSchedClassDesc(ResolvedSchedClassId)),
-      WasVariant(WasVariant),
-      NonRedundantWriteProcRes(getNonRedundantWriteProcRes(*SCDesc, STI)),
-      IdealizedProcResPressure(computeIdealizedProcResPressure(
-          STI.getSchedModel(), NonRedundantWriteProcRes)) {
-  assert((SCDesc == nullptr || !SCDesc->isVariant()) &&
-         "ResolvedSchedClass should never be variant");
-}
-
 void Analysis::SchedClassCluster::addPoint(
     size_t PointId, const InstructionBenchmarkClustering &Clustering) {
   PointIds.push_back(PointId);
   const auto &Point = Clustering.getPoints()[PointId];
-  if (ClusterId.isUndef()) {
+  if (ClusterId.isUndef())
     ClusterId = Clustering.getClusterIdForPoint(PointId);
-    Representative.resize(Point.Measurements.size());
-  }
-  for (size_t I = 0, E = Point.Measurements.size(); I < E; ++I) {
-    Representative[I].push(Point.Measurements[I]);
-  }
   assert(ClusterId == Clustering.getClusterIdForPoint(PointId));
-}
 
-// Returns a ProxResIdx by id or name.
-static unsigned findProcResIdx(const llvm::MCSubtargetInfo &STI,
-                               const llvm::StringRef NameOrId) {
-  // Interpret the key as an ProcResIdx.
-  unsigned ProcResIdx = 0;
-  if (llvm::to_integer(NameOrId, ProcResIdx, 10))
-    return ProcResIdx;
-  // Interpret the key as a ProcRes name.
-  const auto &SchedModel = STI.getSchedModel();
-  for (int I = 0, E = SchedModel.getNumProcResourceKinds(); I < E; ++I) {
-    if (NameOrId == SchedModel.getProcResource(I)->Name)
-      return I;
-  }
-  return 0;
+  Centroid.addPoint(Point.Measurements);
 }
 
 bool Analysis::SchedClassCluster::measurementsMatch(
     const llvm::MCSubtargetInfo &STI, const ResolvedSchedClass &RSC,
-    const InstructionBenchmarkClustering &Clustering) const {
-  const size_t NumMeasurements = Representative.size();
-  std::vector<BenchmarkMeasure> ClusterCenterPoint(NumMeasurements);
-  std::vector<BenchmarkMeasure> SchedClassPoint(NumMeasurements);
-  // Latency case.
+    const InstructionBenchmarkClustering &Clustering,
+    const double AnalysisInconsistencyEpsilonSquared_) const {
   assert(!Clustering.getPoints().empty());
   const InstructionBenchmark::ModeE Mode = Clustering.getPoints()[0].Mode;
-  if (Mode == InstructionBenchmark::Latency) {
-    if (NumMeasurements != 1) {
-      llvm::errs()
-          << "invalid number of measurements in latency mode: expected 1, got "
-          << NumMeasurements << "\n";
-      return false;
-    }
-    // Find the latency.
-    SchedClassPoint[0].PerInstructionValue = 0.0;
-    for (unsigned I = 0; I < RSC.SCDesc->NumWriteLatencyEntries; ++I) {
-      const llvm::MCWriteLatencyEntry *const WLE =
-          STI.getWriteLatencyEntry(RSC.SCDesc, I);
-      SchedClassPoint[0].PerInstructionValue =
-          std::max<double>(SchedClassPoint[0].PerInstructionValue, WLE->Cycles);
-    }
-    ClusterCenterPoint[0].PerInstructionValue = Representative[0].avg();
-  } else if (Mode == InstructionBenchmark::Uops) {
-    for (int I = 0, E = Representative.size(); I < E; ++I) {
-      const auto Key = Representative[I].key();
-      uint16_t ProcResIdx = findProcResIdx(STI, Key);
-      if (ProcResIdx > 0) {
-        // Find the pressure on ProcResIdx `Key`.
-        const auto ProcResPressureIt =
-            std::find_if(RSC.IdealizedProcResPressure.begin(),
-                         RSC.IdealizedProcResPressure.end(),
-                         [ProcResIdx](const std::pair<uint16_t, float> &WPR) {
-                           return WPR.first == ProcResIdx;
-                         });
-        SchedClassPoint[I].PerInstructionValue =
-            ProcResPressureIt == RSC.IdealizedProcResPressure.end()
-                ? 0.0
-                : ProcResPressureIt->second;
-      } else if (Key == "NumMicroOps") {
-        SchedClassPoint[I].PerInstructionValue = RSC.SCDesc->NumMicroOps;
-      } else {
-        llvm::errs() << "expected `key` to be either a ProcResIdx or a ProcRes "
-                        "name, got "
-                     << Key << "\n";
-        return false;
-      }
-      ClusterCenterPoint[I].PerInstructionValue = Representative[I].avg();
-    }
-  } else {
-    llvm::errs() << "unimplemented measurement matching for mode " << Mode
-                 << "\n";
+
+  if (!Centroid.validate(Mode))
     return false;
-  }
-  return Clustering.isNeighbour(ClusterCenterPoint, SchedClassPoint);
+
+  const std::vector<BenchmarkMeasure> ClusterCenterPoint =
+      Centroid.getAsPoint();
+
+  const std::vector<BenchmarkMeasure> SchedClassPoint =
+      RSC.getAsPoint(Mode, STI, Centroid.getStats());
+  if (SchedClassPoint.empty())
+    return false; // In Uops mode validate() may not be enough.
+
+  assert(ClusterCenterPoint.size() == SchedClassPoint.size() &&
+         "Expected measured/sched data dimensions to match.");
+
+  return Clustering.isNeighbour(ClusterCenterPoint, SchedClassPoint,
+                                AnalysisInconsistencyEpsilonSquared_);
 }
 
 void Analysis::printSchedClassDescHtml(const ResolvedSchedClass &RSC,
                                        llvm::raw_ostream &OS) const {
   OS << "<table class=\"sched-class-desc\">";
   OS << "<tr><th>Valid</th><th>Variant</th><th>NumMicroOps</th><th>Latency</"
-        "th><th>WriteProcRes</th><th title=\"This is the idealized unit "
-        "resource (port) pressure assuming ideal distribution\">Idealized "
-        "Resource Pressure</th></tr>";
+        "th><th>RThroughput</th><th>WriteProcRes</th><th title=\"This is the "
+        "idealized unit resource (port) pressure assuming ideal "
+        "distribution\">Idealized Resource Pressure</th></tr>";
   if (RSC.SCDesc->isValid()) {
     const auto &SM = SubtargetInfo_->getSchedModel();
     OS << "<tr><td>&#10004;</td>";
@@ -541,6 +398,12 @@ void Analysis::printSchedClassDescHtml(const ResolvedSchedClass &RSC,
       OS << "</li>";
     }
     OS << "</ul></td>";
+    // inverse throughput.
+    OS << "<td>";
+    writeMeasurementValue<kEscapeHtml>(
+        OS,
+        MCSchedModel::getReciprocalThroughput(*SubtargetInfo_, *RSC.SCDesc));
+    OS << "</td>";
     // WriteProcRes.
     OS << "<td><ul>";
     for (const auto &WPR : RSC.NonRedundantWriteProcRes) {
@@ -657,6 +520,8 @@ llvm::Error Analysis::run<Analysis::PrintSchedClassInconsistencies>(
       const auto &ClusterId = Clustering_.getClusterIdForPoint(PointId);
       if (!ClusterId.isValid())
         continue; // Ignore noise and errors. FIXME: take noise into account ?
+      if (ClusterId.isUnstable() ^ AnalysisDisplayUnstableOpcodes_)
+        continue; // Either display stable or unstable clusters only.
       auto SchedClassClusterIt =
           std::find_if(SchedClassClusters.begin(), SchedClassClusters.end(),
                        [ClusterId](const SchedClassCluster &C) {
@@ -674,7 +539,8 @@ llvm::Error Analysis::run<Analysis::PrintSchedClassInconsistencies>(
     if (llvm::all_of(SchedClassClusters,
                      [this, &RSCAndPoints](const SchedClassCluster &C) {
                        return C.measurementsMatch(
-                           *SubtargetInfo_, RSCAndPoints.RSC, Clustering_);
+                           *SubtargetInfo_, RSCAndPoints.RSC, Clustering_,
+                           AnalysisInconsistencyEpsilonSquared_);
                      }))
       continue; // Nothing weird.
 
@@ -695,118 +561,6 @@ llvm::Error Analysis::run<Analysis::PrintSchedClassInconsistencies>(
 
   OS << "</body></html>";
   return llvm::Error::success();
-}
-
-// Distributes a pressure budget as evenly as possible on the provided subunits
-// given the already existing port pressure distribution.
-//
-// The algorithm is as follows: while there is remaining pressure to
-// distribute, find the subunits with minimal pressure, and distribute
-// remaining pressure equally up to the pressure of the unit with
-// second-to-minimal pressure.
-// For example, let's assume we want to distribute 2*P1256
-// (Subunits = [P1,P2,P5,P6]), and the starting DensePressure is:
-//     DensePressure =        P0   P1   P2   P3   P4   P5   P6   P7
-//                           0.1  0.3  0.2  0.0  0.0  0.5  0.5  0.5
-//     RemainingPressure = 2.0
-// We sort the subunits by pressure:
-//     Subunits = [(P2,p=0.2), (P1,p=0.3), (P5,p=0.5), (P6, p=0.5)]
-// We'll first start by the subunits with minimal pressure, which are at
-// the beginning of the sorted array. In this example there is one (P2).
-// The subunit with second-to-minimal pressure is the next one in the
-// array (P1). So we distribute 0.1 pressure to P2, and remove 0.1 cycles
-// from the budget.
-//     Subunits = [(P2,p=0.3), (P1,p=0.3), (P5,p=0.5), (P5,p=0.5)]
-//     RemainingPressure = 1.9
-// We repeat this process: distribute 0.2 pressure on each of the minimal
-// P2 and P1, decrease budget by 2*0.2:
-//     Subunits = [(P2,p=0.5), (P1,p=0.5), (P5,p=0.5), (P5,p=0.5)]
-//     RemainingPressure = 1.5
-// There are no second-to-minimal subunits so we just share the remaining
-// budget (1.5 cycles) equally:
-//     Subunits = [(P2,p=0.875), (P1,p=0.875), (P5,p=0.875), (P5,p=0.875)]
-//     RemainingPressure = 0.0
-// We stop as there is no remaining budget to distribute.
-void distributePressure(float RemainingPressure,
-                        llvm::SmallVector<uint16_t, 32> Subunits,
-                        llvm::SmallVector<float, 32> &DensePressure) {
-  // Find the number of subunits with minimal pressure (they are at the
-  // front).
-  llvm::sort(Subunits, [&DensePressure](const uint16_t A, const uint16_t B) {
-    return DensePressure[A] < DensePressure[B];
-  });
-  const auto getPressureForSubunit = [&DensePressure,
-                                      &Subunits](size_t I) -> float & {
-    return DensePressure[Subunits[I]];
-  };
-  size_t NumMinimalSU = 1;
-  while (NumMinimalSU < Subunits.size() &&
-         getPressureForSubunit(NumMinimalSU) == getPressureForSubunit(0)) {
-    ++NumMinimalSU;
-  }
-  while (RemainingPressure > 0.0f) {
-    if (NumMinimalSU == Subunits.size()) {
-      // All units are minimal, just distribute evenly and be done.
-      for (size_t I = 0; I < NumMinimalSU; ++I) {
-        getPressureForSubunit(I) += RemainingPressure / NumMinimalSU;
-      }
-      return;
-    }
-    // Distribute the remaining pressure equally.
-    const float MinimalPressure = getPressureForSubunit(NumMinimalSU - 1);
-    const float SecondToMinimalPressure = getPressureForSubunit(NumMinimalSU);
-    assert(MinimalPressure < SecondToMinimalPressure);
-    const float Increment = SecondToMinimalPressure - MinimalPressure;
-    if (RemainingPressure <= NumMinimalSU * Increment) {
-      // There is not enough remaining pressure.
-      for (size_t I = 0; I < NumMinimalSU; ++I) {
-        getPressureForSubunit(I) += RemainingPressure / NumMinimalSU;
-      }
-      return;
-    }
-    // Bump all minimal pressure subunits to `SecondToMinimalPressure`.
-    for (size_t I = 0; I < NumMinimalSU; ++I) {
-      getPressureForSubunit(I) = SecondToMinimalPressure;
-      RemainingPressure -= SecondToMinimalPressure;
-    }
-    while (NumMinimalSU < Subunits.size() &&
-           getPressureForSubunit(NumMinimalSU) == SecondToMinimalPressure) {
-      ++NumMinimalSU;
-    }
-  }
-}
-
-std::vector<std::pair<uint16_t, float>> computeIdealizedProcResPressure(
-    const llvm::MCSchedModel &SM,
-    llvm::SmallVector<llvm::MCWriteProcResEntry, 8> WPRS) {
-  // DensePressure[I] is the port pressure for Proc Resource I.
-  llvm::SmallVector<float, 32> DensePressure(SM.getNumProcResourceKinds());
-  llvm::sort(WPRS, [](const llvm::MCWriteProcResEntry &A,
-                      const llvm::MCWriteProcResEntry &B) {
-    return A.ProcResourceIdx < B.ProcResourceIdx;
-  });
-  for (const llvm::MCWriteProcResEntry &WPR : WPRS) {
-    // Get units for the entry.
-    const llvm::MCProcResourceDesc *const ProcResDesc =
-        SM.getProcResource(WPR.ProcResourceIdx);
-    if (ProcResDesc->SubUnitsIdxBegin == nullptr) {
-      // This is a ProcResUnit.
-      DensePressure[WPR.ProcResourceIdx] += WPR.Cycles;
-    } else {
-      // This is a ProcResGroup.
-      llvm::SmallVector<uint16_t, 32> Subunits(ProcResDesc->SubUnitsIdxBegin,
-                                               ProcResDesc->SubUnitsIdxBegin +
-                                                   ProcResDesc->NumUnits);
-      distributePressure(WPR.Cycles, Subunits, DensePressure);
-    }
-  }
-  // Turn dense pressure into sparse pressure by removing zero entries.
-  std::vector<std::pair<uint16_t, float>> Pressure;
-  for (unsigned I = 0, E = SM.getNumProcResourceKinds(); I < E; ++I) {
-    if (DensePressure[I] > 0.0f)
-      Pressure.emplace_back(I, DensePressure[I]);
-  }
-  return Pressure;
 }
 
 } // namespace exegesis

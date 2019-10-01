@@ -17,24 +17,20 @@ define i32 @main() nounwind {
 ; RV32IFD:       # %bb.0: # %entry
 ; RV32IFD-NEXT:    addi sp, sp, -16
 ; RV32IFD-NEXT:    sw ra, 12(sp)
-; RV32IFD-NEXT:    lui a0, %hi(.LCPI1_0)
-; RV32IFD-NEXT:    addi a0, a0, %lo(.LCPI1_0)
-; RV32IFD-NEXT:    fld ft0, 0(a0)
-; RV32IFD-NEXT:    fsd ft0, 0(sp)
-; RV32IFD-NEXT:    lw a0, 0(sp)
-; RV32IFD-NEXT:    lw a1, 4(sp)
+; RV32IFD-NEXT:    mv a0, zero
+; RV32IFD-NEXT:    lui a1, 262144
 ; RV32IFD-NEXT:    call test
-; RV32IFD-NEXT:    lui a2, %hi(.LCPI1_1)
-; RV32IFD-NEXT:    addi a2, a2, %lo(.LCPI1_1)
-; RV32IFD-NEXT:    fld ft1, 0(a2)
 ; RV32IFD-NEXT:    sw a0, 0(sp)
 ; RV32IFD-NEXT:    sw a1, 4(sp)
 ; RV32IFD-NEXT:    fld ft0, 0(sp)
+; RV32IFD-NEXT:    lui a0, %hi(.LCPI1_0)
+; RV32IFD-NEXT:    addi a0, a0, %lo(.LCPI1_0)
+; RV32IFD-NEXT:    fld ft1, 0(a0)
 ; RV32IFD-NEXT:    flt.d a0, ft0, ft1
 ; RV32IFD-NEXT:    bnez a0, .LBB1_3
 ; RV32IFD-NEXT:  # %bb.1: # %entry
-; RV32IFD-NEXT:    lui a0, %hi(.LCPI1_2)
-; RV32IFD-NEXT:    addi a0, a0, %lo(.LCPI1_2)
+; RV32IFD-NEXT:    lui a0, %hi(.LCPI1_1)
+; RV32IFD-NEXT:    addi a0, a0, %lo(.LCPI1_1)
 ; RV32IFD-NEXT:    fld ft1, 0(a0)
 ; RV32IFD-NEXT:    flt.d a0, ft1, ft0
 ; RV32IFD-NEXT:    xori a0, a0, 1

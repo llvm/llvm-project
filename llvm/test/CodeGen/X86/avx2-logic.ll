@@ -91,14 +91,12 @@ define <32 x i8> @vpblendvb(<32 x i1> %cond, <32 x i8> %x, <32 x i8> %y) {
 ; X32-LABEL: vpblendvb:
 ; X32:       # %bb.0:
 ; X32-NEXT:    vpsllw $7, %ymm0, %ymm0
-; X32-NEXT:    vpand {{\.LCPI.*}}, %ymm0, %ymm0
 ; X32-NEXT:    vpblendvb %ymm0, %ymm1, %ymm2, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: vpblendvb:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vpsllw $7, %ymm0, %ymm0
-; X64-NEXT:    vpand {{.*}}(%rip), %ymm0, %ymm0
 ; X64-NEXT:    vpblendvb %ymm0, %ymm1, %ymm2, %ymm0
 ; X64-NEXT:    retq
   %min = select <32 x i1> %cond, <32 x i8> %x, <32 x i8> %y

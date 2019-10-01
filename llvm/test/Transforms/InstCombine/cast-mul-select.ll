@@ -170,3 +170,12 @@ exit:
   unreachable
 }
 
+; Check that we don't drop debug info when a zext is removed.
+define i1 @foo(i1 zeroext %b) {
+; DBGINFO-LABEL: @foo(
+; DBGINFO-NEXT:  call void @llvm.dbg.value(metadata i1 %b
+; DBGINFO-NEXT:  ret i1 %b
+
+  %frombool = zext i1 %b to i8 
+  ret i1 %b
+}

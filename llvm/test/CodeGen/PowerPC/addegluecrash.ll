@@ -27,7 +27,6 @@ define void @bn_mul_comba8(i64* nocapture %r, i64* nocapture readonly %a, i64* n
 ; CHECK-NEXT:    mr 4, 10
 ; CHECK-NEXT:    clrldi 4, 4, 32
 ; CHECK-NEXT:    std 4, 0(3)
-; CHECK-NEXT:    std 6, -8(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    blr
   %1 = load i64, i64* %a, align 8
   %conv = zext i64 %1 to i128

@@ -1,9 +1,8 @@
 //===- TpiStreamBuilder.cpp -   -------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -77,7 +76,7 @@ Error TpiStreamBuilder::finalize() {
   H->HashStreamIndex = HashStreamIndex;
   H->HashAuxStreamIndex = kInvalidStreamIndex;
   H->HashKeySize = sizeof(ulittle32_t);
-  H->NumHashBuckets = MinTpiHashBuckets;
+  H->NumHashBuckets = MaxTpiHashBuckets - 1;
 
   // Recall that hash values go into a completely different stream identified by
   // the `HashStreamIndex` field of the `TpiStreamHeader`.  Therefore, the data
@@ -130,7 +129,7 @@ Error TpiStreamBuilder::finalizeMsfLayout() {
     ulittle32_t *H = Allocator.Allocate<ulittle32_t>(TypeHashes.size());
     MutableArrayRef<ulittle32_t> HashBuffer(H, TypeHashes.size());
     for (uint32_t I = 0; I < TypeHashes.size(); ++I) {
-      HashBuffer[I] = TypeHashes[I] % MinTpiHashBuckets;
+      HashBuffer[I] = TypeHashes[I] % (MaxTpiHashBuckets - 1);
     }
     ArrayRef<uint8_t> Bytes(
         reinterpret_cast<const uint8_t *>(HashBuffer.data()),
@@ -153,9 +152,12 @@ Error TpiStreamBuilder::commit(const msf::MSFLayout &Layout,
   if (auto EC = Writer.writeObject(*Header))
     return EC;
 
-  for (auto Rec : TypeRecords)
+  for (auto Rec : TypeRecords) {
+    assert(!Rec.empty()); // An empty record will not write anything, but it
+                          // would shift all offsets from here on.
     if (auto EC = Writer.writeBytes(Rec))
       return EC;
+  }
 
   if (HashStreamIndex != kInvalidStreamIndex) {
     auto HVS = WritableMappedBlockStream::createIndexedStream(

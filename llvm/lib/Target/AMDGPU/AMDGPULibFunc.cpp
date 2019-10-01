@@ -1,9 +1,8 @@
 //===-- AMDGPULibFunc.cpp -------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -64,6 +63,8 @@ struct ManglingRule {
    int getNumLeads() const { return (Lead[0] ? 1 : 0) + (Lead[1] ? 1 : 0); }
 
    unsigned getNumArgs() const;
+
+   static StringMap<int> buildManglingRulesMap();
 };
 
 // Information about library functions with unmangled names.
@@ -77,16 +78,7 @@ class UnmangledFuncInfo {
   // Number of entries in Table.
   static const unsigned TableSize;
 
-  // Map function name to index.
-  class NameMap : public StringMap<unsigned> {
-  public:
-    NameMap() {
-      for (unsigned I = 0; I != TableSize; ++I)
-        (*this)[Table[I].Name] = I;
-    }
-  };
-  friend class NameMap;
-  static NameMap Map;
+  static StringMap<unsigned> buildNameMap();
 
 public:
   using ID = AMDGPULibFunc::EFuncId;
@@ -102,7 +94,8 @@ public:
            static_cast<unsigned>(AMDGPULibFunc::EI_LAST_MANGLED);
   }
   static ID toFuncId(unsigned Index) {
-    assert(Index < TableSize && "Invalid unmangled library function");
+    assert(Index < TableSize &&
+           "Invalid unmangled library function");
     return static_cast<ID>(
         Index + 1 + static_cast<unsigned>(AMDGPULibFunc::EI_LAST_MANGLED));
   }
@@ -350,18 +343,7 @@ const UnmangledFuncInfo UnmangledFuncInfo::Table[] = {
 };
 
 const unsigned UnmangledFuncInfo::TableSize =
-    sizeof(UnmangledFuncInfo::Table) / sizeof(UnmangledFuncInfo::Table[0]);
-
-UnmangledFuncInfo::NameMap UnmangledFuncInfo::Map;
-
-static const struct ManglingRulesMap : public StringMap<int> {
-  ManglingRulesMap()
-    : StringMap<int>(sizeof(manglingRules)/sizeof(manglingRules[0])) {
-    int Id = 0;
-    for (auto Rule : manglingRules)
-      insert({ Rule.Name, Id++ });
-  }
-} manglingRulesMap;
+    array_lengthof(UnmangledFuncInfo::Table);
 
 static AMDGPULibFunc::Param getRetType(AMDGPULibFunc::EFuncId id,
                                        const AMDGPULibFunc::Param (&Leads)[2]) {
@@ -569,7 +551,17 @@ static AMDGPULibFunc::ENamePrefix parseNamePrefix(StringRef& mangledName) {
   return Pfx;
 }
 
+StringMap<int> ManglingRule::buildManglingRulesMap() {
+  StringMap<int> Map(array_lengthof(manglingRules));
+  int Id = 0;
+  for (auto Rule : manglingRules)
+    Map.insert({Rule.Name, Id++});
+  return Map;
+}
+
 bool AMDGPUMangledLibFunc::parseUnmangledName(StringRef FullName) {
+  static const StringMap<int> manglingRulesMap =
+      ManglingRule::buildManglingRulesMap();
   FuncId = static_cast<EFuncId>(manglingRulesMap.lookup(FullName));
   return FuncId != EI_NONE;
 }
@@ -961,8 +953,8 @@ Function *AMDGPULibFunc::getFunction(Module *M, const AMDGPULibFunc &fInfo) {
   return nullptr;
 }
 
-Function *AMDGPULibFunc::getOrInsertFunction(Module *M,
-                                             const AMDGPULibFunc &fInfo) {
+FunctionCallee AMDGPULibFunc::getOrInsertFunction(Module *M,
+                                                  const AMDGPULibFunc &fInfo) {
   std::string const FuncName = fInfo.mangle();
   Function *F = dyn_cast_or_null<Function>(
     M->getValueSymbolTable().lookup(FuncName));
@@ -988,7 +980,7 @@ Function *AMDGPULibFunc::getOrInsertFunction(Module *M,
     }
   }
 
-  Constant *C = nullptr;
+  FunctionCallee C;
   if (hasPtr) {
     // Do not set extra attributes for functions with pointer arguments.
     C = M->getOrInsertFunction(FuncName, FuncTy);
@@ -1002,10 +994,18 @@ Function *AMDGPULibFunc::getOrInsertFunction(Module *M,
     C = M->getOrInsertFunction(FuncName, FuncTy, Attr);
   }
 
-  return cast<Function>(C);
+  return C;
+}
+
+StringMap<unsigned> UnmangledFuncInfo::buildNameMap() {
+  StringMap<unsigned> Map;
+  for (unsigned I = 0; I != TableSize; ++I)
+    Map[Table[I].Name] = I;
+  return Map;
 }
 
 bool UnmangledFuncInfo::lookup(StringRef Name, ID &Id) {
+  static const StringMap<unsigned> Map = buildNameMap();
   auto Loc = Map.find(Name);
   if (Loc != Map.end()) {
     Id = toFuncId(Loc->second);

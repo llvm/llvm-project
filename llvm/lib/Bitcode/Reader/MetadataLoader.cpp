@@ -1,9 +1,8 @@
 //===- MetadataLoader.cpp - Internal BitcodeReader implementation ---------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -104,7 +103,7 @@ static cl::opt<bool> DisableLazyLoading(
 
 namespace {
 
-static int64_t unrotateSign(uint64_t U) { return U & 1 ? ~(U >> 1) : U >> 1; }
+static int64_t unrotateSign(uint64_t U) { return (U & 1) ? ~(U >> 1) : U >> 1; }
 
 class BitcodeReaderMetadataList {
   /// Array of metadata references.
@@ -338,7 +337,7 @@ Metadata *BitcodeReaderMetadataList::resolveTypeRefArray(Metadata *MaybeTuple) {
   if (!Tuple || Tuple->isDistinct())
     return MaybeTuple;
 
-  // Look through the DITypeRefArray, upgrading each DITypeRef.
+  // Look through the DITypeRefArray, upgrading each DIType *.
   SmallVector<Metadata *, 32> Ops;
   Ops.reserve(Tuple->getNumOperands());
   for (Metadata *MD : Tuple->operands())
@@ -812,6 +811,7 @@ MetadataLoader::MetadataLoaderImpl::lazyLoadModuleMetadataBlock() {
       case bitc::METADATA_LEXICAL_BLOCK:
       case bitc::METADATA_LEXICAL_BLOCK_FILE:
       case bitc::METADATA_NAMESPACE:
+      case bitc::METADATA_COMMON_BLOCK:
       case bitc::METADATA_MACRO:
       case bitc::METADATA_MACRO_FILE:
       case bitc::METADATA_TEMPLATE_TYPE:
@@ -1423,12 +1423,33 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       return error("Invalid record");
 
     bool HasSPFlags = Record[0] & 4;
-    DISubprogram::DISPFlags SPFlags =
-        HasSPFlags
-            ? static_cast<DISubprogram::DISPFlags>(Record[9])
-            : DISubprogram::toSPFlags(
-                  /*IsLocalToUnit=*/Record[7], /*IsDefinition=*/Record[8],
-                  /*IsOptimized=*/Record[14], /*Virtuality=*/Record[11]);
+
+    DINode::DIFlags Flags;
+    DISubprogram::DISPFlags SPFlags;
+    if (!HasSPFlags)
+      Flags = static_cast<DINode::DIFlags>(Record[11 + 2]);
+    else {
+      Flags = static_cast<DINode::DIFlags>(Record[11]);
+      SPFlags = static_cast<DISubprogram::DISPFlags>(Record[9]);
+    }
+
+    // Support for old metadata when
+    // subprogram specific flags are placed in DIFlags.
+    const unsigned DIFlagMainSubprogram = 1 << 21;
+    bool HasOldMainSubprogramFlag = Flags & DIFlagMainSubprogram;
+    if (HasOldMainSubprogramFlag)
+      // Remove old DIFlagMainSubprogram from DIFlags.
+      // Note: This assumes that any future use of bit 21 defaults to it
+      // being 0.
+      Flags &= ~static_cast<DINode::DIFlags>(DIFlagMainSubprogram);
+
+    if (HasOldMainSubprogramFlag && HasSPFlags)
+      SPFlags |= DISubprogram::SPFlagMainSubprogram;
+    else if (!HasSPFlags)
+      SPFlags = DISubprogram::toSPFlags(
+                    /*IsLocalToUnit=*/Record[7], /*IsDefinition=*/Record[8],
+                    /*IsOptimized=*/Record[14], /*Virtuality=*/Record[11],
+                    /*DIFlagMainSubprogram*/HasOldMainSubprogramFlag);
 
     // All definitions should be distinct.
     IsDistinct = (Record[0] & 1) || (SPFlags & DISubprogram::SPFlagDefinition);
@@ -1472,7 +1493,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
          getDITypeRefOrNull(Record[8 + OffsetA]),           // containingType
          Record[10 + OffsetA],                              // virtualIndex
          HasThisAdj ? Record[16 + OffsetB] : 0,             // thisAdjustment
-         static_cast<DINode::DIFlags>(Record[11 + OffsetA]),// flags
+         Flags,                                             // flags
          SPFlags,                                           // SPFlags
          HasUnit ? CUorFn : nullptr,                        // unit
          getMDOrNull(Record[13 + OffsetB]),                 // templateParams
@@ -1520,6 +1541,17 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
         GET_OR_DISTINCT(DILexicalBlockFile,
                         (Context, getMDOrNull(Record[1]),
                          getMDOrNull(Record[2]), Record[3])),
+        NextMetadataNo);
+    NextMetadataNo++;
+    break;
+  }
+  case bitc::METADATA_COMMON_BLOCK: {
+    IsDistinct = Record[0] & 1;
+    MetadataList.assignValue(
+        GET_OR_DISTINCT(DICommonBlock,
+                        (Context, getMDOrNull(Record[1]),
+                         getMDOrNull(Record[2]), getMDString(Record[3]),
+                         getMDOrNull(Record[4]), Record[5])),
         NextMetadataNo);
     NextMetadataNo++;
     break;

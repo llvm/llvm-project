@@ -52,7 +52,7 @@ entry:
 ; GCN-DAG: ds_write_b16
 
 ; EG-DAG: LDS_USHORT_READ_RET
-; EG-DAG: LDS_READ_RET
+; EG-DAG: LDS_USHORT_READ_RET
 define amdgpu_kernel void @local_load_v3i16(<3 x i16> addrspace(3)* %out, <3 x i16> addrspace(3)* %in) {
 entry:
   %ld = load <3 x i16>, <3 x i16> addrspace(3)* %in
@@ -235,7 +235,9 @@ define amdgpu_kernel void @local_sextload_v2i16_to_v2i32(<2 x i32> addrspace(3)*
 ; GCN-DAG: ds_write_b32
 ; GCN-DAG: ds_write_b64
 
-; EG: LDS_READ_RET
+; EG: LDS_USHORT_READ_RET
+; EG: LDS_USHORT_READ_RET
+; EG: LDS_USHORT_READ_RET
 define amdgpu_kernel void @local_local_zextload_v3i16_to_v3i32(<3 x i32> addrspace(3)* %out, <3 x i16> addrspace(3)* %in) {
 entry:
   %ld = load <3 x i16>, <3 x i16> addrspace(3)* %in
@@ -252,7 +254,9 @@ entry:
 ; GCN-DAG: ds_write_b32
 ; GCN-DAG: ds_write_b64
 
-; EG: LDS_READ_RET
+; EG: LDS_USHORT_READ_RET
+; EG: LDS_USHORT_READ_RET
+; EG: LDS_USHORT_READ_RET
 ; EG-DAG: BFE_INT
 ; EG-DAG: BFE_INT
 ; EG-DAG: BFE_INT

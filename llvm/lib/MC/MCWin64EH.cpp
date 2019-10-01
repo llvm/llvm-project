@@ -1,9 +1,8 @@
 //===- lib/MC/MCWin64EH.cpp - MCWin64EH implementation --------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -256,8 +255,12 @@ static int64_t GetAbsDifference(MCStreamer &Streamer, const MCSymbol *LHS,
       MCBinaryExpr::createSub(MCSymbolRefExpr::create(LHS, Context),
                               MCSymbolRefExpr::create(RHS, Context), Context);
   MCObjectStreamer *OS = (MCObjectStreamer *)(&Streamer);
+  // It should normally be possible to calculate the length of a function
+  // at this point, but it might not be possible in the presence of certain
+  // unusual constructs, like an inline asm with an alignment directive.
   int64_t value;
-  Diff->evaluateAsAbsolute(value, OS->getAssembler());
+  if (!Diff->evaluateAsAbsolute(value, OS->getAssembler()))
+    report_fatal_error("Failed to evaluate function length in SEH unwind info");
   return value;
 }
 
@@ -453,6 +456,38 @@ static void ARM64EmitUnwindCode(MCStreamer &streamer, const MCSymbol *begin,
   }
 }
 
+// Returns the epilog symbol of an epilog with the exact same unwind code
+// sequence, if it exists.  Otherwise, returns nulltpr.
+// EpilogInstrs - Unwind codes for the current epilog.
+// Epilogs - Epilogs that potentialy match the current epilog.
+static MCSymbol*
+FindMatchingEpilog(const std::vector<WinEH::Instruction>& EpilogInstrs,
+                   const std::vector<MCSymbol *>& Epilogs,
+                   const WinEH::FrameInfo *info) {
+  for (auto *EpilogStart : Epilogs) {
+    auto InstrsIter = info->EpilogMap.find(EpilogStart);
+    assert(InstrsIter != info->EpilogMap.end() &&
+           "Epilog not found in EpilogMap");
+    const auto &Instrs = InstrsIter->second;
+
+    if (Instrs.size() != EpilogInstrs.size())
+      continue;
+
+    bool Match = true;
+    for (unsigned i = 0; i < Instrs.size(); ++i)
+      if (Instrs[i].Operation != EpilogInstrs[i].Operation ||
+          Instrs[i].Offset != EpilogInstrs[i].Offset ||
+          Instrs[i].Register != EpilogInstrs[i].Register) {
+         Match = false;
+         break;
+      }
+
+    if (Match)
+      return EpilogStart;
+  }
+  return nullptr;
+}
+
 // Populate the .xdata section.  The format of .xdata on ARM64 is documented at
 // https://docs.microsoft.com/en-us/cpp/build/arm64-exception-handling
 static void ARM64EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info) {
@@ -467,22 +502,71 @@ static void ARM64EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info) {
   streamer.EmitLabel(Label);
   info->Symbol = Label;
 
-  uint32_t FuncLength = 0x0;
-  if (info->FuncletOrFuncEnd)
-    FuncLength = (uint32_t)GetAbsDifference(streamer, info->FuncletOrFuncEnd,
-                                            info->Begin);
-  FuncLength /= 4;
+  int64_t RawFuncLength;
+  if (!info->FuncletOrFuncEnd) {
+    // FIXME: This is very wrong; we emit SEH data which covers zero bytes
+    // of code. But otherwise test/MC/AArch64/seh.s crashes.
+    RawFuncLength = 0;
+  } else {
+    // FIXME: GetAbsDifference tries to compute the length of the function
+    // immediately, before the whole file is emitted, but in general
+    // that's impossible: the size in bytes of certain assembler directives
+    // like .align and .fill is not known until the whole file is parsed and
+    // relaxations are applied. Currently, GetAbsDifference fails with a fatal
+    // error in that case. (We mostly don't hit this because inline assembly
+    // specifying those directives is rare, and we don't normally try to
+    // align loops on AArch64.)
+    //
+    // There are two potential approaches to delaying the computation. One,
+    // we could emit something like ".word (endfunc-beginfunc)/4+0x10800000",
+    // as long as we have some conservative estimate we could use to prove
+    // that we don't need to split the unwind data. Emitting the constant
+    // is straightforward, but there's no existing code for estimating the
+    // size of the function.
+    //
+    // The other approach would be to use a dedicated, relaxable fragment,
+    // which could grow to accommodate splitting the unwind data if
+    // necessary. This is more straightforward, since it automatically works
+    // without any new infrastructure, and it's consistent with how we handle
+    // relaxation in other contexts.  But it would require some refactoring
+    // to move parts of the pdata/xdata emission into the implementation of
+    // a fragment. We could probably continue to encode the unwind codes
+    // here, but we'd have to emit the pdata, the xdata header, and the
+    // epilogue scopes later, since they depend on whether the we need to
+    // split the unwind data.
+    RawFuncLength = GetAbsDifference(streamer, info->FuncletOrFuncEnd,
+                                     info->Begin);
+  }
+  if (RawFuncLength > 0xFFFFF)
+    report_fatal_error("SEH unwind data splitting not yet implemented");
+  uint32_t FuncLength = (uint32_t)RawFuncLength / 4;
   uint32_t PrologCodeBytes = ARM64CountOfUnwindCodes(info->Instructions);
   uint32_t TotalCodeBytes = PrologCodeBytes;
 
   // Process epilogs.
   MapVector<MCSymbol *, uint32_t> EpilogInfo;
+  // Epilogs processed so far.
+  std::vector<MCSymbol *> AddedEpilogs;
+
   for (auto &I : info->EpilogMap) {
     MCSymbol *EpilogStart = I.first;
     auto &EpilogInstrs = I.second;
     uint32_t CodeBytes = ARM64CountOfUnwindCodes(EpilogInstrs);
-    EpilogInfo[EpilogStart] = TotalCodeBytes;
-    TotalCodeBytes += CodeBytes;
+
+    MCSymbol* MatchingEpilog =
+      FindMatchingEpilog(EpilogInstrs, AddedEpilogs, info);
+    if (MatchingEpilog) {
+      assert(EpilogInfo.find(MatchingEpilog) != EpilogInfo.end() &&
+             "Duplicate epilog not found");
+      EpilogInfo[EpilogStart] = EpilogInfo.lookup(MatchingEpilog);
+      // Clear the unwind codes in the EpilogMap, so that they don't get output
+      // in the logic below.
+      EpilogInstrs.clear();
+    } else {
+      EpilogInfo[EpilogStart] = TotalCodeBytes;
+      TotalCodeBytes += CodeBytes;
+      AddedEpilogs.push_back(EpilogStart);
+    }
   }
 
   // Code Words, Epilog count, E, X, Vers, Function Length

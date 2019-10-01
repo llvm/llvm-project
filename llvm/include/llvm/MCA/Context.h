@@ -1,9 +1,8 @@
 //===---------------------------- Context.h ---------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 /// \file
@@ -32,15 +31,21 @@ namespace mca {
 /// This is a convenience struct to hold the parameters necessary for creating
 /// the pre-built "default" out-of-order pipeline.
 struct PipelineOptions {
-  PipelineOptions(unsigned DW, unsigned RFS, unsigned LQS, unsigned SQS,
-                  bool NoAlias)
-      : DispatchWidth(DW), RegisterFileSize(RFS), LoadQueueSize(LQS),
-        StoreQueueSize(SQS), AssumeNoAlias(NoAlias) {}
+  PipelineOptions(unsigned UOPQSize, unsigned DecThr, unsigned DW, unsigned RFS,
+                  unsigned LQS, unsigned SQS, bool NoAlias,
+                  bool ShouldEnableBottleneckAnalysis = false)
+      : MicroOpQueueSize(UOPQSize), DecodersThroughput(DecThr),
+        DispatchWidth(DW), RegisterFileSize(RFS), LoadQueueSize(LQS),
+        StoreQueueSize(SQS), AssumeNoAlias(NoAlias),
+        EnableBottleneckAnalysis(ShouldEnableBottleneckAnalysis) {}
+  unsigned MicroOpQueueSize;
+  unsigned DecodersThroughput; // Instructions per cycle.
   unsigned DispatchWidth;
   unsigned RegisterFileSize;
   unsigned LoadQueueSize;
   unsigned StoreQueueSize;
   bool AssumeNoAlias;
+  bool EnableBottleneckAnalysis;
 };
 
 class Context {

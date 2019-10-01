@@ -39,14 +39,14 @@ attributes #0 = { norecurse nounwind readnone ssp uwtable }
 !llvm.module.flags = !{!3, !4, !5, !6}
 !llvm.ident = !{!7}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 7.0.0 (https://git.llvm.org/git/clang.git/ 195459d046e795f5952f7d2121e505eeb59c5574) (https://git.llvm.org/git/llvm.git/ e9dc5b5ade57869d1a443c568c6cf556ccf3b7af)", isOptimized: true, runtimeVersion: 0, emissionKind: LineTablesOnly, enums: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 7.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: LineTablesOnly, enums: !2)
 !1 = !DIFile(filename: "test.c", directory: "/Volumes/Data/llvm/build/obj")
 !2 = !{}
 !3 = !{i32 2, !"Dwarf Version", i32 4}
 !4 = !{i32 2, !"Debug Info Version", i32 3}
 !5 = !{i32 1, !"wchar_size", i32 4}
 !6 = !{i32 7, !"PIC Level", i32 2}
-!7 = !{!"clang version 7.0.0 (https://git.llvm.org/git/clang.git/ 195459d046e795f5952f7d2121e505eeb59c5574) (https://git.llvm.org/git/llvm.git/ e9dc5b5ade57869d1a443c568c6cf556ccf3b7af)"}
+!7 = !{!"clang version 7.0.0"}
 !8 = !DILocation(line: 3, column: 72, scope: !9)
 !9 = distinct !DISubprogram(name: "eliminated", scope: !1, file: !1, line: 3, type: !10, isLocal: true, isDefinition: true, scopeLine: 3, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !2)
 !10 = !DISubroutineType(types: !2)

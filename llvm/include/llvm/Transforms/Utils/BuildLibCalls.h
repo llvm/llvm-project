@@ -1,9 +1,8 @@
 //===- BuildLibCalls.h - Utility builder for libcalls -----------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -71,12 +70,22 @@ namespace llvm {
   /// Emit a call to the strcpy function to the builder, for the specified
   /// pointer arguments.
   Value *emitStrCpy(Value *Dst, Value *Src, IRBuilder<> &B,
-                    const TargetLibraryInfo *TLI, StringRef Name = "strcpy");
+                    const TargetLibraryInfo *TLI);
+
+  /// Emit a call to the stpcpy function to the builder, for the specified
+  /// pointer arguments.
+  Value *emitStpCpy(Value *Dst, Value *Src, IRBuilder<> &B,
+                    const TargetLibraryInfo *TLI);
 
   /// Emit a call to the strncpy function to the builder, for the specified
   /// pointer arguments and length.
   Value *emitStrNCpy(Value *Dst, Value *Src, Value *Len, IRBuilder<> &B,
-                     const TargetLibraryInfo *TLI, StringRef Name = "strncpy");
+                     const TargetLibraryInfo *TLI);
+
+  /// Emit a call to the stpncpy function to the builder, for the specified
+  /// pointer arguments and length.
+  Value *emitStpNCpy(Value *Dst, Value *Src, Value *Len, IRBuilder<> &B,
+                     const TargetLibraryInfo *TLI);
 
   /// Emit a call to the __memcpy_chk function to the builder. This expects that
   /// the Len and ObjSize have type 'intptr_t' and Dst/Src are pointers.
@@ -92,6 +101,47 @@ namespace llvm {
   /// Emit a call to the memcmp function.
   Value *emitMemCmp(Value *Ptr1, Value *Ptr2, Value *Len, IRBuilder<> &B,
                     const DataLayout &DL, const TargetLibraryInfo *TLI);
+
+  /// Emit a call to the bcmp function.
+  Value *emitBCmp(Value *Ptr1, Value *Ptr2, Value *Len, IRBuilder<> &B,
+                  const DataLayout &DL, const TargetLibraryInfo *TLI);
+
+  /// Emit a call to the memccpy function.
+  Value *emitMemCCpy(Value *Ptr1, Value *Ptr2, Value *Val, Value *Len,
+                     IRBuilder<> &B, const TargetLibraryInfo *TLI);
+
+  /// Emit a call to the snprintf function.
+  Value *emitSNPrintf(Value *Dest, Value *Size, Value *Fmt,
+                      ArrayRef<Value *> Args, IRBuilder<> &B,
+                      const TargetLibraryInfo *TLI);
+
+  /// Emit a call to the sprintf function.
+  Value *emitSPrintf(Value *Dest, Value *Fmt, ArrayRef<Value *> VariadicArgs,
+                     IRBuilder<> &B, const TargetLibraryInfo *TLI);
+
+  /// Emit a call to the strcat function.
+  Value *emitStrCat(Value *Dest, Value *Src, IRBuilder<> &B,
+                    const TargetLibraryInfo *TLI);
+
+  /// Emit a call to the strlcpy function.
+  Value *emitStrLCpy(Value *Dest, Value *Src, Value *Size, IRBuilder<> &B,
+                     const TargetLibraryInfo *TLI);
+
+  /// Emit a call to the strlcat function.
+  Value *emitStrLCat(Value *Dest, Value *Src, Value *Size, IRBuilder<> &B,
+                     const TargetLibraryInfo *TLI);
+
+  /// Emit a call to the strncat function.
+  Value *emitStrNCat(Value *Dest, Value *Src, Value *Size, IRBuilder<> &B,
+                     const TargetLibraryInfo *TLI);
+
+  /// Emit a call to the vsnprintf function.
+  Value *emitVSNPrintf(Value *Dest, Value *Size, Value *Fmt, Value *VAList,
+                       IRBuilder<> &B, const TargetLibraryInfo *TLI);
+
+  /// Emit a call to the vsprintf function.
+  Value *emitVSPrintf(Value *Dest, Value *Fmt, Value *VAList, IRBuilder<> &B,
+                      const TargetLibraryInfo *TLI);
 
   /// Emit a call to the unary function named 'Name' (e.g.  'floor'). This
   /// function is known to take a single of type matching 'Op' and returns one

@@ -1,0 +1,14 @@
+# RUN: not llc -mtriple=amdgcn-- -O0 -run-pass=legalizer -o - %s 2>&1 | FileCheck %s
+
+# CHECK: LLVM ERROR: unable to legalize instruction: %1:_(s1), %2:_(s1) = G_UNMERGE_VALUES %0:_(<2 x s1>) (in function: test_unmerge_v2s1)
+
+---
+name: test_unmerge_v2s1
+body: |
+  bb.0:
+    %0:_(<2 x s1>) = G_IMPLICIT_DEF
+    %1:_(s1), %2:_(s1) = G_UNMERGE_VALUES %0
+    S_NOP 0, implicit %1
+    S_NOP 0, implicit %2
+...
+

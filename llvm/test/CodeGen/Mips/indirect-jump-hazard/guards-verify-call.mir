@@ -1,5 +1,5 @@
 # RUN: not llc -mtriple=mips-mti-linux-gnu -mcpu=mips32r2 %s \
-# RUN:         -start-after=expand-isel-pseudos -stop-after=expand-isel-pseudos \
+# RUN:         -start-after=finalize-isel -stop-after=finalize-isel \
 # RUN:         -verify-machineinstrs -mattr=+use-indirect-jump-hazard -o - 2>&1 \
 # RUN:   | FileCheck %s
 

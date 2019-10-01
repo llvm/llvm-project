@@ -1,15 +1,13 @@
 //===- Writer.cpp ---------------------------------------------------------===//
 //
-//                      The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "Writer.h"
 #include "Object.h"
-#include "llvm-objcopy.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/COFF.h"
@@ -25,16 +23,83 @@ namespace coff {
 using namespace object;
 using namespace COFF;
 
-Writer::~Writer() {}
+Error COFFWriter::finalizeRelocTargets() {
+  for (Section &Sec : Obj.getMutableSections()) {
+    for (Relocation &R : Sec.Relocs) {
+      const Symbol *Sym = Obj.findSymbol(R.Target);
+      if (Sym == nullptr)
+        return createStringError(object_error::invalid_symbol_index,
+                                 "relocation target '%s' (%zu) not found",
+                                 R.TargetName.str().c_str(), R.Target);
+      R.Reloc.SymbolTableIndex = Sym->RawIndex;
+    }
+  }
+  return Error::success();
+}
+
+Error COFFWriter::finalizeSymbolContents() {
+  for (Symbol &Sym : Obj.getMutableSymbols()) {
+    if (Sym.TargetSectionId <= 0) {
+      // Undefined, or a special kind of symbol. These negative values
+      // are stored in the SectionNumber field which is unsigned.
+      Sym.Sym.SectionNumber = static_cast<uint32_t>(Sym.TargetSectionId);
+    } else {
+      const Section *Sec = Obj.findSection(Sym.TargetSectionId);
+      if (Sec == nullptr)
+        return createStringError(object_error::invalid_symbol_index,
+                                 "symbol '%s' points to a removed section",
+                                 Sym.Name.str().c_str());
+      Sym.Sym.SectionNumber = Sec->Index;
+
+      if (Sym.Sym.NumberOfAuxSymbols == 1 &&
+          Sym.Sym.StorageClass == IMAGE_SYM_CLASS_STATIC) {
+        coff_aux_section_definition *SD =
+            reinterpret_cast<coff_aux_section_definition *>(
+                Sym.AuxData[0].Opaque);
+        uint32_t SDSectionNumber;
+        if (Sym.AssociativeComdatTargetSectionId == 0) {
+          // Not a comdat associative section; just set the Number field to
+          // the number of the section itself.
+          SDSectionNumber = Sec->Index;
+        } else {
+          Sec = Obj.findSection(Sym.AssociativeComdatTargetSectionId);
+          if (Sec == nullptr)
+            return createStringError(
+                object_error::invalid_symbol_index,
+                "symbol '%s' is associative to a removed section",
+                Sym.Name.str().c_str());
+          SDSectionNumber = Sec->Index;
+        }
+        // Update the section definition with the new section number.
+        SD->NumberLowPart = static_cast<uint16_t>(SDSectionNumber);
+        SD->NumberHighPart = static_cast<uint16_t>(SDSectionNumber >> 16);
+      }
+    }
+    // Check that we actually have got AuxData to match the weak symbol target
+    // we want to set. Only >= 1 would be required, but only == 1 makes sense.
+    if (Sym.WeakTargetSymbolId && Sym.Sym.NumberOfAuxSymbols == 1) {
+      coff_aux_weak_external *WE =
+          reinterpret_cast<coff_aux_weak_external *>(Sym.AuxData[0].Opaque);
+      const Symbol *Target = Obj.findSymbol(*Sym.WeakTargetSymbolId);
+      if (Target == nullptr)
+        return createStringError(object_error::invalid_symbol_index,
+                                 "symbol '%s' is missing its weak target",
+                                 Sym.Name.str().c_str());
+      WE->TagIndex = Target->RawIndex;
+    }
+  }
+  return Error::success();
+}
 
 void COFFWriter::layoutSections() {
-  for (auto &S : Obj.Sections) {
+  for (auto &S : Obj.getMutableSections()) {
     if (S.Header.SizeOfRawData > 0)
       S.Header.PointerToRawData = FileSize;
     FileSize += S.Header.SizeOfRawData; // For executables, this is already
                                         // aligned to FileAlignment.
-    if (S.Header.NumberOfRelocations > 0)
-      S.Header.PointerToRelocations = FileSize;
+    S.Header.NumberOfRelocations = S.Relocs.size();
+    S.Header.PointerToRelocations =
+        S.Header.NumberOfRelocations > 0 ? FileSize : 0;
     FileSize += S.Relocs.size() * sizeof(coff_relocation);
     FileSize = alignTo(FileSize, FileAlignment);
 
@@ -44,25 +109,26 @@ void COFFWriter::layoutSections() {
 }
 
 size_t COFFWriter::finalizeStringTable() {
-  for (auto &S : Obj.Sections)
+  for (const auto &S : Obj.getSections())
     if (S.Name.size() > COFF::NameSize)
       StrTabBuilder.add(S.Name);
 
-  for (const auto &S : Obj.Symbols)
+  for (const auto &S : Obj.getSymbols())
     if (S.Name.size() > COFF::NameSize)
       StrTabBuilder.add(S.Name);
 
   StrTabBuilder.finalize();
 
-  for (auto &S : Obj.Sections) {
+  for (auto &S : Obj.getMutableSections()) {
     if (S.Name.size() > COFF::NameSize) {
+      memset(S.Header.Name, 0, sizeof(S.Header.Name));
       snprintf(S.Header.Name, sizeof(S.Header.Name), "/%d",
                (int)StrTabBuilder.getOffset(S.Name));
     } else {
       strncpy(S.Header.Name, S.Name.data(), COFF::NameSize);
     }
   }
-  for (auto &S : Obj.Symbols) {
+  for (auto &S : Obj.getMutableSymbols()) {
     if (S.Name.size() > COFF::NameSize) {
       S.Sym.Name.Offset.Zeroes = 0;
       S.Sym.Name.Offset.Offset = StrTabBuilder.getOffset(S.Name);
@@ -75,13 +141,31 @@ size_t COFFWriter::finalizeStringTable() {
 
 template <class SymbolTy>
 std::pair<size_t, size_t> COFFWriter::finalizeSymbolTable() {
-  size_t SymTabSize = Obj.Symbols.size() * sizeof(SymbolTy);
-  for (const auto &S : Obj.Symbols)
-    SymTabSize += S.AuxData.size();
-  return std::make_pair(SymTabSize, sizeof(SymbolTy));
+  size_t RawSymIndex = 0;
+  for (auto &S : Obj.getMutableSymbols()) {
+    // Symbols normally have NumberOfAuxSymbols set correctly all the time.
+    // For file symbols, we need to know the output file's symbol size to be
+    // able to calculate the number of slots it occupies.
+    if (!S.AuxFile.empty())
+      S.Sym.NumberOfAuxSymbols =
+          alignTo(S.AuxFile.size(), sizeof(SymbolTy)) / sizeof(SymbolTy);
+    S.RawIndex = RawSymIndex;
+    RawSymIndex += 1 + S.Sym.NumberOfAuxSymbols;
+  }
+  return std::make_pair(RawSymIndex * sizeof(SymbolTy), sizeof(SymbolTy));
 }
 
-void COFFWriter::finalize(bool IsBigObj) {
+Error COFFWriter::finalize(bool IsBigObj) {
+  size_t SymTabSize, SymbolSize;
+  std::tie(SymTabSize, SymbolSize) = IsBigObj
+                                         ? finalizeSymbolTable<coff_symbol32>()
+                                         : finalizeSymbolTable<coff_symbol16>();
+
+  if (Error E = finalizeRelocTargets())
+    return E;
+  if (Error E = finalizeSymbolContents())
+    return E;
+
   size_t SizeOfHeaders = 0;
   FileAlignment = 1;
   size_t PeHeaderSize = 0;
@@ -97,10 +181,10 @@ void COFFWriter::finalize(bool IsBigObj) {
     SizeOfHeaders +=
         PeHeaderSize + sizeof(data_directory) * Obj.DataDirectories.size();
   }
-  Obj.CoffFileHeader.NumberOfSections = Obj.Sections.size();
+  Obj.CoffFileHeader.NumberOfSections = Obj.getSections().size();
   SizeOfHeaders +=
       IsBigObj ? sizeof(coff_bigobj_file_header) : sizeof(coff_file_header);
-  SizeOfHeaders += sizeof(coff_section) * Obj.Sections.size();
+  SizeOfHeaders += sizeof(coff_section) * Obj.getSections().size();
   SizeOfHeaders = alignTo(SizeOfHeaders, FileAlignment);
 
   Obj.CoffFileHeader.SizeOfOptionalHeader =
@@ -115,8 +199,8 @@ void COFFWriter::finalize(bool IsBigObj) {
     Obj.PeHeader.SizeOfHeaders = SizeOfHeaders;
     Obj.PeHeader.SizeOfInitializedData = SizeOfInitializedData;
 
-    if (!Obj.Sections.empty()) {
-      const Section &S = Obj.Sections.back();
+    if (!Obj.getSections().empty()) {
+      const Section &S = Obj.getSections().back();
       Obj.PeHeader.SizeOfImage =
           alignTo(S.Header.VirtualAddress + S.Header.VirtualSize,
                   Obj.PeHeader.SectionAlignment);
@@ -128,20 +212,15 @@ void COFFWriter::finalize(bool IsBigObj) {
   }
 
   size_t StrTabSize = finalizeStringTable();
-  size_t SymTabSize, SymbolSize;
-  std::tie(SymTabSize, SymbolSize) = IsBigObj
-                                         ? finalizeSymbolTable<coff_symbol32>()
-                                         : finalizeSymbolTable<coff_symbol16>();
 
   size_t PointerToSymbolTable = FileSize;
   // StrTabSize <= 4 is the size of an empty string table, only consisting
   // of the length field.
-  if (SymTabSize == 0 && StrTabSize <= 4) {
-    // Don't point to the symbol table if empty.
+  if (SymTabSize == 0 && StrTabSize <= 4 && Obj.IsPE) {
+    // For executables, don't point to the symbol table and skip writing
+    // the length field, if both the symbol and string tables are empty.
     PointerToSymbolTable = 0;
-    // For executables, skip the length field of an empty string table.
-    if (Obj.IsPE)
-      StrTabSize = 0;
+    StrTabSize = 0;
   }
 
   size_t NumRawSymbols = SymTabSize / SymbolSize;
@@ -149,6 +228,8 @@ void COFFWriter::finalize(bool IsBigObj) {
   Obj.CoffFileHeader.NumberOfSymbols = NumRawSymbols;
   FileSize += SymTabSize + StrTabSize;
   FileSize = alignTo(FileSize, FileAlignment);
+
+  return Error::success();
 }
 
 void COFFWriter::writeHeaders(bool IsBigObj) {
@@ -181,7 +262,7 @@ void COFFWriter::writeHeaders(bool IsBigObj) {
     BigObjHeader.unused4 = 0;
     // The value in Obj.CoffFileHeader.NumberOfSections is truncated, thus
     // get the original one instead.
-    BigObjHeader.NumberOfSections = Obj.Sections.size();
+    BigObjHeader.NumberOfSections = Obj.getSections().size();
     BigObjHeader.PointerToSymbolTable = Obj.CoffFileHeader.PointerToSymbolTable;
     BigObjHeader.NumberOfSymbols = Obj.CoffFileHeader.NumberOfSymbols;
 
@@ -206,39 +287,57 @@ void COFFWriter::writeHeaders(bool IsBigObj) {
       Ptr += sizeof(DD);
     }
   }
-  for (const auto &S : Obj.Sections) {
+  for (const auto &S : Obj.getSections()) {
     memcpy(Ptr, &S.Header, sizeof(S.Header));
     Ptr += sizeof(S.Header);
   }
 }
 
 void COFFWriter::writeSections() {
-  for (const auto &S : Obj.Sections) {
+  for (const auto &S : Obj.getSections()) {
     uint8_t *Ptr = Buf.getBufferStart() + S.Header.PointerToRawData;
-    std::copy(S.Contents.begin(), S.Contents.end(), Ptr);
+    ArrayRef<uint8_t> Contents = S.getContents();
+    std::copy(Contents.begin(), Contents.end(), Ptr);
 
     // For executable sections, pad the remainder of the raw data size with
     // 0xcc, which is int3 on x86.
     if ((S.Header.Characteristics & IMAGE_SCN_CNT_CODE) &&
-        S.Header.SizeOfRawData > S.Contents.size())
-      memset(Ptr + S.Contents.size(), 0xcc,
-             S.Header.SizeOfRawData - S.Contents.size());
+        S.Header.SizeOfRawData > Contents.size())
+      memset(Ptr + Contents.size(), 0xcc,
+             S.Header.SizeOfRawData - Contents.size());
 
     Ptr += S.Header.SizeOfRawData;
-    std::copy(S.Relocs.begin(), S.Relocs.end(),
-              reinterpret_cast<coff_relocation *>(Ptr));
+    for (const auto &R : S.Relocs) {
+      memcpy(Ptr, &R.Reloc, sizeof(R.Reloc));
+      Ptr += sizeof(R.Reloc);
+    }
   }
 }
 
 template <class SymbolTy> void COFFWriter::writeSymbolStringTables() {
   uint8_t *Ptr = Buf.getBufferStart() + Obj.CoffFileHeader.PointerToSymbolTable;
-  for (const auto &S : Obj.Symbols) {
+  for (const auto &S : Obj.getSymbols()) {
     // Convert symbols back to the right size, from coff_symbol32.
     copySymbol<SymbolTy, coff_symbol32>(*reinterpret_cast<SymbolTy *>(Ptr),
                                         S.Sym);
     Ptr += sizeof(SymbolTy);
-    std::copy(S.AuxData.begin(), S.AuxData.end(), Ptr);
-    Ptr += S.AuxData.size();
+    if (!S.AuxFile.empty()) {
+      // For file symbols, just write the string into the aux symbol slots,
+      // assuming that the unwritten parts are initialized to zero in the memory
+      // mapped file.
+      std::copy(S.AuxFile.begin(), S.AuxFile.end(), Ptr);
+      Ptr += S.Sym.NumberOfAuxSymbols * sizeof(SymbolTy);
+    } else {
+      // For other auxillary symbols, write their opaque payload into one symbol
+      // table slot each. For big object files, the symbols are larger than the
+      // opaque auxillary symbol struct and we leave padding at the end of each
+      // entry.
+      for (const AuxSymbol &AuxSym : S.AuxData) {
+        ArrayRef<uint8_t> Ref = AuxSym.getRef();
+        std::copy(Ref.begin(), Ref.end(), Ptr);
+        Ptr += sizeof(SymbolTy);
+      }
+    }
   }
   if (StrTabBuilder.getSize() > 4 || !Obj.IsPE) {
     // Always write a string table in object files, even an empty one.
@@ -248,9 +347,11 @@ template <class SymbolTy> void COFFWriter::writeSymbolStringTables() {
 }
 
 Error COFFWriter::write(bool IsBigObj) {
-  finalize(IsBigObj);
+  if (Error E = finalize(IsBigObj))
+    return E;
 
-  Buf.allocate(FileSize);
+  if (Error E = Buf.allocate(FileSize))
+    return E;
 
   writeHeaders(IsBigObj);
   writeSections();
@@ -275,15 +376,14 @@ Error COFFWriter::patchDebugDirectory() {
   const data_directory *Dir = &Obj.DataDirectories[DEBUG_DIRECTORY];
   if (Dir->Size <= 0)
     return Error::success();
-  for (const auto &S : Obj.Sections) {
+  for (const auto &S : Obj.getSections()) {
     if (Dir->RelativeVirtualAddress >= S.Header.VirtualAddress &&
         Dir->RelativeVirtualAddress <
             S.Header.VirtualAddress + S.Header.SizeOfRawData) {
       if (Dir->RelativeVirtualAddress + Dir->Size >
           S.Header.VirtualAddress + S.Header.SizeOfRawData)
-        return make_error<StringError>(
-            "Debug directory extends past end of section",
-            object_error::parse_failed);
+        return createStringError(object_error::parse_failed,
+                                 "debug directory extends past end of section");
 
       size_t Offset = Dir->RelativeVirtualAddress - S.Header.VirtualAddress;
       uint8_t *Ptr = Buf.getBufferStart() + S.Header.PointerToRawData + Offset;
@@ -299,15 +399,15 @@ Error COFFWriter::patchDebugDirectory() {
       return Error::success();
     }
   }
-  return make_error<StringError>("Debug directory not found",
-                                 object_error::parse_failed);
+  return createStringError(object_error::parse_failed,
+                           "debug directory not found");
 }
 
 Error COFFWriter::write() {
-  bool IsBigObj = Obj.Sections.size() > MaxNumberOfSections16;
+  bool IsBigObj = Obj.getSections().size() > MaxNumberOfSections16;
   if (IsBigObj && Obj.IsPE)
-    return make_error<StringError>("Too many sections for executable",
-                                   object_error::parse_failed);
+    return createStringError(object_error::parse_failed,
+                             "too many sections for executable");
   return write(IsBigObj);
 }
 

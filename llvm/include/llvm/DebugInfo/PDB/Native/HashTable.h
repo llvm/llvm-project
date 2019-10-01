@@ -1,9 +1,8 @@
 //===- HashTable.h - PDB Hash Table -----------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -144,7 +143,7 @@ public:
       return EC;
     if (Present.intersects(Deleted))
       return make_error<RawError>(raw_error_code::corrupt_file,
-                                  "Present bit vector interesects deleted!");
+                                  "Present bit vector intersects deleted!");
 
     for (uint32_t P : Present) {
       if (auto EC = Stream.readInteger(Buckets[P].first))

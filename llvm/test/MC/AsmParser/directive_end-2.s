@@ -1,5 +1,5 @@
 # RUN: llvm-mc -triple i386-unknown-unknown %s -I %p -filetype obj -o - \
-# RUN:   | llvm-readobj -t | FileCheck %s
+# RUN:   | llvm-readobj --symbols | FileCheck %s
 
 rock:
     movl $42, %eax

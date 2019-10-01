@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=mips-mti-linux-gnu -mcpu=mips32r2 -mattr=+micromips -stop-after=expand-isel-pseudos < %s | FileCheck %s
+; RUN: llc -mtriple=mips-mti-linux-gnu -mcpu=mips32r2 -mattr=+micromips -stop-after=finalize-isel < %s | FileCheck %s
 
 ; CHECK: JAL_MM
 ; CHECK-NOT: JALR16_MM

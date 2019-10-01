@@ -2,6 +2,8 @@
 ; RUN: llc < %s -mtriple=x86_64-pc-linux-gnu | FileCheck %s --check-prefix=X64
 ; RUN: llc < %s -mtriple=x86_64-pc-linux-gnux32 | FileCheck %s --check-prefix=X64
 ; RUN: llc < %s -mtriple=i686-pc-linux | FileCheck %s --check-prefix=X86
+; At least one of the test cases in here crashed when linearizing the DAG.
+; RUN: llc < %s -mtriple=x86_64-pc-linux-gnu -pre-RA-sched=linearize | FileCheck %s --check-prefix=X64
 
 define i32 @mul4_32(i32 %A) {
 ; X64-LABEL: mul4_32:
@@ -218,7 +220,7 @@ define i32 @mul33_32(i32 %A) {
 ; X64-NEXT:    # kill: def $edi killed $edi def $rdi
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    shll $5, %eax
-; X64-NEXT:    leal (%rax,%rdi), %eax
+; X64-NEXT:    addl %edi, %eax
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: mul33_32:
@@ -347,7 +349,7 @@ define i32 @test2(i32 %a) {
 ; X64-NEXT:    # kill: def $edi killed $edi def $rdi
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    shll $5, %eax
-; X64-NEXT:    leal (%rax,%rdi), %eax
+; X64-NEXT:    addl %edi, %eax
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: test2:
@@ -368,7 +370,7 @@ define i32 @test3(i32 %a) {
 ; X64-NEXT:    # kill: def $edi killed $edi def $rdi
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    shll $5, %eax
-; X64-NEXT:    leal (%rax,%rdi), %eax
+; X64-NEXT:    addl %edi, %eax
 ; X64-NEXT:    negl %eax
 ; X64-NEXT:    retq
 ;
@@ -446,7 +448,7 @@ define i64 @test6(i64 %a) {
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    shlq $5, %rax
-; X64-NEXT:    leaq (%rax,%rdi), %rax
+; X64-NEXT:    addq %rdi, %rax
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: test6:
@@ -469,7 +471,7 @@ define i64 @test7(i64 %a) {
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    shlq $5, %rax
-; X64-NEXT:    leaq (%rax,%rdi), %rax
+; X64-NEXT:    addq %rdi, %rax
 ; X64-NEXT:    negq %rax
 ; X64-NEXT:    retq
 ;

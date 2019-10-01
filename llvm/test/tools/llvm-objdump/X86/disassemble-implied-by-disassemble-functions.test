@@ -1,0 +1,22 @@
+## Check that --disassemble-functions implies --disassemble.
+# RUN: yaml2obj %s | llvm-objdump - --disassemble-functions=main | FileCheck %s
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_EXECINSTR ]
+    Content: 90
+Symbols:
+  - Name:    main
+    Type:    STT_FUNC
+    Section: .text
+...
+
+# CHECK: 0000000000000000 main:
+# CHECK-NEXT:        0: 90                            nop

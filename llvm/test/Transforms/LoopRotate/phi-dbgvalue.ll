@@ -48,12 +48,12 @@ attributes #3 = { nounwind }
 !llvm.module.flags = !{!3, !4}
 !llvm.ident = !{!5}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 5.0.0 (http://llvm.org/git/clang.git 0f3ed908c1f13f83da4b240f7595eb8d05e0a754) (http://llvm.org/git/llvm.git 8e270f5a6b8ceb0f3ac3ef1ffb83c5e29b44ae68)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 5.0.0", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
 !1 = !DIFile(filename: "debug-phi.c", directory: "/work/projects/src/tests/debug")
 !2 = !{}
 !3 = !{i32 2, !"Dwarf Version", i32 4}
 !4 = !{i32 2, !"Debug Info Version", i32 3}
-!5 = !{!"clang version 5.0.0 (http://llvm.org/git/clang.git 0f3ed908c1f13f83da4b240f7595eb8d05e0a754) (http://llvm.org/git/llvm.git 8e270f5a6b8ceb0f3ac3ef1ffb83c5e29b44ae68)"}
+!5 = !{!"clang version 5.0.0"}
 !6 = distinct !DISubprogram(name: "func", scope: !1, file: !1, line: 2, type: !7, isLocal: false, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
 !7 = !DISubroutineType(types: !8)
 !8 = !{null, !9}

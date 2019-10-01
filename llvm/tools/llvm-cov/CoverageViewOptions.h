@@ -1,9 +1,8 @@
 //===- CoverageViewOptions.h - Code coverage display options -------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -35,6 +34,8 @@ struct CoverageViewOptions {
   bool ShowRegionSummary;
   bool ShowInstantiationSummary;
   bool ExportSummaryOnly;
+  bool SkipExpansions;
+  bool SkipFunctions;
   OutputFormat Format;
   std::string ShowOutputDirectory;
   std::vector<std::string> DemanglerOpts;

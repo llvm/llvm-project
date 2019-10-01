@@ -1,9 +1,8 @@
 //===-- AArch64TargetParser - Parser for AArch64 features -------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -49,6 +48,12 @@ enum ArchExtKind : unsigned {
   AEK_MTE =         1 << 19,
   AEK_SSBS =        1 << 20,
   AEK_SB =          1 << 21,
+  AEK_PREDRES =     1 << 22,
+  AEK_SVE2 =        1 << 23,
+  AEK_SVE2AES =     1 << 24,
+  AEK_SVE2SM4 =     1 << 25,
+  AEK_SVE2SHA3 =    1 << 26,
+  AEK_BITPERM =     1 << 27,
 };
 
 enum class ArchKind {

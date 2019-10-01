@@ -1,9 +1,8 @@
 //===- DWARFDebugLoc.cpp --------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -58,9 +57,8 @@ void DWARFDebugLoc::LocationList::dump(raw_ostream &OS, bool IsLittleEndian,
 
 DWARFDebugLoc::LocationList const *
 DWARFDebugLoc::getLocationListAtOffset(uint64_t Offset) const {
-  auto It = std::lower_bound(
-      Locations.begin(), Locations.end(), Offset,
-      [](const LocationList &L, uint64_t Offset) { return L.Offset < Offset; });
+  auto It = llvm::bsearch(
+      Locations, [=](const LocationList &L) { return Offset <= L.Offset; });
   if (It != Locations.end() && It->Offset == Offset)
     return &(*It);
   return nullptr;
@@ -69,7 +67,7 @@ DWARFDebugLoc::getLocationListAtOffset(uint64_t Offset) const {
 void DWARFDebugLoc::dump(raw_ostream &OS, const MCRegisterInfo *MRI,
                          Optional<uint64_t> Offset) const {
   auto DumpLocationList = [&](const LocationList &L) {
-    OS << format("0x%8.8x: ", L.Offset);
+    OS << format("0x%8.8" PRIx64 ": ", L.Offset);
     L.dump(OS, IsLittleEndian, AddressSize, MRI, nullptr, 0, 12);
     OS << "\n\n";
   };
@@ -86,7 +84,7 @@ void DWARFDebugLoc::dump(raw_ostream &OS, const MCRegisterInfo *MRI,
 }
 
 Optional<DWARFDebugLoc::LocationList>
-DWARFDebugLoc::parseOneLocationList(DWARFDataExtractor Data, unsigned *Offset) {
+DWARFDebugLoc::parseOneLocationList(DWARFDataExtractor Data, uint64_t *Offset) {
   LocationList LL;
   LL.Offset = *Offset;
 
@@ -134,7 +132,7 @@ void DWARFDebugLoc::parse(const DWARFDataExtractor &data) {
   IsLittleEndian = data.isLittleEndian();
   AddressSize = data.getAddressSize();
 
-  uint32_t Offset = 0;
+  uint64_t Offset = 0;
   while (data.isValidOffset(Offset + data.getAddressSize() - 1)) {
     if (auto LL = parseOneLocationList(data, &Offset))
       Locations.push_back(std::move(*LL));
@@ -146,7 +144,7 @@ void DWARFDebugLoc::parse(const DWARFDataExtractor &data) {
 }
 
 Optional<DWARFDebugLoclists::LocationList>
-DWARFDebugLoclists::parseOneLocationList(DataExtractor Data, unsigned *Offset,
+DWARFDebugLoclists::parseOneLocationList(DataExtractor Data, uint64_t *Offset,
                                          unsigned Version) {
   LocationList LL;
   LL.Offset = *Offset;
@@ -203,7 +201,7 @@ void DWARFDebugLoclists::parse(DataExtractor data, unsigned Version) {
   IsLittleEndian = data.isLittleEndian();
   AddressSize = data.getAddressSize();
 
-  uint32_t Offset = 0;
+  uint64_t Offset = 0;
   while (data.isValidOffset(Offset)) {
     if (auto LL = parseOneLocationList(data, &Offset, Version))
       Locations.push_back(std::move(*LL));
@@ -214,9 +212,8 @@ void DWARFDebugLoclists::parse(DataExtractor data, unsigned Version) {
 
 DWARFDebugLoclists::LocationList const *
 DWARFDebugLoclists::getLocationListAtOffset(uint64_t Offset) const {
-  auto It = std::lower_bound(
-      Locations.begin(), Locations.end(), Offset,
-      [](const LocationList &L, uint64_t Offset) { return L.Offset < Offset; });
+  auto It = llvm::bsearch(
+      Locations, [=](const LocationList &L) { return Offset <= L.Offset; });
   if (It != Locations.end() && It->Offset == Offset)
     return &(*It);
   return nullptr;
@@ -226,6 +223,7 @@ void DWARFDebugLoclists::LocationList::dump(raw_ostream &OS, uint64_t BaseAddr,
                                             bool IsLittleEndian,
                                             unsigned AddressSize,
                                             const MCRegisterInfo *MRI,
+                                            DWARFUnit *U,
                                             unsigned Indent) const {
   for (const Entry &E : Entries) {
     switch (E.Kind) {
@@ -255,7 +253,7 @@ void DWARFDebugLoclists::LocationList::dump(raw_ostream &OS, uint64_t BaseAddr,
       llvm_unreachable("unreachable locations list kind");
     }
 
-    dumpExpression(OS, E.Loc, IsLittleEndian, AddressSize, MRI, nullptr);
+    dumpExpression(OS, E.Loc, IsLittleEndian, AddressSize, MRI, U);
   }
 }
 
@@ -263,8 +261,8 @@ void DWARFDebugLoclists::dump(raw_ostream &OS, uint64_t BaseAddr,
                               const MCRegisterInfo *MRI,
                               Optional<uint64_t> Offset) const {
   auto DumpLocationList = [&](const LocationList &L) {
-    OS << format("0x%8.8x: ", L.Offset);
-    L.dump(OS, BaseAddr, IsLittleEndian, AddressSize, MRI, /*Indent=*/12);
+    OS << format("0x%8.8" PRIx64 ": ", L.Offset);
+    L.dump(OS, BaseAddr, IsLittleEndian, AddressSize, MRI, nullptr, /*Indent=*/12);
     OS << "\n\n";
   };
 

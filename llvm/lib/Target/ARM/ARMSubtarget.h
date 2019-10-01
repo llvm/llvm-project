@@ -1,9 +1,8 @@
 //===-- ARMSubtarget.h - Define Subtarget for the ARM ----------*- C++ -*--===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -60,6 +59,7 @@ protected:
     CortexA72,
     CortexA73,
     CortexA75,
+    CortexA76,
     CortexA8,
     CortexA9,
     CortexM3,
@@ -110,7 +110,8 @@ protected:
     ARMv8a,
     ARMv8mBaseline,
     ARMv8mMainline,
-    ARMv8r
+    ARMv8r,
+    ARMv81mMainline,
   };
 
 public:
@@ -157,6 +158,9 @@ protected:
   bool HasV8_5aOps = false;
   bool HasV8MBaselineOps = false;
   bool HasV8MMainlineOps = false;
+  bool HasV8_1MMainlineOps = false;
+  bool HasMVEIntegerOps = false;
+  bool HasMVEFloatOps = false;
 
   /// HasVFPv2, HasVFPv3, HasVFPv4, HasFPARMv8, HasNEON - Specify what
   /// floating point ISAs are supported.
@@ -165,6 +169,24 @@ protected:
   bool HasVFPv4 = false;
   bool HasFPARMv8 = false;
   bool HasNEON = false;
+  bool HasFPRegs = false;
+  bool HasFPRegs16 = false;
+  bool HasFPRegs64 = false;
+
+  /// Versions of the VFP flags restricted to single precision, or to
+  /// 16 d-registers, or both.
+  bool HasVFPv2SP = false;
+  bool HasVFPv3SP = false;
+  bool HasVFPv4SP = false;
+  bool HasFPARMv8SP = false;
+  bool HasVFPv2D16 = false;
+  bool HasVFPv3D16 = false;
+  bool HasVFPv4D16 = false;
+  bool HasFPARMv8D16 = false;
+  bool HasVFPv2D16SP = false;
+  bool HasVFPv3D16SP = false;
+  bool HasVFPv4D16SP = false;
+  bool HasFPARMv8D16SP = false;
 
   /// HasDotProd - True if the ARMv8.2A dot product instructions are supported.
   bool HasDotProd = false;
@@ -232,9 +254,9 @@ protected:
   /// HasFP16FML - True if subtarget supports half-precision FP fml operations
   bool HasFP16FML = false;
 
-  /// HasD16 - True if subtarget is limited to 16 double precision
+  /// HasD32 - True if subtarget has the full 32 double precision
   /// FP registers for VFPv3.
-  bool HasD16 = false;
+  bool HasD32 = false;
 
   /// HasHardwareDivide - True if subtarget supports [su]div in Thumb mode
   bool HasHardwareDivideInThumb = false;
@@ -291,9 +313,9 @@ protected:
   /// extension.
   bool HasVirtualization = false;
 
-  /// FPOnlySP - If true, the floating point unit only supports single
+  /// HasFP64 - If true, the floating point unit supports double
   /// precision.
-  bool FPOnlySP = false;
+  bool HasFP64 = false;
 
   /// If true, the processor supports the Performance Monitor Extensions. These
   /// include a generic cycle-counter as well as more fine-grained (often
@@ -320,6 +342,9 @@ protected:
 
   /// HasRAS - if true, the processor supports RAS extensions
   bool HasRAS = false;
+
+  /// HasLOB - if true, the processor supports the Low Overhead Branch extension
+  bool HasLOB = false;
 
   /// If true, the instructions "vmov.i32 d0, #0" and "vmov.i32 q0, #0" are
   /// particularly effective at zeroing a VFP register.
@@ -446,6 +471,10 @@ protected:
   /// What alignment is preferred for loop bodies, in log2(bytes).
   unsigned PrefLoopAlignment = 0;
 
+  /// OptMinSize - True if we're optimising for minimum code size, equal to
+  /// the function attribute.
+  bool OptMinSize = false;
+
   /// IsLittle - The target is Little Endian
   bool IsLittle;
 
@@ -468,7 +497,8 @@ public:
   /// of the specified triple.
   ///
   ARMSubtarget(const Triple &TT, const std::string &CPU, const std::string &FS,
-               const ARMBaseTargetMachine &TM, bool IsLittle);
+               const ARMBaseTargetMachine &TM, bool IsLittle,
+               bool MinSize = false);
 
   /// getMaxInlineSizeThreshold - Returns the maximum memset / memcpy size
   /// that still makes it profitable to inline the call.
@@ -546,6 +576,12 @@ public:
   bool hasV8_5aOps() const { return HasV8_5aOps; }
   bool hasV8MBaselineOps() const { return HasV8MBaselineOps; }
   bool hasV8MMainlineOps() const { return HasV8MMainlineOps; }
+  bool hasV8_1MMainlineOps() const { return HasV8_1MMainlineOps; }
+  bool hasMVEIntegerOps() const { return HasMVEIntegerOps; }
+  bool hasMVEFloatOps() const { return HasMVEFloatOps; }
+  bool hasFPRegs() const { return HasFPRegs; }
+  bool hasFPRegs16() const { return HasFPRegs16; }
+  bool hasFPRegs64() const { return HasFPRegs64; }
 
   /// @{
   /// These functions are obsolete, please consider adding subtarget features
@@ -564,10 +600,10 @@ public:
 
   bool hasARMOps() const { return !NoARM; }
 
-  bool hasVFP2() const { return HasVFPv2; }
-  bool hasVFP3() const { return HasVFPv3; }
-  bool hasVFP4() const { return HasVFPv4; }
-  bool hasFPARMv8() const { return HasFPARMv8; }
+  bool hasVFP2Base() const { return HasVFPv2D16SP; }
+  bool hasVFP3Base() const { return HasVFPv3D16SP; }
+  bool hasVFP4Base() const { return HasVFPv4D16SP; }
+  bool hasFPARMv8Base() const { return HasFPARMv8D16SP; }
   bool hasNEON() const { return HasNEON;  }
   bool hasSHA2() const { return HasSHA2; }
   bool hasAES() const { return HasAES; }
@@ -575,6 +611,7 @@ public:
   bool hasDotProd() const { return HasDotProd; }
   bool hasCRC() const { return HasCRC; }
   bool hasRAS() const { return HasRAS; }
+  bool hasLOB() const { return HasLOB; }
   bool hasVirtualization() const { return HasVirtualization; }
 
   bool useNEONForSinglePrecisionFP() const {
@@ -596,7 +633,7 @@ public:
   bool useFPVMLx() const { return !SlowFPVMLx; }
   bool hasVMLxForwarding() const { return HasVMLxForwarding; }
   bool isFPBrccSlow() const { return SlowFPBrcc; }
-  bool isFPOnlySP() const { return FPOnlySP; }
+  bool hasFP64() const { return HasFP64; }
   bool hasPerfMon() const { return HasPerfMon; }
   bool hasTrustZone() const { return HasTrustZone; }
   bool has8MSecExt() const { return Has8MSecExt; }
@@ -633,7 +670,7 @@ public:
   bool genExecuteOnly() const { return GenExecuteOnly; }
 
   bool hasFP16() const { return HasFP16; }
-  bool hasD16() const { return HasD16; }
+  bool hasD32() const { return HasD32; }
   bool hasFullFP16() const { return HasFullFP16; }
   bool hasFP16FML() const { return HasFP16FML; }
 
@@ -710,6 +747,7 @@ public:
   bool disablePostRAScheduler() const { return DisablePostRAScheduler; }
   bool useSoftFloat() const { return UseSoftFloat; }
   bool isThumb() const { return InThumbMode; }
+  bool hasMinSize() const { return OptMinSize; }
   bool isThumb1Only() const { return InThumbMode && !HasThumb2; }
   bool isThumb2() const { return InThumbMode && HasThumb2; }
   bool hasThumb2() const { return HasThumb2; }
@@ -736,9 +774,9 @@ public:
            isThumb1Only();
   }
 
-  bool useStride4VFPs(const MachineFunction &MF) const;
+  bool useStride4VFPs() const;
 
-  bool useMovt(const MachineFunction &MF) const;
+  bool useMovt() const;
 
   bool supportsTailCall() const { return SupportsTailCall; }
 

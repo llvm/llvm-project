@@ -1,9 +1,8 @@
 //===-- AMDGPUPromoteAlloca.cpp - Promote Allocas -------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -163,12 +162,16 @@ bool AMDGPUPromoteAlloca::runOnFunction(Function &F) {
   bool SufficientLDS = hasSufficientLocalMem(F);
   bool Changed = false;
   BasicBlock &EntryBB = *F.begin();
-  for (auto I = EntryBB.begin(), E = EntryBB.end(); I != E; ) {
-    AllocaInst *AI = dyn_cast<AllocaInst>(I);
 
-    ++I;
-    if (AI)
-      Changed |= handleAlloca(*AI, SufficientLDS);
+  SmallVector<AllocaInst *, 16> Allocas;
+  for (Instruction &I : EntryBB) {
+    if (AllocaInst *AI = dyn_cast<AllocaInst>(&I))
+      Allocas.push_back(AI);
+  }
+
+  for (AllocaInst *AI : Allocas) {
+    if (handleAlloca(*AI, SufficientLDS))
+      Changed = true;
   }
 
   return Changed;
@@ -245,11 +248,11 @@ AMDGPUPromoteAlloca::getLocalSizeYZ(IRBuilder<> &Builder) {
   // We could do a single 64-bit load here, but it's likely that the basic
   // 32-bit and extract sequence is already present, and it is probably easier
   // to CSE this. The loads should be mergable later anyway.
-  Value *GEPXY = Builder.CreateConstInBoundsGEP1_64(CastDispatchPtr, 1);
-  LoadInst *LoadXY = Builder.CreateAlignedLoad(GEPXY, 4);
+  Value *GEPXY = Builder.CreateConstInBoundsGEP1_64(I32Ty, CastDispatchPtr, 1);
+  LoadInst *LoadXY = Builder.CreateAlignedLoad(I32Ty, GEPXY, 4);
 
-  Value *GEPZU = Builder.CreateConstInBoundsGEP1_64(CastDispatchPtr, 2);
-  LoadInst *LoadZU = Builder.CreateAlignedLoad(GEPZU, 4);
+  Value *GEPZU = Builder.CreateConstInBoundsGEP1_64(I32Ty, CastDispatchPtr, 2);
+  LoadInst *LoadZU = Builder.CreateAlignedLoad(I32Ty, GEPZU, 4);
 
   MDNode *MD = MDNode::get(Mod->getContext(), None);
   LoadXY->setMetadata(LLVMContext::MD_invariant_load, MD);
@@ -427,7 +430,7 @@ static bool tryPromoteAllocaToVector(AllocaInst *Alloca) {
       Value *Index = calculateVectorIndex(Ptr, GEPVectorIdx);
 
       Value *BitCast = Builder.CreateBitCast(Alloca, VecPtrTy);
-      Value *VecValue = Builder.CreateLoad(BitCast);
+      Value *VecValue = Builder.CreateLoad(VectorTy, BitCast);
       Value *ExtractElement = Builder.CreateExtractElement(VecValue, Index);
       Inst->replaceAllUsesWith(ExtractElement);
       Inst->eraseFromParent();
@@ -442,7 +445,7 @@ static bool tryPromoteAllocaToVector(AllocaInst *Alloca) {
       Value *Ptr = SI->getPointerOperand();
       Value *Index = calculateVectorIndex(Ptr, GEPVectorIdx);
       Value *BitCast = Builder.CreateBitCast(Alloca, VecPtrTy);
-      Value *VecValue = Builder.CreateLoad(BitCast);
+      Value *VecValue = Builder.CreateLoad(VectorTy, BitCast);
       Value *NewVecValue = Builder.CreateInsertElement(VecValue,
                                                        SI->getValueOperand(),
                                                        Index);

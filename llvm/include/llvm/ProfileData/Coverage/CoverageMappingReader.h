@@ -1,9 +1,8 @@
 //===- CoverageMappingReader.h - Code coverage mapping reader ---*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -204,9 +203,15 @@ public:
   BinaryCoverageReader(const BinaryCoverageReader &) = delete;
   BinaryCoverageReader &operator=(const BinaryCoverageReader &) = delete;
 
+  static Expected<std::vector<std::unique_ptr<BinaryCoverageReader>>>
+  create(MemoryBufferRef ObjectBuffer, StringRef Arch,
+         SmallVectorImpl<std::unique_ptr<MemoryBuffer>> &ObjectFileBuffers);
+
   static Expected<std::unique_ptr<BinaryCoverageReader>>
-  create(std::unique_ptr<MemoryBuffer> &ObjectBuffer,
-         StringRef Arch);
+  createCoverageReaderFromBuffer(StringRef Coverage,
+                                 InstrProfSymtab &&ProfileNames,
+                                 uint8_t BytesInAddress,
+                                 support::endianness Endian);
 
   Error readNextRecord(CoverageMappingRecord &Record) override;
 };

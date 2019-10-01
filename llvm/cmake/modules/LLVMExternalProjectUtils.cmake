@@ -5,7 +5,7 @@ include(ExternalProject)
 function(llvm_ExternalProject_BuildCmd out_var target bin_dir)
   cmake_parse_arguments(ARG "" "CONFIGURATION" "" ${ARGN})
   if(NOT ARG_CONFIGURATION)
-    set(ARG_CONFIGURATION "$<CONFIGURATION>")
+    set(ARG_CONFIGURATION "$<CONFIG>")
   endif()
   if (CMAKE_GENERATOR MATCHES "Make")
     # Use special command for Makefiles to support parallelism.
@@ -35,12 +35,14 @@ endfunction()
 #     Extra targets in the subproject to generate targets for
 #   PASSTHROUGH_PREFIXES prefix...
 #     Extra variable prefixes (name is always included) to pass down
+#   STRIP_TOOL path
+#     Use provided strip tool instead of the default one.
 #   )
 function(llvm_ExternalProject_Add name source_dir)
   cmake_parse_arguments(ARG
     "USE_TOOLCHAIN;EXCLUDE_FROM_ALL;NO_INSTALL;ALWAYS_CLEAN"
     "SOURCE_DIR"
-    "CMAKE_ARGS;TOOLCHAIN_TOOLS;RUNTIME_LIBRARIES;DEPENDS;EXTRA_TARGETS;PASSTHROUGH_PREFIXES"
+    "CMAKE_ARGS;TOOLCHAIN_TOOLS;RUNTIME_LIBRARIES;DEPENDS;EXTRA_TARGETS;PASSTHROUGH_PREFIXES;STRIP_TOOL"
     ${ARGN})
   canonicalize_tool_name(${name} nameCanon)
   if(NOT ARG_TOOLCHAIN_TOOLS)
@@ -102,13 +104,28 @@ function(llvm_ExternalProject_Add name source_dir)
     endforeach()
   endforeach()
 
+  foreach(arg ${ARG_CMAKE_ARGS})
+    if(arg MATCHES "^-DCMAKE_SYSTEM_NAME=")
+      string(REGEX REPLACE "^-DCMAKE_SYSTEM_NAME=(.*)$" "\\1" _cmake_system_name "${arg}")
+    endif()
+  endforeach()
+
   if(ARG_USE_TOOLCHAIN AND NOT CMAKE_CROSSCOMPILING)
     if(CLANG_IN_TOOLCHAIN)
-      set(compiler_args -DCMAKE_C_COMPILER=${LLVM_RUNTIME_OUTPUT_INTDIR}/clang
-                        -DCMAKE_CXX_COMPILER=${LLVM_RUNTIME_OUTPUT_INTDIR}/clang++)
+      if(_cmake_system_name STREQUAL Windows)
+        set(compiler_args -DCMAKE_C_COMPILER=${LLVM_RUNTIME_OUTPUT_INTDIR}/clang-cl
+                          -DCMAKE_CXX_COMPILER=${LLVM_RUNTIME_OUTPUT_INTDIR}/clang-cl)
+      else()
+        set(compiler_args -DCMAKE_C_COMPILER=${LLVM_RUNTIME_OUTPUT_INTDIR}/clang
+                          -DCMAKE_CXX_COMPILER=${LLVM_RUNTIME_OUTPUT_INTDIR}/clang++)
+      endif()
     endif()
     if(lld IN_LIST TOOLCHAIN_TOOLS)
-      list(APPEND compiler_args -DCMAKE_LINKER=${LLVM_RUNTIME_OUTPUT_INTDIR}/ld.lld)
+      if(_cmake_system_name STREQUAL Windows)
+        list(APPEND compiler_args -DCMAKE_LINKER=${LLVM_RUNTIME_OUTPUT_INTDIR}/lld-link)
+      else()
+        list(APPEND compiler_args -DCMAKE_LINKER=${LLVM_RUNTIME_OUTPUT_INTDIR}/ld.lld)
+      endif()
     endif()
     if(llvm-ar IN_LIST TOOLCHAIN_TOOLS)
       list(APPEND compiler_args -DCMAKE_AR=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-ar)
@@ -125,10 +142,14 @@ function(llvm_ExternalProject_Add name source_dir)
     if(llvm-objcopy IN_LIST TOOLCHAIN_TOOLS)
       list(APPEND compiler_args -DCMAKE_OBJCOPY=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-objcopy)
     endif()
-    if(llvm-strip IN_LIST TOOLCHAIN_TOOLS)
+    if(llvm-strip IN_LIST TOOLCHAIN_TOOLS AND NOT ARG_STRIP_TOOL)
       list(APPEND compiler_args -DCMAKE_STRIP=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-strip)
     endif()
     list(APPEND ARG_DEPENDS ${TOOLCHAIN_TOOLS})
+  endif()
+
+  if(ARG_STRIP_TOOL)
+    list(APPEND compiler_args -DCMAKE_STRIP=${ARG_STRIP_TOOL})
   endif()
 
   add_custom_command(
@@ -210,6 +231,8 @@ function(llvm_ExternalProject_Add name source_dir)
                -DLLVM_ENABLE_WERROR=${LLVM_ENABLE_WERROR}
                -DLLVM_HOST_TRIPLE=${LLVM_HOST_TRIPLE}
                -DLLVM_HAVE_LINK_VERSION_SCRIPT=${LLVM_HAVE_LINK_VERSION_SCRIPT}
+               -DLLVM_USE_RELATIVE_PATHS_IN_DEBUG_INFO=${LLVM_USE_RELATIVE_PATHS_IN_DEBUG_INFO}
+               -DLLVM_SOURCE_PREFIX=${LLVM_SOURCE_PREFIX}
                -DPACKAGE_VERSION=${PACKAGE_VERSION}
                -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
                -DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}

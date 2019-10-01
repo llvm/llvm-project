@@ -1,9 +1,8 @@
 //===- Instructions.cpp - Implement the LLVM instructions -----------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -29,6 +28,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
@@ -44,6 +44,12 @@
 #include <vector>
 
 using namespace llvm;
+
+static cl::opt<bool> SwitchInstProfUpdateWrapperStrict(
+    "switch-inst-prof-update-wrapper-strict", cl::Hidden,
+    cl::desc("Assert that prof branch_weights metadata is valid when creating "
+             "an instance of SwitchInstProfUpdateWrapper"),
+    cl::init(false));
 
 //===----------------------------------------------------------------------===//
 //                            AllocaInst Class
@@ -257,6 +263,36 @@ void LandingPadInst::addClause(Constant *Val) {
 
 Function *CallBase::getCaller() { return getParent()->getParent(); }
 
+unsigned CallBase::getNumSubclassExtraOperandsDynamic() const {
+  assert(getOpcode() == Instruction::CallBr && "Unexpected opcode!");
+  return cast<CallBrInst>(this)->getNumIndirectDests() + 1;
+}
+
+bool CallBase::isIndirectCall() const {
+  const Value *V = getCalledValue();
+  if (isa<Function>(V) || isa<Constant>(V))
+    return false;
+  if (const CallInst *CI = dyn_cast<CallInst>(this))
+    if (CI->isInlineAsm())
+      return false;
+  return true;
+}
+
+/// Tests if this call site must be tail call optimized. Only a CallInst can
+/// be tail call optimized.
+bool CallBase::isMustTailCall() const {
+  if (auto *CI = dyn_cast<CallInst>(this))
+    return CI->isMustTailCall();
+  return false;
+}
+
+/// Tests if this call site is marked as a tail call.
+bool CallBase::isTailCall() const {
+  if (auto *CI = dyn_cast<CallInst>(this))
+    return CI->isTailCall();
+  return false;
+}
+
 Intrinsic::ID CallBase::getIntrinsicID() const {
   if (auto *F = getCalledFunction())
     return F->getIntrinsicID();
@@ -378,9 +414,8 @@ void CallInst::init(FunctionType *FTy, Value *Func, ArrayRef<Value *> Args,
   setName(NameStr);
 }
 
-void CallInst::init(Value *Func, const Twine &NameStr) {
-  FTy =
-      cast<FunctionType>(cast<PointerType>(Func->getType())->getElementType());
+void CallInst::init(FunctionType *FTy, Value *Func, const Twine &NameStr) {
+  this->FTy = FTy;
   assert(getNumOperands() == 1 && "NumOperands not set up?");
   setCalledOperand(Func);
 
@@ -389,22 +424,18 @@ void CallInst::init(Value *Func, const Twine &NameStr) {
   setName(NameStr);
 }
 
-CallInst::CallInst(Value *Func, const Twine &Name, Instruction *InsertBefore)
-    : CallBase(cast<FunctionType>(
-                   cast<PointerType>(Func->getType())->getElementType())
-                   ->getReturnType(),
-               Instruction::Call, OperandTraits<CallBase>::op_end(this) - 1, 1,
-               InsertBefore) {
-  init(Func, Name);
+CallInst::CallInst(FunctionType *Ty, Value *Func, const Twine &Name,
+                   Instruction *InsertBefore)
+    : CallBase(Ty->getReturnType(), Instruction::Call,
+               OperandTraits<CallBase>::op_end(this) - 1, 1, InsertBefore) {
+  init(Ty, Func, Name);
 }
 
-CallInst::CallInst(Value *Func, const Twine &Name, BasicBlock *InsertAtEnd)
-    : CallBase(cast<FunctionType>(
-                   cast<PointerType>(Func->getType())->getElementType())
-                   ->getReturnType(),
-               Instruction::Call, OperandTraits<CallBase>::op_end(this) - 1, 1,
-               InsertAtEnd) {
-  init(Func, Name);
+CallInst::CallInst(FunctionType *Ty, Value *Func, const Twine &Name,
+                   BasicBlock *InsertAtEnd)
+    : CallBase(Ty->getReturnType(), Instruction::Call,
+               OperandTraits<CallBase>::op_end(this) - 1, 1, InsertAtEnd) {
+  init(Ty, Func, Name);
 }
 
 CallInst::CallInst(const CallInst &CI)
@@ -424,8 +455,8 @@ CallInst *CallInst::Create(CallInst *CI, ArrayRef<OperandBundleDef> OpB,
                            Instruction *InsertPt) {
   std::vector<Value *> Args(CI->arg_begin(), CI->arg_end());
 
-  auto *NewCI = CallInst::Create(CI->getCalledValue(), Args, OpB, CI->getName(),
-                                 InsertPt);
+  auto *NewCI = CallInst::Create(CI->getFunctionType(), CI->getCalledValue(),
+                                 Args, OpB, CI->getName(), InsertPt);
   NewCI->setTailCallKind(CI->getTailCallKind());
   NewCI->setCallingConv(CI->getCallingConv());
   NewCI->SubclassOptionalData = CI->SubclassOptionalData;
@@ -434,14 +465,57 @@ CallInst *CallInst::Create(CallInst *CI, ArrayRef<OperandBundleDef> OpB,
   return NewCI;
 }
 
+// Update profile weight for call instruction by scaling it using the ratio
+// of S/T. The meaning of "branch_weights" meta data for call instruction is
+// transfered to represent call count.
+void CallInst::updateProfWeight(uint64_t S, uint64_t T) {
+  auto *ProfileData = getMetadata(LLVMContext::MD_prof);
+  if (ProfileData == nullptr)
+    return;
 
+  auto *ProfDataName = dyn_cast<MDString>(ProfileData->getOperand(0));
+  if (!ProfDataName || (!ProfDataName->getString().equals("branch_weights") &&
+                        !ProfDataName->getString().equals("VP")))
+    return;
 
+  if (T == 0) {
+    LLVM_DEBUG(dbgs() << "Attempting to update profile weights will result in "
+                         "div by 0. Ignoring. Likely the function "
+                      << getParent()->getParent()->getName()
+                      << " has 0 entry count, and contains call instructions "
+                         "with non-zero prof info.");
+    return;
+  }
 
-
-
-
-
-
+  MDBuilder MDB(getContext());
+  SmallVector<Metadata *, 3> Vals;
+  Vals.push_back(ProfileData->getOperand(0));
+  APInt APS(128, S), APT(128, T);
+  if (ProfDataName->getString().equals("branch_weights") &&
+      ProfileData->getNumOperands() > 0) {
+    // Using APInt::div may be expensive, but most cases should fit 64 bits.
+    APInt Val(128, mdconst::dyn_extract<ConstantInt>(ProfileData->getOperand(1))
+                       ->getValue()
+                       .getZExtValue());
+    Val *= APS;
+    Vals.push_back(MDB.createConstant(ConstantInt::get(
+        Type::getInt64Ty(getContext()), Val.udiv(APT).getLimitedValue())));
+  } else if (ProfDataName->getString().equals("VP"))
+    for (unsigned i = 1; i < ProfileData->getNumOperands(); i += 2) {
+      // The first value is the key of the value profile, which will not change.
+      Vals.push_back(ProfileData->getOperand(i));
+      // Using APInt::div may be expensive, but most cases should fit 64 bits.
+      APInt Val(128,
+                mdconst::dyn_extract<ConstantInt>(ProfileData->getOperand(i + 1))
+                    ->getValue()
+                    .getZExtValue());
+      Val *= APS;
+      Vals.push_back(MDB.createConstant(
+          ConstantInt::get(Type::getInt64Ty(getContext()),
+                           Val.udiv(APT).getLimitedValue())));
+    }
+  setMetadata(LLVMContext::MD_prof, MDNode::get(getContext(), Vals));
+}
 
 /// IsConstantOne - Return true only if val is constant int 1
 static bool IsConstantOne(Value *val) {
@@ -498,7 +572,7 @@ static Instruction *createMalloc(Instruction *InsertBefore,
   BasicBlock *BB = InsertBefore ? InsertBefore->getParent() : InsertAtEnd;
   Module *M = BB->getParent()->getParent();
   Type *BPTy = Type::getInt8PtrTy(BB->getContext());
-  Value *MallocFunc = MallocF;
+  FunctionCallee MallocFunc = MallocF;
   if (!MallocFunc)
     // prototype malloc as "void *malloc(size_t)"
     MallocFunc = M->getOrInsertFunction("malloc", BPTy, IntPtrTy);
@@ -522,7 +596,7 @@ static Instruction *createMalloc(Instruction *InsertBefore,
     }
   }
   MCall->setTailCall();
-  if (Function *F = dyn_cast<Function>(MallocFunc)) {
+  if (Function *F = dyn_cast<Function>(MallocFunc.getCallee())) {
     MCall->setCallingConv(F->getCallingConv());
     if (!F->returnDoesNotAlias())
       F->setReturnDoesNotAlias();
@@ -595,7 +669,7 @@ static Instruction *createFree(Value *Source,
   Type *VoidTy = Type::getVoidTy(M->getContext());
   Type *IntPtrTy = Type::getInt8PtrTy(M->getContext());
   // prototype free as "void free(void*)"
-  Value *FreeFunc = M->getOrInsertFunction("free", VoidTy, IntPtrTy);
+  FunctionCallee FreeFunc = M->getOrInsertFunction("free", VoidTy, IntPtrTy);
   CallInst *Result = nullptr;
   Value *PtrCast = Source;
   if (InsertBefore) {
@@ -608,7 +682,7 @@ static Instruction *createFree(Value *Source,
     Result = CallInst::Create(FreeFunc, PtrCast, Bundles, "");
   }
   Result->setTailCall();
-  if (Function *F = dyn_cast<Function>(FreeFunc))
+  if (Function *F = dyn_cast<Function>(FreeFunc.getCallee()))
     Result->setCallingConv(F->getCallingConv());
 
   return Result;
@@ -692,9 +766,9 @@ InvokeInst *InvokeInst::Create(InvokeInst *II, ArrayRef<OperandBundleDef> OpB,
                                Instruction *InsertPt) {
   std::vector<Value *> Args(II->arg_begin(), II->arg_end());
 
-  auto *NewII = InvokeInst::Create(II->getCalledValue(), II->getNormalDest(),
-                                   II->getUnwindDest(), Args, OpB,
-                                   II->getName(), InsertPt);
+  auto *NewII = InvokeInst::Create(II->getFunctionType(), II->getCalledValue(),
+                                   II->getNormalDest(), II->getUnwindDest(),
+                                   Args, OpB, II->getName(), InsertPt);
   NewII->setCallingConv(II->getCallingConv());
   NewII->SubclassOptionalData = II->SubclassOptionalData;
   NewII->setAttributes(II->getAttributes());
@@ -705,6 +779,76 @@ InvokeInst *InvokeInst::Create(InvokeInst *II, ArrayRef<OperandBundleDef> OpB,
 
 LandingPadInst *InvokeInst::getLandingPadInst() const {
   return cast<LandingPadInst>(getUnwindDest()->getFirstNonPHI());
+}
+
+//===----------------------------------------------------------------------===//
+//                        CallBrInst Implementation
+//===----------------------------------------------------------------------===//
+
+void CallBrInst::init(FunctionType *FTy, Value *Fn, BasicBlock *Fallthrough,
+                      ArrayRef<BasicBlock *> IndirectDests,
+                      ArrayRef<Value *> Args,
+                      ArrayRef<OperandBundleDef> Bundles,
+                      const Twine &NameStr) {
+  this->FTy = FTy;
+
+  assert((int)getNumOperands() ==
+             ComputeNumOperands(Args.size(), IndirectDests.size(),
+                                CountBundleInputs(Bundles)) &&
+         "NumOperands not set up?");
+  NumIndirectDests = IndirectDests.size();
+  setDefaultDest(Fallthrough);
+  for (unsigned i = 0; i != NumIndirectDests; ++i)
+    setIndirectDest(i, IndirectDests[i]);
+  setCalledOperand(Fn);
+
+#ifndef NDEBUG
+  assert(((Args.size() == FTy->getNumParams()) ||
+          (FTy->isVarArg() && Args.size() > FTy->getNumParams())) &&
+         "Calling a function with bad signature");
+
+  for (unsigned i = 0, e = Args.size(); i != e; i++)
+    assert((i >= FTy->getNumParams() ||
+            FTy->getParamType(i) == Args[i]->getType()) &&
+           "Calling a function with a bad signature!");
+#endif
+
+  std::copy(Args.begin(), Args.end(), op_begin());
+
+  auto It = populateBundleOperandInfos(Bundles, Args.size());
+  (void)It;
+  assert(It + 2 + IndirectDests.size() == op_end() && "Should add up!");
+
+  setName(NameStr);
+}
+
+CallBrInst::CallBrInst(const CallBrInst &CBI)
+    : CallBase(CBI.Attrs, CBI.FTy, CBI.getType(), Instruction::CallBr,
+               OperandTraits<CallBase>::op_end(this) - CBI.getNumOperands(),
+               CBI.getNumOperands()) {
+  setCallingConv(CBI.getCallingConv());
+  std::copy(CBI.op_begin(), CBI.op_end(), op_begin());
+  std::copy(CBI.bundle_op_info_begin(), CBI.bundle_op_info_end(),
+            bundle_op_info_begin());
+  SubclassOptionalData = CBI.SubclassOptionalData;
+  NumIndirectDests = CBI.NumIndirectDests;
+}
+
+CallBrInst *CallBrInst::Create(CallBrInst *CBI, ArrayRef<OperandBundleDef> OpB,
+                               Instruction *InsertPt) {
+  std::vector<Value *> Args(CBI->arg_begin(), CBI->arg_end());
+
+  auto *NewCBI = CallBrInst::Create(CBI->getFunctionType(),
+                                    CBI->getCalledValue(),
+                                    CBI->getDefaultDest(),
+                                    CBI->getIndirectDests(),
+                                    Args, OpB, CBI->getName(), InsertPt);
+  NewCBI->setCallingConv(CBI->getCallingConv());
+  NewCBI->SubclassOptionalData = CBI->SubclassOptionalData;
+  NewCBI->setAttributes(CBI->getAttributes());
+  NewCBI->setDebugLoc(CBI->getDebugLoc());
+  NewCBI->NumIndirectDests = CBI->NumIndirectDests;
+  return NewCBI;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1133,28 +1277,30 @@ void LoadInst::AssertOK() {
          "Alignment required for atomic load");
 }
 
-LoadInst::LoadInst(Value *Ptr, const Twine &Name, Instruction *InsertBef)
-    : LoadInst(Ptr, Name, /*isVolatile=*/false, InsertBef) {}
+LoadInst::LoadInst(Type *Ty, Value *Ptr, const Twine &Name,
+                   Instruction *InsertBef)
+    : LoadInst(Ty, Ptr, Name, /*isVolatile=*/false, InsertBef) {}
 
-LoadInst::LoadInst(Value *Ptr, const Twine &Name, BasicBlock *InsertAE)
-    : LoadInst(Ptr, Name, /*isVolatile=*/false, InsertAE) {}
+LoadInst::LoadInst(Type *Ty, Value *Ptr, const Twine &Name,
+                   BasicBlock *InsertAE)
+    : LoadInst(Ty, Ptr, Name, /*isVolatile=*/false, InsertAE) {}
 
 LoadInst::LoadInst(Type *Ty, Value *Ptr, const Twine &Name, bool isVolatile,
                    Instruction *InsertBef)
     : LoadInst(Ty, Ptr, Name, isVolatile, /*Align=*/0, InsertBef) {}
 
-LoadInst::LoadInst(Value *Ptr, const Twine &Name, bool isVolatile,
+LoadInst::LoadInst(Type *Ty, Value *Ptr, const Twine &Name, bool isVolatile,
                    BasicBlock *InsertAE)
-    : LoadInst(Ptr, Name, isVolatile, /*Align=*/0, InsertAE) {}
+    : LoadInst(Ty, Ptr, Name, isVolatile, /*Align=*/0, InsertAE) {}
 
 LoadInst::LoadInst(Type *Ty, Value *Ptr, const Twine &Name, bool isVolatile,
                    unsigned Align, Instruction *InsertBef)
     : LoadInst(Ty, Ptr, Name, isVolatile, Align, AtomicOrdering::NotAtomic,
                SyncScope::System, InsertBef) {}
 
-LoadInst::LoadInst(Value *Ptr, const Twine &Name, bool isVolatile,
+LoadInst::LoadInst(Type *Ty, Value *Ptr, const Twine &Name, bool isVolatile,
                    unsigned Align, BasicBlock *InsertAE)
-    : LoadInst(Ptr, Name, isVolatile, Align, AtomicOrdering::NotAtomic,
+    : LoadInst(Ty, Ptr, Name, isVolatile, Align, AtomicOrdering::NotAtomic,
                SyncScope::System, InsertAE) {}
 
 LoadInst::LoadInst(Type *Ty, Value *Ptr, const Twine &Name, bool isVolatile,
@@ -1169,59 +1315,16 @@ LoadInst::LoadInst(Type *Ty, Value *Ptr, const Twine &Name, bool isVolatile,
   setName(Name);
 }
 
-LoadInst::LoadInst(Value *Ptr, const Twine &Name, bool isVolatile,
-                   unsigned Align, AtomicOrdering Order,
-                   SyncScope::ID SSID,
+LoadInst::LoadInst(Type *Ty, Value *Ptr, const Twine &Name, bool isVolatile,
+                   unsigned Align, AtomicOrdering Order, SyncScope::ID SSID,
                    BasicBlock *InsertAE)
-  : UnaryInstruction(cast<PointerType>(Ptr->getType())->getElementType(),
-                     Load, Ptr, InsertAE) {
+    : UnaryInstruction(Ty, Load, Ptr, InsertAE) {
+  assert(Ty == cast<PointerType>(Ptr->getType())->getElementType());
   setVolatile(isVolatile);
   setAlignment(Align);
   setAtomic(Order, SSID);
   AssertOK();
   setName(Name);
-}
-
-LoadInst::LoadInst(Value *Ptr, const char *Name, Instruction *InsertBef)
-  : UnaryInstruction(cast<PointerType>(Ptr->getType())->getElementType(),
-                     Load, Ptr, InsertBef) {
-  setVolatile(false);
-  setAlignment(0);
-  setAtomic(AtomicOrdering::NotAtomic);
-  AssertOK();
-  if (Name && Name[0]) setName(Name);
-}
-
-LoadInst::LoadInst(Value *Ptr, const char *Name, BasicBlock *InsertAE)
-  : UnaryInstruction(cast<PointerType>(Ptr->getType())->getElementType(),
-                     Load, Ptr, InsertAE) {
-  setVolatile(false);
-  setAlignment(0);
-  setAtomic(AtomicOrdering::NotAtomic);
-  AssertOK();
-  if (Name && Name[0]) setName(Name);
-}
-
-LoadInst::LoadInst(Type *Ty, Value *Ptr, const char *Name, bool isVolatile,
-                   Instruction *InsertBef)
-    : UnaryInstruction(Ty, Load, Ptr, InsertBef) {
-  assert(Ty == cast<PointerType>(Ptr->getType())->getElementType());
-  setVolatile(isVolatile);
-  setAlignment(0);
-  setAtomic(AtomicOrdering::NotAtomic);
-  AssertOK();
-  if (Name && Name[0]) setName(Name);
-}
-
-LoadInst::LoadInst(Value *Ptr, const char *Name, bool isVolatile,
-                   BasicBlock *InsertAE)
-  : UnaryInstruction(cast<PointerType>(Ptr->getType())->getElementType(),
-                     Load, Ptr, InsertAE) {
-  setVolatile(isVolatile);
-  setAlignment(0);
-  setAtomic(AtomicOrdering::NotAtomic);
-  AssertOK();
-  if (Name && Name[0]) setName(Name);
 }
 
 void LoadInst::setAlignment(unsigned Align) {
@@ -1444,6 +1547,10 @@ StringRef AtomicRMWInst::getOperationName(BinOp Op) {
     return "umax";
   case AtomicRMWInst::UMin:
     return "umin";
+  case AtomicRMWInst::FAdd:
+    return "fadd";
+  case AtomicRMWInst::FSub:
+    return "fsub";
   case AtomicRMWInst::BAD_BINOP:
     return "<invalid operation>";
   }
@@ -1700,6 +1807,25 @@ ShuffleVectorInst::ShuffleVectorInst(Value *V1, Value *V2, Value *Mask,
   Op<1>() = V2;
   Op<2>() = Mask;
   setName(Name);
+}
+
+void ShuffleVectorInst::commute() {
+  int NumOpElts = Op<0>()->getType()->getVectorNumElements();
+  int NumMaskElts = getMask()->getType()->getVectorNumElements();
+  SmallVector<Constant*, 16> NewMask(NumMaskElts);
+  Type *Int32Ty = Type::getInt32Ty(getContext());
+  for (int i = 0; i != NumMaskElts; ++i) {
+    int MaskElt = getMaskValue(i);
+    if (MaskElt == -1) {
+      NewMask[i] = UndefValue::get(Int32Ty);
+      continue;
+    }
+    assert(MaskElt >= 0 && MaskElt < 2 * NumOpElts && "Out-of-range mask");
+    MaskElt = (MaskElt < NumOpElts) ? MaskElt + NumOpElts : MaskElt - NumOpElts;
+    NewMask[i] = ConstantInt::get(Int32Ty, MaskElt);
+  }
+  Op<2>() = ConstantVector::get(NewMask);
+  Op<0>().swap(Op<1>());
 }
 
 bool ShuffleVectorInst::isValidOperands(const Value *V1, const Value *V2,
@@ -3750,6 +3876,142 @@ void SwitchInst::growOperands() {
   growHungoffUses(ReservedSpace);
 }
 
+MDNode *
+SwitchInstProfUpdateWrapper::getProfBranchWeightsMD(const SwitchInst &SI) {
+  if (MDNode *ProfileData = SI.getMetadata(LLVMContext::MD_prof))
+    if (auto *MDName = dyn_cast<MDString>(ProfileData->getOperand(0)))
+      if (MDName->getString() == "branch_weights")
+        return ProfileData;
+  return nullptr;
+}
+
+MDNode *SwitchInstProfUpdateWrapper::buildProfBranchWeightsMD() {
+  assert(State == Changed && "called only if metadata has changed");
+
+  if (!Weights)
+    return nullptr;
+
+  assert(SI.getNumSuccessors() == Weights->size() &&
+         "num of prof branch_weights must accord with num of successors");
+
+  bool AllZeroes =
+      all_of(Weights.getValue(), [](uint32_t W) { return W == 0; });
+
+  if (AllZeroes || Weights.getValue().size() < 2)
+    return nullptr;
+
+  return MDBuilder(SI.getParent()->getContext()).createBranchWeights(*Weights);
+}
+
+void SwitchInstProfUpdateWrapper::init() {
+  MDNode *ProfileData = getProfBranchWeightsMD(SI);
+  if (!ProfileData) {
+    State = Initialized;
+    return;
+  }
+
+  if (ProfileData->getNumOperands() != SI.getNumSuccessors() + 1) {
+    State = Invalid;
+    if (SwitchInstProfUpdateWrapperStrict)
+      assert(false &&
+             "number of prof branch_weights metadata operands corresponds to"
+             " number of succesors");
+    return;
+  }
+
+  SmallVector<uint32_t, 8> Weights;
+  for (unsigned CI = 1, CE = SI.getNumSuccessors(); CI <= CE; ++CI) {
+    ConstantInt *C = mdconst::extract<ConstantInt>(ProfileData->getOperand(CI));
+    uint32_t CW = C->getValue().getZExtValue();
+    Weights.push_back(CW);
+  }
+  State = Initialized;
+  this->Weights = std::move(Weights);
+}
+
+SwitchInst::CaseIt
+SwitchInstProfUpdateWrapper::removeCase(SwitchInst::CaseIt I) {
+  if (Weights) {
+    assert(SI.getNumSuccessors() == Weights->size() &&
+           "num of prof branch_weights must accord with num of successors");
+    State = Changed;
+    // Copy the last case to the place of the removed one and shrink.
+    // This is tightly coupled with the way SwitchInst::removeCase() removes
+    // the cases in SwitchInst::removeCase(CaseIt).
+    Weights.getValue()[I->getCaseIndex() + 1] = Weights.getValue().back();
+    Weights.getValue().pop_back();
+  }
+  return SI.removeCase(I);
+}
+
+void SwitchInstProfUpdateWrapper::addCase(
+    ConstantInt *OnVal, BasicBlock *Dest,
+    SwitchInstProfUpdateWrapper::CaseWeightOpt W) {
+  SI.addCase(OnVal, Dest);
+
+  if (State == Invalid)
+    return;
+
+  if (!Weights && W && *W) {
+    State = Changed;
+    Weights = SmallVector<uint32_t, 8>(SI.getNumSuccessors(), 0);
+    Weights.getValue()[SI.getNumSuccessors() - 1] = *W;
+  } else if (Weights) {
+    State = Changed;
+    Weights.getValue().push_back(W ? *W : 0);
+  }
+  if (Weights)
+    assert(SI.getNumSuccessors() == Weights->size() &&
+           "num of prof branch_weights must accord with num of successors");
+}
+
+SymbolTableList<Instruction>::iterator
+SwitchInstProfUpdateWrapper::eraseFromParent() {
+  // Instruction is erased. Mark as unchanged to not touch it in the destructor.
+  if (State != Invalid) {
+    State = Initialized;
+    if (Weights)
+      Weights->resize(0);
+  }
+  return SI.eraseFromParent();
+}
+
+SwitchInstProfUpdateWrapper::CaseWeightOpt
+SwitchInstProfUpdateWrapper::getSuccessorWeight(unsigned idx) {
+  if (!Weights)
+    return None;
+  return Weights.getValue()[idx];
+}
+
+void SwitchInstProfUpdateWrapper::setSuccessorWeight(
+    unsigned idx, SwitchInstProfUpdateWrapper::CaseWeightOpt W) {
+  if (!W || State == Invalid)
+    return;
+
+  if (!Weights && *W)
+    Weights = SmallVector<uint32_t, 8>(SI.getNumSuccessors(), 0);
+
+  if (Weights) {
+    auto &OldW = Weights.getValue()[idx];
+    if (*W != OldW) {
+      State = Changed;
+      OldW = *W;
+    }
+  }
+}
+
+SwitchInstProfUpdateWrapper::CaseWeightOpt
+SwitchInstProfUpdateWrapper::getSuccessorWeight(const SwitchInst &SI,
+                                                unsigned idx) {
+  if (MDNode *ProfileData = getProfBranchWeightsMD(SI))
+    if (ProfileData->getNumOperands() == SI.getNumSuccessors() + 1)
+      return mdconst::extract<ConstantInt>(ProfileData->getOperand(idx + 1))
+          ->getValue()
+          .getZExtValue();
+
+  return None;
+}
+
 //===----------------------------------------------------------------------===//
 //                        IndirectBrInst Implementation
 //===----------------------------------------------------------------------===//
@@ -3874,7 +4136,7 @@ AllocaInst *AllocaInst::cloneImpl() const {
 }
 
 LoadInst *LoadInst::cloneImpl() const {
-  return new LoadInst(getOperand(0), Twine(), isVolatile(),
+  return new LoadInst(getType(), getOperand(0), Twine(), isVolatile(),
                       getAlignment(), getOrdering(), getSyncScopeID());
 }
 
@@ -4012,6 +4274,14 @@ InvokeInst *InvokeInst::cloneImpl() const {
     return new(getNumOperands(), DescriptorBytes) InvokeInst(*this);
   }
   return new(getNumOperands()) InvokeInst(*this);
+}
+
+CallBrInst *CallBrInst::cloneImpl() const {
+  if (hasOperandBundles()) {
+    unsigned DescriptorBytes = getNumOperandBundles() * sizeof(BundleOpInfo);
+    return new (getNumOperands(), DescriptorBytes) CallBrInst(*this);
+  }
+  return new (getNumOperands()) CallBrInst(*this);
 }
 
 ResumeInst *ResumeInst::cloneImpl() const { return new (1) ResumeInst(*this); }

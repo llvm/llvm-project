@@ -29,7 +29,7 @@
 
 ; SI: v_rcp_iflag_f32_e32 [[RCP:v[0-9]+]]
 ; SI-DAG: v_mul_hi_u32 [[RCP_HI:v[0-9]+]], [[RCP]]
-; SI-DAG: v_mul_lo_i32 [[RCP_LO:v[0-9]+]], [[RCP]]
+; SI-DAG: v_mul_lo_u32 [[RCP_LO:v[0-9]+]], [[RCP]]
 ; SI-DAG: v_sub_{{[iu]}}32_e32 [[NEG_RCP_LO:v[0-9]+]], vcc, 0, [[RCP_LO]]
 ; SI: v_cmp_eq_u32_e64 [[CC1:s\[[0-9:]+\]]], 0, [[RCP_HI]]
 ; SI: v_cndmask_b32_e64 [[CND1:v[0-9]+]], [[RCP_LO]], [[NEG_RCP_LO]], [[CC1]]
@@ -38,7 +38,7 @@
 ; SI-DAG: v_subrev_{{[iu]}}32_e32 [[RCP_S_E:v[0-9]+]], vcc, [[E]], [[RCP]]
 ; SI: v_cndmask_b32_e64 [[CND2:v[0-9]+]], [[RCP_S_E]], [[RCP_A_E]], [[CC1]]
 ; SI: v_mul_hi_u32 [[Quotient:v[0-9]+]], [[CND2]],
-; SI: v_mul_lo_i32 [[Num_S_Remainder:v[0-9]+]], [[CND2]]
+; SI: v_mul_lo_u32 [[Num_S_Remainder:v[0-9]+]], [[CND2]]
 ; SI-DAG: v_add_{{[iu]}}32_e32 [[Quotient_A_One:v[0-9]+]], vcc, 1, [[Quotient]]
 ; SI-DAG: v_sub_{{[iu]}}32_e32 [[Remainder:v[0-9]+]], vcc, {{[vs][0-9]+}}, [[Num_S_Remainder]]
 ; SI-DAG: v_cndmask_b32_e64
@@ -113,7 +113,7 @@ define amdgpu_kernel void @test_udivrem(i32 addrspace(1)* %out0, [8 x i32], i32 
 ; accurately check all the operands.
 ; SI-DAG: v_rcp_iflag_f32_e32
 ; SI-DAG: v_mul_hi_u32
-; SI-DAG: v_mul_lo_i32
+; SI-DAG: v_mul_lo_u32
 ; SI-DAG: v_sub_{{[iu]}}32_e32
 ; SI-DAG: v_cndmask_b32_e64
 ; SI-DAG: v_mul_hi_u32
@@ -121,7 +121,7 @@ define amdgpu_kernel void @test_udivrem(i32 addrspace(1)* %out0, [8 x i32], i32 
 ; SI-DAG: v_subrev_{{[iu]}}32_e32
 ; SI-DAG: v_cndmask_b32_e64
 ; SI-DAG: v_mul_hi_u32
-; SI-DAG: v_mul_lo_i32
+; SI-DAG: v_mul_lo_u32
 ; SI-DAG: v_subrev_{{[iu]}}32_e32
 ; SI-DAG: v_cndmask_b32_e64
 ; SI-DAG: v_add_{{[iu]}}32_e32
@@ -134,7 +134,7 @@ define amdgpu_kernel void @test_udivrem(i32 addrspace(1)* %out0, [8 x i32], i32 
 ; SI-DAG: v_cndmask_b32_e64
 ; SI-DAG: v_rcp_iflag_f32_e32
 ; SI-DAG: v_mul_hi_u32
-; SI-DAG: v_mul_lo_i32
+; SI-DAG: v_mul_lo_u32
 ; SI-DAG: v_sub_{{[iu]}}32_e32
 ; SI-DAG: v_cndmask_b32_e64
 ; SI-DAG: v_mul_hi_u32
@@ -142,7 +142,7 @@ define amdgpu_kernel void @test_udivrem(i32 addrspace(1)* %out0, [8 x i32], i32 
 ; SI-DAG: v_subrev_{{[iu]}}32_e32
 ; SI-DAG: v_cndmask_b32_e64
 ; SI-DAG: v_mul_hi_u32
-; SI-DAG: v_mul_lo_i32
+; SI-DAG: v_mul_lo_u32
 ; SI-DAG: v_subrev_{{[iu]}}32_e32
 ; SI-DAG: v_cndmask_b32_e64
 ; SI-DAG: v_add_{{[iu]}}32_e32
@@ -260,7 +260,7 @@ define amdgpu_kernel void @test_udivrem_v2(<2 x i32> addrspace(1)* %out, <2 x i3
 
 ; SI-DAG: v_rcp_iflag_f32_e32
 ; SI-DAG: v_mul_hi_u32
-; SI-DAG: v_mul_lo_i32
+; SI-DAG: v_mul_lo_u32
 ; SI-DAG: v_sub_{{[iu]}}32_e32
 ; SI-DAG: v_cndmask_b32_e64
 ; SI-DAG: v_mul_hi_u32
@@ -268,7 +268,7 @@ define amdgpu_kernel void @test_udivrem_v2(<2 x i32> addrspace(1)* %out, <2 x i3
 ; SI-DAG: v_subrev_{{[iu]}}32_e32
 ; SI-DAG: v_cndmask_b32_e64
 ; SI-DAG: v_mul_hi_u32
-; SI-DAG: v_mul_lo_i32
+; SI-DAG: v_mul_lo_u32
 ; SI-DAG: v_subrev_{{[iu]}}32_e32
 ; SI-DAG: v_cndmask_b32_e64
 ; SI-DAG: v_add_{{[iu]}}32_e32
@@ -281,7 +281,7 @@ define amdgpu_kernel void @test_udivrem_v2(<2 x i32> addrspace(1)* %out, <2 x i3
 ; SI-DAG: v_cndmask_b32_e64
 ; SI-DAG: v_rcp_iflag_f32_e32
 ; SI-DAG: v_mul_hi_u32
-; SI-DAG: v_mul_lo_i32
+; SI-DAG: v_mul_lo_u32
 ; SI-DAG: v_sub_{{[iu]}}32_e32
 ; SI-DAG: v_cndmask_b32_e64
 ; SI-DAG: v_mul_hi_u32
@@ -289,7 +289,7 @@ define amdgpu_kernel void @test_udivrem_v2(<2 x i32> addrspace(1)* %out, <2 x i3
 ; SI-DAG: v_subrev_{{[iu]}}32_e32
 ; SI-DAG: v_cndmask_b32_e64
 ; SI-DAG: v_mul_hi_u32
-; SI-DAG: v_mul_lo_i32
+; SI-DAG: v_mul_lo_u32
 ; SI-DAG: v_subrev_{{[iu]}}32_e32
 ; SI-DAG: v_cndmask_b32_e64
 ; SI-DAG: v_add_{{[iu]}}32_e32
@@ -302,7 +302,7 @@ define amdgpu_kernel void @test_udivrem_v2(<2 x i32> addrspace(1)* %out, <2 x i3
 ; SI-DAG: v_cndmask_b32_e64
 ; SI-DAG: v_rcp_iflag_f32_e32
 ; SI-DAG: v_mul_hi_u32
-; SI-DAG: v_mul_lo_i32
+; SI-DAG: v_mul_lo_u32
 ; SI-DAG: v_sub_{{[iu]}}32_e32
 ; SI-DAG: v_cndmask_b32_e64
 ; SI-DAG: v_mul_hi_u32
@@ -310,7 +310,7 @@ define amdgpu_kernel void @test_udivrem_v2(<2 x i32> addrspace(1)* %out, <2 x i3
 ; SI-DAG: v_subrev_{{[iu]}}32_e32
 ; SI-DAG: v_cndmask_b32_e64
 ; SI-DAG: v_mul_hi_u32
-; SI-DAG: v_mul_lo_i32
+; SI-DAG: v_mul_lo_u32
 ; SI-DAG: v_subrev_{{[iu]}}32_e32
 ; SI-DAG: v_cndmask_b32_e64
 ; SI-DAG: v_add_{{[iu]}}32_e32
@@ -323,7 +323,7 @@ define amdgpu_kernel void @test_udivrem_v2(<2 x i32> addrspace(1)* %out, <2 x i3
 ; SI-DAG: v_cndmask_b32_e64
 ; SI-DAG: v_rcp_iflag_f32_e32
 ; SI-DAG: v_mul_hi_u32
-; SI-DAG: v_mul_lo_i32
+; SI-DAG: v_mul_lo_u32
 ; SI-DAG: v_sub_{{[iu]}}32_e32
 ; SI-DAG: v_cndmask_b32_e64
 ; SI-DAG: v_mul_hi_u32

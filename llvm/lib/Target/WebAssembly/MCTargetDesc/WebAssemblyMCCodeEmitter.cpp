@@ -1,9 +1,8 @@
 //=- WebAssemblyMCCodeEmitter.cpp - Convert WebAssembly code to machine code -//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -49,7 +48,7 @@ class WebAssemblyMCCodeEmitter final : public MCCodeEmitter {
                          const MCSubtargetInfo &STI) const override;
 
 public:
-  WebAssemblyMCCodeEmitter(const MCInstrInfo &mcii) : MCII(mcii) {}
+  WebAssemblyMCCodeEmitter(const MCInstrInfo &MCII) : MCII(MCII) {}
 };
 } // end anonymous namespace
 
@@ -82,14 +81,14 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
     encodeULEB128(MI.getNumOperands() - 2, OS);
 
   const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
-  for (unsigned i = 0, e = MI.getNumOperands(); i < e; ++i) {
-    const MCOperand &MO = MI.getOperand(i);
+  for (unsigned I = 0, E = MI.getNumOperands(); I < E; ++I) {
+    const MCOperand &MO = MI.getOperand(I);
     if (MO.isReg()) {
       /* nothing to encode */
 
     } else if (MO.isImm()) {
-      if (i < Desc.getNumOperands()) {
-        const MCOperandInfo &Info = Desc.OpInfo[i];
+      if (I < Desc.getNumOperands()) {
+        const MCOperandInfo &Info = Desc.OpInfo[I];
         LLVM_DEBUG(dbgs() << "Encoding immediate: type="
                           << int(Info.OperandType) << "\n");
         switch (Info.OperandType) {
@@ -127,28 +126,28 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
       }
 
     } else if (MO.isFPImm()) {
-      const MCOperandInfo &Info = Desc.OpInfo[i];
+      const MCOperandInfo &Info = Desc.OpInfo[I];
       if (Info.OperandType == WebAssembly::OPERAND_F32IMM) {
         // TODO: MC converts all floating point immediate operands to double.
         // This is fine for numeric values, but may cause NaNs to change bits.
-        float f = float(MO.getFPImm());
-        support::endian::write<float>(OS, f, support::little);
+        auto F = float(MO.getFPImm());
+        support::endian::write<float>(OS, F, support::little);
       } else {
         assert(Info.OperandType == WebAssembly::OPERAND_F64IMM);
-        double d = MO.getFPImm();
-        support::endian::write<double>(OS, d, support::little);
+        double D = MO.getFPImm();
+        support::endian::write<double>(OS, D, support::little);
       }
 
     } else if (MO.isExpr()) {
-      const MCOperandInfo &Info = Desc.OpInfo[i];
+      const MCOperandInfo &Info = Desc.OpInfo[I];
       llvm::MCFixupKind FixupKind;
       size_t PaddedSize = 5;
       switch (Info.OperandType) {
       case WebAssembly::OPERAND_I32IMM:
-        FixupKind = MCFixupKind(WebAssembly::fixup_code_sleb128_i32);
+        FixupKind = MCFixupKind(WebAssembly::fixup_sleb128_i32);
         break;
       case WebAssembly::OPERAND_I64IMM:
-        FixupKind = MCFixupKind(WebAssembly::fixup_code_sleb128_i64);
+        FixupKind = MCFixupKind(WebAssembly::fixup_sleb128_i64);
         PaddedSize = 10;
         break;
       case WebAssembly::OPERAND_FUNCTION32:
@@ -156,7 +155,7 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
       case WebAssembly::OPERAND_TYPEINDEX:
       case WebAssembly::OPERAND_GLOBAL:
       case WebAssembly::OPERAND_EVENT:
-        FixupKind = MCFixupKind(WebAssembly::fixup_code_uleb128_i32);
+        FixupKind = MCFixupKind(WebAssembly::fixup_uleb128_i32);
         break;
       default:
         llvm_unreachable("unexpected symbolic operand kind");

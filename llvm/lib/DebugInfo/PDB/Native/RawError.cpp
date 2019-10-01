@@ -5,6 +5,7 @@
 using namespace llvm;
 using namespace llvm::pdb;
 
+namespace {
 // FIXME: This class is only here to support the transition to llvm::Error. It
 // will be removed once this transition is complete. Clients should prefer to
 // deal with the Error value directly, rather than converting to error_code.
@@ -44,6 +45,7 @@ public:
     llvm_unreachable("Unrecognized raw_error_code");
   }
 };
+} // namespace
 
 static llvm::ManagedStatic<RawErrorCategory> RawCategory;
 const std::error_category &llvm::pdb::RawErrCategory() { return *RawCategory; }

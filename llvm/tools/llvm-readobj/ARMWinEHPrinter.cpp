@@ -1,9 +1,8 @@
 //===-- ARMWinEHPrinter.cpp - Windows on ARM EH Data Printer ----*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -1095,17 +1094,17 @@ void Decoder::dumpProcedureData(const COFFObjectFile &COFF,
       break;
 }
 
-std::error_code Decoder::dumpProcedureData(const COFFObjectFile &COFF) {
+Error Decoder::dumpProcedureData(const COFFObjectFile &COFF) {
   for (const auto &Section : COFF.sections()) {
-    StringRef SectionName;
-    if (std::error_code EC =
-            COFF.getSectionName(COFF.getCOFFSection(Section), SectionName))
-      return EC;
+    Expected<StringRef> NameOrErr =
+        COFF.getSectionName(COFF.getCOFFSection(Section));
+    if (!NameOrErr)
+      return NameOrErr.takeError();
 
-    if (SectionName.startswith(".pdata"))
+    if (NameOrErr->startswith(".pdata"))
       dumpProcedureData(COFF, Section);
   }
-  return std::error_code();
+  return Error::success();
 }
 }
 }

@@ -118,24 +118,24 @@ define i32 @no_sink_readonly_call(i32 %x, i32 %y, i32* %p) {
 ; CHECK-NEXT: br_if       0, $pop8{{$}}
 ; CHECK-NEXT: i32.const   $push9=, 0{{$}}
 ; CHECK-NEXT: return      $pop9{{$}}
-; CHECK-NEXT: .LBB7_2:
+; CHECK-NEXT: .LBB{{[0-9]+}}_2:
 ; CHECK-NEXT: end_block{{$}}
 ; CHECK-NEXT: i32.const   $push14=, 1{{$}}
 ; CHECK-NEXT: return      $pop14{{$}}
 ; NOREGS-LABEL: stack_uses:
 ; NOREGS: .functype stack_uses (i32, i32, i32, i32) -> (i32){{$}}
 ; NOREGS-NEXT: block {{$}}
-; NOREGS-NEXT: get_local 0{{$}}
+; NOREGS-NEXT: local.get 0{{$}}
 ; NOREGS-NEXT: i32.const   1{{$}}
 ; NOREGS-NEXT: i32.lt_s
-; NOREGS-NEXT: get_local 1{{$}}
+; NOREGS-NEXT: local.get 1{{$}}
 ; NOREGS-NEXT: i32.const   2{{$}}
 ; NOREGS-NEXT: i32.lt_s
 ; NOREGS-NEXT: i32.xor {{$}}
-; NOREGS-NEXT: get_local 2{{$}}
+; NOREGS-NEXT: local.get 2{{$}}
 ; NOREGS-NEXT: i32.const   1{{$}}
 ; NOREGS-NEXT: i32.lt_s
-; NOREGS-NEXT: get_local 3{{$}}
+; NOREGS-NEXT: local.get 3{{$}}
 ; NOREGS-NEXT: i32.const   2{{$}}
 ; NOREGS-NEXT: i32.lt_s
 ; NOREGS-NEXT: i32.xor {{$}}
@@ -145,7 +145,7 @@ define i32 @no_sink_readonly_call(i32 %x, i32 %y, i32* %p) {
 ; NOREGS-NEXT: br_if       0{{$}}
 ; NOREGS-NEXT: i32.const   0{{$}}
 ; NOREGS-NEXT: return{{$}}
-; NOREGS-NEXT: .LBB7_2:
+; NOREGS-NEXT: .LBB{{[0-9]+}}_2:
 ; NOREGS-NEXT: end_block{{$}}
 ; NOREGS-NEXT: i32.const   1{{$}}
 ; NOREGS-NEXT: return{{$}}
@@ -166,39 +166,39 @@ false:
 }
 
 ; Test an interesting case where the load has multiple uses and cannot
-; be trivially stackified. However, it can be stackified with a tee_local.
+; be trivially stackified. However, it can be stackified with a local.tee.
 
 ; CHECK-LABEL: multiple_uses:
 ; CHECK: .functype multiple_uses (i32, i32, i32) -> (){{$}}
 ; CHECK-NEXT: block   {{$}}
 ; CHECK-NEXT: i32.load    $push[[NUM0:[0-9]+]]=, 0($2){{$}}
-; CHECK-NEXT: tee_local   $push[[NUM1:[0-9]+]]=, $3=, $pop[[NUM0]]{{$}}
+; CHECK-NEXT: local.tee   $push[[NUM1:[0-9]+]]=, $3=, $pop[[NUM0]]{{$}}
 ; CHECK-NEXT: i32.ge_u    $push[[NUM2:[0-9]+]]=, $pop[[NUM1]], $1{{$}}
 ; CHECK-NEXT: br_if       0, $pop[[NUM2]]{{$}}
 ; CHECK-NEXT: i32.lt_u    $push[[NUM3:[0-9]+]]=, $3, $0{{$}}
 ; CHECK-NEXT: br_if       0, $pop[[NUM3]]{{$}}
 ; CHECK-NEXT: i32.store   0($2), $3{{$}}
-; CHECK-NEXT: .LBB8_3:
+; CHECK-NEXT: .LBB{{[0-9]+}}_3:
 ; CHECK-NEXT: end_block{{$}}
 ; CHECK-NEXT: return{{$}}
 ; NOREGS-LABEL: multiple_uses:
 ; NOREGS: .functype multiple_uses (i32, i32, i32) -> (){{$}}
 ; NOREGS: .local i32{{$}}
 ; NOREGS-NEXT: block {{$}}
-; NOREGS-NEXT: get_local   2{{$}}
+; NOREGS-NEXT: local.get   2{{$}}
 ; NOREGS-NEXT: i32.load    0{{$}}
-; NOREGS-NEXT: tee_local   3{{$}}
-; NOREGS-NEXT: get_local   1{{$}}
+; NOREGS-NEXT: local.tee   3{{$}}
+; NOREGS-NEXT: local.get   1{{$}}
 ; NOREGS-NEXT: i32.ge_u
 ; NOREGS-NEXT: br_if       0{{$}}
-; NOREGS-NEXT: get_local   3{{$}}
-; NOREGS-NEXT: get_local   0{{$}}
+; NOREGS-NEXT: local.get   3{{$}}
+; NOREGS-NEXT: local.get   0{{$}}
 ; NOREGS-NEXT: i32.lt_u
 ; NOREGS-NEXT: br_if       0{{$}}
-; NOREGS-NEXT: get_local   2{{$}}
-; NOREGS-NEXT: get_local   3{{$}}
+; NOREGS-NEXT: local.get   2{{$}}
+; NOREGS-NEXT: local.get   3{{$}}
 ; NOREGS-NEXT: i32.store   0{{$}}
-; NOREGS-NEXT: .LBB8_3:
+; NOREGS-NEXT: .LBB{{[0-9]+}}_3:
 ; NOREGS-NEXT: end_block{{$}}
 ; NOREGS-NEXT: return{{$}}
 define void @multiple_uses(i32* %arg0, i32* %arg1, i32* %arg2) nounwind {
@@ -270,33 +270,33 @@ entry:
 ; CHECK-NEXT: return      $pop[[L14]]{{$}}
 ; NOREGS-LABEL: div_tree:
 ; NOREGS: .functype div_tree (i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32) -> (i32){{$}}
-; NOREGS-NEXT: get_local 0{{$}}
-; NOREGS-NEXT: get_local 1{{$}}
+; NOREGS-NEXT: local.get 0{{$}}
+; NOREGS-NEXT: local.get 1{{$}}
 ; NOREGS-NEXT: i32.div_s{{$}}
-; NOREGS-NEXT: get_local 2{{$}}
-; NOREGS-NEXT: get_local 3{{$}}
-; NOREGS-NEXT: i32.div_s{{$}}
-; NOREGS-NEXT: i32.div_s{{$}}
-; NOREGS-NEXT: get_local 4{{$}}
-; NOREGS-NEXT: get_local 5{{$}}
-; NOREGS-NEXT: i32.div_s{{$}}
-; NOREGS-NEXT: get_local 6{{$}}
-; NOREGS-NEXT: get_local 7{{$}}
+; NOREGS-NEXT: local.get 2{{$}}
+; NOREGS-NEXT: local.get 3{{$}}
 ; NOREGS-NEXT: i32.div_s{{$}}
 ; NOREGS-NEXT: i32.div_s{{$}}
+; NOREGS-NEXT: local.get 4{{$}}
+; NOREGS-NEXT: local.get 5{{$}}
 ; NOREGS-NEXT: i32.div_s{{$}}
-; NOREGS-NEXT: get_local 8{{$}}
-; NOREGS-NEXT: get_local 9{{$}}
-; NOREGS-NEXT: i32.div_s{{$}}
-; NOREGS-NEXT: get_local 10{{$}}
-; NOREGS-NEXT: get_local 11{{$}}
+; NOREGS-NEXT: local.get 6{{$}}
+; NOREGS-NEXT: local.get 7{{$}}
 ; NOREGS-NEXT: i32.div_s{{$}}
 ; NOREGS-NEXT: i32.div_s{{$}}
-; NOREGS-NEXT: get_local 12{{$}}
-; NOREGS-NEXT: get_local 13{{$}}
 ; NOREGS-NEXT: i32.div_s{{$}}
-; NOREGS-NEXT: get_local 14{{$}}
-; NOREGS-NEXT: get_local 15{{$}}
+; NOREGS-NEXT: local.get 8{{$}}
+; NOREGS-NEXT: local.get 9{{$}}
+; NOREGS-NEXT: i32.div_s{{$}}
+; NOREGS-NEXT: local.get 10{{$}}
+; NOREGS-NEXT: local.get 11{{$}}
+; NOREGS-NEXT: i32.div_s{{$}}
+; NOREGS-NEXT: i32.div_s{{$}}
+; NOREGS-NEXT: local.get 12{{$}}
+; NOREGS-NEXT: local.get 13{{$}}
+; NOREGS-NEXT: i32.div_s{{$}}
+; NOREGS-NEXT: local.get 14{{$}}
+; NOREGS-NEXT: local.get 15{{$}}
 ; NOREGS-NEXT: i32.div_s{{$}}
 ; NOREGS-NEXT: i32.div_s{{$}}
 ; NOREGS-NEXT: i32.div_s{{$}}
@@ -327,19 +327,19 @@ entry:
 ; CHECK-LABEL: simple_multiple_use:
 ; CHECK:       .functype simple_multiple_use (i32, i32) -> (){{$}}
 ; CHECK-NEXT:  i32.mul     $push[[NUM0:[0-9]+]]=, $1, $0{{$}}
-; CHECK-NEXT:  tee_local   $push[[NUM1:[0-9]+]]=, $[[NUM2:[0-9]+]]=, $pop[[NUM0]]{{$}}
-; CHECK-NEXT:  call        use_a@FUNCTION, $pop[[NUM1]]{{$}}
-; CHECK-NEXT:  call        use_b@FUNCTION, $[[NUM2]]{{$}}
+; CHECK-NEXT:  local.tee   $push[[NUM1:[0-9]+]]=, $[[NUM2:[0-9]+]]=, $pop[[NUM0]]{{$}}
+; CHECK-NEXT:  call        use_a, $pop[[NUM1]]{{$}}
+; CHECK-NEXT:  call        use_b, $[[NUM2]]{{$}}
 ; CHECK-NEXT:  return{{$}}
 ; NOREGS-LABEL: simple_multiple_use:
 ; NOREGS:       .functype simple_multiple_use (i32, i32) -> (){{$}}
-; NOREGS-NEXT:  get_local 1{{$}}
-; NOREGS-NEXT:  get_local 0{{$}}
+; NOREGS-NEXT:  local.get 1{{$}}
+; NOREGS-NEXT:  local.get 0{{$}}
 ; NOREGS-NEXT:  i32.mul
-; NOREGS-NEXT:  tee_local   1{{$}}
-; NOREGS-NEXT:  call        use_a@FUNCTION{{$}}
-; NOREGS-NEXT:  get_local   1{{$}}
-; NOREGS-NEXT:  call        use_b@FUNCTION{{$}}
+; NOREGS-NEXT:  local.tee   1{{$}}
+; NOREGS-NEXT:  call        use_a{{$}}
+; NOREGS-NEXT:  local.get   1{{$}}
+; NOREGS-NEXT:  call        use_b{{$}}
 ; NOREGS-NEXT:  return{{$}}
 declare void @use_a(i32)
 declare void @use_b(i32)
@@ -355,17 +355,17 @@ define void @simple_multiple_use(i32 %x, i32 %y) {
 ; CHECK-LABEL: multiple_uses_in_same_insn:
 ; CHECK:       .functype multiple_uses_in_same_insn (i32, i32) -> (){{$}}
 ; CHECK-NEXT:  i32.mul     $push[[NUM0:[0-9]+]]=, $1, $0{{$}}
-; CHECK-NEXT:  tee_local   $push[[NUM1:[0-9]+]]=, $[[NUM2:[0-9]+]]=, $pop[[NUM0]]{{$}}
-; CHECK-NEXT:  call        use_2@FUNCTION, $pop[[NUM1]], $[[NUM2]]{{$}}
+; CHECK-NEXT:  local.tee   $push[[NUM1:[0-9]+]]=, $[[NUM2:[0-9]+]]=, $pop[[NUM0]]{{$}}
+; CHECK-NEXT:  call        use_2, $pop[[NUM1]], $[[NUM2]]{{$}}
 ; CHECK-NEXT:  return{{$}}
 ; NOREGS-LABEL: multiple_uses_in_same_insn:
 ; NOREGS:       .functype multiple_uses_in_same_insn (i32, i32) -> (){{$}}
-; NOREGS-NEXT:  get_local 1{{$}}
-; NOREGS-NEXT:  get_local 0{{$}}
+; NOREGS-NEXT:  local.get 1{{$}}
+; NOREGS-NEXT:  local.get 0{{$}}
 ; NOREGS-NEXT:  i32.mul
-; NOREGS-NEXT:  tee_local   1{{$}}
-; NOREGS-NEXT:  get_local   1{{$}}
-; NOREGS-NEXT:  call        use_2@FUNCTION{{$}}
+; NOREGS-NEXT:  local.tee   1{{$}}
+; NOREGS-NEXT:  local.get   1{{$}}
+; NOREGS-NEXT:  call        use_2{{$}}
 ; NOREGS-NEXT:  return{{$}}
 declare void @use_2(i32, i32)
 define void @multiple_uses_in_same_insn(i32 %x, i32 %y) {
@@ -378,18 +378,18 @@ define void @multiple_uses_in_same_insn(i32 %x, i32 %y) {
 
 ; CHECK-LABEL: commute:
 ; CHECK:  .functype commute () -> (i32){{$}}
-; CHECK-NEXT:  i32.call    $push0=, red@FUNCTION{{$}}
-; CHECK-NEXT:  i32.call    $push1=, green@FUNCTION{{$}}
+; CHECK-NEXT:  i32.call    $push0=, red{{$}}
+; CHECK-NEXT:  i32.call    $push1=, green{{$}}
 ; CHECK-NEXT:  i32.add     $push2=, $pop0, $pop1{{$}}
-; CHECK-NEXT:  i32.call    $push3=, blue@FUNCTION{{$}}
+; CHECK-NEXT:  i32.call    $push3=, blue{{$}}
 ; CHECK-NEXT:  i32.add     $push4=, $pop2, $pop3{{$}}
 ; CHECK-NEXT:  return      $pop4{{$}}
 ; NOREGS-LABEL: commute:
 ; NOREGS:  .functype commute () -> (i32){{$}}
-; NOREGS-NEXT:  i32.call    red@FUNCTION{{$}}
-; NOREGS-NEXT:  i32.call    green@FUNCTION{{$}}
+; NOREGS-NEXT:  i32.call    red{{$}}
+; NOREGS-NEXT:  i32.call    green{{$}}
 ; NOREGS-NEXT:  i32.add {{$}}
-; NOREGS-NEXT:  i32.call    blue@FUNCTION{{$}}
+; NOREGS-NEXT:  i32.call    blue{{$}}
 ; NOREGS-NEXT:  i32.add {{$}}
 ; NOREGS-NEXT:  return{{$}}
 declare i32 @red()
@@ -405,27 +405,27 @@ define i32 @commute() {
 }
 
 ; Don't stackify a register when it would move a the def of the register past
-; an implicit get_local for the register.
+; an implicit local.get for the register.
 
 ; CHECK-LABEL: no_stackify_past_use:
-; CHECK:      i32.call        $1=, callee@FUNCTION, $0
+; CHECK:      i32.call        $1=, callee, $0
 ; CHECK-NEXT: i32.const       $push0=, 1
 ; CHECK-NEXT: i32.add         $push1=, $0, $pop0
-; CHECK-NEXT: i32.call        $push2=, callee@FUNCTION, $pop1
+; CHECK-NEXT: i32.call        $push2=, callee, $pop1
 ; CHECK-NEXT: i32.sub         $push3=, $pop2, $1
 ; CHECK-NEXT: i32.div_s       $push4=, $pop3, $1
 ; CHECK-NEXT: return          $pop4
 ; NOREGS-LABEL: no_stackify_past_use:
-; NOREGS:      get_local       0{{$}}
-; NOREGS-NEXT: i32.call        callee@FUNCTION
-; NOREGS-NEXT: set_local       1{{$}}
-; NOREGS-NEXT: get_local       0{{$}}
+; NOREGS:      local.get       0{{$}}
+; NOREGS-NEXT: i32.call        callee
+; NOREGS-NEXT: local.set       1{{$}}
+; NOREGS-NEXT: local.get       0{{$}}
 ; NOREGS-NEXT: i32.const       1
 ; NOREGS-NEXT: i32.add
-; NOREGS-NEXT: i32.call        callee@FUNCTION
-; NOREGS-NEXT: get_local       1{{$}}
+; NOREGS-NEXT: i32.call        callee
+; NOREGS-NEXT: local.get       1{{$}}
 ; NOREGS-NEXT: i32.sub
-; NOREGS-NEXT: get_local       1{{$}}
+; NOREGS-NEXT: local.get       1{{$}}
 ; NOREGS-NEXT: i32.div_s
 ; NOREGS-NEXT: return
 declare i32 @callee(i32)
@@ -442,23 +442,23 @@ define i32 @no_stackify_past_use(i32 %arg) {
 ; so we can reorder the operands and stackify.
 
 ; CHECK-LABEL: commute_to_fix_ordering:
-; CHECK: i32.call        $push[[L0:.+]]=, callee@FUNCTION, $0
-; CHECK: tee_local       $push[[L1:.+]]=, $1=, $pop[[L0]]
+; CHECK: i32.call        $push[[L0:.+]]=, callee, $0
+; CHECK: local.tee       $push[[L1:.+]]=, $1=, $pop[[L0]]
 ; CHECK: i32.const       $push0=, 1
 ; CHECK: i32.add         $push1=, $0, $pop0
-; CHECK: i32.call        $push2=, callee@FUNCTION, $pop1
+; CHECK: i32.call        $push2=, callee, $pop1
 ; CHECK: i32.add         $push3=, $1, $pop2
 ; CHECK: i32.mul         $push4=, $pop[[L1]], $pop3
 ; CHECK: return          $pop4
 ; NOREGS-LABEL: commute_to_fix_ordering:
-; NOREGS: get_local       0{{$}}
-; NOREGS: i32.call        callee@FUNCTION
-; NOREGS: tee_local       1
-; NOREGS: get_local       1{{$}}
-; NOREGS: get_local       0{{$}}
+; NOREGS: local.get       0{{$}}
+; NOREGS: i32.call        callee
+; NOREGS: local.tee       1
+; NOREGS: local.get       1{{$}}
+; NOREGS: local.get       0{{$}}
 ; NOREGS: i32.const       1
 ; NOREGS: i32.add
-; NOREGS: i32.call        callee@FUNCTION
+; NOREGS: i32.call        callee
 ; NOREGS: i32.add
 ; NOREGS: i32.mul
 ; NOREGS: return
@@ -475,12 +475,12 @@ define i32 @commute_to_fix_ordering(i32 %arg) {
 
 ; CHECK-LABEL: multiple_defs:
 ; CHECK:        f64.add         $push[[NUM0:[0-9]+]]=, ${{[0-9]+}}, $pop{{[0-9]+}}{{$}}
-; CHECK-NEXT:   tee_local       $push[[NUM1:[0-9]+]]=, $[[NUM2:[0-9]+]]=, $pop[[NUM0]]{{$}}
+; CHECK-NEXT:   local.tee       $push[[NUM1:[0-9]+]]=, $[[NUM2:[0-9]+]]=, $pop[[NUM0]]{{$}}
 ; CHECK-NEXT:   f64.select      $push{{[0-9]+}}=, $pop{{[0-9]+}}, $pop[[NUM1]], ${{[0-9]+}}{{$}}
 ; CHECK:        $[[NUM2]]=,
 ; NOREGS-LABEL: multiple_defs:
 ; NOREGS:        f64.add
-; NOREGS:        tee_local
+; NOREGS:        local.tee
 ; NOREGS:        f64.select
 define void @multiple_defs(i32 %arg, i32 %arg1, i1 %arg2, i1 %arg3, i1 %arg4) {
 bb:
@@ -541,11 +541,11 @@ define i32 @no_stackify_call_past_load() {
 ; CHECK-LABEL: no_stackify_store_past_load
 ; CHECK: i32.store 0($1), $0
 ; CHECK: i32.load {{.*}}, 0($2)
-; CHECK: i32.call {{.*}}, callee@FUNCTION, $0{{$}}
+; CHECK: i32.call {{.*}}, callee, $0{{$}}
 ; NOREGS-LABEL: no_stackify_store_past_load
 ; NOREGS: i32.store 0
 ; NOREGS: i32.load 0
-; NOREGS: i32.call callee@FUNCTION{{$}}
+; NOREGS: i32.call callee{{$}}
 define i32 @no_stackify_store_past_load(i32 %a, i32* %p1, i32* %p2) {
   store i32 %a, i32* %p1
   %b = load i32, i32* %p2, align 4
@@ -556,12 +556,12 @@ define i32 @no_stackify_store_past_load(i32 %a, i32* %p1, i32* %p2) {
 ; Can still stackify past invariant loads.
 ; CHECK-LABEL: store_past_invar_load
 ; CHECK: i32.store 0($1), $0
-; CHECK: i32.call {{.*}}, callee@FUNCTION, $0
+; CHECK: i32.call {{.*}}, callee, $0
 ; CHECK: i32.load $push{{.*}}, 0($2)
 ; CHECK: return $pop
 ; NOREGS-LABEL: store_past_invar_load
 ; NOREGS: i32.store 0
-; NOREGS: i32.call callee@FUNCTION
+; NOREGS: i32.call callee
 ; NOREGS: i32.load 0
 ; NOREGS: return
 define i32 @store_past_invar_load(i32 %a, i32* %p1, i32* dereferenceable(4) %p2) {
@@ -602,12 +602,12 @@ define i32 @no_stackify_past_epilogue() {
 ; CHECK-LABEL: stackify_indvar:
 ; CHECK:             i32.const   $push[[L5:.+]]=, 1{{$}}
 ; CHECK-NEXT:        i32.add     $push[[L4:.+]]=, $[[R0:.+]], $pop[[L5]]{{$}}
-; CHECK-NEXT:        tee_local   $push[[L3:.+]]=, $[[R0]]=, $pop[[L4]]{{$}}
+; CHECK-NEXT:        local.tee   $push[[L3:.+]]=, $[[R0]]=, $pop[[L4]]{{$}}
 ; CHECK-NEXT:        i32.ne      $push[[L2:.+]]=, $0, $pop[[L3]]{{$}}
 ; NOREGS-LABEL: stackify_indvar:
 ; NOREGS:             i32.const   1{{$}}
 ; NOREGS-NEXT:        i32.add
-; NOREGS-NEXT:        tee_local   2{{$}}
+; NOREGS-NEXT:        local.tee   2{{$}}
 ; NOREGS-NEXT:        i32.ne
 define void @stackify_indvar(i32 %tmp, i32* %v) #0 {
 bb:
@@ -629,12 +629,12 @@ bb10:                                             ; preds = %bb9, %bb
 ; Don't stackify a call past a __stack_pointer store.
 
 ; CHECK-LABEL: stackpointer_dependency:
-; CHECK:      call {{.+}}, stackpointer_callee@FUNCTION,
-; CHECK-NEXT: set_global __stack_pointer@GLOBAL,
+; CHECK:      call {{.+}}, stackpointer_callee,
+; CHECK-NEXT: global.set __stack_pointer,
 ; NOREGS-LABEL: stackpointer_dependency:
-; NOREGS:      call stackpointer_callee@FUNCTION
-; NOREGS:      set_global __stack_pointer
-declare i32 @stackpointer_callee(i8* readnone, i8* readnone)
+; NOREGS:      call stackpointer_callee
+; NOREGS:      global.set __stack_pointer
+declare i32 @stackpointer_callee(i8* readnone, i8* readnone) nounwind readnone
 declare i8* @llvm.frameaddress(i32)
 define i32 @stackpointer_dependency(i8* readnone) {
   %2 = tail call i8* @llvm.frameaddress(i32 0)
@@ -646,13 +646,13 @@ define i32 @stackpointer_dependency(i8* readnone) {
 
 ; CHECK-LABEL: call_indirect_stackify:
 ; CHECK: i32.load  $push[[L4:.+]]=, 0($0)
-; CHECK-NEXT: tee_local $push[[L3:.+]]=, $0=, $pop[[L4]]
+; CHECK-NEXT: local.tee $push[[L3:.+]]=, $0=, $pop[[L4]]
 ; CHECK-NEXT: i32.load  $push[[L0:.+]]=, 0($0)
 ; CHECK-NEXT: i32.load  $push[[L1:.+]]=, 0($pop[[L0]])
 ; CHECK-NEXT: i32.call_indirect $push{{.+}}=, $pop[[L3]], $1, $pop[[L1]]
 ; NOREGS-LABEL: call_indirect_stackify:
 ; NOREGS: i32.load  0
-; NOREGS-NEXT: tee_local 0
+; NOREGS-NEXT: local.tee 0
 ; NOREGS:      i32.load  0
 ; NOREGS-NEXT: i32.load  0
 ; NOREGS-NEXT: i32.call_indirect

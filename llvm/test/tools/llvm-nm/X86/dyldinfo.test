@@ -1,6 +1,6 @@
 # RUN: llvm-nm %p/Inputs/Strip-ST.dylib.macho-x86_64 | FileCheck --check-prefix=DEFAULT %s
-# RUN: llvm-nm -no-dyldinfo %p/Inputs/Strip-ST.dylib.macho-x86_64 | FileCheck --check-prefix=NO-DYLDINFO %s
-# RUN: llvm-nm -dyldinfo-only %p/Inputs/Strip-ST.dylib.macho-x86_64 | FileCheck --check-prefix=DYLDINFO-ONLY %s
+# RUN: llvm-nm --no-dyldinfo %p/Inputs/Strip-ST.dylib.macho-x86_64 | FileCheck --check-prefix=NO-DYLDINFO %s
+# RUN: llvm-nm --dyldinfo-only %p/Inputs/Strip-ST.dylib.macho-x86_64 | FileCheck --check-prefix=DYLDINFO-ONLY %s
 # RUN: llvm-nm %p/Inputs/Strip-N.hello.exe.macho-x86_64 | FileCheck --check-prefix=FUNC-STARTS %s
 # RUN: llvm-nm %p/Inputs/Strip-N.LC_MAIN.exe.macho-x86_64 | FileCheck --check-prefix=LC-MAIN %s
 

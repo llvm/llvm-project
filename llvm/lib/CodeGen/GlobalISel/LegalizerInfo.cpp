@@ -1,9 +1,8 @@
 //===- lib/CodeGen/GlobalISel/LegalizerInfo.cpp - Legalizer ---------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -43,6 +42,45 @@ cl::opt<bool> llvm::DisableGISelLegalityCheck(
     cl::desc("Don't verify that MIR is fully legal between GlobalISel passes"),
     cl::Hidden);
 
+raw_ostream &llvm::operator<<(raw_ostream &OS, LegalizeAction Action) {
+  switch (Action) {
+  case Legal:
+    OS << "Legal";
+    break;
+  case NarrowScalar:
+    OS << "NarrowScalar";
+    break;
+  case WidenScalar:
+    OS << "WidenScalar";
+    break;
+  case FewerElements:
+    OS << "FewerElements";
+    break;
+  case MoreElements:
+    OS << "MoreElements";
+    break;
+  case Lower:
+    OS << "Lower";
+    break;
+  case Libcall:
+    OS << "Libcall";
+    break;
+  case Custom:
+    OS << "Custom";
+    break;
+  case Unsupported:
+    OS << "Unsupported";
+    break;
+  case NotFound:
+    OS << "NotFound";
+    break;
+  case UseLegacyRules:
+    OS << "UseLegacyRules";
+    break;
+  }
+  return OS;
+}
+
 raw_ostream &LegalityQuery::print(raw_ostream &OS) const {
   OS << Opcode << ", Tys={";
   for (const auto &Type : Types) {
@@ -59,6 +97,86 @@ raw_ostream &LegalityQuery::print(raw_ostream &OS) const {
   return OS;
 }
 
+#ifndef NDEBUG
+// Make sure the rule won't (trivially) loop forever.
+static bool hasNoSimpleLoops(const LegalizeRule &Rule, const LegalityQuery &Q,
+                             const std::pair<unsigned, LLT> &Mutation) {
+  switch (Rule.getAction()) {
+  case Custom:
+  case Lower:
+  case MoreElements:
+  case FewerElements:
+    break;
+  default:
+    return Q.Types[Mutation.first] != Mutation.second;
+  }
+  return true;
+}
+
+// Make sure the returned mutation makes sense for the match type.
+static bool mutationIsSane(const LegalizeRule &Rule,
+                           const LegalityQuery &Q,
+                           std::pair<unsigned, LLT> Mutation) {
+  // If the user wants a custom mutation, then we can't really say much about
+  // it. Return true, and trust that they're doing the right thing.
+  if (Rule.getAction() == Custom)
+    return true;
+
+  const unsigned TypeIdx = Mutation.first;
+  const LLT OldTy = Q.Types[TypeIdx];
+  const LLT NewTy = Mutation.second;
+
+  switch (Rule.getAction()) {
+  case FewerElements:
+  case MoreElements: {
+    if (!OldTy.isVector())
+      return false;
+
+    if (NewTy.isVector()) {
+      if (Rule.getAction() == FewerElements) {
+        // Make sure the element count really decreased.
+        if (NewTy.getNumElements() >= OldTy.getNumElements())
+          return false;
+      } else {
+        // Make sure the element count really increased.
+        if (NewTy.getNumElements() <= OldTy.getNumElements())
+          return false;
+      }
+    }
+
+    // Make sure the element type didn't change.
+    return NewTy.getScalarType() == OldTy.getElementType();
+  }
+  case NarrowScalar:
+  case WidenScalar: {
+    if (OldTy.isVector()) {
+      // Number of elements should not change.
+      if (!NewTy.isVector() || OldTy.getNumElements() != NewTy.getNumElements())
+        return false;
+    } else {
+      // Both types must be vectors
+      if (NewTy.isVector())
+        return false;
+    }
+
+    if (Rule.getAction() == NarrowScalar)  {
+      // Make sure the size really decreased.
+      if (NewTy.getScalarSizeInBits() >= OldTy.getScalarSizeInBits())
+        return false;
+    } else {
+      // Make sure the size really increased.
+      if (NewTy.getScalarSizeInBits() <= OldTy.getScalarSizeInBits())
+        return false;
+    }
+
+    return true;
+  }
+  default:
+    return true;
+  }
+}
+#endif
+
 LegalizeActionStep LegalizeRuleSet::apply(const LegalityQuery &Query) const {
   LLVM_DEBUG(dbgs() << "Applying legalizer ruleset to: "; Query.print(dbgs());
              dbgs() << "\n");
@@ -66,17 +184,15 @@ LegalizeActionStep LegalizeRuleSet::apply(const LegalityQuery &Query) const {
     LLVM_DEBUG(dbgs() << ".. fallback to legacy rules (no rules defined)\n");
     return {LegalizeAction::UseLegacyRules, 0, LLT{}};
   }
-  for (const auto &Rule : Rules) {
+  for (const LegalizeRule &Rule : Rules) {
     if (Rule.match(Query)) {
       LLVM_DEBUG(dbgs() << ".. match\n");
       std::pair<unsigned, LLT> Mutation = Rule.determineMutation(Query);
-      LLVM_DEBUG(dbgs() << ".. .. " << (unsigned)Rule.getAction() << ", "
+      LLVM_DEBUG(dbgs() << ".. .. " << Rule.getAction() << ", "
                         << Mutation.first << ", " << Mutation.second << "\n");
-      assert((Query.Types[Mutation.first] != Mutation.second ||
-              Rule.getAction() == Lower ||
-              Rule.getAction() == MoreElements ||
-              Rule.getAction() == FewerElements) &&
-             "Simple loop detected");
+      assert(mutationIsSane(Rule, Query, Mutation) &&
+             "legality mutation invalid for match");
+      assert(hasNoSimpleLoops(Rule, Query, Mutation) && "Simple loop detected");
       return {Rule.getAction(), Mutation.first, Mutation.second};
     } else
       LLVM_DEBUG(dbgs() << ".. no match\n");
@@ -180,16 +296,14 @@ void LegalizerInfo::computeTables() {
         if (TypeIdx < ScalarSizeChangeStrategies[OpcodeIdx].size() &&
             ScalarSizeChangeStrategies[OpcodeIdx][TypeIdx] != nullptr)
           S = ScalarSizeChangeStrategies[OpcodeIdx][TypeIdx];
-        llvm::sort(ScalarSpecifiedActions.begin(),
-                   ScalarSpecifiedActions.end());
+        llvm::sort(ScalarSpecifiedActions);
         checkPartialSizeAndActionsVector(ScalarSpecifiedActions);
         setScalarAction(Opcode, TypeIdx, S(ScalarSpecifiedActions));
       }
 
       // 2. Handle pointer types
       for (auto PointerSpecifiedActions : AddressSpace2SpecifiedActions) {
-        llvm::sort(PointerSpecifiedActions.second.begin(),
-                   PointerSpecifiedActions.second.end());
+        llvm::sort(PointerSpecifiedActions.second);
         checkPartialSizeAndActionsVector(PointerSpecifiedActions.second);
         // For pointer types, we assume that there isn't a meaningfull way
         // to change the number of bits used in the pointer.
@@ -201,8 +315,7 @@ void LegalizerInfo::computeTables() {
       // 3. Handle vector types
       SizeAndActionsVec ElementSizesSeen;
       for (auto VectorSpecifiedActions : ElemSize2SpecifiedActions) {
-        llvm::sort(VectorSpecifiedActions.second.begin(),
-                   VectorSpecifiedActions.second.end());
+        llvm::sort(VectorSpecifiedActions.second);
         const uint16_t ElementSize = VectorSpecifiedActions.first;
         ElementSizesSeen.push_back({ElementSize, Legal});
         checkPartialSizeAndActionsVector(VectorSpecifiedActions.second);
@@ -328,9 +441,8 @@ LegalizerInfo::getAction(const LegalityQuery &Query) const {
   for (unsigned i = 0; i < Query.Types.size(); ++i) {
     auto Action = getAspectAction({Query.Opcode, i, Query.Types[i]});
     if (Action.first != Legal) {
-      LLVM_DEBUG(dbgs() << ".. (legacy) Type " << i
-                        << " Action=" << (unsigned)Action.first << ", "
-                        << Action.second << "\n");
+      LLVM_DEBUG(dbgs() << ".. (legacy) Type " << i << " Action="
+                        << Action.first << ", " << Action.second << "\n");
       return {Action.first, i, Action.second};
     } else
       LLVM_DEBUG(dbgs() << ".. (legacy) Type " << i << " Legal\n");
@@ -364,8 +476,9 @@ LegalizerInfo::getAction(const MachineInstr &MI,
 
   SmallVector<LegalityQuery::MemDesc, 2> MemDescrs;
   for (const auto &MMO : MI.memoperands())
-    MemDescrs.push_back(
-        {MMO->getSize() /* in bytes */ * 8, MMO->getOrdering()});
+    MemDescrs.push_back({8 * MMO->getSize() /* in bits */,
+                         8 * MMO->getAlignment(),
+                         MMO->getOrdering()});
 
   return getAction({MI.getOpcode(), Types, MemDescrs});
 }
@@ -373,6 +486,14 @@ LegalizerInfo::getAction(const MachineInstr &MI,
 bool LegalizerInfo::isLegal(const MachineInstr &MI,
                             const MachineRegisterInfo &MRI) const {
   return getAction(MI, MRI).Action == Legal;
+}
+
+bool LegalizerInfo::isLegalOrCustom(const MachineInstr &MI,
+                                    const MachineRegisterInfo &MRI) const {
+  auto Action = getAction(MI, MRI).Action;
+  // If the action is custom, it may not necessarily modify the instruction,
+  // so we have to assume it's legal.
+  return Action == Legal || Action == Custom;
 }
 
 bool LegalizerInfo::legalizeCustom(MachineInstr &MI, MachineRegisterInfo &MRI,
@@ -423,11 +544,8 @@ LegalizerInfo::findAction(const SizeAndActionsVec &Vec, const uint32_t Size) {
   // Find the last element in Vec that has a bitsize equal to or smaller than
   // the requested bit size.
   // That is the element just before the first element that is bigger than Size.
-  auto VecIt = std::upper_bound(
-      Vec.begin(), Vec.end(), Size,
-      [](const uint32_t Size, const SizeAndAction lhs) -> bool {
-        return Size < lhs.first;
-      });
+  auto VecIt = llvm::bsearch(
+      Vec, [=](const SizeAndAction &A) { return Size < A.first; });
   assert(VecIt != Vec.begin() && "Does Vec not start with size 1?");
   --VecIt;
   int VecIdx = VecIt - Vec.begin();
@@ -584,7 +702,8 @@ const MachineInstr *llvm::machineFunctionIsIllegal(const MachineFunction &MF) {
     const MachineRegisterInfo &MRI = MF.getRegInfo();
     for (const MachineBasicBlock &MBB : MF)
       for (const MachineInstr &MI : MBB)
-        if (isPreISelGenericOpcode(MI.getOpcode()) && !MLI->isLegal(MI, MRI))
+        if (isPreISelGenericOpcode(MI.getOpcode()) &&
+            !MLI->isLegalOrCustom(MI, MRI))
           return &MI;
   }
   return nullptr;

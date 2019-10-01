@@ -1,9 +1,8 @@
 //===-- SIRegisterInfo.h - SI Register Info Interface ----------*- C++ -*--===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -34,6 +33,7 @@ private:
   BitVector VGPRPressureSets;
   bool SpillSGPRToVGPR;
   bool SpillSGPRToSMEM;
+  bool isWave32;
 
   void classifyPressureSet(unsigned PSetID, unsigned Reg,
                            BitVector &PressureSets) const;
@@ -57,8 +57,6 @@ public:
   unsigned reservedPrivateSegmentWaveByteOffsetReg(
     const MachineFunction &MF) const;
 
-  unsigned reservedStackPtrOffsetReg(const MachineFunction &MF) const;
-
   BitVector getReservedRegs(const MachineFunction &MF) const override;
 
   const MCPhysReg *getCalleeSavedRegs(const MachineFunction *MF) const override;
@@ -74,6 +72,7 @@ public:
 
   unsigned getFrameRegister(const MachineFunction &MF) const override;
 
+  bool canRealignStack(const MachineFunction &MF) const override;
   bool requiresRegisterScavenging(const MachineFunction &Fn) const override;
 
   bool requiresFrameIndexScavenging(const MachineFunction &MF) const override;
@@ -196,6 +195,11 @@ public:
                                                unsigned Reg) const;
   bool isVGPR(const MachineRegisterInfo &MRI, unsigned Reg) const;
 
+  virtual bool
+  isDivergentRegClass(const TargetRegisterClass *RC) const override {
+    return !isSGPRClass(RC);
+  }
+
   bool isSGPRPressureSet(unsigned SetID) const {
     return SGPRPressureSets.test(SetID) && !VGPRPressureSets.test(SetID);
   }
@@ -227,6 +231,20 @@ public:
   const TargetRegisterClass *
   getConstrainedRegClassForOperand(const MachineOperand &MO,
                                  const MachineRegisterInfo &MRI) const override;
+
+  const TargetRegisterClass *getBoolRC() const {
+    return isWave32 ? &AMDGPU::SReg_32_XM0RegClass
+                    : &AMDGPU::SReg_64RegClass;
+  }
+
+  const TargetRegisterClass *getWaveMaskRegClass() const {
+    return isWave32 ? &AMDGPU::SReg_32_XM0_XEXECRegClass
+                    : &AMDGPU::SReg_64_XEXECRegClass;
+  }
+
+  unsigned getVCC() const;
+
+  const TargetRegisterClass *getRegClass(unsigned RCID) const;
 
   // Find reaching register definition
   MachineInstr *findReachingDef(unsigned Reg, unsigned SubReg,

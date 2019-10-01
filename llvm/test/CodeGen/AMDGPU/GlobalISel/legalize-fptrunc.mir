@@ -2,16 +2,72 @@
 # RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=fiji -run-pass=legalizer -global-isel %s -o - | FileCheck %s
 
 ---
-name: test_fptrunc_f64_to_f32
+name: test_fptrunc_s64_to_s32
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1
 
-    ; CHECK-LABEL: name: test_fptrunc_f64_to_f32
+    ; CHECK-LABEL: name: test_fptrunc_s64_to_s32
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
     ; CHECK: [[FPTRUNC:%[0-9]+]]:_(s32) = G_FPTRUNC [[COPY]](s64)
     ; CHECK: $vgpr0 = COPY [[FPTRUNC]](s32)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s32) = G_FPTRUNC %0
     $vgpr0 = COPY %1
+...
+
+---
+name: test_fptrunc_s32_to_s16
+body: |
+  bb.0:
+    liveins: $vgpr0
+
+    ; CHECK-LABEL: name: test_fptrunc_s32_to_s16
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[COPY]](s32)
+    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[FPTRUNC]](s16)
+    ; CHECK: $vgpr0 = COPY [[ANYEXT]](s32)
+    %0:_(s32) = COPY $vgpr0
+    %1:_(s16) = G_FPTRUNC %0
+    %2:_(s32) = G_ANYEXT %1
+    $vgpr0 = COPY %2
+...
+
+---
+name: test_fptrunc_v2s64_to_v2s32
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3
+
+    ; CHECK-LABEL: name: test_fptrunc_v2s64_to_v2s32
+    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](<2 x s64>)
+    ; CHECK: [[FPTRUNC:%[0-9]+]]:_(s32) = G_FPTRUNC [[UV]](s64)
+    ; CHECK: [[FPTRUNC1:%[0-9]+]]:_(s32) = G_FPTRUNC [[UV1]](s64)
+    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[FPTRUNC]](s32), [[FPTRUNC1]](s32)
+    ; CHECK: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x s32>)
+    %0:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    %1:_(<2 x s32>) = G_FPTRUNC %0
+    $vgpr0_vgpr1 = COPY %1
+...
+
+---
+name: test_fptrunc_v2s32_to_v2s16
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+
+    ; CHECK-LABEL: name: test_fptrunc_v2s32_to_v2s16
+    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
+    ; CHECK: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[UV]](s32)
+    ; CHECK: [[FPTRUNC1:%[0-9]+]]:_(s16) = G_FPTRUNC [[UV1]](s32)
+    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[FPTRUNC]](s16)
+    ; CHECK: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[FPTRUNC1]](s16)
+    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[ANYEXT]](s32), [[ANYEXT1]](s32)
+    ; CHECK: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x s32>)
+    %0:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    %1:_(<2 x s16>) = G_FPTRUNC %0
+    %2:_(<2 x s32>) = G_ANYEXT %1
+    $vgpr0_vgpr1 = COPY %2
 ...

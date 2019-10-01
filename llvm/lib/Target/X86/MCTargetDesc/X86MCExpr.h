@@ -1,9 +1,8 @@
 //=--- X86MCExpr.h - X86 specific MC expression classes ---*- C++ -*-=//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -15,7 +14,7 @@
 #ifndef LLVM_LIB_TARGET_X86_MCTARGETDESC_X86MCEXPR_H
 #define LLVM_LIB_TARGET_X86_MCTARGETDESC_X86MCEXPR_H
 
-#include "InstPrinter/X86ATTInstPrinter.h"
+#include "X86ATTInstPrinter.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"

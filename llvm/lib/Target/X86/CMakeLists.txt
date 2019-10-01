@@ -22,7 +22,6 @@ endif()
 add_public_tablegen_target(X86CommonTableGen)
 
 set(sources
-  ShadowCallStack.cpp
   X86AsmPrinter.cpp
   X86CallFrameOptimization.cpp
   X86CallingConv.cpp
@@ -75,7 +74,6 @@ add_llvm_target(X86CodeGen ${sources})
 
 add_subdirectory(AsmParser)
 add_subdirectory(Disassembler)
-add_subdirectory(InstPrinter)
 add_subdirectory(MCTargetDesc)
 add_subdirectory(TargetInfo)
 add_subdirectory(Utils)

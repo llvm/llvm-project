@@ -1,5 +1,5 @@
 ; RUN: bugpoint -load %llvmshlibdir/BugpointPasses%shlibext %s -output-prefix %t -bugpoint-crash-too-many-cus -silence-passes 2>&1 | FileCheck %s
-; REQUIRES: loadable_module
+; REQUIRES: plugins
 ; CHECK: DICompileUnit not listed in llvm.dbg.cu
 
 ; When bugpoint hacks at this testcase it will at one point create illegal IR

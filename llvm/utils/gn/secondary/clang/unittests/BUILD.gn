@@ -15,7 +15,9 @@ group("unittests") {
     "Rename:ClangRenameTests",
     "Rewrite:RewriteTests",
     "Sema:SemaTests",
+    "Serialization:SerializationTests",
     "Tooling:ToolingTests",
+    "Tooling/Syntax:SyntaxTests",
   ]
   if (clang_enable_static_analyzer) {
     deps += [

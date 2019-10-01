@@ -5,6 +5,7 @@ add_public_tablegen_target(InstCombineTableGen)
 add_llvm_library(LLVMInstCombine
   InstructionCombining.cpp
   InstCombineAddSub.cpp
+  InstCombineAtomicRMW.cpp
   InstCombineAndOrXor.cpp
   InstCombineCalls.cpp
   InstCombineCasts.cpp

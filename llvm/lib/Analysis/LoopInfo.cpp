@@ -1,9 +1,8 @@
 //===- LoopInfo.cpp - Natural Loop Calculator -----------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -18,8 +17,12 @@
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/LoopInfoImpl.h"
 #include "llvm/Analysis/LoopIterator.h"
+#include "llvm/Analysis/MemorySSA.h"
+#include "llvm/Analysis/MemorySSAUpdater.h"
+#include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/CFG.h"
@@ -65,15 +68,16 @@ bool Loop::hasLoopInvariantOperands(const Instruction *I) const {
   return all_of(I->operands(), [this](Value *V) { return isLoopInvariant(V); });
 }
 
-bool Loop::makeLoopInvariant(Value *V, bool &Changed,
-                             Instruction *InsertPt) const {
+bool Loop::makeLoopInvariant(Value *V, bool &Changed, Instruction *InsertPt,
+                             MemorySSAUpdater *MSSAU) const {
   if (Instruction *I = dyn_cast<Instruction>(V))
-    return makeLoopInvariant(I, Changed, InsertPt);
+    return makeLoopInvariant(I, Changed, InsertPt, MSSAU);
   return true; // All non-instructions are loop-invariant.
 }
 
 bool Loop::makeLoopInvariant(Instruction *I, bool &Changed,
-                             Instruction *InsertPt) const {
+                             Instruction *InsertPt,
+                             MemorySSAUpdater *MSSAU) const {
   // Test if the value is already loop-invariant.
   if (isLoopInvariant(I))
     return true;
@@ -94,11 +98,14 @@ bool Loop::makeLoopInvariant(Instruction *I, bool &Changed,
   }
   // Don't hoist instructions with loop-variant operands.
   for (Value *Operand : I->operands())
-    if (!makeLoopInvariant(Operand, Changed, InsertPt))
+    if (!makeLoopInvariant(Operand, Changed, InsertPt, MSSAU))
       return false;
 
   // Hoist.
   I->moveBefore(InsertPt);
+  if (MSSAU)
+    if (auto *MUD = MSSAU->getMemorySSA()->getMemoryAccess(I))
+      MSSAU->moveToPlace(MUD, InsertPt->getParent(), MemorySSA::End);
 
   // There is possibility of hoisting this instruction above some arbitrary
   // condition. Any metadata defined on it can be control dependent on this
@@ -110,24 +117,37 @@ bool Loop::makeLoopInvariant(Instruction *I, bool &Changed,
   return true;
 }
 
-PHINode *Loop::getCanonicalInductionVariable() const {
+bool Loop::getIncomingAndBackEdge(BasicBlock *&Incoming,
+                                  BasicBlock *&Backedge) const {
   BasicBlock *H = getHeader();
 
-  BasicBlock *Incoming = nullptr, *Backedge = nullptr;
+  Incoming = nullptr;
+  Backedge = nullptr;
   pred_iterator PI = pred_begin(H);
   assert(PI != pred_end(H) && "Loop must have at least one backedge!");
   Backedge = *PI++;
   if (PI == pred_end(H))
-    return nullptr; // dead loop
+    return false; // dead loop
   Incoming = *PI++;
   if (PI != pred_end(H))
-    return nullptr; // multiple backedges?
+    return false; // multiple backedges?
 
   if (contains(Incoming)) {
     if (contains(Backedge))
-      return nullptr;
+      return false;
     std::swap(Incoming, Backedge);
   } else if (!contains(Backedge))
+    return false;
+
+  assert(Incoming && Backedge && "expected non-null incoming and backedges");
+  return true;
+}
+
+PHINode *Loop::getCanonicalInductionVariable() const {
+  BasicBlock *H = getHeader();
+
+  BasicBlock *Incoming = nullptr, *Backedge = nullptr;
+  if (!getIncomingAndBackEdge(Incoming, Backedge))
     return nullptr;
 
   // Loop over all of the PHI nodes, looking for a canonical indvar.
@@ -144,6 +164,218 @@ PHINode *Loop::getCanonicalInductionVariable() const {
                 return PN;
   }
   return nullptr;
+}
+
+/// Get the latch condition instruction.
+static ICmpInst *getLatchCmpInst(const Loop &L) {
+  if (BasicBlock *Latch = L.getLoopLatch())
+    if (BranchInst *BI = dyn_cast_or_null<BranchInst>(Latch->getTerminator()))
+      if (BI->isConditional())
+        return dyn_cast<ICmpInst>(BI->getCondition());
+
+  return nullptr;
+}
+
+/// Return the final value of the loop induction variable if found.
+static Value *findFinalIVValue(const Loop &L, const PHINode &IndVar,
+                               const Instruction &StepInst) {
+  ICmpInst *LatchCmpInst = getLatchCmpInst(L);
+  if (!LatchCmpInst)
+    return nullptr;
+
+  Value *Op0 = LatchCmpInst->getOperand(0);
+  Value *Op1 = LatchCmpInst->getOperand(1);
+  if (Op0 == &IndVar || Op0 == &StepInst)
+    return Op1;
+
+  if (Op1 == &IndVar || Op1 == &StepInst)
+    return Op0;
+
+  return nullptr;
+}
+
+Optional<Loop::LoopBounds> Loop::LoopBounds::getBounds(const Loop &L,
+                                                       PHINode &IndVar,
+                                                       ScalarEvolution &SE) {
+  InductionDescriptor IndDesc;
+  if (!InductionDescriptor::isInductionPHI(&IndVar, &L, &SE, IndDesc))
+    return None;
+
+  Value *InitialIVValue = IndDesc.getStartValue();
+  Instruction *StepInst = IndDesc.getInductionBinOp();
+  if (!InitialIVValue || !StepInst)
+    return None;
+
+  const SCEV *Step = IndDesc.getStep();
+  Value *StepInstOp1 = StepInst->getOperand(1);
+  Value *StepInstOp0 = StepInst->getOperand(0);
+  Value *StepValue = nullptr;
+  if (SE.getSCEV(StepInstOp1) == Step)
+    StepValue = StepInstOp1;
+  else if (SE.getSCEV(StepInstOp0) == Step)
+    StepValue = StepInstOp0;
+
+  Value *FinalIVValue = findFinalIVValue(L, IndVar, *StepInst);
+  if (!FinalIVValue)
+    return None;
+
+  return LoopBounds(L, *InitialIVValue, *StepInst, StepValue, *FinalIVValue,
+                    SE);
+}
+
+using Direction = Loop::LoopBounds::Direction;
+
+ICmpInst::Predicate Loop::LoopBounds::getCanonicalPredicate() const {
+  BasicBlock *Latch = L.getLoopLatch();
+  assert(Latch && "Expecting valid latch");
+
+  BranchInst *BI = dyn_cast_or_null<BranchInst>(Latch->getTerminator());
+  assert(BI && BI->isConditional() && "Expecting conditional latch branch");
+
+  ICmpInst *LatchCmpInst = dyn_cast<ICmpInst>(BI->getCondition());
+  assert(LatchCmpInst &&
+         "Expecting the latch compare instruction to be a CmpInst");
+
+  // Need to inverse the predicate when first successor is not the loop
+  // header
+  ICmpInst::Predicate Pred = (BI->getSuccessor(0) == L.getHeader())
+                                 ? LatchCmpInst->getPredicate()
+                                 : LatchCmpInst->getInversePredicate();
+
+  if (LatchCmpInst->getOperand(0) == &getFinalIVValue())
+    Pred = ICmpInst::getSwappedPredicate(Pred);
+
+  // Need to flip strictness of the predicate when the latch compare instruction
+  // is not using StepInst
+  if (LatchCmpInst->getOperand(0) == &getStepInst() ||
+      LatchCmpInst->getOperand(1) == &getStepInst())
+    return Pred;
+
+  // Cannot flip strictness of NE and EQ
+  if (Pred != ICmpInst::ICMP_NE && Pred != ICmpInst::ICMP_EQ)
+    return ICmpInst::getFlippedStrictnessPredicate(Pred);
+
+  Direction D = getDirection();
+  if (D == Direction::Increasing)
+    return ICmpInst::ICMP_SLT;
+
+  if (D == Direction::Decreasing)
+    return ICmpInst::ICMP_SGT;
+
+  // If cannot determine the direction, then unable to find the canonical
+  // predicate
+  return ICmpInst::BAD_ICMP_PREDICATE;
+}
+
+Direction Loop::LoopBounds::getDirection() const {
+  if (const SCEVAddRecExpr *StepAddRecExpr =
+          dyn_cast<SCEVAddRecExpr>(SE.getSCEV(&getStepInst())))
+    if (const SCEV *StepRecur = StepAddRecExpr->getStepRecurrence(SE)) {
+      if (SE.isKnownPositive(StepRecur))
+        return Direction::Increasing;
+      if (SE.isKnownNegative(StepRecur))
+        return Direction::Decreasing;
+    }
+
+  return Direction::Unknown;
+}
+
+Optional<Loop::LoopBounds> Loop::getBounds(ScalarEvolution &SE) const {
+  if (PHINode *IndVar = getInductionVariable(SE))
+    return LoopBounds::getBounds(*this, *IndVar, SE);
+
+  return None;
+}
+
+PHINode *Loop::getInductionVariable(ScalarEvolution &SE) const {
+  if (!isLoopSimplifyForm())
+    return nullptr;
+
+  BasicBlock *Header = getHeader();
+  assert(Header && "Expected a valid loop header");
+  ICmpInst *CmpInst = getLatchCmpInst(*this);
+  if (!CmpInst)
+    return nullptr;
+
+  Instruction *LatchCmpOp0 = dyn_cast<Instruction>(CmpInst->getOperand(0));
+  Instruction *LatchCmpOp1 = dyn_cast<Instruction>(CmpInst->getOperand(1));
+
+  for (PHINode &IndVar : Header->phis()) {
+    InductionDescriptor IndDesc;
+    if (!InductionDescriptor::isInductionPHI(&IndVar, this, &SE, IndDesc))
+      continue;
+
+    Instruction *StepInst = IndDesc.getInductionBinOp();
+
+    // case 1:
+    // IndVar = phi[{InitialValue, preheader}, {StepInst, latch}]
+    // StepInst = IndVar + step
+    // cmp = StepInst < FinalValue
+    if (StepInst == LatchCmpOp0 || StepInst == LatchCmpOp1)
+      return &IndVar;
+
+    // case 2:
+    // IndVar = phi[{InitialValue, preheader}, {StepInst, latch}]
+    // StepInst = IndVar + step
+    // cmp = IndVar < FinalValue
+    if (&IndVar == LatchCmpOp0 || &IndVar == LatchCmpOp1)
+      return &IndVar;
+  }
+
+  return nullptr;
+}
+
+bool Loop::getInductionDescriptor(ScalarEvolution &SE,
+                                  InductionDescriptor &IndDesc) const {
+  if (PHINode *IndVar = getInductionVariable(SE))
+    return InductionDescriptor::isInductionPHI(IndVar, this, &SE, IndDesc);
+
+  return false;
+}
+
+bool Loop::isAuxiliaryInductionVariable(PHINode &AuxIndVar,
+                                        ScalarEvolution &SE) const {
+  // Located in the loop header
+  BasicBlock *Header = getHeader();
+  if (AuxIndVar.getParent() != Header)
+    return false;
+
+  // No uses outside of the loop
+  for (User *U : AuxIndVar.users())
+    if (const Instruction *I = dyn_cast<Instruction>(U))
+      if (!contains(I))
+        return false;
+
+  InductionDescriptor IndDesc;
+  if (!InductionDescriptor::isInductionPHI(&AuxIndVar, this, &SE, IndDesc))
+    return false;
+
+  // The step instruction opcode should be add or sub.
+  if (IndDesc.getInductionOpcode() != Instruction::Add &&
+      IndDesc.getInductionOpcode() != Instruction::Sub)
+    return false;
+
+  // Incremented by a loop invariant step for each loop iteration
+  return SE.isLoopInvariant(IndDesc.getStep(), this);
+}
+
+bool Loop::isCanonical(ScalarEvolution &SE) const {
+  InductionDescriptor IndDesc;
+  if (!getInductionDescriptor(SE, IndDesc))
+    return false;
+
+  ConstantInt *Init = dyn_cast_or_null<ConstantInt>(IndDesc.getStartValue());
+  if (!Init || !Init->isZero())
+    return false;
+
+  if (IndDesc.getInductionOpcode() != Instruction::Add)
+    return false;
+
+  ConstantInt *Step = IndDesc.getConstIntStepValue();
+  if (!Step || !Step->isOne())
+    return false;
+
+  return true;
 }
 
 // Check that 'BB' doesn't have any uses outside of the 'L'
@@ -242,48 +474,20 @@ void Loop::setLoopID(MDNode *LoopID) const {
   assert((!LoopID || LoopID->getOperand(0) == LoopID) &&
          "Loop ID should refer to itself");
 
-  BasicBlock *H = getHeader();
-  for (BasicBlock *BB : this->blocks()) {
-    Instruction *TI = BB->getTerminator();
-    for (BasicBlock *Successor : successors(TI)) {
-      if (Successor == H) {
-        TI->setMetadata(LLVMContext::MD_loop, LoopID);
-        break;
-      }
-    }
-  }
+  SmallVector<BasicBlock *, 4> LoopLatches;
+  getLoopLatches(LoopLatches);
+  for (BasicBlock *BB : LoopLatches)
+    BB->getTerminator()->setMetadata(LLVMContext::MD_loop, LoopID);
 }
 
 void Loop::setLoopAlreadyUnrolled() {
-  MDNode *LoopID = getLoopID();
-  // First remove any existing loop unrolling metadata.
-  SmallVector<Metadata *, 4> MDs;
-  // Reserve first location for self reference to the LoopID metadata node.
-  MDs.push_back(nullptr);
-
-  if (LoopID) {
-    for (unsigned i = 1, ie = LoopID->getNumOperands(); i < ie; ++i) {
-      bool IsUnrollMetadata = false;
-      MDNode *MD = dyn_cast<MDNode>(LoopID->getOperand(i));
-      if (MD) {
-        const MDString *S = dyn_cast<MDString>(MD->getOperand(0));
-        IsUnrollMetadata = S && S->getString().startswith("llvm.loop.unroll.");
-      }
-      if (!IsUnrollMetadata)
-        MDs.push_back(LoopID->getOperand(i));
-    }
-  }
-
-  // Add unroll(disable) metadata to disable future unrolling.
   LLVMContext &Context = getHeader()->getContext();
-  SmallVector<Metadata *, 1> DisableOperands;
-  DisableOperands.push_back(MDString::get(Context, "llvm.loop.unroll.disable"));
-  MDNode *DisableNode = MDNode::get(Context, DisableOperands);
-  MDs.push_back(DisableNode);
 
-  MDNode *NewLoopID = MDNode::get(Context, MDs);
-  // Set operand 0 to refer to the loop id itself.
-  NewLoopID->replaceOperandWith(0, NewLoopID);
+  MDNode *DisableUnrollMD =
+      MDNode::get(Context, MDString::get(Context, "llvm.loop.unroll.disable"));
+  MDNode *LoopID = getLoopID();
+  MDNode *NewLoopID = makePostTransformationMetadata(
+      Context, LoopID, {"llvm.loop.unroll."}, {DisableUnrollMD});
   setLoopID(NewLoopID);
 }
 
@@ -759,6 +963,46 @@ MDNode *llvm::findOptionMDForLoop(const Loop *TheLoop, StringRef Name) {
 
 bool llvm::isValidAsAccessGroup(MDNode *Node) {
   return Node->getNumOperands() == 0 && Node->isDistinct();
+}
+
+MDNode *llvm::makePostTransformationMetadata(LLVMContext &Context,
+                                             MDNode *OrigLoopID,
+                                             ArrayRef<StringRef> RemovePrefixes,
+                                             ArrayRef<MDNode *> AddAttrs) {
+  // First remove any existing loop metadata related to this transformation.
+  SmallVector<Metadata *, 4> MDs;
+
+  // Reserve first location for self reference to the LoopID metadata node.
+  TempMDTuple TempNode = MDNode::getTemporary(Context, None);
+  MDs.push_back(TempNode.get());
+
+  // Remove metadata for the transformation that has been applied or that became
+  // outdated.
+  if (OrigLoopID) {
+    for (unsigned i = 1, ie = OrigLoopID->getNumOperands(); i < ie; ++i) {
+      bool IsVectorMetadata = false;
+      Metadata *Op = OrigLoopID->getOperand(i);
+      if (MDNode *MD = dyn_cast<MDNode>(Op)) {
+        const MDString *S = dyn_cast<MDString>(MD->getOperand(0));
+        if (S)
+          IsVectorMetadata =
+              llvm::any_of(RemovePrefixes, [S](StringRef Prefix) -> bool {
+                return S->getString().startswith(Prefix);
+              });
+      }
+      if (!IsVectorMetadata)
+        MDs.push_back(Op);
+    }
+  }
+
+  // Add metadata to avoid reapplying a transformation, such as
+  // llvm.loop.unroll.disable and llvm.loop.isvectorized.
+  MDs.append(AddAttrs.begin(), AddAttrs.end());
+
+  MDNode *NewLoopID = MDNode::getDistinct(Context, MDs);
+  // Replace the temporary node with a self-reference.
+  NewLoopID->replaceOperandWith(0, NewLoopID);
+  return NewLoopID;
 }
 
 //===----------------------------------------------------------------------===//

@@ -142,14 +142,14 @@ tools.extend([
     'dsymutil', 'lli', 'lli-child-target', 'llvm-ar', 'llvm-as',
     'llvm-bcanalyzer', 'llvm-config', 'llvm-cov', 'llvm-cxxdump', 'llvm-cvtres',
     'llvm-diff', 'llvm-dis', 'llvm-dwarfdump', 'llvm-exegesis', 'llvm-extract',
-    'llvm-isel-fuzzer', 'llvm-opt-fuzzer', 'llvm-lib', 'llvm-link', 'llvm-lto',
-    'llvm-lto2', 'llvm-mc', 'llvm-mca', 'llvm-modextract', 'llvm-nm',
-    'llvm-objcopy', 'llvm-objdump', 'llvm-pdbutil', 'llvm-profdata',
-    'llvm-ranlib', 'llvm-readelf', 'llvm-readobj', 'llvm-rtdyld', 'llvm-size',
-    'llvm-split', 'llvm-strings', 'llvm-strip', 'llvm-tblgen', 'llvm-undname',
-    'llvm-c-test', 'llvm-cxxfilt', 'llvm-xray', 'yaml2obj', 'obj2yaml',
-    'yaml-bench', 'verify-uselistorder', 'bugpoint', 'llc', 'llvm-symbolizer',
-    'opt', 'sancov', 'sanstats'])
+    'llvm-isel-fuzzer', 'llvm-jitlink', 'llvm-opt-fuzzer', 'llvm-lib',
+    'llvm-link', 'llvm-lto', 'llvm-lto2', 'llvm-mc', 'llvm-mca',
+    'llvm-modextract', 'llvm-nm', 'llvm-objcopy', 'llvm-objdump',
+    'llvm-pdbutil', 'llvm-profdata', 'llvm-ranlib', 'llvm-rc', 'llvm-readelf',
+    'llvm-readobj', 'llvm-rtdyld', 'llvm-size', 'llvm-split', 'llvm-strings',
+    'llvm-strip', 'llvm-tblgen', 'llvm-undname', 'llvm-c-test', 'llvm-cxxfilt',
+    'llvm-xray', 'yaml2obj', 'obj2yaml', 'yaml-bench', 'verify-uselistorder',
+    'bugpoint', 'llc', 'llvm-symbolizer', 'opt', 'sancov', 'sanstats'])
 
 # The following tools are optional
 tools.extend([
@@ -177,20 +177,18 @@ if (config.host_ldflags.find("-m32") < 0
     and any(config.llvm_host_triple.startswith(x) for x in known_arches)):
   config.available_features.add("llvm-64-bits")
 
-# Others/can-execute.txt
-if sys.platform not in ['win32']:
+config.available_features.add("host-byteorder-" + sys.byteorder + "-endian")
+
+if sys.platform in ['win32']:
+    # ExecutionEngine, no weak symbols in COFF.
+    config.available_features.add('uses_COFF')
+else:
+    # Others/can-execute.txt
     config.available_features.add('can-execute')
-    config.available_features.add('not_COFF')
 
 # Loadable module
-# FIXME: This should be supplied by Makefile or autoconf.
-if sys.platform in ['win32', 'cygwin']:
-    loadable_module = (config.enable_shared == 1)
-else:
-    loadable_module = True
-
-if loadable_module:
-    config.available_features.add('loadable_module')
+if config.has_plugins:
+    config.available_features.add('plugins')
 
 # Static libraries are not built if BUILD_SHARED_LIBS is ON.
 if not config.build_shared_libs and not config.link_llvm_dylib:
@@ -225,6 +223,9 @@ def have_cxx_shared_library():
 
 if have_cxx_shared_library():
     config.available_features.add('cxx-shared-library')
+
+if config.libcxx_used:
+    config.available_features.add('libcxx-used')
 
 # Direct object generation
 if not 'hexagon' in config.target_triple:
@@ -281,7 +282,10 @@ if have_ld_plugin_support():
 
 
 def have_ld64_plugin_support():
-    if not config.llvm_tool_lto_build or config.ld64_executable == '':
+    if not os.path.exists(os.path.join(config.llvm_shlib_dir, 'libLTO' + config.llvm_shlib_ext)):
+        return False
+
+    if config.ld64_executable == '':
         return False
 
     ld_cmd = subprocess.Popen(
@@ -324,7 +328,7 @@ if config.have_libxar:
 if config.enable_threads:
     config.available_features.add('thread_support')
 
-if config.llvm_libxml2_enabled == '1':
+if config.llvm_libxml2_enabled:
     config.available_features.add('libxml2')
 
 if config.have_opt_viewer_modules:

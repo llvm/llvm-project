@@ -189,6 +189,10 @@ supported include:
     More than two arguments are accepted with the result being the concatenation
     of all the lists given.
 
+``!listsplat(a, size)``
+    A list value that contains the value ``a`` ``size`` times.
+    Example: ``!listsplat(0, 2)`` results in ``[0, 0]``.
+
 ``!strconcat(a, b, ...)``
     A string value that is the result of concatenating the 'a' and 'b' strings.
     More than two arguments are accepted with the result being the concatenation
@@ -258,6 +262,16 @@ supported include:
 ``!if(a,b,c)``
   'b' if the result of 'int' or 'bit' operator 'a' is nonzero, 'c' otherwise.
 
+``!cond(condition_1 : val1, condition_2 : val2, ..., condition_n : valn)``
+    Instead of embedding !if inside !if which can get cumbersome,
+    one can use !cond. !cond returns 'val1' if the result of 'int' or 'bit'
+    operator 'condition1' is nonzero. Otherwise, it checks 'condition2'.
+    If 'condition2' is nonzero, returns 'val2', and so on.
+    If all conditions are zero, it reports an error.  
+
+    For example, to convert an integer 'x' into a string:
+      !cond(!lt(x,0) : "negative", !eq(x,0) : "zero", 1 : "positive")
+
 ``!eq(a,b)``
     'bit 1' if string a is equal to string b, 0 otherwise.  This only operates
     on string, int and bit objects.  Use !cast<string> to compare other types of
@@ -274,7 +288,7 @@ supported include:
     The usual shift operators. Operations are on 64-bit integers, the result
     is undefined for shift counts outside [0, 63].
 
-``!add(a,b,...)`` ``!and(a,b,...)`` ``!or(a,b,...)``
+``!add(a,b,...)`` ``!mul(a,b,...)`` ``!and(a,b,...)`` ``!or(a,b,...)``
     The usual arithmetic and binary operators.
 
 Note that all of the values have rules specifying how they convert to values

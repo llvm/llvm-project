@@ -1,9 +1,0 @@
-RUN: llvm-objdump -d %p/../Inputs/no-start-symbol.elf-x86_64 | FileCheck %s
-
-Test that we disassemble the start of the section.
-
-CHECK: Disassembly of section .text:
-CHECK-NEXT:  .text:
-CHECK-NEXT:       0:	90 	nop
-CHECK: foo:
-CHECK-NEXT:       1:	90 	nop

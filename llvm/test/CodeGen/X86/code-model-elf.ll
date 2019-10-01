@@ -37,6 +37,8 @@ target triple = "x86_64--linux"
 @global_data = dso_local global [10 x i32] [i32 1, i32 2, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0], align 16
 @static_data = internal global [10 x i32] zeroinitializer, align 16
 @extern_data = external global [10 x i32], align 16
+@thread_data = external thread_local global i32, align 4
+
 
 define dso_local i32* @lea_static_data() #0 {
 ; SMALL-STATIC-LABEL: lea_static_data:
@@ -371,6 +373,70 @@ define dso_local void ()* @lea_extern_fn() #0 {
 ; LARGE-PIC-NEXT:    movq (%rcx,%rax), %rax
 ; LARGE-PIC-NEXT:    retq
   ret void ()* @extern_fn
+}
+
+; FIXME: The result is same for small, medium and large model, because we
+; specify pie option in the test case. And the type of tls is initial exec tls.
+; For pic code. The large model code for pic tls should be emitted as below.
+
+; .L3:
+; leaq	.L3(%rip), %rbx
+; movabsq	$_GLOBAL_OFFSET_TABLE_-.L3, %r11
+; addq	%r11, %rbx
+; leaq	thread_data@TLSGD(%rip), %rdi
+; movabsq	$__tls_get_addr@PLTOFF, %rax
+; addq	%rbx, %rax
+; call	*%rax
+; movl	(%rax), %eax
+
+; The medium and small model code for pic tls should be emitted as below.
+; data16
+; leaq	thread_data@TLSGD(%rip), %rdi
+; data16
+; data16
+; rex64
+; callq	__tls_get_addr@PLT
+; movl	(%rax), %eax
+
+define dso_local i32 @load_thread_data() #0 {
+; SMALL-STATIC-LABEL: load_thread_data:
+; SMALL-STATIC:       # %bb.0:
+; SMALL-STATIC-NEXT:    movq    thread_data@GOTTPOFF(%rip), %rax
+; SMALL-STATIC-NEXT:    movl    %fs:(%rax), %eax
+; SMALL-STATIC-NEXT:    retq
+;
+; MEDIUM-STATIC-LABEL: load_thread_data:
+; MEDIUM-STATIC:       # %bb.0:
+; MEDIUM-STATIC-NEXT:    movq    thread_data@GOTTPOFF(%rip), %rax
+; MEDIUM-STATIC-NEXT:    movl    %fs:(%rax), %eax
+; MEDIUM-STATIC-NEXT:    retq
+;
+; LARGE-STATIC-LABEL: load_thread_data:
+; LARGE-STATIC:       # %bb.0:
+; LARGE-STATIC-NEXT:    movq    thread_data@GOTTPOFF(%rip), %rax
+; LARGE-STATIC-NEXT:    movl    %fs:(%rax), %eax
+; LARGE-STATIC-NEXT:    retq
+;
+; SMALL-PIC-LABEL: load_thread_data:
+; SMALL-PIC:       # %bb.0:
+; SMALL-PIC-NEXT:    movq    thread_data@GOTTPOFF(%rip), %rax
+; SMALL-PIC-NEXT:    movl    %fs:(%rax), %eax
+; SMALL-PIC-NEXT:    retq
+;
+; MEDIUM-PIC-LABEL: load_thread_data:
+; MEDIUM-PIC:       # %bb.0:
+; MEDIUM-PIC-NEXT:    movq    thread_data@GOTTPOFF(%rip), %rax
+; MEDIUM-PIC-NEXT:    movl    %fs:(%rax), %eax
+; MEDIUM-PIC-NEXT:    retq
+;
+; LARGE-PIC-LABEL: load_thread_data:
+; LARGE-PIC:       # %bb.0:
+; LARGE-PIC-NEXT:    movq    thread_data@GOTTPOFF(%rip), %rax
+; LARGE-PIC-NEXT:    movl    %fs:(%rax), %eax
+; LARGE-PIC-NEXT:    retq
+;
+  %1 = load i32, i32* @thread_data, align 4
+  ret i32 %1
 }
 
 attributes #0 = { noinline nounwind uwtable }

@@ -1,9 +1,8 @@
 //===---- PPCReduceCRLogicals.cpp - Reduce CR Bit Logical operations ------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===---------------------------------------------------------------------===//
 //
@@ -48,10 +47,6 @@ STATISTIC(NumNotSplitChainCopies,
           "Number of blocks not split due to operands being chained copies.");
 STATISTIC(NumNotSplitWrongOpcode,
           "Number of blocks not split due to the wrong opcode.");
-
-namespace llvm {
-  void initializePPCReduceCRLogicalsPass(PassRegistry&);
-}
 
 /// Given a basic block \p Successor that potentially contains PHIs, this
 /// function will look for any incoming values in the PHIs that are supposed to
@@ -171,9 +166,33 @@ static bool splitMBB(BlockSplitInfo &BSI) {
                                            : *ThisMBB->succ_begin();
   MachineBasicBlock *NewBRTarget =
       BSI.BranchToFallThrough ? OrigFallThrough : OrigTarget;
-  BranchProbability ProbToNewTarget =
-      !BSI.MBPI ? BranchProbability::getUnknown()
-                : BSI.MBPI->getEdgeProbability(ThisMBB, NewBRTarget);
+
+  // It's impossible to know the precise branch probability after the split.
+  // But it still needs to be reasonable, the whole probability to original
+  // targets should not be changed.
+  // After split NewBRTarget will get two incoming edges. Assume P0 is the
+  // original branch probability to NewBRTarget, P1 and P2 are new branch
+  // probabilies to NewBRTarget after split. If the two edge frequencies are
+  // same, then
+  //      F * P1 = F * P0 / 2            ==>  P1 = P0 / 2
+  //      F * (1 - P1) * P2 = F * P1     ==>  P2 = P1 / (1 - P1)
+  BranchProbability ProbToNewTarget, ProbFallThrough;     // Prob for new Br.
+  BranchProbability ProbOrigTarget, ProbOrigFallThrough;  // Prob for orig Br.
+  ProbToNewTarget = ProbFallThrough = BranchProbability::getUnknown();
+  ProbOrigTarget = ProbOrigFallThrough = BranchProbability::getUnknown();
+  if (BSI.MBPI) {
+    if (BSI.BranchToFallThrough) {
+      ProbToNewTarget = BSI.MBPI->getEdgeProbability(ThisMBB, OrigFallThrough) / 2;
+      ProbFallThrough = ProbToNewTarget.getCompl();
+      ProbOrigFallThrough = ProbToNewTarget / ProbToNewTarget.getCompl();
+      ProbOrigTarget = ProbOrigFallThrough.getCompl();
+    } else {
+      ProbToNewTarget = BSI.MBPI->getEdgeProbability(ThisMBB, OrigTarget) / 2;
+      ProbFallThrough = ProbToNewTarget.getCompl();
+      ProbOrigTarget = ProbToNewTarget / ProbToNewTarget.getCompl();
+      ProbOrigFallThrough = ProbOrigTarget.getCompl();
+    }
+  }
 
   // Create a new basic block.
   MachineBasicBlock::iterator InsertPoint = BSI.SplitBefore;
@@ -185,11 +204,16 @@ static bool splitMBB(BlockSplitInfo &BSI) {
   // Move everything after SplitBefore into the new block.
   NewMBB->splice(NewMBB->end(), ThisMBB, InsertPoint, ThisMBB->end());
   NewMBB->transferSuccessors(ThisMBB);
+  if (!ProbOrigTarget.isUnknown()) {
+    auto MBBI = std::find(NewMBB->succ_begin(), NewMBB->succ_end(), OrigTarget);
+    NewMBB->setSuccProbability(MBBI, ProbOrigTarget);
+    MBBI = std::find(NewMBB->succ_begin(), NewMBB->succ_end(), OrigFallThrough);
+    NewMBB->setSuccProbability(MBBI, ProbOrigFallThrough);
+  }
 
-  // Add the two successors to ThisMBB. The probabilities come from the
-  // existing blocks if available.
+  // Add the two successors to ThisMBB.
   ThisMBB->addSuccessor(NewBRTarget, ProbToNewTarget);
-  ThisMBB->addSuccessor(NewMBB, ProbToNewTarget.getCompl());
+  ThisMBB->addSuccessor(NewMBB, ProbFallThrough);
 
   // Add the branches to ThisMBB.
   BuildMI(*ThisMBB, ThisMBB->end(), BSI.SplitBefore->getDebugLoc(),

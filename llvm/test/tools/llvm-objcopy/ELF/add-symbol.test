@@ -1,0 +1,78 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objcopy --add-symbol='abs1=1' \ 
+# RUN:              --add-symbol='abs2=2,LoCaL,HiDdEn,FuNcTiOn' \
+# RUN:              --add-symbol='abs3=3,global,default,object' \
+# RUN:              --add-symbol='foo.cpp=0,file' \
+# RUN:              --add-symbol='=.text:0,section' \
+# RUN:              --add-symbol='data=.data:0x100,weak' \
+# RUN:              --add-symbol='ifunc=.text:0,indirect-function' \
+# RUN:              %t %t2
+# RUN: llvm-readelf -s %t2 | FileCheck %s
+
+# Checked ignored options
+# RUN: llvm-objcopy \
+# RUN:   --add-symbol='dummy1=0,indirect,constructor,debug,synthetic' \
+# RUN:   --add-symbol='dummy2=0,before=foo,unique-object,warning' %t %t3
+# RUN: llvm-readelf -s %t3 | FileCheck %s --check-prefix=IGNORED
+
+# Check errors
+# RUN: not llvm-objcopy --add-symbol='test' %t %t4 2>&1 | FileCheck %s --check-prefix=ERR1
+# RUN: not llvm-objcopy --add-symbol='test=:0' %t %t5 2>&1 | FileCheck %s --check-prefix=ERR2
+# RUN: not llvm-objcopy --add-symbol='test=foo:' %t %t6 2>&1 | FileCheck %s --check-prefix=ERR2
+# RUN: not llvm-objcopy --add-symbol='test=0,cool' %t %t7 2>&1 | FileCheck %s --check-prefix=ERR3
+# RUN: not llvm-objcopy --add-symbol='test=0,foo,bar' %t %t8 2>&1 | FileCheck %s --check-prefix=ERR4
+# RUN: not llvm-objcopy --add-symbol='test=xyz' %t %t9 2>&1 | FileCheck %s --check-prefix=ERR5
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS32
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_ARM
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1000
+    AddressAlign:    0x0000000000001000
+    Size:            64
+  - Name:            .data
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x2000
+    AddressAlign:    0x0000000000001000
+    Size:            64
+ProgramHeaders:
+  - Type: PT_LOAD
+    Flags: [ PF_X, PF_R ]
+    VAddr: 0x1000
+    PAddr: 0x1000
+    Align: 0x1000
+    Sections:
+      - Section: .text
+  - Type: PT_LOAD
+    Flags: [ PF_R, PF_W ]
+    VAddr: 0x2000
+    PAddr: 0x2000
+    Align: 0x1000
+    Sections:
+      - Section: .data
+
+# CHECK:      0: 00000000 0 NOTYPE LOCAL DEFAULT UND 
+# CHECK-NEXT: 1: 00000001 0 NOTYPE GLOBAL DEFAULT ABS abs1
+# CHECK-NEXT: 2: 00000002 0 FUNC LOCAL HIDDEN ABS abs2
+# CHECK-NEXT: 3: 00000003 0 OBJECT GLOBAL DEFAULT ABS abs3
+# CHECK-NEXT: 4: 00000000 0 FILE GLOBAL DEFAULT ABS foo.cpp
+# CHECK-NEXT: 5: 00001000 0 SECTION GLOBAL DEFAULT 1 
+# CHECK-NEXT: 6: 00002100 0 NOTYPE WEAK DEFAULT 2 data
+# CHECK-NEXT: 7: 00001000 0 IFUNC GLOBAL DEFAULT 1 ifunc
+
+# IGNORED:       1: 00000000 0 NOTYPE GLOBAL DEFAULT ABS dummy1
+# IGNORED-NEXT:  2: 00000000 0 NOTYPE GLOBAL DEFAULT ABS dummy2
+
+# ERR1: error: bad format for --add-symbol, missing '=' after 'test'
+# ERR2: error: bad format for --add-symbol, missing section name or symbol value
+# ERR3: error: unsupported flag for --add-symbol: 'cool'
+# ERR4: error: unsupported flags for --add-symbol: 'foo', 'bar'
+# ERR5: error: bad symbol value: 'xyz'
+

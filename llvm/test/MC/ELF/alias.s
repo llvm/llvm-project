@@ -1,4 +1,4 @@
-// RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s -o - | llvm-readobj -t | FileCheck %s
+// RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s -o - | llvm-readobj --symbols | FileCheck %s
 
 foo:
 bar = foo
@@ -107,7 +107,7 @@ leaq .Llocal1(%rip), %rdi
 // CHECK-NEXT:     Section: .text
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Symbol {
-// CHECK-NEXT:     Name: (0)
+// CHECK-NEXT:     Name: .data (0)
 // CHECK-NOT: Symbol {
 // CHECK:        }
 // CHECK-NEXT:   Symbol {

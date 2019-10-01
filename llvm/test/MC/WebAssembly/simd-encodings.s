@@ -1,4 +1,4 @@
-# RUN: llvm-mc -show-encoding -triple=wasm32-unkown-unknown -mattr=+sign-ext,+simd128 < %s | FileCheck %s
+# RUN: llvm-mc -show-encoding -triple=wasm32-unkown-unknown -mattr=+unimplemented-simd128 < %s | FileCheck %s
 
 main:
     .functype main () -> ()
@@ -427,28 +427,28 @@ main:
     # CHECK: f64x2.max # encoding: [0xfd,0xaa,0x01]
     f64x2.max
 
-    # CHECK: i32x4.trunc_sat_s/f32x4 # encoding: [0xfd,0xab,0x01]
-    i32x4.trunc_sat_s/f32x4
+    # CHECK: i32x4.trunc_sat_f32x4_s # encoding: [0xfd,0xab,0x01]
+    i32x4.trunc_sat_f32x4_s
 
-    # CHECK: i32x4.trunc_sat_u/f32x4 # encoding: [0xfd,0xac,0x01]
-    i32x4.trunc_sat_u/f32x4
+    # CHECK: i32x4.trunc_sat_f32x4_u # encoding: [0xfd,0xac,0x01]
+    i32x4.trunc_sat_f32x4_u
 
-    # CHECK: i64x2.trunc_sat_s/f64x2 # encoding: [0xfd,0xad,0x01]
-    i64x2.trunc_sat_s/f64x2
+    # CHECK: i64x2.trunc_sat_f64x2_s # encoding: [0xfd,0xad,0x01]
+    i64x2.trunc_sat_f64x2_s
 
-    # CHECK: i64x2.trunc_sat_u/f64x2 # encoding: [0xfd,0xae,0x01]
-    i64x2.trunc_sat_u/f64x2
+    # CHECK: i64x2.trunc_sat_f64x2_u # encoding: [0xfd,0xae,0x01]
+    i64x2.trunc_sat_f64x2_u
 
-    # CHECK: f32x4.convert_s/i32x4 # encoding: [0xfd,0xaf,0x01]
-    f32x4.convert_s/i32x4
+    # CHECK: f32x4.convert_i32x4_s # encoding: [0xfd,0xaf,0x01]
+    f32x4.convert_i32x4_s
 
-    # CHECK: f32x4.convert_u/i32x4 # encoding: [0xfd,0xb0,0x01]
-    f32x4.convert_u/i32x4
+    # CHECK: f32x4.convert_i32x4_u # encoding: [0xfd,0xb0,0x01]
+    f32x4.convert_i32x4_u
 
-    # CHECK: f64x2.convert_s/i64x2 # encoding: [0xfd,0xb1,0x01]
-    f64x2.convert_s/i64x2
+    # CHECK: f64x2.convert_i64x2_s # encoding: [0xfd,0xb1,0x01]
+    f64x2.convert_i64x2_s
 
-    # CHECK: f64x2.convert_u/i64x2 # encoding: [0xfd,0xb2,0x01]
-    f64x2.convert_u/i64x2
+    # CHECK: f64x2.convert_i64x2_u # encoding: [0xfd,0xb2,0x01]
+    f64x2.convert_i64x2_u
 
     end_function

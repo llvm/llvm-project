@@ -1,9 +1,8 @@
 //===-- llvm/Target/TargetLoweringObjectFile.h - Object Info ----*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -79,6 +78,9 @@ public:
 
   /// Emit the module-level metadata that the platform cares about.
   virtual void emitModuleMetadata(MCStreamer &Streamer, Module &M) const {}
+
+  /// Get the module-level metadata that the platform cares about.
+  virtual void getModuleMetadata(Module &M) {}
 
   /// Given a constant with the SectionKind, return a section that it should be
   /// placed in.
@@ -187,7 +189,8 @@ public:
   }
 
   /// Get the target specific PC relative GOT entry relocation
-  virtual const MCExpr *getIndirectSymViaGOTPCRel(const MCSymbol *Sym,
+  virtual const MCExpr *getIndirectSymViaGOTPCRel(const GlobalValue *GV,
+                                                  const MCSymbol *Sym,
                                                   const MCValue &MV,
                                                   int64_t Offset,
                                                   MachineModuleInfo *MMI,

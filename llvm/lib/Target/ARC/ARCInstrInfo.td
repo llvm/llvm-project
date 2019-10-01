@@ -1,9 +1,8 @@
 //===- ARCInstrInfo.td - Target Description for ARC --------*- tablegen -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -788,50 +787,47 @@ let isReturn = 1, isTerminator = 1 in {
 // Load/Store instructions.
 //----------------------------------------------------------------------------
 
+// Filter  class for load/store mappings
+class ArcLdStRel;
+
 // Load instruction variants:
 // Control bits: x, aa, di, zz
 // x - sign extend.
 // aa - incrementing mode. (N/A for LIMM).
 // di - uncached.
 // zz - data size.
-multiclass ArcLdInst<bits<2> zz, string asmop> {
-  let mayLoad = 1 in {
-  def _rs9 : F32_LD_ADDR<0, 0b00, 0, zz,
-                         (outs GPR32:$A), (ins MEMrs9:$addr),
-                         !strconcat(asmop, "\t$A, [$addr]"), []>;
+multiclass ArcLdInst<DataSizeMode zz, ExtMode x, CacheMode di, string asmop> {
+  let mayLoad = 1, ZZ = zz, X = x, DI = di in {
+    def _rs9: F32_LD_ADDR<x.Value, NoAM.Value, di.Value, zz.Value,
+			   (outs GPR32:$A), (ins MEMrs9:$addr),
+			   !strconcat(asmop, "\t$A, [$addr]"), []>, ArcLdStRel;
 
-  def _limm : F32_LD_LIMM<0, 0, zz,
-                         (outs GPR32:$A), (ins MEMii:$addr),
-                         !strconcat(asmop, "\t$A, [$addr]"), []>;
+    def _limm: F32_LD_LIMM<x.Value, di.Value, zz.Value,
+			   (outs GPR32:$A), (ins MEMii:$addr),
+			   !strconcat(asmop, "\t$A, [$addr]"), []>, ArcLdStRel;
 
-  def _rlimm : F32_LD_RLIMM<0, 0b00, 0, zz,
-                           (outs GPR32:$A), (ins MEMrlimm:$addr),
-                           !strconcat(asmop, "\t$A, [$addr]"), []>;
+    def _rlimm: F32_LD_RLIMM<x.Value, NoAM.Value, di.Value, zz.Value,
+			     (outs GPR32:$A), (ins MEMrlimm:$addr),
+			     !strconcat(asmop, "\t$A, [$addr]"), []>, ArcLdStRel;
 
-  def _X_rs9 : F32_LD_ADDR<1, 0b00, 0, zz,
-                         (outs GPR32:$A), (ins MEMrs9:$addr),
-                         !strconcat(asmop, ".x\t$A, [$addr]"), []>;
-
-  def _X_limm : F32_LD_LIMM<1, 0, zz,
-                         (outs GPR32:$A), (ins MEMii:$addr),
-                         !strconcat(asmop, ".x\t$A, [$addr]"), []>;
-
-  def _X_rlimm : F32_LD_RLIMM<1, 0b00, 0, zz,
-                           (outs GPR32:$A), (ins MEMrlimm:$addr),
-                           !strconcat(asmop, ".x\t$A, [$addr]"), []>;
-
-  def _AB_rs9 : F32_LD_RS9<0, 0b10, 0, zz,
-                      (outs GPR32:$addrout, GPR32:$A),
-                      (ins GPR32:$B, immS<9>:$S9),
-                      !strconcat(asmop, ".ab\t$A, [$B,$S9]"), []>
-    { let Constraints = "$addrout = $B"; }
+    foreach aa = [PreIncAM, PostIncAM] in {
+      def aa.InstSuffix#_rs9: F32_LD_RS9<x.Value, aa.Value, di.Value, zz.Value,
+					  (outs GPR32:$A, GPR32:$addrout),
+					  (ins GPR32:$B, immS<9>:$S9),
+					  asmop#aa.AsmSuffix#"\t$A, [$B,$S9]", []>, ArcLdStRel
+			       { let Constraints = "$addrout = $B"; let AA = aa; }
+    }
   }
 }
-                         
-// Load instruction definitions.
-defm LD  : ArcLdInst<0b00, "ld">;
-defm LDH : ArcLdInst<0b10, "ldh">;
-defm LDB : ArcLdInst<0b01, "ldb">;
+
+foreach di = [NoCC, UncachedCC] in {
+  defm LD#di.InstSuffix : ArcLdInst<WordSM, NoEM, di, "ld"#di.AsmSuffix>;
+  foreach zz = [ByteSM, HalfSM] in {
+    foreach x = [NoEM, SignedEM] in {
+      defm LD#zz.InstSuffix#x.InstSuffix#di.InstSuffix : ArcLdInst<zz, x, di, "ld"#zz.AsmSuffix#x.AsmSuffix#di.AsmSuffix>;
+    }
+  }
+}
 
 // Load instruction patterns.
 // 32-bit loads.
@@ -873,25 +869,32 @@ def : Pat<(sextloadi8 AddrModeS9:$addr),(LDB_X_rs9 AddrModeS9:$addr)>;
 // aa - incrementing mode. (N/A for LIMM).
 // di - uncached.
 // zz - data size.
-multiclass ArcStInst<bits<2> zz, string asmop> {
-  let mayStore = 1 in {
-  def _rs9  : F32_ST_ADDR<0b00, 0, zz, (outs), (ins GPR32:$C, MEMrs9:$addr),
-                         !strconcat(asmop, "\t$C, [$addr]"), []>;
+multiclass ArcStInst<DataSizeMode zz, CacheMode di, string asmop> {
+  let mayStore = 1, ZZ = zz, DI = di in {
+    def _rs9: F32_ST_ADDR<NoAM.Value, di.Value, zz.Value,
+			   (outs), (ins GPR32:$C, MEMrs9:$addr),
+			   !strconcat(asmop, "\t$C, [$addr]"), []>, ArcLdStRel;
 
-  def _limm : F32_ST_LIMM<0, zz, (outs), (ins GPR32:$C, MEMii:$addr),
-                         !strconcat(asmop, "\t$C, [$addr]"), []>;
+    def _limm: F32_ST_LIMM<di.Value, zz.Value,
+			   (outs), (ins GPR32:$C, MEMii:$addr),
+			   !strconcat(asmop, "\t$C, [$addr]"), []>, ArcLdStRel;
 
-  def _AW_rs9 : F32_ST_RS9<0b01, 0, zz, (outs GPR32:$addrout),
-                      (ins GPR32:$C, GPR32:$B, immS<9>:$S9),
-                      !strconcat(asmop, ".aw\t$C, [$B,$S9]"), []>
-    { let Constraints = "$addrout = $B"; }
+
+    foreach aa = [PreIncAM, PostIncAM] in {
+      def aa.InstSuffix#_rs9: F32_ST_RS9<aa.Value, di.Value, zz.Value,
+					  (outs GPR32:$addrout),
+					  (ins GPR32:$C, GPR32:$B, immS<9>:$S9),
+					  asmop#aa.AsmSuffix#"\t$C, [$B,$S9]", []>, ArcLdStRel
+			       { let Constraints = "$addrout = $B"; let AA = aa; }
+    }
   }
 }
 
-// Store instruction definitions.
-defm ST  : ArcStInst<0b00, "st">;
-defm STH : ArcStInst<0b10, "sth">;
-defm STB : ArcStInst<0b01, "stb">;
+foreach di = [NoCC, UncachedCC] in {
+  foreach zz = [ByteSM, HalfSM, WordSM] in {
+      defm ST#zz.InstSuffix#di.InstSuffix : ArcStInst<zz, di, "st"#zz.AsmSuffix#di.AsmSuffix>;
+  }
+}
 
 // Store instruction patterns.
 // 32-bit stores
@@ -912,3 +915,10 @@ def : Pat<(truncstorei8 i32:$C, AddrModeS9:$addr),
 def : Pat<(truncstorei8 i32:$C, AddrModeImm:$addr),
           (STB_limm i32:$C, AddrModeImm:$addr)>;
 
+def getPostIncOpcode : InstrMapping {
+  let FilterClass = "ArcLdStRel";
+  let RowFields = [ "BaseOpcode", "ZZ", "DI", "X"];
+  let ColFields = [ "AA" ];
+  let KeyCol = [ "NoAM" ];
+  let ValueCols = [["PostIncAM"]];
+}

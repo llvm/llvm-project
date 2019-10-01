@@ -1,18 +1,26 @@
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=fiji -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=fiji -verify-machineinstrs < %s | FileCheck -enable-var-scope %s
 
 declare i32 @llvm.amdgcn.readlane(i32, i32) #0
 
-; CHECK-LABEL: {{^}}test_readlane_sreg:
-; CHECK: v_readlane_b32 s{{[0-9]+}}, v{{[0-9]+}}, s{{[0-9]+}}
-define amdgpu_kernel void @test_readlane_sreg(i32 addrspace(1)* %out, i32 %src0, i32 %src1) #1 {
+; CHECK-LABEL: {{^}}test_readlane_sreg_sreg:
+; CHECK-NOT: v_readlane_b32
+define amdgpu_kernel void @test_readlane_sreg_sreg(i32 %src0, i32 %src1) #1 {
   %readlane = call i32 @llvm.amdgcn.readlane(i32 %src0, i32 %src1)
-  store i32 %readlane, i32 addrspace(1)* %out, align 4
+  call void asm sideeffect "; use $0", "s"(i32 %readlane)
+  ret void
+}
+
+; CHECK-LABEL: {{^}}test_readlane_vreg_sreg:
+; CHECK: v_readlane_b32 s{{[0-9]+}}, v{{[0-9]+}}, s{{[0-9]+}}
+define amdgpu_kernel void @test_readlane_vreg_sreg(i32 %src0, i32 %src1) #1 {
+  %vgpr = call i32 asm sideeffect "; def $0", "=v"()
+  %readlane = call i32 @llvm.amdgcn.readlane(i32 %vgpr, i32 %src1)
+  call void asm sideeffect "; use $0", "s"(i32 %readlane)
   ret void
 }
 
 ; CHECK-LABEL: {{^}}test_readlane_imm_sreg:
-; CHECK: v_mov_b32_e32 [[VVAL:v[0-9]]], 32
-; CHECK: v_readlane_b32 s{{[0-9]+}}, [[VVAL]], s{{[0-9]+}}
+; CHECK-NOT: v_readlane_b32
 define amdgpu_kernel void @test_readlane_imm_sreg(i32 addrspace(1)* %out, i32 %src1) #1 {
   %readlane = call i32 @llvm.amdgcn.readlane(i32 32, i32 %src1)
   store i32 %readlane, i32 addrspace(1)* %out, align 4
@@ -38,19 +46,35 @@ define amdgpu_kernel void @test_readlane_vregs(i32 addrspace(1)* %out, <2 x i32>
 ; CHECK: s_mov_b32 m0, -1
 ; CHECK: s_mov_b32 [[COPY_M0:s[0-9]+]], m0
 ; CHECK: v_mov_b32_e32 [[VVAL:v[0-9]]], [[COPY_M0]]
-; CHECK: v_readlane_b32 s{{[0-9]+}}, [[VVAL]], s{{[0-9]+}}
+; CHECK: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[VVAL]]
 define amdgpu_kernel void @test_readlane_m0_sreg(i32 addrspace(1)* %out, i32 %src1) #1 {
-  %m0 = call i32 asm "s_mov_b32 m0, -1", "={M0}"()
+  %m0 = call i32 asm "s_mov_b32 m0, -1", "={m0}"()
   %readlane = call i32 @llvm.amdgcn.readlane(i32 %m0, i32 %src1)
   store i32 %readlane, i32 addrspace(1)* %out, align 4
   ret void
 }
 
-; CHECK-LABEL: {{^}}test_readlane_imm:
+; CHECK-LABEL: {{^}}test_readlane_vgpr_imm:
 ; CHECK: v_readlane_b32 s{{[0-9]+}}, v{{[0-9]+}}, 32
-define amdgpu_kernel void @test_readlane_imm(i32 addrspace(1)* %out, i32 %src0) #1 {
-  %readlane = call i32 @llvm.amdgcn.readlane(i32 %src0, i32 32) #0
+define amdgpu_kernel void @test_readlane_vgpr_imm(i32 addrspace(1)* %out) #1 {
+  %vgpr = call i32 asm sideeffect "; def $0", "=v"()
+  %readlane = call i32 @llvm.amdgcn.readlane(i32 %vgpr, i32 32) #0
   store i32 %readlane, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
+; CHECK-LABEL: {{^}}test_readlane_copy_from_sgpr:
+; CHECK: ;;#ASMSTART
+; CHECK-NEXT: s_mov_b32 [[SGPR:s[0-9]+]]
+; CHECK: ;;#ASMEND
+; CHECK-NOT: [[SGPR]]
+; CHECK-NOT: readlane
+; CHECK: v_mov_b32_e32 [[VCOPY:v[0-9]+]], [[SGPR]]
+; CHECK: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[VCOPY]]
+define amdgpu_kernel void @test_readlane_copy_from_sgpr(i32 addrspace(1)* %out) #1 {
+  %sgpr = call i32 asm "s_mov_b32 $0, 0", "=s"()
+  %readfirstlane = call i32 @llvm.amdgcn.readlane(i32 %sgpr, i32 7)
+  store i32 %readfirstlane, i32 addrspace(1)* %out, align 4
   ret void
 }
 

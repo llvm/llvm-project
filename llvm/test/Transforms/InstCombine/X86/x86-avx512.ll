@@ -7,7 +7,7 @@ declare <4 x float> @llvm.x86.avx512.mask.add.ss.round(<4 x float>, <4 x float>,
 define <4 x float> @test_add_ss(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: @test_add_ss(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[A:%.*]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[B:%.*]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[B:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = fadd float [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> [[A]], float [[TMP3]], i64 0
 ; CHECK-NEXT:    ret <4 x float> [[TMP4]]
@@ -38,7 +38,7 @@ define <4 x float> @test_add_ss_mask(<4 x float> %a, <4 x float> %b, <4 x float>
 ; CHECK-NEXT:    [[TMP3:%.*]] = fadd float [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <8 x i1> [[TMP4]], i64 0
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[C:%.*]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[C:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = select i1 [[TMP5]], float [[TMP3]], float [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x float> [[A]], float [[TMP7]], i64 0
 ; CHECK-NEXT:    ret <4 x float> [[TMP8]]
@@ -149,7 +149,7 @@ declare <4 x float> @llvm.x86.avx512.mask.sub.ss.round(<4 x float>, <4 x float>,
 define <4 x float> @test_sub_ss(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: @test_sub_ss(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[A:%.*]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[B:%.*]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[B:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = fsub float [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> [[A]], float [[TMP3]], i64 0
 ; CHECK-NEXT:    ret <4 x float> [[TMP4]]
@@ -180,7 +180,7 @@ define <4 x float> @test_sub_ss_mask(<4 x float> %a, <4 x float> %b, <4 x float>
 ; CHECK-NEXT:    [[TMP3:%.*]] = fsub float [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <8 x i1> [[TMP4]], i64 0
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[C:%.*]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[C:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = select i1 [[TMP5]], float [[TMP3]], float [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x float> [[A]], float [[TMP7]], i64 0
 ; CHECK-NEXT:    ret <4 x float> [[TMP8]]
@@ -291,7 +291,7 @@ declare <4 x float> @llvm.x86.avx512.mask.mul.ss.round(<4 x float>, <4 x float>,
 define <4 x float> @test_mul_ss(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: @test_mul_ss(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[A:%.*]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[B:%.*]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[B:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul float [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> [[A]], float [[TMP3]], i64 0
 ; CHECK-NEXT:    ret <4 x float> [[TMP4]]
@@ -322,7 +322,7 @@ define <4 x float> @test_mul_ss_mask(<4 x float> %a, <4 x float> %b, <4 x float>
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul float [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <8 x i1> [[TMP4]], i64 0
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[C:%.*]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[C:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = select i1 [[TMP5]], float [[TMP3]], float [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x float> [[A]], float [[TMP7]], i64 0
 ; CHECK-NEXT:    ret <4 x float> [[TMP8]]
@@ -433,7 +433,7 @@ declare <4 x float> @llvm.x86.avx512.mask.div.ss.round(<4 x float>, <4 x float>,
 define <4 x float> @test_div_ss(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: @test_div_ss(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[A:%.*]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[B:%.*]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[B:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = fdiv float [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> [[A]], float [[TMP3]], i64 0
 ; CHECK-NEXT:    ret <4 x float> [[TMP4]]
@@ -464,7 +464,7 @@ define <4 x float> @test_div_ss_mask(<4 x float> %a, <4 x float> %b, <4 x float>
 ; CHECK-NEXT:    [[TMP3:%.*]] = fdiv float [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <8 x i1> [[TMP4]], i64 0
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[C:%.*]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[C:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = select i1 [[TMP5]], float [[TMP3]], float [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x float> [[A]], float [[TMP7]], i64 0
 ; CHECK-NEXT:    ret <4 x float> [[TMP8]]
@@ -916,213 +916,6 @@ declare i64 @llvm.x86.avx512.vcvtsd2usi64(<2 x double>, i32)
 declare i32 @llvm.x86.avx512.cvttsd2usi(<2 x double>, i32)
 declare i64 @llvm.x86.avx512.cvttsd2usi64(<2 x double>, i32)
 
-declare <4 x float> @llvm.x86.avx512.mask.rndscale.ss(<4 x float>, <4 x float>, <4 x float>, i8, i32, i32)
-declare <2 x double> @llvm.x86.avx512.mask.rndscale.sd(<2 x double>, <2 x double>, <2 x double>, i8, i32, i32)
-declare <4 x float> @llvm.x86.avx512.mask.rndscale.ps.128(<4 x float>, i32, <4 x float>, i8)
-declare <8 x float> @llvm.x86.avx512.mask.rndscale.ps.256(<8 x float>, i32, <8 x float>, i8)
-declare <16 x float> @llvm.x86.avx512.mask.rndscale.ps.512(<16 x float>, i32, <16 x float>, i16, i32)
-declare <2 x double> @llvm.x86.avx512.mask.rndscale.pd.128(<2 x double>, i32, <2 x double>, i8)
-declare <4 x double> @llvm.x86.avx512.mask.rndscale.pd.256(<4 x double>, i32, <4 x double>, i8)
-declare <8 x double> @llvm.x86.avx512.mask.rndscale.pd.512(<8 x double>, i32, <8 x double>, i8, i32)
-
-define <4 x float> @test_rndscale_ss_floor(<4 x float> %src0, <4 x float> %src1, <4 x float> %dst, i8 %k) {
-; CHECK-LABEL: @test_rndscale_ss_floor(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[K:%.*]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i8 [[TMP1]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[SRC1:%.*]], i64 0
-; CHECK-NEXT:    [[TMP4:%.*]] = call float @llvm.floor.f32(float [[TMP3]])
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x float> [[DST:%.*]], i64 0
-; CHECK-NEXT:    [[TMP6:%.*]] = select i1 [[TMP2]], float [[TMP5]], float [[TMP4]]
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x float> [[SRC0:%.*]], float [[TMP6]], i64 0
-; CHECK-NEXT:    ret <4 x float> [[TMP7]]
-;
-  %1 = call <4 x float> @llvm.x86.avx512.mask.rndscale.ss(<4 x float> %src0, <4 x float> %src1, <4 x float> %dst, i8 %k, i32 1, i32 4)
-  ret <4 x float> %1
-}
-
-define <4 x float> @test_rndscale_ss_ceil(<4 x float> %src0, <4 x float> %src1, <4 x float> %dst, i8 %k) {
-; CHECK-LABEL: @test_rndscale_ss_ceil(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[K:%.*]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i8 [[TMP1]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[SRC1:%.*]], i64 0
-; CHECK-NEXT:    [[TMP4:%.*]] = call float @llvm.ceil.f32(float [[TMP3]])
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x float> [[DST:%.*]], i64 0
-; CHECK-NEXT:    [[TMP6:%.*]] = select i1 [[TMP2]], float [[TMP5]], float [[TMP4]]
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x float> [[SRC0:%.*]], float [[TMP6]], i64 0
-; CHECK-NEXT:    ret <4 x float> [[TMP7]]
-;
-  %1 = call <4 x float> @llvm.x86.avx512.mask.rndscale.ss(<4 x float> %src0, <4 x float> %src1, <4 x float> %dst, i8 %k, i32 2, i32 4)
-  ret <4 x float> %1
-}
-
-define <2 x double> @test_rndscale_sd_floor(<2 x double> %src0, <2 x double> %src1, <2 x double> %dst, i8 %k) {
-; CHECK-LABEL: @test_rndscale_sd_floor(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[K:%.*]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i8 [[TMP1]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[SRC1:%.*]], i64 0
-; CHECK-NEXT:    [[TMP4:%.*]] = call double @llvm.floor.f64(double [[TMP3]])
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[DST:%.*]], i64 0
-; CHECK-NEXT:    [[TMP6:%.*]] = select i1 [[TMP2]], double [[TMP5]], double [[TMP4]]
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x double> [[SRC0:%.*]], double [[TMP6]], i64 0
-; CHECK-NEXT:    ret <2 x double> [[TMP7]]
-;
-  %1 = call <2 x double> @llvm.x86.avx512.mask.rndscale.sd(<2 x double> %src0, <2 x double> %src1, <2 x double> %dst, i8 %k, i32 1, i32 4)
-  ret <2 x double> %1
-}
-
-define <2 x double> @test_rndscale_sd_ceil(<2 x double> %src0, <2 x double> %src1, <2 x double> %dst, i8 %k) {
-; CHECK-LABEL: @test_rndscale_sd_ceil(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[K:%.*]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i8 [[TMP1]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[SRC1:%.*]], i64 0
-; CHECK-NEXT:    [[TMP4:%.*]] = call double @llvm.ceil.f64(double [[TMP3]])
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[DST:%.*]], i64 0
-; CHECK-NEXT:    [[TMP6:%.*]] = select i1 [[TMP2]], double [[TMP5]], double [[TMP4]]
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x double> [[SRC0:%.*]], double [[TMP6]], i64 0
-; CHECK-NEXT:    ret <2 x double> [[TMP7]]
-;
-  %1 = call <2 x double> @llvm.x86.avx512.mask.rndscale.sd(<2 x double> %src0, <2 x double> %src1, <2 x double> %dst, i8 %k, i32 2, i32 4)
-  ret <2 x double> %1
-}
-
-define <4 x float> @test_rndscale_ps_128_floor(<4 x float> %src, <4 x float> %dst, i8 %k) {
-; CHECK-LABEL: @test_rndscale_ps_128_floor(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.floor.v4f32(<4 x float> [[SRC:%.*]])
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8 [[K:%.*]] to <8 x i1>
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i1> [[TMP2]], <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP4:%.*]] = select <4 x i1> [[TMP3]], <4 x float> [[TMP1]], <4 x float> [[DST:%.*]]
-; CHECK-NEXT:    ret <4 x float> [[TMP4]]
-;
-  %1 = call <4 x float> @llvm.x86.avx512.mask.rndscale.ps.128(<4 x float> %src, i32 1, <4 x float> %dst, i8 %k)
-  ret <4 x float> %1
-}
-
-define <4 x float> @test_rndscale_ps_128_ceil(<4 x float> %src, <4 x float> %dst, i8 %k) {
-; CHECK-LABEL: @test_rndscale_ps_128_ceil(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.ceil.v4f32(<4 x float> [[SRC:%.*]])
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8 [[K:%.*]] to <8 x i1>
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i1> [[TMP2]], <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP4:%.*]] = select <4 x i1> [[TMP3]], <4 x float> [[TMP1]], <4 x float> [[DST:%.*]]
-; CHECK-NEXT:    ret <4 x float> [[TMP4]]
-;
-  %1 = call <4 x float> @llvm.x86.avx512.mask.rndscale.ps.128(<4 x float> %src, i32 2, <4 x float> %dst, i8 %k)
-  ret <4 x float> %1
-}
-
-define <8 x float> @test_rndscale_ps_256_floor(<8 x float> %src, <8 x float> %dst, i8 %k) {
-; CHECK-LABEL: @test_rndscale_ps_256_floor(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x float> @llvm.floor.v8f32(<8 x float> [[SRC:%.*]])
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8 [[K:%.*]] to <8 x i1>
-; CHECK-NEXT:    [[TMP3:%.*]] = select <8 x i1> [[TMP2]], <8 x float> [[TMP1]], <8 x float> [[DST:%.*]]
-; CHECK-NEXT:    ret <8 x float> [[TMP3]]
-;
-  %1 = call <8 x float> @llvm.x86.avx512.mask.rndscale.ps.256(<8 x float> %src, i32 1, <8 x float> %dst, i8 %k)
-  ret <8 x float> %1
-}
-
-define <8 x float> @test_rndscale_ps_256_ceil(<8 x float> %src, <8 x float> %dst, i8 %k) {
-; CHECK-LABEL: @test_rndscale_ps_256_ceil(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x float> @llvm.ceil.v8f32(<8 x float> [[SRC:%.*]])
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8 [[K:%.*]] to <8 x i1>
-; CHECK-NEXT:    [[TMP3:%.*]] = select <8 x i1> [[TMP2]], <8 x float> [[TMP1]], <8 x float> [[DST:%.*]]
-; CHECK-NEXT:    ret <8 x float> [[TMP3]]
-;
-  %1 = call <8 x float> @llvm.x86.avx512.mask.rndscale.ps.256(<8 x float> %src, i32 2, <8 x float> %dst, i8 %k)
-  ret <8 x float> %1
-}
-
-define <16 x float> @test_rndscale_ps_512_floor(<16 x float> %src, <16 x float> %dst, i16 %k) {
-; CHECK-LABEL: @test_rndscale_ps_512_floor(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <16 x float> @llvm.floor.v16f32(<16 x float> [[SRC:%.*]])
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i16 [[K:%.*]] to <16 x i1>
-; CHECK-NEXT:    [[TMP3:%.*]] = select <16 x i1> [[TMP2]], <16 x float> [[TMP1]], <16 x float> [[DST:%.*]]
-; CHECK-NEXT:    ret <16 x float> [[TMP3]]
-;
-  %1 = call <16 x float> @llvm.x86.avx512.mask.rndscale.ps.512(<16 x float> %src, i32 1, <16 x float> %dst, i16 %k, i32 4)
-  ret <16 x float> %1
-}
-
-define <16 x float> @test_rndscale_ps_512_ceil(<16 x float> %src, <16 x float> %dst, i16 %k) {
-; CHECK-LABEL: @test_rndscale_ps_512_ceil(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <16 x float> @llvm.ceil.v16f32(<16 x float> [[SRC:%.*]])
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i16 [[K:%.*]] to <16 x i1>
-; CHECK-NEXT:    [[TMP3:%.*]] = select <16 x i1> [[TMP2]], <16 x float> [[TMP1]], <16 x float> [[DST:%.*]]
-; CHECK-NEXT:    ret <16 x float> [[TMP3]]
-;
-  %1 = call <16 x float> @llvm.x86.avx512.mask.rndscale.ps.512(<16 x float> %src, i32 2, <16 x float> %dst, i16 %k, i32 4)
-  ret <16 x float> %1
-}
-
-define <2 x double> @test_rndscale_pd_128_floor(<2 x double> %src, <2 x double> %dst, i8 %k) {
-; CHECK-LABEL: @test_rndscale_pd_128_floor(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x double> @llvm.floor.v2f64(<2 x double> [[SRC:%.*]])
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8 [[K:%.*]] to <8 x i1>
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i1> [[TMP2]], <8 x i1> undef, <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    [[TMP4:%.*]] = select <2 x i1> [[TMP3]], <2 x double> [[TMP1]], <2 x double> [[DST:%.*]]
-; CHECK-NEXT:    ret <2 x double> [[TMP4]]
-;
-  %1 = call <2 x double> @llvm.x86.avx512.mask.rndscale.pd.128(<2 x double> %src, i32 1, <2 x double> %dst, i8 %k)
-  ret <2 x double> %1
-}
-
-define <2 x double> @test_rndscale_pd_128_ceil(<2 x double> %src, <2 x double> %dst, i8 %k) {
-; CHECK-LABEL: @test_rndscale_pd_128_ceil(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x double> @llvm.ceil.v2f64(<2 x double> [[SRC:%.*]])
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8 [[K:%.*]] to <8 x i1>
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i1> [[TMP2]], <8 x i1> undef, <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    [[TMP4:%.*]] = select <2 x i1> [[TMP3]], <2 x double> [[TMP1]], <2 x double> [[DST:%.*]]
-; CHECK-NEXT:    ret <2 x double> [[TMP4]]
-;
-  %1 = call <2 x double> @llvm.x86.avx512.mask.rndscale.pd.128(<2 x double> %src, i32 2, <2 x double> %dst, i8 %k)
-  ret <2 x double> %1
-}
-
-define <4 x double> @test_rndscale_pd_256_floor(<4 x double> %src, <4 x double> %dst, i8 %k) {
-; CHECK-LABEL: @test_rndscale_pd_256_floor(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x double> @llvm.floor.v4f64(<4 x double> [[SRC:%.*]])
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8 [[K:%.*]] to <8 x i1>
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i1> [[TMP2]], <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP4:%.*]] = select <4 x i1> [[TMP3]], <4 x double> [[TMP1]], <4 x double> [[DST:%.*]]
-; CHECK-NEXT:    ret <4 x double> [[TMP4]]
-;
-  %1 = call <4 x double> @llvm.x86.avx512.mask.rndscale.pd.256(<4 x double> %src, i32 1, <4 x double> %dst, i8 %k)
-  ret <4 x double> %1
-}
-
-define <4 x double> @test_rndscale_pd_256_ceil(<4 x double> %src, <4 x double> %dst, i8 %k) {
-; CHECK-LABEL: @test_rndscale_pd_256_ceil(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x double> @llvm.ceil.v4f64(<4 x double> [[SRC:%.*]])
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8 [[K:%.*]] to <8 x i1>
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i1> [[TMP2]], <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP4:%.*]] = select <4 x i1> [[TMP3]], <4 x double> [[TMP1]], <4 x double> [[DST:%.*]]
-; CHECK-NEXT:    ret <4 x double> [[TMP4]]
-;
-  %1 = call <4 x double> @llvm.x86.avx512.mask.rndscale.pd.256(<4 x double> %src, i32 2, <4 x double> %dst, i8 %k)
-  ret <4 x double> %1
-}
-
-define <8 x double> @test_rndscale_pd_512_floor(<8 x double> %src, <8 x double> %dst, i8 %k) {
-; CHECK-LABEL: @test_rndscale_pd_512_floor(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x double> @llvm.floor.v8f64(<8 x double> [[SRC:%.*]])
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8 [[K:%.*]] to <8 x i1>
-; CHECK-NEXT:    [[TMP3:%.*]] = select <8 x i1> [[TMP2]], <8 x double> [[TMP1]], <8 x double> [[DST:%.*]]
-; CHECK-NEXT:    ret <8 x double> [[TMP3]]
-;
-  %1 = call <8 x double> @llvm.x86.avx512.mask.rndscale.pd.512(<8 x double> %src, i32 1, <8 x double> %dst, i8 %k, i32 4)
-  ret <8 x double> %1
-}
-
-define <8 x double> @test_rndscale_pd_512_ceil(<8 x double> %src, <8 x double> %dst, i8 %k) {
-; CHECK-LABEL: @test_rndscale_pd_512_ceil(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x double> @llvm.ceil.v8f64(<8 x double> [[SRC:%.*]])
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8 [[K:%.*]] to <8 x i1>
-; CHECK-NEXT:    [[TMP3:%.*]] = select <8 x i1> [[TMP2]], <8 x double> [[TMP1]], <8 x double> [[DST:%.*]]
-; CHECK-NEXT:    ret <8 x double> [[TMP3]]
-;
-  %1 = call <8 x double> @llvm.x86.avx512.mask.rndscale.pd.512(<8 x double> %src, i32 2, <8 x double> %dst, i8 %k, i32 4)
-  ret <8 x double> %1
-}
-
 declare float @llvm.fma.f32(float, float, float) #1
 
 define <4 x float> @test_mask_vfmadd_ss(<4 x float> %a, <4 x float> %b, <4 x float> %c, i8 %mask) {
@@ -1551,15 +1344,15 @@ define <4 x float> @test_mask3_vfmsub_ss(<4 x float> %a, <4 x float> %b, <4 x fl
 ; CHECK-LABEL: @test_mask3_vfmsub_ss(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[A:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[B:%.*]], i32 0
-; CHECK-NEXT:    [[DOTRHS:%.*]] = extractelement <4 x float> [[C:%.*]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = fsub float -0.000000e+00, [[DOTRHS]]
-; CHECK-NEXT:    [[TMP4:%.*]] = call float @llvm.fma.f32(float [[TMP1]], float [[TMP2]], float [[TMP3]])
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x float> [[C]], i64 0
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <8 x i1> [[TMP6]], i64 0
-; CHECK-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], float [[TMP4]], float [[TMP5]]
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x float> [[C]], float [[TMP8]], i64 0
-; CHECK-NEXT:    ret <4 x float> [[TMP9]]
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[C:%.*]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = fsub float -0.000000e+00, [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = call float @llvm.fma.f32(float [[TMP1]], float [[TMP2]], float [[TMP4]])
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[C]], i64 0
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <8 x i1> [[TMP7]], i64 0
+; CHECK-NEXT:    [[TMP9:%.*]] = select i1 [[TMP8]], float [[TMP5]], float [[TMP6]]
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x float> [[C]], float [[TMP9]], i64 0
+; CHECK-NEXT:    ret <4 x float> [[TMP10]]
 ;
   %1 = insertelement <4 x float> %a, float 1.000000e+00, i32 1
   %2 = insertelement <4 x float> %1, float 2.000000e+00, i32 2
@@ -1584,14 +1377,14 @@ define float @test_mask3_vfmsub_ss_0(<4 x float> %a, <4 x float> %b, <4 x float>
 ; CHECK-LABEL: @test_mask3_vfmsub_ss_0(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[B:%.*]], i64 0
-; CHECK-NEXT:    [[DOTRHS:%.*]] = extractelement <4 x float> [[C:%.*]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = fsub float -0.000000e+00, [[DOTRHS]]
-; CHECK-NEXT:    [[TMP4:%.*]] = call float @llvm.fma.f32(float [[TMP1]], float [[TMP2]], float [[TMP3]])
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x float> [[C]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <8 x i1> [[TMP6]], i64 0
-; CHECK-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], float [[TMP4]], float [[TMP5]]
-; CHECK-NEXT:    ret float [[TMP8]]
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[C:%.*]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = fsub float -0.000000e+00, [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = call float @llvm.fma.f32(float [[TMP1]], float [[TMP2]], float [[TMP4]])
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[C]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <8 x i1> [[TMP7]], i64 0
+; CHECK-NEXT:    [[TMP9:%.*]] = select i1 [[TMP8]], float [[TMP5]], float [[TMP6]]
+; CHECK-NEXT:    ret float [[TMP9]]
 ;
   %1 = insertelement <4 x float> %c, float 1.000000e+00, i32 1
   %2 = insertelement <4 x float> %1, float 2.000000e+00, i32 2
@@ -1631,19 +1424,40 @@ define float @test_mask3_vfmsub_ss_1(<4 x float> %a, <4 x float> %b, <4 x float>
   ret float %14
 }
 
+define float @test_mask3_vfmsub_ss_1_unary_fneg(<4 x float> %a, <4 x float> %b, <4 x float> %c, i8 %mask) {
+; CHECK-LABEL: @test_mask3_vfmsub_ss_1_unary_fneg(
+; CHECK-NEXT:    ret float 1.000000e+00
+;
+  %1 = insertelement <4 x float> %c, float 1.000000e+00, i32 1
+  %2 = insertelement <4 x float> %1, float 2.000000e+00, i32 2
+  %3 = insertelement <4 x float> %2, float 3.000000e+00, i32 3
+  %4 = fneg <4 x float> %3
+  %5 = extractelement <4 x float> %a, i64 0
+  %6 = extractelement <4 x float> %b, i64 0
+  %7 = extractelement <4 x float> %4, i64 0
+  %8 = call float @llvm.fma.f32(float %5, float %6, float %7)
+  %9 = extractelement <4 x float> %3, i64 0
+  %10 = bitcast i8 %mask to <8 x i1>
+  %11 = extractelement <8 x i1> %10, i64 0
+  %12 = select i1 %11, float %8, float %9
+  %13 = insertelement <4 x float> %3, float %12, i64 0
+  %14 = extractelement <4 x float> %13, i32 1
+  ret float %14
+}
+
 define <2 x double> @test_mask3_vfmsub_sd(<2 x double> %a, <2 x double> %b, <2 x double> %c, i8 %mask) {
 ; CHECK-LABEL: @test_mask3_vfmsub_sd(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x double> [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[B:%.*]], i64 0
-; CHECK-NEXT:    [[DOTRHS:%.*]] = extractelement <2 x double> [[C:%.*]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = fsub double -0.000000e+00, [[DOTRHS]]
-; CHECK-NEXT:    [[TMP4:%.*]] = call double @llvm.fma.f64(double [[TMP1]], double [[TMP2]], double [[TMP3]])
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[C]], i64 0
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <8 x i1> [[TMP6]], i64 0
-; CHECK-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], double [[TMP4]], double [[TMP5]]
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x double> [[C]], double [[TMP8]], i64 0
-; CHECK-NEXT:    ret <2 x double> [[TMP9]]
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[C:%.*]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = fsub double -0.000000e+00, [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = call double @llvm.fma.f64(double [[TMP1]], double [[TMP2]], double [[TMP4]])
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x double> [[C]], i64 0
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <8 x i1> [[TMP7]], i64 0
+; CHECK-NEXT:    [[TMP9:%.*]] = select i1 [[TMP8]], double [[TMP5]], double [[TMP6]]
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x double> [[C]], double [[TMP9]], i64 0
+; CHECK-NEXT:    ret <2 x double> [[TMP10]]
 ;
   %1 = insertelement <2 x double> %a, double 1.000000e+00, i32 1
   %2 = insertelement <2 x double> %b, double 2.000000e+00, i32 1
@@ -1664,14 +1478,14 @@ define double @test_mask3_vfmsub_sd_0(<2 x double> %a, <2 x double> %b, <2 x dou
 ; CHECK-LABEL: @test_mask3_vfmsub_sd_0(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x double> [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[B:%.*]], i64 0
-; CHECK-NEXT:    [[DOTRHS:%.*]] = extractelement <2 x double> [[C:%.*]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = fsub double -0.000000e+00, [[DOTRHS]]
-; CHECK-NEXT:    [[TMP4:%.*]] = call double @llvm.fma.f64(double [[TMP1]], double [[TMP2]], double [[TMP3]])
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[C]], i64 0
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <8 x i1> [[TMP6]], i64 0
-; CHECK-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], double [[TMP4]], double [[TMP5]]
-; CHECK-NEXT:    ret double [[TMP8]]
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[C:%.*]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = fsub double -0.000000e+00, [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = call double @llvm.fma.f64(double [[TMP1]], double [[TMP2]], double [[TMP4]])
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x double> [[C]], i64 0
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <8 x i1> [[TMP7]], i64 0
+; CHECK-NEXT:    [[TMP9:%.*]] = select i1 [[TMP8]], double [[TMP5]], double [[TMP6]]
+; CHECK-NEXT:    ret double [[TMP9]]
 ;
   %1 = insertelement <2 x double> %c, double 1.000000e+00, i32 1
   %2 = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %1
@@ -1707,20 +1521,39 @@ define double @test_mask3_vfmsub_sd_1(<2 x double> %a, <2 x double> %b, <2 x dou
   ret double %12
 }
 
+define double @test_mask3_vfmsub_sd_1_unary_fneg(<2 x double> %a, <2 x double> %b, <2 x double> %c, i8 %mask) {
+; CHECK-LABEL: @test_mask3_vfmsub_sd_1_unary_fneg(
+; CHECK-NEXT:    ret double 1.000000e+00
+;
+  %1 = insertelement <2 x double> %c, double 1.000000e+00, i32 1
+  %2 = fneg <2 x double> %1
+  %3 = extractelement <2 x double> %a, i64 0
+  %4 = extractelement <2 x double> %b, i64 0
+  %5 = extractelement <2 x double> %2, i64 0
+  %6 = call double @llvm.fma.f64(double %3, double %4, double %5)
+  %7 = extractelement <2 x double> %1, i64 0
+  %8 = bitcast i8 %mask to <8 x i1>
+  %9 = extractelement <8 x i1> %8, i64 0
+  %10 = select i1 %9, double %6, double %7
+  %11 = insertelement <2 x double> %1, double %10, i64 0
+  %12 = extractelement <2 x double> %11, i32 1
+  ret double %12
+}
+
 define <4 x float> @test_mask3_vfnmsub_ss(<4 x float> %a, <4 x float> %b, <4 x float> %c, i8 %mask) {
 ; CHECK-LABEL: @test_mask3_vfnmsub_ss(
-; CHECK-NEXT:    [[DOTRHS:%.*]] = extractelement <4 x float> [[A:%.*]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = fsub float -0.000000e+00, [[DOTRHS]]
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[B:%.*]], i32 0
-; CHECK-NEXT:    [[DOTRHS1:%.*]] = extractelement <4 x float> [[C:%.*]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = fsub float -0.000000e+00, [[DOTRHS1]]
-; CHECK-NEXT:    [[TMP4:%.*]] = call float @llvm.fma.f32(float [[TMP1]], float [[TMP2]], float [[TMP3]])
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x float> [[C]], i64 0
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <8 x i1> [[TMP6]], i64 0
-; CHECK-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], float [[TMP4]], float [[TMP5]]
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x float> [[C]], float [[TMP8]], i64 0
-; CHECK-NEXT:    ret <4 x float> [[TMP9]]
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[A:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = fsub float -0.000000e+00, [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[B:%.*]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[C:%.*]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = fsub float -0.000000e+00, [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call float @llvm.fma.f32(float [[TMP2]], float [[TMP3]], float [[TMP5]])
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x float> [[C]], i64 0
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <8 x i1> [[TMP8]], i64 0
+; CHECK-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], float [[TMP6]], float [[TMP7]]
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x float> [[C]], float [[TMP10]], i64 0
+; CHECK-NEXT:    ret <4 x float> [[TMP11]]
 ;
   %1 = insertelement <4 x float> %a, float 1.000000e+00, i32 1
   %2 = insertelement <4 x float> %1, float 2.000000e+00, i32 2
@@ -1744,17 +1577,17 @@ define <4 x float> @test_mask3_vfnmsub_ss(<4 x float> %a, <4 x float> %b, <4 x f
 
 define float @test_mask3_vfnmsub_ss_0(<4 x float> %a, <4 x float> %b, <4 x float> %c, i8 %mask) {
 ; CHECK-LABEL: @test_mask3_vfnmsub_ss_0(
-; CHECK-NEXT:    [[DOTRHS:%.*]] = extractelement <4 x float> [[A:%.*]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = fsub float -0.000000e+00, [[DOTRHS]]
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[B:%.*]], i64 0
-; CHECK-NEXT:    [[DOTRHS1:%.*]] = extractelement <4 x float> [[C:%.*]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = fsub float -0.000000e+00, [[DOTRHS1]]
-; CHECK-NEXT:    [[TMP4:%.*]] = call float @llvm.fma.f32(float [[TMP1]], float [[TMP2]], float [[TMP3]])
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x float> [[C]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <8 x i1> [[TMP6]], i64 0
-; CHECK-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], float [[TMP4]], float [[TMP5]]
-; CHECK-NEXT:    ret float [[TMP8]]
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[A:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = fsub float -0.000000e+00, [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[B:%.*]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[C:%.*]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = fsub float -0.000000e+00, [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call float @llvm.fma.f32(float [[TMP2]], float [[TMP3]], float [[TMP5]])
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x float> [[C]], i32 0
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <8 x i1> [[TMP8]], i64 0
+; CHECK-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], float [[TMP6]], float [[TMP7]]
+; CHECK-NEXT:    ret float [[TMP10]]
 ;
   %1 = insertelement <4 x float> %c, float 1.000000e+00, i32 1
   %2 = insertelement <4 x float> %1, float 2.000000e+00, i32 2
@@ -1796,20 +1629,42 @@ define float @test_mask3_vfnmsub_ss_1(<4 x float> %a, <4 x float> %b, <4 x float
   ret float %15
 }
 
+define float @test_mask3_vfnmsub_ss_1_unary_fneg(<4 x float> %a, <4 x float> %b, <4 x float> %c, i8 %mask) {
+; CHECK-LABEL: @test_mask3_vfnmsub_ss_1_unary_fneg(
+; CHECK-NEXT:    ret float 1.000000e+00
+;
+  %1 = insertelement <4 x float> %c, float 1.000000e+00, i32 1
+  %2 = insertelement <4 x float> %1, float 2.000000e+00, i32 2
+  %3 = insertelement <4 x float> %2, float 3.000000e+00, i32 3
+  %4 = fneg <4 x float> %a
+  %5 = fneg <4 x float> %3
+  %6 = extractelement <4 x float> %4, i64 0
+  %7 = extractelement <4 x float> %b, i64 0
+  %8 = extractelement <4 x float> %5, i64 0
+  %9 = call float @llvm.fma.f32(float %6, float %7, float %8)
+  %10 = extractelement <4 x float> %3, i64 0
+  %11 = bitcast i8 %mask to <8 x i1>
+  %12 = extractelement <8 x i1> %11, i64 0
+  %13 = select i1 %12, float %9, float %10
+  %14 = insertelement <4 x float> %3, float %13, i64 0
+  %15 = extractelement <4 x float> %14, i32 1
+  ret float %15
+}
+
 define <2 x double> @test_mask3_vfnmsub_sd(<2 x double> %a, <2 x double> %b, <2 x double> %c, i8 %mask) {
 ; CHECK-LABEL: @test_mask3_vfnmsub_sd(
-; CHECK-NEXT:    [[DOTRHS:%.*]] = extractelement <2 x double> [[A:%.*]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = fsub double -0.000000e+00, [[DOTRHS]]
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[B:%.*]], i64 0
-; CHECK-NEXT:    [[DOTRHS1:%.*]] = extractelement <2 x double> [[C:%.*]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = fsub double -0.000000e+00, [[DOTRHS1]]
-; CHECK-NEXT:    [[TMP4:%.*]] = call double @llvm.fma.f64(double [[TMP1]], double [[TMP2]], double [[TMP3]])
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[C]], i64 0
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <8 x i1> [[TMP6]], i64 0
-; CHECK-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], double [[TMP4]], double [[TMP5]]
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x double> [[C]], double [[TMP8]], i64 0
-; CHECK-NEXT:    ret <2 x double> [[TMP9]]
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x double> [[A:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = fsub double -0.000000e+00, [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[B:%.*]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[C:%.*]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = fsub double -0.000000e+00, [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call double @llvm.fma.f64(double [[TMP2]], double [[TMP3]], double [[TMP5]])
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x double> [[C]], i64 0
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <8 x i1> [[TMP8]], i64 0
+; CHECK-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], double [[TMP6]], double [[TMP7]]
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <2 x double> [[C]], double [[TMP10]], i64 0
+; CHECK-NEXT:    ret <2 x double> [[TMP11]]
 ;
   %1 = insertelement <2 x double> %a, double 1.000000e+00, i32 1
   %2 = insertelement <2 x double> %b, double 2.000000e+00, i32 1
@@ -1829,17 +1684,17 @@ define <2 x double> @test_mask3_vfnmsub_sd(<2 x double> %a, <2 x double> %b, <2 
 
 define double @test_mask3_vfnmsub_sd_0(<2 x double> %a, <2 x double> %b, <2 x double> %c, i8 %mask) {
 ; CHECK-LABEL: @test_mask3_vfnmsub_sd_0(
-; CHECK-NEXT:    [[DOTRHS:%.*]] = extractelement <2 x double> [[A:%.*]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = fsub double -0.000000e+00, [[DOTRHS]]
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[B:%.*]], i64 0
-; CHECK-NEXT:    [[DOTRHS1:%.*]] = extractelement <2 x double> [[C:%.*]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = fsub double -0.000000e+00, [[DOTRHS1]]
-; CHECK-NEXT:    [[TMP4:%.*]] = call double @llvm.fma.f64(double [[TMP1]], double [[TMP2]], double [[TMP3]])
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[C]], i64 0
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <8 x i1> [[TMP6]], i64 0
-; CHECK-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], double [[TMP4]], double [[TMP5]]
-; CHECK-NEXT:    ret double [[TMP8]]
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x double> [[A:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = fsub double -0.000000e+00, [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[B:%.*]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[C:%.*]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = fsub double -0.000000e+00, [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call double @llvm.fma.f64(double [[TMP2]], double [[TMP3]], double [[TMP5]])
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x double> [[C]], i64 0
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <8 x i1> [[TMP8]], i64 0
+; CHECK-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], double [[TMP6]], double [[TMP7]]
+; CHECK-NEXT:    ret double [[TMP10]]
 ;
   %1 = insertelement <2 x double> %c, double 1.000000e+00, i32 1
   %2 = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %a
@@ -1864,6 +1719,26 @@ define double @test_mask3_vfnmsub_sd_1(<2 x double> %a, <2 x double> %b, <2 x do
   %1 = insertelement <2 x double> %c, double 1.000000e+00, i32 1
   %2 = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %a
   %3 = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %1
+  %4 = extractelement <2 x double> %2, i64 0
+  %5 = extractelement <2 x double> %b, i64 0
+  %6 = extractelement <2 x double> %3, i64 0
+  %7 = call double @llvm.fma.f64(double %4, double %5, double %6)
+  %8 = extractelement <2 x double> %1, i64 0
+  %9 = bitcast i8 %mask to <8 x i1>
+  %10 = extractelement <8 x i1> %9, i64 0
+  %11 = select i1 %10, double %7, double %8
+  %12 = insertelement <2 x double> %1, double %11, i64 0
+  %13 = extractelement <2 x double> %12, i32 1
+  ret double %13
+}
+
+define double @test_mask3_vfnmsub_sd_1_unary_fneg(<2 x double> %a, <2 x double> %b, <2 x double> %c, i8 %mask) {
+; CHECK-LABEL: @test_mask3_vfnmsub_sd_1_unary_fneg(
+; CHECK-NEXT:    ret double 1.000000e+00
+;
+  %1 = insertelement <2 x double> %c, double 1.000000e+00, i32 1
+  %2 = fneg <2 x double> %a
+  %3 = fneg <2 x double> %1
   %4 = extractelement <2 x double> %2, i64 0
   %5 = extractelement <2 x double> %b, i64 0
   %6 = extractelement <2 x double> %3, i64 0

@@ -35,6 +35,7 @@ get_property(COMPILE_FLAGS TARGET llvm-config PROPERTY COMPILE_FLAGS)
 # user may add that could affect the ABI.  We only want to extract flags
 # that have been added by the LLVM build system.
 string(REGEX MATCH "-std=[^ ]\+" LLVM_CXX_STD_FLAG ${CMAKE_CXX_FLAGS})
+string(REGEX MATCH "-stdlib=[^ ]\+" LLVM_CXX_STDLIB_FLAG ${CMAKE_CXX_FLAGS})
 string(REGEX MATCH "-std=[^ ]\+" LLVM_C_STD_FLAG ${CMAKE_C_FLAGS})
 
 # Use configure_file to create BuildVariables.inc.
@@ -42,7 +43,7 @@ set(LLVM_SRC_ROOT ${LLVM_MAIN_SRC_DIR})
 set(LLVM_OBJ_ROOT ${LLVM_BINARY_DIR})
 set(LLVM_CPPFLAGS "${LLVM_DEFINITIONS}")
 set(LLVM_CFLAGS "${LLVM_C_STD_FLAG} ${LLVM_DEFINITIONS}")
-set(LLVM_CXXFLAGS "${LLVM_CXX_STD_FLAG} ${COMPILE_FLAGS} ${LLVM_DEFINITIONS}")
+set(LLVM_CXXFLAGS "${LLVM_CXX_STD_FLAG} ${LLVM_CXX_STDLIB_FLAG} ${COMPILE_FLAGS} ${LLVM_DEFINITIONS}")
 set(LLVM_BUILD_SYSTEM cmake)
 set(LLVM_HAS_RTTI ${LLVM_CONFIG_HAS_RTTI})
 set(LLVM_DYLIB_VERSION "${LLVM_VERSION_MAJOR}${LLVM_VERSION_SUFFIX}")
@@ -74,16 +75,9 @@ endif()
 add_file_dependencies(${CMAKE_CURRENT_SOURCE_DIR}/llvm-config.cpp ${BUILDVARIABLES_OBJPATH})
 
 if(CMAKE_CROSSCOMPILING AND NOT LLVM_CONFIG_PATH)
-  set(LLVM_CONFIG_PATH "${LLVM_NATIVE_BUILD}/bin/llvm-config" CACHE STRING "")
+  build_native_tool(llvm-config LLVM_CONFIG_PATH)
+  set(LLVM_CONFIG_PATH "${LLVM_CONFIG_PATH}" CACHE STRING "")
 
-  add_custom_command(OUTPUT "${LLVM_CONFIG_PATH}"
-    COMMAND ${CMAKE_COMMAND} --build . --target llvm-config --config $<CONFIGURATION>
-    DEPENDS ${LLVM_NATIVE_BUILD}/CMakeCache.txt
-    WORKING_DIRECTORY ${LLVM_NATIVE_BUILD}
-    COMMENT "Building native llvm-config..."
-    USES_TERMINAL)
   add_custom_target(NativeLLVMConfig DEPENDS ${LLVM_CONFIG_PATH})
-  add_dependencies(NativeLLVMConfig CONFIGURE_LLVM_NATIVE)
-
   add_dependencies(llvm-config NativeLLVMConfig)
 endif()

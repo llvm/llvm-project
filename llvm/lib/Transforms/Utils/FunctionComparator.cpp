@@ -1,9 +1,8 @@
 //===- FunctionComparator.h - Function Comparator -------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -114,6 +113,19 @@ int FunctionComparator::cmpAttrs(const AttributeList L,
     for (; LI != LE && RI != RE; ++LI, ++RI) {
       Attribute LA = *LI;
       Attribute RA = *RI;
+      if (LA.isTypeAttribute() && RA.isTypeAttribute()) {
+        if (LA.getKindAsEnum() != RA.getKindAsEnum())
+          return cmpNumbers(LA.getKindAsEnum(), RA.getKindAsEnum());
+
+        Type *TyL = LA.getValueAsType();
+        Type *TyR = RA.getValueAsType();
+        if (TyL && TyR)
+          return cmpTypes(TyL, TyR);
+
+        // Two pointers, at least one null, so the comparison result is
+        // independent of the value of a real pointer.
+        return cmpNumbers((uint64_t)TyL, (uint64_t)TyR);
+      }
       if (LA < RA)
         return -1;
       if (RA < LA)

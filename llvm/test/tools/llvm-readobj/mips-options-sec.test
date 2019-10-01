@@ -1,4 +1,4 @@
-RUN: llvm-readobj -mips-options %p/Inputs/options.obj.elf-mipsel | FileCheck %s
+RUN: llvm-readobj --mips-options %p/Inputs/options.obj.elf-mipsel | FileCheck %s
 
 CHECK:      MIPS Options {
 CHECK-NEXT:   ODK_REGINFO {

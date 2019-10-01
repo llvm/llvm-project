@@ -1,0 +1,35 @@
+RUN: %python %p/../Inputs/ungzip.py %p/Inputs/bigobj.o.gz > %t.in.o
+
+RUN: llvm-objdump -t %t.in.o | FileCheck %s --check-prefixes=SYMBOLS,SYMBOLS-BIG,SYMBOLS-ORIG
+
+# Do a plain copy, to check that section numbers in symbols referring
+# to sections outside of the small object format are handled correctly.
+RUN: llvm-objcopy -R '.text$4' %t.in.o %t.small.o
+RUN: llvm-objdump -t %t.in.o | FileCheck %s --check-prefixes=SYMBOLS,SYMBOLS-BIG,SYMBOLS-ORIG
+
+# Remove a section, making the section count fit into a small object.
+RUN: llvm-objcopy -R '.text$4' %t.in.o %t.small.o
+RUN: llvm-objdump -t %t.small.o | FileCheck %s --check-prefixes=SYMBOLS,SYMBOLS-SMALL,SYMBOLS-REMOVED-SMALL
+
+# Add a .gnu_debuglink section, forcing the object back to big format.
+RUN: llvm-objcopy --add-gnu-debuglink=%t.in.o %t.small.o %t.big.o
+ llvm-objdump -t %t.big.o | FileCheck %s --check-prefixes=SYMBOLS,SYMBOLS-BIG,SYMBOLS-REMOVED-BIG
+
+# In big object format, the .file symbol occupies one symbol table entry for
+# the auxillary data, but needs two entries in the small format, forcing the
+# raw symbol indices of later symbols to change.
+SYMBOLS:            SYMBOL TABLE:
+SYMBOLS-NEXT:       [ 0]{{.*}} (nx 1) {{.*}} .text
+SYMBOLS-NEXT:       AUX scnlen
+SYMBOLS-SMALL-NEXT: [ 2]{{.*}} (nx 2) {{.*}} .file
+SYMBOLS-BIG-NEXT:   [ 2]{{.*}} (nx 1) {{.*}} .file
+SYMBOLS-NEXT:       AUX abcdefghijklmnopqrs
+SYMBOLS-SMALL-NEXT: [ 5]{{.*}} (nx 0) {{.*}} foo
+SYMBOLS-BIG-NEXT:   [ 4]{{.*}} (nx 0) {{.*}} foo
+
+# Check that the section numbers outside of signed 16 bit int range
+# are represented properly. After removing one section, the section
+# numbers decrease.
+SYMBOLS-ORIG:          [ 5](sec 65280){{.*}} symbol65280
+SYMBOLS-REMOVED-SMALL: [ 6](sec 65279){{.*}} symbol65280
+SYMBOLS-REMOVED-BIG:   [ 5](sec 65279){{.*}} symbol65280

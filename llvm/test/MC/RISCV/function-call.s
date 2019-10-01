@@ -43,3 +43,11 @@ call mstatus
 # INSTR: auipc ra, 0
 # INSTR: jalr  ra
 # FIXUP: fixup A - offset: 0, value: mstatus, kind: fixup_riscv_call
+
+# Ensure that calls to procedure linkage table symbols work.
+
+call foo@plt
+# RELOC: R_RISCV_CALL_PLT foo 0x0
+# INSTR: auipc ra, 0
+# INSTR: jalr  ra
+# FIXUP: fixup A - offset: 0, value: foo@plt, kind: fixup_riscv_call_plt

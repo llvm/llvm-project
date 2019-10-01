@@ -1,7 +1,7 @@
 # This test succeeds but produces an invalid relocation. This test
 # documents this behavoir.
 # RUN: yaml2obj %s > %t
-# RUN: llvm-readobj -relocations %t | FileCheck %s
+# RUN: llvm-readobj -r %t | FileCheck %s
 
 !ELF
 FileHeader:

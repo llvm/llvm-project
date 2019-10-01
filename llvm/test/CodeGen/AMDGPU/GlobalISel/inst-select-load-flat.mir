@@ -1,8 +1,6 @@
 # RUN: llc -march=amdgcn -mcpu=hawaii -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=GCN
 # RUN: llc -march=amdgcn -mcpu=fiji -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=GCN
 
-# REQUIRES: global-isel
-
 --- |
   define amdgpu_kernel void @global_addrspace(i32 addrspace(1)* %global0) { ret void }
 ...
@@ -14,7 +12,7 @@ regBankSelected: true
 
 # GCN: global_addrspace
 # GCN: [[PTR:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
-# GCN: FLAT_LOAD_DWORD  [[PTR]], 0, 0, 0
+# GCN: FLAT_LOAD_DWORD  [[PTR]], 0, 0, 0, 0
 
 body: |
   bb.0:

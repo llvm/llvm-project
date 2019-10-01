@@ -1,9 +1,8 @@
 ;===- ./lib/Target/AVR/MCTargetDesc/LLVMBuild.txt --------------*- Conf -*--===;
 ;
-;                     The LLVM Compiler Infrastructure
-;
-; This file is distributed under the University of Illinois Open Source
-; License. See LICENSE.TXT for details.
+; Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+; See https://llvm.org/LICENSE.txt for license information.
+; SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 ;
 ;===------------------------------------------------------------------------===;
 ;
@@ -19,5 +18,5 @@
 type = Library
 name = AVRDesc
 parent = AVR
-required_libraries = MC AVRAsmPrinter AVRInfo Support
+required_libraries = MC AVRInfo Support
 add_to_library_groups = AVR

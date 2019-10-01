@@ -1,9 +1,8 @@
 //===-- ARMInstrFormats.td - ARM Instruction Formats -------*- tablegen -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -110,6 +109,7 @@ def AddrModeT2_i8s4 : AddrMode<15>;
 def AddrMode_i12    : AddrMode<16>;
 def AddrMode5FP16   : AddrMode<17>;
 def AddrModeT2_ldrex : AddrMode<18>;
+def AddrModeT2_i7s4 : AddrMode<19>;
 
 // Load / store index mode.
 class IndexMode<bits<2> val> {
@@ -121,14 +121,15 @@ def IndexModePost : IndexMode<2>;
 def IndexModeUpd  : IndexMode<3>;
 
 // Instruction execution domain.
-class Domain<bits<3> val> {
-  bits<3> Value = val;
+class Domain<bits<4> val> {
+  bits<4> Value = val;
 }
 def GenericDomain : Domain<0>;
 def VFPDomain     : Domain<1>; // Instructions in VFP domain only
 def NeonDomain    : Domain<2>; // Instructions in Neon domain only
 def VFPNeonDomain : Domain<3>; // Instructions in both VFP & Neon domains
 def VFPNeonA8Domain : Domain<5>; // Instructions in VFP & Neon under A8
+def MVEDomain : Domain<8>; // Instructions in MVE and ARMv8.1m
 
 //===----------------------------------------------------------------------===//
 // ARM special operands.
@@ -183,6 +184,86 @@ def s_cc_out : OptionalDefOperand<OtherVT, (ops CCR), (ops (i32 CPSR))> {
   let PrintMethod = "printSBitModifierOperand";
   let ParserMatchClass = CCOutOperand;
   let DecoderMethod = "DecodeCCOutOperand";
+}
+
+// VPT predicate
+
+def VPTPredNOperand : AsmOperandClass {
+  let Name = "VPTPredN";
+  let PredicateMethod = "isVPTPred";
+}
+def VPTPredROperand : AsmOperandClass {
+  let Name = "VPTPredR";
+  let PredicateMethod = "isVPTPred";
+}
+def undef_tied_input;
+
+// Operand classes for the cluster of MC operands describing a
+// VPT-predicated MVE instruction.
+//
+// There are two of these classes. Both of them have the same first
+// two options:
+//
+// $cond (an integer) indicates the instruction's predication status:
+//   * ARMVCC::None means it's unpredicated
+//   * ARMVCC::Then means it's in a VPT block and appears with the T suffix
+//   * ARMVCC::Else means it's in a VPT block and appears with the E suffix.
+// During code generation, unpredicated and predicated instructions
+// are indicated by setting this parameter to 'None' or to 'Then'; the
+// third value 'Else' is only used for assembly and disassembly.
+//
+// $cond_reg (type VCCR) gives the input predicate register. This is
+// always either zero_reg or VPR, but needs to be modelled as an
+// explicit operand so that it can be register-allocated and spilled
+// when these operands are used in code generation).
+//
+// For 'vpred_r', there's an extra operand $inactive, which specifies
+// the vector register which will supply any lanes of the output
+// register that the predication mask prevents from being written by
+// this instruction. It's always tied to the actual output register
+// (i.e. must be allocated into the same physical reg), but again,
+// code generation will need to model it as a separate input value.
+//
+// 'vpred_n' doesn't have that extra operand: it only has $cond and
+// $cond_reg. This variant is used for any instruction that can't, or
+// doesn't want to, tie $inactive to the output register. Sometimes
+// that's because another input parameter is already tied to it (e.g.
+// instructions that both read and write their Qd register even when
+// unpredicated, either because they only partially overwrite it like
+// a narrowing integer conversion, or simply because the instruction
+// encoding doesn't have enough register fields to make the output
+// independent of all inputs). It can also be because the instruction
+// is defined to set disabled output lanes to zero rather than leaving
+// them unchanged (vector loads), or because it doesn't output a
+// vector register at all (stores, compares). In any of these
+// situations it's unnecessary to have an extra operand tied to the
+// output, and inconvenient to leave it there unused.
+
+// Base class for both kinds of vpred.
+class vpred_ops<dag extra_op, dag extra_mi> : OperandWithDefaultOps<OtherVT,
+            !con((ops (i32 0), (i32 zero_reg)), extra_op)> {
+  let PrintMethod = "printVPTPredicateOperand";
+  let OperandNamespace = "ARM";
+  let MIOperandInfo = !con((ops i32imm:$cond, VCCR:$cond_reg), extra_mi);
+
+  // For convenience, we provide a string value that can be appended
+  // to the constraints string. It's empty for vpred_n, and for
+  // vpred_r it ties the $inactive operand to the output q-register
+  // (which by convention will be called $Qd).
+  string vpred_constraint;
+}
+
+def vpred_r : vpred_ops<(ops (v4i32 undef_tied_input)), (ops MQPR:$inactive)> {
+  let ParserMatchClass = VPTPredROperand;
+  let OperandType = "OPERAND_VPRED_R";
+  let DecoderMethod = "DecodeVpredROperand";
+  let vpred_constraint = ",$Qd = $vp.inactive";
+}
+
+def vpred_n : vpred_ops<(ops), (ops)> {
+  let ParserMatchClass = VPTPredNOperand;
+  let OperandType = "OPERAND_VPRED_N";
+  let vpred_constraint = "";
 }
 
 // ARM special operands for disassembly only.
@@ -285,6 +366,8 @@ class VFP3InstAlias<string Asm, dag Result, bit EmitPriority = 0>
       : InstAlias<Asm, Result, EmitPriority>, Requires<[HasVFP3]>;
 class NEONInstAlias<string Asm, dag Result, bit EmitPriority = 0>
       : InstAlias<Asm, Result, EmitPriority>, Requires<[HasNEON]>;
+class MVEInstAlias<string Asm, dag Result, bit EmitPriority = 1>
+      : InstAlias<Asm, Result, EmitPriority>, Requires<[HasMVEInt, IsThumb]>;
 
 
 class VFP2MnemonicAlias<string src, string dst> : MnemonicAlias<src, dst>,
@@ -325,8 +408,8 @@ class InstTemplate<AddrMode am, int sz, IndexMode im,
   let TSFlags{12-7} = Form;
   let TSFlags{13}    = isUnaryDataProc;
   let TSFlags{14}    = canXformTo16Bit;
-  let TSFlags{17-15} = D.Value;
-  let TSFlags{18}    = thumbArithFlagSetting;
+  let TSFlags{18-15} = D.Value;
+  let TSFlags{19}    = thumbArithFlagSetting;
 
   let Constraints = cstr;
   let Itinerary = itin;
@@ -1556,6 +1639,8 @@ class AHI5<bits<4> opcod1, bits<2> opcod2, dag oops, dag iops,
 
   // Loads & stores operate on both NEON and VFP pipelines.
   let D = VFPNeonDomain;
+
+  let isUnpredicable = 1; // FP16 instructions cannot in general be conditional
 }
 
 // VFP Load / store multiple pseudo instructions.
@@ -1903,6 +1988,8 @@ class AHuI<bits<5> opcod1, bits<2> opcod2, bits<4> opcod3, bits<2> opcod4,
   let Inst{11-8}  = 0b1001;   // Half precision
   let Inst{7-6}   = opcod4;
   let Inst{4}     = opcod5;
+
+  let isUnpredicable = 1; // FP16 instructions cannot in general be conditional
 }
 
 // Half precision, unary, non-predicated
@@ -1931,6 +2018,8 @@ class AHuInp<bits<5> opcod1, bits<2> opcod2, bits<4> opcod3, bits<2> opcod4,
   let Inst{11-8}  = 0b1001;   // Half precision
   let Inst{7-6}   = opcod4;
   let Inst{4}     = opcod5;
+
+  let isUnpredicable = 1; // FP16 instructions cannot in general be conditional
 }
 
 // Half precision, binary
@@ -1957,6 +2046,8 @@ class AHbI<bits<5> opcod1, bits<2> opcod2, bit op6, bit op4, dag oops, dag iops,
   let Inst{11-8}  = 0b1001;   // Half precision
   let Inst{6}     = op6;
   let Inst{4}     = op4;
+
+  let isUnpredicable = 1; // FP16 instructions cannot in general be conditional
 }
 
 // Half precision, binary, not predicated
@@ -1986,6 +2077,8 @@ class AHbInp<bits<5> opcod1, bits<2> opcod2, bit opcod3, dag oops, dag iops,
   let Inst{11-8}  = 0b1001;   // Half precision
   let Inst{6}     = opcod3;
   let Inst{4}     = 0;
+
+  let isUnpredicable = 1; // FP16 instructions cannot in general be conditional
 }
 
 // VFP conversion instructions

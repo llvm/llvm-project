@@ -10,7 +10,7 @@ define i32 @test_asm_length(i32 %in) {
 ; CHECK:     b [[FALSE:LBB[0-9]+_[0-9]+]]
 
 ; CHECK: [[TRUE]]:
-; CHECK:     orr w0, wzr, #0x4
+; CHECK:     mov w0, #4
 ; CHECK:     nop
 ; CHECK:     nop
 ; CHECK:     nop

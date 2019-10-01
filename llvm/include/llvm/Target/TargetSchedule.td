@@ -1,9 +1,8 @@
 //===- TargetSchedule.td - Target Independent Scheduling ---*- tablegen -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -136,7 +135,7 @@ class ProcResourceKind;
 //
 // An optional Super resource may be given to model these resources as
 // a subset of the more general super resources. Using one of these
-// resources implies using one of the super resoruces.
+// resources implies using one of the super resources.
 //
 // ProcResourceUnits normally model a few buffered resources within an
 // out-of-order engine. Buffered resources may be held for multiple

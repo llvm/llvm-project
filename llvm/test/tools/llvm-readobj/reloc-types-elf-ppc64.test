@@ -1,0 +1,38 @@
+## Test that llvm-readobj/llvm-readelf shows proper relocation type
+## names and values for ppc64 target.
+
+## TODO: Use yaml2obj. obj2yaml now hangs on dumping relocs.obj.elf-ppc64
+# RUN: llvm-readobj -r --expand-relocs %p/Inputs/relocs.obj.elf-ppc64 | FileCheck %s
+
+# CHECK: Type: R_PPC64_NONE (0)
+# CHECK: Type: R_PPC64_ADDR32 (1)
+# CHECK: Type: R_PPC64_ADDR16_LO (4)
+# CHECK: Type: R_PPC64_ADDR16_HI (5)
+# CHECK: Type: R_PPC64_ADDR14 (7)
+# CHECK: Type: R_PPC64_REL24 (10)
+# CHECK: Type: R_PPC64_REL32 (26)
+# CHECK: Type: R_PPC64_ADDR64 (38)
+# CHECK: Type: R_PPC64_ADDR16_HIGHER (39)
+# CHECK: Type: R_PPC64_ADDR16_HIGHEST (41)
+# CHECK: Type: R_PPC64_REL64 (44)
+# CHECK: Type: R_PPC64_TOC16 (47)
+# CHECK: Type: R_PPC64_TOC16_LO (48)
+# CHECK: Type: R_PPC64_TOC16_HA (50)
+# CHECK: Type: R_PPC64_TOC (51)
+# CHECK: Type: R_PPC64_ADDR16_DS (56)
+# CHECK: Type: R_PPC64_ADDR16_LO_DS (57)
+# CHECK: Type: R_PPC64_TOC16_DS (63)
+# CHECK: Type: R_PPC64_TOC16_LO_DS (64)
+# CHECK: Type: R_PPC64_TLS (67)
+# CHECK: Type: R_PPC64_TPREL16_LO (70)
+# CHECK: Type: R_PPC64_TPREL16_HA (72)
+# CHECK: Type: R_PPC64_DTPREL16_LO (75)
+# CHECK: Type: R_PPC64_DTPREL16_HA (77)
+# CHECK: Type: R_PPC64_GOT_TLSGD16_LO (80)
+# CHECK: Type: R_PPC64_GOT_TLSGD16_HA (82)
+# CHECK: Type: R_PPC64_GOT_TLSLD16_LO (84)
+# CHECK: Type: R_PPC64_GOT_TLSLD16_HA (86)
+# CHECK: Type: R_PPC64_GOT_TPREL16_LO_DS (88)
+# CHECK: Type: R_PPC64_GOT_TPREL16_HA (90)
+# CHECK: Type: R_PPC64_TLSGD (107)
+# CHECK: Type: R_PPC64_TLSLD (108)

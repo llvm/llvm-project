@@ -1,9 +1,8 @@
 //===-- GCNSchedStrategy.cpp - GCN Scheduler Strategy ---------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -446,8 +445,12 @@ void GCNScheduleDAGMILive::computeBlockPressure(const MachineBasicBlock *MBB) {
     RPTracker.reset(*MBB->begin(), &LiveIn);
     MBBLiveIns.erase(LiveInIt);
   } else {
-    I = Regions[CurRegion].first;
-    RPTracker.reset(*I);
+    auto &Rgn = Regions[CurRegion];
+    I = Rgn.first;
+    auto *NonDbgMI = &*skipDebugInstructionsForward(Rgn.first, Rgn.second);
+    auto LRS = BBLiveInMap.lookup(NonDbgMI);
+    assert(isEqual(getLiveRegsBefore(*NonDbgMI, *LIS), LRS));
+    RPTracker.reset(*I, &LRS);
   }
 
   for ( ; ; ) {
@@ -478,12 +481,32 @@ void GCNScheduleDAGMILive::computeBlockPressure(const MachineBasicBlock *MBB) {
   }
 }
 
+DenseMap<MachineInstr *, GCNRPTracker::LiveRegSet>
+GCNScheduleDAGMILive::getBBLiveInMap() const {
+  assert(!Regions.empty());
+  std::vector<MachineInstr *> BBStarters;
+  BBStarters.reserve(Regions.size());
+  auto I = Regions.rbegin(), E = Regions.rend();
+  auto *BB = I->first->getParent();
+  do {
+    auto *MI = &*skipDebugInstructionsForward(I->first, I->second);
+    BBStarters.push_back(MI);
+    do {
+      ++I;
+    } while (I != E && I->first->getParent() == BB);
+  } while (I != E);
+  return getLiveRegMap(BBStarters, false /*After*/, *LIS);
+}
+
 void GCNScheduleDAGMILive::finalizeSchedule() {
   GCNMaxOccupancySchedStrategy &S = (GCNMaxOccupancySchedStrategy&)*SchedImpl;
   LLVM_DEBUG(dbgs() << "All regions recorded, starting actual scheduling.\n");
 
   LiveIns.resize(Regions.size());
   Pressure.resize(Regions.size());
+
+  if (!Regions.empty())
+    BBLiveInMap = getBBLiveInMap();
 
   do {
     Stage++;

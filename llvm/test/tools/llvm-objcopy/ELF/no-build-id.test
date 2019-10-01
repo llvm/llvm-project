@@ -1,7 +1,7 @@
 # RUN: yaml2obj %s > %t
-# RUN: not llvm-objcopy --build-id-link-dir=%t-dir --build-id-link-input=.debug %t 2>&1 >/dev/null | FileCheck %s
+# RUN: not llvm-objcopy --build-id-link-dir=%t-dir --build-id-link-input=.debug %t 2>&1 >/dev/null | FileCheck %s -DINPUT=%t
 
-# CHECK: Could not find build ID.
+# CHECK: error: '[[INPUT]]': could not find build ID
 
 --- !ELF
 FileHeader:
@@ -18,4 +18,4 @@ ProgramHeaders:
   - Type: PT_NOTE
     Flags: [ PF_R ]
     Sections:
-      - Section: .note.gnu.foo
+      - Section: .note.foo

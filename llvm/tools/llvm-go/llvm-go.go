@@ -1,9 +1,8 @@
 //===-- llvm-go.go - go tool wrapper for LLVM -----------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -91,6 +90,12 @@ func llvmConfig(args ...string) string {
 func llvmFlags() compilerFlags {
 	args := append([]string{"--ldflags", "--libs", "--system-libs"}, components...)
 	ldflags := llvmConfig(args...)
+	stdLibOption := ""
+	if strings.Contains(llvmConfig("--cxxflags"), "-stdlib=libc++") {
+		// If libc++ is used to build LLVM libraries, -stdlib=libc++ is
+		// needed to resolve dependent symbols
+		stdLibOption = "-stdlib=libc++"
+	}
 	if runtime.GOOS != "darwin" {
 		// OS X doesn't like -rpath with cgo. See:
 		// https://github.com/golang/go/issues/7293
@@ -98,7 +103,7 @@ func llvmFlags() compilerFlags {
 	}
 	return compilerFlags{
 		cpp: llvmConfig("--cppflags"),
-		cxx: "-std=c++11",
+		cxx: "-std=c++11" + " " + stdLibOption,
 		ld:  ldflags,
 	}
 }

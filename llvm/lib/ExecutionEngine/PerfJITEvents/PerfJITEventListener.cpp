@@ -1,9 +1,8 @@
 //===-- PerfJITEventListener.cpp - Tell Linux's perf about JITted code ----===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -266,16 +265,22 @@ void PerfJITEventListener::notifyObjectLoaded(
       consumeError(AddrOrErr.takeError());
       continue;
     }
-    uint64_t Addr = *AddrOrErr;
     uint64_t Size = P.second;
+    object::SectionedAddress Address;
+    Address.Address = *AddrOrErr;
+
+    uint64_t SectionIndex = object::SectionedAddress::UndefSection;
+    if (auto SectOrErr = Sym.getSection())
+        if (*SectOrErr != Obj.section_end())
+            SectionIndex = SectOrErr.get()->getIndex();
 
     // According to spec debugging info has to come before loading the
     // corresonding code load.
     DILineInfoTable Lines = Context->getLineInfoForAddressRange(
-        Addr, Size, FileLineInfoKind::AbsoluteFilePath);
+        {*AddrOrErr, SectionIndex}, Size, FileLineInfoKind::AbsoluteFilePath);
 
-    NotifyDebug(Addr, Lines);
-    NotifyCode(Name, Addr, Size);
+    NotifyDebug(*AddrOrErr, Lines);
+    NotifyCode(Name, *AddrOrErr, Size);
   }
 
   Dumpstream->flush();
@@ -336,8 +341,8 @@ bool PerfJITEventListener::OpenMarker() {
   //
   // Mapping must be PROT_EXEC to ensure it is captured by perf record
   // even when not using -d option.
-  MarkerAddr = ::mmap(NULL, sys::Process::getPageSize(), PROT_READ | PROT_EXEC,
-                      MAP_PRIVATE, DumpFd, 0);
+  MarkerAddr = ::mmap(NULL, sys::Process::getPageSizeEstimate(),
+                      PROT_READ | PROT_EXEC, MAP_PRIVATE, DumpFd, 0);
 
   if (MarkerAddr == MAP_FAILED) {
     errs() << "could not mmap JIT marker\n";
@@ -350,7 +355,7 @@ void PerfJITEventListener::CloseMarker() {
   if (!MarkerAddr)
     return;
 
-  munmap(MarkerAddr, sys::Process::getPageSize());
+  munmap(MarkerAddr, sys::Process::getPageSizeEstimate());
   MarkerAddr = nullptr;
 }
 

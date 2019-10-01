@@ -10,6 +10,7 @@ static_library("Orc") {
   ]
   sources = [
     "CompileOnDemandLayer.cpp",
+    "CompileUtils.cpp",
     "Core.cpp",
     "ExecutionUtils.cpp",
     "IRCompileLayer.cpp",
@@ -21,6 +22,7 @@ static_library("Orc") {
     "LazyReexports.cpp",
     "Legacy.cpp",
     "NullResolver.cpp",
+    "ObjectLinkingLayer.cpp",
     "ObjectTransformLayer.cpp",
     "OrcABISupport.cpp",
     "OrcCBindings.cpp",

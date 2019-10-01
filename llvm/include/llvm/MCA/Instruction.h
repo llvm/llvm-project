@@ -1,9 +1,8 @@
 //===--------------------- Instruction.h ------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 /// \file
@@ -28,6 +27,7 @@
 #include <memory>
 
 namespace llvm {
+
 namespace mca {
 
 constexpr int UNKNOWN_CYCLES = -512;
@@ -80,6 +80,15 @@ struct ReadDescriptor {
 
 class ReadState;
 
+/// A critical data dependency descriptor.
+///
+/// Field RegID is set to the invalid register for memory dependencies.
+struct CriticalDependency {
+  unsigned IID;
+  unsigned RegID;
+  unsigned Cycles;
+};
+
 /// Tracks uses of a register definition (e.g. register write).
 ///
 /// Each implicit/explicit register write is associated with an instance of
@@ -123,8 +132,10 @@ class WriteState {
 
   // A partial write that is in a false dependency with this write.
   WriteState *PartialWrite;
-
   unsigned DependentWriteCyclesLeft;
+
+  // Critical register dependency for this write.
+  CriticalDependency CRD;
 
   // A list of dependent reads. Users is a set of dependent
   // reads. A dependent read is added to the set only if CyclesLeft
@@ -137,10 +148,10 @@ class WriteState {
 public:
   WriteState(const WriteDescriptor &Desc, unsigned RegID,
              bool clearsSuperRegs = false, bool writesZero = false)
-      : WD(&Desc), CyclesLeft(UNKNOWN_CYCLES), RegisterID(RegID),
-        PRFID(0), ClearsSuperRegs(clearsSuperRegs), WritesZero(writesZero),
+      : WD(&Desc), CyclesLeft(UNKNOWN_CYCLES), RegisterID(RegID), PRFID(0),
+        ClearsSuperRegs(clearsSuperRegs), WritesZero(writesZero),
         IsEliminated(false), DependentWrite(nullptr), PartialWrite(nullptr),
-        DependentWriteCyclesLeft(0) {}
+        DependentWriteCyclesLeft(0), CRD() {}
 
   WriteState(const WriteState &Other) = default;
   WriteState &operator=(const WriteState &Other) = default;
@@ -150,11 +161,21 @@ public:
   unsigned getRegisterID() const { return RegisterID; }
   unsigned getRegisterFileID() const { return PRFID; }
   unsigned getLatency() const { return WD->Latency; }
+  unsigned getDependentWriteCyclesLeft() const {
+    return DependentWriteCyclesLeft;
+  }
+  const WriteState *getDependentWrite() const { return DependentWrite; }
+  const CriticalDependency &getCriticalRegDep() const { return CRD; }
 
-  void addUser(ReadState *Use, int ReadAdvance);
-  void addUser(WriteState *Use);
+  // This method adds Use to the set of data dependent reads. IID is the
+  // instruction identifier associated with this write. ReadAdvance is the
+  // number of cycles to subtract from the latency of this data dependency.
+  // Use is in a RAW dependency with this write.
+  void addUser(unsigned IID, ReadState *Use, int ReadAdvance);
 
-  unsigned getDependentWriteCyclesLeft() const { return DependentWriteCyclesLeft; }
+  // Use is a younger register write that is in a false dependency with this
+  // write. IID is the instruction identifier associated with this write.
+  void addUser(unsigned IID, WriteState *Use);
 
   unsigned getNumUsers() const {
     unsigned NumUsers = Users.size();
@@ -166,17 +187,20 @@ public:
   bool clearsSuperRegisters() const { return ClearsSuperRegs; }
   bool isWriteZero() const { return WritesZero; }
   bool isEliminated() const { return IsEliminated; }
+
+  bool isReady() const {
+    if (DependentWrite)
+      return false;
+    unsigned CyclesLeft = getDependentWriteCyclesLeft();
+    return !CyclesLeft || CyclesLeft < getLatency();
+  }
+
   bool isExecuted() const {
     return CyclesLeft != UNKNOWN_CYCLES && CyclesLeft <= 0;
   }
 
-  const WriteState *getDependentWrite() const { return DependentWrite; }
-  void setDependentWrite(WriteState *Other) { DependentWrite = Other; }
-  void writeStartEvent(unsigned Cycles) {
-    DependentWriteCyclesLeft = Cycles;
-    DependentWrite = nullptr;
-  }
-
+  void setDependentWrite(const WriteState *Other) { DependentWrite = Other; }
+  void writeStartEvent(unsigned IID, unsigned RegID, unsigned Cycles);
   void setWriteZero() { WritesZero = true; }
   void setEliminated() {
     assert(Users.empty() && "Write is in an inconsistent state.");
@@ -188,7 +212,7 @@ public:
 
   // On every cycle, update CyclesLeft and notify dependent users.
   void cycleEvent();
-  void onInstructionIssued();
+  void onInstructionIssued(unsigned IID);
 
 #ifndef NDEBUG
   void dump() const;
@@ -218,6 +242,8 @@ class ReadState {
   // dependent writes (i.e. field DependentWrite) is zero, this value is
   // propagated to field CyclesLeft.
   unsigned TotalCycles;
+  // Longest register dependency.
+  CriticalDependency CRD;
   // This field is set to true only if there are no dependent writes, and
   // there are no `CyclesLeft' to wait.
   bool IsReady;
@@ -229,14 +255,16 @@ class ReadState {
 public:
   ReadState(const ReadDescriptor &Desc, unsigned RegID)
       : RD(&Desc), RegisterID(RegID), PRFID(0), DependentWrites(0),
-        CyclesLeft(UNKNOWN_CYCLES), TotalCycles(0), IsReady(true),
+        CyclesLeft(UNKNOWN_CYCLES), TotalCycles(0), CRD(), IsReady(true),
         IsZero(false), IndependentFromDef(false) {}
 
   const ReadDescriptor &getDescriptor() const { return *RD; }
   unsigned getSchedClass() const { return RD->SchedClassID; }
   unsigned getRegisterID() const { return RegisterID; }
   unsigned getRegisterFileID() const { return PRFID; }
+  const CriticalDependency &getCriticalRegDep() const { return CRD; }
 
+  bool isPending() const { return !IndependentFromDef && CyclesLeft > 0; }
   bool isReady() const { return IsReady; }
   bool isImplicitRead() const { return RD->isImplicitRead(); }
 
@@ -244,7 +272,7 @@ public:
   void setIndependentFromDef() { IndependentFromDef = true; }
 
   void cycleEvent();
-  void writeStartEvent(unsigned Cycles);
+  void writeStartEvent(unsigned IID, unsigned RegID, unsigned Cycles);
   void setDependentWrites(unsigned Writes) {
     DependentWrites = Writes;
     IsReady = !Writes;
@@ -327,15 +355,26 @@ struct InstrDesc {
   // A list of buffered resources consumed by this instruction.
   SmallVector<uint64_t, 4> Buffers;
 
+  unsigned UsedProcResUnits;
+  unsigned UsedProcResGroups;
+
   unsigned MaxLatency;
   // Number of MicroOps for this instruction.
   unsigned NumMicroOps;
+  // SchedClassID used to construct this InstrDesc.
+  // This information is currently used by views to do fast queries on the
+  // subtarget when computing the reciprocal throughput.
+  unsigned SchedClassID;
 
   bool MayLoad;
   bool MayStore;
   bool HasSideEffects;
   bool BeginGroup;
   bool EndGroup;
+
+  // True if all buffered resources are in-order, and there is at least one
+  // buffer which is a dispatch hazard (BufferSize = 0).
+  bool MustIssueImmediately;
 
   // A zero latency instruction doesn't consume any scheduler resources.
   bool isZeroLatency() const { return !MaxLatency && Resources.empty(); }
@@ -391,6 +430,7 @@ public:
   // Returns true if this instruction is a candidate for move elimination.
   bool isOptimizableMove() const { return IsOptimizableMove; }
   void setOptimizableMove() { IsOptimizableMove = true; }
+  bool isMemOp() const { return Desc.MayLoad || Desc.MayStore; }
 };
 
 /// An instruction propagated through the simulated instruction pipeline.
@@ -399,12 +439,13 @@ public:
 /// that are sent to the various components of the simulated hardware pipeline.
 class Instruction : public InstructionBase {
   enum InstrStage {
-    IS_INVALID,   // Instruction in an invalid state.
-    IS_AVAILABLE, // Instruction dispatched but operands are not ready.
-    IS_READY,     // Instruction dispatched and operands ready.
-    IS_EXECUTING, // Instruction issued.
-    IS_EXECUTED,  // Instruction executed. Values are written back.
-    IS_RETIRED    // Instruction retired.
+    IS_INVALID,    // Instruction in an invalid state.
+    IS_DISPATCHED, // Instruction dispatched but operands are not ready.
+    IS_PENDING,    // Instruction is not ready, but operand latency is known.
+    IS_READY,      // Instruction dispatched and operands ready.
+    IS_EXECUTING,  // Instruction issued.
+    IS_EXECUTED,   // Instruction executed. Values are written back.
+    IS_RETIRED     // Instruction retired.
   };
 
   // The current instruction stage.
@@ -417,12 +458,34 @@ class Instruction : public InstructionBase {
   // Retire Unit token ID for this instruction.
   unsigned RCUTokenID;
 
+  // LS token ID for this instruction.
+  // This field is set to the invalid null token if this is not a memory
+  // operation.
+  unsigned LSUTokenID;
+
+  // Critical register dependency.
+  CriticalDependency CriticalRegDep;
+
+  // Critical memory dependency.
+  CriticalDependency CriticalMemDep;
+
+  // A bitmask of busy processor resource units.
+  // This field is set to zero only if execution is not delayed during this
+  // cycle because of unavailable pipeline resources.
+  uint64_t CriticalResourceMask;
+
+  // True if this instruction has been optimized at register renaming stage.
+  bool IsEliminated;
+
 public:
   Instruction(const InstrDesc &D)
       : InstructionBase(D), Stage(IS_INVALID), CyclesLeft(UNKNOWN_CYCLES),
-        RCUTokenID(0) {}
+        RCUTokenID(0), LSUTokenID(0), CriticalRegDep(), CriticalMemDep(),
+        CriticalResourceMask(0), IsEliminated(false) {}
 
   unsigned getRCUTokenID() const { return RCUTokenID; }
+  unsigned getLSUTokenID() const { return LSUTokenID; }
+  void setLSUTokenID(unsigned LSUTok) { LSUTokenID = LSUTok; }
   int getCyclesLeft() const { return CyclesLeft; }
 
   // Transition to the dispatch stage, and assign a RCUToken to this
@@ -431,35 +494,46 @@ public:
   void dispatch(unsigned RCUTokenID);
 
   // Instruction issued. Transition to the IS_EXECUTING state, and update
-  // all the definitions.
-  void execute();
+  // all the register definitions.
+  void execute(unsigned IID);
 
-  // Force a transition from the IS_AVAILABLE state to the IS_READY state if
-  // input operands are all ready. State transitions normally occur at the
-  // beginning of a new cycle (see method cycleEvent()). However, the scheduler
-  // may decide to promote instructions from the wait queue to the ready queue
-  // as the result of another issue event.  This method is called every time the
-  // instruction might have changed in state.
+  // Force a transition from the IS_DISPATCHED state to the IS_READY or
+  // IS_PENDING state. State transitions normally occur either at the beginning
+  // of a new cycle (see method cycleEvent()), or as a result of another issue
+  // event. This method is called every time the instruction might have changed
+  // in state. It internally delegates to method updateDispatched() and
+  // updateWaiting().
   void update();
+  bool updateDispatched();
+  bool updatePending();
 
-  bool isDispatched() const { return Stage == IS_AVAILABLE; }
+  bool isDispatched() const { return Stage == IS_DISPATCHED; }
+  bool isPending() const { return Stage == IS_PENDING; }
   bool isReady() const { return Stage == IS_READY; }
   bool isExecuting() const { return Stage == IS_EXECUTING; }
   bool isExecuted() const { return Stage == IS_EXECUTED; }
   bool isRetired() const { return Stage == IS_RETIRED; }
+  bool isEliminated() const { return IsEliminated; }
 
-  bool isEliminated() const {
-    return isReady() && getDefs().size() &&
-           all_of(getDefs(),
-                  [](const WriteState &W) { return W.isEliminated(); });
-  }
-
-  // Forces a transition from state IS_AVAILABLE to state IS_EXECUTED.
+  // Forces a transition from state IS_DISPATCHED to state IS_EXECUTED.
   void forceExecuted();
+  void setEliminated() { IsEliminated = true; }
 
   void retire() {
     assert(isExecuted() && "Instruction is in an invalid state!");
     Stage = IS_RETIRED;
+  }
+
+  const CriticalDependency &getCriticalRegDep() const { return CriticalRegDep; }
+  const CriticalDependency &getCriticalMemDep() const { return CriticalMemDep; }
+  const CriticalDependency &computeCriticalRegDep();
+  void setCriticalMemDep(const CriticalDependency &MemDep) {
+    CriticalMemDep = MemDep;
+  }
+
+  uint64_t getCriticalResourceMask() const { return CriticalResourceMask; }
+  void setCriticalResourceMask(uint64_t ResourceMask) {
+    CriticalResourceMask = ResourceMask;
   }
 
   void cycleEvent();
@@ -476,13 +550,17 @@ public:
   InstRef(unsigned Index, Instruction *I) : Data(std::make_pair(Index, I)) {}
 
   bool operator==(const InstRef &Other) const { return Data == Other.Data; }
+  bool operator!=(const InstRef &Other) const { return Data != Other.Data; }
+  bool operator<(const InstRef &Other) const {
+    return Data.first < Other.Data.first;
+  }
 
   unsigned getSourceIndex() const { return Data.first; }
   Instruction *getInstruction() { return Data.second; }
   const Instruction *getInstruction() const { return Data.second; }
 
   /// Returns true if this references a valid instruction.
-  operator bool() const { return Data.second != nullptr; }
+  explicit operator bool() const { return Data.second != nullptr; }
 
   /// Invalidate this reference.
   void invalidate() { Data.second = nullptr; }
@@ -530,7 +608,7 @@ public:
     return !WS || WS->isExecuted();
   }
 
-  bool isValid() const { return Data.first != INVALID_IID && Data.second; }
+  bool isValid() const { return Data.second && Data.first != INVALID_IID; }
   bool operator==(const WriteRef &Other) const { return Data == Other.Data; }
 
 #ifndef NDEBUG
@@ -541,4 +619,4 @@ public:
 } // namespace mca
 } // namespace llvm
 
-#endif  // LLVM_MCA_INSTRUCTION_H
+#endif // LLVM_MCA_INSTRUCTION_H

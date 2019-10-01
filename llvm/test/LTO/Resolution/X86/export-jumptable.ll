@@ -2,7 +2,7 @@
 ; the full LTO object file; any such functions will be referenced by the jump
 ; table.
 
-; RUN: opt -thinlto-bc -o %t %s
+; RUN: opt -thinlto-bc -thinlto-split-lto-unit -o %t %s
 ; RUN: llvm-lto2 run -o %t2 -r %t,f1,p -r %t,f2,p -r %t,_start,px %t -save-temps
 ; RUN: llvm-dis %t2.1.2.internalize.bc -o - | FileCheck %s
 

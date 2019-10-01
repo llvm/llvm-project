@@ -1,9 +1,8 @@
 //===-- llvm/BinaryFormat/Dwarf.h ---Dwarf Constants-------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -46,6 +45,11 @@ enum LLVMConstants : uint32_t {
   DW_TAG_invalid = ~0U,        // Tag for invalid results.
   DW_VIRTUALITY_invalid = ~0U, // Virtuality for invalid results.
   DW_MACINFO_invalid = ~0U,    // Macinfo type for invalid results.
+
+  // Special values for an initial length field.
+  DW_LENGTH_lo_reserved = 0xfffffff0, // Lower bound of the reserved range.
+  DW_LENGTH_DWARF64 = 0xffffffff,     // Indicator of 64-bit DWARF format.
+  DW_LENGTH_hi_reserved = 0xffffffff, // Upper bound of the reserved range.
 
   // Other constants.
   DWARF_VERSION = 4,       // Default dwarf version we output.
@@ -130,7 +134,9 @@ enum LocationAtom {
 #include "llvm/BinaryFormat/Dwarf.def"
   DW_OP_lo_user = 0xe0,
   DW_OP_hi_user = 0xff,
-  DW_OP_LLVM_fragment = 0x1000 ///< Only used in LLVM metadata.
+  DW_OP_LLVM_fragment = 0x1000,   ///< Only used in LLVM metadata.
+  DW_OP_LLVM_convert = 0x1001,    ///< Only used in LLVM metadata.
+  DW_OP_LLVM_tag_offset = 0x1002, ///< Only used in LLVM metadata.
 };
 
 enum TypeKind : uint8_t {

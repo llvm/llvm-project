@@ -1,9 +1,8 @@
 //===-- PPCScheduleP9.td - PPC P9 Scheduling Definitions ---*- tablegen -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -51,8 +50,21 @@ let SchedModel = P9Model in {
 
   // ***************** Processor Resources *****************
 
-  //Dispatcher:
-  def DISPATCHER : ProcResource<12>;
+  // Dispatcher slots:
+  // x0, x1, x2, and x3 are the dedicated slice dispatch ports, where each
+  // corresponds to one of the four execution slices.
+  def DISPx02 : ProcResource<2>;
+  def DISPx13 : ProcResource<2>;
+  // The xa and xb ports can be used to send an iop to either of the two slices
+  // of the superslice, but are restricted to iops with only two primary sources.
+  def DISPxab : ProcResource<2>;
+  // b0 and b1 are dedicated dispatch ports into the branch slice.
+  def DISPb01 : ProcResource<2>;
+
+  // Any non BR dispatch ports
+  def DISP_NBR
+      : ProcResGroup<[ DISPx02, DISPx13, DISPxab]>;
+  def DISP_SS : ProcResGroup<[ DISPx02, DISPx13]>;
 
   // Issue Ports
   // An instruction can go down one of two issue queues.
@@ -117,8 +129,37 @@ let SchedModel = P9Model in {
 
   // ***************** SchedWriteRes Definitions *****************
 
-  //Dispatcher
-  def DISP_1C : SchedWriteRes<[DISPATCHER]> {
+  // Dispatcher
+  // Dispatch Rules: '-' or 'V'
+  // Vector ('V') - vector iops (128-bit operand) take only one decode and
+  // dispatch slot but are dispatched to both the even and odd slices of a
+  // superslice.
+  def DISP_1C : SchedWriteRes<[DISP_NBR]> {
+    let NumMicroOps = 0;
+    let Latency = 1;
+  }
+  // Dispatch Rules: 'E' 
+  // Even slice ('E')- certain operations must be sent only to an even slice.
+  // Also consumes odd dispatch slice slot of the same superslice at dispatch
+  def DISP_EVEN_1C : SchedWriteRes<[ DISPx02, DISPx13 ]> {
+    let NumMicroOps = 0;
+    let Latency = 1;
+  }
+  // Dispatch Rules: 'P'
+  // Paired ('P') - certain cracked and expanded iops are paired such that they
+  // must dispatch together to the same superslice.
+  def DISP_PAIR_1C : SchedWriteRes<[ DISP_SS, DISP_SS]> {
+    let NumMicroOps = 0;
+    let Latency = 1;
+  }
+  // Tuple Restricted ('R') - certain iops preclude dispatching more than one
+  // operation per slice for the super- slice to which they are dispatched
+  def DISP_3SLOTS_1C : SchedWriteRes<[DISPx02, DISPx13, DISPxab]> {
+    let NumMicroOps = 0;
+    let Latency = 1;
+  }
+  // Each execution and branch slice can receive up to two iops per cycle
+  def DISP_BR_1C : SchedWriteRes<[ DISPxab ]> {
     let NumMicroOps = 0;
     let Latency = 1;
   }
@@ -148,7 +189,7 @@ let SchedModel = P9Model in {
 
   // ALU Units
   // An ALU may take either 2 or 3 cycles to complete the operation.
-  // However, the ALU unit is only every busy for 1 cycle at a time and may
+  // However, the ALU unit is only ever busy for 1 cycle at a time and may
   // receive new instructions each cycle.
   def P9_ALU_2C : SchedWriteRes<[ALU]> {
     let Latency = 2;
@@ -203,10 +244,6 @@ let SchedModel = P9Model in {
   // DP Unit
   // A DP unit may take from 2 to 36 cycles to complete.
   // Some DP operations keep the unit busy for up to 10 cycles.
-  def P9_DP_2C : SchedWriteRes<[DP]> {
-    let Latency = 2;
-  }
-
   def P9_DP_5C : SchedWriteRes<[DP]> {
     let Latency = 5;
   }
@@ -228,11 +265,6 @@ let SchedModel = P9Model in {
     let Latency = 22;
   }
 
-  def P9_DP_24C_8 : SchedWriteRes<[DP]> {
-    let ResourceCycles = [8];
-    let Latency = 24;
-  }
-
   def P9_DPO_24C_8 : SchedWriteRes<[DPO]> {
     let ResourceCycles = [8];
     let Latency = 24;
@@ -246,11 +278,6 @@ let SchedModel = P9Model in {
   def P9_DP_26C_5 : SchedWriteRes<[DP]> {
     let ResourceCycles = [5];
     let Latency = 22;
-  }
-
-  def P9_DP_27C_7 : SchedWriteRes<[DP]> {
-    let ResourceCycles = [7];
-    let Latency = 27;
   }
 
   def P9_DPE_27C_10 : SchedWriteRes<[DP]> {
@@ -383,16 +410,12 @@ let SchedModel = P9Model in {
   def P9_IntDivAndALUOp_26C_8 : WriteSequence<[P9_DIV_24C_8, P9_ALU_2C]>;
   def P9_IntDivAndALUOp_42C_8 : WriteSequence<[P9_DIV_40C_8, P9_ALU_2C]>;
   def P9_StoreAndALUOp_3C : WriteSequence<[P9_LS_1C, P9_ALU_2C]>;
-  def P9_StoreAndALUOp_4C : WriteSequence<[P9_LS_1C, P9_ALU_3C]>;
   def P9_ALUOpAndALUOp_4C : WriteSequence<[P9_ALU_2C, P9_ALU_2C]>;
   def P9_ALU2OpAndALU2Op_6C : WriteSequence<[P9_ALU_3C, P9_ALU_3C]>;
   def P9_ALUOpAndALUOpAndALUOp_6C :
     WriteSequence<[P9_ALU_2C, P9_ALU_2C, P9_ALU_2C]>;
   def P9_DPOpAndALUOp_7C : WriteSequence<[P9_DP_5C, P9_ALU_2C]>;
-  def P9_DPOpAndALUOp_9C : WriteSequence<[P9_DP_7C, P9_ALU_2C]>;
   def P9_DPOpAndALU2Op_10C : WriteSequence<[P9_DP_7C, P9_ALU_3C]>;
-  def P9_DPOpAndALUOp_24C_5 : WriteSequence<[P9_DP_22C_5, P9_ALU_2C]>;
-  def P9_DPOpAndALUOp_35C_8 : WriteSequence<[P9_DP_33C_8, P9_ALU_2C]>;
   def P9_DPOpAndALU2Op_25C_5 : WriteSequence<[P9_DP_22C_5, P9_ALU_3C]>;
   def P9_DPOpAndALU2Op_29C_5 : WriteSequence<[P9_DP_26C_5, P9_ALU_3C]>;
   def P9_DPOpAndALU2Op_36C_8 : WriteSequence<[P9_DP_33C_8, P9_ALU_3C]>;

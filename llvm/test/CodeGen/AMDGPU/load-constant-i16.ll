@@ -29,7 +29,8 @@ entry:
 ; FUNC-LABEL: {{^}}constant_load_v3i16:
 ; GCN: s_load_dwordx2 s
 
-; EG-DAG: VTX_READ_32 T{{[0-9]+}}.X, T{{[0-9]+}}.X, 0, #1
+; EG-DAG: VTX_READ_16 T{{[0-9]+}}.X, T{{[0-9]+}}.X, 0, #1
+; EG-DAG: VTX_READ_16 T{{[0-9]+}}.X, T{{[0-9]+}}.X, 2, #1
 ; EG-DAG: VTX_READ_16 T{{[0-9]+}}.X, T{{[0-9]+}}.X, 4, #1
 define amdgpu_kernel void @constant_load_v3i16(<3 x i16> addrspace(1)* %out, <3 x i16> addrspace(4)* %in) {
 entry:
@@ -186,15 +187,11 @@ define amdgpu_kernel void @constant_sextload_v2i16_to_v2i32(<2 x i32> addrspace(
 ; EG-DAG: MEM_RAT_CACHELESS STORE_RAW [[ST_LO:T[0-9]]].XY, {{T[0-9].[XYZW]}},
 ; EG-DAG: MEM_RAT_CACHELESS STORE_RAW [[ST_HI:T[0-9]]].X, {{T[0-9].[XYZW]}},
 ; EG: CF_END
-; EG-DAG: VTX_READ_32 [[DST_LO:T[0-9]\.[XYZW]]], {{T[0-9]\.[XYZW]}}, 0, #1
-; EG-DAG: VTX_READ_16 [[DST_HI:T[0-9]\.[XYZW]]], {{T[0-9]\.[XYZW]}}, 4, #1
-; TODO: This should use DST, but for some there are redundant MOVs
-; EG-DAG: LSHR {{[* ]*}}[[ST_LO]].Y, {{T[0-9]\.[XYZW]}}, literal
+; EG-DAG: VTX_READ_16 [[ST_LO]].X, [[SRC:T[0-9]\.[XYZW]]], 0, #1
+; EG-DAG: VTX_READ_16 {{T[0-9]\.[XYZW]}}, [[SRC]], 2, #1
+; EG-DAG: VTX_READ_16 [[ST_HI]].X, [[SRC]], 4, #1
+; EG-DAG: LSHR {{[* ]*}}{{T[0-9]\.[XYZW]}}, {{T[0-9]\.[XYZW]}}, literal
 ; EG-DAG: 16
-; EG-DAG: AND_INT {{[* ]*}}[[ST_LO]].X, {{T[0-9]\.[XYZW]}}, literal
-; EG-DAG: AND_INT {{[* ]*}}[[ST_HI]].X, {{T[0-9]\.[XYZW]}}, literal
-; EG-DAG: 65535
-; EG-DAG: 65535
 define amdgpu_kernel void @constant_zextload_v3i16_to_v3i32(<3 x i32> addrspace(1)* %out, <3 x i16> addrspace(4)* %in) {
 entry:
   %ld = load <3 x i16>, <3 x i16> addrspace(4)* %in
@@ -209,11 +206,12 @@ entry:
 ; EG-DAG: MEM_RAT_CACHELESS STORE_RAW [[ST_LO:T[0-9]]].XY, {{T[0-9].[XYZW]}},
 ; EG-DAG: MEM_RAT_CACHELESS STORE_RAW [[ST_HI:T[0-9]]].X, {{T[0-9].[XYZW]}},
 ; v3i16 is naturally 8 byte aligned
-; EG-DAG: VTX_READ_32 [[DST_HI:T[0-9]\.[XYZW]]], [[PTR:T[0-9]\.[XYZW]]], 0, #1
-; EG-DAG: VTX_READ_16 [[DST_LO:T[0-9]\.[XYZW]]], {{T[0-9]\.[XYZW]}}, 4, #1
-; EG-DAG: ASHR {{[* ]*}}[[ST_LO]].Y, {{T[0-9]\.[XYZW]}}, literal
-; EG-DAG: BFE_INT {{[* ]*}}[[ST_LO]].X, {{T[0-9]\.[XYZW]}}, 0.0, literal
-; EG-DAG: BFE_INT {{[* ]*}}[[ST_HI]].X, {{T[0-9]\.[XYZW]}}, 0.0, literal
+; EG-DAG: VTX_READ_16 [[ST_LO]].X, [[SRC:T[0-9]\.[XYZW]]], 0, #1
+; EG-DAG: VTX_READ_16 [[DST_MID:T[0-9]\.[XYZW]]], [[SRC]], 2, #1
+; EG-DAG: VTX_READ_16 [[ST_HI]].X, [[SRC]], 4, #1
+; EG-DAG: BFE_INT {{[* ]*}}[[ST_LO]].X, [[ST_LO]].X, 0.0, literal
+; EG-DAG: BFE_INT {{[* ]*}}[[ST_LO]].Y, [[DST_MID]], 0.0, literal
+; EG-DAG: BFE_INT {{[* ]*}}[[ST_HI]].X, [[ST_HI]].X, 0.0, literal
 ; EG-DAG: 16
 ; EG-DAG: 16
 define amdgpu_kernel void @constant_sextload_v3i16_to_v3i32(<3 x i32> addrspace(1)* %out, <3 x i16> addrspace(4)* %in) {

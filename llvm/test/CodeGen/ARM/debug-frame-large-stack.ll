@@ -1,4 +1,4 @@
-; RUN: llc -filetype=asm -o - < %s -mtriple arm-arm-netbsd-eabi -disable-fp-elim| FileCheck %s --check-prefix=CHECK-ARM
+; RUN: llc -filetype=asm -o - < %s -mtriple arm-arm-netbsd-eabi -frame-pointer=all| FileCheck %s --check-prefix=CHECK-ARM
 ; RUN: llc -filetype=asm -o - < %s -mtriple arm-arm-netbsd-eabi | FileCheck %s --check-prefix=CHECK-ARM-FP-ELIM
 
 define void @test1() {

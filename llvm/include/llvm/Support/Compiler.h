@@ -1,9 +1,8 @@
 //===-- llvm/Support/Compiler.h - Compiler abstraction support --*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -253,6 +252,15 @@
 #define LLVM_FALLTHROUGH [[clang::fallthrough]]
 #else
 #define LLVM_FALLTHROUGH
+#endif
+
+/// LLVM_REQUIRE_CONSTANT_INITIALIZATION - Apply this to globals to ensure that
+/// they are constant initialized.
+#if __has_cpp_attribute(clang::require_constant_initialization)
+#define LLVM_REQUIRE_CONSTANT_INITIALIZATION                                   \
+  [[clang::require_constant_initialization]]
+#else
+#define LLVM_REQUIRE_CONSTANT_INITIALIZATION
 #endif
 
 /// LLVM_EXTENSION - Support compilers where we have a keyword to suppress

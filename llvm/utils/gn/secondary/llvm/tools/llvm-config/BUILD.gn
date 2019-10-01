@@ -1,28 +1,15 @@
-import("//llvm/lib/Target/targets.gni")
+import("//llvm/lib/Target/targets_string.gni")
 import("//llvm/utils/gn/build/buildflags.gni")
 import("//llvm/utils/gn/build/libs/pthread/enable.gni")
 import("//llvm/utils/gn/build/libs/terminfo/enable.gni")
 import("//llvm/utils/gn/build/libs/xml/enable.gni")
 import("//llvm/utils/gn/build/libs/zlib/enable.gni")
+import("//llvm/utils/gn/build/write_cmake_config.gni")
 import("//llvm/version.gni")
 
-enable_targets = ""
-foreach(target, llvm_targets_to_build) {
-  if (enable_targets != "") {
-    enable_targets += " "
-  }
-  enable_targets += target
-}
-
-action("BuildVariables.inc") {
-  script = "//llvm/utils/gn/build/write_cmake_config.py"
-
-  sources = [
-    "BuildVariables.inc.in",
-  ]
-  outputs = [
-    "$target_gen_dir/BuildVariables.inc",
-  ]
+write_cmake_config("BuildVariables.inc") {
+  input = "BuildVariables.inc.in"
+  output = "$target_gen_dir/BuildVariables.inc"
 
   if (is_debug) {
     build_mode = "debug"
@@ -76,11 +63,7 @@ action("BuildVariables.inc") {
     system_libs += " ${l}z${lib}"
   }
 
-  args = [
-    "-o",
-    rebase_path(outputs[0], root_out_dir),
-    rebase_path(sources[0], root_out_dir),
-
+  values = [
     "LLVM_SRC_ROOT=" + rebase_path("//llvm"),
     "LLVM_OBJ_ROOT=" + rebase_path(root_out_dir),
 
@@ -91,7 +74,7 @@ action("BuildVariables.inc") {
     "LLVM_CXXFLAGS=.",  # FIXME
     "LLVM_BUILDMODE=$build_mode",
     "LLVM_LIBDIR_SUFFIX=",
-    "LLVM_TARGETS_BUILT=$enable_targets",
+    "LLVM_TARGETS_BUILT=$llvm_targets_to_build_string",
     "LLVM_SYSTEM_LIBS=$system_libs",
     "LLVM_BUILD_SYSTEM=gn",
     "LLVM_HAS_RTTI=0",
@@ -108,12 +91,14 @@ action("BuildVariables.inc") {
 # FIXME: It'd be nice to not depend on llvm-build on this, Depending on all the
 # LLVMBuild.txt files just for this seems a bit overkill.  `gn desc` should
 # have all this information too and could be called at build time.
+# When this is removed, update llvm/test/BUILD.gn to no longer have unnecessary
+# deps on a couple llvm/lib/ targets.
 action("LibraryDependencies.inc") {
   script = "//llvm/utils/llvm-build/llvm-build"
   output = "$target_gen_dir/LibraryDependencies.inc"
   args = [
     "--native-target=$native_target",
-    "--enable-targets=$enable_targets",
+    "--enable-targets=$llvm_targets_to_build_string",
     "--write-library-table=" + rebase_path(output, root_out_dir),
   ]
   outputs = [

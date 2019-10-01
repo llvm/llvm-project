@@ -2,6 +2,9 @@
 ; without copying the whole lib dir or polluting the build dir.
 ; REQUIRES: static-libs
 
+; The above also applies if the binary is built with libc++.
+; UNSUPPORTED: libcxx-used
+
 ; RUN: echo > %t.input
 
 ; RUN: cp llvm-isel-fuzzer %t.bin--gisel

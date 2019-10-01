@@ -4,7 +4,7 @@
 @ for st_other should always be 0.
 
 @ RUN: llvm-mc < %s -triple thumbv5-linux-gnueabi -filetype=obj -o - \
-@ RUN:   | llvm-readobj -t | FileCheck %s
+@ RUN:   | llvm-readobj --symbols | FileCheck %s
 
 	.syntax	unified
 	.text

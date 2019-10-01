@@ -102,3 +102,61 @@ define <4 x i32> @bool_logic_and_math_vec(<4 x i32> %a, <4 x i32> %b, <4 x i32> 
   ret <4 x i32> %add
 }
 
+define <4 x i32> @sextbool_add_vector(<4 x i32> %cmp1, <4 x i32> %cmp2, <4 x i32> %x) {
+; CHECK-LABEL: sextbool_add_vector:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vpaddd %xmm0, %xmm2, %xmm0
+; CHECK-NEXT:    retq
+  %c = icmp eq <4 x i32> %cmp1, %cmp2
+  %b = sext <4 x i1> %c to <4 x i32>
+  %s = add <4 x i32> %x, %b
+  ret <4 x i32> %s
+}
+
+define <4 x i32> @zextbool_sub_vector(<4 x i32> %cmp1, <4 x i32> %cmp2, <4 x i32> %x) {
+; CHECK-LABEL: zextbool_sub_vector:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vpaddd %xmm0, %xmm2, %xmm0
+; CHECK-NEXT:    retq
+  %c = icmp eq <4 x i32> %cmp1, %cmp2
+  %b = zext <4 x i1> %c to <4 x i32>
+  %s = sub <4 x i32> %x, %b
+  ret <4 x i32> %s
+}
+
+define i32 @assertsext_sub_1(i1 signext %cond, i32 %y) {
+; CHECK-LABEL: assertsext_sub_1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    leal (%rdi,%rsi), %eax
+; CHECK-NEXT:    retq
+  %e = zext i1 %cond to i32
+  %r = sub i32 %y, %e
+  ret i32 %r
+}
+
+define i32 @assertsext_add_1(i1 signext %cond, i32 %y) {
+; CHECK-LABEL: assertsext_add_1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    subl %edi, %eax
+; CHECK-NEXT:    retq
+  %e = zext i1 %cond to i32
+  %r = add i32 %e, %y
+  ret i32 %r
+}
+
+define i32 @assertsext_add_1_commute(i1 signext %cond, i32 %y) {
+; CHECK-LABEL: assertsext_add_1_commute:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    subl %edi, %eax
+; CHECK-NEXT:    retq
+  %e = zext i1 %cond to i32
+  %r = add i32 %y, %e
+  ret i32 %r
+}
+

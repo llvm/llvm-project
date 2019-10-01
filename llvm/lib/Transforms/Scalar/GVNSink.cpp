@@ -1,9 +1,8 @@
 //===- GVNSink.cpp - sink expressions into successors ---------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -791,10 +790,7 @@ unsigned GVNSink::sinkBB(BasicBlock *BBEnd) {
     --LRI;
   }
 
-  std::stable_sort(
-      Candidates.begin(), Candidates.end(),
-      [](const SinkingInstructionCandidate &A,
-         const SinkingInstructionCandidate &B) { return A > B; });
+  llvm::stable_sort(Candidates, std::greater<SinkingInstructionCandidate>());
   LLVM_DEBUG(dbgs() << " -- Sinking candidates:\n"; for (auto &C
                                                          : Candidates) dbgs()
                                                     << "  " << C << "\n";);

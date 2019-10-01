@@ -1,4 +1,4 @@
-; RUN: llc -disable-fp-elim -O0 -fast-isel %s -mtriple aarch64-apple-darwin -o - | FileCheck %s
+; RUN: llc -frame-pointer=all -O0 -fast-isel %s -mtriple aarch64-apple-darwin -o - | FileCheck %s
 
 ; int func(void);
 ; void prologue_end_test() {

@@ -1,27 +1,37 @@
 ; RUN: llc -O0 -fast-isel -fast-isel-abort=1 -verify-machineinstrs -mtriple=arm64-apple-darwin < %s | FileCheck %s
+; RUN: llc -O0 -global-isel -verify-machineinstrs -mtriple=arm64-apple-darwin %s -o - | FileCheck %s --check-prefix=GISEL
+
 
 ; Materialize using fmov
 define float @fmov_float1() {
 ; CHECK-LABEL: fmov_float1
 ; CHECK:       fmov s0, #1.25000000
+; GISEL-LABEL: fmov_float1
+; GISEL:       fmov s0, #1.25000000
   ret float 1.250000e+00
 }
 
 define float @fmov_float2() {
 ; CHECK-LABEL: fmov_float2
 ; CHECK:       fmov s0, wzr
+; GISEL-LABEL: fmov_float2
+; GISEL:       fmov s0, wzr
   ret float 0.0e+00
 }
 
 define double @fmov_double1() {
 ; CHECK-LABEL: fmov_double1
 ; CHECK:       fmov d0, #1.25000000
+; GISEL-LABEL: fmov_double1
+; GISEL:       fmov d0, #1.25000000
   ret double 1.250000e+00
 }
 
 define double @fmov_double2() {
 ; CHECK-LABEL: fmov_double2
 ; CHECK:       fmov d0, xzr
+; GISEL-LABEL: fmov_double2
+; GISEL:       fmov d0, xzr
   ret double 0.0e+00
 }
 

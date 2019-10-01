@@ -7,13 +7,13 @@ vhaddps  %xmm3, %xmm3, %xmm4
 
 # CHECK:      Iterations:        300
 # CHECK-NEXT: Instructions:      900
-# CHECK-NEXT: Total Cycles:      627
+# CHECK-NEXT: Total Cycles:      1709
 # CHECK-NEXT: Total uOps:        2100
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    3.35
-# CHECK-NEXT: IPC:               1.44
-# CHECK-NEXT: Block RThroughput: 2.0
+# CHECK-NEXT: uOps Per Cycle:    1.23
+# CHECK-NEXT: IPC:               0.53
+# CHECK-NEXT: Block RThroughput: 5.5
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -25,8 +25,8 @@ vhaddps  %xmm3, %xmm3, %xmm4
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # CHECK-NEXT:  1      5     1.00                        vmulps	%xmm0, %xmm1, %xmm2
-# CHECK-NEXT:  3      11    1.00                        vhaddps	%xmm2, %xmm2, %xmm3
-# CHECK-NEXT:  3      11    1.00                        vhaddps	%xmm3, %xmm3, %xmm4
+# CHECK-NEXT:  3      11    2.50                        vhaddps	%xmm2, %xmm2, %xmm3
+# CHECK-NEXT:  3      11    2.50                        vhaddps	%xmm3, %xmm3, %xmm4
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0.0] - PdAGLU01
@@ -55,27 +55,27 @@ vhaddps  %xmm3, %xmm3, %xmm4
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.50   1.50    -      -      -      -     2.00   1.00    -      -      -      -      -      -      -
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     5.50   5.50    -      -      -      -     2.00   1.00    -      -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]   Instructions:
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.49   0.51    -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmulps	%xmm0, %xmm1, %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.51   0.49    -      -      -      -     1.00    -      -      -      -      -      -      -      -     vhaddps	%xmm2, %xmm2, %xmm3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     1.00    -      -      -      -      -      -      -      -     vhaddps	%xmm3, %xmm3, %xmm4
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     2.53   2.47    -      -      -      -     1.00    -      -      -      -      -      -      -      -     vhaddps	%xmm2, %xmm2, %xmm3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     2.48   2.52    -      -      -      -     1.00    -      -      -      -      -      -      -      -     vhaddps	%xmm3, %xmm3, %xmm4
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          012
+# CHECK-NEXT:                     0123456789          01234
 # CHECK-NEXT: Index     0123456789          0123456789
 
-# CHECK:      [0,0]     DeeeeeER  .    .    .    .    . .   vmulps	%xmm0, %xmm1, %xmm2
-# CHECK-NEXT: [0,1]     D=====eeeeeeeeeeeER .    .    . .   vhaddps	%xmm2, %xmm2, %xmm3
-# CHECK-NEXT: [0,2]     .D===============eeeeeeeeeeeER. .   vhaddps	%xmm3, %xmm3, %xmm4
-# CHECK-NEXT: [1,0]     .DeeeeeE---------------------R. .   vmulps	%xmm0, %xmm1, %xmm2
-# CHECK-NEXT: [1,1]     . D====eeeeeeeeeeeE----------R. .   vhaddps	%xmm2, %xmm2, %xmm3
-# CHECK-NEXT: [1,2]     .  D==============eeeeeeeeeeeER .   vhaddps	%xmm3, %xmm3, %xmm4
-# CHECK-NEXT: [2,0]     .  DeeeeeE--------------------R .   vmulps	%xmm0, %xmm1, %xmm2
-# CHECK-NEXT: [2,1]     .   D====eeeeeeeeeeeE---------R .   vhaddps	%xmm2, %xmm2, %xmm3
-# CHECK-NEXT: [2,2]     .    D==============eeeeeeeeeeeER   vhaddps	%xmm3, %xmm3, %xmm4
+# CHECK:      [0,0]     DeeeeeER  .    .    .    .    .   .   vmulps	%xmm0, %xmm1, %xmm2
+# CHECK-NEXT: [0,1]     D=====eeeeeeeeeeeER .    .    .   .   vhaddps	%xmm2, %xmm2, %xmm3
+# CHECK-NEXT: [0,2]     .D===============eeeeeeeeeeeER.   .   vhaddps	%xmm3, %xmm3, %xmm4
+# CHECK-NEXT: [1,0]     .DeeeeeE---------------------R.   .   vmulps	%xmm0, %xmm1, %xmm2
+# CHECK-NEXT: [1,1]     . D====eeeeeeeeeeeE----------R.   .   vhaddps	%xmm2, %xmm2, %xmm3
+# CHECK-NEXT: [1,2]     .  D==============eeeeeeeeeeeER   .   vhaddps	%xmm3, %xmm3, %xmm4
+# CHECK-NEXT: [2,0]     .  DeeeeeE--------------------R   .   vmulps	%xmm0, %xmm1, %xmm2
+# CHECK-NEXT: [2,1]     .   D======eeeeeeeeeeeE-------R   .   vhaddps	%xmm2, %xmm2, %xmm3
+# CHECK-NEXT: [2,2]     .    D================eeeeeeeeeeeER   vhaddps	%xmm3, %xmm3, %xmm4
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -85,5 +85,5 @@ vhaddps  %xmm3, %xmm3, %xmm4
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     3     1.0    1.0    13.7      vmulps	%xmm0, %xmm1, %xmm2
-# CHECK-NEXT: 1.     3     5.3    0.0    6.3       vhaddps	%xmm2, %xmm2, %xmm3
-# CHECK-NEXT: 2.     3     15.3   0.0    0.0       vhaddps	%xmm3, %xmm3, %xmm4
+# CHECK-NEXT: 1.     3     6.0    0.7    5.7       vhaddps	%xmm2, %xmm2, %xmm3
+# CHECK-NEXT: 2.     3     16.0   0.0    0.0       vhaddps	%xmm3, %xmm3, %xmm4

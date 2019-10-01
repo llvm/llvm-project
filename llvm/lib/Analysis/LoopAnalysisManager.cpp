@@ -1,9 +1,8 @@
 //===- LoopAnalysisManager.cpp - Loop analysis management -----------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -19,11 +18,6 @@
 using namespace llvm;
 
 namespace llvm {
-/// Enables memory ssa as a dependency for loop passes in legacy pass manager.
-cl::opt<bool> EnableMSSALoopDependency(
-    "enable-mssa-loop-dependency", cl::Hidden, cl::init(false),
-    cl::desc("Enable MemorySSA dependency for loop pass manager"));
-
 // Explicit template instantiations and specialization definitions for core
 // template typedefs.
 template class AllAnalysesOn<Loop>;
@@ -147,8 +141,6 @@ PreservedAnalyses llvm::getLoopPassPreservedAnalyses() {
   PA.preserve<LoopAnalysis>();
   PA.preserve<LoopAnalysisManagerFunctionProxy>();
   PA.preserve<ScalarEvolutionAnalysis>();
-  if (EnableMSSALoopDependency)
-    PA.preserve<MemorySSAAnalysis>();
   // FIXME: What we really want to do here is preserve an AA category, but that
   // concept doesn't exist yet.
   PA.preserve<AAManager>();

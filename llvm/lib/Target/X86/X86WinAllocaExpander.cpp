@@ -1,9 +1,8 @@
 //===----- X86WinAllocaExpander.cpp - Expand WinAlloca pseudo instruction -===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -84,10 +83,6 @@ static int64_t getWinAllocaAmount(MachineInstr *MI, MachineRegisterInfo *MRI) {
 
   unsigned AmountReg = MI->getOperand(0).getReg();
   MachineInstr *Def = MRI->getUniqueVRegDef(AmountReg);
-
-  // Look through copies.
-  while (Def && Def->isCopy() && Def->getOperand(1).isReg())
-    Def = MRI->getUniqueVRegDef(Def->getOperand(1).getReg());
 
   if (!Def ||
       (Def->getOpcode() != X86::MOV32ri && Def->getOpcode() != X86::MOV64ri) ||
@@ -210,15 +205,18 @@ void X86WinAllocaExpander::lower(MachineInstr* MI, Lowering L) {
     return;
   }
 
+  // These two variables differ on x32, which is a 64-bit target with a
+  // 32-bit alloca.
   bool Is64Bit = STI->is64Bit();
+  bool Is64BitAlloca = MI->getOpcode() == X86::WIN_ALLOCA_64;
   assert(SlotSize == 4 || SlotSize == 8);
-  unsigned RegA = (SlotSize == 8) ? X86::RAX : X86::EAX;
 
   switch (L) {
-  case TouchAndSub:
+  case TouchAndSub: {
     assert(Amount >= SlotSize);
 
     // Use a push to touch the top of the stack.
+    unsigned RegA = Is64Bit ? X86::RAX : X86::EAX;
     BuildMI(*MBB, I, DL, TII->get(Is64Bit ? X86::PUSH64r : X86::PUSH32r))
         .addReg(RegA, RegState::Undef);
     Amount -= SlotSize;
@@ -227,15 +225,18 @@ void X86WinAllocaExpander::lower(MachineInstr* MI, Lowering L) {
 
     // Fall through to make any remaining adjustment.
     LLVM_FALLTHROUGH;
+  }
   case Sub:
     assert(Amount > 0);
     if (Amount == SlotSize) {
       // Use push to save size.
+      unsigned RegA = Is64Bit ? X86::RAX : X86::EAX;
       BuildMI(*MBB, I, DL, TII->get(Is64Bit ? X86::PUSH64r : X86::PUSH32r))
           .addReg(RegA, RegState::Undef);
     } else {
       // Sub.
-      BuildMI(*MBB, I, DL, TII->get(getSubOpcode(Is64Bit, Amount)), StackPtr)
+      BuildMI(*MBB, I, DL,
+              TII->get(getSubOpcode(Is64BitAlloca, Amount)), StackPtr)
           .addReg(StackPtr)
           .addImm(Amount);
     }
@@ -243,6 +244,7 @@ void X86WinAllocaExpander::lower(MachineInstr* MI, Lowering L) {
   case Probe:
     if (!NoStackArgProbe) {
       // The probe lowering expects the amount in RAX/EAX.
+      unsigned RegA = Is64BitAlloca ? X86::RAX : X86::EAX;
       BuildMI(*MBB, MI, DL, TII->get(TargetOpcode::COPY), RegA)
           .addReg(MI->getOperand(0).getReg());
 
@@ -251,8 +253,8 @@ void X86WinAllocaExpander::lower(MachineInstr* MI, Lowering L) {
                                               /*InPrologue=*/false);
     } else {
       // Sub
-      BuildMI(*MBB, I, DL, TII->get(Is64Bit ? X86::SUB64rr : X86::SUB32rr),
-              StackPtr)
+      BuildMI(*MBB, I, DL,
+              TII->get(Is64BitAlloca ? X86::SUB64rr : X86::SUB32rr), StackPtr)
           .addReg(StackPtr)
           .addReg(MI->getOperand(0).getReg());
     }
@@ -262,18 +264,10 @@ void X86WinAllocaExpander::lower(MachineInstr* MI, Lowering L) {
   unsigned AmountReg = MI->getOperand(0).getReg();
   MI->eraseFromParent();
 
-  // Delete the definition of AmountReg, possibly walking a chain of copies.
-  for (;;) {
-    if (!MRI->use_empty(AmountReg))
-      break;
-    MachineInstr *AmountDef = MRI->getUniqueVRegDef(AmountReg);
-    if (!AmountDef)
-      break;
-    if (AmountDef->isCopy() && AmountDef->getOperand(1).isReg())
-      AmountReg = AmountDef->getOperand(1).isReg();
-    AmountDef->eraseFromParent();
-    break;
-  }
+  // Delete the definition of AmountReg.
+  if (MRI->use_empty(AmountReg))
+    if (MachineInstr *AmountDef = MRI->getUniqueVRegDef(AmountReg))
+      AmountDef->eraseFromParent();
 }
 
 bool X86WinAllocaExpander::runOnMachineFunction(MachineFunction &MF) {

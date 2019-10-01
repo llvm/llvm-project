@@ -1,12 +1,12 @@
 ; RUN: llc -mtriple=amdgcn-amd-unknown -mcpu=gfx802 -mattr=-code-object-v3 < %s | FileCheck --check-prefix=GCN --check-prefix=OSABI-UNK --check-prefix=GFX802 %s
 ; RUN: llc -mtriple=amdgcn-amd-unknown -mcpu=iceland -mattr=-code-object-v3 < %s | FileCheck --check-prefix=GCN --check-prefix=OSABI-UNK --check-prefix=GFX802 %s
-; RUN: llc -mtriple=amdgcn-amd-unknown -mcpu=gfx802 -filetype=obj -mattr=-code-object-v3 < %s | llvm-readobj -elf-output-style=GNU -notes  | FileCheck --check-prefix=GCN --check-prefix=OSABI-UNK-ELF --check-prefix=GFX802 %s
+; RUN: llc -mtriple=amdgcn-amd-unknown -mcpu=gfx802 -filetype=obj -mattr=-code-object-v3 < %s | llvm-readelf --notes  | FileCheck --check-prefix=GCN --check-prefix=OSABI-UNK-ELF --check-prefix=GFX802 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx802 -mattr=-code-object-v3 < %s | FileCheck --check-prefix=GCN --check-prefix=OSABI-HSA --check-prefix=GFX802 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=iceland -mattr=-code-object-v3 < %s | FileCheck --check-prefix=GCN --check-prefix=OSABI-HSA --check-prefix=GFX802 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx802 -filetype=obj -mattr=-code-object-v3 < %s | llvm-readobj -elf-output-style=GNU -notes  | FileCheck --check-prefix=GCN --check-prefix=OSABI-HSA-ELF --check-prefix=GFX802 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx802 -filetype=obj -mattr=-code-object-v3 < %s | llvm-readelf --notes  | FileCheck --check-prefix=GCN --check-prefix=OSABI-HSA-ELF --check-prefix=GFX802 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx802 -mattr=-code-object-v3 < %s | FileCheck --check-prefix=GCN --check-prefix=OSABI-PAL --check-prefix=GFX802 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=iceland -mattr=-code-object-v3 < %s | FileCheck --check-prefix=GCN --check-prefix=OSABI-PAL --check-prefix=GFX802 %s
-; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx802 -filetype=obj -mattr=-code-object-v3 < %s | llvm-readobj -elf-output-style=GNU -notes  | FileCheck --check-prefix=GCN --check-prefix=OSABI-PAL-ELF --check-prefix=GFX802 %s
+; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx802 -filetype=obj -mattr=-code-object-v3 < %s | llvm-readelf --notes  | FileCheck --check-prefix=GCN --check-prefix=OSABI-PAL-ELF --check-prefix=GFX802 %s
 ; RUN: llc -march=r600 < %s | FileCheck --check-prefix=R600 %s
 
 ; OSABI-UNK-NOT: .hsa_code_object_version
@@ -65,7 +65,8 @@
 ; OSABI-PAL-ELF: amdgcn-amd-amdpal--gfx802
 ; OSABI-PAL-ELF-NOT: NT_AMD_AMDGPU_HSA_METADATA (HSA Metadata)
 ; OSABI-PAL-ELF: NT_AMD_AMDGPU_PAL_METADATA (PAL Metadata)
-; OSABI-PAL-ELF: PAL Metadata:
+; TODO: readobj can no longer dump PAL metadata pending resolution of D52821
+; OSABI-PAL-ELF-XXX: PAL Metadata:
 ; TODO: Following check line fails on mips:
 ; OSABI-PAL-ELF-XXX: 0x2e12,0xac02c0,0x2e13,0x80,0x1000001b,0x1,0x10000022,0x60,0x1000003e,0x0
 

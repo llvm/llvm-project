@@ -16,10 +16,10 @@ define void @store_i8_with_variable_gep_offset(i8* %p, i32 %idx) {
 }
 
 ; CHECK-LABEL: store_i8_with_array_alloca_gep:
-; CHECK: get_global  $push[[L0:[0-9]+]]=, __stack_pointer
+; CHECK: global.get  $push[[L0:[0-9]+]]=, __stack_pointer
 ; CHECK: i32.const   $push[[L1:[0-9]+]]=, 32{{$}}
 ; CHECK: i32.sub     $push[[L2:[0-9]+]]=, $pop[[L0]], $pop[[L1]]{{$}}
-; CHECK: copy_local  $push[[L3:[0-9]+]]=, $pop[[L2]]
+; CHECK: local.copy  $push[[L3:[0-9]+]]=, $pop[[L2]]
 ; CHECK: i32.add     $push[[L4:[0-9]+]]=, $pop[[L3]], $0{{$}}
 ; CHECK: i32.const   $push[[L5:[0-9]+]]=, 0{{$}}
 ; CHECK: i32.store8  0($pop[[L4]]), $pop[[L5]]{{$}}

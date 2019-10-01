@@ -1,9 +1,8 @@
 //===- BranchProbabilityInfo.cpp - Branch Probability Analysis ------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -661,8 +660,14 @@ bool BranchProbabilityInfo::calcZeroHeuristics(const BasicBlock *BB,
   if (!CI)
     return false;
 
+  auto GetConstantInt = [](Value *V) {
+    if (auto *I = dyn_cast<BitCastInst>(V))
+      return dyn_cast<ConstantInt>(I->getOperand(0));
+    return dyn_cast<ConstantInt>(V);
+  };
+
   Value *RHS = CI->getOperand(1);
-  ConstantInt *CV = dyn_cast<ConstantInt>(RHS);
+  ConstantInt *CV = GetConstantInt(RHS);
   if (!CV)
     return false;
 

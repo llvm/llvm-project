@@ -1,9 +1,8 @@
 //==-- AArch64MCInstLower.cpp - Convert AArch64 MachineInstr to an MCInst --==//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -189,20 +188,51 @@ MCOperand AArch64MCInstLower::lowerSymbolOperandELF(const MachineOperand &MO,
 
 MCOperand AArch64MCInstLower::lowerSymbolOperandCOFF(const MachineOperand &MO,
                                                      MCSymbol *Sym) const {
-  AArch64MCExpr::VariantKind RefKind = AArch64MCExpr::VK_NONE;
+  uint32_t RefFlags = 0;
+
   if (MO.getTargetFlags() & AArch64II::MO_TLS) {
     if ((MO.getTargetFlags() & AArch64II::MO_FRAGMENT) == AArch64II::MO_PAGEOFF)
-      RefKind = AArch64MCExpr::VK_SECREL_LO12;
+      RefFlags |= AArch64MCExpr::VK_SECREL_LO12;
     else if ((MO.getTargetFlags() & AArch64II::MO_FRAGMENT) ==
              AArch64II::MO_HI12)
-      RefKind = AArch64MCExpr::VK_SECREL_HI12;
+      RefFlags |= AArch64MCExpr::VK_SECREL_HI12;
+
+  } else if (MO.getTargetFlags() & AArch64II::MO_S) {
+    RefFlags |= AArch64MCExpr::VK_SABS;
+  } else {
+    RefFlags |= AArch64MCExpr::VK_ABS;
   }
+
+  if ((MO.getTargetFlags() & AArch64II::MO_FRAGMENT) == AArch64II::MO_G3)
+    RefFlags |= AArch64MCExpr::VK_G3;
+  else if ((MO.getTargetFlags() & AArch64II::MO_FRAGMENT) == AArch64II::MO_G2)
+    RefFlags |= AArch64MCExpr::VK_G2;
+  else if ((MO.getTargetFlags() & AArch64II::MO_FRAGMENT) == AArch64II::MO_G1)
+    RefFlags |= AArch64MCExpr::VK_G1;
+  else if ((MO.getTargetFlags() & AArch64II::MO_FRAGMENT) == AArch64II::MO_G0)
+    RefFlags |= AArch64MCExpr::VK_G0;
+
+  // FIXME: Currently we only set VK_NC for MO_G3/MO_G2/MO_G1/MO_G0. This is
+  // because setting VK_NC for others would mean setting their respective
+  // RefFlags correctly.  We should do this in a separate patch.
+  if (MO.getTargetFlags() & AArch64II::MO_NC) {
+    auto MOFrag = (MO.getTargetFlags() & AArch64II::MO_FRAGMENT);
+    if (MOFrag == AArch64II::MO_G3 || MOFrag == AArch64II::MO_G2 ||
+        MOFrag == AArch64II::MO_G1 || MOFrag == AArch64II::MO_G0)
+      RefFlags |= AArch64MCExpr::VK_NC;
+  }
+
   const MCExpr *Expr =
       MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, Ctx);
   if (!MO.isJTI() && MO.getOffset())
     Expr = MCBinaryExpr::createAdd(
         Expr, MCConstantExpr::create(MO.getOffset(), Ctx), Ctx);
+
+  auto RefKind = static_cast<AArch64MCExpr::VariantKind>(RefFlags);
+  assert(RefKind != AArch64MCExpr::VK_INVALID &&
+         "Invalid relocation requested");
   Expr = AArch64MCExpr::create(Expr, RefKind, Ctx);
+
   return MCOperand::createExpr(Expr);
 }
 

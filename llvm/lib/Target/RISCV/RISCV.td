@@ -1,9 +1,8 @@
 //===-- RISCV.td - Describe the RISCV Target Machine -------*- tablegen -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -54,6 +53,12 @@ def IsRV32 : Predicate<"!Subtarget->is64Bit()">,
 
 def RV64           : HwMode<"+64bit">;
 def RV32           : HwMode<"-64bit">;
+
+def FeatureRV32E
+    : SubtargetFeature<"e", "IsRV32E", "true",
+                       "Implements RV32E (provides 16 rather than 32 GPRs)">;
+def IsRV32E : Predicate<"Subtarget->isRV32E()">,
+                        AssemblerPredicate<"FeatureRV32E">;
 
 def FeatureRelax
     : SubtargetFeature<"relax", "EnableLinkerRelax", "true",

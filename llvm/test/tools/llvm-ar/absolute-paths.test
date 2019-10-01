@@ -10,11 +10,19 @@ CHECK-LIST: C:/src/llvm-project/build/dne/b.o
 CHECK-LIST: C:/src/llvm-project/build/dne/a.o
 
 Check that a.o comes out and defines foo.
-RUN: llvm-ar x %S/Inputs/absolute-paths.lib 'C:/src/llvm-project/build/dne/a.o'
+RUN: llvm-ar xP %S/Inputs/absolute-paths.lib 'C:/src/llvm-project/build/dne/a.o'
 RUN: llvm-nm a.o | FileCheck %s --check-prefix=CHECK-A
 CHECK-A: T foo
 
 Check that b.o comes out and defines bar.
-RUN: llvm-ar x %S/Inputs/absolute-paths.lib C:/src/llvm-project/build/dne/b.o
+RUN: llvm-ar xP %S/Inputs/absolute-paths.lib C:/src/llvm-project/build/dne/b.o
 RUN: llvm-nm b.o | FileCheck %s --check-prefix=CHECK-B
 CHECK-B: T bar
+
+xP above is only required because we were explicitly extracting items from an
+archive with absolute paths. Extracting all objects doesn't need P because we
+aren't explicitly requesting any individual object.
+RUN: rm -f a.o b.o
+RUN: llvm-ar x %S/Inputs/absolute-paths.lib
+RUN: llvm-nm a.o | FileCheck %s --check-prefix=CHECK-A
+RUN: llvm-nm b.o | FileCheck %s --check-prefix=CHECK-B

@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=tahiti -o - %s | FileCheck %s
+; RUN: llc -march=amdgcn -mcpu=tahiti -amdgpu-dce-in-ra=0 -o - %s | FileCheck %s
 ; Don't crash when the use of an undefined value is only detected by the
 ; register coalescer because it is hidden with subregister insert/extract.
 target triple="amdgcn--"

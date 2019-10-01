@@ -603,13 +603,13 @@ define void @f27() {
 }
 
 ; Test three-operand halfword immediate addition involving mixtures of low
-; and high registers.  RISBHG/AIH would be OK too, instead of AHIK/RISBHG.
+; and high registers.  AHIK/RISBHG would be OK too, instead of RISBHG/AIH.
 define i32 @f28(i32 %old) {
 ; CHECK-LABEL: f28:
 ; CHECK: ahik [[REG1:%r[0-5]]], %r2, 14
 ; CHECK: stepa %r2, [[REG1]]
-; CHECK: ahik [[TMP:%r[0-5]]], [[REG1]], 254
-; CHECK: risbhg [[REG2:%r[0-5]]], [[TMP]], 0, 159, 32
+; CHECK: risbhg  [[REG1]], [[REG1]], 0, 159, 32
+; CHECK: aih     [[REG1]], 254
 ; CHECK: stepb [[REG1]], [[REG2]]
 ; CHECK: risbhg [[REG3:%r[0-5]]], [[REG2]], 0, 159, 0
 ; CHECK: aih [[REG3]], 127

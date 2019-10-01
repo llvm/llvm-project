@@ -1,9 +1,8 @@
 //===- PassTimingInfo.cpp - LLVM Pass Timing Implementation ---------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -78,7 +77,8 @@ public:
   static void init();
 
   /// Prints out timing information and then resets the timers.
-  void print();
+  /// By default it uses the stream created by CreateInfoOutputFile().
+  void print(raw_ostream *OutStream = nullptr);
 
   /// Returns the timer for the specified pass if it exists.
   Timer *getPassTimer(Pass *, PassInstanceID);
@@ -112,7 +112,9 @@ void PassTimingInfo::init() {
 }
 
 /// Prints out timing information and then resets the timers.
-void PassTimingInfo::print() { TG.print(*CreateInfoOutputFile()); }
+void PassTimingInfo::print(raw_ostream *OutStream) {
+  TG.print(OutStream ? *OutStream : *CreateInfoOutputFile(), true);
+}
 
 Timer *PassTimingInfo::newPassTimer(StringRef PassID, StringRef PassDesc) {
   unsigned &num = PassIDCountMap[PassID];
@@ -154,9 +156,9 @@ Timer *getPassTimer(Pass *P) {
 
 /// If timing is enabled, report the times collected up to now and then reset
 /// them.
-void reportAndResetTimings() {
+void reportAndResetTimings(raw_ostream *OutStream) {
   if (legacy::PassTimingInfo::TheTimeInfo)
-    legacy::PassTimingInfo::TheTimeInfo->print();
+    legacy::PassTimingInfo::TheTimeInfo->print(OutStream);
 }
 
 //===----------------------------------------------------------------------===//
@@ -182,7 +184,15 @@ Timer &TimePassesHandler::getPassTimer(StringRef PassID) {
 TimePassesHandler::TimePassesHandler(bool Enabled)
     : TG("pass", "... Pass execution timing report ..."), Enabled(Enabled) {}
 
-void TimePassesHandler::print() { TG.print(*CreateInfoOutputFile()); }
+void TimePassesHandler::setOutStream(raw_ostream &Out) {
+  OutStream = &Out;
+}
+
+void TimePassesHandler::print() {
+  if (!Enabled)
+    return;
+  TG.print(OutStream ? *OutStream : *CreateInfoOutputFile(), true);
+}
 
 LLVM_DUMP_METHOD void TimePassesHandler::dump() const {
   dbgs() << "Dumping timers for " << getTypeName<TimePassesHandler>()

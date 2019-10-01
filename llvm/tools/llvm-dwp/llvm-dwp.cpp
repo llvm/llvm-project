@@ -1,9 +1,8 @@
 //===-- llvm-dwp.cpp - Split DWARF merging tool for llvm ------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -14,6 +13,7 @@
 #include "DWPError.h"
 #include "DWPStringPool.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
@@ -39,6 +39,8 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/ToolOutputFile.h"
+#include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -68,11 +70,11 @@ static void writeStringsAndOffsets(MCStreamer &Out, DWPStringPool &Strings,
   if (CurStrSection.empty() || CurStrOffsetSection.empty())
     return;
 
-  DenseMap<uint32_t, uint32_t> OffsetRemapping;
+  DenseMap<uint64_t, uint32_t> OffsetRemapping;
 
   DataExtractor Data(CurStrSection, true, 0);
-  uint32_t LocalOffset = 0;
-  uint32_t PrevOffset = 0;
+  uint64_t LocalOffset = 0;
+  uint64_t PrevOffset = 0;
   while (const char *s = Data.getCStr(&LocalOffset)) {
     OffsetRemapping[PrevOffset] =
         Strings.getOffset(s, LocalOffset - PrevOffset);
@@ -83,7 +85,7 @@ static void writeStringsAndOffsets(MCStreamer &Out, DWPStringPool &Strings,
 
   Out.SwitchSection(StrOffsetSection);
 
-  uint32_t Offset = 0;
+  uint64_t Offset = 0;
   uint64_t Size = CurStrOffsetSection.size();
   while (Offset < Size) {
     auto OldOffset = Data.getU32(&Offset);
@@ -92,9 +94,9 @@ static void writeStringsAndOffsets(MCStreamer &Out, DWPStringPool &Strings,
   }
 }
 
-static uint32_t getCUAbbrev(StringRef Abbrev, uint64_t AbbrCode) {
+static uint64_t getCUAbbrev(StringRef Abbrev, uint64_t AbbrCode) {
   uint64_t CurCode;
-  uint32_t Offset = 0;
+  uint64_t Offset = 0;
   DataExtractor AbbrevData(Abbrev, true, 0);
   while ((CurCode = AbbrevData.getULEB128(&Offset)) != AbbrCode) {
     // Tag
@@ -116,7 +118,7 @@ struct CompileUnitIdentifiers {
 
 static Expected<const char *>
 getIndexedString(dwarf::Form Form, DataExtractor InfoData,
-                 uint32_t &InfoOffset, StringRef StrOffsets, StringRef Str) {
+                 uint64_t &InfoOffset, StringRef StrOffsets, StringRef Str) {
   if (Form == dwarf::DW_FORM_string)
     return InfoData.getCStr(&InfoOffset);
   if (Form != dwarf::DW_FORM_GNU_str_index)
@@ -124,8 +126,8 @@ getIndexedString(dwarf::Form Form, DataExtractor InfoData,
         "string field encoded without DW_FORM_string or DW_FORM_GNU_str_index");
   auto StrIndex = InfoData.getULEB128(&InfoOffset);
   DataExtractor StrOffsetsData(StrOffsets, true, 0);
-  uint32_t StrOffsetsOffset = 4 * StrIndex;
-  uint32_t StrOffset = StrOffsetsData.getU32(&StrOffsetsOffset);
+  uint64_t StrOffsetsOffset = 4 * StrIndex;
+  uint64_t StrOffset = StrOffsetsData.getU32(&StrOffsetsOffset);
   DataExtractor StrData(Str, true, 0);
   return StrData.getCStr(&StrOffset);
 }
@@ -134,7 +136,7 @@ static Expected<CompileUnitIdentifiers> getCUIdentifiers(StringRef Abbrev,
                                                          StringRef Info,
                                                          StringRef StrOffsets,
                                                          StringRef Str) {
-  uint32_t Offset = 0;
+  uint64_t Offset = 0;
   DataExtractor InfoData(Info, true, 0);
   dwarf::DwarfFormat Format = dwarf::DwarfFormat::DWARF32;
   uint64_t Length = InfoData.getU32(&Offset);
@@ -151,7 +153,7 @@ static Expected<CompileUnitIdentifiers> getCUIdentifiers(StringRef Abbrev,
   uint32_t AbbrCode = InfoData.getULEB128(&Offset);
 
   DataExtractor AbbrevData(Abbrev, true, 0);
-  uint32_t AbbrevOffset = getCUAbbrev(Abbrev, AbbrCode);
+  uint64_t AbbrevOffset = getCUAbbrev(Abbrev, AbbrCode);
   auto Tag = static_cast<dwarf::Tag>(AbbrevData.getULEB128(&AbbrevOffset));
   if (Tag != dwarf::DW_TAG_compile_unit)
     return make_error<DWPError>("top level DIE is not a compile unit");
@@ -160,6 +162,7 @@ static Expected<CompileUnitIdentifiers> getCUIdentifiers(StringRef Abbrev,
   uint32_t Name;
   dwarf::Form Form;
   CompileUnitIdentifiers ID;
+  Optional<uint64_t> Signature = None;
   while ((Name = AbbrevData.getULEB128(&AbbrevOffset)) |
          (Form = static_cast<dwarf::Form>(AbbrevData.getULEB128(&AbbrevOffset))) &&
          (Name != 0 || Form != 0)) {
@@ -181,13 +184,16 @@ static Expected<CompileUnitIdentifiers> getCUIdentifiers(StringRef Abbrev,
       break;
     }
     case dwarf::DW_AT_GNU_dwo_id:
-      ID.Signature = InfoData.getU64(&Offset);
+      Signature = InfoData.getU64(&Offset);
       break;
     default:
       DWARFFormValue::skipValue(Form, InfoData, &Offset,
                                 dwarf::FormParams({Version, AddrSize, Format}));
     }
   }
+  if (!Signature)
+    return make_error<DWPError>("compile unit missing dwo_id");
+  ID.Signature = *Signature;
   return ID;
 }
 
@@ -244,7 +250,7 @@ static void addAllTypes(MCStreamer &Out,
                         const UnitIndexEntry &CUEntry, uint32_t &TypesOffset) {
   for (StringRef Types : TypesSections) {
     Out.SwitchSection(OutputTypes);
-    uint32_t Offset = 0;
+    uint64_t Offset = 0;
     DataExtractor Data(Types, true, 0);
     while (Data.isValidOffset(Offset)) {
       UnitIndexEntry Entry = CUEntry;
@@ -404,9 +410,10 @@ static Error handleSection(
   if (std::error_code Err = Section.getName(Name))
     return errorCodeToError(Err);
 
-  StringRef Contents;
-  if (auto Err = Section.getContents(Contents))
-    return errorCodeToError(Err);
+  Expected<StringRef> ContentsOrErr = Section.getContents();
+  if (!ContentsOrErr)
+    return ContentsOrErr.takeError();
+  StringRef Contents = *ContentsOrErr;
 
   if (auto Err = handleCompressedSection(UncompressedSections, Name, Contents))
     return Err;
@@ -561,7 +568,7 @@ static Error write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
       Expected<CompileUnitIdentifiers> EID = getCUIdentifiers(
           AbbrevSection, InfoSection, CurStrOffsetSection, CurStrSection);
       if (!EID)
-        return EID.takeError();
+        return createFileError(Input, EID.takeError());
       const auto &ID = *EID;
       auto P = IndexEntries.insert(std::make_pair(ID.Signature, CurEntry));
       if (!P.second)
@@ -589,7 +596,7 @@ static Error write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
           getSubsection(CurStrOffsetSection, E, DW_SECT_STR_OFFSETS),
           CurStrSection);
       if (!EID)
-        return EID.takeError();
+        return createFileError(Input, EID.takeError());
       const auto &ID = *EID;
       if (!P.second)
         return buildDuplicateError(*P.first, ID, Input);
@@ -696,23 +703,23 @@ int main(int argc, char **argv) {
 
   // Create the output file.
   std::error_code EC;
-  raw_fd_ostream OutFile(OutputFilename, EC, sys::fs::F_None);
+  ToolOutputFile OutFile(OutputFilename, EC, sys::fs::F_None);
   Optional<buffer_ostream> BOS;
   raw_pwrite_stream *OS;
   if (EC)
     return error(Twine(OutputFilename) + ": " + EC.message(), Context);
-  if (OutFile.supportsSeeking()) {
-    OS = &OutFile;
+  if (OutFile.os().supportsSeeking()) {
+    OS = &OutFile.os();
   } else {
-    BOS.emplace(OutFile);
+    BOS.emplace(OutFile.os());
     OS = BOS.getPointer();
   }
 
   MCTargetOptions MCOptions = InitMCTargetOptionsFromFlags();
   std::unique_ptr<MCStreamer> MS(TheTarget->createMCObjectStreamer(
       TheTriple, MC, std::unique_ptr<MCAsmBackend>(MAB),
-      MAB->createObjectWriter(*OS), std::unique_ptr<MCCodeEmitter>(MCE),
-      *MSTI, MCOptions.MCRelaxAll, MCOptions.MCIncrementalLinkerCompatible,
+      MAB->createObjectWriter(*OS), std::unique_ptr<MCCodeEmitter>(MCE), *MSTI,
+      MCOptions.MCRelaxAll, MCOptions.MCIncrementalLinkerCompatible,
       /*DWARFMustBeAtTheEnd*/ false));
   if (!MS)
     return error("no object streamer for target " + TripleName, Context);
@@ -721,7 +728,7 @@ int main(int argc, char **argv) {
   for (const auto &ExecFilename : ExecFilenames) {
     auto DWOs = getDWOFilenames(ExecFilename);
     if (!DWOs) {
-      logAllUnhandledErrors(DWOs.takeError(), errs(), "error: ");
+      logAllUnhandledErrors(DWOs.takeError(), WithColor::error());
       return 1;
     }
     DWOFilenames.insert(DWOFilenames.end(),
@@ -730,9 +737,11 @@ int main(int argc, char **argv) {
   }
 
   if (auto Err = write(*MS, DWOFilenames)) {
-    logAllUnhandledErrors(std::move(Err), errs(), "error: ");
+    logAllUnhandledErrors(std::move(Err), WithColor::error());
     return 1;
   }
 
   MS->Finish();
+  OutFile.keep();
+  return 0;
 }

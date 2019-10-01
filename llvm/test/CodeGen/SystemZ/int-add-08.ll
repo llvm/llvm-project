@@ -50,9 +50,8 @@ define void @f3(i128 *%aptr, i64 %base) {
 ; Test the next doubleword up, which requires separate address logic for ALG.
 define void @f4(i128 *%aptr, i64 %base) {
 ; CHECK-LABEL: f4:
-; CHECK: lgr [[BASE:%r[1-5]]], %r3
-; CHECK: agfi [[BASE]], 524288
-; CHECK: alg {{%r[0-5]}}, 0([[BASE]])
+; CHECK: lay [[BASE:%r[1-5]]], 524280(%r3)
+; CHECK: alg {{%r[0-5]}}, 8([[BASE]])
 ; CHECK: alcg {{%r[0-5]}}, 524280(%r3)
 ; CHECK: br %r14
   %addr = add i64 %base, 524280
@@ -65,11 +64,10 @@ define void @f4(i128 *%aptr, i64 %base) {
 }
 
 ; Test the next doubleword after that, which requires separate logic for
-; both instructions.  It would be better to create an anchor at 524288
-; that both instructions can use, but that isn't implemented yet.
+; both instructions.
 define void @f5(i128 *%aptr, i64 %base) {
 ; CHECK-LABEL: f5:
-; CHECK: alg {{%r[0-5]}}, 0({{%r[1-5]}})
+; CHECK: alg {{%r[0-5]}}, 8({{%r[1-5]}})
 ; CHECK: alcg {{%r[0-5]}}, 0({{%r[1-5]}})
 ; CHECK: br %r14
   %addr = add i64 %base, 524288

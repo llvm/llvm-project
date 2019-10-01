@@ -1,9 +1,8 @@
 //===- lib/Support/YAMLTraits.cpp -----------------------------------------===//
 //
-//                             The LLVM Linker
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -114,6 +113,11 @@ const Node *Input::getCurrentNode() const {
 }
 
 bool Input::mapTag(StringRef Tag, bool Default) {
+  // CurrentNode can be null if setCurrentDocument() was unable to
+  // parse the document because it was invalid or empty.
+  if (!CurrentNode)
+    return false;
+
   std::string foundTag = CurrentNode->_node->getVerbatimTag();
   if (foundTag.empty()) {
     // If no tag found and 'Tag' is the default, say it was found.
@@ -661,11 +665,6 @@ void Output::scalarString(StringRef &S, QuotingType MustQuote) {
     return;
   }
 
-  unsigned i = 0;
-  unsigned j = 0;
-  unsigned End = S.size();
-  const char *Base = S.data();
-
   const char *const Quote = MustQuote == QuotingType::Single ? "'" : "\"";
   output(Quote); // Starting quote.
 
@@ -673,10 +672,15 @@ void Output::scalarString(StringRef &S, QuotingType MustQuote) {
   // present, and will be escaped using a variety of unicode-scalar and special short-form
   // escapes. This is handled in yaml::escape.
   if (MustQuote == QuotingType::Double) {
-    output(yaml::escape(Base, /* EscapePrintable= */ false));
+    output(yaml::escape(S, /* EscapePrintable= */ false));
     outputUpToEndOfLine(Quote);
     return;
   }
+
+  unsigned i = 0;
+  unsigned j = 0;
+  unsigned End = S.size();
+  const char *Base = S.data();
 
   // When using single-quoted strings, any single quote ' must be doubled to be escaped.
   while (j < End) {

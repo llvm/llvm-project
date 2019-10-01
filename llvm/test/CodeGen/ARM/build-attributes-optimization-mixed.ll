@@ -2,9 +2,9 @@
 ; RUN: llc < %s -mtriple=arm-none-none-eabi -mcpu=cortex-a7 -O1 | FileCheck %s
 ; RUN: llc < %s -mtriple=arm-none-none-eabi -mcpu=cortex-a7 -O3 | FileCheck %s
 
-; RUN: llc < %s -mtriple=arm-none-none-eabi -mcpu=cortex-a7 -O0 -filetype obj -o - | llvm-readobj -arm-attributes - | FileCheck %s
-; RUN: llc < %s -mtriple=arm-none-none-eabi -mcpu=cortex-a7 -O1 -filetype obj -o - | llvm-readobj -arm-attributes - | FileCheck %s
-; RUN: llc < %s -mtriple=arm-none-none-eabi -mcpu=cortex-a7 -O3 -filetype obj -o - | llvm-readobj -arm-attributes - | FileCheck %s
+; RUN: llc < %s -mtriple=arm-none-none-eabi -mcpu=cortex-a7 -O0 -filetype obj -o - | llvm-readobj --arm-attributes - | FileCheck %s
+; RUN: llc < %s -mtriple=arm-none-none-eabi -mcpu=cortex-a7 -O1 -filetype obj -o - | llvm-readobj --arm-attributes - | FileCheck %s
+; RUN: llc < %s -mtriple=arm-none-none-eabi -mcpu=cortex-a7 -O3 -filetype obj -o - | llvm-readobj --arm-attributes - | FileCheck %s
 
 ; CHECK-NOT: .eabi_attribute 30
 ; CHECK-NOT: Tag_ABI_optimization_goals

@@ -41,89 +41,86 @@ declare void @after_the_null()
 
 ; CHECK-LABEL: .Lcall_dtors.0:
 ; CHECK-NEXT: .functype .Lcall_dtors.0 (i32) -> (){{$}}
-; CHECK-NEXT: call            orig_dtor0@FUNCTION{{$}}
+; CHECK-NEXT: call            orig_dtor0{{$}}
 
 ; CHECK-LABEL: .Lregister_call_dtors.0:
 ; CHECK:      block
-; CHECK-NEXT: i32.const       $push2=, .Lcall_dtors.0@FUNCTION{{$}}
+; CHECK-NEXT: i32.const       $push2=, .Lcall_dtors.0{{$}}
 ; CHECK-NEXT: i32.const       $push1=, 0
 ; CHECK-NEXT: i32.const       $push0=, __dso_handle
-; CHECK-NEXT: i32.call        $push3=, __cxa_atexit@FUNCTION, $pop2, $pop1, $pop0{{$}}
-; CHECK-NEXT: br_if           0, $pop3
-; CHECK-NEXT: return
-;      CHECK: end_block
+; CHECK-NEXT: i32.call        $push3=, __cxa_atexit, $pop2, $pop1, $pop0{{$}}
+; CHECK-NEXT: i32.eqz         $push4=, $pop3
+; CHECK-NEXT: br_if           0, $pop4
 ; CHECK-NEXT: unreachable
+;      CHECK: end_block
 
 ; CHECK-LABEL: .Lcall_dtors.1:
 ; CHECK-NEXT: .functype .Lcall_dtors.1 (i32) -> (){{$}}
-; CHECK-NEXT: call            orig_dtor1a@FUNCTION{{$}}
-; CHECK-NEXT: call            orig_dtor1b@FUNCTION{{$}}
+; CHECK-NEXT: call            orig_dtor1a{{$}}
+; CHECK-NEXT: call            orig_dtor1b{{$}}
 
 ; CHECK-LABEL: .Lregister_call_dtors.1:
 ; CHECK:      block
-; CHECK-NEXT: i32.const       $push2=, .Lcall_dtors.1@FUNCTION{{$}}
+; CHECK-NEXT: i32.const       $push2=, .Lcall_dtors.1{{$}}
 ; CHECK-NEXT: i32.const       $push1=, 0
 ; CHECK-NEXT: i32.const       $push0=, __dso_handle
-; CHECK-NEXT: i32.call        $push3=, __cxa_atexit@FUNCTION, $pop2, $pop1, $pop0{{$}}
-; CHECK-NEXT: br_if           0, $pop3
-; CHECK-NEXT: return
-;      CHECK: end_block
+; CHECK-NEXT: i32.call        $push3=, __cxa_atexit, $pop2, $pop1, $pop0{{$}}
+; CHECK-NEXT: i32.eqz         $push4=, $pop3
+; CHECK-NEXT: br_if           0, $pop4
 ; CHECK-NEXT: unreachable
+;      CHECK: end_block
 
 ; CHECK-LABEL: .Lcall_dtors.1.associated1c0:
 ; CHECK-NEXT: .functype .Lcall_dtors.1.associated1c0 (i32) -> (){{$}}
-; CHECK-NEXT: call            orig_dtor1c0@FUNCTION{{$}}
+; CHECK-NEXT: call            orig_dtor1c0{{$}}
 
 ; CHECK-LABEL: .Lregister_call_dtors.1.associated1c0:
 ; CHECK:      block
-; CHECK-NEXT: i32.const       $push2=, .Lcall_dtors.1.associated1c0@FUNCTION{{$}}
+; CHECK-NEXT: i32.const       $push2=, .Lcall_dtors.1.associated1c0{{$}}
 ; CHECK-NEXT: i32.const       $push1=, 0
 ; CHECK-NEXT: i32.const       $push0=, __dso_handle
-; CHECK-NEXT: i32.call        $push3=, __cxa_atexit@FUNCTION, $pop2, $pop1, $pop0{{$}}
-; CHECK-NEXT: br_if           0, $pop3
-; CHECK-NEXT: return
-;      CHECK: end_block
+; CHECK-NEXT: i32.call        $push3=, __cxa_atexit, $pop2, $pop1, $pop0{{$}}
+; CHECK-NEXT: i32.eqz         $push4=, $pop3
+; CHECK-NEXT: br_if           0, $pop4
 ; CHECK-NEXT: unreachable
 
 ; CHECK-LABEL: .Lcall_dtors.1.associated1c1:
 ; CHECK-NEXT: .functype .Lcall_dtors.1.associated1c1 (i32) -> (){{$}}
-; CHECK-NEXT: call            orig_dtor1c1a@FUNCTION{{$}}
-; CHECK-NEXT: call            orig_dtor1c1b@FUNCTION{{$}}
+; CHECK-NEXT: call            orig_dtor1c1a{{$}}
+; CHECK-NEXT: call            orig_dtor1c1b{{$}}
 
 ; CHECK-LABEL: .Lregister_call_dtors.1.associated1c1:
 ; CHECK:      block
-; CHECK-NEXT: i32.const       $push2=, .Lcall_dtors.1.associated1c1@FUNCTION{{$}}
+; CHECK-NEXT: i32.const       $push2=, .Lcall_dtors.1.associated1c1{{$}}
 ; CHECK-NEXT: i32.const       $push1=, 0
 ; CHECK-NEXT: i32.const       $push0=, __dso_handle
-; CHECK-NEXT: i32.call        $push3=, __cxa_atexit@FUNCTION, $pop2, $pop1, $pop0{{$}}
-; CHECK-NEXT: br_if           0, $pop3
-; CHECK-NEXT: return
-;      CHECK: end_block
+; CHECK-NEXT: i32.call        $push3=, __cxa_atexit, $pop2, $pop1, $pop0{{$}}
+; CHECK-NEXT: i32.eqz         $push4=, $pop3
+; CHECK-NEXT: br_if           0, $pop4
 ; CHECK-NEXT: unreachable
 
 ; CHECK-LABEL: .Lcall_dtors:
 ; CHECK-NEXT: .functype .Lcall_dtors (i32) -> (){{$}}
-; CHECK-NEXT: call            orig_dtor65536@FUNCTION{{$}}
+; CHECK-NEXT: call            orig_dtor65536{{$}}
 
 ; CHECK-LABEL: .Lregister_call_dtors:
 ; CHECK:      block
-; CHECK-NEXT: i32.const       $push2=, .Lcall_dtors@FUNCTION{{$}}
+; CHECK-NEXT: i32.const       $push2=, .Lcall_dtors{{$}}
 ; CHECK-NEXT: i32.const       $push1=, 0
 ; CHECK-NEXT: i32.const       $push0=, __dso_handle
-; CHECK-NEXT: i32.call        $push3=, __cxa_atexit@FUNCTION, $pop2, $pop1, $pop0{{$}}
-; CHECK-NEXT: br_if           0, $pop3
-; CHECK-NEXT: return
-;      CHECK: end_block
+; CHECK-NEXT: i32.call        $push3=, __cxa_atexit, $pop2, $pop1, $pop0{{$}}
+; CHECK-NEXT: i32.eqz         $push4=, $pop3
+; CHECK-NEXT: br_if           0, $pop4
 ; CHECK-NEXT: unreachable
 
 ; CHECK-LABEL: .section .init_array.0,"",@
-;      CHECK: .int32  .Lregister_call_dtors.0@FUNCTION{{$}}
+;      CHECK: .int32  .Lregister_call_dtors.0{{$}}
 ; CHECK-LABEL: .section .init_array.1,"",@
-;      CHECK: .int32  .Lregister_call_dtors.1@FUNCTION{{$}}
+;      CHECK: .int32  .Lregister_call_dtors.1{{$}}
 ; CHECK-LABEL: .section .init_array.200,"",@
-;      CHECK: .int32  orig_ctor@FUNCTION{{$}}
+;      CHECK: .int32  orig_ctor{{$}}
 ; CHECK-LABEL: .section .init_array,"",@
-;      CHECK: .int32  .Lregister_call_dtors@FUNCTION{{$}}
+;      CHECK: .int32  .Lregister_call_dtors{{$}}
 
 ; CHECK-LABEL: .weak __dso_handle
 

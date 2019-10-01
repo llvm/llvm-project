@@ -1,7 +1,11 @@
 # This file defines a template for adding a unittest binary.
 #
 # It's a thin wrapper around GN's built-in executable() target type and
-# accepts the same parameters.
+# accepts the same parameters, and in addition this paramater:
+#
+#   has_custom_main (optional)
+#       [bool] If set, link against gtest instead of UnitTestMain; for tests
+#              that define their own main() function.
 #
 # Example use:
 #
@@ -12,7 +16,9 @@
 
 template("unittest") {
   executable(target_name) {
-    # Foward everything (configs, sources, deps, ...).
+    has_custom_main = false  # Default value.
+
+    # Foward everything (has_custom_main if set; configs, sources, deps, ...).
     forward_variables_from(invoker, "*")
     assert(!defined(invoker.output_dir), "cannot set unittest output_dir")
     assert(!defined(invoker.testonly), "cannot set unittest testonly")
@@ -33,8 +39,16 @@ template("unittest") {
     # run the unit test binary if necessary. Using target_out_dir here
     # means that //clang/unittests/Format gets its binary in
     # out/gn/obj/clang/unittests/Format/FormatTests, which seems fine.
+    #
+    # If you change output_dir here, look through
+    # `git grep target_out_dir '*/unittests/*'` and update those too.
     output_dir = target_out_dir
-    deps += [ "//llvm/utils/unittest/UnitTestMain" ]
+
+    if (has_custom_main) {
+      deps += [ "//llvm/utils/unittest:gtest" ]
+    } else {
+      deps += [ "//llvm/utils/unittest/UnitTestMain" ]
+    }
     testonly = true
   }
 }

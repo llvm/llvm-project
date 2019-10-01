@@ -28,7 +28,7 @@ entry:
 attributes #1 = { noinline optnone "thunk" }
 
 ; CHECK: mov     v16.16b, v0.16b
-; CHECK: ldr     x8, [x0]
-; CHECK: ldr     x8, [x8]
+; CHECK: ldr     x9, [x0]
+; CHECK: ldr     x9, [x9]
 ; CHECK: mov     v0.16b, v16.16b
-; CHECK: br      x8
+; CHECK: br      x9

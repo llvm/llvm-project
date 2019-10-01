@@ -2,7 +2,7 @@
 # for offset and header size when copied with llvm-objcopy.
 # RUN: yaml2obj %s > %t
 # RUN: llvm-objcopy %t %t2
-# RUN: llvm-readobj -file-headers %t2 | FileCheck %s
+# RUN: llvm-readobj --file-headers %t2 | FileCheck %s
 
 !ELF
 FileHeader:

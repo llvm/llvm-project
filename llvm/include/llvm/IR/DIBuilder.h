@@ -1,9 +1,8 @@
 //===- DIBuilder.h - Debug Information Builder ------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -502,11 +501,11 @@ namespace llvm {
     /// \param Elements       Enumeration elements.
     /// \param UnderlyingType Underlying type of a C++11/ObjC fixed enum.
     /// \param UniqueIdentifier A unique identifier for the enum.
-    /// \param IsFixed Boolean flag indicate if this is C++11/ObjC fixed enum.
+    /// \param IsScoped Boolean flag indicate if this is C++11/ObjC 'enum class'.
     DICompositeType *createEnumerationType(
         DIScope *Scope, StringRef Name, DIFile *File, unsigned LineNumber,
         uint64_t SizeInBits, uint32_t AlignInBits, DINodeArray Elements,
-        DIType *UnderlyingType, StringRef UniqueIdentifier = "", bool IsFixed = false);
+        DIType *UnderlyingType, StringRef UniqueIdentifier = "", bool IsScoped = false);
 
     /// Create subroutine type.
     /// \param ParameterTypes  An array of subroutine parameter types. This
@@ -706,6 +705,16 @@ namespace llvm {
                  DISubprogram::DISPFlags SPFlags = DISubprogram::SPFlagZero,
                  DITemplateParameterArray TParams = nullptr,
                  DITypeArray ThrownTypes = nullptr);
+
+    /// Create common block entry for a Fortran common block.
+    /// \param Scope       Scope of this common block.
+    /// \param decl        Global variable declaration.
+    /// \param Name        The name of this common block.
+    /// \param File        The file this common block is defined.
+    /// \param LineNo      Line number.
+    DICommonBlock *createCommonBlock(DIScope *Scope, DIGlobalVariable *decl,
+                                     StringRef Name, DIFile *File,
+                                     unsigned LineNo);
 
     /// This creates new descriptor for a namespace with the specified
     /// parent scope.

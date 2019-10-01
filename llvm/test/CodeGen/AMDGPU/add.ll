@@ -1,11 +1,8 @@
 ; RUN: llc -march=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SIVI,FUNC %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SIVI,FUNC %s
 ; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,FUNC %s
-; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -enable-var-scope -check-prefix=EG -check-prefix=FUNC %s
 
 ; FUNC-LABEL: {{^}}s_add_i32:
-; EG: ADD_INT {{[* ]*}}T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
-
 ; GCN: s_add_i32 s[[REG:[0-9]+]], {{s[0-9]+, s[0-9]+}}
 ; GCN: v_mov_b32_e32 v[[V_REG:[0-9]+]], s[[REG]]
 ; GCN: buffer_store_dword v[[V_REG]],
@@ -19,9 +16,6 @@ define amdgpu_kernel void @s_add_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %
 }
 
 ; FUNC-LABEL: {{^}}s_add_v2i32:
-; EG: ADD_INT {{[* ]*}}T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
-; EG: ADD_INT {{[* ]*}}T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
-
 ; GCN: s_add_i32 s{{[0-9]+, s[0-9]+, s[0-9]+}}
 ; GCN: s_add_i32 s{{[0-9]+, s[0-9]+, s[0-9]+}}
 define amdgpu_kernel void @s_add_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> addrspace(1)* %in) {
@@ -34,11 +28,6 @@ define amdgpu_kernel void @s_add_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> a
 }
 
 ; FUNC-LABEL: {{^}}s_add_v4i32:
-; EG: ADD_INT {{[* ]*}}T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
-; EG: ADD_INT {{[* ]*}}T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
-; EG: ADD_INT {{[* ]*}}T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
-; EG: ADD_INT {{[* ]*}}T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
-
 ; GCN: s_add_i32 s{{[0-9]+, s[0-9]+, s[0-9]+}}
 ; GCN: s_add_i32 s{{[0-9]+, s[0-9]+, s[0-9]+}}
 ; GCN: s_add_i32 s{{[0-9]+, s[0-9]+, s[0-9]+}}
@@ -53,15 +42,6 @@ define amdgpu_kernel void @s_add_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> a
 }
 
 ; FUNC-LABEL: {{^}}s_add_v8i32:
-; EG: ADD_INT
-; EG: ADD_INT
-; EG: ADD_INT
-; EG: ADD_INT
-; EG: ADD_INT
-; EG: ADD_INT
-; EG: ADD_INT
-; EG: ADD_INT
-
 ; GCN: s_add_i32
 ; GCN: s_add_i32
 ; GCN: s_add_i32
@@ -78,23 +58,6 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}s_add_v16i32:
-; EG: ADD_INT
-; EG: ADD_INT
-; EG: ADD_INT
-; EG: ADD_INT
-; EG: ADD_INT
-; EG: ADD_INT
-; EG: ADD_INT
-; EG: ADD_INT
-; EG: ADD_INT
-; EG: ADD_INT
-; EG: ADD_INT
-; EG: ADD_INT
-; EG: ADD_INT
-; EG: ADD_INT
-; EG: ADD_INT
-; EG: ADD_INT
-
 ; GCN: s_add_i32
 ; GCN: s_add_i32
 ; GCN: s_add_i32
@@ -124,7 +87,7 @@ entry:
 ; SIVI: v_add_{{i|u}}32_e32 v{{[0-9]+}}, vcc, [[A]], [[B]]
 ; GFX9: v_add_u32_e32 v{{[0-9]+}}, [[A]], [[B]]
 define amdgpu_kernel void @v_add_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
-  %tid = call i32 @llvm.r600.read.tidig.x()
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds i32, i32 addrspace(1)* %in, i32 %tid
   %b_ptr = getelementptr i32, i32 addrspace(1)* %gep, i32 1
   %a = load volatile i32, i32 addrspace(1)* %gep
@@ -139,7 +102,7 @@ define amdgpu_kernel void @v_add_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %
 ; SIVI: v_add_{{i|u}}32_e32 v{{[0-9]+}}, vcc, 0x7b, [[A]]
 ; GFX9: v_add_u32_e32 v{{[0-9]+}}, 0x7b, [[A]]
 define amdgpu_kernel void @v_add_imm_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
-  %tid = call i32 @llvm.r600.read.tidig.x()
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds i32, i32 addrspace(1)* %in, i32 %tid
   %b_ptr = getelementptr i32, i32 addrspace(1)* %gep, i32 1
   %a = load volatile i32, i32 addrspace(1)* %gep
@@ -151,13 +114,6 @@ define amdgpu_kernel void @v_add_imm_i32(i32 addrspace(1)* %out, i32 addrspace(1
 ; FUNC-LABEL: {{^}}add64:
 ; GCN: s_add_u32
 ; GCN: s_addc_u32
-
-; EG: MEM_RAT_CACHELESS STORE_RAW [[LO:T[0-9]+\.XY]]
-; EG-DAG: ADD_INT {{[* ]*}}
-; EG-DAG: ADDC_UINT
-; EG-DAG: ADD_INT
-; EG-DAG: ADD_INT {{[* ]*}}
-; EG-NOT: SUB
 define amdgpu_kernel void @add64(i64 addrspace(1)* %out, i64 %a, i64 %b) {
 entry:
   %add = add i64 %a, %b
@@ -172,13 +128,6 @@ entry:
 
 ; FUNC-LABEL: {{^}}add64_sgpr_vgpr:
 ; GCN-NOT: v_addc_u32_e32 s
-
-; EG: MEM_RAT_CACHELESS STORE_RAW [[LO:T[0-9]+\.XY]]
-; EG-DAG: ADD_INT {{[* ]*}}
-; EG-DAG: ADDC_UINT
-; EG-DAG: ADD_INT
-; EG-DAG: ADD_INT {{[* ]*}}
-; EG-NOT: SUB
 define amdgpu_kernel void @add64_sgpr_vgpr(i64 addrspace(1)* %out, i64 %a, i64 addrspace(1)* %in) {
 entry:
   %0 = load i64, i64 addrspace(1)* %in
@@ -191,13 +140,6 @@ entry:
 ; FUNC-LABEL: {{^}}add64_in_branch:
 ; GCN: s_add_u32
 ; GCN: s_addc_u32
-
-; EG: MEM_RAT_CACHELESS STORE_RAW [[LO:T[0-9]+\.XY]]
-; EG-DAG: ADD_INT {{[* ]*}}
-; EG-DAG: ADDC_UINT
-; EG-DAG: ADD_INT
-; EG-DAG: ADD_INT {{[* ]*}}
-; EG-NOT: SUB
 define amdgpu_kernel void @add64_in_branch(i64 addrspace(1)* %out, i64 addrspace(1)* %in, i64 %a, i64 %b, i64 %c) {
 entry:
   %0 = icmp eq i64 %a, 0
@@ -217,7 +159,26 @@ endif:
   ret void
 }
 
-declare i32 @llvm.r600.read.tidig.x() #1
+; Make sure the VOP3 form of add is initially selected. Otherwise pair
+; of opies from/to VCC would be necessary
+
+; GCN-LABEL: {{^}}add_select_vop3:
+; SI: v_add_i32_e64 v0, s[0:1], s0, v0
+; VI: v_add_u32_e64 v0, s[0:1], s0, v0
+; GFX9: v_add_u32_e32 v0, s0, v0
+
+; GCN: ; def vcc
+; GCN: ds_write_b32
+; GCN: ; use vcc
+define amdgpu_ps void @add_select_vop3(i32 inreg %s, i32 %v) {
+  %vcc = call i64 asm sideeffect "; def vcc", "={vcc}"()
+  %sub = add i32 %v, %s
+  store i32 %sub, i32 addrspace(3)* undef
+  call void asm sideeffect "; use vcc", "{vcc}"(i64 %vcc)
+  ret void
+}
+
+declare i32 @llvm.amdgcn.workitem.id.x() #1
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone speculatable }

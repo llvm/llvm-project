@@ -28,3 +28,11 @@ define float @fmf_transfer(float %x, float %y) {
   ret float %f8
 }
 
+; CHECK: Optimized type-legalized selection DAG: %bb.0 'fmf_setcc:'
+; CHECK: t13: i8 = setcc nnan ninf nsz arcp contract afn reassoc t2, ConstantFP:f32<0.000000e+00>, setlt:ch
+
+define float @fmf_setcc(float %x, float %y) {
+  %cmp = fcmp fast ult float %x, 0.0
+  %ret = select i1 %cmp, float %x, float %y
+  ret float %ret
+}

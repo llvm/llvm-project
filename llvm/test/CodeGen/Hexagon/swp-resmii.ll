@@ -4,7 +4,7 @@
 ;
 ; Test that checks if the ResMII is 1.
 
-; CHECK: MII = 1 (rec=1, res=1)
+; CHECK: MII = 1 MAX_II = 11 (rec=1, res=1)
 
 ; Function Attrs: nounwind
 define void @f0(i32* nocapture %a0, i32 %a1) #0 {

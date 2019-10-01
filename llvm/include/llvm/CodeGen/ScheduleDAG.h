@@ -1,9 +1,8 @@
 //===- llvm/CodeGen/ScheduleDAG.h - Common Base Class -----------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -239,9 +238,6 @@ class TargetRegisterInfo;
     void dump(const TargetRegisterInfo *TRI = nullptr) const;
   };
 
-  template <>
-  struct isPodLike<SDep> { static const bool value = true; };
-
   /// Scheduling unit. This is a node in the scheduling DAG.
   class SUnit {
   private:
@@ -418,7 +414,7 @@ class TargetRegisterInfo;
     /// dirty.
     void setDepthToAtLeast(unsigned NewDepth);
 
-    /// If NewDepth is greater than this node's depth value, set it to be
+    /// If NewHeight is greater than this node's height value, set it to be
     /// the new height value. This also recursively marks predecessor nodes
     /// dirty.
     void setHeightToAtLeast(unsigned NewHeight);
@@ -695,6 +691,12 @@ class TargetRegisterInfo;
     std::vector<SUnit> &SUnits;
     SUnit *ExitSU;
 
+    // Have any new nodes been added?
+    bool Dirty = false;
+
+    // Outstanding added edges, that have not been applied to the ordering.
+    SmallVector<std::pair<SUnit *, SUnit *>, 16> Updates;
+
     /// Maps topological index to the node number.
     std::vector<int> Index2Node;
     /// Maps the node number to its topological index.
@@ -713,6 +715,11 @@ class TargetRegisterInfo;
 
     /// Assigns the topological index to the node n.
     void Allocate(int n, int index);
+
+    /// Fix the ordering, by either recomputing from scratch or by applying
+    /// any outstanding updates. Uses a heuristic to estimate what will be
+    /// cheaper.
+    void FixOrder();
 
   public:
     ScheduleDAGTopologicalSort(std::vector<SUnit> &SUnits, SUnit *ExitSU);
@@ -738,10 +745,18 @@ class TargetRegisterInfo;
     /// added from SUnit \p X to SUnit \p Y.
     void AddPred(SUnit *Y, SUnit *X);
 
+    /// Queues an update to the topological ordering to accommodate an edge to
+    /// be added from SUnit \p X to SUnit \p Y.
+    void AddPredQueued(SUnit *Y, SUnit *X);
+
     /// Updates the topological ordering to accommodate an an edge to be
     /// removed from the specified node \p N from the predecessors of the
     /// current node \p M.
     void RemovePred(SUnit *M, SUnit *N);
+
+    /// Mark the ordering as temporarily broken, after a new node has been
+    /// added.
+    void MarkDirty() { Dirty = true; }
 
     typedef std::vector<int>::iterator iterator;
     typedef std::vector<int>::const_iterator const_iterator;

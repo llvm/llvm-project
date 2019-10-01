@@ -47,9 +47,9 @@ foo2:20000
 
 #ICTXT: Indirect Call Site Count: 3
 #ICTXT-NEXT:    Indirect Target Results:
-#ICTXT-NEXT:	[ 1, foo, 100 ]
-#ICTXT-NEXT:	[ 1, foo2, 1000 ]
-#ICTXT-NEXT:	[ 2, foo2, 20000 ]
+#ICTXT-NEXT:	[ 1, foo, 100 ] (9.09%)
+#ICTXT-NEXT:	[ 1, foo2, 1000 ] (90.91%)
+#ICTXT-NEXT:	[ 2, foo2, 20000 ] (100.00%)
 
 #IC: Indirect Call Site Count: 3
 #IC-NEXT:    Indirect Target Results:

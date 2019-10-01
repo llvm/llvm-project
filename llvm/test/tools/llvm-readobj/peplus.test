@@ -1,4 +1,4 @@
-RUN: llvm-readobj -file-headers %p/Inputs/nop.exe.coff-x86-64 | FileCheck %s
+RUN: llvm-readobj --file-headers %p/Inputs/nop.exe.coff-x86-64 | FileCheck %s
 
 CHECK: Format: COFF-x86-64
 CHECK: Arch: x86_64

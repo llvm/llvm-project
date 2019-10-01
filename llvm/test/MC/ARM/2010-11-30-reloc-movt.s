@@ -1,5 +1,5 @@
 // RUN: llvm-mc  %s -triple=armv7-linux-gnueabi -filetype=obj -o - | \
-// RUN:    llvm-readobj -s -sr -sd | FileCheck  %s
+// RUN:    llvm-readobj -S --sr --sd | FileCheck  %s
 
 	.syntax unified
 	.eabi_attribute	6, 10

@@ -63,6 +63,6 @@ Install doxygen <http://www.stack.nl/~dimitri/doxygen/download.html> and dot2tex
     make doxygen-clang # for clang docs
 
 It will generate html in
-    
+
     <build-dir>/docs/doxygen/html # for LLVM docs
     <build-dir>/tools/clang/docs/doxygen/html # for clang docs

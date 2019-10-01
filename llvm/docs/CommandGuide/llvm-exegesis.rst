@@ -10,13 +10,13 @@ DESCRIPTION
 -----------
 
 :program:`llvm-exegesis` is a benchmarking tool that uses information available
-in LLVM to measure host machine instruction characteristics like latency or port
-decomposition.
+in LLVM to measure host machine instruction characteristics like latency,
+throughput, or port decomposition.
 
 Given an LLVM opcode name and a benchmarking mode, :program:`llvm-exegesis`
 generates a code snippet that makes execution as serial (resp. as parallel) as
-possible so that we can measure the latency (resp. uop decomposition) of the
-instruction.
+possible so that we can measure the latency (resp. inverse throughput/uop decomposition)
+of the instruction.
 The code snippet is jitted and executed on the host subtarget. The time taken
 (resp. resource usage) is measured using hardware performance counters. The
 result is printed out as YAML to the standard output.
@@ -37,11 +37,13 @@ instruction, run:
 
     $ llvm-exegesis -mode=latency -opcode-name=ADD64rr
 
-Measuring the uop decomposition of an instruction works similarly:
+Measuring the uop decomposition or inverse throughput of an instruction works similarly:
 
 .. code-block:: bash
 
     $ llvm-exegesis -mode=uops -opcode-name=ADD64rr
+    $ llvm-exegesis -mode=inverse_throughput -opcode-name=ADD64rr
+
 
 The output is a YAML document (the default is to write to stdout, but you can
 redirect the output to a file using `-benchmarks-file`):
@@ -186,9 +188,11 @@ OPTIONS
   Specify the custom code snippet to measure. See example 2 for details.
   Either `opcode-index`, `opcode-name` or `snippets-file` must be set.
 
-.. option:: -mode=[latency|uops|analysis]
+.. option:: -mode=[latency|uops|inverse_throughput|analysis]
 
- Specify the run mode.
+ Specify the run mode. Note that if you pick `analysis` mode, you also need
+ to specify at least one of the `-analysis-clusters-output-file=` and
+ `-analysis-inconsistencies-output-file=`.
 
 .. option:: -num-repetitions=<Number of repetition>
 
@@ -197,37 +201,62 @@ OPTIONS
 
 .. option:: -benchmarks-file=</path/to/file>
 
- File to read (`analysis` mode) or write (`latency`/`uops` modes) benchmark
- results. "-" uses stdin/stdout.
+ File to read (`analysis` mode) or write (`latency`/`uops`/`inverse_throughput`
+ modes) benchmark results. "-" uses stdin/stdout.
 
 .. option:: -analysis-clusters-output-file=</path/to/file>
 
  If provided, write the analysis clusters as CSV to this file. "-" prints to
- stdout.
+ stdout. By default, this analysis is not run.
 
 .. option:: -analysis-inconsistencies-output-file=</path/to/file>
 
  If non-empty, write inconsistencies found during analysis to this file. `-`
- prints to stdout.
+ prints to stdout. By default, this analysis is not run.
+
+.. option:: -analysis-clustering=[dbscan,naive]
+
+ Specify the clustering algorithm to use. By default DBSCAN will be used.
+ Naive clustering algorithm is better for doing further work on the
+ `-analysis-inconsistencies-output-file=` output, it will create one cluster
+ per opcode, and check that the cluster is stable (all points are neighbours).
 
 .. option:: -analysis-numpoints=<dbscan numPoints parameter>
 
  Specify the numPoints parameters to be used for DBSCAN clustering
+ (`analysis` mode, DBSCAN only).
+
+.. option:: -analysis-clustering-epsilon=<dbscan epsilon parameter>
+
+ Specify the epsilon parameter used for clustering of benchmark points
  (`analysis` mode).
 
-.. option:: -analysis-espilon=<dbscan epsilon parameter>
+.. option:: -analysis-inconsistency-epsilon=<epsilon>
 
- Specify the numPoints parameters to be used for DBSCAN clustering
- (`analysis` mode).
+ Specify the epsilon parameter used for detection of when the cluster
+ is different from the LLVM schedule profile values (`analysis` mode).
+
+.. option:: -analysis-display-unstable-clusters
+
+ If there is more than one benchmark for an opcode, said benchmarks may end up
+ not being clustered into the same cluster if the measured performance
+ characteristics are different. by default all such opcodes are filtered out.
+ This flag will instead show only such unstable opcodes.
 
 .. option:: -ignore-invalid-sched-class=false
 
  If set, ignore instructions that do not have a sched class (class idx = 0).
 
- .. option:: -mcpu=<cpu name>
+.. option:: -mcpu=<cpu name>
 
-  If set, measure the cpu characteristics using the counters for this CPU. This
-  is useful when creating new sched models (the host CPU is unknown to LLVM).
+ If set, measure the cpu characteristics using the counters for this CPU. This
+ is useful when creating new sched models (the host CPU is unknown to LLVM).
+
+.. option:: --dump-object-to-disk=true
+
+ By default, llvm-exegesis will dump the generated code to a temporary file to
+ enable code inspection. You may disable it to speed up the execution and save
+ disk space.
 
 EXIT STATUS
 -----------

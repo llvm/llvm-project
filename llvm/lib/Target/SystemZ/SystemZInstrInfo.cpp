@@ -1,9 +1,8 @@
 //===-- SystemZInstrInfo.cpp - SystemZ instruction information ------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -169,11 +168,13 @@ void SystemZInstrInfo::expandRIEPseudo(MachineInstr &MI, unsigned LowOpcode,
   if (!DestIsHigh && !SrcIsHigh)
     MI.setDesc(get(LowOpcodeK));
   else {
-    emitGRX32Move(*MI.getParent(), MI, MI.getDebugLoc(), DestReg, SrcReg,
-                  SystemZ::LR, 32, MI.getOperand(1).isKill(),
-                  MI.getOperand(1).isUndef());
+    if (DestReg != SrcReg) {
+      emitGRX32Move(*MI.getParent(), MI, MI.getDebugLoc(), DestReg, SrcReg,
+                    SystemZ::LR, 32, MI.getOperand(1).isKill(),
+                    MI.getOperand(1).isUndef());
+      MI.getOperand(1).setReg(DestReg);
+    }
     MI.setDesc(get(DestIsHigh ? HighOpcode : LowOpcode));
-    MI.getOperand(1).setReg(DestReg);
     MI.tieOperands(0, 1);
   }
 }
@@ -555,80 +556,6 @@ bool SystemZInstrInfo::analyzeCompare(const MachineInstr &MI, unsigned &SrcReg,
   }
 
   return false;
-}
-
-// If Reg is a virtual register, return its definition, otherwise return null.
-static MachineInstr *getDef(unsigned Reg,
-                            const MachineRegisterInfo *MRI) {
-  if (TargetRegisterInfo::isPhysicalRegister(Reg))
-    return nullptr;
-  return MRI->getUniqueVRegDef(Reg);
-}
-
-// Return true if MI is a shift of type Opcode by Imm bits.
-static bool isShift(MachineInstr *MI, unsigned Opcode, int64_t Imm) {
-  return (MI->getOpcode() == Opcode &&
-          !MI->getOperand(2).getReg() &&
-          MI->getOperand(3).getImm() == Imm);
-}
-
-// If the destination of MI has no uses, delete it as dead.
-static void eraseIfDead(MachineInstr *MI, const MachineRegisterInfo *MRI) {
-  if (MRI->use_nodbg_empty(MI->getOperand(0).getReg()))
-    MI->eraseFromParent();
-}
-
-// Compare compares SrcReg against zero.  Check whether SrcReg contains
-// the result of an IPM sequence whose input CC survives until Compare,
-// and whether Compare is therefore redundant.  Delete it and return
-// true if so.
-static bool removeIPMBasedCompare(MachineInstr &Compare, unsigned SrcReg,
-                                  const MachineRegisterInfo *MRI,
-                                  const TargetRegisterInfo *TRI) {
-  MachineInstr *LGFR = nullptr;
-  MachineInstr *RLL = getDef(SrcReg, MRI);
-  if (RLL && RLL->getOpcode() == SystemZ::LGFR) {
-    LGFR = RLL;
-    RLL = getDef(LGFR->getOperand(1).getReg(), MRI);
-  }
-  if (!RLL || !isShift(RLL, SystemZ::RLL, 31))
-    return false;
-
-  MachineInstr *SRL = getDef(RLL->getOperand(1).getReg(), MRI);
-  if (!SRL || !isShift(SRL, SystemZ::SRL, SystemZ::IPM_CC))
-    return false;
-
-  MachineInstr *IPM = getDef(SRL->getOperand(1).getReg(), MRI);
-  if (!IPM || IPM->getOpcode() != SystemZ::IPM)
-    return false;
-
-  // Check that there are no assignments to CC between the IPM and Compare,
-  if (IPM->getParent() != Compare.getParent())
-    return false;
-  MachineBasicBlock::iterator MBBI = IPM, MBBE = Compare.getIterator();
-  for (++MBBI; MBBI != MBBE; ++MBBI) {
-    MachineInstr &MI = *MBBI;
-    if (MI.modifiesRegister(SystemZ::CC, TRI))
-      return false;
-  }
-
-  Compare.eraseFromParent();
-  if (LGFR)
-    eraseIfDead(LGFR, MRI);
-  eraseIfDead(RLL, MRI);
-  eraseIfDead(SRL, MRI);
-  eraseIfDead(IPM, MRI);
-
-  return true;
-}
-
-bool SystemZInstrInfo::optimizeCompareInstr(
-    MachineInstr &Compare, unsigned SrcReg, unsigned SrcReg2, int Mask,
-    int Value, const MachineRegisterInfo *MRI) const {
-  assert(!SrcReg2 && "Only optimizing constant comparisons so far");
-  bool IsLogical = (Compare.getDesc().TSFlags & SystemZII::IsLogical) != 0;
-  return Value == 0 && !IsLogical &&
-         removeIPMBasedCompare(Compare, SrcReg, MRI, &RI);
 }
 
 bool SystemZInstrInfo::canInsertSelect(const MachineBasicBlock &MBB,
@@ -1032,73 +959,13 @@ static void transferDeadCC(MachineInstr *OldMI, MachineInstr *NewMI) {
   }
 }
 
-// Used to return from convertToThreeAddress after replacing two-address
-// instruction OldMI with three-address instruction NewMI.
-static MachineInstr *finishConvertToThreeAddress(MachineInstr *OldMI,
-                                                 MachineInstr *NewMI,
-                                                 LiveVariables *LV) {
-  if (LV) {
-    unsigned NumOps = OldMI->getNumOperands();
-    for (unsigned I = 1; I < NumOps; ++I) {
-      MachineOperand &Op = OldMI->getOperand(I);
-      if (Op.isReg() && Op.isKill())
-        LV->replaceKillInstruction(Op.getReg(), *OldMI, *NewMI);
-    }
-  }
-  transferDeadCC(OldMI, NewMI);
-  return NewMI;
-}
-
 MachineInstr *SystemZInstrInfo::convertToThreeAddress(
     MachineFunction::iterator &MFI, MachineInstr &MI, LiveVariables *LV) const {
   MachineBasicBlock *MBB = MI.getParent();
-  MachineFunction *MF = MBB->getParent();
-  MachineRegisterInfo &MRI = MF->getRegInfo();
-
-  unsigned Opcode = MI.getOpcode();
-  unsigned NumOps = MI.getNumOperands();
-
-  // Try to convert something like SLL into SLLK, if supported.
-  // We prefer to keep the two-operand form where possible both
-  // because it tends to be shorter and because some instructions
-  // have memory forms that can be used during spilling.
-  if (STI.hasDistinctOps()) {
-    MachineOperand &Dest = MI.getOperand(0);
-    MachineOperand &Src = MI.getOperand(1);
-    unsigned DestReg = Dest.getReg();
-    unsigned SrcReg = Src.getReg();
-    // AHIMux is only really a three-operand instruction when both operands
-    // are low registers.  Try to constrain both operands to be low if
-    // possible.
-    if (Opcode == SystemZ::AHIMux &&
-        TargetRegisterInfo::isVirtualRegister(DestReg) &&
-        TargetRegisterInfo::isVirtualRegister(SrcReg) &&
-        MRI.getRegClass(DestReg)->contains(SystemZ::R1L) &&
-        MRI.getRegClass(SrcReg)->contains(SystemZ::R1L)) {
-      MRI.constrainRegClass(DestReg, &SystemZ::GR32BitRegClass);
-      MRI.constrainRegClass(SrcReg, &SystemZ::GR32BitRegClass);
-    }
-    int ThreeOperandOpcode = SystemZ::getThreeOperandOpcode(Opcode);
-    if (ThreeOperandOpcode >= 0) {
-      // Create three address instruction without adding the implicit
-      // operands. Those will instead be copied over from the original
-      // instruction by the loop below.
-      MachineInstrBuilder MIB(
-          *MF, MF->CreateMachineInstr(get(ThreeOperandOpcode), MI.getDebugLoc(),
-                                      /*NoImplicit=*/true));
-      MIB.add(Dest);
-      // Keep the kill state, but drop the tied flag.
-      MIB.addReg(Src.getReg(), getKillRegState(Src.isKill()), Src.getSubReg());
-      // Keep the remaining operands as-is.
-      for (unsigned I = 2; I < NumOps; ++I)
-        MIB.add(MI.getOperand(I));
-      MBB->insert(MI, MIB);
-      return finishConvertToThreeAddress(&MI, MIB, LV);
-    }
-  }
 
   // Try to convert an AND into an RISBG-type instruction.
-  if (LogicOp And = interpretAndImmediate(Opcode)) {
+  // TODO: It might be beneficial to select RISBG and shorten to AND instead.
+  if (LogicOp And = interpretAndImmediate(MI.getOpcode())) {
     uint64_t Imm = MI.getOperand(2).getImm() << And.ImmLSB;
     // AND IMMEDIATE leaves the other bits of the register unchanged.
     Imm |= allOnes(And.RegSize) & ~(allOnes(And.ImmSize) << And.ImmLSB);
@@ -1126,7 +993,16 @@ MachineInstr *SystemZInstrInfo::convertToThreeAddress(
               .addImm(Start)
               .addImm(End + 128)
               .addImm(0);
-      return finishConvertToThreeAddress(&MI, MIB, LV);
+      if (LV) {
+        unsigned NumOps = MI.getNumOperands();
+        for (unsigned I = 1; I < NumOps; ++I) {
+          MachineOperand &Op = MI.getOperand(I);
+          if (Op.isReg() && Op.isKill())
+            LV->replaceKillInstruction(Op.getReg(), MI, *MIB);
+        }
+      }
+      transferDeadCC(&MI, MIB);
+      return MIB;
     }
   }
   return nullptr;
@@ -1135,7 +1011,7 @@ MachineInstr *SystemZInstrInfo::convertToThreeAddress(
 MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
     MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
     MachineBasicBlock::iterator InsertPt, int FrameIndex,
-    LiveIntervals *LIS) const {
+    LiveIntervals *LIS, VirtRegMap *VRM) const {
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   unsigned Size = MFI.getObjectSize(FrameIndex);
@@ -1263,7 +1139,7 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
   // MVCs that turn out to be redundant.
   if (OpNum == 0 && MI.hasOneMemOperand()) {
     MachineMemOperand *MMO = *MI.memoperands_begin();
-    if (MMO->getSize() == Size && !MMO->isVolatile()) {
+    if (MMO->getSize() == Size && !MMO->isVolatile() && !MMO->isAtomic()) {
       // Handle conversion of loads.
       if (isSimpleBD12Move(&MI, SystemZII::SimpleBDXLoad)) {
         return BuildMI(*InsertPt->getParent(), InsertPt, MI.getDebugLoc(),
@@ -1289,12 +1165,37 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
     }
   }
 
-  // If the spilled operand is the final one, try to change <INSN>R
-  // into <INSN>.
+  // If the spilled operand is the final one or the instruction is
+  // commutable, try to change <INSN>R into <INSN>.
+  unsigned NumOps = MI.getNumExplicitOperands();
   int MemOpcode = SystemZ::getMemOpcode(Opcode);
+
+  // See if this is a 3-address instruction that is convertible to 2-address
+  // and suitable for folding below.  Only try this with virtual registers
+  // and a provided VRM (during regalloc).
+  bool NeedsCommute = false;
+  if (SystemZ::getTwoOperandOpcode(Opcode) != -1 && MemOpcode != -1) {
+    if (VRM == nullptr)
+      MemOpcode = -1;
+    else {
+      assert(NumOps == 3 && "Expected two source registers.");
+      unsigned DstReg = MI.getOperand(0).getReg();
+      unsigned DstPhys =
+        (TRI->isVirtualRegister(DstReg) ? VRM->getPhys(DstReg) : DstReg);
+      unsigned SrcReg = (OpNum == 2 ? MI.getOperand(1).getReg()
+                                    : ((OpNum == 1 && MI.isCommutable())
+                                           ? MI.getOperand(2).getReg()
+                                           : 0));
+      if (DstPhys && !SystemZ::GRH32BitRegClass.contains(DstPhys) && SrcReg &&
+          TRI->isVirtualRegister(SrcReg) && DstPhys == VRM->getPhys(SrcReg))
+        NeedsCommute = (OpNum == 1);
+      else
+        MemOpcode = -1;
+    }
+  }
+
   if (MemOpcode >= 0) {
-    unsigned NumOps = MI.getNumExplicitOperands();
-    if (OpNum == NumOps - 1) {
+    if ((OpNum == NumOps - 1) || NeedsCommute) {
       const MCInstrDesc &MemDesc = get(MemOpcode);
       uint64_t AccessBytes = SystemZII::getAccessSize(MemDesc.TSFlags);
       assert(AccessBytes != 0 && "Size of access should be known");
@@ -1302,8 +1203,12 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
       uint64_t Offset = Size - AccessBytes;
       MachineInstrBuilder MIB = BuildMI(*InsertPt->getParent(), InsertPt,
                                         MI.getDebugLoc(), get(MemOpcode));
-      for (unsigned I = 0; I < OpNum; ++I)
-        MIB.add(MI.getOperand(I));
+      MIB.add(MI.getOperand(0));
+      if (NeedsCommute)
+        MIB.add(MI.getOperand(2));
+      else
+        for (unsigned I = 1; I < OpNum; ++I)
+          MIB.add(MI.getOperand(I));
       MIB.addFrameIndex(FrameIndex).addImm(Offset);
       if (MemDesc.TSFlags & SystemZII::HasIndex)
         MIB.addReg(0);
@@ -1506,7 +1411,7 @@ bool SystemZInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
 }
 
 unsigned SystemZInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
-  if (MI.getOpcode() == TargetOpcode::INLINEASM) {
+  if (MI.isInlineAsm()) {
     const MachineFunction *MF = MI.getParent()->getParent();
     const char *AsmStr = MI.getOperand(0).getSymbolName();
     return getInlineAsmLength(AsmStr, *MF->getTarget().getMCAsmInfo());
@@ -1857,7 +1762,8 @@ void SystemZInstrInfo::loadImmediate(MachineBasicBlock &MBB,
 }
 
 bool SystemZInstrInfo::
-areMemAccessesTriviallyDisjoint(MachineInstr &MIa, MachineInstr &MIb,
+areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
+                                const MachineInstr &MIb,
                                 AliasAnalysis *AA) const {
 
   if (!MIa.hasOneMemOperand() || !MIb.hasOneMemOperand())

@@ -1,9 +1,8 @@
 //===- HexagonVectorLoopCarriedReuse.cpp ----------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -430,11 +429,18 @@ void HexagonVectorLoopCarriedReuse::findValueToReuse() {
 
         for (int OpNo = 0; OpNo < NumOperands; ++OpNo) {
           Value *Op = I->getOperand(OpNo);
-          Instruction *OpInst = dyn_cast<Instruction>(Op);
-          if (!OpInst)
-            continue;
-
           Value *BEOp = BEUser->getOperand(OpNo);
+
+          Instruction *OpInst = dyn_cast<Instruction>(Op);
+          if (!OpInst) {
+            if (Op == BEOp)
+              continue;
+            // Do not allow reuse to occur when the operands may be different
+            // values.
+            BEUser = nullptr;
+            break;
+          }
+
           Instruction *BEOpInst = dyn_cast<Instruction>(BEOp);
 
           if (!isDepChainBtwn(OpInst, BEOpInst, Iters)) {

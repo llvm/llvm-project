@@ -1,9 +1,8 @@
 //===-- WasmDumper.cpp - Wasm-specific object file dumper -----------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -33,11 +32,25 @@ static const EnumEntry<unsigned> WasmSymbolTypes[] = {
 static const EnumEntry<uint32_t> WasmSectionTypes[] = {
 #define ENUM_ENTRY(X)                                                          \
   { #X, wasm::WASM_SEC_##X }
-    ENUM_ENTRY(CUSTOM),   ENUM_ENTRY(TYPE),  ENUM_ENTRY(IMPORT),
-    ENUM_ENTRY(FUNCTION), ENUM_ENTRY(TABLE), ENUM_ENTRY(MEMORY),
-    ENUM_ENTRY(GLOBAL),   ENUM_ENTRY(EVENT), ENUM_ENTRY(EXPORT),
-    ENUM_ENTRY(START),    ENUM_ENTRY(ELEM),  ENUM_ENTRY(CODE),
-    ENUM_ENTRY(DATA),
+    ENUM_ENTRY(CUSTOM),   ENUM_ENTRY(TYPE),      ENUM_ENTRY(IMPORT),
+    ENUM_ENTRY(FUNCTION), ENUM_ENTRY(TABLE),     ENUM_ENTRY(MEMORY),
+    ENUM_ENTRY(GLOBAL),   ENUM_ENTRY(EVENT),     ENUM_ENTRY(EXPORT),
+    ENUM_ENTRY(START),    ENUM_ENTRY(ELEM),      ENUM_ENTRY(CODE),
+    ENUM_ENTRY(DATA),     ENUM_ENTRY(DATACOUNT),
+#undef ENUM_ENTRY
+};
+
+static const EnumEntry<unsigned> WasmSymbolFlags[] = {
+#define ENUM_ENTRY(X)                                                          \
+  { #X, wasm::WASM_SYMBOL_##X }
+  ENUM_ENTRY(BINDING_GLOBAL),
+  ENUM_ENTRY(BINDING_WEAK),
+  ENUM_ENTRY(BINDING_LOCAL),
+  ENUM_ENTRY(VISIBILITY_DEFAULT),
+  ENUM_ENTRY(VISIBILITY_HIDDEN),
+  ENUM_ENTRY(UNDEFINED),
+  ENUM_ENTRY(EXPORTED),
+  ENUM_ENTRY(EXPLICIT_NAME),
 #undef ENUM_ENTRY
 };
 
@@ -49,8 +62,6 @@ public:
   void printFileHeaders() override;
   void printSectionHeaders() override;
   void printRelocations() override;
-  void printSymbols() override;
-  void printDynamicSymbols() override { llvm_unreachable("unimplemented"); }
   void printUnwindInfo() override { llvm_unreachable("unimplemented"); }
   void printStackMap() const override { llvm_unreachable("unimplemented"); }
 
@@ -59,6 +70,9 @@ protected:
   void printRelocation(const SectionRef &Section, const RelocationRef &Reloc);
 
 private:
+  void printSymbols() override;
+  void printDynamicSymbols() override { llvm_unreachable("unimplemented"); }
+
   const WasmObjectFile *Obj;
 };
 
@@ -80,11 +94,11 @@ void WasmDumper::printRelocation(const SectionRef &Section,
 
   bool HasAddend = false;
   switch (RelocType) {
-  case wasm::R_WEBASSEMBLY_MEMORY_ADDR_LEB:
-  case wasm::R_WEBASSEMBLY_MEMORY_ADDR_SLEB:
-  case wasm::R_WEBASSEMBLY_MEMORY_ADDR_I32:
-  case wasm::R_WEBASSEMBLY_FUNCTION_OFFSET_I32:
-  case wasm::R_WEBASSEMBLY_SECTION_OFFSET_I32:
+  case wasm::R_WASM_MEMORY_ADDR_LEB:
+  case wasm::R_WASM_MEMORY_ADDR_SLEB:
+  case wasm::R_WASM_MEMORY_ADDR_I32:
+  case wasm::R_WASM_FUNCTION_OFFSET_I32:
+  case wasm::R_WASM_SECTION_OFFSET_I32:
     HasAddend = true;
     break;
   default:
@@ -209,7 +223,19 @@ void WasmDumper::printSymbol(const SymbolRef &Sym) {
   WasmSymbol Symbol = Obj->getWasmSymbol(Sym.getRawDataRefImpl());
   W.printString("Name", Symbol.Info.Name);
   W.printEnum("Type", Symbol.Info.Kind, makeArrayRef(WasmSymbolTypes));
-  W.printHex("Flags", Symbol.Info.Flags);
+  W.printFlags("Flags", Symbol.Info.Flags, makeArrayRef(WasmSymbolFlags));
+
+  if (Symbol.Info.Flags & wasm::WASM_SYMBOL_UNDEFINED) {
+    W.printString("ImportName", Symbol.Info.ImportName);
+    W.printString("ImportModule", Symbol.Info.ImportModule);
+  }
+  if (Symbol.Info.Kind != wasm::WASM_SYMBOL_TYPE_DATA) {
+    W.printHex("ElementIndex", Symbol.Info.ElementIndex);
+  } else if (!(Symbol.Info.Flags & wasm::WASM_SYMBOL_UNDEFINED)) {
+    W.printHex("Offset", Symbol.Info.DataRef.Offset);
+    W.printHex("Segment", Symbol.Info.DataRef.Segment);
+    W.printHex("Size", Symbol.Info.DataRef.Size);
+  }
 }
 
 } // namespace
@@ -219,7 +245,7 @@ namespace llvm {
 std::error_code createWasmDumper(const object::ObjectFile *Obj,
                                  ScopedPrinter &Writer,
                                  std::unique_ptr<ObjDumper> &Result) {
-  const WasmObjectFile *WasmObj = dyn_cast<WasmObjectFile>(Obj);
+  const auto *WasmObj = dyn_cast<WasmObjectFile>(Obj);
   assert(WasmObj && "createWasmDumper called with non-wasm object");
 
   Result.reset(new WasmDumper(WasmObj, Writer));

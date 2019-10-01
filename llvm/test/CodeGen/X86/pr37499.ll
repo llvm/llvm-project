@@ -4,7 +4,11 @@
 define <2 x i64> @undef_tval() {
 ; CHECK-LABEL: undef_tval:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovaps {{.*#+}} xmm0 = [1,1,1,1,1,1,1,1]
+; CHECK-NEXT:    vmovdqa {{.*#+}} xmm0 = [1,1,1,1,1,1,1,1]
+; CHECK-NEXT:    movb $1, %al
+; CHECK-NEXT:    kmovw %eax, %k1
+; CHECK-NEXT:    vpmovqw %zmm0, %xmm0 {%k1}
+; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %1 = tail call <8 x i16> @llvm.x86.avx512.mask.pmov.qw.512(<8 x i64> undef, <8 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>, i8 1) #3
   %2 = bitcast <8 x i16> %1 to <2 x i64>

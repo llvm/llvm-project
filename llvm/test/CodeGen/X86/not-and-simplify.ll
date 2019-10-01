@@ -20,8 +20,9 @@ define i32 @shrink_xor_constant1(i32 %x) {
 define <4 x i32> @shrink_xor_constant1_splat(<4 x i32> %x) {
 ; ALL-LABEL: shrink_xor_constant1_splat:
 ; ALL:       # %bb.0:
+; ALL-NEXT:    pcmpeqd %xmm1, %xmm1
+; ALL-NEXT:    pxor %xmm1, %xmm0
 ; ALL-NEXT:    psrld $31, %xmm0
-; ALL-NEXT:    pxor {{.*}}(%rip), %xmm0
 ; ALL-NEXT:    retq
   %sh = lshr <4 x i32> %x, <i32 31, i32 31, i32 31, i32 31>
   %not = xor <4 x i32> %sh, <i32 -1, i32 -1, i32 -1, i32 -1>

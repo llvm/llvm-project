@@ -1,6 +1,6 @@
 # RUN: yaml2obj %s > %t
 # RUN: llvm-objcopy %t %t2
-# RUN: llvm-readobj -file-headers %t2 | FileCheck %s
+# RUN: llvm-readobj --file-headers %t2 | FileCheck %s
 
 ## Check that llvm-objcopy preserves the OSABI and ABIVersion fields.
 # CHECK: OS/ABI: FreeBSD (0x9)

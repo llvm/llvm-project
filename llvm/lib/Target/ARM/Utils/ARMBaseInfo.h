@@ -1,9 +1,8 @@
 //===-- ARMBaseInfo.h - Top level definitions for ARM ---*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -66,6 +65,30 @@ inline static CondCodes getOppositeCondition(CondCodes CC) {
   }
 }
 } // end namespace ARMCC
+
+namespace ARMVCC {
+  enum VPTCodes {
+    None = 0,
+    Then,
+    Else
+  };
+}
+
+inline static const char *ARMVPTPredToString(ARMVCC::VPTCodes CC) {
+  switch (CC) {
+  case ARMVCC::None:  return "none";
+  case ARMVCC::Then:  return "t";
+  case ARMVCC::Else:  return "e";
+  }
+  llvm_unreachable("Unknown VPT code");
+}
+
+inline static unsigned ARMVectorCondCodeFromString(StringRef CC) {
+  return StringSwitch<unsigned>(CC.lower())
+    .Case("t", ARMVCC::Then)
+    .Case("e", ARMVCC::Else)
+    .Default(~0U);
+}
 
 inline static const char *ARMCondCodeToString(ARMCC::CondCodes CC) {
   switch (CC) {

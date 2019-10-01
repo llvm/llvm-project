@@ -1,5 +1,5 @@
 @ RUN: llvm-mc -n -triple thumbv7-apple-darwin10 %s -filetype=obj -o %t.obj
-@ RUN: llvm-readobj -file-headers -s -sd -r -t -macho-segment -macho-dysymtab -macho-indirect-symbols < %t.obj > %t.dump
+@ RUN: llvm-readobj --file-headers -S --sd -r --symbols --macho-segment --macho-dysymtab --macho-indirect-symbols < %t.obj > %t.dump
 @ RUN: FileCheck < %t.dump %s
 
 	.syntax unified

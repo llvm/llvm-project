@@ -27,3 +27,17 @@ defined:
 .else
 	.byte 0
 .endif
+
+# .ifndef directive does not count as a use, so ensure redefinition is permitted
+.set var, 1
+.ifndef var
+	.set var, 2
+.else
+	.set var, 3
+.endif
+# CHECK: .byte 3
+.byte var
+
+.set var, 4
+# CHECK: .byte 4
+.byte var

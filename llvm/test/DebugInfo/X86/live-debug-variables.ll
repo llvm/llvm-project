@@ -25,7 +25,7 @@
 ; CHECK:      .debug_loc contents:
 ; CHECK-NEXT: 0x00000000:
 ;   We currently emit an entry for the function prologue, too, which could be optimized away.
-; CHECK:              [0x0000000000000018, 0x0000000000000072): DW_OP_reg3 RBX
+; CHECK:              [0x0000000000000010, 0x0000000000000072): DW_OP_reg3 RBX
 ;   We should only have one entry inside the function.
 ; CHECK-NOT: :
 

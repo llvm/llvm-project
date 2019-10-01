@@ -13,13 +13,13 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !llvm.module.flags = !{!3, !4, !5}
 !llvm.ident = !{!6}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 8.0.0 (https://git.llvm.org/git/clang.git/ 41055c6168135fe539801799e5c5636247cf0302) (https://git.llvm.org/git/llvm.git/ de0558be123ffbb5b5bd692c17dbd57a75fe684f)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, nameTableKind: None)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 8.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, nameTableKind: None)
 !1 = !DIFile(filename: "b.cpp", directory: "/home/test/PRs/PR38990")
 !2 = !{}
 !3 = !{i32 2, !"Dwarf Version", i32 4}
 !4 = !{i32 2, !"Debug Info Version", i32 3}
 !5 = !{i32 1, !"wchar_size", i32 4}
-!6 = !{!"clang version 8.0.0 (https://git.llvm.org/git/clang.git/ 41055c6168135fe539801799e5c5636247cf0302) (https://git.llvm.org/git/llvm.git/ de0558be123ffbb5b5bd692c17dbd57a75fe684f)"}
+!6 = !{!"clang version 8.0.0"}
 !7 = distinct !DISubprogram(name: "b", linkageName: "_Z1bi", scope: !1, file: !1, line: 1, type: !8, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !11)
 !8 = !DISubroutineType(types: !9)
 !9 = !{null, !10}

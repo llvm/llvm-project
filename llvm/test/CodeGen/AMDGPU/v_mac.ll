@@ -135,7 +135,7 @@ entry:
 
 ; GCN-LABEL: {{^}}safe_mad_sub0_src0:
 ; GCN: v_sub_f32_e32 [[SUB0:v[0-9]+]], 0,
-; GCN: v_mac_f32_e32 v{{[0-9]+}}, [[SUB0]], v{{[0-9]+}}
+; GCN: v_ma{{[cd]}}_f32{{[_e32]*}} v{{[0-9]+}}, [[SUB0]], v{{[0-9]+}}
 define amdgpu_kernel void @safe_mad_sub0_src0(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
 entry:
   %b_ptr = getelementptr float, float addrspace(1)* %in, i32 1

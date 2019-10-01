@@ -1,0 +1,41 @@
+# RUN: yaml2obj %s > %t
+# RUN: llvm-objdump -p %t | FileCheck --strict-whitespace %s
+
+# CHECK:      Version definitions:
+# CHECK-NEXT: 1 0x01 0x075bcd15 foo
+# CHECK-NEXT: 2 0x02 0x3ade68b1 VERSION_1
+# CHECK-NEXT: 	                VERSION_2 
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+  Machine:         EM_X86_64
+  Entry:           0x0000000000001000
+Sections:
+  - Name:            .gnu.version_d
+    Type:            SHT_GNU_verdef
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x0000000000000230
+    Link:            .dynstr
+    AddressAlign:    0x0000000000000004
+    Info:            0x0000000000000003
+    Entries:
+      - Version:         1
+        Flags:           1
+        VersionNdx:      1
+        Hash:            123456789
+        Names:
+          - foo
+      - Version:         1
+        Flags:           2
+        VersionNdx:      2
+        Hash:            987654321
+        Names:
+          - VERSION_1
+          - VERSION_2
+DynamicSymbols:
+  - Name:    bar
+    Binding: STB_GLOBAL
+...

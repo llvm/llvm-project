@@ -2,8 +2,6 @@
 # RUN: llc -march=amdgcn -mcpu=fiji -run-pass=regbankselect %s -verify-machineinstrs -o - -regbankselect-fast | FileCheck %s
 # RUN: llc -march=amdgcn -mcpu=fiji -run-pass=regbankselect %s -verify-machineinstrs -o - -regbankselect-greedy | FileCheck %s
 
-# REQUIRES: global-isel
-
 --- |
   define void @exp_s() {
     call void @llvm.amdgcn.exp.f32(i32 0, i32 0, float 1.0, float 1.0, float 1.0, float 1.0, i1 0, i1 0)

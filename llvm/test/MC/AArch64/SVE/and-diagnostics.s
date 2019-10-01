@@ -62,7 +62,7 @@ and z21.d, z5.d, z26.b
 // Predicate out of restricted predicate range
 
 and z0.d, p8/z, z0.d, z1.d
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: restricted predicate has range [0, 7].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid restricted predicate register, expected p0..p7 (without element suffix)
 // CHECK-NEXT: and z0.d, p8/z, z0.d, z1.d
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

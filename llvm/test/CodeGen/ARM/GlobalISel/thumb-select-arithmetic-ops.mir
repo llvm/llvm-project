@@ -1,4 +1,4 @@
-# RUN: llc -O0 -mtriple thumb-- -mattr=+v6t2 -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -O0 -mtriple thumb-- -mattr=+v6t2,+hwdiv -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s
 --- |
   define void @test_add_regs() { ret void }
   define void @test_add_fold_imm() { ret void }
@@ -10,6 +10,9 @@
 
   define void @test_mul() { ret void }
   define void @test_mla() { ret void }
+
+  define void @test_sdiv() { ret void }
+  define void @test_udiv() { ret void }
 ...
 ---
 name:            test_add_regs
@@ -244,6 +247,66 @@ body:             |
     ; CHECK: [[VREGRES:%[0-9]+]]:rgpr = t2MLA [[VREGX]], [[VREGY]], [[VREGZ]], 14, $noreg
 
     $r0 = COPY %4(s32)
+    ; CHECK: $r0 = COPY [[VREGRES]]
+
+    BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14, $noreg, implicit $r0
+...
+---
+name:            test_sdiv
+# CHECK-LABEL: name: test_sdiv
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+body:             |
+  bb.0:
+    liveins: $r0, $r1
+
+    %0(s32) = COPY $r0
+    ; CHECK: [[VREGX:%[0-9]+]]:rgpr = COPY $r0
+
+    %1(s32) = COPY $r1
+    ; CHECK: [[VREGY:%[0-9]+]]:rgpr = COPY $r1
+
+    %2(s32) = G_SDIV %0, %1
+    ; CHECK: [[VREGRES:%[0-9]+]]:rgpr = t2SDIV [[VREGX]], [[VREGY]], 14, $noreg
+
+    $r0 = COPY %2(s32)
+    ; CHECK: $r0 = COPY [[VREGRES]]
+
+    BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14, $noreg, implicit $r0
+...
+---
+name:            test_udiv
+# CHECK-LABEL: name: test_udiv
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+body:             |
+  bb.0:
+    liveins: $r0, $r1
+
+    %0(s32) = COPY $r0
+    ; CHECK: [[VREGX:%[0-9]+]]:rgpr = COPY $r0
+
+    %1(s32) = COPY $r1
+    ; CHECK: [[VREGY:%[0-9]+]]:rgpr = COPY $r1
+
+    %2(s32) = G_UDIV %0, %1
+    ; CHECK: [[VREGRES:%[0-9]+]]:rgpr = t2UDIV [[VREGX]], [[VREGY]], 14, $noreg
+
+    $r0 = COPY %2(s32)
     ; CHECK: $r0 = COPY [[VREGRES]]
 
     BX_RET 14, $noreg, implicit $r0

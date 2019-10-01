@@ -1,5 +1,6 @@
 ; RUN: opt -S -licm < %s | FileCheck %s
 ; RUN: opt -aa-pipeline=basic-aa -passes='require<aa>,require<targetir>,require<scalar-evolution>,require<opt-remark-emit>,loop(licm)' -S %s | FileCheck %s
+; RUN: opt -S -licm -enable-mssa-loop-dependency=true -verify-memoryssa < %s | FileCheck %s
 
 target datalayout = "E-m:e-p:32:32-i8:8:8-i16:16:16-i64:32:32-f64:32:32-v64:32:32-v128:32:32-a0:0:32-n32"
 

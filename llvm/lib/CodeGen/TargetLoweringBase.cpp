@@ -1,9 +1,8 @@
 //===- TargetLoweringBase.cpp - Implement the TargetLoweringBase class ----===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -74,8 +73,8 @@ static cl::opt<unsigned> MinimumJumpTableEntries
    cl::desc("Set minimum number of entries to use a jump table."));
 
 static cl::opt<unsigned> MaximumJumpTableSize
-  ("max-jump-table-size", cl::init(0), cl::Hidden,
-   cl::desc("Set maximum size of jump tables; zero for no limit."));
+  ("max-jump-table-size", cl::init(UINT_MAX), cl::Hidden,
+   cl::desc("Set maximum size of jump tables."));
 
 /// Minimum jump table density for normal functions.
 static cl::opt<unsigned>
@@ -546,7 +545,6 @@ TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm) : TM(tm) {
   JumpIsExpensive = JumpIsExpensiveOverride;
   PredictableSelectIsExpensive = false;
   EnableExtLdPromotion = false;
-  HasFloatingPointExceptions = true;
   StackPointerRegisterToSaveRestore = 0;
   BooleanContents = UndefinedBooleanContent;
   BooleanFloatContents = UndefinedBooleanContent;
@@ -583,6 +581,14 @@ void TargetLoweringBase::initActions() {
   std::fill(std::begin(TargetDAGCombineArray),
             std::end(TargetDAGCombineArray), 0);
 
+  for (MVT VT : MVT::fp_valuetypes()) {
+    MVT IntVT = MVT::getIntegerVT(VT.getSizeInBits());
+    if (IntVT.isValid()) {
+      setOperationAction(ISD::ATOMIC_SWAP, VT, Promote);
+      AddPromotedToType(ISD::ATOMIC_SWAP, VT, IntVT);
+    }
+  }
+
   // Set default actions for various operations.
   for (MVT VT : MVT::all_valuetypes()) {
     // Default all indexed load / store to expand.
@@ -617,6 +623,8 @@ void TargetLoweringBase::initActions() {
     setOperationAction(ISD::SSUBSAT, VT, Expand);
     setOperationAction(ISD::USUBSAT, VT, Expand);
     setOperationAction(ISD::SMULFIX, VT, Expand);
+    setOperationAction(ISD::SMULFIXSAT, VT, Expand);
+    setOperationAction(ISD::UMULFIX, VT, Expand);
 
     // Overflow operations default to expand
     setOperationAction(ISD::SADDO, VT, Expand);
@@ -655,8 +663,51 @@ void TargetLoweringBase::initActions() {
       setOperationAction(ISD::ZERO_EXTEND_VECTOR_INREG, VT, Expand);
     }
 
+    // Constrained floating-point operations default to expand.
+    setOperationAction(ISD::STRICT_FADD, VT, Expand);
+    setOperationAction(ISD::STRICT_FSUB, VT, Expand);
+    setOperationAction(ISD::STRICT_FMUL, VT, Expand);
+    setOperationAction(ISD::STRICT_FDIV, VT, Expand);
+    setOperationAction(ISD::STRICT_FREM, VT, Expand);
+    setOperationAction(ISD::STRICT_FMA, VT, Expand);
+    setOperationAction(ISD::STRICT_FSQRT, VT, Expand);
+    setOperationAction(ISD::STRICT_FPOW, VT, Expand);
+    setOperationAction(ISD::STRICT_FPOWI, VT, Expand);
+    setOperationAction(ISD::STRICT_FSIN, VT, Expand);
+    setOperationAction(ISD::STRICT_FCOS, VT, Expand);
+    setOperationAction(ISD::STRICT_FEXP, VT, Expand);
+    setOperationAction(ISD::STRICT_FEXP2, VT, Expand);
+    setOperationAction(ISD::STRICT_FLOG, VT, Expand);
+    setOperationAction(ISD::STRICT_FLOG10, VT, Expand);
+    setOperationAction(ISD::STRICT_FLOG2, VT, Expand);
+    setOperationAction(ISD::STRICT_FRINT, VT, Expand);
+    setOperationAction(ISD::STRICT_FNEARBYINT, VT, Expand);
+    setOperationAction(ISD::STRICT_FCEIL, VT, Expand);
+    setOperationAction(ISD::STRICT_FFLOOR, VT, Expand);
+    setOperationAction(ISD::STRICT_FROUND, VT, Expand);
+    setOperationAction(ISD::STRICT_FTRUNC, VT, Expand);
+    setOperationAction(ISD::STRICT_FMAXNUM, VT, Expand);
+    setOperationAction(ISD::STRICT_FMINNUM, VT, Expand);
+    setOperationAction(ISD::STRICT_FP_ROUND, VT, Expand);
+    setOperationAction(ISD::STRICT_FP_EXTEND, VT, Expand);
+
     // For most targets @llvm.get.dynamic.area.offset just returns 0.
     setOperationAction(ISD::GET_DYNAMIC_AREA_OFFSET, VT, Expand);
+
+    // Vector reduction default to expand.
+    setOperationAction(ISD::VECREDUCE_FADD, VT, Expand);
+    setOperationAction(ISD::VECREDUCE_FMUL, VT, Expand);
+    setOperationAction(ISD::VECREDUCE_ADD, VT, Expand);
+    setOperationAction(ISD::VECREDUCE_MUL, VT, Expand);
+    setOperationAction(ISD::VECREDUCE_AND, VT, Expand);
+    setOperationAction(ISD::VECREDUCE_OR, VT, Expand);
+    setOperationAction(ISD::VECREDUCE_XOR, VT, Expand);
+    setOperationAction(ISD::VECREDUCE_SMAX, VT, Expand);
+    setOperationAction(ISD::VECREDUCE_SMIN, VT, Expand);
+    setOperationAction(ISD::VECREDUCE_UMAX, VT, Expand);
+    setOperationAction(ISD::VECREDUCE_UMIN, VT, Expand);
+    setOperationAction(ISD::VECREDUCE_FMAX, VT, Expand);
+    setOperationAction(ISD::VECREDUCE_FMIN, VT, Expand);
   }
 
   // Most targets ignore the @llvm.prefetch intrinsic.
@@ -688,6 +739,10 @@ void TargetLoweringBase::initActions() {
     setOperationAction(ISD::FRINT,      VT, Expand);
     setOperationAction(ISD::FTRUNC,     VT, Expand);
     setOperationAction(ISD::FROUND,     VT, Expand);
+    setOperationAction(ISD::LROUND,     VT, Expand);
+    setOperationAction(ISD::LLROUND,    VT, Expand);
+    setOperationAction(ISD::LRINT,      VT, Expand);
+    setOperationAction(ISD::LLRINT,     VT, Expand);
   }
 
   // Default ISD::TRAP to expand (which turns it into abort).
@@ -700,7 +755,7 @@ void TargetLoweringBase::initActions() {
 
 MVT TargetLoweringBase::getScalarShiftAmountTy(const DataLayout &DL,
                                                EVT) const {
-  return MVT::getIntegerVT(8 * DL.getPointerSize(0));
+  return MVT::getIntegerVT(DL.getPointerSizeInBits(0));
 }
 
 EVT TargetLoweringBase::getShiftAmountTy(EVT LHSTy, const DataLayout &DL,
@@ -985,16 +1040,16 @@ TargetLoweringBase::emitPatchPoint(MachineInstr &InitialMI,
     // Add a new memory operand for this FI.
     assert(MFI.getObjectOffset(FI) != -1);
 
-    auto Flags = MachineMemOperand::MOLoad;
-    if (MI->getOpcode() == TargetOpcode::STATEPOINT) {
-      Flags |= MachineMemOperand::MOStore;
-      Flags |= MachineMemOperand::MOVolatile;
+    // Note: STATEPOINT MMOs are added during SelectionDAG.  STACKMAP, and
+    // PATCHPOINT should be updated to do the same. (TODO)
+    if (MI->getOpcode() != TargetOpcode::STATEPOINT) {
+      auto Flags = MachineMemOperand::MOLoad;
+      MachineMemOperand *MMO = MF.getMachineMemOperand(
+          MachinePointerInfo::getFixedStack(MF, FI), Flags,
+          MF.getDataLayout().getPointerSize(), MFI.getObjectAlignment(FI));
+      MIB->addMemOperand(MF, MMO);
     }
-    MachineMemOperand *MMO = MF.getMachineMemOperand(
-        MachinePointerInfo::getFixedStack(MF, FI), Flags,
-        MF.getDataLayout().getPointerSize(), MFI.getObjectAlignment(FI));
-    MIB->addMemOperand(MF, MMO);
-
+    
     // Replace the instruction and update the operand index.
     MBB->insert(MachineBasicBlock::iterator(MI), MIB);
     OperIdx += (MIB->getNumOperands() - MI->getNumOperands()) - 1;
@@ -1409,6 +1464,7 @@ bool TargetLoweringBase::allowsMemoryAccess(LLVMContext &Context,
                                             const DataLayout &DL, EVT VT,
                                             unsigned AddrSpace,
                                             unsigned Alignment,
+                                            MachineMemOperand::Flags Flags,
                                             bool *Fast) const {
   // Check if the specified alignment is sufficient based on the data layout.
   // TODO: While using the data layout works in practice, a better solution
@@ -1424,7 +1480,15 @@ bool TargetLoweringBase::allowsMemoryAccess(LLVMContext &Context,
   }
 
   // This is a misaligned access.
-  return allowsMisalignedMemoryAccesses(VT, AddrSpace, Alignment, Fast);
+  return allowsMisalignedMemoryAccesses(VT, AddrSpace, Alignment, Flags, Fast);
+}
+
+bool TargetLoweringBase::allowsMemoryAccess(LLVMContext &Context,
+                                            const DataLayout &DL, EVT VT,
+                                            const MachineMemOperand &MMO,
+                                            bool *Fast) const {
+  return allowsMemoryAccess(Context, DL, VT, MMO.getAddrSpace(),
+                            MMO.getAlignment(), MMO.getFlags(), Fast);
 }
 
 BranchProbability TargetLoweringBase::getPredictableBranchThreshold() const {
@@ -1447,6 +1511,7 @@ int TargetLoweringBase::InstructionOpcodeToISD(unsigned Opcode) const {
   case Switch:         return 0;
   case IndirectBr:     return 0;
   case Invoke:         return 0;
+  case CallBr:         return 0;
   case Resume:         return 0;
   case Unreachable:    return 0;
   case CleanupRet:     return 0;
@@ -1580,8 +1645,8 @@ Value *TargetLoweringBase::getSafeStackPointerLocation(IRBuilder<> &IRB) const {
   // thread's unsafe stack pointer.
   Module *M = IRB.GetInsertBlock()->getParent()->getParent();
   Type *StackPtrTy = Type::getInt8PtrTy(M->getContext());
-  Value *Fn = M->getOrInsertFunction("__safestack_pointer_address",
-                                     StackPtrTy->getPointerTo(0));
+  FunctionCallee Fn = M->getOrInsertFunction("__safestack_pointer_address",
+                                             StackPtrTy->getPointerTo(0));
   return IRB.CreateCall(Fn);
 }
 
@@ -1656,7 +1721,7 @@ Value *TargetLoweringBase::getSDagStackGuard(const Module &M) const {
   return M.getNamedValue("__stack_chk_guard");
 }
 
-Value *TargetLoweringBase::getSSPStackGuardCheck(const Module &M) const {
+Function *TargetLoweringBase::getSSPStackGuardCheck(const Module &M) const {
   return nullptr;
 }
 

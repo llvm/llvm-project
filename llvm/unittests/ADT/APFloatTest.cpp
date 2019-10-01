@@ -1,9 +1,8 @@
 //===- llvm/unittest/ADT/APFloat.cpp - APFloat unit tests ---------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -869,6 +868,33 @@ TEST(APFloatTest, fromDecimalString) {
   EXPECT_EQ(2.05e+12,  APFloat(APFloat::IEEEdouble(), "002.05000e+12").convertToDouble());
   EXPECT_EQ(2.05e-12,  APFloat(APFloat::IEEEdouble(), "002.05000e-12").convertToDouble());
 
+  EXPECT_EQ(1.0,      APFloat(APFloat::IEEEdouble(), "1e").convertToDouble());
+  EXPECT_EQ(1.0,      APFloat(APFloat::IEEEdouble(), "+1e").convertToDouble());
+  EXPECT_EQ(-1.0,      APFloat(APFloat::IEEEdouble(), "-1e").convertToDouble());
+
+  EXPECT_EQ(1.0,      APFloat(APFloat::IEEEdouble(), "1.e").convertToDouble());
+  EXPECT_EQ(1.0,      APFloat(APFloat::IEEEdouble(), "+1.e").convertToDouble());
+  EXPECT_EQ(-1.0,      APFloat(APFloat::IEEEdouble(), "-1.e").convertToDouble());
+
+  EXPECT_EQ(0.1,      APFloat(APFloat::IEEEdouble(), ".1e").convertToDouble());
+  EXPECT_EQ(0.1,      APFloat(APFloat::IEEEdouble(), "+.1e").convertToDouble());
+  EXPECT_EQ(-0.1,      APFloat(APFloat::IEEEdouble(), "-.1e").convertToDouble());
+
+  EXPECT_EQ(1.1,      APFloat(APFloat::IEEEdouble(), "1.1e").convertToDouble());
+  EXPECT_EQ(1.1,      APFloat(APFloat::IEEEdouble(), "+1.1e").convertToDouble());
+  EXPECT_EQ(-1.1,      APFloat(APFloat::IEEEdouble(), "-1.1e").convertToDouble());
+
+  EXPECT_EQ(1.0,      APFloat(APFloat::IEEEdouble(), "1e+").convertToDouble());
+  EXPECT_EQ(1.0,      APFloat(APFloat::IEEEdouble(), "1e-").convertToDouble());
+
+  EXPECT_EQ(0.1,      APFloat(APFloat::IEEEdouble(), ".1e").convertToDouble());
+  EXPECT_EQ(0.1,      APFloat(APFloat::IEEEdouble(), ".1e+").convertToDouble());
+  EXPECT_EQ(0.1,      APFloat(APFloat::IEEEdouble(), ".1e-").convertToDouble());
+
+  EXPECT_EQ(1.0,      APFloat(APFloat::IEEEdouble(), "1.0e").convertToDouble());
+  EXPECT_EQ(1.0,      APFloat(APFloat::IEEEdouble(), "1.0e+").convertToDouble());
+  EXPECT_EQ(1.0,      APFloat(APFloat::IEEEdouble(), "1.0e-").convertToDouble());
+
   // These are "carefully selected" to overflow the fast log-base
   // calculations in APFloat.cpp
   EXPECT_TRUE(APFloat(APFloat::IEEEdouble(), "99e99999").isInfinity());
@@ -1164,36 +1190,6 @@ TEST(APFloatTest, StringDecimalSignificandDeath) {
   EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  ".e"), "Significand has no digits");
   EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "+.e"), "Significand has no digits");
   EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "-.e"), "Significand has no digits");
-}
-
-TEST(APFloatTest, StringDecimalExponentDeath) {
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),   "1e"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "+1e"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "-1e"), "Exponent has no digits");
-
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),   "1.e"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "+1.e"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "-1.e"), "Exponent has no digits");
-
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),   ".1e"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "+.1e"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "-.1e"), "Exponent has no digits");
-
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),   "1.1e"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "+1.1e"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "-1.1e"), "Exponent has no digits");
-
-
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "1e+"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "1e-"), "Exponent has no digits");
-
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  ".1e"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), ".1e+"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), ".1e-"), "Exponent has no digits");
-
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "1.0e"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "1.0e+"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "1.0e-"), "Exponent has no digits");
 }
 
 TEST(APFloatTest, StringHexadecimalDeath) {

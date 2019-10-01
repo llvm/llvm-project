@@ -1,9 +1,8 @@
 //===- GCOV.cpp - LLVM coverage tool --------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -19,6 +18,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/MD5.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <system_error>
@@ -396,10 +396,10 @@ void GCOVBlock::addCount(size_t DstEdgeNo, uint64_t N) {
 /// sortDstEdges - Sort destination edges by block number, nop if already
 /// sorted. This is required for printing branch info in the correct order.
 void GCOVBlock::sortDstEdges() {
-  if (!DstEdgesAreSorted) {
-    SortDstEdgesFunctor SortEdges;
-    std::stable_sort(DstEdges.begin(), DstEdges.end(), SortEdges);
-  }
+  if (!DstEdgesAreSorted)
+    llvm::stable_sort(DstEdges, [](const GCOVEdge *E1, const GCOVEdge *E2) {
+      return E1->Dst.Number < E2->Dst.Number;
+    });
 }
 
 /// collectLineCounts - Collect line counts. This must be used after
@@ -687,7 +687,15 @@ std::string FileInfo::getCoveragePath(StringRef Filename,
   if (Options.LongFileNames && !Filename.equals(MainFilename))
     CoveragePath =
         mangleCoveragePath(MainFilename, Options.PreservePaths) + "##";
-  CoveragePath += mangleCoveragePath(Filename, Options.PreservePaths) + ".gcov";
+  CoveragePath += mangleCoveragePath(Filename, Options.PreservePaths);
+  if (Options.HashFilenames) {
+    MD5 Hasher;
+    MD5::MD5Result Result;
+    Hasher.update(Filename.str());
+    Hasher.final(Result);
+    CoveragePath += "##" + Result.digest().str().str();
+  }
+  CoveragePath += ".gcov";
   return CoveragePath;
 }
 

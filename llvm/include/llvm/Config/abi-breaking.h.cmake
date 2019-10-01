@@ -1,9 +1,9 @@
 /*===------- llvm/Config/abi-breaking.h - llvm configuration -------*- C -*-===*/
 /*                                                                            */
-/*                     The LLVM Compiler Infrastructure                       */
-/*                                                                            */
-/* This file is distributed under the University of Illinois Open Source      */
-/* License. See LICENSE.TXT for details.                                      */
+/* Part of the LLVM Project, under the Apache License v2.0 with LLVM          */
+/* Exceptions.                                                                */
+/* See https://llvm.org/LICENSE.txt for license information.                  */
+/* SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception                    */
 /*                                                                            */
 /*===----------------------------------------------------------------------===*/
 
@@ -34,15 +34,27 @@
 #elif defined(_WIN32) || defined(__CYGWIN__) // Win32 w/o #pragma detect_mismatch
 // FIXME: Implement checks without weak.
 #elif defined(__cplusplus)
+#if !(defined(_AIX) && defined(__GNUC__) && !defined(__clang__))
+#define LLVM_HIDDEN_VISIBILITY __attribute__ ((visibility("hidden")))
+#else
+// GCC on AIX does not support visibility attributes. Symbols are not
+// exported by default on AIX.
+#define LLVM_HIDDEN_VISIBILITY
+#endif
 namespace llvm {
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
 extern int EnableABIBreakingChecks;
-__attribute__((weak, visibility ("hidden"))) int *VerifyEnableABIBreakingChecks = &EnableABIBreakingChecks;
+LLVM_HIDDEN_VISIBILITY
+__attribute__((weak)) int *VerifyEnableABIBreakingChecks =
+    &EnableABIBreakingChecks;
 #else
 extern int DisableABIBreakingChecks;
-__attribute__((weak, visibility ("hidden"))) int *VerifyDisableABIBreakingChecks = &DisableABIBreakingChecks;
+LLVM_HIDDEN_VISIBILITY
+__attribute__((weak)) int *VerifyDisableABIBreakingChecks =
+    &DisableABIBreakingChecks;
 #endif
 }
+#undef LLVM_HIDDEN_VISIBILITY
 #endif // _MSC_VER
 
 #endif // LLVM_DISABLE_ABI_BREAKING_CHECKS_ENFORCING

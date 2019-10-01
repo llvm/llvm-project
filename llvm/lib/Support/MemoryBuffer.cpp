@@ -1,9 +1,8 @@
 //===--- MemoryBuffer.cpp - Memory Buffer implementation ------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -418,7 +417,7 @@ static ErrorOr<std::unique_ptr<MB>>
 getOpenFileImpl(int FD, const Twine &Filename, uint64_t FileSize,
                 uint64_t MapSize, int64_t Offset, bool RequiresNullTerminator,
                 bool IsVolatile) {
-  static int PageSize = sys::Process::getPageSize();
+  static int PageSize = sys::Process::getPageSizeEstimate();
 
   // Default is to map the full file.
   if (MapSize == uint64_t(-1)) {

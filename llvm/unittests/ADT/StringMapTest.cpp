@@ -1,14 +1,12 @@
 //===- llvm/unittest/ADT/StringMapMap.cpp - StringMap unit tests ----------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/StringMap.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/DataTypes.h"
 #include "gtest/gtest.h"
@@ -279,20 +277,6 @@ TEST_F(StringMapTest, IterMapKeys) {
   Map["D"] = 3;
 
   auto Keys = to_vector<4>(Map.keys());
-  llvm::sort(Keys);
-
-  SmallVector<StringRef, 4> Expected = {"A", "B", "C", "D"};
-  EXPECT_EQ(Expected, Keys);
-}
-
-TEST_F(StringMapTest, IterSetKeys) {
-  StringSet<> Set;
-  Set.insert("A");
-  Set.insert("B");
-  Set.insert("C");
-  Set.insert("D");
-
-  auto Keys = to_vector<4>(Set.keys());
   llvm::sort(Keys);
 
   SmallVector<StringRef, 4> Expected = {"A", "B", "C", "D"};

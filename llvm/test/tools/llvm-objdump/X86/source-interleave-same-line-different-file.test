@@ -1,0 +1,12 @@
+## Test that source is printed when subsequent lines in the translation unit
+## come from the same line in two different files.
+
+# RUN: sed -e "s,SRC_COMPDIR,%/p/Inputs,g" %p/Inputs/source-interleave-same-line-different-file.ll > %t.ll
+# RUN: llc -o %t.o -filetype=obj -mtriple=x86_64-pc-linux %t.ll
+# RUN: llvm-objdump --source %t.o | FileCheck %s
+
+# CHECK:      0000000000000000 add1:
+# CHECK-NEXT: ; int add1(int a) { return a + 1; }
+#
+# CHECK:      0000000000000010 return4:
+# CHECK-NEXT: ; int return4() { return 4; }

@@ -22,6 +22,7 @@ define float @foo(%swift_error** swifterror %error_ptr_ref) {
 ; CHECK-O0: malloc
 ; CHECK-O0: mov [[ID2:r[0-9]+]], r0
 ; CHECK-O0: mov [[ID:r[0-9]+]], #1
+; CHECK-O0: strb [[ID]], [r0, #8]
 ; CHECK-O0: mov r8, [[ID2]]
 entry:
   %call = call i8* @malloc(i64 16)
@@ -181,7 +182,7 @@ define float @foo_loop(%swift_error** swifterror %error_ptr_ref, i32 %cc, float 
 ; CHECK-APPLE: mov r0, #16
 ; CHECK-APPLE: malloc
 ; CHECK-APPLE: strb r{{.*}}, [r0, #8]
-; CHECK-APPLE: ble
+; CHECK-APPLE: b
 
 ; CHECK-O0-LABEL: foo_loop:
 ; CHECK-O0: cmp r{{.*}}, #0

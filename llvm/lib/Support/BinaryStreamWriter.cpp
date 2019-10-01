@@ -1,9 +1,8 @@
 //===- BinaryStreamWriter.cpp - Writes objects to a BinaryStream ----------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -12,6 +11,7 @@
 #include "llvm/Support/BinaryStreamError.h"
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/BinaryStreamRef.h"
+#include "llvm/Support/LEB128.h"
 
 using namespace llvm;
 
@@ -30,6 +30,18 @@ Error BinaryStreamWriter::writeBytes(ArrayRef<uint8_t> Buffer) {
     return EC;
   Offset += Buffer.size();
   return Error::success();
+}
+
+Error BinaryStreamWriter::writeULEB128(uint64_t Value) {
+  uint8_t EncodedBytes[10] = {0};
+  unsigned Size = encodeULEB128(Value, &EncodedBytes[0]);
+  return writeBytes({EncodedBytes, Size});
+}
+
+Error BinaryStreamWriter::writeSLEB128(int64_t Value) {
+  uint8_t EncodedBytes[10] = {0};
+  unsigned Size = encodeSLEB128(Value, &EncodedBytes[0]);
+  return writeBytes({EncodedBytes, Size});
 }
 
 Error BinaryStreamWriter::writeCString(StringRef Str) {

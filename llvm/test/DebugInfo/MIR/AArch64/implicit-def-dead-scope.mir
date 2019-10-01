@@ -5,8 +5,10 @@
 #  encountering an IMPLICIT_DEF in its own lexical scope.
 
 # CHECK: .debug_info contents:
-# CHECK: DW_TAG_formal_parameter
-# CHECK:   DW_AT_const_value [DW_FORM_udata]   (0)
+# CHECK:       DW_TAG_formal_parameter
+# CHECK:       DW_AT_location [DW_FORM_sec_offset]
+# CHECK-NEXT:                 DW_OP_lit0, DW_OP_stack_value
+# CHECK-NEXT:  DW_AT_abstract_origin {{.*}} "name"
 --- |
   ; ModuleID = 't.ll'
   source_filename = "t.ll"
@@ -103,7 +105,7 @@
   !15 = distinct !DICompositeType(tag: DW_TAG_class_type, name: "v", file: !5, line: 97, size: 64, elements: !2, identifier: "_ZTS1v")
   !16 = !DISubroutineType(types: !2)
   !17 = !DISubprogram(name: "bv", linkageName: "_ZN1v2bvEv", scope: !15, file: !5, line: 98, type: !16, isLocal: false, isDefinition: false, scopeLine: 98, flags: DIFlagPrototyped, isOptimized: true)
-  !18 = !DILocalVariable(arg: 2, scope: !19, file: !5, line: 22, type: !21)
+  !18 = !DILocalVariable(name: "name", arg: 2, scope: !19, file: !5, line: 22, type: !21)
   !19 = distinct !DISubprogram(name: "m", linkageName: "_ZN1jILi6EN1a1fEE1mEj", scope: !11, file: !5, line: 22, type: !16, isLocal: false, isDefinition: true, scopeLine: 22, flags: DIFlagPrototyped, isOptimized: true, unit: !0, declaration: !20, retainedNodes: !2)
   !20 = !DISubprogram(name: "m", linkageName: "_ZN1jILi6EN1a1fEE1mEj", scope: !11, file: !5, line: 22, type: !16, isLocal: false, isDefinition: false, scopeLine: 22, flags: DIFlagPublic | DIFlagPrototyped, isOptimized: true)
   !21 = !DIDerivedType(tag: DW_TAG_typedef, name: "h", file: !5, line: 10, baseType: !22)

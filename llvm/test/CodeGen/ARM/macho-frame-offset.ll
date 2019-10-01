@@ -1,4 +1,4 @@
-; RUN: llc -mtriple thumbv7m-apple-macho -disable-fp-elim -o - %s | FileCheck %s
+; RUN: llc -mtriple thumbv7m-apple-macho -frame-pointer=all -o - %s | FileCheck %s
 
 define void @func() {
 ; CHECK-LABEL: func:

@@ -1,9 +1,8 @@
 //===- AMDGPURewriteOutArgumentsPass.cpp - Create struct returns ----------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -163,7 +162,7 @@ bool AMDGPURewriteOutArguments::checkArgumentUses(Value &Arg) const {
       // some casts between structs and non-structs, but we can't bitcast
       // directly between them.  directly bitcast between them.  Blender uses
       // some casts that look like { <3 x float> }* to <4 x float>*
-      if ((SrcEltTy->isStructTy() && (SrcEltTy->getNumContainedTypes() != 1)))
+      if ((SrcEltTy->isStructTy() && (SrcEltTy->getStructNumElements() != 1)))
         return false;
 
       // Clang emits OpenCL 3-vector type accesses with a bitcast to the
@@ -401,8 +400,8 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
       if (Val->getType() != EltTy) {
         Type *EffectiveEltTy = EltTy;
         if (StructType *CT = dyn_cast<StructType>(EltTy)) {
-          assert(CT->getNumContainedTypes() == 1);
-          EffectiveEltTy = CT->getContainedType(0);
+          assert(CT->getNumElements() == 1);
+          EffectiveEltTy = CT->getElementType(0);
         }
 
         if (DL->getTypeSizeInBits(EffectiveEltTy) !=

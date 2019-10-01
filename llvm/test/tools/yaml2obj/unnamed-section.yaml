@@ -1,6 +1,6 @@
 # Ensure yaml2obj doesn't crash on unnamed sections
 # RUN: yaml2obj %s -o %t
-# RUN: llvm-readobj -sections %t | FileCheck %s
+# RUN: llvm-readobj --sections %t | FileCheck %s
 
 !ELF
 FileHeader:

@@ -19,7 +19,7 @@ body: |
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = COPY $sgpr1
     %2:vgpr(s32) = COPY $vgpr0
-    %3:vgpr(s64) = COPY $vgpr3_vgpr4
+    %3:vgpr(p1) = COPY $vgpr3_vgpr4
     %4:sgpr(s32) = G_CONSTANT i32 1
     %5:sgpr(s32) = G_CONSTANT i32 4096
 
@@ -39,7 +39,7 @@ body: |
     ; GCN: [[VV:%[0-9]+]]:vgpr_32 = V_OR_B32_e32 [[SV]], [[VGPR0]]
     %9:vgpr(s32) = G_OR %8, %2
 
-    G_STORE %9, %3 :: (store 4 into %ir.global0)
+    G_STORE %9, %3 :: (store 4 into %ir.global0, addrspace 1)
 
 ...
 ---

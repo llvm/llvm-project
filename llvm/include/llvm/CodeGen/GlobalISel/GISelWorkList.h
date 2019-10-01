@@ -1,9 +1,8 @@
 //===- GISelWorkList.h - Worklist for GISel passes ----*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -18,6 +17,7 @@
 
 namespace llvm {
 
+class MachineInstr;
 class MachineFunction;
 
 // Worklist which mostly works similar to InstCombineWorkList, but on
@@ -25,57 +25,68 @@ class MachineFunction;
 // erasing an element doesn't move all elements over one place - instead just
 // nulls out the element of the vector.
 //
-// This worklist operates on instructions within a particular function. This is
-// important for acquiring the rights to modify/replace instructions a
-// GISelChangeObserver reports as the observer doesn't have the right to make
-// changes to the instructions it sees so we use our access to the
-// MachineFunction to establish that it's ok to add a given instruction to the
-// worklist.
-//
 // FIXME: Does it make sense to factor out common code with the
 // instcombinerWorkList?
 template<unsigned N>
 class GISelWorkList {
-  MachineFunction *MF;
   SmallVector<MachineInstr *, N> Worklist;
   DenseMap<MachineInstr *, unsigned> WorklistMap;
 
+#ifndef NDEBUG
+  bool Finalized = true;
+#endif
+
 public:
-  GISelWorkList(MachineFunction *MF) : MF(MF) {}
+  GISelWorkList() : WorklistMap(N) {}
 
   bool empty() const { return WorklistMap.empty(); }
 
   unsigned size() const { return WorklistMap.size(); }
 
-  /// Add the specified instruction to the worklist if it isn't already in it.
-  void insert(MachineInstr *I) {
-    // It would be safe to add this instruction to the worklist regardless but
-    // for consistency with the const version, check that the instruction we're
-    // adding would have been accepted if we were given a const pointer instead.
-    insert(const_cast<const MachineInstr *>(I));
+  // Since we don't know ahead of time how many instructions we're going to add
+  // to the worklist, and migrating densemap's elements is quite expensive
+  // everytime we resize, only insert to the smallvector (typically during the
+  // initial phase of populating lists). Before the worklist can be used,
+  // finalize should be called. Also assert with NDEBUG if list is ever used
+  // without finalizing. Note that unlike insert, we won't check for duplicates
+  // - so the ideal place to use this is during the initial prepopulating phase
+  // of most passes.
+  void deferred_insert(MachineInstr *I) {
+    Worklist.push_back(I);
+#ifndef NDEBUG
+    Finalized = false;
+#endif
   }
 
-  void insert(const MachineInstr *I) {
-    // Confirm we'd be able to find the non-const pointer we want to schedule if
-    // we wanted to. We have the right to schedule work that may modify any
-    // instruction in MF.
-    assert(I->getParent() && "Expected parent BB");
-    assert(I->getParent()->getParent() && "Expected parent function");
-    assert((!MF || I->getParent()->getParent() == MF) &&
-           "Expected parent function to be current function or not given");
+  // This should only be called when using deferred_insert.
+  // This asserts that the WorklistMap is empty, and then
+  // inserts all the elements in the Worklist into the map.
+  // It also asserts if there are any duplicate elements found.
+  void finalize() {
+    assert(WorklistMap.empty() && "Expecting empty worklistmap");
+    if (Worklist.size() > N)
+      WorklistMap.reserve(Worklist.size());
+    for (unsigned i = 0; i < Worklist.size(); ++i)
+      if (!WorklistMap.try_emplace(Worklist[i], i).second)
+        llvm_unreachable("Duplicate elements in the list");
+#ifndef NDEBUG
+    Finalized = true;
+#endif
+  }
 
-    // But don't actually do the search since we can derive it from the const
-    // pointer.
-    MachineInstr *NonConstI = const_cast<MachineInstr *>(I);
-    if (WorklistMap.try_emplace(NonConstI, Worklist.size()).second) {
-      Worklist.push_back(NonConstI);
-    }
+  /// Add the specified instruction to the worklist if it isn't already in it.
+  void insert(MachineInstr *I) {
+    assert(Finalized && "GISelWorkList used without finalizing");
+    if (WorklistMap.try_emplace(I, Worklist.size()).second)
+      Worklist.push_back(I);
   }
 
   /// Remove I from the worklist if it exists.
   void remove(const MachineInstr *I) {
+    assert((Finalized || WorklistMap.empty()) && "Neither finalized nor empty");
     auto It = WorklistMap.find(I);
-    if (It == WorklistMap.end()) return; // Not in worklist.
+    if (It == WorklistMap.end())
+      return; // Not in worklist.
 
     // Don't bother moving everything down, just null out the slot.
     Worklist[It->second] = nullptr;
@@ -83,7 +94,13 @@ public:
     WorklistMap.erase(It);
   }
 
+  void clear() {
+    Worklist.clear();
+    WorklistMap.clear();
+  }
+
   MachineInstr *pop_back_val() {
+    assert(Finalized && "GISelWorkList used without finalizing");
     MachineInstr *I;
     do {
       I = Worklist.pop_back_val();

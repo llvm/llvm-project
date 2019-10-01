@@ -1,5 +1,5 @@
 # RUN: llvm-mc -triple s390x-linux-gnu -filetype=obj %s | \
-# RUN: llvm-readobj -s -sd | FileCheck %s
+# RUN: llvm-readobj -S --sd | FileCheck %s
 
 .section word, "aw"
 .word 0xabcd

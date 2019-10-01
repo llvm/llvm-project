@@ -1,9 +1,8 @@
 //===- ArgumentPromotion.cpp - Promote by-reference arguments -------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -49,6 +48,7 @@
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
@@ -566,8 +566,8 @@ static void markIndicesSafe(const IndicesVector &ToMark,
 /// This method limits promotion of aggregates to only promote up to three
 /// elements of the aggregate in order to avoid exploding the number of
 /// arguments passed in.
-static bool isSafeToPromoteArgument(Argument *Arg, bool isByValOrInAlloca,
-                                    AAResults &AAR, unsigned MaxElements) {
+static bool isSafeToPromoteArgument(Argument *Arg, bool isByVal, AAResults &AAR,
+                                    unsigned MaxElements) {
   using GEPIndicesSet = std::set<IndicesVector>;
 
   // Quick exit for unused arguments
@@ -589,9 +589,6 @@ static bool isSafeToPromoteArgument(Argument *Arg, bool isByValOrInAlloca,
   //
   // This set will contain all sets of indices that are loaded in the entry
   // block, and thus are safe to unconditionally load in the caller.
-  //
-  // This optimization is also safe for InAlloca parameters, because it verifies
-  // that the address isn't captured.
   GEPIndicesSet SafeToUnconditionallyLoad;
 
   // This set contains all the sets of indices that we are planning to promote.
@@ -599,7 +596,7 @@ static bool isSafeToPromoteArgument(Argument *Arg, bool isByValOrInAlloca,
   GEPIndicesSet ToPromote;
 
   // If the pointer is always valid, any load with first index 0 is valid.
-  if (isByValOrInAlloca || allCallersPassInValidPointerForArgument(Arg))
+  if (isByVal || allCallersPassInValidPointerForArgument(Arg))
     SafeToUnconditionallyLoad.insert(IndicesVector(1, 0));
 
   // First, iterate the entry block and mark loads of (geps of) arguments as
@@ -656,8 +653,7 @@ static bool isSafeToPromoteArgument(Argument *Arg, bool isByValOrInAlloca,
         // TODO: This runs the above loop over and over again for dead GEPs
         // Couldn't we just do increment the UI iterator earlier and erase the
         // use?
-        return isSafeToPromoteArgument(Arg, isByValOrInAlloca, AAR,
-                                       MaxElements);
+        return isSafeToPromoteArgument(Arg, isByVal, AAR, MaxElements);
       }
 
       // Ensure that all of the indices are constants.
@@ -813,6 +809,21 @@ static bool canPaddingBeAccessed(Argument *arg) {
   return false;
 }
 
+static bool areFunctionArgsABICompatible(
+    const Function &F, const TargetTransformInfo &TTI,
+    SmallPtrSetImpl<Argument *> &ArgsToPromote,
+    SmallPtrSetImpl<Argument *> &ByValArgsToTransform) {
+  for (const Use &U : F.uses()) {
+    CallSite CS(U.getUser());
+    const Function *Caller = CS.getCaller();
+    const Function *Callee = CS.getCalledFunction();
+    if (!TTI.areFunctionArgsABICompatible(Caller, Callee, ArgsToPromote) ||
+        !TTI.areFunctionArgsABICompatible(Caller, Callee, ByValArgsToTransform))
+      return false;
+  }
+  return true;
+}
+
 /// PromoteArguments - This method checks the specified function to see if there
 /// are any promotable arguments and if it is safe to promote the function (for
 /// example, all callers are direct).  If safe to promote some arguments, it
@@ -821,7 +832,8 @@ static Function *
 promoteArguments(Function *F, function_ref<AAResults &(Function &F)> AARGetter,
                  unsigned MaxElements,
                  Optional<function_ref<void(CallSite OldCS, CallSite NewCS)>>
-                     ReplaceCallSite) {
+                     ReplaceCallSite,
+                 const TargetTransformInfo &TTI) {
   // Don't perform argument promotion for naked functions; otherwise we can end
   // up removing parameters that are seemingly 'not used' as they are referred
   // to in the assembly.
@@ -840,6 +852,11 @@ promoteArguments(Function *F, function_ref<AAResults &(Function &F)> AARGetter,
   if (F->isVarArg())
     return nullptr;
 
+  // Don't transform functions that receive inallocas, as the transformation may
+  // not be safe depending on calling convention.
+  if (F->getAttributes().hasAttrSomewhere(Attribute::InAlloca))
+    return nullptr;
+
   // First check: see if there are any pointer arguments!  If not, quick exit.
   SmallVector<Argument *, 16> PointerArgs;
   for (Argument &I : F->args())
@@ -850,7 +867,7 @@ promoteArguments(Function *F, function_ref<AAResults &(Function &F)> AARGetter,
 
   // Second check: make sure that all callers are direct callers.  We can't
   // transform functions that have indirect callers.  Also see if the function
-  // is self-recursive.
+  // is self-recursive and check that target features are compatible.
   bool isSelfRecursive = false;
   for (Use &U : F->uses()) {
     CallSite CS(U.getUser());
@@ -898,8 +915,7 @@ promoteArguments(Function *F, function_ref<AAResults &(Function &F)> AARGetter,
 
     // If this is a byval argument, and if the aggregate type is small, just
     // pass the elements, which is always safe, if the passed value is densely
-    // packed or if we can prove the padding bytes are never accessed. This does
-    // not apply to inalloca.
+    // packed or if we can prove the padding bytes are never accessed.
     bool isSafeToPromote =
         PtrArg->hasByValAttr() &&
         (isDenselyPacked(AgTy, DL) || !canPaddingBeAccessed(PtrArg));
@@ -950,13 +966,17 @@ promoteArguments(Function *F, function_ref<AAResults &(Function &F)> AARGetter,
     }
 
     // Otherwise, see if we can promote the pointer to its value.
-    if (isSafeToPromoteArgument(PtrArg, PtrArg->hasByValOrInAllocaAttr(), AAR,
+    if (isSafeToPromoteArgument(PtrArg, PtrArg->hasByValAttr(), AAR,
                                 MaxElements))
       ArgsToPromote.insert(PtrArg);
   }
 
   // No promotable pointer arguments.
   if (ArgsToPromote.empty() && ByValArgsToTransform.empty())
+    return nullptr;
+
+  if (!areFunctionArgsABICompatible(*F, TTI, ArgsToPromote,
+                                    ByValArgsToTransform))
     return nullptr;
 
   return doPromotion(F, ArgsToPromote, ByValArgsToTransform, ReplaceCallSite);
@@ -984,7 +1004,9 @@ PreservedAnalyses ArgumentPromotionPass::run(LazyCallGraph::SCC &C,
         return FAM.getResult<AAManager>(F);
       };
 
-      Function *NewF = promoteArguments(&OldF, AARGetter, MaxElements, None);
+      const TargetTransformInfo &TTI = FAM.getResult<TargetIRAnalysis>(OldF);
+      Function *NewF =
+          promoteArguments(&OldF, AARGetter, MaxElements, None, TTI);
       if (!NewF)
         continue;
       LocalChange = true;
@@ -1022,6 +1044,7 @@ struct ArgPromotion : public CallGraphSCCPass {
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<TargetLibraryInfoWrapperPass>();
+    AU.addRequired<TargetTransformInfoWrapperPass>();
     getAAResultsAnalysisUsage(AU);
     CallGraphSCCPass::getAnalysisUsage(AU);
   }
@@ -1047,6 +1070,7 @@ INITIALIZE_PASS_BEGIN(ArgPromotion, "argpromotion",
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(CallGraphWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_END(ArgPromotion, "argpromotion",
                     "Promote 'by reference' arguments to scalars", false, false)
 
@@ -1080,11 +1104,15 @@ bool ArgPromotion::runOnSCC(CallGraphSCC &SCC) {
         CallGraphNode *NewCalleeNode =
             CG.getOrInsertFunction(NewCS.getCalledFunction());
         CallGraphNode *CallerNode = CG[Caller];
-        CallerNode->replaceCallEdge(OldCS, NewCS, NewCalleeNode);
+        CallerNode->replaceCallEdge(*cast<CallBase>(OldCS.getInstruction()),
+                                    *cast<CallBase>(NewCS.getInstruction()),
+                                    NewCalleeNode);
       };
 
+      const TargetTransformInfo &TTI =
+          getAnalysis<TargetTransformInfoWrapperPass>().getTTI(*OldF);
       if (Function *NewF = promoteArguments(OldF, AARGetter, MaxElements,
-                                            {ReplaceCallSite})) {
+                                            {ReplaceCallSite}, TTI)) {
         LocalChange = true;
 
         // Update the call graph for the newly promoted function.

@@ -6,7 +6,7 @@
 
 # RUN: yaml2obj %s -o %t
 # RUN: llvm-objcopy -R .text2 %t %t2
-# RUN: llvm-readobj -file-headers -program-headers -sections %t2 | FileCheck %s
+# RUN: llvm-readobj --file-headers --program-headers --sections %t2 | FileCheck %s
 # RUN: od -t x1 -j 8192 %t2 | FileCheck %s --check-prefix=DATA
 
 !ELF

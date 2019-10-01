@@ -149,6 +149,9 @@ vpcmpgtq        (%rax), %ymm1, %ymm2
 vpcmpgtw        %ymm0, %ymm1, %ymm2
 vpcmpgtw        (%rax), %ymm1, %ymm2
 
+vperm2i128      $1, %ymm0, %ymm1, %ymm2
+vperm2i128      $1, (%rax), %ymm1, %ymm2
+
 vpermd          %ymm0, %ymm1, %ymm2
 vpermd          (%rax), %ymm1, %ymm2
 
@@ -168,7 +171,7 @@ vpgatherdq      %xmm0, (%rax,%xmm1,2), %xmm2
 vpgatherdq      %ymm0, (%rax,%xmm1,2), %ymm2
 
 vpgatherqd      %xmm0, (%rax,%xmm1,2), %xmm2
-vpgatherqq      %ymm0, (%rax,%ymm1,2), %ymm2
+vpgatherqd      %xmm0, (%rax,%ymm1,2), %xmm2
 
 vpgatherqq      %xmm0, (%rax,%xmm1,2), %xmm2
 vpgatherqq      %ymm0, (%rax,%ymm1,2), %ymm2
@@ -555,6 +558,8 @@ vpxor           (%rax), %ymm1, %ymm2
 # CHECK-NEXT:  2      12    1.00    *                   vpcmpgtq	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      1     0.50                        vpcmpgtw	%ymm0, %ymm1, %ymm2
 # CHECK-NEXT:  2      8     0.50    *                   vpcmpgtw	(%rax), %ymm1, %ymm2
+# CHECK-NEXT:  1      3     1.00                        vperm2i128	$1, %ymm0, %ymm1, %ymm2
+# CHECK-NEXT:  2      10    1.00    *                   vperm2i128	$1, (%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      3     1.00                        vpermd	%ymm0, %ymm1, %ymm2
 # CHECK-NEXT:  2      10    1.00    *                   vpermd	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      3     1.00                        vpermpd	$1, %ymm0, %ymm2
@@ -568,7 +573,7 @@ vpxor           (%rax), %ymm1, %ymm2
 # CHECK-NEXT:  12     26    2.67    *                   vpgatherdq	%xmm0, (%rax,%xmm1,2), %xmm2
 # CHECK-NEXT:  20     27    4.00    *                   vpgatherdq	%ymm0, (%rax,%xmm1,2), %ymm2
 # CHECK-NEXT:  22     25    5.00    *                   vpgatherqd	%xmm0, (%rax,%xmm1,2), %xmm2
-# CHECK-NEXT:  22     24    5.00    *                   vpgatherqq	%ymm0, (%rax,%ymm1,2), %ymm2
+# CHECK-NEXT:  22     28    5.00    *                   vpgatherqd	%xmm0, (%rax,%ymm1,2), %xmm2
 # CHECK-NEXT:  14     23    3.33    *                   vpgatherqq	%xmm0, (%rax,%xmm1,2), %xmm2
 # CHECK-NEXT:  22     24    5.00    *                   vpgatherqq	%ymm0, (%rax,%ymm1,2), %ymm2
 # CHECK-NEXT:  3      3     2.00                        vphaddd	%ymm0, %ymm1, %ymm2
@@ -771,7 +776,7 @@ vpxor           (%rax), %ymm1, %ymm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]
-# CHECK-NEXT:  -      -     202.67 89.67  97.17  97.17  5.00   280.67 28.00  1.67
+# CHECK-NEXT:  -      -     202.67 89.67  97.67  97.67  5.00   282.67 28.00  1.67
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    Instructions:
@@ -873,6 +878,8 @@ vpxor           (%rax), %ymm1, %ymm2
 # CHECK-NEXT:  -      -     1.00    -     0.50   0.50    -      -      -      -     vpcmpgtq	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  -      -      -     0.50    -      -      -     0.50    -      -     vpcmpgtw	%ymm0, %ymm1, %ymm2
 # CHECK-NEXT:  -      -      -     0.50   0.50   0.50    -     0.50    -      -     vpcmpgtw	(%rax), %ymm1, %ymm2
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vperm2i128	$1, %ymm0, %ymm1, %ymm2
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vperm2i128	$1, (%rax), %ymm1, %ymm2
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vpermd	%ymm0, %ymm1, %ymm2
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpermd	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vpermpd	$1, %ymm0, %ymm2
@@ -886,7 +893,7 @@ vpxor           (%rax), %ymm1, %ymm2
 # CHECK-NEXT:  -      -     4.00   1.50   1.00   1.00    -     3.50   1.00    -     vpgatherdq	%xmm0, (%rax,%xmm1,2), %xmm2
 # CHECK-NEXT:  -      -     6.67   2.17   2.00   2.00    -     5.17   2.00    -     vpgatherdq	%ymm0, (%rax,%xmm1,2), %ymm2
 # CHECK-NEXT:  -      -     8.67   2.17   2.00   2.00    -     5.17   2.00    -     vpgatherqd	%xmm0, (%rax,%xmm1,2), %xmm2
-# CHECK-NEXT:  -      -     8.67   2.17   2.00   2.00    -     5.17   2.00    -     vpgatherqq	%ymm0, (%rax,%ymm1,2), %ymm2
+# CHECK-NEXT:  -      -     8.67   2.17   2.00   2.00    -     5.17   2.00    -     vpgatherqd	%xmm0, (%rax,%ymm1,2), %xmm2
 # CHECK-NEXT:  -      -     5.00   1.50   1.00   1.00    -     4.50   1.00    -     vpgatherqq	%xmm0, (%rax,%xmm1,2), %xmm2
 # CHECK-NEXT:  -      -     8.67   2.17   2.00   2.00    -     5.17   2.00    -     vpgatherqq	%ymm0, (%rax,%ymm1,2), %ymm2
 # CHECK-NEXT:  -      -      -     0.50    -      -      -     2.50    -      -     vphaddd	%ymm0, %ymm1, %ymm2

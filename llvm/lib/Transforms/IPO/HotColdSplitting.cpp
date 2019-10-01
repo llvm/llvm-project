@@ -1,9 +1,8 @@
 //===- HotColdSplitting.cpp -- Outline Cold Regions -------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -33,7 +32,6 @@
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/CFG.h"
-#include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
@@ -67,7 +65,6 @@
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/CodeExtractor.h"
 #include "llvm/Transforms/Utils/Local.h"
-#include "llvm/Transforms/Utils/SSAUpdater.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <algorithm>
 #include <limits>
@@ -157,7 +154,7 @@ static bool mayExtractBlock(const BasicBlock &BB) {
 /// module has profile data), set entry count to 0 to ensure treated as cold.
 /// Return true if the function is changed.
 static bool markFunctionCold(Function &F, bool UpdateEntryCount = false) {
-  assert(!F.hasFnAttribute(Attribute::OptimizeNone) && "Can't mark this cold");
+  assert(!F.hasOptNone() && "Can't mark this cold");
   bool Changed = false;
   if (!F.hasFnAttribute(Attribute::Cold)) {
     F.addFnAttr(Attribute::Cold);
@@ -243,12 +240,6 @@ bool HotColdSplitting::shouldOutlineFrom(const Function &F) const {
 
   if (F.hasFnAttribute(Attribute::NoInline))
     return false;
-
-  // Support for outlining WinEH code has not been tested sufficiently. It may
-  // trigger verifier failures or miscompiles (see llvm.org/PR40710).
-  if (F.hasPersonalityFn())
-    if (isScopedEHPersonality(classifyEHPersonality(F.getPersonalityFn())))
-      return false;
 
   if (F.hasFnAttribute(Attribute::SanitizeAddress) ||
       F.hasFnAttribute(Attribute::SanitizeHWAddress) ||
@@ -428,6 +419,7 @@ Function *HotColdSplitting::extractColdRegion(const BlockSequence &Region,
 /// A pair of (basic block, score).
 using BlockTy = std::pair<BasicBlock *, unsigned>;
 
+namespace {
 /// A maximal outlining region. This contains all blocks post-dominated by a
 /// sink block, the sink block itself, and all blocks dominated by the sink.
 /// If sink-predecessors and sink-successors cannot be extracted in one region,
@@ -602,6 +594,7 @@ public:
     return SubRegion;
   }
 };
+} // namespace
 
 bool HotColdSplitting::outlineColdRegions(Function &F, bool HasProfileSummary) {
   bool Changed = false;
@@ -638,11 +631,7 @@ bool HotColdSplitting::outlineColdRegions(Function &F, bool HasProfileSummary) {
     if (ColdBlocks.count(BB))
       continue;
 
-    // apple/swift-llvm: The use of ProfileSummaryInfo to identify cold blocks
-    // has not yet been qualified, and may introduce performance regressions
-    // (rdar://47622429). Disable it.
-    const bool EnablePSI = false;
-    bool Cold = (EnablePSI && BFI && PSI->isColdBlock(BB, BFI)) ||
+    bool Cold = (BFI && PSI->isColdBlock(BB, BFI)) ||
                 (EnableStaticAnalyis && unlikelyExecuted(*BB));
     if (!Cold)
       continue;
@@ -710,7 +699,7 @@ bool HotColdSplitting::outlineColdRegions(Function &F, bool HasProfileSummary) {
 
 bool HotColdSplitting::run(Module &M) {
   bool Changed = false;
-  bool HasProfileSummary = M.getProfileSummary();
+  bool HasProfileSummary = (M.getProfileSummary(/* IsCS */ false) != nullptr);
   for (auto It = M.begin(), End = M.end(); It != End; ++It) {
     Function &F = *It;
 
@@ -719,7 +708,7 @@ bool HotColdSplitting::run(Module &M) {
       continue;
 
     // Do not modify `optnone` functions.
-    if (F.hasFnAttribute(Attribute::OptimizeNone))
+    if (F.hasOptNone())
       continue;
 
     // Detect inherently cold functions and mark them as such.

@@ -1,9 +1,8 @@
 //===- RISCVCompressInstEmitter.cpp - Generator for RISCV Compression -===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 // RISCVCompressInstEmitter implements a tablegen-driven CompressPat based
 // RISCV Instruction Compression mechanism.
@@ -65,6 +64,7 @@
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
+#include <set>
 #include <vector>
 using namespace llvm;
 
@@ -253,12 +253,14 @@ static bool verifyDagOpCount(CodeGenInstruction &Inst, DagInit *Dag,
   // Source instructions are non compressed instructions and don't have tied
   // operands.
   if (IsSource)
-    PrintFatalError("Input operands for Inst '" + Inst.TheDef->getName() +
-                    "' and input Dag operand count mismatch");
+    PrintFatalError(Inst.TheDef->getLoc(),
+                    "Input operands for Inst '" + Inst.TheDef->getName() +
+                        "' and input Dag operand count mismatch");
   // The Dag can't have more arguments than the Instruction.
   if (Dag->getNumArgs() > Inst.Operands.size())
-    PrintFatalError("Inst '" + Inst.TheDef->getName() +
-                    "' and Dag operand count mismatch");
+    PrintFatalError(Inst.TheDef->getLoc(),
+                    "Inst '" + Inst.TheDef->getName() +
+                        "' and Dag operand count mismatch");
 
   // The Instruction might have tied operands so the Dag might have
   //  a fewer operand count.
@@ -268,8 +270,9 @@ static bool verifyDagOpCount(CodeGenInstruction &Inst, DagInit *Dag,
       --RealCount;
 
   if (Dag->getNumArgs() != RealCount)
-    PrintFatalError("Inst '" + Inst.TheDef->getName() +
-                    "' and Dag operand count mismatch");
+    PrintFatalError(Inst.TheDef->getLoc(),
+                    "Inst '" + Inst.TheDef->getName() +
+                        "' and Dag operand count mismatch");
   return true;
 }
 
@@ -472,7 +475,7 @@ void RISCVCompressInstEmitter::evaluateCompressPat(Record *Rec) {
                                          SourceOperandMap, DestOperandMap));
 }
 
-static void getReqFeatures(std::map<StringRef, int> &FeaturesMap,
+static void getReqFeatures(std::set<StringRef> &FeaturesSet,
                            const std::vector<Record *> &ReqFeatures) {
   for (auto &R : ReqFeatures) {
     StringRef AsmCondString = R->getValueAsString("AssemblerCondString");
@@ -481,11 +484,9 @@ static void getReqFeatures(std::map<StringRef, int> &FeaturesMap,
     SmallVector<StringRef, 4> Ops;
     SplitString(AsmCondString, Ops, ",");
     assert(!Ops.empty() && "AssemblerCondString cannot be empty");
-
     for (auto &Op : Ops) {
       assert(!Op.empty() && "Empty operator");
-      if (FeaturesMap.find(Op) == FeaturesMap.end())
-        FeaturesMap[Op] = FeaturesMap.size();
+      FeaturesSet.insert(Op);
     }
   }
 }
@@ -530,7 +531,8 @@ void RISCVCompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
                                                        bool Compress) {
   Record *AsmWriter = Target.getAsmWriter();
   if (!AsmWriter->getValueAsInt("PassSubtarget"))
-    PrintFatalError("'PassSubtarget' is false. SubTargetInfo object is needed "
+    PrintFatalError(AsmWriter->getLoc(),
+                    "'PassSubtarget' is false. SubTargetInfo object is needed "
                     "for target features.\n");
 
   std::string Namespace = Target.getName();
@@ -540,15 +542,15 @@ void RISCVCompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
   // transformed to a C_ADD or a C_MV. When emitting 'uncompress()' function the
   // source and destination are flipped and the sort key needs to change
   // accordingly.
-  std::stable_sort(CompressPatterns.begin(), CompressPatterns.end(),
-                   [Compress](const CompressPat &LHS, const CompressPat &RHS) {
-                     if (Compress)
-                       return (LHS.Source.TheDef->getName().str() <
-                               RHS.Source.TheDef->getName().str());
-                     else
-                       return (LHS.Dest.TheDef->getName().str() <
-                               RHS.Dest.TheDef->getName().str());
-                   });
+  llvm::stable_sort(CompressPatterns,
+                    [Compress](const CompressPat &LHS, const CompressPat &RHS) {
+                      if (Compress)
+                        return (LHS.Source.TheDef->getName().str() <
+                                RHS.Source.TheDef->getName().str());
+                      else
+                        return (LHS.Dest.TheDef->getName().str() <
+                                RHS.Dest.TheDef->getName().str());
+                    });
 
   // A list of MCOperandPredicates for all operands in use, and the reverse map.
   std::vector<const Record *> MCOpPredicates;
@@ -617,9 +619,9 @@ void RISCVCompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
       CaseStream.indent(4) << "case " + Namespace + "::" + CurOp + ": {\n";
     }
 
-    std::map<StringRef, int> FeaturesMap;
+    std::set<StringRef> FeaturesSet;
     // Add CompressPat required features.
-    getReqFeatures(FeaturesMap, CompressPat.PatReqFeatures);
+    getReqFeatures(FeaturesSet, CompressPat.PatReqFeatures);
 
     // Add Dest instruction required features.
     std::vector<Record *> ReqFeatures;
@@ -627,11 +629,10 @@ void RISCVCompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
     copy_if(RF, std::back_inserter(ReqFeatures), [](Record *R) {
       return R->getValueAsBit("AssemblerMatcherPredicate");
     });
-    getReqFeatures(FeaturesMap, ReqFeatures);
+    getReqFeatures(FeaturesSet, ReqFeatures);
 
     // Emit checks for all required features.
-    for (auto &F : FeaturesMap) {
-      StringRef Op = F.first;
+    for (auto &Op : FeaturesSet) {
       if (Op[0] == '!')
         CondStream.indent(6) << ("!STI.getFeatureBits()[" + Namespace +
                                  "::" + Op.substr(1) + "]")

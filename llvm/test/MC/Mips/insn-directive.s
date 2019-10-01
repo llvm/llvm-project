@@ -1,7 +1,7 @@
 # RUN: llvm-mc %s -arch=mips -mcpu=mips32 | FileCheck %s --check-prefix=ASM
 
 # RUN: llvm-mc %s -arch=mips -mcpu=mips32 -filetype=obj -o - | \
-# RUN:   llvm-readobj -symbols - | FileCheck %s --check-prefix=OBJ
+# RUN:   llvm-readobj --symbols - | FileCheck %s --check-prefix=OBJ
 
   .set micromips
 

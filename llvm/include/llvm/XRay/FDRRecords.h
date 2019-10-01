@@ -1,9 +1,8 @@
 //===- FDRRecords.h - XRay Flight Data Recorder Mode Records --------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -418,16 +417,16 @@ public:
 
 class RecordInitializer : public RecordVisitor {
   DataExtractor &E;
-  uint32_t &OffsetPtr;
+  uint64_t &OffsetPtr;
   uint16_t Version;
 
 public:
   static constexpr uint16_t DefaultVersion = 5u;
 
-  explicit RecordInitializer(DataExtractor &DE, uint32_t &OP, uint16_t V)
+  explicit RecordInitializer(DataExtractor &DE, uint64_t &OP, uint16_t V)
       : RecordVisitor(), E(DE), OffsetPtr(OP), Version(V) {}
 
-  explicit RecordInitializer(DataExtractor &DE, uint32_t &OP)
+  explicit RecordInitializer(DataExtractor &DE, uint64_t &OP)
       : RecordInitializer(DE, OP, DefaultVersion) {}
 
   Error visit(BufferExtents &) override;

@@ -1,9 +1,13 @@
 ; RUN: llc < %s -march=mips -mcpu=mips2 -relocation-model=pic | FileCheck %s \
-; RUN:    --check-prefixes=ALL,GP32
+; RUN:    --check-prefixes=ALL,GP32,GP32-M
 ; RUN: llc < %s -march=mips -mcpu=mips32 -relocation-model=pic | FileCheck %s \
-; RUN:    --check-prefixes=ALL,GP32
+; RUN:    --check-prefixes=ALL,GP32,GP32-M
 ; RUN: llc < %s -march=mips -mcpu=mips32r6 -relocation-model=pic | FileCheck %s \
-; RUN:    --check-prefixes=ALL,GP32
+; RUN:    --check-prefixes=ALL,GP32,GP32-M
+; RUN: llc < %s -march=mips -mcpu=mips32r2 -mattr=+micromips -relocation-model=pic | FileCheck %s \
+; RUN:    --check-prefixes=ALL,GP32,GP32-MM,GP32-MMR2
+; RUN: llc < %s -march=mips -mcpu=mips32r6 -mattr=+micromips -relocation-model=pic | FileCheck %s \
+; RUN:    --check-prefixes=ALL,GP32,GP32-MM,GP32-MMR6
 ; RUN: llc < %s -march=mips64 -mcpu=mips3 -relocation-model=pic | FileCheck %s \
 ; RUN:    --check-prefixes=ALL,GP64,N64
 ; RUN: llc < %s -march=mips64 -mcpu=mips64 -relocation-model=pic | FileCheck %s \
@@ -30,7 +34,9 @@ entry:
   ; FIXME: We are currently over-allocating stack space. This particular case
   ;        needs a frame of up to between 16 and 512-bytes but currently
   ;        allocates between 1024 and 1536 bytes
-  ; GP32:       addiu   $sp, $sp, -1024
+  ; GP32-M:     addiu   $sp, $sp, -1024
+  ; GP32-MMR2:  addiusp -1024
+  ; GP32-MMR6:  addiu   $sp, $sp, -1024
   ; GP32:       sw      $ra, 1020($sp)
   ; GP32:       sw      $fp, 1016($sp)
   ;
@@ -40,13 +46,16 @@ entry:
 
   ; body
   ; GP32:       addiu   $[[T1:[0-9]+]], $sp, 512
-  ; GP32:       sw      $[[T1]], 16($sp)
+  ; GP32-M:     sw      $[[T1]], 16($sp)
+  ; GP32-MM:    sw16    $[[T1]], 16(${{[0-9]+}})
 
   ; epilogue
   ; GP32:       move    $sp, $fp
   ; GP32:       lw      $fp, 1016($sp)
   ; GP32:       lw      $ra, 1020($sp)
-  ; GP32:       addiu   $sp, $sp, 1024
+  ; GP32-M:     addiu   $sp, $sp, 1024
+  ; GP32-MMR2:  addiusp 1024
+  ; GP32-MMR6:  addiu   $sp, $sp, 1024
 
   %a = alloca i32, align 512
   call void @helper_01(i32 0, i32 0, i32 0, i32 0, i32* %a)
@@ -106,10 +115,12 @@ entry:
 
   ; body
   ; FIXME: We are currently over-allocating stack space.
-  ; GP32-DAG:   addiu   $[[T0:[0-9]+]], $sp, 512
-  ; GP32-DAG:   sw      $[[T0]], 16($sp)
-  ; GP32-DAG:   lw      $[[T1:[0-9]+]], 1040($fp)
-  ; GP32-DAG:   sw      $[[T1]], 20($sp)
+  ; GP32-DAG:     addiu   $[[T0:[0-9]+]], $sp, 512
+  ; GP32-M-DAG:   sw      $[[T0]], 16($sp)
+  ; GP32-MM-DAG:  sw16    $[[T0]], 16(${{[0-9]+}})
+  ; GP32-DAG:     lw      $[[T1:[0-9]+]], 1040($fp)
+  ; GP32-M-DAG:   sw      $[[T1]], 20($sp)
+  ; GP32-MM-DAG:  sw16    $[[T1]], 20(${{[0-9]+}})
 
   %a = alloca i32, align 512
   call void @helper_03(i32 0, i32 0, i32 0, i32 0, i32* %a, i32* %b)
@@ -149,7 +160,9 @@ entry:
 
   ; prologue
   ; FIXME: We are currently over-allocating stack space.
-  ; GP32:       addiu   $sp, $sp, -1024
+  ; GP32-M:     addiu   $sp, $sp, -1024
+  ; GP32-MMR2:  addiusp -1024
+  ; GP32-MMR6:  addiu   $sp, $sp, -1024
   ; GP32:       sw      $fp, 1020($sp)
   ; GP32:       sw      $23, 1016($sp)
   ;
@@ -166,7 +179,9 @@ entry:
   ; GP32:       move    $sp, $fp
   ; GP32:       lw      $23, 1016($sp)
   ; GP32:       lw      $fp, 1020($sp)
-  ; GP32:       addiu   $sp, $sp, 1024
+  ; GP32-M:     addiu   $sp, $sp, 1024
+  ; GP32-MMR2:  addiusp 1024
+  ; GP32-MMR6:  addiu   $sp, $sp, 1024
 
   %a0 = alloca i32, i32 %sz, align 512
   %a1 = alloca i32, align 4
@@ -229,7 +244,8 @@ entry:
   ; GP32-DAG:       addiu   $[[T1:[0-9]+]], $zero, 222
   ; GP32-DAG:       sw      $[[T1]], 508($23)
   ;
-  ; GP32-DAG:       sw      $[[T2:[0-9]+]], 16($sp)
+  ; GP32-M-DAG:     sw      $[[T2:[0-9]+]], 16($sp)
+  ; GP32-MM-DAG:    sw16    $[[T2:[0-9]+]], 16($[[T3:[0-9]+]])
 
   %a0 = alloca i32, i32 %sz, align 512
   %a1 = alloca i32, align 4

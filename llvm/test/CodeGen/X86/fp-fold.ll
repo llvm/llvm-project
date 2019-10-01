@@ -99,6 +99,28 @@ define float @fsub_neg_y(float %x, float %y) {
   ret float %r
 }
 
+define <4 x float> @fsub_neg_y_vector(<4 x float> %x, <4 x float> %y) {
+; ANY-LABEL: fsub_neg_y_vector:
+; ANY:       # %bb.0:
+; ANY-NEXT:    mulps {{.*}}(%rip), %xmm0
+; ANY-NEXT:    retq
+  %mul = fmul <4 x float> %x, <float 5.0, float 5.0, float 5.0, float 5.0>
+  %add = fadd <4 x float> %mul, %y
+  %r = fsub nsz reassoc <4 x float> %y, %add
+  ret <4 x float> %r
+}
+
+define <4 x float> @fsub_neg_y_vector_nonuniform(<4 x float> %x, <4 x float> %y) {
+; ANY-LABEL: fsub_neg_y_vector_nonuniform:
+; ANY:       # %bb.0:
+; ANY-NEXT:    mulps {{.*}}(%rip), %xmm0
+; ANY-NEXT:    retq
+  %mul = fmul <4 x float> %x, <float 5.0, float 6.0, float 7.0, float 8.0>
+  %add = fadd <4 x float> %mul, %y
+  %r = fsub nsz reassoc <4 x float> %y, %add
+  ret <4 x float> %r
+}
+
 define float @fsub_neg_y_commute(float %x, float %y) {
 ; ANY-LABEL: fsub_neg_y_commute:
 ; ANY:       # %bb.0:
@@ -109,6 +131,18 @@ define float @fsub_neg_y_commute(float %x, float %y) {
   %r = fsub nsz reassoc float %y, %add
   ret float %r
 }
+
+define <4 x float> @fsub_neg_y_commute_vector(<4 x float> %x, <4 x float> %y) {
+; ANY-LABEL: fsub_neg_y_commute_vector:
+; ANY:       # %bb.0:
+; ANY-NEXT:    mulps {{.*}}(%rip), %xmm0
+; ANY-NEXT:    retq
+  %mul = fmul <4 x float> %x, <float 5.0, float 5.0, float 5.0, float 5.0>
+  %add = fadd <4 x float> %y, %mul
+  %r = fsub nsz reassoc <4 x float> %y, %add
+  ret <4 x float> %r
+}
+
 ; Y - (X + Y) --> -X
 
 define float @fsub_fadd_common_op_fneg(float %x, float %y) {
@@ -170,6 +204,20 @@ define float @fsub_negzero(float %x) {
 ; UNSAFE-NEXT:    retq
   %r = fsub float %x, -0.0
   ret float %r
+}
+
+define <4 x float> @fsub_negzero_vector(<4 x float> %x) {
+; STRICT-LABEL: fsub_negzero_vector:
+; STRICT:       # %bb.0:
+; STRICT-NEXT:    xorps %xmm1, %xmm1
+; STRICT-NEXT:    addps %xmm1, %xmm0
+; STRICT-NEXT:    retq
+;
+; UNSAFE-LABEL: fsub_negzero_vector:
+; UNSAFE:       # %bb.0:
+; UNSAFE-NEXT:    retq
+  %r = fsub <4 x float> %x, <float -0.0, float -0.0, float -0.0, float -0.0>
+  ret <4 x float> %r
 }
 
 define float @fsub_zero_nsz_1(float %x) {

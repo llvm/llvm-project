@@ -223,19 +223,14 @@ entry:
   %halfLim = ashr i32 %limit, 2
   br label %loop
 
-; This test originally checked that the OR instruction was cloned. Now the
-; ScalarEvolution is able to understand the loop evolution and that '%iv' at the
-; end of the loop is an even value. Thus '%val' is computed at the end of the
-; loop and the OR instruction is replaced by an ADD keeping the result
-; equivalent.
+; Test cloning an or, which is not an OverflowBinaryOperator.
 ;
 ; CHECK: sext
 ; CHECK: loop:
 ; CHECK: phi i64
 ; CHECK-NOT: sext
-; CHECK: icmp slt i64
+; CHECK: or i64
 ; CHECK: exit:
-; CHECK: add i64
 loop:
   %iv = phi i32 [ 0, %entry], [ %iv.next, %loop ]
   %t1 = sext i32 %iv to i64

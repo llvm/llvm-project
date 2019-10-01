@@ -1,9 +1,8 @@
 //===- GraphBuilder.cpp -----------------------------------------*- C++ -*-===//
 //
-//                      The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -39,17 +38,17 @@ using Instr = llvm::cfi_verify::FileAnalysis::Instr;
 namespace llvm {
 namespace cfi_verify {
 
-unsigned long long SearchLengthForUndef;
-unsigned long long SearchLengthForConditionalBranch;
+uint64_t SearchLengthForUndef;
+uint64_t SearchLengthForConditionalBranch;
 
-static cl::opt<unsigned long long, true> SearchLengthForUndefArg(
+static cl::opt<uint64_t, true> SearchLengthForUndefArg(
     "search-length-undef",
     cl::desc("Specify the maximum amount of instructions "
              "to inspect when searching for an undefined "
              "instruction from a conditional branch."),
     cl::location(SearchLengthForUndef), cl::init(2));
 
-static cl::opt<unsigned long long, true> SearchLengthForConditionalBranchArg(
+static cl::opt<uint64_t, true> SearchLengthForConditionalBranchArg(
     "search-length-cb",
     cl::desc("Specify the maximum amount of instructions "
              "to inspect when searching for a conditional "
@@ -94,17 +93,19 @@ void GraphResult::printToDOT(const FileAnalysis &Analysis,
 }
 
 GraphResult GraphBuilder::buildFlowGraph(const FileAnalysis &Analysis,
-                                         uint64_t Address) {
+                                         object::SectionedAddress Address) {
   GraphResult Result;
-  Result.BaseAddress = Address;
+  Result.BaseAddress = Address.Address;
   DenseSet<uint64_t> OpenedNodes;
 
   const auto &IndirectInstructions = Analysis.getIndirectInstructions();
 
-  if (IndirectInstructions.find(Address) == IndirectInstructions.end())
+  // check that IndirectInstructions contains specified Address
+  if (IndirectInstructions.find(Address) == IndirectInstructions.end()) {
     return Result;
+  }
 
-  buildFlowGraphImpl(Analysis, OpenedNodes, Result, Address, 0);
+  buildFlowGraphImpl(Analysis, OpenedNodes, Result, Address.Address, 0);
   return Result;
 }
 

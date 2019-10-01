@@ -1,9 +1,8 @@
 //===- TwoAddressInstructionPass.cpp - Two-Address instruction pass -------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -1245,8 +1244,13 @@ bool TwoAddressInstructionPass::tryInstructionCommute(MachineInstr *MI,
         ++NumAggrCommuted;
         // There might be more than two commutable operands, update BaseOp and
         // continue scanning.
+        // FIXME: This assumes that the new instruction's operands are in the
+        // same positions and were simply swapped.
         BaseOpReg = OtherOpReg;
         BaseOpKilled = OtherOpKilled;
+        // Resamples OpsNum in case the number of operands was reduced. This
+        // happens with X86.
+        OpsNum = MI->getDesc().getNumOperands();
         continue;
       }
       // If this was a commute based on kill, we won't do better continuing.

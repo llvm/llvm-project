@@ -446,7 +446,7 @@ define amdgpu_kernel void @v_insertelement_v2i16_dynamic_sgpr(<2 x i16> addrspac
 
 ; GCN-LABEL: {{^}}v_insertelement_v2f16_dynamic_vgpr:
 ; GFX89-DAG: s_mov_b32 [[MASKK:s[0-9]+]], 0xffff{{$}}
-; GCN-DAG: s_movk_i32 [[K:s[0-9]+]], 0x1234
+; GCN-DAG: s_mov_b32 [[K:s[0-9]+]], 0x12341234
 
 ; GCN-DAG: {{flat|global}}_load_dword [[IDX:v[0-9]+]]
 ; GCN-DAG: {{flat|global}}_load_dword [[VEC:v[0-9]+]]
@@ -611,25 +611,20 @@ define amdgpu_kernel void @v_insertelement_v4i16_2(<4 x i16> addrspace(1)* %out,
 ; GCN-DAG: s_load_dword [[VAL:s[0-9]+]]
 ; GCN-DAG: {{flat|global}}_load_dwordx2 v{{\[}}[[LO:[0-9]+]]:[[HI:[0-9]+]]{{\]}}
 
-; GCN-DAG: v_lshlrev_b32_e32 [[SCALED_IDX:v[0-9]+]], 4, [[IDX]]
+; GCN-DAG: s_mov_b32 s[[MASK_LO:[0-9]+]], 0xffff
 ; GCN-DAG: s_mov_b32 s[[MASK_HI:[0-9]+]], 0
-; GCN-DAG: s_mov_b32 s[[MASK_LO:[0-9]+]], 0xffff{{$}}
+; CIVI-DAG: s_and_b32 [[MASKED_VAL:s[0-9]+]], [[VAL]], s[[MASK_LO]]
+; VI-DAG: s_lshl_b32 [[SHIFTED_VAL:s[0-9]+]], [[MASKED_VAL]], 16
+; CI-DAG: s_lshl_b32 [[SHIFTED_VAL:s[0-9]+]], [[VAL]], 16
+; CIVI: s_or_b32 [[DUP_VAL:s[0-9]+]], [[MASKED_VAL]], [[SHIFTED_VAL]]
+; GCN-DAG: v_lshlrev_b32_e32 [[SCALED_IDX:v[0-9]+]], 4, [[IDX]]
+; GFX9-DAG: s_pack_ll_b32_b16 [[DUP_VAL:s[0-9]+]], [[VAL]], [[VAL]]
+; GFX89: v_lshlrev_b64 v[{{[0-9:]+}}], [[SCALED_IDX]], s{{\[}}[[MASK_LO]]:[[MASK_HI]]{{\]}}
+; CI: v_lshl_b64 v[{{[0-9:]+}}], s[{{[0-9:]+}}], [[SCALED_IDX]]
+; GCN: v_bfi_b32 v{{[0-9]+}}, v{{[0-9]+}}, [[DUP_VAL]], v{{[0-9]+}}
+; GCN: v_bfi_b32 v{{[0-9]+}}, v{{[0-9]+}}, [[DUP_VAL]], v{{[0-9]+}}
 
-; GFX89: v_lshlrev_b64 v{{\[}}[[SHIFT_LO:[0-9]+]]:[[SHIFT_HI:[0-9]+]]{{\]}}, [[SCALED_IDX]], s{{\[}}[[MASK_LO]]:[[MASK_HI]]{{\]}}
-; GFX89-DAG: v_not_b32_e32 v[[NOT_SHIFT_LO:[0-9+]]], v[[SHIFT_LO]]
-; GFX89-DAG: v_not_b32_e32 v[[NOT_SHIFT_HI:[0-9+]]], v[[SHIFT_HI]]
-; GFX89-DAG: v_and_b32_e32 v[[MASK:[0-9]+]], [[VAL]], v[[SHIFT_LO]]
-
-; GFX89-DAG: v_and_b32_e32 v[[AND0:[0-9]+]], v[[NOT_SHIFT_LO]], v[[LO]]
-; GFX89-DAG: v_and_b32_e32 v[[AND1:[0-9]+]], v[[NOT_SHIFT_HI]], v[[HI]]
-; GFX89: v_or_b32_sdwa v[[OR_SDWA:[0-9]+]], v[[MASK]], v[[AND0]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-
-
-; CI: v_lshl_b64 v{{\[}}[[SHIFT_LO:[0-9]+]]:[[SHIFT_HI:[0-9]+]]{{\]}}, s{{\[}}[[MASK_LO]]:[[MASK_HI]]{{\]}}, [[SCALED_IDX]]
-; CI-DAG: v_bfi_b32 v[[OR_SDWA:[0-9]+]], v[[SHIFT_LO]],
-; CI-DAG: v_bfi_b32 v[[AND1:[0-9]+]], v[[SHIFT_HI]], 0,
-
-; GCN: {{flat|global}}_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[}}[[OR_SDWA]]:[[AND1]]{{\]}}
+; GCN: {{flat|global}}_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}
 define amdgpu_kernel void @v_insertelement_v4i16_dynamic_vgpr(<4 x i16> addrspace(1)* %out, <4 x i16> addrspace(1)* %in, i32 %val) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %tid.ext = sext i32 %tid to i64

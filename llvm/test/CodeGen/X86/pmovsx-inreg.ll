@@ -53,12 +53,12 @@ define void @test2(<4 x i8>* %in, <4 x i64>* %out) nounwind {
 ;
 ; AVX1-LABEL: test2:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpmovsxbq 2(%rdi), %xmm0
-; AVX1-NEXT:    vpmovsxbq (%rdi), %xmm1
-; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
-; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vmovdqu %ymm1, (%rax)
-; AVX1-NEXT:    vmovups %ymm0, (%rsi)
+; AVX1-NEXT:    vpmovsxbq (%rdi), %xmm0
+; AVX1-NEXT:    vpmovsxbq 2(%rdi), %xmm1
+; AVX1-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vmovups %ymm2, (%rax)
+; AVX1-NEXT:    vmovdqu %xmm1, 16(%rsi)
+; AVX1-NEXT:    vmovdqu %xmm0, (%rsi)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
@@ -134,12 +134,12 @@ define void @test4(<8 x i8>* %in, <8 x i32>* %out) nounwind {
 ;
 ; AVX1-LABEL: test4:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpmovsxbd 4(%rdi), %xmm0
-; AVX1-NEXT:    vpmovsxbd (%rdi), %xmm1
-; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
-; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vmovdqu %ymm1, (%rax)
-; AVX1-NEXT:    vmovups %ymm0, (%rsi)
+; AVX1-NEXT:    vpmovsxbd (%rdi), %xmm0
+; AVX1-NEXT:    vpmovsxbd 4(%rdi), %xmm1
+; AVX1-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vmovups %ymm2, (%rax)
+; AVX1-NEXT:    vmovdqu %xmm1, 16(%rsi)
+; AVX1-NEXT:    vmovdqu %xmm0, (%rsi)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
@@ -215,12 +215,12 @@ define void @test6(<16 x i8>* %in, <16 x i16>* %out) nounwind {
 ;
 ; AVX1-LABEL: test6:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpmovsxbw 8(%rdi), %xmm0
-; AVX1-NEXT:    vpmovsxbw (%rdi), %xmm1
-; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
-; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vmovdqu %ymm1, (%rax)
-; AVX1-NEXT:    vmovups %ymm0, (%rsi)
+; AVX1-NEXT:    vpmovsxbw (%rdi), %xmm0
+; AVX1-NEXT:    vpmovsxbw 8(%rdi), %xmm1
+; AVX1-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vmovups %ymm2, (%rax)
+; AVX1-NEXT:    vmovdqu %xmm1, 16(%rsi)
+; AVX1-NEXT:    vmovdqu %xmm0, (%rsi)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
@@ -296,12 +296,12 @@ define void @test8(<4 x i16>* %in, <4 x i64>* %out) nounwind {
 ;
 ; AVX1-LABEL: test8:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpmovsxwq 4(%rdi), %xmm0
-; AVX1-NEXT:    vpmovsxwq (%rdi), %xmm1
-; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
-; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vmovdqu %ymm1, (%rax)
-; AVX1-NEXT:    vmovups %ymm0, (%rsi)
+; AVX1-NEXT:    vpmovsxwq (%rdi), %xmm0
+; AVX1-NEXT:    vpmovsxwq 4(%rdi), %xmm1
+; AVX1-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vmovups %ymm2, (%rax)
+; AVX1-NEXT:    vmovdqu %xmm1, 16(%rsi)
+; AVX1-NEXT:    vmovdqu %xmm0, (%rsi)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
@@ -377,12 +377,12 @@ define void @test10(<8 x i16>* %in, <8 x i32>* %out) nounwind {
 ;
 ; AVX1-LABEL: test10:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpmovsxwd 8(%rdi), %xmm0
-; AVX1-NEXT:    vpmovsxwd (%rdi), %xmm1
-; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
-; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vmovdqu %ymm1, (%rax)
-; AVX1-NEXT:    vmovups %ymm0, (%rsi)
+; AVX1-NEXT:    vpmovsxwd (%rdi), %xmm0
+; AVX1-NEXT:    vpmovsxwd 8(%rdi), %xmm1
+; AVX1-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vmovups %ymm2, (%rax)
+; AVX1-NEXT:    vmovdqu %xmm1, 16(%rsi)
+; AVX1-NEXT:    vmovdqu %xmm0, (%rsi)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
@@ -458,12 +458,12 @@ define void @test12(<4 x i32>* %in, <4 x i64>* %out) nounwind {
 ;
 ; AVX1-LABEL: test12:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpmovsxdq 8(%rdi), %xmm0
-; AVX1-NEXT:    vpmovsxdq (%rdi), %xmm1
-; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
-; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vmovdqu %ymm1, (%rax)
-; AVX1-NEXT:    vmovups %ymm0, (%rsi)
+; AVX1-NEXT:    vpmovsxdq (%rdi), %xmm0
+; AVX1-NEXT:    vpmovsxdq 8(%rdi), %xmm1
+; AVX1-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vmovups %ymm2, (%rax)
+; AVX1-NEXT:    vmovdqu %xmm1, 16(%rsi)
+; AVX1-NEXT:    vmovdqu %xmm0, (%rsi)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;

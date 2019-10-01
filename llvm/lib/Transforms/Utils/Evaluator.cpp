@@ -1,9 +1,8 @@
 //===- Evaluator.cpp - LLVM IR evaluator ----------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -175,6 +174,34 @@ static bool isSimpleEnoughPointerToCommit(Constant *C) {
   return false;
 }
 
+/// Apply 'Func' to Ptr. If this returns nullptr, introspect the pointer's
+/// type and walk down through the initial elements to obtain additional
+/// pointers to try. Returns the first non-null return value from Func, or
+/// nullptr if the type can't be introspected further.
+static Constant *
+evaluateBitcastFromPtr(Constant *Ptr, const DataLayout &DL,
+                       const TargetLibraryInfo *TLI,
+                       std::function<Constant *(Constant *)> Func) {
+  Constant *Val;
+  while (!(Val = Func(Ptr))) {
+    // If Ty is a struct, we can convert the pointer to the struct
+    // into a pointer to its first member.
+    // FIXME: This could be extended to support arrays as well.
+    Type *Ty = cast<PointerType>(Ptr->getType())->getElementType();
+    if (!isa<StructType>(Ty))
+      break;
+
+    IntegerType *IdxTy = IntegerType::get(Ty->getContext(), 32);
+    Constant *IdxZero = ConstantInt::get(IdxTy, 0, false);
+    Constant *const IdxList[] = {IdxZero, IdxZero};
+
+    Ptr = ConstantExpr::getGetElementPtr(Ty, Ptr, IdxList);
+    if (auto *FoldedPtr = ConstantFoldConstant(Ptr, DL, TLI))
+      Ptr = FoldedPtr;
+  }
+  return Val;
+}
+
 static Constant *getInitializer(Constant *C) {
   auto *GV = dyn_cast<GlobalVariable>(C);
   return GV && GV->hasDefinitiveInitializer() ? GV->getInitializer() : nullptr;
@@ -185,8 +212,14 @@ static Constant *getInitializer(Constant *C) {
 Constant *Evaluator::ComputeLoadResult(Constant *P) {
   // If this memory location has been recently stored, use the stored value: it
   // is the most up-to-date.
-  DenseMap<Constant*, Constant*>::const_iterator I = MutatedMemory.find(P);
-  if (I != MutatedMemory.end()) return I->second;
+  auto findMemLoc = [this](Constant *Ptr) {
+    DenseMap<Constant *, Constant *>::const_iterator I =
+        MutatedMemory.find(Ptr);
+    return I != MutatedMemory.end() ? I->second : nullptr;
+  };
+
+  if (Constant *Val = findMemLoc(P))
+    return Val;
 
   // Access it.
   if (GlobalVariable *GV = dyn_cast<GlobalVariable>(P)) {
@@ -204,13 +237,17 @@ Constant *Evaluator::ComputeLoadResult(Constant *P) {
       break;
     // Handle a constantexpr bitcast.
     case Instruction::BitCast:
-      Constant *Val = getVal(CE->getOperand(0));
-      auto MM = MutatedMemory.find(Val);
-      auto *I = (MM != MutatedMemory.end()) ? MM->second
-                                            : getInitializer(CE->getOperand(0));
-      if (I)
+      // We're evaluating a load through a pointer that was bitcast to a
+      // different type. See if the "from" pointer has recently been stored.
+      // If it hasn't, we may still be able to find a stored pointer by
+      // introspecting the type.
+      Constant *Val =
+          evaluateBitcastFromPtr(CE->getOperand(0), DL, TLI, findMemLoc);
+      if (!Val)
+        Val = getInitializer(CE->getOperand(0));
+      if (Val)
         return ConstantFoldLoadThroughBitcast(
-            I, P->getType()->getPointerElementType(), DL);
+            Val, P->getType()->getPointerElementType(), DL);
       break;
     }
   }
@@ -330,37 +367,26 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst,
                      << "Attempting to resolve bitcast on constant ptr.\n");
           // If we're evaluating a store through a bitcast, then we need
           // to pull the bitcast off the pointer type and push it onto the
-          // stored value.
-          Ptr = CE->getOperand(0);
+          // stored value. In order to push the bitcast onto the stored value,
+          // a bitcast from the pointer's element type to Val's type must be
+          // legal. If it's not, we can try introspecting the type to find a
+          // legal conversion.
 
-          Type *NewTy = cast<PointerType>(Ptr->getType())->getElementType();
-
-          // In order to push the bitcast onto the stored value, a bitcast
-          // from NewTy to Val's type must be legal.  If it's not, we can try
-          // introspecting NewTy to find a legal conversion.
-          Constant *NewVal;
-          while (!(NewVal = ConstantFoldLoadThroughBitcast(Val, NewTy, DL))) {
-            // If NewTy is a struct, we can convert the pointer to the struct
-            // into a pointer to its first member.
-            // FIXME: This could be extended to support arrays as well.
-            if (StructType *STy = dyn_cast<StructType>(NewTy)) {
-              NewTy = STy->getTypeAtIndex(0U);
-
-              IntegerType *IdxTy = IntegerType::get(NewTy->getContext(), 32);
-              Constant *IdxZero = ConstantInt::get(IdxTy, 0, false);
-              Constant * const IdxList[] = {IdxZero, IdxZero};
-
-              Ptr = ConstantExpr::getGetElementPtr(nullptr, Ptr, IdxList);
-              if (auto *FoldedPtr = ConstantFoldConstant(Ptr, DL, TLI))
-                Ptr = FoldedPtr;
-
-            // If we can't improve the situation by introspecting NewTy,
-            // we have to give up.
-            } else {
-              LLVM_DEBUG(dbgs() << "Failed to bitcast constant ptr, can not "
-                                   "evaluate.\n");
-              return false;
+          auto castValTy = [&](Constant *P) -> Constant * {
+            Type *Ty = cast<PointerType>(P->getType())->getElementType();
+            if (Constant *FV = ConstantFoldLoadThroughBitcast(Val, Ty, DL)) {
+              Ptr = P;
+              return FV;
             }
+            return nullptr;
+          };
+
+          Constant *NewVal =
+              evaluateBitcastFromPtr(CE->getOperand(0), DL, TLI, castValTy);
+          if (!NewVal) {
+            LLVM_DEBUG(dbgs() << "Failed to bitcast constant ptr, can not "
+                                 "evaluate.\n");
+            return false;
           }
 
           Val = NewVal;
@@ -541,7 +567,8 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst,
 
       if (Callee->isDeclaration()) {
         // If this is a function we can constant fold, do it.
-        if (Constant *C = ConstantFoldCall(CS, Callee, Formals, TLI)) {
+        if (Constant *C = ConstantFoldCall(cast<CallBase>(CS.getInstruction()),
+                                           Callee, Formals, TLI)) {
           InstResult = castCallResultIfNeeded(CS.getCalledValue(), C);
           if (!InstResult)
             return false;

@@ -199,7 +199,7 @@ body:             |
     DBG_VALUE $eax, _, !12, !20, debug-location !21
     $edi = MOV32ri 2
     CMP32ri8 killed $eax, 2, implicit-def $eflags, debug-location !26
-    JNE_1 %bb.2.if.end, implicit $eflags
+    JCC_1 %bb.2.if.end, 5, implicit $eflags
   
   bb.1.if.else:
     successors: %bb.2.if.end(0)
@@ -220,7 +220,7 @@ body:             |
     $ebx = MOV32rr $eax, debug-location !34
     DBG_VALUE $ebx, _, !14, !20, debug-location !33
     CMP32ri8 $ebx, 11, implicit-def $eflags, debug-location !37
-    JL_1 %bb.4.if.else.5, implicit killed $eflags, debug-location !37
+    JCC_1 %bb.4.if.else.5, 12, implicit killed $eflags, debug-location !37
   
   bb.3.if.then.3:
     successors: %bb.5.if.end.7(0)

@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=thumbv7-apple-darwin9 -mcpu=cortex-a8 -relocation-model=pic -disable-fp-elim -arm-atomic-cfg-tidy=0 | FileCheck %s
+; RUN: llc < %s -mtriple=thumbv7-apple-darwin9 -mcpu=cortex-a8 -relocation-model=pic -frame-pointer=all -arm-atomic-cfg-tidy=0 | FileCheck %s
 
 @csize = external global [100 x [20 x [4 x i8]]]		; <[100 x [20 x [4 x i8]]]*> [#uses=1]
 @vsize = external global [100 x [20 x [4 x i8]]]		; <[100 x [20 x [4 x i8]]]*> [#uses=1]

@@ -22,5 +22,5 @@ afterfor:		; preds = %forinc, %entry
 	ret i32 %j.0.lcssa
 }
 
-; CHECK: backedge-taken count is (-2147483632 + ((-1 + (-1 * %{{[xy]}})) smax (-1 + (-1 * %{{[xy]}}))))
+; CHECK: backedge-taken count is (-2147483633 + (-1 * (%{{[xy]}} smin %{{[xy]}})))
 

@@ -1,9 +1,8 @@
 //===-- BPFISelLowering.h - BPF DAG Lowering Interface ----------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -56,6 +55,7 @@ public:
                               MachineBasicBlock *BB) const override;
 
   bool getHasAlu32() const { return HasAlu32; }
+  bool getHasJmp32() const { return HasJmp32; }
   bool getHasJmpExt() const { return HasJmpExt; }
 
   EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Context,
@@ -66,6 +66,7 @@ public:
 private:
   // Control Instruction Selection Features
   bool HasAlu32;
+  bool HasJmp32;
   bool HasJmpExt;
 
   SDValue LowerBR_CC(SDValue Op, SelectionDAG &DAG) const;
@@ -100,7 +101,7 @@ private:
 
   EVT getOptimalMemOpType(uint64_t Size, unsigned DstAlign, unsigned SrcAlign,
                           bool IsMemset, bool ZeroMemset, bool MemcpyStrSrc,
-                          MachineFunction &MF) const override {
+                          const AttributeList &FuncAttributes) const override {
     return Size >= 8 ? MVT::i64 : MVT::i32;
   }
 

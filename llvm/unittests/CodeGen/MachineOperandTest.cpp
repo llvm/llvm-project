@@ -1,9 +1,8 @@
 //===- MachineOperandTest.cpp ---------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -397,6 +396,16 @@ TEST(MachineOperandTest, PrintPredicate) {
   raw_string_ostream OS(str);
   MO.print(OS, /*TRI=*/nullptr, /*IntrinsicInfo=*/nullptr);
   ASSERT_TRUE(OS.str() == "intpred(eq)");
+}
+
+TEST(MachineOperandTest, HashValue) {
+  char SymName1[] = "test";
+  char SymName2[] = "test";
+  MachineOperand MO1 = MachineOperand::CreateES(SymName1);
+  MachineOperand MO2 = MachineOperand::CreateES(SymName2);
+  ASSERT_NE(SymName1, SymName2);
+  ASSERT_EQ(hash_value(MO1), hash_value(MO2));
+  ASSERT_TRUE(MO1.isIdenticalTo(MO2));
 }
 
 } // end namespace

@@ -1,9 +1,8 @@
 //===- InferFunctionAttrs.cpp - Infer implicit function attributes --------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -26,7 +25,7 @@ static bool inferAllPrototypeAttributes(Module &M,
   for (Function &F : M.functions())
     // We only infer things using the prototype and the name; we don't need
     // definitions.
-    if (F.isDeclaration() && !F.hasFnAttribute((Attribute::OptimizeNone)))
+    if (F.isDeclaration() && !F.hasOptNone())
       Changed |= inferLibFuncAttributes(F, TLI);
 
   return Changed;

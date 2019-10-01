@@ -1,9 +1,8 @@
 //===- llvm/CodeGen/DwarfFile.h - Dwarf Debug Framework ---------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -59,7 +58,6 @@ public:
   MCSymbol *getSym() const { return RangeSym; }
   const DwarfCompileUnit &getCU() const { return *CU; }
   const SmallVectorImpl<RangeSpan> &getRanges() const { return Ranges; }
-  void addRange(RangeSpan Range) { Ranges.push_back(Range); }
 };
 
 class DwarfFile {
@@ -148,7 +146,7 @@ public:
   void emitUnits(bool UseOffsets);
 
   /// Emit the given unit to its section.
-  void emitUnit(DwarfUnit *U, bool UseOffsets);
+  void emitUnit(DwarfUnit *TheU, bool UseOffsets);
 
   /// Emit a set of abbreviations to the specific section.
   void emitAbbrevs(MCSection *);

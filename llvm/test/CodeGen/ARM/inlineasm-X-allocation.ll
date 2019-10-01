@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=armv7-none-eabi -mattr=-neon,-vfp2 %s -o - | FileCheck %s  -check-prefixes=COMMON,NOVFP
+; RUN: llc -mtriple=armv7-none-eabi -mattr=-neon,-vfp2d16sp %s -o - | FileCheck %s  -check-prefixes=COMMON,NOVFP
 ; RUN: llc -mtriple=armv7-none-eabi -mattr=+neon %s -float-abi=hard -o - | FileCheck %s -check-prefixes=COMMON,VFP
 
 ; The intent here is to test "X", which says that any operand whatsoever is allowed.

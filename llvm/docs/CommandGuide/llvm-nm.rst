@@ -12,8 +12,9 @@ DESCRIPTION
 The :program:`llvm-nm` utility lists the names of symbols from the LLVM bitcode
 files, object files, or :program:`ar` archives containing them, named on the
 command line.  Each symbol is listed along with some simple information about
-its provenance.  If no file name is specified, or *-* is used as a file name,
-:program:`llvm-nm` will process a file on its standard input stream.
+its provenance.  If no filename is specified, *a.out* is used as the input.
+If *-* is used as a filename, :program:`llvm-nm` will read a file from its
+standard input stream.
 
 :program:`llvm-nm`'s default output format is the traditional BSD :program:`nm`
 output format.  Each such output record consists of an (optional) 8-digit
@@ -99,10 +100,10 @@ OPTIONS
 
 .. option:: --format=format, -f format
 
- Select an output format; *format* may be *sysv*, *posix*, or *bsd*.  The default
- is *bsd*.
+ Select an output format; *format* may be *sysv*, *posix*, *darwin*, or *bsd*.
+ The default is *bsd*.
 
-.. option:: -help
+.. option:: --help, -h
 
  Print a summary of command-line options and their meanings.
 
@@ -120,7 +121,7 @@ OPTIONS
 
 .. option:: --print-size, -S
 
- Show symbol size instead of address.
+ Show symbol size as well as address (not applicable for Mach-O).
 
 .. option:: --size-sort
 
@@ -133,7 +134,7 @@ OPTIONS
 .. option:: --radix=RADIX, -t
 
  Specify the radix of the symbol address(es). Values accepted d(decimal),
- x(hexadecomal) and o(octal).
+ x(hexadecimal) and o(octal).
 
 BUGS
 ----

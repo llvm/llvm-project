@@ -27,5 +27,5 @@ body: |
 
   bb.3:
     %3 : vgpr_32 = V_CVT_F32_I32_e32 killed %6.sub1, implicit $exec
-    S_ENDPGM
+    S_ENDPGM 0
 ...

@@ -1,0 +1,306 @@
+import("//clang/runtimes.gni")
+import("//llvm/utils/gn/build/symlink_or_copy.gni")
+
+declare_args() {
+  # Build libc++ with definitions for operator new/delete.
+  libcxx_enable_new_delete_definitions = true
+
+  # Build libc++ as a shared library.
+  libcxx_enable_shared = true
+
+  # Build libc++ as a static library.
+  libcxx_enable_static = true
+
+  # Build filesystem as part of libc++fs.a.
+  libcxx_enable_filesystem = target_os != "win"
+
+  # Build libc++experimental.a.
+  libcxx_enable_experimental = true
+
+  # Use compiler-rt builtins.
+  libcxx_use_compiler_rt = true
+
+  # Use exceptions.
+  libcxx_enable_exceptions = true
+
+  # Use run time type information.
+  libcxx_enable_rtti = true
+
+  # Do not export any symbols from the static library.
+  libcxx_hermetic_static_library = true
+
+  # Use and install a linker script for the given ABI library.
+  libcxx_enable_abi_linker_script = true
+}
+
+config("cxx_config") {
+  include_dirs = [
+    "//libcxxabi/include",
+    "//libcxx/include",
+  ]
+  cflags = [
+    "-Wall",
+    "-Wextra",
+    "-W",
+    "-Wwrite-strings",
+    "-Wno-unused-parameter",
+    "-Wno-long-long",
+    "-Werror=return-type",
+    "-Wextra-semi",
+    "-Wno-user-defined-literals",
+    "-Wno-covered-switch-default",
+  ]
+  cflags_cc = [ "-nostdinc++" ]
+  if (target_os == "win") {
+    cflags_cc += [ "/std:c++11" ]
+  } else {
+    cflags_cc += [ "-std=c++11" ]
+  }
+  defines = [ "_LIBCPP_BUILDING_LIBRARY" ]
+  if (target_os == "win") {
+    cflags += [ "/Zl" ]
+    defines += [
+      # Ignore the -MSC_VER mismatch, as we may build
+      # with a different compatibility version.
+      "_ALLOW_MSC_VER_MISMATCH",
+
+      # Don't check the msvcprt iterator debug levels
+      # as we will define the iterator types; libc++
+      # uses a different macro to identify the debug
+      # level.
+      "_ALLOW_ITERATOR_DEBUG_LEVEL_MISMATCH",
+
+      # We are building the c++ runtime, don't pull in
+      # msvcprt.
+      "_CRTBLD",
+
+      # Don't warn on the use of "deprecated"
+      # "insecure" functions which are standards
+      # specified.
+      "_CRT_SECURE_NO_WARNINGS",
+
+      # Use the ISO conforming behaviour for conversion
+      # in printf, scanf.
+      "_CRT_STDIO_ISO_WIDE_SPECIFIERS",
+    ]
+  }
+  if (!libcxx_enable_new_delete_definitions) {
+    defines += [ "_LIBCPP_DISABLE_NEW_DELETE_DEFINITIONS" ]
+  }
+  if (libcxx_enable_exceptions) {
+    if (current_os == "win") {
+      cflags_cc += [ "/EHsc" ]
+    }
+  } else {
+    if (current_os == "win") {
+      cflags_cc += [
+        "/EHs-",
+        "/EHa-",
+      ]
+    } else {
+      cflags_cc += [ "-fno-exceptions" ]
+    }
+    defines += [ "_LIBCPP_NO_EXCEPTIONS" ]
+  }
+  if (!libcxx_enable_rtti) {
+    if (current_os == "win") {
+      cflags_cc += [ "/GR-" ]
+    } else {
+      cflags_cc += [ "-fno-rtti" ]
+    }
+    defines += [ "_LIBCPP_NO_RTTI" ]
+  }
+}
+
+cxx_sources = [
+  "algorithm.cpp",
+  "string.cpp",
+  "ios.cpp",
+  "condition_variable.cpp",
+  "hash.cpp",
+  "random.cpp",
+  "new.cpp",
+  "functional.cpp",
+  "exception.cpp",
+  "support/runtime/exception_msvc.ipp",
+  "support/runtime/exception_libcxxabi.ipp",
+  "support/runtime/exception_glibcxx.ipp",
+  "support/runtime/new_handler_fallback.ipp",
+  "support/runtime/exception_libcxxrt.ipp",
+  "support/runtime/exception_pointer_unimplemented.ipp",
+  "support/runtime/exception_pointer_cxxabi.ipp",
+  "support/runtime/exception_pointer_msvc.ipp",
+  "support/runtime/exception_fallback.ipp",
+  "support/runtime/exception_pointer_glibcxx.ipp",
+  "variant.cpp",
+  "shared_mutex.cpp",
+  "optional.cpp",
+  "strstream.cpp",
+  "include/apple_availability.h",
+  "include/refstring.h",
+  "include/config_elast.h",
+  "include/atomic_support.h",
+  "future.cpp",
+  "system_error.cpp",
+  "bind.cpp",
+  "iostream.cpp",
+  "stdexcept.cpp",
+  "valarray.cpp",
+  "chrono.cpp",
+  "typeinfo.cpp",
+  "locale.cpp",
+  "debug.cpp",
+  "charconv.cpp",
+  "utility.cpp",
+  "regex.cpp",
+  "mutex.cpp",
+  "any.cpp",
+  "thread.cpp",
+  "vector.cpp",
+  "memory.cpp",
+]
+if (target_os == "win") {
+  cxx_sources += [
+    "support/win32/locale_win32.cpp",
+    "support/win32/support.cpp",
+    "support/win32/thread_win32.cpp",
+  ]
+}
+if (target_os == "solaris") {
+  cxx_sources += [
+    # This comment prevents `gn format` from putting the file on the same line
+    # as `sources +=`, for sync_source_lists_from_cmake.py.
+    "support/solaris/xlocale.cpp",
+  ]
+}
+if (libcxx_enable_filesystem) {
+  cxx_sources += [
+    "filesystem/directory_iterator.cpp",
+    "filesystem/filesystem_common.h",
+    "filesystem/operations.cpp",
+  ]
+  if (libcxx_use_compiler_rt) {
+    cxx_sources += [
+      # This comment prevents `gn format` from putting the file on the same line
+      # as `sources +=`, for sync_source_lists_from_cmake.py.
+      "filesystem/int128_builtins.cpp",
+    ]
+  }
+}
+
+if (libcxx_enable_shared) {
+  shared_library("cxx_shared") {
+    output_dir = runtimes_dir
+    output_name = "c++"
+    if (libcxx_enable_abi_linker_script) {
+      output_extension = "so.0"
+    }
+    if (target_os == "linux" || target_os == "mac") {
+      cflags = [ "-fPIC" ]
+      ldflags = [ "-nostdlib++" ]
+      libs = [
+        "dl",
+        "pthread",
+      ]
+    }
+    sources = cxx_sources
+    deps = [
+      "//compiler-rt/lib/builtins",
+      "//libcxxabi/src:cxxabi_shared",
+      "//libunwind/src:unwind_shared",
+    ]
+    configs += [ ":cxx_config" ]
+    configs -= [
+      "//llvm/utils/gn/build:no_exceptions",
+      "//llvm/utils/gn/build:no_rtti",
+    ]
+  }
+
+  symlink_or_copy("cxx_symlink") {
+    deps = [
+      ":cxx_shared",
+    ]
+    source = "libc++.so.0"
+    output = "$runtimes_dir/libc++.so"
+  }
+
+  if (libcxx_enable_abi_linker_script) {
+    action("cxx_linker_script") {
+      script = "//libcxx/utils/gen_link_script.py"
+      outputs = [
+        "$runtimes_dir/libc++.so",
+      ]
+      args = [
+        "--input",
+        "$runtimes_dir/libc++.so.0",
+        "--output",
+        "$runtimes_dir/libc++.so",
+        "c++abi",
+        "unwind",
+      ]
+      deps = [
+        ":cxx_symlink",
+      ]
+    }
+  }
+}
+
+if (libcxx_enable_static) {
+  static_library("cxx_static") {
+    output_dir = runtimes_dir
+    output_name = "c++"
+    complete_static_lib = true
+    configs -= [ "//llvm/utils/gn/build:thin_archive" ]
+    sources = cxx_sources
+    if (libcxx_hermetic_static_library) {
+      cflags = [ "-fvisibility=hidden" ]
+      if (libcxx_enable_new_delete_definitions) {
+        cflags_cc = [ "-fvisibility-global-new-delete-hidden" ]
+      }
+      defines = [ "_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS" ]
+    }
+    deps = [
+      "//compiler-rt/lib/builtins",
+      "//libcxxabi/src:cxxabi_static",
+      "//libunwind/src:unwind_static",
+    ]
+    configs += [ ":cxx_config" ]
+    configs -= [
+      "//llvm/utils/gn/build:no_exceptions",
+      "//llvm/utils/gn/build:no_rtti",
+    ]
+  }
+}
+
+if (libcxx_enable_experimental) {
+  static_library("cxx_experimental") {
+    output_dir = runtimes_dir
+    output_name = "c++experimental"
+    cflags_cc = [ "-std=c++14" ]
+    sources = [
+      "experimental/memory_resource.cpp",
+    ]
+    configs += [ ":cxx_config" ]
+    configs -= [
+      "//llvm/utils/gn/build:no_exceptions",
+      "//llvm/utils/gn/build:no_rtti",
+    ]
+  }
+}
+
+group("src") {
+  deps = []
+  if (libcxx_enable_shared) {
+    if (libcxx_enable_abi_linker_script) {
+      deps += [ ":cxx_linker_script" ]
+    } else {
+      deps += [ ":cxx_shared" ]
+    }
+  }
+  if (libcxx_enable_static) {
+    deps += [ ":cxx_static" ]
+  }
+  if (libcxx_enable_experimental) {
+    deps += [ ":cxx_experimental" ]
+  }
+}

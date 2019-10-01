@@ -1,9 +1,8 @@
 //===--------------------- Support.h ----------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 /// \file
@@ -61,24 +60,13 @@ public:
     return (Denominator == 1) ? Numerator : (double)Numerator / Denominator;
   }
 
+  unsigned getNumerator() const { return Numerator; }
+  unsigned getDenominator() const { return Denominator; }
+
   // Add the components of RHS to this instance.  Instead of calculating
   // the final value here, we keep track of the numerator and denominator
   // separately, to reduce floating point error.
-  ResourceCycles &operator+=(const ResourceCycles &RHS) {
-    if (Denominator == RHS.Denominator)
-      Numerator += RHS.Numerator;
-    else {
-      // Create a common denominator for LHS and RHS by calculating the least
-      // common multiple from the GCD.
-      unsigned GCD = GreatestCommonDivisor64(Denominator, RHS.Denominator);
-      unsigned LCM = (Denominator * RHS.Denominator) / GCD;
-      unsigned LHSNumerator = Numerator * (LCM / Denominator);
-      unsigned RHSNumerator = RHS.Numerator * (LCM / RHS.Denominator);
-      Numerator = LHSNumerator + RHSNumerator;
-      Denominator = LCM;
-    }
-    return *this;
-  }
+  ResourceCycles &operator+=(const ResourceCycles &RHS);
 };
 
 /// Populates vector Masks with processor resource masks.
@@ -104,7 +92,14 @@ public:
 /// Resource masks are used by the ResourceManager to solve set membership
 /// problems with simple bit manipulation operations.
 void computeProcResourceMasks(const MCSchedModel &SM,
-                              SmallVectorImpl<uint64_t> &Masks);
+                              MutableArrayRef<uint64_t> Masks);
+
+// Returns the index of the highest bit set. For resource masks, the position of
+// the highest bit set can be used to construct a resource mask identifier.
+inline unsigned getResourceStateIndex(uint64_t Mask) {
+  assert(Mask && "Processor Resource Mask cannot be zero!");
+  return (std::numeric_limits<uint64_t>::digits - countLeadingZeros(Mask)) - 1;
+}
 
 /// Compute the reciprocal block throughput from a set of processor resource
 /// cycles. The reciprocal block throughput is computed as the MAX between:

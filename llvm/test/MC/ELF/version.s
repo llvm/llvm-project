@@ -1,4 +1,4 @@
-// RUN: llvm-mc -filetype=obj -triple i386-pc-linux-gnu %s -o - | llvm-readobj -s -sd | FileCheck  %s
+// RUN: llvm-mc -filetype=obj -triple i386-pc-linux-gnu %s -o - | llvm-readobj -S --sd | FileCheck  %s
 
 .version "1234"
 .version "123"

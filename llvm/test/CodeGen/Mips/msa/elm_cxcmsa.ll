@@ -84,6 +84,15 @@ entry:
 ; CHECK: cfcmsa $[[R1:[0-9]+]], $7
 ; CHECK: .size msa_unmap_cfcmsa_test
 ;
+define i32 @msa_invalid_reg_cfcmsa_test() nounwind {
+entry:
+  %0 = tail call i32 @llvm.mips.cfcmsa(i32 8)
+  ret i32 %0
+}
+
+; CHECK-LABEL: msa_invalid_reg_cfcmsa_test:
+; CHECK: cfcmsa ${{[0-9]+}}, $8
+;
 define void @msa_ir_ctcmsa_test() nounwind {
 entry:
   tail call void @llvm.mips.ctcmsa(i32 0, i32 1)
@@ -163,6 +172,15 @@ entry:
 ; CHECK: msa_unmap_ctcmsa_test:
 ; CHECK: ctcmsa $7
 ; CHECK: .size msa_unmap_ctcmsa_test
+;
+define void @msa_invalid_reg_ctcmsa_test() nounwind {
+entry:
+  tail call void @llvm.mips.ctcmsa(i32 8, i32 1)
+  ret void
+}
+
+; CHECK: msa_invalid_reg_ctcmsa_test:
+; CHECK: ctcmsa $8
 ;
 declare i32 @llvm.mips.cfcmsa(i32) nounwind
 declare void @llvm.mips.ctcmsa(i32, i32) nounwind

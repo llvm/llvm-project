@@ -1,9 +1,8 @@
 //===- SymbolicFile.cpp - Interface that only provides symbols ------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -53,6 +52,7 @@ SymbolicFile::createSymbolicFile(MemoryBufferRef Object, file_magic Type,
   case file_magic::macho_universal_binary:
   case file_magic::windows_resource:
   case file_magic::pdb:
+  case file_magic::minidump:
     return errorCodeToError(object_error::invalid_file_type);
   case file_magic::elf:
   case file_magic::elf_executable:
@@ -69,6 +69,7 @@ SymbolicFile::createSymbolicFile(MemoryBufferRef Object, file_magic Type,
   case file_magic::macho_dsym_companion:
   case file_magic::macho_kext_bundle:
   case file_magic::pecoff_executable:
+  case file_magic::xcoff_object_32:
   case file_magic::wasm_object:
     return ObjectFile::createObjectFile(Object, Type);
   case file_magic::coff_import_library:

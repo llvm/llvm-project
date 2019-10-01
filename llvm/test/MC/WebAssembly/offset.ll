@@ -13,7 +13,7 @@ define i32 @load_i32_from_negative_address() {
 }
 
 ; CHECK-NEXT:       - Index:           1
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            41002802030B
 define i32 @load_i32_from_wrapped_address() {
   %t = load i32, i32* inttoptr (i32 4294967299 to i32*)

@@ -1,9 +1,8 @@
 //===--------------------- ResourceManager.cpp ------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 /// \file
@@ -24,16 +23,10 @@ namespace mca {
 #define DEBUG_TYPE "llvm-mca"
 ResourceStrategy::~ResourceStrategy() = default;
 
-// Returns the index of the highest bit set. For resource masks, the position of
-// the highest bit set can be used to construct a resource mask identifier.
-static unsigned getResourceStateIndex(uint64_t Mask) {
-  return std::numeric_limits<uint64_t>::digits - countLeadingZeros(Mask);
-}
-
 static uint64_t selectImpl(uint64_t CandidateMask,
                            uint64_t &NextInSequenceMask) {
   // The upper bit set in CandidateMask identifies our next candidate resource.
-  CandidateMask = 1ULL << (getResourceStateIndex(CandidateMask) - 1);
+  CandidateMask = 1ULL << getResourceStateIndex(CandidateMask);
   NextInSequenceMask &= (CandidateMask | (CandidateMask - 1));
   return CandidateMask;
 }
@@ -75,7 +68,7 @@ ResourceState::ResourceState(const MCProcResourceDesc &Desc, unsigned Index,
       BufferSize(Desc.BufferSize), IsAGroup(countPopulation(ResourceMask) > 1) {
   if (IsAGroup) {
     ResourceSizeMask =
-        ResourceMask ^ 1ULL << (getResourceStateIndex(ResourceMask) - 1);
+        ResourceMask ^ 1ULL << getResourceStateIndex(ResourceMask);
   } else {
     ResourceSizeMask = (1ULL << Desc.NumUnits) - 1;
   }
@@ -99,9 +92,9 @@ ResourceStateEvent ResourceState::isBufferAvailable() const {
 
 #ifndef NDEBUG
 void ResourceState::dump() const {
-  dbgs() << "MASK=" << format_hex(ResourceMask, 8)
-         << ", SZMASK=" << format_hex(ResourceSizeMask, 8)
-         << ", RDYMASK=" << format_hex(ReadyMask, 8)
+  dbgs() << "MASK=" << format_hex(ResourceMask, 16)
+         << ", SZMASK=" << format_hex(ResourceSizeMask, 16)
+         << ", RDYMASK=" << format_hex(ReadyMask, 16)
          << ", BufferSize=" << BufferSize
          << ", AvailableSlots=" << AvailableSlots
          << ", Reserved=" << Unavailable << '\n';
@@ -115,18 +108,50 @@ getStrategyFor(const ResourceState &RS) {
   return std::unique_ptr<ResourceStrategy>(nullptr);
 }
 
-ResourceManager::ResourceManager(const MCSchedModel &SM) {
+ResourceManager::ResourceManager(const MCSchedModel &SM)
+    : Resources(SM.getNumProcResourceKinds() - 1),
+      Strategies(SM.getNumProcResourceKinds() - 1),
+      Resource2Groups(SM.getNumProcResourceKinds() - 1, 0),
+      ProcResID2Mask(SM.getNumProcResourceKinds(), 0),
+      ResIndex2ProcResID(SM.getNumProcResourceKinds() - 1, 0),
+      ProcResUnitMask(0), ReservedResourceGroups(0) {
   computeProcResourceMasks(SM, ProcResID2Mask);
-  Resources.resize(SM.getNumProcResourceKinds());
-  Strategies.resize(SM.getNumProcResourceKinds());
 
-  for (unsigned I = 0, E = SM.getNumProcResourceKinds(); I < E; ++I) {
+  // initialize vector ResIndex2ProcResID.
+  for (unsigned I = 1, E = SM.getNumProcResourceKinds(); I < E; ++I) {
+    unsigned Index = getResourceStateIndex(ProcResID2Mask[I]);
+    ResIndex2ProcResID[Index] = I;
+  }
+
+  for (unsigned I = 1, E = SM.getNumProcResourceKinds(); I < E; ++I) {
     uint64_t Mask = ProcResID2Mask[I];
     unsigned Index = getResourceStateIndex(Mask);
     Resources[Index] =
         llvm::make_unique<ResourceState>(*SM.getProcResource(I), I, Mask);
     Strategies[Index] = getStrategyFor(*Resources[Index]);
   }
+
+  for (unsigned I = 1, E = SM.getNumProcResourceKinds(); I < E; ++I) {
+    uint64_t Mask = ProcResID2Mask[I];
+    unsigned Index = getResourceStateIndex(Mask);
+    const ResourceState &RS = *Resources[Index];
+    if (!RS.isAResourceGroup()) {
+      ProcResUnitMask |= Mask;
+      continue;
+    }
+
+    uint64_t GroupMaskIdx = 1ULL << Index;
+    Mask -= GroupMaskIdx;
+    while (Mask) {
+      // Extract lowest set isolated bit.
+      uint64_t Unit = Mask & (-Mask);
+      unsigned IndexUnit = getResourceStateIndex(Unit);
+      Resource2Groups[IndexUnit] |= GroupMaskIdx;
+      Mask ^= Unit;
+    }
+  }
+
+  AvailableProcResUnits = ProcResUnitMask;
 }
 
 void ResourceManager::setCustomStrategyImpl(std::unique_ptr<ResourceStrategy> S,
@@ -138,7 +163,7 @@ void ResourceManager::setCustomStrategyImpl(std::unique_ptr<ResourceStrategy> S,
 }
 
 unsigned ResourceManager::resolveResourceMask(uint64_t Mask) const {
-  return Resources[getResourceStateIndex(Mask)]->getProcResourceID();
+  return ResIndex2ProcResID[getResourceStateIndex(Mask)];
 }
 
 unsigned ResourceManager::getNumUnits(uint64_t ResourceID) const {
@@ -150,6 +175,7 @@ unsigned ResourceManager::getNumUnits(uint64_t ResourceID) const {
 // Second, is the specific sub-resource ID.
 ResourceRef ResourceManager::selectPipe(uint64_t ResourceID) {
   unsigned Index = getResourceStateIndex(ResourceID);
+  assert(Index < Resources.size() && "Invalid resource use!");
   ResourceState &RS = *Resources[Index];
   assert(RS.isReady() && "No available units to select!");
 
@@ -179,34 +205,38 @@ void ResourceManager::use(const ResourceRef &RR) {
   if (RS.isReady())
     return;
 
-  // Notify to other resources that RR.first is no longer available.
-  for (std::unique_ptr<ResourceState> &Res : Resources) {
-    ResourceState &Current = *Res;
-    if (!Current.isAResourceGroup() || Current.getResourceMask() == RR.first)
-      continue;
+  AvailableProcResUnits ^= RR.first;
 
-    if (Current.containsResource(RR.first)) {
-      unsigned Index = getResourceStateIndex(Current.getResourceMask());
-      Current.markSubResourceAsUsed(RR.first);
-      Strategies[Index]->used(RR.first);
-    }
+  // Notify groups that RR.first is no longer available.
+  uint64_t Users = Resource2Groups[RSID];
+  while (Users) {
+    // Extract lowest set isolated bit.
+    unsigned GroupIndex = getResourceStateIndex(Users & (-Users));
+    ResourceState &CurrentUser = *Resources[GroupIndex];
+    CurrentUser.markSubResourceAsUsed(RR.first);
+    Strategies[GroupIndex]->used(RR.first);
+    // Reset lowest set bit.
+    Users &= Users - 1;
   }
 }
 
 void ResourceManager::release(const ResourceRef &RR) {
-  ResourceState &RS = *Resources[getResourceStateIndex(RR.first)];
+  unsigned RSID = getResourceStateIndex(RR.first);
+  ResourceState &RS = *Resources[RSID];
   bool WasFullyUsed = !RS.isReady();
   RS.releaseSubResource(RR.second);
   if (!WasFullyUsed)
     return;
 
-  for (std::unique_ptr<ResourceState> &Res : Resources) {
-    ResourceState &Current = *Res;
-    if (!Current.isAResourceGroup() || Current.getResourceMask() == RR.first)
-      continue;
+  AvailableProcResUnits ^= RR.first;
 
-    if (Current.containsResource(RR.first))
-      Current.releaseSubResource(RR.first);
+  // Notify groups that RR.first is now available again.
+  uint64_t Users = Resource2Groups[RSID];
+  while (Users) {
+    unsigned GroupIndex = getResourceStateIndex(Users & (-Users));
+    ResourceState &CurrentUser = *Resources[GroupIndex];
+    CurrentUser.releaseSubResource(RR.first);
+    Users &= Users - 1;
   }
 }
 
@@ -240,31 +270,19 @@ void ResourceManager::releaseBuffers(ArrayRef<uint64_t> Buffers) {
     Resources[getResourceStateIndex(R)]->releaseBuffer();
 }
 
-bool ResourceManager::canBeIssued(const InstrDesc &Desc) const {
-  return all_of(
-      Desc.Resources, [&](const std::pair<uint64_t, const ResourceUsage> &E) {
-        unsigned NumUnits = E.second.isReserved() ? 0U : E.second.NumUnits;
-        unsigned Index = getResourceStateIndex(E.first);
-        return Resources[Index]->isReady(NumUnits);
-      });
-}
+uint64_t ResourceManager::checkAvailability(const InstrDesc &Desc) const {
+  uint64_t BusyResourceMask = 0;
+  for (const std::pair<uint64_t, const ResourceUsage> &E : Desc.Resources) {
+    unsigned NumUnits = E.second.isReserved() ? 0U : E.second.NumUnits;
+    unsigned Index = getResourceStateIndex(E.first);
+    if (!Resources[Index]->isReady(NumUnits))
+      BusyResourceMask |= E.first;
+  }
 
-// Returns true if all resources are in-order, and there is at least one
-// resource which is a dispatch hazard (BufferSize = 0).
-bool ResourceManager::mustIssueImmediately(const InstrDesc &Desc) const {
-  if (!canBeIssued(Desc))
-    return false;
-  bool AllInOrderResources = all_of(Desc.Buffers, [&](uint64_t BufferMask) {
-    unsigned Index = getResourceStateIndex(BufferMask);
-    const ResourceState &Resource = *Resources[Index];
-    return Resource.isInOrder() || Resource.isADispatchHazard();
-  });
-  if (!AllInOrderResources)
-    return false;
-
-  return any_of(Desc.Buffers, [&](uint64_t BufferMask) {
-    return Resources[getResourceStateIndex(BufferMask)]->isADispatchHazard();
-  });
+  BusyResourceMask &= ProcResUnitMask;
+  if (BusyResourceMask)
+    return BusyResourceMask;
+  return Desc.UsedProcResGroups & ReservedResourceGroups;
 }
 
 void ResourceManager::issueInstruction(
@@ -282,9 +300,6 @@ void ResourceManager::issueInstruction(
       ResourceRef Pipe = selectPipe(R.first);
       use(Pipe);
       BusyResources[Pipe] += CS.size();
-      // Replace the resource mask with a valid processor resource index.
-      const ResourceState &RS = *Resources[getResourceStateIndex(Pipe.first)];
-      Pipe.first = RS.getProcResourceID();
       Pipes.emplace_back(std::pair<ResourceRef, ResourceCycles>(
           Pipe, ResourceCycles(CS.size())));
     } else {
@@ -318,14 +333,20 @@ void ResourceManager::cycleEvent(SmallVectorImpl<ResourceRef> &ResourcesFreed) {
 }
 
 void ResourceManager::reserveResource(uint64_t ResourceID) {
-  ResourceState &Resource = *Resources[getResourceStateIndex(ResourceID)];
-  assert(!Resource.isReserved());
+  const unsigned Index = getResourceStateIndex(ResourceID);
+  ResourceState &Resource = *Resources[Index];
+  assert(Resource.isAResourceGroup() && !Resource.isReserved() &&
+         "Unexpected resource found!");
   Resource.setReserved();
+  ReservedResourceGroups ^= 1ULL << Index;
 }
 
 void ResourceManager::releaseResource(uint64_t ResourceID) {
-  ResourceState &Resource = *Resources[getResourceStateIndex(ResourceID)];
+  const unsigned Index = getResourceStateIndex(ResourceID);
+  ResourceState &Resource = *Resources[Index];
   Resource.clearReserved();
+  if (Resource.isAResourceGroup())
+    ReservedResourceGroups ^= 1ULL << Index;
 }
 
 } // namespace mca

@@ -1,9 +1,8 @@
 //=====- NVPTXTargetStreamer.cpp - NVPTXTargetStreamer class ------------=====//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -29,6 +28,11 @@ void NVPTXTargetStreamer::outputDwarfFileDirectives() {
   for (const std::string &S : DwarfFiles)
     getStreamer().EmitRawText(S.data());
   DwarfFiles.clear();
+}
+
+void NVPTXTargetStreamer::closeLastSection() {
+  if (HasSections)
+    getStreamer().EmitRawText("\t}");
 }
 
 void NVPTXTargetStreamer::emitDwarfFileDirective(StringRef Directive) {
@@ -82,22 +86,27 @@ void NVPTXTargetStreamer::changeSection(const MCSection *CurSection,
                                         raw_ostream &OS) {
   assert(!SubSection && "SubSection is not null!");
   const MCObjectFileInfo *FI = getStreamer().getContext().getObjectFileInfo();
-  // FIXME: remove comment once debug info is properly supported.
   // Emit closing brace for DWARF sections only.
   if (isDwarfSection(FI, CurSection))
-    OS << "//\t}\n";
+    OS << "\t}\n";
   if (isDwarfSection(FI, Section)) {
     // Emit DWARF .file directives in the outermost scope.
     outputDwarfFileDirectives();
-    OS << "//\t.section";
+    OS << "\t.section";
     Section->PrintSwitchToSection(*getStreamer().getContext().getAsmInfo(),
                                   FI->getTargetTriple(), OS, SubSection);
     // DWARF sections are enclosed into braces - emit the open one.
-    OS << "//\t{\n";
+    OS << "\t{\n";
+    HasSections = true;
   }
 }
 
 void NVPTXTargetStreamer::emitRawBytes(StringRef Data) {
+  MCTargetStreamer::emitRawBytes(Data);
+  // TODO: enable this once the bug in the ptxas with the packed bytes is
+  // resolved. Currently, (it is confirmed by NVidia) it causes a crash in
+  // ptxas.
+#if 0
   const MCAsmInfo *MAI = Streamer.getContext().getAsmInfo();
   const char *Directive = MAI->getData8bitsDirective();
   unsigned NumElements = Data.size();
@@ -121,5 +130,6 @@ void NVPTXTargetStreamer::emitRawBytes(StringRef Data) {
     }
     Streamer.EmitRawText(OS.str());
   }
+#endif
 }
 

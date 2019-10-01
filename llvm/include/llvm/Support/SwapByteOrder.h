@@ -1,9 +1,8 @@
 //===- SwapByteOrder.h - Generic and optimized byte swaps -------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -18,6 +17,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
 #include <cstddef>
+#include <type_traits>
 #if defined(_MSC_VER) && !defined(_DEBUG)
 #include <stdlib.h>
 #endif
@@ -114,6 +114,13 @@ inline double getSwappedBytes(double C) {
   in.d = C;
   out.i = SwapByteOrder_64(in.i);
   return out.d;
+}
+
+template <typename T>
+inline typename std::enable_if<std::is_enum<T>::value, T>::type
+getSwappedBytes(T C) {
+  return static_cast<T>(
+      getSwappedBytes(static_cast<typename std::underlying_type<T>::type>(C)));
 }
 
 template<typename T>

@@ -1,9 +1,8 @@
 //===-- PredicateInfo.cpp - PredicateInfo Builder--------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------===//
 //
@@ -474,7 +473,8 @@ void PredicateInfo::buildPredicateInfo() {
   }
   for (auto &Assume : AC.assumptions()) {
     if (auto *II = dyn_cast_or_null<IntrinsicInst>(Assume))
-      processAssume(II, II->getParent(), OpsToRename);
+      if (DT.isReachableFromEntry(II->getParent()))
+        processAssume(II, II->getParent(), OpsToRename);
   }
   // Now rename all our operations.
   renameUses(OpsToRename);
@@ -489,8 +489,10 @@ void PredicateInfo::buildPredicateInfo() {
 // tricky (FIXME).
 static Function *getCopyDeclaration(Module *M, Type *Ty) {
   std::string Name = "llvm.ssa.copy." + utostr((uintptr_t) Ty);
-  return cast<Function>(M->getOrInsertFunction(
-      Name, getType(M->getContext(), Intrinsic::ssa_copy, Ty)));
+  return cast<Function>(
+      M->getOrInsertFunction(Name,
+                             getType(M->getContext(), Intrinsic::ssa_copy, Ty))
+          .getCallee());
 }
 
 // Given the renaming stack, make all the operands currently on the stack real
@@ -633,7 +635,7 @@ void PredicateInfo::renameUses(SmallPtrSetImpl<Value *> &OpSet) {
     // uses in the same instruction do not have a strict sort order
     // currently and will be considered equal. We could get rid of the
     // stable sort by creating one if we wanted.
-    std::stable_sort(OrderedUses.begin(), OrderedUses.end(), Compare);
+    llvm::stable_sort(OrderedUses, Compare);
     SmallVector<ValueDFS, 8> RenameStack;
     // For each use, sorted into dfs order, push values and replaces uses with
     // top of stack, which will represent the reaching def.

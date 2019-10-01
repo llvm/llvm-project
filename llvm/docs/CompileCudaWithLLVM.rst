@@ -143,9 +143,9 @@ device side.
 ----------------------------
 
 In clang, ``math.h`` and ``cmath`` are available and `pass
-<https://github.com/llvm-mirror/test-suite/blob/master/External/CUDA/math_h.cu>`_
+<https://github.com/llvm/llvm-test-suite/blob/master/External/CUDA/math_h.cu>`_
 `tests
-<https://github.com/llvm-mirror/test-suite/blob/master/External/CUDA/cmath.cu>`_
+<https://github.com/llvm/llvm-test-suite/blob/master/External/CUDA/cmath.cu>`_
 adapted from libc++'s test suite.
 
 In nvcc ``math.h`` and ``cmath`` are mostly available.  Versions of ``::foof``

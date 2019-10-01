@@ -9,16 +9,16 @@ define void @test_x86_wrpkru(i32 %src) {
 ; X86-LABEL: test_x86_wrpkru:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
-; X86-NEXT:    xorl %ecx, %ecx ## encoding: [0x31,0xc9]
 ; X86-NEXT:    xorl %edx, %edx ## encoding: [0x31,0xd2]
+; X86-NEXT:    xorl %ecx, %ecx ## encoding: [0x31,0xc9]
 ; X86-NEXT:    wrpkru ## encoding: [0x0f,0x01,0xef]
 ; X86-NEXT:    retl ## encoding: [0xc3]
 ;
 ; X64-LABEL: test_x86_wrpkru:
 ; X64:       ## %bb.0:
 ; X64-NEXT:    movl %edi, %eax ## encoding: [0x89,0xf8]
-; X64-NEXT:    xorl %ecx, %ecx ## encoding: [0x31,0xc9]
 ; X64-NEXT:    xorl %edx, %edx ## encoding: [0x31,0xd2]
+; X64-NEXT:    xorl %ecx, %ecx ## encoding: [0x31,0xc9]
 ; X64-NEXT:    wrpkru ## encoding: [0x0f,0x01,0xef]
 ; X64-NEXT:    retq ## encoding: [0xc3]
   call void @llvm.x86.wrpkru(i32 %src)

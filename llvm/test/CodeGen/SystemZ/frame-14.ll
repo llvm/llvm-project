@@ -5,7 +5,7 @@
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z10 | \
 ; RUN:   FileCheck -check-prefix=CHECK-NOFP %s
-; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z10 -disable-fp-elim | \
+; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z10 -frame-pointer=all | \
 ; RUN:   FileCheck -check-prefix=CHECK-FP %s
 ;
 ; This file tests what happens when a displacement is converted from

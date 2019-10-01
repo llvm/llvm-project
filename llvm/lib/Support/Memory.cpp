@@ -1,9 +1,8 @@
 //===- Memory.cpp - Memory Handling Support ---------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -16,6 +15,10 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Valgrind.h"
 
+#ifndef NDEBUG
+#include "llvm/Support/raw_ostream.h"
+#endif // ifndef NDEBUG
+
 // Include the platform-specific parts of this class.
 #ifdef LLVM_ON_UNIX
 #include "Unix/Memory.inc"
@@ -23,3 +26,28 @@
 #ifdef _WIN32
 #include "Windows/Memory.inc"
 #endif
+
+#ifndef NDEBUG
+
+namespace llvm {
+namespace sys {
+
+raw_ostream &operator<<(raw_ostream &OS, const Memory::ProtectionFlags &PF) {
+  assert((PF & ~(Memory::MF_READ | Memory::MF_WRITE | Memory::MF_EXEC)) == 0 &&
+         "Unrecognized flags");
+
+  return OS << (PF & Memory::MF_READ ? 'R' : '-')
+            << (PF & Memory::MF_WRITE ? 'W' : '-')
+            << (PF & Memory::MF_EXEC ? 'X' : '-');
+}
+
+raw_ostream &operator<<(raw_ostream &OS, const MemoryBlock &MB) {
+  return OS << "[ " << MB.base() << " .. "
+            << (void *)((char *)MB.base() + MB.allocatedSize()) << " ] ("
+            << MB.allocatedSize() << " bytes)";
+}
+
+} // end namespace sys
+} // end namespace llvm
+
+#endif // ifndef NDEBUG

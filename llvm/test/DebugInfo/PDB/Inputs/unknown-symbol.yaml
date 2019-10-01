@@ -4,7 +4,7 @@ DbiStream:
     - Module:          unknown-symbol.yaml
       Modi:
         Records:
-          - Kind:            S_ANNOTATION
+          - Kind:            S_RESERVED1
             UnknownSym:
               Data:          123456789ABCDEF0
 ...

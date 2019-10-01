@@ -145,3 +145,28 @@ define <2 x double> @test_mm_i32gather_pd(double *%a0, <2 x i64> %a1) {
   %res = call <2 x double> @llvm.x86.avx2.gather.d.pd(<2 x double> zeroinitializer, i8* %arg0, <4 x i32> %arg1, <2 x double> %mask, i8 2)
   ret <2 x double> %res
 }
+
+@x = global [1024 x float] zeroinitializer, align 16
+
+define <4 x float> @gather_global(<4 x i64>, i32* nocapture readnone) {
+; X32-LABEL: gather_global:
+; X32:       # %bb.0:
+; X32-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; X32-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; X32-NEXT:    vgatherqps %xmm2, x(,%ymm0,4), %xmm1
+; X32-NEXT:    vmovaps %xmm1, %xmm0
+; X32-NEXT:    vzeroupper
+; X32-NEXT:    retl
+;
+; X64-LABEL: gather_global:
+; X64:       # %bb.0:
+; X64-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; X64-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; X64-NEXT:    vgatherqps %xmm2, x(,%ymm0,4), %xmm1
+; X64-NEXT:    vmovaps %xmm1, %xmm0
+; X64-NEXT:    vzeroupper
+; X64-NEXT:    retq
+  %3 = tail call <4 x float> @llvm.x86.avx2.gather.q.ps.256(<4 x float> zeroinitializer, i8* bitcast ([1024 x float]* @x to i8*), <4 x i64> %0, <4 x float> <float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000>, i8 4)
+  ret <4 x float> %3
+}
+declare <4 x float> @llvm.x86.avx2.gather.q.ps.256(<4 x float>, i8*, <4 x i64>, <4 x float>, i8)

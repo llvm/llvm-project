@@ -9,7 +9,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; Can we sink single addressing mode computation to use?
 define void @test1(i1 %cond, i64* %base) {
 ; CHECK-LABEL: @test1
-; CHECK: getelementptr i8, {{.+}} 40
+; CHECK: getelementptr inbounds i8, {{.+}} 40
 entry:
   %addr = getelementptr inbounds i64, i64* %base, i64 5
   %casted = bitcast i64* %addr to i32*
@@ -35,7 +35,7 @@ entry:
 
 if.then:
 ; CHECK-LABEL: if.then:
-; CHECK: getelementptr i8, {{.+}} 40
+; CHECK: getelementptr inbounds i8, {{.+}} 40
   %v1 = load i32, i32* %casted, align 4
   call void @foo(i32 %v1)
   %cmp = icmp eq i32 %v1, 0
@@ -43,7 +43,7 @@ if.then:
 
 next:
 ; CHECK-LABEL: next:
-; CHECK: getelementptr i8, {{.+}} 40
+; CHECK: getelementptr inbounds i8, {{.+}} 40
   %v2 = load i32, i32* %casted, align 4
   call void @foo(i32 %v2)
   br label %fallthrough
@@ -63,10 +63,10 @@ entry:
 
 if.then:
 ; CHECK-LABEL: if.then:
-; CHECK: getelementptr i8, {{.+}} 40
+; CHECK: getelementptr inbounds i8, {{.+}} 40
   %v1 = load i32, i32* %casted, align 4
   call void @foo(i32 %v1)
-; CHECK-NOT: getelementptr i8, {{.+}} 40
+; CHECK-NOT: getelementptr inbounds i8, {{.+}} 40
   %v2 = load i32, i32* %casted, align 4
   call void @foo(i32 %v2)
   br label %fallthrough
@@ -86,7 +86,7 @@ entry:
 
 if.then:
 ; CHECK-LABEL: if.then:
-; CHECK: getelementptr i8, {{.+}} 40
+; CHECK: getelementptr inbounds i8, {{.+}} 40
   %v1 = load i32, i32* %casted, align 4
   call void @foo(i32 %v1)
   %cmp = icmp eq i32 %v1, 0
@@ -97,7 +97,7 @@ fallthrough:
 
 rare.1:
 ; CHECK-LABEL: rare.1:
-; CHECK: getelementptr i8, {{.+}} 40
+; CHECK: getelementptr inbounds i8, {{.+}} 40
   call void @slowpath(i32 %v1, i32* %casted) cold
   br label %fallthrough
 }
@@ -106,14 +106,14 @@ rare.1:
 define void @test5(i1 %cond, i64* %base) {
 ; CHECK-LABEL: @test5
 entry:
-; CHECK: %addr = getelementptr
+; CHECK: %addr = getelementptr inbounds
   %addr = getelementptr inbounds i64, i64* %base, i64 5
   %casted = bitcast i64* %addr to i32*
   br i1 %cond, label %if.then, label %fallthrough
 
 if.then:
 ; CHECK-LABEL: if.then:
-; CHECK-NOT: getelementptr i8, {{.+}} 40
+; CHECK-NOT: getelementptr inbounds i8, {{.+}} 40
   %v1 = load i32, i32* %casted, align 4
   call void @foo(i32 %v1)
   %cmp = icmp eq i32 %v1, 0
@@ -138,7 +138,7 @@ entry:
 
 if.then:
 ; CHECK-LABEL: if.then:
-; CHECK-NOT: getelementptr i8, {{.+}} 40
+; CHECK-NOT: getelementptr inbounds i8, {{.+}} 40
   %v1 = load i32, i32* %casted, align 4
   call void @foo(i32 %v1)
   %cmp = icmp eq i32 %v1, 0
@@ -164,7 +164,7 @@ entry:
 
 if.then:
 ; CHECK-LABEL: if.then:
-; CHECK: getelementptr i8, {{.+}} 40
+; CHECK: getelementptr inbounds i8, {{.+}} 40
   %v1 = load i32, i32* %casted, align 4
   call void @foo(i32 %v1)
   %cmp = icmp eq i32 %v1, 0
@@ -172,7 +172,7 @@ if.then:
 
 next:
 ; CHECK-LABEL: next:
-; CHECK: getelementptr i8, {{.+}} 40
+; CHECK: getelementptr inbounds i8, {{.+}} 40
   %v2 = load i32, i32* %casted, align 4
   call void @foo(i32 %v2)
   %cmp2 = icmp eq i32 %v2, 0
@@ -183,13 +183,13 @@ fallthrough:
 
 rare.1:
 ; CHECK-LABEL: rare.1:
-; CHECK: getelementptr i8, {{.+}} 40
+; CHECK: getelementptr inbounds i8, {{.+}} 40
   call void @slowpath(i32 %v1, i32* %casted) cold
   br label %next
 
 rare.2:
 ; CHECK-LABEL: rare.2:
-; CHECK: getelementptr i8, {{.+}} 40
+; CHECK: getelementptr inbounds i8, {{.+}} 40
   call void @slowpath(i32 %v2, i32* %casted) cold
   br label %fallthrough
 }
@@ -240,7 +240,7 @@ if.then:
 
 backedge:
 ; CHECK-LABEL: backedge:
-; CHECK: getelementptr i8, {{.+}} 40
+; CHECK: getelementptr inbounds i8, {{.+}} 40
   %casted.merged = phi i32* [%casted.loop, %header], [%casted.1, %if.then]
   %v = load i32, i32* %casted.merged, align 4
   call void @foo(i32 %v)
@@ -256,7 +256,7 @@ exit:
 ; address computation.
 define void @test10(i1 %cond, i64* %base) {
 ; CHECK-LABEL: @test10
-; CHECK: getelementptr i8, {{.+}} 40
+; CHECK: getelementptr inbounds i8, {{.+}} 40
 ; CHECK-NOT: select
 entry:
   %gep1 = getelementptr inbounds i64, i64* %base, i64 5

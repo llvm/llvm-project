@@ -1,5 +1,5 @@
 ; RUN: llc < %s -march=xcore | FileCheck %s
-; RUN: llc < %s -march=xcore -disable-fp-elim | FileCheck %s -check-prefix=CHECKFP
+; RUN: llc < %s -march=xcore -frame-pointer=all | FileCheck %s -check-prefix=CHECKFP
 
 declare i8* @llvm.frameaddress(i32) nounwind readnone
 declare i8* @llvm.returnaddress(i32) nounwind

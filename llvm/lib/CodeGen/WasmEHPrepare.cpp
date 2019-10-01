@@ -1,14 +1,14 @@
 //===-- WasmEHPrepare - Prepare excepton handling for WebAssembly --------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
 // This transformation is designed for use by code generators which use
-// WebAssembly exception handling scheme.
+// WebAssembly exception handling scheme. This currently supports C++
+// exceptions.
 //
 // WebAssembly exception handling uses Windows exception IR for the middle level
 // representation. This pass does the following transformation for every
@@ -23,53 +23,20 @@
 //
 // - After:
 //   catchpad ...
-//   exn = wasm.catch(0); // 0 is a tag for C++
-//   wasm.landingpad.index(index);
+//   exn = wasm.extract.exception();
 //   // Only add below in case it's not a single catch (...)
+//   wasm.landingpad.index(index);
 //   __wasm_lpad_context.lpad_index = index;
 //   __wasm_lpad_context.lsda = wasm.lsda();
 //   _Unwind_CallPersonality(exn);
-//   int selector = __wasm.landingpad_context.selector;
+//   selector = __wasm.landingpad_context.selector;
 //   ...
-//
-// Also, does the following for a cleanuppad block with a call to
-// __clang_call_terminate():
-// - Before:
-//   cleanuppad ...
-//   exn = wasm.get.exception();
-//   __clang_call_terminate(exn);
-//
-// - After:
-//   cleanuppad ...
-//   exn = wasm.catch(0); // 0 is a tag for C++
-//   __clang_call_terminate(exn);
-//
-//
-// * Background: WebAssembly EH instructions
-// WebAssembly's try and catch instructions are structured as follows:
-// try
-//   instruction*
-// catch (C++ tag)
-//   instruction*
-// ...
-// catch_all
-//   instruction*
-// try_end
-//
-// A catch instruction in WebAssembly does not correspond to a C++ catch clause.
-// In WebAssembly, there is a single catch instruction for all C++ exceptions.
-// There can be more catch instructions for exceptions in other languages, but
-// they are not generated for now. catch_all catches all exceptions including
-// foreign exceptions (e.g. JavaScript). We turn catchpads into catch (C++ tag)
-// and cleanuppads into catch_all, with one exception: cleanuppad with a call to
-// __clang_call_terminate should be both in catch (C++ tag) and catch_all.
 //
 //
 // * Background: Direct personality function call
 // In WebAssembly EH, the VM is responsible for unwinding the stack once an
 // exception is thrown. After the stack is unwound, the control flow is
-// transfered to WebAssembly 'catch' instruction, which returns a caught
-// exception object.
+// transfered to WebAssembly 'catch' instruction.
 //
 // Unwinding the stack is not done by libunwind but the VM, so the personality
 // function in libcxxabi cannot be called from libunwind during the unwinding
@@ -137,19 +104,19 @@ class WasmEHPrepare : public FunctionPass {
   Value *LSDAField = nullptr;      // lsda field
   Value *SelectorField = nullptr;  // selector
 
-  Function *ThrowF = nullptr;           // wasm.throw() intrinsic
-  Function *CatchF = nullptr;           // wasm.catch.extract() intrinsic
-  Function *LPadIndexF = nullptr;       // wasm.landingpad.index() intrinsic
-  Function *LSDAF = nullptr;            // wasm.lsda() intrinsic
-  Function *GetExnF = nullptr;          // wasm.get.exception() intrinsic
-  Function *GetSelectorF = nullptr;     // wasm.get.ehselector() intrinsic
-  Function *CallPersonalityF = nullptr; // _Unwind_CallPersonality() wrapper
-  Function *ClangCallTermF = nullptr;   // __clang_call_terminate() function
+  Function *ThrowF = nullptr;       // wasm.throw() intrinsic
+  Function *LPadIndexF = nullptr;   // wasm.landingpad.index() intrinsic
+  Function *LSDAF = nullptr;        // wasm.lsda() intrinsic
+  Function *GetExnF = nullptr;      // wasm.get.exception() intrinsic
+  Function *ExtractExnF = nullptr;  // wasm.extract.exception() intrinsic
+  Function *GetSelectorF = nullptr; // wasm.get.ehselector() intrinsic
+  FunctionCallee CallPersonalityF =
+      nullptr; // _Unwind_CallPersonality() wrapper
 
   bool prepareEHPads(Function &F);
   bool prepareThrows(Function &F);
 
-  void prepareEHPad(BasicBlock *BB, unsigned Index);
+  void prepareEHPad(BasicBlock *BB, bool NeedLSDA, unsigned Index = 0);
   void prepareTerminateCleanupPad(BasicBlock *BB);
 
 public:
@@ -209,14 +176,12 @@ bool WasmEHPrepare::prepareThrows(Function &F) {
 
   // wasm.throw() intinsic, which will be lowered to wasm 'throw' instruction.
   ThrowF = Intrinsic::getDeclaration(&M, Intrinsic::wasm_throw);
-
   // Insert an unreachable instruction after a call to @llvm.wasm.throw and
   // delete all following instructions within the BB, and delete all the dead
   // children of the BB as well.
   for (User *U : ThrowF->users()) {
-    // A call to @llvm.wasm.throw() is only generated from
-    // __builtin_wasm_throw() builtin call within libcxxabi, and cannot be an
-    // InvokeInst.
+    // A call to @llvm.wasm.throw() is only generated from __cxa_throw()
+    // builtin call within libcxxabi, and cannot be an InvokeInst.
     auto *ThrowI = cast<CallInst>(U);
     if (ThrowI->getFunction() != &F)
       continue;
@@ -263,8 +228,6 @@ bool WasmEHPrepare::prepareEHPads(Function &F) {
   SelectorField = IRB.CreateConstGEP2_32(LPadContextTy, LPadContextGV, 0, 2,
                                          "selector_gep");
 
-  // wasm.catch() intinsic, which will be lowered to wasm 'catch' instruction.
-  CatchF = Intrinsic::getDeclaration(&M, Intrinsic::wasm_catch);
   // wasm.landingpad.index() intrinsic, which is to specify landingpad index
   LPadIndexF = Intrinsic::getDeclaration(&M, Intrinsic::wasm_landingpad_index);
   // wasm.lsda() intrinsic. Returns the address of LSDA table for the current
@@ -275,14 +238,18 @@ bool WasmEHPrepare::prepareEHPads(Function &F) {
   GetExnF = Intrinsic::getDeclaration(&M, Intrinsic::wasm_get_exception);
   GetSelectorF = Intrinsic::getDeclaration(&M, Intrinsic::wasm_get_ehselector);
 
-  // _Unwind_CallPersonality() wrapper function, which calls the personality
-  CallPersonalityF = cast<Function>(M.getOrInsertFunction(
-      "_Unwind_CallPersonality", IRB.getInt32Ty(), IRB.getInt8PtrTy()));
-  CallPersonalityF->setDoesNotThrow();
+  // wasm.extract.exception() is the same as wasm.get.exception() but it does
+  // not take a token argument. This will be lowered down to EXTRACT_EXCEPTION
+  // pseudo instruction in instruction selection, which will be expanded using
+  // 'br_on_exn' instruction later.
+  ExtractExnF =
+      Intrinsic::getDeclaration(&M, Intrinsic::wasm_extract_exception);
 
-  // __clang_call_terminate() function, which is inserted by clang in case a
-  // cleanup throws
-  ClangCallTermF = M.getFunction("__clang_call_terminate");
+  // _Unwind_CallPersonality() wrapper function, which calls the personality
+  CallPersonalityF = M.getOrInsertFunction(
+      "_Unwind_CallPersonality", IRB.getInt32Ty(), IRB.getInt8PtrTy());
+  if (Function *F = dyn_cast<Function>(CallPersonalityF.getCallee()))
+    F->setDoesNotThrow();
 
   unsigned Index = 0;
   for (auto *BB : CatchPads) {
@@ -290,60 +257,52 @@ bool WasmEHPrepare::prepareEHPads(Function &F) {
     // In case of a single catch (...), we don't need to emit LSDA
     if (CPI->getNumArgOperands() == 1 &&
         cast<Constant>(CPI->getArgOperand(0))->isNullValue())
-      prepareEHPad(BB, -1);
+      prepareEHPad(BB, false);
     else
-      prepareEHPad(BB, Index++);
+      prepareEHPad(BB, true, Index++);
   }
 
-  if (!ClangCallTermF)
-    return !CatchPads.empty();
-
-  // Cleanuppads will turn into catch_all later, but cleanuppads with a call to
-  // __clang_call_terminate() is a special case. __clang_call_terminate() takes
-  // an exception object, so we have to duplicate call in both 'catch <C++ tag>'
-  // and 'catch_all' clauses. Here we only insert a call to catch; the
-  // duplication will be done later. In catch_all, the exception object will be
-  // set to null.
+  // Cleanup pads don't need LSDA.
   for (auto *BB : CleanupPads)
-    for (auto &I : *BB)
-      if (auto *CI = dyn_cast<CallInst>(&I))
-        if (CI->getCalledValue() == ClangCallTermF)
-          prepareEHPad(BB, -1);
+    prepareEHPad(BB, false);
 
   return true;
 }
 
-void WasmEHPrepare::prepareEHPad(BasicBlock *BB, unsigned Index) {
+// Prepare an EH pad for Wasm EH handling. If NeedLSDA is false, Index is
+// ignored.
+void WasmEHPrepare::prepareEHPad(BasicBlock *BB, bool NeedLSDA,
+                                 unsigned Index) {
   assert(BB->isEHPad() && "BB is not an EHPad!");
   IRBuilder<> IRB(BB->getContext());
-
   IRB.SetInsertPoint(&*BB->getFirstInsertionPt());
-  // The argument to wasm.catch() is the tag for C++ exceptions, which we set to
-  // 0 for this module.
-  // Pseudocode: void *exn = wasm.catch(0);
-  Instruction *Exn = IRB.CreateCall(CatchF, IRB.getInt32(0), "exn");
-  // Replace the return value of wasm.get.exception() with the return value from
-  // wasm.catch().
+
   auto *FPI = cast<FuncletPadInst>(BB->getFirstNonPHI());
   Instruction *GetExnCI = nullptr, *GetSelectorCI = nullptr;
   for (auto &U : FPI->uses()) {
     if (auto *CI = dyn_cast<CallInst>(U.getUser())) {
       if (CI->getCalledValue() == GetExnF)
         GetExnCI = CI;
-      else if (CI->getCalledValue() == GetSelectorF)
+      if (CI->getCalledValue() == GetSelectorF)
         GetSelectorCI = CI;
     }
   }
 
-  assert(GetExnCI && "wasm.get.exception() call does not exist");
-  GetExnCI->replaceAllUsesWith(Exn);
+  // Cleanup pads w/o __clang_call_terminate call do not have any of
+  // wasm.get.exception() or wasm.get.ehselector() calls. We need to do nothing.
+  if (!GetExnCI) {
+    assert(!GetSelectorCI &&
+           "wasm.get.ehselector() cannot exist w/o wasm.get.exception()");
+    return;
+  }
+
+  Instruction *ExtractExnCI = IRB.CreateCall(ExtractExnF, {}, "exn");
+  GetExnCI->replaceAllUsesWith(ExtractExnCI);
   GetExnCI->eraseFromParent();
 
   // In case it is a catchpad with single catch (...) or a cleanuppad, we don't
   // need to call personality function because we don't need a selector.
-  if (FPI->getNumArgOperands() == 0 ||
-      (FPI->getNumArgOperands() == 1 &&
-       cast<Constant>(FPI->getArgOperand(0))->isNullValue())) {
+  if (!NeedLSDA) {
     if (GetSelectorCI) {
       assert(GetSelectorCI->use_empty() &&
              "wasm.get.ehselector() still has uses!");
@@ -351,7 +310,7 @@ void WasmEHPrepare::prepareEHPad(BasicBlock *BB, unsigned Index) {
     }
     return;
   }
-  IRB.SetInsertPoint(Exn->getNextNode());
+  IRB.SetInsertPoint(ExtractExnCI->getNextNode());
 
   // This is to create a map of <landingpad EH label, landingpad index> in
   // SelectionDAGISel, which is to be used in EHStreamer to emit LSDA tables.
@@ -373,12 +332,13 @@ void WasmEHPrepare::prepareEHPad(BasicBlock *BB, unsigned Index) {
     IRB.CreateStore(IRB.CreateCall(LSDAF), LSDAField);
 
   // Pseudocode: _Unwind_CallPersonality(exn);
-  CallInst *PersCI =
-      IRB.CreateCall(CallPersonalityF, Exn, OperandBundleDef("funclet", CPI));
+  CallInst *PersCI = IRB.CreateCall(CallPersonalityF, ExtractExnCI,
+                                    OperandBundleDef("funclet", CPI));
   PersCI->setDoesNotThrow();
 
   // Pseudocode: int selector = __wasm.landingpad_context.selector;
-  Instruction *Selector = IRB.CreateLoad(SelectorField, "selector");
+  Instruction *Selector =
+      IRB.CreateLoad(IRB.getInt32Ty(), SelectorField, "selector");
 
   // Replace the return value from wasm.get.ehselector() with the selector value
   // loaded from __wasm_lpad_context.selector.
@@ -388,15 +348,15 @@ void WasmEHPrepare::prepareEHPad(BasicBlock *BB, unsigned Index) {
 }
 
 void llvm::calculateWasmEHInfo(const Function *F, WasmEHFuncInfo &EHInfo) {
+  // If an exception is not caught by a catchpad (i.e., it is a foreign
+  // exception), it will unwind to its parent catchswitch's unwind destination.
+  // We don't record an unwind destination for cleanuppads because every
+  // exception should be caught by it.
   for (const auto &BB : *F) {
     if (!BB.isEHPad())
       continue;
     const Instruction *Pad = BB.getFirstNonPHI();
 
-    // If an exception is not caught by a catchpad (i.e., it is a foreign
-    // exception), it will unwind to its parent catchswitch's unwind
-    // destination. We don't record an unwind destination for cleanuppads
-    // because every exception should be caught by it.
     if (const auto *CatchPad = dyn_cast<CatchPadInst>(Pad)) {
       const auto *UnwindBB = CatchPad->getCatchSwitch()->getUnwindDest();
       if (!UnwindBB)
@@ -408,23 +368,5 @@ void llvm::calculateWasmEHInfo(const Function *F, WasmEHFuncInfo &EHInfo) {
       else // cleanuppad
         EHInfo.setEHPadUnwindDest(&BB, UnwindBB);
     }
-  }
-
-  // Record the unwind destination for invoke and cleanupret instructions.
-  for (const auto &BB : *F) {
-    const Instruction *TI = BB.getTerminator();
-    BasicBlock *UnwindBB = nullptr;
-    if (const auto *Invoke = dyn_cast<InvokeInst>(TI))
-      UnwindBB = Invoke->getUnwindDest();
-    else if (const auto *CleanupRet = dyn_cast<CleanupReturnInst>(TI))
-      UnwindBB = CleanupRet->getUnwindDest();
-    if (!UnwindBB)
-      continue;
-    const Instruction *UnwindPad = UnwindBB->getFirstNonPHI();
-    if (const auto *CatchSwitch = dyn_cast<CatchSwitchInst>(UnwindPad))
-      // Currently there should be only one handler per a catchswitch.
-      EHInfo.setThrowUnwindDest(&BB, *CatchSwitch->handlers().begin());
-    else // cleanuppad
-      EHInfo.setThrowUnwindDest(&BB, UnwindBB);
   }
 }

@@ -1,9 +1,8 @@
 //===---------------------- ExecuteStage.cpp --------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 /// \file
@@ -53,10 +52,14 @@ bool ExecuteStage::isAvailable(const InstRef &IR) const {
 
 Error ExecuteStage::issueInstruction(InstRef &IR) {
   SmallVector<std::pair<ResourceRef, ResourceCycles>, 4> Used;
+  SmallVector<InstRef, 4> Pending;
   SmallVector<InstRef, 4> Ready;
-  HWS.issueInstruction(IR, Used, Ready);
+
+  HWS.issueInstruction(IR, Used, Pending, Ready);
+  NumIssuedOpcodes += IR.getInstruction()->getDesc().NumMicroOps;
 
   notifyReservedOrReleasedBuffers(IR, /* Reserved */ false);
+
   notifyInstructionIssued(IR, Used);
   if (IR.getInstruction()->isExecuted()) {
     notifyInstructionExecuted(IR);
@@ -64,6 +67,9 @@ Error ExecuteStage::issueInstruction(InstRef &IR) {
     if (Error S = moveToTheNextStage(IR))
       return S;
   }
+
+  for (const InstRef &I : Pending)
+    notifyInstructionPending(I);
 
   for (const InstRef &I : Ready)
     notifyInstructionReady(I);
@@ -86,9 +92,12 @@ Error ExecuteStage::issueReadyInstructions() {
 Error ExecuteStage::cycleStart() {
   SmallVector<ResourceRef, 8> Freed;
   SmallVector<InstRef, 4> Executed;
+  SmallVector<InstRef, 4> Pending;
   SmallVector<InstRef, 4> Ready;
 
-  HWS.cycleEvent(Freed, Executed, Ready);
+  HWS.cycleEvent(Freed, Executed, Pending, Ready);
+  NumDispatchedOpcodes = 0;
+  NumIssuedOpcodes = 0;
 
   for (const ResourceRef &RR : Freed)
     notifyResourceAvailable(RR);
@@ -100,10 +109,51 @@ Error ExecuteStage::cycleStart() {
       return S;
   }
 
+  for (const InstRef &IR : Pending)
+    notifyInstructionPending(IR);
+
   for (const InstRef &IR : Ready)
     notifyInstructionReady(IR);
 
   return issueReadyInstructions();
+}
+
+Error ExecuteStage::cycleEnd() {
+  if (!EnablePressureEvents)
+    return ErrorSuccess();
+
+  // Always conservatively report any backpressure events if the dispatch logic
+  // was stalled due to unavailable scheduler resources.
+  if (!HWS.hadTokenStall() && NumDispatchedOpcodes <= NumIssuedOpcodes)
+    return ErrorSuccess();
+
+  SmallVector<InstRef, 8> Insts;
+  uint64_t Mask = HWS.analyzeResourcePressure(Insts);
+  if (Mask) {
+    LLVM_DEBUG(dbgs() << "[E] Backpressure increased because of unavailable "
+                         "pipeline resources: "
+                      << format_hex(Mask, 16) << '\n');
+    HWPressureEvent Ev(HWPressureEvent::RESOURCES, Insts, Mask);
+    notifyEvent(Ev);
+  }
+
+  SmallVector<InstRef, 8> RegDeps;
+  SmallVector<InstRef, 8> MemDeps;
+  HWS.analyzeDataDependencies(RegDeps, MemDeps);
+  if (RegDeps.size()) {
+    LLVM_DEBUG(
+        dbgs() << "[E] Backpressure increased by register dependencies\n");
+    HWPressureEvent Ev(HWPressureEvent::REGISTER_DEPS, RegDeps);
+    notifyEvent(Ev);
+  }
+
+  if (MemDeps.size()) {
+    LLVM_DEBUG(dbgs() << "[E] Backpressure increased by memory dependencies\n");
+    HWPressureEvent Ev(HWPressureEvent::MEMORY_DEPS, MemDeps);
+    notifyEvent(Ev);
+  }
+
+  return ErrorSuccess();
 }
 
 #ifndef NDEBUG
@@ -123,6 +173,7 @@ Error ExecuteStage::handleInstructionEliminated(InstRef &IR) {
 #ifndef NDEBUG
   verifyInstructionEliminated(IR);
 #endif
+  notifyInstructionPending(IR);
   notifyInstructionReady(IR);
   notifyInstructionIssued(IR, {});
   IR.getInstruction()->forceExecuted();
@@ -146,10 +197,18 @@ Error ExecuteStage::execute(InstRef &IR) {
   // BufferSize=0 as reserved. Resources with a buffer size of zero will only
   // be released after MCIS is issued, and all the ResourceCycles for those
   // units have been consumed.
-  HWS.dispatch(IR);
+  bool IsReadyInstruction = HWS.dispatch(IR);
+  const Instruction &Inst = *IR.getInstruction();
+  NumDispatchedOpcodes += Inst.getDesc().NumMicroOps;
   notifyReservedOrReleasedBuffers(IR, /* Reserved */ true);
-  if (!HWS.isReady(IR))
+ 
+  if (!IsReadyInstruction) {
+    if (Inst.isPending())
+      notifyInstructionPending(IR);
     return ErrorSuccess();
+  }
+
+  notifyInstructionPending(IR);
 
   // If we did not return early, then the scheduler is ready for execution.
   notifyInstructionReady(IR);
@@ -169,6 +228,12 @@ void ExecuteStage::notifyInstructionExecuted(const InstRef &IR) const {
       HWInstructionEvent(HWInstructionEvent::Executed, IR));
 }
 
+void ExecuteStage::notifyInstructionPending(const InstRef &IR) const {
+  LLVM_DEBUG(dbgs() << "[E] Instruction Pending: #" << IR << '\n');
+  notifyEvent<HWInstructionEvent>(
+      HWInstructionEvent(HWInstructionEvent::Pending, IR));
+}
+
 void ExecuteStage::notifyInstructionReady(const InstRef &IR) const {
   LLVM_DEBUG(dbgs() << "[E] Instruction Ready: #" << IR << '\n');
   notifyEvent<HWInstructionEvent>(
@@ -184,15 +249,21 @@ void ExecuteStage::notifyResourceAvailable(const ResourceRef &RR) const {
 
 void ExecuteStage::notifyInstructionIssued(
     const InstRef &IR,
-    ArrayRef<std::pair<ResourceRef, ResourceCycles>> Used) const {
+    MutableArrayRef<std::pair<ResourceRef, ResourceCycles>> Used) const {
   LLVM_DEBUG({
     dbgs() << "[E] Instruction Issued: #" << IR << '\n';
     for (const std::pair<ResourceRef, ResourceCycles> &Resource : Used) {
+      assert(Resource.second.getDenominator() == 1 && "Invalid cycles!");
       dbgs() << "[E] Resource Used: [" << Resource.first.first << '.'
              << Resource.first.second << "], ";
-      dbgs() << "cycles: " << Resource.second << '\n';
+      dbgs() << "cycles: " << Resource.second.getNumerator() << '\n';
     }
   });
+
+  // Replace resource masks with valid resource processor IDs.
+  for (std::pair<ResourceRef, ResourceCycles> &Use : Used)
+    Use.first.first = HWS.getResourceID(Use.first.first);
+
   notifyEvent<HWInstructionEvent>(HWInstructionIssuedEvent(IR, Used));
 }
 

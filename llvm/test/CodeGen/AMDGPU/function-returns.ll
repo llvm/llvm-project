@@ -140,7 +140,7 @@ define <2 x i32> @v2i32_func_void() #0 {
 }
 
 ; GCN-LABEL: {{^}}v3i32_func_void:
-; GCN: buffer_load_dwordx4 v[0:3], off
+; GCN: buffer_load_dwordx3 v[0:2], off
 ; GCN-NEXT: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_setpc_b64
 define <3 x i32> @v3i32_func_void() #0 {
@@ -568,6 +568,26 @@ define { <3 x float>, i32 } @v3f32_struct_func_void_wasted_reg() #0 {
   %insert.3 = insertvalue { <3 x float>, i32 } undef, <3 x float> %insert.2, 0
   %insert.4 = insertvalue { <3 x float>, i32 } %insert.3, i32 %load3, 1
   ret { <3 x float>, i32 } %insert.4
+}
+
+; GCN-LABEL: {{^}}void_func_sret_max_known_zero_bits:
+; GCN: v_lshrrev_b32_e32 [[LSHR16:v[0-9]+]], 16, v0
+; GCN: ds_write_b32 {{v[0-9]+}}, [[LSHR16]]
+
+; GCN: v_mov_b32_e32 [[HIGH_BITS:v[0-9]+]], 0
+; GCN: ds_write_b32 {{v[0-9]+}}, [[HIGH_BITS]]
+; GCN-NEXT: ds_write_b32 {{v[0-9]+}}, [[HIGH_BITS]]
+define void @void_func_sret_max_known_zero_bits(i8 addrspace(5)* sret %arg0) #0 {
+  %arg0.int = ptrtoint i8 addrspace(5)* %arg0 to i32
+
+  %lshr0 = lshr i32 %arg0.int, 16
+  %lshr1 = lshr i32 %arg0.int, 17
+  %lshr2 = lshr i32 %arg0.int, 18
+
+  store volatile i32 %lshr0, i32 addrspace(3)* undef
+  store volatile i32 %lshr1, i32 addrspace(3)* undef
+  store volatile i32 %lshr2, i32 addrspace(3)* undef
+  ret void
 }
 
 attributes #0 = { nounwind }

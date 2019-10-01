@@ -1,9 +1,8 @@
 //==- WebAssemblyDisassembler.cpp - Disassembler for WebAssembly -*- C++ -*-==//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -15,7 +14,9 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/WebAssemblyInstPrinter.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
+#include "TargetInfo/WebAssemblyTargetInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCFixedLenDisassembler.h"
@@ -45,6 +46,10 @@ class WebAssemblyDisassembler final : public MCDisassembler {
                               ArrayRef<uint8_t> Bytes, uint64_t Address,
                               raw_ostream &VStream,
                               raw_ostream &CStream) const override;
+  DecodeStatus onSymbolStart(StringRef Name, uint64_t &Size,
+                             ArrayRef<uint8_t> Bytes, uint64_t Address,
+                             raw_ostream &VStream,
+                             raw_ostream &CStream) const override;
 
 public:
   WebAssemblyDisassembler(const MCSubtargetInfo &STI, MCContext &Ctx,
@@ -77,7 +82,7 @@ static int nextByte(ArrayRef<uint8_t> Bytes, uint64_t &Size) {
 }
 
 static bool nextLEB(int64_t &Val, ArrayRef<uint8_t> Bytes, uint64_t &Size,
-                    bool Signed = false) {
+                    bool Signed) {
   unsigned N = 0;
   const char *Error = nullptr;
   Val = Signed ? decodeSLEB128(Bytes.data() + Size, &N,
@@ -104,9 +109,8 @@ template <typename T>
 bool parseImmediate(MCInst &MI, uint64_t &Size, ArrayRef<uint8_t> Bytes) {
   if (Size + sizeof(T) > Bytes.size())
     return false;
-  T Val;
-  memcpy(&Val, Bytes.data() + Size, sizeof(T));
-  support::endian::byte_swap<T, support::endianness::little>(Val);
+  T Val = support::endian::read<T, support::endianness::little, 1>(
+      Bytes.data() + Size);
   Size += sizeof(T);
   if (std::is_floating_point<T>::value) {
     MI.addOperand(MCOperand::createFPImm(static_cast<double>(Val)));
@@ -114,6 +118,41 @@ bool parseImmediate(MCInst &MI, uint64_t &Size, ArrayRef<uint8_t> Bytes) {
     MI.addOperand(MCOperand::createImm(static_cast<int64_t>(Val)));
   }
   return true;
+}
+
+MCDisassembler::DecodeStatus WebAssemblyDisassembler::onSymbolStart(
+    StringRef Name, uint64_t &Size, ArrayRef<uint8_t> Bytes, uint64_t Address,
+    raw_ostream &VStream, raw_ostream &CStream) const {
+  Size = 0;
+  if (Address == 0) {
+    // Start of a code section: we're parsing only the function count.
+    int64_t FunctionCount;
+    if (!nextLEB(FunctionCount, Bytes, Size, false))
+      return MCDisassembler::Fail;
+    outs() << "        # " << FunctionCount << " functions in section.";
+  } else {
+    // Parse the start of a single function.
+    int64_t BodySize, LocalEntryCount;
+    if (!nextLEB(BodySize, Bytes, Size, false) ||
+        !nextLEB(LocalEntryCount, Bytes, Size, false))
+      return MCDisassembler::Fail;
+    if (LocalEntryCount) {
+      outs() << "        .local ";
+      for (int64_t I = 0; I < LocalEntryCount; I++) {
+        int64_t Count, Type;
+        if (!nextLEB(Count, Bytes, Size, false) ||
+            !nextLEB(Type, Bytes, Size, false))
+          return MCDisassembler::Fail;
+        for (int64_t J = 0; J < Count; J++) {
+          if (I || J)
+            outs() << ", ";
+          outs() << WebAssembly::anyTypeToString(Type);
+        }
+      }
+    }
+  }
+  outs() << "\n";
+  return MCDisassembler::Success;
 }
 
 MCDisassembler::DecodeStatus WebAssemblyDisassembler::getInstruction(
@@ -138,7 +177,7 @@ MCDisassembler::DecodeStatus WebAssemblyDisassembler::getInstruction(
     if (!WasmInst)
       return MCDisassembler::Fail;
     int64_t PrefixedOpc;
-    if (!nextLEB(PrefixedOpc, Bytes, Size))
+    if (!nextLEB(PrefixedOpc, Bytes, Size, false))
       return MCDisassembler::Fail;
     if (PrefixedOpc < 0 || PrefixedOpc >= WebAssemblyInstructionTableSize)
       return MCDisassembler::Fail;
@@ -161,6 +200,7 @@ MCDisassembler::DecodeStatus WebAssemblyDisassembler::getInstruction(
     case WebAssembly::OPERAND_OFFSET32:
     case WebAssembly::OPERAND_P2ALIGN:
     case WebAssembly::OPERAND_TYPEINDEX:
+    case WebAssembly::OPERAND_EVENT:
     case MCOI::OPERAND_IMMEDIATE: {
       if (!parseLEBImmediate(MI, Size, Bytes, false))
         return MCDisassembler::Fail;

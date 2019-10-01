@@ -6,7 +6,7 @@ target triple = "wasm32-unknown-unknown"
 
 ; CHECK-LABEL: return_i32:
 ; CHECK-NEXT:  .functype return_i32 (i32) -> (i32){{$}}
-; CHECK-NEXT:  get_local  $push0=, 0
+; CHECK-NEXT:  local.get  $push0=, 0
 ; CHECK-NEXT:  end_function{{$}}
 define i32 @return_i32(i32 %p) {
   ret i32 %p

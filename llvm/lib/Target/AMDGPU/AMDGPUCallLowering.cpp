@@ -1,9 +1,8 @@
 //===-- llvm/lib/Target/AMDGPU/AMDGPUCallLowering.cpp - Call lowering -----===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -21,11 +20,48 @@
 #include "SIMachineFunctionInfo.h"
 #include "SIRegisterInfo.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/Support/LowLevelTypeImpl.h"
 
 using namespace llvm;
+
+namespace {
+
+struct OutgoingArgHandler : public CallLowering::ValueHandler {
+  OutgoingArgHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
+                     MachineInstrBuilder MIB, CCAssignFn *AssignFn)
+      : ValueHandler(MIRBuilder, MRI, AssignFn), MIB(MIB) {}
+
+  MachineInstrBuilder MIB;
+
+  unsigned getStackAddress(uint64_t Size, int64_t Offset,
+                           MachinePointerInfo &MPO) override {
+    llvm_unreachable("not implemented");
+  }
+
+  void assignValueToAddress(unsigned ValVReg, unsigned Addr, uint64_t Size,
+                            MachinePointerInfo &MPO, CCValAssign &VA) override {
+    llvm_unreachable("not implemented");
+  }
+
+  void assignValueToReg(unsigned ValVReg, unsigned PhysReg,
+                        CCValAssign &VA) override {
+    MIB.addUse(PhysReg);
+    MIRBuilder.buildCopy(PhysReg, ValVReg);
+  }
+
+  bool assignArg(unsigned ValNo, MVT ValVT, MVT LocVT,
+                 CCValAssign::LocInfo LocInfo,
+                 const CallLowering::ArgInfo &Info,
+                 CCState &State) override {
+    return AssignFn(ValNo, ValVT, LocVT, LocInfo, Info.Flags, State);
+  }
+};
+
+}
 
 AMDGPUCallLowering::AMDGPUCallLowering(const AMDGPUTargetLowering &TLI)
   : CallLowering(&TLI) {
@@ -34,11 +70,44 @@ AMDGPUCallLowering::AMDGPUCallLowering(const AMDGPUTargetLowering &TLI)
 bool AMDGPUCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
                                      const Value *Val,
                                      ArrayRef<unsigned> VRegs) const {
-  // FIXME: Add support for non-void returns.
-  if (Val)
+
+  MachineFunction &MF = MIRBuilder.getMF();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+  MFI->setIfReturnsVoid(!Val);
+
+  if (!Val) {
+    MIRBuilder.buildInstr(AMDGPU::S_ENDPGM).addImm(0);
+    return true;
+  }
+
+  unsigned VReg = VRegs[0];
+
+  const Function &F = MF.getFunction();
+  auto &DL = F.getParent()->getDataLayout();
+  if (!AMDGPU::isShader(F.getCallingConv()))
     return false;
 
-  MIRBuilder.buildInstr(AMDGPU::S_ENDPGM);
+
+  const AMDGPUTargetLowering &TLI = *getTLI<AMDGPUTargetLowering>();
+  SmallVector<EVT, 4> SplitVTs;
+  SmallVector<uint64_t, 4> Offsets;
+  ArgInfo OrigArg{VReg, Val->getType()};
+  setArgFlags(OrigArg, AttributeList::ReturnIndex, DL, F);
+  ComputeValueVTs(TLI, DL, OrigArg.Ty, SplitVTs, &Offsets, 0);
+
+  SmallVector<ArgInfo, 8> SplitArgs;
+  CCAssignFn *AssignFn = CCAssignFnForReturn(F.getCallingConv(), false);
+  for (unsigned i = 0, e = Offsets.size(); i != e; ++i) {
+    Type *SplitTy = SplitVTs[i].getTypeForEVT(F.getContext());
+    SplitArgs.push_back({VRegs[i], SplitTy, OrigArg.Flags, OrigArg.IsFixed});
+  }
+  auto RetInstr = MIRBuilder.buildInstrNoInsert(AMDGPU::SI_RETURN_TO_EPILOG);
+  OutgoingArgHandler Handler(MIRBuilder, MRI, RetInstr, AssignFn);
+  if (!handleAssignments(MIRBuilder, SplitArgs, Handler))
+    return false;
+  MIRBuilder.insertInstr(RetInstr);
+
   return true;
 }
 
@@ -87,6 +156,43 @@ void AMDGPUCallLowering::lowerParameter(MachineIRBuilder &MIRBuilder,
   MIRBuilder.buildLoad(DstReg, PtrReg, *MMO);
 }
 
+static unsigned findFirstFreeSGPR(CCState &CCInfo) {
+  unsigned NumSGPRs = AMDGPU::SGPR_32RegClass.getNumRegs();
+  for (unsigned Reg = 0; Reg < NumSGPRs; ++Reg) {
+    if (!CCInfo.isAllocated(AMDGPU::SGPR0 + Reg)) {
+      return AMDGPU::SGPR0 + Reg;
+    }
+  }
+  llvm_unreachable("Cannot allocate sgpr");
+}
+
+static void allocateSystemSGPRs(CCState &CCInfo,
+                                MachineFunction &MF,
+                                SIMachineFunctionInfo &Info,
+                                CallingConv::ID CallConv,
+                                bool IsShader) {
+  if (Info.hasPrivateSegmentWaveByteOffset()) {
+    // Scratch wave offset passed in system SGPR.
+    unsigned PrivateSegmentWaveByteOffsetReg;
+
+    if (IsShader) {
+      PrivateSegmentWaveByteOffsetReg =
+        Info.getPrivateSegmentWaveByteOffsetSystemSGPR();
+
+      // This is true if the scratch wave byte offset doesn't have a fixed
+      // location.
+      if (PrivateSegmentWaveByteOffsetReg == AMDGPU::NoRegister) {
+        PrivateSegmentWaveByteOffsetReg = findFirstFreeSGPR(CCInfo);
+        Info.setPrivateSegmentWaveByteOffset(PrivateSegmentWaveByteOffsetReg);
+      }
+    } else
+      PrivateSegmentWaveByteOffsetReg = Info.addPrivateSegmentWaveByteOffset();
+
+    MF.addLiveIn(PrivateSegmentWaveByteOffsetReg, &AMDGPU::SGPR_32RegClass);
+    CCInfo.AllocateReg(PrivateSegmentWaveByteOffsetReg);
+  }
+}
+
 bool AMDGPUCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
                                               const Function &F,
                                               ArrayRef<unsigned> VRegs) const {
@@ -101,6 +207,8 @@ bool AMDGPUCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
   const SIRegisterInfo *TRI = MF.getSubtarget<GCNSubtarget>().getRegisterInfo();
   const DataLayout &DL = F.getParent()->getDataLayout();
+
+  bool IsShader = AMDGPU::isShader(F.getCallingConv());
 
   SmallVector<CCValAssign, 16> ArgLocs;
   CCState CCInfo(F.getCallingConv(), F.isVarArg(), MF, ArgLocs, F.getContext());
@@ -173,6 +281,7 @@ bool AMDGPUCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
       ++i;
     }
 
+    allocateSystemSGPRs(CCInfo, MF, *Info, F.getCallingConv(), IsShader);
     return true;
   }
 
@@ -244,6 +353,8 @@ bool AMDGPUCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
       MIRBuilder.getMBB().addLiveIn(VA.getLocReg());
       MIRBuilder.buildCopy(VRegs[OrigArgIdx], VA.getLocReg());
     }
+
+    allocateSystemSGPRs(CCInfo, MF, *Info, F.getCallingConv(), IsShader);
     return true;
   }
 

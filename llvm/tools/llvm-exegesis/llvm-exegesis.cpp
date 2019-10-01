@@ -1,9 +1,8 @@
 //===-- llvm-exegesis.cpp ---------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -19,6 +18,7 @@
 #include "lib/LlvmState.h"
 #include "lib/PerfHelper.h"
 #include "lib/Target.h"
+#include "lib/TargetSelect.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/MC/MCInstBuilder.h"
@@ -41,71 +41,110 @@
 namespace llvm {
 namespace exegesis {
 
+static cl::OptionCategory Options("llvm-exegesis options");
+static cl::OptionCategory BenchmarkOptions("llvm-exegesis benchmark options");
+static cl::OptionCategory AnalysisOptions("llvm-exegesis analysis options");
+
 static cl::opt<int> OpcodeIndex("opcode-index",
                                 cl::desc("opcode to measure, by index"),
-                                cl::init(0));
+                                cl::cat(BenchmarkOptions), cl::init(0));
 
 static cl::opt<std::string>
     OpcodeNames("opcode-name",
                 cl::desc("comma-separated list of opcodes to measure, by name"),
-                cl::init(""));
+                cl::cat(BenchmarkOptions), cl::init(""));
 
 static cl::opt<std::string> SnippetsFile("snippets-file",
                                          cl::desc("code snippets to measure"),
+                                         cl::cat(BenchmarkOptions),
                                          cl::init(""));
 
-static cl::opt<std::string> BenchmarkFile("benchmarks-file", cl::desc(""),
-                                          cl::init(""));
+static cl::opt<std::string>
+    BenchmarkFile("benchmarks-file",
+                  cl::desc("File to read (analysis mode) or write "
+                           "(latency/uops/inverse_throughput modes) benchmark "
+                           "results. “-” uses stdin/stdout."),
+                  cl::cat(Options), cl::init(""));
 
-static cl::opt<exegesis::InstructionBenchmark::ModeE>
-    BenchmarkMode("mode", cl::desc("the mode to run"),
-                  cl::values(clEnumValN(exegesis::InstructionBenchmark::Latency,
-                                        "latency", "Instruction Latency"),
-                             clEnumValN(exegesis::InstructionBenchmark::Uops,
-                                        "uops", "Uop Decomposition"),
-                             // When not asking for a specific benchmark mode,
-                             // we'll analyse the results.
-                             clEnumValN(exegesis::InstructionBenchmark::Unknown,
-                                        "analysis", "Analysis")));
+static cl::opt<exegesis::InstructionBenchmark::ModeE> BenchmarkMode(
+    "mode", cl::desc("the mode to run"), cl::cat(Options),
+    cl::values(clEnumValN(exegesis::InstructionBenchmark::Latency, "latency",
+                          "Instruction Latency"),
+               clEnumValN(exegesis::InstructionBenchmark::InverseThroughput,
+                          "inverse_throughput",
+                          "Instruction Inverse Throughput"),
+               clEnumValN(exegesis::InstructionBenchmark::Uops, "uops",
+                          "Uop Decomposition"),
+               // When not asking for a specific benchmark mode,
+               // we'll analyse the results.
+               clEnumValN(exegesis::InstructionBenchmark::Unknown, "analysis",
+                          "Analysis")));
 
 static cl::opt<unsigned>
     NumRepetitions("num-repetitions",
                    cl::desc("number of time to repeat the asm snippet"),
-                   cl::init(10000));
+                   cl::cat(BenchmarkOptions), cl::init(10000));
 
 static cl::opt<bool> IgnoreInvalidSchedClass(
     "ignore-invalid-sched-class",
     cl::desc("ignore instructions that do not define a sched class"),
-    cl::init(false));
+    cl::cat(BenchmarkOptions), cl::init(false));
 
-static cl::opt<unsigned> AnalysisNumPoints(
+static cl::opt<exegesis::InstructionBenchmarkClustering::ModeE>
+    AnalysisClusteringAlgorithm(
+        "analysis-clustering", cl::desc("the clustering algorithm to use"),
+        cl::cat(AnalysisOptions),
+        cl::values(clEnumValN(exegesis::InstructionBenchmarkClustering::Dbscan,
+                              "dbscan", "use DBSCAN/OPTICS algorithm"),
+                   clEnumValN(exegesis::InstructionBenchmarkClustering::Naive,
+                              "naive", "one cluster per opcode")),
+        cl::init(exegesis::InstructionBenchmarkClustering::Dbscan));
+
+static cl::opt<unsigned> AnalysisDbscanNumPoints(
     "analysis-numpoints",
-    cl::desc("minimum number of points in an analysis cluster"), cl::init(3));
+    cl::desc("minimum number of points in an analysis cluster (dbscan only)"),
+    cl::cat(AnalysisOptions), cl::init(3));
 
-static cl::opt<float>
-    AnalysisEpsilon("analysis-epsilon",
-                    cl::desc("dbscan epsilon for analysis clustering"),
-                    cl::init(0.1));
+static cl::opt<float> AnalysisClusteringEpsilon(
+    "analysis-clustering-epsilon",
+    cl::desc("epsilon for benchmark point clustering"),
+    cl::cat(AnalysisOptions), cl::init(0.1));
+
+static cl::opt<float> AnalysisInconsistencyEpsilon(
+    "analysis-inconsistency-epsilon",
+    cl::desc("epsilon for detection of when the cluster is different from the "
+             "LLVM schedule profile values"),
+    cl::cat(AnalysisOptions), cl::init(0.1));
 
 static cl::opt<std::string>
     AnalysisClustersOutputFile("analysis-clusters-output-file", cl::desc(""),
-                               cl::init("-"));
+                               cl::cat(AnalysisOptions), cl::init(""));
 static cl::opt<std::string>
     AnalysisInconsistenciesOutputFile("analysis-inconsistencies-output-file",
-                                      cl::desc(""), cl::init("-"));
+                                      cl::desc(""), cl::cat(AnalysisOptions),
+                                      cl::init(""));
 
-static cl::opt<std::string>
-    CpuName("mcpu",
-            cl::desc(
-                "cpu name to use for pfm counters, leave empty to autodetect"),
-            cl::init(""));
+static cl::opt<bool> AnalysisDisplayUnstableOpcodes(
+    "analysis-display-unstable-clusters",
+    cl::desc("if there is more than one benchmark for an opcode, said "
+             "benchmarks may end up not being clustered into the same cluster "
+             "if the measured performance characteristics are different. by "
+             "default all such opcodes are filtered out. this flag will "
+             "instead show only such unstable opcodes"),
+    cl::cat(AnalysisOptions), cl::init(false));
 
+static cl::opt<std::string> CpuName(
+    "mcpu",
+    cl::desc("cpu name to use for pfm counters, leave empty to autodetect"),
+    cl::cat(Options), cl::init(""));
+
+static cl::opt<bool>
+    DumpObjectToDisk("dump-object-to-disk",
+                     cl::desc("dumps the generated benchmark object to disk "
+                              "and prints a message to access it"),
+                     cl::cat(BenchmarkOptions), cl::init(true));
 
 static ExitOnError ExitOnErr;
-
-#ifdef LLVM_EXEGESIS_INITIALIZE_NATIVE_TARGET
-void LLVM_EXEGESIS_INITIALIZE_NATIVE_TARGET();
-#endif
 
 // Checks that only one of OpcodeNames, OpcodeIndex or SnippetsFile is provided,
 // and returns the opcode indices or {} if snippets should be read from
@@ -189,8 +228,7 @@ public:
   // Implementation of the llvm::MCStreamer interface. We only care about
   // instructions.
   void EmitInstruction(const llvm::MCInst &Instruction,
-                       const llvm::MCSubtargetInfo &STI,
-                       bool PrintSchedInfo) override {
+                       const llvm::MCSubtargetInfo &STI) override {
     Result->Instructions.push_back(Instruction);
   }
 
@@ -318,15 +356,18 @@ readSnippets(const LLVMState &State, llvm::StringRef Filename) {
 }
 
 void benchmarkMain() {
+#ifndef HAVE_LIBPFM
+  llvm::report_fatal_error(
+      "benchmarking unavailable, LLVM was built without libpfm.");
+#endif
+
   if (exegesis::pfm::pfmInitialize())
     llvm::report_fatal_error("cannot initialize libpfm");
 
   llvm::InitializeNativeTarget();
   llvm::InitializeNativeTargetAsmPrinter();
   llvm::InitializeNativeTargetAsmParser();
-#ifdef LLVM_EXEGESIS_INITIALIZE_NATIVE_TARGET
-  LLVM_EXEGESIS_INITIALIZE_NATIVE_TARGET();
-#endif
+  InitializeNativeExegesisTarget();
 
   const LLVMState State(CpuName);
   const auto Opcodes = getOpcodesOrDie(State.getInstrInfo());
@@ -371,7 +412,7 @@ void benchmarkMain() {
 
   for (const BenchmarkCode &Conf : Configurations) {
     InstructionBenchmark Result =
-        Runner->runConfiguration(Conf, NumRepetitions);
+        Runner->runConfiguration(Conf, NumRepetitions, DumpObjectToDisk);
     ExitOnErr(Result.writeYaml(State, BenchmarkFile));
   }
   exegesis::pfm::pfmTerminate();
@@ -402,6 +443,13 @@ static void analysisMain() {
   if (BenchmarkFile.empty())
     llvm::report_fatal_error("--benchmarks-file must be set.");
 
+  if (AnalysisClustersOutputFile.empty() &&
+      AnalysisInconsistenciesOutputFile.empty()) {
+    llvm::report_fatal_error(
+        "At least one of --analysis-clusters-output-file and "
+        "--analysis-inconsistencies-output-file must be specified.");
+  }
+
   llvm::InitializeNativeTarget();
   llvm::InitializeNativeTargetAsmPrinter();
   llvm::InitializeNativeTargetDisassembler();
@@ -424,10 +472,16 @@ static void analysisMain() {
     llvm::errs() << "unknown target '" << Points[0].LLVMTriple << "'\n";
     return;
   }
-  const auto Clustering = ExitOnErr(InstructionBenchmarkClustering::create(
-      Points, AnalysisNumPoints, AnalysisEpsilon));
 
-  const Analysis Analyzer(*TheTarget, Clustering);
+  std::unique_ptr<llvm::MCInstrInfo> InstrInfo(TheTarget->createMCInstrInfo());
+
+  const auto Clustering = ExitOnErr(InstructionBenchmarkClustering::create(
+      Points, AnalysisClusteringAlgorithm, AnalysisDbscanNumPoints,
+      AnalysisClusteringEpsilon, InstrInfo->getNumOpcodes()));
+
+  const Analysis Analyzer(*TheTarget, std::move(InstrInfo), Clustering,
+                          AnalysisInconsistencyEpsilon,
+                          AnalysisDisplayUnstableOpcodes);
 
   maybeRunAnalysis<Analysis::PrintClusters>(Analyzer, "analysis clusters",
                                             AnalysisClustersOutputFile);

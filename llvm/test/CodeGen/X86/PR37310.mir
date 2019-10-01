@@ -101,10 +101,10 @@ frameInfo:
 fixedStack:      
 stack:           
   - { id: 0, name: q, type: default, offset: 0, size: 512, alignment: 16, 
-      stack-id: 0, callee-saved-register: '', callee-saved-restored: true, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
   - { id: 1, name: r, type: default, offset: 0, size: 512, alignment: 16, 
-      stack-id: 0, callee-saved-register: '', callee-saved-restored: true, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
 constants:       
 body:             |
@@ -114,7 +114,7 @@ body:             |
   
     %0:gr32 = COPY $edi
     %1:gr32 = SUB32ri8 %0, 3, implicit-def $eflags
-    JE_1 %bb.3, implicit $eflags
+    JCC_1 %bb.3, 4, implicit $eflags
     JMP_1 %bb.1
   
   bb.1.if.then:

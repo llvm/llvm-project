@@ -1,9 +1,8 @@
 //===- llvm/CodeGen/GlobalISel/RegisterBankInfo.cpp --------------*- C++ -*-==//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 /// \file
@@ -208,19 +207,49 @@ RegisterBankInfo::getInstrMappingImpl(const MachineInstr &MI) const {
         continue;
       }
     }
-    const ValueMapping *ValMapping =
-        &getValueMapping(0, getSizeInBits(Reg, MRI, TRI), *CurRegBank);
+
+    unsigned Size = getSizeInBits(Reg, MRI, TRI);
+    const ValueMapping *ValMapping = &getValueMapping(0, Size, *CurRegBank);
     if (IsCopyLike) {
-      OperandsMapping[0] = ValMapping;
+      if (!OperandsMapping[0]) {
+        if (MI.isRegSequence()) {
+          // For reg_sequence, the result size does not match the input.
+          unsigned ResultSize = getSizeInBits(MI.getOperand(0).getReg(),
+                                              MRI, TRI);
+          OperandsMapping[0] = &getValueMapping(0, ResultSize, *CurRegBank);
+        } else {
+          OperandsMapping[0] = ValMapping;
+        }
+      }
+
+      // The default handling assumes any register bank can be copied to any
+      // other. If this isn't the case, the target should specially deal with
+      // reg_sequence/phi. There may also be unsatisfiable copies.
+      for (; OpIdx != EndIdx; ++OpIdx) {
+        const MachineOperand &MO = MI.getOperand(OpIdx);
+        if (!MO.isReg())
+          continue;
+        unsigned Reg = MO.getReg();
+        if (!Reg)
+          continue;
+
+        const RegisterBank *AltRegBank = getRegBank(Reg, MRI, TRI);
+        if (AltRegBank &&
+            cannotCopy(*CurRegBank, *AltRegBank, getSizeInBits(Reg, MRI, TRI)))
+          return getInvalidInstructionMapping();
+      }
+
       CompleteMapping = true;
       break;
     }
+
     OperandsMapping[OpIdx] = ValMapping;
   }
 
-  if (IsCopyLike && !CompleteMapping)
+  if (IsCopyLike && !CompleteMapping) {
     // No way to deduce the type from what we have.
     return getInvalidInstructionMapping();
+  }
 
   assert(CompleteMapping && "Setting an uncomplete mapping");
   return getInstructionMapping(
@@ -363,11 +392,8 @@ RegisterBankInfo::getInstructionMappingImpl(
   ++NumInstructionMappingsCreated;
 
   auto &InstrMapping = MapOfInstructionMappings[Hash];
-  if (IsInvalid)
-    InstrMapping = llvm::make_unique<InstructionMapping>();
-  else
-    InstrMapping = llvm::make_unique<InstructionMapping>(
-        ID, Cost, OperandsMapping, NumOperands);
+  InstrMapping = llvm::make_unique<InstructionMapping>(
+      ID, Cost, OperandsMapping, NumOperands);
   return *InstrMapping;
 }
 
@@ -382,8 +408,12 @@ RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
 RegisterBankInfo::InstructionMappings
 RegisterBankInfo::getInstrPossibleMappings(const MachineInstr &MI) const {
   InstructionMappings PossibleMappings;
-  // Put the default mapping first.
-  PossibleMappings.push_back(&getInstrMapping(MI));
+  const auto &Mapping = getInstrMapping(MI);
+  if (Mapping.isValid()) {
+    // Put the default mapping first.
+    PossibleMappings.push_back(&Mapping);
+  }
+
   // Then the alternative mapping, if any.
   InstructionMappings AltMappings = getInstrAlternativeMappings(MI);
   for (const InstructionMapping *AltMapping : AltMappings)
@@ -496,6 +526,19 @@ void RegisterBankInfo::PartialMapping::print(raw_ostream &OS) const {
     OS << *RegBank;
   else
     OS << "nullptr";
+}
+
+bool RegisterBankInfo::ValueMapping::partsAllUniform() const {
+  if (NumBreakDowns < 2)
+    return true;
+
+  const PartialMapping *First = begin();
+  for (const PartialMapping *Part = First + 1; Part != end(); ++Part) {
+    if (Part->Length != First->Length || Part->RegBank != First->RegBank)
+      return false;
+  }
+
+  return true;
 }
 
 bool RegisterBankInfo::ValueMapping::verify(unsigned MeaningfulBitWidth) const {

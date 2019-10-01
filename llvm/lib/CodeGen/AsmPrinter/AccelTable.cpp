@@ -1,9 +1,8 @@
 //===- llvm/CodeGen/AsmPrinter/AccelTable.cpp - Accelerator Tables --------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -56,10 +55,10 @@ void AccelTableBase::finalize(AsmPrinter *Asm, StringRef Prefix) {
   // Create the individual hash data outputs.
   for (auto &E : Entries) {
     // Unique the entries.
-    std::stable_sort(E.second.Values.begin(), E.second.Values.end(),
-                     [](const AccelTableData *A, const AccelTableData *B) {
-                       return *A < *B;
-                     });
+    llvm::stable_sort(E.second.Values,
+                      [](const AccelTableData *A, const AccelTableData *B) {
+                        return *A < *B;
+                      });
     E.second.Values.erase(
         std::unique(E.second.Values.begin(), E.second.Values.end()),
         E.second.Values.end());
@@ -82,10 +81,9 @@ void AccelTableBase::finalize(AsmPrinter *Asm, StringRef Prefix) {
   // Sort the contents of the buckets by hash value so that hash collisions end
   // up together. Stable sort makes testing easier and doesn't cost much more.
   for (auto &Bucket : Buckets)
-    std::stable_sort(Bucket.begin(), Bucket.end(),
-                     [](HashData *LHS, HashData *RHS) {
-                       return LHS->HashValue < RHS->HashValue;
-                     });
+    llvm::stable_sort(Bucket, [](HashData *LHS, HashData *RHS) {
+      return LHS->HashValue < RHS->HashValue;
+    });
 }
 
 namespace {
@@ -557,8 +555,8 @@ void llvm::emitDWARF5AccelTable(
   SmallVector<unsigned, 1> CUIndex(CUs.size());
   int Count = 0;
   for (const auto &CU : enumerate(CUs)) {
-    if (CU.value()->getCUNode()->getNameTableKind() ==
-        DICompileUnit::DebugNameTableKind::None)
+    if (CU.value()->getCUNode()->getNameTableKind() !=
+        DICompileUnit::DebugNameTableKind::Default)
       continue;
     CUIndex[CU.index()] = Count++;
     assert(CU.index() == CU.value()->getUniqueID());

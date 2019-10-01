@@ -1,8 +1,8 @@
 ; RUN: llc < %s | FileCheck %s
 
-; CHECK:       orr     w0, wzr, #0x1
+; CHECK:       mov     w0, #1
 ; CHECK-NEXT:  bl      foo
-; CHECK-NEXT:  orr     w0, wzr, #0x1
+; CHECK-NEXT:  mov     w0, #1
 ; CHECK-NEXT:  bl      foo
 
 target triple = "aarch64--linux-android"

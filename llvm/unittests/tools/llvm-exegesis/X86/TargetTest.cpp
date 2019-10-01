@@ -1,9 +1,8 @@
 //===-- TargetTest.cpp -----------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -144,6 +143,10 @@ class Core2Avx512TargetTest : public X86TargetTest {
 public:
   Core2Avx512TargetTest() : X86TargetTest("+avx512vl") {}
 };
+
+TEST_F(Core2TargetTest, NoHighByteRegs) {
+  EXPECT_TRUE(State.getRATC().reservedRegisters().test(X86::AH));
+}
 
 TEST_F(Core2TargetTest, SetFlags) {
   const unsigned Reg = llvm::X86::EFLAGS;

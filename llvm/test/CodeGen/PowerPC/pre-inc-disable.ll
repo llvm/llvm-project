@@ -9,109 +9,120 @@
 ; Function Attrs: norecurse nounwind readonly
 define signext i32 @test_pre_inc_disable_1(i8* nocapture readonly %pix1, i32 signext %i_stride_pix1, i8* nocapture readonly %pix2) {
 ; CHECK-LABEL: test_pre_inc_disable_1:
-; CHECK:   # %bb.0: # %entry
-; CHECK:    lfd f0, 0(r5)
-; CHECK:    addis r5, r2
-; CHECK:    addi r5, r5,
-; CHECK:    lxvx v2, 0, r5
-; CHECK:    addis r5, r2,
-; CHECK:    addi r5, r5,
-; CHECK:    lxvx v4, 0, r5
-; CHECK:    xxpermdi v5, f0, f0, 2
-; CHECK:    xxlxor v3, v3, v3
-; CHECK-DAG: vperm v[[VR1:[0-9]+]], v5, v3, v4
-; CHECK-DAG: vperm v[[VR2:[0-9]+]], v3, v5, v2
-; CHECK-DAG: xvnegsp v[[VR3:[0-9]+]], v[[VR1]]
-; CHECK-DAG: xvnegsp v[[VR4:[0-9]+]], v[[VR2]]
-
-; CHECK:  .LBB0_1: # %for.cond1.preheader
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    lfd f0, 0(r5)
+; CHECK-NEXT:    addis r5, r2, .LCPI0_0@toc@ha
+; CHECK-NEXT:    addi r5, r5, .LCPI0_0@toc@l
+; CHECK-NEXT:    lxvx v2, 0, r5
+; CHECK-NEXT:    addis r5, r2, .LCPI0_1@toc@ha
+; CHECK-NEXT:    addi r5, r5, .LCPI0_1@toc@l
+; CHECK-NEXT:    lxvx v4, 0, r5
+; CHECK-NEXT:    xxpermdi v5, f0, f0, 2
+; CHECK-NEXT:    xxlxor v3, v3, v3
+; CHECK-NEXT:    li r5, 4
+; CHECK-NEXT:    vperm v0, v3, v5, v2
+; CHECK-NEXT:    mtctr r5
+; CHECK-NEXT:    li r5, 0
+; CHECK-NEXT:    vperm v1, v5, v3, v4
+; CHECK-NEXT:    li r6, 0
+; CHECK-NEXT:    xvnegsp v5, v0
+; CHECK-NEXT:    xvnegsp v0, v1
+; CHECK-NEXT:    .p2align 4
+; CHECK-NEXT:  .LBB0_1: # %for.cond1.preheader
 ; CHECK:    lfd f0, 0(r3)
-; CHECK:    xxpermdi v1, f0, f0, 2
-; CHECK:    vperm v6, v3, v1, v2
-; CHECK:    vperm v1, v1, v3, v4
-; CHECK-DAG:    xvnegsp v6, v6
-; CHECK-DAG:    xvnegsp v1, v1
-; CHECK-DAG: vabsduw v1, v1, v[[VR3]]
-; CHECK-DAG: vabsduw v6, v6, v[[VR4]]
-; CHECK:    vadduwm v1, v1, v6
-; CHECK:    xxswapd v6, v1
-; CHECK:    vadduwm v1, v1, v6
-; CHECK:    xxspltw v6, v1, 2
-; CHECK:    vadduwm v1, v1, v6
-; CHECK:    vextuwrx r7, r5, v1
-; CHECK:    ldux r8, r3, r4
-; CHECK:    add r3, r3, r4
-; CHECK:    add r6, r7, r6
-; CHECK:    mtvsrd f0, r8
-; CHECK:    xxswapd v1, vs0
-; CHECK:    vperm v6, v3, v1, v2
-; CHECK:    vperm v1, v1, v3, v4
-; CHECK-DAG: xvnegsp v6, v6
-; CHECK-DAG: xvnegsp v1, v1
-; CHECK-DAG: vabsduw v1, v1, v[[VR3]]
-; CHECK-DAG: vabsduw v6, v6, v[[VR4]]
-; CHECK:    vadduwm v1, v1, v6
-; CHECK:    xxswapd v6, v1
-; CHECK:    vadduwm v1, v1, v6
-; CHECK:    xxspltw v6, v1, 2
-; CHECK:    vadduwm v1, v1, v6
-; CHECK:    vextuwrx r7, r5, v1
-; CHECK:    add r6, r7, r6
-; CHECK:    bdnz .LBB0_1
-; CHECK:    extsw r3, r6
-; CHECK:    blr
-
+; CHECK-NEXT:    xxpermdi v1, f0, f0, 2
+; CHECK-NEXT:    vperm v6, v1, v3, v4
+; CHECK-NEXT:    vperm v1, v3, v1, v2
+; CHECK-NEXT:    xvnegsp v1, v1
+; CHECK-NEXT:    xvnegsp v6, v6
+; CHECK-NEXT:    vabsduw v1, v1, v5
+; CHECK-NEXT:    vabsduw v6, v6, v0
+; CHECK-NEXT:    vadduwm v1, v6, v1
+; CHECK-NEXT:    xxswapd v6, v1
+; CHECK-NEXT:    vadduwm v1, v1, v6
+; CHECK-NEXT:    xxspltw v6, v1, 2
+; CHECK-NEXT:    vadduwm v1, v1, v6
+; CHECK-NEXT:    vextuwrx r7, r5, v1
+; CHECK-NEXT:    lfdx f0, r3, r4
+; CHECK-NEXT:    add r6, r7, r6
+; CHECK-NEXT:    add r7, r3, r4
+; CHECK-NEXT:    xxpermdi v1, f0, f0, 2
+; CHECK-NEXT:    add r3, r7, r4
+; CHECK-NEXT:    vperm v6, v3, v1, v2
+; CHECK-NEXT:    vperm v1, v1, v3, v4
+; CHECK-NEXT:    xvnegsp v6, v6
+; CHECK-NEXT:    xvnegsp v1, v1
+; CHECK-NEXT:    vabsduw v6, v6, v5
+; CHECK-NEXT:    vabsduw v1, v1, v0
+; CHECK-NEXT:    vadduwm v1, v1, v6
+; CHECK-NEXT:    xxswapd v6, v1
+; CHECK-NEXT:    vadduwm v1, v1, v6
+; CHECK-NEXT:    xxspltw v6, v1, 2
+; CHECK-NEXT:    vadduwm v1, v1, v6
+; CHECK-NEXT:    vextuwrx r8, r5, v1
+; CHECK-NEXT:    add r6, r8, r6
+; CHECK-NEXT:    bdnz .LBB0_1
+; CHECK-NEXT:  # %bb.2: # %for.cond.cleanup
+; CHECK-NEXT:    extsw r3, r6
+; CHECK-NEXT:    blr
+;
 ; P9BE-LABEL: test_pre_inc_disable_1:
-; P9BE:    lfd f0, 0(r5)
-; P9BE:    addis r5, r2,
-; P9BE:    addi r5, r5,
-; P9BE:    lxvx v2, 0, r5
-; P9BE:    addis r5, r2,
-; P9BE:    addi r5, r5,
-; P9BE:    lxvx v4, 0, r5
-; P9BE:    xxlor v5, vs0, vs0
-; P9BE:    xxlxor v3, v3, v3
-; P9BE-DAG: li r5, 0
-; P9BE-DAG: vperm v[[VR1:[0-9]+]], v3, v5, v2
-; P9BE-DAG: vperm v[[VR2:[0-9]+]], v3, v5, v4
-; P9BE-DAG: xvnegsp v[[VR3:[0-9]+]], v[[VR1]]
-; P9BE-DAG: xvnegsp v[[VR4:[0-9]+]], v[[VR2]]
-
-; P9BE:  .LBB0_1: # %for.cond1.preheader
+; P9BE:       # %bb.0: # %entry
+; P9BE-NEXT:    lfd f0, 0(r5)
+; P9BE-NEXT:    addis r5, r2, .LCPI0_0@toc@ha
+; P9BE-NEXT:    addi r5, r5, .LCPI0_0@toc@l
+; P9BE-NEXT:    lxvx v2, 0, r5
+; P9BE-NEXT:    addis r5, r2, .LCPI0_1@toc@ha
+; P9BE-NEXT:    addi r5, r5, .LCPI0_1@toc@l
+; P9BE-NEXT:    lxvx v4, 0, r5
+; P9BE-NEXT:    li r5, 4
+; P9BE-NEXT:    xxlor v5, vs0, vs0
+; P9BE-NEXT:    xxlxor v3, v3, v3
+; P9BE-NEXT:    vperm v0, v3, v5, v2
+; P9BE-NEXT:    mtctr r5
+; P9BE-NEXT:    li r5, 0
+; P9BE-NEXT:    vperm v1, v3, v5, v4
+; P9BE-NEXT:    li r6, 0
+; P9BE-NEXT:    xvnegsp v5, v0
+; P9BE-NEXT:    xvnegsp v0, v1
+; P9BE-NEXT:    .p2align 4
+; P9BE-NEXT:  .LBB0_1: # %for.cond1.preheader
 ; P9BE:    lfd f0, 0(r3)
-; P9BE:    xxlor v1, vs0, vs0
-; P9BE:    vperm v6, v3, v1, v4
-; P9BE:    vperm v1, v3, v1, v2
-; P9BE-DAG: xvnegsp v6, v6
-; P9BE-DAG: xvnegsp v1, v1
-; P9BE-DAG: vabsduw v1, v1, v[[VR3]]
-; P9BE-DAG: vabsduw v6, v6, v[[VR4]]
-; P9BE:    vadduwm v1, v6, v1
-; P9BE:    xxswapd v6, v1
-; P9BE:    vadduwm v1, v1, v6
-; P9BE:    xxspltw v6, v1, 1
-; P9BE:    vadduwm v1, v1, v6
-; P9BE:    vextuwlx r[[GR1:[0-9]+]], r5, v1
-; P9BE:    add r6, r[[GR1]], r6
-; P9BE:    ldux r[[GR2:[0-9]+]], r3, r4
-; P9BE:    add r3, r3, r4
-; P9BE:    mtvsrd v1, r[[GR2]]
-; P9BE:    vperm v6, v3, v1, v2
-; P9BE:    vperm v1, v3, v1, v4
-; P9BE-DAG: xvnegsp v6, v6
-; P9BE-DAG: xvnegsp v1, v1
-; P9BE-DAG: vabsduw v1, v1, v[[VR4]]
-; P9BE-DAG: vabsduw v6, v6, v[[VR3]]
-; P9BE:    vadduwm v1, v1, v6
-; P9BE:    xxswapd v6, v1
-; P9BE:    vadduwm v1, v1, v6
-; P9BE:    xxspltw v6, v1, 1
-; P9BE:    vadduwm v1, v1, v6
-; P9BE:    vextuwlx r7, r5, v1
-; P9BE:    add r6, r7, r6
-; P9BE:    bdnz .LBB0_1
-; P9BE:    extsw r3, r6
-; P9BE:    blr
+; P9BE-NEXT:    xxlor v1, vs0, vs0
+; P9BE-NEXT:    vperm v6, v3, v1, v4
+; P9BE-NEXT:    vperm v1, v3, v1, v2
+; P9BE-NEXT:    xvnegsp v1, v1
+; P9BE-NEXT:    xvnegsp v6, v6
+; P9BE-NEXT:    vabsduw v1, v1, v5
+; P9BE-NEXT:    vabsduw v6, v6, v0
+; P9BE-NEXT:    vadduwm v1, v6, v1
+; P9BE-NEXT:    xxswapd v6, v1
+; P9BE-NEXT:    vadduwm v1, v1, v6
+; P9BE-NEXT:    xxspltw v6, v1, 1
+; P9BE-NEXT:    vadduwm v1, v1, v6
+; P9BE-NEXT:    vextuwlx r7, r5, v1
+; P9BE-NEXT:    lfdx f0, r3, r4
+; P9BE-NEXT:    add r6, r7, r6
+; P9BE-NEXT:    add r7, r3, r4
+; P9BE-NEXT:    xxlor v1, vs0, vs0
+; P9BE-NEXT:    add r3, r7, r4
+; P9BE-NEXT:    vperm v6, v3, v1, v2
+; P9BE-NEXT:    vperm v1, v3, v1, v4
+; P9BE-NEXT:    xvnegsp v6, v6
+; P9BE-NEXT:    xvnegsp v1, v1
+; P9BE-NEXT:    vabsduw v6, v6, v5
+; P9BE-NEXT:    vabsduw v1, v1, v0
+; P9BE-NEXT:    vadduwm v1, v1, v6
+; P9BE-NEXT:    xxswapd v6, v1
+; P9BE-NEXT:    vadduwm v1, v1, v6
+; P9BE-NEXT:    xxspltw v6, v1, 1
+; P9BE-NEXT:    vadduwm v1, v1, v6
+; P9BE-NEXT:    vextuwlx r8, r5, v1
+; P9BE-NEXT:    add r6, r8, r6
+; P9BE-NEXT:    bdnz .LBB0_1
+; P9BE-NEXT:  # %bb.2: # %for.cond.cleanup
+; P9BE-NEXT:    extsw r3, r6
+; P9BE-NEXT:    blr
 entry:
   %idx.ext = sext i32 %i_stride_pix1 to i64
   %0 = bitcast i8* %pix2 to <8 x i8>*
@@ -166,58 +177,62 @@ for.cond.cleanup:                                 ; preds = %for.cond1.preheader
 ; Function Attrs: norecurse nounwind readonly
 define signext i32 @test_pre_inc_disable_2(i8* nocapture readonly %pix1, i8* nocapture readonly %pix2) {
 ; CHECK-LABEL: test_pre_inc_disable_2:
-; CHECK:    lfd f0, 0(r3)
-; CHECK:    addis r3, r2,
-; CHECK:    addi r3, r3, .LCPI1_0@toc@l
-; CHECK:    lxvx v4, 0, r3
-; CHECK:    addis r3, r2,
-; CHECK:    xxpermdi v2, f0, f0, 2
-; CHECK:    lfd f0, 0(r4)
-; CHECK:    addi r3, r3, .LCPI1_1@toc@l
-; CHECK:    xxlxor v3, v3, v3
-; CHECK:    lxvx v0, 0, r3
-; CHECK:    xxpermdi v1, f0, f0, 2
-; CHECK:    vperm v5, v2, v3, v4
-; CHECK:    vperm v2, v3, v2, v0
-; CHECK:    vperm v0, v3, v1, v0
-; CHECK:    vperm v3, v1, v3, v4
-; CHECK:    vabsduw v2, v2, v0
-; CHECK:    vabsduw v3, v5, v3
-; CHECK:    vadduwm v2, v3, v2
-; CHECK:    xxswapd v3, v2
-; CHECK:    vadduwm v2, v2, v3
-; CHECK:    xxspltw v3, v2, 2
-; CHECK:    vadduwm v2, v2, v3
-; CHECK:    vextuwrx r3, r3, v2
-; CHECK:    extsw r3, r3
-; CHECK:    blr
-
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    lfd f0, 0(r3)
+; CHECK-NEXT:    addis r3, r2, .LCPI1_0@toc@ha
+; CHECK-NEXT:    addi r3, r3, .LCPI1_0@toc@l
+; CHECK-NEXT:    lxvx v4, 0, r3
+; CHECK-NEXT:    addis r3, r2, .LCPI1_1@toc@ha
+; CHECK-NEXT:    xxpermdi v2, f0, f0, 2
+; CHECK-NEXT:    lfd f0, 0(r4)
+; CHECK-NEXT:    addi r3, r3, .LCPI1_1@toc@l
+; CHECK-NEXT:    xxlxor v3, v3, v3
+; CHECK-NEXT:    lxvx v0, 0, r3
+; CHECK-NEXT:    xxpermdi v1, f0, f0, 2
+; CHECK-NEXT:    vperm v5, v2, v3, v4
+; CHECK-NEXT:    vperm v2, v3, v2, v0
+; CHECK-NEXT:    vperm v0, v3, v1, v0
+; CHECK-NEXT:    vperm v3, v1, v3, v4
+; CHECK-NEXT:    vabsduw v2, v2, v0
+; CHECK-NEXT:    vabsduw v3, v5, v3
+; CHECK-NEXT:    vadduwm v2, v3, v2
+; CHECK-NEXT:    xxswapd v3, v2
+; CHECK-NEXT:    li r3, 0
+; CHECK-NEXT:    vadduwm v2, v2, v3
+; CHECK-NEXT:    xxspltw v3, v2, 2
+; CHECK-NEXT:    vadduwm v2, v2, v3
+; CHECK-NEXT:    vextuwrx r3, r3, v2
+; CHECK-NEXT:    extsw r3, r3
+; CHECK-NEXT:    blr
+;
 ; P9BE-LABEL: test_pre_inc_disable_2:
-; P9BE:    lfd f0, 0(r3)
-; P9BE:    addis r3, r2,
-; P9BE:    addi r3, r3,
-; P9BE:    lxvx v4, 0, r3
-; P9BE:    addis r3, r2,
-; P9BE:    addi r3, r3,
-; P9BE:    xxlor v2, vs0, vs0
-; P9BE:    lfd f0, 0(r4)
-; P9BE:    lxvx v0, 0, r3
-; P9BE:    xxlxor v3, v3, v3
-; P9BE:    xxlor v1, vs0, vs0
-; P9BE:    vperm v5, v3, v2, v4
-; P9BE:    vperm v2, v3, v2, v0
-; P9BE:    vperm v0, v3, v1, v0
-; P9BE:    vperm v3, v3, v1, v4
-; P9BE:    vabsduw v2, v2, v0
-; P9BE:    vabsduw v3, v5, v3
-; P9BE:    vadduwm v2, v3, v2
-; P9BE:    xxswapd v3, v2
-; P9BE:    vadduwm v2, v2, v3
-; P9BE:    xxspltw v3, v2, 1
-; P9BE:    vadduwm v2, v2, v3
-; P9BE:    vextuwlx r3, r3, v2
-; P9BE:    extsw r3, r3
-; P9BE:    blr
+; P9BE:       # %bb.0: # %entry
+; P9BE-NEXT:    lfd f0, 0(r3)
+; P9BE-NEXT:    addis r3, r2, .LCPI1_0@toc@ha
+; P9BE-NEXT:    addi r3, r3, .LCPI1_0@toc@l
+; P9BE-NEXT:    lxvx v4, 0, r3
+; P9BE-NEXT:    addis r3, r2, .LCPI1_1@toc@ha
+; P9BE-NEXT:    addi r3, r3, .LCPI1_1@toc@l
+; P9BE-NEXT:    xxlor v2, vs0, vs0
+; P9BE-NEXT:    lfd f0, 0(r4)
+; P9BE-NEXT:    lxvx v0, 0, r3
+; P9BE-NEXT:    xxlxor v3, v3, v3
+; P9BE-NEXT:    xxlor v1, vs0, vs0
+; P9BE-NEXT:    vperm v5, v3, v2, v4
+; P9BE-NEXT:    vperm v2, v3, v2, v0
+; P9BE-NEXT:    vperm v0, v3, v1, v0
+; P9BE-NEXT:    vperm v3, v3, v1, v4
+; P9BE-NEXT:    vabsduw v2, v2, v0
+; P9BE-NEXT:    vabsduw v3, v5, v3
+; P9BE-NEXT:    vadduwm v2, v3, v2
+; P9BE-NEXT:    xxswapd v3, v2
+; P9BE-NEXT:    vadduwm v2, v2, v3
+; P9BE-NEXT:    xxspltw v3, v2, 1
+; P9BE-NEXT:    vadduwm v2, v2, v3
+; P9BE-NEXT:    li r3, 0
+; P9BE-NEXT:    vextuwlx r3, r3, v2
+; P9BE-NEXT:    extsw r3, r3
+; P9BE-NEXT:    blr
 entry:
   %0 = bitcast i8* %pix1 to <8 x i8>*
   %1 = load <8 x i8>, <8 x i8>* %0, align 1
@@ -264,3 +279,119 @@ entry:
 ;  return i_sum;
 ;}
 
+define void @test32(i8* nocapture readonly %pix2, i32 signext %i_pix2) {
+entry:
+  %idx.ext63 = sext i32 %i_pix2 to i64
+  %add.ptr64 = getelementptr inbounds i8, i8* %pix2, i64 %idx.ext63
+  %arrayidx5.1 = getelementptr inbounds i8, i8* %add.ptr64, i64 4
+  %0 = bitcast i8* %add.ptr64 to <4 x i8>*
+  %1 = load <4 x i8>, <4 x i8>* %0, align 1
+  %reorder_shuffle117 = shufflevector <4 x i8> %1, <4 x i8> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %2 = zext <4 x i8> %reorder_shuffle117 to <4 x i32>
+  %3 = sub nsw <4 x i32> zeroinitializer, %2
+  %4 = bitcast i8* %arrayidx5.1 to <4 x i8>*
+  %5 = load <4 x i8>, <4 x i8>* %4, align 1
+  %reorder_shuffle115 = shufflevector <4 x i8> %5, <4 x i8> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %6 = zext <4 x i8> %reorder_shuffle115 to <4 x i32>
+  %7 = sub nsw <4 x i32> zeroinitializer, %6
+  %8 = shl nsw <4 x i32> %7, <i32 16, i32 16, i32 16, i32 16>
+  %9 = add nsw <4 x i32> %8, %3
+  %10 = sub nsw <4 x i32> %9, zeroinitializer
+  %11 = shufflevector <4 x i32> undef, <4 x i32> %10, <4 x i32> <i32 2, i32 7, i32 0, i32 5>
+  %12 = add nsw <4 x i32> zeroinitializer, %11
+  %13 = shufflevector <4 x i32> %12, <4 x i32> undef, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+  store <4 x i32> %13, <4 x i32>* undef, align 16
+  ret void
+; CHECK-LABEL: test32:
+; CHECK-NOT: lwzux
+; CHECK-NOT: mtvsrws
+; CHECK: lfiwzx
+; CHECK: lfiwzx
+; P9BE-CHECK-LABEL: test32:
+; P9BE-CHECK-NOT: lwzux
+; P9BE-CHECK-NOT: mtvsrws
+; P9BE-CHECK: lfiwzx
+; P9BE-CHECK: lfiwzx
+}
+
+define void @test16(i16* nocapture readonly %sums, i32 signext %delta, i32 signext %thresh) {
+entry:
+  %idxprom = sext i32 %delta to i64
+  %add14 = add nsw i32 %delta, 8
+  %idxprom15 = sext i32 %add14 to i64
+  br label %for.body
+
+for.body:                                         ; preds = %entry
+  %arrayidx8 = getelementptr inbounds i16, i16* %sums, i64 %idxprom
+  %0 = load i16, i16* %arrayidx8, align 2
+  %arrayidx16 = getelementptr inbounds i16, i16* %sums, i64 %idxprom15
+  %1 = load i16, i16* %arrayidx16, align 2
+  %2 = insertelement <4 x i16> undef, i16 %0, i32 2
+  %3 = insertelement <4 x i16> %2, i16 %1, i32 3
+  %4 = zext <4 x i16> %3 to <4 x i32>
+  %5 = sub nsw <4 x i32> zeroinitializer, %4
+  %6 = sub nsw <4 x i32> zeroinitializer, %5
+  %7 = select <4 x i1> undef, <4 x i32> %6, <4 x i32> %5
+  %bin.rdx = add <4 x i32> %7, zeroinitializer
+  %rdx.shuf54 = shufflevector <4 x i32> %bin.rdx, <4 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+  %bin.rdx55 = add <4 x i32> %bin.rdx, %rdx.shuf54
+  %8 = extractelement <4 x i32> %bin.rdx55, i32 0
+  %op.extra = add nuw i32 %8, 0
+  %cmp25 = icmp slt i32 %op.extra, %thresh
+  br i1 %cmp25, label %if.then, label %if.end
+
+if.then:                                          ; preds = %for.body
+  unreachable
+
+if.end:                                           ; preds = %for.body
+  ret void
+; CHECK-LABEL: test16:
+; CHECK-NOT: lhzux
+; CHECK: lxsihzx
+; CHECK: lxsihzx
+; P9BE-CHECK-LABEL: test16:
+; P9BE-CHECK-NOT: lhzux
+; P9BE-CHECK: lxsihzx
+; P9BE-CHECK: lxsihzx
+}
+
+define void @test8(i8* nocapture readonly %sums, i32 signext %delta, i32 signext %thresh) {
+entry:
+  %idxprom = sext i32 %delta to i64
+  %add14 = add nsw i32 %delta, 8
+  %idxprom15 = sext i32 %add14 to i64
+  br label %for.body
+
+for.body:                                         ; preds = %entry
+  %arrayidx8 = getelementptr inbounds i8, i8* %sums, i64 %idxprom
+  %0 = load i8, i8* %arrayidx8, align 2
+  %arrayidx16 = getelementptr inbounds i8, i8* %sums, i64 %idxprom15
+  %1 = load i8, i8* %arrayidx16, align 2
+  %2 = insertelement <4 x i8> undef, i8 %0, i32 2
+  %3 = insertelement <4 x i8> %2, i8 %1, i32 3
+  %4 = zext <4 x i8> %3 to <4 x i32>
+  %5 = sub nsw <4 x i32> zeroinitializer, %4
+  %6 = sub nsw <4 x i32> zeroinitializer, %5
+  %7 = select <4 x i1> undef, <4 x i32> %6, <4 x i32> %5
+  %bin.rdx = add <4 x i32> %7, zeroinitializer
+  %rdx.shuf54 = shufflevector <4 x i32> %bin.rdx, <4 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+  %bin.rdx55 = add <4 x i32> %bin.rdx, %rdx.shuf54
+  %8 = extractelement <4 x i32> %bin.rdx55, i32 0
+  %op.extra = add nuw i32 %8, 0
+  %cmp25 = icmp slt i32 %op.extra, %thresh
+  br i1 %cmp25, label %if.then, label %if.end
+
+if.then:                                          ; preds = %for.body
+  unreachable
+
+if.end:                                           ; preds = %for.body
+  ret void
+; CHECK-LABEL: test8:
+; CHECK-NOT: lbzux
+; CHECK: lxsibzx
+; CHECK: lxsibzx
+; P9BE-CHECK-LABEL: test8:
+; P9BE-CHECK-NOT: lbzux
+; P9BE-CHECK: lxsibzx
+; P9BE-CHECK: lxsibzx
+}

@@ -1,5 +1,5 @@
 // RUN: llvm-mc < %s -filetype=obj -triple powerpc64le-pc-linux | \
-// RUN:   llvm-readobj -t | FileCheck %s
+// RUN:   llvm-readobj --symbols | FileCheck %s
 
 // This used to crash. Make sure it produce the correct symbol.
 

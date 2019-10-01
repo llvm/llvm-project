@@ -1,4 +1,4 @@
-; RUN: llc -start-after=codegenprepare -stop-before expand-isel-pseudos -o - %s | FileCheck %s
+; RUN: llc -start-after=codegenprepare -stop-before finalize-isel -o - %s | FileCheck %s
 
 ; This is a reproducer based on the test case from PR37321.
 

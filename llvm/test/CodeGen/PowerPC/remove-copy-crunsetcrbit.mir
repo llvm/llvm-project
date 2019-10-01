@@ -1,0 +1,178 @@
+# RUN: llc -run-pass simple-register-coalescing %s -o - | FileCheck %s
+--- |
+  target datalayout = "e-m:e-i64:64-n32:64"
+  target triple = "powerpc64le-unknown-linux-gnu"
+
+  @b = common dso_local local_unnamed_addr global i32 0, align 4
+  @d = common dso_local local_unnamed_addr global i32 0, align 4
+  @e = common dso_local local_unnamed_addr global i32* null, align 8
+  @c = common dso_local local_unnamed_addr global i32 0, align 4
+  @a = common dso_local local_unnamed_addr global [1 x i32] zeroinitializer, align 4
+
+  ; Function Attrs: norecurse nounwind
+  define dso_local signext i32 @copycrunset() local_unnamed_addr #0 {
+  entry:
+    %0 = load i32, i32* @b, align 4
+    %tobool3 = icmp eq i32 %0, 0
+    br i1 %tobool3, label %while.end, label %while.body.preheader
+
+  while.body.preheader:                             ; preds = %entry
+    %.pre = load i32, i32* @d, align 4
+    %tobool1 = icmp eq i32 %.pre, 0
+    br label %while.body
+
+  while.body:                                       ; preds = %land.end, %while.body.preheader
+    br i1 %tobool1, label %land.end, label %land.rhs
+
+  land.rhs:                                         ; preds = %while.body
+    %1 = load i32*, i32** @e, align 8
+    %2 = load i32, i32* %1, align 4
+    %idxprom = sext i32 %2 to i64
+    %arrayidx = getelementptr inbounds [1 x i32], [1 x i32]* @a, i64 0, i64 %idxprom
+    %3 = load i32, i32* %arrayidx, align 4
+    %tobool2 = icmp ne i32 %3, 0
+    br label %land.end
+
+  land.end:                                         ; preds = %land.rhs, %while.body
+    %4 = phi i1 [ false, %while.body ], [ %tobool2, %land.rhs ]
+    %land.ext = zext i1 %4 to i32
+    store i32 %land.ext, i32* @c, align 4
+    br label %while.body
+
+  while.end:                                        ; preds = %entry
+    ret i32 undef
+  }
+
+...
+---
+name:            copycrunset
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:
+  - { id: 0, class: crbitrc, preferred-register: '' }
+  - { id: 1, class: crbitrc, preferred-register: '' }
+  - { id: 2, class: crbitrc, preferred-register: '' }
+  - { id: 3, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 4, class: gprc, preferred-register: '' }
+  - { id: 5, class: crrc, preferred-register: '' }
+  - { id: 6, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 7, class: gprc, preferred-register: '' }
+  - { id: 8, class: crrc, preferred-register: '' }
+  - { id: 9, class: crbitrc, preferred-register: '' }
+  - { id: 10, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 11, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 12, class: g8rc, preferred-register: '' }
+  - { id: 13, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 14, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 15, class: g8rc, preferred-register: '' }
+  - { id: 16, class: gprc, preferred-register: '' }
+  - { id: 17, class: crrc, preferred-register: '' }
+  - { id: 18, class: crbitrc, preferred-register: '' }
+  - { id: 19, class: gprc_and_gprc_nor0, preferred-register: '' }
+  - { id: 20, class: gprc_and_gprc_nor0, preferred-register: '' }
+  - { id: 21, class: gprc, preferred-register: '' }
+  - { id: 22, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 23, class: g8rc, preferred-register: '' }
+  - { id: 24, class: crbitrc, preferred-register: '' }
+liveins:
+  - { reg: '$x2', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    successors: %bb.5(0x30000000), %bb.1(0x50000000)
+    liveins: $x2
+
+    %3:g8rc_and_g8rc_nox0 = ADDIStocHA $x2, @b
+    %4:gprc = LWZ target-flags(ppc-toc-lo) @b, killed %3, implicit $x2 :: (dereferenceable load 4 from @b)
+    %5:crrc = CMPLWI killed %4, 0
+    BCC 76, killed %5, %bb.5
+    B %bb.1
+
+  bb.1.while.body.preheader:
+    successors: %bb.2(0x80000000)
+    liveins: $x2
+
+    %6:g8rc_and_g8rc_nox0 = ADDIStocHA $x2, @d
+    %7:gprc = LWZ target-flags(ppc-toc-lo) @d, killed %6, implicit $x2 :: (dereferenceable load 4 from @d)
+    %8:crrc = CMPWI killed %7, 0
+    %0:crbitrc = COPY killed %8.sub_eq
+    %9:crbitrc = CRUNSET
+    %19:gprc_and_gprc_nor0 = LI 0
+    %20:gprc_and_gprc_nor0 = LI 1
+    %22:g8rc_and_g8rc_nox0 = ADDIStocHA $x2, @c
+    %10:g8rc_and_g8rc_nox0 = ADDIStocHA $x2, @e
+    %13:g8rc_and_g8rc_nox0 = ADDIStocHA $x2, @a
+    %14:g8rc_and_g8rc_nox0 = ADDItocL killed %13, @a, implicit $x2
+
+  bb.2.while.body:
+    successors: %bb.4(0x30000000), %bb.3(0x50000000)
+    liveins: $x2
+
+    %24:crbitrc = COPY %9
+    BC %0, %bb.4
+    B %bb.3
+
+  bb.3.land.rhs:
+    successors: %bb.4(0x80000000)
+    liveins: $x2
+
+    %11:g8rc_and_g8rc_nox0 = LD target-flags(ppc-toc-lo) @e, %10, implicit $x2 :: (dereferenceable load 8 from @e)
+    %12:g8rc = LWA 0, killed %11 :: (load 4 from %ir.1)
+    %15:g8rc = RLDICR killed %12, 2, 61
+    %16:gprc = LWZX %14, killed %15 :: (load 4 from %ir.arrayidx)
+    %17:crrc = CMPWI killed %16, 0
+    %18:crbitrc = COPY killed %17.sub_eq
+    %1:crbitrc = CRNOR killed %18, %18
+    %24:crbitrc = COPY killed %1
+
+  bb.4.land.end:
+    successors: %bb.2(0x80000000)
+    liveins: $x2
+
+    %2:crbitrc = COPY killed %24
+    %21:gprc = ISEL %20, %19, killed %2
+    STW killed %21, target-flags(ppc-toc-lo) @c, %22, implicit $x2 :: (store 4 into @c)
+    B %bb.2
+
+  bb.5.while.end:
+    %23:g8rc = LI8 0
+    $x3 = COPY killed %23
+    BLR8 implicit $lr8, implicit $rm, implicit killed $x3
+
+...
+#Copy of CRUNSET should be removed in simple register coalescing pass
+#CHECK-LABEL: copycrunset
+#CHECK: bb.1.while.body.preheader:
+#CHECK-NOT: %9:crbitrc = CRUNSET
+#CHECK: bb.2.while.body:
+#CHECK-NOT: %24:crbitrc = COPY %9
+#CHECK: %24:crbitrc = CRUNSET
+#CHECK: B %bb.3

@@ -1,9 +1,8 @@
 //===- CFLGraph.h - Abstract stratified sets implementation. -----*- C++-*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -25,7 +24,6 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
@@ -154,7 +152,7 @@ public:
   }
 };
 
-///A builder class used to create CFLGraph instance from a given function
+/// A builder class used to create CFLGraph instance from a given function
 /// The CFL-AA that uses this builder must provide its own type as a template
 /// argument. This is necessary for interprocedural processing: CFLGraphBuilder
 /// needs a way of obtaining the summary of other functions when callinsts are
@@ -183,24 +181,23 @@ template <typename CFLAA> class CFLGraphBuilder {
 
     static bool hasUsefulEdges(ConstantExpr *CE) {
       // ConstantExpr doesn't have terminators, invokes, or fences, so only
-      // needs
-      // to check for compares.
+      // needs to check for compares.
       return CE->getOpcode() != Instruction::ICmp &&
              CE->getOpcode() != Instruction::FCmp;
     }
 
     // Returns possible functions called by CS into the given SmallVectorImpl.
     // Returns true if targets found, false otherwise.
-    static bool getPossibleTargets(CallSite CS,
+    static bool getPossibleTargets(CallBase &Call,
                                    SmallVectorImpl<Function *> &Output) {
-      if (auto *Fn = CS.getCalledFunction()) {
+      if (auto *Fn = Call.getCalledFunction()) {
         Output.push_back(Fn);
         return true;
       }
 
       // TODO: If the call is indirect, we might be able to enumerate all
-      // potential
-      // targets of the call and return them, rather than just failing.
+      // potential targets of the call and return them, rather than just
+      // failing.
       return false;
     }
 
@@ -294,6 +291,11 @@ template <typename CFLAA> class CFLGraphBuilder {
       addAssignEdge(Op2, &Inst);
     }
 
+    void visitUnaryOperator(UnaryOperator &Inst) {
+      auto *Src = Inst.getOperand(0);
+      addAssignEdge(Src, &Inst);
+    }
+
     void visitAtomicCmpXchgInst(AtomicCmpXchgInst &Inst) {
       auto *Ptr = Inst.getPointerOperand();
       auto *Val = Inst.getNewValOperand();
@@ -370,11 +372,11 @@ template <typename CFLAA> class CFLGraphBuilder {
       return !Fn->hasExactDefinition();
     }
 
-    bool tryInterproceduralAnalysis(CallSite CS,
+    bool tryInterproceduralAnalysis(CallBase &Call,
                                     const SmallVectorImpl<Function *> &Fns) {
       assert(Fns.size() > 0);
 
-      if (CS.arg_size() > MaxSupportedArgsInSummary)
+      if (Call.arg_size() > MaxSupportedArgsInSummary)
         return false;
 
       // Exit early if we'll fail anyway
@@ -382,7 +384,7 @@ template <typename CFLAA> class CFLGraphBuilder {
         if (isFunctionExternal(Fn) || Fn->isVarArg())
           return false;
         // Fail if the caller does not provide enough arguments
-        assert(Fn->arg_size() <= CS.arg_size());
+        assert(Fn->arg_size() <= Call.arg_size());
         if (!AA.getAliasSummary(*Fn))
           return false;
       }
@@ -393,7 +395,7 @@ template <typename CFLAA> class CFLGraphBuilder {
 
         auto &RetParamRelations = Summary->RetParamRelations;
         for (auto &Relation : RetParamRelations) {
-          auto IRelation = instantiateExternalRelation(Relation, CS);
+          auto IRelation = instantiateExternalRelation(Relation, Call);
           if (IRelation.hasValue()) {
             Graph.addNode(IRelation->From);
             Graph.addNode(IRelation->To);
@@ -403,7 +405,7 @@ template <typename CFLAA> class CFLGraphBuilder {
 
         auto &RetParamAttributes = Summary->RetParamAttributes;
         for (auto &Attribute : RetParamAttributes) {
-          auto IAttr = instantiateExternalAttribute(Attribute, CS);
+          auto IAttr = instantiateExternalAttribute(Attribute, Call);
           if (IAttr.hasValue())
             Graph.addNode(IAttr->IValue, IAttr->Attr);
         }
@@ -412,37 +414,35 @@ template <typename CFLAA> class CFLGraphBuilder {
       return true;
     }
 
-    void visitCallSite(CallSite CS) {
-      auto Inst = CS.getInstruction();
-
+    void visitCallBase(CallBase &Call) {
       // Make sure all arguments and return value are added to the graph first
-      for (Value *V : CS.args())
+      for (Value *V : Call.args())
         if (V->getType()->isPointerTy())
           addNode(V);
-      if (Inst->getType()->isPointerTy())
-        addNode(Inst);
+      if (Call.getType()->isPointerTy())
+        addNode(&Call);
 
       // Check if Inst is a call to a library function that
       // allocates/deallocates on the heap. Those kinds of functions do not
       // introduce any aliases.
       // TODO: address other common library functions such as realloc(),
       // strdup(), etc.
-      if (isMallocOrCallocLikeFn(Inst, &TLI) || isFreeCall(Inst, &TLI))
+      if (isMallocOrCallocLikeFn(&Call, &TLI) || isFreeCall(&Call, &TLI))
         return;
 
       // TODO: Add support for noalias args/all the other fun function
       // attributes that we can tack on.
       SmallVector<Function *, 4> Targets;
-      if (getPossibleTargets(CS, Targets))
-        if (tryInterproceduralAnalysis(CS, Targets))
+      if (getPossibleTargets(Call, Targets))
+        if (tryInterproceduralAnalysis(Call, Targets))
           return;
 
       // Because the function is opaque, we need to note that anything
       // could have happened to the arguments (unless the function is marked
       // readonly or readnone), and that the result could alias just about
       // anything, too (unless the result is marked noalias).
-      if (!CS.onlyReadsMemory())
-        for (Value *V : CS.args()) {
+      if (!Call.onlyReadsMemory())
+        for (Value *V : Call.args()) {
           if (V->getType()->isPointerTy()) {
             // The argument itself escapes.
             Graph.addAttr(InstantiatedValue{V, 0}, getAttrEscaped());
@@ -453,12 +453,12 @@ template <typename CFLAA> class CFLGraphBuilder {
           }
         }
 
-      if (Inst->getType()->isPointerTy()) {
-        auto *Fn = CS.getCalledFunction();
+      if (Call.getType()->isPointerTy()) {
+        auto *Fn = Call.getCalledFunction();
         if (Fn == nullptr || !Fn->returnDoesNotAlias())
           // No need to call addNode() since we've added Inst at the
           // beginning of this function and we know it is not a global.
-          Graph.addAttr(InstantiatedValue{Inst, 0}, getAttrUnknown());
+          Graph.addAttr(InstantiatedValue{&Call, 0}, getAttrUnknown());
       }
     }
 
@@ -559,6 +559,7 @@ template <typename CFLAA> class CFLGraphBuilder {
       }
 
       case Instruction::Add:
+      case Instruction::FAdd:
       case Instruction::Sub:
       case Instruction::FSub:
       case Instruction::Mul:
@@ -580,6 +581,11 @@ template <typename CFLAA> class CFLGraphBuilder {
       case Instruction::ShuffleVector: {
         addAssignEdge(CE->getOperand(0), CE);
         addAssignEdge(CE->getOperand(1), CE);
+        break;
+      }
+
+      case Instruction::FNeg: {
+        addAssignEdge(CE->getOperand(0), CE);
         break;
       }
 

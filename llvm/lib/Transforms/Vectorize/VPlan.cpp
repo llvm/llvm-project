@@ -1,9 +1,8 @@
 //===- VPlan.cpp - Vectorizer Plan ----------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -374,10 +373,9 @@ void VPlan::execute(VPTransformState *State) {
   BasicBlock *VectorPreHeaderBB = State->CFG.PrevBB;
   BasicBlock *VectorHeaderBB = VectorPreHeaderBB->getSingleSuccessor();
   assert(VectorHeaderBB && "Loop preheader does not have a single successor.");
-  BasicBlock *VectorLatchBB = VectorHeaderBB;
 
   // 1. Make room to generate basic-blocks inside loop body if needed.
-  VectorLatchBB = VectorHeaderBB->splitBasicBlock(
+  BasicBlock *VectorLatchBB = VectorHeaderBB->splitBasicBlock(
       VectorHeaderBB->getFirstInsertionPt(), "vector.body.latch");
   Loop *L = State->LI->getLoopFor(VectorHeaderBB);
   L->addBasicBlockToLoop(VectorLatchBB, *State->LI);
@@ -561,6 +559,19 @@ void VPlanPrinter::dumpBasicBlock(const VPBasicBlock *BasicBlock) {
   bumpIndent(1);
   OS << Indent << "\"" << DOT::EscapeString(BasicBlock->getName()) << ":\\n\"";
   bumpIndent(1);
+
+  // Dump the block predicate.
+  const VPValue *Pred = BasicBlock->getPredicate();
+  if (Pred) {
+    OS << " +\n" << Indent << " \"BlockPredicate: ";
+    if (const VPInstruction *PredI = dyn_cast<VPInstruction>(Pred)) {
+      PredI->printAsOperand(OS);
+      OS << " (" << DOT::EscapeString(PredI->getParent()->getName())
+         << ")\\l\"";
+    } else
+      Pred->printAsOperand(OS);
+  }
+
   for (const VPRecipeBase &Recipe : *BasicBlock)
     Recipe.print(OS, Indent);
 

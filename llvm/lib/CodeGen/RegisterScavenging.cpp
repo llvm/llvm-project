@@ -1,9 +1,8 @@
 //===- RegisterScavenging.cpp - Machine register scavenging ---------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -534,7 +533,7 @@ RegScavenger::spill(unsigned Reg, const TargetRegisterClass &RC, int SPAdj,
 
 unsigned RegScavenger::scavengeRegister(const TargetRegisterClass *RC,
                                         MachineBasicBlock::iterator I,
-                                        int SPAdj) {
+                                        int SPAdj, bool AllowSpill) {
   MachineInstr &MI = *I;
   const MachineFunction &MF = *MI.getMF();
   // Consider all allocatable registers in the register class initially
@@ -565,6 +564,9 @@ unsigned RegScavenger::scavengeRegister(const TargetRegisterClass *RC,
     return SReg;
   }
 
+  if (!AllowSpill)
+    return 0;
+
   ScavengedInfo &Scavenged = spill(SReg, *RC, SPAdj, I, UseMI);
   Scavenged.Restore = &*std::prev(UseMI);
 
@@ -576,7 +578,8 @@ unsigned RegScavenger::scavengeRegister(const TargetRegisterClass *RC,
 
 unsigned RegScavenger::scavengeRegisterBackwards(const TargetRegisterClass &RC,
                                                  MachineBasicBlock::iterator To,
-                                                 bool RestoreAfter, int SPAdj) {
+                                                 bool RestoreAfter, int SPAdj,
+                                                 bool AllowSpill) {
   const MachineBasicBlock &MBB = *To->getParent();
   const MachineFunction &MF = *MBB.getParent();
 
@@ -590,21 +593,25 @@ unsigned RegScavenger::scavengeRegisterBackwards(const TargetRegisterClass &RC,
   MachineBasicBlock::iterator SpillBefore = P.second;
   assert(Reg != 0 && "No register left to scavenge!");
   // Found an available register?
-  if (SpillBefore != MBB.end()) {
-    MachineBasicBlock::iterator ReloadAfter =
-      RestoreAfter ? std::next(MBBI) : MBBI;
-    MachineBasicBlock::iterator ReloadBefore = std::next(ReloadAfter);
-    if (ReloadBefore != MBB.end())
-      LLVM_DEBUG(dbgs() << "Reload before: " << *ReloadBefore << '\n');
-    ScavengedInfo &Scavenged = spill(Reg, RC, SPAdj, SpillBefore, ReloadBefore);
-    Scavenged.Restore = &*std::prev(SpillBefore);
-    LiveUnits.removeReg(Reg);
-    LLVM_DEBUG(dbgs() << "Scavenged register with spill: " << printReg(Reg, TRI)
-                      << " until " << *SpillBefore);
-  } else {
+  if (SpillBefore == MBB.end()) {
     LLVM_DEBUG(dbgs() << "Scavenged free register: " << printReg(Reg, TRI)
-                      << '\n');
+               << '\n');
+    return Reg;
   }
+
+  if (!AllowSpill)
+    return 0;
+
+  MachineBasicBlock::iterator ReloadAfter =
+    RestoreAfter ? std::next(MBBI) : MBBI;
+  MachineBasicBlock::iterator ReloadBefore = std::next(ReloadAfter);
+  if (ReloadBefore != MBB.end())
+    LLVM_DEBUG(dbgs() << "Reload before: " << *ReloadBefore << '\n');
+  ScavengedInfo &Scavenged = spill(Reg, RC, SPAdj, SpillBefore, ReloadBefore);
+  Scavenged.Restore = &*std::prev(SpillBefore);
+  LiveUnits.removeReg(Reg);
+  LLVM_DEBUG(dbgs() << "Scavenged register with spill: " << printReg(Reg, TRI)
+             << " until " << *SpillBefore);
   return Reg;
 }
 

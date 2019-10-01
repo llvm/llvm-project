@@ -1,9 +1,8 @@
 //===-- ModuleSummaryIndex.cpp - Module Summary Index ---------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -27,12 +26,22 @@ STATISTIC(ReadOnlyLiveGVars,
 
 FunctionSummary FunctionSummary::ExternalNode =
     FunctionSummary::makeDummyFunctionSummary({});
+
 bool ValueInfo::isDSOLocal() const {
   // Need to check all summaries are local in case of hash collisions.
   return getSummaryList().size() &&
          llvm::all_of(getSummaryList(),
                       [](const std::unique_ptr<GlobalValueSummary> &Summary) {
                         return Summary->isDSOLocal();
+                      });
+}
+
+bool ValueInfo::canAutoHide() const {
+  // Can only auto hide if all copies are eligible to auto hide.
+  return getSummaryList().size() &&
+         llvm::all_of(getSummaryList(),
+                      [](const std::unique_ptr<GlobalValueSummary> &Summary) {
+                        return Summary->canAutoHide();
                       });
 }
 
@@ -62,17 +71,6 @@ void ModuleSummaryIndex::collectDefinedFunctionsForModule(
       if (Summary->modulePath() != ModulePath)
         continue;
       GVSummaryMap[GUID] = Summary;
-    }
-  }
-}
-
-// Collect for each module the list of function it defines (GUID -> Summary).
-void ModuleSummaryIndex::collectDefinedGVSummariesPerModule(
-    StringMap<GVSummaryMapTy> &ModuleToDefinedGVSummaries) const {
-  for (auto &GlobalList : *this) {
-    auto GUID = GlobalList.first;
-    for (auto &Summary : GlobalList.second.SummaryList) {
-      ModuleToDefinedGVSummaries[Summary->modulePath()][GUID] = Summary.get();
     }
   }
 }
@@ -342,7 +340,8 @@ static bool hasReadOnlyFlag(const GlobalValueSummary *S) {
 void ModuleSummaryIndex::exportToDot(raw_ostream &OS) const {
   std::vector<Edge> CrossModuleEdges;
   DenseMap<GlobalValue::GUID, std::vector<uint64_t>> NodeMap;
-  StringMap<GVSummaryMapTy> ModuleToDefinedGVS;
+  using GVSOrderedMapTy = std::map<GlobalValue::GUID, GlobalValueSummary *>;
+  std::map<StringRef, GVSOrderedMapTy> ModuleToDefinedGVS;
   collectDefinedGVSummariesPerModule(ModuleToDefinedGVS);
 
   // Get node identifier in form MXXX_<GUID>. The MXXX prefix is required,
@@ -379,12 +378,12 @@ void ModuleSummaryIndex::exportToDot(raw_ostream &OS) const {
 
   OS << "digraph Summary {\n";
   for (auto &ModIt : ModuleToDefinedGVS) {
-    auto ModId = getModuleId(ModIt.first());
-    OS << "  // Module: " << ModIt.first() << "\n";
+    auto ModId = getModuleId(ModIt.first);
+    OS << "  // Module: " << ModIt.first << "\n";
     OS << "  subgraph cluster_" << std::to_string(ModId) << " {\n";
     OS << "    style = filled;\n";
     OS << "    color = lightgrey;\n";
-    OS << "    label = \"" << sys::path::filename(ModIt.first()) << "\";\n";
+    OS << "    label = \"" << sys::path::filename(ModIt.first) << "\";\n";
     OS << "    node [style=filled,fillcolor=lightblue];\n";
 
     auto &GVSMap = ModIt.second;
@@ -410,6 +409,10 @@ void ModuleSummaryIndex::exportToDot(raw_ostream &OS) const {
         if (Flags.Live && hasReadOnlyFlag(SummaryIt.second))
           A.addComment("immutable");
       }
+      if (Flags.DSOLocal)
+        A.addComment("dsoLocal");
+      if (Flags.CanAutoHide)
+        A.addComment("canAutoHide");
 
       auto VI = getValueInfo(SummaryIt.first);
       A.add("label", getNodeLabel(VI, SummaryIt.second));
@@ -429,17 +432,7 @@ void ModuleSummaryIndex::exportToDot(raw_ostream &OS) const {
         Draw(SummaryIt.first, R.getGUID(), R.isReadOnly() ? -1 : -2);
 
       if (auto *AS = dyn_cast_or_null<AliasSummary>(SummaryIt.second)) {
-        GlobalValue::GUID AliaseeId;
-        if (AS->hasAliaseeGUID())
-          AliaseeId = AS->getAliaseeGUID();
-        else {
-          auto AliaseeOrigId = AS->getAliasee().getOriginalName();
-          AliaseeId = getGUIDFromOriginalID(AliaseeOrigId);
-          if (!AliaseeId)
-            AliaseeId = AliaseeOrigId;
-        }
-
-        Draw(SummaryIt.first, AliaseeId, -3);
+        Draw(SummaryIt.first, AS->getAliaseeGUID(), -3);
         continue;
       }
 

@@ -1,9 +1,8 @@
 //===- Type.cpp - Implement the Type class --------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -256,7 +255,7 @@ IntegerType *IntegerType::get(LLVMContext &C, unsigned NumBits) {
   IntegerType *&Entry = C.pImpl->IntegerTypes[NumBits];
 
   if (!Entry)
-    Entry = new (C.pImpl->TypeAllocator) IntegerType(C, NumBits);
+    Entry = new (C.pImpl->Alloc) IntegerType(C, NumBits);
 
   return Entry;
 }
@@ -308,7 +307,7 @@ FunctionType *FunctionType::get(Type *ReturnType,
   if (Insertion.second) {
     // The function type was not found. Allocate one and update FunctionTypes
     // in-place.
-    FT = (FunctionType *)pImpl->TypeAllocator.Allocate(
+    FT = (FunctionType *)pImpl->Alloc.Allocate(
         sizeof(FunctionType) + sizeof(Type *) * (Params.size() + 1),
         alignof(FunctionType));
     new (FT) FunctionType(ReturnType, Params, isVarArg);
@@ -354,7 +353,7 @@ StructType *StructType::get(LLVMContext &Context, ArrayRef<Type*> ETypes,
   if (Insertion.second) {
     // The struct type was not found. Allocate one and update AnonStructTypes
     // in-place.
-    ST = new (Context.pImpl->TypeAllocator) StructType(Context);
+    ST = new (Context.pImpl->Alloc) StructType(Context);
     ST->setSubclassData(SCDB_IsLiteral);  // Literal struct.
     ST->setBody(ETypes, isPacked);
     *Insertion.first = ST;
@@ -380,7 +379,7 @@ void StructType::setBody(ArrayRef<Type*> Elements, bool isPacked) {
     return;
   }
 
-  ContainedTys = Elements.copy(getContext().pImpl->TypeAllocator).data();
+  ContainedTys = Elements.copy(getContext().pImpl->Alloc).data();
 }
 
 void StructType::setName(StringRef Name) {
@@ -435,7 +434,7 @@ void StructType::setName(StringRef Name) {
 // StructType Helper functions.
 
 StructType *StructType::create(LLVMContext &Context, StringRef Name) {
-  StructType *ST = new (Context.pImpl->TypeAllocator) StructType(Context);
+  StructType *ST = new (Context.pImpl->Alloc) StructType(Context);
   if (!Name.empty())
     ST->setName(Name);
   return ST;
@@ -586,7 +585,7 @@ ArrayType *ArrayType::get(Type *ElementType, uint64_t NumElements) {
     pImpl->ArrayTypes[std::make_pair(ElementType, NumElements)];
 
   if (!Entry)
-    Entry = new (pImpl->TypeAllocator) ArrayType(ElementType, NumElements);
+    Entry = new (pImpl->Alloc) ArrayType(ElementType, NumElements);
   return Entry;
 }
 
@@ -600,21 +599,20 @@ bool ArrayType::isValidElementType(Type *ElemTy) {
 //                          VectorType Implementation
 //===----------------------------------------------------------------------===//
 
-VectorType::VectorType(Type *ElType, unsigned NumEl)
-  : SequentialType(VectorTyID, ElType, NumEl) {}
+VectorType::VectorType(Type *ElType, ElementCount EC)
+  : SequentialType(VectorTyID, ElType, EC.Min), Scalable(EC.Scalable) {}
 
-VectorType *VectorType::get(Type *ElementType, unsigned NumElements) {
-  assert(NumElements > 0 && "#Elements of a VectorType must be greater than 0");
+VectorType *VectorType::get(Type *ElementType, ElementCount EC) {
+  assert(EC.Min > 0 && "#Elements of a VectorType must be greater than 0");
   assert(isValidElementType(ElementType) && "Element type of a VectorType must "
                                             "be an integer, floating point, or "
                                             "pointer type.");
 
   LLVMContextImpl *pImpl = ElementType->getContext().pImpl;
   VectorType *&Entry = ElementType->getContext().pImpl
-    ->VectorTypes[std::make_pair(ElementType, NumElements)];
-
+                                 ->VectorTypes[std::make_pair(ElementType, EC)];
   if (!Entry)
-    Entry = new (pImpl->TypeAllocator) VectorType(ElementType, NumElements);
+    Entry = new (pImpl->Alloc) VectorType(ElementType, EC);
   return Entry;
 }
 
@@ -638,7 +636,7 @@ PointerType *PointerType::get(Type *EltTy, unsigned AddressSpace) {
      : CImpl->ASPointerTypes[std::make_pair(EltTy, AddressSpace)];
 
   if (!Entry)
-    Entry = new (CImpl->TypeAllocator) PointerType(EltTy, AddressSpace);
+    Entry = new (CImpl->Alloc) PointerType(EltTy, AddressSpace);
   return Entry;
 }
 

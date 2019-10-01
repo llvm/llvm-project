@@ -1,5 +1,5 @@
 # RUN: llvm-mc -triple=i686-windows-msvc %s -filetype=obj -o %t.obj
-# RUN: llvm-readobj -codeview %t.obj | FileCheck %s
+# RUN: llvm-readobj --codeview %t.obj | FileCheck %s
 
 # The .cv_string directive mainly exists as a convenience for manually writing
 # FPO data in assembler. Test that we can write FPO data using this directive,

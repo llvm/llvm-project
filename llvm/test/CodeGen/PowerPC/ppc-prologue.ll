@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-unknown-linux-gnu -disable-fp-elim | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-unknown-linux-gnu -frame-pointer=all | FileCheck %s
 
 define i32 @_Z4funci(i32 %a) ssp {
 ; CHECK:       mflr 0

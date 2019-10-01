@@ -1,9 +1,8 @@
 //===- llvm/unittest/IR/BasicBlockTest.cpp - BasicBlock unit tests --------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -101,10 +100,9 @@ TEST(BasicBlockTest, TestInstructionsWithoutDebug) {
   Argument *V = new Argument(Type::getInt32Ty(Ctx));
   Function *F = Function::Create(FT, Function::ExternalLinkage, "", M);
 
-  Value *DbgAddr = Intrinsic::getDeclaration(M, Intrinsic::dbg_addr);
-  Value *DbgDeclare =
-      Intrinsic::getDeclaration(M, Intrinsic::dbg_declare);
-  Value *DbgValue = Intrinsic::getDeclaration(M, Intrinsic::dbg_value);
+  Function *DbgAddr = Intrinsic::getDeclaration(M, Intrinsic::dbg_addr);
+  Function *DbgDeclare = Intrinsic::getDeclaration(M, Intrinsic::dbg_declare);
+  Function *DbgValue = Intrinsic::getDeclaration(M, Intrinsic::dbg_value);
   Value *DIV = MetadataAsValue::get(Ctx, (Metadata *)nullptr);
   SmallVector<Value *, 3> Args = {DIV, DIV, DIV};
 

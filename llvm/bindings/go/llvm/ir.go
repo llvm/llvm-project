@@ -1,9 +1,8 @@
 //===- ir.go - Bindings for ir --------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -66,6 +65,8 @@ type (
 		C C.LLVMAttributeRef
 	}
 	Opcode              C.LLVMOpcode
+	AtomicRMWBinOp      C.LLVMAtomicRMWBinOp
+	AtomicOrdering      C.LLVMAtomicOrdering
 	TypeKind            C.LLVMTypeKind
 	Linkage             C.LLVMLinkage
 	Visibility          C.LLVMVisibility
@@ -191,6 +192,30 @@ const (
 	ShuffleVector  Opcode = C.LLVMShuffleVector
 	ExtractValue   Opcode = C.LLVMExtractValue
 	InsertValue    Opcode = C.LLVMInsertValue
+)
+
+const (
+	AtomicRMWBinOpXchg AtomicRMWBinOp = C.LLVMAtomicRMWBinOpXchg
+	AtomicRMWBinOpAdd  AtomicRMWBinOp = C.LLVMAtomicRMWBinOpAdd
+	AtomicRMWBinOpSub  AtomicRMWBinOp = C.LLVMAtomicRMWBinOpSub
+	AtomicRMWBinOpAnd  AtomicRMWBinOp = C.LLVMAtomicRMWBinOpAnd
+	AtomicRMWBinOpNand AtomicRMWBinOp = C.LLVMAtomicRMWBinOpNand
+	AtomicRMWBinOpOr   AtomicRMWBinOp = C.LLVMAtomicRMWBinOpOr
+	AtomicRMWBinOpXor  AtomicRMWBinOp = C.LLVMAtomicRMWBinOpXor
+	AtomicRMWBinOpMax  AtomicRMWBinOp = C.LLVMAtomicRMWBinOpMax
+	AtomicRMWBinOpMin  AtomicRMWBinOp = C.LLVMAtomicRMWBinOpMin
+	AtomicRMWBinOpUMax AtomicRMWBinOp = C.LLVMAtomicRMWBinOpUMax
+	AtomicRMWBinOpUMin AtomicRMWBinOp = C.LLVMAtomicRMWBinOpUMin
+)
+
+const (
+	AtomicOrderingNotAtomic              AtomicOrdering = C.LLVMAtomicOrderingNotAtomic
+	AtomicOrderingUnordered              AtomicOrdering = C.LLVMAtomicOrderingUnordered
+	AtomicOrderingMonotonic              AtomicOrdering = C.LLVMAtomicOrderingMonotonic
+	AtomicOrderingAcquire                AtomicOrdering = C.LLVMAtomicOrderingAcquire
+	AtomicOrderingRelease                AtomicOrdering = C.LLVMAtomicOrderingRelease
+	AtomicOrderingAcquireRelease         AtomicOrdering = C.LLVMAtomicOrderingAcquireRelease
+	AtomicOrderingSequentiallyConsistent AtomicOrdering = C.LLVMAtomicOrderingSequentiallyConsistent
 )
 
 //-------------------------------------------------------------------------
@@ -359,49 +384,49 @@ func AttributeKindID(name string) (id uint) {
 }
 
 func (c Context) CreateEnumAttribute(kind uint, val uint64) (a Attribute) {
-  a.C = C.LLVMCreateEnumAttribute(c.C, C.unsigned(kind), C.uint64_t(val))
-  return
+	a.C = C.LLVMCreateEnumAttribute(c.C, C.unsigned(kind), C.uint64_t(val))
+	return
 }
 
 func (a Attribute) GetEnumKind() (id int) {
-  id = int(C.LLVMGetEnumAttributeKind(a.C))
-  return
+	id = int(C.LLVMGetEnumAttributeKind(a.C))
+	return
 }
 
 func (a Attribute) GetEnumValue() (val uint64) {
-  val = uint64(C.LLVMGetEnumAttributeValue(a.C))
-  return
+	val = uint64(C.LLVMGetEnumAttributeValue(a.C))
+	return
 }
 
 func (c Context) CreateStringAttribute(kind string, val string) (a Attribute) {
-  ckind := C.CString(kind)
-  defer C.free(unsafe.Pointer(ckind))
-  cval := C.CString(val)
-  defer C.free(unsafe.Pointer(cval))
-  a.C = C.LLVMCreateStringAttribute(c.C,
-                                    ckind, C.unsigned(len(kind)),
-                                    cval, C.unsigned(len(val)))
-  return
+	ckind := C.CString(kind)
+	defer C.free(unsafe.Pointer(ckind))
+	cval := C.CString(val)
+	defer C.free(unsafe.Pointer(cval))
+	a.C = C.LLVMCreateStringAttribute(c.C,
+		ckind, C.unsigned(len(kind)),
+		cval, C.unsigned(len(val)))
+	return
 }
 
 func (a Attribute) GetStringKind() string {
-  length := C.unsigned(0)
-  ckind := C.LLVMGetStringAttributeKind(a.C, &length)
-  return C.GoStringN(ckind, C.int(length))
+	length := C.unsigned(0)
+	ckind := C.LLVMGetStringAttributeKind(a.C, &length)
+	return C.GoStringN(ckind, C.int(length))
 }
 
 func (a Attribute) GetStringValue() string {
-  length := C.unsigned(0)
-  ckind := C.LLVMGetStringAttributeValue(a.C, &length)
-  return C.GoStringN(ckind, C.int(length))
+	length := C.unsigned(0)
+	ckind := C.LLVMGetStringAttributeValue(a.C, &length)
+	return C.GoStringN(ckind, C.int(length))
 }
 
 func (a Attribute) IsEnum() bool {
-  return C.LLVMIsEnumAttribute(a.C) != 0;
+	return C.LLVMIsEnumAttribute(a.C) != 0
 }
 
 func (a Attribute) IsString() bool {
-  return C.LLVMIsStringAttribute(a.C) != 0;
+	return C.LLVMIsStringAttribute(a.C) != 0
 }
 
 //-------------------------------------------------------------------------
@@ -1045,6 +1070,26 @@ func (v Value) IsGlobalConstant() bool    { return C.LLVMIsGlobalConstant(v.C) !
 func (v Value) SetGlobalConstant(gc bool) { C.LLVMSetGlobalConstant(v.C, boolToLLVMBool(gc)) }
 func (v Value) IsVolatile() bool          { return C.LLVMGetVolatile(v.C) != 0 }
 func (v Value) SetVolatile(volatile bool) { C.LLVMSetVolatile(v.C, boolToLLVMBool(volatile)) }
+func (v Value) Ordering() AtomicOrdering  { return AtomicOrdering(C.LLVMGetOrdering(v.C)) }
+func (v Value) SetOrdering(ordering AtomicOrdering) {
+	C.LLVMSetOrdering(v.C, C.LLVMAtomicOrdering(ordering))
+}
+func (v Value) IsAtomicSingleThread() bool { return C.LLVMIsAtomicSingleThread(v.C) != 0 }
+func (v Value) SetAtomicSingleThread(singleThread bool) {
+	C.LLVMSetAtomicSingleThread(v.C, boolToLLVMBool(singleThread))
+}
+func (v Value) CmpXchgSuccessOrdering() AtomicOrdering {
+	return AtomicOrdering(C.LLVMGetCmpXchgSuccessOrdering(v.C))
+}
+func (v Value) SetCmpXchgSuccessOrdering(ordering AtomicOrdering) {
+	C.LLVMSetCmpXchgSuccessOrdering(v.C, C.LLVMAtomicOrdering(ordering))
+}
+func (v Value) CmpXchgFailureOrdering() AtomicOrdering {
+	return AtomicOrdering(C.LLVMGetCmpXchgFailureOrdering(v.C))
+}
+func (v Value) SetCmpXchgFailureOrdering(ordering AtomicOrdering) {
+	C.LLVMSetCmpXchgFailureOrdering(v.C, C.LLVMAtomicOrdering(ordering))
+}
 
 // Operations on aliases
 func AddAlias(m Module, t Type, aliasee Value, name string) (v Value) {
@@ -1105,36 +1150,36 @@ func (v Value) SetGC(name string) {
 	C.LLVMSetGC(v.C, cname)
 }
 func (v Value) AddAttributeAtIndex(i int, a Attribute) {
-  C.LLVMAddAttributeAtIndex(v.C, C.LLVMAttributeIndex(i), a.C)
+	C.LLVMAddAttributeAtIndex(v.C, C.LLVMAttributeIndex(i), a.C)
 }
 func (v Value) AddFunctionAttr(a Attribute) {
-  v.AddAttributeAtIndex(C.LLVMAttributeFunctionIndex, a);
+	v.AddAttributeAtIndex(C.LLVMAttributeFunctionIndex, a)
 }
 func (v Value) GetEnumAttributeAtIndex(i int, kind uint) (a Attribute) {
-  a.C = C.LLVMGetEnumAttributeAtIndex(v.C, C.LLVMAttributeIndex(i), C.unsigned(kind))
-  return
+	a.C = C.LLVMGetEnumAttributeAtIndex(v.C, C.LLVMAttributeIndex(i), C.unsigned(kind))
+	return
 }
 func (v Value) GetEnumFunctionAttribute(kind uint) Attribute {
-  return v.GetEnumAttributeAtIndex(C.LLVMAttributeFunctionIndex, kind)
+	return v.GetEnumAttributeAtIndex(C.LLVMAttributeFunctionIndex, kind)
 }
 func (v Value) GetStringAttributeAtIndex(i int, kind string) (a Attribute) {
-  ckind := C.CString(kind)
-  defer C.free(unsafe.Pointer(ckind))
-  a.C = C.LLVMGetStringAttributeAtIndex(v.C, C.LLVMAttributeIndex(i),
-                                        ckind, C.unsigned(len(kind)))
-  return
+	ckind := C.CString(kind)
+	defer C.free(unsafe.Pointer(ckind))
+	a.C = C.LLVMGetStringAttributeAtIndex(v.C, C.LLVMAttributeIndex(i),
+		ckind, C.unsigned(len(kind)))
+	return
 }
 func (v Value) RemoveEnumAttributeAtIndex(i int, kind uint) {
-  C.LLVMRemoveEnumAttributeAtIndex(v.C, C.LLVMAttributeIndex(i), C.unsigned(kind))
+	C.LLVMRemoveEnumAttributeAtIndex(v.C, C.LLVMAttributeIndex(i), C.unsigned(kind))
 }
 func (v Value) RemoveEnumFunctionAttribute(kind uint) {
-  v.RemoveEnumAttributeAtIndex(C.LLVMAttributeFunctionIndex, kind);
+	v.RemoveEnumAttributeAtIndex(C.LLVMAttributeFunctionIndex, kind)
 }
 func (v Value) RemoveStringAttributeAtIndex(i int, kind string) {
-  ckind := C.CString(kind)
-  defer C.free(unsafe.Pointer(ckind))
-  C.LLVMRemoveStringAttributeAtIndex(v.C, C.LLVMAttributeIndex(i),
-                                     ckind, C.unsigned(len(kind)))
+	ckind := C.CString(kind)
+	defer C.free(unsafe.Pointer(ckind))
+	C.LLVMRemoveStringAttributeAtIndex(v.C, C.LLVMAttributeIndex(i),
+		ckind, C.unsigned(len(kind)))
 }
 func (v Value) AddTargetDependentFunctionAttr(attr, value string) {
 	cattr := C.CString(attr)
@@ -1156,12 +1201,12 @@ func (v Value) Params() []Value {
 	}
 	return out
 }
-func (v Value) Param(i int) (rv Value)  { rv.C = C.LLVMGetParam(v.C, C.unsigned(i)); return }
-func (v Value) ParamParent() (rv Value) { rv.C = C.LLVMGetParamParent(v.C); return }
-func (v Value) FirstParam() (rv Value)  { rv.C = C.LLVMGetFirstParam(v.C); return }
-func (v Value) LastParam() (rv Value)   { rv.C = C.LLVMGetLastParam(v.C); return }
-func NextParam(v Value) (rv Value)      { rv.C = C.LLVMGetNextParam(v.C); return }
-func PrevParam(v Value) (rv Value)      { rv.C = C.LLVMGetPreviousParam(v.C); return }
+func (v Value) Param(i int) (rv Value)      { rv.C = C.LLVMGetParam(v.C, C.unsigned(i)); return }
+func (v Value) ParamParent() (rv Value)     { rv.C = C.LLVMGetParamParent(v.C); return }
+func (v Value) FirstParam() (rv Value)      { rv.C = C.LLVMGetFirstParam(v.C); return }
+func (v Value) LastParam() (rv Value)       { rv.C = C.LLVMGetLastParam(v.C); return }
+func NextParam(v Value) (rv Value)          { rv.C = C.LLVMGetNextParam(v.C); return }
+func PrevParam(v Value) (rv Value)          { rv.C = C.LLVMGetPreviousParam(v.C); return }
 func (v Value) SetParamAlignment(align int) { C.LLVMSetParamAlignment(v.C, C.unsigned(align)) }
 
 // Operations on basic blocks
@@ -1209,6 +1254,7 @@ func (bb BasicBlock) MoveBefore(pos BasicBlock) { C.LLVMMoveBasicBlockBefore(bb.
 func (bb BasicBlock) MoveAfter(pos BasicBlock)  { C.LLVMMoveBasicBlockAfter(bb.C, pos.C) }
 
 // Operations on instructions
+func (v Value) EraseFromParentAsInstruction()      { C.LLVMInstructionEraseFromParent(v.C) }
 func (v Value) InstructionParent() (bb BasicBlock) { bb.C = C.LLVMGetInstructionParent(v.C); return }
 func (bb BasicBlock) FirstInstruction() (v Value)  { v.C = C.LLVMGetFirstInstruction(bb.C); return }
 func (bb BasicBlock) LastInstruction() (v Value)   { v.C = C.LLVMGetLastInstruction(bb.C); return }
@@ -1227,6 +1273,10 @@ func (v Value) AddCallSiteAttribute(i int, a Attribute) {
 }
 func (v Value) SetInstrParamAlignment(i int, align int) {
 	C.LLVMSetInstrParamAlignment(v.C, C.unsigned(i), C.unsigned(align))
+}
+func (v Value) CalledValue() (rv Value) {
+	rv.C = C.LLVMGetCalledValue(v.C)
+	return
 }
 
 // Operations on call instructions (only)
@@ -1263,13 +1313,17 @@ func (v Value) Indices() []uint32 {
 	num := C.LLVMGetNumIndices(v.C)
 	indicesPtr := C.LLVMGetIndices(v.C)
 	// https://github.com/golang/go/wiki/cgo#turning-c-arrays-into-go-slices
-	rawIndices := (*[1 << 30]C.uint)(unsafe.Pointer(indicesPtr))[:num:num]
+	rawIndices := (*[1 << 20]C.uint)(unsafe.Pointer(indicesPtr))[:num:num]
 	indices := make([]uint32, num)
 	for i := range indices {
 		indices[i] = uint32(rawIndices[i])
 	}
 	return indices
 }
+
+// Operations on comparisons
+func (v Value) IntPredicate() IntPredicate     { return IntPredicate(C.LLVMGetICmpPredicate(v.C)) }
+func (v Value) FloatPredicate() FloatPredicate { return FloatPredicate(C.LLVMGetFCmpPredicate(v.C)) }
 
 //-------------------------------------------------------------------------
 // llvm.Builder
@@ -1297,16 +1351,18 @@ func (b Builder) Dispose() { C.LLVMDisposeBuilder(b.C) }
 
 // Metadata
 type DebugLoc struct {
-	Line, Col      uint
-	Scope          Metadata
-	InlinedAt      Metadata
+	Line, Col uint
+	Scope     Metadata
+	InlinedAt Metadata
 }
+
 func (b Builder) SetCurrentDebugLocation(line, col uint, scope, inlinedAt Metadata) {
-	C.LLVMSetCurrentDebugLocation2(b.C, C.unsigned(line), C.unsigned(col), scope.C, inlinedAt.C)
+	C.LLVMGoSetCurrentDebugLocation(b.C, C.unsigned(line), C.unsigned(col), scope.C, inlinedAt.C)
 }
+
 // Get current debug location. Please do not call this function until setting debug location with SetCurrentDebugLocation()
 func (b Builder) GetCurrentDebugLocation() (loc DebugLoc) {
-	md := C.LLVMGetCurrentDebugLocation2(b.C)
+	md := C.LLVMGoGetCurrentDebugLocation(b.C)
 	loc.Line = uint(md.Line)
 	loc.Col = uint(md.Col)
 	loc.Scope = Metadata{C: md.Scope}
@@ -1621,6 +1677,14 @@ func (b Builder) CreateGlobalStringPtr(str, name string) (v Value) {
 	cname := C.CString(name)
 	defer C.free(unsafe.Pointer(cname))
 	v.C = C.LLVMBuildGlobalStringPtr(b.C, cstr, cname)
+	return
+}
+func (b Builder) CreateAtomicRMW(op AtomicRMWBinOp, ptr, val Value, ordering AtomicOrdering, singleThread bool) (v Value) {
+	v.C = C.LLVMBuildAtomicRMW(b.C, C.LLVMAtomicRMWBinOp(op), ptr.C, val.C, C.LLVMAtomicOrdering(ordering), boolToLLVMBool(singleThread))
+	return
+}
+func (b Builder) CreateAtomicCmpXchg(ptr, cmp, newVal Value, successOrdering, failureOrdering AtomicOrdering, singleThread bool) (v Value) {
+	v.C = C.LLVMBuildAtomicCmpXchg(b.C, ptr.C, cmp.C, newVal.C, C.LLVMAtomicOrdering(successOrdering), C.LLVMAtomicOrdering(failureOrdering), boolToLLVMBool(singleThread))
 	return
 }
 

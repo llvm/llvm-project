@@ -1,9 +1,8 @@
 //===- LibDriver.cpp - lib.exe-compatible driver --------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -14,8 +13,12 @@
 
 #include "llvm/ToolDrivers/llvm-lib/LibDriver.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/BinaryFormat/COFF.h"
 #include "llvm/BinaryFormat/Magic.h"
+#include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Object/ArchiveWriter.h"
+#include "llvm/Object/COFF.h"
+#include "llvm/Object/WindowsMachineFlag.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
@@ -97,6 +100,47 @@ static std::string findInputFile(StringRef File, ArrayRef<StringRef> Paths) {
   return "";
 }
 
+static void fatalOpenError(llvm::Error E, Twine File) {
+  if (!E)
+    return;
+  handleAllErrors(std::move(E), [&](const llvm::ErrorInfoBase &EIB) {
+    llvm::errs() << "error opening '" << File << "': " << EIB.message() << '\n';
+    exit(1);
+  });
+}
+
+static void doList(opt::InputArgList& Args) {
+  // lib.exe prints the contents of the first archive file.
+  std::unique_ptr<MemoryBuffer> B;
+  for (auto *Arg : Args.filtered(OPT_INPUT)) {
+    // Create or open the archive object.
+    ErrorOr<std::unique_ptr<MemoryBuffer>> MaybeBuf =
+        MemoryBuffer::getFile(Arg->getValue(), -1, false);
+    fatalOpenError(errorCodeToError(MaybeBuf.getError()), Arg->getValue());
+
+    if (identify_magic(MaybeBuf.get()->getBuffer()) == file_magic::archive) {
+      B = std::move(MaybeBuf.get());
+      break;
+    }
+  }
+
+  // lib.exe doesn't print an error if no .lib files are passed.
+  if (!B)
+    return;
+
+  Error Err = Error::success();
+  object::Archive Archive(B.get()->getMemBufferRef(), Err);
+  fatalOpenError(std::move(Err), B->getBufferIdentifier());
+
+  for (auto &C : Archive.children(Err)) {
+    Expected<StringRef> NameOrErr = C.getName();
+    fatalOpenError(NameOrErr.takeError(), B->getBufferIdentifier());
+    StringRef Name = NameOrErr.get();
+    llvm::outs() << Name << '\n';
+  }
+  fatalOpenError(std::move(Err), B->getBufferIdentifier());
+}
+
 int llvm::libDriverMain(ArrayRef<const char *> ArgsArr) {
   BumpPtrAllocator Alloc;
   StringSaver Saver(Alloc);
@@ -131,7 +175,24 @@ int llvm::libDriverMain(ArrayRef<const char *> ArgsArr) {
   if (!Args.hasArgNoClaim(OPT_INPUT))
     return 0;
 
+  if (Args.hasArg(OPT_lst)) {
+    doList(Args);
+    return 0;
+  }
+
   std::vector<StringRef> SearchPaths = getSearchPaths(&Args, Saver);
+
+  COFF::MachineTypes LibMachine = COFF::IMAGE_FILE_MACHINE_UNKNOWN;
+  std::string LibMachineSource;
+  if (auto *Arg = Args.getLastArg(OPT_machine)) {
+    LibMachine = getMachineType(Arg->getValue());
+    if (LibMachine == COFF::IMAGE_FILE_MACHINE_UNKNOWN) {
+      llvm::errs() << "unknown /machine: arg " << Arg->getValue() << '\n';
+      return 1;
+    }
+    LibMachineSource =
+        std::string(" (from '/machine:") + Arg->getValue() + "' flag)";
+  }
 
   // Create a NewArchiveMember for each input file.
   std::vector<NewArchiveMember> Members;
@@ -158,11 +219,95 @@ int llvm::libDriverMain(ArrayRef<const char *> ArgsArr) {
                    << ": not a COFF object, bitcode or resource file\n";
       return 1;
     }
+
+    // Check that all input files have the same machine type.
+    // Mixing normal objects and LTO bitcode files is fine as long as they
+    // have the same machine type.
+    // Doing this here duplicates the header parsing work that writeArchive()
+    // below does, but it's not a lot of work and it's a bit awkward to do
+    // in writeArchive() which needs to support many tools, can't assume the
+    // input is COFF, and doesn't have a good way to report errors.
+    COFF::MachineTypes FileMachine = COFF::IMAGE_FILE_MACHINE_UNKNOWN;
+    if (Magic == file_magic::coff_object) {
+      std::error_code EC;
+      object::COFFObjectFile Obj(*MOrErr->Buf, EC);
+      if (EC) {
+        llvm::errs() << Arg->getValue() << ": failed to open: " << EC.message()
+                     << '\n';
+        return 1;
+      }
+      uint16_t Machine = Obj.getMachine();
+      if (Machine != COFF::IMAGE_FILE_MACHINE_I386 &&
+          Machine != COFF::IMAGE_FILE_MACHINE_AMD64 &&
+          Machine != COFF::IMAGE_FILE_MACHINE_ARMNT &&
+          Machine != COFF::IMAGE_FILE_MACHINE_ARM64) {
+        llvm::errs() << Arg->getValue() << ": unknown machine: " << Machine
+                     << '\n';
+        return 1;
+      }
+      FileMachine = static_cast<COFF::MachineTypes>(Machine);
+    } else if (Magic == file_magic::bitcode) {
+      Expected<std::string> TripleStr = getBitcodeTargetTriple(*MOrErr->Buf);
+      if (!TripleStr) {
+        llvm::errs() << Arg->getValue()
+                     << ": failed to get target triple from bitcode\n";
+        return 1;
+      }
+      switch (Triple(*TripleStr).getArch()) {
+      case Triple::x86:
+        FileMachine = COFF::IMAGE_FILE_MACHINE_I386;
+        break;
+      case Triple::x86_64:
+        FileMachine = COFF::IMAGE_FILE_MACHINE_AMD64;
+        break;
+      case Triple::arm:
+        FileMachine = COFF::IMAGE_FILE_MACHINE_ARMNT;
+        break;
+      case Triple::aarch64:
+        FileMachine = COFF::IMAGE_FILE_MACHINE_ARM64;
+        break;
+      default:
+        llvm::errs() << Arg->getValue() << ": unknown arch in target triple "
+                     << *TripleStr << '\n';
+        return 1;
+      }
+    }
+
+    // FIXME: Once lld-link rejects multiple resource .obj files:
+    // Call convertResToCOFF() on .res files and add the resulting
+    // COFF file to the .lib output instead of adding the .res file, and remove
+    // this check. See PR42180.
+    if (FileMachine != COFF::IMAGE_FILE_MACHINE_UNKNOWN) {
+      if (LibMachine == COFF::IMAGE_FILE_MACHINE_UNKNOWN) {
+        LibMachine = FileMachine;
+        LibMachineSource = std::string(" (inferred from earlier file '") +
+                           Arg->getValue() + "')";
+      } else if (LibMachine != FileMachine) {
+        llvm::errs() << Arg->getValue() << ": file machine type "
+                     << machineToStr(FileMachine)
+                     << " conflicts with library machine type "
+                     << machineToStr(LibMachine) << LibMachineSource << '\n';
+        return 1;
+      }
+    }
+
     Members.emplace_back(std::move(*MOrErr));
   }
 
   // Create an archive file.
   std::string OutputPath = getOutputPath(&Args, Members[0]);
+  // llvm-lib uses relative paths for both regular and thin archives, unlike
+  // standard GNU ar, which only uses relative paths for thin archives and
+  // basenames for regular archives.
+  for (NewArchiveMember &Member : Members) {
+    if (sys::path::is_relative(Member.MemberName)) {
+      Expected<std::string> PathOrErr =
+          computeArchiveRelativePath(OutputPath, Member.MemberName);
+      if (PathOrErr)
+        Member.MemberName = Saver.save(*PathOrErr);
+    }
+  }
+
   if (Error E =
           writeArchive(OutputPath, Members,
                        /*WriteSymtab=*/true, object::Archive::K_GNU,

@@ -1,9 +1,8 @@
 //===--------------- OrcCAPITest.cpp - Unit tests Orc C API ---------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -27,8 +26,15 @@ class OrcCAPIExecutionTest : public testing::Test, public OrcExecutionTest {
 protected:
   std::unique_ptr<Module> createTestModule(const Triple &TT) {
     ModuleBuilder MB(Context, TT.str(), "");
-    Function *TestFunc = MB.createFunctionDecl<int()>("testFunc");
-    Function *Main = MB.createFunctionDecl<int(int, char*[])>("main");
+    Type *IntTy = Type::getScalarTy<int>(Context);
+    Function *TestFunc =
+        MB.createFunctionDecl(FunctionType::get(IntTy, {}, false), "testFunc");
+    Function *Main = MB.createFunctionDecl(
+        FunctionType::get(
+            IntTy,
+            {IntTy, Type::getInt8PtrTy(Context)->getPointerTo()},
+            false),
+        "main");
 
     Main->getBasicBlockList().push_back(BasicBlock::Create(Context));
     IRBuilder<> B(&Main->back());

@@ -1,9 +1,8 @@
 //===- HexagonCommonGEP.cpp -----------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -12,6 +11,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/GraphTraits.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -71,7 +71,7 @@ namespace {
   using NodeToValueMap = std::map<GepNode *, Value *>;
   using NodeVect = std::vector<GepNode *>;
   using NodeChildrenMap = std::map<GepNode *, NodeVect>;
-  using UseSet = std::set<Use *>;
+  using UseSet = SetVector<Use *>;
   using NodeToUsesMap = std::map<GepNode *, UseSet>;
 
   // Numbering map for gep nodes. Used to keep track of ordering for
@@ -980,15 +980,13 @@ void HexagonCommonGEP::separateChainForNode(GepNode *Node, Use *U,
   assert(UF != Uses.end());
   UseSet &Us = UF->second;
   UseSet NewUs;
-  for (UseSet::iterator I = Us.begin(); I != Us.end(); ) {
-    User *S = (*I)->getUser();
-    UseSet::iterator Nx = std::next(I);
-    if (S == R) {
-      NewUs.insert(*I);
-      Us.erase(I);
-    }
-    I = Nx;
+  for (Use *U : Us) {
+    if (U->getUser() == R)
+      NewUs.insert(U);
   }
+  for (Use *U : NewUs)
+    Us.remove(U); // erase takes an iterator.
+
   if (Us.empty()) {
     Node->Flags &= ~GepNode::Used;
     Uses.erase(UF);

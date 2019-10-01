@@ -1,9 +1,9 @@
-RUN: llvm-readobj -coff-load-config %S/Inputs/coff-load-config-x86.dll | FileCheck %s --check-prefix=X86
-RUN: llvm-readobj -coff-load-config %S/Inputs/coff-load-config-x64.dll | FileCheck %s --check-prefix=X64
+RUN: llvm-readobj --coff-load-config %S/Inputs/coff-load-config-x86.dll | FileCheck %s --check-prefix=X86
+RUN: llvm-readobj --coff-load-config %S/Inputs/coff-load-config-x64.dll | FileCheck %s --check-prefix=X64
 
-RUN: llvm-readobj -coff-load-config %S/Inputs/coff-load-config-data-end.exe | FileCheck %s --check-prefix=DATAEND
+RUN: llvm-readobj --coff-load-config %S/Inputs/coff-load-config-data-end.exe | FileCheck %s --check-prefix=DATAEND
 
-RUN: llvm-readobj -coff-load-config %S/Inputs/coff-no-load-config.exe | FileCheck %s --check-prefix=NOCONFIG
+RUN: llvm-readobj --coff-load-config %S/Inputs/coff-no-load-config.exe | FileCheck %s --check-prefix=NOCONFIG
 
 X86: LoadConfig [
 X86:   Size: 0x5C

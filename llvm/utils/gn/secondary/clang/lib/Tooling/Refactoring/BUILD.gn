@@ -1,5 +1,5 @@
 static_library("Refactoring") {
-  output_name = "clangToolingRefactor"
+  output_name = "clangToolingRefactoring"
   configs += [ "//llvm/utils/gn/build:clang_code" ]
   deps = [
     "//clang/lib/AST",
@@ -19,11 +19,15 @@ static_library("Refactoring") {
     "AtomicChange.cpp",
     "Extract/Extract.cpp",
     "Extract/SourceExtraction.cpp",
+    "RangeSelector.cpp",
     "RefactoringActions.cpp",
     "Rename/RenamingAction.cpp",
     "Rename/SymbolOccurrences.cpp",
     "Rename/USRFinder.cpp",
     "Rename/USRFindingAction.cpp",
     "Rename/USRLocFinder.cpp",
+    "SourceCode.cpp",
+    "Stencil.cpp",
+    "Transformer.cpp",
   ]
 }

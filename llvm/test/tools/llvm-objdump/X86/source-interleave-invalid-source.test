@@ -1,0 +1,16 @@
+## Test llvm-objdump's --source behaviour when a line number is greater than the
+## file length.
+
+# RUN: sed -e "s,SRC_COMPDIR,%/p/Inputs,g" %p/Inputs/source-interleave.ll > %t.ll
+# RUN: sed -e "s,line: 7,line: 9999,g" %t.ll > %t2.ll
+
+# RUN: llc -o %t.o -filetype=obj -mtriple=x86_64-pc-linux %t.ll
+# RUN: llc -o %t2.o -filetype=obj -mtriple=x86_64-pc-linux %t2.ll
+
+# RUN: llvm-objdump --source %t.o | FileCheck %s --check-prefixes=CHECK,GOOD
+# RUN: llvm-objdump --source %t2.o | FileCheck %s --implicit-check-not="int *b = &a;"
+
+# CHECK:      main:
+# CHECK-NEXT: ; int main() {
+# GOOD:       ;   int *b = &a;
+# CHECK:      ;   return *b + foo();

@@ -1,9 +1,8 @@
 //===- JITSymbol.h - JIT symbol abstraction ---------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -56,7 +55,7 @@ template <typename T> JITTargetAddress pointerToJITTargetAddress(T *Ptr) {
 class JITSymbolFlags {
 public:
   using UnderlyingType = uint8_t;
-  using TargetFlagsType = uint64_t;
+  using TargetFlagsType = uint8_t;
 
   enum FlagNames : UnderlyingType {
     None = 0,
@@ -66,14 +65,8 @@ public:
     Absolute = 1U << 3,
     Exported = 1U << 4,
     Callable = 1U << 5,
-    Lazy = 1U << 6,
-    Materializing = 1U << 7,
-    LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ Materializing)
+    LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ Callable)
   };
-
-  static JITSymbolFlags stripTransientFlags(JITSymbolFlags Orig) {
-    return static_cast<FlagNames>(Orig.Flags & ~Lazy & ~Materializing);
-  }
 
   /// Default-construct a JITSymbolFlags instance.
   JITSymbolFlags() = default;
@@ -84,7 +77,7 @@ public:
   /// Construct a JITSymbolFlags instance from the given flags and target
   ///        flags.
   JITSymbolFlags(FlagNames Flags, TargetFlagsType TargetFlags)
-    : Flags(Flags), TargetFlags(TargetFlags) {}
+      : TargetFlags(TargetFlags), Flags(Flags) {}
 
   /// Implicitly convert to bool. Returs true if any flag is set.
   explicit operator bool() const { return Flags != None || TargetFlags != 0; }
@@ -110,19 +103,6 @@ public:
   bool hasError() const {
     return (Flags & HasError) == HasError;
   }
-
-  /// Returns true if this is a lazy symbol.
-  ///        This flag is used internally by the JIT APIs to track
-  ///        materialization states.
-  bool isLazy() const { return Flags & Lazy; }
-
-  /// Returns true if this symbol is in the process of being
-  ///        materialized.
-  bool isMaterializing() const { return Flags & Materializing; }
-
-  /// Returns true if this symbol is fully materialized.
-  ///        (i.e. neither lazy, nor materializing).
-  bool isMaterialized() const { return !(Flags & (Lazy | Materializing)); }
 
   /// Returns true if the Weak flag is set.
   bool isWeak() const {
@@ -168,8 +148,8 @@ public:
   fromObjectSymbol(const object::SymbolRef &Symbol);
 
 private:
-  FlagNames Flags = None;
   TargetFlagsType TargetFlags = 0;
+  FlagNames Flags = None;
 };
 
 inline JITSymbolFlags operator&(const JITSymbolFlags &LHS,

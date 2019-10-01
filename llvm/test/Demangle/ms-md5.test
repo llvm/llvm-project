@@ -1,4 +1,4 @@
-; These tests are based on clang/test/CodeGenCXX/mangle-ms-cxx11.cpp
+; These tests are based on clang/test/CodeGenCXX/mangle-ms-md5.cpp
 
 ; RUN: llvm-undname < %s | FileCheck %s
 
@@ -9,3 +9,15 @@
 ??@a6a285da2eea70dba6b578022be61d81@
 ; CHECK: ??@a6a285da2eea70dba6b578022be61d81@
 ; CHECK-NEXT: ??@a6a285da2eea70dba6b578022be61d81@
+
+; Don't include trailing garbage:
+??@a6a285da2eea70dba6b578022be61d81@asdf
+; CHECK: ??@a6a285da2eea70dba6b578022be61d81@asdf
+; CHECK-NEXT: ??@a6a285da2eea70dba6b578022be61d81@
+
+; The complete object locator special case:
+; FIXME: This should probably print
+; ??@a6a285da2eea70dba6b578022be61d81@::`RTTI Complete Object Locator' instead.
+??@a6a285da2eea70dba6b578022be61d81@??_R4@
+; CHECK: ??@a6a285da2eea70dba6b578022be61d81@??_R4@
+; CHECK-NEXT: ??@a6a285da2eea70dba6b578022be61d81@??_R4@

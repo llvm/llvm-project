@@ -16,7 +16,7 @@ entry-block:
 
 ; CHECK-LABEL: @foo(
 ; CHECK:         %[[sret_cast:[^=]+]] = bitcast [8 x i64]* %sret to i8*
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 8 %[[sret_cast]], i8 0, i64 64
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* nonnull align 8 %[[sret_cast]], i8 0, i64 64
 ; CHECK-NOT: call void @llvm.memcpy
 ; CHECK: ret void
 }
@@ -38,12 +38,12 @@ entry-block:
 ; CHECK-LABEL: @bar(
 ; CHECK:         %[[a:[^=]+]] = alloca [8 x i64]
 ; CHECK:         %[[a_cast:[^=]+]] = bitcast [8 x i64]* %[[a]] to i8*
-; CHECK:         call void @llvm.memset.p0i8.i64(i8* align 8 %[[a_cast]], i8 0, i64 64
+; CHECK:         call void @llvm.memset.p0i8.i64(i8* nonnull align 8 %[[a_cast]], i8 0, i64 64
 ; CHECK:         %[[sret_cast:[^=]+]] = bitcast [8 x i64]* %sret to i8*
-; CHECK:         call void @llvm.memset.p0i8.i64(i8* align 8 %[[sret_cast]], i8 0, i64 64
-; CHECK:         call void @llvm.memset.p0i8.i64(i8* align 8 %[[a_cast]], i8 42, i64 32
+; CHECK:         call void @llvm.memset.p0i8.i64(i8* nonnull align 8 %[[sret_cast]], i8 0, i64 64
+; CHECK:         call void @llvm.memset.p0i8.i64(i8* nonnull align 8 %[[a_cast]], i8 42, i64 32
 ; CHECK:         %[[out_cast:[^=]+]] = bitcast [8 x i64]* %out to i8*
-; CHECK:         call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 %[[out_cast]], i8* align 8 %[[a_cast]], i64 64
+; CHECK:         call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 8 %[[out_cast]], i8* nonnull align 8 %[[a_cast]], i64 64
 ; CHECK-NOT: call void @llvm.memcpy
 ; CHECK: ret void
 }

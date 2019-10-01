@@ -1,9 +1,8 @@
 //===-- ARMFixupKinds.h - ARM Specific Fixup Entries ------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -103,6 +102,15 @@ enum Fixups {
 
   // Fixup for Thumb2 8-bit rotated operand
   fixup_t2_so_imm,
+
+  // Fixups for Branch Future.
+  fixup_bf_branch,
+  fixup_bf_target,
+  fixup_bfl_target,
+  fixup_bfc_target,
+  fixup_bfcsel_else_target,
+  fixup_wls,
+  fixup_le,
 
   // Marker
   LastTargetFixupKind,

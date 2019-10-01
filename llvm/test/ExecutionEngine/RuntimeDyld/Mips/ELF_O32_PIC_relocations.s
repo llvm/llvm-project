@@ -34,7 +34,7 @@ tmp1:
 	.globl	bar
 	.type	bar,@function
 bar:
-# rtdyld-check:  decode_operand(R_MIPS_26, 0)[27:0] = stub_addr(test_ELF_O32.o, .text, foo)[27:0]
+# rtdyld-check:  decode_operand(R_MIPS_26, 0)[27:0] = stub_addr(test_ELF_O32.o/.text, foo)[27:0]
 # rtdyld-check:  decode_operand(R_MIPS_26, 0)[1:0] = 0
 R_MIPS_26:
 	j   foo

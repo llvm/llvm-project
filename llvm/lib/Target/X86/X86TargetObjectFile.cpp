@@ -1,9 +1,8 @@
 //===-- X86TargetObjectFile.cpp - X86 Object Info -------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -48,8 +47,8 @@ MCSymbol *X86_64MachoTargetObjectFile::getCFIPersonalitySymbol(
 }
 
 const MCExpr *X86_64MachoTargetObjectFile::getIndirectSymViaGOTPCRel(
-    const MCSymbol *Sym, const MCValue &MV, int64_t Offset,
-    MachineModuleInfo *MMI, MCStreamer &Streamer) const {
+    const GlobalValue *GV, const MCSymbol *Sym, const MCValue &MV,
+    int64_t Offset, MachineModuleInfo *MMI, MCStreamer &Streamer) const {
   // On Darwin/X86-64, we need to use foo@GOTPCREL+4 to access the got entry
   // from a data section. In case there's an additional offset, then use
   // foo@GOTPCREL+4+<offset>.

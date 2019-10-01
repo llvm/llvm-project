@@ -270,8 +270,8 @@ define <8 x i16> @vzip_lower_shufflemask_undef(<4 x i16>* %A, <4 x i16>* %B) {
 ; CHECK-LABEL: vzip_lower_shufflemask_undef:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldr d17, [r1]
-; CHECK-NEXT:    vldr d16, [r0]
-; CHECK-NEXT:    vzip.16 d16, d17
+; CHECK-NEXT:    vldr d18, [r0]
+; CHECK-NEXT:    vzip.16 d18, d17
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    vmov r2, r3, d17
 ; CHECK-NEXT:    mov pc, lr

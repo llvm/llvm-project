@@ -1,9 +1,8 @@
 //===- AMDGPUELFObjectWriter.cpp - AMDGPU ELF Writer ----------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -23,7 +22,8 @@ namespace {
 
 class AMDGPUELFObjectWriter : public MCELFObjectTargetWriter {
 public:
-  AMDGPUELFObjectWriter(bool Is64Bit, uint8_t OSABI, bool HasRelocationAddend);
+  AMDGPUELFObjectWriter(bool Is64Bit, uint8_t OSABI, bool HasRelocationAddend,
+                        uint8_t ABIVersion);
 
 protected:
   unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
@@ -35,9 +35,10 @@ protected:
 
 AMDGPUELFObjectWriter::AMDGPUELFObjectWriter(bool Is64Bit,
                                              uint8_t OSABI,
-                                             bool HasRelocationAddend)
+                                             bool HasRelocationAddend,
+                                             uint8_t ABIVersion)
   : MCELFObjectTargetWriter(Is64Bit, OSABI, ELF::EM_AMDGPU,
-                            HasRelocationAddend) {}
+                            HasRelocationAddend, ABIVersion) {}
 
 unsigned AMDGPUELFObjectWriter::getRelocType(MCContext &Ctx,
                                              const MCValue &Target,
@@ -84,7 +85,9 @@ unsigned AMDGPUELFObjectWriter::getRelocType(MCContext &Ctx,
 
 std::unique_ptr<MCObjectTargetWriter>
 llvm::createAMDGPUELFObjectWriter(bool Is64Bit, uint8_t OSABI,
-                                  bool HasRelocationAddend) {
+                                  bool HasRelocationAddend,
+                                  uint8_t ABIVersion) {
   return llvm::make_unique<AMDGPUELFObjectWriter>(Is64Bit, OSABI,
-                                                  HasRelocationAddend);
+                                                  HasRelocationAddend,
+                                                  ABIVersion);
 }

@@ -8,6 +8,7 @@
 ; Should be transformed into:
 ;   x s<= C
 ; Iff: isPowerOf2(C + 1)
+; C must not be -1, but may be 0.
 
 ; ============================================================================ ;
 ; Basic positive tests
@@ -47,6 +48,17 @@ define <2 x i1> @p2_vec_nonsplat(<2 x i8> %x) {
   ret <2 x i1> %ret
 }
 
+define <2 x i1> @p2_vec_nonsplat_edgecase(<2 x i8> %x) {
+; CHECK-LABEL: @p2_vec_nonsplat_edgecase(
+; CHECK-NEXT:    [[TMP0:%.*]] = and <2 x i8> [[X:%.*]], <i8 3, i8 0>
+; CHECK-NEXT:    [[RET:%.*]] = icmp sge <2 x i8> [[TMP0]], [[X]]
+; CHECK-NEXT:    ret <2 x i1> [[RET]]
+;
+  %tmp0 = and <2 x i8> %x, <i8 3, i8 0>
+  %ret = icmp sge <2 x i8> %tmp0, %x
+  ret <2 x i1> %ret
+}
+
 define <3 x i1> @p3_vec_splat_undef(<3 x i8> %x) {
 ; CHECK-LABEL: @p3_vec_splat_undef(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt <3 x i8> [[X:%.*]], <i8 4, i8 undef, i8 4>
@@ -80,9 +92,7 @@ define i1 @oneuse0(i8 %x) {
 ; Negative tests
 ; ============================================================================ ;
 
-; ============================================================================ ;
 ; Commutativity tests.
-; ============================================================================ ;
 
 declare i8 @gen8()
 
@@ -100,57 +110,7 @@ define i1 @c0() {
 }
 
 ; ============================================================================ ;
-; Commutativity tests with variable
-; ============================================================================ ;
-
-; Ok, this one should fold. We only testing commutativity of 'and'.
-define i1 @cv0(i8 %y) {
-; CHECK-LABEL: @cv0(
-; CHECK-NEXT:    [[X:%.*]] = call i8 @gen8()
-; CHECK-NEXT:    [[TMP0:%.*]] = lshr i8 -1, [[Y:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X]], [[TMP0]]
-; CHECK-NEXT:    [[RET:%.*]] = icmp sge i8 [[TMP1]], [[X]]
-; CHECK-NEXT:    ret i1 [[RET]]
-;
-  %x = call i8 @gen8()
-  %tmp0 = lshr i8 -1, %y
-  %tmp1 = and i8 %x, %tmp0 ; swapped order
-  %ret = icmp sge i8 %tmp1, %x
-  ret i1 %ret
-}
-
-define i1 @cv1(i8 %y) {
-; CHECK-LABEL: @cv1(
-; CHECK-NEXT:    [[X:%.*]] = call i8 @gen8()
-; CHECK-NEXT:    [[TMP0:%.*]] = lshr i8 -1, [[Y:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[TMP0]], [[X]]
-; CHECK-NEXT:    [[RET:%.*]] = icmp sge i8 [[X]], [[TMP1]]
-; CHECK-NEXT:    ret i1 [[RET]]
-;
-  %x = call i8 @gen8()
-  %tmp0 = lshr i8 -1, %y
-  %tmp1 = and i8 %tmp0, %x
-  %ret = icmp sge i8 %x, %tmp1 ; swapped order
-  ret i1 %ret
-}
-
-define i1 @cv2(i8 %y) {
-; CHECK-LABEL: @cv2(
-; CHECK-NEXT:    [[X:%.*]] = call i8 @gen8()
-; CHECK-NEXT:    [[TMP0:%.*]] = lshr i8 -1, [[Y:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X]], [[TMP0]]
-; CHECK-NEXT:    [[RET:%.*]] = icmp sge i8 [[X]], [[TMP1]]
-; CHECK-NEXT:    ret i1 [[RET]]
-;
-  %x = call i8 @gen8()
-  %tmp0 = lshr i8 -1, %y
-  %tmp1 = and i8 %x, %tmp0 ; swapped order
-  %ret = icmp sge i8 %x, %tmp1 ; swapped order
-  ret i1 %ret
-}
-
-; ============================================================================ ;
-; Normal negative tests
+; Rest of negative tests
 ; ============================================================================ ;
 
 define i1 @n0(i8 %x) {
@@ -223,4 +183,51 @@ define <3 x i1> @n4_vec(<3 x i8> %x) {
   %tmp0 = and <3 x i8> %x, <i8 3, i8 undef, i8 -1>
   %ret = icmp sge <3 x i8> %tmp0, %x
   ret <3 x i1> %ret
+}
+
+; Commutativity tests with variable
+
+define i1 @cv0(i8 %y) {
+; CHECK-LABEL: @cv0(
+; CHECK-NEXT:    [[X:%.*]] = call i8 @gen8()
+; CHECK-NEXT:    [[TMP0:%.*]] = lshr i8 -1, [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X]], [[TMP0]]
+; CHECK-NEXT:    [[RET:%.*]] = icmp sge i8 [[TMP1]], [[X]]
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %x = call i8 @gen8()
+  %tmp0 = lshr i8 -1, %y
+  %tmp1 = and i8 %x, %tmp0 ; swapped order
+  %ret = icmp sge i8 %tmp1, %x
+  ret i1 %ret
+}
+
+define i1 @cv1(i8 %y) {
+; CHECK-LABEL: @cv1(
+; CHECK-NEXT:    [[X:%.*]] = call i8 @gen8()
+; CHECK-NEXT:    [[TMP0:%.*]] = lshr i8 -1, [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[TMP0]], [[X]]
+; CHECK-NEXT:    [[RET:%.*]] = icmp sge i8 [[X]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %x = call i8 @gen8()
+  %tmp0 = lshr i8 -1, %y
+  %tmp1 = and i8 %tmp0, %x
+  %ret = icmp sge i8 %x, %tmp1 ; swapped order
+  ret i1 %ret
+}
+
+define i1 @cv2(i8 %y) {
+; CHECK-LABEL: @cv2(
+; CHECK-NEXT:    [[X:%.*]] = call i8 @gen8()
+; CHECK-NEXT:    [[TMP0:%.*]] = lshr i8 -1, [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X]], [[TMP0]]
+; CHECK-NEXT:    [[RET:%.*]] = icmp sge i8 [[X]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %x = call i8 @gen8()
+  %tmp0 = lshr i8 -1, %y
+  %tmp1 = and i8 %x, %tmp0 ; swapped order
+  %ret = icmp sge i8 %x, %tmp1 ; swapped order
+  ret i1 %ret
 }

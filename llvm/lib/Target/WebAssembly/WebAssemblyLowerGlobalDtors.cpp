@@ -1,9 +1,8 @@
 //===-- WebAssemblyLowerGlobalDtors.cpp - Lower @llvm.global_dtors --------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -59,8 +58,10 @@ ModulePass *llvm::createWebAssemblyLowerGlobalDtors() {
 }
 
 bool LowerGlobalDtors::runOnModule(Module &M) {
+  LLVM_DEBUG(dbgs() << "********** Lower Global Destructors **********\n");
+
   GlobalVariable *GV = M.getGlobalVariable("llvm.global_dtors");
-  if (!GV)
+  if (!GV || !GV->hasInitializer())
     return false;
 
   const ConstantArray *InitList = dyn_cast<ConstantArray>(GV->getInitializer());
@@ -68,7 +69,7 @@ bool LowerGlobalDtors::runOnModule(Module &M) {
     return false;
 
   // Sanity-check @llvm.global_dtor's type.
-  StructType *ETy = dyn_cast<StructType>(InitList->getType()->getElementType());
+  auto *ETy = dyn_cast<StructType>(InitList->getType()->getElementType());
   if (!ETy || ETy->getNumElements() != 3 ||
       !ETy->getTypeAtIndex(0U)->isIntegerTy() ||
       !ETy->getTypeAtIndex(1U)->isPointerTy() ||
@@ -79,11 +80,11 @@ bool LowerGlobalDtors::runOnModule(Module &M) {
   // associated symbol.
   std::map<uint16_t, MapVector<Constant *, std::vector<Constant *>>> DtorFuncs;
   for (Value *O : InitList->operands()) {
-    ConstantStruct *CS = dyn_cast<ConstantStruct>(O);
+    auto *CS = dyn_cast<ConstantStruct>(O);
     if (!CS)
       continue; // Malformed.
 
-    ConstantInt *Priority = dyn_cast<ConstantInt>(CS->getOperand(0));
+    auto *Priority = dyn_cast<ConstantInt>(CS->getOperand(0));
     if (!Priority)
       continue; // Malformed.
     uint16_t PriorityValue = Priority->getLimitedValue(UINT16_MAX);
@@ -108,10 +109,11 @@ bool LowerGlobalDtors::runOnModule(Module &M) {
       FunctionType::get(Type::getVoidTy(C), AtExitFuncArgs,
                         /*isVarArg=*/false);
 
-  Type *AtExitArgs[] = {PointerType::get(AtExitFuncTy, 0), VoidStar, VoidStar};
-  FunctionType *AtExitTy = FunctionType::get(Type::getInt32Ty(C), AtExitArgs,
-                                             /*isVarArg=*/false);
-  Constant *AtExit = M.getOrInsertFunction("__cxa_atexit", AtExitTy);
+  FunctionCallee AtExit = M.getOrInsertFunction(
+      "__cxa_atexit",
+      FunctionType::get(Type::getInt32Ty(C),
+                        {PointerType::get(AtExitFuncTy, 0), VoidStar, VoidStar},
+                        /*isVarArg=*/false));
 
   // Declare __dso_local.
   Constant *DsoHandle = M.getNamedValue("__dso_handle");
@@ -141,13 +143,13 @@ bool LowerGlobalDtors::runOnModule(Module &M) {
                                           : Twine()),
           &M);
       BasicBlock *BB = BasicBlock::Create(C, "body", CallDtors);
-
-      for (auto Dtor : AssociatedAndMore.second)
-        CallInst::Create(Dtor, "", BB);
-      ReturnInst::Create(C, BB);
-
       FunctionType *VoidVoid = FunctionType::get(Type::getVoidTy(C),
                                                  /*isVarArg=*/false);
+
+      for (auto Dtor : AssociatedAndMore.second)
+        CallInst::Create(VoidVoid, Dtor, "", BB);
+      ReturnInst::Create(C, BB);
+
       Function *RegisterCallDtors = Function::Create(
           VoidVoid, Function::PrivateLinkage,
           "register_call_dtors" +

@@ -1,9 +1,8 @@
 //===-- AMDGPUAsmUtils.cpp - AsmParser/InstPrinter common -----------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 #include "AMDGPUAsmUtils.h"
@@ -23,7 +22,7 @@ const char* const IdSymbolic[] = {
   nullptr,
   nullptr,
   nullptr,
-  nullptr,
+  "MSG_GS_ALLOC_REQ",
   nullptr,
   nullptr,
   nullptr,
@@ -69,7 +68,17 @@ const char* const IdSymbolic[] = {
   nullptr,
   nullptr,
   nullptr,
-  "HW_REG_SH_MEM_BASES"
+  "HW_REG_SH_MEM_BASES",
+  "HW_REG_TBA_LO",
+  "HW_REG_TBA_HI",
+  "HW_REG_TMA_LO",
+  "HW_REG_TMA_HI",
+  "HW_REG_FLAT_SCR_LO",
+  "HW_REG_FLAT_SCR_HI",
+  "HW_REG_XNACK_MASK",
+  nullptr, // HW_ID1, no predictable values
+  nullptr, // HW_ID2, no predictable values
+  "HW_REG_POPS_PACKER"
 };
 
 } // namespace Hwreg
@@ -86,5 +95,18 @@ const char* const IdSymbolic[] = {
 };
 
 } // namespace Swizzle
+
+namespace VGPRIndexMode {
+
+// This must be in sync with llvm::AMDGPU::VGPRIndexMode::Id enum members, see SIDefines.h.
+const char* const IdSymbolic[] = {
+  "SRC0",
+  "SRC1",
+  "SRC2",
+  "DST",
+};
+
+} // namespace VGPRIndexMode
+
 } // namespace AMDGPU
 } // namespace llvm

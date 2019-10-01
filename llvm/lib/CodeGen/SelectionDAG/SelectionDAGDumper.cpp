@@ -1,9 +1,8 @@
 //===- SelectionDAGDumper.cpp - Implement SelectionDAG::dump() ------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -96,6 +95,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::ATOMIC_LOAD_MAX:            return "AtomicLoadMax";
   case ISD::ATOMIC_LOAD_UMIN:           return "AtomicLoadUMin";
   case ISD::ATOMIC_LOAD_UMAX:           return "AtomicLoadUMax";
+  case ISD::ATOMIC_LOAD_FADD:           return "AtomicLoadFAdd";
   case ISD::ATOMIC_LOAD:                return "AtomicLoad";
   case ISD::ATOMIC_STORE:               return "AtomicStore";
   case ISD::PCMARKER:                   return "PCMarker";
@@ -172,7 +172,9 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::UNDEF:                      return "undef";
   case ISD::MERGE_VALUES:               return "merge_values";
   case ISD::INLINEASM:                  return "inlineasm";
+  case ISD::INLINEASM_BR:               return "inlineasm_br";
   case ISD::EH_LABEL:                   return "eh_label";
+  case ISD::ANNOTATION_LABEL:           return "annotation_label";
   case ISD::HANDLENODE:                 return "handlenode";
 
   // Unary operators
@@ -299,7 +301,10 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::UADDSAT:                    return "uaddsat";
   case ISD::SSUBSAT:                    return "ssubsat";
   case ISD::USUBSAT:                    return "usubsat";
+
   case ISD::SMULFIX:                    return "smulfix";
+  case ISD::SMULFIXSAT:                 return "smulfixsat";
+  case ISD::UMULFIX:                    return "umulfix";
 
   // Conversion operators.
   case ISD::SIGN_EXTEND:                return "sign_extend";
@@ -311,9 +316,11 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::ZERO_EXTEND_VECTOR_INREG:   return "zero_extend_vector_inreg";
   case ISD::TRUNCATE:                   return "truncate";
   case ISD::FP_ROUND:                   return "fp_round";
+  case ISD::STRICT_FP_ROUND:            return "strict_fp_round";
   case ISD::FLT_ROUNDS_:                return "flt_rounds";
   case ISD::FP_ROUND_INREG:             return "fp_round_inreg";
   case ISD::FP_EXTEND:                  return "fp_extend";
+  case ISD::STRICT_FP_EXTEND:           return "strict_fp_extend";
 
   case ISD::SINT_TO_FP:                 return "sint_to_fp";
   case ISD::UINT_TO_FP:                 return "uint_to_fp";
@@ -323,6 +330,10 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::ADDRSPACECAST:              return "addrspacecast";
   case ISD::FP16_TO_FP:                 return "fp16_to_fp";
   case ISD::FP_TO_FP16:                 return "fp_to_fp16";
+  case ISD::LROUND:                     return "lround";
+  case ISD::LLROUND:                    return "llround";
+  case ISD::LRINT:                      return "lrint";
+  case ISD::LLRINT:                     return "llrint";
 
     // Control flow instructions
   case ISD::BR:                         return "br";
@@ -652,6 +663,36 @@ void SDNode::print_details(raw_ostream &OS, const SelectionDAG *G) const {
       OS << ", " << AM;
 
     OS << ">";
+  } else if (const MaskedLoadSDNode *MLd = dyn_cast<MaskedLoadSDNode>(this)) {
+    OS << "<";
+
+    printMemOperand(OS, *MLd->getMemOperand(), G);
+
+    bool doExt = true;
+    switch (MLd->getExtensionType()) {
+    default: doExt = false; break;
+    case ISD::EXTLOAD:  OS << ", anyext"; break;
+    case ISD::SEXTLOAD: OS << ", sext"; break;
+    case ISD::ZEXTLOAD: OS << ", zext"; break;
+    }
+    if (doExt)
+      OS << " from " << MLd->getMemoryVT().getEVTString();
+
+    if (MLd->isExpandingLoad())
+      OS << ", expanding";
+
+    OS << ">";
+  } else if (const MaskedStoreSDNode *MSt = dyn_cast<MaskedStoreSDNode>(this)) {
+    OS << "<";
+    printMemOperand(OS, *MSt->getMemOperand(), G);
+
+    if (MSt->isTruncatingStore())
+      OS << ", trunc to " << MSt->getMemoryVT().getEVTString();
+
+    if (MSt->isCompressingStore())
+      OS << ", compressing";
+
+    OS << ">";
   } else if (const MemSDNode* M = dyn_cast<MemSDNode>(this)) {
     OS << "<";
     printMemOperand(OS, *M->getMemOperand(), G);
@@ -677,6 +718,9 @@ void SDNode::print_details(raw_ostream &OS, const SelectionDAG *G) const {
        << " -> "
        << ASC->getDestAddressSpace()
        << ']';
+  } else if (const LifetimeSDNode *LN = dyn_cast<LifetimeSDNode>(this)) {
+    if (LN->hasOffset())
+      OS << "<" << LN->getOffset() << " to " << LN->getOffset() + LN->getSize() << ">";
   }
 
   if (VerboseDAGDumping) {

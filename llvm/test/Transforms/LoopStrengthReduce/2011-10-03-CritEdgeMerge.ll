@@ -2,7 +2,7 @@
 ;
 ; Test LSR's use of SplitCriticalEdge during phi rewriting.
 
-target triple = "x86-apple-darwin"
+target triple = "x86_64-apple-darwin"
 
 ; Provide legal integer types.
 target datalayout = "n8:16:32:64"

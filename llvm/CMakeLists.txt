@@ -11,8 +11,12 @@ if(POLICY CMP0075)
   cmake_policy(SET CMP0075 NEW)
 endif()
 
+if(POLICY CMP0077)
+  cmake_policy(SET CMP0077 NEW)
+endif()
+
 if(NOT DEFINED LLVM_VERSION_MAJOR)
-  set(LLVM_VERSION_MAJOR 8)
+  set(LLVM_VERSION_MAJOR 9)
 endif()
 if(NOT DEFINED LLVM_VERSION_MINOR)
   set(LLVM_VERSION_MINOR 0)
@@ -45,86 +49,67 @@ if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Build type (default Debug)" FORCE)
 endif()
 
-# This should only apply if you are both on an Apple host, and targeting Apple.
-if(CMAKE_HOST_APPLE AND APPLE)
-  # if CMAKE_LIBTOOL is not set, try and find it with xcrun or find_program
-  if(NOT CMAKE_LIBTOOL)
-    if(NOT CMAKE_XCRUN)
-      find_program(CMAKE_XCRUN NAMES xcrun)
-    endif()
-    if(CMAKE_XCRUN)
-      execute_process(COMMAND ${CMAKE_XCRUN} -find libtool
-        OUTPUT_VARIABLE CMAKE_LIBTOOL
-        OUTPUT_STRIP_TRAILING_WHITESPACE)
-    endif()
-
-    if(NOT CMAKE_LIBTOOL OR NOT EXISTS CMAKE_LIBTOOL)
-      find_program(CMAKE_LIBTOOL NAMES libtool)
-    endif()
-  endif()
-
-  get_property(languages GLOBAL PROPERTY ENABLED_LANGUAGES)
-  if(CMAKE_LIBTOOL)
-    set(CMAKE_LIBTOOL ${CMAKE_LIBTOOL} CACHE PATH "libtool executable")
-    message(STATUS "Found libtool - ${CMAKE_LIBTOOL}")
-
-    execute_process(COMMAND ${CMAKE_LIBTOOL} -V
-      OUTPUT_VARIABLE LIBTOOL_V_OUTPUT
-      OUTPUT_STRIP_TRAILING_WHITESPACE)
-    if("${LIBTOOL_V_OUTPUT}" MATCHES ".*cctools-([0-9.]+).*")
-      string(REGEX REPLACE ".*cctools-([0-9.]+).*" "\\1" LIBTOOL_VERSION
-        ${LIBTOOL_V_OUTPUT})
-      if(NOT LIBTOOL_VERSION VERSION_LESS "862")
-        set(LIBTOOL_NO_WARNING_FLAG "-no_warning_for_no_symbols")
-      endif()
-    endif()
-
-    foreach(lang ${languages})
-      set(CMAKE_${lang}_CREATE_STATIC_LIBRARY
-        "\"${CMAKE_LIBTOOL}\" -static ${LIBTOOL_NO_WARNING_FLAG} -o <TARGET> \
-        <LINK_FLAGS> <OBJECTS> ")
-    endforeach()
-  endif()
-
-  # If DYLD_LIBRARY_PATH is set we need to set it on archiver commands
-  if(DYLD_LIBRARY_PATH)
-    set(dyld_envar "DYLD_LIBRARY_PATH=${DYLD_LIBRARY_PATH}")
-    foreach(lang ${languages})
-      foreach(cmd ${CMAKE_${lang}_CREATE_STATIC_LIBRARY})
-        list(APPEND CMAKE_${lang}_CREATE_STATIC_LIBRARY_NEW
-             "${dyld_envar} ${cmd}")
-      endforeach()
-      set(CMAKE_${lang}_CREATE_STATIC_LIBRARY
-        ${CMAKE_${lang}_CREATE_STATIC_LIBRARY_NEW})
-    endforeach()
-  endif()
-endif()
-
 # Side-by-side subprojects layout: automatically set the
 # LLVM_EXTERNAL_${project}_SOURCE_DIR using LLVM_ALL_PROJECTS
 # This allows an easy way of setting up a build directory for llvm and another
 # one for llvm+clang+... using the same sources.
-set(LLVM_ALL_PROJECTS "clang;libcxx;libcxxabi;libunwind;lldb;compiler-rt;lld;polly;debuginfo-tests")
+set(LLVM_ALL_PROJECTS "clang;clang-tools-extra;compiler-rt;debuginfo-tests;libclc;libcxx;libcxxabi;libunwind;lld;lldb;llgo;openmp;parallel-libs;polly;pstl")
 set(LLVM_ENABLE_PROJECTS "" CACHE STRING
 	"Semicolon-separated list of projects to build (${LLVM_ALL_PROJECTS}), or \"all\".")
 if( LLVM_ENABLE_PROJECTS STREQUAL "all" )
   set( LLVM_ENABLE_PROJECTS ${LLVM_ALL_PROJECTS})
 endif()
-foreach(proj ${LLVM_ENABLE_PROJECTS})
-  set(PROJ_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../${proj}")
-  if(NOT EXISTS "${PROJ_DIR}" OR NOT IS_DIRECTORY "${PROJ_DIR}")
-    message(FATAL_ERROR "LLVM_ENABLE_PROJECTS requests ${proj} but directory not found: ${PROJ_DIR}")
-  endif()
-  string(TOUPPER "${proj}" upper_proj)
-  STRING(REGEX REPLACE "-" "_" upper_proj ${upper_proj})
-  set(LLVM_EXTERNAL_${upper_proj}_SOURCE_DIR   "${CMAKE_CURRENT_SOURCE_DIR}/../${proj}")
-  # There is a widely spread opinion that clang-tools-extra should be merged
-  # into clang. The following simulates it by always enabling clang-tools-extra
-  # when enabling clang.
-  if (proj STREQUAL "clang")
-    set(LLVM_EXTERNAL_CLANG_TOOLS_EXTRA_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../clang-tools-extra")
-  endif()
-endforeach()
+
+# LLVM_ENABLE_PROJECTS_USED is `ON` if the user has ever used the
+# `LLVM_ENABLE_PROJECTS` CMake cache variable.  This exists for
+# several reasons:
+#
+# * As an indicator that the `LLVM_ENABLE_PROJECTS` list is now the single
+# source of truth for which projects to build. This means we will ignore user
+# supplied `LLVM_TOOL_<project>_BUILD` CMake cache variables and overwrite
+# them.
+#
+# * The case where the user previously had `LLVM_ENABLE_PROJECTS` set to a
+# non-empty list but now the user wishes to disable building all other projects
+# by setting `LLVM_ENABLE_PROJECTS` to an empty string. In that case we still
+# need to set the `LLVM_TOOL_${upper_proj}_BUILD` variables so that we disable
+# building all the projects that were previously enabled.
+set(LLVM_ENABLE_PROJECTS_USED OFF CACHE BOOL "")
+mark_as_advanced(LLVM_ENABLE_PROJECTS_USED)
+
+if (LLVM_ENABLE_PROJECTS_USED OR NOT LLVM_ENABLE_PROJECTS STREQUAL "")
+  set(LLVM_ENABLE_PROJECTS_USED ON CACHE BOOL "" FORCE)
+  foreach(proj ${LLVM_ALL_PROJECTS} ${LLVM_EXTERNAL_PROJECTS})
+    string(TOUPPER "${proj}" upper_proj)
+    string(REGEX REPLACE "-" "_" upper_proj ${upper_proj})
+    if ("${proj}" IN_LIST LLVM_ENABLE_PROJECTS)
+      message(STATUS "${proj} project is enabled")
+      set(SHOULD_ENABLE_PROJECT TRUE)
+      set(PROJ_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../${proj}")
+      if(NOT EXISTS "${PROJ_DIR}" OR NOT IS_DIRECTORY "${PROJ_DIR}")
+        message(FATAL_ERROR "LLVM_ENABLE_PROJECTS requests ${proj} but directory not found: ${PROJ_DIR}")
+      endif()
+      set(LLVM_EXTERNAL_${upper_proj}_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../${proj}" CACHE STRING "")
+    elseif ("${proj}" IN_LIST LLVM_EXTERNAL_PROJECTS)
+      message(STATUS "${proj} project is enabled")
+      set(SHOULD_ENABLE_PROJECT TRUE)
+    else()
+      message(STATUS "${proj} project is disabled")
+      set(SHOULD_ENABLE_PROJECT FALSE)
+    endif()
+    # Force `LLVM_TOOL_${upper_proj}_BUILD` variables to have values that
+    # corresponds with `LLVM_ENABLE_PROJECTS`. This prevents the user setting
+    # `LLVM_TOOL_${upper_proj}_BUILD` variables externally. At some point
+    # we should deprecate allowing users to set these variables by turning them
+    # into normal CMake variables rather than cache variables.
+    set(LLVM_TOOL_${upper_proj}_BUILD
+      ${SHOULD_ENABLE_PROJECT}
+      CACHE
+      BOOL "Whether to build ${upper_proj} as part of LLVM" FORCE
+    )
+  endforeach()
+endif()
+unset(SHOULD_ENABLE_PROJECT)
 
 # Build llvm with ccache if the package is present
 set(LLVM_CCACHE_BUILD OFF CACHE BOOL "Set to ON for a ccache enabled build")
@@ -200,7 +185,7 @@ endif()
 include(VersionFromVCS)
 
 option(LLVM_APPEND_VC_REV
-  "Embed the version control system revision id in LLVM" ON)
+  "Embed the version control system revision in LLVM" ON)
 
 set(PACKAGE_NAME LLVM)
 set(PACKAGE_STRING "${PACKAGE_NAME} ${PACKAGE_VERSION}")
@@ -318,6 +303,8 @@ if(LLVM_ENABLE_BACKTRACES)
   set(ENABLE_BACKTRACES 1)
 endif()
 
+option(LLVM_ENABLE_UNWIND_TABLES "Emit unwind tables for the libraries" ON)
+
 option(LLVM_ENABLE_CRASH_OVERRIDES "Enable crash overrides." ON)
 if(LLVM_ENABLE_CRASH_OVERRIDES)
   set(ENABLE_CRASH_OVERRIDES 1)
@@ -344,6 +331,31 @@ option(LLVM_ENABLE_THREADS "Use threads if available." ON)
 
 option(LLVM_ENABLE_ZLIB "Use zlib for compression/decompression if available." ON)
 
+set(LLVM_Z3_INSTALL_DIR "" CACHE STRING "Install directory of the Z3 solver.")
+
+find_package(Z3 4.7.1)
+
+if (LLVM_Z3_INSTALL_DIR)
+  if (NOT Z3_FOUND)
+    message(FATAL_ERROR "Z3 >= 4.7.1 has not been found in LLVM_Z3_INSTALL_DIR: ${LLVM_Z3_INSTALL_DIR}.")
+  endif()
+endif()
+
+set(LLVM_ENABLE_Z3_SOLVER_DEFAULT "${Z3_FOUND}")
+
+option(LLVM_ENABLE_Z3_SOLVER
+  "Enable Support for the Z3 constraint solver in LLVM."
+  ${LLVM_ENABLE_Z3_SOLVER_DEFAULT}
+)
+
+if (LLVM_ENABLE_Z3_SOLVER)
+  if (NOT Z3_FOUND)
+    message(FATAL_ERROR "LLVM_ENABLE_Z3_SOLVER cannot be enabled when Z3 is not available.")
+  endif()
+
+  set(LLVM_WITH_Z3 1)
+endif()
+
 if( LLVM_TARGETS_TO_BUILD STREQUAL "all" )
   set( LLVM_TARGETS_TO_BUILD ${LLVM_ALL_TARGETS} )
 endif()
@@ -363,8 +375,6 @@ else()
   option(LLVM_ENABLE_MODULE_DEBUGGING "Compile with -gmodules." OFF)
   option(LLVM_ENABLE_LOCAL_SUBMODULE_VISIBILITY "Compile with -fmodules-local-submodule-visibility." ON)
 endif()
-option(LLVM_ENABLE_CXX1Y "Compile with C++1y enabled." OFF)
-option(LLVM_ENABLE_CXX1Z "Compile with C++1z enabled." OFF)
 option(LLVM_ENABLE_LIBCXX "Use libc++ if available." OFF)
 option(LLVM_ENABLE_LLD "Use lld as C and C++ linker." OFF)
 option(LLVM_ENABLE_PEDANTIC "Compile with pedantic enabled." ON)
@@ -383,8 +393,11 @@ option(LLVM_ENABLE_EXPENSIVE_CHECKS "Enable expensive checks" OFF)
 set(LLVM_ABI_BREAKING_CHECKS "WITH_ASSERTS" CACHE STRING
   "Enable abi-breaking checks.  Can be WITH_ASSERTS, FORCE_ON or FORCE_OFF.")
 
-option(LLVM_FORCE_USE_OLD_HOST_TOOLCHAIN
+option(LLVM_FORCE_USE_OLD_TOOLCHAIN
        "Set to ON to force using an old, unsupported host toolchain." OFF)
+
+option(LLVM_TEMPORARILY_ALLOW_OLD_TOOLCHAIN
+       "Set to ON to only warn when using a toolchain which is about to be deprecated, instead of emitting an error." OFF)
 
 option(LLVM_USE_INTEL_JITEVENTS
   "Use Intel JIT API to inform Intel(R) VTune(TM) Amplifier XE 2011 about JIT code"
@@ -534,7 +547,7 @@ if(NOT DEFINED LLVM_DYLIB_COMPONENTS)
 endif()
 option(LLVM_LINK_LLVM_DYLIB "Link tools against the libllvm dynamic library" OFF)
 if(MSVC)
-  option(LLVM_BUILD_LLVM_C_DYLIB "Build LLVM-C.dll (Windows only)" OFF)
+  option(LLVM_BUILD_LLVM_C_DYLIB "Build LLVM-C.dll (Windows only)" ON)
 else()
   option(LLVM_BUILD_LLVM_C_DYLIB "Build libllvm-c re-export library (Darwin only)" OFF)
 endif()
@@ -568,10 +581,21 @@ if (LLVM_BUILD_INSTRUMENTED OR LLVM_BUILD_INSTRUMENTED_COVERAGE OR
     endif()
 		file(TO_NATIVE_PATH "${LLVM_PROFILE_DATA_DIR}/%${LLVM_PROFILE_MERGE_POOL_SIZE}m.profraw" LLVM_PROFILE_FILE_PATTERN)
   endif()
+  if(NOT LLVM_CSPROFILE_FILE_PATTERN)
+    if(NOT LLVM_CSPROFILE_DATA_DIR)
+      file(TO_NATIVE_PATH "${LLVM_BINARY_DIR}/csprofiles" LLVM_CSPROFILE_DATA_DIR)
+    endif()
+    file(TO_NATIVE_PATH "${LLVM_CSPROFILE_DATA_DIR}/%${LLVM_PROFILE_MERGE_POOL_SIZE}m.profraw" LLVM_CSPROFILE_FILE_PATTERN)
+  endif()
 endif()
 
 if (LLVM_BUILD_STATIC)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
+endif()
+
+# Use libtool instead of ar if you are both on an Apple host, and targeting Apple.
+if(CMAKE_HOST_APPLE AND APPLE)
+  include(UseLibtool)
 endif()
 
 # Override the default target with an environment variable named by LLVM_TARGET_TRIPLE_ENV.
@@ -597,6 +621,17 @@ set(LLVM_DEFAULT_TARGET_TRIPLE "${LLVM_HOST_TRIPLE}" CACHE STRING
 set(TARGET_TRIPLE "${LLVM_DEFAULT_TARGET_TRIPLE}")
 message(STATUS "LLVM host triple: ${LLVM_HOST_TRIPLE}")
 message(STATUS "LLVM default target triple: ${LLVM_DEFAULT_TARGET_TRIPLE}")
+
+if(WIN32 OR CYGWIN)
+  if(BUILD_SHARED_LIBS OR LLVM_BUILD_LLVM_DYLIB)
+    set(LLVM_ENABLE_PLUGINS_default ON)
+  else()
+    set(LLVM_ENABLE_PLUGINS_default OFF)
+  endif()
+else()
+  set(LLVM_ENABLE_PLUGINS_default ${LLVM_ENABLE_PIC})
+endif()
+option(LLVM_ENABLE_PLUGINS "Enable plugin support" ${LLVM_ENABLE_PLUGINS_default})
 
 include(HandleLLVMOptions)
 
@@ -752,13 +787,12 @@ set(LLVM_SRPM_USER_BINARY_SPECFILE ${CMAKE_CURRENT_SOURCE_DIR}/llvm.spec.in
 set(LLVM_SRPM_BINARY_SPECFILE ${CMAKE_CURRENT_BINARY_DIR}/llvm.spec)
 set(LLVM_SRPM_DIR "${CMAKE_CURRENT_BINARY_DIR}/srpm")
 
-# SVN_REVISION and GIT_COMMIT get set by the call to add_version_info_from_vcs.
-# DUMMY_VAR contains a version string which we don't care about.
-add_version_info_from_vcs(DUMMY_VAR)
-if ( SVN_REVISION )
-  set(LLVM_RPM_SPEC_REVISION "r${SVN_REVISION}")
-elseif ( GIT_COMMIT )
-  set (LLVM_RPM_SPEC_REVISION "g${GIT_COMMIT}")
+get_source_info(${CMAKE_CURRENT_SOURCE_DIR} revision repository)
+string(LENGTH "${revision}" revision_length)
+if(revision MATCHES "^[0-9]+$" AND revision_length LESS 40)
+  set(LLVM_RPM_SPEC_REVISION "r${revision}")
+else()
+  set(LLVM_RPM_SPEC_REVISION "${revision}")
 endif()
 
 configure_file(
@@ -783,6 +817,13 @@ if(APPLE AND DARWIN_LTO_LIBRARY)
     "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-lto_library -Wl,${DARWIN_LTO_LIBRARY}")
   set(CMAKE_MODULE_LINKER_FLAGS
     "${CMAKE_MODULE_LINKER_FLAGS} -Wl,-lto_library -Wl,${DARWIN_LTO_LIBRARY}")
+endif()
+
+# Build with _XOPEN_SOURCE on AIX, as stray macros in _ALL_SOURCE mode tend to
+# break things. In this case we need to enable the large-file API as well.
+if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+          add_definitions("-D_XOPEN_SOURCE=700")
+          add_definitions("-D_LARGE_FILE_API")
 endif()
 
 # Work around a broken bfd ld behavior. When linking a binary with a
@@ -1027,36 +1068,8 @@ endif()
 
 # This must be at the end of the LLVM root CMakeLists file because it must run
 # after all targets are created.
-if(LLVM_DISTRIBUTION_COMPONENTS)
-  if(LLVM_ENABLE_IDE)
-    message(FATAL_ERROR "LLVM_DISTRIBUTION_COMPONENTS cannot be specified with multi-configuration generators (i.e. Xcode or Visual Studio)")
-  endif()
-
-  add_custom_target(distribution)
-  add_custom_target(install-distribution)
-  add_custom_target(install-distribution-stripped)
-  foreach(target ${LLVM_DISTRIBUTION_COMPONENTS} ${LLVM_RUNTIME_DISTRIBUTION_COMPONENTS})
-    if(TARGET ${target})
-      add_dependencies(distribution ${target})
-    else()
-      message(SEND_ERROR "Specified distribution component '${target}' doesn't have a target")
-    endif()
-
-    if(TARGET install-${target})
-      add_dependencies(install-distribution install-${target})
-    else()
-      message(SEND_ERROR "Specified distribution component '${target}' doesn't have an install target")
-    endif()
-
-    if(TARGET install-${target}-stripped)
-      add_dependencies(install-distribution-stripped install-${target}-stripped)
-    else()
-      message(SEND_ERROR "Specified distribution component '${target}' doesn't have an install-stripped target."
-                         " Its installation target creation should be changed to use add_llvm_install_targets,"
-                         " or you should manually create the 'install-${target}-stripped' target.")
-    endif()
-  endforeach()
-endif()
+include(LLVMDistributionSupport)
+llvm_distribution_add_targets()
 
 # This allows us to deploy the Universal CRT DLLs by passing -DCMAKE_INSTALL_UCRT_LIBRARIES=ON to CMake
 if (MSVC AND CMAKE_HOST_SYSTEM_NAME STREQUAL "Windows" AND CMAKE_INSTALL_UCRT_LIBRARIES)

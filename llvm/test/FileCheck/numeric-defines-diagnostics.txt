@@ -1,0 +1,33 @@
+; Test incorrect syntax for -D# option is correctly diagnosed.
+
+; Invalid variable name: starts with a digit.
+RUN: not FileCheck -D#10VALUE=10 --input-file %s %s 2>&1 \
+RUN:   | FileCheck %s --strict-whitespace --check-prefix NUMERRCLIFMT
+
+NUMERRCLIFMT: Global defines:1:20: error: invalid variable name
+NUMERRCLIFMT-NEXT: Global define #1: #10VALUE=10
+NUMERRCLIFMT-NEXT: {{^                   \^$}}
+
+; Invalid definition of pseudo variable.
+RUN: not FileCheck -D#@VALUE=10 --input-file %s %s 2>&1 \
+RUN:   | FileCheck %s --strict-whitespace --check-prefix NUMERRCLIPSEUDO
+
+NUMERRCLIPSEUDO: Global defines:1:20: error: definition of pseudo numeric variable unsupported
+NUMERRCLIPSEUDO-NEXT: Global define #1: #@VALUE=10
+NUMERRCLIPSEUDO-NEXT: {{^                   \^$}}
+
+; Invalid definition of an expression.
+RUN: not FileCheck -D#VALUE+2=10 --input-file %s %s 2>&1 \
+RUN:   | FileCheck %s --strict-whitespace --check-prefix NUMERRCLITRAIL
+
+NUMERRCLITRAIL: Global defines:1:20: error: invalid variable name
+NUMERRCLITRAIL-NEXT: Global define #1: #VALUE+2=10
+NUMERRCLITRAIL-NEXT: {{^                   \^$}}
+
+; Invalid value: numeric expression instead of literal.
+RUN: not FileCheck -D#VALUE1=3 -D#VALUE2='VALUE1 + 2' --input-file %s %s 2>&1 \
+RUN:   | FileCheck %s --strict-whitespace --check-prefix NUMERRCLIEXPR
+
+NUMERRCLIEXPR: Global defines:2:27: error: invalid value in numeric variable definition 'VALUE1 + 2'
+NUMERRCLIEXPR-NEXT: Global define #2: #VALUE2=VALUE1 + 2
+NUMERRCLIEXPR-NEXT: {{^                          \^$}}

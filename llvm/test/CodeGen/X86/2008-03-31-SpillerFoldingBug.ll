@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i386-apple-darwin -relocation-model=pic -disable-fp-elim | grep add | grep 12 | not grep non_lazy_ptr
+; RUN: llc < %s -mtriple=i386-apple-darwin -relocation-model=pic -frame-pointer=all | grep add | grep 12 | not grep non_lazy_ptr
 ; Don't fold re-materialized load into a two address instruction
 
 	%"struct.Smarts::Runnable" = type { i32 (...)**, i32 }

@@ -1,0 +1,13 @@
+## Test that if an object has no debug information, only the disassembly is
+## printed when --source is specified.
+
+# RUN: sed -e "s,SRC_COMPDIR,%/p/Inputs,g" %p/Inputs/source-interleave.ll > %t.ll
+# RUN: llc -o %t.o -filetype=obj -mtriple=x86_64-pc-linux %t.ll
+# RUN: llvm-objcopy --strip-debug %t.o %t2.o
+
+# RUN: llvm-objdump --source %t.o | FileCheck %s --check-prefixes=CHECK,SOURCE
+# RUN: llvm-objdump --source %t2.o | FileCheck %s --implicit-check-not='main()'
+
+# CHECK:       0000000000000010 main:
+# SOURCE-NEXT: ; int main() {
+# CHECK-NEXT:   10:   55                      pushq   %rbp

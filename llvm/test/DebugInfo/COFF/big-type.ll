@@ -1,4 +1,4 @@
-; RUN: llc -filetype=obj < %s | llvm-readobj - -codeview | FileCheck %s
+; RUN: llc -filetype=obj < %s | llvm-readobj - --codeview | FileCheck %s
 
 ; We need three continuation records for this.
 

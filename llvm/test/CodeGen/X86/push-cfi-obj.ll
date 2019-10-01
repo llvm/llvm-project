@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=i686-pc-linux -filetype=obj | llvm-readobj -s -sr -sd | FileCheck %s -check-prefix=LINUX
-; RUN: llc < %s -mtriple=i686-darwin-macosx10.7 -filetype=obj | llvm-readobj -sections | FileCheck -check-prefix=DARWIN %s
+; RUN: llc < %s -mtriple=i686-pc-linux -filetype=obj | llvm-readobj -S --sr --sd | FileCheck %s -check-prefix=LINUX
+; RUN: llc < %s -mtriple=i686-darwin-macosx10.7 -filetype=obj | llvm-readobj --sections | FileCheck -check-prefix=DARWIN %s
 
 ; On darwin, check that we manage to generate the compact unwind section
 ; DARWIN: Name: __compact_unwind

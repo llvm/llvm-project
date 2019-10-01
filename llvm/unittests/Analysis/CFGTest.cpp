@@ -1,13 +1,13 @@
 //===- CFGTest.cpp - CFG tests --------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/CFG.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Dominators.h"
@@ -58,24 +58,32 @@ protected:
       report_fatal_error("@test must have an instruction %A");
     if (B == nullptr)
       report_fatal_error("@test must have an instruction %B");
+
+    assert(ExclusionSet.empty());
+    for (auto I = F->begin(), E = F->end(); I != E; ++I) {
+      if (I->hasName() && I->getName().startswith("excluded"))
+        ExclusionSet.insert(&*I);
+    }
   }
 
   void ExpectPath(bool ExpectedResult) {
     static char ID;
     class IsPotentiallyReachableTestPass : public FunctionPass {
      public:
-      IsPotentiallyReachableTestPass(bool ExpectedResult,
-                                     Instruction *A, Instruction *B)
-          : FunctionPass(ID), ExpectedResult(ExpectedResult), A(A), B(B) {}
+       IsPotentiallyReachableTestPass(bool ExpectedResult, Instruction *A,
+                                      Instruction *B,
+                                      SmallPtrSet<BasicBlock *, 4> ExclusionSet)
+           : FunctionPass(ID), ExpectedResult(ExpectedResult), A(A), B(B),
+             ExclusionSet(ExclusionSet) {}
 
-      static int initialize() {
-        PassInfo *PI = new PassInfo("isPotentiallyReachable testing pass",
-                                    "", &ID, nullptr, true, true);
-        PassRegistry::getPassRegistry()->registerPass(*PI, false);
-        initializeLoopInfoWrapperPassPass(*PassRegistry::getPassRegistry());
-        initializeDominatorTreeWrapperPassPass(
-            *PassRegistry::getPassRegistry());
-        return 0;
+       static int initialize() {
+         PassInfo *PI = new PassInfo("isPotentiallyReachable testing pass", "",
+                                     &ID, nullptr, true, true);
+         PassRegistry::getPassRegistry()->registerPass(*PI, false);
+         initializeLoopInfoWrapperPassPass(*PassRegistry::getPassRegistry());
+         initializeDominatorTreeWrapperPassPass(
+             *PassRegistry::getPassRegistry());
+         return 0;
       }
 
       void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -91,22 +99,26 @@ protected:
         LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
         DominatorTree *DT =
             &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-        EXPECT_EQ(isPotentiallyReachable(A, B, nullptr, nullptr),
+        EXPECT_EQ(isPotentiallyReachable(A, B, &ExclusionSet, nullptr, nullptr),
                   ExpectedResult);
-        EXPECT_EQ(isPotentiallyReachable(A, B, DT, nullptr), ExpectedResult);
-        EXPECT_EQ(isPotentiallyReachable(A, B, nullptr, LI), ExpectedResult);
-        EXPECT_EQ(isPotentiallyReachable(A, B, DT, LI), ExpectedResult);
+        EXPECT_EQ(isPotentiallyReachable(A, B, &ExclusionSet, DT, nullptr),
+                  ExpectedResult);
+        EXPECT_EQ(isPotentiallyReachable(A, B, &ExclusionSet, nullptr, LI),
+                  ExpectedResult);
+        EXPECT_EQ(isPotentiallyReachable(A, B, &ExclusionSet, DT, LI),
+                  ExpectedResult);
         return false;
       }
       bool ExpectedResult;
       Instruction *A, *B;
+      SmallPtrSet<BasicBlock *, 4> ExclusionSet;
     };
 
     static int initialize = IsPotentiallyReachableTestPass::initialize();
     (void)initialize;
 
     IsPotentiallyReachableTestPass *P =
-        new IsPotentiallyReachableTestPass(ExpectedResult, A, B);
+        new IsPotentiallyReachableTestPass(ExpectedResult, A, B, ExclusionSet);
     legacy::PassManager PM;
     PM.add(P);
     PM.run(*M);
@@ -115,6 +127,7 @@ protected:
   LLVMContext Context;
   std::unique_ptr<Module> M;
   Instruction *A, *B;
+  SmallPtrSet<BasicBlock *, 4> ExclusionSet;
 };
 
 }
@@ -384,5 +397,111 @@ TEST_F(IsPotentiallyReachableTest, ModifyTest) {
   S[0] = S[1];
   ExpectPath(false);
   S[0] = OldBB;
+  ExpectPath(true);
+}
+
+TEST_F(IsPotentiallyReachableTest, UnreachableFromEntryTest) {
+  ParseAssembly("define void @test() {\n"
+                "entry:\n"
+                "  %A = bitcast i8 undef to i8\n"
+                "  ret void\n"
+                "not.reachable:\n"
+                "  %B = bitcast i8 undef to i8\n"
+                "  ret void\n"
+                "}");
+  ExpectPath(false);
+}
+
+TEST_F(IsPotentiallyReachableTest, UnreachableBlocksTest1) {
+  ParseAssembly("define void @test() {\n"
+                "entry:\n"
+                "  ret void\n"
+                "not.reachable.1:\n"
+                "  %A = bitcast i8 undef to i8\n"
+                "  br label %not.reachable.2\n"
+                "not.reachable.2:\n"
+                "  %B = bitcast i8 undef to i8\n"
+                "  ret void\n"
+                "}");
+  ExpectPath(true);
+}
+
+TEST_F(IsPotentiallyReachableTest, UnreachableBlocksTest2) {
+  ParseAssembly("define void @test() {\n"
+                "entry:\n"
+                "  ret void\n"
+                "not.reachable.1:\n"
+                "  %B = bitcast i8 undef to i8\n"
+                "  br label %not.reachable.2\n"
+                "not.reachable.2:\n"
+                "  %A = bitcast i8 undef to i8\n"
+                "  ret void\n"
+                "}");
+  ExpectPath(false);
+}
+
+TEST_F(IsPotentiallyReachableTest, SimpleExclusionTest) {
+  ParseAssembly("define void @test() {\n"
+                "entry:\n"
+                "  %A = bitcast i8 undef to i8\n"
+                "  br label %excluded\n"
+                "excluded:\n"
+                "  br label %exit\n"
+                "exit:\n"
+                "  %B = bitcast i8 undef to i8\n"
+                "  ret void\n"
+                "}");
+  ExpectPath(false);
+}
+
+TEST_F(IsPotentiallyReachableTest, DiamondExcludedTest) {
+  ParseAssembly("declare i1 @switch()\n"
+                "\n"
+                "define void @test() {\n"
+                "entry:\n"
+                "  %x = call i1 @switch()\n"
+                "  %A = bitcast i8 undef to i8\n"
+                "  br i1 %x, label %excluded.1, label %excluded.2\n"
+                "excluded.1:\n"
+                "  br label %exit\n"
+                "excluded.2:\n"
+                "  br label %exit\n"
+                "exit:\n"
+                "  %B = bitcast i8 undef to i8\n"
+                "  ret void\n"
+                "}");
+  ExpectPath(false);
+}
+
+TEST_F(IsPotentiallyReachableTest, DiamondOneSideExcludedTest) {
+  ParseAssembly("declare i1 @switch()\n"
+                "\n"
+                "define void @test() {\n"
+                "entry:\n"
+                "  %x = call i1 @switch()\n"
+                "  %A = bitcast i8 undef to i8\n"
+                "  br i1 %x, label %excluded, label %diamond\n"
+                "excluded:\n"
+                "  br label %exit\n"
+                "diamond:\n"
+                "  br label %exit\n"
+                "exit:\n"
+                "  %B = bitcast i8 undef to i8\n"
+                "  ret void\n"
+                "}");
+  ExpectPath(true);
+}
+
+TEST_F(IsPotentiallyReachableTest, UnreachableToReachable) {
+  ParseAssembly("define void @test() {\n"
+                "entry:\n"
+                "  br label %exit\n"
+                "unreachableblock:\n"
+                "  %A = bitcast i8 undef to i8\n"
+                "  br label %exit\n"
+                "exit:\n"
+                "  %B = bitcast i8 undef to i8\n"
+                "  ret void\n"
+                "}");
   ExpectPath(true);
 }

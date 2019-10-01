@@ -1,9 +1,8 @@
-//===------- RPCUTils.h - Utilities for building RPC APIs -------*- C++ -*-===//
+//===- RPCUtils.h - Utilities for building RPC APIs -------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -152,24 +151,16 @@ public:
 
   /// Returns the full function prototype as a string.
   static const char *getPrototype() {
-    std::lock_guard<std::mutex> Lock(NameMutex);
-    if (Name.empty())
+    static std::string Name = [] {
+      std::string Name;
       raw_string_ostream(Name)
           << RPCTypeName<RetT>::getName() << " " << DerivedFunc::getName()
           << "(" << llvm::orc::rpc::RPCTypeNameSequence<ArgTs...>() << ")";
+      return Name;
+    }();
     return Name.data();
   }
-
-private:
-  static std::mutex NameMutex;
-  static std::string Name;
 };
-
-template <typename DerivedFunc, typename RetT, typename... ArgTs>
-std::mutex Function<DerivedFunc, RetT(ArgTs...)>::NameMutex;
-
-template <typename DerivedFunc, typename RetT, typename... ArgTs>
-std::string Function<DerivedFunc, RetT(ArgTs...)>::Name;
 
 /// Allocates RPC function ids during autonegotiation.
 /// Specializations of this class must provide four members:

@@ -111,6 +111,28 @@ and     p15.b, p15/z, p15.b, p15.b
 
 
 // --------------------------------------------------------------------------//
+// Test aliases.
+
+and     z0.s, z0.s, z0.s
+// CHECK-INST: and     z0.d, z0.d, z0.d
+// CHECK-ENCODING: [0x00,0x30,0x20,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 30 20 04 <unknown>
+
+and     z0.h, z0.h, z0.h
+// CHECK-INST: and     z0.d, z0.d, z0.d
+// CHECK-ENCODING: [0x00,0x30,0x20,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 30 20 04 <unknown>
+
+and     z0.b, z0.b, z0.b
+// CHECK-INST: and     z0.d, z0.d, z0.d
+// CHECK-ENCODING: [0x00,0x30,0x20,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 30 20 04 <unknown>
+
+
+// --------------------------------------------------------------------------//
 // Test compatibility with MOVPRFX instruction.
 
 movprfx z4.d, p7/z, z6.d

@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=amdgcn -mcpu=fiji -filetype=obj | llvm-readobj -symbols -s -sd - | FileCheck %s
+; RUN: llc < %s -march=amdgcn -mcpu=fiji -filetype=obj | llvm-readobj --symbols -S --sd - | FileCheck %s
 
 ; CHECK: Section {
 ; CHECK: Name: .AMDGPU.comment.info_1

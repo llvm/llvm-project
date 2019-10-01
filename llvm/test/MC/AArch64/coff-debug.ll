@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=aarch64-windows -filetype=obj -o - %s | \
-; RUN: llvm-readobj -codeview - | FileCheck %s
+; RUN: llvm-readobj --codeview - | FileCheck %s
 
 ; ModuleID = 'a.c'
 source_filename = "a.c"

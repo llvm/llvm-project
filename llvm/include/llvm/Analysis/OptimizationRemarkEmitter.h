@@ -1,9 +1,8 @@
 //===- OptimizationRemarkEmitter.h - Optimization Diagnostic ----*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -78,7 +77,7 @@ public:
     // remarks enabled. We can't currently check whether remarks are requested
     // for the calling pass since that requires actually building the remark.
 
-    if (F->getContext().getDiagnosticsOutputFile() ||
+    if (F->getContext().getRemarkStreamer() ||
         F->getContext().getDiagHandlerPtr()->isAnyRemarkEnabled()) {
       auto R = RemarkBuilder();
       emit((DiagnosticInfoOptimizationBase &)R);
@@ -93,7 +92,7 @@ public:
   /// provide more context so that non-trivial false positives can be quickly
   /// detected by the user.
   bool allowExtraAnalysis(StringRef PassName) const {
-    return (F->getContext().getDiagnosticsOutputFile() ||
+    return (F->getContext().getRemarkStreamer() ||
             F->getContext().getDiagHandlerPtr()->isAnyRemarkEnabled(PassName));
   }
 

@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-undermydesk-freebsd8.0 -relocation-model=pic -disable-fp-elim
+; RUN: llc < %s -mtriple=x86_64-undermydesk-freebsd8.0 -relocation-model=pic -frame-pointer=all
 ; PR4225
 
 define void @sha256_block1(i32* nocapture %arr, i8* nocapture %in, i64 %num) nounwind {

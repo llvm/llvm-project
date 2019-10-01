@@ -164,6 +164,12 @@ rarely have to include this file directly).
   efficient to use the ``InstVisitor`` class to dispatch over the instruction
   type directly.
 
+``isa_and_nonnull<>``:
+  The ``isa_and_nonnull<>`` operator works just like the ``isa<>`` operator,
+  except that it allows for a null pointer as an argument (which it then
+  returns false).  This can sometimes be useful, allowing you to combine several
+  null checks into one.
+
 ``cast_or_null<>``:
   The ``cast_or_null<>`` operator works just like the ``cast<>`` operator,
   except that it allows for a null pointer as an argument (which it then
@@ -656,19 +662,21 @@ taken is to report them to the user so that the user can attempt to fix the
 environment. In this case representing the error as a string makes perfect
 sense. LLVM provides the ``StringError`` class for this purpose. It takes two
 arguments: A string error message, and an equivalent ``std::error_code`` for
-interoperability:
+interoperability. It also provides a ``createStringError`` function to simplify
+common usage of this class:
 
 .. code-block:: c++
 
-  make_error<StringError>("Bad executable",
-                          make_error_code(errc::executable_format_error"));
+  // These two lines of code are equivalent:
+  make_error<StringError>("Bad executable", errc::executable_format_error);
+  createStringError(errc::executable_format_error, "Bad executable");
 
 If you're certain that the error you're building will never need to be converted
 to a ``std::error_code`` you can use the ``inconvertibleErrorCode()`` function:
 
 .. code-block:: c++
 
-  make_error<StringError>("Bad executable", inconvertibleErrorCode());
+  createStringError(inconvertibleErrorCode(), "Bad executable");
 
 This should be done only after careful consideration. If any attempt is made to
 convert this error to a ``std::error_code`` it will trigger immediate program
@@ -676,6 +684,14 @@ termination. Unless you are certain that your errors will not need
 interoperability you should look for an existing ``std::error_code`` that you
 can convert to, and even (as painful as it is) consider introducing a new one as
 a stopgap measure.
+
+``createStringError`` can take ``printf`` style format specifiers to provide a
+formatted message:
+
+.. code-block:: c++
+
+  createStringError(errc::executable_format_error,
+                    "Bad executable: %s", FileName);
 
 Interoperability with std::error_code and ErrorOr
 """""""""""""""""""""""""""""""""""""""""""""""""
@@ -925,27 +941,85 @@ Building fallible iterators and iterator ranges
 
 The archive walking examples above retrieve archive members by index, however
 this requires considerable boiler-plate for iteration and error checking. We can
-clean this up by using ``Error`` with the "fallible iterator" pattern. The usual
-C++ iterator patterns do not allow for failure on increment, but we can
-incorporate support for it by having iterators hold an Error reference through
-which they can report failure. In this pattern, if an increment operation fails
-the failure is recorded via the Error reference and the iterator value is set to
-the end of the range in order to terminate the loop. This ensures that the
-dereference operation is safe anywhere that an ordinary iterator dereference
-would be safe (i.e. when the iterator is not equal to end). Where this pattern
-is followed (as in the ``llvm::object::Archive`` class) the result is much
-cleaner iteration idiom:
+clean this up by using the "fallible iterator" pattern, which supports the
+following natural iteration idiom for fallible containers like Archive:
 
 .. code-block:: c++
 
   Error Err;
   for (auto &Child : Ar->children(Err)) {
-    // Use Child - we only enter the loop when it's valid
+    // Use Child - only enter the loop when it's valid
+
+    // Allow early exit from the loop body, since we know that Err is success
+    // when we're inside the loop.
+    if (BailOutOn(Child))
+      return;
+
     ...
   }
   // Check Err after the loop to ensure it didn't break due to an error.
   if (Err)
     return Err;
+
+To enable this idiom, iterators over fallible containers are written in a
+natural style, with their ``++`` and ``--`` operators replaced with fallible
+``Error inc()`` and ``Error dec()`` functions. E.g.:
+
+.. code-block:: c++
+
+  class FallibleChildIterator {
+  public:
+    FallibleChildIterator(Archive &A, unsigned ChildIdx);
+    Archive::Child &operator*();
+    friend bool operator==(const ArchiveIterator &LHS,
+                           const ArchiveIterator &RHS);
+
+    // operator++/operator-- replaced with fallible increment / decrement:
+    Error inc() {
+      if (!A.childValid(ChildIdx + 1))
+        return make_error<BadArchiveMember>(...);
+      ++ChildIdx;
+      return Error::success();
+    }
+
+    Error dec() { ... }
+  };
+
+Instances of this kind of fallible iterator interface are then wrapped with the
+fallible_iterator utility which provides ``operator++`` and ``operator--``,
+returning any errors via a reference passed in to the wrapper at construction
+time. The fallible_iterator wrapper takes care of (a) jumping to the end of the
+range on error, and (b) marking the error as checked whenever an iterator is
+compared to ``end`` and found to be inequal (in particular: this marks the
+error as checked throughout the body of a range-based for loop), enabling early
+exit from the loop without redundant error checking.
+
+Instances of the fallible iterator interface (e.g. FallibleChildIterator above)
+are wrapped using the ``make_fallible_itr`` and ``make_fallible_end``
+functions. E.g.:
+
+.. code-block:: c++
+
+  class Archive {
+  public:
+    using child_iterator = fallible_iterator<FallibleChildIterator>;
+
+    child_iterator child_begin(Error &Err) {
+      return make_fallible_itr(FallibleChildIterator(*this, 0), Err);
+    }
+
+    child_iterator child_end() {
+      return make_fallible_end(FallibleChildIterator(*this, size()));
+    }
+
+    iterator_range<child_iterator> children(Error &Err) {
+      return make_range(child_begin(Err), child_end());
+    }
+  };
+
+Using the fallible_iterator utility allows for both natural construction of
+fallible iterators (using failing ``inc`` and ``dec`` operations) and
+relatively natural use of c++ iterator/loop idioms.
 
 .. _function_apis:
 
@@ -1298,8 +1372,8 @@ these functions in your code in places you want to debug.
 
 Getting this to work requires a small amount of setup.  On Unix systems
 with X11, install the `graphviz <http://www.graphviz.org>`_ toolkit, and make
-sure 'dot' and 'gv' are in your path.  If you are running on Mac OS X, download
-and install the Mac OS X `Graphviz program
+sure 'dot' and 'gv' are in your path.  If you are running on macOS, download
+and install the macOS `Graphviz program
 <http://www.pixelglow.com/graphviz/>`_ and add
 ``/Applications/Graphviz.app/Contents/MacOS/`` (or wherever you install it) to
 your path. The programs need not be present when configuring, building or
@@ -1456,7 +1530,7 @@ SmallVector has grown a few other minor advantages over std::vector, causing
 #. std::vector is exception-safe, and some implementations have pessimizations
    that copy elements when SmallVector would move them.
 
-#. SmallVector understands ``isPodLike<Type>`` and uses realloc aggressively.
+#. SmallVector understands ``llvm::is_trivially_copyable<Type>`` and uses realloc aggressively.
 
 #. Many LLVM APIs take a SmallVectorImpl as an out parameter (see the note
    below).
@@ -2591,7 +2665,7 @@ Iterating over def-use & use-def chains
 
 Frequently, we might have an instance of the ``Value`` class (`doxygen
 <http://llvm.org/doxygen/classllvm_1_1Value.html>`__) and we want to determine
-which ``User`` s use the ``Value``.  The list of all ``User``\ s of a particular
+which ``User``\ s use the ``Value``.  The list of all ``User``\ s of a particular
 ``Value`` is called a *def-use* chain.  For example, let's say we have a
 ``Function*`` named ``F`` to a particular function ``foo``.  Finding all of the
 instructions that *use* ``foo`` is as simple as iterating over the *def-use*
@@ -2904,37 +2978,6 @@ For example:
 
   GV->eraseFromParent();
 
-
-.. _create_types:
-
-How to Create Types
--------------------
-
-In generating IR, you may need some complex types.  If you know these types
-statically, you can use ``TypeBuilder<...>::get()``, defined in
-``llvm/Support/TypeBuilder.h``, to retrieve them.  ``TypeBuilder`` has two forms
-depending on whether you're building types for cross-compilation or native
-library use.  ``TypeBuilder<T, true>`` requires that ``T`` be independent of the
-host environment, meaning that it's built out of types from the ``llvm::types``
-(`doxygen <http://llvm.org/doxygen/namespacellvm_1_1types.html>`__) namespace
-and pointers, functions, arrays, etc. built of those.  ``TypeBuilder<T, false>``
-additionally allows native C types whose size may depend on the host compiler.
-For example,
-
-.. code-block:: c++
-
-  FunctionType *ft = TypeBuilder<types::i<8>(types::i<32>*), true>::get();
-
-is easier to read and write than the equivalent
-
-.. code-block:: c++
-
-  std::vector<const Type*> params;
-  params.push_back(PointerType::getUnqual(Type::Int32Ty));
-  FunctionType *ft = FunctionType::get(Type::Int8Ty, params, false);
-
-See the `class comment
-<http://llvm.org/doxygen/TypeBuilder_8h_source.html#l00001>`_ for more details.
 
 .. _threading:
 
@@ -3522,11 +3565,17 @@ Important Public Members of the ``Module`` class
   Look up the specified function in the ``Module`` SymbolTable_.  If it does not
   exist, return ``null``.
 
-* ``Function *getOrInsertFunction(const std::string &Name, const FunctionType
-  *T)``
+* ``FunctionCallee getOrInsertFunction(const std::string &Name,
+  const FunctionType *T)``
 
-  Look up the specified function in the ``Module`` SymbolTable_.  If it does not
-  exist, add an external declaration for the function and return it.
+  Look up the specified function in the ``Module`` SymbolTable_.  If
+  it does not exist, add an external declaration for the function and
+  return it. Note that the function signature already present may not
+  match the requested signature. Thus, in order to enable the common
+  usage of passing the result directly to EmitCall, the return type is
+  a struct of ``{FunctionType *T, Constant *FunctionPtr}``, rather
+  than simply the ``Function*`` with potentially an unexpected
+  signature.
 
 * ``std::string getTypeName(const Type *Ty)``
 

@@ -1,9 +1,8 @@
 //===-- EarlyIfConversion.cpp - If-conversion on SSA form machine code ----===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -395,6 +394,13 @@ bool SSAIfConv::canConvertIf(MachineBasicBlock *MBB) {
   // This is weird, probably some sort of degenerate CFG.
   if (!TBB) {
     LLVM_DEBUG(dbgs() << "AnalyzeBranch didn't find conditional branch.\n");
+    return false;
+  }
+
+  // Make sure the analyzed branch is conditional; one of the successors
+  // could be a landing pad. (Empty landing pads can be generated on Windows.)
+  if (Cond.empty()) {
+    LLVM_DEBUG(dbgs() << "AnalyzeBranch found an unconditional branch.\n");
     return false;
   }
 

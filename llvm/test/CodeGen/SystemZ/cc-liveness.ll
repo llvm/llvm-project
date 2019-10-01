@@ -2,7 +2,7 @@
 ; not be placed betwen two compare and load-on-condition instructions.
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z13 -pre-RA-sched=list-ilp \
-; RUN:   -print-after=expand-isel-pseudos 2>&1 | FileCheck %s
+; RUN:   -print-after=finalize-isel 2>&1 | FileCheck %s
 ;
 ; CHECK-LABEL: bb.0.bb:
 ; CHECK: CLI

@@ -1,6 +1,7 @@
 // RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti -show-encoding %s | FileCheck -check-prefix=GCN -check-prefix=SICI %s
 // RUN: llvm-mc -arch=amdgcn -mcpu=fiji -show-encoding %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
 // RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti -show-encoding %s 2>&1 | FileCheck -check-prefix=NOSICI %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 -show-encoding %s 2>&1 | FileCheck -check-prefix=GFX10-ERR %s
 
 //===----------------------------------------------------------------------===//
 // SOPC Instructions
@@ -8,6 +9,12 @@
 
 s_cmp_eq_i32 s1, s2
 // GCN: s_cmp_eq_i32 s1, s2 ; encoding: [0x01,0x02,0x00,0xbf]
+
+s_cmp_eq_i32 0xabcd1234, 0xabcd1234
+// GCN: s_cmp_eq_i32 0xabcd1234, 0xabcd1234 ; encoding: [0xff,0xff,0x00,0xbf,0x34,0x12,0xcd,0xab]
+
+s_cmp_eq_i32 0xFFFF0000, -65536
+// GCN: s_cmp_eq_i32 0xffff0000, 0xffff0000 ; encoding: [0xff,0xff,0x00,0xbf,0x00,0x00,0xff,0xff]
 
 s_cmp_lg_i32 s1, s2
 // GCN: s_cmp_lg_i32 s1, s2 ; encoding: [0x01,0x02,0x01,0xbf]
@@ -56,6 +63,7 @@ s_bitcmp1_b64 s[2:3], s4
 
 s_setvskip s3, s5
 // GCN: s_setvskip s3, s5 ; encoding: [0x03,0x05,0x10,0xbf]
+// GFX10-ERR: error: instruction not supported on this GPU
 
 s_cmp_eq_u64 s[0:1], s[2:3]
 // VI: s_cmp_eq_u64 s[0:1], s[2:3] ; encoding: [0x00,0x02,0x12,0xbf]
@@ -65,18 +73,44 @@ s_cmp_lg_u64 s[0:1], s[2:3]
 // VI: s_cmp_lg_u64 s[0:1], s[2:3] ; encoding: [0x00,0x02,0x13,0xbf]
 // NOSICI: error: instruction not supported on this GPU
 
+gpr_idx = 1
+s_set_gpr_idx_on s0, gpr_idx
+// VI: s_set_gpr_idx_on s0, gpr_idx(SRC0) ; encoding: [0x00,0x01,0x11,0xbf]
+// NOSICI: error:
+
+gpr_idx_mode = 10
+s_set_gpr_idx_on s0, gpr_idx_mode + 5
+// VI: s_set_gpr_idx_on s0, gpr_idx(SRC0,SRC1,SRC2,DST) ; encoding: [0x00,0x0f,0x11,0xbf]
+// NOSICI: error:
+
 s_set_gpr_idx_on s0, 0
-// VI: s_set_gpr_idx_on s0, 0 ; encoding: [0x00,0x00,0x11,0xbf]
-// NOSICI: error: instruction not supported on this GPU
+// VI: s_set_gpr_idx_on s0, gpr_idx() ; encoding: [0x00,0x00,0x11,0xbf]
+// NOSICI: error:
+
+s_set_gpr_idx_on s0, gpr_idx()
+// VI: s_set_gpr_idx_on s0, gpr_idx() ; encoding: [0x00,0x00,0x11,0xbf]
+// NOSICI: error:
 
 s_set_gpr_idx_on s0, 1
-// VI: s_set_gpr_idx_on s0, src0 ; encoding: [0x00,0x01,0x11,0xbf]
-// NOSICI: error: instruction not supported on this GPU
+// VI: s_set_gpr_idx_on s0, gpr_idx(SRC0) ; encoding: [0x00,0x01,0x11,0xbf]
+// NOSICI: error:
+
+s_set_gpr_idx_on s0, gpr_idx(SRC0)
+// VI: s_set_gpr_idx_on s0, gpr_idx(SRC0) ; encoding: [0x00,0x01,0x11,0xbf]
+// NOSICI: error:
 
 s_set_gpr_idx_on s0, 3
-// VI: s_set_gpr_idx_on s0, src0 src1 ; encoding: [0x00,0x03,0x11,0xbf]
-// NOSICI: error: instruction not supported on this GPU
+// VI: s_set_gpr_idx_on s0, gpr_idx(SRC0,SRC1) ; encoding: [0x00,0x03,0x11,0xbf]
+// NOSICI: error:
+
+s_set_gpr_idx_on s0, gpr_idx(SRC1,SRC0)
+// VI: s_set_gpr_idx_on s0, gpr_idx(SRC0,SRC1) ; encoding: [0x00,0x03,0x11,0xbf]
+// NOSICI: error:
 
 s_set_gpr_idx_on s0, 15
-// VI: s_set_gpr_idx_on s0, dst src0 src1 src2 ; encoding: [0x00,0x0f,0x11,0xbf]
-// NOSICI: error: instruction not supported on this GPU
+// VI: s_set_gpr_idx_on s0, gpr_idx(SRC0,SRC1,SRC2,DST) ; encoding: [0x00,0x0f,0x11,0xbf]
+// NOSICI: error:
+
+s_set_gpr_idx_on s0, gpr_idx(SRC0,DST,SRC2,SRC1)
+// VI: s_set_gpr_idx_on s0, gpr_idx(SRC0,SRC1,SRC2,DST) ; encoding: [0x00,0x0f,0x11,0xbf]
+// NOSICI: error:

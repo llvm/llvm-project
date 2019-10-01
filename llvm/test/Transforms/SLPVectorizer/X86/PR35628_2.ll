@@ -14,7 +14,7 @@ define void @test() #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i64> [[TMP1]], i64 [[TMP0]], i32 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i64> [[TMP2]], i64 [[TMP0]], i32 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i64> [[TMP3]], i64 [[TMP0]], i32 3
-; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i64> <i64 3, i64 2, i64 1, i64 0>, [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i64> [[TMP4]], <i64 3, i64 2, i64 1, i64 0>
 ; CHECK-NEXT:    [[TMP6]] = extractelement <4 x i64> [[TMP5]], i32 3
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i64> [[TMP5]], i32 0
 ; CHECK-NEXT:    [[DUMMY_SHL:%.*]] = shl i64 [[TMP7]], 32

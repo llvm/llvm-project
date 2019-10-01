@@ -7,7 +7,7 @@
 # RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext \
 # RUN:     -m elf_x86_64 -o %t.exe %t2.o %t.o  \
 # RUN:     --section-ordering-file=%t_order_lto.txt
-# RUN: llvm-readobj -elf-output-style=GNU -t %t.exe | FileCheck %s
+# RUN: llvm-readelf -s %t.exe | FileCheck %s
 
 # CHECK-DAG:      00000000004010fc     4 OBJECT  GLOBAL DEFAULT    2 dipsy
 # CHECK-DAG:      00000000004010f8     4 OBJECT  GLOBAL DEFAULT    2 tin

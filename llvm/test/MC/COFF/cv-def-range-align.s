@@ -97,7 +97,7 @@ max:                                    # @max
 	# BUG
 	.p2align 2
 .Ltmp13:
-	.cv_def_range	 .Ltmp0 .Ltmp1, "B\021\000\000\000\000"
+	.cv_def_range	 .Ltmp0 .Ltmp1, frame_ptr_rel, 8
 	.short	.Ltmp15-.Ltmp14         # Record length
 .Ltmp14:
 	.short	4414                    # Record kind: S_LOCAL
@@ -107,7 +107,7 @@ max:                                    # @max
 	# BUG
 	.p2align 2
 .Ltmp15:
-	.cv_def_range	 .Ltmp0 .Ltmp1, "B\021\004\000\000\000"
+	.cv_def_range	 .Ltmp0 .Ltmp1, frame_ptr_rel, 8
 	.short	2                       # Record length
 	.short	4431                    # Record kind: S_PROC_ID_END
 .Ltmp7:

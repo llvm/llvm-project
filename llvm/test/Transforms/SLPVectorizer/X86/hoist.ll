@@ -25,7 +25,7 @@ define i32 @foo(i32* nocapture %A, i32 %n, i32 %k) {
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i32 [[I_024]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32* [[ARRAYIDX]] to <4 x i32>*
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, <4 x i32>* [[TMP2]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = add nsw <4 x i32> [[SHUFFLE]], [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = add nsw <4 x i32> [[TMP3]], [[SHUFFLE]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i32* [[ARRAYIDX]] to <4 x i32>*
 ; CHECK-NEXT:    store <4 x i32> [[TMP4]], <4 x i32>* [[TMP5]], align 4
 ; CHECK-NEXT:    [[ADD10]] = add nsw i32 [[I_024]], 4

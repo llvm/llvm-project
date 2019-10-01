@@ -10,3 +10,7 @@ class BBB<list<list<int>> vals> : BB<vals>;
 
 def OneB : BBB<[[1,2,3]]>;
 def TwoB : BBB<[[1,2,3],[4,5,6]]>;
+
+def ThreeB: BBB<[[1,2,3],
+                 [4,5,6],
+                ]>;

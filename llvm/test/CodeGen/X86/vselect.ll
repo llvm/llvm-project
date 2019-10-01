@@ -567,11 +567,10 @@ define <2 x i64> @shrunkblend_nonvselectuse(<2 x i1> %cond, <2 x i64> %a, <2 x i
 define <2 x i32> @simplify_select(i32 %x, <2 x i1> %z) {
 ; SSE2-LABEL: simplify_select:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    # kill: def $edi killed $edi def $rdi
 ; SSE2-NEXT:    psllq $63, %xmm0
 ; SSE2-NEXT:    psrad $31, %xmm0
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; SSE2-NEXT:    movq %rdi, %xmm1
+; SSE2-NEXT:    movd %edi, %xmm1
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[0,1,0,1]
 ; SSE2-NEXT:    movdqa %xmm2, %xmm3
 ; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm1[0]
@@ -582,15 +581,13 @@ define <2 x i32> @simplify_select(i32 %x, <2 x i1> %z) {
 ;
 ; SSE41-LABEL: simplify_select:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    # kill: def $edi killed $edi def $rdi
-; SSE41-NEXT:    movq %rdi, %xmm0
+; SSE41-NEXT:    movd %edi, %xmm0
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: simplify_select:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    # kill: def $edi killed $edi def $rdi
-; AVX1-NEXT:    vmovq %rdi, %xmm0
+; AVX1-NEXT:    vmovd %edi, %xmm0
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; AVX1-NEXT:    retq
 ;
@@ -610,3 +607,36 @@ define <2 x i32> @simplify_select(i32 %x, <2 x i1> %z) {
   ret <2 x i32> %r
 }
 
+; Test to make sure we don't try to insert a new setcc to swap the operands
+; of select with all zeros LHS if the setcc has additional users.
+define void @vselect_allzeros_LHS_multiple_use_setcc(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z, <4 x i32>* %p1, <4 x i32>* %p2) {
+; SSE-LABEL: vselect_allzeros_LHS_multiple_use_setcc:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movdqa {{.*#+}} xmm3 = [1,2,4,8]
+; SSE-NEXT:    pand %xmm3, %xmm0
+; SSE-NEXT:    pcmpeqd %xmm3, %xmm0
+; SSE-NEXT:    movdqa %xmm0, %xmm3
+; SSE-NEXT:    pandn %xmm1, %xmm3
+; SSE-NEXT:    pand %xmm2, %xmm0
+; SSE-NEXT:    movdqa %xmm3, (%rdi)
+; SSE-NEXT:    movdqa %xmm0, (%rsi)
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: vselect_allzeros_LHS_multiple_use_setcc:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovdqa {{.*#+}} xmm3 = [1,2,4,8]
+; AVX-NEXT:    vpand %xmm3, %xmm0, %xmm0
+; AVX-NEXT:    vpcmpeqd %xmm3, %xmm0, %xmm0
+; AVX-NEXT:    vpandn %xmm1, %xmm0, %xmm1
+; AVX-NEXT:    vpand %xmm2, %xmm0, %xmm0
+; AVX-NEXT:    vmovdqa %xmm1, (%rdi)
+; AVX-NEXT:    vmovdqa %xmm0, (%rsi)
+; AVX-NEXT:    retq
+  %and = and <4 x i32> %x, <i32 1, i32 2, i32 4, i32 8>
+  %cond = icmp ne <4 x i32> %and, zeroinitializer
+  %sel1 = select <4 x i1> %cond, <4 x i32> zeroinitializer, <4 x i32> %y
+  %sel2 = select <4 x i1> %cond, <4 x i32> %z, <4 x i32> zeroinitializer
+  store <4 x i32> %sel1, <4 x i32>* %p1
+  store <4 x i32> %sel2, <4 x i32>* %p2
+  ret void
+}

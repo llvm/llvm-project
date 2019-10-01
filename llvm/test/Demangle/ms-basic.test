@@ -11,6 +11,9 @@
 ?x@@3PEAPEAHEA
 ; CHECK: int **x
 
+?foo@@3Y123KA
+; CHECK: unsigned long foo[3][4]
+
 ?x@@3PEAY02HEA
 ; CHECK: int (*x)[3]
 
@@ -23,11 +26,23 @@
 ?x@@3PEAEEA
 ; CHECK: unsigned char *x
 
+?y@@3PEAGEA
+; CHECK: unsigned short *y
+
+?z@@3PEAKEA
+; CHECK: unsigned long *z
+
 ?x@@3PEAY1NKM@5HEA
 ; CHECK: int (*x)[3500][6]
 
 ?x@@YAXMH@Z
 ; CHECK: void __cdecl x(float, int)
+
+?x@@YAXMHZZ
+; CHECK: void __cdecl x(float, int, ...)
+
+?x@@YAXZZ
+; CHECK: void __cdecl x(...)
 
 ?x@@3P6AHMNH@ZEA
 ; CHECK: int (__cdecl *x)(float, double, int)
@@ -225,5 +240,5 @@
 ??_V@YAXPEAXAEAVklass@@@Z
 ; CHECK: void __cdecl operator delete[](void *, class klass &)
 
-; ?A@?A0x43583946@@3VB@@B
-class B const `anonymous namespace'::A
+?A@?A0x43583946@@3VB@@B
+; CHECK: class B const `anonymous namespace'::A

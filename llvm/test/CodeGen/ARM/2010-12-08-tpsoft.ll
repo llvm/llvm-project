@@ -1,7 +1,7 @@
 ; RUN: llc  %s -mtriple=armv7-linux-gnueabi -o - | \
 ; RUN:    FileCheck  -check-prefix=ELFASM %s 
 ; RUN: llc  %s -mtriple=armv7-linux-gnueabi -filetype=obj -o - | \
-; RUN:    llvm-readobj -s -sd | FileCheck  -check-prefix=ELFOBJ %s
+; RUN:    llvm-readobj -S --sd | FileCheck  -check-prefix=ELFOBJ %s
 
 ;; Make sure that bl __aeabi_read_tp is materialized and fixed up correctly
 ;; in the obj case. 

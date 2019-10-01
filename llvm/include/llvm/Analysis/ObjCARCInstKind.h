@@ -1,9 +1,8 @@
 //===- ObjCARCInstKind.h - ARC instruction equivalence classes --*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -74,6 +73,10 @@ bool IsForwarding(ARCInstKind Class);
 /// Test if the given class represents instructions which do nothing if
 /// passed a null pointer.
 bool IsNoopOnNull(ARCInstKind Class);
+
+/// Test if the given class represents instructions which do nothing if
+/// passed a global variable.
+bool IsNoopOnGlobal(ARCInstKind Class);
 
 /// Test if the given class represents instructions which are always safe
 /// to mark with the "tail" keyword.

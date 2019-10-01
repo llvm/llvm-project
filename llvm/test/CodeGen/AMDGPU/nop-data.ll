@@ -78,7 +78,7 @@ entry:
 ; CHECK-NEXT: s_nop 0
 ; CHECK-NEXT: s_nop 0  // 0000000001FC: BF800000
 
-; CHECK-NEXT: {{^$}}
+; CHECK-EMPTY:
 ; CHECK-NEXT: kernel1:
 ; CHECK-NEXT: s_endpgm
 define amdgpu_kernel void @kernel1(i32 addrspace(1)* addrspace(4)* %ptr.out) align 256 {

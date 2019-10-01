@@ -1,9 +1,8 @@
 //===- llvm/CodeGen/DwarfCompileUnit.h - Dwarf Compile Unit -----*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -101,6 +100,8 @@ class DwarfCompileUnit final : public DwarfUnit {
     return DU->getAbstractEntities();
   }
 
+  void finishNonUnitTypeDIE(DIE& D, const DICompositeType *CTy) override;
+
 public:
   DwarfCompileUnit(unsigned UID, const DICompileUnit *Node, AsmPrinter *A,
                    DwarfDebug *DW, DwarfFile *DWU);
@@ -125,10 +126,26 @@ public:
     const DIExpression *Expr;
   };
 
+  struct BaseTypeRef {
+    BaseTypeRef(unsigned BitSize, dwarf::TypeKind Encoding) :
+      BitSize(BitSize), Encoding(Encoding) {}
+    unsigned BitSize;
+    dwarf::TypeKind Encoding;
+    DIE *Die = nullptr;
+  };
+
+  std::vector<BaseTypeRef> ExprRefedBaseTypes;
+
   /// Get or create global variable DIE.
   DIE *
   getOrCreateGlobalVariableDIE(const DIGlobalVariable *GV,
                                ArrayRef<GlobalExpr> GlobalExprs);
+
+  DIE *getOrCreateCommonBlock(const DICommonBlock *CB,
+                              ArrayRef<GlobalExpr> GlobalExprs);
+
+  void addLocationAttribute(DIE *ToDIE, const DIGlobalVariable *GV,
+                            ArrayRef<GlobalExpr> GlobalExprs);
 
   /// addLabelAddress - Add a dwarf label attribute data and value using
   /// either DW_FORM_addr or DW_FORM_GNU_addr_index.
@@ -199,6 +216,8 @@ public:
   DIE *createScopeChildrenDIE(LexicalScope *Scope,
                               SmallVectorImpl<DIE *> &Children,
                               bool *HasNonScopeChildren = nullptr);
+
+  void createBaseTypeDIEs();
 
   /// Construct a DIE for this subprogram scope.
   DIE &constructSubprogramScopeDIE(const DISubprogram *Sub,
@@ -314,6 +333,8 @@ public:
   void setDWOId(uint64_t DwoId) { DWOId = DwoId; }
 
   bool hasDwarfPubSections() const;
+
+  void addBaseTypeRef(DIEValueList &Die, int64_t Idx);
 };
 
 } // end namespace llvm

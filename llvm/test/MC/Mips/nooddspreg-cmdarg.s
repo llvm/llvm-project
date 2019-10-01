@@ -2,7 +2,7 @@
 # RUN:   FileCheck %s -check-prefix=CHECK-ASM
 #
 # RUN: llvm-mc %s -triple mips-unknown-linux-gnu -mattr=+fp64,+nooddspreg -filetype=obj -o - | \
-# RUN:   llvm-readobj -sections -section-data -section-relocations - | \
+# RUN:   llvm-readobj --sections --section-data --section-relocations - | \
 # RUN:     FileCheck %s -check-prefix=CHECK-OBJ
 
 # RUN: not llvm-mc %s -triple mips64-unknown-linux-gnuabin32 -mattr=+nooddspreg 2> %t0

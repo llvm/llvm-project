@@ -29,16 +29,24 @@ later.
 LLVM Testing Infrastructure Organization
 ========================================
 
-The LLVM testing infrastructure contains two major categories of tests:
-regression tests and whole programs. The regression tests are contained
-inside the LLVM repository itself under ``llvm/test`` and are expected
-to always pass -- they should be run before every commit.
+The LLVM testing infrastructure contains three major categories of tests:
+unit tests, regression tests and whole programs. The unit tests and regression
+tests are contained inside the LLVM repository itself under ``llvm/unittests``
+and ``llvm/test`` respectively and are expected to always pass -- they should be
+run before every commit.
 
 The whole programs tests are referred to as the "LLVM test suite" (or
 "test-suite") and are in the ``test-suite`` module in subversion. For
 historical reasons, these tests are also referred to as the "nightly
 tests" in places, which is less ambiguous than "test-suite" and remains
 in use although we run them much more often than nightly.
+
+Unit tests
+----------
+
+Unit tests are written using `Google Test <https://github.com/google/googletest/blob/master/googletest/docs/primer.md>`_
+and `Google Mock <https://github.com/google/googletest/blob/master/googlemock/docs/ForDummies.md>`_
+and are located in the ``llvm/unittests`` directory.
 
 Regression tests
 ----------------
@@ -90,22 +98,36 @@ test suite for more information . This test suite is located in the
 Quick start
 ===========
 
-The tests are located in two separate Subversion modules. The
-regressions tests are in the main "llvm" module under the directory
-``llvm/test`` (so you get these tests for free with the main LLVM tree).
-Use ``make check-all`` to run the regression tests after building LLVM.
+The tests are located in two separate Subversion modules. The unit and
+regression tests are in the main "llvm" module under the directories
+``llvm/unittests`` and ``llvm/test`` (so you get these tests for free with the
+main LLVM tree). Use ``make check-all`` to run the unit and regression tests
+after building LLVM.
 
 The ``test-suite`` module contains more comprehensive tests including whole C
 and C++ programs. See the :doc:`TestSuiteGuide` for details.
 
-Regression tests
-----------------
+Unit and Regression tests
+-------------------------
+
+To run all of the LLVM unit tests use the check-llvm-unit target:
+
+.. code-block:: bash
+
+    % make check-llvm-unit
 
 To run all of the LLVM regression tests use the check-llvm target:
 
 .. code-block:: bash
 
     % make check-llvm
+
+In order to get reasonable testing performance, build LLVM and subprojects
+in release mode, i.e.
+
+.. code-block:: bash
+
+    % cmake -DCMAKE_BUILD_TYPE="Release" -DLLVM_ENABLE_ASSERTIONS=On
 
 If you have `Clang <http://clang.llvm.org/>`_ checked out and built, you
 can run the LLVM and Clang tests simultaneously using:
@@ -143,15 +165,9 @@ or the :doc:`lit man page <CommandGuide/lit>`.
 Debugging Information tests
 ---------------------------
 
-To run debugging information tests simply checkout the tests inside
-clang/test directory.
-
-.. code-block:: bash
-
-    % cd clang/test
-    % svn co http://llvm.org/svn/llvm-project/debuginfo-tests/trunk debuginfo-tests
-
-These tests are already set up to run as part of clang regression tests.
+To run debugging information tests simply add the ``debuginfo-tests``
+project to your ``LLVM_ENABLE_PROJECTS`` define on the cmake
+command-line.
 
 Regression test structure
 =========================
@@ -495,7 +511,7 @@ RUN lines:
    The suffix for the host platforms shared library files. This includes the
    period as the first character.
 
-   Example: ``.so`` (Linux), ``.dylib`` (OS X), ``.dll`` (Windows)
+   Example: ``.so`` (Linux), ``.dylib`` (macOS), ``.dll`` (Windows)
 
 ``%exeext``
    The suffix for the host platforms executable files. This includes the

@@ -46,7 +46,7 @@ for.end:                                          ; preds = %for.body, %entry
   ret void
 ; CHECK-LABEL: @test1_i16(
 ; CHECK: %[[BaseBC:.*]] = bitcast i16* %Base to i8*
-; CHECK: %[[Sz:[0-9]+]] = shl i64 %Size, 1
+; CHECK: %[[Sz:[0-9]+]] = shl nuw i64 %Size, 1
 ; CHECK: call void @llvm.memset.p0i8.i64(i8* align 2 %[[BaseBC]], i8 0, i64 %[[Sz]], i1 false)
 ; CHECK-NOT: store
 }
@@ -92,7 +92,7 @@ for.end:                                          ; preds = %for.body, %entry
   ret void
 ; CHECK-LABEL: @test2(
 ; CHECK: br i1 %cmp10,
-; CHECK: %0 = shl i64 %Size, 2
+; CHECK: %0 = shl nuw i64 %Size, 2
 ; CHECK: call void @llvm.memset.p0i8.i64(i8* align 4 %Base1, i8 1, i64 %0, i1 false)
 ; CHECK-NOT: store
 }
@@ -212,7 +212,7 @@ for.end:                                          ; preds = %for.body, %entry
 ; CHECK-LABEL: @test6_dest_align(
 ; CHECK: %[[Dst:.*]] = bitcast i32* %Dest to i8*
 ; CHECK: %[[Src:.*]] = bitcast i32* %Base to i8*
-; CHECK: %[[Sz:[0-9]+]] = shl i64 %Size, 2
+; CHECK: %[[Sz:[0-9]+]] = shl nuw i64 %Size, 2
 ; CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %[[Dst]], i8* align 1 %[[Src]], i64 %[[Sz]], i1 false)
 ; CHECK-NOT: store
 ; CHECK: ret void
@@ -238,7 +238,7 @@ for.end:                                          ; preds = %for.body, %entry
 ; CHECK-LABEL: @test6_src_align(
 ; CHECK: %[[Dst]] = bitcast i32* %Dest to i8*
 ; CHECK: %[[Src]] = bitcast i32* %Base to i8*
-; CHECK: %[[Sz:[0-9]+]] = shl i64 %Size, 2
+; CHECK: %[[Sz:[0-9]+]] = shl nuw i64 %Size, 2
 ; CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 %[[Dst]], i8* align 4 %[[Src]], i64 %[[Sz]], i1 false)
 ; CHECK-NOT: store
 ; CHECK: ret void
@@ -653,7 +653,7 @@ loop.ph:
   br label %loop.body
 ; CHECK:       loop.ph:
 ; CHECK-NEXT:    %[[ZEXT_SIZE:.*]] = zext i32 %size to i64
-; CHECK-NEXT:    %[[SCALED_SIZE:.*]] = shl i64 %[[ZEXT_SIZE]], 3
+; CHECK-NEXT:    %[[SCALED_SIZE:.*]] = shl nuw nsw i64 %[[ZEXT_SIZE]], 3
 ; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 8 %{{.*}}, i8 0, i64 %[[SCALED_SIZE]], i1 false)
 
 loop.body:
@@ -685,7 +685,7 @@ loop.ph:
   br label %loop.body
 ; CHECK:       loop.ph:
 ; CHECK-NEXT:    %[[ZEXT_SIZE:.*]] = zext i32 %size to i64
-; CHECK-NEXT:    %[[SCALED_SIZE:.*]] = shl i64 %[[ZEXT_SIZE]], 3
+; CHECK-NEXT:    %[[SCALED_SIZE:.*]] = shl nuw nsw i64 %[[ZEXT_SIZE]], 3
 ; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 %{{.*}}, i8* align 8 %{{.*}}, i64 %[[SCALED_SIZE]], i1 false)
 
 loop.body:

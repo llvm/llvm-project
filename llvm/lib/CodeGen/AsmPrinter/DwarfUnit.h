@@ -1,9 +1,8 @@
 //===-- llvm/CodeGen/DwarfUnit.h - Dwarf Compile Unit ---*- C++ -*--===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -199,6 +198,7 @@ public:
   void addConstantValue(DIE &Die, const ConstantInt *CI, const DIType *Ty);
   void addConstantValue(DIE &Die, const APInt &Val, const DIType *Ty);
   void addConstantValue(DIE &Die, const APInt &Val, bool Unsigned);
+  void addConstantValue(DIE &Die, uint64_t Val, const DIType *Ty);
   void addConstantValue(DIE &Die, bool Unsigned, uint64_t Val);
 
   /// Add constant value entry in variable DIE.
@@ -236,6 +236,9 @@ public:
 
   void applySubprogramAttributes(const DISubprogram *SP, DIE &SPDie,
                                  bool SkipSPAttributes = false);
+
+  /// Creates type DIE with specific context.
+  DIE *createTypeDIE(const DIScope *Context, DIE &ContextDIE, const DIType *Ty);
 
   /// Find existing DIE or create new DIE for the given type.
   DIE *getOrCreateTypeDIE(const MDNode *TyNode);
@@ -294,7 +297,10 @@ public:
 
   /// If the \p File has an MD5 checksum, return it as an MD5Result
   /// allocated in the MCContext.
-  MD5::MD5Result *getMD5AsBytes(const DIFile *File) const;
+  Optional<MD5::MD5Result> getMD5AsBytes(const DIFile *File) const;
+
+  /// Get context owner's DIE.
+  DIE *createTypeDIE(const DICompositeType *Ty);
 
 protected:
   ~DwarfUnit();
@@ -305,17 +311,6 @@ protected:
   /// Look up the source ID for the given file. If none currently exists,
   /// create a new ID and insert it in the line table.
   virtual unsigned getOrCreateSourceID(const DIFile *File) = 0;
-
-  /// Look in the DwarfDebug map for the MDNode that corresponds to the
-  /// reference.
-  template <typename T> T *resolve(TypedDINodeRef<T> Ref) const {
-    return Ref.resolve();
-  }
-
-  /// If this is a named finished type then include it in the list of types for
-  /// the accelerator tables.
-  void updateAcceleratorTables(const DIScope *Context, const DIType *Ty,
-                               const DIE &TyDIE);
 
   /// Emit the common part of the header for this unit.
   void emitCommonHeader(bool UseOffsets, dwarf::UnitType UT);
@@ -344,6 +339,13 @@ private:
   /// Set D as anonymous type for index which can be reused later.
   void setIndexTyDie(DIE *D) { IndexTyDie = D; }
 
+  virtual void finishNonUnitTypeDIE(DIE& D, const DICompositeType *CTy) = 0;
+
+  /// If this is a named finished type then include it in the list of types for
+  /// the accelerator tables.
+  void updateAcceleratorTables(const DIScope *Context, const DIType *Ty,
+                               const DIE &TyDIE);
+
   virtual bool isDwoUnit() const = 0;
   const MCSymbol *getCrossSectionRelativeBaseAddress() const override;
 };
@@ -356,6 +358,7 @@ class DwarfTypeUnit final : public DwarfUnit {
   bool UsedLineTable = false;
 
   unsigned getOrCreateSourceID(const DIFile *File) override;
+  void finishNonUnitTypeDIE(DIE& D, const DICompositeType *CTy) override;
   bool isDwoUnit() const override;
 
 public:
@@ -364,9 +367,6 @@ public:
 
   void setTypeSignature(uint64_t Signature) { TypeSignature = Signature; }
   void setType(const DIE *Ty) { this->Ty = Ty; }
-
-  /// Get context owner's DIE.
-  DIE *createTypeDIE(const DICompositeType *Ty);
 
   /// Emit the header for this unit, not including the initial length field.
   void emitHeader(bool UseOffsets) override;

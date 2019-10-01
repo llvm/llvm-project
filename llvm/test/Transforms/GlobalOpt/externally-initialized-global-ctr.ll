@@ -9,7 +9,7 @@
 @"\01L_OBJC_METH_VAR_NAME_40" = internal global [7 x i8] c"print:\00", section "__TEXT,__objc_methname,cstring_literals", align 1
 @"\01L_OBJC_SELECTOR_REFERENCES_41" = internal externally_initialized  global i8* getelementptr inbounds ([7 x i8], [7 x i8]* @"\01L_OBJC_METH_VAR_NAME_40", i32 0, i32 0), section "__DATA, __objc_selrefs, literal_pointers, no_dead_strip"
 
-@llvm.global_ctors = appending global [1 x { i32, void ()* }] [{ i32, void ()* } { i32 65535, void ()* @_GLOBAL__I_a }]
+@llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @_GLOBAL__I_a, i8* null }]
 @llvm.used = appending global [2 x i8*] [i8* getelementptr inbounds ([7 x i8], [7 x i8]* @"\01L_OBJC_METH_VAR_NAME_40", i32 0, i32 0),  i8* bitcast (i8** @"\01L_OBJC_SELECTOR_REFERENCES_41" to i8*)]
 
 define internal void @__cxx_global_var_init() section "__TEXT,__StaticInit,regular,pure_instructions" {

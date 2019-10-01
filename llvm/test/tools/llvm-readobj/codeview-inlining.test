@@ -30,7 +30,7 @@
 ;
 ; Both a.h and b.h contain "__asm nop".
 
-RUN: llvm-readobj -s -codeview -section-symbols %p/Inputs/codeview-inlining.obj.coff | FileCheck %s
+RUN: llvm-readobj -S --codeview --section-symbols %p/Inputs/codeview-inlining.obj.coff | FileCheck %s
 
 ; FIXME: If we were more clever, we could turn FileIDs into paths.
 

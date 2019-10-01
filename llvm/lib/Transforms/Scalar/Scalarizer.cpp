@@ -1,9 +1,8 @@
 //===- Scalarizer.cpp - Scalarize vector operations -----------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -125,6 +124,18 @@ struct ICmpSplitter {
   ICmpInst &ICI;
 };
 
+// UnarySpliiter(UO)(Builder, X, Name) uses Builder to create
+// a unary operator like UO called Name with operand X.
+struct UnarySplitter {
+  UnarySplitter(UnaryOperator &uo) : UO(uo) {}
+
+  Value *operator()(IRBuilder<> &Builder, Value *Op, const Twine &Name) const {
+    return Builder.CreateUnOp(UO.getOpcode(), Op, Name);
+  }
+
+  UnaryOperator &UO;
+};
+
 // BinarySpliiter(BO)(Builder, X, Y, Name) uses Builder to create
 // a binary operator like BO called Name with operands X and Y.
 struct BinarySplitter {
@@ -174,6 +185,7 @@ public:
   bool visitSelectInst(SelectInst &SI);
   bool visitICmpInst(ICmpInst &ICI);
   bool visitFCmpInst(FCmpInst &FCI);
+  bool visitUnaryOperator(UnaryOperator &UO);
   bool visitBinaryOperator(BinaryOperator &BO);
   bool visitGetElementPtrInst(GetElementPtrInst &GEPI);
   bool visitCastInst(CastInst &CI);
@@ -193,6 +205,7 @@ private:
                        const DataLayout &DL);
   bool finish();
 
+  template<typename T> bool splitUnary(Instruction &, const T &);
   template<typename T> bool splitBinary(Instruction &, const T &);
 
   bool splitCall(CallInst &CI);
@@ -246,14 +259,13 @@ Value *Scatterer::operator[](unsigned I) {
     return CV[I];
   IRBuilder<> Builder(BB, BBI);
   if (PtrTy) {
+    Type *ElTy = PtrTy->getElementType()->getVectorElementType();
     if (!CV[0]) {
-      Type *Ty =
-        PointerType::get(PtrTy->getElementType()->getVectorElementType(),
-                         PtrTy->getAddressSpace());
-      CV[0] = Builder.CreateBitCast(V, Ty, V->getName() + ".i0");
+      Type *NewPtrTy = PointerType::get(ElTy, PtrTy->getAddressSpace());
+      CV[0] = Builder.CreateBitCast(V, NewPtrTy, V->getName() + ".i0");
     }
     if (I != 0)
-      CV[I] = Builder.CreateConstGEP1_32(nullptr, CV[0], I,
+      CV[I] = Builder.CreateConstGEP1_32(ElTy, CV[0], I,
                                          V->getName() + ".i" + Twine(I));
   } else {
     // Search through a chain of InsertElementInsts looking for element I.
@@ -410,8 +422,7 @@ bool ScalarizerVisitor::getVectorLayout(Type *Ty, unsigned Alignment,
 
   // Check that we're dealing with full-byte elements.
   Layout.ElemTy = Layout.VecTy->getElementType();
-  if (DL.getTypeSizeInBits(Layout.ElemTy) !=
-      DL.getTypeStoreSizeInBits(Layout.ElemTy))
+  if (!DL.typeSizeEqualsStoreSize(Layout.ElemTy))
     return false;
 
   if (Alignment)
@@ -419,6 +430,26 @@ bool ScalarizerVisitor::getVectorLayout(Type *Ty, unsigned Alignment,
   else
     Layout.VecAlign = DL.getABITypeAlignment(Layout.VecTy);
   Layout.ElemSize = DL.getTypeStoreSize(Layout.ElemTy);
+  return true;
+}
+
+// Scalarize one-operand instruction I, using Split(Builder, X, Name)
+// to create an instruction like I with operand X and name Name.
+template<typename Splitter>
+bool ScalarizerVisitor::splitUnary(Instruction &I, const Splitter &Split) {
+  VectorType *VT = dyn_cast<VectorType>(I.getType());
+  if (!VT)
+    return false;
+
+  unsigned NumElems = VT->getNumElements();
+  IRBuilder<> Builder(&I);
+  Scatterer Op = scatter(&I, I.getOperand(0));
+  assert(Op.size() == NumElems && "Mismatched unary operation");
+  ValueVector Res;
+  Res.resize(NumElems);
+  for (unsigned Elem = 0; Elem < NumElems; ++Elem)
+    Res[Elem] = Split(Builder, Op[Elem], I.getName() + ".i" + Twine(Elem));
+  gather(&I, Res);
   return true;
 }
 
@@ -552,6 +583,10 @@ bool ScalarizerVisitor::visitICmpInst(ICmpInst &ICI) {
 
 bool ScalarizerVisitor::visitFCmpInst(FCmpInst &FCI) {
   return splitBinary(FCI, FCmpSplitter(FCI));
+}
+
+bool ScalarizerVisitor::visitUnaryOperator(UnaryOperator &UO) {
+  return splitUnary(UO, UnarySplitter(UO));
 }
 
 bool ScalarizerVisitor::visitBinaryOperator(BinaryOperator &BO) {
@@ -744,7 +779,8 @@ bool ScalarizerVisitor::visitLoadInst(LoadInst &LI) {
   Res.resize(NumElems);
 
   for (unsigned I = 0; I < NumElems; ++I)
-    Res[I] = Builder.CreateAlignedLoad(Ptr[I], Layout.getElemAlign(I),
+    Res[I] = Builder.CreateAlignedLoad(Layout.VecTy->getElementType(), Ptr[I],
+                                       Layout.getElemAlign(I),
                                        LI.getName() + ".i" + Twine(I));
   gather(&LI, Res);
   return true;

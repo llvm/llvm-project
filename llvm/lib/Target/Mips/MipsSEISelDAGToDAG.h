@@ -1,9 +1,8 @@
 //===-- MipsSEISelDAGToDAG.h - A Dag to Dag Inst Selector for MipsSE -----===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -130,10 +129,6 @@ private:
   bool trySelect(SDNode *Node) override;
 
   void processFunctionAfterISel(MachineFunction &MF) override;
-
-  // Insert instructions to initialize the global base register in the
-  // first MBB of the function.
-  void initGlobalBaseReg(MachineFunction &MF);
 
   bool SelectInlineAsmMemoryOperand(const SDValue &Op,
                                     unsigned ConstraintID,

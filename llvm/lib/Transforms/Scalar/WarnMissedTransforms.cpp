@@ -1,9 +1,8 @@
 //===- LoopTransformWarning.cpp -  ----------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -93,7 +92,7 @@ PreservedAnalyses
 WarnMissedTransformationsPass::run(Function &F, FunctionAnalysisManager &AM) {
   // Do not warn about not applied transformations if optimizations are
   // disabled.
-  if (F.hasFnAttribute(Attribute::OptimizeNone))
+  if (F.hasOptNone())
     return PreservedAnalyses::all();
 
   auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);

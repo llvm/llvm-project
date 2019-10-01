@@ -1,4 +1,4 @@
-; RUN: llc -start-after=codegenprepare -stop-before expand-isel-pseudos -o - %s | FileCheck %s
+; RUN: llc -start-after=codegenprepare -stop-before finalize-isel -o - %s | FileCheck %s
 
 ; This test case was generated from the following debug.c program,
 ; using: clang debug.c -g -O1 -S -o dbg_value_phi_isel1.ll -emit-llvm

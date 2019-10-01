@@ -1,9 +1,8 @@
 //===- Unix/Threading.inc - Unix Threading Implementation ----- -*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -203,6 +202,12 @@ void llvm::get_thread_name(SmallVectorImpl<char> &Name) {
   ::pthread_getname_np(::pthread_self(), buf, len);
 
   Name.append(buf, buf + strlen(buf));
+#elif defined(__OpenBSD__)
+  constexpr uint32_t len = get_max_thread_name_length_impl();
+  char buf[len];
+  ::pthread_get_name_np(::pthread_self(), buf, len);
+
+  Name.append(buf, buf + strlen(buf));
 #elif defined(__linux__)
 #if HAVE_PTHREAD_GETNAME_NP
   constexpr uint32_t len = get_max_thread_name_length_impl();
@@ -211,4 +216,43 @@ void llvm::get_thread_name(SmallVectorImpl<char> &Name) {
     Name.append(Buffer, Buffer + strlen(Buffer));
 #endif
 #endif
+}
+
+SetThreadPriorityResult llvm::set_thread_priority(ThreadPriority Priority) {
+#if defined(__linux__) && defined(SCHED_IDLE)
+  // Some *really* old glibcs are missing SCHED_IDLE.
+  // http://man7.org/linux/man-pages/man3/pthread_setschedparam.3.html
+  // http://man7.org/linux/man-pages/man2/sched_setscheduler.2.html
+  sched_param priority;
+  // For each of the above policies, param->sched_priority must be 0.
+  priority.sched_priority = 0;
+  // SCHED_IDLE    for running very low priority background jobs.
+  // SCHED_OTHER   the standard round-robin time-sharing policy;
+  return !pthread_setschedparam(
+             pthread_self(),
+             Priority == ThreadPriority::Background ? SCHED_IDLE : SCHED_OTHER,
+             &priority)
+             ? SetThreadPriorityResult::SUCCESS
+             : SetThreadPriorityResult::FAILURE;
+#elif defined(__APPLE__)
+  // https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man2/getpriority.2.html
+  // When setting a thread into background state the scheduling priority is set
+  // to lowest value, disk and network IO are throttled. Network IO will be
+  // throttled for any sockets the thread opens after going into background
+  // state. Any previously opened sockets are not affected.
+
+  // https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man3/getiopolicy_np.3.html
+  // I/Os with THROTTLE policy are called THROTTLE I/Os. If a THROTTLE I/O
+  // request occurs within a small time window (usually a fraction of a second)
+  // of another NORMAL I/O request, the thread that issues the THROTTLE I/O is
+  // forced to sleep for a certain interval. This slows down the thread that
+  // issues the THROTTLE I/O so that NORMAL I/Os can utilize most of the disk
+  // I/O bandwidth.
+  return !setpriority(PRIO_DARWIN_THREAD, 0,
+                      Priority == ThreadPriority::Background ? PRIO_DARWIN_BG
+                                                             : 0)
+             ? SetThreadPriorityResult::SUCCESS
+             : SetThreadPriorityResult::FAILURE;
+#endif
+  return SetThreadPriorityResult::FAILURE;
 }

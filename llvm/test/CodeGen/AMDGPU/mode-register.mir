@@ -23,7 +23,7 @@ body: |
     $vgpr1 = V_INTERP_P2_F16 0, $vgpr2, 2, 1, 0, killed $vgpr1, 0, 0, implicit $m0, implicit $exec
     $vgpr0 = V_INTERP_P2_F16 0, killed $vgpr2, 2, 1, 0, killed $vgpr0, -1, 0, implicit $m0, implicit $exec
     $vgpr0 = V_ADD_F16_e32 killed $vgpr1, killed $vgpr0, implicit $exec
-    S_ENDPGM
+    S_ENDPGM 0
 ...
 ---
 # check that the mode is not changed for interp f16 when the mode is already RTZ
@@ -49,7 +49,7 @@ body: |
     $vgpr1 = V_INTERP_P2_F16 0, $vgpr2, 2, 1, 0, killed $vgpr1, 0, 0, implicit $m0, implicit $exec
     $vgpr0 = V_INTERP_P2_F16 0, killed $vgpr2, 2, 1, 0, killed $vgpr0, -1, 0, implicit $m0, implicit $exec
     $vgpr0 = V_ADD_F16_e32 killed $vgpr1, killed $vgpr0, implicit $exec
-    S_ENDPGM
+    S_ENDPGM 0
 ...
 ---
 # check that explicit RTN mode change is registered
@@ -75,7 +75,7 @@ body: |
     $vgpr0 = V_INTERP_P2_F16 0, killed $vgpr2, 2, 1, 0, killed $vgpr0, -1, 0, implicit $m0, implicit $exec
     S_SETREG_IMM32_B32 0, 2177
     $vgpr0 = V_ADD_F16_e32 killed $vgpr1, killed $vgpr0, implicit $exec
-    S_ENDPGM
+    S_ENDPGM 0
 ...
 ---
 # check that the mode is unchanged from RTN for F64 instruction
@@ -90,7 +90,7 @@ body: |
   bb.0:
     liveins: $vgpr1_vgpr2
     $vgpr1_vgpr2 = V_FRACT_F64_e32 killed $vgpr1_vgpr2, implicit $exec
-    S_ENDPGM
+    S_ENDPGM 0
 ...
 ---
 # check that the mode is changed from RTZ to RTN for F64 instruction
@@ -108,7 +108,7 @@ body: |
     liveins: $vgpr1_vgpr2
     S_SETREG_IMM32_B32 3, 2177
     $vgpr1_vgpr2 = V_FRACT_F64_e32 killed $vgpr1_vgpr2, implicit $exec
-    S_ENDPGM
+    S_ENDPGM 0
 ...
 ---
 # CHECK-LABEL: name: rtz_from_rtn
@@ -127,7 +127,7 @@ body: |
 
   bb.1:
     $vgpr1 = V_INTERP_P1LL_F16 0, $vgpr0, 2, 1, 0, 0, 0, implicit $m0, implicit $exec
-    S_ENDPGM
+    S_ENDPGM 0
 ...
 ---
 # check that the mode is changed from RTZ to RTN for F64 instruction
@@ -157,7 +157,7 @@ body: |
     $vgpr3_vgpr4 = V_FRACT_F64_e32 killed $vgpr3_vgpr4, implicit $exec
     $vgpr0 = V_INTERP_P2_F16 0, killed $vgpr2, 2, 1, 0, killed $vgpr0, -1, 0, implicit $m0, implicit $exec
     $vgpr0 = V_ADD_F16_e32 killed $sgpr0, killed $vgpr0, implicit $exec
-    S_ENDPGM
+    S_ENDPGM 0
 ...
 ---
 # check that an explicit change to the single precision mode has no effect
@@ -187,7 +187,7 @@ body: |
     $vgpr3_vgpr4 = V_FRACT_F64_e32 killed $vgpr3_vgpr4, implicit $exec
     $vgpr0 = V_INTERP_P2_F16 0, killed $vgpr2, 2, 1, 0, killed $vgpr0, -1, 0, implicit $m0, implicit $exec
     $vgpr0 = V_ADD_F16_e32 killed $sgpr0, killed $vgpr0, implicit $exec
-    S_ENDPGM
+    S_ENDPGM 0
 ...
 ---
 # check that mode is propagated back to start of loop - first instruction is RTN but needs
@@ -223,7 +223,7 @@ body: |
     S_BRANCH %bb.3
 
   bb.3:
-    S_ENDPGM
+    S_ENDPGM 0
 ...
 ---
 # two back-edges to same node with different modes
@@ -272,7 +272,7 @@ body: |
     S_BRANCH %bb.6
 
   bb.6:
-    S_ENDPGM
+    S_ENDPGM 0
 ...
 ---
 # check that mode is propagated back to start of loop and through a block that
@@ -311,7 +311,7 @@ body: |
     S_BRANCH %bb.4
 
   bb.4:
-    S_ENDPGM
+    S_ENDPGM 0
 ...
 ---
 # check that multiple mode values are propagated to a block that uses the mode
@@ -346,7 +346,7 @@ body: |
     S_BRANCH %bb.4
 
   bb.4:
-    S_ENDPGM
+    S_ENDPGM 0
 ...
 ---
 # check that multiple mode values are propagated through a block that neither
@@ -387,7 +387,7 @@ body: |
     S_BRANCH %bb.5
 
   bb.5:
-    S_ENDPGM
+    S_ENDPGM 0
 ...
 ---
 # CHECK-LABEL: name: pass_through_blocks
@@ -420,7 +420,7 @@ body: |
 
   bb.4:
     $vgpr1 = V_INTERP_P1LL_F16 0, $vgpr0, 2, 1, 0, 0, 0, implicit $m0, implicit $exec
-    S_ENDPGM
+    S_ENDPGM 0
 ...
 ---
 # check that multiple mode values are propagated
@@ -455,5 +455,5 @@ body: |
     S_BRANCH %bb.4
 
   bb.4:
-    S_ENDPGM
+    S_ENDPGM 0
 ...

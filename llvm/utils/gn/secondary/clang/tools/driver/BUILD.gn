@@ -1,4 +1,5 @@
 import("//llvm/utils/gn/build/symlink_or_copy.gni")
+import("//llvm/utils/gn/build/write_cmake_config.gni")
 import("//llvm/version.gni")
 
 symlinks = [
@@ -35,20 +36,10 @@ group("symlinks") {
 }
 
 if (host_os == "mac") {
-  action("write_info_plist") {
-    script = "//llvm/utils/gn/build/write_cmake_config.py"
-    sources = [
-      "Info.plist.in",
-    ]
-    outputs = [
-      "$target_gen_dir/Info.plist",
-    ]
-
-    args = [
-      "-o",
-      rebase_path(outputs[0], root_out_dir),
-      rebase_path(sources[0], root_out_dir),
-
+  write_cmake_config("write_info_plist") {
+    input = "Info.plist.in"
+    output = "$target_gen_dir/Info.plist"
+    values = [
       "TOOL_INFO_BUILD_VERSION=$llvm_version_major.$llvm_version_minor",
       "TOOL_INFO_NAME=clang",
       "TOOL_INFO_UTI=org.llvm.clang",

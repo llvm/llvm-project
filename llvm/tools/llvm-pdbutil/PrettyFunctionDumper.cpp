@@ -1,9 +1,8 @@
 //===- PrettyFunctionDumper.cpp --------------------------------- *- C++ *-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -139,7 +138,8 @@ void FunctionDumper::start(const PDBSymbolFunc &Symbol, PointerType Pointer) {
 
   if (Symbol.hasFramePointer()) {
     WithColor(Printer, PDB_ColorItem::Register).get()
-        << Symbol.getLocalBasePointerRegisterId();
+        << CPURegister{Symbol.getRawSymbol().getPlatform(),
+                       Symbol.getLocalBasePointerRegisterId()};
   } else {
     WithColor(Printer, PDB_ColorItem::Register).get() << "FPO";
   }
@@ -229,9 +229,9 @@ void FunctionDumper::dump(const PDBSymbolTypeFunctionArg &Symbol) {
   uint32_t TypeId = Symbol.getTypeId();
   auto Type = Symbol.getSession().getSymbolById(TypeId);
   if (Type)
-    Printer << "<unknown-type>";
-  else
     Type->dump(*this);
+  else
+    Printer << "<unknown-type>";
 }
 
 void FunctionDumper::dump(const PDBSymbolTypeTypedef &Symbol) {

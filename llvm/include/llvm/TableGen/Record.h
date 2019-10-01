@@ -1,9 +1,8 @@
 //===- llvm/TableGen/Record.h - Classes for Table Records -------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -316,6 +315,7 @@ protected:
     IK_TernOpInit,
     IK_UnOpInit,
     IK_LastOpInit,
+    IK_CondOpInit,
     IK_FoldOpInit,
     IK_IsAOpInit,
     IK_StringInit,
@@ -623,10 +623,11 @@ public:
 
 class CodeInit : public TypedInit {
   StringRef Value;
+  SMLoc Loc;
 
-  explicit CodeInit(StringRef V)
+  explicit CodeInit(StringRef V, const SMLoc &Loc)
       : TypedInit(IK_CodeInit, static_cast<RecTy *>(CodeRecTy::get())),
-        Value(V) {}
+        Value(V), Loc(Loc) {}
 
 public:
   CodeInit(const StringInit &) = delete;
@@ -636,9 +637,10 @@ public:
     return I->getKind() == IK_CodeInit;
   }
 
-  static CodeInit *get(StringRef);
+  static CodeInit *get(StringRef, const SMLoc &Loc);
 
   StringRef getValue() const { return Value; }
+  const SMLoc &getLoc() const { return Loc; }
 
   Init *convertInitializerTo(RecTy *Ty) const override;
 
@@ -798,8 +800,9 @@ public:
 /// !op (X, Y) - Combine two inits.
 class BinOpInit : public OpInit, public FoldingSetNode {
 public:
-  enum BinaryOp : uint8_t { ADD, AND, OR, SHL, SRA, SRL, LISTCONCAT,
-                            STRCONCAT, CONCAT, EQ, NE, LE, LT, GE, GT };
+  enum BinaryOp : uint8_t { ADD, MUL, AND, OR, SHL, SRA, SRL, LISTCONCAT,
+                            LISTSPLAT, STRCONCAT, CONCAT, EQ, NE, LE, LT, GE,
+                            GT };
 
 private:
   Init *LHS, *RHS;
@@ -818,6 +821,8 @@ public:
   static BinOpInit *get(BinaryOp opc, Init *lhs, Init *rhs,
                         RecTy *Type);
   static Init *getStrConcat(Init *lhs, Init *rhs);
+  static Init *getListConcat(TypedInit *lhs, Init *rhs);
+  static Init *getListSplat(TypedInit *lhs, Init *rhs);
 
   void Profile(FoldingSetNodeID &ID) const;
 
@@ -910,6 +915,83 @@ public:
   Init *resolveReferences(Resolver &R) const override;
 
   std::string getAsString() const override;
+};
+
+/// !cond(condition_1: value1, ... , condition_n: value)
+/// Selects the first value for which condition is true.
+/// Otherwise reports an error.
+class CondOpInit final : public TypedInit, public FoldingSetNode,
+                      public TrailingObjects<CondOpInit, Init *> {
+  unsigned NumConds;
+  RecTy *ValType;
+
+  CondOpInit(unsigned NC, RecTy *Type)
+    : TypedInit(IK_CondOpInit, Type),
+      NumConds(NC), ValType(Type) {}
+
+  size_t numTrailingObjects(OverloadToken<Init *>) const {
+    return 2*NumConds;
+  }
+
+public:
+  CondOpInit(const CondOpInit &) = delete;
+  CondOpInit &operator=(const CondOpInit &) = delete;
+
+  static bool classof(const Init *I) {
+    return I->getKind() == IK_CondOpInit;
+  }
+
+  static CondOpInit *get(ArrayRef<Init*> C, ArrayRef<Init*> V,
+                        RecTy *Type);
+
+  void Profile(FoldingSetNodeID &ID) const;
+
+  RecTy *getValType() const { return ValType; }
+
+  unsigned getNumConds() const { return NumConds; }
+
+  Init *getCond(unsigned Num) const {
+    assert(Num < NumConds && "Condition number out of range!");
+    return getTrailingObjects<Init *>()[Num];
+  }
+
+  Init *getVal(unsigned Num) const {
+    assert(Num < NumConds && "Val number out of range!");
+    return getTrailingObjects<Init *>()[Num+NumConds];
+  }
+
+  ArrayRef<Init *> getConds() const {
+    return makeArrayRef(getTrailingObjects<Init *>(), NumConds);
+  }
+
+  ArrayRef<Init *> getVals() const {
+    return makeArrayRef(getTrailingObjects<Init *>()+NumConds, NumConds);
+  }
+
+  Init *Fold(Record *CurRec) const;
+
+  Init *resolveReferences(Resolver &R) const override;
+
+  bool isConcrete() const override;
+  bool isComplete() const override;
+  std::string getAsString() const override;
+
+  using const_case_iterator = SmallVectorImpl<Init*>::const_iterator;
+  using const_val_iterator = SmallVectorImpl<Init*>::const_iterator;
+
+  inline const_case_iterator  arg_begin() const { return getConds().begin(); }
+  inline const_case_iterator  arg_end  () const { return getConds().end(); }
+
+  inline size_t              case_size () const { return NumConds; }
+  inline bool                case_empty() const { return NumConds == 0; }
+
+  inline const_val_iterator name_begin() const { return getVals().begin();}
+  inline const_val_iterator name_end  () const { return getVals().end(); }
+
+  inline size_t              val_size () const { return NumConds; }
+  inline bool                val_empty() const { return NumConds == 0; }
+
+  Init *getBit(unsigned Bit) const override;
 };
 
 /// !foldl (a, b, expr, start, lst) - Fold over a list.

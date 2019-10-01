@@ -46,8 +46,8 @@ define i32 @t4({}* %fn, i32 %n, i32 %r) {
 ; CHECK-LABEL: t4:
 ; CHECK: incl %[[r:.*]]
 ; CHECK: decl %[[n:.*]]
-; CHECK: movl %[[r]], {{[0-9]+}}(%esp)
-; CHECK: movl %[[n]], {{[0-9]+}}(%esp)
+; CHECK-DAG: movl %[[r]], {{[0-9]+}}(%esp)
+; CHECK-DAG: movl %[[n]], {{[0-9]+}}(%esp)
 ; CHECK: jmpl *%{{.*}}
 
 entry:
@@ -71,8 +71,8 @@ define i32 @t5({}* %fn, i32 %n, i32 %r) alignstack(32) {
 ; CHECK: incl %[[r:.*]]
 ; CHECK: decl %[[n:.*]]
 ; 	Store them through ebp, since that's the only stable arg pointer.
-; CHECK: movl %[[r]], {{[0-9]+}}(%ebp)
-; CHECK: movl %[[n]], {{[0-9]+}}(%ebp)
+; CHECK-DAG: movl %[[r]], {{[0-9]+}}(%ebp)
+; CHECK-DAG: movl %[[n]], {{[0-9]+}}(%ebp)
 ; 	Epilogue.
 ; CHECK: leal {{[-0-9]+}}(%ebp), %esp
 ; CHECK: popl %esi

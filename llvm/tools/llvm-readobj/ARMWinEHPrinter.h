@@ -1,9 +1,8 @@
 //===--- ARMWinEHPrinter.h - Windows on ARM Unwind Information Printer ----===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License.  See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -157,7 +156,7 @@ public:
   Decoder(ScopedPrinter &SW, bool isAArch64) : SW(SW),
                                                OS(SW.getOStream()),
                                                isAArch64(isAArch64) {}
-  std::error_code dumpProcedureData(const object::COFFObjectFile &COFF);
+  Error dumpProcedureData(const object::COFFObjectFile &COFF);
 };
 }
 }

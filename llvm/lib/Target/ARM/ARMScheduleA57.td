@@ -1,9 +1,8 @@
 //=- ARMScheduleA57.td - ARM Cortex-A57 Scheduling Defs -----*- tablegen -*-=//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -95,6 +94,9 @@ def CortexA57Model : SchedMachineModel {
 
   // FIXME: Remove when all errors have been fixed.
   let FullInstRWOverlapCheck = 0;
+
+  let UnsupportedFeatures = [HasV8_1MMainline, HasMVEInt, HasMVEFloat,
+                             HasFPRegsV8_1M];
 }
 
 //===----------------------------------------------------------------------===//
@@ -1175,7 +1177,8 @@ def : InstRW<[A57Write_8cyc_1V], (instregex
 
 // ASIMD FP max/min
 def : InstRW<[A57Write_5cyc_1V], (instregex
-  "(VMAX|VMIN)(fd|fq|hd|hq)", "(VPMAX|VPMIN)(f|h)", "VMAXNM", "VMINNM")>;
+  "(VMAX|VMIN)(fd|fq|hd|hq)", "(VPMAX|VPMIN)(f|h)", "(NEON|VFP)_VMAXNM",
+  "(NEON|VFP)_VMINNM")>;
 
 // ASIMD FP multiply
 def A57WriteVMUL_VecFP  : SchedWriteRes<[A57UnitV]> { let Latency = 5;  }

@@ -1,9 +1,8 @@
 //===- DWARFDebugLineTest.cpp ---------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -38,7 +37,7 @@ struct CommonFixture {
   }
 
   bool setupGenerator(uint16_t Version = 4) {
-    Triple T = getHostTripleForAddrSize(8);
+    Triple T = getDefaultTargetTripleForAddrSize(8);
     if (!isConfigurationSupported(T))
       return false;
     auto ExpectedGenerator = Generator::create(T, Version);
@@ -51,8 +50,9 @@ struct CommonFixture {
     Context = createContext();
     assert(Context != nullptr && "test state is not valid");
     const DWARFObject &Obj = Context->getDWARFObj();
-    LineData = DWARFDataExtractor(Obj, Obj.getLineSection(),
-                                  sys::IsLittleEndianHost, 8);
+    LineData = DWARFDataExtractor(
+        Obj, Obj.getLineSection(),
+        getDefaultTargetTripleForAddrSize(8).isLittleEndian(), 8);
   }
 
   std::unique_ptr<DWARFContext> createContext() {
@@ -118,6 +118,16 @@ struct CommonFixture {
     EXPECT_FALSE(Recoverable);
 
     checkError(ExpectedMsg, ExpectedLineTable.takeError());
+  }
+
+  void checkGetOrParseLineTableEmitsError(ArrayRef<StringRef> ExpectedMsgs,
+                                          uint64_t Offset = 0) {
+    auto ExpectedLineTable = Line.getOrParseLineTable(
+        LineData, Offset, *Context, nullptr, RecordRecoverable);
+    EXPECT_FALSE(ExpectedLineTable);
+    EXPECT_FALSE(Recoverable);
+
+    checkError(ExpectedMsgs, ExpectedLineTable.takeError());
   }
 
   std::unique_ptr<Generator> Gen;
@@ -291,13 +301,13 @@ TEST_F(DebugLineBasicFixture, ErrorForReservedLength) {
     return;
 
   LineTable &LT = Gen->addLineTable();
-  LT.setCustomPrologue({{0xffffff00, LineTable::Long}});
+  LT.setCustomPrologue({{0xfffffff0, LineTable::Long}});
 
   generate();
 
   checkGetOrParseLineTableEmitsError(
       "parsing line table prologue at offset 0x00000000 unsupported reserved "
-      "unit length found of value 0xffffff00");
+      "unit length found of value 0xfffffff0");
 }
 
 TEST_F(DebugLineBasicFixture, ErrorForLowVersion) {
@@ -344,8 +354,9 @@ TEST_F(DebugLineBasicFixture, ErrorForInvalidV5IncludeDirTable) {
   generate();
 
   checkGetOrParseLineTableEmitsError(
-      "parsing line table prologue at 0x00000000 found an invalid directory or "
-      "file table description at 0x00000014");
+      {"parsing line table prologue at 0x00000000 found an invalid directory "
+       "or file table description at 0x00000014",
+       "failed to parse entry content descriptions because no path was found"});
 }
 
 TEST_P(DebugLineParameterisedFixture, ErrorForTooLargePrologueLength) {
@@ -532,7 +543,7 @@ TEST_F(DebugLineBasicFixture, ParserMovesToEndForBadLengthWhenParsing) {
     return;
 
   LineTable &LT = Gen->addLineTable();
-  LT.setCustomPrologue({{0xffffff00, LineTable::Long}});
+  LT.setCustomPrologue({{0xfffffff0, LineTable::Long}});
   Gen->addLineTable();
   generate();
 
@@ -544,7 +555,7 @@ TEST_F(DebugLineBasicFixture, ParserMovesToEndForBadLengthWhenParsing) {
   EXPECT_FALSE(Recoverable);
 
   checkError("parsing line table prologue at offset 0x00000000 unsupported "
-             "reserved unit length found of value 0xffffff00",
+             "reserved unit length found of value 0xfffffff0",
              std::move(Unrecoverable));
 }
 
@@ -553,7 +564,7 @@ TEST_F(DebugLineBasicFixture, ParserMovesToEndForBadLengthWhenSkipping) {
     return;
 
   LineTable &LT = Gen->addLineTable();
-  LT.setCustomPrologue({{0xffffff00, LineTable::Long}});
+  LT.setCustomPrologue({{0xfffffff0, LineTable::Long}});
   Gen->addLineTable();
   generate();
 
@@ -564,7 +575,7 @@ TEST_F(DebugLineBasicFixture, ParserMovesToEndForBadLengthWhenSkipping) {
   EXPECT_TRUE(Parser.done());
 
   checkError("parsing line table prologue at offset 0x00000000 unsupported "
-             "reserved unit length found of value 0xffffff00",
+             "reserved unit length found of value 0xfffffff0",
              std::move(Unrecoverable));
 }
 

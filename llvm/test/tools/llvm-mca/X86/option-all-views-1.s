@@ -18,6 +18,13 @@ add %eax, %eax
 # DEFAULTREPORT-NEXT: IPC:               0.97
 # DEFAULTREPORT-NEXT: Block RThroughput: 0.5
 
+# FULLREPORT:         Cycles with backend pressure increase [ 76.70% ]
+# FULLREPORT-NEXT:    Throughput Bottlenecks:
+# FULLREPORT-NEXT:      Resource Pressure       [ 0.00% ]
+# FULLREPORT-NEXT:      Data Dependencies:      [ 76.70% ]
+# FULLREPORT-NEXT:      - Register Dependencies [ 76.70% ]
+# FULLREPORT-NEXT:      - Memory Dependencies   [ 0.00% ]
+
 # DEFAULTREPORT:      Instruction Info:
 # DEFAULTREPORT-NEXT: [1]: #uOps
 # DEFAULTREPORT-NEXT: [2]: Latency
@@ -43,7 +50,7 @@ add %eax, %eax
 # FULLREPORT-NEXT:     1,              62  (60.2%)
 # FULLREPORT-NEXT:     2,              19  (18.4%)
 
-# FULLREPORT:         Schedulers - number of cycles where we saw N instructions issued:
+# FULLREPORT:         Schedulers - number of cycles where we saw N micro opcodes issued:
 # FULLREPORT-NEXT:    [# issued], [# cycles]
 # FULLREPORT-NEXT:     0,          3  (2.9%)
 # FULLREPORT-NEXT:     1,          100  (97.1%)

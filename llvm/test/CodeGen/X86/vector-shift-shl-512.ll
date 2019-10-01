@@ -142,8 +142,8 @@ define <64 x i8> @splatvar_shift_v64i8(<64 x i8> %a, <64 x i8> %b) nounwind {
 ; AVX512DQ:       # %bb.0:
 ; AVX512DQ-NEXT:    vpmovzxbq {{.*#+}} xmm2 = xmm2[0],zero,zero,zero,zero,zero,zero,zero,xmm2[1],zero,zero,zero,zero,zero,zero,zero
 ; AVX512DQ-NEXT:    vpsllw %xmm2, %ymm0, %ymm0
-; AVX512DQ-NEXT:    vpcmpeqd %ymm3, %ymm3, %ymm3
-; AVX512DQ-NEXT:    vpsllw %xmm2, %ymm3, %ymm3
+; AVX512DQ-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
+; AVX512DQ-NEXT:    vpsllw %xmm2, %xmm3, %xmm3
 ; AVX512DQ-NEXT:    vpbroadcastb %xmm3, %ymm3
 ; AVX512DQ-NEXT:    vpand %ymm3, %ymm0, %ymm0
 ; AVX512DQ-NEXT:    vpsllw %xmm2, %ymm1, %ymm1
@@ -154,8 +154,8 @@ define <64 x i8> @splatvar_shift_v64i8(<64 x i8> %a, <64 x i8> %b) nounwind {
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vpmovzxbq {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,zero,zero,zero,zero,xmm1[1],zero,zero,zero,zero,zero,zero,zero
 ; AVX512BW-NEXT:    vpsllw %xmm1, %zmm0, %zmm0
-; AVX512BW-NEXT:    vpternlogd $255, %zmm2, %zmm2, %zmm2
-; AVX512BW-NEXT:    vpsllw %xmm1, %zmm2, %zmm1
+; AVX512BW-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; AVX512BW-NEXT:    vpsllw %xmm1, %xmm2, %xmm1
 ; AVX512BW-NEXT:    vpbroadcastb %xmm1, %zmm1
 ; AVX512BW-NEXT:    vpandq %zmm1, %zmm0, %zmm0
 ; AVX512BW-NEXT:    retq
@@ -208,7 +208,8 @@ define <64 x i8> @constant_shift_v64i8(<64 x i8> %a) nounwind {
 ; AVX512DQ-NEXT:    vpsllw $4, %ymm0, %ymm2
 ; AVX512DQ-NEXT:    vmovdqa {{.*#+}} ymm3 = [240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240]
 ; AVX512DQ-NEXT:    vpand %ymm3, %ymm2, %ymm2
-; AVX512DQ-NEXT:    vmovdqa {{.*#+}} ymm4 = [8192,24640,41088,57536,49376,32928,16480,32,8192,24640,41088,57536,49376,32928,16480,32]
+; AVX512DQ-NEXT:    vbroadcasti128 {{.*#+}} ymm4 = [8192,24640,41088,57536,49376,32928,16480,32,8192,24640,41088,57536,49376,32928,16480,32]
+; AVX512DQ-NEXT:    # ymm4 = mem[0,1,0,1]
 ; AVX512DQ-NEXT:    vpblendvb %ymm4, %ymm2, %ymm0, %ymm0
 ; AVX512DQ-NEXT:    vpsllw $2, %ymm0, %ymm2
 ; AVX512DQ-NEXT:    vmovdqa {{.*#+}} ymm5 = [252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252]
@@ -230,7 +231,8 @@ define <64 x i8> @constant_shift_v64i8(<64 x i8> %a) nounwind {
 ;
 ; AVX512BW-LABEL: constant_shift_v64i8:
 ; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [8192,24640,41088,57536,49376,32928,16480,32,8192,24640,41088,57536,49376,32928,16480,32,8192,24640,41088,57536,49376,32928,16480,32,8192,24640,41088,57536,49376,32928,16480,32]
+; AVX512BW-NEXT:    vbroadcasti32x4 {{.*#+}} zmm1 = [8192,24640,41088,57536,49376,32928,16480,32,8192,24640,41088,57536,49376,32928,16480,32,8192,24640,41088,57536,49376,32928,16480,32,8192,24640,41088,57536,49376,32928,16480,32]
+; AVX512BW-NEXT:    # zmm1 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
 ; AVX512BW-NEXT:    vpmovb2m %zmm1, %k1
 ; AVX512BW-NEXT:    vpsllw $4, %zmm0, %zmm2
 ; AVX512BW-NEXT:    vpandq {{.*}}(%rip), %zmm2, %zmm2

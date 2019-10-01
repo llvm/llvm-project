@@ -7,7 +7,7 @@
 ; CHECK: JMP{{.*}}%bb.4, debug-location ![[JUMPLOC:[0-9]+]]
 ; CHECK: bb.4.entry:
 ; CHECK: successors:
-; CHECK: JE{{.*}}debug-location ![[JUMPLOC]]
+; CHECK: JCC{{.*}}debug-location ![[JUMPLOC]]
 ; CHECK: JMP{{.*}}debug-location ![[JUMPLOC]]
 
 define i32 @main() !dbg !12 {

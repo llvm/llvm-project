@@ -1,9 +1,8 @@
 //===-- BenchmarkResult.h ---------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -58,10 +57,12 @@ struct BenchmarkMeasure {
 // The result of an instruction benchmark.
 struct InstructionBenchmark {
   InstructionBenchmarkKey Key;
-  enum ModeE { Unknown, Latency, Uops };
+  enum ModeE { Unknown, Latency, Uops, InverseThroughput };
   ModeE Mode;
   std::string CpuName;
   std::string LLVMTriple;
+  // Which instruction is being benchmarked here?
+  const llvm::MCInst &keyInstruction() const { return Key.Instructions[0]; }
   // The number of instructions inside the repeated snippet. For example, if a
   // snippet of 3 instructions is repeated 4 times, this is 12.
   int NumRepetitions = 0;
@@ -78,10 +79,11 @@ struct InstructionBenchmark {
   static llvm::Expected<std::vector<InstructionBenchmark>>
   readYamls(const LLVMState &State, llvm::StringRef Filename);
 
-  void readYamlFrom(const LLVMState &State, llvm::StringRef InputContent);
+  llvm::Error readYamlFrom(const LLVMState &State,
+                           llvm::StringRef InputContent);
 
   // Write functions, non-const because of YAML traits.
-  void writeYamlTo(const LLVMState &State, llvm::raw_ostream &S);
+  llvm::Error writeYamlTo(const LLVMState &State, llvm::raw_ostream &S);
 
   llvm::Error writeYaml(const LLVMState &State, const llvm::StringRef Filename);
 };

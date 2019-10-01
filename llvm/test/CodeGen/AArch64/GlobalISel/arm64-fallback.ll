@@ -54,7 +54,7 @@ false:
 
 }
 
-; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to legalize instruction: %2:_(s32) = G_ZEXTLOAD %1:_(p0) :: (load 3 from `i24* undef`, align 1) (in function: odd_type_load)
+; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to legalize instruction: %3:_(s32) = G_LOAD %1:_(p0) :: (load 3 from `i24* undef`, align 1) (in function: odd_type_load)
 ; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for odd_type_load
 ; FALLBACK-WITH-REPORT-OUT-LABEL: odd_type_load
 define i32 @odd_type_load() {
@@ -158,7 +158,7 @@ end:
   br label %block
 }
 
-; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to legalize instruction: G_STORE %2:_(<2 x p0>), %1:_(p0) :: (store 16 into `<2 x i16*>* undef`) (in function: vector_of_pointers_insertelement)
+; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to legalize instruction: %2:_(<2 x p0>) = G_INSERT_VECTOR_ELT %0:_, %3:_(p0), %5:_(s32) (in function: vector_of_pointers_insertelement)
 ; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for vector_of_pointers_insertelement
 ; FALLBACK-WITH-REPORT-OUT-LABEL: vector_of_pointers_insertelement:
 define void @vector_of_pointers_insertelement() {
@@ -205,21 +205,13 @@ define void @nonpow2_load_narrowing() {
   ret void
 }
 
-; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to legalize instruction: G_STORE %3:_(s96), %0:_(p0) :: (store 12 into %ir.c, align 16) (in function: nonpow2_store_narrowing
+; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to legalize instruction: %4:_(s64) = G_EXTRACT %3:_(s96), 0 (in function: nonpow2_store_narrowing)
 ; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for nonpow2_store_narrowing
 ; FALLBACK-WITH-REPORT-OUT-LABEL: nonpow2_store_narrowing:
 define void @nonpow2_store_narrowing(i96* %c) {
   %a = add i128 undef, undef
   %b = trunc i128 %a to i96
   store i96 %b, i96* %c
-  ret void
-}
-
-; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to legalize instruction: G_STORE %0:_(s96), %1:_(p0) :: (store 12 into `i96* undef`, align 16) (in function: nonpow2_constant_narrowing)
-; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for nonpow2_constant_narrowing
-; FALLBACK-WITH-REPORT-OUT-LABEL: nonpow2_constant_narrowing:
-define void @nonpow2_constant_narrowing() {
-  store i96 0, i96* undef
   ret void
 }
 
@@ -238,23 +230,8 @@ define void @nonpow2_vector_add_fewerelements() {
 
 %swift_error = type {i64, i8}
 
-; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to lower arguments due to swifterror/swiftself: void (%swift_error**)* (in function: swifterror_param)
-; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for swifterror_param
-define void @swifterror_param(%swift_error** swifterror %error_ptr_ref) {
+; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to lower arguments due to swiftself: void (%swift_error**)* (in function: swiftself_param)
+; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for swiftself_param
+define void @swiftself_param(%swift_error** swiftself %error_ptr_ref) {
   ret void
 }
-
-; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to translate instruction: alloca: '  %error_ptr_ref = alloca swifterror %swift_error*' (in function: swifterror_alloca)
-; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for swifterror_alloca
-; We can't currently test the call parameters being swifterror because the value
-; must come from a swifterror alloca or parameter, at which point we already
-; fallback. As long as those cases work however we should be fine.
-define void @swifterror_alloca(i8* %error_ref) {
-entry:
-  %error_ptr_ref = alloca swifterror %swift_error*
-  store %swift_error* null, %swift_error** %error_ptr_ref
-  call void @swifterror_param(%swift_error** swifterror %error_ptr_ref)
-  ret void
-}
-
-

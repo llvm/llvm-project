@@ -1,4 +1,4 @@
-# RUN: llvm-mc -triple=i686-pc-win32 -filetype=obj < %s | llvm-readobj -codeview -codeview-subsection-bytes | FileCheck %s
+# RUN: llvm-mc -triple=i686-pc-win32 -filetype=obj < %s | llvm-readobj --codeview --codeview-subsection-bytes | FileCheck %s
 	.text
 	.def	 @feat.00;
 	.scl	3;
@@ -75,7 +75,7 @@ Ltmp2:
 Ltmp3:
 	.short	2                       # Record length
 	.short	4431                    # Record kind: S_PROC_ID_END
-	.cv_def_range	Lvar_begin0 Lvar_end0, "\102\021\374\377\377\377"
+	.cv_def_range	Lvar_begin0 Lvar_end0, frame_ptr_rel, -4
 
 # CHECK:    DefRangeFramePointerRelSym {
 # CHECK:      Offset: -4

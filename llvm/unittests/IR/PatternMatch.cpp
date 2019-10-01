@@ -1,9 +1,8 @@
 //===---- llvm/unittest/IR/PatternMatch.cpp - PatternMatch unit tests ----===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -398,7 +397,7 @@ TEST_F(PatternMatchTest, LoadStoreOps) {
   //  store i32 42, i32* %0
 
   Value *Alloca = IRB.CreateAlloca(IRB.getInt32Ty());
-  Value *LoadInst = IRB.CreateLoad(Alloca);
+  Value *LoadInst = IRB.CreateLoad(IRB.getInt32Ty(), Alloca);
   Value *FourtyTwo = IRB.getInt32(42);
   Value *StoreInst = IRB.CreateStore(FourtyTwo, Alloca);
   Value *MatchLoad, *MatchStoreVal, *MatchStorePointer;
@@ -588,6 +587,35 @@ TEST_F(PatternMatchTest, VectorUndefFloat) {
   EXPECT_TRUE(match(ScalarZero, m_AnyZeroFP()));
   EXPECT_TRUE(match(VectorZero, m_AnyZeroFP()));
   EXPECT_TRUE(match(VectorZeroUndef, m_AnyZeroFP()));
+}
+
+TEST_F(PatternMatchTest, FloatingPointFNeg) {
+  Type *FltTy = IRB.getFloatTy();
+  Value *One = ConstantFP::get(FltTy, 1.0);
+  Value *Z = ConstantFP::get(FltTy, 0.0);
+  Value *NZ = ConstantFP::get(FltTy, -0.0);
+  Value *V = IRB.CreateFNeg(One);
+  Value *V1 = IRB.CreateFSub(NZ, One);
+  Value *V2 = IRB.CreateFSub(Z, One);
+  Value *V3 = IRB.CreateFAdd(NZ, One);
+  Value *Match;
+
+  // Test FNeg(1.0)
+  EXPECT_TRUE(match(V, m_FNeg(m_Value(Match))));
+  EXPECT_EQ(One, Match);
+
+  // Test FSub(-0.0, 1.0)
+  EXPECT_TRUE(match(V1, m_FNeg(m_Value(Match))));
+  EXPECT_EQ(One, Match);
+
+  // Test FSub(0.0, 1.0)
+  EXPECT_FALSE(match(V2, m_FNeg(m_Value(Match))));
+  cast<Instruction>(V2)->setHasNoSignedZeros(true);
+  EXPECT_TRUE(match(V2, m_FNeg(m_Value(Match))));
+  EXPECT_EQ(One, Match);
+
+  // Test FAdd(-0.0, 1.0)
+  EXPECT_FALSE(match(V3, m_FNeg(m_Value(Match))));
 }
 
 template <typename T> struct MutableConstTest : PatternMatchTest { };

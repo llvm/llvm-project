@@ -711,6 +711,14 @@ buffer_atomic_inc v1, v[2:3], s[8:11], 56 idxen offen offset:4 glc slc
 // SICI: buffer_atomic_inc v1, v[2:3], s[8:11], 56 idxen offen offset:4 glc slc ; encoding: [0x04,0x70,0xf0,0xe0,0x02,0x01,0x42,0xb8]
 // VI:   buffer_atomic_inc v1, v[2:3], s[8:11], 56 idxen offen offset:4 glc slc ; encoding: [0x04,0x70,0x2e,0xe1,0x02,0x01,0x02,0xb8]
 
+buffer_atomic_add v5, off, s[8:11], 0.5 offset:4095 glc
+// SICI: buffer_atomic_add v5, off, s[8:11], 0.5 offset:4095 glc ; encoding: [0xff,0x4f,0xc8,0xe0,0x00,0x05,0x02,0xf0]
+// VI:   buffer_atomic_add v5, off, s[8:11], 0.5 offset:4095 glc ; encoding: [0xff,0x4f,0x08,0xe1,0x00,0x05,0x02,0xf0]
+
+buffer_atomic_add v5, off, s[8:11], 0.15915494 offset:4095 glc
+// NOSICI: error: invalid operand for instruction
+// VI:   buffer_atomic_add v5, off, s[8:11], 0.15915494 offset:4095 glc ; encoding: [0xff,0x4f,0x08,0xe1,0x00,0x05,0x02,0xf8]
+
 //===----------------------------------------------------------------------===//
 // Lds support
 //===----------------------------------------------------------------------===//

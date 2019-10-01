@@ -1,9 +1,8 @@
 //===-- WebAssemblyCallIndirectFixup.cpp - Fix call_indirects -------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -61,7 +60,7 @@ FunctionPass *llvm::createWebAssemblyCallIndirectFixup() {
   return new WebAssemblyCallIndirectFixup();
 }
 
-static unsigned GetNonPseudoCallIndirectOpcode(const MachineInstr &MI) {
+static unsigned getNonPseudoCallIndirectOpcode(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
     using namespace WebAssembly;
   case PCALL_INDIRECT_VOID:
@@ -91,14 +90,14 @@ static unsigned GetNonPseudoCallIndirectOpcode(const MachineInstr &MI) {
   }
 }
 
-static bool IsPseudoCallIndirect(const MachineInstr &MI) {
-  return GetNonPseudoCallIndirectOpcode(MI) !=
+static bool isPseudoCallIndirect(const MachineInstr &MI) {
+  return getNonPseudoCallIndirectOpcode(MI) !=
          WebAssembly::INSTRUCTION_LIST_END;
 }
 
 bool WebAssemblyCallIndirectFixup::runOnMachineFunction(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "********** Fixing up CALL_INDIRECTs **********\n"
-                    << MF.getName() << '\n');
+                    << "********** Function: " << MF.getName() << '\n');
 
   bool Changed = false;
   const WebAssemblyInstrInfo *TII =
@@ -106,11 +105,11 @@ bool WebAssemblyCallIndirectFixup::runOnMachineFunction(MachineFunction &MF) {
 
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
-      if (IsPseudoCallIndirect(MI)) {
+      if (isPseudoCallIndirect(MI)) {
         LLVM_DEBUG(dbgs() << "Found call_indirect: " << MI << '\n');
 
         // Rewrite pseudo to non-pseudo
-        const MCInstrDesc &Desc = TII->get(GetNonPseudoCallIndirectOpcode(MI));
+        const MCInstrDesc &Desc = TII->get(getNonPseudoCallIndirectOpcode(MI));
         MI.setDesc(Desc);
 
         // Rewrite argument order

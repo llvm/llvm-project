@@ -1,9 +1,8 @@
 //===- TargetTransformInfoImpl.h --------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 /// \file
@@ -124,7 +123,7 @@ public:
     return TTI::TCC_Basic;
   }
 
-  unsigned getCallCost(FunctionType *FTy, int NumArgs) {
+  unsigned getCallCost(FunctionType *FTy, int NumArgs, const User *U) {
     assert(FTy && "FunctionType must be provided to this routine.");
 
     // The target-independent implementation just measures the size of the
@@ -141,45 +140,8 @@ public:
 
   unsigned getInliningThresholdMultiplier() { return 1; }
 
-  unsigned getIntrinsicCost(Intrinsic::ID IID, Type *RetTy,
-                            ArrayRef<Type *> ParamTys) {
-    switch (IID) {
-    default:
-      // Intrinsics rarely (if ever) have normal argument setup constraints.
-      // Model them as having a basic instruction cost.
-      // FIXME: This is wrong for libc intrinsics.
-      return TTI::TCC_Basic;
-
-    case Intrinsic::annotation:
-    case Intrinsic::assume:
-    case Intrinsic::sideeffect:
-    case Intrinsic::dbg_declare:
-    case Intrinsic::dbg_value:
-    case Intrinsic::dbg_label:
-    case Intrinsic::invariant_start:
-    case Intrinsic::invariant_end:
-    case Intrinsic::launder_invariant_group:
-    case Intrinsic::strip_invariant_group:
-    case Intrinsic::is_constant:
-    case Intrinsic::lifetime_start:
-    case Intrinsic::lifetime_end:
-    case Intrinsic::objectsize:
-    case Intrinsic::ptr_annotation:
-    case Intrinsic::var_annotation:
-    case Intrinsic::experimental_gc_result:
-    case Intrinsic::experimental_gc_relocate:
-    case Intrinsic::coro_alloc:
-    case Intrinsic::coro_begin:
-    case Intrinsic::coro_free:
-    case Intrinsic::coro_end:
-    case Intrinsic::coro_frame:
-    case Intrinsic::coro_size:
-    case Intrinsic::coro_suspend:
-    case Intrinsic::coro_param:
-    case Intrinsic::coro_subfn_addr:
-      // These intrinsics don't actually represent code after lowering.
-      return TTI::TCC_Free;
-    }
+  unsigned getMemcpyCost(const Instruction *I) {
+    return TTI::TCC_Expensive;
   }
 
   bool hasBranchDivergence() { return false; }
@@ -228,6 +190,13 @@ public:
     return true;
   }
 
+  bool isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
+                                AssumptionCache &AC,
+                                TargetLibraryInfo *LibInfo,
+                                HardwareLoopInfo &HWLoopInfo) {
+    return false;
+  }
+
   void getUnrollingPreferences(Loop *, ScalarEvolution &,
                                TTI::UnrollingPreferences &) {}
 
@@ -254,13 +223,33 @@ public:
 
   bool shouldFavorPostInc() const { return false; }
 
+  bool shouldFavorBackedgeIndex(const Loop *L) const { return false; }
+
   bool isLegalMaskedStore(Type *DataType) { return false; }
 
   bool isLegalMaskedLoad(Type *DataType) { return false; }
 
+  bool isLegalNTStore(Type *DataType, unsigned Alignment) {
+    // By default, assume nontemporal memory stores are available for stores
+    // that are aligned and have a size that is a power of 2.
+    unsigned DataSize = DL.getTypeStoreSize(DataType);
+    return Alignment >= DataSize && isPowerOf2_32(DataSize);
+  }
+
+  bool isLegalNTLoad(Type *DataType, unsigned Alignment) {
+    // By default, assume nontemporal memory loads are available for loads that
+    // are aligned and have a size that is a power of 2.
+    unsigned DataSize = DL.getTypeStoreSize(DataType);
+    return Alignment >= DataSize && isPowerOf2_32(DataSize);
+  }
+
   bool isLegalMaskedScatter(Type *DataType) { return false; }
 
   bool isLegalMaskedGather(Type *DataType) { return false; }
+
+  bool isLegalMaskedCompressStore(Type *DataType) { return false; }
+
+  bool isLegalMaskedExpandLoad(Type *DataType) { return false; }
 
   bool hasDivRemOp(Type *DataType, bool IsSigned) { return false; }
 
@@ -526,6 +515,14 @@ public:
             Callee->getFnAttribute("target-features"));
   }
 
+  bool areFunctionArgsABICompatible(const Function *Caller, const Function *Callee,
+                                    SmallPtrSetImpl<Argument *> &Args) const {
+    return (Caller->getFnAttribute("target-cpu") ==
+            Callee->getFnAttribute("target-cpu")) &&
+           (Caller->getFnAttribute("target-features") ==
+            Callee->getFnAttribute("target-features"));
+  }
+
   bool isIndexedLoadLegal(TTI::MemIndexedMode Mode, Type *Ty,
                           const DataLayout &DL) const {
     return false;
@@ -573,6 +570,10 @@ public:
 
   bool shouldExpandReduction(const IntrinsicInst *II) const {
     return true;
+  }
+
+  unsigned getGISelRematGlobalCost() const {
+    return 1;
   }
 
 protected:
@@ -671,7 +672,7 @@ protected:
 public:
   using BaseT::getCallCost;
 
-  unsigned getCallCost(const Function *F, int NumArgs) {
+  unsigned getCallCost(const Function *F, int NumArgs, const User *U) {
     assert(F && "A concrete function must be provided to this routine.");
 
     if (NumArgs < 0)
@@ -683,35 +684,34 @@ public:
       FunctionType *FTy = F->getFunctionType();
       SmallVector<Type *, 8> ParamTys(FTy->param_begin(), FTy->param_end());
       return static_cast<T *>(this)
-          ->getIntrinsicCost(IID, FTy->getReturnType(), ParamTys);
+          ->getIntrinsicCost(IID, FTy->getReturnType(), ParamTys, U);
     }
 
     if (!static_cast<T *>(this)->isLoweredToCall(F))
       return TTI::TCC_Basic; // Give a basic cost if it will be lowered
                              // directly.
 
-    return static_cast<T *>(this)->getCallCost(F->getFunctionType(), NumArgs);
+    return static_cast<T *>(this)->getCallCost(F->getFunctionType(), NumArgs, U);
   }
 
-  unsigned getCallCost(const Function *F, ArrayRef<const Value *> Arguments) {
+  unsigned getCallCost(const Function *F, ArrayRef<const Value *> Arguments,
+                       const User *U) {
     // Simply delegate to generic handling of the call.
     // FIXME: We should use instsimplify or something else to catch calls which
     // will constant fold with these arguments.
-    return static_cast<T *>(this)->getCallCost(F, Arguments.size());
+    return static_cast<T *>(this)->getCallCost(F, Arguments.size(), U);
   }
 
   using BaseT::getGEPCost;
 
   int getGEPCost(Type *PointeeType, const Value *Ptr,
                  ArrayRef<const Value *> Operands) {
-    const GlobalValue *BaseGV = nullptr;
-    if (Ptr != nullptr) {
-      // TODO: will remove this when pointers have an opaque type.
-      assert(Ptr->getType()->getScalarType()->getPointerElementType() ==
-                 PointeeType &&
-             "explicit pointee type doesn't match operand's pointee type");
-      BaseGV = dyn_cast<GlobalValue>(Ptr->stripPointerCasts());
-    }
+    assert(PointeeType && Ptr && "can't get GEPCost of nullptr");
+    // TODO: will remove this when pointers have an opaque type.
+    assert(Ptr->getType()->getScalarType()->getPointerElementType() ==
+               PointeeType &&
+           "explicit pointee type doesn't match operand's pointee type");
+    auto *BaseGV = dyn_cast<GlobalValue>(Ptr->stripPointerCasts());
     bool HasBaseReg = (BaseGV == nullptr);
 
     auto PtrSizeBits = DL.getPointerTypeSizeInBits(Ptr->getType());
@@ -754,21 +754,60 @@ public:
       }
     }
 
-    // Assumes the address space is 0 when Ptr is nullptr.
-    unsigned AS =
-        (Ptr == nullptr ? 0 : Ptr->getType()->getPointerAddressSpace());
-
     if (static_cast<T *>(this)->isLegalAddressingMode(
             TargetType, const_cast<GlobalValue *>(BaseGV),
-            BaseOffset.sextOrTrunc(64).getSExtValue(), HasBaseReg, Scale, AS))
+            BaseOffset.sextOrTrunc(64).getSExtValue(), HasBaseReg, Scale,
+            Ptr->getType()->getPointerAddressSpace()))
       return TTI::TCC_Free;
     return TTI::TCC_Basic;
   }
 
-  using BaseT::getIntrinsicCost;
+  unsigned getIntrinsicCost(Intrinsic::ID IID, Type *RetTy,
+                            ArrayRef<Type *> ParamTys, const User *U) {
+    switch (IID) {
+    default:
+      // Intrinsics rarely (if ever) have normal argument setup constraints.
+      // Model them as having a basic instruction cost.
+      return TTI::TCC_Basic;
+
+    // TODO: other libc intrinsics.
+    case Intrinsic::memcpy:
+      return static_cast<T *>(this)->getMemcpyCost(dyn_cast<Instruction>(U));
+
+    case Intrinsic::annotation:
+    case Intrinsic::assume:
+    case Intrinsic::sideeffect:
+    case Intrinsic::dbg_declare:
+    case Intrinsic::dbg_value:
+    case Intrinsic::dbg_label:
+    case Intrinsic::invariant_start:
+    case Intrinsic::invariant_end:
+    case Intrinsic::launder_invariant_group:
+    case Intrinsic::strip_invariant_group:
+    case Intrinsic::is_constant:
+    case Intrinsic::lifetime_start:
+    case Intrinsic::lifetime_end:
+    case Intrinsic::objectsize:
+    case Intrinsic::ptr_annotation:
+    case Intrinsic::var_annotation:
+    case Intrinsic::experimental_gc_result:
+    case Intrinsic::experimental_gc_relocate:
+    case Intrinsic::coro_alloc:
+    case Intrinsic::coro_begin:
+    case Intrinsic::coro_free:
+    case Intrinsic::coro_end:
+    case Intrinsic::coro_frame:
+    case Intrinsic::coro_size:
+    case Intrinsic::coro_suspend:
+    case Intrinsic::coro_param:
+    case Intrinsic::coro_subfn_addr:
+      // These intrinsics don't actually represent code after lowering.
+      return TTI::TCC_Free;
+    }
+  }
 
   unsigned getIntrinsicCost(Intrinsic::ID IID, Type *RetTy,
-                            ArrayRef<const Value *> Arguments) {
+                            ArrayRef<const Value *> Arguments, const User *U) {
     // Delegate to the generic intrinsic handling code. This mostly provides an
     // opportunity for targets to (for example) special case the cost of
     // certain intrinsics based on constants used as arguments.
@@ -776,7 +815,7 @@ public:
     ParamTys.reserve(Arguments.size());
     for (unsigned Idx = 0, Size = Arguments.size(); Idx != Size; ++Idx)
       ParamTys.push_back(Arguments[Idx]->getType());
-    return static_cast<T *>(this)->getIntrinsicCost(IID, RetTy, ParamTys);
+    return static_cast<T *>(this)->getIntrinsicCost(IID, RetTy, ParamTys, U);
   }
 
   unsigned getUserCost(const User *U, ArrayRef<const Value *> Operands) {
@@ -800,22 +839,18 @@ public:
         // Just use the called value type.
         Type *FTy = CS.getCalledValue()->getType()->getPointerElementType();
         return static_cast<T *>(this)
-            ->getCallCost(cast<FunctionType>(FTy), CS.arg_size());
+            ->getCallCost(cast<FunctionType>(FTy), CS.arg_size(), U);
       }
 
       SmallVector<const Value *, 8> Arguments(CS.arg_begin(), CS.arg_end());
-      return static_cast<T *>(this)->getCallCost(F, Arguments);
+      return static_cast<T *>(this)->getCallCost(F, Arguments, U);
     }
 
-    if (const CastInst *CI = dyn_cast<CastInst>(U)) {
-      // Result of a cmp instruction is often extended (to be used by other
-      // cmp instructions, logical or return instructions). These are usually
-      // nop on most sane targets.
-      if (isa<CmpInst>(CI->getOperand(0)))
-        return TTI::TCC_Free;
-      if (isa<SExtInst>(CI) || isa<ZExtInst>(CI) || isa<FPExtInst>(CI))
-        return static_cast<T *>(this)->getExtCost(CI, Operands.back());
-    }
+    if (isa<SExtInst>(U) || isa<ZExtInst>(U) || isa<FPExtInst>(U))
+      // The old behaviour of generally treating extensions of icmp to be free
+      // has been removed. A target that needs it should override getUserCost().
+      return static_cast<T *>(this)->getExtCost(cast<Instruction>(U),
+                                                Operands.back());
 
     return static_cast<T *>(this)->getOperationCost(
         Operator::getOpcode(U), U->getType(),

@@ -1,9 +1,8 @@
 //===- DWARFDebugAranges.cpp ----------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -24,11 +23,11 @@ using namespace llvm;
 void DWARFDebugAranges::extract(DataExtractor DebugArangesData) {
   if (!DebugArangesData.isValidOffset(0))
     return;
-  uint32_t Offset = 0;
+  uint64_t Offset = 0;
   DWARFDebugArangeSet Set;
 
   while (Set.extract(DebugArangesData, &Offset)) {
-    uint32_t CUOffset = Set.getCompileUnitDIEOffset();
+    uint64_t CUOffset = Set.getCompileUnitDIEOffset();
     for (const auto &Desc : Set.descriptors()) {
       uint64_t LowPC = Desc.Address;
       uint64_t HighPC = Desc.getEndAddress();
@@ -52,7 +51,7 @@ void DWARFDebugAranges::generate(DWARFContext *CTX) {
   // it may describe only a small subset of compilation units, so we need to
   // manually build aranges for the rest of them.
   for (const auto &CU : CTX->compile_units()) {
-    uint32_t CUOffset = CU->getOffset();
+    uint64_t CUOffset = CU->getOffset();
     if (ParsedCUOffsets.insert(CUOffset).second) {
       Expected<DWARFAddressRangesVector> CURanges = CU->collectAddressRanges();
       if (!CURanges)
@@ -72,7 +71,7 @@ void DWARFDebugAranges::clear() {
   ParsedCUOffsets.clear();
 }
 
-void DWARFDebugAranges::appendRange(uint32_t CUOffset, uint64_t LowPC,
+void DWARFDebugAranges::appendRange(uint64_t CUOffset, uint64_t LowPC,
                                     uint64_t HighPC) {
   if (LowPC >= HighPC)
     return;
@@ -81,7 +80,7 @@ void DWARFDebugAranges::appendRange(uint32_t CUOffset, uint64_t LowPC,
 }
 
 void DWARFDebugAranges::construct() {
-  std::multiset<uint32_t> ValidCUs;  // Maintain the set of CUs describing
+  std::multiset<uint64_t> ValidCUs;  // Maintain the set of CUs describing
                                      // a current address range.
   llvm::sort(Endpoints);
   uint64_t PrevAddress = -1ULL;
@@ -115,20 +114,9 @@ void DWARFDebugAranges::construct() {
 }
 
 uint32_t DWARFDebugAranges::findAddress(uint64_t Address) const {
-  if (!Aranges.empty()) {
-    Range range(Address);
-    RangeCollIterator begin = Aranges.begin();
-    RangeCollIterator end = Aranges.end();
-    RangeCollIterator pos =
-        std::lower_bound(begin, end, range);
-
-    if (pos != end && pos->containsAddress(Address)) {
-      return pos->CUOffset;
-    } else if (pos != begin) {
-      --pos;
-      if (pos->containsAddress(Address))
-        return pos->CUOffset;
-    }
-  }
+  RangeCollIterator It =
+      llvm::bsearch(Aranges, [=](Range RHS) { return Address < RHS.HighPC(); });
+  if (It != Aranges.end() && It->LowPC <= Address)
+    return It->CUOffset;
   return -1U;
 }

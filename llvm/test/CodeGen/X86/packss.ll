@@ -172,19 +172,19 @@ define <8 x i16> @trunc_ashr_v4i64_demandedelts(<4 x i64> %a0) {
 ;
 ; X86-AVX1-LABEL: trunc_ashr_v4i64_demandedelts:
 ; X86-AVX1:       # %bb.0:
-; X86-AVX1-NEXT:    vpsllq $63, %xmm0, %xmm1
-; X86-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; X86-AVX1-NEXT:    vpsllq $63, %xmm2, %xmm3
-; X86-AVX1-NEXT:    vpsrlq $63, %xmm3, %xmm3
-; X86-AVX1-NEXT:    vpblendw {{.*#+}} xmm2 = xmm3[0,1,2,3],xmm2[4,5,6,7]
-; X86-AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [1,0,0,0,0,0,0,32768]
-; X86-AVX1-NEXT:    vpxor %xmm3, %xmm2, %xmm2
-; X86-AVX1-NEXT:    vpsubq %xmm3, %xmm2, %xmm2
+; X86-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; X86-AVX1-NEXT:    vpsllq $63, %xmm1, %xmm2
+; X86-AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm2[0,1,2,3],xmm1[4,5,6,7]
+; X86-AVX1-NEXT:    vpsllq $63, %xmm0, %xmm2
 ; X86-AVX1-NEXT:    vpsrlq $63, %xmm1, %xmm1
-; X86-AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm1[0,1,2,3],xmm0[4,5,6,7]
+; X86-AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [1,0,0,2147483648]
+; X86-AVX1-NEXT:    vpxor %xmm3, %xmm1, %xmm1
+; X86-AVX1-NEXT:    vpsubq %xmm3, %xmm1, %xmm1
+; X86-AVX1-NEXT:    vpsrlq $63, %xmm2, %xmm2
+; X86-AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm2[0,1,2,3],xmm0[4,5,6,7]
 ; X86-AVX1-NEXT:    vpxor %xmm3, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    vpsubq %xmm3, %xmm0, %xmm0
-; X86-AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; X86-AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; X86-AVX1-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[0,0,0,0,4,4,4,4]
 ; X86-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; X86-AVX1-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
@@ -193,7 +193,8 @@ define <8 x i16> @trunc_ashr_v4i64_demandedelts(<4 x i64> %a0) {
 ;
 ; X86-AVX2-LABEL: trunc_ashr_v4i64_demandedelts:
 ; X86-AVX2:       # %bb.0:
-; X86-AVX2-NEXT:    vmovdqa {{.*#+}} ymm1 = [63,0,0,0,63,0,0,0]
+; X86-AVX2-NEXT:    vbroadcasti128 {{.*#+}} ymm1 = [63,0,0,0,63,0,0,0]
+; X86-AVX2-NEXT:    # ymm1 = mem[0,1,0,1]
 ; X86-AVX2-NEXT:    vpsllvq %ymm1, %ymm0, %ymm0
 ; X86-AVX2-NEXT:    vmovdqa {{.*#+}} ymm2 = [0,2147483648,0,2147483648,0,2147483648,0,2147483648]
 ; X86-AVX2-NEXT:    vpsrlvq %ymm1, %ymm2, %ymm2
@@ -224,19 +225,19 @@ define <8 x i16> @trunc_ashr_v4i64_demandedelts(<4 x i64> %a0) {
 ;
 ; X64-AVX1-LABEL: trunc_ashr_v4i64_demandedelts:
 ; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    vpsllq $63, %xmm0, %xmm1
-; X64-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; X64-AVX1-NEXT:    vpsllq $63, %xmm2, %xmm3
-; X64-AVX1-NEXT:    vpsrlq $63, %xmm3, %xmm3
-; X64-AVX1-NEXT:    vpblendw {{.*#+}} xmm2 = xmm3[0,1,2,3],xmm2[4,5,6,7]
-; X64-AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [1,9223372036854775808]
-; X64-AVX1-NEXT:    vpxor %xmm3, %xmm2, %xmm2
-; X64-AVX1-NEXT:    vpsubq %xmm3, %xmm2, %xmm2
+; X64-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; X64-AVX1-NEXT:    vpsllq $63, %xmm1, %xmm2
+; X64-AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm2[0,1,2,3],xmm1[4,5,6,7]
+; X64-AVX1-NEXT:    vpsllq $63, %xmm0, %xmm2
 ; X64-AVX1-NEXT:    vpsrlq $63, %xmm1, %xmm1
-; X64-AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm1[0,1,2,3],xmm0[4,5,6,7]
+; X64-AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [1,9223372036854775808]
+; X64-AVX1-NEXT:    vpxor %xmm3, %xmm1, %xmm1
+; X64-AVX1-NEXT:    vpsubq %xmm3, %xmm1, %xmm1
+; X64-AVX1-NEXT:    vpsrlq $63, %xmm2, %xmm2
+; X64-AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm2[0,1,2,3],xmm0[4,5,6,7]
 ; X64-AVX1-NEXT:    vpxor %xmm3, %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vpsubq %xmm3, %xmm0, %xmm0
-; X64-AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; X64-AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; X64-AVX1-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[0,0,0,0,4,4,4,4]
 ; X64-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; X64-AVX1-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0

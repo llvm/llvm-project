@@ -1,5 +1,6 @@
 ; RUN: llc < %s -mtriple=arm64-eabi -aarch64-enable-atomic-cfg-tidy=0 -disable-post-ra -verify-machineinstrs | FileCheck %s
 ; RUN: llc < %s -mtriple=arm64-eabi -aarch64-enable-atomic-cfg-tidy=0 -fast-isel -fast-isel-abort=1 -disable-post-ra -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-eabi -aarch64-enable-atomic-cfg-tidy=0 -global-isel -global-isel-abort=2 -pass-remarks-missed=gisel* -disable-post-ra -verify-machineinstrs | FileCheck %s --check-prefixes=GISEL,FALLBACK
 
 ;
 ; Get the actual value of the overflow bit.
@@ -105,11 +106,15 @@ entry:
   ret i1 %obit
 }
 
+; FALLBACK-NOT: remark{{.*}}uaddo.i32
 define zeroext i1 @uaddo.i32(i32 %v1, i32 %v2, i32* %res) {
 entry:
 ; CHECK-LABEL:  uaddo.i32
 ; CHECK:        adds {{w[0-9]+}}, w0, w1
 ; CHECK-NEXT:   cset {{w[0-9]+}}, hs
+; GISEL-LABEL:  uaddo.i32
+; GISEL:        adds {{w[0-9]+}}, w0, w1
+; GISEL-NEXT:   cset {{w[0-9]+}}, hs
   %t = call {i32, i1} @llvm.uadd.with.overflow.i32(i32 %v1, i32 %v2)
   %val = extractvalue {i32, i1} %t, 0
   %obit = extractvalue {i32, i1} %t, 1
@@ -117,11 +122,15 @@ entry:
   ret i1 %obit
 }
 
+; FALLBACK-NOT: remark{{.*}}uaddo.i64
 define zeroext i1 @uaddo.i64(i64 %v1, i64 %v2, i64* %res) {
 entry:
 ; CHECK-LABEL:  uaddo.i64
 ; CHECK:        adds {{x[0-9]+}}, x0, x1
 ; CHECK-NEXT:   cset {{w[0-9]+}}, hs
+; GISEL-LABEL:  uaddo.i64
+; GISEL:        adds {{x[0-9]+}}, x0, x1
+; GISEL-NEXT:   cset {{w[0-9]+}}, hs
   %t = call {i64, i1} @llvm.uadd.with.overflow.i64(i64 %v1, i64 %v2)
   %val = extractvalue {i64, i1} %t, 0
   %obit = extractvalue {i64, i1} %t, 1

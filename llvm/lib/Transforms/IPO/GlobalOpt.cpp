@@ -1,9 +1,8 @@
 //===- GlobalOpt.cpp - Optimize Global Variables --------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -730,7 +729,8 @@ static bool OptimizeAwayTrappingUsesOfValue(Value *V, Constant *NewV) {
           break;
       if (Idxs.size() == GEPI->getNumOperands()-1)
         Changed |= OptimizeAwayTrappingUsesOfValue(
-            GEPI, ConstantExpr::getGetElementPtr(nullptr, NewV, Idxs));
+            GEPI, ConstantExpr::getGetElementPtr(GEPI->getSourceElementType(),
+                                                 NewV, Idxs));
       if (GEPI->use_empty()) {
         Changed = true;
         GEPI->eraseFromParent();
@@ -906,9 +906,10 @@ OptimizeGlobalAddressOfMalloc(GlobalVariable *GV, CallInst *CI, Type *AllocTy,
 
       // Replace the cmp X, 0 with a use of the bool value.
       // Sink the load to where the compare was, if atomic rules allow us to.
-      Value *LV = new LoadInst(InitBool, InitBool->getName()+".val", false, 0,
+      Value *LV = new LoadInst(InitBool->getValueType(), InitBool,
+                               InitBool->getName() + ".val", false, 0,
                                LI->getOrdering(), LI->getSyncScopeID(),
-                               LI->isUnordered() ? (Instruction*)ICI : LI);
+                               LI->isUnordered() ? (Instruction *)ICI : LI);
       InitBoolUsed = true;
       switch (ICI->getPredicate()) {
       default: llvm_unreachable("Unknown ICmp Predicate!");
@@ -1041,7 +1042,8 @@ static void ReplaceUsesOfMallocWithGlobal(Instruction *Alloc,
     }
 
     // Insert a load from the global, and use it instead of the malloc.
-    Value *NL = new LoadInst(GV, GV->getName()+".val", InsertPt);
+    Value *NL =
+        new LoadInst(GV->getValueType(), GV, GV->getName() + ".val", InsertPt);
     U->replaceUsesOfWith(Alloc, NL);
   }
 }
@@ -1164,10 +1166,10 @@ static Value *GetHeapSROAValue(Value *V, unsigned FieldNo,
   if (LoadInst *LI = dyn_cast<LoadInst>(V)) {
     // This is a scalarized version of the load from the global.  Just create
     // a new Load of the scalarized global.
-    Result = new LoadInst(GetHeapSROAValue(LI->getOperand(0), FieldNo,
-                                           InsertedScalarizedValues,
-                                           PHIsToRewrite),
-                          LI->getName()+".f"+Twine(FieldNo), LI);
+    Value *V = GetHeapSROAValue(LI->getOperand(0), FieldNo,
+                                InsertedScalarizedValues, PHIsToRewrite);
+    Result = new LoadInst(V->getType()->getPointerElementType(), V,
+                          LI->getName() + ".f" + Twine(FieldNo), LI);
   } else {
     PHINode *PN = cast<PHINode>(V);
     // PN's type is pointer to struct.  Make a new PHI of pointer to struct
@@ -1357,7 +1359,9 @@ static GlobalVariable *PerformHeapAllocSRoA(GlobalVariable *GV, CallInst *CI,
   // Within the NullPtrBlock, we need to emit a comparison and branch for each
   // pointer, because some may be null while others are not.
   for (unsigned i = 0, e = FieldGlobals.size(); i != e; ++i) {
-    Value *GVVal = new LoadInst(FieldGlobals[i], "tmp", NullPtrBlock);
+    Value *GVVal =
+        new LoadInst(cast<GlobalVariable>(FieldGlobals[i])->getValueType(),
+                     FieldGlobals[i], "tmp", NullPtrBlock);
     Value *Cmp = new ICmpInst(*NullPtrBlock, ICmpInst::ICMP_NE, GVVal,
                               Constant::getNullValue(GVVal->getType()));
     BasicBlock *FreeBlock = BasicBlock::Create(Cmp->getContext(), "free_it",
@@ -1650,6 +1654,9 @@ static bool TryToShrinkGlobalToBoolean(GlobalVariable *GV, Constant *OtherVal) {
       for(auto *GVe : GVs){
         DIGlobalVariable *DGV = GVe->getVariable();
         DIExpression *E = GVe->getExpression();
+        const DataLayout &DL = GV->getParent()->getDataLayout();
+        unsigned SizeInOctets =
+          DL.getTypeAllocSizeInBits(NewGV->getType()->getElementType()) / 8;
 
         // It is expected that the address of global optimized variable is on
         // top of the stack. After optimization, value of that variable will
@@ -1660,10 +1667,12 @@ static bool TryToShrinkGlobalToBoolean(GlobalVariable *GV, Constant *OtherVal) {
         // DW_OP_deref DW_OP_constu <ValMinus>
         // DW_OP_mul DW_OP_constu <ValInit> DW_OP_plus DW_OP_stack_value
         SmallVector<uint64_t, 12> Ops = {
-            dwarf::DW_OP_deref, dwarf::DW_OP_constu, ValMinus,
-            dwarf::DW_OP_mul,   dwarf::DW_OP_constu, ValInit,
+            dwarf::DW_OP_deref_size, SizeInOctets,
+            dwarf::DW_OP_constu, ValMinus,
+            dwarf::DW_OP_mul, dwarf::DW_OP_constu, ValInit,
             dwarf::DW_OP_plus};
-        E = DIExpression::prependOpcodes(E, Ops, DIExpression::WithStackValue);
+        bool WithStackValue = true;
+        E = DIExpression::prependOpcodes(E, Ops, WithStackValue);
         DIGlobalVariableExpression *DGVE =
           DIGlobalVariableExpression::get(NewGV->getContext(), DGV, E);
         NewGV->addDebugInfo(DGVE);
@@ -1701,7 +1710,8 @@ static bool TryToShrinkGlobalToBoolean(GlobalVariable *GV, Constant *OtherVal) {
         if (LoadInst *LI = dyn_cast<LoadInst>(StoredVal)) {
           assert(LI->getOperand(0) == GV && "Not a copy!");
           // Insert a new load, to preserve the saved value.
-          StoreVal = new LoadInst(NewGV, LI->getName()+".b", false, 0,
+          StoreVal = new LoadInst(NewGV->getValueType(), NewGV,
+                                  LI->getName() + ".b", false, 0,
                                   LI->getOrdering(), LI->getSyncScopeID(), LI);
         } else {
           assert((isa<CastInst>(StoredVal) || isa<SelectInst>(StoredVal)) &&
@@ -1717,8 +1727,9 @@ static bool TryToShrinkGlobalToBoolean(GlobalVariable *GV, Constant *OtherVal) {
     } else {
       // Change the load into a load of bool then a select.
       LoadInst *LI = cast<LoadInst>(UI);
-      LoadInst *NLI = new LoadInst(NewGV, LI->getName()+".b", false, 0,
-                                   LI->getOrdering(), LI->getSyncScopeID(), LI);
+      LoadInst *NLI =
+          new LoadInst(NewGV->getValueType(), NewGV, LI->getName() + ".b",
+                       false, 0, LI->getOrdering(), LI->getSyncScopeID(), LI);
       Instruction *NSI;
       if (IsOneZero)
         NSI = new ZExtInst(NLI, LI->getType(), "", LI);
@@ -1970,7 +1981,12 @@ static bool processInternalGlobal(
   }
   if (GS.StoredType <= GlobalStatus::InitializerStored) {
     LLVM_DEBUG(dbgs() << "MARKING CONSTANT: " << *GV << "\n");
-    GV->setConstant(true);
+
+    // Don't actually mark a global constant if it's atomic because atomic loads
+    // are implemented by a trivial cmpxchg in some edge-cases and that usually
+    // requires write access to the variable even if it's not actually changed.
+    if (GS.Ordering == AtomicOrdering::NotAtomic)
+      GV->setConstant(true);
 
     // Clean up any obviously simplifiable users now.
     CleanupConstantGlobalUsers(GV, GV->getInitializer(), DL, TLI);
@@ -2084,21 +2100,21 @@ static void ChangeCalleesToFastCall(Function *F) {
   }
 }
 
-static AttributeList StripNest(LLVMContext &C, AttributeList Attrs) {
-  // There can be at most one attribute set with a nest attribute.
-  unsigned NestIndex;
-  if (Attrs.hasAttrSomewhere(Attribute::Nest, &NestIndex))
-    return Attrs.removeAttribute(C, NestIndex, Attribute::Nest);
+static AttributeList StripAttr(LLVMContext &C, AttributeList Attrs,
+                               Attribute::AttrKind A) {
+  unsigned AttrIndex;
+  if (Attrs.hasAttrSomewhere(A, &AttrIndex))
+    return Attrs.removeAttribute(C, AttrIndex, A);
   return Attrs;
 }
 
-static void RemoveNestAttribute(Function *F) {
-  F->setAttributes(StripNest(F->getContext(), F->getAttributes()));
+static void RemoveAttribute(Function *F, Attribute::AttrKind A) {
+  F->setAttributes(StripAttr(F->getContext(), F->getAttributes(), A));
   for (User *U : F->users()) {
     if (isa<BlockAddress>(U))
       continue;
     CallSite CS(cast<Instruction>(U));
-    CS.setAttributes(StripNest(F->getContext(), CS.getAttributes()));
+    CS.setAttributes(StripAttr(F->getContext(), CS.getAttributes(), A));
   }
 }
 
@@ -2111,13 +2127,6 @@ static bool hasChangeableCC(Function *F) {
 
   // FIXME: Is it worth transforming x86_stdcallcc and x86_fastcallcc?
   if (CC != CallingConv::C && CC != CallingConv::X86_ThisCall)
-    return false;
-
-  // Don't break the invariant that the inalloca parameter is the only parameter
-  // passed in memory.
-  // FIXME: GlobalOpt should remove inalloca when possible and hoist the dynamic
-  // alloca it uses to the entry block if possible.
-  if (F->getAttributes().hasAttrSomewhere(Attribute::InAlloca))
     return false;
 
   // FIXME: Change CC for the whole chain of musttail calls when possible.
@@ -2281,6 +2290,17 @@ OptimizeFunctions(Module &M, TargetLibraryInfo *TLI,
     if (!F->hasLocalLinkage())
       continue;
 
+    // If we have an inalloca parameter that we can safely remove the
+    // inalloca attribute from, do so. This unlocks optimizations that
+    // wouldn't be safe in the presence of inalloca.
+    // FIXME: We should also hoist alloca affected by this to the entry
+    // block if possible.
+    if (F->getAttributes().hasAttrSomewhere(Attribute::InAlloca) &&
+        !F->hasAddressTaken()) {
+      RemoveAttribute(F, Attribute::InAlloca);
+      Changed = true;
+    }
+
     if (hasChangeableCC(F) && !F->isVarArg() && !F->hasAddressTaken()) {
       NumInternalFunc++;
       TargetTransformInfo &TTI = GetTTI(*F);
@@ -2313,7 +2333,7 @@ OptimizeFunctions(Module &M, TargetLibraryInfo *TLI,
         !F->hasAddressTaken()) {
       // The function is not used by a trampoline intrinsic, so it is safe
       // to remove the 'nest' attribute.
-      RemoveNestAttribute(F);
+      RemoveAttribute(F, Attribute::Nest);
       ++NumNestRemoved;
       Changed = true;
     }
@@ -2808,46 +2828,20 @@ static Function *FindCXAAtExit(Module &M, TargetLibraryInfo *TLI) {
 /// Returns whether the given function is an empty C++ destructor and can
 /// therefore be eliminated.
 /// Note that we assume that other optimization passes have already simplified
-/// the code so we only look for a function with a single basic block, where
-/// the only allowed instructions are 'ret', 'call' to an empty C++ dtor and
-/// other side-effect free instructions.
-static bool cxxDtorIsEmpty(const Function &Fn,
-                           SmallPtrSet<const Function *, 8> &CalledFunctions) {
+/// the code so we simply check for 'ret'.
+static bool cxxDtorIsEmpty(const Function &Fn) {
   // FIXME: We could eliminate C++ destructors if they're readonly/readnone and
   // nounwind, but that doesn't seem worth doing.
   if (Fn.isDeclaration())
     return false;
 
-  if (++Fn.begin() != Fn.end())
-    return false;
-
-  const BasicBlock &EntryBlock = Fn.getEntryBlock();
-  for (BasicBlock::const_iterator I = EntryBlock.begin(), E = EntryBlock.end();
-       I != E; ++I) {
-    if (const CallInst *CI = dyn_cast<CallInst>(I)) {
-      // Ignore debug intrinsics.
-      if (isa<DbgInfoIntrinsic>(CI))
-        continue;
-
-      const Function *CalledFn = CI->getCalledFunction();
-
-      if (!CalledFn)
-        return false;
-
-      SmallPtrSet<const Function *, 8> NewCalledFunctions(CalledFunctions);
-
-      // Don't treat recursive functions as empty.
-      if (!NewCalledFunctions.insert(CalledFn).second)
-        return false;
-
-      if (!cxxDtorIsEmpty(*CalledFn, NewCalledFunctions))
-        return false;
-    } else if (isa<ReturnInst>(*I))
-      return true; // We're done.
-    else if (I->mayHaveSideEffects())
-      return false; // Destructor with side effects, bail.
+  for (auto &I : Fn.getEntryBlock()) {
+    if (isa<DbgInfoIntrinsic>(I))
+      continue;
+    if (isa<ReturnInst>(I))
+      return true;
+    break;
   }
-
   return false;
 }
 
@@ -2879,11 +2873,7 @@ static bool OptimizeEmptyGlobalCXXDtors(Function *CXAAtExitFn) {
 
     Function *DtorFn =
       dyn_cast<Function>(CI->getArgOperand(0)->stripPointerCasts());
-    if (!DtorFn)
-      continue;
-
-    SmallPtrSet<const Function *, 8> CalledFunctions;
-    if (!cxxDtorIsEmpty(*DtorFn, CalledFunctions))
+    if (!DtorFn || !cxxDtorIsEmpty(*DtorFn))
       continue;
 
     // Just remove the call.

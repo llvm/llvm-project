@@ -1,9 +1,8 @@
 //===------ utils/wasm2yaml.cpp - obj2yaml conversion tool ------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -32,7 +31,7 @@ public:
 
 } // namespace
 
-static WasmYAML::Table make_table(const wasm::WasmTable &Table) {
+static WasmYAML::Table makeTable(const wasm::WasmTable &Table) {
   WasmYAML::Table T;
   T.ElemType = Table.ElemType;
   T.TableLimits.Flags = Table.Limits.Flags;
@@ -41,7 +40,7 @@ static WasmYAML::Table make_table(const wasm::WasmTable &Table) {
   return T;
 }
 
-static WasmYAML::Limits make_limits(const wasm::WasmLimits &Limits) {
+static WasmYAML::Limits makeLimits(const wasm::WasmLimits &Limits) {
   WasmYAML::Limits L;
   L.Flags = Limits.Flags;
   L.Initial = Limits.Initial;
@@ -94,7 +93,7 @@ WasmDumper::dumpCustomSection(const WasmSection &WasmSec) {
         SegmentInfo.Name = Segment.Data.Name;
         SegmentInfo.Index = SegmentIndex;
         SegmentInfo.Alignment = Segment.Data.Alignment;
-        SegmentInfo.Flags = Segment.Data.Flags;
+        SegmentInfo.Flags = Segment.Data.LinkerFlags;
         LinkingSec->SegmentInfos.push_back(SegmentInfo);
       }
       if (Segment.Data.Comdat != UINT32_MAX) {
@@ -133,6 +132,39 @@ WasmDumper::dumpCustomSection(const WasmSection &WasmSec) {
     }
 
     CustomSec = std::move(LinkingSec);
+  } else if (WasmSec.Name == "producers") {
+    std::unique_ptr<WasmYAML::ProducersSection> ProducersSec =
+        make_unique<WasmYAML::ProducersSection>();
+    const llvm::wasm::WasmProducerInfo &Info = Obj.getProducerInfo();
+    for (auto &E : Info.Languages) {
+      WasmYAML::ProducerEntry Producer;
+      Producer.Name = E.first;
+      Producer.Version = E.second;
+      ProducersSec->Languages.push_back(Producer);
+    }
+    for (auto &E : Info.Tools) {
+      WasmYAML::ProducerEntry Producer;
+      Producer.Name = E.first;
+      Producer.Version = E.second;
+      ProducersSec->Tools.push_back(Producer);
+    }
+    for (auto &E : Info.SDKs) {
+      WasmYAML::ProducerEntry Producer;
+      Producer.Name = E.first;
+      Producer.Version = E.second;
+      ProducersSec->SDKs.push_back(Producer);
+    }
+    CustomSec = std::move(ProducersSec);
+  } else if (WasmSec.Name == "target_features") {
+    std::unique_ptr<WasmYAML::TargetFeaturesSection> TargetFeaturesSec =
+        make_unique<WasmYAML::TargetFeaturesSection>();
+    for (auto &E : Obj.getTargetFeatures()) {
+      WasmYAML::FeatureEntry Feature;
+      Feature.Prefix = E.Prefix;
+      Feature.Name = E.Name;
+      TargetFeaturesSec->Features.push_back(Feature);
+    }
+    CustomSec = std::move(TargetFeaturesSec);
   } else {
     CustomSec = make_unique<WasmYAML::CustomSection>(WasmSec.Name);
   }
@@ -172,7 +204,7 @@ ErrorOr<WasmYAML::Object *> WasmDumper::dump() {
         if (FunctionSig.Returns.size())
           Sig.ReturnType = static_cast<uint32_t>(FunctionSig.Returns[0]);
         for (const auto &ParamType : FunctionSig.Params)
-          Sig.ParamTypes.push_back(static_cast<uint32_t>(ParamType));
+          Sig.ParamTypes.emplace_back(static_cast<uint32_t>(ParamType));
         TypeSec->Signatures.push_back(Sig);
       }
       S = std::move(TypeSec);
@@ -198,10 +230,10 @@ ErrorOr<WasmYAML::Object *> WasmDumper::dump() {
           Im.EventImport.SigIndex = Import.Event.SigIndex;
           break;
         case wasm::WASM_EXTERNAL_TABLE:
-          Im.TableImport = make_table(Import.Table);
+          Im.TableImport = makeTable(Import.Table);
           break;
         case wasm::WASM_EXTERNAL_MEMORY:
-          Im.Memory = make_limits(Import.Memory);
+          Im.Memory = makeLimits(Import.Memory);
           break;
         }
         ImportSec->Imports.push_back(Im);
@@ -220,7 +252,7 @@ ErrorOr<WasmYAML::Object *> WasmDumper::dump() {
     case wasm::WASM_SEC_TABLE: {
       auto TableSec = make_unique<WasmYAML::TableSection>();
       for (const wasm::WasmTable &Table : Obj.tables()) {
-        TableSec->Tables.push_back(make_table(Table));
+        TableSec->Tables.push_back(makeTable(Table));
       }
       S = std::move(TableSec);
       break;
@@ -228,7 +260,7 @@ ErrorOr<WasmYAML::Object *> WasmDumper::dump() {
     case wasm::WASM_SEC_MEMORY: {
       auto MemorySec = make_unique<WasmYAML::MemorySection>();
       for (const wasm::WasmLimits &Memory : Obj.memories()) {
-        MemorySec->Memories.push_back(make_limits(Memory));
+        MemorySec->Memories.push_back(makeLimits(Memory));
       }
       S = std::move(MemorySec);
       break;
@@ -312,12 +344,19 @@ ErrorOr<WasmYAML::Object *> WasmDumper::dump() {
       for (const object::WasmSegment &Segment : Obj.dataSegments()) {
         WasmYAML::DataSegment Seg;
         Seg.SectionOffset = Segment.SectionOffset;
+        Seg.InitFlags = Segment.Data.InitFlags;
         Seg.MemoryIndex = Segment.Data.MemoryIndex;
         Seg.Offset = Segment.Data.Offset;
         Seg.Content = yaml::BinaryRef(Segment.Data.Content);
         DataSec->Segments.push_back(Seg);
       }
       S = std::move(DataSec);
+      break;
+    }
+    case wasm::WASM_SEC_DATACOUNT: {
+      auto DataCountSec = make_unique<WasmYAML::DataCountSection>();
+      DataCountSec->Count = Obj.dataSegments().size();
+      S = std::move(DataCountSec);
       break;
     }
     default:

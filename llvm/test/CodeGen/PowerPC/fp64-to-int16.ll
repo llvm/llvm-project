@@ -5,8 +5,8 @@ target triple = "powerpc64le--linux-gnu"
 define i1 @Test(double %a) {
 ; CHECK-LABEL: Test:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xscvdpsxws 1, 1
-; CHECK-NEXT:    mfvsrwz 3, 1
+; CHECK-NEXT:    xscvdpsxws 0, 1
+; CHECK-NEXT:    mfvsrwz 3, 0
 ; CHECK-NEXT:    xori 3, 3, 65534
 ; CHECK-NEXT:    cntlzw 3, 3
 ; CHECK-NEXT:    srwi 3, 3, 5

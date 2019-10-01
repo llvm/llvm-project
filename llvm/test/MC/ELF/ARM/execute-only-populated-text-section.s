@@ -1,5 +1,5 @@
 // RUN: llvm-mc -filetype=obj -triple thumbv7m-arm-linux-gnu %s -o - \
-// RUN: | llvm-readobj -s -t | FileCheck %s
+// RUN: | llvm-readobj -S --symbols | FileCheck %s
 
         .text
         bx      lr

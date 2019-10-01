@@ -1,9 +1,8 @@
 //===- X86InstrVecCompiler.td - Vector Compiler Patterns ---*- tablegen -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -99,76 +98,6 @@ defm : subvector_subreg_lowering<VR256, v16i16, VR512, v32i16, sub_ymm>;
 defm : subvector_subreg_lowering<VR256, v32i8,  VR512, v64i8,  sub_ymm>;
 
 
-multiclass subvector_store_lowering<string AlignedStr, string UnalignedStr,
-                                    RegisterClass RC, ValueType DstTy,
-                                    ValueType SrcTy, SubRegIndex SubIdx> {
-  def : Pat<(alignedstore (DstTy (extract_subvector
-                                  (SrcTy RC:$src), (iPTR 0))), addr:$dst),
-            (!cast<Instruction>("VMOV"#AlignedStr#"mr") addr:$dst,
-             (DstTy (EXTRACT_SUBREG RC:$src, SubIdx)))>;
-
-  def : Pat<(store (DstTy (extract_subvector
-                           (SrcTy RC:$src), (iPTR 0))), addr:$dst),
-            (!cast<Instruction>("VMOV"#UnalignedStr#"mr") addr:$dst,
-             (DstTy (EXTRACT_SUBREG RC:$src, SubIdx)))>;
-}
-
-let Predicates = [HasAVX, NoVLX] in {
-  defm : subvector_store_lowering<"APD", "UPD", VR256X, v2f64, v4f64,  sub_xmm>;
-  defm : subvector_store_lowering<"APS", "UPS", VR256X, v4f32, v8f32,  sub_xmm>;
-  defm : subvector_store_lowering<"DQA", "DQU", VR256X, v2i64, v4i64,  sub_xmm>;
-  defm : subvector_store_lowering<"DQA", "DQU", VR256X, v4i32, v8i32,  sub_xmm>;
-  defm : subvector_store_lowering<"DQA", "DQU", VR256X, v8i16, v16i16, sub_xmm>;
-  defm : subvector_store_lowering<"DQA", "DQU", VR256X, v16i8, v32i8,  sub_xmm>;
-}
-
-let Predicates = [HasVLX] in {
-  // Special patterns for storing subvector extracts of lower 128-bits
-  // Its cheaper to just use VMOVAPS/VMOVUPS instead of VEXTRACTF128mr
-  defm : subvector_store_lowering<"APDZ128", "UPDZ128", VR256X, v2f64, v4f64,
-                                  sub_xmm>;
-  defm : subvector_store_lowering<"APSZ128", "UPSZ128", VR256X, v4f32, v8f32,
-                                  sub_xmm>;
-  defm : subvector_store_lowering<"DQA64Z128", "DQU64Z128", VR256X, v2i64,
-                                  v4i64, sub_xmm>;
-  defm : subvector_store_lowering<"DQA64Z128", "DQU64Z128", VR256X, v4i32,
-                                  v8i32, sub_xmm>;
-  defm : subvector_store_lowering<"DQA64Z128", "DQU64Z128", VR256X, v8i16,
-                                  v16i16, sub_xmm>;
-  defm : subvector_store_lowering<"DQA64Z128", "DQU64Z128", VR256X, v16i8,
-                                  v32i8, sub_xmm>;
-
-  // Special patterns for storing subvector extracts of lower 128-bits of 512.
-  // Its cheaper to just use VMOVAPS/VMOVUPS instead of VEXTRACTF128mr
-  defm : subvector_store_lowering<"APDZ128", "UPDZ128", VR512, v2f64, v8f64,
-                                  sub_xmm>;
-  defm : subvector_store_lowering<"APSZ128", "UPSZ128", VR512, v4f32, v16f32,
-                                  sub_xmm>;
-  defm : subvector_store_lowering<"DQA64Z128", "DQU64Z128", VR512, v2i64,
-                                  v8i64, sub_xmm>;
-  defm : subvector_store_lowering<"DQA64Z128", "DQU64Z128", VR512, v4i32,
-                                  v16i32, sub_xmm>;
-  defm : subvector_store_lowering<"DQA64Z128", "DQU64Z128", VR512, v8i16,
-                                  v32i16, sub_xmm>;
-  defm : subvector_store_lowering<"DQA64Z128", "DQU64Z128", VR512, v16i8,
-                                  v64i8, sub_xmm>;
-
-  // Special patterns for storing subvector extracts of lower 256-bits of 512.
-  // Its cheaper to just use VMOVAPS/VMOVUPS instead of VEXTRACTF128mr
-  defm : subvector_store_lowering<"APDZ256", "UPDZ256", VR512, v4f64, v8f64,
-                                  sub_ymm>;
-  defm : subvector_store_lowering<"APSZ256", "UPSZ256", VR512, v8f32, v16f32,
-                                  sub_ymm>;
-  defm : subvector_store_lowering<"DQA64Z256", "DQU64Z256", VR512, v4i64,
-                                  v8i64, sub_ymm>;
-  defm : subvector_store_lowering<"DQA64Z256", "DQU64Z256", VR512, v8i32,
-                                  v16i32, sub_ymm>;
-  defm : subvector_store_lowering<"DQA64Z256", "DQU64Z256", VR512, v16i16,
-                                  v32i16, sub_ymm>;
-  defm : subvector_store_lowering<"DQA64Z256", "DQU64Z256", VR512, v32i8,
-                                  v64i8, sub_ymm>;
-}
-
 // If we're inserting into an all zeros vector, just use a plain move which
 // will zero the upper bits. A post-isel hook will take care of removing
 // any moves that we can prove are unnecessary.
@@ -176,7 +105,7 @@ multiclass subvec_zero_lowering<string MoveStr,
                                 RegisterClass RC, ValueType DstTy,
                                 ValueType SrcTy, ValueType ZeroTy,
                                 SubRegIndex SubIdx> {
-  def : Pat<(DstTy (insert_subvector (bitconvert (ZeroTy immAllZerosV)),
+  def : Pat<(DstTy (insert_subvector immAllZerosV,
                                      (SrcTy RC:$src), (iPTR 0))),
             (SUBREG_TO_REG (i64 0),
              (SrcTy (!cast<Instruction>("VMOV"#MoveStr#"rr") RC:$src)), SubIdx)>;
@@ -398,7 +327,7 @@ let Predicates = [HasBWI, HasDQI] in {
             (COPY_TO_REGCLASS (KMOVBkk VK8:$mask), VK64)>;
 }
 
-let Predicates = [HasBWI, HasVLX] in {
+let Predicates = [HasBWI] in {
   def : Pat<(v32i1 (insert_subvector (v32i1 immAllZerosV),
                                      (v1i1 VK1:$mask), (iPTR 0))),
             (KSHIFTRDri (KSHIFTLDri (COPY_TO_REGCLASS VK1:$mask, VK32),
@@ -487,7 +416,7 @@ def : Pat<(f128 (X86fxor VR128:$src1, VR128:$src2)),
           (XORPSrr VR128:$src1, VR128:$src2)>;
 }
 
-let Predicates = [HasAVX] in {
+let Predicates = [HasAVX, NoVLX] in {
 // andps is shorter than andpd or pand. andps is SSE and andpd/pand are in SSE2
 def : Pat<(f128 (X86fand VR128:$src1, (loadf128 addr:$src2))),
           (VANDPSrm VR128:$src1, f128mem:$src2)>;
@@ -506,4 +435,25 @@ def : Pat<(f128 (X86fxor VR128:$src1, (loadf128 addr:$src2))),
 
 def : Pat<(f128 (X86fxor VR128:$src1, VR128:$src2)),
           (VXORPSrr VR128:$src1, VR128:$src2)>;
+}
+
+let Predicates = [HasVLX] in {
+// andps is shorter than andpd or pand. andps is SSE and andpd/pand are in SSE2
+def : Pat<(f128 (X86fand VR128X:$src1, (loadf128 addr:$src2))),
+          (VANDPSZ128rm VR128X:$src1, f128mem:$src2)>;
+
+def : Pat<(f128 (X86fand VR128X:$src1, VR128X:$src2)),
+          (VANDPSZ128rr VR128X:$src1, VR128X:$src2)>;
+
+def : Pat<(f128 (X86for VR128X:$src1, (loadf128 addr:$src2))),
+          (VORPSZ128rm VR128X:$src1, f128mem:$src2)>;
+
+def : Pat<(f128 (X86for VR128X:$src1, VR128X:$src2)),
+          (VORPSZ128rr VR128X:$src1, VR128X:$src2)>;
+
+def : Pat<(f128 (X86fxor VR128X:$src1, (loadf128 addr:$src2))),
+          (VXORPSZ128rm VR128X:$src1, f128mem:$src2)>;
+
+def : Pat<(f128 (X86fxor VR128X:$src1, VR128X:$src2)),
+          (VXORPSZ128rr VR128X:$src1, VR128X:$src2)>;
 }

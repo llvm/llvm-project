@@ -1,9 +1,8 @@
 //===-- Execution.cpp - Implement code to simulate the program ------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -41,6 +40,60 @@ static cl::opt<bool> PrintVolatile("interpreter-print-volatile", cl::Hidden,
 
 static void SetValue(Value *V, GenericValue Val, ExecutionContext &SF) {
   SF.Values[V] = Val;
+}
+
+//===----------------------------------------------------------------------===//
+//                    Unary Instruction Implementations
+//===----------------------------------------------------------------------===//
+
+static void executeFNegInst(GenericValue &Dest, GenericValue Src, Type *Ty) {
+  switch (Ty->getTypeID()) {
+  case Type::FloatTyID:
+    Dest.FloatVal = -Src.FloatVal;
+    break;
+  case Type::DoubleTyID:
+    Dest.DoubleVal = -Src.DoubleVal;
+    break;
+  default:
+    llvm_unreachable("Unhandled type for FNeg instruction");
+  }
+}
+
+void Interpreter::visitUnaryOperator(UnaryOperator &I) {
+  ExecutionContext &SF = ECStack.back();
+  Type *Ty = I.getOperand(0)->getType();
+  GenericValue Src = getOperandValue(I.getOperand(0), SF);
+  GenericValue R; // Result
+
+  // First process vector operation
+  if (Ty->isVectorTy()) {
+    R.AggregateVal.resize(Src.AggregateVal.size());
+
+    switch(I.getOpcode()) {
+    default:
+      llvm_unreachable("Don't know how to handle this unary operator");
+      break;
+    case Instruction::FNeg:
+      if (cast<VectorType>(Ty)->getElementType()->isFloatTy()) {
+        for (unsigned i = 0; i < R.AggregateVal.size(); ++i)
+          R.AggregateVal[i].FloatVal = -Src.AggregateVal[i].FloatVal;
+      } else if (cast<VectorType>(Ty)->getElementType()->isDoubleTy()) {
+        for (unsigned i = 0; i < R.AggregateVal.size(); ++i)
+          R.AggregateVal[i].DoubleVal = -Src.AggregateVal[i].DoubleVal;
+      } else {
+        llvm_unreachable("Unhandled type for FNeg instruction");
+      }
+      break;
+    }
+  } else {
+    switch (I.getOpcode()) {
+    default:
+      llvm_unreachable("Don't know how to handle this unary operator");
+      break;
+    case Instruction::FNeg: executeFNegInst(R, Src, Ty); break;
+    }
+  }
+  SetValue(&I, R, SF);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1778,17 +1831,14 @@ void Interpreter::visitExtractElementInst(ExtractElementInst &I) {
 
 void Interpreter::visitInsertElementInst(InsertElementInst &I) {
   ExecutionContext &SF = ECStack.back();
-  Type *Ty = I.getType();
-
-  if(!(Ty->isVectorTy()) )
-    llvm_unreachable("Unhandled dest type for insertelement instruction");
+  VectorType *Ty = cast<VectorType>(I.getType());
 
   GenericValue Src1 = getOperandValue(I.getOperand(0), SF);
   GenericValue Src2 = getOperandValue(I.getOperand(1), SF);
   GenericValue Src3 = getOperandValue(I.getOperand(2), SF);
   GenericValue Dest;
 
-  Type *TyContained = Ty->getContainedType(0);
+  Type *TyContained = Ty->getElementType();
 
   const unsigned indx = unsigned(Src3.IntVal.getZExtValue());
   Dest.AggregateVal = Src1.AggregateVal;
@@ -1814,9 +1864,7 @@ void Interpreter::visitInsertElementInst(InsertElementInst &I) {
 void Interpreter::visitShuffleVectorInst(ShuffleVectorInst &I){
   ExecutionContext &SF = ECStack.back();
 
-  Type *Ty = I.getType();
-  if(!(Ty->isVectorTy()))
-    llvm_unreachable("Unhandled dest type for shufflevector instruction");
+  VectorType *Ty = cast<VectorType>(I.getType());
 
   GenericValue Src1 = getOperandValue(I.getOperand(0), SF);
   GenericValue Src2 = getOperandValue(I.getOperand(1), SF);
@@ -1827,7 +1875,7 @@ void Interpreter::visitShuffleVectorInst(ShuffleVectorInst &I){
   // bytecode can't contain different types for src1 and src2 for a
   // shufflevector instruction.
 
-  Type *TyContained = Ty->getContainedType(0);
+  Type *TyContained = Ty->getElementType();
   unsigned src1Size = (unsigned)Src1.AggregateVal.size();
   unsigned src2Size = (unsigned)Src2.AggregateVal.size();
   unsigned src3Size = (unsigned)Src3.AggregateVal.size();
@@ -2118,7 +2166,7 @@ void Interpreter::run() {
     // Track the number of dynamic instructions executed.
     ++NumDynamicInsts;
 
-    LLVM_DEBUG(dbgs() << "About to interpret: " << I);
+    LLVM_DEBUG(dbgs() << "About to interpret: " << I << "\n");
     visit(I);   // Dispatch to one of the visit* methods...
   }
 }

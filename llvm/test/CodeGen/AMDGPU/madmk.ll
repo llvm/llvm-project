@@ -188,9 +188,9 @@ define amdgpu_kernel void @madmk_add_inline_imm_f32(float addrspace(1)* noalias 
 }
 
 ; SI-LABEL: {{^}}kill_madmk_verifier_error:
+; SI: s_or_b64
 ; SI: s_xor_b64
 ; SI: v_mac_f32_e32 {{v[0-9]+}}, 0x472aee8c, {{v[0-9]+}}
-; SI: s_or_b64
 define amdgpu_kernel void @kill_madmk_verifier_error() nounwind {
 bb:
   br label %bb2

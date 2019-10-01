@@ -1,9 +1,8 @@
 //===- StackProtector.h - Stack Protector Insertion -------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -61,12 +60,6 @@ private:
   /// The minimum size of buffers that will receive stack smashing
   /// protection when -fstack-protection is used.
   unsigned SSPBufferSize = 0;
-
-  /// VisitedPHIs - The set of PHI nodes visited when determining
-  /// if a variable's reference has been taken.  This set
-  /// is maintained to ensure we don't visit the same PHI node multiple
-  /// times.
-  SmallPtrSet<const PHINode *, 16> VisitedPHIs;
 
   // A prologue is generated.
   bool HasPrologue = false;

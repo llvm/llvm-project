@@ -2,11 +2,11 @@
 
 ; RUN: llc < %s -o %t -filetype=obj -O0 -generate-type-units -mtriple=x86_64-unknown-linux-gnu
 ; RUN: llvm-dwarfdump -v %t | FileCheck --check-prefix=CHECK --check-prefix=SINGLE %s
-; RUN: llvm-readobj -s -t %t | FileCheck --check-prefix=OBJ_SINGLE %s
+; RUN: llvm-readobj -S --symbols %t | FileCheck --check-prefix=OBJ_SINGLE %s
 
 ; RUN: llc < %s -split-dwarf-file=foo.dwo -o %t -filetype=obj -O0 -generate-type-units -mtriple=x86_64-unknown-linux-gnu
 ; RUN: llvm-dwarfdump -v %t | FileCheck --check-prefix=CHECK --check-prefix=FISSION %s
-; RUN: llvm-readobj -s -t %t | FileCheck --check-prefix=OBJ_FISSION %s
+; RUN: llvm-readobj -S --symbols %t | FileCheck --check-prefix=OBJ_FISSION %s
 
 ; Generated from bar.cpp:
 
@@ -181,7 +181,7 @@ source_filename = "test/DebugInfo/X86/generate-odr-hash.ll"
 @_ZN7echidna8capybara8mongoose6animalE = global %"class.echidna::capybara::mongoose::fluffy" zeroinitializer, align 4, !dbg !6
 @w = internal global %"struct.<anonymous namespace>::walrus" zeroinitializer, align 1, !dbg !16
 @wom = global %struct.wombat zeroinitializer, align 4, !dbg !25
-@llvm.global_ctors = appending global [1 x { i32, void ()* }] [{ i32, void ()* } { i32 65535, void ()* @_GLOBAL__I_a }]
+@llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @_GLOBAL__I_a, i8* null }]
 
 ; Function Attrs: nounwind uwtable
 define void @_Z3foov() #0 !dbg !40 {

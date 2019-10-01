@@ -1,9 +1,8 @@
 //===-- DWARFExpression.cpp -----------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -118,7 +117,7 @@ static uint8_t getRefAddrSize(uint8_t AddrSize, uint16_t Version) {
 }
 
 bool DWARFExpression::Operation::extract(DataExtractor Data, uint16_t Version,
-                                         uint8_t AddressSize, uint32_t Offset) {
+                                         uint8_t AddressSize, uint64_t Offset) {
   Opcode = Data.getU8(&Offset);
 
   Desc = getOpDesc(Opcode);
@@ -156,17 +155,21 @@ bool DWARFExpression::Operation::extract(DataExtractor Data, uint16_t Version,
     case Operation::SizeAddr:
       if (AddressSize == 8) {
         Operands[Operand] = Data.getU64(&Offset);
-      } else {
-        assert(AddressSize == 4);
+      } else if (AddressSize == 4) {
         Operands[Operand] = Data.getU32(&Offset);
+      } else {
+        assert(AddressSize == 2);
+        Operands[Operand] = Data.getU16(&Offset);
       }
       break;
     case Operation::SizeRefAddr:
       if (getRefAddrSize(AddressSize, Version) == 8) {
         Operands[Operand] = Data.getU64(&Offset);
-      } else {
-        assert(getRefAddrSize(AddressSize, Version) == 4);
+      } else if (getRefAddrSize(AddressSize, Version) == 4) {
         Operands[Operand] = Data.getU32(&Offset);
+      } else {
+        assert(getRefAddrSize(AddressSize, Version) == 2);
+        Operands[Operand] = Data.getU16(&Offset);
       }
       break;
     case Operation::SizeLEB:
@@ -189,6 +192,8 @@ bool DWARFExpression::Operation::extract(DataExtractor Data, uint16_t Version,
     default:
       llvm_unreachable("Unknown DWARFExpression Op size");
     }
+
+    OperandEndOffsets[Operand] = Offset;
   }
 
   EndOffset = Offset;
@@ -256,16 +261,15 @@ bool DWARFExpression::Operation::print(raw_ostream &OS,
     if (Size == Operation::BaseTypeRef && U) {
       auto Die = U->getDIEForOffset(U->getOffset() + Operands[Operand]);
       if (Die && Die.getTag() == dwarf::DW_TAG_base_type) {
-        OS << format(" (0x%08x)", U->getOffset() + Operands[Operand]);
+        OS << format(" (0x%08" PRIx64 ")", U->getOffset() + Operands[Operand]);
         if (auto Name = Die.find(dwarf::DW_AT_name))
-          if (Name->getAsCString())
-            OS << " \"" << *Name->getAsCString() << "\"";
+          OS << " \"" << Name->getAsCString() << "\"";
       } else {
         OS << format(" <invalid base_type ref: 0x%" PRIx64 ">",
                      Operands[Operand]);
       }
     } else if (Size == Operation::SizeBlock) {
-      uint32_t Offset = Operands[Operand];
+      uint64_t Offset = Operands[Operand];
       for (unsigned i = 0; i < Operands[Operand - 1]; ++i)
         OS << format(" 0x%02x", Expr->Data.getU8(&Offset));
     } else {
@@ -282,7 +286,7 @@ void DWARFExpression::print(raw_ostream &OS, const MCRegisterInfo *RegInfo,
                             DWARFUnit *U, bool IsEH) const {
   for (auto &Op : *this) {
     if (!Op.print(OS, this, RegInfo, U, IsEH)) {
-      uint32_t FailOffset = Op.getEndOffset();
+      uint64_t FailOffset = Op.getEndOffset();
       while (FailOffset < Data.getData().size())
         OS << format(" %02x", Data.getU8(&FailOffset));
       return;

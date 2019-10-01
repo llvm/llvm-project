@@ -1,9 +1,8 @@
 //===-- RISCVSubtarget.cpp - RISCV Subtarget Information ------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -26,10 +25,10 @@ using namespace llvm;
 
 void RISCVSubtarget::anchor() {}
 
-RISCVSubtarget &RISCVSubtarget::initializeSubtargetDependencies(StringRef CPU,
-                                                                StringRef FS,
-                                                                bool Is64Bit) {
+RISCVSubtarget &RISCVSubtarget::initializeSubtargetDependencies(
+    const Triple &TT, StringRef CPU, StringRef FS, StringRef ABIName) {
   // Determine default and user-specified characteristics
+  bool Is64Bit = TT.isArch64Bit();
   std::string CPUName = CPU;
   if (CPUName.empty())
     CPUName = Is64Bit ? "generic-rv64" : "generic-rv32";
@@ -38,11 +37,14 @@ RISCVSubtarget &RISCVSubtarget::initializeSubtargetDependencies(StringRef CPU,
     XLenVT = MVT::i64;
     XLen = 64;
   }
+
+  TargetABI = RISCVABI::computeTargetABI(TT, getFeatureBits(), ABIName);
+  RISCVFeatures::validate(TT, getFeatureBits());
   return *this;
 }
 
-RISCVSubtarget::RISCVSubtarget(const Triple &TT, const std::string &CPU,
-                               const std::string &FS, const TargetMachine &TM)
+RISCVSubtarget::RISCVSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
+                               StringRef ABIName, const TargetMachine &TM)
     : RISCVGenSubtargetInfo(TT, CPU, FS),
-      FrameLowering(initializeSubtargetDependencies(CPU, FS, TT.isArch64Bit())),
+      FrameLowering(initializeSubtargetDependencies(TT, CPU, FS, ABIName)),
       InstrInfo(), RegInfo(getHwMode()), TLInfo(TM, *this) {}

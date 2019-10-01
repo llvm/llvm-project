@@ -74,7 +74,7 @@ therefore be indexed and requires an index operand. Consider this example:
     P[0].f1 = P[1].f1 + P[2].f2;
   }
   ...
-  munger_struct Array[3];
+  struct munger_struct Array[3];
   ...
   munge(Array);
 
@@ -88,15 +88,15 @@ looks like:
 
 .. code-block:: llvm
 
-  void %munge(%struct.munger_struct* %P) {
+  define void @munge(%struct.munger_struct* %P) {
   entry:
     %tmp = getelementptr %struct.munger_struct, %struct.munger_struct* %P, i32 1, i32 0
-    %tmp = load i32* %tmp
-    %tmp6 = getelementptr %struct.munger_struct, %struct.munger_struct* %P, i32 2, i32 1
-    %tmp7 = load i32* %tmp6
-    %tmp8 = add i32 %tmp7, %tmp
-    %tmp9 = getelementptr %struct.munger_struct, %struct.munger_struct* %P, i32 0, i32 0
-    store i32 %tmp8, i32* %tmp9
+    %tmp1 = load i32, i32* %tmp
+    %tmp2 = getelementptr %struct.munger_struct, %struct.munger_struct* %P, i32 2, i32 1
+    %tmp3 = load i32, i32* %tmp2
+    %tmp4 = add i32 %tmp3, %tmp1
+    %tmp5 = getelementptr %struct.munger_struct, %struct.munger_struct* %P, i32 0, i32 0
+    store i32 %tmp4, i32* %tmp5
     ret void
   }
 
@@ -199,7 +199,7 @@ following:
 .. code-block:: text
 
   %idx = getelementptr { [40 x i32]* }, { [40 x i32]* }* %, i64 0, i32 0
-  %arr = load [40 x i32]** %idx
+  %arr = load [40 x i32]*, [40 x i32]** %idx
   %idx = getelementptr [40 x i32], [40 x i32]* %arr, i64 0, i64 17
 
 In this case, we have to load the pointer in the structure with a load

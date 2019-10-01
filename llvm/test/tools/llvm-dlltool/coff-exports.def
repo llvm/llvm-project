@@ -1,7 +1,7 @@
 ; RUN: llvm-dlltool -m i386:x86-64 --input-def %s --output-lib %t.a
-; RUN: llvm-readobj -coff-exports %t.a | FileCheck %s
+; RUN: llvm-readobj --coff-exports %t.a | FileCheck %s
 ; RUN: llvm-dlltool -m arm64 --input-def %s --output-lib %t.a
-; RUN: llvm-readobj -coff-exports %t.a | FileCheck %s
+; RUN: llvm-readobj --coff-exports %t.a | FileCheck %s
 
 LIBRARY test.dll
 EXPORTS

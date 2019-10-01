@@ -1,9 +1,8 @@
 //===- ELFObjcopy.cpp -----------------------------------------------------===//
 //
-//                      The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -14,6 +13,7 @@
 #include "llvm-objcopy.h"
 
 #include "llvm/ADT/BitmaskEnum.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -71,6 +71,44 @@ static bool onlyKeepDWOPred(const Object &Obj, const SectionBase &Sec) {
   return !isDWOSection(Sec);
 }
 
+uint64_t getNewShfFlags(SectionFlag AllFlags) {
+  uint64_t NewFlags = 0;
+  if (AllFlags & SectionFlag::SecAlloc)
+    NewFlags |= ELF::SHF_ALLOC;
+  if (!(AllFlags & SectionFlag::SecReadonly))
+    NewFlags |= ELF::SHF_WRITE;
+  if (AllFlags & SectionFlag::SecCode)
+    NewFlags |= ELF::SHF_EXECINSTR;
+  if (AllFlags & SectionFlag::SecMerge)
+    NewFlags |= ELF::SHF_MERGE;
+  if (AllFlags & SectionFlag::SecStrings)
+    NewFlags |= ELF::SHF_STRINGS;
+  return NewFlags;
+}
+
+static uint64_t getSectionFlagsPreserveMask(uint64_t OldFlags,
+                                            uint64_t NewFlags) {
+  // Preserve some flags which should not be dropped when setting flags.
+  // Also, preserve anything OS/processor dependant.
+  const uint64_t PreserveMask = ELF::SHF_COMPRESSED | ELF::SHF_EXCLUDE |
+                                ELF::SHF_GROUP | ELF::SHF_LINK_ORDER |
+                                ELF::SHF_MASKOS | ELF::SHF_MASKPROC |
+                                ELF::SHF_TLS | ELF::SHF_INFO_LINK;
+  return (OldFlags & PreserveMask) | (NewFlags & ~PreserveMask);
+}
+
+static void setSectionFlagsAndType(SectionBase &Sec, SectionFlag Flags) {
+  Sec.Flags = getSectionFlagsPreserveMask(Sec.Flags, getNewShfFlags(Flags));
+
+  // In GNU objcopy, certain flags promote SHT_NOBITS to SHT_PROGBITS. This rule
+  // may promote more non-ALLOC sections than GNU objcopy, but it is fine as
+  // non-ALLOC SHT_NOBITS sections do not make much sense.
+  if (Sec.Type == SHT_NOBITS &&
+      (!(Sec.Flags & ELF::SHF_ALLOC) ||
+       Flags & (SectionFlag::SecContents | SectionFlag::SecLoad)))
+    Sec.Type = SHT_PROGBITS;
+}
+
 static ElfType getOutputElfType(const Binary &Bin) {
   // Infer output ELF type from the input ELF object
   if (isa<ELFObjectFile<ELF32LE>>(Bin))
@@ -92,12 +130,9 @@ static ElfType getOutputElfType(const MachineInfo &MI) {
     return MI.IsLittleEndian ? ELFT_ELF32LE : ELFT_ELF32BE;
 }
 
-static std::unique_ptr<Writer> createWriter(const CopyConfig &Config,
-                                            Object &Obj, Buffer &Buf,
-                                            ElfType OutputElfType) {
-  if (Config.OutputFormat == "binary") {
-    return llvm::make_unique<BinaryWriter>(Obj, Buf);
-  }
+static std::unique_ptr<Writer> createELFWriter(const CopyConfig &Config,
+                                               Object &Obj, Buffer &Buf,
+                                               ElfType OutputElfType) {
   // Depending on the initial ELFT and OutputFormat we need a different Writer.
   switch (OutputElfType) {
   case ELFT_ELF32LE:
@@ -116,10 +151,25 @@ static std::unique_ptr<Writer> createWriter(const CopyConfig &Config,
   llvm_unreachable("Invalid output format");
 }
 
+static std::unique_ptr<Writer> createWriter(const CopyConfig &Config,
+                                            Object &Obj, Buffer &Buf,
+                                            ElfType OutputElfType) {
+  using Functor = std::function<std::unique_ptr<Writer>()>;
+  return StringSwitch<Functor>(Config.OutputFormat)
+      .Case("binary", [&] { return llvm::make_unique<BinaryWriter>(Obj, Buf); })
+      .Case("ihex", [&] { return llvm::make_unique<IHexWriter>(Obj, Buf); })
+      .Default(
+          [&] { return createELFWriter(Config, Obj, Buf, OutputElfType); })();
+}
+
 template <class ELFT>
 static Expected<ArrayRef<uint8_t>>
-findBuildID(const object::ELFFile<ELFT> &In) {
-  for (const auto &Phdr : unwrapOrError(In.program_headers())) {
+findBuildID(const CopyConfig &Config, const object::ELFFile<ELFT> &In) {
+  auto PhdrsOrErr = In.program_headers();
+  if (auto Err = PhdrsOrErr.takeError())
+    return createFileError(Config.InputFilename, std::move(Err));
+
+  for (const auto &Phdr : *PhdrsOrErr) {
     if (Phdr.p_type != PT_NOTE)
       continue;
     Error Err = Error::success();
@@ -127,56 +177,106 @@ findBuildID(const object::ELFFile<ELFT> &In) {
       if (Note.getType() == NT_GNU_BUILD_ID && Note.getName() == ELF_NOTE_GNU)
         return Note.getDesc();
     if (Err)
-      return std::move(Err);
+      return createFileError(Config.InputFilename, std::move(Err));
   }
-  return createStringError(llvm::errc::invalid_argument,
-                           "Could not find build ID.");
+
+  return createFileError(
+      Config.InputFilename,
+      createStringError(llvm::errc::invalid_argument,
+                        "could not find build ID"));
 }
 
 static Expected<ArrayRef<uint8_t>>
-findBuildID(const object::ELFObjectFileBase &In) {
+findBuildID(const CopyConfig &Config, const object::ELFObjectFileBase &In) {
   if (auto *O = dyn_cast<ELFObjectFile<ELF32LE>>(&In))
-    return findBuildID(*O->getELFFile());
+    return findBuildID(Config, *O->getELFFile());
   else if (auto *O = dyn_cast<ELFObjectFile<ELF64LE>>(&In))
-    return findBuildID(*O->getELFFile());
+    return findBuildID(Config, *O->getELFFile());
   else if (auto *O = dyn_cast<ELFObjectFile<ELF32BE>>(&In))
-    return findBuildID(*O->getELFFile());
+    return findBuildID(Config, *O->getELFFile());
   else if (auto *O = dyn_cast<ELFObjectFile<ELF64BE>>(&In))
-    return findBuildID(*O->getELFFile());
+    return findBuildID(Config, *O->getELFFile());
 
   llvm_unreachable("Bad file format");
 }
 
-static void linkToBuildIdDir(const CopyConfig &Config, StringRef ToLink,
-                             StringRef Suffix, ArrayRef<uint8_t> BuildIdBytes) {
+template <class... Ts>
+static Error makeStringError(std::error_code EC, const Twine &Msg, Ts &&... Args) {
+  std::string FullMsg = (EC.message() + ": " + Msg).str();
+  return createStringError(EC, FullMsg.c_str(), std::forward<Ts>(Args)...);
+}
+
+#define MODEL_8 "%%%%%%%%"
+#define MODEL_16 MODEL_8 MODEL_8
+#define MODEL_32 (MODEL_16 MODEL_16)
+
+static Error linkToBuildIdDir(const CopyConfig &Config, StringRef ToLink,
+                              StringRef Suffix,
+                              ArrayRef<uint8_t> BuildIdBytes) {
   SmallString<128> Path = Config.BuildIdLinkDir;
   sys::path::append(Path, llvm::toHex(BuildIdBytes[0], /*LowerCase*/ true));
   if (auto EC = sys::fs::create_directories(Path))
-    error("cannot create build ID link directory " + Path + ": " +
-          EC.message());
+    return createFileError(
+        Path.str(),
+        makeStringError(EC, "cannot create build ID link directory"));
 
   sys::path::append(Path,
                     llvm::toHex(BuildIdBytes.slice(1), /*LowerCase*/ true));
   Path += Suffix;
-  if (auto EC = sys::fs::create_hard_link(ToLink, Path)) {
-    // Hard linking failed, try to remove the file first if it exists.
-    if (sys::fs::exists(Path))
-      sys::fs::remove(Path);
-    EC = sys::fs::create_hard_link(ToLink, Path);
-    if (EC)
-      error("cannot link " + ToLink + " to " + Path + ": " + EC.message());
+  SmallString<128> TmpPath;
+  // create_hard_link races so we need to link to a temporary path but
+  // we want to make sure that we choose a filename that does not exist.
+  // By using 32 model characters we get 128-bits of entropy. It is
+  // unlikely that this string has ever existed before much less exists
+  // on this disk or in the current working directory.
+  // Additionally we prepend the original Path for debugging but also
+  // because it ensures that we're linking within a directory on the same
+  // partition on the same device which is critical. It has the added
+  // win of yet further decreasing the odds of a conflict.
+  sys::fs::createUniquePath(Twine(Path) + "-" + MODEL_32 + ".tmp", TmpPath,
+                            /*MakeAbsolute*/ false);
+  if (auto EC = sys::fs::create_hard_link(ToLink, TmpPath)) {
+    Path.push_back('\0');
+    return makeStringError(EC, "cannot link '%s' to '%s'", ToLink.data(),
+                           Path.data());
   }
+  // We then atomically rename the link into place which will just move the
+  // link. If rename fails something is more seriously wrong so just return
+  // an error.
+  if (auto EC = sys::fs::rename(TmpPath, Path)) {
+    Path.push_back('\0');
+    return makeStringError(EC, "cannot link '%s' to '%s'", ToLink.data(),
+                           Path.data());
+  }
+  // If `Path` was already a hard-link to the same underlying file then the
+  // temp file will be left so we need to remove it. Remove will not cause
+  // an error by default if the file is already gone so just blindly remove
+  // it rather than checking.
+  if (auto EC = sys::fs::remove(TmpPath)) {
+    TmpPath.push_back('\0');
+    return makeStringError(EC, "could not remove '%s'", TmpPath.data());
+  }
+  return Error::success();
 }
 
-static void splitDWOToFile(const CopyConfig &Config, const Reader &Reader,
-                           StringRef File, ElfType OutputElfType) {
+static Error splitDWOToFile(const CopyConfig &Config, const Reader &Reader,
+                            StringRef File, ElfType OutputElfType) {
   auto DWOFile = Reader.create();
-  DWOFile->removeSections(
-      [&](const SectionBase &Sec) { return onlyKeepDWOPred(*DWOFile, Sec); });
+  auto OnlyKeepDWOPred = [&DWOFile](const SectionBase &Sec) {
+    return onlyKeepDWOPred(*DWOFile, Sec);
+  };
+  if (Error E = DWOFile->removeSections(Config.AllowBrokenLinks, 
+                                        OnlyKeepDWOPred))
+    return E;
+  if (Config.OutputArch) {
+    DWOFile->Machine = Config.OutputArch.getValue().EMachine;
+    DWOFile->OSABI = Config.OutputArch.getValue().OSABI;
+  }
   FileBuffer FB(File);
   auto Writer = createWriter(Config, *DWOFile, FB, OutputElfType);
-  Writer->finalize();
-  Writer->write();
+  if (Error E = Writer->finalize())
+    return E;
+  return Writer->write();
 }
 
 static Error dumpSectionToFile(StringRef SecName, StringRef Filename,
@@ -184,9 +284,9 @@ static Error dumpSectionToFile(StringRef SecName, StringRef Filename,
   for (auto &Sec : Obj.sections()) {
     if (Sec.Name == SecName) {
       if (Sec.OriginalData.empty())
-        return make_error<StringError>("Can't dump section \"" + SecName +
-                                           "\": it has no contents",
-                                       object_error::parse_failed);
+        return createStringError(object_error::parse_failed,
+                                 "cannot dump section '%s': it has no contents",
+                                 SecName.str().c_str());
       Expected<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
           FileOutputBuffer::create(Filename, Sec.OriginalData.size());
       if (!BufferOrErr)
@@ -199,147 +299,143 @@ static Error dumpSectionToFile(StringRef SecName, StringRef Filename,
       return Error::success();
     }
   }
-  return make_error<StringError>("Section not found",
-                                 object_error::parse_failed);
-}
-
-static bool isCompressed(const SectionBase &Section) {
-  const char *Magic = "ZLIB";
-  return StringRef(Section.Name).startswith(".zdebug") ||
-         (Section.OriginalData.size() > strlen(Magic) &&
-          !strncmp(reinterpret_cast<const char *>(Section.OriginalData.data()),
-                   Magic, strlen(Magic))) ||
-         (Section.Flags & ELF::SHF_COMPRESSED);
+  return createStringError(object_error::parse_failed, "section '%s' not found",
+                           SecName.str().c_str());
 }
 
 static bool isCompressable(const SectionBase &Section) {
-  return !isCompressed(Section) && isDebugSection(Section) &&
-         Section.Name != ".gdb_index";
+  return !(Section.Flags & ELF::SHF_COMPRESSED) &&
+         StringRef(Section.Name).startswith(".debug");
 }
 
 static void replaceDebugSections(
-    const CopyConfig &Config, Object &Obj, SectionPred &RemovePred,
+    Object &Obj, SectionPred &RemovePred,
     function_ref<bool(const SectionBase &)> shouldReplace,
     function_ref<SectionBase *(const SectionBase *)> addSection) {
+  // Build a list of the debug sections we are going to replace.
+  // We can't call `addSection` while iterating over sections,
+  // because it would mutate the sections array.
   SmallVector<SectionBase *, 13> ToReplace;
-  SmallVector<RelocationSection *, 13> RelocationSections;
-  for (auto &Sec : Obj.sections()) {
-    if (RelocationSection *R = dyn_cast<RelocationSection>(&Sec)) {
-      if (shouldReplace(*R->getSection()))
-        RelocationSections.push_back(R);
-      continue;
-    }
-
+  for (auto &Sec : Obj.sections())
     if (shouldReplace(Sec))
       ToReplace.push_back(&Sec);
-  }
 
-  for (SectionBase *S : ToReplace) {
-    SectionBase *NewSection = addSection(S);
+  // Build a mapping from original section to a new one.
+  DenseMap<SectionBase *, SectionBase *> FromTo;
+  for (SectionBase *S : ToReplace)
+    FromTo[S] = addSection(S);
 
-    for (RelocationSection *RS : RelocationSections) {
-      if (RS->getSection() == S)
-        RS->setSection(NewSection);
-    }
-  }
+  // Now we want to update the target sections of relocation
+  // sections. Also we will update the relocations themselves
+  // to update the symbol references.
+  for (auto &Sec : Obj.sections())
+    Sec.replaceSectionReferences(FromTo);
 
   RemovePred = [shouldReplace, RemovePred](const SectionBase &Sec) {
     return shouldReplace(Sec) || RemovePred(Sec);
   };
 }
 
-// This function handles the high level operations of GNU objcopy including
-// handling command line options. It's important to outline certain properties
-// we expect to hold of the command line operations. Any operation that "keeps"
-// should keep regardless of a remove. Additionally any removal should respect
-// any previous removals. Lastly whether or not something is removed shouldn't
-// depend a) on the order the options occur in or b) on some opaque priority
-// system. The only priority is that keeps/copies overrule removes.
-static void handleArgs(const CopyConfig &Config, Object &Obj,
-                       const Reader &Reader, ElfType OutputElfType) {
+static bool isUnneededSymbol(const Symbol &Sym) {
+  return !Sym.Referenced &&
+         (Sym.Binding == STB_LOCAL || Sym.getShndx() == SHN_UNDEF) &&
+         Sym.Type != STT_SECTION;
+}
 
-  if (!Config.SplitDWO.empty()) {
-    splitDWOToFile(Config, Reader, Config.SplitDWO, OutputElfType);
-  }
-
+static Error updateAndRemoveSymbols(const CopyConfig &Config, Object &Obj) {
   // TODO: update or remove symbols only if there is an option that affects
   // them.
-  if (Obj.SymbolTable) {
-    Obj.SymbolTable->updateSymbols([&](Symbol &Sym) {
-      if (!Sym.isCommon() &&
-          ((Config.LocalizeHidden &&
-            (Sym.Visibility == STV_HIDDEN || Sym.Visibility == STV_INTERNAL)) ||
-           is_contained(Config.SymbolsToLocalize, Sym.Name)))
-        Sym.Binding = STB_LOCAL;
+  if (!Obj.SymbolTable)
+    return Error::success();
 
-      // Note: these two globalize flags have very similar names but different
-      // meanings:
-      //
-      // --globalize-symbol: promote a symbol to global
-      // --keep-global-symbol: all symbols except for these should be made local
-      //
-      // If --globalize-symbol is specified for a given symbol, it will be
-      // global in the output file even if it is not included via
-      // --keep-global-symbol. Because of that, make sure to check
-      // --globalize-symbol second.
-      if (!Config.SymbolsToKeepGlobal.empty() &&
-          !is_contained(Config.SymbolsToKeepGlobal, Sym.Name) &&
-          Sym.getShndx() != SHN_UNDEF)
-        Sym.Binding = STB_LOCAL;
+  Obj.SymbolTable->updateSymbols([&](Symbol &Sym) {
+    // Common and undefined symbols don't make sense as local symbols, and can
+    // even cause crashes if we localize those, so skip them.
+    if (!Sym.isCommon() && Sym.getShndx() != SHN_UNDEF &&
+        ((Config.LocalizeHidden &&
+          (Sym.Visibility == STV_HIDDEN || Sym.Visibility == STV_INTERNAL)) ||
+         is_contained(Config.SymbolsToLocalize, Sym.Name)))
+      Sym.Binding = STB_LOCAL;
 
-      if (is_contained(Config.SymbolsToGlobalize, Sym.Name) &&
-          Sym.getShndx() != SHN_UNDEF)
-        Sym.Binding = STB_GLOBAL;
+    // Note: these two globalize flags have very similar names but different
+    // meanings:
+    //
+    // --globalize-symbol: promote a symbol to global
+    // --keep-global-symbol: all symbols except for these should be made local
+    //
+    // If --globalize-symbol is specified for a given symbol, it will be
+    // global in the output file even if it is not included via
+    // --keep-global-symbol. Because of that, make sure to check
+    // --globalize-symbol second.
+    if (!Config.SymbolsToKeepGlobal.empty() &&
+        !is_contained(Config.SymbolsToKeepGlobal, Sym.Name) &&
+        Sym.getShndx() != SHN_UNDEF)
+      Sym.Binding = STB_LOCAL;
 
-      if (is_contained(Config.SymbolsToWeaken, Sym.Name) &&
-          Sym.Binding == STB_GLOBAL)
-        Sym.Binding = STB_WEAK;
+    if (is_contained(Config.SymbolsToGlobalize, Sym.Name) &&
+        Sym.getShndx() != SHN_UNDEF)
+      Sym.Binding = STB_GLOBAL;
 
-      if (Config.Weaken && Sym.Binding == STB_GLOBAL &&
-          Sym.getShndx() != SHN_UNDEF)
-        Sym.Binding = STB_WEAK;
+    if (is_contained(Config.SymbolsToWeaken, Sym.Name) &&
+        Sym.Binding == STB_GLOBAL)
+      Sym.Binding = STB_WEAK;
 
-      const auto I = Config.SymbolsToRename.find(Sym.Name);
-      if (I != Config.SymbolsToRename.end())
-        Sym.Name = I->getValue();
+    if (Config.Weaken && Sym.Binding == STB_GLOBAL &&
+        Sym.getShndx() != SHN_UNDEF)
+      Sym.Binding = STB_WEAK;
 
-      if (!Config.SymbolsPrefix.empty() && Sym.Type != STT_SECTION)
-        Sym.Name = (Config.SymbolsPrefix + Sym.Name).str();
-    });
+    const auto I = Config.SymbolsToRename.find(Sym.Name);
+    if (I != Config.SymbolsToRename.end())
+      Sym.Name = I->getValue();
 
-    // The purpose of this loop is to mark symbols referenced by sections
-    // (like GroupSection or RelocationSection). This way, we know which
-    // symbols are still 'needed' and which are not.
-    if (Config.StripUnneeded) {
-      for (auto &Section : Obj.sections())
-        Section.markSymbols();
-    }
+    if (!Config.SymbolsPrefix.empty() && Sym.Type != STT_SECTION)
+      Sym.Name = (Config.SymbolsPrefix + Sym.Name).str();
+  });
 
-    Obj.removeSymbols([&](const Symbol &Sym) {
-      if (is_contained(Config.SymbolsToKeep, Sym.Name) ||
-          (Config.KeepFileSymbols && Sym.Type == STT_FILE))
-        return false;
-
-      if (Config.DiscardAll && Sym.Binding == STB_LOCAL &&
-          Sym.getShndx() != SHN_UNDEF && Sym.Type != STT_FILE &&
-          Sym.Type != STT_SECTION)
-        return true;
-
-      if (Config.StripAll || Config.StripAllGNU)
-        return true;
-
-      if (is_contained(Config.SymbolsToRemove, Sym.Name))
-        return true;
-
-      if (Config.StripUnneeded && !Sym.Referenced &&
-          (Sym.Binding == STB_LOCAL || Sym.getShndx() == SHN_UNDEF) &&
-          Sym.Type != STT_FILE && Sym.Type != STT_SECTION)
-        return true;
-
-      return false;
-    });
+  // The purpose of this loop is to mark symbols referenced by sections
+  // (like GroupSection or RelocationSection). This way, we know which
+  // symbols are still 'needed' and which are not.
+  if (Config.StripUnneeded || !Config.UnneededSymbolsToRemove.empty() ||
+      !Config.OnlySection.empty()) {
+    for (auto &Section : Obj.sections())
+      Section.markSymbols();
   }
 
+  auto RemoveSymbolsPred = [&](const Symbol &Sym) {
+    if (is_contained(Config.SymbolsToKeep, Sym.Name) ||
+        (Config.KeepFileSymbols && Sym.Type == STT_FILE))
+      return false;
+
+    if ((Config.DiscardMode == DiscardType::All ||
+         (Config.DiscardMode == DiscardType::Locals &&
+          StringRef(Sym.Name).startswith(".L"))) &&
+        Sym.Binding == STB_LOCAL && Sym.getShndx() != SHN_UNDEF &&
+        Sym.Type != STT_FILE && Sym.Type != STT_SECTION)
+      return true;
+
+    if (Config.StripAll || Config.StripAllGNU)
+      return true;
+
+    if (is_contained(Config.SymbolsToRemove, Sym.Name))
+      return true;
+
+    if ((Config.StripUnneeded ||
+         is_contained(Config.UnneededSymbolsToRemove, Sym.Name)) &&
+        isUnneededSymbol(Sym))
+      return true;
+
+    // We want to remove undefined symbols if all references have been stripped.
+    if (!Config.OnlySection.empty() && !Sym.Referenced &&
+        Sym.getShndx() == SHN_UNDEF)
+      return true;
+
+    return false;
+  };
+
+  return Obj.removeSymbols(RemoveSymbolsPred);
+}
+
+static Error replaceAndRemoveSections(const CopyConfig &Config, Object &Obj) {
   SectionPred RemovePred = [](const SectionBase &) { return false; };
 
   // Removes:
@@ -379,7 +475,7 @@ static void handleArgs(const CopyConfig &Config, Object &Obj,
 
   if (Config.StripSections) {
     RemovePred = [RemovePred](const SectionBase &Sec) {
-      return RemovePred(Sec) || (Sec.Flags & SHF_ALLOC) == 0;
+      return RemovePred(Sec) || Sec.ParentSegment == nullptr;
     };
   }
 
@@ -395,7 +491,7 @@ static void handleArgs(const CopyConfig &Config, Object &Obj,
         return true;
       if (&Sec == Obj.SectionNames)
         return false;
-      return (Sec.Flags & SHF_ALLOC) == 0;
+      return (Sec.Flags & SHF_ALLOC) == 0 && Sec.ParentSegment == nullptr;
     };
 
   if (Config.StripAll)
@@ -406,8 +502,20 @@ static void handleArgs(const CopyConfig &Config, Object &Obj,
         return false;
       if (StringRef(Sec.Name).startswith(".gnu.warning"))
         return false;
+      if (Sec.ParentSegment != nullptr)
+        return false;
       return (Sec.Flags & SHF_ALLOC) == 0;
     };
+
+  if (Config.ExtractPartition || Config.ExtractMainPartition) {
+    RemovePred = [RemovePred](const SectionBase &Sec) {
+      if (RemovePred(Sec))
+        return true;
+      if (Sec.Type == SHT_LLVM_PART_EHDR || Sec.Type == SHT_LLVM_PART_PHDR)
+        return true;
+      return (Sec.Flags & SHF_ALLOC) != 0 && !Sec.ParentSegment;
+    };
+  }
 
   // Explicit copies:
   if (!Config.OnlySection.empty()) {
@@ -457,112 +565,248 @@ static void handleArgs(const CopyConfig &Config, Object &Obj,
   }
 
   if (Config.CompressionType != DebugCompressionType::None)
-    replaceDebugSections(Config, Obj, RemovePred, isCompressable,
+    replaceDebugSections(Obj, RemovePred, isCompressable, 
                          [&Config, &Obj](const SectionBase *S) {
                            return &Obj.addSection<CompressedSection>(
-                               *S, Config.CompressionType);
-                         });
+                                *S, Config.CompressionType);
+                        });
   else if (Config.DecompressDebugSections)
     replaceDebugSections(
-        Config, Obj, RemovePred,
+        Obj, RemovePred,
         [](const SectionBase &S) { return isa<CompressedSection>(&S); },
         [&Obj](const SectionBase *S) {
           auto CS = cast<CompressedSection>(S);
           return &Obj.addSection<DecompressedSection>(*CS);
         });
 
-  Obj.removeSections(RemovePred);
+  return Obj.removeSections(Config.AllowBrokenLinks, RemovePred);
+}
 
-  if (!Config.SectionsToRename.empty()) {
+// This function handles the high level operations of GNU objcopy including
+// handling command line options. It's important to outline certain properties
+// we expect to hold of the command line operations. Any operation that "keeps"
+// should keep regardless of a remove. Additionally any removal should respect
+// any previous removals. Lastly whether or not something is removed shouldn't
+// depend a) on the order the options occur in or b) on some opaque priority
+// system. The only priority is that keeps/copies overrule removes.
+static Error handleArgs(const CopyConfig &Config, Object &Obj,
+                        const Reader &Reader, ElfType OutputElfType) {
+
+  if (!Config.SplitDWO.empty())
+    if (Error E =
+            splitDWOToFile(Config, Reader, Config.SplitDWO, OutputElfType))
+      return E;
+
+  if (Config.OutputArch) {
+    Obj.Machine = Config.OutputArch.getValue().EMachine;
+    Obj.OSABI = Config.OutputArch.getValue().OSABI;
+  }
+
+  // It is important to remove the sections first. For example, we want to
+  // remove the relocation sections before removing the symbols. That allows
+  // us to avoid reporting the inappropriate errors about removing symbols
+  // named in relocations.
+  if (Error E = replaceAndRemoveSections(Config, Obj))
+    return E;
+
+  if (Error E = updateAndRemoveSymbols(Config, Obj))
+    return E;
+
+  if (!Config.SectionsToRename.empty() || !Config.AllocSectionsPrefix.empty()) {
+    DenseSet<SectionBase *> PrefixedSections;
     for (auto &Sec : Obj.sections()) {
       const auto Iter = Config.SectionsToRename.find(Sec.Name);
       if (Iter != Config.SectionsToRename.end()) {
         const SectionRename &SR = Iter->second;
         Sec.Name = SR.NewName;
-        if (SR.NewFlags.hasValue()) {
-          // Preserve some flags which should not be dropped when setting flags.
-          // Also, preserve anything OS/processor dependant.
-          const uint64_t PreserveMask = ELF::SHF_COMPRESSED | ELF::SHF_EXCLUDE |
-                                        ELF::SHF_GROUP | ELF::SHF_LINK_ORDER |
-                                        ELF::SHF_MASKOS | ELF::SHF_MASKPROC |
-                                        ELF::SHF_TLS | ELF::SHF_INFO_LINK;
-          Sec.Flags = (Sec.Flags & PreserveMask) |
-                      (SR.NewFlags.getValue() & ~PreserveMask);
+        if (SR.NewFlags.hasValue())
+          setSectionFlagsAndType(Sec, SR.NewFlags.getValue());
+      }
+
+      // Add a prefix to allocated sections and their relocation sections. This
+      // should be done after renaming the section by Config.SectionToRename to
+      // imitate the GNU objcopy behavior.
+      if (!Config.AllocSectionsPrefix.empty()) {
+        if (Sec.Flags & SHF_ALLOC) {
+          Sec.Name = (Config.AllocSectionsPrefix + Sec.Name).str();
+          PrefixedSections.insert(&Sec);
+
+          // Rename relocation sections associated to the allocated sections.
+          // For example, if we rename .text to .prefix.text, we also rename
+          // .rel.text to .rel.prefix.text.
+          //
+          // Dynamic relocation sections (SHT_REL[A] with SHF_ALLOC) are handled
+          // above, e.g., .rela.plt is renamed to .prefix.rela.plt, not
+          // .rela.prefix.plt since GNU objcopy does so.
+        } else if (auto *RelocSec = dyn_cast<RelocationSectionBase>(&Sec)) {
+          auto *TargetSec = RelocSec->getSection();
+          if (TargetSec && (TargetSec->Flags & SHF_ALLOC)) {
+            StringRef prefix;
+            switch (Sec.Type) {
+            case SHT_REL:
+              prefix = ".rel";
+              break;
+            case SHT_RELA:
+              prefix = ".rela";
+              break;
+            default:
+              continue;
+            }
+
+            // If the relocation section comes *after* the target section, we
+            // don't add Config.AllocSectionsPrefix because we've already added
+            // the prefix to TargetSec->Name. Otherwise, if the relocation
+            // section comes *before* the target section, we add the prefix.
+            if (PrefixedSections.count(TargetSec)) {
+              Sec.Name = (prefix + TargetSec->Name).str();
+            } else {
+              const auto Iter = Config.SectionsToRename.find(TargetSec->Name);
+              if (Iter != Config.SectionsToRename.end()) {
+                // Both `--rename-section` and `--prefix-alloc-sections` are
+                // given but the target section is not yet renamed.
+                Sec.Name =
+                    (prefix + Config.AllocSectionsPrefix + Iter->second.NewName)
+                        .str();
+              } else {
+                Sec.Name =
+                    (prefix + Config.AllocSectionsPrefix + TargetSec->Name)
+                        .str();
+              }
+            }
+          }
         }
       }
     }
   }
 
-  if (!Config.AddSection.empty()) {
-    for (const auto &Flag : Config.AddSection) {
-      auto SecPair = Flag.split("=");
-      auto SecName = SecPair.first;
-      auto File = SecPair.second;
-      auto BufOrErr = MemoryBuffer::getFile(File);
-      if (!BufOrErr)
-        reportError(File, BufOrErr.getError());
-      auto Buf = std::move(*BufOrErr);
-      auto BufPtr = reinterpret_cast<const uint8_t *>(Buf->getBufferStart());
-      auto BufSize = Buf->getBufferSize();
-      Obj.addSection<OwnedDataSection>(SecName,
-                                       ArrayRef<uint8_t>(BufPtr, BufSize));
+  if (!Config.SetSectionFlags.empty()) {
+    for (auto &Sec : Obj.sections()) {
+      const auto Iter = Config.SetSectionFlags.find(Sec.Name);
+      if (Iter != Config.SetSectionFlags.end()) {
+        const SectionFlagsUpdate &SFU = Iter->second;
+        setSectionFlagsAndType(Sec, SFU.NewFlags);
+      }
     }
   }
 
-  if (!Config.DumpSection.empty()) {
-    for (const auto &Flag : Config.DumpSection) {
-      std::pair<StringRef, StringRef> SecPair = Flag.split("=");
-      StringRef SecName = SecPair.first;
-      StringRef File = SecPair.second;
-      if (Error E = dumpSectionToFile(SecName, File, Obj))
-        reportError(Config.InputFilename, std::move(E));
-    }
+  for (const auto &Flag : Config.AddSection) {
+    std::pair<StringRef, StringRef> SecPair = Flag.split("=");
+    StringRef SecName = SecPair.first;
+    StringRef File = SecPair.second;
+    ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
+        MemoryBuffer::getFile(File);
+    if (!BufOrErr)
+      return createFileError(File, errorCodeToError(BufOrErr.getError()));
+    std::unique_ptr<MemoryBuffer> Buf = std::move(*BufOrErr);
+    ArrayRef<uint8_t> Data(
+        reinterpret_cast<const uint8_t *>(Buf->getBufferStart()),
+        Buf->getBufferSize());
+    OwnedDataSection &NewSection =
+        Obj.addSection<OwnedDataSection>(SecName, Data);
+    if (SecName.startswith(".note") && SecName != ".note.GNU-stack")
+      NewSection.Type = SHT_NOTE;
+  }
+
+  for (const auto &Flag : Config.DumpSection) {
+    std::pair<StringRef, StringRef> SecPair = Flag.split("=");
+    StringRef SecName = SecPair.first;
+    StringRef File = SecPair.second;
+    if (Error E = dumpSectionToFile(SecName, File, Obj))
+      return E;
   }
 
   if (!Config.AddGnuDebugLink.empty())
-    Obj.addSection<GnuDebugLinkSection>(Config.AddGnuDebugLink);
+    Obj.addSection<GnuDebugLinkSection>(Config.AddGnuDebugLink,
+                                        Config.GnuDebugLinkCRC32);
+
+  for (const NewSymbolInfo &SI : Config.SymbolsToAdd) {
+    SectionBase *Sec = Obj.findSection(SI.SectionName);
+    uint64_t Value = Sec ? Sec->Addr + SI.Value : SI.Value;
+    Obj.SymbolTable->addSymbol(
+        SI.SymbolName, SI.Bind, SI.Type, Sec, Value, SI.Visibility,
+        Sec ? (uint16_t)SYMBOL_SIMPLE_INDEX : (uint16_t)SHN_ABS, 0);
+  }
+
+  if (Config.EntryExpr)
+    Obj.Entry = Config.EntryExpr(Obj.Entry);
+  return Error::success();
 }
 
-void executeObjcopyOnRawBinary(const CopyConfig &Config, MemoryBuffer &In,
-                               Buffer &Out) {
+static Error writeOutput(const CopyConfig &Config, Object &Obj, Buffer &Out,
+                         ElfType OutputElfType) {
+  std::unique_ptr<Writer> Writer =
+      createWriter(Config, Obj, Out, OutputElfType);
+  if (Error E = Writer->finalize())
+    return E;
+  return Writer->write();
+}
+
+Error executeObjcopyOnIHex(const CopyConfig &Config, MemoryBuffer &In,
+                           Buffer &Out) {
+  IHexReader Reader(&In);
+  std::unique_ptr<Object> Obj = Reader.create();
+  const ElfType OutputElfType =
+      getOutputElfType(Config.OutputArch.getValueOr(Config.BinaryArch));
+  if (Error E = handleArgs(Config, *Obj, Reader, OutputElfType))
+    return E;
+  return writeOutput(Config, *Obj, Out, OutputElfType);
+}
+
+Error executeObjcopyOnRawBinary(const CopyConfig &Config, MemoryBuffer &In,
+                                Buffer &Out) {
   BinaryReader Reader(Config.BinaryArch, &In);
   std::unique_ptr<Object> Obj = Reader.create();
 
-  const ElfType OutputElfType = getOutputElfType(Config.BinaryArch);
-  handleArgs(Config, *Obj, Reader, OutputElfType);
-  std::unique_ptr<Writer> Writer =
-      createWriter(Config, *Obj, Out, OutputElfType);
-  Writer->finalize();
-  Writer->write();
+  // Prefer OutputArch (-O<format>) if set, otherwise fallback to BinaryArch
+  // (-B<arch>).
+  const ElfType OutputElfType =
+      getOutputElfType(Config.OutputArch.getValueOr(Config.BinaryArch));
+  if (Error E = handleArgs(Config, *Obj, Reader, OutputElfType))
+    return E;
+  return writeOutput(Config, *Obj, Out, OutputElfType);
 }
 
-void executeObjcopyOnBinary(const CopyConfig &Config,
-                            object::ELFObjectFileBase &In, Buffer &Out) {
-  ELFReader Reader(&In);
+Error executeObjcopyOnBinary(const CopyConfig &Config,
+                             object::ELFObjectFileBase &In, Buffer &Out) {
+  ELFReader Reader(&In, Config.ExtractPartition);
   std::unique_ptr<Object> Obj = Reader.create();
-  const ElfType OutputElfType = getOutputElfType(In);
+  // Prefer OutputArch (-O<format>) if set, otherwise infer it from the input.
+  const ElfType OutputElfType =
+      Config.OutputArch ? getOutputElfType(Config.OutputArch.getValue())
+                        : getOutputElfType(In);
   ArrayRef<uint8_t> BuildIdBytes;
 
   if (!Config.BuildIdLinkDir.empty()) {
-    BuildIdBytes = unwrapOrError(findBuildID(In));
+    auto BuildIdBytesOrErr = findBuildID(Config, In);
+    if (auto E = BuildIdBytesOrErr.takeError())
+      return E;
+    BuildIdBytes = *BuildIdBytesOrErr;
+
     if (BuildIdBytes.size() < 2)
-      error("build ID in file '" + Config.InputFilename +
-            "' is smaller than two bytes");
+      return createFileError(
+          Config.InputFilename,
+          createStringError(object_error::parse_failed,
+                            "build ID is smaller than two bytes"));
   }
 
-  if (!Config.BuildIdLinkDir.empty() && Config.BuildIdLinkInput) {
-    linkToBuildIdDir(Config, Config.InputFilename,
-                     Config.BuildIdLinkInput.getValue(), BuildIdBytes);
-  }
-  handleArgs(Config, *Obj, Reader, OutputElfType);
-  std::unique_ptr<Writer> Writer =
-      createWriter(Config, *Obj, Out, OutputElfType);
-  Writer->finalize();
-  Writer->write();
-  if (!Config.BuildIdLinkDir.empty() && Config.BuildIdLinkOutput) {
-    linkToBuildIdDir(Config, Config.OutputFilename,
-                     Config.BuildIdLinkOutput.getValue(), BuildIdBytes);
-  }
+  if (!Config.BuildIdLinkDir.empty() && Config.BuildIdLinkInput)
+    if (Error E =
+            linkToBuildIdDir(Config, Config.InputFilename,
+                             Config.BuildIdLinkInput.getValue(), BuildIdBytes))
+      return E;
+
+  if (Error E = handleArgs(Config, *Obj, Reader, OutputElfType))
+    return createFileError(Config.InputFilename, std::move(E));
+
+  if (Error E = writeOutput(Config, *Obj, Out, OutputElfType))
+    return createFileError(Config.InputFilename, std::move(E));
+  if (!Config.BuildIdLinkDir.empty() && Config.BuildIdLinkOutput)
+    if (Error E =
+            linkToBuildIdDir(Config, Config.OutputFilename,
+                             Config.BuildIdLinkOutput.getValue(), BuildIdBytes))
+      return createFileError(Config.OutputFilename, std::move(E));
+
+  return Error::success();
 }
 
 } // end namespace elf

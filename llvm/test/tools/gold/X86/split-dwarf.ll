@@ -47,13 +47,13 @@ attributes #0 = { noinline nounwind optnone uwtable "correctly-rounded-divide-sq
 !llvm.module.flags = !{!3, !4, !5}
 !llvm.ident = !{!6}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 7.0.0 (https://github.com/llvm-mirror/clang.git b641d31365414ba3ea0305fdaa80369a9efb6bd9) (https://github.com/llvm-mirror/llvm.git 6165a776d1a8bb181be93f2dc97088f7a1abc405)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 7.0.0", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
 !1 = !DIFile(filename: "split-dwarf.c", directory: "/usr/local/google/home/yunlian/dwp/build/bin")
 !2 = !{}
 !3 = !{i32 2, !"Dwarf Version", i32 4}
 !4 = !{i32 2, !"Debug Info Version", i32 3}
 !5 = !{i32 1, !"wchar_size", i32 4}
-!6 = !{!"clang version 7.0.0 (https://github.com/llvm-mirror/clang.git b641d31365414ba3ea0305fdaa80369a9efb6bd9) (https://github.com/llvm-mirror/llvm.git 6165a776d1a8bb181be93f2dc97088f7a1abc405)"}
+!6 = !{!"clang version 7.0.0"}
 !7 = distinct !DISubprogram(name: "split_dwarf", scope: !1, file: !1, line: 1, type: !8, isLocal: false, isDefinition: true, scopeLine: 1, isOptimized: false, unit: !0, retainedNodes: !2)
 !8 = !DISubroutineType(types: !9)
 !9 = !{!10}

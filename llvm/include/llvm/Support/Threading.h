@@ -1,9 +1,8 @@
 //===-- llvm/Support/Threading.h - Control multithreading mode --*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -168,6 +167,19 @@ void llvm_execute_on_thread(void (*UserFn)(void *), void *UserData,
   /// purposes, and as with setting a thread's name no indication of whether
   /// the operation succeeded or failed is returned.
   void get_thread_name(SmallVectorImpl<char> &Name);
+
+  enum class ThreadPriority {
+    Background = 0,
+    Default = 1,
+  };
+  /// If priority is Background tries to lower current threads priority such
+  /// that it does not affect foreground tasks significantly. Can be used for
+  /// long-running, latency-insensitive tasks to make sure cpu is not hogged by
+  /// this task.
+  /// If the priority is default tries to restore current threads priority to
+  /// default scheduling priority.
+  enum class SetThreadPriorityResult { FAILURE, SUCCESS };
+  SetThreadPriorityResult set_thread_priority(ThreadPriority Priority);
 }
 
 #endif

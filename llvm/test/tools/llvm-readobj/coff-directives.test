@@ -1,2 +1,2 @@
-RUN: llvm-readobj -coff-directives %p/Inputs/directives.obj.coff-x86_64 | FileCheck %s
+RUN: llvm-readobj --coff-directives %p/Inputs/directives.obj.coff-x86_64 | FileCheck %s
 CHECK: Directive(s): /DEFAULTLIB:"LIBCMT" /DEFAULTLIB:"OLDNAMES" 

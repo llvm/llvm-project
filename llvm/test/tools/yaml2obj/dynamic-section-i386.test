@@ -1,0 +1,43 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-readobj %t --dynamic-table | FileCheck %s
+
+## Check we write a valid .dynamic section values when emiting a 32-bit object.
+
+# CHECK:      DynamicSection [ (2 entries)
+# CHECK-NEXT:   Tag        Type                 Name/Value
+# CHECK-NEXT:   0x0000000A STRSZ                1 (bytes)
+# CHECK-NEXT:   0x00000000 NULL                 0x0
+# CHECK-NEXT: ]
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS32
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+  Machine:         EM_386
+Sections:
+  - Name:            .dynamic
+    Type:            SHT_DYNAMIC
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x0000000000000008
+    AddressAlign:    0x0000000000000008
+    EntSize:         0x0000000000000010
+    Entries:
+      - Tag:             DT_STRSZ
+        Value:           0x0000000000000001
+      - Tag:             DT_NULL
+        Value:           0x0000000000000000
+ProgramHeaders:
+  - Type: PT_LOAD
+    Flags: [ PF_R ]
+    VAddr: 0x0000
+    PAddr: 0x0000
+    Align: 8
+    Sections:
+      - Section: .dynamic
+  - Type: PT_DYNAMIC
+    Flags: [ PF_X, PF_R ]
+    VAddr: 0x0008
+    PAddr: 0x0008
+    Sections:
+      - Section: .dynamic

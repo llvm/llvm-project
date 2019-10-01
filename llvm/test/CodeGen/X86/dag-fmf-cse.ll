@@ -12,7 +12,6 @@ define float @fmf_should_not_break_cse(float %a, float %b) {
 ; CHECK-NEXT:    vmulss %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vaddss %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
-
   %mul1 = fmul fast float %a, %b
   %nega = fsub fast float 0.0, %a
   %mul2 = fmul fast float %nega, %b
@@ -20,3 +19,15 @@ define float @fmf_should_not_break_cse(float %a, float %b) {
   ret float %abx2
 }
 
+define <4 x float> @fmf_should_not_break_cse_vector(<4 x float> %a, <4 x float> %b) {
+; CHECK-LABEL: fmf_should_not_break_cse_vector:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmulps %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vaddps %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    retq
+  %mul1 = fmul fast <4 x float> %a, %b
+  %nega = fsub fast <4 x float> <float 0.0, float 0.0, float 0.0, float 0.0>, %a
+  %mul2 = fmul fast <4 x float> %nega, %b
+  %abx2 = fsub fast <4 x float> %mul1, %mul2
+  ret <4 x float> %abx2
+}

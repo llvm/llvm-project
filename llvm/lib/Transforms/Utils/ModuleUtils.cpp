@@ -1,9 +1,8 @@
 //===-- ModuleUtils.cpp - Functions to manipulate Modules -----------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -28,44 +27,24 @@ static void appendToGlobalArray(const char *Array, Module &M, Function *F,
   // Get the current set of static global constructors and add the new ctor
   // to the list.
   SmallVector<Constant *, 16> CurrentCtors;
-  StructType *EltTy;
+  StructType *EltTy = StructType::get(
+      IRB.getInt32Ty(), PointerType::getUnqual(FnTy), IRB.getInt8PtrTy());
   if (GlobalVariable *GVCtor = M.getNamedGlobal(Array)) {
-    ArrayType *ATy = cast<ArrayType>(GVCtor->getValueType());
-    StructType *OldEltTy = cast<StructType>(ATy->getElementType());
-    // Upgrade a 2-field global array type to the new 3-field format if needed.
-    if (Data && OldEltTy->getNumElements() < 3)
-      EltTy = StructType::get(IRB.getInt32Ty(), PointerType::getUnqual(FnTy),
-                              IRB.getInt8PtrTy());
-    else
-      EltTy = OldEltTy;
     if (Constant *Init = GVCtor->getInitializer()) {
       unsigned n = Init->getNumOperands();
       CurrentCtors.reserve(n + 1);
-      for (unsigned i = 0; i != n; ++i) {
-        auto Ctor = cast<Constant>(Init->getOperand(i));
-        if (EltTy != OldEltTy)
-          Ctor =
-              ConstantStruct::get(EltTy, Ctor->getAggregateElement((unsigned)0),
-                                  Ctor->getAggregateElement(1),
-                                  Constant::getNullValue(IRB.getInt8PtrTy()));
-        CurrentCtors.push_back(Ctor);
-      }
+      for (unsigned i = 0; i != n; ++i)
+        CurrentCtors.push_back(cast<Constant>(Init->getOperand(i)));
     }
     GVCtor->eraseFromParent();
-  } else {
-    // Use the new three-field struct if there isn't one already.
-    EltTy = StructType::get(IRB.getInt32Ty(), PointerType::getUnqual(FnTy),
-                            IRB.getInt8PtrTy());
   }
 
-  // Build a 2 or 3 field global_ctor entry.  We don't take a comdat key.
+  // Build a 3 field global_ctor entry.  We don't take a comdat key.
   Constant *CSVals[3];
   CSVals[0] = IRB.getInt32(Priority);
   CSVals[1] = F;
-  // FIXME: Drop support for the two element form in LLVM 4.0.
-  if (EltTy->getNumElements() >= 3)
-    CSVals[2] = Data ? ConstantExpr::getPointerCast(Data, IRB.getInt8PtrTy())
-                     : Constant::getNullValue(IRB.getInt8PtrTy());
+  CSVals[2] = Data ? ConstantExpr::getPointerCast(Data, IRB.getInt8PtrTy())
+                   : Constant::getNullValue(IRB.getInt8PtrTy());
   Constant *RuntimeCtorInit =
       ConstantStruct::get(EltTy, makeArrayRef(CSVals, EltTy->getNumElements()));
 
@@ -127,36 +106,24 @@ void llvm::appendToCompilerUsed(Module &M, ArrayRef<GlobalValue *> Values) {
   appendToUsedList(M, "llvm.compiler.used", Values);
 }
 
-Function *llvm::checkSanitizerInterfaceFunction(Constant *FuncOrBitcast) {
-  if (isa<Function>(FuncOrBitcast))
-    return cast<Function>(FuncOrBitcast);
-  FuncOrBitcast->print(errs());
-  errs() << '\n';
-  std::string Err;
-  raw_string_ostream Stream(Err);
-  Stream << "Sanitizer interface function redefined: " << *FuncOrBitcast;
-  report_fatal_error(Err);
-}
-
-Function *llvm::declareSanitizerInitFunction(Module &M, StringRef InitName,
-                                             ArrayRef<Type *> InitArgTypes) {
+FunctionCallee
+llvm::declareSanitizerInitFunction(Module &M, StringRef InitName,
+                                   ArrayRef<Type *> InitArgTypes) {
   assert(!InitName.empty() && "Expected init function name");
-  Function *F = checkSanitizerInterfaceFunction(M.getOrInsertFunction(
+  return M.getOrInsertFunction(
       InitName,
       FunctionType::get(Type::getVoidTy(M.getContext()), InitArgTypes, false),
-      AttributeList()));
-  F->setLinkage(Function::ExternalLinkage);
-  return F;
+      AttributeList());
 }
 
-std::pair<Function *, Function *> llvm::createSanitizerCtorAndInitFunctions(
+std::pair<Function *, FunctionCallee> llvm::createSanitizerCtorAndInitFunctions(
     Module &M, StringRef CtorName, StringRef InitName,
     ArrayRef<Type *> InitArgTypes, ArrayRef<Value *> InitArgs,
     StringRef VersionCheckName) {
   assert(!InitName.empty() && "Expected init function name");
   assert(InitArgs.size() == InitArgTypes.size() &&
          "Sanitizer's init function expects different number of arguments");
-  Function *InitFunction =
+  FunctionCallee InitFunction =
       declareSanitizerInitFunction(M, InitName, InitArgTypes);
   Function *Ctor = Function::Create(
       FunctionType::get(Type::getVoidTy(M.getContext()), false),
@@ -165,12 +132,34 @@ std::pair<Function *, Function *> llvm::createSanitizerCtorAndInitFunctions(
   IRBuilder<> IRB(ReturnInst::Create(M.getContext(), CtorBB));
   IRB.CreateCall(InitFunction, InitArgs);
   if (!VersionCheckName.empty()) {
-    Function *VersionCheckFunction =
-        checkSanitizerInterfaceFunction(M.getOrInsertFunction(
-            VersionCheckName, FunctionType::get(IRB.getVoidTy(), {}, false),
-            AttributeList()));
+    FunctionCallee VersionCheckFunction = M.getOrInsertFunction(
+        VersionCheckName, FunctionType::get(IRB.getVoidTy(), {}, false),
+        AttributeList());
     IRB.CreateCall(VersionCheckFunction, {});
   }
+  return std::make_pair(Ctor, InitFunction);
+}
+
+std::pair<Function *, FunctionCallee>
+llvm::getOrCreateSanitizerCtorAndInitFunctions(
+    Module &M, StringRef CtorName, StringRef InitName,
+    ArrayRef<Type *> InitArgTypes, ArrayRef<Value *> InitArgs,
+    function_ref<void(Function *, FunctionCallee)> FunctionsCreatedCallback,
+    StringRef VersionCheckName) {
+  assert(!CtorName.empty() && "Expected ctor function name");
+
+  if (Function *Ctor = M.getFunction(CtorName))
+    // FIXME: Sink this logic into the module, similar to the handling of
+    // globals. This will make moving to a concurrent model much easier.
+    if (Ctor->arg_size() == 0 ||
+        Ctor->getReturnType() == Type::getVoidTy(M.getContext()))
+      return {Ctor, declareSanitizerInitFunction(M, InitName, InitArgTypes)};
+
+  Function *Ctor;
+  FunctionCallee InitFunction;
+  std::tie(Ctor, InitFunction) = llvm::createSanitizerCtorAndInitFunctions(
+      M, CtorName, InitName, InitArgTypes, InitArgs, VersionCheckName);
+  FunctionsCreatedCallback(Ctor, InitFunction);
   return std::make_pair(Ctor, InitFunction);
 }
 
@@ -186,9 +175,10 @@ Function *llvm::getOrCreateInitFunction(Module &M, StringRef Name) {
     }
     return F;
   }
-  Function *F = checkSanitizerInterfaceFunction(M.getOrInsertFunction(
-      Name, AttributeList(), Type::getVoidTy(M.getContext())));
-  F->setLinkage(Function::ExternalLinkage);
+  Function *F =
+      cast<Function>(M.getOrInsertFunction(Name, AttributeList(),
+                                           Type::getVoidTy(M.getContext()))
+                         .getCallee());
 
   appendToGlobalCtors(M, F, 0);
 

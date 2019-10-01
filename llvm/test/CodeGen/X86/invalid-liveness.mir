@@ -16,7 +16,7 @@ registers:
   - { id: 0, class: gr32 }
 body: |
   bb.0:
-    JG_1 %bb.2, implicit $eflags
+    JCC_1 %bb.2, 15, implicit $eflags
     JMP_1 %bb.3
 
   bb.2:

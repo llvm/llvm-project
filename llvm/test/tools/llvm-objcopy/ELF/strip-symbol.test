@@ -1,6 +1,18 @@
 # RUN: yaml2obj %s > %t
 # RUN: llvm-objcopy --strip-symbol baz -N bar %t %t2
-# RUN: llvm-readobj -symbols -sections %t2 | FileCheck %s
+# RUN: llvm-readobj --symbols --sections %t2 | FileCheck %s
+# RUN: llvm-strip --strip-symbol baz -N bar %t -o %t3
+# RUN: cmp %t2 %t3
+# RUN: llvm-strip --regex --strip-symbol '^b.*' -N bar %t -o %t4
+# RUN: cmp %t3 %t4
+# RUN: echo " bar # bar" > %t-list.txt
+# RUN: echo " baz # baz" >> %t-list.txt
+# RUN: echo " # no symbol" >> %t-list.txt
+# RUN: llvm-objcopy --strip-symbols %t-list.txt %t %t5
+# RUN: cmp %t3 %t5
+# RUN: echo "b.* # bar & baz" > %t-list2.txt
+# RUN: llvm-objcopy --regex --strip-symbols %t-list2.txt %t %t6
+# RUN: cmp %t3 %t6
 
 !ELF
 FileHeader:
@@ -16,24 +28,23 @@ Sections:
     AddressAlign:    0x0000000000000010
     Size:            64
 Symbols:
-  Local:
-    - Name:     foo
-      Type:     STT_FUNC
-      Section:  .text
-      Value:    0x1000
-      Size:     8
-  Weak:
-    - Name:     bar
-      Type:     STT_FUNC
-      Size:     8
-      Section:  .text
-      Value:    0x1008
-  Global:
-    - Name:     baz
-      Type:     STT_FUNC
-      Size:     8
-      Section:  .text
-      Value:    0x1010
+  - Name:     foo
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0x1000
+    Size:     8
+  - Name:     bar
+    Type:     STT_FUNC
+    Size:     8
+    Section:  .text
+    Value:    0x1008
+    Binding:  STB_WEAK
+  - Name:     baz
+    Type:     STT_FUNC
+    Size:     8
+    Section:  .text
+    Value:    0x1010
+    Binding:  STB_GLOBAL
 
 #CHECK: Symbols [
 #CHECK-NEXT:  Symbol {

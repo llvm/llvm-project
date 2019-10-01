@@ -1,13 +1,13 @@
 RUN: llvm-readobj -h %p/Inputs/macho-universal.x86_64.i386 \
 RUN: | FileCheck %s -check-prefix MULTIHEADER
 
-RUN: llvm-readobj -sections %p/Inputs/macho-universal.x86_64.i386 \
+RUN: llvm-readobj --sections %p/Inputs/macho-universal.x86_64.i386 \
 RUN: | FileCheck %s -check-prefix MULTISECTIONS
 
 RUN: llvm-readobj -h %p/Inputs/macho-universal-archive.x86_64.i386 \
 RUN: | FileCheck %s -check-prefix MULTIHEADER-ARCHIVE
 
-RUN: llvm-readobj -sections %p/Inputs/macho-universal-archive.x86_64.i386 \
+RUN: llvm-readobj --sections %p/Inputs/macho-universal-archive.x86_64.i386 \
 RUN: | FileCheck %s -check-prefix MULTISECTIONS-ARCHIVE
 
 MULTIHEADER: Format: Mach-O 64-bit x86-64

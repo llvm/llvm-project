@@ -58,7 +58,7 @@ attributes #1 = { nounwind readnone }
 
 !0 = distinct !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = !DIGlobalVariable(name: "d", scope: !2, file: !3, line: 7, type: !6, isLocal: false, isDefinition: true, align: 16384)
-!2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang version 4.0.0 (http://llvm.org/git/clang.git 9ce5220b821054019059c2ac4a9b132c7723832d) (http://llvm.org/git/llvm.git 9a6298be89ce0359b151c0a37af2776a12c69e85)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !5)
+!2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang version 4.0.0", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !5)
 !3 = !DIFile(filename: "test.c", directory: "/tmp")
 !4 = !{}
 !5 = !{!0}
@@ -72,7 +72,7 @@ attributes #1 = { nounwind readnone }
 !13 = !DISubrange(count: 2)
 !14 = !{i32 2, !"Dwarf Version", i32 4}
 !15 = !{i32 2, !"Debug Info Version", i32 3}
-!16 = !{!"clang version 4.0.0 (http://llvm.org/git/clang.git 9ce5220b821054019059c2ac4a9b132c7723832d) (http://llvm.org/git/llvm.git 9a6298be89ce0359b151c0a37af2776a12c69e85)"}
+!16 = !{!"clang version 4.0.0"}
 !17 = distinct !DISubprogram(name: "foo", scope: !3, file: !3, line: 8, type: !18, isLocal: false, isDefinition: true, scopeLine: 9, flags: DIFlagPrototyped, isOptimized: false, unit: !2, retainedNodes: !4)
 !18 = !DISubroutineType(types: !19)
 !19 = !{!20}

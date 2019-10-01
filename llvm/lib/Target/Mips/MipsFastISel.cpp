@@ -1,9 +1,8 @@
 //===- MipsFastISel.cpp - Mips FastISel implementation --------------------===//
 //
-// The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -56,6 +55,7 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSymbol.h"
@@ -74,6 +74,8 @@
 #define DEBUG_TYPE "mips-fastisel"
 
 using namespace llvm;
+
+extern cl::opt<bool> EmitJalrReloc;
 
 namespace {
 
@@ -951,21 +953,34 @@ bool MipsFastISel::selectBranch(const Instruction *I) {
   //
   MachineBasicBlock *TBB = FuncInfo.MBBMap[BI->getSuccessor(0)];
   MachineBasicBlock *FBB = FuncInfo.MBBMap[BI->getSuccessor(1)];
-  // For now, just try the simplest case where it's fed by a compare.
+
+  // Fold the common case of a conditional branch with a comparison
+  // in the same block.
+  unsigned ZExtCondReg = 0;
   if (const CmpInst *CI = dyn_cast<CmpInst>(BI->getCondition())) {
-    MVT CIMVT =
-        TLI.getValueType(DL, CI->getOperand(0)->getType(), true).getSimpleVT();
-    if (CIMVT == MVT::i1)
+    if (CI->hasOneUse() && CI->getParent() == I->getParent()) {
+      ZExtCondReg = createResultReg(&Mips::GPR32RegClass);
+      if (!emitCmp(ZExtCondReg, CI))
+        return false;
+    }
+  }
+
+  // For the general case, we need to mask with 1.
+  if (ZExtCondReg == 0) {
+    unsigned CondReg = getRegForValue(BI->getCondition());
+    if (CondReg == 0)
       return false;
 
-    unsigned CondReg = getRegForValue(CI);
-    BuildMI(*BrBB, FuncInfo.InsertPt, DbgLoc, TII.get(Mips::BGTZ))
-        .addReg(CondReg)
-        .addMBB(TBB);
-    finishCondBranch(BI->getParent(), TBB, FBB);
-    return true;
+    ZExtCondReg = emitIntExt(MVT::i1, CondReg, MVT::i32, true);
+    if (ZExtCondReg == 0)
+      return false;
   }
-  return false;
+
+  BuildMI(*BrBB, FuncInfo.InsertPt, DbgLoc, TII.get(Mips::BGTZ))
+      .addReg(ZExtCondReg)
+      .addMBB(TBB);
+  finishCondBranch(BI->getParent(), TBB, FBB);
+  return true;
 }
 
 bool MipsFastISel::selectCmp(const Instruction *I) {
@@ -1550,6 +1565,16 @@ bool MipsFastISel::fastLowerCall(CallLoweringInfo &CLI) {
   MIB.addRegMask(TRI.getCallPreservedMask(*FuncInfo.MF, CC));
 
   CLI.Call = MIB;
+
+  if (EmitJalrReloc && !Subtarget->inMips16Mode()) {
+    // Attach callee address to the instruction, let asm printer emit
+    // .reloc R_MIPS_JALR.
+    if (Symbol)
+      MIB.addSym(Symbol, MipsII::MO_JALR);
+    else
+      MIB.addSym(FuncInfo.MF->getContext().getOrCreateSymbol(
+	                   Addr.getGlobalValue()->getName()), MipsII::MO_JALR);
+  }
 
   // Finish off the call including any return values.
   return finishCall(CLI, RetVT, NumBytes);

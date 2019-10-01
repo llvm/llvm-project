@@ -7,10 +7,6 @@ target triple = "wasm32-unknown-unknown"
 
 declare i32 @llvm.wasm.memory.size.i32(i32) nounwind readonly
 declare i32 @llvm.wasm.memory.grow.i32(i32, i32) nounwind
-declare i32 @llvm.wasm.mem.size.i32(i32) nounwind readonly
-declare i32 @llvm.wasm.mem.grow.i32(i32, i32) nounwind
-declare i32 @llvm.wasm.current.memory.i32() nounwind readonly
-declare i32 @llvm.wasm.grow.memory.i32(i32) nounwind
 
 ; CHECK-LABEL: memory_size:
 ; CHECK-NEXT: .functype memory_size () -> (i32){{$}}
@@ -27,41 +23,5 @@ define i32 @memory_size() {
 ; CHECK-NEXT: return $pop0{{$}}
 define i32 @memory_grow(i32 %n) {
   %a = call i32 @llvm.wasm.memory.grow.i32(i32 0, i32 %n)
-  ret i32 %a
-}
-
-; CHECK-LABEL: mem_size:
-; CHECK-NEXT: .functype mem_size () -> (i32){{$}}
-; CHECK-NEXT: mem.size $push0=, 0{{$}}
-; CHECK-NEXT: return $pop0{{$}}
-define i32 @mem_size() {
-  %a = call i32 @llvm.wasm.mem.size.i32(i32 0)
-  ret i32 %a
-}
-
-; CHECK-LABEL: mem_grow:
-; CHECK-NEXT: .functype mem_grow (i32) -> (i32){{$}}
-; CHECK: mem.grow $push0=, 0, $0{{$}}
-; CHECK-NEXT: return $pop0{{$}}
-define i32 @mem_grow(i32 %n) {
-  %a = call i32 @llvm.wasm.mem.grow.i32(i32 0, i32 %n)
-  ret i32 %a
-}
-
-; CHECK-LABEL: current_memory:
-; CHECK-NEXT: .functype current_memory () -> (i32){{$}}
-; CHECK-NEXT: current_memory $push0={{$}}
-; CHECK-NEXT: return $pop0{{$}}
-define i32 @current_memory() {
-  %a = call i32 @llvm.wasm.current.memory.i32()
-  ret i32 %a
-}
-
-; CHECK-LABEL: grow_memory:
-; CHECK-NEXT: .functype grow_memory (i32) -> (i32){{$}}
-; CHECK: grow_memory $push0=, $0{{$}}
-; CHECK-NEXT: return $pop0{{$}}
-define i32 @grow_memory(i32 %n) {
-  %a = call i32 @llvm.wasm.grow.memory.i32(i32 %n)
   ret i32 %a
 }

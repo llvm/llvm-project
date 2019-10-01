@@ -1,4 +1,4 @@
-; RUN: llc -stop-after=expand-isel-pseudos < %s | FileCheck %s
+; RUN: llc -stop-after=finalize-isel < %s | FileCheck %s
 ;
 ; Make sure that when the entry block of IR below is lowered, an instruction
 ; that implictly defines $eflags has a same debug location with the icmp
@@ -10,7 +10,7 @@
 ; CHECK-DAG:  [[VREG1:%[^ ]+]]:gr32 = COPY $esi
 ; CHECK-DAG:  [[VREG2:%[^ ]+]]:gr32 = COPY $edi
 ; CHECK:      SUB32rr [[VREG2]], [[VREG1]], implicit-def $eflags, debug-location [[DLOC1]]
-; CHECK-NEXT: JE_1{{.*}} implicit $eflags, debug-location [[DLOC2]]
+; CHECK-NEXT: JCC_1{{.*}} 4, implicit $eflags, debug-location [[DLOC2]]
 ; CHECK-NEXT: JMP_1{{.*}} debug-location [[DLOC2]]
 
 target triple = "x86_64-unknown-linux-gnu"

@@ -345,3 +345,34 @@ bb1:
 ; CHECK-LABEL: define void @caller7(
 ; CHECK: %call = call i16 @caller7.external(i16 1)
 ; CHECK-NEXT: ret void
+
+define float @caller8(float %y) {
+; Check that we can constant-prop through fneg instructions
+;
+; CHECK-LABEL: @caller8(
+; CHECK-NOT: call
+; CHECK: ret
+  %x = call float @callee8(float -42.0, float %y)
+  ret float %x
+}
+
+define float @callee8(float %x, float %y) {
+  %neg = fneg float %x
+  %icmp = fcmp ugt float %neg, 42.0
+  br i1 %icmp, label %bb.true, label %bb.false
+
+bb.true:
+  ; This block musn't be counted in the inline cost.
+  %y1 = fadd float %y, 1.0
+  %y2 = fadd float %y1, 1.0
+  %y3 = fadd float %y2, 1.0
+  %y4 = fadd float %y3, 1.0
+  %y5 = fadd float %y4, 1.0
+  %y6 = fadd float %y5, 1.0
+  %y7 = fadd float %y6, 1.0
+  %y8 = fadd float %y7, 1.0
+  ret float %y8
+
+bb.false:
+  ret float %x
+}

@@ -2,6 +2,7 @@
 ; RUN: opt -S -instcombine < %s | FileCheck %s
 
 declare double @llvm.sqrt.f64(double) nounwind readnone speculatable
+declare <2 x float> @llvm.sqrt.v2f32(<2 x float>)
 declare void @use(double)
 
 ; sqrt(a) * sqrt(b) no math flags
@@ -87,3 +88,104 @@ define double @sqrt_a_sqrt_b_sqrt_c_sqrt_d_reassoc(double %a, double %b, double 
   ret double %mul2
 }
 
+define double @rsqrt_squared(double %x) {
+; CHECK-LABEL: @rsqrt_squared(
+; CHECK-NEXT:    [[SQUARED:%.*]] = fdiv fast double 1.000000e+00, [[X:%.*]]
+; CHECK-NEXT:    ret double [[SQUARED]]
+;
+  %sqrt = call fast double @llvm.sqrt.f64(double %x)
+  %rsqrt = fdiv fast double 1.0, %sqrt
+  %squared = fmul fast double %rsqrt, %rsqrt
+  ret double %squared
+}
+
+define double @sqrt_divisor_squared(double %x, double %y) {
+; CHECK-LABEL: @sqrt_divisor_squared(
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc nnan nsz double [[Y:%.*]], [[Y]]
+; CHECK-NEXT:    [[SQUARED:%.*]] = fdiv reassoc nnan nsz double [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    ret double [[SQUARED]]
+;
+  %sqrt = call double @llvm.sqrt.f64(double %x)
+  %div = fdiv double %y, %sqrt
+  %squared = fmul reassoc nnan nsz double %div, %div
+  ret double %squared
+}
+
+define <2 x float> @sqrt_dividend_squared(<2 x float> %x, <2 x float> %y) {
+; CHECK-LABEL: @sqrt_dividend_squared(
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast <2 x float> [[Y:%.*]], [[Y]]
+; CHECK-NEXT:    [[SQUARED:%.*]] = fdiv fast <2 x float> [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret <2 x float> [[SQUARED]]
+;
+  %sqrt = call <2 x float> @llvm.sqrt.v2f32(<2 x float> %x)
+  %div = fdiv fast <2 x float> %sqrt, %y
+  %squared = fmul fast <2 x float> %div, %div
+  ret <2 x float> %squared
+}
+
+; We do not transform this because it would result in an extra instruction.
+; This might still be a good optimization for the backend.
+
+define double @sqrt_divisor_squared_extra_use(double %x, double %y) {
+; CHECK-LABEL: @sqrt_divisor_squared_extra_use(
+; CHECK-NEXT:    [[SQRT:%.*]] = call double @llvm.sqrt.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv double [[Y:%.*]], [[SQRT]]
+; CHECK-NEXT:    call void @use(double [[DIV]])
+; CHECK-NEXT:    [[SQUARED:%.*]] = fmul reassoc nnan nsz double [[DIV]], [[DIV]]
+; CHECK-NEXT:    ret double [[SQUARED]]
+;
+  %sqrt = call double @llvm.sqrt.f64(double %x)
+  %div = fdiv double %y, %sqrt
+  call void @use(double %div)
+  %squared = fmul reassoc nnan nsz double %div, %div
+  ret double %squared
+}
+
+define double @sqrt_dividend_squared_extra_use(double %x, double %y) {
+; CHECK-LABEL: @sqrt_dividend_squared_extra_use(
+; CHECK-NEXT:    [[SQRT:%.*]] = call double @llvm.sqrt.f64(double [[X:%.*]])
+; CHECK-NEXT:    call void @use(double [[SQRT]])
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast double [[Y:%.*]], [[Y]]
+; CHECK-NEXT:    [[SQUARED:%.*]] = fdiv fast double [[X]], [[TMP1]]
+; CHECK-NEXT:    ret double [[SQUARED]]
+;
+  %sqrt = call double @llvm.sqrt.f64(double %x)
+  call void @use(double %sqrt)
+  %div = fdiv fast double %sqrt, %y
+  %squared = fmul fast double %div, %div
+  ret double %squared
+}
+
+; Negative test - require 'nsz'.
+
+define double @sqrt_divisor_not_enough_FMF(double %x, double %y) {
+; CHECK-LABEL: @sqrt_divisor_not_enough_FMF(
+; CHECK-NEXT:    [[SQRT:%.*]] = call double @llvm.sqrt.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv double [[Y:%.*]], [[SQRT]]
+; CHECK-NEXT:    [[SQUARED:%.*]] = fmul reassoc nnan double [[DIV]], [[DIV]]
+; CHECK-NEXT:    ret double [[SQUARED]]
+;
+  %sqrt = call double @llvm.sqrt.f64(double %x)
+  %div = fdiv double %y, %sqrt
+  %squared = fmul reassoc nnan double %div, %div
+  ret double %squared
+}
+
+; TODO: This is a special-case of the general pattern. If we have a constant
+; operand, the extra use limitation could be eased because this does not
+; result in an extra instruction (1.0 * 1.0 is constant folded).
+
+define double @rsqrt_squared_extra_use(double %x) {
+; CHECK-LABEL: @rsqrt_squared_extra_use(
+; CHECK-NEXT:    [[SQRT:%.*]] = call fast double @llvm.sqrt.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[RSQRT:%.*]] = fdiv fast double 1.000000e+00, [[SQRT]]
+; CHECK-NEXT:    call void @use(double [[RSQRT]])
+; CHECK-NEXT:    [[SQUARED:%.*]] = fmul fast double [[RSQRT]], [[RSQRT]]
+; CHECK-NEXT:    ret double [[SQUARED]]
+;
+  %sqrt = call fast double @llvm.sqrt.f64(double %x)
+  %rsqrt = fdiv fast double 1.0, %sqrt
+  call void @use(double %rsqrt)
+  %squared = fmul fast double %rsqrt, %rsqrt
+  ret double %squared
+}

@@ -18,9 +18,10 @@ define void @fn1() {
   %xor = zext i1 %tobool1 to i32
   %t1 = load i32, i32* @b, align 4
   %tobool2 = icmp ne i32 %t1, 0
-  %tobool4 = icmp ne i32 undef, 0
-  %t2 = and i1 %tobool4, %tobool2
-  %sub = sext i1 %t2 to i32
+  %t2 = load i32, i32* @d, align 4
+  %tobool4 = icmp ne i32 %t2, 0
+  %t3 = and i1 %tobool4, %tobool2
+  %sub = sext i1 %t3 to i32
   %div = sdiv i32 %sub, 2
   %add = add nsw i32 %div, %xor
   store i32 %add, i32* @d, align 4

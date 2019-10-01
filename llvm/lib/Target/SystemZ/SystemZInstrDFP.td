@@ -1,9 +1,8 @@
 //==- SystemZInstrDFP.td - Floating-point SystemZ instructions -*- tblgen-*-==//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -20,7 +19,7 @@
 //===----------------------------------------------------------------------===//
 
 // Load and test.
-let Defs = [CC] in {
+let Uses = [FPC], Defs = [CC] in {
   def LTDTR : UnaryRRE<"ltdtr", 0xB3D6, null_frag, FP64,  FP64>;
   def LTXTR : UnaryRRE<"ltxtr", 0xB3DE, null_frag, FP128, FP128>;
 }
@@ -32,25 +31,31 @@ let Defs = [CC] in {
 
 // Convert floating-point values to narrower representations.  The destination
 // of LDXTR is a 128-bit value, but only the first register of the pair is used.
-def LEDTR : TernaryRRFe<"ledtr", 0xB3D5, FP32,  FP64>;
-def LDXTR : TernaryRRFe<"ldxtr", 0xB3DD, FP128, FP128>;
+let Uses = [FPC] in {
+  def LEDTR : TernaryRRFe<"ledtr", 0xB3D5, FP32,  FP64>;
+  def LDXTR : TernaryRRFe<"ldxtr", 0xB3DD, FP128, FP128>;
+}
 
 // Extend floating-point values to wider representations.
-def LDETR : BinaryRRFd<"ldetr", 0xB3D4, FP64,  FP32>;
-def LXDTR : BinaryRRFd<"lxdtr", 0xB3DC, FP128, FP64>;
+let Uses = [FPC] in {
+  def LDETR : BinaryRRFd<"ldetr", 0xB3D4, FP64,  FP32>;
+  def LXDTR : BinaryRRFd<"lxdtr", 0xB3DC, FP128, FP64>;
+}
 
 // Convert a signed integer value to a floating-point one.
-def CDGTR : UnaryRRE<"cdgtr", 0xB3F1, null_frag, FP64,  GR64>;
-def CXGTR : UnaryRRE<"cxgtr", 0xB3F9, null_frag, FP128, GR64>;
-let Predicates = [FeatureFPExtension] in {
-  def CDGTRA : TernaryRRFe<"cdgtra", 0xB3F1, FP64,  GR64>;
-  def CXGTRA : TernaryRRFe<"cxgtra", 0xB3F9, FP128, GR64>;
-  def CDFTR : TernaryRRFe<"cdftr", 0xB951, FP64,  GR32>;
-  def CXFTR : TernaryRRFe<"cxftr", 0xB959, FP128, GR32>;
+let Uses = [FPC] in {
+  def CDGTR : UnaryRRE<"cdgtr", 0xB3F1, null_frag, FP64,  GR64>;
+  def CXGTR : UnaryRRE<"cxgtr", 0xB3F9, null_frag, FP128, GR64>;
+  let Predicates = [FeatureFPExtension] in {
+    def CDGTRA : TernaryRRFe<"cdgtra", 0xB3F1, FP64,  GR64>;
+    def CXGTRA : TernaryRRFe<"cxgtra", 0xB3F9, FP128, GR64>;
+    def CDFTR : TernaryRRFe<"cdftr", 0xB951, FP64,  GR32>;
+    def CXFTR : TernaryRRFe<"cxftr", 0xB959, FP128, GR32>;
+  }
 }
 
 // Convert an unsigned integer value to a floating-point one.
-let Predicates = [FeatureFPExtension] in {
+let Uses = [FPC], Predicates = [FeatureFPExtension] in {
   def CDLGTR : TernaryRRFe<"cdlgtr", 0xB952, FP64,  GR64>;
   def CXLGTR : TernaryRRFe<"cxlgtr", 0xB95A, FP128, GR64>;
   def CDLFTR : TernaryRRFe<"cdlftr", 0xB953, FP64,  GR32>;
@@ -58,7 +63,7 @@ let Predicates = [FeatureFPExtension] in {
 }
 
 // Convert a floating-point value to a signed integer value.
-let Defs = [CC] in {
+let Uses = [FPC], Defs = [CC] in {
   def CGDTR : BinaryRRFe<"cgdtr", 0xB3E1, GR64, FP64>;
   def CGXTR : BinaryRRFe<"cgxtr", 0xB3E9, GR64, FP128>;
   let Predicates = [FeatureFPExtension] in {
@@ -70,7 +75,7 @@ let Defs = [CC] in {
 }
 
 // Convert a floating-point value to an unsigned integer value.
-let Defs = [CC] in {
+let Uses = [FPC], Defs = [CC] in {
   let Predicates = [FeatureFPExtension] in {
     def CLGDTR : TernaryRRFe<"clgdtr", 0xB942, GR64, FP64>;
     def CLGXTR : TernaryRRFe<"clgxtr", 0xB94A, GR64, FP128>;
@@ -108,7 +113,7 @@ let Predicates = [FeatureDFPPackedConversion] in {
 }
 
 // Perform floating-point operation.
-let Defs = [CC, R1L, F0Q], Uses = [R0L, F4Q] in
+let Defs = [CC, R1L, F0Q], Uses = [FPC, R0L, F4Q] in
   def PFPO : SideEffectInherentE<"pfpo", 0x010A>;
 
 
@@ -118,8 +123,10 @@ let Defs = [CC, R1L, F0Q], Uses = [R0L, F4Q] in
 
 // Round to an integer, with the second operand (M3) specifying the rounding
 // mode.  M4 can be set to 4 to suppress detection of inexact conditions.
-def FIDTR : TernaryRRFe<"fidtr", 0xB3D7, FP64,  FP64>;
-def FIXTR : TernaryRRFe<"fixtr", 0xB3DF, FP128, FP128>;
+let Uses = [FPC] in {
+  def FIDTR : TernaryRRFe<"fidtr", 0xB3D7, FP64,  FP64>;
+  def FIXTR : TernaryRRFe<"fixtr", 0xB3DF, FP128, FP128>;
+}
 
 // Extract biased exponent.
 def EEDTR : UnaryRRE<"eedtr", 0xB3E5, null_frag, FP64,  FP64>;
@@ -135,7 +142,7 @@ def ESXTR : UnaryRRE<"esxtr", 0xB3EF, null_frag, FP128, FP128>;
 //===----------------------------------------------------------------------===//
 
 // Addition.
-let Defs = [CC] in {
+let Uses = [FPC], Defs = [CC] in {
   let isCommutable = 1 in {
     def ADTR : BinaryRRFa<"adtr", 0xB3D2, null_frag, FP64,  FP64,  FP64>;
     def AXTR : BinaryRRFa<"axtr", 0xB3DA, null_frag, FP128, FP128, FP128>;
@@ -147,7 +154,7 @@ let Defs = [CC] in {
 }
 
 // Subtraction.
-let Defs = [CC] in {
+let Uses = [FPC], Defs = [CC] in {
   def SDTR : BinaryRRFa<"sdtr", 0xB3D3, null_frag, FP64,  FP64,  FP64>;
   def SXTR : BinaryRRFa<"sxtr", 0xB3DB, null_frag, FP128, FP128, FP128>;
   let Predicates = [FeatureFPExtension] in {
@@ -157,30 +164,38 @@ let Defs = [CC] in {
 }
 
 // Multiplication.
-let isCommutable = 1 in {
-  def MDTR : BinaryRRFa<"mdtr", 0xB3D0, null_frag, FP64,  FP64,  FP64>;
-  def MXTR : BinaryRRFa<"mxtr", 0xB3D8, null_frag, FP128, FP128, FP128>;
-}
-let Predicates = [FeatureFPExtension] in {
-  def MDTRA : TernaryRRFa<"mdtra", 0xB3D0, FP64,  FP64,  FP64>;
-  def MXTRA : TernaryRRFa<"mxtra", 0xB3D8, FP128, FP128, FP128>;
+let Uses = [FPC] in {
+  let isCommutable = 1 in {
+    def MDTR : BinaryRRFa<"mdtr", 0xB3D0, null_frag, FP64,  FP64,  FP64>;
+    def MXTR : BinaryRRFa<"mxtr", 0xB3D8, null_frag, FP128, FP128, FP128>;
+  }
+  let Predicates = [FeatureFPExtension] in {
+    def MDTRA : TernaryRRFa<"mdtra", 0xB3D0, FP64,  FP64,  FP64>;
+    def MXTRA : TernaryRRFa<"mxtra", 0xB3D8, FP128, FP128, FP128>;
+  }
 }
 
 // Division.
-def DDTR : BinaryRRFa<"ddtr", 0xB3D1, null_frag, FP64,  FP64,  FP64>;
-def DXTR : BinaryRRFa<"dxtr", 0xB3D9, null_frag, FP128, FP128, FP128>;
-let Predicates = [FeatureFPExtension] in {
-  def DDTRA : TernaryRRFa<"ddtra", 0xB3D1, FP64,  FP64,  FP64>;
-  def DXTRA : TernaryRRFa<"dxtra", 0xB3D9, FP128, FP128, FP128>;
+let Uses = [FPC] in {
+  def DDTR : BinaryRRFa<"ddtr", 0xB3D1, null_frag, FP64,  FP64,  FP64>;
+  def DXTR : BinaryRRFa<"dxtr", 0xB3D9, null_frag, FP128, FP128, FP128>;
+  let Predicates = [FeatureFPExtension] in {
+    def DDTRA : TernaryRRFa<"ddtra", 0xB3D1, FP64,  FP64,  FP64>;
+    def DXTRA : TernaryRRFa<"dxtra", 0xB3D9, FP128, FP128, FP128>;
+  }
 }
 
 // Quantize.
-def QADTR : TernaryRRFb<"qadtr", 0xB3F5, FP64,  FP64,  FP64>;
-def QAXTR : TernaryRRFb<"qaxtr", 0xB3FD, FP128, FP128, FP128>;
+let Uses = [FPC] in {
+  def QADTR : TernaryRRFb<"qadtr", 0xB3F5, FP64,  FP64,  FP64>;
+  def QAXTR : TernaryRRFb<"qaxtr", 0xB3FD, FP128, FP128, FP128>;
+}
 
 // Reround.
-def RRDTR : TernaryRRFb<"rrdtr", 0xB3F7, FP64,  FP64,  FP64>;
-def RRXTR : TernaryRRFb<"rrxtr", 0xB3FF, FP128, FP128, FP128>;
+let Uses = [FPC] in {
+  def RRDTR : TernaryRRFb<"rrdtr", 0xB3F7, FP64,  FP64,  FP64>;
+  def RRXTR : TernaryRRFb<"rrxtr", 0xB3FF, FP128, FP128, FP128>;
+}
 
 // Shift significand left/right.
 def SLDT : BinaryRXF<"sldt", 0xED40, null_frag, FP64,  FP64,  null_frag, 0>;
@@ -198,13 +213,13 @@ def IEXTR : BinaryRRFb<"iextr", 0xB3FE, null_frag, FP128, FP128, FP128>;
 //===----------------------------------------------------------------------===//
 
 // Compare.
-let Defs = [CC] in {
+let Uses = [FPC], Defs = [CC] in {
   def CDTR : CompareRRE<"cdtr", 0xB3E4, null_frag, FP64,  FP64>;
   def CXTR : CompareRRE<"cxtr", 0xB3EC, null_frag, FP128, FP128>;
 }
 
 // Compare and signal.
-let Defs = [CC] in {
+let Uses = [FPC], Defs = [CC] in {
   def KDTR : CompareRRE<"kdtr", 0xB3E0, null_frag, FP64,  FP64>;
   def KXTR : CompareRRE<"kxtr", 0xB3E8, null_frag, FP128, FP128>;
 }

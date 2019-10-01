@@ -1,9 +1,8 @@
 //===- ELFTypes.h - Endian specific types for ELF ---------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -593,9 +592,9 @@ class Elf_Note_Impl {
 
   template <class NoteIteratorELFT> friend class Elf_Note_Iterator_Impl;
 
+public:
   Elf_Note_Impl(const Elf_Nhdr_Impl<ELFT> &Nhdr) : Nhdr(Nhdr) {}
 
-public:
   /// Get the note's name, excluding the terminating null byte.
   StringRef getName() const {
     if (!Nhdr.n_namesz)

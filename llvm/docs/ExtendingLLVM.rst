@@ -47,11 +47,13 @@ function and then be turned into an instruction if warranted.
 
 #. ``llvm/include/llvm/IR/Intrinsics*.td``:
 
-   Add an entry for your intrinsic.  Describe its memory access characteristics
-   for optimization (this controls whether it will be DCE'd, CSE'd, etc). Note
-   that any intrinsic using one of the ``llvm_any*_ty`` types for an argument or
-   return type will be deemed by ``tblgen`` as overloaded and the corresponding
-   suffix will be required on the intrinsic's name.
+   Add an entry for your intrinsic.  Describe its memory access
+   characteristics for optimization (this controls whether it will be
+   DCE'd, CSE'd, etc). If any arguments need to be immediates, these
+   must be indicated with the ImmArg property. Note that any intrinsic
+   using one of the ``llvm_any*_ty`` types for an argument or return
+   type will be deemed by ``tblgen`` as overloaded and the
+   corresponding suffix will be required on the intrinsic's name.
 
 #. ``llvm/lib/Analysis/ConstantFolding.cpp``:
 
@@ -253,10 +255,6 @@ Adding a fundamental type
    add enum ``LLVMTypeKind`` and modify
    ``LLVMTypeKind LLVMGetTypeKind(LLVMTypeRef Ty)`` for the new type
 
-#. ``llvm/include/llvm/IR/TypeBuilder.h``:
-
-   add new class to represent new type in the hierarchy
-
 #. ``llvm/lib/AsmParser/LLLexer.cpp``:
 
    add ability to parse in the type from text assembly
@@ -298,10 +296,6 @@ Adding a derived type
 
    add enum ``LLVMTypeKind`` and modify
    `LLVMTypeKind LLVMGetTypeKind(LLVMTypeRef Ty)` for the new type
-
-#. ``llvm/include/llvm/IR/TypeBuilder.h``:
-
-   add new class to represent new class in the hierarchy
 
 #. ``llvm/lib/AsmParser/LLLexer.cpp``:
 

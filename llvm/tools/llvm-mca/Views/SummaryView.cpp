@@ -1,9 +1,8 @@
 //===--------------------- SummaryView.cpp -------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 /// \file
@@ -25,10 +24,17 @@ namespace mca {
 
 SummaryView::SummaryView(const MCSchedModel &Model, ArrayRef<MCInst> S,
                          unsigned Width)
-    : SM(Model), Source(S), DispatchWidth(Width), LastInstructionIdx(0),
+    : SM(Model), Source(S), DispatchWidth(Width?Width: Model.IssueWidth),
+      LastInstructionIdx(0),
       TotalCycles(0), NumMicroOps(0),
-      ProcResourceUsage(Model.getNumProcResourceKinds(), 0) {
+      ProcResourceUsage(Model.getNumProcResourceKinds(), 0),
+      ProcResourceMasks(Model.getNumProcResourceKinds()),
+      ResIdx2ProcResID(Model.getNumProcResourceKinds(), 0) {
   computeProcResourceMasks(SM, ProcResourceMasks);
+  for (unsigned I = 1, E = SM.getNumProcResourceKinds(); I < E; ++I) {
+    unsigned Index = getResourceStateIndex(ProcResourceMasks[I]);
+    ResIdx2ProcResID[Index] = I;
+  }
 }
 
 void SummaryView::onEvent(const HWInstructionEvent &Event) {
@@ -50,11 +56,8 @@ void SummaryView::onEvent(const HWInstructionEvent &Event) {
   NumMicroOps += Desc.NumMicroOps;
   for (const std::pair<uint64_t, const ResourceUsage> &RU : Desc.Resources) {
     if (RU.second.size()) {
-      const auto It = find(ProcResourceMasks, RU.first);
-      assert(It != ProcResourceMasks.end() &&
-             "Invalid processor resource mask!");
-      ProcResourceUsage[std::distance(ProcResourceMasks.begin(), It)] +=
-          RU.second.size();
+      unsigned ProcResID = ResIdx2ProcResID[getResourceStateIndex(RU.first)];
+      ProcResourceUsage[ProcResID] += RU.second.size();
     }
   }
 }
@@ -86,5 +89,6 @@ void SummaryView::printView(raw_ostream &OS) const {
   TempStream.flush();
   OS << Buffer;
 }
+
 } // namespace mca.
 } // namespace llvm

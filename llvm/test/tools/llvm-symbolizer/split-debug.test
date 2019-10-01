@@ -20,7 +20,7 @@
 RUN: mkdir -p %t/.debug
 RUN: llvm-objcopy --keep-section=.debug_info %p/Inputs/addr.exe %t/.debug/addr
 RUN: llvm-objcopy --strip-debug --add-gnu-debuglink=%t/.debug/addr %p/Inputs/addr.exe %t/addr.exe
-RUN: llvm-symbolizer -print-address -obj=%t/addr.exe < %p/Inputs/addr.inp | FileCheck %s
+RUN: llvm-symbolizer -print-address -obj=%t/addr.exe 0x40054d | FileCheck %s
 
 #CHECK: 0x40054d
 #CHECK: {{[/\]+}}tmp{{[/\]+}}x.c:14:0

@@ -74,3 +74,14 @@ entry:
   %shr = lshr i16 %a, 10
   ret i16 %shr
 }
+
+define i16 @lshl10_i16(i16 %a) #0 {
+entry:
+; CHECK-LABEL: lshl10_i16:
+; CHECK:      mov.b r12, r12
+; CHECK-NEXT: swpb r12
+; CHECK-NEXT: add r12, r12
+; CHECK-NEXT: add r12, r12
+  %shl = shl i16 %a, 10
+  ret i16 %shl
+}

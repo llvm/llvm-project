@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-- -print-machineinstrs=expand-isel-pseudos %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: llc -mtriple=x86_64-- -print-after=finalize-isel %s -o /dev/null 2>&1 | FileCheck %s
 
 declare void @foo(i32)
 
@@ -276,6 +276,6 @@ sw.epilog:
 ; CHECK: successors: %bb.8(0x20000001), %bb.9(0x5fffffff)
 }
 
-!1 = !{!"branch_weights", i32 10, i32 10, i32 10, i32 10, i32 10, i32 10, i32 10, i32 10, i32 10} 
-!2 = !{!"branch_weights", i32 10, i32 10, i32 10, i32 10, i32 10, i32 10} 
-!3 = !{!"branch_weights", i32 10, i32 10, i32 10, i32 10, i32 10, i32 10, i32 10} 
+!1 = !{!"branch_weights", i32 10, i32 10, i32 10, i32 10, i32 10, i32 10, i32 10, i32 10, i32 10}
+!2 = !{!"branch_weights", i32 10, i32 10, i32 10, i32 10, i32 10, i32 10}
+!3 = !{!"branch_weights", i32 10, i32 10, i32 10, i32 10, i32 10, i32 10, i32 10}

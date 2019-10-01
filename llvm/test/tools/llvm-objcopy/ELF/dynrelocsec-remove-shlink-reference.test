@@ -1,0 +1,34 @@
+# RUN: yaml2obj %s > %t
+
+## Check we cannot remove the .dynsym symbol table because dynamic
+## relocation section .rela.dyn still references it via sh_link field.
+# RUN: not llvm-objcopy -R .dynsym %t %t2 2>&1 >/dev/null | FileCheck %s --check-prefix=ERR -DINPUT=%t
+# ERR: error: '[[INPUT]]': symbol table '.dynsym' cannot be removed because it is referenced by the relocation section '.rela.dyn'
+
+## Check we can remove .dynsym after removing the reference.
+# RUN: llvm-objcopy -R .dynsym -R .rela.dyn %t %t2
+# RUN: llvm-readelf --sections %t2 | FileCheck %s --implicit-check-not=".dynsym"
+
+## Check we zero out sh_link field and allow producing output with the --allow-broken-links switch.
+# RUN: llvm-objcopy -R .dynsym --allow-broken-links %t %t2
+# RUN: llvm-readelf --sections %t2 | FileCheck %s --check-prefix=DROP-LINK
+# DROP-LINK:     [Nr] Name      Type Address          Off    Size   ES   Flg L
+# DROP-LINK:     [ 1] .rela.dyn RELA 0000000000000270 000040 000000 18   A   0
+# DROP-LINK-NOT: .dynsym
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+  Machine:         EM_X86_64
+Sections:
+  - Name:          .rela.dyn
+    Type:          SHT_RELA
+    Flags:         [ SHF_ALLOC ]
+    Address:       0x0000000000000270
+    Link:          .dynsym
+    EntSize:       0x0000000000000018
+DynamicSymbols:
+  - Name:          bar
+    Binding:       STB_GLOBAL

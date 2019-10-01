@@ -1,9 +1,8 @@
 //===- CoverageMapping.cpp - Code coverage mapping support ----------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -195,6 +194,15 @@ void FunctionRecordIterator::skipOtherFiles() {
     *this = FunctionRecordIterator();
 }
 
+ArrayRef<unsigned> CoverageMapping::getImpreciseRecordIndicesForFilename(
+    StringRef Filename) const {
+  size_t FilenameHash = hash_value(Filename);
+  auto RecordIt = FilenameHash2RecordIndices.find(FilenameHash);
+  if (RecordIt == FilenameHash2RecordIndices.end())
+    return {};
+  return RecordIt->second;
+}
+
 Error CoverageMapping::loadFunctionRecord(
     const CoverageMappingRecord &Record,
     IndexedInstrProfReader &ProfileReader) {
@@ -250,6 +258,20 @@ Error CoverageMapping::loadFunctionRecord(
     return Error::success();
 
   Functions.push_back(std::move(Function));
+
+  // Performance optimization: keep track of the indices of the function records
+  // which correspond to each filename. This can be used to substantially speed
+  // up queries for coverage info in a file.
+  unsigned RecordIndex = Functions.size() - 1;
+  for (StringRef Filename : Record.Filenames) {
+    auto &RecordIndices = FilenameHash2RecordIndices[hash_value(Filename)];
+    // Note that there may be duplicates in the filename set for a function
+    // record, because of e.g. macro expansions in the function in which both
+    // the macro and the function are defined in the same file.
+    if (RecordIndices.empty() || RecordIndices.back() != RecordIndex)
+      RecordIndices.push_back(RecordIndex);
+  }
+
   return Error::success();
 }
 
@@ -286,11 +308,14 @@ CoverageMapping::load(ArrayRef<StringRef> ObjectFilenames,
     if (std::error_code EC = CovMappingBufOrErr.getError())
       return errorCodeToError(EC);
     StringRef Arch = Arches.empty() ? StringRef() : Arches[File.index()];
-    auto CoverageReaderOrErr =
-        BinaryCoverageReader::create(CovMappingBufOrErr.get(), Arch);
-    if (Error E = CoverageReaderOrErr.takeError())
+    MemoryBufferRef CovMappingBufRef =
+        CovMappingBufOrErr.get()->getMemBufferRef();
+    auto CoverageReadersOrErr =
+        BinaryCoverageReader::create(CovMappingBufRef, Arch, Buffers);
+    if (Error E = CoverageReadersOrErr.takeError())
       return std::move(E);
-    Readers.push_back(std::move(CoverageReaderOrErr.get()));
+    for (auto &Reader : CoverageReadersOrErr.get())
+      Readers.push_back(std::move(Reader));
     Buffers.push_back(std::move(CovMappingBufOrErr.get()));
   }
   return load(Readers, *ProfileReader);
@@ -605,7 +630,12 @@ CoverageData CoverageMapping::getCoverageForFile(StringRef Filename) const {
   CoverageData FileCoverage(Filename);
   std::vector<CountedRegion> Regions;
 
-  for (const auto &Function : Functions) {
+  // Look up the function records in the given file. Due to hash collisions on
+  // the filename, we may get back some records that are not in the file.
+  ArrayRef<unsigned> RecordIndices =
+      getImpreciseRecordIndicesForFilename(Filename);
+  for (unsigned RecordIndex : RecordIndices) {
+    const FunctionRecord &Function = Functions[RecordIndex];
     auto MainFileID = findMainViewFileID(Filename, Function);
     auto FileIDs = gatherFileIDs(Filename, Function);
     for (const auto &CR : Function.CountedRegions)
@@ -625,7 +655,12 @@ CoverageData CoverageMapping::getCoverageForFile(StringRef Filename) const {
 std::vector<InstantiationGroup>
 CoverageMapping::getInstantiationGroups(StringRef Filename) const {
   FunctionInstantiationSetCollector InstantiationSetCollector;
-  for (const auto &Function : Functions) {
+  // Look up the function records in the given file. Due to hash collisions on
+  // the filename, we may get back some records that are not in the file.
+  ArrayRef<unsigned> RecordIndices =
+      getImpreciseRecordIndicesForFilename(Filename);
+  for (unsigned RecordIndex : RecordIndices) {
+    const FunctionRecord &Function = Functions[RecordIndex];
     auto MainFileID = findMainViewFileID(Filename, Function);
     if (!MainFileID)
       continue;

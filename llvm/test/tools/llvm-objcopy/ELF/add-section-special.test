@@ -1,0 +1,22 @@
+# Check the properties of added sections.
+# By default, sections are SHT_PROGBITS, but .note sections (excluding
+# .note.GNU-stack) are SHT_NOTE sections.
+
+# RUN: yaml2obj %s > %t.o
+# RUN: llvm-objcopy --add-section=.foo=/dev/null %t.o %t-foo.o
+# RUN: llvm-objcopy --add-section=.note.foo=/dev/null %t.o %t-regular-note.o
+# RUN: llvm-objcopy --add-section=.note.GNU-stack=/dev/null %t.o %t-gnu-stack.o
+# RUN: llvm-readelf --sections %t-foo.o | FileCheck %s --check-prefix=NORMAL
+# RUN: llvm-readelf --sections %t-regular-note.o | FileCheck %s --check-prefix=NOTE
+# RUN: llvm-readelf --sections %t-gnu-stack.o | FileCheck %s --check-prefix=GNU-STACK
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+
+# NORMAL:    .foo            PROGBITS
+# NOTE:      .note.foo       NOTE
+# GNU-STACK: .note.GNU-stack PROGBITS

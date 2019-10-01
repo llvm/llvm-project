@@ -1,9 +1,8 @@
 //===--- HexagonPseudo.td -------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -560,3 +559,8 @@ defm PS_storerh : NewCircularStore<IntRegs, HalfWordAccess>;
 defm PS_storerf : NewCircularStore<IntRegs, HalfWordAccess>;
 defm PS_storeri : NewCircularStore<IntRegs, WordAccess>;
 defm PS_storerd : NewCircularStore<DoubleRegs, WordAccess>;
+
+// A pseudo that generates a runtime crash. This is used to implement
+// __builtin_trap.
+let hasSideEffects = 1, isPseudo = 1, isCodeGenOnly = 1, isSolo = 1 in
+def PS_crash: InstHexagon<(outs), (ins), "", [], "", PSEUDO, TypePSEUDO>;

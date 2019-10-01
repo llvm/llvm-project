@@ -1,9 +1,8 @@
 //=-- ProfilesummaryBuilder.cpp - Profile summary computation ---------------=//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -45,12 +44,17 @@ void InstrProfSummaryBuilder::addRecord(const InstrProfRecord &R) {
 // To compute the detailed summary, we consider each line containing samples as
 // equivalent to a block with a count in the instrumented profile.
 void SampleProfileSummaryBuilder::addRecord(
-    const sampleprof::FunctionSamples &FS) {
-  NumFunctions++;
-  if (FS.getHeadSamples() > MaxFunctionCount)
-    MaxFunctionCount = FS.getHeadSamples();
+    const sampleprof::FunctionSamples &FS, bool isCallsiteSample) {
+  if (!isCallsiteSample) {
+    NumFunctions++;
+    if (FS.getHeadSamples() > MaxFunctionCount)
+      MaxFunctionCount = FS.getHeadSamples();
+  }
   for (const auto &I : FS.getBodySamples())
     addCount(I.second.getSamples());
+  for (const auto &I : FS.getCallsiteSamples())
+    for (const auto &CS : I.second)
+      addRecord(CS.second, true);
 }
 
 // The argument to this method is a vector of cutoff percentages and the return

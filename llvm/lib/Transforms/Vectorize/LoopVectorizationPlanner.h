@@ -1,9 +1,8 @@
 //===- LoopVectorizationPlanner.h - Planner for LoopVectorization ---------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -172,6 +171,13 @@ struct VectorizationFactor {
   unsigned Width;
   // Cost of the loop with that width
   unsigned Cost;
+
+  // Width 1 means no vectorization, cost 0 means uncomputed cost.
+  static VectorizationFactor Disabled() { return {1, 0}; }
+
+  bool operator==(const VectorizationFactor &rhs) const {
+    return Width == rhs.Width && Cost == rhs.Cost;
+  }
 };
 
 /// Planner drives the vectorization process after having passed
@@ -192,10 +198,8 @@ class LoopVectorizationPlanner {
   /// The legality analysis.
   LoopVectorizationLegality *Legal;
 
-  /// The profitablity analysis.
+  /// The profitability analysis.
   LoopVectorizationCostModel &CM;
-
-  using VPlanPtr = std::unique_ptr<VPlan>;
 
   SmallVector<VPlanPtr, 4> VPlans;
 
@@ -222,8 +226,9 @@ public:
                            LoopVectorizationCostModel &CM)
       : OrigLoop(L), LI(LI), TLI(TLI), TTI(TTI), Legal(Legal), CM(CM) {}
 
-  /// Plan how to best vectorize, return the best VF and its cost.
-  VectorizationFactor plan(bool OptForSize, unsigned UserVF);
+  /// Plan how to best vectorize, return the best VF and its cost, or None if
+  /// vectorization and interleaving should be avoided up front.
+  Optional<VectorizationFactor> plan(bool OptForSize, unsigned UserVF);
 
   /// Use the VPlan-native path to plan how to best vectorize, return the best
   /// VF and its cost.

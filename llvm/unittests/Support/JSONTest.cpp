@@ -1,13 +1,13 @@
 //===-- JSONTest.cpp - JSON unit tests --------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/JSON.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -382,6 +382,44 @@ TEST(JSONTest, Deserialize) {
   // Optional<T> must parse as the correct type if present.
   EXPECT_FALSE(fromJSON(Object{{"str", 1}, {"int", "string"}}, V))
       << "Wrong type for Optional<T> " << V;
+}
+
+TEST(JSONTest, Stream) {
+  auto StreamStuff = [](unsigned Indent) {
+    std::string S;
+    llvm::raw_string_ostream OS(S);
+    OStream J(OS, Indent);
+    J.object([&] {
+      J.attributeArray("foo", [&] {
+        J.value(nullptr);
+        J.value(42.5);
+        J.arrayBegin();
+        J.value(43);
+        J.arrayEnd();
+      });
+      J.attributeBegin("bar");
+      J.objectBegin();
+      J.objectEnd();
+      J.attributeEnd();
+      J.attribute("baz", "xyz");
+    });
+    return OS.str();
+  };
+
+  const char *Plain = R"({"foo":[null,42.5,[43]],"bar":{},"baz":"xyz"})";
+  EXPECT_EQ(Plain, StreamStuff(0));
+  const char *Pretty = R"({
+  "foo": [
+    null,
+    42.5,
+    [
+      43
+    ]
+  ],
+  "bar": {},
+  "baz": "xyz"
+})";
+  EXPECT_EQ(Pretty, StreamStuff(2));
 }
 
 } // namespace

@@ -1,4 +1,4 @@
-@ RUN: not llvm-mc -triple armv8 -mattr=-fp-armv8 -show-encoding < %s 2>&1 | FileCheck %s
+@ RUN: not llvm-mc -triple armv8 -mattr=-fp-armv8d16sp -show-encoding < %s 2>&1 | FileCheck %s
 
 vmaxnm.f32 s4, d5, q1
 @ CHECK: error: invalid instruction

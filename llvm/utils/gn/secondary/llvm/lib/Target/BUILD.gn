@@ -1,4 +1,6 @@
 import("//llvm/lib/Target/targets.gni")
+import("//llvm/lib/Target/targets_with_asm_parsers.gni")
+import("//llvm/lib/Target/targets_with_disassemblers.gni")
 
 # This build file has two parts:
 # 1. The actual //llvm/lib/Target build target, which is just a static
@@ -56,15 +58,8 @@ group("TargetsToBuild") {
 
 group("AllTargetsAsmParsers") {
   deps = []
-  foreach(target, llvm_targets_to_build) {
+  foreach(target, targets_with_asm_parsers) {
     deps += [ "$target/AsmParser" ]
-  }
-}
-
-group("AllTargetsAsmPrinters") {
-  deps = []
-  foreach(target, llvm_targets_to_build) {
-    deps += [ "$target/InstPrinter" ]
   }
 }
 
@@ -77,7 +72,7 @@ group("AllTargetsDescs") {
 
 group("AllTargetsDisassemblers") {
   deps = []
-  foreach(target, llvm_targets_to_build) {
+  foreach(target, targets_with_disassemblers) {
     deps += [ "$target/Disassembler" ]
   }
 }

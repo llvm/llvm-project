@@ -1,9 +1,8 @@
 //===- ModuleDebugStream.cpp - PDB Module Info Stream Access --------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -15,6 +14,7 @@
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecordHelpers.h"
 #include "llvm/DebugInfo/PDB/Native/DbiModuleDescriptor.h"
+#include "llvm/DebugInfo/PDB/Native/RawConstants.h"
 #include "llvm/DebugInfo/PDB/Native/RawError.h"
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/BinaryStreamRef.h"
@@ -37,6 +37,17 @@ ModuleDebugStreamRef::~ModuleDebugStreamRef() = default;
 Error ModuleDebugStreamRef::reload() {
   BinaryStreamReader Reader(*Stream);
 
+  if (Mod.getModuleStreamIndex() != llvm::pdb::kInvalidStreamIndex) {
+    if (Error E = reloadSerialize(Reader))
+      return E;
+  }
+  if (Reader.bytesRemaining() > 0)
+    return make_error<RawError>(raw_error_code::corrupt_file,
+                                "Unexpected bytes in module stream.");
+  return Error::success();
+}
+
+Error ModuleDebugStreamRef::reloadSerialize(BinaryStreamReader &Reader) {
   uint32_t SymbolSize = Mod.getSymbolDebugInfoByteSize();
   uint32_t C11Size = Mod.getC11LineInfoByteSize();
   uint32_t C13Size = Mod.getC13LineInfoByteSize();
@@ -72,10 +83,6 @@ Error ModuleDebugStreamRef::reload() {
     return EC;
   if (auto EC = Reader.readSubstream(GlobalRefsSubstream, GlobalRefsSize))
     return EC;
-  if (Reader.bytesRemaining() > 0)
-    return make_error<RawError>(raw_error_code::corrupt_file,
-                                "Unexpected bytes in module stream.");
-
   return Error::success();
 }
 

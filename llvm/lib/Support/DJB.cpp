@@ -1,9 +1,8 @@
 //===-- Support/DJB.cpp ---DJB Hash -----------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -58,29 +57,26 @@ static UTF32 foldCharDwarf(UTF32 C) {
   return sys::unicode::foldCharSimple(C);
 }
 
-static uint32_t caseFoldingDjbHashCharSlow(StringRef &Buffer, uint32_t H) {
-  UTF32 C = chopOneUTF32(Buffer);
-
-  C = foldCharDwarf(C);
-
-  std::array<UTF8, UNI_MAX_UTF8_BYTES_PER_CODE_POINT> Storage;
-  StringRef Folded = toUTF8(C, Storage);
-  return djbHash(Folded, H);
+static Optional<uint32_t> fastCaseFoldingDjbHash(StringRef Buffer, uint32_t H) {
+  bool AllASCII = true;
+  for (unsigned char C : Buffer) {
+    H = H * 33 + ('A' <= C && C <= 'Z' ? C - 'A' + 'a' : C);
+    AllASCII &= C <= 0x7f;
+  }
+  if (AllASCII)
+    return H;
+  return None;
 }
 
 uint32_t llvm::caseFoldingDjbHash(StringRef Buffer, uint32_t H) {
+  if (Optional<uint32_t> Result = fastCaseFoldingDjbHash(Buffer, H))
+    return *Result;
+
+  std::array<UTF8, UNI_MAX_UTF8_BYTES_PER_CODE_POINT> Storage;
   while (!Buffer.empty()) {
-    unsigned char C = Buffer.front();
-    if (LLVM_LIKELY(C <= 0x7f)) {
-      // US-ASCII, encoded as one character in utf-8.
-      // This is by far the most common case, so handle this specially.
-      if (C >= 'A' && C <= 'Z')
-        C = 'a' + (C - 'A'); // fold uppercase into lowercase
-      H = (H << 5) + H + C;
-      Buffer = Buffer.drop_front();
-      continue;
-    }
-    H = caseFoldingDjbHashCharSlow(Buffer, H);
+    UTF32 C = foldCharDwarf(chopOneUTF32(Buffer));
+    StringRef Folded = toUTF8(C, Storage);
+    H = djbHash(Folded, H);
   }
   return H;
 }

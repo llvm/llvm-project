@@ -1,11 +1,9 @@
 ; Test KHWASan instrumentation.
 ;
-; RUN: opt < %s -hwasan -hwasan-kernel=1 -S | FileCheck %s --allow-empty --check-prefixes=INIT
-; RUN: opt < %s -hwasan -hwasan-kernel=1 -S | FileCheck %s  --check-prefixes=CHECK,NOOFFSET,MATCH-ALL
-; RUN: opt < %s -hwasan -hwasan-kernel=1 -hwasan-mapping-offset=12345678 -S | FileCheck %s  --check-prefixes=CHECK,OFFSET,MATCH-ALL
-; RUN: opt < %s -hwasan -hwasan-kernel=1 -hwasan-recover=0 -S | FileCheck %s  --check-prefixes=CHECK,NOOFFSET,ABORT,MATCH-ALL
-; RUN: opt < %s -hwasan -hwasan-kernel=1 -hwasan-recover=1 -S | FileCheck %s  --check-prefixes=CHECK,NOOFFSET,RECOVER,MATCH-ALL
-; RUN: opt < %s -hwasan -hwasan-kernel=1 -hwasan-recover=1 -hwasan-match-all-tag=-1 -S | FileCheck %s  --check-prefixes=CHECK,NOOFFSET,RECOVER,NO-MATCH-ALL
+; RUN: opt < %s -hwasan -hwasan-kernel=1 -hwasan-recover=1 -S | FileCheck %s --allow-empty --check-prefixes=INIT
+; RUN: opt < %s -hwasan -hwasan-kernel=1 -hwasan-recover=1 -S | FileCheck %s  --check-prefixes=CHECK,NOOFFSET,MATCH-ALL
+; RUN: opt < %s -hwasan -hwasan-kernel=1 -hwasan-recover=1 -hwasan-mapping-offset=12345678 -S | FileCheck %s  --check-prefixes=CHECK,OFFSET,MATCH-ALL
+; RUN: opt < %s -hwasan -hwasan-kernel=1 -hwasan-recover=1 -hwasan-match-all-tag=-1 -S | FileCheck %s  --check-prefixes=CHECK,NOOFFSET,NO-MATCH-ALL
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-android"
@@ -20,8 +18,7 @@ define i8 @test_load(i8* %a) sanitize_hwaddress {
 
 ; NOOFFSET: %[[E:[^ ]*]] = inttoptr i64 %[[D]] to i8*
 
-; OFFSET: %[[D1:[^ ]*]] = add i64 %[[D]], 12345678
-; OFFSET: %[[E:[^ ]*]] = inttoptr i64 %[[D1]] to i8*
+; OFFSET: %[[E:[^ ]*]] = getelementptr i8, i8* inttoptr (i64 12345678 to i8*), i64 %[[D]]
 
 ; CHECK: %[[MEMTAG:[^ ]*]] = load i8, i8* %[[E]]
 ; CHECK: %[[F:[^ ]*]] = icmp ne i8 %[[PTRTAG]], %[[MEMTAG]]
@@ -32,10 +29,8 @@ define i8 @test_load(i8* %a) sanitize_hwaddress {
 
 ; NO-MATCH-ALL: br i1 %[[F]], label {{.*}}, label {{.*}}, !prof {{.*}}
 
-; ABORT: call void asm sideeffect "brk #2304", "{x0}"(i64 %[[A]])
-; ABORT: unreachable
-; RECOVER: call void asm sideeffect "brk #2336", "{x0}"(i64 %[[A]])
-; RECOVER: br label
+; CHECK: call void asm sideeffect "brk #2336", "{x0}"(i64 %[[A]])
+; CHECK: br label
 
 ; CHECK: %[[G:[^ ]*]] = load i8, i8* %a, align 4
 ; CHECK: ret i8 %[[G]]

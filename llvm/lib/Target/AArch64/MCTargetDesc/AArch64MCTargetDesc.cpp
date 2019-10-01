@@ -1,9 +1,8 @@
 //===-- AArch64MCTargetDesc.cpp - AArch64 Target Descriptions ---*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -15,8 +14,10 @@
 #include "AArch64ELFStreamer.h"
 #include "AArch64MCAsmInfo.h"
 #include "AArch64WinCOFFStreamer.h"
-#include "InstPrinter/AArch64InstPrinter.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
+#include "MCTargetDesc/AArch64InstPrinter.h"
+#include "TargetInfo/AArch64TargetInfo.h"
+#include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCInstrAnalysis.h"
@@ -56,11 +57,177 @@ createAArch64MCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef FS) {
 }
 
 void AArch64_MC::initLLVMToCVRegMapping(MCRegisterInfo *MRI) {
-  for (unsigned Reg = AArch64::NoRegister + 1;
-       Reg < AArch64::NUM_TARGET_REGS; ++Reg) {
-    unsigned CV = MRI->getEncodingValue(Reg);
-    MRI->mapLLVMRegToCVReg(Reg, CV);
-  }
+  // Mapping from CodeView to MC register id.
+  static const struct {
+    codeview::RegisterId CVReg;
+    MCPhysReg Reg;
+  } RegMap[] = {
+      {codeview::RegisterId::ARM64_W0, AArch64::W0},
+      {codeview::RegisterId::ARM64_W1, AArch64::W1},
+      {codeview::RegisterId::ARM64_W2, AArch64::W2},
+      {codeview::RegisterId::ARM64_W3, AArch64::W3},
+      {codeview::RegisterId::ARM64_W4, AArch64::W4},
+      {codeview::RegisterId::ARM64_W5, AArch64::W5},
+      {codeview::RegisterId::ARM64_W6, AArch64::W6},
+      {codeview::RegisterId::ARM64_W7, AArch64::W7},
+      {codeview::RegisterId::ARM64_W8, AArch64::W8},
+      {codeview::RegisterId::ARM64_W9, AArch64::W9},
+      {codeview::RegisterId::ARM64_W10, AArch64::W10},
+      {codeview::RegisterId::ARM64_W11, AArch64::W11},
+      {codeview::RegisterId::ARM64_W12, AArch64::W12},
+      {codeview::RegisterId::ARM64_W13, AArch64::W13},
+      {codeview::RegisterId::ARM64_W14, AArch64::W14},
+      {codeview::RegisterId::ARM64_W15, AArch64::W15},
+      {codeview::RegisterId::ARM64_W16, AArch64::W16},
+      {codeview::RegisterId::ARM64_W17, AArch64::W17},
+      {codeview::RegisterId::ARM64_W18, AArch64::W18},
+      {codeview::RegisterId::ARM64_W19, AArch64::W19},
+      {codeview::RegisterId::ARM64_W20, AArch64::W20},
+      {codeview::RegisterId::ARM64_W21, AArch64::W21},
+      {codeview::RegisterId::ARM64_W22, AArch64::W22},
+      {codeview::RegisterId::ARM64_W23, AArch64::W23},
+      {codeview::RegisterId::ARM64_W24, AArch64::W24},
+      {codeview::RegisterId::ARM64_W25, AArch64::W25},
+      {codeview::RegisterId::ARM64_W26, AArch64::W26},
+      {codeview::RegisterId::ARM64_W27, AArch64::W27},
+      {codeview::RegisterId::ARM64_W28, AArch64::W28},
+      {codeview::RegisterId::ARM64_W29, AArch64::W29},
+      {codeview::RegisterId::ARM64_W30, AArch64::W30},
+      {codeview::RegisterId::ARM64_WZR, AArch64::WZR},
+      {codeview::RegisterId::ARM64_X0, AArch64::X0},
+      {codeview::RegisterId::ARM64_X1, AArch64::X1},
+      {codeview::RegisterId::ARM64_X2, AArch64::X2},
+      {codeview::RegisterId::ARM64_X3, AArch64::X3},
+      {codeview::RegisterId::ARM64_X4, AArch64::X4},
+      {codeview::RegisterId::ARM64_X5, AArch64::X5},
+      {codeview::RegisterId::ARM64_X6, AArch64::X6},
+      {codeview::RegisterId::ARM64_X7, AArch64::X7},
+      {codeview::RegisterId::ARM64_X8, AArch64::X8},
+      {codeview::RegisterId::ARM64_X9, AArch64::X9},
+      {codeview::RegisterId::ARM64_X10, AArch64::X10},
+      {codeview::RegisterId::ARM64_X11, AArch64::X11},
+      {codeview::RegisterId::ARM64_X12, AArch64::X12},
+      {codeview::RegisterId::ARM64_X13, AArch64::X13},
+      {codeview::RegisterId::ARM64_X14, AArch64::X14},
+      {codeview::RegisterId::ARM64_X15, AArch64::X15},
+      {codeview::RegisterId::ARM64_X16, AArch64::X16},
+      {codeview::RegisterId::ARM64_X17, AArch64::X17},
+      {codeview::RegisterId::ARM64_X18, AArch64::X18},
+      {codeview::RegisterId::ARM64_X19, AArch64::X19},
+      {codeview::RegisterId::ARM64_X20, AArch64::X20},
+      {codeview::RegisterId::ARM64_X21, AArch64::X21},
+      {codeview::RegisterId::ARM64_X22, AArch64::X22},
+      {codeview::RegisterId::ARM64_X23, AArch64::X23},
+      {codeview::RegisterId::ARM64_X24, AArch64::X24},
+      {codeview::RegisterId::ARM64_X25, AArch64::X25},
+      {codeview::RegisterId::ARM64_X26, AArch64::X26},
+      {codeview::RegisterId::ARM64_X27, AArch64::X27},
+      {codeview::RegisterId::ARM64_X28, AArch64::X28},
+      {codeview::RegisterId::ARM64_FP, AArch64::FP},
+      {codeview::RegisterId::ARM64_LR, AArch64::LR},
+      {codeview::RegisterId::ARM64_SP, AArch64::SP},
+      {codeview::RegisterId::ARM64_ZR, AArch64::XZR},
+      {codeview::RegisterId::ARM64_NZCV, AArch64::NZCV},
+      {codeview::RegisterId::ARM64_S0, AArch64::S0},
+      {codeview::RegisterId::ARM64_S1, AArch64::S1},
+      {codeview::RegisterId::ARM64_S2, AArch64::S2},
+      {codeview::RegisterId::ARM64_S3, AArch64::S3},
+      {codeview::RegisterId::ARM64_S4, AArch64::S4},
+      {codeview::RegisterId::ARM64_S5, AArch64::S5},
+      {codeview::RegisterId::ARM64_S6, AArch64::S6},
+      {codeview::RegisterId::ARM64_S7, AArch64::S7},
+      {codeview::RegisterId::ARM64_S8, AArch64::S8},
+      {codeview::RegisterId::ARM64_S9, AArch64::S9},
+      {codeview::RegisterId::ARM64_S10, AArch64::S10},
+      {codeview::RegisterId::ARM64_S11, AArch64::S11},
+      {codeview::RegisterId::ARM64_S12, AArch64::S12},
+      {codeview::RegisterId::ARM64_S13, AArch64::S13},
+      {codeview::RegisterId::ARM64_S14, AArch64::S14},
+      {codeview::RegisterId::ARM64_S15, AArch64::S15},
+      {codeview::RegisterId::ARM64_S16, AArch64::S16},
+      {codeview::RegisterId::ARM64_S17, AArch64::S17},
+      {codeview::RegisterId::ARM64_S18, AArch64::S18},
+      {codeview::RegisterId::ARM64_S19, AArch64::S19},
+      {codeview::RegisterId::ARM64_S20, AArch64::S20},
+      {codeview::RegisterId::ARM64_S21, AArch64::S21},
+      {codeview::RegisterId::ARM64_S22, AArch64::S22},
+      {codeview::RegisterId::ARM64_S23, AArch64::S23},
+      {codeview::RegisterId::ARM64_S24, AArch64::S24},
+      {codeview::RegisterId::ARM64_S25, AArch64::S25},
+      {codeview::RegisterId::ARM64_S26, AArch64::S26},
+      {codeview::RegisterId::ARM64_S27, AArch64::S27},
+      {codeview::RegisterId::ARM64_S28, AArch64::S28},
+      {codeview::RegisterId::ARM64_S29, AArch64::S29},
+      {codeview::RegisterId::ARM64_S30, AArch64::S30},
+      {codeview::RegisterId::ARM64_S31, AArch64::S31},
+      {codeview::RegisterId::ARM64_D0, AArch64::D0},
+      {codeview::RegisterId::ARM64_D1, AArch64::D1},
+      {codeview::RegisterId::ARM64_D2, AArch64::D2},
+      {codeview::RegisterId::ARM64_D3, AArch64::D3},
+      {codeview::RegisterId::ARM64_D4, AArch64::D4},
+      {codeview::RegisterId::ARM64_D5, AArch64::D5},
+      {codeview::RegisterId::ARM64_D6, AArch64::D6},
+      {codeview::RegisterId::ARM64_D7, AArch64::D7},
+      {codeview::RegisterId::ARM64_D8, AArch64::D8},
+      {codeview::RegisterId::ARM64_D9, AArch64::D9},
+      {codeview::RegisterId::ARM64_D10, AArch64::D10},
+      {codeview::RegisterId::ARM64_D11, AArch64::D11},
+      {codeview::RegisterId::ARM64_D12, AArch64::D12},
+      {codeview::RegisterId::ARM64_D13, AArch64::D13},
+      {codeview::RegisterId::ARM64_D14, AArch64::D14},
+      {codeview::RegisterId::ARM64_D15, AArch64::D15},
+      {codeview::RegisterId::ARM64_D16, AArch64::D16},
+      {codeview::RegisterId::ARM64_D17, AArch64::D17},
+      {codeview::RegisterId::ARM64_D18, AArch64::D18},
+      {codeview::RegisterId::ARM64_D19, AArch64::D19},
+      {codeview::RegisterId::ARM64_D20, AArch64::D20},
+      {codeview::RegisterId::ARM64_D21, AArch64::D21},
+      {codeview::RegisterId::ARM64_D22, AArch64::D22},
+      {codeview::RegisterId::ARM64_D23, AArch64::D23},
+      {codeview::RegisterId::ARM64_D24, AArch64::D24},
+      {codeview::RegisterId::ARM64_D25, AArch64::D25},
+      {codeview::RegisterId::ARM64_D26, AArch64::D26},
+      {codeview::RegisterId::ARM64_D27, AArch64::D27},
+      {codeview::RegisterId::ARM64_D28, AArch64::D28},
+      {codeview::RegisterId::ARM64_D29, AArch64::D29},
+      {codeview::RegisterId::ARM64_D30, AArch64::D30},
+      {codeview::RegisterId::ARM64_D31, AArch64::D31},
+      {codeview::RegisterId::ARM64_Q0, AArch64::Q0},
+      {codeview::RegisterId::ARM64_Q1, AArch64::Q1},
+      {codeview::RegisterId::ARM64_Q2, AArch64::Q2},
+      {codeview::RegisterId::ARM64_Q3, AArch64::Q3},
+      {codeview::RegisterId::ARM64_Q4, AArch64::Q4},
+      {codeview::RegisterId::ARM64_Q5, AArch64::Q5},
+      {codeview::RegisterId::ARM64_Q6, AArch64::Q6},
+      {codeview::RegisterId::ARM64_Q7, AArch64::Q7},
+      {codeview::RegisterId::ARM64_Q8, AArch64::Q8},
+      {codeview::RegisterId::ARM64_Q9, AArch64::Q9},
+      {codeview::RegisterId::ARM64_Q10, AArch64::Q10},
+      {codeview::RegisterId::ARM64_Q11, AArch64::Q11},
+      {codeview::RegisterId::ARM64_Q12, AArch64::Q12},
+      {codeview::RegisterId::ARM64_Q13, AArch64::Q13},
+      {codeview::RegisterId::ARM64_Q14, AArch64::Q14},
+      {codeview::RegisterId::ARM64_Q15, AArch64::Q15},
+      {codeview::RegisterId::ARM64_Q16, AArch64::Q16},
+      {codeview::RegisterId::ARM64_Q17, AArch64::Q17},
+      {codeview::RegisterId::ARM64_Q18, AArch64::Q18},
+      {codeview::RegisterId::ARM64_Q19, AArch64::Q19},
+      {codeview::RegisterId::ARM64_Q20, AArch64::Q20},
+      {codeview::RegisterId::ARM64_Q21, AArch64::Q21},
+      {codeview::RegisterId::ARM64_Q22, AArch64::Q22},
+      {codeview::RegisterId::ARM64_Q23, AArch64::Q23},
+      {codeview::RegisterId::ARM64_Q24, AArch64::Q24},
+      {codeview::RegisterId::ARM64_Q25, AArch64::Q25},
+      {codeview::RegisterId::ARM64_Q26, AArch64::Q26},
+      {codeview::RegisterId::ARM64_Q27, AArch64::Q27},
+      {codeview::RegisterId::ARM64_Q28, AArch64::Q28},
+      {codeview::RegisterId::ARM64_Q29, AArch64::Q29},
+      {codeview::RegisterId::ARM64_Q30, AArch64::Q30},
+      {codeview::RegisterId::ARM64_Q31, AArch64::Q31},
+
+  };
+  for (unsigned I = 0; I < array_lengthof(RegMap); ++I)
+    MRI->mapLLVMRegToCVReg(RegMap[I].Reg, static_cast<int>(RegMap[I].CVReg));
 }
 
 static MCRegisterInfo *createAArch64MCRegisterInfo(const Triple &Triple) {
@@ -166,12 +333,20 @@ public:
     for (uint64_t Byte = 0, End = PltContents.size(); Byte + 7 < End;
          Byte += 4) {
       uint32_t Insn = support::endian::read32le(PltContents.data() + Byte);
+      uint64_t Off = 0;
+      // Check for optional bti c that prefixes adrp in BTI enabled entries
+      if (Insn == 0xd503245f) {
+         Off = 4;
+         Insn = support::endian::read32le(PltContents.data() + Byte + Off);
+      }
       // Check for adrp.
       if ((Insn & 0x9f000000) != 0x90000000)
         continue;
+      Off += 4;
       uint64_t Imm = (((PltSectionVA + Byte) >> 12) << 12) +
             (((Insn >> 29) & 3) << 12) + (((Insn >> 5) & 0x3ffff) << 14);
-      uint32_t Insn2 = support::endian::read32le(PltContents.data() + Byte + 4);
+      uint32_t Insn2 =
+          support::endian::read32le(PltContents.data() + Byte + Off);
       // Check for: ldr Xt, [Xn, #pimm].
       if (Insn2 >> 22 == 0x3e5) {
         Imm += ((Insn2 >> 10) & 0xfff) << 3;
@@ -192,7 +367,8 @@ static MCInstrAnalysis *createAArch64InstrAnalysis(const MCInstrInfo *Info) {
 // Force static initialization.
 extern "C" void LLVMInitializeAArch64TargetMC() {
   for (Target *T : {&getTheAArch64leTarget(), &getTheAArch64beTarget(),
-                    &getTheARM64Target()}) {
+                    &getTheAArch64_32Target(), &getTheARM64Target(),
+                    &getTheARM64_32Target()}) {
     // Register the MC asm info.
     RegisterMCAsmInfoFn X(*T, createAArch64MCAsmInfo);
 
@@ -228,7 +404,8 @@ extern "C" void LLVMInitializeAArch64TargetMC() {
   }
 
   // Register the asm backend.
-  for (Target *T : {&getTheAArch64leTarget(), &getTheARM64Target()})
+  for (Target *T : {&getTheAArch64leTarget(), &getTheAArch64_32Target(),
+                    &getTheARM64Target(), &getTheARM64_32Target()})
     TargetRegistry::RegisterMCAsmBackend(*T, createAArch64leAsmBackend);
   TargetRegistry::RegisterMCAsmBackend(getTheAArch64beTarget(),
                                        createAArch64beAsmBackend);

@@ -1,9 +1,8 @@
 //===- FileAnalysis.cpp -----------------------------------------*- C++ -*-===//
 //
-//                      The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -255,7 +254,8 @@ FileAnalysis::getDirectControlFlowXRefs(const Instr &InstrMeta) const {
   return CFCrossReferences;
 }
 
-const std::set<uint64_t> &FileAnalysis::getIndirectInstructions() const {
+const std::set<object::SectionedAddress> &
+FileAnalysis::getIndirectInstructions() const {
   return IndirectInstructions;
 }
 
@@ -269,8 +269,10 @@ const MCInstrAnalysis *FileAnalysis::getMCInstrAnalysis() const {
   return MIA.get();
 }
 
-Expected<DIInliningInfo> FileAnalysis::symbolizeInlinedCode(uint64_t Address) {
+Expected<DIInliningInfo>
+FileAnalysis::symbolizeInlinedCode(object::SectionedAddress Address) {
   assert(Symbolizer != nullptr && "Symbolizer is invalid.");
+
   return Symbolizer->symbolizeInlinedCode(Object->getFileName(), Address);
 }
 
@@ -451,20 +453,19 @@ Error FileAnalysis::parseCodeSections() {
     if (!Section.getName(SectionName) && SectionName == ".plt")
       continue;
 
-    StringRef SectionContents;
-    if (Section.getContents(SectionContents))
-      return make_error<StringError>("Failed to retrieve section contents",
-                                     inconvertibleErrorCode());
+    Expected<StringRef> Contents = Section.getContents();
+    if (!Contents)
+      return Contents.takeError();
+    ArrayRef<uint8_t> SectionBytes = arrayRefFromStringRef(*Contents);
 
-    ArrayRef<uint8_t> SectionBytes((const uint8_t *)SectionContents.data(),
-                                   Section.getSize());
-    parseSectionContents(SectionBytes, Section.getAddress());
+    parseSectionContents(SectionBytes,
+                         {Section.getAddress(), Section.getIndex()});
   }
   return Error::success();
 }
 
 void FileAnalysis::parseSectionContents(ArrayRef<uint8_t> SectionBytes,
-                                        uint64_t SectionAddress) {
+                                        object::SectionedAddress Address) {
   assert(Symbolizer && "Symbolizer is uninitialised.");
   MCInst Instruction;
   Instr InstrMeta;
@@ -478,7 +479,7 @@ void FileAnalysis::parseSectionContents(ArrayRef<uint8_t> SectionBytes,
 
     Byte += InstructionSize;
 
-    uint64_t VMAddress = SectionAddress + Byte - InstructionSize;
+    uint64_t VMAddress = Address.Address + Byte - InstructionSize;
     InstrMeta.Instruction = Instruction;
     InstrMeta.VMAddress = VMAddress;
     InstrMeta.InstructionSize = InstructionSize;
@@ -510,8 +511,8 @@ void FileAnalysis::parseSectionContents(ArrayRef<uint8_t> SectionBytes,
 
     // Check if this instruction exists in the range of the DWARF metadata.
     if (!IgnoreDWARFFlag) {
-      auto LineInfo =
-          Symbolizer->symbolizeCode(Object->getFileName(), VMAddress);
+      auto LineInfo = Symbolizer->symbolizeCode(
+          Object->getFileName(), {VMAddress, Address.SectionIndex});
       if (!LineInfo) {
         handleAllErrors(LineInfo.takeError(), [](const ErrorInfoBase &E) {
           errs() << "Symbolizer failed to get line: " << E.message() << "\n";
@@ -523,7 +524,7 @@ void FileAnalysis::parseSectionContents(ArrayRef<uint8_t> SectionBytes,
         continue;
     }
 
-    IndirectInstructions.insert(VMAddress);
+    IndirectInstructions.insert({VMAddress, Address.SectionIndex});
   }
 }
 

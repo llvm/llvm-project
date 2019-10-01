@@ -1,9 +1,8 @@
 //===- unittests/IR/MetadataTest.cpp - Metadata unit tests ----------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -118,8 +117,9 @@ protected:
         32, 32, 0, DINode::FlagZero, nullptr, 0, nullptr, nullptr, "");
   }
   Function *getFunction(StringRef Name) {
-    return cast<Function>(M.getOrInsertFunction(
-        Name, FunctionType::get(Type::getVoidTy(Context), None, false)));
+    return Function::Create(
+        FunctionType::get(Type::getVoidTy(Context), None, false),
+        Function::ExternalLinkage, Name, M);
   }
 };
 typedef MetadataTest MDStringTest;
@@ -1050,35 +1050,41 @@ TEST_F(DILocationTest, discriminatorSpecialCases) {
   EXPECT_EQ(0U, L1->getBaseDiscriminator());
   EXPECT_EQ(1U, L1->getDuplicationFactor());
 
-  auto L2 = L1->setBaseDiscriminator(1).getValue();
+  EXPECT_EQ(L1, L1->cloneWithBaseDiscriminator(0).getValue());
+  EXPECT_EQ(L1, L1->cloneByMultiplyingDuplicationFactor(0).getValue());
+  EXPECT_EQ(L1, L1->cloneByMultiplyingDuplicationFactor(1).getValue());
+
+  auto L2 = L1->cloneWithBaseDiscriminator(1).getValue();
   EXPECT_EQ(0U, L1->getBaseDiscriminator());
   EXPECT_EQ(1U, L1->getDuplicationFactor());
 
   EXPECT_EQ(1U, L2->getBaseDiscriminator());
   EXPECT_EQ(1U, L2->getDuplicationFactor());
 
-  auto L3 = L2->cloneWithDuplicationFactor(2).getValue();
+  auto L3 = L2->cloneByMultiplyingDuplicationFactor(2).getValue();
   EXPECT_EQ(1U, L3->getBaseDiscriminator());
   EXPECT_EQ(2U, L3->getDuplicationFactor());
 
-  auto L4 = L3->cloneWithDuplicationFactor(4).getValue();
+  EXPECT_EQ(L2, L2->cloneByMultiplyingDuplicationFactor(1).getValue());
+
+  auto L4 = L3->cloneByMultiplyingDuplicationFactor(4).getValue();
   EXPECT_EQ(1U, L4->getBaseDiscriminator());
   EXPECT_EQ(8U, L4->getDuplicationFactor());
 
-  auto L5 = L4->setBaseDiscriminator(2).getValue();
+  auto L5 = L4->cloneWithBaseDiscriminator(2).getValue();
   EXPECT_EQ(2U, L5->getBaseDiscriminator());
-  EXPECT_EQ(1U, L5->getDuplicationFactor());
+  EXPECT_EQ(8U, L5->getDuplicationFactor());
 
   // Check extreme cases
-  auto L6 = L1->setBaseDiscriminator(0xfff).getValue();
+  auto L6 = L1->cloneWithBaseDiscriminator(0xfff).getValue();
   EXPECT_EQ(0xfffU, L6->getBaseDiscriminator());
-  EXPECT_EQ(
-      0xfffU,
-      L6->cloneWithDuplicationFactor(0xfff).getValue()->getDuplicationFactor());
+  EXPECT_EQ(0xfffU, L6->cloneByMultiplyingDuplicationFactor(0xfff)
+                        .getValue()
+                        ->getDuplicationFactor());
 
   // Check we return None for unencodable cases.
-  EXPECT_EQ(None, L4->setBaseDiscriminator(0x1000));
-  EXPECT_EQ(None, L4->cloneWithDuplicationFactor(0x1000));
+  EXPECT_EQ(None, L4->cloneWithBaseDiscriminator(0x1000));
+  EXPECT_EQ(None, L4->cloneByMultiplyingDuplicationFactor(0x1000));
 }
 
 
@@ -2329,7 +2335,11 @@ TEST_F(DIExpressionTest, get) {
   // Test DIExpression::prepend().
   uint64_t Elts0[] = {dwarf::DW_OP_LLVM_fragment, 0, 32};
   auto *N0 = DIExpression::get(Context, Elts0);
-  auto *N0WithPrependedOps = DIExpression::prepend(N0, true, 64, true, true);
+  uint8_t DIExprFlags = DIExpression::ApplyOffset;
+  DIExprFlags |= DIExpression::DerefBefore;
+  DIExprFlags |= DIExpression::DerefAfter;
+  DIExprFlags |= DIExpression::StackValue;
+  auto *N0WithPrependedOps = DIExpression::prepend(N0, DIExprFlags, 64);
   uint64_t Elts1[] = {dwarf::DW_OP_deref,
                       dwarf::DW_OP_plus_uconst, 64,
                       dwarf::DW_OP_deref,
@@ -2746,7 +2756,7 @@ TEST_F(FunctionAttachmentTest, EntryCount) {
   F = getFunction("bar");
   EXPECT_FALSE(F->getEntryCount().hasValue());
   F->setEntryCount(123, Function::PCT_Synthetic);
-  Count = F->getEntryCount();
+  Count = F->getEntryCount(true /*allow synthetic*/);
   EXPECT_TRUE(Count.hasValue());
   EXPECT_EQ(123u, Count.getCount());
   EXPECT_EQ(Function::PCT_Synthetic, Count.getType());

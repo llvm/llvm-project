@@ -79,6 +79,7 @@ char IPSCCPLegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(IPSCCPLegacyPass, "ipsccp",
                       "Interprocedural Sparse Conditional Constant Propagation",
                       false, false)
+INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_END(IPSCCPLegacyPass, "ipsccp",

@@ -1,0 +1,250 @@
+//===-- VecFuncs.def - Library information -------------*- C++ -*-----------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+// This .def file will create mappings from scalar math functions to vector
+// functions along with their vectorization factor. The current support includes
+// such mappings for Accelerate framework, MASS vector library, and SVML library. 
+
+#if !(defined(TLI_DEFINE_VECFUNC))
+#define TLI_DEFINE_VECFUNC(SCAL, VEC, VF) {SCAL, VEC, VF},
+#endif 
+
+#if defined(TLI_DEFINE_ACCELERATE_VECFUNCS)
+// Accelerate framework's Vector Functions
+
+// Floating-Point Arithmetic and Auxiliary Functions
+TLI_DEFINE_VECFUNC("ceilf", "vceilf", 4)
+TLI_DEFINE_VECFUNC("fabsf", "vfabsf", 4)
+TLI_DEFINE_VECFUNC("llvm.fabs.f32", "vfabsf", 4)
+TLI_DEFINE_VECFUNC("floorf", "vfloorf", 4)
+TLI_DEFINE_VECFUNC("sqrtf", "vsqrtf", 4)
+TLI_DEFINE_VECFUNC("llvm.sqrt.f32", "vsqrtf", 4)
+
+// Exponential and Logarithmic Functions
+TLI_DEFINE_VECFUNC("expf", "vexpf", 4)
+TLI_DEFINE_VECFUNC("llvm.exp.f32", "vexpf", 4)
+TLI_DEFINE_VECFUNC("expm1f", "vexpm1f", 4)
+TLI_DEFINE_VECFUNC("logf", "vlogf", 4)
+TLI_DEFINE_VECFUNC("llvm.log.f32", "vlogf", 4)
+TLI_DEFINE_VECFUNC("log1pf", "vlog1pf", 4)
+TLI_DEFINE_VECFUNC("log10f", "vlog10f", 4)
+TLI_DEFINE_VECFUNC("llvm.log10.f32", "vlog10f", 4)
+TLI_DEFINE_VECFUNC("logbf", "vlogbf", 4)
+
+// Trigonometric Functions
+TLI_DEFINE_VECFUNC("sinf", "vsinf", 4)
+TLI_DEFINE_VECFUNC("llvm.sin.f32", "vsinf", 4)
+TLI_DEFINE_VECFUNC("cosf", "vcosf", 4)
+TLI_DEFINE_VECFUNC("llvm.cos.f32", "vcosf", 4)
+TLI_DEFINE_VECFUNC("tanf", "vtanf", 4)
+TLI_DEFINE_VECFUNC("asinf", "vasinf", 4)
+TLI_DEFINE_VECFUNC("acosf", "vacosf", 4)
+TLI_DEFINE_VECFUNC("atanf", "vatanf", 4)
+
+// Hyperbolic Functions
+TLI_DEFINE_VECFUNC("sinhf", "vsinhf", 4)
+TLI_DEFINE_VECFUNC("coshf", "vcoshf", 4)
+TLI_DEFINE_VECFUNC("tanhf", "vtanhf", 4)
+TLI_DEFINE_VECFUNC("asinhf", "vasinhf", 4)
+TLI_DEFINE_VECFUNC("acoshf", "vacoshf", 4)
+TLI_DEFINE_VECFUNC("atanhf", "vatanhf", 4)
+
+
+#elif defined(TLI_DEFINE_MASSV_VECFUNCS)
+// IBM MASS library's vector Functions
+
+// Floating-Point Arithmetic and Auxiliary Functions
+TLI_DEFINE_VECFUNC("cbrt", "__cbrtd2_massv", 2)
+TLI_DEFINE_VECFUNC("cbrtf", "__cbrtf4_massv", 4)
+TLI_DEFINE_VECFUNC("pow", "__powd2_massv", 2)
+TLI_DEFINE_VECFUNC("llvm.pow.f64", "__powd2_massv", 2)
+TLI_DEFINE_VECFUNC("powf", "__powf4_massv", 4)
+TLI_DEFINE_VECFUNC("llvm.pow.f32", "__powf4_massv", 4)
+TLI_DEFINE_VECFUNC("sqrt", "__sqrtd2_massv", 2)
+TLI_DEFINE_VECFUNC("llvm.sqrt.f64", "__sqrtd2_massv", 2)
+TLI_DEFINE_VECFUNC("sqrtf", "__sqrtf4_massv", 4)
+TLI_DEFINE_VECFUNC("llvm.sqrt.f32", "__sqrtf4_massv", 4)
+
+// Exponential and Logarithmic Functions
+TLI_DEFINE_VECFUNC("exp", "__expd2_massv", 2)
+TLI_DEFINE_VECFUNC("llvm.exp.f64", "__expd2_massv", 2)
+TLI_DEFINE_VECFUNC("expf", "__expf4_massv", 4)
+TLI_DEFINE_VECFUNC("llvm.exp.f32", "__expf4_massv", 4)
+TLI_DEFINE_VECFUNC("exp2", "__exp2d2_massv", 2)
+TLI_DEFINE_VECFUNC("llvm.exp2.f64", "__exp2d2_massv", 2)
+TLI_DEFINE_VECFUNC("exp2f", "__exp2f4_massv", 4)
+TLI_DEFINE_VECFUNC("llvm.exp2.f32", "__exp2f4_massv", 4)
+TLI_DEFINE_VECFUNC("expm1", "__expm1d2_massv", 2)
+TLI_DEFINE_VECFUNC("expm1f", "__expm1f4_massv", 4)
+TLI_DEFINE_VECFUNC("log", "__logd2_massv", 2)
+TLI_DEFINE_VECFUNC("llvm.log.f64", "__logd2_massv", 2)
+TLI_DEFINE_VECFUNC("logf", "__logf4_massv", 4)
+TLI_DEFINE_VECFUNC("llvm.log.f32", "__logf4_massv", 4)
+TLI_DEFINE_VECFUNC("log1p", "__log1pd2_massv", 2)
+TLI_DEFINE_VECFUNC("log1pf", "__log1pf4_massv", 4)
+TLI_DEFINE_VECFUNC("log10", "__log10d2_massv", 2)
+TLI_DEFINE_VECFUNC("llvm.log10.f64", "__log10d2_massv", 2)
+TLI_DEFINE_VECFUNC("log10f", "__log10f4_massv", 4)
+TLI_DEFINE_VECFUNC("llvm.log10.f32", "__log10f4_massv", 4)
+TLI_DEFINE_VECFUNC("log2", "__log2d2_massv", 2)
+TLI_DEFINE_VECFUNC("llvm.log2.f64", "__log2d2_massv", 2)
+TLI_DEFINE_VECFUNC("log2f", "__log2f4_massv", 4)
+TLI_DEFINE_VECFUNC("llvm.log2.f32", "__log2f4_massv", 4)
+
+// Trigonometric Functions
+TLI_DEFINE_VECFUNC("sin", "__sind2_massv", 2)
+TLI_DEFINE_VECFUNC("llvm.sin.f64", "__sind2_massv", 2)
+TLI_DEFINE_VECFUNC("sinf", "__sinf4_massv", 4)
+TLI_DEFINE_VECFUNC("llvm.sin.f32", "__sinf4_massv", 4)
+TLI_DEFINE_VECFUNC("cos", "__cosd2_massv", 2)
+TLI_DEFINE_VECFUNC("llvm.cos.f64", "__cosd2_massv", 2)
+TLI_DEFINE_VECFUNC("cosf", "__cosf4_massv", 4)
+TLI_DEFINE_VECFUNC("llvm.cos.f32", "__cosf4_massv", 4)
+TLI_DEFINE_VECFUNC("tan", "__tand2_massv", 2)
+TLI_DEFINE_VECFUNC("tanf", "__tanf4_massv", 4)
+TLI_DEFINE_VECFUNC("asin", "__asind2_massv", 2)
+TLI_DEFINE_VECFUNC("asinf", "__asinf4_massv", 4)
+TLI_DEFINE_VECFUNC("acos", "__acosd2_massv", 2)
+TLI_DEFINE_VECFUNC("acosf", "__acosf4_massv", 4)
+TLI_DEFINE_VECFUNC("atan", "__atand2_massv", 2)
+TLI_DEFINE_VECFUNC("atanf", "__atanf4_massv", 4)
+TLI_DEFINE_VECFUNC("atan2", "__atan2d2_massv", 2)
+TLI_DEFINE_VECFUNC("atan2f", "__atan2f4_massv", 4)
+
+// Hyperbolic Functions
+TLI_DEFINE_VECFUNC("sinh", "__sinhd2_massv", 2)
+TLI_DEFINE_VECFUNC("sinhf", "__sinhf4_massv", 4)
+TLI_DEFINE_VECFUNC("cosh", "__coshd2_massv", 2)
+TLI_DEFINE_VECFUNC("coshf", "__coshf4_massv", 4)
+TLI_DEFINE_VECFUNC("tanh", "__tanhd2_massv", 2)
+TLI_DEFINE_VECFUNC("tanhf", "__tanhf4_massv", 4)
+TLI_DEFINE_VECFUNC("asinh", "__asinhd2_massv", 2)
+TLI_DEFINE_VECFUNC("asinhf", "__asinhf4_massv", 4)
+TLI_DEFINE_VECFUNC("acosh", "__acoshd2_massv", 2)
+TLI_DEFINE_VECFUNC("acoshf", "__acoshf4_massv", 4)
+TLI_DEFINE_VECFUNC("atanh", "__atanhd2_massv", 2)
+TLI_DEFINE_VECFUNC("atanhf", "__atanhf4_massv", 4)
+
+
+#elif defined(TLI_DEFINE_SVML_VECFUNCS)
+// Intel SVM library's Vector Functions
+
+TLI_DEFINE_VECFUNC("sin", "__svml_sin2", 2)
+TLI_DEFINE_VECFUNC("sin", "__svml_sin4", 4)
+TLI_DEFINE_VECFUNC("sin", "__svml_sin8", 8)
+
+TLI_DEFINE_VECFUNC("sinf", "__svml_sinf4", 4)
+TLI_DEFINE_VECFUNC("sinf", "__svml_sinf8", 8)
+TLI_DEFINE_VECFUNC("sinf", "__svml_sinf16", 16)
+
+TLI_DEFINE_VECFUNC("llvm.sin.f64", "__svml_sin2", 2)
+TLI_DEFINE_VECFUNC("llvm.sin.f64", "__svml_sin4", 4)
+TLI_DEFINE_VECFUNC("llvm.sin.f64", "__svml_sin8", 8)
+
+TLI_DEFINE_VECFUNC("llvm.sin.f32", "__svml_sinf4", 4)
+TLI_DEFINE_VECFUNC("llvm.sin.f32", "__svml_sinf8", 8)
+TLI_DEFINE_VECFUNC("llvm.sin.f32", "__svml_sinf16", 16)
+
+TLI_DEFINE_VECFUNC("cos", "__svml_cos2", 2)
+TLI_DEFINE_VECFUNC("cos", "__svml_cos4", 4)
+TLI_DEFINE_VECFUNC("cos", "__svml_cos8", 8)
+
+TLI_DEFINE_VECFUNC("cosf", "__svml_cosf4", 4)
+TLI_DEFINE_VECFUNC("cosf", "__svml_cosf8", 8)
+TLI_DEFINE_VECFUNC("cosf", "__svml_cosf16", 16)
+
+TLI_DEFINE_VECFUNC("llvm.cos.f64", "__svml_cos2", 2)
+TLI_DEFINE_VECFUNC("llvm.cos.f64", "__svml_cos4", 4)
+TLI_DEFINE_VECFUNC("llvm.cos.f64", "__svml_cos8", 8)
+
+TLI_DEFINE_VECFUNC("llvm.cos.f32", "__svml_cosf4", 4)
+TLI_DEFINE_VECFUNC("llvm.cos.f32", "__svml_cosf8", 8)
+TLI_DEFINE_VECFUNC("llvm.cos.f32", "__svml_cosf16", 16)
+
+TLI_DEFINE_VECFUNC("pow", "__svml_pow2", 2)
+TLI_DEFINE_VECFUNC("pow", "__svml_pow4", 4)
+TLI_DEFINE_VECFUNC("pow", "__svml_pow8", 8)
+
+TLI_DEFINE_VECFUNC("powf", "__svml_powf4", 4)
+TLI_DEFINE_VECFUNC("powf", "__svml_powf8", 8)
+TLI_DEFINE_VECFUNC("powf", "__svml_powf16", 16)
+
+TLI_DEFINE_VECFUNC("__pow_finite", "__svml_pow2", 2)
+TLI_DEFINE_VECFUNC("__pow_finite", "__svml_pow4", 4)
+TLI_DEFINE_VECFUNC("__pow_finite", "__svml_pow8", 8)
+
+TLI_DEFINE_VECFUNC("__powf_finite", "__svml_powf4", 4)
+TLI_DEFINE_VECFUNC("__powf_finite", "__svml_powf8", 8)
+TLI_DEFINE_VECFUNC("__powf_finite", "__svml_powf16", 16)
+
+TLI_DEFINE_VECFUNC("llvm.pow.f64", "__svml_pow2", 2)
+TLI_DEFINE_VECFUNC("llvm.pow.f64", "__svml_pow4", 4)
+TLI_DEFINE_VECFUNC("llvm.pow.f64", "__svml_pow8", 8)
+
+TLI_DEFINE_VECFUNC("llvm.pow.f32", "__svml_powf4", 4)
+TLI_DEFINE_VECFUNC("llvm.pow.f32", "__svml_powf8", 8)
+TLI_DEFINE_VECFUNC("llvm.pow.f32", "__svml_powf16", 16)
+
+TLI_DEFINE_VECFUNC("exp", "__svml_exp2", 2)
+TLI_DEFINE_VECFUNC("exp", "__svml_exp4", 4)
+TLI_DEFINE_VECFUNC("exp", "__svml_exp8", 8)
+
+TLI_DEFINE_VECFUNC("expf", "__svml_expf4", 4)
+TLI_DEFINE_VECFUNC("expf", "__svml_expf8", 8)
+TLI_DEFINE_VECFUNC("expf", "__svml_expf16", 16)
+
+TLI_DEFINE_VECFUNC("__exp_finite", "__svml_exp2", 2)
+TLI_DEFINE_VECFUNC("__exp_finite", "__svml_exp4", 4)
+TLI_DEFINE_VECFUNC("__exp_finite", "__svml_exp8", 8)
+
+TLI_DEFINE_VECFUNC("__expf_finite", "__svml_expf4", 4)
+TLI_DEFINE_VECFUNC("__expf_finite", "__svml_expf8", 8)
+TLI_DEFINE_VECFUNC("__expf_finite", "__svml_expf16", 16)
+
+TLI_DEFINE_VECFUNC("llvm.exp.f64", "__svml_exp2", 2)
+TLI_DEFINE_VECFUNC("llvm.exp.f64", "__svml_exp4", 4)
+TLI_DEFINE_VECFUNC("llvm.exp.f64", "__svml_exp8", 8)
+
+TLI_DEFINE_VECFUNC("llvm.exp.f32", "__svml_expf4", 4)
+TLI_DEFINE_VECFUNC("llvm.exp.f32", "__svml_expf8", 8)
+TLI_DEFINE_VECFUNC("llvm.exp.f32", "__svml_expf16", 16)
+
+TLI_DEFINE_VECFUNC("log", "__svml_log2", 2)
+TLI_DEFINE_VECFUNC("log", "__svml_log4", 4)
+TLI_DEFINE_VECFUNC("log", "__svml_log8", 8)
+
+TLI_DEFINE_VECFUNC("logf", "__svml_logf4", 4)
+TLI_DEFINE_VECFUNC("logf", "__svml_logf8", 8)
+TLI_DEFINE_VECFUNC("logf", "__svml_logf16", 16)
+
+TLI_DEFINE_VECFUNC("__log_finite", "__svml_log2", 2)
+TLI_DEFINE_VECFUNC("__log_finite", "__svml_log4", 4)
+TLI_DEFINE_VECFUNC("__log_finite", "__svml_log8", 8)
+
+TLI_DEFINE_VECFUNC("__logf_finite", "__svml_logf4", 4)
+TLI_DEFINE_VECFUNC("__logf_finite", "__svml_logf8", 8)
+TLI_DEFINE_VECFUNC("__logf_finite", "__svml_logf16", 16)
+
+TLI_DEFINE_VECFUNC("llvm.log.f64", "__svml_log2", 2)
+TLI_DEFINE_VECFUNC("llvm.log.f64", "__svml_log4", 4)
+TLI_DEFINE_VECFUNC("llvm.log.f64", "__svml_log8", 8)
+
+TLI_DEFINE_VECFUNC("llvm.log.f32", "__svml_logf4", 4)
+TLI_DEFINE_VECFUNC("llvm.log.f32", "__svml_logf8", 8)
+TLI_DEFINE_VECFUNC("llvm.log.f32", "__svml_logf16", 16)
+
+
+#else
+#error "Must choose which vector library functions are to be defined."
+#endif
+
+#undef TLI_DEFINE_VECFUNC
+#undef TLI_DEFINE_ACCELERATE_VECFUNCS
+#undef TLI_DEFINE_MASSV_VECFUNCS
+#undef TLI_DEFINE_SVML_VECFUNCS
+

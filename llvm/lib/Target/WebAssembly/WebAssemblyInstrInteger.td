@@ -1,9 +1,8 @@
 // WebAssemblyInstrInteger.td-WebAssembly Integer codegen -------*- tablegen -*-
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -122,10 +121,3 @@ def : Pat<(select (i32 (seteq I32:$cond, 0)), I32:$lhs, I32:$rhs),
           (SELECT_I32 I32:$rhs, I32:$lhs, I32:$cond)>;
 def : Pat<(select (i32 (seteq I32:$cond, 0)), I64:$lhs, I64:$rhs),
           (SELECT_I64 I64:$rhs, I64:$lhs, I32:$cond)>;
-
-// The legalizer inserts an unnecessary `and 1` to make input conform
-// to getBooleanContents, which we can lower away.
-def : Pat<(select (i32 (and I32:$cond, 1)), I32:$lhs, I32:$rhs),
-          (SELECT_I32 I32:$lhs, I32:$rhs, I32:$cond)>;
-def : Pat<(select (i32 (and I32:$cond, 1)), I64:$lhs, I64:$rhs),
-          (SELECT_I64 I64:$lhs, I64:$rhs, I32:$cond)>;

@@ -23,6 +23,9 @@ target triple = "x86_64-apple-macosx10.12.0"
 
 %struct.entry = type { %struct.entry* }
 
+; This salvage can't currently occur safely (PR40628), however if/when that's
+; ever fixed, then this is definitely a piece of test coverage that should
+; be maintained.
 define void @salvage_load(%struct.entry** %queue) local_unnamed_addr #0 !dbg !14 {
 entry:
   %im_not_dead = alloca %struct.entry*
@@ -31,8 +34,7 @@ entry:
   call void @llvm.dbg.value(metadata %struct.entry* %1, metadata !18, metadata !20), !dbg !19
 ; CHECK: define void @salvage_load
 ; CHECK-NEXT: entry:
-; CHECK-NEXT: call void @llvm.dbg.value(metadata %struct.entry** %queue,
-; CHECK-SAME:                           metadata !DIExpression(DW_OP_deref, DW_OP_plus_uconst, 0))
+; CHECK-NOT: dbg.value
   store %struct.entry* %1, %struct.entry** %im_not_dead, align 8
   ret void, !dbg !21
 }

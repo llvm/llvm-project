@@ -28,7 +28,7 @@
 !4 = !{!5, !10, !14, !19, !23, !28, !32, !37, !41}
 
 ; Test enumeration with a fixed "signed char" underlying type.
-!5 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "E0", file: !3, line: 2, baseType: !6, size: 8, flags: DIFlagFixedEnum, elements: !7, identifier: "_ZTS2E0")
+!5 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "E0", file: !3, line: 2, baseType: !6, size: 8, flags: DIFlagEnumClass, elements: !7, identifier: "_ZTS2E0")
 !6 = !DIBasicType(name: "signed char", size: 8, encoding: DW_ATE_signed_char)
 !7 = !{!8, !9}
 !8 = !DIEnumerator(name: "A0", value: -128)
@@ -46,7 +46,7 @@
 ; CHECK-NEXT:      DW_AT_const_value     (127)
 
 ; Test enumeration with a fixed "unsigned char" underlying type.
-!10 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "E1", file: !3, line: 12, baseType: !11, size: 8, flags: DIFlagFixedEnum, elements: !12, identifier: "_ZTS2E1")
+!10 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "E1", file: !3, line: 12, baseType: !11, size: 8, flags: DIFlagEnumClass, elements: !12, identifier: "_ZTS2E1")
 !11 = !DIBasicType(name: "unsigned char", size: 8, encoding: DW_ATE_unsigned_char)
 !12 = !{!13}
 !13 = !DIEnumerator(name: "A1", value: 255, isUnsigned: true)
@@ -60,7 +60,7 @@
 ; CHECK-NEXT:      DW_AT_const_value     (255)
 
 ; Test enumeration with a fixed "short" underlying type.
-!14 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "E2", file: !3, line: 18, baseType: !15, size: 16, flags: DIFlagFixedEnum, elements: !16, identifier: "_ZTS2E2")
+!14 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "E2", file: !3, line: 18, baseType: !15, size: 16, flags: DIFlagEnumClass, elements: !16, identifier: "_ZTS2E2")
 !15 = !DIBasicType(name: "short", size: 16, encoding: DW_ATE_signed)
 !16 = !{!17, !18}
 !17 = !DIEnumerator(name: "A2", value: -32768)
@@ -78,7 +78,7 @@
 ; CHECK-NEXT:      DW_AT_const_value     (32767)
 
 ; Test enumeration with a fixed "unsigned short" underlying type.
-!19 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "E3", file: !3, line: 28, baseType: !20, size: 16, flags: DIFlagFixedEnum, elements: !21, identifier: "_ZTS2E3")
+!19 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "E3", file: !3, line: 28, baseType: !20, size: 16, flags: DIFlagEnumClass, elements: !21, identifier: "_ZTS2E3")
 !20 = !DIBasicType(name: "unsigned short", size: 16, encoding: DW_ATE_unsigned)
 !21 = !{!22}
 !22 = !DIEnumerator(name: "A3", value: 65535, isUnsigned: true)
@@ -92,7 +92,7 @@
 ; CHECK-NEXT:      DW_AT_const_value     (65535)
 
 ; Test enumeration with a fixed "int" underlying type.
-!23 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "E4", file: !3, line: 34, baseType: !24, size: 32, flags: DIFlagFixedEnum, elements: !25, identifier: "_ZTS2E4")
+!23 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "E4", file: !3, line: 34, baseType: !24, size: 32, flags: DIFlagEnumClass, elements: !25, identifier: "_ZTS2E4")
 !24 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
 !25 = !{!26, !27}
 !26 = !DIEnumerator(name: "A4", value: -2147483648)
@@ -110,7 +110,7 @@
 ; CHECK-NEXT:      DW_AT_const_value     (2147483647)
 
 ; Test enumeration with a fixed "unsigend int" underlying type.
-!28 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "E5", file: !3, line: 41, baseType: !29, size: 32, flags: DIFlagFixedEnum, elements: !30, identifier: "_ZTS2E5")
+!28 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "E5", file: !3, line: 41, baseType: !29, size: 32, flags: DIFlagEnumClass, elements: !30, identifier: "_ZTS2E5")
 !29 = !DIBasicType(name: "unsigned int", size: 32, encoding: DW_ATE_unsigned)
 !30 = !{!31}
 !31 = !DIEnumerator(name: "A5", value: 4294967295, isUnsigned: true)
@@ -124,7 +124,7 @@
 ; CHECK-NEXT:      DW_AT_const_value     (4294967295)
 
 ; Test enumeration with a fixed "long long" underlying type.
-!32 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "E6", file: !3, line: 47, baseType: !33, size: 64, flags: DIFlagFixedEnum, elements: !34, identifier: "_ZTS2E6")
+!32 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "E6", file: !3, line: 47, baseType: !33, size: 64, flags: DIFlagEnumClass, elements: !34, identifier: "_ZTS2E6")
 !33 = !DIBasicType(name: "long long int", size: 64, encoding: DW_ATE_signed)
 !34 = !{!35, !36}
 !35 = !DIEnumerator(name: "A6", value: -9223372036854775808)
@@ -142,7 +142,7 @@
 ; CHECK-NEXT:      DW_AT_const_value     (9223372036854775807)
 
 ; Test enumeration with a fixed "unsigned long long" underlying type.
-!37 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "E7", file: !3, line: 57, baseType: !38, size: 64, flags: DIFlagFixedEnum, elements: !39, identifier: "_ZTS2E7")
+!37 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "E7", file: !3, line: 57, baseType: !38, size: 64, flags: DIFlagEnumClass, elements: !39, identifier: "_ZTS2E7")
 !38 = !DIBasicType(name: "long long unsigned int", size: 64, encoding: DW_ATE_unsigned)
 !39 = !{!40}
 !40 = !DIEnumerator(name: "A7", value: 18446744073709551615, isUnsigned: true)
@@ -168,11 +168,11 @@
 ; CHECK-NOT:       DW_AT_enum_class
 ; CHECK:           DW_AT_name      ("E8")
 
-; Test enumeration without a fixed underlying type, but with the DIFlagFixedEnum
+; Test enumeration without a fixed underlying type, but with the DIFlagEnumClass
 ; set. The DW_AT_enum_class attribute should be absent. This behaviour is
 ; intented to keep compatibilty with existing DWARF consumers, which may imply
 ; the type is present whenever DW_AT_enum_class is set.
-!63 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "E9", file: !3, line: 63, size: 32, flags: DIFlagFixedEnum,  elements: !64, identifier: "_ZTS2E9")
+!63 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "E9", file: !3, line: 63, size: 32, flags: DIFlagEnumClass,  elements: !64, identifier: "_ZTS2E9")
 !64 = !{!65, !66}
 !65 = !DIEnumerator(name: "A9", value: -128)
 !66 = !DIEnumerator(name: "B9", value: 127)

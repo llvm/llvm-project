@@ -1,9 +1,8 @@
 //===- COFF.h - COFF object file implementation -----------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -898,13 +897,12 @@ protected:
   Expected<SymbolRef::Type> getSymbolType(DataRefImpl Symb) const override;
   Expected<section_iterator> getSymbolSection(DataRefImpl Symb) const override;
   void moveSectionNext(DataRefImpl &Sec) const override;
-  std::error_code getSectionName(DataRefImpl Sec,
-                                 StringRef &Res) const override;
+  Expected<StringRef> getSectionName(DataRefImpl Sec) const override;
   uint64_t getSectionAddress(DataRefImpl Sec) const override;
   uint64_t getSectionIndex(DataRefImpl Sec) const override;
   uint64_t getSectionSize(DataRefImpl Sec) const override;
-  std::error_code getSectionContents(DataRefImpl Sec,
-                                     StringRef &Res) const override;
+  Expected<ArrayRef<uint8_t>>
+  getSectionContents(DataRefImpl Sec) const override;
   uint64_t getSectionAlignment(DataRefImpl Sec) const override;
   bool isSectionCompressed(DataRefImpl Sec) const override;
   bool isSectionText(DataRefImpl Sec) const override;
@@ -1034,10 +1032,10 @@ public:
 
   ArrayRef<coff_relocation> getRelocations(const coff_section *Sec) const;
 
-  std::error_code getSectionName(const coff_section *Sec, StringRef &Res) const;
+  Expected<StringRef> getSectionName(const coff_section *Sec) const;
   uint64_t getSectionSize(const coff_section *Sec) const;
-  std::error_code getSectionContents(const coff_section *Sec,
-                                     ArrayRef<uint8_t> &Res) const;
+  Error getSectionContents(const coff_section *Sec,
+                           ArrayRef<uint8_t> &Res) const;
 
   uint64_t getImageBase() const;
   std::error_code getVaPtr(uint64_t VA, uintptr_t &Res) const;

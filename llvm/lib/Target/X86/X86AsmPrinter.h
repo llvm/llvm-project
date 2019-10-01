@@ -1,9 +1,8 @@
 //===-- X86AsmPrinter.h - X86 implementation of AsmPrinter ------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -103,6 +102,18 @@ class LLVM_LIBRARY_VISIBILITY X86AsmPrinter : public AsmPrinter {
   // Choose between emitting .seh_ directives and .cv_fpo_ directives.
   void EmitSEHInstruction(const MachineInstr *MI);
 
+  void PrintSymbolOperand(const MachineOperand &MO, raw_ostream &O) override;
+  void PrintOperand(const MachineInstr *MI, unsigned OpNo, raw_ostream &O);
+  void PrintModifiedOperand(const MachineInstr *MI, unsigned OpNo,
+                            raw_ostream &O, const char *Modifier);
+  void PrintPCRelImm(const MachineInstr *MI, unsigned OpNo, raw_ostream &O);
+  void PrintLeaMemReference(const MachineInstr *MI, unsigned OpNo,
+                            raw_ostream &O, const char *Modifier);
+  void PrintMemReference(const MachineInstr *MI, unsigned OpNo, raw_ostream &O,
+                         const char *Modifier);
+  void PrintIntelMemReference(const MachineInstr *MI, unsigned OpNo,
+                              raw_ostream &O);
+
 public:
   X86AsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer);
 
@@ -124,11 +135,9 @@ public:
   }
 
   bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                       unsigned AsmVariant, const char *ExtraCode,
-                       raw_ostream &OS) override;
+                       const char *ExtraCode, raw_ostream &OS) override;
   bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
-                             unsigned AsmVariant, const char *ExtraCode,
-                             raw_ostream &OS) override;
+                             const char *ExtraCode, raw_ostream &OS) override;
 
   bool doInitialization(Module &M) override {
     SMShadowTracker.reset(0);

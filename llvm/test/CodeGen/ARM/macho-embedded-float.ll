@@ -12,7 +12,7 @@ define float @test_default_cc(float %a, float %b) {
 ; CHECK-SOFT-DAG: vmov [[A:s[0-9]+]], r0
 ; CHECK-SOFT-DAG: vmov [[B:s[0-9]+]], r1
 ; CHECK-SOFT: vadd.f32 [[RES:s[0-9]+]], [[A]], [[B]]
-; CEHCK-SOFT: vmov r0, [[RES]]
+; CHECK-SOFT: vmov r0, [[RES]]
 
   %res = fadd float %a, %b
   ret float %res

@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s | llvm-readobj -sections -relocations - | FileCheck %s
+# RUN: yaml2obj %s | llvm-readobj --sections -r - | FileCheck %s
 
 !ELF
 FileHeader: !FileHeader
@@ -49,17 +49,17 @@ Sections:
       Type: R_MIPS_LO16
 
 Symbols:
-  Local:
-    - Name: loc1
-    - Name: loc2
-  Global:
-    - Name: glob1
-      Section: .text
-      Value: 0x0
-      Size: 4
-    - Name: glob2
-  Weak:
-    - Name: weak1
+  - Name:    loc1
+  - Name:    loc2
+  - Name:    glob1
+    Section: .text
+    Value:   0x0
+    Size:    4
+    Binding: STB_GLOBAL
+  - Name:    glob2
+    Binding: STB_GLOBAL
+  - Name:    weak1
+    Binding: STB_WEAK
 
 # CHECK:        Section {
 # CHECK-NEXT:     Index: 0

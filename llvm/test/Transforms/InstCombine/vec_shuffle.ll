@@ -182,9 +182,20 @@ define <2 x i8> @extract_subvector_of_shuffle(<2 x i8> %x, <2 x i8> %y) {
   ret <2 x i8> %extract_subv
 }
 
-; Extra uses are ok.
 ; Undef elements in either mask are ok. Undefs from the 2nd shuffle mask should propagate to the new shuffle.
 ; The type of the inputs does not have to match the output type.
+
+define <4 x i8> @extract_subvector_of_shuffle_undefs_types(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @extract_subvector_of_shuffle_undefs_types(
+; CHECK-NEXT:    [[EXTRACT_SUBV:%.*]] = shufflevector <2 x i8> [[X:%.*]], <2 x i8> [[Y:%.*]], <4 x i32> <i32 undef, i32 2, i32 0, i32 undef>
+; CHECK-NEXT:    ret <4 x i8> [[EXTRACT_SUBV]]
+;
+  %shuf = shufflevector <2 x i8> %x, <2 x i8> %y, <5 x i32> <i32 undef, i32 2, i32 0, i32 1, i32 0>
+  %extract_subv = shufflevector <5 x i8> %shuf, <5 x i8> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 undef>
+  ret <4 x i8> %extract_subv
+}
+
+; Extra uses are not ok - we only do the transform when we can eliminate an instruction.
 
 declare void @use_v5i8(<5 x i8>)
 
@@ -192,7 +203,7 @@ define <4 x i8> @extract_subvector_of_shuffle_extra_use(<2 x i8> %x, <2 x i8> %y
 ; CHECK-LABEL: @extract_subvector_of_shuffle_extra_use(
 ; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <2 x i8> [[X:%.*]], <2 x i8> [[Y:%.*]], <5 x i32> <i32 undef, i32 2, i32 0, i32 1, i32 0>
 ; CHECK-NEXT:    call void @use_v5i8(<5 x i8> [[SHUF]])
-; CHECK-NEXT:    [[EXTRACT_SUBV:%.*]] = shufflevector <2 x i8> [[X]], <2 x i8> [[Y]], <4 x i32> <i32 undef, i32 2, i32 0, i32 undef>
+; CHECK-NEXT:    [[EXTRACT_SUBV:%.*]] = shufflevector <5 x i8> [[SHUF]], <5 x i8> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 undef>
 ; CHECK-NEXT:    ret <4 x i8> [[EXTRACT_SUBV]]
 ;
   %shuf = shufflevector <2 x i8> %x, <2 x i8> %y, <5 x i32> <i32 undef, i32 2, i32 0, i32 1, i32 0>
@@ -723,8 +734,8 @@ define <8 x i8> @pr19730(<16 x i8> %in0) {
 
 define i32 @pr19737(<4 x i32> %in0) {
 ; CHECK-LABEL: @pr19737(
-; CHECK-NEXT:    [[RV_RHS:%.*]] = extractelement <4 x i32> [[IN0:%.*]], i32 0
-; CHECK-NEXT:    ret i32 [[RV_RHS]]
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i32> [[IN0:%.*]], i32 0
+; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %shuffle.i = shufflevector <4 x i32> zeroinitializer, <4 x i32> %in0, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
   %neg.i = xor <4 x i32> %shuffle.i, <i32 -1, i32 -1, i32 -1, i32 -1>
@@ -1129,3 +1140,115 @@ define <2 x i1> @PR40734(<1 x i1> %x, <4 x i1> %y) {
   ret <2 x i1> %r
 }
 
+; Negative test - do not transform non-power-of-2 unless we know the backend handles these sequences identically.
+
+define <7 x i8> @insert_subvector_shuffles(<3 x i8> %x, <3 x i8> %y) {
+; CHECK-LABEL: @insert_subvector_shuffles(
+; CHECK-NEXT:    [[S1:%.*]] = shufflevector <3 x i8> [[X:%.*]], <3 x i8> undef, <7 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[S2:%.*]] = shufflevector <3 x i8> [[Y:%.*]], <3 x i8> undef, <7 x i32> <i32 undef, i32 1, i32 2, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[S3:%.*]] = shufflevector <7 x i8> [[S1]], <7 x i8> [[S2]], <7 x i32> <i32 0, i32 8, i32 1, i32 undef, i32 8, i32 1, i32 9>
+; CHECK-NEXT:    ret <7 x i8> [[S3]]
+;
+  %s1 = shufflevector <3 x i8> %x, <3 x i8> undef, <7 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %s2 = shufflevector <3 x i8> %y, <3 x i8> undef, <7 x i32> <i32 undef, i32 1, i32 2, i32 undef, i32 undef, i32 undef, i32 undef>
+  %s3 = shufflevector <7 x i8> %s1, <7 x i8> %s2, <7 x i32> <i32 0, i32 8, i32 1, i32 undef, i32 8, i32 1, i32 9>
+  ret <7 x i8> %s3
+}
+
+define <8 x i8> @insert_subvector_shuffles_pow2elts(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @insert_subvector_shuffles_pow2elts(
+; CHECK-NEXT:    [[S3:%.*]] = shufflevector <2 x i8> [[X:%.*]], <2 x i8> [[Y:%.*]], <8 x i32> <i32 0, i32 2, i32 1, i32 undef, i32 2, i32 1, i32 3, i32 0>
+; CHECK-NEXT:    ret <8 x i8> [[S3]]
+;
+  %s1 = shufflevector <2 x i8> %x, <2 x i8> undef, <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %s2 = shufflevector <2 x i8> %y, <2 x i8> undef, <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %s3 = shufflevector <8 x i8> %s1, <8 x i8> %s2, <8 x i32> <i32 0, i32 8, i32 1, i32 undef, i32 8, i32 1, i32 9, i32 0>
+  ret <8 x i8> %s3
+}
+
+; The last shuffle may change the vector type.
+; Negative test - do not transform non-power-of-2 unless we know the backend handles these sequences identically.
+
+define <2 x i8> @insert_subvector_shuffles_narrowing(<3 x i8> %x, <3 x i8> %y) {
+; CHECK-LABEL: @insert_subvector_shuffles_narrowing(
+; CHECK-NEXT:    [[S1:%.*]] = shufflevector <3 x i8> [[X:%.*]], <3 x i8> undef, <7 x i32> <i32 0, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[S2:%.*]] = shufflevector <3 x i8> [[Y:%.*]], <3 x i8> undef, <7 x i32> <i32 undef, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[S3:%.*]] = shufflevector <7 x i8> [[S1]], <7 x i8> [[S2]], <2 x i32> <i32 0, i32 8>
+; CHECK-NEXT:    ret <2 x i8> [[S3]]
+;
+  %s1 = shufflevector <3 x i8> %x, <3 x i8> undef, <7 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %s2 = shufflevector <3 x i8> %y, <3 x i8> undef, <7 x i32> <i32 undef, i32 1, i32 2, i32 undef, i32 undef, i32 undef, i32 undef>
+  %s3 = shufflevector <7 x i8> %s1, <7 x i8> %s2, <2 x i32> <i32 0, i32 8>
+  ret <2 x i8> %s3
+}
+
+define <2 x i8> @insert_subvector_shuffles_narrowing_pow2elts(<4 x i8> %x, <4 x i8> %y) {
+; CHECK-LABEL: @insert_subvector_shuffles_narrowing_pow2elts(
+; CHECK-NEXT:    [[S3:%.*]] = shufflevector <4 x i8> [[X:%.*]], <4 x i8> [[Y:%.*]], <2 x i32> <i32 0, i32 4>
+; CHECK-NEXT:    ret <2 x i8> [[S3]]
+;
+  %s1 = shufflevector <4 x i8> %x, <4 x i8> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %s2 = shufflevector <4 x i8> %y, <4 x i8> undef, <8 x i32> <i32 0, i32 1, i32 undef, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
+  %s3 = shufflevector <8 x i8> %s1, <8 x i8> %s2, <2 x i32> <i32 0, i32 8>
+  ret <2 x i8> %s3
+}
+
+; Similar to above, but this reduces to a widen with undefs of 'x'.
+
+define <4 x double> @insert_subvector_shuffles_identity(<2 x double> %x) {
+; CHECK-LABEL: @insert_subvector_shuffles_identity(
+; CHECK-NEXT:    [[S3:%.*]] = shufflevector <2 x double> [[X:%.*]], <2 x double> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; CHECK-NEXT:    ret <4 x double> [[S3]]
+;
+  %s1 = shufflevector <2 x double> %x, <2 x double> undef, <4 x i32> <i32 undef, i32 1, i32 undef, i32 undef>
+  %s2 = shufflevector <2 x double> %x, <2 x double> undef, <4 x i32> <i32 0, i32 undef, i32 undef, i32 undef>
+  %s3 = shufflevector <4 x double> %s2, <4 x double> %s1, <4 x i32> <i32 0, i32 5, i32 undef, i32 undef>
+  ret <4 x double> %s3
+}
+
+; Negative test - not identity with padding (although this could be folded with better analysis).
+
+define <4 x double> @not_insert_subvector_shuffle(<2 x double> %x) {
+; CHECK-LABEL: @not_insert_subvector_shuffle(
+; CHECK-NEXT:    [[S1:%.*]] = shufflevector <2 x double> [[X:%.*]], <2 x double> undef, <4 x i32> <i32 undef, i32 1, i32 undef, i32 1>
+; CHECK-NEXT:    [[S2:%.*]] = shufflevector <2 x double> [[X]], <2 x double> undef, <4 x i32> <i32 0, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[S3:%.*]] = shufflevector <4 x double> [[S2]], <4 x double> [[S1]], <4 x i32> <i32 0, i32 5, i32 7, i32 undef>
+; CHECK-NEXT:    ret <4 x double> [[S3]]
+;
+  %s1 = shufflevector <2 x double> %x, <2 x double> undef, <4 x i32> <i32 undef, i32 1, i32 undef, i32 1>
+  %s2 = shufflevector <2 x double> %x, <2 x double> undef, <4 x i32> <i32 0, i32 undef, i32 undef, i32 undef>
+  %s3 = shufflevector <4 x double> %s2, <4 x double> %s1, <4 x i32> <i32 0, i32 5, i32 7, i32 undef>
+  ret <4 x double> %s3
+}
+
+; Negative test - operands are not the same size (although this could be partly folded with better analysis).
+
+define <4 x double> @not_insert_subvector_shuffles_with_same_size(<2 x double> %x, <3 x double> %y) {
+; CHECK-LABEL: @not_insert_subvector_shuffles_with_same_size(
+; CHECK-NEXT:    [[S1:%.*]] = shufflevector <2 x double> [[X:%.*]], <2 x double> undef, <4 x i32> <i32 undef, i32 1, i32 undef, i32 undef>
+; CHECK-NEXT:    [[S2:%.*]] = shufflevector <3 x double> [[Y:%.*]], <3 x double> undef, <4 x i32> <i32 0, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[S3:%.*]] = shufflevector <4 x double> [[S2]], <4 x double> [[S1]], <4 x i32> <i32 0, i32 5, i32 undef, i32 undef>
+; CHECK-NEXT:    ret <4 x double> [[S3]]
+;
+  %s1 = shufflevector <2 x double> %x, <2 x double> undef, <4 x i32> <i32 undef, i32 1, i32 undef, i32 undef>
+  %s2 = shufflevector <3 x double> %y, <3 x double> undef, <4 x i32> <i32 0, i32 undef, i32 undef, i32 undef>
+  %s3 = shufflevector <4 x double> %s2, <4 x double> %s1, <4 x i32> <i32 0, i32 5, i32 undef, i32 undef>
+  ret <4 x double> %s3
+}
+
+; Demanded vector elements may not be able to simplify a shuffle mask
+; before we try to narrow it. This used to crash.
+
+define <4 x float> @insert_subvector_crash_invalid_mask_elt(<2 x float> %x, <4 x float>* %p) {
+; CHECK-LABEL: @insert_subvector_crash_invalid_mask_elt(
+; CHECK-NEXT:    [[WIDEN:%.*]] = shufflevector <2 x float> [[X:%.*]], <2 x float> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; CHECK-NEXT:    [[I:%.*]] = shufflevector <2 x float> [[X]], <2 x float> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; CHECK-NEXT:    store <4 x float> [[I]], <4 x float>* [[P:%.*]], align 16
+; CHECK-NEXT:    ret <4 x float> [[WIDEN]]
+;
+  %widen = shufflevector <2 x float> %x, <2 x float> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+  %ext2 = extractelement <2 x float> %x, i32 0
+  %I = insertelement <4 x float> %widen, float %ext2, i16 0
+  store <4 x float> %I, <4 x float>* %p
+  ret <4 x float> %widen
+}

@@ -1,9 +1,8 @@
 //===- MipsSEISelLowering.cpp - MipsSE DAG Lowering Interface -------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -214,6 +213,11 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
   setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::Other, Custom);
   setOperationAction(ISD::INTRINSIC_VOID, MVT::Other, Custom);
 
+  if (Subtarget.hasMips32r2() && !Subtarget.useSoftFloat() &&
+      !Subtarget.hasMips64()) {
+    setOperationAction(ISD::BITCAST, MVT::i64, Custom);
+  }
+
   if (NoDPLoadStore) {
     setOperationAction(ISD::LOAD, MVT::f64, Custom);
     setOperationAction(ISD::STORE, MVT::f64, Custom);
@@ -415,11 +419,8 @@ SDValue MipsSETargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
                      Op->getOperand(2));
 }
 
-bool
-MipsSETargetLowering::allowsMisalignedMemoryAccesses(EVT VT,
-                                                     unsigned,
-                                                     unsigned,
-                                                     bool *Fast) const {
+bool MipsSETargetLowering::allowsMisalignedMemoryAccesses(
+    EVT VT, unsigned, unsigned, MachineMemOperand::Flags, bool *Fast) const {
   MVT::SimpleValueType SVT = VT.getSimpleVT().SimpleTy;
 
   if (Subtarget.systemSupportsUnalignedAccess()) {
@@ -463,6 +464,7 @@ SDValue MipsSETargetLowering::LowerOperation(SDValue Op,
   case ISD::BUILD_VECTOR:       return lowerBUILD_VECTOR(Op, DAG);
   case ISD::VECTOR_SHUFFLE:     return lowerVECTOR_SHUFFLE(Op, DAG);
   case ISD::SELECT:             return lowerSELECT(Op, DAG);
+  case ISD::BITCAST:            return lowerBITCAST(Op, DAG);
   }
 
   return MipsTargetLowering::LowerOperation(Op, DAG);
@@ -714,8 +716,31 @@ static bool shouldTransformMulToShiftsAddsSubs(APInt C, EVT VT,
                                                SelectionDAG &DAG,
                                                const MipsSubtarget &Subtarget) {
   // Estimate the number of operations the below transform will turn a
-  // constant multiply into. The number is approximately how many powers
-  // of two summed together that the constant can be broken down into.
+  // constant multiply into. The number is approximately equal to the minimal
+  // number of powers of two that constant can be broken down to by adding
+  // or subtracting them.
+  //
+  // If we have taken more than 12[1] / 8[2] steps to attempt the
+  // optimization for a native sized value, it is more than likely that this
+  // optimization will make things worse.
+  //
+  // [1] MIPS64 requires 6 instructions at most to materialize any constant,
+  //     multiplication requires at least 4 cycles, but another cycle (or two)
+  //     to retrieve the result from the HI/LO registers.
+  //
+  // [2] For MIPS32, more than 8 steps is expensive as the constant could be
+  //     materialized in 2 instructions, multiplication requires at least 4
+  //     cycles, but another cycle (or two) to retrieve the result from the
+  //     HI/LO registers.
+  //
+  // TODO:
+  // - MaxSteps needs to consider the `VT` of the constant for the current
+  //   target.
+  // - Consider to perform this optimization after type legalization.
+  //   That allows to remove a workaround for types not supported natively.
+  // - Take in account `-Os, -Oz` flags because this optimization
+  //   increases code size.
+  unsigned MaxSteps = Subtarget.isABI_O32() ? 8 : 12;
 
   SmallVector<APInt, 16> WorkStack(1, C);
   unsigned Steps = 0;
@@ -727,6 +752,9 @@ static bool shouldTransformMulToShiftsAddsSubs(APInt C, EVT VT,
     if (Val == 0 || Val == 1)
       continue;
 
+    if (Steps >= MaxSteps)
+      return false;
+
     if (Val.isPowerOf2()) {
       ++Steps;
       continue;
@@ -735,36 +763,15 @@ static bool shouldTransformMulToShiftsAddsSubs(APInt C, EVT VT,
     APInt Floor = APInt(BitWidth, 1) << Val.logBase2();
     APInt Ceil = Val.isNegative() ? APInt(BitWidth, 0)
                                   : APInt(BitWidth, 1) << C.ceilLogBase2();
-
     if ((Val - Floor).ule(Ceil - Val)) {
       WorkStack.push_back(Floor);
       WorkStack.push_back(Val - Floor);
-      ++Steps;
-      continue;
+    } else {
+      WorkStack.push_back(Ceil);
+      WorkStack.push_back(Ceil - Val);
     }
 
-    WorkStack.push_back(Ceil);
-    WorkStack.push_back(Ceil - Val);
     ++Steps;
-
-    // If we have taken more than 12[1] / 8[2] steps to attempt the
-    // optimization for a native sized value, it is more than likely that this
-    // optimization will make things worse.
-    //
-    // [1] MIPS64 requires 6 instructions at most to materialize any constant,
-    //     multiplication requires at least 4 cycles, but another cycle (or two)
-    //     to retrieve the result from the HI/LO registers.
-    //
-    // [2] For MIPS32, more than 8 steps is expensive as the constant could be
-    //     materialized in 2 instructions, multiplication requires at least 4
-    //     cycles, but another cycle (or two) to retrieve the result from the
-    //     HI/LO registers.
-
-    if (Steps > 12 && (Subtarget.isABI_N32() || Subtarget.isABI_N64()))
-      return false;
-
-    if (Steps > 8 && Subtarget.isABI_O32())
-      return false;
   }
 
   // If the value being multiplied is not supported natively, we have to pay
@@ -1221,6 +1228,36 @@ SDValue MipsSETargetLowering::lowerSTORE(SDValue Op, SelectionDAG &DAG) const {
                       Nd.getMemOperand()->getFlags(), Nd.getAAInfo());
 }
 
+SDValue MipsSETargetLowering::lowerBITCAST(SDValue Op,
+                                           SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  MVT Src = Op.getOperand(0).getValueType().getSimpleVT();
+  MVT Dest = Op.getValueType().getSimpleVT();
+
+  // Bitcast i64 to double.
+  if (Src == MVT::i64 && Dest == MVT::f64) {
+    SDValue Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32,
+                             Op.getOperand(0), DAG.getIntPtrConstant(0, DL));
+    SDValue Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32,
+                             Op.getOperand(0), DAG.getIntPtrConstant(1, DL));
+    return DAG.getNode(MipsISD::BuildPairF64, DL, MVT::f64, Lo, Hi);
+  }
+
+  // Bitcast double to i64.
+  if (Src == MVT::f64 && Dest == MVT::i64) {
+    SDValue Lo =
+        DAG.getNode(MipsISD::ExtractElementF64, DL, MVT::i32, Op.getOperand(0),
+                    DAG.getConstant(0, DL, MVT::i32));
+    SDValue Hi =
+        DAG.getNode(MipsISD::ExtractElementF64, DL, MVT::i32, Op.getOperand(0),
+                    DAG.getConstant(1, DL, MVT::i32));
+    return DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64, Lo, Hi);
+  }
+
+  // Skip other cases of bitcast and use default lowering.
+  return SDValue();
+}
+
 SDValue MipsSETargetLowering::lowerMulDiv(SDValue Op, unsigned NewOpc,
                                           bool HasLo, bool HasHi,
                                           SelectionDAG &DAG) const {
@@ -1379,9 +1416,10 @@ static SDValue lowerMSASplatZExt(SDValue Op, unsigned OpNr, SelectionDAG &DAG) {
 
 static SDValue lowerMSASplatImm(SDValue Op, unsigned ImmOp, SelectionDAG &DAG,
                                 bool IsSigned = false) {
+  auto *CImm = cast<ConstantSDNode>(Op->getOperand(ImmOp));
   return DAG.getConstant(
       APInt(Op->getValueType(0).getScalarType().getSizeInBits(),
-            Op->getConstantOperandVal(ImmOp), IsSigned),
+            IsSigned ? CImm->getSExtValue() : CImm->getZExtValue(), IsSigned),
       SDLoc(Op), Op->getValueType(0));
 }
 

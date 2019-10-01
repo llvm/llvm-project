@@ -84,17 +84,27 @@ define <4 x float> @test3_undef(<4 x float> %a, <4 x float> %b) {
 }
 
 define <4 x float> @test4_undef(<4 x float> %a, <4 x float> %b) {
-; SSE-LABEL: test4_undef:
-; SSE:       # %bb.0:
-; SSE-NEXT:    movshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; SSE-NEXT:    addss %xmm1, %xmm0
-; SSE-NEXT:    retq
+; SSE-SLOW-LABEL: test4_undef:
+; SSE-SLOW:       # %bb.0:
+; SSE-SLOW-NEXT:    movshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; SSE-SLOW-NEXT:    addss %xmm1, %xmm0
+; SSE-SLOW-NEXT:    retq
 ;
-; AVX-LABEL: test4_undef:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; AVX-NEXT:    vaddss %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    retq
+; SSE-FAST-LABEL: test4_undef:
+; SSE-FAST:       # %bb.0:
+; SSE-FAST-NEXT:    haddps %xmm0, %xmm0
+; SSE-FAST-NEXT:    retq
+;
+; AVX-SLOW-LABEL: test4_undef:
+; AVX-SLOW:       # %bb.0:
+; AVX-SLOW-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; AVX-SLOW-NEXT:    vaddss %xmm1, %xmm0, %xmm0
+; AVX-SLOW-NEXT:    retq
+;
+; AVX-FAST-LABEL: test4_undef:
+; AVX-FAST:       # %bb.0:
+; AVX-FAST-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
+; AVX-FAST-NEXT:    retq
   %vecext = extractelement <4 x float> %a, i32 0
   %vecext1 = extractelement <4 x float> %a, i32 1
   %add = fadd float %vecext, %vecext1
@@ -103,19 +113,29 @@ define <4 x float> @test4_undef(<4 x float> %a, <4 x float> %b) {
 }
 
 define <2 x double> @test5_undef(<2 x double> %a, <2 x double> %b) {
-; SSE-LABEL: test5_undef:
-; SSE:       # %bb.0:
-; SSE-NEXT:    movapd %xmm0, %xmm1
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
-; SSE-NEXT:    addsd %xmm0, %xmm1
-; SSE-NEXT:    movapd %xmm1, %xmm0
-; SSE-NEXT:    retq
+; SSE-SLOW-LABEL: test5_undef:
+; SSE-SLOW:       # %bb.0:
+; SSE-SLOW-NEXT:    movapd %xmm0, %xmm1
+; SSE-SLOW-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
+; SSE-SLOW-NEXT:    addsd %xmm0, %xmm1
+; SSE-SLOW-NEXT:    movapd %xmm1, %xmm0
+; SSE-SLOW-NEXT:    retq
 ;
-; AVX-LABEL: test5_undef:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
-; AVX-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    retq
+; SSE-FAST-LABEL: test5_undef:
+; SSE-FAST:       # %bb.0:
+; SSE-FAST-NEXT:    haddpd %xmm0, %xmm0
+; SSE-FAST-NEXT:    retq
+;
+; AVX-SLOW-LABEL: test5_undef:
+; AVX-SLOW:       # %bb.0:
+; AVX-SLOW-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX-SLOW-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
+; AVX-SLOW-NEXT:    retq
+;
+; AVX-FAST-LABEL: test5_undef:
+; AVX-FAST:       # %bb.0:
+; AVX-FAST-NEXT:    vhaddpd %xmm0, %xmm0, %xmm0
+; AVX-FAST-NEXT:    retq
   %vecext = extractelement <2 x double> %a, i32 0
   %vecext1 = extractelement <2 x double> %a, i32 1
   %add = fadd double %vecext, %vecext1
@@ -166,27 +186,39 @@ define <4 x float> @test7_undef(<4 x float> %a, <4 x float> %b) {
 }
 
 define <4 x float> @test8_undef(<4 x float> %a, <4 x float> %b) {
-; SSE-LABEL: test8_undef:
-; SSE:       # %bb.0:
-; SSE-NEXT:    movshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; SSE-NEXT:    addss %xmm0, %xmm1
-; SSE-NEXT:    movaps %xmm0, %xmm2
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1],xmm0[1]
-; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,1,2,3]
-; SSE-NEXT:    addss %xmm2, %xmm0
-; SSE-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
-; SSE-NEXT:    movaps %xmm1, %xmm0
-; SSE-NEXT:    retq
+; SSE-SLOW-LABEL: test8_undef:
+; SSE-SLOW:       # %bb.0:
+; SSE-SLOW-NEXT:    movshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; SSE-SLOW-NEXT:    addss %xmm0, %xmm1
+; SSE-SLOW-NEXT:    movaps %xmm0, %xmm2
+; SSE-SLOW-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1],xmm0[1]
+; SSE-SLOW-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; SSE-SLOW-NEXT:    addss %xmm2, %xmm0
+; SSE-SLOW-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
+; SSE-SLOW-NEXT:    movaps %xmm1, %xmm0
+; SSE-SLOW-NEXT:    retq
 ;
-; AVX-LABEL: test8_undef:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; AVX-NEXT:    vaddss %xmm1, %xmm0, %xmm1
-; AVX-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
-; AVX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,1,2,3]
-; AVX-NEXT:    vaddss %xmm0, %xmm2, %xmm0
-; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1],xmm0[0],xmm1[3]
-; AVX-NEXT:    retq
+; SSE-FAST-LABEL: test8_undef:
+; SSE-FAST:       # %bb.0:
+; SSE-FAST-NEXT:    haddps %xmm0, %xmm0
+; SSE-FAST-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1,1,3]
+; SSE-FAST-NEXT:    retq
+;
+; AVX-SLOW-LABEL: test8_undef:
+; AVX-SLOW:       # %bb.0:
+; AVX-SLOW-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; AVX-SLOW-NEXT:    vaddss %xmm1, %xmm0, %xmm1
+; AVX-SLOW-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
+; AVX-SLOW-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; AVX-SLOW-NEXT:    vaddss %xmm0, %xmm2, %xmm0
+; AVX-SLOW-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1],xmm0[0],xmm1[3]
+; AVX-SLOW-NEXT:    retq
+;
+; AVX-FAST-LABEL: test8_undef:
+; AVX-FAST:       # %bb.0:
+; AVX-FAST-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
+; AVX-FAST-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,1,1,3]
+; AVX-FAST-NEXT:    retq
   %vecext = extractelement <4 x float> %a, i32 0
   %vecext1 = extractelement <4 x float> %a, i32 1
   %add = fadd float %vecext, %vecext1
@@ -227,7 +259,7 @@ define <8 x float> @test10_undef(<8 x float> %a, <8 x float> %b) {
 ;
 ; AVX-LABEL: test10_undef:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vhaddps %ymm1, %ymm0, %ymm0
+; AVX-NEXT:    vhaddps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %vecext = extractelement <8 x float> %a, i32 0
   %vecext1 = extractelement <8 x float> %a, i32 1
@@ -241,18 +273,25 @@ define <8 x float> @test10_undef(<8 x float> %a, <8 x float> %b) {
 }
 
 define <8 x float> @test11_undef(<8 x float> %a, <8 x float> %b) {
-; SSE-LABEL: test11_undef:
-; SSE:       # %bb.0:
-; SSE-NEXT:    movshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; SSE-NEXT:    addss %xmm1, %xmm0
-; SSE-NEXT:    movshdup {{.*#+}} xmm1 = xmm3[1,1,3,3]
-; SSE-NEXT:    addss %xmm3, %xmm1
-; SSE-NEXT:    movddup {{.*#+}} xmm1 = xmm1[0,0]
-; SSE-NEXT:    retq
+; SSE-SLOW-LABEL: test11_undef:
+; SSE-SLOW:       # %bb.0:
+; SSE-SLOW-NEXT:    movshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; SSE-SLOW-NEXT:    addss %xmm1, %xmm0
+; SSE-SLOW-NEXT:    movshdup {{.*#+}} xmm1 = xmm3[1,1,3,3]
+; SSE-SLOW-NEXT:    addss %xmm3, %xmm1
+; SSE-SLOW-NEXT:    movddup {{.*#+}} xmm1 = xmm1[0,0]
+; SSE-SLOW-NEXT:    retq
+;
+; SSE-FAST-LABEL: test11_undef:
+; SSE-FAST:       # %bb.0:
+; SSE-FAST-NEXT:    haddps %xmm0, %xmm0
+; SSE-FAST-NEXT:    haddps %xmm3, %xmm3
+; SSE-FAST-NEXT:    movddup {{.*#+}} xmm1 = xmm3[0,0]
+; SSE-FAST-NEXT:    retq
 ;
 ; AVX-LABEL: test11_undef:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vhaddps %ymm0, %ymm0, %ymm0
+; AVX-NEXT:    vhaddps %ymm1, %ymm0, %ymm0
 ; AVX-NEXT:    retq
   %vecext = extractelement <8 x float> %a, i32 0
   %vecext1 = extractelement <8 x float> %a, i32 1
@@ -273,7 +312,7 @@ define <8 x float> @test12_undef(<8 x float> %a, <8 x float> %b) {
 ;
 ; AVX-LABEL: test12_undef:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vhaddps %ymm0, %ymm0, %ymm0
+; AVX-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %vecext = extractelement <8 x float> %a, i32 0
   %vecext1 = extractelement <8 x float> %a, i32 1
@@ -328,29 +367,29 @@ define <16 x float> @test13_v16f32_undef(<16 x float> %a, <16 x float> %b) {
 ; AVX1-SLOW-NEXT:    vhaddps %xmm1, %xmm0, %xmm0
 ; AVX1-SLOW-NEXT:    retq
 ;
-; AVX1-FAST-LABEL: test13_v16f32_undef:
-; AVX1-FAST:       # %bb.0:
-; AVX1-FAST-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-FAST-NEXT:    vhaddps %xmm1, %xmm0, %xmm0
-; AVX1-FAST-NEXT:    retq
+; AVX-FAST-LABEL: test13_v16f32_undef:
+; AVX-FAST:       # %bb.0:
+; AVX-FAST-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX-FAST-NEXT:    vhaddps %xmm1, %xmm0, %xmm0
+; AVX-FAST-NEXT:    retq
 ;
-; AVX512-LABEL: test13_v16f32_undef:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; AVX512-NEXT:    vaddss %xmm1, %xmm0, %xmm1
-; AVX512-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
-; AVX512-NEXT:    vpermilps {{.*#+}} xmm3 = xmm0[3,1,2,3]
-; AVX512-NEXT:    vaddss %xmm3, %xmm2, %xmm2
-; AVX512-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[2,3]
-; AVX512-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX512-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm0[1,1,3,3]
-; AVX512-NEXT:    vaddss %xmm2, %xmm0, %xmm2
-; AVX512-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],xmm2[0],xmm1[3]
-; AVX512-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
-; AVX512-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,1,2,3]
-; AVX512-NEXT:    vaddss %xmm0, %xmm2, %xmm0
-; AVX512-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
-; AVX512-NEXT:    retq
+; AVX512-SLOW-LABEL: test13_v16f32_undef:
+; AVX512-SLOW:       # %bb.0:
+; AVX512-SLOW-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; AVX512-SLOW-NEXT:    vaddss %xmm1, %xmm0, %xmm1
+; AVX512-SLOW-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
+; AVX512-SLOW-NEXT:    vpermilps {{.*#+}} xmm3 = xmm0[3,1,2,3]
+; AVX512-SLOW-NEXT:    vaddss %xmm3, %xmm2, %xmm2
+; AVX512-SLOW-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[2,3]
+; AVX512-SLOW-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX512-SLOW-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm0[1,1,3,3]
+; AVX512-SLOW-NEXT:    vaddss %xmm2, %xmm0, %xmm2
+; AVX512-SLOW-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],xmm2[0],xmm1[3]
+; AVX512-SLOW-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
+; AVX512-SLOW-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; AVX512-SLOW-NEXT:    vaddss %xmm0, %xmm2, %xmm0
+; AVX512-SLOW-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
+; AVX512-SLOW-NEXT:    retq
   %vecext = extractelement <16 x float> %a, i32 0
   %vecext1 = extractelement <16 x float> %a, i32 1
   %add1 = fadd float %vecext, %vecext1
@@ -460,30 +499,15 @@ define <2 x double> @add_pd_010(<2 x double> %x) {
 }
 
 define <4 x float> @add_ps_007(<4 x float> %x) {
-; SSE-SLOW-LABEL: add_ps_007:
-; SSE-SLOW:       # %bb.0:
-; SSE-SLOW-NEXT:    movaps %xmm0, %xmm1
-; SSE-SLOW-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1],xmm0[0,2]
-; SSE-SLOW-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1,1,3]
-; SSE-SLOW-NEXT:    addps %xmm1, %xmm0
-; SSE-SLOW-NEXT:    retq
+; SSE-LABEL: add_ps_007:
+; SSE:       # %bb.0:
+; SSE-NEXT:    haddps %xmm0, %xmm0
+; SSE-NEXT:    retq
 ;
-; SSE-FAST-LABEL: add_ps_007:
-; SSE-FAST:       # %bb.0:
-; SSE-FAST-NEXT:    haddps %xmm0, %xmm0
-; SSE-FAST-NEXT:    retq
-;
-; AVX-SLOW-LABEL: add_ps_007:
-; AVX-SLOW:       # %bb.0:
-; AVX-SLOW-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[0,1,0,2]
-; AVX-SLOW-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,1,1,3]
-; AVX-SLOW-NEXT:    vaddps %xmm0, %xmm1, %xmm0
-; AVX-SLOW-NEXT:    retq
-;
-; AVX-FAST-LABEL: add_ps_007:
-; AVX-FAST:       # %bb.0:
-; AVX-FAST-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
-; AVX-FAST-NEXT:    retq
+; AVX-LABEL: add_ps_007:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    retq
   %l = shufflevector <4 x float> %x, <4 x float> undef, <4 x i32> <i32 undef, i32 undef, i32 0, i32 2>
   %r = shufflevector <4 x float> %x, <4 x float> undef, <4 x i32> <i32 undef, i32 undef, i32 1, i32 3>
   %add = fadd <4 x float> %l, %r
@@ -491,34 +515,17 @@ define <4 x float> @add_ps_007(<4 x float> %x) {
 }
 
 define <4 x float> @add_ps_030(<4 x float> %x) {
-; SSE-SLOW-LABEL: add_ps_030:
-; SSE-SLOW:       # %bb.0:
-; SSE-SLOW-NEXT:    movaps %xmm0, %xmm1
-; SSE-SLOW-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1],xmm0[0,2]
-; SSE-SLOW-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1,1,3]
-; SSE-SLOW-NEXT:    addps %xmm1, %xmm0
-; SSE-SLOW-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,2,2,3]
-; SSE-SLOW-NEXT:    retq
+; SSE-LABEL: add_ps_030:
+; SSE:       # %bb.0:
+; SSE-NEXT:    haddps %xmm0, %xmm0
+; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,2,2,3]
+; SSE-NEXT:    retq
 ;
-; SSE-FAST-LABEL: add_ps_030:
-; SSE-FAST:       # %bb.0:
-; SSE-FAST-NEXT:    haddps %xmm0, %xmm0
-; SSE-FAST-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,2,2,3]
-; SSE-FAST-NEXT:    retq
-;
-; AVX-SLOW-LABEL: add_ps_030:
-; AVX-SLOW:       # %bb.0:
-; AVX-SLOW-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[0,1,0,2]
-; AVX-SLOW-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,1,1,3]
-; AVX-SLOW-NEXT:    vaddps %xmm0, %xmm1, %xmm0
-; AVX-SLOW-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,2,2,3]
-; AVX-SLOW-NEXT:    retq
-;
-; AVX-FAST-LABEL: add_ps_030:
-; AVX-FAST:       # %bb.0:
-; AVX-FAST-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
-; AVX-FAST-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,2,2,3]
-; AVX-FAST-NEXT:    retq
+; AVX-LABEL: add_ps_030:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,2,2,3]
+; AVX-NEXT:    retq
   %l = shufflevector <4 x float> %x, <4 x float> undef, <4 x i32> <i32 undef, i32 undef, i32 0, i32 2>
   %r = shufflevector <4 x float> %x, <4 x float> undef, <4 x i32> <i32 undef, i32 undef, i32 1, i32 3>
   %add = fadd <4 x float> %l, %r
@@ -527,36 +534,15 @@ define <4 x float> @add_ps_030(<4 x float> %x) {
 }
 
 define <4 x float> @add_ps_007_2(<4 x float> %x) {
-; SSE-SLOW-LABEL: add_ps_007_2:
-; SSE-SLOW:       # %bb.0:
-; SSE-SLOW-NEXT:    movddup {{.*#+}} xmm1 = xmm0[0,0]
-; SSE-SLOW-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1,1,3]
-; SSE-SLOW-NEXT:    addps %xmm1, %xmm0
-; SSE-SLOW-NEXT:    retq
+; SSE-LABEL: add_ps_007_2:
+; SSE:       # %bb.0:
+; SSE-NEXT:    haddps %xmm0, %xmm0
+; SSE-NEXT:    retq
 ;
-; SSE-FAST-LABEL: add_ps_007_2:
-; SSE-FAST:       # %bb.0:
-; SSE-FAST-NEXT:    haddps %xmm0, %xmm0
-; SSE-FAST-NEXT:    retq
-;
-; AVX1-SLOW-LABEL: add_ps_007_2:
-; AVX1-SLOW:       # %bb.0:
-; AVX1-SLOW-NEXT:    vmovddup {{.*#+}} xmm1 = xmm0[0,0]
-; AVX1-SLOW-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,1,1,3]
-; AVX1-SLOW-NEXT:    vaddps %xmm0, %xmm1, %xmm0
-; AVX1-SLOW-NEXT:    retq
-;
-; AVX-FAST-LABEL: add_ps_007_2:
-; AVX-FAST:       # %bb.0:
-; AVX-FAST-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
-; AVX-FAST-NEXT:    retq
-;
-; AVX512-SLOW-LABEL: add_ps_007_2:
-; AVX512-SLOW:       # %bb.0:
-; AVX512-SLOW-NEXT:    vbroadcastss %xmm0, %xmm1
-; AVX512-SLOW-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,1,1,3]
-; AVX512-SLOW-NEXT:    vaddps %xmm0, %xmm1, %xmm0
-; AVX512-SLOW-NEXT:    retq
+; AVX-LABEL: add_ps_007_2:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    retq
   %l = shufflevector <4 x float> %x, <4 x float> undef, <4 x i32> <i32 undef, i32 undef, i32 0, i32 undef>
   %r = shufflevector <4 x float> %x, <4 x float> undef, <4 x i32> <i32 undef, i32 undef, i32 1, i32 undef>
   %add = fadd <4 x float> %l, %r
@@ -624,45 +610,195 @@ define <4 x float> @add_ps_017(<4 x float> %x) {
 }
 
 define <4 x float> @add_ps_018(<4 x float> %x) {
-; SSE-SLOW-LABEL: add_ps_018:
-; SSE-SLOW:       # %bb.0:
-; SSE-SLOW-NEXT:    movddup {{.*#+}} xmm1 = xmm0[0,0]
-; SSE-SLOW-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1,1,3]
-; SSE-SLOW-NEXT:    addps %xmm1, %xmm0
-; SSE-SLOW-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; SSE-SLOW-NEXT:    retq
+; SSE-LABEL: add_ps_018:
+; SSE:       # %bb.0:
+; SSE-NEXT:    haddps %xmm0, %xmm0
+; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; SSE-NEXT:    retq
 ;
-; SSE-FAST-LABEL: add_ps_018:
-; SSE-FAST:       # %bb.0:
-; SSE-FAST-NEXT:    haddps %xmm0, %xmm0
-; SSE-FAST-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; SSE-FAST-NEXT:    retq
-;
-; AVX1-SLOW-LABEL: add_ps_018:
-; AVX1-SLOW:       # %bb.0:
-; AVX1-SLOW-NEXT:    vmovddup {{.*#+}} xmm1 = xmm0[0,0]
-; AVX1-SLOW-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,1,1,3]
-; AVX1-SLOW-NEXT:    vaddps %xmm0, %xmm1, %xmm0
-; AVX1-SLOW-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; AVX1-SLOW-NEXT:    retq
-;
-; AVX-FAST-LABEL: add_ps_018:
-; AVX-FAST:       # %bb.0:
-; AVX-FAST-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
-; AVX-FAST-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; AVX-FAST-NEXT:    retq
-;
-; AVX512-SLOW-LABEL: add_ps_018:
-; AVX512-SLOW:       # %bb.0:
-; AVX512-SLOW-NEXT:    vbroadcastss %xmm0, %xmm1
-; AVX512-SLOW-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,1,1,3]
-; AVX512-SLOW-NEXT:    vaddps %xmm0, %xmm1, %xmm0
-; AVX512-SLOW-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; AVX512-SLOW-NEXT:    retq
+; AVX-LABEL: add_ps_018:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; AVX-NEXT:    retq
   %l = shufflevector <4 x float> %x, <4 x float> undef, <4 x i32> <i32 undef, i32 undef, i32 0, i32 undef>
   %r = shufflevector <4 x float> %x, <4 x float> undef, <4 x i32> <i32 undef, i32 undef, i32 1, i32 undef>
   %add = fadd <4 x float> %l, %r
   %shuffle2 = shufflevector <4 x float> %add, <4 x float> undef, <4 x i32> <i32 undef, i32 2, i32 undef, i32 undef>
   ret <4 x float> %shuffle2
+}
+
+define <4 x float> @v8f32_inputs_v4f32_output_0101(<8 x float> %a, <8 x float> %b) {
+; SSE-LABEL: v8f32_inputs_v4f32_output_0101:
+; SSE:       # %bb.0:
+; SSE-NEXT:    haddps %xmm2, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: v8f32_inputs_v4f32_output_0101:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vhaddps %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vzeroupper
+; AVX-NEXT:    retq
+  %a0 = extractelement <8 x float> %a, i32 0
+  %a1 = extractelement <8 x float> %a, i32 1
+  %b0 = extractelement <8 x float> %b, i32 0
+  %b1 = extractelement <8 x float> %b, i32 1
+  %add0 = fadd float %a0, %a1
+  %add2 = fadd float %b0, %b1
+  %r0 = insertelement <4 x float> undef, float %add0, i32 0
+  %r = insertelement <4 x float> %r0, float %add2, i32 2
+  ret <4 x float> %r
+}
+
+define <4 x float> @v8f32_input0_v4f32_output_0123(<8 x float> %a, <4 x float> %b) {
+; SSE-LABEL: v8f32_input0_v4f32_output_0123:
+; SSE:       # %bb.0:
+; SSE-NEXT:    haddps %xmm2, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: v8f32_input0_v4f32_output_0123:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vhaddps %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vzeroupper
+; AVX-NEXT:    retq
+  %a0 = extractelement <8 x float> %a, i32 0
+  %a1 = extractelement <8 x float> %a, i32 1
+  %b2 = extractelement <4 x float> %b, i32 2
+  %b3 = extractelement <4 x float> %b, i32 3
+  %add0 = fadd float %a0, %a1
+  %add3 = fadd float %b2, %b3
+  %r0 = insertelement <4 x float> undef, float %add0, i32 0
+  %r = insertelement <4 x float> %r0, float %add3, i32 3
+  ret <4 x float> %r
+}
+
+define <4 x float> @v8f32_input1_v4f32_output_2301(<4 x float> %a, <8 x float> %b) {
+; SSE-LABEL: v8f32_input1_v4f32_output_2301:
+; SSE:       # %bb.0:
+; SSE-NEXT:    haddps %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: v8f32_input1_v4f32_output_2301:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vhaddps %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vzeroupper
+; AVX-NEXT:    retq
+  %a2 = extractelement <4 x float> %a, i32 2
+  %a3 = extractelement <4 x float> %a, i32 3
+  %b0 = extractelement <8 x float> %b, i32 0
+  %b1 = extractelement <8 x float> %b, i32 1
+  %add1 = fadd float %a2, %a3
+  %add2 = fadd float %b0, %b1
+  %r1 = insertelement <4 x float> undef, float %add1, i32 1
+  %r = insertelement <4 x float> %r1, float %add2, i32 2
+  ret <4 x float> %r
+}
+
+define <4 x float> @v8f32_inputs_v4f32_output_2323(<8 x float> %a, <8 x float> %b) {
+; SSE-LABEL: v8f32_inputs_v4f32_output_2323:
+; SSE:       # %bb.0:
+; SSE-NEXT:    haddps %xmm2, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: v8f32_inputs_v4f32_output_2323:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vhaddps %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vzeroupper
+; AVX-NEXT:    retq
+  %a2 = extractelement <8 x float> %a, i32 2
+  %a3 = extractelement <8 x float> %a, i32 3
+  %b2 = extractelement <8 x float> %b, i32 2
+  %b3 = extractelement <8 x float> %b, i32 3
+  %add1 = fadd float %a2, %a3
+  %add3 = fadd float %b2, %b3
+  %r1 = insertelement <4 x float> undef, float %add1, i32 1
+  %r = insertelement <4 x float> %r1, float %add3, i32 3
+  ret <4 x float> %r
+}
+
+define <4 x float> @v16f32_inputs_v4f32_output_0123(<16 x float> %a, <16 x float> %b) {
+; SSE-LABEL: v16f32_inputs_v4f32_output_0123:
+; SSE:       # %bb.0:
+; SSE-NEXT:    haddps %xmm4, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX1-SLOW-LABEL: v16f32_inputs_v4f32_output_0123:
+; AVX1-SLOW:       # %bb.0:
+; AVX1-SLOW-NEXT:    vhaddps %xmm2, %xmm0, %xmm0
+; AVX1-SLOW-NEXT:    vzeroupper
+; AVX1-SLOW-NEXT:    retq
+;
+; AVX1-FAST-LABEL: v16f32_inputs_v4f32_output_0123:
+; AVX1-FAST:       # %bb.0:
+; AVX1-FAST-NEXT:    vhaddps %xmm2, %xmm0, %xmm0
+; AVX1-FAST-NEXT:    vzeroupper
+; AVX1-FAST-NEXT:    retq
+;
+; AVX512-LABEL: v16f32_inputs_v4f32_output_0123:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vhaddps %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
+  %a0 = extractelement <16 x float> %a, i32 0
+  %a1 = extractelement <16 x float> %a, i32 1
+  %b2 = extractelement <16 x float> %b, i32 2
+  %b3 = extractelement <16 x float> %b, i32 3
+  %add0 = fadd float %a0, %a1
+  %add3 = fadd float %b2, %b3
+  %r0 = insertelement <4 x float> undef, float %add0, i32 0
+  %r = insertelement <4 x float> %r0, float %add3, i32 3
+  ret <4 x float> %r
+}
+
+define <8 x float> @v16f32_inputs_v8f32_output_4567(<16 x float> %a, <16 x float> %b) {
+; SSE-LABEL: v16f32_inputs_v8f32_output_4567:
+; SSE:       # %bb.0:
+; SSE-NEXT:    haddps %xmm5, %xmm1
+; SSE-NEXT:    retq
+;
+; AVX1-SLOW-LABEL: v16f32_inputs_v8f32_output_4567:
+; AVX1-SLOW:       # %bb.0:
+; AVX1-SLOW-NEXT:    vhaddps %ymm2, %ymm0, %ymm0
+; AVX1-SLOW-NEXT:    retq
+;
+; AVX1-FAST-LABEL: v16f32_inputs_v8f32_output_4567:
+; AVX1-FAST:       # %bb.0:
+; AVX1-FAST-NEXT:    vhaddps %ymm2, %ymm0, %ymm0
+; AVX1-FAST-NEXT:    retq
+;
+; AVX512-LABEL: v16f32_inputs_v8f32_output_4567:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vhaddps %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    retq
+  %a4 = extractelement <16 x float> %a, i32 4
+  %a5 = extractelement <16 x float> %a, i32 5
+  %b6 = extractelement <16 x float> %b, i32 6
+  %b7 = extractelement <16 x float> %b, i32 7
+  %add4 = fadd float %a4, %a5
+  %add7 = fadd float %b6, %b7
+  %r4 = insertelement <8 x float> undef, float %add4, i32 4
+  %r = insertelement <8 x float> %r4, float %add7, i32 7
+  ret <8 x float> %r
+}
+
+define <8 x float> @PR40243(<8 x float> %a, <8 x float> %b) {
+; SSE-LABEL: PR40243:
+; SSE:       # %bb.0:
+; SSE-NEXT:    haddps %xmm3, %xmm1
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: PR40243:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vhaddps %ymm1, %ymm0, %ymm0
+; AVX-NEXT:    retq
+  %a4 = extractelement <8 x float> %a, i32 4
+  %a5 = extractelement <8 x float> %a, i32 5
+  %add4 = fadd float %a4, %a5
+  %b6 = extractelement <8 x float> %b, i32 6
+  %b7 = extractelement <8 x float> %b, i32 7
+  %add7 = fadd float %b6, %b7
+  %r4 = insertelement <8 x float> undef, float %add4, i32 4
+  %r = insertelement <8 x float> %r4, float %add7, i32 7
+  ret <8 x float> %r
 }
 

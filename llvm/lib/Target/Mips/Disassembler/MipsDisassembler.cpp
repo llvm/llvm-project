@@ -1,9 +1,8 @@
 //===- MipsDisassembler.cpp - Disassembler for Mips -----------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -13,6 +12,7 @@
 
 #include "MCTargetDesc/MipsMCTargetDesc.h"
 #include "Mips.h"
+#include "TargetInfo/MipsTargetInfo.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
@@ -540,15 +540,6 @@ static DecodeStatus DecodeMovePRegPair(MCInst &Inst, unsigned RegPair,
 
 static DecodeStatus DecodeMovePOperands(MCInst &Inst, unsigned Insn,
                                         uint64_t Address, const void *Decoder);
-
-namespace llvm {
-
-Target &getTheMipselTarget();
-Target &getTheMipsTarget();
-Target &getTheMips64Target();
-Target &getTheMips64elTarget();
-
-} // end namespace llvm
 
 static MCDisassembler *createMipsDisassembler(
                        const Target &T,

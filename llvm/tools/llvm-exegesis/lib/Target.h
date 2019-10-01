@@ -1,9 +1,8 @@
 //===-- Target.h ------------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -91,12 +90,25 @@ public:
         "fillMemoryOperands() requires getScratchMemoryRegister() > 0");
   }
 
+  // Returns a list of unavailable registers.
+  // Targets can use this to prevent some registers to be automatically selected
+  // for use in snippets.
+  virtual ArrayRef<unsigned> getUnavailableRegisters() const { return {}; }
+
   // Returns the maximum number of bytes a load/store instruction can access at
   // once. This is typically the size of the largest register available on the
   // processor. Note that this only used as a hint to generate independant
   // load/stores to/from memory, so the exact returned value does not really
   // matter as long as it's large enough.
   virtual unsigned getMaxMemoryAccessSize() const { return 0; }
+
+  // Assigns a random operand of the right type to variable Var.
+  // The default implementation only handles generic operand types.
+  // The target is responsible for handling any operand
+  // starting from OPERAND_FIRST_TARGET.
+  virtual void randomizeMCOperand(const Instruction &Instr, const Variable &Var,
+                                  llvm::MCOperand &AssignedValue,
+                                  const llvm::BitVector &ForbiddenRegs) const;
 
   // Creates a snippet generator for the given mode.
   std::unique_ptr<SnippetGenerator>
@@ -131,7 +143,7 @@ private:
   std::unique_ptr<SnippetGenerator> virtual createUopsSnippetGenerator(
       const LLVMState &State) const;
   std::unique_ptr<BenchmarkRunner> virtual createLatencyBenchmarkRunner(
-      const LLVMState &State) const;
+      const LLVMState &State, InstructionBenchmark::ModeE Mode) const;
   std::unique_ptr<BenchmarkRunner> virtual createUopsBenchmarkRunner(
       const LLVMState &State) const;
 

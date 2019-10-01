@@ -1,4 +1,4 @@
-; RUN: llc -disable-fp-elim -O0 %s -mtriple sparc -o - | FileCheck %s
+; RUN: llc -frame-pointer=all -O0 %s -mtriple sparc -o - | FileCheck %s
 
 ; int func(void);
 ; void prologue_end_test() {

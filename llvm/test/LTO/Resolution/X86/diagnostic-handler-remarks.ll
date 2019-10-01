@@ -4,6 +4,7 @@
 ; RUN: llvm-as < %s >%t.bc
 ; RUN: rm -f %t.yaml
 ; RUN: llvm-lto2 run -pass-remarks-output=%t.yaml \
+; RUN:           -pass-remarks-filter=inline \
 ; RUN:           -r %t.bc,tinkywinky,p \
 ; RUN:           -r %t.bc,patatino,px \
 ; RUN:           -r %t.bc,main,px -o %t.o %t.bc
@@ -13,6 +14,7 @@
 ; RUN: opt -module-summary %s -o %t.bc
 ; RUN: rm -f %t.thin.1.yaml
 ; RUN: llvm-lto2 run -pass-remarks-output=%t \
+; RUN:           -pass-remarks-filter=inline \
 ; RUN:           -r %t.bc,tinkywinky,p \
 ; RUN:           -r %t.bc,patatino,px \
 ; RUN:           -r %t.bc,main,px -o %t.o %t.bc

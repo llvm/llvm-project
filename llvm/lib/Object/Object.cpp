@@ -1,9 +1,8 @@
 //===- Object.cpp - C bindings to the object file library--------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -14,7 +13,9 @@
 
 #include "llvm-c/Object.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Object/MachOUniversal.h"
 
 using namespace llvm;
 using namespace object;
@@ -56,6 +57,121 @@ inline LLVMRelocationIteratorRef
 wrap(const relocation_iterator *SI) {
   return reinterpret_cast<LLVMRelocationIteratorRef>
     (const_cast<relocation_iterator*>(SI));
+}
+
+/*--.. Operations on binary files ..........................................--*/
+
+LLVMBinaryRef LLVMCreateBinary(LLVMMemoryBufferRef MemBuf,
+                               LLVMContextRef Context,
+                               char **ErrorMessage) {
+  auto maybeContext = Context ? unwrap(Context) : nullptr;
+  Expected<std::unique_ptr<Binary>> ObjOrErr(
+      createBinary(unwrap(MemBuf)->getMemBufferRef(), maybeContext));
+  if (!ObjOrErr) {
+    *ErrorMessage = strdup(toString(ObjOrErr.takeError()).c_str());
+    return nullptr;
+  }
+
+  return wrap(ObjOrErr.get().release());
+}
+
+LLVMMemoryBufferRef LLVMBinaryCopyMemoryBuffer(LLVMBinaryRef BR) {
+  auto Buf = unwrap(BR)->getMemoryBufferRef();
+  return wrap(llvm::MemoryBuffer::getMemBuffer(
+                Buf.getBuffer(), Buf.getBufferIdentifier(),
+                /*RequiresNullTerminator*/false).release());
+}
+
+void LLVMDisposeBinary(LLVMBinaryRef BR) {
+  delete unwrap(BR);
+}
+
+LLVMBinaryType LLVMBinaryGetType(LLVMBinaryRef BR) {
+  class BinaryTypeMapper final : public Binary {
+  public:
+    static LLVMBinaryType mapBinaryTypeToLLVMBinaryType(unsigned Kind) {
+      switch (Kind) {
+      case ID_Archive:
+        return LLVMBinaryTypeArchive;
+      case ID_MachOUniversalBinary:
+        return LLVMBinaryTypeMachOUniversalBinary;
+      case ID_COFFImportFile:
+        return LLVMBinaryTypeCOFFImportFile;
+      case ID_IR:
+        return LLVMBinaryTypeIR;
+      case ID_WinRes:
+        return LLVMBinaryTypeWinRes;
+      case ID_COFF:
+        return LLVMBinaryTypeCOFF;
+      case ID_ELF32L:
+        return LLVMBinaryTypeELF32L;
+      case ID_ELF32B:
+        return LLVMBinaryTypeELF32B;
+      case ID_ELF64L:
+        return LLVMBinaryTypeELF64L;
+      case ID_ELF64B:
+        return LLVMBinaryTypeELF64B;
+      case ID_MachO32L:
+        return LLVMBinaryTypeMachO32L;
+      case ID_MachO32B:
+        return LLVMBinaryTypeMachO32B;
+      case ID_MachO64L:
+        return LLVMBinaryTypeMachO64L;
+      case ID_MachO64B:
+        return LLVMBinaryTypeMachO64B;
+      case ID_Wasm:
+        return LLVMBinaryTypeWasm;
+      case ID_StartObjects:
+      case ID_EndObjects:
+        llvm_unreachable("Marker types are not valid binary kinds!");
+      default:
+        llvm_unreachable("Unknown binary kind!");
+      }
+    }
+  };
+  return BinaryTypeMapper::mapBinaryTypeToLLVMBinaryType(unwrap(BR)->getType());
+}
+
+LLVMBinaryRef LLVMMachOUniversalBinaryCopyObjectForArch(LLVMBinaryRef BR,
+                                                        const char *Arch,
+                                                        size_t ArchLen,
+                                                        char **ErrorMessage) {
+  auto universal = cast<MachOUniversalBinary>(unwrap(BR));
+  Expected<std::unique_ptr<ObjectFile>> ObjOrErr(
+      universal->getObjectForArch({Arch, ArchLen}));
+  if (!ObjOrErr) {
+    *ErrorMessage = strdup(toString(ObjOrErr.takeError()).c_str());
+    return nullptr;
+  }
+  return wrap(ObjOrErr.get().release());
+}
+
+LLVMSectionIteratorRef LLVMObjectFileCopySectionIterator(LLVMBinaryRef BR) {
+  auto OF = cast<ObjectFile>(unwrap(BR));
+  auto sections = OF->sections();
+  if (sections.begin() == sections.end())
+    return nullptr;
+  return wrap(new section_iterator(sections.begin()));
+}
+
+LLVMBool LLVMObjectFileIsSectionIteratorAtEnd(LLVMBinaryRef BR,
+                                              LLVMSectionIteratorRef SI) {
+  auto OF = cast<ObjectFile>(unwrap(BR));
+  return (*unwrap(SI) == OF->section_end()) ? 1 : 0;
+}
+
+LLVMSymbolIteratorRef LLVMObjectFileCopySymbolIterator(LLVMBinaryRef BR) {
+  auto OF = cast<ObjectFile>(unwrap(BR));
+  auto symbols = OF->symbols();
+  if (symbols.begin() == symbols.end())
+    return nullptr;
+  return wrap(new symbol_iterator(symbols.begin()));
+}
+
+LLVMBool LLVMObjectFileIsSymbolIteratorAtEnd(LLVMBinaryRef BR,
+                                             LLVMSymbolIteratorRef SI) {
+  auto OF = cast<ObjectFile>(unwrap(BR));
+  return (*unwrap(SI) == OF->symbol_end()) ? 1 : 0;
 }
 
 // ObjectFile creation
@@ -146,10 +262,10 @@ uint64_t LLVMGetSectionSize(LLVMSectionIteratorRef SI) {
 }
 
 const char *LLVMGetSectionContents(LLVMSectionIteratorRef SI) {
-  StringRef ret;
-  if (std::error_code ec = (*unwrap(SI))->getContents(ret))
-    report_fatal_error(ec.message());
-  return ret.data();
+  if (Expected<StringRef> E = (*unwrap(SI))->getContents())
+    return E->data();
+  else
+    report_fatal_error(E.takeError());
 }
 
 uint64_t LLVMGetSectionAddress(LLVMSectionIteratorRef SI) {

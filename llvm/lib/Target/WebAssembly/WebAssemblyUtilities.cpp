@@ -1,9 +1,8 @@
 //===-- WebAssemblyUtilities.cpp - WebAssembly Utility Functions ----------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -65,6 +64,8 @@ bool WebAssembly::isCopy(const MachineInstr &MI) {
   case WebAssembly::COPY_F64_S:
   case WebAssembly::COPY_V128:
   case WebAssembly::COPY_V128_S:
+  case WebAssembly::COPY_EXCEPT_REF:
+  case WebAssembly::COPY_EXCEPT_REF_S:
     return true;
   default:
     return false;
@@ -243,50 +244,10 @@ bool WebAssembly::isMarker(const MachineInstr &MI) {
   }
 }
 
-bool WebAssembly::isThrow(const MachineInstr &MI) {
-  switch (MI.getOpcode()) {
-  case WebAssembly::THROW_I32:
-  case WebAssembly::THROW_I32_S:
-  case WebAssembly::THROW_I64:
-  case WebAssembly::THROW_I64_S:
-    return true;
-  default:
-    return false;
-  }
-}
-
-bool WebAssembly::isRethrow(const MachineInstr &MI) {
-  switch (MI.getOpcode()) {
-  case WebAssembly::RETHROW:
-  case WebAssembly::RETHROW_S:
-  case WebAssembly::RETHROW_TO_CALLER:
-  case WebAssembly::RETHROW_TO_CALLER_S:
-    return true;
-  default:
-    return false;
-  }
-}
-
-bool WebAssembly::isCatch(const MachineInstr &MI) {
-  switch (MI.getOpcode()) {
-  case WebAssembly::CATCH_I32:
-  case WebAssembly::CATCH_I32_S:
-  case WebAssembly::CATCH_I64:
-  case WebAssembly::CATCH_I64_S:
-  case WebAssembly::CATCH_ALL:
-  case WebAssembly::CATCH_ALL_S:
-    return true;
-  default:
-    return false;
-  }
-}
-
 bool WebAssembly::mayThrow(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
-  case WebAssembly::THROW_I32:
-  case WebAssembly::THROW_I32_S:
-  case WebAssembly::THROW_I64:
-  case WebAssembly::THROW_I64_S:
+  case WebAssembly::THROW:
+  case WebAssembly::THROW_S:
   case WebAssembly::RETHROW:
   case WebAssembly::RETHROW_S:
     return true;
@@ -307,43 +268,8 @@ bool WebAssembly::mayThrow(const MachineInstr &MI) {
   if (F->getName() == CxaBeginCatchFn || F->getName() == PersonalityWrapperFn ||
       F->getName() == ClangCallTerminateFn || F->getName() == StdTerminateFn)
     return false;
+
+  // TODO Can we exclude call instructions that are marked as 'nounwind' in the
+  // original LLVm IR? (Even when the callee may throw)
   return true;
-}
-
-bool WebAssembly::isCatchTerminatePad(const MachineBasicBlock &MBB) {
-  if (!MBB.isEHPad())
-    return false;
-  bool SeenCatch = false;
-  for (auto &MI : MBB) {
-    if (MI.getOpcode() == WebAssembly::CATCH_I32 ||
-        MI.getOpcode() == WebAssembly::CATCH_I64 ||
-        MI.getOpcode() == WebAssembly::CATCH_I32_S ||
-        MI.getOpcode() == WebAssembly::CATCH_I64_S)
-      SeenCatch = true;
-    if (SeenCatch && MI.isCall()) {
-      const MachineOperand &CalleeOp = MI.getOperand(getCalleeOpNo(MI));
-      if (CalleeOp.isGlobal() &&
-          CalleeOp.getGlobal()->getName() == ClangCallTerminateFn)
-        return true;
-    }
-  }
-  return false;
-}
-
-bool WebAssembly::isCatchAllTerminatePad(const MachineBasicBlock &MBB) {
-  if (!MBB.isEHPad())
-    return false;
-  bool SeenCatchAll = false;
-  for (auto &MI : MBB) {
-    if (MI.getOpcode() == WebAssembly::CATCH_ALL ||
-        MI.getOpcode() == WebAssembly::CATCH_ALL_S)
-      SeenCatchAll = true;
-    if (SeenCatchAll && MI.isCall()) {
-      const MachineOperand &CalleeOp = MI.getOperand(getCalleeOpNo(MI));
-      if (CalleeOp.isGlobal() &&
-          CalleeOp.getGlobal()->getName() == StdTerminateFn)
-        return true;
-    }
-  }
-  return false;
 }

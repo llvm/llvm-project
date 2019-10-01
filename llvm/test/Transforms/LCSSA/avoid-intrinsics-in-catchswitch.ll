@@ -85,7 +85,7 @@ declare %class.f* @"\01??0f@@QEAA@H@Z"(%class.f* returned, i32) unnamed_addr
 
 define internal i32 @"\01?filt$0@0@m@@"(i8* %exception_pointers, i8* %frame_pointer) personality i8* bitcast (i32 (...)* @__C_specific_handler to i8*) {
 entry:
-  %0 = tail call i8* @llvm.x86.seh.recoverfp(i8* bitcast (i32 ()* @"\01?m@@YAJXZ" to i8*), i8* %frame_pointer)
+  %0 = tail call i8* @llvm.eh.recoverfp(i8* bitcast (i32 ()* @"\01?m@@YAJXZ" to i8*), i8* %frame_pointer)
   %1 = tail call i8* @llvm.localrecover(i8* bitcast (i32 ()* @"\01?m@@YAJXZ" to i8*), i8* %0, i32 0)
   %2 = tail call i8* @llvm.localrecover(i8* bitcast (i32 ()* @"\01?m@@YAJXZ" to i8*), i8* %0, i32 1)
   %status = bitcast i8* %2 to i32*
@@ -112,7 +112,7 @@ ehcleanup:                                        ; preds = %entry
   cleanupret from %9 unwind to caller
 }
 
-declare i8* @llvm.x86.seh.recoverfp(i8*, i8*)
+declare i8* @llvm.eh.recoverfp(i8*, i8*)
 declare i8* @llvm.localrecover(i8*, i8*, i32)
 declare i32 @"\01?j@@YAJVf@@JPEAUk@@PEAH@Z"(i8, i32, %struct.k*, i32*) local_unnamed_addr
 declare i32 @__C_specific_handler(...)

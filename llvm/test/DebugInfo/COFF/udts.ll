@@ -1,5 +1,5 @@
 ; RUN: llc < %s -filetype=obj > %t.obj
-; RUN: llvm-readobj -codeview %t.obj | FileCheck --check-prefix=READOBJ %s
+; RUN: llvm-readobj --codeview %t.obj | FileCheck --check-prefix=READOBJ %s
 ; RUN: llvm-pdbutil dump -symbols %t.obj | FileCheck --check-prefix=PDBUTIL %s
 
 ; C++ to regenerate:

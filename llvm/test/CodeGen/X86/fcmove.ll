@@ -6,7 +6,7 @@ target triple = "x86_64-unknown-unknown"
 ; Test that we can generate an fcmove, and also that it passes verification.
 
 ; CHECK-LABEL: cmove_f
-; CHECK: fcmove %st({{[0-7]}}), %st(0)
+; CHECK: fcmove %st({{[0-7]}}), %st
 define x86_fp80 @cmove_f(x86_fp80 %a, x86_fp80 %b, i32 %c) {
   %test = icmp eq i32 %c, 0
   %add = fadd x86_fp80 %a, %b

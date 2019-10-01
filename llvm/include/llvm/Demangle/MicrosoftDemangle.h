@@ -1,16 +1,15 @@
 //===------------------------- MicrosoftDemangle.h --------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_DEMANGLE_MICROSOFT_DEMANGLE_H
 #define LLVM_DEMANGLE_MICROSOFT_DEMANGLE_H
 
-#include "llvm/Demangle/Compiler.h"
+#include "llvm/Demangle/DemangleConfig.h"
 #include "llvm/Demangle/MicrosoftDemangleNodes.h"
 #include "llvm/Demangle/StringView.h"
 #include "llvm/Demangle/Utility.h"
@@ -56,24 +55,21 @@ public:
     }
   }
 
-  char *allocUnalignedBuffer(size_t Length) {
-    uint8_t *Buf = Head->Buf + Head->Used;
+  char *allocUnalignedBuffer(size_t Size) {
+    assert(Head && Head->Buf);
 
-    Head->Used += Length;
-    if (Head->Used > Head->Capacity) {
-      // It's possible we need a buffer which is larger than our default unit
-      // size, so we need to be careful to add a node with capacity that is at
-      // least as large as what we need.
-      addNode(std::max(AllocUnit, Length));
-      Head->Used = Length;
-      Buf = Head->Buf;
-    }
+    uint8_t *P = Head->Buf + Head->Used;
 
-    return reinterpret_cast<char *>(Buf);
+    Head->Used += Size;
+    if (Head->Used <= Head->Capacity)
+      return reinterpret_cast<char *>(P);
+
+    addNode(std::max(AllocUnit, Size));
+    Head->Used = Size;
+    return reinterpret_cast<char *>(Head->Buf);
   }
 
   template <typename T, typename... Args> T *allocArray(size_t Count) {
-
     size_t Size = Count * sizeof(T);
     assert(Head && Head->Buf);
 
@@ -84,17 +80,16 @@ public:
     size_t Adjustment = AlignedP - P;
 
     Head->Used += Size + Adjustment;
-    if (Head->Used < Head->Capacity)
+    if (Head->Used <= Head->Capacity)
       return new (PP) T[Count]();
 
-    addNode(AllocUnit);
+    addNode(std::max(AllocUnit, Size));
     Head->Used = Size;
     return new (Head->Buf) T[Count]();
   }
 
   template <typename T, typename... Args> T *alloc(Args &&... ConstructorArgs) {
-
-    size_t Size = sizeof(T);
+    constexpr size_t Size = sizeof(T);
     assert(Head && Head->Buf);
 
     size_t P = (size_t)Head->Buf + Head->Used;
@@ -104,9 +99,10 @@ public:
     size_t Adjustment = AlignedP - P;
 
     Head->Used += Size + Adjustment;
-    if (Head->Used < Head->Capacity)
+    if (Head->Used <= Head->Capacity)
       return new (PP) T(std::forward<Args>(ConstructorArgs)...);
 
+    static_assert(Size < AllocUnit, "");
     addNode(AllocUnit);
     Head->Used = Size;
     return new (Head->Buf) T(std::forward<Args>(ConstructorArgs)...);
@@ -160,6 +156,8 @@ public:
 private:
   SymbolNode *demangleEncodedSymbol(StringView &MangledName,
                                     QualifiedNameNode *QN);
+  SymbolNode *demangleDeclarator(StringView &MangledName);
+  SymbolNode *demangleMD5Name(StringView &MangledName);
 
   VariableSymbolNode *demangleVariableEncoding(StringView &MangledName,
                                                StorageClass SC);
@@ -179,8 +177,9 @@ private:
 
   ArrayTypeNode *demangleArrayType(StringView &MangledName);
 
+  NodeArrayNode *demangleFunctionParameterList(StringView &MangledName,
+                                               bool &IsVariadic);
   NodeArrayNode *demangleTemplateParameterList(StringView &MangledName);
-  NodeArrayNode *demangleFunctionParameterList(StringView &MangledName);
 
   std::pair<uint64_t, bool> demangleNumber(StringView &MangledName);
   uint64_t demangleUnsigned(StringView &MangledName);
@@ -207,6 +206,8 @@ private:
   NamedIdentifierNode *demangleBackRefName(StringView &MangledName);
   IdentifierNode *demangleTemplateInstantiationName(StringView &MangledName,
                                                     NameBackrefBehavior NBB);
+  IntrinsicFunctionKind
+  translateIntrinsicFunctionCode(char CH, FunctionIdentifierCodeGroup Group);
   IdentifierNode *demangleFunctionIdentifierCode(StringView &MangledName);
   IdentifierNode *
   demangleFunctionIdentifierCode(StringView &MangledName,
@@ -223,7 +224,7 @@ private:
   demangleSpecialTableSymbolNode(StringView &MangledName,
                                  SpecialIntrinsicKind SIK);
   LocalStaticGuardVariableNode *
-  demangleLocalStaticGuard(StringView &MangledName);
+  demangleLocalStaticGuard(StringView &MangledName, bool IsThread);
   VariableSymbolNode *demangleUntypedVariable(ArenaAllocator &Arena,
                                               StringView &MangledName,
                                               StringView VariableName);
@@ -245,7 +246,7 @@ private:
   FuncClass demangleFunctionClass(StringView &MangledName);
   CallingConv demangleCallingConvention(StringView &MangledName);
   StorageClass demangleVariableStorageClass(StringView &MangledName);
-  void demangleThrowSpecification(StringView &MangledName);
+  bool demangleThrowSpecification(StringView &MangledName);
   wchar_t demangleWcharLiteral(StringView &MangledName);
   uint8_t demangleCharLiteral(StringView &MangledName);
 

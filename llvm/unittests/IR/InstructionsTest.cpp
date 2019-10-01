@@ -1,9 +1,8 @@
 //===- llvm/unittest/IR/InstructionsTest.cpp - Instructions unit tests ----===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -505,14 +504,15 @@ TEST(InstructionsTest, CloneCall) {
   LLVMContext C;
   Type *Int32Ty = Type::getInt32Ty(C);
   Type *ArgTys[] = {Int32Ty, Int32Ty, Int32Ty};
-  Type *FnTy = FunctionType::get(Int32Ty, ArgTys, /*isVarArg=*/false);
+  FunctionType *FnTy = FunctionType::get(Int32Ty, ArgTys, /*isVarArg=*/false);
   Value *Callee = Constant::getNullValue(FnTy->getPointerTo());
   Value *Args[] = {
     ConstantInt::get(Int32Ty, 1),
     ConstantInt::get(Int32Ty, 2),
     ConstantInt::get(Int32Ty, 3)
   };
-  std::unique_ptr<CallInst> Call(CallInst::Create(Callee, Args, "result"));
+  std::unique_ptr<CallInst> Call(
+      CallInst::Create(FnTy, Callee, Args, "result"));
 
   // Test cloning the tail call kind.
   CallInst::TailCallKind Kinds[] = {CallInst::TCK_None, CallInst::TCK_Tail,
@@ -538,12 +538,12 @@ TEST(InstructionsTest, CloneCall) {
 TEST(InstructionsTest, AlterCallBundles) {
   LLVMContext C;
   Type *Int32Ty = Type::getInt32Ty(C);
-  Type *FnTy = FunctionType::get(Int32Ty, Int32Ty, /*isVarArg=*/false);
+  FunctionType *FnTy = FunctionType::get(Int32Ty, Int32Ty, /*isVarArg=*/false);
   Value *Callee = Constant::getNullValue(FnTy->getPointerTo());
   Value *Args[] = {ConstantInt::get(Int32Ty, 42)};
   OperandBundleDef OldBundle("before", UndefValue::get(Int32Ty));
   std::unique_ptr<CallInst> Call(
-      CallInst::Create(Callee, Args, OldBundle, "result"));
+      CallInst::Create(FnTy, Callee, Args, OldBundle, "result"));
   Call->setTailCallKind(CallInst::TailCallKind::TCK_NoTail);
   AttrBuilder AB;
   AB.addAttribute(Attribute::Cold);
@@ -565,14 +565,15 @@ TEST(InstructionsTest, AlterCallBundles) {
 TEST(InstructionsTest, AlterInvokeBundles) {
   LLVMContext C;
   Type *Int32Ty = Type::getInt32Ty(C);
-  Type *FnTy = FunctionType::get(Int32Ty, Int32Ty, /*isVarArg=*/false);
+  FunctionType *FnTy = FunctionType::get(Int32Ty, Int32Ty, /*isVarArg=*/false);
   Value *Callee = Constant::getNullValue(FnTy->getPointerTo());
   Value *Args[] = {ConstantInt::get(Int32Ty, 42)};
   std::unique_ptr<BasicBlock> NormalDest(BasicBlock::Create(C));
   std::unique_ptr<BasicBlock> UnwindDest(BasicBlock::Create(C));
   OperandBundleDef OldBundle("before", UndefValue::get(Int32Ty));
-  std::unique_ptr<InvokeInst> Invoke(InvokeInst::Create(
-      Callee, NormalDest.get(), UnwindDest.get(), Args, OldBundle, "result"));
+  std::unique_ptr<InvokeInst> Invoke(
+      InvokeInst::Create(FnTy, Callee, NormalDest.get(), UnwindDest.get(), Args,
+                         OldBundle, "result"));
   AttrBuilder AB;
   AB.addAttribute(Attribute::Cold);
   Invoke->setAttributes(
@@ -646,7 +647,8 @@ TEST_F(ModuleWithFunctionTest, DropPoisonGeneratingFlags) {
 
   {
     Value *GEPBase = Constant::getNullValue(B.getInt8PtrTy());
-    auto *GI = cast<GetElementPtrInst>(B.CreateInBoundsGEP(GEPBase, {Arg0}));
+    auto *GI = cast<GetElementPtrInst>(
+        B.CreateInBoundsGEP(B.getInt8Ty(), GEPBase, Arg0));
     ASSERT_TRUE(GI->isInBounds());
     GI->dropPoisonGeneratingFlags();
     ASSERT_FALSE(GI->isInBounds());
@@ -749,6 +751,85 @@ TEST(InstructionsTest, SwitchInst) {
   const auto &Handle = *CCI;
   EXPECT_EQ(1, Handle.getCaseValue()->getSExtValue());
   EXPECT_EQ(BB1.get(), Handle.getCaseSuccessor());
+}
+
+TEST(InstructionsTest, SwitchInstProfUpdateWrapper) {
+  LLVMContext C;
+
+  std::unique_ptr<BasicBlock> BB1, BB2, BB3;
+  BB1.reset(BasicBlock::Create(C));
+  BB2.reset(BasicBlock::Create(C));
+  BB3.reset(BasicBlock::Create(C));
+
+  // We create block 0 after the others so that it gets destroyed first and
+  // clears the uses of the other basic blocks.
+  std::unique_ptr<BasicBlock> BB0(BasicBlock::Create(C));
+
+  auto *Int32Ty = Type::getInt32Ty(C);
+
+  SwitchInst *SI =
+      SwitchInst::Create(UndefValue::get(Int32Ty), BB0.get(), 4, BB0.get());
+  SI->addCase(ConstantInt::get(Int32Ty, 1), BB1.get());
+  SI->addCase(ConstantInt::get(Int32Ty, 2), BB2.get());
+  SI->setMetadata(LLVMContext::MD_prof,
+                  MDBuilder(C).createBranchWeights({ 9, 1, 22 }));
+
+  {
+    SwitchInstProfUpdateWrapper SIW(*SI);
+    EXPECT_EQ(*SIW.getSuccessorWeight(0), 9u);
+    EXPECT_EQ(*SIW.getSuccessorWeight(1), 1u);
+    EXPECT_EQ(*SIW.getSuccessorWeight(2), 22u);
+    SIW.setSuccessorWeight(0, 99u);
+    SIW.setSuccessorWeight(1, 11u);
+    EXPECT_EQ(*SIW.getSuccessorWeight(0), 99u);
+    EXPECT_EQ(*SIW.getSuccessorWeight(1), 11u);
+    EXPECT_EQ(*SIW.getSuccessorWeight(2), 22u);
+  }
+
+  { // Create another wrapper and check that the data persist.
+    SwitchInstProfUpdateWrapper SIW(*SI);
+    EXPECT_EQ(*SIW.getSuccessorWeight(0), 99u);
+    EXPECT_EQ(*SIW.getSuccessorWeight(1), 11u);
+    EXPECT_EQ(*SIW.getSuccessorWeight(2), 22u);
+  }
+
+  // Make prof data invalid by adding one extra weight.
+  SI->setMetadata(LLVMContext::MD_prof, MDBuilder(C).createBranchWeights(
+                                            { 99, 11, 22, 33 })); // extra
+  { // Invalid prof data makes wrapper act as if there were no prof data.
+    SwitchInstProfUpdateWrapper SIW(*SI);
+    ASSERT_FALSE(SIW.getSuccessorWeight(0).hasValue());
+    ASSERT_FALSE(SIW.getSuccessorWeight(1).hasValue());
+    ASSERT_FALSE(SIW.getSuccessorWeight(2).hasValue());
+    SIW.addCase(ConstantInt::get(Int32Ty, 3), BB3.get(), 39);
+    ASSERT_FALSE(SIW.getSuccessorWeight(3).hasValue()); // did not add weight 39
+  }
+
+  { // With added 3rd case the prof data become consistent with num of cases.
+    SwitchInstProfUpdateWrapper SIW(*SI);
+    EXPECT_EQ(*SIW.getSuccessorWeight(0), 99u);
+    EXPECT_EQ(*SIW.getSuccessorWeight(1), 11u);
+    EXPECT_EQ(*SIW.getSuccessorWeight(2), 22u);
+    EXPECT_EQ(*SIW.getSuccessorWeight(3), 33u);
+  }
+
+  // Make prof data invalid by removing one extra weight.
+  SI->setMetadata(LLVMContext::MD_prof,
+                  MDBuilder(C).createBranchWeights({ 99, 11, 22 })); // shorter
+  { // Invalid prof data makes wrapper act as if there were no prof data.
+    SwitchInstProfUpdateWrapper SIW(*SI);
+    ASSERT_FALSE(SIW.getSuccessorWeight(0).hasValue());
+    ASSERT_FALSE(SIW.getSuccessorWeight(1).hasValue());
+    ASSERT_FALSE(SIW.getSuccessorWeight(2).hasValue());
+    SIW.removeCase(SwitchInst::CaseIt(SI, 2));
+  }
+
+  { // With removed 3rd case the prof data become consistent with num of cases.
+    SwitchInstProfUpdateWrapper SIW(*SI);
+    EXPECT_EQ(*SIW.getSuccessorWeight(0), 99u);
+    EXPECT_EQ(*SIW.getSuccessorWeight(1), 11u);
+    EXPECT_EQ(*SIW.getSuccessorWeight(2), 22u);
+  }
 }
 
 TEST(InstructionsTest, CommuteShuffleMask) {
@@ -989,6 +1070,33 @@ TEST(InstructionsTest, SkipDebug) {
 
   // After the terminator, there are no non-debug instructions.
   EXPECT_EQ(nullptr, Term->getNextNonDebugInstruction());
+}
+
+TEST(InstructionsTest, PhiIsNotFPMathOperator) {
+  LLVMContext Context;
+  IRBuilder<> Builder(Context);
+  MDBuilder MDHelper(Context);
+  Instruction *I = Builder.CreatePHI(Builder.getDoubleTy(), 0);
+  EXPECT_FALSE(isa<FPMathOperator>(I));
+  I->deleteValue();
+}
+
+TEST(InstructionsTest, FNegInstruction) {
+  LLVMContext Context;
+  Type *FltTy = Type::getFloatTy(Context);
+  Constant *One = ConstantFP::get(FltTy, 1.0);
+  BinaryOperator *FAdd = BinaryOperator::CreateFAdd(One, One);
+  FAdd->setHasNoNaNs(true);
+  UnaryOperator *FNeg = UnaryOperator::CreateFNegFMF(One, FAdd);
+  EXPECT_TRUE(FNeg->hasNoNaNs());
+  EXPECT_FALSE(FNeg->hasNoInfs());
+  EXPECT_FALSE(FNeg->hasNoSignedZeros());
+  EXPECT_FALSE(FNeg->hasAllowReciprocal());
+  EXPECT_FALSE(FNeg->hasAllowContract());
+  EXPECT_FALSE(FNeg->hasAllowReassoc());
+  EXPECT_FALSE(FNeg->hasApproxFunc());
+  FAdd->deleteValue();
+  FNeg->deleteValue();
 }
 
 } // end anonymous namespace

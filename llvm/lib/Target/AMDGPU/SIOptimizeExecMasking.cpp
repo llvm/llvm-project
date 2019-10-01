@@ -1,9 +1,8 @@
 //===-- SIOptimizeExecMasking.cpp -----------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -57,13 +56,16 @@ char SIOptimizeExecMasking::ID = 0;
 char &llvm::SIOptimizeExecMaskingID = SIOptimizeExecMasking::ID;
 
 /// If \p MI is a copy from exec, return the register copied to.
-static unsigned isCopyFromExec(const MachineInstr &MI) {
+static unsigned isCopyFromExec(const MachineInstr &MI, const GCNSubtarget &ST) {
   switch (MI.getOpcode()) {
   case AMDGPU::COPY:
   case AMDGPU::S_MOV_B64:
-  case AMDGPU::S_MOV_B64_term: {
+  case AMDGPU::S_MOV_B64_term:
+  case AMDGPU::S_MOV_B32:
+  case AMDGPU::S_MOV_B32_term: {
     const MachineOperand &Src = MI.getOperand(1);
-    if (Src.isReg() && Src.getReg() == AMDGPU::EXEC)
+    if (Src.isReg() &&
+        Src.getReg() == (ST.isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC))
       return MI.getOperand(0).getReg();
   }
   }
@@ -72,16 +74,20 @@ static unsigned isCopyFromExec(const MachineInstr &MI) {
 }
 
 /// If \p MI is a copy to exec, return the register copied from.
-static unsigned isCopyToExec(const MachineInstr &MI) {
+static unsigned isCopyToExec(const MachineInstr &MI, const GCNSubtarget &ST) {
   switch (MI.getOpcode()) {
   case AMDGPU::COPY:
-  case AMDGPU::S_MOV_B64: {
+  case AMDGPU::S_MOV_B64:
+  case AMDGPU::S_MOV_B32: {
     const MachineOperand &Dst = MI.getOperand(0);
-    if (Dst.isReg() && Dst.getReg() == AMDGPU::EXEC && MI.getOperand(1).isReg())
+    if (Dst.isReg() &&
+        Dst.getReg() == (ST.isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC) &&
+        MI.getOperand(1).isReg())
       return MI.getOperand(1).getReg();
     break;
   }
   case AMDGPU::S_MOV_B64_term:
+  case AMDGPU::S_MOV_B32_term:
     llvm_unreachable("should have been replaced");
   }
 
@@ -106,6 +112,23 @@ static unsigned isLogicalOpOnExec(const MachineInstr &MI) {
     const MachineOperand &Src2 = MI.getOperand(2);
     if (Src2.isReg() && Src2.getReg() == AMDGPU::EXEC)
       return MI.getOperand(0).getReg();
+    break;
+  }
+  case AMDGPU::S_AND_B32:
+  case AMDGPU::S_OR_B32:
+  case AMDGPU::S_XOR_B32:
+  case AMDGPU::S_ANDN2_B32:
+  case AMDGPU::S_ORN2_B32:
+  case AMDGPU::S_NAND_B32:
+  case AMDGPU::S_NOR_B32:
+  case AMDGPU::S_XNOR_B32: {
+    const MachineOperand &Src1 = MI.getOperand(1);
+    if (Src1.isReg() && Src1.getReg() == AMDGPU::EXEC_LO)
+      return MI.getOperand(0).getReg();
+    const MachineOperand &Src2 = MI.getOperand(2);
+    if (Src2.isReg() && Src2.getReg() == AMDGPU::EXEC_LO)
+      return MI.getOperand(0).getReg();
+    break;
   }
   }
 
@@ -130,6 +153,22 @@ static unsigned getSaveExecOp(unsigned Opc) {
     return AMDGPU::S_NOR_SAVEEXEC_B64;
   case AMDGPU::S_XNOR_B64:
     return AMDGPU::S_XNOR_SAVEEXEC_B64;
+  case AMDGPU::S_AND_B32:
+    return AMDGPU::S_AND_SAVEEXEC_B32;
+  case AMDGPU::S_OR_B32:
+    return AMDGPU::S_OR_SAVEEXEC_B32;
+  case AMDGPU::S_XOR_B32:
+    return AMDGPU::S_XOR_SAVEEXEC_B32;
+  case AMDGPU::S_ANDN2_B32:
+    return AMDGPU::S_ANDN2_SAVEEXEC_B32;
+  case AMDGPU::S_ORN2_B32:
+    return AMDGPU::S_ORN2_SAVEEXEC_B32;
+  case AMDGPU::S_NAND_B32:
+    return AMDGPU::S_NAND_SAVEEXEC_B32;
+  case AMDGPU::S_NOR_B32:
+    return AMDGPU::S_NOR_SAVEEXEC_B32;
+  case AMDGPU::S_XNOR_B32:
+    return AMDGPU::S_XNOR_SAVEEXEC_B32;
   default:
     return AMDGPU::INSTRUCTION_LIST_END;
   }
@@ -140,7 +179,8 @@ static unsigned getSaveExecOp(unsigned Opc) {
 // these is expected per block.
 static bool removeTerminatorBit(const SIInstrInfo &TII, MachineInstr &MI) {
   switch (MI.getOpcode()) {
-  case AMDGPU::S_MOV_B64_term: {
+  case AMDGPU::S_MOV_B64_term:
+  case AMDGPU::S_MOV_B32_term: {
     MI.setDesc(TII.get(AMDGPU::COPY));
     return true;
   }
@@ -150,10 +190,28 @@ static bool removeTerminatorBit(const SIInstrInfo &TII, MachineInstr &MI) {
     MI.setDesc(TII.get(AMDGPU::S_XOR_B64));
     return true;
   }
+  case AMDGPU::S_XOR_B32_term: {
+    // This is only a terminator to get the correct spill code placement during
+    // register allocation.
+    MI.setDesc(TII.get(AMDGPU::S_XOR_B32));
+    return true;
+  }
+  case AMDGPU::S_OR_B32_term: {
+    // This is only a terminator to get the correct spill code placement during
+    // register allocation.
+    MI.setDesc(TII.get(AMDGPU::S_OR_B32));
+    return true;
+  }
   case AMDGPU::S_ANDN2_B64_term: {
     // This is only a terminator to get the correct spill code placement during
     // register allocation.
     MI.setDesc(TII.get(AMDGPU::S_ANDN2_B64));
+    return true;
+  }
+  case AMDGPU::S_ANDN2_B32_term: {
+    // This is only a terminator to get the correct spill code placement during
+    // register allocation.
+    MI.setDesc(TII.get(AMDGPU::S_ANDN2_B32));
     return true;
   }
   default:
@@ -178,6 +236,7 @@ static MachineBasicBlock::reverse_iterator fixTerminators(
 
 static MachineBasicBlock::reverse_iterator findExecCopy(
   const SIInstrInfo &TII,
+  const GCNSubtarget &ST,
   MachineBasicBlock &MBB,
   MachineBasicBlock::reverse_iterator I,
   unsigned CopyToExec) {
@@ -185,7 +244,7 @@ static MachineBasicBlock::reverse_iterator findExecCopy(
 
   auto E = MBB.rend();
   for (unsigned N = 0; N <= InstLimit && I != E; ++I, ++N) {
-    unsigned CopyFromExec = isCopyFromExec(*I);
+    unsigned CopyFromExec = isCopyFromExec(*I, ST);
     if (CopyFromExec != AMDGPU::NoRegister)
       return I;
   }
@@ -212,6 +271,7 @@ bool SIOptimizeExecMasking::runOnMachineFunction(MachineFunction &MF) {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
   const SIInstrInfo *TII = ST.getInstrInfo();
+  unsigned Exec = ST.isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
 
   // Optimize sequences emitted for control flow lowering. They are originally
   // emitted as the separate operations because spill code may need to be
@@ -230,13 +290,13 @@ bool SIOptimizeExecMasking::runOnMachineFunction(MachineFunction &MF) {
     if (I == E)
       continue;
 
-    unsigned CopyToExec = isCopyToExec(*I);
+    unsigned CopyToExec = isCopyToExec(*I, ST);
     if (CopyToExec == AMDGPU::NoRegister)
       continue;
 
     // Scan backwards to find the def.
     auto CopyToExecInst = &*I;
-    auto CopyFromExecInst = findExecCopy(*TII, MBB, I, CopyToExec);
+    auto CopyFromExecInst = findExecCopy(*TII, ST, MBB, I, CopyToExec);
     if (CopyFromExecInst == E) {
       auto PrepareExecInst = std::next(I);
       if (PrepareExecInst == E)
@@ -246,7 +306,7 @@ bool SIOptimizeExecMasking::runOnMachineFunction(MachineFunction &MF) {
           isLogicalOpOnExec(*PrepareExecInst) == CopyToExec) {
         LLVM_DEBUG(dbgs() << "Fold exec copy: " << *PrepareExecInst);
 
-        PrepareExecInst->getOperand(0).setReg(AMDGPU::EXEC);
+        PrepareExecInst->getOperand(0).setReg(Exec);
 
         LLVM_DEBUG(dbgs() << "into: " << *PrepareExecInst << '\n');
 
@@ -269,7 +329,7 @@ bool SIOptimizeExecMasking::runOnMachineFunction(MachineFunction &MF) {
     for (MachineBasicBlock::iterator J
            = std::next(CopyFromExecInst->getIterator()), JE = I->getIterator();
          J != JE; ++J) {
-      if (SaveExecInst && J->readsRegister(AMDGPU::EXEC, TRI)) {
+      if (SaveExecInst && J->readsRegister(Exec, TRI)) {
         LLVM_DEBUG(dbgs() << "exec read prevents saveexec: " << *J << '\n');
         // Make sure this is inserted after any VALU ops that may have been
         // scheduled in between.
@@ -353,7 +413,7 @@ bool SIOptimizeExecMasking::runOnMachineFunction(MachineFunction &MF) {
     CopyToExecInst->eraseFromParent();
 
     for (MachineInstr *OtherInst : OtherUseInsts) {
-      OtherInst->substituteRegister(CopyToExec, AMDGPU::EXEC,
+      OtherInst->substituteRegister(CopyToExec, Exec,
                                     AMDGPU::NoSubRegister, *TRI);
     }
   }

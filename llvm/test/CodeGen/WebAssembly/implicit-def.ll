@@ -7,11 +7,10 @@ target triple = "wasm32-unknown-unknown"
 ; CONST_XXX instructions to provide an explicit push.
 
 ; CHECK-LABEL: implicit_def_i32:
-; CHECK: .LBB{{[0-9]+}}_4:{{$}}
-; CHECK-NEXT: end_block{{$}}
-; CHECK-NEXT: i32.const $push[[R:[0-9]+]]=, 0{{$}}
+; CHECK:      i32.const $push{{[0-9]+}}=, 0{{$}}
+; CHECK:      i32.const $push{{[0-9]+}}=, 0{{$}}
+; CHECK:      i32.const $push[[R:[0-9]+]]=, 0{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
-; CHECK-NEXT: end_function{{$}}
 define i32 @implicit_def_i32() {
   br i1 undef, label %A, label %X
 
@@ -32,11 +31,8 @@ X:                                                ; preds = %0, C
 }
 
 ; CHECK-LABEL: implicit_def_i64:
-; CHECK: .LBB{{[0-9]+}}_4:{{$}}
-; CHECK-NEXT: end_block{{$}}
-; CHECK-NEXT: i64.const $push[[R:[0-9]+]]=, 0{{$}}
+; CHECK:      i64.const $push[[R:[0-9]+]]=, 0{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
-; CHECK-NEXT: end_function{{$}}
 define i64 @implicit_def_i64() {
   br i1 undef, label %A, label %X
 
@@ -57,11 +53,8 @@ X:                                                ; preds = %0, C
 }
 
 ; CHECK-LABEL: implicit_def_f32:
-; CHECK: .LBB{{[0-9]+}}_4:{{$}}
-; CHECK-NEXT: end_block{{$}}
-; CHECK-NEXT: f32.const $push[[R:[0-9]+]]=, 0x0p0{{$}}
+; CHECK:      f32.const $push[[R:[0-9]+]]=, 0x0p0{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
-; CHECK-NEXT: end_function{{$}}
 define float @implicit_def_f32() {
   br i1 undef, label %A, label %X
 
@@ -82,11 +75,8 @@ X:                                                ; preds = %0, C
 }
 
 ; CHECK-LABEL: implicit_def_f64:
-; CHECK: .LBB{{[0-9]+}}_4:{{$}}
-; CHECK-NEXT: end_block{{$}}
-; CHECK-NEXT: f64.const $push[[R:[0-9]+]]=, 0x0p0{{$}}
+; CHECK:      f64.const $push[[R:[0-9]+]]=, 0x0p0{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
-; CHECK-NEXT: end_function{{$}}
 define double @implicit_def_f64() {
   br i1 undef, label %A, label %X
 
@@ -107,12 +97,11 @@ X:                                                ; preds = %0, C
 }
 
 ; CHECK-LABEL: implicit_def_v4i32:
-; CHECK: .LBB{{[0-9]+}}_4:{{$}}
-; CHECK-NEXT: end_block{{$}}
-; CHECK-NEXT: i32.const $push[[L0:[0-9]+]]=, 0{{$}}
+; CHECK:      i32.const $push{{[0-9]+}}=, 0{{$}}
+; CHECK:      i32.const $push{{[0-9]+}}=, 0{{$}}
+; CHECK:      i32.const $push[[L0:[0-9]+]]=, 0{{$}}
 ; CHECK-NEXT: i32x4.splat $push[[R:[0-9]+]]=, $pop[[L0]]
 ; CHECK-NEXT: return $pop[[R]]{{$}}
-; CHECK-NEXT: end_function{{$}}
 define <4 x i32> @implicit_def_v4i32() {
   br i1 undef, label %A, label %X
 

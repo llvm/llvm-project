@@ -1,21 +1,23 @@
-# RUN: llc -march=amdgcn -run-pass si-fold-operands %s -o - | FileCheck -check-prefix=GCN %s
+# RUN: llc -march=amdgcn -run-pass si-fold-operands -verify-machineinstrs %s -o - | FileCheck -check-prefix=GCN %s
 
 # GCN-LABEL:       name: fold-imm-copy
 # GCN:             [[SREG:%[0-9+]]]:sreg_32_xm0 = S_MOV_B32 65535
 # GCN:             V_AND_B32_e32 [[SREG]]
 
+---
 name: fold-imm-copy
+tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $sgpr0_sgpr1
     %0:vgpr_32 = COPY $vgpr0
     %1:sgpr_64 = COPY $sgpr0_sgpr1
-    %2:sreg_128 = S_LOAD_DWORDX4_IMM %1, 9, 0
+    %2:sreg_128 = S_LOAD_DWORDX4_IMM %1, 9, 0, 0
     %3:sreg_32_xm0 = S_MOV_B32 2
     %4:vgpr_32 = V_LSHLREV_B32_e64 killed %3, %0, implicit $exec
     %5:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     %6:vreg_64 = REG_SEQUENCE killed %4, %subreg.sub0, killed %5, %subreg.sub1
-    %7:vgpr_32 = BUFFER_LOAD_DWORD_ADDR64 %6, %2, 0, 4, 0, 0, 0, implicit $exec
+    %7:vgpr_32 = BUFFER_LOAD_DWORD_ADDR64 %6, %2, 0, 4, 0, 0, 0, 0, implicit $exec
     %8:sreg_32_xm0 = S_MOV_B32 65535
     %9:vgpr_32 = COPY %8
     %10:vgpr_32 = V_AND_B32_e32 %7, %9, implicit $exec

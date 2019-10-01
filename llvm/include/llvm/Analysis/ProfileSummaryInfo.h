@@ -1,9 +1,8 @@
 //===- llvm/Analysis/ProfileSummaryInfo.h - profile summary ---*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -74,6 +73,12 @@ public:
            Summary->getKind() == ProfileSummary::PSK_Instr;
   }
 
+  /// Returns true if module \c M has context sensitive instrumentation profile.
+  bool hasCSInstrumentationProfile() {
+    return hasProfileSummary() &&
+           Summary->getKind() == ProfileSummary::PSK_CSInstr;
+  }
+
   /// Handle the invalidation of this information.
   ///
   /// When used as a result of \c ProfileSummaryAnalysis this method will be
@@ -87,7 +92,8 @@ public:
 
   /// Returns the profile count for \p CallInst.
   Optional<uint64_t> getProfileCount(const Instruction *CallInst,
-                                     BlockFrequencyInfo *BFI);
+                                     BlockFrequencyInfo *BFI,
+                                     bool AllowSynthetic = false);
   /// Returns true if the working set size of the code is considered huge.
   bool hasHugeWorkingSetSize();
   /// Returns true if \p F has hot function entry.

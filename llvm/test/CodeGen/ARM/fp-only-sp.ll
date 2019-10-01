@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=thumbv7em-apple-macho -mcpu=cortex-m4 %s -o - -O0 | FileCheck %s
 ; RUN: llc -mtriple=thumbv7em-apple-macho -mcpu=cortex-m4 %s -o - | FileCheck %s
 
-; Note: vldr and vstr really do have 64-bit variants even with fp-only-sp
+; Note: vldr and vstr really do have 64-bit variants even with -fp64
 define void @test_load_store(double* %addr) {
 ; CHECK-LABEL: test_load_store:
 ; CHECK: vldr [[TMP:d[0-9]+]], [r0]

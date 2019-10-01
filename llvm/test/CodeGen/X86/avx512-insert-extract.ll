@@ -270,7 +270,7 @@ define i64 @test14(<8 x i64>%a, <8 x i64>%b, i64 %a1, i64 %b1) {
 ; SKX:       ## %bb.0:
 ; SKX-NEXT:    movq %rdi, %rax
 ; SKX-NEXT:    vpcmpgtq %zmm0, %zmm1, %k0
-; SKX-NEXT:    kshiftrw $4, %k0, %k0
+; SKX-NEXT:    kshiftrb $4, %k0, %k0
 ; SKX-NEXT:    kmovd %k0, %ecx
 ; SKX-NEXT:    testb $1, %cl
 ; SKX-NEXT:    cmoveq %rsi, %rax
@@ -976,7 +976,7 @@ define zeroext i8 @test_extractelement_v4i1(<4 x i32> %a, <4 x i32> %b) {
 ; SKX-LABEL: test_extractelement_v4i1:
 ; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpcmpnleud %xmm1, %xmm0, %k0
-; SKX-NEXT:    kshiftrw $3, %k0, %k0
+; SKX-NEXT:    kshiftrb $3, %k0, %k0
 ; SKX-NEXT:    kmovd %k0, %eax
 ; SKX-NEXT:    andl $1, %eax
 ; SKX-NEXT:    retq
@@ -1514,7 +1514,7 @@ define zeroext i8 @test_extractelement_varible_v2i1(<2 x i64> %a, <2 x i64> %b, 
 ; KNL-NEXT:    ## kill: def $xmm0 killed $xmm0 def $zmm0
 ; KNL-NEXT:    vpcmpnleuq %zmm1, %zmm0, %k1
 ; KNL-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
-; KNL-NEXT:    vextracti32x4 $0, %zmm0, -{{[0-9]+}}(%rsp)
+; KNL-NEXT:    vmovdqa %xmm0, -{{[0-9]+}}(%rsp)
 ; KNL-NEXT:    andl $1, %edi
 ; KNL-NEXT:    movzbl -24(%rsp,%rdi,8), %eax
 ; KNL-NEXT:    andl $1, %eax
@@ -1545,7 +1545,7 @@ define zeroext i8 @test_extractelement_varible_v4i1(<4 x i32> %a, <4 x i32> %b, 
 ; KNL-NEXT:    ## kill: def $xmm0 killed $xmm0 def $zmm0
 ; KNL-NEXT:    vpcmpnleud %zmm1, %zmm0, %k1
 ; KNL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
-; KNL-NEXT:    vextracti32x4 $0, %zmm0, -{{[0-9]+}}(%rsp)
+; KNL-NEXT:    vmovdqa %xmm0, -{{[0-9]+}}(%rsp)
 ; KNL-NEXT:    andl $3, %edi
 ; KNL-NEXT:    movzbl -24(%rsp,%rdi,4), %eax
 ; KNL-NEXT:    andl $1, %eax
@@ -1844,70 +1844,70 @@ define i96 @test_insertelement_variable_v96i1(<96 x i8> %a, i8 %b, i32 %index) {
 ; KNL-NEXT:    andq $-128, %rsp
 ; KNL-NEXT:    subq $256, %rsp ## imm = 0x100
 ; KNL-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; KNL-NEXT:    vpinsrb $1, 488(%rbp), %xmm0, %xmm0
-; KNL-NEXT:    vpinsrb $2, 496(%rbp), %xmm0, %xmm0
-; KNL-NEXT:    vpinsrb $3, 504(%rbp), %xmm0, %xmm0
-; KNL-NEXT:    vpinsrb $4, 512(%rbp), %xmm0, %xmm0
-; KNL-NEXT:    vpinsrb $5, 520(%rbp), %xmm0, %xmm0
-; KNL-NEXT:    vpinsrb $6, 528(%rbp), %xmm0, %xmm0
-; KNL-NEXT:    vpinsrb $7, 536(%rbp), %xmm0, %xmm0
-; KNL-NEXT:    vpinsrb $8, 544(%rbp), %xmm0, %xmm0
-; KNL-NEXT:    vpinsrb $9, 552(%rbp), %xmm0, %xmm0
-; KNL-NEXT:    vpinsrb $10, 560(%rbp), %xmm0, %xmm0
-; KNL-NEXT:    vpinsrb $11, 568(%rbp), %xmm0, %xmm0
-; KNL-NEXT:    vpinsrb $12, 576(%rbp), %xmm0, %xmm0
-; KNL-NEXT:    vpinsrb $13, 584(%rbp), %xmm0, %xmm0
-; KNL-NEXT:    vpinsrb $14, 592(%rbp), %xmm0, %xmm0
-; KNL-NEXT:    vpinsrb $15, 600(%rbp), %xmm0, %xmm0
+; KNL-NEXT:    vpinsrb $1, 232(%rbp), %xmm0, %xmm0
+; KNL-NEXT:    vpinsrb $2, 240(%rbp), %xmm0, %xmm0
+; KNL-NEXT:    vpinsrb $3, 248(%rbp), %xmm0, %xmm0
+; KNL-NEXT:    vpinsrb $4, 256(%rbp), %xmm0, %xmm0
+; KNL-NEXT:    vpinsrb $5, 264(%rbp), %xmm0, %xmm0
+; KNL-NEXT:    vpinsrb $6, 272(%rbp), %xmm0, %xmm0
+; KNL-NEXT:    vpinsrb $7, 280(%rbp), %xmm0, %xmm0
+; KNL-NEXT:    vpinsrb $8, 288(%rbp), %xmm0, %xmm0
+; KNL-NEXT:    vpinsrb $9, 296(%rbp), %xmm0, %xmm0
+; KNL-NEXT:    vpinsrb $10, 304(%rbp), %xmm0, %xmm0
+; KNL-NEXT:    vpinsrb $11, 312(%rbp), %xmm0, %xmm0
+; KNL-NEXT:    vpinsrb $12, 320(%rbp), %xmm0, %xmm0
+; KNL-NEXT:    vpinsrb $13, 328(%rbp), %xmm0, %xmm0
+; KNL-NEXT:    vpinsrb $14, 336(%rbp), %xmm0, %xmm0
+; KNL-NEXT:    vpinsrb $15, 344(%rbp), %xmm0, %xmm0
 ; KNL-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; KNL-NEXT:    vpinsrb $1, 616(%rbp), %xmm1, %xmm1
-; KNL-NEXT:    vpinsrb $2, 624(%rbp), %xmm1, %xmm1
-; KNL-NEXT:    vpinsrb $3, 632(%rbp), %xmm1, %xmm1
-; KNL-NEXT:    vpinsrb $4, 640(%rbp), %xmm1, %xmm1
-; KNL-NEXT:    vpinsrb $5, 648(%rbp), %xmm1, %xmm1
-; KNL-NEXT:    vpinsrb $6, 656(%rbp), %xmm1, %xmm1
-; KNL-NEXT:    vpinsrb $7, 664(%rbp), %xmm1, %xmm1
-; KNL-NEXT:    vpinsrb $8, 672(%rbp), %xmm1, %xmm1
-; KNL-NEXT:    vpinsrb $9, 680(%rbp), %xmm1, %xmm1
-; KNL-NEXT:    vpinsrb $10, 688(%rbp), %xmm1, %xmm1
-; KNL-NEXT:    vpinsrb $11, 696(%rbp), %xmm1, %xmm1
-; KNL-NEXT:    vpinsrb $12, 704(%rbp), %xmm1, %xmm1
-; KNL-NEXT:    vpinsrb $13, 712(%rbp), %xmm1, %xmm1
-; KNL-NEXT:    vpinsrb $14, 720(%rbp), %xmm1, %xmm1
-; KNL-NEXT:    vpinsrb $15, 728(%rbp), %xmm1, %xmm1
+; KNL-NEXT:    vpinsrb $1, 360(%rbp), %xmm1, %xmm1
+; KNL-NEXT:    vpinsrb $2, 368(%rbp), %xmm1, %xmm1
+; KNL-NEXT:    vpinsrb $3, 376(%rbp), %xmm1, %xmm1
+; KNL-NEXT:    vpinsrb $4, 384(%rbp), %xmm1, %xmm1
+; KNL-NEXT:    vpinsrb $5, 392(%rbp), %xmm1, %xmm1
+; KNL-NEXT:    vpinsrb $6, 400(%rbp), %xmm1, %xmm1
+; KNL-NEXT:    vpinsrb $7, 408(%rbp), %xmm1, %xmm1
+; KNL-NEXT:    vpinsrb $8, 416(%rbp), %xmm1, %xmm1
+; KNL-NEXT:    vpinsrb $9, 424(%rbp), %xmm1, %xmm1
+; KNL-NEXT:    vpinsrb $10, 432(%rbp), %xmm1, %xmm1
+; KNL-NEXT:    vpinsrb $11, 440(%rbp), %xmm1, %xmm1
+; KNL-NEXT:    vpinsrb $12, 448(%rbp), %xmm1, %xmm1
+; KNL-NEXT:    vpinsrb $13, 456(%rbp), %xmm1, %xmm1
+; KNL-NEXT:    vpinsrb $14, 464(%rbp), %xmm1, %xmm1
+; KNL-NEXT:    vpinsrb $15, 472(%rbp), %xmm1, %xmm1
 ; KNL-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; KNL-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; KNL-NEXT:    vpinsrb $1, 232(%rbp), %xmm1, %xmm1
-; KNL-NEXT:    vpinsrb $2, 240(%rbp), %xmm1, %xmm1
-; KNL-NEXT:    vpinsrb $3, 248(%rbp), %xmm1, %xmm1
-; KNL-NEXT:    vpinsrb $4, 256(%rbp), %xmm1, %xmm1
-; KNL-NEXT:    vpinsrb $5, 264(%rbp), %xmm1, %xmm1
-; KNL-NEXT:    vpinsrb $6, 272(%rbp), %xmm1, %xmm1
-; KNL-NEXT:    vpinsrb $7, 280(%rbp), %xmm1, %xmm1
-; KNL-NEXT:    vpinsrb $8, 288(%rbp), %xmm1, %xmm1
-; KNL-NEXT:    vpinsrb $9, 296(%rbp), %xmm1, %xmm1
-; KNL-NEXT:    vpinsrb $10, 304(%rbp), %xmm1, %xmm1
-; KNL-NEXT:    vpinsrb $11, 312(%rbp), %xmm1, %xmm1
-; KNL-NEXT:    vpinsrb $12, 320(%rbp), %xmm1, %xmm1
-; KNL-NEXT:    vpinsrb $13, 328(%rbp), %xmm1, %xmm1
-; KNL-NEXT:    vpinsrb $14, 336(%rbp), %xmm1, %xmm1
-; KNL-NEXT:    vpinsrb $15, 344(%rbp), %xmm1, %xmm1
+; KNL-NEXT:    vpinsrb $1, 488(%rbp), %xmm1, %xmm1
+; KNL-NEXT:    vpinsrb $2, 496(%rbp), %xmm1, %xmm1
+; KNL-NEXT:    vpinsrb $3, 504(%rbp), %xmm1, %xmm1
+; KNL-NEXT:    vpinsrb $4, 512(%rbp), %xmm1, %xmm1
+; KNL-NEXT:    vpinsrb $5, 520(%rbp), %xmm1, %xmm1
+; KNL-NEXT:    vpinsrb $6, 528(%rbp), %xmm1, %xmm1
+; KNL-NEXT:    vpinsrb $7, 536(%rbp), %xmm1, %xmm1
+; KNL-NEXT:    vpinsrb $8, 544(%rbp), %xmm1, %xmm1
+; KNL-NEXT:    vpinsrb $9, 552(%rbp), %xmm1, %xmm1
+; KNL-NEXT:    vpinsrb $10, 560(%rbp), %xmm1, %xmm1
+; KNL-NEXT:    vpinsrb $11, 568(%rbp), %xmm1, %xmm1
+; KNL-NEXT:    vpinsrb $12, 576(%rbp), %xmm1, %xmm1
+; KNL-NEXT:    vpinsrb $13, 584(%rbp), %xmm1, %xmm1
+; KNL-NEXT:    vpinsrb $14, 592(%rbp), %xmm1, %xmm1
+; KNL-NEXT:    vpinsrb $15, 600(%rbp), %xmm1, %xmm1
 ; KNL-NEXT:    vmovd {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; KNL-NEXT:    vpinsrb $1, 360(%rbp), %xmm2, %xmm2
-; KNL-NEXT:    vpinsrb $2, 368(%rbp), %xmm2, %xmm2
-; KNL-NEXT:    vpinsrb $3, 376(%rbp), %xmm2, %xmm2
-; KNL-NEXT:    vpinsrb $4, 384(%rbp), %xmm2, %xmm2
-; KNL-NEXT:    vpinsrb $5, 392(%rbp), %xmm2, %xmm2
-; KNL-NEXT:    vpinsrb $6, 400(%rbp), %xmm2, %xmm2
-; KNL-NEXT:    vpinsrb $7, 408(%rbp), %xmm2, %xmm2
-; KNL-NEXT:    vpinsrb $8, 416(%rbp), %xmm2, %xmm2
-; KNL-NEXT:    vpinsrb $9, 424(%rbp), %xmm2, %xmm2
-; KNL-NEXT:    vpinsrb $10, 432(%rbp), %xmm2, %xmm2
-; KNL-NEXT:    vpinsrb $11, 440(%rbp), %xmm2, %xmm2
-; KNL-NEXT:    vpinsrb $12, 448(%rbp), %xmm2, %xmm2
-; KNL-NEXT:    vpinsrb $13, 456(%rbp), %xmm2, %xmm2
-; KNL-NEXT:    vpinsrb $14, 464(%rbp), %xmm2, %xmm2
-; KNL-NEXT:    vpinsrb $15, 472(%rbp), %xmm2, %xmm2
+; KNL-NEXT:    vpinsrb $1, 616(%rbp), %xmm2, %xmm2
+; KNL-NEXT:    vpinsrb $2, 624(%rbp), %xmm2, %xmm2
+; KNL-NEXT:    vpinsrb $3, 632(%rbp), %xmm2, %xmm2
+; KNL-NEXT:    vpinsrb $4, 640(%rbp), %xmm2, %xmm2
+; KNL-NEXT:    vpinsrb $5, 648(%rbp), %xmm2, %xmm2
+; KNL-NEXT:    vpinsrb $6, 656(%rbp), %xmm2, %xmm2
+; KNL-NEXT:    vpinsrb $7, 664(%rbp), %xmm2, %xmm2
+; KNL-NEXT:    vpinsrb $8, 672(%rbp), %xmm2, %xmm2
+; KNL-NEXT:    vpinsrb $9, 680(%rbp), %xmm2, %xmm2
+; KNL-NEXT:    vpinsrb $10, 688(%rbp), %xmm2, %xmm2
+; KNL-NEXT:    vpinsrb $11, 696(%rbp), %xmm2, %xmm2
+; KNL-NEXT:    vpinsrb $12, 704(%rbp), %xmm2, %xmm2
+; KNL-NEXT:    vpinsrb $13, 712(%rbp), %xmm2, %xmm2
+; KNL-NEXT:    vpinsrb $14, 720(%rbp), %xmm2, %xmm2
+; KNL-NEXT:    vpinsrb $15, 728(%rbp), %xmm2, %xmm2
 ; KNL-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
 ; KNL-NEXT:    vmovd %edi, %xmm2
 ; KNL-NEXT:    vpinsrb $1, %esi, %xmm2, %xmm2
@@ -1952,7 +1952,6 @@ define i96 @test_insertelement_variable_v96i1(<96 x i8> %a, i8 %b, i32 %index) {
 ; KNL-NEXT:    vpcmpeqb %ymm3, %ymm0, %ymm0
 ; KNL-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm0
 ; KNL-NEXT:    cmpb $0, 736(%rbp)
-; KNL-NEXT:    vmovdqa %ymm3, {{[0-9]+}}(%rsp)
 ; KNL-NEXT:    vmovdqa %ymm0, {{[0-9]+}}(%rsp)
 ; KNL-NEXT:    vmovdqa %ymm1, {{[0-9]+}}(%rsp)
 ; KNL-NEXT:    vmovdqa %ymm2, (%rsp)
@@ -2252,4 +2251,108 @@ define i128 @test_insertelement_variable_v128i1(<128 x i8> %a, i8 %b, i32 %index
   %t3 = insertelement <128 x i1> %t1, i1 %t2, i32 %index
   %t4 = bitcast <128 x i1> %t3 to i128
   ret i128 %t4
+}
+
+define void @test_concat_v2i1(<2 x half>* %arg, <2 x half>* %arg1, <2 x half>* %arg2) {
+; KNL-LABEL: test_concat_v2i1:
+; KNL:       ## %bb.0:
+; KNL-NEXT:    movswl (%rdi), %eax
+; KNL-NEXT:    vmovd %eax, %xmm0
+; KNL-NEXT:    vcvtph2ps %xmm0, %xmm0
+; KNL-NEXT:    movswl 2(%rdi), %eax
+; KNL-NEXT:    vmovd %eax, %xmm1
+; KNL-NEXT:    vcvtph2ps %xmm1, %xmm1
+; KNL-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; KNL-NEXT:    vucomiss %xmm2, %xmm1
+; KNL-NEXT:    setb %al
+; KNL-NEXT:    kmovw %eax, %k0
+; KNL-NEXT:    kshiftlw $1, %k0, %k0
+; KNL-NEXT:    vucomiss %xmm2, %xmm0
+; KNL-NEXT:    setb %al
+; KNL-NEXT:    andl $1, %eax
+; KNL-NEXT:    kmovw %eax, %k1
+; KNL-NEXT:    korw %k0, %k1, %k0
+; KNL-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; KNL-NEXT:    vucomiss %xmm2, %xmm1
+; KNL-NEXT:    seta %al
+; KNL-NEXT:    kmovw %eax, %k1
+; KNL-NEXT:    kshiftlw $1, %k1, %k1
+; KNL-NEXT:    vucomiss %xmm2, %xmm0
+; KNL-NEXT:    seta %al
+; KNL-NEXT:    andl $1, %eax
+; KNL-NEXT:    kmovw %eax, %k2
+; KNL-NEXT:    korw %k1, %k2, %k1
+; KNL-NEXT:    kandw %k1, %k0, %k1
+; KNL-NEXT:    kshiftrw $1, %k1, %k2
+; KNL-NEXT:    movswl (%rsi), %eax
+; KNL-NEXT:    vmovd %eax, %xmm0
+; KNL-NEXT:    vcvtph2ps %xmm0, %xmm0
+; KNL-NEXT:    movswl 2(%rsi), %eax
+; KNL-NEXT:    vmovd %eax, %xmm1
+; KNL-NEXT:    vcvtph2ps %xmm1, %xmm1
+; KNL-NEXT:    vmovss %xmm1, %xmm0, %xmm1 {%k2} {z}
+; KNL-NEXT:    vmovss %xmm0, %xmm0, %xmm0 {%k1} {z}
+; KNL-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; KNL-NEXT:    vmovd %xmm0, %eax
+; KNL-NEXT:    movw %ax, (%rdx)
+; KNL-NEXT:    vcvtps2ph $4, %xmm1, %xmm0
+; KNL-NEXT:    vmovd %xmm0, %eax
+; KNL-NEXT:    movw %ax, 2(%rdx)
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: test_concat_v2i1:
+; SKX:       ## %bb.0:
+; SKX-NEXT:    movswl (%rdi), %eax
+; SKX-NEXT:    vmovd %eax, %xmm0
+; SKX-NEXT:    vcvtph2ps %xmm0, %xmm0
+; SKX-NEXT:    movswl 2(%rdi), %eax
+; SKX-NEXT:    vmovd %eax, %xmm1
+; SKX-NEXT:    vcvtph2ps %xmm1, %xmm1
+; SKX-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; SKX-NEXT:    vucomiss %xmm2, %xmm1
+; SKX-NEXT:    setb %al
+; SKX-NEXT:    kmovd %eax, %k0
+; SKX-NEXT:    kshiftlb $1, %k0, %k0
+; SKX-NEXT:    vucomiss %xmm2, %xmm0
+; SKX-NEXT:    setb %al
+; SKX-NEXT:    kmovd %eax, %k1
+; SKX-NEXT:    kshiftlb $7, %k1, %k1
+; SKX-NEXT:    kshiftrb $7, %k1, %k1
+; SKX-NEXT:    korw %k0, %k1, %k0
+; SKX-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; SKX-NEXT:    vucomiss %xmm2, %xmm1
+; SKX-NEXT:    seta %al
+; SKX-NEXT:    kmovd %eax, %k1
+; SKX-NEXT:    kshiftlb $1, %k1, %k1
+; SKX-NEXT:    vucomiss %xmm2, %xmm0
+; SKX-NEXT:    seta %al
+; SKX-NEXT:    kmovd %eax, %k2
+; SKX-NEXT:    kshiftlb $7, %k2, %k2
+; SKX-NEXT:    kshiftrb $7, %k2, %k2
+; SKX-NEXT:    korw %k1, %k2, %k1
+; SKX-NEXT:    kandw %k1, %k0, %k1
+; SKX-NEXT:    kshiftrb $1, %k1, %k2
+; SKX-NEXT:    movswl (%rsi), %eax
+; SKX-NEXT:    vmovd %eax, %xmm0
+; SKX-NEXT:    vcvtph2ps %xmm0, %xmm0
+; SKX-NEXT:    movswl 2(%rsi), %eax
+; SKX-NEXT:    vmovd %eax, %xmm1
+; SKX-NEXT:    vcvtph2ps %xmm1, %xmm1
+; SKX-NEXT:    vmovss %xmm1, %xmm0, %xmm1 {%k2} {z}
+; SKX-NEXT:    vmovss %xmm0, %xmm0, %xmm0 {%k1} {z}
+; SKX-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; SKX-NEXT:    vmovd %xmm0, %eax
+; SKX-NEXT:    movw %ax, (%rdx)
+; SKX-NEXT:    vcvtps2ph $4, %xmm1, %xmm0
+; SKX-NEXT:    vmovd %xmm0, %eax
+; SKX-NEXT:    movw %ax, 2(%rdx)
+; SKX-NEXT:    retq
+  %tmp = load <2 x half>, <2 x half>* %arg, align 8
+  %tmp3 = fcmp fast olt <2 x half> %tmp, <half 0xH4600, half 0xH4600>
+  %tmp4 = fcmp fast ogt <2 x half> %tmp, zeroinitializer
+  %tmp5 = and <2 x i1> %tmp3, %tmp4
+  %tmp6 = load <2 x half>, <2 x half>* %arg1, align 8
+  %tmp7 = select <2 x i1> %tmp5, <2 x half> %tmp6, <2 x half> zeroinitializer
+  store <2 x half> %tmp7, <2 x half>* %arg2, align 8
+  ret void
 }

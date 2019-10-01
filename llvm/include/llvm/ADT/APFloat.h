@@ -1,9 +1,8 @@
 //===- llvm/ADT/APFloat.h - Arbitrary Precision Floating Point ---*- C++ -*-==//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -148,6 +147,17 @@ struct APFloatBase {
 
   /// \name Floating Point Semantics.
   /// @{
+  enum Semantics {
+    S_IEEEhalf,
+    S_IEEEsingle,
+    S_IEEEdouble,
+    S_x87DoubleExtended,
+    S_IEEEquad,
+    S_PPCDoubleDouble
+  };
+
+  static const llvm::fltSemantics &EnumToSemantics(Semantics S);
+  static Semantics SemanticsToEnum(const llvm::fltSemantics &Sem);
 
   static const fltSemantics &IEEEhalf() LLVM_READNONE;
   static const fltSemantics &IEEEsingle() LLVM_READNONE;

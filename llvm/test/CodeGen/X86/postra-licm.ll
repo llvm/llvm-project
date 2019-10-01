@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=i386-apple-darwin -relocation-model=pic -disable-fp-elim | FileCheck %s -check-prefix=X86-32
-; RUN: llc < %s -mtriple=x86_64-apple-darwin -relocation-model=pic -disable-fp-elim | FileCheck %s -check-prefix=X86-64
+; RUN: llc < %s -mtriple=i386-apple-darwin -relocation-model=pic -frame-pointer=all | FileCheck %s -check-prefix=X86-32
+; RUN: llc < %s -mtriple=x86_64-apple-darwin -relocation-model=pic -frame-pointer=all | FileCheck %s -check-prefix=X86-64
 
 ; MachineLICM should be able to hoist loop invariant reload out of the loop.
 ; Only linear scan needs this, -regalloc=greedy sinks the spill instead.

@@ -297,16 +297,16 @@ define <8 x i16> @ashr_op0_constant(i16* %p) nounwind {
 ; SSE-LABEL: ashr_op0_constant:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movb (%rdi), %cl
-; SSE-NEXT:    movw $-42, %ax
-; SSE-NEXT:    sarw %cl, %ax
+; SSE-NEXT:    movl $-42, %eax
+; SSE-NEXT:    sarl %cl, %eax
 ; SSE-NEXT:    movd %eax, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: ashr_op0_constant:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movb (%rdi), %cl
-; AVX-NEXT:    movw $-42, %ax
-; AVX-NEXT:    sarw %cl, %ax
+; AVX-NEXT:    movl $-42, %eax
+; AVX-NEXT:    sarl %cl, %eax
 ; AVX-NEXT:    vmovd %eax, %xmm0
 ; AVX-NEXT:    retq
   %x = load i16, i16* %p
@@ -318,15 +318,15 @@ define <8 x i16> @ashr_op0_constant(i16* %p) nounwind {
 define <8 x i16> @ashr_op1_constant(i16* %p) nounwind {
 ; SSE-LABEL: ashr_op1_constant:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movzwl (%rdi), %eax
-; SSE-NEXT:    sarw $7, %ax
+; SSE-NEXT:    movswl (%rdi), %eax
+; SSE-NEXT:    sarl $7, %eax
 ; SSE-NEXT:    movd %eax, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: ashr_op1_constant:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    movzwl (%rdi), %eax
-; AVX-NEXT:    sarw $7, %ax
+; AVX-NEXT:    movswl (%rdi), %eax
+; AVX-NEXT:    sarl $7, %eax
 ; AVX-NEXT:    vmovd %eax, %xmm0
 ; AVX-NEXT:    retq
   %x = load i16, i16* %p
@@ -365,10 +365,11 @@ define <8 x i16> @sdiv_op1_constant(i16* %p) nounwind {
 ; SSE-NEXT:    shrl $16, %ecx
 ; SSE-NEXT:    addl %eax, %ecx
 ; SSE-NEXT:    movzwl %cx, %eax
-; SSE-NEXT:    sarw $5, %cx
+; SSE-NEXT:    movswl %ax, %ecx
 ; SSE-NEXT:    shrl $15, %eax
-; SSE-NEXT:    addl %ecx, %eax
-; SSE-NEXT:    movd %eax, %xmm0
+; SSE-NEXT:    sarl $5, %ecx
+; SSE-NEXT:    addl %eax, %ecx
+; SSE-NEXT:    movd %ecx, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: sdiv_op1_constant:
@@ -378,10 +379,11 @@ define <8 x i16> @sdiv_op1_constant(i16* %p) nounwind {
 ; AVX-NEXT:    shrl $16, %ecx
 ; AVX-NEXT:    addl %eax, %ecx
 ; AVX-NEXT:    movzwl %cx, %eax
-; AVX-NEXT:    sarw $5, %cx
+; AVX-NEXT:    movswl %ax, %ecx
 ; AVX-NEXT:    shrl $15, %eax
-; AVX-NEXT:    addl %ecx, %eax
-; AVX-NEXT:    vmovd %eax, %xmm0
+; AVX-NEXT:    sarl $5, %ecx
+; AVX-NEXT:    addl %eax, %ecx
+; AVX-NEXT:    vmovd %ecx, %xmm0
 ; AVX-NEXT:    retq
   %x = load i16, i16* %p
   %b = sdiv i16 %x, 42

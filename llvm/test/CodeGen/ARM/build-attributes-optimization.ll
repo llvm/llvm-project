@@ -2,9 +2,9 @@
 ; RUN: llc < %s -mtriple=arm-none-none-eabi -mcpu=cortex-a7 -O1 | FileCheck %s --check-prefix=SPEED
 ; RUN: llc < %s -mtriple=arm-none-none-eabi -mcpu=cortex-a7 -O3 | FileCheck %s --check-prefix=MAXSPEED
 
-; RUN: llc < %s -mtriple=arm-none-none-eabi -mcpu=cortex-a7 -O0 -filetype obj -o - | llvm-readobj -arm-attributes - | FileCheck %s --check-prefix=NONE-OBJ
-; RUN: llc < %s -mtriple=arm-none-none-eabi -mcpu=cortex-a7 -O1 -filetype obj -o - | llvm-readobj -arm-attributes - | FileCheck %s --check-prefix=SPEED-OBJ
-; RUN: llc < %s -mtriple=arm-none-none-eabi -mcpu=cortex-a7 -O3 -filetype obj -o - | llvm-readobj -arm-attributes - | FileCheck %s --check-prefix=MAXSPEED-OBJ
+; RUN: llc < %s -mtriple=arm-none-none-eabi -mcpu=cortex-a7 -O0 -filetype obj -o - | llvm-readobj --arm-attributes - | FileCheck %s --check-prefix=NONE-OBJ
+; RUN: llc < %s -mtriple=arm-none-none-eabi -mcpu=cortex-a7 -O1 -filetype obj -o - | llvm-readobj --arm-attributes - | FileCheck %s --check-prefix=SPEED-OBJ
+; RUN: llc < %s -mtriple=arm-none-none-eabi -mcpu=cortex-a7 -O3 -filetype obj -o - | llvm-readobj --arm-attributes - | FileCheck %s --check-prefix=MAXSPEED-OBJ
 
 ; NONE:     .eabi_attribute 30, 5	@ Tag_ABI_optimization_goals
 ; SPEED:    .eabi_attribute 30, 1	@ Tag_ABI_optimization_goals

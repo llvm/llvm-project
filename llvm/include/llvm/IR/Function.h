@@ -1,9 +1,8 @@
 //===- llvm/Function.h - Class to represent a single function ---*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -297,15 +296,18 @@ public:
 
   /// Get the entry count for this function.
   ///
-  /// Entry count is the number of times the function was executed based on
-  /// pgo data.
-  ProfileCount getEntryCount() const;
+  /// Entry count is the number of times the function was executed.
+  /// When AllowSynthetic is false, only pgo_data will be returned.
+  ProfileCount getEntryCount(bool AllowSynthetic = false) const;
 
   /// Return true if the function is annotated with profile data.
   ///
   /// Presence of entry counts from a profile run implies the function has
-  /// profile annotations.
-  bool hasProfileData() const { return getEntryCount().hasValue(); }
+  /// profile annotations. If IncludeSynthetic is false, only return true
+  /// when the profile data is real.
+  bool hasProfileData(bool IncludeSynthetic = false) const {
+    return getEntryCount(IncludeSynthetic).hasValue();
+  }
 
   /// Returns the set of GUIDs that needs to be imported to the function for
   /// sample PGO, to enable the same inlines as the profiled optimized binary.
@@ -399,6 +401,11 @@ public:
     return getAttributes().hasParamAttribute(ArgNo, Kind);
   }
 
+  /// gets the specified attribute from the list of attributes.
+  Attribute getParamAttribute(unsigned ArgNo, Attribute::AttrKind Kind) const {
+    return getAttributes().getParamAttr(ArgNo, Kind);
+  }
+
   /// gets the attribute from the list of attributes.
   Attribute getAttribute(unsigned i, Attribute::AttrKind Kind) const {
     return AttributeSets.getAttribute(i, Kind);
@@ -427,6 +434,12 @@ public:
   /// Extract the alignment for a call or parameter (0=unknown).
   unsigned getParamAlignment(unsigned ArgNo) const {
     return AttributeSets.getParamAlignment(ArgNo);
+  }
+
+  /// Extract the byval type for a parameter.
+  Type *getParamByValType(unsigned ArgNo) const {
+    Type *Ty = AttributeSets.getParamByValType(ArgNo);
+    return Ty ? Ty : (arg_begin() + ArgNo)->getType()->getPointerElementType();
   }
 
   /// Extract the number of dereferenceable bytes for a call or
@@ -591,12 +604,15 @@ public:
     addAttribute(AttributeList::ReturnIndex, Attribute::NoAlias);
   }
 
+  /// Do not optimize this function (-O0).
+  bool hasOptNone() const { return hasFnAttribute(Attribute::OptimizeNone); }
+
   /// Optimize this function for minimum size (-Oz).
-  bool optForMinSize() const { return hasFnAttribute(Attribute::MinSize); }
+  bool hasMinSize() const { return hasFnAttribute(Attribute::MinSize); }
 
   /// Optimize this function for size (-Os) or minimum size (-Oz).
-  bool optForSize() const {
-    return hasFnAttribute(Attribute::OptimizeForSize) || optForMinSize();
+  bool hasOptSize() const {
+    return hasFnAttribute(Attribute::OptimizeForSize) || hasMinSize();
   }
 
   /// copyAttributesFrom - copy all additional attributes (those not needed to

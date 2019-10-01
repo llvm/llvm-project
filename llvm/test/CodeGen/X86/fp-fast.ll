@@ -104,14 +104,3 @@ define float @test10(float %a) {
   %t2 = fadd float %a, %t1
   ret float %t2
 }
-
-define float @test11(float %a) {
-; CHECK-LABEL: test11:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    retq
-  %t1 = fsub float -0.0, %a
-  %t2 = fadd float %a, %t1
-  ret float %t2
-}
-

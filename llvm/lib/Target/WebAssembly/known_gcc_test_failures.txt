@@ -75,7 +75,6 @@ pr41935.c
 920501-3.c
 920728-1.c
 pr28865.c
-widechar-2.c
 attr-alias-1.C
 attr-alias-2.C
 attr-ifunc-1.C
@@ -86,7 +85,6 @@ complit12.C
 va-arg-pack-1.C
 va-arg-pack-len-1.C
 builtin-line1.C
-builtin-location.C
 devirt-6.C  # bad main signature
 devirt-13.C  # bad main signature
 devirt-14.C  # bad main signature
@@ -94,11 +92,22 @@ devirt-21.C  # bad main signature
 devirt-23.C  # bad main signature
 lifetime2.C  # violates C++ DR1696
 
+# WASI doesn't have stdjmp.h yet
+pr56982.c
+simd-2.C
+
+# WASI doesn't have pthread.h yet
+thread_local3.C
+thread_local3g.C
+thread_local4.C
+thread_local4g.C
+thread_local5.C
+thread_local5g.C
+
 # Untriaged C++ failures
 spec5.C
 addr1.C
 ef_test.C
-friend18.C
 member2.C
 new39.C
 new40.C

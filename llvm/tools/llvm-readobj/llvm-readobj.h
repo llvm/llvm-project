@@ -1,9 +1,8 @@
 //===-- llvm-readobj.h ----------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -23,6 +22,10 @@ namespace llvm {
 
   // Various helper functions.
   LLVM_ATTRIBUTE_NORETURN void reportError(Twine Msg);
+  void reportError(StringRef Input, Error Err); 
+  void reportWarning(Twine Msg);
+  void reportWarning(StringRef Input, Error Err);
+  void warn(llvm::Error Err);
   void error(std::error_code EC);
   void error(llvm::Error EC);
   template <typename T> T error(llvm::Expected<T> &&E) {
@@ -30,11 +33,7 @@ namespace llvm {
     return std::move(*E);
   }
 
-  template <class T> T unwrapOrError(ErrorOr<T> EO) {
-    if (EO)
-      return *EO;
-    reportError(EO.getError().message());
-  }
+  // TODO: This one is deprecated. Use one with a Input name below.
   template <class T> T unwrapOrError(Expected<T> EO) {
     if (EO)
       return *EO;
@@ -44,18 +43,23 @@ namespace llvm {
     OS.flush();
     reportError(Buf);
   }
-  bool relocAddressLess(object::RelocationRef A,
-                        object::RelocationRef B);
+
+  template <class T> T unwrapOrError(StringRef Input, Expected<T> EO) {
+    if (EO)
+      return *EO;
+    reportError(Input, EO.takeError());
+    llvm_unreachable("reportError shouldn't return in this case");
+  }
 } // namespace llvm
 
 namespace opts {
   extern llvm::cl::opt<bool> SectionRelocations;
   extern llvm::cl::opt<bool> SectionSymbols;
   extern llvm::cl::opt<bool> SectionData;
-  extern llvm::cl::opt<bool> DynamicSymbols;
   extern llvm::cl::opt<bool> ExpandRelocs;
   extern llvm::cl::opt<bool> RawRelr;
   extern llvm::cl::opt<bool> CodeViewSubsectionBytes;
+  extern llvm::cl::opt<bool> Demangle;
   enum OutputStyleTy { LLVM, GNU };
   extern llvm::cl::opt<OutputStyleTy> Output;
 } // namespace opts

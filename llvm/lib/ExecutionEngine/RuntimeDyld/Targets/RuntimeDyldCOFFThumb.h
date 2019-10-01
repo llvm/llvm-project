@@ -1,9 +1,8 @@
 //===--- RuntimeDyldCOFFThumb.h --- COFF/Thumb specific code ---*- C++ --*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -22,9 +21,10 @@
 
 namespace llvm {
 
-static bool isThumbFunc(symbol_iterator Symbol, const ObjectFile &Obj,
-                        section_iterator Section) {
-  Expected<SymbolRef::Type> SymTypeOrErr = Symbol->getType();
+static bool isThumbFunc(object::symbol_iterator Symbol,
+                        const object::ObjectFile &Obj,
+                        object::section_iterator Section) {
+  Expected<object::SymbolRef::Type> SymTypeOrErr = Symbol->getType();
   if (!SymTypeOrErr) {
     std::string Buf;
     raw_string_ostream OS(Buf);
@@ -33,12 +33,14 @@ static bool isThumbFunc(symbol_iterator Symbol, const ObjectFile &Obj,
     report_fatal_error(Buf);
   }
 
-  if (*SymTypeOrErr != SymbolRef::ST_Function)
+  if (*SymTypeOrErr != object::SymbolRef::ST_Function)
     return false;
 
   // We check the IMAGE_SCN_MEM_16BIT flag in the section of the symbol to tell
   // if it's thumb or not
-  return cast<COFFObjectFile>(Obj).getCOFFSection(*Section)->Characteristics &
+  return cast<object::COFFObjectFile>(Obj)
+             .getCOFFSection(*Section)
+             ->Characteristics &
          COFF::IMAGE_SCN_MEM_16BIT;
 }
 
@@ -48,16 +50,16 @@ public:
                        JITSymbolResolver &Resolver)
       : RuntimeDyldCOFF(MM, Resolver) {}
 
-  unsigned getMaxStubSize() override {
+  unsigned getMaxStubSize() const override {
     return 16; // 8-byte load instructions, 4-byte jump, 4-byte padding
   }
 
   unsigned getStubAlignment() override { return 1; }
 
-  Expected<relocation_iterator>
+  Expected<object::relocation_iterator>
   processRelocationRef(unsigned SectionID,
-                       relocation_iterator RelI,
-                       const ObjectFile &Obj,
+                       object::relocation_iterator RelI,
+                       const object::ObjectFile &Obj,
                        ObjSectionToIDMap &ObjSectionToID,
                        StubMap &Stubs) override {
     auto Symbol = RelI->getSymbol();

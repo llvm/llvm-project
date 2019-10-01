@@ -1,5 +1,5 @@
 ; RUN: llc < %s -mtriple=thumbv7-none-eabi   -mcpu=cortex-m4 -mattr=-vfp2             | FileCheck %s -check-prefix=CHECK -check-prefix=SOFT
-; RUN: llc < %s -mtriple=thumbv7-none-eabihf -mcpu=cortex-m4 -mattr=+vfp4,+fp-only-sp | FileCheck %s -check-prefix=CHECK -check-prefix=HARD -check-prefix=SP
+; RUN: llc < %s -mtriple=thumbv7-none-eabihf -mcpu=cortex-m4 -mattr=+vfp4,-fp64 | FileCheck %s -check-prefix=CHECK -check-prefix=HARD -check-prefix=SP
 ; RUN: llc < %s -mtriple=thumbv7-none-eabihf -mcpu=cortex-a8 -mattr=+vfp3             | FileCheck %s -check-prefix=CHECK -check-prefix=HARD -check-prefix=DP
 
 define float @float_in_reg(float %a, float %b) {

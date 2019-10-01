@@ -188,3 +188,73 @@ entry:
   %shl = shl i32 %shr, 3
   ret i32 %shl
 }
+
+define i32 @test16(i32 %x) {
+; CHECK-LABEL: test16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    lsls r0, r0, #28
+; CHECK-NEXT:    lsrs r0, r0, #26
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = and i32 %x, 15
+  %shl = shl i32 %0, 2
+  ret i32 %shl
+}
+
+define i32* @test17(i32* %p, i32 %x) {
+; CHECK-LABEL: test17:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    lsls r1, r1, #28
+; CHECK-NEXT:    lsrs r1, r1, #26
+; CHECK-NEXT:    adds r0, r0, r1
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = and i32 %x, 15
+  %shl = getelementptr i32, i32* %p, i32 %0
+  ret i32* %shl
+}
+
+define i32* @test18(i32* %p, i32 %x) {
+; CHECK-LABEL: test18:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    adds r1, r1, #1
+; CHECK-NEXT:    lsls r1, r1, #28
+; CHECK-NEXT:    lsrs r1, r1, #26
+; CHECK-NEXT:    adds r0, r0, r1
+; CHECK-NEXT:    bx lr
+entry:
+  %xx = add i32 %x, 1
+  %0 = and i32 %xx, 15
+  %shl = getelementptr i32, i32* %p, i32 %0
+  ret i32* %shl
+}
+
+define i32* @test19(i32* %p, i32 %x) {
+; CHECK-LABEL: test19:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    subs r1, r1, #1
+; CHECK-NEXT:    lsls r1, r1, #28
+; CHECK-NEXT:    lsrs r1, r1, #26
+; CHECK-NEXT:    adds r0, r0, r1
+; CHECK-NEXT:    bx lr
+entry:
+  %xx = sub i32 %x, 1
+  %0 = and i32 %xx, 15
+  %shl = getelementptr i32, i32* %p, i32 %0
+  ret i32* %shl
+}
+
+define i32* @test20(i32* %p, i32 %x) {
+; CHECK-LABEL: test20:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    subs r1, r1, #1
+; CHECK-NEXT:    lsls r1, r1, #28
+; CHECK-NEXT:    lsrs r1, r1, #26
+; CHECK-NEXT:    adds r0, r0, r1
+; CHECK-NEXT:    bx lr
+entry:
+  %xx = add i32 %x, 15
+  %0 = and i32 %xx, 15
+  %shl = getelementptr i32, i32* %p, i32 %0
+  ret i32* %shl
+}

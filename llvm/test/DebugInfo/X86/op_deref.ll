@@ -6,10 +6,10 @@
 ; RUN:     | FileCheck %s -check-prefix=CHECK -check-prefix=DWARF3
 
 ; DWARF4: DW_AT_location [DW_FORM_sec_offset]                      (0x00000000
-; DWARF4-NEXT:  {{.*}}: DW_OP_breg2 RCX+0, DW_OP_deref
+; DWARF4-NEXT:  {{.*}}: DW_OP_breg1 RDX+0, DW_OP_deref
 
 ; DWARF3: DW_AT_location [DW_FORM_data4]                      (0x00000000
-; DWARF3-NEXT:  {{.*}}: DW_OP_breg2 RCX+0, DW_OP_deref
+; DWARF3-NEXT:  {{.*}}: DW_OP_breg1 RDX+0, DW_OP_deref
 
 ; CHECK-NOT: DW_TAG
 ; CHECK: DW_AT_name [DW_FORM_strp]  ( .debug_str[0x00000067] = "vla")
@@ -17,8 +17,8 @@
 ; Check the DEBUG_VALUE comments for good measure.
 ; RUN: llc -O0 -mtriple=x86_64-apple-darwin %s -o - -filetype=asm | FileCheck %s -check-prefix=ASM-CHECK
 ; vla should have a register-indirect address at one point.
-; ASM-CHECK: DEBUG_VALUE: vla <- [DW_OP_deref] [$rcx+0]
-; ASM-CHECK: DW_OP_breg2
+; ASM-CHECK: DEBUG_VALUE: vla <- [DW_OP_deref] [$rdx+0]
+; ASM-CHECK: DW_OP_breg1
 
 ; RUN: llvm-as %s -o - | llvm-dis - | FileCheck %s --check-prefix=PRETTY-PRINT
 ; PRETTY-PRINT: DIExpression(DW_OP_deref)

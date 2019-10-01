@@ -1,9 +1,8 @@
 //===-- LLVMTargetMachine.cpp - Implement the LLVMTargetMachine class -----===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -202,6 +201,15 @@ bool LLVMTargetMachine::addPassesToEmitFile(PassManagerBase &PM,
     return true;
 
   if (!TargetPassConfig::willCompleteCodeGenPipeline()) {
+    if (this->getTargetTriple().isOSAIX()) {
+      // On AIX, we might manifest MCSymbols during SDAG lowering. For MIR
+      // testing to be meaningful, we need to ensure that the symbols created
+      // are MCSymbolXCOFF variants, which requires that
+      // the TargetLoweringObjectFile instance has been initialized.
+      MCContext &Ctx = MMI->getContext();
+      const_cast<TargetLoweringObjectFile &>(*this->getObjFileLowering())
+          .Initialize(Ctx, *this);
+    }
     PM.add(createPrintMIRPass(Out));
   } else if (addAsmPrinter(PM, Out, DwoOut, FileType, MMI->getContext()))
     return true;

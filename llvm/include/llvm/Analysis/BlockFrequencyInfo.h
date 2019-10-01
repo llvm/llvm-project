@@ -1,9 +1,8 @@
 //===- BlockFrequencyInfo.h - Block Frequency Analysis ----------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -56,7 +55,7 @@ public:
 
   const Function *getFunction() const;
   const BranchProbabilityInfo *getBPI() const;
-  void view() const;
+  void view(StringRef = "BlockFrequencyDAGs") const;
 
   /// getblockFreq - Return block frequency. Return 0 if we don't have the
   /// information. Please note that initial frequency is equal to ENTRY_FREQ. It
@@ -68,7 +67,8 @@ public:
   /// Returns the estimated profile count of \p BB.
   /// This computes the relative block frequency of \p BB and multiplies it by
   /// the enclosing function's count (if available) and returns the value.
-  Optional<uint64_t> getBlockProfileCount(const BasicBlock *BB) const;
+  Optional<uint64_t> getBlockProfileCount(const BasicBlock *BB,
+                                          bool AllowSynthetic = false) const;
 
   /// Returns the estimated profile count of \p Freq.
   /// This uses the frequency \p Freq and multiplies it by

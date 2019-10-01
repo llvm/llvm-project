@@ -21,6 +21,7 @@ from __future__ import print_function
 
 import argparse
 import collections
+import glob
 import os
 import re
 import subprocess
@@ -62,6 +63,8 @@ class LLC:
         with open(ir) as ir_file:
             stdout = subprocess.check_output('{} {}'.format(self.bin, args),
                                              shell=True, stdin=ir_file)
+            if sys.version_info[0] > 2:
+              stdout = stdout.decode()
             # Fix line endings to unix CR style.
             stdout = stdout.replace('\r\n', '\n')
         return stdout
@@ -408,7 +411,7 @@ def update_test_file(llc, test, remove_common_prefixes=False, verbose=False):
     log('Writing {} lines to {}...'.format(len(output_lines), test), verbose)
 
     with open(test, 'wb') as fd:
-        fd.writelines([l + '\n' for l in output_lines])
+        fd.writelines(['{}\n'.format(l).encode('utf-8') for l in output_lines])
 
 
 def main():
@@ -424,7 +427,8 @@ def main():
     parser.add_argument('tests', nargs='+')
     args = parser.parse_args()
 
-    for test in args.tests:
+    test_paths = [test for pattern in args.tests for test in glob.glob(pattern)]
+    for test in test_paths:
         try:
             update_test_file(args.llc, test, args.remove_common_prefixes,
                              verbose=args.verbose)

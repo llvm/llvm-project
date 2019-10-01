@@ -115,8 +115,8 @@ define void @use_workgroup_id_x() #1 {
 
 ; GCN-LABEL: {{^}}use_stack_workgroup_id_x:
 ; GCN: s_waitcnt
-; GCN: s_mov_b32 s5, s32
-; GCN: buffer_store_dword v0, off, s[0:3], s5 offset:4
+; GCN-NOT: s32
+; GCN: buffer_store_dword v0, off, s[0:3], s32{{$}}
 ; GCN: ; use s6
 ; GCN: s_setpc_b64
 define void @use_stack_workgroup_id_x() #1 {
@@ -429,7 +429,7 @@ define amdgpu_kernel void @kern_indirect_other_arg_use_workgroup_id_z() #1 {
 }
 
 ; GCN-LABEL: {{^}}use_every_sgpr_input:
-; GCN: buffer_store_dword v{{[0-9]+}}, off, s[0:3], s5 offset:4
+; GCN: buffer_store_dword v{{[0-9]+}}, off, s[0:3], s32{{$}}
 ; GCN: v_mov_b32_e32 v[[LO:[0-9]+]], s6
 ; GCN: v_mov_b32_e32 v[[HI:[0-9]+]], s7
 ; GCN: {{flat|global}}_load_dword v{{[0-9]+}}, v{{\[}}[[LO]]:[[HI]]{{\]}}
@@ -577,7 +577,7 @@ define void @func_use_every_sgpr_input_call_use_workgroup_id_xyz() #1 {
 
 ; GCN: s_swappc_b64
 
-; GCN-DAG: buffer_store_dword v{{[0-9]+}}, off, s[0:3], s5 offset:4
+; GCN-DAG: buffer_store_dword v{{[0-9]+}}, off, s[0:3], s5{{$}}
 ; GCN-DAG: v_mov_b32_e32 v[[LO1:[0-9]+]], s[[LO_X]]
 ; GCN-DAG: v_mov_b32_e32 v[[HI1:[0-9]+]], s[[HI_X]]
 ; GCN-DAG: {{flat|global}}_load_dword v{{[0-9]+}}, v{{\[}}[[LO1]]:[[HI1]]{{\]}}

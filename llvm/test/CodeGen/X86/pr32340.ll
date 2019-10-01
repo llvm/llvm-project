@@ -39,14 +39,14 @@ define void @foo() {
 ; X64-NEXT:    movq %rdi, %r8
 ; X64-NEXT:    orq var_57, %r8
 ; X64-NEXT:    orq %r8, %rdi
-; X64-NEXT:    movw %di, %r10w
-; X64-NEXT:    movw %r10w, var_900
+; X64-NEXT:    # kill: def $di killed $di killed $rdi
+; X64-NEXT:    movw %di, var_900
 ; X64-NEXT:    cmpq var_28, %rcx
-; X64-NEXT:    setne %r11b
-; X64-NEXT:    andb $1, %r11b
-; X64-NEXT:    movzbl %r11b, %eax
-; X64-NEXT:    movw %ax, %r10w
-; X64-NEXT:    movw %r10w, var_827
+; X64-NEXT:    setne %r10b
+; X64-NEXT:    andb $1, %r10b
+; X64-NEXT:    movzbl %r10b, %eax
+; X64-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-NEXT:    movw %ax, var_827
 ; X64-NEXT:    retq
 entry:
   store i16 0, i16* @var_825, align 2

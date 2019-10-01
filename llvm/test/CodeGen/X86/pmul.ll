@@ -1374,9 +1374,9 @@ define <2 x i64> @pmuldq_square(<2 x i64> %x) {
 ; SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
 ; SSE2-NEXT:    psrlq $32, %xmm0
 ; SSE2-NEXT:    pmuludq %xmm1, %xmm0
+; SSE2-NEXT:    pmuludq %xmm1, %xmm1
 ; SSE2-NEXT:    paddq %xmm0, %xmm0
 ; SSE2-NEXT:    psllq $32, %xmm0
-; SSE2-NEXT:    pmuludq %xmm1, %xmm1
 ; SSE2-NEXT:    paddq %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;

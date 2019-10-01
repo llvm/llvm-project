@@ -1,9 +1,8 @@
 //===- ELFObjcopy.h ---------------------------------------------*- C++ -*-===//
 //
-//                      The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -11,6 +10,7 @@
 #define LLVM_TOOLS_OBJCOPY_ELFOBJCOPY_H
 
 namespace llvm {
+class Error;
 class MemoryBuffer;
 
 namespace object {
@@ -22,10 +22,12 @@ struct CopyConfig;
 class Buffer;
 
 namespace elf {
-void executeObjcopyOnRawBinary(const CopyConfig &Config, MemoryBuffer &In,
-                               Buffer &Out);
-void executeObjcopyOnBinary(const CopyConfig &Config,
-                            object::ELFObjectFileBase &In, Buffer &Out);
+Error executeObjcopyOnIHex(const CopyConfig &Config, MemoryBuffer &In,
+                           Buffer &Out);
+Error executeObjcopyOnRawBinary(const CopyConfig &Config, MemoryBuffer &In,
+                                Buffer &Out);
+Error executeObjcopyOnBinary(const CopyConfig &Config,
+                             object::ELFObjectFileBase &In, Buffer &Out);
 
 } // end namespace elf
 } // end namespace objcopy

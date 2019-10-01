@@ -1,9 +1,8 @@
 //===-- llvm/GlobalValue.h - Class to represent a global value --*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -80,15 +79,15 @@ protected:
         ValueType(Ty), Visibility(DefaultVisibility),
         UnnamedAddrVal(unsigned(UnnamedAddr::None)),
         DllStorageClass(DefaultStorageClass), ThreadLocal(NotThreadLocal),
-        HasLLVMReservedName(false), IsDSOLocal(false), IntID((Intrinsic::ID)0U),
-        Parent(nullptr) {
+        HasLLVMReservedName(false), IsDSOLocal(false), HasPartition(false),
+        IntID((Intrinsic::ID)0U), Parent(nullptr) {
     setLinkage(Linkage);
     setName(Name);
   }
 
   Type *ValueType;
 
-  static const unsigned GlobalValueSubClassDataBits = 17;
+  static const unsigned GlobalValueSubClassDataBits = 16;
 
   // All bitfields use unsigned as the underlying type so that MSVC will pack
   // them.
@@ -109,9 +108,13 @@ protected:
   /// definition cannot be runtime preempted.
   unsigned IsDSOLocal : 1;
 
+  /// True if this symbol has a partition name assigned (see
+  /// https://lld.llvm.org/Partitions.html).
+  unsigned HasPartition : 1;
+
 private:
   // Give subclasses access to what otherwise would be wasted padding.
-  // (17 + 4 + 2 + 2 + 2 + 3 + 1 + 1) == 32.
+  // (16 + 4 + 2 + 2 + 2 + 3 + 1 + 1 + 1) == 32.
   unsigned SubClassData : GlobalValueSubClassDataBits;
 
   friend class Constant;
@@ -280,6 +283,12 @@ public:
   bool isDSOLocal() const {
     return IsDSOLocal;
   }
+
+  bool hasPartition() const {
+    return HasPartition;
+  }
+  StringRef getPartition() const;
+  void setPartition(StringRef Part);
 
   static LinkageTypes getLinkOnceLinkage(bool ODR) {
     return ODR ? LinkOnceODRLinkage : LinkOnceAnyLinkage;

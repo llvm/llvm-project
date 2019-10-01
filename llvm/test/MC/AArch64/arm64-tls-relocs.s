@@ -1,6 +1,6 @@
 // RUN: llvm-mc -triple=arm64-none-linux-gnu -show-encoding < %s | FileCheck %s
 // RUN: llvm-mc -triple=arm64-none-linux-gnu -filetype=obj < %s -o - | \
-// RUN:   llvm-readobj -r -t | FileCheck --check-prefix=CHECK-ELF %s
+// RUN:   llvm-readobj -r --symbols | FileCheck --check-prefix=CHECK-ELF %s
 
 ////////////////////////////////////////////////////////////////////////////////
 // TLS initial-exec forms

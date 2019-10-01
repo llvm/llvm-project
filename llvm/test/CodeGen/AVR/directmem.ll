@@ -207,10 +207,10 @@ define i32 @static32_inc() {
 ; CHECK: sbci r23, 255
 ; CHECK: sbci r24, 255
 ; CHECK: sbci r25, 255
-; CHECK: sts long.static+3, r25
-; CHECK: sts long.static+2, r24
-; CHECK: sts long.static+1, r23
-; CHECK: sts long.static, r22
+; CHECK-DAG: sts long.static+3, r25
+; CHECK-DAG: sts long.static+2, r24
+; CHECK-DAG: sts long.static+1, r23
+; CHECK-DAG: sts long.static, r22
   %1 = load i32, i32* @long.static
   %inc = add nsw i32 %1, 1
   store i32 %inc, i32* @long.static
@@ -309,14 +309,14 @@ define i64 @static64_inc() {
 ; CHECK: sbci r23, 255
 ; CHECK: sbci r24, 255
 ; CHECK: sbci r25, 255
-; CHECK: sts longlong.static+7, r25
-; CHECK: sts longlong.static+6, r24
-; CHECK: sts longlong.static+5, r23
-; CHECK: sts longlong.static+4, r22
-; CHECK: sts longlong.static+3, r21
-; CHECK: sts longlong.static+2, r20
-; CHECK: sts longlong.static+1, r19
-; CHECK: sts longlong.static, r18
+; CHECK-DAG: sts longlong.static+7, r25
+; CHECK-DAG: sts longlong.static+6, r24
+; CHECK-DAG: sts longlong.static+5, r23
+; CHECK-DAG: sts longlong.static+4, r22
+; CHECK-DAG: sts longlong.static+3, r21
+; CHECK-DAG: sts longlong.static+2, r20
+; CHECK-DAG: sts longlong.static+1, r19
+; CHECK-DAG: sts longlong.static, r18
   %1 = load i64, i64* @longlong.static
   %inc = add nsw i64 %1, 1
   store i64 %inc, i64* @longlong.static

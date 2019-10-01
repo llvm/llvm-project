@@ -1,9 +1,8 @@
 //===-- X86MCInstLower.cpp - Convert X86 MachineInstr to an MCInst --------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -12,9 +11,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "InstPrinter/X86ATTInstPrinter.h"
-#include "InstPrinter/X86InstComments.h"
+#include "MCTargetDesc/X86ATTInstPrinter.h"
 #include "MCTargetDesc/X86BaseInfo.h"
+#include "MCTargetDesc/X86InstComments.h"
 #include "MCTargetDesc/X86TargetStreamer.h"
 #include "Utils/X86ShuffleDecode.h"
 #include "X86AsmPrinter.h"
@@ -101,9 +100,7 @@ void X86AsmPrinter::StackMapShadowTracker::emitShadowPadding(
 }
 
 void X86AsmPrinter::EmitAndCountInstruction(MCInst &Inst) {
-  OutStreamer->EmitInstruction(Inst, getSubtargetInfo(),
-                               EnablePrintSchedInfo &&
-                                   !(Inst.getFlags() & X86::NO_SCHED_INFO));
+  OutStreamer->EmitInstruction(Inst, getSubtargetInfo());
   SMShadowTracker.count(Inst, getSubtargetInfo(), CodeEmitter.get());
 }
 
@@ -438,7 +435,6 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
       OutMI.addOperand(MaybeMCOp.getValue());
 
   // Handle a few special cases to eliminate operand modifiers.
-ReSimplify:
   switch (OutMI.getOpcode()) {
   case X86::LEA64_32r:
   case X86::LEA64r:
@@ -554,11 +550,6 @@ ReSimplify:
     case X86::TAILJMPd64:
       Opcode = X86::JMP_1;
       goto SetTailJmpOpcode;
-    case X86::TAILJMPd_CC:
-    case X86::TAILJMPd64_CC:
-      Opcode = X86::GetCondBranchFromCond(
-          static_cast<X86::CondCode>(MI->getOperand(1).getImm()));
-      goto SetTailJmpOpcode;
 
     SetTailJmpOpcode:
       MCOperand Saved = OutMI.getOperand(0);
@@ -567,6 +558,17 @@ ReSimplify:
       OutMI.addOperand(Saved);
       break;
     }
+
+  case X86::TAILJMPd_CC:
+  case X86::TAILJMPd64_CC: {
+    MCOperand Saved = OutMI.getOperand(0);
+    MCOperand Saved2 = OutMI.getOperand(1);
+    OutMI = MCInst();
+    OutMI.setOpcode(X86::JCC_1);
+    OutMI.addOperand(Saved);
+    OutMI.addOperand(Saved2);
+    break;
+  }
 
   case X86::DEC16r:
   case X86::DEC32r:
@@ -585,19 +587,6 @@ ReSimplify:
       OutMI.setOpcode(Opcode);
     }
     break;
-
-  // These are pseudo-ops for OR to help with the OR->ADD transformation.  We do
-  // this with an ugly goto in case the resultant OR uses EAX and needs the
-  // short form.
-  case X86::ADD16rr_DB:   OutMI.setOpcode(X86::OR16rr);   goto ReSimplify;
-  case X86::ADD32rr_DB:   OutMI.setOpcode(X86::OR32rr);   goto ReSimplify;
-  case X86::ADD64rr_DB:   OutMI.setOpcode(X86::OR64rr);   goto ReSimplify;
-  case X86::ADD16ri_DB:   OutMI.setOpcode(X86::OR16ri);   goto ReSimplify;
-  case X86::ADD32ri_DB:   OutMI.setOpcode(X86::OR32ri);   goto ReSimplify;
-  case X86::ADD64ri32_DB: OutMI.setOpcode(X86::OR64ri32); goto ReSimplify;
-  case X86::ADD16ri8_DB:  OutMI.setOpcode(X86::OR16ri8);  goto ReSimplify;
-  case X86::ADD32ri8_DB:  OutMI.setOpcode(X86::OR32ri8);  goto ReSimplify;
-  case X86::ADD64ri8_DB:  OutMI.setOpcode(X86::OR64ri8);  goto ReSimplify;
 
   // We don't currently select the correct instruction form for instructions
   // which have a short %eax, etc. form. Handle this by custom lowering, for
@@ -694,16 +683,9 @@ ReSimplify:
 
 void X86AsmPrinter::LowerTlsAddr(X86MCInstLower &MCInstLowering,
                                  const MachineInstr &MI) {
-
-  bool is64Bits = MI.getOpcode() == X86::TLS_addr64 ||
+  bool Is64Bits = MI.getOpcode() == X86::TLS_addr64 ||
                   MI.getOpcode() == X86::TLS_base_addr64;
-
-  bool needsPadding = MI.getOpcode() == X86::TLS_addr64;
-
-  MCContext &context = OutStreamer->getContext();
-
-  if (needsPadding)
-    EmitAndCountInstruction(MCInstBuilder(X86::DATA16_PREFIX));
+  MCContext &Ctx = OutStreamer->getContext();
 
   MCSymbolRefExpr::VariantKind SRVK;
   switch (MI.getOpcode()) {
@@ -721,51 +703,79 @@ void X86AsmPrinter::LowerTlsAddr(X86MCInstLower &MCInstLowering,
     llvm_unreachable("unexpected opcode");
   }
 
-  MCSymbol *sym = MCInstLowering.GetSymbolFromOperand(MI.getOperand(3));
-  const MCSymbolRefExpr *symRef = MCSymbolRefExpr::create(sym, SRVK, context);
+  const MCSymbolRefExpr *Sym = MCSymbolRefExpr::create(
+      MCInstLowering.GetSymbolFromOperand(MI.getOperand(3)), SRVK, Ctx);
+  bool UseGot = MMI->getModule()->getRtLibUseGOT();
 
-  MCInst LEA;
-  if (is64Bits) {
-    LEA.setOpcode(X86::LEA64r);
-    LEA.addOperand(MCOperand::createReg(X86::RDI)); // dest
-    LEA.addOperand(MCOperand::createReg(X86::RIP)); // base
-    LEA.addOperand(MCOperand::createImm(1));        // scale
-    LEA.addOperand(MCOperand::createReg(0));        // index
-    LEA.addOperand(MCOperand::createExpr(symRef));  // disp
-    LEA.addOperand(MCOperand::createReg(0));        // seg
-  } else if (SRVK == MCSymbolRefExpr::VK_TLSLDM) {
-    LEA.setOpcode(X86::LEA32r);
-    LEA.addOperand(MCOperand::createReg(X86::EAX)); // dest
-    LEA.addOperand(MCOperand::createReg(X86::EBX)); // base
-    LEA.addOperand(MCOperand::createImm(1));        // scale
-    LEA.addOperand(MCOperand::createReg(0));        // index
-    LEA.addOperand(MCOperand::createExpr(symRef));  // disp
-    LEA.addOperand(MCOperand::createReg(0));        // seg
+  if (Is64Bits) {
+    bool NeedsPadding = SRVK == MCSymbolRefExpr::VK_TLSGD;
+    if (NeedsPadding)
+      EmitAndCountInstruction(MCInstBuilder(X86::DATA16_PREFIX));
+    EmitAndCountInstruction(MCInstBuilder(X86::LEA64r)
+                                .addReg(X86::RDI)
+                                .addReg(X86::RIP)
+                                .addImm(1)
+                                .addReg(0)
+                                .addExpr(Sym)
+                                .addReg(0));
+    const MCSymbol *TlsGetAddr = Ctx.getOrCreateSymbol("__tls_get_addr");
+    if (NeedsPadding) {
+      if (!UseGot)
+        EmitAndCountInstruction(MCInstBuilder(X86::DATA16_PREFIX));
+      EmitAndCountInstruction(MCInstBuilder(X86::DATA16_PREFIX));
+      EmitAndCountInstruction(MCInstBuilder(X86::REX64_PREFIX));
+    }
+    if (UseGot) {
+      const MCExpr *Expr = MCSymbolRefExpr::create(
+          TlsGetAddr, MCSymbolRefExpr::VK_GOTPCREL, Ctx);
+      EmitAndCountInstruction(MCInstBuilder(X86::CALL64m)
+                                  .addReg(X86::RIP)
+                                  .addImm(1)
+                                  .addReg(0)
+                                  .addExpr(Expr)
+                                  .addReg(0));
+    } else {
+      EmitAndCountInstruction(
+          MCInstBuilder(X86::CALL64pcrel32)
+              .addExpr(MCSymbolRefExpr::create(TlsGetAddr,
+                                               MCSymbolRefExpr::VK_PLT, Ctx)));
+    }
   } else {
-    LEA.setOpcode(X86::LEA32r);
-    LEA.addOperand(MCOperand::createReg(X86::EAX)); // dest
-    LEA.addOperand(MCOperand::createReg(0));        // base
-    LEA.addOperand(MCOperand::createImm(1));        // scale
-    LEA.addOperand(MCOperand::createReg(X86::EBX)); // index
-    LEA.addOperand(MCOperand::createExpr(symRef));  // disp
-    LEA.addOperand(MCOperand::createReg(0));        // seg
+    if (SRVK == MCSymbolRefExpr::VK_TLSGD && !UseGot) {
+      EmitAndCountInstruction(MCInstBuilder(X86::LEA32r)
+                                  .addReg(X86::EAX)
+                                  .addReg(0)
+                                  .addImm(1)
+                                  .addReg(X86::EBX)
+                                  .addExpr(Sym)
+                                  .addReg(0));
+    } else {
+      EmitAndCountInstruction(MCInstBuilder(X86::LEA32r)
+                                  .addReg(X86::EAX)
+                                  .addReg(X86::EBX)
+                                  .addImm(1)
+                                  .addReg(0)
+                                  .addExpr(Sym)
+                                  .addReg(0));
+    }
+
+    const MCSymbol *TlsGetAddr = Ctx.getOrCreateSymbol("___tls_get_addr");
+    if (UseGot) {
+      const MCExpr *Expr =
+          MCSymbolRefExpr::create(TlsGetAddr, MCSymbolRefExpr::VK_GOT, Ctx);
+      EmitAndCountInstruction(MCInstBuilder(X86::CALL32m)
+                                  .addReg(X86::EBX)
+                                  .addImm(1)
+                                  .addReg(0)
+                                  .addExpr(Expr)
+                                  .addReg(0));
+    } else {
+      EmitAndCountInstruction(
+          MCInstBuilder(X86::CALLpcrel32)
+              .addExpr(MCSymbolRefExpr::create(TlsGetAddr,
+                                               MCSymbolRefExpr::VK_PLT, Ctx)));
+    }
   }
-  EmitAndCountInstruction(LEA);
-
-  if (needsPadding) {
-    EmitAndCountInstruction(MCInstBuilder(X86::DATA16_PREFIX));
-    EmitAndCountInstruction(MCInstBuilder(X86::DATA16_PREFIX));
-    EmitAndCountInstruction(MCInstBuilder(X86::REX64_PREFIX));
-  }
-
-  StringRef name = is64Bits ? "__tls_get_addr" : "___tls_get_addr";
-  MCSymbol *tlsGetAddr = context.getOrCreateSymbol(name);
-  const MCSymbolRefExpr *tlsRef =
-      MCSymbolRefExpr::create(tlsGetAddr, MCSymbolRefExpr::VK_PLT, context);
-
-  EmitAndCountInstruction(
-      MCInstBuilder(is64Bits ? X86::CALL64pcrel32 : X86::CALLpcrel32)
-          .addExpr(tlsRef));
 }
 
 /// Emit the largest nop instruction smaller than or equal to \p NumBytes
@@ -778,7 +788,7 @@ static unsigned EmitNop(MCStreamer &OS, unsigned NumBytes, bool Is64Bit,
 
   unsigned NopSize;
   unsigned Opc, BaseReg, ScaleVal, IndexReg, Displacement, SegmentReg;
-  Opc = IndexReg = Displacement = SegmentReg = 0;
+  IndexReg = Displacement = SegmentReg = 0;
   BaseReg = X86::RAX;
   ScaleVal = 1;
   switch (NumBytes) {
@@ -963,6 +973,7 @@ void X86AsmPrinter::LowerFAULTING_OP(const MachineInstr &FaultingMI,
     if (auto MaybeOperand = MCIL.LowerMachineOperand(&FaultingMI, *I))
       MI.addOperand(MaybeOperand.getValue());
 
+  OutStreamer->AddComment("on-fault: " + HandlerLabel->getName());
   OutStreamer->EmitInstruction(MI, getSubtargetInfo());
 }
 
@@ -1374,7 +1385,8 @@ PrevCrossBBInst(MachineBasicBlock::const_iterator MBBI) {
     MBB = MBB->getPrevNode();
     MBBI = MBB->end();
   }
-  return --MBBI;
+  --MBBI;
+  return MBBI;
 }
 
 static const Constant *getConstantFromPool(const MachineInstr &MI,
@@ -1668,6 +1680,77 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
   case X86::TLS_base_addr64:
     return LowerTlsAddr(MCInstLowering, *MI);
 
+  // Loading/storing mask pairs requires two kmov operations. The second one of these
+  // needs a 2 byte displacement relative to the specified address (with 32 bit spill
+  // size). The pairs of 1bit masks up to 16 bit masks all use the same spill size,
+  // they all are stored using MASKPAIR16STORE, loaded using MASKPAIR16LOAD.
+  //
+  // The displacement value might wrap around in theory, thus the asserts in both
+  // cases.
+  case X86::MASKPAIR16LOAD: {
+    int64_t Disp = MI->getOperand(1 + X86::AddrDisp).getImm();
+    assert(Disp >= 0 && Disp <= INT32_MAX - 2 && "Unexpected displacement");
+    const X86RegisterInfo *RI =
+      MF->getSubtarget<X86Subtarget>().getRegisterInfo();
+    unsigned Reg = MI->getOperand(0).getReg();
+    unsigned Reg0 = RI->getSubReg(Reg, X86::sub_mask_0);
+    unsigned Reg1 = RI->getSubReg(Reg, X86::sub_mask_1);
+
+    // Load the first mask register
+    MCInstBuilder MIB = MCInstBuilder(X86::KMOVWkm);
+    MIB.addReg(Reg0);
+    for (int i = 0; i < X86::AddrNumOperands; ++i) {
+      auto Op = MCInstLowering.LowerMachineOperand(MI, MI->getOperand(1 + i));
+      MIB.addOperand(Op.getValue());
+    }
+    EmitAndCountInstruction(MIB);
+
+    // Load the second mask register of the pair
+    MIB = MCInstBuilder(X86::KMOVWkm);
+    MIB.addReg(Reg1);
+    for (int i = 0; i < X86::AddrNumOperands; ++i) {
+      if (i == X86::AddrDisp) {
+        MIB.addImm(Disp + 2);
+      } else {
+        auto Op = MCInstLowering.LowerMachineOperand(MI, MI->getOperand(1 + i));
+        MIB.addOperand(Op.getValue());
+      }
+    }
+    EmitAndCountInstruction(MIB);
+    return;
+  }
+
+  case X86::MASKPAIR16STORE: {
+    int64_t Disp = MI->getOperand(X86::AddrDisp).getImm();
+    assert(Disp >= 0 && Disp <= INT32_MAX - 2 && "Unexpected displacement");
+    const X86RegisterInfo *RI =
+      MF->getSubtarget<X86Subtarget>().getRegisterInfo();
+    unsigned Reg = MI->getOperand(X86::AddrNumOperands).getReg();
+    unsigned Reg0 = RI->getSubReg(Reg, X86::sub_mask_0);
+    unsigned Reg1 = RI->getSubReg(Reg, X86::sub_mask_1);
+
+    // Store the first mask register
+    MCInstBuilder MIB = MCInstBuilder(X86::KMOVWmk);
+    for (int i = 0; i < X86::AddrNumOperands; ++i)
+      MIB.addOperand(MCInstLowering.LowerMachineOperand(MI, MI->getOperand(i)).getValue());
+    MIB.addReg(Reg0);
+    EmitAndCountInstruction(MIB);
+
+    // Store the second mask register of the pair
+    MIB = MCInstBuilder(X86::KMOVWmk);
+    for (int i = 0; i < X86::AddrNumOperands; ++i) {
+      if (i == X86::AddrDisp) {
+        MIB.addImm(Disp + 2);
+      } else {
+        auto Op = MCInstLowering.LowerMachineOperand(MI, MI->getOperand(0 + i));
+        MIB.addOperand(Op.getValue());
+      }
+    }
+    MIB.addReg(Reg1);
+    EmitAndCountInstruction(MIB);
+    return;
+  }
+
   case X86::MOVPC32r: {
     // This is a pseudo op for a two instruction sequence with a label, which
     // looks like:
@@ -1861,8 +1944,7 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
       SmallVector<int, 64> Mask;
       DecodePSHUFBMask(C, Width, Mask);
       if (!Mask.empty())
-        OutStreamer->AddComment(getShuffleComment(MI, SrcIdx, SrcIdx, Mask),
-                                !EnablePrintSchedInfo);
+        OutStreamer->AddComment(getShuffleComment(MI, SrcIdx, SrcIdx, Mask));
     }
     break;
   }
@@ -1934,8 +2016,7 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
       SmallVector<int, 16> Mask;
       DecodeVPERMILPMask(C, ElSize, Width, Mask);
       if (!Mask.empty())
-        OutStreamer->AddComment(getShuffleComment(MI, SrcIdx, SrcIdx, Mask),
-                                !EnablePrintSchedInfo);
+        OutStreamer->AddComment(getShuffleComment(MI, SrcIdx, SrcIdx, Mask));
     }
     break;
   }
@@ -1966,8 +2047,7 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
       SmallVector<int, 16> Mask;
       DecodeVPERMIL2PMask(C, (unsigned)CtrlOp.getImm(), ElSize, Width, Mask);
       if (!Mask.empty())
-        OutStreamer->AddComment(getShuffleComment(MI, 1, 2, Mask),
-                                !EnablePrintSchedInfo);
+        OutStreamer->AddComment(getShuffleComment(MI, 1, 2, Mask));
     }
     break;
   }
@@ -1984,8 +2064,7 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
       SmallVector<int, 16> Mask;
       DecodeVPPERMMask(C, Width, Mask);
       if (!Mask.empty())
-        OutStreamer->AddComment(getShuffleComment(MI, 1, 2, Mask),
-                                !EnablePrintSchedInfo);
+        OutStreamer->AddComment(getShuffleComment(MI, 1, 2, Mask));
     }
     break;
   }
@@ -2002,7 +2081,7 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
       CS << X86ATTInstPrinter::getRegisterName(DstOp.getReg()) << " = ";
       if (auto *CF = dyn_cast<ConstantFP>(C)) {
         CS << "0x" << CF->getValueAPF().bitcastToAPInt().toString(16, false);
-        OutStreamer->AddComment(CS.str(), !EnablePrintSchedInfo);
+        OutStreamer->AddComment(CS.str());
       }
     }
     break;
@@ -2099,7 +2178,7 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
           }
         }
         CS << "]";
-        OutStreamer->AddComment(CS.str(), !EnablePrintSchedInfo);
+        OutStreamer->AddComment(CS.str());
       } else if (auto *CV = dyn_cast<ConstantVector>(C)) {
         CS << "<";
         for (int l = 0; l != NumLanes; ++l) {
@@ -2111,7 +2190,7 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
           }
         }
         CS << ">";
-        OutStreamer->AddComment(CS.str(), !EnablePrintSchedInfo);
+        OutStreamer->AddComment(CS.str());
       }
     }
     break;
@@ -2198,14 +2277,12 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
         printConstant(C, CS);
       }
       CS << "]";
-      OutStreamer->AddComment(CS.str(), !EnablePrintSchedInfo);
+      OutStreamer->AddComment(CS.str());
     }
   }
 
   MCInst TmpInst;
   MCInstLowering.Lower(MI, TmpInst);
-  if (MI->getAsmPrinterFlag(MachineInstr::NoSchedComment))
-    TmpInst.setFlags(TmpInst.getFlags() | X86::NO_SCHED_INFO);
 
   // Stackmap shadows cannot include branch targets, so we can count the bytes
   // in a call towards the shadow, but must ensure that the no thread returns

@@ -1,12 +1,12 @@
 //===-- llvm-c++filt.cpp --------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
@@ -25,7 +25,7 @@ enum Style {
   EDG,   ///< EDG compiler
   GNUv3, ///< GNU C++ v3 ABI
   Java,  ///< Java (gcj)
-  GNAT   ///< ADA copiler (gnat)
+  GNAT   ///< ADA compiler (gnat)
 };
 static cl::opt<Style>
     Format("format", cl::desc("decoration style"),
@@ -52,31 +52,81 @@ static cl::alias TypesShort("t", cl::desc("alias for --types"),
 static cl::list<std::string>
 Decorated(cl::Positional, cl::desc("<mangled>"), cl::ZeroOrMore);
 
-static void demangle(llvm::raw_ostream &OS, const std::string &Mangled) {
+static std::string demangle(llvm::raw_ostream &OS, const std::string &Mangled) {
   int Status;
 
-  const char *Decorated = Mangled.c_str();
+  const char *DecoratedStr = Mangled.c_str();
   if (StripUnderscore)
-    if (Decorated[0] == '_')
-      ++Decorated;
-  size_t DecoratedLength = strlen(Decorated);
+    if (DecoratedStr[0] == '_')
+      ++DecoratedStr;
+  size_t DecoratedLength = strlen(DecoratedStr);
 
   char *Undecorated = nullptr;
 
-  if (Types || ((DecoratedLength >= 2 && strncmp(Decorated, "_Z", 2) == 0) ||
-                (DecoratedLength >= 4 && strncmp(Decorated, "___Z", 4) == 0)))
-    Undecorated = itaniumDemangle(Decorated, nullptr, nullptr, &Status);
+  if (Types ||
+      ((DecoratedLength >= 2 && strncmp(DecoratedStr, "_Z", 2) == 0) ||
+       (DecoratedLength >= 4 && strncmp(DecoratedStr, "___Z", 4) == 0)))
+    Undecorated = itaniumDemangle(DecoratedStr, nullptr, nullptr, &Status);
 
   if (!Undecorated &&
-      (DecoratedLength > 6 && strncmp(Decorated, "__imp_", 6) == 0)) {
+      (DecoratedLength > 6 && strncmp(DecoratedStr, "__imp_", 6) == 0)) {
     OS << "import thunk for ";
-    Undecorated = itaniumDemangle(Decorated + 6, nullptr, nullptr, &Status);
+    Undecorated = itaniumDemangle(DecoratedStr + 6, nullptr, nullptr, &Status);
   }
 
-  OS << (Undecorated ? Undecorated : Mangled) << '\n';
-  OS.flush();
-
+  std::string Result(Undecorated ? Undecorated : Mangled);
   free(Undecorated);
+  return Result;
+}
+
+// Split 'Source' on any character that fails to pass 'IsLegalChar'.  The
+// returned vector consists of pairs where 'first' is the delimited word, and
+// 'second' are the delimiters following that word.
+static void SplitStringDelims(
+    StringRef Source,
+    SmallVectorImpl<std::pair<StringRef, StringRef>> &OutFragments,
+    function_ref<bool(char)> IsLegalChar) {
+  // The beginning of the input string.
+  const auto Head = Source.begin();
+
+  // Obtain any leading delimiters.
+  auto Start = std::find_if(Head, Source.end(), IsLegalChar);
+  if (Start != Head)
+    OutFragments.push_back({"", Source.slice(0, Start - Head)});
+
+  // Capture each word and the delimiters following that word.
+  while (Start != Source.end()) {
+    Start = std::find_if(Start, Source.end(), IsLegalChar);
+    auto End = std::find_if_not(Start, Source.end(), IsLegalChar);
+    auto DEnd = std::find_if(End, Source.end(), IsLegalChar);
+    OutFragments.push_back({Source.slice(Start - Head, End - Head),
+                            Source.slice(End - Head, DEnd - Head)});
+    Start = DEnd;
+  }
+}
+
+// This returns true if 'C' is a character that can show up in an
+// Itanium-mangled string.
+static bool IsLegalItaniumChar(char C) {
+  // Itanium CXX ABI [External Names]p5.1.1:
+  // '$' and '.' in mangled names are reserved for private implementations.
+  return isalnum(C) || C == '.' || C == '$' || C == '_';
+}
+
+// If 'Split' is true, then 'Mangled' is broken into individual words and each
+// word is demangled.  Otherwise, the entire string is treated as a single
+// mangled item.  The result is output to 'OS'.
+static void demangleLine(llvm::raw_ostream &OS, StringRef Mangled, bool Split) {
+  std::string Result;
+  if (Split) {
+    SmallVector<std::pair<StringRef, StringRef>, 16> Words;
+    SplitStringDelims(Mangled, Words, IsLegalItaniumChar);
+    for (const auto &Word : Words)
+      Result += demangle(OS, Word.first) + Word.second.str();
+  } else
+    Result = demangle(OS, Mangled);
+  OS << Result << '\n';
+  OS.flush();
 }
 
 int main(int argc, char **argv) {
@@ -86,10 +136,10 @@ int main(int argc, char **argv) {
 
   if (Decorated.empty())
     for (std::string Mangled; std::getline(std::cin, Mangled);)
-      demangle(llvm::outs(), Mangled);
+      demangleLine(llvm::outs(), Mangled, true);
   else
     for (const auto &Symbol : Decorated)
-      demangle(llvm::outs(), Symbol);
+      demangleLine(llvm::outs(), Symbol, false);
 
   return EXIT_SUCCESS;
 }

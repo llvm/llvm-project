@@ -678,7 +678,6 @@ define <8 x i16> @stack_fold_pminuw(<8 x i16> %a0, <8 x i16> %a1) {
   %3 = select <8 x i1> %2, <8 x i16> %a0, <8 x i16> %a1
   ret <8 x i16> %3
 }
-declare <8 x i16> @llvm.x86.sse41.pminuw(<8 x i16>, <8 x i16>) nounwind readnone
 
 define <2 x i64> @stack_fold_pmuldq(<4 x i32> %a0, <4 x i32> %a1) {
   ;CHECK-LABEL: stack_fold_pmuldq

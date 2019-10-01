@@ -1,9 +1,8 @@
 // CodeGen/RuntimeLibcallSignatures.cpp - R.T. Lib. Call Signatures -*- C++ -*--
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -52,6 +51,8 @@ enum RuntimeLibcallSignature {
   f64_func_f64_i32,
   f64_func_i64_i64,
   i16_func_f32,
+  i16_func_f64,
+  i16_func_i64_i64,
   i8_func_i8_i8,
   func_f32_iPTR_iPTR,
   func_f64_iPTR_iPTR,
@@ -85,6 +86,9 @@ enum RuntimeLibcallSignature {
   func_iPTR_i64_i64_i64_i64_i64_i64,
   i32_func_i64_i64,
   i32_func_i64_i64_i64_i64,
+  iPTR_func_f32,
+  iPTR_func_f64,
+  iPTR_func_i64_i64,
   unsupported
 };
 
@@ -215,6 +219,18 @@ struct RuntimeLibcallSignatureTable {
     Table[RTLIB::ROUND_F32] = f32_func_f32;
     Table[RTLIB::ROUND_F64] = f64_func_f64;
     Table[RTLIB::ROUND_F128] = func_iPTR_i64_i64;
+    Table[RTLIB::LROUND_F32] = iPTR_func_f32;
+    Table[RTLIB::LROUND_F64] = iPTR_func_f64;
+    Table[RTLIB::LROUND_F128] = iPTR_func_i64_i64;
+    Table[RTLIB::LLROUND_F32] = i64_func_f32;
+    Table[RTLIB::LLROUND_F64] = i64_func_f64;
+    Table[RTLIB::LLROUND_F128] = i64_func_i64_i64;
+    Table[RTLIB::LRINT_F32] = iPTR_func_f32;
+    Table[RTLIB::LRINT_F64] = iPTR_func_f64;
+    Table[RTLIB::LRINT_F128] = iPTR_func_i64_i64;
+    Table[RTLIB::LLRINT_F32] = i64_func_f32;
+    Table[RTLIB::LLRINT_F64] = i64_func_f64;
+    Table[RTLIB::LLRINT_F128] = i64_func_i64_i64;
     Table[RTLIB::FLOOR_F32] = f32_func_f32;
     Table[RTLIB::FLOOR_F64] = f64_func_f64;
     Table[RTLIB::FLOOR_F128] = func_iPTR_i64_i64;
@@ -229,13 +245,15 @@ struct RuntimeLibcallSignatureTable {
     Table[RTLIB::FMAX_F128] = func_iPTR_i64_i64_i64_i64;
 
     // Conversion
-    // All F80 and PPCF128 routines are unspported.
+    // All F80 and PPCF128 routines are unsupported.
     Table[RTLIB::FPEXT_F64_F128] = func_iPTR_f64;
     Table[RTLIB::FPEXT_F32_F128] = func_iPTR_f32;
     Table[RTLIB::FPEXT_F32_F64] = f64_func_f32;
     Table[RTLIB::FPEXT_F16_F32] = f32_func_i16;
     Table[RTLIB::FPROUND_F32_F16] = i16_func_f32;
+    Table[RTLIB::FPROUND_F64_F16] = i16_func_f64;
     Table[RTLIB::FPROUND_F64_F32] = f32_func_f64;
+    Table[RTLIB::FPROUND_F128_F16] = i16_func_i64_i64;
     Table[RTLIB::FPROUND_F128_F32] = f32_func_i64_i64;
     Table[RTLIB::FPROUND_F128_F64] = f64_func_i64_i64;
     Table[RTLIB::FPTOSINT_F32_I32] = i32_func_f32;
@@ -309,6 +327,12 @@ struct RuntimeLibcallSignatureTable {
     Table[RTLIB::MEMCPY] = iPTR_func_iPTR_iPTR_iPTR;
     Table[RTLIB::MEMSET] = iPTR_func_iPTR_i32_iPTR;
     Table[RTLIB::MEMMOVE] = iPTR_func_iPTR_iPTR_iPTR;
+
+    // __stack_chk_fail
+    Table[RTLIB::STACKPROTECTOR_CHECK_FAIL] = func;
+
+    // Return address handling
+    Table[RTLIB::RETURN_ADDRESS] = i32_func_i32;
 
     // Element-wise Atomic memory
     // TODO: Fix these when we implement atomic support
@@ -480,19 +504,25 @@ struct StaticLibcallNameMap {
         Map[NameLibcall.first] = NameLibcall.second;
       }
     }
+    // Override the __gnu_f2h_ieee/__gnu_h2f_ieee names so that the f32 name is
+    // consistent with the f64 and f128 names.
+    Map["__extendhfsf2"] = RTLIB::FPEXT_F16_F32;
+    Map["__truncsfhf2"] = RTLIB::FPROUND_F32_F16;
+
+    Map["emscripten_return_address"] = RTLIB::RETURN_ADDRESS;
   }
 };
 
 } // end anonymous namespace
 
-void llvm::GetLibcallSignature(const WebAssemblySubtarget &Subtarget,
+void llvm::getLibcallSignature(const WebAssemblySubtarget &Subtarget,
                                RTLIB::Libcall LC,
                                SmallVectorImpl<wasm::ValType> &Rets,
                                SmallVectorImpl<wasm::ValType> &Params) {
   assert(Rets.empty());
   assert(Params.empty());
 
-  wasm::ValType iPTR =
+  wasm::ValType PtrTy =
       Subtarget.hasAddr64() ? wasm::ValType::I64 : wasm::ValType::I32;
 
   auto &Table = RuntimeLibcallSignatures->Table;
@@ -593,6 +623,15 @@ void llvm::GetLibcallSignature(const WebAssemblySubtarget &Subtarget,
     Rets.push_back(wasm::ValType::I32);
     Params.push_back(wasm::ValType::F32);
     break;
+  case i16_func_f64:
+    Rets.push_back(wasm::ValType::I32);
+    Params.push_back(wasm::ValType::F64);
+    break;
+  case i16_func_i64_i64:
+    Rets.push_back(wasm::ValType::I32);
+    Params.push_back(wasm::ValType::I64);
+    Params.push_back(wasm::ValType::I64);
+    break;
   case i8_func_i8_i8:
     Rets.push_back(wasm::ValType::I32);
     Params.push_back(wasm::ValType::I32);
@@ -600,13 +639,13 @@ void llvm::GetLibcallSignature(const WebAssemblySubtarget &Subtarget,
     break;
   case func_f32_iPTR_iPTR:
     Params.push_back(wasm::ValType::F32);
-    Params.push_back(iPTR);
-    Params.push_back(iPTR);
+    Params.push_back(PtrTy);
+    Params.push_back(PtrTy);
     break;
   case func_f64_iPTR_iPTR:
     Params.push_back(wasm::ValType::F64);
-    Params.push_back(iPTR);
-    Params.push_back(iPTR);
+    Params.push_back(PtrTy);
+    Params.push_back(PtrTy);
     break;
   case i16_func_i16_i16:
     Rets.push_back(wasm::ValType::I32);
@@ -632,7 +671,7 @@ void llvm::GetLibcallSignature(const WebAssemblySubtarget &Subtarget,
     Rets.push_back(wasm::ValType::I32);
     Params.push_back(wasm::ValType::I32);
     Params.push_back(wasm::ValType::I32);
-    Params.push_back(iPTR);
+    Params.push_back(PtrTy);
     break;
   case i64_func_i64_i64:
     Rets.push_back(wasm::ValType::I64);
@@ -643,14 +682,14 @@ void llvm::GetLibcallSignature(const WebAssemblySubtarget &Subtarget,
     Rets.push_back(wasm::ValType::I64);
     Params.push_back(wasm::ValType::I64);
     Params.push_back(wasm::ValType::I64);
-    Params.push_back(iPTR);
+    Params.push_back(PtrTy);
     break;
   case i64_i64_func_f32:
 #if 0 // TODO: Enable this when wasm gets multiple-return-value support.
     Rets.push_back(wasm::ValType::I64);
     Rets.push_back(wasm::ValType::I64);
 #else
-    Params.push_back(iPTR);
+    Params.push_back(PtrTy);
 #endif
     Params.push_back(wasm::ValType::F32);
     break;
@@ -659,7 +698,7 @@ void llvm::GetLibcallSignature(const WebAssemblySubtarget &Subtarget,
     Rets.push_back(wasm::ValType::I64);
     Rets.push_back(wasm::ValType::I64);
 #else
-    Params.push_back(iPTR);
+    Params.push_back(PtrTy);
 #endif
     Params.push_back(wasm::ValType::F64);
     break;
@@ -668,7 +707,7 @@ void llvm::GetLibcallSignature(const WebAssemblySubtarget &Subtarget,
     Rets.push_back(wasm::ValType::I32);
     Rets.push_back(wasm::ValType::I32);
 #else
-    Params.push_back(iPTR);
+    Params.push_back(PtrTy);
 #endif
     Params.push_back(wasm::ValType::I32);
     Params.push_back(wasm::ValType::I32);
@@ -678,7 +717,7 @@ void llvm::GetLibcallSignature(const WebAssemblySubtarget &Subtarget,
     Rets.push_back(wasm::ValType::I32);
     Rets.push_back(wasm::ValType::I32);
 #else
-    Params.push_back(iPTR);
+    Params.push_back(PtrTy);
 #endif
     Params.push_back(wasm::ValType::I32);
     Params.push_back(wasm::ValType::I32);
@@ -688,7 +727,7 @@ void llvm::GetLibcallSignature(const WebAssemblySubtarget &Subtarget,
     Rets.push_back(wasm::ValType::I64);
     Rets.push_back(wasm::ValType::I64);
 #else
-    Params.push_back(iPTR);
+    Params.push_back(PtrTy);
 #endif
     Params.push_back(wasm::ValType::I64);
     Params.push_back(wasm::ValType::I64);
@@ -698,7 +737,7 @@ void llvm::GetLibcallSignature(const WebAssemblySubtarget &Subtarget,
     Rets.push_back(wasm::ValType::I64);
     Rets.push_back(wasm::ValType::I64);
 #else
-    Params.push_back(iPTR);
+    Params.push_back(PtrTy);
 #endif
     Params.push_back(wasm::ValType::I64);
     Params.push_back(wasm::ValType::I64);
@@ -710,13 +749,13 @@ void llvm::GetLibcallSignature(const WebAssemblySubtarget &Subtarget,
     Rets.push_back(wasm::ValType::I64);
     Rets.push_back(wasm::ValType::I64);
 #else
-    Params.push_back(iPTR);
+    Params.push_back(PtrTy);
 #endif
     Params.push_back(wasm::ValType::I64);
     Params.push_back(wasm::ValType::I64);
     Params.push_back(wasm::ValType::I64);
     Params.push_back(wasm::ValType::I64);
-    Params.push_back(iPTR);
+    Params.push_back(PtrTy);
     break;
   case i64_i64_i64_i64_func_i64_i64_i64_i64:
 #if 0 // TODO: Enable this when wasm gets multiple-return-value support.
@@ -725,7 +764,7 @@ void llvm::GetLibcallSignature(const WebAssemblySubtarget &Subtarget,
     Rets.push_back(wasm::ValType::I64);
     Rets.push_back(wasm::ValType::I64);
 #else
-    Params.push_back(iPTR);
+    Params.push_back(PtrTy);
 #endif
     Params.push_back(wasm::ValType::I64);
     Params.push_back(wasm::ValType::I64);
@@ -739,23 +778,23 @@ void llvm::GetLibcallSignature(const WebAssemblySubtarget &Subtarget,
     Rets.push_back(wasm::ValType::I64);
     Rets.push_back(wasm::ValType::I64);
 #else
-    Params.push_back(iPTR);
+    Params.push_back(PtrTy);
 #endif
     Params.push_back(wasm::ValType::I64);
     Params.push_back(wasm::ValType::I64);
     Params.push_back(wasm::ValType::I32);
     break;
   case iPTR_func_iPTR_i32_iPTR:
-    Rets.push_back(iPTR);
-    Params.push_back(iPTR);
+    Rets.push_back(PtrTy);
+    Params.push_back(PtrTy);
     Params.push_back(wasm::ValType::I32);
-    Params.push_back(iPTR);
+    Params.push_back(PtrTy);
     break;
   case iPTR_func_iPTR_iPTR_iPTR:
-    Rets.push_back(iPTR);
-    Params.push_back(iPTR);
-    Params.push_back(iPTR);
-    Params.push_back(iPTR);
+    Rets.push_back(PtrTy);
+    Params.push_back(PtrTy);
+    Params.push_back(PtrTy);
+    Params.push_back(PtrTy);
     break;
   case f32_func_f32_f32_f32:
     Rets.push_back(wasm::ValType::F32);
@@ -772,39 +811,39 @@ void llvm::GetLibcallSignature(const WebAssemblySubtarget &Subtarget,
   case func_i64_i64_iPTR_iPTR:
     Params.push_back(wasm::ValType::I64);
     Params.push_back(wasm::ValType::I64);
-    Params.push_back(iPTR);
-    Params.push_back(iPTR);
+    Params.push_back(PtrTy);
+    Params.push_back(PtrTy);
     break;
   case func_iPTR_f32:
-    Params.push_back(iPTR);
+    Params.push_back(PtrTy);
     Params.push_back(wasm::ValType::F32);
     break;
   case func_iPTR_f64:
-    Params.push_back(iPTR);
+    Params.push_back(PtrTy);
     Params.push_back(wasm::ValType::F64);
     break;
   case func_iPTR_i32:
-    Params.push_back(iPTR);
+    Params.push_back(PtrTy);
     Params.push_back(wasm::ValType::I32);
     break;
   case func_iPTR_i64:
-    Params.push_back(iPTR);
+    Params.push_back(PtrTy);
     Params.push_back(wasm::ValType::I64);
     break;
   case func_iPTR_i64_i64:
-    Params.push_back(iPTR);
+    Params.push_back(PtrTy);
     Params.push_back(wasm::ValType::I64);
     Params.push_back(wasm::ValType::I64);
     break;
   case func_iPTR_i64_i64_i64_i64:
-    Params.push_back(iPTR);
+    Params.push_back(PtrTy);
     Params.push_back(wasm::ValType::I64);
     Params.push_back(wasm::ValType::I64);
     Params.push_back(wasm::ValType::I64);
     Params.push_back(wasm::ValType::I64);
     break;
   case func_iPTR_i64_i64_i64_i64_i64_i64:
-    Params.push_back(iPTR);
+    Params.push_back(PtrTy);
     Params.push_back(wasm::ValType::I64);
     Params.push_back(wasm::ValType::I64);
     Params.push_back(wasm::ValType::I64);
@@ -824,6 +863,19 @@ void llvm::GetLibcallSignature(const WebAssemblySubtarget &Subtarget,
     Params.push_back(wasm::ValType::I64);
     Params.push_back(wasm::ValType::I64);
     break;
+  case iPTR_func_f32:
+    Rets.push_back(PtrTy);
+    Params.push_back(wasm::ValType::F32);
+    break;
+  case iPTR_func_f64:
+    Rets.push_back(PtrTy);
+    Params.push_back(wasm::ValType::F64);
+    break;
+  case iPTR_func_i64_i64:
+    Rets.push_back(PtrTy);
+    Params.push_back(wasm::ValType::I64);
+    Params.push_back(wasm::ValType::I64);
+    break;
   case unsupported:
     llvm_unreachable("unsupported runtime library signature");
   }
@@ -832,12 +884,17 @@ void llvm::GetLibcallSignature(const WebAssemblySubtarget &Subtarget,
 static ManagedStatic<StaticLibcallNameMap> LibcallNameMap;
 // TODO: If the RTLIB::Libcall-taking flavor of GetSignature remains unsed
 // other than here, just roll its logic into this version.
-void llvm::GetLibcallSignature(const WebAssemblySubtarget &Subtarget,
+void llvm::getLibcallSignature(const WebAssemblySubtarget &Subtarget,
                                const char *Name,
                                SmallVectorImpl<wasm::ValType> &Rets,
                                SmallVectorImpl<wasm::ValType> &Params) {
   auto &Map = LibcallNameMap->Map;
-  auto val = Map.find(Name);
-  assert(val != Map.end() && "unexpected runtime library name");
-  return GetLibcallSignature(Subtarget, val->second, Rets, Params);
+  auto Val = Map.find(Name);
+#ifndef NDEBUG
+  if (Val == Map.end()) {
+    auto message = std::string("unexpected runtime library name: ") + Name;
+    llvm_unreachable(message.c_str());
+  }
+#endif
+  return getLibcallSignature(Subtarget, Val->second, Rets, Params);
 }

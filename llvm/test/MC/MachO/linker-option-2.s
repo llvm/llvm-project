@@ -1,4 +1,4 @@
-// RUN: llvm-mc -n -triple x86_64-apple-darwin10 %s -filetype=obj | llvm-readobj -macho-linker-options | FileCheck %s
+// RUN: llvm-mc -n -triple x86_64-apple-darwin10 %s -filetype=obj | llvm-readobj --macho-linker-options | FileCheck %s
 
 .linker_option "a"
 .linker_option "a", "b"

@@ -11,7 +11,7 @@ if (llvm_install_binutils_symlinks) {
   }
 }
 
-# //:llvm-nm depends on this symlink target, see comment in //BUILD.gn.
+# //:llvm-objdump depends on this symlink target, see comment in //BUILD.gn.
 group("symlinks") {
   deps = [
     ":llvm-objdump",
@@ -33,7 +33,6 @@ executable("llvm-objdump") {
     "//llvm/lib/MC/MCDisassembler",
     "//llvm/lib/Object",
     "//llvm/lib/Support",
-    "//llvm/lib/Target:AllTargetsAsmPrinters",
     "//llvm/lib/Target:AllTargetsDescs",
     "//llvm/lib/Target:AllTargetsDisassemblers",
     "//llvm/lib/Target:AllTargetsInfos",

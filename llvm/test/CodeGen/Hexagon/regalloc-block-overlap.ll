@@ -16,7 +16,7 @@ declare <32 x i32> @llvm.hexagon.V6.vasrwhsat.128B(<32 x i32>, <32 x i32>, i32) 
 declare <64 x i32> @llvm.hexagon.V6.vlutvwh.128B(<32 x i32>, <32 x i32>, i32) #1
 declare <64 x i32> @llvm.hexagon.V6.vlutvwh.oracc.128B(<64 x i32>, <32 x i32>, <32 x i32>, i32) #1
 
-define hidden void @fred(<32 x i32>* %a0, i32 %a1) #0 {
+define hidden void @fred(<32 x i32>* %a0, i32 %a1, i1 %cond) #0 {
 b0:
   %v1 = ashr i32 %a1, 7
   %v2 = shl nsw i32 %v1, 7
@@ -70,7 +70,7 @@ b15:                                              ; preds = %b14
   br label %b16
 
 b16:                                              ; preds = %b15
-  br i1 undef, label %b17, label %b18
+  br i1 %cond, label %b17, label %b18
 
 b17:                                              ; preds = %b16
   unreachable

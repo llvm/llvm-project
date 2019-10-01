@@ -1,9 +1,8 @@
 ;===- ./lib/Target/NVPTX/LLVMBuild.txt -------------------------*- Conf -*--===;
 ;
-;                     The LLVM Compiler Infrastructure
-;
-; This file is distributed under the University of Illinois Open Source
-; License. See LICENSE.TXT for details.
+; Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+; See https://llvm.org/LICENSE.txt for license information.
+; SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 ;
 ;===------------------------------------------------------------------------===;
 ;
@@ -16,7 +15,7 @@
 ;===------------------------------------------------------------------------===;
 
 [common]
-subdirectories = InstPrinter MCTargetDesc TargetInfo
+subdirectories = MCTargetDesc TargetInfo
 
 [component_0]
 type = TargetGroup
@@ -28,5 +27,5 @@ has_asmprinter = 1
 type = Library
 name = NVPTXCodeGen
 parent = NVPTX
-required_libraries = Analysis AsmPrinter CodeGen Core IPO MC NVPTXAsmPrinter NVPTXDesc NVPTXInfo Scalar SelectionDAG Support Target TransformUtils Vectorize
+required_libraries = Analysis AsmPrinter CodeGen Core IPO MC NVPTXDesc NVPTXInfo Scalar SelectionDAG Support Target TransformUtils Vectorize
 add_to_library_groups = NVPTX

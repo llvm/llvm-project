@@ -7,6 +7,8 @@ declare void @llvm.amdgcn.s.barrier() #1
 
 ; Function Attrs: nounwind
 ; CHECK-LABEL: {{^}}signed_ds_offset_addressing_loop:
+; SI: s_movk_i32 [[K_0X88:s[0-9]+]], 0x
+; SI: s_movk_i32 [[K_0X100:s[0-9]+]], 0x100
 ; CHECK: BB0_1:
 ; CHECK: v_add_i32_e32 [[VADDR:v[0-9]+]],
 ; SI-DAG: ds_read_b32 v{{[0-9]+}}, [[VADDR]]
@@ -14,9 +16,9 @@ declare void @llvm.amdgcn.s.barrier() #1
 ; SI-DAG: ds_read_b32 v{{[0-9]+}}, [[VADDR8]]
 ; SI-DAG: v_add_i32_e32 [[VADDR0x80:v[0-9]+]], vcc, 0x80, [[VADDR]]
 ; SI-DAG: ds_read_b32 v{{[0-9]+}}, [[VADDR0x80]]
-; SI-DAG: v_add_i32_e32 [[VADDR0x88:v[0-9]+]], vcc, 0x88, [[VADDR]]
+; SI-DAG: v_add_i32_e32 [[VADDR0x88:v[0-9]+]], vcc, [[K_0X88]], [[VADDR]]
 ; SI-DAG: ds_read_b32 v{{[0-9]+}}, [[VADDR0x88]]
-; SI-DAG: v_add_i32_e32 [[VADDR0x100:v[0-9]+]], vcc, 0x100, [[VADDR]]
+; SI-DAG: v_add_i32_e32 [[VADDR0x100:v[0-9]+]], vcc, [[K_0X100]], [[VADDR]]
 ; SI-DAG: ds_read_b32 v{{[0-9]+}}, [[VADDR0x100]]
 
 ; CI-DAG: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, [[VADDR]] offset1:2

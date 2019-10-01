@@ -1,9 +1,8 @@
 //===-- ARMBasicBlockInfo.h - Basic Block Information -----------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -14,11 +13,15 @@
 #ifndef LLVM_LIB_TARGET_ARM_ARMBASICBLOCKINFO_H
 #define LLVM_LIB_TARGET_ARM_ARMBASICBLOCKINFO_H
 
+#include "ARMBaseInstrInfo.h"
+#include "ARMMachineFunctionInfo.h"
 #include "llvm/Support/MathExtras.h"
 #include <algorithm>
 #include <cstdint>
 
 namespace llvm {
+
+using BBInfoVector = SmallVectorImpl<BasicBlockInfo>;
 
 /// UnknownPadding - Return the worst case padding that could result from
 /// unknown offset bits.  This does not include alignment padding caused by
@@ -102,6 +105,50 @@ struct BasicBlockInfo {
     return std::max(std::max(unsigned(PostAlign), LogAlign),
                     internalKnownBits());
   }
+};
+
+class ARMBasicBlockUtils {
+
+private:
+  MachineFunction &MF;
+  bool isThumb = false;
+  const ARMBaseInstrInfo *TII = nullptr;
+  SmallVector<BasicBlockInfo, 8> BBInfo;
+
+public:
+  ARMBasicBlockUtils(MachineFunction &MF) : MF(MF) {
+    TII =
+      static_cast<const ARMBaseInstrInfo*>(MF.getSubtarget().getInstrInfo());
+    isThumb = MF.getInfo<ARMFunctionInfo>()->isThumbFunction();
+  }
+
+  void computeAllBlockSizes() {
+    BBInfo.resize(MF.getNumBlockIDs());
+    for (MachineBasicBlock &MBB : MF)
+      computeBlockSize(&MBB);
+  }
+
+  void computeBlockSize(MachineBasicBlock *MBB);
+
+  unsigned getOffsetOf(MachineInstr *MI) const;
+
+  void adjustBBOffsetsAfter(MachineBasicBlock *MBB);
+
+  void adjustBBSize(MachineBasicBlock *MBB, int Size) {
+    BBInfo[MBB->getNumber()].Size += Size;
+  }
+
+  bool isBBInRange(MachineInstr *MI, MachineBasicBlock *DestBB,
+                   unsigned MaxDisp) const;
+
+  void insert(unsigned BBNum, BasicBlockInfo BBI) {
+    BBInfo.insert(BBInfo.begin() + BBNum, BBI);
+  }
+
+  void clear() { BBInfo.clear(); }
+
+  BBInfoVector &getBBInfo() { return BBInfo; }
+
 };
 
 } // end namespace llvm

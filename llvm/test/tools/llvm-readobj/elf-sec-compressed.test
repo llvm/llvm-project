@@ -1,4 +1,4 @@
-RUN: llvm-readobj -sections \
+RUN: llvm-readobj --sections \
 RUN:   %p/Inputs/compression.zlib.style.elf-x86-64 | FileCheck %s
 
 CHECK:      Section {

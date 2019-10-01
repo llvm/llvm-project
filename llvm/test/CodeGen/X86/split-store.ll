@@ -217,10 +217,9 @@ define void @int1_int1_pair(i1 signext %tmp1, i1 signext %tmp2, i2* %ref.tmp) {
 ; CHECK-LABEL: int1_int1_pair:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addb %sil, %sil
-; CHECK-NEXT:    andb $1, %dil
-; CHECK-NEXT:    orb %sil, %dil
-; CHECK-NEXT:    andb $3, %dil
-; CHECK-NEXT:    movb %dil, (%rdx)
+; CHECK-NEXT:    subb %dil, %sil
+; CHECK-NEXT:    andb $3, %sil
+; CHECK-NEXT:    movb %sil, (%rdx)
 ; CHECK-NEXT:    retq
   %t1 = zext i1 %tmp2 to i2
   %t2 = shl nuw i2 %t1, 1

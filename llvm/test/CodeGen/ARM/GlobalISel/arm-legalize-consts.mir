@@ -24,8 +24,8 @@ body:             |
 
     %4(p0) = COPY $r0
 
-    %0(s32) = G_CONSTANT 42
-    ; CHECK: {{%[0-9]+}}:_(s32) = G_CONSTANT 42
+    %0(s32) = G_CONSTANT i32 42
+    ; CHECK: {{%[0-9]+}}:_(s32) = G_CONSTANT i32 42
 
     %1(s16) = G_CONSTANT i16 21
     G_STORE %1(s16), %4(p0) :: (store 2)
@@ -48,9 +48,9 @@ body:             |
     ; CHECK: {{%[0-9]+}}:_(s1) = G_TRUNC [[EXT]](s32)
     ; CHECK-NOT: G_CONSTANT i1
 
-    %5(p0) = G_CONSTANT 0
+    %5(p0) = G_CONSTANT i32 0
     G_STORE %5(p0), %4(p0) :: (store 4)
-    ; CHECK: {{%[0-9]+}}:_(p0) = G_CONSTANT 0
+    ; CHECK: {{%[0-9]+}}:_(p0) = G_CONSTANT i32 0
 
     $r0 = COPY %0(s32)
     BX_RET 14, $noreg, implicit $r0

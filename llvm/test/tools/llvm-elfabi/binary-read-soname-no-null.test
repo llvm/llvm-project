@@ -1,0 +1,51 @@
+# RUN: yaml2obj %s > %t
+# RUN: not llvm-elfabi --elf %t --emit-tbe=%t.tbe 2>&1 | FileCheck %s
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .dynstr
+    Type:            SHT_STRTAB
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x1000
+#                     \0 b a z\0 s o m e l i b . s o z z z
+    Content:         "0062617a00736f6d656c69622e736f7a7a7a"
+  - Name:            .dynamic
+    Type:            SHT_DYNAMIC
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x0000000000001018
+    Link:            .dynstr
+    AddressAlign:    0x0000000000000008
+    EntSize:         0x0000000000000010
+    Entries:
+      - Tag:             DT_SONAME
+        Value:           0x0000000000000005
+      - Tag:             DT_STRSZ
+        Value:           0x000000000000000F
+      - Tag:             DT_STRTAB
+        Value:           0x0000000000001000
+      - Tag:             DT_SYMTAB
+        Value:           0x0000000000001000
+      - Tag:             DT_NULL
+        Value:           0x0000000000000000
+ProgramHeaders:
+  - Type: PT_LOAD
+    Flags: [ PF_R ]
+    VAddr: 0x1000
+    PAddr: 0x1000
+    Align: 8
+    Sections:
+      - Section: .dynstr
+      - Section: .dynamic
+  - Type: PT_DYNAMIC
+    Flags: [ PF_X, PF_R ]
+    VAddr: 0x1018
+    PAddr: 0x1018
+    Sections:
+      - Section: .dynamic
+
+# CHECK: String overran bounds of string table (no null terminator) when reading DT_SONAME

@@ -1,8 +1,8 @@
-RUN: llvm-readobj -h %p/Inputs/trivial.obj.elf-i386 --elf-output-style=GNU \
+RUN: llvm-readelf -h %p/Inputs/trivial.obj.elf-i386 \
 RUN:   | FileCheck %s -check-prefix ELF32
-RUN: llvm-readobj -h %p/Inputs/trivial.obj.elf-x86-64 --elf-output-style=GNU \
+RUN: llvm-readelf -h %p/Inputs/trivial.obj.elf-x86-64 \
 RUN:   | FileCheck %s -check-prefix ELF64
-RUN: llvm-readobj -h %p/Inputs/trivial.obj.elf-mipsel --elf-output-style=GNU \
+RUN: llvm-readelf -h %p/Inputs/trivial.obj.elf-mipsel \
 RUN:   | FileCheck %s -check-prefix MIPSEL
 
 ELF32:      ELF Header:

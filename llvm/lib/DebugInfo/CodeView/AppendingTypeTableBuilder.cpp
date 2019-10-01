@@ -1,9 +1,8 @@
 //===- AppendingTypeTableBuilder.cpp --------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -50,13 +49,8 @@ Optional<TypeIndex> AppendingTypeTableBuilder::getNext(TypeIndex Prev) {
   return Prev;
 }
 
-CVType AppendingTypeTableBuilder::getType(TypeIndex Index) {
-  CVType Type;
-  Type.RecordData = SeenRecords[Index.toArrayIndex()];
-  const RecordPrefix *P =
-      reinterpret_cast<const RecordPrefix *>(Type.RecordData.data());
-  Type.Type = static_cast<TypeLeafKind>(uint16_t(P->RecordKind));
-  return Type;
+CVType AppendingTypeTableBuilder::getType(TypeIndex Index){
+  return CVType(SeenRecords[Index.toArrayIndex()]);
 }
 
 StringRef AppendingTypeTableBuilder::getTypeName(TypeIndex Index) {

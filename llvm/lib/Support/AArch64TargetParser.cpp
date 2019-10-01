@@ -1,9 +1,8 @@
 //===-- AArch64TargetParser - Parser for AArch64 features -------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -89,6 +88,16 @@ bool AArch64::getExtensionFeatures(unsigned Extensions,
     Features.push_back("+rdm");
   if (Extensions & AEK_SVE)
     Features.push_back("+sve");
+  if (Extensions & AEK_SVE2)
+    Features.push_back("+sve2");
+  if (Extensions & AEK_SVE2AES)
+    Features.push_back("+sve2-aes");
+  if (Extensions & AEK_SVE2SM4)
+    Features.push_back("+sve2-sm4");
+  if (Extensions & AEK_SVE2SHA3)
+    Features.push_back("+sve2-sha3");
+  if (Extensions & AEK_BITPERM)
+    Features.push_back("+bitperm");
   if (Extensions & AEK_RCPC)
     Features.push_back("+rcpc");
 

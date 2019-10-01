@@ -1,9 +1,8 @@
 //===- SpeculateAroundPHIs.cpp --------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -66,6 +65,14 @@ isSafeToSpeculatePHIUsers(PHINode &PN, DominatorTree &DT,
     if (UI->getParent() != PhiBB) {
       LLVM_DEBUG(dbgs() << "  Unsafe: use in a different BB: " << *UI << "\n");
       return false;
+    }
+
+    if (auto CS = ImmutableCallSite(UI)) {
+      if (CS.isConvergent() || CS.cannotDuplicate()) {
+        LLVM_DEBUG(dbgs() << "  Unsafe: convergent "
+                   "callsite cannot de duplicated: " << *UI << '\n');
+        return false;
+      }
     }
 
     // FIXME: This check is much too conservative. We're not going to move these

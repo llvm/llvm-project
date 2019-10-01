@@ -1,9 +1,8 @@
 //===- AliasAnalysisEvaluator.cpp - Alias Analysis Accuracy Evaluator -----===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -66,11 +65,10 @@ static inline void PrintModRefResults(const char *Msg, bool P, Instruction *I,
   }
 }
 
-static inline void PrintModRefResults(const char *Msg, bool P, CallSite CSA,
-                                      CallSite CSB, Module *M) {
+static inline void PrintModRefResults(const char *Msg, bool P, CallBase *CallA,
+                                      CallBase *CallB, Module *M) {
   if (PrintAll || P) {
-    errs() << "  " << Msg << ": " << *CSA.getInstruction() << " <-> "
-           << *CSB.getInstruction() << '\n';
+    errs() << "  " << Msg << ": " << *CallA << " <-> " << *CallB << '\n';
   }
 }
 
@@ -98,7 +96,7 @@ void AAEvaluator::runInternal(Function &F, AAResults &AA) {
   ++FunctionCount;
 
   SetVector<Value *> Pointers;
-  SmallSetVector<CallSite, 16> CallSites;
+  SmallSetVector<CallBase *, 16> Calls;
   SetVector<Value *> Loads;
   SetVector<Value *> Stores;
 
@@ -114,16 +112,16 @@ void AAEvaluator::runInternal(Function &F, AAResults &AA) {
     if (EvalAAMD && isa<StoreInst>(&*I))
       Stores.insert(&*I);
     Instruction &Inst = *I;
-    if (auto CS = CallSite(&Inst)) {
-      Value *Callee = CS.getCalledValue();
+    if (auto *Call = dyn_cast<CallBase>(&Inst)) {
+      Value *Callee = Call->getCalledValue();
       // Skip actual functions for direct function calls.
       if (!isa<Function>(Callee) && isInterestingPointer(Callee))
         Pointers.insert(Callee);
       // Consider formals.
-      for (Use &DataOp : CS.data_ops())
+      for (Use &DataOp : Call->data_ops())
         if (isInterestingPointer(DataOp))
           Pointers.insert(DataOp);
-      CallSites.insert(CS);
+      Calls.insert(Call);
     } else {
       // Consider all operands.
       for (Instruction::op_iterator OI = Inst.op_begin(), OE = Inst.op_end();
@@ -136,7 +134,7 @@ void AAEvaluator::runInternal(Function &F, AAResults &AA) {
   if (PrintAll || PrintNoAlias || PrintMayAlias || PrintPartialAlias ||
       PrintMustAlias || PrintNoModRef || PrintMod || PrintRef || PrintModRef)
     errs() << "Function: " << F.getName() << ": " << Pointers.size()
-           << " pointers, " << CallSites.size() << " call sites\n";
+           << " pointers, " << Calls.size() << " call sites\n";
 
   // iterate over the worklist, and run the full (n^2)/2 disambiguations
   for (SetVector<Value *>::iterator I1 = Pointers.begin(), E = Pointers.end();
@@ -230,50 +228,48 @@ void AAEvaluator::runInternal(Function &F, AAResults &AA) {
   }
 
   // Mod/ref alias analysis: compare all pairs of calls and values
-  for (CallSite C : CallSites) {
-    Instruction *I = C.getInstruction();
-
+  for (CallBase *Call : Calls) {
     for (auto Pointer : Pointers) {
       auto Size = LocationSize::unknown();
       Type *ElTy = cast<PointerType>(Pointer->getType())->getElementType();
       if (ElTy->isSized())
         Size = LocationSize::precise(DL.getTypeStoreSize(ElTy));
 
-      switch (AA.getModRefInfo(C, Pointer, Size)) {
+      switch (AA.getModRefInfo(Call, Pointer, Size)) {
       case ModRefInfo::NoModRef:
-        PrintModRefResults("NoModRef", PrintNoModRef, I, Pointer,
+        PrintModRefResults("NoModRef", PrintNoModRef, Call, Pointer,
                            F.getParent());
         ++NoModRefCount;
         break;
       case ModRefInfo::Mod:
-        PrintModRefResults("Just Mod", PrintMod, I, Pointer, F.getParent());
+        PrintModRefResults("Just Mod", PrintMod, Call, Pointer, F.getParent());
         ++ModCount;
         break;
       case ModRefInfo::Ref:
-        PrintModRefResults("Just Ref", PrintRef, I, Pointer, F.getParent());
+        PrintModRefResults("Just Ref", PrintRef, Call, Pointer, F.getParent());
         ++RefCount;
         break;
       case ModRefInfo::ModRef:
-        PrintModRefResults("Both ModRef", PrintModRef, I, Pointer,
+        PrintModRefResults("Both ModRef", PrintModRef, Call, Pointer,
                            F.getParent());
         ++ModRefCount;
         break;
       case ModRefInfo::Must:
-        PrintModRefResults("Must", PrintMust, I, Pointer, F.getParent());
+        PrintModRefResults("Must", PrintMust, Call, Pointer, F.getParent());
         ++MustCount;
         break;
       case ModRefInfo::MustMod:
-        PrintModRefResults("Just Mod (MustAlias)", PrintMustMod, I, Pointer,
+        PrintModRefResults("Just Mod (MustAlias)", PrintMustMod, Call, Pointer,
                            F.getParent());
         ++MustModCount;
         break;
       case ModRefInfo::MustRef:
-        PrintModRefResults("Just Ref (MustAlias)", PrintMustRef, I, Pointer,
+        PrintModRefResults("Just Ref (MustAlias)", PrintMustRef, Call, Pointer,
                            F.getParent());
         ++MustRefCount;
         break;
       case ModRefInfo::MustModRef:
-        PrintModRefResults("Both ModRef (MustAlias)", PrintMustModRef, I,
+        PrintModRefResults("Both ModRef (MustAlias)", PrintMustModRef, Call,
                            Pointer, F.getParent());
         ++MustModRefCount;
         break;
@@ -282,44 +278,46 @@ void AAEvaluator::runInternal(Function &F, AAResults &AA) {
   }
 
   // Mod/ref alias analysis: compare all pairs of calls
-  for (auto C = CallSites.begin(), Ce = CallSites.end(); C != Ce; ++C) {
-    for (auto D = CallSites.begin(); D != Ce; ++D) {
-      if (D == C)
+  for (CallBase *CallA : Calls) {
+    for (CallBase *CallB : Calls) {
+      if (CallA == CallB)
         continue;
-      switch (AA.getModRefInfo(*C, *D)) {
+      switch (AA.getModRefInfo(CallA, CallB)) {
       case ModRefInfo::NoModRef:
-        PrintModRefResults("NoModRef", PrintNoModRef, *C, *D, F.getParent());
+        PrintModRefResults("NoModRef", PrintNoModRef, CallA, CallB,
+                           F.getParent());
         ++NoModRefCount;
         break;
       case ModRefInfo::Mod:
-        PrintModRefResults("Just Mod", PrintMod, *C, *D, F.getParent());
+        PrintModRefResults("Just Mod", PrintMod, CallA, CallB, F.getParent());
         ++ModCount;
         break;
       case ModRefInfo::Ref:
-        PrintModRefResults("Just Ref", PrintRef, *C, *D, F.getParent());
+        PrintModRefResults("Just Ref", PrintRef, CallA, CallB, F.getParent());
         ++RefCount;
         break;
       case ModRefInfo::ModRef:
-        PrintModRefResults("Both ModRef", PrintModRef, *C, *D, F.getParent());
+        PrintModRefResults("Both ModRef", PrintModRef, CallA, CallB,
+                           F.getParent());
         ++ModRefCount;
         break;
       case ModRefInfo::Must:
-        PrintModRefResults("Must", PrintMust, *C, *D, F.getParent());
+        PrintModRefResults("Must", PrintMust, CallA, CallB, F.getParent());
         ++MustCount;
         break;
       case ModRefInfo::MustMod:
-        PrintModRefResults("Just Mod (MustAlias)", PrintMustMod, *C, *D,
+        PrintModRefResults("Just Mod (MustAlias)", PrintMustMod, CallA, CallB,
                            F.getParent());
         ++MustModCount;
         break;
       case ModRefInfo::MustRef:
-        PrintModRefResults("Just Ref (MustAlias)", PrintMustRef, *C, *D,
+        PrintModRefResults("Just Ref (MustAlias)", PrintMustRef, CallA, CallB,
                            F.getParent());
         ++MustRefCount;
         break;
       case ModRefInfo::MustModRef:
-        PrintModRefResults("Both ModRef (MustAlias)", PrintMustModRef, *C, *D,
-                           F.getParent());
+        PrintModRefResults("Both ModRef (MustAlias)", PrintMustModRef, CallA,
+                           CallB, F.getParent());
         ++MustModRefCount;
         break;
       }

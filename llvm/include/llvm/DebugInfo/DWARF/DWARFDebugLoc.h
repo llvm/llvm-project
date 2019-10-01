@@ -1,9 +1,8 @@
 //===- DWARFDebugLoc.h ------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -37,7 +36,7 @@ public:
   struct LocationList {
     /// The beginning offset where this location list is stored in the debug_loc
     /// section.
-    unsigned Offset;
+    uint64_t Offset;
     /// All the locations in which the variable is stored.
     SmallVector<Entry, 2> Entries;
     /// Dump this list on OS.
@@ -70,7 +69,7 @@ public:
   LocationList const *getLocationListAtOffset(uint64_t Offset) const;
 
   Optional<LocationList> parseOneLocationList(DWARFDataExtractor Data,
-                                              uint32_t *Offset);
+                                              uint64_t *Offset);
 };
 
 class DWARFDebugLoclists {
@@ -83,11 +82,11 @@ public:
   };
 
   struct LocationList {
-    unsigned Offset;
+    uint64_t Offset;
     SmallVector<Entry, 2> Entries;
     void dump(raw_ostream &OS, uint64_t BaseAddr, bool IsLittleEndian,
               unsigned AddressSize, const MCRegisterInfo *RegInfo,
-              unsigned Indent) const;
+              DWARFUnit *U, unsigned Indent) const;
   };
 
 private:
@@ -108,7 +107,7 @@ public:
   LocationList const *getLocationListAtOffset(uint64_t Offset) const;
 
   static Optional<LocationList>
-  parseOneLocationList(DataExtractor Data, unsigned *Offset, unsigned Version);
+  parseOneLocationList(DataExtractor Data, uint64_t *Offset, unsigned Version);
 };
 
 } // end namespace llvm

@@ -1,9 +1,8 @@
 //===- lib/MC/MCSectionWasm.cpp - Wasm Code Section Representation --------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -15,11 +14,9 @@
 
 using namespace llvm;
 
-MCSectionWasm::~MCSectionWasm() {} // anchor.
-
 // Decides whether a '.section' directive
 // should be printed before the section name.
-bool MCSectionWasm::ShouldOmitSectionDirective(StringRef Name,
+bool MCSectionWasm::shouldOmitSectionDirective(StringRef Name,
                                                const MCAsmInfo &MAI) const {
   return MAI.shouldOmitSectionDirective(Name);
 }
@@ -51,7 +48,7 @@ void MCSectionWasm::PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                                          raw_ostream &OS,
                                          const MCExpr *Subsection) const {
 
-  if (ShouldOmitSectionDirective(SectionName, MAI)) {
+  if (shouldOmitSectionDirective(SectionName, MAI)) {
     OS << '\t' << getSectionName();
     if (Subsection) {
       OS << '\t';
@@ -65,7 +62,8 @@ void MCSectionWasm::PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
   printName(OS, getSectionName());
   OS << ",\"";
 
-  // TODO: Print section flags.
+  if (IsPassive)
+    OS << "passive";
 
   OS << '"';
 

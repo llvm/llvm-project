@@ -1,4 +1,4 @@
-// RUN: llvm-mc -filetype=obj %s -o - -triple x86_64-pc-linux | llvm-readobj -s - | FileCheck %s
+// RUN: llvm-mc -filetype=obj %s -o - -triple x86_64-pc-linux | llvm-readobj -S - | FileCheck %s
 
 // This used to crash. Test that it create an empty section instead.
 

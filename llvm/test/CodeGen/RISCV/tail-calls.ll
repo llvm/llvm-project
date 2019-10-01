@@ -3,7 +3,7 @@
 
 ; Perform tail call optimization for global address.
 declare i32 @callee_tail(i32 %i)
-define i32 @caller_tail(i32 %i) {
+define i32 @caller_tail(i32 %i) nounwind {
 ; CHECK-LABEL: caller_tail
 ; CHECK: tail callee_tail
 entry:
@@ -26,7 +26,7 @@ entry:
 ; Perform indirect tail call optimization (for function pointer call).
 declare void @callee_indirect1()
 declare void @callee_indirect2()
-define void @caller_indirect_tail(i32 %a) {
+define void @caller_indirect_tail(i32 %a) nounwind {
 ; CHECK-LABEL: caller_indirect_tail
 ; CHECK-NOT: call callee_indirect1
 ; CHECK-NOT: call callee_indirect2
@@ -49,7 +49,7 @@ entry:
 
 ; Do not tail call optimize functions with varargs.
 declare i32 @callee_varargs(i32, ...)
-define void @caller_varargs(i32 %a, i32 %b) {
+define void @caller_varargs(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: caller_varargs
 ; CHECK-NOT: tail callee_varargs
 ; CHECK: call callee_varargs
@@ -60,7 +60,7 @@ entry:
 
 ; Do not tail call optimize if stack is used to pass parameters.
 declare i32 @callee_args(i32 %a, i32 %b, i32 %c, i32 %dd, i32 %e, i32 %ff, i32 %g, i32 %h, i32 %i, i32 %j, i32 %k, i32 %l, i32 %m, i32 %n)
-define i32 @caller_args(i32 %a, i32 %b, i32 %c, i32 %dd, i32 %e, i32 %ff, i32 %g, i32 %h, i32 %i, i32 %j, i32 %k, i32 %l, i32 %m, i32 %n) {
+define i32 @caller_args(i32 %a, i32 %b, i32 %c, i32 %dd, i32 %e, i32 %ff, i32 %g, i32 %h, i32 %i, i32 %j, i32 %k, i32 %l, i32 %m, i32 %n) nounwind {
 ; CHECK-LABEL: caller_args
 ; CHECK-NOT: tail callee_args
 ; CHECK: call callee_args
@@ -71,7 +71,7 @@ entry:
 
 ; Do not tail call optimize if parameters need to be passed indirectly.
 declare i32 @callee_indirect_args(fp128 %a)
-define void @caller_indirect_args() {
+define void @caller_indirect_args() nounwind {
 ; CHECK-LABEL: caller_indirect_args
 ; CHECK-NOT: tail callee_indirect_args
 ; CHECK: call callee_indirect_args
@@ -85,7 +85,7 @@ entry:
 ; calls) is implementation-defined, so we cannot rely on the linker replacing
 ; the tail call with a return.
 declare extern_weak void @callee_weak()
-define void @caller_weak() {
+define void @caller_weak() nounwind {
 ; CHECK-LABEL: caller_weak
 ; CHECK-NOT: tail callee_weak
 ; CHECK: call callee_weak
@@ -112,7 +112,7 @@ attributes #0 = { "interrupt"="machine" }
 ; we want to reuse during a tail call. Do not tail call optimize functions with
 ; byval parameters.
 declare i32 @callee_byval(i32** byval %a)
-define i32 @caller_byval() {
+define i32 @caller_byval() nounwind {
 ; CHECK-LABEL: caller_byval
 ; CHECK-NOT: tail callee_byval
 ; CHECK: call callee_byval
@@ -127,7 +127,7 @@ entry:
 @a = global %struct.A zeroinitializer
 
 declare void @callee_struct(%struct.A* sret %a)
-define void @caller_nostruct() {
+define void @caller_nostruct() nounwind {
 ; CHECK-LABEL: caller_nostruct
 ; CHECK-NOT: tail callee_struct
 ; CHECK: call callee_struct
@@ -138,7 +138,7 @@ entry:
 
 ; Do not tail call optimize if caller uses structret semantics.
 declare void @callee_nostruct()
-define void @caller_struct(%struct.A* sret %a) {
+define void @caller_struct(%struct.A* sret %a) nounwind {
 ; CHECK-LABEL: caller_struct
 ; CHECK-NOT: tail callee_nostruct
 ; CHECK: call callee_nostruct

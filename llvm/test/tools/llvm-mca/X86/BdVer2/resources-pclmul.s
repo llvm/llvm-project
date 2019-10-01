@@ -13,8 +13,8 @@ pclmulqdq     $11, (%rax), %xmm2
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  5      12    1.00                        pclmulqdq	$11, %xmm0, %xmm2
-# CHECK-NEXT:  6      17    1.00    *                   pclmulqdq	$11, (%rax), %xmm2
+# CHECK-NEXT:  5      12    7.00                        pclmulqdq	$11, %xmm0, %xmm2
+# CHECK-NEXT:  6      17    7.00    *                   pclmulqdq	$11, (%rax), %xmm2
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0.0] - PdAGLU01
@@ -43,9 +43,9 @@ pclmulqdq     $11, (%rax), %xmm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -     2.00    -     2.00    -      -      -      -     0.50   0.50    -      -
+# CHECK-NEXT: 1.50   1.50    -      -      -      -      -      -      -      -      -      -     14.00   -     2.00    -      -      -      -     1.50   1.50    -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]   Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -      -      -      -      -      -      -      -     pclmulqdq	$11, %xmm0, %xmm2
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -      -      -      -     0.50   0.50    -      -     pclmulqdq	$11, (%rax), %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     7.00    -     1.00    -      -      -      -      -      -      -      -     pclmulqdq	$11, %xmm0, %xmm2
+# CHECK-NEXT: 1.50   1.50    -      -      -      -      -      -      -      -      -      -     7.00    -     1.00    -      -      -      -     1.50   1.50    -      -     pclmulqdq	$11, (%rax), %xmm2

@@ -1,4 +1,4 @@
-// RUN: llvm-mc -filetype=obj -triple i686-pc-windows-msvc < %s | llvm-readobj -s --section-data | FileCheck %s
+// RUN: llvm-mc -filetype=obj -triple i686-pc-windows-msvc < %s | llvm-readobj -S --section-data | FileCheck %s
 
 .text
 .set var, 42

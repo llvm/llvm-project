@@ -1,0 +1,95 @@
+# Show that all machine-specific section types are properly printed for both LLVM and
+# GNU styles for ELF files with that machine type.
+
+# RUN: yaml2obj %s --docnum=1 -o %t-arm.o
+# RUN: llvm-readobj --section-headers %t-arm.o | FileCheck %s --check-prefix=ARM-LLVM
+# RUN: llvm-readelf --section-headers %t-arm.o | FileCheck %s --check-prefix=ARM-GNU
+
+# RUN: yaml2obj %s --docnum=2 -o %t-x86_64.o
+# RUN: llvm-readobj --section-headers %t-x86_64.o | FileCheck %s --check-prefix=X86-LLVM
+# RUN: llvm-readelf --section-headers %t-x86_64.o | FileCheck %s --check-prefix=X86-GNU
+
+# RUN: yaml2obj %s --docnum=3 -o %t-mips.o
+# RUN: llvm-readobj --section-headers %t-mips.o | FileCheck %s --check-prefix=MIPS-LLVM
+# RUN: llvm-readelf --section-headers %t-mips.o | FileCheck %s --check-prefix=MIPS-GNU
+
+# ARM-LLVM: Name: exidx
+# ARM-LLVM: Type: SHT_ARM_EXIDX
+# ARM-LLVM: Name: preemptmap
+# ARM-LLVM: Type: SHT_ARM_PREEMPTMAP
+# ARM-LLVM: Name: attributes
+# ARM-LLVM: Type: SHT_ARM_ATTRIBUTES
+# ARM-LLVM: Name: debugoverlay
+# ARM-LLVM: Type: SHT_ARM_DEBUGOVERLAY
+# ARM-LLVM: Name: overlaysection
+# ARM-LLVM: Type: SHT_ARM_OVERLAYSECTION
+
+# ARM-GNU: exidx          ARM_EXIDX
+# ARM-GNU: preemptmap     ARM_PREEMPTMAP
+# ARM-GNU: attributes     ARM_ATTRIBUTES
+# ARM-GNU: debugoverlay   ARM_DEBUGOVERLAY
+# ARM-GNU: overlaysection ARM_OVERLAYSECTION
+
+# X86-LLVM: Name: unwind
+# X86-LLVM: Type: SHT_X86_64_UNWIND
+
+# X86-GNU: unwind X86_64_UNWIND
+
+# MIPS-LLVM: Name: reginfo
+# MIPS-LLVM: Type: SHT_MIPS_REGINFO
+# MIPS-LLVM: Name: options
+# MIPS-LLVM: Type: SHT_MIPS_OPTIONS
+# MIPS-LLVM: Name: abiflags
+# MIPS-LLVM: Type: SHT_MIPS_ABIFLAGS
+# MIPS-LLVM: Name: dwarf
+# MIPS-LLVM: Type: SHT_MIPS_DWARF
+
+# MIPS-GNU: reginfo  MIPS_REGINFO
+# MIPS-GNU: options  MIPS_OPTIONS
+# MIPS-GNU: abiflags MIPS_ABIFLAGS
+# MIPS-GNU: dwarf    MIPS_DWARF
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_ARM
+Sections:
+  - Name: exidx
+    Type: SHT_ARM_EXIDX
+  - Name: preemptmap
+    Type: SHT_ARM_PREEMPTMAP
+  - Name: attributes
+    Type: SHT_ARM_ATTRIBUTES
+  - Name: debugoverlay
+    Type: SHT_ARM_DEBUGOVERLAY
+  - Name: overlaysection
+    Type: SHT_ARM_OVERLAYSECTION
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: unwind
+    Type: SHT_X86_64_UNWIND
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_MIPS
+Sections:
+  - Name: reginfo
+    Type: SHT_MIPS_REGINFO
+  - Name: options
+    Type: SHT_MIPS_OPTIONS
+  - Name: abiflags
+    Type: SHT_MIPS_ABIFLAGS
+    ISA:  MIPS64
+  - Name: dwarf
+    Type: SHT_MIPS_DWARF

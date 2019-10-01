@@ -1,9 +1,8 @@
 //===---- MachineOutliner.cpp - Outline instructions -----------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -74,8 +73,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <functional>
-#include <map>
-#include <sstream>
 #include <tuple>
 #include <vector>
 
@@ -1095,19 +1092,15 @@ MachineOutliner::createOutlinedFunction(Module &M, OutlinedFunction &OF,
                                         InstructionMapper &Mapper,
                                         unsigned Name) {
 
-  // Create the function name. This should be unique. For now, just hash the
-  // module name and include it in the function name plus the number of this
-  // function.
-  std::ostringstream NameStream;
+  // Create the function name. This should be unique.
   // FIXME: We should have a better naming scheme. This should be stable,
   // regardless of changes to the outliner's cost model/traversal order.
-  NameStream << "OUTLINED_FUNCTION_" << Name;
+  std::string FunctionName = ("OUTLINED_FUNCTION_" + Twine(Name)).str();
 
   // Create the function using an IR-level function.
   LLVMContext &C = M.getContext();
-  Function *F = dyn_cast<Function>(
-      M.getOrInsertFunction(NameStream.str(), Type::getVoidTy(C)));
-  assert(F && "Function was null!");
+  Function *F = Function::Create(FunctionType::get(Type::getVoidTy(C), false),
+                                 Function::ExternalLinkage, FunctionName, M);
 
   // NOTE: If this is linkonceodr, then we can take advantage of linker deduping
   // which gives us better results when we outline from linkonceodr functions.
@@ -1205,11 +1198,10 @@ bool MachineOutliner::outline(Module &M,
   unsigned OutlinedFunctionNum = 0;
 
   // Sort by benefit. The most beneficial functions should be outlined first.
-  std::stable_sort(
-      FunctionList.begin(), FunctionList.end(),
-      [](const OutlinedFunction &LHS, const OutlinedFunction &RHS) {
-        return LHS.getBenefit() > RHS.getBenefit();
-      });
+  llvm::stable_sort(FunctionList, [](const OutlinedFunction &LHS,
+                                     const OutlinedFunction &RHS) {
+    return LHS.getBenefit() > RHS.getBenefit();
+  });
 
   // Walk over each function, outlining them as we go along. Functions are
   // outlined greedily, based off the sort above.

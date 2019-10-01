@@ -1,9 +1,8 @@
 //===-- BPFInstrInfo.td - Target Description for BPF Target ---------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -102,6 +101,26 @@ def BPF_CC_LTU : PatLeaf<(i64 imm),
                          [{return (N->getZExtValue() == ISD::SETULT);}]>;
 def BPF_CC_LEU : PatLeaf<(i64 imm),
                          [{return (N->getZExtValue() == ISD::SETULE);}]>;
+def BPF_CC_EQ_32  : PatLeaf<(i32 imm),
+                         [{return (N->getZExtValue() == ISD::SETEQ);}]>;
+def BPF_CC_NE_32  : PatLeaf<(i32 imm),
+                         [{return (N->getZExtValue() == ISD::SETNE);}]>;
+def BPF_CC_GE_32  : PatLeaf<(i32 imm),
+                         [{return (N->getZExtValue() == ISD::SETGE);}]>;
+def BPF_CC_GT_32  : PatLeaf<(i32 imm),
+                         [{return (N->getZExtValue() == ISD::SETGT);}]>;
+def BPF_CC_GTU_32 : PatLeaf<(i32 imm),
+                         [{return (N->getZExtValue() == ISD::SETUGT);}]>;
+def BPF_CC_GEU_32 : PatLeaf<(i32 imm),
+                         [{return (N->getZExtValue() == ISD::SETUGE);}]>;
+def BPF_CC_LE_32  : PatLeaf<(i32 imm),
+                         [{return (N->getZExtValue() == ISD::SETLE);}]>;
+def BPF_CC_LT_32  : PatLeaf<(i32 imm),
+                         [{return (N->getZExtValue() == ISD::SETLT);}]>;
+def BPF_CC_LTU_32 : PatLeaf<(i32 imm),
+                         [{return (N->getZExtValue() == ISD::SETULT);}]>;
+def BPF_CC_LEU_32 : PatLeaf<(i32 imm),
+                         [{return (N->getZExtValue() == ISD::SETULE);}]>;
 
 // For arithmetic and jump instructions the 8-bit 'code'
 // field is divided into three parts:
@@ -167,23 +186,57 @@ class JMP_RI<BPFJumpOp Opc, string OpcodeStr, PatLeaf Cond>
   let BPFClass = BPF_JMP;
 }
 
-multiclass J<BPFJumpOp Opc, string OpcodeStr, PatLeaf Cond> {
+class JMP_RR_32<BPFJumpOp Opc, string OpcodeStr, PatLeaf Cond>
+    : TYPE_ALU_JMP<Opc.Value, BPF_X.Value,
+                   (outs),
+                   (ins GPR32:$dst, GPR32:$src, brtarget:$BrDst),
+                   "if $dst "#OpcodeStr#" $src goto $BrDst",
+                   [(BPFbrcc i32:$dst, i32:$src, Cond, bb:$BrDst)]> {
+  bits<4> dst;
+  bits<4> src;
+  bits<16> BrDst;
+
+  let Inst{55-52} = src;
+  let Inst{51-48} = dst;
+  let Inst{47-32} = BrDst;
+  let BPFClass = BPF_JMP32;
+}
+
+class JMP_RI_32<BPFJumpOp Opc, string OpcodeStr, PatLeaf Cond>
+    : TYPE_ALU_JMP<Opc.Value, BPF_K.Value,
+                   (outs),
+                   (ins GPR32:$dst, i32imm:$imm, brtarget:$BrDst),
+                   "if $dst "#OpcodeStr#" $imm goto $BrDst",
+                   [(BPFbrcc i32:$dst, i32immSExt32:$imm, Cond, bb:$BrDst)]> {
+  bits<4> dst;
+  bits<16> BrDst;
+  bits<32> imm;
+
+  let Inst{51-48} = dst;
+  let Inst{47-32} = BrDst;
+  let Inst{31-0} = imm;
+  let BPFClass = BPF_JMP32;
+}
+
+multiclass J<BPFJumpOp Opc, string OpcodeStr, PatLeaf Cond, PatLeaf Cond32> {
   def _rr : JMP_RR<Opc, OpcodeStr, Cond>;
   def _ri : JMP_RI<Opc, OpcodeStr, Cond>;
+  def _rr_32 : JMP_RR_32<Opc, OpcodeStr, Cond32>;
+  def _ri_32 : JMP_RI_32<Opc, OpcodeStr, Cond32>;
 }
 
 let isBranch = 1, isTerminator = 1, hasDelaySlot=0 in {
 // cmp+goto instructions
-defm JEQ  : J<BPF_JEQ, "==",  BPF_CC_EQ>;
-defm JUGT : J<BPF_JGT, ">", BPF_CC_GTU>;
-defm JUGE : J<BPF_JGE, ">=", BPF_CC_GEU>;
-defm JNE  : J<BPF_JNE, "!=",  BPF_CC_NE>;
-defm JSGT : J<BPF_JSGT, "s>", BPF_CC_GT>;
-defm JSGE : J<BPF_JSGE, "s>=", BPF_CC_GE>;
-defm JULT : J<BPF_JLT, "<", BPF_CC_LTU>;
-defm JULE : J<BPF_JLE, "<=", BPF_CC_LEU>;
-defm JSLT : J<BPF_JSLT, "s<", BPF_CC_LT>;
-defm JSLE : J<BPF_JSLE, "s<=", BPF_CC_LE>;
+defm JEQ  : J<BPF_JEQ, "==",  BPF_CC_EQ, BPF_CC_EQ_32>;
+defm JUGT : J<BPF_JGT, ">", BPF_CC_GTU, BPF_CC_GTU_32>;
+defm JUGE : J<BPF_JGE, ">=", BPF_CC_GEU, BPF_CC_GEU_32>;
+defm JNE  : J<BPF_JNE, "!=",  BPF_CC_NE, BPF_CC_NE_32>;
+defm JSGT : J<BPF_JSGT, "s>", BPF_CC_GT, BPF_CC_GT_32>;
+defm JSGE : J<BPF_JSGE, "s>=", BPF_CC_GE, BPF_CC_GE_32>;
+defm JULT : J<BPF_JLT, "<", BPF_CC_LTU, BPF_CC_LTU_32>;
+defm JULE : J<BPF_JLE, "<=", BPF_CC_LEU, BPF_CC_LEU_32>;
+defm JSLT : J<BPF_JSLT, "s<", BPF_CC_LT, BPF_CC_LT_32>;
+defm JSLE : J<BPF_JSLE, "s<=", BPF_CC_LE, BPF_CC_LE_32>;
 }
 
 // ALU instructions
@@ -561,11 +614,31 @@ class XADD<BPFWidthModifer SizeOp, string OpcodeStr, PatFrag OpNode>
   let BPFClass = BPF_STX;
 }
 
+class XADD32<BPFWidthModifer SizeOp, string OpcodeStr, PatFrag OpNode>
+    : TYPE_LD_ST<BPF_XADD.Value, SizeOp.Value,
+                 (outs GPR32:$dst),
+                 (ins MEMri:$addr, GPR32:$val),
+                 "lock *("#OpcodeStr#" *)($addr) += $val",
+                 [(set GPR32:$dst, (OpNode ADDRri:$addr, GPR32:$val))]> {
+  bits<4> dst;
+  bits<20> addr;
+
+  let Inst{51-48} = addr{19-16}; // base reg
+  let Inst{55-52} = dst;
+  let Inst{47-32} = addr{15-0}; // offset
+  let BPFClass = BPF_STX;
+}
+
 let Constraints = "$dst = $val" in {
-def XADD32 : XADD<BPF_W, "u32", atomic_load_add_32>;
-def XADD64 : XADD<BPF_DW, "u64", atomic_load_add_64>;
-// undefined def XADD16 : XADD<1, "xadd16", atomic_load_add_16>;
-// undefined def XADD8  : XADD<2, "xadd8", atomic_load_add_8>;
+  let Predicates = [BPFNoALU32] in {
+    def XADDW : XADD<BPF_W, "u32", atomic_load_add_32>;
+  }
+
+  let Predicates = [BPFHasALU32], DecoderNamespace = "BPFALU32" in {
+    def XADDW32 : XADD32<BPF_W, "u32", atomic_load_add_32>;
+  }
+
+  def XADDD : XADD<BPF_DW, "u64", atomic_load_add_64>;
 }
 
 // bswap16, bswap32, bswap64

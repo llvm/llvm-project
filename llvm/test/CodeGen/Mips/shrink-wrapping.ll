@@ -9,11 +9,11 @@
 ; RUN:   FileCheck %s -check-prefix=NO-SHRINK-WRAP-STATIC
 
 ; RUN: llc -mtriple=mips-unknown-linux-gnu -enable-shrink-wrap=true \
-; RUN:   -relocation-model=pic < %s | \
+; RUN:   -relocation-model=pic -mips-jalr-reloc=false < %s | \
 ; RUN:   FileCheck %s -check-prefix=SHRINK-WRAP-PIC
 
 ; RUN: llc -mtriple=mips-unknown-linux-gnu -enable-shrink-wrap=false \
-; RUN:   -relocation-model=pic < %s | \
+; RUN:   -relocation-model=pic -mips-jalr-reloc=false < %s | \
 ; RUN:   FileCheck %s -check-prefix=NO-SHRINK-WRAP-PIC
 
 ; RUN: llc -mtriple=mips64-unknown-linux-gnu -enable-shrink-wrap=true \
@@ -25,11 +25,11 @@
 ; RUN:   FileCheck %s -check-prefix=NO-SHRINK-WRAP-64-STATIC
 
 ; RUN: llc -mtriple=mips64-unknown-linux-gnu -enable-shrink-wrap=true \
-; RUN:   -relocation-model=pic < %s | \
+; RUN:   -relocation-model=pic -mips-jalr-reloc=false < %s | \
 ; RUN:   FileCheck %s -check-prefix=SHRINK-WRAP-64-PIC
 
 ; RUN: llc -mtriple=mips64-unknown-linux-gnu -enable-shrink-wrap=false \
-; RUN:   -relocation-model=pic < %s | \
+; RUN:   -relocation-model=pic -mips-jalr-reloc=false < %s | \
 ; RUN:   FileCheck %s -check-prefix=NO-SHRINK-WRAP-64-PIC
 
 declare void @f(i32 signext)

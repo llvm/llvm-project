@@ -1,4 +1,4 @@
-// RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s -o - | llvm-readobj -s -sd | FileCheck %s
+// RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s -o - | llvm-readobj -S --sd | FileCheck %s
 
 f:
         .cfi_startproc
@@ -23,11 +23,11 @@ g:
 // CHECK-NEXT:     AddressAlignment: 8
 // CHECK-NEXT:     EntrySize: 0
 // CHECK-NEXT:     SectionData (
-// CHECK-NEXT:       0000: 14000000 00000000 017A5253 00017810
-// CHECK-NEXT:       0010: 011B0C07 08900100 10000000 1C000000
-// CHECK-NEXT:       0020: 00000000 00000000 00000000 14000000
-// CHECK-NEXT:       0030: 00000000 017A5200 01781001 1B0C0708
-// CHECK-NEXT:       0040: 90010000 10000000 1C000000 00000000
-// CHECK-NEXT:       0050: 00000000 00000000
+// CHECK-NEXT:       0000: 14000000 00000000 017A5200 01781001  |.........zR..x..|
+// CHECK-NEXT:       0010: 1B0C0708 90010000 10000000 1C000000  |................|
+// CHECK-NEXT:       0020: 00000000 00000000 00000000 14000000  |................|
+// CHECK-NEXT:       0030: 00000000 017A5253 00017810 011B0C07  |.....zRS..x.....|
+// CHECK-NEXT:       0040: 08900100 10000000 1C000000 00000000  |................|
+// CHECK-NEXT:       0050: 00000000 00000000                    |........|
 // CHECK-NEXT:     )
 // CHECK-NEXT:   }

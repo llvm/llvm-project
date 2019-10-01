@@ -10,7 +10,7 @@
 # Little endian
 #------------------------------------------------------------------------------
 # CHECK-EL: j 1328      # encoding: [0x00,0xd4,0x98,0x02]
-# CHECK-EL: nop         # encoding: [0x00,0x00,0x00,0x00]
+# CHECK-EL: nop         # encoding: [0x00,0x0c]
 # CHECK-EL: jal 1328    # encoding: [0x00,0xf4,0x98,0x02]
 # CHECK-EL: nop         # encoding: [0x00,0x00,0x00,0x00]
 # CHECK-EL: jalr $ra, $6 # encoding: [0xe6,0x03,0x3c,0x0f]
@@ -33,7 +33,7 @@
 # Big endian
 #------------------------------------------------------------------------------
 # CHECK-EB: j 1328      # encoding: [0xd4,0x00,0x02,0x98]
-# CHECK-EB: nop         # encoding: [0x00,0x00,0x00,0x00]
+# CHECK-EB: nop         # encoding: [0x0c,0x00]
 # CHECK-EB: jal 1328    # encoding: [0xf4,0x00,0x02,0x98]
 # CHECK-EB: nop         # encoding: [0x00,0x00,0x00,0x00]
 # CHECK-EB: jalr $ra, $6 # encoding: [0x03,0xe6,0x0f,0x3c]

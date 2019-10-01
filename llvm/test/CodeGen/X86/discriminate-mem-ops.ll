@@ -1,4 +1,4 @@
-; RUN: llc < %s | FileCheck %s
+; RUN: llc -x86-discriminate-memops  < %s | FileCheck %s
 ;
 ; original source, compiled with -O3 -gmlt -fdebug-info-for-profiling:
 ; int sum(int* arr, int pos1, int pos2) {

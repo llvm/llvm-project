@@ -1,9 +1,8 @@
 //===--------------------- SummaryView.h ---------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 /// \file
@@ -46,6 +45,7 @@ class SummaryView : public View {
   unsigned TotalCycles;
   // The total number of micro opcodes contributed by a block of instructions.
   unsigned NumMicroOps;
+
   // For each processor resource, this vector stores the cumulative number of
   // resource cycles consumed by the analyzed code block.
   llvm::SmallVector<unsigned, 8> ProcResourceUsage;
@@ -55,6 +55,9 @@ class SummaryView : public View {
   // resource masks. There is exactly one element per each processor resource
   // declared by the scheduling model.
   llvm::SmallVector<uint64_t, 8> ProcResourceMasks;
+
+  // Used to map resource indices to actual processor resource IDs.
+  llvm::SmallVector<unsigned, 8> ResIdx2ProcResID;
 
   // Compute the reciprocal throughput for the analyzed code block.
   // The reciprocal block throughput is computed as the MAX between:
@@ -68,9 +71,9 @@ public:
 
   void onCycleEnd() override { ++TotalCycles; }
   void onEvent(const HWInstructionEvent &Event) override;
-
   void printView(llvm::raw_ostream &OS) const override;
 };
+
 } // namespace mca
 } // namespace llvm
 

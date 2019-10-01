@@ -30,6 +30,7 @@ bar:
 @ ASM-NEXT:     movt    r0, :upper16:((foo-bar)+1234)
 
 @OBJ:      Disassembly of section .text:
+@OBJ-EMPTY:
 @OBJ-NEXT: barf:
 @OBJ-NEXT: 0:             f0 0f 0f e3     movw    r0, #65520
 @OBJ-NEXT: 00000000:         R_ARM_MOVW_PREL_NC   GOT
@@ -43,6 +44,7 @@ bar:
 @OBJ-NEXT: 14:            00 00 40 e3     movt    r0, #0
 
 @THUMB:      Disassembly of section .text:
+@THUMB-EMPTY:
 @THUMB-NEXT: barf:
 @THUMB-NEXT: 0:             4f f6 f0 70     movw    r0, #65520
 @THUMB-NEXT: 00000000:         R_ARM_THM_MOVW_PREL_NC GOT

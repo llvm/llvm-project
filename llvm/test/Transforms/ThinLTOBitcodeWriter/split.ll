@@ -1,6 +1,6 @@
 ; Generate bitcode files with summary, as well as minimized bitcode without
 ; the debug metadata for the thin link.
-; RUN: opt -thinlto-bc -thin-link-bitcode-file=%t2 -o %t %s
+; RUN: opt -thinlto-bc -thin-link-bitcode-file=%t2 -thinlto-split-lto-unit -o %t %s
 ; RUN: llvm-modextract -b -n 0 -o %t0.bc %t
 ; RUN: llvm-modextract -b -n 1 -o %t1.bc %t
 ; RUN: llvm-modextract -b -n 0 -o %t0.thinlink.bc %t2

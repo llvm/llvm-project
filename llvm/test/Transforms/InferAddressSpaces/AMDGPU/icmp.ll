@@ -18,9 +18,9 @@ define i1 @icmp_flat_flat_from_group(i32 addrspace(3)* %group.ptr.0, i32 addrspa
 }
 
 ; CHECK-LABEL: @icmp_mismatch_flat_from_group_private(
-; CHECK: %1 = addrspacecast i32 addrspace(5)* %private.ptr.0 to i32*
-; CHECK: %2 = addrspacecast i32 addrspace(3)* %group.ptr.1 to i32*
-; CHECK: %cmp = icmp eq i32* %1, %2
+; CHECK: %cast0 = addrspacecast i32 addrspace(5)* %private.ptr.0 to i32*
+; CHECK: %cast1 = addrspacecast i32 addrspace(3)* %group.ptr.1 to i32*
+; CHECK: %cmp = icmp eq i32* %cast0, %cast1
 define i1 @icmp_mismatch_flat_from_group_private(i32 addrspace(5)* %private.ptr.0, i32 addrspace(3)* %group.ptr.1) #0 {
   %cast0 = addrspacecast i32 addrspace(5)* %private.ptr.0 to i32*
   %cast1 = addrspacecast i32 addrspace(3)* %group.ptr.1 to i32*
@@ -29,8 +29,8 @@ define i1 @icmp_mismatch_flat_from_group_private(i32 addrspace(5)* %private.ptr.
 }
 
 ; CHECK-LABEL: @icmp_flat_group_flat(
-; CHECK: %1 = addrspacecast i32 addrspace(3)* %group.ptr.0 to i32*
-; CHECK: %cmp = icmp eq i32* %1, %flat.ptr.1
+; CHECK: %cast0 = addrspacecast i32 addrspace(3)* %group.ptr.0 to i32*
+; CHECK: %cmp = icmp eq i32* %cast0, %flat.ptr.1
 define i1 @icmp_flat_group_flat(i32 addrspace(3)* %group.ptr.0, i32* %flat.ptr.1) #0 {
   %cast0 = addrspacecast i32 addrspace(3)* %group.ptr.0 to i32*
   %cmp = icmp eq i32* %cast0, %flat.ptr.1
@@ -38,8 +38,8 @@ define i1 @icmp_flat_group_flat(i32 addrspace(3)* %group.ptr.0, i32* %flat.ptr.1
 }
 
 ; CHECK-LABEL: @icmp_flat_flat_group(
-; CHECK: %1 = addrspacecast i32 addrspace(3)* %group.ptr.1 to i32*
-; CHECK: %cmp = icmp eq i32* %flat.ptr.0, %1
+; CHECK: %cast1 = addrspacecast i32 addrspace(3)* %group.ptr.1 to i32*
+; CHECK: %cmp = icmp eq i32* %flat.ptr.0, %cast1
 define i1 @icmp_flat_flat_group(i32* %flat.ptr.0, i32 addrspace(3)* %group.ptr.1) #0 {
   %cast1 = addrspacecast i32 addrspace(3)* %group.ptr.1 to i32*
   %cmp = icmp eq i32* %flat.ptr.0, %cast1
@@ -78,8 +78,8 @@ define i1 @icmp_group_flat_cmp_constant_inttoptr(i32 addrspace(3)* %group.ptr.0)
 }
 
 ; CHECK-LABEL: @icmp_mismatch_flat_group_private_cmp_null(
-; CHECK: %1 = addrspacecast i32 addrspace(3)* %group.ptr.0 to i32*
-; CHECK: %cmp = icmp eq i32* %1, addrspacecast (i32 addrspace(5)* null to i32*)
+; CHECK: %cast0 = addrspacecast i32 addrspace(3)* %group.ptr.0 to i32*
+; CHECK: %cmp = icmp eq i32* %cast0, addrspacecast (i32 addrspace(5)* null to i32*)
 define i1 @icmp_mismatch_flat_group_private_cmp_null(i32 addrspace(3)* %group.ptr.0) #0 {
   %cast0 = addrspacecast i32 addrspace(3)* %group.ptr.0 to i32*
   %cmp = icmp eq i32* %cast0, addrspacecast (i32 addrspace(5)* null to i32*)
@@ -98,8 +98,8 @@ define i1 @icmp_mismatch_flat_group_private_cmp_undef(i32 addrspace(3)* %group.p
 @global0 = internal addrspace(1) global i32 0, align 4
 
 ; CHECK-LABEL: @icmp_mismatch_flat_group_global_cmp_gv(
-; CHECK: %1 = addrspacecast i32 addrspace(3)* %group.ptr.0 to i32*
-; CHECK: %cmp = icmp eq i32* %1, addrspacecast (i32 addrspace(1)* @global0 to i32*)
+; CHECK: %cast0 = addrspacecast i32 addrspace(3)* %group.ptr.0 to i32*
+; CHECK: %cmp = icmp eq i32* %cast0, addrspacecast (i32 addrspace(1)* @global0 to i32*)
 define i1 @icmp_mismatch_flat_group_global_cmp_gv(i32 addrspace(3)* %group.ptr.0) #0 {
   %cast0 = addrspacecast i32 addrspace(3)* %group.ptr.0 to i32*
   %cmp = icmp eq i32* %cast0, addrspacecast (i32 addrspace(1)* @global0 to i32*)
@@ -123,8 +123,8 @@ define i1 @icmp_group_flat_cmp_undef(i32 addrspace(3)* %group.ptr.0) #0 {
 
 ; Test non-canonical orders
 ; CHECK-LABEL: @icmp_mismatch_flat_group_private_cmp_null_swap(
-; CHECK: %1 = addrspacecast i32 addrspace(3)* %group.ptr.0 to i32*
-; CHECK: %cmp = icmp eq i32* addrspacecast (i32 addrspace(5)* null to i32*), %1
+; CHECK: %cast0 = addrspacecast i32 addrspace(3)* %group.ptr.0 to i32*
+; CHECK: %cmp = icmp eq i32* addrspacecast (i32 addrspace(5)* null to i32*), %cast0
 define i1 @icmp_mismatch_flat_group_private_cmp_null_swap(i32 addrspace(3)* %group.ptr.0) #0 {
   %cast0 = addrspacecast i32 addrspace(3)* %group.ptr.0 to i32*
   %cmp = icmp eq i32* addrspacecast (i32 addrspace(5)* null to i32*), %cast0

@@ -26,10 +26,8 @@ entry:
 ; ASM:      	.globl	foo
 ; ASM:      foo:
 ; ASM-NEXT: 	.functype	foo (i32) -> ()
-; ASM-NEXT: 	call	bar@FUNCTION
+; ASM-NEXT: 	call	bar
 ; ASM-NEXT: 	end_function
-; ASM-NEXT: .Lfunc_end0:
-; ASM-NEXT: 	.size	foo, .Lfunc_end0-foo
 ; ASM:       	.functype	bar () -> ()
 
 
@@ -57,7 +55,7 @@ entry:
 ; CHECK-NEXT:         Field:           __indirect_function_table
 ; CHECK-NEXT:         Kind:            TABLE
 ; CHECK-NEXT:         Table:
-; CHECK-NEXT:           ElemType:        ANYFUNC
+; CHECK-NEXT:           ElemType:        FUNCREF
 ; CHECK-NEXT:           Limits:
 ; CHECK-NEXT:             Initial:         0x00000000
 ; CHECK-NEXT:       - Module:          env
@@ -68,7 +66,7 @@ entry:
 ; CHECK-NEXT:     FunctionTypes:   [ 0 ]
 ; CHECK-NEXT:   - Type:            CODE
 ; CHECK-NEXT:     Relocations:
-; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_FUNCTION_INDEX_LEB
+; CHECK-NEXT:       - Type:            R_WASM_FUNCTION_INDEX_LEB
 ; CHECK-NEXT:         Index:           1
 ; CHECK-NEXT:         Offset:          0x00000004
 ; CHECK-NEXT:     Functions:
@@ -77,7 +75,7 @@ entry:
 ; CHECK-NEXT:         Body:            1080808080000B
 ; CHECK-NEXT:   - Type:            CUSTOM
 ; CHECK-NEXT:     Name:            linking
-; CHECK-NEXT:     Version:         1
+; CHECK-NEXT:     Version:         2
 ; CHECK-NEXT:     SymbolTable:
 ; CHECK-NEXT:       - Index:           0
 ; CHECK-NEXT:         Kind:            FUNCTION

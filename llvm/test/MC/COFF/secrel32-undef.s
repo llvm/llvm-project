@@ -1,5 +1,5 @@
 # RUN: llvm-mc -filetype=obj -triple i686-pc-win32 %s -o %t.obj
-# RUN: llvm-readobj -symbols -relocations %t.obj | FileCheck %s
+# RUN: llvm-readobj --symbols -r %t.obj | FileCheck %s
 
 # Previously .secrel32 and .secidx relocations against undefined symbols
 # resulted in an error. That was a mistake. The linker is fully capable of

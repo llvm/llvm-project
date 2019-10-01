@@ -1,9 +1,8 @@
 //===-- BenchmarkRunner.cpp -------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -67,8 +66,9 @@ private:
       CounterName = CounterName.trim();
       pfm::PerfEvent PerfEvent(CounterName);
       if (!PerfEvent.valid())
-        llvm::report_fatal_error(
-            llvm::Twine("invalid perf event '").concat(CounterName).concat("'"));
+        llvm::report_fatal_error(llvm::Twine("invalid perf event '")
+                                     .concat(CounterName)
+                                     .concat("'"));
       pfm::Counter Counter(PerfEvent);
       Scratch->clear();
       {
@@ -97,7 +97,8 @@ private:
 
 InstructionBenchmark
 BenchmarkRunner::runConfiguration(const BenchmarkCode &BC,
-                                  unsigned NumRepetitions) const {
+                                  unsigned NumRepetitions,
+                                  bool DumpObjectToDisk) const {
   InstructionBenchmark InstrBenchmark;
   InstrBenchmark.Mode = Mode;
   InstrBenchmark.CpuName = State.getTargetMachine().getTargetCPU();
@@ -116,29 +117,40 @@ BenchmarkRunner::runConfiguration(const BenchmarkCode &BC,
   // that the inside instructions are repeated.
   constexpr const int kMinInstructionsForSnippet = 16;
   {
-    auto ObjectFilePath = writeObjectFile(
-        BC, GenerateInstructions(BC, kMinInstructionsForSnippet));
-    if (llvm::Error E = ObjectFilePath.takeError()) {
-      InstrBenchmark.Error = llvm::toString(std::move(E));
-      return InstrBenchmark;
-    }
+    llvm::SmallString<0> Buffer;
+    llvm::raw_svector_ostream OS(Buffer);
+    assembleToStream(State.getExegesisTarget(), State.createTargetMachine(),
+                     BC.LiveIns, BC.RegisterInitialValues,
+                     GenerateInstructions(BC, kMinInstructionsForSnippet), OS);
     const ExecutableFunction EF(State.createTargetMachine(),
-                                getObjectFromFile(*ObjectFilePath));
+                                getObjectFromBuffer(OS.str()));
     const auto FnBytes = EF.getFunctionBytes();
     InstrBenchmark.AssembledSnippet.assign(FnBytes.begin(), FnBytes.end());
   }
 
   // Assemble NumRepetitions instructions repetitions of the snippet for
   // measurements.
-  auto ObjectFilePath = writeObjectFile(
-      BC, GenerateInstructions(BC, InstrBenchmark.NumRepetitions));
-  if (llvm::Error E = ObjectFilePath.takeError()) {
-    InstrBenchmark.Error = llvm::toString(std::move(E));
-    return InstrBenchmark;
+  const auto Code = GenerateInstructions(BC, InstrBenchmark.NumRepetitions);
+
+  llvm::object::OwningBinary<llvm::object::ObjectFile> ObjectFile;
+  if (DumpObjectToDisk) {
+    auto ObjectFilePath = writeObjectFile(BC, Code);
+    if (llvm::Error E = ObjectFilePath.takeError()) {
+      InstrBenchmark.Error = llvm::toString(std::move(E));
+      return InstrBenchmark;
+    }
+    llvm::outs() << "Check generated assembly with: /usr/bin/objdump -d "
+                 << *ObjectFilePath << "\n";
+    ObjectFile = getObjectFromFile(*ObjectFilePath);
+  } else {
+    llvm::SmallString<0> Buffer;
+    llvm::raw_svector_ostream OS(Buffer);
+    assembleToStream(State.getExegesisTarget(), State.createTargetMachine(),
+                     BC.LiveIns, BC.RegisterInitialValues, Code, OS);
+    ObjectFile = getObjectFromBuffer(OS.str());
   }
-  llvm::outs() << "Check generated assembly with: /usr/bin/objdump -d "
-               << *ObjectFilePath << "\n";
-  const FunctionExecutorImpl Executor(State, getObjectFromFile(*ObjectFilePath),
+
+  const FunctionExecutorImpl Executor(State, std::move(ObjectFile),
                                       Scratch.get());
   auto Measurements = runMeasurements(Executor);
   if (llvm::Error E = Measurements.takeError()) {

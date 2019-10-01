@@ -1,9 +1,8 @@
 //===-- Statistic.cpp - Easy way to expose stats information --------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -136,8 +135,7 @@ bool llvm::AreStatisticsEnabled() {
 }
 
 void StatisticInfo::sort() {
-  std::stable_sort(Stats.begin(), Stats.end(),
-                   [](const Statistic *LHS, const Statistic *RHS) {
+  llvm::stable_sort(Stats, [](const Statistic *LHS, const Statistic *RHS) {
     if (int Cmp = std::strcmp(LHS->getDebugType(), RHS->getDebugType()))
       return Cmp < 0;
 

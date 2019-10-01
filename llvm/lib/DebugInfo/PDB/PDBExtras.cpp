@@ -1,9 +1,8 @@
 //===- PDBExtras.cpp - helper functions and classes for PDBs --------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -118,13 +117,37 @@ raw_ostream &llvm::pdb::operator<<(raw_ostream &OS, const PDB_DataKind &Data) {
 }
 
 raw_ostream &llvm::pdb::operator<<(raw_ostream &OS,
-                                   const codeview::RegisterId &Reg) {
-  switch (Reg) {
-#define CV_REGISTER(name, val) case codeview::RegisterId::name: OS << #name; return OS;
+                                   const llvm::codeview::CPURegister &CpuReg) {
+  if (CpuReg.Cpu == llvm::codeview::CPUType::ARM64) {
+    switch (CpuReg.Reg) {
+#define CV_REGISTERS_ARM64
+#define CV_REGISTER(name, val)                                                 \
+  case codeview::RegisterId::name:                                             \
+    OS << #name;                                                               \
+    return OS;
 #include "llvm/DebugInfo/CodeView/CodeViewRegisters.def"
 #undef CV_REGISTER
+#undef CV_REGISTERS_ARM64
+
+    default:
+      break;
+    }
+  } else {
+    switch (CpuReg.Reg) {
+#define CV_REGISTERS_X86
+#define CV_REGISTER(name, val)                                                 \
+  case codeview::RegisterId::name:                                             \
+    OS << #name;                                                               \
+    return OS;
+#include "llvm/DebugInfo/CodeView/CodeViewRegisters.def"
+#undef CV_REGISTER
+#undef CV_REGISTERS_X86
+
+    default:
+      break;
+    }
   }
-  OS << static_cast<int>(Reg);
+  OS << static_cast<int>(CpuReg.Reg);
   return OS;
 }
 

@@ -1,9 +1,8 @@
 //===-- MSP430InstrInfo.td - MSP430 Instruction defs -------*- tablegen -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source 
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -226,7 +225,6 @@ let isCodeGenOnly = 1, usesCustomInserter = 1 in {
 //  Control Flow Instructions...
 //
 
-// FIXME: Provide proper encoding!
 let isReturn = 1, isTerminator = 1, isBarrier = 1 in {
   def RET  : IForm16<0b0100, DstReg, SrcPostInc, 2,
                      (outs), (ins), "ret",  [(MSP430retflag)]> {
@@ -292,6 +290,8 @@ let isCall = 1,
   def CALLm     : II16m<0b101,
                         (outs), (ins memsrc:$src),
                         "call\t$src", [(MSP430call (load addr:$src))]>;
+  def CALLn     : II16n<0b101, (outs), (ins indreg:$rs), "call\t$rs", []>;
+  def CALLp     : II16p<0b101, (outs), (ins postreg:$rs), "call\t$rs", []>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -315,7 +315,6 @@ def PUSH16i : II16i<0b100, (outs), (ins i16imm:$imm), "push\t$imm", []>;
 //===----------------------------------------------------------------------===//
 // Move Instructions
 
-// FIXME: Provide proper encoding!
 let hasSideEffects = 0 in {
 def MOV8rr  : I8rr<0b0100,
                    (outs GR8:$rd), (ins GR8:$rs),
@@ -327,7 +326,6 @@ def MOV16rr : I16rr<0b0100,
                     []>;
 }
 
-// FIXME: Provide proper encoding!
 let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
 def MOV8rc : I8rc<0b0100,
                    (outs GR8:$rd), (ins cg8imm:$imm),
@@ -436,6 +434,11 @@ def MOV16mm : I16mm<0b0100,
                     (outs), (ins memdst:$dst, memsrc:$src),
                     "mov\t{$src, $dst}",
                     [(store (i16 (load addr:$src)), addr:$dst)]>;
+
+def MOV8mn  : I8mn<0b0100, (outs), (ins memdst:$dst, indreg:$rs),
+                   "mov.b\t{$rs, $dst}", []>;
+def MOV16mn : I16mn<0b0100, (outs), (ins memdst:$dst, indreg:$rs),
+                    "mov\t{$rs, $dst}", []>;
 
 //===----------------------------------------------------------------------===//
 // Arithmetic Instructions
@@ -619,11 +622,11 @@ def SETZ : InstAlias<"setz", (BIS16rc SR, 2)>;
 def : Pat<(MSP430rla GR8:$dst),  (ADD8rr  $dst, $dst)>;
 def : Pat<(MSP430rla GR16:$dst), (ADD16rr $dst, $dst)>;
 
+// Format-II (Single Operand) Instruction
+// Register mode
 let Constraints = "$rs = $rd" in {
 
 let Defs = [SR] in {
-
-// FIXME: memory variant!
 def RRA8r :   II8r<0b010,
                    (outs GR8:$rd), (ins GR8:$rs),
                    "rra.b\t$rd",
@@ -646,9 +649,8 @@ def RRC16r : II16r<0b000,
                    "rrc\t$rd",
                    [(set GR16:$rd, (MSP430rrc GR16:$rs)),
                     (implicit SR)]>;
-}
+} // Uses = [SR]
 
-// FIXME: Memory sext's ?
 def SEXT16r : II16r<0b011,
                     (outs GR16:$rd), (ins GR16:$rs),
                     "sxt\t$rd",
@@ -663,13 +665,67 @@ def ZEXT16r : I8rr<0b0100,
                    "mov.b\t{$rs, $rd}",
                    [(set GR16:$rd, (zext (trunc GR16:$rs)))]>;
 
-// FIXME: Memory bitswaps?
 def SWPB16r : II16r<0b001,
                     (outs GR16:$rd), (ins GR16:$rs),
                     "swpb\t$rd",
                     [(set GR16:$rd, (bswap GR16:$rs))]>;
 
 } // Constraints = "$src = $dst"
+
+// Indexed, indirect register and indirect autoincrement modes
+let Defs = [SR] in {
+def RRA8m  : II8m<0b010,
+                   (outs), (ins memsrc:$src),
+                   "rra.b\t$src",
+                   [(store (MSP430rra (i8 (load addr:$src))), addr:$src),
+                    (implicit SR)]>;
+def RRA16m : II16m<0b010,
+                   (outs), (ins memsrc:$src),
+                   "rra\t$src",
+                   [(store (MSP430rra (i16 (load addr:$src))), addr:$src),
+                    (implicit SR)]>;
+
+def RRA8n  : II8n<0b010, (outs), (ins indreg:$rs), "rra.b\t$rs", []>;
+def RRA16n : II16n<0b010, (outs), (ins indreg:$rs), "rra\t$rs", []>;
+def RRA8p  : II8p<0b010, (outs), (ins postreg:$rs), "rra.b\t$rs", []>;
+def RRA16p : II16p<0b010, (outs), (ins postreg:$rs), "rra\t$rs", []>;
+
+let Uses = [SR] in {
+def RRC8m  : II8m<0b000,
+                   (outs), (ins memsrc:$src),
+                   "rrc.b\t$src",
+                   [(store (MSP430rrc (i8 (load addr:$src))), addr:$src),
+                    (implicit SR)]>;
+def RRC16m : II16m<0b000,
+                   (outs), (ins memsrc:$src),
+                   "rrc\t$src",
+                   [(store (MSP430rrc (i16 (load addr:$src))), addr:$src),
+                    (implicit SR)]>;
+
+def RRC8n  : II8n<0b000, (outs), (ins indreg:$rs), "rrc.b\t$rs", []>;
+def RRC16n : II16n<0b000, (outs), (ins indreg:$rs), "rrc\t$rs", []>;
+def RRC8p  : II8p<0b000, (outs), (ins postreg:$rs), "rrc.b\t$rs", []>;
+def RRC16p : II16p<0b000, (outs), (ins postreg:$rs), "rrc\t$rs", []>;
+
+} // Uses = [SR]
+
+def SEXT16m : II16m<0b011,
+                    (outs), (ins memsrc:$src),
+                    "sxt\t$src",
+                    [(store (sext_inreg (extloadi16i8 addr:$src), i8),
+                             addr:$src),
+                     (implicit SR)]>;
+def SEXT16n : II16n<0b011, (outs), (ins indreg:$rs), "sxt\t$rs", []>;
+def SEXT16p : II16p<0b011, (outs), (ins postreg:$rs), "sxt\t$rs", []>;
+
+} // Defs = [SR]
+
+def SWPB16m : II16m<0b001,
+                   (outs), (ins memsrc:$src),
+                   "swpb\t$src",
+                   [(store (bswap (i16 (load addr:$src))), addr:$src)]>;
+def SWPB16n : II16n<0b001, (outs), (ins indreg:$rs), "swpb\t$rs", []>;
+def SWPB16p : II16p<0b001, (outs), (ins postreg:$rs), "swpb\t$rs", []>;
 
 // Integer comparisons
 let Defs = [SR] in {
@@ -733,6 +789,16 @@ def CMP16rm : I16rm<0b1001,
                     [(MSP430cmp GR16:$rd, (load addr:$src)),
                      (implicit SR)]>;
 
+def CMP8rn  : I8rn<0b1001,
+                   (outs), (ins GR8:$rd, indreg:$rs), "cmp.b\t$rs, $rd", []>;
+def CMP16rn : I16rn<0b1001,
+                    (outs), (ins GR16:$rd, indreg:$rs), "cmp\t$rs, $rd", []>;
+
+def CMP8rp  : I8rp<0b1001,
+                   (outs), (ins GR8:$rd, postreg:$rs), "cmp.b\t$rs, $rd", []>;
+def CMP16rp : I16rp<0b1001,
+                    (outs), (ins GR16:$rd, postreg:$rs), "cmp\t$rs, $rd", []>;
+
 def CMP8mr  : I8mr<0b1001,
                    (outs), (ins memsrc:$dst, GR8:$rs),
                    "cmp.b\t$rs, $dst",
@@ -743,6 +809,25 @@ def CMP16mr : I16mr<0b1001,
                     "cmp\t$rs, $dst",
                     [(MSP430cmp (load addr:$dst), GR16:$rs), 
                      (implicit SR)]>;
+def CMP8mm  : I8mm<0b1001,
+                   (outs), (ins memdst:$dst, memsrc:$src),
+                   "cmp.b\t$src, $dst",
+                   [(MSP430cmp (load addr:$dst), (i8 (load addr:$src))),
+                    (implicit SR)]>;
+def CMP16mm : I16mm<0b1001, (outs), (ins memdst:$dst, memsrc:$src),
+                    "cmp\t$src, $dst",
+                    [(MSP430cmp (load addr:$dst), (i16 (load addr:$src))),
+                     (implicit SR)]>;
+
+def CMP8mn  : I8mn<0b1001, (outs), (ins memsrc:$dst, indreg:$rs),
+                   "cmp.b\t$rs, $dst", []>;
+def CMP16mn : I16mn<0b1001, (outs), (ins memsrc:$dst, indreg:$rs),
+                    "cmp\t$rs, $dst", []>;
+
+def CMP8mp  : I8mp<0b1001, (outs), (ins memsrc:$dst, postreg:$rs),
+                   "cmp.b\t$rs, $dst", []>;
+def CMP16mp : I16mp<0b1001, (outs), (ins memsrc:$dst, postreg:$rs),
+                    "cmp\t$rs, $dst", []>;
 
 // BIT TESTS, just sets condition codes
 // Note that the C condition is set differently than when using CMP.
@@ -791,6 +876,16 @@ def BIT16rm : I16rm<0b1011,
                     [(MSP430cmp (and_su GR16:$rd,  (load addr:$src)), 0),
                      (implicit SR)]>;
 
+def BIT8rn  : I8rn<0b1011, (outs), (ins GR8:$rd, indreg:$rs),
+                   "bit.b\t$rs, $rd", []>;
+def BIT16rn : I16rn<0b1011, (outs), (ins GR16:$rd, indreg:$rs),
+                    "bit\t$rs, $rd", []>;
+
+def BIT8rp  : I8rp<0b1011, (outs), (ins GR8:$rd, postreg:$rs),
+                   "bit.b\t$rs, $rd", []>;
+def BIT16rp : I16rp<0b1011, (outs), (ins GR16:$rd, postreg:$rs),
+                    "bit\t$rs, $rd", []>;
+
 def BIT8mr  : I8mr<0b1011,
                   (outs), (ins memsrc:$dst, GR8:$rs),
                   "bit.b\t$rs, $dst",
@@ -808,7 +903,7 @@ def BIT8mc  : I8mc<0b1011,
                    [(MSP430cmp (and_su (load addr:$dst), (i8 cg8imm:$imm)), 0),
                     (implicit SR)]>;
 def BIT16mc : I16mc<0b1011,
-                    (outs), (ins memsrc:$dst, i16imm:$imm),
+                    (outs), (ins memdst:$dst, cg16imm:$imm),
                     "bit\t$imm, $dst",
                     [(MSP430cmp (and_su (load addr:$dst), (i16 cg16imm:$imm)), 0),
                      (implicit SR)]>;
@@ -838,6 +933,16 @@ def BIT16mm : I16mm<0b1011,
                                         (load addr:$src)),
                                  0),
                      (implicit SR)]>;
+def BIT8mn  : I8mn<0b1011, (outs), (ins memsrc:$dst, indreg:$rs),
+                   "bit.b\t$rs, $dst", []>;
+def BIT16mn : I16mn<0b1011, (outs), (ins memsrc:$dst, indreg:$rs),
+                    "bit\t$rs, $dst", []>;
+
+def BIT8mp  : I8mp<0b1011, (outs), (ins memsrc:$dst, postreg:$rs),
+                   "bit.b\t$rs, $dst", []>;
+def BIT16mp : I16mp<0b1011, (outs), (ins memsrc:$dst, postreg:$rs),
+                    "bit\t$rs, $dst", []>;
+
 } // Defs = [SR]
 
 def TST8r   : InstAlias<"tst.b\t$dst",  (CMP8rc    GR8:$dst,     0)>;

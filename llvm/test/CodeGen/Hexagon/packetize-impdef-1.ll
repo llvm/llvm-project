@@ -128,7 +128,7 @@ b24:                                              ; preds = %b23, %b19
   br label %b25
 
 b25:                                              ; preds = %b24
-  %v28 = icmp sgt i64 undef, %v27
+  %v28 = icmp sgt i64 0, %v27
   br i1 %v28, label %b28, label %b26
 
 b26:                                              ; preds = %b25

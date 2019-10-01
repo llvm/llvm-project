@@ -1,4 +1,6 @@
 declare_args() {
   # Whether to build code that requires the Microsoft DIA SDK.
+  # If this is set, %INCLUDE% must contain ".../DIA SDK/include"
+  # and %LIB% must contain ".../DIA SKD/lib/amd64".
   llvm_enable_dia_sdk = false
 }

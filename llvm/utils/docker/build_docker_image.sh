@@ -1,10 +1,9 @@
 #!/bin/bash
 #===- llvm/utils/docker/build_docker_image.sh ----------------------------===//
 #
-#                     The LLVM Compiler Infrastructure
-#
-# This file is distributed under the University of Illinois Open Source
-# License. See LICENSE.TXT for details.
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
 #===----------------------------------------------------------------------===//
 set -e
@@ -56,7 +55,7 @@ All options after '--' are passed to CMake invocation.
 
 For example, running:
 $ build_docker_image.sh -s debian8 -d mydocker/debian8-clang -t latest \ 
-  -p clang -i install-clang -i install-clang-headers
+  -p clang -i install-clang -i install-clang-resource-headers
 will produce two docker images:
     mydocker/debian8-clang-build:latest - an intermediate image used to compile
       clang.
@@ -67,12 +66,12 @@ version of clang.
 
 To get a 2-stage clang build, you could use this command:
 $ ./build_docker_image.sh -s debian8 -d mydocker/clang-debian8 -t "latest" \ 
-    -p clang -i stage2-install-clang -i stage2-install-clang-headers \ 
+    -p clang -i stage2-install-clang -i stage2-install-clang-resource-headers \ 
     -- \ 
     -DLLVM_TARGETS_TO_BUILD=Native -DCMAKE_BUILD_TYPE=Release \ 
     -DBOOTSTRAP_CMAKE_BUILD_TYPE=Release \ 
     -DCLANG_ENABLE_BOOTSTRAP=ON \ 
-    -DCLANG_BOOTSTRAP_TARGETS="install-clang;install-clang-headers"
+    -DCLANG_BOOTSTRAP_TARGETS="install-clang;install-clang-resource-headers"
 EOF
 }
 

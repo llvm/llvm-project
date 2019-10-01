@@ -1,0 +1,12 @@
+import("//llvm/utils/unittest/unittest.gni")
+
+unittest("RemarksTests") {
+  deps = [
+    "//llvm/lib/Remarks",
+    "//llvm/lib/Support",
+  ]
+  sources = [
+    "RemarksStrTabParsingTest.cpp",
+    "YAMLRemarksParsingTest.cpp",
+  ]
+}

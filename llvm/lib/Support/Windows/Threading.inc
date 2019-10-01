@@ -1,9 +1,8 @@
 //===- Windows/Threading.inc - Win32 Threading Implementation - -*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -14,7 +13,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Twine.h"
 
-#include "Windows/WindowsSupport.h"
+#include "WindowsSupport.h"
 #include <process.h>
 
 // Windows will at times define MemoryFence.
@@ -106,4 +105,20 @@ void llvm::get_thread_name(SmallVectorImpl<char> &Name) {
   // set_thread_name so that subsequent calls to get_thread_name return this
   // value.
   Name.clear();
+}
+
+SetThreadPriorityResult llvm::set_thread_priority(ThreadPriority Priority) {
+  // https://docs.microsoft.com/en-us/windows/desktop/api/processthreadsapi/nf-processthreadsapi-setthreadpriority
+  // Begin background processing mode. The system lowers the resource scheduling
+  // priorities of the thread so that it can perform background work without
+  // significantly affecting activity in the foreground.
+  // End background processing mode. The system restores the resource scheduling
+  // priorities of the thread as they were before the thread entered background
+  // processing mode.
+  return SetThreadPriority(GetCurrentThread(),
+                           Priority == ThreadPriority::Background
+                               ? THREAD_MODE_BACKGROUND_BEGIN
+                               : THREAD_MODE_BACKGROUND_END)
+             ? SetThreadPriorityResult::SUCCESS
+             : SetThreadPriorityResult::FAILURE;
 }

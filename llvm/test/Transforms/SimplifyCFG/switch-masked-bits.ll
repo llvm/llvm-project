@@ -4,10 +4,10 @@
 define i32 @test1(i32 %x) nounwind {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  a:
-; CHECK-NEXT:    [[I:%.*]] = shl i32 %x, 1
+; CHECK-NEXT:    [[I:%.*]] = shl i32 [[X:%.*]], 1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[I]], 24
-; CHECK-NEXT:    [[DOT:%.*]] = select i1 [[COND]], i32 5, i32 0
-; CHECK-NEXT:    ret i32 [[DOT]]
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[COND]], i32 5, i32 0
+; CHECK-NEXT:    ret i32 [[SPEC_SELECT]]
 ;
   %i = shl i32 %x, 1
   switch i32 %i, label %a [
@@ -48,12 +48,19 @@ c:
 
 define i1 @repeated_signbits(i8 %condition) {
 ; CHECK-LABEL: @repeated_signbits(
-; CHECK:         switch i32
-; CHECK-DAG:     i32 -128, label %a
-; CHECK-DAG:     i32 -1, label %a
-; CHECK-DAG:     i32  0, label %a
-; CHECK-DAG:     i32  127, label %a
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SEXT:%.*]] = sext i8 [[CONDITION:%.*]] to i32
+; CHECK-NEXT:    switch i32 [[SEXT]], label [[DEFAULT:%.*]] [
+; CHECK-NEXT:    i32 0, label [[A:%.*]]
+; CHECK-NEXT:    i32 127, label [[A]]
+; CHECK-NEXT:    i32 -128, label [[A]]
+; CHECK-NEXT:    i32 -1, label [[A]]
 ; CHECK-NEXT:    ]
+; CHECK:       a:
+; CHECK-NEXT:    [[MERGE:%.*]] = phi i1 [ true, [[ENTRY:%.*]] ], [ true, [[ENTRY]] ], [ true, [[ENTRY]] ], [ true, [[ENTRY]] ], [ false, [[DEFAULT]] ]
+; CHECK-NEXT:    ret i1 [[MERGE]]
+; CHECK:       default:
+; CHECK-NEXT:    br label [[A]]
 ;
 entry:
   %sext = sext i8 %condition to i32

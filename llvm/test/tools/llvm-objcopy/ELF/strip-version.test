@@ -1,4 +1,3 @@
-# RUN: llvm-strip -version | FileCheck %s
 # RUN: llvm-strip --version | FileCheck %s
 # RUN: llvm-strip -V | FileCheck %s
 

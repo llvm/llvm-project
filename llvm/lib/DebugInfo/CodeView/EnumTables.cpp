@@ -1,9 +1,8 @@
 //===- EnumTables.cpp - Enum to string conversion tables ------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -32,10 +31,20 @@ static const EnumEntry<TypeLeafKind> TypeLeafNames[] = {
 #undef CV_TYPE
 };
 
-static const EnumEntry<uint16_t> RegisterNames[] = {
+static const EnumEntry<uint16_t> RegisterNames_X86[] = {
+#define CV_REGISTERS_X86
 #define CV_REGISTER(name, val) CV_ENUM_CLASS_ENT(RegisterId, name),
 #include "llvm/DebugInfo/CodeView/CodeViewRegisters.def"
 #undef CV_REGISTER
+#undef CV_REGISTERS_X86
+};
+
+static const EnumEntry<uint16_t> RegisterNames_ARM64[] = {
+#define CV_REGISTERS_ARM64
+#define CV_REGISTER(name, val) CV_ENUM_CLASS_ENT(RegisterId, name),
+#include "llvm/DebugInfo/CodeView/CodeViewRegisters.def"
+#undef CV_REGISTER
+#undef CV_REGISTERS_ARM64
 };
 
 static const EnumEntry<uint32_t> PublicSymFlagNames[] = {
@@ -172,6 +181,7 @@ static const EnumEntry<unsigned> CPUTypeNames[] = {
     CV_ENUM_CLASS_ENT(CPUType, ARM_XMAC),
     CV_ENUM_CLASS_ENT(CPUType, ARM_WMMX),
     CV_ENUM_CLASS_ENT(CPUType, ARM7),
+    CV_ENUM_CLASS_ENT(CPUType, ARM64),
     CV_ENUM_CLASS_ENT(CPUType, Omni),
     CV_ENUM_CLASS_ENT(CPUType, Ia64),
     CV_ENUM_CLASS_ENT(CPUType, Ia64_2),
@@ -301,8 +311,11 @@ ArrayRef<EnumEntry<TypeLeafKind>> getTypeLeafNames() {
   return makeArrayRef(TypeLeafNames);
 }
 
-ArrayRef<EnumEntry<uint16_t>> getRegisterNames() {
-  return makeArrayRef(RegisterNames);
+ArrayRef<EnumEntry<uint16_t>> getRegisterNames(CPUType Cpu) {
+  if (Cpu == CPUType::ARM64) {
+    return makeArrayRef(RegisterNames_ARM64);
+  }
+  return makeArrayRef(RegisterNames_X86);
 }
 
 ArrayRef<EnumEntry<uint32_t>> getPublicSymFlagNames() {

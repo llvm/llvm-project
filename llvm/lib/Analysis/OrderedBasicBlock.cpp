@@ -1,9 +1,8 @@
 //===- OrderedBasicBlock.cpp --------------------------------- -*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -85,4 +84,28 @@ bool OrderedBasicBlock::dominates(const Instruction *A, const Instruction *B) {
     return false;
 
   return comesBefore(A, B);
+}
+
+void OrderedBasicBlock::eraseInstruction(const Instruction *I) {
+  if (LastInstFound != BB->end() && I == &*LastInstFound) {
+    if (LastInstFound == BB->begin()) {
+      LastInstFound = BB->end();
+      NextInstPos = 0;
+    } else
+      LastInstFound--;
+  }
+
+  NumberedInsts.erase(I);
+}
+
+void OrderedBasicBlock::replaceInstruction(const Instruction *Old,
+                                           const Instruction *New) {
+  auto OI = NumberedInsts.find(Old);
+  if (OI == NumberedInsts.end())
+    return;
+
+  NumberedInsts.insert({New, OI->second});
+  if (LastInstFound != BB->end() && Old == &*LastInstFound)
+    LastInstFound = New->getIterator();
+  NumberedInsts.erase(Old);
 }

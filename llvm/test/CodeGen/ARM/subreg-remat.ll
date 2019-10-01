@@ -1,4 +1,4 @@
-; RUN: llc < %s -relocation-model=pic -disable-fp-elim -mcpu=cortex-a8 -pre-RA-sched=source -no-integrated-as | FileCheck %s
+; RUN: llc < %s -relocation-model=pic -frame-pointer=all -mcpu=cortex-a8 -pre-RA-sched=source -no-integrated-as | FileCheck %s
 target triple = "thumbv7-apple-ios"
 ; <rdar://problem/10032939>
 ;

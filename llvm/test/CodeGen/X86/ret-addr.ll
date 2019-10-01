@@ -1,5 +1,5 @@
-; RUN: llc < %s -disable-fp-elim -mtriple=i686-- | not grep xor
-; RUN: llc < %s -disable-fp-elim -mtriple=x86_64-- | not grep xor
+; RUN: llc < %s -frame-pointer=all -mtriple=i686-- | not grep xor
+; RUN: llc < %s -frame-pointer=all -mtriple=x86_64-- | not grep xor
 
 define i8* @h() nounwind readnone optsize {
 entry:

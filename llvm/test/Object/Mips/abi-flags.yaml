@@ -1,5 +1,5 @@
 # RUN: yaml2obj %s > %t
-# RUN: llvm-readobj -mips-abi-flags %t | FileCheck -check-prefix=OBJ %s
+# RUN: llvm-readobj --mips-abi-flags %t | FileCheck -check-prefix=OBJ %s
 # RUN: obj2yaml %t | FileCheck -check-prefix=YAML %s
 
 # OBJ:      MIPS ABI Flags {
@@ -25,6 +25,7 @@
 # YAML-NEXT: - Name:            .MIPS.abiflags
 # YAML-NEXT:   Type:            SHT_MIPS_ABIFLAGS
 # YAML-NEXT:   AddressAlign:    0x0000000000000008
+# YAML-NEXT:   EntSize:         0x0000000000000018
 # YAML-NEXT:   ISA:             MIPS64
 # YAML-NEXT:   ISARevision:     0x05
 # YAML-NEXT:   ISAExtension:    EXT_OCTEON3
@@ -58,7 +59,6 @@ Sections:
   Flags2:       0x0
 
 Symbols:
-  Local:
-    - Name:    .MIPS.abiflags
-      Type:    STT_SECTION
-      Section: .MIPS.abiflags
+  - Name:    .MIPS.abiflags
+    Type:    STT_SECTION
+    Section: .MIPS.abiflags

@@ -1,9 +1,8 @@
 //===- PDBTypes.h - Defines enums for various fields contained in PDB ----====//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -127,6 +126,7 @@ enum class PDB_Machine {
   Am33 = 0x13,
   Amd64 = 0x8664,
   Arm = 0x1C0,
+  Arm64 = 0xaa64,
   ArmNT = 0x1C4,
   Ebc = 0xEBC,
   x86 = 0x14C,

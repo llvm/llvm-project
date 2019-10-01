@@ -33,7 +33,7 @@
 ; INTERNALIZE: define internal void @linkonce_func()
 ; INTERNALIZE-OPTION-DISABLE: define void @foo
 ; INTERNALIZE-OPTION-DISABLE: define void @bar
-; INTERNALIZE-OPTION-DISABLE: define linkonce void @linkonce_func()
+; INTERNALIZE-OPTION-DISABLE: define weak void @linkonce_func()
 ; INTERNALIZE2: define dso_local void @foo
 ; INTERNALIZE2: define internal void @bar
 ; INTERNALIZE2: define internal void @linkonce_func()

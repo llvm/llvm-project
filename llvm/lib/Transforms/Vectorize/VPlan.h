@@ -1,9 +1,8 @@
 //===- VPlan.h - Represent A Vectorizer Plan --------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -353,6 +352,9 @@ private:
   /// Successor selector, null for zero or single successor blocks.
   VPValue *CondBit = nullptr;
 
+  /// Current block predicate - null if the block does not need a predicate.
+  VPValue *Predicate = nullptr;
+
   /// Add \p Successor as the last successor to this block.
   void appendSuccessor(VPBlockBase *Successor) {
     assert(Successor && "Cannot add nullptr successor!");
@@ -491,6 +493,12 @@ public:
 
   void setCondBit(VPValue *CV) { CondBit = CV; }
 
+  VPValue *getPredicate() { return Predicate; }
+
+  const VPValue *getPredicate() const { return Predicate; }
+
+  void setPredicate(VPValue *Pred) { Predicate = Pred; }
+
   /// Set a given VPBlockBase \p Successor as the single successor of this
   /// VPBlockBase. This VPBlockBase is not added as predecessor of \p Successor.
   /// This VPBlockBase must have no successors.
@@ -519,6 +527,15 @@ public:
     assert(Predecessors.empty() && "Block predecessors already set.");
     for (auto *Pred : NewPreds)
       appendPredecessor(Pred);
+  }
+
+  /// Remove all the predecessor of this block.
+  void clearPredecessors() { Predecessors.clear(); }
+
+  /// Remove all the successors of this block and set to null its condition bit
+  void clearSuccessors() {
+    Successors.clear();
+    CondBit = nullptr;
   }
 
   /// The method which generates the output IR that correspond to this
@@ -1490,6 +1507,41 @@ public:
     assert(To && "Successor to disconnect is null.");
     From->removeSuccessor(To);
     To->removePredecessor(From);
+  }
+
+  /// Returns true if the edge \p FromBlock -> \p ToBlock is a back-edge.
+  static bool isBackEdge(const VPBlockBase *FromBlock,
+                         const VPBlockBase *ToBlock, const VPLoopInfo *VPLI) {
+    assert(FromBlock->getParent() == ToBlock->getParent() &&
+           FromBlock->getParent() && "Must be in same region");
+    const VPLoop *FromLoop = VPLI->getLoopFor(FromBlock);
+    const VPLoop *ToLoop = VPLI->getLoopFor(ToBlock);
+    if (!FromLoop || !ToLoop || FromLoop != ToLoop)
+      return false;
+
+    // A back-edge is a branch from the loop latch to its header.
+    return ToLoop->isLoopLatch(FromBlock) && ToBlock == ToLoop->getHeader();
+  }
+
+  /// Returns true if \p Block is a loop latch
+  static bool blockIsLoopLatch(const VPBlockBase *Block,
+                               const VPLoopInfo *VPLInfo) {
+    if (const VPLoop *ParentVPL = VPLInfo->getLoopFor(Block))
+      return ParentVPL->isLoopLatch(Block);
+
+    return false;
+  }
+
+  /// Count and return the number of succesors of \p PredBlock excluding any
+  /// backedges.
+  static unsigned countSuccessorsNoBE(VPBlockBase *PredBlock,
+                                      VPLoopInfo *VPLI) {
+    unsigned Count = 0;
+    for (VPBlockBase *SuccBlock : PredBlock->getSuccessors()) {
+      if (!VPBlockUtils::isBackEdge(PredBlock, SuccBlock, VPLI))
+        Count++;
+    }
+    return Count;
   }
 };
 

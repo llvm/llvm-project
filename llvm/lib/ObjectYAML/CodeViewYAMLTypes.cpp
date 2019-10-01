@@ -1,9 +1,8 @@
 //===- CodeViewYAMLTypes.cpp - CodeView YAMLIO types implementation -------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -99,7 +98,7 @@ template <typename T> struct LeafRecordImpl : public LeafRecordBase {
 
   CVType toCodeViewRecord(AppendingTypeTableBuilder &TS) const override {
     TS.writeLeafType(Record);
-    return CVType(Kind, TS.records().back());
+    return CVType(TS.records().back());
   }
 
   mutable T Record;
@@ -497,7 +496,7 @@ CVType LeafRecordImpl<FieldListRecord>::toCodeViewRecord(
     Member.Member->writeTo(CRB);
   }
   TS.insertRecord(CRB);
-  return CVType(Kind, TS.records().back());
+  return CVType(TS.records().back());
 }
 
 void MappingTraits<OneMethodRecord>::mapping(IO &io, OneMethodRecord &Record) {

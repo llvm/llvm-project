@@ -23,7 +23,7 @@ define i1 @test1(i32 %A, i32 %B) {
 
 define i32 @shrink_xor(i64 %a) {
 ; CHECK-LABEL: @shrink_xor(
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 %a to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[A:%.*]] to i32
 ; CHECK-NEXT:    [[TRUNC:%.*]] = xor i32 [[TMP1]], 1
 ; CHECK-NEXT:    ret i32 [[TRUNC]]
 ;
@@ -36,7 +36,7 @@ define i32 @shrink_xor(i64 %a) {
 
 define <2 x i32> @shrink_xor_vec(<2 x i64> %a) {
 ; CHECK-LABEL: @shrink_xor_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i64> %a to <2 x i32>
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i64> [[A:%.*]] to <2 x i32>
 ; CHECK-NEXT:    [[TRUNC:%.*]] = xor <2 x i32> [[TMP1]], <i32 2, i32 2>
 ; CHECK-NEXT:    ret <2 x i32> [[TRUNC]]
 ;
@@ -49,7 +49,7 @@ define <2 x i32> @shrink_xor_vec(<2 x i64> %a) {
 
 define i3 @shrink_or(i6 %a) {
 ; CHECK-LABEL: @shrink_or(
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i6 %a to i3
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i6 [[A:%.*]] to i3
 ; CHECK-NEXT:    [[TRUNC:%.*]] = or i3 [[TMP1]], 1
 ; CHECK-NEXT:    ret i3 [[TRUNC]]
 ;
@@ -62,7 +62,7 @@ define i3 @shrink_or(i6 %a) {
 
 define <2 x i8> @shrink_or_vec(<2 x i16> %a) {
 ; CHECK-LABEL: @shrink_or_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i16> %a to <2 x i8>
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i16> [[A:%.*]] to <2 x i8>
 ; CHECK-NEXT:    [[TRUNC:%.*]] = or <2 x i8> [[TMP1]], <i8 -1, i8 0>
 ; CHECK-NEXT:    ret <2 x i8> [[TRUNC]]
 ;
@@ -75,7 +75,7 @@ define <2 x i8> @shrink_or_vec(<2 x i16> %a) {
 
 define i31 @shrink_and(i64 %a) {
 ; CHECK-LABEL: @shrink_and(
-; CHECK-NEXT:    [[AND:%.*]] = and i64 %a, 42
+; CHECK-NEXT:    [[AND:%.*]] = and i64 [[A:%.*]], 42
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[AND]] to i31
 ; CHECK-NEXT:    ret i31 [[TRUNC]]
 ;
@@ -88,7 +88,7 @@ define i31 @shrink_and(i64 %a) {
 
 define <2 x i32> @shrink_and_vec(<2 x i33> %a) {
 ; CHECK-LABEL: @shrink_and_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i33> %a to <2 x i32>
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i33> [[A:%.*]] to <2 x i32>
 ; CHECK-NEXT:    [[TRUNC:%.*]] = and <2 x i32> [[TMP1]], <i32 0, i32 6>
 ; CHECK-NEXT:    ret <2 x i32> [[TRUNC]]
 ;

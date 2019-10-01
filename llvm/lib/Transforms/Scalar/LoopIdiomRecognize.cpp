@@ -1,9 +1,8 @@
 //===- LoopIdiomRecognize.cpp - Loop idiom recognition --------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -37,6 +36,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Transforms/Scalar/LoopIdiomRecognize.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -51,12 +51,12 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpander.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
@@ -87,8 +87,8 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
-#include "llvm/Transforms/Scalar/LoopIdiomRecognize.h"
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include <algorithm>
 #include <cassert>
@@ -120,6 +120,7 @@ class LoopIdiomRecognize {
   TargetLibraryInfo *TLI;
   const TargetTransformInfo *TTI;
   const DataLayout *DL;
+  OptimizationRemarkEmitter &ORE;
   bool ApplyCodeSizeHeuristics;
 
 public:
@@ -127,8 +128,9 @@ public:
                               LoopInfo *LI, ScalarEvolution *SE,
                               TargetLibraryInfo *TLI,
                               const TargetTransformInfo *TTI,
-                              const DataLayout *DL)
-      : AA(AA), DT(DT), LI(LI), SE(SE), TLI(TLI), TTI(TTI), DL(DL) {}
+                              const DataLayout *DL,
+                              OptimizationRemarkEmitter &ORE)
+      : AA(AA), DT(DT), LI(LI), SE(SE), TLI(TLI), TTI(TTI), DL(DL), ORE(ORE) {}
 
   bool runOnLoop(Loop *L);
 
@@ -221,7 +223,12 @@ public:
             *L->getHeader()->getParent());
     const DataLayout *DL = &L->getHeader()->getModule()->getDataLayout();
 
-    LoopIdiomRecognize LIR(AA, DT, LI, SE, TLI, TTI, DL);
+    // For the old PM, we can't use OptimizationRemarkEmitter as an analysis
+    // pass.  Function analyses need to be preserved across loop transformations
+    // but ORE cannot be preserved (see comment before the pass definition).
+    OptimizationRemarkEmitter ORE(L->getHeader()->getParent());
+
+    LoopIdiomRecognize LIR(AA, DT, LI, SE, TLI, TTI, DL, ORE);
     return LIR.runOnLoop(L);
   }
 
@@ -243,7 +250,19 @@ PreservedAnalyses LoopIdiomRecognizePass::run(Loop &L, LoopAnalysisManager &AM,
                                               LPMUpdater &) {
   const auto *DL = &L.getHeader()->getModule()->getDataLayout();
 
-  LoopIdiomRecognize LIR(&AR.AA, &AR.DT, &AR.LI, &AR.SE, &AR.TLI, &AR.TTI, DL);
+  const auto &FAM =
+      AM.getResult<FunctionAnalysisManagerLoopProxy>(L, AR).getManager();
+  Function *F = L.getHeader()->getParent();
+
+  auto *ORE = FAM.getCachedResult<OptimizationRemarkEmitterAnalysis>(*F);
+  // FIXME: This should probably be optional rather than required.
+  if (!ORE)
+    report_fatal_error(
+        "LoopIdiomRecognizePass: OptimizationRemarkEmitterAnalysis not cached "
+        "at a higher level");
+
+  LoopIdiomRecognize LIR(&AR.AA, &AR.DT, &AR.LI, &AR.SE, &AR.TLI, &AR.TTI, DL,
+                         *ORE);
   if (!LIR.runOnLoop(&L))
     return PreservedAnalyses::all();
 
@@ -285,7 +304,7 @@ bool LoopIdiomRecognize::runOnLoop(Loop *L) {
 
   // Determine if code size heuristics need to be applied.
   ApplyCodeSizeHeuristics =
-      L->getHeader()->getParent()->optForSize() && UseLIRCodeSizeHeurs;
+      L->getHeader()->getParent()->hasOptSize() && UseLIRCodeSizeHeurs;
 
   HasMemset = TLI->has(LibFunc_memset);
   HasMemsetPattern = TLI->has(LibFunc_memset_pattern16);
@@ -313,9 +332,10 @@ bool LoopIdiomRecognize::runOnCountableLoop() {
   SmallVector<BasicBlock *, 8> ExitBlocks;
   CurLoop->getUniqueExitBlocks(ExitBlocks);
 
-  LLVM_DEBUG(dbgs() << "loop-idiom Scanning: F["
+  LLVM_DEBUG(dbgs() << DEBUG_TYPE " Scanning: F["
                     << CurLoop->getHeader()->getParent()->getName()
-                    << "] Loop %" << CurLoop->getHeader()->getName() << "\n");
+                    << "] Countable Loop %" << CurLoop->getHeader()->getName()
+                    << "\n");
 
   bool MadeChange = false;
 
@@ -931,9 +951,8 @@ bool LoopIdiomRecognize::processLoopStridedStore(
 
     Module *M = TheStore->getModule();
     StringRef FuncName = "memset_pattern16";
-    Value *MSP =
-        M->getOrInsertFunction(FuncName, Builder.getVoidTy(),
-                               Int8PtrTy, Int8PtrTy, IntPtr);
+    FunctionCallee MSP = M->getOrInsertFunction(FuncName, Builder.getVoidTy(),
+                                                Int8PtrTy, Int8PtrTy, IntPtr);
     inferLibFuncAttributes(M, FuncName, *TLI);
 
     // Otherwise we should form a memset_pattern16.  PatternValue is known to be
@@ -951,6 +970,14 @@ bool LoopIdiomRecognize::processLoopStridedStore(
                     << "    from store to: " << *Ev << " at: " << *TheStore
                     << "\n");
   NewCall->setDebugLoc(TheStore->getDebugLoc());
+
+  ORE.emit([&]() {
+    return OptimizationRemark(DEBUG_TYPE, "ProcessLoopStridedStore",
+                              NewCall->getDebugLoc(), Preheader)
+           << "Transformed loop-strided store into a call to "
+           << ore::NV("NewFunction", NewCall->getCalledFunction())
+           << "() function";
+  });
 
   // Okay, the memset has been formed.  Zap the original store and anything that
   // feeds into it.
@@ -1084,6 +1111,14 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(StoreInst *SI,
                     << "    from store ptr=" << *StoreEv << " at: " << *SI
                     << "\n");
 
+  ORE.emit([&]() {
+    return OptimizationRemark(DEBUG_TYPE, "ProcessLoopStoreOfLoopLoad",
+                              NewCall->getDebugLoc(), Preheader)
+           << "Formed a call to "
+           << ore::NV("NewFunction", NewCall->getCalledFunction())
+           << "() function";
+  });
+
   // Okay, the memcpy has been formed.  Zap the original store and anything that
   // feeds into it.
   deleteDeadInstruction(SI);
@@ -1109,6 +1144,11 @@ bool LoopIdiomRecognize::avoidLIRForMultiBlockLoop(bool IsMemset,
 }
 
 bool LoopIdiomRecognize::runOnNoncountableLoop() {
+  LLVM_DEBUG(dbgs() << DEBUG_TYPE " Scanning: F["
+                    << CurLoop->getHeader()->getParent()->getName()
+                    << "] Noncountable Loop %"
+                    << CurLoop->getHeader()->getName() << "\n");
+
   return recognizePopcount() || recognizeAndInsertFFS();
 }
 
@@ -1535,7 +1575,7 @@ static CallInst *createPopcntIntrinsic(IRBuilder<> &IRBuilder, Value *Val,
   Type *Tys[] = {Val->getType()};
 
   Module *M = IRBuilder.GetInsertBlock()->getParent()->getParent();
-  Value *Func = Intrinsic::getDeclaration(M, Intrinsic::ctpop, Tys);
+  Function *Func = Intrinsic::getDeclaration(M, Intrinsic::ctpop, Tys);
   CallInst *CI = IRBuilder.CreateCall(Func, Ops);
   CI->setDebugLoc(DL);
 
@@ -1549,7 +1589,7 @@ static CallInst *createFFSIntrinsic(IRBuilder<> &IRBuilder, Value *Val,
   Type *Tys[] = {Val->getType()};
 
   Module *M = IRBuilder.GetInsertBlock()->getParent()->getParent();
-  Value *Func = Intrinsic::getDeclaration(M, IID, Tys);
+  Function *Func = Intrinsic::getDeclaration(M, IID, Tys);
   CallInst *CI = IRBuilder.CreateCall(Func, Ops);
   CI->setDebugLoc(DL);
 

@@ -1,4 +1,4 @@
-; RUN: llc -O0 -disable-fp-elim < %s | FileCheck %s
+; RUN: llc -O0 -frame-pointer=all < %s | FileCheck %s
 
 target datalayout = "e-p:16:16:16-i8:8:8-i16:16:16-i32:16:32-n8:16"
 target triple = "msp430---elf"
@@ -27,3 +27,5 @@ define msp430_intrcc void @fpb_alloced() #0 {
   call void asm sideeffect "nop", "r"(i8 0)
   ret void
 }
+
+attributes #0 = { noinline nounwind optnone "interrupt"="2" }

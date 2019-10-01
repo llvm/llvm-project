@@ -1,5 +1,5 @@
 @ RUN: llvm-mc %s -triple=armv7-unknown-linux-gnueabi -filetype=obj -o - \
-@ RUN:   | llvm-readobj -s -sd -sr | FileCheck %s
+@ RUN:   | llvm-readobj -S --sd --sr | FileCheck %s
 
 @ Check the .cantunwind directive
 

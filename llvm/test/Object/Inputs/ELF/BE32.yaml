@@ -1,6 +1,0 @@
-!ELF
-FileHeader: !FileHeader
-  Class: ELFCLASS32
-  Data: ELFDATA2MSB
-  Type: ET_EXEC
-  Machine: EM_PPC

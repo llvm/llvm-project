@@ -1,9 +1,8 @@
 //===- llvm/Analysis/AliasSetTracker.h - Build Alias Sets -------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -37,6 +36,8 @@ namespace llvm {
 class AliasSetTracker;
 class BasicBlock;
 class LoadInst;
+class Loop;
+class MemorySSA;
 class AnyMemSetInst;
 class AnyMemTransferInst;
 class raw_ostream;
@@ -294,7 +295,8 @@ private:
   void removeFromTracker(AliasSetTracker &AST);
 
   void addPointer(AliasSetTracker &AST, PointerRec &Entry, LocationSize Size,
-                  const AAMDNodes &AAInfo, bool KnownMustAlias = false);
+                  const AAMDNodes &AAInfo, bool KnownMustAlias = false,
+                  bool SkipSizeUpdate = false);
   void addUnknownInst(Instruction *I, AliasAnalysis &AA);
 
   void removeUnknownInst(AliasSetTracker &AST, Instruction *I) {
@@ -310,10 +312,10 @@ private:
   }
 
 public:
-  /// Return true if the specified pointer "may" (or must) alias one of the
-  /// members in the set.
-  bool aliasesPointer(const Value *Ptr, LocationSize Size,
-                      const AAMDNodes &AAInfo, AliasAnalysis &AA) const;
+  /// If the specified pointer "may" (or must) alias one of the members in the
+  /// set return the appropriate AliasResult. Otherwise return NoAlias.
+  AliasResult aliasesPointer(const Value *Ptr, LocationSize Size,
+                             const AAMDNodes &AAInfo, AliasAnalysis &AA) const;
   bool aliasesUnknownInst(const Instruction *Inst, AliasAnalysis &AA) const;
 };
 
@@ -341,6 +343,8 @@ class AliasSetTracker {
   struct ASTCallbackVHDenseMapInfo : public DenseMapInfo<Value *> {};
 
   AliasAnalysis &AA;
+  MemorySSA *MSSA;
+  Loop *L;
   ilist<AliasSet> AliasSets;
 
   using PointerMapType = DenseMap<ASTCallbackVH, AliasSet::PointerRec *,
@@ -353,6 +357,8 @@ public:
   /// Create an empty collection of AliasSets, and use the specified alias
   /// analysis object to disambiguate load and store addresses.
   explicit AliasSetTracker(AliasAnalysis &aa) : AA(aa) {}
+  explicit AliasSetTracker(AliasAnalysis &aa, MemorySSA *mssa, Loop *l)
+      : AA(aa), MSSA(mssa), L(l) {}
   ~AliasSetTracker() { clear(); }
 
   /// These methods are used to add different types of instructions to the alias
@@ -377,6 +383,7 @@ public:
   void add(BasicBlock &BB);       // Add all instructions in basic block
   void add(const AliasSetTracker &AST); // Add alias relations from another AST
   void addUnknown(Instruction *I);
+  void addAllInstructionsInLoopUsingMSSA();
 
   void clear();
 
@@ -439,7 +446,8 @@ private:
 
   AliasSet &addPointer(MemoryLocation Loc, AliasSet::AccessLattice E);
   AliasSet *mergeAliasSetsForPointer(const Value *Ptr, LocationSize Size,
-                                     const AAMDNodes &AAInfo);
+                                     const AAMDNodes &AAInfo,
+                                     bool &MustAliasAll);
 
   /// Merge all alias sets into a single set that is considered to alias any
   /// pointer.

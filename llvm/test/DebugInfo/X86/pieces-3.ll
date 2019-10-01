@@ -18,6 +18,7 @@
 ; CHECK: DW_TAG_formal_parameter [3]
 ; CHECK-NEXT:   DW_AT_location [DW_FORM_data4]        (
 ; CHECK-NEXT:     [0x0000000000000000, 0x0000000000000007): DW_OP_reg5 RDI, DW_OP_piece 0x8, DW_OP_piece 0x4, DW_OP_reg4 RSI, DW_OP_piece 0x4
+; CHECK-NEXT:     [0x0000000000000007, 0x0000000000000009): DW_OP_reg5 RDI, DW_OP_piece 0x8
 ; CHECK-NEXT:   DW_AT_name {{.*}}"outer"
 ; CHECK: DW_TAG_variable
 ; CHECK-NEXT:   DW_AT_name {{.*}}"i1"

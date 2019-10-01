@@ -7,7 +7,7 @@
 ; patterns might make the mistake of assuming that a (sext_inreg foo, i32) can
 ; only be produced when sign-extending an i32 type.
 
-define i64 @tricky_shl(i64 %a, i64 %b) {
+define i64 @tricky_shl(i64 %a, i64 %b) nounwind {
 ; RV64I-LABEL: tricky_shl:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    sll a0, a0, a1
@@ -19,7 +19,7 @@ define i64 @tricky_shl(i64 %a, i64 %b) {
   ret i64 %3
 }
 
-define i64 @tricky_lshr(i64 %a, i64 %b) {
+define i64 @tricky_lshr(i64 %a, i64 %b) nounwind {
 ; RV64I-LABEL: tricky_lshr:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slli a0, a0, 32
@@ -31,7 +31,7 @@ define i64 @tricky_lshr(i64 %a, i64 %b) {
   ret i64 %2
 }
 
-define i64 @tricky_ashr(i64 %a, i64 %b) {
+define i64 @tricky_ashr(i64 %a, i64 %b) nounwind {
 ; RV64I-LABEL: tricky_ashr:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    sext.w a0, a0

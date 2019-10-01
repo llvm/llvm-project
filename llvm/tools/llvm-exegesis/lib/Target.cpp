@@ -1,9 +1,8 @@
 //===-- Target.cpp ----------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 #include "Target.h"
@@ -46,6 +45,7 @@ ExegesisTarget::createSnippetGenerator(InstructionBenchmark::ModeE Mode,
   case InstructionBenchmark::Latency:
     return createLatencySnippetGenerator(State);
   case InstructionBenchmark::Uops:
+  case InstructionBenchmark::InverseThroughput:
     return createUopsSnippetGenerator(State);
   }
   return nullptr;
@@ -58,7 +58,8 @@ ExegesisTarget::createBenchmarkRunner(InstructionBenchmark::ModeE Mode,
   case InstructionBenchmark::Unknown:
     return nullptr;
   case InstructionBenchmark::Latency:
-    return createLatencyBenchmarkRunner(State);
+  case InstructionBenchmark::InverseThroughput:
+    return createLatencyBenchmarkRunner(State, Mode);
   case InstructionBenchmark::Uops:
     return createUopsBenchmarkRunner(State);
   }
@@ -75,14 +76,38 @@ ExegesisTarget::createUopsSnippetGenerator(const LLVMState &State) const {
   return llvm::make_unique<UopsSnippetGenerator>(State);
 }
 
-std::unique_ptr<BenchmarkRunner>
-ExegesisTarget::createLatencyBenchmarkRunner(const LLVMState &State) const {
-  return llvm::make_unique<LatencyBenchmarkRunner>(State);
+std::unique_ptr<BenchmarkRunner> ExegesisTarget::createLatencyBenchmarkRunner(
+    const LLVMState &State, InstructionBenchmark::ModeE Mode) const {
+  return llvm::make_unique<LatencyBenchmarkRunner>(State, Mode);
 }
 
 std::unique_ptr<BenchmarkRunner>
 ExegesisTarget::createUopsBenchmarkRunner(const LLVMState &State) const {
   return llvm::make_unique<UopsBenchmarkRunner>(State);
+}
+
+void ExegesisTarget::randomizeMCOperand(
+    const Instruction &Instr, const Variable &Var,
+    llvm::MCOperand &AssignedValue,
+    const llvm::BitVector &ForbiddenRegs) const {
+  const Operand &Op = Instr.getPrimaryOperand(Var);
+  switch (Op.getExplicitOperandInfo().OperandType) {
+  case llvm::MCOI::OperandType::OPERAND_IMMEDIATE:
+    // FIXME: explore immediate values too.
+    AssignedValue = llvm::MCOperand::createImm(1);
+    break;
+  case llvm::MCOI::OperandType::OPERAND_REGISTER: {
+    assert(Op.isReg());
+    auto AllowedRegs = Op.getRegisterAliasing().sourceBits();
+    assert(AllowedRegs.size() == ForbiddenRegs.size());
+    for (auto I : ForbiddenRegs.set_bits())
+      AllowedRegs.reset(I);
+    AssignedValue = llvm::MCOperand::createReg(randomBit(AllowedRegs));
+    break;
+  }
+  default:
+    break;
+  }
 }
 
 static_assert(std::is_pod<PfmCountersInfo>::value,

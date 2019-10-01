@@ -33,7 +33,7 @@ registers:
 # CHECK-NEXT:    %3:gr32 = MOV32ri 1
 # CHECK-NEXT:    %1:gr8 = COPY %0.sub_8bit
 # CHECK-NEXT:    TEST8ri %1, 1, implicit-def $eflags
-# CHECK-NEXT:    JNE_1 %[[TRUE:bb.[0-9]+]], implicit $eflags
+# CHECK-NEXT:    JCC_1 %[[TRUE:bb.[0-9]+]], 5, implicit $eflags
 # CHECK-NEXT:    JMP_1 %[[FALSE:bb.[0-9]+]]
 # CHECK:      [[TRUE]].{{[a-zA-Z0-9]+}}:
 # CHECK-NEXT:    $eax = COPY %2

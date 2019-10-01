@@ -45,6 +45,8 @@ autoconf/autom4te.cache
 /CMakeSettings.json
 # CLion project configuration
 /.idea
+# Qt Creator project configuration
+/CMakeLists.txt.user
 
 #==============================================================================#
 # Directories to ignore (do not add trailing '/'s, they skip symlinks).
@@ -72,6 +74,8 @@ docs/_build
 # VS2017 and VSCode config files.
 .vscode
 .vs
+# clangd index
+.clangd
 
 #==============================================================================#
 # Files created in tree by the Go bindings.

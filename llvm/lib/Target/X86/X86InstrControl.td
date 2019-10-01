@@ -1,9 +1,8 @@
 //===-- X86InstrControl.td - Control Flow Instructions -----*- tablegen -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -71,35 +70,40 @@ let isBarrier = 1, isBranch = 1, isTerminator = 1, SchedRW = [WriteJump] in {
 }
 
 // Conditional Branches.
-let isBranch = 1, isTerminator = 1, Uses = [EFLAGS], SchedRW = [WriteJump] in {
-  multiclass ICBr<bits<8> opc1, bits<8> opc4, string asm, PatFrag Cond> {
-    def _1 : Ii8PCRel <opc1, RawFrm, (outs), (ins brtarget8:$dst), asm,
-                       [(X86brcond bb:$dst, Cond, EFLAGS)]>;
-    let hasSideEffects = 0, isCodeGenOnly = 1, ForceDisassemble = 1 in {
-      def _2 : Ii16PCRel<opc4, RawFrm, (outs), (ins brtarget16:$dst), asm,
-                         []>, OpSize16, TB;
-      def _4 : Ii32PCRel<opc4, RawFrm, (outs), (ins brtarget32:$dst), asm,
-                         []>, TB, OpSize32;
-    }
+let isBranch = 1, isTerminator = 1, Uses = [EFLAGS], SchedRW = [WriteJump],
+    isCodeGenOnly = 1, ForceDisassemble = 1 in {
+  def JCC_1 : Ii8PCRel <0x70, AddCCFrm, (outs),
+                        (ins brtarget8:$dst, ccode:$cond),
+                        "j${cond}\t$dst",
+                        [(X86brcond bb:$dst, imm:$cond, EFLAGS)]>;
+  let hasSideEffects = 0 in {
+    def JCC_2 : Ii16PCRel<0x80, AddCCFrm, (outs),
+                          (ins brtarget16:$dst, ccode:$cond),
+                          "j${cond}\t$dst",
+                          []>, OpSize16, TB;
+    def JCC_4 : Ii32PCRel<0x80, AddCCFrm, (outs),
+                          (ins brtarget32:$dst, ccode:$cond),
+                          "j${cond}\t$dst",
+                          []>, TB, OpSize32;
   }
 }
 
-defm JO  : ICBr<0x70, 0x80, "jo\t$dst" , X86_COND_O>;
-defm JNO : ICBr<0x71, 0x81, "jno\t$dst", X86_COND_NO>;
-defm JB  : ICBr<0x72, 0x82, "jb\t$dst" , X86_COND_B>;
-defm JAE : ICBr<0x73, 0x83, "jae\t$dst", X86_COND_AE>;
-defm JE  : ICBr<0x74, 0x84, "je\t$dst" , X86_COND_E>;
-defm JNE : ICBr<0x75, 0x85, "jne\t$dst", X86_COND_NE>;
-defm JBE : ICBr<0x76, 0x86, "jbe\t$dst", X86_COND_BE>;
-defm JA  : ICBr<0x77, 0x87, "ja\t$dst" , X86_COND_A>;
-defm JS  : ICBr<0x78, 0x88, "js\t$dst" , X86_COND_S>;
-defm JNS : ICBr<0x79, 0x89, "jns\t$dst", X86_COND_NS>;
-defm JP  : ICBr<0x7A, 0x8A, "jp\t$dst" , X86_COND_P>;
-defm JNP : ICBr<0x7B, 0x8B, "jnp\t$dst", X86_COND_NP>;
-defm JL  : ICBr<0x7C, 0x8C, "jl\t$dst" , X86_COND_L>;
-defm JGE : ICBr<0x7D, 0x8D, "jge\t$dst", X86_COND_GE>;
-defm JLE : ICBr<0x7E, 0x8E, "jle\t$dst", X86_COND_LE>;
-defm JG  : ICBr<0x7F, 0x8F, "jg\t$dst" , X86_COND_G>;
+def : InstAlias<"jo\t$dst",  (JCC_1 brtarget8:$dst,  0), 0>;
+def : InstAlias<"jno\t$dst", (JCC_1 brtarget8:$dst,  1), 0>;
+def : InstAlias<"jb\t$dst",  (JCC_1 brtarget8:$dst,  2), 0>;
+def : InstAlias<"jae\t$dst", (JCC_1 brtarget8:$dst,  3), 0>;
+def : InstAlias<"je\t$dst",  (JCC_1 brtarget8:$dst,  4), 0>;
+def : InstAlias<"jne\t$dst", (JCC_1 brtarget8:$dst,  5), 0>;
+def : InstAlias<"jbe\t$dst", (JCC_1 brtarget8:$dst,  6), 0>;
+def : InstAlias<"ja\t$dst",  (JCC_1 brtarget8:$dst,  7), 0>;
+def : InstAlias<"js\t$dst",  (JCC_1 brtarget8:$dst,  8), 0>;
+def : InstAlias<"jns\t$dst", (JCC_1 brtarget8:$dst,  9), 0>;
+def : InstAlias<"jp\t$dst",  (JCC_1 brtarget8:$dst, 10), 0>;
+def : InstAlias<"jnp\t$dst", (JCC_1 brtarget8:$dst, 11), 0>;
+def : InstAlias<"jl\t$dst",  (JCC_1 brtarget8:$dst, 12), 0>;
+def : InstAlias<"jge\t$dst", (JCC_1 brtarget8:$dst, 13), 0>;
+def : InstAlias<"jle\t$dst", (JCC_1 brtarget8:$dst, 14), 0>;
+def : InstAlias<"jg\t$dst",  (JCC_1 brtarget8:$dst, 15), 0>;
 
 // jcx/jecx/jrcx instructions.
 let isBranch = 1, isTerminator = 1, hasSideEffects = 0, SchedRW = [WriteJump] in {

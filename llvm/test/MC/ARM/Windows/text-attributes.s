@@ -1,5 +1,5 @@
 @ RUN: llvm-mc -triple thumbv7-windows-itanium -filetype obj -o - %s \
-@ RUN:   | llvm-readobj -s - | FileCheck %s
+@ RUN:   | llvm-readobj -S - | FileCheck %s
 
 	.syntax unified
 	.thumb

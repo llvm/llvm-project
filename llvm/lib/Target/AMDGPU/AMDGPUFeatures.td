@@ -1,9 +1,8 @@
 //===-- AMDGPUFeatures.td - AMDGPU Feature Definitions -----*- tablegen -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -50,16 +49,11 @@ def FeatureWavefrontSize16 : SubtargetFeatureWavefrontSize<16>;
 def FeatureWavefrontSize32 : SubtargetFeatureWavefrontSize<32>;
 def FeatureWavefrontSize64 : SubtargetFeatureWavefrontSize<64>;
 
-class SubtargetFeatureGeneration <string Value, string Subtarget,
+class SubtargetFeatureGeneration <string Value, string FeatureName,
+                                 string Subtarget,
                                   list<SubtargetFeature> Implies> :
-        SubtargetFeature <Value, "Gen", Subtarget#"::"#Value,
+        SubtargetFeature <FeatureName, "Gen", Subtarget#"::"#Value,
                           Value#" GPU generation", Implies>;
-
-def FeatureDX10Clamp : SubtargetFeature<"dx10-clamp",
-  "DX10Clamp",
-  "true",
-  "clamp modifier clamps NaNs to 0.0"
->;
 
 def FeaturePromoteAlloca : SubtargetFeature <"promote-alloca",
   "EnablePromoteAlloca",

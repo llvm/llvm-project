@@ -1,5 +1,7 @@
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin | grep call | grep 560
 ; rdar://6522427
+; This command line used to crash due to dangling nodes left after PreprocessISelDAG
+; RUN: llc < %s -mtriple=x86_64-apple-darwin -pre-RA-sched=linearize
 
 	%"struct.clang::Action" = type { %"struct.clang::ActionBase" }
 	%"struct.clang::ActionBase" = type { i32 (...)** }

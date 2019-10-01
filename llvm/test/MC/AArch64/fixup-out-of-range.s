@@ -61,8 +61,11 @@
 // CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: fixup value out of range
   movz x0, #:abs_g1:value2
 
-// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: resolvable R_AARCH64_MOVW_SABS_G* fixups are not yet implemented
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: fixup value out of range
   movz x0, #:abs_g0_s:value1
+
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: fixup value out of range
+  movz x0, #:abs_g1_s:value2
 
 // CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: relocation for a thread-local variable points to an absolute symbol
   movz x0, #:tprel_g0:value1

@@ -1,9 +1,8 @@
 //=- AArch64CallingConv.td - Calling Conventions for AArch64 -*- tablegen -*-=//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -22,6 +21,7 @@ class CCIfBigEndian<CCAction A> :
 // ARM AAPCS64 Calling Convention
 //===----------------------------------------------------------------------===//
 
+let Entry = 1 in
 def CC_AArch64_AAPCS : CallingConv<[
   CCIfType<[iPTR], CCBitConvertToType<i64>>,
   CCIfType<[v2f32], CCBitConvertToType<v2i32>>,
@@ -34,7 +34,23 @@ def CC_AArch64_AAPCS : CallingConv<[
   CCIfBigEndian<CCIfType<[v2i64, v2f64, v4i32, v4f32, v8i16, v8f16, v16i8],
                          CCBitConvertToType<f128>>>,
 
-  // An SRet is passed in X8, not X0 like a normal pointer parameter.
+  // In AAPCS, an SRet is passed in X8, not X0 like a normal pointer parameter.
+  // However, on windows, in some circumstances, the SRet is passed in X0 or X1
+  // instead.  The presence of the inreg attribute indicates that SRet is
+  // passed in the alternative register (X0 or X1), not X8:
+  // - X0 for non-instance methods.
+  // - X1 for instance methods.
+
+  // The "sret" attribute identifies indirect returns.
+  // The "inreg" attribute identifies non-aggregate types.
+  // The position of the "sret" attribute identifies instance/non-instance
+  // methods.
+  // "sret" on argument 0 means non-instance methods.
+  // "sret" on argument 1 means instance methods.
+
+  CCIfInReg<CCIfType<[i64],
+    CCIfSRet<CCIfType<[i64], CCAssignToRegWithShadow<[X0, X1], [W0, W1]>>>>>,
+
   CCIfSRet<CCIfType<[i64], CCAssignToRegWithShadow<[X8], [W8]>>>,
 
   // Put ByVal arguments directly on the stack. Minimum size and alignment of a
@@ -89,6 +105,7 @@ def CC_AArch64_AAPCS : CallingConv<[
            CCAssignToStack<16, 16>>
 ]>;
 
+let Entry = 1 in
 def RetCC_AArch64_AAPCS : CallingConv<[
   CCIfType<[iPTR], CCBitConvertToType<i64>>,
   CCIfType<[v2f32], CCBitConvertToType<v2i32>>,
@@ -122,6 +139,7 @@ def RetCC_AArch64_AAPCS : CallingConv<[
 ]>;
 
 // Vararg functions on windows pass floats in integer registers
+let Entry = 1 in
 def CC_AArch64_Win64_VarArg : CallingConv<[
   CCIfType<[f16, f32], CCPromoteToType<f64>>,
   CCIfType<[f64], CCBitConvertToType<i64>>,
@@ -133,6 +151,7 @@ def CC_AArch64_Win64_VarArg : CallingConv<[
 // from the standard one at this level:
 //     + i128s (i.e. split i64s) don't need even registers.
 //     + Stack slots are sized as needed rather than being at least 64-bit.
+let Entry = 1 in
 def CC_AArch64_DarwinPCS : CallingConv<[
   CCIfType<[iPTR], CCBitConvertToType<i64>>,
   CCIfType<[v2f32], CCBitConvertToType<v2i32>>,
@@ -189,6 +208,7 @@ def CC_AArch64_DarwinPCS : CallingConv<[
            CCAssignToStack<16, 16>>
 ]>;
 
+let Entry = 1 in
 def CC_AArch64_DarwinPCS_VarArg : CallingConv<[
   CCIfType<[iPTR], CCBitConvertToType<i64>>,
   CCIfType<[v2f32], CCBitConvertToType<v2i32>>,
@@ -213,6 +233,7 @@ def CC_AArch64_DarwinPCS_VarArg : CallingConv<[
 // in register and the remaining arguments on stack. We allow 32bit stack slots,
 // so that WebKit can write partial values in the stack and define the other
 // 32bit quantity as undef.
+let Entry = 1 in
 def CC_AArch64_WebKit_JS : CallingConv<[
   // Handle i1, i8, i16, i32, and i64 passing in register X0 (W0).
   CCIfType<[i1, i8, i16], CCPromoteToType<i32>>,
@@ -224,6 +245,7 @@ def CC_AArch64_WebKit_JS : CallingConv<[
   CCIfType<[i64, f64], CCAssignToStack<8, 8>>
 ]>;
 
+let Entry = 1 in
 def RetCC_AArch64_WebKit_JS : CallingConv<[
   CCIfType<[i32], CCAssignToRegWithShadow<[W0, W1, W2, W3, W4, W5, W6, W7],
                                           [X0, X1, X2, X3, X4, X5, X6, X7]>>,
@@ -257,6 +279,7 @@ def RetCC_AArch64_WebKit_JS : CallingConv<[
 // The AArch64 register mapping is under the heading "The ARMv8/AArch64 ABI
 // register mapping".
 
+let Entry = 1 in
 def CC_AArch64_GHC : CallingConv<[
   CCIfType<[iPTR], CCBitConvertToType<i64>>,
 

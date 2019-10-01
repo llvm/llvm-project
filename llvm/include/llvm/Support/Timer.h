@@ -1,9 +1,8 @@
 //===-- llvm/Support/Timer.h - Interval Timing Support ----------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -206,8 +205,9 @@ public:
     Description.assign(NewDescription.begin(), NewDescription.end());
   }
 
-  /// Print any started timers in this group.
-  void print(raw_ostream &OS);
+  /// Print any started timers in this group, optionally resetting timers after
+  /// printing them.
+  void print(raw_ostream &OS, bool ResetAfterPrint = false);
 
   /// Clear all timers in this group.
   void clear();
@@ -234,7 +234,7 @@ private:
   friend void PrintStatisticsJSON(raw_ostream &OS);
   void addTimer(Timer &T);
   void removeTimer(Timer &T);
-  void prepareToPrintList();
+  void prepareToPrintList(bool reset_time = false);
   void PrintQueuedTimers(raw_ostream &OS);
   void printJSONValue(raw_ostream &OS, const PrintRecord &R,
                       const char *suffix, double Value);

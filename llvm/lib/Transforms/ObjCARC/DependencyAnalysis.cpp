@@ -1,9 +1,8 @@
 //===- DependencyAnalysis.cpp - ObjC ARC Optimization ---------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 /// \file
@@ -45,18 +44,15 @@ bool llvm::objcarc::CanAlterRefCount(const Instruction *Inst, const Value *Ptr,
   default: break;
   }
 
-  ImmutableCallSite CS(Inst);
-  assert(CS && "Only calls can alter reference counts!");
+  const auto *Call = cast<CallBase>(Inst);
 
   // See if AliasAnalysis can help us with the call.
-  FunctionModRefBehavior MRB = PA.getAA()->getModRefBehavior(CS);
+  FunctionModRefBehavior MRB = PA.getAA()->getModRefBehavior(Call);
   if (AliasAnalysis::onlyReadsMemory(MRB))
     return false;
   if (AliasAnalysis::onlyAccessesArgPointees(MRB)) {
     const DataLayout &DL = Inst->getModule()->getDataLayout();
-    for (ImmutableCallSite::arg_iterator I = CS.arg_begin(), E = CS.arg_end();
-         I != E; ++I) {
-      const Value *Op = *I;
+    for (const Value *Op : Call->args()) {
       if (IsPotentialRetainableObjPtr(Op, *PA.getAA()) &&
           PA.related(Ptr, Op, DL))
         return true;

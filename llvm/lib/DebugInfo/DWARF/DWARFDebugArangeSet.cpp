@@ -1,9 +1,8 @@
 //===- DWARFDebugArangeSet.cpp --------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -25,13 +24,13 @@ void DWARFDebugArangeSet::Descriptor::dump(raw_ostream &OS,
 }
 
 void DWARFDebugArangeSet::clear() {
-  Offset = -1U;
+  Offset = -1ULL;
   std::memset(&HeaderData, 0, sizeof(Header));
   ArangeDescriptors.clear();
 }
 
 bool
-DWARFDebugArangeSet::extract(DataExtractor data, uint32_t *offset_ptr) {
+DWARFDebugArangeSet::extract(DataExtractor data, uint64_t *offset_ptr) {
   if (data.isValidOffset(*offset_ptr)) {
     ArangeDescriptors.clear();
     Offset = *offset_ptr;

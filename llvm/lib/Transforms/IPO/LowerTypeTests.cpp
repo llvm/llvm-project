@@ -1,9 +1,8 @@
 //===- LowerTypeTests.cpp - type metadata lowering pass -------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -549,10 +548,10 @@ ByteArrayInfo *LowerTypeTestsModule::createByteArray(BitSetInfo &BSI) {
 }
 
 void LowerTypeTestsModule::allocateByteArrays() {
-  std::stable_sort(ByteArrayInfos.begin(), ByteArrayInfos.end(),
-                   [](const ByteArrayInfo &BAI1, const ByteArrayInfo &BAI2) {
-                     return BAI1.BitSize > BAI2.BitSize;
-                   });
+  llvm::stable_sort(ByteArrayInfos,
+                    [](const ByteArrayInfo &BAI1, const ByteArrayInfo &BAI2) {
+                      return BAI1.BitSize > BAI2.BitSize;
+                    });
 
   std::vector<uint64_t> ByteArrayOffsets(ByteArrayInfos.size());
 
@@ -619,7 +618,7 @@ Value *LowerTypeTestsModule::createBitSetTest(IRBuilder<> &B,
     }
 
     Value *ByteAddr = B.CreateGEP(Int8Ty, ByteArray, BitOffset);
-    Value *Byte = B.CreateLoad(ByteAddr);
+    Value *Byte = B.CreateLoad(Int8Ty, ByteAddr);
 
     Value *ByteAndMask =
         B.CreateAnd(Byte, ConstantExpr::getPtrToInt(TIL.BitMask, Int8Ty));
@@ -1553,11 +1552,10 @@ void LowerTypeTestsModule::buildBitSetsFromDisjointSet(
 
   // Order the sets of indices by size. The GlobalLayoutBuilder works best
   // when given small index sets first.
-  std::stable_sort(
-      TypeMembers.begin(), TypeMembers.end(),
-      [](const std::set<uint64_t> &O1, const std::set<uint64_t> &O2) {
-        return O1.size() < O2.size();
-      });
+  llvm::stable_sort(TypeMembers, [](const std::set<uint64_t> &O1,
+                                    const std::set<uint64_t> &O2) {
+    return O1.size() < O2.size();
+  });
 
   // Create a GlobalLayoutBuilder and provide it with index sets as layout
   // fragments. The GlobalLayoutBuilder tries to lay out members of fragments as
@@ -1693,6 +1691,14 @@ void LowerTypeTestsModule::replaceDirectCalls(Value *Old, Value *New) {
 }
 
 bool LowerTypeTestsModule::lower() {
+  // If only some of the modules were split, we cannot correctly perform
+  // this transformation. We already checked for the presense of type tests
+  // with partially split modules during the thin link, and would have emitted
+  // an error if any were found, so here we can simply return.
+  if ((ExportSummary && ExportSummary->partiallySplitLTOUnits()) ||
+      (ImportSummary && ImportSummary->partiallySplitLTOUnits()))
+    return false;
+
   Function *TypeTestFunc =
       M.getFunction(Intrinsic::getName(Intrinsic::type_test));
   Function *ICallBranchFunnelFunc =

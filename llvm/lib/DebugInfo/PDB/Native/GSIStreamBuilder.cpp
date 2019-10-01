@@ -1,9 +1,8 @@
 //===- DbiStreamBuilder.cpp - PDB Dbi Stream Creation -----------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -31,14 +30,14 @@ using namespace llvm::pdb;
 using namespace llvm::codeview;
 
 struct llvm::pdb::GSIHashStreamBuilder {
-  struct UdtDenseMapInfo {
+  struct SymbolDenseMapInfo {
     static inline CVSymbol getEmptyKey() {
       static CVSymbol Empty;
       return Empty;
     }
     static inline CVSymbol getTombstoneKey() {
-      static CVSymbol Tombstone(static_cast<SymbolKind>(-1),
-                                ArrayRef<uint8_t>());
+      static CVSymbol Tombstone(
+          DenseMapInfo<ArrayRef<uint8_t>>::getTombstoneKey());
       return Tombstone;
     }
     static unsigned getHashValue(const CVSymbol &Val) {
@@ -51,7 +50,7 @@ struct llvm::pdb::GSIHashStreamBuilder {
 
   std::vector<CVSymbol> Records;
   uint32_t StreamIndex;
-  llvm::DenseSet<CVSymbol, UdtDenseMapInfo> UdtHashes;
+  llvm::DenseSet<CVSymbol, SymbolDenseMapInfo> SymbolHashes;
   std::vector<PSHashRecord> HashRecords;
   std::array<support::ulittle32_t, (IPHR_HASH + 32) / 32> HashBitmap;
   std::vector<support::ulittle32_t> HashBuckets;
@@ -67,8 +66,8 @@ struct llvm::pdb::GSIHashStreamBuilder {
                                                CodeViewContainer::Pdb));
   }
   void addSymbol(const CVSymbol &Symbol) {
-    if (Symbol.kind() == S_UDT) {
-      auto Iter = UdtHashes.insert(Symbol);
+    if (Symbol.kind() == S_UDT || Symbol.kind() == S_CONSTANT) {
+      auto Iter = SymbolHashes.insert(Symbol);
       if (!Iter.second)
         return;
     }
@@ -263,8 +262,7 @@ static std::vector<ulittle32_t> computeAddrMap(ArrayRef<CVSymbol> Records) {
     SymOffsets.push_back(SymOffset);
     SymOffset += Sym.length();
   }
-  std::stable_sort(PublicsByAddr.begin(), PublicsByAddr.end(),
-                   comparePubSymByAddrAndName);
+  llvm::stable_sort(PublicsByAddr, comparePubSymByAddrAndName);
 
   // Fill in the symbol offsets in the appropriate order.
   std::vector<ulittle32_t> AddrMap;

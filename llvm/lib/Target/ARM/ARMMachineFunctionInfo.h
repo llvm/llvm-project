@@ -1,9 +1,8 @@
 //===-- ARMMachineFunctionInfo.h - ARM machine function info ----*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -61,6 +60,10 @@ class ARMFunctionInfo : public MachineFunctionInfo {
   /// LRSpilledForFarJump - True if the LR register has been for spilled to
   /// enable far jump.
   bool LRSpilledForFarJump = false;
+
+  /// LRSpilled - True if the LR register has been for spilled for
+  /// any reason, so it's legal to emit an ARM::tBfar (i.e. "bl").
+  bool LRSpilled = false;
 
   /// FramePtrSpillOffset - If HasStackFrame, this records the frame pointer
   /// spill stack offset.
@@ -150,6 +153,9 @@ public:
 
   bool shouldRestoreSPFromFP() const { return RestoreSPFromFP; }
   void setShouldRestoreSPFromFP(bool s) { RestoreSPFromFP = s; }
+
+  bool isLRSpilled() const { return LRSpilled; }
+  void setLRIsSpilled(bool s) { LRSpilled = s; }
 
   bool isLRSpilledForFarJump() const { return LRSpilledForFarJump; }
   void setLRIsSpilledForFarJump(bool s) { LRSpilledForFarJump = s; }

@@ -44,17 +44,6 @@
 ; CHECK-NEXT:        .byte   0
 ; CHECK-NEXT:        .ascii  "char"                  # string offset=5
 ; CHECK-NEXT:        .byte   0
-; CHECK-NEXT:        .section        .BTF.ext,"",@progbits
-; CHECK-NEXT:        .short  60319                   # 0xeb9f
-; CHECK-NEXT:        .byte   1
-; CHECK-NEXT:        .byte   0
-; CHECK-NEXT:        .long   24
-; CHECK-NEXT:        .long   0
-; CHECK-NEXT:        .long   4
-; CHECK-NEXT:        .long   4
-; CHECK-NEXT:        .long   4
-; CHECK-NEXT:        .long   8                       # FuncInfo
-; CHECK-NEXT:        .long   16                      # LineInfo
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "a", scope: !2, file: !3, line: 1, type: !6, isLocal: false, isDefinition: true)

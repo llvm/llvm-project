@@ -1,9 +1,8 @@
 //===- PatternMatch.h - Match on the LLVM IR --------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -31,7 +30,6 @@
 
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/InstrTypes.h"
@@ -669,18 +667,26 @@ template <typename Op_t> struct FNeg_match {
   FNeg_match(const Op_t &Op) : X(Op) {}
   template <typename OpTy> bool match(OpTy *V) {
     auto *FPMO = dyn_cast<FPMathOperator>(V);
-    if (!FPMO || FPMO->getOpcode() != Instruction::FSub)
-      return false;
-    if (FPMO->hasNoSignedZeros()) {
-      // With 'nsz', any zero goes.
-      if (!cstfp_pred_ty<is_any_zero_fp>().match(FPMO->getOperand(0)))
-        return false;
-    } else {
-      // Without 'nsz', we need fsub -0.0, X exactly.
-      if (!cstfp_pred_ty<is_neg_zero_fp>().match(FPMO->getOperand(0)))
-        return false;
+    if (!FPMO) return false;
+
+    if (FPMO->getOpcode() == Instruction::FNeg)
+      return X.match(FPMO->getOperand(0));
+
+    if (FPMO->getOpcode() == Instruction::FSub) {
+      if (FPMO->hasNoSignedZeros()) {
+        // With 'nsz', any zero goes.
+        if (!cstfp_pred_ty<is_any_zero_fp>().match(FPMO->getOperand(0)))
+          return false;
+      } else {
+        // Without 'nsz', we need fsub -0.0, X exactly.
+        if (!cstfp_pred_ty<is_neg_zero_fp>().match(FPMO->getOperand(0)))
+          return false;
+      }
+
+      return X.match(FPMO->getOperand(1));
     }
-    return X.match(FPMO->getOperand(1));
+
+    return false;
   }
 };
 
@@ -1465,6 +1471,20 @@ struct UAddWithOverflow_match {
       if (AddExpr.match(ICmpRHS) && (ICmpLHS == AddLHS || ICmpLHS == AddRHS))
         return L.match(AddLHS) && R.match(AddRHS) && S.match(ICmpRHS);
 
+    // Match special-case for increment-by-1.
+    if (Pred == ICmpInst::ICMP_EQ) {
+      // (a + 1) == 0
+      // (1 + a) == 0
+      if (AddExpr.match(ICmpLHS) && m_ZeroInt().match(ICmpRHS) &&
+          (m_One().match(AddLHS) || m_One().match(AddRHS)))
+        return L.match(AddLHS) && R.match(AddRHS) && S.match(ICmpLHS);
+      // 0 == (a + 1)
+      // 0 == (1 + a)
+      if (m_ZeroInt().match(ICmpLHS) && AddExpr.match(ICmpRHS) &&
+          (m_One().match(AddLHS) || m_One().match(AddRHS)))
+        return L.match(AddLHS) && R.match(AddRHS) && S.match(ICmpRHS);
+    }
+
     return false;
   }
 };
@@ -1486,8 +1506,10 @@ template <typename Opnd_t> struct Argument_match {
   Argument_match(unsigned OpIdx, const Opnd_t &V) : OpI(OpIdx), Val(V) {}
 
   template <typename OpTy> bool match(OpTy *V) {
-    CallSite CS(V);
-    return CS.isCall() && Val.match(CS.getArgument(OpI));
+    // FIXME: Should likely be switched to use `CallBase`.
+    if (const auto *CI = dyn_cast<CallInst>(V))
+      return Val.match(CI->getArgOperand(OpI));
+    return false;
   }
 };
 

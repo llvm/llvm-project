@@ -7,8 +7,7 @@ define void @f() {
 ; X64-LABEL: f:
 ; X64:       # %bb.0: # %BB
 ; X64-NEXT:    movb (%rax), %al
-; X64-NEXT:    movb (%rax), %al
-; X64-NEXT:    testb %al, %al
+; X64-NEXT:    cmpb $0, (%rax)
 ; X64-NEXT:    setne (%rax)
 ; X64-NEXT:    leaq -{{[0-9]+}}(%rsp), %rax
 ; X64-NEXT:    movq %rax, (%rax)
@@ -25,8 +24,7 @@ define void @f() {
 ; X86-NEXT:    andl $-8, %esp
 ; X86-NEXT:    subl $16, %esp
 ; X86-NEXT:    movb (%eax), %al
-; X86-NEXT:    movb (%eax), %al
-; X86-NEXT:    testb %al, %al
+; X86-NEXT:    cmpb $0, (%eax)
 ; X86-NEXT:    setne (%eax)
 ; X86-NEXT:    leal -{{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl %eax, (%eax)
@@ -43,7 +41,7 @@ BB:
   %L10 = load volatile i8, i8* undef
   %L11 = load volatile i8, i8* undef
   %B6 = udiv i8 %L10, %L11
-  %C15 = icmp eq i8 undef, 0
+  %C15 = icmp eq i8 %L11, 0
   %B8 = srem i66 0, %B20
   %C2 = icmp ule i66 %B8, %B20
   %B5 = or i8 0, %B6
@@ -64,8 +62,7 @@ define void @g() {
 ; X64-LABEL: g:
 ; X64:       # %bb.0: # %BB
 ; X64-NEXT:    movb (%rax), %al
-; X64-NEXT:    movb (%rax), %al
-; X64-NEXT:    testb %al, %al
+; X64-NEXT:    cmpb $0, (%rax)
 ; X64-NEXT:    setne (%rax)
 ; X64-NEXT:    leaq -{{[0-9]+}}(%rsp), %rax
 ; X64-NEXT:    movq %rax, (%rax)
@@ -82,8 +79,7 @@ define void @g() {
 ; X86-NEXT:    andl $-8, %esp
 ; X86-NEXT:    subl $8, %esp
 ; X86-NEXT:    movb (%eax), %al
-; X86-NEXT:    movb (%eax), %al
-; X86-NEXT:    testb %al, %al
+; X86-NEXT:    cmpb $0, (%eax)
 ; X86-NEXT:    setne (%eax)
 ; X86-NEXT:    leal -{{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl %eax, (%eax)
@@ -100,7 +96,7 @@ BB:
   %L10 = load volatile i8, i8* undef
   %L11 = load volatile i8, i8* undef
   %B6 = udiv i8 %L10, %L11
-  %C15 = icmp eq i8 undef, 0
+  %C15 = icmp eq i8 %L11, 0
   %B8 = srem i34 0, %B20
   %C2 = icmp ule i34 %B8, %B20
   %B5 = or i8 0, %B6

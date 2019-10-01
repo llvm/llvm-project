@@ -65,5 +65,16 @@ define float @double_negative(float %x, float %y) #0 {
   ret float %div
 }
 
+define <4 x float> @double_negative_vector(<4 x float> %x, <4 x float> %y) #0 {
+; CHECK-LABEL: double_negative_vector:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    divps %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %neg1 = fsub <4 x float> <float -0.0, float -0.0, float -0.0, float -0.0>, %x
+  %neg2 = fsub <4 x float> <float -0.0, float -0.0, float -0.0, float -0.0>, %y
+  %div = fdiv <4 x float> %neg1, %neg2
+  ret <4 x float> %div
+}
+
 attributes #0 = { "unsafe-fp-math"="false" }
 

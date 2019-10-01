@@ -40,9 +40,9 @@
 ; CHECK: !DIEnumerator(name: "B0", value: 2147483647)
 
 
-!10 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "E1", file: !3, line: 3, baseType: !6, size: 32, flags: DIFlagFixedEnum, elements: !11, identifier: "_ZTS2E1")
+!10 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "E1", file: !3, line: 3, baseType: !6, size: 32, flags: DIFlagEnumClass, elements: !11, identifier: "_ZTS2E1")
 ; CHECK: !DICompositeType(tag: DW_TAG_enumeration_type, name: "E1"{{.*}}, baseType: ![[INT]]
-; CHECK-SAME: DIFlagFixedEnum
+; CHECK-SAME: DIFlagEnumClass
 !11 = !{!12, !13}
 !12 = !DIEnumerator(name: "A1", value: -2147483648)
 !13 = !DIEnumerator(name: "B1", value: 2147483647)
@@ -50,9 +50,9 @@
 ; CHECK: !DIEnumerator(name: "B1", value: 2147483647)
 
 
-!14 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "E2", file: !3, line: 5, baseType: !15, size: 64, flags: DIFlagFixedEnum, elements: !16, identifier: "_ZTS2E2")
+!14 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "E2", file: !3, line: 5, baseType: !15, size: 64, flags: DIFlagEnumClass, elements: !16, identifier: "_ZTS2E2")
 ; CHECK: !DICompositeType(tag: DW_TAG_enumeration_type, name: "E2"{{.*}}, baseType: ![[LONG:[0-9]+]]
-; CHECK-SAME: DIFlagFixedEnum
+; CHECK-SAME: DIFlagEnumClass
 !15 = !DIBasicType(name: "long long int", size: 64, encoding: DW_ATE_signed)
 ; CHECK: ![[LONG]] = !DIBasicType(name: "long long int", size: 64, encoding: DW_ATE_signed)
 !16 = !{!17, !18}
@@ -62,9 +62,9 @@
 ; CHECK: !DIEnumerator(name: "B2", value: 9223372036854775807)
 
 
-!19 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "E3", file: !3, line: 7, baseType: !20, size: 64, flags: DIFlagFixedEnum, elements: !21, identifier: "_ZTS2E3")
+!19 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "E3", file: !3, line: 7, baseType: !20, size: 64, flags: DIFlagEnumClass, elements: !21, identifier: "_ZTS2E3")
 ; CHECK: !DICompositeType(tag: DW_TAG_enumeration_type, name: "E3"{{.*}}, baseType: ![[ULONG:[0-9]+]]
-; CHECK-SAME: DIFlagFixedEnum
+; CHECK-SAME: DIFlagEnumClass
 !20 = !DIBasicType(name: "long long unsigned int", size: 64, encoding: DW_ATE_unsigned)
 ; CHECK: ![[ULONG]] = !DIBasicType(name: "long long unsigned int", size: 64, encoding: DW_ATE_unsigned)
 !21 = !{!22}

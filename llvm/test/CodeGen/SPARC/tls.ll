@@ -3,10 +3,10 @@
 ; RUN: llc <%s -march=sparc   -relocation-model=pic    | FileCheck %s --check-prefix=pic
 ; RUN: llc <%s -march=sparcv9 -relocation-model=pic    | FileCheck %s --check-prefix=pic
 
-; RUN: llc <%s -march=sparc   -relocation-model=static -filetype=obj | llvm-readobj -r -t | FileCheck %s --check-prefix=v8abs-obj
-; RUN: llc <%s -march=sparcv9 -relocation-model=static -filetype=obj | llvm-readobj -r -t | FileCheck %s --check-prefix=v9abs-obj
-; RUN: llc <%s -march=sparc   -relocation-model=pic    -filetype=obj | llvm-readobj -r -t | FileCheck %s --check-prefix=pic-obj
-; RUN: llc <%s -march=sparcv9 -relocation-model=pic    -filetype=obj | llvm-readobj -r -t | FileCheck %s --check-prefix=pic-obj
+; RUN: llc <%s -march=sparc   -relocation-model=static -filetype=obj | llvm-readobj -r --symbols | FileCheck %s --check-prefix=v8abs-obj
+; RUN: llc <%s -march=sparcv9 -relocation-model=static -filetype=obj | llvm-readobj -r --symbols | FileCheck %s --check-prefix=v9abs-obj
+; RUN: llc <%s -march=sparc   -relocation-model=pic    -filetype=obj | llvm-readobj -r --symbols | FileCheck %s --check-prefix=pic-obj
+; RUN: llc <%s -march=sparcv9 -relocation-model=pic    -filetype=obj | llvm-readobj -r --symbols | FileCheck %s --check-prefix=pic-obj
 
 @local_symbol = internal thread_local global i32 0
 @extern_symbol = external thread_local global i32

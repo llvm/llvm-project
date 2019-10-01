@@ -12,9 +12,9 @@
 ; RUN: llc -mtriple=aarch64-unknown-linux -mcpu=cortex-a57 < %s | FileCheck --check-prefixes=ALIGN4,CHECK %s
 ; RUN: llc -mtriple=aarch64-unknown-linux -mcpu=cortex-a72 < %s | FileCheck --check-prefixes=ALIGN4,CHECK %s
 ; RUN: llc -mtriple=aarch64-unknown-linux -mcpu=cortex-a73 < %s | FileCheck --check-prefixes=ALIGN4,CHECK %s
-; RUN: llc -mtriple=aarch64-unknown-linux -mcpu=exynos-m1 < %s | FileCheck ---check-prefixes=ALIGN4,CHECK %s
-; RUN: llc -mtriple=aarch64-unknown-linux -mcpu=exynos-m2 < %s | FileCheck ---check-prefixes=ALIGN4,CHECK %s
-; RUN: llc -mtriple=aarch64-unknown-linux -mcpu=exynos-m3 < %s | FileCheck ---check-prefixes=ALIGN5,CHECK %s
+; RUN: llc -mtriple=aarch64-unknown-linux -mcpu=exynos-m1 < %s | FileCheck --check-prefixes=ALIGN4,CHECK %s
+; RUN: llc -mtriple=aarch64-unknown-linux -mcpu=exynos-m2 < %s | FileCheck --check-prefixes=ALIGN4,CHECK %s
+; RUN: llc -mtriple=aarch64-unknown-linux -mcpu=exynos-m3 < %s | FileCheck --check-prefixes=ALIGN5,CHECK %s
 
 define void @test() {
   ret void

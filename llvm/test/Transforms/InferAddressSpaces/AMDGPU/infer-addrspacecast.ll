@@ -41,8 +41,8 @@ define void @addrspacecast_to_memory(i32 addrspace(3)* %ptr) {
 }
 
 ; CHECK-LABEL: @multiuse_addrspacecast_gep_addrspacecast(
-; CHECK: %1 = addrspacecast i32 addrspace(3)* %ptr to i32*
-; CHECK-NEXT: store volatile i32* %1, i32* addrspace(1)* undef
+; CHECK: %asc0 = addrspacecast i32 addrspace(3)* %ptr to i32*
+; CHECK-NEXT: store volatile i32* %asc0, i32* addrspace(1)* undef
 ; CHECK-NEXT: %gep0 = getelementptr i32, i32 addrspace(3)* %ptr, i64 9
 ; CHECK-NEXT: store i32 8, i32 addrspace(3)* %gep0, align 8
 ; CHECK-NEXT: ret void

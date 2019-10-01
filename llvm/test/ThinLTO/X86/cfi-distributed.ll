@@ -3,8 +3,8 @@
 ; Test to ensure that only referenced type ID records are emitted into
 ; each distributed index file.
 
-; RUN: opt -thinlto-bc -o %t1.o %s
-; RUN: opt -thinlto-bc -o %t2.o %p/Inputs/cfi-distributed.ll
+; RUN: opt -thinlto-bc -thinlto-split-lto-unit -o %t1.o %s
+; RUN: opt -thinlto-bc -thinlto-split-lto-unit -o %t2.o %p/Inputs/cfi-distributed.ll
 
 ; RUN: llvm-lto2 run -thinlto-distributed-indexes %t1.o %t2.o \
 ; RUN:   -o %t3 \

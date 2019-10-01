@@ -745,7 +745,7 @@ define void @pointer_bitcast_baseinst(i16* %arg, i8* %arg1, i64 %arg2) {
 ; CHECK-LABEL: @pointer_bitcast_baseinst(
 ; CHECK:       bb3:
 ; CHECK-NEXT:    %indvar = phi i64 [ %indvar.next, %bb3 ], [ 0, %bb ]
-; CHECK-NEXT:    %4 = shl i64 %indvar, 3
+; CHECK-NEXT:    %4 = shl nuw i64 %indvar, 3
 ; CHECK-NEXT:    %5 = add i64 %4, 1
 ; CHECK-NEXT:    %tmp5 = shl nuw i64 %5, 1
 ; CHECK-NEXT:    %tmp6 = getelementptr i8, i8* %arg1, i64 %tmp5
@@ -782,6 +782,30 @@ bb3:                                              ; preds = %bb3, %bb
   br i1 %tmp18, label %bb19, label %bb3
 
 bb19:                                             ; preds = %bb3
+  ret void
+}
+
+define void @bad_step(i32* nocapture readnone %x) #0 {
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %entry
+  %i.08 = phi i32 [ 0, %entry ], [ %add3, %for.body ]
+  %call = tail call i32 @foo(i32 %i.08) #1
+  %add = add nsw i32 %i.08, 2
+  %call1 = tail call i32 @foo(i32 %add) #1
+  %add2 = add nsw i32 %i.08, 3
+  %call3 = tail call i32 @foo(i32 %add2) #1
+  %add3 = add nsw i32 %i.08, 6
+  %exitcond = icmp sge i32 %add3, 500
+  br i1 %exitcond, label %for.end, label %for.body
+
+; CHECK-LABEL: @bad_step
+; CHECK: %add = add nsw i32 %i.08, 2
+; CHECK: %add2 = add nsw i32 %i.08, 3
+; CHECK: %add3 = add nsw i32 %i.08, 6
+
+for.end:                                          ; preds = %for.body
   ret void
 }
 

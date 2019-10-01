@@ -292,7 +292,6 @@ define i32 @assumption_conflicts_with_known_bits(i32 %a, i32 %b) {
   ret i32 %and1
 }
 
-; FIXME:
 ; PR37726 - https://bugs.llvm.org/show_bug.cgi?id=37726
 ; There's a loophole in eliminating a redundant assumption when
 ; we have conflicting assumptions. Verify that debuginfo doesn't
@@ -318,6 +317,24 @@ define void @debug_interference(i8 %x) {
   tail call void @llvm.dbg.value(metadata i32 5, metadata !1, metadata !DIExpression()), !dbg !9
   tail call void @llvm.assume(i1 %cmp2)
   ret void
+}
+
+; This would crash.
+; Does it ever make sense to peek through a bitcast of the icmp operand?
+
+define i32 @PR40940(<4 x i8> %x) {
+; CHECK-LABEL: @PR40940(
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i8> [[X:%.*]], <4 x i8> undef, <4 x i32> <i32 1, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[T2:%.*]] = bitcast <4 x i8> [[SHUF]] to i32
+; CHECK-NEXT:    [[T3:%.*]] = icmp ult i32 [[T2]], 65536
+; CHECK-NEXT:    call void @llvm.assume(i1 [[T3]])
+; CHECK-NEXT:    ret i32 [[T2]]
+;
+  %shuf = shufflevector <4 x i8> %x, <4 x i8> undef, <4 x i32> <i32 1, i32 1, i32 2, i32 3>
+  %t2 = bitcast <4 x i8> %shuf to i32
+  %t3 = icmp ult i32 %t2, 65536
+  call void @llvm.assume(i1 %t3)
+  ret i32 %t2
 }
 
 declare void @llvm.dbg.value(metadata, metadata, metadata)

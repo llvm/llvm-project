@@ -282,7 +282,7 @@ for.end:                                          ; preds = %for.body, %entry
 ;; memcpy.atomic formation (atomic load & store) -- element size 2
 define void @test6(i64 %Size) nounwind ssp {
 ; CHECK-LABEL: @test6(
-; CHECK: [[Sz:%[0-9]+]] = shl i64 %Size, 1
+; CHECK: [[Sz:%[0-9]+]] = shl nuw i64 %Size, 1
 ; CHECK: call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 2 %Dest{{[0-9]*}}, i8* align 2 %Base{{[0-9]*}}, i64 [[Sz]], i32 2)
 ; CHECK-NOT: store
 ; CHECK: ret void
@@ -308,7 +308,7 @@ for.end:                                          ; preds = %for.body, %entry
 ;; memcpy.atomic formation (atomic load & store) -- element size 4
 define void @test7(i64 %Size) nounwind ssp {
 ; CHECK-LABEL: @test7(
-; CHECK: [[Sz:%[0-9]+]] = shl i64 %Size, 2
+; CHECK: [[Sz:%[0-9]+]] = shl nuw i64 %Size, 2
 ; CHECK: call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 4 %Dest{{[0-9]*}}, i8* align 4 %Base{{[0-9]*}}, i64 [[Sz]], i32 4)
 ; CHECK-NOT: store
 ; CHECK: ret void
@@ -334,7 +334,7 @@ for.end:                                          ; preds = %for.body, %entry
 ;; memcpy.atomic formation (atomic load & store) -- element size 8
 define void @test8(i64 %Size) nounwind ssp {
 ; CHECK-LABEL: @test8(
-; CHECK: [[Sz:%[0-9]+]] = shl i64 %Size, 3
+; CHECK: [[Sz:%[0-9]+]] = shl nuw i64 %Size, 3
 ; CHECK: call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 8 %Dest{{[0-9]*}}, i8* align 8 %Base{{[0-9]*}}, i64 [[Sz]], i32 8)
 ; CHECK-NOT: store
 ; CHECK: ret void
@@ -360,7 +360,7 @@ for.end:                                          ; preds = %for.body, %entry
 ;; memcpy.atomic formation rejection (atomic load & store) -- element size 16
 define void @test9(i64 %Size) nounwind ssp {
 ; CHECK-LABEL: @test9(
-; CHECK: [[Sz:%[0-9]+]] = shl i64 %Size, 4
+; CHECK: [[Sz:%[0-9]+]] = shl nuw i64 %Size, 4
 ; CHECK: call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 16 %Dest{{[0-9]*}}, i8* align 16 %Base{{[0-9]*}}, i64 [[Sz]], i32 16)
 ; CHECK-NOT: store
 ; CHECK: ret void

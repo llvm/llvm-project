@@ -1,0 +1,44 @@
+# RUN: yaml2obj %s > %t.o
+# RUN: llvm-nm %t.o --debug-syms --format=sysv | FileCheck %s
+
+!ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Symbols:
+  - Name: symbol_notype
+    Type: STT_NOTYPE
+  - Name: symbol_common
+    Type: STT_COMMON
+  - Name: symbol_tls
+    Type: STT_TLS
+  - Name: symbol_file
+    Type: STT_FILE
+  - Name: symbol_obj
+    Type: STT_OBJECT
+  - Name: symbol_func
+    Type: STT_FUNC
+  - Name: symbol_ifunc
+    Type: STT_GNU_IFUNC
+  - Name: os_specific
+    Type: 11
+  - Name: proc_specific
+    Type: 13
+  - Name: unknown
+    Type: 7
+
+## FIXME: Should not print blank types for unknown, OS-specific and processor-
+##        specific types. See https://bugs.llvm.org/show_bug.cgi?id=41713.
+
+# CHECK:      os_specific   {{.*}}|                  |                |     |*UND*
+# CHECK-NEXT: proc_specific {{.*}}|                  |                |     |*UND*
+# CHECK-NEXT: symbol_common {{.*}}|            COMMON|                |     |*COM*
+# CHECK-NEXT: symbol_file   {{.*}}|              FILE|                |     |*UND*
+# CHECK-NEXT: symbol_func   {{.*}}|              FUNC|                |     |*UND*
+# CHECK-NEXT: symbol_ifunc  {{.*}}|             IFUNC|                |     |*UND*
+# CHECK-NEXT: symbol_notype {{.*}}|            NOTYPE|                |     |*UND*
+# CHECK-NEXT: symbol_obj    {{.*}}|            OBJECT|                |     |*UND*
+# CHECK-NEXT: symbol_tls    {{.*}}|               TLS|                |     |*UND*
+# CHECK-NEXT: unknown       {{.*}}|                  |                |     |*UND*

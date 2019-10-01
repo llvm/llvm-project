@@ -1,5 +1,13 @@
 // RUN: llvm-mc -triple x86_64-unknown-unknown --show-encoding %s | FileCheck %s
 
+// CHECK: bsfw %r13w, %r13w 
+// CHECK: encoding: [0x66,0x45,0x0f,0xbc,0xed]        
+bsfw %r13w, %r13w 
+
+// CHECK: bsrw %r13w, %r13w 
+// CHECK: encoding: [0x66,0x45,0x0f,0xbd,0xed]        
+bsrw %r13w, %r13w 
+
 // CHECK: bsfl %r13d, %r13d 
 // CHECK: encoding: [0x45,0x0f,0xbc,0xed]        
 bsfl %r13d, %r13d 
@@ -8,9 +16,90 @@ bsfl %r13d, %r13d
 // CHECK: encoding: [0x45,0x0f,0xbd,0xed]        
 bsrl %r13d, %r13d 
 
+// CHECK: bsfq %r13, %r13 
+// CHECK: encoding: [0x4d,0x0f,0xbc,0xed]        
+bsfq %r13, %r13 
+
+// CHECK: bsrq %r13, %r13 
+// CHECK: encoding: [0x4d,0x0f,0xbd,0xed]        
+bsrq %r13, %r13 
+
+
+// CHECK: btcw $0, %r13w 
+// CHECK: encoding: [0x66,0x41,0x0f,0xba,0xfd,0x00]        
+btcw $0, %r13w 
+
+// CHECK: btcw $255, %r13w 
+// CHECK: encoding: [0x66,0x41,0x0f,0xba,0xfd,0xff]        
+btcw $-1, %r13w 
+
+// CHECK: btcw $255, %r13w 
+// CHECK: encoding: [0x66,0x41,0x0f,0xba,0xfd,0xff]        
+btcw $255, %r13w 
+
+// CHECK: btcw %r13w, %r13w 
+// CHECK: encoding: [0x66,0x45,0x0f,0xbb,0xed]        
+btcw %r13w, %r13w 
+
+// CHECK: btw $0, %r13w 
+// CHECK: encoding: [0x66,0x41,0x0f,0xba,0xe5,0x00]        
+btw $0, %r13w 
+
+// CHECK: btw $255, %r13w 
+// CHECK: encoding: [0x66,0x41,0x0f,0xba,0xe5,0xff]        
+btw $-1, %r13w 
+
+// CHECK: btw $255, %r13w 
+// CHECK: encoding: [0x66,0x41,0x0f,0xba,0xe5,0xff]        
+btw $255, %r13w 
+
+// CHECK: btw %r13w, %r13w 
+// CHECK: encoding: [0x66,0x45,0x0f,0xa3,0xed]        
+btw %r13w, %r13w 
+
+// CHECK: btrw $0, %r13w 
+// CHECK: encoding: [0x66,0x41,0x0f,0xba,0xf5,0x00]        
+btrw $0, %r13w 
+
+// CHECK: btrw $255, %r13w 
+// CHECK: encoding: [0x66,0x41,0x0f,0xba,0xf5,0xff]        
+btrw $-1, %r13w 
+
+// CHECK: btrw $255, %r13w 
+// CHECK: encoding: [0x66,0x41,0x0f,0xba,0xf5,0xff]        
+btrw $255, %r13w 
+
+// CHECK: btrw %r13w, %r13w 
+// CHECK: encoding: [0x66,0x45,0x0f,0xb3,0xed]        
+btrw %r13w, %r13w 
+
+// CHECK: btsw $0, %r13w 
+// CHECK: encoding: [0x66,0x41,0x0f,0xba,0xed,0x00]        
+btsw $0, %r13w 
+
+// CHECK: btsw $255, %r13w 
+// CHECK: encoding: [0x66,0x41,0x0f,0xba,0xed,0xff]        
+btsw $-1, %r13w 
+
+// CHECK: btsw $255, %r13w 
+// CHECK: encoding: [0x66,0x41,0x0f,0xba,0xed,0xff]        
+btsw $255, %r13w 
+
+// CHECK: btsw %r13w, %r13w 
+// CHECK: encoding: [0x66,0x45,0x0f,0xab,0xed]        
+btsw %r13w, %r13w 
+
 // CHECK: btcl $0, %r13d 
 // CHECK: encoding: [0x41,0x0f,0xba,0xfd,0x00]        
 btcl $0, %r13d 
+
+// CHECK: btcl $255, %r13d 
+// CHECK: encoding: [0x41,0x0f,0xba,0xfd,0xff]        
+btcl $-1, %r13d 
+
+// CHECK: btcl $255, %r13d 
+// CHECK: encoding: [0x41,0x0f,0xba,0xfd,0xff]        
+btcl $255, %r13d 
 
 // CHECK: btcl %r13d, %r13d 
 // CHECK: encoding: [0x45,0x0f,0xbb,0xed]        
@@ -20,6 +109,14 @@ btcl %r13d, %r13d
 // CHECK: encoding: [0x41,0x0f,0xba,0xe5,0x00]        
 btl $0, %r13d 
 
+// CHECK: btl $255, %r13d 
+// CHECK: encoding: [0x41,0x0f,0xba,0xe5,0xff]        
+btl $-1, %r13d 
+
+// CHECK: btl $255, %r13d 
+// CHECK: encoding: [0x41,0x0f,0xba,0xe5,0xff]        
+btl $255, %r13d 
+
 // CHECK: btl %r13d, %r13d 
 // CHECK: encoding: [0x45,0x0f,0xa3,0xed]        
 btl %r13d, %r13d 
@@ -27,6 +124,14 @@ btl %r13d, %r13d
 // CHECK: btrl $0, %r13d 
 // CHECK: encoding: [0x41,0x0f,0xba,0xf5,0x00]        
 btrl $0, %r13d 
+
+// CHECK: btrl $255, %r13d 
+// CHECK: encoding: [0x41,0x0f,0xba,0xf5,0xff]        
+btrl $-1, %r13d 
+
+// CHECK: btrl $255, %r13d 
+// CHECK: encoding: [0x41,0x0f,0xba,0xf5,0xff]        
+btrl $255, %r13d 
 
 // CHECK: btrl %r13d, %r13d 
 // CHECK: encoding: [0x45,0x0f,0xb3,0xed]        
@@ -36,13 +141,81 @@ btrl %r13d, %r13d
 // CHECK: encoding: [0x41,0x0f,0xba,0xed,0x00]        
 btsl $0, %r13d 
 
+// CHECK: btsl $255, %r13d 
+// CHECK: encoding: [0x41,0x0f,0xba,0xed,0xff]        
+btsl $-1, %r13d 
+
+// CHECK: btsl $255, %r13d 
+// CHECK: encoding: [0x41,0x0f,0xba,0xed,0xff]        
+btsl $255, %r13d 
+
 // CHECK: btsl %r13d, %r13d 
 // CHECK: encoding: [0x45,0x0f,0xab,0xed]        
 btsl %r13d, %r13d 
 
-// CHECK: cltd 
-// CHECK: encoding: [0x99]          
-cltd 
+// CHECK: btcq $0, %r13 
+// CHECK: encoding: [0x49,0x0f,0xba,0xfd,0x00]        
+btcq $0, %r13 
+
+// CHECK: btcq $255, %r13 
+// CHECK: encoding: [0x49,0x0f,0xba,0xfd,0xff]        
+btcq $-1, %r13 
+
+// CHECK: btcq $255, %r13 
+// CHECK: encoding: [0x49,0x0f,0xba,0xfd,0xff]        
+btcq $255, %r13 
+
+// CHECK: btcq %r13, %r13 
+// CHECK: encoding: [0x4d,0x0f,0xbb,0xed]        
+btcq %r13, %r13 
+
+// CHECK: btq $0, %r13 
+// CHECK: encoding: [0x49,0x0f,0xba,0xe5,0x00]        
+btq $0, %r13 
+
+// CHECK: btq $255, %r13 
+// CHECK: encoding: [0x49,0x0f,0xba,0xe5,0xff]        
+btq $-1, %r13 
+
+// CHECK: btq $255, %r13 
+// CHECK: encoding: [0x49,0x0f,0xba,0xe5,0xff]        
+btq $255, %r13 
+
+// CHECK: btq %r13, %r13 
+// CHECK: encoding: [0x4d,0x0f,0xa3,0xed]        
+btq %r13, %r13 
+
+// CHECK: btrq $0, %r13 
+// CHECK: encoding: [0x49,0x0f,0xba,0xf5,0x00]        
+btrq $0, %r13 
+
+// CHECK: btrq $255, %r13 
+// CHECK: encoding: [0x49,0x0f,0xba,0xf5,0xff]        
+btrq $-1, %r13 
+
+// CHECK: btrq $255, %r13 
+// CHECK: encoding: [0x49,0x0f,0xba,0xf5,0xff]        
+btrq $255, %r13 
+
+// CHECK: btrq %r13, %r13 
+// CHECK: encoding: [0x4d,0x0f,0xb3,0xed]        
+btrq %r13, %r13 
+
+// CHECK: btsq $0, %r13 
+// CHECK: encoding: [0x49,0x0f,0xba,0xed,0x00]        
+btsq $0, %r13 
+
+// CHECK: btsq $255, %r13 
+// CHECK: encoding: [0x49,0x0f,0xba,0xed,0xff]        
+btsq $-1, %r13 
+
+// CHECK: btsq $255, %r13 
+// CHECK: encoding: [0x49,0x0f,0xba,0xed,0xff]        
+btsq $255, %r13 
+
+// CHECK: btsq %r13, %r13 
+// CHECK: encoding: [0x4d,0x0f,0xab,0xed]        
+btsq %r13, %r13 
 
 // CHECK: cmpsb %es:(%rdi), %gs:(%rsi) 
 // CHECK: encoding: [0x65,0xa6]        
@@ -59,14 +232,6 @@ cmpsq %es:(%rdi), %gs:(%rsi)
 // CHECK: cmpsw %es:(%rdi), %gs:(%rsi) 
 // CHECK: encoding: [0x66,0x65,0xa7]        
 cmpsw %es:(%rdi), %gs:(%rsi) 
-
-// CHECK: cwtd 
-// CHECK: encoding: [0x66,0x99]          
-cwtd 
-
-// CHECK: cwtl 
-// CHECK: encoding: [0x98]          
-cwtl 
 
 // CHECK: insb %dx, %es:(%rdi) 
 // CHECK: encoding: [0x6c]        

@@ -1,9 +1,8 @@
 //===-- AMDGPULowerKernelArguments.cpp ------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -110,7 +109,8 @@ bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
       // modes on SI to know the high bits are 0 so pointer adds don't wrap. We
       // can't represent this with range metadata because it's only allowed for
       // integer types.
-      if (PT->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS &&
+      if ((PT->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS ||
+           PT->getAddressSpace() == AMDGPUAS::REGION_ADDRESS) &&
           ST.getGeneration() == AMDGPUSubtarget::SOUTHERN_ISLANDS)
         continue;
 
@@ -132,6 +132,7 @@ bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
                                       KernArgBaseAlign);
 
     Value *ArgPtr;
+    Type *AdjustedArgTy;
     if (DoShiftOpt) { // FIXME: Handle aggregate types
       // Since we don't have sub-dword scalar loads, avoid doing an extload by
       // loading earlier than the argument address, and extracting the relevant
@@ -139,30 +140,27 @@ bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
       //
       // Additionally widen any sub-dword load to i32 even if suitably aligned,
       // so that CSE between different argument loads works easily.
-
       ArgPtr = Builder.CreateConstInBoundsGEP1_64(
-        KernArgSegment,
-        AlignDownOffset,
-        Arg.getName() + ".kernarg.offset.align.down");
-      ArgPtr = Builder.CreateBitCast(ArgPtr,
-                                     Builder.getInt32Ty()->getPointerTo(AS),
-                                     ArgPtr->getName() + ".cast");
+          Builder.getInt8Ty(), KernArgSegment, AlignDownOffset,
+          Arg.getName() + ".kernarg.offset.align.down");
+      AdjustedArgTy = Builder.getInt32Ty();
     } else {
       ArgPtr = Builder.CreateConstInBoundsGEP1_64(
-        KernArgSegment,
-        EltOffset,
-        Arg.getName() + ".kernarg.offset");
-      ArgPtr = Builder.CreateBitCast(ArgPtr, ArgTy->getPointerTo(AS),
-                                     ArgPtr->getName() + ".cast");
+          Builder.getInt8Ty(), KernArgSegment, EltOffset,
+          Arg.getName() + ".kernarg.offset");
+      AdjustedArgTy = ArgTy;
     }
 
     if (IsV3 && Size >= 32) {
       V4Ty = VectorType::get(VT->getVectorElementType(), 4);
       // Use the hack that clang uses to avoid SelectionDAG ruining v3 loads
-      ArgPtr = Builder.CreateBitCast(ArgPtr, V4Ty->getPointerTo(AS));
+      AdjustedArgTy = V4Ty;
     }
 
-    LoadInst *Load = Builder.CreateAlignedLoad(ArgPtr, AdjustedAlign);
+    ArgPtr = Builder.CreateBitCast(ArgPtr, AdjustedArgTy->getPointerTo(AS),
+                                   ArgPtr->getName() + ".cast");
+    LoadInst *Load =
+        Builder.CreateAlignedLoad(AdjustedArgTy, ArgPtr, AdjustedAlign);
     Load->setMetadata(LLVMContext::MD_invariant_load, MDNode::get(Ctx, {}));
 
     MDBuilder MDB(Ctx);

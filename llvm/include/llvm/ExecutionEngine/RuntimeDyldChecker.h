@@ -1,16 +1,18 @@
 //===---- RuntimeDyldChecker.h - RuntimeDyld tester framework -----*- C++ -*-=//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_EXECUTIONENGINE_RUNTIMEDYLDCHECKER_H
 #define LLVM_EXECUTIONENGINE_RUNTIMEDYLDCHECKER_H
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ExecutionEngine/JITSymbol.h"
+#include "llvm/Support/Endian.h"
 
 #include <cstdint>
 #include <memory>
@@ -58,7 +60,8 @@ class raw_ostream;
 ///
 /// ident_expr = 'decode_operand' '(' symbol ',' operand-index ')'
 ///            | 'next_pc'        '(' symbol ')'
-///            | 'stub_addr' '(' file-name ',' section-name ',' symbol ')'
+///            | 'stub_addr' '(' stub-container-name ',' symbol ')'
+///            | 'got_addr' '(' stub-container-name ',' symbol ')'
 ///            | symbol
 ///
 /// binary_expr = expr '+' expr
@@ -70,15 +73,84 @@ class raw_ostream;
 ///
 class RuntimeDyldChecker {
 public:
-  RuntimeDyldChecker(RuntimeDyld &RTDyld, MCDisassembler *Disassembler,
-                     MCInstPrinter *InstPrinter, raw_ostream &ErrStream);
+  class MemoryRegionInfo {
+  public:
+    MemoryRegionInfo() = default;
+
+    /// Constructor for symbols/sections with content.
+    MemoryRegionInfo(StringRef Content, JITTargetAddress TargetAddress)
+        : ContentPtr(Content.data()), Size(Content.size()),
+          TargetAddress(TargetAddress) {}
+
+    /// Constructor for zero-fill symbols/sections.
+    MemoryRegionInfo(uint64_t Size, JITTargetAddress TargetAddress)
+        : Size(Size), TargetAddress(TargetAddress) {}
+
+    /// Returns true if this is a zero-fill symbol/section.
+    bool isZeroFill() const {
+      assert(Size && "setContent/setZeroFill must be called first");
+      return !ContentPtr;
+    }
+
+    /// Set the content for this memory region.
+    void setContent(StringRef Content) {
+      assert(!ContentPtr && !Size && "Content/zero-fill already set");
+      ContentPtr = Content.data();
+      Size = Content.size();
+    }
+
+    /// Set a zero-fill length for this memory region.
+    void setZeroFill(uint64_t Size) {
+      assert(!ContentPtr && !this->Size && "Content/zero-fill already set");
+      this->Size = Size;
+    }
+
+    /// Returns the content for this section if there is any.
+    StringRef getContent() const {
+      assert(!isZeroFill() && "Can't get content for a zero-fill section");
+      return StringRef(ContentPtr, static_cast<size_t>(Size));
+    }
+
+    /// Returns the zero-fill length for this section.
+    uint64_t getZeroFillLength() const {
+      assert(isZeroFill() && "Can't get zero-fill length for content section");
+      return Size;
+    }
+
+    /// Set the target address for this region.
+    void setTargetAddress(JITTargetAddress TargetAddress) {
+      assert(!this->TargetAddress && "TargetAddress already set");
+      this->TargetAddress = TargetAddress;
+    }
+
+    /// Return the target address for this region.
+    JITTargetAddress getTargetAddress() const { return TargetAddress; }
+
+  private:
+    const char *ContentPtr = 0;
+    uint64_t Size = 0;
+    JITTargetAddress TargetAddress = 0;
+  };
+
+  using IsSymbolValidFunction = std::function<bool(StringRef Symbol)>;
+  using GetSymbolInfoFunction =
+      std::function<Expected<MemoryRegionInfo>(StringRef SymbolName)>;
+  using GetSectionInfoFunction = std::function<Expected<MemoryRegionInfo>(
+      StringRef FileName, StringRef SectionName)>;
+  using GetStubInfoFunction = std::function<Expected<MemoryRegionInfo>(
+      StringRef StubContainer, StringRef TargetName)>;
+  using GetGOTInfoFunction = std::function<Expected<MemoryRegionInfo>(
+      StringRef GOTContainer, StringRef TargetName)>;
+
+  RuntimeDyldChecker(IsSymbolValidFunction IsSymbolValid,
+                     GetSymbolInfoFunction GetSymbolInfo,
+                     GetSectionInfoFunction GetSectionInfo,
+                     GetStubInfoFunction GetStubInfo,
+                     GetGOTInfoFunction GetGOTInfo,
+                     support::endianness Endianness,
+                     MCDisassembler *Disassembler, MCInstPrinter *InstPrinter,
+                     raw_ostream &ErrStream);
   ~RuntimeDyldChecker();
-
-  // Get the associated RTDyld instance.
-  RuntimeDyld& getRTDyld();
-
-  // Get the associated RTDyld instance.
-  const RuntimeDyld& getRTDyld() const;
 
   /// Check a single expression against the attached RuntimeDyld
   ///        instance.
@@ -100,7 +172,7 @@ public:
                                                   bool LocalAddress);
 
   /// If there is a section at the given local address, return its load
-  ///        address, otherwise return none.
+  /// address, otherwise return none.
   Optional<uint64_t> getSectionLoadAddress(void *LocalAddress) const;
 
 private:

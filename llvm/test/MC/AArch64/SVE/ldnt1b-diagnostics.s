@@ -23,12 +23,12 @@ ldnt1b z0.h, p0/z, [x0]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ldnt1b z0.s, p0/z, [x0]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid element width
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // CHECK-NEXT: ldnt1b z0.s, p0/z, [x0]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ldnt1b z0.d, p0/z, [x0]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid element width
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // CHECK-NEXT: ldnt1b z0.d, p0/z, [x0]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
@@ -37,7 +37,7 @@ ldnt1b z0.d, p0/z, [x0]
 // restricted predicate has range [0, 7].
 
 ldnt1b z27.b, p8/z, [x0]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: restricted predicate has range [0, 7].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid restricted predicate register, expected p0..p7 (without element suffix)
 // CHECK-NEXT: ldnt1b z27.b, p8/z, [x0]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

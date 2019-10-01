@@ -38,12 +38,12 @@ attributes #0 = { noreturn }
 !llvm.module.flags = !{!3, !4}
 !llvm.ident = !{!5}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_ObjC, file: !1, producer: "clang version 4.0.0 (http://llvm.org/git/clang.git 08946d46f2add8cb241fdc09fc3731dd9dc5ecb5) (http://llvm.org/git/llvm.git d048aeecd34b8c336d1fd44e36c15b0b11c2ea4d)", isOptimized: false, runtimeVersion: 1, emissionKind: FullDebug, enums: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_ObjC, file: !1, producer: "clang version 4.0.0", isOptimized: false, runtimeVersion: 1, emissionKind: FullDebug, enums: !2)
 !1 = !DIFile(filename: "test.m", directory: "/home/del/test/noreturn/objc")
 !2 = !{}
 !3 = !{i32 2, !"Dwarf Version", i32 4}
 !4 = !{i32 2, !"Debug Info Version", i32 3}
-!5 = !{!"clang version 4.0.0 (http://llvm.org/git/clang.git 08946d46f2add8cb241fdc09fc3731dd9dc5ecb5) (http://llvm.org/git/llvm.git d048aeecd34b8c336d1fd44e36c15b0b11c2ea4d)"}
+!5 = !{!"clang version 4.0.0"}
 !6 = distinct !DISubprogram(name: "f", scope: !7, file: !7, line: 2, type: !8, isLocal: false, isDefinition: true, scopeLine: 3, flags: DIFlagNoReturn, isOptimized: false, unit: !0, retainedNodes: !2)
 !7 = !DIFile(filename: "./test.m", directory: "/home/del/test/noreturn/objc")
 !8 = !DISubroutineType(types: !9)

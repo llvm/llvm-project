@@ -1,9 +1,8 @@
 //===-- echo.cpp - tool for testing libLLVM and llvm-c API ----------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -940,7 +939,7 @@ AliasDecl:
   if (!Begin) {
     if (End != nullptr)
       report_fatal_error("Range has an end but no beginning");
-    goto NamedMDDecl;
+    goto GlobalIFuncDecl;
   }
 
   Cur = Begin;
@@ -962,6 +961,41 @@ AliasDecl:
     }
 
     LLVMValueRef Prev = LLVMGetPreviousGlobalAlias(Next);
+    if (Prev != Cur)
+      report_fatal_error("Next.Previous global is not Current");
+
+    Cur = Next;
+  }
+
+GlobalIFuncDecl:
+  Begin = LLVMGetFirstGlobalIFunc(Src);
+  End = LLVMGetLastGlobalIFunc(Src);
+  if (!Begin) {
+    if (End != nullptr)
+      report_fatal_error("Range has an end but no beginning");
+    goto NamedMDDecl;
+  }
+
+  Cur = Begin;
+  Next = nullptr;
+  while (true) {
+    size_t NameLen;
+    const char *Name = LLVMGetValueName2(Cur, &NameLen);
+    if (LLVMGetNamedGlobalIFunc(M, Name, NameLen))
+      report_fatal_error("Global ifunc already cloned");
+    LLVMTypeRef CurType = TypeCloner(M).Clone(LLVMGlobalGetValueType(Cur));
+    // FIXME: Allow NULL resolver.
+    LLVMAddGlobalIFunc(M, Name, NameLen,
+                       CurType, /*addressSpace*/ 0, LLVMGetUndef(CurType));
+
+    Next = LLVMGetNextGlobalIFunc(Cur);
+    if (Next == nullptr) {
+      if (Cur != End)
+        report_fatal_error("");
+      break;
+    }
+
+    LLVMValueRef Prev = LLVMGetPreviousGlobalIFunc(Next);
     if (Prev != Cur)
       report_fatal_error("Next.Previous global is not Current");
 
@@ -1115,7 +1149,7 @@ AliasClone:
   if (!Begin) {
     if (End != nullptr)
       report_fatal_error("Range has an end but no beginning");
-    goto NamedMDClone;
+    goto GlobalIFuncClone;
   }
 
   Cur = Begin;
@@ -1142,6 +1176,45 @@ AliasClone:
     }
 
     LLVMValueRef Prev = LLVMGetPreviousGlobalAlias(Next);
+    if (Prev != Cur)
+      report_fatal_error("Next.Previous global alias is not Current");
+
+    Cur = Next;
+  }
+
+GlobalIFuncClone:
+  Begin = LLVMGetFirstGlobalIFunc(Src);
+  End = LLVMGetLastGlobalIFunc(Src);
+  if (!Begin) {
+    if (End != nullptr)
+      report_fatal_error("Range has an end but no beginning");
+    goto NamedMDClone;
+  }
+
+  Cur = Begin;
+  Next = nullptr;
+  while (true) {
+    size_t NameLen;
+    const char *Name = LLVMGetValueName2(Cur, &NameLen);
+    LLVMValueRef IFunc = LLVMGetNamedGlobalIFunc(M, Name, NameLen);
+    if (!IFunc)
+      report_fatal_error("Global ifunc must have been declared already");
+
+    if (LLVMValueRef Resolver = LLVMGetGlobalIFuncResolver(Cur)) {
+      LLVMSetGlobalIFuncResolver(IFunc, clone_constant(Resolver, M));
+    }
+
+    LLVMSetLinkage(IFunc, LLVMGetLinkage(Cur));
+    LLVMSetUnnamedAddress(IFunc, LLVMGetUnnamedAddress(Cur));
+
+    Next = LLVMGetNextGlobalIFunc(Cur);
+    if (Next == nullptr) {
+      if (Cur != End)
+        report_fatal_error("Last global alias does not match End");
+      break;
+    }
+
+    LLVMValueRef Prev = LLVMGetPreviousGlobalIFunc(Next);
     if (Prev != Cur)
       report_fatal_error("Next.Previous global alias is not Current");
 

@@ -1,9 +1,8 @@
 //===-- FunctionLoweringInfo.cpp ------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -86,6 +85,7 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
   RegInfo = &MF->getRegInfo();
   const TargetFrameLowering *TFI = MF->getSubtarget().getFrameLowering();
   unsigned StackAlign = TFI->getStackAlignment();
+  DA = DAG->getDivergenceAnalysis();
 
   // Check whether the function can return without sret-demotion.
   SmallVector<ISD::OutputArg, 4> Outs;
@@ -322,13 +322,6 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
       NewMap[MBBMap[Src]] = MBBMap[Dst];
     }
     EHInfo.EHPadUnwindMap = std::move(NewMap);
-    NewMap.clear();
-    for (auto &KV : EHInfo.ThrowUnwindMap) {
-      const auto *Src = KV.first.get<const BasicBlock *>();
-      const auto *Dst = KV.second.get<const BasicBlock *>();
-      NewMap[MBBMap[Src]] = MBBMap[Dst];
-    }
-    EHInfo.ThrowUnwindMap = std::move(NewMap);
   }
 }
 
@@ -343,6 +336,7 @@ void FunctionLoweringInfo::clear() {
   LiveOutRegInfo.clear();
   VisitedBBs.clear();
   ArgDbgValues.clear();
+  DescribedArgs.clear();
   ByValArgFrameIndexMap.clear();
   RegFixups.clear();
   RegsWithFixups.clear();
@@ -352,9 +346,9 @@ void FunctionLoweringInfo::clear() {
 }
 
 /// CreateReg - Allocate a single virtual register for the given type.
-unsigned FunctionLoweringInfo::CreateReg(MVT VT) {
+unsigned FunctionLoweringInfo::CreateReg(MVT VT, bool isDivergent) {
   return RegInfo->createVirtualRegister(
-      MF->getSubtarget().getTargetLowering()->getRegClassFor(VT));
+      MF->getSubtarget().getTargetLowering()->getRegClassFor(VT, isDivergent));
 }
 
 /// CreateRegs - Allocate the appropriate number of virtual registers of
@@ -364,7 +358,7 @@ unsigned FunctionLoweringInfo::CreateReg(MVT VT) {
 /// In the case that the given value has struct or array type, this function
 /// will assign registers for each member or element.
 ///
-unsigned FunctionLoweringInfo::CreateRegs(Type *Ty) {
+unsigned FunctionLoweringInfo::CreateRegs(Type *Ty, bool isDivergent) {
   const TargetLowering *TLI = MF->getSubtarget().getTargetLowering();
 
   SmallVector<EVT, 4> ValueVTs;
@@ -377,11 +371,16 @@ unsigned FunctionLoweringInfo::CreateRegs(Type *Ty) {
 
     unsigned NumRegs = TLI->getNumRegisters(Ty->getContext(), ValueVT);
     for (unsigned i = 0; i != NumRegs; ++i) {
-      unsigned R = CreateReg(RegisterVT);
+      unsigned R = CreateReg(RegisterVT, isDivergent);
       if (!FirstReg) FirstReg = R;
     }
   }
   return FirstReg;
+}
+
+unsigned FunctionLoweringInfo::CreateRegs(const Value *V) {
+  return CreateRegs(V->getType(), DA && !TLI->requiresUniformRegister(*MF, V) &&
+                                      DA->isDivergent(V));
 }
 
 /// GetLiveOutRegInfo - Gets LiveOutInfo for a register, returning NULL if the
@@ -400,7 +399,7 @@ FunctionLoweringInfo::GetLiveOutRegInfo(unsigned Reg, unsigned BitWidth) {
 
   if (BitWidth > LOI->Known.getBitWidth()) {
     LOI->NumSignBits = 1;
-    LOI->Known = LOI->Known.zextOrTrunc(BitWidth);
+    LOI->Known = LOI->Known.zext(BitWidth, false /* => any extend */);
   }
 
   return LOI;
@@ -524,56 +523,6 @@ unsigned FunctionLoweringInfo::getCatchPadExceptionPointerVReg(
     VReg = MRI.createVirtualRegister(RC);
   assert(VReg && "null vreg in exception pointer table!");
   return VReg;
-}
-
-unsigned
-FunctionLoweringInfo::getOrCreateSwiftErrorVReg(const MachineBasicBlock *MBB,
-                                                const Value *Val) {
-  auto Key = std::make_pair(MBB, Val);
-  auto It = SwiftErrorVRegDefMap.find(Key);
-  // If this is the first use of this swifterror value in this basic block,
-  // create a new virtual register.
-  // After we processed all basic blocks we will satisfy this "upwards exposed
-  // use" by inserting a copy or phi at the beginning of this block.
-  if (It == SwiftErrorVRegDefMap.end()) {
-    auto &DL = MF->getDataLayout();
-    const TargetRegisterClass *RC = TLI->getRegClassFor(TLI->getPointerTy(DL));
-    auto VReg = MF->getRegInfo().createVirtualRegister(RC);
-    SwiftErrorVRegDefMap[Key] = VReg;
-    SwiftErrorVRegUpwardsUse[Key] = VReg;
-    return VReg;
-  } else return It->second;
-}
-
-void FunctionLoweringInfo::setCurrentSwiftErrorVReg(
-    const MachineBasicBlock *MBB, const Value *Val, unsigned VReg) {
-  SwiftErrorVRegDefMap[std::make_pair(MBB, Val)] = VReg;
-}
-
-std::pair<unsigned, bool>
-FunctionLoweringInfo::getOrCreateSwiftErrorVRegDefAt(const Instruction *I) {
-  auto Key = PointerIntPair<const Instruction *, 1, bool>(I, true);
-  auto It = SwiftErrorVRegDefUses.find(Key);
-  if (It == SwiftErrorVRegDefUses.end()) {
-    auto &DL = MF->getDataLayout();
-    const TargetRegisterClass *RC = TLI->getRegClassFor(TLI->getPointerTy(DL));
-    unsigned VReg =  MF->getRegInfo().createVirtualRegister(RC);
-    SwiftErrorVRegDefUses[Key] = VReg;
-    return std::make_pair(VReg, true);
-  }
-  return std::make_pair(It->second, false);
-}
-
-std::pair<unsigned, bool>
-FunctionLoweringInfo::getOrCreateSwiftErrorVRegUseAt(const Instruction *I, const MachineBasicBlock *MBB, const Value *Val) {
-  auto Key = PointerIntPair<const Instruction *, 1, bool>(I, false);
-  auto It = SwiftErrorVRegDefUses.find(Key);
-  if (It == SwiftErrorVRegDefUses.end()) {
-    unsigned VReg = getOrCreateSwiftErrorVReg(MBB, Val);
-    SwiftErrorVRegDefUses[Key] = VReg;
-    return std::make_pair(VReg, true);
-  }
-  return std::make_pair(It->second, false);
 }
 
 const Value *

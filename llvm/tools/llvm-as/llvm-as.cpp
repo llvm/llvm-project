@@ -1,9 +1,8 @@
 //===--- llvm-as.cpp - The low-level LLVM assembler -----------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -31,38 +30,43 @@
 #include <memory>
 using namespace llvm;
 
+cl::OptionCategory AsCat("llvm-as Options");
+
 static cl::opt<std::string> InputFilename(cl::Positional,
                                           cl::desc("<input .llvm file>"),
                                           cl::init("-"));
 
 static cl::opt<std::string> OutputFilename("o",
                                            cl::desc("Override output filename"),
-                                           cl::value_desc("filename"));
+                                           cl::value_desc("filename"),
+                                           cl::cat(AsCat));
 
-static cl::opt<bool> Force("f", cl::desc("Enable binary output on terminals"));
+static cl::opt<bool> Force("f", cl::desc("Enable binary output on terminals"),
+                           cl::cat(AsCat));
 
 static cl::opt<bool> DisableOutput("disable-output", cl::desc("Disable output"),
-                                   cl::init(false));
+                                   cl::init(false), cl::cat(AsCat));
 
 static cl::opt<bool> EmitModuleHash("module-hash", cl::desc("Emit module hash"),
-                                    cl::init(false));
+                                    cl::init(false), cl::cat(AsCat));
 
 static cl::opt<bool> DumpAsm("d", cl::desc("Print assembly as parsed"),
-                             cl::Hidden);
+                             cl::Hidden, cl::cat(AsCat));
 
 static cl::opt<bool>
     DisableVerify("disable-verify", cl::Hidden,
-                  cl::desc("Do not run verifier on input LLVM (dangerous!)"));
+                  cl::desc("Do not run verifier on input LLVM (dangerous!)"),
+                  cl::cat(AsCat));
 
 static cl::opt<bool> PreserveBitcodeUseListOrder(
     "preserve-bc-uselistorder",
     cl::desc("Preserve use-list order when writing LLVM bitcode."),
-    cl::init(true), cl::Hidden);
+    cl::init(true), cl::Hidden, cl::cat(AsCat));
 
 static cl::opt<std::string> ClDataLayout("data-layout",
                                          cl::desc("data layout string to use"),
                                          cl::value_desc("layout-string"),
-                                         cl::init(""));
+                                         cl::init(""), cl::cat(AsCat));
 
 static void WriteOutputFile(const Module *M, const ModuleSummaryIndex *Index) {
   // Infer the output filename if needed.
@@ -110,6 +114,7 @@ static void WriteOutputFile(const Module *M, const ModuleSummaryIndex *Index) {
 int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
   LLVMContext Context;
+  cl::HideUnrelatedOptions(AsCat);
   cl::ParseCommandLineOptions(argc, argv, "llvm .ll -> .bc assembler\n");
 
   // Parse the file now...

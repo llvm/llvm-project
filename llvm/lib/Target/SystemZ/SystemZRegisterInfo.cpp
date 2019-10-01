@@ -1,9 +1,8 @@
 //===-- SystemZRegisterInfo.cpp - SystemZ register information ------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -54,6 +53,26 @@ static const TargetRegisterClass *getRC32(MachineOperand &MO,
   return RC;
 }
 
+// Pass the registers of RC as hints while making sure that if any of these
+// registers are copy hints (and therefore already in Hints), hint them
+// first.
+static void addHints(ArrayRef<MCPhysReg> Order,
+                     SmallVectorImpl<MCPhysReg> &Hints,
+                     const TargetRegisterClass *RC,
+                     const MachineRegisterInfo *MRI) {
+  SmallSet<unsigned, 4> CopyHints;
+  CopyHints.insert(Hints.begin(), Hints.end());
+  Hints.clear();
+  for (MCPhysReg Reg : Order)
+    if (CopyHints.count(Reg) &&
+        RC->contains(Reg) && !MRI->isReserved(Reg))
+      Hints.push_back(Reg);
+  for (MCPhysReg Reg : Order)
+    if (!CopyHints.count(Reg) &&
+        RC->contains(Reg) && !MRI->isReserved(Reg))
+      Hints.push_back(Reg);
+}
+
 bool
 SystemZRegisterInfo::getRegAllocationHints(unsigned VirtReg,
                                            ArrayRef<MCPhysReg> Order,
@@ -62,7 +81,8 @@ SystemZRegisterInfo::getRegAllocationHints(unsigned VirtReg,
                                            const VirtRegMap *VRM,
                                            const LiveRegMatrix *Matrix) const {
   const MachineRegisterInfo *MRI = &MF.getRegInfo();
-  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+  const SystemZSubtarget &Subtarget = MF.getSubtarget<SystemZSubtarget>();
+  const TargetRegisterInfo *TRI = Subtarget.getRegisterInfo();
 
   bool BaseImplRetVal = TargetRegisterInfo::getRegAllocationHints(
       VirtReg, Order, Hints, MF, VRM, Matrix);
@@ -76,7 +96,7 @@ SystemZRegisterInfo::getRegAllocationHints(unsigned VirtReg,
       if (!DoneRegs.insert(Reg).second)
         continue;
 
-      for (auto &Use : MRI->use_instructions(Reg))
+      for (auto &Use : MRI->use_instructions(Reg)) {
         // For LOCRMux, see if the other operand is already a high or low
         // register, and in that case give the correpsonding hints for
         // VirtReg. LOCR instructions need both operands in either high or
@@ -88,19 +108,7 @@ SystemZRegisterInfo::getRegAllocationHints(unsigned VirtReg,
             TRI->getCommonSubClass(getRC32(FalseMO, VRM, MRI),
                                    getRC32(TrueMO, VRM, MRI));
           if (RC && RC != &SystemZ::GRX32BitRegClass) {
-            // Pass the registers of RC as hints while making sure that if
-            // any of these registers are copy hints, hint them first.
-            SmallSet<unsigned, 4> CopyHints;
-            CopyHints.insert(Hints.begin(), Hints.end());
-            Hints.clear();
-            for (MCPhysReg Reg : Order)
-              if (CopyHints.count(Reg) &&
-                  RC->contains(Reg) && !MRI->isReserved(Reg))
-                Hints.push_back(Reg);
-            for (MCPhysReg Reg : Order)
-              if (!CopyHints.count(Reg) &&
-                  RC->contains(Reg) && !MRI->isReserved(Reg))
-                Hints.push_back(Reg);
+            addHints(Order, Hints, RC, MRI);
             // Return true to make these hints the only regs available to
             // RA. This may mean extra spilling but since the alternative is
             // a jump sequence expansion of the LOCRMux, it is preferred.
@@ -112,9 +120,69 @@ SystemZRegisterInfo::getRegAllocationHints(unsigned VirtReg,
             (TrueMO.getReg() == Reg ? FalseMO.getReg() : TrueMO.getReg());
           if (MRI->getRegClass(OtherReg) == &SystemZ::GRX32BitRegClass)
             Worklist.push_back(OtherReg);
-        }
+        } // end LOCRMux
+        else if (Use.getOpcode() == SystemZ::CHIMux ||
+                 Use.getOpcode() == SystemZ::CFIMux) {
+          if (Use.getOperand(1).getImm() == 0) {
+            bool OnlyLMuxes = true;
+            for (MachineInstr &DefMI : MRI->def_instructions(VirtReg))
+              if (DefMI.getOpcode() != SystemZ::LMux)
+                OnlyLMuxes = false;
+            if (OnlyLMuxes) {
+              addHints(Order, Hints, &SystemZ::GR32BitRegClass, MRI);
+              // Return false to make these hints preferred but not obligatory.
+              return false;
+            }
+          }
+        } // end CHIMux / CFIMux
+      }
     }
   }
+
+  if (VRM == nullptr)
+    return BaseImplRetVal;
+
+  // Add any two address hints after any copy hints.
+  SmallSet<unsigned, 4> TwoAddrHints;
+  for (auto &Use : MRI->reg_nodbg_instructions(VirtReg))
+    if (SystemZ::getTwoOperandOpcode(Use.getOpcode()) != -1) {
+      const MachineOperand *VRRegMO = nullptr;
+      const MachineOperand *OtherMO = nullptr;
+      const MachineOperand *CommuMO = nullptr;
+      if (VirtReg == Use.getOperand(0).getReg()) {
+        VRRegMO = &Use.getOperand(0);
+        OtherMO = &Use.getOperand(1);
+        if (Use.isCommutable())
+          CommuMO = &Use.getOperand(2);
+      } else if (VirtReg == Use.getOperand(1).getReg()) {
+        VRRegMO = &Use.getOperand(1);
+        OtherMO = &Use.getOperand(0);
+      } else if (VirtReg == Use.getOperand(2).getReg() && Use.isCommutable()) {
+        VRRegMO = &Use.getOperand(2);
+        OtherMO = &Use.getOperand(0);
+      } else
+        continue;
+
+      auto tryAddHint = [&](const MachineOperand *MO) -> void {
+        unsigned Reg = MO->getReg();
+        unsigned PhysReg = isPhysicalRegister(Reg) ? Reg : VRM->getPhys(Reg);
+        if (PhysReg) {
+          if (MO->getSubReg())
+            PhysReg = getSubReg(PhysReg, MO->getSubReg());
+          if (VRRegMO->getSubReg())
+            PhysReg = getMatchingSuperReg(PhysReg, VRRegMO->getSubReg(),
+                                          MRI->getRegClass(VirtReg));
+          if (!MRI->isReserved(PhysReg) && !is_contained(Hints, PhysReg))
+            TwoAddrHints.insert(PhysReg);
+        }
+      };
+      tryAddHint(OtherMO);
+      if (CommuMO)
+        tryAddHint(CommuMO);
+    }
+  for (MCPhysReg OrderReg : Order)
+    if (TwoAddrHints.count(OrderReg))
+      Hints.push_back(OrderReg);
 
   return BaseImplRetVal;
 }
@@ -168,6 +236,9 @@ SystemZRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   // A0 and A1 hold the thread pointer.
   Reserved.set(SystemZ::A0);
   Reserved.set(SystemZ::A1);
+
+  // FPC is the floating-point control register.
+  Reserved.set(SystemZ::FPC);
 
   return Reserved;
 }

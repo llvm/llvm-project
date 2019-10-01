@@ -6,9 +6,7 @@ define <4 x i64> @A(i64* %ptr) nounwind uwtable readnone ssp {
 ; X32-LABEL: A:
 ; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X32-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,1,0,1]
-; X32-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; X32-NEXT:    vbroadcastsd (%eax), %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: A:
@@ -34,20 +32,18 @@ define <4 x i64> @A2(i64* %ptr, i64* %ptr2) nounwind uwtable readnone ssp {
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl (%ecx), %edx
 ; X32-NEXT:    movl 4(%ecx), %esi
-; X32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X32-NEXT:    vbroadcastsd (%ecx), %ymm0
 ; X32-NEXT:    movl %edx, (%eax)
 ; X32-NEXT:    movl %esi, 4(%eax)
-; X32-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,1,0,1]
-; X32-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; X32-NEXT:    popl %esi
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: A2:
 ; X64:       ## %bb.0: ## %entry
 ; X64-NEXT:    movq (%rdi), %rax
-; X64-NEXT:    vmovq %rax, %xmm0
 ; X64-NEXT:    movq %rax, (%rsi)
-; X64-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
+; X64-NEXT:    vmovq %rax, %xmm0
+; X64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; X64-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; X64-NEXT:    retq
 entry:
@@ -110,8 +106,8 @@ define <8 x i32> @B3(i32* %ptr, i32* %ptr2) nounwind uwtable readnone ssp {
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl (%ecx), %ecx
-; X32-NEXT:    vmovd %ecx, %xmm0
 ; X32-NEXT:    movl %ecx, (%eax)
+; X32-NEXT:    vmovd %ecx, %xmm0
 ; X32-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; X32-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; X32-NEXT:    retl
@@ -119,8 +115,8 @@ define <8 x i32> @B3(i32* %ptr, i32* %ptr2) nounwind uwtable readnone ssp {
 ; X64-LABEL: B3:
 ; X64:       ## %bb.0: ## %entry
 ; X64-NEXT:    movl (%rdi), %eax
-; X64-NEXT:    vmovd %eax, %xmm0
 ; X64-NEXT:    movl %eax, (%rsi)
+; X64-NEXT:    vmovd %eax, %xmm0
 ; X64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; X64-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; X64-NEXT:    retq
@@ -590,14 +586,12 @@ define <2 x i64> @G(i64* %ptr) nounwind uwtable readnone ssp {
 ; X32-LABEL: G:
 ; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X32-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,1,0,1]
+; X32-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: G:
 ; X64:       ## %bb.0: ## %entry
-; X64-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X64-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,1,0,1]
+; X64-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; X64-NEXT:    retq
 entry:
   %q = load i64, i64* %ptr, align 8
@@ -616,10 +610,9 @@ define <2 x i64> @G2(i64* %ptr, i64* %ptr2) nounwind uwtable readnone ssp {
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl (%ecx), %edx
 ; X32-NEXT:    movl 4(%ecx), %esi
-; X32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X32-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; X32-NEXT:    movl %edx, (%eax)
 ; X32-NEXT:    movl %esi, 4(%eax)
-; X32-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; X32-NEXT:    popl %esi
 ; X32-NEXT:    retl
 ;
@@ -861,6 +854,80 @@ define <4 x double> @broadcast_shuffle1032(double* %p) {
   %3 = insertelement <2 x double> undef, double %1, i32 0
   %4 = shufflevector <2 x double> %2, <2 x double> %3, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
   ret <4 x double> %4
+}
+
+define void @broadcast_v16i32(i32* %a, <16 x i32>* %b) {
+; X32-LABEL: broadcast_v16i32:
+; X32:       ## %bb.0:
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    vbroadcastss (%ecx), %ymm0
+; X32-NEXT:    vmovups %ymm0, 32(%eax)
+; X32-NEXT:    vmovups %ymm0, (%eax)
+; X32-NEXT:    vzeroupper
+; X32-NEXT:    retl
+;
+; X64-LABEL: broadcast_v16i32:
+; X64:       ## %bb.0:
+; X64-NEXT:    vbroadcastss (%rdi), %ymm0
+; X64-NEXT:    vmovups %ymm0, 32(%rsi)
+; X64-NEXT:    vmovups %ymm0, (%rsi)
+; X64-NEXT:    vzeroupper
+; X64-NEXT:    retq
+  %1 = load i32, i32* %a, align 4
+  %2 = insertelement <8 x i32> undef, i32 %1, i32 0
+  %3 = shufflevector <8 x i32> %2, <8 x i32> undef, <8 x i32> zeroinitializer
+  %4 = shufflevector <8 x i32> undef, <8 x i32> %3, <16 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11, i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
+  store <16 x i32> %4, <16 x i32>* %b, align 4
+  ret void
+}
+
+;
+; Broadcast scale factor for xyz vector - slp will have vectorized xy.
+; FIXME: Load as a broadcast and then use the scalar 0'th element.
+;
+define double @broadcast_scale_xyz(double* nocapture readonly, double* nocapture readonly) nounwind {
+; X32-LABEL: broadcast_scale_xyz:
+; X32:       ## %bb.0:
+; X32-NEXT:    subl $12, %esp
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X32-NEXT:    vmovddup {{.*#+}} xmm1 = xmm0[0,0]
+; X32-NEXT:    vmulpd (%eax), %xmm1, %xmm1
+; X32-NEXT:    vmulsd 16(%eax), %xmm0, %xmm0
+; X32-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm1[1,0]
+; X32-NEXT:    vaddsd %xmm2, %xmm1, %xmm1
+; X32-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
+; X32-NEXT:    vmovsd %xmm0, (%esp)
+; X32-NEXT:    fldl (%esp)
+; X32-NEXT:    addl $12, %esp
+; X32-NEXT:    retl
+;
+; X64-LABEL: broadcast_scale_xyz:
+; X64:       ## %bb.0:
+; X64-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X64-NEXT:    vmovddup {{.*#+}} xmm1 = xmm0[0,0]
+; X64-NEXT:    vmulpd (%rsi), %xmm1, %xmm1
+; X64-NEXT:    vmulsd 16(%rsi), %xmm0, %xmm0
+; X64-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm1[1,0]
+; X64-NEXT:    vaddsd %xmm2, %xmm1, %xmm1
+; X64-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
+; X64-NEXT:    retq
+  %3 = bitcast double* %1 to <2 x double>*
+  %4 = load <2 x double>, <2 x double>* %3, align 8
+  %5 = getelementptr inbounds double, double* %1, i64 2
+  %6 = load double, double* %5, align 8
+  %7 = load double, double* %0, align 8
+  %8 = insertelement <2 x double> undef, double %7, i32 0
+  %9 = shufflevector <2 x double> %8, <2 x double> undef, <2 x i32> zeroinitializer
+  %10 = fmul <2 x double> %4, %9
+  %11 = fmul double %6, %7
+  %12 = extractelement <2 x double> %10, i32 0
+  %13 = extractelement <2 x double> %10, i32 1
+  %14 = fadd double %12, %13
+  %15 = fadd double %11, %14
+  ret double %15
 }
 
 ;

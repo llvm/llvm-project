@@ -1,9 +1,8 @@
 //===- llvm/Support/DiagnosticInfo.cpp - Diagnostic Definitions -*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -373,83 +372,3 @@ std::string DiagnosticInfoOptimizationBase::getMsg() const {
 
 void OptimizationRemarkAnalysisFPCommute::anchor() {}
 void OptimizationRemarkAnalysisAliasing::anchor() {}
-
-namespace llvm {
-namespace yaml {
-
-void MappingTraits<DiagnosticInfoOptimizationBase *>::mapping(
-    IO &io, DiagnosticInfoOptimizationBase *&OptDiag) {
-  assert(io.outputting() && "input not yet implemented");
-
-  if (io.mapTag("!Passed",
-                (OptDiag->getKind() == DK_OptimizationRemark ||
-                 OptDiag->getKind() == DK_MachineOptimizationRemark)))
-    ;
-  else if (io.mapTag(
-               "!Missed",
-               (OptDiag->getKind() == DK_OptimizationRemarkMissed ||
-                OptDiag->getKind() == DK_MachineOptimizationRemarkMissed)))
-    ;
-  else if (io.mapTag(
-               "!Analysis",
-               (OptDiag->getKind() == DK_OptimizationRemarkAnalysis ||
-                OptDiag->getKind() == DK_MachineOptimizationRemarkAnalysis)))
-    ;
-  else if (io.mapTag("!AnalysisFPCommute",
-                     OptDiag->getKind() ==
-                         DK_OptimizationRemarkAnalysisFPCommute))
-    ;
-  else if (io.mapTag("!AnalysisAliasing",
-                     OptDiag->getKind() ==
-                         DK_OptimizationRemarkAnalysisAliasing))
-    ;
-  else if (io.mapTag("!Failure", OptDiag->getKind() == DK_OptimizationFailure))
-    ;
-  else
-    llvm_unreachable("Unknown remark type");
-
-  // These are read-only for now.
-  DiagnosticLocation DL = OptDiag->getLocation();
-  StringRef FN =
-      GlobalValue::dropLLVMManglingEscape(OptDiag->getFunction().getName());
-
-  StringRef PassName(OptDiag->PassName);
-  io.mapRequired("Pass", PassName);
-  io.mapRequired("Name", OptDiag->RemarkName);
-  if (!io.outputting() || DL.isValid())
-    io.mapOptional("DebugLoc", DL);
-  io.mapRequired("Function", FN);
-  io.mapOptional("Hotness", OptDiag->Hotness);
-  io.mapOptional("Args", OptDiag->Args);
-}
-
-template <> struct MappingTraits<DiagnosticLocation> {
-  static void mapping(IO &io, DiagnosticLocation &DL) {
-    assert(io.outputting() && "input not yet implemented");
-
-    StringRef File = DL.getRelativePath();
-    unsigned Line = DL.getLine();
-    unsigned Col = DL.getColumn();
-
-    io.mapRequired("File", File);
-    io.mapRequired("Line", Line);
-    io.mapRequired("Column", Col);
-  }
-
-  static const bool flow = true;
-};
-
-// Implement this as a mapping for now to get proper quotation for the value.
-template <> struct MappingTraits<DiagnosticInfoOptimizationBase::Argument> {
-  static void mapping(IO &io, DiagnosticInfoOptimizationBase::Argument &A) {
-    assert(io.outputting() && "input not yet implemented");
-    io.mapRequired(A.Key.data(), A.Val);
-    if (A.Loc.isValid())
-      io.mapOptional("DebugLoc", A.Loc);
-  }
-};
-
-} // end namespace yaml
-} // end namespace llvm
-
-LLVM_YAML_IS_SEQUENCE_VECTOR(DiagnosticInfoOptimizationBase::Argument)

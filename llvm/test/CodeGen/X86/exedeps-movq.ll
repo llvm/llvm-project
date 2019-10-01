@@ -32,14 +32,14 @@ define void @store_floats(<4 x float> %x, i64* %p) {
 define void @store_double(<2 x double> %x, i64* %p) {
 ; SSE-LABEL: store_double:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    addpd %xmm0, %xmm0
-; SSE-NEXT:    movlpd %xmm0, (%rdi)
+; SSE-NEXT:    addsd %xmm0, %xmm0
+; SSE-NEXT:    movsd %xmm0, (%rdi)
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: store_double:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vaddpd %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vmovlpd %xmm0, (%rdi)
+; AVX-NEXT:    vaddsd %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vmovsd %xmm0, (%rdi)
 ; AVX-NEXT:    retq
   %a = fadd <2 x double> %x, %x
   %b = extractelement <2 x double> %a, i32 0

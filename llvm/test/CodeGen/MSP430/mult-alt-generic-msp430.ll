@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=msp430
+; RUN: llc < %s -march=msp430 -no-integrated-as
 ; ModuleID = 'mult-alt-generic.c'
 target datalayout = "e-p:16:16:16-i8:8:8-i16:16:16-i32:16:32-n8:16"
 target triple = "msp430"

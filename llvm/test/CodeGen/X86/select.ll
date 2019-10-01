@@ -191,7 +191,7 @@ define signext i8 @test4(i8* nocapture %P, double %F) nounwind readonly {
 ; ATHLON-NEXT:    fldl {{[0-9]+}}(%esp)
 ; ATHLON-NEXT:    flds LCPI3_0
 ; ATHLON-NEXT:    xorl %ecx, %ecx
-; ATHLON-NEXT:    fucompi %st(1)
+; ATHLON-NEXT:    fucompi %st(1), %st
 ; ATHLON-NEXT:    fstp %st(0)
 ; ATHLON-NEXT:    seta %cl
 ; ATHLON-NEXT:    movsbl (%eax,%ecx,4), %eax
@@ -293,25 +293,25 @@ define void @test6(i32 %C, <4 x float>* %A, <4 x float>* %B) nounwind {
 ; ATHLON-NEXT:    flds 4(%ecx)
 ; ATHLON-NEXT:    flds (%ecx)
 ; ATHLON-NEXT:    flds (%eax)
-; ATHLON-NEXT:    fmul %st(0), %st(0)
+; ATHLON-NEXT:    fmul %st, %st(0)
 ; ATHLON-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
 ; ATHLON-NEXT:    fxch %st(1)
-; ATHLON-NEXT:    fcmove %st(1), %st(0)
+; ATHLON-NEXT:    fcmove %st(1), %st
 ; ATHLON-NEXT:    fstp %st(1)
 ; ATHLON-NEXT:    flds 4(%eax)
-; ATHLON-NEXT:    fmul %st(0), %st(0)
+; ATHLON-NEXT:    fmul %st, %st(0)
 ; ATHLON-NEXT:    fxch %st(2)
-; ATHLON-NEXT:    fcmove %st(2), %st(0)
+; ATHLON-NEXT:    fcmove %st(2), %st
 ; ATHLON-NEXT:    fstp %st(2)
 ; ATHLON-NEXT:    flds 8(%eax)
-; ATHLON-NEXT:    fmul %st(0), %st(0)
+; ATHLON-NEXT:    fmul %st, %st(0)
 ; ATHLON-NEXT:    fxch %st(3)
-; ATHLON-NEXT:    fcmove %st(3), %st(0)
+; ATHLON-NEXT:    fcmove %st(3), %st
 ; ATHLON-NEXT:    fstp %st(3)
 ; ATHLON-NEXT:    flds 12(%eax)
-; ATHLON-NEXT:    fmul %st(0), %st(0)
+; ATHLON-NEXT:    fmul %st, %st(0)
 ; ATHLON-NEXT:    fxch %st(4)
-; ATHLON-NEXT:    fcmove %st(4), %st(0)
+; ATHLON-NEXT:    fcmove %st(4), %st
 ; ATHLON-NEXT:    fstp %st(4)
 ; ATHLON-NEXT:    fxch %st(3)
 ; ATHLON-NEXT:    fstps 12(%ecx)
@@ -332,13 +332,13 @@ define void @test6(i32 %C, <4 x float>* %A, <4 x float>* %B) nounwind {
 ; MCU-NEXT:    flds 4(%ecx)
 ; MCU-NEXT:    flds 8(%ecx)
 ; MCU-NEXT:    flds 12(%ecx)
-; MCU-NEXT:    fmul %st(0), %st(0)
+; MCU-NEXT:    fmul %st, %st(0)
 ; MCU-NEXT:    fxch %st(1)
-; MCU-NEXT:    fmul %st(0), %st(0)
+; MCU-NEXT:    fmul %st, %st(0)
 ; MCU-NEXT:    fxch %st(2)
-; MCU-NEXT:    fmul %st(0), %st(0)
+; MCU-NEXT:    fmul %st, %st(0)
 ; MCU-NEXT:    fxch %st(3)
-; MCU-NEXT:    fmul %st(0), %st(0)
+; MCU-NEXT:    fmul %st, %st(0)
 ; MCU-NEXT:    testl %eax, %eax
 ; MCU-NEXT:    flds (%edx)
 ; MCU-NEXT:    je .LBB5_2
@@ -1088,14 +1088,25 @@ define i8 @test18(i32 %x, i8 zeroext %a, i8 zeroext %b) nounwind {
 }
 
 define i32 @trunc_select_miscompile(i32 %a, i1 zeroext %cc) {
-; CHECK-LABEL: trunc_select_miscompile:
-; CHECK:       ## %bb.0:
-; CHECK-NEXT:    movl %esi, %ecx
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    orb $2, %cl
-; CHECK-NEXT:    ## kill: def $cl killed $cl killed $ecx
-; CHECK-NEXT:    shll %cl, %eax
-; CHECK-NEXT:    retq
+; GENERIC-LABEL: trunc_select_miscompile:
+; GENERIC:       ## %bb.0:
+; GENERIC-NEXT:    ## kill: def $esi killed $esi def $rsi
+; GENERIC-NEXT:    movl %edi, %eax
+; GENERIC-NEXT:    leal 2(%rsi), %ecx
+; GENERIC-NEXT:    ## kill: def $cl killed $cl killed $ecx
+; GENERIC-NEXT:    shll %cl, %eax
+; GENERIC-NEXT:    retq
+;
+; ATOM-LABEL: trunc_select_miscompile:
+; ATOM:       ## %bb.0:
+; ATOM-NEXT:    ## kill: def $esi killed $esi def $rsi
+; ATOM-NEXT:    leal 2(%rsi), %ecx
+; ATOM-NEXT:    movl %edi, %eax
+; ATOM-NEXT:    ## kill: def $cl killed $cl killed $ecx
+; ATOM-NEXT:    shll %cl, %eax
+; ATOM-NEXT:    nop
+; ATOM-NEXT:    nop
+; ATOM-NEXT:    retq
 ;
 ; ATHLON-LABEL: trunc_select_miscompile:
 ; ATHLON:       ## %bb.0:
@@ -1125,11 +1136,8 @@ define void @clamp_i8(i32 %src, i8* %dst) {
 ; GENERIC-NEXT:    movl $127, %eax
 ; GENERIC-NEXT:    cmovlel %edi, %eax
 ; GENERIC-NEXT:    cmpl $-128, %eax
-; GENERIC-NEXT:    movb $-128, %cl
-; GENERIC-NEXT:    jl LBB21_2
-; GENERIC-NEXT:  ## %bb.1:
-; GENERIC-NEXT:    movl %eax, %ecx
-; GENERIC-NEXT:  LBB21_2:
+; GENERIC-NEXT:    movl $128, %ecx
+; GENERIC-NEXT:    cmovgel %eax, %ecx
 ; GENERIC-NEXT:    movb %cl, (%rsi)
 ; GENERIC-NEXT:    retq
 ;
@@ -1137,30 +1145,24 @@ define void @clamp_i8(i32 %src, i8* %dst) {
 ; ATOM:       ## %bb.0:
 ; ATOM-NEXT:    cmpl $127, %edi
 ; ATOM-NEXT:    movl $127, %eax
-; ATOM-NEXT:    movb $-128, %cl
+; ATOM-NEXT:    movl $128, %ecx
 ; ATOM-NEXT:    cmovlel %edi, %eax
 ; ATOM-NEXT:    cmpl $-128, %eax
-; ATOM-NEXT:    jl LBB21_2
-; ATOM-NEXT:  ## %bb.1:
-; ATOM-NEXT:    movl %eax, %ecx
-; ATOM-NEXT:  LBB21_2:
+; ATOM-NEXT:    cmovgel %eax, %ecx
 ; ATOM-NEXT:    movb %cl, (%rsi)
 ; ATOM-NEXT:    retq
 ;
 ; ATHLON-LABEL: clamp_i8:
 ; ATHLON:       ## %bb.0:
 ; ATHLON-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; ATHLON-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; ATHLON-NEXT:    cmpl $127, %edx
-; ATHLON-NEXT:    movl $127, %ecx
-; ATHLON-NEXT:    cmovlel %edx, %ecx
-; ATHLON-NEXT:    cmpl $-128, %ecx
-; ATHLON-NEXT:    movb $-128, %dl
-; ATHLON-NEXT:    jl LBB21_2
-; ATHLON-NEXT:  ## %bb.1:
-; ATHLON-NEXT:    movl %ecx, %edx
-; ATHLON-NEXT:  LBB21_2:
-; ATHLON-NEXT:    movb %dl, (%eax)
+; ATHLON-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; ATHLON-NEXT:    cmpl $127, %ecx
+; ATHLON-NEXT:    movl $127, %edx
+; ATHLON-NEXT:    cmovlel %ecx, %edx
+; ATHLON-NEXT:    cmpl $-128, %edx
+; ATHLON-NEXT:    movl $128, %ecx
+; ATHLON-NEXT:    cmovgel %edx, %ecx
+; ATHLON-NEXT:    movb %cl, (%eax)
 ; ATHLON-NEXT:    retl
 ;
 ; MCU-LABEL: clamp_i8:
@@ -1250,106 +1252,6 @@ define void @clamp(i32 %src, i16* %dst) {
   ret void
 }
 
-define void @test19() {
-; This is a massive reduction of an llvm-stress test case that generates
-; interesting chains feeding setcc and eventually a f32 select operation. This
-; is intended to exercise the SELECT formation in the DAG combine simplifying
-; a simplified select_cc node. If it it regresses and is no longer triggering
-; that code path, it can be deleted.
-;
-; CHECK-LABEL: test19:
-; CHECK:       ## %bb.0: ## %BB
-; CHECK-NEXT:    movl $-1, %eax
-; CHECK-NEXT:    movb $1, %cl
-; CHECK-NEXT:    .p2align 4, 0x90
-; CHECK-NEXT:  LBB23_1: ## %CF
-; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    testb %cl, %cl
-; CHECK-NEXT:    jne LBB23_1
-; CHECK-NEXT:  ## %bb.2: ## %CF250
-; CHECK-NEXT:    ## in Loop: Header=BB23_1 Depth=1
-; CHECK-NEXT:    jne LBB23_1
-; CHECK-NEXT:    .p2align 4, 0x90
-; CHECK-NEXT:  LBB23_3: ## %CF242
-; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    cmpl %eax, %eax
-; CHECK-NEXT:    ucomiss %xmm0, %xmm0
-; CHECK-NEXT:    jp LBB23_3
-; CHECK-NEXT:  ## %bb.4: ## %CF244
-; CHECK-NEXT:    retq
-;
-; ATHLON-LABEL: test19:
-; ATHLON:       ## %bb.0: ## %BB
-; ATHLON-NEXT:    movb $1, %al
-; ATHLON-NEXT:    .p2align 4, 0x90
-; ATHLON-NEXT:  LBB23_1: ## %CF
-; ATHLON-NEXT:    ## =>This Inner Loop Header: Depth=1
-; ATHLON-NEXT:    testb %al, %al
-; ATHLON-NEXT:    jne LBB23_1
-; ATHLON-NEXT:  ## %bb.2: ## %CF250
-; ATHLON-NEXT:    ## in Loop: Header=BB23_1 Depth=1
-; ATHLON-NEXT:    jne LBB23_1
-; ATHLON-NEXT:  ## %bb.3: ## %CF242.preheader
-; ATHLON-NEXT:    fldz
-; ATHLON-NEXT:    .p2align 4, 0x90
-; ATHLON-NEXT:  LBB23_4: ## %CF242
-; ATHLON-NEXT:    ## =>This Inner Loop Header: Depth=1
-; ATHLON-NEXT:    fucomi %st(0)
-; ATHLON-NEXT:    jp LBB23_4
-; ATHLON-NEXT:  ## %bb.5: ## %CF244
-; ATHLON-NEXT:    fstp %st(0)
-; ATHLON-NEXT:    retl
-;
-; MCU-LABEL: test19:
-; MCU:       # %bb.0: # %BB
-; MCU-NEXT:    movl $-1, %ecx
-; MCU-NEXT:    movb $1, %al
-; MCU-NEXT:    .p2align 4, 0x90
-; MCU-NEXT:  .LBB23_1: # %CF
-; MCU-NEXT:    # =>This Inner Loop Header: Depth=1
-; MCU-NEXT:    testb %al, %al
-; MCU-NEXT:    jne .LBB23_1
-; MCU-NEXT:  # %bb.2: # %CF250
-; MCU-NEXT:    # in Loop: Header=BB23_1 Depth=1
-; MCU-NEXT:    jne .LBB23_1
-; MCU-NEXT:  # %bb.3: # %CF242.preheader
-; MCU-NEXT:    fldz
-; MCU-NEXT:    .p2align 4, 0x90
-; MCU-NEXT:  .LBB23_4: # %CF242
-; MCU-NEXT:    # =>This Inner Loop Header: Depth=1
-; MCU-NEXT:    cmpl %eax, %ecx
-; MCU-NEXT:    fucom %st(0)
-; MCU-NEXT:    fnstsw %ax
-; MCU-NEXT:    # kill: def $ah killed $ah killed $ax
-; MCU-NEXT:    sahf
-; MCU-NEXT:    jp .LBB23_4
-; MCU-NEXT:  # %bb.5: # %CF244
-; MCU-NEXT:    fstp %st(0)
-; MCU-NEXT:    retl
-BB:
-  br label %CF
-
-CF:
-  %Cmp10 = icmp ule i8 undef, undef
-  br i1 %Cmp10, label %CF, label %CF250
-
-CF250:
-  %E12 = extractelement <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>, i32 2
-  %Cmp32 = icmp ugt i1 %Cmp10, false
-  br i1 %Cmp32, label %CF, label %CF242
-
-CF242:
-  %Cmp38 = icmp uge i32 %E12, undef
-  %FC = uitofp i1 %Cmp38 to float
-  %Sl59 = select i1 %Cmp32, float %FC, float undef
-  %Cmp60 = fcmp ugt float undef, undef
-  br i1 %Cmp60, label %CF242, label %CF244
-
-CF244:
-  %B122 = fadd float %Sl59, undef
-  ret void
-}
-
 define i16 @select_xor_1(i16 %A, i8 %cond) {
 ; CHECK-LABEL: select_xor_1:
 ; CHECK:       ## %bb.0: ## %entry
@@ -1411,10 +1313,10 @@ define i16 @select_xor_1b(i16 %A, i8 %cond) {
 ; MCU-LABEL: select_xor_1b:
 ; MCU:       # %bb.0: # %entry
 ; MCU-NEXT:    testb $1, %dl
-; MCU-NEXT:    je .LBB25_2
+; MCU-NEXT:    je .LBB24_2
 ; MCU-NEXT:  # %bb.1:
 ; MCU-NEXT:    xorl $43, %eax
-; MCU-NEXT:  .LBB25_2: # %entry
+; MCU-NEXT:  .LBB24_2: # %entry
 ; MCU-NEXT:    # kill: def $ax killed $ax killed $eax
 ; MCU-NEXT:    retl
 entry:
@@ -1481,10 +1383,10 @@ define i32 @select_xor_2b(i32 %A, i32 %B, i8 %cond) {
 ; MCU-LABEL: select_xor_2b:
 ; MCU:       # %bb.0: # %entry
 ; MCU-NEXT:    testb $1, %cl
-; MCU-NEXT:    je .LBB27_2
+; MCU-NEXT:    je .LBB26_2
 ; MCU-NEXT:  # %bb.1:
 ; MCU-NEXT:    xorl %edx, %eax
-; MCU-NEXT:  .LBB27_2: # %entry
+; MCU-NEXT:  .LBB26_2: # %entry
 ; MCU-NEXT:    retl
 entry:
  %and = and i8 %cond, 1
@@ -1550,10 +1452,10 @@ define i32 @select_or_b(i32 %A, i32 %B, i8 %cond) {
 ; MCU-LABEL: select_or_b:
 ; MCU:       # %bb.0: # %entry
 ; MCU-NEXT:    testb $1, %cl
-; MCU-NEXT:    je .LBB29_2
+; MCU-NEXT:    je .LBB28_2
 ; MCU-NEXT:  # %bb.1:
 ; MCU-NEXT:    orl %edx, %eax
-; MCU-NEXT:  .LBB29_2: # %entry
+; MCU-NEXT:  .LBB28_2: # %entry
 ; MCU-NEXT:    retl
 entry:
  %and = and i8 %cond, 1
@@ -1619,10 +1521,10 @@ define i32 @select_or_1b(i32 %A, i32 %B, i32 %cond) {
 ; MCU-LABEL: select_or_1b:
 ; MCU:       # %bb.0: # %entry
 ; MCU-NEXT:    testb $1, %cl
-; MCU-NEXT:    je .LBB31_2
+; MCU-NEXT:    je .LBB30_2
 ; MCU-NEXT:  # %bb.1:
 ; MCU-NEXT:    orl %edx, %eax
-; MCU-NEXT:  .LBB31_2: # %entry
+; MCU-NEXT:  .LBB30_2: # %entry
 ; MCU-NEXT:    retl
 entry:
  %and = and i32 %cond, 1

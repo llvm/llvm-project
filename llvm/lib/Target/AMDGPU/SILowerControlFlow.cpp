@@ -1,9 +1,8 @@
 //===-- SILowerControlFlow.cpp - Use predicates for control flow ----------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -82,6 +81,16 @@ private:
   const SIInstrInfo *TII = nullptr;
   LiveIntervals *LIS = nullptr;
   MachineRegisterInfo *MRI = nullptr;
+
+  const TargetRegisterClass *BoolRC = nullptr;
+  unsigned AndOpc;
+  unsigned OrOpc;
+  unsigned XorOpc;
+  unsigned MovTermOpc;
+  unsigned Andn2TermOpc;
+  unsigned XorTermrOpc;
+  unsigned OrSaveExecOpc;
+  unsigned Exec;
 
   void emitIf(MachineInstr &MI);
   void emitElse(MachineInstr &MI);
@@ -189,25 +198,25 @@ void SILowerControlFlow::emitIf(MachineInstr &MI) {
   // Add an implicit def of exec to discourage scheduling VALU after this which
   // will interfere with trying to form s_and_saveexec_b64 later.
   unsigned CopyReg = SimpleIf ? SaveExecReg
-                       : MRI->createVirtualRegister(&AMDGPU::SReg_64RegClass);
+                       : MRI->createVirtualRegister(BoolRC);
   MachineInstr *CopyExec =
     BuildMI(MBB, I, DL, TII->get(AMDGPU::COPY), CopyReg)
-    .addReg(AMDGPU::EXEC)
-    .addReg(AMDGPU::EXEC, RegState::ImplicitDefine);
+    .addReg(Exec)
+    .addReg(Exec, RegState::ImplicitDefine);
 
-  unsigned Tmp = MRI->createVirtualRegister(&AMDGPU::SReg_64RegClass);
+  unsigned Tmp = MRI->createVirtualRegister(BoolRC);
 
   MachineInstr *And =
-    BuildMI(MBB, I, DL, TII->get(AMDGPU::S_AND_B64), Tmp)
+    BuildMI(MBB, I, DL, TII->get(AndOpc), Tmp)
     .addReg(CopyReg)
-    //.addReg(AMDGPU::EXEC)
-    .addReg(Cond.getReg());
+    .add(Cond);
+
   setImpSCCDefDead(*And, true);
 
   MachineInstr *Xor = nullptr;
   if (!SimpleIf) {
     Xor =
-      BuildMI(MBB, I, DL, TII->get(AMDGPU::S_XOR_B64), SaveExecReg)
+      BuildMI(MBB, I, DL, TII->get(XorOpc), SaveExecReg)
       .addReg(Tmp)
       .addReg(CopyReg);
     setImpSCCDefDead(*Xor, ImpDefSCC.isDead());
@@ -216,7 +225,7 @@ void SILowerControlFlow::emitIf(MachineInstr &MI) {
   // Use a copy that is a terminator to get correct spill code placement it with
   // fast regalloc.
   MachineInstr *SetExec =
-    BuildMI(MBB, I, DL, TII->get(AMDGPU::S_MOV_B64_term), AMDGPU::EXEC)
+    BuildMI(MBB, I, DL, TII->get(MovTermOpc), Exec)
     .addReg(Tmp, RegState::Kill);
 
   // Insert a pseudo terminator to help keep the verifier happy. This will also
@@ -240,7 +249,7 @@ void SILowerControlFlow::emitIf(MachineInstr &MI) {
   LIS->InsertMachineInstrInMaps(*SetExec);
   LIS->InsertMachineInstrInMaps(*NewBr);
 
-  LIS->removeRegUnit(*MCRegUnitIterator(AMDGPU::EXEC, TRI));
+  LIS->removeAllRegUnitsForPhysReg(AMDGPU::EXEC);
   MI.eraseFromParent();
 
   // FIXME: Is there a better way of adjusting the liveness? It shouldn't be
@@ -266,7 +275,7 @@ void SILowerControlFlow::emitElse(MachineInstr &MI) {
   // We are running before TwoAddressInstructions, and si_else's operands are
   // tied. In order to correctly tie the registers, split this into a copy of
   // the src like it does.
-  unsigned CopyReg = MRI->createVirtualRegister(&AMDGPU::SReg_64RegClass);
+  unsigned CopyReg = MRI->createVirtualRegister(BoolRC);
   MachineInstr *CopyExec =
     BuildMI(MBB, Start, DL, TII->get(AMDGPU::COPY), CopyReg)
       .add(MI.getOperand(1)); // Saved EXEC
@@ -274,9 +283,9 @@ void SILowerControlFlow::emitElse(MachineInstr &MI) {
   // This must be inserted before phis and any spill code inserted before the
   // else.
   unsigned SaveReg = ExecModified ?
-    MRI->createVirtualRegister(&AMDGPU::SReg_64RegClass) : DstReg;
+    MRI->createVirtualRegister(BoolRC) : DstReg;
   MachineInstr *OrSaveExec =
-    BuildMI(MBB, Start, DL, TII->get(AMDGPU::S_OR_SAVEEXEC_B64), SaveReg)
+    BuildMI(MBB, Start, DL, TII->get(OrSaveExecOpc), SaveReg)
     .addReg(CopyReg);
 
   MachineBasicBlock *DestBB = MI.getOperand(2).getMBB();
@@ -285,8 +294,8 @@ void SILowerControlFlow::emitElse(MachineInstr &MI) {
 
   if (ExecModified) {
     MachineInstr *And =
-      BuildMI(MBB, ElsePt, DL, TII->get(AMDGPU::S_AND_B64), DstReg)
-      .addReg(AMDGPU::EXEC)
+      BuildMI(MBB, ElsePt, DL, TII->get(AndOpc), DstReg)
+      .addReg(Exec)
       .addReg(SaveReg);
 
     if (LIS)
@@ -294,8 +303,8 @@ void SILowerControlFlow::emitElse(MachineInstr &MI) {
   }
 
   MachineInstr *Xor =
-    BuildMI(MBB, ElsePt, DL, TII->get(AMDGPU::S_XOR_B64_term), AMDGPU::EXEC)
-    .addReg(AMDGPU::EXEC)
+    BuildMI(MBB, ElsePt, DL, TII->get(XorTermrOpc), Exec)
+    .addReg(Exec)
     .addReg(DstReg);
 
   MachineInstr *Branch =
@@ -324,7 +333,7 @@ void SILowerControlFlow::emitElse(MachineInstr &MI) {
     LIS->createAndComputeVirtRegInterval(SaveReg);
 
   // Let this be recomputed.
-  LIS->removeRegUnit(*MCRegUnitIterator(AMDGPU::EXEC, TRI));
+  LIS->removeAllRegUnitsForPhysReg(AMDGPU::EXEC);
 }
 
 void SILowerControlFlow::emitIfBreak(MachineInstr &MI) {
@@ -348,14 +357,14 @@ void SILowerControlFlow::emitIfBreak(MachineInstr &MI) {
   // exit" mask.
   MachineInstr *And = nullptr, *Or = nullptr;
   if (!SkipAnding) {
-    And = BuildMI(MBB, &MI, DL, TII->get(AMDGPU::S_AND_B64), Dst)
-             .addReg(AMDGPU::EXEC)
+    And = BuildMI(MBB, &MI, DL, TII->get(AndOpc), Dst)
+             .addReg(Exec)
              .add(MI.getOperand(1));
-    Or = BuildMI(MBB, &MI, DL, TII->get(AMDGPU::S_OR_B64), Dst)
+    Or = BuildMI(MBB, &MI, DL, TII->get(OrOpc), Dst)
              .addReg(Dst)
              .add(MI.getOperand(2));
   } else
-    Or = BuildMI(MBB, &MI, DL, TII->get(AMDGPU::S_OR_B64), Dst)
+    Or = BuildMI(MBB, &MI, DL, TII->get(OrOpc), Dst)
              .add(MI.getOperand(1))
              .add(MI.getOperand(2));
 
@@ -373,8 +382,8 @@ void SILowerControlFlow::emitLoop(MachineInstr &MI) {
   const DebugLoc &DL = MI.getDebugLoc();
 
   MachineInstr *AndN2 =
-      BuildMI(MBB, &MI, DL, TII->get(AMDGPU::S_ANDN2_B64_term), AMDGPU::EXEC)
-          .addReg(AMDGPU::EXEC)
+      BuildMI(MBB, &MI, DL, TII->get(Andn2TermOpc), Exec)
+          .addReg(Exec)
           .add(MI.getOperand(0));
 
   MachineInstr *Branch =
@@ -395,8 +404,8 @@ void SILowerControlFlow::emitEndCf(MachineInstr &MI) {
 
   MachineBasicBlock::iterator InsPt = MBB.begin();
   MachineInstr *NewMI =
-      BuildMI(MBB, InsPt, DL, TII->get(AMDGPU::S_OR_B64), AMDGPU::EXEC)
-          .addReg(AMDGPU::EXEC)
+      BuildMI(MBB, InsPt, DL, TII->get(OrOpc), Exec)
+          .addReg(Exec)
           .add(MI.getOperand(0));
 
   if (LIS)
@@ -428,13 +437,13 @@ void SILowerControlFlow::findMaskOperands(MachineInstr &MI, unsigned OpNo,
   // does not really modify exec.
   for (auto I = Def->getIterator(); I != MI.getIterator(); ++I)
     if (I->modifiesRegister(AMDGPU::EXEC, TRI) &&
-        !(I->isCopy() && I->getOperand(0).getReg() != AMDGPU::EXEC))
+        !(I->isCopy() && I->getOperand(0).getReg() != Exec))
       return;
 
   for (const auto &SrcOp : Def->explicit_operands())
     if (SrcOp.isReg() && SrcOp.isUse() &&
         (TargetRegisterInfo::isVirtualRegister(SrcOp.getReg()) ||
-        SrcOp.getReg() == AMDGPU::EXEC))
+        SrcOp.getReg() == Exec))
       Src.push_back(SrcOp);
 }
 
@@ -472,6 +481,27 @@ bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
   // This doesn't actually need LiveIntervals, but we can preserve them.
   LIS = getAnalysisIfAvailable<LiveIntervals>();
   MRI = &MF.getRegInfo();
+  BoolRC = TRI->getBoolRC();
+
+  if (ST.isWave32()) {
+    AndOpc = AMDGPU::S_AND_B32;
+    OrOpc = AMDGPU::S_OR_B32;
+    XorOpc = AMDGPU::S_XOR_B32;
+    MovTermOpc = AMDGPU::S_MOV_B32_term;
+    Andn2TermOpc = AMDGPU::S_ANDN2_B32_term;
+    XorTermrOpc = AMDGPU::S_XOR_B32_term;
+    OrSaveExecOpc = AMDGPU::S_OR_SAVEEXEC_B32;
+    Exec = AMDGPU::EXEC_LO;
+  } else {
+    AndOpc = AMDGPU::S_AND_B64;
+    OrOpc = AMDGPU::S_OR_B64;
+    XorOpc = AMDGPU::S_XOR_B64;
+    MovTermOpc = AMDGPU::S_MOV_B64_term;
+    Andn2TermOpc = AMDGPU::S_ANDN2_B64_term;
+    XorTermrOpc = AMDGPU::S_XOR_B64_term;
+    OrSaveExecOpc = AMDGPU::S_OR_SAVEEXEC_B64;
+    Exec = AMDGPU::EXEC;
+  }
 
   MachineFunction::iterator NextBB;
   for (MachineFunction::iterator BI = MF.begin(), BE = MF.end();
@@ -508,6 +538,8 @@ bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
 
       case AMDGPU::S_AND_B64:
       case AMDGPU::S_OR_B64:
+      case AMDGPU::S_AND_B32:
+      case AMDGPU::S_OR_B32:
         // Cleanup bit manipulations on exec mask
         combineMasks(MI);
         Last = I;

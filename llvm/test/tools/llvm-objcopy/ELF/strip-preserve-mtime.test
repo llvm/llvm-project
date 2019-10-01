@@ -41,7 +41,7 @@
 # Preserve dates in split DWO files.
 # RUN: cp %p/Inputs/dwarf.dwo %t-input.dwo
 # RUN: touch -m -t 199705050555.55 %t-input.dwo
-# RUN: llvm-objcopy -p -split-dwo=%t-dwo %t-input.dwo %t-nondwo
+# RUN: llvm-objcopy -p --split-dwo=%t-dwo %t-input.dwo %t-nondwo
 # RUN: ls -l %t-dwo | FileCheck %s --check-prefix=CHECK-PRESERVE-MTIME
 # RUN: llvm-readobj %t-dwo
 # RUN: ls -l %t-nondwo | FileCheck %s --check-prefix=CHECK-PRESERVE-MTIME

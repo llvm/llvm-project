@@ -45,6 +45,7 @@
 ; VERIFY-NEXT:   Verify generated machine code
 ; ENABLED-NEXT:  PreLegalizerCombiner
 ; VERIFY-NEXT:   Verify generated machine code
+; ENABLED-NEXT:  Analysis containing CSE Info
 ; ENABLED-NEXT:  Legalizer
 ; VERIFY-NEXT:   Verify generated machine code
 ; ENABLED-NEXT:  RegBankSelect
@@ -61,7 +62,7 @@
 ; DISABLED-NOT: IRTranslator
 
 ; DISABLED: AArch64 Instruction Selection
-; DISABLED: Expand ISel Pseudo-instructions
+; DISABLED: Finalize ISel and expand pseudo-instructions
 
 define void @empty() {
   ret void

@@ -1,4 +1,4 @@
-; RUN: llc < %s -filetype=obj | llvm-readobj - -codeview | FileCheck %s
+; RUN: llc < %s -filetype=obj | llvm-readobj - --codeview | FileCheck %s
 
 ; C++ source to regenerate:
 ; struct A {
@@ -62,7 +62,7 @@ attributes #1 = { nounwind readnone speculatable }
 !12 = !{null}
 !13 = !DILocalVariable(name: "GenericPtr", scope: !10, file: !1, line: 13, type: !14)
 !14 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !15, size: 64)
-!15 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "A", file: !1, line: 1, size: 8, flags: DIFlagTypePassByValue | DIFlagTrivial, elements: !16, identifier: ".?AUA@@")
+!15 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "A", file: !1, line: 1, size: 8, flags: DIFlagTypePassByValue, elements: !16, identifier: ".?AUA@@")
 !16 = !{!17, !22, !24, !26, !27}
 !17 = !DISubprogram(name: "NoRefQual", linkageName: "?NoRefQual@A@@QEAAHXZ", scope: !15, file: !1, line: 2, type: !18, isLocal: false, isDefinition: false, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: false)
 !18 = !DISubroutineType(types: !19)

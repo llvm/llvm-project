@@ -1,9 +1,8 @@
 //===-- PPCFrameLowering.h - Define frame lowering for PowerPC --*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -13,7 +12,6 @@
 #ifndef LLVM_LIB_TARGET_POWERPC_PPCFRAMELOWERING_H
 #define LLVM_LIB_TARGET_POWERPC_PPCFRAMELOWERING_H
 
-#include "PPC.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/Target/TargetMachine.h"
@@ -73,12 +71,29 @@ class PPCFrameLowering: public TargetFrameLowering {
    */
   void createTailCallBranchInstr(MachineBasicBlock &MBB) const;
 
+  /**
+    * Check if the conditions are correct to allow for the stack update
+    * to be moved past the CSR save/restore code.
+    */
+  bool stackUpdateCanBeMoved(MachineFunction &MF) const;
+
 public:
   PPCFrameLowering(const PPCSubtarget &STI);
 
-  unsigned determineFrameLayout(MachineFunction &MF,
-                                bool UpdateMF = true,
-                                bool UseEstimate = false) const;
+  /**
+   * Determine the frame layout and update the machine function.
+   */
+  unsigned determineFrameLayoutAndUpdate(MachineFunction &MF,
+                                         bool UseEstimate = false) const;
+
+  /**
+   * Determine the frame layout but do not update the machine function.
+   * The MachineFunction object can be const in this case as it is not
+   * modified.
+   */
+  unsigned determineFrameLayout(const MachineFunction &MF,
+                                bool UseEstimate = false,
+                                unsigned *NewMaxCallFrameSize = nullptr) const;
 
   /// emitProlog/emitEpilog - These methods insert prolog and epilog code into
   /// the function.

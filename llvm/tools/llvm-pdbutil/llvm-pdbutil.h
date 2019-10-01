@@ -1,9 +1,8 @@
 //===- llvm-pdbutil.h ----------------------------------------- *- C++ --*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -141,6 +140,7 @@ extern llvm::cl::opt<bool> DumpSummary;
 extern llvm::cl::opt<bool> DumpFpm;
 extern llvm::cl::opt<bool> DumpStreams;
 extern llvm::cl::opt<bool> DumpSymbolStats;
+extern llvm::cl::opt<bool> DumpTypeStats;
 extern llvm::cl::opt<bool> DumpUdtStats;
 extern llvm::cl::opt<bool> DumpStreamBlocks;
 
@@ -156,6 +156,7 @@ extern llvm::cl::opt<bool> DumpTypeData;
 extern llvm::cl::opt<bool> DumpTypeExtras;
 extern llvm::cl::list<uint32_t> DumpTypeIndex;
 extern llvm::cl::opt<bool> DumpTypeDependents;
+extern llvm::cl::opt<bool> DumpTypeRefStats;
 extern llvm::cl::opt<bool> DumpSectionHeaders;
 
 extern llvm::cl::opt<bool> DumpIds;

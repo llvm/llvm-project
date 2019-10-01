@@ -19,7 +19,7 @@ attributes #1 = { "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-
 !llvm.module.flags = !{!7, !8, !9}
 !llvm.ident = !{!10}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.8.0 (http://llvm.org/git/clang.git 3490ab8630d5643f71f1f04e46984f05b27b8d67) (http://llvm.org/git/llvm.git d2643e2ff955ed234944fe3c6b4ffc1250085843)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.8.0", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
 !1 = !DIFile(filename: "test.c", directory: "movpc-test")
 !2 = !{}
 !4 = distinct !DISubprogram(name: "test", scope: !1, file: !1, line: 2, type: !5, isLocal: false, isDefinition: true, scopeLine: 3, isOptimized: false, unit: !0, retainedNodes: !2)
@@ -28,7 +28,7 @@ attributes #1 = { "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-
 !7 = !{i32 2, !"Dwarf Version", i32 4}
 !8 = !{i32 2, !"Debug Info Version", i32 3}
 !9 = !{i32 1, !"PIC Level", i32 2}
-!10 = !{!"clang version 3.8.0 (http://llvm.org/git/clang.git 3490ab8630d5643f71f1f04e46984f05b27b8d67) (http://llvm.org/git/llvm.git d2643e2ff955ed234944fe3c6b4ffc1250085843)"}
+!10 = !{!"clang version 3.8.0"}
 !11 = !DILocation(line: 4, column: 3, scope: !4)
 !12 = !DILocation(line: 5, column: 1, scope: !4)
 

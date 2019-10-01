@@ -1,9 +1,8 @@
 //===- FileAnalysis.h -------------------------------------------*- C++ -*-===//
 //
-//                      The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -140,14 +139,15 @@ public:
   bool usesRegisterOperand(const Instr &InstrMeta) const;
 
   // Returns the list of indirect instructions.
-  const std::set<uint64_t> &getIndirectInstructions() const;
+  const std::set<object::SectionedAddress> &getIndirectInstructions() const;
 
   const MCRegisterInfo *getRegisterInfo() const;
   const MCInstrInfo *getMCInstrInfo() const;
   const MCInstrAnalysis *getMCInstrAnalysis() const;
 
   // Returns the inlining information for the provided address.
-  Expected<DIInliningInfo> symbolizeInlinedCode(uint64_t Address);
+  Expected<DIInliningInfo>
+  symbolizeInlinedCode(object::SectionedAddress Address);
 
   // Returns whether the provided Graph represents a protected indirect control
   // flow instruction in this file.
@@ -179,7 +179,7 @@ protected:
   // Disassemble and parse the provided bytes into this object. Instruction
   // address calculation is done relative to the provided SectionAddress.
   void parseSectionContents(ArrayRef<uint8_t> SectionBytes,
-                            uint64_t SectionAddress);
+                            object::SectionedAddress Address);
 
   // Constructs and initialises members required for disassembly.
   Error initialiseDisassemblyMembers();
@@ -226,7 +226,7 @@ private:
   DenseMap<uint64_t, std::vector<uint64_t>> StaticBranchTargetings;
 
   // A list of addresses of indirect control flow instructions.
-  std::set<uint64_t> IndirectInstructions;
+  std::set<object::SectionedAddress> IndirectInstructions;
 
   // The addresses of functions that will trap on CFI violations.
   SmallSet<uint64_t, 4> TrapOnFailFunctionAddresses;

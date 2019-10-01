@@ -25,14 +25,14 @@ attributes #0 = { minsize norecurse nounwind optsize readnone "disable-tail-call
 !llvm.module.flags = !{!3, !4, !5, !6}
 !llvm.ident = !{!7}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.9.0 (http://llvm.org/git/clang.git 075a2bc2570dfcbb6d6aed6c836e4c62b37afea6)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.9.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
 !1 = !DIFile(filename: "/Users/jammol01/Code/test.c", directory: "/Users/jammol01/Code/llvm-git/build")
 !2 = !{}
 !3 = !{i32 2, !"Dwarf Version", i32 4}
 !4 = !{i32 2, !"Debug Info Version", i32 3}
 !5 = !{i32 1, !"wchar_size", i32 4}
 !6 = !{i32 1, !"min_enum_size", i32 4}
-!7 = !{!"clang version 3.9.0 (http://llvm.org/git/clang.git 075a2bc2570dfcbb6d6aed6c836e4c62b37afea6)"}
+!7 = !{!"clang version 3.9.0"}
 !8 = distinct !DISubprogram(name: "fn1", scope: !1, file: !1, line: 1, type: !9, isLocal: false, isDefinition: true, scopeLine: 1, isOptimized: true, unit: !0, retainedNodes: !2)
 !9 = !DISubroutineType(types: !10)
 !10 = !{!11}

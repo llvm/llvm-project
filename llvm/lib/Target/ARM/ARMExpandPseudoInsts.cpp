@@ -1,9 +1,8 @@
 //===-- ARMExpandPseudoInsts.cpp - Expand pseudo instructions -------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -24,6 +23,7 @@
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/Support/Debug.h"
 
 using namespace llvm;
 
@@ -470,6 +470,7 @@ static void GetDSubRegs(unsigned Reg, NEONRegSpacing RegSpc,
 void ARMExpandPseudo::ExpandVLD(MachineBasicBlock::iterator &MBBI) {
   MachineInstr &MI = *MBBI;
   MachineBasicBlock &MBB = *MI.getParent();
+  LLVM_DEBUG(dbgs() << "Expanding: "; MI.dump());
 
   const NEONLdStTableEntry *TableEntry = LookupNEONLdSt(MI.getOpcode());
   assert(TableEntry && TableEntry->IsLoad && "NEONLdStTable lookup failed");
@@ -571,8 +572,8 @@ void ARMExpandPseudo::ExpandVLD(MachineBasicBlock::iterator &MBBI) {
 
   // Transfer memoperands.
   MIB.cloneMemRefs(MI);
-
   MI.eraseFromParent();
+  LLVM_DEBUG(dbgs() << "To:        "; MIB.getInstr()->dump(););
 }
 
 /// ExpandVST - Translate VST pseudo instructions with Q, QQ or QQQQ register
@@ -580,6 +581,7 @@ void ARMExpandPseudo::ExpandVLD(MachineBasicBlock::iterator &MBBI) {
 void ARMExpandPseudo::ExpandVST(MachineBasicBlock::iterator &MBBI) {
   MachineInstr &MI = *MBBI;
   MachineBasicBlock &MBB = *MI.getParent();
+  LLVM_DEBUG(dbgs() << "Expanding: "; MI.dump());
 
   const NEONLdStTableEntry *TableEntry = LookupNEONLdSt(MI.getOpcode());
   assert(TableEntry && !TableEntry->IsLoad && "NEONLdStTable lookup failed");
@@ -646,8 +648,8 @@ void ARMExpandPseudo::ExpandVST(MachineBasicBlock::iterator &MBBI) {
 
   // Transfer memoperands.
   MIB.cloneMemRefs(MI);
-
   MI.eraseFromParent();
+  LLVM_DEBUG(dbgs() << "To:        "; MIB.getInstr()->dump(););
 }
 
 /// ExpandLaneOp - Translate VLD*LN and VST*LN instructions with Q, QQ or QQQQ
@@ -655,6 +657,7 @@ void ARMExpandPseudo::ExpandVST(MachineBasicBlock::iterator &MBBI) {
 void ARMExpandPseudo::ExpandLaneOp(MachineBasicBlock::iterator &MBBI) {
   MachineInstr &MI = *MBBI;
   MachineBasicBlock &MBB = *MI.getParent();
+  LLVM_DEBUG(dbgs() << "Expanding: "; MI.dump());
 
   const NEONLdStTableEntry *TableEntry = LookupNEONLdSt(MI.getOpcode());
   assert(TableEntry && "NEONLdStTable lookup failed");
@@ -745,6 +748,7 @@ void ARMExpandPseudo::ExpandVTBL(MachineBasicBlock::iterator &MBBI,
                                  unsigned Opc, bool IsExt) {
   MachineInstr &MI = *MBBI;
   MachineBasicBlock &MBB = *MI.getParent();
+  LLVM_DEBUG(dbgs() << "Expanding: "; MI.dump());
 
   MachineInstrBuilder MIB = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(Opc));
   unsigned OpIdx = 0;
@@ -774,6 +778,7 @@ void ARMExpandPseudo::ExpandVTBL(MachineBasicBlock::iterator &MBBI,
   MIB.addReg(SrcReg, RegState::Implicit | getKillRegState(SrcIsKill));
   TransferImpOps(MI, MIB, MIB);
   MI.eraseFromParent();
+  LLVM_DEBUG(dbgs() << "To:        "; MIB.getInstr()->dump(););
 }
 
 static bool IsAnAddressOperand(const MachineOperand &MO) {
@@ -830,6 +835,7 @@ void ARMExpandPseudo::ExpandMOV32BitImm(MachineBasicBlock &MBB,
   const MachineOperand &MO = MI.getOperand(isCC ? 2 : 1);
   bool RequiresBundling = STI->isTargetWindows() && IsAnAddressOperand(MO);
   MachineInstrBuilder LO16, HI16;
+  LLVM_DEBUG(dbgs() << "Expanding: "; MI.dump());
 
   if (!STI->hasV6T2Ops() &&
       (Opcode == ARM::MOVi32imm || Opcode == ARM::MOVCCi32imm)) {
@@ -911,6 +917,8 @@ void ARMExpandPseudo::ExpandMOV32BitImm(MachineBasicBlock &MBB,
     LO16.add(makeImplicit(MI.getOperand(1)));
   TransferImpOps(MI, LO16, HI16);
   MI.eraseFromParent();
+  LLVM_DEBUG(dbgs() << "To:        "; LO16.getInstr()->dump(););
+  LLVM_DEBUG(dbgs() << "And:       "; HI16.getInstr()->dump(););
 }
 
 /// Expand a CMP_SWAP pseudo-inst to an ldrex/strex loop as simply as
@@ -1930,11 +1938,16 @@ bool ARMExpandPseudo::runOnMachineFunction(MachineFunction &MF) {
   TRI = STI->getRegisterInfo();
   AFI = MF.getInfo<ARMFunctionInfo>();
 
+  LLVM_DEBUG(dbgs() << "********** ARM EXPAND PSEUDO INSTRUCTIONS **********\n"
+                    << "********** Function: " << MF.getName() << '\n');
+
   bool Modified = false;
   for (MachineBasicBlock &MBB : MF)
     Modified |= ExpandMBB(MBB);
   if (VerifyARMPseudo)
     MF.verify(this, "After expanding ARM pseudo instructions.");
+
+  LLVM_DEBUG(dbgs() << "***************************************************\n");
   return Modified;
 }
 

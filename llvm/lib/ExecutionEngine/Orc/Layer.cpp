@@ -1,9 +1,8 @@
 //===-------------------- Layer.cpp - Layer interfaces --------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -88,17 +87,15 @@ void BasicIRLayerMaterializationUnit::materialize(
 
 #ifndef NDEBUG
   auto &ES = R.getTargetJITDylib().getExecutionSession();
+  auto &N = R.getTargetJITDylib().getName();
 #endif // NDEBUG
 
   auto Lock = TSM.getContextLock();
-  LLVM_DEBUG(ES.runSessionLocked([&]() {
-    dbgs() << "Emitting, for " << R.getTargetJITDylib().getName() << ", "
-           << *this << "\n";
-  }););
+  LLVM_DEBUG(ES.runSessionLocked(
+      [&]() { dbgs() << "Emitting, for " << N << ", " << *this << "\n"; }););
   L.emit(std::move(R), std::move(TSM));
   LLVM_DEBUG(ES.runSessionLocked([&]() {
-    dbgs() << "Finished emitting, for " << R.getTargetJITDylib().getName()
-           << ", " << *this << "\n";
+    dbgs() << "Finished emitting, for " << N << ", " << *this << "\n";
   }););
 }
 

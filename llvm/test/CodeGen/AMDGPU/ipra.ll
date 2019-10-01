@@ -12,7 +12,7 @@ entry:
 
 ; GCN-LABEL: {{^}}func:
 ; GCN: ; NumVgprs: 8
-define void @func() #1 {
+define hidden void @func() #1 {
   call void asm sideeffect "", "~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6},~{v7}"() #0
   ret void
 }

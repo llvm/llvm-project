@@ -23,7 +23,7 @@ define double @foo(double %a, double %b) {
 ;
 ; MM6-LABEL: foo:
 ; MM6:       # %bb.0: # %entry
-; MM6-NEXT:    mov.d $f0, $f12 # encoding: [0x46,0x20,0x60,0x06]
+; MM6-NEXT:    mov.d $f0, $f12 # encoding: [0x54,0x0c,0x20,0x7b]
 ; MM6-NEXT:    mtc1 $zero, $f1 # encoding: [0x54,0x01,0x28,0x3b]
 ; MM6-NEXT:    mthc1 $zero, $f1 # encoding: [0x54,0x01,0x38,0x3b]
 ; MM6-NEXT:    cmp.ule.d $f1, $f12, $f1 # encoding: [0x54,0x2c,0x09,0xd5]

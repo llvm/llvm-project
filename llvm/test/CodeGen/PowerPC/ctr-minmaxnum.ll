@@ -58,13 +58,9 @@ loop_exit:
 }
 
 ; CHECK-LABEL: test1v:
-; CHECK: bl fminf
-; CHECK-NOT: mtctr
-; CHECK: bl fminf
-; CHECK-NOT: mtctr
-; CHECK: bl fminf
-; CHECK-NOT: mtctr
-; CHECK: bl fminf
+; CHECK: xvminsp
+; CHECK-NOT: bl fminf
+; CHECK: mtctr
 ; CHECK-NOT: bl fminf
 ; CHECK: blr
 
@@ -136,13 +132,10 @@ loop_exit:
 }
 
 ; CHECK-LABEL: test2v:
-; CHECK: bl fmax
-; CHECK-NOT: mtctr
-; CHECK: bl fmax
-; CHECK-NOT: mtctr
-; CHECK: bl fmax
-; CHECK-NOT: mtctr
-; CHECK: bl fmax
+; CHECK: xvmaxdp
+; CHECK: xvmaxdp
+; CHECK-NOT: bl fmax
+; CHECK: mtctr
 ; CHECK-NOT: bl fmax
 ; CHECK: blr
 

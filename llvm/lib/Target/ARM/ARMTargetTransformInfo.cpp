@@ -1,9 +1,8 @@
 //===- ARMTargetTransformInfo.cpp - ARM specific TTI ----------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -22,6 +21,7 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Type.h"
 #include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Support/Casting.h"
@@ -35,6 +35,10 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "armtti"
+
+static cl::opt<bool> DisableLowOverheadLoops(
+  "disable-arm-loloops", cl::Hidden, cl::init(true),
+  cl::desc("Disable the generation of low-overhead loops"));
 
 bool ARMTTIImpl::areInlineCompatible(const Function *Caller,
                                      const Function *Callee) const {
@@ -107,9 +111,13 @@ int ARMTTIImpl::getIntImmCost(unsigned Opcode, unsigned Idx, const APInt &Imm,
       Idx == 1)
     return 0;
 
-  if (Opcode == Instruction::And)
-      // Conversion to BIC is free, and means we can use ~Imm instead.
-      return std::min(getIntImmCost(Imm, Ty), getIntImmCost(~Imm, Ty));
+  if (Opcode == Instruction::And) {
+    // UXTB/UXTH
+    if (Imm == 255 || Imm == 65535)
+      return 0;
+    // Conversion to BIC is free, and means we can use ~Imm instead.
+    return std::min(getIntImmCost(Imm, Ty), getIntImmCost(~Imm, Ty));
+  }
 
   if (Opcode == Instruction::Add)
     // Conversion to SUB is free, and means we can use -Imm instead.
@@ -398,6 +406,40 @@ int ARMTTIImpl::getAddressComputationCost(Type *Ty, ScalarEvolution *SE,
   return 1;
 }
 
+int ARMTTIImpl::getMemcpyCost(const Instruction *I) {
+  const MemCpyInst *MI = dyn_cast<MemCpyInst>(I);
+  assert(MI && "MemcpyInst expected");
+  ConstantInt *C = dyn_cast<ConstantInt>(MI->getLength());
+
+  // To model the cost of a library call, we assume 1 for the call, and
+  // 3 for the argument setup.
+  const unsigned LibCallCost = 4;
+
+  // If 'size' is not a constant, a library call will be generated.
+  if (!C)
+    return LibCallCost;
+
+  const unsigned Size = C->getValue().getZExtValue();
+  const unsigned DstAlign = MI->getDestAlignment();
+  const unsigned SrcAlign = MI->getSourceAlignment();
+  const Function *F = I->getParent()->getParent();
+  const unsigned Limit = TLI->getMaxStoresPerMemmove(F->hasMinSize());
+  std::vector<EVT> MemOps;
+
+  // MemOps will be poplulated with a list of data types that needs to be
+  // loaded and stored. That's why we multiply the number of elements by 2 to
+  // get the cost for this memcpy.
+  if (getTLI()->findOptimalMemOpLowering(
+          MemOps, Limit, Size, DstAlign, SrcAlign, false /*IsMemset*/,
+          false /*ZeroMemset*/, false /*MemcpyStrSrc*/, false /*AllowOverlap*/,
+          MI->getDestAddressSpace(), MI->getSourceAddressSpace(),
+          F->getAttributes()))
+    return MemOps.size() * 2;
+
+  // If we can't find an optimal memop lowering, return the default cost
+  return LibCallCost;
+}
+
 int ARMTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index,
                                Type *SubTp) {
   if (Kind == TTI::SK_Broadcast) {
@@ -590,6 +632,220 @@ int ARMTTIImpl::getInterleavedMemoryOpCost(unsigned Opcode, Type *VecTy,
                                            UseMaskForCond, UseMaskForGaps);
 }
 
+bool ARMTTIImpl::isLoweredToCall(const Function *F) {
+  if (!F->isIntrinsic())
+    BaseT::isLoweredToCall(F);
+
+  // Assume all Arm-specific intrinsics map to an instruction.
+  if (F->getName().startswith("llvm.arm"))
+    return false;
+
+  switch (F->getIntrinsicID()) {
+  default: break;
+  case Intrinsic::powi:
+  case Intrinsic::sin:
+  case Intrinsic::cos:
+  case Intrinsic::pow:
+  case Intrinsic::log:
+  case Intrinsic::log10:
+  case Intrinsic::log2:
+  case Intrinsic::exp:
+  case Intrinsic::exp2:
+    return true;
+  case Intrinsic::sqrt:
+  case Intrinsic::fabs:
+  case Intrinsic::copysign:
+  case Intrinsic::floor:
+  case Intrinsic::ceil:
+  case Intrinsic::trunc:
+  case Intrinsic::rint:
+  case Intrinsic::nearbyint:
+  case Intrinsic::round:
+  case Intrinsic::canonicalize:
+  case Intrinsic::lround:
+  case Intrinsic::llround:
+  case Intrinsic::lrint:
+  case Intrinsic::llrint:
+    if (F->getReturnType()->isDoubleTy() && !ST->hasFP64())
+      return true;
+    if (F->getReturnType()->isHalfTy() && !ST->hasFullFP16())
+      return true;
+    // Some operations can be handled by vector instructions and assume
+    // unsupported vectors will be expanded into supported scalar ones.
+    // TODO Handle scalar operations properly.
+    return !ST->hasFPARMv8Base() && !ST->hasVFP2Base();
+  case Intrinsic::masked_store:
+  case Intrinsic::masked_load:
+  case Intrinsic::masked_gather:
+  case Intrinsic::masked_scatter:
+    return !ST->hasMVEIntegerOps();
+  case Intrinsic::sadd_with_overflow:
+  case Intrinsic::uadd_with_overflow:
+  case Intrinsic::ssub_with_overflow:
+  case Intrinsic::usub_with_overflow:
+  case Intrinsic::sadd_sat:
+  case Intrinsic::uadd_sat:
+  case Intrinsic::ssub_sat:
+  case Intrinsic::usub_sat:
+    return false;
+  }
+
+  return BaseT::isLoweredToCall(F);
+}
+
+bool ARMTTIImpl::isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
+                                          AssumptionCache &AC,
+                                          TargetLibraryInfo *LibInfo,
+                                          HardwareLoopInfo &HWLoopInfo) {
+  // Low-overhead branches are only supported in the 'low-overhead branch'
+  // extension of v8.1-m.
+  if (!ST->hasLOB() || DisableLowOverheadLoops)
+    return false;
+
+  if (!SE.hasLoopInvariantBackedgeTakenCount(L))
+    return false;
+
+  const SCEV *BackedgeTakenCount = SE.getBackedgeTakenCount(L);
+  if (isa<SCEVCouldNotCompute>(BackedgeTakenCount))
+    return false;
+
+  const SCEV *TripCountSCEV =
+    SE.getAddExpr(BackedgeTakenCount,
+                  SE.getOne(BackedgeTakenCount->getType()));
+
+  // We need to store the trip count in LR, a 32-bit register.
+  if (SE.getUnsignedRangeMax(TripCountSCEV).getBitWidth() > 32)
+    return false;
+
+  // Making a call will trash LR and clear LO_BRANCH_INFO, so there's little
+  // point in generating a hardware loop if that's going to happen.
+  auto MaybeCall = [this](Instruction &I) {
+    const ARMTargetLowering *TLI = getTLI();
+    unsigned ISD = TLI->InstructionOpcodeToISD(I.getOpcode());
+    EVT VT = TLI->getValueType(DL, I.getType(), true);
+    if (TLI->getOperationAction(ISD, VT) == TargetLowering::LibCall)
+      return true;
+
+    // Check if an intrinsic will be lowered to a call and assume that any
+    // other CallInst will generate a bl.
+    if (auto *Call = dyn_cast<CallInst>(&I)) {
+      if (isa<IntrinsicInst>(Call)) {
+        if (const Function *F = Call->getCalledFunction())
+          return isLoweredToCall(F);
+      }
+      return true;
+    }
+
+    // FPv5 provides conversions between integer, double-precision,
+    // single-precision, and half-precision formats.
+    switch (I.getOpcode()) {
+    default:
+      break;
+    case Instruction::FPToSI:
+    case Instruction::FPToUI:
+    case Instruction::SIToFP:
+    case Instruction::UIToFP:
+    case Instruction::FPTrunc:
+    case Instruction::FPExt:
+      return !ST->hasFPARMv8Base();
+    }
+
+    // FIXME: Unfortunately the approach of checking the Operation Action does
+    // not catch all cases of Legalization that use library calls. Our
+    // Legalization step categorizes some transformations into library calls as
+    // Custom, Expand or even Legal when doing type legalization. So for now
+    // we have to special case for instance the SDIV of 64bit integers and the
+    // use of floating point emulation.
+    if (VT.isInteger() && VT.getSizeInBits() >= 64) {
+      switch (ISD) {
+      default:
+        break;
+      case ISD::SDIV:
+      case ISD::UDIV:
+      case ISD::SREM:
+      case ISD::UREM:
+      case ISD::SDIVREM:
+      case ISD::UDIVREM:
+        return true;
+      }
+    }
+
+    // Assume all other non-float operations are supported.
+    if (!VT.isFloatingPoint())
+      return false;
+
+    // We'll need a library call to handle most floats when using soft.
+    if (TLI->useSoftFloat()) {
+      switch (I.getOpcode()) {
+      default:
+        return true;
+      case Instruction::Alloca:
+      case Instruction::Load:
+      case Instruction::Store:
+      case Instruction::Select:
+      case Instruction::PHI:
+        return false;
+      }
+    }
+
+    // We'll need a libcall to perform double precision operations on a single
+    // precision only FPU.
+    if (I.getType()->isDoubleTy() && !ST->hasFP64())
+      return true;
+
+    // Likewise for half precision arithmetic.
+    if (I.getType()->isHalfTy() && !ST->hasFullFP16())
+      return true;
+
+    return false;
+  };
+
+  auto IsHardwareLoopIntrinsic = [](Instruction &I) {
+    if (auto *Call = dyn_cast<IntrinsicInst>(&I)) {
+      switch (Call->getIntrinsicID()) {
+      default:
+        break;
+      case Intrinsic::set_loop_iterations:
+      case Intrinsic::loop_decrement:
+      case Intrinsic::loop_decrement_reg:
+        return true;
+      }
+    }
+    return false;
+  };
+
+  // Scan the instructions to see if there's any that we know will turn into a
+  // call or if this loop is already a low-overhead loop.
+  auto ScanLoop = [&](Loop *L) {
+    for (auto *BB : L->getBlocks()) {
+      for (auto &I : *BB) {
+        if (MaybeCall(I) || IsHardwareLoopIntrinsic(I))
+          return false;
+      }
+    }
+    return true;
+  };
+
+  // Visit inner loops.
+  for (auto Inner : *L)
+    if (!ScanLoop(Inner))
+      return false;
+
+  if (!ScanLoop(L))
+    return false;
+
+  // TODO: Check whether the trip count calculation is expensive. If L is the
+  // inner loop but we know it has a low trip count, calculating that trip
+  // count (in the parent loop) may be detrimental.
+
+  LLVMContext &C = L->getHeader()->getContext();
+  HWLoopInfo.CounterInReg = true;
+  HWLoopInfo.IsNestingLegal = false;
+  HWLoopInfo.CountType = Type::getInt32Ty(C);
+  HWLoopInfo.LoopDecrement = ConstantInt::get(HWLoopInfo.CountType, 1);
+  return true;
+}
+
 void ARMTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                          TTI::UnrollingPreferences &UP) {
   // Only currently enable these preferences for M-Class cores.
@@ -599,7 +855,7 @@ void ARMTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   // Disable loop unrolling for Oz and Os.
   UP.OptSizeThreshold = 0;
   UP.PartialOptSizeThreshold = 0;
-  if (L->getHeader()->getParent()->optForSize())
+  if (L->getHeader()->getParent()->hasOptSize())
     return;
 
   // Only enable on Thumb-2 targets.
@@ -645,6 +901,7 @@ void ARMTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
 
   UP.Partial = true;
   UP.Runtime = true;
+  UP.UpperBound = true;
   UP.UnrollRemainder = true;
   UP.DefaultUnrollRuntimeCount = 4;
   UP.UnrollAndJam = true;

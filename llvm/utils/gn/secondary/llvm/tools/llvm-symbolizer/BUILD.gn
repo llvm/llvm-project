@@ -1,23 +1,25 @@
 import("//llvm/tools/binutils_symlinks.gni")
 import("//llvm/utils/gn/build/symlink_or_copy.gni")
 
+symlinks = [ "llvm-addr2line" ]
 if (llvm_install_binutils_symlinks) {
-  symlink_or_copy("addr2line") {
+  symlinks += [ "addr2line" ]
+}
+foreach(target, symlinks) {
+  symlink_or_copy(target) {
     deps = [
       ":llvm-symbolizer",
     ]
     source = "llvm-symbolizer"
-    output = "$root_out_dir/bin/addr2line"
+    output = "$root_out_dir/bin/$target"
   }
 }
 
 # //:llvm-symbolizer depends on this symlink target, see comment in //BUILD.gn.
 group("symlinks") {
-  deps = [
-    ":llvm-symbolizer",
-  ]
-  if (llvm_install_binutils_symlinks) {
-    deps += [ ":addr2line" ]
+  deps = []
+  foreach(target, symlinks) {
+    deps += [ ":$target" ]
   }
 }
 

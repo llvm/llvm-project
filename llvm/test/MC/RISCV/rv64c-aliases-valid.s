@@ -94,3 +94,12 @@ li t3, 0x700000000B00000F
 li t4, 0x123456789abcdef0
 # CHECK-EXPAND: c.li t5, -1
 li t5, 0xFFFFFFFFFFFFFFFF
+
+# CHECK-EXPAND: c.ld s0, 0(s1)
+c.ld x8, (x9)
+# CHECK-EXPAND: c.sd s0, 0(s1)
+c.sd x8, (x9)
+# CHECK-EXPAND: c.ldsp s0, 0(sp)
+c.ldsp x8, (x2)
+# CHECK-EXPAND: c.sdsp s0, 0(sp)
+c.sdsp x8, (x2)

@@ -1,9 +1,8 @@
 //===- llvm/ADT/DenseMapInfo.h - Type traits for DenseMap -------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -19,6 +18,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
 #include "llvm/Support/type_traits.h"
+#include "llvm/Support/ScalableSize.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -327,6 +327,21 @@ template <> struct DenseMapInfo<hash_code> {
   static inline hash_code getTombstoneKey() { return hash_code(-2); }
   static unsigned getHashValue(hash_code val) { return val; }
   static bool isEqual(hash_code LHS, hash_code RHS) { return LHS == RHS; }
+};
+
+template <> struct DenseMapInfo<ElementCount> {
+  static inline ElementCount getEmptyKey() { return {~0U, true}; }
+  static inline ElementCount getTombstoneKey() { return {~0U - 1, false}; }
+  static unsigned getHashValue(const ElementCount& EltCnt) {
+    if (EltCnt.Scalable)
+      return (EltCnt.Min * 37U) - 1U;
+
+    return EltCnt.Min * 37U;
+  }
+
+  static bool isEqual(const ElementCount& LHS, const ElementCount& RHS) {
+    return LHS == RHS;
+  }
 };
 
 } // end namespace llvm

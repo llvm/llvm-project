@@ -1,9 +1,8 @@
 //===- DWARFDebugAranges.h --------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -29,7 +28,7 @@ private:
   void extract(DataExtractor DebugArangesData);
 
   /// Call appendRange multiple times and then call construct.
-  void appendRange(uint32_t CUOffset, uint64_t LowPC, uint64_t HighPC);
+  void appendRange(uint64_t CUOffset, uint64_t LowPC, uint64_t HighPC);
   void construct();
 
   struct Range {
@@ -50,10 +49,6 @@ private:
       return -1ULL;
     }
 
-    bool containsAddress(uint64_t Address) const {
-      return LowPC <= Address && Address < HighPC();
-    }
-
     bool operator<(const Range &other) const {
       return LowPC < other.LowPC;
     }
@@ -65,10 +60,10 @@ private:
 
   struct RangeEndpoint {
     uint64_t Address;
-    uint32_t CUOffset;
+    uint64_t CUOffset;
     bool IsRangeStart;
 
-    RangeEndpoint(uint64_t Address, uint32_t CUOffset, bool IsRangeStart)
+    RangeEndpoint(uint64_t Address, uint64_t CUOffset, bool IsRangeStart)
         : Address(Address), CUOffset(CUOffset), IsRangeStart(IsRangeStart) {}
 
     bool operator<(const RangeEndpoint &Other) const {
@@ -81,7 +76,7 @@ private:
 
   std::vector<RangeEndpoint> Endpoints;
   RangeColl Aranges;
-  DenseSet<uint32_t> ParsedCUOffsets;
+  DenseSet<uint64_t> ParsedCUOffsets;
 };
 
 } // end namespace llvm

@@ -6,6 +6,11 @@
 // such as DT_HIOS, etc. to allow using this file to in other contexts.
 // For example we can use it to generate a stringification switch statement.
 
+#ifndef AARCH64_DYNAMIC_TAG
+#define AARCH64_DYNAMIC_TAG(name, value) DYNAMIC_TAG(name, value)
+#define AARCH64_DYNAMIC_TAG_DEFINED
+#endif
+
 #ifndef HEXAGON_DYNAMIC_TAG
 #define HEXAGON_DYNAMIC_TAG(name, value) DYNAMIC_TAG(name, value)
 #define HEXAGON_DYNAMIC_TAG_DEFINED
@@ -14,6 +19,11 @@
 #ifndef MIPS_DYNAMIC_TAG
 #define MIPS_DYNAMIC_TAG(name, value) DYNAMIC_TAG(name, value)
 #define MIPS_DYNAMIC_TAG_DEFINED
+#endif
+
+#ifndef PPC_DYNAMIC_TAG
+#define PPC_DYNAMIC_TAG(name, value) DYNAMIC_TAG(name, value)
+#define PPC_DYNAMIC_TAG_DEFINED
 #endif
 
 #ifndef PPC64_DYNAMIC_TAG
@@ -107,6 +117,10 @@ DYNAMIC_TAG(VERNEED, 0X6FFFFFFE)    // The address of the version dependency
                                     // table.
 DYNAMIC_TAG(VERNEEDNUM, 0X6FFFFFFF) // The number of entries in DT_VERNEED.
 
+// AArch64 specific dynamic table entries
+AARCH64_DYNAMIC_TAG(AARCH64_BTI_PLT, 0x70000001)
+AARCH64_DYNAMIC_TAG(AARCH64_PAC_PLT, 0x70000003)
+
 // Hexagon specific dynamic table entries
 HEXAGON_DYNAMIC_TAG(HEXAGON_SYMSZ, 0x70000000)
 HEXAGON_DYNAMIC_TAG(HEXAGON_VER, 0x70000001)
@@ -190,17 +204,27 @@ MIPS_DYNAMIC_TAG(MIPS_RWPLT, 0x70000034)        // Points to the base
 MIPS_DYNAMIC_TAG(MIPS_RLD_MAP_REL, 0x70000035)  // Relative offset of run time loader
                                                 // map, used for debugging.
 
+// PPC specific dynamic table entries.
+PPC_DYNAMIC_TAG(PPC_GOT, 0x70000000) // Uses Secure PLT ABI.
+PPC_DYNAMIC_TAG(PPC_OPT, 0x70000001) // Has TLS optimization.
+
 // PPC64 specific dynamic table entries.
 PPC64_DYNAMIC_TAG(PPC64_GLINK, 0x70000000) // Address of 32 bytes before the
                                            // first glink lazy resolver stub.
 
 // Sun machine-independent extensions.
 DYNAMIC_TAG(AUXILIARY, 0x7FFFFFFD) // Shared object to load before self
+DYNAMIC_TAG(USED, 0x7FFFFFFE)      // Same as DT_NEEDED
 DYNAMIC_TAG(FILTER, 0x7FFFFFFF)    // Shared object to get values from
 
 
 #ifdef DYNAMIC_TAG_MARKER_DEFINED
 #undef DYNAMIC_TAG_MARKER
+#undef DYNAMIC_TAG_MARKER_DEFINED
+#endif
+#ifdef AARCH64_DYNAMIC_TAG_DEFINED
+#undef AARCH64_DYNAMIC_TAG
+#undef AARCH64_DYNAMIC_TAG_DEFINED
 #endif
 #ifdef MIPS_DYNAMIC_TAG_DEFINED
 #undef MIPS_DYNAMIC_TAG
@@ -209,6 +233,10 @@ DYNAMIC_TAG(FILTER, 0x7FFFFFFF)    // Shared object to get values from
 #ifdef HEXAGON_DYNAMIC_TAG_DEFINED
 #undef HEXAGON_DYNAMIC_TAG
 #undef HEXAGON_DYNAMIC_TAG_DEFINED
+#endif
+#ifdef PPC_DYNAMIC_TAG_DEFINED
+#undef PPC_DYNAMIC_TAG
+#undef PPC_DYNAMIC_TAG_DEFINED
 #endif
 #ifdef PPC64_DYNAMIC_TAG_DEFINED
 #undef PPC64_DYNAMIC_TAG

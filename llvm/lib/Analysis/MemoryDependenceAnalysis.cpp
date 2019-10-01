@@ -1,9 +1,8 @@
 //===- MemoryDependenceAnalysis.cpp - Mem Deps Implementation -------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -31,7 +30,6 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -182,8 +180,8 @@ static ModRefInfo GetLocation(const Instruction *Inst, MemoryLocation &Loc,
 }
 
 /// Private helper for finding the local dependencies of a call site.
-MemDepResult MemoryDependenceResults::getCallSiteDependencyFrom(
-    CallSite CS, bool isReadOnlyCall, BasicBlock::iterator ScanIt,
+MemDepResult MemoryDependenceResults::getCallDependencyFrom(
+    CallBase *Call, bool isReadOnlyCall, BasicBlock::iterator ScanIt,
     BasicBlock *BB) {
   unsigned Limit = BlockScanLimit;
 
@@ -205,21 +203,21 @@ MemDepResult MemoryDependenceResults::getCallSiteDependencyFrom(
     ModRefInfo MR = GetLocation(Inst, Loc, TLI);
     if (Loc.Ptr) {
       // A simple instruction.
-      if (isModOrRefSet(AA.getModRefInfo(CS, Loc)))
+      if (isModOrRefSet(AA.getModRefInfo(Call, Loc)))
         return MemDepResult::getClobber(Inst);
       continue;
     }
 
-    if (auto InstCS = CallSite(Inst)) {
+    if (auto *CallB = dyn_cast<CallBase>(Inst)) {
       // If these two calls do not interfere, look past it.
-      if (isNoModRef(AA.getModRefInfo(CS, InstCS))) {
-        // If the two calls are the same, return InstCS as a Def, so that
-        // CS can be found redundant and eliminated.
+      if (isNoModRef(AA.getModRefInfo(Call, CallB))) {
+        // If the two calls are the same, return Inst as a Def, so that
+        // Call can be found redundant and eliminated.
         if (isReadOnlyCall && !isModSet(MR) &&
-            CS.getInstruction()->isIdenticalToWhenDefined(Inst))
+            Call->isIdenticalToWhenDefined(CallB))
           return MemDepResult::getDef(Inst);
 
-        // Otherwise if the two calls don't interact (e.g. InstCS is readnone)
+        // Otherwise if the two calls don't interact (e.g. CallB is readnone)
         // keep scanning.
         continue;
       } else
@@ -328,7 +326,8 @@ static bool isVolatile(Instruction *Inst) {
 
 MemDepResult MemoryDependenceResults::getPointerDependencyFrom(
     const MemoryLocation &MemLoc, bool isLoad, BasicBlock::iterator ScanIt,
-    BasicBlock *BB, Instruction *QueryInst, unsigned *Limit) {
+    BasicBlock *BB, Instruction *QueryInst, unsigned *Limit,
+    OrderedBasicBlock *OBB) {
   MemDepResult InvariantGroupDependency = MemDepResult::getUnknown();
   if (QueryInst != nullptr) {
     if (auto *LI = dyn_cast<LoadInst>(QueryInst)) {
@@ -339,7 +338,7 @@ MemDepResult MemoryDependenceResults::getPointerDependencyFrom(
     }
   }
   MemDepResult SimpleDep = getSimplePointerDependencyFrom(
-      MemLoc, isLoad, ScanIt, BB, QueryInst, Limit);
+      MemLoc, isLoad, ScanIt, BB, QueryInst, Limit, OBB);
   if (SimpleDep.isDef())
     return SimpleDep;
   // Non-local invariant group dependency indicates there is non local Def
@@ -440,14 +439,13 @@ MemoryDependenceResults::getInvariantGroupPointerDependency(LoadInst *LI,
 
 MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
     const MemoryLocation &MemLoc, bool isLoad, BasicBlock::iterator ScanIt,
-    BasicBlock *BB, Instruction *QueryInst, unsigned *Limit) {
+    BasicBlock *BB, Instruction *QueryInst, unsigned *Limit,
+    OrderedBasicBlock *OBB) {
   bool isInvariantLoad = false;
 
-  if (!Limit) {
-    unsigned DefaultLimit = BlockScanLimit;
-    return getSimplePointerDependencyFrom(MemLoc, isLoad, ScanIt, BB, QueryInst,
-                                          &DefaultLimit);
-  }
+  unsigned DefaultLimit = BlockScanLimit;
+  if (!Limit)
+    Limit = &DefaultLimit;
 
   // We must be careful with atomic accesses, as they may allow another thread
   //   to touch this location, clobbering it. We are conservative: if the
@@ -489,11 +487,14 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
 
   const DataLayout &DL = BB->getModule()->getDataLayout();
 
-  // Create a numbered basic block to lazily compute and cache instruction
+  // If the caller did not provide an ordered basic block,
+  // create one to lazily compute and cache instruction
   // positions inside a BB. This is used to provide fast queries for relative
   // position between two instructions in a BB and can be used by
   // AliasAnalysis::callCapturesBefore.
-  OrderedBasicBlock OBB(BB);
+  OrderedBasicBlock OBBTmp(BB);
+  if (!OBB)
+    OBB = &OBBTmp;
 
   // Return "true" if and only if the instruction I is either a non-simple
   // load or a non-simple store.
@@ -674,7 +675,7 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
     // A release fence requires that all stores complete before it, but does
     // not prevent the reordering of following loads or stores 'before' the
     // fence.  As a result, we look past it when finding a dependency for
-    // loads.  DSE uses this to find preceeding stores to delete and thus we
+    // loads.  DSE uses this to find preceding stores to delete and thus we
     // can't bypass the fence if the query instruction is a store.
     if (FenceInst *FI = dyn_cast<FenceInst>(Inst))
       if (isLoad && FI->getOrdering() == AtomicOrdering::Release)
@@ -684,7 +685,7 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
     ModRefInfo MR = AA.getModRefInfo(Inst, MemLoc);
     // If necessary, perform additional analysis.
     if (isModAndRefSet(MR))
-      MR = AA.callCapturesBefore(Inst, MemLoc, &DT, &OBB);
+      MR = AA.callCapturesBefore(Inst, MemLoc, &DT, OBB);
     switch (clearMust(MR)) {
     case ModRefInfo::NoModRef:
       // If the call has no effect on the queried pointer, just ignore it.
@@ -710,7 +711,8 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
   return MemDepResult::getNonFuncLocal();
 }
 
-MemDepResult MemoryDependenceResults::getDependency(Instruction *QueryInst) {
+MemDepResult MemoryDependenceResults::getDependency(Instruction *QueryInst,
+                                                    OrderedBasicBlock *OBB) {
   Instruction *ScanPos = QueryInst;
 
   // Check for a cached result
@@ -748,13 +750,13 @@ MemDepResult MemoryDependenceResults::getDependency(Instruction *QueryInst) {
       if (auto *II = dyn_cast<IntrinsicInst>(QueryInst))
         isLoad |= II->getIntrinsicID() == Intrinsic::lifetime_start;
 
-      LocalCache = getPointerDependencyFrom(
-          MemLoc, isLoad, ScanPos->getIterator(), QueryParent, QueryInst);
-    } else if (isa<CallInst>(QueryInst) || isa<InvokeInst>(QueryInst)) {
-      CallSite QueryCS(QueryInst);
-      bool isReadOnly = AA.onlyReadsMemory(QueryCS);
-      LocalCache = getCallSiteDependencyFrom(
-          QueryCS, isReadOnly, ScanPos->getIterator(), QueryParent);
+      LocalCache =
+          getPointerDependencyFrom(MemLoc, isLoad, ScanPos->getIterator(),
+                                   QueryParent, QueryInst, nullptr, OBB);
+    } else if (auto *QueryCall = dyn_cast<CallBase>(QueryInst)) {
+      bool isReadOnly = AA.onlyReadsMemory(QueryCall);
+      LocalCache = getCallDependencyFrom(QueryCall, isReadOnly,
+                                         ScanPos->getIterator(), QueryParent);
     } else
       // Non-memory instruction.
       LocalCache = MemDepResult::getUnknown();
@@ -780,11 +782,11 @@ static void AssertSorted(MemoryDependenceResults::NonLocalDepInfo &Cache,
 #endif
 
 const MemoryDependenceResults::NonLocalDepInfo &
-MemoryDependenceResults::getNonLocalCallDependency(CallSite QueryCS) {
-  assert(getDependency(QueryCS.getInstruction()).isNonLocal() &&
+MemoryDependenceResults::getNonLocalCallDependency(CallBase *QueryCall) {
+  assert(getDependency(QueryCall).isNonLocal() &&
          "getNonLocalCallDependency should only be used on calls with "
          "non-local deps!");
-  PerInstNLInfo &CacheP = NonLocalDeps[QueryCS.getInstruction()];
+  PerInstNLInfo &CacheP = NonLocalDeps[QueryCall];
   NonLocalDepInfo &Cache = CacheP.first;
 
   // This is the set of blocks that need to be recomputed.  In the cached case,
@@ -814,14 +816,14 @@ MemoryDependenceResults::getNonLocalCallDependency(CallSite QueryCS) {
     //     << Cache.size() << " cached: " << *QueryInst;
   } else {
     // Seed DirtyBlocks with each of the preds of QueryInst's block.
-    BasicBlock *QueryBB = QueryCS.getInstruction()->getParent();
+    BasicBlock *QueryBB = QueryCall->getParent();
     for (BasicBlock *Pred : PredCache.get(QueryBB))
       DirtyBlocks.push_back(Pred);
     ++NumUncacheNonLocal;
   }
 
   // isReadonlyCall - If this is a read-only call, we can be more aggressive.
-  bool isReadonlyCall = AA.onlyReadsMemory(QueryCS);
+  bool isReadonlyCall = AA.onlyReadsMemory(QueryCall);
 
   SmallPtrSet<BasicBlock *, 32> Visited;
 
@@ -865,8 +867,8 @@ MemoryDependenceResults::getNonLocalCallDependency(CallSite QueryCS) {
       if (Instruction *Inst = ExistingResult->getResult().getInst()) {
         ScanPos = Inst->getIterator();
         // We're removing QueryInst's use of Inst.
-        RemoveFromReverseMap(ReverseNonLocalDeps, Inst,
-                             QueryCS.getInstruction());
+        RemoveFromReverseMap<Instruction *>(ReverseNonLocalDeps, Inst,
+                                            QueryCall);
       }
     }
 
@@ -874,8 +876,7 @@ MemoryDependenceResults::getNonLocalCallDependency(CallSite QueryCS) {
     MemDepResult Dep;
 
     if (ScanPos != DirtyBB->begin()) {
-      Dep =
-          getCallSiteDependencyFrom(QueryCS, isReadonlyCall, ScanPos, DirtyBB);
+      Dep = getCallDependencyFrom(QueryCall, isReadonlyCall, ScanPos, DirtyBB);
     } else if (DirtyBB != &DirtyBB->getParent()->getEntryBlock()) {
       // No dependence found.  If this is the entry block of the function, it is
       // a clobber, otherwise it is unknown.
@@ -897,7 +898,7 @@ MemoryDependenceResults::getNonLocalCallDependency(CallSite QueryCS) {
       // Keep the ReverseNonLocalDeps map up to date so we can efficiently
       // update this when we remove instructions.
       if (Instruction *Inst = Dep.getInst())
-        ReverseNonLocalDeps[Inst].insert(QueryCS.getInstruction());
+        ReverseNonLocalDeps[Inst].insert(QueryCall);
     } else {
 
       // If the block *is* completely transparent to the load, we need to check

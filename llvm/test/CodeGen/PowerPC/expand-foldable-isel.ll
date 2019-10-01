@@ -29,13 +29,13 @@ define void @_ZN3pov6ot_insEPPNS_14ot_node_structEPNS_15ot_block_structEPNS_12ot
 ;
 ; CHECK-LABEL: _ZN3pov6ot_insEPPNS_14ot_node_structEPNS_15ot_block_structEPNS_12ot_id_structE:
 ; CHECK:    mr r4, r3
-; CHECK:    bc 12, 4*cr5+lt, .LBB0_3
-; CHECK:   # %bb.2:
+; CHECK:    bc 12, 4*cr5+lt, [[CASE1:.LBB[0-9_]+]]
+; CHECK:   # %bb.
 ; CHECK:    ori r29, r6, 0
-; CHECK:    b .LBB0_4
-; CHECK:  .LBB0_3:
+; CHECK:    b [[MERGE:.LBB[0-9_]+]]
+; CHECK:  [[CASE1]]:
 ; CHECK:    addi r29, r5, 0
-; CHECK:  .LBB0_4:
+; CHECK:  [[MERGE]]:
 ; CHECK:    blr
 entry:
   br label %while.cond11

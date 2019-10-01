@@ -410,8 +410,9 @@ define <16 x i8> @shuffle_uu_0_5_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu(<16 x i8
 define <16 x i8> @shuffle_uu_16_4_16_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu(<16 x i8> %v) {
 ; AMD10H-LABEL: shuffle_uu_16_4_16_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu:
 ; AMD10H:       # %bb.0:
-; AMD10H-NEXT:    psrlq $16, %xmm0
-; AMD10H-NEXT:    pand {{.*}}(%rip), %xmm0
+; AMD10H-NEXT:    pslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3,4]
+; AMD10H-NEXT:    psrldq {{.*#+}} xmm0 = xmm0[15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AMD10H-NEXT:    pslldq {{.*#+}} xmm0 = zero,zero,xmm0[0,1,2,3,4,5,6,7,8,9,10,11,12,13]
 ; AMD10H-NEXT:    retq
 ;
 ; BTVER1-LABEL: shuffle_uu_16_4_16_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu:

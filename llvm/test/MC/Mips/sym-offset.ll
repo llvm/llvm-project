@@ -1,4 +1,4 @@
-; DISABLED: llc -filetype=obj -mtriple mipsel-unknown-linux %s -o - | llvm-readobj -s -sd | FileCheck %s
+; DISABLED: llc -filetype=obj -mtriple mipsel-unknown-linux %s -o - | llvm-readobj -S --sd | FileCheck %s
 ; RUN: false
 ; XFAIL: *
 

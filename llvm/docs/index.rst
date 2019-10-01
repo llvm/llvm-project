@@ -55,11 +55,10 @@ User Guides
 
 For those new to the LLVM system.
 
-NOTE: If you are a user who is only interested in using LLVM-based
-compilers, you should look into `Clang <http://clang.llvm.org>`_ or
-`DragonEgg <http://dragonegg.llvm.org>`_ instead. The documentation here is
-intended for users who have a need to work with the intermediate LLVM
-representation.
+NOTE: If you are a user who is only interested in using an LLVM-based compiler,
+you should look into `Clang <http://clang.llvm.org>`_ instead. The
+documentation here is intended for users who have a need to work with the
+intermediate LLVM representation.
 
 .. toctree::
    :hidden:
@@ -90,11 +89,14 @@ representation.
    GetElementPtr
    Frontend/PerformanceTips
    MCJITDesignAndImplementation
+   ORCv2DesignAndImplementation
    CodeOfConduct
    CompileCudaWithLLVM
    ReportingGuide
    Benchmarking
    Docker
+   BuildingADistribution
+   Remarks
 
 :doc:`GettingStarted`
    Discusses how to get up and running quickly with the LLVM infrastructure.
@@ -177,6 +179,12 @@ representation.
 :doc:`Docker`
    A reference for using Dockerfiles provided with LLVM.
 
+:doc:`BuildingADistribution`
+  A best-practices guide for using LLVM's CMake build system to package and
+  distribute LLVM-based tools.
+
+:doc:`Remarks`
+   A reference on the implementation of remarks in LLVM.
 
 Programming Documentation
 =========================
@@ -232,7 +240,7 @@ For developers of applications which use LLVM as a library.
 
 `Documentation for Go bindings <http://godoc.org/llvm.org/llvm/bindings/go/llvm>`_
 
-`ViewVC Repository Browser <http://llvm.org/viewvc/>`_
+`Github Source Repository Browser <http://github.com/llvm/llvm-project//>`_
    ..
 
 :doc:`CompilerWriterInfo`
@@ -268,6 +276,7 @@ For API clients and LLVM developers.
    Bugpoint
    CodeGenerator
    ExceptionHandling
+   AddingConstrainedIntrinsics
    LinkTimeOptimization
    SegmentedStacks
    TableGenFundamentals
@@ -346,6 +355,10 @@ For API clients and LLVM developers.
    This document describes the design and implementation of exception handling
    in LLVM.
 
+:doc:`AddingConstrainedIntrinsics`
+   Gives the steps necessary when adding a new constrained math intrinsic
+   to LLVM.
+
 :doc:`Bugpoint`
    Automatic bug finder and test-case reducer description and usage
    information.
@@ -369,6 +382,10 @@ For API clients and LLVM developers.
 
 :doc:`MCJITDesignAndImplementation`
    Describes the inner workings of MCJIT execution engine.
+
+:doc:`ORCv2DesignAndImplementation`
+   Describes the design and implementation of the ORC APIs, including some
+   usage examples.
 
 :doc:`BranchWeightMetadata`
    Provides information about Branch Prediction Information.
@@ -554,13 +571,27 @@ This channel has several bots.
 
   * llvmbb - Bot for the main LLVM buildbot master.
     http://lab.llvm.org:8011/console
-  * bb-chapuni - An individually run buildbot master. http://bb.pgr.jp/console
   * smooshlab - Apple's internal buildbot master.
 
 * robot - Bugzilla linker. %bug <number>
 
 * clang-bot - A `geordi <http://www.eelis.net/geordi/>`_ instance running
   near-trunk clang instead of gcc.
+
+Meetups and social events
+-------------------------
+
+.. toctree::
+   :hidden:
+
+   MeetupGuidelines
+
+Besides developer `meetings and conferences <https://llvm.org/devmtg/>`_,
+there are several user groups called
+`LLVM Socials <https://www.meetup.com/pro/llvm/>`_. We greatly encourage you to
+join one in your city. Or start a new one if there is none:
+
+:doc:`MeetupGuidelines`
 
 Community wide proposals
 ------------------------
@@ -574,6 +605,7 @@ can be better.
    CodeOfConduct
    Proposals/GitHubMove
    Proposals/TestSuite
+   Proposals/VariableNames
    Proposals/VectorizationPlan
 
 :doc:`CodeOfConduct`
@@ -585,6 +617,9 @@ can be better.
 
 :doc:`Proposals/TestSuite`
    Proposals for additional benchmarks/programs for llvm's test-suite.
+
+:doc:`Proposals/VariableNames`
+   Proposal to change the variable names coding standard.
 
 :doc:`Proposals/VectorizationPlan`
    Proposal to model the process and upgrade the infrastructure of LLVM's Loop Vectorizer.

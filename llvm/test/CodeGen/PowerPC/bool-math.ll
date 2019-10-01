@@ -83,9 +83,8 @@ define i8 @add_zext_cmp_mask_narrower_result(i32 %x) {
 define i32 @low_bit_select_constants_bigger_false_same_size_result(i32 %x) {
 ; CHECK-LABEL: low_bit_select_constants_bigger_false_same_size_result:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    not 3, 3
 ; CHECK-NEXT:    clrldi 3, 3, 63
-; CHECK-NEXT:    subfic 3, 3, 43
+; CHECK-NEXT:    ori 3, 3, 42
 ; CHECK-NEXT:    blr
   %a = and i32 %x, 1
   %c = icmp eq i32 %a, 0
@@ -96,9 +95,8 @@ define i32 @low_bit_select_constants_bigger_false_same_size_result(i32 %x) {
 define i64 @low_bit_select_constants_bigger_false_wider_result(i32 %x) {
 ; CHECK-LABEL: low_bit_select_constants_bigger_false_wider_result:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    not 3, 3
 ; CHECK-NEXT:    clrldi 3, 3, 63
-; CHECK-NEXT:    subfic 3, 3, 27
+; CHECK-NEXT:    ori 3, 3, 26
 ; CHECK-NEXT:    blr
   %a = and i32 %x, 1
   %c = icmp eq i32 %a, 0
@@ -109,9 +107,8 @@ define i64 @low_bit_select_constants_bigger_false_wider_result(i32 %x) {
 define i16 @low_bit_select_constants_bigger_false_narrower_result(i32 %x) {
 ; CHECK-LABEL: low_bit_select_constants_bigger_false_narrower_result:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    nor 3, 3, 3
-; CHECK-NEXT:    clrlwi 3, 3, 31
-; CHECK-NEXT:    subfic 3, 3, 37
+; CHECK-NEXT:    clrldi 3, 3, 63
+; CHECK-NEXT:    ori 3, 3, 36
 ; CHECK-NEXT:    blr
   %a = and i32 %x, 1
   %c = icmp eq i32 %a, 0

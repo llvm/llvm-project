@@ -1,9 +1,8 @@
 //===------ PPCLoopPreIncPrep.cpp - Loop Pre-Inc. AM Prep. Pass -----------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -64,12 +63,6 @@ static cl::opt<unsigned> MaxVars("ppc-preinc-prep-max-vars",
   cl::desc("Potential PHI threshold for PPC preinc loop prep"));
 
 STATISTIC(PHINodeAlreadyExists, "PHI node already in pre-increment form");
-
-namespace llvm {
-
-  void initializePPCLoopPreIncPrepPass(PassRegistry&);
-
-} // end namespace llvm
 
 namespace {
 
@@ -338,7 +331,7 @@ bool PPCLoopPreIncPrep::runOnLoop(Loop *L) {
   // iteration space), insert a new preheader for the loop.
   if (!LoopPredecessor ||
       !LoopPredecessor->getTerminator()->getType()->isVoidTy()) {
-    LoopPredecessor = InsertPreheaderForLoop(L, DT, LI, PreserveLCSSA);
+    LoopPredecessor = InsertPreheaderForLoop(L, DT, LI, nullptr, PreserveLCSSA);
     if (LoopPredecessor)
       MadeChange = true;
   }

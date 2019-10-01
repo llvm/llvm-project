@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=aarch64-linux-gnu -verify-machineinstrs -o - %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-linux-gnu -verify-machineinstrs -disable-block-placement -o - %s | FileCheck %s
 ; LSR used to pick a sub-optimal solution due to the target responding
 ; conservatively to isLegalAddImmediate for negative values.
 

@@ -1,9 +1,8 @@
 //===- GCOV.h - LLVM coverage tool ------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -45,9 +44,10 @@ enum GCOVVersion { V402, V404, V704 };
 
 /// A struct for passing gcov options between functions.
 struct Options {
-  Options(bool A, bool B, bool C, bool F, bool P, bool U, bool L, bool N)
+  Options(bool A, bool B, bool C, bool F, bool P, bool U, bool L, bool N, bool X)
       : AllBlocks(A), BranchInfo(B), BranchCount(C), FuncCoverage(F),
-        PreservePaths(P), UncondBranch(U), LongFileNames(L), NoOutput(N) {}
+        PreservePaths(P), UncondBranch(U), LongFileNames(L), NoOutput(N),
+        HashFilenames(X) {}
 
   bool AllBlocks;
   bool BranchInfo;
@@ -57,6 +57,7 @@ struct Options {
   bool UncondBranch;
   bool LongFileNames;
   bool NoOutput;
+  bool HashFilenames;
 };
 
 } // end namespace GCOV
@@ -315,12 +316,6 @@ class GCOVBlock {
 
     GCOVBlock *Dst;
     uint64_t Count = 0;
-  };
-
-  struct SortDstEdgesFunctor {
-    bool operator()(const GCOVEdge *E1, const GCOVEdge *E2) {
-      return E1->Dst.Number < E2->Dst.Number;
-    }
   };
 
 public:

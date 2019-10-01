@@ -1,9 +1,8 @@
 //===- PeepholeOptimizer.cpp - Peephole Optimizations ---------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -1826,7 +1825,7 @@ ValueTrackerResult ValueTracker::getNextSourceFromBitcast() {
   assert(Def->isBitcast() && "Invalid definition");
 
   // Bail if there are effects that a plain copy will not expose.
-  if (Def->hasUnmodeledSideEffects())
+  if (Def->mayRaiseFPException() || Def->hasUnmodeledSideEffects())
     return ValueTrackerResult();
 
   // Bitcasts with more than one def are not supported.
@@ -1901,13 +1900,8 @@ ValueTrackerResult ValueTracker::getNextSourceFromRegSequence() {
   // Def = REG_SEQUENCE v0, sub0, v1, sub1, ...
   // Check if one of the operand defines the subreg we are interested in.
   for (const RegSubRegPairAndIdx &RegSeqInput : RegSeqInputRegs) {
-    if (RegSeqInput.SubIdx == DefSubReg) {
-      if (RegSeqInput.SubReg)
-        // Bail if we have to compose sub registers.
-        return ValueTrackerResult();
-
+    if (RegSeqInput.SubIdx == DefSubReg)
       return ValueTrackerResult(RegSeqInput.Reg, RegSeqInput.SubReg);
-    }
   }
 
   // If the subreg we are tracking is super-defined by another subreg,

@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple powerpc-apple-darwin8 -arch=ppc32 -filetype=obj %s -o - | llvm-readobj -sections | FileCheck %s
+// RUN: llvm-mc -triple powerpc-apple-darwin8 -arch=ppc32 -filetype=obj %s -o - | llvm-readobj --sections | FileCheck %s
 
 // CHECK: Section {
 // CHECK-NEXT: Index: 0

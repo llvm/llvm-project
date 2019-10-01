@@ -22,12 +22,12 @@ registers:
 body:             |
   bb.0.entry:
     %0 = IMPLICIT_DEF
-    %1 = V_CNDMASK_B32_e64 0, 0, %0, implicit $exec
-    %2 = V_CNDMASK_B32_e64 %1, %1, %0, implicit $exec
+    %1 = V_CNDMASK_B32_e64 0, 0, 0, 0, %0, implicit $exec
+    %2 = V_CNDMASK_B32_e64 0, %1, 0, %1, %0, implicit $exec
     %3 = IMPLICIT_DEF
-    %4 = V_CNDMASK_B32_e64 %3, %3, %0, implicit $exec
+    %4 = V_CNDMASK_B32_e64 0, %3, 0, %3, %0, implicit $exec
     %5 = COPY %1
-    %6 = V_CNDMASK_B32_e64 %5, 0, %0, implicit $exec
+    %6 = V_CNDMASK_B32_e64 0, %5, 0, 0, %0, implicit $exec
     $vcc = IMPLICIT_DEF
     %7 = V_CNDMASK_B32_e32 %3, %3, implicit $exec, implicit $vcc
 

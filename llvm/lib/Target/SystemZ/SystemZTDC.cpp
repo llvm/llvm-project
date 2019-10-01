@@ -1,9 +1,8 @@
 //===-- SystemZTDC.cpp - Utilize Test Data Class instruction --------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -356,8 +355,8 @@ bool SystemZTDCPass::runOnFunction(Function &F) {
       if (!Worthy)
         continue;
       // Call the intrinsic, compare result with 0.
-      Value *TDCFunc = Intrinsic::getDeclaration(&M, Intrinsic::s390_tdc,
-                                                 V->getType());
+      Function *TDCFunc =
+          Intrinsic::getDeclaration(&M, Intrinsic::s390_tdc, V->getType());
       IRBuilder<> IRB(I);
       Value *MaskVal = ConstantInt::get(Type::getInt64Ty(Ctx), Mask);
       Instruction *TDC = IRB.CreateCall(TDCFunc, {V, MaskVal});

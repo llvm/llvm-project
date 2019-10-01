@@ -1,9 +1,8 @@
 //===-- BPFISelLowering.cpp - BPF DAG Lowering Implementation  ------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -106,7 +105,8 @@ BPFTargetLowering::BPFTargetLowering(const TargetMachine &TM,
 
   if (STI.getHasAlu32()) {
     setOperationAction(ISD::BSWAP, MVT::i32, Promote);
-    setOperationAction(ISD::BR_CC, MVT::i32, Promote);
+    setOperationAction(ISD::BR_CC, MVT::i32,
+                       STI.getHasJmp32() ? Custom : Promote);
   }
 
   setOperationAction(ISD::CTTZ, MVT::i64, Custom);
@@ -163,6 +163,7 @@ BPFTargetLowering::BPFTargetLowering(const TargetMachine &TM,
 
   // CPU/Feature control
   HasAlu32 = STI.getHasAlu32();
+  HasJmp32 = STI.getHasJmp32();
   HasJmpExt = STI.getHasJmpExt();
 }
 
@@ -507,7 +508,7 @@ SDValue BPFTargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
     NegateCC(LHS, RHS, CC);
 
   return DAG.getNode(BPFISD::BR_CC, DL, Op.getValueType(), Chain, LHS, RHS,
-                     DAG.getConstant(CC, DL, MVT::i64), Dest);
+                     DAG.getConstant(CC, DL, LHS.getValueType()), Dest);
 }
 
 SDValue BPFTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
@@ -677,36 +678,23 @@ BPFTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   int CC = MI.getOperand(3).getImm();
   int NewCC;
   switch (CC) {
-  case ISD::SETGT:
-    NewCC = isSelectRROp ? BPF::JSGT_rr : BPF::JSGT_ri;
-    break;
-  case ISD::SETUGT:
-    NewCC = isSelectRROp ? BPF::JUGT_rr : BPF::JUGT_ri;
-    break;
-  case ISD::SETGE:
-    NewCC = isSelectRROp ? BPF::JSGE_rr : BPF::JSGE_ri;
-    break;
-  case ISD::SETUGE:
-    NewCC = isSelectRROp ? BPF::JUGE_rr : BPF::JUGE_ri;
-    break;
-  case ISD::SETEQ:
-    NewCC = isSelectRROp ? BPF::JEQ_rr : BPF::JEQ_ri;
-    break;
-  case ISD::SETNE:
-    NewCC = isSelectRROp ? BPF::JNE_rr : BPF::JNE_ri;
-    break;
-  case ISD::SETLT:
-    NewCC = isSelectRROp ? BPF::JSLT_rr : BPF::JSLT_ri;
-    break;
-  case ISD::SETULT:
-    NewCC = isSelectRROp ? BPF::JULT_rr : BPF::JULT_ri;
-    break;
-  case ISD::SETLE:
-    NewCC = isSelectRROp ? BPF::JSLE_rr : BPF::JSLE_ri;
-    break;
-  case ISD::SETULE:
-    NewCC = isSelectRROp ? BPF::JULE_rr : BPF::JULE_ri;
-    break;
+#define SET_NEWCC(X, Y) \
+  case ISD::X: \
+    if (is32BitCmp && HasJmp32) \
+      NewCC = isSelectRROp ? BPF::Y##_rr_32 : BPF::Y##_ri_32; \
+    else \
+      NewCC = isSelectRROp ? BPF::Y##_rr : BPF::Y##_ri; \
+    break
+  SET_NEWCC(SETGT, JSGT);
+  SET_NEWCC(SETUGT, JUGT);
+  SET_NEWCC(SETGE, JSGE);
+  SET_NEWCC(SETUGE, JUGE);
+  SET_NEWCC(SETEQ, JEQ);
+  SET_NEWCC(SETNE, JNE);
+  SET_NEWCC(SETLT, JSLT);
+  SET_NEWCC(SETULT, JULT);
+  SET_NEWCC(SETLE, JSLE);
+  SET_NEWCC(SETULE, JULE);
   default:
     report_fatal_error("unimplemented select CondCode " + Twine(CC));
   }
@@ -724,13 +712,13 @@ BPFTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   //
   // We simply do extension for all situations in this method, but we will
   // try to remove those unnecessary in BPFMIPeephole pass.
-  if (is32BitCmp)
+  if (is32BitCmp && !HasJmp32)
     LHS = EmitSubregExt(MI, BB, LHS, isSignedCmp);
 
   if (isSelectRROp) {
     unsigned RHS = MI.getOperand(2).getReg();
 
-    if (is32BitCmp)
+    if (is32BitCmp && !HasJmp32)
       RHS = EmitSubregExt(MI, BB, RHS, isSignedCmp);
 
     BuildMI(BB, DL, TII.get(NewCC)).addReg(LHS).addReg(RHS).addMBB(Copy1MBB);

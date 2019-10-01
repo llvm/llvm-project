@@ -29,6 +29,19 @@ RUN: llvm-symbolizer -i -print-address -p -obj=%p/Inputs/addr.exe < %p/Inputs/ad
 RUN: echo "0x1" > %t.input
 RUN: llvm-symbolizer -obj=%p/Inputs/zero < %t.input | FileCheck -check-prefix="ZERO" %s
 
+RUN: llvm-addr2line -obj=%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileCheck -check-prefix=A2L %s
+RUN: llvm-addr2line -a -obj=%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileCheck -check-prefixes=A2L,A2L_A %s
+RUN: llvm-addr2line -f -obj=%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileCheck -check-prefixes=A2L,A2L_F %s
+RUN: llvm-addr2line -i -obj=%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileCheck -check-prefixes=A2L,A2L_I %s
+RUN: llvm-addr2line -fi -obj=%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileCheck -check-prefixes=A2L,A2L_F,A2L_I,A2L_FI %s
+
+RUN: llvm-addr2line -pa -obj=%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileCheck -check-prefixes=A2LP,A2LP_A %s
+RUN: llvm-addr2line -pf -obj=%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileCheck -check-prefixes=A2LP,A2LP_F %s
+RUN: llvm-addr2line -paf -obj=%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileCheck -check-prefixes=A2LP,A2LP_AF %s
+RUN: llvm-addr2line -pai -obj=%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileCheck -check-prefixes=A2LP,A2LP_A,A2LP_I %s
+RUN: llvm-addr2line -pfi -obj=%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileCheck -check-prefixes=A2LP,A2LP_F,A2LP_FI %s
+RUN: llvm-addr2line -pafi -obj=%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileCheck -check-prefixes=A2LP,A2LP_AF,A2LP_FI %s
+
 #CHECK: some text
 #CHECK: 0x40054d
 #CHECK: main
@@ -43,3 +56,23 @@ RUN: llvm-symbolizer -obj=%p/Inputs/zero < %t.input | FileCheck -check-prefix="Z
 #
 #ZERO: ??
 #ZERO: ??:0:0
+#
+#A2L:         some text
+#A2L_A-NEXT:  0x40054d
+#A2L_F-NEXT:  inctwo
+#A2L-NEXT:    {{[/\]+}}tmp{{[/\]+}}x.c:3{{$}}
+#A2L_FI-NEXT: inc{{$}}
+#A2L_I-NEXT:  {{[/\]+}}tmp{{[/\]+}}x.c:7{{$}}
+#A2L_FI-NEXT: main
+#A2L_I-NEXT:  {{[/\]+}}tmp{{[/\]+}}x.c:14{{$}}
+#A2L-NEXT:    some text2
+
+#A2LP:          some text
+#A2LP_A-NEXT:   0x40054d: {{[/\]+}}tmp{{[/\]+}}x.c:3{{$}}
+#A2LP_F-NEXT:   inctwo at {{[/\]+}}tmp{{[/\]+}}x.c:3{{$}}
+#A2LP_AF-NEXT:  0x40054d: inctwo at {{[/\]+}}tmp{{[/\]+}}x.c:3{{$}}
+#A2LP_I-NEXT:   {{[/\]+}}tmp{{[/\]+}}x.c:7{{$}}
+#A2LP_I-NEXT:   {{[/\]+}}tmp{{[/\]+}}x.c:14{{$}}
+#A2LP_FI-NEXT:   (inlined by) inc at {{[/\]+}}tmp{{[/\]+}}x.c:7{{$}}
+#A2LP_FI-NEXT:   (inlined by) main at {{[/\]+}}tmp{{[/\]+}}x.c:14{{$}}
+#A2LP-NEXT:     some text2

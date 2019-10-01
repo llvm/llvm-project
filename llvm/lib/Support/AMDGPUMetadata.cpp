@@ -1,9 +1,8 @@
 //===--- AMDGPUMetadata.cpp -------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -219,19 +218,5 @@ std::error_code toString(Metadata HSAMetadata, std::string &String) {
 }
 
 } // end namespace HSAMD
-
-namespace PALMD {
-
-std::error_code toString(const Metadata &PALMetadata, std::string &String) {
-  raw_string_ostream Stream(String);
-  for (auto I = PALMetadata.begin(), E = PALMetadata.end(); I != E; ++I) {
-    Stream << Twine(I == PALMetadata.begin() ? " 0x" : ",0x");
-    Stream << Twine::utohexstr(*I);
-  }
-  Stream.flush();
-  return std::error_code();
-}
-
-} // end namespace PALMD
 } // end namespace AMDGPU
 } // end namespace llvm

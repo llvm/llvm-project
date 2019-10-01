@@ -1,9 +1,8 @@
 //===- DWARFObject.h --------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===-----------------------------------------------------------------------===/
 
@@ -41,8 +40,8 @@ public:
   virtual const DWARFSection &getLocSection() const { return Dummy; }
   virtual const DWARFSection &getLoclistsSection() const { return Dummy; }
   virtual StringRef getARangeSection() const { return ""; }
-  virtual StringRef getDebugFrameSection() const { return ""; }
-  virtual StringRef getEHFrameSection() const { return ""; }
+  virtual const DWARFSection &getDebugFrameSection() const { return Dummy; }
+  virtual const DWARFSection &getEHFrameSection() const { return Dummy; }
   virtual const DWARFSection &getLineSection() const { return Dummy; }
   virtual StringRef getLineStringSection() const { return ""; }
   virtual StringRef getStringSection() const { return ""; }

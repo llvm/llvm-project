@@ -1,9 +1,8 @@
 //===-- CodeViewSymbols.def - All CodeView leaf types -----------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -103,7 +102,6 @@ CV_SYMBOL(S_LPROCIA64_ST  , 0x1015)
 CV_SYMBOL(S_GPROCIA64_ST  , 0x1016)
 CV_SYMBOL(S_LOCALSLOT_ST  , 0x1017)
 CV_SYMBOL(S_PARAMSLOT_ST  , 0x1018)
-CV_SYMBOL(S_ANNOTATION    , 0x1019)
 CV_SYMBOL(S_GMANPROC_ST   , 0x101a)
 CV_SYMBOL(S_LMANPROC_ST   , 0x101b)
 CV_SYMBOL(S_RESERVED1     , 0x101c)
@@ -255,6 +253,7 @@ SYMBOL_RECORD(S_LTHREAD32     , 0x1112, ThreadLocalDataSym)
 SYMBOL_RECORD_ALIAS(S_GTHREAD32     , 0x1113, GlobalTLS, ThreadLocalDataSym)
 
 SYMBOL_RECORD(S_UNAMESPACE    , 0x1124, UsingNamespaceSym)
+SYMBOL_RECORD(S_ANNOTATION    , 0x1019, AnnotationSym)
 
 #undef CV_SYMBOL
 #undef SYMBOL_RECORD

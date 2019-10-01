@@ -1,9 +1,8 @@
 //===- ObjCARCAliasAnalysis.cpp - ObjC ARC Optimization -------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 /// \file
@@ -38,9 +37,10 @@ using namespace llvm;
 using namespace llvm::objcarc;
 
 AliasResult ObjCARCAAResult::alias(const MemoryLocation &LocA,
-                                   const MemoryLocation &LocB) {
+                                   const MemoryLocation &LocB,
+                                   AAQueryInfo &AAQI) {
   if (!EnableARCOpts)
-    return AAResultBase::alias(LocA, LocB);
+    return AAResultBase::alias(LocA, LocB, AAQI);
 
   // First, strip off no-ops, including ObjC-specific no-ops, and try making a
   // precise alias query.
@@ -48,7 +48,7 @@ AliasResult ObjCARCAAResult::alias(const MemoryLocation &LocA,
   const Value *SB = GetRCIdentityRoot(LocB.Ptr);
   AliasResult Result =
       AAResultBase::alias(MemoryLocation(SA, LocA.Size, LocA.AATags),
-                          MemoryLocation(SB, LocB.Size, LocB.AATags));
+                          MemoryLocation(SB, LocB.Size, LocB.AATags), AAQI);
   if (Result != MayAlias)
     return Result;
 
@@ -57,7 +57,7 @@ AliasResult ObjCARCAAResult::alias(const MemoryLocation &LocA,
   const Value *UA = GetUnderlyingObjCPtr(SA, DL);
   const Value *UB = GetUnderlyingObjCPtr(SB, DL);
   if (UA != SA || UB != SB) {
-    Result = AAResultBase::alias(MemoryLocation(UA), MemoryLocation(UB));
+    Result = AAResultBase::alias(MemoryLocation(UA), MemoryLocation(UB), AAQI);
     // We can't use MustAlias or PartialAlias results here because
     // GetUnderlyingObjCPtr may return an offsetted pointer value.
     if (Result == NoAlias)
@@ -70,22 +70,23 @@ AliasResult ObjCARCAAResult::alias(const MemoryLocation &LocA,
 }
 
 bool ObjCARCAAResult::pointsToConstantMemory(const MemoryLocation &Loc,
-                                             bool OrLocal) {
+                                             AAQueryInfo &AAQI, bool OrLocal) {
   if (!EnableARCOpts)
-    return AAResultBase::pointsToConstantMemory(Loc, OrLocal);
+    return AAResultBase::pointsToConstantMemory(Loc, AAQI, OrLocal);
 
   // First, strip off no-ops, including ObjC-specific no-ops, and try making
   // a precise alias query.
   const Value *S = GetRCIdentityRoot(Loc.Ptr);
   if (AAResultBase::pointsToConstantMemory(
-          MemoryLocation(S, Loc.Size, Loc.AATags), OrLocal))
+          MemoryLocation(S, Loc.Size, Loc.AATags), AAQI, OrLocal))
     return true;
 
   // If that failed, climb to the underlying object, including climbing through
   // ObjC-specific no-ops, and try making an imprecise alias query.
   const Value *U = GetUnderlyingObjCPtr(S, DL);
   if (U != S)
-    return AAResultBase::pointsToConstantMemory(MemoryLocation(U), OrLocal);
+    return AAResultBase::pointsToConstantMemory(MemoryLocation(U), AAQI,
+                                                OrLocal);
 
   // If that failed, fail. We don't need to chain here, since that's covered
   // by the earlier precise query.
@@ -106,12 +107,13 @@ FunctionModRefBehavior ObjCARCAAResult::getModRefBehavior(const Function *F) {
   return AAResultBase::getModRefBehavior(F);
 }
 
-ModRefInfo ObjCARCAAResult::getModRefInfo(ImmutableCallSite CS,
-                                          const MemoryLocation &Loc) {
+ModRefInfo ObjCARCAAResult::getModRefInfo(const CallBase *Call,
+                                          const MemoryLocation &Loc,
+                                          AAQueryInfo &AAQI) {
   if (!EnableARCOpts)
-    return AAResultBase::getModRefInfo(CS, Loc);
+    return AAResultBase::getModRefInfo(Call, Loc, AAQI);
 
-  switch (GetBasicARCInstKind(CS.getInstruction())) {
+  switch (GetBasicARCInstKind(Call)) {
   case ARCInstKind::Retain:
   case ARCInstKind::RetainRV:
   case ARCInstKind::Autorelease:
@@ -128,7 +130,7 @@ ModRefInfo ObjCARCAAResult::getModRefInfo(ImmutableCallSite CS,
     break;
   }
 
-  return AAResultBase::getModRefInfo(CS, Loc);
+  return AAResultBase::getModRefInfo(Call, Loc, AAQI);
 }
 
 ObjCARCAAResult ObjCARCAA::run(Function &F, FunctionAnalysisManager &AM) {

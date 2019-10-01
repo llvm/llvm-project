@@ -1886,6 +1886,436 @@ bb4:
   ret i32 %v13
 }
 
+; Test the case where two scopes share a common instruction to hoist (%cmp.i).
+; Two scopes would hoist it to their hoist points, but since the outer scope
+; hoists (entry/bb6-9) it first to its hoist point, it'd be wrong (causing bad
+; IR) for the inner scope (bb1-4) to hoist the same instruction to its hoist
+; point.
+; Roughly,
+; if (j != k) {
+;   if (i != 2)
+;     foo();
+;   cmp.i = i == 86
+;   if (!cmp.i)
+;     foo();
+;   if (j != i)
+;     foo();
+;   if (!cmp.i)
+;     foo();
+;  }
+;  return 45;
+define i32 @test_chr_21(i64 %i, i64 %k, i64 %j) !prof !14 {
+; CHECK-LABEL: @test_chr_21(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP0:%.*]] = icmp ne i64 [[J:%.*]], [[K:%.*]]
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp ne i64 [[J]], [[I:%.*]]
+; CHECK-NEXT:    [[CMP_I:%.*]] = icmp ne i64 [[I]], 86
+; CHECK-NEXT:    [[TMP0:%.*]] = and i1 [[CMP0]], [[CMP3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i1 [[TMP0]], [[CMP_I]]
+; CHECK-NEXT:    br i1 [[TMP1]], label [[BB1:%.*]], label [[ENTRY_SPLIT_NONCHR:%.*]], !prof !15
+; CHECK:       bb1:
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i64 [[I]], 2
+; CHECK-NEXT:    switch i64 [[I]], label [[BB2:%.*]] [
+; CHECK-NEXT:    i64 2, label [[BB3_NONCHR2:%.*]]
+; CHECK-NEXT:    i64 86, label [[BB2_NONCHR1:%.*]]
+; CHECK-NEXT:    ], !prof !20
+; CHECK:       bb2:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    br label [[BB7:%.*]]
+; CHECK:       bb2.nonchr1:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    br label [[BB3_NONCHR2]]
+; CHECK:       bb3.nonchr2:
+; CHECK-NEXT:    br i1 [[CMP_I]], label [[BB4_NONCHR3:%.*]], label [[BB7]], !prof !18
+; CHECK:       bb4.nonchr3:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    br label [[BB7]]
+; CHECK:       bb7:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    br label [[BB10:%.*]]
+; CHECK:       entry.split.nonchr:
+; CHECK-NEXT:    br i1 [[CMP0]], label [[BB1_NONCHR:%.*]], label [[BB10]], !prof !18
+; CHECK:       bb1.nonchr:
+; CHECK-NEXT:    [[CMP2_NONCHR:%.*]] = icmp eq i64 [[I]], 2
+; CHECK-NEXT:    br i1 [[CMP2_NONCHR]], label [[BB3_NONCHR:%.*]], label [[BB2_NONCHR:%.*]], !prof !16
+; CHECK:       bb3.nonchr:
+; CHECK-NEXT:    [[CMP_I_NONCHR:%.*]] = icmp eq i64 [[I]], 86
+; CHECK-NEXT:    br i1 [[CMP_I_NONCHR]], label [[BB6_NONCHR:%.*]], label [[BB4_NONCHR:%.*]], !prof !16
+; CHECK:       bb6.nonchr:
+; CHECK-NEXT:    [[CMP3_NONCHR:%.*]] = icmp eq i64 [[J]], [[I]]
+; CHECK-NEXT:    br i1 [[CMP3_NONCHR]], label [[BB8_NONCHR:%.*]], label [[BB7_NONCHR:%.*]], !prof !16
+; CHECK:       bb8.nonchr:
+; CHECK-NEXT:    br i1 [[CMP_I_NONCHR]], label [[BB10]], label [[BB9_NONCHR:%.*]], !prof !16
+; CHECK:       bb9.nonchr:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    br label [[BB10]]
+; CHECK:       bb7.nonchr:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    br label [[BB8_NONCHR]]
+; CHECK:       bb4.nonchr:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    br label [[BB6_NONCHR]]
+; CHECK:       bb2.nonchr:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    br label [[BB3_NONCHR]]
+; CHECK:       bb10:
+; CHECK-NEXT:    ret i32 45
+;
+entry:
+  %cmp0 = icmp eq i64 %j, %k
+  br i1 %cmp0, label %bb10, label %bb1, !prof !15
+
+bb1:
+  %cmp2 = icmp eq i64 %i, 2
+  br i1 %cmp2, label %bb3, label %bb2, !prof !15
+
+bb2:
+  call void @foo()
+  br label %bb3
+
+bb3:
+  %cmp.i = icmp eq i64 %i, 86
+  br i1 %cmp.i, label %bb5, label %bb4, !prof !15
+
+bb4:
+  call void @foo()
+  br label %bb5
+
+bb5:
+  br label %bb6
+
+bb6:
+  %cmp3 = icmp eq i64 %j, %i
+  br i1 %cmp3, label %bb8, label %bb7, !prof !15
+
+bb7:
+  call void @foo()
+  br label %bb8
+
+bb8:
+  br i1 %cmp.i, label %bb10, label %bb9, !prof !15
+
+bb9:
+  call void @foo()
+  br label %bb10
+
+bb10:
+  ret i32 45
+}
+
+; Test a case with a really long use-def chains. This test checks that it's not
+; really slow and doesn't appear to be hanging.
+define i64 @test_chr_22(i1 %i, i64* %j, i64 %v0) !prof !14 {
+bb0:
+  %v1 = add i64 %v0, 3
+  %v2 = add i64 %v1, %v0
+  %c1 = icmp sgt i64 %v2, 99
+  %v3 = select i1 %c1, i64 %v1, i64 %v2, !prof !15
+  %v4 = add i64 %v2, %v2
+  %v5 = add i64 %v4, %v2
+  %v6 = add i64 %v5, %v4
+  %v7 = add i64 %v6, %v5
+  %v8 = add i64 %v7, %v6
+  %v9 = add i64 %v8, %v7
+  %v10 = add i64 %v9, %v8
+  %v11 = add i64 %v10, %v9
+  %v12 = add i64 %v11, %v10
+  %v13 = add i64 %v12, %v11
+  %v14 = add i64 %v13, %v12
+  %v15 = add i64 %v14, %v13
+  %v16 = add i64 %v15, %v14
+  %v17 = add i64 %v16, %v15
+  %v18 = add i64 %v17, %v16
+  %v19 = add i64 %v18, %v17
+  %v20 = add i64 %v19, %v18
+  %v21 = add i64 %v20, %v19
+  %v22 = add i64 %v21, %v20
+  %v23 = add i64 %v22, %v21
+  %v24 = add i64 %v23, %v22
+  %v25 = add i64 %v24, %v23
+  %v26 = add i64 %v25, %v24
+  %v27 = add i64 %v26, %v25
+  %v28 = add i64 %v27, %v26
+  %v29 = add i64 %v28, %v27
+  %v30 = add i64 %v29, %v28
+  %v31 = add i64 %v30, %v29
+  %v32 = add i64 %v31, %v30
+  %v33 = add i64 %v32, %v31
+  %v34 = add i64 %v33, %v32
+  %v35 = add i64 %v34, %v33
+  %v36 = add i64 %v35, %v34
+  %v37 = add i64 %v36, %v35
+  %v38 = add i64 %v37, %v36
+  %v39 = add i64 %v38, %v37
+  %v40 = add i64 %v39, %v38
+  %v41 = add i64 %v40, %v39
+  %v42 = add i64 %v41, %v40
+  %v43 = add i64 %v42, %v41
+  %v44 = add i64 %v43, %v42
+  %v45 = add i64 %v44, %v43
+  %v46 = add i64 %v45, %v44
+  %v47 = add i64 %v46, %v45
+  %v48 = add i64 %v47, %v46
+  %v49 = add i64 %v48, %v47
+  %v50 = add i64 %v49, %v48
+  %v51 = add i64 %v50, %v49
+  %v52 = add i64 %v51, %v50
+  %v53 = add i64 %v52, %v51
+  %v54 = add i64 %v53, %v52
+  %v55 = add i64 %v54, %v53
+  %v56 = add i64 %v55, %v54
+  %v57 = add i64 %v56, %v55
+  %v58 = add i64 %v57, %v56
+  %v59 = add i64 %v58, %v57
+  %v60 = add i64 %v59, %v58
+  %v61 = add i64 %v60, %v59
+  %v62 = add i64 %v61, %v60
+  %v63 = add i64 %v62, %v61
+  %v64 = add i64 %v63, %v62
+  %v65 = add i64 %v64, %v63
+  %v66 = add i64 %v65, %v64
+  %v67 = add i64 %v66, %v65
+  %v68 = add i64 %v67, %v66
+  %v69 = add i64 %v68, %v67
+  %v70 = add i64 %v69, %v68
+  %v71 = add i64 %v70, %v69
+  %v72 = add i64 %v71, %v70
+  %v73 = add i64 %v72, %v71
+  %v74 = add i64 %v73, %v72
+  %v75 = add i64 %v74, %v73
+  %v76 = add i64 %v75, %v74
+  %v77 = add i64 %v76, %v75
+  %v78 = add i64 %v77, %v76
+  %v79 = add i64 %v78, %v77
+  %v80 = add i64 %v79, %v78
+  %v81 = add i64 %v80, %v79
+  %v82 = add i64 %v81, %v80
+  %v83 = add i64 %v82, %v81
+  %v84 = add i64 %v83, %v82
+  %v85 = add i64 %v84, %v83
+  %v86 = add i64 %v85, %v84
+  %v87 = add i64 %v86, %v85
+  %v88 = add i64 %v87, %v86
+  %v89 = add i64 %v88, %v87
+  %v90 = add i64 %v89, %v88
+  %v91 = add i64 %v90, %v89
+  %v92 = add i64 %v91, %v90
+  %v93 = add i64 %v92, %v91
+  %v94 = add i64 %v93, %v92
+  %v95 = add i64 %v94, %v93
+  %v96 = add i64 %v95, %v94
+  %v97 = add i64 %v96, %v95
+  %v98 = add i64 %v97, %v96
+  %v99 = add i64 %v98, %v97
+  %v100 = add i64 %v99, %v98
+  %v101 = add i64 %v100, %v99
+  %v102 = add i64 %v101, %v100
+  %v103 = add i64 %v102, %v101
+  %v104 = add i64 %v103, %v102
+  %v105 = add i64 %v104, %v103
+  %v106 = add i64 %v105, %v104
+  %v107 = add i64 %v106, %v105
+  %v108 = add i64 %v107, %v106
+  %v109 = add i64 %v108, %v107
+  %v110 = add i64 %v109, %v108
+  %v111 = add i64 %v110, %v109
+  %v112 = add i64 %v111, %v110
+  %v113 = add i64 %v112, %v111
+  %v114 = add i64 %v113, %v112
+  %v115 = add i64 %v114, %v113
+  %v116 = add i64 %v115, %v114
+  %v117 = add i64 %v116, %v115
+  %v118 = add i64 %v117, %v116
+  %v119 = add i64 %v118, %v117
+  %v120 = add i64 %v119, %v118
+  %v121 = add i64 %v120, %v119
+  %v122 = add i64 %v121, %v120
+  %v123 = add i64 %v122, %v121
+  %v124 = add i64 %v123, %v122
+  %v125 = add i64 %v124, %v123
+  %v126 = add i64 %v125, %v124
+  %v127 = add i64 %v126, %v125
+  %v128 = add i64 %v127, %v126
+  %v129 = add i64 %v128, %v127
+  %v130 = add i64 %v129, %v128
+  %v131 = add i64 %v130, %v129
+  %v132 = add i64 %v131, %v130
+  %v133 = add i64 %v132, %v131
+  %v134 = add i64 %v133, %v132
+  %v135 = add i64 %v134, %v133
+  %v136 = add i64 %v135, %v134
+  %v137 = add i64 %v136, %v135
+  %v138 = add i64 %v137, %v136
+  %v139 = add i64 %v138, %v137
+  %v140 = add i64 %v139, %v138
+  %v141 = add i64 %v140, %v139
+  %v142 = add i64 %v141, %v140
+  %v143 = add i64 %v142, %v141
+  %v144 = add i64 %v143, %v142
+  %v145 = add i64 %v144, %v143
+  %v146 = add i64 %v145, %v144
+  %v147 = add i64 %v146, %v145
+  %v148 = add i64 %v147, %v146
+  %v149 = add i64 %v148, %v147
+  %v150 = add i64 %v149, %v148
+  %v151 = add i64 %v150, %v149
+  %v152 = add i64 %v151, %v150
+  %v153 = add i64 %v152, %v151
+  %v154 = add i64 %v153, %v152
+  %v155 = add i64 %v154, %v153
+  %v156 = add i64 %v155, %v154
+  %v157 = add i64 %v156, %v155
+  %v158 = add i64 %v157, %v156
+  %v159 = add i64 %v158, %v157
+  %v160 = add i64 %v159, %v158
+  %v161 = add i64 %v160, %v159
+  %v162 = add i64 %v161, %v160
+  %v163 = add i64 %v162, %v161
+  %v164 = add i64 %v163, %v162
+  %v165 = add i64 %v164, %v163
+  %v166 = add i64 %v165, %v164
+  %v167 = add i64 %v166, %v165
+  %v168 = add i64 %v167, %v166
+  %v169 = add i64 %v168, %v167
+  %v170 = add i64 %v169, %v168
+  %v171 = add i64 %v170, %v169
+  %v172 = add i64 %v171, %v170
+  %v173 = add i64 %v172, %v171
+  %v174 = add i64 %v173, %v172
+  %v175 = add i64 %v174, %v173
+  %v176 = add i64 %v175, %v174
+  %v177 = add i64 %v176, %v175
+  %v178 = add i64 %v177, %v176
+  %v179 = add i64 %v178, %v177
+  %v180 = add i64 %v179, %v178
+  %v181 = add i64 %v180, %v179
+  %v182 = add i64 %v181, %v180
+  %v183 = add i64 %v182, %v181
+  %v184 = add i64 %v183, %v182
+  %v185 = add i64 %v184, %v183
+  %v186 = add i64 %v185, %v184
+  %v187 = add i64 %v186, %v185
+  %v188 = add i64 %v187, %v186
+  %v189 = add i64 %v188, %v187
+  %v190 = add i64 %v189, %v188
+  %v191 = add i64 %v190, %v189
+  %v192 = add i64 %v191, %v190
+  %v193 = add i64 %v192, %v191
+  %v194 = add i64 %v193, %v192
+  %v195 = add i64 %v194, %v193
+  %v196 = add i64 %v195, %v194
+  %v197 = add i64 %v196, %v195
+  %v198 = add i64 %v197, %v196
+  %v199 = add i64 %v198, %v197
+  %v200 = add i64 %v199, %v198
+  %v201 = add i64 %v200, %v199
+  %v202 = add i64 %v201, %v200
+  %v203 = add i64 %v202, %v201
+  %v204 = add i64 %v203, %v202
+  %v205 = add i64 %v204, %v203
+  %v206 = add i64 %v205, %v204
+  %v207 = add i64 %v206, %v205
+  %v208 = add i64 %v207, %v206
+  %v209 = add i64 %v208, %v207
+  %v210 = add i64 %v209, %v208
+  %v211 = add i64 %v210, %v209
+  %v212 = add i64 %v211, %v210
+  %v213 = add i64 %v212, %v211
+  %v214 = add i64 %v213, %v212
+  %v215 = add i64 %v214, %v213
+  %v216 = add i64 %v215, %v214
+  %v217 = add i64 %v216, %v215
+  %v218 = add i64 %v217, %v216
+  %v219 = add i64 %v218, %v217
+  %v220 = add i64 %v219, %v218
+  %v221 = add i64 %v220, %v219
+  %v222 = add i64 %v221, %v220
+  %v223 = add i64 %v222, %v221
+  %v224 = add i64 %v223, %v222
+  %v225 = add i64 %v224, %v223
+  %v226 = add i64 %v225, %v224
+  %v227 = add i64 %v226, %v225
+  %v228 = add i64 %v227, %v226
+  %v229 = add i64 %v228, %v227
+  %v230 = add i64 %v229, %v228
+  %v231 = add i64 %v230, %v229
+  %v232 = add i64 %v231, %v230
+  %v233 = add i64 %v232, %v231
+  %v234 = add i64 %v233, %v232
+  %v235 = add i64 %v234, %v233
+  %v236 = add i64 %v235, %v234
+  %v237 = add i64 %v236, %v235
+  %v238 = add i64 %v237, %v236
+  %v239 = add i64 %v238, %v237
+  %v240 = add i64 %v239, %v238
+  %v241 = add i64 %v240, %v239
+  %v242 = add i64 %v241, %v240
+  %v243 = add i64 %v242, %v241
+  %v244 = add i64 %v243, %v242
+  %v245 = add i64 %v244, %v243
+  %v246 = add i64 %v245, %v244
+  %v247 = add i64 %v246, %v245
+  %v248 = add i64 %v247, %v246
+  %v249 = add i64 %v248, %v247
+  %v250 = add i64 %v249, %v248
+  %v251 = add i64 %v250, %v249
+  %v252 = add i64 %v251, %v250
+  %v253 = add i64 %v252, %v251
+  %v254 = add i64 %v253, %v252
+  %v255 = add i64 %v254, %v253
+  %v256 = add i64 %v255, %v254
+  %v257 = add i64 %v256, %v255
+  %v258 = add i64 %v257, %v256
+  %v259 = add i64 %v258, %v257
+  %v260 = add i64 %v259, %v258
+  %v261 = add i64 %v260, %v259
+  %v262 = add i64 %v261, %v260
+  %v263 = add i64 %v262, %v261
+  %v264 = add i64 %v263, %v262
+  %v265 = add i64 %v264, %v263
+  %v266 = add i64 %v265, %v264
+  %v267 = add i64 %v266, %v265
+  %v268 = add i64 %v267, %v266
+  %v269 = add i64 %v268, %v267
+  %v270 = add i64 %v269, %v268
+  %v271 = add i64 %v270, %v269
+  %v272 = add i64 %v271, %v270
+  %v273 = add i64 %v272, %v271
+  %v274 = add i64 %v273, %v272
+  %v275 = add i64 %v274, %v273
+  %v276 = add i64 %v275, %v274
+  %v277 = add i64 %v276, %v275
+  %v278 = add i64 %v277, %v276
+  %v279 = add i64 %v278, %v277
+  %v280 = add i64 %v279, %v278
+  %v281 = add i64 %v280, %v279
+  %v282 = add i64 %v281, %v280
+  %v283 = add i64 %v282, %v281
+  %v284 = add i64 %v283, %v282
+  %v285 = add i64 %v284, %v283
+  %v286 = add i64 %v285, %v284
+  %v287 = add i64 %v286, %v285
+  %v288 = add i64 %v287, %v286
+  %v289 = add i64 %v288, %v287
+  %v290 = add i64 %v289, %v288
+  %v291 = add i64 %v290, %v289
+  %v292 = add i64 %v291, %v290
+  %v293 = add i64 %v292, %v291
+  %v294 = add i64 %v293, %v292
+  %v295 = add i64 %v294, %v293
+  %v296 = add i64 %v295, %v294
+  %v297 = add i64 %v296, %v295
+  %v298 = add i64 %v297, %v296
+  %v299 = add i64 %v298, %v297
+  %v300 = add i64 %v299, %v298
+  %v301 = icmp eq i64 %v300, 100
+  %v302 = select i1 %v301, i64 %v298, i64 %v299, !prof !15
+  store i64 %v302, i64* %j
+  ret i64 99
+}
+
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"ProfileSummary", !1}
 !1 = !{!2, !3, !4, !5, !6, !7, !8, !9}

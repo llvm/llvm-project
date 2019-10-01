@@ -8,22 +8,21 @@ define i32 @t1(i32 %a, i32 %b) nounwind  {
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    testl %esi, %esi
-; CHECK-NEXT:    je LBB0_1
-; CHECK-NEXT:  ## %bb.2: ## %while.body.preheader
+; CHECK-NEXT:    je LBB0_4
+; CHECK-NEXT:  ## %bb.1: ## %while.body.preheader
 ; CHECK-NEXT:    movl %esi, %edx
 ; CHECK-NEXT:    .p2align 4, 0x90
-; CHECK-NEXT:  LBB0_3: ## %while.body
+; CHECK-NEXT:  LBB0_2: ## %while.body
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movl %edx, %ecx
 ; CHECK-NEXT:    cltd
 ; CHECK-NEXT:    idivl %ecx
 ; CHECK-NEXT:    testl %edx, %edx
 ; CHECK-NEXT:    movl %ecx, %eax
-; CHECK-NEXT:    jne LBB0_3
-; CHECK-NEXT:  ## %bb.4: ## %while.end
+; CHECK-NEXT:    jne LBB0_2
+; CHECK-NEXT:  ## %bb.3: ## %while.end
 ; CHECK-NEXT:    movl %ecx, %eax
-; CHECK-NEXT:    retq
-; CHECK-NEXT:  LBB0_1:
+; CHECK-NEXT:  LBB0_4:
 ; CHECK-NEXT:    retq
 entry:
   %cmp1 = icmp eq i32 %b, 0
@@ -60,22 +59,21 @@ define i32 @t3(i64 %a, i64 %b) nounwind  {
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    testq %rsi, %rsi
-; CHECK-NEXT:    je LBB2_1
-; CHECK-NEXT:  ## %bb.2: ## %while.body.preheader
+; CHECK-NEXT:    je LBB2_4
+; CHECK-NEXT:  ## %bb.1: ## %while.body.preheader
 ; CHECK-NEXT:    movq %rsi, %rdx
 ; CHECK-NEXT:    .p2align 4, 0x90
-; CHECK-NEXT:  LBB2_3: ## %while.body
+; CHECK-NEXT:  LBB2_2: ## %while.body
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movq %rdx, %rcx
 ; CHECK-NEXT:    cqto
 ; CHECK-NEXT:    idivq %rcx
 ; CHECK-NEXT:    testq %rdx, %rdx
 ; CHECK-NEXT:    movq %rcx, %rax
-; CHECK-NEXT:    jne LBB2_3
-; CHECK-NEXT:  ## %bb.4: ## %while.end
+; CHECK-NEXT:    jne LBB2_2
+; CHECK-NEXT:  ## %bb.3: ## %while.end
 ; CHECK-NEXT:    movl %ecx, %eax
-; CHECK-NEXT:    retq
-; CHECK-NEXT:  LBB2_1:
+; CHECK-NEXT:  LBB2_4:
 ; CHECK-NEXT:    retq
 entry:
   %cmp1 = icmp eq i64 %b, 0

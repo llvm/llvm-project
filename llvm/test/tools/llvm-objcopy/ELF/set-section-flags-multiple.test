@@ -1,0 +1,32 @@
+# RUN: yaml2obj %s > %t
+
+# RUN: llvm-objcopy --set-section-flags=.foo=alloc --set-section-flags=.bar=code %t %t.2
+# RUN: llvm-readobj --sections %t.2 | FileCheck %s --check-prefixes=CHECK,ALLOC,WRITE
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .foo
+    Type:            SHT_PROGBITS
+    Flags:           [ ]
+  - Name:            .bar
+    Type:            SHT_PROGBITS
+    Flags:           [ ]
+
+# CHECK:        Name: .foo
+# CHECK-NEXT:   Type: SHT_PROGBITS
+# CHECK-NEXT:   Flags [
+# CHECK-NEXT:     SHF_ALLOC (0x2)
+# CHECK-NEXT:     SHF_WRITE (0x1)
+# CHECK-NEXT:   ]
+
+# CHECK:        Name: .bar
+# CHECK-NEXT:   Type: SHT_PROGBITS
+# CHECK-NEXT:   Flags [
+# CHECK-NEXT:     SHF_EXECINSTR (0x4)
+# CHECK-NEXT:     SHF_WRITE (0x1)
+# CHECK-NEXT:   ]

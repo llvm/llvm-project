@@ -1,9 +1,8 @@
 //===- SSAUpdater.cpp - Unstructured SSA Update Tool ----------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -350,8 +349,7 @@ LoadAndStorePromoter(ArrayRef<const Instruction *> Insts,
   SSA.Initialize(SomeVal->getType(), BaseName);
 }
 
-void LoadAndStorePromoter::
-run(const SmallVectorImpl<Instruction *> &Insts) const {
+void LoadAndStorePromoter::run(const SmallVectorImpl<Instruction *> &Insts) {
   // First step: bucket up uses of the alloca by the block they occur in.
   // This is important because we have to handle multiple defs/uses in a block
   // ourselves: SSAUpdater is purely for cross-block references.

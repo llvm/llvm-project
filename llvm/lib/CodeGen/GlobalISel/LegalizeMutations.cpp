@@ -1,9 +1,8 @@
 //===- lib/CodeGen/GlobalISel/LegalizerMutations.cpp - Mutations ----------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -27,25 +26,46 @@ LegalizeMutation LegalizeMutations::changeTo(unsigned TypeIdx,
   };
 }
 
-LegalizeMutation LegalizeMutations::widenScalarToNextPow2(unsigned TypeIdx,
-                                                          unsigned Min) {
+LegalizeMutation LegalizeMutations::changeElementTo(unsigned TypeIdx,
+                                                    unsigned FromTypeIdx) {
   return [=](const LegalityQuery &Query) {
-    unsigned NewSizeInBits =
-        1 << Log2_32_Ceil(Query.Types[TypeIdx].getSizeInBits());
-    if (NewSizeInBits < Min)
-      NewSizeInBits = Min;
-    return std::make_pair(TypeIdx, LLT::scalar(NewSizeInBits));
+    const LLT OldTy = Query.Types[TypeIdx];
+    const LLT NewTy = Query.Types[FromTypeIdx];
+    return std::make_pair(TypeIdx, OldTy.changeElementType(NewTy));
+  };
+}
+
+LegalizeMutation LegalizeMutations::changeElementTo(unsigned TypeIdx,
+                                                    LLT NewEltTy) {
+  return [=](const LegalityQuery &Query) {
+    const LLT OldTy = Query.Types[TypeIdx];
+    return std::make_pair(TypeIdx, OldTy.changeElementType(NewEltTy));
+  };
+}
+
+LegalizeMutation LegalizeMutations::widenScalarOrEltToNextPow2(unsigned TypeIdx,
+                                                               unsigned Min) {
+  return [=](const LegalityQuery &Query) {
+    const LLT Ty = Query.Types[TypeIdx];
+    unsigned NewEltSizeInBits =
+        std::max(1u << Log2_32_Ceil(Ty.getScalarSizeInBits()), Min);
+    return std::make_pair(TypeIdx, Ty.changeElementSize(NewEltSizeInBits));
   };
 }
 
 LegalizeMutation LegalizeMutations::moreElementsToNextPow2(unsigned TypeIdx,
                                                            unsigned Min) {
   return [=](const LegalityQuery &Query) {
-    const LLT &VecTy = Query.Types[TypeIdx];
-    unsigned NewNumElements = 1 << Log2_32_Ceil(VecTy.getNumElements());
-    if (NewNumElements < Min)
-      NewNumElements = Min;
-    return std::make_pair(
-        TypeIdx, LLT::vector(NewNumElements, VecTy.getScalarSizeInBits()));
+    const LLT VecTy = Query.Types[TypeIdx];
+    unsigned NewNumElements =
+        std::max(1u << Log2_32_Ceil(VecTy.getNumElements()), Min);
+    return std::make_pair(TypeIdx,
+                          LLT::vector(NewNumElements, VecTy.getElementType()));
+  };
+}
+
+LegalizeMutation LegalizeMutations::scalarize(unsigned TypeIdx) {
+  return [=](const LegalityQuery &Query) {
+    return std::make_pair(TypeIdx, Query.Types[TypeIdx].getElementType());
   };
 }

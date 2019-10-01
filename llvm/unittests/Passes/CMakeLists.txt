@@ -15,7 +15,7 @@ export_executable_symbols(PluginsTests)
 target_link_libraries(PluginsTests PRIVATE LLVMTestingSupport)
 
 set(LLVM_LINK_COMPONENTS)
-add_llvm_library(TestPlugin MODULE
+add_llvm_library(TestPlugin MODULE BUILDTREE_ONLY
   TestPlugin.cpp
   )
 

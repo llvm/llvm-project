@@ -11,7 +11,7 @@ define hidden i32 @main() local_unnamed_addr #0 {
 ; If LSR stops selecting a negative base reg value, then this test will no
 ; longer be useful as written.
 ; CHECK:      i32.const $push[[L0:[0-9]+]]=, -128
-; CHECK-NEXT: set_local 0, $pop[[L0]]
+; CHECK-NEXT: local.set 0, $pop[[L0]]
 entry:
   br label %for.body
 

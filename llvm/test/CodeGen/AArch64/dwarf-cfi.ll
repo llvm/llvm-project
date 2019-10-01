@@ -1,4 +1,4 @@
-; RUN: llc -mtriple aarch64-windows-gnu -filetype=asm -o - %s | FileCheck %s
+; RUN: llc -mtriple aarch64-windows-gnu -exception-model=dwarf -filetype=asm -o - %s | FileCheck %s
 
 define void @_Z1gv() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
 entry:

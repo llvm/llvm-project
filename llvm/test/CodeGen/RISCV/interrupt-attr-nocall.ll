@@ -22,7 +22,7 @@
 @b = external global i32
 @c = external global i32
 
-define void @foo_i32() #0 {
+define void @foo_i32() nounwind #0 {
 ; CHECK-RV32-LABEL: foo_i32:
 ; CHECK-RV32:       # %bb.0:
 ; CHECK-RV32-NEXT:    addi sp, sp, -16
@@ -51,7 +51,7 @@ define void @foo_i32() #0 {
 ; Additionally check frame pointer and return address are properly saved.
 ;
 
-define void @foo_fp_i32() #1 {
+define void @foo_fp_i32() nounwind #1 {
 ; CHECK-RV32-LABEL: foo_fp_i32:
 ; CHECK-RV32:       # %bb.0:
 ; CHECK-RV32-NEXT:    addi sp, sp, -16
@@ -85,7 +85,7 @@ define void @foo_fp_i32() #1 {
 @f = external global float
 @d = external global float
 
-define void @foo_float() #0 {
+define void @foo_float() nounwind #0 {
 ; CHECK-RV32-F-LABEL: foo_float:
 ; CHECK-RV32-F:       # %bb.0:
 ; CHECK-RV32-F-NEXT:    addi sp, sp, -16
@@ -115,7 +115,7 @@ define void @foo_float() #0 {
 ;
 ; Additionally check frame pointer and return address are properly saved.
 ;
-define void @foo_fp_float() #1 {
+define void @foo_fp_float() nounwind #1 {
 ; CHECK-RV32-F-LABEL: foo_fp_float:
 ; CHECK-RV32-F:       # %bb.0:
 ; CHECK-RV32-F-NEXT:    addi sp, sp, -32
@@ -151,7 +151,7 @@ define void @foo_fp_float() #1 {
 @i = external global double
 @g = external global double
 
-define void @foo_double() #0 {
+define void @foo_double() nounwind #0 {
 ; CHECK-RV32-FD-LABEL: foo_double:
 ; CHECK-RV32-FD:       # %bb.0:
 ; CHECK-RV32-FD-NEXT:    addi sp, sp, -32
@@ -181,7 +181,7 @@ define void @foo_double() #0 {
 ;
 ; Additionally check frame pointer and return address are properly saved.
 ;
-define void @foo_fp_double() #1 {
+define void @foo_fp_double() nounwind #1 {
 ; CHECK-RV32-FD-LABEL: foo_fp_double:
 ; CHECK-RV32-FD:       # %bb.0:
 ; CHECK-RV32-FD-NEXT:    addi sp, sp, -32

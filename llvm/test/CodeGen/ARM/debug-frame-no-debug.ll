@@ -8,7 +8,7 @@
 ; RUN:   | FileCheck %s --check-prefix=CHECK-FP-ELIM
 
 ; RUN: llc -mtriple thumb-unknown-linux-gnueabi \
-; RUN:     -disable-fp-elim -filetype=asm -o - %s \
+; RUN:     -frame-pointer=all -filetype=asm -o - %s \
 ; RUN:   | FileCheck %s --check-prefix=CHECK-THUMB-FP
 
 ;-------------------------------------------------------------------------------

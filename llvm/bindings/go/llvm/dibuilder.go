@@ -1,9 +1,8 @@
 //===- dibuilder.go - Bindings for DIBuilder ------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -306,11 +305,11 @@ func (d *DIBuilder) CreateBasicType(t DIBasicType) Metadata {
 
 // DIPointerType holds the values for creating pointer type debug metadata.
 type DIPointerType struct {
-	Pointee     Metadata
-	SizeInBits  uint64
-	AlignInBits uint32 // optional
+	Pointee      Metadata
+	SizeInBits   uint64
+	AlignInBits  uint32 // optional
 	AddressSpace uint32
-	Name        string // optional
+	Name         string // optional
 }
 
 // CreatePointerType creates a type that represents a pointer to another type.
@@ -356,14 +355,14 @@ func (d *DIBuilder) CreateSubroutineType(t DISubroutineType) Metadata {
 
 // DIStructType holds the values for creating struct type debug metadata.
 type DIStructType struct {
-	Name        string
-	File        Metadata
-	Line        int
-	SizeInBits  uint64
-	AlignInBits uint32
-	Flags       int
-	DerivedFrom Metadata
-	Elements    []Metadata
+	Name         string
+	File         Metadata
+	Line         int
+	SizeInBits   uint64
+	AlignInBits  uint32
+	Flags        int
+	DerivedFrom  Metadata
+	Elements     []Metadata
 	VTableHolder Metadata // optional
 	UniqueID     string
 }
@@ -582,7 +581,7 @@ func (d *DIBuilder) InsertValueAtEnd(v Value, diVarInfo, expr Metadata, l DebugL
 }
 
 func (v Value) SetSubprogram(sp Metadata) {
-  C.LLVMSetSubprogram(v.C, sp.C)
+	C.LLVMSetSubprogram(v.C, sp.C)
 }
 
 func boolToCInt(v bool) C.int {

@@ -1,0 +1,95 @@
+# Show that the value field is omitted if a symbol has no name or value, but is
+# printed if one is present. Test for both static and dynamic relocation
+# printing.
+
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-readelf --relocations --dyn-relocations %t | FileCheck %s
+
+# CHECK:      Relocation section '.rela.text' at offset {{.*}} contains 2 entries:
+# CHECK-NEXT:     Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
+# CHECK-NEXT: 0000000000000000  0000000000000000 R_X86_64_NONE                           1
+# CHECK-NEXT: 0000000000000000  0000000100000000 R_X86_64_NONE          0000000000000000 sym + 1
+
+# CHECK:      Relocation section '.rela.dyn' at offset {{.*}} contains 2 entries:
+# CHECK-NEXT:     Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
+# CHECK-NEXT: 0000000000000000  0000000000000000 R_X86_64_NONE                           1
+# CHECK-NEXT: 0000000000000000  0000000100000000 R_X86_64_NONE          0000000000000000 sym + 1
+
+# CHECK:      'RELA' relocation section at offset {{.*}} contains 48 bytes:
+# CHECK-NEXT:     Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
+# CHECK-NEXT: 0000000000000000  0000000000000000 R_X86_64_NONE                           1
+# CHECK-NEXT: 0000000000000000  0000000100000000 R_X86_64_NONE          0000000000000000 sym + 1
+
+# TODO: Add test for symbol with no name but with a value once yaml2obj allows
+# referencing symbols with no name from relocations.
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+    Size: 0x10
+  - Name: .rela.text
+    Type: SHT_RELA
+    Link: .symtab
+    Info: .text
+    Relocations:
+      - Offset: 0
+        Type: R_X86_64_NONE
+        Addend: 1
+      - Offset: 0
+        Type: R_X86_64_NONE
+        Addend: 1
+        Symbol: sym
+  - Name: .dynamic
+    Type: SHT_DYNAMIC
+    Flags: [SHF_ALLOC]
+    Address: 0x1000
+    AddressAlign: 0x1000
+    Entries:
+      - Tag: DT_RELA
+        Value: 0x1100
+      - Tag: DT_RELASZ
+        Value: 48
+      - Tag: DT_RELAENT
+        Value: 24
+      - Tag: DT_NULL
+        Value: 0
+  - Name: .rela.dyn
+    Type: SHT_RELA
+    Flags: [SHF_ALLOC]
+    Info: .text
+    Address: 0x1100
+    AddressAlign: 0x100
+    Relocations:
+      - Offset: 0
+        Type: R_X86_64_NONE
+        Addend: 1
+      - Offset: 0
+        Type: R_X86_64_NONE
+        Addend: 1
+        Symbol: sym
+Symbols:
+  - Name:    sym
+    Value:   0
+    Section: .text
+    Binding: STB_GLOBAL
+DynamicSymbols:
+  - Name:    sym
+    Value:   0
+    Section: .text
+    Binding: STB_GLOBAL
+ProgramHeaders:
+  - Type: PT_LOAD
+    VAddr: 0x1000
+    Sections:
+      - Section: .rela.dyn
+      - Section: .dynamic
+  - Type: PT_DYNAMIC
+    VAddr: 0x1000
+    Sections:
+      - Section: .dynamic

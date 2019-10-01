@@ -1,9 +1,8 @@
 //===-- SnippetGeneratorTest.cpp --------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -228,19 +227,20 @@ TEST_F(UopsSnippetGeneratorTest, SerialInstruction) {
 }
 
 TEST_F(UopsSnippetGeneratorTest, StaticRenaming) {
-  // CMOVA32rr has tied variables, we enumerate the possible values to execute
+  // CMOV32rr has tied variables, we enumerate the possible values to execute
   // as many in parallel as possible.
 
-  // - CMOVA32rr
+  // - CMOV32rr
   // - Op0 Explicit Def RegClass(GR32)
   // - Op1 Explicit Use RegClass(GR32) TiedToOp0
   // - Op2 Explicit Use RegClass(GR32)
+  // - Op3 Explicit Use Immediate
   // - Op3 Implicit Use Reg(EFLAGS)
   // - Var0 [Op0,Op1]
   // - Var1 [Op2]
   // - hasTiedRegisters (execution is always serial)
   // - hasAliasingRegisters
-  const unsigned Opcode = llvm::X86::CMOVA32rr;
+  const unsigned Opcode = llvm::X86::CMOV32rr;
   const auto CodeTemplates = checkAndGetCodeTemplates(Opcode);
   ASSERT_THAT(CodeTemplates, SizeIs(1));
   const auto &CT = CodeTemplates[0];
@@ -250,7 +250,7 @@ TEST_F(UopsSnippetGeneratorTest, StaticRenaming) {
   ASSERT_THAT(CT.Instructions, SizeIs(kInstructionCount));
   std::unordered_set<unsigned> AllDefRegisters;
   for (const auto &IT : CT.Instructions) {
-    ASSERT_THAT(IT.VariableValues, SizeIs(2));
+    ASSERT_THAT(IT.VariableValues, SizeIs(3));
     AllDefRegisters.insert(IT.VariableValues[0].getReg());
   }
   EXPECT_THAT(AllDefRegisters, SizeIs(kInstructionCount))

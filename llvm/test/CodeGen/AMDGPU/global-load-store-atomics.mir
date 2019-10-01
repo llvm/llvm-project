@@ -93,7 +93,7 @@ body:             |
 
     %1:sgpr_64 = COPY $sgpr0_sgpr1
     %0:vgpr_32 = COPY $vgpr0
-    %4:sreg_64_xexec = S_LOAD_DWORDX2_IMM %1, 36, 0 :: (dereferenceable invariant load 8 )
+    %4:sreg_64_xexec = S_LOAD_DWORDX2_IMM %1, 36, 0, 0 :: (dereferenceable invariant load 8 )
     %5:sreg_32_xm0 = S_MOV_B32 2
     %6:vgpr_32 = V_LSHLREV_B32_e64 killed %5, %0, implicit $exec
     %7:sreg_32_xm0 = S_MOV_B32 0
@@ -103,147 +103,147 @@ body:             |
     %22:vgpr_32 = COPY %14.sub0
     %23:sgpr_32 = COPY %4.sub1
     %24:vgpr_32 = COPY %14.sub1
-    %17:vgpr_32, %19:sreg_64_xexec = V_ADD_I32_e64 %21, %22, implicit $exec
+    %17:vgpr_32, %19:sreg_64_xexec = V_ADD_I32_e64 %21, %22, 0, implicit $exec
     %25:vgpr_32 = COPY %23
-    %18:vgpr_32, dead %20:sreg_64_xexec = V_ADDC_U32_e64 %25, %24, killed %19, implicit $exec
+    %18:vgpr_32, dead %20:sreg_64_xexec = V_ADDC_U32_e64 %25, %24, killed %19, 0, implicit $exec
     %16:vreg_64 = REG_SEQUENCE %17, %subreg.sub0, %18, %subreg.sub1
     %11:vreg_64 = COPY %16
 
-    %10:vgpr_32 = GLOBAL_LOAD_DWORD %11, 16, 0, 0, implicit $exec :: (load 4)
-    GLOBAL_STORE_DWORD %11, %10, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
-    %40:vreg_64 = GLOBAL_LOAD_DWORDX2 %11, 16, 0, 0, implicit $exec :: (load 4)
-    GLOBAL_STORE_DWORDX2 %11, %40, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
-    %41:vreg_96 = GLOBAL_LOAD_DWORDX3 %11, 16, 0, 0, implicit $exec :: (load 4)
-    GLOBAL_STORE_DWORDX3 %11, %41, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
-    %42:vreg_128 = GLOBAL_LOAD_DWORDX4 %11, 16, 0, 0, implicit $exec :: (load 4)
-    GLOBAL_STORE_DWORDX4 %11, %42, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
-    %43:vgpr_32 = GLOBAL_LOAD_SSHORT %11, 16, 0, 0, implicit $exec :: (load 4)
-    GLOBAL_STORE_SHORT %11, %43, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
-    %44:vgpr_32 = GLOBAL_LOAD_USHORT %11, 16, 0, 0, implicit $exec :: (load 4)
-    GLOBAL_STORE_SHORT %11, %44, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
-    %45:vgpr_32 = GLOBAL_LOAD_UBYTE %11, 16, 0, 0, implicit $exec :: (load 4)
-    GLOBAL_STORE_BYTE %11, %45, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
-    %46:vgpr_32 = GLOBAL_LOAD_SBYTE %11, 16, 0, 0, implicit $exec :: (load 4)
-    GLOBAL_STORE_BYTE %11, %46, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
-    %47:vgpr_32 = GLOBAL_LOAD_SBYTE_D16 %11, 16, 0, 0, %46, implicit $exec :: (load 4)
-    GLOBAL_STORE_BYTE_D16_HI %11, %47, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
-    %48:vgpr_32 = GLOBAL_LOAD_UBYTE_D16 %11, 16, 0, 0, %46, implicit $exec :: (load 4)
-    GLOBAL_STORE_BYTE_D16_HI %11, %48, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
-    %49:vgpr_32 = GLOBAL_LOAD_SBYTE_D16_HI %11, 16, 0, 0, %46, implicit $exec :: (load 4)
-    GLOBAL_STORE_BYTE_D16_HI %11, %49, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
-    %50:vgpr_32 = GLOBAL_LOAD_UBYTE_D16_HI %11, 16, 0, 0, %46, implicit $exec :: (load 4)
-    GLOBAL_STORE_BYTE_D16_HI %11, %50, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
-    %51:vgpr_32 = GLOBAL_LOAD_SHORT_D16_HI %11, 16, 0, 0, %46, implicit $exec :: (load 4)
-    GLOBAL_STORE_SHORT_D16_HI %11, %51, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
-    %52:vgpr_32 = GLOBAL_LOAD_SHORT_D16 %11, 16, 0, 0, %46, implicit $exec :: (load 4)
-    GLOBAL_STORE_SHORT_D16_HI %11, %52, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
+    %10:vgpr_32 = GLOBAL_LOAD_DWORD %11, 16, 0, 0, 0, implicit $exec :: (load 4)
+    GLOBAL_STORE_DWORD %11, %10, 0, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
+    %40:vreg_64 = GLOBAL_LOAD_DWORDX2 %11, 16, 0, 0, 0, implicit $exec :: (load 4)
+    GLOBAL_STORE_DWORDX2 %11, %40, 0, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
+    %41:vreg_96 = GLOBAL_LOAD_DWORDX3 %11, 16, 0, 0, 0, implicit $exec :: (load 4)
+    GLOBAL_STORE_DWORDX3 %11, %41, 0, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
+    %42:vreg_128 = GLOBAL_LOAD_DWORDX4 %11, 16, 0, 0, 0, implicit $exec :: (load 4)
+    GLOBAL_STORE_DWORDX4 %11, %42, 0, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
+    %43:vgpr_32 = GLOBAL_LOAD_SSHORT %11, 16, 0, 0, 0, implicit $exec :: (load 4)
+    GLOBAL_STORE_SHORT %11, %43, 0, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
+    %44:vgpr_32 = GLOBAL_LOAD_USHORT %11, 16, 0, 0, 0, implicit $exec :: (load 4)
+    GLOBAL_STORE_SHORT %11, %44, 0, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
+    %45:vgpr_32 = GLOBAL_LOAD_UBYTE %11, 16, 0, 0, 0, implicit $exec :: (load 4)
+    GLOBAL_STORE_BYTE %11, %45, 0, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
+    %46:vgpr_32 = GLOBAL_LOAD_SBYTE %11, 16, 0, 0, 0, implicit $exec :: (load 4)
+    GLOBAL_STORE_BYTE %11, %46, 0, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
+    %47:vgpr_32 = GLOBAL_LOAD_SBYTE_D16 %11, 16, 0, 0, 0, %46, implicit $exec :: (load 4)
+    GLOBAL_STORE_BYTE_D16_HI %11, %47, 0, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
+    %48:vgpr_32 = GLOBAL_LOAD_UBYTE_D16 %11, 16, 0, 0, 0, %46, implicit $exec :: (load 4)
+    GLOBAL_STORE_BYTE_D16_HI %11, %48, 0, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
+    %49:vgpr_32 = GLOBAL_LOAD_SBYTE_D16_HI %11, 16, 0, 0, 0, %46, implicit $exec :: (load 4)
+    GLOBAL_STORE_BYTE_D16_HI %11, %49, 0, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
+    %50:vgpr_32 = GLOBAL_LOAD_UBYTE_D16_HI %11, 16, 0, 0, 0, %46, implicit $exec :: (load 4)
+    GLOBAL_STORE_BYTE_D16_HI %11, %50, 0, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
+    %51:vgpr_32 = GLOBAL_LOAD_SHORT_D16_HI %11, 16, 0, 0, 0, %46, implicit $exec :: (load 4)
+    GLOBAL_STORE_SHORT_D16_HI %11, %51, 0, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
+    %52:vgpr_32 = GLOBAL_LOAD_SHORT_D16 %11, 16, 0, 0, 0, %46, implicit $exec :: (load 4)
+    GLOBAL_STORE_SHORT_D16_HI %11, %52, 0, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
 
     %53:vgpr_32 = GLOBAL_ATOMIC_XOR_RTN %11, %15, 16, 0, implicit $exec :: (volatile load store seq_cst 4, addrspace 1)
-    GLOBAL_STORE_DWORD %11, %53, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
+    GLOBAL_STORE_DWORD %11, %53, 0, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
     GLOBAL_ATOMIC_XOR %11, %15, 16, 0, implicit $exec :: (volatile load store seq_cst 4, addrspace 1)
 
     %54:vgpr_32 = GLOBAL_ATOMIC_SMIN_RTN %11, %15, 16, 0, implicit $exec :: (volatile load store seq_cst 4, addrspace 1)
-    GLOBAL_STORE_DWORD %11, %54, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
+    GLOBAL_STORE_DWORD %11, %54, 0, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
     GLOBAL_ATOMIC_SMIN %11, %15, 16, 0, implicit $exec :: (volatile load store seq_cst 4, addrspace 1)
 
     %55:vgpr_32 = GLOBAL_ATOMIC_AND_RTN %11, %15, 16, 0, implicit $exec :: (volatile load store seq_cst 4, addrspace 1)
-    GLOBAL_STORE_DWORD %11, %55, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
+    GLOBAL_STORE_DWORD %11, %55, 0, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
     GLOBAL_ATOMIC_AND %11, %15, 16, 0, implicit $exec :: (volatile load store seq_cst 4, addrspace 1)
 
     %56:vgpr_32 = GLOBAL_ATOMIC_SWAP_RTN %11, %15, 16, 0, implicit $exec :: (volatile load store seq_cst 4, addrspace 1)
-    GLOBAL_STORE_DWORD %11, %56, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
+    GLOBAL_STORE_DWORD %11, %56, 0, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
     GLOBAL_ATOMIC_SWAP %11, %15, 16, 0, implicit $exec :: (volatile load store seq_cst 4, addrspace 1)
 
     %57:vgpr_32 = GLOBAL_ATOMIC_SMAX_RTN %11, %15, 16, 0, implicit $exec :: (volatile load store seq_cst 4, addrspace 1)
-    GLOBAL_STORE_DWORD %11, %57, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
+    GLOBAL_STORE_DWORD %11, %57, 0, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
     GLOBAL_ATOMIC_SMAX %11, %15, 16, 0, implicit $exec :: (volatile load store seq_cst 4, addrspace 1)
 
     %58:vgpr_32 = GLOBAL_ATOMIC_UMIN_RTN %11, %15, 16, 0, implicit $exec :: (volatile load store seq_cst 4, addrspace 1)
-    GLOBAL_STORE_DWORD %11, %58, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
+    GLOBAL_STORE_DWORD %11, %58, 0, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
     GLOBAL_ATOMIC_UMIN %11, %15, 16, 0, implicit $exec :: (volatile load store seq_cst 4, addrspace 1)
 
     %59:vgpr_32 = GLOBAL_ATOMIC_UMAX_RTN %11, %15, 16, 0, implicit $exec :: (volatile load store seq_cst 4, addrspace 1)
-    GLOBAL_STORE_DWORD %11, %59, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
+    GLOBAL_STORE_DWORD %11, %59, 0, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
     GLOBAL_ATOMIC_UMAX %11, %15, 16, 0, implicit $exec :: (volatile load store seq_cst 4, addrspace 1)
 
     %60:vgpr_32 = GLOBAL_ATOMIC_OR_RTN %11, %15, 16, 0, implicit $exec :: (volatile load store seq_cst 4, addrspace 1)
-    GLOBAL_STORE_DWORD %11, %60, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
+    GLOBAL_STORE_DWORD %11, %60, 0, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
     GLOBAL_ATOMIC_OR %11, %15, 16, 0, implicit $exec :: (volatile load store seq_cst 4, addrspace 1)
 
     %61:vgpr_32 = GLOBAL_ATOMIC_ADD_RTN %11, %15, 16, 0, implicit $exec :: (volatile load store seq_cst 4, addrspace 1)
-    GLOBAL_STORE_DWORD %11, %61, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
+    GLOBAL_STORE_DWORD %11, %61, 0, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
     GLOBAL_ATOMIC_ADD %11, %15, 16, 0, implicit $exec :: (volatile load store seq_cst 4, addrspace 1)
 
     %62:vgpr_32 = GLOBAL_ATOMIC_SUB_RTN %11, %15, 16, 0, implicit $exec :: (volatile load store seq_cst 4, addrspace 1)
-    GLOBAL_STORE_DWORD %11, %62, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
+    GLOBAL_STORE_DWORD %11, %62, 0, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
     GLOBAL_ATOMIC_SUB %11, %15, 16, 0, implicit $exec :: (volatile load store seq_cst 4, addrspace 1)
 
     %63:vgpr_32 = GLOBAL_ATOMIC_CMPSWAP_RTN %11, %16, 16, 0, implicit $exec :: (volatile load store seq_cst 4, addrspace 1)
-    GLOBAL_STORE_DWORD %11, %63, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
+    GLOBAL_STORE_DWORD %11, %63, 0, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
     GLOBAL_ATOMIC_CMPSWAP %11, %16, 16, 0, implicit $exec :: (volatile load store seq_cst 4, addrspace 1)
 
     %64:vgpr_32 = GLOBAL_ATOMIC_INC_RTN %11, %15, 16, 0, implicit $exec :: (volatile load store seq_cst 4, addrspace 1)
-    GLOBAL_STORE_DWORD %11, %64, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
+    GLOBAL_STORE_DWORD %11, %64, 0, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
     GLOBAL_ATOMIC_INC %11, %15, 16, 0, implicit $exec :: (volatile load store seq_cst 4, addrspace 1)
 
     %65:vgpr_32 = GLOBAL_ATOMIC_DEC_RTN %11, %15, 16, 0, implicit $exec :: (volatile load store seq_cst 4, addrspace 1)
-    GLOBAL_STORE_DWORD %11, %65, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
+    GLOBAL_STORE_DWORD %11, %65, 0, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
     GLOBAL_ATOMIC_DEC %11, %15, 16, 0, implicit $exec :: (volatile load store seq_cst 4, addrspace 1)
 
     %66:vreg_64 = GLOBAL_ATOMIC_OR_X2_RTN %11, %16, 16, 0, implicit $exec :: (volatile load store seq_cst 4, addrspace 1)
-    GLOBAL_STORE_DWORDX2 %11, %66, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
+    GLOBAL_STORE_DWORDX2 %11, %66, 0, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
     GLOBAL_ATOMIC_OR_X2 %11, %16, 16, 0, implicit $exec :: (volatile load store seq_cst 4, addrspace 1)
 
     %67:vreg_64 = GLOBAL_ATOMIC_XOR_X2_RTN %11, %16, 16, 0, implicit $exec :: (volatile load store seq_cst 4, addrspace 1)
-    GLOBAL_STORE_DWORDX2 %11, %67, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
+    GLOBAL_STORE_DWORDX2 %11, %67, 0, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
     GLOBAL_ATOMIC_XOR_X2 %11, %16, 16, 0, implicit $exec :: (volatile load store seq_cst 4, addrspace 1)
 
     %68:vreg_64 = GLOBAL_ATOMIC_AND_X2_RTN %11, %16, 16, 0, implicit $exec :: (volatile load store seq_cst 4, addrspace 1)
-    GLOBAL_STORE_DWORDX2 %11, %68, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
+    GLOBAL_STORE_DWORDX2 %11, %68, 0, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
     GLOBAL_ATOMIC_AND_X2 %11, %16, 16, 0, implicit $exec :: (volatile load store seq_cst 4, addrspace 1)
 
     %69:vreg_64 = GLOBAL_ATOMIC_ADD_X2_RTN %11, %16, 16, 0, implicit $exec :: (volatile load store seq_cst 4, addrspace 1)
-    GLOBAL_STORE_DWORDX2 %11, %69, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
+    GLOBAL_STORE_DWORDX2 %11, %69, 0, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
     GLOBAL_ATOMIC_ADD_X2 %11, %16, 16, 0, implicit $exec :: (volatile load store seq_cst 4, addrspace 1)
 
     %70:vreg_64 = GLOBAL_ATOMIC_SUB_X2_RTN %11, %16, 16, 0, implicit $exec :: (volatile load store seq_cst 4, addrspace 1)
-    GLOBAL_STORE_DWORDX2 %11, %70, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
+    GLOBAL_STORE_DWORDX2 %11, %70, 0, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
     GLOBAL_ATOMIC_SUB_X2 %11, %16, 16, 0, implicit $exec :: (volatile load store seq_cst 4, addrspace 1)
 
     %71:vreg_64 = GLOBAL_ATOMIC_DEC_X2_RTN %11, %16, 16, 0, implicit $exec :: (volatile load store seq_cst 4, addrspace 1)
-    GLOBAL_STORE_DWORDX2 %11, %71, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
+    GLOBAL_STORE_DWORDX2 %11, %71, 0, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
     GLOBAL_ATOMIC_DEC_X2 %11, %16, 16, 0, implicit $exec :: (volatile load store seq_cst 4, addrspace 1)
 
     %72:vreg_64 = GLOBAL_ATOMIC_INC_X2_RTN %11, %16, 16, 0, implicit $exec :: (volatile load store seq_cst 4, addrspace 1)
-    GLOBAL_STORE_DWORDX2 %11, %72, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
+    GLOBAL_STORE_DWORDX2 %11, %72, 0, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
     GLOBAL_ATOMIC_INC_X2 %11, %16, 16, 0, implicit $exec :: (volatile load store seq_cst 4, addrspace 1)
 
     %73:vreg_64 = GLOBAL_ATOMIC_SMIN_X2_RTN %11, %16, 16, 0, implicit $exec :: (volatile load store seq_cst 4, addrspace 1)
-    GLOBAL_STORE_DWORDX2 %11, %73, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
+    GLOBAL_STORE_DWORDX2 %11, %73, 0, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
     GLOBAL_ATOMIC_SMIN_X2 %11, %16, 16, 0, implicit $exec :: (volatile load store seq_cst 4, addrspace 1)
 
     %74:vreg_64 = GLOBAL_ATOMIC_SWAP_X2_RTN %11, %16, 16, 0, implicit $exec :: (volatile load store seq_cst 4, addrspace 1)
-    GLOBAL_STORE_DWORDX2 %11, %74, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
+    GLOBAL_STORE_DWORDX2 %11, %74, 0, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
     GLOBAL_ATOMIC_SWAP_X2 %11, %16, 16, 0, implicit $exec :: (volatile load store seq_cst 4, addrspace 1)
 
     %75:vreg_64 = GLOBAL_ATOMIC_SMAX_X2_RTN %11, %16, 16, 0, implicit $exec :: (volatile load store seq_cst 4, addrspace 1)
-    GLOBAL_STORE_DWORDX2 %11, %75, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
+    GLOBAL_STORE_DWORDX2 %11, %75, 0, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
     GLOBAL_ATOMIC_SMAX_X2 %11, %16, 16, 0, implicit $exec :: (volatile load store seq_cst 4, addrspace 1)
 
     %76:vreg_64 = GLOBAL_ATOMIC_UMIN_X2_RTN %11, %16, 16, 0, implicit $exec :: (volatile load store seq_cst 4, addrspace 1)
-    GLOBAL_STORE_DWORDX2 %11, %76, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
+    GLOBAL_STORE_DWORDX2 %11, %76, 0, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
     GLOBAL_ATOMIC_UMIN_X2 %11, %16, 16, 0, implicit $exec :: (volatile load store seq_cst 4, addrspace 1)
 
     %77:vreg_64 = GLOBAL_ATOMIC_UMAX_X2_RTN %11, %16, 16, 0, implicit $exec :: (volatile load store seq_cst 4, addrspace 1)
-    GLOBAL_STORE_DWORDX2 %11, %77, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
+    GLOBAL_STORE_DWORDX2 %11, %77, 0, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
     GLOBAL_ATOMIC_UMAX_X2 %11, %16, 16, 0, implicit $exec :: (volatile load store seq_cst 4, addrspace 1)
 
     %79:sreg_128 = REG_SEQUENCE %4, %subreg.sub0, %4, %subreg.sub1, %4, %subreg.sub2, %4, %subreg.sub3
     %80:vreg_128 = COPY %79
 
     %78:vreg_64 = GLOBAL_ATOMIC_CMPSWAP_X2_RTN %11, %80, 16, 0, implicit $exec :: (volatile load store seq_cst 4, addrspace 1)
-    GLOBAL_STORE_DWORDX2 %11, %78, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
+    GLOBAL_STORE_DWORDX2 %11, %78, 0, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
     GLOBAL_ATOMIC_CMPSWAP_X2 %11, %80, 16, 0, implicit $exec :: (volatile load store seq_cst 4, addrspace 1)
 
-    S_ENDPGM
+    S_ENDPGM 0
 ...

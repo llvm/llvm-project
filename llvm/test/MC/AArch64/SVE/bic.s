@@ -105,6 +105,28 @@ bic     p0.b, p0/z, p0.b, p0.b
 
 
 // --------------------------------------------------------------------------//
+// Test aliases.
+
+bic     z0.s, z0.s, z0.s
+// CHECK-INST: bic     z0.d, z0.d, z0.d
+// CHECK-ENCODING: [0x00,0x30,0xe0,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 30 e0 04 <unknown>
+
+bic     z0.h, z0.h, z0.h
+// CHECK-INST: bic     z0.d, z0.d, z0.d
+// CHECK-ENCODING: [0x00,0x30,0xe0,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 30 e0 04 <unknown>
+
+bic     z0.b, z0.b, z0.b
+// CHECK-INST: bic     z0.d, z0.d, z0.d
+// CHECK-ENCODING: [0x00,0x30,0xe0,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 30 e0 04 <unknown>
+
+
+// --------------------------------------------------------------------------//
 // Test compatibility with MOVPRFX instruction.
 
 movprfx z4.d, p7/z, z6.d

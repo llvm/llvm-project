@@ -1,20 +1,20 @@
 ; ## Full FP16 support enabled by default.
 ; RUN: llc < %s -mtriple=nvptx64-nvidia-cuda -mcpu=sm_53 -asm-verbose=false \
-; RUN:          -O0 -disable-post-ra -disable-fp-elim -verify-machineinstrs \
+; RUN:          -O0 -disable-post-ra -frame-pointer=all -verify-machineinstrs \
 ; RUN: | FileCheck -check-prefixes CHECK,CHECK-NOFTZ,CHECK-F16,CHECK-F16-NOFTZ %s
 ; ## Full FP16 with FTZ
 ; RUN: llc < %s -mtriple=nvptx64-nvidia-cuda -mcpu=sm_53 -asm-verbose=false \
-; RUN:          -O0 -disable-post-ra -disable-fp-elim -verify-machineinstrs \
+; RUN:          -O0 -disable-post-ra -frame-pointer=all -verify-machineinstrs \
 ; RUN:          -nvptx-f32ftz \
 ; RUN: | FileCheck -check-prefixes CHECK,CHECK-F16,CHECK-F16-FTZ %s
 ; ## FP16 support explicitly disabled.
 ; RUN: llc < %s -mtriple=nvptx64-nvidia-cuda -mcpu=sm_53 -asm-verbose=false \
-; RUN:          -O0 -disable-post-ra -disable-fp-elim --nvptx-no-f16-math \
+; RUN:          -O0 -disable-post-ra -frame-pointer=all --nvptx-no-f16-math \
 ; RUN:           -verify-machineinstrs \
 ; RUN: | FileCheck -check-prefixes CHECK,CHECK-NOFTZ,CHECK-NOF16 %s
 ; ## FP16 is not supported by hardware.
 ; RUN: llc < %s -O0 -mtriple=nvptx64-nvidia-cuda -mcpu=sm_52 -asm-verbose=false \
-; RUN:          -disable-post-ra -disable-fp-elim -verify-machineinstrs \
+; RUN:          -disable-post-ra -frame-pointer=all -verify-machineinstrs \
 ; RUN: | FileCheck -check-prefixes CHECK,CHECK-NOFTZ,CHECK-NOF16 %s
 
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
@@ -1107,9 +1107,11 @@ define half @test_nearbyint(half %a) #0 {
 }
 
 ; CHECK-LABEL: test_round(
-; CHECK:      ld.param.b16    [[A:%h[0-9]+]], [test_round_param_0];
-; CHECK:      cvt.rni.f16.f16 [[R:%h[0-9]+]], [[A]];
-; CHECK:      st.param.b16    [func_retval0+0], [[R]];
+; CHECK:      ld.param.b16    {{.*}}, [test_round_param_0];
+; check the use of sign mask and 0.5 to implement round
+; CHECK:      and.b32 [[R:%r[0-9]+]], {{.*}}, -2147483648;
+; CHECK:      or.b32 {{.*}}, [[R]], 1056964608;
+; CHECK:      st.param.b16    [func_retval0+0], {{.*}};
 ; CHECK:      ret;
 define half @test_round(half %a) #0 {
   %r = call half @llvm.round.f16(half %a)

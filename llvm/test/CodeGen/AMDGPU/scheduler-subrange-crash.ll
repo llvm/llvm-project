@@ -15,9 +15,9 @@ target triple = "amdgcn--"
 
 define amdgpu_gs void @main(i32 inreg %arg) #0 {
 main_body:
-  %tmp = call float @llvm.SI.load.const.v4i32(<4 x i32> undef, i32 20)
-  %tmp1 = call float @llvm.SI.load.const.v4i32(<4 x i32> undef, i32 24)
-  %tmp2 = call float @llvm.SI.load.const.v4i32(<4 x i32> undef, i32 48)
+  %tmp = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> undef, i32 20, i32 0)
+  %tmp1 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> undef, i32 24, i32 0)
+  %tmp2 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> undef, i32 48, i32 0)
   %array_vector3 = insertelement <4 x float> zeroinitializer, float %tmp2, i32 3
   %array_vector5 = insertelement <4 x float> <float 0.000000e+00, float undef, float undef, float undef>, float %tmp, i32 1
   %array_vector6 = insertelement <4 x float> %array_vector5, float undef, i32 2
@@ -45,7 +45,7 @@ main_body:
   ret void
 }
 
-declare float @llvm.SI.load.const.v4i32(<4 x i32>, i32) #1
+declare float @llvm.amdgcn.s.buffer.load.f32(<4 x i32>, i32, i32) #1
 declare i32 @llvm.amdgcn.raw.buffer.load.i32(<4 x i32>, i32, i32, i32) #2
 declare void @llvm.amdgcn.tbuffer.store.i32(i32, <4 x i32>, i32, i32, i32, i32, i32, i32, i1, i1) #3
 

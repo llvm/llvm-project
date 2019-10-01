@@ -1,9 +1,8 @@
 //===-- RISCVRegisterInfo.td - RISC-V Register defs --------*- tablegen -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -56,7 +55,7 @@ let RegAltNameIndices = [ABIRegAltName] in {
   def X6  : RISCVReg<6, "x6", ["t1"]>, DwarfRegNum<[6]>;
   def X7  : RISCVReg<7, "x7", ["t2"]>, DwarfRegNum<[7]>;
   }
-  def X8  : RISCVReg<8, "x8", ["s0"]>, DwarfRegNum<[8]>;
+  def X8  : RISCVReg<8, "x8", ["s0", "fp"]>, DwarfRegNum<[8]>;
   def X9  : RISCVReg<9, "x9", ["s1"]>, DwarfRegNum<[9]>;
   def X10 : RISCVReg<10,"x10", ["a0"]>, DwarfRegNum<[10]>;
   def X11 : RISCVReg<11,"x11", ["a1"]>, DwarfRegNum<[11]>;

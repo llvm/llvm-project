@@ -45,4 +45,4 @@ attributes #0 = { norecurse noreturn nounwind ssp uwtable "correctly-rounded-div
 
 !llvm.ident = !{!0}
 
-!0 = !{!"clang version 6.0.0 (http://llvm.org/git/clang.git e649d902285b23af8ba58cb92a739f3bad2723df) (/Users/dannyb/sources/llvm-clean 0abfd30028cbb294ff2c2dd5e2df4ec3fdb6c591)"}
+!0 = !{!"clang version 6.0.0"}

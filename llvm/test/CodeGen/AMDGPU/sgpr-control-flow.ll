@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
+; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=SI %s
 ;
 ;
 ; Most SALU instructions ignore control flow, so we need to make sure
@@ -108,7 +108,7 @@ endif:
 
 ; SI: ; %if
 ; SI:      buffer_load_dword  [[AVAL:v[0-9]+]]
-; SI:      v_cmp_eq_u32_e32   [[CMP_ELSE:vcc]], 0, [[AVAL]]
+; SI-DAG:  v_cmp_eq_u32_e32   [[CMP_ELSE:vcc]], 0, [[AVAL]]
 ; SI-DAG:  s_andn2_b64        [[PHI]], [[PHI]], exec
 ; SI-DAG:  s_and_b64          [[TMP:s\[[0-9]+:[0-9]+\]]], [[CMP_ELSE]], exec
 ; SI:      s_or_b64           [[PHI]], [[PHI]], [[TMP]]

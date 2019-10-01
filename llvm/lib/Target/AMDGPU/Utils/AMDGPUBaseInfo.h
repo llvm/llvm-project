@@ -1,9 +1,8 @@
 //===- AMDGPUBaseInfo.h - Top level definitions for AMDGPU ------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -46,6 +45,7 @@ namespace AMDGPU {
 #define GET_MIMGDim_DECL
 #define GET_MIMGEncoding_DECL
 #define GET_MIMGLZMapping_DECL
+#define GET_MIMGMIPMapping_DECL
 #include "AMDGPUGenSearchableTables.inc"
 
 namespace IsaInfo {
@@ -150,10 +150,18 @@ unsigned getNumExtraSGPRs(const MCSubtargetInfo *STI, bool VCCUsed,
 unsigned getNumSGPRBlocks(const MCSubtargetInfo *STI, unsigned NumSGPRs);
 
 /// \returns VGPR allocation granularity for given subtarget \p STI.
-unsigned getVGPRAllocGranule(const MCSubtargetInfo *STI);
+///
+/// For subtargets which support it, \p EnableWavefrontSize32 should match
+/// the ENABLE_WAVEFRONT_SIZE32 kernel descriptor field.
+unsigned getVGPRAllocGranule(const MCSubtargetInfo *STI,
+                             Optional<bool> EnableWavefrontSize32 = None);
 
 /// \returns VGPR encoding granularity for given subtarget \p STI.
-unsigned getVGPREncodingGranule(const MCSubtargetInfo *STI);
+///
+/// For subtargets which support it, \p EnableWavefrontSize32 should match
+/// the ENABLE_WAVEFRONT_SIZE32 kernel descriptor field.
+unsigned getVGPREncodingGranule(const MCSubtargetInfo *STI,
+                                Optional<bool> EnableWavefrontSize32 = None);
 
 /// \returns Total number of VGPRs for given subtarget \p STI.
 unsigned getTotalNumVGPRs(const MCSubtargetInfo *STI);
@@ -171,7 +179,11 @@ unsigned getMaxNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU);
 
 /// \returns Number of VGPR blocks needed for given subtarget \p STI when
 /// \p NumVGPRs are used.
-unsigned getNumVGPRBlocks(const MCSubtargetInfo *STI, unsigned NumSGPRs);
+///
+/// For subtargets which support it, \p EnableWavefrontSize32 should match the
+/// ENABLE_WAVEFRONT_SIZE32 kernel descriptor field.
+unsigned getNumVGPRBlocks(const MCSubtargetInfo *STI, unsigned NumSGPRs,
+                          Optional<bool> EnableWavefrontSize32 = None);
 
 } // end namespace IsaInfo
 
@@ -184,6 +196,7 @@ struct MIMGBaseOpcodeInfo {
   bool Atomic;
   bool AtomicX2;
   bool Sampler;
+  bool Gather4;
 
   uint8_t NumExtraArgs;
   bool Gradients;
@@ -200,18 +213,34 @@ struct MIMGDimInfo {
   uint8_t NumCoords;
   uint8_t NumGradients;
   bool DA;
+  uint8_t Encoding;
+  const char *AsmSuffix;
 };
 
 LLVM_READONLY
-const MIMGDimInfo *getMIMGDimInfo(unsigned Dim);
+const MIMGDimInfo *getMIMGDimInfo(unsigned DimEnum);
+
+LLVM_READONLY
+const MIMGDimInfo *getMIMGDimInfoByEncoding(uint8_t DimEnc);
+
+LLVM_READONLY
+const MIMGDimInfo *getMIMGDimInfoByAsmSuffix(StringRef AsmSuffix);
 
 struct MIMGLZMappingInfo {
   MIMGBaseOpcode L;
   MIMGBaseOpcode LZ;
 };
 
+struct MIMGMIPMappingInfo {
+  MIMGBaseOpcode MIP;
+  MIMGBaseOpcode NONMIP;
+};
+
 LLVM_READONLY
 const MIMGLZMappingInfo *getMIMGLZMappingInfo(unsigned L);
+
+LLVM_READONLY
+const MIMGMIPMappingInfo *getMIMGMIPMappingInfo(unsigned L);
 
 LLVM_READONLY
 int getMIMGOpcode(unsigned BaseOpcode, unsigned MIMGEncoding,
@@ -219,6 +248,17 @@ int getMIMGOpcode(unsigned BaseOpcode, unsigned MIMGEncoding,
 
 LLVM_READONLY
 int getMaskedMIMGOp(unsigned Opc, unsigned NewChannels);
+
+struct MIMGInfo {
+  uint16_t Opcode;
+  uint16_t BaseOpcode;
+  uint8_t MIMGEncoding;
+  uint8_t VDataDwords;
+  uint8_t VAddrDwords;
+};
+
+LLVM_READONLY
+const MIMGInfo *getMIMGInfo(unsigned Opc);
 
 LLVM_READONLY
 int getMUBUFBaseOpcode(unsigned Opc);
@@ -244,7 +284,8 @@ int getMCOpcode(uint16_t Opcode, unsigned Gen);
 void initDefaultAMDKernelCodeT(amd_kernel_code_t &Header,
                                const MCSubtargetInfo *STI);
 
-amdhsa::kernel_descriptor_t getDefaultAmdhsaKernelDescriptor();
+amdhsa::kernel_descriptor_t getDefaultAmdhsaKernelDescriptor(
+    const MCSubtargetInfo *STI);
 
 bool isGroupSegment(const GlobalValue *GV);
 bool isGlobalSegment(const GlobalValue *GV);
@@ -284,21 +325,30 @@ struct Waitcnt {
   unsigned VmCnt = ~0u;
   unsigned ExpCnt = ~0u;
   unsigned LgkmCnt = ~0u;
+  unsigned VsCnt = ~0u;
 
   Waitcnt() {}
-  Waitcnt(unsigned VmCnt, unsigned ExpCnt, unsigned LgkmCnt)
-      : VmCnt(VmCnt), ExpCnt(ExpCnt), LgkmCnt(LgkmCnt) {}
+  Waitcnt(unsigned VmCnt, unsigned ExpCnt, unsigned LgkmCnt, unsigned VsCnt)
+      : VmCnt(VmCnt), ExpCnt(ExpCnt), LgkmCnt(LgkmCnt), VsCnt(VsCnt) {}
 
-  static Waitcnt allZero() { return Waitcnt(0, 0, 0); }
+  static Waitcnt allZero(const IsaVersion &Version) {
+    return Waitcnt(0, 0, 0, Version.Major >= 10 ? 0 : ~0u);
+  }
+  static Waitcnt allZeroExceptVsCnt() { return Waitcnt(0, 0, 0, ~0u); }
+
+  bool hasWait() const {
+    return VmCnt != ~0u || ExpCnt != ~0u || LgkmCnt != ~0u || VsCnt != ~0u;
+  }
 
   bool dominates(const Waitcnt &Other) const {
     return VmCnt <= Other.VmCnt && ExpCnt <= Other.ExpCnt &&
-           LgkmCnt <= Other.LgkmCnt;
+           LgkmCnt <= Other.LgkmCnt && VsCnt <= Other.VsCnt;
   }
 
   Waitcnt combined(const Waitcnt &Other) const {
     return Waitcnt(std::min(VmCnt, Other.VmCnt), std::min(ExpCnt, Other.ExpCnt),
-                   std::min(LgkmCnt, Other.LgkmCnt));
+                   std::min(LgkmCnt, Other.LgkmCnt),
+                   std::min(VsCnt, Other.VsCnt));
   }
 };
 
@@ -331,7 +381,8 @@ unsigned decodeLgkmcnt(const IsaVersion &Version, unsigned Waitcnt);
 ///     \p Vmcnt = \p Waitcnt[3:0]                      (pre-gfx9 only)
 ///     \p Vmcnt = \p Waitcnt[3:0] | \p Waitcnt[15:14]  (gfx9+ only)
 ///     \p Expcnt = \p Waitcnt[6:4]
-///     \p Lgkmcnt = \p Waitcnt[11:8]
+///     \p Lgkmcnt = \p Waitcnt[11:8]                   (pre-gfx10 only)
+///     \p Lgkmcnt = \p Waitcnt[13:8]                   (gfx10+ only)
 void decodeWaitcnt(const IsaVersion &Version, unsigned Waitcnt,
                    unsigned &Vmcnt, unsigned &Expcnt, unsigned &Lgkmcnt);
 
@@ -356,7 +407,8 @@ unsigned encodeLgkmcnt(const IsaVersion &Version, unsigned Waitcnt,
 ///     Waitcnt[3:0]   = \p Vmcnt       (pre-gfx9 only)
 ///     Waitcnt[3:0]   = \p Vmcnt[3:0]  (gfx9+ only)
 ///     Waitcnt[6:4]   = \p Expcnt
-///     Waitcnt[11:8]  = \p Lgkmcnt
+///     Waitcnt[11:8]  = \p Lgkmcnt     (pre-gfx10 only)
+///     Waitcnt[13:8]  = \p Lgkmcnt     (gfx10+ only)
 ///     Waitcnt[15:14] = \p Vmcnt[5:4]  (gfx9+ only)
 ///
 /// \returns Waitcnt with encoded \p Vmcnt, \p Expcnt and \p Lgkmcnt for given
@@ -365,6 +417,33 @@ unsigned encodeWaitcnt(const IsaVersion &Version,
                        unsigned Vmcnt, unsigned Expcnt, unsigned Lgkmcnt);
 
 unsigned encodeWaitcnt(const IsaVersion &Version, const Waitcnt &Decoded);
+
+namespace Hwreg {
+
+LLVM_READONLY
+int64_t getHwregId(const StringRef Name);
+
+LLVM_READNONE
+bool isValidHwreg(int64_t Id, const MCSubtargetInfo &STI);
+
+LLVM_READNONE
+bool isValidHwreg(int64_t Id);
+
+LLVM_READNONE
+bool isValidHwregOffset(int64_t Offset);
+
+LLVM_READNONE
+bool isValidHwregWidth(int64_t Width);
+
+LLVM_READNONE
+int64_t encodeHwreg(int64_t Id, int64_t Offset, int64_t Width);
+
+LLVM_READNONE
+StringRef getHwreg(unsigned Id, const MCSubtargetInfo &STI);
+
+void decodeHwreg(unsigned Val, unsigned &Id, unsigned &Offset, unsigned &Width);
+
+} // namespace Hwreg
 
 unsigned getInitialPSInputAddr(const Function &F);
 
@@ -398,6 +477,7 @@ bool isSI(const MCSubtargetInfo &STI);
 bool isCI(const MCSubtargetInfo &STI);
 bool isVI(const MCSubtargetInfo &STI);
 bool isGFX9(const MCSubtargetInfo &STI);
+bool isGFX10(const MCSubtargetInfo &STI);
 
 /// Is Reg - scalar register
 bool isSGPR(unsigned Reg, const MCRegisterInfo* TRI);
@@ -453,6 +533,8 @@ inline unsigned getOperandSize(const MCOperandInfo &OpInfo) {
   case AMDGPU::OPERAND_REG_INLINE_C_FP16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
+  case AMDGPU::OPERAND_REG_IMM_V2INT16:
+  case AMDGPU::OPERAND_REG_IMM_V2FP16:
     return 2;
 
   default:
@@ -494,6 +576,45 @@ bool splitMUBUFOffset(uint32_t Imm, uint32_t &SOffset, uint32_t &ImmOffset,
 
 /// \returns true if the intrinsic is divergent
 bool isIntrinsicSourceOfDivergence(unsigned IntrID);
+
+
+// Track defaults for fields in the MODE registser.
+struct SIModeRegisterDefaults {
+  /// Floating point opcodes that support exception flag gathering quiet and
+  /// propagate signaling NaN inputs per IEEE 754-2008. Min_dx10 and max_dx10
+  /// become IEEE 754- 2008 compliant due to signaling NaN propagation and
+  /// quieting.
+  bool IEEE : 1;
+
+  /// Used by the vector ALU to force DX10-style treatment of NaNs: when set,
+  /// clamp NaN to zero; otherwise, pass NaN through.
+  bool DX10Clamp : 1;
+
+  // TODO: FP mode fields
+
+  SIModeRegisterDefaults() :
+    IEEE(true),
+    DX10Clamp(true) {}
+
+  SIModeRegisterDefaults(const Function &F);
+
+  static SIModeRegisterDefaults getDefaultForCallingConv(CallingConv::ID CC) {
+    SIModeRegisterDefaults Mode;
+    Mode.DX10Clamp = true;
+    Mode.IEEE = AMDGPU::isCompute(CC);
+    return Mode;
+  }
+
+  bool operator ==(const SIModeRegisterDefaults Other) const {
+    return IEEE == Other.IEEE && DX10Clamp == Other.DX10Clamp;
+  }
+
+  // FIXME: Inlining should be OK for dx10-clamp, since the caller's mode should
+  // be able to override.
+  bool isInlineCompatible(SIModeRegisterDefaults CalleeMode) const {
+    return *this == CalleeMode;
+  }
+};
 
 } // end namespace AMDGPU
 } // end namespace llvm

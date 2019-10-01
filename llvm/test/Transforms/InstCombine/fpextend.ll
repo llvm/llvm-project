@@ -55,6 +55,19 @@ entry:
   ret float %tmp34
 }
 
+define float @test4_unary_fneg(float %x) nounwind  {
+; CHECK-LABEL: @test4_unary_fneg(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP34:%.*]] = fneg float [[X:%.*]]
+; CHECK-NEXT:    ret float [[TMP34]]
+;
+entry:
+  %tmp1 = fpext float %x to double
+  %tmp2 = fneg double %tmp1
+  %tmp34 = fptrunc double %tmp2 to float
+  ret float %tmp34
+}
+
 ; Test with vector splat constant
 define <2 x float> @test5(<2 x float> %x) nounwind  {
 ; CHECK-LABEL: @test5(

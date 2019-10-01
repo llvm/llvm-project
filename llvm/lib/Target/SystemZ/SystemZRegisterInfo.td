@@ -1,9 +1,8 @@
 //==- SystemZRegisterInfo.td - SystemZ register definitions -*- tablegen -*-==//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -295,6 +294,13 @@ def v128any : TypedReg<untyped, VR128>;
 def CC : SystemZReg<"cc">;
 let isAllocatable = 0, CopyCost = -1 in
   def CCR : RegisterClass<"SystemZ", [i32], 32, (add CC)>;
+
+// The floating-point control register.
+// Note: We only model the current rounding modes and the IEEE masks.
+// IEEE flags and DXC are not modeled here.
+def FPC : SystemZReg<"fpc">;
+let isAllocatable = 0 in
+  def FPCRegs : RegisterClass<"SystemZ", [i32], 32, (add FPC)>;
 
 // Access registers.
 class ACR32<bits<16> num, string n> : SystemZReg<n> {

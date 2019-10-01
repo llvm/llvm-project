@@ -4,31 +4,33 @@
 ; Check that a <4 x float> compare is generated and that we are
 ; not stuck in an endless loop.
 
-define void @cmp_2_floats(<2 x float> %a, <2 x float> %b) {
+define void @cmp_2_floats(<2 x float> %a, <2 x float> %b, <2 x float> %c) {
 ; CHECK-LABEL: cmp_2_floats:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movaps %xmm0, %xmm2
-; CHECK-NEXT:    cmpordps %xmm0, %xmm0
-; CHECK-NEXT:    blendvps %xmm0, %xmm2, %xmm1
+; CHECK-NEXT:    movaps %xmm0, %xmm3
+; CHECK-NEXT:    cmpordps %xmm2, %xmm2
+; CHECK-NEXT:    movaps %xmm2, %xmm0
+; CHECK-NEXT:    blendvps %xmm0, %xmm3, %xmm1
 ; CHECK-NEXT:    movlps %xmm1, (%rax)
 ; CHECK-NEXT:    retq
 entry:
-  %0 = fcmp oeq <2 x float> undef, undef
+  %0 = fcmp oeq <2 x float> %c, %c
   %1 = select <2 x i1> %0, <2 x float> %a, <2 x float> %b
   store <2 x float> %1, <2 x float>* undef
   ret void
 }
 
-define void @cmp_2_doubles(<2 x double> %a, <2 x double> %b) {
+define void @cmp_2_doubles(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
 ; CHECK-LABEL: cmp_2_doubles:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movapd %xmm0, %xmm2
-; CHECK-NEXT:    cmpordpd %xmm0, %xmm0
-; CHECK-NEXT:    blendvpd %xmm0, %xmm2, %xmm1
+; CHECK-NEXT:    movapd %xmm0, %xmm3
+; CHECK-NEXT:    cmpordpd %xmm2, %xmm2
+; CHECK-NEXT:    movapd %xmm2, %xmm0
+; CHECK-NEXT:    blendvpd %xmm0, %xmm3, %xmm1
 ; CHECK-NEXT:    movapd %xmm1, (%rax)
 ; CHECK-NEXT:    retq
 entry:
-  %0 = fcmp oeq <2 x double> undef, undef
+  %0 = fcmp oeq <2 x double> %c, %c
   %1 = select <2 x i1> %0, <2 x double> %a, <2 x double> %b
   store <2 x double> %1, <2 x double>* undef
   ret void

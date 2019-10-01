@@ -8,6 +8,7 @@
 ; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=exynos-m2  | FileCheck %s
 ; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=exynos-m3  | FileCheck %s
 ; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=exynos-m4  | FileCheck %s
+; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=exynos-m5  | FileCheck %s
 
 declare <16 x i8> @llvm.aarch64.crypto.aese(<16 x i8> %d, <16 x i8> %k)
 declare <16 x i8> @llvm.aarch64.crypto.aesmc(<16 x i8> %d)
@@ -204,7 +205,9 @@ entry:
 
 ; CHECK-LABEL: aes_load_store:
 ; CHECK: aese [[VA:v[0-7].16b]], {{v[0-7].16b}}
-; CHECK-NEXT: aesmc [[VA]], [[VA]]
+; aese and aesmc are described to share a unit, hence won't be scheduled on the
+; same cycle and the scheduler can find another instruction to place inbetween
+; CHECK: aesmc [[VA]], [[VA]]
 ; CHECK: aese [[VB:v[0-7].16b]], {{v[0-7].16b}}
 ; CHECK-NEXT: aesmc [[VB]], [[VB]]
 ; CHECK-NOT: aesmc

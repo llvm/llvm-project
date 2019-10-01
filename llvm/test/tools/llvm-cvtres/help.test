@@ -10,4 +10,5 @@
 ; HELP_TEST-DAG:    /NOLOGO        
 ; HELP_TEST-NEXT:   /OUT:filename  
 ; HELP_TEST-NEXT:   /READONLY      
+; HELP_TEST-NEXT:   /TIMESTAMP:<value> Timestamp for coff header, defaults to current time
 ; HELP_TEST-NEXT:   /VERBOSE

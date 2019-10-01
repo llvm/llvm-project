@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: llc < %s -mtriple=x86_64-apple-darwin10.0 -relocation-model=pic -disable-fp-elim -stats 2>&1 | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-apple-darwin10.0 -relocation-model=pic -frame-pointer=all -stats 2>&1 | FileCheck %s
 ; XFAIL: *
 ; 69408 removed the opportunity for this optimization to work
 

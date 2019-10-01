@@ -159,14 +159,14 @@ entry:
 
   ; CHECK-NEXT: call void @llvm.lifetime.end.p0i8(i64 40, i8* %zz)
 
-  ; CHECK-LABEL: <label>
+  ; CHECK: {{^[0-9]+}}:
 
   ; CHECK-NEXT: [[OFFSET:%[0-9]+]] = add i64 [[SHADOW_BASE]], 0
   ; CHECK-NEXT: call void @__asan_set_shadow_f5(i64 [[OFFSET]], i64 128)
 
   ; CHECK-NOT: add i64 [[SHADOW_BASE]]
 
-  ; CHECK-LABEL: <label>
+  ; CHECK: {{^[0-9]+}}:
 
   ; 00000000
   ; EXIT-NEXT: [[OFFSET:%[0-9]+]] = add i64 [[SHADOW_BASE]], 0
@@ -205,7 +205,7 @@ entry:
   ; CHECK-NOT: add i64 [[SHADOW_BASE]]
 
   ret void
-  ; CHECK-LABEL: <label>
+  ; CHECK: {{^[0-9]+}}:
   ; CHECK: ret void
 }
 

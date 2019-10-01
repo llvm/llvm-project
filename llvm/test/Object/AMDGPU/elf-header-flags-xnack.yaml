@@ -1,8 +1,8 @@
 # RUN: yaml2obj -docnum=1 %s > %t.o.1
-# RUN: llvm-readobj -s -file-headers %t.o.1 | FileCheck --check-prefixes=ELF-ALL,ELF-XNACK-NONE %s
+# RUN: llvm-readobj -S --file-headers %t.o.1 | FileCheck --check-prefixes=ELF-ALL,ELF-XNACK-NONE %s
 # RUN: obj2yaml %t.o.1 | FileCheck --check-prefixes=YAML-XNACK-NONE %s
 # RUN: yaml2obj -docnum=2 %s > %t.o.2
-# RUN: llvm-readobj -s -file-headers %t.o.2 | FileCheck --check-prefixes=ELF-ALL,ELF-XNACK-GFX801 %s
+# RUN: llvm-readobj -S --file-headers %t.o.2 | FileCheck --check-prefixes=ELF-ALL,ELF-XNACK-GFX801 %s
 # RUN: obj2yaml %t.o.2 | FileCheck --check-prefixes=YAML-XNACK-GFX801 %s
 
 # ELF-ALL:          Flags [

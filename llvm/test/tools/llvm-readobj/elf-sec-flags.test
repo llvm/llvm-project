@@ -1,7 +1,7 @@
 # Check that llvm-readobj shows arch specific ELF section flags.
 
 # RUN: yaml2obj -docnum 1 %s > %t-hex.o
-# RUN: llvm-readobj -s %t-hex.o | FileCheck -check-prefix=HEX %s
+# RUN: llvm-readobj -S %t-hex.o | FileCheck -check-prefix=HEX %s
 
 # HEX:      Flags [ (0x10000000)
 # HEX-NEXT:   SHF_HEX_GPREL (0x10000000)
@@ -22,7 +22,7 @@ Sections:
     Size:   4
 
 # RUN: yaml2obj -docnum 2 %s > %t-mips.o
-# RUN: llvm-readobj -s %t-mips.o | FileCheck -check-prefix=MIPS %s
+# RUN: llvm-readobj -S %t-mips.o | FileCheck -check-prefix=MIPS %s
 
 # MIPS:      Flags [ (0x38000000)
 # MIPS-NEXT:   SHF_MIPS_GPREL (0x10000000)
@@ -45,7 +45,7 @@ Sections:
     Size:   4
 
 # RUN: yaml2obj -docnum 3 %s > %t-x86_64.o
-# RUN: llvm-readobj -s %t-x86_64.o | FileCheck -check-prefix=X86_64 %s
+# RUN: llvm-readobj -S %t-x86_64.o | FileCheck -check-prefix=X86_64 %s
 
 # X86_64:      Flags [ (0x10000000)
 # X86_64-NEXT:   SHF_X86_64_LARGE (0x10000000)

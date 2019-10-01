@@ -128,6 +128,7 @@ this:
   USAGE: compiler [options]
 
   OPTIONS:
+    -h                - Alias for -help
     -help             - display available options (-help-hidden for more)
     -o <filename>     - Specify output filename
 
@@ -194,6 +195,7 @@ declarations above, the ``-help`` option synopsis is now extended to:
   USAGE: compiler [options] <input file>
 
   OPTIONS:
+    -h                - Alias for -help
     -help             - display available options (-help-hidden for more)
     -o <filename>     - Specify output filename
 
@@ -1168,11 +1170,18 @@ As usual, you can only specify one of these arguments at most.
 .. _grouping:
 .. _cl::Grouping:
 
-* The **cl::Grouping** modifier is used to implement Unix-style tools (like
-  ``ls``) that have lots of single letter arguments, but only require a single
-  dash.  For example, the '``ls -labF``' command actually enables four different
-  options, all of which are single letters.  Note that **cl::Grouping** options
-  cannot have values.
+Controlling options grouping
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The **cl::Grouping** modifier can be combined with any formatting types except
+for `cl::Positional`_.  It is used to implement Unix-style tools (like ``ls``)
+that have lots of single letter arguments, but only require a single dash.
+For example, the '``ls -labF``' command actually enables four different options,
+all of which are single letters.
+
+Note that **cl::Grouping** options can have values only if they are used
+separately or at the end of the groups.  For `cl::ValueRequired`_, it is
+a runtime error if such an option is used elsewhere in the group.
 
 The CommandLine library does not restrict how you use the **cl::Prefix** or
 **cl::Grouping** modifiers, but it is possible to specify ambiguous argument
@@ -1187,19 +1196,24 @@ basically looks like this:
 
   parse(string OrigInput) {
 
-  1. string input = OrigInput;
-  2. if (isOption(input)) return getOption(input).parse();  // Normal option
-  3. while (!isOption(input) && !input.empty()) input.pop_back();  // Remove the last letter
-  4. if (input.empty()) return error();  // No matching option
-  5. if (getOption(input).isPrefix())
-       return getOption(input).parse(input);
-  6. while (!input.empty()) {  // Must be grouping options
-       getOption(input).parse();
-       OrigInput.erase(OrigInput.begin(), OrigInput.begin()+input.length());
-       input = OrigInput;
-       while (!isOption(input) && !input.empty()) input.pop_back();
+  1. string Input = OrigInput;
+  2. if (isOption(Input)) return getOption(Input).parse();  // Normal option
+  3. while (!Input.empty() && !isOption(Input)) Input.pop_back();  // Remove the last letter
+  4. while (!Input.empty()) {
+       string MaybeValue = OrigInput.substr(Input.length())
+       if (getOption(Input).isPrefix())
+         return getOption(Input).parse(MaybeValue)
+       if (!MaybeValue.empty() && MaybeValue[0] == '=')
+         return getOption(Input).parse(MaybeValue.substr(1))
+       if (!getOption(Input).isGrouping())
+         return error()
+       getOption(Input).parse()
+       Input = OrigInput = MaybeValue
+       while (!Input.empty() && !isOption(Input)) Input.pop_back();
+       if (!Input.empty() && !getOption(Input).isGrouping())
+         return error()
      }
-  7. if (!OrigInput.empty()) error();
+  5. if (!OrigInput.empty()) error();
 
   }
 
@@ -1220,6 +1234,14 @@ specify boolean properties that modify the option.
   option is allowed to accept one or more values (i.e. it is a `cl::list`_
   option).
 
+.. _cl::DefaultOption:
+
+* The **cl::DefaultOption** modifier is used to specify that the option is a
+  default that can be overridden by application specific parsers. For example,
+  the ``-help`` alias, ``-h``, is registered this way, so it can be overridden
+  by applications that need to use the ``-h`` option for another purpose,
+  either as a regular option or an alias for another option.
+
 .. _cl::PositionalEatsArgs:
 
 * The **cl::PositionalEatsArgs** modifier (which only applies to positional
@@ -1238,8 +1260,6 @@ specify boolean properties that modify the option.
   unrecognized option strings to it as values instead of signaling an error. As
   with ``cl::CommaSeparated``, this modifier only makes sense with a `cl::list`_
   option.
-
-So far, these are the only three miscellaneous option modifiers.
 
 .. _response files:
 

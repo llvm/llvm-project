@@ -1,0 +1,23 @@
+#RUN: not llc -o - -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
+# REQUIRES: global-isel, aarch64-registered-target
+
+---
+name:            test_load
+legalized:       true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:
+body:             |
+  bb.0:
+
+    ; CHECK: Bad machine code: Generic memory instruction must access a pointer
+    %0:_(s64) = G_CONSTANT i32 0
+    %1:_(s32) = G_LOAD %0 :: (load 4)
+
+    %2:_(p0) = G_IMPLICIT_DEF
+
+    ; CHECK: Bad machine code: load memory size cannot exceed result size
+    %3:_(s8) = G_LOAD %2 :: (load 2)
+
+...

@@ -1,17 +1,16 @@
 //===- Reader.cpp ---------------------------------------------------------===//
 //
-//                      The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "Reader.h"
 #include "Object.h"
-#include "llvm-objcopy.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/COFF.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cstddef>
@@ -22,8 +21,7 @@ namespace objcopy {
 namespace coff {
 
 using namespace object;
-
-Reader::~Reader() {}
+using namespace COFF;
 
 Error COFFReader::readExecutableHeaders(Object &Obj) const {
   const dos_header *DH = COFFObj.getDOSHeader();
@@ -61,37 +59,46 @@ Error COFFReader::readExecutableHeaders(Object &Obj) const {
 }
 
 Error COFFReader::readSections(Object &Obj) const {
+  std::vector<Section> Sections;
   // Section indexing starts from 1.
   for (size_t I = 1, E = COFFObj.getNumberOfSections(); I <= E; I++) {
     const coff_section *Sec;
     if (auto EC = COFFObj.getSection(I, Sec))
       return errorCodeToError(EC);
-    Obj.Sections.push_back(Section());
-    Section &S = Obj.Sections.back();
+    Sections.push_back(Section());
+    Section &S = Sections.back();
     S.Header = *Sec;
-    if (auto EC = COFFObj.getSectionContents(Sec, S.Contents))
-      return errorCodeToError(EC);
+    ArrayRef<uint8_t> Contents;
+    if (Error E = COFFObj.getSectionContents(Sec, Contents))
+      return E;
+    S.setContentsRef(Contents);
     ArrayRef<coff_relocation> Relocs = COFFObj.getRelocations(Sec);
     for (const coff_relocation &R : Relocs)
       S.Relocs.push_back(R);
-    if (auto EC = COFFObj.getSectionName(Sec, S.Name))
-      return errorCodeToError(EC);
+    if (Expected<StringRef> NameOrErr = COFFObj.getSectionName(Sec))
+      S.Name = *NameOrErr;
+    else
+      return NameOrErr.takeError();
     if (Sec->hasExtendedRelocations())
-      return make_error<StringError>("Extended relocations not supported yet",
-                                     object_error::parse_failed);
+      return createStringError(object_error::parse_failed,
+                               "extended relocations not supported yet");
   }
+  Obj.addSections(Sections);
   return Error::success();
 }
 
 Error COFFReader::readSymbols(Object &Obj, bool IsBigObj) const {
+  std::vector<Symbol> Symbols;
+  Symbols.reserve(COFFObj.getRawNumberOfSymbols());
+  ArrayRef<Section> Sections = Obj.getSections();
   for (uint32_t I = 0, E = COFFObj.getRawNumberOfSymbols(); I < E;) {
     Expected<COFFSymbolRef> SymOrErr = COFFObj.getSymbol(I);
     if (!SymOrErr)
       return SymOrErr.takeError();
     COFFSymbolRef SymRef = *SymOrErr;
 
-    Obj.Symbols.push_back(Symbol());
-    Symbol &Sym = Obj.Symbols.back();
+    Symbols.push_back(Symbol());
+    Symbol &Sym = Symbols.back();
     // Copy symbols from the original form into an intermediate coff_symbol32.
     if (IsBigObj)
       copySymbol(Sym.Sym,
@@ -101,10 +108,89 @@ Error COFFReader::readSymbols(Object &Obj, bool IsBigObj) const {
                  *reinterpret_cast<const coff_symbol16 *>(SymRef.getRawPtr()));
     if (auto EC = COFFObj.getSymbolName(SymRef, Sym.Name))
       return errorCodeToError(EC);
-    Sym.AuxData = COFFObj.getSymbolAuxData(SymRef);
-    assert((Sym.AuxData.size() %
-            (IsBigObj ? sizeof(coff_symbol32) : sizeof(coff_symbol16))) == 0);
+
+    ArrayRef<uint8_t> AuxData = COFFObj.getSymbolAuxData(SymRef);
+    size_t SymSize = IsBigObj ? sizeof(coff_symbol32) : sizeof(coff_symbol16);
+    assert(AuxData.size() == SymSize * SymRef.getNumberOfAuxSymbols());
+    // The auxillary symbols are structs of sizeof(coff_symbol16) each.
+    // In the big object format (where symbols are coff_symbol32), each
+    // auxillary symbol is padded with 2 bytes at the end. Copy each
+    // auxillary symbol to the Sym.AuxData vector. For file symbols,
+    // the whole range of aux symbols are interpreted as one null padded
+    // string instead.
+    if (SymRef.isFileRecord())
+      Sym.AuxFile = StringRef(reinterpret_cast<const char *>(AuxData.data()),
+                              AuxData.size())
+                        .rtrim('\0');
+    else
+      for (size_t I = 0; I < SymRef.getNumberOfAuxSymbols(); I++)
+        Sym.AuxData.push_back(AuxData.slice(I * SymSize, sizeof(AuxSymbol)));
+
+    // Find the unique id of the section
+    if (SymRef.getSectionNumber() <=
+        0) // Special symbol (undefined/absolute/debug)
+      Sym.TargetSectionId = SymRef.getSectionNumber();
+    else if (static_cast<uint32_t>(SymRef.getSectionNumber() - 1) <
+             Sections.size())
+      Sym.TargetSectionId = Sections[SymRef.getSectionNumber() - 1].UniqueId;
+    else
+      return createStringError(object_error::parse_failed,
+                               "section number out of range");
+    // For section definitions, check if it is comdat associative, and if
+    // it is, find the target section unique id.
+    const coff_aux_section_definition *SD = SymRef.getSectionDefinition();
+    const coff_aux_weak_external *WE = SymRef.getWeakExternal();
+    if (SD && SD->Selection == IMAGE_COMDAT_SELECT_ASSOCIATIVE) {
+      int32_t Index = SD->getNumber(IsBigObj);
+      if (Index <= 0 || static_cast<uint32_t>(Index - 1) >= Sections.size())
+        return createStringError(object_error::parse_failed,
+                                 "unexpected associative section index");
+      Sym.AssociativeComdatTargetSectionId = Sections[Index - 1].UniqueId;
+    } else if (WE) {
+      // This is a raw symbol index for now, but store it in the Symbol
+      // until we've added them to the Object, which assigns the final
+      // unique ids.
+      Sym.WeakTargetSymbolId = WE->TagIndex;
+    }
     I += 1 + SymRef.getNumberOfAuxSymbols();
+  }
+  Obj.addSymbols(Symbols);
+  return Error::success();
+}
+
+Error COFFReader::setSymbolTargets(Object &Obj) const {
+  std::vector<const Symbol *> RawSymbolTable;
+  for (const Symbol &Sym : Obj.getSymbols()) {
+    RawSymbolTable.push_back(&Sym);
+    for (size_t I = 0; I < Sym.Sym.NumberOfAuxSymbols; I++)
+      RawSymbolTable.push_back(nullptr);
+  }
+  for (Symbol &Sym : Obj.getMutableSymbols()) {
+    // Convert WeakTargetSymbolId from the original raw symbol index to
+    // a proper unique id.
+    if (Sym.WeakTargetSymbolId) {
+      if (*Sym.WeakTargetSymbolId >= RawSymbolTable.size())
+        return createStringError(object_error::parse_failed,
+                                 "weak external reference out of range");
+      const Symbol *Target = RawSymbolTable[*Sym.WeakTargetSymbolId];
+      if (Target == nullptr)
+        return createStringError(object_error::parse_failed,
+                                 "invalid SymbolTableIndex");
+      Sym.WeakTargetSymbolId = Target->UniqueId;
+    }
+  }
+  for (Section &Sec : Obj.getMutableSections()) {
+    for (Relocation &R : Sec.Relocs) {
+      if (R.Reloc.SymbolTableIndex >= RawSymbolTable.size())
+        return createStringError(object_error::parse_failed,
+                                 "SymbolTableIndex out of range");
+      const Symbol *Sym = RawSymbolTable[R.Reloc.SymbolTableIndex];
+      if (Sym == nullptr)
+        return createStringError(object_error::parse_failed,
+                                 "invalid SymbolTableIndex");
+      R.Target = Sym->UniqueId;
+      R.TargetName = Sym->Name;
+    }
   }
   return Error::success();
 }
@@ -121,8 +207,8 @@ Expected<std::unique_ptr<Object>> COFFReader::create() const {
     Obj->CoffFileHeader = *CFH;
   } else {
     if (!CBFH)
-      return make_error<StringError>("No COFF file header returned",
-                                     object_error::parse_failed);
+      return createStringError(object_error::parse_failed,
+                               "no COFF file header returned");
     // Only copying the few fields from the bigobj header that we need
     // and won't recreate in the end.
     Obj->CoffFileHeader.Machine = CBFH->Machine;
@@ -135,6 +221,8 @@ Expected<std::unique_ptr<Object>> COFFReader::create() const {
   if (Error E = readSections(*Obj))
     return std::move(E);
   if (Error E = readSymbols(*Obj, IsBigObj))
+    return std::move(E);
+  if (Error E = setSymbolTargets(*Obj))
     return std::move(E);
 
   return std::move(Obj);

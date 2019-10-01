@@ -1,9 +1,8 @@
 //===- StraightLineStrengthReduce.cpp - -----------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -683,9 +682,13 @@ void StraightLineStrengthReduce::rewriteCandidateWithBasis(
         // Canonicalize bump to pointer size.
         Bump = Builder.CreateSExtOrTrunc(Bump, IntPtrTy);
         if (InBounds)
-          Reduced = Builder.CreateInBoundsGEP(nullptr, Basis.Ins, Bump);
+          Reduced = Builder.CreateInBoundsGEP(
+              cast<GetElementPtrInst>(Basis.Ins)->getResultElementType(),
+              Basis.Ins, Bump);
         else
-          Reduced = Builder.CreateGEP(nullptr, Basis.Ins, Bump);
+          Reduced = Builder.CreateGEP(
+              cast<GetElementPtrInst>(Basis.Ins)->getResultElementType(),
+              Basis.Ins, Bump);
       }
       break;
     }

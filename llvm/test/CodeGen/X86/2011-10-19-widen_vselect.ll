@@ -21,24 +21,26 @@ entry:
   ret void
 }
 
-define void @complex_inreg_work(<2 x float> %a, <2 x float> %b) {
+define void @complex_inreg_work(<2 x float> %a, <2 x float> %b, <2 x float> %c) {
 ; X32-LABEL: complex_inreg_work:
 ; X32:       # %bb.0: # %entry
-; X32-NEXT:    movaps %xmm0, %xmm2
-; X32-NEXT:    cmpordps %xmm0, %xmm0
-; X32-NEXT:    blendvps %xmm0, %xmm2, %xmm1
+; X32-NEXT:    movaps %xmm0, %xmm3
+; X32-NEXT:    cmpordps %xmm2, %xmm2
+; X32-NEXT:    movaps %xmm2, %xmm0
+; X32-NEXT:    blendvps %xmm0, %xmm3, %xmm1
 ; X32-NEXT:    movlps %xmm1, (%eax)
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: complex_inreg_work:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movaps %xmm0, %xmm2
-; X64-NEXT:    cmpordps %xmm0, %xmm0
-; X64-NEXT:    blendvps %xmm0, %xmm2, %xmm1
+; X64-NEXT:    movaps %xmm0, %xmm3
+; X64-NEXT:    cmpordps %xmm2, %xmm2
+; X64-NEXT:    movaps %xmm2, %xmm0
+; X64-NEXT:    blendvps %xmm0, %xmm3, %xmm1
 ; X64-NEXT:    movlps %xmm1, (%rax)
 ; X64-NEXT:    retq
 entry:
-  %0 = fcmp oeq <2 x float> undef, undef
+  %0 = fcmp oeq <2 x float> %c, %c
   %1 = select <2 x i1> %0, <2 x float> %a, <2 x float> %b
   store <2 x float> %1, <2 x float>* undef
   ret void

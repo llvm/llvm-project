@@ -1,9 +1,8 @@
 //===-- UnreachableBlockElim.cpp - Remove unreachable blocks for codegen --===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -38,43 +37,13 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Pass.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 using namespace llvm;
-
-static bool eliminateUnreachableBlock(Function &F) {
-  df_iterator_default_set<BasicBlock*> Reachable;
-
-  // Mark all reachable blocks.
-  for (BasicBlock *BB : depth_first_ext(&F, Reachable))
-    (void)BB/* Mark all reachable blocks */;
-
-  // Loop over all dead blocks, remembering them and deleting all instructions
-  // in them.
-  std::vector<BasicBlock*> DeadBlocks;
-  for (Function::iterator I = F.begin(), E = F.end(); I != E; ++I)
-    if (!Reachable.count(&*I)) {
-      BasicBlock *BB = &*I;
-      DeadBlocks.push_back(BB);
-      while (PHINode *PN = dyn_cast<PHINode>(BB->begin())) {
-        PN->replaceAllUsesWith(Constant::getNullValue(PN->getType()));
-        BB->getInstList().pop_front();
-      }
-      for (succ_iterator SI = succ_begin(BB), E = succ_end(BB); SI != E; ++SI)
-        (*SI)->removePredecessor(BB);
-      BB->dropAllReferences();
-    }
-
-  // Actually remove the blocks now.
-  for (unsigned i = 0, e = DeadBlocks.size(); i != e; ++i) {
-    DeadBlocks[i]->eraseFromParent();
-  }
-
-  return !DeadBlocks.empty();
-}
 
 namespace {
 class UnreachableBlockElimLegacyPass : public FunctionPass {
   bool runOnFunction(Function &F) override {
-    return eliminateUnreachableBlock(F);
+    return llvm::EliminateUnreachableBlocks(F);
   }
 
 public:
@@ -99,7 +68,7 @@ FunctionPass *llvm::createUnreachableBlockEliminationPass() {
 
 PreservedAnalyses UnreachableBlockElimPass::run(Function &F,
                                                 FunctionAnalysisManager &AM) {
-  bool Changed = eliminateUnreachableBlock(F);
+  bool Changed = llvm::EliminateUnreachableBlocks(F);
   if (!Changed)
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
