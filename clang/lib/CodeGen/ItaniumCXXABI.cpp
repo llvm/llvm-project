@@ -360,7 +360,8 @@ public:
   }
 
   bool usesThreadWrapperFunction(const VarDecl *VD) const override {
-    return !isEmittedWithConstantInitializer(VD);
+    return !isEmittedWithConstantInitializer(VD) ||
+           VD->needsDestruction(getContext());
   }
   LValue EmitThreadLocalVarDeclLValue(CodeGenFunction &CGF, const VarDecl *VD,
                                       QualType LValType) override;
@@ -2606,7 +2607,7 @@ void ItaniumCXXABI::EmitThreadLocalInitFuncs(
     llvm::GlobalValue *Init = nullptr;
     bool InitIsInitFunc = false;
     bool HasConstantInitialization = false;
-    if (isEmittedWithConstantInitializer(VD)) {
+    if (!usesThreadWrapperFunction(VD)) {
       HasConstantInitialization = true;
     } else if (VD->hasDefinition()) {
       InitIsInitFunc = true;

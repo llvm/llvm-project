@@ -105,15 +105,16 @@ private:
   llvm::raw_ostream &logs() { return Parent.logs(); }
 public:
   LazyASTImporter(ExternalASTMerger &_Parent, ASTContext &ToContext,
-                  FileManager &ToFileManager, ASTContext &FromContext,
-                  FileManager &FromFileManager,
-                  const ExternalASTMerger::OriginMap &_FromOrigins,
+                  FileManager &ToFileManager,
+                  const ExternalASTMerger::ImporterSource &_Source,
                   std::shared_ptr<ASTImporterSharedState> SharedState)
-      : ASTImporter(ToContext, ToFileManager, FromContext, FromFileManager,
+      : ASTImporter(ToContext, ToFileManager, _Source.getASTContext(),
+                    _Source.getFileManager(),
                     /*MinimalImport=*/true, SharedState),
-        Parent(_Parent), Reverse(FromContext, FromFileManager, ToContext,
-                                 ToFileManager, /*MinimalImport=*/true),
-        FromOrigins(_FromOrigins) {}
+        Parent(_Parent),
+        Reverse(_Source.getASTContext(), _Source.getFileManager(), ToContext,
+                ToFileManager, /*MinimalImport=*/true),
+        FromOrigins(_Source.getOriginMap()) {}
 
   /// Whenever a DeclContext is imported, ensure that ExternalASTSource's origin
   /// map is kept up to date.  Also set the appropriate flags.
@@ -323,23 +324,23 @@ ExternalASTMerger::ExternalASTMerger(const ImporterTarget &Target,
 
 void ExternalASTMerger::AddSources(llvm::ArrayRef<ImporterSource> Sources) {
   for (const ImporterSource &S : Sources) {
-    assert(&S.AST != &Target.AST);
+    assert(&S.getASTContext() != &Target.AST);
     Importers.push_back(std::make_unique<LazyASTImporter>(
-        *this, Target.AST, Target.FM, S.AST, S.FM, S.OM, SharedState));
+        *this, Target.AST, Target.FM, S, SharedState));
   }
 }
 
 void ExternalASTMerger::RemoveSources(llvm::ArrayRef<ImporterSource> Sources) {
   if (LoggingEnabled())
     for (const ImporterSource &S : Sources)
-      logs() << "(ExternalASTMerger*)" << (void*)this
-             << " removing source (ASTContext*)" << (void*)&S.AST
+      logs() << "(ExternalASTMerger*)" << (void *)this
+             << " removing source (ASTContext*)" << (void *)&S.getASTContext()
              << "\n";
   Importers.erase(
       std::remove_if(Importers.begin(), Importers.end(),
                      [&Sources](std::unique_ptr<ASTImporter> &Importer) -> bool {
                        for (const ImporterSource &S : Sources) {
-                         if (&Importer->getFromContext() == &S.AST)
+                         if (&Importer->getFromContext() == &S.getASTContext())
                            return true;
                        }
                        return false;
@@ -349,7 +350,7 @@ void ExternalASTMerger::RemoveSources(llvm::ArrayRef<ImporterSource> Sources) {
     std::pair<const DeclContext *, DCOrigin> Origin = *OI;
     bool Erase = false;
     for (const ImporterSource &S : Sources) {
-      if (&S.AST == Origin.second.AST) {
+      if (&S.getASTContext() == Origin.second.AST) {
         Erase = true;
         break;
       }
