@@ -319,14 +319,29 @@ struct Bar { int func(); };
 Bar* bar;
   )cpp";
   // First ^ is the expected beginning, last is the search position.
-  for (std::string Text : std::vector<std::string>{
+  for (const std::string &Text : std::vector<std::string>{
            "int ^f^oo();", // inside identifier
            "int ^foo();",  // beginning of identifier
            "int ^foo^();", // end of identifier
            "int foo(^);",  // non-identifier
            "^int foo();",  // beginning of file (can't back up)
            "int ^f0^0();", // after a digit (lexing at N-1 is wrong)
-           "int ^λλ^λ();", // UTF-8 handled properly when backing up
+           "/^/ comments", // non-interesting token
+           "void f(int abc) { abc ^ ++; }",    // whitespace
+           "void f(int abc) { ^abc^++; }",     // range of identifier
+           "void f(int abc) { ++^abc^; }",     // range of identifier
+           "void f(int abc) { ++^abc; }",      // range of identifier
+           "void f(int abc) { ^+^+abc; }",     // range of operator
+           "void f(int abc) { ^abc^ ++; }",    // range of identifier
+           "void f(int abc) { abc ^++^; }",    // range of operator
+           "void f(int abc) { ^++^ abc; }",    // range of operator
+           "void f(int abc) { ++ ^abc^; }",    // range of identifier
+           "void f(int abc) { ^++^/**/abc; }", // range of operator
+           "void f(int abc) { ++/**/^abc; }",  // range of identifier
+           "void f(int abc) { ^abc^/**/++; }", // range of identifier
+           "void f(int abc) { abc/**/^++; }",  // range of operator
+           "void f() {^ }", // outside of identifier and operator
+           "int ^λλ^λ();",  // UTF-8 handled properly when backing up
 
            // identifier in macro arg
            "MACRO(bar->^func())",  // beginning of identifier
