@@ -11,6 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "TableGenBackends.h"
+
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/StringMatcher.h"
 #include "llvm/TableGen/TableGenBackend.h"
@@ -18,8 +20,7 @@
 
 using namespace llvm;
 
-namespace clang {
-void EmitClangCommentCommandInfo(RecordKeeper &Records, raw_ostream &OS) {
+void clang::EmitClangCommentCommandInfo(RecordKeeper &Records, raw_ostream &OS) {
   emitSourceFileHeader("A list of commands useable in documentation "
                        "comments", OS);
 
@@ -105,7 +106,7 @@ static std::string MangleName(StringRef Str) {
   return Mangled;
 }
 
-void EmitClangCommentCommandList(RecordKeeper &Records, raw_ostream &OS) {
+void clang::EmitClangCommentCommandList(RecordKeeper &Records, raw_ostream &OS) {
   emitSourceFileHeader("A list of commands useable in documentation "
                        "comments", OS);
 
@@ -121,4 +122,3 @@ void EmitClangCommentCommandList(RecordKeeper &Records, raw_ostream &OS) {
     OS << "COMMENT_COMMAND(" << MangledName << ")\n";
   }
 }
-} // end namespace clang

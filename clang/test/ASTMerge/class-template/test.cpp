@@ -9,13 +9,13 @@ static_assert(sizeof(X0<int>().getValue(1)) == sizeof(int));
 // CHECK: class-template2.cpp:9:15: note: declared here with type 'long'
 
 // CHECK: class-template1.cpp:12:14: warning: template parameter has different kinds in different translation units
-// CHECK: class-template2.cpp:12:10: note: template parameter declared here
+// CHECK: class-template2.cpp:12:18: note: template parameter declared here
 
 // CHECK: class-template1.cpp:18:23: warning: non-type template parameter declared with incompatible types in different translation units ('long' vs. 'int')
 // CHECK: class-template2.cpp:18:23: note: declared here with type 'int'
 
-// CHECK: class-template1.cpp:21:10: warning: template parameter has different kinds in different translation units
-// CHECK: class-template2.cpp:21:10: note: template parameter declared here
+// CHECK: class-template1.cpp:21:18: warning: template parameter has different kinds in different translation units
+// CHECK: class-template2.cpp:21:31: note: template parameter declared here
 
 // CHECK: class-template2.cpp:27:20: warning: external variable 'x0r' declared with incompatible types in different translation units ('X0<double> *' vs. 'X0<float> *')
 // CHECK: class-template1.cpp:26:19: note: declared here with type 'X0<float> *'

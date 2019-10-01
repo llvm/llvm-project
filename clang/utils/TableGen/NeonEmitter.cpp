@@ -23,6 +23,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "TableGenBackends.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/None.h"
@@ -2629,22 +2630,18 @@ void NeonEmitter::runFP16(raw_ostream &OS) {
   OS << "#endif /* __ARM_FP16_H */\n";
 }
 
-namespace clang {
-
-void EmitNeon(RecordKeeper &Records, raw_ostream &OS) {
+void clang::EmitNeon(RecordKeeper &Records, raw_ostream &OS) {
   NeonEmitter(Records).run(OS);
 }
 
-void EmitFP16(RecordKeeper &Records, raw_ostream &OS) {
+void clang::EmitFP16(RecordKeeper &Records, raw_ostream &OS) {
   NeonEmitter(Records).runFP16(OS);
 }
 
-void EmitNeonSema(RecordKeeper &Records, raw_ostream &OS) {
+void clang::EmitNeonSema(RecordKeeper &Records, raw_ostream &OS) {
   NeonEmitter(Records).runHeader(OS);
 }
 
-void EmitNeonTest(RecordKeeper &Records, raw_ostream &OS) {
+void clang::EmitNeonTest(RecordKeeper &Records, raw_ostream &OS) {
   llvm_unreachable("Neon test generation no longer implemented!");
 }
-
-} // end namespace clang
