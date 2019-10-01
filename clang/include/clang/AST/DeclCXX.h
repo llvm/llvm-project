@@ -1172,6 +1172,10 @@ public:
   /// if this is a closure type.
   CXXMethodDecl *getLambdaCallOperator() const;
 
+  /// Retrieve the dependent lambda call operator of the closure type
+  /// if this is a templated closure type.
+  FunctionTemplateDecl *getDependentLambdaCallOperator() const;
+
   /// Retrieve the lambda static invoker, the address of which
   /// is returned by the conversion operator, and the body of which
   /// is forwarded to the lambda call operator.

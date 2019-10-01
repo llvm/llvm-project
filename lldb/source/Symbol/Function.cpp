@@ -173,6 +173,7 @@ void CallEdge::ParseSymbolFileAndResolve(ModuleList &images) {
 
 Function *CallEdge::GetCallee(ModuleList &images) {
   ParseSymbolFileAndResolve(images);
+  assert(resolved && "Did not resolve lazy callee");
   return lazy_callee.def;
 }
 

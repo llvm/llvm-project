@@ -1,4 +1,5 @@
-;RUN: llc < %s -march=amdgcn -mcpu=gfx900 -verify-machineinstrs | FileCheck %s --check-prefix=GCN
+; RUN: llc < %s -march=amdgcn -mcpu=gfx900 -verify-machineinstrs | FileCheck %s --check-prefix=GCN
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}full_mask:
 ; GCN: s_mov_b64 exec, -1
@@ -51,7 +52,7 @@ main_body:
 ; GCN: s_bfm_b64 exec, s1, 0
 ; GCN: s_cmp_eq_u32 s1, 64
 ; GCN: s_cmov_b64 exec, -1
-; GCN: v_add_u32_e32 v0, s0, v0
+; GCN: v_add{{(_nc)?}}_u32_e32 v0, s0, v0
 define amdgpu_ps float @reuse_input(i32 inreg %count, i32 %a) {
 main_body:
   call void @llvm.amdgcn.init.exec.from.input(i32 %count, i32 19)
@@ -65,7 +66,7 @@ main_body:
 ; GCN: s_bfm_b64 exec, s1, 0
 ; GCN: s_cmp_eq_u32 s1, 64
 ; GCN: s_cmov_b64 exec, -1
-; GCN: v_add_u32_e32 v0, s0, v0
+; GCN: v_add{{(_nc)?}}_u32_e32 v0, s0, v0
 define amdgpu_ps float @reuse_input2(i32 inreg %count, i32 %a) {
 main_body:
   %s = add i32 %a, %count
