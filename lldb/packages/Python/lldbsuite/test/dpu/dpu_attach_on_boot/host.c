@@ -2,10 +2,8 @@
 
 int main() {
   struct dpu_rank_t *dpu_rank;
-  struct dpu_param_t params = {
-      .type = HW, .profile = "cycleAccurate=true", .logging_config = NULL};
 
-  if (dpu_alloc(&params, &dpu_rank) != DPU_API_SUCCESS) {
+  if (dpu_alloc("backend=hw,cycleAccurate=true", &dpu_rank) != DPU_API_SUCCESS) {
     return -1;
   }
 
