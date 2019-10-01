@@ -577,7 +577,7 @@ TEST_F(SymbolFilePDBTests, TestMaxMatches) {
   uint32_t num_results = results.GetSize();
   for (uint32_t i = 1; i <= iterations; ++i) {
     symfile->FindTypes(name, nullptr, i, searched_files, results);
-    uint32_t num_limited_results = results.GetSize() - num_results);
+    uint32_t num_limited_results = results.GetSize() - num_results;
     EXPECT_EQ(i, num_limited_results);
     EXPECT_EQ(num_limited_results, results.GetSize());
   }
