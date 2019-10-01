@@ -393,6 +393,32 @@ TEST_F(TargetDeclTest, Lambda) {
   EXPECT_DECLS("DeclRefExpr", "auto int x = 1");
 }
 
+TEST_F(TargetDeclTest, OverloadExpr) {
+  Code = R"cpp(
+    void func(int*);
+    void func(char*);
+
+    template <class T>
+    void foo(T t) {
+      [[func]](t);
+    };
+  )cpp";
+  EXPECT_DECLS("UnresolvedLookupExpr", "void func(int *)", "void func(char *)");
+
+  Code = R"cpp(
+    struct X {
+      void func(int*);
+      void func(char*);
+    };
+
+    template <class T>
+    void foo(X x, T t) {
+      x.[[func]](t);
+    };
+  )cpp";
+  EXPECT_DECLS("UnresolvedMemberExpr", "void func(int *)", "void func(char *)");
+}
+
 TEST_F(TargetDeclTest, ObjC) {
   Flags = {"-xobjective-c"};
   Code = R"cpp(

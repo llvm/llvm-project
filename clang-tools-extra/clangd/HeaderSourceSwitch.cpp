@@ -7,6 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "HeaderSourceSwitch.h"
+#include "AST.h"
+#include "Logger.h"
+#include "index/SymbolCollector.h"
+#include "clang/AST/Decl.h"
 
 namespace clang {
 namespace clangd {
@@ -62,6 +66,87 @@ llvm::Optional<Path> getCorrespondingHeaderOrSource(
       return NewPath.str().str();
   }
   return None;
+}
+
+llvm::Optional<Path> getCorrespondingHeaderOrSource(const Path &OriginalFile,
+                                                    ParsedAST &AST,
+                                                    const SymbolIndex *Index) {
+  if (!Index) {
+    // FIXME: use the AST to do the inference.
+    return None;
+  }
+  LookupRequest Request;
+  // Find all symbols present in the original file.
+  for (const auto *D : getIndexableLocalDecls(AST)) {
+    if (auto ID = getSymbolID(D))
+      Request.IDs.insert(*ID);
+  }
+  llvm::StringMap<int> Candidates; // Target path => score.
+  auto AwardTarget = [&](const char *TargetURI) {
+    if (auto TargetPath = URI::resolve(TargetURI, OriginalFile)) {
+      if (*TargetPath != OriginalFile) // exclude the original file.
+        ++Candidates[*TargetPath];
+    };
+  };
+  // If we switch from a header, we are looking for the implementation
+  // file, so we use the definition loc; otherwise we look for the header file,
+  // we use the decl loc;
+  //
+  // For each symbol in the original file, we get its target location (decl or
+  // def) from the index, then award that target file.
+  bool IsHeader = AST.getASTContext().getLangOpts().IsHeaderFile;
+  Index->lookup(Request, [&](const Symbol &Sym) {
+    if (IsHeader)
+      AwardTarget(Sym.Definition.FileURI);
+    else
+      AwardTarget(Sym.CanonicalDeclaration.FileURI);
+  });
+  // FIXME: our index doesn't have any interesting information (this could be
+  // that the background-index is not finished), we should use the decl/def
+  // locations from the AST to do the inference (from .cc to .h).
+  if (Candidates.empty())
+    return None;
+
+  // Pickup the winner, who contains most of symbols.
+  // FIXME: should we use other signals (file proximity) to help score?
+  auto Best = Candidates.begin();
+  for (auto It = Candidates.begin(); It != Candidates.end(); ++It) {
+    if (It->second > Best->second)
+      Best = It;
+    else if (It->second == Best->second && It->first() < Best->first())
+      // Select the first one in the lexical order if we have multiple
+      // candidates.
+      Best = It;
+  }
+  return Path(Best->first());
+}
+
+std::vector<const Decl *> getIndexableLocalDecls(ParsedAST &AST) {
+  std::vector<const Decl *> Results;
+  std::function<void(Decl *)> TraverseDecl = [&](Decl *D) {
+    auto *ND = llvm::dyn_cast<NamedDecl>(D);
+    if (!ND || ND->isImplicit())
+      return;
+    if (!SymbolCollector::shouldCollectSymbol(*ND, D->getASTContext(), {},
+                                              /*IsMainFileSymbol=*/false))
+      return;
+    if (!llvm::isa<FunctionDecl>(ND)) {
+      // Visit the children, but we skip function decls as we are not interested
+      // in the function body.
+      if (auto *Scope = llvm::dyn_cast<DeclContext>(ND)) {
+        for (auto *D : Scope->decls())
+          TraverseDecl(D);
+      }
+    }
+    if (llvm::isa<NamespaceDecl>(D))
+      return; // namespace is indexable, but we're not interested.
+    Results.push_back(D);
+  };
+  // Traverses the ParsedAST directly to collect all decls present in the main
+  // file.
+  for (auto *TopLevel : AST.getLocalTopLevelDecls())
+    TraverseDecl(TopLevel);
+  return Results;
 }
 
 } // namespace clangd
