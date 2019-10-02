@@ -260,6 +260,7 @@ if (LIBCXX_ENABLE_SHARED)
       DEFINE_SYMBOL ""
   )
   cxx_set_common_defines(cxx_shared)
+  cxx_add_warning_flags(cxx_shared)
 
   # Link against LLVM libunwind
   if (LIBCXXABI_USE_LLVM_UNWINDER)
@@ -360,6 +361,7 @@ if (LIBCXX_ENABLE_STATIC)
       OUTPUT_NAME   "c++"
   )
   cxx_set_common_defines(cxx_static)
+  cxx_add_warning_flags(cxx_static)
 
   if (LIBCXX_HERMETIC_STATIC_LIBRARY)
     # If the hermetic library doesn't define the operator new/delete functions

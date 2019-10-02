@@ -568,19 +568,19 @@ if (LIBCXX_HAS_COMMENT_LIB_PRAGMA)
 endif()
 
 # Warning flags ===============================================================
-add_definitions(-D_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-add_compile_flags_if_supported(
-    -Wall -Wextra -W -Wwrite-strings
-    -Wno-unused-parameter -Wno-long-long
-    -Werror=return-type -Wextra-semi)
-if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
-    add_compile_flags_if_supported(
-        -Wno-user-defined-literals
-        -Wno-covered-switch-default
-        -Wno-ignored-attributes # FIXME: Caused by _LIBCPP_NODEBUG_TYPE not being supported on older clangs
-        )
+function(cxx_add_warning_flags target)
+  target_compile_definitions(${target} PUBLIC -D_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+  target_add_compile_flags_if_supported(${target} PRIVATE -Wall -Wextra -W -Wwrite-strings
+                                                          -Wno-unused-parameter -Wno-long-long
+                                                          -Werror=return-type -Wextra-semi)
+  if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+    target_add_compile_flags_if_supported(${target} PRIVATE
+      -Wno-user-defined-literals
+      -Wno-covered-switch-default
+      -Wno-ignored-attributes # FIXME: Caused by _LIBCPP_NODEBUG_TYPE not being supported on older clangs
+    )
     if (LIBCXX_TARGETING_CLANG_CL)
-      add_compile_flags_if_supported(
+      target_add_compile_flags_if_supported(${target} PRIVATE
         -Wno-c++98-compat
         -Wno-c++98-compat-pedantic
         -Wno-c++11-compat
@@ -597,26 +597,27 @@ if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
         -Wno-double-promotion # FIXME: remove me
       )
     endif()
-elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
-    add_compile_flags_if_supported(
-        -Wno-literal-suffix
-        -Wno-c++14-compat
-        -Wno-noexcept-type)
-endif()
-if (LIBCXX_ENABLE_WERROR)
-  add_compile_flags_if_supported(-Werror)
-  add_compile_flags_if_supported(-WX)
-else()
-  # TODO(EricWF) Remove this. We shouldn't be suppressing errors when -Werror is
-  # added elsewhere.
-  add_compile_flags_if_supported(-Wno-error)
-endif()
-if (LIBCXX_ENABLE_PEDANTIC)
-  add_compile_flags_if_supported(-pedantic)
-endif()
-if (LIBCXX_DISABLE_MACRO_CONFLICT_WARNINGS)
-  add_definitions(-D_LIBCPP_DISABLE_MACRO_CONFLICT_WARNINGS)
-endif()
+  elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
+    target_add_compile_flags_if_supported(${target} PRIVATE
+      -Wno-literal-suffix
+      -Wno-c++14-compat
+      -Wno-noexcept-type)
+  endif()
+  if (LIBCXX_ENABLE_WERROR)
+    target_add_compile_flags_if_supported(${target} PRIVATE -Werror)
+    target_add_compile_flags_if_supported(${target} PRIVATE -WX)
+  else()
+    # TODO(EricWF) Remove this. We shouldn't be suppressing errors when -Werror is
+    # added elsewhere.
+    target_add_compile_flags_if_supported(${target} PRIVATE -Wno-error)
+  endif()
+  if (LIBCXX_ENABLE_PEDANTIC)
+    target_add_compile_flags_if_supported(${target} PRIVATE -pedantic)
+  endif()
+  if (LIBCXX_DISABLE_MACRO_CONFLICT_WARNINGS)
+    target_compile_definitions(${target} PRIVATE -D_LIBCPP_DISABLE_MACRO_CONFLICT_WARNINGS)
+  endif()
+endfunction()
 
 # Exception flags =============================================================
 if (LIBCXX_ENABLE_EXCEPTIONS)
