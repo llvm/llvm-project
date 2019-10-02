@@ -126,8 +126,8 @@ TokenBuffer::spelledForExpandedToken(const syntax::Token *Expanded) const {
 
   unsigned ExpandedIndex = Expanded - ExpandedTokens.data();
   // Find the first mapping that produced tokens after \p Expanded.
-  auto It = llvm::bsearch(File.Mappings, [&](const Mapping &M) {
-    return ExpandedIndex < M.BeginExpanded;
+  auto It = llvm::partition_point(File.Mappings, [&](const Mapping &M) {
+    return M.BeginExpanded <= ExpandedIndex;
   });
   // Our token could only be produced by the previous mapping.
   if (It == File.Mappings.begin()) {
@@ -211,8 +211,8 @@ TokenBuffer::expansionStartingAt(const syntax::Token *Spelled) const {
          Spelled < (File.SpelledTokens.data() + File.SpelledTokens.size()));
 
   unsigned SpelledIndex = Spelled - File.SpelledTokens.data();
-  auto M = llvm::bsearch(File.Mappings, [&](const Mapping &M) {
-    return SpelledIndex <= M.BeginSpelled;
+  auto M = llvm::partition_point(File.Mappings, [&](const Mapping &M) {
+    return M.BeginSpelled < SpelledIndex;
   });
   if (M == File.Mappings.end() || M->BeginSpelled != SpelledIndex)
     return llvm::None;
