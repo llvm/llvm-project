@@ -223,12 +223,12 @@ define <2 x half> @v_mad_mix_v2f32_clamp_postcvt_hi(<2 x half> %src0, <2 x half>
 
 ; FIXME: Should be able to use mixlo/mixhi
 ; GCN-LABEL: {{^}}v_mad_mix_v2f32_clamp_precvt:
-; GFX9: v_mad_mix_f32 v3, v0, v1, v2 op_sel_hi:[1,1,1] clamp
-; GFX9-NEXT: v_mad_mix_f32 v0, v0, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
-; GFX9: v_cvt_f16_f32_e32 v1, v3
+; GFX9: v_mad_mix_f32 v3, v0, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
+; GFX9-NEXT: v_mad_mix_f32 v0, v0, v1, v2 op_sel_hi:[1,1,1] clamp
 ; GFX9: v_cvt_f16_f32_e32 v0, v0
-; GFX9: v_and_b32_e32 v1, 0xffff, v1
-; GFX9: v_lshl_or_b32 v0, v0, 16, v1
+; GFX9: v_cvt_f16_f32_e32 v1, v3
+; GFX9: v_and_b32_e32 v0, 0xffff, v0
+; GFX9: v_lshl_or_b32 v0, v1, 16, v0
 ; GFX9: s_setpc_b64
 define <2 x half> @v_mad_mix_v2f32_clamp_precvt(<2 x half> %src0, <2 x half> %src1, <2 x half> %src2) #0 {
   %src0.ext = fpext <2 x half> %src0 to <2 x float>

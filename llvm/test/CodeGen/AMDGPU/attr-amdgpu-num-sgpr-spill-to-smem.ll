@@ -1,4 +1,5 @@
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=fiji -amdgpu-spill-sgpr-to-smem=1 -verify-machineinstrs < %s | FileCheck -check-prefix=TOSMEM -check-prefix=ALL %s
+; REQUIRES: disabled
+; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=fiji -enable-misched=false -amdgpu-spill-sgpr-to-smem=1 -verify-machineinstrs < %s | FileCheck -check-prefix=TOSMEM -check-prefix=ALL %s
 
 ; FIXME: SGPR-to-SMEM requires an additional SGPR always to scavenge m0
 

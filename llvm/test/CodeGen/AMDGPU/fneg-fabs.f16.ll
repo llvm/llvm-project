@@ -40,7 +40,7 @@ define amdgpu_kernel void @fneg_fabs_fmul_f16(half addrspace(1)* %out, half %x, 
 ; unless isFabsFree returns true
 
 ; GCN-LABEL: {{^}}fneg_fabs_free_f16:
-; GCN: s_or_b32 s{{[0-9]+}}, s{{[0-9]+}}, 0x8000
+; GCN: {{s_or_b32 s[0-9]+, s[0-9]+, 0x8000|s_bitset1_b32 s[0-9]+, 15}}
 define amdgpu_kernel void @fneg_fabs_free_f16(half addrspace(1)* %out, i16 %in) {
   %bc = bitcast i16 %in to half
   %fabs = call half @llvm.fabs.f16(half %bc)
@@ -50,7 +50,7 @@ define amdgpu_kernel void @fneg_fabs_free_f16(half addrspace(1)* %out, i16 %in) 
 }
 
 ; GCN-LABEL: {{^}}fneg_fabs_f16:
-; GCN: s_or_b32 s{{[0-9]+}}, s{{[0-9]+}}, 0x8000
+; GCN: {{s_or_b32 s[0-9]+, s[0-9]+, 0x8000|s_bitset1_b32 s[0-9]+, 15}}
 define amdgpu_kernel void @fneg_fabs_f16(half addrspace(1)* %out, half %in) {
   %fabs = call half @llvm.fabs.f16(half %in)
   %fsub = fsub half -0.0, %fabs

@@ -148,7 +148,6 @@ define amdgpu_kernel void @add_i32_varying_gfx1064(i32 addrspace(1)* %out) {
 ; GFX1064:         s_or_saveexec_b64 s[4:5], -1
 ; GFX1064:         v_mov_b32_e32 v3, v1
 ; GFX1064:         v_mov_b32_e32 v4, v1
-; GFX1064:         s_mov_b32 s2, -1
 ; GFX1064:         v_mov_b32_dpp v3, v2 row_shr:1 row_mask:0xf bank_mask:0xf
 ; GFX1064:         v_add_nc_u32_e32 v2, v2, v3
 ; GFX1064:         v_mov_b32_e32 v3, v1
@@ -165,17 +164,18 @@ define amdgpu_kernel void @add_i32_varying_gfx1064(i32 addrspace(1)* %out) {
 ; GFX1064:         v_mov_b32_dpp v4, v3 quad_perm:[0,1,2,3] row_mask:0xa bank_mask:0xf
 ; GFX1064:         v_add_nc_u32_e32 v2, v2, v4
 ; GFX1064:         v_mov_b32_e32 v4, v1
-; GFX1064:         v_readlane_b32 s3, v2, 31
-; GFX1064:         v_mov_b32_e32 v3, s3
+; GFX1064:         v_readlane_b32 s2, v2, 31
+; GFX1064:         v_mov_b32_e32 v3, s2
 ; GFX1064:         v_mov_b32_dpp v4, v3 quad_perm:[0,1,2,3] row_mask:0xc bank_mask:0xf
 ; GFX1064:         v_add_nc_u32_e32 v2, v2, v4
 ; GFX1064:         v_mov_b32_dpp v1, v2 row_shr:1 row_mask:0xf bank_mask:0xf
-; GFX1064:         v_readlane_b32 s3, v2, 15
-; GFX1064:         v_readlane_b32 s6, v2, 31
-; GFX1064:         v_writelane_b32 v1, s3, 16
-; GFX1064:         v_readlane_b32 s3, v2, 63
-; GFX1064:         v_writelane_b32 v1, s6, 32
+; GFX1064:         v_readlane_b32 s2, v2, 15
+; GFX1064:         v_readlane_b32 s3, v2, 31
 ; GFX1064:         v_readlane_b32 s6, v2, 47
+; GFX1064:         v_writelane_b32 v1, s2, 16
+; GFX1064:         s_mov_b32 s2, -1
+; GFX1064:         v_writelane_b32 v1, s3, 32
+; GFX1064:         v_readlane_b32 s3, v2, 63
 ; GFX1064:         v_writelane_b32 v1, s6, 48
 ; GFX1064:         s_mov_b64 exec, s[4:5]
 ; GFX1064:         v_cmp_eq_u32_e32 vcc, 0, v0

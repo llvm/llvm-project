@@ -8,10 +8,10 @@ define void @local_store_i56(i56 addrspace(3)* %ptr, i56 %arg) #0 {
 ; CIVI:       ; %bb.0:
 ; CIVI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CIVI-NEXT:    s_mov_b32 m0, -1
-; CIVI-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
 ; CIVI-NEXT:    ds_write_b16 v0, v2 offset:4
 ; CIVI-NEXT:    ds_write_b32 v0, v1
-; CIVI-NEXT:    ds_write_b8 v0, v3 offset:6
+; CIVI-NEXT:    v_lshrrev_b32_e32 v1, 16, v2
+; CIVI-NEXT:    ds_write_b8 v0, v1 offset:6
 ; CIVI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CIVI-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -103,9 +103,9 @@ define amdgpu_kernel void @local_store_i48(i48 addrspace(3)* %ptr, i48 %arg) #0 
 ; HAWAII-NEXT:    s_mov_b32 m0, -1
 ; HAWAII-NEXT:    s_waitcnt lgkmcnt(0)
 ; HAWAII-NEXT:    v_mov_b32_e32 v0, s0
+; HAWAII-NEXT:    v_mov_b32_e32 v1, s2
+; HAWAII-NEXT:    ds_write_b16 v0, v1 offset:4
 ; HAWAII-NEXT:    v_mov_b32_e32 v1, s1
-; HAWAII-NEXT:    v_mov_b32_e32 v2, s2
-; HAWAII-NEXT:    ds_write_b16 v0, v2 offset:4
 ; HAWAII-NEXT:    ds_write_b32 v0, v1
 ; HAWAII-NEXT:    s_endpgm
 ;
@@ -117,9 +117,9 @@ define amdgpu_kernel void @local_store_i48(i48 addrspace(3)* %ptr, i48 %arg) #0 
 ; FIJI-NEXT:    s_mov_b32 m0, -1
 ; FIJI-NEXT:    s_waitcnt lgkmcnt(0)
 ; FIJI-NEXT:    v_mov_b32_e32 v0, s0
+; FIJI-NEXT:    v_mov_b32_e32 v1, s2
+; FIJI-NEXT:    ds_write_b16 v0, v1 offset:4
 ; FIJI-NEXT:    v_mov_b32_e32 v1, s1
-; FIJI-NEXT:    v_mov_b32_e32 v2, s2
-; FIJI-NEXT:    ds_write_b16 v0, v2 offset:4
 ; FIJI-NEXT:    ds_write_b32 v0, v1
 ; FIJI-NEXT:    s_endpgm
 ;
@@ -130,10 +130,10 @@ define amdgpu_kernel void @local_store_i48(i48 addrspace(3)* %ptr, i48 %arg) #0 
 ; GFX9-NEXT:    s_load_dword s2, s[4:5], 0xc
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s0
-; GFX9-NEXT:    v_mov_b32_e32 v1, s1
-; GFX9-NEXT:    v_mov_b32_e32 v2, s2
-; GFX9-NEXT:    ds_write_b16 v0, v2 offset:4
-; GFX9-NEXT:    ds_write_b32 v0, v1
+; GFX9-NEXT:    v_mov_b32_e32 v2, s1
+; GFX9-NEXT:    v_mov_b32_e32 v1, s2
+; GFX9-NEXT:    ds_write_b16 v0, v1 offset:4
+; GFX9-NEXT:    ds_write_b32 v0, v2
 ; GFX9-NEXT:    s_endpgm
   store i48 %arg, i48 addrspace(3)* %ptr, align 8
   ret void
@@ -148,11 +148,11 @@ define amdgpu_kernel void @local_store_i65(i65 addrspace(3)* %ptr, i65 %arg) #0 
 ; HAWAII-NEXT:    s_mov_b32 m0, -1
 ; HAWAII-NEXT:    s_waitcnt lgkmcnt(0)
 ; HAWAII-NEXT:    v_mov_b32_e32 v2, s2
+; HAWAII-NEXT:    s_and_b32 s3, s3, 1
+; HAWAII-NEXT:    v_mov_b32_e32 v0, s3
+; HAWAII-NEXT:    ds_write_b8 v2, v0 offset:8
 ; HAWAII-NEXT:    v_mov_b32_e32 v0, s0
 ; HAWAII-NEXT:    v_mov_b32_e32 v1, s1
-; HAWAII-NEXT:    s_and_b32 s0, s3, 1
-; HAWAII-NEXT:    v_mov_b32_e32 v3, s0
-; HAWAII-NEXT:    ds_write_b8 v2, v3 offset:8
 ; HAWAII-NEXT:    ds_write_b64 v2, v[0:1]
 ; HAWAII-NEXT:    s_endpgm
 ;
@@ -164,11 +164,11 @@ define amdgpu_kernel void @local_store_i65(i65 addrspace(3)* %ptr, i65 %arg) #0 
 ; FIJI-NEXT:    s_mov_b32 m0, -1
 ; FIJI-NEXT:    s_waitcnt lgkmcnt(0)
 ; FIJI-NEXT:    v_mov_b32_e32 v2, s2
+; FIJI-NEXT:    s_and_b32 s3, s3, 1
+; FIJI-NEXT:    v_mov_b32_e32 v0, s3
+; FIJI-NEXT:    ds_write_b8 v2, v0 offset:8
 ; FIJI-NEXT:    v_mov_b32_e32 v0, s0
 ; FIJI-NEXT:    v_mov_b32_e32 v1, s1
-; FIJI-NEXT:    s_and_b32 s0, s3, 1
-; FIJI-NEXT:    v_mov_b32_e32 v3, s0
-; FIJI-NEXT:    ds_write_b8 v2, v3 offset:8
 ; FIJI-NEXT:    ds_write_b64 v2, v[0:1]
 ; FIJI-NEXT:    s_endpgm
 ;
@@ -180,9 +180,9 @@ define amdgpu_kernel void @local_store_i65(i65 addrspace(3)* %ptr, i65 %arg) #0 
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-NEXT:    s_and_b32 s3, s3, 1
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s1
-; GFX9-NEXT:    s_and_b32 s0, s3, 1
-; GFX9-NEXT:    v_mov_b32_e32 v3, s0
+; GFX9-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX9-NEXT:    ds_write_b8 v2, v3 offset:8
 ; GFX9-NEXT:    ds_write_b64 v2, v[0:1]
 ; GFX9-NEXT:    s_endpgm
@@ -215,10 +215,10 @@ define void @local_store_i17(i17 addrspace(3)* %ptr, i17 %arg) #0 {
 ; CIVI-LABEL: local_store_i17:
 ; CIVI:       ; %bb.0:
 ; CIVI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CIVI-NEXT:    v_bfe_u32 v2, v1, 16, 1
 ; CIVI-NEXT:    s_mov_b32 m0, -1
 ; CIVI-NEXT:    ds_write_b16 v0, v1
-; CIVI-NEXT:    ds_write_b8 v0, v2 offset:2
+; CIVI-NEXT:    v_bfe_u32 v1, v1, 16, 1
+; CIVI-NEXT:    ds_write_b8 v0, v1 offset:2
 ; CIVI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CIVI-NEXT:    s_setpc_b64 s[30:31]
 ;

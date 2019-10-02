@@ -2,8 +2,8 @@
 
 ; GCN-LABEL: {{^}}v_insertelement_v2i16_dynamic_vgpr:
 
-; GCN: {{flat|global}}_load_dword [[IDX:v[0-9]+]]
 ; GCN: {{flat|global}}_load_dword [[VEC:v[0-9]+]]
+; GCN: {{flat|global}}_load_dword [[IDX:v[0-9]+]]
 
 ; GFX89-DAG: s_mov_b32 [[MASKK:s[0-9]+]], 0xffff{{$}}
 ; GCN-DAG: s_mov_b32 [[K:s[0-9]+]], 0x3e7
