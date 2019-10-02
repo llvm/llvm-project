@@ -363,16 +363,15 @@ Error InstrProfSymtab::create(Module &M, bool InLTO) {
 
 uint64_t InstrProfSymtab::getFunctionHashFromAddress(uint64_t Address) {
   finalizeSymtab();
-  auto Result =
-      std::lower_bound(AddrToMD5Map.begin(), AddrToMD5Map.end(), Address,
-                       [](const std::pair<uint64_t, uint64_t> &LHS,
-                          uint64_t RHS) { return LHS.first < RHS; });
+  auto It = partition_point(AddrToMD5Map, [=](std::pair<uint64_t, uint64_t> A) {
+    return A.first < Address;
+  });
   // Raw function pointer collected by value profiler may be from
   // external functions that are not instrumented. They won't have
   // mapping data to be used by the deserializer. Force the value to
   // be 0 in this case.
-  if (Result != AddrToMD5Map.end() && Result->first == Address)
-    return (uint64_t)Result->second;
+  if (It != AddrToMD5Map.end() && It->first == Address)
+    return (uint64_t)It->second;
   return 0;
 }
 
