@@ -153,7 +153,7 @@ COFF Improvements
 
 * Having more than two ``/natvis:`` now works correctly; it used to not
   work for larger binaries before.
-  (`r327895 <https://reviews.llvm.org/rL327895>`_)
+  (`r359515 <https://reviews.llvm.org/rL359515>`_)
 
 * Undefined symbols are now printed only in demangled form. Pass
   ``/demangle:no`` to see raw symbol names instead.
