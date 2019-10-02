@@ -22,15 +22,17 @@ enum PartialMappingIdx {
   PM_SGPR128 = 9,
   PM_SGPR256 = 10,
   PM_SGPR512 = 11,
-  PM_VGPR1  = 12,
-  PM_VGPR16 = 16,
-  PM_VGPR32 = 17,
-  PM_VGPR64 = 18,
-  PM_VGPR128 = 19,
-  PM_VGPR256 = 20,
-  PM_VGPR512 = 21,
-  PM_SGPR96 = 22,
-  PM_VGPR96 = 23
+  PM_SGPR1024 = 12,
+  PM_VGPR1  = 13,
+  PM_VGPR16 = 17,
+  PM_VGPR32 = 18,
+  PM_VGPR64 = 19,
+  PM_VGPR128 = 20,
+  PM_VGPR256 = 21,
+  PM_VGPR512 = 22,
+  PM_VGPR1024 = 23,
+  PM_SGPR96 = 24,
+  PM_VGPR96 = 25
 };
 
 const RegisterBankInfo::PartialMapping PartMappings[] {
@@ -45,6 +47,7 @@ const RegisterBankInfo::PartialMapping PartMappings[] {
   {0, 128, SGPRRegBank},
   {0, 256, SGPRRegBank},
   {0, 512, SGPRRegBank},
+  {0, 1024, SGPRRegBank},
 
   {0, 1,  VGPRRegBank}, // VGPR begin
   {0, 16, VGPRRegBank},
@@ -53,8 +56,9 @@ const RegisterBankInfo::PartialMapping PartMappings[] {
   {0, 128, VGPRRegBank},
   {0, 256, VGPRRegBank},
   {0, 512, VGPRRegBank},
+  {0, 1024, VGPRRegBank},
   {0, 96, SGPRRegBank},
-  {0, 96, VGPRRegBank},
+  {0, 96, VGPRRegBank}
 };
 
 const RegisterBankInfo::ValueMapping ValMappings[] {
@@ -65,30 +69,32 @@ const RegisterBankInfo::ValueMapping ValMappings[] {
   {&PartMappings[1], 1},
 
   // SGPRs
-  {&PartMappings[2], 1},
+  {&PartMappings[2], 1}, // 1
   {nullptr, 0}, // Illegal power of 2 sizes
   {nullptr, 0},
   {nullptr, 0},
-  {&PartMappings[3], 1},
-  {&PartMappings[4], 1},
-  {&PartMappings[5], 1},
-  {&PartMappings[6], 1},
-  {&PartMappings[7], 1},
-  {&PartMappings[8], 1},
+  {&PartMappings[3], 1}, // 16
+  {&PartMappings[4], 1}, // 32
+  {&PartMappings[5], 1}, // 64
+  {&PartMappings[6], 1}, // 128
+  {&PartMappings[7], 1}, // 256
+  {&PartMappings[8], 1}, // 512
+  {&PartMappings[9], 1}, // 1024
 
-    // VGPRs
-  {&PartMappings[9], 1},
+  // VGPRs
+  {&PartMappings[10], 1}, // 1
   {nullptr, 0},
   {nullptr, 0},
   {nullptr, 0},
-  {&PartMappings[10], 1},
-  {&PartMappings[11], 1},
-  {&PartMappings[12], 1},
-  {&PartMappings[13], 1},
-  {&PartMappings[14], 1},
-  {&PartMappings[15], 1},
-  {&PartMappings[16], 1},
-  {&PartMappings[17], 1}
+  {&PartMappings[11], 1}, // 16
+  {&PartMappings[12], 1}, // 32
+  {&PartMappings[13], 1}, // 64
+  {&PartMappings[14], 1}, // 128
+  {&PartMappings[15], 1}, // 256
+  {&PartMappings[16], 1}, // 512
+  {&PartMappings[17], 1}, // 1024
+  {&PartMappings[18], 1},
+  {&PartMappings[19], 1}
 };
 
 const RegisterBankInfo::PartialMapping SGPROnly64BreakDown[] {
@@ -116,7 +122,7 @@ const RegisterBankInfo::ValueMapping ValMappingsSGPR64OnlyVGPR32[] {
 enum ValueMappingIdx {
   SCCStartIdx = 0,
   SGPRStartIdx = 2,
-  VGPRStartIdx = 12
+  VGPRStartIdx = 13
 };
 
 const RegisterBankInfo::ValueMapping *getValueMapping(unsigned BankID,

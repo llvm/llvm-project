@@ -1,2 +1,2 @@
 RUN: not llvm-lib %S/Inputs/cl-gl.obj 2>&1 | FileCheck %s
-CHECK: not a COFF object, bitcode or resource file
+CHECK: not a COFF object, bitcode, archive or resource file

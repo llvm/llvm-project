@@ -2215,7 +2215,7 @@ void llvm::removeUnwindEdge(BasicBlock *BB, DomTreeUpdater *DTU) {
 bool llvm::removeUnreachableBlocks(Function &F, LazyValueInfo *LVI,
                                    DomTreeUpdater *DTU,
                                    MemorySSAUpdater *MSSAU) {
-  SmallPtrSet<BasicBlock*, 16> Reachable;
+  SmallPtrSet<BasicBlock *, 16> Reachable;
   bool Changed = markAliveBlocks(F, Reachable, DTU);
 
   // If there are unreachable blocks in the CFG...
@@ -2223,14 +2223,14 @@ bool llvm::removeUnreachableBlocks(Function &F, LazyValueInfo *LVI,
     return Changed;
 
   assert(Reachable.size() < F.size());
-  NumRemoved += F.size()-Reachable.size();
+  NumRemoved += F.size() - Reachable.size();
 
   SmallSetVector<BasicBlock *, 8> DeadBlockSet;
-  for (Function::iterator I = ++F.begin(), E = F.end(); I != E; ++I) {
-    auto *BB = &*I;
-    if (Reachable.count(BB))
+  for (BasicBlock &BB : F) {
+    // Skip reachable basic blocks
+    if (Reachable.find(&BB) != Reachable.end())
       continue;
-    DeadBlockSet.insert(BB);
+    DeadBlockSet.insert(&BB);
   }
 
   if (MSSAU)
@@ -2249,13 +2249,6 @@ bool llvm::removeUnreachableBlocks(Function &F, LazyValueInfo *LVI,
     if (LVI)
       LVI->eraseBlock(BB);
     BB->dropAllReferences();
-  }
-  for (Function::iterator I = ++F.begin(); I != F.end();) {
-    auto *BB = &*I;
-    if (Reachable.count(BB)) {
-      ++I;
-      continue;
-    }
     if (DTU) {
       // Remove the terminator of BB to clear the successor list of BB.
       if (BB->getTerminator())
@@ -2263,9 +2256,6 @@ bool llvm::removeUnreachableBlocks(Function &F, LazyValueInfo *LVI,
       new UnreachableInst(BB->getContext(), BB);
       assert(succ_empty(BB) && "The successor list of BB isn't empty before "
                                "applying corresponding DTU updates.");
-      ++I;
-    } else {
-      I = F.getBasicBlockList().erase(I);
     }
   }
 
@@ -2281,7 +2271,11 @@ bool llvm::removeUnreachableBlocks(Function &F, LazyValueInfo *LVI,
     }
     if (!Deleted)
       return false;
+  } else {
+    for (auto *BB : DeadBlockSet)
+      BB->eraseFromParent();
   }
+
   return true;
 }
 
