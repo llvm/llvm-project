@@ -691,6 +691,8 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
         type_sp = unique_ast_entry_up->m_type_sp;
         if (type_sp) {
           dwarf->GetDIEToType()[die.GetDIE()] = type_sp.get();
+          LinkDeclContextToDIE(
+              GetCachedClangDeclContextForDIE(unique_ast_entry_up->m_die), die);
           return type_sp;
         }
       }
