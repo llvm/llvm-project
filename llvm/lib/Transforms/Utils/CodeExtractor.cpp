@@ -293,10 +293,8 @@ static BasicBlock *getCommonExitBlock(const SetVector<BasicBlock *> &Blocks) {
         CommonExitBlock = Succ;
         continue;
       }
-      if (CommonExitBlock == Succ)
-        continue;
-
-      return true;
+      if (CommonExitBlock != Succ)
+        return true;
     }
     return false;
   };
