@@ -9388,6 +9388,19 @@ TEST_F(FormatTest, DoesNotTryToParseUDLiteralsInPreCpp11Code) {
             format("#define x(_a) printf(\"foo\"_a);", Style));
 }
 
+TEST_F(FormatTest, CppLexVersion) {
+  FormatStyle Style = getLLVMStyle();
+  // Formatting of x * y differs if x is a type.
+  verifyFormat("void foo() { MACRO(a * b); }", Style);
+  verifyFormat("void foo() { MACRO(int *b); }", Style);
+
+  // LLVM style uses latest lexer.
+  verifyFormat("void foo() { MACRO(char8_t *b); }", Style);
+  Style.Standard = FormatStyle::LS_Cpp17;
+  // But in c++17, char8_t isn't a keyword.
+  verifyFormat("void foo() { MACRO(char8_t * b); }", Style);
+}
+
 TEST_F(FormatTest, UnderstandsCpp1y) { verifyFormat("int bi{1'000'000};"); }
 
 TEST_F(FormatTest, BreakStringLiteralsBeforeUnbreakableTokenSequence) {
@@ -12305,11 +12318,18 @@ TEST_F(FormatTest, ParsesConfiguration) {
               FormatStyle::PAS_Middle);
 
   Style.Standard = FormatStyle::LS_Auto;
+  CHECK_PARSE("Standard: c++03", Standard, FormatStyle::LS_Cpp03);
+  CHECK_PARSE("Standard: c++11", Standard, FormatStyle::LS_Cpp11);
+  CHECK_PARSE("Standard: c++14", Standard, FormatStyle::LS_Cpp14);
+  CHECK_PARSE("Standard: c++17", Standard, FormatStyle::LS_Cpp17);
+  CHECK_PARSE("Standard: c++20", Standard, FormatStyle::LS_Cpp20);
+  CHECK_PARSE("Standard: Auto", Standard, FormatStyle::LS_Auto);
+  CHECK_PARSE("Standard: Latest", Standard, FormatStyle::LS_Latest);
+  // Legacy aliases:
   CHECK_PARSE("Standard: Cpp03", Standard, FormatStyle::LS_Cpp03);
-  CHECK_PARSE("Standard: Cpp11", Standard, FormatStyle::LS_Cpp11);
+  CHECK_PARSE("Standard: Cpp11", Standard, FormatStyle::LS_Latest);
   CHECK_PARSE("Standard: C++03", Standard, FormatStyle::LS_Cpp03);
   CHECK_PARSE("Standard: C++11", Standard, FormatStyle::LS_Cpp11);
-  CHECK_PARSE("Standard: Auto", Standard, FormatStyle::LS_Auto);
 
   Style.BreakBeforeBinaryOperators = FormatStyle::BOS_All;
   CHECK_PARSE("BreakBeforeBinaryOperators: NonAssignment",

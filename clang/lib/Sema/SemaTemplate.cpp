@@ -5499,7 +5499,7 @@ namespace {
     bool Visit##Class##Type(const Class##Type *) { return false; }
 #define NON_CANONICAL_TYPE(Class, Parent) \
     bool Visit##Class##Type(const Class##Type *) { return false; }
-#include "clang/AST/TypeNodes.def"
+#include "clang/AST/TypeNodes.inc"
 
     bool VisitTagDecl(const TagDecl *Tag);
     bool VisitNestedNameSpecifier(NestedNameSpecifier *NNS);

@@ -166,7 +166,7 @@ namespace clang {
 #define TYPE(Class, Base) \
         case Type::Class: Visit##Class##Type(cast<Class##Type>(T)); break;
 #define ABSTRACT_TYPE(Class, Base)
-#include "clang/AST/TypeNodes.def"
+#include "clang/AST/TypeNodes.inc"
         }
       }
     }
@@ -177,7 +177,7 @@ namespace clang {
 
 #define TYPE(Class, Base) void Visit##Class##Type(const Class##Type *T);
 #define ABSTRACT_TYPE(Class, Base)
-#include "clang/AST/TypeNodes.def"
+#include "clang/AST/TypeNodes.inc"
   };
 
 } // namespace clang

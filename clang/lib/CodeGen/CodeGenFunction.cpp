@@ -194,7 +194,7 @@ TypeEvaluationKind CodeGenFunction::getEvaluationKind(QualType type) {
 #define NON_CANONICAL_TYPE(name, parent) case Type::name:
 #define DEPENDENT_TYPE(name, parent) case Type::name:
 #define NON_CANONICAL_UNLESS_DEPENDENT_TYPE(name, parent) case Type::name:
-#include "clang/AST/TypeNodes.def"
+#include "clang/AST/TypeNodes.inc"
       llvm_unreachable("non-canonical or dependent type in IR-generation");
 
     case Type::Auto:
@@ -1871,7 +1871,7 @@ void CodeGenFunction::EmitVariablyModifiedType(QualType type) {
 #define NON_CANONICAL_TYPE(Class, Base)
 #define DEPENDENT_TYPE(Class, Base) case Type::Class:
 #define NON_CANONICAL_UNLESS_DEPENDENT_TYPE(Class, Base)
-#include "clang/AST/TypeNodes.def"
+#include "clang/AST/TypeNodes.inc"
       llvm_unreachable("unexpected dependent type!");
 
     // These types are never variably-modified.

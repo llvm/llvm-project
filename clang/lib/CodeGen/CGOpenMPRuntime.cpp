@@ -7324,10 +7324,10 @@ private:
         return ElemSize;
 
       if (const Expr *LenExpr = OAE->getLength()) {
-        llvm::Value *LengthVal = CGF.EmitScalarExpr(OAE->getLength());
-        LengthVal = CGF.EmitScalarConversion(
-            LengthVal, OAE->getLength()->getType(),
-            CGF.getContext().getSizeType(), OAE->getLength()->getExprLoc());
+        llvm::Value *LengthVal = CGF.EmitScalarExpr(LenExpr);
+        LengthVal = CGF.EmitScalarConversion(LengthVal, LenExpr->getType(),
+                                             CGF.getContext().getSizeType(),
+                                             LenExpr->getExprLoc());
         return CGF.Builder.CreateNUWMul(LengthVal, ElemSize);
       }
       assert(!OAE->getLength() && OAE->getColonLoc().isValid() &&
