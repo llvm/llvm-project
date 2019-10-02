@@ -2179,7 +2179,7 @@ NodeArrayNode *Demangler::demangleFunctionParameterList(StringView &MangledName,
 
 NodeArrayNode *
 Demangler::demangleTemplateParameterList(StringView &MangledName) {
-  NodeList *Head;
+  NodeList *Head = nullptr;
   NodeList **Current = &Head;
   size_t Count = 0;
 

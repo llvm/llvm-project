@@ -1,5 +1,5 @@
 ; RUN: llc -march=hexagon -enable-pipeliner=true -stats -o /dev/null < %s \
-; RUN:      2>&1 | FileCheck %s --check-prefix=STATS
+; RUN:      2>&1 -pipeliner-experimental-cg=true | FileCheck %s --check-prefix=STATS
 ; REQUIRES: asserts
 
 ; Test that we do not schedule chained references too far apart,

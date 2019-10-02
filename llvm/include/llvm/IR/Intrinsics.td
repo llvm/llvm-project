@@ -193,6 +193,10 @@ class LLVMHalfElementsVectorType<int num> : LLVMMatchType<num>;
 class LLVMSubdivide2VectorType<int num> : LLVMMatchType<num>;
 class LLVMSubdivide4VectorType<int num> : LLVMMatchType<num>;
 
+// Match the element count and bit width of another intrinsic parameter, but
+// change the element type to an integer.
+class LLVMVectorOfBitcastsToInt<int num> : LLVMMatchType<num>;
+
 def llvm_void_ty       : LLVMType<isVoid>;
 let isAny = 1 in {
   def llvm_any_ty        : LLVMType<Any>;

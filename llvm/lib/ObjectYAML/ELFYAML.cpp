@@ -1029,6 +1029,7 @@ static void sectionMapping(IO &IO, ELFYAML::HashSection &Section) {
   IO.mapOptional("Content", Section.Content);
   IO.mapOptional("Bucket", Section.Bucket);
   IO.mapOptional("Chain", Section.Chain);
+  IO.mapOptional("Size", Section.Size);
 }
 
 static void sectionMapping(IO &IO, ELFYAML::NoBitsSection &Section) {
@@ -1210,14 +1211,20 @@ StringRef MappingTraits<std::unique_ptr<ELFYAML::Section>>::validate(
   }
 
   if (const auto *HS = dyn_cast<ELFYAML::HashSection>(Section.get())) {
-    if (!HS->Content && !HS->Bucket && !HS->Chain)
-      return "one of \"Content\", \"Bucket\" or \"Chain\" must be specified";
+    if (!HS->Content && !HS->Bucket && !HS->Chain && !HS->Size)
+      return "one of \"Content\", \"Size\", \"Bucket\" or \"Chain\" must be "
+             "specified";
 
-    if (HS->Content) {
+    if (HS->Content || HS->Size) {
+      if (HS->Size && HS->Content &&
+          (uint64_t)*HS->Size < HS->Content->binary_size())
+        return "\"Size\" must be greater than or equal to the content "
+               "size";
+
       if (HS->Bucket)
-        return "\"Content\" and \"Bucket\" cannot be used together";
+        return "\"Bucket\" cannot be used with \"Content\" or \"Size\"";
       if (HS->Chain)
-        return "\"Content\" and \"Chain\" cannot be used together";
+        return "\"Chain\" cannot be used with \"Content\" or \"Size\"";
       return {};
     }
 

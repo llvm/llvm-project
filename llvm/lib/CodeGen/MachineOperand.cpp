@@ -1065,17 +1065,6 @@ uint64_t MachineMemOperand::getAlignment() const {
   return MinAlign(getBaseAlignment(), getOffset());
 }
 
-void MachineMemOperand::print(raw_ostream &OS) const {
-  ModuleSlotTracker DummyMST(nullptr);
-  print(OS, DummyMST);
-}
-
-void MachineMemOperand::print(raw_ostream &OS, ModuleSlotTracker &MST) const {
-  SmallVector<StringRef, 0> SSNs;
-  LLVMContext Ctx;
-  print(OS, MST, SSNs, Ctx, nullptr, nullptr);
-}
-
 void MachineMemOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
                               SmallVectorImpl<StringRef> &SSNs,
                               const LLVMContext &Context,

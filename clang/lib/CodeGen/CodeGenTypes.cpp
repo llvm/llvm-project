@@ -402,7 +402,7 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
 #define NON_CANONICAL_TYPE(Class, Base) case Type::Class:
 #define DEPENDENT_TYPE(Class, Base) case Type::Class:
 #define NON_CANONICAL_UNLESS_DEPENDENT_TYPE(Class, Base) case Type::Class:
-#include "clang/AST/TypeNodes.def"
+#include "clang/AST/TypeNodes.inc"
     llvm_unreachable("Non-canonical or dependent types aren't possible.");
 
   case Type::Builtin: {

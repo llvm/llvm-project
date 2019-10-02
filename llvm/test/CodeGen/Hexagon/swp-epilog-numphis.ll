@@ -1,6 +1,6 @@
 ; XFAIL: *
 ; Needs some fixed in the pipeliner.
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -march=hexagon < %s -pipeliner-experimental-cg=true | FileCheck %s
 
 ; CHECK: endloop0
 ; CHECK: vmem

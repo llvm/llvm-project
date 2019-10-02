@@ -670,6 +670,14 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj,
     }
   }
 
+  if (!Config.SetSectionAlignment.empty()) {
+    for (SectionBase &Sec : Obj.sections()) {
+      auto I = Config.SetSectionAlignment.find(Sec.Name);
+      if (I != Config.SetSectionAlignment.end())
+        Sec.Align = I->second;
+    }
+  }
+
   if (!Config.SetSectionFlags.empty()) {
     for (auto &Sec : Obj.sections()) {
       const auto Iter = Config.SetSectionFlags.find(Sec.Name);

@@ -1854,7 +1854,8 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
         ivarBuilder.addInt(Int32Ty,
             CGM.getContext().getTypeSizeInChars(ivarTy).getQuantity());
         // Alignment will be stored as a base-2 log of the alignment.
-        int align = llvm::Log2_32(Context.getTypeAlignInChars(ivarTy).getQuantity());
+        unsigned align =
+            llvm::Log2_32(Context.getTypeAlignInChars(ivarTy).getQuantity());
         // Objects that require more than 2^64-byte alignment should be impossible!
         assert(align < 64);
         // uint32_t flags;

@@ -2622,17 +2622,11 @@ void SelectionDAGBuilder::visitBitTestHeader(BitTestBlock &B,
   // Subtract the minimum value.
   SDValue SwitchOp = getValue(B.SValue);
   EVT VT = SwitchOp.getValueType();
-  SDValue Sub = DAG.getNode(ISD::SUB, dl, VT, SwitchOp,
-                            DAG.getConstant(B.First, dl, VT));
-
-  // Check range.
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  SDValue RangeCmp = DAG.getSetCC(
-      dl, TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(),
-                                 Sub.getValueType()),
-      Sub, DAG.getConstant(B.Range, dl, VT), ISD::SETUGT);
+  SDValue RangeSub =
+      DAG.getNode(ISD::SUB, dl, VT, SwitchOp, DAG.getConstant(B.First, dl, VT));
 
   // Determine the type of the test operands.
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   bool UsePtrType = false;
   if (!TLI.isTypeLegal(VT)) {
     UsePtrType = true;
@@ -2645,6 +2639,7 @@ void SelectionDAGBuilder::visitBitTestHeader(BitTestBlock &B,
         break;
       }
   }
+  SDValue Sub = RangeSub;
   if (UsePtrType) {
     VT = TLI.getPointerTy(DAG.getDataLayout());
     Sub = DAG.getZExtOrTrunc(Sub, dl, VT);
@@ -2656,20 +2651,29 @@ void SelectionDAGBuilder::visitBitTestHeader(BitTestBlock &B,
 
   MachineBasicBlock* MBB = B.Cases[0].ThisBB;
 
-  addSuccessorWithProb(SwitchBB, B.Default, B.DefaultProb);
+  if (!B.OmitRangeCheck)
+    addSuccessorWithProb(SwitchBB, B.Default, B.DefaultProb);
   addSuccessorWithProb(SwitchBB, MBB, B.Prob);
   SwitchBB->normalizeSuccProbs();
 
-  SDValue BrRange = DAG.getNode(ISD::BRCOND, dl,
-                                MVT::Other, CopyTo, RangeCmp,
-                                DAG.getBasicBlock(B.Default));
+  SDValue Root = CopyTo;
+  if (!B.OmitRangeCheck) {
+    // Conditional branch to the default block.
+    SDValue RangeCmp = DAG.getSetCC(dl,
+        TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(),
+                               RangeSub.getValueType()),
+        RangeSub, DAG.getConstant(B.Range, dl, RangeSub.getValueType()),
+        ISD::SETUGT);
+
+    Root = DAG.getNode(ISD::BRCOND, dl, MVT::Other, Root, RangeCmp,
+                       DAG.getBasicBlock(B.Default));
+  }
 
   // Avoid emitting unnecessary branches to the next block.
   if (MBB != NextBlock(SwitchBB))
-    BrRange = DAG.getNode(ISD::BR, dl, MVT::Other, BrRange,
-                          DAG.getBasicBlock(MBB));
+    Root = DAG.getNode(ISD::BR, dl, MVT::Other, Root, DAG.getBasicBlock(MBB));
 
-  DAG.setRoot(BrRange);
+  DAG.setRoot(Root);
 }
 
 /// visitBitTestCase - this function produces one "bit test"
@@ -10164,8 +10168,6 @@ void SelectionDAGBuilder::lowerWorkItem(SwitchWorkListItem W, Value *Cond,
         break;
       }
       case CC_BitTests: {
-        // FIXME: If Fallthrough is unreachable, skip the range check.
-
         // FIXME: Optimize away range check based on pivot comparisons.
         BitTestBlock *BTB = &SL->BitTestCases[I->BTCasesIndex];
 
@@ -10184,6 +10186,11 @@ void SelectionDAGBuilder::lowerWorkItem(SwitchWorkListItem W, Value *Cond,
         if (!BTB->ContiguousRange) {
           BTB->Prob += DefaultProb / 2;
           BTB->DefaultProb -= DefaultProb / 2;
+        }
+
+        if (FallthroughUnreachable) {
+          // Skip the range check if the fallthrough block is unreachable.
+          BTB->OmitRangeCheck = true;
         }
 
         // If we're in the right place, emit the bit test header right now.
