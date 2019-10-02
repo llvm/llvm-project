@@ -38,8 +38,15 @@ def get_object_from_command(command, debugger, target, name, object_type,
     except:
         success, addr = get_value_from_command(debugger, command, base)
         if not(success):
-            print("Could not interpret command '" + command + "'")
-            sys.exit(1)
+            dpus = dpu_list(debugger, None, None, None)
+            addr = next((dpu[0] for dpu in dpus
+                         if (command ==
+                             str(dpu[1]) + "." + str(dpu[2]) + "." +
+                             str(dpu[3]) + "." + str(dpu[4]))),
+                        0)
+            if addr == 0:
+                print("Could not interpret command '" + command + "'")
+                sys.exit(1)
     return target.CreateValueFromExpression(
         name, "(" + object_type + ")" + str(addr))
 
