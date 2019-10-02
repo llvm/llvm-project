@@ -37,6 +37,10 @@ class TestSwiftMacroConflict(TestBase):
         self.runCmd('settings set symbols.clang-modules-cache-path "%s"'
                     % mod_cache)
         self.build()
+
+        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
+        self.registerSharedLibrariesWithTarget(target, ['Foo', 'Bar'])
+
         target, process, _, _ = lldbutil.run_to_source_breakpoint(
             self, 'break here', lldb.SBFileSpec('Bar.swift'))
         bar_value = self.frame().EvaluateExpression("bar")
@@ -72,6 +76,10 @@ class TestSwiftMacroConflict(TestBase):
         self.runCmd('settings set symbols.clang-modules-cache-path "%s"'
                     % mod_cache)
         self.build()
+
+        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
+        self.registerSharedLibrariesWithTarget(target, ['Foo', 'Bar'])
+
         target, process, _, _ = lldbutil.run_to_source_breakpoint(
             self, 'break here', lldb.SBFileSpec('Bar.swift'))
         self.expect("v bar", substrs=["23"])

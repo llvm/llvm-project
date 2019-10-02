@@ -45,6 +45,8 @@ class TestSwiftBridgingHeaderHeadermap(TestBase):
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
 
+        self.registerSharedLibrariesWithTarget(target, ['dylib'])
+
         lldbutil.run_to_source_breakpoint(self, "break here",
                                           lldb.SBFileSpec('dylib.swift'))
         self.expect("fr v -d run-target -- a",

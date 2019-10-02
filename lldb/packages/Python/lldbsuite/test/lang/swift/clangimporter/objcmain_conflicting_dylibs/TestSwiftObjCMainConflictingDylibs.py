@@ -43,6 +43,8 @@ class TestSwiftObjCMainConflictingDylibs(TestBase):
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
 
+        self.registerSharedLibrariesWithTarget(target, ['Foo', 'Bar'])
+
         # Set the breakpoints
         bar_breakpoint = target.BreakpointCreateBySourceRegex(
             'break here', lldb.SBFileSpec('Bar.swift'))

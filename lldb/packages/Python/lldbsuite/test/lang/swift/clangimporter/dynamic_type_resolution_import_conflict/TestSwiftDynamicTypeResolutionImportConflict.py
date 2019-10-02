@@ -44,6 +44,10 @@ class TestSwiftDynamicTypeResolutionImportConflict(TestBase):
         self.runCmd('settings set symbols.clang-modules-cache-path "%s"'
                     % mod_cache)
         self.build()
+
+        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
+        self.registerSharedLibrariesWithTarget(target, ['Dylib', 'Conflict'])
+
         lldbutil.run_to_source_breakpoint(self, "break here",
                                           lldb.SBFileSpec('main.swift'))
         # Destroy the scratch context with a dynamic type lookup.

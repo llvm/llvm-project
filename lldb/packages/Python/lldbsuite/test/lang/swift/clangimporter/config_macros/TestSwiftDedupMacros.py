@@ -46,6 +46,8 @@ class TestSwiftDedupMacros(TestBase):
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
 
+        self.registerSharedLibrariesWithTarget(target, ['Dylib'])
+
         # Set the breakpoints.
         foo_breakpoint = target.BreakpointCreateBySourceRegex(
             'break here', lldb.SBFileSpec('dylib.swift'))
