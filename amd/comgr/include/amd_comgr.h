@@ -1313,11 +1313,11 @@ typedef enum amd_comgr_action_kind_s {
    * device-specific and language-specific bitcode libraries required for
    * compilation.
    *
-   * Currently the only supported languages are @p AMD_COMGR_LANGUAGE_OPENCL_1_2
-   * and @p AMD_COMGR_LANGUAGE_OPENCL_2_0.
+   * Currently the only supported languages are @p AMD_COMGR_LANGUAGE_OPENCL_1_2,
+   * @p AMD_COMGR_LANGUAGE_OPENCL_2_0, and @p AMD_COMGR_LANGUAGE_HIP.
    *
    * The options in @p info should be set to a set of language-specific flags.
-   * For OpenCL these include:
+   * For OpenCL and HIP these include:
    *
    *    correctly_rounded_sqrt
    *    daz_opt

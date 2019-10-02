@@ -229,6 +229,8 @@ static StringRef getLanguageName(amd_comgr_language_t Language) {
     return "AMD_COMGR_LANGUAGE_OPENCL_2_0";
   case AMD_COMGR_LANGUAGE_HC:
     return "AMD_COMGR_LANGUAGE_HC";
+  case AMD_COMGR_LANGUAGE_HIP:
+    return "AMD_COMGR_LANGUAGE_HIP";
   default:
     return "UNKNOWN_LANGUAGE";
   }

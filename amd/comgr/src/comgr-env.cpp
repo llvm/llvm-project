@@ -65,5 +65,12 @@ llvm::StringRef getHIPPath() {
   return HIPPath;
 }
 
+llvm::StringRef getLLVMPath() {
+  static const char *LLVMPath = std::getenv("LLVM_PATH");
+  if (!LLVMPath)
+    LLVMPath = "/opt/rocm/llvm";
+  return LLVMPath;
+}
+
 } // namespace env
 } // namespace COMGR

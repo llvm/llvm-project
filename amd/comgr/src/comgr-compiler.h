@@ -97,6 +97,13 @@ class AMDGPUCompiler {
   std::string Triple;
   /// User supplied target CPU.
   std::string CPU;
+  /// User supplied target GPU Arch.
+  std::string GPUArch;
+  /// HIP and Clang Include Paths
+  std::string HIPIncludePath;
+  std::string ClangIncludePath;
+  /// Perform out-of-process compilation.
+  bool CompileOOP = false;
   /// Precompiled header file paths.
   llvm::SmallVector<llvm::SmallString<128>, 2> PrecompiledHeaders;
   /// Arguments common to all driver invocations in the current action.
@@ -115,7 +122,9 @@ class AMDGPUCompiler {
   amd_comgr_status_t processFiles(amd_comgr_data_kind_t OutputKind,
                                   const char *OutputSuffix);
   amd_comgr_status_t addIncludeFlags();
-  amd_comgr_status_t addTargetIdentifierFlags(llvm::StringRef IdentStr);
+  amd_comgr_status_t addTargetIdentifierFlags(llvm::StringRef IdentStr,
+                                              bool SrcToBC);
+  amd_comgr_status_t addCompilationFlags();
   amd_comgr_status_t
   executeOutOfProcessHIPCompilation(llvm::ArrayRef<const char *> Args);
 

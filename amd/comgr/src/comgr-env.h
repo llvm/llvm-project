@@ -55,6 +55,10 @@ bool shouldEmitVerboseLogs();
 /// otherwise return the default HIP path.
 llvm::StringRef getHIPPath();
 
+/// If environment variable LLVM_PATH is set, return the environment variable,
+/// otherwise return the default LLVM path.
+llvm::StringRef getLLVMPath();
+
 } // namespace env
 } // namespace COMGR
 

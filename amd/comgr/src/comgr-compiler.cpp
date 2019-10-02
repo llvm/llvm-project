@@ -39,6 +39,7 @@
 #include "comgr-compiler.h"
 #include "comgr-env.h"
 #include "lld/Common/Driver.h"
+#include "clang/Basic/Version.h"
 #include "clang/CodeGen/CodeGenAction.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/DriverDiagnostic.h"
@@ -717,8 +718,8 @@ amd_comgr_status_t AMDGPUCompiler::processFile(const char *InputFilePath,
   Argv.push_back("-o");
   Argv.push_back(OutputFilePath);
 
-  // For HIP compilation, we launch a process.
-  if (getLanguage() == AMD_COMGR_LANGUAGE_HIP)
+  // For HIP OOP compilation, we launch a process.
+  if (CompileOOP && getLanguage() == AMD_COMGR_LANGUAGE_HIP)
     return executeOutOfProcessHIPCompilation(Argv);
 
   InProcessDriver TheDriver(LogS);
@@ -798,17 +799,25 @@ amd_comgr_status_t AMDGPUCompiler::addIncludeFlags() {
 }
 
 amd_comgr_status_t
-AMDGPUCompiler::addTargetIdentifierFlags(llvm::StringRef IdentStr) {
+AMDGPUCompiler::addTargetIdentifierFlags(llvm::StringRef IdentStr,
+                                         bool SrcToBC = false) {
   TargetIdentifier Ident;
   if (auto Status = parseTargetIdentifier(IdentStr, Ident))
     return Status;
   Triple = (Twine(Ident.Arch) + "-" + Ident.Vendor + "-" + Ident.OS).str();
-  CPU = (Twine("-mcpu=") + Ident.Processor).str();
+  GPUArch = Twine(Ident.Processor).str();
+  CPU = (Twine("-mcpu=") + GPUArch).str();
 
-  Args.push_back("-target");
-  Args.push_back(Triple.c_str());
+  if (SrcToBC && getLanguage() == AMD_COMGR_LANGUAGE_HIP) {
+    std::string CUDAGPUArch = (Twine("--cuda-gpu-arch=") + GPUArch).str();
+    Args.push_back(CUDAGPUArch.c_str());
+  }
+  else {
+    Args.push_back("-target");
+    Args.push_back(Triple.c_str());
 
-  Args.push_back(CPU.c_str());
+    Args.push_back(CPU.c_str());
+  }
 
   bool EnableXNACK = false;
   bool EnableSRAMECC = false;
@@ -827,6 +836,40 @@ AMDGPUCompiler::addTargetIdentifierFlags(llvm::StringRef IdentStr) {
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
+amd_comgr_status_t
+AMDGPUCompiler::addCompilationFlags() {
+  HIPIncludePath = (Twine(env::getHIPPath()) + "/include").str();
+  ClangIncludePath = (Twine(env::getLLVMPath()) + "/lib/clang/"+CLANG_VERSION_STRING+"/include").str();
+
+  Args.push_back("-x");
+
+  switch (ActionInfo->Language) {
+  case AMD_COMGR_LANGUAGE_OPENCL_1_2:
+    Args.push_back("cl");
+    Args.push_back("-std=cl1.2");
+    break;
+  case AMD_COMGR_LANGUAGE_OPENCL_2_0:
+    Args.push_back("cl");
+    Args.push_back("-std=cl2.0");
+    break;
+  case AMD_COMGR_LANGUAGE_HIP:
+    Args.push_back("hip");
+    Args.push_back("-std=c++11");
+    Args.push_back("-target");
+    Args.push_back("x86_64-unknown-linux-gnu");
+    Args.push_back("--cuda-device-only");
+    Args.push_back("-nogpulib");
+    Args.push_back("-isystem");
+    Args.push_back(HIPIncludePath.c_str());
+    Args.push_back("-isystem");
+    Args.push_back(ClangIncludePath.c_str());
+    break;
+  default:
+    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
+  return AMD_COMGR_STATUS_SUCCESS;
+}
+
 amd_comgr_status_t AMDGPUCompiler::preprocessToSource() {
   if (auto Status = createTmpDirs())
     return Status;
@@ -838,19 +881,8 @@ amd_comgr_status_t AMDGPUCompiler::preprocessToSource() {
   if (auto Status = addIncludeFlags())
     return Status;
 
-  Args.push_back("-x");
-  Args.push_back("cl");
-
-  switch (ActionInfo->Language) {
-  case AMD_COMGR_LANGUAGE_OPENCL_1_2:
-    Args.push_back("-std=cl1.2");
-    break;
-  case AMD_COMGR_LANGUAGE_OPENCL_2_0:
-    Args.push_back("-std=cl2.0");
-    break;
-  default:
-    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
-  }
+  if (auto Status = addCompilationFlags())
+    return Status;
 
   Args.push_back("-E");
 
@@ -862,25 +894,14 @@ amd_comgr_status_t AMDGPUCompiler::compileToBitcode() {
     return Status;
 
   if (ActionInfo->IsaName)
-    if (auto Status = addTargetIdentifierFlags(ActionInfo->IsaName))
+    if (auto Status = addTargetIdentifierFlags(ActionInfo->IsaName, true))
       return Status;
 
   if (auto Status = addIncludeFlags())
     return Status;
 
-  Args.push_back("-x");
-  Args.push_back("cl");
-
-  switch (ActionInfo->Language) {
-  case AMD_COMGR_LANGUAGE_OPENCL_1_2:
-    Args.push_back("-std=cl1.2");
-    break;
-  case AMD_COMGR_LANGUAGE_OPENCL_2_0:
-    Args.push_back("-std=cl2.0");
-    break;
-  default:
-    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
-  }
+  if (auto Status = addCompilationFlags())
+    return Status;
 
   Args.push_back("-c");
   Args.push_back("-emit-llvm");
@@ -899,7 +920,12 @@ amd_comgr_status_t AMDGPUCompiler::compileToFatBin() {
   if (ActionInfo->Language != AMD_COMGR_LANGUAGE_HIP)
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
 
-  return processFiles(AMD_COMGR_DATA_KIND_FATBIN, ".fatbin");
+  // This is a workaround to support HIP OOP Fatbin Compilation
+  CompileOOP = true;
+  auto Status = processFiles(AMD_COMGR_DATA_KIND_FATBIN, ".fatbin");
+  CompileOOP = false;
+
+  return Status;
 }
 
 amd_comgr_status_t AMDGPUCompiler::linkBitcodeToBitcode() {
