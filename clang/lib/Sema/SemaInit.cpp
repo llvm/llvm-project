@@ -7580,34 +7580,27 @@ static void CheckMoveOnConstruction(Sema &S, const Expr *InitExpr,
   if (!DestType->isRecordType())
     return;
 
-  const CXXConstructExpr *CCE =
-      dyn_cast<CXXConstructExpr>(InitExpr->IgnoreParens());
-  if (!CCE || CCE->getNumArgs() != 1)
-    return;
+  unsigned DiagID = 0;
+  if (IsReturnStmt) {
+    const CXXConstructExpr *CCE =
+        dyn_cast<CXXConstructExpr>(InitExpr->IgnoreParens());
+    if (!CCE || CCE->getNumArgs() != 1)
+      return;
 
-  if (!CCE->getConstructor()->isCopyOrMoveConstructor())
-    return;
+    if (!CCE->getConstructor()->isCopyOrMoveConstructor())
+      return;
 
-  InitExpr = CCE->getArg(0)->IgnoreImpCasts();
+    InitExpr = CCE->getArg(0)->IgnoreImpCasts();
+  }
 
   // Find the std::move call and get the argument.
   const CallExpr *CE = dyn_cast<CallExpr>(InitExpr->IgnoreParens());
   if (!CE || !CE->isCallToStdMove())
     return;
 
-  const Expr *Arg = CE->getArg(0);
+  const Expr *Arg = CE->getArg(0)->IgnoreImplicit();
 
-  unsigned DiagID = 0;
-
-  if (!IsReturnStmt && !isa<MaterializeTemporaryExpr>(Arg))
-    return;
-
-  if (isa<MaterializeTemporaryExpr>(Arg)) {
-    DiagID = diag::warn_pessimizing_move_on_initialization;
-    const Expr *ArgStripped = Arg->IgnoreImplicit()->IgnoreParens();
-    if (!ArgStripped->isRValue() || !ArgStripped->getType()->isRecordType())
-      return;
-  } else { // IsReturnStmt
+  if (IsReturnStmt) {
     const DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(Arg->IgnoreParenImpCasts());
     if (!DRE || DRE->refersToEnclosingVariableOrCapture())
       return;
@@ -7634,18 +7627,24 @@ static void CheckMoveOnConstruction(Sema &S, const Expr *InitExpr,
       DiagID = diag::warn_redundant_move_on_return;
     else
       DiagID = diag::warn_pessimizing_move_on_return;
+  } else {
+    DiagID = diag::warn_pessimizing_move_on_initialization;
+    const Expr *ArgStripped = Arg->IgnoreImplicit()->IgnoreParens();
+    if (!ArgStripped->isRValue() || !ArgStripped->getType()->isRecordType())
+      return;
   }
 
   S.Diag(CE->getBeginLoc(), DiagID);
 
   // Get all the locations for a fix-it.  Don't emit the fix-it if any location
   // is within a macro.
-  SourceLocation BeginLoc = CCE->getBeginLoc();
-  if (BeginLoc.isMacroID())
+  SourceLocation CallBegin = CE->getCallee()->getBeginLoc();
+  if (CallBegin.isMacroID())
     return;
   SourceLocation RParen = CE->getRParenLoc();
   if (RParen.isMacroID())
     return;
+  SourceLocation LParen;
   SourceLocation ArgLoc = Arg->getBeginLoc();
 
   // Special testing for the argument location.  Since the fix-it needs the
@@ -7656,16 +7655,14 @@ static void CheckMoveOnConstruction(Sema &S, const Expr *InitExpr,
     ArgLoc = S.getSourceManager().getImmediateExpansionRange(ArgLoc).getBegin();
   }
 
-  SourceLocation LParen = ArgLoc.getLocWithOffset(-1);
   if (LParen.isMacroID())
     return;
-  SourceLocation EndLoc = CCE->getEndLoc();
-  if (EndLoc.isMacroID())
-    return;
+
+  LParen = ArgLoc.getLocWithOffset(-1);
 
   S.Diag(CE->getBeginLoc(), diag::note_remove_move)
-      << FixItHint::CreateRemoval(SourceRange(BeginLoc, LParen))
-      << FixItHint::CreateRemoval(SourceRange(RParen, EndLoc));
+      << FixItHint::CreateRemoval(SourceRange(CallBegin, LParen))
+      << FixItHint::CreateRemoval(SourceRange(RParen, RParen));
 }
 
 static void CheckForNullPointerDereference(Sema &S, const Expr *E) {

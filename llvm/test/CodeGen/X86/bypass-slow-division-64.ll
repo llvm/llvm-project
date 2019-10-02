@@ -75,3 +75,13 @@ define i64 @Test_get_quotient_and_remainder(i64 %a, i64 %b) nounwind {
   %result = add i64 %resultdiv, %resultrem
   ret i64 %result
 }
+
+define void @PR43514(i32 %x, i32 %y) {
+; CHECK-LABEL: PR43514:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    retq
+  %z1 = zext i32 %x to i64
+  %z2 = zext i32 %y to i64
+  %s = srem i64 %z1, %z2
+  ret void
+}

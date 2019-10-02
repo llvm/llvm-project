@@ -74,6 +74,7 @@
 ; CHECK-NEXT:      MachineDominator Tree Construction
 ; CHECK-NEXT:      Machine Natural Loop Construction
 ; CHECK-NEXT:      Early Machine Loop Invariant Code Motion
+; CHECK-NEXT:      MachineDominator Tree Construction
 ; CHECK-NEXT:      Machine Block Frequency Analysis
 ; CHECK-NEXT:      Machine Common Subexpression Elimination
 ; CHECK-NEXT:      MachinePostDominator Tree Construction
@@ -112,6 +113,7 @@
 ; CHECK-NEXT:      Machine Loop Invariant Code Motion
 ; CHECK-NEXT:      PostRA Machine Sink
 ; CHECK-NEXT:      Machine Block Frequency Analysis
+; CHECK-NEXT:      MachineDominator Tree Construction
 ; CHECK-NEXT:      MachinePostDominator Tree Construction
 ; CHECK-NEXT:      Lazy Machine Block Frequency Analysis
 ; CHECK-NEXT:      Machine Optimization Remark Emitter

@@ -416,9 +416,8 @@ void SIRegisterInfo::resolveFrameIndex(MachineInstr &MI, unsigned BaseReg,
   assert(FIOp && FIOp->isFI() && "frame index must be address operand");
   assert(TII->isMUBUF(MI));
   assert(TII->getNamedOperand(MI, AMDGPU::OpName::soffset)->getReg() ==
-         MF->getInfo<SIMachineFunctionInfo>()->getFrameOffsetReg() &&
-         "should only be seeing frame offset relative FrameIndex");
-
+         MF->getInfo<SIMachineFunctionInfo>()->getStackPtrOffsetReg() &&
+         "should only be seeing stack pointer offset relative FrameIndex");
 
   MachineOperand *OffsetOp = TII->getNamedOperand(MI, AMDGPU::OpName::offset);
   int64_t NewOffset = OffsetOp->getImm() + Offset;

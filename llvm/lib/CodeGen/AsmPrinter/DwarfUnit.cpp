@@ -722,7 +722,7 @@ std::string DwarfUnit::getParentContextString(const DIScope *Context) const {
     return "";
 
   // FIXME: Decide whether to implement this for non-C++ languages.
-  if (getLanguage() != dwarf::DW_LANG_C_plus_plus)
+  if (!dwarf::isCPlusPlus((dwarf::SourceLanguage)getLanguage()))
     return "";
 
   std::string CS;

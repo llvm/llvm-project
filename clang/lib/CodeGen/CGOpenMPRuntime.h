@@ -15,6 +15,7 @@
 
 #include "CGValue.h"
 #include "clang/AST/DeclOpenMP.h"
+#include "clang/AST/GlobalDecl.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/SourceLocation.h"
@@ -36,7 +37,6 @@ class Value;
 
 namespace clang {
 class Expr;
-class GlobalDecl;
 class OMPDependClause;
 class OMPExecutableDirective;
 class OMPLoopDirective;
@@ -643,6 +643,12 @@ private:
   /// List of variables that can become declare target implicitly and, thus,
   /// must be emitted.
   llvm::SmallDenseSet<const VarDecl *> DeferredGlobalVariables;
+
+  /// Mapping of the original functions to their variants and original global
+  /// decl.
+  llvm::MapVector<CanonicalDeclPtr<const FunctionDecl>,
+                  std::pair<GlobalDecl, GlobalDecl>>
+      DeferredVariantFunction;
 
   /// Flag for keeping track of weather a requires unified_shared_memory
   /// directive is present.
@@ -1652,6 +1658,9 @@ public:
 
   /// Return whether the unified_shared_memory has been specified.
   bool hasRequiresUnifiedSharedMemory() const;
+
+  /// Emits the definition of the declare variant function.
+  virtual bool emitDeclareVariant(GlobalDecl GD, bool IsForDefinition);
 };
 
 /// Class supports emissionof SIMD-only code.

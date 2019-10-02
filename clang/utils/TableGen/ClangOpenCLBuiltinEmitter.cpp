@@ -50,6 +50,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "TableGenBackends.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
@@ -639,11 +640,7 @@ static void OCL2Qual(ASTContext &Context, const OpenCLTypeStruct &Ty,
   OS << "\n} // OCL2Qual\n";
 }
 
-namespace clang {
-
-void EmitClangOpenCLBuiltins(RecordKeeper &Records, raw_ostream &OS) {
+void clang::EmitClangOpenCLBuiltins(RecordKeeper &Records, raw_ostream &OS) {
   BuiltinNameEmitter NameChecker(Records, OS);
   NameChecker.Emit();
 }
-
-} // end namespace clang

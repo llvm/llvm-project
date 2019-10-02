@@ -199,6 +199,7 @@ char &llvm::MachineSchedulerID = MachineScheduler::ID;
 INITIALIZE_PASS_BEGIN(MachineScheduler, DEBUG_TYPE,
                       "Machine Instruction Scheduler", false, false)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
 INITIALIZE_PASS_DEPENDENCY(SlotIndexes)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervals)
@@ -211,7 +212,7 @@ MachineScheduler::MachineScheduler() : MachineSchedulerBase(ID) {
 
 void MachineScheduler::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
-  AU.addRequiredID(MachineDominatorsID);
+  AU.addRequired<MachineDominatorTree>();
   AU.addRequired<MachineLoopInfo>();
   AU.addRequired<AAResultsWrapperPass>();
   AU.addRequired<TargetPassConfig>();
@@ -235,7 +236,7 @@ PostMachineScheduler::PostMachineScheduler() : MachineSchedulerBase(ID) {
 
 void PostMachineScheduler::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
-  AU.addRequiredID(MachineDominatorsID);
+  AU.addRequired<MachineDominatorTree>();
   AU.addRequired<MachineLoopInfo>();
   AU.addRequired<TargetPassConfig>();
   MachineFunctionPass::getAnalysisUsage(AU);

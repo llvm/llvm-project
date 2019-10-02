@@ -114,17 +114,3 @@ namespace templates {
     test2<B, A>(A());
   }
 }
-
-A init_list(A a) {
-  return { std::move(a) };
-  // expected-warning@-1{{redundant move in return statement}}
-  // expected-note@-2{{remove std::move call here}}
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:10-[[@LINE-3]]:22}:""
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-4]]:23-[[@LINE-4]]:26}:""
-
-  return { (std::move(a)) };
-  // expected-warning@-1{{redundant move in return statement}}
-  // expected-note@-2{{remove std::move call here}}
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:10-[[@LINE-3]]:23}:""
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-4]]:24-[[@LINE-4]]:28}:""
-}

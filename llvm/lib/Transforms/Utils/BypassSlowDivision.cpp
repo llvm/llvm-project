@@ -448,12 +448,16 @@ bool llvm::bypassSlowDivision(BasicBlock *BB,
   DivCacheTy PerBBDivCache;
 
   bool MadeChange = false;
-  Instruction* Next = &*BB->begin();
+  Instruction *Next = &*BB->begin();
   while (Next != nullptr) {
     // We may add instructions immediately after I, but we want to skip over
     // them.
-    Instruction* I = Next;
+    Instruction *I = Next;
     Next = Next->getNextNode();
+
+    // Ignore dead code to save time and avoid bugs.
+    if (I->hasNUses(0))
+      continue;
 
     FastDivInsertionTask Task(I, BypassWidths);
     if (Value *Replacement = Task.getReplacement(PerBBDivCache)) {
