@@ -401,12 +401,14 @@ TEST_F(SymbolFilePDBTests, TestNestedClassTypes) {
   // and one is global. We process correctly this case and create the same
   // compiler type for both, but `FindTypes` may return more than one type
   // (with the same compiler type) because the symbols have different IDs.
+
+  TypeMap more_results;
   auto ClassCompilerDeclCtx = CompilerDeclContext(clang_ast_ctx, ClassDeclCtx);
   symfile->FindTypes(ConstString("NestedClass"), &ClassCompilerDeclCtx, 0,
-                     searched_files, results);
-  EXPECT_LE(1u, results.GetSize());
+                     searched_files, more_results);
+  EXPECT_LE(1u, more_results.GetSize());
 
-  lldb::TypeSP udt_type = results.GetTypeAtIndex(0);
+  lldb::TypeSP udt_type = more_results.GetTypeAtIndex(0);
   EXPECT_EQ(ConstString("NestedClass"), udt_type->GetName());
 
   CompilerType compiler_type = udt_type->GetForwardCompilerType();
@@ -568,19 +570,17 @@ TEST_F(SymbolFilePDBTests, TestMaxMatches) {
   TypeMap results;
   const ConstString name("ClassTypedef");
   symfile->FindTypes(name, nullptr, 0, searched_files, results);
-  // Try to limit ourselves from 1 to 10 results, otherwise we could be doing
-  // this thousands of times.
-  // The idea is just to make sure that for a variety of values, the number of
-  // limited results always
-  // comes out to the number we are expecting.
-  uint32_t iterations = std::min(results.GetSize(), 10u);
+  // Try to limit ourselves from 1 to 10 results, otherwise we could
+  // be doing this thousands of times.  The idea is just to make sure
+  // that for a variety of values, the number of limited results
+  // always comes out to the number we are expecting.
   uint32_t num_results = results.GetSize();
+  uint32_t iterations = std::min(num_results, 10u);
   for (uint32_t i = 1; i <= iterations; ++i) {
-    symfile->FindTypes(name, nullptr, i, searched_files, results);
-    uint32_t num_limited_results = results.GetSize() - num_results;
+    TypeMap more_results;
+    symfile->FindTypes(name, nullptr, i, searched_files, more_results);
+    uint32_t num_limited_results = more_results.GetSize();
     EXPECT_EQ(i, num_limited_results);
-    EXPECT_EQ(num_limited_results, results.GetSize());
-    num_results = num_limited_results;
   }
 }
 
