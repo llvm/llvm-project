@@ -8422,7 +8422,7 @@ EvaluateBuiltinClassifyType(QualType T, const LangOptions &LangOpts) {
 #define DEPENDENT_TYPE(ID, BASE) case Type::ID:
 #define NON_CANONICAL_TYPE(ID, BASE) case Type::ID:
 #define NON_CANONICAL_UNLESS_DEPENDENT_TYPE(ID, BASE) case Type::ID:
-#include "clang/AST/TypeNodes.def"
+#include "clang/AST/TypeNodes.inc"
   case Type::Auto:
   case Type::DeducedTemplateSpecialization:
       llvm_unreachable("unexpected non-canonical or dependent type");

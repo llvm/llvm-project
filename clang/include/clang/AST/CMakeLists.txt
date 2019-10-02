@@ -31,7 +31,7 @@ clang_tablegen(DeclNodes.inc -gen-clang-decl-nodes
   SOURCE ../Basic/DeclNodes.td
   TARGET ClangDeclNodes)
 
-clang_tablegen(TypeNodes.def -gen-clang-type-nodes
+clang_tablegen(TypeNodes.inc -gen-clang-type-nodes
   SOURCE ../Basic/TypeNodes.td
   TARGET ClangTypeNodes)
 
