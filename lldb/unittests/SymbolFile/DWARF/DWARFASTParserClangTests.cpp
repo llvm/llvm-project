@@ -15,6 +15,19 @@
 using namespace lldb;
 using namespace lldb_private;
 
+class DWARFASTParserClangTests : public testing::Test {
+public:
+  void SetUp() override {
+    FileSystem::Initialize();
+    ClangASTContext::Initialize();
+  }
+
+  void TearDown() override {
+    ClangASTContext::Terminate();
+    FileSystem::Terminate();
+  }
+};
+
 namespace {
 class DWARFASTParserClangStub : public DWARFASTParserClang {
 public:
@@ -32,8 +45,8 @@ public:
 
 // If your implementation needs to dereference the dummy pointers we are
 // defining here, causing this test to fail, feel free to delete it.
-TEST(DWARFASTParserClangTests,
-     EnsureAllDIEsInDeclContextHaveBeenParsedParsesOnlyMatchingEntries) {
+TEST_F(DWARFASTParserClangTests,
+       EnsureAllDIEsInDeclContextHaveBeenParsedParsesOnlyMatchingEntries) {
   ClangASTContext ast_ctx;
   DWARFASTParserClangStub ast_parser(ast_ctx);
 

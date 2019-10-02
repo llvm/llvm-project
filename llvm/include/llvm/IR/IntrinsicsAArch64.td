@@ -768,6 +768,13 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
                  LLVMMatchType<0>],
                 [IntrNoMem]>;
 
+  class AdvSIMD_SVE_CNT_Intrinsic
+    : Intrinsic<[LLVMVectorOfBitcastsToInt<0>],
+                [LLVMVectorOfBitcastsToInt<0>,
+                 LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                 llvm_anyvector_ty],
+                [IntrNoMem]>;
+
   class AdvSIMD_SVE_PUNPKHI_Intrinsic
     : Intrinsic<[LLVMHalfElementsVectorType<0>],
                 [llvm_anyvector_ty],
@@ -791,6 +798,12 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
 
 def int_aarch64_sve_abs : AdvSIMD_Merged1VectorArg_Intrinsic;
 def int_aarch64_sve_neg : AdvSIMD_Merged1VectorArg_Intrinsic;
+
+//
+// Counting bits
+//
+
+def int_aarch64_sve_cnt : AdvSIMD_SVE_CNT_Intrinsic;
 
 //
 // Floating-point comparisons

@@ -1473,14 +1473,14 @@ bool Sema::IsFunctionConversion(QualType FromType, QualType ToType,
   if (TyClass != CanFrom->getTypeClass()) return false;
   if (TyClass != Type::FunctionProto && TyClass != Type::FunctionNoProto) {
     if (TyClass == Type::Pointer) {
-      CanTo = CanTo.getAs<PointerType>()->getPointeeType();
-      CanFrom = CanFrom.getAs<PointerType>()->getPointeeType();
+      CanTo = CanTo.castAs<PointerType>()->getPointeeType();
+      CanFrom = CanFrom.castAs<PointerType>()->getPointeeType();
     } else if (TyClass == Type::BlockPointer) {
-      CanTo = CanTo.getAs<BlockPointerType>()->getPointeeType();
-      CanFrom = CanFrom.getAs<BlockPointerType>()->getPointeeType();
+      CanTo = CanTo.castAs<BlockPointerType>()->getPointeeType();
+      CanFrom = CanFrom.castAs<BlockPointerType>()->getPointeeType();
     } else if (TyClass == Type::MemberPointer) {
-      auto ToMPT = CanTo.getAs<MemberPointerType>();
-      auto FromMPT = CanFrom.getAs<MemberPointerType>();
+      auto ToMPT = CanTo.castAs<MemberPointerType>();
+      auto FromMPT = CanFrom.castAs<MemberPointerType>();
       // A function pointer conversion cannot change the class of the function.
       if (ToMPT->getClass() != FromMPT->getClass())
         return false;
@@ -2283,7 +2283,7 @@ bool Sema::IsPointerConversion(Expr *From, QualType FromType, QualType ToType,
 
   // Blocks: Block pointers can be converted to void*.
   if (FromType->isBlockPointerType() && ToType->isPointerType() &&
-      ToType->getAs<PointerType>()->getPointeeType()->isVoidType()) {
+      ToType->castAs<PointerType>()->getPointeeType()->isVoidType()) {
     ConvertedType = ToType;
     return true;
   }
@@ -3282,7 +3282,7 @@ IsInitializerListConstructorConversion(Sema &S, Expr *From, QualType ToType,
     User.ConversionFunction = Constructor;
     User.FoundConversionFunction = Best->FoundDecl;
     User.After.setAsIdentityConversion();
-    User.After.setFromType(ThisType->getAs<PointerType>()->getPointeeType());
+    User.After.setFromType(ThisType->castAs<PointerType>()->getPointeeType());
     User.After.setAllToTypes(ToType);
     return Result;
   }
@@ -3473,7 +3473,7 @@ IsUserDefinedConversion(Sema &S, Expr *From, QualType ToType,
       User.ConversionFunction = Constructor;
       User.FoundConversionFunction = Best->FoundDecl;
       User.After.setAsIdentityConversion();
-      User.After.setFromType(ThisType->getAs<PointerType>()->getPointeeType());
+      User.After.setFromType(ThisType->castAs<PointerType>()->getPointeeType());
       User.After.setAllToTypes(ToType);
       return Result;
     }
@@ -4115,14 +4115,14 @@ CompareDerivedToBaseConversions(Sema &S, SourceLocation Loc,
       /*FIXME: Remove if Objective-C id conversions get their own rank*/
       FromType1->isPointerType() && FromType2->isPointerType() &&
       ToType1->isPointerType() && ToType2->isPointerType()) {
-    QualType FromPointee1
-      = FromType1->getAs<PointerType>()->getPointeeType().getUnqualifiedType();
-    QualType ToPointee1
-      = ToType1->getAs<PointerType>()->getPointeeType().getUnqualifiedType();
-    QualType FromPointee2
-      = FromType2->getAs<PointerType>()->getPointeeType().getUnqualifiedType();
-    QualType ToPointee2
-      = ToType2->getAs<PointerType>()->getPointeeType().getUnqualifiedType();
+    QualType FromPointee1 =
+        FromType1->castAs<PointerType>()->getPointeeType().getUnqualifiedType();
+    QualType ToPointee1 =
+        ToType1->castAs<PointerType>()->getPointeeType().getUnqualifiedType();
+    QualType FromPointee2 =
+        FromType2->castAs<PointerType>()->getPointeeType().getUnqualifiedType();
+    QualType ToPointee2 =
+        ToType2->castAs<PointerType>()->getPointeeType().getUnqualifiedType();
 
     //   -- conversion of C* to B* is better than conversion of C* to A*,
     if (FromPointee1 == FromPointee2 && ToPointee1 != ToPointee2) {
@@ -4402,7 +4402,7 @@ FindConversionForRefInit(Sema &S, ImplicitConversionSequence &ICS,
                          bool AllowExplicit) {
   assert(T2->isRecordType() && "Can only find conversions of record types.");
   CXXRecordDecl *T2RecordDecl
-    = dyn_cast<CXXRecordDecl>(T2->getAs<RecordType>()->getDecl());
+    = dyn_cast<CXXRecordDecl>(T2->castAs<RecordType>()->getDecl());
 
   OverloadCandidateSet CandidateSet(
       DeclLoc, OverloadCandidateSet::CSK_InitByUserDefinedConversion);
@@ -4533,7 +4533,7 @@ TryReferenceInit(Sema &S, Expr *Init, QualType DeclType,
   ImplicitConversionSequence ICS;
   ICS.setBad(BadConversionSequence::no_conversion, Init, DeclType);
 
-  QualType T1 = DeclType->getAs<ReferenceType>()->getPointeeType();
+  QualType T1 = DeclType->castAs<ReferenceType>()->getPointeeType();
   QualType T2 = Init->getType();
 
   // If the initializer is the address of an overloaded function, try
@@ -4957,7 +4957,7 @@ TryListConversion(Sema &S, InitListExpr *From, QualType ToType,
     // mention initializer lists in any way. So we go by what list-
     // initialization would do and try to extrapolate from that.
 
-    QualType T1 = ToType->getAs<ReferenceType>()->getPointeeType();
+    QualType T1 = ToType->castAs<ReferenceType>()->getPointeeType();
 
     // If the initializer list has a single element that is reference-related
     // to the parameter type, we initialize the reference from that.
@@ -5227,7 +5227,7 @@ Sema::PerformObjectArgumentInitialization(Expr *From,
                                           CXXMethodDecl *Method) {
   QualType FromRecordType, DestType;
   QualType ImplicitParamRecordType  =
-    Method->getThisType()->getAs<PointerType>()->getPointeeType();
+    Method->getThisType()->castAs<PointerType>()->getPointeeType();
 
   Expr::Classification FromClassification;
   if (const PointerType *PT = From->getType()->getAs<PointerType>()) {
@@ -7014,7 +7014,7 @@ void Sema::AddConversionCandidate(
   if (const PointerType *FromPtrType = ImplicitParamType->getAs<PointerType>())
     ImplicitParamType = FromPtrType->getPointeeType();
   CXXRecordDecl *ConversionContext
-    = cast<CXXRecordDecl>(ImplicitParamType->getAs<RecordType>()->getDecl());
+    = cast<CXXRecordDecl>(ImplicitParamType->castAs<RecordType>()->getDecl());
 
   Candidate.Conversions[0] = TryObjectArgumentInitialization(
       *this, CandidateSet.getLocation(), From->getType(),
@@ -8774,7 +8774,7 @@ public:
                   Enum = CandidateTypes[ArgIdx].enumeration_begin(),
                EnumEnd = CandidateTypes[ArgIdx].enumeration_end();
              Enum != EnumEnd; ++Enum) {
-          if (!(*Enum)->getAs<EnumType>()->getDecl()->isScoped())
+          if (!(*Enum)->castAs<EnumType>()->getDecl()->isScoped())
             continue;
 
           if (!AddedTypes.insert(S.Context.getCanonicalType(*Enum)).second)
@@ -10799,12 +10799,12 @@ static void CompleteNonViableCandidate(Sema &S, OverloadCandidate *Cand,
       = Cand->Surrogate->getConversionType().getNonReferenceType();
     if (const PointerType *ConvPtrType = ConvType->getAs<PointerType>())
       ConvType = ConvPtrType->getPointeeType();
-    ParamTypes = ConvType->getAs<FunctionProtoType>()->getParamTypes();
+    ParamTypes = ConvType->castAs<FunctionProtoType>()->getParamTypes();
     // Conversion 0 is 'this', which doesn't have a corresponding argument.
     ConvIdx = 1;
   } else if (Cand->Function) {
     ParamTypes =
-        Cand->Function->getType()->getAs<FunctionProtoType>()->getParamTypes();
+        Cand->Function->getType()->castAs<FunctionProtoType>()->getParamTypes();
     if (isa<CXXMethodDecl>(Cand->Function) &&
         !isa<CXXConstructorDecl>(Cand->Function)) {
       // Conversion 0 is 'this', which doesn't have a corresponding argument.

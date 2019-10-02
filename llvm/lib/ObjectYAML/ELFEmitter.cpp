@@ -824,8 +824,8 @@ void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
   if (Section.Link.empty() && SN2I.lookup(".dynsym", Link))
     SHeader.sh_link = Link;
 
-  if (Section.Content) {
-    SHeader.sh_size = writeContent(OS, Section.Content, None);
+  if (Section.Content || Section.Size) {
+    SHeader.sh_size = writeContent(OS, Section.Content, Section.Size);
     return;
   }
 

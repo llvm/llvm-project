@@ -257,9 +257,8 @@ void DivergencePropagator::computeInfluenceRegion(
 void DivergencePropagator::exploreDataDependency(Value *V) {
   // Follow def-use chains of V.
   for (User *U : V->users()) {
-    Instruction *UserInst = cast<Instruction>(U);
-    if (!TTI.isAlwaysUniform(U) && DV.insert(UserInst).second)
-      Worklist.push_back(UserInst);
+    if (!TTI.isAlwaysUniform(U) && DV.insert(U).second)
+      Worklist.push_back(U);
   }
 }
 

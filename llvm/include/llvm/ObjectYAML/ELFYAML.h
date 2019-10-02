@@ -223,6 +223,7 @@ struct NoBitsSection : Section {
 
 struct HashSection : Section {
   Optional<yaml::BinaryRef> Content;
+  Optional<llvm::yaml::Hex64> Size;
   Optional<std::vector<uint32_t>> Bucket;
   Optional<std::vector<uint32_t>> Chain;
 

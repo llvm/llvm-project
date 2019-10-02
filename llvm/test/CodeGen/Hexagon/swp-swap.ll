@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -enable-pipeliner -stats -o /dev/null < %s 2>&1 | FileCheck %s --check-prefix=STATS
+; RUN: llc -march=hexagon -enable-pipeliner -stats -o /dev/null < %s 2>&1 -pipeliner-experimental-cg=true | FileCheck %s --check-prefix=STATS
 ; REQUIRES: asserts
 
 ; Test that we don't pipeline, incorrectly, the swap operation.

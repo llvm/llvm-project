@@ -161,6 +161,7 @@ struct CopyConfig {
 
   // Map options
   StringMap<SectionRename> SectionsToRename;
+  StringMap<uint64_t> SetSectionAlignment;
   StringMap<SectionFlagsUpdate> SetSectionFlags;
   StringMap<StringRef> SymbolsToRename;
 

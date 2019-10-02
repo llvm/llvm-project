@@ -1212,8 +1212,8 @@ bool llvm::isConsecutiveAccess(Value *A, Value *B, const DataLayout &DL,
   const SCEV *OffsetSCEVA = SE.getConstant(OffsetA);
   const SCEV *OffsetSCEVB = SE.getConstant(OffsetB);
   const SCEV *OffsetDeltaSCEV = SE.getMinusSCEV(OffsetSCEVB, OffsetSCEVA);
-  const SCEVConstant *OffsetDeltaC = dyn_cast<SCEVConstant>(OffsetDeltaSCEV);
-  const APInt &OffsetDelta = OffsetDeltaC->getAPInt();
+  const APInt &OffsetDelta = cast<SCEVConstant>(OffsetDeltaSCEV)->getAPInt();
+
   // Check if they are based on the same pointer. That makes the offsets
   // sufficient.
   if (PtrA == PtrB)

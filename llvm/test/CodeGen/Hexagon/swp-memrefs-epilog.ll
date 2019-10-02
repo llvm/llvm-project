@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O2 -fp-contract=fast < %s | FileCheck %s
+; RUN: llc -march=hexagon -O2 -fp-contract=fast < %s -pipeliner-experimental-cg=true | FileCheck %s
 
 ; Test that the memoperands for instructions in the epilog are updated
 ; correctly. Previously, the pipeliner updated the offset for the memoperands

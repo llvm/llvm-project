@@ -1512,6 +1512,17 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
 
   return true;
 }
+#elif defined(_WIN32) && (defined(__aarch64__) || defined(_M_ARM64))
+bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
+  if (IsProcessorFeaturePresent(PF_ARM_NEON_INSTRUCTIONS_AVAILABLE))
+    Features["neon"] = true;
+  if (IsProcessorFeaturePresent(PF_ARM_V8_CRC32_INSTRUCTIONS_AVAILABLE))
+    Features["crc"] = true;
+  if (IsProcessorFeaturePresent(PF_ARM_V8_CRYPTO_INSTRUCTIONS_AVAILABLE))
+    Features["crypto"] = true;
+
+  return true;
+}
 #else
 bool sys::getHostCPUFeatures(StringMap<bool> &Features) { return false; }
 #endif
