@@ -72,6 +72,7 @@ endif()
 
 # We append the directory in which LLVMConfig.cmake lives. We expect LLVM's
 # CMake modules to be in that directory as well.
+file(TO_CMAKE_PATH ${LLVM_DIR} LLVM_DIR)
 list(APPEND CMAKE_MODULE_PATH "${LLVM_DIR}")
 list(APPEND CMAKE_MODULE_PATH "${SWIFT_CMAKE_DIR}")
 include(AddLLVM)
