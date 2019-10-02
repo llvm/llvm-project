@@ -2288,22 +2288,38 @@ the configuration (without a prefix: ``Auto``).
      std::unique_ptr<int[]> foo() {} // Won't be affected
 
 **Standard** (``LanguageStandard``)
-  Format compatible with this standard, e.g. use ``A<A<int> >``
-  instead of ``A<A<int>>`` for ``LS_Cpp03``.
+  .. code-block:: c++
+
+     c++03:                                 latest:
+     vector<set<int> > x;           vs.     vector<set<int>> x;
+  Parse and format C++ constructs compatible with this standard.
 
   Possible values:
 
-  * ``LS_Cpp03`` (in configuration: ``Cpp03``)
+  * ``LS_Cpp03`` (in configuration: ``c++03``)
     Use C++03-compatible syntax.
 
-  * ``LS_Cpp11`` (in configuration: ``Cpp11``)
-    Use features of C++11, C++14 and C++1z (e.g. ``A<A<int>>`` instead of
-    ``A<A<int> >``).
+  * ``LS_Cpp11`` (in configuration: ``c++11``)
+    Use C++11-compatible syntax.
+
+  * ``LS_Cpp14`` (in configuration: ``c++14``)
+    Use C++14-compatible syntax.
+
+  * ``LS_Cpp17`` (in configuration: ``c++17``)
+    Use C++17-compatible syntax.
+
+  * ``LS_Cpp20`` (in configuration: ``c++20``)
+    Use C++20-compatible syntax.
+
+  * ``LS_Latest`` (in configuration: ``Latest``)
+    Parse and format using the latest supported language version.
 
   * ``LS_Auto`` (in configuration: ``Auto``)
     Automatic detection based on the input.
 
+  * ``Cpp03``: deprecated alias for ``c++03``
 
+  * ``Cpp11``: deprecated alias for ``Latest``
 
 **StatementMacros** (``std::vector<std::string>``)
   A vector of macros that should be interpreted as complete
