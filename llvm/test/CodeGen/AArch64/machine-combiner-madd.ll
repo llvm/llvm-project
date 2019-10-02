@@ -3,8 +3,6 @@
 ; RUN: llc -mtriple=aarch64-linux-gnu -mcpu=cortex-a72 < %s | FileCheck %s
 ; RUN: llc -mtriple=aarch64-linux-gnu -mcpu=cortex-a73 < %s | FileCheck %s
 ; RUN: llc -mtriple=aarch64-linux-gnu -mcpu=cyclone    < %s | FileCheck %s
-; RUN: llc -mtriple=aarch64-linux-gnu -mcpu=exynos-m1  < %s | FileCheck %s
-; RUN: llc -mtriple=aarch64-linux-gnu -mcpu=exynos-m2  < %s | FileCheck %s
 ; RUN: llc -mtriple=aarch64-linux-gnu -mcpu=exynos-m3  < %s | FileCheck %s
 ; RUN: llc -mtriple=aarch64-linux-gnu -mcpu=kryo       < %s | FileCheck %s
 ; RUN: llc -mtriple=aarch64-linux-gnu -mcpu=thunderx2t99 < %s | FileCheck %s

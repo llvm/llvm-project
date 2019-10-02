@@ -2,7 +2,6 @@
 ; RUN: llc %s -O2 -print-machineinstrs -mtriple=aarch64-linux-gnu -jump-table-density=40 -max-jump-table-size=4  -o /dev/null 2> %t; FileCheck %s --check-prefixes=CHECK,CHECK4  < %t
 ; RUN: llc %s -O2 -print-machineinstrs -mtriple=aarch64-linux-gnu -jump-table-density=40 -max-jump-table-size=8  -o /dev/null 2> %t; FileCheck %s --check-prefixes=CHECK,CHECK8  < %t
 ; RUN: llc %s -O2 -print-machineinstrs -mtriple=aarch64-linux-gnu -jump-table-density=40 -max-jump-table-size=16 -o /dev/null 2> %t; FileCheck %s --check-prefixes=CHECK,CHECK16 < %t
-; RUN: llc %s -O2 -print-machineinstrs -mtriple=aarch64-linux-gnu -jump-table-density=40 -mcpu=exynos-m1         -o /dev/null 2> %t; FileCheck %s --check-prefixes=CHECK,CHECKM1 < %t
 ; RUN: llc %s -O2 -print-machineinstrs -mtriple=aarch64-linux-gnu -jump-table-density=40 -mcpu=exynos-m3         -o /dev/null 2> %t; FileCheck %s --check-prefixes=CHECK,CHECKM3 < %t
 
 declare void @ext(i32, i32)
@@ -42,9 +41,6 @@ entry:
 ; CHECK8-NOT:   %jump-table.2:
 ; CHECK16-NEXT: %jump-table.0: %bb.2 %bb.3 %bb.4 %bb.5 %bb.6 %bb.7 %bb.8 %bb.9 %bb.10 %bb.11 %bb.12 %bb.13 %bb.14 %bb.15 %bb.16 %bb.17
 ; CHECK16-NOT:  %jump-table.1:
-; CHECKM1-NEXT: %jump-table.0: %bb.2 %bb.3 %bb.4 %bb.5 %bb.6 %bb.7 %bb.8 %bb.9
-; CHECKM1-NEXT: %jump-table.1: %bb.10 %bb.11 %bb.12 %bb.13 %bb.14 %bb.15 %bb.16 %bb.17
-; CHECKM1-NOT:  %jump-table.2:
 ; CHECKM3-NEXT: %jump-table.0: %bb.1 %bb.2 %bb.3 %bb.4 %bb.5 %bb.6 %bb.7 %bb.8 %bb.9 %bb.10 %bb.11 %bb.12 %bb.13 %bb.14 %bb.15 %bb.16 %bb.17
 ; CHECKM3-NOT:  %jump-table.1:
 
@@ -90,8 +86,6 @@ entry:
 ; CHECK8-NOT:   %jump-table.1:
 ; CHECK16-NEXT: %jump-table.0: %bb.1 %bb.2 %bb.3 %bb.4 %bb.7 %bb.7 %bb.7 %bb.7 %bb.7 %bb.7 %bb.7 %bb.7 %bb.7 %bb.5 %bb.6{{$}}
 ; CHECK16-NOT:  %jump-table.1:
-; CHECKM1-NEXT: %jump-table.0: %bb.1 %bb.2 %bb.3 %bb.4{{$}}
-; CHECKM1-NOT:  %jump-table.1:
 ; CHECKM3-NEXT: %jump-table.0: %bb.1 %bb.2 %bb.3 %bb.4 %bb.7 %bb.7 %bb.7 %bb.7 %bb.7 %bb.7 %bb.7 %bb.7 %bb.7 %bb.5 %bb.6{{$}}
 ; CHECKM3-NOT:  %jump-table.1:
 ; CHECK-DAG: End machine code for function jt2.
@@ -137,9 +131,6 @@ entry:
 ; CHECK16-NEXT: %jump-table.0: %bb.1 %bb.2 %bb.3 %bb.4 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.5 %bb.6 %bb.7
 ; CHECK16-NEXT: %jump-table.1: %bb.8 %bb.13 %bb.9 %bb.10 %bb.13 %bb.11 %bb.12
 ; CHECK16-NOT:  %jump-table.2:
-; CHECKM1-NEXT: %jump-table.0: %bb.1 %bb.2 %bb.3 %bb.4
-; CHECKM1-NEXT: %jump-table.1: %bb.5 %bb.6 %bb.7 %bb.8 %bb.13 %bb.9 %bb.10
-; CHECKM1-NOT:  %jump-table.2:
 ; CHECKM3-NEXT: %jump-table.0: %bb.1 %bb.2 %bb.3 %bb.4 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.5 %bb.6 %bb.7 %bb.8 %bb.13 %bb.9 %bb.10
 ; CHECKM3-NOT:  %jump-table.1:
 ; CHECK-DAG: End machine code for function jt3.
@@ -192,9 +183,6 @@ entry:
 ; CHECK16-NEXT: %jump-table.0: %bb.1 %bb.2 %bb.3 %bb.4 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.5 %bb.6 %bb.7
 ; CHECK16-NEXT: %jump-table.1: %bb.8 %bb.13 %bb.9 %bb.10 %bb.13 %bb.11 %bb.12
 ; CHECK16-NOT:  %jump-table.2:
-; CHECKM1-NEXT: %jump-table.0: %bb.1 %bb.2 %bb.3 %bb.4
-; CHECKM1-NEXT: %jump-table.1: %bb.5 %bb.6 %bb.7 %bb.8 %bb.13 %bb.9 %bb.10
-; CHECKM1-NOT:  %jump-table.2:
 ; CHECKM3-NEXT: %jump-table.0: %bb.1 %bb.2 %bb.3 %bb.4 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.5 %bb.6 %bb.7 %bb.8 %bb.13 %bb.9 %bb.10
 ; CHECKM3-NOT:  %jump-table.1:
 ; CHECK-DAG: End machine code for function jt4.
