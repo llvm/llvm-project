@@ -142,8 +142,9 @@ def break_to_next_boot_and_get_dpus(debugger, target):
             "(int)(rank->description->topology.nr_of_control_interfaces)",
             debugger, target)
         nb_dpu_per_ci = get_dpu_from_command(
-            "(int)(rank->description->topology.nr_of_dpus_per_control_interface)",
-            debugger,target)
+            "(int)(rank->description->topology."
+            "nr_of_dpus_per_control_interface)",
+            debugger, target)
         nb_dpu = int(nb_ci.GetValue(), 16) * int(nb_dpu_per_ci.GetValue(), 16)
         for each_dpu in range(0, nb_dpu):
             dpu_list.append(get_dpu_from_command("&rank->dpus["
@@ -309,8 +310,8 @@ def print_list(list, result):
     if result is None:
         return
     result.PutCString("ADDR \t\t\tID \t\tSTATUS \t\tPROGRAM")
-    for (dpu_addr, region_id, rank_id, slice_id, dpu_id, status, program) \
-        in list:
+    for (dpu_addr, region_id, rank_id, slice_id, dpu_id,
+         status, program) in list:
         result.PutCString(
             "'" + str(dpu_addr) + "' \t"
             + str(region_id) + ":" + str(rank_id) + ":"
