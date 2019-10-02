@@ -31,7 +31,7 @@ void func1(int &sink, int x) {
   DESTROY_RSI;
 
   //% self.filecheck("image lookup -va $pc", "main.cpp", "-check-prefix=FUNC1-DESC")
-  // FUNC1-DESC: name = "x", type = "int", location = DW_OP_entry_value( rsi)
+  // FUNC1-DESC: name = "x", type = "int", location = DW_OP_entry_value(DW_OP_reg4 RSI)
 
   ++sink;
 }
@@ -152,7 +152,10 @@ int main() {
   func2(sink, 123);
 
   // Test evaluation of "DW_OP_fbreg -24, DW_OP_deref" in the parent frame.
+  // Disabled for now, see: llvm.org/PR43343
+#if 0
   func3(sink, s1.field2);
+#endif
 
   // The sequences `main -> func4 -> func{5,6}_amb -> sink` are both plausible.
   // Test that lldb doesn't attempt to guess which one occurred: entry value

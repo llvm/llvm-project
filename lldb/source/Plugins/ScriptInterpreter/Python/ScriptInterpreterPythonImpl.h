@@ -78,6 +78,7 @@ public:
 
   StructuredData::ObjectSP
   CreateScriptedThreadPlan(const char *class_name,
+                           std::string &error_str,
                            lldb::ThreadPlanSP thread_plan) override;
 
   bool ScriptedThreadPlanExplainsStop(StructuredData::ObjectSP implementor_sp,

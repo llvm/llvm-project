@@ -38,6 +38,9 @@ public:
    ~SBThreadPlan ();
 
     bool
+    IsValid();
+
+    bool
     IsValid() const;
 
     explicit operator bool() const;
@@ -88,11 +91,6 @@ public:
 
     bool
     IsPlanStale();
-
-    bool
-    IsValid();
-
-    explicit operator bool() const;
 
     // This section allows an SBThreadPlan to push another of the common types of plans...
     SBThreadPlan

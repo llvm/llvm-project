@@ -1751,7 +1751,7 @@ Process::CreateBreakpointSite(const BreakpointLocationSP &owner,
       Address symbol_address = symbol->GetAddress();
       load_addr = ResolveIndirectFunction(&symbol_address, error);
       if (!error.Success() && show_error) {
-        GetTarget().GetDebugger().GetErrorFile()->Printf(
+        GetTarget().GetDebugger().GetErrorStream().Printf(
             "warning: failed to resolve indirect function at 0x%" PRIx64
             " for breakpoint %i.%i: %s\n",
             symbol->GetLoadAddress(&GetTarget()),
@@ -1790,7 +1790,7 @@ Process::CreateBreakpointSite(const BreakpointLocationSP &owner,
         } else {
           if (show_error || use_hardware) {
             // Report error for setting breakpoint...
-            GetTarget().GetDebugger().GetErrorFile()->Printf(
+            GetTarget().GetDebugger().GetErrorStream().Printf(
                 "warning: failed to set breakpoint site at 0x%" PRIx64
                 " for breakpoint %i.%i: %s\n",
                 load_addr, owner->GetBreakpoint().GetID(), owner->GetID(),
@@ -4404,9 +4404,9 @@ public:
       : IOHandler(process->GetTarget().GetDebugger(),
                   IOHandler::Type::ProcessIO),
         m_process(process),
+        m_read_file(GetInputFD(), File::eOpenOptionRead, false),
         m_write_file(write_fd, File::eOpenOptionWrite, false) {
     m_pipe.CreateNew(false);
-    m_read_file.SetDescriptor(GetInputFD(), File::eOpenOptionRead, false);
   }
 
   ~IOHandlerProcessSTDIO() override = default;
@@ -5660,6 +5660,12 @@ ProcessRunLock &Process::GetRunLock() {
   else
     return m_public_run_lock;
 }
+
+bool Process::CurrentThreadIsPrivateStateThread()
+{
+  return m_private_state_thread.EqualsThread(Host::GetCurrentThread());
+}
+
 
 void Process::Flush() {
   m_thread_list.Flush();

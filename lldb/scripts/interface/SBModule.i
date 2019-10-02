@@ -345,12 +345,6 @@ public:
     lldb::SBAddress
     GetObjectFileEntryPointAddress() const;
 
-    bool
-    operator == (const lldb::SBModule &rhs) const;
-
-    bool
-    operator != (const lldb::SBModule &rhs) const;
-
     %pythoncode %{
         def __len__(self):
             '''Return the number of symbols in a lldb.SBModule object.'''

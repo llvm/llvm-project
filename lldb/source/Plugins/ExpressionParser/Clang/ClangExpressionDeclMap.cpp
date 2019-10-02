@@ -277,8 +277,8 @@ static clang::QualType ExportAllDeclaredTypes(
     clang::FileManager &source_file_manager,
     const clang::ExternalASTMerger::OriginMap &source_origin_map,
     clang::FileID file, clang::QualType root) {
-  clang::ExternalASTMerger::ImporterSource importer_source = {
-      source, source_file_manager, source_origin_map};
+  clang::ExternalASTMerger::ImporterSource importer_source(
+      source, source_file_manager, source_origin_map);
   merger.AddSources(importer_source);
   clang::ASTImporter &exporter = merger.ImporterForOrigin(source);
   CompleteAllDeclContexts(exporter, file, root);

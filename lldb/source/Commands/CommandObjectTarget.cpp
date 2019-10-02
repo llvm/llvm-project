@@ -1630,75 +1630,30 @@ static size_t LookupFunctionInModule(CommandInterpreter &interpreter,
 static size_t LookupTypeInModule(CommandInterpreter &interpreter, Stream &strm,
                                  Module *module, const char *name_cstr,
                                  bool name_is_regex) {
+  TypeList type_list;
   if (module && name_cstr && name_cstr[0]) {
-    TypeList type_list;
     const uint32_t max_num_matches = UINT32_MAX;
     size_t num_matches = 0;
     bool name_is_fully_qualified = false;
 
     ConstString name(name_cstr);
     llvm::DenseSet<lldb_private::SymbolFile *> searched_symbol_files;
-    num_matches =
-        module->FindTypes(name, name_is_fully_qualified, max_num_matches,
-                          searched_symbol_files, type_list);
+    module->FindTypes(name, name_is_fully_qualified, max_num_matches,
+                      searched_symbol_files, type_list);
 
-    if (num_matches) {
-      strm.Indent();
-      strm.Printf("%" PRIu64 " match%s found in ", (uint64_t)num_matches,
-                  num_matches > 1 ? "es" : "");
-      DumpFullpath(strm, &module->GetFileSpec(), 0);
-      strm.PutCString(":\n");
-      for (TypeSP type_sp : type_list.Types()) {
-        if (type_sp) {
-          // Resolve the clang type so that any forward references to types
-          // that haven't yet been parsed will get parsed.
-          type_sp->GetFullCompilerType();
-          type_sp->GetDescription(&strm, eDescriptionLevelFull, true);
-          // Print all typedef chains
-          TypeSP typedef_type_sp(type_sp);
-          TypeSP typedefed_type_sp(typedef_type_sp->GetTypedefType());
-          while (typedefed_type_sp) {
-            strm.EOL();
-            strm.Printf("     typedef '%s': ",
-                        typedef_type_sp->GetName().GetCString());
-            typedefed_type_sp->GetFullCompilerType();
-            typedefed_type_sp->GetDescription(&strm, eDescriptionLevelFull,
-                                              true);
-            typedef_type_sp = typedefed_type_sp;
-            typedefed_type_sp = typedef_type_sp->GetTypedefType();
-          }
-        }
-        strm.EOL();
-      }
-    }
-    return num_matches;
-  }
-  return 0;
-}
+    if (type_list.Empty())
+      return 0;
 
-static size_t LookupTypeHere(CommandInterpreter &interpreter, Stream &strm,
-                             Module &module, const char *name_cstr,
-                             bool name_is_regex) {
-  TypeList type_list;
-  const uint32_t max_num_matches = UINT32_MAX;
-  size_t num_matches = 1;
-  bool name_is_fully_qualified = false;
-
-  ConstString name(name_cstr);
-  llvm::DenseSet<SymbolFile *> searched_symbol_files;
-  num_matches = module.FindTypes(name, name_is_fully_qualified, max_num_matches,
-                                 searched_symbol_files, type_list);
-
-  if (num_matches) {
     strm.Indent();
-    strm.PutCString("Best match found in ");
-    DumpFullpath(strm, &module.GetFileSpec(), 0);
+    strm.Printf("%" PRIu64 " match%s found in ", (uint64_t)num_matches,
+                num_matches > 1 ? "es" : "");
+    DumpFullpath(strm, &module->GetFileSpec(), 0);
     strm.PutCString(":\n");
-
-    TypeSP type_sp(type_list.GetTypeAtIndex(0));
-    if (type_sp) {
-      // Resolve the clang type so that any forward references to types that
-      // haven't yet been parsed will get parsed.
+    for (TypeSP type_sp : type_list.Types()) {
+      if (!type_sp)
+        continue;
+      // Resolve the clang type so that any forward references to types
+      // that haven't yet been parsed will get parsed.
       type_sp->GetFullCompilerType();
       type_sp->GetDescription(&strm, eDescriptionLevelFull, true);
       // Print all typedef chains
@@ -1716,7 +1671,50 @@ static size_t LookupTypeHere(CommandInterpreter &interpreter, Stream &strm,
     }
     strm.EOL();
   }
-  return num_matches;
+  return type_list.GetSize();
+}
+
+static size_t LookupTypeHere(CommandInterpreter &interpreter, Stream &strm,
+                             Module &module, const char *name_cstr,
+                             bool name_is_regex) {
+  TypeList type_list;
+  const uint32_t max_num_matches = UINT32_MAX;
+  bool name_is_fully_qualified = false;
+
+  ConstString name(name_cstr);
+  llvm::DenseSet<SymbolFile *> searched_symbol_files;
+  module.FindTypes(name, name_is_fully_qualified, max_num_matches,
+                   searched_symbol_files, type_list);
+
+  if (type_list.Empty())
+    return 0;
+
+  strm.Indent();
+  strm.PutCString("Best match found in ");
+  DumpFullpath(strm, &module.GetFileSpec(), 0);
+  strm.PutCString(":\n");
+
+  TypeSP type_sp(type_list.GetTypeAtIndex(0));
+  if (type_sp) {
+    // Resolve the clang type so that any forward references to types that
+    // haven't yet been parsed will get parsed.
+    type_sp->GetFullCompilerType();
+    type_sp->GetDescription(&strm, eDescriptionLevelFull, true);
+    // Print all typedef chains
+    TypeSP typedef_type_sp(type_sp);
+    TypeSP typedefed_type_sp(typedef_type_sp->GetTypedefType());
+    while (typedefed_type_sp) {
+      strm.EOL();
+      strm.Printf("     typedef '%s': ",
+                  typedef_type_sp->GetName().GetCString());
+      typedefed_type_sp->GetFullCompilerType();
+      typedefed_type_sp->GetDescription(&strm, eDescriptionLevelFull, true);
+      typedef_type_sp = typedefed_type_sp;
+      typedefed_type_sp = typedef_type_sp->GetTypedefType();
+    }
+  }
+  strm.EOL();
+  return type_list.GetSize();
 }
 
 static uint32_t LookupFileAndLineInModule(CommandInterpreter &interpreter,
@@ -4569,7 +4567,7 @@ public:
 
 protected:
   void IOHandlerActivated(IOHandler &io_handler, bool interactive) override {
-    StreamFileSP output_sp(io_handler.GetOutputStreamFile());
+    StreamFileSP output_sp(io_handler.GetOutputStreamFileSP());
     if (output_sp && interactive) {
       output_sp->PutCString(
           "Enter your stop hook command(s).  Type 'DONE' to end.\n");
@@ -4581,7 +4579,7 @@ protected:
                               std::string &line) override {
     if (m_stop_hook_sp) {
       if (line.empty()) {
-        StreamFileSP error_sp(io_handler.GetErrorStreamFile());
+        StreamFileSP error_sp(io_handler.GetErrorStreamFileSP());
         if (error_sp) {
           error_sp->Printf("error: stop hook #%" PRIu64
                            " aborted, no commands.\n",
@@ -4593,7 +4591,7 @@ protected:
           target->RemoveStopHookByID(m_stop_hook_sp->GetID());
       } else {
         m_stop_hook_sp->GetCommandPointer()->SplitIntoLines(line);
-        StreamFileSP output_sp(io_handler.GetOutputStreamFile());
+        StreamFileSP output_sp(io_handler.GetOutputStreamFileSP());
         if (output_sp) {
           output_sp->Printf("Stop hook #%" PRIu64 " added.\n",
                             m_stop_hook_sp->GetID());

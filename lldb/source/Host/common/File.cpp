@@ -93,20 +93,12 @@ int File::GetDescriptor() const {
 
 IOObject::WaitableHandle File::GetWaitableHandle() { return GetDescriptor(); }
 
-void File::SetDescriptor(int fd, uint32_t options, bool transfer_ownership) {
-  if (IsValid())
-    Close();
-  m_descriptor = fd;
-  m_should_close_fd = transfer_ownership;
-  m_options = options;
-}
-
 FILE *File::GetStream() {
   if (!StreamIsValid()) {
     if (DescriptorIsValid()) {
       const char *mode = GetStreamOpenModeFromOptions(m_options);
       if (mode) {
-        if (!m_should_close_fd) {
+        if (!m_own_descriptor) {
 // We must duplicate the file descriptor if we don't own it because when you
 // call fdopen, the stream will own the fd
 #ifdef _WIN32
@@ -114,7 +106,7 @@ FILE *File::GetStream() {
 #else
           m_descriptor = dup(GetDescriptor());
 #endif
-          m_should_close_fd = true;
+          m_own_descriptor = true;
         }
 
         m_stream =
@@ -125,19 +117,12 @@ FILE *File::GetStream() {
 
         if (m_stream) {
           m_own_stream = true;
-          m_should_close_fd = false;
+          m_own_descriptor = false;
         }
       }
     }
   }
   return m_stream;
-}
-
-void File::SetStream(FILE *fh, bool transfer_ownership) {
-  if (IsValid())
-    Close();
-  m_stream = fh;
-  m_own_stream = transfer_ownership;
 }
 
 uint32_t File::GetPermissions(Status &error) const {
@@ -163,7 +148,7 @@ Status File::Close() {
       error.SetErrorToErrno();
   }
 
-  if (DescriptorIsValid() && m_should_close_fd) {
+  if (DescriptorIsValid() && m_own_descriptor) {
     if (::close(m_descriptor) != 0)
       error.SetErrorToErrno();
   }
@@ -171,19 +156,22 @@ Status File::Close() {
   m_stream = kInvalidStream;
   m_options = 0;
   m_own_stream = false;
-  m_should_close_fd = false;
+  m_own_descriptor = false;
   m_is_interactive = eLazyBoolCalculate;
   m_is_real_terminal = eLazyBoolCalculate;
   return error;
 }
 
-void File::Clear() {
-  m_stream = nullptr;
+FILE *File::TakeStreamAndClear() {
+  FILE *stream = GetStream();
+  m_stream = NULL;
   m_descriptor = kInvalidDescriptor;
   m_options = 0;
   m_own_stream = false;
+  m_own_descriptor = false;
   m_is_interactive = m_supports_colors = m_is_real_terminal =
       eLazyBoolCalculate;
+  return stream;
 }
 
 Status File::GetFileSpec(FileSpec &file_spec) const {

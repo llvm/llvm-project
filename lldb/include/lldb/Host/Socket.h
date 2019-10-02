@@ -122,6 +122,7 @@ protected:
   SocketProtocol m_protocol;
   NativeSocket m_socket;
   bool m_child_processes_inherit;
+  bool m_should_close_fd;
 };
 
 } // namespace lldb_private

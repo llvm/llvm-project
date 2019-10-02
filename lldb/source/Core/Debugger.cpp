@@ -308,14 +308,12 @@ Status Debugger::SetPropertyValue(const ExecutionContext *exe_ctx,
         std::list<Status> errors;
         StreamString feedback_stream;
         if (!target_sp->LoadScriptingResources(errors, &feedback_stream)) {
-          StreamFileSP stream_sp(GetErrorFile());
-          if (stream_sp) {
-            for (auto error : errors) {
-              stream_sp->Printf("%s\n", error.AsCString());
-            }
-            if (feedback_stream.GetSize())
-              stream_sp->PutCString(feedback_stream.GetString());
+          Stream &s = GetErrorStream();
+          for (auto error : errors) {
+            s.Printf("%s\n", error.AsCString());
           }
+          if (feedback_stream.GetSize())
+            s.PutCString(feedback_stream.GetString());
         }
       }
     }
@@ -711,9 +709,9 @@ TargetSP Debugger::FindTargetWithProcess(Process *process) {
 Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
     : UserID(g_unique_id++),
       Properties(std::make_shared<OptionValueProperties>()),
-      m_input_file_sp(std::make_shared<StreamFile>(stdin, false)),
-      m_output_file_sp(std::make_shared<StreamFile>(stdout, false)),
-      m_error_file_sp(std::make_shared<StreamFile>(stderr, false)),
+      m_input_file_sp(std::make_shared<File>(stdin, false)),
+      m_output_stream_sp(std::make_shared<StreamFile>(stdout, false)),
+      m_error_stream_sp(std::make_shared<StreamFile>(stderr, false)),
       m_input_recorder(nullptr),
       m_broadcaster_manager_sp(BroadcasterManager::MakeBroadcasterManager()),
       m_terminal_state(), m_target_list(*this), m_platform_list(),
@@ -768,7 +766,7 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
   if (term && !strcmp(term, "dumb"))
     SetUseColor(false);
   // Turn off use-color if we don't write to a terminal with color support.
-  if (!m_output_file_sp->GetFile().GetIsTerminalWithColors())
+  if (!GetOutputFile().GetIsTerminalWithColors())
     SetUseColor(false);
 
 #if defined(_WIN32) && defined(ENABLE_VIRTUAL_TERMINAL_PROCESSING)
@@ -809,8 +807,7 @@ void Debugger::Clear() {
     // Close the input file _before_ we close the input read communications
     // class as it does NOT own the input file, our m_input_file does.
     m_terminal_state.Clear();
-    if (m_input_file_sp)
-      m_input_file_sp->GetFile().Close();
+    GetInputFile().Close();
 
     m_command_interpreter_up->Clear();
   });
@@ -838,14 +835,10 @@ repro::DataRecorder *Debugger::GetInputRecorder() { return m_input_recorder; }
 void Debugger::SetInputFileHandle(FILE *fh, bool tranfer_ownership,
                                   repro::DataRecorder *recorder) {
   m_input_recorder = recorder;
-  if (m_input_file_sp)
-    m_input_file_sp->GetFile().SetStream(fh, tranfer_ownership);
-  else
-    m_input_file_sp = std::make_shared<StreamFile>(fh, tranfer_ownership);
 
-  File &in_file = m_input_file_sp->GetFile();
-  if (!in_file.IsValid())
-    in_file.SetStream(stdin, true);
+  m_input_file_sp = std::make_shared<File>(fh, tranfer_ownership);
+  if (!m_input_file_sp->IsValid())
+    m_input_file_sp = std::make_shared<File>(stdin, false);
 
   // Save away the terminal state if that is relevant, so that we can restore
   // it in RestoreInputState.
@@ -853,34 +846,24 @@ void Debugger::SetInputFileHandle(FILE *fh, bool tranfer_ownership,
 }
 
 void Debugger::SetOutputFileHandle(FILE *fh, bool tranfer_ownership) {
-  if (m_output_file_sp)
-    m_output_file_sp->GetFile().SetStream(fh, tranfer_ownership);
-  else
-    m_output_file_sp = std::make_shared<StreamFile>(fh, tranfer_ownership);
-
-  File &out_file = m_output_file_sp->GetFile();
-  if (!out_file.IsValid())
-    out_file.SetStream(stdout, false);
+  FileSP file_sp = std::make_shared<File>(fh, tranfer_ownership);
+  if (!file_sp->IsValid())
+    file_sp = std::make_shared<File>(stdout, false);
+  m_output_stream_sp = std::make_shared<StreamFile>(file_sp);
 
 }
 
 void Debugger::SetErrorFileHandle(FILE *fh, bool tranfer_ownership) {
-  if (m_error_file_sp)
-    m_error_file_sp->GetFile().SetStream(fh, tranfer_ownership);
-  else
-    m_error_file_sp = std::make_shared<StreamFile>(fh, tranfer_ownership);
-
-  File &err_file = m_error_file_sp->GetFile();
-  if (!err_file.IsValid())
-    err_file.SetStream(stderr, false);
+  FileSP file_sp = std::make_shared<File>(fh, tranfer_ownership);
+  if (!file_sp->IsValid())
+    file_sp = std::make_shared<File>(stderr, false);
+  m_error_stream_sp = std::make_shared<StreamFile>(file_sp);
 }
 
 void Debugger::SaveInputTerminalState() {
-  if (m_input_file_sp) {
-    File &in_file = m_input_file_sp->GetFile();
-    if (in_file.GetDescriptor() != File::kInvalidDescriptor)
-      m_terminal_state.Save(in_file.GetDescriptor(), true);
-  }
+  int fd = GetInputFile().GetDescriptor();
+  if (fd != File::kInvalidDescriptor)
+    m_terminal_state.Save(fd, true);
 }
 
 void Debugger::RestoreInputTerminalState() { m_terminal_state.Restore(); }
@@ -961,8 +944,9 @@ bool Debugger::CheckTopIOHandlerTypes(IOHandler::Type top_type,
 }
 
 void Debugger::PrintAsync(const char *s, size_t len, bool is_stdout) {
-  lldb::StreamFileSP stream = is_stdout ? GetOutputFile() : GetErrorFile();
-  m_input_reader_stack.PrintAsync(stream.get(), s, len);
+  lldb_private::StreamFile &stream =
+      is_stdout ? GetOutputStream() : GetErrorStream();
+  m_input_reader_stack.PrintAsync(&stream, s, len);
 }
 
 ConstString Debugger::GetTopIOHandlerControlSequence(char ch) {
@@ -999,8 +983,7 @@ void Debugger::RunIOHandler(const IOHandlerSP &reader_sp) {
   }
 }
 
-void Debugger::AdoptTopIOHandlerFilesIfInvalid(StreamFileSP &in,
-                                               StreamFileSP &out,
+void Debugger::AdoptTopIOHandlerFilesIfInvalid(FileSP &in, StreamFileSP &out,
                                                StreamFileSP &err) {
   // Before an IOHandler runs, it must have in/out/err streams. This function
   // is called when one ore more of the streams are nullptr. We use the top
@@ -1012,20 +995,20 @@ void Debugger::AdoptTopIOHandlerFilesIfInvalid(StreamFileSP &in,
   // If no STDIN has been set, then set it appropriately
   if (!in) {
     if (top_reader_sp)
-      in = top_reader_sp->GetInputStreamFile();
+      in = top_reader_sp->GetInputFileSP();
     else
-      in = GetInputFile();
+      in = GetInputFileSP();
 
     // If there is nothing, use stdin
     if (!in)
-      in = std::make_shared<StreamFile>(stdin, false);
+      in = std::make_shared<File>(stdin, false);
   }
   // If no STDOUT has been set, then set it appropriately
   if (!out) {
     if (top_reader_sp)
-      out = top_reader_sp->GetOutputStreamFile();
+      out = top_reader_sp->GetOutputStreamFileSP();
     else
-      out = GetOutputFile();
+      out = GetOutputStreamSP();
 
     // If there is nothing, use stdout
     if (!out)
@@ -1034,13 +1017,13 @@ void Debugger::AdoptTopIOHandlerFilesIfInvalid(StreamFileSP &in,
   // If no STDERR has been set, then set it appropriately
   if (!err) {
     if (top_reader_sp)
-      err = top_reader_sp->GetErrorStreamFile();
+      err = top_reader_sp->GetErrorStreamFileSP();
     else
-      err = GetErrorFile();
+      err = GetErrorStreamSP();
 
     // If there is nothing, use stderr
     if (!err)
-      err = std::make_shared<StreamFile>(stdout, false);
+      err = std::make_shared<StreamFile>(stderr, false);
   }
 }
 
@@ -1244,7 +1227,7 @@ bool Debugger::EnableLog(llvm::StringRef channel,
         LLDB_LOG_OPTION_PREPEND_TIMESTAMP | LLDB_LOG_OPTION_PREPEND_THREAD_NAME;
   } else if (log_file.empty()) {
     log_stream_sp = std::make_shared<llvm::raw_fd_ostream>(
-        GetOutputFile()->GetFile().GetDescriptor(), !should_close, unbuffered);
+        GetOutputFile().GetDescriptor(), !should_close, unbuffered);
   } else {
     auto pos = m_log_streams.find(log_file);
     if (pos != m_log_streams.end())
@@ -1642,8 +1625,7 @@ bool Debugger::StartIOHandlerThread() {
 
 void Debugger::StopIOHandlerThread() {
   if (m_io_handler_thread.IsJoinable()) {
-    if (m_input_file_sp)
-      m_input_file_sp->GetFile().Close();
+    GetInputFile().Close();
     m_io_handler_thread.Join(nullptr);
   }
 }

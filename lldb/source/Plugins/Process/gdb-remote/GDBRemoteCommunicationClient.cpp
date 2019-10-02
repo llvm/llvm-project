@@ -23,7 +23,6 @@
 #include "lldb/Target/UnixSignals.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/DataBufferHeap.h"
-#include "lldb/Utility/JSON.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
@@ -35,14 +34,15 @@
 #include "lldb/Utility/StringExtractorGDBRemote.h"
 
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Support/JSON.h"
 
 #if defined(HAVE_LIBCOMPRESSION)
 #include <compression.h>
 #endif
 
 using namespace lldb;
-using namespace lldb_private;
 using namespace lldb_private::process_gdb_remote;
+using namespace lldb_private;
 using namespace std::chrono;
 
 // GDBRemoteCommunicationClient constructor
@@ -3609,21 +3609,21 @@ ParseModuleSpec(StructuredData::Dictionary *dict) {
 llvm::Optional<std::vector<ModuleSpec>>
 GDBRemoteCommunicationClient::GetModulesInfo(
     llvm::ArrayRef<FileSpec> module_file_specs, const llvm::Triple &triple) {
+  namespace json = llvm::json;
+
   if (!m_supports_jModulesInfo)
     return llvm::None;
 
-  JSONArray::SP module_array_sp = std::make_shared<JSONArray>();
+  json::Array module_array;
   for (const FileSpec &module_file_spec : module_file_specs) {
-    JSONObject::SP module_sp = std::make_shared<JSONObject>();
-    module_array_sp->AppendObject(module_sp);
-    module_sp->SetObject(
-        "file", std::make_shared<JSONString>(module_file_spec.GetPath(false)));
-    module_sp->SetObject("triple",
-                         std::make_shared<JSONString>(triple.getTriple()));
+    module_array.push_back(
+        json::Object{{"file", module_file_spec.GetPath(false)},
+                     {"triple", triple.getTriple()}});
   }
   StreamString unescaped_payload;
   unescaped_payload.PutCString("jModulesInfo:");
-  module_array_sp->Write(unescaped_payload);
+  unescaped_payload.AsRawOstream() << std::move(module_array);
+
   StreamGDBRemote payload;
   payload.PutEscapedBytes(unescaped_payload.GetString().data(),
                           unescaped_payload.GetSize());

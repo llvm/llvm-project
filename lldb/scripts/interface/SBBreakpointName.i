@@ -34,8 +34,6 @@ public:
 
   ~SBBreakpointName();
 
-  const lldb::SBBreakpointName &operator=(const lldb::SBBreakpointName &rhs);
-
   // Tests to see if the opaque breakpoint object in this object matches the
   // opaque breakpoint object in "rhs".
   bool operator==(const lldb::SBBreakpointName &rhs);

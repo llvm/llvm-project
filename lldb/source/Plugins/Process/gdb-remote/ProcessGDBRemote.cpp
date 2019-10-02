@@ -86,7 +86,6 @@
 #include "llvm/Support/raw_ostream.h"
 
 #define DEBUGSERVER_BASENAME "debugserver"
-using namespace llvm;
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::process_gdb_remote;
@@ -5090,7 +5089,7 @@ ParseStructuredDataPacket(llvm::StringRef packet) {
   if (log) {
     if (json_sp) {
       StreamString json_str;
-      json_sp->Dump(json_str);
+      json_sp->Dump(json_str, true);
       json_str.Flush();
       LLDB_LOGF(log,
                 "ProcessGDBRemote::%s() "

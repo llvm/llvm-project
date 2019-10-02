@@ -54,7 +54,8 @@ public:
       return error;
     }
 
-    m_data_sp->Dump(stream);
+    llvm::json::OStream s(stream.AsRawOstream());
+    m_data_sp->Serialize(s);
     return error;
   }
 

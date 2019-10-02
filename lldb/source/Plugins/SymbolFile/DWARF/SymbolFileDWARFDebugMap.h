@@ -109,10 +109,10 @@ public:
   uint32_t FindFunctions(const lldb_private::RegularExpression &regex,
                          bool include_inlines, bool append,
                          lldb_private::SymbolContextList &sc_list) override;
-  uint32_t
+  void
   FindTypes(lldb_private::ConstString name,
             const lldb_private::CompilerDeclContext *parent_decl_ctx,
-            bool append, uint32_t max_matches,
+            uint32_t max_matches,
             llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
             lldb_private::TypeMap &types) override;
   size_t FindTypes(llvm::ArrayRef<lldb_private::CompilerContext> context,
@@ -121,9 +121,9 @@ public:
   lldb_private::CompilerDeclContext FindNamespace(
       lldb_private::ConstString name,
       const lldb_private::CompilerDeclContext *parent_decl_ctx) override;
-  size_t GetTypes(lldb_private::SymbolContextScope *sc_scope,
-                  lldb::TypeClass type_mask,
-                  lldb_private::TypeList &type_list) override;
+  void GetTypes(lldb_private::SymbolContextScope *sc_scope,
+                lldb::TypeClass type_mask,
+                lldb_private::TypeList &type_list) override;
   std::vector<lldb_private::CallEdge>
   ParseCallEdgesInFunction(lldb_private::UserID func_id) override;
 

@@ -1441,27 +1441,23 @@ void SymbolFilePDB::AddSymbols(lldb_private::Symtab &symtab) {
   symtab.Finalize();
 }
 
-uint32_t SymbolFilePDB::FindTypes(
+void SymbolFilePDB::FindTypes(
     lldb_private::ConstString name,
-    const lldb_private::CompilerDeclContext *parent_decl_ctx, bool append,
+    const lldb_private::CompilerDeclContext *parent_decl_ctx,
     uint32_t max_matches,
     llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
     lldb_private::TypeMap &types) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
-  if (!append)
-    types.Clear();
   if (!name)
-    return 0;
+    return;
   if (!DeclContextMatchesThisSymbolFile(parent_decl_ctx))
-    return 0;
+    return;
 
   searched_symbol_files.clear();
   searched_symbol_files.insert(this);
 
   // There is an assumption 'name' is not a regex
   FindTypesByName(name.GetStringRef(), parent_decl_ctx, max_matches, types);
-
-  return types.GetSize();
 }
 
 void SymbolFilePDB::DumpClangAST(Stream &s) {
@@ -1584,13 +1580,9 @@ void SymbolFilePDB::FindTypesByName(
   }
 }
 
-size_t SymbolFilePDB::FindTypes(llvm::ArrayRef<CompilerContext> pattern,
-                                LanguageSet languages, bool append,
-                                lldb_private::TypeMap &types) {
-  if (!append)
-    types.Clear();
-  return 0;
-}
+void SymbolFilePDB::FindTypes(llvm::ArrayRef<CompilerContext> pattern,
+                              LanguageSet languages,
+                              lldb_private::TypeMap &types) {}
 
 void SymbolFilePDB::GetTypesForPDBSymbol(const llvm::pdb::PDBSymbol &pdb_symbol,
                                          uint32_t type_mask,
@@ -1642,18 +1634,17 @@ void SymbolFilePDB::GetTypesForPDBSymbol(const llvm::pdb::PDBSymbol &pdb_symbol,
     GetTypesForPDBSymbol(*symbol_up, type_mask, type_collection);
 }
 
-size_t SymbolFilePDB::GetTypes(lldb_private::SymbolContextScope *sc_scope,
-                               TypeClass type_mask,
-                               lldb_private::TypeList &type_list) {
+void SymbolFilePDB::GetTypes(lldb_private::SymbolContextScope *sc_scope,
+                             TypeClass type_mask,
+                             lldb_private::TypeList &type_list) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   TypeCollection type_collection;
-  uint32_t old_size = type_list.GetSize();
   CompileUnit *cu =
       sc_scope ? sc_scope->CalculateSymbolContextCompileUnit() : nullptr;
   if (cu) {
     auto compiland_up = GetPDBCompilandByUID(cu->GetID());
     if (!compiland_up)
-      return 0;
+      return;
     GetTypesForPDBSymbol(*compiland_up, type_mask, type_collection);
   } else {
     for (uint32_t cu_idx = 0; cu_idx < GetNumCompileUnits(); ++cu_idx) {
@@ -1669,7 +1660,6 @@ size_t SymbolFilePDB::GetTypes(lldb_private::SymbolContextScope *sc_scope,
     type->GetForwardCompilerType();
     type_list.Insert(type->shared_from_this());
   }
-  return type_list.GetSize() - old_size;
 }
 
 llvm::Expected<lldb_private::TypeSystem &>

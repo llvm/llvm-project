@@ -1226,8 +1226,8 @@ Status Platform::PutFile(const FileSpec &source, const FileSpec &destination,
   if (fs::is_symlink_file(source.GetPath()))
     source_open_options |= File::eOpenOptionDontFollowSymlinks;
 
-  auto source_file = FileSystem::Instance().Open(
-      source, source_open_options, lldb::eFilePermissionsUserRW);
+  auto source_file = FileSystem::Instance().Open(source, source_open_options,
+                                                 lldb::eFilePermissionsUserRW);
   if (!source_file)
     return Status(source_file.takeError());
   Status error;
@@ -1796,8 +1796,7 @@ lldb::ProcessSP Platform::ConnectProcess(llvm::StringRef connect_url,
   if (!process_sp)
     return nullptr;
 
-  error =
-      process_sp->ConnectRemote(debugger.GetOutputFile().get(), connect_url);
+  error = process_sp->ConnectRemote(&debugger.GetOutputStream(), connect_url);
   if (error.Fail())
     return nullptr;
 

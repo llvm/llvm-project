@@ -308,22 +308,13 @@ uint32_t SymbolFileBreakpad::FindFunctions(const RegularExpression &regex,
   return sc_list.GetSize();
 }
 
-uint32_t SymbolFileBreakpad::FindTypes(
+void SymbolFileBreakpad::FindTypes(
     ConstString name, const CompilerDeclContext *parent_decl_ctx,
-    bool append, uint32_t max_matches,
-    llvm::DenseSet<SymbolFile *> &searched_symbol_files, TypeMap &types) {
-  if (!append)
-    types.Clear();
-  return types.GetSize();
-}
+    uint32_t max_matches, llvm::DenseSet<SymbolFile *> &searched_symbol_files,
+    TypeMap &types) {}
 
-size_t SymbolFileBreakpad::FindTypes(llvm::ArrayRef<CompilerContext> pattern,
-                                     LanguageSet languages, bool append,
-                                     TypeMap &types) {
-  if (!append)
-    types.Clear();
-  return types.GetSize();
-}
+void SymbolFileBreakpad::FindTypes(llvm::ArrayRef<CompilerContext> pattern,
+                                   LanguageSet languages, TypeMap &types) {}
 
 void SymbolFileBreakpad::AddSymbols(Symtab &symtab) {
   Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_SYMBOLS);
@@ -372,6 +363,20 @@ void SymbolFileBreakpad::AddSymbols(Symtab &symtab) {
   for (auto &KV : symbols)
     symtab.AddSymbol(std::move(KV.second));
   symtab.CalculateSymbolSizes();
+}
+
+llvm::Expected<lldb::addr_t>
+SymbolFileBreakpad::GetParameterStackSize(Symbol &symbol) {
+  ParseUnwindData();
+  if (auto *entry = m_unwind_data->win.FindEntryThatContains(
+          symbol.GetAddress().GetFileAddress())) {
+    auto record = StackWinRecord::parse(
+        *LineIterator(*m_objfile_sp, Record::StackWin, entry->data));
+    assert(record.hasValue());
+    return record->ParameterSize;
+  }
+  return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                 "Parameter size unknown.");
 }
 
 static llvm::Optional<std::pair<llvm::StringRef, llvm::StringRef>>
@@ -585,12 +590,19 @@ SymbolFileBreakpad::ParseWinUnwindPlan(const Bookmark &bookmark,
 
   // We assume the first value will be the CFA. It is usually called T0, but
   // clang will use T1, if it needs to realign the stack.
-  if (!postfix::ResolveSymbols(it->second, symbol_resolver)) {
-    LLDB_LOG(log, "Resolving symbols in `{0}` failed.", record->ProgramString);
-    return nullptr;
+  auto *symbol = llvm::dyn_cast<postfix::SymbolNode>(it->second);
+  if (symbol && symbol->GetName() == ".raSearch") {
+    row_sp->GetCFAValue().SetRaSearch(record->LocalSize +
+                                      record->SavedRegisterSize);
+  } else {
+    if (!postfix::ResolveSymbols(it->second, symbol_resolver)) {
+      LLDB_LOG(log, "Resolving symbols in `{0}` failed.",
+               record->ProgramString);
+      return nullptr;
+    }
+    llvm::ArrayRef<uint8_t> saved  = SaveAsDWARF(*it->second);
+    row_sp->GetCFAValue().SetIsDWARFExpression(saved.data(), saved.size());
   }
-  llvm::ArrayRef<uint8_t> saved = SaveAsDWARF(*it->second);
-  row_sp->GetCFAValue().SetIsDWARFExpression(saved.data(), saved.size());
 
   // Replace the node value with InitialValueNode, so that subsequent
   // expressions refer to the CFA value instead of recomputing the whole

@@ -329,9 +329,8 @@ FILE *SBDebugger::GetInputFileHandle() {
   LLDB_RECORD_METHOD_NO_ARGS(FILE *, SBDebugger, GetInputFileHandle);
 
   if (m_opaque_sp) {
-    StreamFileSP stream_file_sp(m_opaque_sp->GetInputFile());
-    if (stream_file_sp)
-      return LLDB_RECORD_RESULT(stream_file_sp->GetFile().GetStream());
+    File &file_sp = m_opaque_sp->GetInputFile();
+    return LLDB_RECORD_RESULT(file_sp.GetStream());
   }
   return nullptr;
 }
@@ -340,9 +339,8 @@ FILE *SBDebugger::GetOutputFileHandle() {
   LLDB_RECORD_METHOD_NO_ARGS(FILE *, SBDebugger, GetOutputFileHandle);
 
   if (m_opaque_sp) {
-    StreamFileSP stream_file_sp(m_opaque_sp->GetOutputFile());
-    if (stream_file_sp)
-      return LLDB_RECORD_RESULT(stream_file_sp->GetFile().GetStream());
+    StreamFile &stream_file = m_opaque_sp->GetOutputStream();
+    return LLDB_RECORD_RESULT(stream_file.GetFile().GetStream());
   }
   return nullptr;
 }
@@ -351,9 +349,8 @@ FILE *SBDebugger::GetErrorFileHandle() {
   LLDB_RECORD_METHOD_NO_ARGS(FILE *, SBDebugger, GetErrorFileHandle);
 
   if (m_opaque_sp) {
-    StreamFileSP stream_file_sp(m_opaque_sp->GetErrorFile());
-    if (stream_file_sp)
-      return LLDB_RECORD_RESULT(stream_file_sp->GetFile().GetStream());
+    StreamFile &stream_file = m_opaque_sp->GetErrorStream();
+    return LLDB_RECORD_RESULT(stream_file.GetFile().GetStream());
   }
   return nullptr;
 }

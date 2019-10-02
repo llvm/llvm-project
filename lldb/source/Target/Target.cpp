@@ -1374,15 +1374,15 @@ static void LoadScriptingResourceForModule(const ModuleSP &module_sp,
   if (module_sp && !module_sp->LoadScriptingResourceInTarget(
                        target, error, &feedback_stream)) {
     if (error.AsCString())
-      target->GetDebugger().GetErrorFile()->Printf(
+      target->GetDebugger().GetErrorStream().Printf(
           "unable to load scripting data for module %s - error reported was "
           "%s\n",
           module_sp->GetFileSpec().GetFileNameStrippingExtension().GetCString(),
           error.AsCString());
   }
   if (feedback_stream.GetSize())
-    target->GetDebugger().GetErrorFile()->Printf("%s\n",
-                                                 feedback_stream.GetData());
+    target->GetDebugger().GetErrorStream().Printf("%s\n",
+                                                  feedback_stream.GetData());
 }
 
 void Target::ClearModules(bool delete_locations) {
@@ -4490,6 +4490,13 @@ Target::TargetEventData::GetModuleListFromEvent(const Event *event_ptr) {
   if (event_data)
     module_list = event_data->m_module_list;
   return module_list;
+}
+
+std::recursive_mutex &Target::GetAPIMutex() { 
+  if (GetProcessSP() && GetProcessSP()->CurrentThreadIsPrivateStateThread())
+    return m_private_mutex;
+  else
+    return m_mutex;
 }
 
 bool Target::RegisterSwiftContextMessageKey(std::string Key) {
