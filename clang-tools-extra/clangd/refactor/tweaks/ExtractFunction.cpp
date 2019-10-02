@@ -104,6 +104,11 @@ bool isRootStmt(const Node *N) {
 }
 
 // Returns the (unselected) parent of all RootStmts given the commonAncestor.
+// Returns null if:
+// 1. any node is partially selected
+// 2. If all completely selected nodes don't have the same common parent
+// 3. Any child of Parent isn't a RootStmt.
+// Returns null if any child is not a RootStmt.
 // We only support extraction of RootStmts since it allows us to extract without
 // having to change the selection range. Also, this means that any scope that
 // begins in selection range, ends in selection range and any scope that begins
@@ -111,28 +116,30 @@ bool isRootStmt(const Node *N) {
 const Node *getParentOfRootStmts(const Node *CommonAnc) {
   if (!CommonAnc)
     return nullptr;
+  const Node *Parent = nullptr;
   switch (CommonAnc->Selected) {
   case SelectionTree::Selection::Unselected:
+    // Typicaly a block, with the { and } unselected, could also be ForStmt etc
     // Ensure all Children are RootStmts.
-    return llvm::all_of(CommonAnc->Children, isRootStmt) ? CommonAnc : nullptr;
+    Parent = CommonAnc;
+    break;
   case SelectionTree::Selection::Partial:
-    // Treat Partially selected VarDecl as completely selected since
-    // SelectionTree doesn't always select VarDecls correctly.
-    // FIXME: Remove this after D66872 is upstream)
-    if (!CommonAnc->ASTNode.get<VarDecl>())
-      return nullptr;
-    LLVM_FALLTHROUGH;
+    // Only a fully-selected single statement can be selected.
+    return nullptr;
   case SelectionTree::Selection::Complete:
     // If the Common Ancestor is completely selected, then it's a root statement
     // and its parent will be unselected.
-    const Node *Parent = CommonAnc->Parent;
+    Parent = CommonAnc->Parent;
     // If parent is a DeclStmt, even though it's unselected, we consider it a
     // root statement and return its parent. This is done because the VarDecls
     // claim the entire selection range of the Declaration and DeclStmt is
     // always unselected.
-    return Parent->ASTNode.get<DeclStmt>() ? Parent->Parent : Parent;
+    if (Parent->ASTNode.get<DeclStmt>())
+      Parent = Parent->Parent;
+    break;
   }
-  llvm_unreachable("Unhandled SelectionTree::Selection enum");
+  // Ensure all Children are RootStmts.
+  return llvm::all_of(Parent->Children, isRootStmt) ? Parent : nullptr;
 }
 
 // The ExtractionZone class forms a view of the code wrt Zone.
@@ -218,10 +225,24 @@ computeEnclosingFuncRange(const FunctionDecl *EnclosingFunction,
   return toHalfOpenFileRange(SM, LangOpts, EnclosingFunction->getSourceRange());
 }
 
+// returns true if Child can be a single RootStmt being extracted from
+// EnclosingFunc.
+bool validSingleChild(const Node *Child, const FunctionDecl *EnclosingFunc) {
+  // Don't extract expressions.
+  // FIXME: We should extract expressions that are "statements" i.e. not
+  // subexpressions
+  if (Child->ASTNode.get<Expr>())
+    return false;
+  // Extracting the body of EnclosingFunc would remove it's definition.
+  assert(EnclosingFunc->hasBody() &&
+         "We should always be extracting from a function body.");
+  if (Child->ASTNode.get<Stmt>() == EnclosingFunc->getBody())
+    return false;
+  return true;
+}
+
 // FIXME: Check we're not extracting from the initializer/condition of a control
 // flow structure.
-// FIXME: Check that we don't extract the compound statement of the
-// enclosingFunction.
 llvm::Optional<ExtractionZone> findExtractionZone(const Node *CommonAnc,
                                                   const SourceManager &SM,
                                                   const LangOptions &LangOpts) {
@@ -229,14 +250,13 @@ llvm::Optional<ExtractionZone> findExtractionZone(const Node *CommonAnc,
   ExtZone.Parent = getParentOfRootStmts(CommonAnc);
   if (!ExtZone.Parent || ExtZone.Parent->Children.empty())
     return llvm::None;
-  // Don't extract expressions.
-  // FIXME: We should extract expressions that are "statements" i.e. not
-  // subexpressions
-  if (ExtZone.Parent->Children.size() == 1 &&
-      ExtZone.getLastRootStmt()->ASTNode.get<Expr>())
-    return llvm::None;
   ExtZone.EnclosingFunction = findEnclosingFunction(ExtZone.Parent);
   if (!ExtZone.EnclosingFunction)
+    return llvm::None;
+  // When there is a single RootStmt, we must check if it's valid for
+  // extraction.
+  if (ExtZone.Parent->Children.size() == 1 &&
+      !validSingleChild(ExtZone.getLastRootStmt(), ExtZone.EnclosingFunction))
     return llvm::None;
   if (auto FuncRange =
           computeEnclosingFuncRange(ExtZone.EnclosingFunction, SM, LangOpts))
