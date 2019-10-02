@@ -152,6 +152,12 @@ New checks
   Finds calls to ``NSInvocation`` methods under ARC that don't have proper
   argument object lifetimes.
 
+- New :doc:`readability-use-anyofallof
+  <clang-tidy/checks/readability-use-anyofallof>` check.
+
+  Finds range-based for loops that can be replaced by a call to ``std::any_of``
+  or ``std::all_of``.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
