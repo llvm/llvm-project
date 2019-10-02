@@ -3131,7 +3131,7 @@ size_t ObjectFileMachO::ParseSymtab() {
                                   if (!FileSystem::Instance().Exists(so_dir)) {
                                     so_dir.SetFile(
                                         &full_so_path[double_slash_pos + 1],
-                                        false);
+                                        FileSpec::Style::native);
                                     if (FileSystem::Instance().Exists(so_dir)) {
                                       // Trim off the incorrect path
                                       full_so_path.erase(0,
