@@ -1005,15 +1005,10 @@ NamedDecl *Sema::ActOnTypeParameter(Scope *S, bool Typename,
   assert(S->isTemplateParamScope() &&
          "Template type parameter not in template parameter scope!");
 
-  SourceLocation Loc = ParamNameLoc;
-  if (!ParamName)
-    Loc = KeyLoc;
-
   bool IsParameterPack = EllipsisLoc.isValid();
-  TemplateTypeParmDecl *Param
-    = TemplateTypeParmDecl::Create(Context, Context.getTranslationUnitDecl(),
-                                   KeyLoc, Loc, Depth, Position, ParamName,
-                                   Typename, IsParameterPack);
+  TemplateTypeParmDecl *Param = TemplateTypeParmDecl::Create(
+      Context, Context.getTranslationUnitDecl(), KeyLoc, ParamNameLoc, Depth,
+      Position, ParamName, Typename, IsParameterPack);
   Param->setAccess(AS_public);
 
   if (Param->isParameterPack())
@@ -1044,7 +1039,7 @@ NamedDecl *Sema::ActOnTypeParameter(Scope *S, bool Typename,
     assert(DefaultTInfo && "expected source information for type");
 
     // Check for unexpanded parameter packs.
-    if (DiagnoseUnexpandedParameterPack(Loc, DefaultTInfo,
+    if (DiagnoseUnexpandedParameterPack(ParamNameLoc, DefaultTInfo,
                                         UPPC_DefaultArgument))
       return Param;
 

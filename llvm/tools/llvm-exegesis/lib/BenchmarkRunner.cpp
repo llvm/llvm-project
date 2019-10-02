@@ -11,6 +11,7 @@
 
 #include "Assembler.h"
 #include "BenchmarkRunner.h"
+#include "Error.h"
 #include "MCInstrDescView.h"
 #include "PerfHelper.h"
 #include "llvm/ADT/StringExtras.h"
@@ -23,9 +24,6 @@
 
 namespace llvm {
 namespace exegesis {
-
-BenchmarkFailure::BenchmarkFailure(const llvm::Twine &S)
-    : llvm::StringError(S, llvm::inconvertibleErrorCode()) {}
 
 BenchmarkRunner::BenchmarkRunner(const LLVMState &State,
                                  InstructionBenchmark::ModeE Mode)
@@ -71,8 +69,7 @@ private:
         llvm::CrashRecoveryContext::Disable();
         // FIXME: Better diagnosis.
         if (Crashed)
-          return llvm::make_error<BenchmarkFailure>(
-              "snippet crashed while running");
+          return make_error<Failure>("snippet crashed while running");
       }
       CounterValue += Counter.read();
     }

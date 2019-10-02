@@ -66,7 +66,7 @@ Address CodeGenFunction::CreateTempAllocaWithoutCast(llvm::Type *Ty,
                                                      const Twine &Name,
                                                      llvm::Value *ArraySize) {
   auto Alloca = CreateTempAlloca(Ty, Name, ArraySize);
-  Alloca->setAlignment(Align.getQuantity());
+  Alloca->setAlignment(llvm::MaybeAlign(Align.getQuantity()));
   return Address(Alloca, Align);
 }
 

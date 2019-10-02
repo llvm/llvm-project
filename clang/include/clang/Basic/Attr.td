@@ -3281,11 +3281,12 @@ def OMPAllocateDecl : InheritableAttr {
   let Documentation = [Undocumented];
 }
 
-def OMPDeclareVariant : Attr {
+def OMPDeclareVariant : InheritableAttr {
   let Spellings = [Pragma<"omp", "declare variant">];
   let Subjects = SubjectList<[Function]>;
   let SemaHandler = 0;
   let HasCustomParsing = 1;
+  let InheritEvenIfAlreadyPresent = 1;
   let Documentation = [OMPDeclareVariantDocs];
   let Args = [
     ExprArgument<"VariantFuncRef">,

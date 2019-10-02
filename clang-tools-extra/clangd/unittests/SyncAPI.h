@@ -56,6 +56,9 @@ RefSlab getRefs(const SymbolIndex &Index, SymbolID ID);
 llvm::Expected<std::vector<Range>>
 runSemanticRanges(ClangdServer &Server, PathRef File, Position Pos);
 
+llvm::Expected<llvm::Optional<clangd::Path>>
+runSwitchHeaderSource(ClangdServer &Server, PathRef File);
+
 } // namespace clangd
 } // namespace clang
 

@@ -22,6 +22,7 @@
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/StmtVisitor.h"
+#include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/AST/TypeLocVisitor.h"
@@ -188,6 +189,10 @@ public:
                 llvm::dyn_cast<UsingShadowDecl>(ME->getFoundDecl().getDecl()))
           D = USD;
         Outer.add(D, Flags);
+      }
+      void VisitOverloadExpr(const OverloadExpr *OE) {
+        for (auto *D : OE->decls())
+          Outer.add(D, Flags);
       }
       void VisitCXXConstructExpr(const CXXConstructExpr *CCE) {
         Outer.add(CCE->getConstructor(), Flags);
@@ -561,6 +566,34 @@ public:
     return true;
   }
 
+  // We re-define Traverse*, since there's no corresponding Visit*.
+  // TemplateArgumentLoc is the only way to get locations for references to
+  // template template parameters.
+  bool TraverseTemplateArgumentLoc(TemplateArgumentLoc A) {
+    switch (A.getArgument().getKind()) {
+    case TemplateArgument::Template:
+    case TemplateArgument::TemplateExpansion:
+      reportReference(ReferenceLoc{A.getTemplateQualifierLoc(),
+                                   A.getTemplateNameLoc(),
+                                   {A.getArgument()
+                                        .getAsTemplateOrTemplatePattern()
+                                        .getAsTemplateDecl()}},
+                      DynTypedNode::create(A.getArgument()));
+      break;
+    case TemplateArgument::Declaration:
+      break; // FIXME: can this actually happen in TemplateArgumentLoc?
+    case TemplateArgument::Integral:
+    case TemplateArgument::Null:
+    case TemplateArgument::NullPtr:
+      break; // no references.
+    case TemplateArgument::Pack:
+    case TemplateArgument::Type:
+    case TemplateArgument::Expression:
+      break; // Handled by VisitType and VisitExpression.
+    };
+    return RecursiveASTVisitor::TraverseTemplateArgumentLoc(A);
+  }
+
   bool VisitDecl(Decl *D) {
     visitNode(DynTypedNode::create(*D));
     return true;
@@ -619,15 +652,19 @@ private:
     auto Ref = explicitReference(N);
     if (!Ref)
       return;
+    reportReference(*Ref, N);
+  }
+
+  void reportReference(const ReferenceLoc &Ref, DynTypedNode N) {
     // Our promise is to return only references from the source code. If we lack
     // location information, skip these nodes.
     // Normally this should not happen in practice, unless there are bugs in the
     // traversals or users started the traversal at an implicit node.
-    if (Ref->NameLoc.isInvalid()) {
+    if (Ref.NameLoc.isInvalid()) {
       dlog("invalid location at node {0}", nodeToString(N));
       return;
     }
-    Out(*Ref);
+    Out(Ref);
   }
 
   llvm::function_ref<void(ReferenceLoc)> Out;

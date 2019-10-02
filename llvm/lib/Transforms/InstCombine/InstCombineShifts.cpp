@@ -131,7 +131,7 @@ reassociateShiftAmtsOfTwoSameDirectionShifts(BinaryOperator *Sh0,
 //   c,d,e,f) (ShiftShAmt-MaskShAmt) s>= 0 (i.e. ShiftShAmt u>= MaskShAmt)
 static Instruction *
 dropRedundantMaskingOfLeftShiftInput(BinaryOperator *OuterShift,
-                                     const SimplifyQuery &SQ,
+                                     const SimplifyQuery &Q,
                                      InstCombiner::BuilderTy &Builder) {
   assert(OuterShift->getOpcode() == Instruction::BinaryOps::Shl &&
          "The input must be 'shl'!");
@@ -155,9 +155,8 @@ dropRedundantMaskingOfLeftShiftInput(BinaryOperator *OuterShift,
   Constant *NewMask;
   if (match(Masked, m_c_And(m_CombineOr(MaskA, MaskB), m_Value(X)))) {
     // Can we simplify (MaskShAmt+ShiftShAmt) ?
-    auto *SumOfShAmts = dyn_cast_or_null<Constant>(
-        SimplifyAddInst(MaskShAmt, ShiftShAmt, /*IsNSW=*/false, /*IsNUW=*/false,
-                        SQ.getWithInstruction(OuterShift)));
+    auto *SumOfShAmts = dyn_cast_or_null<Constant>(SimplifyAddInst(
+        MaskShAmt, ShiftShAmt, /*IsNSW=*/false, /*IsNUW=*/false, Q));
     if (!SumOfShAmts)
       return nullptr; // Did not simplify.
     Type *Ty = X->getType();
@@ -189,9 +188,8 @@ dropRedundantMaskingOfLeftShiftInput(BinaryOperator *OuterShift,
              match(Masked, m_Shr(m_Shl(m_Value(X), m_Value(MaskShAmt)),
                                  m_Deferred(MaskShAmt)))) {
     // Can we simplify (ShiftShAmt-MaskShAmt) ?
-    auto *ShAmtsDiff = dyn_cast_or_null<Constant>(
-        SimplifySubInst(ShiftShAmt, MaskShAmt, /*IsNSW=*/false, /*IsNUW=*/false,
-                        SQ.getWithInstruction(OuterShift)));
+    auto *ShAmtsDiff = dyn_cast_or_null<Constant>(SimplifySubInst(
+        ShiftShAmt, MaskShAmt, /*IsNSW=*/false, /*IsNUW=*/false, Q));
     if (!ShAmtsDiff)
       return nullptr; // Did not simplify.
     // In this pattern ShAmtsDiff correlates with the number of high bits that
@@ -797,9 +795,10 @@ Instruction *InstCombiner::FoldShiftByConstant(Value *Op0, Constant *Op1,
 }
 
 Instruction *InstCombiner::visitShl(BinaryOperator &I) {
+  const SimplifyQuery Q = SQ.getWithInstruction(&I);
+
   if (Value *V = SimplifyShlInst(I.getOperand(0), I.getOperand(1),
-                                 I.hasNoSignedWrap(), I.hasNoUnsignedWrap(),
-                                 SQ.getWithInstruction(&I)))
+                                 I.hasNoSignedWrap(), I.hasNoUnsignedWrap(), Q))
     return replaceInstUsesWith(I, V);
 
   if (Instruction *X = foldVectorBinop(I))
@@ -808,7 +807,7 @@ Instruction *InstCombiner::visitShl(BinaryOperator &I) {
   if (Instruction *V = commonShiftTransforms(I))
     return V;
 
-  if (Instruction *V = dropRedundantMaskingOfLeftShiftInput(&I, SQ, Builder))
+  if (Instruction *V = dropRedundantMaskingOfLeftShiftInput(&I, Q, Builder))
     return V;
 
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);

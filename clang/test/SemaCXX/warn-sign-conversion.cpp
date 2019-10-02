@@ -70,11 +70,15 @@ namespace test2 {
     int d1 = 1 ? i : Foo<bool>::D; // expected-warning {{operand of ? changes signedness: 'test2::Foo<bool>::Named4' to 'int'}}
     int d2 = 1 ? Foo<bool>::D : i; // expected-warning {{operand of ? changes signedness: 'test2::Foo<bool>::Named4' to 'int'}}
     int d3 = 1 ? B : Foo<bool>::D; // expected-warning {{operand of ? changes signedness: 'test2::Foo<bool>::Named4' to 'int'}}
+    // expected-warning@-1 {{enumeration type mismatch in conditional expression ('test2::Named2' and 'test2::Foo<bool>::Named4')}}
     int d4 = 1 ? Foo<bool>::D : B; // expected-warning {{operand of ? changes signedness: 'test2::Foo<bool>::Named4' to 'int'}}
+    // expected-warning@-1 {{enumeration type mismatch in conditional expression ('test2::Foo<bool>::Named4' and 'test2::Named2')}}
 
     int e1 = 1 ? i : E; // expected-warning {{operand of ? changes signedness: 'test2::Named5' to 'int'}}
     int e2 = 1 ? E : i; // expected-warning {{operand of ? changes signedness: 'test2::Named5' to 'int'}}
     int e3 = 1 ? E : B; // expected-warning {{operand of ? changes signedness: 'test2::Named5' to 'int'}}
+    // expected-warning@-1 {{enumeration type mismatch in conditional expression ('test2::Named5' and 'test2::Named2')}}
     int e4 = 1 ? B : E; // expected-warning {{operand of ? changes signedness: 'test2::Named5' to 'int'}}
+    // expected-warning@-1 {{enumeration type mismatch in conditional expression ('test2::Named2' and 'test2::Named5')}}
   }
 }

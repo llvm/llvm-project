@@ -1228,7 +1228,7 @@ AllocaInst::AllocaInst(Type *Ty, unsigned AddrSpace, Value *ArraySize,
   : UnaryInstruction(PointerType::get(Ty, AddrSpace), Alloca,
                      getAISize(Ty->getContext(), ArraySize), InsertBefore),
     AllocatedType(Ty) {
-  setAlignment(Align);
+  setAlignment(MaybeAlign(Align));
   assert(!Ty->isVoidTy() && "Cannot allocate void!");
   setName(Name);
 }
@@ -1239,13 +1239,9 @@ AllocaInst::AllocaInst(Type *Ty, unsigned AddrSpace, Value *ArraySize,
   : UnaryInstruction(PointerType::get(Ty, AddrSpace), Alloca,
                      getAISize(Ty->getContext(), ArraySize), InsertAtEnd),
       AllocatedType(Ty) {
-  setAlignment(Align);
+  setAlignment(MaybeAlign(Align));
   assert(!Ty->isVoidTy() && "Cannot allocate void!");
   setName(Name);
-}
-
-void AllocaInst::setAlignment(unsigned Align) {
-  setAlignment(llvm::MaybeAlign(Align));
 }
 
 void AllocaInst::setAlignment(MaybeAlign Align) {
@@ -1321,7 +1317,7 @@ LoadInst::LoadInst(Type *Ty, Value *Ptr, const Twine &Name, bool isVolatile,
     : UnaryInstruction(Ty, Load, Ptr, InsertBef) {
   assert(Ty == cast<PointerType>(Ptr->getType())->getElementType());
   setVolatile(isVolatile);
-  setAlignment(Align);
+  setAlignment(MaybeAlign(Align));
   setAtomic(Order, SSID);
   AssertOK();
   setName(Name);
@@ -1333,14 +1329,10 @@ LoadInst::LoadInst(Type *Ty, Value *Ptr, const Twine &Name, bool isVolatile,
     : UnaryInstruction(Ty, Load, Ptr, InsertAE) {
   assert(Ty == cast<PointerType>(Ptr->getType())->getElementType());
   setVolatile(isVolatile);
-  setAlignment(Align);
+  setAlignment(MaybeAlign(Align));
   setAtomic(Order, SSID);
   AssertOK();
   setName(Name);
-}
-
-void LoadInst::setAlignment(unsigned Align) {
-  setAlignment(llvm::MaybeAlign(Align));
 }
 
 void LoadInst::setAlignment(MaybeAlign Align) {

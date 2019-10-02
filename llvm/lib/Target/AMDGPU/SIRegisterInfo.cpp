@@ -1975,6 +1975,9 @@ SIRegisterInfo::getRegClassForSizeOnBank(unsigned Size,
   case 512:
     return RB.getID() == AMDGPU::VGPRRegBankID ? &AMDGPU::VReg_512RegClass :
                                                  &AMDGPU::SReg_512RegClass;
+  case 1024:
+    return RB.getID() == AMDGPU::VGPRRegBankID ? &AMDGPU::VReg_1024RegClass :
+                                                 &AMDGPU::SReg_1024RegClass;
   default:
     if (Size < 32)
       return RB.getID() == AMDGPU::VGPRRegBankID ? &AMDGPU::VGPR_32RegClass :

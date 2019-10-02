@@ -1184,7 +1184,7 @@ bool HWAddressSanitizer::sanitizeFunction(Function &F) {
     uint64_t Size = getAllocaSizeInBytes(*AI);
     uint64_t AlignedSize = alignTo(Size, Mapping.getObjectAlignment());
     AI->setAlignment(
-        std::max(AI->getAlignment(), Mapping.getObjectAlignment()));
+        MaybeAlign(std::max(AI->getAlignment(), Mapping.getObjectAlignment())));
     if (Size != AlignedSize) {
       Type *AllocatedType = AI->getAllocatedType();
       if (AI->isArrayAllocation()) {
@@ -1197,7 +1197,7 @@ bool HWAddressSanitizer::sanitizeFunction(Function &F) {
       auto *NewAI = new AllocaInst(
           TypeWithPadding, AI->getType()->getAddressSpace(), nullptr, "", AI);
       NewAI->takeName(AI);
-      NewAI->setAlignment(AI->getAlignment());
+      NewAI->setAlignment(MaybeAlign(AI->getAlignment()));
       NewAI->setUsedWithInAlloca(AI->isUsedWithInAlloca());
       NewAI->setSwiftError(AI->isSwiftError());
       NewAI->copyMetadata(*AI);

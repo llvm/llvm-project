@@ -3841,7 +3841,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       AI = CreateTempAlloca(ArgStruct, "argmem");
     }
     auto Align = CallInfo.getArgStructAlignment();
-    AI->setAlignment(Align.getQuantity());
+    AI->setAlignment(llvm::MaybeAlign(Align.getQuantity()));
     AI->setUsedWithInAlloca(true);
     assert(AI->isUsedWithInAlloca() && !AI->isStaticAlloca());
     ArgMemory = Address(AI, Align);

@@ -538,8 +538,9 @@ static int compileModule(char **argv, LLVMContext &Context) {
     }
 
     const char *argv0 = argv[0];
-    LLVMTargetMachine &LLVMTM = static_cast<LLVMTargetMachine&>(*Target);
-    MachineModuleInfo *MMI = new MachineModuleInfo(&LLVMTM);
+    LLVMTargetMachine &LLVMTM = static_cast<LLVMTargetMachine &>(*Target);
+    MachineModuleInfoWrapperPass *MMIWP =
+        new MachineModuleInfoWrapperPass(&LLVMTM);
 
     // Construct a custom pass pipeline that starts after instruction
     // selection.
@@ -559,7 +560,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
 
       TPC.setDisableVerify(NoVerify);
       PM.add(&TPC);
-      PM.add(MMI);
+      PM.add(MMIWP);
       TPC.printAndVerify("");
       for (const std::string &RunPassName : *RunPassNames) {
         if (addPass(PM, argv0, RunPassName, TPC))
@@ -570,7 +571,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
       PM.add(createFreeMachineFunctionPass());
     } else if (Target->addPassesToEmitFile(PM, *OS,
                                            DwoOut ? &DwoOut->os() : nullptr,
-                                           FileType, NoVerify, MMI)) {
+                                           FileType, NoVerify, MMIWP)) {
       WithColor::warning(errs(), argv[0])
           << "target does not support generation of this"
           << " file type!\n";
@@ -578,8 +579,8 @@ static int compileModule(char **argv, LLVMContext &Context) {
     }
 
     if (MIR) {
-      assert(MMI && "Forgot to create MMI?");
-      if (MIR->parseMachineFunctions(*M, *MMI))
+      assert(MMIWP && "Forgot to create MMIWP?");
+      if (MIR->parseMachineFunctions(*M, MMIWP->getMMI()))
         return 1;
     }
 

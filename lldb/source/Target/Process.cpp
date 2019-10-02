@@ -5538,6 +5538,12 @@ ProcessRunLock &Process::GetRunLock() {
     return m_public_run_lock;
 }
 
+bool Process::CurrentThreadIsPrivateStateThread()
+{
+  return m_private_state_thread.EqualsThread(Host::GetCurrentThread());
+}
+
+
 void Process::Flush() {
   m_thread_list.Flush();
   m_extended_thread_list.Flush();

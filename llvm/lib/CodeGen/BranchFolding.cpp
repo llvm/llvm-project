@@ -129,9 +129,10 @@ bool BranchFolderPass::runOnMachineFunction(MachineFunction &MF) {
       getAnalysis<MachineBlockFrequencyInfo>());
   BranchFolder Folder(EnableTailMerge, /*CommonHoist=*/true, MBBFreqInfo,
                       getAnalysis<MachineBranchProbabilityInfo>());
-  return Folder.OptimizeFunction(MF, MF.getSubtarget().getInstrInfo(),
-                                 MF.getSubtarget().getRegisterInfo(),
-                                 getAnalysisIfAvailable<MachineModuleInfo>());
+  auto *MMIWP = getAnalysisIfAvailable<MachineModuleInfoWrapperPass>();
+  return Folder.OptimizeFunction(
+      MF, MF.getSubtarget().getInstrInfo(), MF.getSubtarget().getRegisterInfo(),
+      MMIWP ? &MMIWP->getMMI() : nullptr);
 }
 
 BranchFolder::BranchFolder(bool defaultEnableTailMerge, bool CommonHoist,

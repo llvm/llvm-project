@@ -6130,6 +6130,37 @@ static bool getTargetConstantBitsFromNode(SDValue Op, unsigned EltSizeInBits,
     }
   }
 
+  if (Op.getOpcode() == X86ISD::VBROADCAST_LOAD &&
+      EltSizeInBits <= VT.getScalarSizeInBits()) {
+    auto *MemIntr = cast<MemIntrinsicSDNode>(Op);
+    if (MemIntr->getMemoryVT().getScalarSizeInBits() != VT.getScalarSizeInBits())
+      return false;
+
+    SDValue Ptr = MemIntr->getBasePtr();
+    if (Ptr->getOpcode() == X86ISD::Wrapper ||
+        Ptr->getOpcode() == X86ISD::WrapperRIP)
+      Ptr = Ptr->getOperand(0);
+
+    auto *CNode = dyn_cast<ConstantPoolSDNode>(Ptr);
+    if (!CNode || CNode->isMachineConstantPoolEntry() ||
+        CNode->getOffset() != 0)
+      return false;
+
+    if (const Constant *C = CNode->getConstVal()) {
+      unsigned SrcEltSizeInBits = C->getType()->getScalarSizeInBits();
+      unsigned NumSrcElts = SizeInBits / SrcEltSizeInBits;
+
+      APInt UndefSrcElts(NumSrcElts, 0);
+      SmallVector<APInt, 64> SrcEltBits(1, APInt(SrcEltSizeInBits, 0));
+      if (CollectConstantBits(C, SrcEltBits[0], UndefSrcElts, 0)) {
+        if (UndefSrcElts[0])
+          UndefSrcElts.setBits(0, NumSrcElts);
+        SrcEltBits.append(NumSrcElts - 1, SrcEltBits[0]);
+        return CastBitData(UndefSrcElts, SrcEltBits);
+      }
+    }
+  }
+
   // Extract constant bits from a subvector broadcast.
   if (Op.getOpcode() == X86ISD::SUBV_BROADCAST) {
     SmallVector<APInt, 16> SubEltBits;
@@ -8459,10 +8490,20 @@ static SDValue LowerBUILD_VECTORvXi1(SDValue Op, SelectionDAG &DAG,
   }
 
   // for splat use " (select i1 splat_elt, all-ones, all-zeroes)"
-  if (IsSplat)
-    return DAG.getSelect(dl, VT, Op.getOperand(SplatIdx),
+  if (IsSplat) {
+    // The build_vector allows the scalar element to be larger than the vector
+    // element type. We need to mask it to use as a condition unless we know
+    // the upper bits are zero.
+    // FIXME: Use computeKnownBits instead of checking specific opcode?
+    SDValue Cond = Op.getOperand(SplatIdx);
+    assert(Cond.getValueType() == MVT::i8 && "Unexpected VT!");
+    if (Cond.getOpcode() != ISD::SETCC)
+      Cond = DAG.getNode(ISD::AND, dl, MVT::i8, Cond,
+                         DAG.getConstant(1, dl, MVT::i8));
+    return DAG.getSelect(dl, VT, Cond,
                          DAG.getConstant(1, dl, VT),
                          DAG.getConstant(0, dl, VT));
+  }
 
   // insert elements one by one
   SDValue DstVec;
@@ -24117,12 +24158,11 @@ SDValue X86TargetLowering::LowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const {
 
 // FIXME? Maybe this could be a TableGen attribute on some registers and
 // this table could be generated automatically from RegInfo.
-unsigned X86TargetLowering::getRegisterByName(const char* RegName, EVT VT,
-                                              SelectionDAG &DAG) const {
+Register X86TargetLowering::getRegisterByName(const char* RegName, EVT VT,
+                                              const MachineFunction &MF) const {
   const TargetFrameLowering &TFI = *Subtarget.getFrameLowering();
-  const MachineFunction &MF = DAG.getMachineFunction();
 
-  unsigned Reg = StringSwitch<unsigned>(RegName)
+  Register Reg = StringSwitch<unsigned>(RegName)
                        .Case("esp", X86::ESP)
                        .Case("rsp", X86::RSP)
                        .Case("ebp", X86::EBP)
@@ -24136,8 +24176,7 @@ unsigned X86TargetLowering::getRegisterByName(const char* RegName, EVT VT,
 #ifndef NDEBUG
     else {
       const X86RegisterInfo *RegInfo = Subtarget.getRegisterInfo();
-      unsigned FrameReg =
-          RegInfo->getPtrSizedFrameRegister(DAG.getMachineFunction());
+      Register FrameReg = RegInfo->getPtrSizedFrameRegister(MF);
       assert((FrameReg == X86::EBP || FrameReg == X86::RBP) &&
              "Invalid Frame Register!");
     }
@@ -27887,6 +27926,12 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     }
     return;
   }
+  case ISD::ANY_EXTEND:
+    // Right now, only MVT::v8i8 has Custom action for an illegal type.
+    // It's intended to custom handle the input type.
+    assert(N->getValueType(0) == MVT::v8i8 &&
+           "Do not know how to legalize this Node");
+    return;
   case ISD::SIGN_EXTEND:
   case ISD::ZERO_EXTEND: {
     EVT VT = N->getValueType(0);
@@ -28568,6 +28613,7 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::UNPCKL:             return "X86ISD::UNPCKL";
   case X86ISD::UNPCKH:             return "X86ISD::UNPCKH";
   case X86ISD::VBROADCAST:         return "X86ISD::VBROADCAST";
+  case X86ISD::VBROADCAST_LOAD:    return "X86ISD::VBROADCAST_LOAD";
   case X86ISD::VBROADCASTM:        return "X86ISD::VBROADCASTM";
   case X86ISD::SUBV_BROADCAST:     return "X86ISD::SUBV_BROADCAST";
   case X86ISD::VPERMILPV:          return "X86ISD::VPERMILPV";
@@ -33333,6 +33379,19 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
     if (Src.getOpcode() == ISD::SCALAR_TO_VECTOR)
       return DAG.getNode(X86ISD::VBROADCAST, DL, VT, Src.getOperand(0));
 
+    // vbroadcast(scalarload X) -> vbroadcast_load X
+    if (!SrcVT.isVector() && Src.hasOneUse() &&
+        ISD::isNormalLoad(Src.getNode())) {
+      LoadSDNode *LN = cast<LoadSDNode>(Src);
+      SDVTList Tys = DAG.getVTList(VT, MVT::Other);
+      SDValue Ops[] = { LN->getChain(), LN->getBasePtr() };
+      SDValue BcastLd =
+          DAG.getMemIntrinsicNode(X86ISD::VBROADCAST_LOAD, DL, Tys, Ops,
+                                  LN->getMemoryVT(), LN->getMemOperand());
+      DAG.ReplaceAllUsesOfValueWith(SDValue(LN, 1), BcastLd.getValue(1));
+      return BcastLd;
+    }
+
     // Share broadcast with the longest vector and extract low subvector (free).
     for (SDNode *User : Src->uses())
       if (User != N.getNode() && User->getOpcode() == X86ISD::VBROADCAST &&
@@ -33498,17 +33557,23 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
                            DAG.getTargetConstant(InsertPSMask, DL, MVT::i8));
     }
 
-    // If we're inserting an element from a vbroadcast of a load, fold the
+    // If we're inserting an element from a vbroadcast load, fold the
     // load into the X86insertps instruction. We need to convert the scalar
     // load to a vector and clear the source lane of the INSERTPS control.
-    if (Op1.getOpcode() == X86ISD::VBROADCAST && Op1.hasOneUse() &&
-        Op1.getOperand(0).hasOneUse() &&
-        !Op1.getOperand(0).getValueType().isVector() &&
-        ISD::isNormalLoad(Op1.getOperand(0).getNode()))
-      return DAG.getNode(X86ISD::INSERTPS, DL, VT, Op0,
-                         DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VT,
-                                     Op1.getOperand(0)),
-                         DAG.getTargetConstant(InsertPSMask & 0x3f, DL, MVT::i8));
+    if (Op1.getOpcode() == X86ISD::VBROADCAST_LOAD && Op1.hasOneUse()) {
+      auto *MemIntr = cast<MemIntrinsicSDNode>(Op1);
+      if (MemIntr->getMemoryVT().getScalarSizeInBits() == 32) {
+        SDValue Load = DAG.getLoad(MVT::f32, DL, MemIntr->getChain(),
+                                   MemIntr->getBasePtr(),
+                                   MemIntr->getMemOperand());
+        SDValue Insert = DAG.getNode(X86ISD::INSERTPS, DL, VT, Op0,
+                           DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VT,
+                                       Load),
+                           DAG.getTargetConstant(InsertPSMask & 0x3f, DL, MVT::i8));
+        DAG.ReplaceAllUsesOfValueWith(SDValue(MemIntr, 1), Load.getValue(1));
+        return Insert;
+      }
+    }
 
     return SDValue();
   }
@@ -35835,6 +35900,23 @@ static SDValue combineExtractWithShuffle(SDNode *N, SelectionDAG &DAG,
     SDValue SrcOp = SrcBC.getOperand(0);
     if (SrcOp.getValueSizeInBits() == VT.getSizeInBits())
       return DAG.getBitcast(VT, SrcOp);
+  }
+
+  // If we're extracting a single element from a broadcast load and there are
+  // no other users, just create a single load.
+  if (SrcBC.getOpcode() == X86ISD::VBROADCAST_LOAD && SrcBC.hasOneUse()) {
+    auto *MemIntr = cast<MemIntrinsicSDNode>(SrcBC);
+    unsigned SrcBCWidth = SrcBC.getScalarValueSizeInBits();
+    if (MemIntr->getMemoryVT().getSizeInBits() == SrcBCWidth &&
+        VT.getSizeInBits() == SrcBCWidth) {
+      SDValue Load = DAG.getLoad(VT, dl, MemIntr->getChain(),
+                                 MemIntr->getBasePtr(),
+                                 MemIntr->getPointerInfo(),
+                                 MemIntr->getAlignment(),
+                                 MemIntr->getMemOperand()->getFlags());
+      DAG.ReplaceAllUsesOfValueWith(SDValue(MemIntr, 1), Load.getValue(1));
+      return Load;
+    }
   }
 
   // Handle extract(truncate(x)) for 0'th index.
@@ -43473,16 +43555,19 @@ static SDValue combineAdd(SDNode *N, SelectionDAG &DAG,
   // FIXME: We have the (sub Y, (zext (vXi1 X))) -> (add (sext (vXi1 X)), Y) in
   // generic DAG combine without a legal type check, but adding this there
   // caused regressions.
-  if (Subtarget.hasAVX512() && VT.isVector()) {
+  if (VT.isVector()) {
+    const TargetLowering &TLI = DAG.getTargetLoweringInfo();
     if (Op0.getOpcode() == ISD::ZERO_EXTEND &&
-        Op0.getOperand(0).getValueType().getVectorElementType() == MVT::i1) {
+        Op0.getOperand(0).getValueType().getVectorElementType() == MVT::i1 &&
+        TLI.isTypeLegal(Op0.getOperand(0).getValueType())) {
       SDLoc DL(N);
       SDValue SExt = DAG.getNode(ISD::SIGN_EXTEND, DL, VT, Op0.getOperand(0));
       return DAG.getNode(ISD::SUB, DL, VT, Op1, SExt);
     }
 
     if (Op1.getOpcode() == ISD::ZERO_EXTEND &&
-        Op1.getOperand(0).getValueType().getVectorElementType() == MVT::i1) {
+        Op1.getOperand(0).getValueType().getVectorElementType() == MVT::i1 &&
+        TLI.isTypeLegal(Op1.getOperand(0).getValueType())) {
       SDLoc DL(N);
       SDValue SExt = DAG.getNode(ISD::SIGN_EXTEND, DL, VT, Op1.getOperand(0));
       return DAG.getNode(ISD::SUB, DL, VT, Op0, SExt);
@@ -43876,6 +43961,21 @@ static SDValue combineInsertSubvector(SDNode *N, SelectionDAG &DAG,
   if (Vec.isUndef() && IdxVal != 0 && SubVec.getOpcode() == X86ISD::VBROADCAST)
     return DAG.getNode(X86ISD::VBROADCAST, dl, OpVT, SubVec.getOperand(0));
 
+  // If this is a broadcast load inserted into an upper undef, use a larger
+  // broadcast load.
+  if (Vec.isUndef() && IdxVal != 0 && SubVec.hasOneUse() &&
+      SubVec.getOpcode() == X86ISD::VBROADCAST_LOAD) {
+    auto *MemIntr = cast<MemIntrinsicSDNode>(SubVec);
+    SDVTList Tys = DAG.getVTList(OpVT, MVT::Other);
+    SDValue Ops[] = { MemIntr->getChain(), MemIntr->getBasePtr() };
+    SDValue BcastLd =
+        DAG.getMemIntrinsicNode(X86ISD::VBROADCAST_LOAD, dl, Tys, Ops,
+                                MemIntr->getMemoryVT(),
+                                MemIntr->getMemOperand());
+    DAG.ReplaceAllUsesOfValueWith(SDValue(MemIntr, 1), BcastLd.getValue(1));
+    return BcastLd;
+  }
+
   return SDValue();
 }
 
@@ -44047,6 +44147,20 @@ static SDValue combineExtractSubvector(SDNode *N, SelectionDAG &DAG,
   if (InVec.getOpcode() == X86ISD::VBROADCAST && InVec.hasOneUse() &&
       InVec.getOperand(0).getValueSizeInBits() <= VT.getSizeInBits())
     return DAG.getNode(X86ISD::VBROADCAST, SDLoc(N), VT, InVec.getOperand(0));
+
+  if (InVec.getOpcode() == X86ISD::VBROADCAST_LOAD && InVec.hasOneUse()) {
+    auto *MemIntr = cast<MemIntrinsicSDNode>(InVec);
+    if (MemIntr->getMemoryVT().getSizeInBits() <= VT.getSizeInBits()) {
+      SDVTList Tys = DAG.getVTList(VT, MVT::Other);
+      SDValue Ops[] = { MemIntr->getChain(), MemIntr->getBasePtr() };
+      SDValue BcastLd =
+          DAG.getMemIntrinsicNode(X86ISD::VBROADCAST_LOAD, SDLoc(N), Tys, Ops,
+                                  MemIntr->getMemoryVT(),
+                                  MemIntr->getMemOperand());
+      DAG.ReplaceAllUsesOfValueWith(SDValue(MemIntr, 1), BcastLd.getValue(1));
+      return BcastLd;
+    }
+  }
 
   // If we're extracting the lowest subvector and we're the only user,
   // we may be able to perform this with a smaller vector width.

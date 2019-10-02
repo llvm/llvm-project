@@ -192,9 +192,10 @@ public:
   void locateSymbolAt(PathRef File, Position Pos,
                       Callback<std::vector<LocatedSymbol>> CB);
 
-  /// Helper function that returns a path to the corresponding source file when
-  /// given a header file and vice versa.
-  llvm::Optional<Path> switchSourceHeader(PathRef Path);
+  /// Switch to a corresponding source file when given a header file, and vice
+  /// versa.
+  void switchSourceHeader(PathRef Path,
+                          Callback<llvm::Optional<clangd::Path>> CB);
 
   /// Get document highlights for a given position.
   void findDocumentHighlights(PathRef File, Position Pos,

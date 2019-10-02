@@ -2006,10 +2006,9 @@ void AVRTargetLowering::LowerAsmOperandForConstraint(SDValue Op,
   return TargetLowering::LowerAsmOperandForConstraint(Op, Constraint, Ops, DAG);
 }
 
-unsigned AVRTargetLowering::getRegisterByName(const char *RegName,
-                                              EVT VT,
-                                              SelectionDAG &DAG) const {
-  unsigned Reg;
+Register AVRTargetLowering::getRegisterByName(const char *RegName, EVT VT,
+                                              const MachineFunction &MF) const {
+  Register Reg;
 
   if (VT == MVT::i8) {
     Reg = StringSwitch<unsigned>(RegName)

@@ -1116,16 +1116,22 @@ void FileCheckPatternContext::createLineVariable() {
   GlobalNumericVariableTable[LineName] = LineVariable;
 }
 
-bool FileCheck::ReadCheckFile(SourceMgr &SM, StringRef Buffer, Regex &PrefixRE,
-                              std::vector<FileCheckString> &CheckStrings) {
+FileCheck::FileCheck(FileCheckRequest Req)
+    : Req(Req), PatternContext(std::make_unique<FileCheckPatternContext>()),
+      CheckStrings(std::make_unique<std::vector<FileCheckString>>()) {}
+
+FileCheck::~FileCheck() = default;
+
+bool FileCheck::readCheckFile(SourceMgr &SM, StringRef Buffer,
+                              Regex &PrefixRE) {
   Error DefineError =
-      PatternContext.defineCmdlineVariables(Req.GlobalDefines, SM);
+      PatternContext->defineCmdlineVariables(Req.GlobalDefines, SM);
   if (DefineError) {
     logAllUnhandledErrors(std::move(DefineError), errs());
     return true;
   }
 
-  PatternContext.createLineVariable();
+  PatternContext->createLineVariable();
 
   std::vector<FileCheckPattern> ImplicitNegativeChecks;
   for (const auto &PatternString : Req.ImplicitCheckNot) {
@@ -1141,7 +1147,7 @@ bool FileCheck::ReadCheckFile(SourceMgr &SM, StringRef Buffer, Regex &PrefixRE,
     SM.AddNewSourceBuffer(std::move(CmdLine), SMLoc());
 
     ImplicitNegativeChecks.push_back(
-        FileCheckPattern(Check::CheckNot, &PatternContext));
+        FileCheckPattern(Check::CheckNot, PatternContext.get()));
     ImplicitNegativeChecks.back().parsePattern(PatternInBuffer,
                                                "IMPLICIT-CHECK", SM, Req);
   }
@@ -1204,7 +1210,7 @@ bool FileCheck::ReadCheckFile(SourceMgr &SM, StringRef Buffer, Regex &PrefixRE,
     SMLoc PatternLoc = SMLoc::getFromPointer(Buffer.data());
 
     // Parse the pattern.
-    FileCheckPattern P(CheckTy, &PatternContext, LineNumber);
+    FileCheckPattern P(CheckTy, PatternContext.get(), LineNumber);
     if (P.parsePattern(Buffer.substr(0, EOL), UsedPrefix, SM, Req))
       return true;
 
@@ -1222,7 +1228,7 @@ bool FileCheck::ReadCheckFile(SourceMgr &SM, StringRef Buffer, Regex &PrefixRE,
     // Verify that CHECK-NEXT/SAME/EMPTY lines have at least one CHECK line before them.
     if ((CheckTy == Check::CheckNext || CheckTy == Check::CheckSame ||
          CheckTy == Check::CheckEmpty) &&
-        CheckStrings.empty()) {
+        CheckStrings->empty()) {
       StringRef Type = CheckTy == Check::CheckNext
                            ? "NEXT"
                            : CheckTy == Check::CheckEmpty ? "EMPTY" : "SAME";
@@ -1240,21 +1246,21 @@ bool FileCheck::ReadCheckFile(SourceMgr &SM, StringRef Buffer, Regex &PrefixRE,
     }
 
     // Okay, add the string we captured to the output vector and move on.
-    CheckStrings.emplace_back(P, UsedPrefix, PatternLoc);
-    std::swap(DagNotMatches, CheckStrings.back().DagNotStrings);
+    CheckStrings->emplace_back(P, UsedPrefix, PatternLoc);
+    std::swap(DagNotMatches, CheckStrings->back().DagNotStrings);
     DagNotMatches = ImplicitNegativeChecks;
   }
 
   // Add an EOF pattern for any trailing CHECK-DAG/-NOTs, and use the first
   // prefix as a filler for the error message.
   if (!DagNotMatches.empty()) {
-    CheckStrings.emplace_back(
-        FileCheckPattern(Check::CheckEOF, &PatternContext, LineNumber + 1),
+    CheckStrings->emplace_back(
+        FileCheckPattern(Check::CheckEOF, PatternContext.get(), LineNumber + 1),
         *Req.CheckPrefixes.begin(), SMLoc::getFromPointer(Buffer.data()));
-    std::swap(DagNotMatches, CheckStrings.back().DagNotStrings);
+    std::swap(DagNotMatches, CheckStrings->back().DagNotStrings);
   }
 
-  if (CheckStrings.empty()) {
+  if (CheckStrings->empty()) {
     errs() << "error: no check strings found with prefix"
            << (Req.CheckPrefixes.size() > 1 ? "es " : " ");
     auto I = Req.CheckPrefixes.begin();
@@ -1916,18 +1922,17 @@ void FileCheckPatternContext::clearLocalVars() {
     GlobalNumericVariableTable.erase(Var);
 }
 
-bool FileCheck::CheckInput(SourceMgr &SM, StringRef Buffer,
-                           ArrayRef<FileCheckString> CheckStrings,
+bool FileCheck::checkInput(SourceMgr &SM, StringRef Buffer,
                            std::vector<FileCheckDiag> *Diags) {
   bool ChecksFailed = false;
 
-  unsigned i = 0, j = 0, e = CheckStrings.size();
+  unsigned i = 0, j = 0, e = CheckStrings->size();
   while (true) {
     StringRef CheckRegion;
     if (j == e) {
       CheckRegion = Buffer;
     } else {
-      const FileCheckString &CheckLabelStr = CheckStrings[j];
+      const FileCheckString &CheckLabelStr = (*CheckStrings)[j];
       if (CheckLabelStr.Pat.getCheckTy() != Check::CheckLabel) {
         ++j;
         continue;
@@ -1950,10 +1955,10 @@ bool FileCheck::CheckInput(SourceMgr &SM, StringRef Buffer,
     // CHECK-LABEL and it would clear variables defined on the command-line
     // before they get used.
     if (i != 0 && Req.EnableVarScope)
-      PatternContext.clearLocalVars();
+      PatternContext->clearLocalVars();
 
     for (; i != j; ++i) {
-      const FileCheckString &CheckStr = CheckStrings[i];
+      const FileCheckString &CheckStr = (*CheckStrings)[i];
 
       // Check each string within the scanned region, including a second check
       // of any final CHECK-LABEL (to verify CHECK-NOT and CHECK-DAG)

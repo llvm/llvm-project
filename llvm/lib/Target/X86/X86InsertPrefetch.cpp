@@ -173,7 +173,7 @@ bool X86InsertPrefetch::doInitialization(Module &M) {
 
 void X86InsertPrefetch::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
-  AU.addRequired<MachineModuleInfo>();
+  AU.addRequired<MachineModuleInfoWrapperPass>();
 }
 
 bool X86InsertPrefetch::runOnMachineFunction(MachineFunction &MF) {

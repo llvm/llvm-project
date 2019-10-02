@@ -496,12 +496,12 @@ define <32 x i8> @ext_i32_32i8(i32 %a0) {
 ; AVX512F-NEXT:    kmovw %edi, %k1
 ; AVX512F-NEXT:    shrl $16, %edi
 ; AVX512F-NEXT:    kmovw %edi, %k2
-; AVX512F-NEXT:    movl {{.*}}(%rip), %eax
-; AVX512F-NEXT:    vpbroadcastd %eax, %zmm0 {%k1} {z}
-; AVX512F-NEXT:    vpmovdb %zmm0, %xmm0
-; AVX512F-NEXT:    vpbroadcastd %eax, %zmm1 {%k2} {z}
+; AVX512F-NEXT:    vpbroadcastd {{.*#+}} zmm0 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+; AVX512F-NEXT:    vmovdqa32 %zmm0, %zmm1 {%k1} {z}
 ; AVX512F-NEXT:    vpmovdb %zmm1, %xmm1
-; AVX512F-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX512F-NEXT:    vmovdqa32 %zmm0, %zmm0 {%k2} {z}
+; AVX512F-NEXT:    vpmovdb %zmm0, %xmm0
+; AVX512F-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VLBW-LABEL: ext_i32_32i8:
@@ -898,18 +898,18 @@ define <64 x i8> @ext_i64_64i8(i64 %a0) {
 ; AVX512F-NEXT:    kmovw %ecx, %k2
 ; AVX512F-NEXT:    kmovw %eax, %k3
 ; AVX512F-NEXT:    kmovw %edi, %k4
-; AVX512F-NEXT:    movl {{.*}}(%rip), %eax
-; AVX512F-NEXT:    vpbroadcastd %eax, %zmm0 {%k4} {z}
-; AVX512F-NEXT:    vpmovdb %zmm0, %xmm0
-; AVX512F-NEXT:    vpbroadcastd %eax, %zmm1 {%k3} {z}
+; AVX512F-NEXT:    vpbroadcastd {{.*#+}} zmm0 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+; AVX512F-NEXT:    vmovdqa32 %zmm0, %zmm1 {%k4} {z}
 ; AVX512F-NEXT:    vpmovdb %zmm1, %xmm1
-; AVX512F-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; AVX512F-NEXT:    vpbroadcastd %eax, %zmm1 {%k1} {z}
-; AVX512F-NEXT:    vpmovdb %zmm1, %xmm1
-; AVX512F-NEXT:    vpbroadcastd %eax, %zmm2 {%k2} {z}
+; AVX512F-NEXT:    vmovdqa32 %zmm0, %zmm2 {%k3} {z}
 ; AVX512F-NEXT:    vpmovdb %zmm2, %xmm2
 ; AVX512F-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
-; AVX512F-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
+; AVX512F-NEXT:    vmovdqa32 %zmm0, %zmm2 {%k1} {z}
+; AVX512F-NEXT:    vpmovdb %zmm2, %xmm2
+; AVX512F-NEXT:    vmovdqa32 %zmm0, %zmm0 {%k2} {z}
+; AVX512F-NEXT:    vpmovdb %zmm0, %xmm0
+; AVX512F-NEXT:    vinserti128 $1, %xmm0, %ymm2, %ymm0
+; AVX512F-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VLBW-LABEL: ext_i64_64i8:

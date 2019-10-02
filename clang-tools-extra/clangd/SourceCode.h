@@ -79,7 +79,7 @@ llvm::Expected<SourceLocation> sourceLocationInMainFile(const SourceManager &SM,
                                                         Position P);
 
 /// Get the beginning SourceLocation at a specified \p Pos in the main file.
-/// May be invalid if Pos is, or if there's no identifier.
+/// May be invalid if Pos is, or if there's no identifier or operators.
 /// The returned position is in the main file, callers may prefer to
 /// obtain the macro expansion location.
 SourceLocation getBeginningOfIdentifier(const Position &Pos,

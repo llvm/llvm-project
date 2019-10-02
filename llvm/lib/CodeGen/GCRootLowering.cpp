@@ -249,7 +249,7 @@ GCMachineCodeAnalysis::GCMachineCodeAnalysis() : MachineFunctionPass(ID) {}
 void GCMachineCodeAnalysis::getAnalysisUsage(AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);
   AU.setPreservesAll();
-  AU.addRequired<MachineModuleInfo>();
+  AU.addRequired<MachineModuleInfoWrapperPass>();
   AU.addRequired<GCModuleInfo>();
 }
 
@@ -310,7 +310,7 @@ bool GCMachineCodeAnalysis::runOnMachineFunction(MachineFunction &MF) {
     return false;
 
   FI = &getAnalysis<GCModuleInfo>().getFunctionInfo(MF.getFunction());
-  MMI = &getAnalysis<MachineModuleInfo>();
+  MMI = &getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
   TII = MF.getSubtarget().getInstrInfo();
 
   // Find the size of the stack frame.  There may be no correct static frame

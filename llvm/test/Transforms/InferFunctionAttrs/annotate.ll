@@ -619,7 +619,7 @@ declare i8* @malloc(i64)
 ; CHECK-LINUX: declare noalias i8* @memalign(i64, i64) [[G0]]
 declare i8* @memalign(i64, i64)
 
-; CHECK: declare i8* @memccpy(i8*, i8* nocapture readonly, i32, i64) [[G1]]
+; CHECK: declare i8* @memccpy(i8* noalias, i8* noalias nocapture readonly, i32, i64) [[G1]]
 declare i8* @memccpy(i8*, i8*, i32, i64)
 
 ; CHECK: declare i8* @memchr(i8*, i32, i64) [[G2]]
@@ -631,7 +631,7 @@ declare i32 @memcmp(i8*, i8*, i64)
 ; CHECK: declare i8* @memcpy(i8* noalias returned, i8* noalias nocapture readonly, i64) [[G1]]
 declare i8* @memcpy(i8*, i8*, i64)
 
-; CHECK: declare i8* @mempcpy(i8*, i8* nocapture readonly, i64) [[G1]]
+; CHECK: declare i8* @mempcpy(i8* noalias, i8* noalias nocapture readonly, i64) [[G1]]
 declare i8* @mempcpy(i8*, i8*, i64)
 
 ; CHECK: declare i8* @memmove(i8* returned, i8* nocapture readonly, i64) [[G1]]

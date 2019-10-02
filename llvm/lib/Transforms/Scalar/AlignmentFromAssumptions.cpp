@@ -321,7 +321,7 @@ bool AlignmentFromAssumptionsPass::processAssumption(CallInst *ACall) {
         LI->getPointerOperand(), SE);
 
       if (NewAlignment > LI->getAlignment()) {
-        LI->setAlignment(NewAlignment);
+        LI->setAlignment(MaybeAlign(NewAlignment));
         ++NumLoadAlignChanged;
       }
     } else if (StoreInst *SI = dyn_cast<StoreInst>(J)) {

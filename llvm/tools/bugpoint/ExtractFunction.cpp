@@ -407,11 +407,10 @@ BugDriver::extractMappedBlocksFromModule(const std::vector<BasicBlock *> &BBs,
 
   std::string uniqueFN = "--extract-blocks-file=";
   uniqueFN += Temp->TmpName;
-  const char *ExtraArg = uniqueFN.c_str();
 
   std::vector<std::string> PI;
   PI.push_back("extract-blocks");
-  std::unique_ptr<Module> Ret = runPassesOn(M, PI, 1, &ExtraArg);
+  std::unique_ptr<Module> Ret = runPassesOn(M, PI, {uniqueFN});
 
   if (!Ret) {
     outs() << "*** Basic Block extraction failed, please report a bug!\n";

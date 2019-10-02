@@ -645,6 +645,20 @@ addInputSec(StringMap<TinyPtrVector<OutputSection *>> &map,
   for (OutputSection *sec : v) {
     if (sec->partition != isec->partition)
       continue;
+
+    if (config->relocatable && (isec->flags & SHF_LINK_ORDER)) {
+      // Merging two SHF_LINK_ORDER sections with different sh_link fields will
+      // change their semantics, so we only merge them in -r links if they will
+      // end up being linked to the same output section. The casts are fine
+      // because everything in the map was created by the orphan placement code.
+      auto *firstIsec = cast<InputSectionBase>(
+          cast<InputSectionDescription>(sec->sectionCommands[0])
+              ->sectionBases[0]);
+      if (firstIsec->getLinkOrderDep()->getOutputSection() !=
+          isec->getLinkOrderDep()->getOutputSection())
+        continue;
+    }
+
     sec->recordSection(isec);
     return nullptr;
   }
@@ -659,26 +673,30 @@ void LinkerScript::addOrphanSections() {
   StringMap<TinyPtrVector<OutputSection *>> map;
   std::vector<OutputSection *> v;
 
-  auto add = [&](InputSectionBase *s) {
-    if (!s->isLive() || s->parent)
-      return;
+  std::function<void(InputSectionBase *)> add;
+  add = [&](InputSectionBase *s) {
+    if (s->isLive() && !s->parent) {
+      StringRef name = getOutputSectionName(s);
 
-    StringRef name = getOutputSectionName(s);
+      if (config->orphanHandling == OrphanHandlingPolicy::Error)
+        error(toString(s) + " is being placed in '" + name + "'");
+      else if (config->orphanHandling == OrphanHandlingPolicy::Warn)
+        warn(toString(s) + " is being placed in '" + name + "'");
 
-    if (config->orphanHandling == OrphanHandlingPolicy::Error)
-      error(toString(s) + " is being placed in '" + name + "'");
-    else if (config->orphanHandling == OrphanHandlingPolicy::Warn)
-      warn(toString(s) + " is being placed in '" + name + "'");
-
-    if (OutputSection *sec = findByName(sectionCommands, name)) {
-      sec->recordSection(s);
-      return;
+      if (OutputSection *sec = findByName(sectionCommands, name)) {
+        sec->recordSection(s);
+      } else {
+        if (OutputSection *os = addInputSec(map, s, name))
+          v.push_back(os);
+        assert(isa<MergeInputSection>(s) ||
+               s->getOutputSection()->sectionIndex == UINT32_MAX);
+      }
     }
 
-    if (OutputSection *os = addInputSec(map, s, name))
-      v.push_back(os);
-    assert(isa<MergeInputSection>(s) ||
-           s->getOutputSection()->sectionIndex == UINT32_MAX);
+    if (config->relocatable)
+      for (InputSectionBase *depSec : s->dependentSections)
+        if (depSec->flags & SHF_LINK_ORDER)
+          add(depSec);
   };
 
   // For futher --emit-reloc handling code we need target output section
@@ -686,6 +704,12 @@ void LinkerScript::addOrphanSections() {
   // to create target sections first. We do not want priority handling
   // for synthetic sections because them are special.
   for (InputSectionBase *isec : inputSections) {
+    // In -r links, SHF_LINK_ORDER sections are added while adding their parent
+    // sections because we need to know the parent's output section before we
+    // can select an output section for the SHF_LINK_ORDER section.
+    if (config->relocatable && (isec->flags & SHF_LINK_ORDER))
+      continue;
+
     if (auto *sec = dyn_cast<InputSection>(isec))
       if (InputSectionBase *rel = sec->getRelocatedSection())
         if (auto *relIS = dyn_cast_or_null<InputSectionBase>(rel->parent))

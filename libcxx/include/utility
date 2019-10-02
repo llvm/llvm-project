@@ -334,22 +334,17 @@ struct _LIBCPP_TEMPLATE_VIS pair
     using _EnableB _LIBCPP_NODEBUG_TYPE = typename enable_if<_Val, bool>::type;
 
     struct _CheckArgs {
-      template <class _U1, class _U2>
+      template <int&...>
       static constexpr bool __enable_explicit_default() {
-          return is_default_constructible<_U1>::value
-              && is_default_constructible<_U2>::value
-              && !__enable_implicit_default<_U1, _U2>();
+          return is_default_constructible<_T1>::value
+              && is_default_constructible<_T2>::value
+              && !__enable_implicit_default<>();
       }
 
-      template <class _U1, class _U2>
+      template <int&...>
       static constexpr bool __enable_implicit_default() {
-          // In C++03, there's no way to implement the resolution of LWG2510.
-#ifdef _LIBCPP_CXX03_LANG
-          return true;
-#else
-          return __is_implicitly_default_constructible<_U1>::value
-              && __is_implicitly_default_constructible<_U2>::value;
-#endif
+          return __is_implicitly_default_constructible<_T1>::value
+              && __is_implicitly_default_constructible<_T2>::value;
       }
 
       template <class _U1, class _U2>
@@ -400,7 +395,7 @@ struct _LIBCPP_TEMPLATE_VIS pair
     >::type;
 
     template<bool _Dummy = true, _EnableB<
-            _CheckArgsDep<_Dummy>::template __enable_explicit_default<_T1, _T2>()
+            _CheckArgsDep<_Dummy>::__enable_explicit_default()
     > = false>
     explicit _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
     pair() _NOEXCEPT_(is_nothrow_default_constructible<first_type>::value &&
@@ -408,7 +403,7 @@ struct _LIBCPP_TEMPLATE_VIS pair
         : first(), second() {}
 
     template<bool _Dummy = true, _EnableB<
-            _CheckArgsDep<_Dummy>::template __enable_implicit_default<_T1, _T2>()
+            _CheckArgsDep<_Dummy>::__enable_implicit_default()
     > = false>
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
     pair() _NOEXCEPT_(is_nothrow_default_constructible<first_type>::value &&

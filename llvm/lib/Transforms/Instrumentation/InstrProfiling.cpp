@@ -758,7 +758,6 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfIncrementInst *Inc) {
   // of the parent function, that will result in relocations against discarded
   // sections.
   bool NeedComdat = needsComdatForCounter(*Fn, *M);
-  Comdat *Cmdt = nullptr; // Comdat group.
   if (NeedComdat) {
     if (TT.isOSBinFormatCOFF()) {
       // For COFF, put the counters, data, and values each into their own
@@ -767,14 +766,11 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfIncrementInst *Inc) {
       // with the same name marked IMAGE_COMDAT_SELECT_ASSOCIATIVE.
       Linkage = GlobalValue::LinkOnceODRLinkage;
       Visibility = GlobalValue::HiddenVisibility;
-    } else {
-      // Otherwise, create one comdat group for everything.
-      Cmdt = M->getOrInsertComdat(getVarName(Inc, getInstrProfComdatPrefix()));
     }
   }
   auto MaybeSetComdat = [=](GlobalVariable *GV) {
     if (NeedComdat)
-      GV->setComdat(Cmdt ? Cmdt : M->getOrInsertComdat(GV->getName()));
+      GV->setComdat(M->getOrInsertComdat(GV->getName()));
   };
 
   uint64_t NumCounters = Inc->getNumCounters()->getZExtValue();

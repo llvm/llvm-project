@@ -2109,7 +2109,7 @@ bool llvm::promoteLoopAccessesToScalars(
       SomePtr->getName() + ".promoted", Preheader->getTerminator());
   if (SawUnorderedAtomic)
     PreheaderLoad->setOrdering(AtomicOrdering::Unordered);
-  PreheaderLoad->setAlignment(Alignment);
+  PreheaderLoad->setAlignment(MaybeAlign(Alignment));
   PreheaderLoad->setDebugLoc(DL);
   if (AATags)
     PreheaderLoad->setAAMetadata(AATags);

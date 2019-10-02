@@ -41,12 +41,12 @@ void initializeNVPTXLowerAllocaPass(PassRegistry &);
 }
 
 namespace {
-class NVPTXLowerAlloca : public BasicBlockPass {
-  bool runOnBasicBlock(BasicBlock &BB) override;
+class NVPTXLowerAlloca : public FunctionPass {
+  bool runOnFunction(Function &F) override;
 
 public:
   static char ID; // Pass identification, replacement for typeid
-  NVPTXLowerAlloca() : BasicBlockPass(ID) {}
+  NVPTXLowerAlloca() : FunctionPass(ID) {}
   StringRef getPassName() const override {
     return "convert address space of alloca'ed memory to local";
   }
@@ -61,58 +61,61 @@ INITIALIZE_PASS(NVPTXLowerAlloca, "nvptx-lower-alloca",
 // =============================================================================
 // Main function for this pass.
 // =============================================================================
-bool NVPTXLowerAlloca::runOnBasicBlock(BasicBlock &BB) {
-  if (skipBasicBlock(BB))
+bool NVPTXLowerAlloca::runOnFunction(Function &F) {
+  if (skipFunction(F))
     return false;
 
   bool Changed = false;
-  for (auto &I : BB) {
-    if (auto allocaInst = dyn_cast<AllocaInst>(&I)) {
-      Changed = true;
-      auto PTy = dyn_cast<PointerType>(allocaInst->getType());
-      auto ETy = PTy->getElementType();
-      auto LocalAddrTy = PointerType::get(ETy, ADDRESS_SPACE_LOCAL);
-      auto NewASCToLocal = new AddrSpaceCastInst(allocaInst, LocalAddrTy, "");
-      auto GenericAddrTy = PointerType::get(ETy, ADDRESS_SPACE_GENERIC);
-      auto NewASCToGeneric = new AddrSpaceCastInst(NewASCToLocal,
-                                                    GenericAddrTy, "");
-      NewASCToLocal->insertAfter(allocaInst);
-      NewASCToGeneric->insertAfter(NewASCToLocal);
-      for (Value::use_iterator UI = allocaInst->use_begin(),
-                                UE = allocaInst->use_end();
-            UI != UE; ) {
-        // Check Load, Store, GEP, and BitCast Uses on alloca and make them
-        // use the converted generic address, in order to expose non-generic
-        // addrspacecast to NVPTXInferAddressSpaces. For other types
-        // of instructions this is unnecessary and may introduce redundant
-        // address cast.
-        const auto &AllocaUse = *UI++;
-        auto LI = dyn_cast<LoadInst>(AllocaUse.getUser());
-        if (LI && LI->getPointerOperand() == allocaInst && !LI->isVolatile()) {
-          LI->setOperand(LI->getPointerOperandIndex(), NewASCToGeneric);
-          continue;
-        }
-        auto SI = dyn_cast<StoreInst>(AllocaUse.getUser());
-        if (SI && SI->getPointerOperand() == allocaInst && !SI->isVolatile()) {
-          SI->setOperand(SI->getPointerOperandIndex(), NewASCToGeneric);
-          continue;
-        }
-        auto GI = dyn_cast<GetElementPtrInst>(AllocaUse.getUser());
-        if (GI && GI->getPointerOperand() == allocaInst) {
-          GI->setOperand(GI->getPointerOperandIndex(), NewASCToGeneric);
-          continue;
-        }
-        auto BI = dyn_cast<BitCastInst>(AllocaUse.getUser());
-        if (BI && BI->getOperand(0) == allocaInst) {
-          BI->setOperand(0, NewASCToGeneric);
-          continue;
+  for (auto &BB : F)
+    for (auto &I : BB) {
+      if (auto allocaInst = dyn_cast<AllocaInst>(&I)) {
+        Changed = true;
+        auto PTy = dyn_cast<PointerType>(allocaInst->getType());
+        auto ETy = PTy->getElementType();
+        auto LocalAddrTy = PointerType::get(ETy, ADDRESS_SPACE_LOCAL);
+        auto NewASCToLocal = new AddrSpaceCastInst(allocaInst, LocalAddrTy, "");
+        auto GenericAddrTy = PointerType::get(ETy, ADDRESS_SPACE_GENERIC);
+        auto NewASCToGeneric =
+            new AddrSpaceCastInst(NewASCToLocal, GenericAddrTy, "");
+        NewASCToLocal->insertAfter(allocaInst);
+        NewASCToGeneric->insertAfter(NewASCToLocal);
+        for (Value::use_iterator UI = allocaInst->use_begin(),
+                                 UE = allocaInst->use_end();
+             UI != UE;) {
+          // Check Load, Store, GEP, and BitCast Uses on alloca and make them
+          // use the converted generic address, in order to expose non-generic
+          // addrspacecast to NVPTXInferAddressSpaces. For other types
+          // of instructions this is unnecessary and may introduce redundant
+          // address cast.
+          const auto &AllocaUse = *UI++;
+          auto LI = dyn_cast<LoadInst>(AllocaUse.getUser());
+          if (LI && LI->getPointerOperand() == allocaInst &&
+              !LI->isVolatile()) {
+            LI->setOperand(LI->getPointerOperandIndex(), NewASCToGeneric);
+            continue;
+          }
+          auto SI = dyn_cast<StoreInst>(AllocaUse.getUser());
+          if (SI && SI->getPointerOperand() == allocaInst &&
+              !SI->isVolatile()) {
+            SI->setOperand(SI->getPointerOperandIndex(), NewASCToGeneric);
+            continue;
+          }
+          auto GI = dyn_cast<GetElementPtrInst>(AllocaUse.getUser());
+          if (GI && GI->getPointerOperand() == allocaInst) {
+            GI->setOperand(GI->getPointerOperandIndex(), NewASCToGeneric);
+            continue;
+          }
+          auto BI = dyn_cast<BitCastInst>(AllocaUse.getUser());
+          if (BI && BI->getOperand(0) == allocaInst) {
+            BI->setOperand(0, NewASCToGeneric);
+            continue;
+          }
         }
       }
     }
-  }
   return Changed;
 }
 
-BasicBlockPass *llvm::createNVPTXLowerAllocaPass() {
+FunctionPass *llvm::createNVPTXLowerAllocaPass() {
   return new NVPTXLowerAlloca();
 }

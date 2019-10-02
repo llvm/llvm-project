@@ -733,8 +733,8 @@ namespace llvm {
     SDValue BuildSDIVPow2(SDNode *N, const APInt &Divisor, SelectionDAG &DAG,
                           SmallVectorImpl<SDNode *> &Created) const override;
 
-    unsigned getRegisterByName(const char* RegName, EVT VT,
-                               SelectionDAG &DAG) const override;
+    Register getRegisterByName(const char* RegName, EVT VT,
+                               const MachineFunction &MF) const override;
 
     void computeKnownBitsForTargetNode(const SDValue Op,
                                        KnownBits &Known,

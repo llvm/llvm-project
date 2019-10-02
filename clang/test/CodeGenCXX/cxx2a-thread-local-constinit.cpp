@@ -33,11 +33,6 @@ extern thread_local int c;
 // CHECK: }
 int h() { return c; }
 
-thread_local int c = 0;
-
-int d_init();
-thread_local int d = d_init();
-
 // Note: use of 'c' does not trigger initialization of 'd', because 'c' has a
 // constant initializer.
 // CHECK-LABEL: define weak_odr {{.*}} @_ZTW1c()
@@ -45,3 +40,30 @@ thread_local int d = d_init();
 // CHECK-NOT: call
 // CHECK: ret i32* @c
 // CHECK: }
+
+thread_local int c = 0;
+
+int d_init();
+
+// CHECK: define {{.*}}[[D_INIT:@__cxx_global_var_init[^(]*]](
+// CHECK: call {{.*}} @_Z6d_initv()
+thread_local int d = d_init();
+
+struct Destructed {
+  int n;
+  ~Destructed();
+};
+
+extern thread_local constinit Destructed e;
+// CHECK-LABEL: define i32 @_Z1iv()
+// CHECK: call {{.*}}* @_ZTW1e()
+// CHECK: }
+int i() { return e.n; }
+
+// CHECK: define {{.*}}[[E2_INIT:@__cxx_global_var_init[^(]*]](
+// CHECK: call {{.*}} @__cxa_thread_atexit({{.*}} @_ZN10DestructedD1Ev {{.*}} @e2
+thread_local constinit Destructed e2;
+
+// CHECK-LABEL: define {{.*}}__tls_init
+// CHECK: call {{.*}} [[D_INIT]]
+// CHECK: call {{.*}} [[E2_INIT]]

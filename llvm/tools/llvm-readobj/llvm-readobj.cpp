@@ -236,8 +236,6 @@ namespace opts {
                               cl::desc("Displays architecture-specific information, if there is any."));
   cl::alias ArchSpecifcInfoShort("A", cl::desc("Alias for --arch-specific"),
                                  cl::aliasopt(ArchSpecificInfo), cl::NotHidden);
-  cl::alias ARMAttributes("arm-attributes", cl::desc("Alias for --arch-specific"),
-                           cl::aliasopt(ArchSpecificInfo), cl::Hidden);
 
   // --mips-plt-got
   cl::opt<bool>

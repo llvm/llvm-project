@@ -1078,12 +1078,10 @@ bool isIRPGOFlagSet(const Module *M) {
   if (!IRInstrVar->hasInitializer())
     return false;
 
-  const Constant *InitVal = IRInstrVar->getInitializer();
+  auto *InitVal = dyn_cast_or_null<ConstantInt>(IRInstrVar->getInitializer());
   if (!InitVal)
     return false;
-
-  return (dyn_cast<ConstantInt>(InitVal)->getZExtValue() &
-          VARIANT_MASK_IR_PROF) != 0;
+  return (InitVal->getZExtValue() & VARIANT_MASK_IR_PROF) != 0;
 }
 
 // Check if we can safely rename this Comdat function.

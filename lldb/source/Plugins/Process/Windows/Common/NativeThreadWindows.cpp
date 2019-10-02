@@ -132,11 +132,30 @@ bool NativeThreadWindows::GetStopReason(ThreadStopInfo &stop_info,
 
 Status NativeThreadWindows::SetWatchpoint(lldb::addr_t addr, size_t size,
                                           uint32_t watch_flags, bool hardware) {
-  return Status("unimplemented.");
+  if (!hardware)
+    return Status("not implemented");
+  if (m_state == eStateLaunching)
+    return Status();
+  Status error = RemoveWatchpoint(addr);
+  if (error.Fail())
+    return error;
+  uint32_t wp_index =
+      m_reg_context_up->SetHardwareWatchpoint(addr, size, watch_flags);
+  if (wp_index == LLDB_INVALID_INDEX32)
+    return Status("Setting hardware watchpoint failed.");
+  m_watchpoint_index_map.insert({addr, wp_index});
+  return Status();
 }
 
 Status NativeThreadWindows::RemoveWatchpoint(lldb::addr_t addr) {
-  return Status("unimplemented");
+  auto wp = m_watchpoint_index_map.find(addr);
+  if (wp == m_watchpoint_index_map.end())
+    return Status();
+  uint32_t wp_index = wp->second;
+  m_watchpoint_index_map.erase(wp);
+  if (m_reg_context_up->ClearHardwareWatchpoint(wp_index))
+    return Status();
+  return Status("Clearing hardware watchpoint failed.");
 }
 
 Status NativeThreadWindows::SetHardwareBreakpoint(lldb::addr_t addr,

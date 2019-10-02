@@ -1,6 +1,6 @@
 add_lldb_tool(lldb-argdumper ADD_TO_FRAMEWORK
   argdumper.cpp
 
-  LINK_LIBS
-    lldbUtility
+  LINK_COMPONENTS
+    Support
 )

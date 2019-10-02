@@ -63,6 +63,7 @@ class ELFDumper {
   Expected<ELFYAML::SymtabShndxSection *>
   dumpSymtabShndxSection(const Elf_Shdr *Shdr);
   Expected<ELFYAML::NoBitsSection *> dumpNoBitsSection(const Elf_Shdr *Shdr);
+  Expected<ELFYAML::HashSection *> dumpHashSection(const Elf_Shdr *Shdr);
   Expected<ELFYAML::VerdefSection *> dumpVerdefSection(const Elf_Shdr *Shdr);
   Expected<ELFYAML::SymverSection *> dumpSymverSection(const Elf_Shdr *Shdr);
   Expected<ELFYAML::VerneedSection *> dumpVerneedSection(const Elf_Shdr *Shdr);
@@ -250,6 +251,13 @@ template <class ELFT> Expected<ELFYAML::Object *> ELFDumper<ELFT>::dump() {
     }
     case ELF::SHT_NOBITS: {
       Expected<ELFYAML::NoBitsSection *> SecOrErr = dumpNoBitsSection(&Sec);
+      if (!SecOrErr)
+        return SecOrErr.takeError();
+      Y->Sections.emplace_back(*SecOrErr);
+      break;
+    }
+    case ELF::SHT_HASH: {
+      Expected<ELFYAML::HashSection *> SecOrErr = dumpHashSection(&Sec);
       if (!SecOrErr)
         return SecOrErr.takeError();
       Y->Sections.emplace_back(*SecOrErr);
@@ -614,6 +622,47 @@ ELFDumper<ELFT>::dumpNoBitsSection(const Elf_Shdr *Shdr) {
   S->Size = Shdr->sh_size;
 
   return S.release();
+}
+
+template <class ELFT>
+Expected<ELFYAML::HashSection *>
+ELFDumper<ELFT>::dumpHashSection(const Elf_Shdr *Shdr) {
+  auto S = std::make_unique<ELFYAML::HashSection>();
+  if (Error E = dumpCommonSection(Shdr, *S))
+    return std::move(E);
+
+  auto ContentOrErr = Obj.getSectionContents(Shdr);
+  if (!ContentOrErr)
+    return ContentOrErr.takeError();
+
+  ArrayRef<uint8_t> Content = *ContentOrErr;
+  if (Content.size() % 4 != 0 || Content.size() < 8) {
+    S->Content = yaml::BinaryRef(Content);
+    return S.release();
+  }
+
+  DataExtractor::Cursor Cur(0);
+  DataExtractor Data(Content, Obj.isLE(), /*AddressSize=*/0);
+  uint32_t NBucket = Data.getU32(Cur);
+  uint32_t NChain = Data.getU32(Cur);
+  if (Content.size() != (2 + NBucket + NChain) * 4) {
+    S->Content = yaml::BinaryRef(Content);
+    if (Cur)
+      return S.release();
+    llvm_unreachable("entries were not read correctly");
+  }
+
+  S->Bucket.emplace(NBucket);
+  for (uint32_t &V : *S->Bucket)
+    V = Data.getU32(Cur);
+
+  S->Chain.emplace(NChain);
+  for (uint32_t &V : *S->Chain)
+    V = Data.getU32(Cur);
+
+  if (Cur)
+    return S.release();
+  llvm_unreachable("entries were not read correctly");
 }
 
 template <class ELFT>

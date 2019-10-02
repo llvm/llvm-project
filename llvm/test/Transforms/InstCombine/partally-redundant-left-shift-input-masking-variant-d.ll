@@ -63,6 +63,29 @@ define <8 x i32> @t2_vec_splat(<8 x i32> %x, <8 x i32> %nbits) {
   ret <8 x i32> %t4
 }
 
+define <8 x i32> @t2_vec_splat_undef(<8 x i32> %x, <8 x i32> %nbits) {
+; CHECK-LABEL: @t2_vec_splat_undef(
+; CHECK-NEXT:    [[T0:%.*]] = shl <8 x i32> <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 undef, i32 -1>, [[NBITS:%.*]]
+; CHECK-NEXT:    [[T1:%.*]] = lshr <8 x i32> [[T0]], [[NBITS]]
+; CHECK-NEXT:    [[T3:%.*]] = add <8 x i32> [[NBITS]], <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 undef, i32 -1>
+; CHECK-NEXT:    call void @use8xi32(<8 x i32> [[T0]])
+; CHECK-NEXT:    call void @use8xi32(<8 x i32> [[T1]])
+; CHECK-NEXT:    call void @use8xi32(<8 x i32> [[T3]])
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <8 x i32> [[X:%.*]], [[T3]]
+; CHECK-NEXT:    [[T4:%.*]] = and <8 x i32> [[TMP1]], <i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647, i32 -1, i32 2147483647>
+; CHECK-NEXT:    ret <8 x i32> [[T4]]
+;
+  %t0 = shl <8 x i32> <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 undef, i32 -1>, %nbits
+  %t1 = lshr <8 x i32> %t0, %nbits
+  %t2 = and <8 x i32> %t1, %x
+  %t3 = add <8 x i32> %nbits, <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 undef, i32 -1>
+  call void @use8xi32(<8 x i32> %t0)
+  call void @use8xi32(<8 x i32> %t1)
+  call void @use8xi32(<8 x i32> %t3)
+  %t4 = shl <8 x i32> %t2, %t3 ; shift is smaller than mask
+  ret <8 x i32> %t4
+}
+
 define <8 x i32> @t2_vec_nonsplat(<8 x i32> %x, <8 x i32> %nbits) {
 ; CHECK-LABEL: @t2_vec_nonsplat(
 ; CHECK-NEXT:    [[T0:%.*]] = shl <8 x i32> <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>, [[NBITS:%.*]]

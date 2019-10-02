@@ -239,7 +239,7 @@ static void mergeInlinedArrayAllocas(
         }
 
         if (Align1 > Align2)
-          AvailableAlloca->setAlignment(AI->getAlignment());
+          AvailableAlloca->setAlignment(MaybeAlign(AI->getAlignment()));
       }
 
       AI->eraseFromParent();

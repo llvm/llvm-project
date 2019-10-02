@@ -56,12 +56,14 @@ CreateRegisterInfoInterface(const ArchSpec &target_arch) {
   return new RegisterContextWindows_i386(target_arch);
 }
 
-static Status GetWoW64ThreadContextHelper(lldb::thread_t thread_handle,
-                                          PWOW64_CONTEXT context_ptr) {
+static Status
+GetWoW64ThreadContextHelper(lldb::thread_t thread_handle,
+                            PWOW64_CONTEXT context_ptr,
+                            const DWORD control_flag = kWoW64ContextFlags) {
   Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_REGISTERS);
   Status error;
   memset(context_ptr, 0, sizeof(::WOW64_CONTEXT));
-  context_ptr->ContextFlags = kWoW64ContextFlags;
+  context_ptr->ContextFlags = control_flag;
   if (!::Wow64GetThreadContext(thread_handle, context_ptr)) {
     error.SetError(GetLastError(), eErrorTypeWin32);
     LLDB_LOG(log, "{0} Wow64GetThreadContext failed with error {1}",
@@ -91,6 +93,10 @@ NativeRegisterContextWindows_WoW64::NativeRegisterContextWindows_WoW64(
 
 bool NativeRegisterContextWindows_WoW64::IsGPR(uint32_t reg_index) const {
   return (reg_index >= k_first_gpr_i386 && reg_index < k_first_alias_i386);
+}
+
+bool NativeRegisterContextWindows_WoW64::IsDR(uint32_t reg_index) const {
+  return (reg_index >= lldb_dr0_i386 && reg_index <= lldb_dr7_i386);
 }
 
 uint32_t NativeRegisterContextWindows_WoW64::GetRegisterSetCount() const {
@@ -228,6 +234,82 @@ NativeRegisterContextWindows_WoW64::GPRWrite(const uint32_t reg,
   return SetWoW64ThreadContextHelper(thread_handle, &tls_context);
 }
 
+Status NativeRegisterContextWindows_WoW64::DRRead(const uint32_t reg,
+                                                  RegisterValue &reg_value) {
+  ::WOW64_CONTEXT tls_context;
+  DWORD context_flag = CONTEXT_DEBUG_REGISTERS;
+  Status error = GetWoW64ThreadContextHelper(GetThreadHandle(), &tls_context,
+                                             context_flag);
+  if (error.Fail())
+    return error;
+
+  switch (reg) {
+  case lldb_dr0_i386:
+    reg_value.SetUInt32(tls_context.Dr0);
+    break;
+  case lldb_dr1_i386:
+    reg_value.SetUInt32(tls_context.Dr1);
+    break;
+  case lldb_dr2_i386:
+    reg_value.SetUInt32(tls_context.Dr2);
+    break;
+  case lldb_dr3_i386:
+    reg_value.SetUInt32(tls_context.Dr3);
+    break;
+  case lldb_dr4_i386:
+    return Status("register DR4 is obsolete");
+  case lldb_dr5_i386:
+    return Status("register DR5 is obsolete");
+  case lldb_dr6_i386:
+    reg_value.SetUInt32(tls_context.Dr6);
+    break;
+  case lldb_dr7_i386:
+    reg_value.SetUInt32(tls_context.Dr7);
+    break;
+  }
+
+  return {};
+}
+
+Status
+NativeRegisterContextWindows_WoW64::DRWrite(const uint32_t reg,
+                                            const RegisterValue &reg_value) {
+  ::WOW64_CONTEXT tls_context;
+  DWORD context_flag = CONTEXT_DEBUG_REGISTERS;
+  auto thread_handle = GetThreadHandle();
+  Status error =
+      GetWoW64ThreadContextHelper(thread_handle, &tls_context, context_flag);
+  if (error.Fail())
+    return error;
+
+  switch (reg) {
+  case lldb_dr0_i386:
+    tls_context.Dr0 = reg_value.GetAsUInt32();
+    break;
+  case lldb_dr1_i386:
+    tls_context.Dr1 = reg_value.GetAsUInt32();
+    break;
+  case lldb_dr2_i386:
+    tls_context.Dr2 = reg_value.GetAsUInt32();
+    break;
+  case lldb_dr3_i386:
+    tls_context.Dr3 = reg_value.GetAsUInt32();
+    break;
+  case lldb_dr4_i386:
+    return Status("register DR4 is obsolete");
+  case lldb_dr5_i386:
+    return Status("register DR5 is obsolete");
+  case lldb_dr6_i386:
+    tls_context.Dr6 = reg_value.GetAsUInt32();
+    break;
+  case lldb_dr7_i386:
+    tls_context.Dr7 = reg_value.GetAsUInt32();
+    break;
+  }
+
+  return SetWoW64ThreadContextHelper(thread_handle, &tls_context);
+}
+
 Status
 NativeRegisterContextWindows_WoW64::ReadRegister(const RegisterInfo *reg_info,
                                                  RegisterValue &reg_value) {
@@ -249,6 +331,9 @@ NativeRegisterContextWindows_WoW64::ReadRegister(const RegisterInfo *reg_info,
 
   if (IsGPR(reg))
     return GPRRead(reg, reg_value);
+
+  if (IsDR(reg))
+    return DRRead(reg, reg_value);
 
   return Status("unimplemented");
 }
@@ -274,6 +359,9 @@ Status NativeRegisterContextWindows_WoW64::WriteRegister(
 
   if (IsGPR(reg))
     return GPRWrite(reg, reg_value);
+
+  if (IsDR(reg))
+    return DRWrite(reg, reg_value);
 
   return Status("unimplemented");
 }
@@ -317,46 +405,198 @@ Status NativeRegisterContextWindows_WoW64::WriteAllRegisterValues(
 
 Status NativeRegisterContextWindows_WoW64::IsWatchpointHit(uint32_t wp_index,
                                                            bool &is_hit) {
-  return Status("unimplemented");
+  is_hit = false;
+
+  if (wp_index >= NumSupportedHardwareWatchpoints())
+    return Status("watchpoint index out of range");
+
+  RegisterValue reg_value;
+  Status error = DRRead(lldb_dr6_i386, reg_value);
+  if (error.Fail())
+    return error;
+
+  is_hit = reg_value.GetAsUInt32() & (1 << wp_index);
+
+  return {};
 }
 
 Status NativeRegisterContextWindows_WoW64::GetWatchpointHitIndex(
     uint32_t &wp_index, lldb::addr_t trap_addr) {
-  return Status("unimplemented");
+  wp_index = LLDB_INVALID_INDEX32;
+
+  for (uint32_t i = 0; i < NumSupportedHardwareWatchpoints(); i++) {
+    bool is_hit;
+    Status error = IsWatchpointHit(i, is_hit);
+    if (error.Fail())
+      return error;
+
+    if (is_hit) {
+      wp_index = i;
+      return {};
+    }
+  }
+
+  return {};
 }
 
 Status NativeRegisterContextWindows_WoW64::IsWatchpointVacant(uint32_t wp_index,
                                                               bool &is_vacant) {
-  return Status("unimplemented");
-}
+  is_vacant = false;
 
-Status NativeRegisterContextWindows_WoW64::SetHardwareWatchpointWithIndex(
-    lldb::addr_t addr, size_t size, uint32_t watch_flags, uint32_t wp_index) {
-  return Status("unimplemented");
+  if (wp_index >= NumSupportedHardwareWatchpoints())
+    return Status("Watchpoint index out of range");
+
+  RegisterValue reg_value;
+  Status error = DRRead(lldb_dr7_i386, reg_value);
+  if (error.Fail())
+    return error;
+
+  is_vacant = !(reg_value.GetAsUInt32() & (1 << (2 * wp_index)));
+
+  return error;
 }
 
 bool NativeRegisterContextWindows_WoW64::ClearHardwareWatchpoint(
     uint32_t wp_index) {
-  return false;
+  if (wp_index >= NumSupportedHardwareWatchpoints())
+    return false;
+
+  // for watchpoints 0, 1, 2, or 3, respectively, clear bits 0, 1, 2, or 3 of
+  // the debug status register (DR6)
+
+  RegisterValue reg_value;
+  Status error = DRRead(lldb_dr6_i386, reg_value);
+  if (error.Fail())
+    return false;
+
+  uint32_t bit_mask = 1 << wp_index;
+  uint32_t status_bits = reg_value.GetAsUInt32() & ~bit_mask;
+  error = DRWrite(lldb_dr6_i386, RegisterValue(status_bits));
+  if (error.Fail())
+    return false;
+
+  // for watchpoints 0, 1, 2, or 3, respectively, clear bits {0-1,16-19},
+  // {2-3,20-23}, {4-5,24-27}, or {6-7,28-31} of the debug control register
+  // (DR7)
+
+  error = DRRead(lldb_dr7_i386, reg_value);
+  if (error.Fail())
+    return false;
+
+  bit_mask = (0x3 << (2 * wp_index)) | (0xF << (16 + 4 * wp_index));
+  uint32_t control_bits = reg_value.GetAsUInt32() & ~bit_mask;
+  return DRWrite(lldb_dr7_i386, RegisterValue(control_bits)).Success();
 }
 
 Status NativeRegisterContextWindows_WoW64::ClearAllHardwareWatchpoints() {
-  return Status("unimplemented");
+  RegisterValue reg_value;
+
+  // clear bits {0-4} of the debug status register (DR6)
+
+  Status error = DRRead(lldb_dr6_i386, reg_value);
+  if (error.Fail())
+    return error;
+
+  uint32_t status_bits = reg_value.GetAsUInt32() & ~0xF;
+  error = DRWrite(lldb_dr6_i386, RegisterValue(status_bits));
+  if (error.Fail())
+    return error;
+
+  // clear bits {0-7,16-31} of the debug control register (DR7)
+
+  error = DRRead(lldb_dr7_i386, reg_value);
+  if (error.Fail())
+    return error;
+
+  uint32_t control_bits = reg_value.GetAsUInt32() & ~0xFFFF00FF;
+  return DRWrite(lldb_dr7_i386, RegisterValue(control_bits));
 }
 
 uint32_t NativeRegisterContextWindows_WoW64::SetHardwareWatchpoint(
     lldb::addr_t addr, size_t size, uint32_t watch_flags) {
+  switch (size) {
+  case 1:
+  case 2:
+  case 4:
+    break;
+  default:
+    return LLDB_INVALID_INDEX32;
+  }
+
+  if (watch_flags == 0x2)
+    watch_flags = 0x3;
+
+  if (watch_flags != 0x1 && watch_flags != 0x3)
+    return LLDB_INVALID_INDEX32;
+
+  for (uint32_t wp_index = 0; wp_index < NumSupportedHardwareWatchpoints();
+       ++wp_index) {
+    bool is_vacant;
+    if (IsWatchpointVacant(wp_index, is_vacant).Fail())
+      return LLDB_INVALID_INDEX32;
+
+    if (is_vacant) {
+      if (!ClearHardwareWatchpoint(wp_index))
+        return LLDB_INVALID_INDEX32;
+
+      if (ApplyHardwareBreakpoint(wp_index, addr, size, watch_flags).Fail())
+        return LLDB_INVALID_INDEX32;
+
+      return wp_index;
+    }
+  }
   return LLDB_INVALID_INDEX32;
+}
+
+Status NativeRegisterContextWindows_WoW64::ApplyHardwareBreakpoint(
+    uint32_t wp_index, lldb::addr_t addr, size_t size, uint32_t flags) {
+  RegisterValue reg_value;
+  auto error = DRRead(lldb_dr7_i386, reg_value);
+  if (error.Fail())
+    return error;
+
+  // for watchpoints 0, 1, 2, or 3, respectively, set bits 1, 3, 5, or 7
+  uint32_t enable_bit = 1 << (2 * wp_index);
+
+  // set bits 16-17, 20-21, 24-25, or 28-29
+  // with 0b01 for write, and 0b11 for read/write
+  uint32_t rw_bits = flags << (16 + 4 * wp_index);
+
+  // set bits 18-19, 22-23, 26-27, or 30-31
+  // with 0b00, 0b01, 0b10, or 0b11
+  // for 1, 2, 8 (if supported), or 4 bytes, respectively
+  uint32_t size_bits = (size == 8 ? 0x2 : size - 1) << (18 + 4 * wp_index);
+
+  uint32_t bit_mask = (0x3 << (2 * wp_index)) | (0xF << (16 + 4 * wp_index));
+
+  uint32_t control_bits = reg_value.GetAsUInt32() & ~bit_mask;
+  control_bits |= enable_bit | rw_bits | size_bits;
+
+  error = DRWrite(lldb_dr7_i386, RegisterValue(control_bits));
+  if (error.Fail())
+    return error;
+
+  error = DRWrite(lldb_dr0_i386 + wp_index, RegisterValue(addr));
+  if (error.Fail())
+    return error;
+
+  return {};
 }
 
 lldb::addr_t
 NativeRegisterContextWindows_WoW64::GetWatchpointAddress(uint32_t wp_index) {
-  return LLDB_INVALID_ADDRESS;
+  if (wp_index >= NumSupportedHardwareWatchpoints())
+    return LLDB_INVALID_ADDRESS;
+
+  RegisterValue reg_value;
+  if (DRRead(lldb_dr0_i386 + wp_index, reg_value).Fail())
+    return LLDB_INVALID_ADDRESS;
+
+  return reg_value.GetAsUInt32();
 }
 
 uint32_t NativeRegisterContextWindows_WoW64::NumSupportedHardwareWatchpoints() {
-  // Not implemented
-  return 0;
+  return 4;
 }
 
 #endif // defined(__x86_64__) || defined(_M_X64)

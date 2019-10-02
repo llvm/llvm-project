@@ -185,7 +185,7 @@ Instruction *InstCombiner::SimplifyAnyMemTransfer(AnyMemTransferInst *MI) {
   Value *Dest = Builder.CreateBitCast(MI->getArgOperand(0), NewDstPtrTy);
   LoadInst *L = Builder.CreateLoad(IntType, Src);
   // Alignment from the mem intrinsic will be better, so use it.
-  L->setAlignment(CopySrcAlign);
+  L->setAlignment(MaybeAlign(CopySrcAlign));
   if (CopyMD)
     L->setMetadata(LLVMContext::MD_tbaa, CopyMD);
   MDNode *LoopMemParallelMD =

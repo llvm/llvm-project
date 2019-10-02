@@ -72,9 +72,9 @@ unsigned LSUnit::dispatch(const InstRef &IR) {
   assert((Desc.MayLoad || Desc.MayStore) && "Not a memory operation!");
 
   if (Desc.MayLoad)
-    assignLQSlot();
+    acquireLQSlot();
   if (Desc.MayStore)
-    assignSQSlot();
+    acquireSQSlot();
 
   if (Desc.MayStore) {
     // Always create a new group for store operations.
@@ -173,13 +173,13 @@ void LSUnitBase::onInstructionExecuted(const InstRef &IR) {
   }
 
   if (IsALoad) {
-    UsedLQEntries--;
+    releaseLQSlot();
     LLVM_DEBUG(dbgs() << "[LSUnit]: Instruction idx=" << IR.getSourceIndex()
                       << " has been removed from the load queue.\n");
   }
 
   if (IsAStore) {
-    UsedSQEntries--;
+    releaseSQSlot();
     LLVM_DEBUG(dbgs() << "[LSUnit]: Instruction idx=" << IR.getSourceIndex()
                       << " has been removed from the store queue.\n");
   }

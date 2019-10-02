@@ -1382,6 +1382,7 @@ public:
       AU.addPreserved<MemorySSAWrapperPass>();
     }
     AU.addPreserved<GlobalsAAWrapperPass>();
+    AU.addPreserved<AAResultsWrapperPass>();
     AU.setPreservesCFG();
   }
 };

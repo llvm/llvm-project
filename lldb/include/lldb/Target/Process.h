@@ -2272,6 +2272,8 @@ public:
   void ClearPreResumeAction(PreResumeActionCallback callback, void *baton);
 
   ProcessRunLock &GetRunLock();
+  
+  bool CurrentThreadIsPrivateStateThread();
 
   virtual Status SendEventData(const char *data) {
     Status return_error("Sending an event is not supported for this process.");

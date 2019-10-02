@@ -30,6 +30,7 @@ add_library(LLVMExegesis
   RegisterAliasing.cpp
   RegisterValue.cpp
   SchedClassResolution.cpp
+  SnippetFile.cpp
   SnippetGenerator.cpp
   SnippetRepetitor.cpp
   Target.cpp
@@ -46,6 +47,7 @@ llvm_map_components_to_libnames(libs
   MC
   MCDisassembler
   MCJIT
+  MCParser
   Object
   ObjectYAML
   Support

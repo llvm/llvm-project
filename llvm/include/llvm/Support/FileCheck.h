@@ -728,10 +728,13 @@ struct FileCheckString {
 /// use information from the request.
 class FileCheck {
   FileCheckRequest Req;
-  FileCheckPatternContext PatternContext;
+  std::unique_ptr<FileCheckPatternContext> PatternContext;
+  // C++17 TODO: make this a plain std::vector.
+  std::unique_ptr<std::vector<FileCheckString>> CheckStrings;
 
 public:
-  FileCheck(FileCheckRequest Req) : Req(Req) {}
+  explicit FileCheck(FileCheckRequest Req);
+  ~FileCheck();
 
   // Combines the check prefixes into a single regex so that we can efficiently
   // scan for any of the set.
@@ -741,13 +744,11 @@ public:
   Regex buildCheckPrefixRegex();
 
   /// Reads the check file from \p Buffer and records the expected strings it
-  /// contains in the \p CheckStrings vector. Errors are reported against
-  /// \p SM.
+  /// contains. Errors are reported against \p SM.
   ///
   /// Only expected strings whose prefix is one of those listed in \p PrefixRE
   /// are recorded. \returns true in case of an error, false otherwise.
-  bool ReadCheckFile(SourceMgr &SM, StringRef Buffer, Regex &PrefixRE,
-                     std::vector<FileCheckString> &CheckStrings);
+  bool readCheckFile(SourceMgr &SM, StringRef Buffer, Regex &PrefixRE);
 
   bool ValidateCheckPrefixes();
 
@@ -757,12 +758,11 @@ public:
                              SmallVectorImpl<char> &OutputBuffer);
 
   /// Checks the input to FileCheck provided in the \p Buffer against the
-  /// \p CheckStrings read from the check file and record diagnostics emitted
+  /// expected strings read from the check file and record diagnostics emitted
   /// in \p Diags. Errors are recorded against \p SM.
   ///
   /// \returns false if the input fails to satisfy the checks.
-  bool CheckInput(SourceMgr &SM, StringRef Buffer,
-                  ArrayRef<FileCheckString> CheckStrings,
+  bool checkInput(SourceMgr &SM, StringRef Buffer,
                   std::vector<FileCheckDiag> *Diags = nullptr);
 };
 } // namespace llvm

@@ -391,14 +391,13 @@ define amdgpu_kernel void @v_brev_i64(i64 addrspace(1)* noalias %out, i64 addrsp
 ; SI-NEXT:    v_mov_b32_e32 v1, 0
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    buffer_load_dwordx2 v[0:1], v[0:1], s[0:3], 0 addr64
-; SI-NEXT:    s_mov_b32 s0, 0xff0000
-; SI-NEXT:    s_mov_b32 s1, 0xff00
-; SI-NEXT:    s_mov_b32 s2, 0xf0f0f0f
-; SI-NEXT:    s_mov_b32 s3, 0xf0f0f0f0
-; SI-NEXT:    s_mov_b32 s6, 0x33333333
-; SI-NEXT:    s_mov_b32 s8, 0xcccccccc
-; SI-NEXT:    s_mov_b32 s9, 0x55555555
-; SI-NEXT:    s_mov_b32 s10, 0xaaaaaaaa
+; SI-NEXT:    s_mov_b32 s0, 0xff00
+; SI-NEXT:    s_mov_b32 s1, 0xf0f0f0f
+; SI-NEXT:    s_mov_b32 s2, 0xf0f0f0f0
+; SI-NEXT:    s_mov_b32 s3, 0x33333333
+; SI-NEXT:    s_mov_b32 s6, 0xcccccccc
+; SI-NEXT:    s_mov_b32 s8, 0x55555555
+; SI-NEXT:    s_mov_b32 s9, 0xaaaaaaaa
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_lshl_b64 v[2:3], v[0:1], 8
 ; SI-NEXT:    v_alignbit_b32 v4, v1, v0, 24
@@ -408,39 +407,39 @@ define amdgpu_kernel void @v_brev_i64(i64 addrspace(1)* noalias %out, i64 addrsp
 ; SI-NEXT:    v_lshl_b64 v[1:2], v[0:1], 24
 ; SI-NEXT:    v_lshlrev_b32_e32 v1, 24, v0
 ; SI-NEXT:    v_lshlrev_b32_e32 v0, 8, v0
-; SI-NEXT:    v_and_b32_e32 v0, s0, v0
-; SI-NEXT:    v_and_b32_e32 v4, s0, v4
+; SI-NEXT:    v_and_b32_e32 v0, 0xff0000, v0
+; SI-NEXT:    v_and_b32_e32 v4, 0xff0000, v4
 ; SI-NEXT:    v_and_b32_e32 v5, 0xff000000, v5
-; SI-NEXT:    v_and_b32_e32 v7, s1, v7
+; SI-NEXT:    v_and_b32_e32 v7, s0, v7
 ; SI-NEXT:    v_and_b32_e32 v3, 0xff, v3
-; SI-NEXT:    v_and_b32_e32 v2, s1, v2
+; SI-NEXT:    v_and_b32_e32 v2, s0, v2
 ; SI-NEXT:    v_or_b32_e32 v4, v5, v4
 ; SI-NEXT:    v_or_b32_e32 v5, v7, v6
 ; SI-NEXT:    v_or_b32_e32 v0, v1, v0
 ; SI-NEXT:    v_or_b32_e32 v2, v2, v3
 ; SI-NEXT:    v_or_b32_e32 v1, v4, v5
 ; SI-NEXT:    v_or_b32_e32 v3, v0, v2
-; SI-NEXT:    v_and_b32_e32 v0, s2, v1
-; SI-NEXT:    v_and_b32_e32 v2, s3, v1
-; SI-NEXT:    v_and_b32_e32 v1, s2, v3
-; SI-NEXT:    v_and_b32_e32 v3, s3, v3
+; SI-NEXT:    v_and_b32_e32 v0, s1, v1
+; SI-NEXT:    v_and_b32_e32 v2, s2, v1
+; SI-NEXT:    v_and_b32_e32 v1, s1, v3
+; SI-NEXT:    v_and_b32_e32 v3, s2, v3
 ; SI-NEXT:    v_lshl_b64 v[0:1], v[0:1], 4
 ; SI-NEXT:    v_lshr_b64 v[2:3], v[2:3], 4
 ; SI-NEXT:    v_or_b32_e32 v3, v3, v1
 ; SI-NEXT:    v_or_b32_e32 v2, v2, v0
-; SI-NEXT:    v_and_b32_e32 v1, s6, v3
-; SI-NEXT:    v_and_b32_e32 v0, s6, v2
-; SI-NEXT:    v_and_b32_e32 v3, s8, v3
-; SI-NEXT:    v_and_b32_e32 v2, s8, v2
+; SI-NEXT:    v_and_b32_e32 v1, s3, v3
+; SI-NEXT:    v_and_b32_e32 v0, s3, v2
+; SI-NEXT:    v_and_b32_e32 v3, s6, v3
+; SI-NEXT:    v_and_b32_e32 v2, s6, v2
 ; SI-NEXT:    v_lshl_b64 v[0:1], v[0:1], 2
 ; SI-NEXT:    v_lshr_b64 v[2:3], v[2:3], 2
 ; SI-NEXT:    s_mov_b32 s6, -1
 ; SI-NEXT:    v_or_b32_e32 v3, v3, v1
 ; SI-NEXT:    v_or_b32_e32 v2, v2, v0
-; SI-NEXT:    v_and_b32_e32 v1, s9, v3
-; SI-NEXT:    v_and_b32_e32 v0, s9, v2
-; SI-NEXT:    v_and_b32_e32 v3, s10, v3
-; SI-NEXT:    v_and_b32_e32 v2, s10, v2
+; SI-NEXT:    v_and_b32_e32 v1, s8, v3
+; SI-NEXT:    v_and_b32_e32 v0, s8, v2
+; SI-NEXT:    v_and_b32_e32 v3, s9, v3
+; SI-NEXT:    v_and_b32_e32 v2, s9, v2
 ; SI-NEXT:    v_lshl_b64 v[0:1], v[0:1], 1
 ; SI-NEXT:    v_lshr_b64 v[2:3], v[2:3], 1
 ; SI-NEXT:    v_or_b32_e32 v1, v3, v1
@@ -454,18 +453,17 @@ define amdgpu_kernel void @v_brev_i64(i64 addrspace(1)* noalias %out, i64 addrsp
 ; FLAT-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x2c
 ; FLAT-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
 ; FLAT-NEXT:    v_mov_b32_e32 v4, 8
-; FLAT-NEXT:    s_mov_b32 s2, 0xff0000
-; FLAT-NEXT:    s_mov_b32 s3, 0xf0f0f0f
+; FLAT-NEXT:    s_mov_b32 s2, 0xf0f0f0f
+; FLAT-NEXT:    s_mov_b32 s3, 0xf0f0f0f0
 ; FLAT-NEXT:    s_waitcnt lgkmcnt(0)
 ; FLAT-NEXT:    v_mov_b32_e32 v1, s1
 ; FLAT-NEXT:    v_add_u32_e32 v0, vcc, s0, v0
 ; FLAT-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; FLAT-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
-; FLAT-NEXT:    s_mov_b32 s0, 0xf0f0f0f0
-; FLAT-NEXT:    s_mov_b32 s1, 0x33333333
-; FLAT-NEXT:    s_mov_b32 s6, 0xcccccccc
-; FLAT-NEXT:    s_mov_b32 s8, 0x55555555
-; FLAT-NEXT:    s_mov_b32 s9, 0xaaaaaaaa
+; FLAT-NEXT:    s_mov_b32 s0, 0x33333333
+; FLAT-NEXT:    s_mov_b32 s1, 0xcccccccc
+; FLAT-NEXT:    s_mov_b32 s6, 0x55555555
+; FLAT-NEXT:    s_mov_b32 s8, 0xaaaaaaaa
 ; FLAT-NEXT:    s_mov_b32 s7, 0xf000
 ; FLAT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; FLAT-NEXT:    v_lshlrev_b64 v[2:3], 24, v[0:1]
@@ -475,9 +473,9 @@ define amdgpu_kernel void @v_brev_i64(i64 addrspace(1)* noalias %out, i64 addrsp
 ; FLAT-NEXT:    v_lshlrev_b64 v[4:5], 8, v[0:1]
 ; FLAT-NEXT:    v_lshlrev_b32_e32 v4, 24, v0
 ; FLAT-NEXT:    v_lshlrev_b32_e32 v0, 8, v0
-; FLAT-NEXT:    v_and_b32_e32 v2, s2, v2
+; FLAT-NEXT:    v_and_b32_e32 v2, 0xff0000, v2
 ; FLAT-NEXT:    v_and_b32_e32 v6, 0xff000000, v6
-; FLAT-NEXT:    v_and_b32_e32 v0, s2, v0
+; FLAT-NEXT:    v_and_b32_e32 v0, 0xff0000, v0
 ; FLAT-NEXT:    v_or_b32_sdwa v1, v7, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_3
 ; FLAT-NEXT:    v_or_b32_e32 v2, v6, v2
 ; FLAT-NEXT:    v_and_b32_e32 v3, 0xff00, v3
@@ -485,29 +483,29 @@ define amdgpu_kernel void @v_brev_i64(i64 addrspace(1)* noalias %out, i64 addrsp
 ; FLAT-NEXT:    v_or_b32_e32 v0, v4, v0
 ; FLAT-NEXT:    v_or_b32_sdwa v2, v3, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
 ; FLAT-NEXT:    v_or_b32_e32 v3, v0, v2
-; FLAT-NEXT:    v_and_b32_e32 v0, s3, v1
-; FLAT-NEXT:    v_and_b32_e32 v2, s0, v1
-; FLAT-NEXT:    v_and_b32_e32 v1, s3, v3
-; FLAT-NEXT:    v_and_b32_e32 v3, s0, v3
+; FLAT-NEXT:    v_and_b32_e32 v0, s2, v1
+; FLAT-NEXT:    v_and_b32_e32 v2, s3, v1
+; FLAT-NEXT:    v_and_b32_e32 v1, s2, v3
+; FLAT-NEXT:    v_and_b32_e32 v3, s3, v3
 ; FLAT-NEXT:    v_lshlrev_b64 v[0:1], 4, v[0:1]
 ; FLAT-NEXT:    v_lshrrev_b64 v[2:3], 4, v[2:3]
 ; FLAT-NEXT:    v_or_b32_e32 v3, v3, v1
 ; FLAT-NEXT:    v_or_b32_e32 v2, v2, v0
-; FLAT-NEXT:    v_and_b32_e32 v1, s1, v3
-; FLAT-NEXT:    v_and_b32_e32 v0, s1, v2
-; FLAT-NEXT:    v_and_b32_e32 v3, s6, v3
-; FLAT-NEXT:    v_and_b32_e32 v2, s6, v2
+; FLAT-NEXT:    v_and_b32_e32 v1, s0, v3
+; FLAT-NEXT:    v_and_b32_e32 v0, s0, v2
+; FLAT-NEXT:    v_and_b32_e32 v3, s1, v3
+; FLAT-NEXT:    v_and_b32_e32 v2, s1, v2
 ; FLAT-NEXT:    v_lshlrev_b64 v[0:1], 2, v[0:1]
 ; FLAT-NEXT:    v_lshrrev_b64 v[2:3], 2, v[2:3]
-; FLAT-NEXT:    s_mov_b32 s6, -1
 ; FLAT-NEXT:    v_or_b32_e32 v3, v3, v1
 ; FLAT-NEXT:    v_or_b32_e32 v2, v2, v0
-; FLAT-NEXT:    v_and_b32_e32 v1, s8, v3
-; FLAT-NEXT:    v_and_b32_e32 v0, s8, v2
-; FLAT-NEXT:    v_and_b32_e32 v3, s9, v3
-; FLAT-NEXT:    v_and_b32_e32 v2, s9, v2
+; FLAT-NEXT:    v_and_b32_e32 v1, s6, v3
+; FLAT-NEXT:    v_and_b32_e32 v0, s6, v2
+; FLAT-NEXT:    v_and_b32_e32 v3, s8, v3
+; FLAT-NEXT:    v_and_b32_e32 v2, s8, v2
 ; FLAT-NEXT:    v_lshlrev_b64 v[0:1], 1, v[0:1]
 ; FLAT-NEXT:    v_lshrrev_b64 v[2:3], 1, v[2:3]
+; FLAT-NEXT:    s_mov_b32 s6, -1
 ; FLAT-NEXT:    v_or_b32_e32 v1, v3, v1
 ; FLAT-NEXT:    v_or_b32_e32 v0, v2, v0
 ; FLAT-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
@@ -789,23 +787,20 @@ define amdgpu_kernel void @v_brev_v2i64(<2 x i64> addrspace(1)* noalias %out, <2
 ; SI-NEXT:    v_mov_b32_e32 v1, 0
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    buffer_load_dwordx4 v[0:3], v[0:1], s[0:3], 0 addr64
-; SI-NEXT:    s_mov_b32 s0, 0xff0000
-; SI-NEXT:    s_mov_b32 s1, 0xff000000
-; SI-NEXT:    s_mov_b32 s2, 0xff00
-; SI-NEXT:    s_movk_i32 s3, 0xff
-; SI-NEXT:    s_mov_b32 s8, 0xf0f0f0f
-; SI-NEXT:    s_mov_b32 s9, 0xf0f0f0f0
-; SI-NEXT:    s_mov_b32 s10, 0x33333333
-; SI-NEXT:    s_mov_b32 s11, 0xcccccccc
-; SI-NEXT:    s_mov_b32 s12, 0x55555555
-; SI-NEXT:    s_mov_b32 s13, 0xaaaaaaaa
+; SI-NEXT:    s_mov_b32 s0, 0xff00
+; SI-NEXT:    s_mov_b32 s1, 0xf0f0f0f
+; SI-NEXT:    s_mov_b32 s2, 0xf0f0f0f0
+; SI-NEXT:    s_mov_b32 s3, 0x33333333
+; SI-NEXT:    s_mov_b32 s8, 0xcccccccc
+; SI-NEXT:    s_mov_b32 s9, 0x55555555
+; SI-NEXT:    s_mov_b32 s10, 0xaaaaaaaa
 ; SI-NEXT:    s_mov_b32 s6, -1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_lshl_b64 v[4:5], v[2:3], 8
 ; SI-NEXT:    v_alignbit_b32 v6, v3, v2, 24
 ; SI-NEXT:    v_alignbit_b32 v7, v3, v2, 8
-; SI-NEXT:    v_lshrrev_b32_e32 v8, 24, v3
 ; SI-NEXT:    v_lshrrev_b32_e32 v9, 8, v3
+; SI-NEXT:    v_lshrrev_b32_e32 v8, 24, v3
 ; SI-NEXT:    v_lshl_b64 v[3:4], v[2:3], 24
 ; SI-NEXT:    v_lshlrev_b32_e32 v10, 24, v2
 ; SI-NEXT:    v_lshlrev_b32_e32 v11, 8, v2
@@ -817,78 +812,80 @@ define amdgpu_kernel void @v_brev_v2i64(<2 x i64> addrspace(1)* noalias %out, <2
 ; SI-NEXT:    v_lshlrev_b32_e32 v16, 24, v0
 ; SI-NEXT:    v_lshlrev_b32_e32 v17, 8, v0
 ; SI-NEXT:    v_lshl_b64 v[0:1], v[0:1], 24
-; SI-NEXT:    v_and_b32_e32 v0, s0, v6
-; SI-NEXT:    v_and_b32_e32 v2, s1, v7
-; SI-NEXT:    v_and_b32_e32 v6, s2, v9
-; SI-NEXT:    v_and_b32_e32 v7, s0, v11
-; SI-NEXT:    v_and_b32_e32 v9, s0, v12
-; SI-NEXT:    v_and_b32_e32 v11, s1, v13
-; SI-NEXT:    v_or_b32_e32 v0, v2, v0
-; SI-NEXT:    v_or_b32_e32 v2, v6, v8
-; SI-NEXT:    v_and_b32_e32 v12, s2, v15
-; SI-NEXT:    v_and_b32_e32 v13, s0, v17
-; SI-NEXT:    v_and_b32_e32 v5, s3, v5
-; SI-NEXT:    v_and_b32_e32 v4, s2, v4
-; SI-NEXT:    v_and_b32_e32 v3, s3, v3
-; SI-NEXT:    v_and_b32_e32 v1, s2, v1
-; SI-NEXT:    v_or_b32_e32 v6, v10, v7
-; SI-NEXT:    v_or_b32_e32 v7, v11, v9
-; SI-NEXT:    v_or_b32_e32 v2, v0, v2
-; SI-NEXT:    v_or_b32_e32 v8, v12, v14
-; SI-NEXT:    v_or_b32_e32 v0, v4, v5
+; SI-NEXT:    v_and_b32_e32 v6, 0xff0000, v6
+; SI-NEXT:    v_and_b32_e32 v7, 0xff000000, v7
+; SI-NEXT:    v_mov_b32_e32 v0, 0xff0000
+; SI-NEXT:    v_or_b32_e32 v6, v7, v6
+; SI-NEXT:    v_mov_b32_e32 v7, 0xff00
+; SI-NEXT:    v_and_b32_e32 v2, v0, v11
+; SI-NEXT:    v_and_b32_e32 v11, v0, v12
+; SI-NEXT:    v_and_b32_e32 v9, s0, v9
+; SI-NEXT:    v_and_b32_e32 v12, 0xff000000, v13
+; SI-NEXT:    v_and_b32_e32 v0, v0, v17
+; SI-NEXT:    v_and_b32_e32 v13, v7, v15
+; SI-NEXT:    v_and_b32_e32 v1, v7, v1
+; SI-NEXT:    v_and_b32_e32 v3, 0xff, v3
+; SI-NEXT:    v_or_b32_e32 v8, v9, v8
+; SI-NEXT:    v_or_b32_e32 v2, v10, v2
+; SI-NEXT:    v_and_b32_e32 v5, 0xff, v5
+; SI-NEXT:    v_and_b32_e32 v4, s0, v4
+; SI-NEXT:    v_or_b32_e32 v7, v16, v0
 ; SI-NEXT:    v_or_b32_e32 v1, v1, v3
-; SI-NEXT:    v_or_b32_e32 v9, v16, v13
-; SI-NEXT:    v_or_b32_e32 v5, v7, v8
-; SI-NEXT:    v_or_b32_e32 v3, v6, v0
-; SI-NEXT:    v_or_b32_e32 v7, v9, v1
-; SI-NEXT:    v_and_b32_e32 v0, s8, v2
-; SI-NEXT:    v_and_b32_e32 v1, s8, v3
-; SI-NEXT:    v_and_b32_e32 v2, s9, v2
-; SI-NEXT:    v_and_b32_e32 v3, s9, v3
-; SI-NEXT:    v_and_b32_e32 v4, s8, v5
-; SI-NEXT:    v_and_b32_e32 v6, s9, v5
-; SI-NEXT:    v_and_b32_e32 v5, s8, v7
-; SI-NEXT:    v_and_b32_e32 v7, s9, v7
-; SI-NEXT:    v_lshl_b64 v[0:1], v[0:1], 4
-; SI-NEXT:    v_lshr_b64 v[2:3], v[2:3], 4
+; SI-NEXT:    v_or_b32_e32 v9, v12, v11
+; SI-NEXT:    v_or_b32_e32 v10, v13, v14
+; SI-NEXT:    v_or_b32_e32 v0, v4, v5
+; SI-NEXT:    v_or_b32_e32 v5, v9, v10
+; SI-NEXT:    v_or_b32_e32 v6, v6, v8
+; SI-NEXT:    v_or_b32_e32 v7, v7, v1
+; SI-NEXT:    v_or_b32_e32 v3, v2, v0
+; SI-NEXT:    v_and_b32_e32 v0, s1, v6
+; SI-NEXT:    v_and_b32_e32 v2, s2, v6
+; SI-NEXT:    v_and_b32_e32 v4, s1, v5
+; SI-NEXT:    v_and_b32_e32 v6, s2, v5
+; SI-NEXT:    v_and_b32_e32 v5, s1, v7
+; SI-NEXT:    v_and_b32_e32 v7, s2, v7
+; SI-NEXT:    v_and_b32_e32 v1, s1, v3
+; SI-NEXT:    v_and_b32_e32 v3, s2, v3
 ; SI-NEXT:    v_lshl_b64 v[4:5], v[4:5], 4
 ; SI-NEXT:    v_lshr_b64 v[6:7], v[6:7], 4
-; SI-NEXT:    v_or_b32_e32 v3, v3, v1
-; SI-NEXT:    v_or_b32_e32 v2, v2, v0
+; SI-NEXT:    v_lshl_b64 v[0:1], v[0:1], 4
+; SI-NEXT:    v_lshr_b64 v[2:3], v[2:3], 4
 ; SI-NEXT:    v_or_b32_e32 v7, v7, v5
 ; SI-NEXT:    v_or_b32_e32 v6, v6, v4
-; SI-NEXT:    v_and_b32_e32 v1, s10, v3
-; SI-NEXT:    v_and_b32_e32 v0, s10, v2
-; SI-NEXT:    v_and_b32_e32 v5, s10, v7
-; SI-NEXT:    v_and_b32_e32 v4, s10, v6
-; SI-NEXT:    v_and_b32_e32 v3, s11, v3
-; SI-NEXT:    v_and_b32_e32 v2, s11, v2
-; SI-NEXT:    v_and_b32_e32 v7, s11, v7
-; SI-NEXT:    v_and_b32_e32 v6, s11, v6
-; SI-NEXT:    v_lshl_b64 v[0:1], v[0:1], 2
-; SI-NEXT:    v_lshr_b64 v[2:3], v[2:3], 2
+; SI-NEXT:    v_or_b32_e32 v3, v3, v1
+; SI-NEXT:    v_or_b32_e32 v2, v2, v0
+; SI-NEXT:    v_and_b32_e32 v5, s3, v7
+; SI-NEXT:    v_and_b32_e32 v4, s3, v6
+; SI-NEXT:    v_and_b32_e32 v7, s8, v7
+; SI-NEXT:    v_and_b32_e32 v6, s8, v6
+; SI-NEXT:    v_and_b32_e32 v1, s3, v3
+; SI-NEXT:    v_and_b32_e32 v0, s3, v2
+; SI-NEXT:    v_and_b32_e32 v3, s8, v3
+; SI-NEXT:    v_and_b32_e32 v2, s8, v2
 ; SI-NEXT:    v_lshl_b64 v[4:5], v[4:5], 2
 ; SI-NEXT:    v_lshr_b64 v[6:7], v[6:7], 2
+; SI-NEXT:    v_lshl_b64 v[0:1], v[0:1], 2
+; SI-NEXT:    v_lshr_b64 v[2:3], v[2:3], 2
+; SI-NEXT:    v_or_b32_e32 v7, v7, v5
+; SI-NEXT:    v_or_b32_e32 v9, v6, v4
 ; SI-NEXT:    v_or_b32_e32 v3, v3, v1
 ; SI-NEXT:    v_or_b32_e32 v2, v2, v0
-; SI-NEXT:    v_or_b32_e32 v7, v7, v5
-; SI-NEXT:    v_or_b32_e32 v6, v6, v4
-; SI-NEXT:    v_and_b32_e32 v1, s12, v3
-; SI-NEXT:    v_and_b32_e32 v0, s12, v2
-; SI-NEXT:    v_and_b32_e32 v5, s12, v7
-; SI-NEXT:    v_and_b32_e32 v4, s12, v6
-; SI-NEXT:    v_and_b32_e32 v3, s13, v3
-; SI-NEXT:    v_and_b32_e32 v2, s13, v2
-; SI-NEXT:    v_and_b32_e32 v7, s13, v7
-; SI-NEXT:    v_and_b32_e32 v6, s13, v6
+; SI-NEXT:    v_and_b32_e32 v5, s9, v7
+; SI-NEXT:    v_and_b32_e32 v4, s9, v9
+; SI-NEXT:    v_and_b32_e32 v1, s9, v3
+; SI-NEXT:    v_and_b32_e32 v0, s9, v2
+; SI-NEXT:    v_and_b32_e32 v6, s10, v7
+; SI-NEXT:    v_lshl_b64 v[7:8], v[4:5], 1
+; SI-NEXT:    v_and_b32_e32 v5, s10, v9
+; SI-NEXT:    v_and_b32_e32 v3, s10, v3
+; SI-NEXT:    v_and_b32_e32 v2, s10, v2
 ; SI-NEXT:    v_lshl_b64 v[0:1], v[0:1], 1
 ; SI-NEXT:    v_lshr_b64 v[2:3], v[2:3], 1
-; SI-NEXT:    v_lshl_b64 v[4:5], v[4:5], 1
-; SI-NEXT:    v_lshr_b64 v[6:7], v[6:7], 1
+; SI-NEXT:    v_lshr_b64 v[4:5], v[5:6], 1
 ; SI-NEXT:    v_or_b32_e32 v3, v3, v1
 ; SI-NEXT:    v_or_b32_e32 v2, v2, v0
-; SI-NEXT:    v_or_b32_e32 v1, v7, v5
-; SI-NEXT:    v_or_b32_e32 v0, v6, v4
+; SI-NEXT:    v_or_b32_e32 v1, v5, v8
+; SI-NEXT:    v_or_b32_e32 v0, v4, v7
 ; SI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
 ;
@@ -898,65 +895,63 @@ define amdgpu_kernel void @v_brev_v2i64(<2 x i64> addrspace(1)* noalias %out, <2
 ; FLAT-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x2c
 ; FLAT-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
 ; FLAT-NEXT:    v_mov_b32_e32 v8, 8
-; FLAT-NEXT:    s_mov_b32 s2, 0xff0000
-; FLAT-NEXT:    s_mov_b32 s3, 0xff000000
+; FLAT-NEXT:    v_mov_b32_e32 v10, 0xff0000
+; FLAT-NEXT:    s_mov_b32 s2, 0xf0f0f0f
 ; FLAT-NEXT:    s_waitcnt lgkmcnt(0)
 ; FLAT-NEXT:    v_mov_b32_e32 v1, s1
 ; FLAT-NEXT:    v_add_u32_e32 v0, vcc, s0, v0
 ; FLAT-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; FLAT-NEXT:    flat_load_dwordx4 v[0:3], v[0:1]
-; FLAT-NEXT:    s_mov_b32 s0, 0xff00
-; FLAT-NEXT:    s_mov_b32 s1, 0xf0f0f0f
-; FLAT-NEXT:    s_mov_b32 s8, 0xf0f0f0f0
-; FLAT-NEXT:    s_mov_b32 s9, 0x33333333
-; FLAT-NEXT:    s_mov_b32 s10, 0xcccccccc
-; FLAT-NEXT:    s_mov_b32 s11, 0x55555555
-; FLAT-NEXT:    s_mov_b32 s12, 0xaaaaaaaa
+; FLAT-NEXT:    s_mov_b32 s0, 0xf0f0f0f0
+; FLAT-NEXT:    s_mov_b32 s1, 0x33333333
+; FLAT-NEXT:    s_mov_b32 s3, 0xcccccccc
+; FLAT-NEXT:    s_mov_b32 s8, 0x55555555
+; FLAT-NEXT:    s_mov_b32 s9, 0xaaaaaaaa
 ; FLAT-NEXT:    s_mov_b32 s7, 0xf000
 ; FLAT-NEXT:    s_mov_b32 s6, -1
 ; FLAT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; FLAT-NEXT:    v_lshlrev_b64 v[4:5], 24, v[2:3]
-; FLAT-NEXT:    v_lshlrev_b32_sdwa v11, v8, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_2
-; FLAT-NEXT:    v_lshlrev_b32_sdwa v14, v8, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_2
+; FLAT-NEXT:    v_lshlrev_b32_sdwa v12, v8, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_2
+; FLAT-NEXT:    v_lshlrev_b32_sdwa v15, v8, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_2
 ; FLAT-NEXT:    v_lshlrev_b64 v[8:9], 8, v[0:1]
 ; FLAT-NEXT:    v_lshlrev_b64 v[6:7], 8, v[2:3]
 ; FLAT-NEXT:    v_alignbit_b32 v4, v3, v2, 24
-; FLAT-NEXT:    v_alignbit_b32 v10, v3, v2, 8
-; FLAT-NEXT:    v_or_b32_sdwa v3, v11, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_3
-; FLAT-NEXT:    v_alignbit_b32 v12, v1, v0, 24
-; FLAT-NEXT:    v_alignbit_b32 v13, v1, v0, 8
+; FLAT-NEXT:    v_alignbit_b32 v11, v3, v2, 8
+; FLAT-NEXT:    v_or_b32_sdwa v3, v12, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_3
+; FLAT-NEXT:    v_or_b32_sdwa v12, v15, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_3
+; FLAT-NEXT:    v_alignbit_b32 v13, v1, v0, 24
+; FLAT-NEXT:    v_alignbit_b32 v14, v1, v0, 8
 ; FLAT-NEXT:    v_lshlrev_b32_e32 v8, 24, v0
 ; FLAT-NEXT:    v_lshlrev_b32_e32 v15, 8, v0
-; FLAT-NEXT:    v_or_b32_sdwa v11, v14, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_3
 ; FLAT-NEXT:    v_lshlrev_b64 v[0:1], 24, v[0:1]
 ; FLAT-NEXT:    v_lshlrev_b32_e32 v6, 24, v2
 ; FLAT-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
-; FLAT-NEXT:    v_and_b32_e32 v0, s2, v4
-; FLAT-NEXT:    v_and_b32_e32 v4, s3, v10
-; FLAT-NEXT:    v_and_b32_e32 v2, s2, v2
+; FLAT-NEXT:    v_and_b32_e32 v0, 0xff0000, v4
+; FLAT-NEXT:    v_and_b32_e32 v4, 0xff000000, v11
+; FLAT-NEXT:    v_and_b32_e32 v2, v10, v2
+; FLAT-NEXT:    v_and_b32_e32 v11, v10, v13
 ; FLAT-NEXT:    v_or_b32_e32 v0, v4, v0
-; FLAT-NEXT:    v_and_b32_e32 v1, s0, v1
-; FLAT-NEXT:    v_and_b32_e32 v10, s2, v12
-; FLAT-NEXT:    v_and_b32_e32 v12, s3, v13
-; FLAT-NEXT:    v_and_b32_e32 v4, s0, v5
-; FLAT-NEXT:    v_and_b32_e32 v13, s2, v15
-; FLAT-NEXT:    v_or_b32_e32 v5, v12, v10
+; FLAT-NEXT:    v_and_b32_e32 v1, 0xff00, v1
+; FLAT-NEXT:    v_and_b32_e32 v13, 0xff000000, v14
+; FLAT-NEXT:    v_and_b32_e32 v4, 0xff00, v5
+; FLAT-NEXT:    v_and_b32_e32 v10, v10, v15
+; FLAT-NEXT:    v_or_b32_e32 v5, v13, v11
 ; FLAT-NEXT:    v_or_b32_e32 v2, v6, v2
 ; FLAT-NEXT:    v_or_b32_e32 v3, v0, v3
 ; FLAT-NEXT:    v_or_b32_sdwa v0, v4, v7 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
-; FLAT-NEXT:    v_or_b32_e32 v6, v8, v13
+; FLAT-NEXT:    v_or_b32_e32 v6, v8, v10
 ; FLAT-NEXT:    v_or_b32_sdwa v1, v1, v9 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
 ; FLAT-NEXT:    v_or_b32_e32 v7, v2, v0
-; FLAT-NEXT:    v_or_b32_e32 v5, v5, v11
+; FLAT-NEXT:    v_or_b32_e32 v5, v5, v12
 ; FLAT-NEXT:    v_or_b32_e32 v8, v6, v1
-; FLAT-NEXT:    v_and_b32_e32 v0, s1, v3
-; FLAT-NEXT:    v_and_b32_e32 v1, s1, v7
-; FLAT-NEXT:    v_and_b32_e32 v2, s8, v3
-; FLAT-NEXT:    v_and_b32_e32 v3, s8, v7
-; FLAT-NEXT:    v_and_b32_e32 v4, s1, v5
-; FLAT-NEXT:    v_and_b32_e32 v6, s8, v5
-; FLAT-NEXT:    v_and_b32_e32 v5, s1, v8
-; FLAT-NEXT:    v_and_b32_e32 v7, s8, v8
+; FLAT-NEXT:    v_and_b32_e32 v0, s2, v3
+; FLAT-NEXT:    v_and_b32_e32 v1, s2, v7
+; FLAT-NEXT:    v_and_b32_e32 v2, s0, v3
+; FLAT-NEXT:    v_and_b32_e32 v3, s0, v7
+; FLAT-NEXT:    v_and_b32_e32 v4, s2, v5
+; FLAT-NEXT:    v_and_b32_e32 v6, s0, v5
+; FLAT-NEXT:    v_and_b32_e32 v5, s2, v8
+; FLAT-NEXT:    v_and_b32_e32 v7, s0, v8
 ; FLAT-NEXT:    v_lshlrev_b64 v[0:1], 4, v[0:1]
 ; FLAT-NEXT:    v_lshrrev_b64 v[2:3], 4, v[2:3]
 ; FLAT-NEXT:    v_lshlrev_b64 v[4:5], 4, v[4:5]
@@ -965,14 +960,14 @@ define amdgpu_kernel void @v_brev_v2i64(<2 x i64> addrspace(1)* noalias %out, <2
 ; FLAT-NEXT:    v_or_b32_e32 v2, v2, v0
 ; FLAT-NEXT:    v_or_b32_e32 v7, v7, v5
 ; FLAT-NEXT:    v_or_b32_e32 v6, v6, v4
-; FLAT-NEXT:    v_and_b32_e32 v1, s9, v3
-; FLAT-NEXT:    v_and_b32_e32 v0, s9, v2
-; FLAT-NEXT:    v_and_b32_e32 v5, s9, v7
-; FLAT-NEXT:    v_and_b32_e32 v4, s9, v6
-; FLAT-NEXT:    v_and_b32_e32 v3, s10, v3
-; FLAT-NEXT:    v_and_b32_e32 v2, s10, v2
-; FLAT-NEXT:    v_and_b32_e32 v7, s10, v7
-; FLAT-NEXT:    v_and_b32_e32 v6, s10, v6
+; FLAT-NEXT:    v_and_b32_e32 v1, s1, v3
+; FLAT-NEXT:    v_and_b32_e32 v0, s1, v2
+; FLAT-NEXT:    v_and_b32_e32 v5, s1, v7
+; FLAT-NEXT:    v_and_b32_e32 v4, s1, v6
+; FLAT-NEXT:    v_and_b32_e32 v3, s3, v3
+; FLAT-NEXT:    v_and_b32_e32 v2, s3, v2
+; FLAT-NEXT:    v_and_b32_e32 v7, s3, v7
+; FLAT-NEXT:    v_and_b32_e32 v6, s3, v6
 ; FLAT-NEXT:    v_lshlrev_b64 v[0:1], 2, v[0:1]
 ; FLAT-NEXT:    v_lshrrev_b64 v[2:3], 2, v[2:3]
 ; FLAT-NEXT:    v_lshlrev_b64 v[4:5], 2, v[4:5]
@@ -981,14 +976,14 @@ define amdgpu_kernel void @v_brev_v2i64(<2 x i64> addrspace(1)* noalias %out, <2
 ; FLAT-NEXT:    v_or_b32_e32 v2, v2, v0
 ; FLAT-NEXT:    v_or_b32_e32 v7, v7, v5
 ; FLAT-NEXT:    v_or_b32_e32 v6, v6, v4
-; FLAT-NEXT:    v_and_b32_e32 v1, s11, v3
-; FLAT-NEXT:    v_and_b32_e32 v0, s11, v2
-; FLAT-NEXT:    v_and_b32_e32 v5, s11, v7
-; FLAT-NEXT:    v_and_b32_e32 v4, s11, v6
-; FLAT-NEXT:    v_and_b32_e32 v3, s12, v3
-; FLAT-NEXT:    v_and_b32_e32 v2, s12, v2
-; FLAT-NEXT:    v_and_b32_e32 v7, s12, v7
-; FLAT-NEXT:    v_and_b32_e32 v6, s12, v6
+; FLAT-NEXT:    v_and_b32_e32 v1, s8, v3
+; FLAT-NEXT:    v_and_b32_e32 v0, s8, v2
+; FLAT-NEXT:    v_and_b32_e32 v5, s8, v7
+; FLAT-NEXT:    v_and_b32_e32 v4, s8, v6
+; FLAT-NEXT:    v_and_b32_e32 v3, s9, v3
+; FLAT-NEXT:    v_and_b32_e32 v2, s9, v2
+; FLAT-NEXT:    v_and_b32_e32 v7, s9, v7
+; FLAT-NEXT:    v_and_b32_e32 v6, s9, v6
 ; FLAT-NEXT:    v_lshlrev_b64 v[0:1], 1, v[0:1]
 ; FLAT-NEXT:    v_lshrrev_b64 v[2:3], 1, v[2:3]
 ; FLAT-NEXT:    v_lshlrev_b64 v[4:5], 1, v[4:5]

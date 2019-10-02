@@ -1106,7 +1106,7 @@ static void lowerLocalAllocas(ArrayRef<CoroAllocaAllocInst*> LocalAllocas,
 
     // Allocate memory.
     auto Alloca = Builder.CreateAlloca(Builder.getInt8Ty(), AI->getSize());
-    Alloca->setAlignment(AI->getAlignment());
+    Alloca->setAlignment(MaybeAlign(AI->getAlignment()));
 
     for (auto U : AI->users()) {
       // Replace gets with the allocation.

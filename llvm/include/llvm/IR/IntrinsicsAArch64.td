@@ -768,6 +768,11 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
                  LLVMMatchType<0>],
                 [IntrNoMem]>;
 
+  class AdvSIMD_SVE_PUNPKHI_Intrinsic
+    : Intrinsic<[LLVMHalfElementsVectorType<0>],
+                [llvm_anyvector_ty],
+                [IntrNoMem]>;
+
   // This class of intrinsics are not intended to be useful within LLVM IR but
   // are instead here to support some of the more regid parts of the ACLE.
   class Builtin_SVCVT<string name, LLVMType OUT, LLVMType IN>
@@ -792,4 +797,11 @@ def int_aarch64_sve_neg : AdvSIMD_Merged1VectorArg_Intrinsic;
 //
 
 def int_aarch64_sve_fcvtzs_i32f16 : Builtin_SVCVT<"svcvt_s32_f16_m", llvm_nxv4i32_ty, llvm_nxv8f16_ty>;
+
+//
+// Predicate operations
+//
+
+def int_aarch64_sve_punpkhi : AdvSIMD_SVE_PUNPKHI_Intrinsic;
+def int_aarch64_sve_punpklo : AdvSIMD_SVE_PUNPKHI_Intrinsic;
 }

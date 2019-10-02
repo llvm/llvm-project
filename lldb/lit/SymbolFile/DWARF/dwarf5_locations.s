@@ -7,7 +7,7 @@
 # RUN: lldb-test symbols %t | FileCheck %s
 
 # CHECK: Variable{0x7fffffff00000011}, name = "color"
-# CHECK-SAME: location = DW_OP_addrx(0x0)
+# CHECK-SAME: location = DW_OP_addrx 0x0
 
         .text
         .section        .debug_str,"MS",@progbits,1

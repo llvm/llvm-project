@@ -11,6 +11,7 @@
 #include "LlvmState.h"
 #include "MCInstrDescView.h"
 #include "RegisterAliasing.h"
+#include "TestBase.h"
 #include "Uops.h"
 #include "X86InstrInfo.h"
 
@@ -34,23 +35,11 @@ using testing::UnorderedElementsAre;
 MATCHER(IsInvalid, "") { return !arg.isValid(); }
 MATCHER(IsReg, "") { return arg.isReg(); }
 
-class X86SnippetGeneratorTest : public ::testing::Test {
+class X86SnippetGeneratorTest : public X86TestBase {
 protected:
-  X86SnippetGeneratorTest()
-      : State("x86_64-unknown-linux", "haswell"),
-        MCInstrInfo(State.getInstrInfo()), MCRegisterInfo(State.getRegInfo()) {}
+  X86SnippetGeneratorTest() : InstrInfo(State.getInstrInfo()) {}
 
-  static void SetUpTestCase() {
-    LLVMInitializeX86TargetInfo();
-    LLVMInitializeX86TargetMC();
-    LLVMInitializeX86Target();
-    LLVMInitializeX86AsmPrinter();
-    InitializeX86ExegesisTarget();
-  }
-
-  const LLVMState State;
-  const llvm::MCInstrInfo &MCInstrInfo;
-  const llvm::MCRegisterInfo &MCRegisterInfo;
+  const llvm::MCInstrInfo &InstrInfo;
 };
 
 template <typename SnippetGeneratorT>
@@ -86,10 +75,10 @@ TEST_F(LatencySnippetGeneratorTest, ImplicitSelfDependencyThroughImplicitReg) {
   // - hasAliasingImplicitRegisters (execution is always serial)
   // - hasAliasingRegisters
   const unsigned Opcode = llvm::X86::ADC16i16;
-  EXPECT_THAT(MCInstrInfo.get(Opcode).getImplicitDefs()[0], llvm::X86::AX);
-  EXPECT_THAT(MCInstrInfo.get(Opcode).getImplicitDefs()[1], llvm::X86::EFLAGS);
-  EXPECT_THAT(MCInstrInfo.get(Opcode).getImplicitUses()[0], llvm::X86::AX);
-  EXPECT_THAT(MCInstrInfo.get(Opcode).getImplicitUses()[1], llvm::X86::EFLAGS);
+  EXPECT_THAT(InstrInfo.get(Opcode).getImplicitDefs()[0], llvm::X86::AX);
+  EXPECT_THAT(InstrInfo.get(Opcode).getImplicitDefs()[1], llvm::X86::EFLAGS);
+  EXPECT_THAT(InstrInfo.get(Opcode).getImplicitUses()[0], llvm::X86::AX);
+  EXPECT_THAT(InstrInfo.get(Opcode).getImplicitUses()[1], llvm::X86::EFLAGS);
   const auto CodeTemplates = checkAndGetCodeTemplates(Opcode);
   ASSERT_THAT(CodeTemplates, SizeIs(1));
   const auto &CT = CodeTemplates[0];
@@ -112,7 +101,7 @@ TEST_F(LatencySnippetGeneratorTest, ImplicitSelfDependencyThroughTiedRegs) {
   // - hasTiedRegisters (execution is always serial)
   // - hasAliasingRegisters
   const unsigned Opcode = llvm::X86::ADD16ri;
-  EXPECT_THAT(MCInstrInfo.get(Opcode).getImplicitDefs()[0], llvm::X86::EFLAGS);
+  EXPECT_THAT(InstrInfo.get(Opcode).getImplicitDefs()[0], llvm::X86::EFLAGS);
   const auto CodeTemplates = checkAndGetCodeTemplates(Opcode);
   ASSERT_THAT(CodeTemplates, SizeIs(1));
   const auto &CT = CodeTemplates[0];

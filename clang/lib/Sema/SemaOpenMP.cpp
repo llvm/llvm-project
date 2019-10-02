@@ -170,7 +170,7 @@ private:
   OpenMPClauseKind ClauseKindMode = OMPC_unknown;
   Sema &SemaRef;
   bool ForceCapturing = false;
-  /// true if all the vaiables in the target executable directives must be
+  /// true if all the variables in the target executable directives must be
   /// captured by reference.
   bool ForceCaptureByReferenceInTargetExecutable = false;
   CriticalsWithHintsTy Criticals;
@@ -4936,8 +4936,9 @@ Sema::checkOpenMPDeclareVariantFunction(Sema::DeclGroupPtrTy DG,
         << FD->getLocation();
 
   // Check if the function was emitted already.
-  if ((LangOpts.EmitAllDecls && FD->isDefined()) ||
-      Context.DeclMustBeEmitted(FD))
+  const FunctionDecl *Definition;
+  if (!FD->isThisDeclarationADefinition() && FD->isDefined(Definition) &&
+      (LangOpts.EmitAllDecls || Context.DeclMustBeEmitted(Definition)))
     Diag(SR.getBegin(), diag::warn_omp_declare_variant_after_emitted)
         << FD->getLocation();
 
@@ -6246,13 +6247,21 @@ Expr *OpenMPIterationSpaceChecker::buildFinalCondition(Scope *S) const {
 Expr *OpenMPIterationSpaceChecker::buildPreCond(
     Scope *S, Expr *Cond,
     llvm::MapVector<const Expr *, DeclRefExpr *> &Captures) const {
+  // Do not build a precondition when the condition/initialization is dependent
+  // to prevent pessimistic early loop exit.
+  // TODO: this can be improved by calculating min/max values but not sure that
+  // it will be very effective.
+  if (CondDependOnLC || InitDependOnLC)
+    return SemaRef.PerformImplicitConversion(
+        SemaRef.ActOnIntegerConstant(SourceLocation(), 1).get(),
+        SemaRef.Context.BoolTy, /*Action=*/Sema::AA_Casting,
+        /*AllowExplicit=*/true).get();
+
   // Try to build LB <op> UB, where <op> is <, >, <=, or >=.
   Sema::TentativeAnalysisScope Trap(SemaRef);
 
-  ExprResult NewLB =
-      InitDependOnLC ? LB : tryBuildCapture(SemaRef, LB, Captures);
-  ExprResult NewUB =
-      CondDependOnLC ? UB : tryBuildCapture(SemaRef, UB, Captures);
+  ExprResult NewLB = tryBuildCapture(SemaRef, LB, Captures);
+  ExprResult NewUB = tryBuildCapture(SemaRef, UB, Captures);
   if (!NewLB.isUsable() || !NewUB.isUsable())
     return nullptr;
 
@@ -7424,7 +7433,7 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
       Built.DependentCounters[Cnt] = nullptr;
       Built.DependentInits[Cnt] = nullptr;
       Built.FinalsConditions[Cnt] = nullptr;
-      if (IS.IsNonRectangularLB) {
+      if (IS.IsNonRectangularLB || IS.IsNonRectangularUB) {
         Built.DependentCounters[Cnt] =
             Built.Counters[NestedLoopCount - 1 - IS.LoopDependentIdx];
         Built.DependentInits[Cnt] =

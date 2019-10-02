@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "sanitizer_platform.h"
+#include "sanitizer_glibc_version.h"
 
 #if SANITIZER_LINUX || SANITIZER_MAC
 // Tests in this file assume that off_t-dependent data structures match the
@@ -1004,10 +1005,6 @@ CHECK_TYPE_SIZE(cmsghdr);
 CHECK_SIZE_AND_OFFSET(cmsghdr, cmsg_len);
 CHECK_SIZE_AND_OFFSET(cmsghdr, cmsg_level);
 CHECK_SIZE_AND_OFFSET(cmsghdr, cmsg_type);
-
-#ifndef __GLIBC_PREREQ
-#define __GLIBC_PREREQ(x, y) 0
-#endif
 
 #if SANITIZER_LINUX && (__ANDROID_API__ >= 21 || __GLIBC_PREREQ (2, 14))
 CHECK_TYPE_SIZE(mmsghdr);

@@ -4,10 +4,10 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
 
 # RUN: ld.lld --dynamic-linker foo %t.o %t.so -o %t
-# RUN: llvm-readelf -program-headers %t | FileCheck %s
+# RUN: llvm-readelf --program-headers --section-headers %t | FileCheck --implicit-check-not=.bss %s
 
 # RUN: ld.lld --dynamic-linker=foo %t.o %t.so -o %t
-# RUN: llvm-readelf -program-headers %t | FileCheck %s
+# RUN: llvm-readelf --program-headers --section-headers %t | FileCheck --implicit-check-not=.bss %s
 
 # CHECK: [Requesting program interpreter: foo]
 

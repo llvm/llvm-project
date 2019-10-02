@@ -2,9 +2,13 @@
 
 // The implicit UsingDirectiveDecls for the anonymous namespaces are created by the Sema.
 
-// CHECK: NamespaceDecl
+// There might be another builtin namespace before our first namespace, so we can't
+// just look for NamespaceDecl. Instead look for the first line of F.cpp (which only
+// contains the namespace we are looking for but no other decl).
+// CHECK: F.cpp:1:1
 // The nested anonymous namespace.
 // CHECK-NEXT: NamespaceDecl
+// CHECK-SAME: <invalid sloc>
 // CHECK: FunctionDecl
 // CHECK-SAME: func4
 // CHECK-NEXT: CompoundStmt

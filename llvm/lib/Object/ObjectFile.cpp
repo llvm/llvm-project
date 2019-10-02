@@ -105,7 +105,7 @@ Triple ObjectFile::makeTriple() const {
     TheTriple.setObjectFormat(Triple::MachO);
 
   if (isCOFF()) {
-    const auto COFFObj = dyn_cast<COFFObjectFile>(this);
+    const auto COFFObj = cast<COFFObjectFile>(this);
     if (COFFObj->getArch() == Triple::thumb)
       TheTriple.setTriple("thumbv7-windows");
   }

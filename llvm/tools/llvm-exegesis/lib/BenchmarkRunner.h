@@ -30,13 +30,6 @@
 namespace llvm {
 namespace exegesis {
 
-// A class representing failures that happened during Benchmark, they are used
-// to report informations to the user.
-class BenchmarkFailure : public llvm::StringError {
-public:
-  BenchmarkFailure(const llvm::Twine &S);
-};
-
 // Common code for all benchmark modes.
 class BenchmarkRunner {
 public:

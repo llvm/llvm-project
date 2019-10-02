@@ -183,6 +183,11 @@ body: |
   bb.0:
     liveins: $sgpr0_sgpr1_sgpr2_sgpr3
 
+    ; GCN-LABEL: name: test_unmerge_values_s_s64_s_s64_s64_s_s192
+    ; GCN: liveins: $sgpr0_sgpr1_sgpr2_sgpr3
+    ; GCN: [[DEF:%[0-9]+]]:sgpr(s192) = G_IMPLICIT_DEF
+    ; GCN: [[UV:%[0-9]+]]:sgpr(s64), [[UV1:%[0-9]+]]:sgpr(s64), [[UV2:%[0-9]+]]:sgpr(s64) = G_UNMERGE_VALUES [[DEF]](s192)
+    ; GCN: S_ENDPGM 0, implicit [[UV]](s64), implicit [[UV1]](s64), implicit [[UV2]](s64)
     %0:sgpr(s192) = G_IMPLICIT_DEF
     %1:sgpr(s64), %2:sgpr(s64), %3:sgpr(s64) = G_UNMERGE_VALUES %0
     S_ENDPGM 0, implicit %1, implicit %2, implicit %3
@@ -228,4 +233,27 @@ body: |
     %0:vreg_64(s64) = COPY $vgpr0_vgpr1
     %1:vgpr(s32), %2:vgpr(s32) = G_UNMERGE_VALUES %0
     S_ENDPGM 0, implicit %1, implicit %2
+...
+
+---
+name: test_unmerge_values_s_s256_s_s1024
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1_sgpr2_sgpr3
+
+    ; GCN-LABEL: name: test_unmerge_values_s_s256_s_s1024
+    ; GCN: liveins: $sgpr0_sgpr1_sgpr2_sgpr3
+    ; GCN: [[DEF:%[0-9]+]]:sreg_1024 = IMPLICIT_DEF
+    ; GCN: [[COPY:%[0-9]+]]:sreg_256 = COPY [[DEF]].sub0_sub1_sub2_sub3_sub4_sub5_sub6_sub7
+    ; GCN: [[COPY1:%[0-9]+]]:sreg_256 = COPY [[DEF]].sub8_sub9_sub10_sub11_sub12_sub13_sub14_sub15
+    ; GCN: [[COPY2:%[0-9]+]]:sreg_256 = COPY [[DEF]].sub16_sub17_sub18_sub19_sub20_sub21_sub22_sub23
+    ; GCN: [[COPY3:%[0-9]+]]:sreg_256 = COPY [[DEF]].sub24_sub25_sub26_sub27_sub28_sub29_sub30_sub31
+    ; GCN: S_ENDPGM 0, implicit [[COPY]], implicit [[COPY1]], implicit [[COPY2]], implicit [[COPY3]]
+    %0:sgpr(s1024) = G_IMPLICIT_DEF
+    %1:sgpr(s256), %2:sgpr(s256), %3:sgpr(s256), %4:sgpr(s256) = G_UNMERGE_VALUES %0
+    S_ENDPGM 0, implicit %1, implicit %2, implicit %3, implicit %4
 ...

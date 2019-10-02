@@ -449,8 +449,24 @@ void ClangdServer::locateSymbolAt(PathRef File, Position Pos,
   WorkScheduler.runWithAST("Definitions", File, std::move(Action));
 }
 
-llvm::Optional<Path> ClangdServer::switchSourceHeader(PathRef Path) {
-  return getCorrespondingHeaderOrSource(Path, FSProvider.getFileSystem());
+void ClangdServer::switchSourceHeader(
+    PathRef Path, Callback<llvm::Optional<clangd::Path>> CB) {
+  // We want to return the result as fast as possible, stragety is:
+  //  1) use the file-only heuristic, it requires some IO but it is much
+  //     faster than building AST, but it only works when .h/.cc files are in
+  //     the same directory.
+  //  2) if 1) fails, we use the AST&Index approach, it is slower but supports
+  //     different code layout.
+  if (auto CorrespondingFile =
+          getCorrespondingHeaderOrSource(Path, FSProvider.getFileSystem()))
+    return CB(std::move(CorrespondingFile));
+  auto Action = [Path, CB = std::move(CB),
+                 this](llvm::Expected<InputsAndAST> InpAST) mutable {
+    if (!InpAST)
+      return CB(InpAST.takeError());
+    CB(getCorrespondingHeaderOrSource(Path, InpAST->AST, Index));
+  };
+  WorkScheduler.runWithAST("SwitchHeaderSource", Path, std::move(Action));
 }
 
 llvm::Expected<tooling::Replacements>

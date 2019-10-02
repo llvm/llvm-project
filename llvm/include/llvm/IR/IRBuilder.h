@@ -1612,19 +1612,19 @@ public:
   LoadInst *CreateAlignedLoad(Type *Ty, Value *Ptr, unsigned Align,
                               const char *Name) {
     LoadInst *LI = CreateLoad(Ty, Ptr, Name);
-    LI->setAlignment(Align);
+    LI->setAlignment(MaybeAlign(Align));
     return LI;
   }
   LoadInst *CreateAlignedLoad(Type *Ty, Value *Ptr, unsigned Align,
                               const Twine &Name = "") {
     LoadInst *LI = CreateLoad(Ty, Ptr, Name);
-    LI->setAlignment(Align);
+    LI->setAlignment(MaybeAlign(Align));
     return LI;
   }
   LoadInst *CreateAlignedLoad(Type *Ty, Value *Ptr, unsigned Align,
                               bool isVolatile, const Twine &Name = "") {
     LoadInst *LI = CreateLoad(Ty, Ptr, isVolatile, Name);
-    LI->setAlignment(Align);
+    LI->setAlignment(MaybeAlign(Align));
     return LI;
   }
 

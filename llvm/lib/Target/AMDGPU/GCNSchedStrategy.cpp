@@ -196,6 +196,15 @@ SUnit *GCNMaxOccupancySchedStrategy::pickNodeBidirectional(bool &IsTopNode) {
     assert(BotCand.Reason != NoCand && "failed to find the first candidate");
   } else {
     LLVM_DEBUG(traceCandidate(BotCand));
+#ifndef NDEBUG
+    if (VerifyScheduling) {
+      SchedCandidate TCand;
+      TCand.reset(CandPolicy());
+      pickNodeFromQueue(Bot, BotPolicy, DAG->getBotRPTracker(), TCand);
+      assert(TCand.SU == BotCand.SU &&
+             "Last pick result should correspond to re-picking right now");
+    }
+#endif
   }
 
   // Check if the top Q has a better candidate.
@@ -207,6 +216,15 @@ SUnit *GCNMaxOccupancySchedStrategy::pickNodeBidirectional(bool &IsTopNode) {
     assert(TopCand.Reason != NoCand && "failed to find the first candidate");
   } else {
     LLVM_DEBUG(traceCandidate(TopCand));
+#ifndef NDEBUG
+    if (VerifyScheduling) {
+      SchedCandidate TCand;
+      TCand.reset(CandPolicy());
+      pickNodeFromQueue(Top, TopPolicy, DAG->getTopRPTracker(), TCand);
+      assert(TCand.SU == TopCand.SU &&
+           "Last pick result should correspond to re-picking right now");
+    }
+#endif
   }
 
   // Pick best from BotCand and TopCand.

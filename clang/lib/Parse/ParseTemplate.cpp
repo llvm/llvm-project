@@ -630,11 +630,11 @@ NamedDecl *Parser::ParseTypeParameter(unsigned Depth, unsigned Position) {
   }
 
   // Grab the template parameter name (if given)
-  SourceLocation NameLoc;
+  SourceLocation NameLoc = Tok.getLocation();
   IdentifierInfo *ParamName = nullptr;
   if (Tok.is(tok::identifier)) {
     ParamName = Tok.getIdentifierInfo();
-    NameLoc = ConsumeToken();
+    ConsumeToken();
   } else if (Tok.isOneOf(tok::equal, tok::comma, tok::greater,
                          tok::greatergreater)) {
     // Unnamed template parameter. Don't have to do anything here, just
@@ -727,11 +727,11 @@ Parser::ParseTemplateTemplateParameter(unsigned Depth, unsigned Position) {
            : diag::ext_variadic_templates);
 
   // Get the identifier, if given.
-  SourceLocation NameLoc;
+  SourceLocation NameLoc = Tok.getLocation();
   IdentifierInfo *ParamName = nullptr;
   if (Tok.is(tok::identifier)) {
     ParamName = Tok.getIdentifierInfo();
-    NameLoc = ConsumeToken();
+    ConsumeToken();
   } else if (Tok.isOneOf(tok::equal, tok::comma, tok::greater,
                          tok::greatergreater)) {
     // Unnamed template parameter. Don't have to do anything here, just

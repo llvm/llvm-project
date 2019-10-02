@@ -431,7 +431,7 @@ Value *getLoadValueForLoad(LoadInst *SrcVal, unsigned Offset, Type *LoadTy,
     PtrVal = Builder.CreateBitCast(PtrVal, DestPTy);
     LoadInst *NewLoad = Builder.CreateLoad(DestTy, PtrVal);
     NewLoad->takeName(SrcVal);
-    NewLoad->setAlignment(SrcVal->getAlignment());
+    NewLoad->setAlignment(MaybeAlign(SrcVal->getAlignment()));
 
     LLVM_DEBUG(dbgs() << "GVN WIDENED LOAD: " << *SrcVal << "\n");
     LLVM_DEBUG(dbgs() << "TO: " << *NewLoad << "\n");

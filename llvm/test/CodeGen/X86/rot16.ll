@@ -177,3 +177,57 @@ define i16 @xbu(i16 %x, i16 %y, i16 %z) nounwind {
 	%t2 = or i16 %t0, %t1
 	ret i16 %t2
 }
+
+define i32 @rot16_demandedbits(i32 %x, i32 %y) nounwind {
+; X32-LABEL: rot16_demandedbits:
+; X32:       # %bb.0:
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl %eax, %ecx
+; X32-NEXT:    shrl $11, %ecx
+; X32-NEXT:    shll $5, %eax
+; X32-NEXT:    orl %ecx, %eax
+; X32-NEXT:    andl $65536, %eax # imm = 0x10000
+; X32-NEXT:    retl
+;
+; X64-LABEL: rot16_demandedbits:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    movl %edi, %ecx
+; X64-NEXT:    shrl $11, %ecx
+; X64-NEXT:    shll $5, %eax
+; X64-NEXT:    orl %ecx, %eax
+; X64-NEXT:    andl $65536, %eax # imm = 0x10000
+; X64-NEXT:    retq
+	%t0 = lshr i32 %x, 11
+	%t1 = shl i32 %x, 5
+	%t2 = or i32 %t0, %t1
+	%t3 = and i32 %t2, 65536
+	ret i32 %t3
+}
+
+define i16 @rot16_trunc(i32 %x, i32 %y) nounwind {
+; X32-LABEL: rot16_trunc:
+; X32:       # %bb.0:
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl %eax, %ecx
+; X32-NEXT:    shrl $11, %ecx
+; X32-NEXT:    shll $5, %eax
+; X32-NEXT:    orl %ecx, %eax
+; X32-NEXT:    # kill: def $ax killed $ax killed $eax
+; X32-NEXT:    retl
+;
+; X64-LABEL: rot16_trunc:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    movl %edi, %ecx
+; X64-NEXT:    shrl $11, %ecx
+; X64-NEXT:    shll $5, %eax
+; X64-NEXT:    orl %ecx, %eax
+; X64-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-NEXT:    retq
+	%t0 = lshr i32 %x, 11
+	%t1 = shl i32 %x, 5
+	%t2 = or i32 %t0, %t1
+	%t3 = trunc i32 %t2 to i16
+	ret i16 %t3
+}

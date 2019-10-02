@@ -90,6 +90,9 @@ The important flags to get right are:
 * On the final candidate you just need Release builds, and that's the binary
   directory you'll have to pack.
 
+* On macOS, you must export ``MACOSX_DEPLOYMENT_TARGET=10.9`` before running
+  the script.
+
 This script builds three phases of Clang+LLVM twice each (Release and
 Release+Asserts), so use screen or nohup to avoid headaches, since it'll take
 a long time.

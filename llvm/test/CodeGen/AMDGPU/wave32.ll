@@ -871,33 +871,6 @@ endif:
   ret void
 }
 
-; GCN-LABEL: {{^}}test_init_exec:
-; GFX1032: s_mov_b32 exec_lo, 0x12345
-; GFX1064: s_mov_b64 exec, 0x12345
-; GCN: v_add_f32_e32 v0,
-define amdgpu_ps float @test_init_exec(float %a, float %b) {
-main_body:
-  %s = fadd float %a, %b
-  call void @llvm.amdgcn.init.exec(i64 74565)
-  ret float %s
-}
-
-; GCN-LABEL: {{^}}test_init_exec_from_input:
-; GCN: s_bfe_u32 s0, s3, 0x70008
-; GFX1032: s_bfm_b32 exec_lo, s0, 0
-; GFX1032: s_cmp_eq_u32 s0, 32
-; GFX1032: s_cmov_b32 exec_lo, -1
-; GFX1064: s_bfm_b64 exec, s0, 0
-; GFX1064: s_cmp_eq_u32 s0, 64
-; GFX1064: s_cmov_b64 exec, -1
-; GCN: v_add_f32_e32 v0,
-define amdgpu_ps float @test_init_exec_from_input(i32 inreg, i32 inreg, i32 inreg, i32 inreg %count, float %a, float %b) {
-main_body:
-  %s = fadd float %a, %b
-  call void @llvm.amdgcn.init.exec.from.input(i32 %count, i32 8)
-  ret float %s
-}
-
 ; GCN-LABEL: {{^}}test_vgprblocks_w32_attr:
 ; Test that the wave size can be overridden in function attributes and that the block size is correct as a result
 ; GFX10DEFWAVE: ; VGPRBlocks: 1
@@ -1132,8 +1105,6 @@ declare i32 @llvm.amdgcn.icmp.i32.i32(i32, i32, i32)
 declare void @llvm.amdgcn.kill(i1)
 declare i1 @llvm.amdgcn.wqm.vote(i1)
 declare i1 @llvm.amdgcn.ps.live()
-declare void @llvm.amdgcn.init.exec(i64)
-declare void @llvm.amdgcn.init.exec.from.input(i32, i32)
 declare i64 @llvm.cttz.i64(i64, i1)
 declare i32 @llvm.cttz.i32(i32, i1)
 

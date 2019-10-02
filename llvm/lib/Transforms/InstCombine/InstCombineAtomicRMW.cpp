@@ -154,6 +154,6 @@ Instruction *InstCombiner::visitAtomicRMWInst(AtomicRMWInst &RMWI) {
   
   LoadInst *Load = new LoadInst(RMWI.getType(), RMWI.getPointerOperand());
   Load->setAtomic(Ordering, RMWI.getSyncScopeID());
-  Load->setAlignment(DL.getABITypeAlignment(RMWI.getType()));
+  Load->setAlignment(MaybeAlign(DL.getABITypeAlignment(RMWI.getType())));
   return Load;
 }

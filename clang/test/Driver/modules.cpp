@@ -15,7 +15,7 @@
 // RUN: %clang -std=c++2a %t/module.pcm -S -o %t/module.pcm.o -v 2>&1 | FileCheck %s --check-prefix=CHECK-COMPILE
 //
 // CHECK-COMPILE: -cc1 {{.*}} {{-emit-obj|-S}}
-// CHECK-COMPILE-SAME: -o {{.*}}.{{pcm.o|s}}
+// CHECK-COMPILE-SAME: -o {{.*}}module{{2*}}.pcm.o
 // CHECK-COMPILE-SAME: -x pcm
 // CHECK-COMPILE-SAME: {{.*}}.pcm
 

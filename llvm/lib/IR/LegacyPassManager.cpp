@@ -1998,10 +1998,28 @@ void FunctionPass::assignPassManager(PMStack &PMS,
   FPP->add(this);
 }
 
+void BasicBlockPass::preparePassManager(PMStack &PMS) {
+  // Find BBPassManager
+  while (!PMS.empty() &&
+         PMS.top()->getPassManagerType() > PMT_BasicBlockPassManager)
+    PMS.pop();
+
+  // If this pass is destroying high level information that is used
+  // by other passes that are managed by BBPM then do not insert
+  // this pass in current BBPM. Use new BBPassManager.
+  if (PMS.top()->getPassManagerType() == PMT_BasicBlockPassManager &&
+      !PMS.top()->preserveHigherLevelAnalysis(this))
+    PMS.pop();
+}
+
 /// Find appropriate Basic Pass Manager or Call Graph Pass Manager
 /// in the PM Stack and add self into that manager.
 void BasicBlockPass::assignPassManager(PMStack &PMS,
                                        PassManagerType PreferredType) {
+  while (!PMS.empty() &&
+         PMS.top()->getPassManagerType() > PMT_BasicBlockPassManager)
+    PMS.pop();
+
   BBPassManager *BBP;
 
   // Basic Pass Manager is a leaf pass manager. It does not handle
@@ -2017,6 +2035,7 @@ void BasicBlockPass::assignPassManager(PMStack &PMS,
 
     // [1] Create new Basic Block Manager
     BBP = new BBPassManager();
+    BBP->populateInheritedAnalysis(PMS);
 
     // [2] Set up new manager's top level manager
     // Basic Block Pass Manager does not live by itself

@@ -100,6 +100,7 @@ namespace llvm {
 
 extern cl::opt<bool> ForceTopDown;
 extern cl::opt<bool> ForceBottomUp;
+extern cl::opt<bool> VerifyScheduling;
 
 class LiveIntervals;
 class MachineDominatorTree;

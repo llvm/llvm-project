@@ -98,6 +98,7 @@ public:
     bool EVEX_W1_VEX_W0 = RecE->getValueAsBit("EVEX_W1_VEX_W0");
 
     if (RecV->getValueAsDef("OpEnc")->getName().str() != "EncVEX" ||
+        RecV->getValueAsBit("isCodeGenOnly") != RecE->getValueAsBit("isCodeGenOnly") ||
         // VEX/EVEX fields
         RecV->getValueAsDef("OpPrefix") != RecE->getValueAsDef("OpPrefix") ||
         RecV->getValueAsDef("OpMap") != RecE->getValueAsDef("OpMap") ||

@@ -164,7 +164,7 @@ LatencySnippetGenerator::generateCodeTemplates(
       break;
   }
   if (Results.empty())
-    return llvm::make_error<BenchmarkFailure>(
+    return make_error<Failure>(
         "No strategy found to make the execution serial");
   return std::move(Results);
 }

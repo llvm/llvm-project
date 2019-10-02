@@ -1093,6 +1093,13 @@ void SIFoldOperands::foldInstOperand(MachineInstr &MI,
     Copy->addImplicitDefUseOperands(*MF);
 
   for (FoldCandidate &Fold : FoldList) {
+    if (Fold.isReg() && Register::isVirtualRegister(Fold.OpToFold->getReg())) {
+      Register Reg = Fold.OpToFold->getReg();
+      MachineInstr *DefMI = Fold.OpToFold->getParent();
+      if (DefMI->readsRegister(AMDGPU::EXEC, TRI) &&
+          execMayBeModifiedBeforeUse(*MRI, Reg, *DefMI, *Fold.UseMI))
+        continue;
+    }
     if (updateOperand(Fold, *TII, *TRI, *ST)) {
       // Clear kill flags.
       if (Fold.isReg()) {

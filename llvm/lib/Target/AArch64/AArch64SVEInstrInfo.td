@@ -216,8 +216,8 @@ let Predicates = [HasSVE] in {
   defm UUNPKLO_ZZ : sve_int_perm_unpk<0b10, "uunpklo">;
   defm UUNPKHI_ZZ : sve_int_perm_unpk<0b11, "uunpkhi">;
 
-  def  PUNPKLO_PP : sve_int_perm_punpk<0b0, "punpklo">;
-  def  PUNPKHI_PP : sve_int_perm_punpk<0b1, "punpkhi">;
+  defm PUNPKLO_PP : sve_int_perm_punpk<0b0, "punpklo", int_aarch64_sve_punpklo>;
+  defm PUNPKHI_PP : sve_int_perm_punpk<0b1, "punpkhi", int_aarch64_sve_punpkhi>;
 
   defm MOVPRFX_ZPzZ : sve_int_movprfx_pred_zero<0b000, "movprfx">;
   defm MOVPRFX_ZPmZ : sve_int_movprfx_pred_merge<0b001, "movprfx">;

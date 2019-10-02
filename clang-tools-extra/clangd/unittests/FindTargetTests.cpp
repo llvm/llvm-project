@@ -393,6 +393,32 @@ TEST_F(TargetDeclTest, Lambda) {
   EXPECT_DECLS("DeclRefExpr", "auto int x = 1");
 }
 
+TEST_F(TargetDeclTest, OverloadExpr) {
+  Code = R"cpp(
+    void func(int*);
+    void func(char*);
+
+    template <class T>
+    void foo(T t) {
+      [[func]](t);
+    };
+  )cpp";
+  EXPECT_DECLS("UnresolvedLookupExpr", "void func(int *)", "void func(char *)");
+
+  Code = R"cpp(
+    struct X {
+      void func(int*);
+      void func(char*);
+    };
+
+    template <class T>
+    void foo(X x, T t) {
+      x.[[func]](t);
+    };
+  )cpp";
+  EXPECT_DECLS("UnresolvedMemberExpr", "void func(int *)", "void func(char *)");
+}
+
 TEST_F(TargetDeclTest, ObjC) {
   Flags = {"-xobjective-c"};
   Code = R"cpp(
@@ -724,6 +750,39 @@ TEST_F(FindExplicitReferencesTest, All) {
             }
         )cpp",
            "0: targets = {I}\n"},
+          // Template template parameters.
+          {R"cpp(
+            template <class T> struct vector {};
+
+            template <template<class> class TT, template<class> class ...TP>
+            void foo() {
+              $0^TT<int> x;
+              $1^foo<$2^TT>();
+              $3^foo<$4^vector>()
+              $5^foo<$6^TP...>();
+            }
+        )cpp",
+           "0: targets = {TT}\n"
+           "1: targets = {foo}\n"
+           "2: targets = {TT}\n"
+           "3: targets = {foo}\n"
+           "4: targets = {vector}\n"
+           "5: targets = {foo}\n"
+           "6: targets = {TP}\n"},
+          // Non-type template parameters with declarations.
+          {R"cpp(
+            int func();
+            template <int(*)()> struct wrapper {};
+
+            template <int(*FuncParam)()>
+            void foo() {
+              $0^wrapper<$1^func> w;
+              $2^FuncParam();
+            }
+        )cpp",
+           "0: targets = {wrapper<&func>}\n"
+           "1: targets = {func}\n"
+           "2: targets = {FuncParam}\n"},
       };
 
   for (const auto &C : Cases) {

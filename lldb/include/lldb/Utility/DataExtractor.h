@@ -14,6 +14,7 @@
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/DataExtractor.h"
 
 #include <cassert>
 #include <stdint.h>
@@ -993,6 +994,11 @@ public:
 
   llvm::ArrayRef<uint8_t> GetData() const {
     return {GetDataStart(), size_t(GetByteSize())};
+  }
+
+  llvm::DataExtractor GetAsLLVM() const {
+    return {GetData(), GetByteOrder() == lldb::eByteOrderLittle,
+            uint8_t(GetAddressByteSize())};
   }
 
 protected:

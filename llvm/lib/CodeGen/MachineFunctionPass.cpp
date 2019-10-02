@@ -41,7 +41,7 @@ bool MachineFunctionPass::runOnFunction(Function &F) {
   if (F.hasAvailableExternallyLinkage())
     return false;
 
-  MachineModuleInfo &MMI = getAnalysis<MachineModuleInfo>();
+  MachineModuleInfo &MMI = getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
   MachineFunction &MF = MMI.getOrCreateMachineFunction(F);
 
   MachineFunctionProperties &MFProps = MF.getProperties();
@@ -101,8 +101,8 @@ bool MachineFunctionPass::runOnFunction(Function &F) {
 }
 
 void MachineFunctionPass::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<MachineModuleInfo>();
-  AU.addPreserved<MachineModuleInfo>();
+  AU.addRequired<MachineModuleInfoWrapperPass>();
+  AU.addPreserved<MachineModuleInfoWrapperPass>();
 
   // MachineFunctionPass preserves all LLVM IR passes, but there's no
   // high-level way to express this. Instead, just list a bunch of

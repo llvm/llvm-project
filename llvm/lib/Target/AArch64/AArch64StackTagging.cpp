@@ -62,7 +62,7 @@ static cl::opt<bool> ClMergeInit(
 static cl::opt<unsigned> ClScanLimit("stack-tagging-merge-init-scan-limit",
                                      cl::init(40), cl::Hidden);
 
-static constexpr unsigned kTagGranuleSize = 16;
+static const Align kTagGranuleSize = Align(16);
 
 namespace {
 
@@ -458,7 +458,8 @@ Instruction *AArch64StackTagging::insertBaseTaggedPointer(
 }
 
 void AArch64StackTagging::alignAndPadAlloca(AllocaInfo &Info) {
-  unsigned NewAlignment = std::max(Info.AI->getAlignment(), kTagGranuleSize);
+  const Align NewAlignment =
+      max(MaybeAlign(Info.AI->getAlignment()), kTagGranuleSize);
   Info.AI->setAlignment(NewAlignment);
 
   uint64_t Size = Info.AI->getAllocationSizeInBits(*DL).getValue() / 8;
@@ -479,7 +480,7 @@ void AArch64StackTagging::alignAndPadAlloca(AllocaInfo &Info) {
   auto *NewAI = new AllocaInst(
       TypeWithPadding, Info.AI->getType()->getAddressSpace(), nullptr, "", Info.AI);
   NewAI->takeName(Info.AI);
-  NewAI->setAlignment(Info.AI->getAlignment());
+  NewAI->setAlignment(MaybeAlign(Info.AI->getAlignment()));
   NewAI->setUsedWithInAlloca(Info.AI->isUsedWithInAlloca());
   NewAI->setSwiftError(Info.AI->isSwiftError());
   NewAI->copyMetadata(*Info.AI);

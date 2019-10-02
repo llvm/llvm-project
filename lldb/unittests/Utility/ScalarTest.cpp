@@ -16,7 +16,9 @@
 #include "llvm/Testing/Support/Error.h"
 
 using namespace lldb_private;
-using namespace llvm;
+using llvm::APInt;
+using llvm::Failed;
+using llvm::Succeeded;
 
 template <typename T>
 bool checkInequality(T c1, T c2) {

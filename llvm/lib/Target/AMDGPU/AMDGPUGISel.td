@@ -202,3 +202,6 @@ def : GISelVop2Pat <or, V_OR_B32_e32, i32>;
 foreach Ty = [i64, p0, p1, p4] in {
   defm : SMRD_Pattern <"S_LOAD_DWORDX2",  Ty>;
 }
+
+def gi_as_i32timm : GICustomOperandRenderer<"renderTruncImm32">,
+  GISDNodeXFormEquiv<as_i32timm>;

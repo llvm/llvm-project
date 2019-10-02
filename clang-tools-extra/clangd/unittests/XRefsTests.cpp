@@ -441,6 +441,15 @@ TEST(LocateSymbol, All) {
           auto x = m^akeX();
         }
       )cpp",
+
+      R"cpp(
+        struct X {
+          X& [[operator]]++() {}
+        };
+        void foo(X& x) {
+          +^+x;
+        }
+      )cpp",
   };
   for (const char *Test : Tests) {
     Annotations T(Test);

@@ -92,14 +92,14 @@ define double @i_exp2() {
   ret double %res
 }
 
-; FIXME
+; FIXME: exp10() is not widely supported.
 declare float @exp10f(float)
 define float @f_exp10f() {
 ; CHECK-LABEL: @f_exp10f(
-; CHECK-NEXT:    [[RES:%.*]] = tail call fast float @exp10f(float 1.000000e+00)
+; CHECK-NEXT:    [[RES:%.*]] = tail call float @exp10f(float 1.000000e+00)
 ; CHECK-NEXT:    ret float [[RES]]
 ;
-  %res = tail call fast float @exp10f(float 1.0)
+  %res = tail call float @exp10f(float 1.0)
   ret float %res
 }
 
@@ -121,12 +121,10 @@ define double @i_log() {
   ret double %res
 }
 
-; FIXME
 declare float @log2f(float)
 define float @f_log2f() {
 ; CHECK-LABEL: @f_log2f(
-; CHECK-NEXT:    [[RES:%.*]] = tail call fast float @log2f(float 1.000000e+00)
-; CHECK-NEXT:    ret float [[RES]]
+; CHECK-NEXT:    ret float 0.000000e+00
 ;
   %res = tail call fast float @log2f(float 1.0)
   ret float %res

@@ -164,7 +164,7 @@ void NVPTXLowerArgs::handleByValParam(Argument *Arg) {
   // Set the alignment to alignment of the byval parameter. This is because,
   // later load/stores assume that alignment, and we are going to replace
   // the use of the byval parameter with this alloca instruction.
-  AllocA->setAlignment(Func->getParamAlignment(Arg->getArgNo()));
+  AllocA->setAlignment(MaybeAlign(Func->getParamAlignment(Arg->getArgNo())));
   Arg->replaceAllUsesWith(AllocA);
 
   Value *ArgInParam = new AddrSpaceCastInst(

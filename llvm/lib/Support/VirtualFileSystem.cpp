@@ -1223,7 +1223,7 @@ class llvm::vfs::RedirectingFileSystemParser {
     }
 
     auto *DE =
-        dyn_cast<RedirectingFileSystem::RedirectingDirectoryEntry>(ParentEntry);
+        cast<RedirectingFileSystem::RedirectingDirectoryEntry>(ParentEntry);
     DE->addContent(std::move(E));
     return DE->getLastContent();
   }
@@ -1234,9 +1234,7 @@ class llvm::vfs::RedirectingFileSystemParser {
     StringRef Name = SrcE->getName();
     switch (SrcE->getKind()) {
     case RedirectingFileSystem::EK_Directory: {
-      auto *DE =
-          dyn_cast<RedirectingFileSystem::RedirectingDirectoryEntry>(SrcE);
-      assert(DE && "Must be a directory");
+      auto *DE = cast<RedirectingFileSystem::RedirectingDirectoryEntry>(SrcE);
       // Empty directories could be present in the YAML as a way to
       // describe a file for a current directory after some of its subdir
       // is parsed. This only leads to redundant walks, ignore it.
@@ -1248,11 +1246,10 @@ class llvm::vfs::RedirectingFileSystemParser {
       break;
     }
     case RedirectingFileSystem::EK_File: {
-      auto *FE = dyn_cast<RedirectingFileSystem::RedirectingFileEntry>(SrcE);
-      assert(FE && "Must be a file");
       assert(NewParentE && "Parent entry must exist");
-      auto *DE = dyn_cast<RedirectingFileSystem::RedirectingDirectoryEntry>(
-          NewParentE);
+      auto *FE = cast<RedirectingFileSystem::RedirectingFileEntry>(SrcE);
+      auto *DE =
+          cast<RedirectingFileSystem::RedirectingDirectoryEntry>(NewParentE);
       DE->addContent(
           std::make_unique<RedirectingFileSystem::RedirectingFileEntry>(
               Name, FE->getExternalContentsPath(), FE->getUseName()));

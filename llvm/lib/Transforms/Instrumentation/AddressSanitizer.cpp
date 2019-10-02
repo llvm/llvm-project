@@ -2899,18 +2899,19 @@ void FunctionStackPoisoner::copyArgsPassedByValToAllocas() {
   for (Argument &Arg : F.args()) {
     if (Arg.hasByValAttr()) {
       Type *Ty = Arg.getType()->getPointerElementType();
-      unsigned Align = Arg.getParamAlignment();
-      if (Align == 0) Align = DL.getABITypeAlignment(Ty);
+      unsigned Alignment = Arg.getParamAlignment();
+      if (Alignment == 0)
+        Alignment = DL.getABITypeAlignment(Ty);
 
       AllocaInst *AI = IRB.CreateAlloca(
           Ty, nullptr,
           (Arg.hasName() ? Arg.getName() : "Arg" + Twine(Arg.getArgNo())) +
               ".byval");
-      AI->setAlignment(Align);
+      AI->setAlignment(Align(Alignment));
       Arg.replaceAllUsesWith(AI);
 
       uint64_t AllocSize = DL.getTypeAllocSize(Ty);
-      IRB.CreateMemCpy(AI, Align, &Arg, Align, AllocSize);
+      IRB.CreateMemCpy(AI, Alignment, &Arg, Alignment, AllocSize);
     }
   }
 }
@@ -2941,7 +2942,7 @@ Value *FunctionStackPoisoner::createAllocaForLayout(
   }
   assert((ClRealignStack & (ClRealignStack - 1)) == 0);
   size_t FrameAlignment = std::max(L.FrameAlignment, (size_t)ClRealignStack);
-  Alloca->setAlignment(FrameAlignment);
+  Alloca->setAlignment(MaybeAlign(FrameAlignment));
   return IRB.CreatePointerCast(Alloca, IntptrTy);
 }
 
@@ -2950,7 +2951,7 @@ void FunctionStackPoisoner::createDynamicAllocasInitStorage() {
   IRBuilder<> IRB(dyn_cast<Instruction>(FirstBB.begin()));
   DynamicAllocaLayout = IRB.CreateAlloca(IntptrTy, nullptr);
   IRB.CreateStore(Constant::getNullValue(IntptrTy), DynamicAllocaLayout);
-  DynamicAllocaLayout->setAlignment(32);
+  DynamicAllocaLayout->setAlignment(Align(32));
 }
 
 void FunctionStackPoisoner::processDynamicAllocas() {
@@ -3297,7 +3298,7 @@ void FunctionStackPoisoner::handleDynamicAllocaCall(AllocaInst *AI) {
 
   // Insert new alloca with new NewSize and Align params.
   AllocaInst *NewAlloca = IRB.CreateAlloca(IRB.getInt8Ty(), NewSize);
-  NewAlloca->setAlignment(Align);
+  NewAlloca->setAlignment(MaybeAlign(Align));
 
   // NewAddress = Address + Align
   Value *NewAddress = IRB.CreateAdd(IRB.CreatePtrToInt(NewAlloca, IntptrTy),

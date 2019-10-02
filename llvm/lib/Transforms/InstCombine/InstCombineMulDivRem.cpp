@@ -213,6 +213,25 @@ Instruction *InstCombiner::visitMul(BinaryOperator &I) {
   if (Instruction *FoldedMul = foldBinOpIntoSelectOrPhi(I))
     return FoldedMul;
 
+  // TODO: This is a specific form of a much more general pattern.
+  //       We could detect a select with any binop identity constant, or we
+  //       could use SimplifyBinOp to see if either arm of the select reduces.
+  //       But that needs to be done carefully and/or while removing potential
+  //       reverse canonicalizations as in InstCombiner::foldSelectIntoOp().
+  // mul (select Cond, 1, -1), Op1 --> select Cond, Op1, -Op1
+  // mul (select Cond, -1, 1), Op1 --> select Cond, -Op1, Op1
+  // mul Op0, (select Cond, 1, -1) --> select Cond, Op0, -Op0
+  // mul Op0, (select Cond, -1, 1) --> select Cond, -Op0, Op0
+  Value *Cond;
+  if (match(Op0, m_OneUse(m_Select(m_Value(Cond), m_One(), m_AllOnes()))))
+    return SelectInst::Create(Cond, Op1, Builder.CreateNeg(Op1));
+  if (match(Op0, m_OneUse(m_Select(m_Value(Cond), m_AllOnes(), m_One()))))
+    return SelectInst::Create(Cond, Builder.CreateNeg(Op1), Op1);
+  if (match(Op1, m_OneUse(m_Select(m_Value(Cond), m_One(), m_AllOnes()))))
+    return SelectInst::Create(Cond, Op0, Builder.CreateNeg(Op0));
+  if (match(Op1, m_OneUse(m_Select(m_Value(Cond), m_AllOnes(), m_One()))))
+    return SelectInst::Create(Cond, Builder.CreateNeg(Op0), Op0);
+
   // Simplify mul instructions with a constant RHS.
   if (isa<Constant>(Op1)) {
     // Canonicalize (X+C1)*CI -> X*CI+C1*CI.

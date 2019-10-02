@@ -82,6 +82,10 @@ cl::opt<bool>
 DumpCriticalPathLength("misched-dcpl", cl::Hidden,
                        cl::desc("Print critical path length to stdout"));
 
+cl::opt<bool> VerifyScheduling(
+    "verify-misched", cl::Hidden,
+    cl::desc("Verify machine instrs before and after machine scheduling"));
+
 } // end namespace llvm
 
 #ifndef NDEBUG
@@ -121,9 +125,6 @@ static cl::opt<bool> EnableCyclicPath("misched-cyclicpath", cl::Hidden,
 static cl::opt<bool> EnableMemOpCluster("misched-cluster", cl::Hidden,
                                         cl::desc("Enable memop clustering."),
                                         cl::init(true));
-
-static cl::opt<bool> VerifyScheduling("verify-misched", cl::Hidden,
-  cl::desc("Verify machine instrs before and after machine scheduling"));
 
 // DAG subtrees must have at least this many nodes.
 static const unsigned MinSubtreeSize = 8;

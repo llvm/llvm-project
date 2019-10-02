@@ -166,9 +166,8 @@ body: |
   bb.0:
 
     ; CHECK-LABEL: name: test_implicit_def_s1024
-    ; CHECK: [[DEF:%[0-9]+]]:_(s512) = G_IMPLICIT_DEF
-    ; CHECK: [[DEF1:%[0-9]+]]:_(s512) = G_IMPLICIT_DEF
-    ; CHECK: [[EXTRACT:%[0-9]+]]:_(s32) = G_EXTRACT [[DEF]](s512), 0
+    ; CHECK: [[DEF:%[0-9]+]]:_(s1024) = G_IMPLICIT_DEF
+    ; CHECK: [[EXTRACT:%[0-9]+]]:_(s32) = G_EXTRACT [[DEF]](s1024), 0
     ; CHECK: $vgpr0 = COPY [[EXTRACT]](s32)
     %0:_(s1024) = G_IMPLICIT_DEF
     %1:_(s32) = G_EXTRACT %0, 0
@@ -289,10 +288,8 @@ body: |
   bb.0:
 
     ; CHECK-LABEL: name: test_implicit_def_v32s32
-    ; CHECK: [[DEF:%[0-9]+]]:_(<16 x s32>) = G_IMPLICIT_DEF
-    ; CHECK: [[DEF1:%[0-9]+]]:_(<16 x s32>) = G_IMPLICIT_DEF
-    ; CHECK: [[CONCAT_VECTORS:%[0-9]+]]:_(<32 x s32>) = G_CONCAT_VECTORS [[DEF]](<16 x s32>), [[DEF1]](<16 x s32>)
-    ; CHECK: S_NOP 0, implicit [[CONCAT_VECTORS]](<32 x s32>)
+    ; CHECK: [[DEF:%[0-9]+]]:_(<32 x s32>) = G_IMPLICIT_DEF
+    ; CHECK: S_NOP 0, implicit [[DEF]](<32 x s32>)
     %0:_(<32 x s32>) = G_IMPLICIT_DEF
     S_NOP 0, implicit %0
 ...

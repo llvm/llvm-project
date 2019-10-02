@@ -253,6 +253,11 @@ namespace {
       return tryFoldLoad(P, P, N, Base, Scale, Index, Disp, Segment);
     }
 
+    bool tryFoldBroadcast(SDNode *Root, SDNode *P, SDValue N,
+                          SDValue &Base, SDValue &Scale,
+                          SDValue &Index, SDValue &Disp,
+                          SDValue &Segment);
+
     /// Implement addressing mode selection for inline asm expressions.
     bool SelectInlineAsmMemoryOperand(const SDValue &Op,
                                       unsigned ConstraintID,
@@ -2592,6 +2597,20 @@ bool X86DAGToDAGISel::tryFoldLoad(SDNode *Root, SDNode *P, SDValue N,
                     N.getOperand(1), Base, Scale, Index, Disp, Segment);
 }
 
+bool X86DAGToDAGISel::tryFoldBroadcast(SDNode *Root, SDNode *P, SDValue N,
+                                       SDValue &Base, SDValue &Scale,
+                                       SDValue &Index, SDValue &Disp,
+                                       SDValue &Segment) {
+  assert(Root && P && "Unknown root/parent nodes");
+  if (N->getOpcode() != X86ISD::VBROADCAST_LOAD ||
+      !IsProfitableToFold(N, P, Root) ||
+      !IsLegalToFold(N, P, Root, OptLevel))
+    return false;
+
+  return selectAddr(N.getNode(),
+                    N.getOperand(1), Base, Scale, Index, Disp, Segment);
+}
+
 /// Return an SDNode that returns the value of the global base register.
 /// Output instructions required to initialize the global base register,
 /// if necessary.
@@ -4234,13 +4253,14 @@ bool X86DAGToDAGISel::tryVPTESTM(SDNode *Root, SDValue Setcc,
 
   auto findBroadcastedOp = [](SDValue Src, MVT CmpSVT, SDNode *&Parent) {
     // Look through single use bitcasts.
-    if (Src.getOpcode() == ISD::BITCAST && Src.hasOneUse())
-      Src = Src.getOperand(0);
-
-    if (Src.getOpcode() == X86ISD::VBROADCAST && Src.hasOneUse()) {
+    if (Src.getOpcode() == ISD::BITCAST && Src.hasOneUse()) {
       Parent = Src.getNode();
       Src = Src.getOperand(0);
-      if (Src.getSimpleValueType() == CmpSVT)
+    }
+
+    if (Src.getOpcode() == X86ISD::VBROADCAST_LOAD && Src.hasOneUse()) {
+      auto *MemIntr = cast<MemIntrinsicSDNode>(Src);
+      if (MemIntr->getMemoryVT().getSizeInBits() == CmpSVT.getSizeInBits())
         return Src;
     }
 
@@ -4252,17 +4272,18 @@ bool X86DAGToDAGISel::tryVPTESTM(SDNode *Root, SDValue Setcc,
   bool FoldedBCast = false;
   if (!FoldedLoad && CanFoldLoads &&
       (CmpSVT == MVT::i32 || CmpSVT == MVT::i64)) {
-    SDNode *ParentNode = nullptr;
+    SDNode *ParentNode = N0.getNode();
     if ((Load = findBroadcastedOp(Src1, CmpSVT, ParentNode))) {
-      FoldedBCast = tryFoldLoad(Root, ParentNode, Load, Tmp0,
-                                Tmp1, Tmp2, Tmp3, Tmp4);
+      FoldedBCast = tryFoldBroadcast(Root, ParentNode, Load, Tmp0,
+                                     Tmp1, Tmp2, Tmp3, Tmp4);
     }
 
     // Try the other operand.
     if (!FoldedBCast) {
+      SDNode *ParentNode = N0.getNode();
       if ((Load = findBroadcastedOp(Src0, CmpSVT, ParentNode))) {
-        FoldedBCast = tryFoldLoad(Root, ParentNode, Load, Tmp0,
-                                  Tmp1, Tmp2, Tmp3, Tmp4);
+        FoldedBCast = tryFoldBroadcast(Root, ParentNode, Load, Tmp0,
+                                       Tmp1, Tmp2, Tmp3, Tmp4);
         if (FoldedBCast)
           std::swap(Src0, Src1);
       }
@@ -4332,7 +4353,7 @@ bool X86DAGToDAGISel::tryVPTESTM(SDNode *Root, SDValue Setcc,
     // Update the chain.
     ReplaceUses(Load.getValue(1), SDValue(CNode, 1));
     // Record the mem-refs
-    CurDAG->setNodeMemRefs(CNode, {cast<LoadSDNode>(Load)->getMemOperand()});
+    CurDAG->setNodeMemRefs(CNode, {cast<MemSDNode>(Load)->getMemOperand()});
   } else {
     if (IsMasked)
       CNode = CurDAG->getMachineNode(Opc, dl, MaskVT, InMask, Src0, Src1);

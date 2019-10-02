@@ -31,7 +31,7 @@ void func1(int &sink, int x) {
   DESTROY_RSI;
 
   //% self.filecheck("image lookup -va $pc", "main.cpp", "-check-prefix=FUNC1-DESC")
-  // FUNC1-DESC: name = "x", type = "int", location = DW_OP_entry_value( rsi)
+  // FUNC1-DESC: name = "x", type = "int", location = DW_OP_entry_value(DW_OP_reg4 RSI)
 
   ++sink;
 }

@@ -44,7 +44,7 @@ MachineFunctionPass *createNVPTXPrologEpilogPass();
 MachineFunctionPass *createNVPTXReplaceImageHandlesPass();
 FunctionPass *createNVPTXImageOptimizerPass();
 FunctionPass *createNVPTXLowerArgsPass(const NVPTXTargetMachine *TM);
-BasicBlockPass *createNVPTXLowerAllocaPass();
+FunctionPass *createNVPTXLowerAllocaPass();
 MachineFunctionPass *createNVPTXPeephole();
 MachineFunctionPass *createNVPTXProxyRegErasurePass();
 

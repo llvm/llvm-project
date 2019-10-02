@@ -499,23 +499,18 @@ class _LIBCPP_TEMPLATE_VIS tuple
     template <class _Dummy>
     struct _CheckArgsConstructor<true, _Dummy>
     {
-        template <class ..._Args>
-        struct __enable_implicit_default
-            // In C++03, there's no way to implement the resolution of LWG2510.
-#ifdef _LIBCPP_CXX03_LANG
-            : true_type
-#else
-            : __all<__is_implicitly_default_constructible<_Args>::value...>
-#endif
-        { };
+        template <int&...>
+        static constexpr bool __enable_implicit_default() {
+           return __all<__is_implicitly_default_constructible<_Tp>::value... >::value;
+        }
 
-        template <class ..._Args>
-        struct __enable_explicit_default
-            : integral_constant<bool,
-                __all<is_default_constructible<_Args>::value...>::value &&
-                !__enable_implicit_default<_Args...>::value
-            >
-        { };
+        template <int&...>
+        static constexpr bool __enable_explicit_default() {
+            return
+                __all<is_default_constructible<_Tp>::value...>::value &&
+                !__enable_implicit_default< >();
+        }
+
 
         template <class ..._Args>
         static constexpr bool __enable_explicit() {
@@ -655,14 +650,14 @@ class _LIBCPP_TEMPLATE_VIS tuple
 public:
 
     template <bool _Dummy = true, _EnableIf<
-        _CheckArgsConstructor<_Dummy>::template __enable_implicit_default<_Tp...>::value
+        _CheckArgsConstructor<_Dummy>::__enable_implicit_default()
     , void*> = nullptr>
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
     tuple()
         _NOEXCEPT_(__all<is_nothrow_default_constructible<_Tp>::value...>::value) {}
 
     template <bool _Dummy = true, _EnableIf<
-        _CheckArgsConstructor<_Dummy>::template __enable_explicit_default<_Tp...>::value
+        _CheckArgsConstructor<_Dummy>::__enable_explicit_default()
     , void*> = nullptr>
     explicit _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
     tuple()
@@ -671,11 +666,8 @@ public:
     tuple(tuple const&) = default;
     tuple(tuple&&) = default;
 
-    template <class _AllocArgT, class _Alloc, bool _Dummy = true, _EnableIf<
-        _And<
-            _IsSame<allocator_arg_t, _AllocArgT>,
-            typename _CheckArgsConstructor<_Dummy>::template __enable_implicit_default<_Tp...>
-       >::value
+    template <class _AllocArgT, class _Alloc, _EnableIf<
+             _CheckArgsConstructor<_IsSame<allocator_arg_t, _AllocArgT>::value >::__enable_implicit_default()
       , void*> = nullptr
     >
     _LIBCPP_INLINE_VISIBILITY
@@ -685,11 +677,8 @@ public:
                     typename __make_tuple_indices<sizeof...(_Tp), 0>::type(),
                     __tuple_types<_Tp...>()) {}
 
-    template <class _AllocArgT, class _Alloc, bool _Dummy = true, _EnableIf<
-        _And<
-            _IsSame<allocator_arg_t, _AllocArgT>,
-            typename _CheckArgsConstructor<_Dummy>::template __enable_explicit_default<_Tp...>
-       >::value
+    template <class _AllocArgT, class _Alloc, _EnableIf<
+             _CheckArgsConstructor<_IsSame<allocator_arg_t, _AllocArgT>::value>::__enable_explicit_default()
       , void*> = nullptr
     >
     explicit _LIBCPP_INLINE_VISIBILITY

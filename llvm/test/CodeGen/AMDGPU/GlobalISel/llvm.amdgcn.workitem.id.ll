@@ -89,7 +89,7 @@ bb2:
 }
 
 ; ALL-LABEL: {{^}}test_workitem_id_x_func:
-; ALL: v_lshrrev_b32_e32 v2, 0, v2
+; ALL: s_waitcnt
 ; ALL-NEXT: v_and_b32_e32 v2, 0x3ff, v2
 define void @test_workitem_id_x_func(i32 addrspace(1)* %out) #1 {
   %id = call i32 @llvm.amdgcn.workitem.id.x()

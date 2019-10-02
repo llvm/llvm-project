@@ -615,6 +615,9 @@ namespace llvm {
       // extract_vector_elt, store.
       VEXTRACT_STORE,
 
+      // scalar broadcast from memory
+      VBROADCAST_LOAD,
+
       // Store FP control world into i16 memory.
       FNSTCW16m,
 
@@ -1151,8 +1154,8 @@ namespace llvm {
       return nullptr; // nothing to do, move along.
     }
 
-    unsigned getRegisterByName(const char* RegName, EVT VT,
-                               SelectionDAG &DAG) const override;
+    Register getRegisterByName(const char* RegName, EVT VT,
+                               const MachineFunction &MF) const override;
 
     /// If a physical register, this returns the register that receives the
     /// exception address on entry to an EH pad.

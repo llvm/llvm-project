@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 #include "../Target.h"
 
+#include "../Error.h"
 #include "../Latency.h"
 #include "../SnippetGenerator.h"
 #include "../Uops.h"
@@ -112,9 +113,11 @@ static Error isInvalidMemoryInstr(const Instruction &Instr) {
   case X86II::RawFrmImm8:
     return Error::success();
   case X86II::AddRegFrm:
-    return (Instr.Description->Opcode == X86::POP16r || Instr.Description->Opcode == X86::POP32r ||
-            Instr.Description->Opcode == X86::PUSH16r || Instr.Description->Opcode == X86::PUSH32r)
-               ? make_error<BenchmarkFailure>(
+    return (Instr.Description->Opcode == X86::POP16r ||
+            Instr.Description->Opcode == X86::POP32r ||
+            Instr.Description->Opcode == X86::PUSH16r ||
+            Instr.Description->Opcode == X86::PUSH32r)
+               ? make_error<Failure>(
                      "unsupported opcode: unsupported memory access")
                : Error::success();
   // These access memory and are handled.
@@ -140,19 +143,17 @@ static Error isInvalidMemoryInstr(const Instruction &Instr) {
   case X86II::RawFrmSrc:
   case X86II::RawFrmDst:
   case X86II::RawFrmDstSrc:
-    return make_error<BenchmarkFailure>(
-        "unsupported opcode: non uniform memory access");
+    return make_error<Failure>("unsupported opcode: non uniform memory access");
   }
 }
 
 static llvm::Error IsInvalidOpcode(const Instruction &Instr) {
   const auto OpcodeName = Instr.Name;
   if ((Instr.Description->TSFlags & X86II::FormMask) == X86II::Pseudo)
-    return llvm::make_error<BenchmarkFailure>(
-        "unsupported opcode: pseudo instruction");
+    return llvm::make_error<Failure>("unsupported opcode: pseudo instruction");
   if (OpcodeName.startswith("POPF") || OpcodeName.startswith("PUSHF") ||
       OpcodeName.startswith("ADJCALLSTACK"))
-    return llvm::make_error<BenchmarkFailure>(
+    return llvm::make_error<Failure>(
         "unsupported opcode: Push/Pop/AdjCallStack");
   if (llvm::Error Error = isInvalidMemoryInstr(Instr))
     return Error;
@@ -160,14 +161,14 @@ static llvm::Error IsInvalidOpcode(const Instruction &Instr) {
   for (const Operand &Op : Instr.Operands)
     if (Op.isExplicit() &&
         Op.getExplicitOperandInfo().OperandType == llvm::MCOI::OPERAND_PCREL)
-      return llvm::make_error<BenchmarkFailure>(
+      return llvm::make_error<Failure>(
           "unsupported opcode: PC relative operand");
   // We do not handle second-form X87 instructions. We only handle first-form
   // ones (_Fp), see comment in X86InstrFPStack.td.
   for (const Operand &Op : Instr.Operands)
     if (Op.isReg() && Op.isExplicit() &&
         Op.getExplicitOperandInfo().RegClass == llvm::X86::RSTRegClassID)
-      return llvm::make_error<BenchmarkFailure>(
+      return llvm::make_error<Failure>(
           "unsupported second-form X87 instruction");
   return llvm::Error::success();
 }
@@ -202,7 +203,7 @@ X86LatencySnippetGenerator::generateCodeTemplates(
   case llvm::X86II::SpecialFP:
   case llvm::X86II::CompareFP:
   case llvm::X86II::CondMovFP:
-    return llvm::make_error<BenchmarkFailure>("Unsupported x87 Instruction");
+    return llvm::make_error<Failure>("Unsupported x87 Instruction");
   case llvm::X86II::OneArgFPRW:
   case llvm::X86II::TwoArgFP:
     // These are instructions like
@@ -239,7 +240,7 @@ X86UopsSnippetGenerator::generateCodeTemplates(
   case llvm::X86II::ZeroArgFP:
   case llvm::X86II::OneArgFP:
   case llvm::X86II::SpecialFP:
-    return llvm::make_error<BenchmarkFailure>("Unsupported x87 Instruction");
+    return llvm::make_error<Failure>("Unsupported x87 Instruction");
   case llvm::X86II::OneArgFPRW:
   case llvm::X86II::TwoArgFP:
     // These are instructions like

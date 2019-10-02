@@ -148,6 +148,8 @@ auto fn_deduced1() { return 0; }
 // CHECK-NEXT: #pragma omp declare variant(SpecialFuncs::bar) match(implementation={vendor(llvm)})
 // CHECK-NEXT: void foo1() {
 // CHECK-NEXT: }
+// CHECK-NEXT: #pragma omp declare variant(SpecialFuncs::baz) match(implementation={vendor(unknown)})
+// CHECK-NEXT: void xxx();
 // CHECK-NEXT: } s;
 struct SpecialFuncs {
   void vd() {}
@@ -162,7 +164,14 @@ struct SpecialFuncs {
 #pragma omp declare variant(SpecialFuncs::bar) match(implementation={vendor(ibm)}, implementation={vendor(llvm)})
 #pragma omp declare variant(SpecialFuncs::baz) match(implementation={vendor(unknown)})
   void foo1() {}
+#pragma omp declare variant(SpecialFuncs::baz) match(implementation={vendor(unknown)})
+  void xxx();
 } s;
+
+// CHECK:      #pragma omp declare variant(SpecialFuncs::baz) match(implementation={vendor(unknown)})
+// CHECK-NEXT: void SpecialFuncs::xxx() {
+// CHECK-NEXT: }
+void SpecialFuncs::xxx() {}
 
 // CHECK:      static void static_f_variant() {
 // CHECK-NEXT: }

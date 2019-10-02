@@ -6911,10 +6911,10 @@ def : Pat<(nontemporalstore FR64:$src, addr:$dst),
 //
 class avx_broadcast_rm<bits<8> opc, string OpcodeStr, RegisterClass RC,
                            X86MemOperand x86memop, ValueType VT,
-                           PatFrag ld_frag, SchedWrite Sched> :
+                           PatFrag bcast_frag, SchedWrite Sched> :
   AVX8I<opc, MRMSrcMem, (outs RC:$dst), (ins x86memop:$src),
         !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"),
-        [(set RC:$dst, (VT (X86VBroadcast (ld_frag addr:$src))))]>,
+        [(set RC:$dst, (VT (bcast_frag addr:$src)))]>,
         Sched<[Sched]>, VEX;
 
 // AVX2 adds register forms
@@ -6927,15 +6927,15 @@ class avx2_broadcast_rr<bits<8> opc, string OpcodeStr, RegisterClass RC,
 
 let ExeDomain = SSEPackedSingle, Predicates = [HasAVX, NoVLX] in {
   def VBROADCASTSSrm  : avx_broadcast_rm<0x18, "vbroadcastss", VR128,
-                                         f32mem, v4f32, loadf32,
+                                         f32mem, v4f32, X86VBroadcastld32,
                                          SchedWriteFShuffle.XMM.Folded>;
   def VBROADCASTSSYrm : avx_broadcast_rm<0x18, "vbroadcastss", VR256,
-                                         f32mem, v8f32, loadf32,
+                                         f32mem, v8f32, X86VBroadcastld32,
                                          SchedWriteFShuffle.XMM.Folded>, VEX_L;
 }
 let ExeDomain = SSEPackedDouble, Predicates = [HasAVX, NoVLX] in
 def VBROADCASTSDYrm  : avx_broadcast_rm<0x19, "vbroadcastsd", VR256, f64mem,
-                                        v4f64, loadf64,
+                                        v4f64, X86VBroadcastld64,
                                         SchedWriteFShuffle.XMM.Folded>, VEX_L;
 
 let ExeDomain = SSEPackedSingle, Predicates = [HasAVX2, NoVLX] in {
@@ -7406,7 +7406,7 @@ def : Pat<(insert_subvector (loadv32i8 addr:$src2), (v16i8 VR128:$src1), (iPTR 0
 //               destination operand
 //
 multiclass avx2_broadcast<bits<8> opc, string OpcodeStr,
-                          X86MemOperand x86memop, PatFrag ld_frag,
+                          X86MemOperand x86memop, PatFrag bcast_frag,
                           ValueType OpVT128, ValueType OpVT256, Predicate prd> {
   let Predicates = [HasAVX2, prd] in {
     def rr : AVX28I<opc, MRMSrcReg, (outs VR128:$dst), (ins VR128:$src),
@@ -7417,7 +7417,7 @@ multiclass avx2_broadcast<bits<8> opc, string OpcodeStr,
     def rm : AVX28I<opc, MRMSrcMem, (outs VR128:$dst), (ins x86memop:$src),
                   !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"),
                   [(set VR128:$dst,
-                   (OpVT128 (X86VBroadcast (ld_frag addr:$src))))]>,
+                   (OpVT128 (bcast_frag addr:$src)))]>,
                   Sched<[SchedWriteShuffle.XMM.Folded]>, VEX;
     def Yrr : AVX28I<opc, MRMSrcReg, (outs VR256:$dst), (ins VR128:$src),
                    !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"),
@@ -7427,7 +7427,7 @@ multiclass avx2_broadcast<bits<8> opc, string OpcodeStr,
     def Yrm : AVX28I<opc, MRMSrcMem, (outs VR256:$dst), (ins x86memop:$src),
                    !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"),
                    [(set VR256:$dst,
-                    (OpVT256 (X86VBroadcast (ld_frag addr:$src))))]>,
+                    (OpVT256 (bcast_frag addr:$src)))]>,
                    Sched<[SchedWriteShuffle.XMM.Folded]>, VEX, VEX_L;
 
     // Provide aliases for broadcast from the same register class that
@@ -7438,13 +7438,13 @@ multiclass avx2_broadcast<bits<8> opc, string OpcodeStr,
   }
 }
 
-defm VPBROADCASTB  : avx2_broadcast<0x78, "vpbroadcastb", i8mem, loadi8,
+defm VPBROADCASTB  : avx2_broadcast<0x78, "vpbroadcastb", i8mem, X86VBroadcastld8,
                                     v16i8, v32i8, NoVLX_Or_NoBWI>;
-defm VPBROADCASTW  : avx2_broadcast<0x79, "vpbroadcastw", i16mem, loadi16,
+defm VPBROADCASTW  : avx2_broadcast<0x79, "vpbroadcastw", i16mem, X86VBroadcastld16,
                                     v8i16, v16i16, NoVLX_Or_NoBWI>;
-defm VPBROADCASTD  : avx2_broadcast<0x58, "vpbroadcastd", i32mem, loadi32,
+defm VPBROADCASTD  : avx2_broadcast<0x58, "vpbroadcastd", i32mem, X86VBroadcastld32,
                                     v4i32, v8i32, NoVLX>;
-defm VPBROADCASTQ  : avx2_broadcast<0x59, "vpbroadcastq", i64mem, loadi64,
+defm VPBROADCASTQ  : avx2_broadcast<0x59, "vpbroadcastq", i64mem, X86VBroadcastld64,
                                     v2i64, v4i64, NoVLX>;
 
 let Predicates = [HasAVX2, NoVLX] in {
@@ -7453,6 +7453,12 @@ let Predicates = [HasAVX2, NoVLX] in {
             (VPBROADCASTQrm addr:$src)>;
   def : Pat<(v4i64 (X86VBroadcast (v2i64 (X86vzload64 addr:$src)))),
             (VPBROADCASTQYrm addr:$src)>;
+
+  // FIXME this is to handle aligned extloads from i8/i16.
+  def : Pat<(v4i32 (X86VBroadcast (loadi32 addr:$src))),
+            (VPBROADCASTDrm addr:$src)>;
+  def : Pat<(v8i32 (X86VBroadcast (loadi32 addr:$src))),
+            (VPBROADCASTDYrm addr:$src)>;
 }
 let Predicates = [HasAVX2, NoVLX_Or_NoBWI] in {
   // loadi16 is tricky to fold, because !isTypeDesirableForOp, justifiably.
@@ -7472,6 +7478,12 @@ let Predicates = [HasAVX2, NoVLX_Or_NoBWI] in {
             (VPBROADCASTWYrm addr:$src)>;
   def : Pat<(v16i16 (X86VBroadcast
               (i16 (trunc (i32 (zextloadi16 addr:$src)))))),
+            (VPBROADCASTWYrm addr:$src)>;
+
+  // FIXME this is to handle aligned extloads from i8.
+  def : Pat<(v8i16 (X86VBroadcast (loadi16 addr:$src))),
+            (VPBROADCASTWrm addr:$src)>;
+  def : Pat<(v16i16 (X86VBroadcast (loadi16 addr:$src))),
             (VPBROADCASTWYrm addr:$src)>;
 }
 
@@ -7518,11 +7530,11 @@ let Predicates = [HasAVX2, NoVLX] in {
 
 // AVX1 broadcast patterns
 let Predicates = [HasAVX1Only] in {
-def : Pat<(v8i32 (X86VBroadcast (loadi32 addr:$src))),
+def : Pat<(v8i32 (X86VBroadcastld32 addr:$src)),
           (VBROADCASTSSYrm addr:$src)>;
-def : Pat<(v4i64 (X86VBroadcast (loadi64 addr:$src))),
+def : Pat<(v4i64 (X86VBroadcastld64 addr:$src)),
           (VBROADCASTSDYrm addr:$src)>;
-def : Pat<(v4i32 (X86VBroadcast (loadi32 addr:$src))),
+def : Pat<(v4i32 (X86VBroadcastld32 addr:$src)),
           (VBROADCASTSSrm addr:$src)>;
 }
 
@@ -7532,7 +7544,7 @@ let Predicates = [HasAVX, NoVLX] in {
   // 128bit broadcasts:
   def : Pat<(v2f64 (X86VBroadcast f64:$src)),
             (VMOVDDUPrr (v2f64 (COPY_TO_REGCLASS FR64:$src, VR128)))>;
-  def : Pat<(v2f64 (X86VBroadcast (loadf64 addr:$src))),
+  def : Pat<(v2f64 (X86VBroadcastld64 addr:$src)),
             (VMOVDDUPrm addr:$src)>;
 
   def : Pat<(v2f64 (X86VBroadcast v2f64:$src)),
@@ -7568,7 +7580,7 @@ let Predicates = [HasAVX1Only] in {
 
   def : Pat<(v2i64 (X86VBroadcast i64:$src)),
             (VPSHUFDri (VMOV64toPQIrr GR64:$src), 0x44)>;
-  def : Pat<(v2i64 (X86VBroadcast (loadi64 addr:$src))),
+  def : Pat<(v2i64 (X86VBroadcastld64 addr:$src)),
             (VMOVDDUPrm addr:$src)>;
 }
 

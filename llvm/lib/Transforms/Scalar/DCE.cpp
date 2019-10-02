@@ -38,17 +38,19 @@ namespace {
   //===--------------------------------------------------------------------===//
   // DeadInstElimination pass implementation
   //
-  struct DeadInstElimination : public BasicBlockPass {
-    static char ID; // Pass identification, replacement for typeid
-    DeadInstElimination() : BasicBlockPass(ID) {
-      initializeDeadInstEliminationPass(*PassRegistry::getPassRegistry());
-    }
-    bool runOnBasicBlock(BasicBlock &BB) override {
-      if (skipBasicBlock(BB))
-        return false;
-      auto *TLIP = getAnalysisIfAvailable<TargetLibraryInfoWrapperPass>();
-      TargetLibraryInfo *TLI = TLIP ? &TLIP->getTLI(*BB.getParent()) : nullptr;
-      bool Changed = false;
+struct DeadInstElimination : public FunctionPass {
+  static char ID; // Pass identification, replacement for typeid
+  DeadInstElimination() : FunctionPass(ID) {
+    initializeDeadInstEliminationPass(*PassRegistry::getPassRegistry());
+  }
+  bool runOnFunction(Function &F) override {
+    if (skipFunction(F))
+      return false;
+    auto *TLIP = getAnalysisIfAvailable<TargetLibraryInfoWrapperPass>();
+    TargetLibraryInfo *TLI = TLIP ? &TLIP->getTLI(F) : nullptr;
+
+    bool Changed = false;
+    for (auto &BB : F) {
       for (BasicBlock::iterator DI = BB.begin(); DI != BB.end(); ) {
         Instruction *Inst = &*DI++;
         if (isInstructionTriviallyDead(Inst, TLI)) {
@@ -60,13 +62,14 @@ namespace {
           ++DIEEliminated;
         }
       }
-      return Changed;
     }
+    return Changed;
+  }
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.setPreservesCFG();
     }
-  };
+};
 }
 
 char DeadInstElimination::ID = 0;

@@ -286,15 +286,15 @@ static void FindInterveningFrames(Function &begin, Function &end,
 
     DFS(Function *end, ModuleList &images) : end(end), images(images) {}
 
-    void search(Function *first_callee, std::vector<Function *> &path) {
+    void search(Function &first_callee, std::vector<Function *> &path) {
       dfs(first_callee);
       if (!ambiguous)
         path = std::move(solution_path);
     }
 
-    void dfs(Function *callee) {
+    void dfs(Function &callee) {
       // Found a path to the target function.
-      if (callee == end) {
+      if (&callee == end) {
         if (solution_path.empty())
           solution_path = active_path;
         else
@@ -306,19 +306,19 @@ static void FindInterveningFrames(Function &begin, Function &end,
       // there's more than one way to reach a target. This errs on the side of
       // caution: it conservatively stops searching when some solutions are
       // still possible to save time in the average case.
-      if (!visited_nodes.insert(callee).second) {
+      if (!visited_nodes.insert(&callee).second) {
         ambiguous = true;
         return;
       }
 
       // Search the calls made from this callee.
-      active_path.push_back(callee);
-      for (CallEdge &edge : callee->GetTailCallingEdges()) {
+      active_path.push_back(&callee);
+      for (CallEdge &edge : callee.GetTailCallingEdges()) {
         Function *next_callee = edge.GetCallee(images);
         if (!next_callee)
           continue;
 
-        dfs(next_callee);
+        dfs(*next_callee);
         if (ambiguous)
           return;
       }
@@ -326,7 +326,7 @@ static void FindInterveningFrames(Function &begin, Function &end,
     }
   };
 
-  DFS(&end, images).search(first_callee, path);
+  DFS(&end, images).search(*first_callee, path);
 }
 
 /// Given that \p next_frame will be appended to the frame list, synthesize

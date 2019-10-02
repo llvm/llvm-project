@@ -1891,16 +1891,13 @@ lldb::SBTypeList SBTarget::FindTypes(const char *typename_cstr) {
     bool exact_match = false;
     TypeList type_list;
     llvm::DenseSet<SymbolFile *> searched_symbol_files;
-    uint32_t num_matches =
-        images.FindTypes(nullptr, const_typename, exact_match, UINT32_MAX,
-                         searched_symbol_files, type_list);
+    images.FindTypes(nullptr, const_typename, exact_match, UINT32_MAX,
+                     searched_symbol_files, type_list);
 
-    if (num_matches > 0) {
-      for (size_t idx = 0; idx < num_matches; idx++) {
-        TypeSP type_sp(type_list.GetTypeAtIndex(idx));
-        if (type_sp)
-          sb_type_list.Append(SBType(type_sp));
-      }
+    for (size_t idx = 0; idx < type_list.GetSize(); idx++) {
+      TypeSP type_sp(type_list.GetTypeAtIndex(idx));
+      if (type_sp)
+        sb_type_list.Append(SBType(type_sp));
     }
 
     // Try the loaded language runtimes

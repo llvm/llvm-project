@@ -14513,8 +14513,8 @@ SDValue PPCTargetLowering::LowerFRAMEADDR(SDValue Op,
 
 // FIXME? Maybe this could be a TableGen attribute on some registers and
 // this table could be generated automatically from RegInfo.
-unsigned PPCTargetLowering::getRegisterByName(const char* RegName, EVT VT,
-                                              SelectionDAG &DAG) const {
+Register PPCTargetLowering::getRegisterByName(const char* RegName, EVT VT,
+                                              const MachineFunction &MF) const {
   bool isPPC64 = Subtarget.isPPC64();
   bool isDarwinABI = Subtarget.isDarwinABI();
 
@@ -14523,12 +14523,12 @@ unsigned PPCTargetLowering::getRegisterByName(const char* RegName, EVT VT,
     report_fatal_error("Invalid register global variable type");
 
   bool is64Bit = isPPC64 && VT == MVT::i64;
-  unsigned Reg = StringSwitch<unsigned>(RegName)
+  Register Reg = StringSwitch<Register>(RegName)
                    .Case("r1", is64Bit ? PPC::X1 : PPC::R1)
-                   .Case("r2", (isDarwinABI || isPPC64) ? 0 : PPC::R2)
-                   .Case("r13", (!isPPC64 && isDarwinABI) ? 0 :
+                   .Case("r2", (isDarwinABI || isPPC64) ? Register() : PPC::R2)
+                   .Case("r13", (!isPPC64 && isDarwinABI) ? Register() :
                                   (is64Bit ? PPC::X13 : PPC::R13))
-                   .Default(0);
+                   .Default(Register());
 
   if (Reg)
     return Reg;
