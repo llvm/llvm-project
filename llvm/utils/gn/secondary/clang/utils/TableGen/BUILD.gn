@@ -15,6 +15,7 @@ executable("clang-tblgen") {
     "ClangOpenCLBuiltinEmitter.cpp",
     "ClangOptionDocEmitter.cpp",
     "ClangSACheckersEmitter.cpp",
+    "ClangTypeNodesEmitter.cpp",
     "NeonEmitter.cpp",
     "TableGen.cpp",
   ]

@@ -124,6 +124,11 @@ if config.have_ocamlopt:
 
 opt_viewer_cmd = '%s %s/tools/opt-viewer/opt-viewer.py' % (sys.executable, config.llvm_src_root)
 
+llvm_locstats_tool = os.path.join(config.llvm_tools_dir, 'llvm-locstats')
+config.substitutions.append(
+    ('%llvm-locstats', "'%s' %s" % (config.python_executable, llvm_locstats_tool)))
+config.llvm_locstats_used = os.path.exists(llvm_locstats_tool)
+
 tools = [
     ToolSubst('%lli', FindTool('lli'), post='.', extra_args=lli_args),
     ToolSubst('%llc_dwarf', FindTool('llc'), extra_args=llc_args),

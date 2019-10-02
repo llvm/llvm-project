@@ -55,6 +55,11 @@ clang_tablegen("DeclNodes") {
   td_file = "../Basic/DeclNodes.td"
 }
 
+clang_tablegen("TypeNodes") {
+  args = [ "-gen-clang-type-nodes" ]
+  td_file = "../Basic/TypeNodes.td"
+}
+
 clang_tablegen("CommentNodes") {
   args = [ "-gen-clang-comment-nodes" ]
   td_file = "../Basic/CommentNodes.td"
