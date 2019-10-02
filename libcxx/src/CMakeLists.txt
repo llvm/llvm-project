@@ -143,40 +143,40 @@ function(cxx_link_system_libraries target)
   target_add_link_flags_if_supported(${target} PRIVATE "/nodefaultlib")
 
   if (LIBCXX_HAS_SYSTEM_LIB)
-    target_link_libraries(${target} PUBLIC System)
+    target_link_libraries(${target} PRIVATE System)
   endif()
 
   if (LIBCXX_HAS_PTHREAD_LIB)
-    target_link_libraries(${target} PUBLIC pthread)
+    target_link_libraries(${target} PRIVATE pthread)
   endif()
 
   if (LIBCXX_HAS_C_LIB)
-    target_link_libraries(${target} PUBLIC c)
+    target_link_libraries(${target} PRIVATE c)
   endif()
 
   if (LIBCXX_HAS_M_LIB)
-    target_link_libraries(${target} PUBLIC m)
+    target_link_libraries(${target} PRIVATE m)
   endif()
 
   if (LIBCXX_HAS_RT_LIB)
-    target_link_libraries(${target} PUBLIC rt)
+    target_link_libraries(${target} PRIVATE rt)
   endif()
 
   if (LIBCXX_USE_COMPILER_RT)
     find_compiler_rt_library(builtins LIBCXX_BUILTINS_LIBRARY)
     if (LIBCXX_BUILTINS_LIBRARY)
-      target_link_libraries(${target} PUBLIC "${LIBCXX_BUILTINS_LIBRARY}")
+      target_link_libraries(${target} PRIVATE "${LIBCXX_BUILTINS_LIBRARY}")
     endif()
   elseif (LIBCXX_HAS_GCC_S_LIB)
-    target_link_libraries(${target} PUBLIC gcc_s)
+    target_link_libraries(${target} PRIVATE gcc_s)
   endif()
 
   if (LIBCXX_HAVE_CXX_ATOMICS_WITH_LIB)
-    target_link_libraries(${target} PUBLIC atomic)
+    target_link_libraries(${target} PRIVATE atomic)
   endif()
 
   if (MINGW)
-    target_link_libraries(${target} PUBLIC "${MINGW_LIBRARIES}")
+    target_link_libraries(${target} PRIVATE "${MINGW_LIBRARIES}")
   endif()
 
   if (LIBCXX_TARGETING_MSVC)
@@ -186,13 +186,13 @@ function(cxx_link_system_libraries target)
       set(LIB_SUFFIX "")
     endif()
 
-    target_link_libraries(${target} PUBLIC ucrt${LIB_SUFFIX}) # Universal C runtime
-    target_link_libraries(${target} PUBLIC vcruntime${LIB_SUFFIX}) # C++ runtime
-    target_link_libraries(${target} PUBLIC msvcrt${LIB_SUFFIX}) # C runtime startup files
-    target_link_libraries(${target} PUBLIC msvcprt${LIB_SUFFIX}) # C++ standard library. Required for exception_ptr internals.
+    target_link_libraries(${target} PRIVATE ucrt${LIB_SUFFIX}) # Universal C runtime
+    target_link_libraries(${target} PRIVATE vcruntime${LIB_SUFFIX}) # C++ runtime
+    target_link_libraries(${target} PRIVATE msvcrt${LIB_SUFFIX}) # C runtime startup files
+    target_link_libraries(${target} PRIVATE msvcprt${LIB_SUFFIX}) # C++ standard library. Required for exception_ptr internals.
     # Required for standards-complaint wide character formatting functions
     # (e.g. `printfw`/`scanfw`)
-    target_link_libraries(${target} PUBLIC iso_stdio_wide_specifiers)
+    target_link_libraries(${target} PRIVATE iso_stdio_wide_specifiers)
   endif()
 endfunction()
 

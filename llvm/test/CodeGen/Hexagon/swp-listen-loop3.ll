@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -pipeliner-ignore-recmii -pipeliner-max-stages=2 -enable-pipeliner < %s | FileCheck %s
+; RUN: llc -march=hexagon -pipeliner-ignore-recmii -pipeliner-max-stages=2 -enable-pipeliner < %s -pipeliner-experimental-cg=true | FileCheck %s
 
 ; This is a loop we pipeline to three packets, though we could do bettter.
 

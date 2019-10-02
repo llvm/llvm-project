@@ -1945,15 +1945,32 @@ struct FormatStyle {
   /// \endcode
   bool SpacesInSquareBrackets;
 
-  /// Supported language standards.
+  /// Supported language standards for parsing and formatting C++ constructs.
+  /// \code
+  ///    Latest:                                vector<set<int>>
+  ///    c++03                          vs.     vector<set<int> >
+  /// \endcode
+  ///
+  /// The correct way to spell a specific language version is e.g. ``c++11``.
+  /// The historical aliases ``Cpp03`` and ``Cpp11`` are deprecated.
   enum LanguageStandard {
-    /// Use C++03-compatible syntax.
+    /// c++03: Parse and format as C++03.
     LS_Cpp03,
-    /// Use features of C++11, C++14 and C++1z (e.g. ``A<A<int>>`` instead of
-    /// ``A<A<int> >``).
+    /// c++11: Parse and format as C++11.
     LS_Cpp11,
-    /// Automatic detection based on the input.
-    LS_Auto
+    /// c++14: Parse and format as C++14.
+    LS_Cpp14,
+    /// c++17: Parse and format as C++17.
+    LS_Cpp17,
+    /// c++20: Parse and format as C++20.
+    LS_Cpp20,
+    /// Latest: Parse and format using the latest supported language version.
+    /// 'Cpp11' is an alias for LS_Latest for historical reasons.
+    LS_Latest,
+
+    /// Auto: Automatic detection based on the input.
+    /// Parse using the latest language version. Format based on detected input.
+    LS_Auto,
   };
 
   /// Format compatible with this standard, e.g. use ``A<A<int> >``

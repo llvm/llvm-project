@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -enable-pipeliner -pipeliner-max-stages=3 < %s | FileCheck %s
+; RUN: llc -march=hexagon -enable-pipeliner -pipeliner-max-stages=3 < %s -pipeliner-experimental-cg=true | FileCheck %s
 
 %s.0 = type { i16, i8, i8, i16, i8, i8, i16, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i32, i16, i8, i8, %s.1, [2 x [16 x %s.2]], i32 (i8*, i8*, i8*, i8*, i8*)*, %s.3*, %s.3*, [120 x i8], i8, i8, %s.4*, [2 x [120 x [8 x i8]]], [56 x i8], [2 x [121 x %s.5]], [2 x %s.5], %s.5*, %s.5*, i32, i32, i16, i8, i8, %s.7, %s.9, %s.11, %s.8*, %s.8* }
 %s.1 = type { i8, i8, i8, i8, i8, i8, i8, i8, i32, i8, [16 x i8], i8, [4 x i8], [32 x i16], [32 x i16], [2 x i8], [4 x i8], [2 x [4 x i8]], [2 x [4 x i8]], i32, i32, i16, i8 }

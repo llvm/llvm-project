@@ -4,15 +4,7 @@
 define arm_aapcs_vfpcc <4 x i32> @sext_0246(<8 x i16> %src) {
 ; CHECK-LABEL: sext_0246:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.u16 r0, q0[0]
-; CHECK-NEXT:    vmov.32 q1[0], r0
-; CHECK-NEXT:    vmov.u16 r0, q0[2]
-; CHECK-NEXT:    vmov.32 q1[1], r0
-; CHECK-NEXT:    vmov.u16 r0, q0[4]
-; CHECK-NEXT:    vmov.32 q1[2], r0
-; CHECK-NEXT:    vmov.u16 r0, q0[6]
-; CHECK-NEXT:    vmov.32 q1[3], r0
-; CHECK-NEXT:    vmovlb.s16 q0, q1
+; CHECK-NEXT:    vmovlb.s16 q0, q0
 ; CHECK-NEXT:    bx lr
 entry:
   %strided.vec = shufflevector <8 x i16> %src, <8 x i16> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
@@ -35,15 +27,7 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @zext_0246(<8 x i16> %src) {
 ; CHECK-LABEL: zext_0246:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.u16 r0, q0[0]
-; CHECK-NEXT:    vmov.32 q1[0], r0
-; CHECK-NEXT:    vmov.u16 r0, q0[2]
-; CHECK-NEXT:    vmov.32 q1[1], r0
-; CHECK-NEXT:    vmov.u16 r0, q0[4]
-; CHECK-NEXT:    vmov.32 q1[2], r0
-; CHECK-NEXT:    vmov.u16 r0, q0[6]
-; CHECK-NEXT:    vmov.32 q1[3], r0
-; CHECK-NEXT:    vmovlb.u16 q0, q1
+; CHECK-NEXT:    vmovlb.u16 q0, q0
 ; CHECK-NEXT:    bx lr
 entry:
   %strided.vec = shufflevector <8 x i16> %src, <8 x i16> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
@@ -66,23 +50,7 @@ entry:
 define arm_aapcs_vfpcc <8 x i16> @sext_02468101214(<16 x i8> %src) {
 ; CHECK-LABEL: sext_02468101214:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.u8 r0, q0[0]
-; CHECK-NEXT:    vmov.16 q1[0], r0
-; CHECK-NEXT:    vmov.u8 r0, q0[2]
-; CHECK-NEXT:    vmov.16 q1[1], r0
-; CHECK-NEXT:    vmov.u8 r0, q0[4]
-; CHECK-NEXT:    vmov.16 q1[2], r0
-; CHECK-NEXT:    vmov.u8 r0, q0[6]
-; CHECK-NEXT:    vmov.16 q1[3], r0
-; CHECK-NEXT:    vmov.u8 r0, q0[8]
-; CHECK-NEXT:    vmov.16 q1[4], r0
-; CHECK-NEXT:    vmov.u8 r0, q0[10]
-; CHECK-NEXT:    vmov.16 q1[5], r0
-; CHECK-NEXT:    vmov.u8 r0, q0[12]
-; CHECK-NEXT:    vmov.16 q1[6], r0
-; CHECK-NEXT:    vmov.u8 r0, q0[14]
-; CHECK-NEXT:    vmov.16 q1[7], r0
-; CHECK-NEXT:    vmovlb.s8 q0, q1
+; CHECK-NEXT:    vmovlb.s8 q0, q0
 ; CHECK-NEXT:    bx lr
 entry:
   %strided.vec = shufflevector <16 x i8> %src, <16 x i8> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
@@ -105,23 +73,7 @@ entry:
 define arm_aapcs_vfpcc <8 x i16> @zext_02468101214(<16 x i8> %src) {
 ; CHECK-LABEL: zext_02468101214:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.u8 r0, q0[0]
-; CHECK-NEXT:    vmov.16 q1[0], r0
-; CHECK-NEXT:    vmov.u8 r0, q0[2]
-; CHECK-NEXT:    vmov.16 q1[1], r0
-; CHECK-NEXT:    vmov.u8 r0, q0[4]
-; CHECK-NEXT:    vmov.16 q1[2], r0
-; CHECK-NEXT:    vmov.u8 r0, q0[6]
-; CHECK-NEXT:    vmov.16 q1[3], r0
-; CHECK-NEXT:    vmov.u8 r0, q0[8]
-; CHECK-NEXT:    vmov.16 q1[4], r0
-; CHECK-NEXT:    vmov.u8 r0, q0[10]
-; CHECK-NEXT:    vmov.16 q1[5], r0
-; CHECK-NEXT:    vmov.u8 r0, q0[12]
-; CHECK-NEXT:    vmov.16 q1[6], r0
-; CHECK-NEXT:    vmov.u8 r0, q0[14]
-; CHECK-NEXT:    vmov.16 q1[7], r0
-; CHECK-NEXT:    vmovlb.u8 q0, q1
+; CHECK-NEXT:    vmovlb.u8 q0, q0
 ; CHECK-NEXT:    bx lr
 entry:
   %strided.vec = shufflevector <16 x i8> %src, <16 x i8> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>

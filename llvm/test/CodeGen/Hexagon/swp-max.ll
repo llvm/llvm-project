@@ -1,5 +1,5 @@
 ; RUN: llc -march=hexagon -mcpu=hexagonv5 -enable-pipeliner \
-; RUN:     -pipeliner-max-stages=2 < %s | FileCheck %s
+; RUN:     -pipeliner-max-stages=2 < %s -pipeliner-experimental-cg=true | FileCheck %s
 
 @A = global [8 x i32] [i32 4, i32 -3, i32 5, i32 -2, i32 -1, i32 2, i32 6, i32 -2], align 8
 

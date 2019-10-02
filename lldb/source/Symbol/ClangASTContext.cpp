@@ -526,6 +526,17 @@ ClangASTContext::ClangASTContext(llvm::StringRef target_triple)
     : TypeSystem(TypeSystem::eKindClang) {
   if (!target_triple.empty())
     SetTargetTriple(target_triple);
+  // The caller didn't pass an ASTContext so create a new one for this
+  // ClangASTContext.
+  CreateASTContext();
+}
+
+ClangASTContext::ClangASTContext(ArchSpec arch)
+    : TypeSystem(TypeSystem::eKindClang) {
+  SetTargetTriple(arch.GetTriple().str());
+  // The caller didn't pass an ASTContext so create a new one for this
+  // ClangASTContext.
+  CreateASTContext();
 }
 
 ClangASTContext::ClangASTContext(ASTContext &existing_ctxt)
@@ -575,26 +586,21 @@ lldb::TypeSystemSP ClangASTContext::CreateInstance(lldb::LanguageType language,
       }
 
       if (module) {
-        std::shared_ptr<ClangASTContext> ast_sp(new ClangASTContext);
-        if (ast_sp) {
-          ast_sp->SetArchitecture(fixed_arch);
-        }
+        std::shared_ptr<ClangASTContext> ast_sp(
+            new ClangASTContext(fixed_arch));
         return ast_sp;
       } else if (target && target->IsValid()) {
         std::shared_ptr<ClangASTContextForExpressions> ast_sp(
-            new ClangASTContextForExpressions(*target));
-        if (ast_sp) {
-          ast_sp->SetArchitecture(fixed_arch);
-          ast_sp->m_scratch_ast_source_up.reset(
-              new ClangASTSource(target->shared_from_this()));
-          lldbassert(ast_sp->getFileManager());
-          ast_sp->m_scratch_ast_source_up->InstallASTContext(
-              *ast_sp->getASTContext(), *ast_sp->getFileManager(), true);
-          llvm::IntrusiveRefCntPtr<clang::ExternalASTSource> proxy_ast_source(
-              ast_sp->m_scratch_ast_source_up->CreateProxy());
-          ast_sp->SetExternalSource(proxy_ast_source);
-          return ast_sp;
-        }
+            new ClangASTContextForExpressions(*target, fixed_arch));
+        ast_sp->m_scratch_ast_source_up.reset(
+            new ClangASTSource(target->shared_from_this()));
+        lldbassert(ast_sp->getFileManager());
+        ast_sp->m_scratch_ast_source_up->InstallASTContext(
+            *ast_sp->getASTContext(), *ast_sp->getFileManager(), true);
+        llvm::IntrusiveRefCntPtr<clang::ExternalASTSource> proxy_ast_source(
+            ast_sp->m_scratch_ast_source_up->CreateProxy());
+        ast_sp->SetExternalSource(proxy_ast_source);
+        return ast_sp;
       }
     }
   }
@@ -638,11 +644,10 @@ void ClangASTContext::Terminate() {
 }
 
 void ClangASTContext::Finalize() {
-  if (m_ast_up) {
-    GetASTMap().Erase(m_ast_up.get());
-    if (!m_ast_owned)
-      m_ast_up.release();
-  }
+  assert(m_ast_up);
+  GetASTMap().Erase(m_ast_up.get());
+  if (!m_ast_owned)
+    m_ast_up.release();
 
   m_builtins_up.reset();
   m_selector_table_up.reset();
@@ -652,21 +657,7 @@ void ClangASTContext::Finalize() {
   m_diagnostics_engine_up.reset();
   m_source_manager_up.reset();
   m_language_options_up.reset();
-  m_ast_up.reset();
   m_scratch_ast_source_up.reset();
-}
-
-void ClangASTContext::Clear() {
-  m_ast_up.reset();
-  m_language_options_up.reset();
-  m_source_manager_up.reset();
-  m_diagnostics_engine_up.reset();
-  m_target_options_rp.reset();
-  m_target_info_up.reset();
-  m_identifier_table_up.reset();
-  m_selector_table_up.reset();
-  m_builtins_up.reset();
-  m_pointer_byte_size = 0;
 }
 
 void ClangASTContext::setSema(Sema *s) {
@@ -680,12 +671,7 @@ const char *ClangASTContext::GetTargetTriple() {
 }
 
 void ClangASTContext::SetTargetTriple(llvm::StringRef target_triple) {
-  Clear();
   m_target_triple = target_triple.str();
-}
-
-void ClangASTContext::SetArchitecture(const ArchSpec &arch) {
-  SetTargetTriple(arch.GetTriple().str());
 }
 
 void ClangASTContext::SetExternalSource(
@@ -698,36 +684,39 @@ void ClangASTContext::SetExternalSource(
 }
 
 ASTContext *ClangASTContext::getASTContext() {
-  if (m_ast_up == nullptr) {
-    m_ast_owned = true;
-    m_ast_up.reset(new ASTContext(*getLanguageOptions(), *getSourceManager(),
-                                  *getIdentifierTable(), *getSelectorTable(),
-                                  *getBuiltinContext()));
-
-    m_ast_up->getDiagnostics().setClient(getDiagnosticConsumer(), false);
-
-    // This can be NULL if we don't know anything about the architecture or if
-    // the target for an architecture isn't enabled in the llvm/clang that we
-    // built
-    TargetInfo *target_info = getTargetInfo();
-    if (target_info)
-      m_ast_up->InitBuiltinTypes(*target_info);
-
-    if ((m_callback_tag_decl || m_callback_objc_decl) && m_callback_baton) {
-      m_ast_up->getTranslationUnitDecl()->setHasExternalLexicalStorage();
-      // m_ast_up->getTranslationUnitDecl()->setHasExternalVisibleStorage();
-    }
-
-    GetASTMap().Insert(m_ast_up.get(), this);
-
-    llvm::IntrusiveRefCntPtr<clang::ExternalASTSource> ast_source_up(
-        new ClangExternalASTSourceCallbacks(
-            ClangASTContext::CompleteTagDecl,
-            ClangASTContext::CompleteObjCInterfaceDecl, nullptr,
-            ClangASTContext::LayoutRecordType, this));
-    SetExternalSource(ast_source_up);
-  }
+  assert(m_ast_up);
   return m_ast_up.get();
+}
+
+void ClangASTContext::CreateASTContext() {
+  assert(!m_ast_up);
+  m_ast_owned = true;
+  m_ast_up.reset(new ASTContext(*getLanguageOptions(), *getSourceManager(),
+                                *getIdentifierTable(), *getSelectorTable(),
+                                *getBuiltinContext()));
+
+  m_ast_up->getDiagnostics().setClient(getDiagnosticConsumer(), false);
+
+  // This can be NULL if we don't know anything about the architecture or if
+  // the target for an architecture isn't enabled in the llvm/clang that we
+  // built
+  TargetInfo *target_info = getTargetInfo();
+  if (target_info)
+    m_ast_up->InitBuiltinTypes(*target_info);
+
+  if ((m_callback_tag_decl || m_callback_objc_decl) && m_callback_baton) {
+    m_ast_up->getTranslationUnitDecl()->setHasExternalLexicalStorage();
+    // m_ast_up->getTranslationUnitDecl()->setHasExternalVisibleStorage();
+  }
+
+  GetASTMap().Insert(m_ast_up.get(), this);
+
+  llvm::IntrusiveRefCntPtr<clang::ExternalASTSource> ast_source_up(
+      new ClangExternalASTSourceCallbacks(
+          ClangASTContext::CompleteTagDecl,
+          ClangASTContext::CompleteObjCInterfaceDecl, nullptr,
+          ClangASTContext::LayoutRecordType, this));
+  SetExternalSource(ast_source_up);
 }
 
 ClangASTContext *ClangASTContext::GetASTContext(clang::ASTContext *ast) {
@@ -10242,9 +10231,9 @@ ClangASTContext::DeclContextGetClangASTContext(const CompilerDeclContext &dc) {
   return nullptr;
 }
 
-ClangASTContextForExpressions::ClangASTContextForExpressions(Target &target)
-    : ClangASTContext(target.GetArchitecture().GetTriple().getTriple().c_str()),
-      m_target_wp(target.shared_from_this()),
+ClangASTContextForExpressions::ClangASTContextForExpressions(Target &target,
+                                                             ArchSpec arch)
+    : ClangASTContext(arch), m_target_wp(target.shared_from_this()),
       m_persistent_variables(new ClangPersistentVariables) {}
 
 UserExpression *ClangASTContextForExpressions::GetUserExpression(

@@ -82,6 +82,11 @@ multiple file formats.
  Remove the specified section from the output. Can be specified multiple times
  to remove multiple sections simultaneously.
 
+.. option:: --set-section-alignment <section>=<align>
+
+ Set the alignment of section ``<section>`` to `<align>``. Can be specified
+ multiple times to update multiple sections.
+
 .. option:: --strip-all-gnu
 
  Remove all symbols, debug sections and relocations from the output. This option

@@ -1082,7 +1082,7 @@ void MemorySSAUpdater::applyInsertUpdates(ArrayRef<CFGUpdate> Updates,
         for (; UI != E;) {
           Use &U = *UI;
           ++UI;
-          MemoryAccess *Usr = dyn_cast<MemoryAccess>(U.getUser());
+          MemoryAccess *Usr = cast<MemoryAccess>(U.getUser());
           if (MemoryPhi *UsrPhi = dyn_cast<MemoryPhi>(Usr)) {
             BasicBlock *DominatedBlock = UsrPhi->getIncomingBlock(U);
             if (!DT.dominates(DominatingBlock, DominatedBlock))

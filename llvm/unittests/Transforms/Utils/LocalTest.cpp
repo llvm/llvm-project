@@ -872,7 +872,7 @@ TEST(Local, RemoveUnreachableBlocks) {
   auto runEager = [&](Function &F, DominatorTree *DT) {
     PostDominatorTree PDT = PostDominatorTree(F);
     DomTreeUpdater DTU(*DT, PDT, DomTreeUpdater::UpdateStrategy::Eager);
-    removeUnreachableBlocks(F, nullptr, &DTU);
+    removeUnreachableBlocks(F, &DTU);
     EXPECT_TRUE(DTU.getDomTree().verify());
     EXPECT_TRUE(DTU.getPostDomTree().verify());
   };
@@ -880,7 +880,7 @@ TEST(Local, RemoveUnreachableBlocks) {
   auto runLazy = [&](Function &F, DominatorTree *DT) {
     PostDominatorTree PDT = PostDominatorTree(F);
     DomTreeUpdater DTU(*DT, PDT, DomTreeUpdater::UpdateStrategy::Lazy);
-    removeUnreachableBlocks(F, nullptr, &DTU);
+    removeUnreachableBlocks(F, &DTU);
     EXPECT_TRUE(DTU.getDomTree().verify());
     EXPECT_TRUE(DTU.getPostDomTree().verify());
   };
@@ -909,8 +909,8 @@ TEST(Local, RemoveUnreachableBlocks) {
 
   auto checkRUBlocksRetVal = [&](Function &F, DominatorTree *DT) {
     DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
-    EXPECT_TRUE(removeUnreachableBlocks(F, nullptr, &DTU));
-    EXPECT_FALSE(removeUnreachableBlocks(F, nullptr, &DTU));
+    EXPECT_TRUE(removeUnreachableBlocks(F, &DTU));
+    EXPECT_FALSE(removeUnreachableBlocks(F, &DTU));
     EXPECT_TRUE(DTU.getDomTree().verify());
   };
 
