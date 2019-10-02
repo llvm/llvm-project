@@ -27,7 +27,6 @@ add_lldb_library(lldbUtility
   FileSpec.cpp
   GDBRemote.cpp
   IOObject.cpp
-  JSON.cpp
   LLDBAssert.cpp
   Listener.cpp
   Log.cpp
