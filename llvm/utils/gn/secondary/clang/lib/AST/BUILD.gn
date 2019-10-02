@@ -33,6 +33,7 @@ static_library("AST") {
     "//clang/include/clang/AST:CommentCommandList",
     "//clang/include/clang/AST:CommentNodes",
     "//clang/include/clang/AST:StmtNodes",
+    "//clang/include/clang/AST:TypeNodes",
   ]
   sources = [
     "APValue.cpp",

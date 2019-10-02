@@ -9,6 +9,7 @@
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
+#include "AvoidSpinlockCheck.h"
 #include "DispatchOnceNonstaticCheck.h"
 
 namespace clang {
@@ -18,6 +19,8 @@ namespace darwin {
 class DarwinModule : public ClangTidyModule {
 public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
+    CheckFactories.registerCheck<AvoidSpinlockCheck>(
+        "darwin-avoid-spinlock");
     CheckFactories.registerCheck<DispatchOnceNonstaticCheck>(
         "darwin-dispatch-once-nonstatic");
   }

@@ -14,7 +14,7 @@
 #include "__cxxabi_config.h"
 
 #include <exception>        // for std::terminate
-#include <new>              // for std::bad_alloc
+#include <new>              // for std::bad_array_new_length
 
 #include "abort_message.h"
 
