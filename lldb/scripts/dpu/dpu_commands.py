@@ -314,8 +314,8 @@ def print_list(list, result):
          status, program) in list:
         result.PutCString(
             "'" + str(dpu_addr) + "' \t"
-            + str(region_id) + ":" + str(rank_id) + ":"
-            + str(slice_id) + ":" + str(dpu_id)
+            + str(region_id) + "." + str(rank_id) + "."
+            + str(slice_id) + "." + str(dpu_id)
             + " \t" + status + " \t'" + program + "'")
 
 
