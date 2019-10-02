@@ -533,9 +533,8 @@ static ArrayRef<const char *> findTargetSubtable(StringRef Name) {
   // Drop "llvm." and take the first dotted component. That will be the target
   // if this is target specific.
   StringRef Target = Name.drop_front(5).split('.').first;
-  auto It = std::lower_bound(Targets.begin(), Targets.end(), Target,
-                             [](const IntrinsicTargetInfo &TI,
-                                StringRef Target) { return TI.Name < Target; });
+  auto It = partition_point(
+      Targets, [=](const IntrinsicTargetInfo &TI) { return TI.Name < Target; });
   // We've either found the target or just fall back to the generic set, which
   // is always first.
   const auto &TI = It != Targets.end() && It->Name == Target ? *It : Targets[0];

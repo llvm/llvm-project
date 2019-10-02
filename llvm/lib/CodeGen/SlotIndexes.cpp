@@ -94,7 +94,7 @@ bool SlotIndexes::runOnMachineFunction(MachineFunction &fn) {
   }
 
   // Sort the Idx2MBBMap
-  llvm::sort(idx2MBBMap, Idx2MBBCompare());
+  llvm::sort(idx2MBBMap, less_first());
 
   LLVM_DEBUG(mf->print(dbgs(), this));
 

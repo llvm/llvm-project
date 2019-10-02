@@ -1620,8 +1620,9 @@ private:
   bool NeedBitValueComma = false;
   bool NeedFlowSequenceComma = false;
   bool EnumerationMatchFound = false;
-  bool NeedsNewLine = false;
   bool WriteDefaultValues = false;
+  StringRef Padding;
+  StringRef PaddingBeforeContainer;
 };
 
 /// YAML I/O does conversion based on types. But often native data types

@@ -633,10 +633,8 @@ public:
                               Top->ExtraData.TerminalDurations.end(), 0uLL);
           {
             auto E = std::make_pair(Top, TopSum);
-            TopStacksBySum.insert(std::lower_bound(TopStacksBySum.begin(),
-                                                   TopStacksBySum.end(), E,
-                                                   greater_second),
-                                  E);
+            TopStacksBySum.insert(
+                llvm::lower_bound(TopStacksBySum, E, greater_second), E);
             if (TopStacksBySum.size() == 11)
               TopStacksBySum.pop_back();
           }

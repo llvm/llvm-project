@@ -242,13 +242,18 @@ enum : unsigned {
 enum : unsigned {
   WASM_OPCODE_END = 0x0b,
   WASM_OPCODE_CALL = 0x10,
+  WASM_OPCODE_LOCAL_GET = 0x20,
   WASM_OPCODE_GLOBAL_GET = 0x23,
+  WASM_OPCODE_GLOBAL_SET = 0x24,
   WASM_OPCODE_I32_STORE = 0x36,
   WASM_OPCODE_I32_CONST = 0x41,
   WASM_OPCODE_I64_CONST = 0x42,
   WASM_OPCODE_F32_CONST = 0x43,
   WASM_OPCODE_F64_CONST = 0x44,
   WASM_OPCODE_I32_ADD = 0x6a,
+  WASM_OPCODE_MISC_PREFIX = 0xfc,
+  WASM_OPCODE_MEMORY_INIT = 0x08,
+  WASM_OPCODE_DATA_DROP = 0x09,
 };
 
 enum : unsigned {
@@ -364,6 +369,7 @@ inline bool operator!=(const WasmGlobalType &LHS, const WasmGlobalType &RHS) {
 
 std::string toString(WasmSymbolType type);
 std::string relocTypetoString(uint32_t type);
+bool relocTypeHasAddend(uint32_t type);
 
 } // end namespace wasm
 } // end namespace llvm

@@ -1,5 +1,5 @@
-; RUN: llc < %s -mattr=-atomics | FileCheck %s --check-prefixes CHECK,NO-ATOMICS
-; RUN: llc < %s -mattr=+atomics | FileCheck %s --check-prefixes CHECK,ATOMICS
+; RUN: llc < %s -mattr=-bulk-memory | FileCheck %s --check-prefixes NO-BULK-MEM
+; RUN: llc < %s -mattr=+bulk-memory | FileCheck %s --check-prefixes BULK-MEM
 
 ; Test that the target features section contains -atomics or +atomics
 ; for modules that have thread local storage in their source.
@@ -9,18 +9,18 @@ target triple = "wasm32-unknown-unknown"
 
 @foo = internal thread_local global i32 0
 
-; CHECK-LABEL: .custom_section.target_features,"",@
+; -bulk-memory
+; NO-BULK-MEM-LABEL: .custom_section.target_features,"",@
+; NO-BULK-MEM-NEXT: .int8 1
+; NO-BULK-MEM-NEXT: .int8 45
+; NO-BULK-MEM-NEXT: .int8 7
+; NO-BULK-MEM-NEXT: .ascii "atomics"
+; NO-BULK-MEM-NEXT: .bss.foo,"",@
 
-; -atomics
-; NO-ATOMICS-NEXT: .int8 1
-; NO-ATOMICS-NEXT: .int8 45
-; NO-ATOMICS-NEXT: .int8 7
-; NO-ATOMICS-NEXT: .ascii "atomics"
-; NO-ATOMICS-NEXT: .bss.foo,"",@
-
-; +atomics
-; ATOMICS-NEXT: .int8 1
-; ATOMICS-NEXT: .int8 43
-; ATOMICS-NEXT: .int8 7
-; ATOMICS-NEXT: .ascii "atomics"
-; ATOMICS-NEXT: .tbss.foo,"",@
+; +bulk-memory
+; BULK-MEM-LABEL: .custom_section.target_features,"",@
+; BULK-MEM-NEXT: .int8 1
+; BULK-MEM-NEXT: .int8 43
+; BULK-MEM-NEXT: .int8 11
+; BULK-MEM-NEXT: .ascii "bulk-memory"
+; BULK-MEM-NEXT: .tbss.foo,"",@

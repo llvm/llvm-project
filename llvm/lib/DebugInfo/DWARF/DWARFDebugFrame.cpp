@@ -532,10 +532,9 @@ void DWARFDebugFrame::parse(DWARFDataExtractor Data) {
 }
 
 FrameEntry *DWARFDebugFrame::getEntryAtOffset(uint64_t Offset) const {
-  auto It =
-      std::lower_bound(Entries.begin(), Entries.end(), Offset,
-                       [](const std::unique_ptr<FrameEntry> &E,
-                          uint64_t Offset) { return E->getOffset() < Offset; });
+  auto It = partition_point(Entries, [=](const std::unique_ptr<FrameEntry> &E) {
+    return E->getOffset() < Offset;
+  });
   if (It != Entries.end() && (*It)->getOffset() == Offset)
     return It->get();
   return nullptr;
