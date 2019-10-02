@@ -13,7 +13,7 @@
 #include "cxxabi.h"
 
 #include <exception>        // for std::terminate
-#include <cstring>          // for memset
+#include <string.h>         // for memset
 #include "cxa_exception.h"
 #include "cxa_handlers.h"
 #include "fallback_malloc.h"
@@ -163,13 +163,12 @@ static size_t get_cxa_exception_offset() {
   } __attribute__((aligned));
 
   // Compute the maximum alignment for the target machine.
-  constexpr size_t alignment = std::alignment_of<S>::value;
+  constexpr size_t alignment = alignof(S);
   constexpr size_t excp_size = sizeof(__cxa_exception);
   constexpr size_t aligned_size =
       (excp_size + alignment - 1) / alignment * alignment;
   constexpr size_t offset = aligned_size - excp_size;
-  static_assert((offset == 0 ||
-                 std::alignment_of<_Unwind_Exception>::value < alignment),
+  static_assert((offset == 0 || alignof(_Unwind_Exception) < alignment),
                 "offset is non-zero only if _Unwind_Exception isn't aligned");
   return offset;
 }
@@ -193,7 +192,7 @@ void *__cxa_allocate_exception(size_t thrown_size) throw() {
         std::terminate();
     __cxa_exception *exception_header =
         static_cast<__cxa_exception *>((void *)(raw_buffer + header_offset));
-    std::memset(exception_header, 0, actual_size);
+    ::memset(exception_header, 0, actual_size);
     return thrown_object_from_cxa_exception(exception_header);
 }
 
@@ -216,7 +215,7 @@ void * __cxa_allocate_dependent_exception () {
     void *ptr = __aligned_malloc_with_fallback(actual_size);
     if (NULL == ptr)
         std::terminate();
-    std::memset(ptr, 0, actual_size);
+    ::memset(ptr, 0, actual_size);
     return ptr;
 }
 

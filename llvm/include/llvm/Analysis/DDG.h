@@ -33,6 +33,8 @@ class LPMUpdater;
 /// 1. Single instruction node containing just one instruction.
 /// 2. Multiple instruction node where two or more instructions from
 ///    the same basic block are merged into one node.
+/// 3. Root node is a special node that connects to all components such that
+///    there is always a path from it to any node in the graph.
 class DDGNode : public DDGNodeBase {
 public:
   using InstructionListType = SmallVectorImpl<Instruction *>;
@@ -41,6 +43,7 @@ public:
     Unknown,
     SingleInstruction,
     MultiInstruction,
+    Root,
   };
 
   DDGNode() = delete;
@@ -76,6 +79,22 @@ protected:
 
 private:
   NodeKind Kind;
+};
+
+/// Subclass of DDGNode representing the root node of the graph.
+/// There should only be one such node in a given graph.
+class RootDDGNode : public DDGNode {
+public:
+  RootDDGNode() : DDGNode(NodeKind::Root) {}
+  RootDDGNode(const RootDDGNode &N) = delete;
+  RootDDGNode(RootDDGNode &&N) : DDGNode(std::move(N)) {}
+  ~RootDDGNode() {}
+
+  /// Define classof to be able to use isa<>, cast<>, dyn_cast<>, etc.
+  static bool classof(const DDGNode *N) {
+    return N->getKind() == NodeKind::Root;
+  }
+  static bool classof(const RootDDGNode *N) { return true; }
 };
 
 /// Subclass of DDGNode representing single or multi-instruction nodes.
@@ -139,10 +158,12 @@ private:
 /// Data Dependency Graph Edge.
 /// An edge in the DDG can represent a def-use relationship or
 /// a memory dependence based on the result of DependenceAnalysis.
+/// A rooted edge connects the root node to one of the components
+/// of the graph.
 class DDGEdge : public DDGEdgeBase {
 public:
   /// The kind of edge in the DDG
-  enum class EdgeKind { Unknown, RegisterDefUse, MemoryDependence };
+  enum class EdgeKind { Unknown, RegisterDefUse, MemoryDependence, Rooted };
 
   explicit DDGEdge(DDGNode &N) = delete;
   DDGEdge(DDGNode &N, EdgeKind K) : DDGEdgeBase(N), Kind(K) {}
@@ -169,6 +190,10 @@ public:
   /// Return true if this is a memory dependence edge, and false otherwise.
   bool isMemoryDependence() const { return Kind == EdgeKind::MemoryDependence; }
 
+  /// Return true if this is an edge stemming from the root node, and false
+  /// otherwise.
+  bool isRooted() const { return Kind == EdgeKind::Rooted; }
+
 private:
   EdgeKind Kind;
 };
@@ -182,13 +207,20 @@ public:
   DependenceGraphInfo() = delete;
   DependenceGraphInfo(const DependenceGraphInfo &G) = delete;
   DependenceGraphInfo(const std::string &N, const DependenceInfo &DepInfo)
-      : Name(N), DI(DepInfo) {}
+      : Name(N), DI(DepInfo), Root(nullptr) {}
   DependenceGraphInfo(DependenceGraphInfo &&G)
-      : Name(std::move(G.Name)), DI(std::move(G.DI)) {}
+      : Name(std::move(G.Name)), DI(std::move(G.DI)), Root(G.Root) {}
   virtual ~DependenceGraphInfo() {}
 
   /// Return the label that is used to name this graph.
   const StringRef getName() const { return Name; }
+
+  /// Return the root node of the graph.
+  NodeType &getRoot() const {
+    assert(Root && "Root node is not available yet. Graph construction may "
+                   "still be in progress\n");
+    return *Root;
+  }
 
 protected:
   // Name of the graph.
@@ -198,6 +230,10 @@ protected:
   // dependencies don't need to be stored. Instead when the dependence is
   // queried it is recomputed using @DI.
   const DependenceInfo DI;
+
+  // A special node in the graph that has an edge to every connected component of
+  // the graph, to ensure all nodes are reachable in a graph walk.
+  NodeType *Root = nullptr;
 };
 
 using DDGInfo = DependenceGraphInfo<DDGNode>;
@@ -217,6 +253,12 @@ public:
   DataDependenceGraph(Function &F, DependenceInfo &DI);
   DataDependenceGraph(const Loop &L, DependenceInfo &DI);
   ~DataDependenceGraph();
+
+protected:
+  /// Add node \p N to the graph, if it's not added yet, and keep track of
+  /// the root node. Return true if node is successfully added.
+  bool addNode(NodeType &N);
+
 };
 
 /// Concrete implementation of a pure data dependence graph builder. This class
@@ -230,6 +272,12 @@ public:
   DDGBuilder(DataDependenceGraph &G, DependenceInfo &D,
              const BasicBlockListType &BBs)
       : AbstractDependenceGraphBuilder(G, D, BBs) {}
+  DDGNode &createRootNode() final override {
+    auto *RN = new RootDDGNode();
+    assert(RN && "Failed to allocate memory for DDG root node.");
+    Graph.addNode(*RN);
+    return *RN;
+  }
   DDGNode &createFineGrainedNode(Instruction &I) final override {
     auto *SN = new SimpleDDGNode(I);
     assert(SN && "Failed to allocate memory for simple DDG node.");
@@ -248,6 +296,14 @@ public:
     Graph.connect(Src, Tgt, *E);
     return *E;
   }
+  DDGEdge &createRootedEdge(DDGNode &Src, DDGNode &Tgt) final override {
+    auto *E = new DDGEdge(Tgt, DDGEdge::EdgeKind::Rooted);
+    assert(E && "Failed to allocate memory for edge");
+    assert(isa<RootDDGNode>(Src) && "Expected root node");
+    Graph.connect(Src, Tgt, *E);
+    return *E;
+  }
+
 };
 
 raw_ostream &operator<<(raw_ostream &OS, const DDGNode &N);
@@ -317,7 +373,9 @@ template <> struct GraphTraits<DDGNode *> {
 template <>
 struct GraphTraits<DataDependenceGraph *> : public GraphTraits<DDGNode *> {
   using nodes_iterator = DataDependenceGraph::iterator;
-  static NodeRef getEntryNode(DataDependenceGraph *DG) { return *DG->begin(); }
+  static NodeRef getEntryNode(DataDependenceGraph *DG) {
+    return &DG->getRoot();
+  }
   static nodes_iterator nodes_begin(DataDependenceGraph *DG) {
     return DG->begin();
   }
@@ -357,7 +415,7 @@ struct GraphTraits<const DataDependenceGraph *>
     : public GraphTraits<const DDGNode *> {
   using nodes_iterator = DataDependenceGraph::const_iterator;
   static NodeRef getEntryNode(const DataDependenceGraph *DG) {
-    return *DG->begin();
+    return &DG->getRoot();
   }
   static nodes_iterator nodes_begin(const DataDependenceGraph *DG) {
     return DG->begin();

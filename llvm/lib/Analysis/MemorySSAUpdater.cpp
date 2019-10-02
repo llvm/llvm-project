@@ -839,6 +839,9 @@ void MemorySSAUpdater::applyInsertUpdates(ArrayRef<CFGUpdate> Updates,
       } else {
         // Single predecessor, BB cannot be dead. GetLastDef of Pred.
         assert(Count == 1 && Pred && "Single predecessor expected.");
+        // BB can be unreachable though, return LoE if that is the case.
+        if (!DT.getNode(BB))
+          return MSSA->getLiveOnEntryDef();
         BB = Pred;
       }
     };

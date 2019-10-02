@@ -12,7 +12,7 @@
 #include "__cxxabi_config.h"
 
 #include <typeinfo>
-#include <cstddef>
+#include <stddef.h>
 
 namespace __cxxabiv1 {
 
@@ -72,7 +72,7 @@ struct _LIBCXXABI_HIDDEN __dynamic_cast_info
     const __class_type_info* dst_type;
     const void* static_ptr;
     const __class_type_info* static_type;
-    std::ptrdiff_t src2dst_offset;
+    ptrdiff_t src2dst_offset;
 
 // Data that represents the answer:
 

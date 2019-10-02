@@ -1759,7 +1759,7 @@ static CharUnits GetNumNonZeroBytesInInit(const Expr *E, CodeGenFunction &CGF) {
   // referencee.  InitListExprs for unions and arrays can't have references.
   if (const RecordType *RT = E->getType()->getAs<RecordType>()) {
     if (!RT->isUnionType()) {
-      RecordDecl *SD = E->getType()->getAs<RecordType>()->getDecl();
+      RecordDecl *SD = RT->getDecl();
       CharUnits NumNonZeroBytes = CharUnits::Zero();
 
       unsigned ILEElement = 0;

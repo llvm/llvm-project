@@ -156,8 +156,7 @@ define <4 x i32> @trunc_usat_v4i64_v4i32(<4 x i64> %a0) {
 ; AVX512F-LABEL: trunc_usat_v4i64_v4i32:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; AVX512F-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [4294967295,4294967295,4294967295,4294967295]
-; AVX512F-NEXT:    vpcmpltuq %zmm1, %zmm0, %k1
+; AVX512F-NEXT:    vpcmpltuq {{.*}}(%rip){1to8}, %zmm0, %k1
 ; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm1 = [4294967295,4294967295,4294967295,429496729]
 ; AVX512F-NEXT:    vmovdqa64 %zmm0, %zmm1 {%k1}
 ; AVX512F-NEXT:    vpmovqd %zmm1, %ymm0
@@ -177,8 +176,7 @@ define <4 x i32> @trunc_usat_v4i64_v4i32(<4 x i64> %a0) {
 ; AVX512BW-LABEL: trunc_usat_v4i64_v4i32:
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; AVX512BW-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [4294967295,4294967295,4294967295,4294967295]
-; AVX512BW-NEXT:    vpcmpltuq %zmm1, %zmm0, %k1
+; AVX512BW-NEXT:    vpcmpltuq {{.*}}(%rip){1to8}, %zmm0, %k1
 ; AVX512BW-NEXT:    vmovdqa {{.*#+}} ymm1 = [4294967295,4294967295,4294967295,429496729]
 ; AVX512BW-NEXT:    vmovdqa64 %zmm0, %zmm1 {%k1}
 ; AVX512BW-NEXT:    vpmovqd %zmm1, %ymm0

@@ -1,10 +1,10 @@
+#include "TableGenBackends.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
 
 using namespace llvm;
 
-namespace clang {
-void EmitClangDataCollectors(RecordKeeper &RK, raw_ostream &OS) {
+void clang::EmitClangDataCollectors(RecordKeeper &RK, raw_ostream &OS) {
   const auto &Defs = RK.getClasses();
   for (const auto &Entry : Defs) {
     Record &R = *Entry.second;
@@ -15,4 +15,3 @@ void EmitClangDataCollectors(RecordKeeper &RK, raw_ostream &OS) {
   }
   OS << "#undef DEF_ADD_DATA\n";
 }
-} // end namespace clang

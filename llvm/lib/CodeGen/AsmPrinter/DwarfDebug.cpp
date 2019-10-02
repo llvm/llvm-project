@@ -1989,9 +1989,10 @@ static dwarf::PubIndexEntryDescriptor computeIndexValue(DwarfUnit *CU,
   case dwarf::DW_TAG_union_type:
   case dwarf::DW_TAG_enumeration_type:
     return dwarf::PubIndexEntryDescriptor(
-        dwarf::GIEK_TYPE, CU->getLanguage() != dwarf::DW_LANG_C_plus_plus
-                              ? dwarf::GIEL_STATIC
-                              : dwarf::GIEL_EXTERNAL);
+        dwarf::GIEK_TYPE,
+        dwarf::isCPlusPlus((dwarf::SourceLanguage)CU->getLanguage())
+            ? dwarf::GIEL_EXTERNAL
+            : dwarf::GIEL_STATIC);
   case dwarf::DW_TAG_typedef:
   case dwarf::DW_TAG_base_type:
   case dwarf::DW_TAG_subrange_type:

@@ -115,6 +115,9 @@ Improvements to clang-tidy
   Now also checks if any calls to ``pthread_*`` functions expect negative return
   values.
 
+- The 'objc-avoid-spinlock' check was renamed to :doc:`darwin-avoid-spinlock
+  <clang-tidy/checks/darwin-avoid-spinlock>`
+
 Improvements to include-fixer
 -----------------------------
 

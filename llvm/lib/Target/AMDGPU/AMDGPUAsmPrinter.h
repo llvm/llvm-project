@@ -43,6 +43,7 @@ private:
     // Track the number of explicitly used VGPRs. Special registers reserved at
     // the end are tracked separately.
     int32_t NumVGPR = 0;
+    int32_t NumAGPR = 0;
     int32_t NumExplicitSGPR = 0;
     uint64_t PrivateSegmentSize = 0;
     bool UsesVCC = false;
@@ -51,6 +52,7 @@ private:
     bool HasRecursion = false;
 
     int32_t getTotalNumSGPRs(const GCNSubtarget &ST) const;
+    int32_t getTotalNumVGPRs(const GCNSubtarget &ST) const;
   };
 
   SIProgramInfo CurrentProgramInfo;
@@ -77,6 +79,8 @@ private:
   void EmitPALMetadata(const MachineFunction &MF,
                        const SIProgramInfo &KernelInfo);
   void emitCommonFunctionComments(uint32_t NumVGPR,
+                                  Optional<uint32_t> NumAGPR,
+                                  uint32_t TotalNumVGPR,
                                   uint32_t NumSGPR,
                                   uint64_t ScratchSize,
                                   uint64_t CodeSize,

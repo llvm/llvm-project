@@ -67,45 +67,6 @@ void TracePC::HandleInline8bitCountersInit(uint8_t *Start, uint8_t *Stop) {
   NumInline8bitCounters += M.Size();
 }
 
-// Mark all full page counter regions as PROT_NONE and set Enabled=false.
-// The first time the instrumented code hits such a protected/disabled
-// counter region we should catch a SEGV and call UnprotectLazyCounters,
-// which will mark the page as PROT_READ|PROT_WRITE and set Enabled=true.
-//
-// Whenever other functions iterate over the counters they should ignore
-// regions with Enabled=false.
-void TracePC::ProtectLazyCounters() {
-  size_t NumPagesProtected = 0;
-  IterateCounterRegions([&](Module::Region &R) {
-    if (!R.OneFullPage) return;
-    if (Mprotect(R.Start, R.Stop - R.Start, false)) {
-      R.Enabled = false;
-      NumPagesProtected++;
-    }
-  });
-  if (NumPagesProtected)
-    Printf("INFO: %zd pages of counters where protected;"
-           " libFuzzer's SEGV handler must be installed\n",
-           NumPagesProtected);
-}
-
-bool TracePC::UnprotectLazyCounters(void *CounterPtr) {
-  // Printf("UnprotectLazyCounters: %p\n", CounterPtr);
-  if (!CounterPtr)
-    return false;
-  bool Done = false;
-  uint8_t *Addr = reinterpret_cast<uint8_t *>(CounterPtr);
-  IterateCounterRegions([&](Module::Region &R) {
-    if (!R.OneFullPage || R.Enabled || Done) return;
-    if (Addr >= R.Start && Addr < R.Stop)
-      if (Mprotect(R.Start, R.Stop - R.Start, true)) {
-        R.Enabled = true;
-        Done = true;
-      }
-  });
-  return Done;
-}
-
 void TracePC::HandlePCsInit(const uintptr_t *Start, const uintptr_t *Stop) {
   const PCTableEntry *B = reinterpret_cast<const PCTableEntry *>(Start);
   const PCTableEntry *E = reinterpret_cast<const PCTableEntry *>(Stop);

@@ -1437,10 +1437,9 @@ class alignas(8) Type : public ExtQualsTypeCommonBase {
 public:
   enum TypeClass {
 #define TYPE(Class, Base) Class,
-#define LAST_TYPE(Class) TypeLast = Class,
+#define LAST_TYPE(Class) TypeLast = Class
 #define ABSTRACT_TYPE(Class, Base)
 #include "clang/AST/TypeNodes.def"
-    TagFirst = Record, TagLast = Enum
   };
 
 private:
@@ -4436,7 +4435,7 @@ public:
   bool isBeingDefined() const;
 
   static bool classof(const Type *T) {
-    return T->getTypeClass() >= TagFirst && T->getTypeClass() <= TagLast;
+    return T->getTypeClass() == Enum || T->getTypeClass() == Record;
   }
 };
 
