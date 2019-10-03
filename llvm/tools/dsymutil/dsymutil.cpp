@@ -95,7 +95,7 @@ struct DsymutilOptions {
   std::vector<std::string> Archs;
   std::vector<std::string> InputFiles;
   unsigned NumThreads;
-  LinkOptions LinkOptions;
+  dsymutil::LinkOptions LinkOptions;
 };
 
 /// Return a list of input files. This function has logic for dealing with the
