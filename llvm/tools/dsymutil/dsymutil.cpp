@@ -114,7 +114,7 @@ static Expected<std::vector<std::string>> getInputs(opt::InputArgList &Args,
   // If we are updating, we might get dSYM bundles as input.
   std::vector<std::string> Inputs;
   for (const auto &Input : InputFiles) {
-    if (!llvm::sys::fs::is_directory(Input)) {
+    if (!sys::fs::is_directory(Input)) {
       Inputs.push_back(Input);
       continue;
     }
@@ -122,7 +122,7 @@ static Expected<std::vector<std::string>> getInputs(opt::InputArgList &Args,
     // Make sure that we're dealing with a dSYM bundle.
     SmallString<256> BundlePath(Input);
     sys::path::append(BundlePath, "Contents", "Resources", "DWARF");
-    if (!llvm::sys::fs::is_directory(BundlePath))
+    if (!sys::fs::is_directory(BundlePath))
       return make_error<StringError>(
           Input + " is a directory, but doesn't look like a dSYM bundle.",
           inconvertibleErrorCode());
@@ -130,8 +130,8 @@ static Expected<std::vector<std::string>> getInputs(opt::InputArgList &Args,
     // Create a directory iterator to iterate over all the entries in the
     // bundle.
     std::error_code EC;
-    llvm::sys::fs::directory_iterator DirIt(BundlePath, EC);
-    llvm::sys::fs::directory_iterator DirEnd;
+    sys::fs::directory_iterator DirIt(BundlePath, EC);
+    sys::fs::directory_iterator DirEnd;
     if (EC)
       return errorCodeToError(EC);
 
@@ -147,7 +147,7 @@ static Expected<std::vector<std::string>> getInputs(opt::InputArgList &Args,
 }
 
 // Verify that the given combination of options makes sense.
-static llvm::Error verifyOptions(const DsymutilOptions &Options) {
+static Error verifyOptions(const DsymutilOptions &Options) {
   if (Options.LinkOptions.Update &&
       std::find(Options.InputFiles.begin(), Options.InputFiles.end(), "-") !=
           Options.InputFiles.end()) {
@@ -253,7 +253,7 @@ static Expected<DsymutilOptions> getOptions(opt::InputArgList &Args) {
   if (opt::Arg *NumThreads = Args.getLastArg(OPT_threads))
     Options.LinkOptions.Threads = atoi(NumThreads->getValue());
   else
-    Options.LinkOptions.Threads = llvm::thread::hardware_concurrency();
+    Options.LinkOptions.Threads = thread::hardware_concurrency();
 
   if (Options.DumpDebugMap || Options.LinkOptions.Verbose)
     Options.LinkOptions.Threads = 1;
@@ -266,13 +266,13 @@ static Expected<DsymutilOptions> getOptions(opt::InputArgList &Args) {
   return Options;
 }
 
-static Error createPlistFile(llvm::StringRef Bin, llvm::StringRef BundleRoot,
-                             llvm::StringRef Toolchain) {
+static Error createPlistFile(StringRef Bin, StringRef BundleRoot,
+                             StringRef Toolchain) {
   // Create plist file to write to.
-  llvm::SmallString<128> InfoPlist(BundleRoot);
-  llvm::sys::path::append(InfoPlist, "Contents/Info.plist");
+  SmallString<128> InfoPlist(BundleRoot);
+  sys::path::append(InfoPlist, "Contents/Info.plist");
   std::error_code EC;
-  llvm::raw_fd_ostream PL(InfoPlist, EC, llvm::sys::fs::F_Text);
+  raw_fd_ostream PL(InfoPlist, EC, sys::fs::F_Text);
   if (EC)
     return make_error<StringError>(
         "cannot create Plist: " + toString(errorCodeToError(EC)), EC);
@@ -280,9 +280,9 @@ static Error createPlistFile(llvm::StringRef Bin, llvm::StringRef BundleRoot,
   CFBundleInfo BI = getBundleInfo(Bin);
 
   if (BI.IDStr.empty()) {
-    llvm::StringRef BundleID = *llvm::sys::path::rbegin(BundleRoot);
-    if (llvm::sys::path::extension(BundleRoot) == ".dSYM")
-      BI.IDStr = llvm::sys::path::stem(BundleID);
+    StringRef BundleID = *sys::path::rbegin(BundleRoot);
+    if (sys::path::extension(BundleRoot) == ".dSYM")
+      BI.IDStr = sys::path::stem(BundleID);
     else
       BI.IDStr = BundleID;
   }
@@ -330,19 +330,18 @@ static Error createPlistFile(llvm::StringRef Bin, llvm::StringRef BundleRoot,
   return Error::success();
 }
 
-static Error createBundleDir(llvm::StringRef BundleBase) {
-  llvm::SmallString<128> Bundle(BundleBase);
-  llvm::sys::path::append(Bundle, "Contents", "Resources", "DWARF");
+static Error createBundleDir(StringRef BundleBase) {
+  SmallString<128> Bundle(BundleBase);
+  sys::path::append(Bundle, "Contents", "Resources", "DWARF");
   if (std::error_code EC =
-          create_directories(Bundle.str(), true, llvm::sys::fs::perms::all_all))
+          create_directories(Bundle.str(), true, sys::fs::perms::all_all))
     return make_error<StringError>(
         "cannot create bundle: " + toString(errorCodeToError(EC)), EC);
 
   return Error::success();
 }
 
-static bool verify(llvm::StringRef OutputFile, llvm::StringRef Arch,
-                   bool Verbose) {
+static bool verify(StringRef OutputFile, StringRef Arch, bool Verbose) {
   if (OutputFile == "-") {
     WithColor::warning() << "verification skipped for " << Arch
                          << "because writing to stdout.\n";
@@ -372,18 +371,17 @@ static bool verify(llvm::StringRef OutputFile, llvm::StringRef Arch,
 
 namespace {
 struct OutputLocation {
-  OutputLocation(std::string DWARFFile,
-                 llvm::Optional<std::string> ResourceDir = {})
+  OutputLocation(std::string DWARFFile, Optional<std::string> ResourceDir = {})
       : DWARFFile(DWARFFile), ResourceDir(ResourceDir) {}
   /// This method is a workaround for older compilers.
-  llvm::Optional<std::string> getResourceDir() const { return ResourceDir; }
+  Optional<std::string> getResourceDir() const { return ResourceDir; }
   std::string DWARFFile;
-  llvm::Optional<std::string> ResourceDir;
+  Optional<std::string> ResourceDir;
 };
 } // namespace
 
 static Expected<OutputLocation>
-getOutputFileName(llvm::StringRef InputFile, const DsymutilOptions &Options) {
+getOutputFileName(StringRef InputFile, const DsymutilOptions &Options) {
   if (Options.OutputFile == "-")
     return OutputLocation(Options.OutputFile);
 
@@ -411,9 +409,8 @@ getOutputFileName(llvm::StringRef InputFile, const DsymutilOptions &Options) {
   //          Resources/
   //             DWARF/
   //                <DWARF file(s)>
-  std::string DwarfFile =
-      InputFile == "-" ? llvm::StringRef("a.out") : InputFile;
-  llvm::SmallString<128> Path(Options.OutputFile);
+  std::string DwarfFile = InputFile == "-" ? StringRef("a.out") : InputFile;
+  SmallString<128> Path(Options.OutputFile);
   if (Path.empty())
     Path = DwarfFile + ".dSYM";
   if (!Options.LinkOptions.NoOutput) {
@@ -423,9 +420,9 @@ getOutputFileName(llvm::StringRef InputFile, const DsymutilOptions &Options) {
       return std::move(E);
   }
 
-  llvm::sys::path::append(Path, "Contents", "Resources");
+  sys::path::append(Path, "Contents", "Resources");
   std::string ResourceDir = Path.str();
-  llvm::sys::path::append(Path, "DWARF", llvm::sys::path::filename(DwarfFile));
+  sys::path::append(Path, "DWARF", sys::path::filename(DwarfFile));
   return OutputLocation(Path.str(), ResourceDir);
 }
 
@@ -440,13 +437,12 @@ int main(int argc, char **argv) {
   opt::InputArgList Args = T.ParseArgs(ArgsArr, MAI, MAC);
 
   void *P = (void *)(intptr_t)getOutputFileName;
-  std::string SDKPath = llvm::sys::fs::getMainExecutable(argv[0], P);
-  SDKPath = llvm::sys::path::parent_path(SDKPath);
+  std::string SDKPath = sys::fs::getMainExecutable(argv[0], P);
+  SDKPath = sys::path::parent_path(SDKPath);
 
   if (Args.hasArg(OPT_help)) {
     T.PrintHelp(
-        llvm::outs(),
-        (std::string(argv[0]) + " [options] <input files>").c_str(),
+        outs(), (std::string(argv[0]) + " [options] <input files>").c_str(),
         "manipulate archived DWARF debug symbol files.\n\n"
         "dsymutil links the DWARF debug information found in the object files\n"
         "for the executable <input file> by using debug symbols information\n"
@@ -456,7 +452,7 @@ int main(int argc, char **argv) {
   }
 
   if (Args.hasArg(OPT_version)) {
-    llvm::cl::PrintVersionMessage();
+    cl::PrintVersionMessage();
     return 0;
   }
 
@@ -468,14 +464,14 @@ int main(int argc, char **argv) {
 
   auto &Options = *OptionsOrErr;
 
-  llvm::InitializeAllTargetInfos();
-  llvm::InitializeAllTargetMCs();
-  llvm::InitializeAllTargets();
-  llvm::InitializeAllAsmPrinters();
+  InitializeAllTargetInfos();
+  InitializeAllTargetMCs();
+  InitializeAllTargets();
+  InitializeAllAsmPrinters();
 
   for (const auto &Arch : Options.Archs)
     if (Arch != "*" && Arch != "all" &&
-        !llvm::object::MachOObjectFile::isValidArch(Arch)) {
+        !object::MachOObjectFile::isValidArch(Arch)) {
       WithColor::error() << "unsupported cpu architecture: '" << Arch << "'\n";
       return 1;
     }
@@ -506,7 +502,7 @@ int main(int argc, char **argv) {
       // the input file.
       for (auto &Map : *DebugMapPtrsOrErr)
         Map->addDebugMapObject(InputFile,
-                               llvm::sys::TimePoint<std::chrono::seconds>());
+                               sys::TimePoint<std::chrono::seconds>());
     }
 
     // Ensure that the debug map is not empty (anymore).
@@ -520,7 +516,7 @@ int main(int argc, char **argv) {
 
     unsigned ThreadCount = std::min<unsigned>(Options.LinkOptions.Threads,
                                               DebugMapPtrsOrErr->size());
-    llvm::ThreadPool Threads(ThreadCount);
+    ThreadPool Threads(ThreadCount);
 
     // If there is more than one link to execute, we need to generate
     // temporary files.
@@ -528,11 +524,11 @@ int main(int argc, char **argv) {
         !Options.DumpDebugMap && (Options.OutputFile != "-") &&
         (DebugMapPtrsOrErr->size() != 1 || Options.LinkOptions.Update);
 
-    llvm::SmallVector<MachOUtils::ArchAndFile, 4> TempFiles;
+    SmallVector<MachOUtils::ArchAndFile, 4> TempFiles;
     std::atomic_char AllOK(1);
     for (auto &Map : *DebugMapPtrsOrErr) {
       if (Options.LinkOptions.Verbose || Options.DumpDebugMap)
-        Map->print(llvm::outs());
+        Map->print(outs());
 
       if (Options.DumpDebugMap)
         continue;
