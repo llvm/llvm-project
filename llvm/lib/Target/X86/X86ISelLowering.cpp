@@ -5769,23 +5769,35 @@ static SDValue insert1BitVector(SDValue Op, SelectionDAG &DAG,
 
   // Widen the vector if needed.
   Vec = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, WideOpVT, Undef, Vec, ZeroIdx);
-  // Move the current value of the bit to be replace to the lsbs.
-  Op = DAG.getNode(X86ISD::KSHIFTR, dl, WideOpVT, Vec,
-                   DAG.getTargetConstant(IdxVal, dl, MVT::i8));
-  // Xor with the new bit.
-  Op = DAG.getNode(ISD::XOR, dl, WideOpVT, Op, SubVec);
-  // Shift to MSB, filling bottom bits with 0.
+
+  // Clear the upper bits of the subvector and move it to its insert position.
   unsigned ShiftLeft = NumElems - SubVecNumElems;
-  Op = DAG.getNode(X86ISD::KSHIFTL, dl, WideOpVT, Op,
-                   DAG.getTargetConstant(ShiftLeft, dl, MVT::i8));
-  // Shift to the final position, filling upper bits with 0.
+  SubVec = DAG.getNode(X86ISD::KSHIFTL, dl, WideOpVT, SubVec,
+                       DAG.getTargetConstant(ShiftLeft, dl, MVT::i8));
   unsigned ShiftRight = NumElems - SubVecNumElems - IdxVal;
-  Op = DAG.getNode(X86ISD::KSHIFTR, dl, WideOpVT, Op,
-                   DAG.getTargetConstant(ShiftRight, dl, MVT::i8));
-  // Xor with original vector leaving the new value.
-  Op = DAG.getNode(ISD::XOR, dl, WideOpVT, Vec, Op);
+  SubVec = DAG.getNode(X86ISD::KSHIFTR, dl, WideOpVT, SubVec,
+                       DAG.getTargetConstant(ShiftRight, dl, MVT::i8));
+
+  // Isolate the bits below the insertion point.
+  unsigned LowShift = NumElems - IdxVal;
+  SDValue Low = DAG.getNode(X86ISD::KSHIFTL, dl, WideOpVT, Vec,
+                            DAG.getTargetConstant(LowShift, dl, MVT::i8));
+  Low = DAG.getNode(X86ISD::KSHIFTR, dl, WideOpVT, Low,
+                    DAG.getTargetConstant(LowShift, dl, MVT::i8));
+
+  // Isolate the bits after the last inserted bit.
+  unsigned HighShift = IdxVal + SubVecNumElems;
+  SDValue High = DAG.getNode(X86ISD::KSHIFTR, dl, WideOpVT, Vec,
+                            DAG.getTargetConstant(HighShift, dl, MVT::i8));
+  High = DAG.getNode(X86ISD::KSHIFTL, dl, WideOpVT, High,
+                    DAG.getTargetConstant(HighShift, dl, MVT::i8));
+
+  // Now OR all 3 pieces together.
+  Vec = DAG.getNode(ISD::OR, dl, WideOpVT, Low, High);
+  SubVec = DAG.getNode(ISD::OR, dl, WideOpVT, SubVec, Vec);
+
   // Reduce to original width if needed.
-  return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, OpVT, Op, ZeroIdx);
+  return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, OpVT, SubVec, ZeroIdx);
 }
 
 static SDValue concatSubVectors(SDValue V1, SDValue V2, SelectionDAG &DAG,
@@ -35402,6 +35414,21 @@ static SDValue combineBitcast(SDNode *N, SelectionDAG &DAG,
       isNullConstant(N0.getOperand(1)))
     return DAG.getNode(ISD::TRUNCATE, SDLoc(N), VT,
                        DAG.getBitcast(MVT::i16, N0.getOperand(0)));
+
+  // Combine (bitcast (vbroadcast_load)) -> (vbroadcast_load). The memory VT
+  // determines // the number of bits loaded. Remaining bits are zero.
+  if (N0.getOpcode() == X86ISD::VBROADCAST_LOAD && N0.hasOneUse() &&
+      VT.getScalarSizeInBits() == SrcVT.getScalarSizeInBits()) {
+    auto *BCast = cast<MemIntrinsicSDNode>(N0);
+    SDVTList Tys = DAG.getVTList(VT, MVT::Other);
+    SDValue Ops[] = { BCast->getChain(), BCast->getBasePtr() };
+    SDValue ResNode =
+        DAG.getMemIntrinsicNode(X86ISD::VBROADCAST_LOAD, SDLoc(N), Tys, Ops,
+                                VT.getVectorElementType(),
+                                BCast->getMemOperand());
+    DAG.ReplaceAllUsesOfValueWith(SDValue(BCast, 1), ResNode.getValue(1));
+    return ResNode;
+  }
 
   // Since MMX types are special and don't usually play with other vector types,
   // it's better to handle them early to be sure we emit efficient code by

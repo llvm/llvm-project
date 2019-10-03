@@ -1,7 +1,7 @@
 ; REQUIRES: asserts
 
 ; RUN: llc -march=hexagon -mcpu=hexagonv65 -O3 -debug-only=pipeliner \
-; RUN: < %s 2>&1 | FileCheck %s
+; RUN: < %s 2>&1 -pipeliner-experimental-cg=true | FileCheck %s
 
 ; Test that the artificial dependences are ignored while computing the
 ; circuits.

@@ -828,6 +828,37 @@ define <16 x i8> @trunc_v16i32_v16i8(<16 x i32>* %x) nounwind "min-legal-vector-
   ret <16 x i8> %b
 }
 
+define <8 x i8> @trunc_v8i64_v8i8(<8 x i64>* %x) nounwind "min-legal-vector-width"="256" {
+; CHECK-AVX512-LABEL: trunc_v8i64_v8i8:
+; CHECK-AVX512:       # %bb.0:
+; CHECK-AVX512-NEXT:    vmovdqa (%rdi), %xmm0
+; CHECK-AVX512-NEXT:    vmovdqa 16(%rdi), %xmm1
+; CHECK-AVX512-NEXT:    vmovdqa 32(%rdi), %xmm2
+; CHECK-AVX512-NEXT:    vmovdqa 48(%rdi), %xmm3
+; CHECK-AVX512-NEXT:    vmovdqa {{.*#+}} xmm4 = <u,u,0,8,u,u,u,u,u,u,u,u,u,u,u,u>
+; CHECK-AVX512-NEXT:    vpshufb %xmm4, %xmm3, %xmm3
+; CHECK-AVX512-NEXT:    vpshufb %xmm4, %xmm2, %xmm2
+; CHECK-AVX512-NEXT:    vpunpcklwd {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1],xmm2[2],xmm3[2],xmm2[3],xmm3[3]
+; CHECK-AVX512-NEXT:    vmovdqa {{.*#+}} xmm3 = <0,8,u,u,u,u,u,u,u,u,u,u,u,u,u,u>
+; CHECK-AVX512-NEXT:    vpshufb %xmm3, %xmm1, %xmm1
+; CHECK-AVX512-NEXT:    vpshufb %xmm3, %xmm0, %xmm0
+; CHECK-AVX512-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; CHECK-AVX512-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2,3]
+; CHECK-AVX512-NEXT:    retq
+;
+; CHECK-VBMI-LABEL: trunc_v8i64_v8i8:
+; CHECK-VBMI:       # %bb.0:
+; CHECK-VBMI-NEXT:    vmovdqa (%rdi), %ymm1
+; CHECK-VBMI-NEXT:    vpbroadcastq {{.*#+}} ymm0 = [4048780183313844224,4048780183313844224,4048780183313844224,4048780183313844224]
+; CHECK-VBMI-NEXT:    vpermi2b 32(%rdi), %ymm1, %ymm0
+; CHECK-VBMI-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; CHECK-VBMI-NEXT:    vzeroupper
+; CHECK-VBMI-NEXT:    retq
+  %a = load <8 x i64>, <8 x i64>* %x
+  %b = trunc <8 x i64> %a to <8 x i8>
+  ret <8 x i8> %b
+}
+
 define <8 x i16> @trunc_v8i64_v8i16(<8 x i64>* %x) nounwind "min-legal-vector-width"="256" {
 ; CHECK-LABEL: trunc_v8i64_v8i16:
 ; CHECK:       # %bb.0:
@@ -980,5 +1011,97 @@ define void @sext_v16i8_v16i64(<16 x i8> %x, <16 x i64>* %y) nounwind "min-legal
 ; CHECK-NEXT:    retq
   %a = sext <16 x i8> %x to <16 x i64>
   store <16 x i64> %a, <16 x i64>* %y
+  ret void
+}
+
+define void @vselect_split_v8i16_setcc(<8 x i16> %s, <8 x i16> %t, <8 x i64>* %p, <8 x i64>* %q, <8 x i64>* %r) "min-legal-vector-width"="256" {
+; CHECK-LABEL: vselect_split_v8i16_setcc:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmovdqa (%rsi), %ymm2
+; CHECK-NEXT:    vmovdqa 32(%rsi), %ymm3
+; CHECK-NEXT:    vpcmpeqw %xmm1, %xmm0, %k1
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[2,3,0,1]
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; CHECK-NEXT:    vpcmpeqw %xmm1, %xmm0, %k2
+; CHECK-NEXT:    vmovdqa64 32(%rdi), %ymm3 {%k2}
+; CHECK-NEXT:    vmovdqa64 (%rdi), %ymm2 {%k1}
+; CHECK-NEXT:    vmovdqa %ymm2, (%rdx)
+; CHECK-NEXT:    vmovdqa %ymm3, 32(%rdx)
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %x = load <8 x i64>, <8 x i64>* %p
+  %y = load <8 x i64>, <8 x i64>* %q
+  %a = icmp eq <8 x i16> %s, %t
+  %b = select <8 x i1> %a, <8 x i64> %x, <8 x i64> %y
+  store <8 x i64> %b, <8 x i64>* %r
+  ret void
+}
+
+define void @vselect_split_v8i32_setcc(<8 x i32> %s, <8 x i32> %t, <8 x i64>* %p, <8 x i64>* %q, <8 x i64>* %r) "min-legal-vector-width"="256" {
+; CHECK-LABEL: vselect_split_v8i32_setcc:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmovdqa (%rsi), %ymm2
+; CHECK-NEXT:    vmovdqa 32(%rsi), %ymm3
+; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm0, %k1
+; CHECK-NEXT:    vextracti128 $1, %ymm1, %xmm1
+; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm0, %k2
+; CHECK-NEXT:    vmovdqa64 32(%rdi), %ymm3 {%k2}
+; CHECK-NEXT:    vmovdqa64 (%rdi), %ymm2 {%k1}
+; CHECK-NEXT:    vmovdqa %ymm2, (%rdx)
+; CHECK-NEXT:    vmovdqa %ymm3, 32(%rdx)
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %x = load <8 x i64>, <8 x i64>* %p
+  %y = load <8 x i64>, <8 x i64>* %q
+  %a = icmp eq <8 x i32> %s, %t
+  %b = select <8 x i1> %a, <8 x i64> %x, <8 x i64> %y
+  store <8 x i64> %b, <8 x i64>* %r
+  ret void
+}
+
+define void @vselect_split_v16i8_setcc(<16 x i8> %s, <16 x i8> %t, <16 x i32>* %p, <16 x i32>* %q, <16 x i32>* %r) "min-legal-vector-width"="256" {
+; CHECK-LABEL: vselect_split_v16i8_setcc:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmovdqa (%rsi), %ymm2
+; CHECK-NEXT:    vmovdqa 32(%rsi), %ymm3
+; CHECK-NEXT:    vpcmpeqb %xmm1, %xmm0, %k1
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[2,3,0,1]
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; CHECK-NEXT:    vpcmpeqb %xmm1, %xmm0, %k2
+; CHECK-NEXT:    vmovdqa32 32(%rdi), %ymm3 {%k2}
+; CHECK-NEXT:    vmovdqa32 (%rdi), %ymm2 {%k1}
+; CHECK-NEXT:    vmovdqa %ymm2, (%rdx)
+; CHECK-NEXT:    vmovdqa %ymm3, 32(%rdx)
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %x = load <16 x i32>, <16 x i32>* %p
+  %y = load <16 x i32>, <16 x i32>* %q
+  %a = icmp eq <16 x i8> %s, %t
+  %b = select <16 x i1> %a, <16 x i32> %x, <16 x i32> %y
+  store <16 x i32> %b, <16 x i32>* %r
+  ret void
+}
+
+define void @vselect_split_v16i16_setcc(<16 x i16> %s, <16 x i16> %t, <16 x i32>* %p, <16 x i32>* %q, <16 x i32>* %r) "min-legal-vector-width"="256" {
+; CHECK-LABEL: vselect_split_v16i16_setcc:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmovdqa (%rsi), %ymm2
+; CHECK-NEXT:    vmovdqa 32(%rsi), %ymm3
+; CHECK-NEXT:    vpcmpeqw %xmm1, %xmm0, %k1
+; CHECK-NEXT:    vextracti128 $1, %ymm1, %xmm1
+; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; CHECK-NEXT:    vpcmpeqw %xmm1, %xmm0, %k2
+; CHECK-NEXT:    vmovdqa32 32(%rdi), %ymm3 {%k2}
+; CHECK-NEXT:    vmovdqa32 (%rdi), %ymm2 {%k1}
+; CHECK-NEXT:    vmovdqa %ymm2, (%rdx)
+; CHECK-NEXT:    vmovdqa %ymm3, 32(%rdx)
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %x = load <16 x i32>, <16 x i32>* %p
+  %y = load <16 x i32>, <16 x i32>* %q
+  %a = icmp eq <16 x i16> %s, %t
+  %b = select <16 x i1> %a, <16 x i32> %x, <16 x i32> %y
+  store <16 x i32> %b, <16 x i32>* %r
   ret void
 }

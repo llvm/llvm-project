@@ -66,7 +66,7 @@ Sections:
 
 # RUN: not yaml2obj --docnum=3 %s 2>&1 | FileCheck %s --check-prefix=CONTENT-BUCKET
 
-# CONTENT-BUCKET: error: "Content" and "Bucket" cannot be used together
+# CONTENT-BUCKET: "Bucket" cannot be used with "Content" or "Size"
 
 --- !ELF
 FileHeader:
@@ -84,7 +84,7 @@ Sections:
 
 # RUN: not yaml2obj --docnum=4 %s 2>&1 | FileCheck %s --check-prefix=CONTENT-CHAIN
 
-# CONTENT-CHAIN: error: "Content" and "Chain" cannot be used together
+# CONTENT-CHAIN: "Chain" cannot be used with "Content" or "Size"
 
 --- !ELF
 FileHeader:
@@ -134,7 +134,7 @@ Sections:
 
 # RUN: not yaml2obj --docnum=7 %s 2>&1 | FileCheck %s --check-prefix=NO-TAGS
 
-# NO-TAGS: error: one of "Content", "Bucket" or "Chain" must be specified
+# NO-TAGS: error: one of "Content", "Size", "Bucket" or "Chain" must be specified
 
 --- !ELF
 FileHeader:
@@ -177,3 +177,102 @@ Sections:
 ## SHT_HASH is linked to dynamic symbol table by default if it exists.
   - Name: .dynsym
     Type: SHT_DYNSYM
+
+## Check we can use only "Size" to create a SHT_HASH section.
+
+# RUN: yaml2obj --docnum=9 %s -o %t9
+# RUN: llvm-readobj --sections --section-data %t9 | FileCheck %s --check-prefix=SIZE
+
+# SIZE:      Name: .hash
+# SIZE:      Size:
+# SIZE-SAME: 17
+# SIZE:      SectionData (
+# SIZE-NEXT:  0000: 00000000 00000000 00000000 00000000  |
+# SIZE-NEXT:  0010: 00                                   |
+# SIZE-NEXT: )
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name: .hash
+    Type: SHT_HASH
+    Size: 0x11
+
+## Check we can use "Size" and "Content" together to create a SHT_HASH section.
+
+# RUN: yaml2obj --docnum=10 %s -o %t10
+# RUN: llvm-readobj --sections --section-data %t10 | FileCheck %s --check-prefix=SIZE-CONTENT
+
+# SIZE-CONTENT:      Name: .hash
+# SIZE-CONTENT:      Size:
+# SIZE-CONTENT-SAME: 5
+# SIZE-CONTENT:      SectionData (
+# SIZE-CONTENT-NEXT:  0000: 11223300 00 |
+# SIZE-CONTENT-NEXT: )
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name: .hash
+    Type: SHT_HASH
+    Size: 0x5
+    Content: "112233"
+
+## Check that when "Size" and "Content" are used together, the size
+## must be greater than or equal to the content size.
+
+# RUN: not yaml2obj --docnum=11 %s 2>&1 | FileCheck %s --check-prefix=SIZE-CONTENT-ERR
+
+# SIZE-CONTENT-ERR: error: "Size" must be greater than or equal to the content size
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name: .hash
+    Type: SHT_HASH
+    Size: 0x1
+    Content: "1122"
+
+## Check we can't use "Size" and "Bucket" tags together.
+
+# RUN: not yaml2obj --docnum=12 %s 2>&1 | FileCheck %s --check-prefix=CONTENT-BUCKET
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name: .hash
+    Type: SHT_HASH
+    Size: 0x1
+    Bucket: [ 1 ]
+
+## Check we can't use "Size" and "Chain" tags together.
+
+# RUN: not yaml2obj --docnum=13 %s 2>&1 | FileCheck %s --check-prefix=CONTENT-CHAIN
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name: .hash
+    Type: SHT_HASH
+    Size: 0x1
+    Chain: [ 1 ]

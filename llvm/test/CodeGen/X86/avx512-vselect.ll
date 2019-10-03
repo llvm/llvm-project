@@ -47,3 +47,174 @@ entry:
   %ret = select <16 x i1> %m.or, <16 x double> %a, <16 x double> %b
   ret <16 x double> %ret
 }
+
+define <16 x i64> @test3(<16 x i8> %x, <16 x i64> %a, <16 x i64> %b) {
+; CHECK-SKX-LABEL: test3:
+; CHECK-SKX:       # %bb.0:
+; CHECK-SKX-NEXT:    vpshufd {{.*#+}} xmm5 = xmm0[2,3,0,1]
+; CHECK-SKX-NEXT:    vptestnmb %xmm5, %xmm5, %k1
+; CHECK-SKX-NEXT:    vptestnmb %xmm0, %xmm0, %k2
+; CHECK-SKX-NEXT:    vpblendmq %zmm1, %zmm3, %zmm0 {%k2}
+; CHECK-SKX-NEXT:    vpblendmq %zmm2, %zmm4, %zmm1 {%k1}
+; CHECK-SKX-NEXT:    retq
+;
+; CHECK-KNL-LABEL: test3:
+; CHECK-KNL:       # %bb.0:
+; CHECK-KNL-NEXT:    vpxor %xmm5, %xmm5, %xmm5
+; CHECK-KNL-NEXT:    vpcmpeqb %xmm5, %xmm0, %xmm0
+; CHECK-KNL-NEXT:    vpmovsxbd %xmm0, %zmm0
+; CHECK-KNL-NEXT:    vptestmd %zmm0, %zmm0, %k1
+; CHECK-KNL-NEXT:    vpblendmq %zmm1, %zmm3, %zmm0 {%k1}
+; CHECK-KNL-NEXT:    kshiftrw $8, %k1, %k1
+; CHECK-KNL-NEXT:    vpblendmq %zmm2, %zmm4, %zmm1 {%k1}
+; CHECK-KNL-NEXT:    retq
+  %c = icmp eq <16 x i8> %x, zeroinitializer
+  %ret = select <16 x i1> %c, <16 x i64> %a, <16 x i64> %b
+  ret <16 x i64> %ret
+}
+
+define <16 x i64> @test4(<16 x i16> %x, <16 x i64> %a, <16 x i64> %b) {
+; CHECK-SKX-LABEL: test4:
+; CHECK-SKX:       # %bb.0:
+; CHECK-SKX-NEXT:    vextracti128 $1, %ymm0, %xmm5
+; CHECK-SKX-NEXT:    vptestnmw %xmm5, %xmm5, %k1
+; CHECK-SKX-NEXT:    vptestnmw %xmm0, %xmm0, %k2
+; CHECK-SKX-NEXT:    vpblendmq %zmm1, %zmm3, %zmm0 {%k2}
+; CHECK-SKX-NEXT:    vpblendmq %zmm2, %zmm4, %zmm1 {%k1}
+; CHECK-SKX-NEXT:    retq
+;
+; CHECK-KNL-LABEL: test4:
+; CHECK-KNL:       # %bb.0:
+; CHECK-KNL-NEXT:    vpxor %xmm5, %xmm5, %xmm5
+; CHECK-KNL-NEXT:    vpcmpeqw %ymm5, %ymm0, %ymm0
+; CHECK-KNL-NEXT:    vpmovsxwd %ymm0, %zmm0
+; CHECK-KNL-NEXT:    vptestmd %zmm0, %zmm0, %k1
+; CHECK-KNL-NEXT:    vpblendmq %zmm1, %zmm3, %zmm0 {%k1}
+; CHECK-KNL-NEXT:    kshiftrw $8, %k1, %k1
+; CHECK-KNL-NEXT:    vpblendmq %zmm2, %zmm4, %zmm1 {%k1}
+; CHECK-KNL-NEXT:    retq
+  %c = icmp eq <16 x i16> %x, zeroinitializer
+  %ret = select <16 x i1> %c, <16 x i64> %a, <16 x i64> %b
+  ret <16 x i64> %ret
+}
+
+define <16 x i64> @test5(<16 x i32> %x, <16 x i64> %a, <16 x i64> %b) {
+; CHECK-SKX-LABEL: test5:
+; CHECK-SKX:       # %bb.0:
+; CHECK-SKX-NEXT:    vextracti64x4 $1, %zmm0, %ymm5
+; CHECK-SKX-NEXT:    vptestnmd %ymm5, %ymm5, %k1
+; CHECK-SKX-NEXT:    vptestnmd %ymm0, %ymm0, %k2
+; CHECK-SKX-NEXT:    vpblendmq %zmm1, %zmm3, %zmm0 {%k2}
+; CHECK-SKX-NEXT:    vpblendmq %zmm2, %zmm4, %zmm1 {%k1}
+; CHECK-SKX-NEXT:    retq
+;
+; CHECK-KNL-LABEL: test5:
+; CHECK-KNL:       # %bb.0:
+; CHECK-KNL-NEXT:    vextracti64x4 $1, %zmm0, %ymm5
+; CHECK-KNL-NEXT:    vptestnmd %zmm5, %zmm5, %k1
+; CHECK-KNL-NEXT:    vptestnmd %zmm0, %zmm0, %k2
+; CHECK-KNL-NEXT:    vpblendmq %zmm1, %zmm3, %zmm0 {%k2}
+; CHECK-KNL-NEXT:    vpblendmq %zmm2, %zmm4, %zmm1 {%k1}
+; CHECK-KNL-NEXT:    retq
+  %c = icmp eq <16 x i32> %x, zeroinitializer
+  %ret = select <16 x i1> %c, <16 x i64> %a, <16 x i64> %b
+  ret <16 x i64> %ret
+}
+
+define <32 x i32> @test6(<32 x i8> %x, <32 x i32> %a, <32 x i32> %b) {
+; CHECK-SKX-LABEL: test6:
+; CHECK-SKX:       # %bb.0:
+; CHECK-SKX-NEXT:    vextracti128 $1, %ymm0, %xmm5
+; CHECK-SKX-NEXT:    vptestnmb %xmm5, %xmm5, %k1
+; CHECK-SKX-NEXT:    vptestnmb %xmm0, %xmm0, %k2
+; CHECK-SKX-NEXT:    vpblendmd %zmm1, %zmm3, %zmm0 {%k2}
+; CHECK-SKX-NEXT:    vpblendmd %zmm2, %zmm4, %zmm1 {%k1}
+; CHECK-SKX-NEXT:    retq
+;
+; CHECK-KNL-LABEL: test6:
+; CHECK-KNL:       # %bb.0:
+; CHECK-KNL-NEXT:    vpxor %xmm5, %xmm5, %xmm5
+; CHECK-KNL-NEXT:    vpcmpeqb %ymm5, %ymm0, %ymm0
+; CHECK-KNL-NEXT:    vextracti128 $1, %ymm0, %xmm5
+; CHECK-KNL-NEXT:    vpmovsxbd %xmm5, %zmm5
+; CHECK-KNL-NEXT:    vptestmd %zmm5, %zmm5, %k1
+; CHECK-KNL-NEXT:    vpmovsxbd %xmm0, %zmm0
+; CHECK-KNL-NEXT:    vptestmd %zmm0, %zmm0, %k2
+; CHECK-KNL-NEXT:    vpblendmd %zmm1, %zmm3, %zmm0 {%k2}
+; CHECK-KNL-NEXT:    vpblendmd %zmm2, %zmm4, %zmm1 {%k1}
+; CHECK-KNL-NEXT:    retq
+  %c = icmp eq <32 x i8> %x, zeroinitializer
+  %ret = select <32 x i1> %c, <32 x i32> %a, <32 x i32> %b
+  ret <32 x i32> %ret
+}
+
+define <32 x i32> @test7(<32 x i16> %x, <32 x i32> %a, <32 x i32> %b) {
+; CHECK-SKX-LABEL: test7:
+; CHECK-SKX:       # %bb.0:
+; CHECK-SKX-NEXT:    vextracti64x4 $1, %zmm0, %ymm5
+; CHECK-SKX-NEXT:    vptestnmw %ymm5, %ymm5, %k1
+; CHECK-SKX-NEXT:    vptestnmw %ymm0, %ymm0, %k2
+; CHECK-SKX-NEXT:    vpblendmd %zmm1, %zmm3, %zmm0 {%k2}
+; CHECK-SKX-NEXT:    vpblendmd %zmm2, %zmm4, %zmm1 {%k1}
+; CHECK-SKX-NEXT:    retq
+;
+; CHECK-KNL-LABEL: test7:
+; CHECK-KNL:       # %bb.0:
+; CHECK-KNL-NEXT:    vextracti64x4 $1, %zmm0, %ymm5
+; CHECK-KNL-NEXT:    vpxor %xmm6, %xmm6, %xmm6
+; CHECK-KNL-NEXT:    vpcmpeqw %ymm6, %ymm5, %ymm5
+; CHECK-KNL-NEXT:    vpmovsxwd %ymm5, %zmm5
+; CHECK-KNL-NEXT:    vptestmd %zmm5, %zmm5, %k1
+; CHECK-KNL-NEXT:    vpcmpeqw %ymm6, %ymm0, %ymm0
+; CHECK-KNL-NEXT:    vpmovsxwd %ymm0, %zmm0
+; CHECK-KNL-NEXT:    vptestmd %zmm0, %zmm0, %k2
+; CHECK-KNL-NEXT:    vpblendmd %zmm1, %zmm3, %zmm0 {%k2}
+; CHECK-KNL-NEXT:    vpblendmd %zmm2, %zmm4, %zmm1 {%k1}
+; CHECK-KNL-NEXT:    retq
+  %c = icmp eq <32 x i16> %x, zeroinitializer
+  %ret = select <32 x i1> %c, <32 x i32> %a, <32 x i32> %b
+  ret <32 x i32> %ret
+}
+
+define <64 x i16> @test8(<64 x i8> %x, <64 x i16> %a, <64 x i16> %b) {
+; CHECK-SKX-LABEL: test8:
+; CHECK-SKX:       # %bb.0:
+; CHECK-SKX-NEXT:    vextracti64x4 $1, %zmm0, %ymm5
+; CHECK-SKX-NEXT:    vptestnmb %ymm5, %ymm5, %k1
+; CHECK-SKX-NEXT:    vptestnmb %ymm0, %ymm0, %k2
+; CHECK-SKX-NEXT:    vpblendmw %zmm1, %zmm3, %zmm0 {%k2}
+; CHECK-SKX-NEXT:    vpblendmw %zmm2, %zmm4, %zmm1 {%k1}
+; CHECK-SKX-NEXT:    retq
+;
+; CHECK-KNL-LABEL: test8:
+; CHECK-KNL:       # %bb.0:
+; CHECK-KNL-NEXT:    pushq %rbp
+; CHECK-KNL-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-KNL-NEXT:    .cfi_offset %rbp, -16
+; CHECK-KNL-NEXT:    movq %rsp, %rbp
+; CHECK-KNL-NEXT:    .cfi_def_cfa_register %rbp
+; CHECK-KNL-NEXT:    andq $-32, %rsp
+; CHECK-KNL-NEXT:    subq $32, %rsp
+; CHECK-KNL-NEXT:    vextracti64x4 $1, %zmm0, %ymm8
+; CHECK-KNL-NEXT:    vmovdqa 16(%rbp), %ymm9
+; CHECK-KNL-NEXT:    vpxor %xmm10, %xmm10, %xmm10
+; CHECK-KNL-NEXT:    vpcmpeqb %ymm10, %ymm0, %ymm11
+; CHECK-KNL-NEXT:    vpmovsxbw %xmm11, %ymm0
+; CHECK-KNL-NEXT:    vpblendvb %ymm0, %ymm1, %ymm5, %ymm0
+; CHECK-KNL-NEXT:    vextracti128 $1, %ymm11, %xmm1
+; CHECK-KNL-NEXT:    vpmovsxbw %xmm1, %ymm1
+; CHECK-KNL-NEXT:    vpblendvb %ymm1, %ymm2, %ymm6, %ymm1
+; CHECK-KNL-NEXT:    vpcmpeqb %ymm10, %ymm8, %ymm5
+; CHECK-KNL-NEXT:    vpmovsxbw %xmm5, %ymm2
+; CHECK-KNL-NEXT:    vpblendvb %ymm2, %ymm3, %ymm7, %ymm2
+; CHECK-KNL-NEXT:    vextracti128 $1, %ymm5, %xmm3
+; CHECK-KNL-NEXT:    vpmovsxbw %xmm3, %ymm3
+; CHECK-KNL-NEXT:    vpblendvb %ymm3, %ymm4, %ymm9, %ymm3
+; CHECK-KNL-NEXT:    movq %rbp, %rsp
+; CHECK-KNL-NEXT:    popq %rbp
+; CHECK-KNL-NEXT:    .cfi_def_cfa %rsp, 8
+; CHECK-KNL-NEXT:    retq
+  %c = icmp eq <64 x i8> %x, zeroinitializer
+  %ret = select <64 x i1> %c, <64 x i16> %a, <64 x i16> %b
+  ret <64 x i16> %ret
+}

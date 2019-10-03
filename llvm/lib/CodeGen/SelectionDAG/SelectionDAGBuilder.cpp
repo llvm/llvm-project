@@ -2651,7 +2651,8 @@ void SelectionDAGBuilder::visitBitTestHeader(BitTestBlock &B,
 
   MachineBasicBlock* MBB = B.Cases[0].ThisBB;
 
-  addSuccessorWithProb(SwitchBB, B.Default, B.DefaultProb);
+  if (!B.OmitRangeCheck)
+    addSuccessorWithProb(SwitchBB, B.Default, B.DefaultProb);
   addSuccessorWithProb(SwitchBB, MBB, B.Prob);
   SwitchBB->normalizeSuccProbs();
 

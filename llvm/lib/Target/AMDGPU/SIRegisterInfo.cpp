@@ -617,6 +617,7 @@ static bool buildMUBUFOffsetLoadStore(const SIInstrInfo *TII,
           .addImm(0) // slc
           .addImm(0) // tfe
           .addImm(0) // dlc
+          .addImm(0) // swz
           .cloneMemRefs(*MI);
 
   const MachineOperand *VDataIn = TII->getNamedOperand(*MI,
@@ -737,6 +738,7 @@ void SIRegisterInfo::buildSpillLoadStore(MachineBasicBlock::iterator MI,
         .addImm(0) // slc
         .addImm(0) // tfe
         .addImm(0) // dlc
+        .addImm(0) // swz
         .addMemOperand(NewMMO);
 
       if (!IsStore && TmpReg != AMDGPU::NoRegister)

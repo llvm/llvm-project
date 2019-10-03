@@ -112,6 +112,7 @@ static void buildPrologSpill(LivePhysRegs &LiveRegs, MachineBasicBlock &MBB,
       .addImm(0) // slc
       .addImm(0) // tfe
       .addImm(0) // dlc
+      .addImm(0) // swz
       .addMemOperand(MMO);
     return;
   }
@@ -132,6 +133,7 @@ static void buildPrologSpill(LivePhysRegs &LiveRegs, MachineBasicBlock &MBB,
     .addImm(0) // slc
     .addImm(0) // tfe
     .addImm(0) // dlc
+    .addImm(0) // swz
     .addMemOperand(MMO);
 }
 
@@ -157,6 +159,7 @@ static void buildEpilogReload(LivePhysRegs &LiveRegs, MachineBasicBlock &MBB,
       .addImm(0) // slc
       .addImm(0) // tfe
       .addImm(0) // dlc
+      .addImm(0) // swz
       .addMemOperand(MMO);
     return;
   }
@@ -177,6 +180,7 @@ static void buildEpilogReload(LivePhysRegs &LiveRegs, MachineBasicBlock &MBB,
     .addImm(0) // slc
     .addImm(0) // tfe
     .addImm(0) // dlc
+    .addImm(0) // swz
     .addMemOperand(MMO);
 }
 

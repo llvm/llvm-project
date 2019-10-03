@@ -155,6 +155,25 @@ static Expected<SectionRename> parseRenameSectionValue(StringRef FlagValue) {
   return SR;
 }
 
+static Expected<std::pair<StringRef, uint64_t>>
+parseSetSectionAlignment(StringRef FlagValue) {
+  if (!FlagValue.contains('='))
+    return createStringError(
+        errc::invalid_argument,
+        "bad format for --set-section-alignment: missing '='");
+  auto Split = StringRef(FlagValue).split('=');
+  if (Split.first.empty())
+    return createStringError(
+        errc::invalid_argument,
+        "bad format for --set-section-alignment: missing section name");
+  uint64_t NewAlign;
+  if (Split.second.getAsInteger(0, NewAlign))
+    return createStringError(errc::invalid_argument,
+                             "invalid alignment for --set-section-alignment: '%s'",
+                             Split.second.str().c_str());
+  return std::make_pair(Split.first, NewAlign);
+}
+
 static Expected<SectionFlagsUpdate>
 parseSetSectionFlagValue(StringRef FlagValue) {
   if (!StringRef(FlagValue).contains('='))
@@ -488,6 +507,13 @@ Expected<DriverConfig> parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
       return createStringError(errc::invalid_argument,
                                "multiple renames of section '%s'",
                                SR->OriginalName.str().c_str());
+  }
+  for (auto Arg : InputArgs.filtered(OBJCOPY_set_section_alignment)) {
+    Expected<std::pair<StringRef, uint64_t>> NameAndAlign =
+        parseSetSectionAlignment(Arg->getValue());
+    if (!NameAndAlign)
+      return NameAndAlign.takeError();
+    Config.SetSectionAlignment[NameAndAlign->first] = NameAndAlign->second;
   }
   for (auto Arg : InputArgs.filtered(OBJCOPY_set_section_flags)) {
     Expected<SectionFlagsUpdate> SFU =

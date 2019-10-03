@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -mcpu=hexagonv5 -enable-pipeliner < %s | FileCheck %s
+; RUN: llc -march=hexagon -mcpu=hexagonv5 -enable-pipeliner < %s -pipeliner-experimental-cg=true | FileCheck %s
 
 ; Make sure we attempt to pipeline all inner most loops.
 

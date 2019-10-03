@@ -3437,10 +3437,21 @@ template <class ELFT> void GNUStyle<ELFT>::printHashSymbols(const ELFO *Obj) {
     for (uint32_t Buc = 0; Buc < SysVHash->nbucket; Buc++) {
       if (Buckets[Buc] == ELF::STN_UNDEF)
         continue;
+      std::vector<bool> Visited(SysVHash->nchain);
       for (uint32_t Ch = Buckets[Buc]; Ch < SysVHash->nchain; Ch = Chains[Ch]) {
         if (Ch == ELF::STN_UNDEF)
           break;
+
+        if (Visited[Ch]) {
+          reportWarning(
+              createError(".hash section is invalid: bucket " + Twine(Ch) +
+                          ": a cycle was detected in the linked chain"),
+              this->FileName);
+          break;
+        }
+
         printHashedSymbol(Obj, &DynSyms[0], Ch, StringTable, Buc);
+        Visited[Ch] = true;
       }
     }
   }

@@ -10,6 +10,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineLoopUtils.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/MC/MCContext.h"
@@ -1564,6 +1565,266 @@ private:
 };
 } // namespace
 
+MachineBasicBlock *
+PeelingModuloScheduleExpander::peelKernel(LoopPeelDirection LPD) {
+  MachineBasicBlock *NewBB = PeelSingleBlockLoop(LPD, BB, MRI, TII);
+  if (LPD == LPD_Front)
+    PeeledFront.push_back(NewBB);
+  else
+    PeeledBack.push_front(NewBB);
+  for (auto I = BB->begin(), NI = NewBB->begin(); !I->isTerminator();
+       ++I, ++NI) {
+    CanonicalMIs[&*I] = &*I;
+    CanonicalMIs[&*NI] = &*I;
+    BlockMIs[{NewBB, &*I}] = &*NI;
+    BlockMIs[{BB, &*I}] = &*I;
+  }
+  return NewBB;
+}
+
+void PeelingModuloScheduleExpander::peelPrologAndEpilogs() {
+  BitVector LS(Schedule.getNumStages(), true);
+  BitVector AS(Schedule.getNumStages(), true);
+  LiveStages[BB] = LS;
+  AvailableStages[BB] = AS;
+
+  // Peel out the prologs.
+  LS.reset();
+  for (int I = 0; I < Schedule.getNumStages() - 1; ++I) {
+    LS[I] = 1;
+    Prologs.push_back(peelKernel(LPD_Front));
+    LiveStages[Prologs.back()] = LS;
+    AvailableStages[Prologs.back()] = LS;
+  }
+
+  // Create a block that will end up as the new loop exiting block (dominated by
+  // all prologs and epilogs). It will only contain PHIs, in the same order as
+  // BB's PHIs. This gives us a poor-man's LCSSA with the inductive property
+  // that the exiting block is a (sub) clone of BB. This in turn gives us the
+  // property that any value deffed in BB but used outside of BB is used by a
+  // PHI in the exiting block.
+  MachineBasicBlock *ExitingBB = CreateLCSSAExitingBlock();
+
+  // Push out the epilogs, again in reverse order.
+  // We can't assume anything about the minumum loop trip count at this point,
+  // so emit a fairly complex epilog:
+  //  K[0, 1, 2]     // Kernel runs stages 0, 1, 2
+  //  E0[2] <- P1    // Epilog runs stage 2 only, so the state after is [0].
+  //  E1[1, 2] <- P0 // Epilog 1 moves the last item from stage 0 to stage 2.
+  //
+  // This creates a single-successor single-predecessor sequence of blocks for
+  // each epilog, which are kept this way for simplicity at this stage and
+  // cleaned up by the optimizer later.
+  for (int I = 1; I <= Schedule.getNumStages() - 1; ++I) {
+    Epilogs.push_back(nullptr);
+    for (int J = Schedule.getNumStages() - 1; J >= I; --J) {
+      LS.reset();
+      LS[J] = 1;
+      Epilogs.back() = peelKernel(LPD_Back);
+      LiveStages[Epilogs.back()] = LS;
+      AvailableStages[Epilogs.back()] = AS;
+    }
+  }
+
+  // Now we've defined all the prolog and epilog blocks as a fallthrough
+  // sequence, add the edges that will be followed if the loop trip count is
+  // lower than the number of stages (connecting prologs directly with epilogs).
+  auto PI = Prologs.begin();
+  auto EI = Epilogs.begin();
+  assert(Prologs.size() == Epilogs.size());
+  for (; PI != Prologs.end(); ++PI, ++EI) {
+    MachineBasicBlock *Pred = *(*EI)->pred_begin();
+    (*PI)->addSuccessor(*EI);
+    for (MachineInstr &MI : (*EI)->phis()) {
+      Register Reg = MI.getOperand(1).getReg();
+      MachineInstr *Use = MRI.getUniqueVRegDef(Reg);
+      if (Use && Use->getParent() == Pred)
+        Reg = getEquivalentRegisterIn(Reg, *PI);
+      MI.addOperand(MachineOperand::CreateReg(Reg, /*isDef=*/false));
+      MI.addOperand(MachineOperand::CreateMBB(*PI));
+    }
+  }
+
+  // Create a list of all blocks in order.
+  SmallVector<MachineBasicBlock *, 8> Blocks;
+  llvm::copy(PeeledFront, std::back_inserter(Blocks));
+  Blocks.push_back(BB);
+  llvm::copy(PeeledBack, std::back_inserter(Blocks));
+
+  // Iterate in reverse order over all instructions, remapping as we go.
+  for (MachineBasicBlock *B : reverse(Blocks)) {
+    for (auto I = B->getFirstInstrTerminator()->getReverseIterator();
+         I != std::next(B->getFirstNonPHI()->getReverseIterator());) {
+      MachineInstr *MI = &*I++;
+      rewriteUsesOf(MI);
+    }
+  }
+  // Now all remapping has been done, we're free to optimize the generated code.
+  for (MachineBasicBlock *B : reverse(Blocks))
+    EliminateDeadPhis(B, MRI, LIS);
+  EliminateDeadPhis(ExitingBB, MRI, LIS);
+}
+
+MachineBasicBlock *PeelingModuloScheduleExpander::CreateLCSSAExitingBlock() {
+  MachineFunction &MF = *BB->getParent();
+  MachineBasicBlock *Exit = *BB->succ_begin();
+  if (Exit == BB)
+    Exit = *std::next(BB->succ_begin());
+
+  MachineBasicBlock *NewBB = MF.CreateMachineBasicBlock(BB->getBasicBlock());
+  MF.insert(std::next(BB->getIterator()), NewBB);
+
+  // Clone all phis in BB into NewBB and rewrite.
+  for (MachineInstr &MI : BB->phis()) {
+    auto RC = MRI.getRegClass(MI.getOperand(0).getReg());
+    Register OldR = MI.getOperand(3).getReg();
+    Register R = MRI.createVirtualRegister(RC);
+    SmallVector<MachineInstr *, 4> Uses;
+    for (MachineInstr &Use : MRI.use_instructions(OldR))
+      if (Use.getParent() != BB)
+        Uses.push_back(&Use);
+    for (MachineInstr *Use : Uses)
+      Use->substituteRegister(OldR, R, /*SubIdx=*/0,
+                              *MRI.getTargetRegisterInfo());
+    MachineInstr *NI = BuildMI(NewBB, DebugLoc(), TII->get(TargetOpcode::PHI), R)
+        .addReg(OldR)
+        .addMBB(BB);
+    BlockMIs[{NewBB, &MI}] = NI;
+    CanonicalMIs[NI] = &MI;
+  }
+  BB->replaceSuccessor(Exit, NewBB);
+  Exit->replacePhiUsesWith(BB, NewBB);
+  NewBB->addSuccessor(Exit);
+
+  MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
+  SmallVector<MachineOperand, 4> Cond;
+  bool CanAnalyzeBr = !TII->analyzeBranch(*BB, TBB, FBB, Cond);
+  (void)CanAnalyzeBr;
+  assert(CanAnalyzeBr && "Must be able to analyze the loop branch!");
+  TII->removeBranch(*BB);
+  TII->insertBranch(*BB, TBB == Exit ? NewBB : TBB, FBB == Exit ? NewBB : FBB,
+                    Cond, DebugLoc());
+  TII->insertUnconditionalBranch(*NewBB, Exit, DebugLoc());
+  return NewBB;
+}
+
+Register
+PeelingModuloScheduleExpander::getEquivalentRegisterIn(Register Reg,
+                                                       MachineBasicBlock *BB) {
+  MachineInstr *MI = MRI.getUniqueVRegDef(Reg);
+  unsigned OpIdx = MI->findRegisterDefOperandIdx(Reg);
+  return BlockMIs[{BB, CanonicalMIs[MI]}]->getOperand(OpIdx).getReg();
+}
+
+void PeelingModuloScheduleExpander::rewriteUsesOf(MachineInstr *MI) {
+  if (MI->isPHI()) {
+    // This is an illegal PHI. The loop-carried (desired) value is operand 3,
+    // and it is produced by this block.
+    Register PhiR = MI->getOperand(0).getReg();
+    Register R = MI->getOperand(3).getReg();
+    int RMIStage = getStage(MRI.getUniqueVRegDef(R));
+    if (RMIStage != -1 && !AvailableStages[MI->getParent()].test(RMIStage))
+      R = MI->getOperand(1).getReg();
+    MRI.setRegClass(R, MRI.getRegClass(PhiR));
+    MRI.replaceRegWith(PhiR, R);
+    if (LIS)
+      LIS->RemoveMachineInstrFromMaps(*MI);
+    MI->eraseFromParent();
+    return;
+  }
+
+  int Stage = getStage(MI);
+  if (Stage == -1 || LiveStages.count(MI->getParent()) == 0 ||
+      LiveStages[MI->getParent()].test(Stage))
+    // Instruction is live, no rewriting to do.
+    return;
+
+  for (MachineOperand &DefMO : MI->defs()) {
+    SmallVector<std::pair<MachineInstr *, Register>, 4> Subs;
+    for (MachineInstr &UseMI : MRI.use_instructions(DefMO.getReg())) {
+      // Only PHIs can use values from this block by construction.
+      // Match with the equivalent PHI in B.
+      assert(UseMI.isPHI());
+      Register Reg = getEquivalentRegisterIn(UseMI.getOperand(0).getReg(),
+                                             MI->getParent());
+      Subs.emplace_back(&UseMI, Reg);
+    }
+    for (auto &Sub : Subs)
+      Sub.first->substituteRegister(DefMO.getReg(), Sub.second, /*SubIdx=*/0,
+                                    *MRI.getTargetRegisterInfo());
+  }
+  if (LIS)
+    LIS->RemoveMachineInstrFromMaps(*MI);
+  MI->eraseFromParent();
+}
+
+void PeelingModuloScheduleExpander::fixupBranches() {
+  std::unique_ptr<TargetInstrInfo::PipelinerLoopInfo> Info =
+      TII->analyzeLoopForPipelining(BB);
+  assert(Info);
+
+  // Work outwards from the kernel.
+  bool KernelDisposed = false;
+  int TC = Schedule.getNumStages() - 1;
+  for (auto PI = Prologs.rbegin(), EI = Epilogs.rbegin(); PI != Prologs.rend();
+       ++PI, ++EI, --TC) {
+    MachineBasicBlock *Prolog = *PI;
+    MachineBasicBlock *Fallthrough = *Prolog->succ_begin();
+    MachineBasicBlock *Epilog = *EI;
+    SmallVector<MachineOperand, 4> Cond;
+    Optional<bool> StaticallyGreater =
+        Info->createTripCountGreaterCondition(TC, *Prolog, Cond);
+    if (!StaticallyGreater.hasValue()) {
+      LLVM_DEBUG(dbgs() << "Dynamic: TC > " << TC << "\n");
+      // Dynamically branch based on Cond.
+      TII->removeBranch(*Prolog);
+      TII->insertBranch(*Prolog, Epilog, Fallthrough, Cond, DebugLoc());
+    } else if (*StaticallyGreater == false) {
+      LLVM_DEBUG(dbgs() << "Static-false: TC > " << TC << "\n");
+      // Prolog never falls through; branch to epilog and orphan interior
+      // blocks. Leave it to unreachable-block-elim to clean up.
+      Prolog->removeSuccessor(Fallthrough);
+      for (MachineInstr &P : Fallthrough->phis()) {
+        P.RemoveOperand(2);
+        P.RemoveOperand(1);
+      }
+      TII->removeBranch(*Prolog);
+      TII->insertUnconditionalBranch(*Prolog, Epilog, DebugLoc());
+      KernelDisposed = true;
+    } else {
+      LLVM_DEBUG(dbgs() << "Static-true: TC > " << TC << "\n");
+      // Prolog always falls through; remove incoming values in epilog.
+      Prolog->removeSuccessor(Epilog);
+      for (MachineInstr &P : Epilog->phis()) {
+        P.RemoveOperand(4);
+        P.RemoveOperand(3);
+      }
+    }
+  }
+
+  if (!KernelDisposed) {
+    Info->adjustTripCount(-(Schedule.getNumStages() - 1));
+    Info->setPreheader(Prologs.back());
+  } else {
+    Info->disposed();
+  }
+}
+
+void PeelingModuloScheduleExpander::rewriteKernel() {
+  KernelRewriter KR(*Schedule.getLoop(), Schedule);
+  KR.rewrite();
+}
+
+void PeelingModuloScheduleExpander::expand() {
+  BB = Schedule.getLoop()->getTopBlock();
+  Preheader = Schedule.getLoop()->getLoopPreheader();
+  LLVM_DEBUG(Schedule.dump());
+
+  rewriteKernel();
+  peelPrologAndEpilogs();
+  fixupBranches();
+}
+
 void PeelingModuloScheduleExpander::validateAgainstModuloScheduleExpander() {
   BB = Schedule.getLoop()->getTopBlock();
   Preheader = Schedule.getLoop()->getLoopPreheader();
@@ -1593,6 +1854,7 @@ void PeelingModuloScheduleExpander::validateAgainstModuloScheduleExpander() {
   // Now run the new expansion algorithm.
   KernelRewriter KR(*Schedule.getLoop(), Schedule);
   KR.rewrite();
+  peelPrologAndEpilogs();
 
   // Collect all illegal phis that the new algorithm created. We'll give these
   // to KernelOperandInfo.

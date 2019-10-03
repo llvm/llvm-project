@@ -640,6 +640,12 @@ bool SILoadStoreOptimizer::findMatchingInst(CombineInfo &CI) {
     return false;
   }
 
+  // Do not merge VMEM buffer instructions with "swizzled" bit set.
+  int Swizzled =
+      AMDGPU::getNamedOperandIdx(CI.I->getOpcode(), AMDGPU::OpName::swz);
+  if (Swizzled != -1 && CI.I->getOperand(Swizzled).getImm())
+    return false;
+
   for (unsigned i = 0; i < CI.NumAddresses; i++) {
     // We only ever merge operations with the same base address register, so
     // don't bother scanning forward if there are no other uses.
@@ -998,6 +1004,7 @@ SILoadStoreOptimizer::mergeBufferLoadPair(CombineInfo &CI) {
       .addImm(CI.SLC0)      // slc
       .addImm(0)            // tfe
       .addImm(CI.DLC0)      // dlc
+      .addImm(0)            // swz
       .addMemOperand(combineKnownAdjacentMMOs(*MBB->getParent(), MMOa, MMOb));
 
   std::pair<unsigned, unsigned> SubRegIdx = getSubRegIdxs(CI);
@@ -1191,6 +1198,7 @@ SILoadStoreOptimizer::mergeBufferStorePair(CombineInfo &CI) {
       .addImm(CI.SLC0)      // slc
       .addImm(0)            // tfe
       .addImm(CI.DLC0)      // dlc
+      .addImm(0)            // swz
       .addMemOperand(combineKnownAdjacentMMOs(*MBB->getParent(), MMOa, MMOb));
 
   moveInstsAfter(MIB, CI.InstsToMove);
