@@ -95,7 +95,7 @@ struct DsymutilOptions {
   std::vector<std::string> Archs;
   std::vector<std::string> InputFiles;
   unsigned NumThreads;
-  dsymutil::LinkOptions LinkOptions;
+  dsymutil::LinkOptions LinkOpts;
 };
 
 /// Return a list of input files. This function has logic for dealing with the
@@ -148,7 +148,7 @@ static Expected<std::vector<std::string>> getInputs(opt::InputArgList &Args,
 
 // Verify that the given combination of options makes sense.
 static Error verifyOptions(const DsymutilOptions &Options) {
-  if (Options.LinkOptions.Update &&
+  if (Options.LinkOpts.Update &&
       std::find(Options.InputFiles.begin(), Options.InputFiles.end(), "-") !=
           Options.InputFiles.end()) {
     // FIXME: We cannot use stdin for an update because stdin will be
@@ -209,15 +209,15 @@ static Expected<DsymutilOptions> getOptions(opt::InputArgList &Args) {
   Options.PaperTrailWarnings = Args.hasArg(OPT_papertrail);
   Options.Verify = Args.hasArg(OPT_verify);
 
-  Options.LinkOptions.Minimize = Args.hasArg(OPT_minimize);
-  Options.LinkOptions.NoODR = Args.hasArg(OPT_no_odr);
-  Options.LinkOptions.NoOutput = Args.hasArg(OPT_no_output);
-  Options.LinkOptions.NoTimestamp = Args.hasArg(OPT_no_swiftmodule_timestamp);
-  Options.LinkOptions.Update = Args.hasArg(OPT_update);
-  Options.LinkOptions.Verbose = Args.hasArg(OPT_verbose);
+  Options.LinkOpts.Minimize = Args.hasArg(OPT_minimize);
+  Options.LinkOpts.NoODR = Args.hasArg(OPT_no_odr);
+  Options.LinkOpts.NoOutput = Args.hasArg(OPT_no_output);
+  Options.LinkOpts.NoTimestamp = Args.hasArg(OPT_no_swiftmodule_timestamp);
+  Options.LinkOpts.Update = Args.hasArg(OPT_update);
+  Options.LinkOpts.Verbose = Args.hasArg(OPT_verbose);
 
   if (Expected<AccelTableKind> AccelKind = getAccelTableKind(Args)) {
-    Options.LinkOptions.TheAccelTableKind = *AccelKind;
+    Options.LinkOpts.TheAccelTableKind = *AccelKind;
   } else {
     return AccelKind.takeError();
   }
@@ -226,10 +226,10 @@ static Expected<DsymutilOptions> getOptions(opt::InputArgList &Args) {
     Options.SymbolMap = SymbolMap->getValue();
 
   if (Args.hasArg(OPT_symbolmap))
-    Options.LinkOptions.Update = true;
+    Options.LinkOpts.Update = true;
 
   if (Expected<std::vector<std::string>> InputFiles =
-          getInputs(Args, Options.LinkOptions.Update)) {
+          getInputs(Args, Options.LinkOpts.Update)) {
     Options.InputFiles = std::move(*InputFiles);
   } else {
     return InputFiles.takeError();
@@ -239,7 +239,7 @@ static Expected<DsymutilOptions> getOptions(opt::InputArgList &Args) {
     Options.Archs.push_back(Arch->getValue());
 
   if (opt::Arg *OsoPrependPath = Args.getLastArg(OPT_oso_prepend_path))
-    Options.LinkOptions.PrependPath = OsoPrependPath->getValue();
+    Options.LinkOpts.PrependPath = OsoPrependPath->getValue();
 
   if (opt::Arg *OutputFile = Args.getLastArg(OPT_output))
     Options.OutputFile = OutputFile->getValue();
@@ -248,15 +248,15 @@ static Expected<DsymutilOptions> getOptions(opt::InputArgList &Args) {
     Options.Toolchain = Toolchain->getValue();
 
   if (Args.hasArg(OPT_assembly))
-    Options.LinkOptions.FileType = OutputFileType::Assembly;
+    Options.LinkOpts.FileType = OutputFileType::Assembly;
 
   if (opt::Arg *NumThreads = Args.getLastArg(OPT_threads))
-    Options.LinkOptions.Threads = atoi(NumThreads->getValue());
+    Options.LinkOpts.Threads = atoi(NumThreads->getValue());
   else
-    Options.LinkOptions.Threads = thread::hardware_concurrency();
+    Options.LinkOpts.Threads = thread::hardware_concurrency();
 
-  if (Options.DumpDebugMap || Options.LinkOptions.Verbose)
-    Options.LinkOptions.Threads = 1;
+  if (Options.DumpDebugMap || Options.LinkOpts.Verbose)
+    Options.LinkOpts.Threads = 1;
 
   if (getenv("RC_DEBUG_OPTIONS"))
     Options.PaperTrailWarnings = true;
@@ -387,7 +387,7 @@ getOutputFileName(StringRef InputFile, const DsymutilOptions &Options) {
 
   // When updating, do in place replacement.
   if (Options.OutputFile.empty() &&
-      (Options.LinkOptions.Update || !Options.SymbolMap.empty()))
+      (Options.LinkOpts.Update || !Options.SymbolMap.empty()))
     return OutputLocation(InputFile);
 
   // If a flat dSYM has been requested, things are pretty simple.
@@ -413,7 +413,7 @@ getOutputFileName(StringRef InputFile, const DsymutilOptions &Options) {
   SmallString<128> Path(Options.OutputFile);
   if (Path.empty())
     Path = DwarfFile + ".dSYM";
-  if (!Options.LinkOptions.NoOutput) {
+  if (!Options.LinkOpts.NoOutput) {
     if (auto E = createBundleDir(Path))
       return std::move(E);
     if (auto E = createPlistFile(DwarfFile, Path, Options.Toolchain))
@@ -481,14 +481,14 @@ int main(int argc, char **argv) {
   for (auto &InputFile : Options.InputFiles) {
     // Dump the symbol table for each input file and requested arch
     if (Options.DumpStab) {
-      if (!dumpStab(InputFile, Options.Archs, Options.LinkOptions.PrependPath))
+      if (!dumpStab(InputFile, Options.Archs, Options.LinkOpts.PrependPath))
         return 1;
       continue;
     }
 
     auto DebugMapPtrsOrErr =
-        parseDebugMap(InputFile, Options.Archs, Options.LinkOptions.PrependPath,
-                      Options.PaperTrailWarnings, Options.LinkOptions.Verbose,
+        parseDebugMap(InputFile, Options.Archs, Options.LinkOpts.PrependPath,
+                      Options.PaperTrailWarnings, Options.LinkOpts.Verbose,
                       Options.InputIsYAMLDebugMap);
 
     if (auto EC = DebugMapPtrsOrErr.getError()) {
@@ -497,7 +497,7 @@ int main(int argc, char **argv) {
       return 1;
     }
 
-    if (Options.LinkOptions.Update) {
+    if (Options.LinkOpts.Update) {
       // The debug map should be empty. Add one object file corresponding to
       // the input file.
       for (auto &Map : *DebugMapPtrsOrErr)
@@ -514,27 +514,27 @@ int main(int argc, char **argv) {
     // Shared a single binary holder for all the link steps.
     BinaryHolder BinHolder;
 
-    unsigned ThreadCount = std::min<unsigned>(Options.LinkOptions.Threads,
-                                              DebugMapPtrsOrErr->size());
+    unsigned ThreadCount =
+        std::min<unsigned>(Options.LinkOpts.Threads, DebugMapPtrsOrErr->size());
     ThreadPool Threads(ThreadCount);
 
     // If there is more than one link to execute, we need to generate
     // temporary files.
     bool NeedsTempFiles =
         !Options.DumpDebugMap && (Options.OutputFile != "-") &&
-        (DebugMapPtrsOrErr->size() != 1 || Options.LinkOptions.Update);
+        (DebugMapPtrsOrErr->size() != 1 || Options.LinkOpts.Update);
 
     SmallVector<MachOUtils::ArchAndFile, 4> TempFiles;
     std::atomic_char AllOK(1);
     for (auto &Map : *DebugMapPtrsOrErr) {
-      if (Options.LinkOptions.Verbose || Options.DumpDebugMap)
+      if (Options.LinkOpts.Verbose || Options.DumpDebugMap)
         Map->print(outs());
 
       if (Options.DumpDebugMap)
         continue;
 
       if (!Options.SymbolMap.empty())
-        Options.LinkOptions.Translator = SymMapLoader.Load(InputFile, *Map);
+        Options.LinkOpts.Translator = SymMapLoader.Load(InputFile, *Map);
 
       if (Map->begin() == Map->end())
         WithColor::warning()
@@ -551,7 +551,7 @@ int main(int argc, char **argv) {
         WithColor::error() << toString(OutputLocationOrErr.takeError());
         return 1;
       }
-      Options.LinkOptions.ResourceDir = OutputLocationOrErr->getResourceDir();
+      Options.LinkOpts.ResourceDir = OutputLocationOrErr->getResourceDir();
 
       std::string OutputFile = OutputLocationOrErr->DWARFFile;
       if (NeedsTempFiles) {
@@ -570,15 +570,14 @@ int main(int argc, char **argv) {
       } else {
         std::error_code EC;
         OS = std::make_shared<raw_fd_ostream>(
-            Options.LinkOptions.NoOutput ? "-" : OutputFile, EC,
-            sys::fs::F_None);
+            Options.LinkOpts.NoOutput ? "-" : OutputFile, EC, sys::fs::F_None);
         if (EC) {
           WithColor::error() << OutputFile << ": " << EC.message();
           return 1;
         }
       }
 
-      const bool Verify = Options.Verify && !Options.LinkOptions.NoOutput;
+      const bool Verify = Options.Verify && !Options.LinkOpts.NoOutput;
       auto LinkLambda = [&, OutputFile](std::shared_ptr<raw_fd_ostream> Stream,
                                         LinkOptions Options) {
         AllOK.fetch_and(
@@ -593,9 +592,9 @@ int main(int argc, char **argv) {
       // out the (significantly smaller) stack when using threads. We don't
       // want this limitation when we only have a single thread.
       if (ThreadCount == 1)
-        LinkLambda(OS, Options.LinkOptions);
+        LinkLambda(OS, Options.LinkOpts);
       else
-        Threads.async(LinkLambda, OS, Options.LinkOptions);
+        Threads.async(LinkLambda, OS, Options.LinkOpts);
     }
 
     Threads.wait();
@@ -612,7 +611,7 @@ int main(int argc, char **argv) {
       }
       if (!MachOUtils::generateUniversalBinary(TempFiles,
                                                OutputLocationOrErr->DWARFFile,
-                                               Options.LinkOptions, SDKPath))
+                                               Options.LinkOpts, SDKPath))
         return 1;
     }
   }
