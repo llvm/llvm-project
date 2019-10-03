@@ -1,21 +1,19 @@
 RUN: dsymutil -help 2>&1 | FileCheck --check-prefix=HELP %s
 HELP: OVERVIEW: manipulate archived DWARF debug symbol files.
-HELP: USAGE: dsymutil{{[^ ]*}} [options] <input files>
+HELP: USAGE: {{.*}}dsymutil{{[^ ]*}} [options] <input files>
 HELP-NOT: -reverse-iterate
-HELP: Color Options
-HELP: -color
-HELP: Specific Options:
+HELP: Dsymutil Options:
 HELP: -accelerator
-HELP: -arch=<arch>
+HELP: -arch <arch>
 HELP: -dump-debug-map
 HELP: -flat
 HELP: -minimize
 HELP: -no-odr
 HELP: -no-output
 HELP: -no-swiftmodule-timestamp
-HELP: -num-threads=<n>
-HELP: -o=<filename>
-HELP: -oso-prepend-path=<path>
+HELP: -num-threads <threads>
+HELP: -oso-prepend-path <path>
+HELP: -o <filename>
 HELP: -papertrail
 HELP: -symbol-map
 HELP: -symtab
