@@ -416,9 +416,8 @@ void SIRegisterInfo::resolveFrameIndex(MachineInstr &MI, unsigned BaseReg,
   assert(FIOp && FIOp->isFI() && "frame index must be address operand");
   assert(TII->isMUBUF(MI));
   assert(TII->getNamedOperand(MI, AMDGPU::OpName::soffset)->getReg() ==
-         MF->getInfo<SIMachineFunctionInfo>()->getFrameOffsetReg() &&
-         "should only be seeing frame offset relative FrameIndex");
-
+         MF->getInfo<SIMachineFunctionInfo>()->getStackPtrOffsetReg() &&
+         "should only be seeing stack pointer offset relative FrameIndex");
 
   MachineOperand *OffsetOp = TII->getNamedOperand(MI, AMDGPU::OpName::offset);
   int64_t NewOffset = OffsetOp->getImm() + Offset;
@@ -618,6 +617,7 @@ static bool buildMUBUFOffsetLoadStore(const SIInstrInfo *TII,
           .addImm(0) // slc
           .addImm(0) // tfe
           .addImm(0) // dlc
+          .addImm(0) // swz
           .cloneMemRefs(*MI);
 
   const MachineOperand *VDataIn = TII->getNamedOperand(*MI,
@@ -738,6 +738,7 @@ void SIRegisterInfo::buildSpillLoadStore(MachineBasicBlock::iterator MI,
         .addImm(0) // slc
         .addImm(0) // tfe
         .addImm(0) // dlc
+        .addImm(0) // swz
         .addMemOperand(NewMMO);
 
       if (!IsStore && TmpReg != AMDGPU::NoRegister)

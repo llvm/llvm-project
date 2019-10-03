@@ -317,7 +317,7 @@ libc++ Feature Options
   **Values**:: ``libc++``, ``libstdc++``
 
   Build the libc++ benchmark tests and Google Benchmark library against the
-  specified standard library on the platform. On linux this can be used to
+  specified standard library on the platform. On Linux this can be used to
   compare libc++ to libstdc++ by building the benchmark tests against both
   standard libraries.
 
@@ -404,7 +404,7 @@ LLVM-specific options
 .. option:: LLVM_BUILD_32_BITS:BOOL
 
   Build 32-bits executables and libraries on 64-bits systems. This option is
-  available only on some 64-bits unix systems. Defaults to OFF.
+  available only on some 64-bits Unix systems. Defaults to OFF.
 
 .. option:: LLVM_LIT_ARGS:STRING
 
@@ -527,7 +527,7 @@ These instructions should only be used when you can't install your ABI library.
 
 Normally you must link libc++ against a ABI shared library that the
 linker can find.  If you want to build and test libc++ against an ABI
-library not in the linker's path you needq to set
+library not in the linker's path you need to set
 ``-DLIBCXX_CXX_ABI_LIBRARY_PATH=/path/to/abi/lib`` when configuring CMake.
 
 An example build using libc++abi would look like:

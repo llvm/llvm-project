@@ -143,6 +143,7 @@ public:
     ImmTyDLC,
     ImmTyGLC,
     ImmTySLC,
+    ImmTySWZ,
     ImmTyTFE,
     ImmTyD16,
     ImmTyClampSI,
@@ -328,6 +329,7 @@ public:
   bool isDLC() const { return isImmTy(ImmTyDLC); }
   bool isGLC() const { return isImmTy(ImmTyGLC); }
   bool isSLC() const { return isImmTy(ImmTySLC); }
+  bool isSWZ() const { return isImmTy(ImmTySWZ); }
   bool isTFE() const { return isImmTy(ImmTyTFE); }
   bool isD16() const { return isImmTy(ImmTyD16); }
   bool isFORMAT() const { return isImmTy(ImmTyFORMAT) && isUInt<8>(getImm()); }
@@ -820,6 +822,7 @@ public:
     case ImmTyDLC: OS << "DLC"; break;
     case ImmTyGLC: OS << "GLC"; break;
     case ImmTySLC: OS << "SLC"; break;
+    case ImmTySWZ: OS << "SWZ"; break;
     case ImmTyTFE: OS << "TFE"; break;
     case ImmTyD16: OS << "D16"; break;
     case ImmTyFORMAT: OS << "FORMAT"; break;
@@ -6037,6 +6040,7 @@ static const OptionalOperand AMDGPUOptionalOperandTable[] = {
   {"format",  AMDGPUOperand::ImmTyFORMAT, false, nullptr},
   {"glc",     AMDGPUOperand::ImmTyGLC, true, nullptr},
   {"slc",     AMDGPUOperand::ImmTySLC, true, nullptr},
+  {"swz",     AMDGPUOperand::ImmTySWZ, true, nullptr},
   {"tfe",     AMDGPUOperand::ImmTyTFE, true, nullptr},
   {"d16",     AMDGPUOperand::ImmTyD16, true, nullptr},
   {"high",    AMDGPUOperand::ImmTyHigh, true, nullptr},

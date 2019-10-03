@@ -493,7 +493,7 @@ void APValue::printPretty(raw_ostream &Out, const ASTContext &Ctx,
     return;
   case APValue::Vector: {
     Out << '{';
-    QualType ElemTy = Ty->getAs<VectorType>()->getElementType();
+    QualType ElemTy = Ty->castAs<VectorType>()->getElementType();
     getVectorElt(0).printPretty(Out, Ctx, ElemTy);
     for (unsigned i = 1; i != getVectorLength(); ++i) {
       Out << ", ";
@@ -652,7 +652,7 @@ void APValue::printPretty(raw_ostream &Out, const ASTContext &Ctx,
   }
   case APValue::Struct: {
     Out << '{';
-    const RecordDecl *RD = Ty->getAs<RecordType>()->getDecl();
+    const RecordDecl *RD = Ty->castAs<RecordType>()->getDecl();
     bool First = true;
     if (unsigned N = getStructNumBases()) {
       const CXXRecordDecl *CD = cast<CXXRecordDecl>(RD);

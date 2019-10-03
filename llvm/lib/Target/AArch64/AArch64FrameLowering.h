@@ -87,6 +87,17 @@ public:
                                int FI) const override;
   int getSEHFrameIndexOffset(const MachineFunction &MF, int FI) const;
 
+  bool isSupportedStackID(TargetStackID::Value ID) const override {
+    switch (ID) {
+    default:
+      return false;
+    case TargetStackID::Default:
+    case TargetStackID::SVEVector:
+    case TargetStackID::NoAlloc:
+      return true;
+    }
+  }
+
 private:
   bool shouldCombineCSRLocalStackBump(MachineFunction &MF,
                                       unsigned StackBumpBytes) const;

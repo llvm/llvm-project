@@ -204,35 +204,6 @@ function(cxx_set_common_defines name)
   if(LIBCXX_CXX_ABI_HEADER_TARGET)
     add_dependencies(${name} ${LIBCXX_CXX_ABI_HEADER_TARGET})
   endif()
-  # Our visibility annotations are not quite right for non-Clang compilers,
-  # so we end up not exporting all the symbols we should. In the future, we
-  # can improve the situation by providing an explicit list of exported
-  # symbols on all compilers.
-  if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    target_compile_options(${name} PRIVATE -fvisibility=hidden)
-  endif()
-  if(WIN32 AND NOT MINGW)
-    target_compile_definitions(${name}
-                               PRIVATE
-                                 # Ignore the -MSC_VER mismatch, as we may build
-                                 # with a different compatibility version.
-                                 _ALLOW_MSC_VER_MISMATCH
-                                 # Don't check the msvcprt iterator debug levels
-                                 # as we will define the iterator types; libc++
-                                 # uses a different macro to identify the debug
-                                 # level.
-                                 _ALLOW_ITERATOR_DEBUG_LEVEL_MISMATCH
-                                 # We are building the c++ runtime, don't pull in
-                                 # msvcprt.
-                                 _CRTBLD
-                                 # Don't warn on the use of "deprecated"
-                                 # "insecure" functions which are standards
-                                 # specified.
-                                 _CRT_SECURE_NO_WARNINGS
-                                 # Use the ISO conforming behaviour for conversion
-                                 # in printf, scanf.
-                                 _CRT_STDIO_ISO_WIDE_SPECIFIERS)
-  endif()
 
   if (LIBCXX_ENABLE_PARALLEL_ALGORITHMS)
     target_link_libraries(${name} PUBLIC pstl::ParallelSTL)
@@ -259,7 +230,10 @@ if (LIBCXX_ENABLE_SHARED)
       SOVERSION     "${LIBCXX_ABI_VERSION}"
       DEFINE_SYMBOL ""
   )
+  cxx_add_basic_build_flags(cxx_shared)
   cxx_set_common_defines(cxx_shared)
+  cxx_add_warning_flags(cxx_shared)
+  cxx_add_windows_flags(cxx_shared)
 
   # Link against LLVM libunwind
   if (LIBCXXABI_USE_LLVM_UNWINDER)
@@ -359,7 +333,10 @@ if (LIBCXX_ENABLE_STATIC)
       LINK_FLAGS    "${LIBCXX_LINK_FLAGS}"
       OUTPUT_NAME   "c++"
   )
+  cxx_add_basic_build_flags(cxx_static)
   cxx_set_common_defines(cxx_static)
+  cxx_add_warning_flags(cxx_static)
+  cxx_add_windows_flags(cxx_static)
 
   if (LIBCXX_HERMETIC_STATIC_LIBRARY)
     # If the hermetic library doesn't define the operator new/delete functions

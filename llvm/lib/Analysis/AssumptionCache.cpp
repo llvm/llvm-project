@@ -130,7 +130,10 @@ void AssumptionCache::unregisterAssumption(CallInst *CI) {
     if (AVI != AffectedValues.end())
       AffectedValues.erase(AVI);
   }
-  remove_if(AssumeHandles, [CI](WeakTrackingVH &VH) { return CI == VH; });
+
+  AssumeHandles.erase(
+      remove_if(AssumeHandles, [CI](WeakTrackingVH &VH) { return CI == VH; }),
+      AssumeHandles.end());
 }
 
 void AssumptionCache::AffectedValueCallbackVH::deleted() {

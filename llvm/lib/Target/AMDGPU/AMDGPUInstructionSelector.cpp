@@ -590,7 +590,7 @@ bool AMDGPUInstructionSelector::selectG_INSERT(MachineInstr &I) const {
 }
 
 bool AMDGPUInstructionSelector::selectG_INTRINSIC(MachineInstr &I) const {
-  unsigned IntrinsicID =  I.getOperand(I.getNumExplicitDefs()).getIntrinsicID();
+  unsigned IntrinsicID = I.getIntrinsicID();
   switch (IntrinsicID) {
   case Intrinsic::amdgcn_if_break: {
     MachineBasicBlock *BB = I.getParent();
@@ -762,16 +762,20 @@ static bool isZero(Register Reg, MachineRegisterInfo &MRI) {
   return mi_match(Reg, MRI, m_Copy(m_ICst(C))) && C == 0;
 }
 
-static unsigned extractGLC(unsigned CachePolicy) {
-  return CachePolicy & 1;
+static unsigned extractGLC(unsigned AuxiliaryData) {
+  return AuxiliaryData & 1;
 }
 
-static unsigned extractSLC(unsigned CachePolicy) {
-  return (CachePolicy >> 1) & 1;
+static unsigned extractSLC(unsigned AuxiliaryData) {
+  return (AuxiliaryData >> 1) & 1;
 }
 
-static unsigned extractDLC(unsigned CachePolicy) {
-  return (CachePolicy >> 2) & 1;
+static unsigned extractDLC(unsigned AuxiliaryData) {
+  return (AuxiliaryData >> 2) & 1;
+}
+
+static unsigned extractSWZ(unsigned AuxiliaryData) {
+  return (AuxiliaryData >> 3) & 1;
 }
 
 // Returns Base register, constant offset, and offset def point.
@@ -970,7 +974,7 @@ bool AMDGPUInstructionSelector::selectStoreIntrinsic(MachineInstr &MI,
   Register RSrc = MI.getOperand(2).getReg();
   Register VOffset = MI.getOperand(3).getReg();
   Register SOffset = MI.getOperand(4).getReg();
-  unsigned CachePolicy = MI.getOperand(5).getImm();
+  unsigned AuxiliaryData = MI.getOperand(5).getImm();
   unsigned ImmOffset;
   unsigned TotalOffset;
 
@@ -994,10 +998,11 @@ bool AMDGPUInstructionSelector::selectStoreIntrinsic(MachineInstr &MI,
   MIB.addUse(RSrc)
      .addUse(SOffset)
      .addImm(ImmOffset)
-     .addImm(extractGLC(CachePolicy))
-     .addImm(extractSLC(CachePolicy))
+     .addImm(extractGLC(AuxiliaryData))
+     .addImm(extractSLC(AuxiliaryData))
      .addImm(0) // tfe: FIXME: Remove from inst
-     .addImm(extractDLC(CachePolicy))
+     .addImm(extractDLC(AuxiliaryData))
+     .addImm(extractSWZ(AuxiliaryData))
      .addMemOperand(MMO);
 
   MI.eraseFromParent();

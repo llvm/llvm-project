@@ -78,7 +78,7 @@ body: |
 
   bb.1:
     successors: %bb.2
-    BUFFER_STORE_DWORD_OFFEN_exact killed renamable $vgpr3, renamable $vgpr2, renamable $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFEN_exact killed renamable $vgpr3, renamable $vgpr2, renamable $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, 0, 0, 0, implicit $exec
 
   bb.2:
     successors: %bb.3, %bb.6
@@ -86,7 +86,7 @@ body: |
 
   bb.3:
     successors: %bb.4, %bb.5
-    BUFFER_STORE_DWORD_OFFEN_exact killed renamable $vgpr3, killed renamable $vgpr2, killed renamable $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFEN_exact killed renamable $vgpr3, killed renamable $vgpr2, killed renamable $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     S_CBRANCH_VCCNZ %bb.5, implicit $vcc
 
   bb.4:

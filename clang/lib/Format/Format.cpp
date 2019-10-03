@@ -67,10 +67,19 @@ template <> struct ScalarEnumerationTraits<FormatStyle::LanguageKind> {
 
 template <> struct ScalarEnumerationTraits<FormatStyle::LanguageStandard> {
   static void enumeration(IO &IO, FormatStyle::LanguageStandard &Value) {
-    IO.enumCase(Value, "Cpp03", FormatStyle::LS_Cpp03);
-    IO.enumCase(Value, "C++03", FormatStyle::LS_Cpp03);
-    IO.enumCase(Value, "Cpp11", FormatStyle::LS_Cpp11);
-    IO.enumCase(Value, "C++11", FormatStyle::LS_Cpp11);
+    IO.enumCase(Value, "c++03", FormatStyle::LS_Cpp03);
+    IO.enumCase(Value, "C++03", FormatStyle::LS_Cpp03); // Legacy alias
+    IO.enumCase(Value, "Cpp03", FormatStyle::LS_Cpp03); // Legacy alias
+
+    IO.enumCase(Value, "c++11", FormatStyle::LS_Cpp11);
+    IO.enumCase(Value, "C++11", FormatStyle::LS_Cpp11); // Legacy alias
+
+    IO.enumCase(Value, "c++14", FormatStyle::LS_Cpp14);
+    IO.enumCase(Value, "c++17", FormatStyle::LS_Cpp17);
+    IO.enumCase(Value, "c++20", FormatStyle::LS_Cpp20);
+
+    IO.enumCase(Value, "Latest", FormatStyle::LS_Latest);
+    IO.enumCase(Value, "Cpp11", FormatStyle::LS_Latest); // Legacy alias
     IO.enumCase(Value, "Auto", FormatStyle::LS_Auto);
   }
 };
@@ -756,7 +765,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.ObjCSpaceBeforeProtocolList = true;
   LLVMStyle.PointerAlignment = FormatStyle::PAS_Right;
   LLVMStyle.SpacesBeforeTrailingComments = 1;
-  LLVMStyle.Standard = FormatStyle::LS_Cpp11;
+  LLVMStyle.Standard = FormatStyle::LS_Latest;
   LLVMStyle.UseTab = FormatStyle::UT_Never;
   LLVMStyle.ReflowComments = true;
   LLVMStyle.SpacesInParentheses = false;
@@ -1399,7 +1408,7 @@ private:
                                    : FormatStyle::PAS_Right;
     if (Style.Standard == FormatStyle::LS_Auto)
       Style.Standard = hasCpp03IncompatibleFormat(AnnotatedLines)
-                           ? FormatStyle::LS_Cpp11
+                           ? FormatStyle::LS_Latest
                            : FormatStyle::LS_Cpp03;
     BinPackInconclusiveFunctions =
         HasBinPackedFunction || !HasOnePerLineFunction;
@@ -1825,6 +1834,28 @@ FindCursorIndex(const SmallVectorImpl<IncludeDirective> &Includes,
   return std::make_pair(CursorIndex, OffsetToEOL);
 }
 
+// Replace all "\r\n" with "\n".
+std::string replaceCRLF(const std::string &Code) {
+  std::string NewCode;
+  size_t Pos = 0, LastPos = 0;
+
+  do {
+    Pos = Code.find("\r\n", LastPos);
+    if (Pos == LastPos) {
+      LastPos++;
+      continue;
+    }
+    if (Pos == std::string::npos) {
+      NewCode += Code.substr(LastPos);
+      break;
+    }
+    NewCode += Code.substr(LastPos, Pos - LastPos) + "\n";
+    LastPos = Pos + 2;
+  } while (Pos != std::string::npos);
+
+  return NewCode;
+}
+
 // Sorts and deduplicate a block of includes given by 'Includes' alphabetically
 // adding the necessary replacement to 'Replaces'. 'Includes' must be in strict
 // source order.
@@ -1898,7 +1929,8 @@ static void sortCppIncludes(const FormatStyle &Style,
 
   // If the #includes are out of order, we generate a single replacement fixing
   // the entire range of blocks. Otherwise, no replacement is generated.
-  if (result == Code.substr(IncludesBeginOffset, IncludesBlockSize))
+  if (replaceCRLF(result) ==
+      replaceCRLF(Code.substr(IncludesBeginOffset, IncludesBlockSize)))
     return;
 
   auto Err = Replaces.add(tooling::Replacement(
@@ -2066,7 +2098,8 @@ static void sortJavaImports(const FormatStyle &Style,
 
   // If the imports are out of order, we generate a single replacement fixing
   // the entire block. Otherwise, no replacement is generated.
-  if (result == Code.substr(Imports.front().Offset, ImportsBlockSize))
+  if (replaceCRLF(result) ==
+      replaceCRLF(Code.substr(Imports.front().Offset, ImportsBlockSize)))
     return;
 
   auto Err = Replaces.add(tooling::Replacement(FileName, Imports.front().Offset,
@@ -2356,7 +2389,7 @@ reformat(const FormatStyle &Style, StringRef Code,
 
   auto Env =
       std::make_unique<Environment>(Code, FileName, Ranges, FirstStartColumn,
-                                     NextStartColumn, LastStartColumn);
+                                    NextStartColumn, LastStartColumn);
   llvm::Optional<std::string> CurrentCode = None;
   tooling::Replacements Fixes;
   unsigned Penalty = 0;
@@ -2431,14 +2464,18 @@ tooling::Replacements sortUsingDeclarations(const FormatStyle &Style,
 
 LangOptions getFormattingLangOpts(const FormatStyle &Style) {
   LangOptions LangOpts;
-  FormatStyle::LanguageStandard LexingStd =
-      Style.Standard == FormatStyle::LS_Auto ? FormatStyle::LS_Cpp11
-                                             : Style.Standard;
+
+  FormatStyle::LanguageStandard LexingStd = Style.Standard;
+  if (LexingStd == FormatStyle::LS_Auto)
+    LexingStd = FormatStyle::LS_Latest;
+  if (LexingStd == FormatStyle::LS_Latest)
+    LexingStd = FormatStyle::LS_Cpp20;
   LangOpts.CPlusPlus = 1;
   LangOpts.CPlusPlus11 = LexingStd >= FormatStyle::LS_Cpp11;
-  LangOpts.CPlusPlus14 = LexingStd >= FormatStyle::LS_Cpp11;
-  LangOpts.CPlusPlus17 = LexingStd >= FormatStyle::LS_Cpp11;
-  LangOpts.CPlusPlus2a = LexingStd >= FormatStyle::LS_Cpp11;
+  LangOpts.CPlusPlus14 = LexingStd >= FormatStyle::LS_Cpp14;
+  LangOpts.CPlusPlus17 = LexingStd >= FormatStyle::LS_Cpp17;
+  LangOpts.CPlusPlus2a = LexingStd >= FormatStyle::LS_Cpp20;
+
   LangOpts.LineComment = 1;
   bool AlternativeOperators = Style.isCpp();
   LangOpts.CXXOperatorNames = AlternativeOperators ? 1 : 0;

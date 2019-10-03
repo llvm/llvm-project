@@ -14,7 +14,7 @@ using namespace clang::ast_matchers;
 
 namespace clang {
 namespace tidy {
-namespace objc {
+namespace darwin {
 
 void AvoidSpinlockCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
@@ -31,6 +31,6 @@ void AvoidSpinlockCheck::check(const MatchFinder::MatchResult &Result) {
        "deprecated OSSpinLock");
 }
 
-}  // namespace objc
+}  // namespace darwin
 }  // namespace tidy
 }  // namespace clang

@@ -43,7 +43,7 @@ public:
 
   bool IsValid() const override { return GetValue() && GetValue() != Py_None; }
 
-  void Dump(Stream &s, bool pretty_print = true) const override;
+  void Serialize(llvm::json::OStream &s) const override;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(StructuredPythonObject);
@@ -465,8 +465,6 @@ public:
 
   void Reset(PyRefType type, PyObject *py_obj) override;
   void Reset(File &file, const char *mode);
-
-  static uint32_t GetOptionsFromMode(llvm::StringRef mode);
 
   lldb::FileUP GetUnderlyingFile() const;
 };

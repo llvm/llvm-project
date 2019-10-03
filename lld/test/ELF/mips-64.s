@@ -4,7 +4,7 @@
 # RUN: llvm-mc -filetype=obj -triple=mips64-unknown-linux %s -o %t.o
 # RUN: ld.lld -shared %t.o -o %t.so
 # RUN: llvm-objdump -s -t %t.so | FileCheck -check-prefix=SYM %s
-# RUN: llvm-readelf -r -s --dynamic-table --mips-plt-got %t.so | FileCheck %s
+# RUN: llvm-readelf -r -s --dynamic-table -A %t.so | FileCheck %s
 
   .data
   .globl v2

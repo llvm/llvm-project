@@ -1834,8 +1834,8 @@ Sema::AccessResult Sema::CheckBaseClassAccess(SourceLocation AccessLoc,
     return AR_accessible;
 
   CXXRecordDecl *BaseD, *DerivedD;
-  BaseD = cast<CXXRecordDecl>(Base->getAs<RecordType>()->getDecl());
-  DerivedD = cast<CXXRecordDecl>(Derived->getAs<RecordType>()->getDecl());
+  BaseD = cast<CXXRecordDecl>(Base->castAs<RecordType>()->getDecl());
+  DerivedD = cast<CXXRecordDecl>(Derived->castAs<RecordType>()->getDecl());
 
   AccessTarget Entity(Context, AccessTarget::Base, BaseD, DerivedD,
                       Path.Access);

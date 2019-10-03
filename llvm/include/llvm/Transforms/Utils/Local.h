@@ -412,8 +412,7 @@ void removeUnwindEdge(BasicBlock *BB, DomTreeUpdater *DTU = nullptr);
 /// Remove all blocks that can not be reached from the function's entry.
 ///
 /// Returns true if any basic block was removed.
-bool removeUnreachableBlocks(Function &F, LazyValueInfo *LVI = nullptr,
-                             DomTreeUpdater *DTU = nullptr,
+bool removeUnreachableBlocks(Function &F, DomTreeUpdater *DTU = nullptr,
                              MemorySSAUpdater *MSSAU = nullptr);
 
 /// Combine the metadata of two instructions so that K can replace J. Some

@@ -519,9 +519,16 @@ static void dumpObject(const ObjectFile *Obj, ScopedPrinter &Writer,
   if (Obj->isELF()) {
     if (opts::ELFLinkerOptions)
       Dumper->printELFLinkerOptions();
-    if (opts::ArchSpecificInfo)
+    if (opts::ArchSpecificInfo) {
       if (Obj->getArch() == llvm::Triple::arm)
         Dumper->printAttributes();
+      else if (isMipsArch(Obj->getArch())) {
+        Dumper->printMipsABIFlags();
+        Dumper->printMipsOptions();
+        Dumper->printMipsReginfo();
+        Dumper->printMipsPLTGOT();
+      }
+    }
     if (isMipsArch(Obj->getArch())) {
       if (opts::MipsPLTGOT)
         Dumper->printMipsPLTGOT();

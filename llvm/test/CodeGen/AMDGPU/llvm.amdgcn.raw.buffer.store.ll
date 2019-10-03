@@ -276,6 +276,37 @@ main_body:
   ret void
 }
 
+;CHECK-LABEL: {{^}}raw_buffer_store_x1_offset_merged:
+;CHECK-NOT: s_waitcnt
+;CHECK-DAG: buffer_store_dwordx4 v[{{[0-9]}}:{{[0-9]}}], off, s[0:3], 0 offset:4
+;CHECK-DAG: buffer_store_dwordx2 v[{{[0-9]}}:{{[0-9]}}], off, s[0:3], 0 offset:28
+define amdgpu_ps void @raw_buffer_store_x1_offset_merged(<4 x i32> inreg %rsrc, float %v1, float %v2, float %v3, float %v4, float %v5, float %v6) {
+  call void @llvm.amdgcn.raw.buffer.store.f32(float %v1, <4 x i32> %rsrc, i32 4, i32 0, i32 0)
+  call void @llvm.amdgcn.raw.buffer.store.f32(float %v2, <4 x i32> %rsrc, i32 8, i32 0, i32 0)
+  call void @llvm.amdgcn.raw.buffer.store.f32(float %v3, <4 x i32> %rsrc, i32 12, i32 0, i32 0)
+  call void @llvm.amdgcn.raw.buffer.store.f32(float %v4, <4 x i32> %rsrc, i32 16, i32 0, i32 0)
+  call void @llvm.amdgcn.raw.buffer.store.f32(float %v5, <4 x i32> %rsrc, i32 28, i32 0, i32 0)
+  call void @llvm.amdgcn.raw.buffer.store.f32(float %v6, <4 x i32> %rsrc, i32 32, i32 0, i32 0)
+  ret void
+}
+
+;CHECK-LABEL: {{^}}raw_buffer_store_x1_offset_swizzled_not_merged:
+;CHECK-DAG: buffer_store_dword v{{[0-9]}}, off, s[0:3], 0 offset:4
+;CHECK-DAG: buffer_store_dword v{{[0-9]}}, off, s[0:3], 0 offset:8
+;CHECK-DAG: buffer_store_dword v{{[0-9]}}, off, s[0:3], 0 offset:12
+;CHECK-DAG: buffer_store_dword v{{[0-9]}}, off, s[0:3], 0 offset:16
+;CHECK-DAG: buffer_store_dword v{{[0-9]}}, off, s[0:3], 0 offset:28
+;CHECK-DAG: buffer_store_dword v{{[0-9]}}, off, s[0:3], 0 offset:32
+define amdgpu_ps void @raw_buffer_store_x1_offset_swizzled_not_merged(<4 x i32> inreg %rsrc, float %v1, float %v2, float %v3, float %v4, float %v5, float %v6) {
+  call void @llvm.amdgcn.raw.buffer.store.f32(float %v1, <4 x i32> %rsrc, i32 4, i32 0, i32 8)
+  call void @llvm.amdgcn.raw.buffer.store.f32(float %v2, <4 x i32> %rsrc, i32 8, i32 0, i32 8)
+  call void @llvm.amdgcn.raw.buffer.store.f32(float %v3, <4 x i32> %rsrc, i32 12, i32 0, i32 8)
+  call void @llvm.amdgcn.raw.buffer.store.f32(float %v4, <4 x i32> %rsrc, i32 16, i32 0, i32 8)
+  call void @llvm.amdgcn.raw.buffer.store.f32(float %v5, <4 x i32> %rsrc, i32 28, i32 0, i32 8)
+  call void @llvm.amdgcn.raw.buffer.store.f32(float %v6, <4 x i32> %rsrc, i32 32, i32 0, i32 8)
+  ret void
+}
+
 declare void @llvm.amdgcn.raw.buffer.store.f32(float, <4 x i32>, i32, i32, i32) #0
 declare void @llvm.amdgcn.raw.buffer.store.v2f32(<2 x float>, <4 x i32>, i32, i32, i32) #0
 declare void @llvm.amdgcn.raw.buffer.store.v4f32(<4 x float>, <4 x i32>, i32, i32, i32) #0

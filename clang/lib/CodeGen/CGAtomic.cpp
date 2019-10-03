@@ -107,7 +107,7 @@ namespace {
         }
         AtomicAlign = ValueAlign = lvalue.getAlignment();
       } else if (lvalue.isVectorElt()) {
-        ValueTy = lvalue.getType()->getAs<VectorType>()->getElementType();
+        ValueTy = lvalue.getType()->castAs<VectorType>()->getElementType();
         ValueSizeInBits = C.getTypeSize(ValueTy);
         AtomicTy = lvalue.getType();
         AtomicSizeInBits = C.getTypeSize(AtomicTy);

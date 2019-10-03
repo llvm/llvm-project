@@ -203,6 +203,25 @@ TEST(MathExtras, PowerOf2Floor) {
   EXPECT_EQ(4U, PowerOf2Floor(7U));
 }
 
+TEST(MathExtras, CTLog2) {
+  EXPECT_EQ(CTLog2<1ULL << 0>(), 0);
+  EXPECT_EQ(CTLog2<1ULL << 1>(), 1);
+  EXPECT_EQ(CTLog2<1ULL << 2>(), 2);
+  EXPECT_EQ(CTLog2<1ULL << 3>(), 3);
+  EXPECT_EQ(CTLog2<1ULL << 4>(), 4);
+  EXPECT_EQ(CTLog2<1ULL << 5>(), 5);
+  EXPECT_EQ(CTLog2<1ULL << 6>(), 6);
+  EXPECT_EQ(CTLog2<1ULL << 7>(), 7);
+  EXPECT_EQ(CTLog2<1ULL << 8>(), 8);
+  EXPECT_EQ(CTLog2<1ULL << 9>(), 9);
+  EXPECT_EQ(CTLog2<1ULL << 10>(), 10);
+  EXPECT_EQ(CTLog2<1ULL << 11>(), 11);
+  EXPECT_EQ(CTLog2<1ULL << 12>(), 12);
+  EXPECT_EQ(CTLog2<1ULL << 13>(), 13);
+  EXPECT_EQ(CTLog2<1ULL << 14>(), 14);
+  EXPECT_EQ(CTLog2<1ULL << 15>(), 15);
+}
+
 TEST(MathExtras, ByteSwap_32) {
   EXPECT_EQ(0x44332211u, ByteSwap_32(0x11223344));
   EXPECT_EQ(0xDDCCBBAAu, ByteSwap_32(0xAABBCCDD));

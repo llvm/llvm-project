@@ -514,15 +514,15 @@ void DAGTypeLegalizer::SplitRes_SELECT(SDNode *N, SDValue &Lo, SDValue &Hi) {
   if (Cond.getValueType().isVector()) {
     if (SDValue Res = WidenVSELECTAndMask(N))
       std::tie(CL, CH) = DAG.SplitVector(Res->getOperand(0), dl);
-    // It seems to improve code to generate two narrow SETCCs as opposed to
-    // splitting a wide result vector.
-    else if (Cond.getOpcode() == ISD::SETCC)
-      SplitVecRes_SETCC(Cond.getNode(), CL, CH);
     // Check if there are already splitted versions of the vector available and
     // use those instead of splitting the mask operand again.
     else if (getTypeAction(Cond.getValueType()) ==
              TargetLowering::TypeSplitVector)
       GetSplitVector(Cond, CL, CH);
+    // It seems to improve code to generate two narrow SETCCs as opposed to
+    // splitting a wide result vector.
+    else if (Cond.getOpcode() == ISD::SETCC)
+      SplitVecRes_SETCC(Cond.getNode(), CL, CH);
     else
       std::tie(CL, CH) = DAG.SplitVector(Cond, dl);
   }

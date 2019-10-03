@@ -194,6 +194,7 @@ Clang-Tidy Checks
    cppcoreguidelines-avoid-magic-numbers (redirects to readability-magic-numbers) <cppcoreguidelines-avoid-magic-numbers>
    cppcoreguidelines-c-copy-assignment-signature (redirects to misc-unconventional-assign-operator) <cppcoreguidelines-c-copy-assignment-signature>
    cppcoreguidelines-explicit-virtual-functions (redirects to modernize-use-override) <cppcoreguidelines-explicit-virtual-functions>
+   cppcoreguidelines-init-variables
    cppcoreguidelines-interfaces-global-init
    cppcoreguidelines-macro-usage
    cppcoreguidelines-narrowing-conversions
@@ -212,6 +213,7 @@ Clang-Tidy Checks
    cppcoreguidelines-pro-type-vararg
    cppcoreguidelines-slicing
    cppcoreguidelines-special-member-functions
+   darwin-avoid-spinlock
    darwin-dispatch-once-nonstatic
    fuchsia-default-arguments-calls
    fuchsia-default-arguments-declarations
@@ -325,7 +327,6 @@ Clang-Tidy Checks
    mpi-buffer-deref
    mpi-type-mismatch
    objc-avoid-nserror-init
-   objc-avoid-spinlock
    objc-forbidden-subclassing
    objc-missing-hash
    objc-property-declaration

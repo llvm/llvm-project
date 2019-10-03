@@ -110,7 +110,10 @@ class Value;
     ///
     /// Based on the blocks used when constructing the code extractor,
     /// determine whether it is eligible for extraction.
-    bool isEligible() const { return !Blocks.empty(); }
+    /// 
+    /// Checks that varargs handling (with vastart and vaend) is only done in
+    /// the outlined blocks.
+    bool isEligible() const;
 
     /// Compute the set of input values and output values for the code.
     ///

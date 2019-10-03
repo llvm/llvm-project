@@ -4,16 +4,16 @@
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-//  
+//
 //  This file implements the "Exception Handling APIs"
 //  https://itanium-cxx-abi.github.io/cxx-abi/abi-eh.html
-//  
+//
 //===----------------------------------------------------------------------===//
 
 #include "cxxabi.h"
 
 #include <exception>        // for std::terminate
-#include <cstring>          // for memset
+#include <string.h>         // for memset
 #include "cxa_exception.h"
 #include "cxa_handlers.h"
 #include "fallback_malloc.h"
@@ -79,9 +79,9 @@ size_t cxa_exception_size_from_exception_thrown_size(size_t size) {
 }
 
 void __setExceptionClass(_Unwind_Exception* unwind_exception, uint64_t newValue) {
-	::memcpy(&unwind_exception->exception_class, &newValue, sizeof(newValue));
-	}
-	
+    ::memcpy(&unwind_exception->exception_class, &newValue, sizeof(newValue));
+}
+
 
 static void setOurExceptionClass(_Unwind_Exception* unwind_exception) {
     __setExceptionClass(unwind_exception, kOurExceptionClass);
@@ -93,17 +93,17 @@ static void setDependentExceptionClass(_Unwind_Exception* unwind_exception) {
 
 //  Is it one of ours?
 uint64_t __getExceptionClass(const _Unwind_Exception* unwind_exception) {
-//	On x86 and some ARM unwinders, unwind_exception->exception_class is
-//		a uint64_t. On other ARM unwinders, it is a char[8]
-//	See: http://infocenter.arm.com/help/topic/com.arm.doc.ihi0038b/IHI0038B_ehabi.pdf
-//	So we just copy it into a uint64_t to be sure.
-	uint64_t exClass;
-	::memcpy(&exClass, &unwind_exception->exception_class, sizeof(exClass));
-	return exClass;
+    // On x86 and some ARM unwinders, unwind_exception->exception_class is
+    // a uint64_t. On other ARM unwinders, it is a char[8].
+    // See: http://infocenter.arm.com/help/topic/com.arm.doc.ihi0038b/IHI0038B_ehabi.pdf
+    // So we just copy it into a uint64_t to be sure.
+    uint64_t exClass;
+    ::memcpy(&exClass, &unwind_exception->exception_class, sizeof(exClass));
+    return exClass;
 }
 
 bool __isOurExceptionClass(const _Unwind_Exception* unwind_exception) {
-    return (__getExceptionClass(unwind_exception) & get_vendor_and_language) == 
+    return (__getExceptionClass(unwind_exception) & get_vendor_and_language) ==
            (kOurExceptionClass                    & get_vendor_and_language);
 }
 
@@ -123,7 +123,7 @@ static inline  int decrementHandlerCount(__cxa_exception *exception) {
 
 /*
     If reason isn't _URC_FOREIGN_EXCEPTION_CAUGHT, then the terminateHandler
-    stored in exc is called.  Otherwise the exceptionDestructor stored in 
+    stored in exc is called.  Otherwise the exceptionDestructor stored in
     exc is called, and then the memory for the exception is deallocated.
 
     This is never called for a __cxa_dependent_exception.
@@ -145,7 +145,7 @@ static _LIBCXXABI_NORETURN void failed_throw(__cxa_exception* exception_header) 
 //      * For purposes of this ABI, several things are considered exception handlers:
 //      ** A terminate() call due to a throw.
 //  and
-//      * Upon entry, Following initialization of the catch parameter, 
+//      * Upon entry, Following initialization of the catch parameter,
 //          a handler must call:
 //      * void *__cxa_begin_catch(void *exceptionObject );
     (void) __cxa_begin_catch(&exception_header->unwindHeader);
@@ -163,13 +163,12 @@ static size_t get_cxa_exception_offset() {
   } __attribute__((aligned));
 
   // Compute the maximum alignment for the target machine.
-  constexpr size_t alignment = std::alignment_of<S>::value;
+  constexpr size_t alignment = alignof(S);
   constexpr size_t excp_size = sizeof(__cxa_exception);
   constexpr size_t aligned_size =
       (excp_size + alignment - 1) / alignment * alignment;
   constexpr size_t offset = aligned_size - excp_size;
-  static_assert((offset == 0 ||
-                 std::alignment_of<_Unwind_Exception>::value < alignment),
+  static_assert((offset == 0 || alignof(_Unwind_Exception) < alignment),
                 "offset is non-zero only if _Unwind_Exception isn't aligned");
   return offset;
 }
@@ -193,7 +192,7 @@ void *__cxa_allocate_exception(size_t thrown_size) throw() {
         std::terminate();
     __cxa_exception *exception_header =
         static_cast<__cxa_exception *>((void *)(raw_buffer + header_offset));
-    std::memset(exception_header, 0, actual_size);
+    ::memset(exception_header, 0, actual_size);
     return thrown_object_from_cxa_exception(exception_header);
 }
 
@@ -216,7 +215,7 @@ void * __cxa_allocate_dependent_exception () {
     void *ptr = __aligned_malloc_with_fallback(actual_size);
     if (NULL == ptr)
         std::terminate();
-    std::memset(ptr, 0, actual_size);
+    ::memset(ptr, 0, actual_size);
     return ptr;
 }
 
@@ -237,15 +236,15 @@ routine never returns.
 The __cxa_throw routine will do the following:
 
 * Obtain the __cxa_exception header from the thrown exception object address,
-which can be computed as follows: 
- __cxa_exception *header = ((__cxa_exception *) thrown_exception - 1); 
+which can be computed as follows:
+ __cxa_exception *header = ((__cxa_exception *) thrown_exception - 1);
 * Save the current unexpected_handler and terminate_handler in the __cxa_exception header.
-* Save the tinfo and dest arguments in the __cxa_exception header. 
+* Save the tinfo and dest arguments in the __cxa_exception header.
 * Set the exception_class field in the unwind header. This is a 64-bit value
 representing the ASCII string "XXXXC++\0", where "XXXX" is a
 vendor-dependent string. That is, for implementations conforming to this
 ABI, the low-order 4 bytes of this 64-bit value will be "C++\0".
-* Increment the uncaught_exception flag. 
+* Increment the uncaught_exception flag.
 * Call _Unwind_RaiseException in the system unwind library, Its argument is the
 pointer to the thrown exception, which __cxa_throw itself received as an argument.
 __Unwind_RaiseException begins the process of stack unwinding, described
@@ -386,7 +385,7 @@ asm (
     "	.popsection"
 );
 #endif  // defined(_LIBCXXABI_ARM_EHABI)
-    
+
 /*
 This routine can catch foreign or native exceptions.  If native, the exception
 can be a primary or dependent variety.  This routine may remain blissfully
@@ -394,7 +393,7 @@ ignorant of whether the native exception is primary or dependent.
 
 If the exception is native:
 * Increment's the exception's handler count.
-* Push the exception on the stack of currently-caught exceptions if it is not 
+* Push the exception on the stack of currently-caught exceptions if it is not
   already there (from a rethrow).
 * Decrements the uncaught_exception count.
 * Returns the adjusted pointer to the exception object, which is stored in
@@ -415,7 +414,7 @@ to terminate or unexpected during unwinding.
   doesn't.  It has a stack of __cxa_exception (which has a next* in it).
 * Do not decrement the uncaught_exception count because we didn't increment it
   in __cxa_throw (or one of our rethrow functions).
-* If we haven't terminated, assume the exception object is just past the 
+* If we haven't terminated, assume the exception object is just past the
   _Unwind_Exception and return a pointer to that.
 */
 void*
@@ -539,7 +538,7 @@ void __cxa_end_catch() {
                     __cxa_decrement_exception_refcount(thrown_object_from_cxa_exception(exception_header));
                 }
             }
-        }       
+        }
         else
         {
             // The foreign exception has not been rethrown.  Pop the stack
@@ -572,10 +571,10 @@ std::type_info *__cxa_current_exception_type() {
 // 2.5.4 Rethrowing Exceptions
 /*  This routine can rethrow native or foreign exceptions.
 If the exception is native:
-* marks the exception object on top of the caughtExceptions stack 
-  (in an implementation-defined way) as being rethrown. 
-* If the caughtExceptions stack is empty, it calls terminate() 
-  (see [C++FDIS] [except.throw], 15.1.8). 
+* marks the exception object on top of the caughtExceptions stack
+  (in an implementation-defined way) as being rethrown.
+* If the caughtExceptions stack is empty, it calls terminate()
+  (see [C++FDIS] [except.throw], 15.1.8).
 * It then calls _Unwind_RaiseException which should not return
    (terminate if it does).
   Note:  exception_header may be masquerading as a __cxa_dependent_exception
@@ -609,7 +608,7 @@ void __cxa_rethrow() {
 #endif
 
     //  If we get here, some kind of unwinding error has occurred.
-    //  There is some weird code generation bug happening with 
+    //  There is some weird code generation bug happening with
     //     Apple clang version 4.0 (tags/Apple/clang-418.0.2) (based on LLVM 3.1svn)
     //     If we call failed_throw here.  Turns up with -O2 or higher, and -Os.
     __cxa_begin_catch(&exception_header->unwindHeader);
@@ -664,7 +663,7 @@ void __cxa_decrement_exception_refcount(void *thrown_object) throw() {
     returns null.
 
     We can use __cxa_get_globals_fast here to get the globals because if there have
-    been no exceptions thrown, ever, on this thread, we can return NULL without 
+    been no exceptions thrown, ever, on this thread, we can return NULL without
     the need to allocate the exception-handling globals.
 */
 void *__cxa_current_primary_exception() throw() {
@@ -697,7 +696,7 @@ static
 void
 dependent_exception_cleanup(_Unwind_Reason_Code reason, _Unwind_Exception* unwind_exception)
 {
-    __cxa_dependent_exception* dep_exception_header = 
+    __cxa_dependent_exception* dep_exception_header =
                       reinterpret_cast<__cxa_dependent_exception*>(unwind_exception + 1) - 1;
     if (_URC_FOREIGN_EXCEPTION_CAUGHT != reason)
         std::__terminate(dep_exception_header->terminateHandler);

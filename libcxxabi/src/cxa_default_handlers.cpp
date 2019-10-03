@@ -8,10 +8,8 @@
 // This file implements the default terminate_handler and unexpected_handler.
 //===----------------------------------------------------------------------===//
 
-#include <stdexcept>
-#include <new>
 #include <exception>
-#include <cstdlib>
+#include <stdlib.h>
 #include "abort_message.h"
 #include "cxxabi.h"
 #include "cxa_handlers.h"
@@ -54,7 +52,7 @@ static void demangling_terminate_handler()
                     name = thrown_type->name();
                 // If the uncaught exception can be caught with std::exception&
                 const __shim_type_info* catch_type =
-				 static_cast<const __shim_type_info*>(&typeid(std::exception));
+                    static_cast<const __shim_type_info*>(&typeid(std::exception));
                 if (catch_type->can_catch(thrown_type, thrown_object))
                 {
                     // Include the what() message from the exception
@@ -87,7 +85,7 @@ static void demangling_unexpected_handler()
 static std::terminate_handler default_terminate_handler = demangling_terminate_handler;
 static std::terminate_handler default_unexpected_handler = demangling_unexpected_handler;
 #else
-static std::terminate_handler default_terminate_handler = std::abort;
+static std::terminate_handler default_terminate_handler = ::abort;
 static std::terminate_handler default_unexpected_handler = std::terminate;
 #endif
 

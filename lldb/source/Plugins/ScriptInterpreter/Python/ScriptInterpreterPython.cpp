@@ -720,9 +720,9 @@ bool ScriptInterpreterPythonImpl::EnterSession(uint16_t on_entry_flags,
 
   PythonDictionary &sys_module_dict = GetSysModuleDictionary();
   if (sys_module_dict.IsValid()) {
-    File in_file(in, false);
-    File out_file(out, false);
-    File err_file(err, false);
+    NativeFile in_file(in, false);
+    NativeFile out_file(out, false);
+    NativeFile err_file(err, false);
 
     lldb::FileSP in_sp;
     lldb::StreamFileSP out_sp;

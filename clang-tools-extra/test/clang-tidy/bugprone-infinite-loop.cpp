@@ -140,6 +140,28 @@ void escape_inside2() {
   } while (i < Limit);
 }
 
+void escape_after1() {
+  int i = 0;
+  int j = 0;
+  int Limit = 10;
+
+  while (i < Limit) {
+    // False negative, but difficult to detect without CFG-based analysis
+  }
+  int *p = &i;
+}
+
+void escape_after2() {
+  int i = 0;
+  int j = 0;
+  int Limit = 10;
+
+  while (i < Limit) {
+    // False negative, but difficult to detect without CFG-based analysis
+  }
+  int &ii = i;
+}
+
 int glob;
 
 void global1(int &x) {

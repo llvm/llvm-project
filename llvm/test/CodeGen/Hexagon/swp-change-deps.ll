@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -hexagon-initial-cfg-cleanup=0 < %s | FileCheck %s
+; RUN: llc -march=hexagon -hexagon-initial-cfg-cleanup=0 < %s -pipeliner-experimental-cg=true | FileCheck %s
 
 ; Test that we generate the correct offsets for loads in the prolog
 ; after removing dependences on a post-increment instructions of the

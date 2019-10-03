@@ -522,65 +522,75 @@ remove_flags("/D_DEBUG" "/MTd" "/MDd" "/MT" "/Md")
 remove_flags(-Wno-pedantic -pedantic-errors -pedantic)
 
 # Required flags ==============================================================
-if (LIBCXX_HAS_MUSL_LIBC OR LIBCXX_TARGETING_CLANG_CL)
-  # musl's pthread implementations uses volatile types in their structs which is
-  # not a constexpr in C++11 but is in C++14, so we use C++14 with musl.
-  set(LIBCXX_STANDARD_VER c++14 CACHE STRING "internal option to change build dialect")
-else()
-  set(LIBCXX_STANDARD_VER c++11 CACHE STRING "internal option to change build dialect")
-endif()
-add_compile_flags_if_supported(-std=${LIBCXX_STANDARD_VER})
-add_compile_flags_if_supported("/std:${LIBCXX_STANDARD_VER}")
-mangle_name("LIBCXX_SUPPORTS_STD_EQ_${LIBCXX_STANDARD_VER}_FLAG" SUPPORTS_DIALECT_NAME)
-mangle_name("LIBCXX_SUPPORTS_STD_COLON_${LIBCXX_STANDARD_VER}_FLAG" SUPPORTS_DIALECT_NAME_MSVC)
-if(NOT ${SUPPORTS_DIALECT_NAME} AND NOT ${SUPPORTS_DIALECT_NAME_MSVC})
-  if(NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC" AND NOT "${CMAKE_CXX_SIMULATE_ID}" STREQUAL "MSVC")
-    message(FATAL_ERROR "C++11 or greater is required but the compiler does not support ${LIBCXX_STANDARD_VER}")
+function(cxx_add_basic_build_flags target)
+  if (LIBCXX_HAS_MUSL_LIBC OR LIBCXX_TARGETING_CLANG_CL)
+    # musl's pthread implementations uses volatile types in their structs which is
+    # not a constexpr in C++11 but is in C++14, so we use C++14 with musl.
+    set(LIBCXX_STANDARD_VER c++14 CACHE STRING "internal option to change build dialect")
+  else()
+    set(LIBCXX_STANDARD_VER c++11 CACHE STRING "internal option to change build dialect")
   endif()
-endif()
+  target_add_compile_flags_if_supported(${target} PRIVATE -std=${LIBCXX_STANDARD_VER})
+  target_add_compile_flags_if_supported(${target} PRIVATE "/std:${LIBCXX_STANDARD_VER}")
+  mangle_name("LIBCXX_SUPPORTS_STD_EQ_${LIBCXX_STANDARD_VER}_FLAG" SUPPORTS_DIALECT_NAME)
+  mangle_name("LIBCXX_SUPPORTS_STD_COLON_${LIBCXX_STANDARD_VER}_FLAG" SUPPORTS_DIALECT_NAME_MSVC)
+  if(NOT ${SUPPORTS_DIALECT_NAME} AND NOT ${SUPPORTS_DIALECT_NAME_MSVC})
+    if(NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC" AND NOT "${CMAKE_CXX_SIMULATE_ID}" STREQUAL "MSVC")
+      message(FATAL_ERROR "C++11 or greater is required but the compiler does not support ${LIBCXX_STANDARD_VER}")
+    endif()
+  endif()
 
-# On all systems the system c++ standard library headers need to be excluded.
-# MSVC only has -X, which disables all default includes; including the crt.
-# Thus, we do nothing and hope we don't accidentally include any of the C++
-# headers
-add_compile_flags_if_supported(-nostdinc++)
+  # On all systems the system c++ standard library headers need to be excluded.
+  # MSVC only has -X, which disables all default includes; including the crt.
+  # Thus, we do nothing and hope we don't accidentally include any of the C++
+  # headers
+  target_add_compile_flags_if_supported(${target} PUBLIC -nostdinc++)
 
-# Hide all inline function definitions which have not explicitly been marked
-# visible. This prevents new definitions for inline functions from appearing in
-# the dylib when get ODR used by another function.
-add_compile_flags_if_supported(-fvisibility-inlines-hidden)
+  # Hide all inline function definitions which have not explicitly been marked
+  # visible. This prevents new definitions for inline functions from appearing in
+  # the dylib when get ODR used by another function.
+  target_add_compile_flags_if_supported(${target} PRIVATE -fvisibility-inlines-hidden)
 
-if (LIBCXX_CONFIGURE_IDE)
-  # This simply allows IDE to process <experimental/coroutine>
-  add_compile_flags_if_supported(-fcoroutines-ts)
-endif()
+  # Our visibility annotations are not quite right for non-Clang compilers,
+  # so we end up not exporting all the symbols we should. In the future, we
+  # can improve the situation by providing an explicit list of exported
+  # symbols on all compilers.
+  if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    target_add_compile_flags_if_supported(${target} PRIVATE -fvisibility=hidden)
+  endif()
 
-# Let the library headers know they are currently being used to build the
-# library.
-add_definitions(-D_LIBCPP_BUILDING_LIBRARY)
+  if (LIBCXX_CONFIGURE_IDE)
+    # This simply allows IDE to process <experimental/coroutine>
+    target_add_compile_flags_if_supported(${target} PRIVATE -fcoroutines-ts)
+  endif()
 
-if (NOT LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS)
-  add_definitions(-D_LIBCPP_DISABLE_NEW_DELETE_DEFINITIONS)
-endif()
+  # Let the library headers know they are currently being used to build the
+  # library.
+  target_compile_definitions(${target} PRIVATE -D_LIBCPP_BUILDING_LIBRARY)
 
-if (LIBCXX_HAS_COMMENT_LIB_PRAGMA)
-  add_definitions(-D_LIBCPP_HAS_COMMENT_LIB_PRAGMA)
-endif()
+  if (NOT LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS)
+    target_compile_definitions(${target} PRIVATE -D_LIBCPP_DISABLE_NEW_DELETE_DEFINITIONS)
+  endif()
+
+  if (LIBCXX_HAS_COMMENT_LIB_PRAGMA)
+    target_compile_definitions(${target} PRIVATE -D_LIBCPP_HAS_COMMENT_LIB_PRAGMA)
+  endif()
+endfunction()
 
 # Warning flags ===============================================================
-add_definitions(-D_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-add_compile_flags_if_supported(
-    -Wall -Wextra -W -Wwrite-strings
-    -Wno-unused-parameter -Wno-long-long
-    -Werror=return-type -Wextra-semi)
-if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
-    add_compile_flags_if_supported(
-        -Wno-user-defined-literals
-        -Wno-covered-switch-default
-        -Wno-ignored-attributes # FIXME: Caused by _LIBCPP_NODEBUG_TYPE not being supported on older clangs
-        )
+function(cxx_add_warning_flags target)
+  target_compile_definitions(${target} PUBLIC -D_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+  target_add_compile_flags_if_supported(${target} PRIVATE -Wall -Wextra -W -Wwrite-strings
+                                                          -Wno-unused-parameter -Wno-long-long
+                                                          -Werror=return-type -Wextra-semi)
+  if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+    target_add_compile_flags_if_supported(${target} PRIVATE
+      -Wno-user-defined-literals
+      -Wno-covered-switch-default
+      -Wno-ignored-attributes # FIXME: Caused by _LIBCPP_NODEBUG_TYPE not being supported on older clangs
+    )
     if (LIBCXX_TARGETING_CLANG_CL)
-      add_compile_flags_if_supported(
+      target_add_compile_flags_if_supported(${target} PRIVATE
         -Wno-c++98-compat
         -Wno-c++98-compat-pedantic
         -Wno-c++11-compat
@@ -597,26 +607,27 @@ if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
         -Wno-double-promotion # FIXME: remove me
       )
     endif()
-elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
-    add_compile_flags_if_supported(
-        -Wno-literal-suffix
-        -Wno-c++14-compat
-        -Wno-noexcept-type)
-endif()
-if (LIBCXX_ENABLE_WERROR)
-  add_compile_flags_if_supported(-Werror)
-  add_compile_flags_if_supported(-WX)
-else()
-  # TODO(EricWF) Remove this. We shouldn't be suppressing errors when -Werror is
-  # added elsewhere.
-  add_compile_flags_if_supported(-Wno-error)
-endif()
-if (LIBCXX_ENABLE_PEDANTIC)
-  add_compile_flags_if_supported(-pedantic)
-endif()
-if (LIBCXX_DISABLE_MACRO_CONFLICT_WARNINGS)
-  add_definitions(-D_LIBCPP_DISABLE_MACRO_CONFLICT_WARNINGS)
-endif()
+  elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
+    target_add_compile_flags_if_supported(${target} PRIVATE
+      -Wno-literal-suffix
+      -Wno-c++14-compat
+      -Wno-noexcept-type)
+  endif()
+  if (LIBCXX_ENABLE_WERROR)
+    target_add_compile_flags_if_supported(${target} PRIVATE -Werror)
+    target_add_compile_flags_if_supported(${target} PRIVATE -WX)
+  else()
+    # TODO(EricWF) Remove this. We shouldn't be suppressing errors when -Werror is
+    # added elsewhere.
+    target_add_compile_flags_if_supported(${target} PRIVATE -Wno-error)
+  endif()
+  if (LIBCXX_ENABLE_PEDANTIC)
+    target_add_compile_flags_if_supported(${target} PRIVATE -pedantic)
+  endif()
+  if (LIBCXX_DISABLE_MACRO_CONFLICT_WARNINGS)
+    target_compile_definitions(${target} PRIVATE -D_LIBCPP_DISABLE_MACRO_CONFLICT_WARNINGS)
+  endif()
+endfunction()
 
 # Exception flags =============================================================
 if (LIBCXX_ENABLE_EXCEPTIONS)
@@ -712,6 +723,31 @@ get_sanitizer_flags(SANITIZER_FLAGS "${LLVM_USE_SANITIZER}")
 if (LIBCXX_STANDALONE_BUILD AND SANITIZER_FLAGS)
   add_flags(${SANITIZER_FLAGS})
 endif()
+
+# Windows-related flags =======================================================
+function(cxx_add_windows_flags target)
+  if(WIN32 AND NOT MINGW)
+    target_compile_definitions(${target} PRIVATE
+                                 # Ignore the -MSC_VER mismatch, as we may build
+                                 # with a different compatibility version.
+                                 _ALLOW_MSC_VER_MISMATCH
+                                 # Don't check the msvcprt iterator debug levels
+                                 # as we will define the iterator types; libc++
+                                 # uses a different macro to identify the debug
+                                 # level.
+                                 _ALLOW_ITERATOR_DEBUG_LEVEL_MISMATCH
+                                 # We are building the c++ runtime, don't pull in
+                                 # msvcprt.
+                                 _CRTBLD
+                                 # Don't warn on the use of "deprecated"
+                                 # "insecure" functions which are standards
+                                 # specified.
+                                 _CRT_SECURE_NO_WARNINGS
+                                 # Use the ISO conforming behaviour for conversion
+                                 # in printf, scanf.
+                                 _CRT_STDIO_ISO_WIDE_SPECIFIERS)
+  endif()
+endfunction()
 
 # Configuration file flags =====================================================
 if (NOT LIBCXX_ABI_VERSION EQUAL 1)

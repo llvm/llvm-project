@@ -181,6 +181,7 @@ private:
   Value *optimizeMemSet(CallInst *CI, IRBuilder<> &B);
   Value *optimizeRealloc(CallInst *CI, IRBuilder<> &B);
   Value *optimizeWcslen(CallInst *CI, IRBuilder<> &B);
+  Value *optimizeBCopy(CallInst *CI, IRBuilder<> &B);
   // Wrapper for all String/Memory Library Call Optimizations
   Value *optimizeStringMemoryLibCall(CallInst *CI, IRBuilder<> &B);
 

@@ -62,7 +62,7 @@ static cl::opt<bool> ClMergeInit(
 static cl::opt<unsigned> ClScanLimit("stack-tagging-merge-init-scan-limit",
                                      cl::init(40), cl::Hidden);
 
-static const Align kTagGranuleSize = Align(16);
+static constexpr Align kTagGranuleSize = Align::Constant<16>();
 
 namespace {
 

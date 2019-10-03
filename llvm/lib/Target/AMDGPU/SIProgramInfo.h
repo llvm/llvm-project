@@ -41,6 +41,8 @@ struct SIProgramInfo {
     uint64_t ComputePGMRSrc2 = 0;
 
     uint32_t NumVGPR = 0;
+    uint32_t NumArchVGPR = 0;
+    uint32_t NumAccVGPR = 0;
     uint32_t NumSGPR = 0;
     uint32_t LDSSize = 0;
     bool FlatUsed = false;

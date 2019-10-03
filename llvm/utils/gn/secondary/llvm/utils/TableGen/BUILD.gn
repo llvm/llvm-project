@@ -30,6 +30,7 @@ executable("llvm-tblgen") {
     "ExegesisEmitter.cpp",
     "FastISelEmitter.cpp",
     "FixedLenDecoderEmitter.cpp",
+    "GICombinerEmitter.cpp",
     "GlobalISelEmitter.cpp",
     "InfoByHwMode.cpp",
     "InstrDocsEmitter.cpp",

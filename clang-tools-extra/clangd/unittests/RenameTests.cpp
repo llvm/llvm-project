@@ -95,7 +95,19 @@ TEST(RenameTest, Renameable) {
     const char *Code;
     const char* ErrorMessage; // null if no error
     bool IsHeaderFile;
+    const SymbolIndex *Index;
   };
+  TestTU OtherFile = TestTU::withCode("Outside s; auto ss = &foo;");
+  const char *CommonHeader = R"cpp(
+    class Outside {};
+    void foo();
+  )cpp";
+  OtherFile.HeaderCode = CommonHeader;
+  OtherFile.Filename = "other.cc";
+  // The index has a "Outside" reference and a "foo" reference.
+  auto OtherFileIndex = OtherFile.index();
+  const SymbolIndex *Index = OtherFileIndex.get();
+
   const bool HeaderFile = true;
   Case Cases[] = {
       {R"cpp(// allow -- function-local
@@ -103,59 +115,55 @@ TEST(RenameTest, Renameable) {
           [[Local]] = 2;
         }
       )cpp",
-       nullptr, HeaderFile},
+       nullptr, HeaderFile, Index},
 
       {R"cpp(// allow -- symbol is indexable and has no refs in index.
         void [[On^lyInThisFile]]();
       )cpp",
-       nullptr, HeaderFile},
+       nullptr, HeaderFile, Index},
 
       {R"cpp(// disallow -- symbol is indexable and has other refs in index.
         void f() {
           Out^side s;
         }
       )cpp",
-       "used outside main file", HeaderFile},
+       "used outside main file", HeaderFile, Index},
 
       {R"cpp(// disallow -- symbol is not indexable.
         namespace {
         class Unin^dexable {};
         }
       )cpp",
-       "not eligible for indexing", HeaderFile},
+       "not eligible for indexing", HeaderFile, Index},
 
       {R"cpp(// disallow -- namespace symbol isn't supported
         namespace fo^o {}
       )cpp",
-       "not a supported kind", HeaderFile},
+       "not a supported kind", HeaderFile, Index},
 
       {
           R"cpp(
          #define MACRO 1
          int s = MAC^RO;
        )cpp",
-          "not a supported kind", HeaderFile},
+          "not a supported kind", HeaderFile, Index},
 
       {
 
           R"cpp(
         struct X { X operator++(int) {} };
         void f(X x) {x+^+;})cpp",
-          "not a supported kind", HeaderFile},
+          "not a supported kind", HeaderFile, Index},
 
       {R"cpp(// foo is declared outside the file.
         void fo^o() {}
-      )cpp", "used outside main file", !HeaderFile/*cc file*/},
+      )cpp", "used outside main file", !HeaderFile /*cc file*/, Index},
+
+      {R"cpp(
+         // We should detect the symbol is used outside the file from the AST.
+         void fo^o() {})cpp",
+       "used outside main file", !HeaderFile, nullptr /*no index*/},
   };
-  const char *CommonHeader = R"cpp(
-    class Outside {};
-    void foo();
-  )cpp";
-  TestTU OtherFile = TestTU::withCode("Outside s; auto ss = &foo;");
-  OtherFile.HeaderCode = CommonHeader;
-  OtherFile.Filename = "other.cc";
-  // The index has a "Outside" reference and a "foo" reference.
-  auto OtherFileIndex = OtherFile.index();
 
   for (const auto& Case : Cases) {
     Annotations T(Case.Code);
@@ -170,7 +178,7 @@ TEST(RenameTest, Renameable) {
     auto AST = TU.build();
 
     auto Results = renameWithinFile(AST, testPath(TU.Filename), T.point(),
-                                    "dummyNewName", OtherFileIndex.get());
+                                    "dummyNewName", Case.Index);
     bool WantRename = true;
     if (T.ranges().empty())
       WantRename = false;

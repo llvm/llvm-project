@@ -79,23 +79,26 @@ Improvements to clang-tidy
   Finds obvious infinite loops (loops where the condition variable is not
   changed at all).
 
+- New :doc:`cppcoreguidelines-init-variables
+  <clang-tidy/checks/cppcoreguidelines-init-variables>` check.
+
 - New :doc:`darwin-dispatch-once-nonstatic
   <clang-tidy/checks/darwin-dispatch-once-nonstatic>` check.
 
   Finds declarations of ``dispatch_once_t`` variables without static or global
   storage.
 
-- New :doc:`linuxkernel-must-use-errs
-  <clang-tidy/checks/linuxkernel-must-use-errs>` check.
-
-  Checks Linux kernel code to see if it uses the results from the functions in
-  ``linux/err.h``.
-
 - New :doc:`google-upgrade-googletest-case
   <clang-tidy/checks/google-upgrade-googletest-case>` check.
 
   Finds uses of deprecated Googletest APIs with names containing ``case`` and
   replaces them with equivalent APIs with ``suite``.
+
+- New :doc:`linuxkernel-must-use-errs
+  <clang-tidy/checks/linuxkernel-must-use-errs>` check.
+
+  Checks Linux kernel code to see if it uses the results from the functions in
+  ``linux/err.h``.
 
 - New :doc:`llvm-prefer-register-over-unsigned
   <clang-tidy/checks/llvm-prefer-register-over-unsigned>` check.
@@ -114,6 +117,9 @@ Improvements to clang-tidy
 
   Now also checks if any calls to ``pthread_*`` functions expect negative return
   values.
+
+- The 'objc-avoid-spinlock' check was renamed to :doc:`darwin-avoid-spinlock
+  <clang-tidy/checks/darwin-avoid-spinlock>`
 
 Improvements to include-fixer
 -----------------------------

@@ -12,7 +12,7 @@
 # CHECK: scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
 # CHECK: scratchWaveOffsetReg: '$sgpr50'
 # CHECK: frameOffsetReg:  '$sgpr50'
-# CHECK: renamable $vgpr0 = BUFFER_LOAD_DWORD_OFFEN %stack.0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr50, 4, 0, 0, 0, 0, implicit $exec :: (load 4, addrspace 5)
+# CHECK: renamable $vgpr0 = BUFFER_LOAD_DWORD_OFFEN %stack.0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr50, 4, 0, 0, 0, 0, 0, implicit $exec :: (load 4, addrspace 5)
 name: reserve_correct_register
 tracksRegLiveness: true
 machineFunctionInfo:
@@ -25,6 +25,6 @@ stack:
 
 body:             |
   bb.0:
-    renamable $vgpr0 = BUFFER_LOAD_DWORD_OFFEN %stack.0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr50, 4, 0, 0, 0, 0, implicit $exec :: (load 4, addrspace 5)
+    renamable $vgpr0 = BUFFER_LOAD_DWORD_OFFEN %stack.0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr50, 4, 0, 0, 0, 0, 0, implicit $exec :: (load 4, addrspace 5)
     S_ENDPGM 0
 ...

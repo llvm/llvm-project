@@ -326,13 +326,13 @@ void DwarfCompileUnit::addRange(RangeSpan Range) {
   // emitted into and the subprogram was contained within. If these are the
   // same then extend our current range, otherwise add this as a new range.
   if (CURanges.empty() || !SameAsPrevCU ||
-      (&CURanges.back().getEnd()->getSection() !=
-       &Range.getEnd()->getSection())) {
+      (&CURanges.back().End->getSection() !=
+       &Range.End->getSection())) {
     CURanges.push_back(Range);
     return;
   }
 
-  CURanges.back().setEnd(Range.getEnd());
+  CURanges.back().End = Range.End;
 }
 
 void DwarfCompileUnit::initStmtList() {
@@ -506,7 +506,7 @@ void DwarfCompileUnit::attachRangesOrLowHighPC(
   if (Ranges.size() == 1 || !DD->useRangesSection()) {
     const RangeSpan &Front = Ranges.front();
     const RangeSpan &Back = Ranges.back();
-    attachLowHighPC(Die, Front.getStart(), Back.getEnd());
+    attachLowHighPC(Die, Front.Begin, Back.End);
   } else
     addScopeRangeList(Die, std::move(Ranges));
 }
@@ -516,8 +516,8 @@ void DwarfCompileUnit::attachRangesOrLowHighPC(
   SmallVector<RangeSpan, 2> List;
   List.reserve(Ranges.size());
   for (const InsnRange &R : Ranges)
-    List.push_back(RangeSpan(DD->getLabelBeforeInsn(R.first),
-                             DD->getLabelAfterInsn(R.second)));
+    List.push_back(
+        {DD->getLabelBeforeInsn(R.first), DD->getLabelAfterInsn(R.second)});
   attachRangesOrLowHighPC(Die, std::move(List));
 }
 

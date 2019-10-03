@@ -532,6 +532,15 @@ inline double Log2(double Value) {
 #endif
 }
 
+/// Return the compile time log base 2 of the specified Value.
+/// `kValue` has to be a power of two.
+template <uint64_t kValue> static constexpr inline uint8_t CTLog2() {
+  static_assert(kValue > 0 && llvm::isPowerOf2_64(kValue),
+                "Value is not a valid power of 2");
+  return 1 + CTLog2<kValue / 2>();
+}
+template <> constexpr inline uint8_t CTLog2<1>() { return 0; }
+
 /// Return the floor log base 2 of the specified value, -1 if the value is zero.
 /// (32 bit edition.)
 /// Ex. Log2_32(32) == 5, Log2_32(1) == 0, Log2_32(0) == -1, Log2_32(6) == 2

@@ -8,7 +8,7 @@
 # RUN: ld.lld %t.so.o -shared -soname=t.so -o %t.so
 # RUN: ld.lld %t.exe.o --script %t.script %t.so -o %t.exe
 # RUN: llvm-objdump -d -t --no-show-raw-insn %t.exe | FileCheck %s
-# RUN: llvm-readelf -r -s --mips-plt-got %t.exe | FileCheck -check-prefix=GOT %s
+# RUN: llvm-readelf -r -s -A %t.exe | FileCheck -check-prefix=GOT %s
 
 # CHECK:      __start:
 # CHECK-NEXT:    {{.*}}  ld      $2, -32736($gp)

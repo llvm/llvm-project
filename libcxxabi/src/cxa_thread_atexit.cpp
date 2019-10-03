@@ -15,7 +15,7 @@
 #endif
 #endif
 
-#include <cstdlib>
+#include <stdlib.h>
 
 namespace __cxxabiv1 {
 
@@ -77,7 +77,7 @@ namespace {
     while (auto head = dtors) {
       dtors = head->next;
       head->dtor(head->obj);
-      std::free(head);
+      ::free(head);
     }
 
     dtors_alive = false;
@@ -126,7 +126,7 @@ extern "C" {
         dtors_alive = true;
       }
 
-      auto head = static_cast<DtorList*>(std::malloc(sizeof(DtorList)));
+      auto head = static_cast<DtorList*>(::malloc(sizeof(DtorList)));
       if (!head) {
         return -1;
       }

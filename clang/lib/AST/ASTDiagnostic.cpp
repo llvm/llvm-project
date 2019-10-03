@@ -154,7 +154,7 @@ Underlying = CTy->desugar(); \
 } \
 break; \
 }
-#include "clang/AST/TypeNodes.def"
+#include "clang/AST/TypeNodes.inc"
     }
 
     // If it wasn't sugared, we're done.

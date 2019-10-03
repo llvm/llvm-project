@@ -44,6 +44,16 @@ TEST(AlignmentTest, ValidCTors) {
   }
 }
 
+TEST(AlignmentTest, CompileTimeConstant) {
+  EXPECT_EQ(Align::Constant<1>(), Align(1));
+  EXPECT_EQ(Align::Constant<2>(), Align(2));
+  EXPECT_EQ(Align::Constant<4>(), Align(4));
+  EXPECT_EQ(Align::Constant<8>(), Align(8));
+  EXPECT_EQ(Align::Constant<16>(), Align(16));
+  EXPECT_EQ(Align::Constant<32>(), Align(32));
+  EXPECT_EQ(Align::Constant<64>(), Align(64));
+}
+
 TEST(AlignmentTest, CheckMaybeAlignHasValue) {
   EXPECT_TRUE(MaybeAlign(1));
   EXPECT_TRUE(MaybeAlign(1).hasValue());

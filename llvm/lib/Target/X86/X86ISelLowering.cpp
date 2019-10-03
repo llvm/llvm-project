@@ -5769,23 +5769,35 @@ static SDValue insert1BitVector(SDValue Op, SelectionDAG &DAG,
 
   // Widen the vector if needed.
   Vec = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, WideOpVT, Undef, Vec, ZeroIdx);
-  // Move the current value of the bit to be replace to the lsbs.
-  Op = DAG.getNode(X86ISD::KSHIFTR, dl, WideOpVT, Vec,
-                   DAG.getTargetConstant(IdxVal, dl, MVT::i8));
-  // Xor with the new bit.
-  Op = DAG.getNode(ISD::XOR, dl, WideOpVT, Op, SubVec);
-  // Shift to MSB, filling bottom bits with 0.
+
+  // Clear the upper bits of the subvector and move it to its insert position.
   unsigned ShiftLeft = NumElems - SubVecNumElems;
-  Op = DAG.getNode(X86ISD::KSHIFTL, dl, WideOpVT, Op,
-                   DAG.getTargetConstant(ShiftLeft, dl, MVT::i8));
-  // Shift to the final position, filling upper bits with 0.
+  SubVec = DAG.getNode(X86ISD::KSHIFTL, dl, WideOpVT, SubVec,
+                       DAG.getTargetConstant(ShiftLeft, dl, MVT::i8));
   unsigned ShiftRight = NumElems - SubVecNumElems - IdxVal;
-  Op = DAG.getNode(X86ISD::KSHIFTR, dl, WideOpVT, Op,
-                   DAG.getTargetConstant(ShiftRight, dl, MVT::i8));
-  // Xor with original vector leaving the new value.
-  Op = DAG.getNode(ISD::XOR, dl, WideOpVT, Vec, Op);
+  SubVec = DAG.getNode(X86ISD::KSHIFTR, dl, WideOpVT, SubVec,
+                       DAG.getTargetConstant(ShiftRight, dl, MVT::i8));
+
+  // Isolate the bits below the insertion point.
+  unsigned LowShift = NumElems - IdxVal;
+  SDValue Low = DAG.getNode(X86ISD::KSHIFTL, dl, WideOpVT, Vec,
+                            DAG.getTargetConstant(LowShift, dl, MVT::i8));
+  Low = DAG.getNode(X86ISD::KSHIFTR, dl, WideOpVT, Low,
+                    DAG.getTargetConstant(LowShift, dl, MVT::i8));
+
+  // Isolate the bits after the last inserted bit.
+  unsigned HighShift = IdxVal + SubVecNumElems;
+  SDValue High = DAG.getNode(X86ISD::KSHIFTR, dl, WideOpVT, Vec,
+                            DAG.getTargetConstant(HighShift, dl, MVT::i8));
+  High = DAG.getNode(X86ISD::KSHIFTL, dl, WideOpVT, High,
+                    DAG.getTargetConstant(HighShift, dl, MVT::i8));
+
+  // Now OR all 3 pieces together.
+  Vec = DAG.getNode(ISD::OR, dl, WideOpVT, Low, High);
+  SubVec = DAG.getNode(ISD::OR, dl, WideOpVT, SubVec, Vec);
+
   // Reduce to original width if needed.
-  return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, OpVT, Op, ZeroIdx);
+  return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, OpVT, SubVec, ZeroIdx);
 }
 
 static SDValue concatSubVectors(SDValue V1, SDValue V2, SelectionDAG &DAG,
@@ -35403,6 +35415,21 @@ static SDValue combineBitcast(SDNode *N, SelectionDAG &DAG,
     return DAG.getNode(ISD::TRUNCATE, SDLoc(N), VT,
                        DAG.getBitcast(MVT::i16, N0.getOperand(0)));
 
+  // Combine (bitcast (vbroadcast_load)) -> (vbroadcast_load). The memory VT
+  // determines // the number of bits loaded. Remaining bits are zero.
+  if (N0.getOpcode() == X86ISD::VBROADCAST_LOAD && N0.hasOneUse() &&
+      VT.getScalarSizeInBits() == SrcVT.getScalarSizeInBits()) {
+    auto *BCast = cast<MemIntrinsicSDNode>(N0);
+    SDVTList Tys = DAG.getVTList(VT, MVT::Other);
+    SDValue Ops[] = { BCast->getChain(), BCast->getBasePtr() };
+    SDValue ResNode =
+        DAG.getMemIntrinsicNode(X86ISD::VBROADCAST_LOAD, SDLoc(N), Tys, Ops,
+                                VT.getVectorElementType(),
+                                BCast->getMemOperand());
+    DAG.ReplaceAllUsesOfValueWith(SDValue(BCast, 1), ResNode.getValue(1));
+    return ResNode;
+  }
+
   // Since MMX types are special and don't usually play with other vector types,
   // it's better to handle them early to be sure we emit efficient code by
   // avoiding store-load conversions.
@@ -42441,6 +42468,40 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
   SDValue Mask = GorS->getMask();
   SDValue Base = GorS->getBasePtr();
   SDValue Scale = GorS->getScale();
+
+  // Shrink constant indices if they are larger than 32-bits.
+  // Only do this before legalize types since v2i64 could become v2i32.
+  // FIXME: We could check that the type is legal if we're after legalize types,
+  // but then we would need to construct test cases where that happens.
+  // FIXME: We could support more than just constant vectors, but we need to
+  // careful with costing. A truncate that can be optimized out would be fine.
+  // Otherwise we might only want to create a truncate if it avoids a split.
+  if (DCI.isBeforeLegalize()) {
+    if (auto *BV = dyn_cast<BuildVectorSDNode>(Index)) {
+      unsigned IndexWidth = Index.getScalarValueSizeInBits();
+      if (BV->isConstant() && IndexWidth > 32 &&
+          DAG.ComputeNumSignBits(Index) > (IndexWidth - 32)) {
+        unsigned NumElts = Index.getValueType().getVectorNumElements();
+        EVT NewVT = EVT::getVectorVT(*DAG.getContext(), MVT::i32, NumElts);
+        Index = DAG.getNode(ISD::TRUNCATE, DL, NewVT, Index);
+        if (auto *Gather = dyn_cast<MaskedGatherSDNode>(GorS)) {
+          SDValue Ops[] = { Chain, Gather->getPassThru(),
+                            Mask, Base, Index, Scale } ;
+          return DAG.getMaskedGather(Gather->getVTList(),
+                                     Gather->getMemoryVT(), DL, Ops,
+                                     Gather->getMemOperand(),
+                                     Gather->getIndexType());
+        }
+        auto *Scatter = cast<MaskedScatterSDNode>(GorS);
+        SDValue Ops[] = { Chain, Scatter->getValue(),
+                          Mask, Base, Index, Scale };
+        return DAG.getMaskedScatter(Scatter->getVTList(),
+                                    Scatter->getMemoryVT(), DL,
+                                    Ops, Scatter->getMemOperand(),
+                                    Scatter->getIndexType());
+      }
+    }
+  }
 
   if (DCI.isBeforeLegalizeOps()) {
     // Remove any sign extends from 32 or smaller to larger than 32.

@@ -126,7 +126,7 @@ using CanQualType = CanQual<Type>;
 
 // Provide forward declarations for all of the *Type classes.
 #define TYPE(Class, Base) class Class##Type;
-#include "clang/AST/TypeNodes.def"
+#include "clang/AST/TypeNodes.inc"
 
 /// The collection of all-type qualifiers we support.
 /// Clang supports five independent qualifiers:
@@ -1437,10 +1437,9 @@ class alignas(8) Type : public ExtQualsTypeCommonBase {
 public:
   enum TypeClass {
 #define TYPE(Class, Base) Class,
-#define LAST_TYPE(Class) TypeLast = Class,
+#define LAST_TYPE(Class) TypeLast = Class
 #define ABSTRACT_TYPE(Class, Base)
-#include "clang/AST/TypeNodes.def"
-    TagFirst = Record, TagLast = Enum
+#include "clang/AST/TypeNodes.inc"
   };
 
 private:
@@ -2420,7 +2419,7 @@ template <> inline const Class##Type *Type::getAs() const { \
 template <> inline const Class##Type *Type::castAs() const { \
   return cast<Class##Type>(CanonicalType); \
 }
-#include "clang/AST/TypeNodes.def"
+#include "clang/AST/TypeNodes.inc"
 
 /// This class is used for builtin types like 'int'.  Builtin
 /// types are always canonical and have a literal name field.
@@ -4436,7 +4435,7 @@ public:
   bool isBeingDefined() const;
 
   static bool classof(const Type *T) {
-    return T->getTypeClass() >= TagFirst && T->getTypeClass() <= TagLast;
+    return T->getTypeClass() == Enum || T->getTypeClass() == Record;
   }
 };
 

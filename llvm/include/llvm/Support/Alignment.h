@@ -58,10 +58,10 @@ public:
   constexpr Align() = default;
   /// Do not perform checks in case of copy/move construct/assign, because the
   /// checks have been performed when building `Other`.
-  Align(const Align &Other) = default;
-  Align &operator=(const Align &Other) = default;
-  Align(Align &&Other) = default;
-  Align &operator=(Align &&Other) = default;
+  constexpr Align(const Align &Other) = default;
+  constexpr Align &operator=(const Align &Other) = default;
+  constexpr Align(Align &&Other) = default;
+  constexpr Align &operator=(Align &&Other) = default;
 
   explicit Align(uint64_t Value) {
     assert(Value > 0 && "Value must not be 0");
@@ -80,6 +80,24 @@ public:
   /// would be better than
   /// `if (A > Align(1))`
   constexpr static const Align None() { return Align(); }
+
+  /// This function is useful when initializing constexpr Align constants.
+  /// e.g. static constexpr Align kAlign16 = Align::Constant<16>();
+  /// Most compilers (clang, gcc, icc) will be able to compute `ShiftValue`
+  /// at compile time with `Align::Align(uint64_t Value)` but to be
+  /// able to use Align as a constexpr constant use this method.
+  /// FIXME: When LLVM is C++17 ready `Align::Align(uint64_t Value)`
+  /// can be constexpr and we can dispatch between runtime (Log2_64) vs
+  /// compile time (CTLog2) versions using constexpr-if. Then this
+  /// function is no more necessary and we can add user defined literals
+  /// for convenience.
+  template <uint64_t kValue> constexpr static Align Constant() {
+    static_assert(kValue > 0 && llvm::isPowerOf2_64(kValue),
+                  "Not a valid alignment");
+    Align A;
+    A.ShiftValue = CTLog2<kValue>();
+    return A;
+  }
 };
 
 /// Treats the value 0 as a 1, so Align is always at least 1.

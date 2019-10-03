@@ -303,7 +303,12 @@ void MemorySSAUpdater::insertDef(MemoryDef *MD, bool RenameUses) {
 
   // See if we had a local def, and if not, go hunting.
   MemoryAccess *DefBefore = getPreviousDef(MD);
-  bool DefBeforeSameBlock = DefBefore->getBlock() == MD->getBlock();
+  bool DefBeforeSameBlock = false;
+  if (DefBefore->getBlock() == MD->getBlock() &&
+      !(isa<MemoryPhi>(DefBefore) &&
+        std::find(InsertedPHIs.begin(), InsertedPHIs.end(), DefBefore) !=
+            InsertedPHIs.end()))
+    DefBeforeSameBlock = true;
 
   // There is a def before us, which means we can replace any store/phi uses
   // of that thing with us, since we are in the way of whatever was there
@@ -342,51 +347,54 @@ void MemorySSAUpdater::insertDef(MemoryDef *MD, bool RenameUses) {
 
     // If this is the first def in the block and this insert is in an arbitrary
     // place, compute IDF and place phis.
+    SmallPtrSet<BasicBlock *, 2> DefiningBlocks;
+
+    // If this is the last Def in the block, also compute IDF based on MD, since
+    // this may a new Def added, and we may need additional Phis.
     auto Iter = MD->getDefsIterator();
     ++Iter;
     auto IterEnd = MSSA->getBlockDefs(MD->getBlock())->end();
-    if (Iter == IterEnd) {
-      SmallPtrSet<BasicBlock *, 2> DefiningBlocks;
+    if (Iter == IterEnd)
       DefiningBlocks.insert(MD->getBlock());
-      for (const auto &VH : InsertedPHIs)
-        if (const auto *RealPHI = cast_or_null<MemoryPhi>(VH))
-          DefiningBlocks.insert(RealPHI->getBlock());
-      ForwardIDFCalculator IDFs(*MSSA->DT);
-      SmallVector<BasicBlock *, 32> IDFBlocks;
-      IDFs.setDefiningBlocks(DefiningBlocks);
-      IDFs.calculate(IDFBlocks);
-      SmallVector<AssertingVH<MemoryPhi>, 4> NewInsertedPHIs;
-      for (auto *BBIDF : IDFBlocks) {
-        auto *MPhi = MSSA->getMemoryAccess(BBIDF);
-        if (!MPhi) {
-          MPhi = MSSA->createMemoryPhi(BBIDF);
-          NewInsertedPHIs.push_back(MPhi);
-        }
-        // Add the phis created into the IDF blocks to NonOptPhis, so they are
-        // not optimized out as trivial by the call to getPreviousDefFromEnd
-        // below. Once they are complete, all these Phis are added to the
-        // FixupList, and removed from NonOptPhis inside fixupDefs(). Existing
-        // Phis in IDF may need fixing as well, and potentially be trivial
-        // before this insertion, hence add all IDF Phis. See PR43044.
-        NonOptPhis.insert(MPhi);
-      }
-      for (auto &MPhi : NewInsertedPHIs) {
-        auto *BBIDF = MPhi->getBlock();
-        for (auto *Pred : predecessors(BBIDF)) {
-          DenseMap<BasicBlock *, TrackingVH<MemoryAccess>> CachedPreviousDef;
-          MPhi->addIncoming(getPreviousDefFromEnd(Pred, CachedPreviousDef),
-                            Pred);
-        }
-      }
 
-      // Re-take the index where we're adding the new phis, because the above
-      // call to getPreviousDefFromEnd, may have inserted into InsertedPHIs.
-      NewPhiIndex = InsertedPHIs.size();
-      for (auto &MPhi : NewInsertedPHIs) {
-        InsertedPHIs.push_back(&*MPhi);
-        FixupList.push_back(&*MPhi);
+    for (const auto &VH : InsertedPHIs)
+      if (const auto *RealPHI = cast_or_null<MemoryPhi>(VH))
+        DefiningBlocks.insert(RealPHI->getBlock());
+    ForwardIDFCalculator IDFs(*MSSA->DT);
+    SmallVector<BasicBlock *, 32> IDFBlocks;
+    IDFs.setDefiningBlocks(DefiningBlocks);
+    IDFs.calculate(IDFBlocks);
+    SmallVector<AssertingVH<MemoryPhi>, 4> NewInsertedPHIs;
+    for (auto *BBIDF : IDFBlocks) {
+      auto *MPhi = MSSA->getMemoryAccess(BBIDF);
+      if (!MPhi) {
+        MPhi = MSSA->createMemoryPhi(BBIDF);
+        NewInsertedPHIs.push_back(MPhi);
+      }
+      // Add the phis created into the IDF blocks to NonOptPhis, so they are not
+      // optimized out as trivial by the call to getPreviousDefFromEnd below.
+      // Once they are complete, all these Phis are added to the FixupList, and
+      // removed from NonOptPhis inside fixupDefs(). Existing Phis in IDF may
+      // need fixing as well, and potentially be trivial before this insertion,
+      // hence add all IDF Phis. See PR43044.
+      NonOptPhis.insert(MPhi);
+    }
+    for (auto &MPhi : NewInsertedPHIs) {
+      auto *BBIDF = MPhi->getBlock();
+      for (auto *Pred : predecessors(BBIDF)) {
+        DenseMap<BasicBlock *, TrackingVH<MemoryAccess>> CachedPreviousDef;
+        MPhi->addIncoming(getPreviousDefFromEnd(Pred, CachedPreviousDef), Pred);
       }
     }
+
+    // Re-take the index where we're adding the new phis, because the above call
+    // to getPreviousDefFromEnd, may have inserted into InsertedPHIs.
+    NewPhiIndex = InsertedPHIs.size();
+    for (auto &MPhi : NewInsertedPHIs) {
+      InsertedPHIs.push_back(&*MPhi);
+      FixupList.push_back(&*MPhi);
+    }
+
     FixupList.push_back(MD);
   }
 
@@ -628,7 +636,7 @@ void MemorySSAUpdater::updatePhisWhenInsertingUniqueBackedgeBlock(
 
   // If NewMPhi is a trivial phi, remove it. Its use in the header MPhi will be
   // replaced with the unique value.
-  tryRemoveTrivialPhi(MPhi);
+  tryRemoveTrivialPhi(NewMPhi);
 }
 
 void MemorySSAUpdater::updateForClonedLoop(const LoopBlocksRPO &LoopBlocks,
@@ -834,6 +842,9 @@ void MemorySSAUpdater::applyInsertUpdates(ArrayRef<CFGUpdate> Updates,
       } else {
         // Single predecessor, BB cannot be dead. GetLastDef of Pred.
         assert(Count == 1 && Pred && "Single predecessor expected.");
+        // BB can be unreachable though, return LoE if that is the case.
+        if (!DT.getNode(BB))
+          return MSSA->getLiveOnEntryDef();
         BB = Pred;
       }
     };
@@ -1074,7 +1085,7 @@ void MemorySSAUpdater::applyInsertUpdates(ArrayRef<CFGUpdate> Updates,
         for (; UI != E;) {
           Use &U = *UI;
           ++UI;
-          MemoryAccess *Usr = dyn_cast<MemoryAccess>(U.getUser());
+          MemoryAccess *Usr = cast<MemoryAccess>(U.getUser());
           if (MemoryPhi *UsrPhi = dyn_cast<MemoryPhi>(Usr)) {
             BasicBlock *DominatedBlock = UsrPhi->getIncomingBlock(U);
             if (!DT.dominates(DominatingBlock, DominatedBlock))
