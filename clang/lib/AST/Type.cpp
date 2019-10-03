@@ -75,11 +75,11 @@ const IdentifierInfo* QualType::getBaseTypeIdentifier() const {
   if (ty->isPointerType() || ty->isReferenceType())
     return ty->getPointeeType().getBaseTypeIdentifier();
   else if (ty->isRecordType())
-    ND = ty->getAs<RecordType>()->getDecl();
+    ND = ty->castAs<RecordType>()->getDecl();
   else if (ty->isEnumeralType())
-    ND = ty->getAs<EnumType>()->getDecl();
+    ND = ty->castAs<EnumType>()->getDecl();
   else if (ty->getTypeClass() == Type::Typedef)
-    ND = ty->getAs<TypedefType>()->getDecl();
+    ND = ty->castAs<TypedefType>()->getDecl();
   else if (ty->isArrayType())
     return ty->castAsArrayTypeUnsafe()->
         getElementType().getBaseTypeIdentifier();
