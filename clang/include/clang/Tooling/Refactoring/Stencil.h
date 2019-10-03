@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 ///
-/// /file
+/// \file
 /// This file defines the *Stencil* abstraction: a code-generating object,
 /// parameterized by named references to (bound) AST nodes.  Given a match
 /// result, a stencil can be evaluated to a string of source code.
@@ -153,6 +153,21 @@ StencilPart selection(RangeSelector Selector);
 inline StencilPart node(llvm::StringRef Id) {
   return selection(tooling::node(Id));
 }
+
+/// Generates the source of the expression bound to \p Id, wrapping it in
+/// parentheses if it may parse differently depending on context. For example, a
+/// binary operation is always wrapped, while a variable reference is never
+/// wrapped.
+StencilPart expression(llvm::StringRef Id);
+
+/// Constructs an idiomatic dereferencing of the expression bound to \p ExprId.
+/// \p ExprId is wrapped in parentheses, if needed.
+StencilPart deref(llvm::StringRef ExprId);
+
+/// Constructs an expression that idiomatically takes the address of the
+/// expression bound to \p ExprId. \p ExprId is wrapped in parentheses, if
+/// needed.
+StencilPart addressOf(llvm::StringRef ExprId);
 
 /// Constructs a `MemberExpr` that accesses the named member (\p Member) of the
 /// object bound to \p BaseId. The access is constructed idiomatically: if \p

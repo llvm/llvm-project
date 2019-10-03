@@ -1,5 +1,3 @@
-add_subdirectory(GlobalISel)
-
 set(LLVM_LINK_COMPONENTS Support)
 
 add_tablegen(llvm-tblgen LLVM
@@ -52,5 +50,4 @@ add_tablegen(llvm-tblgen LLVM
   WebAssemblyDisassemblerEmitter.cpp
   CTagsEmitter.cpp
   )
-target_link_libraries(llvm-tblgen PRIVATE LLVMTableGenGlobalISel)
 set_target_properties(llvm-tblgen PROPERTIES FOLDER "Tablegenning")

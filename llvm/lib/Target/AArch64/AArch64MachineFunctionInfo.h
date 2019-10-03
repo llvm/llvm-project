@@ -95,6 +95,13 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// returned struct in a register. This field holds the virtual register into
   /// which the sret argument is passed.
   unsigned SRetReturnReg = 0;
+  /// SVE stack size (for predicates and data vectors) are maintained here
+  /// rather than in FrameInfo, as the placement and Stack IDs are target
+  /// specific.
+  uint64_t StackSizeSVE = 0;
+
+  /// HasCalculatedStackSizeSVE indicates whether StackSizeSVE is valid.
+  bool HasCalculatedStackSizeSVE = false;
 
   /// Has a value when it is known whether or not the function uses a
   /// redzone, and no value otherwise.
@@ -130,6 +137,15 @@ public:
   void setArgumentStackToRestore(unsigned bytes) {
     ArgumentStackToRestore = bytes;
   }
+
+  bool hasCalculatedStackSizeSVE() const { return HasCalculatedStackSizeSVE; }
+
+  void setStackSizeSVE(uint64_t S) {
+    HasCalculatedStackSizeSVE = true;
+    StackSizeSVE = S;
+  }
+
+  uint64_t getStackSizeSVE() const { return StackSizeSVE; }
 
   bool hasStackFrame() const { return HasStackFrame; }
   void setHasStackFrame(bool s) { HasStackFrame = s; }

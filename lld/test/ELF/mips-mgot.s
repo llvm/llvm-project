@@ -12,7 +12,7 @@
 # RUN:       }" > %t.script
 # RUN: ld.lld -shared -mips-got-size 52 --script %t.script %t0.o %t1.o %t2.o -o %t.so
 # RUN: llvm-objdump -s -section=.got -t %t.so | FileCheck %s
-# RUN: llvm-readobj -r --dyn-syms --mips-plt-got %t.so | FileCheck -check-prefix=GOT %s
+# RUN: llvm-readobj -r --dyn-syms -A %t.so | FileCheck -check-prefix=GOT %s
 
 # CHECK:      Contents of section .got:
 # CHECK-NEXT:  70000 00000000 80000000 [[FOO0:[0-9a-f]+]] [[FOO2:[0-9a-f]+]]

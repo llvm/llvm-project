@@ -828,6 +828,30 @@ define <16 x i8> @trunc_v16i32_v16i8(<16 x i32>* %x) nounwind "min-legal-vector-
   ret <16 x i8> %b
 }
 
+define <8 x i8> @trunc_v8i64_v8i8(<8 x i64>* %x) nounwind "min-legal-vector-width"="256" {
+; CHECK-AVX512-LABEL: trunc_v8i64_v8i8:
+; CHECK-AVX512:       # %bb.0:
+; CHECK-AVX512-NEXT:    vmovdqa (%rdi), %ymm0
+; CHECK-AVX512-NEXT:    vmovdqa 32(%rdi), %ymm1
+; CHECK-AVX512-NEXT:    vpmovqb %ymm1, %xmm1
+; CHECK-AVX512-NEXT:    vpmovqb %ymm0, %xmm0
+; CHECK-AVX512-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; CHECK-AVX512-NEXT:    vzeroupper
+; CHECK-AVX512-NEXT:    retq
+;
+; CHECK-VBMI-LABEL: trunc_v8i64_v8i8:
+; CHECK-VBMI:       # %bb.0:
+; CHECK-VBMI-NEXT:    vmovdqa (%rdi), %ymm1
+; CHECK-VBMI-NEXT:    vpbroadcastq {{.*#+}} ymm0 = [4048780183313844224,4048780183313844224,4048780183313844224,4048780183313844224]
+; CHECK-VBMI-NEXT:    vpermi2b 32(%rdi), %ymm1, %ymm0
+; CHECK-VBMI-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; CHECK-VBMI-NEXT:    vzeroupper
+; CHECK-VBMI-NEXT:    retq
+  %a = load <8 x i64>, <8 x i64>* %x
+  %b = trunc <8 x i64> %a to <8 x i8>
+  ret <8 x i8> %b
+}
+
 define <8 x i16> @trunc_v8i64_v8i16(<8 x i64>* %x) nounwind "min-legal-vector-width"="256" {
 ; CHECK-LABEL: trunc_v8i64_v8i16:
 ; CHECK:       # %bb.0:

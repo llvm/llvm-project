@@ -1,16 +1,25 @@
-RUN: llvm-readobj -a %p/Inputs/trivial.obj.elf-i386 \
-RUN:   | FileCheck %s -check-prefix ALL
-RUN: llvm-readobj --all %p/Inputs/trivial.obj.elf-i386 \
-RUN:   | FileCheck %s -check-prefix ALL
+# RUN: yaml2obj %s -o %t.o
+# RUN: llvm-readobj -a %t.o | FileCheck %s --check-prefix ALL
+# RUN: llvm-readobj --all %t.o | FileCheck %s --check-prefix ALL
 
-ALL: Format: ELF32-i386
-ALL: Arch: i386
-ALL: AddressSize: 32bit
-ALL: LoadName:
-ALL: ElfHeader {
-ALL: Sections [
-ALL: Relocations [
-ALL: Symbols [
-ALL: ProgramHeaders [
-ALL: Notes [
-ALL: StackSizes [
+# ALL: Format: ELF32-i386
+# ALL: Arch: i386
+# ALL: AddressSize: 32bit
+# ALL: LoadName:
+# ALL: ElfHeader {
+# ALL: Sections [
+# ALL: Relocations [
+# ALL: Symbols [
+# ALL: ProgramHeaders [
+# ALL: Version symbols {
+# ALL: SHT_GNU_verdef {
+# ALL: SHT_GNU_verneed {
+# ALL: Notes [
+# ALL: StackSizes [
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_386

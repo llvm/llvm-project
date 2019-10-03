@@ -34,7 +34,6 @@ group("unittests") {
     "Remarks:RemarksTests",
     "Support:SupportTests",
     "Support/DynamicLibrary:DynamicLibraryTests",
-    "TableGen:TableGenTests",
     "TextAPI:TextAPITests",
     "Transforms/IPO:IPOTests",
     "Transforms/Scalar:ScalarTests",

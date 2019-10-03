@@ -6,7 +6,7 @@
 # RUN: echo "SECTIONS { \
 # RUN:          zero1 = 0; zero2 = 0; foo = 0x11004; bar = 0x22000; }" > %t.script
 # RUN: ld.lld --script %t.script -o %t.exe %t.o
-# RUN: llvm-readobj --mips-plt-got %t.exe | FileCheck %s
+# RUN: llvm-readobj -A %t.exe | FileCheck %s
 
 # CHECK:      Static GOT {
 # CHECK:        Local entries [

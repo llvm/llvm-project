@@ -52,15 +52,19 @@ protected:
 };
 } // namespace
 
-llvm::Optional<std::string> PosixUserIDResolver::DoGetUserName(id_t uid) {
+struct PasswdEntry {
+  std::string username;
+  std::string shell;
+};
+
+static llvm::Optional<PasswdEntry> GetPassword(id_t uid) {
 #ifdef USE_GETPWUID
   // getpwuid_r is missing from android-9
-  // UserIDResolver provides some thread safety by making sure noone calls this
-  // function concurrently, but using getpwuid is ultimately not thread-safe as
-  // we don't know who else might be calling it.
-  struct passwd *user_info_ptr = ::getpwuid(uid);
-  if (user_info_ptr)
-    return std::string(user_info_ptr->pw_name);
+  // The caller should provide some thread safety by making sure no one calls
+  // this function concurrently, because using getpwuid is ultimately not
+  // thread-safe as we don't know who else might be calling it.
+  if (auto *user_info_ptr = ::getpwuid(uid))
+    return PasswdEntry{user_info_ptr->pw_name, user_info_ptr->pw_shell};
 #else
   struct passwd user_info;
   struct passwd *user_info_ptr = &user_info;
@@ -69,9 +73,15 @@ llvm::Optional<std::string> PosixUserIDResolver::DoGetUserName(id_t uid) {
   if (::getpwuid_r(uid, &user_info, user_buffer, user_buffer_size,
                    &user_info_ptr) == 0 &&
       user_info_ptr) {
-    return std::string(user_info_ptr->pw_name);
+    return PasswdEntry{user_info_ptr->pw_name, user_info_ptr->pw_shell};
   }
 #endif
+  return llvm::None;
+}
+
+llvm::Optional<std::string> PosixUserIDResolver::DoGetUserName(id_t uid) {
+  if (llvm::Optional<PasswdEntry> password = GetPassword(uid))
+    return password->username;
   return llvm::None;
 }
 
@@ -113,7 +123,13 @@ uint32_t HostInfoPosix::GetEffectiveUserID() { return geteuid(); }
 
 uint32_t HostInfoPosix::GetEffectiveGroupID() { return getegid(); }
 
-FileSpec HostInfoPosix::GetDefaultShell() { return FileSpec("/bin/sh"); }
+FileSpec HostInfoPosix::GetDefaultShell() {
+  if (const char *v = ::getenv("SHELL"))
+    return FileSpec(v);
+  if (llvm::Optional<PasswdEntry> password = GetPassword(::geteuid()))
+    return FileSpec(password->shell);
+  return FileSpec("/bin/sh");
+}
 
 bool HostInfoPosix::ComputeSupportExeDirectory(FileSpec &file_spec) {
   return ComputePathRelativeToLibrary(file_spec, "/bin");

@@ -90,6 +90,13 @@ public:
   static char ID;
   BPFAbstractMemberAccess() : ModulePass(ID) {}
 
+  struct CallInfo {
+    uint32_t Kind;
+    uint32_t AccessIndex;
+    MDNode *Metadata;
+    Value *Base;
+  };
+
 private:
   enum : uint32_t {
     BPFPreserveArrayAI = 1,
@@ -99,34 +106,32 @@ private:
 
   std::map<std::string, GlobalVariable *> GEPGlobals;
   // A map to link preserve_*_access_index instrinsic calls.
-  std::map<CallInst *, std::pair<CallInst *, uint32_t>> AIChain;
+  std::map<CallInst *, std::pair<CallInst *, CallInfo>> AIChain;
   // A map to hold all the base preserve_*_access_index instrinsic calls.
   // The base call is not an input of any other preserve_*_access_index
   // intrinsics.
-  std::map<CallInst *, uint32_t> BaseAICalls;
+  std::map<CallInst *, CallInfo> BaseAICalls;
 
   bool doTransformation(Module &M);
 
-  void traceAICall(CallInst *Call, uint32_t Kind, const MDNode *ParentMeta,
-                   uint32_t ParentAI);
-  void traceBitCast(BitCastInst *BitCast, CallInst *Parent, uint32_t Kind,
-                    const MDNode *ParentMeta, uint32_t ParentAI);
-  void traceGEP(GetElementPtrInst *GEP, CallInst *Parent, uint32_t Kind,
-                const MDNode *ParentMeta, uint32_t ParentAI);
+  void traceAICall(CallInst *Call, CallInfo &ParentInfo);
+  void traceBitCast(BitCastInst *BitCast, CallInst *Parent,
+                    CallInfo &ParentInfo);
+  void traceGEP(GetElementPtrInst *GEP, CallInst *Parent,
+                CallInfo &ParentInfo);
   void collectAICallChains(Module &M, Function &F);
 
-  bool IsPreserveDIAccessIndexCall(const CallInst *Call, uint32_t &Kind,
-                                   const MDNode *&TypeMeta, uint32_t &AccessIndex);
+  bool IsPreserveDIAccessIndexCall(const CallInst *Call, CallInfo &Cinfo);
   bool IsValidAIChain(const MDNode *ParentMeta, uint32_t ParentAI,
                       const MDNode *ChildMeta);
   bool removePreserveAccessIndexIntrinsic(Module &M);
   void replaceWithGEP(std::vector<CallInst *> &CallList,
                       uint32_t NumOfZerosIndex, uint32_t DIIndex);
 
-  Value *computeBaseAndAccessKey(CallInst *Call, std::string &AccessKey,
-                                 uint32_t Kind, MDNode *&BaseMeta);
-  bool getAccessIndex(const Value *IndexValue, uint64_t &AccessIndex);
-  bool transformGEPChain(Module &M, CallInst *Call, uint32_t Kind);
+  Value *computeBaseAndAccessKey(CallInst *Call, CallInfo &CInfo,
+                                 std::string &AccessKey, MDNode *&BaseMeta);
+  uint64_t getConstant(const Value *IndexValue);
+  bool transformGEPChain(Module &M, CallInst *Call, CallInfo &CInfo);
 };
 } // End anonymous namespace
 
@@ -192,9 +197,7 @@ static uint32_t calcArraySize(const DICompositeType *CTy, uint32_t StartDim) {
 
 /// Check whether a call is a preserve_*_access_index intrinsic call or not.
 bool BPFAbstractMemberAccess::IsPreserveDIAccessIndexCall(const CallInst *Call,
-                                                          uint32_t &Kind,
-                                                          const MDNode *&TypeMeta,
-                                                          uint32_t &AccessIndex) {
+                                                          CallInfo &CInfo) {
   if (!Call)
     return false;
 
@@ -202,30 +205,30 @@ bool BPFAbstractMemberAccess::IsPreserveDIAccessIndexCall(const CallInst *Call,
   if (!GV)
     return false;
   if (GV->getName().startswith("llvm.preserve.array.access.index")) {
-    Kind = BPFPreserveArrayAI;
-    TypeMeta = Call->getMetadata(LLVMContext::MD_preserve_access_index);
-    if (!TypeMeta)
+    CInfo.Kind = BPFPreserveArrayAI;
+    CInfo.Metadata = Call->getMetadata(LLVMContext::MD_preserve_access_index);
+    if (!CInfo.Metadata)
       report_fatal_error("Missing metadata for llvm.preserve.array.access.index intrinsic");
-    AccessIndex = cast<ConstantInt>(Call->getArgOperand(2))
-                      ->getZExtValue();
+    CInfo.AccessIndex = getConstant(Call->getArgOperand(2));
+    CInfo.Base = Call->getArgOperand(0);
     return true;
   }
   if (GV->getName().startswith("llvm.preserve.union.access.index")) {
-    Kind = BPFPreserveUnionAI;
-    TypeMeta = Call->getMetadata(LLVMContext::MD_preserve_access_index);
-    if (!TypeMeta)
+    CInfo.Kind = BPFPreserveUnionAI;
+    CInfo.Metadata = Call->getMetadata(LLVMContext::MD_preserve_access_index);
+    if (!CInfo.Metadata)
       report_fatal_error("Missing metadata for llvm.preserve.union.access.index intrinsic");
-    AccessIndex = cast<ConstantInt>(Call->getArgOperand(1))
-                      ->getZExtValue();
+    CInfo.AccessIndex = getConstant(Call->getArgOperand(1));
+    CInfo.Base = Call->getArgOperand(0);
     return true;
   }
   if (GV->getName().startswith("llvm.preserve.struct.access.index")) {
-    Kind = BPFPreserveStructAI;
-    TypeMeta = Call->getMetadata(LLVMContext::MD_preserve_access_index);
-    if (!TypeMeta)
+    CInfo.Kind = BPFPreserveStructAI;
+    CInfo.Metadata = Call->getMetadata(LLVMContext::MD_preserve_access_index);
+    if (!CInfo.Metadata)
       report_fatal_error("Missing metadata for llvm.preserve.struct.access.index intrinsic");
-    AccessIndex = cast<ConstantInt>(Call->getArgOperand(2))
-                      ->getZExtValue();
+    CInfo.AccessIndex = getConstant(Call->getArgOperand(2));
+    CInfo.Base = Call->getArgOperand(0);
     return true;
   }
 
@@ -238,8 +241,7 @@ void BPFAbstractMemberAccess::replaceWithGEP(std::vector<CallInst *> &CallList,
   for (auto Call : CallList) {
     uint32_t Dimension = 1;
     if (DimensionIndex > 0)
-      Dimension = cast<ConstantInt>(Call->getArgOperand(DimensionIndex))
-                      ->getZExtValue();
+      Dimension = getConstant(Call->getArgOperand(DimensionIndex));
 
     Constant *Zero =
         ConstantInt::get(Type::getInt32Ty(Call->getParent()->getContext()), 0);
@@ -265,16 +267,14 @@ bool BPFAbstractMemberAccess::removePreserveAccessIndexIntrinsic(Module &M) {
     for (auto &BB : F)
       for (auto &I : BB) {
         auto *Call = dyn_cast<CallInst>(&I);
-        uint32_t Kind;
-        const MDNode *TypeMeta;
-        uint32_t AccessIndex;
-        if (!IsPreserveDIAccessIndexCall(Call, Kind, TypeMeta, AccessIndex))
+        CallInfo CInfo;
+        if (!IsPreserveDIAccessIndexCall(Call, CInfo))
           continue;
 
         Found = true;
-        if (Kind == BPFPreserveArrayAI)
+        if (CInfo.Kind == BPFPreserveArrayAI)
           PreserveArrayIndexCalls.push_back(Call);
-        else if (Kind == BPFPreserveUnionAI)
+        else if (CInfo.Kind == BPFPreserveUnionAI)
           PreserveUnionIndexCalls.push_back(Call);
         else
           PreserveStructIndexCalls.push_back(Call);
@@ -349,99 +349,94 @@ bool BPFAbstractMemberAccess::IsValidAIChain(const MDNode *ParentType,
   return dyn_cast<DICompositeType>(stripQualifiers(Ty)) == CTy;
 }
 
-void BPFAbstractMemberAccess::traceAICall(CallInst *Call, uint32_t Kind,
-                                          const MDNode *ParentMeta,
-                                          uint32_t ParentAI) {
+void BPFAbstractMemberAccess::traceAICall(CallInst *Call,
+                                          CallInfo &ParentInfo) {
   for (User *U : Call->users()) {
     Instruction *Inst = dyn_cast<Instruction>(U);
     if (!Inst)
       continue;
 
     if (auto *BI = dyn_cast<BitCastInst>(Inst)) {
-      traceBitCast(BI, Call, Kind, ParentMeta, ParentAI);
+      traceBitCast(BI, Call, ParentInfo);
     } else if (auto *CI = dyn_cast<CallInst>(Inst)) {
-      uint32_t CIKind;
-      const MDNode *ChildMeta;
-      uint32_t ChildAI;
-      if (IsPreserveDIAccessIndexCall(CI, CIKind, ChildMeta, ChildAI) &&
-          IsValidAIChain(ParentMeta, ParentAI, ChildMeta)) {
-        AIChain[CI] = std::make_pair(Call, Kind);
-        traceAICall(CI, CIKind, ChildMeta, ChildAI);
+      CallInfo ChildInfo;
+
+      if (IsPreserveDIAccessIndexCall(CI, ChildInfo) &&
+          IsValidAIChain(ParentInfo.Metadata, ParentInfo.AccessIndex,
+                         ChildInfo.Metadata)) {
+        AIChain[CI] = std::make_pair(Call, ParentInfo);
+        traceAICall(CI, ChildInfo);
       } else {
-        BaseAICalls[Call] = Kind;
+        BaseAICalls[Call] = ParentInfo;
       }
     } else if (auto *GI = dyn_cast<GetElementPtrInst>(Inst)) {
       if (GI->hasAllZeroIndices())
-        traceGEP(GI, Call, Kind, ParentMeta, ParentAI);
+        traceGEP(GI, Call, ParentInfo);
       else
-        BaseAICalls[Call] = Kind;
+        BaseAICalls[Call] = ParentInfo;
     } else {
-      BaseAICalls[Call] = Kind;
+      BaseAICalls[Call] = ParentInfo;
     }
   }
 }
 
 void BPFAbstractMemberAccess::traceBitCast(BitCastInst *BitCast,
-                                           CallInst *Parent, uint32_t Kind,
-                                           const MDNode *ParentMeta,
-                                           uint32_t ParentAI) {
+                                           CallInst *Parent,
+                                           CallInfo &ParentInfo) {
   for (User *U : BitCast->users()) {
     Instruction *Inst = dyn_cast<Instruction>(U);
     if (!Inst)
       continue;
 
     if (auto *BI = dyn_cast<BitCastInst>(Inst)) {
-      traceBitCast(BI, Parent, Kind, ParentMeta, ParentAI);
+      traceBitCast(BI, Parent, ParentInfo);
     } else if (auto *CI = dyn_cast<CallInst>(Inst)) {
-      uint32_t CIKind;
-      const MDNode *ChildMeta;
-      uint32_t ChildAI;
-      if (IsPreserveDIAccessIndexCall(CI, CIKind, ChildMeta, ChildAI) &&
-          IsValidAIChain(ParentMeta, ParentAI, ChildMeta)) {
-        AIChain[CI] = std::make_pair(Parent, Kind);
-        traceAICall(CI, CIKind, ChildMeta, ChildAI);
+      CallInfo ChildInfo;
+      if (IsPreserveDIAccessIndexCall(CI, ChildInfo) &&
+          IsValidAIChain(ParentInfo.Metadata, ParentInfo.AccessIndex,
+                         ChildInfo.Metadata)) {
+        AIChain[CI] = std::make_pair(Parent, ParentInfo);
+        traceAICall(CI, ChildInfo);
       } else {
-        BaseAICalls[Parent] = Kind;
+        BaseAICalls[Parent] = ParentInfo;
       }
     } else if (auto *GI = dyn_cast<GetElementPtrInst>(Inst)) {
       if (GI->hasAllZeroIndices())
-        traceGEP(GI, Parent, Kind, ParentMeta, ParentAI);
+        traceGEP(GI, Parent, ParentInfo);
       else
-        BaseAICalls[Parent] = Kind;
+        BaseAICalls[Parent] = ParentInfo;
     } else {
-      BaseAICalls[Parent] = Kind;
+      BaseAICalls[Parent] = ParentInfo;
     }
   }
 }
 
 void BPFAbstractMemberAccess::traceGEP(GetElementPtrInst *GEP, CallInst *Parent,
-                                       uint32_t Kind, const MDNode *ParentMeta,
-                                       uint32_t ParentAI) {
+                                       CallInfo &ParentInfo) {
   for (User *U : GEP->users()) {
     Instruction *Inst = dyn_cast<Instruction>(U);
     if (!Inst)
       continue;
 
     if (auto *BI = dyn_cast<BitCastInst>(Inst)) {
-      traceBitCast(BI, Parent, Kind, ParentMeta, ParentAI);
+      traceBitCast(BI, Parent, ParentInfo);
     } else if (auto *CI = dyn_cast<CallInst>(Inst)) {
-      uint32_t CIKind;
-      const MDNode *ChildMeta;
-      uint32_t ChildAI;
-      if (IsPreserveDIAccessIndexCall(CI, CIKind, ChildMeta, ChildAI) &&
-          IsValidAIChain(ParentMeta, ParentAI, ChildMeta)) {
-        AIChain[CI] = std::make_pair(Parent, Kind);
-        traceAICall(CI, CIKind, ChildMeta, ChildAI);
+      CallInfo ChildInfo;
+      if (IsPreserveDIAccessIndexCall(CI, ChildInfo) &&
+          IsValidAIChain(ParentInfo.Metadata, ParentInfo.AccessIndex,
+                         ChildInfo.Metadata)) {
+        AIChain[CI] = std::make_pair(Parent, ParentInfo);
+        traceAICall(CI, ChildInfo);
       } else {
-        BaseAICalls[Parent] = Kind;
+        BaseAICalls[Parent] = ParentInfo;
       }
     } else if (auto *GI = dyn_cast<GetElementPtrInst>(Inst)) {
       if (GI->hasAllZeroIndices())
-        traceGEP(GI, Parent, Kind, ParentMeta, ParentAI);
+        traceGEP(GI, Parent, ParentInfo);
       else
-        BaseAICalls[Parent] = Kind;
+        BaseAICalls[Parent] = ParentInfo;
     } else {
-      BaseAICalls[Parent] = Kind;
+      BaseAICalls[Parent] = ParentInfo;
     }
   }
 }
@@ -452,44 +447,37 @@ void BPFAbstractMemberAccess::collectAICallChains(Module &M, Function &F) {
 
   for (auto &BB : F)
     for (auto &I : BB) {
-      uint32_t Kind;
-      const MDNode *TypeMeta;
-      uint32_t AccessIndex;
+      CallInfo CInfo;
       auto *Call = dyn_cast<CallInst>(&I);
-      if (!IsPreserveDIAccessIndexCall(Call, Kind, TypeMeta, AccessIndex) ||
+      if (!IsPreserveDIAccessIndexCall(Call, CInfo) ||
           AIChain.find(Call) != AIChain.end())
         continue;
 
-      traceAICall(Call, Kind, TypeMeta, AccessIndex);
+      traceAICall(Call, CInfo);
     }
 }
 
-/// Get access index from the preserve_*_access_index intrinsic calls.
-bool BPFAbstractMemberAccess::getAccessIndex(const Value *IndexValue,
-                                             uint64_t &AccessIndex) {
+uint64_t BPFAbstractMemberAccess::getConstant(const Value *IndexValue) {
   const ConstantInt *CV = dyn_cast<ConstantInt>(IndexValue);
-  if (!CV)
-    return false;
-
-  AccessIndex = CV->getValue().getZExtValue();
-  return true;
+  assert(CV);
+  return CV->getValue().getZExtValue();
 }
 
 /// Compute the base of the whole preserve_*_access_index chains, i.e., the base
 /// pointer of the first preserve_*_access_index call, and construct the access
 /// string, which will be the name of a global variable.
 Value *BPFAbstractMemberAccess::computeBaseAndAccessKey(CallInst *Call,
+                                                        CallInfo &CInfo,
                                                         std::string &AccessKey,
-                                                        uint32_t Kind,
                                                         MDNode *&TypeMeta) {
   Value *Base = nullptr;
   std::string TypeName;
-  std::stack<std::pair<CallInst *, uint32_t>> CallStack;
+  std::stack<std::pair<CallInst *, CallInfo>> CallStack;
 
   // Put the access chain into a stack with the top as the head of the chain.
   while (Call) {
-    CallStack.push(std::make_pair(Call, Kind));
-    Kind = AIChain[Call].second;
+    CallStack.push(std::make_pair(Call, CInfo));
+    CInfo = AIChain[Call].second;
     Call = AIChain[Call].first;
   }
 
@@ -508,14 +496,14 @@ Value *BPFAbstractMemberAccess::computeBaseAndAccessKey(CallInst *Call,
   while (CallStack.size()) {
     auto StackElem = CallStack.top();
     Call = StackElem.first;
-    Kind = StackElem.second;
+    CInfo = StackElem.second;
 
     if (!Base)
-      Base = Call->getArgOperand(0);
+      Base = CInfo.Base;
 
-    MDNode *MDN = Call->getMetadata(LLVMContext::MD_preserve_access_index);
-    DIType *Ty = stripQualifiers(cast<DIType>(MDN));
-    if (Kind == BPFPreserveUnionAI || Kind == BPFPreserveStructAI) {
+    DIType *Ty = stripQualifiers(cast<DIType>(CInfo.Metadata));
+    if (CInfo.Kind == BPFPreserveUnionAI ||
+        CInfo.Kind == BPFPreserveStructAI) {
       // struct or union type
       TypeName = Ty->getName();
       TypeMeta = Ty;
@@ -527,9 +515,7 @@ Value *BPFAbstractMemberAccess::computeBaseAndAccessKey(CallInst *Call,
     CallStack.pop();
 
     // BPFPreserveArrayAI
-    uint64_t AccessIndex;
-    if (!getAccessIndex(Call->getArgOperand(2), AccessIndex))
-      return nullptr;
+    uint64_t AccessIndex = CInfo.AccessIndex;
 
     DIType *BaseTy = nullptr;
     bool CheckElemType = false;
@@ -580,18 +566,14 @@ Value *BPFAbstractMemberAccess::computeBaseAndAccessKey(CallInst *Call,
   // and access key construction.
   while (CallStack.size()) {
     auto StackElem = CallStack.top();
-    Call = StackElem.first;
-    Kind = StackElem.second;
+    CInfo = StackElem.second;
     CallStack.pop();
 
     // Access Index
-    uint64_t AccessIndex;
-    uint32_t ArgIndex = (Kind == BPFPreserveUnionAI) ? 1 : 2;
-    if (!getAccessIndex(Call->getArgOperand(ArgIndex), AccessIndex))
-      return nullptr;
+    uint64_t AccessIndex = CInfo.AccessIndex;
     AccessKey += ":" + std::to_string(AccessIndex);
 
-    MDNode *MDN = Call->getMetadata(LLVMContext::MD_preserve_access_index);
+    MDNode *MDN = CInfo.Metadata;
     // At this stage, it cannot be pointer type.
     auto *CTy = cast<DICompositeType>(stripQualifiers(cast<DIType>(MDN)));
     uint32_t Tag = CTy->getTag();
@@ -615,11 +597,11 @@ Value *BPFAbstractMemberAccess::computeBaseAndAccessKey(CallInst *Call,
 /// Call/Kind is the base preserve_*_access_index() call. Attempts to do
 /// transformation to a chain of relocable GEPs.
 bool BPFAbstractMemberAccess::transformGEPChain(Module &M, CallInst *Call,
-                                                uint32_t Kind) {
+                                                CallInfo &CInfo) {
   std::string AccessKey;
   MDNode *TypeMeta;
   Value *Base =
-      computeBaseAndAccessKey(Call, AccessKey, Kind, TypeMeta);
+      computeBaseAndAccessKey(Call, CInfo, AccessKey, TypeMeta);
   if (!Base)
     return false;
 

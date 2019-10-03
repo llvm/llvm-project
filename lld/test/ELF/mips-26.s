@@ -7,7 +7,7 @@
 # RUN: ld.lld %t2.o -shared -o %t.so
 # RUN: ld.lld %t1.o %t.so -o %t.exe
 # RUN: llvm-objdump -d --no-show-raw-insn --print-imm-hex %t.exe | FileCheck %s
-# RUN: llvm-readobj --dynamic-table -S -r --mips-plt-got %t.exe \
+# RUN: llvm-readobj --dynamic-table -S -r -A %t.exe \
 # RUN:   | FileCheck -check-prefix=REL %s
 
 # CHECK:      Disassembly of section .text:

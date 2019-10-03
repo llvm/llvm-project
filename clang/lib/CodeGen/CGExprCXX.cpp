@@ -418,13 +418,10 @@ CodeGenFunction::EmitCXXMemberPointerCallExpr(const CXXMemberCallExpr *E,
   const Expr *BaseExpr = BO->getLHS();
   const Expr *MemFnExpr = BO->getRHS();
 
-  const MemberPointerType *MPT =
-    MemFnExpr->getType()->castAs<MemberPointerType>();
-
-  const FunctionProtoType *FPT =
-    MPT->getPointeeType()->castAs<FunctionProtoType>();
-  const CXXRecordDecl *RD =
-    cast<CXXRecordDecl>(MPT->getClass()->getAs<RecordType>()->getDecl());
+  const auto *MPT = MemFnExpr->getType()->castAs<MemberPointerType>();
+  const auto *FPT = MPT->getPointeeType()->castAs<FunctionProtoType>();
+  const auto *RD =
+      cast<CXXRecordDecl>(MPT->getClass()->castAs<RecordType>()->getDecl());
 
   // Emit the 'this' pointer.
   Address This = Address::invalid();
@@ -535,7 +532,7 @@ static void EmitNullBaseClassInitialization(CodeGenFunction &CGF,
 
     CharUnits Align = std::max(Layout.getNonVirtualAlignment(),
                                DestPtr.getAlignment());
-    NullVariable->setAlignment(Align.getQuantity());
+    NullVariable->setAlignment(Align.getAsAlign());
 
     Address SrcPtr = Address(CGF.EmitCastToVoidPtr(NullVariable), Align);
 

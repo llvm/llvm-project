@@ -8,13 +8,13 @@
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux %s -o %t-be.o
 # RUN: ld.lld -shared %t-be.o -script %t.script -o %t-be.so
 # RUN: llvm-objdump -t -s %t-be.so | FileCheck -check-prefixes=SYM,BE %s
-# RUN: llvm-readelf -r -s --dynamic-table --mips-plt-got %t-be.so \
+# RUN: llvm-readelf -r -s --dynamic-table -A %t-be.so \
 # RUN:   | FileCheck -check-prefix=REL %s
 
 # RUN: llvm-mc -filetype=obj -triple=mipsel-unknown-linux %s -o %t-el.o
 # RUN: ld.lld -shared %t-el.o -script %t.script -o %t-el.so
 # RUN: llvm-objdump -t -s %t-el.so | FileCheck -check-prefixes=SYM,EL %s
-# RUN: llvm-readelf -r -s --dynamic-table --mips-plt-got %t-el.so \
+# RUN: llvm-readelf -r -s --dynamic-table -A %t-el.so \
 # RUN:   | FileCheck -check-prefix=REL %s
 
   .data

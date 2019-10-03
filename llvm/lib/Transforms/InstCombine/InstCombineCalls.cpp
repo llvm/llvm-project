@@ -185,7 +185,8 @@ Instruction *InstCombiner::SimplifyAnyMemTransfer(AnyMemTransferInst *MI) {
   Value *Dest = Builder.CreateBitCast(MI->getArgOperand(0), NewDstPtrTy);
   LoadInst *L = Builder.CreateLoad(IntType, Src);
   // Alignment from the mem intrinsic will be better, so use it.
-  L->setAlignment(MaybeAlign(CopySrcAlign));
+  L->setAlignment(
+      MaybeAlign(CopySrcAlign)); // FIXME: Check if we can use Align instead.
   if (CopyMD)
     L->setMetadata(LLVMContext::MD_tbaa, CopyMD);
   MDNode *LoopMemParallelMD =
@@ -198,7 +199,8 @@ Instruction *InstCombiner::SimplifyAnyMemTransfer(AnyMemTransferInst *MI) {
 
   StoreInst *S = Builder.CreateStore(L, Dest);
   // Alignment from the mem intrinsic will be better, so use it.
-  S->setAlignment(CopyDstAlign);
+  S->setAlignment(
+      MaybeAlign(CopyDstAlign)); // FIXME: Check if we can use Align instead.
   if (CopyMD)
     S->setMetadata(LLVMContext::MD_tbaa, CopyMD);
   if (LoopMemParallelMD)
@@ -223,9 +225,10 @@ Instruction *InstCombiner::SimplifyAnyMemTransfer(AnyMemTransferInst *MI) {
 }
 
 Instruction *InstCombiner::SimplifyAnyMemSet(AnyMemSetInst *MI) {
-  unsigned Alignment = getKnownAlignment(MI->getDest(), DL, MI, &AC, &DT);
-  if (MI->getDestAlignment() < Alignment) {
-    MI->setDestAlignment(Alignment);
+  const unsigned KnownAlignment =
+      getKnownAlignment(MI->getDest(), DL, MI, &AC, &DT);
+  if (MI->getDestAlignment() < KnownAlignment) {
+    MI->setDestAlignment(KnownAlignment);
     return MI;
   }
 
@@ -243,13 +246,9 @@ Instruction *InstCombiner::SimplifyAnyMemSet(AnyMemSetInst *MI) {
   ConstantInt *FillC = dyn_cast<ConstantInt>(MI->getValue());
   if (!LenC || !FillC || !FillC->getType()->isIntegerTy(8))
     return nullptr;
-  uint64_t Len = LenC->getLimitedValue();
-  Alignment = MI->getDestAlignment();
+  const uint64_t Len = LenC->getLimitedValue();
   assert(Len && "0-sized memory setting should be removed already.");
-
-  // Alignment 0 is identity for alignment 1 for memset, but not store.
-  if (Alignment == 0)
-    Alignment = 1;
+  const Align Alignment = assumeAligned(MI->getDestAlignment());
 
   // If it is an atomic and alignment is less than the size then we will
   // introduce the unaligned memory access which will be later transformed

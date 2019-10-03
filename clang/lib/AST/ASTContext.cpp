@@ -6851,8 +6851,8 @@ void ASTContext::getObjCEncodingForTypeImpl(QualType T, std::string &S,
       }
     } else if (Options.IsOutermostType()) {
       QualType P = PointeeTy;
-      while (P->getAs<PointerType>())
-        P = P->getAs<PointerType>()->getPointeeType();
+      while (auto PT = P->getAs<PointerType>())
+        P = PT->getPointeeType();
       if (P.isConstQualified()) {
         isReadOnly = true;
         S += 'r';

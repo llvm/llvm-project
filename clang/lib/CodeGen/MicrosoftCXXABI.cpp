@@ -2355,7 +2355,7 @@ static ConstantAddress getInitThreadEpochPtr(CodeGenModule &CGM) {
       /*isConstant=*/false, llvm::GlobalVariable::ExternalLinkage,
       /*Initializer=*/nullptr, VarName,
       /*InsertBefore=*/nullptr, llvm::GlobalVariable::GeneralDynamicTLSModel);
-  GV->setAlignment(Align.getQuantity());
+  GV->setAlignment(Align.getAsAlign());
   return ConstantAddress(GV, Align);
 }
 
@@ -2498,7 +2498,7 @@ void MicrosoftCXXABI::EmitGuardedInit(CodeGenFunction &CGF, const VarDecl &D,
                                  GV->getLinkage(), Zero, GuardName.str());
     GuardVar->setVisibility(GV->getVisibility());
     GuardVar->setDLLStorageClass(GV->getDLLStorageClass());
-    GuardVar->setAlignment(GuardAlign.getQuantity());
+    GuardVar->setAlignment(GuardAlign.getAsAlign());
     if (GuardVar->isWeakForLinker())
       GuardVar->setComdat(
           CGM.getModule().getOrInsertComdat(GuardVar->getName()));
