@@ -11,7 +11,7 @@
 
 /*
  * This header provides the interface to the C++ ABI as defined at:
- *       http://www.codesourcery.com/cxx-abi/
+ *       https://itanium-cxx-abi.github.io/cxx-abi/
  */
 
 #include <stddef.h>

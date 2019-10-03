@@ -7,10 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/FileCheck.h"
+#include "../lib/Support/FileCheckImpl.h"
 #include "gtest/gtest.h"
 #include <unordered_set>
 
 using namespace llvm;
+
 namespace {
 
 class FileCheckTest : public ::testing::Test {};

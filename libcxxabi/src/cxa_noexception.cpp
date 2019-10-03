@@ -4,10 +4,10 @@
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-//  
+//
 //  This file implements the "Exception Handling APIs"
 //  https://itanium-cxx-abi.github.io/cxx-abi/abi-eh.html
-//  
+//
 //===----------------------------------------------------------------------===//
 
 // Support functions for the no-exceptions libc++ library

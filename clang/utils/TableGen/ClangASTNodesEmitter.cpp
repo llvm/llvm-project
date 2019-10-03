@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "TableGenBackends.h"
+
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
 #include <cctype>
@@ -173,15 +175,14 @@ void ClangASTNodesEmitter::run(raw_ostream &OS) {
   OS << "#undef ABSTRACT_" << macroName(Root.getName()) << "\n";
 }
 
-namespace clang {
-void EmitClangASTNodes(RecordKeeper &RK, raw_ostream &OS,
-                       const std::string &N, const std::string &S) {
+void clang::EmitClangASTNodes(RecordKeeper &RK, raw_ostream &OS,
+                              const std::string &N, const std::string &S) {
   ClangASTNodesEmitter(RK, N, S).run(OS);
 }
 
 // Emits and addendum to a .inc file to enumerate the clang declaration
 // contexts.
-void EmitClangDeclContext(RecordKeeper &Records, raw_ostream &OS) {
+void clang::EmitClangDeclContext(RecordKeeper &Records, raw_ostream &OS) {
   // FIXME: Find a .td file format to allow for this to be represented better.
 
   emitSourceFileHeader("List of AST Decl nodes", OS);
@@ -225,4 +226,3 @@ void EmitClangDeclContext(RecordKeeper &Records, raw_ostream &OS) {
   OS << "#undef DECL_CONTEXT\n";
   OS << "#undef DECL_CONTEXT_BASE\n";
 }
-} // end namespace clang

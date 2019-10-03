@@ -708,7 +708,6 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
     Options.FeaturesDir = Flags.features_dir;
   if (Flags.collect_data_flow)
     Options.CollectDataFlow = Flags.collect_data_flow;
-  Options.LazyCounters = Flags.lazy_counters;
   if (Flags.stop_file)
     Options.StopFile = Flags.stop_file;
 

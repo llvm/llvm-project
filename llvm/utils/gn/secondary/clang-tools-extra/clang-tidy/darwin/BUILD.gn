@@ -12,6 +12,7 @@ static_library("darwin") {
     "//llvm/lib/Support",
   ]
   sources = [
+    "AvoidSpinlockCheck.cpp",
     "DarwinTidyModule.cpp",
     "DispatchOnceNonstaticCheck.cpp",
   ]

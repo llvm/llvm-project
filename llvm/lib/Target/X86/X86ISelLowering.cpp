@@ -42442,6 +42442,40 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
   SDValue Base = GorS->getBasePtr();
   SDValue Scale = GorS->getScale();
 
+  // Shrink constant indices if they are larger than 32-bits.
+  // Only do this before legalize types since v2i64 could become v2i32.
+  // FIXME: We could check that the type is legal if we're after legalize types,
+  // but then we would need to construct test cases where that happens.
+  // FIXME: We could support more than just constant vectors, but we need to
+  // careful with costing. A truncate that can be optimized out would be fine.
+  // Otherwise we might only want to create a truncate if it avoids a split.
+  if (DCI.isBeforeLegalize()) {
+    if (auto *BV = dyn_cast<BuildVectorSDNode>(Index)) {
+      unsigned IndexWidth = Index.getScalarValueSizeInBits();
+      if (BV->isConstant() && IndexWidth > 32 &&
+          DAG.ComputeNumSignBits(Index) > (IndexWidth - 32)) {
+        unsigned NumElts = Index.getValueType().getVectorNumElements();
+        EVT NewVT = EVT::getVectorVT(*DAG.getContext(), MVT::i32, NumElts);
+        Index = DAG.getNode(ISD::TRUNCATE, DL, NewVT, Index);
+        if (auto *Gather = dyn_cast<MaskedGatherSDNode>(GorS)) {
+          SDValue Ops[] = { Chain, Gather->getPassThru(),
+                            Mask, Base, Index, Scale } ;
+          return DAG.getMaskedGather(Gather->getVTList(),
+                                     Gather->getMemoryVT(), DL, Ops,
+                                     Gather->getMemOperand(),
+                                     Gather->getIndexType());
+        }
+        auto *Scatter = cast<MaskedScatterSDNode>(GorS);
+        SDValue Ops[] = { Chain, Scatter->getValue(),
+                          Mask, Base, Index, Scale };
+        return DAG.getMaskedScatter(Scatter->getVTList(),
+                                    Scatter->getMemoryVT(), DL,
+                                    Ops, Scatter->getMemOperand(),
+                                    Scatter->getIndexType());
+      }
+    }
+  }
+
   if (DCI.isBeforeLegalizeOps()) {
     // Remove any sign extends from 32 or smaller to larger than 32.
     // Only do this before LegalizeOps in case we need the sign extend for

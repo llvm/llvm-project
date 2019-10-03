@@ -1639,7 +1639,6 @@ void SymbolFilePDB::GetTypes(lldb_private::SymbolContextScope *sc_scope,
                              lldb_private::TypeList &type_list) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   TypeCollection type_collection;
-  uint32_t old_size = type_list.GetSize();
   CompileUnit *cu =
       sc_scope ? sc_scope->CalculateSymbolContextCompileUnit() : nullptr;
   if (cu) {

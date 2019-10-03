@@ -46,6 +46,9 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, const DDGNode::NodeKind K) {
   case DDGNode::NodeKind::MultiInstruction:
     Out = "multi-instruction";
     break;
+  case DDGNode::NodeKind::Root:
+    Out = "root";
+    break;
   case DDGNode::NodeKind::Unknown:
     Out = "??";
     break;
@@ -60,7 +63,7 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, const DDGNode &N) {
     OS << " Instructions:\n";
     for (auto *I : cast<const SimpleDDGNode>(N).getInstructions())
       OS.indent(2) << *I << "\n";
-  } else
+  } else if (!isa<RootDDGNode>(N))
     llvm_unreachable("unimplemented type of node");
 
   OS << (N.getEdges().empty() ? " Edges:none!\n" : " Edges:\n");
@@ -108,6 +111,9 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, const DDGEdge::EdgeKind K) {
   case DDGEdge::EdgeKind::MemoryDependence:
     Out = "memory";
     break;
+  case DDGEdge::EdgeKind::Rooted:
+    Out = "rooted";
+    break;
   case DDGEdge::EdgeKind::Unknown:
     Out = "??";
     break;
@@ -151,6 +157,22 @@ DataDependenceGraph::~DataDependenceGraph() {
       delete E;
     delete N;
   }
+}
+
+bool DataDependenceGraph::addNode(DDGNode &N) {
+  if (!DDGBase::addNode(N))
+    return false;
+
+  // In general, if the root node is already created and linked, it is not safe
+  // to add new nodes since they may be unreachable by the root.
+  // TODO: Allow adding Pi-block nodes after root is created. Pi-blocks are an
+  // exception because they represent components that are already reachable by
+  // root.
+  assert(!Root && "Root node is already added. No more nodes can be added.");
+  if (isa<RootDDGNode>(N))
+    Root = &N;
+
+  return true;
 }
 
 raw_ostream &llvm::operator<<(raw_ostream &OS, const DataDependenceGraph &G) {

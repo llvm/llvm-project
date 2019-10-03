@@ -1191,8 +1191,7 @@ define zeroext i8 @test_vpcmpeqd_v4i1_v8i1_mask_mem_b(<2 x i64> %__a, i32* %__b)
 ; NoVLX-LABEL: test_vpcmpeqd_v4i1_v8i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastd (%rdi), %xmm1
-; NoVLX-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vpcmpeqd (%rdi){1to16}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -1222,9 +1221,8 @@ define zeroext i8 @test_masked_vpcmpeqd_v4i1_v8i1_mask_mem_b(i8 zeroext %__u, <2
 ; NoVLX-LABEL: test_masked_vpcmpeqd_v4i1_v8i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastd (%rsi), %xmm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpcmpeqd (%rsi){1to16}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -1382,8 +1380,7 @@ define zeroext i16 @test_vpcmpeqd_v4i1_v16i1_mask_mem_b(<2 x i64> %__a, i32* %__
 ; NoVLX-LABEL: test_vpcmpeqd_v4i1_v16i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastd (%rdi), %xmm1
-; NoVLX-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vpcmpeqd (%rdi){1to16}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -1413,9 +1410,8 @@ define zeroext i16 @test_masked_vpcmpeqd_v4i1_v16i1_mask_mem_b(i8 zeroext %__u, 
 ; NoVLX-LABEL: test_masked_vpcmpeqd_v4i1_v16i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastd (%rsi), %xmm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpcmpeqd (%rsi){1to16}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -1564,8 +1560,7 @@ define zeroext i32 @test_vpcmpeqd_v4i1_v32i1_mask_mem_b(<2 x i64> %__a, i32* %__
 ; NoVLX-LABEL: test_vpcmpeqd_v4i1_v32i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastd (%rdi), %xmm1
-; NoVLX-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vpcmpeqd (%rdi){1to16}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -1593,9 +1588,8 @@ define zeroext i32 @test_masked_vpcmpeqd_v4i1_v32i1_mask_mem_b(i8 zeroext %__u, 
 ; NoVLX-LABEL: test_masked_vpcmpeqd_v4i1_v32i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastd (%rsi), %xmm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpcmpeqd (%rsi){1to16}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -1743,8 +1737,7 @@ define zeroext i64 @test_vpcmpeqd_v4i1_v64i1_mask_mem_b(<2 x i64> %__a, i32* %__
 ; NoVLX-LABEL: test_vpcmpeqd_v4i1_v64i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastd (%rdi), %xmm1
-; NoVLX-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vpcmpeqd (%rdi){1to16}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -1772,9 +1765,8 @@ define zeroext i64 @test_masked_vpcmpeqd_v4i1_v64i1_mask_mem_b(i8 zeroext %__u, 
 ; NoVLX-LABEL: test_masked_vpcmpeqd_v4i1_v64i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastd (%rsi), %xmm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpcmpeqd (%rsi){1to16}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -1934,8 +1926,7 @@ define zeroext i16 @test_vpcmpeqd_v8i1_v16i1_mask_mem_b(<4 x i64> %__a, i32* %__
 ; NoVLX-LABEL: test_vpcmpeqd_v8i1_v16i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastd (%rdi), %ymm1
-; NoVLX-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vpcmpeqd (%rdi){1to16}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $8, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $8, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -1966,9 +1957,8 @@ define zeroext i16 @test_masked_vpcmpeqd_v8i1_v16i1_mask_mem_b(i8 zeroext %__u, 
 ; NoVLX-LABEL: test_masked_vpcmpeqd_v8i1_v16i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastd (%rsi), %ymm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpcmpeqd (%rsi){1to16}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $8, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $8, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -2119,8 +2109,7 @@ define zeroext i32 @test_vpcmpeqd_v8i1_v32i1_mask_mem_b(<4 x i64> %__a, i32* %__
 ; NoVLX-LABEL: test_vpcmpeqd_v8i1_v32i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastd (%rdi), %ymm1
-; NoVLX-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vpcmpeqd (%rdi){1to16}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $8, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $8, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -2149,9 +2138,8 @@ define zeroext i32 @test_masked_vpcmpeqd_v8i1_v32i1_mask_mem_b(i8 zeroext %__u, 
 ; NoVLX-LABEL: test_masked_vpcmpeqd_v8i1_v32i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastd (%rsi), %ymm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpcmpeqd (%rsi){1to16}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $8, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $8, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -2301,8 +2289,7 @@ define zeroext i64 @test_vpcmpeqd_v8i1_v64i1_mask_mem_b(<4 x i64> %__a, i32* %__
 ; NoVLX-LABEL: test_vpcmpeqd_v8i1_v64i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastd (%rdi), %ymm1
-; NoVLX-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vpcmpeqd (%rdi){1to16}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $8, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $8, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -2331,9 +2318,8 @@ define zeroext i64 @test_masked_vpcmpeqd_v8i1_v64i1_mask_mem_b(i8 zeroext %__u, 
 ; NoVLX-LABEL: test_masked_vpcmpeqd_v8i1_v64i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastd (%rsi), %ymm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpcmpeqd (%rsi){1to16}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $8, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $8, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -2796,8 +2782,7 @@ define zeroext i4 @test_vpcmpeqq_v2i1_v4i1_mask_mem_b(<2 x i64> %__a, i64* %__b)
 ; NoVLX-LABEL: test_vpcmpeqq_v2i1_v4i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rdi), %xmm1
-; NoVLX-NEXT:    vpcmpeqq %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vpcmpeqq (%rdi){1to8}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $14, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $14, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -2825,9 +2810,8 @@ define zeroext i4 @test_masked_vpcmpeqq_v2i1_v4i1_mask_mem_b(i8 zeroext %__u, <2
 ; NoVLX-LABEL: test_masked_vpcmpeqq_v2i1_v4i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rsi), %xmm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vpcmpeqq %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpcmpeqq (%rsi){1to8}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $14, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $14, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -2984,8 +2968,7 @@ define zeroext i8 @test_vpcmpeqq_v2i1_v8i1_mask_mem_b(<2 x i64> %__a, i64* %__b)
 ; NoVLX-LABEL: test_vpcmpeqq_v2i1_v8i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rdi), %xmm1
-; NoVLX-NEXT:    vpcmpeqq %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vpcmpeqq (%rdi){1to8}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $14, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $14, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -3015,9 +2998,8 @@ define zeroext i8 @test_masked_vpcmpeqq_v2i1_v8i1_mask_mem_b(i8 zeroext %__u, <2
 ; NoVLX-LABEL: test_masked_vpcmpeqq_v2i1_v8i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rsi), %xmm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vpcmpeqq %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpcmpeqq (%rsi){1to8}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $14, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $14, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -3175,8 +3157,7 @@ define zeroext i16 @test_vpcmpeqq_v2i1_v16i1_mask_mem_b(<2 x i64> %__a, i64* %__
 ; NoVLX-LABEL: test_vpcmpeqq_v2i1_v16i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rdi), %xmm1
-; NoVLX-NEXT:    vpcmpeqq %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vpcmpeqq (%rdi){1to8}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $14, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $14, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -3206,9 +3187,8 @@ define zeroext i16 @test_masked_vpcmpeqq_v2i1_v16i1_mask_mem_b(i8 zeroext %__u, 
 ; NoVLX-LABEL: test_masked_vpcmpeqq_v2i1_v16i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rsi), %xmm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vpcmpeqq %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpcmpeqq (%rsi){1to8}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $14, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $14, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -3357,8 +3337,7 @@ define zeroext i32 @test_vpcmpeqq_v2i1_v32i1_mask_mem_b(<2 x i64> %__a, i64* %__
 ; NoVLX-LABEL: test_vpcmpeqq_v2i1_v32i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rdi), %xmm1
-; NoVLX-NEXT:    vpcmpeqq %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vpcmpeqq (%rdi){1to8}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $14, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $14, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -3386,9 +3365,8 @@ define zeroext i32 @test_masked_vpcmpeqq_v2i1_v32i1_mask_mem_b(i8 zeroext %__u, 
 ; NoVLX-LABEL: test_masked_vpcmpeqq_v2i1_v32i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rsi), %xmm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vpcmpeqq %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpcmpeqq (%rsi){1to8}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $14, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $14, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -3536,8 +3514,7 @@ define zeroext i64 @test_vpcmpeqq_v2i1_v64i1_mask_mem_b(<2 x i64> %__a, i64* %__
 ; NoVLX-LABEL: test_vpcmpeqq_v2i1_v64i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rdi), %xmm1
-; NoVLX-NEXT:    vpcmpeqq %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vpcmpeqq (%rdi){1to8}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $14, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $14, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -3565,9 +3542,8 @@ define zeroext i64 @test_masked_vpcmpeqq_v2i1_v64i1_mask_mem_b(i8 zeroext %__u, 
 ; NoVLX-LABEL: test_masked_vpcmpeqq_v2i1_v64i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rsi), %xmm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vpcmpeqq %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpcmpeqq (%rsi){1to8}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $14, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $14, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -3729,8 +3705,7 @@ define zeroext i8 @test_vpcmpeqq_v4i1_v8i1_mask_mem_b(<4 x i64> %__a, i64* %__b)
 ; NoVLX-LABEL: test_vpcmpeqq_v4i1_v8i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rdi), %ymm1
-; NoVLX-NEXT:    vpcmpeqq %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vpcmpeqq (%rdi){1to8}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -3761,9 +3736,8 @@ define zeroext i8 @test_masked_vpcmpeqq_v4i1_v8i1_mask_mem_b(i8 zeroext %__u, <4
 ; NoVLX-LABEL: test_masked_vpcmpeqq_v4i1_v8i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rsi), %ymm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vpcmpeqq %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpcmpeqq (%rsi){1to8}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -3926,8 +3900,7 @@ define zeroext i16 @test_vpcmpeqq_v4i1_v16i1_mask_mem_b(<4 x i64> %__a, i64* %__
 ; NoVLX-LABEL: test_vpcmpeqq_v4i1_v16i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rdi), %ymm1
-; NoVLX-NEXT:    vpcmpeqq %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vpcmpeqq (%rdi){1to8}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -3958,9 +3931,8 @@ define zeroext i16 @test_masked_vpcmpeqq_v4i1_v16i1_mask_mem_b(i8 zeroext %__u, 
 ; NoVLX-LABEL: test_masked_vpcmpeqq_v4i1_v16i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rsi), %ymm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vpcmpeqq %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpcmpeqq (%rsi){1to8}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -4114,8 +4086,7 @@ define zeroext i32 @test_vpcmpeqq_v4i1_v32i1_mask_mem_b(<4 x i64> %__a, i64* %__
 ; NoVLX-LABEL: test_vpcmpeqq_v4i1_v32i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rdi), %ymm1
-; NoVLX-NEXT:    vpcmpeqq %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vpcmpeqq (%rdi){1to8}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -4144,9 +4115,8 @@ define zeroext i32 @test_masked_vpcmpeqq_v4i1_v32i1_mask_mem_b(i8 zeroext %__u, 
 ; NoVLX-LABEL: test_masked_vpcmpeqq_v4i1_v32i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rsi), %ymm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vpcmpeqq %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpcmpeqq (%rsi){1to8}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -4299,8 +4269,7 @@ define zeroext i64 @test_vpcmpeqq_v4i1_v64i1_mask_mem_b(<4 x i64> %__a, i64* %__
 ; NoVLX-LABEL: test_vpcmpeqq_v4i1_v64i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rdi), %ymm1
-; NoVLX-NEXT:    vpcmpeqq %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vpcmpeqq (%rdi){1to8}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -4329,9 +4298,8 @@ define zeroext i64 @test_masked_vpcmpeqq_v4i1_v64i1_mask_mem_b(i8 zeroext %__u, 
 ; NoVLX-LABEL: test_masked_vpcmpeqq_v4i1_v64i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rsi), %ymm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vpcmpeqq %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpcmpeqq (%rsi){1to8}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -6027,8 +5995,7 @@ define zeroext i8 @test_vpcmpsgtd_v4i1_v8i1_mask_mem_b(<2 x i64> %__a, i32* %__b
 ; NoVLX-LABEL: test_vpcmpsgtd_v4i1_v8i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastd (%rdi), %xmm1
-; NoVLX-NEXT:    vpcmpgtd %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vpcmpgtd (%rdi){1to16}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -6058,9 +6025,8 @@ define zeroext i8 @test_masked_vpcmpsgtd_v4i1_v8i1_mask_mem_b(i8 zeroext %__u, <
 ; NoVLX-LABEL: test_masked_vpcmpsgtd_v4i1_v8i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastd (%rsi), %xmm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vpcmpgtd %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpcmpgtd (%rsi){1to16}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -6218,8 +6184,7 @@ define zeroext i16 @test_vpcmpsgtd_v4i1_v16i1_mask_mem_b(<2 x i64> %__a, i32* %_
 ; NoVLX-LABEL: test_vpcmpsgtd_v4i1_v16i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastd (%rdi), %xmm1
-; NoVLX-NEXT:    vpcmpgtd %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vpcmpgtd (%rdi){1to16}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -6249,9 +6214,8 @@ define zeroext i16 @test_masked_vpcmpsgtd_v4i1_v16i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-LABEL: test_masked_vpcmpsgtd_v4i1_v16i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastd (%rsi), %xmm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vpcmpgtd %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpcmpgtd (%rsi){1to16}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -6400,8 +6364,7 @@ define zeroext i32 @test_vpcmpsgtd_v4i1_v32i1_mask_mem_b(<2 x i64> %__a, i32* %_
 ; NoVLX-LABEL: test_vpcmpsgtd_v4i1_v32i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastd (%rdi), %xmm1
-; NoVLX-NEXT:    vpcmpgtd %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vpcmpgtd (%rdi){1to16}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -6429,9 +6392,8 @@ define zeroext i32 @test_masked_vpcmpsgtd_v4i1_v32i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-LABEL: test_masked_vpcmpsgtd_v4i1_v32i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastd (%rsi), %xmm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vpcmpgtd %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpcmpgtd (%rsi){1to16}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -6579,8 +6541,7 @@ define zeroext i64 @test_vpcmpsgtd_v4i1_v64i1_mask_mem_b(<2 x i64> %__a, i32* %_
 ; NoVLX-LABEL: test_vpcmpsgtd_v4i1_v64i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastd (%rdi), %xmm1
-; NoVLX-NEXT:    vpcmpgtd %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vpcmpgtd (%rdi){1to16}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -6608,9 +6569,8 @@ define zeroext i64 @test_masked_vpcmpsgtd_v4i1_v64i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-LABEL: test_masked_vpcmpsgtd_v4i1_v64i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastd (%rsi), %xmm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vpcmpgtd %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpcmpgtd (%rsi){1to16}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -6770,8 +6730,7 @@ define zeroext i16 @test_vpcmpsgtd_v8i1_v16i1_mask_mem_b(<4 x i64> %__a, i32* %_
 ; NoVLX-LABEL: test_vpcmpsgtd_v8i1_v16i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastd (%rdi), %ymm1
-; NoVLX-NEXT:    vpcmpgtd %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vpcmpgtd (%rdi){1to16}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $8, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $8, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -6802,9 +6761,8 @@ define zeroext i16 @test_masked_vpcmpsgtd_v8i1_v16i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-LABEL: test_masked_vpcmpsgtd_v8i1_v16i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastd (%rsi), %ymm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vpcmpgtd %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpcmpgtd (%rsi){1to16}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $8, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $8, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -6955,8 +6913,7 @@ define zeroext i32 @test_vpcmpsgtd_v8i1_v32i1_mask_mem_b(<4 x i64> %__a, i32* %_
 ; NoVLX-LABEL: test_vpcmpsgtd_v8i1_v32i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastd (%rdi), %ymm1
-; NoVLX-NEXT:    vpcmpgtd %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vpcmpgtd (%rdi){1to16}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $8, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $8, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -6985,9 +6942,8 @@ define zeroext i32 @test_masked_vpcmpsgtd_v8i1_v32i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-LABEL: test_masked_vpcmpsgtd_v8i1_v32i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastd (%rsi), %ymm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vpcmpgtd %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpcmpgtd (%rsi){1to16}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $8, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $8, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -7137,8 +7093,7 @@ define zeroext i64 @test_vpcmpsgtd_v8i1_v64i1_mask_mem_b(<4 x i64> %__a, i32* %_
 ; NoVLX-LABEL: test_vpcmpsgtd_v8i1_v64i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastd (%rdi), %ymm1
-; NoVLX-NEXT:    vpcmpgtd %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vpcmpgtd (%rdi){1to16}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $8, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $8, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -7167,9 +7122,8 @@ define zeroext i64 @test_masked_vpcmpsgtd_v8i1_v64i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-LABEL: test_masked_vpcmpsgtd_v8i1_v64i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastd (%rsi), %ymm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vpcmpgtd %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpcmpgtd (%rsi){1to16}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $8, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $8, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -7632,8 +7586,7 @@ define zeroext i4 @test_vpcmpsgtq_v2i1_v4i1_mask_mem_b(<2 x i64> %__a, i64* %__b
 ; NoVLX-LABEL: test_vpcmpsgtq_v2i1_v4i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rdi), %xmm1
-; NoVLX-NEXT:    vpcmpgtq %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vpcmpgtq (%rdi){1to8}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $14, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $14, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -7661,9 +7614,8 @@ define zeroext i4 @test_masked_vpcmpsgtq_v2i1_v4i1_mask_mem_b(i8 zeroext %__u, <
 ; NoVLX-LABEL: test_masked_vpcmpsgtq_v2i1_v4i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rsi), %xmm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vpcmpgtq %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpcmpgtq (%rsi){1to8}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $14, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $14, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -7820,8 +7772,7 @@ define zeroext i8 @test_vpcmpsgtq_v2i1_v8i1_mask_mem_b(<2 x i64> %__a, i64* %__b
 ; NoVLX-LABEL: test_vpcmpsgtq_v2i1_v8i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rdi), %xmm1
-; NoVLX-NEXT:    vpcmpgtq %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vpcmpgtq (%rdi){1to8}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $14, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $14, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -7851,9 +7802,8 @@ define zeroext i8 @test_masked_vpcmpsgtq_v2i1_v8i1_mask_mem_b(i8 zeroext %__u, <
 ; NoVLX-LABEL: test_masked_vpcmpsgtq_v2i1_v8i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rsi), %xmm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vpcmpgtq %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpcmpgtq (%rsi){1to8}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $14, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $14, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -8011,8 +7961,7 @@ define zeroext i16 @test_vpcmpsgtq_v2i1_v16i1_mask_mem_b(<2 x i64> %__a, i64* %_
 ; NoVLX-LABEL: test_vpcmpsgtq_v2i1_v16i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rdi), %xmm1
-; NoVLX-NEXT:    vpcmpgtq %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vpcmpgtq (%rdi){1to8}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $14, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $14, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -8042,9 +7991,8 @@ define zeroext i16 @test_masked_vpcmpsgtq_v2i1_v16i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-LABEL: test_masked_vpcmpsgtq_v2i1_v16i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rsi), %xmm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vpcmpgtq %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpcmpgtq (%rsi){1to8}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $14, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $14, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -8193,8 +8141,7 @@ define zeroext i32 @test_vpcmpsgtq_v2i1_v32i1_mask_mem_b(<2 x i64> %__a, i64* %_
 ; NoVLX-LABEL: test_vpcmpsgtq_v2i1_v32i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rdi), %xmm1
-; NoVLX-NEXT:    vpcmpgtq %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vpcmpgtq (%rdi){1to8}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $14, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $14, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -8222,9 +8169,8 @@ define zeroext i32 @test_masked_vpcmpsgtq_v2i1_v32i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-LABEL: test_masked_vpcmpsgtq_v2i1_v32i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rsi), %xmm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vpcmpgtq %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpcmpgtq (%rsi){1to8}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $14, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $14, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -8372,8 +8318,7 @@ define zeroext i64 @test_vpcmpsgtq_v2i1_v64i1_mask_mem_b(<2 x i64> %__a, i64* %_
 ; NoVLX-LABEL: test_vpcmpsgtq_v2i1_v64i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rdi), %xmm1
-; NoVLX-NEXT:    vpcmpgtq %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vpcmpgtq (%rdi){1to8}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $14, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $14, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -8401,9 +8346,8 @@ define zeroext i64 @test_masked_vpcmpsgtq_v2i1_v64i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-LABEL: test_masked_vpcmpsgtq_v2i1_v64i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rsi), %xmm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vpcmpgtq %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpcmpgtq (%rsi){1to8}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $14, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $14, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -8565,8 +8509,7 @@ define zeroext i8 @test_vpcmpsgtq_v4i1_v8i1_mask_mem_b(<4 x i64> %__a, i64* %__b
 ; NoVLX-LABEL: test_vpcmpsgtq_v4i1_v8i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rdi), %ymm1
-; NoVLX-NEXT:    vpcmpgtq %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vpcmpgtq (%rdi){1to8}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -8597,9 +8540,8 @@ define zeroext i8 @test_masked_vpcmpsgtq_v4i1_v8i1_mask_mem_b(i8 zeroext %__u, <
 ; NoVLX-LABEL: test_masked_vpcmpsgtq_v4i1_v8i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rsi), %ymm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vpcmpgtq %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpcmpgtq (%rsi){1to8}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -8762,8 +8704,7 @@ define zeroext i16 @test_vpcmpsgtq_v4i1_v16i1_mask_mem_b(<4 x i64> %__a, i64* %_
 ; NoVLX-LABEL: test_vpcmpsgtq_v4i1_v16i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rdi), %ymm1
-; NoVLX-NEXT:    vpcmpgtq %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vpcmpgtq (%rdi){1to8}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -8794,9 +8735,8 @@ define zeroext i16 @test_masked_vpcmpsgtq_v4i1_v16i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-LABEL: test_masked_vpcmpsgtq_v4i1_v16i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rsi), %ymm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vpcmpgtq %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpcmpgtq (%rsi){1to8}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -8950,8 +8890,7 @@ define zeroext i32 @test_vpcmpsgtq_v4i1_v32i1_mask_mem_b(<4 x i64> %__a, i64* %_
 ; NoVLX-LABEL: test_vpcmpsgtq_v4i1_v32i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rdi), %ymm1
-; NoVLX-NEXT:    vpcmpgtq %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vpcmpgtq (%rdi){1to8}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -8980,9 +8919,8 @@ define zeroext i32 @test_masked_vpcmpsgtq_v4i1_v32i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-LABEL: test_masked_vpcmpsgtq_v4i1_v32i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rsi), %ymm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vpcmpgtq %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpcmpgtq (%rsi){1to8}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -9135,8 +9073,7 @@ define zeroext i64 @test_vpcmpsgtq_v4i1_v64i1_mask_mem_b(<4 x i64> %__a, i64* %_
 ; NoVLX-LABEL: test_vpcmpsgtq_v4i1_v64i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rdi), %ymm1
-; NoVLX-NEXT:    vpcmpgtq %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vpcmpgtq (%rdi){1to8}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -9165,9 +9102,8 @@ define zeroext i64 @test_masked_vpcmpsgtq_v4i1_v64i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-LABEL: test_masked_vpcmpsgtq_v4i1_v64i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rsi), %ymm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vpcmpgtq %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpcmpgtq (%rsi){1to8}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -10923,8 +10859,7 @@ define zeroext i8 @test_vpcmpsged_v4i1_v8i1_mask_mem_b(<2 x i64> %__a, i32* %__b
 ; NoVLX-LABEL: test_vpcmpsged_v4i1_v8i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastd (%rdi), %xmm1
-; NoVLX-NEXT:    vpcmpnltd %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vpcmpnltd (%rdi){1to16}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -10954,9 +10889,8 @@ define zeroext i8 @test_masked_vpcmpsged_v4i1_v8i1_mask_mem_b(i8 zeroext %__u, <
 ; NoVLX-LABEL: test_masked_vpcmpsged_v4i1_v8i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastd (%rsi), %xmm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vpcmpnltd %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpcmpnltd (%rsi){1to16}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -11114,8 +11048,7 @@ define zeroext i16 @test_vpcmpsged_v4i1_v16i1_mask_mem_b(<2 x i64> %__a, i32* %_
 ; NoVLX-LABEL: test_vpcmpsged_v4i1_v16i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastd (%rdi), %xmm1
-; NoVLX-NEXT:    vpcmpnltd %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vpcmpnltd (%rdi){1to16}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -11145,9 +11078,8 @@ define zeroext i16 @test_masked_vpcmpsged_v4i1_v16i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-LABEL: test_masked_vpcmpsged_v4i1_v16i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastd (%rsi), %xmm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vpcmpnltd %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpcmpnltd (%rsi){1to16}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -11296,8 +11228,7 @@ define zeroext i32 @test_vpcmpsged_v4i1_v32i1_mask_mem_b(<2 x i64> %__a, i32* %_
 ; NoVLX-LABEL: test_vpcmpsged_v4i1_v32i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastd (%rdi), %xmm1
-; NoVLX-NEXT:    vpcmpnltd %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vpcmpnltd (%rdi){1to16}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -11325,9 +11256,8 @@ define zeroext i32 @test_masked_vpcmpsged_v4i1_v32i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-LABEL: test_masked_vpcmpsged_v4i1_v32i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastd (%rsi), %xmm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vpcmpnltd %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpcmpnltd (%rsi){1to16}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -11475,8 +11405,7 @@ define zeroext i64 @test_vpcmpsged_v4i1_v64i1_mask_mem_b(<2 x i64> %__a, i32* %_
 ; NoVLX-LABEL: test_vpcmpsged_v4i1_v64i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastd (%rdi), %xmm1
-; NoVLX-NEXT:    vpcmpnltd %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vpcmpnltd (%rdi){1to16}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -11504,9 +11433,8 @@ define zeroext i64 @test_masked_vpcmpsged_v4i1_v64i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-LABEL: test_masked_vpcmpsged_v4i1_v64i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastd (%rsi), %xmm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vpcmpnltd %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpcmpnltd (%rsi){1to16}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -11666,8 +11594,7 @@ define zeroext i16 @test_vpcmpsged_v8i1_v16i1_mask_mem_b(<4 x i64> %__a, i32* %_
 ; NoVLX-LABEL: test_vpcmpsged_v8i1_v16i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastd (%rdi), %ymm1
-; NoVLX-NEXT:    vpcmpnltd %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vpcmpnltd (%rdi){1to16}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $8, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $8, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -11698,9 +11625,8 @@ define zeroext i16 @test_masked_vpcmpsged_v8i1_v16i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-LABEL: test_masked_vpcmpsged_v8i1_v16i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastd (%rsi), %ymm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vpcmpnltd %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpcmpnltd (%rsi){1to16}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $8, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $8, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -11851,8 +11777,7 @@ define zeroext i32 @test_vpcmpsged_v8i1_v32i1_mask_mem_b(<4 x i64> %__a, i32* %_
 ; NoVLX-LABEL: test_vpcmpsged_v8i1_v32i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastd (%rdi), %ymm1
-; NoVLX-NEXT:    vpcmpnltd %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vpcmpnltd (%rdi){1to16}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $8, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $8, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -11881,9 +11806,8 @@ define zeroext i32 @test_masked_vpcmpsged_v8i1_v32i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-LABEL: test_masked_vpcmpsged_v8i1_v32i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastd (%rsi), %ymm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vpcmpnltd %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpcmpnltd (%rsi){1to16}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $8, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $8, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -12033,8 +11957,7 @@ define zeroext i64 @test_vpcmpsged_v8i1_v64i1_mask_mem_b(<4 x i64> %__a, i32* %_
 ; NoVLX-LABEL: test_vpcmpsged_v8i1_v64i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastd (%rdi), %ymm1
-; NoVLX-NEXT:    vpcmpnltd %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vpcmpnltd (%rdi){1to16}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $8, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $8, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -12063,9 +11986,8 @@ define zeroext i64 @test_masked_vpcmpsged_v8i1_v64i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-LABEL: test_masked_vpcmpsged_v8i1_v64i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastd (%rsi), %ymm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vpcmpnltd %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpcmpnltd (%rsi){1to16}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $8, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $8, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -12528,8 +12450,7 @@ define zeroext i4 @test_vpcmpsgeq_v2i1_v4i1_mask_mem_b(<2 x i64> %__a, i64* %__b
 ; NoVLX-LABEL: test_vpcmpsgeq_v2i1_v4i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rdi), %xmm1
-; NoVLX-NEXT:    vpcmpnltq %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vpcmpnltq (%rdi){1to8}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $14, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $14, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -12557,9 +12478,8 @@ define zeroext i4 @test_masked_vpcmpsgeq_v2i1_v4i1_mask_mem_b(i8 zeroext %__u, <
 ; NoVLX-LABEL: test_masked_vpcmpsgeq_v2i1_v4i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rsi), %xmm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vpcmpnltq %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpcmpnltq (%rsi){1to8}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $14, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $14, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -12716,8 +12636,7 @@ define zeroext i8 @test_vpcmpsgeq_v2i1_v8i1_mask_mem_b(<2 x i64> %__a, i64* %__b
 ; NoVLX-LABEL: test_vpcmpsgeq_v2i1_v8i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rdi), %xmm1
-; NoVLX-NEXT:    vpcmpnltq %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vpcmpnltq (%rdi){1to8}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $14, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $14, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -12747,9 +12666,8 @@ define zeroext i8 @test_masked_vpcmpsgeq_v2i1_v8i1_mask_mem_b(i8 zeroext %__u, <
 ; NoVLX-LABEL: test_masked_vpcmpsgeq_v2i1_v8i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rsi), %xmm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vpcmpnltq %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpcmpnltq (%rsi){1to8}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $14, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $14, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -12907,8 +12825,7 @@ define zeroext i16 @test_vpcmpsgeq_v2i1_v16i1_mask_mem_b(<2 x i64> %__a, i64* %_
 ; NoVLX-LABEL: test_vpcmpsgeq_v2i1_v16i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rdi), %xmm1
-; NoVLX-NEXT:    vpcmpnltq %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vpcmpnltq (%rdi){1to8}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $14, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $14, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -12938,9 +12855,8 @@ define zeroext i16 @test_masked_vpcmpsgeq_v2i1_v16i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-LABEL: test_masked_vpcmpsgeq_v2i1_v16i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rsi), %xmm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vpcmpnltq %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpcmpnltq (%rsi){1to8}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $14, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $14, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -13089,8 +13005,7 @@ define zeroext i32 @test_vpcmpsgeq_v2i1_v32i1_mask_mem_b(<2 x i64> %__a, i64* %_
 ; NoVLX-LABEL: test_vpcmpsgeq_v2i1_v32i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rdi), %xmm1
-; NoVLX-NEXT:    vpcmpnltq %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vpcmpnltq (%rdi){1to8}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $14, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $14, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -13118,9 +13033,8 @@ define zeroext i32 @test_masked_vpcmpsgeq_v2i1_v32i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-LABEL: test_masked_vpcmpsgeq_v2i1_v32i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rsi), %xmm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vpcmpnltq %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpcmpnltq (%rsi){1to8}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $14, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $14, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -13268,8 +13182,7 @@ define zeroext i64 @test_vpcmpsgeq_v2i1_v64i1_mask_mem_b(<2 x i64> %__a, i64* %_
 ; NoVLX-LABEL: test_vpcmpsgeq_v2i1_v64i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rdi), %xmm1
-; NoVLX-NEXT:    vpcmpnltq %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vpcmpnltq (%rdi){1to8}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $14, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $14, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -13297,9 +13210,8 @@ define zeroext i64 @test_masked_vpcmpsgeq_v2i1_v64i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-LABEL: test_masked_vpcmpsgeq_v2i1_v64i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rsi), %xmm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vpcmpnltq %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpcmpnltq (%rsi){1to8}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $14, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $14, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -13461,8 +13373,7 @@ define zeroext i8 @test_vpcmpsgeq_v4i1_v8i1_mask_mem_b(<4 x i64> %__a, i64* %__b
 ; NoVLX-LABEL: test_vpcmpsgeq_v4i1_v8i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rdi), %ymm1
-; NoVLX-NEXT:    vpcmpnltq %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vpcmpnltq (%rdi){1to8}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -13493,9 +13404,8 @@ define zeroext i8 @test_masked_vpcmpsgeq_v4i1_v8i1_mask_mem_b(i8 zeroext %__u, <
 ; NoVLX-LABEL: test_masked_vpcmpsgeq_v4i1_v8i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rsi), %ymm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vpcmpnltq %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpcmpnltq (%rsi){1to8}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -13658,8 +13568,7 @@ define zeroext i16 @test_vpcmpsgeq_v4i1_v16i1_mask_mem_b(<4 x i64> %__a, i64* %_
 ; NoVLX-LABEL: test_vpcmpsgeq_v4i1_v16i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rdi), %ymm1
-; NoVLX-NEXT:    vpcmpnltq %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vpcmpnltq (%rdi){1to8}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -13690,9 +13599,8 @@ define zeroext i16 @test_masked_vpcmpsgeq_v4i1_v16i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-LABEL: test_masked_vpcmpsgeq_v4i1_v16i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rsi), %ymm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vpcmpnltq %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpcmpnltq (%rsi){1to8}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -13846,8 +13754,7 @@ define zeroext i32 @test_vpcmpsgeq_v4i1_v32i1_mask_mem_b(<4 x i64> %__a, i64* %_
 ; NoVLX-LABEL: test_vpcmpsgeq_v4i1_v32i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rdi), %ymm1
-; NoVLX-NEXT:    vpcmpnltq %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vpcmpnltq (%rdi){1to8}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -13876,9 +13783,8 @@ define zeroext i32 @test_masked_vpcmpsgeq_v4i1_v32i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-LABEL: test_masked_vpcmpsgeq_v4i1_v32i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rsi), %ymm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vpcmpnltq %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpcmpnltq (%rsi){1to8}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -14031,8 +13937,7 @@ define zeroext i64 @test_vpcmpsgeq_v4i1_v64i1_mask_mem_b(<4 x i64> %__a, i64* %_
 ; NoVLX-LABEL: test_vpcmpsgeq_v4i1_v64i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rdi), %ymm1
-; NoVLX-NEXT:    vpcmpnltq %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vpcmpnltq (%rdi){1to8}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -14061,9 +13966,8 @@ define zeroext i64 @test_masked_vpcmpsgeq_v4i1_v64i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-LABEL: test_masked_vpcmpsgeq_v4i1_v64i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rsi), %ymm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vpcmpnltq %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpcmpnltq (%rsi){1to8}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -15839,8 +15743,7 @@ define zeroext i8 @test_vpcmpultd_v4i1_v8i1_mask_mem_b(<2 x i64> %__a, i32* %__b
 ; NoVLX-LABEL: test_vpcmpultd_v4i1_v8i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastd (%rdi), %xmm1
-; NoVLX-NEXT:    vpcmpltud %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vpcmpltud (%rdi){1to16}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -15870,9 +15773,8 @@ define zeroext i8 @test_masked_vpcmpultd_v4i1_v8i1_mask_mem_b(i8 zeroext %__u, <
 ; NoVLX-LABEL: test_masked_vpcmpultd_v4i1_v8i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastd (%rsi), %xmm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vpcmpltud %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpcmpltud (%rsi){1to16}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -16030,8 +15932,7 @@ define zeroext i16 @test_vpcmpultd_v4i1_v16i1_mask_mem_b(<2 x i64> %__a, i32* %_
 ; NoVLX-LABEL: test_vpcmpultd_v4i1_v16i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastd (%rdi), %xmm1
-; NoVLX-NEXT:    vpcmpltud %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vpcmpltud (%rdi){1to16}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -16061,9 +15962,8 @@ define zeroext i16 @test_masked_vpcmpultd_v4i1_v16i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-LABEL: test_masked_vpcmpultd_v4i1_v16i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastd (%rsi), %xmm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vpcmpltud %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpcmpltud (%rsi){1to16}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -16212,8 +16112,7 @@ define zeroext i32 @test_vpcmpultd_v4i1_v32i1_mask_mem_b(<2 x i64> %__a, i32* %_
 ; NoVLX-LABEL: test_vpcmpultd_v4i1_v32i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastd (%rdi), %xmm1
-; NoVLX-NEXT:    vpcmpltud %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vpcmpltud (%rdi){1to16}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -16241,9 +16140,8 @@ define zeroext i32 @test_masked_vpcmpultd_v4i1_v32i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-LABEL: test_masked_vpcmpultd_v4i1_v32i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastd (%rsi), %xmm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vpcmpltud %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpcmpltud (%rsi){1to16}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -16391,8 +16289,7 @@ define zeroext i64 @test_vpcmpultd_v4i1_v64i1_mask_mem_b(<2 x i64> %__a, i32* %_
 ; NoVLX-LABEL: test_vpcmpultd_v4i1_v64i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastd (%rdi), %xmm1
-; NoVLX-NEXT:    vpcmpltud %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vpcmpltud (%rdi){1to16}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -16420,9 +16317,8 @@ define zeroext i64 @test_masked_vpcmpultd_v4i1_v64i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-LABEL: test_masked_vpcmpultd_v4i1_v64i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastd (%rsi), %xmm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vpcmpltud %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpcmpltud (%rsi){1to16}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -16582,8 +16478,7 @@ define zeroext i16 @test_vpcmpultd_v8i1_v16i1_mask_mem_b(<4 x i64> %__a, i32* %_
 ; NoVLX-LABEL: test_vpcmpultd_v8i1_v16i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastd (%rdi), %ymm1
-; NoVLX-NEXT:    vpcmpltud %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vpcmpltud (%rdi){1to16}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $8, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $8, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -16614,9 +16509,8 @@ define zeroext i16 @test_masked_vpcmpultd_v8i1_v16i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-LABEL: test_masked_vpcmpultd_v8i1_v16i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastd (%rsi), %ymm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vpcmpltud %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpcmpltud (%rsi){1to16}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $8, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $8, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -16767,8 +16661,7 @@ define zeroext i32 @test_vpcmpultd_v8i1_v32i1_mask_mem_b(<4 x i64> %__a, i32* %_
 ; NoVLX-LABEL: test_vpcmpultd_v8i1_v32i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastd (%rdi), %ymm1
-; NoVLX-NEXT:    vpcmpltud %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vpcmpltud (%rdi){1to16}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $8, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $8, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -16797,9 +16690,8 @@ define zeroext i32 @test_masked_vpcmpultd_v8i1_v32i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-LABEL: test_masked_vpcmpultd_v8i1_v32i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastd (%rsi), %ymm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vpcmpltud %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpcmpltud (%rsi){1to16}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $8, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $8, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -16949,8 +16841,7 @@ define zeroext i64 @test_vpcmpultd_v8i1_v64i1_mask_mem_b(<4 x i64> %__a, i32* %_
 ; NoVLX-LABEL: test_vpcmpultd_v8i1_v64i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastd (%rdi), %ymm1
-; NoVLX-NEXT:    vpcmpltud %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vpcmpltud (%rdi){1to16}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $8, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $8, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -16979,9 +16870,8 @@ define zeroext i64 @test_masked_vpcmpultd_v8i1_v64i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-LABEL: test_masked_vpcmpultd_v8i1_v64i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastd (%rsi), %ymm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vpcmpltud %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpcmpltud (%rsi){1to16}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $8, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $8, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -17444,8 +17334,7 @@ define zeroext i4 @test_vpcmpultq_v2i1_v4i1_mask_mem_b(<2 x i64> %__a, i64* %__b
 ; NoVLX-LABEL: test_vpcmpultq_v2i1_v4i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rdi), %xmm1
-; NoVLX-NEXT:    vpcmpltuq %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vpcmpltuq (%rdi){1to8}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $14, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $14, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -17473,9 +17362,8 @@ define zeroext i4 @test_masked_vpcmpultq_v2i1_v4i1_mask_mem_b(i8 zeroext %__u, <
 ; NoVLX-LABEL: test_masked_vpcmpultq_v2i1_v4i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rsi), %xmm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vpcmpltuq %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpcmpltuq (%rsi){1to8}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $14, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $14, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -17632,8 +17520,7 @@ define zeroext i8 @test_vpcmpultq_v2i1_v8i1_mask_mem_b(<2 x i64> %__a, i64* %__b
 ; NoVLX-LABEL: test_vpcmpultq_v2i1_v8i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rdi), %xmm1
-; NoVLX-NEXT:    vpcmpltuq %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vpcmpltuq (%rdi){1to8}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $14, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $14, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -17663,9 +17550,8 @@ define zeroext i8 @test_masked_vpcmpultq_v2i1_v8i1_mask_mem_b(i8 zeroext %__u, <
 ; NoVLX-LABEL: test_masked_vpcmpultq_v2i1_v8i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rsi), %xmm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vpcmpltuq %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpcmpltuq (%rsi){1to8}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $14, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $14, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -17823,8 +17709,7 @@ define zeroext i16 @test_vpcmpultq_v2i1_v16i1_mask_mem_b(<2 x i64> %__a, i64* %_
 ; NoVLX-LABEL: test_vpcmpultq_v2i1_v16i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rdi), %xmm1
-; NoVLX-NEXT:    vpcmpltuq %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vpcmpltuq (%rdi){1to8}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $14, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $14, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -17854,9 +17739,8 @@ define zeroext i16 @test_masked_vpcmpultq_v2i1_v16i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-LABEL: test_masked_vpcmpultq_v2i1_v16i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rsi), %xmm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vpcmpltuq %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpcmpltuq (%rsi){1to8}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $14, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $14, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -18005,8 +17889,7 @@ define zeroext i32 @test_vpcmpultq_v2i1_v32i1_mask_mem_b(<2 x i64> %__a, i64* %_
 ; NoVLX-LABEL: test_vpcmpultq_v2i1_v32i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rdi), %xmm1
-; NoVLX-NEXT:    vpcmpltuq %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vpcmpltuq (%rdi){1to8}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $14, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $14, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -18034,9 +17917,8 @@ define zeroext i32 @test_masked_vpcmpultq_v2i1_v32i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-LABEL: test_masked_vpcmpultq_v2i1_v32i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rsi), %xmm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vpcmpltuq %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpcmpltuq (%rsi){1to8}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $14, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $14, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -18184,8 +18066,7 @@ define zeroext i64 @test_vpcmpultq_v2i1_v64i1_mask_mem_b(<2 x i64> %__a, i64* %_
 ; NoVLX-LABEL: test_vpcmpultq_v2i1_v64i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rdi), %xmm1
-; NoVLX-NEXT:    vpcmpltuq %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vpcmpltuq (%rdi){1to8}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $14, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $14, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -18213,9 +18094,8 @@ define zeroext i64 @test_masked_vpcmpultq_v2i1_v64i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-LABEL: test_masked_vpcmpultq_v2i1_v64i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rsi), %xmm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vpcmpltuq %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpcmpltuq (%rsi){1to8}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $14, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $14, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -18377,8 +18257,7 @@ define zeroext i8 @test_vpcmpultq_v4i1_v8i1_mask_mem_b(<4 x i64> %__a, i64* %__b
 ; NoVLX-LABEL: test_vpcmpultq_v4i1_v8i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rdi), %ymm1
-; NoVLX-NEXT:    vpcmpltuq %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vpcmpltuq (%rdi){1to8}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -18409,9 +18288,8 @@ define zeroext i8 @test_masked_vpcmpultq_v4i1_v8i1_mask_mem_b(i8 zeroext %__u, <
 ; NoVLX-LABEL: test_masked_vpcmpultq_v4i1_v8i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rsi), %ymm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vpcmpltuq %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpcmpltuq (%rsi){1to8}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -18574,8 +18452,7 @@ define zeroext i16 @test_vpcmpultq_v4i1_v16i1_mask_mem_b(<4 x i64> %__a, i64* %_
 ; NoVLX-LABEL: test_vpcmpultq_v4i1_v16i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rdi), %ymm1
-; NoVLX-NEXT:    vpcmpltuq %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vpcmpltuq (%rdi){1to8}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -18606,9 +18483,8 @@ define zeroext i16 @test_masked_vpcmpultq_v4i1_v16i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-LABEL: test_masked_vpcmpultq_v4i1_v16i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rsi), %ymm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vpcmpltuq %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpcmpltuq (%rsi){1to8}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -18762,8 +18638,7 @@ define zeroext i32 @test_vpcmpultq_v4i1_v32i1_mask_mem_b(<4 x i64> %__a, i64* %_
 ; NoVLX-LABEL: test_vpcmpultq_v4i1_v32i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rdi), %ymm1
-; NoVLX-NEXT:    vpcmpltuq %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vpcmpltuq (%rdi){1to8}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -18792,9 +18667,8 @@ define zeroext i32 @test_masked_vpcmpultq_v4i1_v32i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-LABEL: test_masked_vpcmpultq_v4i1_v32i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rsi), %ymm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vpcmpltuq %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpcmpltuq (%rsi){1to8}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -18947,8 +18821,7 @@ define zeroext i64 @test_vpcmpultq_v4i1_v64i1_mask_mem_b(<4 x i64> %__a, i64* %_
 ; NoVLX-LABEL: test_vpcmpultq_v4i1_v64i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rdi), %ymm1
-; NoVLX-NEXT:    vpcmpltuq %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vpcmpltuq (%rdi){1to8}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -18977,9 +18850,8 @@ define zeroext i64 @test_masked_vpcmpultq_v4i1_v64i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-LABEL: test_masked_vpcmpultq_v4i1_v64i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vpbroadcastq (%rsi), %ymm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vpcmpltuq %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpcmpltuq (%rsi){1to8}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -19555,8 +19427,7 @@ define zeroext i8 @test_vcmpoeqps_v4i1_v8i1_mask_mem_b(<2 x i64> %__a, float* %_
 ; NoVLX-LABEL: test_vcmpoeqps_v4i1_v8i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vbroadcastss (%rdi), %xmm1
-; NoVLX-NEXT:    vcmpeqps %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vcmpeqps (%rdi){1to16}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -19652,8 +19523,7 @@ define zeroext i8 @test_masked_vcmpoeqps_v4i1_v8i1_mask_mem_b(i4 zeroext %__u, <
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vbroadcastss (%rsi), %xmm1
-; NoVLX-NEXT:    vcmpeqps %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vcmpeqps (%rsi){1to16}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -19743,8 +19613,7 @@ define zeroext i16 @test_vcmpoeqps_v4i1_v16i1_mask_mem_b(<2 x i64> %__a, float* 
 ; NoVLX-LABEL: test_vcmpoeqps_v4i1_v16i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vbroadcastss (%rdi), %xmm1
-; NoVLX-NEXT:    vcmpeqps %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vcmpeqps (%rdi){1to16}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -19840,8 +19709,7 @@ define zeroext i16 @test_masked_vcmpoeqps_v4i1_v16i1_mask_mem_b(i4 zeroext %__u,
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vbroadcastss (%rsi), %xmm1
-; NoVLX-NEXT:    vcmpeqps %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vcmpeqps (%rsi){1to16}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -19926,8 +19794,7 @@ define zeroext i32 @test_vcmpoeqps_v4i1_v32i1_mask_mem_b(<2 x i64> %__a, float* 
 ; NoVLX-LABEL: test_vcmpoeqps_v4i1_v32i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vbroadcastss (%rdi), %xmm1
-; NoVLX-NEXT:    vcmpeqps %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vcmpeqps (%rdi){1to16}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -20017,8 +19884,7 @@ define zeroext i32 @test_masked_vcmpoeqps_v4i1_v32i1_mask_mem_b(i4 zeroext %__u,
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vbroadcastss (%rsi), %xmm1
-; NoVLX-NEXT:    vcmpeqps %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vcmpeqps (%rsi){1to16}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -20102,8 +19968,7 @@ define zeroext i64 @test_vcmpoeqps_v4i1_v64i1_mask_mem_b(<2 x i64> %__a, float* 
 ; NoVLX-LABEL: test_vcmpoeqps_v4i1_v64i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vbroadcastss (%rdi), %xmm1
-; NoVLX-NEXT:    vcmpeqps %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vcmpeqps (%rdi){1to16}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -20193,8 +20058,7 @@ define zeroext i64 @test_masked_vcmpoeqps_v4i1_v64i1_mask_mem_b(i4 zeroext %__u,
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vbroadcastss (%rsi), %xmm1
-; NoVLX-NEXT:    vcmpeqps %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vcmpeqps (%rsi){1to16}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -20286,8 +20150,7 @@ define zeroext i16 @test_vcmpoeqps_v8i1_v16i1_mask_mem_b(<4 x i64> %__a, float* 
 ; NoVLX-LABEL: test_vcmpoeqps_v8i1_v16i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vbroadcastss (%rdi), %ymm1
-; NoVLX-NEXT:    vcmpeqps %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vcmpeqps (%rdi){1to16}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $8, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $8, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -20385,9 +20248,8 @@ define zeroext i16 @test_masked_vcmpoeqps_v8i1_v16i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-LABEL: test_masked_vcmpoeqps_v8i1_v16i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vbroadcastss (%rsi), %ymm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vcmpeqps %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vcmpeqps (%rsi){1to16}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $8, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $8, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -20475,8 +20337,7 @@ define zeroext i32 @test_vcmpoeqps_v8i1_v32i1_mask_mem_b(<4 x i64> %__a, float* 
 ; NoVLX-LABEL: test_vcmpoeqps_v8i1_v32i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vbroadcastss (%rdi), %ymm1
-; NoVLX-NEXT:    vcmpeqps %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vcmpeqps (%rdi){1to16}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $8, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $8, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -20568,9 +20429,8 @@ define zeroext i32 @test_masked_vcmpoeqps_v8i1_v32i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-LABEL: test_masked_vcmpoeqps_v8i1_v32i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vbroadcastss (%rsi), %ymm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vcmpeqps %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vcmpeqps (%rsi){1to16}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $8, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $8, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -20657,8 +20517,7 @@ define zeroext i64 @test_vcmpoeqps_v8i1_v64i1_mask_mem_b(<4 x i64> %__a, float* 
 ; NoVLX-LABEL: test_vcmpoeqps_v8i1_v64i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vbroadcastss (%rdi), %ymm1
-; NoVLX-NEXT:    vcmpeqps %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vcmpeqps (%rdi){1to16}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $8, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $8, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -20750,9 +20609,8 @@ define zeroext i64 @test_masked_vcmpoeqps_v8i1_v64i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-LABEL: test_masked_vcmpoeqps_v8i1_v64i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vbroadcastss (%rsi), %ymm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vcmpeqps %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vcmpeqps (%rsi){1to16}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $8, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $8, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -21243,8 +21101,7 @@ define zeroext i4 @test_vcmpoeqpd_v2i1_v4i1_mask_mem_b(<2 x i64> %__a, double* %
 ; NoVLX-LABEL: test_vcmpoeqpd_v2i1_v4i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vmovddup {{.*#+}} xmm1 = mem[0,0]
-; NoVLX-NEXT:    vcmpeqpd %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vcmpeqpd (%rdi){1to8}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $14, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $14, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -21334,8 +21191,7 @@ define zeroext i4 @test_masked_vcmpoeqpd_v2i1_v4i1_mask_mem_b(i2 zeroext %__u, <
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vmovddup {{.*#+}} xmm1 = mem[0,0]
-; NoVLX-NEXT:    vcmpeqpd %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vcmpeqpd (%rsi){1to8}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $14, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $14, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -21424,8 +21280,7 @@ define zeroext i8 @test_vcmpoeqpd_v2i1_v8i1_mask_mem_b(<2 x i64> %__a, double* %
 ; NoVLX-LABEL: test_vcmpoeqpd_v2i1_v8i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vmovddup {{.*#+}} xmm1 = mem[0,0]
-; NoVLX-NEXT:    vcmpeqpd %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vcmpeqpd (%rdi){1to8}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $14, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $14, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -21521,8 +21376,7 @@ define zeroext i8 @test_masked_vcmpoeqpd_v2i1_v8i1_mask_mem_b(i2 zeroext %__u, <
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vmovddup {{.*#+}} xmm1 = mem[0,0]
-; NoVLX-NEXT:    vcmpeqpd %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vcmpeqpd (%rsi){1to8}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $14, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $14, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -21612,8 +21466,7 @@ define zeroext i16 @test_vcmpoeqpd_v2i1_v16i1_mask_mem_b(<2 x i64> %__a, double*
 ; NoVLX-LABEL: test_vcmpoeqpd_v2i1_v16i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vmovddup {{.*#+}} xmm1 = mem[0,0]
-; NoVLX-NEXT:    vcmpeqpd %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vcmpeqpd (%rdi){1to8}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $14, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $14, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -21709,8 +21562,7 @@ define zeroext i16 @test_masked_vcmpoeqpd_v2i1_v16i1_mask_mem_b(i2 zeroext %__u,
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vmovddup {{.*#+}} xmm1 = mem[0,0]
-; NoVLX-NEXT:    vcmpeqpd %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vcmpeqpd (%rsi){1to8}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $14, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $14, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -21795,8 +21647,7 @@ define zeroext i32 @test_vcmpoeqpd_v2i1_v32i1_mask_mem_b(<2 x i64> %__a, double*
 ; NoVLX-LABEL: test_vcmpoeqpd_v2i1_v32i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vmovddup {{.*#+}} xmm1 = mem[0,0]
-; NoVLX-NEXT:    vcmpeqpd %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vcmpeqpd (%rdi){1to8}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $14, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $14, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -21886,8 +21737,7 @@ define zeroext i32 @test_masked_vcmpoeqpd_v2i1_v32i1_mask_mem_b(i2 zeroext %__u,
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vmovddup {{.*#+}} xmm1 = mem[0,0]
-; NoVLX-NEXT:    vcmpeqpd %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vcmpeqpd (%rsi){1to8}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $14, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $14, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -21971,8 +21821,7 @@ define zeroext i64 @test_vcmpoeqpd_v2i1_v64i1_mask_mem_b(<2 x i64> %__a, double*
 ; NoVLX-LABEL: test_vcmpoeqpd_v2i1_v64i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vmovddup {{.*#+}} xmm1 = mem[0,0]
-; NoVLX-NEXT:    vcmpeqpd %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vcmpeqpd (%rdi){1to8}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $14, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $14, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -22062,8 +21911,7 @@ define zeroext i64 @test_masked_vcmpoeqpd_v2i1_v64i1_mask_mem_b(i2 zeroext %__u,
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vmovddup {{.*#+}} xmm1 = mem[0,0]
-; NoVLX-NEXT:    vcmpeqpd %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vcmpeqpd (%rsi){1to8}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $14, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $14, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -22155,8 +22003,7 @@ define zeroext i8 @test_vcmpoeqpd_v4i1_v8i1_mask_mem_b(<4 x i64> %__a, double* %
 ; NoVLX-LABEL: test_vcmpoeqpd_v4i1_v8i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vbroadcastsd (%rdi), %ymm1
-; NoVLX-NEXT:    vcmpeqpd %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vcmpeqpd (%rdi){1to8}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -22255,8 +22102,7 @@ define zeroext i8 @test_masked_vcmpoeqpd_v4i1_v8i1_mask_mem_b(i4 zeroext %__u, <
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vbroadcastsd (%rsi), %ymm1
-; NoVLX-NEXT:    vcmpeqpd %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vcmpeqpd (%rsi){1to8}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -22349,8 +22195,7 @@ define zeroext i16 @test_vcmpoeqpd_v4i1_v16i1_mask_mem_b(<4 x i64> %__a, double*
 ; NoVLX-LABEL: test_vcmpoeqpd_v4i1_v16i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vbroadcastsd (%rdi), %ymm1
-; NoVLX-NEXT:    vcmpeqpd %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vcmpeqpd (%rdi){1to8}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -22449,8 +22294,7 @@ define zeroext i16 @test_masked_vcmpoeqpd_v4i1_v16i1_mask_mem_b(i4 zeroext %__u,
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vbroadcastsd (%rsi), %ymm1
-; NoVLX-NEXT:    vcmpeqpd %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vcmpeqpd (%rsi){1to8}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -22538,8 +22382,7 @@ define zeroext i32 @test_vcmpoeqpd_v4i1_v32i1_mask_mem_b(<4 x i64> %__a, double*
 ; NoVLX-LABEL: test_vcmpoeqpd_v4i1_v32i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vbroadcastsd (%rdi), %ymm1
-; NoVLX-NEXT:    vcmpeqpd %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vcmpeqpd (%rdi){1to8}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -22632,8 +22475,7 @@ define zeroext i32 @test_masked_vcmpoeqpd_v4i1_v32i1_mask_mem_b(i4 zeroext %__u,
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vbroadcastsd (%rsi), %ymm1
-; NoVLX-NEXT:    vcmpeqpd %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vcmpeqpd (%rsi){1to8}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -22720,8 +22562,7 @@ define zeroext i64 @test_vcmpoeqpd_v4i1_v64i1_mask_mem_b(<4 x i64> %__a, double*
 ; NoVLX-LABEL: test_vcmpoeqpd_v4i1_v64i1_mask_mem_b:
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vbroadcastsd (%rdi), %ymm1
-; NoVLX-NEXT:    vcmpeqpd %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vcmpeqpd (%rdi){1to8}, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
@@ -22814,8 +22655,7 @@ define zeroext i64 @test_masked_vcmpoeqpd_v4i1_v64i1_mask_mem_b(i4 zeroext %__u,
 ; NoVLX:       # %bb.0: # %entry
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; NoVLX-NEXT:    kmovw %edi, %k1
-; NoVLX-NEXT:    vbroadcastsd (%rsi), %ymm1
-; NoVLX-NEXT:    vcmpeqpd %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vcmpeqpd (%rsi){1to8}, %zmm0, %k0 {%k1}
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $12, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax

@@ -608,10 +608,8 @@ define <4 x i1> @bitselect_v4i1_loop(<4 x i32> %a0, <4 x i32> %a1) {
 ; AVX512F:       # %bb.0: # %bb
 ; AVX512F-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
 ; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512F-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [12,12,12,12]
-; AVX512F-NEXT:    vpcmpeqd %zmm2, %zmm1, %k1
-; AVX512F-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [15,15,15,15]
-; AVX512F-NEXT:    vpcmpeqd %zmm2, %zmm1, %k2
+; AVX512F-NEXT:    vpcmpeqd {{.*}}(%rip){1to16}, %zmm1, %k1
+; AVX512F-NEXT:    vpcmpeqd {{.*}}(%rip){1to16}, %zmm1, %k2
 ; AVX512F-NEXT:    vptestnmd %zmm0, %zmm0, %k0 {%k2}
 ; AVX512F-NEXT:    vptestmd %zmm0, %zmm0, %k1 {%k1}
 ; AVX512F-NEXT:    korw %k0, %k1, %k1

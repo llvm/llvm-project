@@ -4,11 +4,11 @@
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-//  
+//
 //  This file implements the "Exception Handling APIs"
 //  https://itanium-cxx-abi.github.io/cxx-abi/abi-eh.html
 //  http://www.intel.com/design/itanium/downloads/245358.htm
-//  
+//
 //===----------------------------------------------------------------------===//
 
 #include <assert.h>
@@ -188,8 +188,8 @@ enum
     DW_EH_PE_omit     = 0xFF
 };
 
-/// Read a uleb128 encoded value and advance pointer 
-/// See Variable Length Data Appendix C in: 
+/// Read a uleb128 encoded value and advance pointer
+/// See Variable Length Data Appendix C in:
 /// @link http://dwarfstd.org/Dwarf4.pdf @unlink
 /// @param data reference variable holding memory pointer to decode from
 /// @returns decoded value
@@ -211,8 +211,8 @@ readULEB128(const uint8_t** data)
     return result;
 }
 
-/// Read a sleb128 encoded value and advance pointer 
-/// See Variable Length Data Appendix C in: 
+/// Read a sleb128 encoded value and advance pointer
+/// See Variable Length Data Appendix C in:
 /// @link http://dwarfstd.org/Dwarf4.pdf @unlink
 /// @param data reference variable holding memory pointer to decode from
 /// @returns decoded value
@@ -236,8 +236,8 @@ readSLEB128(const uint8_t** data)
     return static_cast<intptr_t>(result);
 }
 
-/// Read a pointer encoded value and advance pointer 
-/// See Variable Length Data in: 
+/// Read a pointer encoded value and advance pointer
+/// See Variable Length Data in:
 /// @link http://dwarfstd.org/Dwarf3.pdf @unlink
 /// @param data reference variable holding memory pointer to decode from
 /// @param encoding dwarf encoding type
@@ -247,10 +247,10 @@ uintptr_t
 readEncodedPointer(const uint8_t** data, uint8_t encoding)
 {
     uintptr_t result = 0;
-    if (encoding == DW_EH_PE_omit) 
+    if (encoding == DW_EH_PE_omit)
         return result;
     const uint8_t* p = *data;
-    // first get value 
+    // first get value
     switch (encoding & 0x0F)
     {
     case DW_EH_PE_absptr:
@@ -281,15 +281,15 @@ readEncodedPointer(const uint8_t** data, uint8_t encoding)
         result = readPointerHelper<int64_t>(p);
         break;
     default:
-        // not supported 
+        // not supported
         abort();
         break;
     }
-    // then add relative offset 
+    // then add relative offset
     switch (encoding & 0x70)
     {
     case DW_EH_PE_absptr:
-        // do nothing 
+        // do nothing
         break;
     case DW_EH_PE_pcrel:
         if (result)
@@ -300,11 +300,11 @@ readEncodedPointer(const uint8_t** data, uint8_t encoding)
     case DW_EH_PE_funcrel:
     case DW_EH_PE_aligned:
     default:
-        // not supported 
+        // not supported
         abort();
         break;
     }
-    // then apply indirection 
+    // then apply indirection
     if (result && (encoding & DW_EH_PE_indirect))
         result = *((uintptr_t*)result);
     *data = p;
@@ -613,7 +613,7 @@ static void scan_eh_tab(scan_results &results, _Unwind_Action actions,
     // Get the current instruction pointer and offset it before next
     // instruction in the current frame which threw the exception.
     uintptr_t ip = _Unwind_GetIP(context) - 1;
-    // Get beginning current frame's code (as defined by the 
+    // Get beginning current frame's code (as defined by the
     // emitted dwarf code)
     uintptr_t funcStart = _Unwind_GetRegionStart(context);
 #ifdef __USING_SJLJ_EXCEPTIONS__
@@ -646,8 +646,8 @@ static void scan_eh_tab(scan_results &results, _Unwind_Action actions,
         uintptr_t classInfoOffset = readULEB128(&lsda);
         classInfo = lsda + classInfoOffset;
     }
-    // Walk call-site table looking for range that 
-    // includes current PC. 
+    // Walk call-site table looking for range that
+    // includes current PC.
     uint8_t callSiteEncoding = *lsda++;
 #ifdef __USING_SJLJ_EXCEPTIONS__
     (void)callSiteEncoding;  // When using SjLj exceptions, callSiteEncoding is never used
@@ -928,13 +928,13 @@ _UA_CLEANUP_PHASE
         else
             Recover state from header
         Transfer control to landing pad.  return _URC_INSTALL_CONTEXT
-    
+
     Else
 
         This branch handles both normal C++ non-catching handlers (cleanups)
-          and forced unwinding.    
+          and forced unwinding.
         Scan for anything that can not stop unwinding:
-    
+
             1.  A cleanup.
 
         If a cleanup is found

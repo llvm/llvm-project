@@ -478,7 +478,7 @@ Error readPGOFuncNameStrings(StringRef NameStrings, InstrProfSymtab &Symtab) {
   return Error::success();
 }
 
-void InstrProfRecord::accumuateCounts(CountSumOrPercent &Sum) const {
+void InstrProfRecord::accumulateCounts(CountSumOrPercent &Sum) const {
   uint64_t FuncSum = 0;
   Sum.NumEntries += Counts.size();
   for (size_t F = 0, E = Counts.size(); F < E; ++F)
@@ -552,7 +552,7 @@ void InstrProfRecord::overlap(InstrProfRecord &Other, OverlapStats &Overlap,
                               uint64_t ValueCutoff) {
   // FuncLevel CountSum for other should already computed and nonzero.
   assert(FuncLevelOverlap.Test.CountSum >= 1.0f);
-  accumuateCounts(FuncLevelOverlap.Base);
+  accumulateCounts(FuncLevelOverlap.Base);
   bool Mismatch = (Counts.size() != Other.Counts.size());
 
   // Check if the value profiles mismatch.
@@ -1164,9 +1164,9 @@ void createProfileFileNameVar(Module &M, StringRef InstrProfileOutput) {
   }
 }
 
-Error OverlapStats::accumuateCounts(const std::string &BaseFilename,
-                                    const std::string &TestFilename,
-                                    bool IsCS) {
+Error OverlapStats::accumulateCounts(const std::string &BaseFilename,
+                                     const std::string &TestFilename,
+                                     bool IsCS) {
   auto getProfileSum = [IsCS](const std::string &Filename,
                               CountSumOrPercent &Sum) -> Error {
     auto ReaderOrErr = InstrProfReader::create(Filename);
@@ -1174,7 +1174,7 @@ Error OverlapStats::accumuateCounts(const std::string &BaseFilename,
       return E;
     }
     auto Reader = std::move(ReaderOrErr.get());
-    Reader->accumuateCounts(Sum, IsCS);
+    Reader->accumulateCounts(Sum, IsCS);
     return Error::success();
   };
   auto Ret = getProfileSum(BaseFilename, Base);

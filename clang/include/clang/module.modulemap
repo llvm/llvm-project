@@ -20,7 +20,6 @@ module Clang_AST {
   textual header "AST/BuiltinTypes.def"
   textual header "AST/OperationKinds.def"
   textual header "AST/TypeLocNodes.def"
-  textual header "AST/TypeNodes.def"
 
   module * { export * }
 }

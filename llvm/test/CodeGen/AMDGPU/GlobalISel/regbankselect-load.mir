@@ -68,6 +68,7 @@
   define amdgpu_kernel void @load_constant_i32_uniform_align4() {ret void}
   define amdgpu_kernel void @load_constant_i32_uniform_align2() {ret void}
   define amdgpu_kernel void @load_constant_i32_uniform_align1() {ret void}
+  define amdgpu_kernel void @load_private_uniform_sgpr_i32() {ret void}
 
   declare i32 @llvm.amdgcn.workitem.id.x() #0
   attributes #0 = { nounwind readnone }
@@ -634,4 +635,20 @@ body: |
     ; CHECK: %1:vgpr(s32) = G_LOAD %2(p4) :: (load 4, align 1, addrspace 4)
     %0:_(p4) = COPY $sgpr0_sgpr1
     %1:_(s32) = G_LOAD %0 :: (load 4, addrspace 4, align 1)
+...
+
+---
+name: load_private_uniform_sgpr_i32
+legalized: true
+
+body: |
+  bb.0:
+    liveins: $sgpr0
+
+    ; CHECK-LABEL: name: load_private_uniform_sgpr_i32
+    ; CHECK: [[COPY:%[0-9]+]]:sgpr(p5) = COPY $sgpr0
+    ; CHECK: [[COPY1:%[0-9]+]]:vgpr(p5) = COPY [[COPY]](p5)
+    ; CHECK: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY1]](p5) :: (load 4, addrspace 5)
+    %0:_(p5) = COPY $sgpr0
+    %1:_(s32) = G_LOAD %0 :: (load 4, addrspace 5, align 4)
 ...

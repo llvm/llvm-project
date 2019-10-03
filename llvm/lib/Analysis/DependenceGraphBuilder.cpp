@@ -46,6 +46,34 @@ void AbstractDependenceGraphBuilder<G>::createFineGrainedNodes() {
     }
 }
 
+template <class G>
+void AbstractDependenceGraphBuilder<G>::createAndConnectRootNode() {
+  // Create a root node that connects to every connected component of the graph.
+  // This is done to allow graph iterators to visit all the disjoint components
+  // of the graph, in a single walk.
+  //
+  // This algorithm works by going through each node of the graph and for each
+  // node N, do a DFS starting from N. A rooted edge is established between the
+  // root node and N (if N is not yet visited). All the nodes reachable from N
+  // are marked as visited and are skipped in the DFS of subsequent nodes.
+  //
+  // Note: This algorithm tries to limit the number of edges out of the root
+  // node to some extent, but there may be redundant edges created depending on
+  // the iteration order. For example for a graph {A -> B}, an edge from the
+  // root node is added to both nodes if B is visited before A. While it does
+  // not result in minimal number of edges, this approach saves compile-time
+  // while keeping the number of edges in check.
+  auto &RootNode = createRootNode();
+  df_iterator_default_set<const NodeType *, 4> Visited;
+  for (auto *N : Graph) {
+    if (*N == RootNode)
+      continue;
+    for (auto I : depth_first_ext(N, Visited))
+      if (I == N)
+        createRootedEdge(RootNode, *N);
+  }
+}
+
 template <class G> void AbstractDependenceGraphBuilder<G>::createDefUseEdges() {
   for (NodeType *N : Graph) {
     InstructionListType SrcIList;

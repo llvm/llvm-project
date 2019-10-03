@@ -18,8 +18,8 @@
 #endif
 #endif
 
-#include <cstdlib> // for malloc, calloc, free
-#include <cstring> // for memset
+#include <stdlib.h> // for malloc, calloc, free
+#include <string.h> // for memset
 
 //  A small, simple heap manager based (loosely) on
 //  the startup heap manager from FreeBSD, optimized for space.
@@ -214,7 +214,7 @@ void* __aligned_malloc_with_fallback(size_t size) {
   if (void* dest = _aligned_malloc(size, alignof(__aligned_type)))
     return dest;
 #elif defined(_LIBCPP_HAS_NO_LIBRARY_ALIGNED_ALLOCATION)
-  if (void* dest = std::malloc(size))
+  if (void* dest = ::malloc(size))
     return dest;
 #else
   if (size == 0)
@@ -227,13 +227,13 @@ void* __aligned_malloc_with_fallback(size_t size) {
 }
 
 void* __calloc_with_fallback(size_t count, size_t size) {
-  void* ptr = std::calloc(count, size);
+  void* ptr = ::calloc(count, size);
   if (NULL != ptr)
     return ptr;
   // if calloc fails, fall back to emergency stash
   ptr = fallback_malloc(size * count);
   if (NULL != ptr)
-    std::memset(ptr, 0, size * count);
+    ::memset(ptr, 0, size * count);
   return ptr;
 }
 
@@ -244,7 +244,7 @@ void __aligned_free_with_fallback(void* ptr) {
 #if defined(_WIN32)
     ::_aligned_free(ptr);
 #else
-    std::free(ptr);
+    ::free(ptr);
 #endif
   }
 }
@@ -253,7 +253,7 @@ void __free_with_fallback(void* ptr) {
   if (is_fallback_ptr(ptr))
     fallback_free(ptr);
   else
-    std::free(ptr);
+    ::free(ptr);
 }
 
 } // namespace __cxxabiv1

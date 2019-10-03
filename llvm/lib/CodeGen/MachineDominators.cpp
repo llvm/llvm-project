@@ -67,21 +67,11 @@ void MachineDominatorTree::releaseMemory() {
 }
 
 void MachineDominatorTree::verifyAnalysis() const {
-  if (DT && VerifyMachineDomInfo) {
-    MachineFunction &F = *getRoot()->getParent();
-
-    DomTreeBase<MachineBasicBlock> OtherDT;
-    OtherDT.recalculate(F);
-    if (getRootNode()->getBlock() != OtherDT.getRootNode()->getBlock() ||
-        DT->compare(OtherDT)) {
-      errs() << "MachineDominatorTree for function " << F.getName()
-            << " is not up to date!\nComputed:\n";
-      DT->print(errs());
-      errs() << "\nActual:\n";
-      OtherDT.print(errs());
+  if (DT && VerifyMachineDomInfo)
+    if (!DT->verify(DomTreeT::VerificationLevel::Basic)) {
+      errs() << "MachineDominatorTree verification failed\n";
       abort();
     }
-  }
 }
 
 void MachineDominatorTree::print(raw_ostream &OS, const Module*) const {

@@ -285,6 +285,13 @@ TEST_F(SortImportsTestJava, NoReplacementsForValidImports) {
       sortIncludes(FmtStyle, Code, GetCodeRange(Code), "input.java").empty());
 }
 
+TEST_F(SortImportsTestJava, NoReplacementsForValidImportsWindows) {
+  std::string Code = "import org.a;\r\n"
+                     "import org.b;\r\n";
+  EXPECT_TRUE(
+      sortIncludes(FmtStyle, Code, GetCodeRange(Code), "input.java").empty());
+}
+
 } // end namespace
 } // end namespace format
 } // end namespace clang

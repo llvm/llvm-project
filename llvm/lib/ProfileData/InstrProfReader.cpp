@@ -907,7 +907,7 @@ Error IndexedInstrProfReader::readNextRecord(NamedInstrProfRecord &Record) {
   return success();
 }
 
-void InstrProfReader::accumuateCounts(CountSumOrPercent &Sum, bool IsCS) {
+void InstrProfReader::accumulateCounts(CountSumOrPercent &Sum, bool IsCS) {
   uint64_t NumFuncs = 0;
   for (const auto &Func : *this) {
     if (isIRLevelProfile()) {
@@ -915,7 +915,7 @@ void InstrProfReader::accumuateCounts(CountSumOrPercent &Sum, bool IsCS) {
       if (FuncIsCS != IsCS)
         continue;
     }
-    Func.accumuateCounts(Sum);
+    Func.accumulateCounts(Sum);
     ++NumFuncs;
   }
   Sum.NumEntries = NumFuncs;

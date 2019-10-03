@@ -193,7 +193,7 @@ void InstrProfWriter::overlapRecord(NamedInstrProfRecord &&Other,
                                     const OverlapFuncFilters &FuncFilter) {
   auto Name = Other.Name;
   auto Hash = Other.Hash;
-  Other.accumuateCounts(FuncLevelOverlap.Test);
+  Other.accumulateCounts(FuncLevelOverlap.Test);
   if (FunctionData.find(Name) == FunctionData.end()) {
     Overlap.addOneUnique(FuncLevelOverlap.Test);
     return;

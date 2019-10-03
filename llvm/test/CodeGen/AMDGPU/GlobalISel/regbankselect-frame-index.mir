@@ -17,7 +17,7 @@ stack:
 body: |
   bb.0:
     ; CHECK-LABEL: name: test_frame_index_p5
-    ; CHECK: [[FRAME_INDEX:%[0-9]+]]:sgpr(p5) = G_FRAME_INDEX %stack.0.ptr0
+    ; CHECK: [[FRAME_INDEX:%[0-9]+]]:vgpr(p5) = G_FRAME_INDEX %stack.0.ptr0
     %0:_(p5) = G_FRAME_INDEX %stack.0.ptr0
 
 ...

@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "TableGenBackends.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/StringMatcher.h"
@@ -351,10 +352,6 @@ void ClangOpcodesEmitter::PrintTypes(raw_ostream &OS, ArrayRef<Record *> Types) 
   OS << ">";
 }
 
-namespace clang {
-
-void EmitClangOpcodes(RecordKeeper &Records, raw_ostream &OS) {
+void clang::EmitClangOpcodes(RecordKeeper &Records, raw_ostream &OS) {
   ClangOpcodesEmitter(Records).run(OS);
 }
-
-} // end namespace clang

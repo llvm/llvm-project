@@ -52,8 +52,6 @@ void SetSignalHandler(const FuzzingOptions& Options);
 
 void SleepSeconds(int Seconds);
 
-bool Mprotect(void *Ptr, size_t Size, bool AllowReadWrite);
-
 unsigned long GetPid();
 
 size_t GetPeakRSSMb();

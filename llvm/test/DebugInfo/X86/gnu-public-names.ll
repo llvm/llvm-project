@@ -354,7 +354,7 @@ attributes #1 = { nounwind readnone speculatable }
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "static_member_variable", linkageName: "_ZN1C22static_member_variableE", scope: !2, file: !3, line: 7, type: !13, isLocal: false, isDefinition: true, declaration: !22)
-!2 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !3, producer: "clang version 9.0.0 (trunk 363288) (llvm/trunk 363294)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, retainedTypes: !16, globals: !17, imports: !54, nameTableKind: GNU)
+!2 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_03, file: !3, producer: "clang version 9.0.0 (trunk 363288) (llvm/trunk 363294)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, retainedTypes: !16, globals: !17, imports: !54, nameTableKind: GNU)
 !3 = !DIFile(filename: "names.cpp", directory: "/usr/local/google/home/blaikie/dev/scratch")
 !4 = !{!5, !9, !12}
 !5 = !DICompositeType(tag: DW_TAG_enumeration_type, file: !3, line: 49, baseType: !6, size: 32, elements: !7)

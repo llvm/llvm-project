@@ -182,6 +182,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   const LLT V14S32 = LLT::vector(14, 32);
   const LLT V15S32 = LLT::vector(15, 32);
   const LLT V16S32 = LLT::vector(16, 32);
+  const LLT V32S32 = LLT::vector(32, 32);
 
   const LLT V2S64 = LLT::vector(2, 64);
   const LLT V3S64 = LLT::vector(3, 64);
@@ -190,12 +191,13 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   const LLT V6S64 = LLT::vector(6, 64);
   const LLT V7S64 = LLT::vector(7, 64);
   const LLT V8S64 = LLT::vector(8, 64);
+  const LLT V16S64 = LLT::vector(16, 64);
 
   std::initializer_list<LLT> AllS32Vectors =
     {V2S32, V3S32, V4S32, V5S32, V6S32, V7S32, V8S32,
-     V9S32, V10S32, V11S32, V12S32, V13S32, V14S32, V15S32, V16S32};
+     V9S32, V10S32, V11S32, V12S32, V13S32, V14S32, V15S32, V16S32, V32S32};
   std::initializer_list<LLT> AllS64Vectors =
-    {V2S64, V3S64, V4S64, V5S64, V6S64, V7S64, V8S64};
+    {V2S64, V3S64, V4S64, V5S64, V6S64, V7S64, V8S64, V16S64};
 
   const LLT GlobalPtr = GetAddrSpacePtr(AMDGPUAS::GLOBAL_ADDRESS);
   const LLT ConstantPtr = GetAddrSpacePtr(AMDGPUAS::CONSTANT_ADDRESS);
@@ -930,8 +932,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   auto &BuildVector = getActionDefinitionsBuilder(G_BUILD_VECTOR)
     .legalForCartesianProduct(AllS32Vectors, {S32})
     .legalForCartesianProduct(AllS64Vectors, {S64})
-    .clampNumElements(0, V16S32, V16S32)
-    .clampNumElements(0, V2S64, V8S64);
+    .clampNumElements(0, V16S32, V32S32)
+    .clampNumElements(0, V2S64, V16S64);
 
   if (ST.hasScalarPackInsts())
     BuildVector.legalFor({V2S16, S32});
@@ -1913,7 +1915,7 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(MachineInstr &MI,
                                             MachineRegisterInfo &MRI,
                                             MachineIRBuilder &B) const {
   // Replace the use G_BRCOND with the exec manipulate and branch pseudos.
-  switch (MI.getOperand(MI.getNumExplicitDefs()).getIntrinsicID()) {
+  switch (MI.getIntrinsicID()) {
   case Intrinsic::amdgcn_if: {
     if (MachineInstr *BrCond = verifyCFIntrinsic(MI, MRI)) {
       const SIRegisterInfo *TRI

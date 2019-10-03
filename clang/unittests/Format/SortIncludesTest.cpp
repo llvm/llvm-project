@@ -724,6 +724,14 @@ TEST_F(SortIncludesTest, DoNotOutputReplacementsForSortedBlocksWithRegrouping) {
   EXPECT_EQ(Code, sort(Code, "input.h", 0));
 }
 
+TEST_F(SortIncludesTest,
+       DoNotOutputReplacementsForSortedBlocksWithRegroupingWindows) {
+  Style.IncludeBlocks = Style.IBS_Regroup;
+  std::string Code = "#include \"b.h\"\r\n"
+                     "\r\n"
+                     "#include <a.h>\r\n";
+  EXPECT_EQ(Code, sort(Code, "input.h", 0));
+}
 
 TEST_F(SortIncludesTest, DoNotRegroupGroupsInGoogleObjCStyle) {
   FmtStyle = getGoogleStyle(FormatStyle::LK_ObjC);

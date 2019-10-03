@@ -1283,6 +1283,15 @@ namespace dtor_call {
     // FIXME: This diagnostic is wrong; the union has no active member now.
     as.b.~A(); // expected-note {{destruction of member 'b' of union with active member 'a'}}
   }
+
+  constexpr void destroy_pointer() {
+    using T = int*;
+    T p;
+    // We used to think this was an -> member access because its left-hand side
+    // is a pointer. Ensure we don't crash.
+    p.~T();
+  }
+  static_assert((destroy_pointer(), true));
 }
 
 namespace temp_dtor {

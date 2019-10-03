@@ -1825,6 +1825,28 @@ FindCursorIndex(const SmallVectorImpl<IncludeDirective> &Includes,
   return std::make_pair(CursorIndex, OffsetToEOL);
 }
 
+// Replace all "\r\n" with "\n".
+std::string replaceCRLF(const std::string &Code) {
+  std::string NewCode;
+  size_t Pos = 0, LastPos = 0;
+
+  do {
+    Pos = Code.find("\r\n", LastPos);
+    if (Pos == LastPos) {
+      LastPos++;
+      continue;
+    }
+    if (Pos == std::string::npos) {
+      NewCode += Code.substr(LastPos);
+      break;
+    }
+    NewCode += Code.substr(LastPos, Pos - LastPos) + "\n";
+    LastPos = Pos + 2;
+  } while (Pos != std::string::npos);
+
+  return NewCode;
+}
+
 // Sorts and deduplicate a block of includes given by 'Includes' alphabetically
 // adding the necessary replacement to 'Replaces'. 'Includes' must be in strict
 // source order.
@@ -1898,7 +1920,8 @@ static void sortCppIncludes(const FormatStyle &Style,
 
   // If the #includes are out of order, we generate a single replacement fixing
   // the entire range of blocks. Otherwise, no replacement is generated.
-  if (result == Code.substr(IncludesBeginOffset, IncludesBlockSize))
+  if (replaceCRLF(result) ==
+      replaceCRLF(Code.substr(IncludesBeginOffset, IncludesBlockSize)))
     return;
 
   auto Err = Replaces.add(tooling::Replacement(
@@ -2066,7 +2089,8 @@ static void sortJavaImports(const FormatStyle &Style,
 
   // If the imports are out of order, we generate a single replacement fixing
   // the entire block. Otherwise, no replacement is generated.
-  if (result == Code.substr(Imports.front().Offset, ImportsBlockSize))
+  if (replaceCRLF(result) ==
+      replaceCRLF(Code.substr(Imports.front().Offset, ImportsBlockSize)))
     return;
 
   auto Err = Replaces.add(tooling::Replacement(FileName, Imports.front().Offset,
@@ -2356,7 +2380,7 @@ reformat(const FormatStyle &Style, StringRef Code,
 
   auto Env =
       std::make_unique<Environment>(Code, FileName, Ranges, FirstStartColumn,
-                                     NextStartColumn, LastStartColumn);
+                                    NextStartColumn, LastStartColumn);
   llvm::Optional<std::string> CurrentCode = None;
   tooling::Replacements Fixes;
   unsigned Penalty = 0;

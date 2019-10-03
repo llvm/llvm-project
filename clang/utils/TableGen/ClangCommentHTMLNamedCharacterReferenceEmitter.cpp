@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "TableGenBackends.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/TableGen/Error.h"
@@ -45,9 +46,8 @@ static bool translateCodePointToUTF8(unsigned CodePoint,
   return true;
 }
 
-namespace clang {
-void EmitClangCommentHTMLNamedCharacterReferences(RecordKeeper &Records,
-                                                  raw_ostream &OS) {
+void clang::EmitClangCommentHTMLNamedCharacterReferences(RecordKeeper &Records,
+                                                         raw_ostream &OS) {
   std::vector<Record *> Tags = Records.getAllDerivedDefinitions("NCR");
   std::vector<StringMatcher::StringPair> NameToUTF8;
   SmallString<32> CLiteral;
@@ -79,6 +79,3 @@ void EmitClangCommentHTMLNamedCharacterReferences(RecordKeeper &Records,
   OS << "  return StringRef();\n"
      << "}\n\n";
 }
-
-} // end namespace clang
-

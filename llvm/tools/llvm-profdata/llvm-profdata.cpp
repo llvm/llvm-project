@@ -682,7 +682,7 @@ static void overlapInstrProfile(const std::string &BaseFilename,
   WriterContext Context(false, ErrorLock, WriterErrorCodes);
   WeightedFile WeightedInput{BaseFilename, 1};
   OverlapStats Overlap;
-  Error E = Overlap.accumuateCounts(BaseFilename, TestFilename, IsCS);
+  Error E = Overlap.accumulateCounts(BaseFilename, TestFilename, IsCS);
   if (E)
     exitWithError(std::move(E), "Error in getting profile count sums");
   if (Overlap.Base.CountSum < 1.0f) {

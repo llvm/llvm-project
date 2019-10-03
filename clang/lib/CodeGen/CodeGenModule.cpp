@@ -2532,6 +2532,11 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
     return;
   }
 
+    // Check if this must be emitted as declare variant.
+  if (LangOpts.OpenMP && isa<FunctionDecl>(Global) && OpenMPRuntime &&
+      OpenMPRuntime->emitDeclareVariant(GD, /*IsForDefinition=*/false))
+    return;
+
   // If we're deferring emission of a C++ variable with an
   // initializer, remember the order in which it appeared in the file.
   if (getLangOpts().CPlusPlus && isa<VarDecl>(Global) &&
@@ -3051,6 +3056,10 @@ llvm::Constant *CodeGenModule::GetOrCreateLLVMFunction(
         EmitGlobal(GDDef);
       }
     }
+    // Check if this must be emitted as declare variant and emit reference to
+    // the the declare variant function.
+    if (LangOpts.OpenMP && OpenMPRuntime)
+      (void)OpenMPRuntime->emitDeclareVariant(GD, /*IsForDefinition=*/true);
 
     if (FD->isMultiVersion()) {
       const auto *TA = FD->getAttr<TargetAttr>();
@@ -4327,6 +4336,11 @@ void CodeGenModule::HandleCXXStaticMemberVarInstantiation(VarDecl *VD) {
 
 void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,
                                                  llvm::GlobalValue *GV) {
+  // Check if this must be emitted as declare variant.
+  if (LangOpts.OpenMP && OpenMPRuntime &&
+      OpenMPRuntime->emitDeclareVariant(GD, /*IsForDefinition=*/true))
+    return;
+
   const auto *D = cast<FunctionDecl>(GD.getDecl());
 
   // Compute the function info and LLVM type.

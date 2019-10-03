@@ -630,8 +630,8 @@ struct OverlapStats {
     FuncHash = Hash;
   }
 
-  Error accumuateCounts(const std::string &BaseFilename,
-                        const std::string &TestFilename, bool IsCS);
+  Error accumulateCounts(const std::string &BaseFilename,
+                         const std::string &TestFilename, bool IsCS);
   void addOneMismatch(const CountSumOrPercent &MismatchFunc);
   void addOneUnique(const CountSumOrPercent &UniqueFunc);
 
@@ -768,7 +768,7 @@ struct InstrProfRecord {
   void clearValueData() { ValueData = nullptr; }
 
   /// Compute the sums of all counts and store in Sum.
-  void accumuateCounts(CountSumOrPercent &Sum) const;
+  void accumulateCounts(CountSumOrPercent &Sum) const;
 
   /// Compute the overlap b/w this IntrprofRecord and Other.
   void overlap(InstrProfRecord &Other, OverlapStats &Overlap,

@@ -55,6 +55,7 @@ public:
     createFineGrainedNodes();
     createDefUseEdges();
     createMemoryDependencyEdges();
+    createAndConnectRootNode();
   }
 
   /// Create fine grained nodes. These are typically atomic nodes that
@@ -69,7 +70,14 @@ public:
   /// in the graph nodes and create edges between them.
   void createMemoryDependencyEdges();
 
+  /// Create a root node and add edges such that each node in the graph is
+  /// reachable from the root.
+  void createAndConnectRootNode();
+
 protected:
+  /// Create the root node of the graph.
+  virtual NodeType &createRootNode() = 0;
+
   /// Create an atomic node in the graph given a single instruction.
   virtual NodeType &createFineGrainedNode(Instruction &I) = 0;
 
@@ -78,6 +86,9 @@ protected:
 
   /// Create a memory dependence edge going from \p Src to \p Tgt.
   virtual EdgeType &createMemoryEdge(NodeType &Src, NodeType &Tgt) = 0;
+
+  /// Create a rooted edge going from \p Src to \p Tgt .
+  virtual EdgeType &createRootedEdge(NodeType &Src, NodeType &Tgt) = 0;
 
   /// Deallocate memory of edge \p E.
   virtual void destroyEdge(EdgeType &E) { delete &E; }

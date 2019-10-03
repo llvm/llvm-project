@@ -1,7 +1,7 @@
-.. title:: clang-tidy - objc-avoid-spinlock
+.. title:: clang-tidy - darwin-avoid-spinlock
 
-objc-avoid-spinlock
-===================
+darwin-avoid-spinlock
+=====================
 
 Finds usages of ``OSSpinlock``, which is deprecated due to potential livelock
 problems. 
