@@ -46,12 +46,10 @@ class CheckResult(gdb.Command):
             gdb.newest_frame().select()
 
             expectation_val = compare_frame.read_var("expectation")
+            check_literal = expectation_val.string(encoding="utf-8")
             if "PrettyPrintToRegex" in compare_frame.name():
-                check_literal = expectation_val.string()
                 test_fails = not re.match(check_literal, value)
             else:
-                check_literal_string = expectation_val.string(encoding="utf-8")
-                check_literal = str(check_literal_string.encode("utf-8"))
                 test_fails = value != check_literal
 
             if test_fails:

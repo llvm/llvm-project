@@ -41,6 +41,7 @@ class LLDB_API SBEvent;
 class LLDB_API SBEventList;
 class LLDB_API SBExecutionContext;
 class LLDB_API SBExpressionOptions;
+class LLDB_API SBFile;
 class LLDB_API SBFileSpec;
 class LLDB_API SBFileSpecList;
 class LLDB_API SBFrame;
