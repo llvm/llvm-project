@@ -11193,7 +11193,7 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     // Unaligned nontemporal store of the scalar value.
     StoreInst *SI = Builder.CreateDefaultAlignedStore(Src, BC);
     SI->setMetadata(CGM.getModule().getMDKindID("nontemporal"), Node);
-    SI->setAlignment(1);
+    SI->setAlignment(llvm::Align::None());
     return SI;
   }
   // Rotate is a special case of funnel shift - 1st 2 args are the same.

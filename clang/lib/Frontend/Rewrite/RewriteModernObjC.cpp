@@ -852,7 +852,7 @@ RewriteModernObjC::getIvarAccessString(ObjCIvarDecl *D) {
     IvarT = GetGroupRecordTypeForObjCIvarBitfield(D);
 
   if (!isa<TypedefType>(IvarT) && IvarT->isRecordType()) {
-    RecordDecl *RD = IvarT->getAs<RecordType>()->getDecl();
+    RecordDecl *RD = IvarT->castAs<RecordType>()->getDecl();
     RD = RD->getDefinition();
     if (RD && !RD->getDeclName().getAsIdentifierInfo()) {
       // decltype(((Foo_IMPL*)0)->bar) *
@@ -3637,7 +3637,7 @@ bool RewriteModernObjC::RewriteObjCFieldDeclType(QualType &Type,
     return RewriteObjCFieldDeclType(ElemTy, Result);
   }
   else if (Type->isRecordType()) {
-    RecordDecl *RD = Type->getAs<RecordType>()->getDecl();
+    RecordDecl *RD = Type->castAs<RecordType>()->getDecl();
     if (RD->isCompleteDefinition()) {
       if (RD->isStruct())
         Result += "\n\tstruct ";
@@ -3727,15 +3727,15 @@ void RewriteModernObjC::RewriteLocallyDefinedNamedAggregates(FieldDecl *fieldDec
     return;
   if (Type->isArrayType())
     Type = Context->getBaseElementType(Type);
-  ObjCContainerDecl *IDecl =
-    dyn_cast<ObjCContainerDecl>(fieldDecl->getDeclContext());
+
+  auto *IDecl = dyn_cast<ObjCContainerDecl>(fieldDecl->getDeclContext());
 
   TagDecl *TD = nullptr;
   if (Type->isRecordType()) {
-    TD = Type->getAs<RecordType>()->getDecl();
+    TD = Type->castAs<RecordType>()->getDecl();
   }
   else if (Type->isEnumeralType()) {
-    TD = Type->getAs<EnumType>()->getDecl();
+    TD = Type->castAs<EnumType>()->getDecl();
   }
 
   if (TD) {
@@ -5753,7 +5753,7 @@ void RewriteModernObjC::HandleDeclInMainFile(Decl *D) {
           }
         }
       } else if (VD->getType()->isRecordType()) {
-        RecordDecl *RD = VD->getType()->getAs<RecordType>()->getDecl();
+        RecordDecl *RD = VD->getType()->castAs<RecordType>()->getDecl();
         if (RD->isCompleteDefinition())
           RewriteRecordBody(RD);
       }
@@ -7494,7 +7494,7 @@ Stmt *RewriteModernObjC::RewriteObjCIvarRefExpr(ObjCIvarRefExpr *IV) {
         IvarT = GetGroupRecordTypeForObjCIvarBitfield(D);
 
       if (!isa<TypedefType>(IvarT) && IvarT->isRecordType()) {
-        RecordDecl *RD = IvarT->getAs<RecordType>()->getDecl();
+        RecordDecl *RD = IvarT->castAs<RecordType>()->getDecl();
         RD = RD->getDefinition();
         if (RD && !RD->getDeclName().getAsIdentifierInfo()) {
           // decltype(((Foo_IMPL*)0)->bar) *

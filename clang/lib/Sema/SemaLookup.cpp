@@ -2130,7 +2130,7 @@ static bool LookupQualifiedNameInUsingDirectives(Sema &S, LookupResult &R,
 /// Callback that looks for any member of a class with the given name.
 static bool LookupAnyMember(const CXXBaseSpecifier *Specifier,
                             CXXBasePath &Path, DeclarationName Name) {
-  RecordDecl *BaseRecord = Specifier->getType()->getAs<RecordType>()->getDecl();
+  RecordDecl *BaseRecord = Specifier->getType()->castAs<RecordType>()->getDecl();
 
   Path.Decls = BaseRecord->lookup(Name);
   return !Path.Decls.empty();

@@ -1772,12 +1772,12 @@ void PeelingModuloScheduleExpander::fixupBranches() {
     MachineBasicBlock *Fallthrough = *Prolog->succ_begin();
     MachineBasicBlock *Epilog = *EI;
     SmallVector<MachineOperand, 4> Cond;
+    TII->removeBranch(*Prolog);
     Optional<bool> StaticallyGreater =
         Info->createTripCountGreaterCondition(TC, *Prolog, Cond);
     if (!StaticallyGreater.hasValue()) {
       LLVM_DEBUG(dbgs() << "Dynamic: TC > " << TC << "\n");
       // Dynamically branch based on Cond.
-      TII->removeBranch(*Prolog);
       TII->insertBranch(*Prolog, Epilog, Fallthrough, Cond, DebugLoc());
     } else if (*StaticallyGreater == false) {
       LLVM_DEBUG(dbgs() << "Static-false: TC > " << TC << "\n");
@@ -1788,7 +1788,6 @@ void PeelingModuloScheduleExpander::fixupBranches() {
         P.RemoveOperand(2);
         P.RemoveOperand(1);
       }
-      TII->removeBranch(*Prolog);
       TII->insertUnconditionalBranch(*Prolog, Epilog, DebugLoc());
       KernelDisposed = true;
     } else {

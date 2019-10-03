@@ -2018,7 +2018,7 @@ CGObjCCommonMac::GenerateConstantNSString(const StringLiteral *Literal) {
   GV->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
   // Don't enforce the target's minimum global alignment, since the only use
   // of the string is via this class initializer.
-  GV->setAlignment(1);
+  GV->setAlignment(llvm::Align::None());
   Fields.addBitCast(GV, CGM.Int8PtrTy);
 
   // String length.
@@ -2517,14 +2517,12 @@ void CGObjCCommonMac::BuildRCRecordLayout(const llvm::StructLayout *RecLayout,
     }
 
     if (const ArrayType *Array = CGM.getContext().getAsArrayType(FQT)) {
-      const ConstantArrayType *CArray =
-        dyn_cast_or_null<ConstantArrayType>(Array);
+      auto *CArray = cast<ConstantArrayType>(Array);
       uint64_t ElCount = CArray->getSize().getZExtValue();
       assert(CArray && "only array with known element size is supported");
       FQT = CArray->getElementType();
       while (const ArrayType *Array = CGM.getContext().getAsArrayType(FQT)) {
-        const ConstantArrayType *CArray =
-          dyn_cast_or_null<ConstantArrayType>(Array);
+        auto *CArray = cast<ConstantArrayType>(Array);
         ElCount *= CArray->getSize().getZExtValue();
         FQT = CArray->getElementType();
       }
@@ -3103,7 +3101,7 @@ llvm::Constant *CGObjCMac::GetOrEmitProtocolRef(const ObjCProtocolDecl *PD) {
                                      nullptr, "OBJC_PROTOCOL_" + PD->getName());
     Entry->setSection("__OBJC,__protocol,regular,no_dead_strip");
     // FIXME: Is this necessary? Why only for protocol?
-    Entry->setAlignment(4);
+    Entry->setAlignment(llvm::Align(4));
   }
 
   return Entry;
@@ -3609,7 +3607,7 @@ void CGObjCMac::GenerateClass(const ObjCImplementationDecl *ID) {
            "Forward metaclass reference has incorrect type.");
     values.finishAndSetAsInitializer(GV);
     GV->setSection(Section);
-    GV->setAlignment(CGM.getPointerAlign().getQuantity());
+    GV->setAlignment(CGM.getPointerAlign().getAsAlign());
     CGM.addCompilerUsedGlobal(GV);
   } else
     GV = CreateMetadataVar(Name, values, Section, CGM.getPointerAlign(), true);
@@ -4016,7 +4014,7 @@ llvm::GlobalVariable *CGObjCCommonMac::CreateMetadataVar(Twine Name,
       new llvm::GlobalVariable(CGM.getModule(), Ty, false, LT, Init, Name);
   if (!Section.empty())
     GV->setSection(Section);
-  GV->setAlignment(Align.getQuantity());
+  GV->setAlignment(Align.getAsAlign());
   if (AddToUsed)
     CGM.addCompilerUsedGlobal(GV);
   return GV;
@@ -4064,7 +4062,7 @@ CGObjCCommonMac::CreateCStringLiteral(StringRef Name, ObjCLabelType Type,
   if (CGM.getTriple().isOSBinFormatMachO())
     GV->setSection(Section);
   GV->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
-  GV->setAlignment(CharUnits::One().getQuantity());
+  GV->setAlignment(CharUnits::One().getAsAlign());
   CGM.addCompilerUsedGlobal(GV);
 
   return GV;
@@ -4902,7 +4900,7 @@ LValue CGObjCMac::EmitObjCValueForIvar(CodeGen::CodeGenFunction &CGF,
                                        const ObjCIvarDecl *Ivar,
                                        unsigned CVRQualifiers) {
   const ObjCInterfaceDecl *ID =
-    ObjectTy->getAs<ObjCObjectType>()->getInterface();
+    ObjectTy->castAs<ObjCObjectType>()->getInterface();
   return EmitValueForIvarAtOffset(CGF, ID, BaseValue, Ivar, CVRQualifiers,
                                   EmitIvarOffset(CGF, ID, Ivar));
 }
@@ -6076,7 +6074,8 @@ void CGObjCNonFragileABIMac::AddModuleClassList(
   llvm::GlobalVariable *GV =
     new llvm::GlobalVariable(CGM.getModule(), Init->getType(), false, LT, Init,
                              SymbolName);
-  GV->setAlignment(CGM.getDataLayout().getABITypeAlignment(Init->getType()));
+  GV->setAlignment(
+      llvm::Align(CGM.getDataLayout().getABITypeAlignment(Init->getType())));
   GV->setSection(SectionName);
   CGM.addCompilerUsedGlobal(GV);
 }
@@ -6319,8 +6318,8 @@ CGObjCNonFragileABIMac::BuildClassObject(const ObjCInterfaceDecl *CI,
 
   if (CGM.getTriple().isOSBinFormatMachO())
     GV->setSection("__DATA, __objc_data");
-  GV->setAlignment(
-      CGM.getDataLayout().getABITypeAlignment(ObjCTypes.ClassnfABITy));
+  GV->setAlignment(llvm::Align(
+      CGM.getDataLayout().getABITypeAlignment(ObjCTypes.ClassnfABITy)));
   if (!CGM.getTriple().isOSBinFormatCOFF())
     if (HiddenVisibility)
       GV->setVisibility(llvm::GlobalValue::HiddenVisibility);
@@ -6527,7 +6526,7 @@ llvm::Value *CGObjCNonFragileABIMac::GenerateProtocolRef(CodeGenFunction &CGF,
   PTGV->setSection(GetSectionName("__objc_protorefs",
                                   "coalesced,no_dead_strip"));
   PTGV->setVisibility(llvm::GlobalValue::HiddenVisibility);
-  PTGV->setAlignment(Align.getQuantity());
+  PTGV->setAlignment(Align.getAsAlign());
   if (!CGM.getTriple().isOSBinFormatMachO())
     PTGV->setComdat(CGM.getModule().getOrInsertComdat(ProtocolName));
   CGM.addUsedGlobal(PTGV);
@@ -6759,8 +6758,8 @@ CGObjCNonFragileABIMac::EmitIvarOffsetVar(const ObjCInterfaceDecl *ID,
   llvm::GlobalVariable *IvarOffsetGV = ObjCIvarOffsetVariable(ID, Ivar);
   IvarOffsetGV->setInitializer(
       llvm::ConstantInt::get(ObjCTypes.IvarOffsetVarTy, Offset));
-  IvarOffsetGV->setAlignment(
-      CGM.getDataLayout().getABITypeAlignment(ObjCTypes.IvarOffsetVarTy));
+  IvarOffsetGV->setAlignment(llvm::Align(
+      CGM.getDataLayout().getABITypeAlignment(ObjCTypes.IvarOffsetVarTy)));
 
   if (!CGM.getTriple().isOSBinFormatCOFF()) {
     // FIXME: This matches gcc, but shouldn't the visibility be set on the use
@@ -6986,8 +6985,8 @@ llvm::Constant *CGObjCNonFragileABIMac::GetOrEmitProtocol(
                              ProtocolRef);
   if (!CGM.getTriple().isOSBinFormatMachO())
     PTGV->setComdat(CGM.getModule().getOrInsertComdat(ProtocolRef));
-  PTGV->setAlignment(
-    CGM.getDataLayout().getABITypeAlignment(ObjCTypes.ProtocolnfABIPtrTy));
+  PTGV->setAlignment(llvm::Align(
+      CGM.getDataLayout().getABITypeAlignment(ObjCTypes.ProtocolnfABIPtrTy)));
   PTGV->setSection(GetSectionName("__objc_protolist",
                                   "coalesced,no_dead_strip"));
   PTGV->setVisibility(llvm::GlobalValue::HiddenVisibility);
@@ -7053,7 +7052,7 @@ LValue CGObjCNonFragileABIMac::EmitObjCValueForIvar(
                                                llvm::Value *BaseValue,
                                                const ObjCIvarDecl *Ivar,
                                                unsigned CVRQualifiers) {
-  ObjCInterfaceDecl *ID = ObjectTy->getAs<ObjCObjectType>()->getInterface();
+  ObjCInterfaceDecl *ID = ObjectTy->castAs<ObjCObjectType>()->getInterface();
   llvm::Value *Offset = EmitIvarOffset(CGF, ID, Ivar);
   return EmitValueForIvarAtOffset(CGF, ID, BaseValue, Ivar, CVRQualifiers,
                                   Offset);
@@ -7338,7 +7337,7 @@ CGObjCNonFragileABIMac::EmitClassRefFromId(CodeGenFunction &CGF,
         CGM.getModule(), ClassGV->getType(), false,
         getLinkageTypeForObjCMetadata(CGM, SectionName), ClassGV,
         "OBJC_CLASSLIST_REFERENCES_$_");
-    Entry->setAlignment(CGF.getPointerAlign().getQuantity());
+    Entry->setAlignment(CGF.getPointerAlign().getAsAlign());
     if (!ID || !ID->hasAttr<ObjCClassStubAttr>())
       Entry->setSection(SectionName);
 
@@ -7377,7 +7376,7 @@ CGObjCNonFragileABIMac::EmitSuperClassRef(CodeGenFunction &CGF,
         CGM.getModule(), ClassGV->getType(), false,
         getLinkageTypeForObjCMetadata(CGM, SectionName), ClassGV,
         "OBJC_CLASSLIST_SUP_REFS_$_");
-    Entry->setAlignment(CGF.getPointerAlign().getQuantity());
+    Entry->setAlignment(CGF.getPointerAlign().getAsAlign());
     Entry->setSection(SectionName);
     CGM.addCompilerUsedGlobal(Entry);
   }
@@ -7401,7 +7400,7 @@ llvm::Value *CGObjCNonFragileABIMac::EmitMetaClassRef(CodeGenFunction &CGF,
         CGM.getModule(), ObjCTypes.ClassnfABIPtrTy, false,
         getLinkageTypeForObjCMetadata(CGM, SectionName), MetaClassGV,
         "OBJC_CLASSLIST_SUP_REFS_$_");
-    Entry->setAlignment(Align.getQuantity());
+    Entry->setAlignment(Align.getAsAlign());
     Entry->setSection(SectionName);
     CGM.addCompilerUsedGlobal(Entry);
   }
@@ -7500,7 +7499,7 @@ Address CGObjCNonFragileABIMac::EmitSelectorAddr(CodeGenFunction &CGF,
         "OBJC_SELECTOR_REFERENCES_");
     Entry->setExternallyInitialized(true);
     Entry->setSection(SectionName);
-    Entry->setAlignment(Align.getQuantity());
+    Entry->setAlignment(Align.getAsAlign());
     CGM.addCompilerUsedGlobal(Entry);
   }
 
@@ -7733,7 +7732,7 @@ CGObjCNonFragileABIMac::GetInterfaceEHType(const ObjCInterfaceDecl *ID,
                                           : llvm::GlobalValue::WeakAnyLinkage;
   if (Entry) {
     values.finishAndSetAsInitializer(Entry);
-    Entry->setAlignment(CGM.getPointerAlign().getQuantity());
+    Entry->setAlignment(CGM.getPointerAlign().getAsAlign());
   } else {
     Entry = values.finishAndCreateGlobal("OBJC_EHTYPE_$_" + ClassName,
                                          CGM.getPointerAlign(),

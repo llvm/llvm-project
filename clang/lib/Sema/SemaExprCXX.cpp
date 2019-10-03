@@ -2457,8 +2457,8 @@ bool Sema::FindAllocationFunctions(SourceLocation StartLoc, SourceRange Range,
   //   deallocation function's name is looked up in the global scope.
   LookupResult FoundDelete(*this, DeleteName, StartLoc, LookupOrdinaryName);
   if (AllocElemType->isRecordType() && DeleteScope != AFS_Global) {
-    CXXRecordDecl *RD
-      = cast<CXXRecordDecl>(AllocElemType->getAs<RecordType>()->getDecl());
+    auto *RD =
+        cast<CXXRecordDecl>(AllocElemType->castAs<RecordType>()->getDecl());
     LookupQualifiedName(FoundDelete, RD);
   }
   if (FoundDelete.isAmbiguous())

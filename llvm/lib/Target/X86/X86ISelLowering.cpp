@@ -5769,23 +5769,35 @@ static SDValue insert1BitVector(SDValue Op, SelectionDAG &DAG,
 
   // Widen the vector if needed.
   Vec = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, WideOpVT, Undef, Vec, ZeroIdx);
-  // Move the current value of the bit to be replace to the lsbs.
-  Op = DAG.getNode(X86ISD::KSHIFTR, dl, WideOpVT, Vec,
-                   DAG.getTargetConstant(IdxVal, dl, MVT::i8));
-  // Xor with the new bit.
-  Op = DAG.getNode(ISD::XOR, dl, WideOpVT, Op, SubVec);
-  // Shift to MSB, filling bottom bits with 0.
+
+  // Clear the upper bits of the subvector and move it to its insert position.
   unsigned ShiftLeft = NumElems - SubVecNumElems;
-  Op = DAG.getNode(X86ISD::KSHIFTL, dl, WideOpVT, Op,
-                   DAG.getTargetConstant(ShiftLeft, dl, MVT::i8));
-  // Shift to the final position, filling upper bits with 0.
+  SubVec = DAG.getNode(X86ISD::KSHIFTL, dl, WideOpVT, SubVec,
+                       DAG.getTargetConstant(ShiftLeft, dl, MVT::i8));
   unsigned ShiftRight = NumElems - SubVecNumElems - IdxVal;
-  Op = DAG.getNode(X86ISD::KSHIFTR, dl, WideOpVT, Op,
-                   DAG.getTargetConstant(ShiftRight, dl, MVT::i8));
-  // Xor with original vector leaving the new value.
-  Op = DAG.getNode(ISD::XOR, dl, WideOpVT, Vec, Op);
+  SubVec = DAG.getNode(X86ISD::KSHIFTR, dl, WideOpVT, SubVec,
+                       DAG.getTargetConstant(ShiftRight, dl, MVT::i8));
+
+  // Isolate the bits below the insertion point.
+  unsigned LowShift = NumElems - IdxVal;
+  SDValue Low = DAG.getNode(X86ISD::KSHIFTL, dl, WideOpVT, Vec,
+                            DAG.getTargetConstant(LowShift, dl, MVT::i8));
+  Low = DAG.getNode(X86ISD::KSHIFTR, dl, WideOpVT, Low,
+                    DAG.getTargetConstant(LowShift, dl, MVT::i8));
+
+  // Isolate the bits after the last inserted bit.
+  unsigned HighShift = IdxVal + SubVecNumElems;
+  SDValue High = DAG.getNode(X86ISD::KSHIFTR, dl, WideOpVT, Vec,
+                            DAG.getTargetConstant(HighShift, dl, MVT::i8));
+  High = DAG.getNode(X86ISD::KSHIFTL, dl, WideOpVT, High,
+                    DAG.getTargetConstant(HighShift, dl, MVT::i8));
+
+  // Now OR all 3 pieces together.
+  Vec = DAG.getNode(ISD::OR, dl, WideOpVT, Low, High);
+  SubVec = DAG.getNode(ISD::OR, dl, WideOpVT, SubVec, Vec);
+
   // Reduce to original width if needed.
-  return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, OpVT, Op, ZeroIdx);
+  return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, OpVT, SubVec, ZeroIdx);
 }
 
 static SDValue concatSubVectors(SDValue V1, SDValue V2, SelectionDAG &DAG,
@@ -10288,6 +10300,7 @@ static bool isTargetShuffleEquivalent(ArrayRef<int> Mask,
 
 // Merges a general DAG shuffle mask and zeroable bit mask into a target shuffle
 // mask.
+// TODO: Do we need this? It might be better to use Mask+Zeroable directly.
 static SmallVector<int, 64> createTargetShuffleMask(ArrayRef<int> Mask,
                                                     const APInt &Zeroable) {
   int NumElts = Mask.size();
@@ -15440,7 +15453,8 @@ static SDValue lowerShuffleAsRepeatedMaskAndLanePermute(
 
 static bool matchShuffleWithSHUFPD(MVT VT, SDValue &V1, SDValue &V2,
                                    bool &ForceV1Zero, bool &ForceV2Zero,
-                                   unsigned &ShuffleImm, ArrayRef<int> Mask) {
+                                   unsigned &ShuffleImm, ArrayRef<int> Mask,
+                                   const APInt &Zeroable) {
   int NumElts = VT.getVectorNumElements();
   assert(VT.getScalarSizeInBits() == 64 &&
          (NumElts == 2 || NumElts == 4 || NumElts == 8) &&
@@ -15450,7 +15464,7 @@ static bool matchShuffleWithSHUFPD(MVT VT, SDValue &V1, SDValue &V2,
 
   bool ZeroLane[2] = { true, true };
   for (int i = 0; i < NumElts; ++i)
-    ZeroLane[i & 1] &= isUndefOrZero(Mask[i]);
+    ZeroLane[i & 1] &= Zeroable[i];
 
   // Mask for V8F64: 0/1,  8/9,  2/3,  10/11, 4/5, ..
   // Mask for V4F64; 0/1,  4/5,  2/3,  6/7..
@@ -15483,19 +15497,17 @@ static bool matchShuffleWithSHUFPD(MVT VT, SDValue &V1, SDValue &V2,
 }
 
 static SDValue lowerShuffleWithSHUFPD(const SDLoc &DL, MVT VT, SDValue V1,
-                                      SDValue V2, ArrayRef<int> Original,
+                                      SDValue V2, ArrayRef<int> Mask,
                                       const APInt &Zeroable,
                                       const X86Subtarget &Subtarget,
                                       SelectionDAG &DAG) {
   assert((VT == MVT::v2f64 || VT == MVT::v4f64 || VT == MVT::v8f64) &&
          "Unexpected data type for VSHUFPD");
 
-  SmallVector<int, 64> Mask = createTargetShuffleMask(Original, Zeroable);
-
   unsigned Immediate = 0;
   bool ForceV1Zero = false, ForceV2Zero = false;
   if (!matchShuffleWithSHUFPD(VT, V1, V2, ForceV1Zero, ForceV2Zero, Immediate,
-                              Mask))
+                              Mask, Zeroable))
     return SDValue();
 
   // Create a REAL zero vector - ISD::isBuildVectorAllZeros allows UNDEFs.
@@ -15507,6 +15519,42 @@ static SDValue lowerShuffleWithSHUFPD(const SDLoc &DL, MVT VT, SDValue V1,
   return DAG.getNode(X86ISD::SHUFP, DL, VT, V1, V2,
                      DAG.getTargetConstant(Immediate, DL, MVT::i8));
 }
+
+// Look for {0, 8, 16, 24, 32, 40, 48, 56 } in the first 8 elements. Followed
+// by zeroable elements in the remaining 24 elements. Turn this into two
+// vmovqb instructions shuffled together.
+static SDValue lowerShuffleAsVTRUNCAndUnpack(const SDLoc &DL, MVT VT,
+                                             SDValue V1, SDValue V2,
+                                             ArrayRef<int> Mask,
+                                             const APInt &Zeroable,
+                                             SelectionDAG &DAG) {
+  assert(VT == MVT::v32i8 && "Unexpected type!");
+
+  // The first 8 indices should be every 8th element.
+  if (!isSequentialOrUndefInRange(Mask, 0, 8, 0, 8))
+    return SDValue();
+
+  // Remaining elements need to be zeroable.
+  if (Zeroable.countLeadingOnes() < (Mask.size() - 8))
+    return SDValue();
+
+  V1 = DAG.getBitcast(MVT::v4i64, V1);
+  V2 = DAG.getBitcast(MVT::v4i64, V2);
+
+  V1 = DAG.getNode(X86ISD::VTRUNC, DL, MVT::v16i8, V1);
+  V2 = DAG.getNode(X86ISD::VTRUNC, DL, MVT::v16i8, V2);
+
+  // The VTRUNCs will put 0s in the upper 12 bytes. Use them to put zeroes in
+  // the upper bits of the result using an unpckldq.
+  SDValue Unpack = DAG.getVectorShuffle(MVT::v16i8, DL, V1, V2,
+                                        { 0, 1, 2, 3, 16, 17, 18, 19,
+                                          4, 5, 6, 7, 20, 21, 22, 23 });
+  // Insert the unpckldq into a zero vector to widen to v32i8.
+  return DAG.getNode(ISD::INSERT_SUBVECTOR, DL, MVT::v32i8,
+                     DAG.getConstant(0, DL, MVT::v32i8), Unpack,
+                     DAG.getIntPtrConstant(0, DL));
+}
+
 
 /// Handle lowering of 4-lane 64-bit floating point shuffles.
 ///
@@ -16107,6 +16155,14 @@ static SDValue lowerV32I8Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
   if (SDValue V = lowerShuffleAsLanePermuteAndPermute(
           DL, MVT::v32i8, V1, V2, Mask, DAG, Subtarget))
     return V;
+
+  // Look for {0, 8, 16, 24, 32, 40, 48, 56 } in the first 8 elements. Followed
+  // by zeroable elements in the remaining 24 elements. Turn this into two
+  // vmovqb instructions shuffled together.
+  if (Subtarget.hasVLX())
+    if (SDValue V = lowerShuffleAsVTRUNCAndUnpack(DL, MVT::v32i8, V1, V2,
+                                                  Mask, Zeroable, DAG))
+      return V;
 
   // Otherwise fall back on generic lowering.
   return lowerShuffleAsSplitOrBlend(DL, MVT::v32i8, V1, V2, Mask,
@@ -32091,7 +32147,7 @@ static bool matchBinaryPermuteShuffle(
        (MaskVT.is512BitVector() && Subtarget.hasAVX512()))) {
     bool ForceV1Zero = false, ForceV2Zero = false;
     if (matchShuffleWithSHUFPD(MaskVT, V1, V2, ForceV1Zero, ForceV2Zero,
-                               PermuteImm, Mask)) {
+                               PermuteImm, Mask, Zeroable)) {
       V1 = ForceV1Zero ? getZeroVector(MaskVT, Subtarget, DAG, DL) : V1;
       V2 = ForceV2Zero ? getZeroVector(MaskVT, Subtarget, DAG, DL) : V2;
       Shuffle = X86ISD::SHUFP;
@@ -35402,6 +35458,21 @@ static SDValue combineBitcast(SDNode *N, SelectionDAG &DAG,
       isNullConstant(N0.getOperand(1)))
     return DAG.getNode(ISD::TRUNCATE, SDLoc(N), VT,
                        DAG.getBitcast(MVT::i16, N0.getOperand(0)));
+
+  // Combine (bitcast (vbroadcast_load)) -> (vbroadcast_load). The memory VT
+  // determines // the number of bits loaded. Remaining bits are zero.
+  if (N0.getOpcode() == X86ISD::VBROADCAST_LOAD && N0.hasOneUse() &&
+      VT.getScalarSizeInBits() == SrcVT.getScalarSizeInBits()) {
+    auto *BCast = cast<MemIntrinsicSDNode>(N0);
+    SDVTList Tys = DAG.getVTList(VT, MVT::Other);
+    SDValue Ops[] = { BCast->getChain(), BCast->getBasePtr() };
+    SDValue ResNode =
+        DAG.getMemIntrinsicNode(X86ISD::VBROADCAST_LOAD, SDLoc(N), Tys, Ops,
+                                VT.getVectorElementType(),
+                                BCast->getMemOperand());
+    DAG.ReplaceAllUsesOfValueWith(SDValue(BCast, 1), ResNode.getValue(1));
+    return ResNode;
+  }
 
   // Since MMX types are special and don't usually play with other vector types,
   // it's better to handle them early to be sure we emit efficient code by

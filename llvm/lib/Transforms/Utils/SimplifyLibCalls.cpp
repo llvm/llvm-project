@@ -2792,6 +2792,12 @@ Value *LibCallSimplifier::optimizePuts(CallInst *CI, IRBuilder<> &B) {
   return nullptr;
 }
 
+Value *LibCallSimplifier::optimizeBCopy(CallInst *CI, IRBuilder<> &B) {
+  // bcopy(src, dst, n) -> llvm.memmove(dst, src, n)
+  return B.CreateMemMove(CI->getArgOperand(1), 1, CI->getArgOperand(0), 1,
+                         CI->getArgOperand(2));
+}
+
 bool LibCallSimplifier::hasFloatVersion(StringRef FuncName) {
   LibFunc Func;
   SmallString<20> FloatFuncName = FuncName;
@@ -2870,6 +2876,8 @@ Value *LibCallSimplifier::optimizeStringMemoryLibCall(CallInst *CI,
       return optimizeRealloc(CI, Builder);
     case LibFunc_wcslen:
       return optimizeWcslen(CI, Builder);
+    case LibFunc_bcopy:
+      return optimizeBCopy(CI, Builder);
     default:
       break;
     }

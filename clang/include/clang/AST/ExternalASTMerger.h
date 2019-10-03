@@ -23,7 +23,7 @@ namespace clang {
 /// ExternalASTSource implementation that merges information from several
 /// ASTContexts.
 ///
-/// ExtermalASTMerger maintains a vector of ASTImporters that it uses to import
+/// ExternalASTMerger maintains a vector of ASTImporters that it uses to import
 /// (potentially incomplete) Decls and DeclContexts from the source ASTContexts
 /// in response to ExternalASTSource API calls.
 ///
@@ -37,7 +37,7 @@ namespace clang {
 ///   lookup.  In this case, Origins contains an entry overriding lookup and
 ///   specifying the correct pair of DeclContext/ASTContext.
 ///
-/// - The DeclContext of origin was determined by another ExterenalASTMerger.
+/// - The DeclContext of origin was determined by another ExternalASTMerger.
 ///   (This is possible when the source ASTContext for one of the Importers has
 ///   its own ExternalASTMerger).  The origin must be properly forwarded in this
 ///   case.
@@ -94,7 +94,7 @@ public:
   };
 
 private:
-  /// The target for this ExtenralASTMerger.
+  /// The target for this ExternalASTMerger.
   ImporterTarget Target;
   /// ExternalASTMerger has multiple ASTImporters that import into the same
   /// TU. This is the shared state for all ASTImporters of this
@@ -158,7 +158,7 @@ public:
   /// OriginContext.
   bool HasImporterForOrigin(ASTContext &OriginContext);
 
-  /// Returns a reference to the ASTRImporter from Importers whose origin
+  /// Returns a reference to the ASTImporter from Importers whose origin
   /// is OriginContext.  This allows manual import of ASTs while preserving the
   /// OriginMap correctly.
   ASTImporter &ImporterForOrigin(ASTContext &OriginContext);

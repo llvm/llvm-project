@@ -434,7 +434,7 @@ static Status HandleFileAction(ProcessLaunchInfo &launch_info,
             file_options |= File::eOpenOptionRead;
           if ((oflag & O_RDWR) || (oflag & O_RDONLY))
             file_options |= File::eOpenOptionWrite;
-          file = std::make_shared<File>(created_fd, file_options, true);
+          file = std::make_shared<NativeFile>(created_fd, file_options, true);
           [options setValue:[NSNumber numberWithInteger:created_fd] forKey:key];
           return error; // Success
         } else {

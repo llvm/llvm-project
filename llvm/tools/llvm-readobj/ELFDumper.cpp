@@ -2315,7 +2315,7 @@ MipsGOTParser<ELFT>::MipsGOTParser(const ELFO *Obj, StringRef FileName,
   if (IsStatic) {
     GotSec = findSectionByName(*Obj, FileName, ".got");
     if (!GotSec)
-      reportError(createError("Cannot find .got section"), FileName);
+      return;
 
     ArrayRef<uint8_t> Content =
         unwrapOrError(FileName, Obj->getSectionContents(GotSec));

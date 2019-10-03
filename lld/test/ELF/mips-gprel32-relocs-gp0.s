@@ -3,7 +3,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux %s -o %t.o
 # RUN: ld.lld -r -o %t-rel.o %t.o
-# RUN: llvm-readobj --mips-reginfo %t-rel.o | FileCheck --check-prefix=REL %s
+# RUN: llvm-readobj -A %t-rel.o | FileCheck --check-prefix=REL %s
 
 # RUN: echo "SECTIONS { \
 # RUN:         .rodata ALIGN(0x1000) : { *(.rodata) } \

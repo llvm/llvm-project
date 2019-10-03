@@ -53,7 +53,8 @@ static LegalityPredicate isSmallOddVector(unsigned TypeIdx) {
     const LLT Ty = Query.Types[TypeIdx];
     return Ty.isVector() &&
            Ty.getNumElements() % 2 != 0 &&
-           Ty.getElementType().getSizeInBits() < 32;
+           Ty.getElementType().getSizeInBits() < 32 &&
+           Ty.getSizeInBits() % 32 != 0;
   };
 }
 
@@ -268,7 +269,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .legalFor({S32, S1, S64, V2S32, S16, V2S16, V4S16})
     .clampScalar(0, S32, S64)
     .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
-    .fewerElementsIf(vectorWiderThan(0, 32), fewerEltsToSize64Vector(0))
+    .fewerElementsIf(vectorWiderThan(0, 64), fewerEltsToSize64Vector(0))
     .widenScalarToNextPow2(0)
     .scalarize(0);
 
@@ -279,11 +280,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .scalarize(0); // TODO: Implement.
 
   getActionDefinitionsBuilder(G_BITCAST)
-    .legalForCartesianProduct({S32, V2S16})
-    .legalForCartesianProduct({S64, V2S32, V4S16})
-    .legalForCartesianProduct({V2S64, V4S32})
     // Don't worry about the size constraint.
-    .legalIf(all(isPointer(0), isPointer(1)))
+    .legalIf(all(isRegisterType(0), isRegisterType(1)))
     // FIXME: Testing hack
     .legalForCartesianProduct({S16, LLT::vector(2, 8), });
 

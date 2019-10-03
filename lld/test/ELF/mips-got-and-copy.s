@@ -10,7 +10,7 @@
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux %s -o %t.o
 # RUN: ld.lld %t.so.o -shared -o %t.so
 # RUN: ld.lld %t.o %t.so -o %t.exe
-# RUN: llvm-readobj -r --mips-plt-got %t.exe | FileCheck %s
+# RUN: llvm-readobj -r -A %t.exe | FileCheck %s
 
 # CHECK:      Relocations [
 # CHECK-NEXT:   Section (7) .rel.dyn {
@@ -18,7 +18,8 @@
 # CHECK-NEXT:     0x[[DATA1:[0-9A-F]+]] R_MIPS_COPY data1
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]
-# CHECK-NEXT: Primary GOT {
+
+# CHECK:      Primary GOT {
 # CHECK-NEXT:   Canonical gp value:
 # CHECK-NEXT:   Reserved entries [
 # CHECK:        ]

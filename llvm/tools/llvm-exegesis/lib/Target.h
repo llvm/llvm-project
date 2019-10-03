@@ -95,7 +95,8 @@ public:
   }
 
   // Adds the code to decrement the loop counter and
-  virtual void decrementLoopCounterAndLoop(MachineBasicBlock &MBB,
+  virtual void decrementLoopCounterAndJump(MachineBasicBlock &MBB,
+                                           MachineBasicBlock &TargetMBB,
                                            const llvm::MCInstrInfo &MII) const {
     llvm_unreachable("decrementLoopCounterAndBranch() requires "
                      "getLoopCounterRegister() > 0");

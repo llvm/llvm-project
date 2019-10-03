@@ -2246,9 +2246,13 @@ bool llvm::removeUnreachableBlocks(Function &F, DomTreeUpdater *DTU,
     }
     BB->dropAllReferences();
     if (DTU) {
-      // Remove the terminator of BB to clear the successor list of BB.
-      if (BB->getTerminator())
-        BB->getInstList().pop_back();
+      Instruction *TI = BB->getTerminator();
+      assert(TI && "Basic block should have a terminator");
+      // Terminators like invoke can have users. We have to replace their users,
+      // before removing them.
+      if (!TI->use_empty())
+        TI->replaceAllUsesWith(UndefValue::get(TI->getType()));
+      TI->eraseFromParent();
       new UnreachableInst(BB->getContext(), BB);
       assert(succ_empty(BB) && "The successor list of BB isn't empty before "
                                "applying corresponding DTU updates.");

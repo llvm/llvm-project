@@ -16,7 +16,7 @@ New entries should be added directly below the "Version" header.
 Version 9.0
 -----------
 
-* rXXXXX - Re-rexport missing symbols from libc++abi
+* r358690 - Re-rexport missing symbols from libc++abi
 
   libc++ now re-exports `__cxa_throw_bad_array_new_length` and `__cxa_uncaught_exceptions`,
   both of which are provided by libc++abi. This is not an ABI break because
