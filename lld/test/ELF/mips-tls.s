@@ -12,12 +12,14 @@
 # RUN:       }" > %t.script
 
 # RUN: ld.lld %t.o %t.so -script %t.script -o %t.exe
-# RUN: llvm-objdump -d -s -t --no-show-raw-insn %t.exe | FileCheck -check-prefix=DIS %s
-# RUN: llvm-readobj -r --mips-plt-got %t.exe | FileCheck %s
+# RUN: llvm-objdump -d -s -t --no-show-raw-insn %t.exe \
+# RUN:   | FileCheck -check-prefix=DIS %s
+# RUN: llvm-readobj -r -A %t.exe | FileCheck %s
 
 # RUN: ld.lld -shared %t.o %t.so -script %t.script -o %t-out.so
-# RUN: llvm-objdump -d -s -t --no-show-raw-insn %t-out.so | FileCheck -check-prefix=DIS-SO %s
-# RUN: llvm-readobj -r --mips-plt-got %t-out.so | FileCheck -check-prefix=SO %s
+# RUN: llvm-objdump -d -s -t --no-show-raw-insn %t-out.so \
+# RUN:   | FileCheck -check-prefix=DIS-SO %s
+# RUN: llvm-readobj -r -A %t-out.so | FileCheck -check-prefix=SO %s
 
 # DIS:      __start:
 # DIS-NEXT:    addiu   $2, $3, -32736
@@ -42,7 +44,7 @@
 # CHECK-NEXT:     0x30014 R_MIPS_TLS_DTPREL32 foo 0x0
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]
-# CHECK-NEXT: Primary GOT {
+# CHECK:      Primary GOT {
 # CHECK-NEXT:   Canonical gp value: 0x37FF0
 # CHECK-NEXT:   Reserved entries [
 # CHECK:        ]
@@ -76,7 +78,7 @@
 # SO-NEXT:     0x30014 R_MIPS_TLS_DTPREL32 foo 0x0
 # SO-NEXT:   }
 # SO-NEXT: ]
-# SO-NEXT: Primary GOT {
+# SO:      Primary GOT {
 # SO-NEXT:   Canonical gp value: 0x37FF0
 # SO-NEXT:   Reserved entries [
 # SO:        ]
