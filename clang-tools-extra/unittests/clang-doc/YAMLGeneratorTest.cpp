@@ -45,20 +45,20 @@ TEST(YAMLGeneratorTest, emitNamespaceYAML) {
       R"raw(---
 USR:             '0000000000000000000000000000000000000000'
 Name:            'Namespace'
-Namespace:       
+Namespace:
   - Type:            Namespace
     Name:            'A'
-ChildNamespaces: 
+ChildNamespaces:
   - Type:            Namespace
     Name:            'ChildNamespace'
-ChildRecords:    
+ChildRecords:
   - Type:            Record
     Name:            'ChildStruct'
-ChildFunctions:  
+ChildFunctions:
   - USR:             '0000000000000000000000000000000000000000'
     Name:            'OneFunction'
     ReturnType:      {}
-ChildEnums:      
+ChildEnums:
   - USR:             '0000000000000000000000000000000000000000'
     Name:            'OneEnum'
 ...
@@ -95,35 +95,35 @@ TEST(YAMLGeneratorTest, emitRecordYAML) {
       R"raw(---
 USR:             '0000000000000000000000000000000000000000'
 Name:            'r'
-Namespace:       
+Namespace:
   - Type:            Namespace
     Name:            'A'
-DefLocation:     
+DefLocation:
   LineNumber:      10
   Filename:        'test.cpp'
-Location:        
+Location:
   - LineNumber:      12
     Filename:        'test.cpp'
 TagType:         Class
-Members:         
-  - Type:            
+Members:
+  - Type:
       Name:            'int'
     Name:            'X'
     Access:          Private
-Parents:         
+Parents:
   - Type:            Record
     Name:            'F'
-VirtualParents:  
+VirtualParents:
   - Type:            Record
     Name:            'G'
-ChildRecords:    
+ChildRecords:
   - Type:            Record
     Name:            'ChildStruct'
-ChildFunctions:  
+ChildFunctions:
   - USR:             '0000000000000000000000000000000000000000'
     Name:            'OneFunction'
     ReturnType:      {}
-ChildEnums:      
+ChildEnums:
   - USR:             '0000000000000000000000000000000000000000'
     Name:            'OneEnum'
 ...
@@ -154,25 +154,25 @@ TEST(YAMLGeneratorTest, emitFunctionYAML) {
       R"raw(---
 USR:             '0000000000000000000000000000000000000000'
 Name:            'f'
-Namespace:       
+Namespace:
   - Type:            Namespace
     Name:            'A'
-DefLocation:     
+DefLocation:
   LineNumber:      10
   Filename:        'test.cpp'
-Location:        
+Location:
   - LineNumber:      12
     Filename:        'test.cpp'
 IsMethod:        true
-Parent:          
+Parent:
   Type:            Record
   Name:            'Parent'
-Params:          
-  - Type:            
+Params:
+  - Type:
       Name:            'int'
     Name:            'P'
-ReturnType:      
-  Type:            
+ReturnType:
+  Type:
     Name:            'void'
 ...
 )raw";
@@ -200,17 +200,17 @@ TEST(YAMLGeneratorTest, emitEnumYAML) {
       R"raw(---
 USR:             '0000000000000000000000000000000000000000'
 Name:            'e'
-Namespace:       
+Namespace:
   - Type:            Namespace
     Name:            'A'
-DefLocation:     
+DefLocation:
   LineNumber:      10
   Filename:        'test.cpp'
-Location:        
+Location:
   - LineNumber:      12
     Filename:        'test.cpp'
 Scoped:          true
-Members:         
+Members:
   - 'X'
 ...
 )raw";
@@ -337,31 +337,31 @@ TEST(YAMLGeneratorTest, emitCommentYAML) {
       R"raw(---
 USR:             '0000000000000000000000000000000000000000'
 Name:            'f'
-Description:     
+Description:
   - Kind:            'FullComment'
-    Children:        
+    Children:
       - Kind:            'ParagraphComment'
-        Children:        
+        Children:
           - Kind:            'TextComment'
       - Kind:            'ParagraphComment'
-        Children:        
+        Children:
           - Kind:            'TextComment'
             Text:            ' Brief description.'
             Name:            'ParagraphComment'
       - Kind:            'ParagraphComment'
-        Children:        
+        Children:
           - Kind:            'TextComment'
             Text:            ' Extended description that'
           - Kind:            'TextComment'
             Text:            ' continues onto the next line.'
       - Kind:            'ParagraphComment'
-        Children:        
+        Children:
           - Kind:            'TextComment'
           - Kind:            'HTMLStartTagComment'
             Name:            'ul'
-            AttrKeys:        
+            AttrKeys:
               - 'class'
-            AttrValues:      
+            AttrValues:
               - 'test'
           - Kind:            'HTMLStartTagComment'
             Name:            'li'
@@ -373,48 +373,48 @@ Description:
       - Kind:            'VerbatimBlockComment'
         Name:            'verbatim'
         CloseName:       'endverbatim'
-        Children:        
+        Children:
           - Kind:            'VerbatimBlockLineComment'
             Text:            ' The description continues.'
       - Kind:            'ParamCommandComment'
         Direction:       '[out]'
         ParamName:       'I'
         Explicit:        true
-        Children:        
+        Children:
           - Kind:            'ParagraphComment'
-            Children:        
+            Children:
               - Kind:            'TextComment'
               - Kind:            'TextComment'
                 Text:            ' is a parameter.'
       - Kind:            'ParamCommandComment'
         Direction:       '[in]'
         ParamName:       'J'
-        Children:        
+        Children:
           - Kind:            'ParagraphComment'
-            Children:        
+            Children:
               - Kind:            'TextComment'
                 Text:            ' is a parameter.'
               - Kind:            'TextComment'
       - Kind:            'BlockCommandComment'
         Name:            'return'
         Explicit:        true
-        Children:        
+        Children:
           - Kind:            'ParagraphComment'
-            Children:        
+            Children:
               - Kind:            'TextComment'
                 Text:            'void'
-DefLocation:     
+DefLocation:
   LineNumber:      10
   Filename:        'test.cpp'
-Params:          
-  - Type:            
+Params:
+  - Type:
       Name:            'int'
     Name:            'I'
-  - Type:            
+  - Type:
       Name:            'int'
     Name:            'J'
-ReturnType:      
-  Type:            
+ReturnType:
+  Type:
     Name:            'void'
 ...
 )raw";
