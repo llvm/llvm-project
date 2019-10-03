@@ -1,6 +1,7 @@
 # RUN: llvm-mc -triple=aarch64 -mattr=+fp-armv8 -disassemble < %s | FileCheck %s
 # RUN: llvm-mc -triple=arm64 -mattr=+fp-armv8 -disassemble < %s | FileCheck %s
 # RUN: llvm-mc -triple=arm64 -mattr=+fp-armv8,+fullfp16 -disassemble < %s | FileCheck %s --check-prefix=CHECK --check-prefix=FP16
+# RUN: llvm-mc -triple=arm64 -mattr=+v8.2a -disassemble < %s | FileCheck %s --check-prefix=CHECK-V82
 # RUN: llvm-mc -triple=arm64 -mattr=+v8.3a -disassemble < %s | FileCheck %s --check-prefix=CHECK-V83
 
 #------------------------------------------------------------------------------
@@ -624,7 +625,8 @@
 
 # CHECK: bfi      x4, x5, #52, #11
 # CHECK: bfxil    xzr, x4, #0, #1
-# CHECK: bfc      x4, #1, #6
+# CHECK: bfi      x4, xzr, #1, #6
+# CHECK-V82: bfc      x4, #1, #6
 # CHECK: bfxil    x5, x6, #12, #52
 0xa4 0x28 0x4c 0xb3
 0x9f 0x0 0x40 0xb3
@@ -717,7 +719,8 @@
 # CHECK: bfxil    w9, w10, #0, #32
 # CHECK: bfi      w11, w12, #31, #1
 # CHECK: bfi      w13, w14, #29, #3
-# CHECK: bfc      xzr, #10, #11
+# CHECK-V82: bfc      xzr, #10, #11
+# CHECK: bfi      xzr, xzr, #10, #11
 0x49 0x1 0x0 0x33
 0x62 0x0 0x41 0xb3
 0x93 0xfe 0x40 0xb3

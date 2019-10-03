@@ -978,7 +978,7 @@ _func:
         bfm x5, x6, #12, #63
 // CHECK: bfi      x4, x5, #52, #11           // encoding: [0xa4,0x28,0x4c,0xb3]
 // CHECK: bfxil    xzr, x4, #0, #1            // encoding: [0x9f,0x00,0x40,0xb3]
-// CHECK: bfc      x4, #1, #6                 // encoding: [0xe4,0x17,0x7f,0xb3]
+// CHECK: bfi      x4, xzr, #1, #6            // encoding: [0xe4,0x17,0x7f,0xb3]
 // CHECK: bfxil    x5, x6, #12, #52           // encoding: [0xc5,0xfc,0x4c,0xb3]
 
         sxtb w1, w2
@@ -1078,7 +1078,7 @@ _func:
 // CHECK: bfxil    w9, w10, #0, #32           // encoding: [0x49,0x7d,0x00,0x33]
 // CHECK: bfi      w11, w12, #31, #1          // encoding: [0x8b,0x01,0x01,0x33]
 // CHECK: bfi      w13, w14, #29, #3          // encoding: [0xcd,0x09,0x03,0x33]
-// CHECK: bfc      xzr, #10, #11              // encoding: [0xff,0x2b,0x76,0xb3]
+// CHECK: bfi      xzr, xzr, #10, #11         // encoding: [0xff,0x2b,0x76,0xb3]
 
         bfxil w9, w10, #0, #1
         bfxil x2, x3, #63, #1
@@ -1137,10 +1137,10 @@ _func:
         bfc wzr, #31, #1
         bfc x0, #5, #9
         bfc xzr, #63, #1
-// CHECK: bfc w3, #0, #32             // encoding: [0xe3,0x7f,0x00,0x33]
-// CHECK: bfc wzr, #31, #1            // encoding: [0xff,0x03,0x01,0x33]
-// CHECK: bfc x0, #5, #9              // encoding: [0xe0,0x23,0x7b,0xb3]
-// CHECK: bfc xzr, #63, #1            // encoding: [0xff,0x03,0x41,0xb3]
+// CHECK: bfxil w3, wzr, #0, #32      // encoding: [0xe3,0x7f,0x00,0x33]
+// CHECK: bfi wzr, wzr, #31, #1       // encoding: [0xff,0x03,0x01,0x33]
+// CHECK: bfi x0, xzr, #5, #9         // encoding: [0xe0,0x23,0x7b,0xb3]
+// CHECK: bfi xzr, xzr, #63, #1       // encoding: [0xff,0x03,0x41,0xb3]
 
 //------------------------------------------------------------------------------
 // Compare & branch (immediate)
