@@ -1,0 +1,8 @@
+# UNSUPPORTED: system-windows
+
+# RUN: %clang %S/Inputs/simple.c -g -o %t.out
+# RUN: SHELL=bogus %lldb %t.out -b -o 'run' 2>&1 | FileCheck %s --check-prefix ERROR
+# RUN: env -i %lldb %t.out -b -o 'run' 2>&1 | FileCheck %s
+
+# ERROR: error: shell expansion failed
+# CHECK-NOT: error: shell expansion failed
