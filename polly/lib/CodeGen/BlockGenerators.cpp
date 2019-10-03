@@ -1209,7 +1209,7 @@ void VectorBlockGenerator::copyStore(
     StoreInst *Store = Builder.CreateStore(Vector, VectorPtr);
 
     if (!Aligned)
-      Store->setAlignment(8);
+      Store->setAlignment(Align(8));
   } else {
     for (unsigned i = 0; i < ScalarMaps.size(); i++) {
       Value *Scalar = Builder.CreateExtractElement(Vector, Builder.getInt32(i));
