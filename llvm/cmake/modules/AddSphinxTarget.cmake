@@ -71,6 +71,11 @@ function (add_sphinx_target builder project)
                 COMPONENT "${project}-sphinx-man"
                 DESTINATION ${INSTALL_MANDIR}man1)
 
+        if(NOT LLVM_ENABLE_IDE)
+          add_llvm_install_targets("install-${SPHINX_TARGET_NAME}"
+                                   DEPENDS ${SPHINX_TARGET_NAME}
+                                   COMPONENT "${project}-sphinx-man")
+        endif()
       elseif (builder STREQUAL html)
         string(TOUPPER "${project}" project_upper)
         set(${project_upper}_INSTALL_SPHINX_HTML_DIR "share/doc/${project}/html"
@@ -82,6 +87,12 @@ function (add_sphinx_target builder project)
         install(DIRECTORY "${SPHINX_BUILD_DIR}/."
                 COMPONENT "${project}-sphinx-html"
                 DESTINATION "${${project_upper}_INSTALL_SPHINX_HTML_DIR}")
+
+        if(NOT LLVM_ENABLE_IDE)
+          add_llvm_install_targets("install-${SPHINX_TARGET_NAME}"
+                                   DEPENDS ${SPHINX_TARGET_NAME}
+                                   COMPONENT "${project}-sphinx-html")
+        endif()
       else()
         message(WARNING Installation of ${builder} not supported)
       endif()

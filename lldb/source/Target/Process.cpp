@@ -4422,9 +4422,9 @@ public:
 
 protected:
   Process *m_process;
-  File m_read_file;  // Read from this file (usually actual STDIN for LLDB
-  File m_write_file; // Write to this file (usually the master pty for getting
-                     // io to debuggee)
+  NativeFile m_read_file;  // Read from this file (usually actual STDIN for LLDB
+  NativeFile m_write_file; // Write to this file (usually the master pty for
+                           // getting io to debuggee)
   Pipe m_pipe;
   std::atomic<bool> m_is_running{false};
 };

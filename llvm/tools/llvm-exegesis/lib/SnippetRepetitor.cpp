@@ -79,7 +79,8 @@ public:
       for (const auto &LiveIn : Entry.MBB->liveins())
         Loop.MBB->addLiveIn(LiveIn);
       Loop.addInstructions(Instructions);
-      ET.decrementLoopCounterAndLoop(*Loop.MBB, State.getInstrInfo());
+      ET.decrementLoopCounterAndJump(*Loop.MBB, *Loop.MBB,
+                                     State.getInstrInfo());
 
       // Set up the exit basic block.
       Loop.MBB->addSuccessor(Exit.MBB, llvm::BranchProbability::getZero());

@@ -778,24 +778,46 @@ the configuration (without a prefix: ``Auto``).
       class foo
       {};
 
-  * ``bool AfterControlStatement`` Wrap control statements (``if``/``for``/``while``/``switch``/..).
+  * ``BraceWrappingAfterControlStatementStyle AfterControlStatement``
+    Wrap control statements (``if``/``for``/``while``/``switch``/..).
 
-    .. code-block:: c++
+    Possible values:
 
-      true:
-      if (foo())
-      {
-      } else
-      {}
-      for (int i = 0; i < 10; ++i)
-      {}
+    * ``BWACS_Never`` (in configuration: ``Never``)
+      Never wrap braces after a control statement.
 
-      false:
-      if (foo()) {
-      } else {
-      }
-      for (int i = 0; i < 10; ++i) {
-      }
+      .. code-block:: c++
+
+        if (foo()) {
+        } else {
+        }
+        for (int i = 0; i < 10; ++i) {
+        }
+
+    * ``BWACS_MultiLine`` (in configuration: ``MultiLine``)
+      Only wrap braces after a multi-line control statement.
+
+      .. code-block:: c++
+
+        if (foo && bar &&
+            baz)
+        {
+          quux();
+        }
+        while (foo || bar) {
+        }
+
+    * ``BWACS_Always`` (in configuration: ``Always``)
+      Always wrap braces after a control statement.
+
+      .. code-block:: c++
+
+        if (foo())
+        {
+        } else
+        {}
+        for (int i = 0; i < 10; ++i)
+        {}
 
   * ``bool AfterEnum`` Wrap enum definitions.
 

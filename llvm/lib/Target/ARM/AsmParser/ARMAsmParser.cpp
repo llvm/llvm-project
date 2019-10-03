@@ -11339,7 +11339,7 @@ bool ARMAsmParser::parseDirectiveUnwindRaw(SMLoc L) {
   SmallVector<uint8_t, 16> Opcodes;
 
   auto parseOne = [&]() -> bool {
-    const MCExpr *OE;
+    const MCExpr *OE = nullptr;
     SMLoc OpcodeLoc = getLexer().getLoc();
     if (check(getLexer().is(AsmToken::EndOfStatement) ||
                   Parser.parseExpression(OE),

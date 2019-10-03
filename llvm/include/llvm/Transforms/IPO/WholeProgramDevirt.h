@@ -251,7 +251,7 @@ void runWholeProgramDevirtOnIndex(
 /// devirt target names for any locals that were exported.
 void updateIndexWPDForExports(
     ModuleSummaryIndex &Summary,
-    StringMap<FunctionImporter::ExportSetTy> &ExportLists,
+    function_ref<bool(StringRef, GlobalValue::GUID)> isExported,
     std::map<ValueInfo, std::vector<VTableSlotSummary>> &LocalWPDTargetsMap);
 
 } // end namespace llvm

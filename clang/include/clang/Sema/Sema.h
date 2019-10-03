@@ -1523,6 +1523,8 @@ public:
   QualType BuildAddressSpaceAttr(QualType &T, Expr *AddrSpace,
                                  SourceLocation AttrLoc);
 
+  bool CheckQualifiedFunctionForTypeId(QualType T, SourceLocation Loc);
+
   bool CheckFunctionReturnType(QualType T, SourceLocation Loc);
 
   /// Build a function type.
@@ -9110,11 +9112,14 @@ public:
     OMPDeclareVariantAttr::CtxSelectorType Ctx =
         OMPDeclareVariantAttr::CtxUnknown;
     StringRef ImplVendor;
+    ExprResult CtxScore;
     explicit OpenMPDeclareVariantCtsSelectorData() = default;
     explicit OpenMPDeclareVariantCtsSelectorData(
         OMPDeclareVariantAttr::CtxSelectorSetType CtxSet,
-        OMPDeclareVariantAttr::CtxSelectorType Ctx, StringRef ImplVendor)
-        : CtxSet(CtxSet), Ctx(Ctx), ImplVendor(ImplVendor) {}
+        OMPDeclareVariantAttr::CtxSelectorType Ctx, StringRef ImplVendor,
+        ExprResult CtxScore)
+        : CtxSet(CtxSet), Ctx(Ctx), ImplVendor(ImplVendor), CtxScore(CtxScore) {
+    }
   };
 
   /// Checks if the variant/multiversion functions are compatible.

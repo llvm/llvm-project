@@ -182,6 +182,20 @@ template <> struct ScalarEnumerationTraits<FormatStyle::BraceBreakingStyle> {
 };
 
 template <>
+struct ScalarEnumerationTraits<
+    FormatStyle::BraceWrappingAfterControlStatementStyle> {
+  static void
+  enumeration(IO &IO,
+              FormatStyle::BraceWrappingAfterControlStatementStyle &Value) {
+    IO.enumCase(Value, "false", FormatStyle::BWACS_Never);
+    IO.enumCase(Value, "true", FormatStyle::BWACS_Always);
+    IO.enumCase(Value, "Never", FormatStyle::BWACS_Never);
+    IO.enumCase(Value, "MultiLine", FormatStyle::BWACS_MultiLine);
+    IO.enumCase(Value, "Always", FormatStyle::BWACS_Always);
+  }
+};
+
+template <>
 struct ScalarEnumerationTraits<FormatStyle::BreakConstructorInitializersStyle> {
   static void
   enumeration(IO &IO, FormatStyle::BreakConstructorInitializersStyle &Value) {
@@ -629,9 +643,12 @@ static FormatStyle expandPresets(const FormatStyle &Style) {
   if (Style.BreakBeforeBraces == FormatStyle::BS_Custom)
     return Style;
   FormatStyle Expanded = Style;
-  Expanded.BraceWrapping = {false, false, false, false, false, false,
-                            false, false, false, false, false, false,
-                            false, true,  true,  true};
+  Expanded.BraceWrapping = {false, false, FormatStyle::BWACS_Never,
+                            false, false, false,
+                            false, false, false,
+                            false, false, false,
+                            false, true,  true,
+                            true};
   switch (Style.BreakBeforeBraces) {
   case FormatStyle::BS_Linux:
     Expanded.BraceWrapping.AfterClass = true;
@@ -656,7 +673,7 @@ static FormatStyle expandPresets(const FormatStyle &Style) {
   case FormatStyle::BS_Allman:
     Expanded.BraceWrapping.AfterCaseLabel = true;
     Expanded.BraceWrapping.AfterClass = true;
-    Expanded.BraceWrapping.AfterControlStatement = true;
+    Expanded.BraceWrapping.AfterControlStatement = FormatStyle::BWACS_Always;
     Expanded.BraceWrapping.AfterEnum = true;
     Expanded.BraceWrapping.AfterFunction = true;
     Expanded.BraceWrapping.AfterNamespace = true;
@@ -670,7 +687,7 @@ static FormatStyle expandPresets(const FormatStyle &Style) {
   case FormatStyle::BS_Whitesmiths:
     Expanded.BraceWrapping.AfterCaseLabel = true;
     Expanded.BraceWrapping.AfterClass = true;
-    Expanded.BraceWrapping.AfterControlStatement = true;
+    Expanded.BraceWrapping.AfterControlStatement = FormatStyle::BWACS_Always;
     Expanded.BraceWrapping.AfterEnum = true;
     Expanded.BraceWrapping.AfterFunction = true;
     Expanded.BraceWrapping.AfterNamespace = true;
@@ -681,8 +698,12 @@ static FormatStyle expandPresets(const FormatStyle &Style) {
     Expanded.BraceWrapping.BeforeElse = true;
     break;
   case FormatStyle::BS_GNU:
-    Expanded.BraceWrapping = {true, true, true, true, true, true, true, true,
-                              true, true, true, true, true, true, true, true};
+    Expanded.BraceWrapping = {true, true, FormatStyle::BWACS_Always,
+                              true, true, true,
+                              true, true, true,
+                              true, true, true,
+                              true, true, true,
+                              true};
     break;
   case FormatStyle::BS_WebKit:
     Expanded.BraceWrapping.AfterFunction = true;
@@ -722,9 +743,12 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.BreakBeforeBinaryOperators = FormatStyle::BOS_None;
   LLVMStyle.BreakBeforeTernaryOperators = true;
   LLVMStyle.BreakBeforeBraces = FormatStyle::BS_Attach;
-  LLVMStyle.BraceWrapping = {false, false, false, false, false, false,
-                             false, false, false, false, false, false,
-                             false, true,  true,  true};
+  LLVMStyle.BraceWrapping = {false, false, FormatStyle::BWACS_Never,
+                             false, false, false,
+                             false, false, false,
+                             false, false, false,
+                             false, true,  true,
+                             true};
   LLVMStyle.BreakAfterJavaFieldAnnotations = false;
   LLVMStyle.BreakConstructorInitializers = FormatStyle::BCIS_BeforeColon;
   LLVMStyle.BreakInheritanceList = FormatStyle::BILS_BeforeColon;
@@ -1067,7 +1091,7 @@ FormatStyle getMicrosoftStyle(FormatStyle::LanguageKind Language) {
   Style.UseTab = FormatStyle::UT_Never;
   Style.BreakBeforeBraces = FormatStyle::BS_Custom;
   Style.BraceWrapping.AfterClass = true;
-  Style.BraceWrapping.AfterControlStatement = true;
+  Style.BraceWrapping.AfterControlStatement = FormatStyle::BWACS_Always;
   Style.BraceWrapping.AfterEnum = true;
   Style.BraceWrapping.AfterFunction = true;
   Style.BraceWrapping.AfterNamespace = true;

@@ -881,8 +881,8 @@ Status NativeProcessDarwin::StartWaitpidThread(MainLoop &main_loop) {
 
   // TODO make PipePOSIX derive from IOObject.  This is goofy here.
   const bool transfer_ownership = false;
-  auto io_sp = IOObjectSP(
-      new File(m_waitpid_pipe.GetReadFileDescriptor(), transfer_ownership));
+  auto io_sp = IOObjectSP(new NativeFile(m_waitpid_pipe.GetReadFileDescriptor(),
+                                         transfer_ownership));
   m_waitpid_reader_handle = main_loop.RegisterReadObject(
       io_sp, [this](MainLoopBase &) { HandleWaitpidResult(); }, error);
 

@@ -2,7 +2,7 @@
 # RUN:   FileCheck %s -check-prefix=CHECK-ASM
 #
 # RUN: llvm-mc %s -arch=mips -mcpu=mips32r6 -filetype=obj -o - -mattr=+ginv | \
-# RUN:   llvm-readobj --mips-abi-flags - | \
+# RUN:   llvm-readobj -A - | \
 # RUN:   FileCheck %s -check-prefix=CHECK-OBJ
 
 # CHECK-ASM: .module noginv

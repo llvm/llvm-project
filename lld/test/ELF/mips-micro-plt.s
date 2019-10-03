@@ -11,7 +11,7 @@
 # RUN:         . = 0x20300;  .plt : { *(.plt) } \
 # RUN:       }" > %t.script
 # RUN: ld.lld %t-exe.o %t.so --script %t.script -o %t.exe
-# RUN: llvm-readelf --symbols --dyn-syms --mips-plt-got %t.exe | FileCheck %s
+# RUN: llvm-readelf --symbols --dyn-syms -A %t.exe | FileCheck %s
 # RUN: llvm-objdump -d -mattr=micromips --no-show-raw-insn %t.exe \
 # RUN:   | FileCheck --check-prefix=ASM %s
 

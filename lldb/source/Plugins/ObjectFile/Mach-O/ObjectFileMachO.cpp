@@ -2554,8 +2554,8 @@ size_t ObjectFileMachO::ParseSymtab() {
           "dyld_shared_cache_", /* DYLD_SHARED_CACHE_BASE_NAME */
           header_arch.GetArchitectureName(), ".development");
 
-      FileSpec dsc_nondevelopment_filespec(dsc_path, false);
-      FileSpec dsc_development_filespec(dsc_path_development, false);
+      FileSpec dsc_nondevelopment_filespec(dsc_path);
+      FileSpec dsc_development_filespec(dsc_path_development);
       FileSpec dsc_filespec;
 
       UUID dsc_uuid;
@@ -3001,11 +3001,11 @@ size_t ObjectFileMachO::ParseSymtab() {
                                   // second is the directory for the source
                                   // file so you end up with a path that looks
                                   // like "/tmp/src//tmp/src/"
-                                  FileSpec so_dir(so_path, false);
+                                  FileSpec so_dir(so_path);
                                   if (!FileSystem::Instance().Exists(so_dir)) {
                                     so_dir.SetFile(
                                         &full_so_path[double_slash_pos + 1],
-                                        false);
+                                        FileSpec::Style::native);
                                     if (FileSystem::Instance().Exists(so_dir)) {
                                       // Trim off the incorrect path
                                       full_so_path.erase(0,

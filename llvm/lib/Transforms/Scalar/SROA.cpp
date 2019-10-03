@@ -3127,7 +3127,7 @@ private:
           Value *Op = SI->getOperand(0);
           StoreAlign = DL.getABITypeAlignment(Op->getType());
         }
-        SI->setAlignment(std::min(StoreAlign, getSliceAlign()));
+        SI->setAlignment(MaybeAlign(std::min(StoreAlign, getSliceAlign())));
         continue;
       }
 
