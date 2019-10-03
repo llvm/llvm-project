@@ -71,6 +71,7 @@ protected:
   friend class SBTrace;
   friend class SBValue;
   friend class SBWatchpoint;
+  friend class SBFile;
 
   lldb_private::Status *get();
 

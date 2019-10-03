@@ -137,6 +137,8 @@ public:
 
   int GetDescriptor() const;
 
+  static uint32_t GetOptionsFromMode(llvm::StringRef mode);
+
   WaitableHandle GetWaitableHandle() override;
 
   FILE *GetStream();

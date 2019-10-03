@@ -466,8 +466,6 @@ public:
   void Reset(PyRefType type, PyObject *py_obj) override;
   void Reset(File &file, const char *mode);
 
-  static uint32_t GetOptionsFromMode(llvm::StringRef mode);
-
   lldb::FileUP GetUnderlyingFile() const;
 };
 

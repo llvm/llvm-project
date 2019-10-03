@@ -68,6 +68,20 @@ static const char *GetStreamOpenModeFromOptions(uint32_t options) {
   return nullptr;
 }
 
+uint32_t File::GetOptionsFromMode(llvm::StringRef mode) {
+  return llvm::StringSwitch<uint32_t>(mode)
+      .Case("r", File::eOpenOptionRead)
+      .Case("w", File::eOpenOptionWrite)
+      .Case("a", File::eOpenOptionWrite | File::eOpenOptionAppend |
+                     File::eOpenOptionCanCreate)
+      .Case("r+", File::eOpenOptionRead | File::eOpenOptionWrite)
+      .Case("w+", File::eOpenOptionRead | File::eOpenOptionWrite |
+                      File::eOpenOptionCanCreate | File::eOpenOptionTruncate)
+      .Case("a+", File::eOpenOptionRead | File::eOpenOptionWrite |
+                      File::eOpenOptionAppend | File::eOpenOptionCanCreate)
+      .Default(0);
+}
+
 int File::kInvalidDescriptor = -1;
 FILE *File::kInvalidStream = nullptr;
 
@@ -143,9 +157,14 @@ uint32_t File::GetPermissions(Status &error) const {
 
 Status File::Close() {
   Status error;
-  if (StreamIsValid() && m_own_stream) {
-    if (::fclose(m_stream) == EOF)
-      error.SetErrorToErrno();
+  if (StreamIsValid()) {
+    if (m_own_stream) {
+      if (::fclose(m_stream) == EOF)
+        error.SetErrorToErrno();
+    } else {
+      if (::fflush(m_stream) == EOF)
+        error.SetErrorToErrno();
+    }
   }
 
   if (DescriptorIsValid() && m_own_descriptor) {

@@ -39,6 +39,7 @@ add_lldb_library(liblldb SHARED
   SBExecutionContext.cpp
   SBExpressionOptions.cpp
   SBFileSpec.cpp
+  SBFile.cpp
   SBFileSpecList.cpp
   SBFrame.cpp
   SBFunction.cpp
