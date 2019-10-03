@@ -33,7 +33,7 @@ public:
            const lldb::SymbolFileTypeSP &symfile_type_sp, lldb::ValueType scope,
            SymbolContextScope *owner_scope, const RangeList &scope_range,
            Declaration *decl, const DWARFExpression &location, bool external,
-           bool artificial, bool static_member = false);
+           bool artificial, bool static_member, bool constant);
 
   virtual ~Variable();
 
@@ -69,6 +69,8 @@ public:
   bool IsArtificial() const { return m_artificial; }
 
   bool IsStaticMember() const { return m_static_member; }
+
+  bool IsConstant() const { return m_constant; }
 
   DWARFExpression &LocationExpression() { return m_location; }
 
@@ -133,6 +135,9 @@ protected:
   unsigned m_loc_is_const_data : 1;
   /// Non-zero if variable is static member of a class or struct.
   unsigned m_static_member : 1;
+  /// Indicates whether the variable is a constant, for example, Swift \c let
+  /// binding.
+  uint8_t m_constant : 1;
 
 private:
   Variable(const Variable &rhs) = delete;

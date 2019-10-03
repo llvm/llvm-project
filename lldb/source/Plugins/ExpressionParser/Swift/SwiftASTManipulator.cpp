@@ -1165,6 +1165,8 @@ bool SwiftASTManipulator::AddExternalVariables(
         if (!m_wrapper_decl)
           continue;
 
+        // We need to mutate the $__lldb_wrapped_expr_%d member of self later.
+        introducer = swift::VarDecl::Introducer::Var;
         loc = m_wrapper_decl->getBody()->getLBraceLoc();
         containing_function = m_wrapper_decl;
       }
