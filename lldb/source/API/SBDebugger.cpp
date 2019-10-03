@@ -289,7 +289,7 @@ void SBDebugger::SkipAppInitFiles(bool b) {
 void SBDebugger::SetInputFileHandle(FILE *fh, bool transfer_ownership) {
   LLDB_RECORD_METHOD(void, SBDebugger, SetInputFileHandle, (FILE *, bool), fh,
                      transfer_ownership);
-  SetInputFile(std::make_shared<File>(fh, transfer_ownership));
+  SetInputFile((FileSP)std::make_shared<NativeFile>(fh, transfer_ownership));
 }
 
 // Shouldn't really be settable after initialization as this could cause lots
@@ -319,7 +319,7 @@ SBError SBDebugger::SetInputFile(SBFile file) {
     // FIXME Jonas Devlieghere: shouldn't this error be propagated out to the
     // reproducer somehow if fh is NULL?
     if (fh) {
-      file_sp = std::make_shared<File>(fh, true);
+      file_sp = std::make_shared<NativeFile>(fh, true);
     }
   }
 
@@ -335,7 +335,7 @@ SBError SBDebugger::SetInputFile(SBFile file) {
 void SBDebugger::SetOutputFileHandle(FILE *fh, bool transfer_ownership) {
   LLDB_RECORD_METHOD(void, SBDebugger, SetOutputFileHandle, (FILE *, bool), fh,
                      transfer_ownership);
-  SetOutputFile(std::make_shared<File>(fh, transfer_ownership));
+  SetOutputFile((FileSP)std::make_shared<NativeFile>(fh, transfer_ownership));
 }
 
 SBError SBDebugger::SetOutputFile(SBFile file) {
@@ -356,7 +356,7 @@ SBError SBDebugger::SetOutputFile(SBFile file) {
 void SBDebugger::SetErrorFileHandle(FILE *fh, bool transfer_ownership) {
   LLDB_RECORD_METHOD(void, SBDebugger, SetErrorFileHandle, (FILE *, bool), fh,
                      transfer_ownership);
-  SetErrorFile(std::make_shared<File>(fh, transfer_ownership));
+  SetErrorFile((FileSP)std::make_shared<NativeFile>(fh, transfer_ownership));
 }
 
 SBError SBDebugger::SetErrorFile(SBFile file) {

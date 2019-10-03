@@ -406,6 +406,8 @@ bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
 }
 
 %typemap(out) FILE * {
+   // TODO: This is gross. We should find a way to fetch the mode flags from the
+   // lldb_private::File object.
    char mode[4] = {0};
 %#ifdef __APPLE__
    int i = 0;
@@ -420,9 +422,15 @@ bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
        else // if (flags & __SRW)
           mode[i++] = 'a';
     }
+%#else
+   // There's no portable way to get the mode here. We just return a mode which
+   // permits both reads and writes and count on the operating system to return
+   // an error when an invalid operation is attempted.
+   mode[0] = 'r';
+   mode[1] = '+';
 %#endif
    using namespace lldb_private;
-   File file($1, false);
+   NativeFile file($1, false);
    PythonFile py_file(file, mode);
    $result = py_file.release();
    if (!$result)

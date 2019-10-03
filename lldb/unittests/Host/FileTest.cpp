@@ -31,7 +31,7 @@ TEST(File, GetWaitableHandleFileno) {
   FILE *stream = fdopen(fd, "r");
   ASSERT_TRUE(stream);
 
-  File file(stream, true);
+  NativeFile file(stream, true);
   EXPECT_EQ(file.GetWaitableHandle(), fd);
 }
 
@@ -46,7 +46,7 @@ TEST(File, GetStreamFromDescriptor) {
   llvm::FileRemover remover(name);
   ASSERT_GE(fd, 0);
 
-  File file(fd, File::eOpenOptionWrite, true);
+  NativeFile file(fd, File::eOpenOptionWrite, true);
   ASSERT_TRUE(file.IsValid());
 
   FILE *stream = file.GetStream();

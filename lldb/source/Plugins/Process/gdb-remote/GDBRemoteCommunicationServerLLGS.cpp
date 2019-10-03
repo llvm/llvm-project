@@ -462,7 +462,8 @@ GetRegistersAsJSON(NativeThreadProtocol &thread) {
     WriteRegisterValueInHexFixedWidth(stream, reg_ctx, *reg_info_p,
                                       &reg_value, lldb::eByteOrderBig);
 
-    register_object.try_emplace(llvm::to_string(reg_num), stream.GetString());
+    register_object.try_emplace(llvm::to_string(reg_num),
+                                stream.GetString().str());
   }
 
   return register_object;

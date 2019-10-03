@@ -709,7 +709,7 @@ TargetSP Debugger::FindTargetWithProcess(Process *process) {
 Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
     : UserID(g_unique_id++),
       Properties(std::make_shared<OptionValueProperties>()),
-      m_input_file_sp(std::make_shared<File>(stdin, false)),
+      m_input_file_sp(std::make_shared<NativeFile>(stdin, false)),
       m_output_stream_sp(std::make_shared<StreamFile>(stdout, false)),
       m_error_stream_sp(std::make_shared<StreamFile>(stderr, false)),
       m_input_recorder(nullptr),
@@ -992,7 +992,7 @@ void Debugger::AdoptTopIOHandlerFilesIfInvalid(FileSP &in, StreamFileSP &out,
 
     // If there is nothing, use stdin
     if (!in)
-      in = std::make_shared<File>(stdin, false);
+      in = std::make_shared<NativeFile>(stdin, false);
   }
   // If no STDOUT has been set, then set it appropriately
   if (!out) {

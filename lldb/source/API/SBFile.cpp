@@ -21,14 +21,14 @@ SBFile::SBFile(FileSP file_sp) : m_opaque_sp(file_sp) {}
 SBFile::SBFile() { LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBFile); }
 
 SBFile::SBFile(FILE *file, bool transfer_ownership) {
-  m_opaque_sp = std::make_shared<File>(file, transfer_ownership);
+  m_opaque_sp = std::make_shared<NativeFile>(file, transfer_ownership);
 }
 
 SBFile::SBFile(int fd, const char *mode, bool transfer_owndership) {
   LLDB_RECORD_CONSTRUCTOR(SBFile, (int, const char *, bool), fd, mode,
                           transfer_owndership);
   auto options = File::GetOptionsFromMode(mode);
-  m_opaque_sp = std::make_shared<File>(fd, options, transfer_owndership);
+  m_opaque_sp = std::make_shared<NativeFile>(fd, options, transfer_owndership);
 }
 
 SBError SBFile::Read(uint8_t *buf, size_t num_bytes, size_t *bytes_read) {

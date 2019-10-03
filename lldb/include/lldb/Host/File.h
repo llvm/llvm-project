@@ -22,10 +22,12 @@
 namespace lldb_private {
 
 /// \class File File.h "lldb/Host/File.h"
-/// A file class.
+/// An abstract base class for files.
 ///
-/// A file class that divides abstracts the LLDB core from host file
-/// functionality.
+/// Files will often be NativeFiles, which provides a wrapper
+/// around host OS file functionality.   But it
+/// is also possible to subclass file to provide objects that have file
+/// or stream functionality but are not backed by any host OS file.
 class File : public IOObject {
 public:
   static int kInvalidDescriptor;
@@ -49,77 +51,79 @@ public:
   };
 
   static mode_t ConvertOpenOptionsForPOSIXOpen(uint32_t open_options);
+  static uint32_t GetOptionsFromMode(llvm::StringRef mode);
+  static bool DescriptorIsValid(int descriptor) { return descriptor >= 0; };
 
   File()
-      : IOObject(eFDTypeFile), m_descriptor(kInvalidDescriptor),
-        m_own_descriptor(false), m_stream(kInvalidStream), m_options(0),
-        m_own_stream(false), m_is_interactive(eLazyBoolCalculate),
+      : IOObject(eFDTypeFile), m_is_interactive(eLazyBoolCalculate),
         m_is_real_terminal(eLazyBoolCalculate),
-        m_supports_colors(eLazyBoolCalculate) {}
+        m_supports_colors(eLazyBoolCalculate){};
 
-  File(FILE *fh, bool transfer_ownership)
-      : IOObject(eFDTypeFile), m_descriptor(kInvalidDescriptor),
-        m_own_descriptor(false), m_stream(fh), m_options(0),
-        m_own_stream(transfer_ownership), m_is_interactive(eLazyBoolCalculate),
-        m_is_real_terminal(eLazyBoolCalculate),
-        m_supports_colors(eLazyBoolCalculate) {}
-
-  File(int fd, uint32_t options, bool transfer_ownership)
-      : IOObject(eFDTypeFile), m_descriptor(fd),
-        m_own_descriptor(transfer_ownership), m_stream(kInvalidStream),
-        m_options(options), m_own_stream(false),
-        m_is_interactive(eLazyBoolCalculate),
-        m_is_real_terminal(eLazyBoolCalculate),
-        m_supports_colors(eLazyBoolCalculate) {}
-
-  /// Destructor.
+  /// Read bytes from a file from the current file position into buf.
   ///
-  /// The destructor is virtual in case this class is subclassed.
-  ~File() override;
-
-  bool IsValid() const override {
-    return DescriptorIsValid() || StreamIsValid();
-  }
-
-  /// Convert to pointer operator.
+  /// NOTE: This function is NOT thread safe. Use the read function
+  /// that takes an "off_t &offset" to ensure correct operation in multi-
+  /// threaded environments.
   ///
-  /// This allows code to check a File object to see if it contains anything
-  /// valid using code such as:
+  /// \param[out] buf
   ///
-  /// \code
-  /// File file(...);
-  /// if (file)
-  /// { ...
-  /// \endcode
+  /// \param[in,out] num_bytes.
+  ///    Pass in the size of buf.  Read will pass out the number
+  ///    of bytes read.   Zero bytes read with no error indicates
+  ///    EOF.
   ///
   /// \return
-  ///     A pointer to this object if either the directory or filename
-  ///     is valid, nullptr otherwise.
-  operator bool() const { return DescriptorIsValid() || StreamIsValid(); }
+  ///    success, ENOTSUP, or another error.
+  Status Read(void *buf, size_t &num_bytes) override;
 
-  /// Logical NOT operator.
+  /// Write bytes from buf to a file at the current file position.
   ///
-  /// This allows code to check a File object to see if it is invalid using
-  /// code such as:
+  /// NOTE: This function is NOT thread safe. Use the write function
+  /// that takes an "off_t &offset" to ensure correct operation in multi-
+  /// threaded environments.
   ///
-  /// \code
-  /// File file(...);
-  /// if (!file)
-  /// { ...
-  /// \endcode
+  /// \param[in] buf
+  ///
+  /// \param[in,out] num_bytes
+  ///    Pass in the size of buf.  Write will pass out the number
+  ///    of bytes written.   Write will attempt write the full number
+  ///    of bytes and will not return early except on error.
   ///
   /// \return
-  ///     Returns \b true if the object has an empty directory and
-  ///     filename, \b false otherwise.
-  bool operator!() const { return !DescriptorIsValid() && !StreamIsValid(); }
+  ///    success, ENOTSUP, or another error.
+  Status Write(const void *buf, size_t &num_bytes) override;
 
-  /// Get the file spec for this file.
+  /// IsValid
   ///
   /// \return
-  ///     A reference to the file specification object.
-  Status GetFileSpec(FileSpec &file_spec) const;
+  ///    true iff the file is valid.
+  bool IsValid() const override;
 
+  /// Flush any buffers and release any resources owned by the file.
+  /// After Close() the file will be invalid.
+  ///
+  /// \return
+  ///     success or an error.
   Status Close() override;
+
+  /// Get a handle that can be used for OS polling interfaces, such
+  /// as WaitForMultipleObjects, select, or epoll.   This may return
+  /// IOObject::kInvalidHandleValue if none is available.   This will
+  /// generally be the same as the file descriptor, this function
+  /// is not interchangeable with GetDescriptor().   A WaitableHandle
+  /// must only be used for polling, not actual I/O.
+  ///
+  /// \return
+  ///     a valid handle or IOObject::kInvalidHandleValue
+  WaitableHandle GetWaitableHandle() override;
+
+  /// Get the file specification for this file, if possible.
+  ///
+  /// \param[out] file_spec
+  ///     the file specification.
+  /// \return
+  ///     ENOTSUP, success, or another error.
+  virtual Status GetFileSpec(FileSpec &file_spec) const;
 
   /// DEPRECATED! Extract the underlying FILE* and reset this File without closing it.
   ///
@@ -133,52 +137,26 @@ public:
   /// \return
   ///     The underlying FILE* stream from this File, if one exists and can be extracted,
   ///     nullptr otherwise.
-  FILE *TakeStreamAndClear();
+  virtual FILE *TakeStreamAndClear();
 
-  int GetDescriptor() const;
-
-  static uint32_t GetOptionsFromMode(llvm::StringRef mode);
-
-  WaitableHandle GetWaitableHandle() override;
-
-  FILE *GetStream();
-
-  /// Read bytes from a file from the current file position.
-  ///
-  /// NOTE: This function is NOT thread safe. Use the read function
-  /// that takes an "off_t &offset" to ensure correct operation in multi-
-  /// threaded environments.
-  ///
-  /// \param[in] buf
-  ///     A buffer where to put the bytes that are read.
-  ///
-  /// \param[in,out] num_bytes
-  ///     The number of bytes to read form the current file position
-  ///     which gets modified with the number of bytes that were read.
+  /// Get underlying OS file descriptor for this file, or kInvalidDescriptor.
+  /// If the descriptor is valid, then it may be used directly for I/O
+  /// However, the File may also perform it's own buffering, so avoid using
+  /// this if it is not necessary, or use Flush() appropriately.
   ///
   /// \return
-  ///     An error object that indicates success or the reason for
-  ///     failure.
-  Status Read(void *buf, size_t &num_bytes) override;
+  ///    a valid file descriptor for this file or kInvalidDescriptor
+  virtual int GetDescriptor() const;
 
-  /// Write bytes to a file at the current file position.
+  /// Get the underlying libc stream for this file, or NULL.
   ///
-  /// NOTE: This function is NOT thread safe. Use the write function
-  /// that takes an "off_t &offset" to ensure correct operation in multi-
-  /// threaded environments.
-  ///
-  /// \param[in] buf
-  ///     A buffer where to put the bytes that are read.
-  ///
-  /// \param[in,out] num_bytes
-  ///     The number of bytes to write to the current file position
-  ///     which gets modified with the number of bytes that were
-  ///     written.
+  /// Not all valid files will have a FILE* stream.   This should only be
+  /// used if absolutely necessary, such as to interact with 3rd party
+  /// libraries that need FILE* streams.
   ///
   /// \return
-  ///     An error object that indicates success or the reason for
-  ///     failure.
-  Status Write(const void *buf, size_t &num_bytes) override;
+  ///    a valid stream or NULL;
+  virtual FILE *GetStream();
 
   /// Seek to an offset relative to the beginning of the file.
   ///
@@ -198,7 +176,7 @@ public:
   ///
   /// \return
   ///     The resulting seek offset, or -1 on error.
-  off_t SeekFromStart(off_t offset, Status *error_ptr = nullptr);
+  virtual off_t SeekFromStart(off_t offset, Status *error_ptr = nullptr);
 
   /// Seek to an offset relative to the current file position.
   ///
@@ -218,7 +196,7 @@ public:
   ///
   /// \return
   ///     The resulting seek offset, or -1 on error.
-  off_t SeekFromCurrent(off_t offset, Status *error_ptr = nullptr);
+  virtual off_t SeekFromCurrent(off_t offset, Status *error_ptr = nullptr);
 
   /// Seek to an offset relative to the end of the file.
   ///
@@ -239,7 +217,7 @@ public:
   ///
   /// \return
   ///     The resulting seek offset, or -1 on error.
-  off_t SeekFromEnd(off_t offset, Status *error_ptr = nullptr);
+  virtual off_t SeekFromEnd(off_t offset, Status *error_ptr = nullptr);
 
   /// Read bytes from a file from the specified file offset.
   ///
@@ -262,7 +240,7 @@ public:
   /// \return
   ///     An error object that indicates success or the reason for
   ///     failure.
-  Status Read(void *dst, size_t &num_bytes, off_t &offset);
+  virtual Status Read(void *dst, size_t &num_bytes, off_t &offset);
 
   /// Write bytes to a file at the specified file offset.
   ///
@@ -287,21 +265,48 @@ public:
   /// \return
   ///     An error object that indicates success or the reason for
   ///     failure.
-  Status Write(const void *src, size_t &num_bytes, off_t &offset);
+  virtual Status Write(const void *src, size_t &num_bytes, off_t &offset);
 
   /// Flush the current stream
   ///
   /// \return
   ///     An error object that indicates success or the reason for
   ///     failure.
-  Status Flush();
+  virtual Status Flush();
 
   /// Sync to disk.
   ///
   /// \return
   ///     An error object that indicates success or the reason for
   ///     failure.
-  Status Sync();
+  virtual Status Sync();
+
+  /// Output printf formatted output to the stream.
+  ///
+  /// NOTE: this is not virtual, because it just calls the va_list
+  /// version of the function.
+  ///
+  /// Print some formatted output to the stream.
+  ///
+  /// \param[in] format
+  ///     A printf style format string.
+  ///
+  /// \param[in] ...
+  ///     Variable arguments that are needed for the printf style
+  ///     format string \a format.
+  size_t Printf(const char *format, ...) __attribute__((format(printf, 2, 3)));
+
+  /// Output printf formatted output to the stream.
+  ///
+  /// Print some formatted output to the stream.
+  ///
+  /// \param[in] format
+  ///     A printf style format string.
+  ///
+  /// \param[in] args
+  ///     Variable arguments that are needed for the printf style
+  ///     format string \a format.
+  virtual size_t PrintfVarArg(const char *format, va_list args);
 
   /// Get the permissions for a this file.
   ///
@@ -328,30 +333,69 @@ public:
   ///     a non-zero width and height, false otherwise.
   bool GetIsRealTerminal();
 
+  /// Return true if this file is a terminal which supports colors.
+  ///
+  /// \return
+  ///    True iff this is a terminal and it supports colors.
   bool GetIsTerminalWithColors();
 
-  /// Output printf formatted output to the stream.
-  ///
-  /// Print some formatted output to the stream.
-  ///
-  /// \param[in] format
-  ///     A printf style format string.
-  ///
-  /// \param[in] ...
-  ///     Variable arguments that are needed for the printf style
-  ///     format string \a format.
-  size_t Printf(const char *format, ...) __attribute__((format(printf, 2, 3)));
+  operator bool() const { return IsValid(); };
 
-  size_t PrintfVarArg(const char *format, va_list args);
-
-  static bool DescriptorIsValid(int descriptor) { return descriptor >= 0; };
+  bool operator!() const { return !IsValid(); };
 
 protected:
-  bool DescriptorIsValid() const { return DescriptorIsValid(m_descriptor); }
-
-  bool StreamIsValid() const { return m_stream != kInvalidStream; }
+  LazyBool m_is_interactive;
+  LazyBool m_is_real_terminal;
+  LazyBool m_supports_colors;
 
   void CalculateInteractiveAndTerminal();
+
+private:
+  DISALLOW_COPY_AND_ASSIGN(File);
+};
+
+class NativeFile : public File {
+public:
+  NativeFile()
+      : m_descriptor(kInvalidDescriptor), m_own_descriptor(false),
+        m_stream(kInvalidStream), m_options(0), m_own_stream(false) {}
+
+  NativeFile(FILE *fh, bool transfer_ownership)
+      : m_descriptor(kInvalidDescriptor), m_own_descriptor(false), m_stream(fh),
+        m_options(0), m_own_stream(transfer_ownership) {}
+
+  NativeFile(int fd, uint32_t options, bool transfer_ownership)
+      : m_descriptor(fd), m_own_descriptor(transfer_ownership),
+        m_stream(kInvalidStream), m_options(options), m_own_stream(false) {}
+
+  ~NativeFile() override { Close(); }
+
+  bool IsValid() const override {
+    return DescriptorIsValid() || StreamIsValid();
+  }
+
+  Status Read(void *buf, size_t &num_bytes) override;
+  Status Write(const void *buf, size_t &num_bytes) override;
+  Status Close() override;
+  WaitableHandle GetWaitableHandle() override;
+  Status GetFileSpec(FileSpec &file_spec) const override;
+  FILE *TakeStreamAndClear() override;
+  int GetDescriptor() const override;
+  FILE *GetStream() override;
+  off_t SeekFromStart(off_t offset, Status *error_ptr = nullptr) override;
+  off_t SeekFromCurrent(off_t offset, Status *error_ptr = nullptr) override;
+  off_t SeekFromEnd(off_t offset, Status *error_ptr = nullptr) override;
+  Status Read(void *dst, size_t &num_bytes, off_t &offset) override;
+  Status Write(const void *src, size_t &num_bytes, off_t &offset) override;
+  Status Flush() override;
+  Status Sync() override;
+  size_t PrintfVarArg(const char *format, va_list args) override;
+
+protected:
+  bool DescriptorIsValid() const {
+    return File::DescriptorIsValid(m_descriptor);
+  }
+  bool StreamIsValid() const { return m_stream != kInvalidStream; }
 
   // Member variables
   int m_descriptor;
@@ -359,14 +403,10 @@ protected:
   FILE *m_stream;
   uint32_t m_options;
   bool m_own_stream;
-  bool m_own_descriptor;
-  LazyBool m_is_interactive;
-  LazyBool m_is_real_terminal;
-  LazyBool m_supports_colors;
   std::mutex offset_access_mutex;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(File);
+  DISALLOW_COPY_AND_ASSIGN(NativeFile);
 };
 
 } // namespace lldb_private
