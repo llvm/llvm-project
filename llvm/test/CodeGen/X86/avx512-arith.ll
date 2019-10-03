@@ -190,6 +190,52 @@ define <4 x i64> @imulq256(<4 x i64> %y, <4 x i64> %x) {
   ret <4 x i64>%z
 }
 
+define <4 x i64> @imulq256_bcast(<4 x i64> %x) {
+; AVX512F-LABEL: imulq256_bcast:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [1337,1337,1337,1337]
+; AVX512F-NEXT:    vpmuludq %ymm1, %ymm0, %ymm2
+; AVX512F-NEXT:    vpsrlq $32, %ymm0, %ymm0
+; AVX512F-NEXT:    vpmuludq %ymm1, %ymm0, %ymm0
+; AVX512F-NEXT:    vpsllq $32, %ymm0, %ymm0
+; AVX512F-NEXT:    vpaddq %ymm0, %ymm2, %ymm0
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-LABEL: imulq256_bcast:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [1337,1337,1337,1337]
+; AVX512VL-NEXT:    vpmuludq %ymm1, %ymm0, %ymm2
+; AVX512VL-NEXT:    vpsrlq $32, %ymm0, %ymm0
+; AVX512VL-NEXT:    vpmuludq %ymm1, %ymm0, %ymm0
+; AVX512VL-NEXT:    vpsllq $32, %ymm0, %ymm0
+; AVX512VL-NEXT:    vpaddq %ymm0, %ymm2, %ymm0
+; AVX512VL-NEXT:    retq
+;
+; AVX512BW-LABEL: imulq256_bcast:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [1337,1337,1337,1337]
+; AVX512BW-NEXT:    vpmuludq %ymm1, %ymm0, %ymm2
+; AVX512BW-NEXT:    vpsrlq $32, %ymm0, %ymm0
+; AVX512BW-NEXT:    vpmuludq %ymm1, %ymm0, %ymm0
+; AVX512BW-NEXT:    vpsllq $32, %ymm0, %ymm0
+; AVX512BW-NEXT:    vpaddq %ymm0, %ymm2, %ymm0
+; AVX512BW-NEXT:    retq
+;
+; AVX512DQ-LABEL: imulq256_bcast:
+; AVX512DQ:       # %bb.0:
+; AVX512DQ-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512DQ-NEXT:    vpmullq {{.*}}(%rip){1to8}, %zmm0, %zmm0
+; AVX512DQ-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512DQ-NEXT:    retq
+;
+; SKX-LABEL: imulq256_bcast:
+; SKX:       # %bb.0:
+; SKX-NEXT:    vpmullq {{.*}}(%rip){1to4}, %ymm0, %ymm0
+; SKX-NEXT:    retq
+  %z = mul <4 x i64> %x, <i64 1337, i64 1337, i64 1337, i64 1337>
+  ret <4 x i64>%z
+}
+
 define <2 x i64> @imulq128(<2 x i64> %y, <2 x i64> %x) {
 ; AVX512F-LABEL: imulq128:
 ; AVX512F:       # %bb.0:
@@ -241,6 +287,54 @@ define <2 x i64> @imulq128(<2 x i64> %y, <2 x i64> %x) {
 ; SKX-NEXT:    vpmullq %xmm0, %xmm1, %xmm0
 ; SKX-NEXT:    retq
   %z = mul <2 x i64>%x, %y
+  ret <2 x i64>%z
+}
+
+define <2 x i64> @imulq128_bcast(<2 x i64> %x) {
+; AVX512F-LABEL: imulq128_bcast:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm1 = [8086,8086]
+; AVX512F-NEXT:    vpmuludq %xmm1, %xmm0, %xmm2
+; AVX512F-NEXT:    vpsrlq $32, %xmm0, %xmm0
+; AVX512F-NEXT:    vpmuludq %xmm1, %xmm0, %xmm0
+; AVX512F-NEXT:    vpsllq $32, %xmm0, %xmm0
+; AVX512F-NEXT:    vpaddq %xmm0, %xmm2, %xmm0
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-LABEL: imulq128_bcast:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vmovdqa {{.*#+}} xmm1 = [8086,8086]
+; AVX512VL-NEXT:    vpmuludq %xmm1, %xmm0, %xmm2
+; AVX512VL-NEXT:    vpsrlq $32, %xmm0, %xmm0
+; AVX512VL-NEXT:    vpmuludq %xmm1, %xmm0, %xmm0
+; AVX512VL-NEXT:    vpsllq $32, %xmm0, %xmm0
+; AVX512VL-NEXT:    vpaddq %xmm0, %xmm2, %xmm0
+; AVX512VL-NEXT:    retq
+;
+; AVX512BW-LABEL: imulq128_bcast:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    vmovdqa {{.*#+}} xmm1 = [8086,8086]
+; AVX512BW-NEXT:    vpmuludq %xmm1, %xmm0, %xmm2
+; AVX512BW-NEXT:    vpsrlq $32, %xmm0, %xmm0
+; AVX512BW-NEXT:    vpmuludq %xmm1, %xmm0, %xmm0
+; AVX512BW-NEXT:    vpsllq $32, %xmm0, %xmm0
+; AVX512BW-NEXT:    vpaddq %xmm0, %xmm2, %xmm0
+; AVX512BW-NEXT:    retq
+;
+; AVX512DQ-LABEL: imulq128_bcast:
+; AVX512DQ:       # %bb.0:
+; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512DQ-NEXT:    vmovdqa {{.*#+}} xmm1 = [8086,8086]
+; AVX512DQ-NEXT:    vpmullq %zmm1, %zmm0, %zmm0
+; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; AVX512DQ-NEXT:    vzeroupper
+; AVX512DQ-NEXT:    retq
+;
+; SKX-LABEL: imulq128_bcast:
+; SKX:       # %bb.0:
+; SKX-NEXT:    vpmullq {{.*}}(%rip), %xmm0, %xmm0
+; SKX-NEXT:    retq
+  %z = mul <2 x i64> %x, <i64 8086, i64 8086>
   ret <2 x i64>%z
 }
 

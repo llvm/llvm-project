@@ -662,9 +662,7 @@ bool AMDGPURegisterBankInfo::executeInWaterfallLoop(
   MachineInstr &MI,
   MachineRegisterInfo &MRI,
   ArrayRef<unsigned> OpIndices) const {
-  MachineFunction *MF = MI.getParent()->getParent();
-  const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
-  const SIInstrInfo *TII = ST.getInstrInfo();
+  MachineFunction *MF = &B.getMF();
   MachineBasicBlock::iterator I(MI);
 
   MachineBasicBlock &MBB = *MI.getParent();
@@ -2126,8 +2124,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     return getDefaultMappingVOP(MI);
   case AMDGPU::G_UMULH:
   case AMDGPU::G_SMULH: {
-    if (MF.getSubtarget<GCNSubtarget>().hasScalarMulHiInsts() &&
-        isSALUMapping(MI))
+    if (Subtarget.hasScalarMulHiInsts() && isSALUMapping(MI))
       return getDefaultMappingSOP(MI);
     return getDefaultMappingVOP(MI);
   }
@@ -2301,7 +2298,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
                      Op3Bank == AMDGPU::SGPRRegBankID &&
       (Size == 32 || (Size == 64 &&
                       (Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_NE) &&
-                      MF.getSubtarget<GCNSubtarget>().hasScalarCompareEq64()));
+                      Subtarget.hasScalarCompareEq64()));
 
     unsigned Op0Bank = CanUseSCC ? AMDGPU::SCCRegBankID : AMDGPU::VCCRegBankID;
 

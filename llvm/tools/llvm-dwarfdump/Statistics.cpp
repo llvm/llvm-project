@@ -600,7 +600,7 @@ bool collectStatsForObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
   printDatum(OS, "total vars procesed by location statistics", LocStats.NumVar);
   printLocationStats(OS, "vars", LocStats.VarLocStats);
   printLocationStats(OS, "vars (excluding the debug entry values)",
-                     LocStats.ParamNonEntryValLocStats);
+                     LocStats.VarNonEntryValLocStats);
   OS << "}\n";
   LLVM_DEBUG(
       llvm::dbgs() << "Total Availability: "

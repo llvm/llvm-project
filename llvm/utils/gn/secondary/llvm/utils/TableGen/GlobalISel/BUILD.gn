@@ -1,0 +1,8 @@
+source_set("GlobalISel") {
+  deps = [
+    "//llvm/lib/Support",
+  ]
+  sources = [
+    "CodeExpander.cpp",
+  ]
+}

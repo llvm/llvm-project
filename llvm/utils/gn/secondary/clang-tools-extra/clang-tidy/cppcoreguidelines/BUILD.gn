@@ -18,6 +18,7 @@ static_library("cppcoreguidelines") {
   sources = [
     "AvoidGotoCheck.cpp",
     "CppCoreGuidelinesTidyModule.cpp",
+    "InitVariablesCheck.cpp",
     "InterfacesGlobalInitCheck.cpp",
     "MacroUsageCheck.cpp",
     "NarrowingConversionsCheck.cpp",

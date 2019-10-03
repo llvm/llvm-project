@@ -4,6 +4,7 @@ executable("llvm-tblgen") {
     "//llvm/lib/MC",
     "//llvm/lib/Support",
     "//llvm/lib/TableGen",
+    "//llvm/utils/TableGen/GlobalISel",
   ]
   sources = [
     "AsmMatcherEmitter.cpp",
@@ -30,6 +31,7 @@ executable("llvm-tblgen") {
     "ExegesisEmitter.cpp",
     "FastISelEmitter.cpp",
     "FixedLenDecoderEmitter.cpp",
+    "GICombinerEmitter.cpp",
     "GlobalISelEmitter.cpp",
     "InfoByHwMode.cpp",
     "InstrDocsEmitter.cpp",

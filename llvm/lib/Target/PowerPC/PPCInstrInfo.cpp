@@ -3571,16 +3571,20 @@ bool PPCInstrInfo::transformToImmFormFedByLI(MachineInstr &MI,
       } else {
         // The 32 bit and 64 bit instructions are quite different.
         if (SpecialShift32) {
-          // Left shifts use (N, 0, 31-N), right shifts use (32-N, N, 31).
-          uint64_t SH = RightShift ? 32 - ShAmt : ShAmt;
+          // Left shifts use (N, 0, 31-N).
+          // Right shifts use (32-N, N, 31) if 0 < N < 32.
+          //              use (0, 0, 31)    if N == 0.
+          uint64_t SH = ShAmt == 0 ? 0 : RightShift ? 32 - ShAmt : ShAmt;
           uint64_t MB = RightShift ? ShAmt : 0;
           uint64_t ME = RightShift ? 31 : 31 - ShAmt;
           replaceInstrOperandWithImm(MI, III.OpNoForForwarding, SH);
           MachineInstrBuilder(*MI.getParent()->getParent(), MI).addImm(MB)
             .addImm(ME);
         } else {
-          // Left shifts use (N, 63-N), right shifts use (64-N, N).
-          uint64_t SH = RightShift ? 64 - ShAmt : ShAmt;
+          // Left shifts use (N, 63-N).
+          // Right shifts use (64-N, N) if 0 < N < 64.
+          //              use (0, 0)    if N == 0.
+          uint64_t SH = ShAmt == 0 ? 0 : RightShift ? 64 - ShAmt : ShAmt;
           uint64_t ME = RightShift ? ShAmt : 63 - ShAmt;
           replaceInstrOperandWithImm(MI, III.OpNoForForwarding, SH);
           MachineInstrBuilder(*MI.getParent()->getParent(), MI).addImm(ME);

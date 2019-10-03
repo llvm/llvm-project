@@ -7482,6 +7482,7 @@ bool ARMTargetLowering::isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const {
   unsigned EltSize = VT.getScalarSizeInBits();
   if (EltSize >= 32 ||
       ShuffleVectorSDNode::isSplatMask(&M[0], VT) ||
+      ShuffleVectorInst::isIdentityMask(M) ||
       isVREVMask(M, VT, 64) ||
       isVREVMask(M, VT, 32) ||
       isVREVMask(M, VT, 16))
@@ -13121,7 +13122,8 @@ static SDValue PerformLOADCombine(SDNode *N,
 // Optimize trunc store (of multiple scalars) to shuffle and store.  First,
 // pack all of the elements in one place.  Next, store to memory in fewer
 // chunks.
-SDValue PerformTruncatingStoreCombine(StoreSDNode *St, SelectionDAG &DAG) {
+static SDValue PerformTruncatingStoreCombine(StoreSDNode *St,
+                                             SelectionDAG &DAG) {
   SDValue StVal = St->getValue();
   EVT VT = StVal.getValueType();
   if (!St->isTruncatingStore() || !VT.isVector())
@@ -13205,7 +13207,8 @@ SDValue PerformTruncatingStoreCombine(StoreSDNode *St, SelectionDAG &DAG) {
 // Try taking a single vector store from an truncate (which would otherwise turn
 // into an expensive buildvector) and splitting it into a series of narrowing
 // stores.
-SDValue PerformSplittingToNarrowingStores(StoreSDNode *St, SelectionDAG &DAG) {
+static SDValue PerformSplittingToNarrowingStores(StoreSDNode *St,
+                                                 SelectionDAG &DAG) {
   if (!St->isSimple() || St->isTruncatingStore() || !St->isUnindexed())
     return SDValue();
   SDValue Trunc = St->getValue();
@@ -13695,7 +13698,7 @@ static SDValue PerformShiftCombine(SDNode *N,
 // Look for a sign/zero extend of a larger than legal load. This can be split
 // into two extending loads, which are simpler to deal with than an arbitrary
 // sign extend.
-SDValue PerformSplittingToWideningLoad(SDNode *N, SelectionDAG &DAG) {
+static SDValue PerformSplittingToWideningLoad(SDNode *N, SelectionDAG &DAG) {
   SDValue N0 = N->getOperand(0);
   if (N0.getOpcode() != ISD::LOAD)
     return SDValue();

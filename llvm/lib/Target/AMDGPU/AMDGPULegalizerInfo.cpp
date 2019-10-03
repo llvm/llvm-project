@@ -279,11 +279,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .scalarize(0); // TODO: Implement.
 
   getActionDefinitionsBuilder(G_BITCAST)
-    .legalForCartesianProduct({S32, V2S16})
-    .legalForCartesianProduct({S64, V2S32, V4S16})
-    .legalForCartesianProduct({V2S64, V4S32})
     // Don't worry about the size constraint.
-    .legalIf(all(isPointer(0), isPointer(1)))
+    .legalIf(all(isRegisterType(0), isRegisterType(1)))
     // FIXME: Testing hack
     .legalForCartesianProduct({S16, LLT::vector(2, 8), });
 
