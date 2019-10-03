@@ -224,6 +224,7 @@ SymbolKind indexSymbolKindToSymbolKind(index::SymbolKind Kind) {
   case index::SymbolKind::NamespaceAlias:
     return SymbolKind::Namespace;
   case index::SymbolKind::Macro:
+  case index::SymbolKind::CommentTag:
     return SymbolKind::String;
   case index::SymbolKind::Enum:
     return SymbolKind::Enum;
