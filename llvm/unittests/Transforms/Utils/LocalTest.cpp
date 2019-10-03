@@ -867,6 +867,36 @@ TEST(Local, RemoveUnreachableBlocks) {
       bb2:
         br label %bb1
       }
+
+      declare i32 @__gxx_personality_v0(...)
+
+      define void @invoke_terminator() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+      entry:
+        br i1 undef, label %invoke.block, label %exit
+
+      invoke.block:
+        %cond = invoke zeroext i1 @invokable()
+                to label %continue.block unwind label %lpad.block
+
+      continue.block:
+        br i1 %cond, label %if.then, label %if.end
+
+      if.then:
+        unreachable
+
+      if.end:
+        unreachable
+
+      lpad.block:
+        %lp = landingpad { i8*, i32 }
+                catch i8* null
+        br label %exit
+
+      exit:
+        ret void
+      }
+
+      declare i1 @invokable()
       )");
 
   auto runEager = [&](Function &F, DominatorTree *DT) {
@@ -890,12 +920,14 @@ TEST(Local, RemoveUnreachableBlocks) {
   runWithDomTree(*M, "br_self_loop", runEager);
   runWithDomTree(*M, "br_constant", runEager);
   runWithDomTree(*M, "br_loop", runEager);
+  runWithDomTree(*M, "invoke_terminator", runEager);
 
   // Test removeUnreachableBlocks under Lazy UpdateStrategy.
   runWithDomTree(*M, "br_simple", runLazy);
   runWithDomTree(*M, "br_self_loop", runLazy);
   runWithDomTree(*M, "br_constant", runLazy);
   runWithDomTree(*M, "br_loop", runLazy);
+  runWithDomTree(*M, "invoke_terminator", runLazy);
 
   M = parseIR(C,
               R"(

@@ -143,40 +143,40 @@ function(cxx_link_system_libraries target)
   target_add_link_flags_if_supported(${target} PRIVATE "/nodefaultlib")
 
   if (LIBCXX_HAS_SYSTEM_LIB)
-    target_link_libraries(${target} PRIVATE System)
+    target_link_libraries(${target} PUBLIC System)
   endif()
 
   if (LIBCXX_HAS_PTHREAD_LIB)
-    target_link_libraries(${target} PRIVATE pthread)
+    target_link_libraries(${target} PUBLIC pthread)
   endif()
 
   if (LIBCXX_HAS_C_LIB)
-    target_link_libraries(${target} PRIVATE c)
+    target_link_libraries(${target} PUBLIC c)
   endif()
 
   if (LIBCXX_HAS_M_LIB)
-    target_link_libraries(${target} PRIVATE m)
+    target_link_libraries(${target} PUBLIC m)
   endif()
 
   if (LIBCXX_HAS_RT_LIB)
-    target_link_libraries(${target} PRIVATE rt)
+    target_link_libraries(${target} PUBLIC rt)
   endif()
 
   if (LIBCXX_USE_COMPILER_RT)
     find_compiler_rt_library(builtins LIBCXX_BUILTINS_LIBRARY)
     if (LIBCXX_BUILTINS_LIBRARY)
-      target_link_libraries(${target} PRIVATE "${LIBCXX_BUILTINS_LIBRARY}")
+      target_link_libraries(${target} PUBLIC "${LIBCXX_BUILTINS_LIBRARY}")
     endif()
   elseif (LIBCXX_HAS_GCC_S_LIB)
-    target_link_libraries(${target} PRIVATE gcc_s)
+    target_link_libraries(${target} PUBLIC gcc_s)
   endif()
 
   if (LIBCXX_HAVE_CXX_ATOMICS_WITH_LIB)
-    target_link_libraries(${target} PRIVATE atomic)
+    target_link_libraries(${target} PUBLIC atomic)
   endif()
 
   if (MINGW)
-    target_link_libraries(${target} PRIVATE "${MINGW_LIBRARIES}")
+    target_link_libraries(${target} PUBLIC "${MINGW_LIBRARIES}")
   endif()
 
   if (LIBCXX_TARGETING_MSVC)
@@ -186,13 +186,13 @@ function(cxx_link_system_libraries target)
       set(LIB_SUFFIX "")
     endif()
 
-    target_link_libraries(${target} PRIVATE ucrt${LIB_SUFFIX}) # Universal C runtime
-    target_link_libraries(${target} PRIVATE vcruntime${LIB_SUFFIX}) # C++ runtime
-    target_link_libraries(${target} PRIVATE msvcrt${LIB_SUFFIX}) # C runtime startup files
-    target_link_libraries(${target} PRIVATE msvcprt${LIB_SUFFIX}) # C++ standard library. Required for exception_ptr internals.
+    target_link_libraries(${target} PUBLIC ucrt${LIB_SUFFIX}) # Universal C runtime
+    target_link_libraries(${target} PUBLIC vcruntime${LIB_SUFFIX}) # C++ runtime
+    target_link_libraries(${target} PUBLIC msvcrt${LIB_SUFFIX}) # C runtime startup files
+    target_link_libraries(${target} PUBLIC msvcprt${LIB_SUFFIX}) # C++ standard library. Required for exception_ptr internals.
     # Required for standards-complaint wide character formatting functions
     # (e.g. `printfw`/`scanfw`)
-    target_link_libraries(${target} PRIVATE iso_stdio_wide_specifiers)
+    target_link_libraries(${target} PUBLIC iso_stdio_wide_specifiers)
   endif()
 endfunction()
 
@@ -203,35 +203,6 @@ endif()
 function(cxx_set_common_defines name)
   if(LIBCXX_CXX_ABI_HEADER_TARGET)
     add_dependencies(${name} ${LIBCXX_CXX_ABI_HEADER_TARGET})
-  endif()
-  # Our visibility annotations are not quite right for non-Clang compilers,
-  # so we end up not exporting all the symbols we should. In the future, we
-  # can improve the situation by providing an explicit list of exported
-  # symbols on all compilers.
-  if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    target_compile_options(${name} PRIVATE -fvisibility=hidden)
-  endif()
-  if(WIN32 AND NOT MINGW)
-    target_compile_definitions(${name}
-                               PRIVATE
-                                 # Ignore the -MSC_VER mismatch, as we may build
-                                 # with a different compatibility version.
-                                 _ALLOW_MSC_VER_MISMATCH
-                                 # Don't check the msvcprt iterator debug levels
-                                 # as we will define the iterator types; libc++
-                                 # uses a different macro to identify the debug
-                                 # level.
-                                 _ALLOW_ITERATOR_DEBUG_LEVEL_MISMATCH
-                                 # We are building the c++ runtime, don't pull in
-                                 # msvcprt.
-                                 _CRTBLD
-                                 # Don't warn on the use of "deprecated"
-                                 # "insecure" functions which are standards
-                                 # specified.
-                                 _CRT_SECURE_NO_WARNINGS
-                                 # Use the ISO conforming behaviour for conversion
-                                 # in printf, scanf.
-                                 _CRT_STDIO_ISO_WIDE_SPECIFIERS)
   endif()
 
   if (LIBCXX_ENABLE_PARALLEL_ALGORITHMS)
@@ -259,7 +230,10 @@ if (LIBCXX_ENABLE_SHARED)
       SOVERSION     "${LIBCXX_ABI_VERSION}"
       DEFINE_SYMBOL ""
   )
+  cxx_add_basic_build_flags(cxx_shared)
   cxx_set_common_defines(cxx_shared)
+  cxx_add_warning_flags(cxx_shared)
+  cxx_add_windows_flags(cxx_shared)
 
   # Link against LLVM libunwind
   if (LIBCXXABI_USE_LLVM_UNWINDER)
@@ -359,7 +333,10 @@ if (LIBCXX_ENABLE_STATIC)
       LINK_FLAGS    "${LIBCXX_LINK_FLAGS}"
       OUTPUT_NAME   "c++"
   )
+  cxx_add_basic_build_flags(cxx_static)
   cxx_set_common_defines(cxx_static)
+  cxx_add_warning_flags(cxx_static)
+  cxx_add_windows_flags(cxx_static)
 
   if (LIBCXX_HERMETIC_STATIC_LIBRARY)
     # If the hermetic library doesn't define the operator new/delete functions

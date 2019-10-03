@@ -82,7 +82,6 @@ struct IfBoundData {
   StencilPart TruePart;
   StencilPart FalsePart;
 };
-} // namespace
 
 bool isEqualData(const RawTextData &A, const RawTextData &B) {
   return A.Text == B.Text;
@@ -203,6 +202,7 @@ public:
     return false;
   }
 };
+} // namespace
 
 StencilPart Stencil::wrap(StringRef Text) {
   return stencil::text(Text);

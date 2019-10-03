@@ -23,13 +23,13 @@ body:             |
     ; GCN: liveins: $sgpr12_sgpr13_sgpr14_sgpr15
     ; GCN: [[COPY:%[0-9]+]]:sgpr_128 = COPY $sgpr12_sgpr13_sgpr14_sgpr15
     ; GCN: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 %stack.0, implicit $exec
-    ; GCN: [[BUFFER_LOAD_DWORD_IDXEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_IDXEN [[V_MOV_B32_e32_]], [[COPY]], 0, 0, 0, 0, 0, 0, implicit $exec
+    ; GCN: [[BUFFER_LOAD_DWORD_IDXEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_IDXEN [[V_MOV_B32_e32_]], [[COPY]], 0, 0, 0, 0, 0, 0, 0, implicit $exec
     ; GCN: $vgpr0 = COPY [[BUFFER_LOAD_DWORD_IDXEN]]
     ; GCN: SI_RETURN_TO_EPILOG $vgpr0
     %0:sgpr_128 = COPY $sgpr12_sgpr13_sgpr14_sgpr15
     %1:sreg_32_xm0 = S_MOV_B32 0
     %2:vgpr_32 = V_MOV_B32_e32 %stack.0, implicit $exec
-    %3:vgpr_32 = BUFFER_LOAD_DWORD_IDXEN %2, %0, %1, 0, 0, 0, 0, 0, implicit $exec
+    %3:vgpr_32 = BUFFER_LOAD_DWORD_IDXEN %2, %0, %1, 0, 0, 0, 0, 0, 0, implicit $exec
     $vgpr0 = COPY %3
     SI_RETURN_TO_EPILOG $vgpr0
 
@@ -57,12 +57,12 @@ body:             |
     ; GCN: liveins: $sgpr12_sgpr13_sgpr14_sgpr15
     ; GCN: [[COPY:%[0-9]+]]:sgpr_128 = COPY $sgpr12_sgpr13_sgpr14_sgpr15
     ; GCN: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 %stack.0, implicit $exec
-    ; GCN: [[BUFFER_LOAD_DWORD_IDXEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_IDXEN [[V_MOV_B32_e32_]], [[COPY]], $sgpr32, 0, 0, 0, 0, 0, implicit $exec
+    ; GCN: [[BUFFER_LOAD_DWORD_IDXEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_IDXEN [[V_MOV_B32_e32_]], [[COPY]], $sgpr32, 0, 0, 0, 0, 0, 0, implicit $exec
     ; GCN: $vgpr0 = COPY [[BUFFER_LOAD_DWORD_IDXEN]]
     ; GCN: SI_RETURN_TO_EPILOG $vgpr0
     %0:sgpr_128 = COPY $sgpr12_sgpr13_sgpr14_sgpr15
     %2:vgpr_32 = V_MOV_B32_e32 %stack.0, implicit $exec
-    %3:vgpr_32 = BUFFER_LOAD_DWORD_IDXEN %2, %0, $sgpr32, 0, 0, 0, 0, 0, implicit $exec
+    %3:vgpr_32 = BUFFER_LOAD_DWORD_IDXEN %2, %0, $sgpr32, 0, 0, 0, 0, 0, 0, implicit $exec
     $vgpr0 = COPY %3
     SI_RETURN_TO_EPILOG $vgpr0
 
@@ -87,15 +87,15 @@ body:             |
 
     ; GCN-LABEL: name: fold_fi_mubuf_scratch_scratch_wave_offset
     ; GCN: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 7, implicit $exec
-    ; GCN: BUFFER_STORE_DWORD_OFFEN [[V_MOV_B32_e32_]], %stack.0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, 0, 0, implicit $exec
-    ; GCN: [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN %stack.0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, 0, 0, implicit $exec
+    ; GCN: BUFFER_STORE_DWORD_OFFEN [[V_MOV_B32_e32_]], %stack.0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, 0, 0, 0, implicit $exec
+    ; GCN: [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN %stack.0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, 0, 0, 0, implicit $exec
     ; GCN: $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
     ; GCN: S_ENDPGM 0, implicit $vgpr0
     %0:vgpr_32 = V_MOV_B32_e32 %stack.0, implicit $exec
     %1:vgpr_32 = V_MOV_B32_e32 7, implicit $exec
 
-    BUFFER_STORE_DWORD_OFFEN %1:vgpr_32, %0:vgpr_32, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr33, 0, 0, 0, 0, 0, implicit $exec
-    %2:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN %0:vgpr_32, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr33, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFEN %1:vgpr_32, %0:vgpr_32, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr33, 0, 0, 0, 0, 0, 0, implicit $exec
+    %2:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN %0:vgpr_32, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr33, 0, 0, 0, 0, 0, 0, implicit $exec
     $vgpr0 = COPY %2
     S_ENDPGM 0, implicit $vgpr0
 
@@ -119,15 +119,15 @@ body:             |
 
     ; GCN-LABEL: name: no_fold_fi_mubuf_scratch_sp_offset
     ; GCN: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 7, implicit $exec
-    ; GCN: BUFFER_STORE_DWORD_OFFEN [[V_MOV_B32_e32_]], %stack.0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, 0, 0, implicit $exec
-    ; GCN: [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN %stack.0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, 0, 0, implicit $exec
+    ; GCN: BUFFER_STORE_DWORD_OFFEN [[V_MOV_B32_e32_]], %stack.0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, 0, 0, 0, implicit $exec
+    ; GCN: [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN %stack.0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, 0, 0, 0, implicit $exec
     ; GCN: $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
     ; GCN: S_ENDPGM 0, implicit $vgpr0
     %0:vgpr_32 = V_MOV_B32_e32 %stack.0, implicit $exec
     %1:vgpr_32 = V_MOV_B32_e32 7, implicit $exec
 
-    BUFFER_STORE_DWORD_OFFEN %1:vgpr_32, %0:vgpr_32, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, 0, 0, implicit $exec
-    %2:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN %0:vgpr_32, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFEN %1:vgpr_32, %0:vgpr_32, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, 0, 0, 0, implicit $exec
+    %2:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN %0:vgpr_32, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, 0, 0, 0, implicit $exec
     $vgpr0 = COPY %2
     S_ENDPGM 0, implicit $vgpr0
 

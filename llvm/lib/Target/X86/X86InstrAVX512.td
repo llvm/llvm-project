@@ -5060,22 +5060,11 @@ let Predicates = [HasDQI, NoVLX] in {
                     (INSERT_SUBREG (v8i64 (IMPLICIT_DEF)), VR256X:$src1, sub_ymm),
                     (INSERT_SUBREG (v8i64 (IMPLICIT_DEF)), VR256X:$src2, sub_ymm)),
              sub_ymm)>;
-
-  def : Pat<(v2i64 (mul (v2i64 VR128X:$src1), (v2i64 VR128X:$src2))),
+  def : Pat<(v4i64 (mul (v4i64 VR256X:$src1), (v4i64 (X86VBroadcastld64 addr:$src2)))),
             (EXTRACT_SUBREG
-                (VPMULLQZrr
-                    (INSERT_SUBREG (v8i64 (IMPLICIT_DEF)), VR128X:$src1, sub_xmm),
-                    (INSERT_SUBREG (v8i64 (IMPLICIT_DEF)), VR128X:$src2, sub_xmm)),
-             sub_xmm)>;
-}
-
-// PMULLQ: Use 512bit version to implement 128/256 bit in case NoVLX.
-let Predicates = [HasDQI, NoVLX] in {
-  def : Pat<(v4i64 (mul (v4i64 VR256X:$src1), (v4i64 VR256X:$src2))),
-            (EXTRACT_SUBREG
-                (VPMULLQZrr
+                (VPMULLQZrmb
                     (INSERT_SUBREG (v8i64 (IMPLICIT_DEF)), VR256X:$src1, sub_ymm),
-                    (INSERT_SUBREG (v8i64 (IMPLICIT_DEF)), VR256X:$src2, sub_ymm)),
+                    addr:$src2),
              sub_ymm)>;
 
   def : Pat<(v2i64 (mul (v2i64 VR128X:$src1), (v2i64 VR128X:$src2))),
@@ -5084,29 +5073,47 @@ let Predicates = [HasDQI, NoVLX] in {
                     (INSERT_SUBREG (v8i64 (IMPLICIT_DEF)), VR128X:$src1, sub_xmm),
                     (INSERT_SUBREG (v8i64 (IMPLICIT_DEF)), VR128X:$src2, sub_xmm)),
              sub_xmm)>;
+  def : Pat<(v2i64 (mul (v2i64 VR128X:$src1), (v2i64 (X86VBroadcastld64 addr:$src2)))),
+            (EXTRACT_SUBREG
+                (VPMULLQZrmb
+                    (INSERT_SUBREG (v8i64 (IMPLICIT_DEF)), VR128X:$src1, sub_xmm),
+                    addr:$src2),
+             sub_xmm)>;
 }
 
-multiclass avx512_min_max_lowering<Instruction Instr, SDNode OpNode> {
+multiclass avx512_min_max_lowering<string Instr, SDNode OpNode> {
   def : Pat<(v4i64 (OpNode VR256X:$src1, VR256X:$src2)),
             (EXTRACT_SUBREG
-                (Instr
+                (!cast<Instruction>(Instr#"rr")
                     (INSERT_SUBREG (v8i64 (IMPLICIT_DEF)), VR256X:$src1, sub_ymm),
                     (INSERT_SUBREG (v8i64 (IMPLICIT_DEF)), VR256X:$src2, sub_ymm)),
+             sub_ymm)>;
+  def : Pat<(v4i64 (OpNode (v4i64 VR256X:$src1), (v4i64 (X86VBroadcastld64 addr:$src2)))),
+            (EXTRACT_SUBREG
+                (!cast<Instruction>(Instr#"rmb")
+                    (INSERT_SUBREG (v8i64 (IMPLICIT_DEF)), VR256X:$src1, sub_ymm),
+                    addr:$src2),
              sub_ymm)>;
 
   def : Pat<(v2i64 (OpNode VR128X:$src1, VR128X:$src2)),
             (EXTRACT_SUBREG
-                (Instr
+                (!cast<Instruction>(Instr#"rr")
                     (INSERT_SUBREG (v8i64 (IMPLICIT_DEF)), VR128X:$src1, sub_xmm),
                     (INSERT_SUBREG (v8i64 (IMPLICIT_DEF)), VR128X:$src2, sub_xmm)),
+             sub_xmm)>;
+  def : Pat<(v2i64 (OpNode (v2i64 VR128X:$src1), (v2i64 (X86VBroadcastld64 addr:$src2)))),
+            (EXTRACT_SUBREG
+                (!cast<Instruction>(Instr#"rmb")
+                    (INSERT_SUBREG (v8i64 (IMPLICIT_DEF)), VR128X:$src1, sub_xmm),
+                    addr:$src2),
              sub_xmm)>;
 }
 
 let Predicates = [HasAVX512, NoVLX] in {
-  defm : avx512_min_max_lowering<VPMAXUQZrr, umax>;
-  defm : avx512_min_max_lowering<VPMINUQZrr, umin>;
-  defm : avx512_min_max_lowering<VPMAXSQZrr, smax>;
-  defm : avx512_min_max_lowering<VPMINSQZrr, smin>;
+  defm : avx512_min_max_lowering<"VPMAXUQZ", umax>;
+  defm : avx512_min_max_lowering<"VPMINUQZ", umin>;
+  defm : avx512_min_max_lowering<"VPMAXSQZ", smax>;
+  defm : avx512_min_max_lowering<"VPMINSQZ", smin>;
 }
 
 //===----------------------------------------------------------------------===//

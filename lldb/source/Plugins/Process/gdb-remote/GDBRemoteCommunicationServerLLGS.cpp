@@ -32,7 +32,6 @@
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/Endian.h"
-#include "lldb/Utility/JSON.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegisterValue.h"
@@ -40,6 +39,7 @@
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/UriParser.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Support/ScopedPrinter.h"
 
 #include "ProcessGDBRemote.h"
@@ -402,19 +402,21 @@ static void WriteRegisterValueInHexFixedWidth(
   }
 }
 
-static JSONObject::SP GetRegistersAsJSON(NativeThreadProtocol &thread) {
+static llvm::Expected<json::Object>
+GetRegistersAsJSON(NativeThreadProtocol &thread) {
   Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_THREAD));
 
   NativeRegisterContext& reg_ctx = thread.GetRegisterContext();
 
-  JSONObject::SP register_object_sp = std::make_shared<JSONObject>();
+  json::Object register_object;
 
 #ifdef LLDB_JTHREADSINFO_FULL_REGISTER_SET
   // Expedite all registers in the first register set (i.e. should be GPRs)
   // that are not contained in other registers.
   const RegisterSet *reg_set_p = reg_ctx_sp->GetRegisterSet(0);
   if (!reg_set_p)
-    return nullptr;
+    return llvm::make_error<llvm::StringError>("failed to get registers",
+                                               llvm::inconvertibleErrorCode());
   for (const uint32_t *reg_num_p = reg_set_p->registers;
        *reg_num_p != LLDB_INVALID_REGNUM; ++reg_num_p) {
     uint32_t reg_num = *reg_num_p;
@@ -460,12 +462,10 @@ static JSONObject::SP GetRegistersAsJSON(NativeThreadProtocol &thread) {
     WriteRegisterValueInHexFixedWidth(stream, reg_ctx, *reg_info_p,
                                       &reg_value, lldb::eByteOrderBig);
 
-    register_object_sp->SetObject(
-        llvm::to_string(reg_num),
-        std::make_shared<JSONString>(stream.GetString()));
+    register_object.try_emplace(llvm::to_string(reg_num), stream.GetString());
   }
 
-  return register_object_sp;
+  return register_object;
 }
 
 static const char *GetStopReasonString(StopReason stop_reason) {
@@ -492,11 +492,11 @@ static const char *GetStopReasonString(StopReason stop_reason) {
   return nullptr;
 }
 
-static JSONArray::SP GetJSONThreadsInfo(NativeProcessProtocol &process,
-                                        bool abridged) {
+static llvm::Expected<json::Value>
+GetJSONThreadsInfo(NativeProcessProtocol &process, bool abridged) {
   Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PROCESS | LIBLLDB_LOG_THREAD));
 
-  JSONArray::SP threads_array_sp = std::make_shared<JSONArray>();
+  json::Array threads_array;
 
   // Ensure we can get info on the given thread.
   uint32_t thread_idx = 0;
@@ -510,7 +510,8 @@ static JSONArray::SP GetJSONThreadsInfo(NativeProcessProtocol &process,
     struct ThreadStopInfo tid_stop_info;
     std::string description;
     if (!thread->GetStopReason(tid_stop_info, description))
-      return nullptr;
+      return llvm::make_error<llvm::StringError>(
+          "failed to get stop reason", llvm::inconvertibleErrorCode());
 
     const int signum = tid_stop_info.details.signal.signo;
     if (log) {
@@ -522,50 +523,49 @@ static JSONArray::SP GetJSONThreadsInfo(NativeProcessProtocol &process,
                 tid_stop_info.reason, tid_stop_info.details.exception.type);
     }
 
-    JSONObject::SP thread_obj_sp = std::make_shared<JSONObject>();
-    threads_array_sp->AppendObject(thread_obj_sp);
+    json::Object thread_obj;
 
     if (!abridged) {
-      if (JSONObject::SP registers_sp = GetRegistersAsJSON(*thread))
-        thread_obj_sp->SetObject("registers", registers_sp);
+      if (llvm::Expected<json::Object> registers =
+              GetRegistersAsJSON(*thread)) {
+        thread_obj.try_emplace("registers", std::move(*registers));
+      } else {
+        return registers.takeError();
+      }
     }
 
-    thread_obj_sp->SetObject("tid", std::make_shared<JSONNumber>(tid));
+    thread_obj.try_emplace("tid", static_cast<int64_t>(tid));
+
     if (signum != 0)
-      thread_obj_sp->SetObject("signal", std::make_shared<JSONNumber>(signum));
+      thread_obj.try_emplace("signal", signum);
 
     const std::string thread_name = thread->GetName();
     if (!thread_name.empty())
-      thread_obj_sp->SetObject("name",
-                               std::make_shared<JSONString>(thread_name));
+      thread_obj.try_emplace("name", thread_name);
 
-    if (const char *stop_reason_str = GetStopReasonString(tid_stop_info.reason))
-      thread_obj_sp->SetObject("reason",
-                               std::make_shared<JSONString>(stop_reason_str));
+    const char *stop_reason = GetStopReasonString(tid_stop_info.reason);
+    if (stop_reason)
+      thread_obj.try_emplace("reason", stop_reason);
 
     if (!description.empty())
-      thread_obj_sp->SetObject("description",
-                               std::make_shared<JSONString>(description));
+      thread_obj.try_emplace("description", description);
 
     if ((tid_stop_info.reason == eStopReasonException) &&
         tid_stop_info.details.exception.type) {
-      thread_obj_sp->SetObject(
-          "metype",
-          std::make_shared<JSONNumber>(tid_stop_info.details.exception.type));
+      thread_obj.try_emplace(
+          "metype", static_cast<int64_t>(tid_stop_info.details.exception.type));
 
-      JSONArray::SP medata_array_sp = std::make_shared<JSONArray>();
+      json::Array medata_array;
       for (uint32_t i = 0; i < tid_stop_info.details.exception.data_count;
            ++i) {
-        medata_array_sp->AppendObject(std::make_shared<JSONNumber>(
-            tid_stop_info.details.exception.data[i]));
+        medata_array.push_back(
+            static_cast<int64_t>(tid_stop_info.details.exception.data[i]));
       }
-      thread_obj_sp->SetObject("medata", medata_array_sp);
+      thread_obj.try_emplace("medata", std::move(medata_array));
     }
-
-    // TODO: Expedite interesting regions of inferior memory
+    threads_array.push_back(std::move(thread_obj));
   }
-
-  return threads_array_sp;
+  return threads_array;
 }
 
 GDBRemoteCommunication::PacketResult
@@ -657,19 +657,21 @@ GDBRemoteCommunicationServerLLGS::SendStopReplyPacketForThread(
     // is hex ascii JSON that contains the thread IDs thread stop info only for
     // threads that have stop reasons. Only send this if we have more than one
     // thread otherwise this packet has all the info it needs.
-    if (thread_index > 0) {
+    if (thread_index > 1) {
       const bool threads_with_valid_stop_info_only = true;
-      JSONArray::SP threads_info_sp = GetJSONThreadsInfo(
+      llvm::Expected<json::Value> threads_info = GetJSONThreadsInfo(
           *m_debugged_process_up, threads_with_valid_stop_info_only);
-      if (threads_info_sp) {
+      if (threads_info) {
         response.PutCString("jstopinfo:");
         StreamString unescaped_response;
-        threads_info_sp->Write(unescaped_response);
+        unescaped_response.AsRawOstream() << *threads_info;
         response.PutStringAsRawHex8(unescaped_response.GetData());
         response.PutChar(';');
-      } else
-        LLDB_LOG(log, "failed to prepare a jstopinfo field for pid {0}",
-                 m_debugged_process_up->GetID());
+      } else {
+        LLDB_LOG(log, "failed to prepare a jstopinfo field for pid {0}:",
+                 m_debugged_process_up->GetID(),
+                 llvm::toString(threads_info.takeError()));
+      }
     }
 
     uint32_t i = 0;
@@ -3081,15 +3083,16 @@ GDBRemoteCommunicationServerLLGS::Handle_jThreadsInfo(
 
   StreamString response;
   const bool threads_with_valid_stop_info_only = false;
-  JSONArray::SP threads_array_sp = GetJSONThreadsInfo(
+  llvm::Expected<json::Value> threads_info = GetJSONThreadsInfo(
       *m_debugged_process_up, threads_with_valid_stop_info_only);
-  if (!threads_array_sp) {
-    LLDB_LOG(log, "failed to prepare a packet for pid {0}",
-             m_debugged_process_up->GetID());
+  if (!threads_info) {
+    LLDB_LOG(log, "failed to prepare a packet for pid {0}: {1}",
+             m_debugged_process_up->GetID(),
+             llvm::toString(threads_info.takeError()));
     return SendErrorResponse(52);
   }
 
-  threads_array_sp->Write(response);
+  response.AsRawOstream() << *threads_info;
   StreamGDBRemote escaped_response;
   escaped_response.PutEscapedBytes(response.GetData(), response.GetSize());
   return SendPacketNoLock(escaped_response.GetString());
