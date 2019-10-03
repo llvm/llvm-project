@@ -71,6 +71,12 @@ class TestSwiftRewriteClangPaths(TestBase):
             # that this doesn't work by happy accident without it.
             os.remove(plist)
 
+        # Create the target
+        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
+        self.assertTrue(target, VALID_TARGET)
+
+        self.registerSharedLibrariesWithTarget(target, ['Foo'])
+
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
             self, 'break here', lldb.SBFileSpec('Foo.swift'))
 

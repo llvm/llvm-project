@@ -37,6 +37,11 @@ class TestSwiftIncludeConflict(TestBase):
         self.runCmd('settings set symbols.clang-modules-cache-path "%s"'
                     % mod_cache)
         self.build()
+
+        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
+        self.assertTrue(target, VALID_TARGET)
+        self.registerSharedLibrariesWithTarget(target, ['dylib'])
+
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
             self, 'break here', lldb.SBFileSpec('main.swift'))
         b_breakpoint = target.BreakpointCreateBySourceRegex(

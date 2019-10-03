@@ -1,26 +1,17 @@
 LEVEL = ../../../../make
 SWIFT_OBJC_INTEROP := 1
+SWIFT_SOURCES := main.swift
+SWIFTFLAGS_EXTRAS := -Xcc -DDEBUG=1 -Xcc -DSPACE -Xcc -UNDEBUG -I. -L. -lDylib
 
-all: a.out
+all: libDylib.dylib a.out
 
 include $(LEVEL)/Makefile.rules
 
-a.out: main.swift libDylib.dylib
-	$(SWIFTC) -g -Onone $^ -lDylib -L$(shell pwd) -o $@ $(SWIFTFLAGS) -I. \
-	  -Xcc -DDEBUG=1 -Xcc -DSPACE -Xcc -UNDEBUG \
-	  -toolchain-stdlib-rpath
-ifneq "$(CODESIGN)" ""
-	$(CODESIGN) -s - "$@"
-endif
-
 libDylib.dylib: dylib.swift
-	$(SWIFTC) -g -Onone $^ -emit-library -module-name Dylib -emit-module \
-	  -Xlinker -install_name -Xlinker @executable_path/$@ \
-	  -Xcc -DDEBUG=1 -Xcc -D -Xcc SPACE -Xcc -U -Xcc NDEBUG \
-          -toolchain-stdlib-rpath
-ifneq "$(CODESIGN)" ""
-	$(CODESIGN) -s - "$@"
-endif
+	$(MAKE) MAKE_DSYM=$(MAKE_DSYM) CC=$(CC) SWIFTC=$(SWIFTC) \
+		ARCH=$(ARCH) DSYMUTIL=$(DSYMUTIL) \
+		BASENAME=$(shell basename $< .swift) \
+		VPATH=$(SRCDIR) -I $(SRCDIR) -f $(SRCDIR)/dylib.mk all
 
 clean::
 	rm -rf *.swiftmodule *.swiftdoc *.dSYM *~ lib*.dylib a.out *.o
