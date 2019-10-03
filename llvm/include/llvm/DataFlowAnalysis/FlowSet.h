@@ -5,37 +5,35 @@
 using namespace std;
 namespace llvm{
 
-template <typename T>
+template <class T>
 class FlowSet
 {
     class Node;
-
 public:
-    FlowSet<T>() noexcept
+    FlowSet() noexcept
     {
-	//m_spRoot = nullptr;
+	m_spRoot = nullptr;
     }
 
     class Iterator;
-
+    
     Iterator begin()
     {
 	return Iterator(m_spRoot);
     }
-    
+
     Iterator end()
     {
 	return Iterator(nullptr);
     }
 
     void push_back(T data);
-    //void traverse();
 
     class Iterator
     {
     public:
 	Iterator() noexcept:
-	    m_pCurrentNode(m_spRoot){	}
+	    m_pCurrentNode(m_spRoot){   }
 
 	Iterator(const Node* pNode) noexcept:
 	    m_pCurrentNode(pNode){  }
@@ -46,6 +44,16 @@ public:
 	    return *this;
 	}
 
+	bool operator!=(const Iterator& it)
+	{
+	    return this->m_pCurrentNode != it.m_pCurrentNode;
+	}
+
+	bool operator==(const Iterator& it)
+	{
+	    return this->m_pCurrentNode == it.m_pCurrentNode;
+	}
+
 	Iterator& operator++()
 	{
 	    if(m_pCurrentNode)
@@ -53,16 +61,12 @@ public:
 	    return *this;
 	}
 
-	Iterator& operator++(int)
+	//  post increment (must be non reference)
+	Iterator operator++(int)
 	{
 	    Iterator it = *this;
-	    ++*this;
+	    ++(*this);
 	    return it;
-	}
-
-	Iterator& operator!=(const Iterator& it)
-	{
-	    return m_pCurrentNode != it.m_pCurrentNode;
 	}
 
 	int operator*()
@@ -72,30 +76,54 @@ public:
     private:
 	const Node* m_pCurrentNode;
     };
-
 private:
     class Node
     {
 	T data;
 	Node* pNext;
-
+	
 	friend class FlowSet;
     };
 
-    Node* getNode(T d)
+    Node* getNode(T data)
     {
-	Node* pTmp = new Node;
-	pTmp->data = d;
-	pTmp->pNext = nullptr;
-	return pTmp;
+	Node* pNewNode = new Node;
+	pNewNode->data = data;
+	pNewNode->pNext = nullptr;
+
+	return pNewNode;
     }
-    Node*& getRoot()
+
+    Node*& getRootNode()
     {
 	return m_spRoot;
     }
+
     static Node* m_spRoot;
 };
 
+template <typename T>
+typename FlowSet<T>::Node* FlowSet<T>::m_spRoot = nullptr;
+/*
+template <typename T>
+void FlowSet<T>::push_back(T data)
+{
+    Node* pTemp = getNode(data);
+    if(!getRootNode())
+    {
+	getRootNode() = pTemp; 
+    }
+    else
+    {
+	Node* pC = getRootNode();
+	while(pC->pNext)
+	{
+	    pC = pC->pNext;
+	}
+	pC->pNext = pTemp;
+    }
+}
+*/
 }   // end namepspace llvm
 
 #endif	// LLVM_DFA_FLOWSET_H
