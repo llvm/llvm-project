@@ -18,6 +18,7 @@
 #include "lldb/API/SBCommandReturnObject.h"
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBEvent.h"
+#include "lldb/API/SBFile.h"
 #include "lldb/API/SBFrame.h"
 #include "lldb/API/SBListener.h"
 #include "lldb/API/SBProcess.h"
@@ -285,49 +286,96 @@ void SBDebugger::SkipAppInitFiles(bool b) {
     m_opaque_sp->GetCommandInterpreter().SkipAppInitFiles(b);
 }
 
-// Shouldn't really be settable after initialization as this could cause lots
-// of problems; don't want users trying to switch modes in the middle of a
-// debugging session.
 void SBDebugger::SetInputFileHandle(FILE *fh, bool transfer_ownership) {
   LLDB_RECORD_METHOD(void, SBDebugger, SetInputFileHandle, (FILE *, bool), fh,
                      transfer_ownership);
+  SetInputFile(std::make_shared<File>(fh, transfer_ownership));
+}
 
-  if (!m_opaque_sp)
-    return;
+// Shouldn't really be settable after initialization as this could cause lots
+// of problems; don't want users trying to switch modes in the middle of a
+// debugging session.
+SBError SBDebugger::SetInputFile(SBFile file) {
+  LLDB_RECORD_METHOD(SBError, SBDebugger, SetInputFile, (SBFile), file);
+
+  SBError error;
+  if (!m_opaque_sp) {
+    error.ref().SetErrorString("invalid debugger");
+    return error;
+  }
 
   repro::DataRecorder *recorder = nullptr;
   if (repro::Generator *g = repro::Reproducer::Instance().GetGenerator())
     recorder = g->GetOrCreate<repro::CommandProvider>().GetNewDataRecorder();
 
+  FileSP file_sp = file.m_opaque_sp;
+
   static std::unique_ptr<repro::CommandLoader> loader =
       repro::CommandLoader::Create(repro::Reproducer::Instance().GetLoader());
   if (loader) {
-    llvm::Optional<std::string> file = loader->GetNextFile();
-    fh = file ? FileSystem::Instance().Fopen(file->c_str(), "r") : nullptr;
+    llvm::Optional<std::string> nextfile = loader->GetNextFile();
+    FILE *fh = nextfile ? FileSystem::Instance().Fopen(nextfile->c_str(), "r")
+                        : nullptr;
+    // FIXME Jonas Devlieghere: shouldn't this error be propagated out to the
+    // reproducer somehow if fh is NULL?
+    if (fh) {
+      file_sp = std::make_shared<File>(fh, true);
+    }
   }
 
-  m_opaque_sp->SetInputFileHandle(fh, transfer_ownership, recorder);
+  if (!file_sp || !file_sp->IsValid()) {
+    error.ref().SetErrorString("invalid file");
+    return error;
+  }
+
+  m_opaque_sp->SetInputFile(file_sp, recorder);
+  return error;
 }
 
 void SBDebugger::SetOutputFileHandle(FILE *fh, bool transfer_ownership) {
   LLDB_RECORD_METHOD(void, SBDebugger, SetOutputFileHandle, (FILE *, bool), fh,
                      transfer_ownership);
+  SetOutputFile(std::make_shared<File>(fh, transfer_ownership));
+}
 
-  if (m_opaque_sp)
-    m_opaque_sp->SetOutputFileHandle(fh, transfer_ownership);
+SBError SBDebugger::SetOutputFile(SBFile file) {
+  LLDB_RECORD_METHOD(SBError, SBDebugger, SetOutputFile, (SBFile file), file);
+  SBError error;
+  if (!m_opaque_sp) {
+    error.ref().SetErrorString("invalid debugger");
+    return error;
+  }
+  if (!file) {
+    error.ref().SetErrorString("invalid file");
+    return error;
+  }
+  m_opaque_sp->SetOutputFile(file.m_opaque_sp);
+  return error;
 }
 
 void SBDebugger::SetErrorFileHandle(FILE *fh, bool transfer_ownership) {
   LLDB_RECORD_METHOD(void, SBDebugger, SetErrorFileHandle, (FILE *, bool), fh,
                      transfer_ownership);
+  SetErrorFile(std::make_shared<File>(fh, transfer_ownership));
+}
 
-  if (m_opaque_sp)
-    m_opaque_sp->SetErrorFileHandle(fh, transfer_ownership);
+SBError SBDebugger::SetErrorFile(SBFile file) {
+  LLDB_RECORD_METHOD(SBError, SBDebugger, SetErrorFile, (SBFile file), file);
+  SBError error;
+  if (!m_opaque_sp) {
+    error.ref().SetErrorString("invalid debugger");
+    return error;
+  }
+  if (!file) {
+    error.ref().SetErrorString("invalid file");
+    return error;
+  }
+  m_opaque_sp->SetErrorFile(file.m_opaque_sp);
+  return error;
 }
 
 FILE *SBDebugger::GetInputFileHandle() {
   LLDB_RECORD_METHOD_NO_ARGS(FILE *, SBDebugger, GetInputFileHandle);
-
   if (m_opaque_sp) {
     File &file_sp = m_opaque_sp->GetInputFile();
     return LLDB_RECORD_RESULT(file_sp.GetStream());
@@ -335,14 +383,30 @@ FILE *SBDebugger::GetInputFileHandle() {
   return nullptr;
 }
 
+SBFile SBDebugger::GetInputFile() {
+  LLDB_RECORD_METHOD_NO_ARGS(SBFile, SBDebugger, GetInputFile);
+  if (m_opaque_sp) {
+    return LLDB_RECORD_RESULT(SBFile(m_opaque_sp->GetInputFileSP()));
+  }
+  return LLDB_RECORD_RESULT(SBFile());
+}
+
 FILE *SBDebugger::GetOutputFileHandle() {
   LLDB_RECORD_METHOD_NO_ARGS(FILE *, SBDebugger, GetOutputFileHandle);
-
   if (m_opaque_sp) {
     StreamFile &stream_file = m_opaque_sp->GetOutputStream();
     return LLDB_RECORD_RESULT(stream_file.GetFile().GetStream());
   }
   return nullptr;
+}
+
+SBFile SBDebugger::GetOutputFile() {
+  LLDB_RECORD_METHOD_NO_ARGS(SBFile, SBDebugger, GetOutputFile);
+  if (m_opaque_sp) {
+    SBFile file(m_opaque_sp->GetOutputStream().GetFileSP());
+    return LLDB_RECORD_RESULT(file);
+  }
+  return LLDB_RECORD_RESULT(SBFile());
 }
 
 FILE *SBDebugger::GetErrorFileHandle() {
@@ -353,6 +417,16 @@ FILE *SBDebugger::GetErrorFileHandle() {
     return LLDB_RECORD_RESULT(stream_file.GetFile().GetStream());
   }
   return nullptr;
+}
+
+SBFile SBDebugger::GetErrorFile() {
+  LLDB_RECORD_METHOD_NO_ARGS(SBFile, SBDebugger, GetErrorFile);
+  SBFile file;
+  if (m_opaque_sp) {
+    SBFile file(m_opaque_sp->GetErrorStream().GetFileSP());
+    return LLDB_RECORD_RESULT(file);
+  }
+  return LLDB_RECORD_RESULT(SBFile());
 }
 
 void SBDebugger::SaveInputTerminalState() {
@@ -1503,6 +1577,8 @@ static void SetFileHandleRedirect(SBDebugger *, FILE *, bool) {
   // Do nothing.
 }
 
+static SBError SetFileRedirect(SBDebugger *, SBFile file) { return SBError(); }
+
 static bool GetDefaultArchitectureRedirect(char *arch_name,
                                            size_t arch_name_len) {
   // The function is writing to its argument. Without the redirect it would
@@ -1522,6 +1598,16 @@ template <> void RegisterMethods<SBDebugger>(Registry &R) {
   R.Register<bool(char *, size_t)>(static_cast<bool (*)(char *, size_t)>(
                                        &SBDebugger::GetDefaultArchitecture),
                                    &GetDefaultArchitectureRedirect);
+
+  R.Register(&invoke<SBError (SBDebugger::*)(
+                 SBFile)>::method<&SBDebugger::SetInputFile>::doit,
+             &SetFileRedirect);
+  R.Register(&invoke<SBError (SBDebugger::*)(
+                 SBFile)>::method<&SBDebugger::SetOutputFile>::doit,
+             &SetFileRedirect);
+  R.Register(&invoke<SBError (SBDebugger::*)(
+                 SBFile)>::method<&SBDebugger::SetErrorFile>::doit,
+             &SetFileRedirect);
 
   LLDB_REGISTER_CONSTRUCTOR(SBDebugger, ());
   LLDB_REGISTER_CONSTRUCTOR(SBDebugger, (const lldb::DebuggerSP &));
@@ -1547,6 +1633,9 @@ template <> void RegisterMethods<SBDebugger>(Registry &R) {
   LLDB_REGISTER_METHOD(FILE *, SBDebugger, GetInputFileHandle, ());
   LLDB_REGISTER_METHOD(FILE *, SBDebugger, GetOutputFileHandle, ());
   LLDB_REGISTER_METHOD(FILE *, SBDebugger, GetErrorFileHandle, ());
+  LLDB_REGISTER_METHOD(SBFile, SBDebugger, GetInputFile, ());
+  LLDB_REGISTER_METHOD(SBFile, SBDebugger, GetOutputFile, ());
+  LLDB_REGISTER_METHOD(SBFile, SBDebugger, GetErrorFile, ());
   LLDB_REGISTER_METHOD(void, SBDebugger, SaveInputTerminalState, ());
   LLDB_REGISTER_METHOD(void, SBDebugger, RestoreInputTerminalState, ());
   LLDB_REGISTER_METHOD(lldb::SBCommandInterpreter, SBDebugger,

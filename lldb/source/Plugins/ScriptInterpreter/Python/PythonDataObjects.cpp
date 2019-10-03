@@ -954,6 +954,8 @@ PythonFile::PythonFile(PyRefType type, PyObject *o) { Reset(type, o); }
 PythonFile::~PythonFile() {}
 
 bool PythonFile::Check(PyObject *py_obj) {
+  if (!py_obj)
+    return false;
 #if PY_MAJOR_VERSION < 3
   return PyFile_Check(py_obj);
 #else
