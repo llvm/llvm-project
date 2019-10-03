@@ -234,6 +234,7 @@ if (LIBCXX_ENABLE_SHARED)
   cxx_set_common_defines(cxx_shared)
   cxx_add_warning_flags(cxx_shared)
   cxx_add_windows_flags(cxx_shared)
+  cxx_add_config_site(cxx_shared)
 
   # Link against LLVM libunwind
   if (LIBCXXABI_USE_LLVM_UNWINDER)
@@ -337,6 +338,7 @@ if (LIBCXX_ENABLE_STATIC)
   cxx_set_common_defines(cxx_static)
   cxx_add_warning_flags(cxx_static)
   cxx_add_windows_flags(cxx_static)
+  cxx_add_config_site(cxx_static)
 
   if (LIBCXX_HERMETIC_STATIC_LIBRARY)
     # If the hermetic library doesn't define the operator new/delete functions
