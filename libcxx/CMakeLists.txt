@@ -679,8 +679,8 @@ endif()
 function(cxx_add_module_flags target)
   if (LLVM_ENABLE_MODULES)
     # Ignore that the rest of the modules flags are now unused.
-    target_add_compile_flags_if_supported(${target} PRIVATE -Wno-unused-command-line-argument)
-    target_compile_options(${target} PRIVATE -fno-modules)
+    target_add_compile_flags_if_supported(${target} PUBLIC -Wno-unused-command-line-argument)
+    target_compile_options(${target} PUBLIC -fno-modules)
   endif()
 endfunction()
 

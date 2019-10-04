@@ -60,11 +60,16 @@ if (LIBCXXABI_HAS_CXA_THREAD_ATEXIT_IMPL)
   add_definitions(-DHAVE___CXA_THREAD_ATEXIT_IMPL)
 endif()
 
-if (LIBCXXABI_ENABLE_THREADS)
-  add_library_flags_if(LIBCXXABI_HAS_PTHREAD_LIB pthread)
+if (APPLE)
+  add_library_flags_if(LIBCXXABI_HAS_SYSTEM_LIB System)
+else()
+  if (LIBCXXABI_ENABLE_THREADS)
+    add_library_flags_if(LIBCXXABI_HAS_PTHREAD_LIB pthread)
+  endif()
+
+  add_library_flags_if(LIBCXXABI_HAS_C_LIB c)
 endif()
 
-add_library_flags_if(LIBCXXABI_HAS_C_LIB c)
 if (LIBCXXABI_USE_LLVM_UNWINDER)
   # Prefer using the in-tree version of libunwind, either shared or static. If
   # none are found fall back to using -lunwind.
