@@ -831,6 +831,17 @@ function(cxx_add_config_site target)
   endif()
 endfunction()
 
+# Setup all common build flags =================================================
+function(cxx_add_common_build_flags target)
+  cxx_add_basic_build_flags(${target})
+  cxx_add_warning_flags(${target})
+  cxx_add_windows_flags(${target})
+  cxx_add_config_site(${target})
+  cxx_add_exception_flags(${target})
+  cxx_add_rtti_flags(${target})
+  cxx_add_module_flags(${target})
+endfunction()
+
 #===============================================================================
 # Setup Source Code And Tests
 #===============================================================================

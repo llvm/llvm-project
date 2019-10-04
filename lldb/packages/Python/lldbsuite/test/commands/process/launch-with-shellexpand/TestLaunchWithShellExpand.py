@@ -2,6 +2,7 @@
 Test that argdumper is a viable launching strategy.
 """
 from __future__ import print_function
+import os
 
 
 import lldb
@@ -35,6 +36,9 @@ class LaunchWithShellExpandTestCase(TestBase):
         breakpoint = target.BreakpointCreateBySourceRegex(
             'break here', lldb.SBFileSpec("main.cpp", False))
         self.assertTrue(breakpoint, VALID_BREAKPOINT)
+
+        # Ensure we do the expansion with /bin/sh on POSIX.
+        os.environ["SHELL"] = '/bin/sh'
 
         self.runCmd(
             "process launch -X true -w %s -- fi*.tx? () > <" %

@@ -2038,6 +2038,18 @@ UUID ObjectFileMachO::GetSharedCacheUUID(FileSpec dyld_shared_cache,
   return dsc_uuid;
 }
 
+bool ParseNList(DataExtractor &nlist_data, lldb::offset_t &nlist_data_offset,
+                size_t nlist_byte_size, struct nlist_64 &nlist) {
+  if (!nlist_data.ValidOffsetForDataOfSize(nlist_data_offset, nlist_byte_size))
+    return false;
+  nlist.n_strx = nlist_data.GetU32_unchecked(&nlist_data_offset);
+  nlist.n_type = nlist_data.GetU8_unchecked(&nlist_data_offset);
+  nlist.n_sect = nlist_data.GetU8_unchecked(&nlist_data_offset);
+  nlist.n_desc = nlist_data.GetU16_unchecked(&nlist_data_offset);
+  nlist.n_value = nlist_data.GetAddress_unchecked(&nlist_data_offset);
+  return true;
+}
+
 size_t ObjectFileMachO::ParseSymtab() {
   static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
   Timer scoped_timer(func_cat, "ObjectFileMachO::ParseSymtab () module = %s",
@@ -2734,20 +2746,8 @@ size_t ObjectFileMachO::ParseSymtab() {
                   /////////////////////////////
                   {
                     struct nlist_64 nlist;
-                    if (!dsc_local_symbols_data.ValidOffsetForDataOfSize(
-                            nlist_data_offset, nlist_byte_size))
+                    if (!ParseNList(dsc_local_symbols_data, nlist_data_offset, nlist_byte_size, nlist)
                       break;
-
-                    nlist.n_strx = dsc_local_symbols_data.GetU32_unchecked(
-                        &nlist_data_offset);
-                    nlist.n_type = dsc_local_symbols_data.GetU8_unchecked(
-                        &nlist_data_offset);
-                    nlist.n_sect = dsc_local_symbols_data.GetU8_unchecked(
-                        &nlist_data_offset);
-                    nlist.n_desc = dsc_local_symbols_data.GetU16_unchecked(
-                        &nlist_data_offset);
-                    nlist.n_value = dsc_local_symbols_data.GetAddress_unchecked(
-                        &nlist_data_offset);
 
                     SymbolType type = eSymbolTypeInvalid;
                     const char *symbol_name = dsc_local_symbols_data.PeekCStr(
@@ -3681,15 +3681,8 @@ size_t ObjectFileMachO::ParseSymtab() {
     SymbolIndexToName reexport_shlib_needs_fixup;
     for (; nlist_idx < symtab_load_command.nsyms; ++nlist_idx) {
       struct nlist_64 nlist;
-      if (!nlist_data.ValidOffsetForDataOfSize(nlist_data_offset,
-                                               nlist_byte_size))
+      if (!ParseNList(nlist_data, nlist_data_offset, nlist_byte_size, nlist))
         break;
-
-      nlist.n_strx = nlist_data.GetU32_unchecked(&nlist_data_offset);
-      nlist.n_type = nlist_data.GetU8_unchecked(&nlist_data_offset);
-      nlist.n_sect = nlist_data.GetU8_unchecked(&nlist_data_offset);
-      nlist.n_desc = nlist_data.GetU16_unchecked(&nlist_data_offset);
-      nlist.n_value = nlist_data.GetAddress_unchecked(&nlist_data_offset);
 
       SymbolType type = eSymbolTypeInvalid;
       const char *symbol_name = nullptr;
