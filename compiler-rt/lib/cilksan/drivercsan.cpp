@@ -335,7 +335,7 @@ CILKSAN_API void __csan_func_entry(const csi_id_t func_id,
   //   return;
 
   // Update the tool for entering a Cilk function.
-  CilkSanImpl.do_enter_begin();
+  CilkSanImpl.do_enter_begin(prop.num_sync_reg);
   CilkSanImpl.do_enter_end((uintptr_t)sp);
   enable_instrumentation();
 }
@@ -358,7 +358,11 @@ CILKSAN_API void __csan_func_exit(const csi_id_t func_exit_id,
 
   // if (prop.may_spawn) {
     // Update the tool for leaving a Cilk function.
-    CilkSanImpl.do_leave_begin();
+    //
+    // NOTE: Technically the sync region that would synchronize any orphaned
+    // child tasks is not well defined.  This case should never arise in Cilk
+    // programs.
+    CilkSanImpl.do_leave_begin(0);
     CilkSanImpl.do_leave_end();
   // }
 
@@ -372,9 +376,9 @@ CILKSAN_API void __csan_func_exit(const csi_id_t func_exit_id,
   // cilksan_do_function_exit();
 }
 
-CILKSAN_API void __csi_before_loop(const csi_id_t loop_id,
-                                   const int64_t trip_count,
-                                   const loop_prop_t prop) {
+CILKSAN_API void __csan_before_loop(const csi_id_t loop_id,
+                                    const int64_t trip_count,
+                                    const loop_prop_t prop) {
   if (!should_check())
     return;
 
@@ -382,7 +386,7 @@ CILKSAN_API void __csi_before_loop(const csi_id_t loop_id,
     return;
 
   CheckingRAII nocheck;
-  DBG_TRACE(DEBUG_CALLBACK, "__csi_before_loop(%ld)\n", loop_id);
+  DBG_TRACE(DEBUG_CALLBACK, "__csan_before_loop(%ld)\n", loop_id);
 
   // Record the address of this parallel loop.
   if (__builtin_expect(!loop_pc[loop_id], false))
@@ -403,8 +407,9 @@ CILKSAN_API void __csi_before_loop(const csi_id_t loop_id,
   CilkSanImpl.do_loop_begin();
 }
 
-CILKSAN_API void __csi_after_loop(const csi_id_t loop_id,
-                                  const loop_prop_t prop) {
+CILKSAN_API void __csan_after_loop(const csi_id_t loop_id,
+                                   const unsigned sync_reg,
+                                   const loop_prop_t prop) {
   if (!should_check())
     return;
 
@@ -412,9 +417,9 @@ CILKSAN_API void __csi_after_loop(const csi_id_t loop_id,
     return;
 
   CheckingRAII nocheck;
-  DBG_TRACE(DEBUG_CALLBACK, "__csi_after_loop(%ld)\n", loop_id);
+  DBG_TRACE(DEBUG_CALLBACK, "__csan_after_loop(%ld)\n", loop_id);
 
-  CilkSanImpl.do_loop_end();
+  CilkSanImpl.do_loop_end(sync_reg);
 
   // Pop the parallel-execution state.
   parallel_execution.pop();
@@ -432,7 +437,7 @@ CILKSAN_API void __csan_before_call(const csi_id_t call_id,
     return;
 
   CheckingRAII nocheck;
-  DBG_TRACE(DEBUG_CALLBACK, "__csi_before_call(%ld, %ld)\n",
+  DBG_TRACE(DEBUG_CALLBACK, "__csan_before_call(%ld, %ld)\n",
             call_id, func_id);
 
   // Record the address of this call site.
@@ -456,7 +461,7 @@ CILKSAN_API void __csan_after_call(const csi_id_t call_id,
     return;
 
   CheckingRAII nocheck;
-  DBG_TRACE(DEBUG_CALLBACK, "__csi_after_call(%ld, %ld)\n",
+  DBG_TRACE(DEBUG_CALLBACK, "__csan_after_call(%ld, %ld)\n",
             call_id, func_id);
 
   // Pop any suppressions.
@@ -468,7 +473,8 @@ CILKSAN_API void __csan_after_call(const csi_id_t call_id,
   CilkSanImpl.record_call_return(call_id, CALL);
 }
 
-CILKSAN_API void __csan_detach(const csi_id_t detach_id) {
+CILKSAN_API void __csan_detach(const csi_id_t detach_id,
+                               const unsigned sync_reg) {
   if (!should_check())
     return;
 
@@ -511,7 +517,7 @@ CILKSAN_API void __csan_task(const csi_id_t task_id, const csi_id_t detach_id,
   CilkSanImpl.push_stack_frame((uintptr_t)bp, (uintptr_t)sp);
 
   if (prop.is_tapir_loop_body && CilkSanImpl.handle_loop()) {
-    CilkSanImpl.do_loop_iteration_begin((uintptr_t)sp);
+    CilkSanImpl.do_loop_iteration_begin((uintptr_t)sp, prop.num_sync_reg);
     return;
   }
 
@@ -525,7 +531,7 @@ CILKSAN_API void __csan_task(const csi_id_t task_id, const csi_id_t detach_id,
   *parallel_execution.head() = current_pe;
 
   // Update tool for entering detach-helper function and performing detach.
-  CilkSanImpl.do_enter_helper_begin();
+  CilkSanImpl.do_enter_helper_begin(prop.num_sync_reg);
   CilkSanImpl.do_enter_end((uintptr_t)sp);
   CilkSanImpl.do_detach_begin();
   CilkSanImpl.do_detach_end();
@@ -534,6 +540,7 @@ CILKSAN_API void __csan_task(const csi_id_t task_id, const csi_id_t detach_id,
 CILKSAN_API void __csan_task_exit(const csi_id_t task_exit_id,
                                   const csi_id_t task_id,
                                   const csi_id_t detach_id,
+                                  const unsigned sync_reg,
                                   const task_exit_prop_t prop) {
   if (!should_check())
     return;
@@ -549,7 +556,7 @@ CILKSAN_API void __csan_task_exit(const csi_id_t task_exit_id,
     // The parallel-execution state will be popped when the loop terminates.
   } else {
     // Update tool for leaving a detach-helper function.
-    CilkSanImpl.do_leave_begin();
+    CilkSanImpl.do_leave_begin(sync_reg);
     CilkSanImpl.do_leave_end();
 
     // Pop the parallel-execution state.
@@ -578,7 +585,7 @@ CILKSAN_API void __csan_detach_continue(const csi_id_t detach_continue_id,
   WHEN_CILKSAN_DEBUG(last_event = NONE);
 }
 
-CILKSAN_API void __csan_sync(csi_id_t sync_id) {
+CILKSAN_API void __csan_sync(csi_id_t sync_id, const unsigned sync_reg) {
   if (!should_check())
     return;
   CheckingRAII nocheck;
@@ -587,10 +594,11 @@ CILKSAN_API void __csan_sync(csi_id_t sync_id) {
   // Because this is a serial tool, we can safely perform all operations related
   // to a sync.
   CilkSanImpl.do_sync_begin();
-  CilkSanImpl.do_sync_end();
+  CilkSanImpl.do_sync_end(sync_reg);
 
   // Restore the parallel-execution state to that of the function/task entry.
-  *parallel_execution.head() = *parallel_execution.ancestor(1);
+  if (CilkSanImpl.is_local_synced())
+    *parallel_execution.head() = *parallel_execution.ancestor(1);
 }
 
 // Assuming __csan_load/store is inlined, the stack should look like this:

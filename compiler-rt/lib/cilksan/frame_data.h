@@ -24,49 +24,91 @@ typedef struct Entry_t {
 // Struct for keeping track of shadow frame
 typedef struct FrameData_t {
   bool Sbag_used = false;
-  bool Pbag_used = false;
+  // bool Pbag_used = false;
   bool Iterbag_used = false;
   Entry_t frame_data;
+  unsigned num_Pbags = 0;
   DisjointSet_t<SPBagInterface *> *Sbag = nullptr;
-  DisjointSet_t<SPBagInterface *> *Pbag = nullptr;
+  DisjointSet_t<SPBagInterface *> **Pbags = nullptr;
   DisjointSet_t<SPBagInterface *> *Iterbag = nullptr;
 
   void set_sbag(DisjointSet_t<SPBagInterface *> *that) {
+    if (that)
+      that->inc_ref_count();
+
     if (Sbag)
       Sbag->dec_ref_count();
 
     Sbag = that;
-    if (Sbag)
-      Sbag->inc_ref_count();
+    // if (Sbag)
+    //   Sbag->inc_ref_count();
 
     set_Sbag_used(false);
   }
 
-  void set_pbag(DisjointSet_t<SPBagInterface *> *that) {
-    if (Pbag)
-      Pbag->dec_ref_count();
+  void clear_pbag_array() {
+    if (!Pbags)
+      return;
 
-    Pbag = that;
-    if (Pbag)
-      Pbag->inc_ref_count();
+    for (unsigned i = 0; i < num_Pbags; ++i)
+      set_pbag(i, nullptr);
+    delete[] Pbags;
+    Pbags = nullptr;
+  }
 
-    set_Pbag_used(false);
+  void make_pbag_array(unsigned num_pbags) {
+    clear_pbag_array();
+    Pbags = new DisjointSet_t<SPBagInterface *>*[num_pbags];
+
+    for (unsigned i = 0; i < num_pbags; ++i)
+      Pbags[i] = nullptr;
+    num_Pbags = num_pbags;
+  }
+
+  void copy_pbag_array(unsigned copy_num_Pbags,
+                       DisjointSet_t<SPBagInterface *> **copy_Pbags) {
+    for (unsigned i = 0; i < copy_num_Pbags; ++i) {
+      if (copy_Pbags[i])
+        copy_Pbags[i]->inc_ref_count();
+    }
+    clear_pbag_array();
+    Pbags = copy_Pbags;
+    num_Pbags = copy_num_Pbags;
+  }
+
+  void set_pbag(unsigned idx, DisjointSet_t<SPBagInterface *> *that) {
+    cilksan_assert(idx < num_Pbags && "Invalid index");
+    if (that)
+      that->inc_ref_count();
+
+    if (Pbags[idx])
+      Pbags[idx]->dec_ref_count();
+
+    Pbags[idx] = that;
+    // if (Pbags[idx])
+    //   Pbags[idx]->inc_ref_count();
+
+    // set_Pbag_used(false);
   }
 
   void set_iterbag(DisjointSet_t<SPBagInterface *> *that) {
+    if (that)
+      that->inc_ref_count();
+
     if (Iterbag)
       Iterbag->dec_ref_count();
 
     Iterbag = that;
-    if (Iterbag)
-      Iterbag->inc_ref_count();
+    // if (Iterbag)
+    //   Iterbag->inc_ref_count();
 
     set_Iterbag_used(false);
   }
 
   void reset() {
     set_sbag(nullptr);
-    set_pbag(nullptr);
+    // set_pbag(nullptr);
+    clear_pbag_array();
     set_iterbag(nullptr);
   }
 
@@ -82,8 +124,9 @@ typedef struct FrameData_t {
   FrameData_t(const FrameData_t &copy) : frame_data(copy.frame_data) {
     set_sbag(copy.Sbag);
     set_Sbag_used(copy.is_Sbag_used());
-    set_pbag(copy.Pbag);
-    set_Pbag_used(copy.is_Pbag_used());
+    copy_pbag_array(copy.num_Pbags, copy.Pbags);
+    // set_pbag(copy.Pbag);
+    // set_Pbag_used(copy.is_Pbag_used());
     set_iterbag(copy.Iterbag);
     set_Iterbag_used(copy.is_Iterbag_used());
   }
@@ -92,8 +135,9 @@ typedef struct FrameData_t {
     frame_data = copy.frame_data;
     set_sbag(copy.Sbag);
     set_Sbag_used(copy.is_Sbag_used());
-    set_pbag(copy.Pbag);
-    set_Pbag_used(copy.is_Pbag_used());
+    copy_pbag_array(copy.num_Pbags, copy.Pbags);
+    // set_pbag(copy.Pbag);
+    // set_Pbag_used(copy.is_Pbag_used());
     set_iterbag(copy.Iterbag);
     set_Iterbag_used(copy.is_Iterbag_used());
     return *this;
@@ -101,15 +145,16 @@ typedef struct FrameData_t {
 
   // remember to update this whenever new fields are added
   inline void init_new_function(DisjointSet_t<SPBagInterface *> *_sbag) {
-    cilksan_assert(Pbag == NULL);
+    cilksan_assert(Pbags == NULL);
     set_sbag(_sbag);
   }
 
   bool is_Sbag_used() const { return Sbag_used; }
-  bool is_Pbag_used() const { return Pbag_used; }
+  // bool is_Pbag_used() const { return Pbag_used; }
   bool is_Iterbag_used() const { return Iterbag_used; }
+
   void set_Sbag_used(bool v = true) { Sbag_used = v; }
-  void set_Pbag_used(bool v = true) { Pbag_used = v; }
+  // void set_Pbag_used(bool v = true) { Pbag_used = v; }
   void set_Iterbag_used(bool v = true) { Iterbag_used = v; }
 
   bool is_loop_frame() const {

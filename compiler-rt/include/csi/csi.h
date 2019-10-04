@@ -51,8 +51,10 @@ typedef struct {
 typedef struct {
   // The function might spawn.
   unsigned may_spawn : 1;
+  // Number of sync regions in this function.
+  unsigned num_sync_reg : 8;
   // Pad struct to 64 total bits.
-  uint64_t _padding : 63;
+  uint64_t _padding : 55;
 } func_prop_t;
 
 typedef struct {
@@ -90,7 +92,9 @@ typedef struct {
 typedef struct {
   // The task is the body of a Tapir loop
   unsigned is_tapir_loop_body : 1;
-  uint64_t _padding : 63;
+  // Number of sync regions in this function.
+  unsigned num_sync_reg : 8;
+  uint64_t _padding : 55;
 } task_prop_t;
 
 typedef struct {

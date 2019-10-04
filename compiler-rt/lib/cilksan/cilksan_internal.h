@@ -109,17 +109,26 @@ public:
     // }
   }
 
-  void do_enter_begin();
-  void do_enter_helper_begin();
+  inline bool is_local_synced() const {
+    FrameData_t *f = frame_stack.head();
+    if (f->Pbags)
+      for (unsigned i = 0; i < f->num_Pbags; ++i)
+        if (f->Pbags[i])
+          return false;
+    return true;
+  }
+
+  void do_enter_begin(unsigned num_sync_reg);
+  void do_enter_helper_begin(unsigned num_sync_reg);
   void do_enter_end(uintptr_t stack_ptr);
   void do_detach_begin();
   void do_detach_end();
   void do_loop_begin() {
     start_new_loop = true;
   }
-  void do_loop_iteration_begin(uintptr_t stack_ptr);
+  void do_loop_iteration_begin(uintptr_t stack_ptr, unsigned num_sync_reg);
   void do_loop_iteration_end();
-  void do_loop_end();
+  void do_loop_end(unsigned sync_reg);
   bool in_loop() const {
     return LOOP_FRAME == frame_stack.head()->frame_data.frame_type;
   }
@@ -127,9 +136,9 @@ public:
     return in_loop() || (true == start_new_loop);
   }
   void do_sync_begin();
-  void do_sync_end();
+  void do_sync_end(unsigned sync_reg);
   void do_return();
-  void do_leave_begin();
+  void do_leave_begin(unsigned sync_reg);
   void do_leave_end();
   // void do_function_entry(uint64_t an_address);
   // void do_function_exit();
@@ -158,14 +167,15 @@ public:
   void print_current_function_info();
 
 private:
-  inline void merge_bag_from_returning_child(bool returning_from_detach);
-  inline void start_new_function();
+  inline void merge_bag_from_returning_child(bool returning_from_detach,
+                                             unsigned sync_reg);
+  inline void start_new_function(unsigned num_sync_reg);
   inline void exit_function();
-  inline void enter_cilk_function();
-  inline void leave_cilk_function();
-  inline void enter_detach_child();
-  inline void return_from_detach();
-  inline void complete_sync();
+  inline void enter_cilk_function(unsigned num_sync_reg);
+  inline void leave_cilk_function(unsigned sync_reg);
+  inline void enter_detach_child(unsigned num_sync_reg);
+  inline void return_from_detach(unsigned sync_reg);
+  inline void complete_sync(unsigned sync_reg);
   template<bool is_read>
   inline void record_mem_helper(const csi_id_t acc_id,
                                 uintptr_t addr, size_t mem_size,
