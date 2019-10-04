@@ -107,8 +107,6 @@ if(APPLE)
     if(NOT BACKBOARD_LIBRARY)
       set(SKIP_TEST_DEBUGSERVER ON CACHE BOOL "" FORCE)
     endif()
-  else()
-    find_library(COCOA_LIBRARY Cocoa)
   endif()
 endif()
 
