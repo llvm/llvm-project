@@ -1,7 +1,10 @@
 set(LLVM_NO_RTTI 1)
 
 include(AddLLVM)
-include(SwiftAddCustomCommandTarget)
+
+if (LLDB_ENABLE_SWIFT_SUPPORT)
+  include(SwiftAddCustomCommandTarget)
+endif()
 
 if ( CMAKE_SYSTEM_NAME MATCHES "Windows" )
   add_definitions( -DEXPORT_LIBLLDB )
@@ -199,6 +202,7 @@ if(NOT LLDB_BUILT_STANDALONE)
 endif()
 
 # Copy the clang resource directory.
+if (LLDB_ENABLE_SWIFT_SUPPORT)
 add_custom_command_target(
     copy-clang-resource-dir
     COMMAND "${CMAKE_COMMAND}" "-E" "copy_directory" "${CLANG_RESOURCE_PATH}" "${lib_dir}/lldb/clang/"
@@ -220,6 +224,7 @@ if(LLDB_BUILT_STANDALONE)
 endif()
 
 add_dependencies(liblldb ${copy-clang-resource-dir} ${copy-swift-resource-dir})
+endif()
 
 install(
   CODE "file(MAKE_DIRECTORY ${lib_dir}/lldb)")
@@ -228,9 +233,10 @@ install(
   DIRECTORY "${lib_dir}/lldb/clang"
   DESTINATION lib${LLVM_LIBDIR_SUFFIX}/lldb/)
 
+if(LLDB_ENABLE_SWIFT_SUPPORT)
 if(LLDB_BUILT_STANDALONE)
   install(
     DIRECTORY "${lib_dir}/lldb/swift"
     DESTINATION lib${LLVM_LIBDIR_SUFFIX}/lldb/)
 endif()
-
+endif()
