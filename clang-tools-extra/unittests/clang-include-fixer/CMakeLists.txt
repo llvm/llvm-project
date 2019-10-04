@@ -16,16 +16,19 @@ add_extra_unittest(ClangIncludeFixerTests
   FuzzySymbolIndexTests.cpp
   )
 
-target_link_libraries(ClangIncludeFixerTests
+clang_target_link_libraries(ClangIncludeFixerTests
   PRIVATE
   clangBasic
   clangFormat
   clangFrontend
-  clangIncludeFixer
   clangRewrite
   clangSerialization
   clangTooling
   clangToolingCore
+  )
+target_link_libraries(ClangIncludeFixerTests
+  PRIVATE
+  clangIncludeFixer
   findAllSymbols
   )
 

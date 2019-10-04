@@ -15,16 +15,19 @@ add_extra_unittest(ClangChangeNamespaceTests
   ChangeNamespaceTests.cpp
   )
 
-target_link_libraries(ClangChangeNamespaceTests
+clang_target_link_libraries(ClangChangeNamespaceTests
   PRIVATE
   clangAST
   clangASTMatchers
   clangBasic
-  clangChangeNamespace
   clangFormat
   clangFrontend
   clangRewrite
   clangSerialization
   clangTooling
   clangToolingCore
+  )
+target_link_libraries(ClangChangeNamespaceTests
+  PRIVATE
+  clangChangeNamespace
   )

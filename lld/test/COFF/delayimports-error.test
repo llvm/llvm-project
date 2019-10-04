@@ -7,7 +7,7 @@
 # RUN:   /alternatename:__delayLoadHelper2=main /opt:noref >& %t.log
 # RUN: FileCheck %s < %t.log
 
-# CHECK: cannot delay-load foo.dll due to import of data: __imp_datasym
+# CHECK: cannot delay-load foo.dll due to import of data: __declspec(dllimport) datasym
 
 --- !COFF
 header:

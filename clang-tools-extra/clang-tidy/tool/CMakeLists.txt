@@ -11,14 +11,17 @@ add_clang_tool(clang-tidy
 add_dependencies(clang-tidy
   clang-resource-headers
   )
-target_link_libraries(clang-tidy
+clang_target_link_libraries(clang-tidy
   PRIVATE
   clangAST
   clangASTMatchers
   clangBasic
-  clangTidy
   clangTooling
   clangToolingCore
+  )
+target_link_libraries(clang-tidy
+  PRIVATE
+  clangTidy
   ${ALL_CLANG_TIDY_CHECKS}
   )
 

@@ -4,16 +4,19 @@ add_clang_tool(clang-move
   ClangMove.cpp
   )
 
-target_link_libraries(clang-move
+clang_target_link_libraries(clang-move
   PRIVATE
   clangAST
   clangASTMatchers
   clangBasic
   clangFormat
   clangFrontend
-  clangMove
   clangRewrite
   clangSerialization
   clangTooling
   clangToolingCore
+  )
+target_link_libraries(clang-move
+  PRIVATE
+  clangMove
   )

@@ -671,30 +671,6 @@ LLDBSWIGPython_CastPyObjectToSBValue
     return sb_ptr;
 }
 
-// Currently, SBCommandReturnObjectReleaser wraps a unique pointer to an
-// lldb_private::CommandReturnObject. This means that the destructor for the
-// SB object will deallocate its contained CommandReturnObject. Because that
-// object is used as the real return object for Python-based commands, we want
-// it to stay around. Thus, we release the unique pointer before returning from
-// LLDBSwigPythonCallCommand, and to guarantee that the release will occur no
-// matter how we exit from the function, we have a releaser object whose
-// destructor does the right thing for us
-class SBCommandReturnObjectReleaser
-{
-public:
-    SBCommandReturnObjectReleaser (lldb::SBCommandReturnObject &obj) :
-        m_command_return_object_ref (obj)
-    {
-    }
-
-    ~SBCommandReturnObjectReleaser ()
-    {
-        m_command_return_object_ref.Release();
-    }
-private:
-    lldb::SBCommandReturnObject &m_command_return_object_ref;
-};
-
 SWIGEXPORT bool
 LLDBSwigPythonCallCommand
 (
@@ -707,8 +683,7 @@ LLDBSwigPythonCallCommand
 )
 {
     using namespace lldb_private;
-    lldb::SBCommandReturnObject cmd_retobj_sb(&cmd_retobj);
-    SBCommandReturnObjectReleaser cmd_retobj_sb_releaser(cmd_retobj_sb);
+    lldb::SBCommandReturnObject cmd_retobj_sb(cmd_retobj);
     lldb::SBDebugger debugger_sb(debugger);
     lldb::SBExecutionContext exe_ctx_sb(exe_ctx_ref_sp);
 
@@ -745,8 +720,7 @@ LLDBSwigPythonCallCommandObject
 )
 {
     using namespace lldb_private;
-    lldb::SBCommandReturnObject cmd_retobj_sb(&cmd_retobj);
-    SBCommandReturnObjectReleaser cmd_retobj_sb_releaser(cmd_retobj_sb);
+    lldb::SBCommandReturnObject cmd_retobj_sb(cmd_retobj);
     lldb::SBDebugger debugger_sb(debugger);
     lldb::SBExecutionContext exe_ctx_sb(exe_ctx_ref_sp);
 

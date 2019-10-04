@@ -162,12 +162,11 @@ public:
 
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
-    SBCommandReturnObject sb_return(&result);
+    SBCommandReturnObject sb_return(result);
     SBCommandInterpreter sb_interpreter(&m_interpreter);
     SBDebugger debugger_sb(m_interpreter.GetDebugger().shared_from_this());
     bool ret = m_backend->DoExecute(
         debugger_sb, (char **)command.GetArgumentVector(), sb_return);
-    sb_return.Release();
     return ret;
   }
   std::shared_ptr<lldb::SBCommandPluginInterface> m_backend;

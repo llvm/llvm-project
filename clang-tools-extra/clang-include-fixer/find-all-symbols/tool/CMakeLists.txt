@@ -4,7 +4,7 @@ add_clang_tool(find-all-symbols
   FindAllSymbolsMain.cpp
   )
 
-target_link_libraries(find-all-symbols
+clang_target_link_libraries(find-all-symbols
   PRIVATE
   clangAST
   clangASTMatchers
@@ -13,6 +13,9 @@ target_link_libraries(find-all-symbols
   clangLex
   clangSerialization
   clangTooling
+  )
+target_link_libraries(find-all-symbols
+  PRIVATE
   findAllSymbols
   )
 

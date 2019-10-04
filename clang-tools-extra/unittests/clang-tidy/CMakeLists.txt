@@ -21,7 +21,7 @@ add_extra_unittest(ClangTidyTests
   TransformerClangTidyCheckTest.cpp
   )
 
-target_link_libraries(ClangTidyTests
+clang_target_link_libraries(ClangTidyTests
   PRIVATE
   clangAST
   clangASTMatchers
@@ -29,6 +29,12 @@ target_link_libraries(ClangTidyTests
   clangFrontend
   clangLex
   clangSerialization
+  clangTooling
+  clangToolingCore
+  clangToolingRefactoring
+  )
+target_link_libraries(ClangTidyTests
+  PRIVATE
   clangTidy
   clangTidyAndroidModule
   clangTidyGoogleModule
@@ -36,7 +42,4 @@ target_link_libraries(ClangTidyTests
   clangTidyObjCModule
   clangTidyReadabilityModule
   clangTidyUtils
-  clangTooling
-  clangToolingCore
-  clangToolingRefactoring
   )
