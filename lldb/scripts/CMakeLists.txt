@@ -69,5 +69,14 @@ if(NOT LLDB_BUILD_FRAMEWORK)
     OUTPUT_STRIP_TRAILING_WHITESPACE)
 
   # Install the LLDB python module
-  install(DIRECTORY ${SWIG_PYTHON_DIR}/ DESTINATION ${SWIG_INSTALL_DIR})
+  add_custom_target(lldb-python-scripts)
+  add_dependencies(lldb-python-scripts finish_swig)
+  install(DIRECTORY ${SWIG_PYTHON_DIR}/
+    DESTINATION ${SWIG_INSTALL_DIR}
+    COMPONENT lldb-scripts)
+  if (NOT LLVM_ENABLE_IDE)
+    add_llvm_install_targets(install-lldb-python-scripts
+                             COMPONENT lldb-python-scripts
+                             DEPENDS lldb-python-scripts)
+  endif()
 endif()
