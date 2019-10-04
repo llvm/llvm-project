@@ -112,6 +112,8 @@ def noentry : F<"noentry">,
 def profile : F<"profile">;
 def repro : F<"Brepro">,
     HelpText<"Use a hash of the executable as the PE header timestamp">;
+def reproduce : P<"reproduce",
+    "Dump linker invocation and input files for debugging">;
 def swaprun : P<"swaprun",
   "Comma-separated list of 'cd' or 'net'">;
 def swaprun_cd : F<"swaprun:cd">, Alias<swaprun>, AliasArgs<["cd"]>,

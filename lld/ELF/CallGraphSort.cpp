@@ -45,6 +45,8 @@
 #include "SymbolTable.h"
 #include "Symbols.h"
 
+#include <numeric>
+
 using namespace llvm;
 using namespace lld;
 using namespace lld::elf;
@@ -56,7 +58,7 @@ struct Edge {
 };
 
 struct Cluster {
-  Cluster(int sec, size_t s) : sections{sec}, size(s) {}
+  Cluster(int sec, size_t s) : next(sec), prev(sec), size(s) {}
 
   double getDensity() const {
     if (size == 0)
@@ -64,7 +66,8 @@ struct Cluster {
     return double(weight) / double(size);
   }
 
-  std::vector<int> sections;
+  int next;
+  int prev;
   size_t size = 0;
   uint64_t weight = 0;
   uint64_t initialWeight = 0;
@@ -80,8 +83,6 @@ public:
 private:
   std::vector<Cluster> clusters;
   std::vector<const InputSectionBase *> sections;
-
-  void groupClusters();
 };
 
 // Maximum ammount the combined cluster density can be worse than the original
@@ -103,7 +104,7 @@ CallGraphSort::CallGraphSort() {
   DenseMap<const InputSectionBase *, int> secToCluster;
 
   auto getOrCreateNode = [&](const InputSectionBase *isec) -> int {
-    auto res = secToCluster.insert(std::make_pair(isec, clusters.size()));
+    auto res = secToCluster.try_emplace(isec, clusters.size());
     if (res.second) {
       sections.push_back(isec);
       clusters.emplace_back(clusters.size(), isec->getSize());
@@ -151,79 +152,84 @@ static bool isNewDensityBad(Cluster &a, Cluster &b) {
   return newDensity < a.getDensity() / MAX_DENSITY_DEGRADATION;
 }
 
-static void mergeClusters(Cluster &into, Cluster &from) {
-  into.sections.insert(into.sections.end(), from.sections.begin(),
-                       from.sections.end());
+// Find the leader of V's belonged cluster (represented as an equivalence
+// class). We apply union-find path-halving technique (simple to implement) in
+// the meantime as it decreases depths and the time complexity.
+static int getLeader(std::vector<int> &leaders, int v) {
+  while (leaders[v] != v) {
+    leaders[v] = leaders[leaders[v]];
+    v = leaders[v];
+  }
+  return v;
+}
+
+static void mergeClusters(std::vector<Cluster> &cs, Cluster &into, int intoIdx,
+                          Cluster &from, int fromIdx) {
+  int tail1 = into.prev, tail2 = from.prev;
+  into.prev = tail2;
+  cs[tail2].next = intoIdx;
+  from.prev = tail1;
+  cs[tail1].next = fromIdx;
   into.size += from.size;
   into.weight += from.weight;
-  from.sections.clear();
   from.size = 0;
   from.weight = 0;
 }
 
 // Group InputSections into clusters using the Call-Chain Clustering heuristic
 // then sort the clusters by density.
-void CallGraphSort::groupClusters() {
-  std::vector<int> sortedSecs(clusters.size());
-  std::vector<Cluster *> secToCluster(clusters.size());
+DenseMap<const InputSectionBase *, int> CallGraphSort::run() {
+  std::vector<int> sorted(clusters.size());
+  std::vector<int> leaders(clusters.size());
 
-  for (size_t i = 0; i < clusters.size(); ++i) {
-    sortedSecs[i] = i;
-    secToCluster[i] = &clusters[i];
-  }
-
-  llvm::stable_sort(sortedSecs, [&](int a, int b) {
+  std::iota(leaders.begin(), leaders.end(), 0);
+  std::iota(sorted.begin(), sorted.end(), 0);
+  llvm::stable_sort(sorted, [&](int a, int b) {
     return clusters[a].getDensity() > clusters[b].getDensity();
   });
 
-  for (int si : sortedSecs) {
-    // clusters[si] is the same as secToClusters[si] here because it has not
-    // been merged into another cluster yet.
-    Cluster &c = clusters[si];
+  for (int l : sorted) {
+    // The cluster index is the same as the index of its leader here because
+    // clusters[L] has not been merged into another cluster yet.
+    Cluster &c = clusters[l];
 
     // Don't consider merging if the edge is unlikely.
     if (c.bestPred.from == -1 || c.bestPred.weight * 10 <= c.initialWeight)
       continue;
 
-    Cluster *predC = secToCluster[c.bestPred.from];
-    if (predC == &c)
+    int predL = getLeader(leaders, c.bestPred.from);
+    if (l == predL)
       continue;
 
+    Cluster *predC = &clusters[predL];
     if (c.size + predC->size > MAX_CLUSTER_SIZE)
       continue;
 
     if (isNewDensityBad(*predC, c))
       continue;
 
-    // NOTE: Consider using a disjoint-set to track section -> cluster mapping
-    // if this is ever slow.
-    for (int si : c.sections)
-      secToCluster[si] = predC;
-
-    mergeClusters(*predC, c);
+    leaders[l] = predL;
+    mergeClusters(clusters, *predC, predL, c, l);
   }
 
-  // Remove empty or dead nodes. Invalidates all cluster indices.
-  llvm::erase_if(clusters, [](const Cluster &c) {
-    return c.size == 0 || c.sections.empty();
+  // Sort remaining non-empty clusters by density.
+  sorted.clear();
+  for (int i = 0, e = (int)clusters.size(); i != e; ++i)
+    if (clusters[i].size > 0)
+      sorted.push_back(i);
+  llvm::stable_sort(sorted, [&](int a, int b) {
+    return clusters[a].getDensity() > clusters[b].getDensity();
   });
 
-  // Sort by density.
-  llvm::stable_sort(clusters, [](const Cluster &a, const Cluster &b) {
-    return a.getDensity() > b.getDensity();
-  });
-}
-
-DenseMap<const InputSectionBase *, int> CallGraphSort::run() {
-  groupClusters();
-
-  // Generate order.
   DenseMap<const InputSectionBase *, int> orderMap;
-  ssize_t curOrder = 1;
-
-  for (const Cluster &c : clusters)
-    for (int secIndex : c.sections)
-      orderMap[sections[secIndex]] = curOrder++;
+  int curOrder = 1;
+  for (int leader : sorted)
+    for (int i = leader;;) {
+      orderMap[sections[i]] = curOrder++;
+      i = clusters[i].next;
+      if (i == leader)
+        break;
+    }
 
   if (!config->printSymbolOrder.empty()) {
     std::error_code ec;
@@ -235,15 +241,19 @@ DenseMap<const InputSectionBase *, int> CallGraphSort::run() {
 
     // Print the symbols ordered by C3, in the order of increasing curOrder
     // Instead of sorting all the orderMap, just repeat the loops above.
-    for (const Cluster &c : clusters)
-      for (int secIndex : c.sections)
+    for (int leader : sorted)
+      for (int i = leader;;) {
         // Search all the symbols in the file of the section
         // and find out a Defined symbol with name that is within the section.
-        for (Symbol *sym: sections[secIndex]->file->getSymbols())
+        for (Symbol *sym : sections[i]->file->getSymbols())
           if (!sym->isSection()) // Filter out section-type symbols here.
             if (auto *d = dyn_cast<Defined>(sym))
-              if (sections[secIndex] == d->section)
+              if (sections[i] == d->section)
                 os << sym->getName() << "\n";
+        i = clusters[i].next;
+        if (i == leader)
+          break;
+      }
   }
 
   return orderMap;
