@@ -27,6 +27,16 @@ add_lldb_library(lldbPluginExpressionParserClang PLUGIN
   ${tablegen_deps}
 
   LINK_LIBS
+    lldbCore
+    lldbExpression
+    lldbHost
+    lldbInterpreter
+    lldbSymbol
+    lldbTarget
+    lldbUtility
+    lldbPluginCPlusPlusLanguage
+    lldbPluginCPPRuntime
+  CLANG_LIBS
     clangAST
     clangCodeGen
     clangDriver
@@ -38,15 +48,6 @@ add_lldb_library(lldbPluginExpressionParserClang PLUGIN
     clangRewriteFrontend
     clangSema
     clangSerialization
-    lldbCore
-    lldbExpression
-    lldbHost
-    lldbInterpreter
-    lldbSymbol
-    lldbTarget
-    lldbUtility
-    lldbPluginCPlusPlusLanguage
-    lldbPluginCPPRuntime
   LINK_COMPONENTS
     Core
     ExecutionEngine

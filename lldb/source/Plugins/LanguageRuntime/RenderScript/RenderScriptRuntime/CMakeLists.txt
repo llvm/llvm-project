@@ -13,7 +13,6 @@ add_lldb_library(lldbPluginRenderScriptRuntime PLUGIN
   ${tablegen_deps}
 
   LINK_LIBS
-    clangBasic
     lldbBreakpoint
     lldbCore
     lldbDataFormatters
@@ -22,6 +21,8 @@ add_lldb_library(lldbPluginRenderScriptRuntime PLUGIN
     lldbInterpreter
     lldbSymbol
     lldbTarget
+  CLANG_LIBS
+    clangBasic
   LINK_COMPONENTS
     Core
     IRReader

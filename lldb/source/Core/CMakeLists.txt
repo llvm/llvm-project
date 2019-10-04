@@ -69,7 +69,6 @@ add_lldb_library(lldbCore
     clang-tablegen-targets
 
   LINK_LIBS
-    clangDriver
     lldbBreakpoint
     lldbDataFormatters
     lldbExpression
@@ -81,6 +80,9 @@ add_lldb_library(lldbCore
     lldbPluginCPlusPlusLanguage
     lldbPluginObjCLanguage
     ${LLDB_CURSES_LIBS}
+
+  CLANG_LIBS
+    clangDriver
 
   LINK_COMPONENTS
     Support

@@ -1,7 +1,7 @@
 add_lldb_tool(lldb-instr
   Instrument.cpp
 
-  LINK_LIBS
+  CLANG_LIBS
     clangAST
     clangBasic
     clangCodeGen

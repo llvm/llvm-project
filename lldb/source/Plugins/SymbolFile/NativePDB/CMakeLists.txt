@@ -11,11 +11,12 @@ add_lldb_library(lldbPluginSymbolFileNativePDB PLUGIN
   UdtRecordCompleter.cpp
 
   LINK_LIBS
-    clangAST
-    clangLex
     lldbCore
     lldbSymbol
     lldbUtility
+  CLANG_LIBS
+    clangAST
+    clangLex
   LINK_COMPONENTS
     DebugInfoCodeView
     DebugInfoPDB
