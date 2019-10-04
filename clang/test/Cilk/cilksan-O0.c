@@ -24,7 +24,7 @@ void addB() {
 
 void foo() {
   // CHECK: define void @foo()
-  // CHECK: __csan_func_entry(i64 {{.+}}, i8* {{.+}}, i64 1)
+  // CHECK: __csan_func_entry(i64 {{.+}}, i8* {{.+}}, i64 3)
   _Cilk_spawn addA();
   addB();
   _Cilk_sync;
