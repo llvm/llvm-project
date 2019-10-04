@@ -86,9 +86,9 @@ static cl::opt<bool> ShowAddrs(
     cl::desc("Print registered symbol, section, got and stub addresses"),
     cl::init(false));
 
-static cl::opt<bool> ShowAtomGraph(
+static cl::opt<bool> ShowLinkGraph(
     "show-graph",
-    cl::desc("Print the atom graph after fixups have been applied"),
+    cl::desc("Print the link graph after fixups have been applied"),
     cl::init(false));
 
 static cl::opt<bool> ShowSizes(
@@ -151,17 +151,14 @@ operator<<(raw_ostream &OS, const Session::FileInfoMap &FIM) {
   return OS;
 }
 
-static uint64_t computeTotalAtomSizes(AtomGraph &G) {
+static uint64_t computeTotalBlockSizes(LinkGraph &G) {
   uint64_t TotalSize = 0;
-  for (auto *DA : G.defined_atoms())
-    if (DA->isZeroFill())
-      TotalSize += DA->getZeroFillSize();
-    else
-      TotalSize += DA->getContent().size();
+  for (auto *B : G.blocks())
+    TotalSize += B->getSize();
   return TotalSize;
 }
 
-static void dumpSectionContents(raw_ostream &OS, AtomGraph &G) {
+static void dumpSectionContents(raw_ostream &OS, LinkGraph &G) {
   constexpr JITTargetAddress DumpWidth = 16;
   static_assert(isPowerOf2_64(DumpWidth), "DumpWidth must be a power of two");
 
@@ -172,56 +169,55 @@ static void dumpSectionContents(raw_ostream &OS, AtomGraph &G) {
 
   std::sort(Sections.begin(), Sections.end(),
             [](const Section *LHS, const Section *RHS) {
-              if (LHS->atoms_empty() && RHS->atoms_empty())
+              if (LHS->symbols_empty() && RHS->symbols_empty())
                 return false;
-              if (LHS->atoms_empty())
+              if (LHS->symbols_empty())
                 return false;
-              if (RHS->atoms_empty())
+              if (RHS->symbols_empty())
                 return true;
-              return (*LHS->atoms().begin())->getAddress() <
-                     (*RHS->atoms().begin())->getAddress();
+              SectionRange LHSRange(*LHS);
+              SectionRange RHSRange(*RHS);
+              return LHSRange.getStart() < RHSRange.getStart();
             });
 
   for (auto *S : Sections) {
     OS << S->getName() << " content:";
-    if (S->atoms_empty()) {
+    if (S->symbols_empty()) {
       OS << "\n  section empty\n";
       continue;
     }
 
-    // Sort atoms into order, then render.
-    std::vector<DefinedAtom *> Atoms(S->atoms().begin(), S->atoms().end());
-    std::sort(Atoms.begin(), Atoms.end(),
-              [](const DefinedAtom *LHS, const DefinedAtom *RHS) {
-                return LHS->getAddress() < RHS->getAddress();
-              });
+    // Sort symbols into order, then render.
+    std::vector<Symbol *> Syms(S->symbols().begin(), S->symbols().end());
+    llvm::sort(Syms, [](const Symbol *LHS, const Symbol *RHS) {
+      return LHS->getAddress() < RHS->getAddress();
+    });
 
-    JITTargetAddress NextAddr = Atoms.front()->getAddress() & ~(DumpWidth - 1);
-    for (auto *DA : Atoms) {
-      bool IsZeroFill = DA->isZeroFill();
-      JITTargetAddress AtomStart = DA->getAddress();
-      JITTargetAddress AtomSize =
-          IsZeroFill ? DA->getZeroFillSize() : DA->getContent().size();
-      JITTargetAddress AtomEnd = AtomStart + AtomSize;
-      const uint8_t *AtomData =
-          IsZeroFill ? nullptr : DA->getContent().bytes_begin();
+    JITTargetAddress NextAddr = Syms.front()->getAddress() & ~(DumpWidth - 1);
+    for (auto *Sym : Syms) {
+      bool IsZeroFill = Sym->getBlock().isZeroFill();
+      JITTargetAddress SymStart = Sym->getAddress();
+      JITTargetAddress SymSize = Sym->getSize();
+      JITTargetAddress SymEnd = SymStart + SymSize;
+      const uint8_t *SymData =
+          IsZeroFill ? nullptr : Sym->getSymbolContent().bytes_begin();
 
-      // Pad any space before the atom starts.
-      while (NextAddr != AtomStart) {
+      // Pad any space before the symbol starts.
+      while (NextAddr != SymStart) {
         if (NextAddr % DumpWidth == 0)
           OS << formatv("\n{0:x16}:", NextAddr);
         OS << "   ";
         ++NextAddr;
       }
 
-      // Render the atom content.
-      while (NextAddr != AtomEnd) {
+      // Render the symbol content.
+      while (NextAddr != SymEnd) {
         if (NextAddr % DumpWidth == 0)
           OS << formatv("\n{0:x16}:", NextAddr);
         if (IsZeroFill)
           OS << " 00";
         else
-          OS << formatv(" {0:x-2}", AtomData[NextAddr - AtomStart]);
+          OS << formatv(" {0:x-2}", SymData[NextAddr - SymStart]);
         ++NextAddr;
       }
     }
@@ -291,18 +287,17 @@ public:
     for (auto &KV : Request) {
       auto &Seg = KV.second;
 
-      if (Seg.getContentAlignment() > PageSize)
+      if (Seg.getAlignment() > PageSize)
         return make_error<StringError>("Cannot request higher than page "
                                        "alignment",
                                        inconvertibleErrorCode());
 
-      if (PageSize % Seg.getContentAlignment() != 0)
+      if (PageSize % Seg.getAlignment() != 0)
         return make_error<StringError>("Page size is not a multiple of "
                                        "alignment",
                                        inconvertibleErrorCode());
 
-      uint64_t ZeroFillStart =
-          alignTo(Seg.getContentSize(), Seg.getZeroFillAlignment());
+      uint64_t ZeroFillStart = Seg.getContentSize();
       uint64_t SegmentSize = ZeroFillStart + Seg.getZeroFillSize();
 
       // Round segment size up to page boundary.
@@ -427,7 +422,7 @@ void Session::dumpSessionInfo(raw_ostream &OS) {
 void Session::modifyPassConfig(const Triple &FTT,
                                PassConfiguration &PassConfig) {
   if (!CheckFiles.empty())
-    PassConfig.PostFixupPasses.push_back([this](AtomGraph &G) {
+    PassConfig.PostFixupPasses.push_back([this](LinkGraph &G) {
       if (TT.getObjectFormat() == Triple::MachO)
         return registerMachOStubsAndGOT(*this, G);
       return make_error<StringError>("Unsupported object format for GOT/stub "
@@ -435,27 +430,26 @@ void Session::modifyPassConfig(const Triple &FTT,
                                      inconvertibleErrorCode());
     });
 
-  if (ShowAtomGraph)
-    PassConfig.PostFixupPasses.push_back([](AtomGraph &G) -> Error {
-      outs() << "Atom graph post-fixup:\n";
+  if (ShowLinkGraph)
+    PassConfig.PostFixupPasses.push_back([](LinkGraph &G) -> Error {
+      outs() << "Link graph post-fixup:\n";
       G.dump(outs());
       return Error::success();
     });
 
-
   if (ShowSizes) {
-    PassConfig.PrePrunePasses.push_back([this](AtomGraph &G) -> Error {
-        SizeBeforePruning += computeTotalAtomSizes(G);
-        return Error::success();
-      });
-    PassConfig.PostFixupPasses.push_back([this](AtomGraph &G) -> Error {
-        SizeAfterFixups += computeTotalAtomSizes(G);
-        return Error::success();
-      });
+    PassConfig.PrePrunePasses.push_back([this](LinkGraph &G) -> Error {
+      SizeBeforePruning += computeTotalBlockSizes(G);
+      return Error::success();
+    });
+    PassConfig.PostFixupPasses.push_back([this](LinkGraph &G) -> Error {
+      SizeAfterFixups += computeTotalBlockSizes(G);
+      return Error::success();
+    });
   }
 
   if (ShowRelocatedSectionContents)
-    PassConfig.PostFixupPasses.push_back([](AtomGraph &G) -> Error {
+    PassConfig.PostFixupPasses.push_back([](LinkGraph &G) -> Error {
       outs() << "Relocated section contents for " << G.getName() << ":\n";
       dumpSectionContents(outs(), G);
       return Error::success();
@@ -757,8 +751,8 @@ Error runChecks(Session &S) {
 
 static void dumpSessionStats(Session &S) {
   if (ShowSizes)
-    outs() << "Total size of all atoms before pruning: " << S.SizeBeforePruning
-           << "\nTotal size of all atoms after fixups: " << S.SizeAfterFixups
+    outs() << "Total size of all blocks before pruning: " << S.SizeBeforePruning
+           << "\nTotal size of all blocks after fixups: " << S.SizeAfterFixups
            << "\n";
 }
 

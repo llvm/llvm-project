@@ -13,7 +13,7 @@
 #include "llvm/ExecutionEngine/JITLink/MachO_x86_64.h"
 
 #include "BasicGOTAndStubsBuilder.h"
-#include "MachOAtomGraphBuilder.h"
+#include "MachOLinkGraphBuilder.h"
 
 #define DEBUG_TYPE "jitlink"
 
@@ -23,16 +23,21 @@ using namespace llvm::jitlink::MachO_x86_64_Edges;
 
 namespace {
 
-class MachOAtomGraphBuilder_x86_64 : public MachOAtomGraphBuilder {
+class MachOLinkGraphBuilder_x86_64 : public MachOLinkGraphBuilder {
 public:
-  MachOAtomGraphBuilder_x86_64(const object::MachOObjectFile &Obj)
-      : MachOAtomGraphBuilder(Obj),
-        NumSymbols(Obj.getSymtabLoadCommand().nsyms) {
-    addCustomAtomizer("__eh_frame", [this](MachOSection &EHFrameSection) {
-      return addEHFrame(getGraph(), EHFrameSection.getGenericSection(),
-                        EHFrameSection.getContent(),
-                        EHFrameSection.getAddress(), NegDelta32, Delta64);
-    });
+  MachOLinkGraphBuilder_x86_64(const object::MachOObjectFile &Obj)
+      : MachOLinkGraphBuilder(Obj) {
+    addCustomSectionParser(
+        "__eh_frame", [this](NormalizedSection &EHFrameSection) {
+          if (!EHFrameSection.Data)
+            return make_error<JITLinkError>(
+                "__eh_frame section is marked zero-fill");
+          return MachOEHFrameBinaryParser(
+                     *this, EHFrameSection.Address,
+                     StringRef(EHFrameSection.Data, EHFrameSection.Size),
+                     *EHFrameSection.GraphSection, 8, 4, NegDelta32, Delta64)
+              .addToGraph();
+        });
   }
 
 private:
@@ -102,17 +107,6 @@ private:
         ", length=" + formatv("{0:d}", RI.r_length));
   }
 
-  Expected<Atom &> findAtomBySymbolIndex(const MachO::relocation_info &RI) {
-    auto &Obj = getObject();
-    if (RI.r_symbolnum >= NumSymbols)
-      return make_error<JITLinkError>("Symbol index out of range");
-    auto SymI = Obj.getSymbolByIndex(RI.r_symbolnum);
-    auto Name = SymI->getName();
-    if (!Name)
-      return Name.takeError();
-    return getGraph().getAtomByName(*Name);
-  }
-
   MachO::relocation_info
   getRelocationInfo(const object::relocation_iterator RelItr) {
     MachO::any_relocation_info ARI =
@@ -122,12 +116,12 @@ private:
     return RI;
   }
 
-  using PairRelocInfo = std::tuple<MachOX86RelocationKind, Atom *, uint64_t>;
+  using PairRelocInfo = std::tuple<MachOX86RelocationKind, Symbol *, uint64_t>;
 
   // Parses paired SUBTRACTOR/UNSIGNED relocations and, on success,
   // returns the edge kind and addend to be used.
   Expected<PairRelocInfo>
-  parsePairRelocation(DefinedAtom &AtomToFix, Edge::Kind SubtractorKind,
+  parsePairRelocation(Block &BlockToFix, Edge::Kind SubtractorKind,
                       const MachO::relocation_info &SubRI,
                       JITTargetAddress FixupAddress, const char *FixupContent,
                       object::relocation_iterator &UnsignedRelItr,
@@ -154,9 +148,11 @@ private:
       return make_error<JITLinkError>("length of x86_64 SUBTRACTOR and paired "
                                       "UNSIGNED reloc must match");
 
-    auto FromAtom = findAtomBySymbolIndex(SubRI);
-    if (!FromAtom)
-      return FromAtom.takeError();
+    Symbol *FromSymbol;
+    if (auto FromSymbolOrErr = findSymbolByIndex(SubRI.r_symbolnum))
+      FromSymbol = FromSymbolOrErr->GraphSymbol;
+    else
+      return FromSymbolOrErr.takeError();
 
     // Read the current fixup value.
     uint64_t FixupValue = 0;
@@ -165,53 +161,59 @@ private:
     else
       FixupValue = *(const little32_t *)FixupContent;
 
-    // Find 'ToAtom' using symbol number or address, depending on whether the
+    // Find 'ToSymbol' using symbol number or address, depending on whether the
     // paired UNSIGNED relocation is extern.
-    Atom *ToAtom = nullptr;
+    Symbol *ToSymbol = nullptr;
     if (UnsignedRI.r_extern) {
-      // Find target atom by symbol index.
-      if (auto ToAtomOrErr = findAtomBySymbolIndex(UnsignedRI))
-        ToAtom = &*ToAtomOrErr;
+      // Find target symbol by symbol index.
+      if (auto ToSymbolOrErr = findSymbolByIndex(UnsignedRI.r_symbolnum))
+        ToSymbol = ToSymbolOrErr->GraphSymbol;
       else
-        return ToAtomOrErr.takeError();
+        return ToSymbolOrErr.takeError();
     } else {
-      if (auto ToAtomOrErr = getGraph().findAtomByAddress(FixupValue))
-        ToAtom = &*ToAtomOrErr;
+      if (auto ToSymbolOrErr = findSymbolByAddress(FixupValue))
+        ToSymbol = &*ToSymbolOrErr;
       else
-        return ToAtomOrErr.takeError();
-      FixupValue -= ToAtom->getAddress();
+        return ToSymbolOrErr.takeError();
+      FixupValue -= ToSymbol->getAddress();
     }
 
     MachOX86RelocationKind DeltaKind;
-    Atom *TargetAtom;
+    Symbol *TargetSymbol;
     uint64_t Addend;
-    if (areLayoutLocked(AtomToFix, *FromAtom)) {
-      TargetAtom = ToAtom;
+    if (&BlockToFix == &FromSymbol->getAddressable()) {
+      TargetSymbol = ToSymbol;
       DeltaKind = (SubRI.r_length == 3) ? Delta64 : Delta32;
-      Addend = FixupValue + (FixupAddress - FromAtom->getAddress());
+      Addend = FixupValue + (FixupAddress - FromSymbol->getAddress());
       // FIXME: handle extern 'from'.
-    } else if (areLayoutLocked(AtomToFix, *ToAtom)) {
-      TargetAtom = &*FromAtom;
+    } else if (&BlockToFix == &ToSymbol->getAddressable()) {
+      TargetSymbol = FromSymbol;
       DeltaKind = (SubRI.r_length == 3) ? NegDelta64 : NegDelta32;
-      Addend = FixupValue - (FixupAddress - ToAtom->getAddress());
+      Addend = FixupValue - (FixupAddress - ToSymbol->getAddress());
     } else {
-      // AtomToFix was neither FromAtom nor ToAtom.
+      // BlockToFix was neither FromSymbol nor ToSymbol.
       return make_error<JITLinkError>("SUBTRACTOR relocation must fix up "
-                                      "either 'A' or 'B' (or an atom in one "
-                                      "of their alt-entry groups)");
+                                      "either 'A' or 'B' (or a symbol in one "
+                                      "of their alt-entry chains)");
     }
 
-    return PairRelocInfo(DeltaKind, TargetAtom, Addend);
+    return PairRelocInfo(DeltaKind, TargetSymbol, Addend);
   }
 
   Error addRelocations() override {
     using namespace support;
-    auto &G = getGraph();
     auto &Obj = getObject();
 
     for (auto &S : Obj.sections()) {
 
       JITTargetAddress SectionAddress = S.getAddress();
+
+      if (S.isVirtual()) {
+        if (S.relocation_begin() != S.relocation_end())
+          return make_error<JITLinkError>("Virtual section contains "
+                                          "relocations");
+        continue;
+      }
 
       for (auto RelItr = S.relocation_begin(), RelEnd = S.relocation_end();
            RelItr != RelEnd; ++RelItr) {
@@ -231,26 +233,26 @@ private:
                  << format("0x%016" PRIx64, FixupAddress) << "\n";
         });
 
-        // Find the atom that the fixup points to.
-        DefinedAtom *AtomToFix = nullptr;
+        // Find the block that the fixup points to.
+        Block *BlockToFix = nullptr;
         {
-          auto AtomToFixOrErr = G.findAtomByAddress(FixupAddress);
-          if (!AtomToFixOrErr)
-            return AtomToFixOrErr.takeError();
-          AtomToFix = &*AtomToFixOrErr;
+          auto SymbolToFixOrErr = findSymbolByAddress(FixupAddress);
+          if (!SymbolToFixOrErr)
+            return SymbolToFixOrErr.takeError();
+          BlockToFix = &SymbolToFixOrErr->getBlock();
         }
 
         if (FixupAddress + static_cast<JITTargetAddress>(1ULL << RI.r_length) >
-            AtomToFix->getAddress() + AtomToFix->getContent().size())
+            BlockToFix->getAddress() + BlockToFix->getContent().size())
           return make_error<JITLinkError>(
-              "Relocation content extends past end of fixup atom");
+              "Relocation extends past end of fixup block");
 
         // Get a pointer to the fixup content.
-        const char *FixupContent = AtomToFix->getContent().data() +
-                                   (FixupAddress - AtomToFix->getAddress());
+        const char *FixupContent = BlockToFix->getContent().data() +
+                                   (FixupAddress - BlockToFix->getAddress());
 
-        // The target atom and addend will be populated by the switch below.
-        Atom *TargetAtom = nullptr;
+        // The target symbol and addend will be populated by the switch below.
+        Symbol *TargetSymbol = nullptr;
         uint64_t Addend = 0;
 
         switch (*Kind) {
@@ -258,53 +260,53 @@ private:
         case PCRel32:
         case PCRel32GOTLoad:
         case PCRel32GOT:
-          if (auto TargetAtomOrErr = findAtomBySymbolIndex(RI))
-            TargetAtom = &*TargetAtomOrErr;
+          if (auto TargetSymbolOrErr = findSymbolByIndex(RI.r_symbolnum))
+            TargetSymbol = TargetSymbolOrErr->GraphSymbol;
           else
-            return TargetAtomOrErr.takeError();
+            return TargetSymbolOrErr.takeError();
           Addend = *(const ulittle32_t *)FixupContent;
           break;
         case Pointer32:
-          if (auto TargetAtomOrErr = findAtomBySymbolIndex(RI))
-            TargetAtom = &*TargetAtomOrErr;
+          if (auto TargetSymbolOrErr = findSymbolByIndex(RI.r_symbolnum))
+            TargetSymbol = TargetSymbolOrErr->GraphSymbol;
           else
-            return TargetAtomOrErr.takeError();
+            return TargetSymbolOrErr.takeError();
           Addend = *(const ulittle32_t *)FixupContent;
           break;
         case Pointer64:
-          if (auto TargetAtomOrErr = findAtomBySymbolIndex(RI))
-            TargetAtom = &*TargetAtomOrErr;
+          if (auto TargetSymbolOrErr = findSymbolByIndex(RI.r_symbolnum))
+            TargetSymbol = TargetSymbolOrErr->GraphSymbol;
           else
-            return TargetAtomOrErr.takeError();
+            return TargetSymbolOrErr.takeError();
           Addend = *(const ulittle64_t *)FixupContent;
           break;
         case Pointer64Anon: {
           JITTargetAddress TargetAddress = *(const ulittle64_t *)FixupContent;
-          if (auto TargetAtomOrErr = G.findAtomByAddress(TargetAddress))
-            TargetAtom = &*TargetAtomOrErr;
+          if (auto TargetSymbolOrErr = findSymbolByAddress(TargetAddress))
+            TargetSymbol = &*TargetSymbolOrErr;
           else
-            return TargetAtomOrErr.takeError();
-          Addend = TargetAddress - TargetAtom->getAddress();
+            return TargetSymbolOrErr.takeError();
+          Addend = TargetAddress - TargetSymbol->getAddress();
           break;
         }
         case PCRel32Minus1:
         case PCRel32Minus2:
         case PCRel32Minus4:
-          if (auto TargetAtomOrErr = findAtomBySymbolIndex(RI))
-            TargetAtom = &*TargetAtomOrErr;
+          if (auto TargetSymbolOrErr = findSymbolByIndex(RI.r_symbolnum))
+            TargetSymbol = TargetSymbolOrErr->GraphSymbol;
           else
-            return TargetAtomOrErr.takeError();
+            return TargetSymbolOrErr.takeError();
           Addend = *(const ulittle32_t *)FixupContent +
                    (1 << (*Kind - PCRel32Minus1));
           break;
         case PCRel32Anon: {
           JITTargetAddress TargetAddress =
               FixupAddress + 4 + *(const ulittle32_t *)FixupContent;
-          if (auto TargetAtomOrErr = G.findAtomByAddress(TargetAddress))
-            TargetAtom = &*TargetAtomOrErr;
+          if (auto TargetSymbolOrErr = findSymbolByAddress(TargetAddress))
+            TargetSymbol = &*TargetSymbolOrErr;
           else
-            return TargetAtomOrErr.takeError();
-          Addend = TargetAddress - TargetAtom->getAddress();
+            return TargetSymbolOrErr.takeError();
+          Addend = TargetAddress - TargetSymbol->getAddress();
           break;
         }
         case PCRel32Minus1Anon:
@@ -314,11 +316,11 @@ private:
               static_cast<JITTargetAddress>(1ULL << (*Kind - PCRel32Minus1Anon));
           JITTargetAddress TargetAddress =
               FixupAddress + 4 + Delta + *(const ulittle32_t *)FixupContent;
-          if (auto TargetAtomOrErr = G.findAtomByAddress(TargetAddress))
-            TargetAtom = &*TargetAtomOrErr;
+          if (auto TargetSymbolOrErr = findSymbolByAddress(TargetAddress))
+            TargetSymbol = &*TargetSymbolOrErr;
           else
-            return TargetAtomOrErr.takeError();
-          Addend = TargetAddress - TargetAtom->getAddress();
+            return TargetSymbolOrErr.takeError();
+          Addend = TargetAddress - TargetSymbol->getAddress();
           break;
         }
         case Delta32:
@@ -329,12 +331,12 @@ private:
           // NegDelta32/NegDelta64, depending on the direction of the
           // subtraction) along with the addend.
           auto PairInfo =
-              parsePairRelocation(*AtomToFix, *Kind, RI, FixupAddress,
+              parsePairRelocation(*BlockToFix, *Kind, RI, FixupAddress,
                                   FixupContent, ++RelItr, RelEnd);
           if (!PairInfo)
             return PairInfo.takeError();
-          std::tie(*Kind, TargetAtom, Addend) = *PairInfo;
-          assert(TargetAtom && "No target atom from parsePairRelocation?");
+          std::tie(*Kind, TargetSymbol, Addend) = *PairInfo;
+          assert(TargetSymbol && "No target symbol from parsePairRelocation?");
           break;
         }
         default:
@@ -343,41 +345,38 @@ private:
         }
 
         LLVM_DEBUG({
-          Edge GE(*Kind, FixupAddress - AtomToFix->getAddress(), *TargetAtom,
+          Edge GE(*Kind, FixupAddress - BlockToFix->getAddress(), *TargetSymbol,
                   Addend);
-          printEdge(dbgs(), *AtomToFix, GE,
+          printEdge(dbgs(), *BlockToFix, GE,
                     getMachOX86RelocationKindName(*Kind));
           dbgs() << "\n";
         });
-        AtomToFix->addEdge(*Kind, FixupAddress - AtomToFix->getAddress(),
-                           *TargetAtom, Addend);
+        BlockToFix->addEdge(*Kind, FixupAddress - BlockToFix->getAddress(),
+                            *TargetSymbol, Addend);
       }
     }
     return Error::success();
   }
-
-  unsigned NumSymbols = 0;
 };
 
 class MachO_x86_64_GOTAndStubsBuilder
     : public BasicGOTAndStubsBuilder<MachO_x86_64_GOTAndStubsBuilder> {
 public:
-  MachO_x86_64_GOTAndStubsBuilder(AtomGraph &G)
+  MachO_x86_64_GOTAndStubsBuilder(LinkGraph &G)
       : BasicGOTAndStubsBuilder<MachO_x86_64_GOTAndStubsBuilder>(G) {}
 
   bool isGOTEdge(Edge &E) const {
     return E.getKind() == PCRel32GOT || E.getKind() == PCRel32GOTLoad;
   }
 
-  DefinedAtom &createGOTEntry(Atom &Target) {
-    auto &GOTEntryAtom = G.addAnonymousAtom(getGOTSection(), 0x0, 8);
-    GOTEntryAtom.setContent(
-        StringRef(reinterpret_cast<const char *>(NullGOTEntryContent), 8));
-    GOTEntryAtom.addEdge(Pointer64, 0, Target, 0);
-    return GOTEntryAtom;
+  Symbol &createGOTEntry(Symbol &Target) {
+    auto &GOTEntryBlock = G.createContentBlock(
+        getGOTSection(), getGOTEntryBlockContent(), 0, 8, 0);
+    GOTEntryBlock.addEdge(Pointer64, 0, Target, 0);
+    return G.addAnonymousSymbol(GOTEntryBlock, 0, 8, false, false);
   }
 
-  void fixGOTEdge(Edge &E, Atom &GOTEntry) {
+  void fixGOTEdge(Edge &E, Symbol &GOTEntry) {
     assert((E.getKind() == PCRel32GOT || E.getKind() == PCRel32GOTLoad) &&
            "Not a GOT edge?");
     E.setKind(PCRel32);
@@ -389,19 +388,16 @@ public:
     return E.getKind() == Branch32 && !E.getTarget().isDefined();
   }
 
-  DefinedAtom &createStub(Atom &Target) {
-    auto &StubAtom = G.addAnonymousAtom(getStubsSection(), 0x0, 2);
-    StubAtom.setContent(
-        StringRef(reinterpret_cast<const char *>(StubContent), 6));
-
+  Symbol &createStub(Symbol &Target) {
+    auto &StubContentBlock =
+        G.createContentBlock(getStubsSection(), getStubBlockContent(), 0, 1, 0);
     // Re-use GOT entries for stub targets.
-    auto &GOTEntryAtom = getGOTEntryAtom(Target);
-    StubAtom.addEdge(PCRel32, 2, GOTEntryAtom, 0);
-
-    return StubAtom;
+    auto &GOTEntrySymbol = getGOTEntrySymbol(Target);
+    StubContentBlock.addEdge(PCRel32, 2, GOTEntrySymbol, 0);
+    return G.addAnonymousSymbol(StubContentBlock, 0, 6, true, false);
   }
 
-  void fixExternalBranchEdge(Edge &E, Atom &Stub) {
+  void fixExternalBranchEdge(Edge &E, Symbol &Stub) {
     assert(E.getKind() == Branch32 && "Not a Branch32 edge?");
     assert(E.getAddend() == 0 && "Branch32 edge has non-zero addend?");
     E.setTarget(Stub);
@@ -410,7 +406,7 @@ public:
 private:
   Section &getGOTSection() {
     if (!GOTSection)
-      GOTSection = &G.createSection("$__GOT", 8, sys::Memory::MF_READ, false);
+      GOTSection = &G.createSection("$__GOT", sys::Memory::MF_READ);
     return *GOTSection;
   }
 
@@ -418,9 +414,19 @@ private:
     if (!StubsSection) {
       auto StubsProt = static_cast<sys::Memory::ProtectionFlags>(
           sys::Memory::MF_READ | sys::Memory::MF_EXEC);
-      StubsSection = &G.createSection("$__STUBS", 8, StubsProt, false);
+      StubsSection = &G.createSection("$__STUBS", StubsProt);
     }
     return *StubsSection;
+  }
+
+  StringRef getGOTEntryBlockContent() {
+    return StringRef(reinterpret_cast<const char *>(NullGOTEntryContent),
+                     sizeof(NullGOTEntryContent));
+  }
+
+  StringRef getStubBlockContent() {
+    return StringRef(reinterpret_cast<const char *>(StubContent),
+                     sizeof(StubContent));
   }
 
   static const uint8_t NullGOTEntryContent[8];
@@ -451,30 +457,31 @@ private:
     return getMachOX86RelocationKindName(R);
   }
 
-  Expected<std::unique_ptr<AtomGraph>>
+  Expected<std::unique_ptr<LinkGraph>>
   buildGraph(MemoryBufferRef ObjBuffer) override {
     auto MachOObj = object::ObjectFile::createMachOObjectFile(ObjBuffer);
     if (!MachOObj)
       return MachOObj.takeError();
-    return MachOAtomGraphBuilder_x86_64(**MachOObj).buildGraph();
+    return MachOLinkGraphBuilder_x86_64(**MachOObj).buildGraph();
   }
 
-  static Error targetOutOfRangeError(const Atom &A, const Edge &E) {
+  static Error targetOutOfRangeError(const Block &B, const Edge &E) {
     std::string ErrMsg;
     {
       raw_string_ostream ErrStream(ErrMsg);
       ErrStream << "Relocation target out of range: ";
-      printEdge(ErrStream, A, E, getMachOX86RelocationKindName(E.getKind()));
+      printEdge(ErrStream, B, E, getMachOX86RelocationKindName(E.getKind()));
       ErrStream << "\n";
     }
     return make_error<JITLinkError>(std::move(ErrMsg));
   }
 
-  Error applyFixup(DefinedAtom &A, const Edge &E, char *AtomWorkingMem) const {
+  Error applyFixup(Block &B, const Edge &E, char *BlockWorkingMem) const {
+
     using namespace support;
 
-    char *FixupPtr = AtomWorkingMem + E.getOffset();
-    JITTargetAddress FixupAddress = A.getAddress() + E.getOffset();
+    char *FixupPtr = BlockWorkingMem + E.getOffset();
+    JITTargetAddress FixupAddress = B.getAddress() + E.getOffset();
 
     switch (E.getKind()) {
     case Branch32:
@@ -484,7 +491,7 @@ private:
           E.getTarget().getAddress() - (FixupAddress + 4) + E.getAddend();
       if (Value < std::numeric_limits<int32_t>::min() ||
           Value > std::numeric_limits<int32_t>::max())
-        return targetOutOfRangeError(A, E);
+        return targetOutOfRangeError(B, E);
       *(little32_t *)FixupPtr = Value;
       break;
     }
@@ -502,7 +509,7 @@ private:
           E.getTarget().getAddress() - (FixupAddress + Delta) + E.getAddend();
       if (Value < std::numeric_limits<int32_t>::min() ||
           Value > std::numeric_limits<int32_t>::max())
-        return targetOutOfRangeError(A, E);
+        return targetOutOfRangeError(B, E);
       *(little32_t *)FixupPtr = Value;
       break;
     }
@@ -514,7 +521,7 @@ private:
           E.getTarget().getAddress() - (FixupAddress + Delta) + E.getAddend();
       if (Value < std::numeric_limits<int32_t>::min() ||
           Value > std::numeric_limits<int32_t>::max())
-        return targetOutOfRangeError(A, E);
+        return targetOutOfRangeError(B, E);
       *(little32_t *)FixupPtr = Value;
       break;
     }
@@ -531,7 +538,7 @@ private:
       if (E.getKind() == Delta32 || E.getKind() == NegDelta32) {
         if (Value < std::numeric_limits<int32_t>::min() ||
             Value > std::numeric_limits<int32_t>::max())
-          return targetOutOfRangeError(A, E);
+          return targetOutOfRangeError(B, E);
         *(little32_t *)FixupPtr = Value;
       } else
         *(little64_t *)FixupPtr = Value;
@@ -540,7 +547,7 @@ private:
     case Pointer32: {
       uint64_t Value = E.getTarget().getAddress() + E.getAddend();
       if (Value > std::numeric_limits<uint32_t>::max())
-        return targetOutOfRangeError(A, E);
+        return targetOutOfRangeError(B, E);
       *(ulittle32_t *)FixupPtr = Value;
       break;
     }
@@ -563,10 +570,10 @@ void jitLink_MachO_x86_64(std::unique_ptr<JITLinkContext> Ctx) {
     if (auto MarkLive = Ctx->getMarkLivePass(TT))
       Config.PrePrunePasses.push_back(std::move(MarkLive));
     else
-      Config.PrePrunePasses.push_back(markAllAtomsLive);
+      Config.PrePrunePasses.push_back(markAllSymbolsLive);
 
     // Add an in-place GOT/Stubs pass.
-    Config.PostPrunePasses.push_back([](AtomGraph &G) -> Error {
+    Config.PostPrunePasses.push_back([](LinkGraph &G) -> Error {
       MachO_x86_64_GOTAndStubsBuilder(G).run();
       return Error::success();
     });

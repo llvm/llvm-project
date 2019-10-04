@@ -1,8 +1,9 @@
 # RUN: yaml2obj %s > %t
 # RUN: llvm-objdump --all-headers %t | FileCheck %s
 
-## Check we print file format, architecture and start address followed by the
-## other data when using --all-headers.
+## Note: --all-headers (-x) is an alias for --archive-headers --file-headers
+## --section-headers --private-headers --reloc --syms (-afhprt). Test for them
+## in the following order which provides GNU objdump compatability.
 
 # CHECK:       file format ELF64-x86-64
 # CHECK-EMPTY:
@@ -13,6 +14,7 @@
 # CHECK: Dynamic Section:
 # CHECK: Sections:
 # CHECK: SYMBOL TABLE:
+# CHECK: RELOCATION RECORDS FOR [.text]:
 
 ## Check how we dump the archives.
 ## Check we dump the appropriate headers for each file in the archive.
@@ -23,26 +25,49 @@
 # RUN: llvm-objdump --all-headers %t.a | FileCheck %s --check-prefix=ARCHIVE
 
 # ARCHIVE: {{.*}}.a({{.*}}):   file format ELF64-x86-64
+# ARCHIVE: rw-r--r--
 # ARCHIVE: architecture: x86_64
 # ARCHIVE: start address: 0x0000000000000000
-# ARCHIVE: rw-r--r--
 # ARCHIVE: Program Header:
 # ARCHIVE: Dynamic Section:
 # ARCHIVE: Sections:
 # ARCHIVE: SYMBOL TABLE:
+# ARCHIVE: RELOCATION RECORDS FOR [.text]:
 # ARCHIVE: {{.*}}.a({{.*}}2):   file format ELF64-x86-64
+# ARCHIVE: rw-r--r--
 # ARCHIVE: architecture: x86_64
 # ARCHIVE: start address: 0x0000000000000000
-# ARCHIVE: rw-r--r--
 # ARCHIVE: Program Header:
 # ARCHIVE: Dynamic Section:
 # ARCHIVE: Sections:
 # ARCHIVE: SYMBOL TABLE:
+# ARCHIVE: RELOCATION RECORDS FOR [.text]:
 
 !ELF
 FileHeader:
   Class:           ELFCLASS64
   Data:            ELFDATA2LSB
-  Type:            ET_EXEC
+  Type:            ET_REL
   Machine:         EM_X86_64
 Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+  - Name: .rel.text
+    Type: SHT_REL
+    Info: .text
+    Relocations:
+      - Offset: 0x1
+        Symbol: foo
+        Type: R_X86_64_32
+  - Name:            .dynamic
+    Type:            SHT_DYNAMIC
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    EntSize:         0x0000000000000010
+    Entries:
+      - Tag:             DT_INIT
+        Value:           0x00000000000006A0
+      - Tag:             DT_NULL
+        Value:           0x0000000000000000
+Symbols:
+  - Name:    foo
+    Section: .text

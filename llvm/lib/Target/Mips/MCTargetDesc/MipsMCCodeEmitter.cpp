@@ -485,8 +485,11 @@ getJumpOffset16OpValue(const MCInst &MI, unsigned OpNo,
   assert(MO.isExpr() &&
          "getJumpOffset16OpValue expects only expressions or an immediate");
 
-   // TODO: Push fixup.
-   return 0;
+  const MCExpr *Expr = MO.getExpr();
+  Mips::Fixups FixupKind =
+      isMicroMips(STI) ? Mips::fixup_MICROMIPS_LO16 : Mips::fixup_Mips_LO16;
+  Fixups.push_back(MCFixup::create(0, Expr, MCFixupKind(FixupKind)));
+  return 0;
 }
 
 /// getJumpTargetOpValue - Return binary encoding of the jump

@@ -64,11 +64,6 @@ template("tablegen") {
     depfile = "$gen_output.d"
     td_file = rebase_path(td_file, root_build_dir)
 
-    # FIXME: The cmake build lets tablegen write to a temp file and then copies
-    # it over the final output only if it has changed, for ninja's restat
-    # optimization. Instead of doing that in cmake, llvm-tblgen should do this
-    # itself. r330742 tried this, but it caused problems. Fix those and reland,
-    # so that the gn build has the optimization too.
     args = [
              rebase_path(tblgen_executable, root_build_dir),
              "-I",

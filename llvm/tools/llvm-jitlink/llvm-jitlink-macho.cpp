@@ -26,53 +26,55 @@ static bool isMachOStubsSection(Section &S) {
   return S.getName() == "$__STUBS";
 }
 
-static Expected<Edge &> getFirstRelocationEdge(AtomGraph &G, DefinedAtom &DA) {
-  auto EItr = std::find_if(DA.edges().begin(), DA.edges().end(),
+static Expected<Edge &> getFirstRelocationEdge(LinkGraph &G, Block &B) {
+  auto EItr = std::find_if(B.edges().begin(), B.edges().end(),
                            [](Edge &E) { return E.isRelocation(); });
-  if (EItr == DA.edges().end())
+  if (EItr == B.edges().end())
     return make_error<StringError>("GOT entry in " + G.getName() + ", \"" +
-                                       DA.getSection().getName() +
+                                       B.getSection().getName() +
                                        "\" has no relocations",
                                    inconvertibleErrorCode());
   return *EItr;
 }
 
-static Expected<Atom &> getMachOGOTTarget(AtomGraph &G, DefinedAtom &DA) {
-  auto E = getFirstRelocationEdge(G, DA);
+static Expected<Symbol &> getMachOGOTTarget(LinkGraph &G, Block &B) {
+  auto E = getFirstRelocationEdge(G, B);
   if (!E)
     return E.takeError();
-  auto &TA = E->getTarget();
-  if (!TA.hasName())
-    return make_error<StringError>("GOT entry in " + G.getName() + ", \"" +
-                                       DA.getSection().getName() +
-                                       "\" points to anonymous "
-                                       "atom",
-                                   inconvertibleErrorCode());
-  if (TA.isDefined() || TA.isAbsolute())
+  auto &TargetSym = E->getTarget();
+  if (!TargetSym.hasName())
     return make_error<StringError>(
-        "GOT entry \"" + TA.getName() + "\" in " + G.getName() + ", \"" +
-            DA.getSection().getName() + "\" does not point to an external atom",
+        "GOT entry in " + G.getName() + ", \"" +
+            TargetSym.getBlock().getSection().getName() +
+            "\" points to anonymous "
+            "symbol",
         inconvertibleErrorCode());
-  return TA;
+  if (TargetSym.isDefined() || TargetSym.isAbsolute())
+    return make_error<StringError>(
+        "GOT entry \"" + TargetSym.getName() + "\" in " + G.getName() + ", \"" +
+            TargetSym.getBlock().getSection().getName() +
+            "\" does not point to an external symbol",
+        inconvertibleErrorCode());
+  return TargetSym;
 }
 
-static Expected<Atom &> getMachOStubTarget(AtomGraph &G, DefinedAtom &DA) {
-  auto E = getFirstRelocationEdge(G, DA);
+static Expected<Symbol &> getMachOStubTarget(LinkGraph &G, Block &B) {
+  auto E = getFirstRelocationEdge(G, B);
   if (!E)
     return E.takeError();
-  auto &GOTA = E->getTarget();
-  if (!GOTA.isDefined() ||
-      !isMachOGOTSection(static_cast<DefinedAtom &>(GOTA).getSection()))
-    return make_error<StringError>("Stubs entry in " + G.getName() + ", \"" +
-                                       DA.getSection().getName() +
-                                       "\" does not point to GOT entry",
-                                   inconvertibleErrorCode());
-  return getMachOGOTTarget(G, static_cast<DefinedAtom &>(GOTA));
+  auto &GOTSym = E->getTarget();
+  if (!GOTSym.isDefined() || !isMachOGOTSection(GOTSym.getBlock().getSection()))
+    return make_error<StringError>(
+        "Stubs entry in " + G.getName() + ", \"" +
+            GOTSym.getBlock().getSection().getName() +
+            "\" does not point to GOT entry",
+        inconvertibleErrorCode());
+  return getMachOGOTTarget(G, GOTSym.getBlock());
 }
 
 namespace llvm {
 
-Error registerMachOStubsAndGOT(Session &S, AtomGraph &G) {
+Error registerMachOStubsAndGOT(Session &S, LinkGraph &G) {
   auto FileName = sys::path::filename(G.getName());
   if (S.FileInfos.count(FileName)) {
     return make_error<StringError>("When -check is passed, file names must be "
@@ -88,12 +90,12 @@ Error registerMachOStubsAndGOT(Session &S, AtomGraph &G) {
   for (auto &Sec : G.sections()) {
     LLVM_DEBUG({
       dbgs() << "  Section \"" << Sec.getName() << "\": "
-             << (Sec.atoms_empty() ? "empty. skipping." : "processing...")
+             << (Sec.symbols_empty() ? "empty. skipping." : "processing...")
              << "\n";
     });
 
     // Skip empty sections.
-    if (Sec.atoms_empty())
+    if (Sec.symbols_empty())
       continue;
 
     if (FileInfo.SectionInfos.count(Sec.getName()))
@@ -105,54 +107,65 @@ Error registerMachOStubsAndGOT(Session &S, AtomGraph &G) {
     bool isGOTSection = isMachOGOTSection(Sec);
     bool isStubsSection = isMachOStubsSection(Sec);
 
-    auto *FirstAtom = *Sec.atoms().begin();
-    auto *LastAtom = FirstAtom;
-    for (auto *DA : Sec.atoms()) {
-      if (DA->getAddress() < FirstAtom->getAddress())
-        FirstAtom = DA;
-      if (DA->getAddress() > LastAtom->getAddress())
-        LastAtom = DA;
+    bool SectionContainsContent = false;
+    bool SectionContainsZeroFill = false;
+
+    auto *FirstSym = *Sec.symbols().begin();
+    auto *LastSym = FirstSym;
+    for (auto *Sym : Sec.symbols()) {
+      if (Sym->getAddress() < FirstSym->getAddress())
+        FirstSym = Sym;
+      if (Sym->getAddress() > LastSym->getAddress())
+        LastSym = Sym;
       if (isGOTSection) {
-        if (Sec.isZeroFill())
-          return make_error<StringError>("Content atom in zero-fill section",
+        if (Sym->isSymbolZeroFill())
+          return make_error<StringError>("zero-fill atom in GOT section",
                                          inconvertibleErrorCode());
 
-        if (auto TA = getMachOGOTTarget(G, *DA)) {
-          FileInfo.GOTEntryInfos[TA->getName()] = {DA->getContent(),
-                                                   DA->getAddress()};
-        } else
-          return TA.takeError();
-      } else if (isStubsSection) {
-        if (Sec.isZeroFill())
-          return make_error<StringError>("Content atom in zero-fill section",
-                                         inconvertibleErrorCode());
-
-        if (auto TA = getMachOStubTarget(G, *DA))
-          FileInfo.StubInfos[TA->getName()] = {DA->getContent(),
-                                               DA->getAddress()};
+        if (auto TS = getMachOGOTTarget(G, Sym->getBlock()))
+          FileInfo.GOTEntryInfos[TS->getName()] = {Sym->getSymbolContent(),
+                                                   Sym->getAddress()};
         else
-          return TA.takeError();
-      } else if (DA->hasName() && DA->isGlobal()) {
-        if (DA->isZeroFill())
-          S.SymbolInfos[DA->getName()] = {DA->getSize(), DA->getAddress()};
-        else {
-          if (Sec.isZeroFill())
-            return make_error<StringError>("Content atom in zero-fill section",
-                                           inconvertibleErrorCode());
-          S.SymbolInfos[DA->getName()] = {DA->getContent(), DA->getAddress()};
+          return TS.takeError();
+        SectionContainsContent = true;
+      } else if (isStubsSection) {
+        if (Sym->isSymbolZeroFill())
+          return make_error<StringError>("zero-fill atom in Stub section",
+                                         inconvertibleErrorCode());
+
+        if (auto TS = getMachOStubTarget(G, Sym->getBlock()))
+          FileInfo.StubInfos[TS->getName()] = {Sym->getSymbolContent(),
+                                               Sym->getAddress()};
+        else
+          return TS.takeError();
+        SectionContainsContent = true;
+      } else if (Sym->hasName()) {
+        if (Sym->isSymbolZeroFill()) {
+          S.SymbolInfos[Sym->getName()] = {Sym->getSize(), Sym->getAddress()};
+          SectionContainsZeroFill = true;
+        } else {
+          S.SymbolInfos[Sym->getName()] = {Sym->getSymbolContent(),
+                                           Sym->getAddress()};
+          SectionContainsContent = true;
         }
       }
     }
 
-    JITTargetAddress SecAddr = FirstAtom->getAddress();
-    uint64_t SecSize = (LastAtom->getAddress() + LastAtom->getSize()) -
-                       FirstAtom->getAddress();
+    JITTargetAddress SecAddr = FirstSym->getAddress();
+    uint64_t SecSize =
+        (LastSym->getBlock().getAddress() + LastSym->getBlock().getSize()) -
+        SecAddr;
 
-    if (Sec.isZeroFill())
+    if (SectionContainsZeroFill && SectionContainsContent)
+      return make_error<StringError>("Mixed zero-fill and content sections not "
+                                     "supported yet",
+                                     inconvertibleErrorCode());
+    if (SectionContainsZeroFill)
       FileInfo.SectionInfos[Sec.getName()] = {SecSize, SecAddr};
     else
       FileInfo.SectionInfos[Sec.getName()] = {
-          StringRef(FirstAtom->getContent().data(), SecSize), SecAddr};
+          StringRef(FirstSym->getBlock().getContent().data(), SecSize),
+          SecAddr};
   }
 
   return Error::success();

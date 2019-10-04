@@ -3087,15 +3087,15 @@ static bool mergeConditionalStoreToAddress(BasicBlock *PTB, BasicBlock *PFB,
   // store that doesn't execute.
   if (MinAlignment != 0) {
     // Choose the minimum of all non-zero alignments.
-    SI->setAlignment(MinAlignment);
+    SI->setAlignment(Align(MinAlignment));
   } else if (MaxAlignment != 0) {
     // Choose the minimal alignment between the non-zero alignment and the ABI
     // default alignment for the type of the stored value.
-    SI->setAlignment(std::min(MaxAlignment, TypeAlignment));
+    SI->setAlignment(Align(std::min(MaxAlignment, TypeAlignment)));
   } else {
     // If both alignments are zero, use ABI default alignment for the type of
     // the stored value.
-    SI->setAlignment(TypeAlignment);
+    SI->setAlignment(Align(TypeAlignment));
   }
 
   QStore->eraseFromParent();

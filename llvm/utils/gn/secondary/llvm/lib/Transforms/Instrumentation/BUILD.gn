@@ -26,5 +26,6 @@ static_library("Instrumentation") {
     "PoisonChecking.cpp",
     "SanitizerCoverage.cpp",
     "ThreadSanitizer.cpp",
+    "ValueProfileCollector.cpp",
   ]
 }

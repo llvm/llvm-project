@@ -8,8 +8,8 @@ bar:
 .symidx	bar
 .symidx	foo
 
-// CHECK:      Contents of section .data:
-// CHECK-NEXT:  0000 0[[BAR:[1-9]]]000000 0[[FOO:[1-9]]]000000
 // CHECK:      SYMBOL TABLE:
-// CHECK:      [ [[FOO]]](sec  1)(fl 0x00)(ty   0)(scl   3) (nx 0) 0x00000000 foo
-// CHECK-NEXT: [ [[BAR]]](sec  1)(fl 0x00)(ty   0)(scl   3) (nx 0) 0x00000001 bar
+// CHECK:      [ [[FOO:[1-9]]]](sec  1)(fl 0x00)(ty   0)(scl   3) (nx 0) 0x00000000 foo
+// CHECK-NEXT: [ [[BAR:[1-9]]]](sec  1)(fl 0x00)(ty   0)(scl   3) (nx 0) 0x00000001 bar
+// CHECK:      Contents of section .data:
+// CHECK-NEXT:  0000 0[[BAR]]000000 0[[FOO]]000000

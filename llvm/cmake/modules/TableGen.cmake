@@ -23,7 +23,7 @@ function(tablegen project ofn)
     file(RELATIVE_PATH ofn_rel
       ${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_BINARY_DIR}/${ofn})
     set(additional_cmdline
-      -o ${ofn_rel}.tmp
+      -o ${ofn_rel}
       -d ${ofn_rel}.d
       WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
       DEPFILE ${CMAKE_CURRENT_BINARY_DIR}/${ofn}.d
@@ -34,7 +34,7 @@ function(tablegen project ofn)
     file(GLOB local_tds "*.td")
     file(GLOB_RECURSE global_tds "${LLVM_MAIN_INCLUDE_DIR}/llvm/*.td")
     set(additional_cmdline
-      -o ${CMAKE_CURRENT_BINARY_DIR}/${ofn}.tmp
+      -o ${CMAKE_CURRENT_BINARY_DIR}/${ofn}
       )
   endif()
 
@@ -58,6 +58,15 @@ function(tablegen project ofn)
     endif()
   endif()
 
+  if (CMAKE_GENERATOR MATCHES "Visual Studio")
+    # Visual Studio has problems with llvm-tblgen's native --write-if-changed
+    # behavior. Since it doesn't do restat optimizations anyway, just don't
+    # pass --write-if-changed there.
+    set(tblgen_change_flag)
+  else()
+    set(tblgen_change_flag "--write-if-changed")
+  endif()
+
   # We need both _TABLEGEN_TARGET and _TABLEGEN_EXE in the  DEPENDS list
   # (both the target and the file) to have .inc files rebuilt on
   # a tablegen change, as cmake does not propagate file-level dependencies
@@ -67,11 +76,11 @@ function(tablegen project ofn)
   # dependency twice in the result file when
   # ("${${project}_TABLEGEN_TARGET}" STREQUAL "${${project}_TABLEGEN_EXE}")
   # but lets us having smaller and cleaner code here.
-  add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${ofn}.tmp
-    # Generate tablegen output in a temporary file.
+  add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${ofn}
     COMMAND ${${project}_TABLEGEN_EXE} ${ARGN} -I ${CMAKE_CURRENT_SOURCE_DIR}
     ${LLVM_TABLEGEN_FLAGS}
     ${LLVM_TARGET_DEFINITIONS_ABSOLUTE}
+    ${tblgen_change_flag}
     ${additional_cmdline}
     # The file in LLVM_TARGET_DEFINITIONS may be not in the current
     # directory and local_tds may not contain it, so we must
@@ -81,20 +90,9 @@ function(tablegen project ofn)
     ${LLVM_TARGET_DEFINITIONS_ABSOLUTE}
     COMMENT "Building ${ofn}..."
     )
-  add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${ofn}
-    # Only update the real output file if there are any differences.
-    # This prevents recompilation of all the files depending on it if there
-    # aren't any.
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        ${CMAKE_CURRENT_BINARY_DIR}/${ofn}.tmp
-        ${CMAKE_CURRENT_BINARY_DIR}/${ofn}
-    DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${ofn}.tmp
-    COMMENT "Updating ${ofn}..."
-    )
 
   # `make clean' must remove all those generated files:
-  set_property(DIRECTORY APPEND
-    PROPERTY ADDITIONAL_MAKE_CLEAN_FILES ${ofn}.tmp ${ofn})
+  set_property(DIRECTORY APPEND PROPERTY ADDITIONAL_MAKE_CLEAN_FILES ${ofn})
 
   set(TABLEGEN_OUTPUT ${TABLEGEN_OUTPUT} ${CMAKE_CURRENT_BINARY_DIR}/${ofn} PARENT_SCOPE)
   set_source_files_properties(${CMAKE_CURRENT_BINARY_DIR}/${ofn} PROPERTIES

@@ -61,6 +61,10 @@ InProcessMemoryManager::allocate(const SegmentsRequestMap &Request) {
     AllocationMap SegBlocks;
   };
 
+  if (!isPowerOf2_64((uint64_t)sys::Process::getPageSizeEstimate()))
+    return make_error<StringError>("Page size is not a power of 2",
+                                   inconvertibleErrorCode());
+
   AllocationMap Blocks;
   const sys::Memory::ProtectionFlags ReadWrite =
       static_cast<sys::Memory::ProtectionFlags>(sys::Memory::MF_READ |
@@ -69,19 +73,12 @@ InProcessMemoryManager::allocate(const SegmentsRequestMap &Request) {
   for (auto &KV : Request) {
     auto &Seg = KV.second;
 
-    if (Seg.getContentAlignment() > sys::Process::getPageSizeEstimate())
+    if (Seg.getAlignment() > sys::Process::getPageSizeEstimate())
       return make_error<StringError>("Cannot request higher than page "
                                      "alignment",
                                      inconvertibleErrorCode());
 
-    if (sys::Process::getPageSizeEstimate() % Seg.getContentAlignment() != 0)
-      return make_error<StringError>("Page size is not a multiple of "
-                                     "alignment",
-                                     inconvertibleErrorCode());
-
-    uint64_t ZeroFillStart =
-        alignTo(Seg.getContentSize(), Seg.getZeroFillAlignment());
-    uint64_t SegmentSize = ZeroFillStart + Seg.getZeroFillSize();
+    uint64_t SegmentSize = Seg.getContentSize() + Seg.getZeroFillSize();
 
     std::error_code EC;
     auto SegMem =
@@ -91,7 +88,7 @@ InProcessMemoryManager::allocate(const SegmentsRequestMap &Request) {
       return errorCodeToError(EC);
 
     // Zero out the zero-fill memory.
-    memset(static_cast<char *>(SegMem.base()) + ZeroFillStart, 0,
+    memset(static_cast<char *>(SegMem.base()) + Seg.getContentSize(), 0,
            Seg.getZeroFillSize());
 
     // Record the block for this segment.

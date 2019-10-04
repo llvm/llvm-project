@@ -84,7 +84,7 @@ loop:
 }
 
 ; But can hoist if the side effect is hoisted with MSSA
-define void @test2b_prime(i1 %cond, i32* %ptr) {
+define void @test2b_prime(i1 %cond, i32* noalias %ptr) {
 ; MSSA-LABEL: @test2b_prime(
 ; MSSA-NEXT:  entry:
 ; MSSA-NEXT:    [[P2:%.*]] = getelementptr i32, i32* [[PTR:%.*]], i32 1

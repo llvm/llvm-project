@@ -226,7 +226,7 @@ raw_ostream &operator<<(raw_ostream &OS, const SymbolAliasMap &Aliases) {
   for (auto &KV : Aliases)
     OS << " " << *KV.first << ": " << KV.second.Aliasee << " "
        << KV.second.AliasFlags;
-  OS << " }\n";
+  OS << " }";
   return OS;
 }
 
@@ -378,15 +378,12 @@ Error MaterializationResponsibility::notifyResolved(const SymbolMap &Symbols) {
   });
 #ifndef NDEBUG
   for (auto &KV : Symbols) {
+    auto WeakFlags = JITSymbolFlags::Weak | JITSymbolFlags::Common;
     auto I = SymbolFlags.find(KV.first);
     assert(I != SymbolFlags.end() &&
            "Resolving symbol outside this responsibility set");
-    if (I->second.isWeak())
-      assert(I->second == (KV.second.getFlags() | JITSymbolFlags::Weak) &&
-             "Resolving symbol with incorrect flags");
-    else
-      assert(I->second == KV.second.getFlags() &&
-             "Resolving symbol with incorrect flags");
+    assert((KV.second.getFlags() & ~WeakFlags) == (I->second & ~WeakFlags) &&
+           "Resolving symbol with incorrect flags");
   }
 #endif
 
@@ -949,11 +946,14 @@ Error JITDylib::resolve(const SymbolMap &Resolved) {
       if (SymI->second.getFlags().hasError())
         SymbolsInErrorState.insert(KV.first);
       else {
-        assert((KV.second.getFlags() & ~JITSymbolFlags::Weak) ==
-                   (SymI->second.getFlags() & ~JITSymbolFlags::Weak) &&
+        auto Flags = KV.second.getFlags();
+        Flags &= ~(JITSymbolFlags::Weak | JITSymbolFlags::Common);
+        assert(Flags == (SymI->second.getFlags() &
+                         ~(JITSymbolFlags::Weak | JITSymbolFlags::Common)) &&
                "Resolved flags should match the declared flags");
 
-        Worklist.push_back({SymI, KV.second});
+        Worklist.push_back(
+            {SymI, JITEvaluatedSymbol(KV.second.getAddress(), Flags)});
       }
     }
 
@@ -970,7 +970,6 @@ Error JITDylib::resolve(const SymbolMap &Resolved) {
 
       // Resolved symbols can not be weak: discard the weak flag.
       JITSymbolFlags ResolvedFlags = ResolvedSym.getFlags();
-      ResolvedFlags &= ~JITSymbolFlags::Weak;
       SymI->second.setAddress(ResolvedSym.getAddress());
       SymI->second.setFlags(ResolvedFlags);
       SymI->second.setState(SymbolState::Resolved);

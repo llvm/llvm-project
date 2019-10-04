@@ -1887,6 +1887,17 @@ bool LowerTypeTestsModule::lower() {
         CfiFunctionLinkage Linkage = P.second.Linkage;
         MDNode *FuncMD = P.second.FuncMD;
         Function *F = M.getFunction(FunctionName);
+        if (F && F->hasLocalLinkage()) {
+          // Locally defined function that happens to have the same name as a
+          // function defined in a ThinLTO module. Rename it to move it out of
+          // the way of the external reference that we're about to create.
+          // Note that setName will find a unique name for the function, so even
+          // if there is an existing function with the suffix there won't be a
+          // name collision.
+          F->setName(F->getName() + ".1");
+          F = nullptr;
+        }
+
         if (!F)
           F = Function::Create(
               FunctionType::get(Type::getVoidTy(M.getContext()), false),

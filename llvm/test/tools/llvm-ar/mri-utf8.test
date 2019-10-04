@@ -12,8 +12,4 @@ RUN: echo "SAVE" >> %t/script.mri
 RUN: llvm-ar -M < %t/script.mri
 RUN: cd %t/extracted && llvm-ar x %t/mri.ar
 
-# This works around problems launching processess that
-# include arguments with non-ascii characters.
-# Python on Linux defaults to ASCII encoding unless the
-# environment specifies otherwise, so it is explicitly set.
-RUN: env LANG=en_US.UTF-8 %python -c "assert open(u'\U000000A3.txt', 'rb').read() == b'contents\n'"
+RUN: %python -c "assert open(b'\xC2\xA3.txt', 'rb').read() == b'contents\n'"

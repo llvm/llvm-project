@@ -41,7 +41,7 @@ public:
   }
 
   void lookup(const DenseSet<StringRef> &Symbols,
-              JITLinkAsyncLookupContinuation LookupContinuation) override {
+              std::unique_ptr<JITLinkAsyncLookupContinuation> LC) override {
 
     JITDylibSearchList SearchOrder;
     MR.getTargetJITDylib().withSearchOrderDo(
@@ -54,19 +54,16 @@ public:
       InternedSymbols.insert(ES.intern(S));
 
     // OnResolve -- De-intern the symbols and pass the result to the linker.
-    // FIXME: Capture LookupContinuation by move once we have c++14.
-    auto SharedLookupContinuation =
-        std::make_shared<JITLinkAsyncLookupContinuation>(
-            std::move(LookupContinuation));
-    auto OnResolve = [this, SharedLookupContinuation](Expected<SymbolMap> Result) {
+    auto OnResolve = [this, LookupContinuation = std::move(LC)](
+                         Expected<SymbolMap> Result) mutable {
       auto Main = Layer.getExecutionSession().intern("_main");
       if (!Result)
-        (*SharedLookupContinuation)(Result.takeError());
+        LookupContinuation->run(Result.takeError());
       else {
         AsyncLookupResult LR;
         for (auto &KV : *Result)
           LR[*KV.first] = KV.second;
-        (*SharedLookupContinuation)(std::move(LR));
+        LookupContinuation->run(std::move(LR));
       }
     };
 
@@ -76,29 +73,25 @@ public:
               });
   }
 
-  void notifyResolved(AtomGraph &G) override {
+  void notifyResolved(LinkGraph &G) override {
     auto &ES = Layer.getExecutionSession();
 
     SymbolFlagsMap ExtraSymbolsToClaim;
     bool AutoClaim = Layer.AutoClaimObjectSymbols;
 
     SymbolMap InternedResult;
-    for (auto *DA : G.defined_atoms())
-      if (DA->hasName() && DA->isGlobal()) {
-        auto InternedName = ES.intern(DA->getName());
+    for (auto *Sym : G.defined_symbols())
+      if (Sym->hasName() && Sym->getScope() != Scope::Local) {
+        auto InternedName = ES.intern(Sym->getName());
         JITSymbolFlags Flags;
 
-        if (DA->isExported())
-          Flags |= JITSymbolFlags::Exported;
-        if (DA->isWeak())
-          Flags |= JITSymbolFlags::Weak;
-        if (DA->isCallable())
+        if (Sym->isCallable())
           Flags |= JITSymbolFlags::Callable;
-        if (DA->isCommon())
-          Flags |= JITSymbolFlags::Common;
+        if (Sym->getScope() == Scope::Default)
+          Flags |= JITSymbolFlags::Exported;
 
         InternedResult[InternedName] =
-            JITEvaluatedSymbol(DA->getAddress(), Flags);
+            JITEvaluatedSymbol(Sym->getAddress(), Flags);
         if (AutoClaim && !MR.getSymbols().count(InternedName)) {
           assert(!ExtraSymbolsToClaim.count(InternedName) &&
                  "Duplicate symbol to claim?");
@@ -106,17 +99,17 @@ public:
         }
       }
 
-    for (auto *A : G.absolute_atoms())
-      if (A->hasName()) {
-        auto InternedName = ES.intern(A->getName());
+    for (auto *Sym : G.absolute_symbols())
+      if (Sym->hasName()) {
+        auto InternedName = ES.intern(Sym->getName());
         JITSymbolFlags Flags;
         Flags |= JITSymbolFlags::Absolute;
-        if (A->isWeak())
-          Flags |= JITSymbolFlags::Weak;
-        if (A->isCallable())
+        if (Sym->isCallable())
           Flags |= JITSymbolFlags::Callable;
+        if (Sym->getLinkage() == Linkage::Weak)
+          Flags |= JITSymbolFlags::Weak;
         InternedResult[InternedName] =
-            JITEvaluatedSymbol(A->getAddress(), Flags);
+            JITEvaluatedSymbol(Sym->getAddress(), Flags);
         if (AutoClaim && !MR.getSymbols().count(InternedName)) {
           assert(!ExtraSymbolsToClaim.count(InternedName) &&
                  "Duplicate symbol to claim?");
@@ -148,17 +141,17 @@ public:
     }
   }
 
-  AtomGraphPassFunction getMarkLivePass(const Triple &TT) const override {
-    return [this](AtomGraph &G) { return markResponsibilitySymbolsLive(G); };
+  LinkGraphPassFunction getMarkLivePass(const Triple &TT) const override {
+    return [this](LinkGraph &G) { return markResponsibilitySymbolsLive(G); };
   }
 
   Error modifyPassConfig(const Triple &TT, PassConfiguration &Config) override {
     // Add passes to mark duplicate defs as should-discard, and to walk the
-    // atom graph to build the symbol dependence graph.
+    // link graph to build the symbol dependence graph.
     Config.PrePrunePasses.push_back(
-        [this](AtomGraph &G) { return markSymbolsToDiscard(G); });
+        [this](LinkGraph &G) { return externalizeWeakAndCommonSymbols(G); });
     Config.PostPrunePasses.push_back(
-        [this](AtomGraph &G) { return computeNamedSymbolDependencies(G); });
+        [this](LinkGraph &G) { return computeNamedSymbolDependencies(G); });
 
     Layer.modifyPassConfig(MR, TT, Config);
 
@@ -166,65 +159,59 @@ public:
   }
 
 private:
-  using AnonAtomNamedDependenciesMap =
-      DenseMap<const DefinedAtom *, SymbolNameSet>;
+  using AnonToNamedDependenciesMap = DenseMap<const Symbol *, SymbolNameSet>;
 
-  Error markSymbolsToDiscard(AtomGraph &G) {
+  Error externalizeWeakAndCommonSymbols(LinkGraph &G) {
     auto &ES = Layer.getExecutionSession();
-    for (auto *DA : G.defined_atoms())
-      if (DA->isWeak() && DA->hasName()) {
-        auto S = ES.intern(DA->getName());
-        auto I = MR.getSymbols().find(S);
-        if (I == MR.getSymbols().end())
-          DA->setShouldDiscard(true);
+    for (auto *Sym : G.defined_symbols())
+      if (Sym->hasName() && Sym->getLinkage() == Linkage::Weak) {
+        if (!MR.getSymbols().count(ES.intern(Sym->getName())))
+          G.makeExternal(*Sym);
       }
 
-    for (auto *A : G.absolute_atoms())
-      if (A->isWeak() && A->hasName()) {
-        auto S = ES.intern(A->getName());
-        auto I = MR.getSymbols().find(S);
-        if (I == MR.getSymbols().end())
-          A->setShouldDiscard(true);
+    for (auto *Sym : G.absolute_symbols())
+      if (Sym->hasName() && Sym->getLinkage() == Linkage::Weak) {
+        if (!MR.getSymbols().count(ES.intern(Sym->getName())))
+          G.makeExternal(*Sym);
       }
 
     return Error::success();
   }
 
-  Error markResponsibilitySymbolsLive(AtomGraph &G) const {
+  Error markResponsibilitySymbolsLive(LinkGraph &G) const {
     auto &ES = Layer.getExecutionSession();
-    for (auto *DA : G.defined_atoms())
-      if (DA->hasName() &&
-          MR.getSymbols().count(ES.intern(DA->getName())))
-        DA->setLive(true);
+    for (auto *Sym : G.defined_symbols())
+      if (Sym->hasName() && MR.getSymbols().count(ES.intern(Sym->getName())))
+        Sym->setLive(true);
     return Error::success();
   }
 
-  Error computeNamedSymbolDependencies(AtomGraph &G) {
+  Error computeNamedSymbolDependencies(LinkGraph &G) {
     auto &ES = MR.getTargetJITDylib().getExecutionSession();
     auto AnonDeps = computeAnonDeps(G);
 
-    for (auto *DA : G.defined_atoms()) {
+    for (auto *Sym : G.defined_symbols()) {
 
       // Skip anonymous and non-global atoms: we do not need dependencies for
       // these.
-      if (!DA->hasName() || !DA->isGlobal())
+      if (Sym->getScope() == Scope::Local)
         continue;
 
-      auto DAName = ES.intern(DA->getName());
-      SymbolNameSet &DADeps = NamedSymbolDeps[DAName];
+      auto SymName = ES.intern(Sym->getName());
+      SymbolNameSet &SymDeps = NamedSymbolDeps[SymName];
 
-      for (auto &E : DA->edges()) {
-        auto &TA = E.getTarget();
+      for (auto &E : Sym->getBlock().edges()) {
+        auto &TargetSym = E.getTarget();
 
-        if (TA.hasName())
-          DADeps.insert(ES.intern(TA.getName()));
+        if (TargetSym.getScope() != Scope::Local)
+          SymDeps.insert(ES.intern(TargetSym.getName()));
         else {
-          assert(TA.isDefined() && "Anonymous atoms must be defined");
-          auto &DTA = static_cast<DefinedAtom &>(TA);
-          auto I = AnonDeps.find(&DTA);
+          assert(TargetSym.isDefined() &&
+                 "Anonymous/local symbols must be defined");
+          auto I = AnonDeps.find(&TargetSym);
           if (I != AnonDeps.end())
             for (auto &S : I->second)
-              DADeps.insert(S);
+              SymDeps.insert(S);
         }
       }
     }
@@ -232,58 +219,59 @@ private:
     return Error::success();
   }
 
-  AnonAtomNamedDependenciesMap computeAnonDeps(AtomGraph &G) {
+  AnonToNamedDependenciesMap computeAnonDeps(LinkGraph &G) {
 
     auto &ES = MR.getTargetJITDylib().getExecutionSession();
-    AnonAtomNamedDependenciesMap DepMap;
+    AnonToNamedDependenciesMap DepMap;
 
-    // For all anonymous atoms:
+    // For all anonymous symbols:
     // (1) Add their named dependencies.
     // (2) Add them to the worklist for further iteration if they have any
-    //     depend on any other anonymous atoms.
+    //     depend on any other anonymous symbols.
     struct WorklistEntry {
-      WorklistEntry(DefinedAtom *DA, DenseSet<DefinedAtom *> DAAnonDeps)
-          : DA(DA), DAAnonDeps(std::move(DAAnonDeps)) {}
+      WorklistEntry(Symbol *Sym, DenseSet<Symbol *> SymAnonDeps)
+          : Sym(Sym), SymAnonDeps(std::move(SymAnonDeps)) {}
 
-      DefinedAtom *DA = nullptr;
-      DenseSet<DefinedAtom *> DAAnonDeps;
+      Symbol *Sym = nullptr;
+      DenseSet<Symbol *> SymAnonDeps;
     };
     std::vector<WorklistEntry> Worklist;
-    for (auto *DA : G.defined_atoms())
-      if (!DA->hasName()) {
-        auto &DANamedDeps = DepMap[DA];
-        DenseSet<DefinedAtom *> DAAnonDeps;
+    for (auto *Sym : G.defined_symbols())
+      if (!Sym->hasName()) {
+        auto &SymNamedDeps = DepMap[Sym];
+        DenseSet<Symbol *> SymAnonDeps;
 
-        for (auto &E : DA->edges()) {
-          auto &TA = E.getTarget();
-          if (TA.hasName())
-            DANamedDeps.insert(ES.intern(TA.getName()));
+        for (auto &E : Sym->getBlock().edges()) {
+          auto &TargetSym = E.getTarget();
+          if (TargetSym.hasName())
+            SymNamedDeps.insert(ES.intern(TargetSym.getName()));
           else {
-            assert(TA.isDefined() && "Anonymous atoms must be defined");
-            DAAnonDeps.insert(static_cast<DefinedAtom *>(&TA));
+            assert(TargetSym.isDefined() &&
+                   "Anonymous symbols must be defined");
+            SymAnonDeps.insert(&TargetSym);
           }
         }
 
-        if (!DAAnonDeps.empty())
-          Worklist.push_back(WorklistEntry(DA, std::move(DAAnonDeps)));
+        if (!SymAnonDeps.empty())
+          Worklist.push_back(WorklistEntry(Sym, std::move(SymAnonDeps)));
       }
 
-    // Loop over all anonymous atoms with anonymous dependencies, propagating
+    // Loop over all anonymous symbols with anonymous dependencies, propagating
     // their respective *named* dependencies. Iterate until we hit a stable
     // state.
     bool Changed;
     do {
       Changed = false;
       for (auto &WLEntry : Worklist) {
-        auto *DA = WLEntry.DA;
-        auto &DANamedDeps = DepMap[DA];
-        auto &DAAnonDeps = WLEntry.DAAnonDeps;
+        auto *Sym = WLEntry.Sym;
+        auto &SymNamedDeps = DepMap[Sym];
+        auto &SymAnonDeps = WLEntry.SymAnonDeps;
 
-        for (auto *TA : DAAnonDeps) {
-          auto I = DepMap.find(TA);
+        for (auto *TargetSym : SymAnonDeps) {
+          auto I = DepMap.find(TargetSym);
           if (I != DepMap.end())
             for (const auto &S : I->second)
-              Changed |= DANamedDeps.insert(S).second;
+              Changed |= SymNamedDeps.insert(S).second;
         }
       }
     } while (Changed);
@@ -414,7 +402,7 @@ Error ObjectLinkingLayer::removeAllModules() {
 }
 
 EHFrameRegistrationPlugin::EHFrameRegistrationPlugin(
-    jitlink::EHFrameRegistrar &Registrar)
+    EHFrameRegistrar &Registrar)
     : Registrar(Registrar) {}
 
 void EHFrameRegistrationPlugin::modifyPassConfig(

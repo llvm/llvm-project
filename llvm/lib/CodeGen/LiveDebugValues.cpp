@@ -986,9 +986,6 @@ bool LiveDebugValues::transferTerminator(MachineBasicBlock *CurMBB,
                                          const VarLocMap &VarLocIDs) {
   bool Changed = false;
 
-  if (OpenRanges.empty())
-    return false;
-
   LLVM_DEBUG(for (unsigned ID
                   : OpenRanges.getVarLocs()) {
     // Copy OpenRanges to OutLocs, if not already present.
@@ -1362,11 +1359,6 @@ bool LiveDebugValues::ExtendRanges(MachineFunction &MF) {
                       DebugEntryVals, OverlapFragments, SeenFragments);
         OLChanged |= transferTerminator(MBB, OpenRanges, OutLocs, VarLocIDs);
 
-        // Add any DBG_VALUE instructions necessitated by spills.
-        for (auto &TR : Transfers)
-          MBB->insertAfterBundle(TR.TransferInst->getIterator(), TR.DebugInst);
-        Transfers.clear();
-
         LLVM_DEBUG(printVarLocInMBB(MF, OutLocs, VarLocIDs,
                                     "OutLocs after propagating", dbgs()));
         LLVM_DEBUG(printVarLocInMBB(MF, InLocs, VarLocIDs,
@@ -1386,6 +1378,13 @@ bool LiveDebugValues::ExtendRanges(MachineFunction &MF) {
     // worklist
     assert(Pending.empty() && "Pending should be empty");
   }
+
+  // Add any DBG_VALUE instructions created by location transfers.
+  for (auto &TR : Transfers) {
+    auto *MBB = TR.TransferInst->getParent();
+    MBB->insertAfterBundle(TR.TransferInst->getIterator(), TR.DebugInst);
+  }
+  Transfers.clear();
 
   // Deferred inlocs will not have had any DBG_VALUE insts created; do
   // that now.
