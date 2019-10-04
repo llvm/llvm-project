@@ -120,24 +120,10 @@ Dpu::Dpu(DpuRank *rank, dpu_t *dpu) : m_rank(rank), m_dpu(dpu) {
   nr_of_work_registers_per_thread =
       rank->GetDesc()->dpu.nr_of_work_registers_per_thread;
 
-  uint32_t nr_of_atomic_bits = rank->GetDesc()->dpu.nr_of_atomic_bits;
-  m_context.registers =
-      new uint32_t[nr_of_work_registers_per_thread * nr_threads];
-  m_context.scheduling = new uint8_t[nr_threads];
-  m_context.pcs = new iram_addr_t[nr_threads];
-  m_context.zero_flags = new bool[nr_threads];
-  m_context.carry_flags = new bool[nr_threads];
-  m_context.atomic_register = new bool[nr_of_atomic_bits];
+  m_context = dpu_alloc_dpu_context(dpu_get_rank(dpu));
 }
 
-Dpu::~Dpu() {
-  delete m_context.registers;
-  delete m_context.scheduling;
-  delete m_context.pcs;
-  delete m_context.zero_flags;
-  delete m_context.carry_flags;
-  delete m_context.atomic_register;
-}
+Dpu::~Dpu() { dpu_free_dpu_context(m_context); }
 
 bool Dpu::LoadElf(const FileSpec &elf_file_path) {
   ModuleSP elf_mod(new Module(elf_file_path, k_dpu_arch));
@@ -148,6 +134,22 @@ bool Dpu::LoadElf(const FileSpec &elf_file_path) {
 }
 
 bool Dpu::Boot() {
+  dpu_context_t tmp_context;
+  // Extract a potential context from the dpu structure (that could have been
+  // created by the dpu_loader).
+  dpu_pop_debug_context(m_dpu, &tmp_context);
+
+  // If the dpu contains a context, it means that a core file has been loaded.
+  // In this case, do not do the boot sequence, the dpu is already in a state
+  // ready to be resume with 'dpu_finalize_fault_process_for_dpu'.
+  if (tmp_context != NULL) {
+    // Free our previously allocated context and get the one created by the
+    // dpu_loader.
+    dpu_free_dpu_context(m_context);
+    m_context = tmp_context;
+    return true;
+  }
+
   dpuinstruction_t first_instruction;
   ReadIRAM(0, (void *)(&first_instruction), sizeof(dpuinstruction_t));
 
@@ -186,16 +188,16 @@ bool Dpu::StopThreadsUnlock(bool force) {
   dpu_is_running = false;
 
   for (dpu_thread_t each_thread = 0; each_thread < nr_threads; ++each_thread) {
-    m_context.scheduling[each_thread] = 0xFF;
+    m_context->scheduling[each_thread] = 0xFF;
   }
-  m_context.nr_of_running_threads = 0;
-  m_context.bkp_fault = false;
-  m_context.dma_fault = false;
-  m_context.mem_fault = false;
+  m_context->nr_of_running_threads = 0;
+  m_context->bkp_fault = false;
+  m_context->dma_fault = false;
+  m_context->mem_fault = false;
 
   int ret = DPU_API_SUCCESS;
-  ret |= dpu_initialize_fault_process_for_dpu(m_dpu, &m_context);
-  ret |= dpu_extract_context_for_dpu(m_dpu, &m_context);
+  ret |= dpu_initialize_fault_process_for_dpu(m_dpu, m_context);
+  ret |= dpu_extract_context_for_dpu(m_dpu, m_context);
   return ret == DPU_API_SUCCESS;
 }
 
@@ -226,7 +228,7 @@ StateType Dpu::PollStatus(unsigned int *exit_status) {
   }
   // Needs to be after StopThreadsUnlock to make sure that context is up to
   // date.
-  SetExitStatus(exit_status, &m_context);
+  SetExitStatus(exit_status, m_context);
 
   return result_state;
 }
@@ -245,15 +247,15 @@ static bool IsContextReadyForResumeOrStep(struct _dpu_context_t *context) {
 bool Dpu::ResumeThreads(bool allowed_polling) {
   std::lock_guard<std::mutex> guard(m_rank->GetLock());
 
-  if (!IsContextReadyForResumeOrStep(&m_context))
+  if (!IsContextReadyForResumeOrStep(m_context))
     return false;
 
   int ret = DPU_API_SUCCESS;
   if (registers_has_been_modified) {
-    ret |= dpu_restore_context_for_dpu(m_dpu, &m_context);
+    ret |= dpu_restore_context_for_dpu(m_dpu, m_context);
     registers_has_been_modified = false;
   }
-  ret |= dpu_finalize_fault_process_for_dpu(m_dpu, &m_context);
+  ret |= dpu_finalize_fault_process_for_dpu(m_dpu, m_context);
 
   if (allowed_polling)
     dpu_is_running = true;
@@ -264,29 +266,29 @@ bool Dpu::ResumeThreads(bool allowed_polling) {
 StateType Dpu::StepThread(uint32_t thread_index, unsigned int *exit_status) {
   std::lock_guard<std::mutex> guard(m_rank->GetLock());
 
-  if (!IsContextReadyForResumeOrStep(&m_context))
+  if (!IsContextReadyForResumeOrStep(m_context))
     return StateType::eStateCrashed;
 
   // If the thread is not in the scheduling list, do not try to step it.
   // This behavior is expected as lldb can ask to step one thread and resume all
   // the other, which result in stepping all the thread contained in the
   // scheduling list.
-  if (m_context.scheduling[thread_index] == 0xff)
+  if (m_context->scheduling[thread_index] == 0xff)
     return StateType::eStateStopped;
 
   int ret = DPU_API_SUCCESS;
   if (registers_has_been_modified) {
-    ret |= dpu_restore_context_for_dpu(m_dpu, &m_context);
+    ret |= dpu_restore_context_for_dpu(m_dpu, m_context);
     registers_has_been_modified = false;
   }
   ret |=
-      dpu_execute_thread_step_in_fault_for_dpu(m_dpu, thread_index, &m_context);
-  ret |= dpu_extract_context_for_dpu(m_dpu, &m_context);
+      dpu_execute_thread_step_in_fault_for_dpu(m_dpu, thread_index, m_context);
+  ret |= dpu_extract_context_for_dpu(m_dpu, m_context);
 
   if (ret != DPU_API_SUCCESS)
     return StateType::eStateCrashed;
-  if (m_context.nr_of_running_threads == 0) {
-    SetExitStatus(exit_status, &m_context);
+  if (m_context->nr_of_running_threads == 0) {
+    SetExitStatus(exit_status, m_context);
     return StateType::eStateExited;
   }
   return StateType::eStateStopped;
@@ -346,20 +348,70 @@ bool Dpu::ReadMRAM(uint32_t offset, void *buf, size_t size) {
   return ret == DPU_API_SUCCESS;
 }
 
+bool Dpu::AllocIRAMBuffer(uint8_t **iram, uint32_t *iram_size) {
+  dpu_description_t description = dpu_get_description(dpu_get_rank(m_dpu));
+  uint32_t nb_instructions = description->memories.iram_size;
+  *iram_size = nb_instructions * sizeof(dpuinstruction_t);
+  *iram = new uint8_t[*iram_size];
+  return *iram != NULL;
+}
+
+bool Dpu::FreeIRAMBuffer(uint8_t *iram) {
+  delete[] iram;
+  return true;
+}
+
+bool Dpu::GenerateSaveCore(const char *exe_path, const char *core_file_path,
+                           uint8_t *iram, uint32_t iram_size) {
+  struct dpu_rank_t *rank = dpu_get_rank(m_dpu);
+  dpu_description_t description = dpu_get_description(rank);
+  uint32_t nb_word_in_wram = description->memories.wram_size;
+  uint32_t wram_size = nb_word_in_wram * sizeof(dpuword_t);
+  uint32_t mram_size = description->memories.mram_size;
+  uint8_t *wram = new uint8_t[wram_size];
+  uint8_t *mram = new uint8_t[mram_size];
+
+  dpu_api_status_t status;
+  if (wram != NULL && mram != NULL) {
+    status = dpu_copy_from_wram_for_dpu(m_dpu, (dpuword_t *)wram, 0,
+                                        nb_word_in_wram);
+    if (status != DPU_API_SUCCESS)
+      goto dpu_generate_save_core_exit;
+    status = dpu_copy_from_mram(m_dpu, mram, 0, mram_size, DPU_PRIMARY_MRAM);
+    if (status != DPU_API_SUCCESS)
+      goto dpu_generate_save_core_exit;
+
+    status =
+        dpu_create_core_dump(rank, exe_path, core_file_path, m_context, wram,
+                             mram, iram, wram_size, mram_size, iram_size);
+    if (status != DPU_API_SUCCESS)
+      goto dpu_generate_save_core_exit;
+
+  } else {
+    status = DPU_API_SYSTEM_ERROR;
+  }
+
+dpu_generate_save_core_exit:
+  delete[] wram;
+  delete[] mram;
+
+  return status;
+}
+
 uint32_t *Dpu::ThreadContextRegs(int thread_index) {
-  return m_context.registers + thread_index * nr_of_work_registers_per_thread;
+  return m_context->registers + thread_index * nr_of_work_registers_per_thread;
 }
 
 uint16_t *Dpu::ThreadContextPC(int thread_index) {
-  return m_context.pcs + thread_index;
+  return m_context->pcs + thread_index;
 }
 
 bool *Dpu::ThreadContextZF(int thread_index) {
-  return m_context.zero_flags + thread_index;
+  return m_context->zero_flags + thread_index;
 }
 
 bool *Dpu::ThreadContextCF(int thread_index) {
-  return m_context.carry_flags + thread_index;
+  return m_context->carry_flags + thread_index;
 }
 
 bool *Dpu::ThreadRegistersHasBeenModified() {
@@ -370,23 +422,23 @@ lldb::StateType Dpu::GetThreadState(int thread_index, std::string &description,
                                     lldb::StopReason &stop_reason,
                                     bool stepping) {
   stop_reason = eStopReasonNone;
-  if (m_context.bkp_fault && m_context.bkp_fault_thread_index == thread_index) {
+  if (m_context->bkp_fault && m_context->bkp_fault_thread_index == thread_index) {
     stop_reason = eStopReasonBreakpoint;
     return eStateStopped;
-  } else if (m_context.dma_fault &&
-             m_context.dma_fault_thread_index == thread_index) {
+  } else if (m_context->dma_fault &&
+             m_context->dma_fault_thread_index == thread_index) {
     description = "dma fault";
     stop_reason = eStopReasonException;
     return eStateCrashed;
-  } else if (m_context.mem_fault &&
-             m_context.mem_fault_thread_index == thread_index) {
+  } else if (m_context->mem_fault &&
+             m_context->mem_fault_thread_index == thread_index) {
     description = "memory fault";
     stop_reason = eStopReasonException;
     return eStateCrashed;
-  } else if (m_context.scheduling[thread_index] != 0xff && stepping) {
+  } else if (m_context->scheduling[thread_index] != 0xff && stepping) {
     description = "stepping";
     stop_reason = eStopReasonTrace;
-  } else if (m_context.pcs[thread_index] != 0 && stepping) {
+  } else if (m_context->pcs[thread_index] != 0 && stepping) {
     description = "stopped";
     stop_reason = eStopReasonTrace;
   }

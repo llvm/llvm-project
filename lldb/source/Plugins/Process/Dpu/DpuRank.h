@@ -84,6 +84,11 @@ public:
   bool WriteMRAM(uint32_t offset, const void *buf, size_t size);
   bool ReadMRAM(uint32_t offset, void *buf, size_t size);
 
+  bool AllocIRAMBuffer(uint8_t **iram, uint32_t *iram_size);
+  bool FreeIRAMBuffer(uint8_t *iram);
+  bool GenerateSaveCore(const char *exe_path, const char *core_file_path,
+                        uint8_t *iram, uint32_t iram_size);
+
   int GetNrThreads() { return nr_threads; }
 
   uint32_t *ThreadContextRegs(int thread_index);
@@ -109,7 +114,7 @@ private:
   dpu_t *m_dpu;
   int nr_threads;
   int nr_of_work_registers_per_thread;
-  struct _dpu_context_t m_context;
+  struct _dpu_context_t *m_context;
   bool dpu_is_running = false;
   bool attach_session = false;
   bool registers_has_been_modified = false;
