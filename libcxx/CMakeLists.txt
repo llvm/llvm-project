@@ -81,6 +81,7 @@ option(LIBCXX_ENABLE_FILESYSTEM "Build filesystem as part of the main libc++ lib
     ${ENABLE_FILESYSTEM_DEFAULT})
 option(LIBCXX_INCLUDE_TESTS "Build the libc++ tests." ${LLVM_INCLUDE_TESTS})
 option(LIBCXX_ENABLE_PARALLEL_ALGORITHMS "Enable the parallel algorithms library. This requires the PSTL to be available." OFF)
+option(LIBCXX_TEST_GDB_PRETTY_PRINTERS "Test gdb pretty printers." OFF)
 
 # Benchmark options -----------------------------------------------------------
 option(LIBCXX_INCLUDE_BENCHMARKS "Build the libc++ benchmarks and their dependencies" ON)
