@@ -51,7 +51,7 @@
 using namespace llvm;
 using namespace llvm::object;
 using namespace llvm::COFF;
-using namespace llvm::sys;
+using llvm::sys::Process;
 
 namespace lld {
 namespace coff {
@@ -603,6 +603,7 @@ static std::string createResponseFile(const opt::InputArgList &args,
   for (auto *arg : args) {
     switch (arg->getOption().getID()) {
     case OPT_linkrepro:
+    case OPT_reproduce:
     case OPT_INPUT:
     case OPT_defaultlib:
     case OPT_libpath:
@@ -1071,6 +1072,26 @@ void LinkerDriver::maybeExportMinGWSymbols(const opt::InputArgList &args) {
   });
 }
 
+// lld has a feature to create a tar file containing all input files as well as
+// all command line options, so that other people can run lld again with exactly
+// the same inputs. This feature is accessible via /linkrepro and /reproduce.
+//
+// /linkrepro and /reproduce are very similar, but /linkrepro takes a directory
+// name while /reproduce takes a full path. We have /linkrepro for compatibility
+// with Microsoft link.exe.
+Optional<std::string> getReproduceFile(const opt::InputArgList &args) {
+  if (auto *arg = args.getLastArg(OPT_reproduce))
+    return std::string(arg->getValue());
+
+  if (auto *arg = args.getLastArg(OPT_linkrepro)) {
+    SmallString<64> path = StringRef(arg->getValue());
+    sys::path::append(path, "repro.tar");
+    return path.str().str();
+  }
+
+  return None;
+}
+
 void LinkerDriver::link(ArrayRef<const char *> argsArr) {
   // Needed for LTO.
   InitializeAllTargetInfos();
@@ -1133,16 +1154,16 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
   // options are handled.
   config->mingw = args.hasArg(OPT_lldmingw);
 
-  if (auto *arg = args.getLastArg(OPT_linkrepro)) {
-    const char *path = arg->getValue();
-
+  // Handle /linkrepro and /reproduce.
+  if (Optional<std::string> path = getReproduceFile(args)) {
     Expected<std::unique_ptr<TarWriter>> errOrWriter =
-        TarWriter::create(path, path::stem(path));
+        TarWriter::create(*path, sys::path::stem(*path));
+
     if (errOrWriter) {
       tar = std::move(*errOrWriter);
-      tar->append("version.txt", getLLDVersion() + "\n");
     } else {
-      error("/linkrepro: " + toString(errOrWriter.takeError()));
+      error("/linkrepro: failed to open " + *path + ": " +
+            toString(errOrWriter.takeError()));
     }
   }
 

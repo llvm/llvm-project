@@ -4,7 +4,7 @@
 # RUN: mkdir -p %t.dir/build
 # RUN: cd %t.dir/build
 # RUN: lld-link %p/Inputs/resource.res /subsystem:console /machine:x64 \
-# RUN:   /entry:__ImageBase /linkrepro:repro.tar /out:%t.exe
+# RUN:   /entry:__ImageBase /linkrepro:. /out:%t.exe
 # RUN: tar xf repro.tar
 # RUN: diff %p/Inputs/resource.res repro/%:p/Inputs/resource.res
 # RUN: FileCheck %s --check-prefix=RSP < repro/response.txt

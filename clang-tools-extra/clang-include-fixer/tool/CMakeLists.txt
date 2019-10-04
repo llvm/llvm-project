@@ -17,9 +17,6 @@ target_link_libraries(clang-include-fixer
   findAllSymbols
   )
 
-install(TARGETS clang-include-fixer
-  RUNTIME DESTINATION bin)
-
 install(PROGRAMS clang-include-fixer.el
   DESTINATION share/clang
   COMPONENT clang-include-fixer)

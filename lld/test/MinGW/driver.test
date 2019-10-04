@@ -189,6 +189,9 @@ UNDEFINED: -includeoptional:_foo -includeoptional:_bar -includeoptional:_baz -in
 RUN: ld.lld -### -m i386pep foo.o -Llibpath | FileCheck -check-prefix LIBPATH %s
 LIBPATH: -libpath:libpath
 
+RUN: ld.lld -### -m i386pep foo.o --reproduce=foo.tar | FileCheck -check-prefix REPRO %s
+REPRO: -reproduce:foo.tar
+
 RUN: ld.lld -### -m i386pep foo.o --no-insert-timestamp | FileCheck -check-prefix NOTIMESTAMP %s
 RUN: ld.lld -### -m i386pep foo.o --insert-timestamp --no-insert-timestamp | FileCheck -check-prefix NOTIMESTAMP %s
 NOTIMESTAMP: -timestamp:0

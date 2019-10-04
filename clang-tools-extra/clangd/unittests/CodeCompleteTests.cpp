@@ -2546,6 +2546,25 @@ TEST(CompletionTest, NamespaceDoubleInsertion) {
               UnorderedElementsAre(AllOf(Qualifier(""), Named("ABCDE"))));
 }
 
+TEST(CompletionTest, DerivedMethodsAreAlwaysVisible) {
+  // Despite the fact that base method matches the ref-qualifier better,
+  // completion results should only include the derived method.
+  auto Completions = completions(R"cpp(
+    struct deque_base {
+      float size();
+      double size() const;
+    };
+    struct deque : deque_base {
+        int size() const;
+    };
+
+    auto x = deque().^
+  )cpp")
+                         .Completions;
+  EXPECT_THAT(Completions,
+              ElementsAre(AllOf(ReturnType("int"), Named("size"))));
+}
+
 TEST(NoCompileCompletionTest, Basic) {
   auto Results = completionsNoCompile(R"cpp(
     void func() {

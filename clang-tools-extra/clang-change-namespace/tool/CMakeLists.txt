@@ -4,7 +4,7 @@ set(LLVM_LINK_COMPONENTS
   Support
   )
 
-add_clang_executable(clang-change-namespace
+add_clang_tool(clang-change-namespace
   ClangChangeNamespace.cpp
   )
 target_link_libraries(clang-change-namespace
@@ -20,6 +20,3 @@ target_link_libraries(clang-change-namespace
   clangTooling
   clangToolingCore
   )
-
-install(TARGETS clang-change-namespace
-  RUNTIME DESTINATION bin)
