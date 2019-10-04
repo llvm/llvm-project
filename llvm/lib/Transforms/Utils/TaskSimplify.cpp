@@ -77,6 +77,11 @@ static bool removeRedundantSyncRegions(MaybeParallelTasks &MPTasks, Task *T) {
   if (T->isSerial())
     return false;
 
+  // Create filter for MPTasks of tasks from parent of T.
+  SmallPtrSet<const Task *, 4> EntryTaskList;
+  for (const Task *MPTask : MPTasks.TaskList[T->getEntrySpindle()])
+    EntryTaskList.insert(MPTask);
+
   // Find the unique sync regions in this task.
   SmallPtrSet<Value *, 1> UniqueSyncRegs;
   Instruction *FirstSyncRegion = nullptr;
@@ -96,25 +101,36 @@ static bool removeRedundantSyncRegions(MaybeParallelTasks &MPTasks, Task *T) {
     // Only consider spindles that might have tasks in parallel.
     if (MPTasks.TaskList[S].empty()) continue;
 
+    // Filter the task list of S to exclude tasks in parallel with the entry.
+    SmallPtrSet<const Task *, 4> LocalTaskList;
+    for (const Task *MPTask : MPTasks.TaskList[S])
+      if (!EntryTaskList.count(MPTask))
+        LocalTaskList.insert(MPTask);
+    if (LocalTaskList.empty()) continue;
+
     // Iterate over outgoing edges of S to find discriminating syncs.
     for (Spindle::SpindleEdge &Edge : S->out_edges())
       if (const SyncInst *Y = dyn_cast<SyncInst>(Edge.second->getTerminator()))
-        if (syncIsDiscriminating(Y->getSyncRegion(), MPTasks.TaskList[S]))
+        if (syncIsDiscriminating(Y->getSyncRegion(), LocalTaskList)) {
           NonRedundantSyncRegs.insert(Y->getSyncRegion());
+          for (const Task *MPTask : LocalTaskList)
+            NonRedundantSyncRegs.insert(MPTask->getDetach()->getSyncRegion());
+        }
+  }
 
-    // Replace all redundant sync regions with the first sync region.
-    for (Value *SR : UniqueSyncRegs) {
-      if (!NonRedundantSyncRegs.count(SR) && SR != FirstSyncRegion) {
-        LLVM_DEBUG(dbgs() << "Replacing " << *SR << " with " << *FirstSyncRegion
-                   << "\n");
-        Changed = true;
-        SR->replaceAllUsesWith(FirstSyncRegion);
-        // Ensure that the first sync region is in the entry block of T.
-        if (FirstSyncRegion->getParent() != T->getEntry())
-          FirstSyncRegion->moveAfter(&*T->getEntry()->getFirstInsertionPt());
-      }
+  // Replace all redundant sync regions with the first sync region.
+  for (Value *SR : UniqueSyncRegs) {
+    if (!NonRedundantSyncRegs.count(SR) && SR != FirstSyncRegion) {
+      LLVM_DEBUG(dbgs() << "Replacing " << *SR << " with " << *FirstSyncRegion
+                 << "\n");
+      Changed = true;
+      SR->replaceAllUsesWith(FirstSyncRegion);
+      // Ensure that the first sync region is in the entry block of T.
+      if (FirstSyncRegion->getParent() != T->getEntry())
+        FirstSyncRegion->moveAfter(&*T->getEntry()->getFirstInsertionPt());
     }
   }
+
   return Changed;
 }
 
