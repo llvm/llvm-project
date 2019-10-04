@@ -238,7 +238,7 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
       if (Spec.isVirtual())
         continue;
 
-      const RecordDecl *BD = Spec.getType()->getAs<RecordType>()->getDecl();
+      const RecordDecl *BD = Spec.getType()->castAs<RecordType>()->getDecl();
       Record *BR = getOrCreateRecord(BD);
       if (Descriptor *Desc = GetBaseDesc(BD, BR)) {
         Size += align(sizeof(InlineDescriptor));
@@ -250,7 +250,7 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
     }
 
     for (const CXXBaseSpecifier &Spec : CD->vbases()) {
-      const RecordDecl *BD = Spec.getType()->getAs<RecordType>()->getDecl();
+      const RecordDecl *BD = Spec.getType()->castAs<RecordType>()->getDecl();
       Record *BR = getOrCreateRecord(BD);
 
       if (Descriptor *Desc = GetBaseDesc(BD, BR)) {

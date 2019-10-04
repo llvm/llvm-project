@@ -1098,14 +1098,16 @@ ASTNodeImporter::VisitMemberPointerType(const MemberPointerType *T) {
 
 ExpectedType
 ASTNodeImporter::VisitConstantArrayType(const ConstantArrayType *T) {
-  ExpectedType ToElementTypeOrErr = import(T->getElementType());
-  if (!ToElementTypeOrErr)
-    return ToElementTypeOrErr.takeError();
+  QualType ToElementType;
+  const Expr *ToSizeExpr;
+  if (auto Imp = importSeq(T->getElementType(), T->getSizeExpr()))
+    std::tie(ToElementType, ToSizeExpr) = *Imp;
+  else
+    return Imp.takeError();
 
-  return Importer.getToContext().getConstantArrayType(*ToElementTypeOrErr,
-                                                      T->getSize(),
-                                                      T->getSizeModifier(),
-                                               T->getIndexTypeCVRQualifiers());
+  return Importer.getToContext().getConstantArrayType(
+      ToElementType, T->getSize(), ToSizeExpr, T->getSizeModifier(),
+      T->getIndexTypeCVRQualifiers());
 }
 
 ExpectedType

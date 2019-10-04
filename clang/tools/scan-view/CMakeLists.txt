@@ -21,7 +21,9 @@ if(CLANG_INSTALL_SCANVIEW)
                          ${CMAKE_BINARY_DIR}/bin/
                        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/bin/${BinFile})
     list(APPEND Depends ${CMAKE_BINARY_DIR}/bin/${BinFile})
-    install(PROGRAMS bin/${BinFile} DESTINATION bin)
+    install(PROGRAMS bin/${BinFile}
+            DESTINATION bin
+            COMPONENT scan-view)
   endforeach()
 
   foreach(ShareFile ${ShareFiles})
@@ -33,9 +35,17 @@ if(CLANG_INSTALL_SCANVIEW)
                          ${CMAKE_BINARY_DIR}/share/scan-view/
                        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/share/${ShareFile})
     list(APPEND Depends ${CMAKE_BINARY_DIR}/share/scan-view/${ShareFile})
-    install(FILES share/${ShareFile} DESTINATION share/scan-view)
+    install(FILES share/${ShareFile}
+            DESTINATION share/scan-view
+            COMPONENT scan-view)
   endforeach()
 
   add_custom_target(scan-view ALL DEPENDS ${Depends})
   set_target_properties(scan-view PROPERTIES FOLDER "Misc")
+
+  if(NOT LLVM_ENABLE_IDE)
+    add_llvm_install_targets("install-scan-view"
+                             DEPENDS scan-view
+                             COMPONENT scan-view)
+  endif()
 endif()

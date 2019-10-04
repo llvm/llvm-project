@@ -395,6 +395,12 @@ private:
                          Keywords.kw_internal)) {
       return true;
     }
+
+    // incase its a [XXX] retval func(....
+    if (AttrTok->Next &&
+        AttrTok->Next->startsSequence(tok::identifier, tok::l_paren))
+      return true;
+
     return false;
   }
 
@@ -489,6 +495,8 @@ private:
       } else if (Style.isCpp() && Contexts.back().ContextKind == tok::l_brace &&
                  Parent && Parent->isOneOf(tok::l_brace, tok::comma)) {
         Left->Type = TT_DesignatedInitializerLSquare;
+      } else if (IsCSharp11AttributeSpecifier) {
+        Left->Type = TT_AttributeSquare;
       } else if (CurrentToken->is(tok::r_square) && Parent &&
                  Parent->is(TT_TemplateCloser)) {
         Left->Type = TT_ArraySubscriptLSquare;
@@ -536,8 +544,6 @@ private:
                                  // Should only be relevant to JavaScript:
                                  tok::kw_default)) {
         Left->Type = TT_ArrayInitializerLSquare;
-      } else if (IsCSharp11AttributeSpecifier) {
-        Left->Type = TT_AttributeSquare;
       } else {
         BindingIncrease = 10;
         Left->Type = TT_ArraySubscriptLSquare;
@@ -2634,10 +2640,6 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     return Style.Language == FormatStyle::LK_JavaScript ||
            !Left.TokenText.endswith("=*/");
   if (Right.is(tok::l_paren)) {
-    // using (FileStream fs...
-    if (Style.isCSharp() && Left.is(tok::kw_using) &&
-        Style.SpaceBeforeParens != FormatStyle::SBPO_Never)
-      return true;
     if ((Left.is(tok::r_paren) && Left.is(TT_AttributeParen)) ||
         (Left.is(tok::r_square) && Left.is(TT_AttributeSquare)))
       return true;
@@ -2736,7 +2738,15 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     // and "%d %d"
     if (Left.is(tok::numeric_constant) && Right.is(tok::percent))
       return Right.WhitespaceRange.getEnd() != Right.WhitespaceRange.getBegin();
-  } else if (Style.Language == FormatStyle::LK_JavaScript || Style.isCSharp()) {
+  } else if (Style.isCSharp()) {
+    // space between type and variable e.g. Dictionary<string,string> foo;
+    if (Left.is(TT_TemplateCloser) && Right.is(TT_StartOfName))
+      return true;
+    // space between keywords and paren e.g. "using ("
+    if (Right.is(tok::l_paren))
+      if (Left.is(tok::kw_using))
+        return spaceRequiredBeforeParens(Left);
+  } else if (Style.Language == FormatStyle::LK_JavaScript) {
     if (Left.is(TT_JsFatArrow))
       return true;
     // for await ( ...

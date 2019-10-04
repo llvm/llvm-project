@@ -1034,7 +1034,7 @@ public:
     assert(isInConditionalBranch());
     llvm::BasicBlock *block = OutermostConditional->getStartingBlock();
     auto store = new llvm::StoreInst(value, addr.getPointer(), &block->back());
-    store->setAlignment(addr.getAlignment().getQuantity());
+    store->setAlignment(addr.getAlignment().getAsAlign());
   }
 
   /// An RAII object to record that we're evaluating a statement

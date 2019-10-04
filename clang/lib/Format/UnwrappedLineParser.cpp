@@ -1167,7 +1167,8 @@ void UnwrappedLineParser::parseStructuralElement() {
       case tok::objc_autoreleasepool:
         nextToken();
         if (FormatTok->Tok.is(tok::l_brace)) {
-          if (Style.BraceWrapping.AfterControlStatement)
+          if (Style.BraceWrapping.AfterControlStatement ==
+              FormatStyle::BWACS_Always)
             addUnwrappedLine();
           parseBlock(/*MustBeDeclaration=*/false);
         }
@@ -1179,7 +1180,8 @@ void UnwrappedLineParser::parseStructuralElement() {
           // Skip synchronization object
           parseParens();
         if (FormatTok->Tok.is(tok::l_brace)) {
-          if (Style.BraceWrapping.AfterControlStatement)
+          if (Style.BraceWrapping.AfterControlStatement ==
+              FormatStyle::BWACS_Always)
             addUnwrappedLine();
           parseBlock(/*MustBeDeclaration=*/false);
         }
@@ -1989,7 +1991,8 @@ void UnwrappedLineParser::parseLabel(bool LeftAlignLabel) {
                                        Style.BraceWrapping.IndentBraces);
     parseBlock(/*MustBeDeclaration=*/false);
     if (FormatTok->Tok.is(tok::kw_break)) {
-      if (Style.BraceWrapping.AfterControlStatement)
+      if (Style.BraceWrapping.AfterControlStatement ==
+          FormatStyle::BWACS_Always)
         addUnwrappedLine();
       parseStructuralElement();
     }

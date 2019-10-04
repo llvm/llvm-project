@@ -644,7 +644,8 @@ TEST_F(FormatTest, FormatShortBracedStatements) {
   AllowSimpleBracedStatements.AllowShortIfStatementsOnASingleLine =
       FormatStyle::SIS_WithoutElse;
   AllowSimpleBracedStatements.AllowShortLoopsOnASingleLine = true;
-  AllowSimpleBracedStatements.BraceWrapping.AfterControlStatement = true;
+  AllowSimpleBracedStatements.BraceWrapping.AfterControlStatement =
+      FormatStyle::BWACS_Always;
 
   verifyFormat("if (true) {}", AllowSimpleBracedStatements);
   verifyFormat("if constexpr (true) {}", AllowSimpleBracedStatements);
@@ -1168,7 +1169,7 @@ TEST_F(FormatTest, FormatsSwitchStatement) {
   Style.AllowShortBlocksOnASingleLine = FormatStyle::SBS_Never;
   Style.BreakBeforeBraces = FormatStyle::BS_Custom;
   Style.BraceWrapping.AfterCaseLabel = true;
-  Style.BraceWrapping.AfterControlStatement = true;
+  Style.BraceWrapping.AfterControlStatement = FormatStyle::BWACS_Always;
   EXPECT_EQ("switch (n)\n"
             "{\n"
             "  case 0:\n"
@@ -1370,7 +1371,7 @@ TEST_F(FormatTest, ShortCaseLabels) {
   Style.AllowShortCaseLabelsOnASingleLine = true;
   Style.BreakBeforeBraces = FormatStyle::BS_Custom;
   Style.BraceWrapping.AfterCaseLabel = true;
-  Style.BraceWrapping.AfterControlStatement = true;
+  Style.BraceWrapping.AfterControlStatement = FormatStyle::BWACS_Always;
   EXPECT_EQ("switch (n)\n"
             "{\n"
             "  case 0:\n"
@@ -1439,6 +1440,131 @@ TEST_F(FormatTest, FormatsLabels) {
                "test_label:;\n"
                "  int i = 0;\n"
                "}");
+}
+
+TEST_F(FormatTest, MultiLineControlStatements) {
+  FormatStyle Style = getLLVMStyle();
+  Style.BreakBeforeBraces = FormatStyle::BraceBreakingStyle::BS_Custom;
+  Style.BraceWrapping.AfterControlStatement = FormatStyle::BWACS_MultiLine;
+  Style.ColumnLimit = 20;
+  // Short lines should keep opening brace on same line.
+  EXPECT_EQ("if (foo) {\n"
+            "  bar();\n"
+            "}",
+            format("if(foo){bar();}", Style));
+  EXPECT_EQ("if (foo) {\n"
+            "  bar();\n"
+            "} else {\n"
+            "  baz();\n"
+            "}",
+            format("if(foo){bar();}else{baz();}", Style));
+  EXPECT_EQ("if (foo && bar) {\n"
+            "  baz();\n"
+            "}",
+            format("if(foo&&bar){baz();}", Style));
+  EXPECT_EQ("if (foo) {\n"
+            "  bar();\n"
+            "} else if (baz) {\n"
+            "  quux();\n"
+            "}",
+            format("if(foo){bar();}else if(baz){quux();}", Style));
+  EXPECT_EQ(
+      "if (foo) {\n"
+      "  bar();\n"
+      "} else if (baz) {\n"
+      "  quux();\n"
+      "} else {\n"
+      "  foobar();\n"
+      "}",
+      format("if(foo){bar();}else if(baz){quux();}else{foobar();}", Style));
+  EXPECT_EQ("for (;;) {\n"
+            "  foo();\n"
+            "}",
+            format("for(;;){foo();}"));
+  EXPECT_EQ("while (1) {\n"
+            "  foo();\n"
+            "}",
+            format("while(1){foo();}", Style));
+  EXPECT_EQ("switch (foo) {\n"
+            "case bar:\n"
+            "  return;\n"
+            "}",
+            format("switch(foo){case bar:return;}", Style));
+  EXPECT_EQ("try {\n"
+            "  foo();\n"
+            "} catch (...) {\n"
+            "  bar();\n"
+            "}",
+            format("try{foo();}catch(...){bar();}", Style));
+  EXPECT_EQ("do {\n"
+            "  foo();\n"
+            "} while (bar &&\n"
+            "         baz);",
+            format("do{foo();}while(bar&&baz);", Style));
+  // Long lines should put opening brace on new line.
+  EXPECT_EQ("if (foo && bar &&\n"
+            "    baz)\n"
+            "{\n"
+            "  quux();\n"
+            "}",
+            format("if(foo&&bar&&baz){quux();}", Style));
+  EXPECT_EQ("if (foo && bar &&\n"
+            "    baz)\n"
+            "{\n"
+            "  quux();\n"
+            "}",
+            format("if (foo && bar &&\n"
+                   "    baz) {\n"
+                   "  quux();\n"
+                   "}",
+                   Style));
+  EXPECT_EQ("if (foo) {\n"
+            "  bar();\n"
+            "} else if (baz ||\n"
+            "           quux)\n"
+            "{\n"
+            "  foobar();\n"
+            "}",
+            format("if(foo){bar();}else if(baz||quux){foobar();}", Style));
+  EXPECT_EQ(
+      "if (foo) {\n"
+      "  bar();\n"
+      "} else if (baz ||\n"
+      "           quux)\n"
+      "{\n"
+      "  foobar();\n"
+      "} else {\n"
+      "  barbaz();\n"
+      "}",
+      format("if(foo){bar();}else if(baz||quux){foobar();}else{barbaz();}",
+             Style));
+  EXPECT_EQ("for (int i = 0;\n"
+            "     i < 10; ++i)\n"
+            "{\n"
+            "  foo();\n"
+            "}",
+            format("for(int i=0;i<10;++i){foo();}", Style));
+  EXPECT_EQ("while (foo || bar ||\n"
+            "       baz)\n"
+            "{\n"
+            "  quux();\n"
+            "}",
+            format("while(foo||bar||baz){quux();}", Style));
+  EXPECT_EQ("switch (\n"
+            "    foo = barbaz)\n"
+            "{\n"
+            "case quux:\n"
+            "  return;\n"
+            "}",
+            format("switch(foo=barbaz){case quux:return;}", Style));
+  EXPECT_EQ("try {\n"
+            "  foo();\n"
+            "} catch (\n"
+            "    Exception &bar)\n"
+            "{\n"
+            "  baz();\n"
+            "}",
+            format("try{foo();}catch(Exception&bar){baz();}", Style));
 }
 
 //===----------------------------------------------------------------------===//
@@ -2940,7 +3066,7 @@ TEST_F(FormatTest, MacroCallsWithoutTrailingSemicolon) {
                    "};"));
   FormatStyle Style = getLLVMStyle();
   Style.BreakBeforeBraces = FormatStyle::BS_Custom;
-  Style.BraceWrapping.AfterControlStatement = true;
+  Style.BraceWrapping.AfterControlStatement = FormatStyle::BWACS_Always;
   Style.BraceWrapping.AfterFunction = true;
   EXPECT_EQ("void f()\n"
             "try\n"
@@ -12261,7 +12387,6 @@ TEST_F(FormatTest, ParsesConfigurationBools) {
 
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterCaseLabel);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterClass);
-  CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterControlStatement);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterEnum);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterFunction);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterNamespace);
@@ -12468,6 +12593,25 @@ TEST_F(FormatTest, ParsesConfiguration) {
               FormatStyle::BS_WebKit);
   CHECK_PARSE("BreakBeforeBraces: Custom", BreakBeforeBraces,
               FormatStyle::BS_Custom);
+
+  Style.BraceWrapping.AfterControlStatement = FormatStyle::BWACS_Never;
+  CHECK_PARSE("BraceWrapping:\n"
+              "  AfterControlStatement: MultiLine",
+              BraceWrapping.AfterControlStatement,
+              FormatStyle::BWACS_MultiLine);
+  CHECK_PARSE("BraceWrapping:\n"
+              "  AfterControlStatement: Always",
+              BraceWrapping.AfterControlStatement, FormatStyle::BWACS_Always);
+  CHECK_PARSE("BraceWrapping:\n"
+              "  AfterControlStatement: Never",
+              BraceWrapping.AfterControlStatement, FormatStyle::BWACS_Never);
+  // For backward compatibility:
+  CHECK_PARSE("BraceWrapping:\n"
+              "  AfterControlStatement: true",
+              BraceWrapping.AfterControlStatement, FormatStyle::BWACS_Always);
+  CHECK_PARSE("BraceWrapping:\n"
+              "  AfterControlStatement: false",
+              BraceWrapping.AfterControlStatement, FormatStyle::BWACS_Never);
 
   Style.AlwaysBreakAfterReturnType = FormatStyle::RTBS_All;
   CHECK_PARSE("AlwaysBreakAfterReturnType: None", AlwaysBreakAfterReturnType,

@@ -20,14 +20,19 @@ using namespace tooling;
 using namespace ast_matchers;
 
 namespace {
+using ::llvm::Failed;
 using ::llvm::HasValue;
+using ::llvm::StringError;
 using ::testing::AllOf;
 using ::testing::Eq;
 using ::testing::HasSubstr;
 using MatchResult = MatchFinder::MatchResult;
 using stencil::access;
+using stencil::addressOf;
 using stencil::cat;
+using stencil::deref;
 using stencil::dPrint;
+using stencil::expression;
 using stencil::ifBound;
 using stencil::run;
 using stencil::text;
@@ -104,7 +109,7 @@ protected:
       ADD_FAILURE() << "Expected failure but succeeded: " << *ResultOrErr;
     } else {
       auto Err = llvm::handleErrors(ResultOrErr.takeError(),
-                                    [&Matcher](const llvm::StringError &Err) {
+                                    [&Matcher](const StringError &Err) {
                                       EXPECT_THAT(Err.getMessage(), Matcher);
                                     });
       if (Err) {
@@ -183,6 +188,15 @@ void testExpr(StringRef Id, StringRef Snippet, const Stencil &Stencil,
   EXPECT_THAT_EXPECTED(Stencil.eval(StmtMatch->Result), HasValue(Expected));
 }
 
+void testFailure(StringRef Id, StringRef Snippet, const Stencil &Stencil,
+                 testing::Matcher<std::string> MessageMatcher) {
+  auto StmtMatch = matchStmt(Snippet, expr().bind(Id));
+  ASSERT_TRUE(StmtMatch);
+  EXPECT_THAT_EXPECTED(Stencil.eval(StmtMatch->Result),
+                       Failed<StringError>(testing::Property(
+                           &StringError::getMessage, MessageMatcher)));
+}
+
 TEST_F(StencilTest, SelectionOp) {
   StringRef Id = "id";
   testExpr(Id, "3;", cat(node(Id)), "3");
@@ -196,6 +210,56 @@ TEST_F(StencilTest, IfBoundOpBound) {
 TEST_F(StencilTest, IfBoundOpUnbound) {
   StringRef Id = "id";
   testExpr(Id, "3;", cat(ifBound("other", text("5"), text("7"))), "7");
+}
+
+TEST_F(StencilTest, ExpressionOpNoParens) {
+  StringRef Id = "id";
+  testExpr(Id, "3;", cat(expression(Id)), "3");
+}
+
+// Don't parenthesize a parens expression.
+TEST_F(StencilTest, ExpressionOpNoParensParens) {
+  StringRef Id = "id";
+  testExpr(Id, "(3);", cat(expression(Id)), "(3)");
+}
+
+TEST_F(StencilTest, ExpressionOpBinaryOpParens) {
+  StringRef Id = "id";
+  testExpr(Id, "3+4;", cat(expression(Id)), "(3+4)");
+}
+
+// `expression` shares code with other ops, so we get sufficient coverage of the
+// error handling code with this test. If that changes in the future, more error
+// tests should be added.
+TEST_F(StencilTest, ExpressionOpUnbound) {
+  StringRef Id = "id";
+  testFailure(Id, "3;", cat(expression("ACACA")),
+              AllOf(HasSubstr("ACACA"), HasSubstr("not bound")));
+}
+
+TEST_F(StencilTest, DerefPointer) {
+  StringRef Id = "id";
+  testExpr(Id, "int *x; x;", cat(deref(Id)), "*x");
+}
+
+TEST_F(StencilTest, DerefBinOp) {
+  StringRef Id = "id";
+  testExpr(Id, "int *x; x + 1;", cat(deref(Id)), "*(x + 1)");
+}
+
+TEST_F(StencilTest, DerefAddressExpr) {
+  StringRef Id = "id";
+  testExpr(Id, "int x; &x;", cat(deref(Id)), "x");
+}
+
+TEST_F(StencilTest, AddressOfValue) {
+  StringRef Id = "id";
+  testExpr(Id, "int x; x;", cat(addressOf(Id)), "&x");
+}
+
+TEST_F(StencilTest, AddressOfDerefExpr) {
+  StringRef Id = "id";
+  testExpr(Id, "int *x; *x;", cat(addressOf(Id)), "x");
 }
 
 TEST_F(StencilTest, AccessOpValue) {

@@ -80,6 +80,8 @@ void FormatTokenLexer::tryMergePreviousTokens() {
       return;
     if (tryMergeCSharpNullConditionals())
       return;
+    if (tryTransformCSharpForEach())
+      return;
     static const tok::TokenKind JSRightArrow[] = {tok::equal, tok::greater};
     if (tryMergeTokens(JSRightArrow, TT_JsFatArrow))
       return;
@@ -251,6 +253,21 @@ bool FormatTokenLexer::tryMergeCSharpNullConditionals() {
                 Question->TokenText.end() - Identifier->TokenText.begin());
   Identifier->ColumnWidth += Question->ColumnWidth;
   Tokens.erase(Tokens.end() - 1);
+  return true;
+}
+
+// In C# transform identifier foreach into kw_foreach
+bool FormatTokenLexer::tryTransformCSharpForEach() {
+  if (Tokens.size() < 1)
+    return false;
+  auto &Identifier = *(Tokens.end() - 1);
+  if (!Identifier->is(tok::identifier))
+    return false;
+  if (Identifier->TokenText != "foreach")
+    return false;
+
+  Identifier->Type = TT_ForEachMacro;
+  Identifier->Tok.setKind(tok::kw_for);
   return true;
 }
 

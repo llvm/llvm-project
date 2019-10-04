@@ -121,7 +121,7 @@ CudaInstallationDetector::CudaInstallationDetector(
       Candidates.emplace_back(D.SysRoot + "/usr/lib/cuda");
   }
 
-  bool NoCudaLib = Args.hasArg(options::OPT_nocudalib);
+  bool NoCudaLib = Args.hasArg(options::OPT_nogpulib);
 
   for (const auto &Candidate : Candidates) {
     InstallPath = Candidate.Path;
@@ -628,7 +628,7 @@ void CudaToolChain::addClangTargetOptions(
       CC1Args.push_back("-fgpu-rdc");
   }
 
-  if (DriverArgs.hasArg(options::OPT_nocudalib))
+  if (DriverArgs.hasArg(options::OPT_nogpulib))
     return;
 
   std::string LibDeviceFile = CudaInstallation.getLibDeviceFile(GpuArch);

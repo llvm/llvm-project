@@ -547,7 +547,7 @@ static bool checkRecordDeclForAttr(const RecordDecl *RD) {
               // If it's type-dependent, we assume it could have the attribute.
               if (Ty.isDependentType())
                 return true;
-              return Ty.getAs<RecordType>()->getDecl()->hasAttr<AttrType>();
+              return Ty.castAs<RecordType>()->getDecl()->hasAttr<AttrType>();
             },
             BPaths, true))
       return true;

@@ -1442,7 +1442,7 @@ void CoverageMappingModuleGen::emit() {
       CovDataVal, llvm::getCoverageMappingVarName());
 
   CovData->setSection(getCoverageSection(CGM));
-  CovData->setAlignment(8);
+  CovData->setAlignment(llvm::Align(8));
 
   // Make sure the data doesn't get deleted.
   CGM.addUsedGlobal(CovData);

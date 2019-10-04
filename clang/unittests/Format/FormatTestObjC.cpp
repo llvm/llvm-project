@@ -207,7 +207,7 @@ TEST_F(FormatTestObjC, FormatObjCAutoreleasepool) {
                "  f();\n"
                "}\n");
   Style.BreakBeforeBraces = FormatStyle::BS_Custom;
-  Style.BraceWrapping.AfterControlStatement = true;
+  Style.BraceWrapping.AfterControlStatement = FormatStyle::BWACS_Always;
   verifyFormat("@autoreleasepool\n"
                "{\n"
                "  f();\n"
@@ -237,7 +237,7 @@ TEST_F(FormatTestObjC, FormatObjCSynchronized) {
                "  f();\n"
                "}\n");
   Style.BreakBeforeBraces = FormatStyle::BS_Custom;
-  Style.BraceWrapping.AfterControlStatement = true;
+  Style.BraceWrapping.AfterControlStatement = FormatStyle::BWACS_Always;
   verifyFormat("@synchronized(self)\n"
                "{\n"
                "  f();\n"
