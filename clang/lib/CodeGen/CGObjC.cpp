@@ -143,7 +143,7 @@ llvm::Value *CodeGenFunction::EmitObjCCollectionLiteral(const Expr *E,
                             NumElements);
   QualType ElementType = Context.getObjCIdType().withConst();
   QualType ElementArrayType
-    = Context.getConstantArrayType(ElementType, APNumElements,
+    = Context.getConstantArrayType(ElementType, APNumElements, nullptr,
                                    ArrayType::Normal, /*IndexTypeQuals=*/0);
 
   // Allocate the temporary array(s).
@@ -1661,7 +1661,7 @@ void CodeGenFunction::EmitObjCForCollectionStmt(const ObjCForCollectionStmt &S){
 
   QualType ItemsTy =
     getContext().getConstantArrayType(getContext().getObjCIdType(),
-                                      llvm::APInt(32, NumItems),
+                                      llvm::APInt(32, NumItems), nullptr,
                                       ArrayType::Normal, 0);
   Address ItemsPtr = CreateMemTemp(ItemsTy, "items.ptr");
 

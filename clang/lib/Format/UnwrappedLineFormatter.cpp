@@ -306,8 +306,24 @@ private:
     }
     // Try to merge a control statement block with left brace wrapped
     if (I[1]->First->is(tok::l_brace) &&
-        TheLine->First->isOneOf(tok::kw_if, tok::kw_while, tok::kw_for)) {
-      return Style.BraceWrapping.AfterControlStatement
+        (TheLine->First->isOneOf(tok::kw_if, tok::kw_while, tok::kw_for,
+                                 tok::kw_switch, tok::kw_try, tok::kw_do) ||
+         (TheLine->First->is(tok::r_brace) && TheLine->First->Next &&
+          TheLine->First->Next->isOneOf(tok::kw_else, tok::kw_catch))) &&
+        Style.BraceWrapping.AfterControlStatement ==
+            FormatStyle::BWACS_MultiLine) {
+      // If possible, merge the next line's wrapped left brace with the current
+      // line. Otherwise, leave it on the next line, as this is a multi-line
+      // control statement.
+      return (Style.ColumnLimit == 0 ||
+              TheLine->Last->TotalLength <= Style.ColumnLimit)
+                 ? 1
+                 : 0;
+    } else if (I[1]->First->is(tok::l_brace) &&
+               TheLine->First->isOneOf(tok::kw_if, tok::kw_while,
+                                       tok::kw_for)) {
+      return (Style.BraceWrapping.AfterControlStatement ==
+              FormatStyle::BWACS_Always)
                  ? tryMergeSimpleBlock(I, E, Limit)
                  : 0;
     }
@@ -410,7 +426,8 @@ private:
       SmallVectorImpl<AnnotatedLine *>::const_iterator E, unsigned Limit) {
     if (Limit == 0)
       return 0;
-    if (Style.BraceWrapping.AfterControlStatement &&
+    if (Style.BraceWrapping.AfterControlStatement ==
+            FormatStyle::BWACS_Always &&
         I[1]->First->is(tok::l_brace) &&
         Style.AllowShortBlocksOnASingleLine == FormatStyle::SBS_Never)
       return 0;
@@ -523,8 +540,9 @@ private:
         return 0;
       if (!Style.AllowShortIfStatementsOnASingleLine &&
           Line.startsWith(tok::kw_if) &&
-          Style.BraceWrapping.AfterControlStatement && I + 2 != E &&
-          !I[2]->First->is(tok::r_brace))
+          Style.BraceWrapping.AfterControlStatement ==
+              FormatStyle::BWACS_Always &&
+          I + 2 != E && !I[2]->First->is(tok::r_brace))
         return 0;
       if (!Style.AllowShortLoopsOnASingleLine &&
           Line.First->isOneOf(tok::kw_while, tok::kw_do, tok::kw_for) &&
@@ -533,8 +551,9 @@ private:
         return 0;
       if (!Style.AllowShortLoopsOnASingleLine &&
           Line.First->isOneOf(tok::kw_while, tok::kw_do, tok::kw_for) &&
-          Style.BraceWrapping.AfterControlStatement && I + 2 != E &&
-          !I[2]->First->is(tok::r_brace))
+          Style.BraceWrapping.AfterControlStatement ==
+              FormatStyle::BWACS_Always &&
+          I + 2 != E && !I[2]->First->is(tok::r_brace))
         return 0;
       // FIXME: Consider an option to allow short exception handling clauses on
       // a single line.
@@ -595,6 +614,17 @@ private:
 
         // Don't merge "if (a) { .. } else {".
         if (Tok->Next && Tok->Next->is(tok::kw_else))
+          return 0;
+
+        // Don't merge a trailing multi-line control statement block like:
+        // } else if (foo &&
+        //            bar)
+        // { <-- current Line
+        //   baz();
+        // }
+        if (Line.First == Line.Last &&
+            Style.BraceWrapping.AfterControlStatement ==
+                FormatStyle::BWACS_MultiLine)
           return 0;
 
         return 2;

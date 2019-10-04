@@ -3158,7 +3158,7 @@ void CodeGenFunction::EmitOMPTargetTaskBasedDirective(
         getContext(), getContext().getTranslationUnitDecl(), /*NumParams=*/0);
     llvm::APInt ArrSize(/*numBits=*/32, InputInfo.NumberOfTargetItems);
     QualType BaseAndPointersType = getContext().getConstantArrayType(
-        getContext().VoidPtrTy, ArrSize, ArrayType::Normal,
+        getContext().VoidPtrTy, ArrSize, nullptr, ArrayType::Normal,
         /*IndexTypeQuals=*/0);
     BPVD = createImplicitFirstprivateForType(
         getContext(), Data, BaseAndPointersType, CD, S.getBeginLoc());
@@ -3166,7 +3166,7 @@ void CodeGenFunction::EmitOMPTargetTaskBasedDirective(
         getContext(), Data, BaseAndPointersType, CD, S.getBeginLoc());
     QualType SizesType = getContext().getConstantArrayType(
         getContext().getIntTypeForBitwidth(/*DestWidth=*/64, /*Signed=*/1),
-        ArrSize, ArrayType::Normal,
+        ArrSize, nullptr, ArrayType::Normal,
         /*IndexTypeQuals=*/0);
     SVD = createImplicitFirstprivateForType(getContext(), Data, SizesType, CD,
                                             S.getBeginLoc());

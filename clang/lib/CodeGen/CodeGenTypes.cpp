@@ -135,8 +135,8 @@ isSafeToConvert(const RecordDecl *RD, CodeGenTypes &CGT,
   // the class.
   if (const CXXRecordDecl *CRD = dyn_cast<CXXRecordDecl>(RD)) {
     for (const auto &I : CRD->bases())
-      if (!isSafeToConvert(I.getType()->getAs<RecordType>()->getDecl(),
-                           CGT, AlreadyChecked))
+      if (!isSafeToConvert(I.getType()->castAs<RecordType>()->getDecl(), CGT,
+                           AlreadyChecked))
         return false;
   }
 
@@ -744,8 +744,7 @@ llvm::StructType *CodeGenTypes::ConvertRecordDeclType(const RecordDecl *RD) {
   if (const CXXRecordDecl *CRD = dyn_cast<CXXRecordDecl>(RD)) {
     for (const auto &I : CRD->bases()) {
       if (I.isVirtual()) continue;
-
-      ConvertRecordDeclType(I.getType()->getAs<RecordType>()->getDecl());
+      ConvertRecordDeclType(I.getType()->castAs<RecordType>()->getDecl());
     }
   }
 

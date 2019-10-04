@@ -3207,13 +3207,15 @@ ExprResult Sema::BuildPredefinedExpr(SourceLocation Loc,
       SmallString<32> RawChars;
       ConvertUTF8ToWideString(Context.getTypeSizeInChars(ResTy).getQuantity(),
                               Str, RawChars);
-      ResTy = Context.getConstantArrayType(ResTy, LengthI, ArrayType::Normal,
+      ResTy = Context.getConstantArrayType(ResTy, LengthI, nullptr,
+                                           ArrayType::Normal,
                                            /*IndexTypeQuals*/ 0);
       SL = StringLiteral::Create(Context, RawChars, StringLiteral::Wide,
                                  /*Pascal*/ false, ResTy, Loc);
     } else {
       ResTy = Context.adjustStringLiteralBaseType(Context.CharTy.withConst());
-      ResTy = Context.getConstantArrayType(ResTy, LengthI, ArrayType::Normal,
+      ResTy = Context.getConstantArrayType(ResTy, LengthI, nullptr,
+                                           ArrayType::Normal,
                                            /*IndexTypeQuals*/ 0);
       SL = StringLiteral::Create(Context, Str, StringLiteral::Ascii,
                                  /*Pascal*/ false, ResTy, Loc);
@@ -3453,7 +3455,7 @@ ExprResult Sema::ActOnNumericConstant(const Token &Tok, Scope *UDLScope) {
       unsigned Length = Literal.getUDSuffixOffset();
       QualType StrTy = Context.getConstantArrayType(
           Context.adjustStringLiteralBaseType(Context.CharTy.withConst()),
-          llvm::APInt(32, Length + 1), ArrayType::Normal, 0);
+          llvm::APInt(32, Length + 1), nullptr, ArrayType::Normal, 0);
       Expr *Lit = StringLiteral::Create(
           Context, StringRef(TokSpelling.data(), Length), StringLiteral::Ascii,
           /*Pascal*/false, StrTy, &TokLoc, 1);
@@ -13480,7 +13482,6 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
     if (Input.isInvalid())
       return ExprError();
     resultType = Input.get()->getType();
-
     if (resultType->isDependentType())
       break;
     // C99 6.5.3.3p1. We allow complex int and float as a GCC extension.
@@ -13488,6 +13489,9 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
       // C99 does not support '~' for complex conjugation.
       Diag(OpLoc, diag::ext_integer_complement_complex)
           << resultType << Input.get()->getSourceRange();
+    else if (Input.get()->IgnoreParenImpCasts()->getType()->isBooleanType())
+      Diag(OpLoc, diag::warn_bitwise_negation_bool)
+          << FixItHint::CreateReplacement(OpLoc, "!");
     else if (resultType->hasIntegerRepresentation())
       break;
     else if (resultType->isExtVectorType() && Context.getLangOpts().OpenCL) {

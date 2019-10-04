@@ -795,6 +795,7 @@ public:
   QualType RebuildConstantArrayType(QualType ElementType,
                                     ArrayType::ArraySizeModifier SizeMod,
                                     const llvm::APInt &Size,
+                                    Expr *SizeExpr,
                                     unsigned IndexTypeQuals,
                                     SourceRange BracketsRange);
 
@@ -4726,12 +4727,25 @@ TreeTransform<Derived>::TransformConstantArrayType(TypeLocBuilder &TLB,
   if (ElementType.isNull())
     return QualType();
 
+  // Prefer the expression from the TypeLoc;  the other may have been uniqued.
+  Expr *OldSize = TL.getSizeExpr();
+  if (!OldSize)
+    OldSize = const_cast<Expr*>(T->getSizeExpr());
+  Expr *NewSize = nullptr;
+  if (OldSize) {
+    EnterExpressionEvaluationContext Unevaluated(
+        SemaRef, Sema::ExpressionEvaluationContext::ConstantEvaluated);
+    NewSize = getDerived().TransformExpr(OldSize).template getAs<Expr>();
+    NewSize = SemaRef.ActOnConstantExpression(NewSize).get();
+  }
+
   QualType Result = TL.getType();
   if (getDerived().AlwaysRebuild() ||
-      ElementType != T->getElementType()) {
+      ElementType != T->getElementType() ||
+      (T->getSizeExpr() && NewSize != OldSize)) {
     Result = getDerived().RebuildConstantArrayType(ElementType,
                                                    T->getSizeModifier(),
-                                                   T->getSize(),
+                                                   T->getSize(), NewSize,
                                              T->getIndexTypeCVRQualifiers(),
                                                    TL.getBracketsRange());
     if (Result.isNull())
@@ -4745,15 +4759,7 @@ TreeTransform<Derived>::TransformConstantArrayType(TypeLocBuilder &TLB,
   ArrayTypeLoc NewTL = TLB.push<ArrayTypeLoc>(Result);
   NewTL.setLBracketLoc(TL.getLBracketLoc());
   NewTL.setRBracketLoc(TL.getRBracketLoc());
-
-  Expr *Size = TL.getSizeExpr();
-  if (Size) {
-    EnterExpressionEvaluationContext Unevaluated(
-        SemaRef, Sema::ExpressionEvaluationContext::ConstantEvaluated);
-    Size = getDerived().TransformExpr(Size).template getAs<Expr>();
-    Size = SemaRef.ActOnConstantExpression(Size).get();
-  }
-  NewTL.setSizeExpr(Size);
+  NewTL.setSizeExpr(NewSize);
 
   return Result;
 }
@@ -12802,9 +12808,10 @@ QualType
 TreeTransform<Derived>::RebuildConstantArrayType(QualType ElementType,
                                                  ArrayType::ArraySizeModifier SizeMod,
                                                  const llvm::APInt &Size,
+                                                 Expr *SizeExpr,
                                                  unsigned IndexTypeQuals,
                                                  SourceRange BracketsRange) {
-  return getDerived().RebuildArrayType(ElementType, SizeMod, &Size, nullptr,
+  return getDerived().RebuildArrayType(ElementType, SizeMod, &Size, SizeExpr,
                                         IndexTypeQuals, BracketsRange);
 }
 

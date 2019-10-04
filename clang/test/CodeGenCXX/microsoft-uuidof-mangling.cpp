@@ -24,7 +24,7 @@ struct __declspec(uuid("EAFA1952-66F8-438B-8FBA-AF1BBAE42191")) TestStruct
 
 template <class T> void test_uuidofType(void *arg[sizeof(__uuidof(T))] = 0) {}
 
-template <class T> void test_uuidofExpr(void *arg[sizeof(__uuidof(T::member))] = 0) {}
+template <class T> void test_uuidofExpr(void *arg[sizeof(__uuidof(typename T::member))] = 0) {}
 
 struct HasMember { typedef TestStruct member; };
 

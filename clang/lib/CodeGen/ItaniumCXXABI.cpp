@@ -2194,7 +2194,7 @@ void ItaniumCXXABI::EmitGuardedInit(CodeGenFunction &CGF,
     guard->setVisibility(var->getVisibility());
     // If the variable is thread-local, so is its guard variable.
     guard->setThreadLocalMode(var->getThreadLocalMode());
-    guard->setAlignment(guardAlignment.getQuantity());
+    guard->setAlignment(guardAlignment.getAsAlign());
 
     // The ABI says: "It is suggested that it be emitted in the same COMDAT
     // group as the associated data object." In practice, this doesn't work for
@@ -2547,7 +2547,7 @@ void ItaniumCXXABI::EmitThreadLocalInitFuncs(
     Guard->setThreadLocal(true);
 
     CharUnits GuardAlign = CharUnits::One();
-    Guard->setAlignment(GuardAlign.getQuantity());
+    Guard->setAlignment(GuardAlign.getAsAlign());
 
     CodeGenFunction(CGM).GenerateCXXGlobalInitFunc(
         InitFunc, OrderedInits, ConstantAddress(Guard, GuardAlign));
@@ -3479,7 +3479,7 @@ llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(
 
   CharUnits Align =
       CGM.getContext().toCharUnitsFromBits(CGM.getTarget().getPointerAlign(0));
-  GV->setAlignment(Align.getQuantity());
+  GV->setAlignment(Align.getAsAlign());
 
   // The Itanium ABI specifies that type_info objects must be globally
   // unique, with one exception: if the type is an incomplete class

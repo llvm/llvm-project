@@ -80,7 +80,7 @@ bool CodeGenModule::TryEmitBaseDestructorAsAlias(const CXXDestructorDecl *D) {
 
     // Skip base classes with trivial destructors.
     const auto *Base =
-        cast<CXXRecordDecl>(I.getType()->getAs<RecordType>()->getDecl());
+        cast<CXXRecordDecl>(I.getType()->castAs<RecordType>()->getDecl());
     if (Base->hasTrivialDestructor()) continue;
 
     // If we've already found a base class with a non-trivial

@@ -519,15 +519,15 @@ SourceRange TemplateTypeParmDecl::getSourceRange() const {
 }
 
 unsigned TemplateTypeParmDecl::getDepth() const {
-  return getTypeForDecl()->getAs<TemplateTypeParmType>()->getDepth();
+  return getTypeForDecl()->castAs<TemplateTypeParmType>()->getDepth();
 }
 
 unsigned TemplateTypeParmDecl::getIndex() const {
-  return getTypeForDecl()->getAs<TemplateTypeParmType>()->getIndex();
+  return getTypeForDecl()->castAs<TemplateTypeParmType>()->getIndex();
 }
 
 bool TemplateTypeParmDecl::isParameterPack() const {
-  return getTypeForDecl()->getAs<TemplateTypeParmType>()->isParameterPack();
+  return getTypeForDecl()->castAs<TemplateTypeParmType>()->isParameterPack();
 }
 
 //===----------------------------------------------------------------------===//

@@ -959,8 +959,11 @@ DEF_TRAVERSE_TYPE(AdjustedType, { TRY_TO(TraverseType(T->getOriginalType())); })
 
 DEF_TRAVERSE_TYPE(DecayedType, { TRY_TO(TraverseType(T->getOriginalType())); })
 
-DEF_TRAVERSE_TYPE(ConstantArrayType,
-                  { TRY_TO(TraverseType(T->getElementType())); })
+DEF_TRAVERSE_TYPE(ConstantArrayType, {
+  TRY_TO(TraverseType(T->getElementType()));
+  if (T->getSizeExpr())
+    TRY_TO(TraverseStmt(const_cast<Expr*>(T->getSizeExpr())));
+})
 
 DEF_TRAVERSE_TYPE(IncompleteArrayType,
                   { TRY_TO(TraverseType(T->getElementType())); })

@@ -286,6 +286,9 @@ void HIPToolChain::addClangTargetOptions(
     CC1Args.append({"-fvisibility", "hidden"});
     CC1Args.push_back("-fapply-global-visibility-to-externs");
   }
+
+  if (DriverArgs.hasArg(options::OPT_nogpulib))
+    return;
   ArgStringList LibraryPaths;
 
   // Find in --hip-device-lib-path and HIP_LIBRARY_PATH.

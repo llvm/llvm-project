@@ -482,3 +482,14 @@ namespace dependent_backreference {
   template<short S> void a() { X<short, S, &arr> x; }
   template<short S> void b() { X<int, S, &arr> x; } // expected-note {{substituting}}
 }
+
+namespace instantiation_dependent {
+  template<typename T, __typeof(sizeof(T))> void f(int);
+  template<typename T, __typeof(sizeof(0))> int &f(...);
+  int &rf = f<struct incomplete, 0>(0);
+
+  int arr[sizeof(sizeof(int))];
+  template<typename T, int (*)[sizeof(sizeof(T))]> void g(int);
+  template<typename T, int (*)[sizeof(sizeof(int))]> int &g(...);
+  int &rg = g<struct incomplete, &arr>(0);
+}

@@ -441,9 +441,15 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
                              COMPONENT clang-headers)
   endif()
 
+  add_custom_target(bash-autocomplete DEPENDS utils/bash-autocomplete.sh)
   install(PROGRAMS utils/bash-autocomplete.sh
-    DESTINATION share/clang
-    )
+          DESTINATION share/clang
+          COMPONENT bash-autocomplete)
+  if(NOT LLVM_ENABLE_IDE)
+    add_llvm_install_targets(install-bash-autocomplete
+                             DEPENDS bash-autocomplete
+                             COMPONENT bash-autocomplete)
+  endif()
 endif()
 
 add_definitions( -D_GNU_SOURCE )

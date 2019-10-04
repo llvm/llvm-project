@@ -489,38 +489,38 @@ struct FormatStyle {
 
   /// Different ways to break after the template declaration.
   enum BreakTemplateDeclarationsStyle {
-      /// Do not force break before declaration.
-      /// ``PenaltyBreakTemplateDeclaration`` is taken into account.
-      /// \code
-      ///    template <typename T> T foo() {
-      ///    }
-      ///    template <typename T> T foo(int aaaaaaaaaaaaaaaaaaaaa,
-      ///                                int bbbbbbbbbbbbbbbbbbbbb) {
-      ///    }
-      /// \endcode
-      BTDS_No,
-      /// Force break after template declaration only when the following
-      /// declaration spans multiple lines.
-      /// \code
-      ///    template <typename T> T foo() {
-      ///    }
-      ///    template <typename T>
-      ///    T foo(int aaaaaaaaaaaaaaaaaaaaa,
-      ///          int bbbbbbbbbbbbbbbbbbbbb) {
-      ///    }
-      /// \endcode
-      BTDS_MultiLine,
-      /// Always break after template declaration.
-      /// \code
-      ///    template <typename T>
-      ///    T foo() {
-      ///    }
-      ///    template <typename T>
-      ///    T foo(int aaaaaaaaaaaaaaaaaaaaa,
-      ///          int bbbbbbbbbbbbbbbbbbbbb) {
-      ///    }
-      /// \endcode
-      BTDS_Yes
+    /// Do not force break before declaration.
+    /// ``PenaltyBreakTemplateDeclaration`` is taken into account.
+    /// \code
+    ///    template <typename T> T foo() {
+    ///    }
+    ///    template <typename T> T foo(int aaaaaaaaaaaaaaaaaaaaa,
+    ///                                int bbbbbbbbbbbbbbbbbbbbb) {
+    ///    }
+    /// \endcode
+    BTDS_No,
+    /// Force break after template declaration only when the following
+    /// declaration spans multiple lines.
+    /// \code
+    ///    template <typename T> T foo() {
+    ///    }
+    ///    template <typename T>
+    ///    T foo(int aaaaaaaaaaaaaaaaaaaaa,
+    ///          int bbbbbbbbbbbbbbbbbbbbb) {
+    ///    }
+    /// \endcode
+    BTDS_MultiLine,
+    /// Always break after template declaration.
+    /// \code
+    ///    template <typename T>
+    ///    T foo() {
+    ///    }
+    ///    template <typename T>
+    ///    T foo(int aaaaaaaaaaaaaaaaaaaaa,
+    ///          int bbbbbbbbbbbbbbbbbbbbb) {
+    ///    }
+    /// \endcode
+    BTDS_Yes
   };
 
   /// The template declaration breaking style to use.
@@ -782,6 +782,40 @@ struct FormatStyle {
   /// The brace breaking style to use.
   BraceBreakingStyle BreakBeforeBraces;
 
+  // Different ways to wrap braces after control statements.
+  enum BraceWrappingAfterControlStatementStyle {
+    /// Never wrap braces after a control statement.
+    /// \code
+    ///   if (foo()) {
+    ///   } else {
+    ///   }
+    ///   for (int i = 0; i < 10; ++i) {
+    ///   }
+    /// \endcode
+    BWACS_Never,
+    /// Only wrap braces after a multi-line control statement.
+    /// \code
+    ///   if (foo && bar &&
+    ///       baz)
+    ///   {
+    ///     quux();
+    ///   }
+    ///   while (foo || bar) {
+    ///   }
+    /// \endcode
+    BWACS_MultiLine,
+    /// Always wrap braces after a control statement.
+    /// \code
+    ///   if (foo())
+    ///   {
+    ///   } else
+    ///   {}
+    ///   for (int i = 0; i < 10; ++i)
+    ///   {}
+    /// \endcode
+    BWACS_Always
+  };
+
   /// Precise control over the wrapping of braces.
   /// \code
   ///   # Should be declared this way:
@@ -817,23 +851,7 @@ struct FormatStyle {
     /// \endcode
     bool AfterClass;
     /// Wrap control statements (``if``/``for``/``while``/``switch``/..).
-    /// \code
-    ///   true:
-    ///   if (foo())
-    ///   {
-    ///   } else
-    ///   {}
-    ///   for (int i = 0; i < 10; ++i)
-    ///   {}
-    ///
-    ///   false:
-    ///   if (foo()) {
-    ///   } else {
-    ///   }
-    ///   for (int i = 0; i < 10; ++i) {
-    ///   }
-    /// \endcode
-    bool AfterControlStatement;
+    BraceWrappingAfterControlStatementStyle AfterControlStatement;
     /// Wrap enum definitions.
     /// \code
     ///   true:
@@ -2167,6 +2185,10 @@ FormatStyle getWebKitStyle();
 /// Returns a format style complying with GNU Coding Standards:
 /// http://www.gnu.org/prep/standards/standards.html
 FormatStyle getGNUStyle();
+
+/// Returns a format style complying with Microsoft style guide:
+/// https://docs.microsoft.com/en-us/visualstudio/ide/editorconfig-code-style-settings-reference?view=vs-2017
+FormatStyle getMicrosoftStyle(FormatStyle::LanguageKind Language);
 
 /// Returns style indicating formatting should be not applied at all.
 FormatStyle getNoStyle();
