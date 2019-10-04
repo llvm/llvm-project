@@ -110,8 +110,8 @@ struct lldb_copy_dyld_cache_local_symbols_entry {
 };
 
 static void PrintRegisterValue(RegisterContext *reg_ctx, const char *name,
-                              const char *alt_name, size_t reg_byte_size,
-                              Stream &data) {
+                               const char *alt_name, size_t reg_byte_size,
+                               Stream &data) {
   const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoByName(name);
   if (reg_info == nullptr)
     reg_info = reg_ctx->GetRegisterInfoByName(alt_name);
@@ -122,8 +122,7 @@ static void PrintRegisterValue(RegisterContext *reg_ctx, const char *name,
         data.Write(reg_value.GetBytes(), reg_byte_size);
       else {
         data.Write(reg_value.GetBytes(), reg_info->byte_size);
-        for (size_t i = 0, n = reg_byte_size - reg_info->byte_size; i < n;
-             ++i)
+        for (size_t i = 0, n = reg_byte_size - reg_info->byte_size; i < n; ++i)
           data.PutChar(0);
       }
       return;
@@ -1439,7 +1438,7 @@ static lldb::SectionType GetSectionType(uint32_t flags,
   if (section_name == g_sect_name_dwarf_debug_pubtypes)
     return eSectionTypeDWARFDebugPubTypes;
   if (section_name == g_sect_name_dwarf_debug_ranges)
-    return eSectionTypeDWARFDebugRanges; 
+    return eSectionTypeDWARFDebugRanges;
   if (section_name == g_sect_name_dwarf_debug_str)
     return eSectionTypeDWARFDebugStr;
   if (section_name == g_sect_name_dwarf_debug_types)
@@ -1604,7 +1603,7 @@ void ObjectFileMachO::ProcessSegmentCommand(const load_command &load_cmd_,
         // the file
         load_cmd.filesize, // Size in bytes of this section as found
         // in the file
-        0,                // Segments have no alignment information
+        0,               // Segments have no alignment information
         load_cmd.flags); // Flags for this section
 
     segment_sp->SetIsEncrypted(segment_is_encrypted);
@@ -2353,14 +2352,15 @@ size_t ObjectFileMachO::ParseSymtab() {
 
           UUID lldb_shared_cache;
           addr_t lldb_shared_cache_addr;
-          GetLLDBSharedCacheUUID (lldb_shared_cache_addr, lldb_shared_cache);
+          GetLLDBSharedCacheUUID(lldb_shared_cache_addr, lldb_shared_cache);
           UUID process_shared_cache;
           addr_t process_shared_cache_addr;
-          GetProcessSharedCacheUUID(process, process_shared_cache_addr, process_shared_cache);
+          GetProcessSharedCacheUUID(process, process_shared_cache_addr,
+                                    process_shared_cache);
           bool use_lldb_cache = true;
           if (lldb_shared_cache.IsValid() && process_shared_cache.IsValid() &&
-              (lldb_shared_cache != process_shared_cache
-               || process_shared_cache_addr != lldb_shared_cache_addr)) {
+              (lldb_shared_cache != process_shared_cache ||
+               process_shared_cache_addr != lldb_shared_cache_addr)) {
             use_lldb_cache = false;
           }
 
@@ -2407,26 +2407,26 @@ size_t ObjectFileMachO::ParseSymtab() {
                 indirect_symbol_index_data.SetData(
                     indirect_syms_data_sp, 0,
                     indirect_syms_data_sp->GetByteSize());
-              // If this binary is outside the shared cache, 
+              // If this binary is outside the shared cache,
               // cache the string table.
-              // Binaries in the shared cache all share a giant string table, and
-              // we can't share the string tables across multiple ObjectFileMachO's,
-              // so we'd end up re-reading this mega-strtab for every binary
-              // in the shared cache - it would be a big perf problem.
-              // For binaries outside the shared cache, it's faster to read the
-              // entire strtab at once instead of piece-by-piece as we process
-              // the nlist records.
+              // Binaries in the shared cache all share a giant string table,
+              // and we can't share the string tables across multiple
+              // ObjectFileMachO's, so we'd end up re-reading this mega-strtab
+              // for every binary in the shared cache - it would be a big perf
+              // problem. For binaries outside the shared cache, it's faster to
+              // read the entire strtab at once instead of piece-by-piece as we
+              // process the nlist records.
               if ((m_header.flags & 0x80000000u) == 0) {
-                DataBufferSP strtab_data_sp (ReadMemory (process_sp, strtab_addr, 
-                      strtab_data_byte_size));
+                DataBufferSP strtab_data_sp(
+                    ReadMemory(process_sp, strtab_addr, strtab_data_byte_size));
                 if (strtab_data_sp) {
-                  strtab_data.SetData (strtab_data_sp, 0, strtab_data_sp->GetByteSize());
+                  strtab_data.SetData(strtab_data_sp, 0,
+                                      strtab_data_sp->GetByteSize());
                 }
               }
             }
           }
-          if (memory_module_load_level >=
-                     eMemoryModuleLoadLevelPartial) {
+          if (memory_module_load_level >= eMemoryModuleLoadLevelPartial) {
             if (function_starts_load_command.cmd) {
               const addr_t func_start_addr =
                   linkedit_load_addr + function_starts_load_command.dataoff -
@@ -2669,14 +2669,14 @@ size_t ObjectFileMachO::ParseSymtab() {
       snprintf(
           dsc_path, sizeof(dsc_path), "%s%s%s",
           "/System/Library/Caches/com.apple.dyld/", /* IPHONE_DYLD_SHARED_CACHE_DIR
-                                                       */
+                                                     */
           "dyld_shared_cache_", /* DYLD_SHARED_CACHE_BASE_NAME */
           header_arch.GetArchitectureName());
 
       snprintf(
           dsc_path_development, sizeof(dsc_path), "%s%s%s%s",
           "/System/Library/Caches/com.apple.dyld/", /* IPHONE_DYLD_SHARED_CACHE_DIR
-                                                       */
+                                                     */
           "dyld_shared_cache_", /* DYLD_SHARED_CACHE_BASE_NAME */
           header_arch.GetArchitectureName(), ".development");
 
@@ -2689,7 +2689,8 @@ size_t ObjectFileMachO::ParseSymtab() {
       addr_t process_shared_cache_base_addr;
 
       if (process) {
-        GetProcessSharedCacheUUID(process, process_shared_cache_base_addr, process_shared_cache_uuid);
+        GetProcessSharedCacheUUID(process, process_shared_cache_base_addr,
+                                  process_shared_cache_uuid);
       }
 
       // First see if we can find an exact match for the inferior process
@@ -3274,7 +3275,7 @@ size_t ObjectFileMachO::ParseSymtab() {
                           // end common (local name): 0,,n_sect,0,address
                           symbol_section = section_info.GetSection(
                               nlist.n_sect, nlist.n_value);
-                        // Fall through
+                          // Fall through
 
                         case N_ECOMM:
                           // end common: name,,n_sect,0,0
@@ -5031,62 +5032,61 @@ static llvm::StringRef GetOSName(uint32_t cmd) {
 }
 
 namespace {
-  struct OSEnv {
-    llvm::StringRef os_type;
-    llvm::StringRef environment;
-    OSEnv(uint32_t cmd) {
-      switch (cmd) {
-      case llvm::MachO::PLATFORM_MACOS:
-        os_type = llvm::Triple::getOSTypeName(llvm::Triple::MacOSX);
-        return;
-      case llvm::MachO::PLATFORM_IOS:
-        os_type = llvm::Triple::getOSTypeName(llvm::Triple::IOS);
-        return;
-      case llvm::MachO::PLATFORM_TVOS:
-        os_type = llvm::Triple::getOSTypeName(llvm::Triple::TvOS);
-        return;
-      case llvm::MachO::PLATFORM_WATCHOS:
-        os_type = llvm::Triple::getOSTypeName(llvm::Triple::WatchOS);
-        return;
-// NEED_BRIDGEOS_TRIPLE      case llvm::MachO::PLATFORM_BRIDGEOS:
-// NEED_BRIDGEOS_TRIPLE        os_type = llvm::Triple::getOSTypeName(llvm::Triple::BridgeOS);
-// NEED_BRIDGEOS_TRIPLE        return;
-      case llvm::MachO::PLATFORM_MACCATALYST:
-        os_type = llvm::Triple::getOSTypeName(llvm::Triple::IOS);
-        environment =
-            llvm::Triple::getEnvironmentTypeName(llvm::Triple::MacABI);
-        return;
-      case llvm::MachO::PLATFORM_IOSSIMULATOR:
-        os_type = llvm::Triple::getOSTypeName(llvm::Triple::IOS);
-        environment =
-            llvm::Triple::getEnvironmentTypeName(llvm::Triple::Simulator);
-        return;
-      case llvm::MachO::PLATFORM_TVOSSIMULATOR:
-        os_type = llvm::Triple::getOSTypeName(llvm::Triple::TvOS);
-        environment =
-            llvm::Triple::getEnvironmentTypeName(llvm::Triple::Simulator);
-        return;
-      case llvm::MachO::PLATFORM_WATCHOSSIMULATOR:
-        os_type = llvm::Triple::getOSTypeName(llvm::Triple::WatchOS);
-        environment =
-            llvm::Triple::getEnvironmentTypeName(llvm::Triple::Simulator);
-        return;
-      default: {
-        Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_SYMBOLS |
-                                                        LIBLLDB_LOG_PROCESS));
-        LLDB_LOGF(log, "unsupported platform in LC_BUILD_VERSION");
-      }
-      }
+struct OSEnv {
+  llvm::StringRef os_type;
+  llvm::StringRef environment;
+  OSEnv(uint32_t cmd) {
+    switch (cmd) {
+    case llvm::MachO::PLATFORM_MACOS:
+      os_type = llvm::Triple::getOSTypeName(llvm::Triple::MacOSX);
+      return;
+    case llvm::MachO::PLATFORM_IOS:
+      os_type = llvm::Triple::getOSTypeName(llvm::Triple::IOS);
+      return;
+    case llvm::MachO::PLATFORM_TVOS:
+      os_type = llvm::Triple::getOSTypeName(llvm::Triple::TvOS);
+      return;
+    case llvm::MachO::PLATFORM_WATCHOS:
+      os_type = llvm::Triple::getOSTypeName(llvm::Triple::WatchOS);
+      return;
+      // NEED_BRIDGEOS_TRIPLE      case llvm::MachO::PLATFORM_BRIDGEOS:
+      // NEED_BRIDGEOS_TRIPLE        os_type =
+      // llvm::Triple::getOSTypeName(llvm::Triple::BridgeOS);
+      // NEED_BRIDGEOS_TRIPLE        return;
+    case llvm::MachO::PLATFORM_MACCATALYST:
+      os_type = llvm::Triple::getOSTypeName(llvm::Triple::IOS);
+      environment = llvm::Triple::getEnvironmentTypeName(llvm::Triple::MacABI);
+      return;
+    case llvm::MachO::PLATFORM_IOSSIMULATOR:
+      os_type = llvm::Triple::getOSTypeName(llvm::Triple::IOS);
+      environment =
+          llvm::Triple::getEnvironmentTypeName(llvm::Triple::Simulator);
+      return;
+    case llvm::MachO::PLATFORM_TVOSSIMULATOR:
+      os_type = llvm::Triple::getOSTypeName(llvm::Triple::TvOS);
+      environment =
+          llvm::Triple::getEnvironmentTypeName(llvm::Triple::Simulator);
+      return;
+    case llvm::MachO::PLATFORM_WATCHOSSIMULATOR:
+      os_type = llvm::Triple::getOSTypeName(llvm::Triple::WatchOS);
+      environment =
+          llvm::Triple::getEnvironmentTypeName(llvm::Triple::Simulator);
+      return;
+    default: {
+      Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_SYMBOLS |
+                                                      LIBLLDB_LOG_PROCESS));
+      LLDB_LOGF(log, "unsupported platform in LC_BUILD_VERSION");
     }
-  };
+    }
+  }
+};
 
-  struct MinOS {
-    uint32_t major_version, minor_version, patch_version;
-    MinOS(uint32_t version)
-        : major_version(version >> 16),
-          minor_version((version >> 8) & 0xffu),
-          patch_version(version & 0xffu) {}
-  };
+struct MinOS {
+  uint32_t major_version, minor_version, patch_version;
+  MinOS(uint32_t version)
+      : major_version(version >> 16), minor_version((version >> 8) & 0xffu),
+        patch_version(version & 0xffu) {}
+};
 } // namespace
 
 void ObjectFileMachO::GetAllArchSpecs(const llvm::MachO::mach_header &header,
@@ -5211,7 +5211,7 @@ void ObjectFileMachO::GetAllArchSpecs(const llvm::MachO::mach_header &header,
   if (!found_any) {
     if (header.filetype == MH_KEXT_BUNDLE) {
       base_triple.setVendor(llvm::Triple::Apple);
-      add_triple (base_triple);
+      add_triple(base_triple);
     } else {
       // We didn't find a LC_VERSION_MIN load command and this isn't a KEXT
       // so lets not say our Vendor is Apple, leave it as an unspecified
@@ -5292,10 +5292,10 @@ uint32_t ObjectFileMachO::GetDependentModules(FileSpecList &files) {
             if (path[0] == '@') {
               if (strncmp(path, "@rpath", strlen("@rpath")) == 0)
                 rpath_relative_paths.push_back(path + strlen("@rpath"));
-              else if (strncmp(path, "@executable_path", 
-                       strlen("@executable_path")) == 0)
-                at_exec_relative_paths.push_back(path 
-                                                 + strlen("@executable_path"));
+              else if (strncmp(path, "@executable_path",
+                               strlen("@executable_path")) == 0)
+                at_exec_relative_paths.push_back(path +
+                                                 strlen("@executable_path"));
             } else {
               FileSpec file_spec(path);
               if (files.AppendIfUnique(file_spec))
@@ -5352,7 +5352,7 @@ uint32_t ObjectFileMachO::GetDependentModules(FileSpecList &files) {
     if (!at_exec_relative_paths.empty() && CalculateType() == eTypeExecutable) {
       FileSpec exec_dir = this_file_spec.CopyByRemovingLastPathComponent();
       for (const auto &at_exec_relative_path : at_exec_relative_paths) {
-        FileSpec file_spec = 
+        FileSpec file_spec =
             exec_dir.CopyByAppendingPathComponent(at_exec_relative_path);
         if (FileSystem::Instance().Exists(file_spec) &&
             files.AppendIfUnique(file_spec))
@@ -5369,7 +5369,7 @@ lldb_private::Address ObjectFileMachO::GetEntryPointAddress() {
   // return that. If m_entry_point_address is valid it means we've found it
   // already, so return the cached value.
 
-  if ((!IsExecutable() && !IsDynamicLoader()) || 
+  if ((!IsExecutable() && !IsDynamicLoader()) ||
       m_entry_point_address.IsValid()) {
     return m_entry_point_address;
   }
@@ -5424,9 +5424,8 @@ lldb_private::Address ObjectFileMachO::GetEntryPointAddress() {
 
           switch (m_header.cputype) {
           case llvm::MachO::CPU_TYPE_ARM:
-            if (flavor == 1 ||
-                flavor == 9) // ARM_THREAD_STATE/ARM_THREAD_STATE32 from
-                             // mach/arm/thread_status.h
+            if (flavor == 1 || flavor == 9) // ARM_THREAD_STATE/ARM_THREAD_STATE32
+                                            // from mach/arm/thread_status.h
             {
               offset += 60; // This is the offset of pc in the GPR thread state
                             // data structure.
@@ -5497,8 +5496,8 @@ lldb_private::Address ObjectFileMachO::GetEntryPointAddress() {
     if (start_address == LLDB_INVALID_ADDRESS && IsDynamicLoader()) {
       if (GetSymtab()) {
         Symbol *dyld_start_sym = GetSymtab()->FindFirstSymbolWithNameAndType(
-                      ConstString("_dyld_start"), SymbolType::eSymbolTypeCode, 
-                      Symtab::eDebugAny, Symtab::eVisibilityAny);
+            ConstString("_dyld_start"), SymbolType::eSymbolTypeCode,
+            Symtab::eDebugAny, Symtab::eVisibilityAny);
         if (dyld_start_sym && dyld_start_sym->GetAddress().IsValid()) {
           start_address = dyld_start_sym->GetAddress().GetFileAddress();
         }
@@ -5587,39 +5586,34 @@ std::string ObjectFileMachO::GetIdentifierString() {
       load_command lc;
       if (m_data.GetU32(&offset, &lc.cmd, 2) == nullptr)
         break;
-      if (lc.cmd == LC_NOTE)
-      {
-          char data_owner[17];
-          m_data.CopyData (offset, 16, data_owner);
-          data_owner[16] = '\0';
-          offset += 16;
-          uint64_t fileoff = m_data.GetU64_unchecked (&offset);
-          uint64_t size = m_data.GetU64_unchecked (&offset);
+      if (lc.cmd == LC_NOTE) {
+        char data_owner[17];
+        m_data.CopyData(offset, 16, data_owner);
+        data_owner[16] = '\0';
+        offset += 16;
+        uint64_t fileoff = m_data.GetU64_unchecked(&offset);
+        uint64_t size = m_data.GetU64_unchecked(&offset);
 
-          // "kern ver str" has a uint32_t version and then a nul terminated
-          // c-string.
-          if (strcmp ("kern ver str", data_owner) == 0)
-          {
-              offset = fileoff;
-              uint32_t version;
-              if (m_data.GetU32 (&offset, &version, 1) != nullptr)
-              {
-                  if (version == 1)
-                  {
-                      uint32_t strsize = size - sizeof (uint32_t);
-                      char *buf = (char*) malloc (strsize);
-                      if (buf)
-                      {
-                          m_data.CopyData (offset, strsize, buf);
-                          buf[strsize - 1] = '\0';
-                          result = buf;
-                          if (buf)
-                              free (buf);
-                          return result;
-                      }
-                  }
+        // "kern ver str" has a uint32_t version and then a nul terminated
+        // c-string.
+        if (strcmp("kern ver str", data_owner) == 0) {
+          offset = fileoff;
+          uint32_t version;
+          if (m_data.GetU32(&offset, &version, 1) != nullptr) {
+            if (version == 1) {
+              uint32_t strsize = size - sizeof(uint32_t);
+              char *buf = (char *)malloc(strsize);
+              if (buf) {
+                m_data.CopyData(offset, strsize, buf);
+                buf[strsize - 1] = '\0';
+                result = buf;
+                if (buf)
+                  free(buf);
+                return result;
               }
+            }
           }
+        }
       }
       offset = cmd_offset + lc.cmdsize;
     }
@@ -5633,23 +5627,22 @@ std::string ObjectFileMachO::GetIdentifierString() {
       if (m_data.GetU32(&offset, &ident_command, 2) == nullptr)
         break;
       if (ident_command.cmd == LC_IDENT && ident_command.cmdsize != 0) {
-        char *buf = (char *) malloc (ident_command.cmdsize);
-        if (buf != nullptr 
-            && m_data.CopyData (offset, ident_command.cmdsize, buf) == ident_command.cmdsize) {
+        char *buf = (char *)malloc(ident_command.cmdsize);
+        if (buf != nullptr && m_data.CopyData(offset, ident_command.cmdsize,
+                                              buf) == ident_command.cmdsize) {
           buf[ident_command.cmdsize - 1] = '\0';
           result = buf;
         }
         if (buf)
-          free (buf);
+          free(buf);
       }
       offset = cmd_offset + ident_command.cmdsize;
     }
-
   }
   return result;
 }
 
-bool ObjectFileMachO::GetCorefileMainBinaryInfo (addr_t &address, UUID &uuid) {
+bool ObjectFileMachO::GetCorefileMainBinaryInfo(addr_t &address, UUID &uuid) {
   address = LLDB_INVALID_ADDRESS;
   uuid.Clear();
   ModuleSP module_sp(GetModule());
@@ -5661,41 +5654,39 @@ bool ObjectFileMachO::GetCorefileMainBinaryInfo (addr_t &address, UUID &uuid) {
       load_command lc;
       if (m_data.GetU32(&offset, &lc.cmd, 2) == nullptr)
         break;
-      if (lc.cmd == LC_NOTE)
-      {
-          char data_owner[17];
-          memset (data_owner, 0, sizeof (data_owner));
-          m_data.CopyData (offset, 16, data_owner);
-          offset += 16;
-          uint64_t fileoff = m_data.GetU64_unchecked (&offset);
-          uint64_t size = m_data.GetU64_unchecked (&offset);
+      if (lc.cmd == LC_NOTE) {
+        char data_owner[17];
+        memset(data_owner, 0, sizeof(data_owner));
+        m_data.CopyData(offset, 16, data_owner);
+        offset += 16;
+        uint64_t fileoff = m_data.GetU64_unchecked(&offset);
+        uint64_t size = m_data.GetU64_unchecked(&offset);
 
-          // "main bin spec" (main binary specification) data payload is
-          // formatted:
-          //    uint32_t version       [currently 1]
-          //    uint32_t type          [0 == unspecified, 1 == kernel, 2 == user process]
-          //    uint64_t address       [ UINT64_MAX if address not specified ]
-          //    uuid_t   uuid          [ all zero's if uuid not specified ]
-          //    uint32_t log2_pagesize [ process page size in log base 2, e.g. 4k pages are 12.  0 for unspecified ]
+        // "main bin spec" (main binary specification) data payload is
+        // formatted:
+        //    uint32_t version       [currently 1]
+        //    uint32_t type          [0 == unspecified, 1 == kernel, 2 == user
+        //    process] uint64_t address       [ UINT64_MAX if address not
+        //    specified ] uuid_t   uuid          [ all zero's if uuid not
+        //    specified ] uint32_t log2_pagesize [ process page size in log base
+        //    2, e.g. 4k pages are 12.  0 for unspecified ]
 
-          if (strcmp ("main bin spec", data_owner) == 0 && size >= 32)
-          {
-              offset = fileoff;
-              uint32_t version;
-              if (m_data.GetU32 (&offset, &version, 1) != nullptr && version == 1)
-              {
-                  uint32_t type = 0;
-                  uuid_t raw_uuid;
-                  memset (raw_uuid, 0, sizeof (uuid_t));
+        if (strcmp("main bin spec", data_owner) == 0 && size >= 32) {
+          offset = fileoff;
+          uint32_t version;
+          if (m_data.GetU32(&offset, &version, 1) != nullptr && version == 1) {
+            uint32_t type = 0;
+            uuid_t raw_uuid;
+            memset(raw_uuid, 0, sizeof(uuid_t));
 
-                  if (m_data.GetU32(&offset, &type, 1) &&
-                      m_data.GetU64(&offset, &address, 1) &&
-                      m_data.CopyData(offset, sizeof(uuid_t), raw_uuid) != 0) {
-                    uuid = UUID::fromOptionalData(raw_uuid, sizeof(uuid_t));
-                    return true;
-                  }
-              }
+            if (m_data.GetU32(&offset, &type, 1) &&
+                m_data.GetU64(&offset, &address, 1) &&
+                m_data.CopyData(offset, sizeof(uuid_t), raw_uuid) != 0) {
+              uuid = UUID::fromOptionalData(raw_uuid, sizeof(uuid_t));
+              return true;
+            }
           }
+        }
       }
       offset = cmd_offset + lc.cmdsize;
     }
@@ -5894,7 +5885,8 @@ ArchSpec ObjectFileMachO::GetArchitecture() {
   return {};
 }
 
-void ObjectFileMachO::GetProcessSharedCacheUUID(Process *process, addr_t &base_addr, UUID &uuid) {
+void ObjectFileMachO::GetProcessSharedCacheUUID(Process *process,
+                                                addr_t &base_addr, UUID &uuid) {
   uuid.Clear();
   base_addr = LLDB_INVALID_ADDRESS;
   if (process && process->GetDynamicLoader()) {
@@ -5904,7 +5896,8 @@ void ObjectFileMachO::GetProcessSharedCacheUUID(Process *process, addr_t &base_a
     dl->GetSharedCacheInformation(base_addr, uuid, using_shared_cache,
                                   private_shared_cache);
   }
-  Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_SYMBOLS | LIBLLDB_LOG_PROCESS));
+  Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_SYMBOLS |
+                                                  LIBLLDB_LOG_PROCESS));
   LLDB_LOGF(
       log,
       "inferior process shared cache has a UUID of %s, base address 0x%" PRIx64,
@@ -5920,11 +5913,11 @@ struct lldb_copy__dyld_process_cache_info {
   bool privateCache; // process is using a private copy of its dyld cache
 };
 
-// #including mach/mach.h pulls in machine.h & CPU_TYPE_ARM etc conflicts with llvm
-// enum definitions llvm::MachO::CPU_TYPE_ARM turning them into compile errors.
-// So we need to use the actual underlying types of task_t and kern_return_t
-// below.
-extern "C" unsigned int /*task_t*/ mach_task_self(); 
+// #including mach/mach.h pulls in machine.h & CPU_TYPE_ARM etc conflicts with
+// llvm enum definitions llvm::MachO::CPU_TYPE_ARM turning them into compile
+// errors. So we need to use the actual underlying types of task_t and
+// kern_return_t below.
+extern "C" unsigned int /*task_t*/ mach_task_self();
 
 void ObjectFileMachO::GetLLDBSharedCacheUUID(addr_t &base_addr, UUID &uuid) {
   uuid.Clear();
@@ -5934,7 +5927,7 @@ void ObjectFileMachO::GetLLDBSharedCacheUUID(addr_t &base_addr, UUID &uuid) {
     (defined(__arm__) || defined(__arm64__) || defined(__aarch64__))
   uint8_t *(*dyld_get_all_image_infos)(void);
   dyld_get_all_image_infos =
-      (uint8_t * (*)())dlsym(RTLD_DEFAULT, "_dyld_get_all_image_infos");
+      (uint8_t * (*)()) dlsym(RTLD_DEFAULT, "_dyld_get_all_image_infos");
   if (dyld_get_all_image_infos) {
     uint8_t *dyld_all_image_infos_address = dyld_get_all_image_infos();
     if (dyld_all_image_infos_address) {
@@ -5948,16 +5941,20 @@ void ObjectFileMachO::GetLLDBSharedCacheUUID(addr_t &base_addr, UUID &uuid) {
               (uuid_t *)((uint8_t *)dyld_all_image_infos_address +
                          160); // sharedCacheUUID <mach-o/dyld_images.h>
           if (*version >= 15)
-            base_addr = *(uint64_t *) ((uint8_t *) dyld_all_image_infos_address 
-                          + 176); // sharedCacheBaseAddress <mach-o/dyld_images.h>
+            base_addr =
+                *(uint64_t
+                      *)((uint8_t *)dyld_all_image_infos_address +
+                         176); // sharedCacheBaseAddress <mach-o/dyld_images.h>
         } else {
           sharedCacheUUID_address =
               (uuid_t *)((uint8_t *)dyld_all_image_infos_address +
                          84); // sharedCacheUUID <mach-o/dyld_images.h>
           if (*version >= 15) {
             base_addr = 0;
-            base_addr = *(uint32_t *) ((uint8_t *) dyld_all_image_infos_address 
-                          + 100); // sharedCacheBaseAddress <mach-o/dyld_images.h>
+            base_addr =
+                *(uint32_t
+                      *)((uint8_t *)dyld_all_image_infos_address +
+                         100); // sharedCacheBaseAddress <mach-o/dyld_images.h>
           }
         }
         uuid = UUID::fromOptionalData(sharedCacheUUID_address, sizeof(uuid_t));
@@ -5965,33 +5962,38 @@ void ObjectFileMachO::GetLLDBSharedCacheUUID(addr_t &base_addr, UUID &uuid) {
     }
   } else {
     // Exists in macOS 10.12 and later, iOS 10.0 and later - dyld SPI
-    dyld_process_info (*dyld_process_info_create)(unsigned int /* task_t */ task, uint64_t timestamp, unsigned int /*kern_return_t*/ *kernelError);
+    dyld_process_info (*dyld_process_info_create)(
+        unsigned int /* task_t */ task, uint64_t timestamp,
+        unsigned int /*kern_return_t*/ *kernelError);
     void (*dyld_process_info_get_cache)(void *info, void *cacheInfo);
     void (*dyld_process_info_release)(dyld_process_info info);
 
-    dyld_process_info_create = (void *(*)(unsigned int /* task_t */, uint64_t, unsigned int /*kern_return_t*/ *))
-               dlsym (RTLD_DEFAULT, "_dyld_process_info_create");
-    dyld_process_info_get_cache = (void (*)(void *, void *))
-               dlsym (RTLD_DEFAULT, "_dyld_process_info_get_cache");
-    dyld_process_info_release = (void (*)(void *))
-               dlsym (RTLD_DEFAULT, "_dyld_process_info_release");
+    dyld_process_info_create = (void *(*)(unsigned int /* task_t */, uint64_t,
+                                          unsigned int /*kern_return_t*/ *))
+        dlsym(RTLD_DEFAULT, "_dyld_process_info_create");
+    dyld_process_info_get_cache = (void (*)(void *, void *))dlsym(
+        RTLD_DEFAULT, "_dyld_process_info_get_cache");
+    dyld_process_info_release =
+        (void (*)(void *))dlsym(RTLD_DEFAULT, "_dyld_process_info_release");
 
     if (dyld_process_info_create && dyld_process_info_get_cache) {
       unsigned int /*kern_return_t */ kern_ret;
-		  dyld_process_info process_info = dyld_process_info_create(::mach_task_self(), 0, &kern_ret);
+      dyld_process_info process_info =
+          dyld_process_info_create(::mach_task_self(), 0, &kern_ret);
       if (process_info) {
         struct lldb_copy__dyld_process_cache_info sc_info;
-        memset (&sc_info, 0, sizeof (struct lldb_copy__dyld_process_cache_info));
-        dyld_process_info_get_cache (process_info, &sc_info);
+        memset(&sc_info, 0, sizeof(struct lldb_copy__dyld_process_cache_info));
+        dyld_process_info_get_cache(process_info, &sc_info);
         if (sc_info.cacheBaseAddress != 0) {
           base_addr = sc_info.cacheBaseAddress;
           uuid = UUID::fromOptionalData(sc_info.cacheUUID, sizeof(uuid_t));
         }
-        dyld_process_info_release (process_info);
+        dyld_process_info_release(process_info);
       }
     }
   }
-  Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_SYMBOLS | LIBLLDB_LOG_PROCESS));
+  Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_SYMBOLS |
+                                                  LIBLLDB_LOG_PROCESS));
   if (log && uuid.IsValid())
     LLDB_LOGF(log,
               "lldb's in-memory shared cache has a UUID of %s base address of "
@@ -6022,27 +6024,30 @@ llvm::VersionTuple ObjectFileMachO::GetMinimumOSVersion() {
             m_min_os_version = llvm::VersionTuple(xxxx, yy, zz);
             break;
           }
-        } 
+        }
       } else if (lc.cmd == llvm::MachO::LC_BUILD_VERSION) {
         // struct build_version_command {
         //     uint32_t    cmd;            /* LC_BUILD_VERSION */
-        //     uint32_t    cmdsize;        /* sizeof(struct build_version_command) plus */
-        //                                 /* ntools * sizeof(struct build_tool_version) */
+        //     uint32_t    cmdsize;        /* sizeof(struct
+        //     build_version_command) plus */
+        //                                 /* ntools * sizeof(struct
+        //                                 build_tool_version) */
         //     uint32_t    platform;       /* platform */
-        //     uint32_t    minos;          /* X.Y.Z is encoded in nibbles xxxx.yy.zz */
-        //     uint32_t    sdk;            /* X.Y.Z is encoded in nibbles xxxx.yy.zz */
-        //     uint32_t    ntools;         /* number of tool entries following this */
+        //     uint32_t    minos;          /* X.Y.Z is encoded in nibbles
+        //     xxxx.yy.zz */ uint32_t    sdk;            /* X.Y.Z is encoded in
+        //     nibbles xxxx.yy.zz */ uint32_t    ntools;         /* number of
+        //     tool entries following this */
         // };
 
-        offset += 4;  // skip platform
+        offset += 4; // skip platform
         uint32_t minos = m_data.GetU32(&offset);
 
         const uint32_t xxxx = minos >> 16;
         const uint32_t yy = (minos >> 8) & 0xffu;
         const uint32_t zz = minos & 0xffu;
         if (xxxx) {
-            m_min_os_version = llvm::VersionTuple(xxxx, yy, zz);
-            break;
+          m_min_os_version = llvm::VersionTuple(xxxx, yy, zz);
+          break;
         }
       }
 
@@ -6080,8 +6085,8 @@ llvm::VersionTuple ObjectFileMachO::GetSDKVersion() {
             m_sdk_versions = llvm::VersionTuple(xxxx, yy, zz);
             break;
           } else {
-            GetModule()->ReportWarning(
-                "minimum OS version load command with invalid (0) version found.");
+            GetModule()->ReportWarning("minimum OS version load command with "
+                                       "invalid (0) version found.");
           }
         }
       }
@@ -6260,7 +6265,8 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
          target_triple.getOS() == llvm::Triple::IOS ||
          target_triple.getOS() == llvm::Triple::WatchOS ||
          target_triple.getOS() == llvm::Triple::TvOS)) {
-         // NEED_BRIDGEOS_TRIPLE target_triple.getOS() == llvm::Triple::BridgeOS)) {
+      // NEED_BRIDGEOS_TRIPLE target_triple.getOS() == llvm::Triple::BridgeOS))
+      // {
       bool make_core = false;
       switch (target_arch.GetMachine()) {
       case llvm::Triple::aarch64:
