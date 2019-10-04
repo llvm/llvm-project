@@ -22,6 +22,10 @@
 #ifdef _FILE_OFFSET_BITS
 #undef _FILE_OFFSET_BITS
 #endif
+
+// Must go after undef _FILE_OFFSET_BITS.
+#include "sanitizer_glibc_version.h"
+
 #include <arpa/inet.h>
 #include <dirent.h>
 #include <grp.h>
@@ -1004,10 +1008,6 @@ CHECK_TYPE_SIZE(cmsghdr);
 CHECK_SIZE_AND_OFFSET(cmsghdr, cmsg_len);
 CHECK_SIZE_AND_OFFSET(cmsghdr, cmsg_level);
 CHECK_SIZE_AND_OFFSET(cmsghdr, cmsg_type);
-
-#ifndef __GLIBC_PREREQ
-#define __GLIBC_PREREQ(x, y) 0
-#endif
 
 #if SANITIZER_LINUX && (__ANDROID_API__ >= 21 || __GLIBC_PREREQ (2, 14))
 CHECK_TYPE_SIZE(mmsghdr);
