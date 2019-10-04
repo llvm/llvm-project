@@ -10,5 +10,5 @@ _start:
 .global sym1
 .comm sym1,4,4
 
-# CHECK: 201158: {{.*}} movl    $1, 4098(%rip)
 # CHECK: 0000000000202164 g     O .bss            00000004 sym1
+# CHECK: 201158: {{.*}} movl    $1, 4098(%rip)

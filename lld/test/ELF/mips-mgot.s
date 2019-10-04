@@ -14,19 +14,19 @@
 # RUN: llvm-objdump -s -section=.got -t %t.so | FileCheck %s
 # RUN: llvm-readobj -r --dyn-syms -A %t.so | FileCheck -check-prefix=GOT %s
 
+# CHECK: SYMBOL TABLE:
+# CHECK:           00000000 l    O .tdata          00000000 loc0
+# CHECK: [[FOO0:[0-9a-f]+]]        .text           00000000 foo0
+# CHECK:           00000000 g    O .tdata          00000000 tls0
+# CHECK:           00000004 g    O .tdata          00000000 tls1
+# CHECK: [[FOO2:[0-9a-f]+]]        .text           00000000 foo2
+
 # CHECK:      Contents of section .got:
-# CHECK-NEXT:  70000 00000000 80000000 [[FOO0:[0-9a-f]+]] [[FOO2:[0-9a-f]+]]
+# CHECK-NEXT:  70000 00000000 80000000 [[FOO0]] [[FOO2]]
 # CHECK-NEXT:  70010 00000000 00000004 00010000 00020000
 # CHECK-NEXT:  70020 00030000 00040000 00050000 00060000
 # CHECK-NEXT:  70030 00000000 00000000 00000000 00000000
 # CHECK-NEXT:  70040 00000000 00000000 00000000
-
-# CHECK: SYMBOL TABLE:
-# CHECK: 00000000 l    O .tdata          00000000 loc0
-# CHECK: [[FOO0]]        .text           00000000 foo0
-# CHECK: 00000000 g    O .tdata          00000000 tls0
-# CHECK: 00000004 g    O .tdata          00000000 tls1
-# CHECK: [[FOO2]]        .text           00000000 foo2
 
 # GOT:      Relocations [
 # GOT-NEXT:   Section (7) .rel.dyn {

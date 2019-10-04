@@ -11,6 +11,12 @@
 # RUN: llvm-objdump -d -s -t --print-imm-hex --no-show-raw-insn %t.exe | FileCheck %s
 # RUN: llvm-readobj -r %t.exe | FileCheck -check-prefix=REL %s
 
+# CHECK: 0000000000037ff0   .got    00000000 .hidden _gp
+
+# CHECK:      Contents of section .rodata:
+# CHECK-NEXT:  {{[0-9a-f]+}} ffffffff fffe9014
+#                            ^-- 0x21004 - 0x37ff0 = 0xfffffffffffe9014
+
 # CHECK:      __start:
 # CHECK-NEXT:    21000:  lui     $gp, 0x1
 #                                     ^-- 0x21000 - 0x37ff0
@@ -21,12 +27,6 @@
 #                                     ^-- 0x21000 - 0x37ff0
 #                                     ^-- 0 - 0xfffffffffffe9010
 #                                     ^-- %lo(0x16ff0)
-
-# CHECK:      Contents of section .rodata:
-# CHECK-NEXT:  {{[0-9a-f]+}} ffffffff fffe9014
-#                            ^-- 0x21004 - 0x37ff0 = 0xfffffffffffe9014
-
-# CHECK: 0000000000037ff0   .got    00000000 .hidden _gp
 
 # REL:      Relocations [
 # REL-NEXT: ]

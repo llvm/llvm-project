@@ -17,6 +17,7 @@ See gdb_pretty_printer_test.sh.cpp on how to write a test case.
 from __future__ import print_function
 import re
 import gdb
+import sys
 
 test_failures = 0
 
@@ -57,9 +58,9 @@ class CheckResult(gdb.Command):
                 print("FAIL: " + test_loc.symtab.filename +
                       ":" + str(test_loc.line))
                 print("GDB printed:")
-                print("   " + value)
+                print("   " + repr(value))
                 print("Value should match:")
-                print("   " + check_literal)
+                print("   " + repr(check_literal))
                 test_failures += 1
             else:
                 print("PASS: " + test_loc.symtab.filename +
@@ -76,11 +77,15 @@ class CheckResult(gdb.Command):
     def _get_value_string(self, compare_frame, testcase_frame):
         compare_frame.select()
         if "ComparePrettyPrint" in compare_frame.name():
-            return gdb.execute("p value", to_string=True)
-        value_str = str(compare_frame.read_var("value"))
-        clean_expression_str = value_str.strip("'\"")
-        testcase_frame.select()
-        return gdb.execute("p " + clean_expression_str, to_string=True)
+            s = gdb.execute("p value", to_string=True)
+        else:
+            value_str = str(compare_frame.read_var("value"))
+            clean_expression_str = value_str.strip("'\"")
+            testcase_frame.select()
+            s = gdb.execute("p " + clean_expression_str, to_string=True)
+        if sys.version_info.major == 2:
+            return s.decode("utf-8")
+        return s
 
 
 def exit_handler(event=None):

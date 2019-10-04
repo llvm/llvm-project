@@ -6,6 +6,10 @@
 // RUN: ld.lld %t1.o %t2.so -o %t.exe -z retpolineplt
 // RUN: llvm-objdump -d -s --no-show-raw-insn %t.exe | FileCheck %s
 
+// CHECK:      Contents of section .got.plt:
+// CHECK-NEXT: 40224000 00000000 00000000 10124000
+// CHECK-NEXT: 30124000
+
 // CHECK:      Disassembly of section .plt:
 // CHECK-EMPTY:
 // CHECK-NEXT: .plt:
@@ -55,10 +59,6 @@
 // CHECK-NEXT: 40123d:       int3
 // CHECK-NEXT: 40123e:       int3
 // CHECK-NEXT: 40123f:       int3
-
-// CHECK:      Contents of section .got.plt:
-// CHECK-NEXT: 40224000 00000000 00000000 10124000
-// CHECK-NEXT: 30124000
 
 .global _start
 _start:

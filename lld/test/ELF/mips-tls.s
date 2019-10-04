@@ -21,21 +21,21 @@
 # RUN:   | FileCheck -check-prefix=DIS-SO %s
 # RUN: llvm-readobj -r -A %t-out.so | FileCheck -check-prefix=SO %s
 
-# DIS:      __start:
-# DIS-NEXT:    addiu   $2, $3, -32736
-# DIS-NEXT:    addiu   $2, $3, -32744
-# DIS-NEXT:    addiu   $2, $3, -32728
-# DIS-NEXT:    addiu   $2, $3, -32720
-# DIS-NEXT:    addiu   $2, $3, -32740
+# DIS: 00000000 l    O .tdata          00000000 loc
+# DIS: 00000004 g    O .tdata          00000000 bar
+# DIS: 00000000 g    O *UND*           00000000 foo
 
 # DIS:      Contents of section .got:
 # DIS-NEXT:  30000 00000000 80000000 00000000 ffff9004
 # DIS-NEXT:  30010 00000000 00000000 00000001 00000000
 # DIS-NEXT:  30020 00000001 ffff8004
 
-# DIS: 00000000 l    O .tdata          00000000 loc
-# DIS: 00000004 g    O .tdata          00000000 bar
-# DIS: 00000000 g    O *UND*           00000000 foo
+# DIS:      __start:
+# DIS-NEXT:    addiu   $2, $3, -32736
+# DIS-NEXT:    addiu   $2, $3, -32744
+# DIS-NEXT:    addiu   $2, $3, -32728
+# DIS-NEXT:    addiu   $2, $3, -32720
+# DIS-NEXT:    addiu   $2, $3, -32740
 
 # CHECK:      Relocations [
 # CHECK-NEXT:   Section (7) .rel.dyn {

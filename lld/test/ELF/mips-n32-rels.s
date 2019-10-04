@@ -26,6 +26,14 @@ loc:
   .section  .rodata,"a",@progbits
   .gpword(loc)                                # R_MIPS_GPREL32
 
+# CHECK: 00020104      .text   00000000 loc
+# CHECK: 00028100      .got    00000000 .hidden _gp
+# CHECK: 00020100 g  F .text   00000000 __start
+
+# CHECK:      Contents of section .rodata:
+# CHECK-NEXT:  {{[0-9a-f]+}} ffff8004
+#                            ^-- loc - _gp
+
 # CHECK:      Disassembly of section .text:
 # CHECK-EMPTY:
 # CHECK-NEXT: __start:
@@ -38,14 +46,6 @@ loc:
 #                                          ^-- 0x20100 - 0x28100
 #                                          ^-- 0 - 0xffff8000
 #                                          ^-- %lo(0x8000)
-
-# CHECK:      Contents of section .rodata:
-# CHECK-NEXT:  {{[0-9a-f]+}} ffff8004
-#                            ^-- loc - _gp
-
-# CHECK: 00020104      .text   00000000 loc
-# CHECK: 00028100      .got    00000000 .hidden _gp
-# CHECK: 00020100 g  F .text   00000000 __start
 
 # ELF: Class:                ELF32
 # ELF: Data:                 2's complement, big endian
