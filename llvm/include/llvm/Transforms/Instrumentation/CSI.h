@@ -293,12 +293,16 @@ public:
   /// Set the value of the MaySpawn property.
   void setMaySpawn(bool v) { PropValue.Fields.MaySpawn = v; }
 
+  /// Set the number of sync regions in this function.
+  void setNumSyncReg(unsigned v) { PropValue.Fields.NumSyncReg = v; }
+
 private:
   typedef union {
     // Must match the definition of property type in csi.h
     struct {
       unsigned MaySpawn : 1;
-      uint64_t Padding : 63;
+      unsigned NumSyncReg : 8;
+      uint64_t Padding : 55;
     } Fields;
     uint64_t Bits;
   } Property;
@@ -308,11 +312,12 @@ private:
 
   typedef struct {
     int MaySpawn;
+    int NumSyncReg;
     int Padding;
   } PropertyBits;
 
   /// The number of bits representing each property.
-  static constexpr PropertyBits PropBits = {1, (64 - 1)};
+  static constexpr PropertyBits PropBits = {1, 8, (64 - 1 - 8)};
 };
 
 class CsiFuncExitProperty : public CsiProperty {
@@ -584,12 +589,16 @@ public:
   /// Set the value of the IsTapirLoop property.
   void setIsTapirLoopBody(bool v) { PropValue.Fields.IsTapirLoopBody = v; }
 
+  /// Set the number of sync regions in this function.
+  void setNumSyncReg(unsigned v) { PropValue.Fields.NumSyncReg = v; }
+
 private:
   typedef union {
     // Must match the definition of property type in csi.h
     struct {
       unsigned IsTapirLoopBody : 1;
-      uint64_t Padding : 63;
+      unsigned NumSyncReg : 8;
+      uint64_t Padding : 55;
     } Fields;
     uint64_t Bits;
   } Property;
@@ -599,11 +608,12 @@ private:
 
   typedef struct {
     int IsTapirLoopBody;
+    int NumSyncReg;
     int Padding;
   } PropertyBits;
 
   /// The number of bits representing each property.
-  static constexpr PropertyBits PropBits = {1, (64 - 1)};
+  static constexpr PropertyBits PropBits = {1, 8, (64 - 1 - 8)};
 };
 
 class CsiTaskExitProperty : public CsiProperty {

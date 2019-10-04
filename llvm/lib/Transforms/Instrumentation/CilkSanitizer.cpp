@@ -175,7 +175,9 @@ struct CilkSanitizerImpl : public CSIImpl {
     bool InstrumentAncillaryInstructions(
         SmallPtrSetImpl<Instruction *> &Allocas,
         SmallPtrSetImpl<Instruction *> &AllocationFnCalls,
-        SmallPtrSetImpl<Instruction *> &FreeCalls);
+        SmallPtrSetImpl<Instruction *> &FreeCalls,
+        DenseMap<Value *, unsigned> &SyncRegNums,
+        DenseMap<BasicBlock *, unsigned> &SRCounters);
 
   private:
     void getDetachesForInstruction(Instruction *I);
@@ -207,7 +209,9 @@ struct CilkSanitizerImpl : public CSIImpl {
     bool InstrumentAncillaryInstructions(
         SmallPtrSetImpl<Instruction *> &Allocas,
         SmallPtrSetImpl<Instruction *> &AllocationFnCalls,
-        SmallPtrSetImpl<Instruction *> &FreeCalls);
+        SmallPtrSetImpl<Instruction *> &FreeCalls,
+        DenseMap<Value *, unsigned> &SyncRegNums,
+        DenseMap<BasicBlock *, unsigned> &SRCounters);
     bool PerformDelayedInstrumentation();
 
   private:
@@ -329,10 +333,13 @@ struct CilkSanitizerImpl : public CSIImpl {
   bool suppressCallsite(Instruction *I);
   bool instrumentAllocationFn(Instruction *I, DominatorTree *DT);
   bool instrumentFree(Instruction *I);
-  bool instrumentDetach(DetachInst *DI, DominatorTree *DT, TaskInfo &TI,
+  bool instrumentDetach(DetachInst *DI, unsigned SyncRegNum,
+                        unsigned NumSyncRegs, DominatorTree *DT, TaskInfo &TI,
                         LoopInfo &LI);
-  bool instrumentSync(SyncInst *SI);
-  void instrumentLoop(Loop &L, TaskInfo &TI, ScalarEvolution *SE = nullptr);
+  bool instrumentSync(SyncInst *SI, unsigned SyncRegNum);
+  void instrumentLoop(Loop &L, TaskInfo &TI,
+                      DenseMap<Value *, unsigned> &SyncRegNums,
+                      ScalarEvolution *SE = nullptr);
   bool instrumentAlloca(Instruction *I);
 
   bool instrumentFunctionUsingRI(Function &F);
@@ -364,6 +371,8 @@ private:
   Function *CsanTaskEntry = nullptr;
   Function *CsanTaskExit = nullptr;
   Function *CsanSync = nullptr;
+  Function *CsanBeforeLoop = nullptr;
+  Function *CsanAfterLoop = nullptr;
   Function *CsanAfterAllocFn = nullptr;
   Function *CsanAfterFree = nullptr;
 
@@ -696,6 +705,7 @@ void CilkSanitizerImpl::initializeCsanHooks() {
   Type *LoadPropertyTy = CsiLoadStoreProperty::getType(C);
   Type *StorePropertyTy = CsiLoadStoreProperty::getType(C);
   Type *CallPropertyTy = CsiCallProperty::getType(C);
+  Type *LoopPropertyTy = CsiLoopProperty::getType(C);
   Type *AllocFnPropertyTy = CsiAllocFnProperty::getType(C);
   Type *FreePropertyTy = CsiFreeProperty::getType(C);
   Type *RetType = IRB.getVoidTy();
@@ -757,7 +767,8 @@ void CilkSanitizerImpl::initializeCsanHooks() {
   CsanAfterCallsite->addFnAttr(Attribute::InaccessibleMemOnly);
 
   CsanDetach = M.getOrInsertFunction("__csan_detach", RetType,
-                                     /* detach_id */ IDType);
+                                     /* detach_id */ IDType,
+                                     /* sync_reg */ IRB.getInt8Ty());
   CsanDetach->addFnAttr(Attribute::InaccessibleMemOnly);
   CsanTaskEntry = M.getOrInsertFunction("__csan_task", RetType,
                                         /* task_id */ IDType,
@@ -775,13 +786,15 @@ void CilkSanitizerImpl::initializeCsanHooks() {
                                        /* task_exit_id */ IDType,
                                        /* task_id */ IDType,
                                        /* detach_id */ IDType,
+                                       /* sync_reg */ IRB.getInt8Ty(),
                                        TaskExitPropertyTy);
   CsanTaskExit->addFnAttr(Attribute::InaccessibleMemOnly);
   CsanDetachContinue = M.getOrInsertFunction("__csan_detach_continue", RetType,
                                              /* detach_continue_id */ IDType,
                                              /* detach_id */ IDType);
   CsanDetachContinue->addFnAttr(Attribute::InaccessibleMemOnly);
-  CsanSync = M.getOrInsertFunction("__csan_sync", RetType, IDType);
+  CsanSync = M.getOrInsertFunction("__csan_sync", RetType, IDType,
+                                   /* sync_reg */ IRB.getInt8Ty());
   CsanSync->addFnAttr(Attribute::InaccessibleMemOnly);
 
   // CsanBeforeAllocFn = M.getOrInsertFunction("__csan_before_allocfn", RetType,
@@ -830,8 +843,14 @@ void CilkSanitizerImpl::initializeCsanHooks() {
   SetSuppressionFlag->addFnAttr(Attribute::InaccessibleMemOnly);
 
   // Cilksan-specific attributes on CSI hooks
-  CsiBeforeLoop->addFnAttr(Attribute::InaccessibleMemOnly);
-  CsiAfterLoop->addFnAttr(Attribute::InaccessibleMemOnly);
+  CsanBeforeLoop = checkCsiInterfaceFunction(M.getOrInsertFunction(
+      "__csan_before_loop", IRB.getVoidTy(), IDType, IRB.getInt64Ty(),
+      LoopPropertyTy));
+  CsanBeforeLoop->addFnAttr(Attribute::InaccessibleMemOnly);
+  CsanAfterLoop = checkCsiInterfaceFunction(
+      M.getOrInsertFunction("__csan_after_loop", IRB.getVoidTy(), IDType,
+                            IRB.getInt8Ty(), LoopPropertyTy));
+  CsanAfterLoop->addFnAttr(Attribute::InaccessibleMemOnly);
 
   CsiAfterAlloca->addParamAttr(1, Attribute::NoCapture);
   CsiAfterAlloca->addParamAttr(1, Attribute::ReadNone);
@@ -1299,7 +1318,9 @@ bool CilkSanitizerImpl::SimpleInstrumentor::InstrumentCalls(
 bool CilkSanitizerImpl::SimpleInstrumentor::InstrumentAncillaryInstructions(
     SmallPtrSetImpl<Instruction *> &Allocas,
     SmallPtrSetImpl<Instruction *> &AllocationFnCalls,
-    SmallPtrSetImpl<Instruction *> &FreeCalls) {
+    SmallPtrSetImpl<Instruction *> &FreeCalls,
+    DenseMap<Value *, unsigned> &SyncRegNums,
+    DenseMap<BasicBlock *, unsigned> &SRCounters) {
   bool Result = false;
   SmallPtrSet<SyncInst *, 4> Syncs;
   SmallPtrSet<Loop *, 4> Loops;
@@ -1335,7 +1356,8 @@ bool CilkSanitizerImpl::SimpleInstrumentor::InstrumentAncillaryInstructions(
 
   // Instrument detaches
   for (DetachInst *DI : Detaches) {
-    CilkSanImpl.instrumentDetach(DI, DT, TI, LI);
+    CilkSanImpl.instrumentDetach(DI, SyncRegNums[DI->getSyncRegion()],
+                                 SRCounters[DI->getDetached()], DT, TI, LI);
     // Get syncs associated with this detach
     for (SyncInst *SI : CilkSanImpl.DetachToSync[DI])
       Syncs.insert(SI);
@@ -1350,12 +1372,12 @@ bool CilkSanitizerImpl::SimpleInstrumentor::InstrumentAncillaryInstructions(
 
   // Instrument associated syncs
   for (SyncInst *SI : Syncs)
-    CilkSanImpl.instrumentSync(SI);
+    CilkSanImpl.instrumentSync(SI, SyncRegNums[SI->getSyncRegion()]);
 
   if (CilkSanImpl.Options.InstrumentLoops) {
     // Recursively instrument all loops
     for (Loop *L : Loops)
-      CilkSanImpl.instrumentLoop(*L, TI);
+      CilkSanImpl.instrumentLoop(*L, TI, SyncRegNums);
   }
 
   return Result;
@@ -2063,7 +2085,9 @@ bool CilkSanitizerImpl::Instrumentor::PerformDelayedInstrumentation() {
 bool CilkSanitizerImpl::Instrumentor::InstrumentAncillaryInstructions(
     SmallPtrSetImpl<Instruction *> &Allocas,
     SmallPtrSetImpl<Instruction *> &AllocationFnCalls,
-    SmallPtrSetImpl<Instruction *> &FreeCalls) {
+    SmallPtrSetImpl<Instruction *> &FreeCalls,
+    DenseMap<Value *, unsigned> &SyncRegNums,
+    DenseMap<BasicBlock *, unsigned> &SRCounters) {
   bool Result = false;
   SmallPtrSet<SyncInst *, 4> Syncs;
   SmallPtrSet<Loop *, 4> Loops;
@@ -2105,7 +2129,8 @@ bool CilkSanitizerImpl::Instrumentor::InstrumentAncillaryInstructions(
 
   // Instrument detaches
   for (DetachInst *DI : Detaches) {
-    CilkSanImpl.instrumentDetach(DI, DT, TI, LI);
+    CilkSanImpl.instrumentDetach(DI, SyncRegNums[DI->getSyncRegion()],
+                                 SRCounters[DI->getDetached()], DT, TI, LI);
     // Get syncs associated with this detach
     for (SyncInst *SI : CilkSanImpl.DetachToSync[DI])
       Syncs.insert(SI);
@@ -2120,12 +2145,12 @@ bool CilkSanitizerImpl::Instrumentor::InstrumentAncillaryInstructions(
 
   // Instrument associated syncs
   for (SyncInst *SI : Syncs)
-    CilkSanImpl.instrumentSync(SI);
+    CilkSanImpl.instrumentSync(SI, SyncRegNums[SI->getSyncRegion()]);
 
   if (CilkSanImpl.Options.InstrumentLoops) {
     // Recursively instrument all loops
     for (Loop *L : Loops)
-      CilkSanImpl.instrumentLoop(*L, TI);
+      CilkSanImpl.instrumentLoop(*L, TI, SyncRegNums);
   }
 
   return Result;
@@ -2166,6 +2191,8 @@ bool CilkSanitizerImpl::instrumentFunctionUsingRI(Function &F) {
   SmallPtrSet<Instruction *, 8> AllocationFnCalls;
   SmallPtrSet<Instruction *, 8> FreeCalls;
   SmallVector<SyncInst *, 8> Syncs;
+  DenseMap<BasicBlock *, unsigned> SRCounters;
+  DenseMap<Value *, unsigned> SyncRegNums;
 
   TaskInfo &TI = GetTaskInfo(F);
   RaceInfo &RI = GetRaceInfo(F);
@@ -2188,6 +2215,18 @@ bool CilkSanitizerImpl::instrumentFunctionUsingRI(Function &F) {
       else if (isa<CallInst>(Inst) || isa<InvokeInst>(Inst)) {
         // if (CallInst *CI = dyn_cast<CallInst>(&Inst))
         //   maybeMarkSanitizerLibraryCallNoBuiltin(CI, TLI);
+
+        // If we find a sync region, record it.
+        if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(&Inst))
+          if (Intrinsic::syncregion_start == II->getIntrinsicID()) {
+            // Identify this sync region with a counter value, where all sync
+            // regions within a function or task are numbered from 0.
+            BasicBlock *TEntry = TI.getTaskFor(&BB)->getEntry();
+            // Create a new counter if need be.
+            if (!SRCounters.count(TEntry))
+              SRCounters[TEntry] = 0;
+            SyncRegNums[&Inst] = SRCounters[TEntry]++;
+          }
 
         // Record this function call as either an allocation function, a call to
         // free (or delete), a memory intrinsic, or an ordinary real function
@@ -2241,7 +2280,8 @@ bool CilkSanitizerImpl::instrumentFunctionUsingRI(Function &F) {
     // Instrument ancillary instructions including allocas, allocation-function
     // calls, free calls, detaches, and syncs.
     Result |= FuncI.InstrumentAncillaryInstructions(Allocas, AllocationFnCalls,
-                                                    FreeCalls);
+                                                    FreeCalls, SyncRegNums,
+                                                    SRCounters);
   } else {
     Instrumentor FuncI(*this, RI, TI, LI, DT);
     // Insert suppression flags for each function argument.
@@ -2260,7 +2300,8 @@ bool CilkSanitizerImpl::instrumentFunctionUsingRI(Function &F) {
     // Instrument ancillary instructions including allocas, allocation-function
     // calls, free calls, detaches, and syncs.
     Result |= FuncI.InstrumentAncillaryInstructions(Allocas, AllocationFnCalls,
-                                                    FreeCalls);
+                                                    FreeCalls, SyncRegNums,
+                                                    SRCounters);
 
     // Once we have handled ancillary instructions, we've done the necessary
     // analysis on this function.  We now perform delayed instrumentation, which
@@ -2273,6 +2314,8 @@ bool CilkSanitizerImpl::instrumentFunctionUsingRI(Function &F) {
     CsiFuncProperty FuncEntryProp;
     bool MaySpawn = !TI.isSerial();
     FuncEntryProp.setMaySpawn(MaySpawn);
+    if (MaySpawn)
+      FuncEntryProp.setNumSyncReg(SRCounters[TI.getRootTask()->getEntry()]);
     // TODO: Determine if we actually want the frame pointer, not the stack
     // pointer.
     Value *FrameAddr = IRB.CreateCall(
@@ -2671,8 +2714,10 @@ static void getTaskExits(
   }
 }
 
-bool CilkSanitizerImpl::instrumentDetach(DetachInst *DI, DominatorTree *DT,
-                                         TaskInfo &TI, LoopInfo &LI) {
+bool CilkSanitizerImpl::instrumentDetach(DetachInst *DI, unsigned SyncRegNum,
+                                         unsigned NumSyncRegs,
+                                         DominatorTree *DT, TaskInfo &TI,
+                                         LoopInfo &LI) {
   bool TapirLoopBody = spawnsTapirLoopBody(DI, LI, TI);
   // Instrument the detach instruction itself
   Value *DetachID;
@@ -2680,7 +2725,8 @@ bool CilkSanitizerImpl::instrumentDetach(DetachInst *DI, DominatorTree *DT,
     IRBuilder<> IRB(DI);
     uint64_t LocalID = DetachFED.add(*DI);
     DetachID = DetachFED.localToGlobalId(LocalID, IRB);
-    Instruction *Call = IRB.CreateCall(CsanDetach, {DetachID});
+    Instruction *Call = IRB.CreateCall(CsanDetach, {DetachID,
+                                                    IRB.getInt8(SyncRegNum)});
     IRB.SetInstDebugLocation(Call);
   }
   NumInstrumentedDetaches++;
@@ -2700,6 +2746,7 @@ bool CilkSanitizerImpl::instrumentDetach(DetachInst *DI, DominatorTree *DT,
     Value *TaskID = TaskFED.localToGlobalId(LocalID, IRB);
     CsiTaskProperty Prop;
     Prop.setIsTapirLoopBody(TapirLoopBody);
+    Prop.setNumSyncReg(NumSyncRegs);
     // Get the frame and stack pointers.
     Value *FrameAddr = IRB.CreateCall(
         Intrinsic::getDeclaration(&M, Intrinsic::task_frameaddress),
@@ -2721,7 +2768,8 @@ bool CilkSanitizerImpl::instrumentDetach(DetachInst *DI, DominatorTree *DT,
       CsiTaskExitProperty ExitProp;
       ExitProp.setIsTapirLoopBody(TapirLoopBody);
       Instruction *Call = IRB.CreateCall(
-          CsanTaskExit, {TaskExitID, TaskID, DetachID, ExitProp.getValue(IRB)});
+          CsanTaskExit, {TaskExitID, TaskID, DetachID, IRB.getInt8(SyncRegNum),
+                         ExitProp.getValue(IRB)});
       IRB.SetInstDebugLocation(Call);
       NumInstrumentedDetachExits++;
     }
@@ -2733,7 +2781,8 @@ bool CilkSanitizerImpl::instrumentDetach(DetachInst *DI, DominatorTree *DT,
       CsiTaskExitProperty ExitProp;
       ExitProp.setIsTapirLoopBody(TapirLoopBody);
       Instruction *Call = IRB.CreateCall(
-          CsanTaskExit, {TaskExitID, TaskID, DetachID, ExitProp.getValue(IRB)});
+          CsanTaskExit, {TaskExitID, TaskID, DetachID, IRB.getInt8(SyncRegNum),
+                         ExitProp.getValue(IRB)});
       IRB.SetInstDebugLocation(Call);
       NumInstrumentedDetachExits++;
     }
@@ -2745,8 +2794,9 @@ bool CilkSanitizerImpl::instrumentDetach(DetachInst *DI, DominatorTree *DT,
       ExitProp.setIsTapirLoopBody(TapirLoopBody);
       insertHookCallAtSharedEHSpindleExits(
           SharedEH, T, CsanTaskExit, TaskExitFED,
-          {TaskID, DetachID, ExitProp.getValueImpl(DI->getContext())},
-          {DefaultID, DefaultID,
+          {TaskID, DetachID, IRB.getInt8(SyncRegNum),
+           ExitProp.getValueImpl(DI->getContext())},
+          {DefaultID, DefaultID, IRB.getInt8(0),
            CsiTaskExitProperty::getDefaultValueImpl(DI->getContext())});
     }
   }
@@ -2779,13 +2829,13 @@ bool CilkSanitizerImpl::instrumentDetach(DetachInst *DI, DominatorTree *DT,
   return true;
 }
 
-bool CilkSanitizerImpl::instrumentSync(SyncInst *SI) {
+bool CilkSanitizerImpl::instrumentSync(SyncInst *SI, unsigned SyncRegNum) {
   IRBuilder<> IRB(SI);
   // Get the ID of this sync.
   uint64_t LocalID = SyncFED.add(*SI);
   Value *SyncID = SyncFED.localToGlobalId(LocalID, IRB);
   // Insert instrumentation before the sync.
-  insertHookCall(SI, CsanSync, {SyncID});
+  insertHookCall(SI, CsanSync, {SyncID, IRB.getInt8(SyncRegNum)});
   NumInstrumentedSyncs++;
   return true;
 }
@@ -2812,12 +2862,14 @@ static const SCEV *getRuntimeTripCount(Loop &L, ScalarEvolution *SE) {
   return TripCountSC;
 }
 
-void CilkSanitizerImpl::instrumentLoop(Loop &L, TaskInfo &TI,
+void CilkSanitizerImpl::instrumentLoop(Loop &L,TaskInfo &TI,
+                                       DenseMap<Value *, unsigned> &SyncRegNums,
                                        ScalarEvolution *SE) {
   assert(L.isLoopSimplifyForm() && "CSI assumes loops are in simplified form.");
   BasicBlock *Preheader = L.getLoopPreheader();
   Task *T = getTaskIfTapirLoop(&L, &TI);
   assert(T && "CilkSanitizer should only instrument Tapir loops.");
+  unsigned SyncRegNum = SyncRegNums[T->getDetach()->getSyncRegion()];
   // We assign a local ID for this loop here, so that IDs for loops follow a
   // depth-first ordering.
   // csi_id_t LocalId = LoopFED.add(*Header);
@@ -2854,8 +2906,8 @@ void CilkSanitizerImpl::instrumentLoop(Loop &L, TaskInfo &TI,
   }
 
   // Insert before-loop hook.
-  insertHookCall(&*IRB.GetInsertPoint(), CsiBeforeLoop, {LoopCsiId, TripCount,
-                                                         LoopPropVal});
+  insertHookCall(&*IRB.GetInsertPoint(), CsanBeforeLoop, {LoopCsiId, TripCount,
+                                                          LoopPropVal});
 
   // // Insert loop-body-entry hook.
   // IRB.SetInsertPoint(&*Header->getFirstInsertionPt());
@@ -2881,8 +2933,8 @@ void CilkSanitizerImpl::instrumentLoop(Loop &L, TaskInfo &TI,
   // Insert after-loop hooks.
   for (BasicBlock *BB : ExitBlocks) {
     IRB.SetInsertPoint(&*BB->getFirstInsertionPt());
-    insertHookCall(&*IRB.GetInsertPoint(), CsiAfterLoop, {LoopCsiId,
-                                                          LoopPropVal});
+    insertHookCall(&*IRB.GetInsertPoint(), CsanAfterLoop,
+                   {LoopCsiId, IRB.getInt8(SyncRegNum), LoopPropVal});
   }
 }
 
