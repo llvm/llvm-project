@@ -109,6 +109,14 @@ public:
     SBThreadPlan
     QueueThreadPlanForStepScripted(const char *script_class_name);
 
+    SBThreadPlan
+    QueueThreadPlanForStepScripted(const char *script_class_name,
+                                   SBError &error);
+    SBThreadPlan
+    QueueThreadPlanForStepScripted(const char *script_class_name,
+                                   SBStructuredData &args_data,
+                                   SBError &error);
+
 
 protected:
     friend class SBBreakpoint;

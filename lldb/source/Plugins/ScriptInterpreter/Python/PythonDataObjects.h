@@ -438,6 +438,10 @@ public:
   void Reset(PyRefType type, PyObject *py_obj) override;
 
   ArgInfo GetNumArguments() const;
+  
+  // If the callable is a Py_Class, then find the number of arguments
+  // of the __init__ method.
+  ArgInfo GetNumInitArguments() const;
 
   PythonObject operator()();
 

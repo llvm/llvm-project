@@ -97,6 +97,7 @@ LLDBSwigPythonCreateCommandObject(const char *python_class_name,
 
 extern "C" void *LLDBSwigPythonCreateScriptedThreadPlan(
     const char *python_class_name, const char *session_dictionary_name,
+    StructuredDataImpl *args_data,
     std::string &error_string,
     const lldb::ThreadPlanSP &thread_plan_sp);
 
@@ -1845,7 +1846,8 @@ StructuredData::DictionarySP ScriptInterpreterPythonImpl::OSPlugin_CreateThread(
 }
 
 StructuredData::ObjectSP ScriptInterpreterPythonImpl::CreateScriptedThreadPlan(
-    const char *class_name, std::string &error_str, 
+    const char *class_name, StructuredDataImpl *args_data,
+    std::string &error_str, 
     lldb::ThreadPlanSP thread_plan_sp) {
   if (class_name == nullptr || class_name[0] == '\0')
     return StructuredData::ObjectSP();
@@ -1868,7 +1870,7 @@ StructuredData::ObjectSP ScriptInterpreterPythonImpl::CreateScriptedThreadPlan(
                    Locker::AcquireLock | Locker::InitSession | Locker::NoSTDIN);
     ret_val = LLDBSwigPythonCreateScriptedThreadPlan(
         class_name, python_interpreter->m_dictionary_name.c_str(),
-        error_str, thread_plan_sp);
+        args_data, error_str, thread_plan_sp);
     if (!ret_val)
       return {};
   }

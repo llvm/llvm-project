@@ -63,7 +63,14 @@ class StepScriptedTestCase(TestBase):
         self.assertEqual(stop_id, process.GetStopID(), "Process didn't run")
         
     def test_checking_variable(self):
-        """Test that we can call SBValue API's from a scripted thread plan"""
+        """Test that we can call SBValue API's from a scripted thread plan - using SBAPI's to step"""
+        self.do_test_checking_variable(False)
+        
+    def test_checking_variable_cli(self):
+        """Test that we can call SBValue API's from a scripted thread plan - using cli to step"""
+        self.do_test_checking_variable(True)
+        
+    def do_test_checking_variable(self, use_cli):
         self.build()
         (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(self,
                                                                             "Set a breakpoint here",
@@ -75,8 +82,21 @@ class StepScriptedTestCase(TestBase):
         self.assertTrue(foo_val.GetError().Success(), "Got the foo variable")
         self.assertEqual(foo_val.GetValueAsUnsigned(), 10, "foo starts at 10")
 
-        err = thread.StepUsingScriptedThreadPlan("Steps.StepUntil")
-        self.assertTrue(err.Success(), err.GetCString())
+        if use_cli:
+            result = lldb.SBCommandReturnObject()
+            self.dbg.GetCommandInterpreter().HandleCommand(
+                "thread step-scripted -C Steps.StepUntil -k variable_name -v foo",
+                result)
+            self.assertTrue(result.Succeeded())
+        else:
+            args_data = lldb.SBStructuredData()
+            data = lldb.SBStream()
+            data.Print('{"variable_name" : "foo"}')
+            error = args_data.SetFromJSON(data)
+            self.assertTrue(error.Success(), "Made the args_data correctly")
+
+            err = thread.StepUsingScriptedThreadPlan("Steps.StepUntil", args_data, True)
+            self.assertTrue(err.Success(), err.GetCString())
 
         # We should not have exited:
         self.assertEqual(process.GetState(), lldb.eStateStopped, "We are stopped")

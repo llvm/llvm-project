@@ -28,6 +28,9 @@ public:
 
   SBThreadPlan(lldb::SBThread &thread, const char *class_name);
 
+  SBThreadPlan(lldb::SBThread &thread, const char *class_name, 
+               lldb::SBStructuredData &args_data);
+
   ~SBThreadPlan();
 
   explicit operator bool() const;
@@ -99,6 +102,9 @@ public:
 
   SBThreadPlan QueueThreadPlanForStepScripted(const char *script_class_name);
   SBThreadPlan QueueThreadPlanForStepScripted(const char *script_class_name,
+                                              SBError &error);
+  SBThreadPlan QueueThreadPlanForStepScripted(const char *script_class_name,
+                                              lldb::SBStructuredData &args_data,
                                               SBError &error);
 
 private:

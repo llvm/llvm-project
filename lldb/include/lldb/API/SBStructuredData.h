@@ -91,6 +91,8 @@ protected:
   friend class SBTraceOptions;
   friend class SBDebugger;
   friend class SBTarget;
+  friend class SBThread;
+  friend class SBThreadPlan;
 
   StructuredDataImplUP m_impl_up;
 };

@@ -24,6 +24,9 @@ v1:
 v2:
   .word v1   # R_MIPS_32 target v1 addend 0
 
+# SYM: SYMBOL TABLE:
+# SYM: 00011000  .data  00000000 v1
+
 # BE: Contents of section .data:
 # BE-NEXT: {{.*}} 00000004 00011000
 #                 ^-- v2+4 ^-- v1
@@ -31,10 +34,6 @@ v2:
 # EL: Contents of section .data:
 # EL-NEXT: {{.*}} 04000000 00100100
 #                 ^-- v2+4 ^-- v1
-
-# SYM: SYMBOL TABLE:
-# SYM: 00011000  .data  00000000 v1
-
 # REL: Relocation section
 # REL:      {{.*}} R_MIPS_REL32
 # REL-NEXT: {{.*}} R_MIPS_REL32 [[V2:[0-9a-f]+]]

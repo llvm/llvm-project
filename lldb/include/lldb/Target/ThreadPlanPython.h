@@ -12,6 +12,8 @@
 
 #include <string>
 
+#include "lldb/lldb-forward.h"
+
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
@@ -29,7 +31,8 @@ namespace lldb_private {
 
 class ThreadPlanPython : public ThreadPlan {
 public:
-  ThreadPlanPython(Thread &thread, const char *class_name);
+  ThreadPlanPython(Thread &thread, const char *class_name, 
+                   StructuredDataImpl *args_data);
   ~ThreadPlanPython() override;
 
   void GetDescription(Stream *s, lldb::DescriptionLevel level) override;
@@ -55,6 +58,10 @@ protected:
 
 private:
   std::string m_class_name;
+  StructuredDataImpl *m_args_data; // We own this, but the implementation
+                                   // has to manage the UP (since that is
+                                   // how it gets stored in the
+                                   // SBStructuredData).
   std::string m_error_str;
   StructuredData::ObjectSP m_implementation_sp;
   bool m_did_push;

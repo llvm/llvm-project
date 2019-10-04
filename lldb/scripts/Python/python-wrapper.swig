@@ -250,6 +250,7 @@ LLDBSwigPythonCreateScriptedThreadPlan
 (
     const char *python_class_name,
     const char *session_dictionary_name,
+    lldb_private::StructuredDataImpl *args_impl,
     std::string &error_string,
     const lldb::ThreadPlanSP& thread_plan_sp
 )
@@ -279,7 +280,23 @@ LLDBSwigPythonCreateScriptedThreadPlan
     if (!tp_arg.IsAllocated())
         Py_RETURN_NONE;
 
-    PythonObject result = pfunc(tp_arg, dict);
+    PythonObject result = {};
+    size_t init_num_args = pfunc.GetNumInitArguments().count;
+    if (init_num_args == 3) {
+        if (args_impl != nullptr) {
+           error_string.assign("args passed, but __init__ does not take an args dictionary");
+           Py_RETURN_NONE;
+        }
+        result = pfunc(tp_arg, dict);
+    } else if (init_num_args = 4) {
+        lldb::SBStructuredData *args_value = new lldb::SBStructuredData(args_impl);
+        PythonObject args_arg(PyRefType::Owned, SBTypeToSWIGWrapper(args_value));
+        result = pfunc(tp_arg, args_arg, dict);
+    } else {
+        error_string.assign("wrong number of arguments in __init__, should be 1 or 2 (not including self & dict)");
+        Py_RETURN_NONE;
+    }
+
     // FIXME: At this point we should check that the class we found supports all the methods
     // that we need.
 

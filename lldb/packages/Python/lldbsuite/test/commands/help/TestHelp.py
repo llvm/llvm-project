@@ -188,7 +188,7 @@ class HelpCommandTestCase(TestBase):
     def test_help_next_shows_options(self):
         """Test that 'help next' shows all the options for thread step-over"""
         self.expect("help next",
-                    substrs=['--python-class', '--run-mode'], matching=True)
+                    substrs=['--step-out-avoids-no-debug', '--run-mode'], matching=True)
 
     @no_debug_info_test
     def test_help_provides_alternatives(self):

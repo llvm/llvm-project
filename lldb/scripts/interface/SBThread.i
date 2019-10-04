@@ -254,6 +254,11 @@ public:
     StepUsingScriptedThreadPlan (const char *script_class_name, bool resume_immediately);
 
     SBError
+    StepUsingScriptedThreadPlan(const char *script_class_name,
+                                lldb::SBStructuredData &args_data,
+                                bool resume_immediately);
+
+    SBError
     JumpToLine (lldb::SBFileSpec &file_spec, uint32_t line);
 
     void

@@ -2180,7 +2180,7 @@ CompilerType ClangASTContext::CreateArrayType(const CompilerType &element_type,
       } else {
         return CompilerType(this, ast->getConstantArrayType(
                                          ClangUtil::GetQualType(element_type),
-                                         ap_element_count,
+                                         ap_element_count, nullptr,
                                          clang::ArrayType::Normal, 0)
                                       .getAsOpaquePtr());
       }
@@ -4469,7 +4469,7 @@ CompilerType ClangASTContext::GetArrayType(lldb::opaque_compiler_type_t type,
         return CompilerType(
             this, ast_ctx
                       ->getConstantArrayType(
-                          qual_type, llvm::APInt(64, size),
+                          qual_type, llvm::APInt(64, size), nullptr,
                           clang::ArrayType::ArraySizeModifier::Normal, 0)
                       .getAsOpaquePtr());
       else

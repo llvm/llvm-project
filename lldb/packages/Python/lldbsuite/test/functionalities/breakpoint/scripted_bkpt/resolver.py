@@ -7,6 +7,7 @@ class Resolver:
   def __init__(self, bkpt, extra_args, dict):
       self.bkpt = bkpt
       self.extra_args = extra_args
+        
       Resolver.func_list = []
       Resolver.got_files = 0
 
@@ -15,6 +16,8 @@ class Resolver:
       sym_item = self.extra_args.GetValueForKey("symbol")
       if sym_item.IsValid():
           sym_name = sym_item.GetStringValue(1000)
+      else:
+          print("Didn't have a value for key 'symbol'")
 
       if sym_ctx.compile_unit.IsValid():
           Resolver.got_files = 1

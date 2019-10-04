@@ -6,6 +6,17 @@
 
 ;; Check handling of basic msp430 relocation types.
 
+  .data
+;; R_MSP430_8
+  .byte _byte
+;; R_MSP430_16
+  .word _start
+;; R_MSP430_32
+  .long _start
+
+; CHECK:      Contents of section .data:
+; CHECK-NEXT: 2000 21008000 800000
+
   .text
   .global foo
 foo:
@@ -28,17 +39,6 @@ foo:
   mov #-1, _start
 
 ; CHECK:      800a: {{.*}} mov #-1, -12
-
-  .data
-;; R_MSP430_8
-  .byte _byte
-;; R_MSP430_16
-  .word _start
-;; R_MSP430_32
-  .long _start
-
-; CHECK:      Contents of section .data:
-; CHECK-NEXT: 2000 21008000 800000
 
 ; RUN: od -x %t.exe | FileCheck -check-prefix=TRAP %s
 ; TRAP: 4343 4343 4343 4343 4343 4343 4343 4343
