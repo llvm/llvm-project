@@ -7,7 +7,7 @@ add_clang_tool(pp-trace
   PPCallbacksTracker.cpp
   )
 
-target_link_libraries(pp-trace
+clang_target_link_libraries(pp-trace
   PRIVATE
   clangAST
   clangBasic

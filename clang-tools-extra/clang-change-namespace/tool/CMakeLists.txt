@@ -7,16 +7,19 @@ set(LLVM_LINK_COMPONENTS
 add_clang_tool(clang-change-namespace
   ClangChangeNamespace.cpp
   )
-target_link_libraries(clang-change-namespace
+clang_target_link_libraries(clang-change-namespace
   PRIVATE
   clangAST
   clangASTMatchers
   clangBasic
-  clangChangeNamespace
   clangFormat
   clangFrontend
   clangRewrite
   clangSerialization
   clangTooling
   clangToolingCore
+  )
+target_link_libraries(clang-change-namespace
+  PRIVATE
+  clangChangeNamespace
   )

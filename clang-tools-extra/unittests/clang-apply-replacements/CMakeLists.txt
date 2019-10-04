@@ -11,10 +11,13 @@ add_extra_unittest(ClangApplyReplacementsTests
   ApplyReplacementsTest.cpp
   )
 
-target_link_libraries(ClangApplyReplacementsTests
+clang_target_link_libraries(ClangApplyReplacementsTests
   PRIVATE
-  clangApplyReplacements
   clangBasic
   clangToolingCore
   clangToolingRefactoring
+  )
+target_link_libraries(ClangApplyReplacementsTests
+  PRIVATE
+  clangApplyReplacements
   )

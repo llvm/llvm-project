@@ -30,14 +30,16 @@ static_assert(sizeof(SymbolUnion) <= 48,
 static std::string maybeDemangleSymbol(StringRef symName) {
   if (config->demangle) {
     std::string prefix;
-    StringRef demangleInput = symName;
-    if (demangleInput.consume_front("__imp_"))
+    StringRef prefixless = symName;
+    if (prefixless.consume_front("__imp_"))
       prefix = "__declspec(dllimport) ";
+    StringRef demangleInput = prefixless;
     if (config->machine == I386)
       demangleInput.consume_front("_");
     std::string demangled = demangle(demangleInput);
     if (demangled != demangleInput)
-      return prefix + demangled;
+      return prefix + demangle(demangleInput);
+    return (prefix + prefixless).str();
   }
   return symName;
 }

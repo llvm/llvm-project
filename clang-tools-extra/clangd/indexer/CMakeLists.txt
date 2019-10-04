@@ -8,13 +8,16 @@ add_clang_executable(clangd-indexer
   IndexerMain.cpp
   )
 
-target_link_libraries(clangd-indexer
+clang_target_link_libraries(clangd-indexer
   PRIVATE
   clangAST
   clangBasic
-  clangDaemon
   clangFrontend
   clangIndex
   clangLex
   clangTooling
+)
+target_link_libraries(clangd-indexer
+  PRIVATE
+  clangDaemon
 )

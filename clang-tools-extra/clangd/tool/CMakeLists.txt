@@ -15,12 +15,10 @@ if(CLANGD_BUILD_XPC)
   list(APPEND CLANGD_XPC_LIBS "clangdXpcJsonConversions" "clangdXpcTransport")
 endif()
 
-target_link_libraries(clangd
+clang_target_link_libraries(clangd
   PRIVATE
   clangAST
   clangBasic
-  clangTidy
-  clangDaemon
   clangFormat
   clangFrontend
   clangSema
@@ -28,5 +26,10 @@ target_link_libraries(clangd
   clangToolingCore
   clangToolingRefactoring
   clangToolingSyntax
+  )
+target_link_libraries(clangd
+  PRIVATE
+  clangTidy
+  clangDaemon
   ${CLANGD_XPC_LIBS}
   )
