@@ -630,22 +630,26 @@ function(cxx_add_warning_flags target)
 endfunction()
 
 # Exception flags =============================================================
-if (LIBCXX_ENABLE_EXCEPTIONS)
-  # Catches C++ exceptions only and tells the compiler to assume that extern C
-  # functions never throw a C++ exception.
-  add_compile_flags_if_supported(-EHsc)
-else()
-  add_definitions(-D_LIBCPP_NO_EXCEPTIONS)
-  add_compile_flags_if_supported(-EHs- -EHa-)
-  add_compile_flags_if_supported(-fno-exceptions)
-endif()
+function(cxx_add_exception_flags target)
+  if (LIBCXX_ENABLE_EXCEPTIONS)
+    # Catches C++ exceptions only and tells the compiler to assume that extern C
+    # functions never throw a C++ exception.
+    target_add_compile_flags_if_supported(${target} PUBLIC -EHsc)
+  else()
+    target_compile_definitions(${target} PUBLIC -D_LIBCPP_NO_EXCEPTIONS)
+    target_add_compile_flags_if_supported(${target} PUBLIC -EHs- -EHa-)
+    target_add_compile_flags_if_supported(${target} PUBLIC -fno-exceptions)
+  endif()
+endfunction()
 
 # RTTI flags ==================================================================
-if (NOT LIBCXX_ENABLE_RTTI)
-  add_definitions(-D_LIBCPP_NO_RTTI)
-  add_compile_flags_if_supported(-GR-)
-  add_compile_flags_if_supported(-fno-rtti)
-endif()
+function(cxx_add_rtti_flags target)
+  if (NOT LIBCXX_ENABLE_RTTI)
+    target_compile_definitions(${target} PUBLIC -D_LIBCPP_NO_RTTI)
+    target_add_compile_flags_if_supported(${target} PUBLIC -GR-)
+    target_add_compile_flags_if_supported(${target} PUBLIC -fno-rtti)
+  endif()
+endfunction()
 
 # Threading flags =============================================================
 if (LIBCXX_BUILD_EXTERNAL_THREAD_LIBRARY AND LIBCXX_ENABLE_SHARED)
@@ -672,11 +676,13 @@ endif()
 # FIXME The libc++ sources are fundamentally non-modular. They need special
 # versions of the headers in order to provide C++03 and legacy ABI definitions.
 # NOTE: The public headers can be used with modules in all other contexts.
-if (LLVM_ENABLE_MODULES)
-  # Ignore that the rest of the modules flags are now unused.
-  add_compile_flags_if_supported(-Wno-unused-command-line-argument)
-  add_compile_flags(-fno-modules)
-endif()
+function(cxx_add_module_flags target)
+  if (LLVM_ENABLE_MODULES)
+    # Ignore that the rest of the modules flags are now unused.
+    target_add_compile_flags_if_supported(${target} PRIVATE -Wno-unused-command-line-argument)
+    target_compile_options(${target} PRIVATE -fno-modules)
+  endif()
+endfunction()
 
 # Sanitizer flags =============================================================
 
