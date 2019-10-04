@@ -380,7 +380,8 @@ public:
   ////////////////////////////////////////////////////////////////////////////////
   // Support for dispatch next
 
-  INLINE static int64_t Shuffle(unsigned active, int64_t val, int leader) {
+  INLINE static uint64_t Shuffle(__kmpc_impl_lanemask_t active, int64_t val,
+                                 int leader) {
     uint32_t lo, hi;
     __kmpc_impl_unpack(val, lo, hi);
     hi = __kmpc_impl_shfl_sync(active, hi, leader);

@@ -230,14 +230,8 @@ if (LIBCXX_ENABLE_SHARED)
       SOVERSION     "${LIBCXX_ABI_VERSION}"
       DEFINE_SYMBOL ""
   )
-  cxx_add_basic_build_flags(cxx_shared)
+  cxx_add_common_build_flags(cxx_shared)
   cxx_set_common_defines(cxx_shared)
-  cxx_add_warning_flags(cxx_shared)
-  cxx_add_windows_flags(cxx_shared)
-  cxx_add_config_site(cxx_shared)
-  cxx_add_exception_flags(cxx_shared)
-  cxx_add_rtti_flags(cxx_shared)
-  cxx_add_module_flags(cxx_shared)
 
   # Link against LLVM libunwind
   if (LIBCXXABI_USE_LLVM_UNWINDER)
@@ -337,14 +331,8 @@ if (LIBCXX_ENABLE_STATIC)
       LINK_FLAGS    "${LIBCXX_LINK_FLAGS}"
       OUTPUT_NAME   "c++"
   )
-  cxx_add_basic_build_flags(cxx_static)
+  cxx_add_common_build_flags(cxx_static)
   cxx_set_common_defines(cxx_static)
-  cxx_add_warning_flags(cxx_static)
-  cxx_add_windows_flags(cxx_static)
-  cxx_add_config_site(cxx_static)
-  cxx_add_exception_flags(cxx_static)
-  cxx_add_rtti_flags(cxx_static)
-  cxx_add_module_flags(cxx_static)
 
   if (LIBCXX_HERMETIC_STATIC_LIBRARY)
     # If the hermetic library doesn't define the operator new/delete functions
@@ -402,16 +390,18 @@ if (LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY)
     target_link_libraries(cxx_experimental cxx_static)
   endif()
 
-  set(experimental_flags "${LIBCXX_COMPILE_FLAGS}")
-  check_flag_supported(-std=c++14)
-  if (NOT MSVC AND LIBCXX_SUPPORTS_STD_EQ_CXX14_FLAG)
-    string(REPLACE "-std=c++11" "-std=c++14" experimental_flags "${LIBCXX_COMPILE_FLAGS}")
-  endif()
   set_target_properties(cxx_experimental
     PROPERTIES
-      COMPILE_FLAGS "${experimental_flags}"
+      COMPILE_FLAGS "${LIBCXX_COMPILE_FLAGS}"
       OUTPUT_NAME   "c++experimental"
   )
+endif()
+cxx_add_common_build_flags(cxx_experimental)
+
+# Overwrite the previously-set Standard flag with -std=c++14 if supported
+check_flag_supported(-std=c++14)
+if (NOT MSVC AND LIBCXX_SUPPORTS_STD_EQ_CXX14_FLAG)
+  target_compile_options(cxx_experimental PRIVATE "-std=c++14")
 endif()
 
 if (LIBCXX_BUILD_EXTERNAL_THREAD_LIBRARY)

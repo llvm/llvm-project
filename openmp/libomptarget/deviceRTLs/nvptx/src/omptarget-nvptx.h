@@ -107,7 +107,7 @@ struct DataSharingStateTy {
   __kmpc_data_sharing_slot *SlotPtr[DS_Max_Warp_Number];
   void *StackPtr[DS_Max_Warp_Number];
   void * volatile FramePtr[DS_Max_Warp_Number];
-  int32_t ActiveThreads[DS_Max_Warp_Number];
+  __kmpc_impl_lanemask_t ActiveThreads[DS_Max_Warp_Number];
 };
 // Additional worker slot type which is initialized with the default worker slot
 // size of 4*32 bytes.

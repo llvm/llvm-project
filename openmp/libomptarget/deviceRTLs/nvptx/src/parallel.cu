@@ -44,13 +44,14 @@ typedef struct ConvergentSimdJob {
 ////////////////////////////////////////////////////////////////////////////////
 // support for convergent simd (team of threads in a warp only)
 ////////////////////////////////////////////////////////////////////////////////
-EXTERN bool __kmpc_kernel_convergent_simd(void *buffer, uint32_t Mask,
+EXTERN bool __kmpc_kernel_convergent_simd(void *buffer,
+                                          __kmpc_impl_lanemask_t Mask,
                                           bool *IsFinal, int32_t *LaneSource,
                                           int32_t *LaneId, int32_t *NumLanes) {
   PRINT0(LD_IO, "call to __kmpc_kernel_convergent_simd\n");
-  uint32_t ConvergentMask = Mask;
+  __kmpc_impl_lanemask_t ConvergentMask = Mask;
   int32_t ConvergentSize = __kmpc_impl_popc(ConvergentMask);
-  uint32_t WorkRemaining = ConvergentMask >> (*LaneSource + 1);
+  __kmpc_impl_lanemask_t WorkRemaining = ConvergentMask >> (*LaneSource + 1);
   *LaneSource += __kmpc_impl_ffs(WorkRemaining);
   *IsFinal = __kmpc_impl_popc(WorkRemaining) == 1;
   __kmpc_impl_lanemask_t lanemask_lt = __kmpc_impl_lanemask_lt();
@@ -117,13 +118,14 @@ typedef struct ConvergentParallelJob {
 ////////////////////////////////////////////////////////////////////////////////
 // support for convergent parallelism (team of threads in a warp only)
 ////////////////////////////////////////////////////////////////////////////////
-EXTERN bool __kmpc_kernel_convergent_parallel(void *buffer, uint32_t Mask,
+EXTERN bool __kmpc_kernel_convergent_parallel(void *buffer,
+                                              __kmpc_impl_lanemask_t Mask,
                                               bool *IsFinal,
                                               int32_t *LaneSource) {
   PRINT0(LD_IO, "call to __kmpc_kernel_convergent_parallel\n");
-  uint32_t ConvergentMask = Mask;
+  __kmpc_impl_lanemask_t ConvergentMask = Mask;
   int32_t ConvergentSize = __kmpc_impl_popc(ConvergentMask);
-  uint32_t WorkRemaining = ConvergentMask >> (*LaneSource + 1);
+  __kmpc_impl_lanemask_t WorkRemaining = ConvergentMask >> (*LaneSource + 1);
   *LaneSource += __kmpc_impl_ffs(WorkRemaining);
   *IsFinal = __kmpc_impl_popc(WorkRemaining) == 1;
   __kmpc_impl_lanemask_t lanemask_lt = __kmpc_impl_lanemask_lt();
