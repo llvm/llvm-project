@@ -24,14 +24,14 @@ EXTERN
 void __kmpc_nvptx_end_reduce_nowait(int32_t global_tid) {}
 
 EXTERN int32_t __kmpc_shuffle_int32(int32_t val, int16_t delta, int16_t size) {
-  return __kmpc_impl_shfl_down_sync(0xFFFFFFFF, val, delta, size);
+  return __kmpc_impl_shfl_down_sync(__kmpc_impl_all_lanes, val, delta, size);
 }
 
 EXTERN int64_t __kmpc_shuffle_int64(int64_t val, int16_t delta, int16_t size) {
    uint32_t lo, hi;
    __kmpc_impl_unpack(val, lo, hi);
-   hi = __kmpc_impl_shfl_down_sync(0xFFFFFFFF, hi, delta, size);
-   lo = __kmpc_impl_shfl_down_sync(0xFFFFFFFF, lo, delta, size);
+   hi = __kmpc_impl_shfl_down_sync(__kmpc_impl_all_lanes, hi, delta, size);
+   lo = __kmpc_impl_shfl_down_sync(__kmpc_impl_all_lanes, lo, delta, size);
    return __kmpc_impl_pack(lo, hi);
 }
 
@@ -82,7 +82,7 @@ int32_t __kmpc_nvptx_simd_reduce_nowait(int32_t global_tid, int32_t num_vars,
                                         kmp_ShuffleReductFctPtr shflFct,
                                         kmp_InterWarpCopyFctPtr cpyFct) {
   __kmpc_impl_lanemask_t Liveness = __kmpc_impl_activemask();
-  if (Liveness == 0xffffffff) {
+  if (Liveness == __kmpc_impl_all_lanes) {
     gpu_regular_warp_reduce(reduce_data, shflFct);
     return GetThreadIdInBlock() % WARPSIZE ==
            0; // Result on lane 0 of the simd warp.
@@ -143,7 +143,7 @@ static int32_t nvptx_parallel_reduce_nowait(
   return BlockThreadId == 0;
 #else
   __kmpc_impl_lanemask_t Liveness = __kmpc_impl_activemask();
-  if (Liveness == 0xffffffff) // Full warp
+  if (Liveness == __kmpc_impl_all_lanes) // Full warp
     gpu_regular_warp_reduce(reduce_data, shflFct);
   else if (!(Liveness & (Liveness + 1))) // Partial warp but contiguous lanes
     gpu_irregular_warp_reduce(reduce_data, shflFct,
@@ -318,7 +318,7 @@ static int32_t nvptx_teams_reduce_nowait(int32_t global_tid, int32_t num_vars,
 
   // Reduce across warps to the warp master.
   __kmpc_impl_lanemask_t Liveness = __kmpc_impl_activemask();
-  if (Liveness == 0xffffffff) // Full warp
+  if (Liveness == __kmpc_impl_all_lanes) // Full warp
     gpu_regular_warp_reduce(reduce_data, shflFct);
   else // Partial warp but contiguous lanes
     gpu_irregular_warp_reduce(reduce_data, shflFct,

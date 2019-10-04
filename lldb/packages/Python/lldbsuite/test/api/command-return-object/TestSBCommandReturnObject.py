@@ -14,6 +14,9 @@ class TestSBCommandReturnObject(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipIfNoSBHeaders
+    @expectedFailureAll(
+        oslist=["windows"],
+        bugnumber="llvm.org/pr43570")
     def test_sb_command_return_object(self):
         env = {self.dylibPath: self.getLLDBLibraryEnvVal()}
 

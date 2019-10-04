@@ -320,7 +320,7 @@ EXTERN bool __kmpc_kernel_parallel(void **WorkFn,
     // can be changed incorrectly because of threads divergence.
     bool IsActiveParallelRegion = threadsInTeam != 1;
     IncParallelLevel(IsActiveParallelRegion,
-                     IsActiveParallelRegion ? 0xFFFFFFFF : 1u);
+                     IsActiveParallelRegion ? __kmpc_impl_all_lanes : 1u);
   }
 
   return isActive;
@@ -347,7 +347,7 @@ EXTERN void __kmpc_kernel_end_parallel() {
   // be changed incorrectly because of threads divergence.
     bool IsActiveParallelRegion = threadsInTeam != 1;
     DecParallelLevel(IsActiveParallelRegion,
-                     IsActiveParallelRegion ? 0xFFFFFFFF : 1u);
+                     IsActiveParallelRegion ? __kmpc_impl_all_lanes : 1u);
 }
 
 ////////////////////////////////////////////////////////////////////////////////

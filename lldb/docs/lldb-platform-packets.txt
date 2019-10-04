@@ -181,10 +181,31 @@ incompatible with the flags that gdb specifies.
 //  send:    pid:3500;name:612e6f7574;
 //
 //  The request packet has a criteria to search for, followed by
-//  a specific name.  Other name_match: values include
-//  starts_with, ends_with, contains, regex.  You can specify a pid
-//  to search for, a uid, all_users, triple, etc etc.  The testsuite
-//  only ever searches for name_match:equals.
+//  a specific name.  
+//
+//  KEY           VALUE     DESCRIPTION
+//  ===========   ========  ================================================
+//  "name"        ascii-hex An ASCII hex string that contains the name of 
+//                          the process that will be matched.
+//  "name_match"  enum      One of: "equals", "starts_with", "ends_with", 
+//                          "contains" or "regex"
+//  "pid"         integer   A string value containing the decimal process ID
+//  "parent_pid"  integer   A string value containing the decimal parent 
+//                          process ID
+//  "uid"         integer   A string value containing the decimal user ID
+//  "gid"         integer   A string value containing the decimal group ID
+//  "euid"        integer   A string value containing the decimal effective user ID
+//  "egid"        integer   A string value containing the decimal effective group ID
+//  "all_users"   bool      A boolean value that specifies if processes should
+//                          be listed for all users, not just the user that the 
+//                          platform is running as
+//  "triple"      ascii-hex An ASCII hex target triple string ("x86_64", 
+//                          "x86_64-apple-macosx", "armv7-apple-ios")
+//
+//  If no criteria is given, qfProcessInfo will request a list of every process.
+//
+//  The lldb testsuite currently only uses name_match:equals and the
+//  no-criteria mode to list every process.
 //
 //  The response should include any information about the process that
 //  can be retrieved in semicolon-separated name:value fields.
@@ -195,6 +216,14 @@ incompatible with the flags that gdb specifies.
 //  the search, qsProcessInfo should be sent.
 //
 //  If no process match is found, Exx should be returned.
+//
+//  Sample packet/response:
+//  send packet: $qfProcessInfo#00
+//  read packet: $pid:60001;ppid:59948;uid:7746;gid:11;euid:7746;egid:11;name:6c6c6462;triple:7838365f36342d6170706c652d6d61636f7378;#00
+//  send packet: $qsProcessInfo#00
+//  read packet: $pid:59992;ppid:192;uid:7746;gid:11;euid:7746;egid:11;name:6d64776f726b6572;triple:7838365f36342d6170706c652d6d61636f7378;#00
+//  send packet: $qsProcessInfo#00
+//  read packet: $E04#00
 
 //----------------------------------------------------------------------
 // qsProcessInfo
