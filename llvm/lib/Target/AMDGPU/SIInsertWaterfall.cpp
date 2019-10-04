@@ -389,6 +389,9 @@ bool SIInsertWaterfall::removeRedundantWaterfall(WaterfallWorkitem &Item) {
       MRI->replaceRegWith(RFLDstReg, ReplaceReg);
       Removed++;
       ToRemoveRFLList.push_back(RFLMI);
+    } else if (RFLDstOp->isDead()) {
+      Removed++;
+      ToRemoveRFLList.push_back(RFLMI);
     } else {
       NewRFLList.push_back(RFLMI);
     }
