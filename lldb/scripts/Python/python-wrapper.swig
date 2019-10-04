@@ -288,7 +288,7 @@ LLDBSwigPythonCreateScriptedThreadPlan
            Py_RETURN_NONE;
         }
         result = pfunc(tp_arg, dict);
-    } else if (init_num_args = 4) {
+    } else if (init_num_args == 4) {
         lldb::SBStructuredData *args_value = new lldb::SBStructuredData(args_impl);
         PythonObject args_arg(PyRefType::Owned, SBTypeToSWIGWrapper(args_value));
         result = pfunc(tp_arg, args_arg, dict);

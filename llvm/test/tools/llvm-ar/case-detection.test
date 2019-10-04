@@ -1,6 +1,6 @@
 -- Test CamelCase tool name to ensure detection works properly
 
-REQUIRES: target-windows, system-windows
+REQUIRES: system-windows
 RUN: yaml2obj %S/Inputs/coff.yaml -o %t.obj
 RUN: rm -rf %t1
 RUN: mkdir %t1

@@ -6,17 +6,17 @@
 
 --- |
   define i8 @test_load_i8(i8* %p1) {
-    %r = load atomic i8, i8* %p1 unordered, align 8
+    %r = load atomic i8, i8* %p1 unordered, align 1
     ret i8 %r
   }
 
   define i16 @test_load_i16(i16* %p1) {
-    %r = load atomic i16, i16* %p1 unordered, align 8
+    %r = load atomic i16, i16* %p1 unordered, align 2
     ret i16 %r
   }
 
   define i32 @test_load_i32(i32* %p1) {
-    %r = load atomic i32, i32* %p1 unordered, align 8
+    %r = load atomic i32, i32* %p1 unordered, align 4
     ret i32 %r
   }
 
@@ -26,7 +26,7 @@
   }
 
   define float @test_load_float(float* %p1) {
-    %r = load atomic float, float* %p1 unordered, align 8
+    %r = load atomic float, float* %p1 unordered, align 4
     ret float %r
   }
 
@@ -46,7 +46,7 @@
   }
 
   define i32* @test_store_i32(i32 %val, i32* %p1) {
-    store atomic i32 %val, i32* %p1 unordered, align 8
+    store atomic i32 %val, i32* %p1 unordered, align 4
     ret i32* %p1
   }
 
@@ -56,12 +56,12 @@
   }
 
   define float* @test_store_float(float %val, float* %p1) {
-    store atomic float %val, float* %p1 unordered, align 8
+    store atomic float %val, float* %p1 unordered, align 4
     ret float* %p1
   }
 
   define float* @test_store_float_vec(float %val, float* %p1) {
-    store atomic float %val, float* %p1 unordered, align 8
+    store atomic float %val, float* %p1 unordered, align 4
     ret float* %p1
   }
 

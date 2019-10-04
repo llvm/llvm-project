@@ -1,4 +1,4 @@
-source_set("GlobalISel") {
+static_library("GlobalISel") {
   deps = [
     "//llvm/lib/Support",
   ]

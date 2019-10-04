@@ -5,6 +5,8 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown             | FileCheck %s --check-prefix=X64 --check-prefix=X64-SSE2
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=avx  | FileCheck %s --check-prefix=X64 --check-prefix=X64-AVX --check-prefix=X64-AVX1
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=avx2 | FileCheck %s --check-prefix=X64 --check-prefix=X64-AVX --check-prefix=X64-AVX2
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=avx512f | FileCheck %s --check-prefix=X64 --check-prefix=X64-AVX512F
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=avx512bw | FileCheck %s --check-prefix=X64 --check-prefix=X64-AVX512F --check-prefix=X64-AVX512BW
 
 ; This tests codegen time inlining/optimization of memcmp
 ; rdar://6480398
@@ -1540,6 +1542,15 @@ define i1 @length64_eq(i8* %x, i8* %y) nounwind {
 ; X64-AVX2-NEXT:    setne %al
 ; X64-AVX2-NEXT:    vzeroupper
 ; X64-AVX2-NEXT:    retq
+;
+; X64-AVX512F-LABEL: length64_eq:
+; X64-AVX512F:       # %bb.0:
+; X64-AVX512F-NEXT:    vmovdqu64 (%rdi), %zmm0
+; X64-AVX512F-NEXT:    vpcmpeqd (%rsi), %zmm0, %k0
+; X64-AVX512F-NEXT:    kortestw %k0, %k0
+; X64-AVX512F-NEXT:    setae %al
+; X64-AVX512F-NEXT:    vzeroupper
+; X64-AVX512F-NEXT:    retq
   %call = tail call i32 @memcmp(i8* %x, i8* %y, i64 64) nounwind
   %cmp = icmp ne i32 %call, 0
   ret i1 %cmp
@@ -1592,6 +1603,15 @@ define i1 @length64_eq_const(i8* %X) nounwind {
 ; X64-AVX2-NEXT:    sete %al
 ; X64-AVX2-NEXT:    vzeroupper
 ; X64-AVX2-NEXT:    retq
+;
+; X64-AVX512F-LABEL: length64_eq_const:
+; X64-AVX512F:       # %bb.0:
+; X64-AVX512F-NEXT:    vmovdqu64 (%rdi), %zmm0
+; X64-AVX512F-NEXT:    vpcmpeqd {{.*}}(%rip), %zmm0, %k0
+; X64-AVX512F-NEXT:    kortestw %k0, %k0
+; X64-AVX512F-NEXT:    setb %al
+; X64-AVX512F-NEXT:    vzeroupper
+; X64-AVX512F-NEXT:    retq
   %m = tail call i32 @memcmp(i8* %X, i8* getelementptr inbounds ([65 x i8], [65 x i8]* @.str, i32 0, i32 0), i64 64) nounwind
   %c = icmp eq i32 %m, 0
   ret i1 %c

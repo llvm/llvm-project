@@ -237,23 +237,6 @@ namespace opts {
   cl::alias ArchSpecifcInfoShort("A", cl::desc("Alias for --arch-specific"),
                                  cl::aliasopt(ArchSpecificInfo), cl::NotHidden);
 
-  // --mips-plt-got
-  cl::opt<bool>
-  MipsPLTGOT("mips-plt-got",
-             cl::desc("Display the MIPS GOT and PLT GOT sections"));
-
-  // --mips-abi-flags
-  cl::opt<bool> MipsABIFlags("mips-abi-flags",
-                             cl::desc("Display the MIPS.abiflags section"));
-
-  // --mips-reginfo
-  cl::opt<bool> MipsReginfo("mips-reginfo",
-                            cl::desc("Display the MIPS .reginfo section"));
-
-  // --mips-options
-  cl::opt<bool> MipsOptions("mips-options",
-                            cl::desc("Display the MIPS .MIPS.options section"));
-
   // --coff-imports
   cl::opt<bool>
   COFFImports("coff-imports", cl::desc("Display the PE/COFF import table"));
@@ -519,18 +502,15 @@ static void dumpObject(const ObjectFile *Obj, ScopedPrinter &Writer,
   if (Obj->isELF()) {
     if (opts::ELFLinkerOptions)
       Dumper->printELFLinkerOptions();
-    if (opts::ArchSpecificInfo)
+    if (opts::ArchSpecificInfo) {
       if (Obj->getArch() == llvm::Triple::arm)
         Dumper->printAttributes();
-    if (isMipsArch(Obj->getArch())) {
-      if (opts::MipsPLTGOT)
-        Dumper->printMipsPLTGOT();
-      if (opts::MipsABIFlags)
+      else if (isMipsArch(Obj->getArch())) {
         Dumper->printMipsABIFlags();
-      if (opts::MipsReginfo)
-        Dumper->printMipsReginfo();
-      if (opts::MipsOptions)
         Dumper->printMipsOptions();
+        Dumper->printMipsReginfo();
+        Dumper->printMipsPLTGOT();
+      }
     }
     if (opts::SectionGroups)
       Dumper->printGroupSections();

@@ -2467,7 +2467,7 @@ struct AAAlignImpl : AAAlign {
           if (SI->getAlignment() < getAssumedAlign()) {
             STATS_DECLTRACK(AAAlign, Store,
                             "Number of times alignemnt added to a store");
-            SI->setAlignment(getAssumedAlign());
+            SI->setAlignment(Align(getAssumedAlign()));
             Changed = ChangeStatus::CHANGED;
           }
       } else if (auto *LI = dyn_cast<LoadInst>(U.getUser())) {

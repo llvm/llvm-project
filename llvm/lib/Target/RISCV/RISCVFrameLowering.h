@@ -45,6 +45,11 @@ public:
   eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
                                 MachineBasicBlock::iterator MI) const override;
 
+  // Get the first stack adjustment amount for SplitSPAdjust.
+  // Return 0 if we don't want to to split the SP adjustment in prologue and
+  // epilogue.
+  uint64_t getFirstSPAdjustAmount(const MachineFunction &MF) const;
+
 protected:
   const RISCVSubtarget &STI;
 

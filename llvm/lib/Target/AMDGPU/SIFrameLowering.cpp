@@ -673,6 +673,8 @@ bool SIFrameLowering::isSupportedStackID(TargetStackID::Value ID) const {
   case TargetStackID::NoAlloc:
   case TargetStackID::SGPRSpill:
     return true;
+  case TargetStackID::SVEVector:
+    return false;
   }
   llvm_unreachable("Invalid TargetStackID::Value");
 }

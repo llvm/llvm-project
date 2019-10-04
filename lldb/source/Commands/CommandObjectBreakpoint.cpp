@@ -242,19 +242,18 @@ public:
             interpreter, "breakpoint set",
             "Sets a breakpoint or set of breakpoints in the executable.",
             "breakpoint set <cmd-options>"),
-        m_python_class_options("scripted breakpoint", 'P'),
-        m_bp_opts(), m_options() {
-          // We're picking up all the normal options, commands and disable.
-          m_all_options.Append(&m_python_class_options, LLDB_OPT_SET_1,
-                               LLDB_OPT_SET_11);
-          m_all_options.Append(&m_bp_opts, 
-                               LLDB_OPT_SET_1 | LLDB_OPT_SET_3 | LLDB_OPT_SET_4, 
-                               LLDB_OPT_SET_ALL);
-          m_all_options.Append(&m_dummy_options, LLDB_OPT_SET_1, 
-                               LLDB_OPT_SET_ALL);
-          m_all_options.Append(&m_options);
-          m_all_options.Finalize();
-        }
+        m_bp_opts(), m_python_class_options("scripted breakpoint", 'P'),
+        m_options() {
+    // We're picking up all the normal options, commands and disable.
+    m_all_options.Append(&m_python_class_options, LLDB_OPT_SET_1,
+                         LLDB_OPT_SET_11);
+    m_all_options.Append(&m_bp_opts,
+                         LLDB_OPT_SET_1 | LLDB_OPT_SET_3 | LLDB_OPT_SET_4,
+                         LLDB_OPT_SET_ALL);
+    m_all_options.Append(&m_dummy_options, LLDB_OPT_SET_1, LLDB_OPT_SET_ALL);
+    m_all_options.Append(&m_options);
+    m_all_options.Finalize();
+  }
 
   ~CommandObjectBreakpointSet() override = default;
 

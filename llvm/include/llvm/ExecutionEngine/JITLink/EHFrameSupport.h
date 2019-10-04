@@ -81,7 +81,7 @@ using StoreFrameRangeFunction =
 /// Authors of JITLinkContexts can use this function to register a post-fixup
 /// pass that records the range of the eh-frame section. This range can
 /// be used after finalization to register and deregister the frame.
-AtomGraphPassFunction
+LinkGraphPassFunction
 createEHFrameRecorderPass(const Triple &TT,
                           StoreFrameRangeFunction StoreFrameRange);
 

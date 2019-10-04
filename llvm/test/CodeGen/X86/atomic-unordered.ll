@@ -2680,3 +2680,36 @@ define i64 @load_i16_anyext_i64(i16* %ptr) {
   %res = bitcast <4 x i16> %vec to i64
   ret i64 %res
 }
+
+; TODO: Would be legal to combine for legal atomic wider types
+define i16 @load_combine(i8* %p) {
+; CHECK-O0-LABEL: load_combine:
+; CHECK-O0:       # %bb.0:
+; CHECK-O0-NEXT:    movb (%rdi), %al
+; CHECK-O0-NEXT:    movb 1(%rdi), %cl
+; CHECK-O0-NEXT:    movzbl %al, %edx
+; CHECK-O0-NEXT:    # kill: def $dx killed $dx killed $edx
+; CHECK-O0-NEXT:    movzbl %cl, %esi
+; CHECK-O0-NEXT:    # kill: def $si killed $si killed $esi
+; CHECK-O0-NEXT:    shlw $8, %si
+; CHECK-O0-NEXT:    orw %si, %dx
+; CHECK-O0-NEXT:    movw %dx, %ax
+; CHECK-O0-NEXT:    retq
+;
+; CHECK-O3-LABEL: load_combine:
+; CHECK-O3:       # %bb.0:
+; CHECK-O3-NEXT:    movzbl (%rdi), %ecx
+; CHECK-O3-NEXT:    movzbl 1(%rdi), %eax
+; CHECK-O3-NEXT:    shll $8, %eax
+; CHECK-O3-NEXT:    orl %ecx, %eax
+; CHECK-O3-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-O3-NEXT:    retq
+  %v1 = load atomic i8, i8* %p unordered, align 2
+  %p2 = getelementptr i8, i8* %p, i64 1
+  %v2 = load atomic i8, i8* %p2 unordered, align 1
+  %v1.ext = zext i8 %v1 to i16
+  %v2.ext = zext i8 %v2 to i16
+  %v2.sht = shl i16 %v2.ext, 8
+  %res = or i16 %v1.ext, %v2.sht
+  ret i16 %res
+}

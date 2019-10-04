@@ -6,44 +6,44 @@
 
 ; TODO: the quality of the generated code is poor
 
-define void @test() nounwind {
+define void @test() {
 ; RV32I-FPELIM-LABEL: test:
 ; RV32I-FPELIM:       # %bb.0:
 ; RV32I-FPELIM-NEXT:    lui a0, 74565
 ; RV32I-FPELIM-NEXT:    addi a0, a0, 1664
 ; RV32I-FPELIM-NEXT:    sub sp, sp, a0
+; RV32I-FPELIM-NEXT:    .cfi_def_cfa_offset 305419904
 ; RV32I-FPELIM-NEXT:    lui a0, 74565
 ; RV32I-FPELIM-NEXT:    addi a0, a0, 1664
 ; RV32I-FPELIM-NEXT:    add sp, sp, a0
+; RV32I-FPELIM-NEXT:    .cfi_def_cfa_offset 0
 ; RV32I-FPELIM-NEXT:    ret
 ;
 ; RV32I-WITHFP-LABEL: test:
 ; RV32I-WITHFP:       # %bb.0:
+; RV32I-WITHFP-NEXT:    addi sp, sp, -2032
+; RV32I-WITHFP-NEXT:    .cfi_def_cfa_offset 2032
+; RV32I-WITHFP-NEXT:    sw ra, 2028(sp)
+; RV32I-WITHFP-NEXT:    sw s0, 2024(sp)
+; RV32I-WITHFP-NEXT:    .cfi_offset ra, -4
+; RV32I-WITHFP-NEXT:    .cfi_offset s0, -8
+; RV32I-WITHFP-NEXT:    addi s0, sp, 2032
+; RV32I-WITHFP-NEXT:    .cfi_def_cfa s0, 0
 ; RV32I-WITHFP-NEXT:    lui a0, 74565
-; RV32I-WITHFP-NEXT:    addi a0, a0, 1680
+; RV32I-WITHFP-NEXT:    addi a0, a0, -352
 ; RV32I-WITHFP-NEXT:    sub sp, sp, a0
+; RV32I-WITHFP-NEXT:    .cfi_def_cfa_offset 305419920
 ; RV32I-WITHFP-NEXT:    lui a0, 74565
-; RV32I-WITHFP-NEXT:    addi a0, a0, 1676
-; RV32I-WITHFP-NEXT:    add a0, sp, a0
-; RV32I-WITHFP-NEXT:    sw ra, 0(a0)
-; RV32I-WITHFP-NEXT:    lui a0, 74565
-; RV32I-WITHFP-NEXT:    addi a0, a0, 1672
-; RV32I-WITHFP-NEXT:    add a0, sp, a0
-; RV32I-WITHFP-NEXT:    sw s0, 0(a0)
-; RV32I-WITHFP-NEXT:    lui a0, 74565
-; RV32I-WITHFP-NEXT:    addi a0, a0, 1680
-; RV32I-WITHFP-NEXT:    add s0, sp, a0
-; RV32I-WITHFP-NEXT:    lui a0, 74565
-; RV32I-WITHFP-NEXT:    addi a0, a0, 1672
-; RV32I-WITHFP-NEXT:    add a0, sp, a0
-; RV32I-WITHFP-NEXT:    lw s0, 0(a0)
-; RV32I-WITHFP-NEXT:    lui a0, 74565
-; RV32I-WITHFP-NEXT:    addi a0, a0, 1676
-; RV32I-WITHFP-NEXT:    add a0, sp, a0
-; RV32I-WITHFP-NEXT:    lw ra, 0(a0)
-; RV32I-WITHFP-NEXT:    lui a0, 74565
-; RV32I-WITHFP-NEXT:    addi a0, a0, 1680
+; RV32I-WITHFP-NEXT:    addi a0, a0, -352
 ; RV32I-WITHFP-NEXT:    add sp, sp, a0
+; RV32I-WITHFP-NEXT:    .cfi_def_cfa_offset 2032
+; RV32I-WITHFP-NEXT:    lw s0, 2024(sp)
+; RV32I-WITHFP-NEXT:    .cfi_def_cfa sp, 305419920
+; RV32I-WITHFP-NEXT:    lw ra, 2028(sp)
+; RV32I-WITHFP-NEXT:    .cfi_restore ra
+; RV32I-WITHFP-NEXT:    .cfi_restore s0
+; RV32I-WITHFP-NEXT:    addi sp, sp, 2032
+; RV32I-WITHFP-NEXT:    .cfi_def_cfa_offset 0
 ; RV32I-WITHFP-NEXT:    ret
   %tmp = alloca [ 305419896 x i8 ] , align 4
   ret void
@@ -52,20 +52,19 @@ define void @test() nounwind {
 ; This test case artificially produces register pressure which should force
 ; use of the emergency spill slot.
 
-define void @test_emergency_spill_slot(i32 %a) nounwind {
+define void @test_emergency_spill_slot(i32 %a) {
 ; RV32I-FPELIM-LABEL: test_emergency_spill_slot:
 ; RV32I-FPELIM:       # %bb.0:
-; RV32I-FPELIM-NEXT:    lui a1, 98
-; RV32I-FPELIM-NEXT:    addi a1, a1, -1392
+; RV32I-FPELIM-NEXT:    addi sp, sp, -2032
+; RV32I-FPELIM-NEXT:    .cfi_def_cfa_offset 2032
+; RV32I-FPELIM-NEXT:    sw s0, 2028(sp)
+; RV32I-FPELIM-NEXT:    sw s1, 2024(sp)
+; RV32I-FPELIM-NEXT:    .cfi_offset s0, -4
+; RV32I-FPELIM-NEXT:    .cfi_offset s1, -8
+; RV32I-FPELIM-NEXT:    lui a1, 97
+; RV32I-FPELIM-NEXT:    addi a1, a1, 672
 ; RV32I-FPELIM-NEXT:    sub sp, sp, a1
-; RV32I-FPELIM-NEXT:    lui a1, 98
-; RV32I-FPELIM-NEXT:    addi a1, a1, -1396
-; RV32I-FPELIM-NEXT:    add a1, sp, a1
-; RV32I-FPELIM-NEXT:    sw s0, 0(a1)
-; RV32I-FPELIM-NEXT:    lui a1, 98
-; RV32I-FPELIM-NEXT:    addi a1, a1, -1400
-; RV32I-FPELIM-NEXT:    add a1, sp, a1
-; RV32I-FPELIM-NEXT:    sw s1, 0(a1)
+; RV32I-FPELIM-NEXT:    .cfi_def_cfa_offset 400016
 ; RV32I-FPELIM-NEXT:    lui a1, 78
 ; RV32I-FPELIM-NEXT:    addi a1, a1, 512
 ; RV32I-FPELIM-NEXT:    addi a2, sp, 8
@@ -77,43 +76,36 @@ define void @test_emergency_spill_slot(i32 %a) nounwind {
 ; RV32I-FPELIM-NEXT:    #APP
 ; RV32I-FPELIM-NEXT:    nop
 ; RV32I-FPELIM-NEXT:    #NO_APP
-; RV32I-FPELIM-NEXT:    lui a0, 98
-; RV32I-FPELIM-NEXT:    addi a0, a0, -1400
-; RV32I-FPELIM-NEXT:    add a0, sp, a0
-; RV32I-FPELIM-NEXT:    lw s1, 0(a0)
-; RV32I-FPELIM-NEXT:    lui a0, 98
-; RV32I-FPELIM-NEXT:    addi a0, a0, -1396
-; RV32I-FPELIM-NEXT:    add a0, sp, a0
-; RV32I-FPELIM-NEXT:    lw s0, 0(a0)
-; RV32I-FPELIM-NEXT:    lui a0, 98
-; RV32I-FPELIM-NEXT:    addi a0, a0, -1392
+; RV32I-FPELIM-NEXT:    lui a0, 97
+; RV32I-FPELIM-NEXT:    addi a0, a0, 672
 ; RV32I-FPELIM-NEXT:    add sp, sp, a0
+; RV32I-FPELIM-NEXT:    .cfi_def_cfa_offset 2032
+; RV32I-FPELIM-NEXT:    lw s1, 2024(sp)
+; RV32I-FPELIM-NEXT:    lw s0, 2028(sp)
+; RV32I-FPELIM-NEXT:    .cfi_restore s0
+; RV32I-FPELIM-NEXT:    .cfi_restore s1
+; RV32I-FPELIM-NEXT:    addi sp, sp, 2032
+; RV32I-FPELIM-NEXT:    .cfi_def_cfa_offset 0
 ; RV32I-FPELIM-NEXT:    ret
 ;
 ; RV32I-WITHFP-LABEL: test_emergency_spill_slot:
 ; RV32I-WITHFP:       # %bb.0:
-; RV32I-WITHFP-NEXT:    lui a1, 98
-; RV32I-WITHFP-NEXT:    addi a1, a1, -1376
+; RV32I-WITHFP-NEXT:    addi sp, sp, -2032
+; RV32I-WITHFP-NEXT:    .cfi_def_cfa_offset 2032
+; RV32I-WITHFP-NEXT:    sw ra, 2028(sp)
+; RV32I-WITHFP-NEXT:    sw s0, 2024(sp)
+; RV32I-WITHFP-NEXT:    sw s1, 2020(sp)
+; RV32I-WITHFP-NEXT:    sw s2, 2016(sp)
+; RV32I-WITHFP-NEXT:    .cfi_offset ra, -4
+; RV32I-WITHFP-NEXT:    .cfi_offset s0, -8
+; RV32I-WITHFP-NEXT:    .cfi_offset s1, -12
+; RV32I-WITHFP-NEXT:    .cfi_offset s2, -16
+; RV32I-WITHFP-NEXT:    addi s0, sp, 2032
+; RV32I-WITHFP-NEXT:    .cfi_def_cfa s0, 0
+; RV32I-WITHFP-NEXT:    lui a1, 97
+; RV32I-WITHFP-NEXT:    addi a1, a1, 688
 ; RV32I-WITHFP-NEXT:    sub sp, sp, a1
-; RV32I-WITHFP-NEXT:    lui a1, 98
-; RV32I-WITHFP-NEXT:    addi a1, a1, -1380
-; RV32I-WITHFP-NEXT:    add a1, sp, a1
-; RV32I-WITHFP-NEXT:    sw ra, 0(a1)
-; RV32I-WITHFP-NEXT:    lui a1, 98
-; RV32I-WITHFP-NEXT:    addi a1, a1, -1384
-; RV32I-WITHFP-NEXT:    add a1, sp, a1
-; RV32I-WITHFP-NEXT:    sw s0, 0(a1)
-; RV32I-WITHFP-NEXT:    lui a1, 98
-; RV32I-WITHFP-NEXT:    addi a1, a1, -1388
-; RV32I-WITHFP-NEXT:    add a1, sp, a1
-; RV32I-WITHFP-NEXT:    sw s1, 0(a1)
-; RV32I-WITHFP-NEXT:    lui a1, 98
-; RV32I-WITHFP-NEXT:    addi a1, a1, -1392
-; RV32I-WITHFP-NEXT:    add a1, sp, a1
-; RV32I-WITHFP-NEXT:    sw s2, 0(a1)
-; RV32I-WITHFP-NEXT:    lui a1, 98
-; RV32I-WITHFP-NEXT:    addi a1, a1, -1376
-; RV32I-WITHFP-NEXT:    add s0, sp, a1
+; RV32I-WITHFP-NEXT:    .cfi_def_cfa_offset 400032
 ; RV32I-WITHFP-NEXT:    lui a1, 78
 ; RV32I-WITHFP-NEXT:    addi a1, a1, 512
 ; RV32I-WITHFP-NEXT:    lui a2, 1048478
@@ -128,25 +120,21 @@ define void @test_emergency_spill_slot(i32 %a) nounwind {
 ; RV32I-WITHFP-NEXT:    #APP
 ; RV32I-WITHFP-NEXT:    nop
 ; RV32I-WITHFP-NEXT:    #NO_APP
-; RV32I-WITHFP-NEXT:    lui a0, 98
-; RV32I-WITHFP-NEXT:    addi a0, a0, -1392
-; RV32I-WITHFP-NEXT:    add a0, sp, a0
-; RV32I-WITHFP-NEXT:    lw s2, 0(a0)
-; RV32I-WITHFP-NEXT:    lui a0, 98
-; RV32I-WITHFP-NEXT:    addi a0, a0, -1388
-; RV32I-WITHFP-NEXT:    add a0, sp, a0
-; RV32I-WITHFP-NEXT:    lw s1, 0(a0)
-; RV32I-WITHFP-NEXT:    lui a0, 98
-; RV32I-WITHFP-NEXT:    addi a0, a0, -1384
-; RV32I-WITHFP-NEXT:    add a0, sp, a0
-; RV32I-WITHFP-NEXT:    lw s0, 0(a0)
-; RV32I-WITHFP-NEXT:    lui a0, 98
-; RV32I-WITHFP-NEXT:    addi a0, a0, -1380
-; RV32I-WITHFP-NEXT:    add a0, sp, a0
-; RV32I-WITHFP-NEXT:    lw ra, 0(a0)
-; RV32I-WITHFP-NEXT:    lui a0, 98
-; RV32I-WITHFP-NEXT:    addi a0, a0, -1376
+; RV32I-WITHFP-NEXT:    lui a0, 97
+; RV32I-WITHFP-NEXT:    addi a0, a0, 688
 ; RV32I-WITHFP-NEXT:    add sp, sp, a0
+; RV32I-WITHFP-NEXT:    .cfi_def_cfa_offset 2032
+; RV32I-WITHFP-NEXT:    lw s2, 2016(sp)
+; RV32I-WITHFP-NEXT:    lw s1, 2020(sp)
+; RV32I-WITHFP-NEXT:    lw s0, 2024(sp)
+; RV32I-WITHFP-NEXT:    .cfi_def_cfa sp, 400032
+; RV32I-WITHFP-NEXT:    lw ra, 2028(sp)
+; RV32I-WITHFP-NEXT:    .cfi_restore ra
+; RV32I-WITHFP-NEXT:    .cfi_restore s0
+; RV32I-WITHFP-NEXT:    .cfi_restore s1
+; RV32I-WITHFP-NEXT:    .cfi_restore s2
+; RV32I-WITHFP-NEXT:    addi sp, sp, 2032
+; RV32I-WITHFP-NEXT:    .cfi_def_cfa_offset 0
 ; RV32I-WITHFP-NEXT:    ret
   %data = alloca [ 100000 x i32 ] , align 4
   %ptr = getelementptr inbounds [100000 x i32], [100000 x i32]* %data, i32 0, i32 80000

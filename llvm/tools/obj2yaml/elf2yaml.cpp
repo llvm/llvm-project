@@ -41,6 +41,7 @@ class ELFDumper {
   Expected<StringRef> getUniquedSymbolName(const Elf_Sym *Sym,
                                            StringRef StrTable,
                                            const Elf_Shdr *SymTab);
+  Expected<StringRef> getSymbolName(uint32_t SymtabNdx, uint32_t SymbolNdx);
 
   const object::ELFFile<ELFT> &Obj;
   ArrayRef<Elf_Word> ShndxTable;
@@ -56,6 +57,7 @@ class ELFDumper {
   Error dumpRelocation(const RelT *Rel, const Elf_Shdr *SymTab,
                        ELFYAML::Relocation &R);
 
+  Expected<ELFYAML::AddrsigSection *> dumpAddrsigSection(const Elf_Shdr *Shdr);
   Expected<ELFYAML::DynamicSection *> dumpDynamicSection(const Elf_Shdr *Shdr);
   Expected<ELFYAML::RelocationSection *> dumpRelocSection(const Elf_Shdr *Shdr);
   Expected<ELFYAML::RawContentSection *>
@@ -279,6 +281,13 @@ template <class ELFT> Expected<ELFYAML::Object *> ELFDumper<ELFT>::dump() {
     }
     case ELF::SHT_GNU_verneed: {
       Expected<ELFYAML::VerneedSection *> SecOrErr = dumpVerneedSection(&Sec);
+      if (!SecOrErr)
+        return SecOrErr.takeError();
+      Y->Sections.emplace_back(*SecOrErr);
+      break;
+    }
+    case ELF::SHT_LLVM_ADDRSIG: {
+      Expected<ELFYAML::AddrsigSection *> SecOrErr = dumpAddrsigSection(&Sec);
       if (!SecOrErr)
         return SecOrErr.takeError();
       Y->Sections.emplace_back(*SecOrErr);
@@ -516,6 +525,46 @@ ELFDumper<ELFT>::dumpStackSizesSection(const Elf_Shdr *Shdr) {
     S->Entries = std::move(Entries);
   }
 
+  return S.release();
+}
+
+template <class ELFT>
+Expected<ELFYAML::AddrsigSection *>
+ELFDumper<ELFT>::dumpAddrsigSection(const Elf_Shdr *Shdr) {
+  auto S = std::make_unique<ELFYAML::AddrsigSection>();
+  if (Error E = dumpCommonSection(Shdr, *S))
+    return std::move(E);
+
+  auto ContentOrErr = Obj.getSectionContents(Shdr);
+  if (!ContentOrErr)
+    return ContentOrErr.takeError();
+
+  ArrayRef<uint8_t> Content = *ContentOrErr;
+  DataExtractor::Cursor Cur(0);
+  DataExtractor Data(Content, Obj.isLE(), /*AddressSize=*/0);
+  std::vector<ELFYAML::AddrsigSymbol> Symbols;
+  while (Cur && Cur.tell() < Content.size()) {
+    uint64_t SymNdx = Data.getULEB128(Cur);
+    if (!Cur)
+      break;
+
+    Expected<StringRef> SymbolName = getSymbolName(Shdr->sh_link, SymNdx);
+    if (!SymbolName || SymbolName->empty()) {
+      consumeError(SymbolName.takeError());
+      Symbols.emplace_back(SymNdx);
+      continue;
+    }
+
+    Symbols.emplace_back(*SymbolName);
+  }
+
+  if (Cur) {
+    S->Symbols = std::move(Symbols);
+    return S.release();
+  }
+
+  consumeError(Cur.takeError());
+  S->Content = yaml::BinaryRef(Content);
   return S.release();
 }
 
@@ -791,25 +840,31 @@ ELFDumper<ELFT>::dumpVerneedSection(const Elf_Shdr *Shdr) {
 }
 
 template <class ELFT>
+Expected<StringRef> ELFDumper<ELFT>::getSymbolName(uint32_t SymtabNdx,
+                                                   uint32_t SymbolNdx) {
+  auto SymtabOrErr = Obj.getSection(SymtabNdx);
+  if (!SymtabOrErr)
+    return SymtabOrErr.takeError();
+
+  const Elf_Shdr *Symtab = *SymtabOrErr;
+  auto SymOrErr = Obj.getSymbol(Symtab, SymbolNdx);
+  if (!SymOrErr)
+    return SymOrErr.takeError();
+
+  auto StrTabOrErr = Obj.getStringTableForSymtab(*Symtab);
+  if (!StrTabOrErr)
+    return StrTabOrErr.takeError();
+  return getUniquedSymbolName(*SymOrErr, *StrTabOrErr, Symtab);
+}
+
+template <class ELFT>
 Expected<ELFYAML::Group *> ELFDumper<ELFT>::dumpGroup(const Elf_Shdr *Shdr) {
   auto S = std::make_unique<ELFYAML::Group>();
   if (Error E = dumpCommonSection(Shdr, *S))
     return std::move(E);
 
-  auto SymtabOrErr = Obj.getSection(Shdr->sh_link);
-  if (!SymtabOrErr)
-    return SymtabOrErr.takeError();
-  // Get symbol with index sh_info which name is the signature of the group.
-  const Elf_Shdr *Symtab = *SymtabOrErr;
-  auto SymOrErr = Obj.getSymbol(Symtab, Shdr->sh_info);
-  if (!SymOrErr)
-    return SymOrErr.takeError();
-  auto StrTabOrErr = Obj.getStringTableForSymtab(*Symtab);
-  if (!StrTabOrErr)
-    return StrTabOrErr.takeError();
-
-  Expected<StringRef> SymbolName =
-      getUniquedSymbolName(*SymOrErr, *StrTabOrErr, Symtab);
+  // Get symbol with index sh_info. This symbol's name is the signature of the group.
+  Expected<StringRef> SymbolName = getSymbolName(Shdr->sh_link, Shdr->sh_info);
   if (!SymbolName)
     return SymbolName.takeError();
   S->Signature = *SymbolName;

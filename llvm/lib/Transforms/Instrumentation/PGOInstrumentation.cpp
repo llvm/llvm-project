@@ -48,6 +48,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CFGMST.h"
+#include "ValueProfileCollector.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
@@ -61,7 +62,6 @@
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/CFG.h"
-#include "llvm/Analysis/IndirectCallVisitor.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
@@ -121,6 +121,7 @@
 
 using namespace llvm;
 using ProfileCount = Function::ProfileCount;
+using VPCandidateInfo = ValueProfileCollector::CandidateInfo;
 
 #define DEBUG_TYPE "pgo-instrumentation"
 
@@ -287,6 +288,11 @@ static std::string getBranchCondString(Instruction *TI) {
   return result;
 }
 
+static const char *ValueProfKindDescr[] = {
+#define VALUE_PROF_KIND(Enumerator, Value, Descr) Descr,
+#include "llvm/ProfileData/InstrProfData.inc"
+};
+
 namespace {
 
 /// The select instruction visitor plays three roles specified
@@ -349,50 +355,6 @@ struct SelectInstVisitor : public InstVisitor<SelectInstVisitor> {
   unsigned getNumOfSelectInsts() const { return NSIs; }
 };
 
-/// Instruction Visitor class to visit memory intrinsic calls.
-struct MemIntrinsicVisitor : public InstVisitor<MemIntrinsicVisitor> {
-  Function &F;
-  unsigned NMemIs = 0;          // Number of memIntrinsics instrumented.
-  VisitMode Mode = VM_counting; // Visiting mode.
-  unsigned CurCtrId = 0;        // Current counter index.
-  unsigned TotalNumCtrs = 0;    // Total number of counters
-  GlobalVariable *FuncNameVar = nullptr;
-  uint64_t FuncHash = 0;
-  PGOUseFunc *UseFunc = nullptr;
-  std::vector<Instruction *> Candidates;
-
-  MemIntrinsicVisitor(Function &Func) : F(Func) {}
-
-  void countMemIntrinsics(Function &Func) {
-    NMemIs = 0;
-    Mode = VM_counting;
-    visit(Func);
-  }
-
-  void instrumentMemIntrinsics(Function &Func, unsigned TotalNC,
-                               GlobalVariable *FNV, uint64_t FHash) {
-    Mode = VM_instrument;
-    TotalNumCtrs = TotalNC;
-    FuncHash = FHash;
-    FuncNameVar = FNV;
-    visit(Func);
-  }
-
-  std::vector<Instruction *> findMemIntrinsics(Function &Func) {
-    Candidates.clear();
-    Mode = VM_annotate;
-    visit(Func);
-    return Candidates;
-  }
-
-  // Visit the IR stream and annotate all mem intrinsic call instructions.
-  void instrumentOneMemIntrinsic(MemIntrinsic &MI);
-
-  // Visit \p MI instruction and perform tasks according to visit mode.
-  void visitMemIntrinsic(MemIntrinsic &SI);
-
-  unsigned getNumOfMemIntrinsics() const { return NMemIs; }
-};
 
 class PGOInstrumentationGenLegacyPass : public ModulePass {
 public:
@@ -564,13 +526,14 @@ private:
   // A map that stores the Comdat group in function F.
   std::unordered_multimap<Comdat *, GlobalValue *> &ComdatMembers;
 
+  ValueProfileCollector VPC;
+
   void computeCFGHash();
   void renameComdatFunction();
 
 public:
-  std::vector<std::vector<Instruction *>> ValueSites;
+  std::vector<std::vector<VPCandidateInfo>> ValueSites;
   SelectInstVisitor SIVisitor;
-  MemIntrinsicVisitor MIVisitor;
   std::string FuncName;
   GlobalVariable *FuncNameVar;
 
@@ -605,23 +568,21 @@ public:
       std::unordered_multimap<Comdat *, GlobalValue *> &ComdatMembers,
       bool CreateGlobalVar = false, BranchProbabilityInfo *BPI = nullptr,
       BlockFrequencyInfo *BFI = nullptr, bool IsCS = false)
-      : F(Func), IsCS(IsCS), ComdatMembers(ComdatMembers),
-        ValueSites(IPVK_Last + 1), SIVisitor(Func), MIVisitor(Func),
-        MST(F, BPI, BFI) {
+      : F(Func), IsCS(IsCS), ComdatMembers(ComdatMembers), VPC(Func),
+        ValueSites(IPVK_Last + 1), SIVisitor(Func), MST(F, BPI, BFI) {
     // This should be done before CFG hash computation.
     SIVisitor.countSelects(Func);
-    MIVisitor.countMemIntrinsics(Func);
+    ValueSites[IPVK_MemOPSize] = VPC.get(IPVK_MemOPSize);
     if (!IsCS) {
       NumOfPGOSelectInsts += SIVisitor.getNumOfSelectInsts();
-      NumOfPGOMemIntrinsics += MIVisitor.getNumOfMemIntrinsics();
+      NumOfPGOMemIntrinsics += ValueSites[IPVK_MemOPSize].size();
       NumOfPGOBB += MST.BBInfos.size();
-      ValueSites[IPVK_IndirectCallTarget] = findIndirectCalls(Func);
+      ValueSites[IPVK_IndirectCallTarget] = VPC.get(IPVK_IndirectCallTarget);
     } else {
       NumOfCSPGOSelectInsts += SIVisitor.getNumOfSelectInsts();
-      NumOfCSPGOMemIntrinsics += MIVisitor.getNumOfMemIntrinsics();
+      NumOfCSPGOMemIntrinsics += ValueSites[IPVK_MemOPSize].size();
       NumOfCSPGOBB += MST.BBInfos.size();
     }
-    ValueSites[IPVK_MemOPSize] = MIVisitor.findMemIntrinsics(Func);
 
     FuncName = getPGOFuncName(F);
     computeCFGHash();
@@ -875,28 +836,36 @@ static void instrumentOneFunc(
   if (DisableValueProfiling)
     return;
 
-  unsigned NumIndirectCalls = 0;
-  for (auto &I : FuncInfo.ValueSites[IPVK_IndirectCallTarget]) {
-    CallSite CS(I);
-    Value *Callee = CS.getCalledValue();
-    LLVM_DEBUG(dbgs() << "Instrument one indirect call: CallSite Index = "
-                      << NumIndirectCalls << "\n");
-    IRBuilder<> Builder(I);
-    assert(Builder.GetInsertPoint() != I->getParent()->end() &&
-           "Cannot get the Instrumentation point");
-    Builder.CreateCall(
-        Intrinsic::getDeclaration(M, Intrinsic::instrprof_value_profile),
-        {ConstantExpr::getBitCast(FuncInfo.FuncNameVar, I8PtrTy),
-         Builder.getInt64(FuncInfo.FunctionHash),
-         Builder.CreatePtrToInt(Callee, Builder.getInt64Ty()),
-         Builder.getInt32(IPVK_IndirectCallTarget),
-         Builder.getInt32(NumIndirectCalls++)});
-  }
-  NumOfPGOICall += NumIndirectCalls;
+  NumOfPGOICall += FuncInfo.ValueSites[IPVK_IndirectCallTarget].size();
 
-  // Now instrument memop intrinsic calls.
-  FuncInfo.MIVisitor.instrumentMemIntrinsics(
-      F, NumCounters, FuncInfo.FuncNameVar, FuncInfo.FunctionHash);
+  // For each VP Kind, walk the VP candidates and instrument each one.
+  for (uint32_t Kind = IPVK_First; Kind <= IPVK_Last; ++Kind) {
+    unsigned SiteIndex = 0;
+    if (Kind == IPVK_MemOPSize && !PGOInstrMemOP)
+      continue;
+
+    for (VPCandidateInfo Cand : FuncInfo.ValueSites[Kind]) {
+      LLVM_DEBUG(dbgs() << "Instrument one VP " << ValueProfKindDescr[Kind]
+                        << " site: CallSite Index = " << SiteIndex << "\n");
+
+      IRBuilder<> Builder(Cand.InsertPt);
+      assert(Builder.GetInsertPoint() != Cand.InsertPt->getParent()->end() &&
+             "Cannot get the Instrumentation point");
+
+      Value *ToProfile = nullptr;
+      if (Cand.V->getType()->isIntegerTy())
+        ToProfile = Builder.CreateZExtOrTrunc(Cand.V, Builder.getInt64Ty());
+      else if (Cand.V->getType()->isPointerTy())
+        ToProfile = Builder.CreatePtrToInt(Cand.V, Builder.getInt64Ty());
+      assert(ToProfile && "value profiling Value is of unexpected type");
+
+      Builder.CreateCall(
+          Intrinsic::getDeclaration(M, Intrinsic::instrprof_value_profile),
+          {ConstantExpr::getBitCast(FuncInfo.FuncNameVar, I8PtrTy),
+           Builder.getInt64(FuncInfo.FunctionHash), ToProfile,
+           Builder.getInt32(Kind), Builder.getInt32(SiteIndex++)});
+    }
+  } // IPVK_First <= Kind <= IPVK_Last
 }
 
 namespace {
@@ -1429,43 +1398,6 @@ void SelectInstVisitor::visitSelectInst(SelectInst &SI) {
   llvm_unreachable("Unknown visiting mode");
 }
 
-void MemIntrinsicVisitor::instrumentOneMemIntrinsic(MemIntrinsic &MI) {
-  Module *M = F.getParent();
-  IRBuilder<> Builder(&MI);
-  Type *Int64Ty = Builder.getInt64Ty();
-  Type *I8PtrTy = Builder.getInt8PtrTy();
-  Value *Length = MI.getLength();
-  assert(!isa<ConstantInt>(Length));
-  Builder.CreateCall(
-      Intrinsic::getDeclaration(M, Intrinsic::instrprof_value_profile),
-      {ConstantExpr::getBitCast(FuncNameVar, I8PtrTy),
-       Builder.getInt64(FuncHash), Builder.CreateZExtOrTrunc(Length, Int64Ty),
-       Builder.getInt32(IPVK_MemOPSize), Builder.getInt32(CurCtrId)});
-  ++CurCtrId;
-}
-
-void MemIntrinsicVisitor::visitMemIntrinsic(MemIntrinsic &MI) {
-  if (!PGOInstrMemOP)
-    return;
-  Value *Length = MI.getLength();
-  // Not instrument constant length calls.
-  if (dyn_cast<ConstantInt>(Length))
-    return;
-
-  switch (Mode) {
-  case VM_counting:
-    NMemIs++;
-    return;
-  case VM_instrument:
-    instrumentOneMemIntrinsic(MI);
-    return;
-  case VM_annotate:
-    Candidates.push_back(&MI);
-    return;
-  }
-  llvm_unreachable("Unknown visiting mode");
-}
-
 // Traverse all valuesites and annotate the instructions for all value kind.
 void PGOUseFunc::annotateValueSites() {
   if (DisableValueProfiling)
@@ -1477,11 +1409,6 @@ void PGOUseFunc::annotateValueSites() {
   for (uint32_t Kind = IPVK_First; Kind <= IPVK_Last; ++Kind)
     annotateValueSites(Kind);
 }
-
-static const char *ValueProfKindDescr[] = {
-#define VALUE_PROF_KIND(Enumerator, Value, Descr) Descr,
-#include "llvm/ProfileData/InstrProfData.inc"
-};
 
 // Annotate the instructions for a specific value kind.
 void PGOUseFunc::annotateValueSites(uint32_t Kind) {
@@ -1501,11 +1428,11 @@ void PGOUseFunc::annotateValueSites(uint32_t Kind) {
     return;
   }
 
-  for (auto &I : ValueSites) {
+  for (VPCandidateInfo &I : ValueSites) {
     LLVM_DEBUG(dbgs() << "Read one value site profile (kind = " << Kind
                       << "): Index = " << ValueSiteIndex << " out of "
                       << NumValueSites << "\n");
-    annotateValueSite(*M, *I, ProfileRecord,
+    annotateValueSite(*M, *I.AnnotatedInst, ProfileRecord,
                       static_cast<InstrProfValueKind>(Kind), ValueSiteIndex,
                       Kind == IPVK_MemOPSize ? MaxNumMemOPAnnotations
                                              : MaxNumAnnotations);

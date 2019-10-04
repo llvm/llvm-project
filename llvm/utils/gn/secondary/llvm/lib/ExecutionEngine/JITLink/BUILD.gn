@@ -11,7 +11,7 @@ static_library("JITLink") {
     "JITLinkGeneric.cpp",
     "JITLinkMemoryManager.cpp",
     "MachO.cpp",
-    "MachOAtomGraphBuilder.cpp",
+    "MachOLinkGraphBuilder.cpp",
     "MachO_x86_64.cpp",
   ]
 }

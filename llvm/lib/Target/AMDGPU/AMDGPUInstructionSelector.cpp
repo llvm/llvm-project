@@ -1670,6 +1670,7 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
     return selectG_UADDO_USUBO(I);
   case TargetOpcode::G_INTTOPTR:
   case TargetOpcode::G_BITCAST:
+  case TargetOpcode::G_PTRTOINT:
     return selectCOPY(I);
   case TargetOpcode::G_CONSTANT:
   case TargetOpcode::G_FCONSTANT:

@@ -1356,15 +1356,15 @@ Instruction *InstCombiner::visitStoreInst(StoreInst &SI) {
     return eraseInstFromFunction(SI);
 
   // Attempt to improve the alignment.
-  unsigned KnownAlign = getOrEnforceKnownAlignment(
-      Ptr, DL.getPrefTypeAlignment(Val->getType()), DL, &SI, &AC, &DT);
-  unsigned StoreAlign = SI.getAlignment();
-  unsigned EffectiveStoreAlign =
-      StoreAlign != 0 ? StoreAlign : DL.getABITypeAlignment(Val->getType());
+  const Align KnownAlign = Align(getOrEnforceKnownAlignment(
+      Ptr, DL.getPrefTypeAlignment(Val->getType()), DL, &SI, &AC, &DT));
+  const MaybeAlign StoreAlign = MaybeAlign(SI.getAlignment());
+  const Align EffectiveStoreAlign =
+      StoreAlign ? *StoreAlign : Align(DL.getABITypeAlignment(Val->getType()));
 
   if (KnownAlign > EffectiveStoreAlign)
     SI.setAlignment(KnownAlign);
-  else if (StoreAlign == 0)
+  else if (!StoreAlign)
     SI.setAlignment(EffectiveStoreAlign);
 
   // Try to canonicalize the stored type.

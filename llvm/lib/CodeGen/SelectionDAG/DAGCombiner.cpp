@@ -19911,8 +19911,13 @@ SDValue DAGCombiner::SimplifySelectCC(const SDLoc &DL, SDValue N0, SDValue N1,
   // when the condition can be materialized as an all-ones register.  Any
   // single bit-test can be materialized as an all-ones register with
   // shift-left and shift-right-arith.
+  // TODO: The operation legality checks could be loosened to include "custom",
+  //       but that may cause regressions for targets that do not have shift
+  //       instructions.
   if (CC == ISD::SETEQ && N0->getOpcode() == ISD::AND &&
-      N0->getValueType(0) == VT && isNullConstant(N1) && isNullConstant(N2)) {
+      N0->getValueType(0) == VT && isNullConstant(N1) && isNullConstant(N2) &&
+      TLI.isOperationLegal(ISD::SHL, VT) &&
+      TLI.isOperationLegal(ISD::SRA, VT)) {
     SDValue AndLHS = N0->getOperand(0);
     auto *ConstAndRHS = dyn_cast<ConstantSDNode>(N0->getOperand(1));
     if (ConstAndRHS && ConstAndRHS->getAPIntValue().countPopulation() == 1) {

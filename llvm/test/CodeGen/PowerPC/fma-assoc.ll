@@ -260,7 +260,6 @@ define double @test_FMSUB_ASSOC_EXT3(float %A, float %B, double %C,
 ; CHECK-VSX-LABEL: test_FMSUB_ASSOC_EXT3:
 ; CHECK-VSX: xsnmsubmdp
 ; CHECK-VSX-NEXT: xsnmsubadp
-; CHECK-VSX-NEXT: fmr
 ; CHECK-VSX-NEXT: blr
 }
 

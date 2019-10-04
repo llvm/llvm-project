@@ -1071,6 +1071,13 @@ static void sectionMapping(IO &IO, ELFYAML::SymtabShndxSection &Section) {
   IO.mapRequired("Entries", Section.Entries);
 }
 
+static void sectionMapping(IO &IO, ELFYAML::AddrsigSection &Section) {
+  commonSectionMapping(IO, Section);
+  IO.mapOptional("Content", Section.Content);
+  IO.mapOptional("Size", Section.Size);
+  IO.mapOptional("Symbols", Section.Symbols);
+}
+
 void MappingTraits<ELFYAML::SectionOrType>::mapping(
     IO &IO, ELFYAML::SectionOrType &sectionOrType) {
   IO.mapRequired("SectionOrType", sectionOrType.sectionNameOrType);
@@ -1161,6 +1168,11 @@ void MappingTraits<std::unique_ptr<ELFYAML::Section>>::mapping(
       Section.reset(new ELFYAML::SymtabShndxSection());
     sectionMapping(IO, *cast<ELFYAML::SymtabShndxSection>(Section.get()));
     break;
+  case ELF::SHT_LLVM_ADDRSIG:
+    if (!IO.outputting())
+      Section.reset(new ELFYAML::AddrsigSection());
+    sectionMapping(IO, *cast<ELFYAML::AddrsigSection>(Section.get()));
+    break;
   default:
     if (!IO.outputting()) {
       StringRef Name;
@@ -1230,6 +1242,31 @@ StringRef MappingTraits<std::unique_ptr<ELFYAML::Section>>::validate(
 
     if ((HS->Bucket && !HS->Chain) || (!HS->Bucket && HS->Chain))
       return "\"Bucket\" and \"Chain\" must be used together";
+    return {};
+  }
+
+  if (const auto *Sec = dyn_cast<ELFYAML::AddrsigSection>(Section.get())) {
+    if (!Sec->Symbols && !Sec->Content && !Sec->Size)
+      return "one of \"Content\", \"Size\" or \"Symbols\" must be specified";
+
+    if (Sec->Content || Sec->Size) {
+      if (Sec->Size && Sec->Content &&
+          (uint64_t)*Sec->Size < Sec->Content->binary_size())
+        return "\"Size\" must be greater than or equal to the content "
+               "size";
+
+      if (Sec->Symbols)
+        return "\"Symbols\" cannot be used with \"Content\" or \"Size\"";
+      return {};
+    }
+
+    if (!Sec->Symbols)
+      return {};
+
+    for (const ELFYAML::AddrsigSymbol &AS : *Sec->Symbols)
+      if (AS.Index && AS.Name)
+        return "\"Index\" and \"Name\" cannot be used together when defining a "
+               "symbol";
     return {};
   }
 
@@ -1338,6 +1375,12 @@ void MappingTraits<ELFYAML::Object>::mapping(IO &IO, ELFYAML::Object &Object) {
   IO.mapOptional("Symbols", Object.Symbols);
   IO.mapOptional("DynamicSymbols", Object.DynamicSymbols);
   IO.setContext(nullptr);
+}
+
+void MappingTraits<ELFYAML::AddrsigSymbol>::mapping(IO &IO, ELFYAML::AddrsigSymbol &Sym) {
+  assert(IO.getContext() && "The IO context is not initialized");
+  IO.mapOptional("Name", Sym.Name);
+  IO.mapOptional("Index", Sym.Index);
 }
 
 LLVM_YAML_STRONG_TYPEDEF(uint8_t, MIPS_AFL_REG)

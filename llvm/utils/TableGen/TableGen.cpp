@@ -54,6 +54,7 @@ enum ActionType {
   GenX86FoldTables,
   GenRegisterBank,
   GenExegesis,
+  GenAutomata,
 };
 
 namespace llvm {
@@ -124,7 +125,9 @@ cl::opt<ActionType> Action(
         clEnumValN(GenRegisterBank, "gen-register-bank",
                    "Generate registers bank descriptions"),
         clEnumValN(GenExegesis, "gen-exegesis",
-                   "Generate llvm-exegesis tables")));
+                   "Generate llvm-exegesis tables"),
+        clEnumValN(GenAutomata, "gen-automata",
+                   "Generate generic automata")));
 
 cl::OptionCategory PrintEnumsCat("Options for -print-enums");
 cl::opt<std::string> Class("class", cl::desc("Print Enum list for this class"),
@@ -248,6 +251,9 @@ bool LLVMTableGenMain(raw_ostream &OS, RecordKeeper &Records) {
     break;
   case GenExegesis:
     EmitExegesis(Records, OS);
+    break;
+  case GenAutomata:
+    EmitAutomata(Records, OS);
     break;
   }
 

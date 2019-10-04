@@ -3,6 +3,35 @@
 # RUN: llvm-objdump --all-headers -D -z --adjust-vma=0x0 %t | FileCheck %s --check-prefixes=COMMON,NOADJUST
 # RUN: llvm-objdump --all-headers -D -z --adjust-vma=0x123000 %t | FileCheck %s --check-prefixes=COMMON,ADJUST
 
+# NOADJUST:      Sections:
+# NOADJUST-NEXT: Idx Name           Size     VMA              Type
+# NOADJUST-NEXT:  0                 00000000 0000000000000000
+# NOADJUST-NEXT:  1 .text           00000002 0000000000000000 TEXT
+# NOADJUST-NEXT:  2 .debug_str      00000004 0000000000000000
+# NOADJUST-NEXT:  3 .rela.debug_str 00000018 0000000000000000
+# NOADJUST-NEXT:  4 .data           00000004 0000000000000000 DATA
+# NOADJUST-NEXT:  5 .rela.data      00000018 0000000000000000
+# NOADJUST-NEXT:  6 .symtab         00000060 0000000000000000
+# NOADJUST-NEXT:  7 .strtab         00000010 0000000000000000
+# NOADJUST-NEXT:  8 .shstrtab       0000003c 0000000000000000
+
+# ADJUST:        Sections:
+# ADJUST-NEXT:   Idx Name           Size     VMA              Type
+# ADJUST-NEXT:    0                 00000000 0000000000000000
+# ADJUST-NEXT:    1 .text           00000002 0000000000123000 TEXT
+# ADJUST-NEXT:    2 .debug_str      00000004 0000000000000000
+# ADJUST-NEXT:    3 .rela.debug_str 00000018 0000000000000000
+# ADJUST-NEXT:    4 .data           00000004 0000000000123000 DATA
+# ADJUST-NEXT:    5 .rela.data      00000018 0000000000000000
+# ADJUST-NEXT:    6 .symtab         00000060 0000000000000000
+# ADJUST-NEXT:    7 .strtab         00000010 0000000000000000
+# ADJUST-NEXT:    8 .shstrtab       0000003c 0000000000000000
+
+# COMMON:      SYMBOL TABLE:
+# COMMON-NEXT:  0000000000000001  l F .text 00000000 func
+# COMMON-NEXT:  0000000000000000      .text 00000000 sym
+# COMMON-NEXT:  0000000000000000  l d .text 00000000 .text
+
 # NOADJUST:      0000000000000000 sym:
 # NOADJUST-NEXT:   0: {{.*}}  nop
 # NOADJUST:      0000000000000001 func:
@@ -40,35 +69,6 @@
 # COMMON:        0000000000000000   .rela.data:
 # COMMON-NEXT:    0: {{.*}} addb %al, (%rax)
 ## ... There are more lines here. We do not care.
-
-# NOADJUST:      Sections:
-# NOADJUST-NEXT: Idx Name           Size     VMA              Type
-# NOADJUST-NEXT:  0                 00000000 0000000000000000
-# NOADJUST-NEXT:  1 .text           00000002 0000000000000000 TEXT
-# NOADJUST-NEXT:  2 .debug_str      00000004 0000000000000000
-# NOADJUST-NEXT:  3 .rela.debug_str 00000018 0000000000000000
-# NOADJUST-NEXT:  4 .data           00000004 0000000000000000 DATA
-# NOADJUST-NEXT:  5 .rela.data      00000018 0000000000000000
-# NOADJUST-NEXT:  6 .symtab         00000060 0000000000000000
-# NOADJUST-NEXT:  7 .strtab         00000010 0000000000000000
-# NOADJUST-NEXT:  8 .shstrtab       0000003c 0000000000000000
-
-# ADJUST:        Sections:
-# ADJUST-NEXT:   Idx Name           Size     VMA              Type
-# ADJUST-NEXT:    0                 00000000 0000000000000000
-# ADJUST-NEXT:    1 .text           00000002 0000000000123000 TEXT
-# ADJUST-NEXT:    2 .debug_str      00000004 0000000000000000
-# ADJUST-NEXT:    3 .rela.debug_str 00000018 0000000000000000
-# ADJUST-NEXT:    4 .data           00000004 0000000000123000 DATA
-# ADJUST-NEXT:    5 .rela.data      00000018 0000000000000000
-# ADJUST-NEXT:    6 .symtab         00000060 0000000000000000
-# ADJUST-NEXT:    7 .strtab         00000010 0000000000000000
-# ADJUST-NEXT:    8 .shstrtab       0000003c 0000000000000000
-
-# COMMON:      SYMBOL TABLE:
-# COMMON-NEXT:  0000000000000001  l F .text 00000000 func
-# COMMON-NEXT:  0000000000000000      .text 00000000 sym
-# COMMON-NEXT:  0000000000000000  l d .text 00000000 .text
 
 --- !ELF
 FileHeader:      

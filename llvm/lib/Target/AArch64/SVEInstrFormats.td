@@ -1219,10 +1219,12 @@ multiclass sve_fp_ftmad<string asm> {
 //===----------------------------------------------------------------------===//
 
 class sve_fp_3op_u_zd<bits<2> sz, bits<3> opc, string asm,
-                      ZPRRegOp zprty>
+                      ZPRRegOp zprty,
+                      ValueType vt, ValueType vt2, SDPatternOperator op>
 : I<(outs zprty:$Zd), (ins  zprty:$Zn, zprty:$Zm),
   asm, "\t$Zd, $Zn, $Zm",
-  "", []>, Sched<[]> {
+  "",
+  [(set (vt zprty:$Zd), (op (vt zprty:$Zn), (vt2 zprty:$Zm)))]>, Sched<[]> {
   bits<5> Zd;
   bits<5> Zm;
   bits<5> Zn;
@@ -1236,10 +1238,10 @@ class sve_fp_3op_u_zd<bits<2> sz, bits<3> opc, string asm,
   let Inst{4-0}   = Zd;
 }
 
-multiclass sve_fp_3op_u_zd<bits<3> opc, string asm> {
-  def _H : sve_fp_3op_u_zd<0b01, opc, asm, ZPR16>;
-  def _S : sve_fp_3op_u_zd<0b10, opc, asm, ZPR32>;
-  def _D : sve_fp_3op_u_zd<0b11, opc, asm, ZPR64>;
+multiclass sve_fp_3op_u_zd<bits<3> opc, string asm, SDPatternOperator op> {
+  def _H : sve_fp_3op_u_zd<0b01, opc, asm, ZPR16, nxv8f16, nxv8f16, op>;
+  def _S : sve_fp_3op_u_zd<0b10, opc, asm, ZPR32, nxv4f32, nxv4f32, op>;
+  def _D : sve_fp_3op_u_zd<0b11, opc, asm, ZPR64, nxv2f64, nxv2f64, op>;
 }
 
 //===----------------------------------------------------------------------===//
