@@ -122,9 +122,8 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<MachineDominatorTree>();
-    // FIXME: Temporarily disable these flags as they do not currently hold
-    //AU.addPreserved<MachineDominatorTree>();
-    //AU.setPreservesCFG();
+    AU.addPreserved<MachineDominatorTree>();
+    AU.setPreservesCFG();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
