@@ -395,14 +395,14 @@ if (LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY)
       COMPILE_FLAGS "${LIBCXX_COMPILE_FLAGS}"
       OUTPUT_NAME   "c++experimental"
   )
+  cxx_add_common_build_flags(cxx_experimental)
+  # Overwrite the previously-set Standard flag with -std=c++14 if supported
+  check_flag_supported(-std=c++14)
+  if (NOT MSVC AND LIBCXX_SUPPORTS_STD_EQ_CXX14_FLAG)
+    target_compile_options(cxx_experimental PRIVATE "-std=c++14")
+  endif()
 endif()
-cxx_add_common_build_flags(cxx_experimental)
 
-# Overwrite the previously-set Standard flag with -std=c++14 if supported
-check_flag_supported(-std=c++14)
-if (NOT MSVC AND LIBCXX_SUPPORTS_STD_EQ_CXX14_FLAG)
-  target_compile_options(cxx_experimental PRIVATE "-std=c++14")
-endif()
 
 if (LIBCXX_BUILD_EXTERNAL_THREAD_LIBRARY)
   file(GLOB LIBCXX_EXTERNAL_THREADING_SUPPORT_SOURCES ../test/support/external_threads.cpp)
