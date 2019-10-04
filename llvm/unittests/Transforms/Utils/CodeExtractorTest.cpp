@@ -236,7 +236,7 @@ TEST(CodeExtractor, ExtractAndInvalidateAssumptionCache) {
         %b = type { i64 }
         declare void @g(i8*)
 
-        declare void @llvm.assume(i1) #0
+        declare void @llvm.assume(i1)
 
         define void @test() {
         entry:
@@ -259,8 +259,6 @@ TEST(CodeExtractor, ExtractAndInvalidateAssumptionCache) {
           call void @llvm.assume(i1 %4)
           unreachable
         }
-
-        attributes #0 = { nounwind willreturn }
   )ir",
                                                 Err, Ctx));
 
