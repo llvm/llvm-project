@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -xc %s -verify -DBOOL=_Bool
 // RUN: %clang_cc1 -xc++ %s -verify -DBOOL=bool
 // RUN: %clang_cc1 -xobjective-c %s -verify -DBOOL=_Bool
-// RUN: %clang_cc1 -xc %s -verify -DBOOL=_Bool -Wformat-pedantic -DPEDANTIC
-// RUN: %clang_cc1 -xc++ %s -verify -DBOOL=bool -Wformat-pedantic -DPEDANTIC
+// RUN: %clang_cc1 -xc %s -verify -DBOOL=_Bool -Wformat-type-confusion -DTYPE_CONF
+// RUN: %clang_cc1 -xc++ %s -verify -DBOOL=bool -Wformat-type-confusion -DTYPE_CONF
 
 __attribute__((format(__printf__, 1, 2)))
 int p(const char *fmt, ...);
@@ -22,13 +22,13 @@ BOOL b;
 int main() {
   p("%d", b);
   p("%hd", b);
-#ifdef PEDANTIC
+#ifdef TYPE_CONF
   // expected-warning@-2 {{format specifies type 'short' but the argument has type}}
 #endif
   p("%hhd", b);
   p("%u", b);
   p("%hu", b);
-#ifdef PEDANTIC
+#ifdef TYPE_CONF
   // expected-warning@-2 {{format specifies type 'unsigned short' but the argument has type}}
 #endif
   p("%hhu", b);

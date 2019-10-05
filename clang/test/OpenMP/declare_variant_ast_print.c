@@ -10,11 +10,12 @@ int foo(void);
 #pragma omp declare variant(foo) match(xxx={vvv})
 #pragma omp declare variant(foo) match(implementation={vendor(ibm)}, implementation={vendor(llvm)})
 #pragma omp declare variant(foo) match(implementation={vendor(unknown)})
-#pragma omp declare variant(foo) match(implementation={vendor(score(5): ibm)})
+#pragma omp declare variant(foo) match(implementation={vendor(score(5): ibm, xxx)})
 int bar(void);
 
 // CHECK:      int foo();
 // CHECK-NEXT: #pragma omp declare variant(foo) match(implementation={vendor(score(5):ibm)})
+// CHECK-NEXT: #pragma omp declare variant(foo) match(implementation={vendor(score(5):xxx)})
 // CHECK-NEXT: #pragma omp declare variant(foo) match(implementation={vendor(unknown)})
 // CHECK-NEXT: #pragma omp declare variant(foo) match(implementation={vendor(ibm)})
 // CHECK-NEXT: #pragma omp declare variant(foo) match(implementation={vendor(llvm)})

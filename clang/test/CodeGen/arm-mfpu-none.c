@@ -3,6 +3,7 @@
 
 // CHECK-LABEL: compute
 // CHECK-NOT: {{s[0-9]}}
+// CHECK: .fnend
 float compute(float a, float b) {
   return (a+b) * (a-b);
 }

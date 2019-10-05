@@ -2301,7 +2301,8 @@ the configuration (without a prefix: ``Auto``).
 
 **SpacesInSquareBrackets** (``bool``)
   If ``true``, spaces will be inserted after ``[`` and before ``]``.
-  Lambdas or unspecified size array declarations will not be affected.
+  Lambdas without arguments or unspecified size array declarations will not be
+  affected.
 
   .. code-block:: c++
 
