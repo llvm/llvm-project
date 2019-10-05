@@ -742,7 +742,7 @@ RegisterInfoEmitter::emitComposeSubRegIndices(raw_ostream &OS,
     OS << "    { ";
     for (unsigned i = 0, e = SubRegIndicesSize; i != e; ++i)
       if (Rows[r][i])
-        OS << Rows[r][i]->EnumValue << ", ";
+        OS << Rows[r][i]->getQualifiedName() << ", ";
       else
         OS << "0, ";
     OS << "},\n";
