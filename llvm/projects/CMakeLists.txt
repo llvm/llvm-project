@@ -31,6 +31,7 @@ if(${LLVM_BUILD_RUNTIME})
     # dependent projects can see the target names of their dependencies.
     add_llvm_external_project(libunwind)
     add_llvm_external_project(pstl)
+    add_llvm_external_project(libc)
     add_llvm_external_project(libcxxabi)
     add_llvm_external_project(libcxx)
   endif()

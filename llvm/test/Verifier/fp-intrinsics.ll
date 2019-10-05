@@ -15,64 +15,66 @@ declare double @llvm.experimental.constrained.sqrt.f64(double, metadata, metadat
 ; CHECK1: attributes #[[ATTR]] = { inaccessiblememonly nounwind willreturn }
 ; Note: FP exceptions aren't usually caught through normal unwind mechanisms,
 ;       but we may want to revisit this for asynchronous exception handling.
-define double @f1(double %a, double %b) {
+define double @f1(double %a, double %b) #0 {
 entry:
   %fadd = call double @llvm.experimental.constrained.fadd.f64(
                                                double %a, double %b,
                                                metadata !"round.dynamic",
-                                               metadata !"fpexcept.strict")
+                                               metadata !"fpexcept.strict") #0
   ret double %fadd
 }
 
-define double @f1u(double %a) {
+define double @f1u(double %a) #0 {
 entry:
   %fsqrt = call double @llvm.experimental.constrained.sqrt.f64(
                                                double %a,
                                                metadata !"round.dynamic",
-                                               metadata !"fpexcept.strict")
+                                               metadata !"fpexcept.strict") #0
   ret double %fsqrt
 }
 
 ; Test an illegal value for the rounding mode argument.
 ; CHECK2: invalid rounding mode argument
-;T2: define double @f2(double %a, double %b) {
+;T2: define double @f2(double %a, double %b) #0 {
 ;T2: entry:
 ;T2:   %fadd = call double @llvm.experimental.constrained.fadd.f64(
 ;T2:                                           double %a, double %b,
 ;T2:                                           metadata !"round.dynomite",
-;T2:                                           metadata !"fpexcept.strict")
+;T2:                                           metadata !"fpexcept.strict") #0
 ;T2:   ret double %fadd
 ;T2: }
 
 ; Test an illegal value for the exception behavior argument.
 ; CHECK3: invalid exception behavior argument
-;T3: define double @f3(double %a, double %b) {
+;T3: define double @f3(double %a, double %b) #0 {
 ;T3: entry:
 ;T3:   %fadd = call double @llvm.experimental.constrained.fadd.f64(
 ;T3:                                         double %a, double %b,
 ;T3:                                         metadata !"round.dynamic",
-;T3:                                         metadata !"fpexcept.restrict")
+;T3:                                         metadata !"fpexcept.restrict") #0
 ;T3:   ret double %fadd
 ;T3: }
 
 ; Test an illegal value for the rounding mode argument.
 ; CHECK4: invalid rounding mode argument
-;T4: define double @f4(double %a) {
+;T4: define double @f4(double %a) #0 {
 ;T4: entry:
 ;T4:   %fadd = call double @llvm.experimental.constrained.sqrt.f64(
 ;T4:                                           double %a,
 ;T4:                                           metadata !"round.dynomite",
-;T4:                                           metadata !"fpexcept.strict")
+;T4:                                           metadata !"fpexcept.strict") #0
 ;T4:   ret double %fadd
 ;T4: }
 
 ; Test an illegal value for the exception behavior argument.
 ; CHECK5: invalid exception behavior argument
-;T5: define double @f5(double %a) {
+;T5: define double @f5(double %a) #0 {
 ;T5: entry:
 ;T5:   %fadd = call double @llvm.experimental.constrained.sqrt.f64(
 ;T5:                                         double %a,
 ;T5:                                         metadata !"round.dynamic",
-;T5:                                         metadata !"fpexcept.restrict")
+;T5:                                         metadata !"fpexcept.restrict") #0
 ;T5:   ret double %fadd
 ;T5: }
+
+attributes #0 = { strictfp }

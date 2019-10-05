@@ -1,0 +1,56 @@
+# RUN: llc -mtriple=aarch64-unknown-unknown -run-pass=machine-outliner -verify-machineinstrs %s -o - | FileCheck %s
+
+--- |
+  define void @foo() #0 { ret void }
+  define void @bar(i32 %a) #0 { ret void }
+  define void @baz(i32 %a) #0 { ret void }
+  attributes #0 = { noredzone noreturn }
+...
+---
+
+# Temporarily disable outlining from noreturn functions. To do this, we need
+# to verify thst every function we want to outline from is noreturn.
+
+# CHECK-NOT: OUTLINED_FUNCTION
+
+name:            foo
+alignment:       4
+tracksRegLiveness: true
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    $w3 = ORRWri $wzr, 1
+    $w4 = ORRWri $wzr, 1
+    BRK 1
+...
+---
+name:            bar
+alignment:       4
+tracksRegLiveness: true
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    $w3 = ORRWri $wzr, 1
+    $w4 = ORRWri $wzr, 1
+    BRK 1
+...
+---
+name:            baz
+alignment:       4
+tracksRegLiveness: true
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    $w3 = ORRWri $wzr, 1
+    $w4 = ORRWri $wzr, 1
+    BRK 1
+...

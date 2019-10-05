@@ -1215,9 +1215,9 @@ class directory_entry {
   // that whole structure, callers end up paying for a stat().
   // std::filesystem::directory_entry may be a better model.
   std::string Path;
-  file_type Type;           // Most platforms can provide this.
-  bool FollowSymlinks;      // Affects the behavior of status().
-  basic_file_status Status; // If available.
+  file_type Type = file_type::type_unknown; // Most platforms can provide this.
+  bool FollowSymlinks = true;               // Affects the behavior of status().
+  basic_file_status Status;                 // If available.
 
 public:
   explicit directory_entry(const Twine &Path, bool FollowSymlinks = true,

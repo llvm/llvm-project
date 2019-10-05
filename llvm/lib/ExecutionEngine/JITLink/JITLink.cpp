@@ -74,6 +74,7 @@ const char *getLinkageName(Linkage L) {
   case Linkage::Weak:
     return "weak";
   }
+  llvm_unreachable("Unrecognized llvm.jitlink.Linkage enum");
 }
 
 const char *getScopeName(Scope S) {
@@ -85,6 +86,7 @@ const char *getScopeName(Scope S) {
   case Scope::Local:
     return "local";
   }
+  llvm_unreachable("Unrecognized llvm.jitlink.Scope enum");
 }
 
 raw_ostream &operator<<(raw_ostream &OS, const Block &B) {

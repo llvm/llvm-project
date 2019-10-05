@@ -312,7 +312,7 @@ Error MachOLinkGraphBuilder::graphifyRegularSymbols() {
                                           Twine(KV.first));
         NSym.GraphSymbol = &G->addCommonSymbol(
             *NSym.Name, NSym.S, getCommonSection(), NSym.Value, 0,
-            1U << MachO::GET_COMM_ALIGN(NSym.Desc),
+            1ull << MachO::GET_COMM_ALIGN(NSym.Desc),
             NSym.Desc & MachO::N_NO_DEAD_STRIP);
       } else {
         if (!NSym.Name)

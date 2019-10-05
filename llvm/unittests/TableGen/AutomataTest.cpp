@@ -62,16 +62,16 @@ TEST(Automata, TupleAutomatonAccepts) {
   Automaton<TupleAutomatonAction> A(makeArrayRef(TupleAutomatonTransitions));
   A.reset();
   EXPECT_TRUE(
-      A.add({SK_a, SK_b, "yeet"}));
+      A.add(TupleAutomatonAction{SK_a, SK_b, "yeet"}));
   A.reset();
   EXPECT_FALSE(
-      A.add({SK_a, SK_a, "yeet"}));
+      A.add(TupleAutomatonAction{SK_a, SK_a, "yeet"}));
   A.reset();
   EXPECT_FALSE(
-      A.add({SK_a, SK_b, "feet"}));
+      A.add(TupleAutomatonAction{SK_a, SK_b, "feet"}));
   A.reset();
   EXPECT_TRUE(
-      A.add({SK_b, SK_b, "foo"}));
+      A.add(TupleAutomatonAction{SK_b, SK_b, "foo"}));
 }
 
 TEST(Automata, NfaAutomatonAccepts) {

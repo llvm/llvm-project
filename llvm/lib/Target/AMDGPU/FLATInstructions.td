@@ -1184,7 +1184,7 @@ class FLAT_Real_gfx10<bits<7> op, FLAT_Pseudo ps> :
   let AssemblerPredicate = isGFX10Plus;
   let DecoderNamespace = "GFX10";
 
-  let Inst{11-0}  = {offset{12}, offset{10-0}};
+  let Inst{11-0}  = offset{11-0};
   let Inst{12}    = !if(ps.has_dlc, dlc, ps.dlcValue);
   let Inst{54-48} = !if(ps.has_saddr, !if(ps.enabled_saddr, saddr, 0x7d), 0x7d);
   let Inst{55}    = 0;

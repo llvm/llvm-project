@@ -23,7 +23,7 @@ define double @test_acos_nobuiltin() {
 
 ; Check that we don't constant fold strictfp results that require rounding.
 
-define double @test_acos_strictfp() {
+define double @test_acos_strictfp() strictfp {
 ; CHECK-LABEL: @test_acos_strictfp
   %pi = call double @acos(double -1.000000e+00) strictfp 
 ; CHECK: call double @acos(double -1.000000e+00)

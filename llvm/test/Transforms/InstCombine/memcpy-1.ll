@@ -20,7 +20,7 @@ define i8* @test_simplify1(i8* %mem1, i8* %mem2, i32 %size) {
 
 ; Verify that the strictfp attr doesn't block this optimization.
 
-define i8* @test_simplify2(i8* %mem1, i8* %mem2, i32 %size) {
+define i8* @test_simplify2(i8* %mem1, i8* %mem2, i32 %size) strictfp {
 ; CHECK-LABEL: @test_simplify2(
 ; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 [[MEM1:%.*]], i8* align 1 [[MEM2:%.*]], i32 [[SIZE:%.*]], i1 false)
 ; CHECK-NEXT:    ret i8* [[MEM1]]

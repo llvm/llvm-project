@@ -1567,9 +1567,7 @@ define <8 x i8> @trunc_ssat_v8i64_v8i8(<8 x i64> %a0) {
 ;
 ; AVX512-LABEL: trunc_ssat_v8i64_v8i8:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpminsq {{.*}}(%rip){1to8}, %zmm0, %zmm0
-; AVX512-NEXT:    vpmaxsq {{.*}}(%rip){1to8}, %zmm0, %zmm0
-; AVX512-NEXT:    vpmovqb %zmm0, %xmm0
+; AVX512-NEXT:    vpmovsqb %zmm0, %xmm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %1 = icmp slt <8 x i64> %a0, <i64 127, i64 127, i64 127, i64 127, i64 127, i64 127, i64 127, i64 127>
@@ -2776,9 +2774,7 @@ define <8 x i8> @trunc_ssat_v8i32_v8i8(<8 x i32> %a0) {
 ;
 ; AVX512VL-LABEL: trunc_ssat_v8i32_v8i8:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpminsd {{.*}}(%rip){1to8}, %ymm0, %ymm0
-; AVX512VL-NEXT:    vpmaxsd {{.*}}(%rip){1to8}, %ymm0, %ymm0
-; AVX512VL-NEXT:    vpmovdb %ymm0, %xmm0
+; AVX512VL-NEXT:    vpmovsdb %ymm0, %xmm0
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
 ;
@@ -2794,9 +2790,7 @@ define <8 x i8> @trunc_ssat_v8i32_v8i8(<8 x i32> %a0) {
 ;
 ; AVX512BWVL-LABEL: trunc_ssat_v8i32_v8i8:
 ; AVX512BWVL:       # %bb.0:
-; AVX512BWVL-NEXT:    vpminsd {{.*}}(%rip){1to8}, %ymm0, %ymm0
-; AVX512BWVL-NEXT:    vpmaxsd {{.*}}(%rip){1to8}, %ymm0, %ymm0
-; AVX512BWVL-NEXT:    vpmovdb %ymm0, %xmm0
+; AVX512BWVL-NEXT:    vpmovsdb %ymm0, %xmm0
 ; AVX512BWVL-NEXT:    vzeroupper
 ; AVX512BWVL-NEXT:    retq
   %1 = icmp slt <8 x i32> %a0, <i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127>

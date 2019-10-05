@@ -137,7 +137,8 @@ def uimm8_lsb000 : Operand<XLenVT>,
 }
 
 // A 9-bit signed immediate where the least significant bit is zero.
-def simm9_lsb0 : Operand<OtherVT> {
+def simm9_lsb0 : Operand<OtherVT>,
+                 ImmLeaf<XLenVT, [{return isShiftedInt<8, 1>(Imm);}]> {
   let ParserMatchClass = SImmAsmOperand<9, "Lsb0">;
   let EncoderMethod = "getImmOpValueAsr1";
   let DecoderMethod = "decodeSImmOperandAndLsl1<9>";
@@ -196,7 +197,8 @@ def simm10_lsb0000nonzero : Operand<XLenVT>,
 }
 
 // A 12-bit signed immediate where the least significant bit is zero.
-def simm12_lsb0 : Operand<XLenVT> {
+def simm12_lsb0 : Operand<XLenVT>,
+                  ImmLeaf<XLenVT, [{return isShiftedInt<11, 1>(Imm);}]> {
   let ParserMatchClass = SImmAsmOperand<12, "Lsb0">;
   let EncoderMethod = "getImmOpValueAsr1";
   let DecoderMethod = "decodeSImmOperandAndLsl1<12>";

@@ -209,8 +209,8 @@ def main_with_tmp(builtinParameters):
     parser.add_argument("--version", dest="show_version",
                       help="Show version and exit",
                       action="store_true", default=False)
-    parser.add_argument("-j", "--threads", dest="numThreads", metavar="N",
-                      help="Number of testing threads",
+    parser.add_argument("-j", "--threads", "--workers", dest="numWorkers", metavar="N",
+                      help="Number of workers used for testing",
                       type=int, default=None)
     parser.add_argument("--config-prefix", dest="configPrefix",
                       metavar="NAME", help="Prefix for 'lit' config files",
@@ -334,10 +334,10 @@ def main_with_tmp(builtinParameters):
     if not args:
         parser.error('No inputs specified')
 
-    if opts.numThreads is None:
-        opts.numThreads = lit.util.detectCPUs()
-    elif opts.numThreads <= 0:
-        parser.error("Option '--threads' or '-j' requires positive integer")
+    if opts.numWorkers is None:
+        opts.numWorkers = lit.util.detectCPUs()
+    elif opts.numWorkers <= 0:
+        parser.error("Option '--workers' or '-j' requires positive integer")
 
     if opts.maxFailures is not None and opts.maxFailures <= 0:
         parser.error("Option '--max-failures' requires positive integer")
@@ -480,8 +480,8 @@ def main_with_tmp(builtinParameters):
     if opts.maxTests is not None:
         run.tests = run.tests[:opts.maxTests]
 
-    # Don't create more threads than tests.
-    opts.numThreads = min(len(run.tests), opts.numThreads)
+    # Don't create more workers than tests.
+    opts.numWorkers = min(len(run.tests), opts.numWorkers)
 
     # Because some tests use threads internally, and at least on Linux each
     # of these threads counts toward the current process limit, try to
@@ -489,7 +489,7 @@ def main_with_tmp(builtinParameters):
     # resource exhaustion.
     try:
         cpus = lit.util.detectCPUs()
-        desired_limit = opts.numThreads * cpus * 2 # the 2 is a safety factor
+        desired_limit = opts.numWorkers * cpus * 2 # the 2 is a safety factor
 
         # Import the resource module here inside this try block because it
         # will likely fail on Windows.
@@ -506,8 +506,7 @@ def main_with_tmp(builtinParameters):
         pass
 
     extra = (' of %d' % numTotalTests) if (len(run.tests) != numTotalTests) else ''
-    threads = 'single process' if (opts.numThreads == 1) else ('%d threads' % opts.numThreads)
-    header = '-- Testing: %d%s tests, %s --' % (len(run.tests), extra, threads)
+    header = '-- Testing: %d%s tests, %d workers --' % (len(run.tests), extra, opts.numWorkers)
     progressBar = None
     if not opts.quiet:
         if opts.succinct and opts.useProgressBar:
@@ -523,7 +522,7 @@ def main_with_tmp(builtinParameters):
     startTime = time.time()
     display = TestingProgressDisplay(opts, len(run.tests), progressBar)
     try:
-        run.execute_tests(display, opts.numThreads, opts.maxTime)
+        run.execute_tests(display, opts.numWorkers, opts.maxTime)
     except KeyboardInterrupt:
         sys.exit(2)
     display.finish()

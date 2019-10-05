@@ -12,6 +12,7 @@
 # And bisect will continually call ./script.sh with various counts using
 # the exit status to determine success and failure.
 #
+from __future__ import print_function
 import os
 import sys
 import argparse
@@ -34,10 +35,10 @@ print("End: %d" % end)
 
 last = None
 while start != end and start != end-1:
-    count = start + (end - start)/2
+    count = start + (end - start)//2
     print("Visiting Count: %d with (Start, End) = (%d,%d)" % (count, start, end))
     cmd = [x % {'count':count} for x in args.command]
-    print cmd
+    print(cmd)
     result = subprocess.call(cmd)
     if result == 0:
         print("    PASSES! Setting start to count")

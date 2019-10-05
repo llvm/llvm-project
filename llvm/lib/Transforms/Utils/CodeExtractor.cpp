@@ -1301,13 +1301,6 @@ void CodeExtractor::moveCodeToFunction(Function *newFunction) {
 
     // Insert this basic block into the new function
     newBlocks.push_back(Block);
-
-    // Remove @llvm.assume calls that were moved to the new function from the
-    // old function's assumption cache.
-    if (AC)
-      for (auto &I : *Block)
-        if (match(&I, m_Intrinsic<Intrinsic::assume>()))
-          AC->unregisterAssumption(cast<CallInst>(&I));
   }
 }
 
@@ -1376,6 +1369,15 @@ Function *CodeExtractor::extractCodeRegion() {
       EntryFreq +=
           BFI->getBlockFreq(Pred) * BPI->getEdgeProbability(Pred, header);
     }
+  }
+
+  if (AC) {
+    // Remove @llvm.assume calls that were moved to the new function from the
+    // old function's assumption cache.
+    for (BasicBlock *Block : Blocks)
+      for (auto &I : *Block)
+        if (match(&I, m_Intrinsic<Intrinsic::assume>()))
+          AC->unregisterAssumption(cast<CallInst>(&I));
   }
 
   // If we have any return instructions in the region, split those blocks so
@@ -1568,5 +1570,17 @@ Function *CodeExtractor::extractCodeRegion() {
   });
   LLVM_DEBUG(if (verifyFunction(*oldFunction))
              report_fatal_error("verification of oldFunction failed!"));
+  LLVM_DEBUG(if (AC && verifyAssumptionCache(*oldFunction, AC))
+             report_fatal_error("Stale Asumption cache for old Function!"));
   return newFunction;
+}
+
+bool CodeExtractor::verifyAssumptionCache(const Function& F,
+                                          AssumptionCache *AC) {
+  for (auto AssumeVH : AC->assumptions()) {
+    CallInst *I = cast<CallInst>(AssumeVH);
+    if (I->getFunction() != &F)
+      return true;
+  }
+  return false;
 }

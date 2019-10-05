@@ -62,10 +62,9 @@ uint64_t doAdd(uint64_t OpL, uint64_t OpR) { return OpL + OpR; }
 TEST_F(FileCheckTest, NumericVariable) {
   // Undefined variable: getValue and eval fail, error returned by eval holds
   // the name of the undefined variable.
-  FileCheckNumericVariable FooVar = FileCheckNumericVariable("FOO", 1);
+  FileCheckNumericVariable FooVar("FOO", 1);
   EXPECT_EQ("FOO", FooVar.getName());
-  FileCheckNumericVariableUse FooVarUse =
-      FileCheckNumericVariableUse("FOO", &FooVar);
+  FileCheckNumericVariableUse FooVarUse("FOO", &FooVar);
   EXPECT_FALSE(FooVar.getValue());
   Expected<uint64_t> EvalResult = FooVarUse.eval();
   ASSERT_FALSE(EvalResult);
@@ -91,16 +90,15 @@ TEST_F(FileCheckTest, NumericVariable) {
 }
 
 TEST_F(FileCheckTest, Binop) {
-  FileCheckNumericVariable FooVar = FileCheckNumericVariable("FOO", 1);
+  FileCheckNumericVariable FooVar("FOO", 1);
   FooVar.setValue(42);
   std::unique_ptr<FileCheckNumericVariableUse> FooVarUse =
       std::make_unique<FileCheckNumericVariableUse>("FOO", &FooVar);
-  FileCheckNumericVariable BarVar = FileCheckNumericVariable("BAR", 2);
+  FileCheckNumericVariable BarVar("BAR", 2);
   BarVar.setValue(18);
   std::unique_ptr<FileCheckNumericVariableUse> BarVarUse =
       std::make_unique<FileCheckNumericVariableUse>("BAR", &BarVar);
-  FileCheckASTBinop Binop =
-      FileCheckASTBinop(doAdd, std::move(FooVarUse), std::move(BarVarUse));
+  FileCheckASTBinop Binop(doAdd, std::move(FooVarUse), std::move(BarVarUse));
 
   // Defined variable: eval returns right value.
   Expected<uint64_t> Value = Binop.eval();
@@ -217,8 +215,7 @@ private:
   SourceMgr SM;
   FileCheckRequest Req;
   FileCheckPatternContext Context;
-  FileCheckPattern P =
-      FileCheckPattern(Check::CheckPlain, &Context, LineNumber++);
+  FileCheckPattern P{Check::CheckPlain, &Context, LineNumber++};
 
 public:
   PatternTester() {
@@ -409,25 +406,24 @@ TEST_F(FileCheckTest, Substitution) {
 
   // Substitution of an undefined string variable fails and error holds that
   // variable's name.
-  FileCheckStringSubstitution StringSubstitution =
-      FileCheckStringSubstitution(&Context, "VAR404", 42);
+  FileCheckStringSubstitution StringSubstitution(&Context, "VAR404", 42);
   Expected<std::string> SubstValue = StringSubstitution.getResult();
   ASSERT_FALSE(bool(SubstValue));
   expectUndefError("VAR404", SubstValue.takeError());
 
   // Substitutions of defined pseudo and non-pseudo numeric variables return
   // the right value.
-  FileCheckNumericVariable LineVar = FileCheckNumericVariable("@LINE", 1);
-  FileCheckNumericVariable NVar = FileCheckNumericVariable("N", 1);
+  FileCheckNumericVariable LineVar("@LINE", 1);
+  FileCheckNumericVariable NVar("N", 1);
   LineVar.setValue(42);
   NVar.setValue(10);
   auto LineVarUse =
       std::make_unique<FileCheckNumericVariableUse>("@LINE", &LineVar);
   auto NVarUse = std::make_unique<FileCheckNumericVariableUse>("N", &NVar);
-  FileCheckNumericSubstitution SubstitutionLine = FileCheckNumericSubstitution(
-      &Context, "@LINE", std::move(LineVarUse), 12);
-  FileCheckNumericSubstitution SubstitutionN =
-      FileCheckNumericSubstitution(&Context, "N", std::move(NVarUse), 30);
+  FileCheckNumericSubstitution SubstitutionLine(&Context, "@LINE",
+                                                std::move(LineVarUse), 12);
+  FileCheckNumericSubstitution SubstitutionN(&Context, "N", std::move(NVarUse),
+                                             30);
   SubstValue = SubstitutionLine.getResult();
   ASSERT_TRUE(bool(SubstValue));
   EXPECT_EQ("42", *SubstValue);
@@ -447,7 +443,7 @@ TEST_F(FileCheckTest, Substitution) {
   expectUndefError("N", SubstValue.takeError());
 
   // Substitution of a defined string variable returns the right value.
-  FileCheckPattern P = FileCheckPattern(Check::CheckPlain, &Context, 1);
+  FileCheckPattern P(Check::CheckPlain, &Context, 1);
   StringSubstitution = FileCheckStringSubstitution(&Context, "FOO", 42);
   SubstValue = StringSubstitution.getResult();
   ASSERT_TRUE(bool(SubstValue));
@@ -455,7 +451,7 @@ TEST_F(FileCheckTest, Substitution) {
 }
 
 TEST_F(FileCheckTest, FileCheckContext) {
-  FileCheckPatternContext Cxt = FileCheckPatternContext();
+  FileCheckPatternContext Cxt;
   std::vector<std::string> GlobalDefines;
   SourceMgr SM;
 
@@ -518,7 +514,7 @@ TEST_F(FileCheckTest, FileCheckContext) {
   StringRef EmptyVarStr = "EmptyVar";
   StringRef UnknownVarStr = "UnknownVar";
   Expected<StringRef> LocalVar = Cxt.getPatternVarValue(LocalVarStr);
-  FileCheckPattern P = FileCheckPattern(Check::CheckPlain, &Cxt, 1);
+  FileCheckPattern P(Check::CheckPlain, &Cxt, 1);
   Optional<FileCheckNumericVariable *> DefinedNumericVariable;
   Expected<std::unique_ptr<FileCheckExpressionAST>> ExpressionAST =
       P.parseNumericSubstitutionBlock(LocalNumVar1Ref, DefinedNumericVariable,
