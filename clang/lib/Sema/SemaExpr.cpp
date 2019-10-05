@@ -13489,7 +13489,7 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
       // C99 does not support '~' for complex conjugation.
       Diag(OpLoc, diag::ext_integer_complement_complex)
           << resultType << Input.get()->getSourceRange();
-    else if (Input.get()->IgnoreParenImpCasts()->getType()->isBooleanType())
+    else if (Input.get()->isKnownToHaveBooleanValue())
       Diag(OpLoc, diag::warn_bitwise_negation_bool)
           << FixItHint::CreateReplacement(OpLoc, "!");
     else if (resultType->hasIntegerRepresentation())

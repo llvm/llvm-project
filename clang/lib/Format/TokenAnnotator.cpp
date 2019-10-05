@@ -1393,7 +1393,9 @@ private:
                Style.Language == FormatStyle::LK_Java) {
       Current.Type = TT_LambdaArrow;
     } else if (Current.is(tok::arrow) && AutoFound && Line.MustBeDeclaration &&
-               Current.NestingLevel == 0) {
+               Current.NestingLevel == 0 &&
+               !Current.Previous->is(tok::kw_operator)) {
+      // not auto operator->() -> xxx;
       Current.Type = TT_TrailingReturnArrow;
       TrailingReturnFound = true;
     } else if (Current.is(tok::star) ||
@@ -2194,7 +2196,8 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) {
     if (Current->is(TT_LineComment)) {
       if (Current->Previous->BlockKind == BK_BracedInit &&
           Current->Previous->opensScope())
-        Current->SpacesRequiredBefore = Style.Cpp11BracedListStyle ? 0 : 1;
+        Current->SpacesRequiredBefore =
+            (Style.Cpp11BracedListStyle && !Style.SpacesInParentheses) ? 0 : 1;
       else
         Current->SpacesRequiredBefore = Style.SpacesBeforeTrailingComments;
 
@@ -2518,7 +2521,9 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     return Left.is(tok::hash);
   if (Left.isOneOf(tok::hashhash, tok::hash))
     return Right.is(tok::hash);
-  if (Left.is(tok::l_paren) && Right.is(tok::r_paren))
+  if ((Left.is(tok::l_paren) && Right.is(tok::r_paren)) ||
+      (Left.is(tok::l_brace) && Left.BlockKind != BK_Block &&
+       Right.is(tok::r_brace) && Right.BlockKind != BK_Block))
     return Style.SpaceInEmptyParentheses;
   if (Left.is(tok::l_paren) || Right.is(tok::r_paren))
     return (Right.is(TT_CastRParen) ||
@@ -2611,8 +2616,8 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
   if (Left.is(tok::l_square))
     return (Left.is(TT_ArrayInitializerLSquare) && Right.isNot(tok::r_square) &&
             SpaceRequiredForArrayInitializerLSquare(Left, Style)) ||
-           (Left.isOneOf(TT_ArraySubscriptLSquare,
-                         TT_StructuredBindingLSquare) &&
+           (Left.isOneOf(TT_ArraySubscriptLSquare, TT_StructuredBindingLSquare,
+                         TT_LambdaLSquare) &&
             Style.SpacesInSquareBrackets && Right.isNot(tok::r_square));
   if (Right.is(tok::r_square))
     return Right.MatchingParen &&
@@ -2621,7 +2626,8 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
                                                      Style)) ||
             (Style.SpacesInSquareBrackets &&
              Right.MatchingParen->isOneOf(TT_ArraySubscriptLSquare,
-                                          TT_StructuredBindingLSquare)) ||
+                                          TT_StructuredBindingLSquare,
+                                          TT_LambdaLSquare)) ||
             Right.MatchingParen->is(TT_AttributeParen));
   if (Right.is(tok::l_square) &&
       !Right.isOneOf(TT_ObjCMethodExpr, TT_LambdaLSquare,
@@ -2634,7 +2640,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
   if ((Left.is(tok::l_brace) && Left.BlockKind != BK_Block) ||
       (Right.is(tok::r_brace) && Right.MatchingParen &&
        Right.MatchingParen->BlockKind != BK_Block))
-    return !Style.Cpp11BracedListStyle;
+    return Style.Cpp11BracedListStyle ? Style.SpacesInParentheses : true;
   if (Left.is(TT_BlockComment))
     // No whitespace in x(/*foo=*/1), except for JavaScript.
     return Style.Language == FormatStyle::LK_JavaScript ||
@@ -2898,9 +2904,19 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
       return false;
     return true;
   }
-  if (Left.is(TT_UnaryOperator))
+  if (Left.is(TT_UnaryOperator)) {
+    // The alternative operators for ~ and ! are "compl" and "not".
+    // If they are used instead, we do not want to combine them with
+    // the token to the right, unless that is a left paren.
+    if (!Right.is(tok::l_paren)) {
+      if (Left.is(tok::exclaim) && Left.TokenText == "not")
+        return true;
+      if (Left.is(tok::tilde) && Left.TokenText == "compl")
+        return true;
+    }
     return (Style.SpaceAfterLogicalNot && Left.is(tok::exclaim)) ||
            Right.is(TT_BinaryOperator);
+  }
 
   // If the next token is a binary operator or a selector name, we have
   // incorrectly classified the parenthesis as a cast. FIXME: Detect correctly.

@@ -3,7 +3,7 @@ set(LLVM_LINK_COMPONENTS
   support
   )
 
-add_clang_executable(clang-extdef-mapping
+add_clang_tool(clang-extdef-mapping
   ClangExtDefMapGen.cpp
   )
 
@@ -16,6 +16,3 @@ clang_target_link_libraries(clang-extdef-mapping
   clangSerialization
   clangTooling
   )
-
-install(TARGETS clang-extdef-mapping
-  RUNTIME DESTINATION bin)

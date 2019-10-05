@@ -1,10 +1,20 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -Wformat -Wformat-pedantic -isystem %S/Inputs %s
+// RUN: %clang_cc1 -fsyntax-only -verify -Wno-format -Wformat-pedantic %s
+// RUN: %clang_cc1 -xobjective-c -fblocks -fsyntax-only -verify -Wno-format -Wformat-pedantic %s
+// RUN: %clang_cc1 -xc++ -fsyntax-only -verify -Wno-format -Wformat-pedantic %s
 
+__attribute__((format(printf, 1, 2)))
 int printf(const char *restrict, ...);
 
-typedef unsigned char uint8_t;
+int main() {
+  printf("%p", (int *)0); // expected-warning {{format specifies type 'void *' but the argument has type 'int *'}}
+  printf("%p", (void *)0);
 
-void print_char_as_short() {
-  printf("%hu\n", (unsigned char)1); // expected-warning{{format specifies type 'unsigned short' but the argument has type 'unsigned char'}}
-  printf("%hu\n", (uint8_t)1);       // expected-warning{{format specifies type 'unsigned short' but the argument has type 'uint8_t' (aka 'unsigned char')}}
+#ifdef __OBJC__
+  printf("%p", ^{}); // expected-warning {{format specifies type 'void *' but the argument has type 'void (^)(void)'}}
+  printf("%p", (id)0); // expected-warning {{format specifies type 'void *' but the argument has type 'id'}}
+#endif
+
+#ifdef __cplusplus
+  printf("%p", nullptr); // expected-warning {{format specifies type 'void *' but the argument has type 'nullptr_t'}}
+#endif
 }

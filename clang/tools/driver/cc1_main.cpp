@@ -258,19 +258,20 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   if (llvm::timeTraceProfilerEnabled()) {
     SmallString<128> Path(Clang->getFrontendOpts().OutputFile);
     llvm::sys::path::replace_extension(Path, "json");
-    auto profilerOutput =
-        Clang->createOutputFile(Path.str(),
-                                /*Binary=*/false,
-                                /*RemoveFileOnSignal=*/false, "",
-                                /*Extension=*/"json",
-                                /*useTemporary=*/false);
+    if (auto profilerOutput =
+            Clang->createOutputFile(Path.str(),
+                                    /*Binary=*/false,
+                                    /*RemoveFileOnSignal=*/false, "",
+                                    /*Extension=*/"json",
+                                    /*useTemporary=*/false)) {
 
-    llvm::timeTraceProfilerWrite(*profilerOutput);
-    // FIXME(ibiryukov): make profilerOutput flush in destructor instead.
-    profilerOutput->flush();
-    llvm::timeTraceProfilerCleanup();
+      llvm::timeTraceProfilerWrite(*profilerOutput);
+      // FIXME(ibiryukov): make profilerOutput flush in destructor instead.
+      profilerOutput->flush();
+      llvm::timeTraceProfilerCleanup();
 
-    llvm::errs() << "Time trace json-file dumped to " << Path.str() << "\n";
+      llvm::errs() << "Time trace json-file dumped to " << Path.str() << "\n";
+    }
   }
 
   // Our error handler depends on the Diagnostics object, which we're

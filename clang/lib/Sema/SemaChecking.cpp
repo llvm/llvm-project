@@ -8172,9 +8172,7 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
     return true;
   }
 
-  const analyze_printf::ArgType::MatchKind Match =
-      AT.matchesType(S.Context, ExprTy);
-  bool Pedantic = Match == analyze_printf::ArgType::NoMatchPedantic;
+  analyze_printf::ArgType::MatchKind Match = AT.matchesType(S.Context, ExprTy);
   if (Match == analyze_printf::ArgType::Match)
     return true;
 
@@ -8198,8 +8196,9 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
             AT.matchesType(S.Context, ExprTy);
         if (ImplicitMatch == analyze_printf::ArgType::Match)
           return true;
-        if (ImplicitMatch == analyze_printf::ArgType::NoMatchPedantic)
-          Pedantic = true;
+        if (ImplicitMatch == ArgType::NoMatchPedantic ||
+            ImplicitMatch == ArgType::NoMatchTypeConfusion)
+          Match = ImplicitMatch;
       }
     }
   } else if (const CharacterLiteral *CL = dyn_cast<CharacterLiteral>(E)) {
@@ -8261,7 +8260,7 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
       if ((CastTyName == "NSInteger" || CastTyName == "NSUInteger") &&
           (AT.isSizeT() || AT.isPtrdiffT()) &&
           AT.matchesType(S.Context, CastTy))
-        Pedantic = true;
+        Match = ArgType::NoMatchPedantic;
       IntendedTy = CastTy;
       ShouldNotPrintDirectly = true;
     }
@@ -8281,10 +8280,20 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
     CharSourceRange SpecRange = getSpecifierRange(StartSpecifier, SpecifierLen);
 
     if (IntendedTy == ExprTy && !ShouldNotPrintDirectly) {
-      unsigned Diag =
-          Pedantic
-              ? diag::warn_format_conversion_argument_type_mismatch_pedantic
-              : diag::warn_format_conversion_argument_type_mismatch;
+      unsigned Diag;
+      switch (Match) {
+      case ArgType::Match: llvm_unreachable("expected non-matching");
+      case ArgType::NoMatchPedantic:
+        Diag = diag::warn_format_conversion_argument_type_mismatch_pedantic;
+        break;
+      case ArgType::NoMatchTypeConfusion:
+        Diag = diag::warn_format_conversion_argument_type_mismatch_confusion;
+        break;
+      case ArgType::NoMatch:
+        Diag = diag::warn_format_conversion_argument_type_mismatch;
+        break;
+      }
+
       // In this case, the specifier is wrong and should be changed to match
       // the argument.
       EmitFormatDiagnostic(S.PDiag(Diag)
@@ -8340,7 +8349,7 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
           Name = TypedefTy->getDecl()->getName();
         else
           Name = CastTyName;
-        unsigned Diag = Pedantic
+        unsigned Diag = Match == ArgType::NoMatchPedantic
                             ? diag::warn_format_argument_needs_cast_pedantic
                             : diag::warn_format_argument_needs_cast;
         EmitFormatDiagnostic(S.PDiag(Diag) << Name << IntendedTy << IsEnum
@@ -8367,10 +8376,19 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
     switch (S.isValidVarArgType(ExprTy)) {
     case Sema::VAK_Valid:
     case Sema::VAK_ValidInCXX11: {
-      unsigned Diag =
-          Pedantic
-              ? diag::warn_format_conversion_argument_type_mismatch_pedantic
-              : diag::warn_format_conversion_argument_type_mismatch;
+      unsigned Diag;
+      switch (Match) {
+      case ArgType::Match: llvm_unreachable("expected non-matching");
+      case ArgType::NoMatchPedantic:
+        Diag = diag::warn_format_conversion_argument_type_mismatch_pedantic;
+        break;
+      case ArgType::NoMatchTypeConfusion:
+        Diag = diag::warn_format_conversion_argument_type_mismatch_confusion;
+        break;
+      case ArgType::NoMatch:
+        Diag = diag::warn_format_conversion_argument_type_mismatch;
+        break;
+      }
 
       EmitFormatDiagnostic(
           S.PDiag(Diag) << AT.getRepresentativeTypeName(S.Context) << ExprTy
@@ -11366,7 +11384,7 @@ static void DiagnoseIntInBoolContext(Sema &S, Expr *E) {
         (RHS->getValue() == 0 || RHS->getValue() == 1))
       // Do not diagnose common idioms.
       return;
-    if (LHS->getValue() != 0 && LHS->getValue() != 0)
+    if (LHS->getValue() != 0 && RHS->getValue() != 0)
       S.Diag(ExprLoc, diag::warn_integer_constants_in_conditional_always_true);
   }
 }

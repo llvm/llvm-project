@@ -18,7 +18,7 @@ void test(boolean a) {
   boolean r;
   r = a ? (1) : TWO;
   r = a ? 3 : TWO; // expected-warning {{converting the result of '?:' with integer constants to a boolean always evaluates to 'true'}}
-  r = a ? -2 : 0;  // expected-warning {{converting the result of '?:' with integer constants to a boolean always evaluates to 'true'}}
+  r = a ? -2 : 0;
   r = a ? 3 : -2;  // expected-warning {{converting the result of '?:' with integer constants to a boolean always evaluates to 'true'}}
   r = a ? 0 : TWO;
   r = a ? 3 : ONE; // expected-warning {{converting the result of '?:' with integer constants to a boolean always evaluates to 'true'}}

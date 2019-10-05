@@ -812,10 +812,13 @@ static ExprResult parseContextScore(Parser &P) {
 }
 
 /// Parse context selector for 'implementation' selector set:
-/// 'vendor' '(' <vendor> ')'
-static void
-parseImplementationSelector(Parser &P,
-                            Sema::OpenMPDeclareVariantCtsSelectorData &Data) {
+/// 'vendor' '(' [ 'score' '(' <score _expr> ')' ':' ] <vendor> { ',' <vendor> }
+/// ')'
+static void parseImplementationSelector(
+    Parser &P, SourceLocation Loc,
+    llvm::function_ref<void(SourceRange,
+                            const Sema::OpenMPDeclareVariantCtsSelectorData &)>
+        Callback) {
   const Token &Tok = P.getCurToken();
   // Parse inner context selector set name, if any.
   if (!Tok.is(tok::identifier)) {
@@ -840,20 +843,33 @@ parseImplementationSelector(Parser &P,
     BalancedDelimiterTracker T(P, tok::l_paren, tok::annot_pragma_openmp_end);
     (void)T.expectAndConsume(diag::err_expected_lparen_after,
                              CtxSelectorName.data());
-    Data.CtxScore = parseContextScore(P);
-    // Parse <vendor>.
-    StringRef VendorName;
-    if (Tok.is(tok::identifier)) {
-      VendorName = P.getPreprocessor().getSpelling(P.getCurToken(), Buffer);
-      (void)P.ConsumeToken();
-    } else {
-      P.Diag(Tok.getLocation(), diag::err_omp_declare_variant_item_expected)
-          << "vendor identifier" << "vendor" << "implementation";
-    }
+    const ExprResult Score = parseContextScore(P);
+    do {
+      // Parse <vendor>.
+      StringRef VendorName;
+      if (Tok.is(tok::identifier)) {
+        Buffer.clear();
+        VendorName = P.getPreprocessor().getSpelling(P.getCurToken(), Buffer);
+        (void)P.ConsumeToken();
+      } else {
+        P.Diag(Tok.getLocation(), diag::err_omp_declare_variant_item_expected)
+            << "vendor identifier"
+            << "vendor"
+            << "implementation";
+      }
+      if (!VendorName.empty()) {
+        Sema::OpenMPDeclareVariantCtsSelectorData Data(
+            OMPDeclareVariantAttr::CtxSetImplementation, CSKind, VendorName,
+            Score);
+        Callback(SourceRange(Loc, Tok.getLocation()), Data);
+      }
+      if (!P.TryConsumeToken(tok::comma) && Tok.isNot(tok::r_paren)) {
+        P.Diag(Tok, diag::err_expected_punc)
+            << (VendorName.empty() ? "vendor name" : VendorName);
+      }
+    } while (Tok.is(tok::identifier));
     // Parse ')'.
     (void)T.consumeClose();
-    if (!VendorName.empty())
-      Data.ImplVendor = VendorName;
     break;
   }
   case OMPDeclareVariantAttr::CtxUnknown:
@@ -865,8 +881,6 @@ parseImplementationSelector(Parser &P,
       ;
     return;
   }
-  Data.CtxSet = OMPDeclareVariantAttr::CtxSetImplementation;
-  Data.Ctx = CSKind;
 }
 
 /// Parses clauses for 'declare variant' directive.
@@ -897,7 +911,6 @@ bool Parser::parseOpenMPContextSelectors(
     (void)ConsumeToken();
     // TBD: add parsing of known context selectors.
     // Unknown selector - just ignore it completely.
-    Sema::OpenMPDeclareVariantCtsSelectorData Data;
     {
       // Parse '{'.
       BalancedDelimiterTracker TBr(*this, tok::l_brace,
@@ -910,7 +923,7 @@ bool Parser::parseOpenMPContextSelectors(
           CtxSelectorSetName, CSSKind);
       switch (CSSKind) {
       case OMPDeclareVariantAttr::CtxSetImplementation:
-        parseImplementationSelector(*this, Data);
+        parseImplementationSelector(*this, Loc, Callback);
         break;
       case OMPDeclareVariantAttr::CtxSetUnknown:
         // Skip until either '}', ')', or end of directive.
@@ -922,7 +935,6 @@ bool Parser::parseOpenMPContextSelectors(
       // Parse '}'.
       (void)TBr.consumeClose();
     }
-    Callback(SourceRange(Loc, Tok.getLocation()), Data);
     // Consume ','
     if (Tok.isNot(tok::r_paren) && Tok.isNot(tok::annot_pragma_openmp_end))
       (void)ExpectAndConsume(tok::comma);
