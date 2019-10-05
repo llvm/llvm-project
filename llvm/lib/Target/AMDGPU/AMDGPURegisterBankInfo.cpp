@@ -352,7 +352,7 @@ AMDGPURegisterBankInfo::getInstrAlternativeMappings(
         { { AMDGPU::SCCRegBankID }, 1 }
       };
 
-      return addMappingFromTable<1>(MI, MRI, { 0 }, Table);
+      return addMappingFromTable<1>(MI, MRI, {{ 0 }}, Table);
     }
 
     LLVM_FALLTHROUGH;

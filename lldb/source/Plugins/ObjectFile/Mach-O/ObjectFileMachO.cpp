@@ -2038,8 +2038,9 @@ UUID ObjectFileMachO::GetSharedCacheUUID(FileSpec dyld_shared_cache,
   return dsc_uuid;
 }
 
-bool ParseNList(DataExtractor &nlist_data, lldb::offset_t &nlist_data_offset,
-                size_t nlist_byte_size, struct nlist_64 &nlist) {
+static bool ParseNList(DataExtractor &nlist_data,
+                       lldb::offset_t &nlist_data_offset,
+                       size_t nlist_byte_size, struct nlist_64 &nlist) {
   if (!nlist_data.ValidOffsetForDataOfSize(nlist_data_offset, nlist_byte_size))
     return false;
   nlist.n_strx = nlist_data.GetU32_unchecked(&nlist_data_offset);
@@ -4268,205 +4269,205 @@ size_t ObjectFileMachO::ParseSymtab() {
         }
       }
 
-      if (add_nlist) {
-        uint64_t symbol_value = nlist.n_value;
-
-        if (symbol_name_non_abi_mangled) {
-          sym[sym_idx].GetMangled().SetMangledName(
-              ConstString(symbol_name_non_abi_mangled));
-          sym[sym_idx].GetMangled().SetDemangledName(ConstString(symbol_name));
-        } else {
-          bool symbol_name_is_mangled = false;
-
-          if (symbol_name && symbol_name[0] == '_') {
-            symbol_name_is_mangled = symbol_name[1] == '_';
-            symbol_name++; // Skip the leading underscore
-          }
-
-          if (symbol_name) {
-            ConstString const_symbol_name(symbol_name);
-            sym[sym_idx].GetMangled().SetValue(const_symbol_name,
-                                               symbol_name_is_mangled);
-          }
-        }
-
-        if (is_gsym) {
-          const char *gsym_name =
-              sym[sym_idx]
-                  .GetMangled()
-                  .GetName(lldb::eLanguageTypeUnknown, Mangled::ePreferMangled)
-                  .GetCString();
-          if (gsym_name)
-            N_GSYM_name_to_sym_idx[gsym_name] = sym_idx;
-        }
-
-        if (symbol_section) {
-          const addr_t section_file_addr = symbol_section->GetFileAddress();
-          if (symbol_byte_size == 0 && function_starts_count > 0) {
-            addr_t symbol_lookup_file_addr = nlist.n_value;
-            // Do an exact address match for non-ARM addresses, else get the
-            // closest since the symbol might be a thumb symbol which has an
-            // address with bit zero set
-            FunctionStarts::Entry *func_start_entry =
-                function_starts.FindEntry(symbol_lookup_file_addr, !is_arm);
-            if (is_arm && func_start_entry) {
-              // Verify that the function start address is the symbol address
-              // (ARM) or the symbol address + 1 (thumb)
-              if (func_start_entry->addr != symbol_lookup_file_addr &&
-                  func_start_entry->addr != (symbol_lookup_file_addr + 1)) {
-                // Not the right entry, NULL it out...
-                func_start_entry = nullptr;
-              }
-            }
-            if (func_start_entry) {
-              func_start_entry->data = true;
-
-              addr_t symbol_file_addr = func_start_entry->addr;
-              if (is_arm)
-                symbol_file_addr &= THUMB_ADDRESS_BIT_MASK;
-
-              const FunctionStarts::Entry *next_func_start_entry =
-                  function_starts.FindNextEntry(func_start_entry);
-              const addr_t section_end_file_addr =
-                  section_file_addr + symbol_section->GetByteSize();
-              if (next_func_start_entry) {
-                addr_t next_symbol_file_addr = next_func_start_entry->addr;
-                // Be sure the clear the Thumb address bit when we calculate
-                // the size from the current and next address
-                if (is_arm)
-                  next_symbol_file_addr &= THUMB_ADDRESS_BIT_MASK;
-                symbol_byte_size = std::min<lldb::addr_t>(
-                    next_symbol_file_addr - symbol_file_addr,
-                    section_end_file_addr - symbol_file_addr);
-              } else {
-                symbol_byte_size = section_end_file_addr - symbol_file_addr;
-              }
-            }
-          }
-          symbol_value -= section_file_addr;
-        }
-
-        if (!is_debug) {
-          if (type == eSymbolTypeCode) {
-            // See if we can find a N_FUN entry for any code symbols. If we
-            // do find a match, and the name matches, then we can merge the
-            // two into just the function symbol to avoid duplicate entries
-            // in the symbol table
-            std::pair<ValueToSymbolIndexMap::const_iterator,
-                      ValueToSymbolIndexMap::const_iterator>
-                range;
-            range = N_FUN_addr_to_sym_idx.equal_range(nlist.n_value);
-            if (range.first != range.second) {
-              bool found_it = false;
-              for (ValueToSymbolIndexMap::const_iterator pos = range.first;
-                   pos != range.second; ++pos) {
-                if (sym[sym_idx].GetMangled().GetName(
-                        lldb::eLanguageTypeUnknown, Mangled::ePreferMangled) ==
-                    sym[pos->second].GetMangled().GetName(
-                        lldb::eLanguageTypeUnknown, Mangled::ePreferMangled)) {
-                  m_nlist_idx_to_sym_idx[nlist_idx] = pos->second;
-                  // We just need the flags from the linker symbol, so put
-                  // these flags into the N_FUN flags to avoid duplicate
-                  // symbols in the symbol table
-                  sym[pos->second].SetExternal(sym[sym_idx].IsExternal());
-                  sym[pos->second].SetFlags(nlist.n_type << 16 | nlist.n_desc);
-                  if (resolver_addresses.find(nlist.n_value) !=
-                      resolver_addresses.end())
-                    sym[pos->second].SetType(eSymbolTypeResolver);
-                  sym[sym_idx].Clear();
-                  found_it = true;
-                  break;
-                }
-              }
-              if (found_it)
-                continue;
-            } else {
-              if (resolver_addresses.find(nlist.n_value) !=
-                  resolver_addresses.end())
-                type = eSymbolTypeResolver;
-            }
-          } else if (type == eSymbolTypeData || type == eSymbolTypeObjCClass ||
-                     type == eSymbolTypeObjCMetaClass ||
-                     type == eSymbolTypeObjCIVar) {
-            // See if we can find a N_STSYM entry for any data symbols. If we
-            // do find a match, and the name matches, then we can merge the
-            // two into just the Static symbol to avoid duplicate entries in
-            // the symbol table
-            std::pair<ValueToSymbolIndexMap::const_iterator,
-                      ValueToSymbolIndexMap::const_iterator>
-                range;
-            range = N_STSYM_addr_to_sym_idx.equal_range(nlist.n_value);
-            if (range.first != range.second) {
-              bool found_it = false;
-              for (ValueToSymbolIndexMap::const_iterator pos = range.first;
-                   pos != range.second; ++pos) {
-                if (sym[sym_idx].GetMangled().GetName(
-                        lldb::eLanguageTypeUnknown, Mangled::ePreferMangled) ==
-                    sym[pos->second].GetMangled().GetName(
-                        lldb::eLanguageTypeUnknown, Mangled::ePreferMangled)) {
-                  m_nlist_idx_to_sym_idx[nlist_idx] = pos->second;
-                  // We just need the flags from the linker symbol, so put
-                  // these flags into the N_STSYM flags to avoid duplicate
-                  // symbols in the symbol table
-                  sym[pos->second].SetExternal(sym[sym_idx].IsExternal());
-                  sym[pos->second].SetFlags(nlist.n_type << 16 | nlist.n_desc);
-                  sym[sym_idx].Clear();
-                  found_it = true;
-                  break;
-                }
-              }
-              if (found_it)
-                continue;
-            } else {
-              // Combine N_GSYM stab entries with the non stab symbol
-              const char *gsym_name = sym[sym_idx]
-                                          .GetMangled()
-                                          .GetName(lldb::eLanguageTypeUnknown,
-                                                   Mangled::ePreferMangled)
-                                          .GetCString();
-              if (gsym_name) {
-                ConstNameToSymbolIndexMap::const_iterator pos =
-                    N_GSYM_name_to_sym_idx.find(gsym_name);
-                if (pos != N_GSYM_name_to_sym_idx.end()) {
-                  const uint32_t GSYM_sym_idx = pos->second;
-                  m_nlist_idx_to_sym_idx[nlist_idx] = GSYM_sym_idx;
-                  // Copy the address, because often the N_GSYM address has
-                  // an invalid address of zero when the global is a common
-                  // symbol
-                  sym[GSYM_sym_idx].GetAddressRef().SetSection(symbol_section);
-                  sym[GSYM_sym_idx].GetAddressRef().SetOffset(symbol_value);
-                  // We just need the flags from the linker symbol, so put
-                  // these flags into the N_GSYM flags to avoid duplicate
-                  // symbols in the symbol table
-                  sym[GSYM_sym_idx].SetFlags(nlist.n_type << 16 | nlist.n_desc);
-                  sym[sym_idx].Clear();
-                  continue;
-                }
-              }
-            }
-          }
-        }
-
-        sym[sym_idx].SetID(nlist_idx);
-        sym[sym_idx].SetType(type);
-        if (set_value) {
-          sym[sym_idx].GetAddressRef().SetSection(symbol_section);
-          sym[sym_idx].GetAddressRef().SetOffset(symbol_value);
-        }
-        sym[sym_idx].SetFlags(nlist.n_type << 16 | nlist.n_desc);
-        if (nlist.n_desc & N_WEAK_REF)
-          sym[sym_idx].SetIsWeak(true);
-
-        if (symbol_byte_size > 0)
-          sym[sym_idx].SetByteSize(symbol_byte_size);
-
-        if (demangled_is_synthesized)
-          sym[sym_idx].SetDemangledNameIsSynthesized(true);
-
-        ++sym_idx;
-      } else {
+      if (!add_nlist) {
         sym[sym_idx].Clear();
+        continue;
       }
+
+      uint64_t symbol_value = nlist.n_value;
+
+      if (symbol_name_non_abi_mangled) {
+        sym[sym_idx].GetMangled().SetMangledName(
+            ConstString(symbol_name_non_abi_mangled));
+        sym[sym_idx].GetMangled().SetDemangledName(ConstString(symbol_name));
+      } else {
+        bool symbol_name_is_mangled = false;
+
+        if (symbol_name && symbol_name[0] == '_') {
+          symbol_name_is_mangled = symbol_name[1] == '_';
+          symbol_name++; // Skip the leading underscore
+        }
+
+        if (symbol_name) {
+          ConstString const_symbol_name(symbol_name);
+          sym[sym_idx].GetMangled().SetValue(const_symbol_name,
+                                             symbol_name_is_mangled);
+        }
+      }
+
+      if (is_gsym) {
+        const char *gsym_name =
+            sym[sym_idx]
+                .GetMangled()
+                .GetName(lldb::eLanguageTypeUnknown, Mangled::ePreferMangled)
+                .GetCString();
+        if (gsym_name)
+          N_GSYM_name_to_sym_idx[gsym_name] = sym_idx;
+      }
+
+      if (symbol_section) {
+        const addr_t section_file_addr = symbol_section->GetFileAddress();
+        if (symbol_byte_size == 0 && function_starts_count > 0) {
+          addr_t symbol_lookup_file_addr = nlist.n_value;
+          // Do an exact address match for non-ARM addresses, else get the
+          // closest since the symbol might be a thumb symbol which has an
+          // address with bit zero set.
+          FunctionStarts::Entry *func_start_entry =
+              function_starts.FindEntry(symbol_lookup_file_addr, !is_arm);
+          if (is_arm && func_start_entry) {
+            // Verify that the function start address is the symbol address
+            // (ARM) or the symbol address + 1 (thumb).
+            if (func_start_entry->addr != symbol_lookup_file_addr &&
+                func_start_entry->addr != (symbol_lookup_file_addr + 1)) {
+              // Not the right entry, NULL it out...
+              func_start_entry = nullptr;
+            }
+          }
+          if (func_start_entry) {
+            func_start_entry->data = true;
+
+            addr_t symbol_file_addr = func_start_entry->addr;
+            if (is_arm)
+              symbol_file_addr &= THUMB_ADDRESS_BIT_MASK;
+
+            const FunctionStarts::Entry *next_func_start_entry =
+                function_starts.FindNextEntry(func_start_entry);
+            const addr_t section_end_file_addr =
+                section_file_addr + symbol_section->GetByteSize();
+            if (next_func_start_entry) {
+              addr_t next_symbol_file_addr = next_func_start_entry->addr;
+              // Be sure the clear the Thumb address bit when we calculate the
+              // size from the current and next address
+              if (is_arm)
+                next_symbol_file_addr &= THUMB_ADDRESS_BIT_MASK;
+              symbol_byte_size = std::min<lldb::addr_t>(
+                  next_symbol_file_addr - symbol_file_addr,
+                  section_end_file_addr - symbol_file_addr);
+            } else {
+              symbol_byte_size = section_end_file_addr - symbol_file_addr;
+            }
+          }
+        }
+        symbol_value -= section_file_addr;
+      }
+
+      if (!is_debug) {
+        if (type == eSymbolTypeCode) {
+          // See if we can find a N_FUN entry for any code symbols. If we do
+          // find a match, and the name matches, then we can merge the two into
+          // just the function symbol to avoid duplicate entries in the symbol
+          // table.
+          std::pair<ValueToSymbolIndexMap::const_iterator,
+                    ValueToSymbolIndexMap::const_iterator>
+              range;
+          range = N_FUN_addr_to_sym_idx.equal_range(nlist.n_value);
+          if (range.first != range.second) {
+            bool found_it = false;
+            for (ValueToSymbolIndexMap::const_iterator pos = range.first;
+                 pos != range.second; ++pos) {
+              if (sym[sym_idx].GetMangled().GetName(lldb::eLanguageTypeUnknown,
+                                                    Mangled::ePreferMangled) ==
+                  sym[pos->second].GetMangled().GetName(
+                      lldb::eLanguageTypeUnknown, Mangled::ePreferMangled)) {
+                m_nlist_idx_to_sym_idx[nlist_idx] = pos->second;
+                // We just need the flags from the linker symbol, so put these
+                // flags into the N_FUN flags to avoid duplicate symbols in the
+                // symbol table.
+                sym[pos->second].SetExternal(sym[sym_idx].IsExternal());
+                sym[pos->second].SetFlags(nlist.n_type << 16 | nlist.n_desc);
+                if (resolver_addresses.find(nlist.n_value) !=
+                    resolver_addresses.end())
+                  sym[pos->second].SetType(eSymbolTypeResolver);
+                sym[sym_idx].Clear();
+                found_it = true;
+                break;
+              }
+            }
+            if (found_it)
+              continue;
+          } else {
+            if (resolver_addresses.find(nlist.n_value) !=
+                resolver_addresses.end())
+              type = eSymbolTypeResolver;
+          }
+        } else if (type == eSymbolTypeData || type == eSymbolTypeObjCClass ||
+                   type == eSymbolTypeObjCMetaClass ||
+                   type == eSymbolTypeObjCIVar) {
+          // See if we can find a N_STSYM entry for any data symbols. If we do
+          // find a match, and the name matches, then we can merge the two into
+          // just the Static symbol to avoid duplicate entries in the symbol
+          // table.
+          std::pair<ValueToSymbolIndexMap::const_iterator,
+                    ValueToSymbolIndexMap::const_iterator>
+              range;
+          range = N_STSYM_addr_to_sym_idx.equal_range(nlist.n_value);
+          if (range.first != range.second) {
+            bool found_it = false;
+            for (ValueToSymbolIndexMap::const_iterator pos = range.first;
+                 pos != range.second; ++pos) {
+              if (sym[sym_idx].GetMangled().GetName(lldb::eLanguageTypeUnknown,
+                                                    Mangled::ePreferMangled) ==
+                  sym[pos->second].GetMangled().GetName(
+                      lldb::eLanguageTypeUnknown, Mangled::ePreferMangled)) {
+                m_nlist_idx_to_sym_idx[nlist_idx] = pos->second;
+                // We just need the flags from the linker symbol, so put these
+                // flags into the N_STSYM flags to avoid duplicate symbols in
+                // the symbol table.
+                sym[pos->second].SetExternal(sym[sym_idx].IsExternal());
+                sym[pos->second].SetFlags(nlist.n_type << 16 | nlist.n_desc);
+                sym[sym_idx].Clear();
+                found_it = true;
+                break;
+              }
+            }
+            if (found_it)
+              continue;
+          } else {
+            // Combine N_GSYM stab entries with the non stab symbol.
+            const char *gsym_name = sym[sym_idx]
+                                        .GetMangled()
+                                        .GetName(lldb::eLanguageTypeUnknown,
+                                                 Mangled::ePreferMangled)
+                                        .GetCString();
+            if (gsym_name) {
+              ConstNameToSymbolIndexMap::const_iterator pos =
+                  N_GSYM_name_to_sym_idx.find(gsym_name);
+              if (pos != N_GSYM_name_to_sym_idx.end()) {
+                const uint32_t GSYM_sym_idx = pos->second;
+                m_nlist_idx_to_sym_idx[nlist_idx] = GSYM_sym_idx;
+                // Copy the address, because often the N_GSYM address has an
+                // invalid address of zero when the global is a common symbol.
+                sym[GSYM_sym_idx].GetAddressRef().SetSection(symbol_section);
+                sym[GSYM_sym_idx].GetAddressRef().SetOffset(symbol_value);
+                // We just need the flags from the linker symbol, so put these
+                // flags into the N_GSYM flags to avoid duplicate symbols in
+                // the symbol table.
+                sym[GSYM_sym_idx].SetFlags(nlist.n_type << 16 | nlist.n_desc);
+                sym[sym_idx].Clear();
+                continue;
+              }
+            }
+          }
+        }
+      }
+
+      sym[sym_idx].SetID(nlist_idx);
+      sym[sym_idx].SetType(type);
+      if (set_value) {
+        sym[sym_idx].GetAddressRef().SetSection(symbol_section);
+        sym[sym_idx].GetAddressRef().SetOffset(symbol_value);
+      }
+      sym[sym_idx].SetFlags(nlist.n_type << 16 | nlist.n_desc);
+      if (nlist.n_desc & N_WEAK_REF)
+        sym[sym_idx].SetIsWeak(true);
+
+      if (symbol_byte_size > 0)
+        sym[sym_idx].SetByteSize(symbol_byte_size);
+
+      if (demangled_is_synthesized)
+        sym[sym_idx].SetDemangledNameIsSynthesized(true);
+
+      ++sym_idx;
     }
 
     for (const auto &pos : reexport_shlib_needs_fixup) {

@@ -1303,6 +1303,12 @@ void MachineOutliner::populateMapper(InstructionMapper &Mapper, Module &M,
     if (F.empty())
       continue;
 
+    // Disable outlining from noreturn functions right now. Noreturn requires
+    // special handling for the case where what we are outlining could be a
+    // tail call.
+    if (F.hasFnAttribute(Attribute::NoReturn))
+      continue;
+
     // There's something in F. Check if it has a MachineFunction associated with
     // it.
     MachineFunction *MF = MMI.getMachineFunction(F);

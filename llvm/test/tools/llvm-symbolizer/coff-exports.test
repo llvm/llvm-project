@@ -7,8 +7,6 @@ RUN:   | FileCheck %s
 
 This test relies on UnDecorateSymbolName, which is Win32-only.
 REQUIRES: system-windows
-REQUIRES: target-windows
-FIXME: This test depends on host, not target.
 
 We get the expected stack trace, except 'foo' appears for the 'bar' frame
 because 'bar' isn't in the export table.

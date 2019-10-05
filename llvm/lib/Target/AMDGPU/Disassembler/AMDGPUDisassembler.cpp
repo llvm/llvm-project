@@ -1095,6 +1095,7 @@ MCOperand AMDGPUDisassembler::decodeSpecialReg64(unsigned Val) const {
   case 106: return createRegOperand(VCC);
   case 108: return createRegOperand(TBA);
   case 110: return createRegOperand(TMA);
+  case 125: return createRegOperand(SGPR_NULL);
   case 126: return createRegOperand(EXEC);
   case 235: return createRegOperand(SRC_SHARED_BASE);
   case 236: return createRegOperand(SRC_SHARED_LIMIT);
@@ -1172,7 +1173,8 @@ MCOperand AMDGPUDisassembler::decodeSDWAVopcDst(unsigned Val) const {
 
     int TTmpIdx = getTTmpIdx(Val);
     if (TTmpIdx >= 0) {
-      return createSRegOperand(getTtmpClassId(OPW64), TTmpIdx);
+      auto TTmpClsId = getTtmpClassId(IsWave64 ? OPW64 : OPW32);
+      return createSRegOperand(TTmpClsId, TTmpIdx);
     } else if (Val > SGPR_MAX) {
       return IsWave64 ? decodeSpecialReg64(Val)
                       : decodeSpecialReg32(Val);

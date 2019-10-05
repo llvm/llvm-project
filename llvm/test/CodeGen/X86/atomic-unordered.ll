@@ -2315,22 +2315,11 @@ define i64 @constant_folding(i64* %p) {
 
 ; Legal to forward and fold (TODO)
 define i64 @load_forwarding(i64* %p) {
-; CHECK-O0-LABEL: load_forwarding:
-; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    movq (%rdi), %rax
-; CHECK-O0-NEXT:    orq (%rdi), %rax
-; CHECK-O0-NEXT:    retq
-;
-; CHECK-O3-CUR-LABEL: load_forwarding:
-; CHECK-O3-CUR:       # %bb.0:
-; CHECK-O3-CUR-NEXT:    movq (%rdi), %rax
-; CHECK-O3-CUR-NEXT:    orq (%rdi), %rax
-; CHECK-O3-CUR-NEXT:    retq
-;
-; CHECK-O3-EX-LABEL: load_forwarding:
-; CHECK-O3-EX:       # %bb.0:
-; CHECK-O3-EX-NEXT:    movq (%rdi), %rax
-; CHECK-O3-EX-NEXT:    retq
+; CHECK-LABEL: load_forwarding:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq (%rdi), %rax
+; CHECK-NEXT:    orq (%rdi), %rax
+; CHECK-NEXT:    retq
   %v = load atomic i64, i64* %p unordered, align 8
   %v2 = load atomic i64, i64* %p unordered, align 8
   %ret = or i64 %v, %v2
@@ -2459,8 +2448,8 @@ define i64 @fold_constant_clobber(i64* %p, i64 %arg) {
 ; CHECK-O3-EX-LABEL: fold_constant_clobber:
 ; CHECK-O3-EX:       # %bb.0:
 ; CHECK-O3-EX-NEXT:    movq %rsi, %rax
-; CHECK-O3-EX-NEXT:    movq $5, (%rdi)
 ; CHECK-O3-EX-NEXT:    addq {{.*}}(%rip), %rax
+; CHECK-O3-EX-NEXT:    movq $5, (%rdi)
 ; CHECK-O3-EX-NEXT:    retq
   %v = load atomic i64, i64* @Constant unordered, align 8
   store i64 5, i64* %p
@@ -2486,8 +2475,8 @@ define i64 @fold_constant_fence(i64 %arg) {
 ; CHECK-O3-EX-LABEL: fold_constant_fence:
 ; CHECK-O3-EX:       # %bb.0:
 ; CHECK-O3-EX-NEXT:    movq %rdi, %rax
-; CHECK-O3-EX-NEXT:    mfence
 ; CHECK-O3-EX-NEXT:    addq {{.*}}(%rip), %rax
+; CHECK-O3-EX-NEXT:    mfence
 ; CHECK-O3-EX-NEXT:    retq
   %v = load atomic i64, i64* @Constant unordered, align 8
   fence seq_cst
@@ -2513,8 +2502,8 @@ define i64 @fold_invariant_clobber(i64* dereferenceable(8) %p, i64 %arg) {
 ; CHECK-O3-EX-LABEL: fold_invariant_clobber:
 ; CHECK-O3-EX:       # %bb.0:
 ; CHECK-O3-EX-NEXT:    movq %rsi, %rax
-; CHECK-O3-EX-NEXT:    movq $5, (%rdi)
 ; CHECK-O3-EX-NEXT:    addq (%rdi), %rax
+; CHECK-O3-EX-NEXT:    movq $5, (%rdi)
 ; CHECK-O3-EX-NEXT:    retq
   %v = load atomic i64, i64* %p unordered, align 8, !invariant.load !{}
   store i64 5, i64* %p
@@ -2541,8 +2530,8 @@ define i64 @fold_invariant_fence(i64* dereferenceable(8) %p, i64 %arg) {
 ; CHECK-O3-EX-LABEL: fold_invariant_fence:
 ; CHECK-O3-EX:       # %bb.0:
 ; CHECK-O3-EX-NEXT:    movq %rsi, %rax
-; CHECK-O3-EX-NEXT:    mfence
 ; CHECK-O3-EX-NEXT:    addq (%rdi), %rax
+; CHECK-O3-EX-NEXT:    mfence
 ; CHECK-O3-EX-NEXT:    retq
   %v = load atomic i64, i64* %p unordered, align 8, !invariant.load !{}
   fence seq_cst
@@ -2712,4 +2701,53 @@ define i16 @load_combine(i8* %p) {
   %v2.sht = shl i16 %v2.ext, 8
   %res = or i16 %v1.ext, %v2.sht
   ret i16 %res
+}
+
+define i1 @fold_cmp_over_fence(i32* %p, i32 %v1) {
+; CHECK-O0-LABEL: fold_cmp_over_fence:
+; CHECK-O0:       # %bb.0:
+; CHECK-O0-NEXT:    movl (%rdi), %eax
+; CHECK-O0-NEXT:    mfence
+; CHECK-O0-NEXT:    cmpl %eax, %esi
+; CHECK-O0-NEXT:    jne .LBB116_2
+; CHECK-O0-NEXT:  # %bb.1: # %taken
+; CHECK-O0-NEXT:    movb $1, %al
+; CHECK-O0-NEXT:    retq
+; CHECK-O0-NEXT:  .LBB116_2: # %untaken
+; CHECK-O0-NEXT:    xorl %eax, %eax
+; CHECK-O0-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK-O0-NEXT:    retq
+;
+; CHECK-O3-CUR-LABEL: fold_cmp_over_fence:
+; CHECK-O3-CUR:       # %bb.0:
+; CHECK-O3-CUR-NEXT:    movl (%rdi), %eax
+; CHECK-O3-CUR-NEXT:    mfence
+; CHECK-O3-CUR-NEXT:    cmpl %eax, %esi
+; CHECK-O3-CUR-NEXT:    jne .LBB116_2
+; CHECK-O3-CUR-NEXT:  # %bb.1: # %taken
+; CHECK-O3-CUR-NEXT:    movb $1, %al
+; CHECK-O3-CUR-NEXT:    retq
+; CHECK-O3-CUR-NEXT:  .LBB116_2: # %untaken
+; CHECK-O3-CUR-NEXT:    xorl %eax, %eax
+; CHECK-O3-CUR-NEXT:    retq
+;
+; CHECK-O3-EX-LABEL: fold_cmp_over_fence:
+; CHECK-O3-EX:       # %bb.0:
+; CHECK-O3-EX-NEXT:    cmpl (%rdi), %esi
+; CHECK-O3-EX-NEXT:    mfence
+; CHECK-O3-EX-NEXT:    jne .LBB116_2
+; CHECK-O3-EX-NEXT:  # %bb.1: # %taken
+; CHECK-O3-EX-NEXT:    movb $1, %al
+; CHECK-O3-EX-NEXT:    retq
+; CHECK-O3-EX-NEXT:  .LBB116_2: # %untaken
+; CHECK-O3-EX-NEXT:    xorl %eax, %eax
+; CHECK-O3-EX-NEXT:    retq
+  %v2 = load atomic i32, i32* %p unordered, align 4
+  fence seq_cst
+  %cmp = icmp eq i32 %v1, %v2
+  br i1 %cmp, label %taken, label %untaken
+taken:
+  ret i1 true
+untaken:
+  ret i1 false
 }

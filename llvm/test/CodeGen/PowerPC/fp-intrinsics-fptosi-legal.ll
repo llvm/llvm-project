@@ -8,10 +8,11 @@
 ; Verify that no gross errors happen.
 ; CHECK-LABEL: @f20
 ; COMMON: cfdctsiz
-define i32 @f20(double %a) {
+define i32 @f20(double %a) strictfp {
 entry:
   %result = call i32 @llvm.experimental.constrained.fptosi.i32.f64(double 42.1,
                                                metadata !"fpexcept.strict")
+                                               strictfp
   ret i32 %result
 }
 

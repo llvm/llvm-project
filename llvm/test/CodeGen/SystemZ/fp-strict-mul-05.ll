@@ -5,7 +5,7 @@
 declare fp128 @llvm.experimental.constrained.fmul.f128(fp128, fp128, metadata, metadata)
 
 ; There is no memory form of 128-bit multiplication.
-define void @f1(fp128 *%ptr, float %f2) {
+define void @f1(fp128 *%ptr, float %f2) strictfp {
 ; CHECK-LABEL: f1:
 ; CHECK-DAG: lxebr %f0, %f0
 ; CHECK-DAG: ld %f1, 0(%r2)
@@ -19,7 +19,7 @@ define void @f1(fp128 *%ptr, float %f2) {
   %diff = call fp128 @llvm.experimental.constrained.fmul.f128(
                         fp128 %f1, fp128 %f2x,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") strictfp
   store fp128 %diff, fp128 *%ptr
   ret void
 }

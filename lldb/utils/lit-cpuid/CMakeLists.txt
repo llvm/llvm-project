@@ -1,4 +1,4 @@
-add_llvm_utility(lit-cpuid
+add_lldb_executable(lit-cpuid
   lit-cpuid.cpp
   )
 

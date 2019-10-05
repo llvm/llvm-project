@@ -107,7 +107,7 @@ protected:
                      uint8_t Sect, uint16_t Desc, Linkage L, Scope S)
         : Name(Name), Value(Value), Type(Type), Sect(Sect), Desc(Desc), L(L),
           S(S) {
-      assert(!Name || !Name->empty() && "Name must be none or non-empty");
+      assert((!Name || !Name->empty()) && "Name must be none or non-empty");
     }
 
   public:

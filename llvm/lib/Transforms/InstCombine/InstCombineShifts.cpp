@@ -61,16 +61,10 @@ reassociateShiftAmtsOfTwoSameDirectionShifts(BinaryOperator *Sh0,
   if (ShiftOpcode != Sh1->getOpcode())
     return nullptr;
 
-  // Did we match a pattern with truncation ?
-  if (Trunc) {
-    // For right-shifts we can't do any such simplifications. Leave as-is.
-    if (ShiftOpcode != Instruction::BinaryOps::Shl)
-      return nullptr; // FIXME: still could perform constant-folding.
-    // If we saw truncation, we'll need to produce extra instruction,
-    // and for that one of the operands of the shift must be one-use.
-    if (!match(Sh0, m_c_BinOp(m_OneUse(m_Value()), m_Value())))
-      return nullptr;
-  }
+  // If we saw truncation, we'll need to produce extra instruction,
+  // and for that one of the operands of the shift must be one-use.
+  if (Trunc && !match(Sh0, m_c_BinOp(m_OneUse(m_Value()), m_Value())))
+    return nullptr;
 
   // Can we fold (ShAmt0+ShAmt1) ?
   auto *NewShAmt = dyn_cast_or_null<Constant>(
@@ -78,12 +72,22 @@ reassociateShiftAmtsOfTwoSameDirectionShifts(BinaryOperator *Sh0,
                       SQ.getWithInstruction(Sh0)));
   if (!NewShAmt)
     return nullptr; // Did not simplify.
-  // Is the new shift amount smaller than the bit width of inner shift?
-  if (!match(NewShAmt, m_SpecificInt_ICMP(
-                           ICmpInst::Predicate::ICMP_ULT,
-                           APInt(NewShAmt->getType()->getScalarSizeInBits(),
-                                 X->getType()->getScalarSizeInBits()))))
+  unsigned NewShAmtBitWidth = NewShAmt->getType()->getScalarSizeInBits();
+  unsigned XBitWidth = X->getType()->getScalarSizeInBits();
+  // Is the new shift amount smaller than the bit width of inner/new shift?
+  if (!match(NewShAmt, m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_ULT,
+                                          APInt(NewShAmtBitWidth, XBitWidth))))
     return nullptr; // FIXME: could perform constant-folding.
+
+  // If there was a truncation, and we have a right-shift, we can only fold if
+  // we are left with the original sign bit.
+  // FIXME: zero shift amount is also legal here, but we can't *easily* check
+  // more than one predicate so it's not really worth it.
+  if (Trunc && ShiftOpcode != Instruction::BinaryOps::Shl &&
+      !match(NewShAmt,
+             m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_EQ,
+                                APInt(NewShAmtBitWidth, XBitWidth - 1))))
+    return nullptr;
 
   // All good, we can do this fold.
   NewShAmt = ConstantExpr::getZExtOrBitCast(NewShAmt, X->getType());

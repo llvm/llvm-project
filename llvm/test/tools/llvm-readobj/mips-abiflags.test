@@ -3,6 +3,11 @@ RUN:   FileCheck -check-prefix=EL64 %s
 RUN: llvm-readobj -A %p/Inputs/abiflags.obj.elf-mips | \
 RUN:   FileCheck -check-prefix=BE32 %s
 
+RUN: llvm-readelf -A %p/Inputs/abiflags.obj.elf-mipsel | \
+RUN:   FileCheck -check-prefix=GNU-EL64 %s
+RUN: llvm-readelf -A %p/Inputs/abiflags.obj.elf-mips | \
+RUN:   FileCheck -check-prefix=GNU-BE32 %s
+
 EL64:      MIPS ABI Flags {
 EL64-NEXT:   Version: 0
 EL64-NEXT:   ISA: MIPS64r5
@@ -40,3 +45,27 @@ BE32-NEXT:     ODDSPREG (0x1)
 BE32-NEXT:   ]
 BE32-NEXT:   Flags 2: 0x0
 BE32-NEXT: }
+
+GNU-EL64:       MIPS ABI Flags Version: 0
+GNU-EL64-EMPTY:
+GNU-EL64-NEXT:  ISA: MIPS64r5
+GNU-EL64-NEXT:  GPR size: 64
+GNU-EL64-NEXT:  CPR1 size: 64
+GNU-EL64-NEXT:  CPR2 size: 0
+GNU-EL64-NEXT:  FP ABI: Hard float (double precision)
+GNU-EL64-NEXT:  ISA Extension: Cavium Networks Octeon3
+GNU-EL64-NEXT:  ASEs: DSP, DSPR2, VZ
+GNU-EL64-NEXT:  FLAGS 1: 00000001
+GNU-EL64-NEXT:  FLAGS 2: 00000000
+
+GNU-BE32:       MIPS ABI Flags Version: 0
+GNU-BE32-EMPTY:
+GNU-BE32-NEXT:  ISA: MIPS32r2
+GNU-BE32-NEXT:  GPR size: 32
+GNU-BE32-NEXT:  CPR1 size: 0
+GNU-BE32-NEXT:  CPR2 size: 0
+GNU-BE32-NEXT:  FP ABI: Soft float
+GNU-BE32-NEXT:  ISA Extension: None
+GNU-BE32-NEXT:  ASEs: DSP, DSPR2, microMIPS
+GNU-BE32-NEXT:  FLAGS 1: 00000001
+GNU-BE32-NEXT:  FLAGS 2: 00000000

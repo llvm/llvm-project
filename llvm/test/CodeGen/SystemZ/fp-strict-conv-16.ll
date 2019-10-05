@@ -11,7 +11,7 @@ declare i32 @llvm.experimental.constrained.fptoui.i32.f128(fp128, metadata)
 declare i64 @llvm.experimental.constrained.fptoui.i64.f128(fp128, metadata)
 
 ; Test signed f128->i32.
-define i32 @f5(fp128 *%src) {
+define i32 @f5(fp128 *%src) #0 {
 ; CHECK-LABEL: f5:
 ; CHECK: vl %v0, 0(%r2)
 ; CHECK: vrepg %v2, %v0, 1
@@ -19,12 +19,12 @@ define i32 @f5(fp128 *%src) {
 ; CHECK: br %r14
   %f = load fp128, fp128 *%src
   %conv = call i32 @llvm.experimental.constrained.fptosi.i32.f128(fp128 %f,
-                                               metadata !"fpexcept.strict")
+                                               metadata !"fpexcept.strict") #0
   ret i32 %conv
 }
 
 ; Test signed f128->i64.
-define i64 @f6(fp128 *%src) {
+define i64 @f6(fp128 *%src) #0 {
 ; CHECK-LABEL: f6:
 ; CHECK: vl %v0, 0(%r2)
 ; CHECK: vrepg %v2, %v0, 1
@@ -32,12 +32,12 @@ define i64 @f6(fp128 *%src) {
 ; CHECK: br %r14
   %f = load fp128, fp128 *%src
   %conv = call i64 @llvm.experimental.constrained.fptosi.i64.f128(fp128 %f,
-                                               metadata !"fpexcept.strict")
+                                               metadata !"fpexcept.strict") #0
   ret i64 %conv
 }
 
 ; Test unsigned f128->i32.
-define i32 @f7(fp128 *%src) {
+define i32 @f7(fp128 *%src) #0 {
 ; CHECK-LABEL: f7:
 ; CHECK: vl %v0, 0(%r2)
 ; CHECK: vrepg %v2, %v0, 1
@@ -45,12 +45,12 @@ define i32 @f7(fp128 *%src) {
 ; CHECK: br %r14
   %f = load fp128, fp128 *%src
   %conv = call i32 @llvm.experimental.constrained.fptoui.i32.f128(fp128 %f,
-                                               metadata !"fpexcept.strict")
+                                               metadata !"fpexcept.strict") #0
   ret i32 %conv
 }
 
 ; Test unsigned f128->i64.
-define i64 @f8(fp128 *%src) {
+define i64 @f8(fp128 *%src) #0 {
 ; CHECK-LABEL: f8:
 ; CHECK: vl %v0, 0(%r2)
 ; CHECK: vrepg %v2, %v0, 1
@@ -58,6 +58,8 @@ define i64 @f8(fp128 *%src) {
 ; CHECK: br %r14
   %f = load fp128, fp128 *%src
   %conv = call i64 @llvm.experimental.constrained.fptoui.i64.f128(fp128 %f,
-                                               metadata !"fpexcept.strict")
+                                               metadata !"fpexcept.strict") #0
   ret i64 %conv
 }
+
+attributes #0 = { strictfp }

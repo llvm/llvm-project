@@ -174,40 +174,6 @@ define i16 @t8_extrause2(i32 %x, i16 %y) {
 
 ; Negative tests
 
-; No folding possible for right-shifts..
-define i16 @t9_shl(i32 %x, i16 %y) {
-; CHECK-LABEL: @t9_shl(
-; CHECK-NEXT:    [[T0:%.*]] = sub i16 32, [[Y:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = zext i16 [[T0]] to i32
-; CHECK-NEXT:    [[T2:%.*]] = lshr i32 [[X:%.*]], [[T1]]
-; CHECK-NEXT:    [[T3:%.*]] = trunc i32 [[T2]] to i16
-; CHECK-NEXT:    ret i16 [[T3]]
-;
-  %t0 = sub i16 32, %y
-  %t1 = zext i16 %t0 to i32
-  %t2 = lshr i32 %x, %t1
-  %t3 = trunc i32 %t2 to i16
-  %t4 = add i16 %y, -24
-  %t5 = lshr i16 %t3, %t4
-  ret i16 %t3
-}
-define i16 @t10_ashr(i32 %x, i16 %y) {
-; CHECK-LABEL: @t10_ashr(
-; CHECK-NEXT:    [[T0:%.*]] = sub i16 32, [[Y:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = zext i16 [[T0]] to i32
-; CHECK-NEXT:    [[T2:%.*]] = ashr i32 [[X:%.*]], [[T1]]
-; CHECK-NEXT:    [[T3:%.*]] = trunc i32 [[T2]] to i16
-; CHECK-NEXT:    ret i16 [[T3]]
-;
-  %t0 = sub i16 32, %y
-  %t1 = zext i16 %t0 to i32
-  %t2 = ashr i32 %x, %t1
-  %t3 = trunc i32 %t2 to i16
-  %t4 = add i16 %y, -24
-  %t5 = ashr i16 %t3, %t4
-  ret i16 %t3
-}
-
 ; Can't fold, total shift would be 32
 define i16 @n11(i32 %x, i16 %y) {
 ; CHECK-LABEL: @n11(

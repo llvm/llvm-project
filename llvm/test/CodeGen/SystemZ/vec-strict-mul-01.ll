@@ -7,19 +7,19 @@ declare <2 x double> @llvm.experimental.constrained.fmul.v2f64(<2 x double>, <2 
 
 ; Test a v2f64 multiplication.
 define <2 x double> @f5(<2 x double> %dummy, <2 x double> %val1,
-                        <2 x double> %val2) {
+                        <2 x double> %val2) #0 {
 ; CHECK-LABEL: f5:
 ; CHECK: vfmdb %v24, %v26, %v28
 ; CHECK: br %r14
   %ret = call <2 x double> @llvm.experimental.constrained.fmul.v2f64(
                         <2 x double> %val1, <2 x double> %val2,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret <2 x double> %ret
 }
 
 ; Test an f64 multiplication that uses vector registers.
-define double @f6(<2 x double> %val1, <2 x double> %val2) {
+define double @f6(<2 x double> %val1, <2 x double> %val2) #0 {
 ; CHECK-LABEL: f6:
 ; CHECK: wfmdb %f0, %v24, %v26
 ; CHECK: br %r14
@@ -28,6 +28,8 @@ define double @f6(<2 x double> %val1, <2 x double> %val2) {
   %ret = call double @llvm.experimental.constrained.fmul.f64(
                         double %scalar1, double %scalar2,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret double %ret
 }
+
+attributes #0 = { strictfp }

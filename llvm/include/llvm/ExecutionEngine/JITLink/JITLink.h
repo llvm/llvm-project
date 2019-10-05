@@ -206,7 +206,7 @@ public:
   }
 
   /// Get the alignment for this content.
-  uint64_t getAlignment() const { return 1 << P2Align; }
+  uint64_t getAlignment() const { return 1ull << P2Align; }
 
   /// Get the alignment offset for this content.
   uint64_t getAlignmentOffset() const { return AlignmentOffset; }

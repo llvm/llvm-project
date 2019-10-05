@@ -94,9 +94,8 @@ private:
     // Iterate over all existing heads. We will mutate the Heads deque during
     // iteration.
     unsigned NumHeads = Heads.size();
-    for (auto HeadI = Heads.begin(), HeadE = std::next(Heads.begin(), NumHeads);
-         HeadI != HeadE; ++HeadI) {
-      PathSegment *Head = *HeadI;
+    for (unsigned I = 0; I < NumHeads; ++I) {
+      PathSegment *Head = Heads[I];
       // The sequence of pairs is sorted. Select the set of pairs that
       // transition from the current head state.
       auto PI = lower_bound(Pairs, NfaStatePair{Head->State, 0ULL});

@@ -11,13 +11,13 @@
 ;
 ; CHECK-LABEL: f1
 ; COMMON: divsd
-define double @f1() {
+define double @f1() #0 {
 entry:
   %div = call double @llvm.experimental.constrained.fdiv.f64(
                                                double 1.000000e+00,
                                                double 1.000000e+01,
                                                metadata !"round.dynamic",
-                                               metadata !"fpexcept.strict")
+                                               metadata !"fpexcept.strict") #0
   ret double %div
 }
 
@@ -31,13 +31,13 @@ entry:
 ;
 ; CHECK-LABEL: f2
 ; COMMON:  subsd
-define double @f2(double %a) {
+define double @f2(double %a) #0 {
 entry:
   %sub = call double @llvm.experimental.constrained.fsub.f64(
                                                double %a,
                                                double 0.000000e+00,
                                                metadata !"round.dynamic",
-                                               metadata !"fpexcept.strict")
+                                               metadata !"fpexcept.strict") #0
   ret double %sub
 }
 
@@ -54,21 +54,21 @@ entry:
 ; COMMON:  subsd
 ; COMMON:  mulsd
 ; COMMON:  subsd
-define double @f3(double %a, double %b) {
+define double @f3(double %a, double %b) #0 {
 entry:
   %sub = call double @llvm.experimental.constrained.fsub.f64(
                                                double -0.000000e+00, double %a,
                                                metadata !"round.dynamic",
-                                               metadata !"fpexcept.strict")
+                                               metadata !"fpexcept.strict") #0
   %mul = call double @llvm.experimental.constrained.fmul.f64(
                                                double %sub, double %b,
                                                metadata !"round.dynamic",
-                                               metadata !"fpexcept.strict")
+                                               metadata !"fpexcept.strict") #0
   %ret = call double @llvm.experimental.constrained.fsub.f64(
                                                double -0.000000e+00,
                                                double %mul,
                                                metadata !"round.dynamic",
-                                               metadata !"fpexcept.strict")
+                                               metadata !"fpexcept.strict") #0
   ret double %ret
 }
 
@@ -87,7 +87,7 @@ entry:
 ; COMMON: testl
 ; COMMON: jle
 ; COMMON: addsd
-define double @f4(i32 %n, double %a) {
+define double @f4(i32 %n, double %a) #0 {
 entry:
   %cmp = icmp sgt i32 %n, 0
   br i1 %cmp, label %if.then, label %if.end
@@ -96,7 +96,7 @@ if.then:
   %add = call double @llvm.experimental.constrained.fadd.f64(
                                                double 1.000000e+00, double %a,
                                                metadata !"round.dynamic",
-                                               metadata !"fpexcept.strict")
+                                               metadata !"fpexcept.strict") #0
   br label %if.end
 
 if.end:
@@ -107,112 +107,112 @@ if.end:
 ; Verify that sqrt(42.0) isn't simplified when the rounding mode is unknown.
 ; CHECK-LABEL: f5
 ; COMMON:  sqrtsd
-define double @f5() {
+define double @f5() #0 {
 entry:
   %result = call double @llvm.experimental.constrained.sqrt.f64(double 42.0,
                                                metadata !"round.dynamic",
-                                               metadata !"fpexcept.strict")
+                                               metadata !"fpexcept.strict") #0
   ret double %result
 }
 
 ; Verify that pow(42.1, 3.0) isn't simplified when the rounding mode is unknown.
 ; CHECK-LABEL: f6
 ; COMMON:  pow
-define double @f6() {
+define double @f6() #0 {
 entry:
   %result = call double @llvm.experimental.constrained.pow.f64(double 42.1,
                                                double 3.0,
                                                metadata !"round.dynamic",
-                                               metadata !"fpexcept.strict")
+                                               metadata !"fpexcept.strict") #0
   ret double %result
 }
 
 ; Verify that powi(42.1, 3) isn't simplified when the rounding mode is unknown.
 ; CHECK-LABEL: f7
 ; COMMON:  powi
-define double @f7() {
+define double @f7() #0 {
 entry:
   %result = call double @llvm.experimental.constrained.powi.f64(double 42.1,
                                                i32 3,
                                                metadata !"round.dynamic",
-                                               metadata !"fpexcept.strict")
+                                               metadata !"fpexcept.strict") #0
   ret double %result
 }
 
 ; Verify that sin(42.0) isn't simplified when the rounding mode is unknown.
 ; CHECK-LABEL: f8
 ; COMMON:  sin
-define double @f8() {
+define double @f8() #0 {
 entry:
   %result = call double @llvm.experimental.constrained.sin.f64(double 42.0,
                                                metadata !"round.dynamic",
-                                               metadata !"fpexcept.strict")
+                                               metadata !"fpexcept.strict") #0
   ret double %result
 }
 
 ; Verify that cos(42.0) isn't simplified when the rounding mode is unknown.
 ; CHECK-LABEL: f9
 ; COMMON:  cos
-define double @f9() {
+define double @f9() #0 {
 entry:
   %result = call double @llvm.experimental.constrained.cos.f64(double 42.0,
                                                metadata !"round.dynamic",
-                                               metadata !"fpexcept.strict")
+                                               metadata !"fpexcept.strict") #0
   ret double %result
 }
 
 ; Verify that exp(42.0) isn't simplified when the rounding mode is unknown.
 ; CHECK-LABEL: f10
 ; COMMON:  exp
-define double @f10() {
+define double @f10() #0 {
 entry:
   %result = call double @llvm.experimental.constrained.exp.f64(double 42.0,
                                                metadata !"round.dynamic",
-                                               metadata !"fpexcept.strict")
+                                               metadata !"fpexcept.strict") #0
   ret double %result
 }
 
 ; Verify that exp2(42.1) isn't simplified when the rounding mode is unknown.
 ; CHECK-LABEL: f11
 ; COMMON:  exp2
-define double @f11() {
+define double @f11() #0 {
 entry:
   %result = call double @llvm.experimental.constrained.exp2.f64(double 42.1,
                                                metadata !"round.dynamic",
-                                               metadata !"fpexcept.strict")
+                                               metadata !"fpexcept.strict") #0
   ret double %result
 }
 
 ; Verify that log(42.0) isn't simplified when the rounding mode is unknown.
 ; CHECK-LABEL: f12
 ; COMMON:  log
-define double @f12() {
+define double @f12() #0 {
 entry:
   %result = call double @llvm.experimental.constrained.log.f64(double 42.0,
                                                metadata !"round.dynamic",
-                                               metadata !"fpexcept.strict")
+                                               metadata !"fpexcept.strict") #0
   ret double %result
 }
 
 ; Verify that log10(42.0) isn't simplified when the rounding mode is unknown.
 ; CHECK-LABEL: f13
 ; COMMON:  log10
-define double @f13() {
+define double @f13() #0 {
 entry:
   %result = call double @llvm.experimental.constrained.log10.f64(double 42.0,
                                                metadata !"round.dynamic",
-                                               metadata !"fpexcept.strict")
+                                               metadata !"fpexcept.strict") #0
   ret double %result
 }
 
 ; Verify that log2(42.0) isn't simplified when the rounding mode is unknown.
 ; CHECK-LABEL: f14
 ; COMMON:  log2
-define double @f14() {
+define double @f14() #0 {
 entry:
   %result = call double @llvm.experimental.constrained.log2.f64(double 42.0,
                                                metadata !"round.dynamic",
-                                               metadata !"fpexcept.strict")
+                                               metadata !"fpexcept.strict") #0
   ret double %result
 }
 
@@ -220,11 +220,11 @@ entry:
 ; CHECK-LABEL: f15
 ; NO-FMA:  rint
 ; HAS-FMA: vroundsd
-define double @f15() {
+define double @f15() #0 {
 entry:
   %result = call double @llvm.experimental.constrained.rint.f64(double 42.1,
                                                metadata !"round.dynamic",
-                                               metadata !"fpexcept.strict")
+                                               metadata !"fpexcept.strict") #0
   ret double %result
 }
 
@@ -233,12 +233,12 @@ entry:
 ; CHECK-LABEL: f16
 ; NO-FMA:  nearbyint
 ; HAS-FMA: vroundsd
-define double @f16() {
+define double @f16() #0 {
 entry:
   %result = call double @llvm.experimental.constrained.nearbyint.f64(
                                                double 42.1,
                                                metadata !"round.dynamic",
-                                               metadata !"fpexcept.strict")
+                                               metadata !"fpexcept.strict") #0
   ret double %result
 }
 
@@ -247,14 +247,14 @@ entry:
 ; CHECK-LABEL: f17
 ; FMACALL32: jmp fmaf  # TAILCALL
 ; FMA32: vfmadd213ss
-define float @f17() {
+define float @f17() #0 {
 entry:
   %result = call float @llvm.experimental.constrained.fma.f32(
                                                float 3.5,
                                                float 3.5,
                                                float 3.5,
                                                metadata !"round.dynamic",
-                                               metadata !"fpexcept.strict")
+                                               metadata !"fpexcept.strict") #0
   ret float %result
 }
 
@@ -263,26 +263,26 @@ entry:
 ; CHECK-LABEL: f18
 ; FMACALL64: jmp fma  # TAILCALL
 ; FMA64: vfmadd213sd
-define double @f18() {
+define double @f18() #0 {
 entry:
   %result = call double @llvm.experimental.constrained.fma.f64(
                                                double 42.1,
                                                double 42.1,
                                                double 42.1,
                                                metadata !"round.dynamic",
-                                               metadata !"fpexcept.strict")
+                                               metadata !"fpexcept.strict") #0
   ret double %result
 }
 
 ; CHECK-LABEL: f19
 ; COMMON: fmod
-define double @f19() {
+define double @f19() #0 {
 entry:
   %rem = call double @llvm.experimental.constrained.frem.f64(
                                                double 1.000000e+00,
                                                double 1.000000e+01,
                                                metadata !"round.dynamic",
-                                               metadata !"fpexcept.strict")
+                                               metadata !"fpexcept.strict") #0
   ret double %rem
 }
 
@@ -312,10 +312,10 @@ entry:
 ; HAS-FMA: setae
 ; HAS-FMA: shll
 ; HAS-FMA: xorl
-define i32 @f20u(double %x) {
+define i32 @f20u(double %x) #0 {
 entry:
   %result = call i32 @llvm.experimental.constrained.fptoui.i32.f64(double %x,
-                                               metadata !"fpexcept.strict")
+                                               metadata !"fpexcept.strict") #0
   ret i32 %result
 }
 
@@ -324,23 +324,25 @@ entry:
 ; Verify that no gross errors happen.
 ; CHECK-LABEL: @f21
 ; COMMON: cvtsd2ss
-define float @f21() {
+define float @f21() #0 {
 entry:
   %result = call float @llvm.experimental.constrained.fptrunc.f32.f64(
                                                double 42.1,
                                                metadata !"round.dynamic",
-                                               metadata !"fpexcept.strict")
+                                               metadata !"fpexcept.strict") #0
   ret float %result
 }
 
 ; CHECK-LABEL: @f22
 ; COMMON: cvtss2sd
-define double @f22(float %x) {
+define double @f22(float %x) #0 {
 entry:
   %result = call double @llvm.experimental.constrained.fpext.f64.f32(float %x,
-                                               metadata !"fpexcept.strict")
+                                               metadata !"fpexcept.strict") #0
   ret double %result
 }
+
+attributes #0 = { strictfp }
 
 @llvm.fp.env = thread_local global i8 zeroinitializer, section "llvm.metadata"
 declare double @llvm.experimental.constrained.fadd.f64(double, double, metadata, metadata)

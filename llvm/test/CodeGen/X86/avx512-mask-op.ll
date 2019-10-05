@@ -484,8 +484,8 @@ define <4 x i32> @test4(<4 x i64> %x, <4 x i64> %y, <4 x i64> %x1, <4 x i64> %y1
 ; KNL-NEXT:    ## kill: def $ymm2 killed $ymm2 def $zmm2
 ; KNL-NEXT:    ## kill: def $ymm1 killed $ymm1 def $zmm1
 ; KNL-NEXT:    ## kill: def $ymm0 killed $ymm0 def $zmm0
-; KNL-NEXT:    vpcmpleq %zmm1, %zmm0, %k1
-; KNL-NEXT:    vpcmpgtq %zmm3, %zmm2, %k1 {%k1}
+; KNL-NEXT:    vpcmpgtq %zmm3, %zmm2, %k1
+; KNL-NEXT:    vpcmpleq %zmm1, %zmm0, %k1 {%k1}
 ; KNL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
 ; KNL-NEXT:    ## kill: def $xmm0 killed $xmm0 killed $zmm0
 ; KNL-NEXT:    vzeroupper
@@ -493,8 +493,8 @@ define <4 x i32> @test4(<4 x i64> %x, <4 x i64> %y, <4 x i64> %x1, <4 x i64> %y1
 ;
 ; SKX-LABEL: test4:
 ; SKX:       ## %bb.0:
-; SKX-NEXT:    vpcmpleq %ymm1, %ymm0, %k1
-; SKX-NEXT:    vpcmpgtq %ymm3, %ymm2, %k0 {%k1}
+; SKX-NEXT:    vpcmpgtq %ymm3, %ymm2, %k1
+; SKX-NEXT:    vpcmpleq %ymm1, %ymm0, %k0 {%k1}
 ; SKX-NEXT:    vpmovm2d %k0, %xmm0
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
@@ -505,8 +505,8 @@ define <4 x i32> @test4(<4 x i64> %x, <4 x i64> %y, <4 x i64> %x1, <4 x i64> %y1
 ; AVX512BW-NEXT:    ## kill: def $ymm2 killed $ymm2 def $zmm2
 ; AVX512BW-NEXT:    ## kill: def $ymm1 killed $ymm1 def $zmm1
 ; AVX512BW-NEXT:    ## kill: def $ymm0 killed $ymm0 def $zmm0
-; AVX512BW-NEXT:    vpcmpleq %zmm1, %zmm0, %k1
-; AVX512BW-NEXT:    vpcmpgtq %zmm3, %zmm2, %k1 {%k1}
+; AVX512BW-NEXT:    vpcmpgtq %zmm3, %zmm2, %k1
+; AVX512BW-NEXT:    vpcmpleq %zmm1, %zmm0, %k1 {%k1}
 ; AVX512BW-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
 ; AVX512BW-NEXT:    ## kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512BW-NEXT:    vzeroupper
@@ -518,8 +518,8 @@ define <4 x i32> @test4(<4 x i64> %x, <4 x i64> %y, <4 x i64> %x1, <4 x i64> %y1
 ; AVX512DQ-NEXT:    ## kill: def $ymm2 killed $ymm2 def $zmm2
 ; AVX512DQ-NEXT:    ## kill: def $ymm1 killed $ymm1 def $zmm1
 ; AVX512DQ-NEXT:    ## kill: def $ymm0 killed $ymm0 def $zmm0
-; AVX512DQ-NEXT:    vpcmpleq %zmm1, %zmm0, %k1
-; AVX512DQ-NEXT:    vpcmpgtq %zmm3, %zmm2, %k0 {%k1}
+; AVX512DQ-NEXT:    vpcmpgtq %zmm3, %zmm2, %k1
+; AVX512DQ-NEXT:    vpcmpleq %zmm1, %zmm0, %k0 {%k1}
 ; AVX512DQ-NEXT:    vpmovm2d %k0, %zmm0
 ; AVX512DQ-NEXT:    ## kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512DQ-NEXT:    vzeroupper
@@ -527,8 +527,8 @@ define <4 x i32> @test4(<4 x i64> %x, <4 x i64> %y, <4 x i64> %x1, <4 x i64> %y1
 ;
 ; X86-LABEL: test4:
 ; X86:       ## %bb.0:
-; X86-NEXT:    vpcmpleq %ymm1, %ymm0, %k1
-; X86-NEXT:    vpcmpgtq %ymm3, %ymm2, %k0 {%k1}
+; X86-NEXT:    vpcmpgtq %ymm3, %ymm2, %k1
+; X86-NEXT:    vpcmpleq %ymm1, %ymm0, %k0 {%k1}
 ; X86-NEXT:    vpmovm2d %k0, %xmm0
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
@@ -546,8 +546,8 @@ define <2 x i64> @test5(<2 x i64> %x, <2 x i64> %y, <2 x i64> %x1, <2 x i64> %y1
 ; KNL-NEXT:    ## kill: def $xmm2 killed $xmm2 def $zmm2
 ; KNL-NEXT:    ## kill: def $xmm1 killed $xmm1 def $zmm1
 ; KNL-NEXT:    ## kill: def $xmm0 killed $xmm0 def $zmm0
-; KNL-NEXT:    vpcmpleq %zmm3, %zmm2, %k1
-; KNL-NEXT:    vpcmpgtq %zmm0, %zmm1, %k1 {%k1}
+; KNL-NEXT:    vpcmpgtq %zmm0, %zmm1, %k1
+; KNL-NEXT:    vpcmpleq %zmm3, %zmm2, %k1 {%k1}
 ; KNL-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
 ; KNL-NEXT:    ## kill: def $xmm0 killed $xmm0 killed $zmm0
 ; KNL-NEXT:    vzeroupper
@@ -555,8 +555,8 @@ define <2 x i64> @test5(<2 x i64> %x, <2 x i64> %y, <2 x i64> %x1, <2 x i64> %y1
 ;
 ; SKX-LABEL: test5:
 ; SKX:       ## %bb.0:
-; SKX-NEXT:    vpcmpleq %xmm3, %xmm2, %k1
-; SKX-NEXT:    vpcmpgtq %xmm0, %xmm1, %k0 {%k1}
+; SKX-NEXT:    vpcmpgtq %xmm0, %xmm1, %k1
+; SKX-NEXT:    vpcmpleq %xmm3, %xmm2, %k0 {%k1}
 ; SKX-NEXT:    vpmovm2q %k0, %xmm0
 ; SKX-NEXT:    retq
 ;
@@ -566,8 +566,8 @@ define <2 x i64> @test5(<2 x i64> %x, <2 x i64> %y, <2 x i64> %x1, <2 x i64> %y1
 ; AVX512BW-NEXT:    ## kill: def $xmm2 killed $xmm2 def $zmm2
 ; AVX512BW-NEXT:    ## kill: def $xmm1 killed $xmm1 def $zmm1
 ; AVX512BW-NEXT:    ## kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512BW-NEXT:    vpcmpleq %zmm3, %zmm2, %k1
-; AVX512BW-NEXT:    vpcmpgtq %zmm0, %zmm1, %k1 {%k1}
+; AVX512BW-NEXT:    vpcmpgtq %zmm0, %zmm1, %k1
+; AVX512BW-NEXT:    vpcmpleq %zmm3, %zmm2, %k1 {%k1}
 ; AVX512BW-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
 ; AVX512BW-NEXT:    ## kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512BW-NEXT:    vzeroupper
@@ -579,8 +579,8 @@ define <2 x i64> @test5(<2 x i64> %x, <2 x i64> %y, <2 x i64> %x1, <2 x i64> %y1
 ; AVX512DQ-NEXT:    ## kill: def $xmm2 killed $xmm2 def $zmm2
 ; AVX512DQ-NEXT:    ## kill: def $xmm1 killed $xmm1 def $zmm1
 ; AVX512DQ-NEXT:    ## kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512DQ-NEXT:    vpcmpleq %zmm3, %zmm2, %k1
-; AVX512DQ-NEXT:    vpcmpgtq %zmm0, %zmm1, %k0 {%k1}
+; AVX512DQ-NEXT:    vpcmpgtq %zmm0, %zmm1, %k1
+; AVX512DQ-NEXT:    vpcmpleq %zmm3, %zmm2, %k0 {%k1}
 ; AVX512DQ-NEXT:    vpmovm2q %k0, %zmm0
 ; AVX512DQ-NEXT:    ## kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512DQ-NEXT:    vzeroupper
@@ -588,8 +588,8 @@ define <2 x i64> @test5(<2 x i64> %x, <2 x i64> %y, <2 x i64> %x1, <2 x i64> %y1
 ;
 ; X86-LABEL: test5:
 ; X86:       ## %bb.0:
-; X86-NEXT:    vpcmpleq %xmm3, %xmm2, %k1
-; X86-NEXT:    vpcmpgtq %xmm0, %xmm1, %k0 {%k1}
+; X86-NEXT:    vpcmpgtq %xmm0, %xmm1, %k1
+; X86-NEXT:    vpcmpleq %xmm3, %xmm2, %k0 {%k1}
 ; X86-NEXT:    vpmovm2q %k0, %xmm0
 ; X86-NEXT:    retl
   %x_gt_y = icmp slt <2 x i64> %x, %y
