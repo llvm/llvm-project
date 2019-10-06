@@ -2247,6 +2247,8 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
     return lowerShuffleVector(MI);
   case G_DYN_STACKALLOC:
     return lowerDynStackAlloc(MI);
+  case G_EXTRACT:
+    return lowerExtract(MI);
   }
 }
 
@@ -4098,4 +4100,37 @@ LegalizerHelper::lowerDynStackAlloc(MachineInstr &MI) {
 
   MI.eraseFromParent();
   return Legalized;
+}
+
+LegalizerHelper::LegalizeResult
+LegalizerHelper::lowerExtract(MachineInstr &MI) {
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+  unsigned Offset = MI.getOperand(2).getImm();
+
+  LLT DstTy = MRI.getType(Dst);
+  LLT SrcTy = MRI.getType(Src);
+
+  if (DstTy.isScalar() &&
+      (SrcTy.isScalar() ||
+       (SrcTy.isVector() && DstTy == SrcTy.getElementType()))) {
+    LLT SrcIntTy = SrcTy;
+    if (!SrcTy.isScalar()) {
+      SrcIntTy = LLT::scalar(SrcTy.getSizeInBits());
+      Src = MIRBuilder.buildBitcast(SrcIntTy, Src).getReg(0);
+    }
+
+    if (Offset == 0)
+      MIRBuilder.buildTrunc(Dst, Src);
+    else {
+      auto ShiftAmt = MIRBuilder.buildConstant(SrcIntTy, Offset);
+      auto Shr = MIRBuilder.buildLShr(SrcIntTy, Src, ShiftAmt);
+      MIRBuilder.buildTrunc(Dst, Shr);
+    }
+
+    MI.eraseFromParent();
+    return Legalized;
+  }
+
+  return UnableToLegalize;
 }

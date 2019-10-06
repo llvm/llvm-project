@@ -434,8 +434,11 @@ bool AMDGPUInstructionSelector::selectG_UADDO_USUBO(MachineInstr &I) const {
 
 bool AMDGPUInstructionSelector::selectG_EXTRACT(MachineInstr &I) const {
   MachineBasicBlock *BB = I.getParent();
-  assert(I.getOperand(2).getImm() % 32 == 0);
-  unsigned SubReg = TRI.getSubRegFromChannel(I.getOperand(2).getImm() / 32);
+  unsigned Offset = I.getOperand(2).getImm();
+  if (Offset % 32 != 0)
+    return false;
+
+  unsigned SubReg = TRI.getSubRegFromChannel(Offset / 32);
   const DebugLoc &DL = I.getDebugLoc();
   MachineInstr *Copy = BuildMI(*BB, &I, DL, TII.get(TargetOpcode::COPY),
                                I.getOperand(0).getReg())

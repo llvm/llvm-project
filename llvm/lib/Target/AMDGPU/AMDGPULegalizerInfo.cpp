@@ -48,6 +48,12 @@ static LegalityPredicate isMultiple32(unsigned TypeIdx,
   };
 }
 
+static LegalityPredicate sizeIs(unsigned TypeIdx, unsigned Size) {
+  return [=](const LegalityQuery &Query) {
+    return Query.Types[TypeIdx].getSizeInBits() == Size;
+  };
+}
+
 static LegalityPredicate isSmallOddVector(unsigned TypeIdx) {
   return [=](const LegalityQuery &Query) {
     const LLT Ty = Query.Types[TypeIdx];
@@ -831,6 +837,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   getActionDefinitionsBuilder(G_ATOMICRMW_FADD)
     .legalFor({{S32, LocalPtr}});
 
+  getActionDefinitionsBuilder(G_ATOMIC_CMPXCHG_WITH_SUCCESS)
+    .lower();
+
   // TODO: Pointer types, any 32-bit or 64-bit vector
   getActionDefinitionsBuilder(G_SELECT)
     .legalForCartesianProduct({S32, S64, S16, V2S32, V2S16, V4S16,
@@ -903,7 +912,13 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     unsigned LitTyIdx = Op == G_EXTRACT ? 0 : 1;
 
     // FIXME: Doesn't handle extract of illegal sizes.
-    getActionDefinitionsBuilder(Op)
+    auto &Builder = getActionDefinitionsBuilder(Op);
+
+    // FIXME: Cleanup when G_INSERT lowering implemented.
+    if (Op == G_EXTRACT)
+      Builder.lowerIf(all(typeIs(LitTyIdx, S16), sizeIs(BigTyIdx, 32)));
+
+    Builder
       .legalIf([=](const LegalityQuery &Query) {
           const LLT BigTy = Query.Types[BigTyIdx];
           const LLT LitTy = Query.Types[LitTyIdx];
