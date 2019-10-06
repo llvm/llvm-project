@@ -416,7 +416,7 @@ namespace {
     /// otherwise.
     bool convertBlockPointerToFunctionPointer(QualType &T) {
       if (isTopLevelBlockPointerType(T)) {
-        const BlockPointerType *BPT = T->getAs<BlockPointerType>();
+        const auto *BPT = T->castAs<BlockPointerType>();
         T = Context->getPointerType(BPT->getPointeeType());
         return true;
       }
@@ -1163,6 +1163,7 @@ void RewriteObjC::RewriteObjCMethodDecl(const ObjCInterfaceDecl *IDecl,
 void RewriteObjC::RewriteImplementationDecl(Decl *OID) {
   ObjCImplementationDecl *IMD = dyn_cast<ObjCImplementationDecl>(OID);
   ObjCCategoryImplDecl *CID = dyn_cast<ObjCCategoryImplDecl>(OID);
+  assert((IMD || CID) && "Unknown ImplementationDecl");
 
   InsertText(IMD ? IMD->getBeginLoc() : CID->getBeginLoc(), "// ");
 
@@ -2017,7 +2018,7 @@ RewriteObjC::SynthesizeCallToFunctionDecl(FunctionDecl *FD,
     ImplicitCastExpr::Create(*Context, pToFunc, CK_FunctionToPointerDecay,
                              DRE, nullptr, VK_RValue);
 
-  const FunctionType *FT = msgSendType->getAs<FunctionType>();
+  const auto *FT = msgSendType->castAs<FunctionType>();
 
   CallExpr *Exp = CallExpr::Create(
       *Context, ICE, Args, FT->getCallResultType(*Context), VK_RValue, EndLoc);
@@ -2285,7 +2286,7 @@ void RewriteObjC::RewriteBlockPointerTypeVariable(std::string& Str,
 void RewriteObjC::RewriteBlockLiteralFunctionDecl(FunctionDecl *FD) {
   SourceLocation FunLocStart = FD->getTypeSpecStartLoc();
   const FunctionType *funcType = FD->getType()->getAs<FunctionType>();
-  const FunctionProtoType *proto = dyn_cast<FunctionProtoType>(funcType);
+  const FunctionProtoType *proto = dyn_cast_or_null<FunctionProtoType>(funcType);
   if (!proto)
     return;
   QualType Type = proto->getReturnType();
@@ -2604,7 +2605,7 @@ CallExpr *RewriteObjC::SynthMsgSendStretCallExpr(FunctionDecl *MsgSendStretFlavo
   // Don't forget the parens to enforce the proper binding.
   ParenExpr *PE = new (Context) ParenExpr(SourceLocation(), SourceLocation(), cast);
 
-  const FunctionType *FT = msgSendType->getAs<FunctionType>();
+  const auto *FT = msgSendType->castAs<FunctionType>();
   CallExpr *STCE = CallExpr::Create(*Context, PE, MsgExprs, FT->getReturnType(),
                                     VK_RValue, SourceLocation());
   return STCE;
@@ -2735,8 +2736,8 @@ Stmt *RewriteObjC::SynthMessageExpr(ObjCMessageExpr *Exp,
 
   case ObjCMessageExpr::Class: {
     SmallVector<Expr*, 8> ClsExprs;
-    ObjCInterfaceDecl *Class
-      = Exp->getClassReceiver()->getAs<ObjCObjectType>()->getInterface();
+    auto *Class =
+        Exp->getClassReceiver()->castAs<ObjCObjectType>()->getInterface();
     IdentifierInfo *clsName = Class->getIdentifier();
     ClsExprs.push_back(getStringLiteral(clsName->getName()));
     CallExpr *Cls = SynthesizeCallToFunctionDecl(GetClassFunctionDecl, ClsExprs,
@@ -2957,7 +2958,7 @@ Stmt *RewriteObjC::SynthMessageExpr(ObjCMessageExpr *Exp,
   // Don't forget the parens to enforce the proper binding.
   ParenExpr *PE = new (Context) ParenExpr(StartLoc, EndLoc, cast);
 
-  const FunctionType *FT = msgSendType->getAs<FunctionType>();
+  const auto *FT = msgSendType->castAs<FunctionType>();
   CallExpr *CE = CallExpr::Create(*Context, PE, MsgExprs, FT->getReturnType(),
                                   VK_RValue, EndLoc);
   Stmt *ReplacingStmt = CE;

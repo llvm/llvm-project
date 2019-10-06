@@ -4639,7 +4639,7 @@ TreeTransform<Derived>::TransformReferenceType(TypeLocBuilder &TLB,
   // Objective-C ARC can add lifetime qualifiers to the type that we're
   // referring to.
   TLB.TypeWasModifiedSafely(
-                     Result->getAs<ReferenceType>()->getPointeeTypeAsWritten());
+      Result->castAs<ReferenceType>()->getPointeeTypeAsWritten());
 
   // r-value references can be rebuilt as l-value references.
   ReferenceTypeLoc NewTL;
@@ -5931,7 +5931,7 @@ QualType TreeTransform<Derived>::TransformPipeType(TypeLocBuilder &TLB,
 
   QualType Result = TL.getType();
   if (getDerived().AlwaysRebuild() || ValueType != TL.getValueLoc().getType()) {
-    const PipeType *PT = Result->getAs<PipeType>();
+    const PipeType *PT = Result->castAs<PipeType>();
     bool isReadPipe = PT->isReadOnly();
     Result = getDerived().RebuildPipeType(ValueType, TL.getKWLoc(), isReadPipe);
     if (Result.isNull())
@@ -11675,7 +11675,7 @@ TreeTransform<Derived>::TransformCXXDependentScopeMemberExpr(
   } else {
     OldBase = nullptr;
     BaseType = getDerived().TransformType(E->getBaseType());
-    ObjectType = BaseType->getAs<PointerType>()->getPointeeType();
+    ObjectType = BaseType->castAs<PointerType>()->getPointeeType();
   }
 
   // Transform the first part of the nested-name-specifier that qualifies
@@ -13195,7 +13195,7 @@ TreeTransform<Derived>::RebuildCXXPseudoDestructorExpr(Expr *Base,
   if (Base->isTypeDependent() || Destroyed.getIdentifier() ||
       (!isArrow && !BaseType->getAs<RecordType>()) ||
       (isArrow && BaseType->getAs<PointerType>() &&
-       !BaseType->getAs<PointerType>()->getPointeeType()
+       !BaseType->castAs<PointerType>()->getPointeeType()
                                               ->template getAs<RecordType>())){
     // This pseudo-destructor expression is still a pseudo-destructor.
     return SemaRef.BuildPseudoDestructorExpr(
