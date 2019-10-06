@@ -216,9 +216,13 @@ body: |
     ; CHECK: liveins: $vgpr0, $vgpr1
     ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
     ; CHECK: [[COPY1:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr1
-    ; CHECK: [[EXTRACT:%[0-9]+]]:_(s16) = G_EXTRACT [[COPY]](<2 x s16>), 0
-    ; CHECK: [[EXTRACT1:%[0-9]+]]:_(s16) = G_EXTRACT [[COPY]](<2 x s16>), 16
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[EXTRACT]](s16), [[EXTRACT1]](s16)
+    ; CHECK: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[COPY]](<2 x s16>)
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST]](s32)
+    ; CHECK: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[COPY]](<2 x s16>)
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; CHECK: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C]](s32)
+    ; CHECK: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
+    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16)
     ; CHECK: $vgpr0 = COPY [[BUILD_VECTOR]](<2 x s16>)
     %0:_(<2 x s16>) = COPY $vgpr0
     %1:_(<2 x s16>) = COPY $vgpr1
@@ -239,9 +243,13 @@ body: |
     ; CHECK: liveins: $vgpr0, $vgpr1
     ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
     ; CHECK: [[COPY1:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr1
-    ; CHECK: [[EXTRACT:%[0-9]+]]:_(s16) = G_EXTRACT [[COPY]](<2 x s16>), 16
-    ; CHECK: [[EXTRACT1:%[0-9]+]]:_(s16) = G_EXTRACT [[COPY]](<2 x s16>), 0
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[EXTRACT]](s16), [[EXTRACT1]](s16)
+    ; CHECK: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[COPY]](<2 x s16>)
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; CHECK: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
+    ; CHECK: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[COPY]](<2 x s16>)
+    ; CHECK: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST1]](s32)
+    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16)
     ; CHECK: $vgpr0 = COPY [[BUILD_VECTOR]](<2 x s16>)
     %0:_(<2 x s16>) = COPY $vgpr0
     %1:_(<2 x s16>) = COPY $vgpr1

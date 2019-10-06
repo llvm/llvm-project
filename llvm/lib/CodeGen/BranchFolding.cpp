@@ -1307,6 +1307,8 @@ static bool IsBranchOnlyBlock(MachineBasicBlock *MBB) {
 /// result in infinite loops.
 static bool IsBetterFallthrough(MachineBasicBlock *MBB1,
                                 MachineBasicBlock *MBB2) {
+  assert(MBB1 && MBB2 && "Unknown MachineBasicBlock");
+
   // Right now, we use a simple heuristic.  If MBB2 ends with a call, and
   // MBB1 doesn't, we prefer to fall through into MBB1.  This allows us to
   // optimize branches that branch to either a return block or an assert block
