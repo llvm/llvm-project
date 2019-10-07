@@ -39,6 +39,8 @@ body:             |
   ; CHECK:   successors: %bb.1(0x80000000)
   ; CHECK:   INLINEASM &"", 1, 851978, def dead %11
   ; CHECK:   GLOBAL_STORE_DWORD undef %12:vreg_64, [[BUFFER_LOAD_DWORD_OFFEN]], 0, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
+  ; CHECK:   [[V_MOV_B32_e32_2:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+  ; CHECK:   [[V_MOV_B32_e32_3:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK:   [[DS_READ_B64_gfx9_:%[0-9]+]]:vreg_64 = DS_READ_B64_gfx9 undef %14:vgpr_32, 0, 0, implicit $exec :: (load 8, addrspace 3)
   ; CHECK:   INLINEASM &"def $0 $1", 1, 851978, def %15, 851978, def %16
   ; CHECK:   [[DS_READ_B32_gfx9_:%[0-9]+]]:vgpr_32 = DS_READ_B32_gfx9 [[V_MOV_B32_e32_]], 0, 0, implicit $exec
@@ -46,24 +48,22 @@ body:             |
   ; CHECK:   [[DS_READ_B32_gfx9_2:%[0-9]+]]:vgpr_32 = DS_READ_B32_gfx9 undef %20:vgpr_32, 0, 0, implicit $exec
   ; CHECK:   INLINEASM &"def $0 $1", 1, 851978, def %21, 851978, def %22
   ; CHECK:   [[DS_READ_B32_gfx9_3:%[0-9]+]]:vgpr_32 = DS_READ_B32_gfx9 [[V_MOV_B32_e32_1]], 0, 0, implicit $exec
-  ; CHECK:   [[V_MOV_B32_e32_2:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-  ; CHECK:   %5.sub1:vreg_64 = COPY [[V_MOV_B32_e32_]]
-  ; CHECK:   [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 1, [[DEF2]], implicit $exec
-  ; CHECK:   [[V_CMP_GT_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_GT_U32_e64 64, [[V_ADD_U32_e32_]], implicit $exec
-  ; CHECK:   [[DEF]].sub1:vreg_64 = COPY [[V_MOV_B32_e32_]]
-  ; CHECK:   [[V_MOV_B32_e32_3:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK:   INLINEASM &"", 1, 851978, def dead [[V_MOV_B32_e32_2]], 851978, def dead [[V_MOV_B32_e32_3]], 851977, [[DS_READ_B64_gfx9_]].sub0, 2147483657, [[V_MOV_B32_e32_2]](tied-def 3), 2147549193, [[V_MOV_B32_e32_3]](tied-def 5), 851977, %15, 851977, %16, 851977, [[DS_READ_B32_gfx9_1]], 851977, [[DS_READ_B32_gfx9_]], 851977, [[DS_READ_B32_gfx9_3]], 851977, [[DS_READ_B32_gfx9_2]]
+  ; CHECK:   %5.sub1:vreg_64 = COPY [[V_MOV_B32_e32_]]
   ; CHECK:   DS_WRITE_B32_gfx9 undef %28:vgpr_32, %21, 0, 0, implicit $exec :: (store 4, addrspace 3)
   ; CHECK:   DS_WRITE_B32_gfx9 undef %29:vgpr_32, %22, 0, 0, implicit $exec :: (store 4, addrspace 3)
   ; CHECK:   DS_WRITE_B64_gfx9 undef %30:vgpr_32, %5, 0, 0, implicit $exec :: (store 8, addrspace 3)
   ; CHECK:   undef %31.sub1:vreg_64 = FLAT_LOAD_DWORD undef %32:vreg_64, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 4)
+  ; CHECK:   [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 1, [[DEF2]], implicit $exec
+  ; CHECK:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[S_LOAD_DWORDX2_IMM]].sub1
+  ; CHECK:   [[DEF]].sub1:vreg_64 = COPY [[V_MOV_B32_e32_]]
   ; CHECK:   [[V_MUL_LO_U32_:%[0-9]+]]:vgpr_32 = V_MUL_LO_U32 [[V_ADD_U32_e32_]], [[S_MOV_B32_]], implicit $exec
+  ; CHECK:   [[V_CMP_GT_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_GT_U32_e64 64, [[V_ADD_U32_e32_]], implicit $exec
   ; CHECK:   [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, [[V_ADD_U32_e32_]], [[V_CMP_GT_U32_e64_]], implicit $exec
   ; CHECK:   [[V_SUB_U32_e32_:%[0-9]+]]:vgpr_32 = V_SUB_U32_e32 [[V_MUL_LO_U32_]], [[DEF1]], implicit $exec
   ; CHECK:   [[V_MUL_LO_U32_1:%[0-9]+]]:vgpr_32 = V_MUL_LO_U32 [[V_CNDMASK_B32_e64_]], [[S_MOV_B32_]], implicit $exec
   ; CHECK:   [[V_ADD_U32_e32_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[V_SUB_U32_e32_]], [[DEF]].sub0, implicit $exec
   ; CHECK:   [[V_SUB_U32_e32_1:%[0-9]+]]:vgpr_32 = V_SUB_U32_e32 [[V_MUL_LO_U32_1]], [[V_MUL_LO_U32_]], implicit $exec
-  ; CHECK:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[S_LOAD_DWORDX2_IMM]].sub1
   ; CHECK:   [[DEF]].sub0:vreg_64 = V_ADD_U32_e32 [[V_SUB_U32_e32_1]], [[V_ADD_U32_e32_1]], implicit $exec
   ; CHECK:   undef %38.sub0:vreg_64, %39:sreg_64_xexec = V_ADD_I32_e64 [[S_LOAD_DWORDX2_IMM]].sub0, [[DEF]].sub0, 0, implicit $exec
   ; CHECK:   undef %40.sub1:vreg_64, dead %41:sreg_64_xexec = V_ADDC_U32_e64 [[COPY1]], [[DEF]].sub1, %39, 0, implicit $exec
