@@ -124,8 +124,6 @@ get_demangled_name_without_arguments(ConstString mangled,
 }
 
 #pragma mark Mangled
-// Default constructor
-Mangled::Mangled() : m_mangled(), m_demangled() {}
 
 // Constructor with an optional string and a boolean indicating if it is the
 // mangled version.

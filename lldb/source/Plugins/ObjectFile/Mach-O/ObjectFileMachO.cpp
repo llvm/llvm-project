@@ -3685,7 +3685,7 @@ size_t ObjectFileMachO::ParseSymtab() {
       if (!ParseNList(nlist_data, nlist_data_offset, nlist_byte_size, nlist))
         break;
 
-      SymbolType type = eSymbolTypeInvalid;
+      const char *symbol_name_non_abi_mangled = nullptr;
       const char *symbol_name = nullptr;
 
       if (have_strtab_data) {
@@ -3710,17 +3710,17 @@ size_t ObjectFileMachO::ParseSymtab() {
                                            str_error))
           symbol_name = memory_symbol_name.c_str();
       }
-      const char *symbol_name_non_abi_mangled = nullptr;
 
+      SymbolType type = eSymbolTypeInvalid;
       SectionSP symbol_section;
       lldb::addr_t symbol_byte_size = 0;
       bool add_nlist = true;
       bool is_gsym = false;
-      bool is_debug = ((nlist.n_type & N_STAB) != 0);
       bool demangled_is_synthesized = false;
       bool set_value = true;
-      assert(sym_idx < num_syms);
 
+      const bool is_debug = ((nlist.n_type & N_STAB) != 0);
+      assert(sym_idx < num_syms);
       sym[sym_idx].SetDebug(is_debug);
 
       if (is_debug) {
@@ -4073,7 +4073,6 @@ size_t ObjectFileMachO::ParseSymtab() {
           break;
         }
       } else {
-        // uint8_t n_pext    = N_PEXT & nlist.n_type;
         uint8_t n_type = N_TYPE & nlist.n_type;
         sym[sym_idx].SetExternal((N_EXT & nlist.n_type) != 0);
 

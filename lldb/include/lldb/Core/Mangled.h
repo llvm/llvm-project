@@ -49,7 +49,7 @@ public:
   /// Default constructor.
   ///
   /// Initialize with both mangled and demangled names empty.
-  Mangled();
+  Mangled() = default;
 
   /// Construct with name.
   ///

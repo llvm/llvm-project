@@ -20,7 +20,7 @@
 
 #if defined(WITH_FBS) || defined(WITH_BKS)
 extern "C" {
-#import <sys/kern_memorystatus.h>
+#import <System/sys/kern_memorystatus.h>
 }
 #endif
 

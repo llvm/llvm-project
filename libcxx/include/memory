@@ -4413,8 +4413,6 @@ shared_ptr<_Tp>::reset(_Yp* __p, _Dp __d, _Alloc __a)
     shared_ptr(__p, __d, __a).swap(*this);
 }
 
-#ifndef _LIBCPP_HAS_NO_VARIADICS
-
 template<class _Tp, class ..._Args>
 inline _LIBCPP_INLINE_VISIBILITY
 typename enable_if
@@ -4438,74 +4436,6 @@ allocate_shared(const _Alloc& __a, _Args&& ...__args)
 {
     return shared_ptr<_Tp>::allocate_shared(__a, _VSTD::forward<_Args>(__args)...);
 }
-
-#else  // _LIBCPP_HAS_NO_VARIADICS
-
-template<class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY
-shared_ptr<_Tp>
-make_shared()
-{
-    return shared_ptr<_Tp>::make_shared();
-}
-
-template<class _Tp, class _A0>
-inline _LIBCPP_INLINE_VISIBILITY
-shared_ptr<_Tp>
-make_shared(_A0& __a0)
-{
-    return shared_ptr<_Tp>::make_shared(__a0);
-}
-
-template<class _Tp, class _A0, class _A1>
-inline _LIBCPP_INLINE_VISIBILITY
-shared_ptr<_Tp>
-make_shared(_A0& __a0, _A1& __a1)
-{
-    return shared_ptr<_Tp>::make_shared(__a0, __a1);
-}
-
-template<class _Tp, class _A0, class _A1, class _A2>
-inline _LIBCPP_INLINE_VISIBILITY
-shared_ptr<_Tp>
-make_shared(_A0& __a0, _A1& __a1, _A2& __a2)
-{
-    return shared_ptr<_Tp>::make_shared(__a0, __a1, __a2);
-}
-
-template<class _Tp, class _Alloc>
-inline _LIBCPP_INLINE_VISIBILITY
-shared_ptr<_Tp>
-allocate_shared(const _Alloc& __a)
-{
-    return shared_ptr<_Tp>::allocate_shared(__a);
-}
-
-template<class _Tp, class _Alloc, class _A0>
-inline _LIBCPP_INLINE_VISIBILITY
-shared_ptr<_Tp>
-allocate_shared(const _Alloc& __a, _A0& __a0)
-{
-    return shared_ptr<_Tp>::allocate_shared(__a, __a0);
-}
-
-template<class _Tp, class _Alloc, class _A0, class _A1>
-inline _LIBCPP_INLINE_VISIBILITY
-shared_ptr<_Tp>
-allocate_shared(const _Alloc& __a, _A0& __a0, _A1& __a1)
-{
-    return shared_ptr<_Tp>::allocate_shared(__a, __a0, __a1);
-}
-
-template<class _Tp, class _Alloc, class _A0, class _A1, class _A2>
-inline _LIBCPP_INLINE_VISIBILITY
-shared_ptr<_Tp>
-allocate_shared(const _Alloc& __a, _A0& __a0, _A1& __a1, _A2& __a2)
-{
-    return shared_ptr<_Tp>::allocate_shared(__a, __a0, __a1, __a2);
-}
-
-#endif  // _LIBCPP_HAS_NO_VARIADICS
 
 template<class _Tp, class _Up>
 inline _LIBCPP_INLINE_VISIBILITY

@@ -86,11 +86,13 @@ add_dependencies(liblldb liblldb-resource-headers)
 
 # At build time, copy the staged headers into the framework bundle (and do
 # some post-processing in-place).
+if (NOT IOS)
 add_custom_command(TARGET liblldb POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy_directory ${lldb_header_staging} $<TARGET_FILE_DIR:liblldb>/Headers
   COMMAND ${LLDB_SOURCE_DIR}/scripts/framework-header-fix.sh $<TARGET_FILE_DIR:liblldb>/Headers ${LLDB_VERSION}
   COMMENT "LLDB.framework: copy framework headers"
 )
+endif()
 
 # Copy vendor-specific headers from clang (without staging).
 if(NOT IOS)
