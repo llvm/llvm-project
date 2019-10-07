@@ -28,7 +28,6 @@ public:
 
   virtual lldb::TypeSP ParseTypeFromDWARF(const lldb_private::SymbolContext &sc,
                                           const DWARFDIE &die,
-                                          lldb_private::Log *log,
                                           bool *type_is_new_ptr) = 0;
 
   virtual lldb_private::Function *
