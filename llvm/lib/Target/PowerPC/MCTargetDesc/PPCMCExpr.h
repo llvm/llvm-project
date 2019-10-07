@@ -45,21 +45,21 @@ public:
   /// @{
 
   static const PPCMCExpr *create(VariantKind Kind, const MCExpr *Expr,
-                                 bool isDarwin, MCContext &Ctx);
+                                 bool IsDarwin, MCContext &Ctx);
 
   static const PPCMCExpr *createLo(const MCExpr *Expr,
-                                   bool isDarwin, MCContext &Ctx) {
-    return create(VK_PPC_LO, Expr, isDarwin, Ctx);
+                                   bool IsDarwin, MCContext &Ctx) {
+    return create(VK_PPC_LO, Expr, IsDarwin, Ctx);
   }
 
   static const PPCMCExpr *createHi(const MCExpr *Expr,
-                                   bool isDarwin, MCContext &Ctx) {
-    return create(VK_PPC_HI, Expr, isDarwin, Ctx);
+                                   bool IsDarwin, MCContext &Ctx) {
+    return create(VK_PPC_HI, Expr, IsDarwin, Ctx);
   }
 
   static const PPCMCExpr *createHa(const MCExpr *Expr,
-                                   bool isDarwin, MCContext &Ctx) {
-    return create(VK_PPC_HA, Expr, isDarwin, Ctx);
+                                   bool IsDarwin, MCContext &Ctx) {
+    return create(VK_PPC_HA, Expr, IsDarwin, Ctx);
   }
 
   /// @}

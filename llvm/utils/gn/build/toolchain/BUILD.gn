@@ -265,6 +265,7 @@ toolchain("win") {
       dllfile,
       libfile,
     ]
+    lib_switch = ""
     default_output_extension = ".dll"
     restat = true
 
@@ -287,6 +288,7 @@ toolchain("win") {
     outputs = [
       dllfile,
     ]
+    lib_switch = ""
     runtime_outputs = outputs
     default_output_extension = ".dll"
 
@@ -302,6 +304,7 @@ toolchain("win") {
     outputs = [
       outfile,
     ]
+    lib_switch = ""
     default_output_extension = ".exe"
 
     # Setting this allows targets to override the default executable output by

@@ -14516,7 +14516,7 @@ SDValue PPCTargetLowering::LowerFRAMEADDR(SDValue Op,
 Register PPCTargetLowering::getRegisterByName(const char* RegName, EVT VT,
                                               const MachineFunction &MF) const {
   bool isPPC64 = Subtarget.isPPC64();
-  bool isDarwinABI = Subtarget.isDarwinABI();
+  bool IsDarwinABI = Subtarget.isDarwinABI();
 
   if ((isPPC64 && VT != MVT::i64 && VT != MVT::i32) ||
       (!isPPC64 && VT != MVT::i32))
@@ -14525,8 +14525,8 @@ Register PPCTargetLowering::getRegisterByName(const char* RegName, EVT VT,
   bool is64Bit = isPPC64 && VT == MVT::i64;
   Register Reg = StringSwitch<Register>(RegName)
                    .Case("r1", is64Bit ? PPC::X1 : PPC::R1)
-                   .Case("r2", (isDarwinABI || isPPC64) ? Register() : PPC::R2)
-                   .Case("r13", (!isPPC64 && isDarwinABI) ? Register() :
+                   .Case("r2", (IsDarwinABI || isPPC64) ? Register() : PPC::R2)
+                   .Case("r13", (!isPPC64 && IsDarwinABI) ? Register() :
                                   (is64Bit ? PPC::X13 : PPC::R13))
                    .Default(Register());
 

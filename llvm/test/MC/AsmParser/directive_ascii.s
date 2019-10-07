@@ -39,3 +39,8 @@ TEST5:
 # CHECK: .byte 0
 TEST6:
         .string "B", "C"
+
+# CHECK: TEST7:
+# CHECK: .ascii "dk"
+TEST7:
+        .ascii "\x64\Xa6B"

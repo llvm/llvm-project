@@ -51,10 +51,9 @@ entry:
 define <16 x i64> @test3(<16 x i8> %x, <16 x i64> %a, <16 x i64> %b) {
 ; CHECK-SKX-LABEL: test3:
 ; CHECK-SKX:       # %bb.0:
-; CHECK-SKX-NEXT:    vpshufd {{.*#+}} xmm5 = xmm0[2,3,0,1]
-; CHECK-SKX-NEXT:    vptestnmb %xmm5, %xmm5, %k1
-; CHECK-SKX-NEXT:    vptestnmb %xmm0, %xmm0, %k2
-; CHECK-SKX-NEXT:    vpblendmq %zmm1, %zmm3, %zmm0 {%k2}
+; CHECK-SKX-NEXT:    vptestnmb %xmm0, %xmm0, %k1
+; CHECK-SKX-NEXT:    vpblendmq %zmm1, %zmm3, %zmm0 {%k1}
+; CHECK-SKX-NEXT:    kshiftrw $8, %k1, %k1
 ; CHECK-SKX-NEXT:    vpblendmq %zmm2, %zmm4, %zmm1 {%k1}
 ; CHECK-SKX-NEXT:    retq
 ;
@@ -76,10 +75,9 @@ define <16 x i64> @test3(<16 x i8> %x, <16 x i64> %a, <16 x i64> %b) {
 define <16 x i64> @test4(<16 x i16> %x, <16 x i64> %a, <16 x i64> %b) {
 ; CHECK-SKX-LABEL: test4:
 ; CHECK-SKX:       # %bb.0:
-; CHECK-SKX-NEXT:    vextracti128 $1, %ymm0, %xmm5
-; CHECK-SKX-NEXT:    vptestnmw %xmm5, %xmm5, %k1
-; CHECK-SKX-NEXT:    vptestnmw %xmm0, %xmm0, %k2
-; CHECK-SKX-NEXT:    vpblendmq %zmm1, %zmm3, %zmm0 {%k2}
+; CHECK-SKX-NEXT:    vptestnmw %ymm0, %ymm0, %k1
+; CHECK-SKX-NEXT:    vpblendmq %zmm1, %zmm3, %zmm0 {%k1}
+; CHECK-SKX-NEXT:    kshiftrw $8, %k1, %k1
 ; CHECK-SKX-NEXT:    vpblendmq %zmm2, %zmm4, %zmm1 {%k1}
 ; CHECK-SKX-NEXT:    retq
 ;
@@ -99,23 +97,13 @@ define <16 x i64> @test4(<16 x i16> %x, <16 x i64> %a, <16 x i64> %b) {
 }
 
 define <16 x i64> @test5(<16 x i32> %x, <16 x i64> %a, <16 x i64> %b) {
-; CHECK-SKX-LABEL: test5:
-; CHECK-SKX:       # %bb.0:
-; CHECK-SKX-NEXT:    vextracti64x4 $1, %zmm0, %ymm5
-; CHECK-SKX-NEXT:    vptestnmd %ymm5, %ymm5, %k1
-; CHECK-SKX-NEXT:    vptestnmd %ymm0, %ymm0, %k2
-; CHECK-SKX-NEXT:    vpblendmq %zmm1, %zmm3, %zmm0 {%k2}
-; CHECK-SKX-NEXT:    vpblendmq %zmm2, %zmm4, %zmm1 {%k1}
-; CHECK-SKX-NEXT:    retq
-;
-; CHECK-KNL-LABEL: test5:
-; CHECK-KNL:       # %bb.0:
-; CHECK-KNL-NEXT:    vextracti64x4 $1, %zmm0, %ymm5
-; CHECK-KNL-NEXT:    vptestnmd %zmm5, %zmm5, %k1
-; CHECK-KNL-NEXT:    vptestnmd %zmm0, %zmm0, %k2
-; CHECK-KNL-NEXT:    vpblendmq %zmm1, %zmm3, %zmm0 {%k2}
-; CHECK-KNL-NEXT:    vpblendmq %zmm2, %zmm4, %zmm1 {%k1}
-; CHECK-KNL-NEXT:    retq
+; CHECK-LABEL: test5:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vptestnmd %zmm0, %zmm0, %k1
+; CHECK-NEXT:    vpblendmq %zmm1, %zmm3, %zmm0 {%k1}
+; CHECK-NEXT:    kshiftrw $8, %k1, %k1
+; CHECK-NEXT:    vpblendmq %zmm2, %zmm4, %zmm1 {%k1}
+; CHECK-NEXT:    retq
   %c = icmp eq <16 x i32> %x, zeroinitializer
   %ret = select <16 x i1> %c, <16 x i64> %a, <16 x i64> %b
   ret <16 x i64> %ret
@@ -124,10 +112,9 @@ define <16 x i64> @test5(<16 x i32> %x, <16 x i64> %a, <16 x i64> %b) {
 define <32 x i32> @test6(<32 x i8> %x, <32 x i32> %a, <32 x i32> %b) {
 ; CHECK-SKX-LABEL: test6:
 ; CHECK-SKX:       # %bb.0:
-; CHECK-SKX-NEXT:    vextracti128 $1, %ymm0, %xmm5
-; CHECK-SKX-NEXT:    vptestnmb %xmm5, %xmm5, %k1
-; CHECK-SKX-NEXT:    vptestnmb %xmm0, %xmm0, %k2
-; CHECK-SKX-NEXT:    vpblendmd %zmm1, %zmm3, %zmm0 {%k2}
+; CHECK-SKX-NEXT:    vptestnmb %ymm0, %ymm0, %k1
+; CHECK-SKX-NEXT:    vpblendmd %zmm1, %zmm3, %zmm0 {%k1}
+; CHECK-SKX-NEXT:    kshiftrd $16, %k1, %k1
 ; CHECK-SKX-NEXT:    vpblendmd %zmm2, %zmm4, %zmm1 {%k1}
 ; CHECK-SKX-NEXT:    retq
 ;
@@ -151,10 +138,9 @@ define <32 x i32> @test6(<32 x i8> %x, <32 x i32> %a, <32 x i32> %b) {
 define <32 x i32> @test7(<32 x i16> %x, <32 x i32> %a, <32 x i32> %b) {
 ; CHECK-SKX-LABEL: test7:
 ; CHECK-SKX:       # %bb.0:
-; CHECK-SKX-NEXT:    vextracti64x4 $1, %zmm0, %ymm5
-; CHECK-SKX-NEXT:    vptestnmw %ymm5, %ymm5, %k1
-; CHECK-SKX-NEXT:    vptestnmw %ymm0, %ymm0, %k2
-; CHECK-SKX-NEXT:    vpblendmd %zmm1, %zmm3, %zmm0 {%k2}
+; CHECK-SKX-NEXT:    vptestnmw %zmm0, %zmm0, %k1
+; CHECK-SKX-NEXT:    vpblendmd %zmm1, %zmm3, %zmm0 {%k1}
+; CHECK-SKX-NEXT:    kshiftrd $16, %k1, %k1
 ; CHECK-SKX-NEXT:    vpblendmd %zmm2, %zmm4, %zmm1 {%k1}
 ; CHECK-SKX-NEXT:    retq
 ;
@@ -179,10 +165,9 @@ define <32 x i32> @test7(<32 x i16> %x, <32 x i32> %a, <32 x i32> %b) {
 define <64 x i16> @test8(<64 x i8> %x, <64 x i16> %a, <64 x i16> %b) {
 ; CHECK-SKX-LABEL: test8:
 ; CHECK-SKX:       # %bb.0:
-; CHECK-SKX-NEXT:    vextracti64x4 $1, %zmm0, %ymm5
-; CHECK-SKX-NEXT:    vptestnmb %ymm5, %ymm5, %k1
-; CHECK-SKX-NEXT:    vptestnmb %ymm0, %ymm0, %k2
-; CHECK-SKX-NEXT:    vpblendmw %zmm1, %zmm3, %zmm0 {%k2}
+; CHECK-SKX-NEXT:    vptestnmb %zmm0, %zmm0, %k1
+; CHECK-SKX-NEXT:    vpblendmw %zmm1, %zmm3, %zmm0 {%k1}
+; CHECK-SKX-NEXT:    kshiftrq $32, %k1, %k1
 ; CHECK-SKX-NEXT:    vpblendmw %zmm2, %zmm4, %zmm1 {%k1}
 ; CHECK-SKX-NEXT:    retq
 ;
