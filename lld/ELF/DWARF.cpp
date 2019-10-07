@@ -22,9 +22,9 @@
 
 using namespace llvm;
 using namespace llvm::object;
-using namespace lld;
-using namespace lld::elf;
 
+namespace lld {
+namespace elf {
 template <class ELFT> LLDDwarfObj<ELFT>::LLDDwarfObj(ObjFile<ELFT> *obj) {
   for (InputSectionBase *sec : obj->getSections()) {
     if (!sec)
@@ -124,7 +124,10 @@ Optional<RelocAddrEntry> LLDDwarfObj<ELFT>::find(const llvm::DWARFSection &s,
   return findAux(*sec.sec, pos, sec.sec->template rels<ELFT>());
 }
 
-template class elf::LLDDwarfObj<ELF32LE>;
-template class elf::LLDDwarfObj<ELF32BE>;
-template class elf::LLDDwarfObj<ELF64LE>;
-template class elf::LLDDwarfObj<ELF64BE>;
+template class LLDDwarfObj<ELF32LE>;
+template class LLDDwarfObj<ELF32BE>;
+template class LLDDwarfObj<ELF64LE>;
+template class LLDDwarfObj<ELF64BE>;
+
+} // namespace elf
+} // namespace lld

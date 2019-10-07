@@ -21,6 +21,13 @@
 #include "llvm/Object/ELF.h"
 
 namespace lld {
+std::string toString(const elf::Symbol &);
+
+// There are two different ways to convert an Archive::Symbol to a string:
+// One for Microsoft name mangling and one for Itanium name mangling.
+// Call the functions toCOFFString and toELFString, not just toString.
+std::string toELFString(const llvm::object::Archive::Symbol &);
+
 namespace elf {
 class CommonSymbol;
 class Defined;
@@ -30,16 +37,6 @@ class LazyObject;
 class SharedSymbol;
 class Symbol;
 class Undefined;
-} // namespace elf
-
-std::string toString(const elf::Symbol &);
-
-// There are two different ways to convert an Archive::Symbol to a string:
-// One for Microsoft name mangling and one for Itanium name mangling.
-// Call the functions toCOFFString and toELFString, not just toString.
-std::string toELFString(const elf::Archive::Symbol &);
-
-namespace elf {
 
 // This is a StringRef-like container that doesn't run strlen().
 //

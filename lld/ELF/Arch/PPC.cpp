@@ -16,8 +16,9 @@
 using namespace llvm;
 using namespace llvm::support::endian;
 using namespace llvm::ELF;
-using namespace lld;
-using namespace lld::elf;
+
+namespace lld {
+namespace elf {
 
 namespace {
 class PPC final : public TargetInfo {
@@ -61,7 +62,7 @@ static void writeFromHalf16(uint8_t *loc, uint32_t insn) {
   write32(config->isLE ? loc : loc - 2, insn);
 }
 
-void elf::writePPC32GlinkSection(uint8_t *buf, size_t numEntries) {
+void writePPC32GlinkSection(uint8_t *buf, size_t numEntries) {
   // On PPC Secure PLT ABI, bl foo@plt jumps to a call stub, which loads an
   // absolute address from a specific .plt slot (usually called .got.plt on
   // other targets) and jumps there.
@@ -435,7 +436,10 @@ void PPC::relaxTlsIeToLe(uint8_t *loc, RelType type, uint64_t val) const {
   }
 }
 
-TargetInfo *elf::getPPCTargetInfo() {
+TargetInfo *getPPCTargetInfo() {
   static PPC target;
   return &target;
 }
+
+} // namespace elf
+} // namespace lld

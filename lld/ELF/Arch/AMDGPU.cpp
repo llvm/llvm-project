@@ -17,8 +17,9 @@ using namespace llvm;
 using namespace llvm::object;
 using namespace llvm::support::endian;
 using namespace llvm::ELF;
-using namespace lld;
-using namespace lld::elf;
+
+namespace lld {
+namespace elf {
 
 namespace {
 class AMDGPU final : public TargetInfo {
@@ -107,7 +108,10 @@ RelType AMDGPU::getDynRel(RelType type) const {
   return R_AMDGPU_NONE;
 }
 
-TargetInfo *elf::getAMDGPUTargetInfo() {
+TargetInfo *getAMDGPUTargetInfo() {
   static AMDGPU target;
   return &target;
 }
+
+} // namespace elf
+} // namespace lld

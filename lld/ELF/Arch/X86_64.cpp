@@ -18,8 +18,9 @@ using namespace llvm;
 using namespace llvm::object;
 using namespace llvm::support::endian;
 using namespace llvm::ELF;
-using namespace lld;
-using namespace lld::elf;
+
+namespace lld {
+namespace elf {
 
 namespace {
 class X86_64 : public TargetInfo {
@@ -698,4 +699,7 @@ static TargetInfo *getTargetInfo() {
   return &t;
 }
 
-TargetInfo *elf::getX86_64TargetInfo() { return getTargetInfo(); }
+TargetInfo *getX86_64TargetInfo() { return getTargetInfo(); }
+
+} // namespace elf
+} // namespace lld

@@ -1190,6 +1190,25 @@ namespace dtor_call {
   static_assert(virt_dtor(3, "YX"));
   static_assert(virt_dtor(4, "X"));
 
+  constexpr bool virt_delete(bool global) {
+    struct A {
+      virtual constexpr ~A() {}
+    };
+    struct B : A {
+      void operator delete(void *);
+      constexpr ~B() {}
+    };
+
+    A *p = new B;
+    if (global)
+      ::delete p;
+    else
+      delete p; // expected-note {{call to class-specific 'operator delete'}}
+    return true;
+  }
+  static_assert(virt_delete(true));
+  static_assert(virt_delete(false)); // expected-error {{}} expected-note {{in call}}
+
   constexpr void use_after_virt_destroy() {
     char buff[4] = {};
     VU vu;
