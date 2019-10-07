@@ -540,13 +540,12 @@ TEST_F(ExtractFunctionTest, FunctionTest) {
   EXPECT_EQ(apply("int x = 0; [[x++;]]"), "unavailable");
   // We don't support extraction from lambdas.
   EXPECT_EQ(apply("auto lam = [](){ [[int x;]] }; "), "unavailable");
+  // Partial statements aren't extracted.
+  EXPECT_THAT(apply("int [[x = 0]];"), "unavailable");
 
   // Ensure that end of Zone and Beginning of PostZone being adjacent doesn't
   // lead to break being included in the extraction zone.
   EXPECT_THAT(apply("for(;;) { [[int x;]]break; }"), HasSubstr("extracted"));
-  // FIXME: This should be unavailable since partially selected but
-  // selectionTree doesn't always work correctly for VarDecls.
-  EXPECT_THAT(apply("int [[x = 0]];"), HasSubstr("extracted"));
   // FIXME: ExtractFunction should be unavailable inside loop construct
   // initalizer/condition.
   EXPECT_THAT(apply(" for([[int i = 0;]];);"), HasSubstr("extracted"));
@@ -554,7 +553,6 @@ TEST_F(ExtractFunctionTest, FunctionTest) {
   EXPECT_THAT(apply(" [[int a = 5;]] a++; "), StartsWith("fail"));
   // Don't extract return
   EXPECT_THAT(apply(" if(true) [[return;]] "), StartsWith("fail"));
-  
 }
 
 TEST_F(ExtractFunctionTest, FileTest) {
@@ -631,6 +629,16 @@ void f(const int c) {
     F ([[int x = 0;]])
   )cpp";
   EXPECT_EQ(apply(MacroFailInput), "unavailable");
+
+  // Shouldn't crash.
+  EXPECT_EQ(apply("void f([[int a]]);"), "unavailable");
+  // Don't extract if we select the entire function body (CompoundStmt).
+  std::string CompoundFailInput = R"cpp(
+    void f() [[{
+      int a;
+    }]]
+  )cpp";
+  EXPECT_EQ(apply(CompoundFailInput), "unavailable");
 }
 
 TEST_F(ExtractFunctionTest, ControlFlow) {

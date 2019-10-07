@@ -887,6 +887,20 @@ void PythonCallable::Reset(PyRefType type, PyObject *py_obj) {
   PythonObject::Reset(PyRefType::Borrowed, result.get());
 }
 
+PythonCallable::ArgInfo PythonCallable::GetNumInitArguments() const {
+  ArgInfo result = {0, false, false, false};
+  if (!IsValid())
+    return result;
+
+  PythonObject __init__ = GetAttributeValue("__init__");
+  if (__init__.IsValid() ) {
+    auto __init_callable__ = __init__.AsType<PythonCallable>();
+    if (__init_callable__.IsValid())
+      return __init_callable__.GetNumArguments();
+  }
+  return result;
+}
+
 PythonCallable::ArgInfo PythonCallable::GetNumArguments() const {
   ArgInfo result = {0, false, false, false};
   if (!IsValid())
@@ -949,12 +963,13 @@ PythonFile::PythonFile() : PythonObject() {}
 
 PythonFile::PythonFile(File &file, const char *mode) { Reset(file, mode); }
 
-
 PythonFile::PythonFile(PyRefType type, PyObject *o) { Reset(type, o); }
 
 PythonFile::~PythonFile() {}
 
 bool PythonFile::Check(PyObject *py_obj) {
+  if (!py_obj)
+    return false;
 #if PY_MAJOR_VERSION < 3
   return PyFile_Check(py_obj);
 #else
@@ -1014,22 +1029,6 @@ void PythonFile::Reset(File &file, const char *mode) {
 #endif
 }
 
-uint32_t PythonFile::GetOptionsFromMode(llvm::StringRef mode) {
-  if (mode.empty())
-    return 0;
-
-  return llvm::StringSwitch<uint32_t>(mode.str())
-      .Case("r", File::eOpenOptionRead)
-      .Case("w", File::eOpenOptionWrite)
-      .Case("a", File::eOpenOptionWrite | File::eOpenOptionAppend |
-                     File::eOpenOptionCanCreate)
-      .Case("r+", File::eOpenOptionRead | File::eOpenOptionWrite)
-      .Case("w+", File::eOpenOptionRead | File::eOpenOptionWrite |
-                      File::eOpenOptionCanCreate | File::eOpenOptionTruncate)
-      .Case("a+", File::eOpenOptionRead | File::eOpenOptionWrite |
-                      File::eOpenOptionAppend | File::eOpenOptionCanCreate)
-      .Default(0);
-}
 
 FileUP PythonFile::GetUnderlyingFile() const {
   if (!IsValid())
@@ -1038,9 +1037,9 @@ FileUP PythonFile::GetUnderlyingFile() const {
   // We don't own the file descriptor returned by this function, make sure the
   // File object knows about that.
   PythonString py_mode = GetAttributeValue("mode").AsType<PythonString>();
-  auto options = PythonFile::GetOptionsFromMode(py_mode.GetString());
-  auto file = std::make_unique<File>(PyObject_AsFileDescriptor(m_py_obj),
-                                     options, false);
+  auto options = File::GetOptionsFromMode(py_mode.GetString());
+  auto file = std::unique_ptr<File>(
+      new NativeFile(PyObject_AsFileDescriptor(m_py_obj), options, false));
   if (!file->IsValid())
     return nullptr;
   return file;

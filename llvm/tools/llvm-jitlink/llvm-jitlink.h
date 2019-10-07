@@ -65,7 +65,7 @@ struct Session {
   uint64_t SizeAfterFixups = 0;
 };
 
-Error registerMachOStubsAndGOT(Session &S, jitlink::AtomGraph &G);
+Error registerMachOStubsAndGOT(Session &S, jitlink::LinkGraph &G);
 
 } // end namespace llvm
 

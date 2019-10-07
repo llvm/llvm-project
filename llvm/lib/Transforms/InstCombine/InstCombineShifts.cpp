@@ -61,16 +61,10 @@ reassociateShiftAmtsOfTwoSameDirectionShifts(BinaryOperator *Sh0,
   if (ShiftOpcode != Sh1->getOpcode())
     return nullptr;
 
-  // Did we match a pattern with truncation ?
-  if (Trunc) {
-    // For right-shifts we can't do any such simplifications. Leave as-is.
-    if (ShiftOpcode != Instruction::BinaryOps::Shl)
-      return nullptr; // FIXME: still could perform constant-folding.
-    // If we saw truncation, we'll need to produce extra instruction,
-    // and for that one of the operands of the shift must be one-use.
-    if (!match(Sh0, m_c_BinOp(m_OneUse(m_Value()), m_Value())))
-      return nullptr;
-  }
+  // If we saw truncation, we'll need to produce extra instruction,
+  // and for that one of the operands of the shift must be one-use.
+  if (Trunc && !match(Sh0, m_c_BinOp(m_OneUse(m_Value()), m_Value())))
+    return nullptr;
 
   // Can we fold (ShAmt0+ShAmt1) ?
   auto *NewShAmt = dyn_cast_or_null<Constant>(
@@ -78,12 +72,22 @@ reassociateShiftAmtsOfTwoSameDirectionShifts(BinaryOperator *Sh0,
                       SQ.getWithInstruction(Sh0)));
   if (!NewShAmt)
     return nullptr; // Did not simplify.
-  // Is the new shift amount smaller than the bit width of inner shift?
-  if (!match(NewShAmt, m_SpecificInt_ICMP(
-                           ICmpInst::Predicate::ICMP_ULT,
-                           APInt(NewShAmt->getType()->getScalarSizeInBits(),
-                                 X->getType()->getScalarSizeInBits()))))
+  unsigned NewShAmtBitWidth = NewShAmt->getType()->getScalarSizeInBits();
+  unsigned XBitWidth = X->getType()->getScalarSizeInBits();
+  // Is the new shift amount smaller than the bit width of inner/new shift?
+  if (!match(NewShAmt, m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_ULT,
+                                          APInt(NewShAmtBitWidth, XBitWidth))))
     return nullptr; // FIXME: could perform constant-folding.
+
+  // If there was a truncation, and we have a right-shift, we can only fold if
+  // we are left with the original sign bit.
+  // FIXME: zero shift amount is also legal here, but we can't *easily* check
+  // more than one predicate so it's not really worth it.
+  if (Trunc && ShiftOpcode != Instruction::BinaryOps::Shl &&
+      !match(NewShAmt,
+             m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_EQ,
+                                APInt(NewShAmtBitWidth, XBitWidth - 1))))
+    return nullptr;
 
   // All good, we can do this fold.
   NewShAmt = ConstantExpr::getZExtOrBitCast(NewShAmt, X->getType());
@@ -1039,6 +1043,75 @@ Instruction *InstCombiner::visitLShr(BinaryOperator &I) {
   return nullptr;
 }
 
+Instruction *
+InstCombiner::foldVariableSignZeroExtensionOfVariableHighBitExtract(
+    BinaryOperator &OldAShr) {
+  assert(OldAShr.getOpcode() == Instruction::AShr &&
+         "Must be called with arithmetic right-shift instruction only.");
+
+  // Check that constant C is a splat of the element-wise bitwidth of V.
+  auto BitWidthSplat = [](Constant *C, Value *V) {
+    return match(
+        C, m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_EQ,
+                              APInt(C->getType()->getScalarSizeInBits(),
+                                    V->getType()->getScalarSizeInBits())));
+  };
+
+  // It should look like variable-length sign-extension on the outside:
+  //   (Val << (bitwidth(Val)-Nbits)) a>> (bitwidth(Val)-Nbits)
+  Value *NBits;
+  Instruction *MaybeTrunc;
+  Constant *C1, *C2;
+  if (!match(&OldAShr,
+             m_AShr(m_Shl(m_Instruction(MaybeTrunc),
+                          m_ZExtOrSelf(m_Sub(m_Constant(C1),
+                                             m_ZExtOrSelf(m_Value(NBits))))),
+                    m_ZExtOrSelf(m_Sub(m_Constant(C2),
+                                       m_ZExtOrSelf(m_Deferred(NBits)))))) ||
+      !BitWidthSplat(C1, &OldAShr) || !BitWidthSplat(C2, &OldAShr))
+    return nullptr;
+
+  // There may or may not be a truncation after outer two shifts.
+  Instruction *HighBitExtract;
+  match(MaybeTrunc, m_TruncOrSelf(m_Instruction(HighBitExtract)));
+  bool HadTrunc = MaybeTrunc != HighBitExtract;
+
+  // And finally, the innermost part of the pattern must be a right-shift.
+  Value *X, *NumLowBitsToSkip;
+  if (!match(HighBitExtract, m_Shr(m_Value(X), m_Value(NumLowBitsToSkip))))
+    return nullptr;
+
+  // Said right-shift must extract high NBits bits - C0 must be it's bitwidth.
+  Constant *C0;
+  if (!match(NumLowBitsToSkip,
+             m_ZExtOrSelf(
+                 m_Sub(m_Constant(C0), m_ZExtOrSelf(m_Specific(NBits))))) ||
+      !BitWidthSplat(C0, HighBitExtract))
+    return nullptr;
+
+  // Since the NBits is identical for all shifts, if the outermost and
+  // innermost shifts are identical, then outermost shifts are redundant.
+  // If we had truncation, do keep it though.
+  if (HighBitExtract->getOpcode() == OldAShr.getOpcode())
+    return replaceInstUsesWith(OldAShr, MaybeTrunc);
+
+  // Else, if there was a truncation, then we need to ensure that one
+  // instruction will go away.
+  if (HadTrunc && !match(&OldAShr, m_c_BinOp(m_OneUse(m_Value()), m_Value())))
+    return nullptr;
+
+  // Finally, bypass two innermost shifts, and perform the outermost shift on
+  // the operands of the innermost shift.
+  Instruction *NewAShr =
+      BinaryOperator::Create(OldAShr.getOpcode(), X, NumLowBitsToSkip);
+  NewAShr->copyIRFlags(HighBitExtract); // We can preserve 'exact'-ness.
+  if (!HadTrunc)
+    return NewAShr;
+
+  Builder.Insert(NewAShr);
+  return TruncInst::CreateTruncOrBitCast(NewAShr, OldAShr.getType());
+}
+
 Instruction *InstCombiner::visitAShr(BinaryOperator &I) {
   if (Value *V = SimplifyAShrInst(I.getOperand(0), I.getOperand(1), I.isExact(),
                                   SQ.getWithInstruction(&I)))
@@ -1112,6 +1185,9 @@ Instruction *InstCombiner::visitAShr(BinaryOperator &I) {
       return &I;
     }
   }
+
+  if (Instruction *R = foldVariableSignZeroExtensionOfVariableHighBitExtract(I))
+    return R;
 
   // See if we can turn a signed shr into an unsigned shr.
   if (MaskedValueIsZero(Op0, APInt::getSignMask(BitWidth), 0, &I))

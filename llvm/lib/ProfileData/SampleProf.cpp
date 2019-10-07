@@ -15,7 +15,6 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/Compression.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -156,6 +155,7 @@ void FunctionSamples::print(raw_ostream &OS, unsigned Indent) const {
         FS.second.print(OS, Indent + 4);
       }
     }
+    OS.indent(Indent);
     OS << "}\n";
   } else {
     OS << "No inlined callsites in this function\n";
@@ -198,66 +198,34 @@ FunctionSamples::findFunctionSamples(const DILocation *DIL) const {
 LLVM_DUMP_METHOD void FunctionSamples::dump() const { print(dbgs(), 0); }
 #endif
 
-std::error_code ProfileSymbolList::read(uint64_t CompressSize,
-                                        uint64_t UncompressSize,
-                                        const uint8_t *Data) {
+std::error_code ProfileSymbolList::read(const uint8_t *Data,
+                                        uint64_t ListSize) {
   const char *ListStart = reinterpret_cast<const char *>(Data);
-  // CompressSize being non-zero means the profile is compressed and
-  // needs to be uncompressed first.
-  if (CompressSize) {
-    if (!llvm::zlib::isAvailable())
-      return sampleprof_error::zlib_unavailable;
-
-    StringRef CompressedStrings(reinterpret_cast<const char *>(Data),
-                                CompressSize);
-    char *Buffer = Allocator.Allocate<char>(UncompressSize);
-    size_t UCSize = UncompressSize;
-    llvm::Error E = zlib::uncompress(CompressedStrings, Buffer, UCSize);
-    if (E)
-      return sampleprof_error::uncompress_failed;
-    ListStart = Buffer;
-  }
-
   uint64_t Size = 0;
-  while (Size < UncompressSize) {
+  while (Size < ListSize) {
     StringRef Str(ListStart + Size);
     add(Str);
     Size += Str.size() + 1;
   }
+  if (Size != ListSize)
+    return sampleprof_error::malformed;
   return sampleprof_error::success;
 }
 
 std::error_code ProfileSymbolList::write(raw_ostream &OS) {
-  // Sort the symbols before doing compression. It will make the
-  // compression much more effective.
+  // Sort the symbols before output. If doing compression.
+  // It will make the compression much more effective.
   std::vector<StringRef> SortedList;
   SortedList.insert(SortedList.begin(), Syms.begin(), Syms.end());
   llvm::sort(SortedList);
 
-  std::string UncompressedStrings;
+  std::string OutputString;
   for (auto &Sym : SortedList) {
-    UncompressedStrings.append(Sym.str());
-    UncompressedStrings.append(1, '\0');
+    OutputString.append(Sym.str());
+    OutputString.append(1, '\0');
   }
 
-  if (ToCompress) {
-    if (!llvm::zlib::isAvailable())
-      return sampleprof_error::zlib_unavailable;
-    SmallString<128> CompressedStrings;
-    llvm::Error E = zlib::compress(UncompressedStrings, CompressedStrings,
-                                   zlib::BestSizeCompression);
-    if (E)
-      return sampleprof_error::compress_failed;
-    encodeULEB128(UncompressedStrings.size(), OS);
-    encodeULEB128(CompressedStrings.size(), OS);
-    OS << CompressedStrings.str();
-  } else {
-    encodeULEB128(UncompressedStrings.size(), OS);
-    // If profile symbol list is not compressed, we will still save
-    // a compressed size value, but the value of the size is 0.
-    encodeULEB128(0, OS);
-    OS << UncompressedStrings;
-  }
+  OS << OutputString;
   return sampleprof_error::success;
 }
 

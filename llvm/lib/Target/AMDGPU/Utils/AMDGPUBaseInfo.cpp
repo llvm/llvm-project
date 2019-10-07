@@ -137,9 +137,50 @@ struct MUBUFInfo {
   bool has_soffset;
 };
 
+struct MTBUFInfo {
+  uint16_t Opcode;
+  uint16_t BaseOpcode;
+  uint8_t elements;
+  bool has_vaddr;
+  bool has_srsrc;
+  bool has_soffset;
+};
+
+#define GET_MTBUFInfoTable_DECL
+#define GET_MTBUFInfoTable_IMPL
 #define GET_MUBUFInfoTable_DECL
 #define GET_MUBUFInfoTable_IMPL
 #include "AMDGPUGenSearchableTables.inc"
+
+int getMTBUFBaseOpcode(unsigned Opc) {
+  const MTBUFInfo *Info = getMTBUFInfoFromOpcode(Opc);
+  return Info ? Info->BaseOpcode : -1;
+}
+
+int getMTBUFOpcode(unsigned BaseOpc, unsigned Elements) {
+  const MTBUFInfo *Info = getMTBUFInfoFromBaseOpcodeAndElements(BaseOpc, Elements);
+  return Info ? Info->Opcode : -1;
+}
+
+int getMTBUFElements(unsigned Opc) {
+  const MTBUFInfo *Info = getMTBUFOpcodeHelper(Opc);
+  return Info ? Info->elements : 0;
+}
+
+bool getMTBUFHasVAddr(unsigned Opc) {
+  const MTBUFInfo *Info = getMTBUFOpcodeHelper(Opc);
+  return Info ? Info->has_vaddr : false;
+}
+
+bool getMTBUFHasSrsrc(unsigned Opc) {
+  const MTBUFInfo *Info = getMTBUFOpcodeHelper(Opc);
+  return Info ? Info->has_srsrc : false;
+}
+
+bool getMTBUFHasSoffset(unsigned Opc) {
+  const MTBUFInfo *Info = getMTBUFOpcodeHelper(Opc);
+  return Info ? Info->has_soffset : false;
+}
 
 int getMUBUFBaseOpcode(unsigned Opc) {
   const MUBUFInfo *Info = getMUBUFInfoFromOpcode(Opc);

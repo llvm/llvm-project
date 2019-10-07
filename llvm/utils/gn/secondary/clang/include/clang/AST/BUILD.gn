@@ -58,7 +58,6 @@ clang_tablegen("DeclNodes") {
 clang_tablegen("TypeNodes") {
   args = [ "-gen-clang-type-nodes" ]
   td_file = "../Basic/TypeNodes.td"
-  output_name = "TypeNodes.def"
 }
 
 clang_tablegen("CommentNodes") {

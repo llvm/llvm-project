@@ -33,20 +33,19 @@ public:
   class SegmentRequest {
   public:
     SegmentRequest() = default;
-    SegmentRequest(size_t ContentSize, unsigned ContentAlign,
-                   uint64_t ZeroFillSize, unsigned ZeroFillAlign)
-        : ContentSize(ContentSize), ZeroFillSize(ZeroFillSize),
-          ContentAlign(ContentAlign), ZeroFillAlign(ZeroFillAlign) {}
+    SegmentRequest(uint64_t Alignment, size_t ContentSize,
+                   uint64_t ZeroFillSize)
+        : Alignment(Alignment), ContentSize(ContentSize),
+          ZeroFillSize(ZeroFillSize) {
+      assert(isPowerOf2_32(Alignment) && "Alignment must be power of 2");
+    }
+    uint64_t getAlignment() const { return Alignment; }
     size_t getContentSize() const { return ContentSize; }
-    unsigned getContentAlignment() const { return ContentAlign; }
     uint64_t getZeroFillSize() const { return ZeroFillSize; }
-    unsigned getZeroFillAlignment() const { return ZeroFillAlign; }
-
   private:
+    uint64_t Alignment = 0;
     size_t ContentSize = 0;
     uint64_t ZeroFillSize = 0;
-    unsigned ContentAlign = 0;
-    unsigned ZeroFillAlign = 0;
   };
 
   using SegmentsRequestMap = DenseMap<unsigned, SegmentRequest>;

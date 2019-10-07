@@ -179,7 +179,8 @@ INTERFACE WEAK void *SCUDO_PREFIX(aligned_alloc)(size_t alignment,
       SCUDO_ALLOCATOR.allocate(size, scudo::Chunk::Origin::Malloc, alignment));
 }
 
-INTERFACE WEAK int SCUDO_PREFIX(malloc_info)(int, FILE *) {
-  errno = ENOTSUP;
-  return -1;
+INTERFACE WEAK int SCUDO_PREFIX(malloc_info)(UNUSED int options, FILE *stream) {
+  fputs("<malloc version=\"scudo-1\">", stream);
+  fputs("</malloc>", stream);
+  return 0;
 }

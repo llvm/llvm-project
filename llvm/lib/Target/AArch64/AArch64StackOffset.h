@@ -35,32 +35,38 @@ namespace llvm {
 /// vector and a 64bit GPR.
 class StackOffset {
   int64_t Bytes;
+  int64_t ScalableBytes;
 
   explicit operator int() const;
 
 public:
   using Part = std::pair<int64_t, MVT>;
 
-  StackOffset() : Bytes(0) {}
+  StackOffset() : Bytes(0), ScalableBytes(0) {}
 
   StackOffset(int64_t Offset, MVT::SimpleValueType T) : StackOffset() {
-    assert(!MVT(T).isScalableVector() && "Scalable types not supported");
+    assert(MVT(T).getSizeInBits() % 8 == 0 &&
+           "Offset type is not a multiple of bytes");
     *this += Part(Offset, T);
   }
 
-  StackOffset(const StackOffset &Other) : Bytes(Other.Bytes) {}
+  StackOffset(const StackOffset &Other)
+      : Bytes(Other.Bytes), ScalableBytes(Other.ScalableBytes) {}
 
   StackOffset &operator=(const StackOffset &) = default;
 
   StackOffset &operator+=(const StackOffset::Part &Other) {
-    assert(Other.second.getSizeInBits() % 8 == 0 &&
-           "Offset type is not a multiple of bytes");
-    Bytes += Other.first * (Other.second.getSizeInBits() / 8);
+    int64_t OffsetInBytes = Other.first * (Other.second.getSizeInBits() / 8);
+    if (Other.second.isScalableVector())
+      ScalableBytes += OffsetInBytes;
+    else
+      Bytes += OffsetInBytes;
     return *this;
   }
 
   StackOffset &operator+=(const StackOffset &Other) {
     Bytes += Other.Bytes;
+    ScalableBytes += Other.ScalableBytes;
     return *this;
   }
 
@@ -72,6 +78,7 @@ public:
 
   StackOffset &operator-=(const StackOffset &Other) {
     Bytes -= Other.Bytes;
+    ScalableBytes -= Other.ScalableBytes;
     return *this;
   }
 
@@ -88,16 +95,42 @@ public:
     return Res;
   }
 
+  /// Returns the scalable part of the offset in bytes.
+  int64_t getScalableBytes() const { return ScalableBytes; }
+
   /// Returns the non-scalable part of the offset in bytes.
   int64_t getBytes() const { return Bytes; }
 
   /// Returns the offset in parts to which this frame offset can be
   /// decomposed for the purpose of describing a frame offset.
   /// For non-scalable offsets this is simply its byte size.
-  void getForFrameOffset(int64_t &ByteSized) const { ByteSized = Bytes; }
+  void getForFrameOffset(int64_t &NumBytes, int64_t &NumPredicateVectors,
+                         int64_t &NumDataVectors) const {
+    assert(isValid() && "Invalid frame offset");
+
+    NumBytes = Bytes;
+    NumDataVectors = 0;
+    NumPredicateVectors = ScalableBytes / 2;
+    // This method is used to get the offsets to adjust the frame offset.
+    // If the function requires ADDPL to be used and needs more than two ADDPL
+    // instructions, part of the offset is folded into NumDataVectors so that it
+    // uses ADDVL for part of it, reducing the number of ADDPL instructions.
+    if (NumPredicateVectors % 8 == 0 || NumPredicateVectors < -64 ||
+        NumPredicateVectors > 62) {
+      NumDataVectors = NumPredicateVectors / 8;
+      NumPredicateVectors -= NumDataVectors * 8;
+    }
+  }
 
   /// Returns whether the offset is known zero.
-  explicit operator bool() const { return Bytes; }
+  explicit operator bool() const { return Bytes || ScalableBytes; }
+
+  bool isValid() const {
+    // The smallest scalable element supported by scaled SVE addressing
+    // modes are predicates, which are 2 scalable bytes in size. So the scalable
+    // byte offset must always be a multiple of 2.
+    return ScalableBytes % 2 == 0;
+  }
 };
 
 } // end namespace llvm

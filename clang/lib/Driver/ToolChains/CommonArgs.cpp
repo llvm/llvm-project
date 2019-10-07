@@ -1186,7 +1186,6 @@ static void AddUnwindLibrary(const ToolChain &TC, const Driver &D,
   case ToolChain::UNW_None:
     return;
   case ToolChain::UNW_Libgcc: {
-    LibGccType LGT = getLibGccType(D, Args);
     if (LGT == LibGccType::StaticLibGcc)
       CmdArgs.push_back("-lgcc_eh");
     else

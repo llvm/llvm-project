@@ -98,7 +98,17 @@ public:
                  TypeBeginLoc, TypeEndLoc))
         return false;
     }
-    return visit(Loc.getType()->getAsCXXRecordDecl(), TypeBeginLoc, TypeEndLoc);
+    if (const Type *TP = Loc.getTypePtr()) {
+      if (TP->getTypeClass() == clang::Type::Record)
+        return visit(TP->getAsCXXRecordDecl(), TypeBeginLoc, TypeEndLoc);
+    }
+    return true;
+  }
+
+  bool VisitTypedefTypeLoc(TypedefTypeLoc TL) {
+    const SourceLocation TypeEndLoc =
+        Lexer::getLocForEndOfToken(TL.getBeginLoc(), 0, SM, LangOpts);
+    return visit(TL.getTypedefNameDecl(), TL.getBeginLoc(), TypeEndLoc);
   }
 
   bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc NNS) {

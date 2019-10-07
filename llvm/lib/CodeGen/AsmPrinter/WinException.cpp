@@ -982,8 +982,7 @@ void WinException::emitExceptHandlerTable(const MachineFunction *MF) {
   OS.EmitValueToAlignment(4);
   OS.EmitLabel(LSDALabel);
 
-  const Function *Per =
-      dyn_cast<Function>(F.getPersonalityFn()->stripPointerCasts());
+  const auto *Per = cast<Function>(F.getPersonalityFn()->stripPointerCasts());
   StringRef PerName = Per->getName();
   int BaseState = -1;
   if (PerName == "_except_handler4") {

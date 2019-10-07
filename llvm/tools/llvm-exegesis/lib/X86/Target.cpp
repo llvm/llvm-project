@@ -448,7 +448,8 @@ private:
   void fillMemoryOperands(InstructionTemplate &IT, unsigned Reg,
                           unsigned Offset) const override;
 
-  void decrementLoopCounterAndLoop(MachineBasicBlock &MBB,
+  void decrementLoopCounterAndJump(MachineBasicBlock &MBB,
+                                   MachineBasicBlock &TargetMBB,
                                    const llvm::MCInstrInfo &MII) const override;
 
   std::vector<llvm::MCInst> setRegTo(const llvm::MCSubtargetInfo &STI,
@@ -558,14 +559,15 @@ void ExegesisX86Target::fillMemoryOperands(InstructionTemplate &IT,
   SetOp(MemOpIdx + 4, MCOperand::createReg(0));      // Segment
 }
 
-void ExegesisX86Target::decrementLoopCounterAndLoop(
-    MachineBasicBlock &MBB, const llvm::MCInstrInfo &MII) const {
+void ExegesisX86Target::decrementLoopCounterAndJump(
+    MachineBasicBlock &MBB, MachineBasicBlock &TargetMBB,
+    const llvm::MCInstrInfo &MII) const {
   BuildMI(&MBB, DebugLoc(), MII.get(X86::ADD64ri8))
       .addDef(kLoopCounterReg)
       .addUse(kLoopCounterReg)
       .addImm(-1);
   BuildMI(&MBB, DebugLoc(), MII.get(X86::JCC_1))
-      .addMBB(&MBB)
+      .addMBB(&TargetMBB)
       .addImm(X86::COND_NE);
 }
 

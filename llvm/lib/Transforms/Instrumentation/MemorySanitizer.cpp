@@ -2562,6 +2562,11 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     return false;
   }
 
+  void handleInvariantGroup(IntrinsicInst &I) {
+    setShadow(&I, getShadow(&I, 0));
+    setOrigin(&I, getOrigin(&I, 0));
+  }
+
   void handleLifetimeStart(IntrinsicInst &I) {
     if (!PoisonStack)
       return;
@@ -2992,6 +2997,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     switch (I.getIntrinsicID()) {
     case Intrinsic::lifetime_start:
       handleLifetimeStart(I);
+      break;
+    case Intrinsic::launder_invariant_group:
+    case Intrinsic::strip_invariant_group:
+      handleInvariantGroup(I);
       break;
     case Intrinsic::bswap:
       handleBswap(I);

@@ -700,7 +700,7 @@ void ClangdLSPServer::onCommand(const ExecuteCommandParams &Params,
       WorkspaceEdit WE;
       WE.changes.emplace();
       for (const auto &It : R->ApplyEdits) {
-        (*WE.changes)[URI::create(It.first()).toString()] =
+        (*WE.changes)[URI::createFile(It.first()).toString()] =
             It.second.asTextEdits();
       }
       // ApplyEdit will take care of calling Reply().
@@ -1045,7 +1045,7 @@ void ClangdLSPServer::onSwitchSourceHeader(
         if (!Path)
           return Reply(Path.takeError());
         if (*Path)
-          Reply(URIForFile::canonicalize(**Path, Params.uri.file()));
+          return Reply(URIForFile::canonicalize(**Path, Params.uri.file()));
         return Reply(llvm::None);
       });
 }

@@ -194,6 +194,20 @@ class APIDefaultConstructorTestCase(TestBase):
 
     @add_test_categories(['pyapi'])
     @no_debug_info_test
+    def test_SBFile(self):
+        sbf = lldb.SBFile()
+        self.assertFalse(sbf.IsValid())
+        self.assertFalse(bool(sbf))
+        e, n = sbf.Write(b'foo')
+        self.assertTrue(e.Fail())
+        self.assertEqual(n, 0)
+        buffer = bytearray(100)
+        e, n = sbf.Read(buffer)
+        self.assertEqual(n, 0)
+        self.assertTrue(e.Fail())
+
+    @add_test_categories(['pyapi'])
+    @no_debug_info_test
     def test_SBInstruction(self):
         obj = lldb.SBInstruction()
         if self.TraceOn():

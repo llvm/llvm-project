@@ -6379,7 +6379,8 @@ QualType ASTReader::readTypeRecord(unsigned Index) {
     unsigned IndexTypeQuals = Record[2];
     unsigned Idx = 3;
     llvm::APInt Size = ReadAPInt(Record, Idx);
-    return Context.getConstantArrayType(ElementType, Size,
+    Expr *SizeExpr = ReadExpr(*Loc.F);
+    return Context.getConstantArrayType(ElementType, Size, SizeExpr,
                                          ASM, IndexTypeQuals);
   }
 

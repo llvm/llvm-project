@@ -122,6 +122,36 @@ body: |
 ...
 
 ---
+name: test_bitcast_v2s64_to_v8s16
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3
+
+    ; CHECK-LABEL: name: test_bitcast_v2s64_to_v8s16
+    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK: [[BITCAST:%[0-9]+]]:_(<8 x s16>) = G_BITCAST [[COPY]](<2 x s64>)
+    ; CHECK: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BITCAST]](<8 x s16>)
+    %0:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    %1:_(<8 x s16>) = G_BITCAST %0
+    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %1
+...
+
+---
+name: test_bitcast_v8s16_to_v2s64
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3
+
+    ; CHECK-LABEL: name: test_bitcast_v8s16_to_v2s64
+    ; CHECK: [[COPY:%[0-9]+]]:_(<8 x s16>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK: [[BITCAST:%[0-9]+]]:_(<2 x s64>) = G_BITCAST [[COPY]](<8 x s16>)
+    ; CHECK: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BITCAST]](<2 x s64>)
+    %0:_(<8 x s16>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    %1:_(<2 x s64>) = G_BITCAST %0
+    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %1
+...
+
+---
 name: test_bitcast_p0_to_p1
 body: |
   bb.0:
@@ -179,4 +209,76 @@ body: |
     %0:_(p123) = COPY $vgpr0_vgpr1
     %1:_(p999) = G_BITCAST %0
     $vgpr0_vgpr1 = COPY %1
+...
+
+---
+name: test_bitcast_v4s64_to_v8s32
+tracksRegLiveness: true
+
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+
+    ; CHECK-LABEL: name: test_bitcast_v4s64_to_v8s32
+    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK: [[BITCAST:%[0-9]+]]:_(<8 x s32>) = G_BITCAST [[COPY]](<4 x s64>)
+    ; CHECK: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY [[BITCAST]](<8 x s32>)
+    %0:_(<4 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    %1:_(<8 x s32>) = G_BITCAST %0
+    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY %1
+...
+
+---
+name: test_bitcast_v8s32_to_v4s64
+tracksRegLiveness: true
+
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+
+    ; CHECK-LABEL: name: test_bitcast_v8s32_to_v4s64
+    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK: [[COPY:%[0-9]+]]:_(<8 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK: [[BITCAST:%[0-9]+]]:_(<4 x s64>) = G_BITCAST [[COPY]](<8 x s32>)
+    ; CHECK: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY [[BITCAST]](<4 x s64>)
+    %0:_(<8 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    %1:_(<4 x s64>) = G_BITCAST %0
+    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY %1
+...
+
+---
+name: test_bitcast_v8s64_to_v16s32
+tracksRegLiveness: true
+
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+
+    ; CHECK-LABEL: name: test_bitcast_v8s64_to_v16s32
+    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    ; CHECK: [[COPY:%[0-9]+]]:_(<8 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    ; CHECK: [[BITCAST:%[0-9]+]]:_(<16 x s32>) = G_BITCAST [[COPY]](<8 x s64>)
+    ; CHECK: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = COPY [[BITCAST]](<16 x s32>)
+    %0:_(<8 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    %1:_(<16 x s32>) = G_BITCAST %0
+    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = COPY %1
+...
+
+---
+name: test_bitcast_v16s32_to_v8s64
+tracksRegLiveness: true
+
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+
+    ; CHECK-LABEL: name: test_bitcast_v16s32_to_v8s64
+    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    ; CHECK: [[COPY:%[0-9]+]]:_(<16 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    ; CHECK: [[BITCAST:%[0-9]+]]:_(<8 x s64>) = G_BITCAST [[COPY]](<16 x s32>)
+    ; CHECK: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = COPY [[BITCAST]](<8 x s64>)
+    %0:_(<16 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    %1:_(<8 x s64>) = G_BITCAST %0
+    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = COPY %1
 ...

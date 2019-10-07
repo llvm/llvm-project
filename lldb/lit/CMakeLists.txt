@@ -56,9 +56,11 @@ list(APPEND LLDB_TEST_DEPS
   lli
   llvm-config
   llvm-dwarfdump
+  llvm-nm
   llvm-mc
   llvm-objcopy
   llvm-readobj
+  llvm-strip
   )
 
 if(TARGET lld)

@@ -522,3 +522,169 @@ body: |
     %3:_(<4 x s32>) = G_ANYEXT %2
     $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %3
 ...
+
+---
+name: test_and_v8s8
+body: |
+  bb.0:
+
+    ; CHECK-LABEL: name: test_and_v8s8
+    ; CHECK: [[DEF:%[0-9]+]]:_(<8 x s32>) = G_IMPLICIT_DEF
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(<8 x s8>) = G_TRUNC [[DEF]](<8 x s32>)
+    ; CHECK: [[DEF1:%[0-9]+]]:_(<8 x s32>) = G_IMPLICIT_DEF
+    ; CHECK: [[TRUNC1:%[0-9]+]]:_(<8 x s8>) = G_TRUNC [[DEF1]](<8 x s32>)
+    ; CHECK: [[UV:%[0-9]+]]:_(s8), [[UV1:%[0-9]+]]:_(s8), [[UV2:%[0-9]+]]:_(s8), [[UV3:%[0-9]+]]:_(s8), [[UV4:%[0-9]+]]:_(s8), [[UV5:%[0-9]+]]:_(s8), [[UV6:%[0-9]+]]:_(s8), [[UV7:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[TRUNC]](<8 x s8>)
+    ; CHECK: [[UV8:%[0-9]+]]:_(s8), [[UV9:%[0-9]+]]:_(s8), [[UV10:%[0-9]+]]:_(s8), [[UV11:%[0-9]+]]:_(s8), [[UV12:%[0-9]+]]:_(s8), [[UV13:%[0-9]+]]:_(s8), [[UV14:%[0-9]+]]:_(s8), [[UV15:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[TRUNC1]](<8 x s8>)
+    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[UV]](s8)
+    ; CHECK: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[UV8]](s8)
+    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[ANYEXT]], [[ANYEXT1]]
+    ; CHECK: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[UV1]](s8)
+    ; CHECK: [[ANYEXT3:%[0-9]+]]:_(s32) = G_ANYEXT [[UV9]](s8)
+    ; CHECK: [[AND1:%[0-9]+]]:_(s32) = G_AND [[ANYEXT2]], [[ANYEXT3]]
+    ; CHECK: [[ANYEXT4:%[0-9]+]]:_(s32) = G_ANYEXT [[UV2]](s8)
+    ; CHECK: [[ANYEXT5:%[0-9]+]]:_(s32) = G_ANYEXT [[UV10]](s8)
+    ; CHECK: [[AND2:%[0-9]+]]:_(s32) = G_AND [[ANYEXT4]], [[ANYEXT5]]
+    ; CHECK: [[ANYEXT6:%[0-9]+]]:_(s32) = G_ANYEXT [[UV3]](s8)
+    ; CHECK: [[ANYEXT7:%[0-9]+]]:_(s32) = G_ANYEXT [[UV11]](s8)
+    ; CHECK: [[AND3:%[0-9]+]]:_(s32) = G_AND [[ANYEXT6]], [[ANYEXT7]]
+    ; CHECK: [[ANYEXT8:%[0-9]+]]:_(s32) = G_ANYEXT [[UV4]](s8)
+    ; CHECK: [[ANYEXT9:%[0-9]+]]:_(s32) = G_ANYEXT [[UV12]](s8)
+    ; CHECK: [[AND4:%[0-9]+]]:_(s32) = G_AND [[ANYEXT8]], [[ANYEXT9]]
+    ; CHECK: [[ANYEXT10:%[0-9]+]]:_(s32) = G_ANYEXT [[UV5]](s8)
+    ; CHECK: [[ANYEXT11:%[0-9]+]]:_(s32) = G_ANYEXT [[UV13]](s8)
+    ; CHECK: [[AND5:%[0-9]+]]:_(s32) = G_AND [[ANYEXT10]], [[ANYEXT11]]
+    ; CHECK: [[ANYEXT12:%[0-9]+]]:_(s32) = G_ANYEXT [[UV6]](s8)
+    ; CHECK: [[ANYEXT13:%[0-9]+]]:_(s32) = G_ANYEXT [[UV14]](s8)
+    ; CHECK: [[AND6:%[0-9]+]]:_(s32) = G_AND [[ANYEXT12]], [[ANYEXT13]]
+    ; CHECK: [[ANYEXT14:%[0-9]+]]:_(s32) = G_ANYEXT [[UV7]](s8)
+    ; CHECK: [[ANYEXT15:%[0-9]+]]:_(s32) = G_ANYEXT [[UV15]](s8)
+    ; CHECK: [[AND7:%[0-9]+]]:_(s32) = G_AND [[ANYEXT14]], [[ANYEXT15]]
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY [[AND]](s32)
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[AND1]](s32)
+    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY [[AND2]](s32)
+    ; CHECK: [[COPY3:%[0-9]+]]:_(s32) = COPY [[AND3]](s32)
+    ; CHECK: [[COPY4:%[0-9]+]]:_(s32) = COPY [[AND4]](s32)
+    ; CHECK: [[COPY5:%[0-9]+]]:_(s32) = COPY [[AND5]](s32)
+    ; CHECK: [[COPY6:%[0-9]+]]:_(s32) = COPY [[AND6]](s32)
+    ; CHECK: [[COPY7:%[0-9]+]]:_(s32) = COPY [[AND7]](s32)
+    ; CHECK: [[COPY8:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
+    ; CHECK: [[COPY9:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
+    ; CHECK: [[COPY10:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
+    ; CHECK: [[COPY11:%[0-9]+]]:_(s32) = COPY [[COPY3]](s32)
+    ; CHECK: [[COPY12:%[0-9]+]]:_(s32) = COPY [[COPY4]](s32)
+    ; CHECK: [[COPY13:%[0-9]+]]:_(s32) = COPY [[COPY5]](s32)
+    ; CHECK: [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY6]](s32)
+    ; CHECK: [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY7]](s32)
+    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32), [[COPY12]](s32), [[COPY13]](s32), [[COPY14]](s32), [[COPY15]](s32)
+    ; CHECK: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY [[BUILD_VECTOR]](<8 x s32>)
+    %0:_(<8 x s8>) = G_IMPLICIT_DEF
+    %1:_(<8 x s8>) = G_IMPLICIT_DEF
+    %2:_(<8 x s8>) = G_AND %0, %1
+    %3:_(<8 x s32>) = G_ANYEXT %2
+    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY %3
+...
+
+---
+name: test_and_v16s8
+body: |
+  bb.0:
+
+    ; CHECK-LABEL: name: test_and_v16s8
+    ; CHECK: [[DEF:%[0-9]+]]:_(<16 x s32>) = G_IMPLICIT_DEF
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(<16 x s8>) = G_TRUNC [[DEF]](<16 x s32>)
+    ; CHECK: [[DEF1:%[0-9]+]]:_(<16 x s32>) = G_IMPLICIT_DEF
+    ; CHECK: [[TRUNC1:%[0-9]+]]:_(<16 x s8>) = G_TRUNC [[DEF1]](<16 x s32>)
+    ; CHECK: [[UV:%[0-9]+]]:_(<8 x s8>), [[UV1:%[0-9]+]]:_(<8 x s8>) = G_UNMERGE_VALUES [[TRUNC]](<16 x s8>)
+    ; CHECK: [[UV2:%[0-9]+]]:_(<8 x s8>), [[UV3:%[0-9]+]]:_(<8 x s8>) = G_UNMERGE_VALUES [[TRUNC1]](<16 x s8>)
+    ; CHECK: [[UV4:%[0-9]+]]:_(s8), [[UV5:%[0-9]+]]:_(s8), [[UV6:%[0-9]+]]:_(s8), [[UV7:%[0-9]+]]:_(s8), [[UV8:%[0-9]+]]:_(s8), [[UV9:%[0-9]+]]:_(s8), [[UV10:%[0-9]+]]:_(s8), [[UV11:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[UV]](<8 x s8>)
+    ; CHECK: [[UV12:%[0-9]+]]:_(s8), [[UV13:%[0-9]+]]:_(s8), [[UV14:%[0-9]+]]:_(s8), [[UV15:%[0-9]+]]:_(s8), [[UV16:%[0-9]+]]:_(s8), [[UV17:%[0-9]+]]:_(s8), [[UV18:%[0-9]+]]:_(s8), [[UV19:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[UV2]](<8 x s8>)
+    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[UV4]](s8)
+    ; CHECK: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[UV12]](s8)
+    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[ANYEXT]], [[ANYEXT1]]
+    ; CHECK: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[UV5]](s8)
+    ; CHECK: [[ANYEXT3:%[0-9]+]]:_(s32) = G_ANYEXT [[UV13]](s8)
+    ; CHECK: [[AND1:%[0-9]+]]:_(s32) = G_AND [[ANYEXT2]], [[ANYEXT3]]
+    ; CHECK: [[ANYEXT4:%[0-9]+]]:_(s32) = G_ANYEXT [[UV6]](s8)
+    ; CHECK: [[ANYEXT5:%[0-9]+]]:_(s32) = G_ANYEXT [[UV14]](s8)
+    ; CHECK: [[AND2:%[0-9]+]]:_(s32) = G_AND [[ANYEXT4]], [[ANYEXT5]]
+    ; CHECK: [[ANYEXT6:%[0-9]+]]:_(s32) = G_ANYEXT [[UV7]](s8)
+    ; CHECK: [[ANYEXT7:%[0-9]+]]:_(s32) = G_ANYEXT [[UV15]](s8)
+    ; CHECK: [[AND3:%[0-9]+]]:_(s32) = G_AND [[ANYEXT6]], [[ANYEXT7]]
+    ; CHECK: [[ANYEXT8:%[0-9]+]]:_(s32) = G_ANYEXT [[UV8]](s8)
+    ; CHECK: [[ANYEXT9:%[0-9]+]]:_(s32) = G_ANYEXT [[UV16]](s8)
+    ; CHECK: [[AND4:%[0-9]+]]:_(s32) = G_AND [[ANYEXT8]], [[ANYEXT9]]
+    ; CHECK: [[ANYEXT10:%[0-9]+]]:_(s32) = G_ANYEXT [[UV9]](s8)
+    ; CHECK: [[ANYEXT11:%[0-9]+]]:_(s32) = G_ANYEXT [[UV17]](s8)
+    ; CHECK: [[AND5:%[0-9]+]]:_(s32) = G_AND [[ANYEXT10]], [[ANYEXT11]]
+    ; CHECK: [[ANYEXT12:%[0-9]+]]:_(s32) = G_ANYEXT [[UV10]](s8)
+    ; CHECK: [[ANYEXT13:%[0-9]+]]:_(s32) = G_ANYEXT [[UV18]](s8)
+    ; CHECK: [[AND6:%[0-9]+]]:_(s32) = G_AND [[ANYEXT12]], [[ANYEXT13]]
+    ; CHECK: [[ANYEXT14:%[0-9]+]]:_(s32) = G_ANYEXT [[UV11]](s8)
+    ; CHECK: [[ANYEXT15:%[0-9]+]]:_(s32) = G_ANYEXT [[UV19]](s8)
+    ; CHECK: [[AND7:%[0-9]+]]:_(s32) = G_AND [[ANYEXT14]], [[ANYEXT15]]
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY [[AND]](s32)
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[AND1]](s32)
+    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY [[AND2]](s32)
+    ; CHECK: [[COPY3:%[0-9]+]]:_(s32) = COPY [[AND3]](s32)
+    ; CHECK: [[COPY4:%[0-9]+]]:_(s32) = COPY [[AND4]](s32)
+    ; CHECK: [[COPY5:%[0-9]+]]:_(s32) = COPY [[AND5]](s32)
+    ; CHECK: [[COPY6:%[0-9]+]]:_(s32) = COPY [[AND6]](s32)
+    ; CHECK: [[COPY7:%[0-9]+]]:_(s32) = COPY [[AND7]](s32)
+    ; CHECK: [[UV20:%[0-9]+]]:_(s8), [[UV21:%[0-9]+]]:_(s8), [[UV22:%[0-9]+]]:_(s8), [[UV23:%[0-9]+]]:_(s8), [[UV24:%[0-9]+]]:_(s8), [[UV25:%[0-9]+]]:_(s8), [[UV26:%[0-9]+]]:_(s8), [[UV27:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[UV1]](<8 x s8>)
+    ; CHECK: [[UV28:%[0-9]+]]:_(s8), [[UV29:%[0-9]+]]:_(s8), [[UV30:%[0-9]+]]:_(s8), [[UV31:%[0-9]+]]:_(s8), [[UV32:%[0-9]+]]:_(s8), [[UV33:%[0-9]+]]:_(s8), [[UV34:%[0-9]+]]:_(s8), [[UV35:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[UV3]](<8 x s8>)
+    ; CHECK: [[ANYEXT16:%[0-9]+]]:_(s32) = G_ANYEXT [[UV20]](s8)
+    ; CHECK: [[ANYEXT17:%[0-9]+]]:_(s32) = G_ANYEXT [[UV28]](s8)
+    ; CHECK: [[AND8:%[0-9]+]]:_(s32) = G_AND [[ANYEXT16]], [[ANYEXT17]]
+    ; CHECK: [[ANYEXT18:%[0-9]+]]:_(s32) = G_ANYEXT [[UV21]](s8)
+    ; CHECK: [[ANYEXT19:%[0-9]+]]:_(s32) = G_ANYEXT [[UV29]](s8)
+    ; CHECK: [[AND9:%[0-9]+]]:_(s32) = G_AND [[ANYEXT18]], [[ANYEXT19]]
+    ; CHECK: [[ANYEXT20:%[0-9]+]]:_(s32) = G_ANYEXT [[UV22]](s8)
+    ; CHECK: [[ANYEXT21:%[0-9]+]]:_(s32) = G_ANYEXT [[UV30]](s8)
+    ; CHECK: [[AND10:%[0-9]+]]:_(s32) = G_AND [[ANYEXT20]], [[ANYEXT21]]
+    ; CHECK: [[ANYEXT22:%[0-9]+]]:_(s32) = G_ANYEXT [[UV23]](s8)
+    ; CHECK: [[ANYEXT23:%[0-9]+]]:_(s32) = G_ANYEXT [[UV31]](s8)
+    ; CHECK: [[AND11:%[0-9]+]]:_(s32) = G_AND [[ANYEXT22]], [[ANYEXT23]]
+    ; CHECK: [[ANYEXT24:%[0-9]+]]:_(s32) = G_ANYEXT [[UV24]](s8)
+    ; CHECK: [[ANYEXT25:%[0-9]+]]:_(s32) = G_ANYEXT [[UV32]](s8)
+    ; CHECK: [[AND12:%[0-9]+]]:_(s32) = G_AND [[ANYEXT24]], [[ANYEXT25]]
+    ; CHECK: [[ANYEXT26:%[0-9]+]]:_(s32) = G_ANYEXT [[UV25]](s8)
+    ; CHECK: [[ANYEXT27:%[0-9]+]]:_(s32) = G_ANYEXT [[UV33]](s8)
+    ; CHECK: [[AND13:%[0-9]+]]:_(s32) = G_AND [[ANYEXT26]], [[ANYEXT27]]
+    ; CHECK: [[ANYEXT28:%[0-9]+]]:_(s32) = G_ANYEXT [[UV26]](s8)
+    ; CHECK: [[ANYEXT29:%[0-9]+]]:_(s32) = G_ANYEXT [[UV34]](s8)
+    ; CHECK: [[AND14:%[0-9]+]]:_(s32) = G_AND [[ANYEXT28]], [[ANYEXT29]]
+    ; CHECK: [[ANYEXT30:%[0-9]+]]:_(s32) = G_ANYEXT [[UV27]](s8)
+    ; CHECK: [[ANYEXT31:%[0-9]+]]:_(s32) = G_ANYEXT [[UV35]](s8)
+    ; CHECK: [[AND15:%[0-9]+]]:_(s32) = G_AND [[ANYEXT30]], [[ANYEXT31]]
+    ; CHECK: [[COPY8:%[0-9]+]]:_(s32) = COPY [[AND8]](s32)
+    ; CHECK: [[COPY9:%[0-9]+]]:_(s32) = COPY [[AND9]](s32)
+    ; CHECK: [[COPY10:%[0-9]+]]:_(s32) = COPY [[AND10]](s32)
+    ; CHECK: [[COPY11:%[0-9]+]]:_(s32) = COPY [[AND11]](s32)
+    ; CHECK: [[COPY12:%[0-9]+]]:_(s32) = COPY [[AND12]](s32)
+    ; CHECK: [[COPY13:%[0-9]+]]:_(s32) = COPY [[AND13]](s32)
+    ; CHECK: [[COPY14:%[0-9]+]]:_(s32) = COPY [[AND14]](s32)
+    ; CHECK: [[COPY15:%[0-9]+]]:_(s32) = COPY [[AND15]](s32)
+    ; CHECK: [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
+    ; CHECK: [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
+    ; CHECK: [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
+    ; CHECK: [[COPY19:%[0-9]+]]:_(s32) = COPY [[COPY3]](s32)
+    ; CHECK: [[COPY20:%[0-9]+]]:_(s32) = COPY [[COPY4]](s32)
+    ; CHECK: [[COPY21:%[0-9]+]]:_(s32) = COPY [[COPY5]](s32)
+    ; CHECK: [[COPY22:%[0-9]+]]:_(s32) = COPY [[COPY6]](s32)
+    ; CHECK: [[COPY23:%[0-9]+]]:_(s32) = COPY [[COPY7]](s32)
+    ; CHECK: [[COPY24:%[0-9]+]]:_(s32) = COPY [[COPY8]](s32)
+    ; CHECK: [[COPY25:%[0-9]+]]:_(s32) = COPY [[COPY9]](s32)
+    ; CHECK: [[COPY26:%[0-9]+]]:_(s32) = COPY [[COPY10]](s32)
+    ; CHECK: [[COPY27:%[0-9]+]]:_(s32) = COPY [[COPY11]](s32)
+    ; CHECK: [[COPY28:%[0-9]+]]:_(s32) = COPY [[COPY12]](s32)
+    ; CHECK: [[COPY29:%[0-9]+]]:_(s32) = COPY [[COPY13]](s32)
+    ; CHECK: [[COPY30:%[0-9]+]]:_(s32) = COPY [[COPY14]](s32)
+    ; CHECK: [[COPY31:%[0-9]+]]:_(s32) = COPY [[COPY15]](s32)
+    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<16 x s32>) = G_BUILD_VECTOR [[COPY16]](s32), [[COPY17]](s32), [[COPY18]](s32), [[COPY19]](s32), [[COPY20]](s32), [[COPY21]](s32), [[COPY22]](s32), [[COPY23]](s32), [[COPY24]](s32), [[COPY25]](s32), [[COPY26]](s32), [[COPY27]](s32), [[COPY28]](s32), [[COPY29]](s32), [[COPY30]](s32), [[COPY31]](s32)
+    ; CHECK: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = COPY [[BUILD_VECTOR]](<16 x s32>)
+    %0:_(<16 x s8>) = G_IMPLICIT_DEF
+    %1:_(<16 x s8>) = G_IMPLICIT_DEF
+    %2:_(<16 x s8>) = G_AND %0, %1
+    %3:_(<16 x s32>) = G_ANYEXT %2
+    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = COPY %3
+...

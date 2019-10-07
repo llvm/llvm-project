@@ -279,7 +279,7 @@ public:
         *M, Ty, /*constant*/ true, llvm::GlobalVariable::InternalLinkage, Data,
         "__clang_ast");
     // The on-disk hashtable needs to be aligned.
-    ASTSym->setAlignment(8);
+    ASTSym->setAlignment(llvm::Align(8));
 
     // Mach-O also needs a segment name.
     if (Triple.isOSBinFormatMachO())

@@ -48,7 +48,7 @@ void test_no_info() {
     abort();
 
   // Set the IP to an address clearly outside any function.
-  unw_set_reg(&cursor, UNW_REG_IP, (unw_word_t)&context);
+  unw_set_reg(&cursor, UNW_REG_IP, (unw_word_t)0);
 
   ret = unw_get_proc_info(&cursor, &info);
   if (ret != UNW_ENOINFO)

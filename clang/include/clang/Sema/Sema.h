@@ -1522,6 +1522,8 @@ public:
   QualType BuildAddressSpaceAttr(QualType &T, Expr *AddrSpace,
                                  SourceLocation AttrLoc);
 
+  bool CheckQualifiedFunctionForTypeId(QualType T, SourceLocation Loc);
+
   bool CheckFunctionReturnType(QualType T, SourceLocation Loc);
 
   /// Build a function type.
@@ -9109,11 +9111,14 @@ public:
     OMPDeclareVariantAttr::CtxSelectorType Ctx =
         OMPDeclareVariantAttr::CtxUnknown;
     StringRef ImplVendor;
+    ExprResult CtxScore;
     explicit OpenMPDeclareVariantCtsSelectorData() = default;
     explicit OpenMPDeclareVariantCtsSelectorData(
         OMPDeclareVariantAttr::CtxSelectorSetType CtxSet,
-        OMPDeclareVariantAttr::CtxSelectorType Ctx, StringRef ImplVendor)
-        : CtxSet(CtxSet), Ctx(Ctx), ImplVendor(ImplVendor) {}
+        OMPDeclareVariantAttr::CtxSelectorType Ctx, StringRef ImplVendor,
+        ExprResult CtxScore)
+        : CtxSet(CtxSet), Ctx(Ctx), ImplVendor(ImplVendor), CtxScore(CtxScore) {
+    }
   };
 
   /// Checks if the variant/multiversion functions are compatible.
@@ -9148,6 +9153,10 @@ public:
   /// If the current region is a loop-based region, mark the start of the loop
   /// construct.
   void startOpenMPLoop();
+
+  /// If the current region is a range loop-based region, mark the start of the
+  /// loop construct.
+  void startOpenMPCXXRangeFor();
 
   /// Check if the specified variable is used in 'private' clause.
   /// \param Level Relative level of nested OpenMP construct for that the check

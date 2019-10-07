@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -enable-pipeliner -pipeliner-max-stages=2 < %s | FileCheck %s
+; RUN: llc -march=hexagon -enable-pipeliner -pipeliner-max-stages=2 < %s -pipeliner-experimental-cg=true | FileCheck %s
 
 ; Test that the generatePhi code doesn't rename a a Phi instruction that's defined
 ; in the same block.  The bug causes a Phi to incorrectly depend on another Phi.

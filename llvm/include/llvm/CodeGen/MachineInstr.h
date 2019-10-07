@@ -618,6 +618,12 @@ public:
     return hasPropertyInBundle(1ULL << MCFlag, Type);
   }
 
+  /// Return true if this is an instruction that should go through the usual
+  /// legalization steps.
+  bool isPreISelOpcode(QueryType Type = IgnoreBundle) const {
+    return hasProperty(MCID::PreISelOpcode, Type);
+  }
+
   /// Return true if this instruction can have a variable number of operands.
   /// In this case, the variable operands will be after the normal
   /// operands but before the implicit definitions and uses (if any are

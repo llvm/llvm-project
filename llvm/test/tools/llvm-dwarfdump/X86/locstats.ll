@@ -71,7 +71,7 @@
 ; CHECK: "vars with 80-89% of its scope covered":1
 ; CHECK: "vars with 90-99% of its scope covered":0
 ; CHECK: "vars with 100% of its scope covered":1
-; CHECK: "vars (excluding the debug entry values) with 0% of its scope covered":0
+; CHECK: "vars (excluding the debug entry values) with 0% of its scope covered":1
 ; CHECK: "vars (excluding the debug entry values) with 1-9% of its scope covered":0
 ; CHECK: "vars (excluding the debug entry values) with 10-19% of its scope covered":0
 ; CHECK: "vars (excluding the debug entry values) with 20-29% of its scope covered":0
@@ -80,9 +80,9 @@
 ; CHECK: "vars (excluding the debug entry values) with 50-59% of its scope covered":1
 ; CHECK: "vars (excluding the debug entry values) with 60-69% of its scope covered":0
 ; CHECK: "vars (excluding the debug entry values) with 70-79% of its scope covered":0
-; CHECK: "vars (excluding the debug entry values) with 80-89% of its scope covered":0
+; CHECK: "vars (excluding the debug entry values) with 80-89% of its scope covered":1
 ; CHECK: "vars (excluding the debug entry values) with 90-99% of its scope covered":0
-; CHECK: "vars (excluding the debug entry values) with 100% of its scope covered":1}
+; CHECK: "vars (excluding the debug entry values) with 100% of its scope covered":1
 ;
 ; The source code of the test case:
 ; extern void fn3(int *);

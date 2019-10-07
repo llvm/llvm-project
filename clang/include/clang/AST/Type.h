@@ -126,7 +126,7 @@ using CanQualType = CanQual<Type>;
 
 // Provide forward declarations for all of the *Type classes.
 #define TYPE(Class, Base) class Class##Type;
-#include "clang/AST/TypeNodes.def"
+#include "clang/AST/TypeNodes.inc"
 
 /// The collection of all-type qualifiers we support.
 /// Clang supports five independent qualifiers:
@@ -1439,7 +1439,7 @@ public:
 #define TYPE(Class, Base) Class,
 #define LAST_TYPE(Class) TypeLast = Class
 #define ABSTRACT_TYPE(Class, Base)
-#include "clang/AST/TypeNodes.def"
+#include "clang/AST/TypeNodes.inc"
   };
 
 private:
@@ -1511,6 +1511,15 @@ protected:
     /// 'int X[static restrict 4]'. For function parameters only.
     /// Actually an ArrayType::ArraySizeModifier.
     unsigned SizeModifier : 3;
+  };
+
+  class ConstantArrayTypeBitfields {
+    friend class ConstantArrayType;
+
+    unsigned : NumTypeBits + 3 + 3;
+
+    /// Whether we have a stored size expression.
+    unsigned HasStoredSizeExpr : 1;
   };
 
   class BuiltinTypeBitfields {
@@ -1734,6 +1743,7 @@ protected:
   union {
     TypeBitfields TypeBits;
     ArrayTypeBitfields ArrayTypeBits;
+    ConstantArrayTypeBitfields ConstantArrayTypeBits;
     AttributedTypeBitfields AttributedTypeBits;
     AutoTypeBitfields AutoTypeBits;
     BuiltinTypeBitfields BuiltinTypeBits;
@@ -2419,7 +2429,7 @@ template <> inline const Class##Type *Type::getAs() const { \
 template <> inline const Class##Type *Type::castAs() const { \
   return cast<Class##Type>(CanonicalType); \
 }
-#include "clang/AST/TypeNodes.def"
+#include "clang/AST/TypeNodes.inc"
 
 /// This class is used for builtin types like 'int'.  Builtin
 /// types are always canonical and have a literal name field.
@@ -2864,22 +2874,8 @@ private:
 protected:
   friend class ASTContext; // ASTContext creates these.
 
-  // C++ [temp.dep.type]p1:
-  //   A type is dependent if it is...
-  //     - an array type constructed from any dependent type or whose
-  //       size is specified by a constant expression that is
-  //       value-dependent,
-  ArrayType(TypeClass tc, QualType et, QualType can,
-            ArraySizeModifier sm, unsigned tq,
-            bool ContainsUnexpandedParameterPack)
-      : Type(tc, can, et->isDependentType() || tc == DependentSizedArray,
-             et->isInstantiationDependentType() || tc == DependentSizedArray,
-             (tc == VariableArray || et->isVariablyModifiedType()),
-             ContainsUnexpandedParameterPack),
-        ElementType(et) {
-    ArrayTypeBits.IndexTypeQuals = tq;
-    ArrayTypeBits.SizeModifier = sm;
-  }
+  ArrayType(TypeClass tc, QualType et, QualType can, ArraySizeModifier sm,
+            unsigned tq, const Expr *sz = nullptr);
 
 public:
   QualType getElementType() const { return ElementType; }
@@ -2907,25 +2903,35 @@ public:
 /// Represents the canonical version of C arrays with a specified constant size.
 /// For example, the canonical type for 'int A[4 + 4*100]' is a
 /// ConstantArrayType where the element type is 'int' and the size is 404.
-class ConstantArrayType : public ArrayType {
+class ConstantArrayType final
+    : public ArrayType,
+      private llvm::TrailingObjects<ConstantArrayType, const Expr *> {
+  friend class ASTContext; // ASTContext creates these.
+  friend TrailingObjects;
+
   llvm::APInt Size; // Allows us to unique the type.
 
   ConstantArrayType(QualType et, QualType can, const llvm::APInt &size,
-                    ArraySizeModifier sm, unsigned tq)
-      : ArrayType(ConstantArray, et, can, sm, tq,
-                  et->containsUnexpandedParameterPack()),
-        Size(size) {}
+                    const Expr *sz, ArraySizeModifier sm, unsigned tq)
+      : ArrayType(ConstantArray, et, can, sm, tq, sz), Size(size) {
+    ConstantArrayTypeBits.HasStoredSizeExpr = sz != nullptr;
+    if (ConstantArrayTypeBits.HasStoredSizeExpr) {
+      assert(!can.isNull() && "canonical constant array should not have size");
+      *getTrailingObjects<const Expr*>() = sz;
+    }
+  }
 
-protected:
-  friend class ASTContext; // ASTContext creates these.
-
-  ConstantArrayType(TypeClass tc, QualType et, QualType can,
-                    const llvm::APInt &size, ArraySizeModifier sm, unsigned tq)
-      : ArrayType(tc, et, can, sm, tq, et->containsUnexpandedParameterPack()),
-        Size(size) {}
+  unsigned numTrailingObjects(OverloadToken<const Expr*>) const {
+    return ConstantArrayTypeBits.HasStoredSizeExpr;
+  }
 
 public:
   const llvm::APInt &getSize() const { return Size; }
+  const Expr *getSizeExpr() const {
+    return ConstantArrayTypeBits.HasStoredSizeExpr
+               ? *getTrailingObjects<const Expr *>()
+               : nullptr;
+  }
   bool isSugared() const { return false; }
   QualType desugar() const { return QualType(this, 0); }
 
@@ -2939,19 +2945,15 @@ public:
   /// can require, which limits the maximum size of the array.
   static unsigned getMaxSizeBits(const ASTContext &Context);
 
-  void Profile(llvm::FoldingSetNodeID &ID) {
-    Profile(ID, getElementType(), getSize(),
+  void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Ctx) {
+    Profile(ID, Ctx, getElementType(), getSize(), getSizeExpr(),
             getSizeModifier(), getIndexTypeCVRQualifiers());
   }
 
-  static void Profile(llvm::FoldingSetNodeID &ID, QualType ET,
-                      const llvm::APInt &ArraySize, ArraySizeModifier SizeMod,
-                      unsigned TypeQuals) {
-    ID.AddPointer(ET.getAsOpaquePtr());
-    ID.AddInteger(ArraySize.getZExtValue());
-    ID.AddInteger(SizeMod);
-    ID.AddInteger(TypeQuals);
-  }
+  static void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Ctx,
+                      QualType ET, const llvm::APInt &ArraySize,
+                      const Expr *SizeExpr, ArraySizeModifier SizeMod,
+                      unsigned TypeQuals);
 
   static bool classof(const Type *T) {
     return T->getTypeClass() == ConstantArray;
@@ -2966,8 +2968,7 @@ class IncompleteArrayType : public ArrayType {
 
   IncompleteArrayType(QualType et, QualType can,
                       ArraySizeModifier sm, unsigned tq)
-      : ArrayType(IncompleteArray, et, can, sm, tq,
-                  et->containsUnexpandedParameterPack()) {}
+      : ArrayType(IncompleteArray, et, can, sm, tq) {}
 
 public:
   friend class StmtIteratorBase;
@@ -3019,8 +3020,7 @@ class VariableArrayType : public ArrayType {
   VariableArrayType(QualType et, QualType can, Expr *e,
                     ArraySizeModifier sm, unsigned tq,
                     SourceRange brackets)
-      : ArrayType(VariableArray, et, can, sm, tq,
-                  et->containsUnexpandedParameterPack()),
+      : ArrayType(VariableArray, et, can, sm, tq, e),
         SizeExpr((Stmt*) e), Brackets(brackets) {}
 
 public:

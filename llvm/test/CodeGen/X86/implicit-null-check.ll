@@ -432,14 +432,70 @@ define i32 @imp_null_check_gep_load_with_use_dep(i32* %x, i32 %a) {
   ret i32 %z
 }
 
+;; TODO: We could handle this case as we can lift the fence into the
+;; previous block before the conditional without changing behavior.
+define i32 @imp_null_check_load_fence1(i32* %x) {
+; CHECK-LABEL: imp_null_check_load_fence1:
+; CHECK:       ## %bb.0: ## %entry
+; CHECK-NEXT:    testq %rdi, %rdi
+; CHECK-NEXT:    je LBB16_1
+; CHECK-NEXT:  ## %bb.2: ## %not_null
+; CHECK-NEXT:    ##MEMBARRIER
+; CHECK-NEXT:    movl (%rdi), %eax
+; CHECK-NEXT:    retq
+; CHECK-NEXT:  LBB16_1: ## %is_null
+; CHECK-NEXT:    movl $42, %eax
+; CHECK-NEXT:    retq
+
+entry:
+  %c = icmp eq i32* %x, null
+  br i1 %c, label %is_null, label %not_null, !make.implicit !0
+
+is_null:
+  ret i32 42
+
+not_null:
+  fence acquire
+  %t = load i32, i32* %x
+  ret i32 %t
+}
+
+;; TODO: We could handle this case as we can lift the fence into the
+;; previous block before the conditional without changing behavior.
+define i32 @imp_null_check_load_fence2(i32* %x) {
+; CHECK-LABEL: imp_null_check_load_fence2:
+; CHECK:       ## %bb.0: ## %entry
+; CHECK-NEXT:    testq %rdi, %rdi
+; CHECK-NEXT:    je LBB17_1
+; CHECK-NEXT:  ## %bb.2: ## %not_null
+; CHECK-NEXT:    mfence
+; CHECK-NEXT:    movl (%rdi), %eax
+; CHECK-NEXT:    retq
+; CHECK-NEXT:  LBB17_1: ## %is_null
+; CHECK-NEXT:    movl $42, %eax
+; CHECK-NEXT:    retq
+
+entry:
+  %c = icmp eq i32* %x, null
+  br i1 %c, label %is_null, label %not_null, !make.implicit !0
+
+is_null:
+  ret i32 42
+
+not_null:
+  fence seq_cst
+  %t = load i32, i32* %x
+  ret i32 %t
+}
+
 define void @imp_null_check_store(i32* %x) {
 ; CHECK-LABEL: imp_null_check_store:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:  Ltmp14:
-; CHECK-NEXT:    movl $1, (%rdi) ## on-fault: LBB16_1
+; CHECK-NEXT:    movl $1, (%rdi) ## on-fault: LBB18_1
 ; CHECK-NEXT:  ## %bb.2: ## %not_null
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  LBB16_1: ## %is_null
+; CHECK-NEXT:  LBB18_1: ## %is_null
 ; CHECK-NEXT:    retq
 
  entry:
@@ -459,10 +515,10 @@ define void @imp_null_check_unordered_store(i32* %x) {
 ; CHECK-LABEL: imp_null_check_unordered_store:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:  Ltmp15:
-; CHECK-NEXT:    movl $1, (%rdi) ## on-fault: LBB17_1
+; CHECK-NEXT:    movl $1, (%rdi) ## on-fault: LBB19_1
 ; CHECK-NEXT:  ## %bb.2: ## %not_null
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  LBB17_1: ## %is_null
+; CHECK-NEXT:  LBB19_1: ## %is_null
 ; CHECK-NEXT:    retq
 
  entry:
@@ -481,10 +537,10 @@ define i32 @imp_null_check_neg_gep_load(i32* %x) {
 ; CHECK-LABEL: imp_null_check_neg_gep_load:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:  Ltmp16:
-; CHECK-NEXT:    movl -128(%rdi), %eax ## on-fault: LBB18_1
+; CHECK-NEXT:    movl -128(%rdi), %eax ## on-fault: LBB20_1
 ; CHECK-NEXT:  ## %bb.2: ## %not_null
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  LBB18_1: ## %is_null
+; CHECK-NEXT:  LBB20_1: ## %is_null
 ; CHECK-NEXT:    movl $42, %eax
 ; CHECK-NEXT:    retq
 

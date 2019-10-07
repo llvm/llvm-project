@@ -11,7 +11,7 @@ body:             |
     $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
     $sgpr4 = IMPLICIT_DEF
     $vgpr0 = IMPLICIT_DEF
-    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, 0, implicit $exec
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, 0, 0, implicit $exec
     $sgpr0 = S_MOV_B32 0
 ...
 # GCN-LABEL: name: vmem_smem_write_sgpr
@@ -25,7 +25,7 @@ body:             |
     $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
     $sgpr4 = IMPLICIT_DEF
     $vgpr0 = IMPLICIT_DEF
-    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, 0, implicit $exec
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, 0, 0, implicit $exec
     $sgpr0 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0, 0
 ...
 # GCN-LABEL: name: vmem_snop_write_sgpr
@@ -40,7 +40,7 @@ body:             |
     $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
     $sgpr4 = IMPLICIT_DEF
     $vgpr0 = IMPLICIT_DEF
-    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, 0, implicit $exec
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, 0, 0, implicit $exec
     S_NOP 0
     $sgpr0 = S_MOV_B32 0
 ...
@@ -55,7 +55,7 @@ body:             |
     $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
     $sgpr4 = IMPLICIT_DEF
     $vgpr0 = IMPLICIT_DEF
-    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, 0, implicit $exec
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, 0, 0, implicit $exec
     $vgpr2 = V_ADD_F32_e32 $vgpr1, $vgpr1, implicit $exec
     $sgpr0 = S_MOV_B32 0
 ...
@@ -70,7 +70,7 @@ body:             |
     $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
     $sgpr4 = IMPLICIT_DEF
     $vgpr0 = IMPLICIT_DEF
-    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, 0, implicit $exec
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, 0, 0, implicit $exec
     S_WAITCNT 0
     $sgpr0 = S_MOV_B32 0
 ...
@@ -86,7 +86,7 @@ body:             |
     $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
     $sgpr4 = IMPLICIT_DEF
     $vgpr0 = IMPLICIT_DEF
-    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, 0, implicit $exec
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, 0, 0, implicit $exec
     S_WAITCNT 1
     $sgpr0 = S_MOV_B32 0
 ...
@@ -101,7 +101,7 @@ body:             |
     $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
     $sgpr4 = IMPLICIT_DEF
     $vgpr0 = IMPLICIT_DEF
-    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, 0, implicit $exec
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, 0, 0, implicit $exec
     $exec = S_MOV_B64 7
 ...
 # GCN-LABEL: name: vmem_write_exec_expread
@@ -114,7 +114,7 @@ body:             |
   bb.0:
     $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
     $vgpr0 = IMPLICIT_DEF
-    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $exec_lo, 0, 0, 0, 0, 0, implicit $exec
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $exec_lo, 0, 0, 0, 0, 0, 0, implicit $exec
     $exec = S_MOV_B64 7
 ...
 # GCN-LABEL: name: ds_write_m0
@@ -143,7 +143,7 @@ body:             |
     $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
     $sgpr4 = IMPLICIT_DEF
     $vgpr0 = IMPLICIT_DEF
-    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, 0, implicit $exec
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, 0, 0, implicit $exec
 
   bb.1:
     $sgpr0 = S_MOV_B32 0
@@ -161,7 +161,7 @@ body:             |
     $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
     $sgpr4 = IMPLICIT_DEF
     $vgpr0 = IMPLICIT_DEF
-    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, 0, implicit $exec
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, 0, 0, implicit $exec
     S_BRANCH %bb.1
 
   bb.1:
@@ -181,7 +181,7 @@ body:             |
     $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
     $sgpr4 = IMPLICIT_DEF
     $vgpr0 = IMPLICIT_DEF
-    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, 0, implicit $exec
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, 0, 0, implicit $exec
     S_BRANCH %bb.2
 
   bb.1:
@@ -206,7 +206,7 @@ body:             |
     $sgpr0 = S_MOV_B32 0
 
   bb.1:
-    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, 0, implicit $exec
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, 0, 0, implicit $exec
     S_BRANCH %bb.0
 ...
 # GCN-LABEL: name: ds_write_exec

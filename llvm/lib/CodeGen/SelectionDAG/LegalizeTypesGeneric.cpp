@@ -514,16 +514,25 @@ void DAGTypeLegalizer::SplitRes_SELECT(SDNode *N, SDValue &Lo, SDValue &Hi) {
   if (Cond.getValueType().isVector()) {
     if (SDValue Res = WidenVSELECTAndMask(N))
       std::tie(CL, CH) = DAG.SplitVector(Res->getOperand(0), dl);
-    // It seems to improve code to generate two narrow SETCCs as opposed to
-    // splitting a wide result vector.
-    else if (Cond.getOpcode() == ISD::SETCC)
-      SplitVecRes_SETCC(Cond.getNode(), CL, CH);
     // Check if there are already splitted versions of the vector available and
     // use those instead of splitting the mask operand again.
     else if (getTypeAction(Cond.getValueType()) ==
              TargetLowering::TypeSplitVector)
       GetSplitVector(Cond, CL, CH);
-    else
+    // It seems to improve code to generate two narrow SETCCs as opposed to
+    // splitting a wide result vector.
+    else if (Cond.getOpcode() == ISD::SETCC) {
+      // If the condition is a vXi1 vector, and the LHS of the setcc is a legal
+      // type and the setcc result type is the same vXi1, then leave the setcc
+      // alone.
+      EVT CondLHSVT = Cond.getOperand(0).getValueType();
+      if (Cond.getValueType().getVectorElementType() == MVT::i1 &&
+          isTypeLegal(CondLHSVT) &&
+          getSetCCResultType(CondLHSVT) == Cond.getValueType())
+        std::tie(CL, CH) = DAG.SplitVector(Cond, dl);
+      else
+        SplitVecRes_SETCC(Cond.getNode(), CL, CH);
+    } else
       std::tie(CL, CH) = DAG.SplitVector(Cond, dl);
   }
 

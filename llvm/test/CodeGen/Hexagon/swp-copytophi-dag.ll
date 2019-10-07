@@ -1,7 +1,7 @@
 ; REQUIRES: asserts
 ;
 ; RUN: llc -march=hexagon -enable-pipeliner=true -debug-only=pipeliner < %s \
-; RUN: 2>&1 | FileCheck %s
+; RUN: 2>&1 -pipeliner-experimental-cg=true | FileCheck %s
 
 ; Test that the artificial dependence is created as a result of
 ; CopyToPhi DAG mutation.

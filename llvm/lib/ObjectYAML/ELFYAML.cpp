@@ -1029,6 +1029,7 @@ static void sectionMapping(IO &IO, ELFYAML::HashSection &Section) {
   IO.mapOptional("Content", Section.Content);
   IO.mapOptional("Bucket", Section.Bucket);
   IO.mapOptional("Chain", Section.Chain);
+  IO.mapOptional("Size", Section.Size);
 }
 
 static void sectionMapping(IO &IO, ELFYAML::NoBitsSection &Section) {
@@ -1068,6 +1069,13 @@ static void groupSectionMapping(IO &IO, ELFYAML::Group &Group) {
 static void sectionMapping(IO &IO, ELFYAML::SymtabShndxSection &Section) {
   commonSectionMapping(IO, Section);
   IO.mapRequired("Entries", Section.Entries);
+}
+
+static void sectionMapping(IO &IO, ELFYAML::AddrsigSection &Section) {
+  commonSectionMapping(IO, Section);
+  IO.mapOptional("Content", Section.Content);
+  IO.mapOptional("Size", Section.Size);
+  IO.mapOptional("Symbols", Section.Symbols);
 }
 
 void MappingTraits<ELFYAML::SectionOrType>::mapping(
@@ -1160,6 +1168,11 @@ void MappingTraits<std::unique_ptr<ELFYAML::Section>>::mapping(
       Section.reset(new ELFYAML::SymtabShndxSection());
     sectionMapping(IO, *cast<ELFYAML::SymtabShndxSection>(Section.get()));
     break;
+  case ELF::SHT_LLVM_ADDRSIG:
+    if (!IO.outputting())
+      Section.reset(new ELFYAML::AddrsigSection());
+    sectionMapping(IO, *cast<ELFYAML::AddrsigSection>(Section.get()));
+    break;
   default:
     if (!IO.outputting()) {
       StringRef Name;
@@ -1210,19 +1223,50 @@ StringRef MappingTraits<std::unique_ptr<ELFYAML::Section>>::validate(
   }
 
   if (const auto *HS = dyn_cast<ELFYAML::HashSection>(Section.get())) {
-    if (!HS->Content && !HS->Bucket && !HS->Chain)
-      return "one of \"Content\", \"Bucket\" or \"Chain\" must be specified";
+    if (!HS->Content && !HS->Bucket && !HS->Chain && !HS->Size)
+      return "one of \"Content\", \"Size\", \"Bucket\" or \"Chain\" must be "
+             "specified";
 
-    if (HS->Content) {
+    if (HS->Content || HS->Size) {
+      if (HS->Size && HS->Content &&
+          (uint64_t)*HS->Size < HS->Content->binary_size())
+        return "\"Size\" must be greater than or equal to the content "
+               "size";
+
       if (HS->Bucket)
-        return "\"Content\" and \"Bucket\" cannot be used together";
+        return "\"Bucket\" cannot be used with \"Content\" or \"Size\"";
       if (HS->Chain)
-        return "\"Content\" and \"Chain\" cannot be used together";
+        return "\"Chain\" cannot be used with \"Content\" or \"Size\"";
       return {};
     }
 
     if ((HS->Bucket && !HS->Chain) || (!HS->Bucket && HS->Chain))
       return "\"Bucket\" and \"Chain\" must be used together";
+    return {};
+  }
+
+  if (const auto *Sec = dyn_cast<ELFYAML::AddrsigSection>(Section.get())) {
+    if (!Sec->Symbols && !Sec->Content && !Sec->Size)
+      return "one of \"Content\", \"Size\" or \"Symbols\" must be specified";
+
+    if (Sec->Content || Sec->Size) {
+      if (Sec->Size && Sec->Content &&
+          (uint64_t)*Sec->Size < Sec->Content->binary_size())
+        return "\"Size\" must be greater than or equal to the content "
+               "size";
+
+      if (Sec->Symbols)
+        return "\"Symbols\" cannot be used with \"Content\" or \"Size\"";
+      return {};
+    }
+
+    if (!Sec->Symbols)
+      return {};
+
+    for (const ELFYAML::AddrsigSymbol &AS : *Sec->Symbols)
+      if (AS.Index && AS.Name)
+        return "\"Index\" and \"Name\" cannot be used together when defining a "
+               "symbol";
     return {};
   }
 
@@ -1331,6 +1375,12 @@ void MappingTraits<ELFYAML::Object>::mapping(IO &IO, ELFYAML::Object &Object) {
   IO.mapOptional("Symbols", Object.Symbols);
   IO.mapOptional("DynamicSymbols", Object.DynamicSymbols);
   IO.setContext(nullptr);
+}
+
+void MappingTraits<ELFYAML::AddrsigSymbol>::mapping(IO &IO, ELFYAML::AddrsigSymbol &Sym) {
+  assert(IO.getContext() && "The IO context is not initialized");
+  IO.mapOptional("Name", Sym.Name);
+  IO.mapOptional("Index", Sym.Index);
 }
 
 LLVM_YAML_STRONG_TYPEDEF(uint8_t, MIPS_AFL_REG)

@@ -21,18 +21,31 @@
 namespace llvm {
 namespace jitlink {
 
-/// A generic parser for eh-frame sections.
+/// A generic binary parser for eh-frame sections.
 ///
-/// Adds atoms representing CIE and FDE entries, using the given FDE-to-CIE and
-/// FDEToTarget relocation kinds.
-class EHFrameParser {
+/// Adds blocks and symbols representing CIE and FDE entries to a JITLink graph.
+///
+/// This parser assumes that the user has already verified that the EH-frame's
+/// address range does not overlap any other section/symbol, so that generated
+/// CIE/FDE records do not overlap other sections/symbols.
+class EHFrameBinaryParser {
 public:
-  EHFrameParser(AtomGraph &G, Section &EHFrameSection, StringRef EHFrameContent,
-                JITTargetAddress EHFrameAddress, Edge::Kind FDEToCIERelocKind,
-                Edge::Kind FDEToTargetRelocKind);
-  Error atomize();
+  EHFrameBinaryParser(JITTargetAddress EHFrameAddress, StringRef EHFrameContent,
+                      unsigned PointerSize, support::endianness Endianness);
+  virtual ~EHFrameBinaryParser() {}
+
+  Error addToGraph();
 
 private:
+  virtual void anchor();
+  virtual Symbol *getSymbolAtAddress(JITTargetAddress Addr) = 0;
+  virtual Symbol &createCIERecord(JITTargetAddress RecordAddr,
+                                  StringRef RecordContent) = 0;
+  virtual Expected<Symbol &>
+  createFDERecord(JITTargetAddress RecordAddr, StringRef RecordContent,
+                  Symbol &CIE, size_t CIEOffset, Symbol &Func,
+                  size_t FuncOffset, Symbol *LSDA, size_t LSDAOffset) = 0;
+
   struct AugmentationInfo {
     bool AugmentationDataPresent = false;
     bool EHDataFieldPresent = false;
@@ -41,30 +54,23 @@ private:
 
   Expected<AugmentationInfo> parseAugmentationString();
   Expected<JITTargetAddress> readAbsolutePointer();
-  Error processCIE();
-  Error processFDE(JITTargetAddress CIEPointerAddress, uint32_t CIEPointer);
+  Error processCIE(size_t RecordOffset, size_t RecordLength);
+  Error processFDE(size_t RecordOffset, size_t RecordLength,
+                   JITTargetAddress CIEPointerOffset, uint32_t CIEPointer);
 
   struct CIEInformation {
     CIEInformation() = default;
-    CIEInformation(DefinedAtom &CIEAtom) : CIEAtom(&CIEAtom) {}
-    DefinedAtom *CIEAtom = nullptr;
+    CIEInformation(Symbol &CIESymbol) : CIESymbol(&CIESymbol) {}
+    Symbol *CIESymbol = nullptr;
     bool FDEsHaveLSDAField = false;
   };
 
-  AtomGraph &G;
-  Section &EHFrameSection;
-  StringRef EHFrameContent;
   JITTargetAddress EHFrameAddress;
+  StringRef EHFrameContent;
+  unsigned PointerSize;
   BinaryStreamReader EHFrameReader;
-  DefinedAtom *CurRecordAtom = nullptr;
   DenseMap<JITTargetAddress, CIEInformation> CIEInfos;
-  Edge::Kind FDEToCIERelocKind;
-  Edge::Kind FDEToTargetRelocKind;
 };
-
-Error addEHFrame(AtomGraph &G, Section &EHFrameSection,
-                 StringRef EHFrameContent, JITTargetAddress EHFrameAddress,
-                 Edge::Kind FDEToCIERelocKind, Edge::Kind FDEToTargetRelocKind);
 
 } // end namespace jitlink
 } // end namespace llvm

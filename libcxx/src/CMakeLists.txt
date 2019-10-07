@@ -204,35 +204,6 @@ function(cxx_set_common_defines name)
   if(LIBCXX_CXX_ABI_HEADER_TARGET)
     add_dependencies(${name} ${LIBCXX_CXX_ABI_HEADER_TARGET})
   endif()
-  # Our visibility annotations are not quite right for non-Clang compilers,
-  # so we end up not exporting all the symbols we should. In the future, we
-  # can improve the situation by providing an explicit list of exported
-  # symbols on all compilers.
-  if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    target_compile_options(${name} PRIVATE -fvisibility=hidden)
-  endif()
-  if(WIN32 AND NOT MINGW)
-    target_compile_definitions(${name}
-                               PRIVATE
-                                 # Ignore the -MSC_VER mismatch, as we may build
-                                 # with a different compatibility version.
-                                 _ALLOW_MSC_VER_MISMATCH
-                                 # Don't check the msvcprt iterator debug levels
-                                 # as we will define the iterator types; libc++
-                                 # uses a different macro to identify the debug
-                                 # level.
-                                 _ALLOW_ITERATOR_DEBUG_LEVEL_MISMATCH
-                                 # We are building the c++ runtime, don't pull in
-                                 # msvcprt.
-                                 _CRTBLD
-                                 # Don't warn on the use of "deprecated"
-                                 # "insecure" functions which are standards
-                                 # specified.
-                                 _CRT_SECURE_NO_WARNINGS
-                                 # Use the ISO conforming behaviour for conversion
-                                 # in printf, scanf.
-                                 _CRT_STDIO_ISO_WIDE_SPECIFIERS)
-  endif()
 
   if (LIBCXX_ENABLE_PARALLEL_ALGORITHMS)
     target_link_libraries(${name} PUBLIC pstl::ParallelSTL)
@@ -259,6 +230,7 @@ if (LIBCXX_ENABLE_SHARED)
       SOVERSION     "${LIBCXX_ABI_VERSION}"
       DEFINE_SYMBOL ""
   )
+  cxx_add_common_build_flags(cxx_shared)
   cxx_set_common_defines(cxx_shared)
 
   # Link against LLVM libunwind
@@ -359,6 +331,7 @@ if (LIBCXX_ENABLE_STATIC)
       LINK_FLAGS    "${LIBCXX_LINK_FLAGS}"
       OUTPUT_NAME   "c++"
   )
+  cxx_add_common_build_flags(cxx_static)
   cxx_set_common_defines(cxx_static)
 
   if (LIBCXX_HERMETIC_STATIC_LIBRARY)
@@ -417,17 +390,19 @@ if (LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY)
     target_link_libraries(cxx_experimental cxx_static)
   endif()
 
-  set(experimental_flags "${LIBCXX_COMPILE_FLAGS}")
-  check_flag_supported(-std=c++14)
-  if (NOT MSVC AND LIBCXX_SUPPORTS_STD_EQ_CXX14_FLAG)
-    string(REPLACE "-std=c++11" "-std=c++14" experimental_flags "${LIBCXX_COMPILE_FLAGS}")
-  endif()
   set_target_properties(cxx_experimental
     PROPERTIES
-      COMPILE_FLAGS "${experimental_flags}"
+      COMPILE_FLAGS "${LIBCXX_COMPILE_FLAGS}"
       OUTPUT_NAME   "c++experimental"
   )
+  cxx_add_common_build_flags(cxx_experimental)
+  # Overwrite the previously-set Standard flag with -std=c++14 if supported
+  check_flag_supported(-std=c++14)
+  if (NOT MSVC AND LIBCXX_SUPPORTS_STD_EQ_CXX14_FLAG)
+    target_compile_options(cxx_experimental PRIVATE "-std=c++14")
+  endif()
 endif()
+
 
 if (LIBCXX_BUILD_EXTERNAL_THREAD_LIBRARY)
   file(GLOB LIBCXX_EXTERNAL_THREADING_SUPPORT_SOURCES ../test/support/external_threads.cpp)

@@ -9,8 +9,10 @@ define float @f(<8 x i16>* %a) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addiu $sp, $sp, -32
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    sw $fp, 28($sp) # 4-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 30, -4
+; CHECK-NEXT:    sw $ra, 28($sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw $fp, 24($sp) # 4-byte Folded Spill
+; CHECK-NEXT:    .cfi_offset 31, -4
+; CHECK-NEXT:    .cfi_offset 30, -8
 ; CHECK-NEXT:    move $fp, $sp
 ; CHECK-NEXT:    .cfi_def_cfa_register 30
 ; CHECK-NEXT:    addiu $1, $zero, -16
@@ -25,7 +27,8 @@ define float @f(<8 x i16>* %a) {
 ; CHECK-NEXT:    sw $1, 4($sp)
 ; CHECK-NEXT:    mtc1 $2, $f0
 ; CHECK-NEXT:    move $sp, $fp
-; CHECK-NEXT:    lw $fp, 28($sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw $fp, 24($sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw $ra, 28($sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 32
 entry:

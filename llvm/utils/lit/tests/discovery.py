@@ -29,7 +29,7 @@
 # RUN: %{python} %{inputs}/config-map-discovery/driver.py \
 # RUN:           %{inputs}/config-map-discovery/main-config/lit.cfg \
 # RUN:           %{inputs}/config-map-discovery/lit.alt.cfg \
-# RUN:           --threads=1 --debug --show-tests --show-suites > %t.out 2> %t.err
+# RUN:           --workers=1 --debug --show-tests --show-suites > %t.out 2> %t.err
 # RUN: FileCheck --check-prefix=CHECK-CONFIG-MAP-OUT < %t.out %s
 # RUN: FileCheck --check-prefix=CHECK-CONFIG-MAP-ERR < %t.err %s
 

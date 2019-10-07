@@ -30,7 +30,7 @@ define void @f1(float %f1, float %f2, float *%ptr1, float *%ptr2) {
   ret void
 }
 
-define void @f2(float %f1, float %f2, float *%ptr1, float *%ptr2) {
+define void @f2(float %f1, float %f2, float *%ptr1, float *%ptr2) #0 {
 ; CHECK-LABEL: f2:
 ; CHECK: sqebr
 ; CHECK: ste
@@ -41,11 +41,11 @@ define void @f2(float %f1, float %f2, float *%ptr1, float *%ptr2) {
   %sqrt1 = call float @llvm.experimental.constrained.sqrt.f32(
                         float %f1,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.ignore")
+                        metadata !"fpexcept.ignore") #0
   %sqrt2 = call float @llvm.experimental.constrained.sqrt.f32(
                         float %f2,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.ignore")
+                        metadata !"fpexcept.ignore") #0
 
   store float %sqrt1, float *%ptr1
   store float %sqrt2, float *%ptr2
@@ -53,7 +53,7 @@ define void @f2(float %f1, float %f2, float *%ptr1, float *%ptr2) {
   ret void
 }
 
-define void @f3(float %f1, float %f2, float *%ptr1, float *%ptr2) {
+define void @f3(float %f1, float %f2, float *%ptr1, float *%ptr2) #0 {
 ; CHECK-LABEL: f3:
 ; CHECK: sqebr
 ; CHECK: ste
@@ -64,11 +64,11 @@ define void @f3(float %f1, float %f2, float *%ptr1, float *%ptr2) {
   %sqrt1 = call float @llvm.experimental.constrained.sqrt.f32(
                         float %f1,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   %sqrt2 = call float @llvm.experimental.constrained.sqrt.f32(
                         float %f2,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
 
   store float %sqrt1, float *%ptr1
   store float %sqrt2, float *%ptr2
@@ -98,7 +98,7 @@ define void @f4(float %f1, float %f2, float *%ptr1, float *%ptr2) {
   ret void
 }
 
-define void @f5(float %f1, float %f2, float *%ptr1, float *%ptr2) {
+define void @f5(float %f1, float %f2, float *%ptr1, float *%ptr2) #0 {
 ; CHECK-LABEL: f5:
 ; CHECK: sqebr
 ; CHECK: ste
@@ -109,11 +109,11 @@ define void @f5(float %f1, float %f2, float *%ptr1, float *%ptr2) {
   %sqrt1 = call float @llvm.experimental.constrained.sqrt.f32(
                         float %f1,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.ignore")
+                        metadata !"fpexcept.ignore") #0
   %sqrt2 = call float @llvm.experimental.constrained.sqrt.f32(
                         float %f2,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.ignore")
+                        metadata !"fpexcept.ignore") #0
 
   store volatile float %sqrt1, float *%ptr1
   store volatile float %sqrt2, float *%ptr2
@@ -121,7 +121,7 @@ define void @f5(float %f1, float %f2, float *%ptr1, float *%ptr2) {
   ret void
 }
 
-define void @f6(float %f1, float %f2, float *%ptr1, float *%ptr2) {
+define void @f6(float %f1, float %f2, float *%ptr1, float *%ptr2) #0 {
 ; CHECK-LABEL: f6:
 ; CHECK: sqebr
 ; CHECK: sqebr
@@ -132,11 +132,11 @@ define void @f6(float %f1, float %f2, float *%ptr1, float *%ptr2) {
   %sqrt1 = call float @llvm.experimental.constrained.sqrt.f32(
                         float %f1,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   %sqrt2 = call float @llvm.experimental.constrained.sqrt.f32(
                         float %f2,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
 
   store volatile float %sqrt1, float *%ptr1
   store volatile float %sqrt2, float *%ptr2
@@ -166,7 +166,7 @@ define void @f7(float %f1, float %f2, float *%ptr1, float *%ptr2) {
   ret void
 }
 
-define void @f8(float %f1, float %f2, float *%ptr1, float *%ptr2) {
+define void @f8(float %f1, float %f2, float *%ptr1, float *%ptr2) #0 {
 ; CHECK-LABEL: f8:
 ; CHECK: sqebr
 ; CHECK: sqebr
@@ -177,13 +177,13 @@ define void @f8(float %f1, float %f2, float *%ptr1, float *%ptr2) {
   %sqrt1 = call float @llvm.experimental.constrained.sqrt.f32(
                         float %f1,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.ignore")
+                        metadata !"fpexcept.ignore") #0
   %sqrt2 = call float @llvm.experimental.constrained.sqrt.f32(
                         float %f2,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.ignore")
+                        metadata !"fpexcept.ignore") #0
 
-  call void @llvm.s390.sfpc(i32 0)
+  call void @llvm.s390.sfpc(i32 0) #0
 
   store float %sqrt1, float *%ptr1
   store float %sqrt2, float *%ptr2
@@ -191,7 +191,7 @@ define void @f8(float %f1, float %f2, float *%ptr1, float *%ptr2) {
   ret void
 }
 
-define void @f9(float %f1, float %f2, float *%ptr1, float *%ptr2) {
+define void @f9(float %f1, float %f2, float *%ptr1, float *%ptr2) #0 {
 ; CHECK-LABEL: f9:
 ; CHECK: sqebr
 ; CHECK: sqebr
@@ -202,13 +202,13 @@ define void @f9(float %f1, float %f2, float *%ptr1, float *%ptr2) {
   %sqrt1 = call float @llvm.experimental.constrained.sqrt.f32(
                         float %f1,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   %sqrt2 = call float @llvm.experimental.constrained.sqrt.f32(
                         float %f2,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
 
-  call void @llvm.s390.sfpc(i32 0)
+  call void @llvm.s390.sfpc(i32 0) #0
 
   store float %sqrt1, float *%ptr1
   store float %sqrt2, float *%ptr2
@@ -216,3 +216,4 @@ define void @f9(float %f1, float %f2, float *%ptr1, float *%ptr2) {
   ret void
 }
 
+attributes #0 = { strictfp }

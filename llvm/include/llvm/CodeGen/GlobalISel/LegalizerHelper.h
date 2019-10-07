@@ -230,6 +230,8 @@ public:
   LegalizeResult lowerUnmergeValues(MachineInstr &MI);
   LegalizeResult lowerShuffleVector(MachineInstr &MI);
   LegalizeResult lowerDynStackAlloc(MachineInstr &MI);
+  LegalizeResult lowerExtract(MachineInstr &MI);
+  LegalizeResult lowerInsert(MachineInstr &MI);
 
 private:
   MachineRegisterInfo &MRI;

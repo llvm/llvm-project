@@ -25,6 +25,11 @@
 
 #include <memory>
 
+#if defined(__APPLE__) && (defined(__arm64__) || defined(__aarch64__))
+#include <sys/types.h>
+#include <sys/sysctl.h>
+#endif
+
 // Support building against older versions of LLVM, this macro was added
 // recently.
 #ifndef LLVM_EXTENSION

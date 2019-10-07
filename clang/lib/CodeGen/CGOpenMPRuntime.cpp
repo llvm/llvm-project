@@ -2868,7 +2868,8 @@ llvm::Function *CGOpenMPRuntime::emitThreadPrivateVarDefinition(
 bool CGOpenMPRuntime::emitDeclareTargetVarDefinition(const VarDecl *VD,
                                                      llvm::GlobalVariable *Addr,
                                                      bool PerformInit) {
-  if (CGM.getLangOpts().OMPTargetTriples.empty())
+  if (CGM.getLangOpts().OMPTargetTriples.empty() &&
+      !CGM.getLangOpts().OpenMPIsDevice)
     return false;
   Optional<OMPDeclareTargetDeclAttr::MapTypeTy> Res =
       OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD);
@@ -3375,9 +3376,9 @@ void CGOpenMPRuntime::emitSingleRegion(CodeGenFunction &CGF,
   // <copy_func>, did_it);
   if (DidIt.isValid()) {
     llvm::APInt ArraySize(/*unsigned int numBits=*/32, CopyprivateVars.size());
-    QualType CopyprivateArrayTy =
-        C.getConstantArrayType(C.VoidPtrTy, ArraySize, ArrayType::Normal,
-                               /*IndexTypeQuals=*/0);
+    QualType CopyprivateArrayTy = C.getConstantArrayType(
+        C.VoidPtrTy, ArraySize, nullptr, ArrayType::Normal,
+        /*IndexTypeQuals=*/0);
     // Create a list of all private variables for copyprivate.
     Address CopyprivateList =
         CGF.CreateMemTemp(CopyprivateArrayTy, ".omp.copyprivate.cpr_list");
@@ -4201,7 +4202,9 @@ void CGOpenMPRuntime::createOffloadEntriesAndInfoMetadata() {
 
   llvm::Module &M = CGM.getModule();
   llvm::LLVMContext &C = M.getContext();
-  SmallVector<const OffloadEntriesInfoManagerTy::OffloadEntryInfo *, 16>
+  SmallVector<std::tuple<const OffloadEntriesInfoManagerTy::OffloadEntryInfo *,
+                         SourceLocation, StringRef>,
+              16>
       OrderedEntries(OffloadEntriesInfoManager.size());
   llvm::SmallVector<StringRef, 16> ParentFunctions(
       OffloadEntriesInfoManager.size());
@@ -4219,7 +4222,8 @@ void CGOpenMPRuntime::createOffloadEntriesAndInfoMetadata() {
 
   // Create function that emits metadata for each target region entry;
   auto &&TargetRegionMetadataEmitter =
-      [&C, MD, &OrderedEntries, &ParentFunctions, &GetMDInt, &GetMDString](
+      [this, &C, MD, &OrderedEntries, &ParentFunctions, &GetMDInt,
+       &GetMDString](
           unsigned DeviceID, unsigned FileID, StringRef ParentName,
           unsigned Line,
           const OffloadEntriesInfoManagerTy::OffloadEntryInfoTargetRegion &E) {
@@ -4237,8 +4241,19 @@ void CGOpenMPRuntime::createOffloadEntriesAndInfoMetadata() {
                                  GetMDInt(FileID),      GetMDString(ParentName),
                                  GetMDInt(Line),        GetMDInt(E.getOrder())};
 
+        SourceLocation Loc;
+        for (auto I = CGM.getContext().getSourceManager().fileinfo_begin(),
+                  E = CGM.getContext().getSourceManager().fileinfo_end();
+             I != E; ++I) {
+          if (I->getFirst()->getUniqueID().getDevice() == DeviceID &&
+              I->getFirst()->getUniqueID().getFile() == FileID) {
+            Loc = CGM.getContext().getSourceManager().translateFileLineCol(
+                I->getFirst(), Line, 1);
+            break;
+          }
+        }
         // Save this entry in the right position of the ordered entries array.
-        OrderedEntries[E.getOrder()] = &E;
+        OrderedEntries[E.getOrder()] = std::make_tuple(&E, Loc, ParentName);
         ParentFunctions[E.getOrder()] = ParentName;
 
         // Add metadata to the named metadata node.
@@ -4266,7 +4281,8 @@ void CGOpenMPRuntime::createOffloadEntriesAndInfoMetadata() {
             GetMDInt(E.getFlags()), GetMDInt(E.getOrder())};
 
         // Save this entry in the right position of the ordered entries array.
-        OrderedEntries[E.getOrder()] = &E;
+        OrderedEntries[E.getOrder()] =
+            std::make_tuple(&E, SourceLocation(), MangledName);
 
         // Add metadata to the named metadata node.
         MD->addOperand(llvm::MDNode::get(C, Ops));
@@ -4275,11 +4291,11 @@ void CGOpenMPRuntime::createOffloadEntriesAndInfoMetadata() {
   OffloadEntriesInfoManager.actOnDeviceGlobalVarEntriesInfo(
       DeviceGlobalVarMetadataEmitter);
 
-  for (const auto *E : OrderedEntries) {
-    assert(E && "All ordered entries must exist!");
+  for (const auto &E : OrderedEntries) {
+    assert(std::get<0>(E) && "All ordered entries must exist!");
     if (const auto *CE =
             dyn_cast<OffloadEntriesInfoManagerTy::OffloadEntryInfoTargetRegion>(
-                E)) {
+                std::get<0>(E))) {
       if (!CE->getID() || !CE->getAddress()) {
         // Do not blame the entry if the parent funtion is not emitted.
         StringRef FnName = ParentFunctions[CE->getOrder()];
@@ -4287,16 +4303,16 @@ void CGOpenMPRuntime::createOffloadEntriesAndInfoMetadata() {
           continue;
         unsigned DiagID = CGM.getDiags().getCustomDiagID(
             DiagnosticsEngine::Error,
-            "Offloading entry for target region is incorrect: either the "
+            "Offloading entry for target region in %0 is incorrect: either the "
             "address or the ID is invalid.");
-        CGM.getDiags().Report(DiagID);
+        CGM.getDiags().Report(std::get<1>(E), DiagID) << FnName;
         continue;
       }
       createOffloadEntry(CE->getID(), CE->getAddress(), /*Size=*/0,
                          CE->getFlags(), llvm::GlobalValue::WeakAnyLinkage);
-    } else if (const auto *CE =
-                   dyn_cast<OffloadEntriesInfoManagerTy::
-                                OffloadEntryInfoDeviceGlobalVar>(E)) {
+    } else if (const auto *CE = dyn_cast<OffloadEntriesInfoManagerTy::
+                                             OffloadEntryInfoDeviceGlobalVar>(
+                   std::get<0>(E))) {
       OffloadEntriesInfoManagerTy::OMPTargetGlobalVarEntryKind Flags =
           static_cast<OffloadEntriesInfoManagerTy::OMPTargetGlobalVarEntryKind>(
               CE->getFlags());
@@ -4307,10 +4323,10 @@ void CGOpenMPRuntime::createOffloadEntriesAndInfoMetadata() {
           continue;
         if (!CE->getAddress()) {
           unsigned DiagID = CGM.getDiags().getCustomDiagID(
-              DiagnosticsEngine::Error,
-              "Offloading entry for declare target variable is incorrect: the "
-              "address is invalid.");
-          CGM.getDiags().Report(DiagID);
+              DiagnosticsEngine::Error, "Offloading entry for declare target "
+                                        "variable %0 is incorrect: the "
+                                        "address is invalid.");
+          CGM.getDiags().Report(std::get<1>(E), DiagID) << std::get<2>(E);
           continue;
         }
         // The vaiable has no definition - no need to add the entry.
@@ -5346,7 +5362,7 @@ void CGOpenMPRuntime::emitTaskCall(CodeGenFunction &CGF, SourceLocation Loc,
     // Define type kmp_depend_info[<Dependences.size()>];
     QualType KmpDependInfoArrayTy = C.getConstantArrayType(
         KmpDependInfoTy, llvm::APInt(/*numBits=*/64, NumDependencies),
-        ArrayType::Normal, /*IndexTypeQuals=*/0);
+        nullptr, ArrayType::Normal, /*IndexTypeQuals=*/0);
     // kmp_depend_info[<Dependences.size()>] deps;
     DependenciesArray =
         CGF.CreateMemTemp(KmpDependInfoArrayTy, ".dep.arr.addr");
@@ -5867,7 +5883,7 @@ void CGOpenMPRuntime::emitReduction(CodeGenFunction &CGF, SourceLocation Loc,
   }
   llvm::APInt ArraySize(/*unsigned int numBits=*/32, Size);
   QualType ReductionArrayTy =
-      C.getConstantArrayType(C.VoidPtrTy, ArraySize, ArrayType::Normal,
+      C.getConstantArrayType(C.VoidPtrTy, ArraySize, nullptr, ArrayType::Normal,
                              /*IndexTypeQuals=*/0);
   Address ReductionList =
       CGF.CreateMemTemp(ReductionArrayTy, ".omp.reduction.red_list");
@@ -6339,7 +6355,7 @@ llvm::Value *CGOpenMPRuntime::emitTaskReductionInit(
   unsigned Size = Data.ReductionVars.size();
   llvm::APInt ArraySize(/*numBits=*/64, Size);
   QualType ArrayRDType = C.getConstantArrayType(
-      RDType, ArraySize, ArrayType::Normal, /*IndexTypeQuals=*/0);
+      RDType, ArraySize, nullptr, ArrayType::Normal, /*IndexTypeQuals=*/0);
   // kmp_task_red_input_t .rd_input.[Size];
   Address TaskRedInput = CGF.CreateMemTemp(ArrayRDType, ".rd_input.");
   ReductionCodeGen RCG(Data.ReductionVars, Data.ReductionCopies,
@@ -8695,9 +8711,9 @@ emitOffloadingArrays(CodeGenFunction &CGF,
       }
 
     llvm::APInt PointerNumAP(32, Info.NumberOfPtrs, /*isSigned=*/true);
-    QualType PointerArrayType =
-        Ctx.getConstantArrayType(Ctx.VoidPtrTy, PointerNumAP, ArrayType::Normal,
-                                 /*IndexTypeQuals=*/0);
+    QualType PointerArrayType = Ctx.getConstantArrayType(
+        Ctx.VoidPtrTy, PointerNumAP, nullptr, ArrayType::Normal,
+        /*IndexTypeQuals=*/0);
 
     Info.BasePointersArray =
         CGF.CreateMemTemp(PointerArrayType, ".offload_baseptrs").getPointer();
@@ -8710,9 +8726,9 @@ emitOffloadingArrays(CodeGenFunction &CGF,
     QualType Int64Ty =
         Ctx.getIntTypeForBitwidth(/*DestWidth=*/64, /*Signed=*/1);
     if (hasRuntimeEvaluationCaptureSize) {
-      QualType SizeArrayType =
-          Ctx.getConstantArrayType(Int64Ty, PointerNumAP, ArrayType::Normal,
-                                   /*IndexTypeQuals=*/0);
+      QualType SizeArrayType = Ctx.getConstantArrayType(
+          Int64Ty, PointerNumAP, nullptr, ArrayType::Normal,
+          /*IndexTypeQuals=*/0);
       Info.SizesArray =
           CGF.CreateMemTemp(SizeArrayType, ".offload_sizes").getPointer();
     } else {
@@ -9791,7 +9807,8 @@ CGOpenMPRuntime::registerTargetFirstprivateCopy(CodeGenFunction &CGF,
 
 void CGOpenMPRuntime::registerTargetGlobalVariable(const VarDecl *VD,
                                                    llvm::Constant *Addr) {
-  if (CGM.getLangOpts().OMPTargetTriples.empty())
+  if (CGM.getLangOpts().OMPTargetTriples.empty() &&
+      !CGM.getLangOpts().OpenMPIsDevice)
     return;
   llvm::Optional<OMPDeclareTargetDeclAttr::MapTypeTy> Res =
       OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD);
@@ -10950,7 +10967,7 @@ void CGOpenMPRuntime::emitDoacrossInit(CodeGenFunction &CGF,
   }
   llvm::APInt Size(/*numBits=*/32, NumIterations.size());
   QualType ArrayTy =
-      C.getConstantArrayType(KmpDimTy, Size, ArrayType::Normal, 0);
+      C.getConstantArrayType(KmpDimTy, Size, nullptr, ArrayType::Normal, 0);
 
   Address DimsAddr = CGF.CreateMemTemp(ArrayTy, "dims");
   CGF.EmitNullInitialization(DimsAddr, ArrayTy);
@@ -11001,7 +11018,7 @@ void CGOpenMPRuntime::emitDoacrossOrdered(CodeGenFunction &CGF,
       CGM.getContext().getIntTypeForBitwidth(/*DestWidth=*/64, /*Signed=*/1);
   llvm::APInt Size(/*numBits=*/32, C->getNumLoops());
   QualType ArrayTy = CGM.getContext().getConstantArrayType(
-      Int64Ty, Size, ArrayType::Normal, 0);
+      Int64Ty, Size, nullptr, ArrayType::Normal, 0);
   Address CntAddr = CGF.CreateMemTemp(ArrayTy, ".cnt.addr");
   for (unsigned I = 0, E = C->getNumLoops(); I < E; ++I) {
     const Expr *CounterVal = C->getLoopData(I);
@@ -11158,37 +11175,87 @@ bool checkContext<OMPDeclareVariantAttr::CtxSetImplementation,
   return !A->getImplVendor().compare("llvm");
 }
 
+static bool greaterCtxScore(ASTContext &Ctx, const Expr *LHS, const Expr *RHS) {
+  // If both scores are unknown, choose the very first one.
+  if (!LHS && !RHS)
+    return true;
+  // If only one is known, return this one.
+  if (LHS && !RHS)
+    return true;
+  if (!LHS && RHS)
+    return false;
+  llvm::APSInt LHSVal = LHS->EvaluateKnownConstInt(Ctx);
+  llvm::APSInt RHSVal = RHS->EvaluateKnownConstInt(Ctx);
+  return llvm::APSInt::compareValues(LHSVal, RHSVal) <= 0;
+}
+
+namespace {
+/// Comparator for the priority queue for context selector.
+class OMPDeclareVariantAttrComparer
+    : public std::greater<const OMPDeclareVariantAttr *> {
+private:
+  ASTContext &Ctx;
+
+public:
+  OMPDeclareVariantAttrComparer(ASTContext &Ctx) : Ctx(Ctx) {}
+  bool operator()(const OMPDeclareVariantAttr *LHS,
+                  const OMPDeclareVariantAttr *RHS) const {
+    const Expr *LHSExpr = nullptr;
+    const Expr *RHSExpr = nullptr;
+    if (LHS->getCtxScore() == OMPDeclareVariantAttr::ScoreSpecified)
+      LHSExpr = LHS->getScore();
+    if (RHS->getCtxScore() == OMPDeclareVariantAttr::ScoreSpecified)
+      RHSExpr = RHS->getScore();
+    return greaterCtxScore(Ctx, LHSExpr, RHSExpr);
+  }
+};
+} // anonymous namespace
+
 /// Finds the variant function that matches current context with its context
 /// selector.
-static const FunctionDecl *getDeclareVariantFunction(const FunctionDecl *FD) {
+static const FunctionDecl *getDeclareVariantFunction(ASTContext &Ctx,
+                                                     const FunctionDecl *FD) {
   if (!FD->hasAttrs() || !FD->hasAttr<OMPDeclareVariantAttr>())
     return FD;
   // Iterate through all DeclareVariant attributes and check context selectors.
-  SmallVector<const OMPDeclareVariantAttr *, 4> MatchingAttributes;
-  for (const auto * A : FD->specific_attrs<OMPDeclareVariantAttr>()) {
+  auto &&Comparer = [&Ctx](const OMPDeclareVariantAttr *LHS,
+                           const OMPDeclareVariantAttr *RHS) {
+    const Expr *LHSExpr = nullptr;
+    const Expr *RHSExpr = nullptr;
+    if (LHS->getCtxScore() == OMPDeclareVariantAttr::ScoreSpecified)
+      LHSExpr = LHS->getScore();
+    if (RHS->getCtxScore() == OMPDeclareVariantAttr::ScoreSpecified)
+      RHSExpr = RHS->getScore();
+    return greaterCtxScore(Ctx, LHSExpr, RHSExpr);
+  };
+  const OMPDeclareVariantAttr *TopMostAttr = nullptr;
+  for (const auto *A : FD->specific_attrs<OMPDeclareVariantAttr>()) {
+    const OMPDeclareVariantAttr *SelectedAttr = nullptr;
     switch (A->getCtxSelectorSet()) {
     case OMPDeclareVariantAttr::CtxSetImplementation:
       switch (A->getCtxSelector()) {
       case OMPDeclareVariantAttr::CtxVendor:
         if (checkContext<OMPDeclareVariantAttr::CtxSetImplementation,
                          OMPDeclareVariantAttr::CtxVendor>(A))
-          MatchingAttributes.push_back(A);
+          SelectedAttr = A;
         break;
       case OMPDeclareVariantAttr::CtxUnknown:
         llvm_unreachable(
-            "Unknown context selector in implementation selctor set.");
+            "Unknown context selector in implementation selector set.");
       }
       break;
     case OMPDeclareVariantAttr::CtxSetUnknown:
       llvm_unreachable("Unknown context selector set.");
     }
+    // If the attribute matches the context, find the attribute with the highest
+    // score.
+    if (SelectedAttr && (!TopMostAttr || Comparer(TopMostAttr, SelectedAttr)))
+      TopMostAttr = SelectedAttr;
   }
-  if (MatchingAttributes.empty())
+  if (!TopMostAttr)
     return FD;
-  // TODO: implement score analysis of multiple context selectors.
-  const OMPDeclareVariantAttr *MainAttr = MatchingAttributes.front();
   return cast<FunctionDecl>(
-      cast<DeclRefExpr>(MainAttr->getVariantFuncRef()->IgnoreParenImpCasts())
+      cast<DeclRefExpr>(TopMostAttr->getVariantFuncRef()->IgnoreParenImpCasts())
           ->getDecl());
 }
 
@@ -11199,7 +11266,7 @@ bool CGOpenMPRuntime::emitDeclareVariant(GlobalDecl GD, bool IsForDefinition) {
   llvm::GlobalValue *Orig = CGM.GetGlobalValue(MangledName);
   if (Orig && !Orig->isDeclaration())
     return false;
-  const FunctionDecl *NewFD = getDeclareVariantFunction(D);
+  const FunctionDecl *NewFD = getDeclareVariantFunction(CGM.getContext(), D);
   // Emit original function if it does not have declare variant attribute or the
   // context does not match.
   if (NewFD == D)

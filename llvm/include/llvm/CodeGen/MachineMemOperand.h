@@ -293,8 +293,6 @@ public:
 
   /// Support for operator<<.
   /// @{
-  void print(raw_ostream &OS) const;
-  void print(raw_ostream &OS, ModuleSlotTracker &MST) const;
   void print(raw_ostream &OS, ModuleSlotTracker &MST,
              SmallVectorImpl<StringRef> &SSNs, const LLVMContext &Context,
              const MachineFrameInfo *MFI, const TargetInstrInfo *TII) const;
@@ -318,11 +316,6 @@ public:
     return !(LHS == RHS);
   }
 };
-
-inline raw_ostream &operator<<(raw_ostream &OS, const MachineMemOperand &MRO) {
-  MRO.print(OS);
-  return OS;
-}
 
 } // End llvm namespace
 

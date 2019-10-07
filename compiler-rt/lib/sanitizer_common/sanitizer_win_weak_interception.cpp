@@ -38,6 +38,7 @@ int interceptWhenPossible(uptr dll_function, const char *real_function) {
 
 // Declare weak hooks.
 extern "C" {
+void __sanitizer_on_print(const char *str);
 void __sanitizer_weak_hook_memcmp(uptr called_pc, const void *s1,
                                   const void *s2, uptr n, int result);
 void __sanitizer_weak_hook_strcmp(uptr called_pc, const char *s1,

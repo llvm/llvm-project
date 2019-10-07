@@ -23,12 +23,12 @@ v1:
   .gpword foo
   .gpword bar
 
-# CHECK: Contents of section .rodata:
-# CHECK:  1000 ffff8004 ffff8008
-#              ^ 0x20004 - 0x28000
-#                       ^ 0x20008 - 0x28000
-
 # CHECK: SYMBOL TABLE:
 # CHECK: 00020008         .text           00000000 bar
 # CHECK: 00020004         .text           00000000 foo
 # CHECK: 00028000         .got            00000000 .hidden _gp
+
+# CHECK: Contents of section .rodata:
+# CHECK:  1000 ffff8004 ffff8008
+#              ^ 0x20004 - 0x28000
+#                       ^ 0x20008 - 0x28000

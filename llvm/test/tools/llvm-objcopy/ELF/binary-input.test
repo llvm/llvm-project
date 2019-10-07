@@ -110,3 +110,11 @@
 # CHECK-NEXT:     Section: Absolute
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]
+
+## The alignment can be changed by --set-section-alignment.
+# RUN: llvm-objcopy -I binary -O elf64-x86-64 --set-section-alignment .data=8 %t.x-txt %t2.o
+# RUN: llvm-readobj --sections %t2.o | FileCheck --check-prefix=ALIGN %s
+
+# ALIGN:      Name: .data
+# ALIGN:      AddressAlignment:
+# ALIGN-SAME:                   8{{$}}

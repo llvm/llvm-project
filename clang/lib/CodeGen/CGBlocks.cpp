@@ -1253,8 +1253,7 @@ llvm::Type *CodeGenModule::getGenericBlockLiteralType() {
 
 RValue CodeGenFunction::EmitBlockCallExpr(const CallExpr *E,
                                           ReturnValueSlot ReturnValue) {
-  const BlockPointerType *BPT =
-    E->getCallee()->getType()->getAs<BlockPointerType>();
+  const auto *BPT = E->getCallee()->getType()->castAs<BlockPointerType>();
   llvm::Value *BlockPtr = EmitScalarExpr(E->getCallee());
   llvm::Type *GenBlockTy = CGM.getGenericBlockLiteralType();
   llvm::Value *Func = nullptr;
@@ -1802,7 +1801,7 @@ struct CallBlockRelease final : EHScopeStack::Cleanup {
 bool CodeGenFunction::cxxDestructorCanThrow(QualType T) {
   if (const auto *RD = T->getAsCXXRecordDecl())
     if (const CXXDestructorDecl *DD = RD->getDestructor())
-      return DD->getType()->getAs<FunctionProtoType>()->canThrow();
+      return DD->getType()->castAs<FunctionProtoType>()->canThrow();
   return false;
 }
 

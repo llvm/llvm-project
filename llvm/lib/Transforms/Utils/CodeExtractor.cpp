@@ -293,10 +293,8 @@ static BasicBlock *getCommonExitBlock(const SetVector<BasicBlock *> &Blocks) {
         CommonExitBlock = Succ;
         continue;
       }
-      if (CommonExitBlock == Succ)
-        continue;
-
-      return true;
+      if (CommonExitBlock != Succ)
+        return true;
     }
     return false;
   };
@@ -537,15 +535,41 @@ void CodeExtractor::findAllocas(ValueSet &SinkCands, ValueSet &HoistCands,
   }
 }
 
+bool CodeExtractor::isEligible() const {
+  if (Blocks.empty())
+    return false;
+  BasicBlock *Header = *Blocks.begin();
+  Function *F = Header->getParent();
+
+  // For functions with varargs, check that varargs handling is only done in the
+  // outlined function, i.e vastart and vaend are only used in outlined blocks.
+  if (AllowVarArgs && F->getFunctionType()->isVarArg()) {
+    auto containsVarArgIntrinsic = [](const Instruction &I) {
+      if (const CallInst *CI = dyn_cast<CallInst>(&I))
+        if (const Function *Callee = CI->getCalledFunction())
+          return Callee->getIntrinsicID() == Intrinsic::vastart ||
+                 Callee->getIntrinsicID() == Intrinsic::vaend;
+      return false;
+    };
+
+    for (auto &BB : *F) {
+      if (Blocks.count(&BB))
+        continue;
+      if (llvm::any_of(BB, containsVarArgIntrinsic))
+        return false;
+    }
+  }
+  return true;
+}
+
 void CodeExtractor::findInputsOutputs(ValueSet &Inputs, ValueSet &Outputs,
                                       const ValueSet &SinkCands) const {
   for (BasicBlock *BB : Blocks) {
     // If a used value is defined outside the region, it's an input.  If an
     // instruction is used outside the region, it's an output.
     for (Instruction &II : *BB) {
-      for (User::op_iterator OI = II.op_begin(), OE = II.op_end(); OI != OE;
-           ++OI) {
-        Value *V = *OI;
+      for (auto &OI : II.operands()) {
+        Value *V = OI;
         if (!SinkCands.count(V) && definedInCaller(Blocks, V))
           Inputs.insert(V);
       }
@@ -1277,13 +1301,6 @@ void CodeExtractor::moveCodeToFunction(Function *newFunction) {
 
     // Insert this basic block into the new function
     newBlocks.push_back(Block);
-
-    // Remove @llvm.assume calls that were moved to the new function from the
-    // old function's assumption cache.
-    if (AC)
-      for (auto &I : *Block)
-        if (match(&I, m_Intrinsic<Intrinsic::assume>()))
-          AC->unregisterAssumption(cast<CallInst>(&I));
   }
 }
 
@@ -1341,27 +1358,6 @@ Function *CodeExtractor::extractCodeRegion() {
   BasicBlock *header = *Blocks.begin();
   Function *oldFunction = header->getParent();
 
-  // For functions with varargs, check that varargs handling is only done in the
-  // outlined function, i.e vastart and vaend are only used in outlined blocks.
-  if (AllowVarArgs && oldFunction->getFunctionType()->isVarArg()) {
-    auto containsVarArgIntrinsic = [](Instruction &I) {
-      if (const CallInst *CI = dyn_cast<CallInst>(&I))
-        if (const Function *F = CI->getCalledFunction())
-          return F->getIntrinsicID() == Intrinsic::vastart ||
-                 F->getIntrinsicID() == Intrinsic::vaend;
-      return false;
-    };
-
-    for (auto &BB : *oldFunction) {
-      if (Blocks.count(&BB))
-        continue;
-      if (llvm::any_of(BB, containsVarArgIntrinsic))
-        return nullptr;
-    }
-  }
-  ValueSet inputs, outputs, SinkingCands, HoistingCands;
-  BasicBlock *CommonExit = nullptr;
-
   // Calculate the entry frequency of the new function before we change the root
   //   block.
   BlockFrequency EntryFreq;
@@ -1373,6 +1369,15 @@ Function *CodeExtractor::extractCodeRegion() {
       EntryFreq +=
           BFI->getBlockFreq(Pred) * BPI->getEdgeProbability(Pred, header);
     }
+  }
+
+  if (AC) {
+    // Remove @llvm.assume calls that were moved to the new function from the
+    // old function's assumption cache.
+    for (BasicBlock *Block : Blocks)
+      for (auto &I : *Block)
+        if (match(&I, m_Intrinsic<Intrinsic::assume>()))
+          AC->unregisterAssumption(cast<CallInst>(&I));
   }
 
   // If we have any return instructions in the region, split those blocks so
@@ -1428,6 +1433,8 @@ Function *CodeExtractor::extractCodeRegion() {
   }
   newFuncRoot->getInstList().push_back(BranchI);
 
+  ValueSet inputs, outputs, SinkingCands, HoistingCands;
+  BasicBlock *CommonExit = nullptr;
   findAllocas(SinkingCands, HoistingCands, CommonExit);
   assert(HoistingCands.empty() || CommonExit);
 
@@ -1563,5 +1570,17 @@ Function *CodeExtractor::extractCodeRegion() {
   });
   LLVM_DEBUG(if (verifyFunction(*oldFunction))
              report_fatal_error("verification of oldFunction failed!"));
+  LLVM_DEBUG(if (AC && verifyAssumptionCache(*oldFunction, AC))
+             report_fatal_error("Stale Asumption cache for old Function!"));
   return newFunction;
+}
+
+bool CodeExtractor::verifyAssumptionCache(const Function& F,
+                                          AssumptionCache *AC) {
+  for (auto AssumeVH : AC->assumptions()) {
+    CallInst *I = cast<CallInst>(AssumeVH);
+    if (I->getFunction() != &F)
+      return true;
+  }
+  return false;
 }

@@ -67,15 +67,15 @@ TEST(ProcessInstanceInfo, DumpTable) {
   ProcessInstanceInfo::DumpTableHeader(s, show_args, verbose);
   info.DumpAsTableRow(s, resolver, show_args, verbose);
   EXPECT_STREQ(
-      R"(PID    PARENT USER       GROUP      EFF USER   EFF GROUP  TRIPLE                   ARGUMENTS
-====== ====== ========== ========== ========== ========== ======================== ============================
-47     0      user1      group3     2          4          x86_64-pc-linux          
+      R"(PID    PARENT USER       GROUP      EFF USER   EFF GROUP  TRIPLE                         ARGUMENTS
+====== ====== ========== ========== ========== ========== ============================== ============================
+47     0      user1      group3     2          4          x86_64-pc-linux                
 )",
       s.GetData());
 }
 
 TEST(ProcessInstanceInfo, DumpTable_invalidUID) {
-  ProcessInstanceInfo info("a.out", ArchSpec("x86_64-pc-linux"), 47);
+  ProcessInstanceInfo info("a.out", ArchSpec("aarch64-unknown-linux-android"), 47);
 
   DummyUserIDResolver resolver;
   StreamString s;
@@ -85,9 +85,26 @@ TEST(ProcessInstanceInfo, DumpTable_invalidUID) {
   ProcessInstanceInfo::DumpTableHeader(s, show_args, verbose);
   info.DumpAsTableRow(s, resolver, show_args, verbose);
   EXPECT_STREQ(
-      R"(PID    PARENT USER       TRIPLE                   NAME
-====== ====== ========== ======================== ============================
-47     0                 x86_64-pc-linux          a.out
+      R"(PID    PARENT USER       TRIPLE                         NAME
+====== ====== ========== ============================== ============================
+47     0                 aarch64-unknown-linux-android  a.out
 )",
       s.GetData());
+}
+
+TEST(ProcessInstanceInfoMatch, Name) {
+  ProcessInstanceInfo info_bar, info_empty;
+  info_bar.GetExecutableFile().SetFile("/foo/bar", FileSpec::Style::posix);
+
+  ProcessInstanceInfoMatch match;
+  match.SetNameMatchType(NameMatch::Equals);
+  match.GetProcessInfo().GetExecutableFile().SetFile("bar",
+                                                     FileSpec::Style::posix);
+
+  EXPECT_TRUE(match.Matches(info_bar));
+  EXPECT_FALSE(match.Matches(info_empty));
+
+  match.GetProcessInfo().GetExecutableFile() = FileSpec();
+  EXPECT_TRUE(match.Matches(info_bar));
+  EXPECT_TRUE(match.Matches(info_empty));
 }

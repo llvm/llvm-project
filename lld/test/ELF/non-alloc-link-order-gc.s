@@ -5,13 +5,13 @@
 
 ## Check that we are able to GC non-allocatable metadata sections without crash.
 
+# CHECK:      Name          Size
+# CHECK:      .stack_sizes  00000001
+
 # CHECK:      Disassembly of section .stack_sizes:
 # CHECK-EMPTY:
 # CHECK-NEXT:   .stack_sizes:
 # CHECK-NEXT:    01
-
-# CHECK:      Name          Size
-# CHECK:      .stack_sizes  00000001
 
 .section .text.live,"ax",@progbits
 .globl live

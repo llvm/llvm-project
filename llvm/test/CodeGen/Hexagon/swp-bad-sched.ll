@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: llc -march=hexagon -enable-pipeliner -enable-aa-sched-mi < %s | FileCheck %s
+; RUN: llc -march=hexagon -enable-pipeliner -enable-aa-sched-mi < %s -pipeliner-experimental-cg=true | FileCheck %s
 
 ; CHECK: loop0(
 ; CHECK: loop0(.LBB0_[[LOOP:.]],

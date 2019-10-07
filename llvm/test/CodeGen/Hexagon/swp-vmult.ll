@@ -1,5 +1,5 @@
 ; REQUIRES: to-be-fixed
-; RUN: llc -march=hexagon -mcpu=hexagonv5 -enable-pipeliner < %s | FileCheck %s
+; RUN: llc -march=hexagon -mcpu=hexagonv5 -enable-pipeliner < %s -pipeliner-experimental-cg=true | FileCheck %s
 
 ; Multiply and accumulate
 ; CHECK: mpyi([[REG0:r([0-9]+)]],[[REG1:r([0-9]+)]])

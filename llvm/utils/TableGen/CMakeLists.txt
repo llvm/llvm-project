@@ -1,3 +1,5 @@
+add_subdirectory(GlobalISel)
+
 set(LLVM_LINK_COMPONENTS Support)
 
 add_tablegen(llvm-tblgen LLVM
@@ -19,11 +21,13 @@ add_tablegen(llvm-tblgen LLVM
   DAGISelMatcherGen.cpp
   DAGISelMatcherOpt.cpp
   DAGISelMatcher.cpp
+  DFAEmitter.cpp
   DFAPacketizerEmitter.cpp
   DisassemblerEmitter.cpp
   ExegesisEmitter.cpp
   FastISelEmitter.cpp
   FixedLenDecoderEmitter.cpp
+  GICombinerEmitter.cpp
   GlobalISelEmitter.cpp
   InfoByHwMode.cpp
   InstrInfoEmitter.cpp
@@ -49,4 +53,5 @@ add_tablegen(llvm-tblgen LLVM
   WebAssemblyDisassemblerEmitter.cpp
   CTagsEmitter.cpp
   )
+target_link_libraries(llvm-tblgen PRIVATE LLVMTableGenGlobalISel)
 set_target_properties(llvm-tblgen PROPERTIES FOLDER "Tablegenning")

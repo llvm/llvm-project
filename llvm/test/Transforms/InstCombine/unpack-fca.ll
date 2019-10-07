@@ -13,7 +13,7 @@ declare i32 @A.foo(%A* nocapture %this)
 
 define void @storeA(%A* %a.ptr) {
 ; CHECK-LABEL: storeA
-; CHECK-NEXT: [[GEP:%[a-z0-9\.]+]] = getelementptr inbounds %A, %A* %a.ptr, i64 0, i32 0
+; CHECK-NEXT: [[GEP:%[a-z0-9\.]+]] = getelementptr %A, %A* %a.ptr, i64 0, i32 0
 ; CHECK-NEXT: store %A__vtbl* @A__vtblZ, %A__vtbl** [[GEP]], align 8
 ; CHECK-NEXT: ret void
   store %A { %A__vtbl* @A__vtblZ }, %A* %a.ptr, align 8
@@ -33,7 +33,7 @@ define void @storeB(%B* %b.ptr) {
 
 define void @storeStructOfA({ %A }* %sa.ptr) {
 ; CHECK-LABEL: storeStructOfA
-; CHECK-NEXT: [[GEP:%[a-z0-9\.]+]] = getelementptr inbounds { %A }, { %A }* %sa.ptr, i64 0, i32 0, i32 0
+; CHECK-NEXT: [[GEP:%[a-z0-9\.]+]] = getelementptr { %A }, { %A }* %sa.ptr, i64 0, i32 0, i32 0
 ; CHECK-NEXT: store %A__vtbl* @A__vtblZ, %A__vtbl** [[GEP]], align 8
 ; CHECK-NEXT: ret void
   store { %A } { %A { %A__vtbl* @A__vtblZ } }, { %A }* %sa.ptr, align 8
@@ -42,7 +42,7 @@ define void @storeStructOfA({ %A }* %sa.ptr) {
 
 define void @storeArrayOfA([1 x %A]* %aa.ptr) {
 ; CHECK-LABEL: storeArrayOfA
-; CHECK-NEXT: [[GEP:%[a-z0-9\.]+]] = getelementptr inbounds [1 x %A], [1 x %A]* %aa.ptr, i64 0, i64 0, i32 0
+; CHECK-NEXT: [[GEP:%[a-z0-9\.]+]] = getelementptr [1 x %A], [1 x %A]* %aa.ptr, i64 0, i64 0, i32 0
 ; CHECK-NEXT: store %A__vtbl* @A__vtblZ, %A__vtbl** [[GEP]], align 8
 ; CHECK-NEXT: ret void
   store [1 x %A] [%A { %A__vtbl* @A__vtblZ }], [1 x %A]* %aa.ptr, align 8
@@ -60,7 +60,7 @@ define void @storeLargeArrayOfA([2000 x %A]* %aa.ptr) {
 
 define void @storeStructOfArrayOfA({ [1 x %A] }* %saa.ptr) {
 ; CHECK-LABEL: storeStructOfArrayOfA
-; CHECK-NEXT: [[GEP:%[a-z0-9\.]+]] = getelementptr inbounds { [1 x %A] }, { [1 x %A] }* %saa.ptr, i64 0, i32 0, i64 0, i32 0
+; CHECK-NEXT: [[GEP:%[a-z0-9\.]+]] = getelementptr { [1 x %A] }, { [1 x %A] }* %saa.ptr, i64 0, i32 0, i64 0, i32 0
 ; CHECK-NEXT: store %A__vtbl* @A__vtblZ, %A__vtbl** [[GEP]], align 8
 ; CHECK-NEXT: ret void
   store { [1 x %A] } { [1 x %A] [%A { %A__vtbl* @A__vtblZ }] }, { [1 x %A] }* %saa.ptr, align 8
@@ -90,7 +90,7 @@ define void @storeArrayOfB([2 x %B]* %ab.ptr, [2 x %B] %ab) {
 
 define %A @loadA(%A* %a.ptr) {
 ; CHECK-LABEL: loadA
-; CHECK-NEXT: [[GEP:%[a-z0-9\.]+]] = getelementptr inbounds %A, %A* %a.ptr, i64 0, i32 0
+; CHECK-NEXT: [[GEP:%[a-z0-9\.]+]] = getelementptr %A, %A* %a.ptr, i64 0, i32 0
 ; CHECK-NEXT: [[LOAD:%[a-z0-9\.]+]] = load %A__vtbl*, %A__vtbl** [[GEP]], align 8
 ; CHECK-NEXT: [[IV:%[a-z0-9\.]+]] = insertvalue %A undef, %A__vtbl* [[LOAD]], 0
 ; CHECK-NEXT: ret %A [[IV]]
@@ -113,7 +113,7 @@ define %B @loadB(%B* %b.ptr) {
 
 define { %A } @loadStructOfA({ %A }* %sa.ptr) {
 ; CHECK-LABEL: loadStructOfA
-; CHECK-NEXT: [[GEP:%[a-z0-9\.]+]] = getelementptr inbounds { %A }, { %A }* %sa.ptr, i64 0, i32 0, i32 0
+; CHECK-NEXT: [[GEP:%[a-z0-9\.]+]] = getelementptr { %A }, { %A }* %sa.ptr, i64 0, i32 0, i32 0
 ; CHECK-NEXT: [[LOAD:%[a-z0-9\.]+]] = load %A__vtbl*, %A__vtbl** [[GEP]], align 8
 ; CHECK-NEXT: [[IV1:%[a-z0-9\.]+]] = insertvalue %A undef, %A__vtbl* [[LOAD]], 0
 ; CHECK-NEXT: [[IV2:%[a-z0-9\.]+]] = insertvalue { %A } undef, %A [[IV1]], 0
@@ -124,7 +124,7 @@ define { %A } @loadStructOfA({ %A }* %sa.ptr) {
 
 define [1 x %A] @loadArrayOfA([1 x %A]* %aa.ptr) {
 ; CHECK-LABEL: loadArrayOfA
-; CHECK-NEXT: [[GEP:%[a-z0-9\.]+]] = getelementptr inbounds [1 x %A], [1 x %A]* %aa.ptr, i64 0, i64 0, i32 0
+; CHECK-NEXT: [[GEP:%[a-z0-9\.]+]] = getelementptr [1 x %A], [1 x %A]* %aa.ptr, i64 0, i64 0, i32 0
 ; CHECK-NEXT: [[LOAD:%[a-z0-9\.]+]] = load %A__vtbl*, %A__vtbl** [[GEP]], align 8
 ; CHECK-NEXT: [[IV1:%[a-z0-9\.]+]] = insertvalue %A undef, %A__vtbl* [[LOAD]], 0
 ; CHECK-NEXT: [[IV2:%[a-z0-9\.]+]] = insertvalue [1 x %A] undef, %A [[IV1]], 0
@@ -135,7 +135,7 @@ define [1 x %A] @loadArrayOfA([1 x %A]* %aa.ptr) {
 
 define { [1 x %A] } @loadStructOfArrayOfA({ [1 x %A] }* %saa.ptr) {
 ; CHECK-LABEL: loadStructOfArrayOfA
-; CHECK-NEXT: [[GEP:%[a-z0-9\.]+]] = getelementptr inbounds { [1 x %A] }, { [1 x %A] }* %saa.ptr, i64 0, i32 0, i64 0, i32 0
+; CHECK-NEXT: [[GEP:%[a-z0-9\.]+]] = getelementptr { [1 x %A] }, { [1 x %A] }* %saa.ptr, i64 0, i32 0, i64 0, i32 0
 ; CHECK-NEXT: [[LOAD:%[a-z0-9\.]+]] = load %A__vtbl*, %A__vtbl** [[GEP]], align 8
 ; CHECK-NEXT: [[IV1:%[a-z0-9\.]+]] = insertvalue %A undef, %A__vtbl* [[LOAD]], 0
 ; CHECK-NEXT: [[IV2:%[a-z0-9\.]+]] = insertvalue [1 x %A] undef, %A [[IV1]], 0
@@ -147,7 +147,7 @@ define { [1 x %A] } @loadStructOfArrayOfA({ [1 x %A] }* %saa.ptr) {
 
 define { %A } @structOfA({ %A }* %sa.ptr) {
 ; CHECK-LABEL: structOfA
-; CHECK-NEXT: [[GEP:%[a-z0-9\.]+]] = getelementptr inbounds { %A }, { %A }* %sa.ptr, i64 0, i32 0, i32 0
+; CHECK-NEXT: [[GEP:%[a-z0-9\.]+]] = getelementptr { %A }, { %A }* %sa.ptr, i64 0, i32 0, i32 0
 ; CHECK-NEXT: store %A__vtbl* @A__vtblZ, %A__vtbl** [[GEP]], align 8
 ; CHECK-NEXT: ret { %A } { %A { %A__vtbl* @A__vtblZ } }
   store { %A } { %A { %A__vtbl* @A__vtblZ } }, { %A }* %sa.ptr, align 8

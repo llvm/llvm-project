@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -march=hexagon < %s -pipeliner-experimental-cg=true | FileCheck %s
 ; CHECK: loop0(.LBB0_{{[0-9]+}},#347)
 
 target triple = "hexagon"

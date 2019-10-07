@@ -106,11 +106,19 @@ class Value;
     /// returns false.
     Function *extractCodeRegion();
 
+    /// Verify that assumption cache isn't stale after a region is extracted.
+    /// Returns false when verifier finds errors. AssumptionCache is passed as
+    /// parameter to make this function stateless.
+    static bool verifyAssumptionCache(const Function& F, AssumptionCache *AC);
+
     /// Test whether this code extractor is eligible.
     ///
     /// Based on the blocks used when constructing the code extractor,
     /// determine whether it is eligible for extraction.
-    bool isEligible() const { return !Blocks.empty(); }
+    /// 
+    /// Checks that varargs handling (with vastart and vaend) is only done in
+    /// the outlined blocks.
+    bool isEligible() const;
 
     /// Compute the set of input values and output values for the code.
     ///

@@ -27,12 +27,22 @@
 using namespace llvm;
 using namespace MIPatternMatch;
 
+#define AARCH64PRELEGALIZERCOMBINERHELPER_GENCOMBINERHELPER_DEPS
+#include "AArch64GenGICombiner.inc"
+#undef AARCH64PRELEGALIZERCOMBINERHELPER_GENCOMBINERHELPER_DEPS
+
 namespace {
+#define AARCH64PRELEGALIZERCOMBINERHELPER_GENCOMBINERHELPER_H
+#include "AArch64GenGICombiner.inc"
+#undef AARCH64PRELEGALIZERCOMBINERHELPER_GENCOMBINERHELPER_H
+
 class AArch64PreLegalizerCombinerInfo : public CombinerInfo {
   GISelKnownBits *KB;
   MachineDominatorTree *MDT;
 
 public:
+  AArch64GenPreLegalizerCombinerHelper Generated;
+
   AArch64PreLegalizerCombinerInfo(bool EnableOpt, bool OptSize, bool MinSize,
                                   GISelKnownBits *KB, MachineDominatorTree *MDT)
       : CombinerInfo(/*AllowIllegalOps*/ true, /*ShouldLegalizeIllegal*/ false,
@@ -81,8 +91,15 @@ bool AArch64PreLegalizerCombinerInfo::combine(GISelChangeObserver &Observer,
     }
   }
 
+  if (Generated.tryCombineAll(Observer, MI, B))
+    return true;
+
   return false;
 }
+
+#define AARCH64PRELEGALIZERCOMBINERHELPER_GENCOMBINERHELPER_CPP
+#include "AArch64GenGICombiner.inc"
+#undef AARCH64PRELEGALIZERCOMBINERHELPER_GENCOMBINERHELPER_CPP
 
 // Pass boilerplate
 // ================

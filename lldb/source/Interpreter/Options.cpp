@@ -1380,6 +1380,10 @@ llvm::Expected<Args> Options::Parse(const Args &args,
                                ? nullptr
                                : OptionParser::GetOptionArgument(),
                            execution_context);
+      // If the Option setting returned an error, we should stop parsing
+      // and return the error.
+      if (error.Fail())
+        break;      
     } else {
       error.SetErrorStringWithFormat("invalid option with value '%i'", val);
     }

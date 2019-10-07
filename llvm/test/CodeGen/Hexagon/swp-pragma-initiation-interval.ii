@@ -1,5 +1,5 @@
 ; RUN: llc -disable-lsr -march=hexagon -enable-pipeliner  \
-; RUN:     -debug-only=pipeliner < %s 2>&1 > /dev/null | FileCheck %s
+; RUN:     -debug-only=pipeliner < %s 2>&1 > /dev/null -pipeliner-experimental-cg=true | FileCheck %s
 ; REQUIRES: asserts
 ;
 ; Test that checks if the II set by pragma was taken by pipeliner.

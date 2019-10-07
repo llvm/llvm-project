@@ -750,8 +750,7 @@ define <16 x i8> @usat_trunc_db_256(<8 x i32> %x) {
 ;
 ; SKX-LABEL: usat_trunc_db_256:
 ; SKX:       ## %bb.0:
-; SKX-NEXT:    vpminud {{.*}}(%rip){1to8}, %ymm0, %ymm0
-; SKX-NEXT:    vpmovdb %ymm0, %xmm0
+; SKX-NEXT:    vpmovusdb %ymm0, %xmm0
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
   %tmp1 = icmp ult <8 x i32> %x, <i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255>

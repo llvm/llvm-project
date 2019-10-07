@@ -21,7 +21,7 @@ entry:
 ; CHECK: 	.ent	tnonaked
 ; CHECK-LABEL:         tnonaked:
 ; CHECK:	.frame	$fp,8,$ra
-; CHECK:        .mask 	0x40000000,-4
+; CHECK:        .mask 	0xc0000000,-4
 ; CHECK:	.fmask	0x00000000,0
 ; CHECK: 	addiu	$sp, $sp, -8
 

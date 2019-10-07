@@ -27,6 +27,8 @@
 
 namespace __sanitizer {
 
+namespace {
+
 //---------------------------- UnwindSlow --------------------------------------
 
 typedef struct {
@@ -45,38 +47,6 @@ acquire_my_map_info_list_func acquire_my_map_info_list;
 release_my_map_info_list_func release_my_map_info_list;
 unwind_backtrace_signal_arch_func unwind_backtrace_signal_arch;
 } // extern "C"
-
-#if SANITIZER_ANDROID
-void SanitizerInitializeUnwinder() {
-  if (AndroidGetApiLevel() >= ANDROID_LOLLIPOP_MR1) return;
-
-  // Pre-lollipop Android can not unwind through signal handler frames with
-  // libgcc unwinder, but it has a libcorkscrew.so library with the necessary
-  // workarounds.
-  void *p = dlopen("libcorkscrew.so", RTLD_LAZY);
-  if (!p) {
-    VReport(1,
-            "Failed to open libcorkscrew.so. You may see broken stack traces "
-            "in SEGV reports.");
-    return;
-  }
-  acquire_my_map_info_list =
-      (acquire_my_map_info_list_func)(uptr)dlsym(p, "acquire_my_map_info_list");
-  release_my_map_info_list =
-      (release_my_map_info_list_func)(uptr)dlsym(p, "release_my_map_info_list");
-  unwind_backtrace_signal_arch = (unwind_backtrace_signal_arch_func)(uptr)dlsym(
-      p, "unwind_backtrace_signal_arch");
-  if (!acquire_my_map_info_list || !release_my_map_info_list ||
-      !unwind_backtrace_signal_arch) {
-    VReport(1,
-            "Failed to find one of the required symbols in libcorkscrew.so. "
-            "You may see broken stack traces in SEGV reports.");
-    acquire_my_map_info_list = 0;
-    unwind_backtrace_signal_arch = 0;
-    release_my_map_info_list = 0;
-  }
-}
-#endif
 
 #if defined(__arm__) && !SANITIZER_NETBSD
 // NetBSD uses dwarf EH
@@ -118,6 +88,40 @@ _Unwind_Reason_Code Unwind_Trace(struct _Unwind_Context *ctx, void *param) {
   if (arg->stack->size == arg->max_depth) return UNWIND_STOP;
   return UNWIND_CONTINUE;
 }
+
+}  // namespace
+
+#if SANITIZER_ANDROID
+void SanitizerInitializeUnwinder() {
+  if (AndroidGetApiLevel() >= ANDROID_LOLLIPOP_MR1) return;
+
+  // Pre-lollipop Android can not unwind through signal handler frames with
+  // libgcc unwinder, but it has a libcorkscrew.so library with the necessary
+  // workarounds.
+  void *p = dlopen("libcorkscrew.so", RTLD_LAZY);
+  if (!p) {
+    VReport(1,
+            "Failed to open libcorkscrew.so. You may see broken stack traces "
+            "in SEGV reports.");
+    return;
+  }
+  acquire_my_map_info_list =
+      (acquire_my_map_info_list_func)(uptr)dlsym(p, "acquire_my_map_info_list");
+  release_my_map_info_list =
+      (release_my_map_info_list_func)(uptr)dlsym(p, "release_my_map_info_list");
+  unwind_backtrace_signal_arch = (unwind_backtrace_signal_arch_func)(uptr)dlsym(
+      p, "unwind_backtrace_signal_arch");
+  if (!acquire_my_map_info_list || !release_my_map_info_list ||
+      !unwind_backtrace_signal_arch) {
+    VReport(1,
+            "Failed to find one of the required symbols in libcorkscrew.so. "
+            "You may see broken stack traces in SEGV reports.");
+    acquire_my_map_info_list = 0;
+    unwind_backtrace_signal_arch = 0;
+    release_my_map_info_list = 0;
+  }
+}
+#endif
 
 void BufferedStackTrace::UnwindSlow(uptr pc, u32 max_depth) {
   CHECK_GE(max_depth, 2);

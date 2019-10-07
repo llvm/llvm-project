@@ -24,7 +24,7 @@ loopEndingStmt(internal::Matcher<Stmt> Internal) {
                     callExpr(Internal, callee(functionDecl(isNoReturn())))));
 }
 
-/// \brief Return whether `S` is a reference to the declaration of `Var`.
+/// Return whether `S` is a reference to the declaration of `Var`.
 static bool isAccessForVar(const Stmt *S, const VarDecl *Var) {
   if (const auto *DRE = dyn_cast<DeclRefExpr>(S))
     return DRE->getDecl() == Var;
@@ -32,7 +32,7 @@ static bool isAccessForVar(const Stmt *S, const VarDecl *Var) {
   return false;
 }
 
-/// \brief Return whether `Var` has a pointer of reference in `S`.
+/// Return whether `Var` has a pointer or reference in `S`.
 static bool isPtrOrReferenceForVar(const Stmt *S, const VarDecl *Var) {
   if (const auto *DS = dyn_cast<DeclStmt>(S)) {
     for (const Decl *D : DS->getDeclGroup()) {
@@ -50,7 +50,7 @@ static bool isPtrOrReferenceForVar(const Stmt *S, const VarDecl *Var) {
   return false;
 }
 
-/// \brief Return whether `Var` has a pointer of reference in `S`.
+/// Return whether `Var` has a pointer or reference in `S`.
 static bool hasPtrOrReferenceInStmt(const Stmt *S, const VarDecl *Var) {
   if (isPtrOrReferenceForVar(S, Var))
     return true;
@@ -66,13 +66,13 @@ static bool hasPtrOrReferenceInStmt(const Stmt *S, const VarDecl *Var) {
   return false;
 }
 
-/// \brief Return whether `Var` has a pointer of reference in `Func`.
+/// Return whether `Var` has a pointer or reference in `Func`.
 static bool hasPtrOrReferenceInFunc(const FunctionDecl *Func,
                                     const VarDecl *Var) {
   return hasPtrOrReferenceInStmt(Func->getBody(), Var);
 }
 
-/// \brief Return whether `Var` was changed in `LoopStmt`.
+/// Return whether `Var` was changed in `LoopStmt`.
 static bool isChanged(const Stmt *LoopStmt, const VarDecl *Var,
                       ASTContext *Context) {
   if (const auto *ForLoop = dyn_cast<ForStmt>(LoopStmt))
@@ -88,8 +88,7 @@ static bool isChanged(const Stmt *LoopStmt, const VarDecl *Var,
   return ExprMutationAnalyzer(*LoopStmt, *Context).isMutated(Var);
 }
 
-/// \brief Return whether `Cond` is a variable that is possibly changed in
-/// `LoopStmt`.
+/// Return whether `Cond` is a variable that is possibly changed in `LoopStmt`.
 static bool isVarThatIsPossiblyChanged(const FunctionDecl *Func,
                                        const Stmt *LoopStmt, const Stmt *Cond,
                                        ASTContext *Context) {
@@ -116,7 +115,7 @@ static bool isVarThatIsPossiblyChanged(const FunctionDecl *Func,
   return false;
 }
 
-/// \brief Return whether at least one variable of `Cond` changed in `LoopStmt`.
+/// Return whether at least one variable of `Cond` changed in `LoopStmt`.
 static bool isAtLeastOneCondVarChanged(const FunctionDecl *Func,
                                        const Stmt *LoopStmt, const Stmt *Cond,
                                        ASTContext *Context) {
@@ -133,7 +132,7 @@ static bool isAtLeastOneCondVarChanged(const FunctionDecl *Func,
   return false;
 }
 
-/// \brief Return the variable names in `Cond`.
+/// Return the variable names in `Cond`.
 static std::string getCondVarNames(const Stmt *Cond) {
   if (const auto *DRE = dyn_cast<DeclRefExpr>(Cond)) {
     if (const auto *Var = dyn_cast<VarDecl>(DRE->getDecl()))

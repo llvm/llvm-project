@@ -16,4 +16,8 @@ RUN: cd %t/extracted && llvm-ar x %t/mri.ar
 # include arguments with non-ascii characters.
 # Python on Linux defaults to ASCII encoding unless the
 # environment specifies otherwise, so it is explicitly set.
+# The reliance the test has on this locale is not ideal,
+# however alternate solutions have been difficult due to 
+# behaviour differences with python 2 vs python 3,
+# and linux vs windows.
 RUN: env LANG=en_US.UTF-8 %python -c "assert open(u'\U000000A3.txt', 'rb').read() == b'contents\n'"

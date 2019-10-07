@@ -1,0 +1,12 @@
+# This test applies to POSIX.
+# UNSUPPORTED: system-windows
+
+# FIXME: ShellExpandArguments is unimplemented on Linux.
+# UNSUPPORTED: system-linux
+
+# RUN: %clang %S/Inputs/simple.c -g -o %t.out
+# RUN: SHELL=bogus %lldb %t.out -b -o 'run' 2>&1 | FileCheck %s --check-prefix ERROR
+# RUN: env -i %lldb %t.out -b -o 'run' 2>&1 | FileCheck %s
+
+# ERROR: error: shell expansion failed
+# CHECK-NOT: error: shell expansion failed

@@ -55,6 +55,18 @@ fscsr x6, x7
 # CHECK-ALIAS: fscsr t3
 fscsr x28
 
+# These are obsolete aliases of frcsr/fscsr. They are accepted by the assembler
+# but the disassembler should always print them as the equivalent, new aliases.
+# CHECK-INST: csrrs t4, fcsr, zero
+# CHECK-ALIAS: frcsr t4
+frsr x29
+# CHECK-INST: csrrw t5, fcsr, t6
+# CHECK-ALIAS: fscsr t5, t6
+fssr x30, x31
+# CHECK-INST: csrrw zero, fcsr, s0
+# CHECK-ALIAS: fscsr s0
+fssr x8
+
 # CHECK-INST: csrrs t4, frm, zero
 # CHECK-ALIAS: frrm t4
 frrm x29

@@ -54,7 +54,7 @@ body:             |
     %8 = S_MOV_B32 9999
     %9 = S_AND_B32 killed %7, killed %8, implicit-def dead $scc
     %10 = COPY %9
-    BUFFER_STORE_DWORD_OFFSET killed %10, killed %6, 0, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFSET killed %10, killed %6, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...
@@ -219,7 +219,7 @@ body:             |
     %10 = REG_SEQUENCE killed %7, 1, killed %6, 2, killed %9, 3, killed %8, 4
     %12 = S_LSHL_B32 killed %5, 12, implicit-def dead $scc
     %13 = COPY %12
-    BUFFER_STORE_DWORD_OFFSET killed %13, killed %10, 0, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFSET killed %13, killed %10, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...
@@ -419,7 +419,7 @@ body:             |
     %10 = REG_SEQUENCE killed %7, 1, killed %6, 2, killed %9, 3, killed %8, 4
     %12 = S_ASHR_I32 killed %5, 12, implicit-def dead $scc
     %13 = COPY %12
-    BUFFER_STORE_DWORD_OFFSET killed %13, killed %10, 0, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFSET killed %13, killed %10, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...
@@ -627,7 +627,7 @@ body:             |
     %10 = REG_SEQUENCE killed %7, 1, killed %6, 2, killed %9, 3, killed %8, 4
     %12 = S_LSHR_B32 killed %5, 12, implicit-def dead $scc
     %13 = COPY %12
-    BUFFER_STORE_DWORD_OFFSET killed %13, killed %10, 0, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFSET killed %13, killed %10, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...

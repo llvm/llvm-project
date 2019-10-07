@@ -4,7 +4,7 @@
 # RUN: llvm-mc -filetype=obj -triple=mips64-unknown-linux %s -o %t.o
 # RUN: ld.lld -shared %t.o -o %t.so
 # RUN: llvm-objdump -s -t %t.so | FileCheck -check-prefix=SYM %s
-# RUN: llvm-readelf -r -s --dynamic-table --mips-plt-got %t.so | FileCheck %s
+# RUN: llvm-readelf -r -s --dynamic-table -A %t.so | FileCheck %s
 
   .data
   .globl v2
@@ -13,11 +13,11 @@ v1:
 v2:
   .quad v1   # R_MIPS_64 target v1 addend 0
 
-# SYM: Contents of section .data:
-# SYM-NEXT:  {{.*}} 00000000 00000008 00000000 [[V1:[0-9a-f]+]]
-
 # SYM: SYMBOL TABLE:
-# SYM: 00000000[[V1]]  .data  00000000 v1
+# SYM: 00000000[[V1:[0-9a-f]+]]  .data  00000000 v1
+
+# SYM: Contents of section .data:
+# SYM-NEXT:  {{.*}} 00000000 00000008 00000000 [[V1]]
 
 # CHECK: Relocation section
 # CHECK: [[V2:[0-9a-f]+]]  {{.*}} R_MIPS_REL32/R_MIPS_64/R_MIPS_NONE

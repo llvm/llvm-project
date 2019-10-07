@@ -2,7 +2,7 @@
 ; RUN: llc -O3 -mtriple=x86_64-pc-linux < %s | FileCheck %s
 ; RUN: llc -O3 -mtriple=x86_64-pc-linux -mattr=+avx < %s | FileCheck --check-prefix=AVX %s
 
-define <1 x float> @constrained_vector_fdiv_v1f32() {
+define <1 x float> @constrained_vector_fdiv_v1f32() #0 {
 ; CHECK-LABEL: constrained_vector_fdiv_v1f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -19,11 +19,11 @@ entry:
            <1 x float> <float 1.000000e+00>,
            <1 x float> <float 1.000000e+01>,
            metadata !"round.dynamic",
-           metadata !"fpexcept.strict")
+           metadata !"fpexcept.strict") #0
   ret <1 x float> %div
 }
 
-define <2 x double> @constrained_vector_fdiv_v2f64() {
+define <2 x double> @constrained_vector_fdiv_v2f64() #0 {
 ; CHECK-LABEL: constrained_vector_fdiv_v2f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movapd {{.*#+}} xmm0 = [1.0E+0,2.0E+0]
@@ -40,11 +40,11 @@ entry:
            <2 x double> <double 1.000000e+00, double 2.000000e+00>,
            <2 x double> <double 1.000000e+01, double 1.000000e+01>,
            metadata !"round.dynamic",
-           metadata !"fpexcept.strict")
+           metadata !"fpexcept.strict") #0
   ret <2 x double> %div
 }
 
-define <3 x float> @constrained_vector_fdiv_v3f32() {
+define <3 x float> @constrained_vector_fdiv_v3f32() #0 {
 ; CHECK-LABEL: constrained_vector_fdiv_v3f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
@@ -75,11 +75,11 @@ entry:
            <3 x float> <float 1.000000e+00, float 2.000000e+00, float 3.000000e+00>,
            <3 x float> <float 1.000000e+01, float 1.000000e+01, float 1.000000e+01>,
            metadata !"round.dynamic",
-           metadata !"fpexcept.strict")
+           metadata !"fpexcept.strict") #0
   ret <3 x float> %div
 }
 
-define <3 x double> @constrained_vector_fdiv_v3f64() {
+define <3 x double> @constrained_vector_fdiv_v3f64() #0 {
 ; CHECK-LABEL: constrained_vector_fdiv_v3f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movapd {{.*#+}} xmm0 = [1.0E+0,2.0E+0]
@@ -105,11 +105,11 @@ entry:
            <3 x double> <double 1.000000e+00, double 2.000000e+00, double 3.000000e+00>,
            <3 x double> <double 1.000000e+01, double 1.000000e+01, double 1.000000e+01>,
            metadata !"round.dynamic",
-           metadata !"fpexcept.strict")
+           metadata !"fpexcept.strict") #0
   ret <3 x double> %div
 }
 
-define <4 x double> @constrained_vector_fdiv_v4f64() {
+define <4 x double> @constrained_vector_fdiv_v4f64() #0 {
 ; CHECK-LABEL: constrained_vector_fdiv_v4f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movapd {{.*#+}} xmm2 = [1.0E+1,1.0E+1]
@@ -131,11 +131,11 @@ entry:
            <4 x double> <double 1.000000e+01, double 1.000000e+01,
                          double 1.000000e+01, double 1.000000e+01>,
            metadata !"round.dynamic",
-           metadata !"fpexcept.strict")
+           metadata !"fpexcept.strict") #0
   ret <4 x double> %div
 }
 
-define <1 x float> @constrained_vector_frem_v1f32() {
+define <1 x float> @constrained_vector_frem_v1f32() #0 {
 ; CHECK-LABEL: constrained_vector_frem_v1f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
@@ -162,11 +162,11 @@ entry:
            <1 x float> <float 1.000000e+00>,
            <1 x float> <float 1.000000e+01>,
            metadata !"round.dynamic",
-           metadata !"fpexcept.strict")
+           metadata !"fpexcept.strict") #0
   ret <1 x float> %rem
 }
 
-define <2 x double> @constrained_vector_frem_v2f64() {
+define <2 x double> @constrained_vector_frem_v2f64() #0 {
 ; CHECK-LABEL: constrained_vector_frem_v2f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $24, %rsp
@@ -205,11 +205,11 @@ entry:
            <2 x double> <double 1.000000e+00, double 2.000000e+00>,
            <2 x double> <double 1.000000e+01, double 1.000000e+01>,
            metadata !"round.dynamic",
-           metadata !"fpexcept.strict")
+           metadata !"fpexcept.strict") #0
   ret <2 x double> %rem
 }
 
-define <3 x float> @constrained_vector_frem_v3f32() {
+define <3 x float> @constrained_vector_frem_v3f32() #0 {
 ; CHECK-LABEL: constrained_vector_frem_v3f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $40, %rsp
@@ -261,11 +261,11 @@ entry:
            <3 x float> <float 1.000000e+00, float 2.000000e+00, float 3.000000e+00>,
            <3 x float> <float 1.000000e+01, float 1.000000e+01, float 1.000000e+01>,
            metadata !"round.dynamic",
-           metadata !"fpexcept.strict")
+           metadata !"fpexcept.strict") #0
   ret <3 x float> %rem
 }
 
-define <3 x double> @constrained_vector_frem_v3f64() {
+define <3 x double> @constrained_vector_frem_v3f64() #0 {
 ; CHECK-LABEL: constrained_vector_frem_v3f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $24, %rsp
@@ -319,11 +319,11 @@ entry:
            <3 x double> <double 1.000000e+00, double 2.000000e+00, double 3.000000e+00>,
            <3 x double> <double 1.000000e+01, double 1.000000e+01, double 1.000000e+01>,
            metadata !"round.dynamic",
-           metadata !"fpexcept.strict")
+           metadata !"fpexcept.strict") #0
   ret <3 x double> %rem
 }
 
-define <4 x double> @constrained_vector_frem_v4f64() {
+define <4 x double> @constrained_vector_frem_v4f64() #0 {
 ; CHECK-LABEL: constrained_vector_frem_v4f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    subq $40, %rsp
@@ -386,11 +386,11 @@ define <4 x double> @constrained_vector_frem_v4f64() {
            <4 x double> <double 1.000000e+01, double 1.000000e+01,
                          double 1.000000e+01, double 1.000000e+01>,
            metadata !"round.dynamic",
-           metadata !"fpexcept.strict")
+           metadata !"fpexcept.strict") #0
   ret <4 x double> %rem
 }
 
-define <1 x float> @constrained_vector_fmul_v1f32() {
+define <1 x float> @constrained_vector_fmul_v1f32() #0 {
 ; CHECK-LABEL: constrained_vector_fmul_v1f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -407,11 +407,11 @@ entry:
            <1 x float> <float 0x7FF0000000000000>,
            <1 x float> <float 2.000000e+00>,
            metadata !"round.dynamic",
-           metadata !"fpexcept.strict")
+           metadata !"fpexcept.strict") #0
   ret <1 x float> %mul
 }
 
-define <2 x double> @constrained_vector_fmul_v2f64() {
+define <2 x double> @constrained_vector_fmul_v2f64() #0 {
 ; CHECK-LABEL: constrained_vector_fmul_v2f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movapd {{.*#+}} xmm0 = [1.7976931348623157E+308,1.7976931348623157E+308]
@@ -428,11 +428,11 @@ entry:
            <2 x double> <double 0x7FEFFFFFFFFFFFFF, double 0x7FEFFFFFFFFFFFFF>,
            <2 x double> <double 2.000000e+00, double 3.000000e+00>,
            metadata !"round.dynamic",
-           metadata !"fpexcept.strict")
+           metadata !"fpexcept.strict") #0
   ret <2 x double> %mul
 }
 
-define <3 x float> @constrained_vector_fmul_v3f32() {
+define <3 x float> @constrained_vector_fmul_v3f32() #0 {
 ; CHECK-LABEL: constrained_vector_fmul_v3f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
@@ -460,11 +460,11 @@ entry:
                         float 0x7FF0000000000000>,
            <3 x float> <float 1.000000e+00, float 1.000000e+01, float 1.000000e+02>,
            metadata !"round.dynamic",
-           metadata !"fpexcept.strict")
+           metadata !"fpexcept.strict") #0
   ret <3 x float> %mul
 }
 
-define <3 x double> @constrained_vector_fmul_v3f64() {
+define <3 x double> @constrained_vector_fmul_v3f64() #0 {
 ; CHECK-LABEL: constrained_vector_fmul_v3f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movapd {{.*#+}} xmm0 = [1.7976931348623157E+308,1.7976931348623157E+308]
@@ -491,11 +491,11 @@ entry:
                          double 0x7FEFFFFFFFFFFFFF>,
            <3 x double> <double 1.000000e+00, double 1.000000e+01, double 1.000000e+02>,
            metadata !"round.dynamic",
-           metadata !"fpexcept.strict")
+           metadata !"fpexcept.strict") #0
   ret <3 x double> %mul
 }
 
-define <4 x double> @constrained_vector_fmul_v4f64() {
+define <4 x double> @constrained_vector_fmul_v4f64() #0 {
 ; CHECK-LABEL: constrained_vector_fmul_v4f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movapd {{.*#+}} xmm1 = [1.7976931348623157E+308,1.7976931348623157E+308]
@@ -516,11 +516,11 @@ entry:
            <4 x double> <double 2.000000e+00, double 3.000000e+00,
                          double 4.000000e+00, double 5.000000e+00>,
            metadata !"round.dynamic",
-           metadata !"fpexcept.strict")
+           metadata !"fpexcept.strict") #0
   ret <4 x double> %mul
 }
 
-define <1 x float> @constrained_vector_fadd_v1f32() {
+define <1 x float> @constrained_vector_fadd_v1f32() #0 {
 ; CHECK-LABEL: constrained_vector_fadd_v1f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -537,11 +537,11 @@ entry:
            <1 x float> <float 0x7FF0000000000000>,
            <1 x float> <float 1.0>,
            metadata !"round.dynamic",
-           metadata !"fpexcept.strict")
+           metadata !"fpexcept.strict") #0
   ret <1 x float> %add
 }
 
-define <2 x double> @constrained_vector_fadd_v2f64() {
+define <2 x double> @constrained_vector_fadd_v2f64() #0 {
 ; CHECK-LABEL: constrained_vector_fadd_v2f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
@@ -563,11 +563,11 @@ entry:
            <2 x double> <double 0x7FEFFFFFFFFFFFFF, double 0x7FEFFFFFFFFFFFFF>,
            <2 x double> <double 1.000000e+00, double 1.000000e-01>,
            metadata !"round.dynamic",
-           metadata !"fpexcept.strict")
+           metadata !"fpexcept.strict") #0
   ret <2 x double> %add
 }
 
-define <3 x float> @constrained_vector_fadd_v3f32() {
+define <3 x float> @constrained_vector_fadd_v3f32() #0 {
 ; CHECK-LABEL: constrained_vector_fadd_v3f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xorps %xmm1, %xmm1
@@ -596,11 +596,11 @@ entry:
                         float 0xFFFFFFFFE0000000>,
            <3 x float> <float 2.0, float 1.0, float 0.0>,
            metadata !"round.dynamic",
-           metadata !"fpexcept.strict")
+           metadata !"fpexcept.strict") #0
   ret <3 x float> %add
 }
 
-define <3 x double> @constrained_vector_fadd_v3f64() {
+define <3 x double> @constrained_vector_fadd_v3f64() #0 {
 ; CHECK-LABEL: constrained_vector_fadd_v3f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xorpd %xmm2, %xmm2
@@ -629,11 +629,11 @@ entry:
                          double 0x7FEFFFFFFFFFFFFF>,
            <3 x double> <double 2.0, double 1.0, double 0.0>,
            metadata !"round.dynamic",
-           metadata !"fpexcept.strict")
+           metadata !"fpexcept.strict") #0
   ret <3 x double> %add
 }
 
-define <4 x double> @constrained_vector_fadd_v4f64() {
+define <4 x double> @constrained_vector_fadd_v4f64() #0 {
 ; CHECK-LABEL: constrained_vector_fadd_v4f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
@@ -666,11 +666,11 @@ entry:
            <4 x double> <double 1.000000e+00, double 1.000000e-01,
                          double 2.000000e+00, double 2.000000e-01>,
            metadata !"round.dynamic",
-           metadata !"fpexcept.strict")
+           metadata !"fpexcept.strict") #0
   ret <4 x double> %add
 }
 
-define <1 x float> @constrained_vector_fsub_v1f32() {
+define <1 x float> @constrained_vector_fsub_v1f32() #0 {
 ; CHECK-LABEL: constrained_vector_fsub_v1f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -687,11 +687,11 @@ entry:
            <1 x float> <float 0x7FF0000000000000>,
            <1 x float> <float 1.000000e+00>,
            metadata !"round.dynamic",
-           metadata !"fpexcept.strict")
+           metadata !"fpexcept.strict") #0
   ret <1 x float> %sub
 }
 
-define <2 x double> @constrained_vector_fsub_v2f64() {
+define <2 x double> @constrained_vector_fsub_v2f64() #0 {
 ; CHECK-LABEL: constrained_vector_fsub_v2f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
@@ -713,11 +713,11 @@ entry:
            <2 x double> <double 0xFFEFFFFFFFFFFFFF, double 0xFFEFFFFFFFFFFFFF>,
            <2 x double> <double 1.000000e+00, double 1.000000e-01>,
            metadata !"round.dynamic",
-           metadata !"fpexcept.strict")
+           metadata !"fpexcept.strict") #0
   ret <2 x double> %sub
 }
 
-define <3 x float> @constrained_vector_fsub_v3f32() {
+define <3 x float> @constrained_vector_fsub_v3f32() #0 {
 ; CHECK-LABEL: constrained_vector_fsub_v3f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xorps %xmm0, %xmm0
@@ -747,11 +747,11 @@ entry:
                         float 0xFFFFFFFFE0000000>,
            <3 x float> <float 2.0, float 1.0, float 0.0>,
            metadata !"round.dynamic",
-           metadata !"fpexcept.strict")
+           metadata !"fpexcept.strict") #0
   ret <3 x float> %sub
 }
 
-define <3 x double> @constrained_vector_fsub_v3f64() {
+define <3 x double> @constrained_vector_fsub_v3f64() #0 {
 ; CHECK-LABEL: constrained_vector_fsub_v3f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xorpd %xmm0, %xmm0
@@ -781,11 +781,11 @@ entry:
                          double 0xFFEFFFFFFFFFFFFF>,
            <3 x double> <double 2.0, double 1.0, double 0.0>,
            metadata !"round.dynamic",
-           metadata !"fpexcept.strict")
+           metadata !"fpexcept.strict") #0
   ret <3 x double> %sub
 }
 
-define <4 x double> @constrained_vector_fsub_v4f64() {
+define <4 x double> @constrained_vector_fsub_v4f64() #0 {
 ; CHECK-LABEL: constrained_vector_fsub_v4f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
@@ -818,11 +818,11 @@ entry:
            <4 x double> <double 1.000000e+00, double 1.000000e-01,
                          double 2.000000e+00, double 2.000000e-01>,
            metadata !"round.dynamic",
-           metadata !"fpexcept.strict")
+           metadata !"fpexcept.strict") #0
   ret <4 x double> %sub
 }
 
-define <1 x float> @constrained_vector_sqrt_v1f32() {
+define <1 x float> @constrained_vector_sqrt_v1f32() #0 {
 ; CHECK-LABEL: constrained_vector_sqrt_v1f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -838,11 +838,11 @@ entry:
   %sqrt = call <1 x float> @llvm.experimental.constrained.sqrt.v1f32(
                               <1 x float> <float 42.0>,
                               metadata !"round.dynamic",
-                              metadata !"fpexcept.strict")
+                              metadata !"fpexcept.strict") #0
   ret <1 x float> %sqrt
 }
 
-define <2 x double> @constrained_vector_sqrt_v2f64() {
+define <2 x double> @constrained_vector_sqrt_v2f64() #0 {
 ; CHECK-LABEL: constrained_vector_sqrt_v2f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sqrtpd {{.*}}(%rip), %xmm0
@@ -856,11 +856,11 @@ entry:
   %sqrt = call <2 x double> @llvm.experimental.constrained.sqrt.v2f64(
                               <2 x double> <double 42.0, double 42.1>,
                               metadata !"round.dynamic",
-                              metadata !"fpexcept.strict")
+                              metadata !"fpexcept.strict") #0
   ret <2 x double> %sqrt
 }
 
-define <3 x float> @constrained_vector_sqrt_v3f32() {
+define <3 x float> @constrained_vector_sqrt_v3f32() #0 {
 ; CHECK-LABEL: constrained_vector_sqrt_v3f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -888,11 +888,11 @@ entry:
   %sqrt = call <3 x float> @llvm.experimental.constrained.sqrt.v3f32(
                               <3 x float> <float 42.0, float 43.0, float 44.0>,
                               metadata !"round.dynamic",
-                              metadata !"fpexcept.strict")
+                              metadata !"fpexcept.strict") #0
   ret <3 x float> %sqrt
 }
 
-define <3 x double> @constrained_vector_sqrt_v3f64() {
+define <3 x double> @constrained_vector_sqrt_v3f64() #0 {
 ; CHECK-LABEL: constrained_vector_sqrt_v3f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
@@ -915,11 +915,11 @@ entry:
   %sqrt = call <3 x double> @llvm.experimental.constrained.sqrt.v3f64(
                           <3 x double> <double 42.0, double 42.1, double 42.2>,
                           metadata !"round.dynamic",
-                          metadata !"fpexcept.strict")
+                          metadata !"fpexcept.strict") #0
   ret <3 x double> %sqrt
 }
 
-define <4 x double> @constrained_vector_sqrt_v4f64() {
+define <4 x double> @constrained_vector_sqrt_v4f64() #0 {
 ; CHECK-LABEL: constrained_vector_sqrt_v4f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sqrtpd {{.*}}(%rip), %xmm0
@@ -935,11 +935,11 @@ define <4 x double> @constrained_vector_sqrt_v4f64() {
                               <4 x double> <double 42.0, double 42.1,
                                             double 42.2, double 42.3>,
                               metadata !"round.dynamic",
-                              metadata !"fpexcept.strict")
+                              metadata !"fpexcept.strict") #0
   ret <4 x double> %sqrt
 }
 
-define <1 x float> @constrained_vector_pow_v1f32() {
+define <1 x float> @constrained_vector_pow_v1f32() #0 {
 ; CHECK-LABEL: constrained_vector_pow_v1f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
@@ -966,11 +966,11 @@ entry:
                              <1 x float> <float 42.0>,
                              <1 x float> <float 3.0>,
                              metadata !"round.dynamic",
-                             metadata !"fpexcept.strict")
+                             metadata !"fpexcept.strict") #0
   ret <1 x float> %pow
 }
 
-define <2 x double> @constrained_vector_pow_v2f64() {
+define <2 x double> @constrained_vector_pow_v2f64() #0 {
 ; CHECK-LABEL: constrained_vector_pow_v2f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $24, %rsp
@@ -1009,11 +1009,11 @@ entry:
                              <2 x double> <double 42.1, double 42.2>,
                              <2 x double> <double 3.0, double 3.0>,
                              metadata !"round.dynamic",
-                             metadata !"fpexcept.strict")
+                             metadata !"fpexcept.strict") #0
   ret <2 x double> %pow
 }
 
-define <3 x float> @constrained_vector_pow_v3f32() {
+define <3 x float> @constrained_vector_pow_v3f32() #0 {
 ; CHECK-LABEL: constrained_vector_pow_v3f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $40, %rsp
@@ -1065,11 +1065,11 @@ entry:
                              <3 x float> <float 42.0, float 43.0, float 44.0>,
                              <3 x float> <float 3.0, float 3.0, float 3.0>,
                              metadata !"round.dynamic",
-                             metadata !"fpexcept.strict")
+                             metadata !"fpexcept.strict") #0
   ret <3 x float> %pow
 }
 
-define <3 x double> @constrained_vector_pow_v3f64() {
+define <3 x double> @constrained_vector_pow_v3f64() #0 {
 ; CHECK-LABEL: constrained_vector_pow_v3f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $24, %rsp
@@ -1123,11 +1123,11 @@ entry:
                           <3 x double> <double 42.0, double 42.1, double 42.2>,
                           <3 x double> <double 3.0, double 3.0, double 3.0>,
                           metadata !"round.dynamic",
-                          metadata !"fpexcept.strict")
+                          metadata !"fpexcept.strict") #0
   ret <3 x double> %pow
 }
 
-define <4 x double> @constrained_vector_pow_v4f64() {
+define <4 x double> @constrained_vector_pow_v4f64() #0 {
 ; CHECK-LABEL: constrained_vector_pow_v4f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $40, %rsp
@@ -1191,11 +1191,11 @@ entry:
                              <4 x double> <double 3.0, double 3.0,
                                            double 3.0, double 3.0>,
                              metadata !"round.dynamic",
-                             metadata !"fpexcept.strict")
+                             metadata !"fpexcept.strict") #0
   ret <4 x double> %pow
 }
 
-define <1 x float> @constrained_vector_powi_v1f32() {
+define <1 x float> @constrained_vector_powi_v1f32() #0 {
 ; CHECK-LABEL: constrained_vector_powi_v1f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
@@ -1222,11 +1222,11 @@ entry:
                               <1 x float> <float 42.0>,
                               i32 3,
                               metadata !"round.dynamic",
-                              metadata !"fpexcept.strict")
+                              metadata !"fpexcept.strict") #0
   ret <1 x float> %powi
 }
 
-define <2 x double> @constrained_vector_powi_v2f64() {
+define <2 x double> @constrained_vector_powi_v2f64() #0 {
 ; CHECK-LABEL: constrained_vector_powi_v2f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $24, %rsp
@@ -1265,11 +1265,11 @@ entry:
                               <2 x double> <double 42.1, double 42.2>,
                               i32 3,
                               metadata !"round.dynamic",
-                              metadata !"fpexcept.strict")
+                              metadata !"fpexcept.strict") #0
   ret <2 x double> %powi
 }
 
-define <3 x float> @constrained_vector_powi_v3f32() {
+define <3 x float> @constrained_vector_powi_v3f32() #0 {
 ; CHECK-LABEL: constrained_vector_powi_v3f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $40, %rsp
@@ -1321,11 +1321,11 @@ entry:
                               <3 x float> <float 42.0, float 43.0, float 44.0>,
                               i32 3,
                               metadata !"round.dynamic",
-                              metadata !"fpexcept.strict")
+                              metadata !"fpexcept.strict") #0
   ret <3 x float> %powi
 }
 
-define <3 x double> @constrained_vector_powi_v3f64() {
+define <3 x double> @constrained_vector_powi_v3f64() #0 {
 ; CHECK-LABEL: constrained_vector_powi_v3f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $24, %rsp
@@ -1379,11 +1379,11 @@ entry:
                           <3 x double> <double 42.0, double 42.1, double 42.2>,
                           i32 3,
                           metadata !"round.dynamic",
-                          metadata !"fpexcept.strict")
+                          metadata !"fpexcept.strict") #0
   ret <3 x double> %powi
 }
 
-define <4 x double> @constrained_vector_powi_v4f64() {
+define <4 x double> @constrained_vector_powi_v4f64() #0 {
 ; CHECK-LABEL: constrained_vector_powi_v4f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $40, %rsp
@@ -1446,11 +1446,11 @@ entry:
                                             double 42.3, double 42.4>,
                               i32 3,
                               metadata !"round.dynamic",
-                              metadata !"fpexcept.strict")
+                              metadata !"fpexcept.strict") #0
   ret <4 x double> %powi
 }
 
-define <1 x float> @constrained_vector_sin_v1f32() {
+define <1 x float> @constrained_vector_sin_v1f32() #0 {
 ; CHECK-LABEL: constrained_vector_sin_v1f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
@@ -1474,11 +1474,11 @@ entry:
   %sin = call <1 x float> @llvm.experimental.constrained.sin.v1f32(
                              <1 x float> <float 42.0>,
                              metadata !"round.dynamic",
-                             metadata !"fpexcept.strict")
+                             metadata !"fpexcept.strict") #0
   ret <1 x float> %sin
 }
 
-define <2 x double> @constrained_vector_sin_v2f64() {
+define <2 x double> @constrained_vector_sin_v2f64() #0 {
 ; CHECK-LABEL: constrained_vector_sin_v2f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $24, %rsp
@@ -1512,11 +1512,11 @@ entry:
   %sin = call <2 x double> @llvm.experimental.constrained.sin.v2f64(
                              <2 x double> <double 42.0, double 42.1>,
                              metadata !"round.dynamic",
-                             metadata !"fpexcept.strict")
+                             metadata !"fpexcept.strict") #0
   ret <2 x double> %sin
 }
 
-define <3 x float> @constrained_vector_sin_v3f32() {
+define <3 x float> @constrained_vector_sin_v3f32() #0 {
 ; CHECK-LABEL: constrained_vector_sin_v3f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $40, %rsp
@@ -1561,11 +1561,11 @@ entry:
   %sin = call <3 x float> @llvm.experimental.constrained.sin.v3f32(
                               <3 x float> <float 42.0, float 43.0, float 44.0>,
                               metadata !"round.dynamic",
-                              metadata !"fpexcept.strict")
+                              metadata !"fpexcept.strict") #0
   ret <3 x float> %sin
 }
 
-define <3 x double> @constrained_vector_sin_v3f64() {
+define <3 x double> @constrained_vector_sin_v3f64() #0 {
 ; CHECK-LABEL: constrained_vector_sin_v3f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $24, %rsp
@@ -1612,11 +1612,11 @@ entry:
   %sin = call <3 x double> @llvm.experimental.constrained.sin.v3f64(
                           <3 x double> <double 42.0, double 42.1, double 42.2>,
                           metadata !"round.dynamic",
-                          metadata !"fpexcept.strict")
+                          metadata !"fpexcept.strict") #0
   ret <3 x double> %sin
 }
 
-define <4 x double> @constrained_vector_sin_v4f64() {
+define <4 x double> @constrained_vector_sin_v4f64() #0 {
 ; CHECK-LABEL: constrained_vector_sin_v4f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $40, %rsp
@@ -1670,11 +1670,11 @@ entry:
                              <4 x double> <double 42.0, double 42.1,
                                            double 42.2, double 42.3>,
                              metadata !"round.dynamic",
-                             metadata !"fpexcept.strict")
+                             metadata !"fpexcept.strict") #0
   ret <4 x double> %sin
 }
 
-define <1 x float> @constrained_vector_cos_v1f32() {
+define <1 x float> @constrained_vector_cos_v1f32() #0 {
 ; CHECK-LABEL: constrained_vector_cos_v1f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
@@ -1698,11 +1698,11 @@ entry:
   %cos = call <1 x float> @llvm.experimental.constrained.cos.v1f32(
                              <1 x float> <float 42.0>,
                              metadata !"round.dynamic",
-                             metadata !"fpexcept.strict")
+                             metadata !"fpexcept.strict") #0
   ret <1 x float> %cos
 }
 
-define <2 x double> @constrained_vector_cos_v2f64() {
+define <2 x double> @constrained_vector_cos_v2f64() #0 {
 ; CHECK-LABEL: constrained_vector_cos_v2f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $24, %rsp
@@ -1736,11 +1736,11 @@ entry:
   %cos = call <2 x double> @llvm.experimental.constrained.cos.v2f64(
                              <2 x double> <double 42.0, double 42.1>,
                              metadata !"round.dynamic",
-                             metadata !"fpexcept.strict")
+                             metadata !"fpexcept.strict") #0
   ret <2 x double> %cos
 }
 
-define <3 x float> @constrained_vector_cos_v3f32() {
+define <3 x float> @constrained_vector_cos_v3f32() #0 {
 ; CHECK-LABEL: constrained_vector_cos_v3f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $40, %rsp
@@ -1785,11 +1785,11 @@ entry:
   %cos = call <3 x float> @llvm.experimental.constrained.cos.v3f32(
                               <3 x float> <float 42.0, float 43.0, float 44.0>,
                               metadata !"round.dynamic",
-                              metadata !"fpexcept.strict")
+                              metadata !"fpexcept.strict") #0
   ret <3 x float> %cos
 }
 
-define <3 x double> @constrained_vector_cos_v3f64() {
+define <3 x double> @constrained_vector_cos_v3f64() #0 {
 ; CHECK-LABEL: constrained_vector_cos_v3f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $24, %rsp
@@ -1836,11 +1836,11 @@ entry:
   %cos = call <3 x double> @llvm.experimental.constrained.cos.v3f64(
                           <3 x double> <double 42.0, double 42.1, double 42.2>,
                           metadata !"round.dynamic",
-                          metadata !"fpexcept.strict")
+                          metadata !"fpexcept.strict") #0
   ret <3 x double> %cos
 }
 
-define <4 x double> @constrained_vector_cos_v4f64() {
+define <4 x double> @constrained_vector_cos_v4f64() #0 {
 ; CHECK-LABEL: constrained_vector_cos_v4f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $40, %rsp
@@ -1894,11 +1894,11 @@ entry:
                              <4 x double> <double 42.0, double 42.1,
                                            double 42.2, double 42.3>,
                              metadata !"round.dynamic",
-                             metadata !"fpexcept.strict")
+                             metadata !"fpexcept.strict") #0
   ret <4 x double> %cos
 }
 
-define <1 x float> @constrained_vector_exp_v1f32() {
+define <1 x float> @constrained_vector_exp_v1f32() #0 {
 ; CHECK-LABEL: constrained_vector_exp_v1f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
@@ -1922,11 +1922,11 @@ entry:
   %exp = call <1 x float> @llvm.experimental.constrained.exp.v1f32(
                              <1 x float> <float 42.0>,
                              metadata !"round.dynamic",
-                             metadata !"fpexcept.strict")
+                             metadata !"fpexcept.strict") #0
   ret <1 x float> %exp
 }
 
-define <2 x double> @constrained_vector_exp_v2f64() {
+define <2 x double> @constrained_vector_exp_v2f64() #0 {
 ; CHECK-LABEL: constrained_vector_exp_v2f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $24, %rsp
@@ -1960,11 +1960,11 @@ entry:
   %exp = call <2 x double> @llvm.experimental.constrained.exp.v2f64(
                              <2 x double> <double 42.0, double 42.1>,
                              metadata !"round.dynamic",
-                             metadata !"fpexcept.strict")
+                             metadata !"fpexcept.strict") #0
   ret <2 x double> %exp
 }
 
-define <3 x float> @constrained_vector_exp_v3f32() {
+define <3 x float> @constrained_vector_exp_v3f32() #0 {
 ; CHECK-LABEL: constrained_vector_exp_v3f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $40, %rsp
@@ -2009,11 +2009,11 @@ entry:
   %exp = call <3 x float> @llvm.experimental.constrained.exp.v3f32(
                               <3 x float> <float 42.0, float 43.0, float 44.0>,
                               metadata !"round.dynamic",
-                              metadata !"fpexcept.strict")
+                              metadata !"fpexcept.strict") #0
   ret <3 x float> %exp
 }
 
-define <3 x double> @constrained_vector_exp_v3f64() {
+define <3 x double> @constrained_vector_exp_v3f64() #0 {
 ; CHECK-LABEL: constrained_vector_exp_v3f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $24, %rsp
@@ -2060,11 +2060,11 @@ entry:
   %exp = call <3 x double> @llvm.experimental.constrained.exp.v3f64(
                           <3 x double> <double 42.0, double 42.1, double 42.2>,
                           metadata !"round.dynamic",
-                          metadata !"fpexcept.strict")
+                          metadata !"fpexcept.strict") #0
   ret <3 x double> %exp
 }
 
-define <4 x double> @constrained_vector_exp_v4f64() {
+define <4 x double> @constrained_vector_exp_v4f64() #0 {
 ; CHECK-LABEL: constrained_vector_exp_v4f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $40, %rsp
@@ -2118,11 +2118,11 @@ entry:
                              <4 x double> <double 42.0, double 42.1,
                                            double 42.2, double 42.3>,
                              metadata !"round.dynamic",
-                             metadata !"fpexcept.strict")
+                             metadata !"fpexcept.strict") #0
   ret <4 x double> %exp
 }
 
-define <1 x float> @constrained_vector_exp2_v1f32() {
+define <1 x float> @constrained_vector_exp2_v1f32() #0 {
 ; CHECK-LABEL: constrained_vector_exp2_v1f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
@@ -2146,11 +2146,11 @@ entry:
   %exp2 = call <1 x float> @llvm.experimental.constrained.exp2.v1f32(
                              <1 x float> <float 42.0>,
                              metadata !"round.dynamic",
-                             metadata !"fpexcept.strict")
+                             metadata !"fpexcept.strict") #0
   ret <1 x float> %exp2
 }
 
-define <2 x double> @constrained_vector_exp2_v2f64() {
+define <2 x double> @constrained_vector_exp2_v2f64() #0 {
 ; CHECK-LABEL: constrained_vector_exp2_v2f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $24, %rsp
@@ -2184,11 +2184,11 @@ entry:
   %exp2 = call <2 x double> @llvm.experimental.constrained.exp2.v2f64(
                               <2 x double> <double 42.1, double 42.0>,
                               metadata !"round.dynamic",
-                              metadata !"fpexcept.strict")
+                              metadata !"fpexcept.strict") #0
   ret <2 x double> %exp2
 }
 
-define <3 x float> @constrained_vector_exp2_v3f32() {
+define <3 x float> @constrained_vector_exp2_v3f32() #0 {
 ; CHECK-LABEL: constrained_vector_exp2_v3f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $40, %rsp
@@ -2233,11 +2233,11 @@ entry:
   %exp2 = call <3 x float> @llvm.experimental.constrained.exp2.v3f32(
                               <3 x float> <float 42.0, float 43.0, float 44.0>,
                               metadata !"round.dynamic",
-                              metadata !"fpexcept.strict")
+                              metadata !"fpexcept.strict") #0
   ret <3 x float> %exp2
 }
 
-define <3 x double> @constrained_vector_exp2_v3f64() {
+define <3 x double> @constrained_vector_exp2_v3f64() #0 {
 ; CHECK-LABEL: constrained_vector_exp2_v3f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $24, %rsp
@@ -2284,11 +2284,11 @@ entry:
   %exp2 = call <3 x double> @llvm.experimental.constrained.exp2.v3f64(
                           <3 x double> <double 42.0, double 42.1, double 42.2>,
                           metadata !"round.dynamic",
-                          metadata !"fpexcept.strict")
+                          metadata !"fpexcept.strict") #0
   ret <3 x double> %exp2
 }
 
-define <4 x double> @constrained_vector_exp2_v4f64() {
+define <4 x double> @constrained_vector_exp2_v4f64() #0 {
 ; CHECK-LABEL: constrained_vector_exp2_v4f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $40, %rsp
@@ -2342,11 +2342,11 @@ entry:
                               <4 x double> <double 42.1, double 42.2,
                                             double 42.3, double 42.4>,
                               metadata !"round.dynamic",
-                              metadata !"fpexcept.strict")
+                              metadata !"fpexcept.strict") #0
   ret <4 x double> %exp2
 }
 
-define <1 x float> @constrained_vector_log_v1f32() {
+define <1 x float> @constrained_vector_log_v1f32() #0 {
 ; CHECK-LABEL: constrained_vector_log_v1f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
@@ -2370,11 +2370,11 @@ entry:
   %log = call <1 x float> @llvm.experimental.constrained.log.v1f32(
                              <1 x float> <float 42.0>,
                              metadata !"round.dynamic",
-                             metadata !"fpexcept.strict")
+                             metadata !"fpexcept.strict") #0
   ret <1 x float> %log
 }
 
-define <2 x double> @constrained_vector_log_v2f64() {
+define <2 x double> @constrained_vector_log_v2f64() #0 {
 ; CHECK-LABEL: constrained_vector_log_v2f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $24, %rsp
@@ -2408,11 +2408,11 @@ entry:
   %log = call <2 x double> @llvm.experimental.constrained.log.v2f64(
                              <2 x double> <double 42.0, double 42.1>,
                              metadata !"round.dynamic",
-                             metadata !"fpexcept.strict")
+                             metadata !"fpexcept.strict") #0
   ret <2 x double> %log
 }
 
-define <3 x float> @constrained_vector_log_v3f32() {
+define <3 x float> @constrained_vector_log_v3f32() #0 {
 ; CHECK-LABEL: constrained_vector_log_v3f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $40, %rsp
@@ -2457,11 +2457,11 @@ entry:
   %log = call <3 x float> @llvm.experimental.constrained.log.v3f32(
                               <3 x float> <float 42.0, float 43.0, float 44.0>,
                               metadata !"round.dynamic",
-                              metadata !"fpexcept.strict")
+                              metadata !"fpexcept.strict") #0
   ret <3 x float> %log
 }
 
-define <3 x double> @constrained_vector_log_v3f64() {
+define <3 x double> @constrained_vector_log_v3f64() #0 {
 ; CHECK-LABEL: constrained_vector_log_v3f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $24, %rsp
@@ -2508,11 +2508,11 @@ entry:
   %log = call <3 x double> @llvm.experimental.constrained.log.v3f64(
                           <3 x double> <double 42.0, double 42.1, double 42.2>,
                           metadata !"round.dynamic",
-                          metadata !"fpexcept.strict")
+                          metadata !"fpexcept.strict") #0
   ret <3 x double> %log
 }
 
-define <4 x double> @constrained_vector_log_v4f64() {
+define <4 x double> @constrained_vector_log_v4f64() #0 {
 ; CHECK-LABEL: constrained_vector_log_v4f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $40, %rsp
@@ -2566,11 +2566,11 @@ entry:
                              <4 x double> <double 42.0, double 42.1,
                                            double 42.2, double 42.3>,
                              metadata !"round.dynamic",
-                             metadata !"fpexcept.strict")
+                             metadata !"fpexcept.strict") #0
   ret <4 x double> %log
 }
 
-define <1 x float> @constrained_vector_log10_v1f32() {
+define <1 x float> @constrained_vector_log10_v1f32() #0 {
 ; CHECK-LABEL: constrained_vector_log10_v1f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
@@ -2594,11 +2594,11 @@ entry:
   %log10 = call <1 x float> @llvm.experimental.constrained.log10.v1f32(
                              <1 x float> <float 42.0>,
                              metadata !"round.dynamic",
-                             metadata !"fpexcept.strict")
+                             metadata !"fpexcept.strict") #0
   ret <1 x float> %log10
 }
 
-define <2 x double> @constrained_vector_log10_v2f64() {
+define <2 x double> @constrained_vector_log10_v2f64() #0 {
 ; CHECK-LABEL: constrained_vector_log10_v2f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $24, %rsp
@@ -2632,11 +2632,11 @@ entry:
   %log10 = call <2 x double> @llvm.experimental.constrained.log10.v2f64(
                                <2 x double> <double 42.0, double 42.1>,
                                metadata !"round.dynamic",
-                               metadata !"fpexcept.strict")
+                               metadata !"fpexcept.strict") #0
   ret <2 x double> %log10
 }
 
-define <3 x float> @constrained_vector_log10_v3f32() {
+define <3 x float> @constrained_vector_log10_v3f32() #0 {
 ; CHECK-LABEL: constrained_vector_log10_v3f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $40, %rsp
@@ -2681,11 +2681,11 @@ entry:
   %log10 = call <3 x float> @llvm.experimental.constrained.log10.v3f32(
                               <3 x float> <float 42.0, float 43.0, float 44.0>,
                               metadata !"round.dynamic",
-                              metadata !"fpexcept.strict")
+                              metadata !"fpexcept.strict") #0
   ret <3 x float> %log10
 }
 
-define <3 x double> @constrained_vector_log10_v3f64() {
+define <3 x double> @constrained_vector_log10_v3f64() #0 {
 ; CHECK-LABEL: constrained_vector_log10_v3f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $24, %rsp
@@ -2732,11 +2732,11 @@ entry:
   %log10 = call <3 x double> @llvm.experimental.constrained.log10.v3f64(
                           <3 x double> <double 42.0, double 42.1, double 42.2>,
                           metadata !"round.dynamic",
-                          metadata !"fpexcept.strict")
+                          metadata !"fpexcept.strict") #0
   ret <3 x double> %log10
 }
 
-define <4 x double> @constrained_vector_log10_v4f64() {
+define <4 x double> @constrained_vector_log10_v4f64() #0 {
 ; CHECK-LABEL: constrained_vector_log10_v4f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $40, %rsp
@@ -2790,11 +2790,11 @@ entry:
                                <4 x double> <double 42.0, double 42.1,
                                              double 42.2, double 42.3>,
                                metadata !"round.dynamic",
-                               metadata !"fpexcept.strict")
+                               metadata !"fpexcept.strict") #0
   ret <4 x double> %log10
 }
 
-define <1 x float> @constrained_vector_log2_v1f32() {
+define <1 x float> @constrained_vector_log2_v1f32() #0 {
 ; CHECK-LABEL: constrained_vector_log2_v1f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
@@ -2818,11 +2818,11 @@ entry:
   %log2 = call <1 x float> @llvm.experimental.constrained.log2.v1f32(
                              <1 x float> <float 42.0>,
                              metadata !"round.dynamic",
-                             metadata !"fpexcept.strict")
+                             metadata !"fpexcept.strict") #0
   ret <1 x float> %log2
 }
 
-define <2 x double> @constrained_vector_log2_v2f64() {
+define <2 x double> @constrained_vector_log2_v2f64() #0 {
 ; CHECK-LABEL: constrained_vector_log2_v2f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $24, %rsp
@@ -2856,11 +2856,11 @@ entry:
   %log2 = call <2 x double> @llvm.experimental.constrained.log2.v2f64(
                               <2 x double> <double 42.0, double 42.1>,
                               metadata !"round.dynamic",
-                              metadata !"fpexcept.strict")
+                              metadata !"fpexcept.strict") #0
   ret <2 x double> %log2
 }
 
-define <3 x float> @constrained_vector_log2_v3f32() {
+define <3 x float> @constrained_vector_log2_v3f32() #0 {
 ; CHECK-LABEL: constrained_vector_log2_v3f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $40, %rsp
@@ -2905,11 +2905,11 @@ entry:
   %log2 = call <3 x float> @llvm.experimental.constrained.log2.v3f32(
                               <3 x float> <float 42.0, float 43.0, float 44.0>,
                               metadata !"round.dynamic",
-                              metadata !"fpexcept.strict")
+                              metadata !"fpexcept.strict") #0
   ret <3 x float> %log2
 }
 
-define <3 x double> @constrained_vector_log2_v3f64() {
+define <3 x double> @constrained_vector_log2_v3f64() #0 {
 ; CHECK-LABEL: constrained_vector_log2_v3f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $24, %rsp
@@ -2956,11 +2956,11 @@ entry:
   %log2 = call <3 x double> @llvm.experimental.constrained.log2.v3f64(
                           <3 x double> <double 42.0, double 42.1, double 42.2>,
                           metadata !"round.dynamic",
-                          metadata !"fpexcept.strict")
+                          metadata !"fpexcept.strict") #0
   ret <3 x double> %log2
 }
 
-define <4 x double> @constrained_vector_log2_v4f64() {
+define <4 x double> @constrained_vector_log2_v4f64() #0 {
 ; CHECK-LABEL: constrained_vector_log2_v4f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $40, %rsp
@@ -3014,11 +3014,11 @@ entry:
                               <4 x double> <double 42.0, double 42.1,
                                             double 42.2, double 42.3>,
                               metadata !"round.dynamic",
-                              metadata !"fpexcept.strict")
+                              metadata !"fpexcept.strict") #0
   ret <4 x double> %log2
 }
 
-define <1 x float> @constrained_vector_rint_v1f32() {
+define <1 x float> @constrained_vector_rint_v1f32() #0 {
 ; CHECK-LABEL: constrained_vector_rint_v1f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
@@ -3038,11 +3038,11 @@ entry:
   %rint = call <1 x float> @llvm.experimental.constrained.rint.v1f32(
                              <1 x float> <float 42.0>,
                              metadata !"round.dynamic",
-                             metadata !"fpexcept.strict")
+                             metadata !"fpexcept.strict") #0
   ret <1 x float> %rint
 }
 
-define <2 x double> @constrained_vector_rint_v2f64() {
+define <2 x double> @constrained_vector_rint_v2f64() #0 {
 ; CHECK-LABEL: constrained_vector_rint_v2f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $24, %rsp
@@ -3066,11 +3066,11 @@ entry:
   %rint = call <2 x double> @llvm.experimental.constrained.rint.v2f64(
                         <2 x double> <double 42.1, double 42.0>,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret <2 x double> %rint
 }
 
-define <3 x float> @constrained_vector_rint_v3f32() {
+define <3 x float> @constrained_vector_rint_v3f32() #0 {
 ; CHECK-LABEL: constrained_vector_rint_v3f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $40, %rsp
@@ -3107,11 +3107,11 @@ define <3 x float> @constrained_vector_rint_v3f32() {
   %rint = call <3 x float> @llvm.experimental.constrained.rint.v3f32(
                               <3 x float> <float 42.0, float 43.0, float 44.0>,
                               metadata !"round.dynamic",
-                              metadata !"fpexcept.strict")
+                              metadata !"fpexcept.strict") #0
   ret <3 x float> %rint
 }
 
-define <3 x double> @constrained_vector_rint_v3f64() {
+define <3 x double> @constrained_vector_rint_v3f64() #0 {
 ; CHECK-LABEL: constrained_vector_rint_v3f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $24, %rsp
@@ -3145,11 +3145,11 @@ entry:
   %rint = call <3 x double> @llvm.experimental.constrained.rint.v3f64(
                           <3 x double> <double 42.0, double 42.1, double 42.2>,
                           metadata !"round.dynamic",
-                          metadata !"fpexcept.strict")
+                          metadata !"fpexcept.strict") #0
   ret <3 x double> %rint
 }
 
-define <4 x double> @constrained_vector_rint_v4f64() {
+define <4 x double> @constrained_vector_rint_v4f64() #0 {
 ; CHECK-LABEL: constrained_vector_rint_v4f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $40, %rsp
@@ -3184,11 +3184,11 @@ entry:
                         <4 x double> <double 42.1, double 42.2,
                                       double 42.3, double 42.4>,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret <4 x double> %rint
 }
 
-define <1 x float> @constrained_vector_nearbyint_v1f32() {
+define <1 x float> @constrained_vector_nearbyint_v1f32() #0 {
 ; CHECK-LABEL: constrained_vector_nearbyint_v1f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
@@ -3208,11 +3208,11 @@ entry:
   %nearby = call <1 x float> @llvm.experimental.constrained.nearbyint.v1f32(
                                <1 x float> <float 42.0>,
                                metadata !"round.dynamic",
-                               metadata !"fpexcept.strict")
+                               metadata !"fpexcept.strict") #0
   ret <1 x float> %nearby
 }
 
-define <2 x double> @constrained_vector_nearbyint_v2f64() {
+define <2 x double> @constrained_vector_nearbyint_v2f64() #0 {
 ; CHECK-LABEL: constrained_vector_nearbyint_v2f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $24, %rsp
@@ -3236,11 +3236,11 @@ entry:
   %nearby = call <2 x double> @llvm.experimental.constrained.nearbyint.v2f64(
                                 <2 x double> <double 42.1, double 42.0>,
                                 metadata !"round.dynamic",
-                                metadata !"fpexcept.strict")
+                                metadata !"fpexcept.strict") #0
   ret <2 x double> %nearby
 }
 
-define <3 x float> @constrained_vector_nearbyint_v3f32() {
+define <3 x float> @constrained_vector_nearbyint_v3f32() #0 {
 ; CHECK-LABEL: constrained_vector_nearbyint_v3f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $40, %rsp
@@ -3277,11 +3277,11 @@ entry:
   %nearby = call <3 x float> @llvm.experimental.constrained.nearbyint.v3f32(
                               <3 x float> <float 42.0, float 43.0, float 44.0>,
                               metadata !"round.dynamic",
-                              metadata !"fpexcept.strict")
+                              metadata !"fpexcept.strict") #0
   ret <3 x float> %nearby
 }
 
-define <3 x double> @constrained_vector_nearby_v3f64() {
+define <3 x double> @constrained_vector_nearby_v3f64() #0 {
 ; CHECK-LABEL: constrained_vector_nearby_v3f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $24, %rsp
@@ -3315,11 +3315,11 @@ entry:
   %nearby = call <3 x double> @llvm.experimental.constrained.nearbyint.v3f64(
                           <3 x double> <double 42.0, double 42.1, double 42.2>,
                           metadata !"round.dynamic",
-                          metadata !"fpexcept.strict")
+                          metadata !"fpexcept.strict") #0
   ret <3 x double> %nearby
 }
 
-define <4 x double> @constrained_vector_nearbyint_v4f64() {
+define <4 x double> @constrained_vector_nearbyint_v4f64() #0 {
 ; CHECK-LABEL: constrained_vector_nearbyint_v4f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $40, %rsp
@@ -3354,11 +3354,11 @@ entry:
                                 <4 x double> <double 42.1, double 42.2,
                                               double 42.3, double 42.4>,
                                 metadata !"round.dynamic",
-                                metadata !"fpexcept.strict")
+                                metadata !"fpexcept.strict") #0
   ret <4 x double> %nearby
 }
 
-define <1 x float> @constrained_vector_maxnum_v1f32() {
+define <1 x float> @constrained_vector_maxnum_v1f32() #0 {
 ; CHECK-LABEL: constrained_vector_maxnum_v1f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
@@ -3384,11 +3384,11 @@ entry:
   %max = call <1 x float> @llvm.experimental.constrained.maxnum.v1f32(
                                <1 x float> <float 42.0>, <1 x float> <float 41.0>,
                                metadata !"round.dynamic",
-                               metadata !"fpexcept.strict")
+                               metadata !"fpexcept.strict") #0
   ret <1 x float> %max
 }
 
-define <2 x double> @constrained_vector_maxnum_v2f64() {
+define <2 x double> @constrained_vector_maxnum_v2f64() #0 {
 ; CHECK-LABEL: constrained_vector_maxnum_v2f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $24, %rsp
@@ -3427,11 +3427,11 @@ entry:
                                 <2 x double> <double 43.0, double 42.0>,
                                 <2 x double> <double 41.0, double 40.0>,
                                 metadata !"round.dynamic",
-                                metadata !"fpexcept.strict")
+                                metadata !"fpexcept.strict") #0
   ret <2 x double> %max
 }
 
-define <3 x float> @constrained_vector_maxnum_v3f32() {
+define <3 x float> @constrained_vector_maxnum_v3f32() #0 {
 ; CHECK-LABEL: constrained_vector_maxnum_v3f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $40, %rsp
@@ -3483,11 +3483,11 @@ entry:
                               <3 x float> <float 43.0, float 44.0, float 45.0>,
                               <3 x float> <float 41.0, float 42.0, float 43.0>,
                               metadata !"round.dynamic",
-                              metadata !"fpexcept.strict")
+                              metadata !"fpexcept.strict") #0
   ret <3 x float> %max
 }
 
-define <3 x double> @constrained_vector_max_v3f64() {
+define <3 x double> @constrained_vector_max_v3f64() #0 {
 ; CHECK-LABEL: constrained_vector_max_v3f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $24, %rsp
@@ -3541,11 +3541,11 @@ entry:
                           <3 x double> <double 43.0, double 44.0, double 45.0>,
                           <3 x double> <double 40.0, double 41.0, double 42.0>,
                           metadata !"round.dynamic",
-                          metadata !"fpexcept.strict")
+                          metadata !"fpexcept.strict") #0
   ret <3 x double> %max
 }
 
-define <4 x double> @constrained_vector_maxnum_v4f64() {
+define <4 x double> @constrained_vector_maxnum_v4f64() #0 {
 ; CHECK-LABEL: constrained_vector_maxnum_v4f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $40, %rsp
@@ -3609,11 +3609,11 @@ entry:
                                 <4 x double> <double 40.0, double 41.0,
                                               double 42.0, double 43.0>,
                                 metadata !"round.dynamic",
-                                metadata !"fpexcept.strict")
+                                metadata !"fpexcept.strict") #0
   ret <4 x double> %max
 }
 
-define <1 x float> @constrained_vector_minnum_v1f32() {
+define <1 x float> @constrained_vector_minnum_v1f32() #0 {
 ; CHECK-LABEL: constrained_vector_minnum_v1f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
@@ -3639,11 +3639,11 @@ define <1 x float> @constrained_vector_minnum_v1f32() {
   %min = call <1 x float> @llvm.experimental.constrained.minnum.v1f32(
                                <1 x float> <float 42.0>, <1 x float> <float 41.0>,
                                metadata !"round.dynamic",
-                               metadata !"fpexcept.strict")
+                               metadata !"fpexcept.strict") #0
   ret <1 x float> %min
 }
 
-define <2 x double> @constrained_vector_minnum_v2f64() {
+define <2 x double> @constrained_vector_minnum_v2f64() #0 {
 ; CHECK-LABEL: constrained_vector_minnum_v2f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $24, %rsp
@@ -3682,11 +3682,11 @@ entry:
                                 <2 x double> <double 43.0, double 42.0>,
                                 <2 x double> <double 41.0, double 40.0>,
                                 metadata !"round.dynamic",
-                                metadata !"fpexcept.strict")
+                                metadata !"fpexcept.strict") #0
   ret <2 x double> %min
 }
 
-define <3 x float> @constrained_vector_minnum_v3f32() {
+define <3 x float> @constrained_vector_minnum_v3f32() #0 {
 ; CHECK-LABEL: constrained_vector_minnum_v3f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $40, %rsp
@@ -3738,11 +3738,11 @@ entry:
                               <3 x float> <float 43.0, float 44.0, float 45.0>,
                               <3 x float> <float 41.0, float 42.0, float 43.0>,
                               metadata !"round.dynamic",
-                              metadata !"fpexcept.strict")
+                              metadata !"fpexcept.strict") #0
   ret <3 x float> %min
 }
 
-define <3 x double> @constrained_vector_min_v3f64() {
+define <3 x double> @constrained_vector_min_v3f64() #0 {
 ; CHECK-LABEL: constrained_vector_min_v3f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $24, %rsp
@@ -3796,11 +3796,11 @@ entry:
                           <3 x double> <double 43.0, double 44.0, double 45.0>,
                           <3 x double> <double 40.0, double 41.0, double 42.0>,
                           metadata !"round.dynamic",
-                          metadata !"fpexcept.strict")
+                          metadata !"fpexcept.strict") #0
   ret <3 x double> %min
 }
 
-define <4 x double> @constrained_vector_minnum_v4f64() {
+define <4 x double> @constrained_vector_minnum_v4f64() #0 {
 ; CHECK-LABEL: constrained_vector_minnum_v4f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $40, %rsp
@@ -3864,11 +3864,11 @@ entry:
                                 <4 x double> <double 40.0, double 41.0,
                                               double 42.0, double 43.0>,
                                 metadata !"round.dynamic",
-                                metadata !"fpexcept.strict")
+                                metadata !"fpexcept.strict") #0
   ret <4 x double> %min
 }
 
-define <1 x i32> @constrained_vector_fptosi_v1i32_v1f32() {
+define <1 x i32> @constrained_vector_fptosi_v1i32_v1f32() #0 {
 ; CHECK-LABEL: constrained_vector_fptosi_v1i32_v1f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cvttss2si {{.*}}(%rip), %eax
@@ -3881,11 +3881,11 @@ define <1 x i32> @constrained_vector_fptosi_v1i32_v1f32() {
 entry:
   %result = call <1 x i32> @llvm.experimental.constrained.fptosi.v1i32.v1f32(
                                <1 x float><float 42.0>,
-                               metadata !"fpexcept.strict")
+                               metadata !"fpexcept.strict") #0
   ret <1 x i32> %result
 }
 
-define <2 x i32> @constrained_vector_fptosi_v2i32_v2f32() {
+define <2 x i32> @constrained_vector_fptosi_v2i32_v2f32() #0 {
 ; CHECK-LABEL: constrained_vector_fptosi_v2i32_v2f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cvttss2si {{.*}}(%rip), %eax
@@ -3905,11 +3905,11 @@ define <2 x i32> @constrained_vector_fptosi_v2i32_v2f32() {
 entry:
   %result = call <2 x i32> @llvm.experimental.constrained.fptosi.v2i32.v2f32(
                                 <2 x float><float 42.0, float 43.0>,
-                                metadata !"fpexcept.strict")
+                                metadata !"fpexcept.strict") #0
   ret <2 x i32> %result
 }
 
-define <3 x i32> @constrained_vector_fptosi_v3i32_v3f32() {
+define <3 x i32> @constrained_vector_fptosi_v3i32_v3f32() #0 {
 ; CHECK-LABEL: constrained_vector_fptosi_v3i32_v3f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cvttss2si {{.*}}(%rip), %eax
@@ -3935,11 +3935,11 @@ entry:
   %result = call <3 x i32> @llvm.experimental.constrained.fptosi.v3i32.v3f32(
                                 <3 x float><float 42.0, float 43.0,
                                             float 44.0>,
-                                metadata !"fpexcept.strict")
+                                metadata !"fpexcept.strict") #0
   ret <3 x i32> %result
 }
 
-define <4 x i32> @constrained_vector_fptosi_v4i32_v4f32() {
+define <4 x i32> @constrained_vector_fptosi_v4i32_v4f32() #0 {
 ; CHECK-LABEL: constrained_vector_fptosi_v4i32_v4f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cvttss2si {{.*}}(%rip), %eax
@@ -3970,11 +3970,11 @@ entry:
   %result = call <4 x i32> @llvm.experimental.constrained.fptosi.v4i32.v4f32(
                                 <4 x float><float 42.0, float 43.0,
                                             float 44.0, float 45.0>,
-                                metadata !"fpexcept.strict")
+                                metadata !"fpexcept.strict") #0
   ret <4 x i32> %result
 }
 
-define <1 x i64> @constrained_vector_fptosi_v1i64_v1f32() {
+define <1 x i64> @constrained_vector_fptosi_v1i64_v1f32() #0 {
 ; CHECK-LABEL: constrained_vector_fptosi_v1i64_v1f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cvttss2si {{.*}}(%rip), %rax
@@ -3987,11 +3987,11 @@ define <1 x i64> @constrained_vector_fptosi_v1i64_v1f32() {
 entry:
   %result = call <1 x i64> @llvm.experimental.constrained.fptosi.v1i64.v1f32(
                                <1 x float><float 42.0>,
-                               metadata !"fpexcept.strict")
+                               metadata !"fpexcept.strict") #0
   ret <1 x i64> %result
 }
 
-define <2 x i64> @constrained_vector_fptosi_v2i64_v2f32() {
+define <2 x i64> @constrained_vector_fptosi_v2i64_v2f32() #0 {
 ; CHECK-LABEL: constrained_vector_fptosi_v2i64_v2f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cvttss2si {{.*}}(%rip), %rax
@@ -4012,11 +4012,11 @@ define <2 x i64> @constrained_vector_fptosi_v2i64_v2f32() {
 entry:
   %result = call <2 x i64> @llvm.experimental.constrained.fptosi.v2i64.v2f32(
                                 <2 x float><float 42.0, float 43.0>,
-                                metadata !"fpexcept.strict")
+                                metadata !"fpexcept.strict") #0
   ret <2 x i64> %result
 }
 
-define <3 x i64> @constrained_vector_fptosi_v3i64_v3f32() {
+define <3 x i64> @constrained_vector_fptosi_v3i64_v3f32() #0 {
 ; CHECK-LABEL: constrained_vector_fptosi_v3i64_v3f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cvttss2si {{.*}}(%rip), %rax
@@ -4039,11 +4039,11 @@ entry:
   %result = call <3 x i64> @llvm.experimental.constrained.fptosi.v3i64.v3f32(
                                 <3 x float><float 42.0, float 43.0,
                                             float 44.0>,
-                                metadata !"fpexcept.strict")
+                                metadata !"fpexcept.strict") #0
   ret <3 x i64> %result
 }
 
-define <4 x i64> @constrained_vector_fptosi_v4i64_v4f32() {
+define <4 x i64> @constrained_vector_fptosi_v4i64_v4f32() #0 {
 ; CHECK-LABEL: constrained_vector_fptosi_v4i64_v4f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cvttss2si {{.*}}(%rip), %rax
@@ -4076,11 +4076,11 @@ entry:
   %result = call <4 x i64> @llvm.experimental.constrained.fptosi.v4i64.v4f32(
                                 <4 x float><float 42.0, float 43.0,
                                             float 44.0, float 45.0>,
-                                metadata !"fpexcept.strict")
+                                metadata !"fpexcept.strict") #0
   ret <4 x i64> %result
 }
 
-define <1 x i32> @constrained_vector_fptosi_v1i32_v1f64() {
+define <1 x i32> @constrained_vector_fptosi_v1i32_v1f64() #0 {
 ; CHECK-LABEL: constrained_vector_fptosi_v1i32_v1f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cvttsd2si {{.*}}(%rip), %eax
@@ -4093,12 +4093,12 @@ define <1 x i32> @constrained_vector_fptosi_v1i32_v1f64() {
 entry:
   %result = call <1 x i32> @llvm.experimental.constrained.fptosi.v1i32.v1f64(
                                <1 x double><double 42.1>,
-                               metadata !"fpexcept.strict")
+                               metadata !"fpexcept.strict") #0
   ret <1 x i32> %result
 }
 
 
-define <2 x i32> @constrained_vector_fptosi_v2i32_v2f64() {
+define <2 x i32> @constrained_vector_fptosi_v2i32_v2f64() #0 {
 ; CHECK-LABEL: constrained_vector_fptosi_v2i32_v2f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cvttsd2si {{.*}}(%rip), %eax
@@ -4118,11 +4118,11 @@ define <2 x i32> @constrained_vector_fptosi_v2i32_v2f64() {
 entry:
   %result = call <2 x i32> @llvm.experimental.constrained.fptosi.v2i32.v2f64(
                                 <2 x double><double 42.1, double 42.2>,
-                                metadata !"fpexcept.strict")
+                                metadata !"fpexcept.strict") #0
   ret <2 x i32> %result
 }
 
-define <3 x i32> @constrained_vector_fptosi_v3i32_v3f64() {
+define <3 x i32> @constrained_vector_fptosi_v3i32_v3f64() #0 {
 ; CHECK-LABEL: constrained_vector_fptosi_v3i32_v3f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cvttsd2si {{.*}}(%rip), %eax
@@ -4148,11 +4148,11 @@ entry:
   %result = call <3 x i32> @llvm.experimental.constrained.fptosi.v3i32.v3f64(
                                 <3 x double><double 42.1, double 42.2,
                                              double 42.3>,
-                                metadata !"fpexcept.strict")
+                                metadata !"fpexcept.strict") #0
   ret <3 x i32> %result
 }
 
-define <4 x i32> @constrained_vector_fptosi_v4i32_v4f64() {
+define <4 x i32> @constrained_vector_fptosi_v4i32_v4f64() #0 {
 ; CHECK-LABEL: constrained_vector_fptosi_v4i32_v4f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cvttsd2si {{.*}}(%rip), %eax
@@ -4183,11 +4183,11 @@ entry:
   %result = call <4 x i32> @llvm.experimental.constrained.fptosi.v4i32.v4f64(
                                 <4 x double><double 42.1, double 42.2,
                                              double 42.3, double 42.4>,
-                                metadata !"fpexcept.strict")
+                                metadata !"fpexcept.strict") #0
   ret <4 x i32> %result
 }
 
-define <1 x i64> @constrained_vector_fptosi_v1i64_v1f64() {
+define <1 x i64> @constrained_vector_fptosi_v1i64_v1f64() #0 {
 ; CHECK-LABEL: constrained_vector_fptosi_v1i64_v1f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cvttsd2si {{.*}}(%rip), %rax
@@ -4200,11 +4200,11 @@ define <1 x i64> @constrained_vector_fptosi_v1i64_v1f64() {
 entry:
   %result = call <1 x i64> @llvm.experimental.constrained.fptosi.v1i64.v1f64(
                                <1 x double><double 42.1>,
-                               metadata !"fpexcept.strict")
+                               metadata !"fpexcept.strict") #0
   ret <1 x i64> %result
 }
 
-define <2 x i64> @constrained_vector_fptosi_v2i64_v2f64() {
+define <2 x i64> @constrained_vector_fptosi_v2i64_v2f64() #0 {
 ; CHECK-LABEL: constrained_vector_fptosi_v2i64_v2f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cvttsd2si {{.*}}(%rip), %rax
@@ -4225,11 +4225,11 @@ define <2 x i64> @constrained_vector_fptosi_v2i64_v2f64() {
 entry:
   %result = call <2 x i64> @llvm.experimental.constrained.fptosi.v2i64.v2f64(
                                 <2 x double><double 42.1, double 42.2>,
-                                metadata !"fpexcept.strict")
+                                metadata !"fpexcept.strict") #0
   ret <2 x i64> %result
 }
 
-define <3 x i64> @constrained_vector_fptosi_v3i64_v3f64() {
+define <3 x i64> @constrained_vector_fptosi_v3i64_v3f64() #0 {
 ; CHECK-LABEL: constrained_vector_fptosi_v3i64_v3f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cvttsd2si {{.*}}(%rip), %rax
@@ -4252,11 +4252,11 @@ entry:
   %result = call <3 x i64> @llvm.experimental.constrained.fptosi.v3i64.v3f64(
                                 <3 x double><double 42.1, double 42.2,
                                              double 42.3>,
-                                metadata !"fpexcept.strict")
+                                metadata !"fpexcept.strict") #0
   ret <3 x i64> %result
 }
 
-define <4 x i64> @constrained_vector_fptosi_v4i64_v4f64() {
+define <4 x i64> @constrained_vector_fptosi_v4i64_v4f64() #0 {
 ; CHECK-LABEL: constrained_vector_fptosi_v4i64_v4f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cvttsd2si {{.*}}(%rip), %rax
@@ -4289,11 +4289,11 @@ entry:
   %result = call <4 x i64> @llvm.experimental.constrained.fptosi.v4i64.v4f64(
                                 <4 x double><double 42.1, double 42.2,
                                              double 42.3, double 42.4>,
-                                metadata !"fpexcept.strict")
+                                metadata !"fpexcept.strict") #0
   ret <4 x i64> %result
 }
 
-define <1 x i32> @constrained_vector_fptoui_v1i32_v1f32() {
+define <1 x i32> @constrained_vector_fptoui_v1i32_v1f32() #0 {
 ; CHECK-LABEL: constrained_vector_fptoui_v1i32_v1f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cvttss2si {{.*}}(%rip), %eax
@@ -4306,11 +4306,11 @@ define <1 x i32> @constrained_vector_fptoui_v1i32_v1f32() {
 entry:
   %result = call <1 x i32> @llvm.experimental.constrained.fptoui.v1i32.v1f32(
                                <1 x float><float 42.0>,
-                               metadata !"fpexcept.strict")
+                               metadata !"fpexcept.strict") #0
   ret <1 x i32> %result
 }
 
-define <2 x i32> @constrained_vector_fptoui_v2i32_v2f32() {
+define <2 x i32> @constrained_vector_fptoui_v2i32_v2f32() #0 {
 ; CHECK-LABEL: constrained_vector_fptoui_v2i32_v2f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cvttss2si {{.*}}(%rip), %eax
@@ -4330,11 +4330,11 @@ define <2 x i32> @constrained_vector_fptoui_v2i32_v2f32() {
 entry:
   %result = call <2 x i32> @llvm.experimental.constrained.fptoui.v2i32.v2f32(
                                 <2 x float><float 42.0, float 43.0>,
-                                metadata !"fpexcept.strict")
+                                metadata !"fpexcept.strict") #0
   ret <2 x i32> %result
 }
 
-define <3 x i32> @constrained_vector_fptoui_v3i32_v3f32() {
+define <3 x i32> @constrained_vector_fptoui_v3i32_v3f32() #0 {
 ; CHECK-LABEL: constrained_vector_fptoui_v3i32_v3f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cvttss2si {{.*}}(%rip), %eax
@@ -4360,11 +4360,11 @@ entry:
   %result = call <3 x i32> @llvm.experimental.constrained.fptoui.v3i32.v3f32(
                                 <3 x float><float 42.0, float 43.0,
                                             float 44.0>,
-                                metadata !"fpexcept.strict")
+                                metadata !"fpexcept.strict") #0
   ret <3 x i32> %result
 }
 
-define <4 x i32> @constrained_vector_fptoui_v4i32_v4f32() {
+define <4 x i32> @constrained_vector_fptoui_v4i32_v4f32() #0 {
 ; CHECK-LABEL: constrained_vector_fptoui_v4i32_v4f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cvttss2si {{.*}}(%rip), %eax
@@ -4395,11 +4395,11 @@ entry:
   %result = call <4 x i32> @llvm.experimental.constrained.fptoui.v4i32.v4f32(
                                 <4 x float><float 42.0, float 43.0,
                                             float 44.0, float 45.0>,
-                                metadata !"fpexcept.strict")
+                                metadata !"fpexcept.strict") #0
   ret <4 x i32> %result
 }
 
-define <1 x i64> @constrained_vector_fptoui_v1i64_v1f32() {
+define <1 x i64> @constrained_vector_fptoui_v1i64_v1f32() #0 {
 ; CHECK-LABEL: constrained_vector_fptoui_v1i64_v1f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cvttss2si {{.*}}(%rip), %rax
@@ -4412,11 +4412,11 @@ define <1 x i64> @constrained_vector_fptoui_v1i64_v1f32() {
 entry:
   %result = call <1 x i64> @llvm.experimental.constrained.fptoui.v1i64.v1f32(
                                <1 x float><float 42.0>,
-                               metadata !"fpexcept.strict")
+                               metadata !"fpexcept.strict") #0
   ret <1 x i64> %result
 }
 
-define <2 x i64> @constrained_vector_fptoui_v2i64_v2f32() {
+define <2 x i64> @constrained_vector_fptoui_v2i64_v2f32() #0 {
 ; CHECK-LABEL: constrained_vector_fptoui_v2i64_v2f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cvttss2si {{.*}}(%rip), %rax
@@ -4437,11 +4437,11 @@ define <2 x i64> @constrained_vector_fptoui_v2i64_v2f32() {
 entry:
   %result = call <2 x i64> @llvm.experimental.constrained.fptoui.v2i64.v2f32(
                                 <2 x float><float 42.0, float 43.0>,
-                                metadata !"fpexcept.strict")
+                                metadata !"fpexcept.strict") #0
   ret <2 x i64> %result
 }
 
-define <3 x i64> @constrained_vector_fptoui_v3i64_v3f32() {
+define <3 x i64> @constrained_vector_fptoui_v3i64_v3f32() #0 {
 ; CHECK-LABEL: constrained_vector_fptoui_v3i64_v3f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cvttss2si {{.*}}(%rip), %rax
@@ -4464,11 +4464,11 @@ entry:
   %result = call <3 x i64> @llvm.experimental.constrained.fptoui.v3i64.v3f32(
                                 <3 x float><float 42.0, float 43.0,
                                             float 44.0>,
-                                metadata !"fpexcept.strict")
+                                metadata !"fpexcept.strict") #0
   ret <3 x i64> %result
 }
 
-define <4 x i64> @constrained_vector_fptoui_v4i64_v4f32() {
+define <4 x i64> @constrained_vector_fptoui_v4i64_v4f32() #0 {
 ; CHECK-LABEL: constrained_vector_fptoui_v4i64_v4f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cvttss2si {{.*}}(%rip), %rax
@@ -4501,11 +4501,11 @@ entry:
   %result = call <4 x i64> @llvm.experimental.constrained.fptoui.v4i64.v4f32(
                                 <4 x float><float 42.0, float 43.0,
                                             float 44.0, float 45.0>,
-                                metadata !"fpexcept.strict")
+                                metadata !"fpexcept.strict") #0
   ret <4 x i64> %result
 }
 
-define <1 x i32> @constrained_vector_fptoui_v1i32_v1f64() {
+define <1 x i32> @constrained_vector_fptoui_v1i32_v1f64() #0 {
 ; CHECK-LABEL: constrained_vector_fptoui_v1i32_v1f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cvttsd2si {{.*}}(%rip), %eax
@@ -4518,11 +4518,11 @@ define <1 x i32> @constrained_vector_fptoui_v1i32_v1f64() {
 entry:
   %result = call <1 x i32> @llvm.experimental.constrained.fptoui.v1i32.v1f64(
                                <1 x double><double 42.1>,
-                               metadata !"fpexcept.strict")
+                               metadata !"fpexcept.strict") #0
   ret <1 x i32> %result
 }
 
-define <2 x i32> @constrained_vector_fptoui_v2i32_v2f64() {
+define <2 x i32> @constrained_vector_fptoui_v2i32_v2f64() #0 {
 ; CHECK-LABEL: constrained_vector_fptoui_v2i32_v2f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cvttsd2si {{.*}}(%rip), %eax
@@ -4542,11 +4542,11 @@ define <2 x i32> @constrained_vector_fptoui_v2i32_v2f64() {
 entry:
   %result = call <2 x i32> @llvm.experimental.constrained.fptoui.v2i32.v2f64(
                                 <2 x double><double 42.1, double 42.2>,
-                                metadata !"fpexcept.strict")
+                                metadata !"fpexcept.strict") #0
   ret <2 x i32> %result
 }
 
-define <3 x i32> @constrained_vector_fptoui_v3i32_v3f64() {
+define <3 x i32> @constrained_vector_fptoui_v3i32_v3f64() #0 {
 ; CHECK-LABEL: constrained_vector_fptoui_v3i32_v3f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cvttsd2si {{.*}}(%rip), %eax
@@ -4572,11 +4572,11 @@ entry:
   %result = call <3 x i32> @llvm.experimental.constrained.fptoui.v3i32.v3f64(
                                 <3 x double><double 42.1, double 42.2,
                                              double 42.3>,
-                                metadata !"fpexcept.strict")
+                                metadata !"fpexcept.strict") #0
   ret <3 x i32> %result
 }
 
-define <4 x i32> @constrained_vector_fptoui_v4i32_v4f64() {
+define <4 x i32> @constrained_vector_fptoui_v4i32_v4f64() #0 {
 ; CHECK-LABEL: constrained_vector_fptoui_v4i32_v4f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cvttsd2si {{.*}}(%rip), %eax
@@ -4607,11 +4607,11 @@ entry:
   %result = call <4 x i32> @llvm.experimental.constrained.fptoui.v4i32.v4f64(
                                 <4 x double><double 42.1, double 42.2,
                                              double 42.3, double 42.4>,
-                                metadata !"fpexcept.strict")
+                                metadata !"fpexcept.strict") #0
   ret <4 x i32> %result
 }
 
-define <1 x i64> @constrained_vector_fptoui_v1i64_v1f64() {
+define <1 x i64> @constrained_vector_fptoui_v1i64_v1f64() #0 {
 ; CHECK-LABEL: constrained_vector_fptoui_v1i64_v1f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cvttsd2si {{.*}}(%rip), %rax
@@ -4624,11 +4624,11 @@ define <1 x i64> @constrained_vector_fptoui_v1i64_v1f64() {
 entry:
   %result = call <1 x i64> @llvm.experimental.constrained.fptoui.v1i64.v1f64(
                                <1 x double><double 42.1>,
-                               metadata !"fpexcept.strict")
+                               metadata !"fpexcept.strict") #0
   ret <1 x i64> %result
 }
 
-define <2 x i64> @constrained_vector_fptoui_v2i64_v2f64() {
+define <2 x i64> @constrained_vector_fptoui_v2i64_v2f64() #0 {
 ; CHECK-LABEL: constrained_vector_fptoui_v2i64_v2f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cvttsd2si {{.*}}(%rip), %rax
@@ -4649,11 +4649,11 @@ define <2 x i64> @constrained_vector_fptoui_v2i64_v2f64() {
 entry:
   %result = call <2 x i64> @llvm.experimental.constrained.fptoui.v2i64.v2f64(
                                 <2 x double><double 42.1, double 42.2>,
-                                metadata !"fpexcept.strict")
+                                metadata !"fpexcept.strict") #0
   ret <2 x i64> %result
 }
 
-define <3 x i64> @constrained_vector_fptoui_v3i64_v3f64() {
+define <3 x i64> @constrained_vector_fptoui_v3i64_v3f64() #0 {
 ; CHECK-LABEL: constrained_vector_fptoui_v3i64_v3f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cvttsd2si {{.*}}(%rip), %rax
@@ -4676,11 +4676,11 @@ entry:
   %result = call <3 x i64> @llvm.experimental.constrained.fptoui.v3i64.v3f64(
                                 <3 x double><double 42.1, double 42.2,
                                              double 42.3>,
-                                metadata !"fpexcept.strict")
+                                metadata !"fpexcept.strict") #0
   ret <3 x i64> %result
 }
 
-define <4 x i64> @constrained_vector_fptoui_v4i64_v4f64() {
+define <4 x i64> @constrained_vector_fptoui_v4i64_v4f64() #0 {
 ; CHECK-LABEL: constrained_vector_fptoui_v4i64_v4f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cvttsd2si {{.*}}(%rip), %rax
@@ -4713,12 +4713,12 @@ entry:
   %result = call <4 x i64> @llvm.experimental.constrained.fptoui.v4i64.v4f64(
                                 <4 x double><double 42.1, double 42.2,
                                              double 42.3, double 42.4>,
-                                metadata !"fpexcept.strict")
+                                metadata !"fpexcept.strict") #0
   ret <4 x i64> %result
 }
 
 
-define <1 x float> @constrained_vector_fptrunc_v1f64() {
+define <1 x float> @constrained_vector_fptrunc_v1f64() #0 {
 ; CHECK-LABEL: constrained_vector_fptrunc_v1f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
@@ -4734,11 +4734,11 @@ entry:
   %result = call <1 x float> @llvm.experimental.constrained.fptrunc.v1f32.v1f64(
                                 <1 x double><double 42.1>,
                                 metadata !"round.dynamic",
-                                metadata !"fpexcept.strict")
+                                metadata !"fpexcept.strict") #0
   ret <1 x float> %result
 }
 
-define <2 x float> @constrained_vector_fptrunc_v2f64() {
+define <2 x float> @constrained_vector_fptrunc_v2f64() #0 {
 ; CHECK-LABEL: constrained_vector_fptrunc_v2f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
@@ -4760,11 +4760,11 @@ entry:
   %result = call <2 x float> @llvm.experimental.constrained.fptrunc.v2f32.v2f64(
                                 <2 x double><double 42.1, double 42.2>,
                                 metadata !"round.dynamic",
-                                metadata !"fpexcept.strict")
+                                metadata !"fpexcept.strict") #0
   ret <2 x float> %result
 }
 
-define <3 x float> @constrained_vector_fptrunc_v3f64() {
+define <3 x float> @constrained_vector_fptrunc_v3f64() #0 {
 ; CHECK-LABEL: constrained_vector_fptrunc_v3f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
@@ -4793,11 +4793,11 @@ entry:
                                 <3 x double><double 42.1, double 42.2,
                                              double 42.3>,
                                 metadata !"round.dynamic",
-                                metadata !"fpexcept.strict")
+                                metadata !"fpexcept.strict") #0
   ret <3 x float> %result
 }
 
-define <4 x float> @constrained_vector_fptrunc_v4f64() {
+define <4 x float> @constrained_vector_fptrunc_v4f64() #0 {
 ; CHECK-LABEL: constrained_vector_fptrunc_v4f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
@@ -4822,11 +4822,11 @@ entry:
                                 <4 x double><double 42.1, double 42.2,
                                              double 42.3, double 42.4>,
                                 metadata !"round.dynamic",
-                                metadata !"fpexcept.strict")
+                                metadata !"fpexcept.strict") #0
   ret <4 x float> %result
 }
 
-define <1 x double> @constrained_vector_fpext_v1f32() {
+define <1 x double> @constrained_vector_fpext_v1f32() #0 {
 ; CHECK-LABEL: constrained_vector_fpext_v1f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -4841,11 +4841,11 @@ define <1 x double> @constrained_vector_fpext_v1f32() {
 entry:
   %result = call <1 x double> @llvm.experimental.constrained.fpext.v1f64.v1f32(
                                 <1 x float><float 42.0>,
-                                metadata !"fpexcept.strict")
+                                metadata !"fpexcept.strict") #0
   ret <1 x double> %result
 }
 
-define <2 x double> @constrained_vector_fpext_v2f32() {
+define <2 x double> @constrained_vector_fpext_v2f32() #0 {
 ; CHECK-LABEL: constrained_vector_fpext_v2f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -4866,11 +4866,11 @@ define <2 x double> @constrained_vector_fpext_v2f32() {
 entry:
   %result = call <2 x double> @llvm.experimental.constrained.fpext.v2f64.v2f32(
                                 <2 x float><float 42.0, float 43.0>,
-                                metadata !"fpexcept.strict")
+                                metadata !"fpexcept.strict") #0
   ret <2 x double> %result
 }
 
-define <3 x double> @constrained_vector_fpext_v3f32() {
+define <3 x double> @constrained_vector_fpext_v3f32() #0 {
 ; CHECK-LABEL: constrained_vector_fpext_v3f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -4898,11 +4898,11 @@ entry:
   %result = call <3 x double> @llvm.experimental.constrained.fpext.v3f64.v3f32(
                                 <3 x float><float 42.0, float 43.0,
                                             float 44.0>,
-                                metadata !"fpexcept.strict")
+                                metadata !"fpexcept.strict") #0
   ret <3 x double> %result
 }
 
-define <4 x double> @constrained_vector_fpext_v4f32() {
+define <4 x double> @constrained_vector_fpext_v4f32() #0 {
 ; CHECK-LABEL: constrained_vector_fpext_v4f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -4925,11 +4925,11 @@ entry:
   %result = call <4 x double> @llvm.experimental.constrained.fpext.v4f64.v4f32(
                                 <4 x float><float 42.0, float 43.0,
                                             float 44.0, float 45.0>,
-                                metadata !"fpexcept.strict")
+                                metadata !"fpexcept.strict") #0
   ret <4 x double> %result
 }
 
-define <1 x float> @constrained_vector_ceil_v1f32() {
+define <1 x float> @constrained_vector_ceil_v1f32() #0 {
 ; CHECK-LABEL: constrained_vector_ceil_v1f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
@@ -4949,11 +4949,11 @@ entry:
   %ceil = call <1 x float> @llvm.experimental.constrained.ceil.v1f32(
                                <1 x float> <float 1.5>,
                                metadata !"round.dynamic",
-                               metadata !"fpexcept.strict")
+                               metadata !"fpexcept.strict") #0
   ret <1 x float> %ceil
 }
 
-define <2 x double> @constrained_vector_ceil_v2f64() {
+define <2 x double> @constrained_vector_ceil_v2f64() #0 {
 ; CHECK-LABEL: constrained_vector_ceil_v2f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $24, %rsp
@@ -4977,11 +4977,11 @@ entry:
   %ceil = call <2 x double> @llvm.experimental.constrained.ceil.v2f64(
                                 <2 x double> <double 1.1, double 1.9>,
                                 metadata !"round.dynamic",
-                                metadata !"fpexcept.strict")
+                                metadata !"fpexcept.strict") #0
   ret <2 x double> %ceil
 }
 
-define <3 x float> @constrained_vector_ceil_v3f32() {
+define <3 x float> @constrained_vector_ceil_v3f32() #0 {
 ; CHECK-LABEL: constrained_vector_ceil_v3f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $40, %rsp
@@ -5018,11 +5018,11 @@ entry:
   %ceil = call <3 x float> @llvm.experimental.constrained.ceil.v3f32(
                               <3 x float> <float 1.5, float 2.5, float 3.5>,
                               metadata !"round.dynamic",
-                              metadata !"fpexcept.strict")
+                              metadata !"fpexcept.strict") #0
   ret <3 x float> %ceil
 }
 
-define <3 x double> @constrained_vector_ceil_v3f64() {
+define <3 x double> @constrained_vector_ceil_v3f64() #0 {
 ; CHECK-LABEL: constrained_vector_ceil_v3f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $24, %rsp
@@ -5056,11 +5056,11 @@ entry:
   %ceil = call <3 x double> @llvm.experimental.constrained.ceil.v3f64(
                           <3 x double> <double 1.1, double 1.9, double 1.5>,
                           metadata !"round.dynamic",
-                          metadata !"fpexcept.strict")
+                          metadata !"fpexcept.strict") #0
   ret <3 x double> %ceil
 }
 
-define <1 x float> @constrained_vector_floor_v1f32() {
+define <1 x float> @constrained_vector_floor_v1f32() #0 {
 ; CHECK-LABEL: constrained_vector_floor_v1f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
@@ -5080,12 +5080,12 @@ entry:
   %floor = call <1 x float> @llvm.experimental.constrained.floor.v1f32(
                                <1 x float> <float 1.5>,
                                metadata !"round.dynamic",
-                               metadata !"fpexcept.strict")
+                               metadata !"fpexcept.strict") #0
   ret <1 x float> %floor
 }
 
 
-define <2 x double> @constrained_vector_floor_v2f64() {
+define <2 x double> @constrained_vector_floor_v2f64() #0 {
 ; CHECK-LABEL: constrained_vector_floor_v2f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $24, %rsp
@@ -5109,11 +5109,11 @@ entry:
   %floor = call <2 x double> @llvm.experimental.constrained.floor.v2f64(
                                 <2 x double> <double 1.1, double 1.9>,
                                 metadata !"round.dynamic",
-                                metadata !"fpexcept.strict")
+                                metadata !"fpexcept.strict") #0
   ret <2 x double> %floor
 }
 
-define <3 x float> @constrained_vector_floor_v3f32() {
+define <3 x float> @constrained_vector_floor_v3f32() #0 {
 ; CHECK-LABEL: constrained_vector_floor_v3f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $40, %rsp
@@ -5150,11 +5150,11 @@ entry:
   %floor = call <3 x float> @llvm.experimental.constrained.floor.v3f32(
                               <3 x float> <float 1.5, float 2.5, float 3.5>,
                               metadata !"round.dynamic",
-                              metadata !"fpexcept.strict")
+                              metadata !"fpexcept.strict") #0
   ret <3 x float> %floor
 }
 
-define <3 x double> @constrained_vector_floor_v3f64() {
+define <3 x double> @constrained_vector_floor_v3f64() #0 {
 ; CHECK-LABEL: constrained_vector_floor_v3f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $24, %rsp
@@ -5188,11 +5188,11 @@ entry:
   %floor = call <3 x double> @llvm.experimental.constrained.floor.v3f64(
                           <3 x double> <double 1.1, double 1.9, double 1.5>,
                           metadata !"round.dynamic",
-                          metadata !"fpexcept.strict")
+                          metadata !"fpexcept.strict") #0
   ret <3 x double> %floor
 }
 
-define <1 x float> @constrained_vector_round_v1f32() {
+define <1 x float> @constrained_vector_round_v1f32() #0 {
 ; CHECK-LABEL: constrained_vector_round_v1f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
@@ -5216,11 +5216,11 @@ entry:
   %round = call <1 x float> @llvm.experimental.constrained.round.v1f32(
                                <1 x float> <float 1.5>,
                                metadata !"round.dynamic",
-                               metadata !"fpexcept.strict")
+                               metadata !"fpexcept.strict") #0
   ret <1 x float> %round
 }
 
-define <2 x double> @constrained_vector_round_v2f64() {
+define <2 x double> @constrained_vector_round_v2f64() #0 {
 ; CHECK-LABEL: constrained_vector_round_v2f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $24, %rsp
@@ -5254,11 +5254,11 @@ entry:
   %round = call <2 x double> @llvm.experimental.constrained.round.v2f64(
                                 <2 x double> <double 1.1, double 1.9>,
                                 metadata !"round.dynamic",
-                                metadata !"fpexcept.strict")
+                                metadata !"fpexcept.strict") #0
   ret <2 x double> %round
 }
 
-define <3 x float> @constrained_vector_round_v3f32() {
+define <3 x float> @constrained_vector_round_v3f32() #0 {
 ; CHECK-LABEL: constrained_vector_round_v3f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $40, %rsp
@@ -5303,12 +5303,12 @@ entry:
   %round = call <3 x float> @llvm.experimental.constrained.round.v3f32(
                               <3 x float> <float 1.5, float 2.5, float 3.5>,
                               metadata !"round.dynamic",
-                              metadata !"fpexcept.strict")
+                              metadata !"fpexcept.strict") #0
   ret <3 x float> %round
 }
 
 
-define <3 x double> @constrained_vector_round_v3f64() {
+define <3 x double> @constrained_vector_round_v3f64() #0 {
 ; CHECK-LABEL: constrained_vector_round_v3f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $24, %rsp
@@ -5355,11 +5355,11 @@ entry:
   %round = call <3 x double> @llvm.experimental.constrained.round.v3f64(
                           <3 x double> <double 1.1, double 1.9, double 1.5>,
                           metadata !"round.dynamic",
-                          metadata !"fpexcept.strict")
+                          metadata !"fpexcept.strict") #0
   ret <3 x double> %round
 }
 
-define <1 x float> @constrained_vector_trunc_v1f32() {
+define <1 x float> @constrained_vector_trunc_v1f32() #0 {
 ; CHECK-LABEL: constrained_vector_trunc_v1f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
@@ -5379,11 +5379,11 @@ entry:
   %trunc = call <1 x float> @llvm.experimental.constrained.trunc.v1f32(
                                <1 x float> <float 1.5>,
                                metadata !"round.dynamic",
-                               metadata !"fpexcept.strict")
+                               metadata !"fpexcept.strict") #0
   ret <1 x float> %trunc
 }
 
-define <2 x double> @constrained_vector_trunc_v2f64() {
+define <2 x double> @constrained_vector_trunc_v2f64() #0 {
 ; CHECK-LABEL: constrained_vector_trunc_v2f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $24, %rsp
@@ -5407,11 +5407,11 @@ entry:
   %trunc = call <2 x double> @llvm.experimental.constrained.trunc.v2f64(
                                 <2 x double> <double 1.1, double 1.9>,
                                 metadata !"round.dynamic",
-                                metadata !"fpexcept.strict")
+                                metadata !"fpexcept.strict") #0
   ret <2 x double> %trunc
 }
 
-define <3 x float> @constrained_vector_trunc_v3f32() {
+define <3 x float> @constrained_vector_trunc_v3f32() #0 {
 ; CHECK-LABEL: constrained_vector_trunc_v3f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $40, %rsp
@@ -5448,11 +5448,11 @@ entry:
   %trunc = call <3 x float> @llvm.experimental.constrained.trunc.v3f32(
                               <3 x float> <float 1.5, float 2.5, float 3.5>,
                               metadata !"round.dynamic",
-                              metadata !"fpexcept.strict")
+                              metadata !"fpexcept.strict") #0
   ret <3 x float> %trunc
 }
 
-define <3 x double> @constrained_vector_trunc_v3f64() {
+define <3 x double> @constrained_vector_trunc_v3f64() #0 {
 ; CHECK-LABEL: constrained_vector_trunc_v3f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $24, %rsp
@@ -5486,10 +5486,11 @@ entry:
   %trunc = call <3 x double> @llvm.experimental.constrained.trunc.v3f64(
                           <3 x double> <double 1.1, double 1.9, double 1.5>,
                           metadata !"round.dynamic",
-                          metadata !"fpexcept.strict")
+                          metadata !"fpexcept.strict") #0
   ret <3 x double> %trunc
 }
 
+attributes #0 = { strictfp }
 
 ; Single width declarations
 declare <2 x double> @llvm.experimental.constrained.fadd.v2f64(<2 x double>, <2 x double>, metadata, metadata)

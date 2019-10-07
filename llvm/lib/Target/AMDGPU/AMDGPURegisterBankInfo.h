@@ -13,6 +13,8 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUREGISTERBANKINFO_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUREGISTERBANKINFO_H
 
+#include "llvm/ADT/SmallSet.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/GlobalISel/RegisterBankInfo.h"
 
@@ -41,6 +43,18 @@ class AMDGPURegisterBankInfo : public AMDGPUGenRegisterBankInfo {
   const GCNSubtarget &Subtarget;
   const SIRegisterInfo *TRI;
   const SIInstrInfo *TII;
+
+  bool collectWaterfallOperands(
+    SmallSet<Register, 4> &SGPROperandRegs,
+    MachineInstr &MI,
+    MachineRegisterInfo &MRI,
+    ArrayRef<unsigned> OpIndices) const;
+
+  bool executeInWaterfallLoop(
+    MachineIRBuilder &B,
+    iterator_range<MachineBasicBlock::iterator> Range,
+    SmallSet<Register, 4> &SGPROperandRegs,
+    MachineRegisterInfo &MRI) const;
 
   bool executeInWaterfallLoop(MachineIRBuilder &B,
                               MachineInstr &MI,

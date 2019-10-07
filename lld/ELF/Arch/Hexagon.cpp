@@ -19,8 +19,9 @@ using namespace llvm;
 using namespace llvm::object;
 using namespace llvm::support::endian;
 using namespace llvm::ELF;
-using namespace lld;
-using namespace lld::elf;
+
+namespace lld {
+namespace elf {
 
 namespace {
 class Hexagon final : public TargetInfo {
@@ -318,7 +319,10 @@ RelType Hexagon::getDynRel(RelType type) const {
   return R_HEX_NONE;
 }
 
-TargetInfo *elf::getHexagonTargetInfo() {
+TargetInfo *getHexagonTargetInfo() {
   static Hexagon target;
   return &target;
 }
+
+} // namespace elf
+} // namespace lld

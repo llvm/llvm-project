@@ -75,6 +75,10 @@ defm add_section
          "Make a section named <section> with the contents of <file>.">,
       MetaVarName<"section=file">;
 
+defm set_section_alignment
+    : Eq<"set-section-alignment", "Set alignment for a given section.">,
+      MetaVarName<"section=align">;
+
 defm set_section_flags
     : Eq<"set-section-flags",
          "Set section flags for a given section. Flags supported for GNU "

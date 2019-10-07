@@ -190,9 +190,7 @@ body: |
 
 # Test a load of an offset from a constant base address
 # GCN-LABEL: name: constant_address_positive{{$}}
-# GCN: %4:sreg_32_xm0 = S_MOV_B32 44
-# GCN: %5:sreg_32_xm0 = S_MOV_B32 0
-# GCN: %0:sreg_64 = REG_SEQUENCE %4, %subreg.sub0, %5, %subreg.sub1
+# GCN: %0:sreg_64 = S_MOV_B64 44
 
 # VI: %3:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM %0, 64, 0, 0 :: (dereferenceable invariant load 4, addrspace 4)
 # SICI: %3:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM %0, 16, 0, 0 :: (dereferenceable invariant load 4, addrspace 4)

@@ -2338,8 +2338,15 @@ Instruction *InstCombiner::visitBitCast(BitCastInst &CI) {
     // If we found a path from the src to dest, create the getelementptr now.
     if (SrcElTy == DstElTy) {
       SmallVector<Value *, 8> Idxs(NumZeros + 1, Builder.getInt32(0));
-      return GetElementPtrInst::CreateInBounds(SrcPTy->getElementType(), Src,
-                                               Idxs);
+      GetElementPtrInst *GEP =
+          GetElementPtrInst::Create(SrcPTy->getElementType(), Src, Idxs);
+
+      // If the source pointer is dereferenceable, then assume it points to an
+      // allocated object and apply "inbounds" to the GEP.
+      bool CanBeNull;
+      if (Src->getPointerDereferenceableBytes(DL, CanBeNull))
+        GEP->setIsInBounds();
+      return GEP;
     }
   }
 

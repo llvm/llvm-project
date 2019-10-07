@@ -2076,27 +2076,37 @@ static void dumpObject(ObjectFile *O, const Archive *A = nullptr,
   if (StartAddress.getNumOccurrences() || StopAddress.getNumOccurrences())
     checkForInvalidStartStopAddress(O, StartAddress, StopAddress);
 
+  // Note: the order here matches GNU objdump for compatability.
   StringRef ArchiveName = A ? A->getFileName() : "";
-  if (FileHeaders)
-    printFileHeaders(O);
   if (ArchiveHeaders && !MachOOpt && C)
     printArchiveChild(ArchiveName, *C);
-  if (Disassemble)
-    disassembleObject(O, Relocations);
-  if (Relocations && !Disassemble)
-    printRelocations(O);
-  if (DynamicRelocations)
-    printDynamicRelocations(O);
+  if (FileHeaders)
+    printFileHeaders(O);
   if (PrivateHeaders || FirstPrivateHeader)
     printPrivateFileHeaders(O, FirstPrivateHeader);
   if (SectionHeaders)
     printSectionHeaders(O);
-  if (SectionContents)
-    printSectionContents(O);
   if (SymbolTable)
     printSymbolTable(O, ArchiveName);
+  if (DwarfDumpType != DIDT_Null) {
+    std::unique_ptr<DIContext> DICtx = DWARFContext::create(*O);
+    // Dump the complete DWARF structure.
+    DIDumpOptions DumpOpts;
+    DumpOpts.DumpType = DwarfDumpType;
+    DICtx->dump(outs(), DumpOpts);
+  }
+  if (Relocations && !Disassemble)
+    printRelocations(O);
+  if (DynamicRelocations)
+    printDynamicRelocations(O);
+  if (SectionContents)
+    printSectionContents(O);
+  if (Disassemble)
+    disassembleObject(O, Relocations);
   if (UnwindInfo)
     printUnwindInfo(O);
+
+  // Mach-O specific options:
   if (ExportsTrie)
     printExportsTrie(O);
   if (Rebase)
@@ -2107,17 +2117,12 @@ static void dumpObject(ObjectFile *O, const Archive *A = nullptr,
     printLazyBindTable(O);
   if (WeakBind)
     printWeakBindTable(O);
+
+  // Other special sections:
   if (RawClangAST)
     printRawClangAST(O);
   if (FaultMapSection)
     printFaultMaps(O);
-  if (DwarfDumpType != DIDT_Null) {
-    std::unique_ptr<DIContext> DICtx = DWARFContext::create(*O);
-    // Dump the complete DWARF structure.
-    DIDumpOptions DumpOpts;
-    DumpOpts.DumpType = DwarfDumpType;
-    DICtx->dump(outs(), DumpOpts);
-  }
 }
 
 static void dumpObject(const COFFImportFile *I, const Archive *A,

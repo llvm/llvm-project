@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=hexagon -run-pass pipeliner -debug-only=pipeliner %s -o /dev/null 2>&1 | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass pipeliner -debug-only=pipeliner %s -o /dev/null 2>&1 -pipeliner-experimental-cg=true | FileCheck %s
 # REQUIRES: asserts
 
 # Test that the loop carried dependence check correctly identifies a recurrence.

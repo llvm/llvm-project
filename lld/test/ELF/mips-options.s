@@ -8,7 +8,7 @@
 # RUN:          . = 0x100000000; \
 # RUN:          .got  : { *(.got) } }" > %t.rel.script
 # RUN: ld.lld %t1.o %t2.o --gc-sections --script %t.rel.script -shared -o %t.so
-# RUN: llvm-readobj -l --symbols --mips-options %t.so | FileCheck %s
+# RUN: llvm-readobj -l --symbols -A %t.so | FileCheck %s
 
   .text
   .globl  __start

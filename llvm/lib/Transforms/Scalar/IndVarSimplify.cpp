@@ -2789,7 +2789,7 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
     // have already been removed; TODO: generalize
     BasicBlock *ExitBlock =
     BI->getSuccessor(L->contains(BI->getSuccessor(0)) ? 1 : 0);
-    if (!empty(ExitBlock->phis()))
+    if (!ExitBlock->phis().empty())
       return true;
 
     const SCEV *ExitCount = SE->getExitCount(L, ExitingBB);

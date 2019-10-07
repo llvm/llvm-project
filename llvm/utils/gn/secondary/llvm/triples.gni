@@ -10,7 +10,7 @@ if (current_cpu == "x86") {
   } else if (current_os == "mac") {
     llvm_current_triple = "x86_64-apple-darwin"
   } else if (current_os == "win") {
-    llvm_current_triple = "x86_64-pc-windows"
+    llvm_current_triple = "x86_64-pc-windows-msvc"
   }
 } else if (current_cpu == "arm64") {
   if (current_os == "android") {

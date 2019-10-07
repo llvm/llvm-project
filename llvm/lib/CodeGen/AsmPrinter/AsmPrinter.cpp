@@ -2476,6 +2476,7 @@ static void emitGlobalConstantStruct(const DataLayout &DL,
 }
 
 static void emitGlobalConstantFP(APFloat APF, Type *ET, AsmPrinter &AP) {
+  assert(ET && "Unknown float type");
   APInt API = APF.bitcastToAPInt();
 
   // First print a comment with what we think the original floating-point value
@@ -2483,11 +2484,7 @@ static void emitGlobalConstantFP(APFloat APF, Type *ET, AsmPrinter &AP) {
   if (AP.isVerbose()) {
     SmallString<8> StrVal;
     APF.toString(StrVal);
-
-    if (ET)
-      ET->print(AP.OutStreamer->GetCommentOS());
-    else
-      AP.OutStreamer->GetCommentOS() << "Printing <null> Type";
+    ET->print(AP.OutStreamer->GetCommentOS());
     AP.OutStreamer->GetCommentOS() << ' ' << StrVal << '\n';
   }
 

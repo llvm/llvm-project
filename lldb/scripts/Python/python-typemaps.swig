@@ -224,7 +224,7 @@
 namespace {
 template <class T>
 T PyLongAsT(PyObject *obj) {
-  static_assert(true, "unsupported type"); 
+  static_assert(true, "unsupported type");
 }
 
 template <> uint64_t PyLongAsT<uint64_t>(PyObject *obj) {
@@ -406,6 +406,8 @@ bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
 }
 
 %typemap(out) FILE * {
+   // TODO: This is gross. We should find a way to fetch the mode flags from the
+   // lldb_private::File object.
    char mode[4] = {0};
 %#ifdef __APPLE__
    int i = 0;
@@ -420,9 +422,15 @@ bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
        else // if (flags & __SRW)
           mode[i++] = 'a';
     }
+%#else
+   // There's no portable way to get the mode here. We just return a mode which
+   // permits both reads and writes and count on the operating system to return
+   // an error when an invalid operation is attempted.
+   mode[0] = 'r';
+   mode[1] = '+';
 %#endif
    using namespace lldb_private;
-   File file($1, false);
+   NativeFile file($1, false);
    PythonFile py_file(file, mode);
    $result = py_file.release();
    if (!$result)
@@ -461,3 +469,44 @@ bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
         return NULL;
     }
 }
+
+// These two pybuffer macros are copied out of swig/Lib/python/pybuffer.i,
+// and fixed so they will not crash if PyObject_GetBuffer fails.
+// https://github.com/swig/swig/issues/1640
+
+%define %pybuffer_mutable_binary(TYPEMAP, SIZE)
+%typemap(in) (TYPEMAP, SIZE) {
+  int res; Py_ssize_t size = 0; void *buf = 0;
+  Py_buffer view;
+  res = PyObject_GetBuffer($input, &view, PyBUF_WRITABLE);
+  if (res < 0) {
+    PyErr_Clear();
+    %argument_fail(res, "(TYPEMAP, SIZE)", $symname, $argnum);
+  }
+  size = view.len;
+  buf = view.buf;
+  PyBuffer_Release(&view);
+  $1 = ($1_ltype) buf;
+  $2 = ($2_ltype) (size/sizeof($*1_type));
+}
+%enddef
+
+%define %pybuffer_binary(TYPEMAP, SIZE)
+%typemap(in) (TYPEMAP, SIZE) {
+  int res; Py_ssize_t size = 0; const void *buf = 0;
+  Py_buffer view;
+  res = PyObject_GetBuffer($input, &view, PyBUF_CONTIG_RO);
+  if (res < 0) {
+    PyErr_Clear();
+    %argument_fail(res, "(TYPEMAP, SIZE)", $symname, $argnum);
+  }
+  size = view.len;
+  buf = view.buf;
+  PyBuffer_Release(&view);
+  $1 = ($1_ltype) buf;
+  $2 = ($2_ltype) (size / sizeof($*1_type));
+}
+%enddef
+
+%pybuffer_binary(const uint8_t *buf, size_t num_bytes);
+%pybuffer_mutable_binary(uint8_t *buf, size_t num_bytes);

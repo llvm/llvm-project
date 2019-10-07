@@ -364,7 +364,7 @@ private:
 #define TYPE(CLASS, PARENT) void mangleType(const CLASS##Type *T, \
                                             Qualifiers Quals, \
                                             SourceRange Range);
-#include "clang/AST/TypeNodes.def"
+#include "clang/AST/TypeNodes.inc"
 #undef ABSTRACT_TYPE
 #undef NON_CANONICAL_TYPE
 #undef TYPE
@@ -1941,7 +1941,7 @@ void MicrosoftCXXNameMangler::mangleType(QualType T, SourceRange Range,
   case Type::CLASS: \
     mangleType(cast<CLASS##Type>(ty), Quals, Range); \
     break;
-#include "clang/AST/TypeNodes.def"
+#include "clang/AST/TypeNodes.inc"
 #undef ABSTRACT_TYPE
 #undef NON_CANONICAL_TYPE
 #undef TYPE

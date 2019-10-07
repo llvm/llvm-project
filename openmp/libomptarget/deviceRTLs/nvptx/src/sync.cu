@@ -140,7 +140,7 @@ EXTERN void __kmpc_flush(kmp_Ident *loc) {
 // Vote
 ////////////////////////////////////////////////////////////////////////////////
 
-EXTERN int32_t __kmpc_warp_active_thread_mask() {
+EXTERN __kmpc_impl_lanemask_t __kmpc_warp_active_thread_mask() {
   PRINT0(LD_IO, "call __kmpc_warp_active_thread_mask\n");
   return __kmpc_impl_activemask();
 }
@@ -149,7 +149,7 @@ EXTERN int32_t __kmpc_warp_active_thread_mask() {
 // Syncwarp
 ////////////////////////////////////////////////////////////////////////////////
 
-EXTERN void __kmpc_syncwarp(int32_t Mask) {
+EXTERN void __kmpc_syncwarp(__kmpc_impl_lanemask_t Mask) {
   PRINT0(LD_IO, "call __kmpc_syncwarp\n");
   __kmpc_impl_syncwarp(Mask);
 }

@@ -2014,7 +2014,7 @@ void LLVMSetAlignment(LLVMValueRef V, unsigned Bytes) {
   else if (LoadInst *LI = dyn_cast<LoadInst>(P))
     LI->setAlignment(MaybeAlign(Bytes));
   else if (StoreInst *SI = dyn_cast<StoreInst>(P))
-    SI->setAlignment(Bytes);
+    SI->setAlignment(MaybeAlign(Bytes));
   else
     llvm_unreachable(
         "only GlobalValue, AllocaInst, LoadInst and StoreInst have alignment");

@@ -97,11 +97,11 @@ let Predicates = [HasSVE] in {
   defm ABS_ZPmZ  : sve_int_un_pred_arit_0<  0b110, "abs", int_aarch64_sve_abs>;
   defm NEG_ZPmZ  : sve_int_un_pred_arit_0<  0b111, "neg", int_aarch64_sve_neg>;
 
-  defm CLS_ZPmZ  : sve_int_un_pred_arit_1<   0b000, "cls">;
-  defm CLZ_ZPmZ  : sve_int_un_pred_arit_1<   0b001, "clz">;
-  defm CNT_ZPmZ  : sve_int_un_pred_arit_1<   0b010, "cnt">;
-  defm CNOT_ZPmZ : sve_int_un_pred_arit_1<   0b011, "cnot">;
-  defm NOT_ZPmZ  : sve_int_un_pred_arit_1<   0b110, "not">;
+  defm CLS_ZPmZ  : sve_int_un_pred_arit_1<   0b000, "cls",  null_frag>;
+  defm CLZ_ZPmZ  : sve_int_un_pred_arit_1<   0b001, "clz",  null_frag>;
+  defm CNT_ZPmZ  : sve_int_un_pred_arit_1<   0b010, "cnt",  int_aarch64_sve_cnt>;
+  defm CNOT_ZPmZ : sve_int_un_pred_arit_1<   0b011, "cnot", null_frag>;
+  defm NOT_ZPmZ  : sve_int_un_pred_arit_1<   0b110, "not",  null_frag>;
   defm FABS_ZPmZ : sve_int_un_pred_arit_1_fp<0b100, "fabs">;
   defm FNEG_ZPmZ : sve_int_un_pred_arit_1_fp<0b101, "fneg">;
 
@@ -138,12 +138,12 @@ let Predicates = [HasSVE] in {
   defm FDIVR_ZPmZ  : sve_fp_2op_p_zds<0b1100, "fdivr">;
   defm FDIV_ZPmZ   : sve_fp_2op_p_zds<0b1101, "fdiv">;
 
-  defm FADD_ZZZ    : sve_fp_3op_u_zd<0b000, "fadd">;
-  defm FSUB_ZZZ    : sve_fp_3op_u_zd<0b001, "fsub">;
-  defm FMUL_ZZZ    : sve_fp_3op_u_zd<0b010, "fmul">;
-  defm FTSMUL_ZZZ  : sve_fp_3op_u_zd<0b011, "ftsmul">;
-  defm FRECPS_ZZZ  : sve_fp_3op_u_zd<0b110, "frecps">;
-  defm FRSQRTS_ZZZ : sve_fp_3op_u_zd<0b111, "frsqrts">;
+  defm FADD_ZZZ    : sve_fp_3op_u_zd<0b000, "fadd", fadd>;
+  defm FSUB_ZZZ    : sve_fp_3op_u_zd<0b001, "fsub", null_frag>;
+  defm FMUL_ZZZ    : sve_fp_3op_u_zd<0b010, "fmul", null_frag>;
+  defm FTSMUL_ZZZ  : sve_fp_3op_u_zd<0b011, "ftsmul", null_frag>;
+  defm FRECPS_ZZZ  : sve_fp_3op_u_zd<0b110, "frecps", null_frag>;
+  defm FRSQRTS_ZZZ : sve_fp_3op_u_zd<0b111, "frsqrts", null_frag>;
 
   defm FTSSEL_ZZZ : sve_int_bin_cons_misc_0_b<"ftssel">;
 

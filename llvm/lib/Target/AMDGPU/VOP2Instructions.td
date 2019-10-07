@@ -752,19 +752,22 @@ multiclass Bits_OpsRev_i16_Pats <SDPatternOperator op, Instruction inst,
 
 def : GCNPat<
   (op i16:$src0, i16:$src1),
-  !if(!eq(PreservesHI16,1), (ClearHI16 (inst $src1, $src0)), (inst $src1, $src0))
+  !if(!eq(PreservesHI16,1), (ClearHI16 (inst VSrc_b32:$src1, VSrc_b32:$src0)),
+                                       (inst VSrc_b32:$src1, VSrc_b32:$src0))
 >;
 
 def : GCNPat<
   (i32 (zext (op i16:$src0, i16:$src1))),
-  !if(!eq(PreservesHI16,1), (ClearHI16 (inst $src1, $src0)), (inst $src1, $src0))
+  !if(!eq(PreservesHI16,1), (ClearHI16 (inst VSrc_b32:$src1, VSrc_b32:$src0)),
+                                       (inst VSrc_b32:$src1, VSrc_b32:$src0))
 >;
 
 
 def : GCNPat<
   (i64 (zext (op i16:$src0, i16:$src1))),
    (REG_SEQUENCE VReg_64,
-     !if(!eq(PreservesHI16,1), (ClearHI16 (inst $src1, $src0)), (inst $src1, $src0)),
+     !if(!eq(PreservesHI16,1), (ClearHI16 (inst VSrc_b32:$src1, VSrc_b32:$src0)),
+                                          (inst VSrc_b32:$src1, VSrc_b32:$src0)),
      sub0,
      (V_MOV_B32_e32 (i32 0)), sub1)
 >;

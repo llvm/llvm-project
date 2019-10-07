@@ -67,8 +67,8 @@ class FixupLEAPass : public MachineFunctionPass {
   /// - LEA that uses RIP relative addressing mode
   /// - LEA that uses 16-bit addressing mode "
   /// This function currently handles the first 2 cases only.
-  MachineInstr *processInstrForSlow3OpLEA(MachineInstr &MI,
-                                          MachineBasicBlock &MBB);
+  void processInstrForSlow3OpLEA(MachineBasicBlock::iterator &I,
+                                 MachineBasicBlock &MBB, bool OptIncDec);
 
   /// Look for LEAs that are really two address LEAs that we might be able to
   /// turn into regular ADD instructions.
@@ -216,14 +216,10 @@ bool FixupLEAPass::runOnMachineFunction(MachineFunction &MF) {
       if (optTwoAddrLEA(I, MBB, OptIncDec, UseLEAForSP))
         continue;
 
-      if (IsSlowLEA) {
+      if (IsSlowLEA)
         processInstructionForSlowLEA(I, MBB);
-      } else if (IsSlow3OpsLEA) {
-        if (auto *NewMI = processInstrForSlow3OpLEA(*I, MBB)) {
-          MBB.erase(I);
-          I = NewMI;
-        }
-      }
+      else if (IsSlow3OpsLEA)
+        processInstrForSlow3OpLEA(I, MBB, OptIncDec);
     }
 
     // Second pass for creating LEAs. This may reverse some of the
@@ -301,18 +297,14 @@ static inline bool isInefficientLEAReg(unsigned Reg) {
          Reg == X86::R13D || Reg == X86::R13;
 }
 
-static inline bool isRegOperand(const MachineOperand &Op) {
-  return Op.isReg() && Op.getReg() != X86::NoRegister;
-}
-
 /// Returns true if this LEA uses base an index registers, and the base register
 /// is known to be inefficient for the subtarget.
 // TODO: use a variant scheduling class to model the latency profile
 // of LEA instructions, and implement this logic as a scheduling predicate.
 static inline bool hasInefficientLEABaseReg(const MachineOperand &Base,
                                             const MachineOperand &Index) {
-  return Base.isReg() && isInefficientLEAReg(Base.getReg()) &&
-         isRegOperand(Index);
+  return Base.isReg() && isInefficientLEAReg(Base.getReg()) && Index.isReg() &&
+         Index.getReg() != X86::NoRegister;
 }
 
 static inline bool hasLEAOffset(const MachineOperand &Offset) {
@@ -534,112 +526,150 @@ void FixupLEAPass::processInstructionForSlowLEA(MachineBasicBlock::iterator &I,
   }
 }
 
-MachineInstr *
-FixupLEAPass::processInstrForSlow3OpLEA(MachineInstr &MI,
-                                        MachineBasicBlock &MBB) {
+void FixupLEAPass::processInstrForSlow3OpLEA(MachineBasicBlock::iterator &I,
+                                             MachineBasicBlock &MBB,
+                                             bool OptIncDec) {
+  MachineInstr &MI = *I;
   const unsigned LEAOpcode = MI.getOpcode();
 
-  const MachineOperand &Dst =     MI.getOperand(0);
+  const MachineOperand &Dest =    MI.getOperand(0);
   const MachineOperand &Base =    MI.getOperand(1 + X86::AddrBaseReg);
   const MachineOperand &Scale =   MI.getOperand(1 + X86::AddrScaleAmt);
   const MachineOperand &Index =   MI.getOperand(1 + X86::AddrIndexReg);
   const MachineOperand &Offset =  MI.getOperand(1 + X86::AddrDisp);
   const MachineOperand &Segment = MI.getOperand(1 + X86::AddrSegmentReg);
 
-  if (!(TII->isThreeOperandsLEA(MI) ||
-        hasInefficientLEABaseReg(Base, Index)) ||
+  if (!(TII->isThreeOperandsLEA(MI) || hasInefficientLEABaseReg(Base, Index)) ||
       !TII->isSafeToClobberEFLAGS(MBB, MI) ||
       Segment.getReg() != X86::NoRegister)
-    return nullptr;
+    return;
 
-  Register DstR = Dst.getReg();
-  Register BaseR = Base.getReg();
-  Register IndexR = Index.getReg();
-  Register SSDstR =
-      (LEAOpcode == X86::LEA64_32r) ? Register(getX86SubSuperRegister(DstR, 64))
-                                    : DstR;
+  Register DestReg = Dest.getReg();
+  Register BaseReg = Base.getReg();
+  Register IndexReg = Index.getReg();
+
+  if (MI.getOpcode() == X86::LEA64_32r) {
+    if (BaseReg != 0)
+      BaseReg = TRI->getSubReg(BaseReg, X86::sub_32bit);
+    if (IndexReg != 0)
+      IndexReg = TRI->getSubReg(IndexReg, X86::sub_32bit);
+  }
+
   bool IsScale1 = Scale.getImm() == 1;
-  bool IsInefficientBase = isInefficientLEAReg(BaseR);
-  bool IsInefficientIndex = isInefficientLEAReg(IndexR);
+  bool IsInefficientBase = isInefficientLEAReg(BaseReg);
+  bool IsInefficientIndex = isInefficientLEAReg(IndexReg);
 
   // Skip these cases since it takes more than 2 instructions
   // to replace the LEA instruction.
-  if (IsInefficientBase && SSDstR == BaseR && !IsScale1)
-    return nullptr;
-  if (LEAOpcode == X86::LEA64_32r && IsInefficientBase &&
-      (IsInefficientIndex || !IsScale1))
-    return nullptr;
-
-  const DebugLoc DL = MI.getDebugLoc();
-  const MCInstrDesc &ADDrr = TII->get(getADDrrFromLEA(LEAOpcode));
-  const MCInstrDesc &ADDri = TII->get(getADDriFromLEA(LEAOpcode, Offset));
+  if (IsInefficientBase && DestReg == BaseReg && !IsScale1)
+    return;
 
   LLVM_DEBUG(dbgs() << "FixLEA: Candidate to replace:"; MI.dump(););
   LLVM_DEBUG(dbgs() << "FixLEA: Replaced by: ";);
+
+  MachineInstr *NewMI = nullptr;
 
   // First try to replace LEA with one or two (for the 3-op LEA case)
   // add instructions:
   // 1.lea (%base,%index,1), %base => add %index,%base
   // 2.lea (%base,%index,1), %index => add %base,%index
-  if (IsScale1 && (DstR == BaseR || DstR == IndexR)) {
-    const MachineOperand &Src = DstR == BaseR ? Index : Base;
-    MachineInstr *NewMI =
-        BuildMI(MBB, MI, DL, ADDrr, DstR).addReg(DstR).add(Src);
+  if (IsScale1 && (DestReg == BaseReg || DestReg == IndexReg)) {
+    unsigned NewOpc = getADDrrFromLEA(MI.getOpcode());
+    if (DestReg != BaseReg)
+      std::swap(BaseReg, IndexReg);
+
+    if (MI.getOpcode() == X86::LEA64_32r) {
+      // TODO: Do we need the super register implicit use?
+      NewMI = BuildMI(MBB, I, MI.getDebugLoc(), TII->get(NewOpc), DestReg)
+                  .addReg(BaseReg)
+                  .addReg(IndexReg)
+                  .addReg(Base.getReg(), RegState::Implicit)
+                  .addReg(Index.getReg(), RegState::Implicit);
+    } else {
+      NewMI = BuildMI(MBB, I, MI.getDebugLoc(), TII->get(NewOpc), DestReg)
+                  .addReg(BaseReg)
+                  .addReg(IndexReg);
+    }
+  } else if (!IsInefficientBase || (!IsInefficientIndex && IsScale1)) {
+    // If the base is inefficient try switching the index and base operands,
+    // otherwise just break the 3-Ops LEA inst into 2-Ops LEA + ADD instruction:
+    // lea offset(%base,%index,scale),%dst =>
+    // lea (%base,%index,scale); add offset,%dst
+    NewMI = BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(LEAOpcode))
+                .add(Dest)
+                .add(IsInefficientBase ? Index : Base)
+                .add(Scale)
+                .add(IsInefficientBase ? Base : Index)
+                .addImm(0)
+                .add(Segment);
     LLVM_DEBUG(NewMI->dump(););
+  }
+
+  // If either replacement succeeded above, add the offset if needed, then
+  // replace the instruction.
+  if (NewMI) {
     // Create ADD instruction for the Offset in case of 3-Ops LEA.
     if (hasLEAOffset(Offset)) {
-      NewMI = BuildMI(MBB, MI, DL, ADDri, DstR).addReg(DstR).add(Offset);
-      LLVM_DEBUG(NewMI->dump(););
+      if (OptIncDec && Offset.isImm() &&
+          (Offset.getImm() == 1 || Offset.getImm() == -1)) {
+        unsigned NewOpc =
+            getINCDECFromLEA(MI.getOpcode(), Offset.getImm() == 1);
+        NewMI = BuildMI(MBB, I, MI.getDebugLoc(), TII->get(NewOpc), DestReg)
+                    .addReg(DestReg);
+        LLVM_DEBUG(NewMI->dump(););
+      } else {
+        unsigned NewOpc = getADDriFromLEA(MI.getOpcode(), Offset);
+        NewMI = BuildMI(MBB, I, MI.getDebugLoc(), TII->get(NewOpc), DestReg)
+                    .addReg(DestReg)
+                    .add(Offset);
+        LLVM_DEBUG(NewMI->dump(););
+      }
     }
-    return NewMI;
+
+    MBB.erase(I);
+    I = NewMI;
+    return;
   }
-  // If the base is inefficient try switching the index and base operands,
-  // otherwise just break the 3-Ops LEA inst into 2-Ops LEA + ADD instruction:
-  // lea offset(%base,%index,scale),%dst =>
-  // lea (%base,%index,scale); add offset,%dst
-  if (!IsInefficientBase || (!IsInefficientIndex && IsScale1)) {
-    MachineInstr *NewMI = BuildMI(MBB, MI, DL, TII->get(LEAOpcode))
-                              .add(Dst)
-                              .add(IsInefficientBase ? Index : Base)
-                              .add(Scale)
-                              .add(IsInefficientBase ? Base : Index)
-                              .addImm(0)
-                              .add(Segment);
-    LLVM_DEBUG(NewMI->dump(););
-    // Create ADD instruction for the Offset in case of 3-Ops LEA.
-    if (hasLEAOffset(Offset)) {
-      NewMI = BuildMI(MBB, MI, DL, ADDri, DstR).addReg(DstR).add(Offset);
-      LLVM_DEBUG(NewMI->dump(););
-    }
-    return NewMI;
-  }
+
   // Handle the rest of the cases with inefficient base register:
-  assert(SSDstR != BaseR && "SSDstR == BaseR should be handled already!");
+  assert(DestReg != BaseReg && "DestReg == BaseReg should be handled already!");
   assert(IsInefficientBase && "efficient base should be handled already!");
+
+  // FIXME: Handle LEA64_32r.
+  if (LEAOpcode == X86::LEA64_32r)
+    return;
 
   // lea (%base,%index,1), %dst => mov %base,%dst; add %index,%dst
   if (IsScale1 && !hasLEAOffset(Offset)) {
-    bool BIK = Base.isKill() && BaseR != IndexR;
-    TII->copyPhysReg(MBB, MI, DL, DstR, BaseR, BIK);
+    bool BIK = Base.isKill() && BaseReg != IndexReg;
+    TII->copyPhysReg(MBB, MI, MI.getDebugLoc(), DestReg, BaseReg, BIK);
     LLVM_DEBUG(MI.getPrevNode()->dump(););
 
-    MachineInstr *NewMI =
-        BuildMI(MBB, MI, DL, ADDrr, DstR).addReg(DstR).add(Index);
+    unsigned NewOpc = getADDrrFromLEA(MI.getOpcode());
+    NewMI = BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(NewOpc), DestReg)
+                .addReg(DestReg)
+                .add(Index);
     LLVM_DEBUG(NewMI->dump(););
-    return NewMI;
+    return;
   }
+
   // lea offset(%base,%index,scale), %dst =>
   // lea offset( ,%index,scale), %dst; add %base,%dst
-  MachineInstr *NewMI = BuildMI(MBB, MI, DL, TII->get(LEAOpcode))
-                            .add(Dst)
-                            .addReg(0)
-                            .add(Scale)
-                            .add(Index)
-                            .add(Offset)
-                            .add(Segment);
+  NewMI = BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(LEAOpcode))
+              .add(Dest)
+              .addReg(0)
+              .add(Scale)
+              .add(Index)
+              .add(Offset)
+              .add(Segment);
   LLVM_DEBUG(NewMI->dump(););
 
-  NewMI = BuildMI(MBB, MI, DL, ADDrr, DstR).addReg(DstR).add(Base);
+  unsigned NewOpc = getADDrrFromLEA(MI.getOpcode());
+  NewMI = BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(NewOpc), DestReg)
+              .addReg(DestReg)
+              .add(Base);
   LLVM_DEBUG(NewMI->dump(););
-  return NewMI;
+
+  MBB.erase(I);
+  I = NewMI;
 }

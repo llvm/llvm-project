@@ -8,19 +8,19 @@ declare float @foo()
 declare float @llvm.experimental.constrained.fmul.f32(float, float, metadata, metadata)
 
 ; Check register multiplication.
-define float @f1(float %f1, float %f2) {
+define float @f1(float %f1, float %f2) #0 {
 ; CHECK-LABEL: f1:
 ; CHECK: meebr %f0, %f2
 ; CHECK: br %r14
   %res = call float @llvm.experimental.constrained.fmul.f32(
                         float %f1, float %f2,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret float %res
 }
 
 ; Check the low end of the MEEB range.
-define float @f2(float %f1, float *%ptr) {
+define float @f2(float %f1, float *%ptr) #0 {
 ; CHECK-LABEL: f2:
 ; CHECK: meeb %f0, 0(%r2)
 ; CHECK: br %r14
@@ -28,12 +28,12 @@ define float @f2(float %f1, float *%ptr) {
   %res = call float @llvm.experimental.constrained.fmul.f32(
                         float %f1, float %f2,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret float %res
 }
 
 ; Check the high end of the aligned MEEB range.
-define float @f3(float %f1, float *%base) {
+define float @f3(float %f1, float *%base) #0 {
 ; CHECK-LABEL: f3:
 ; CHECK: meeb %f0, 4092(%r2)
 ; CHECK: br %r14
@@ -42,13 +42,13 @@ define float @f3(float %f1, float *%base) {
   %res = call float @llvm.experimental.constrained.fmul.f32(
                         float %f1, float %f2,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret float %res
 }
 
 ; Check the next word up, which needs separate address logic.
 ; Other sequences besides this one would be OK.
-define float @f4(float %f1, float *%base) {
+define float @f4(float %f1, float *%base) #0 {
 ; CHECK-LABEL: f4:
 ; CHECK: aghi %r2, 4096
 ; CHECK: meeb %f0, 0(%r2)
@@ -58,12 +58,12 @@ define float @f4(float %f1, float *%base) {
   %res = call float @llvm.experimental.constrained.fmul.f32(
                         float %f1, float %f2,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret float %res
 }
 
 ; Check negative displacements, which also need separate address logic.
-define float @f5(float %f1, float *%base) {
+define float @f5(float %f1, float *%base) #0 {
 ; CHECK-LABEL: f5:
 ; CHECK: aghi %r2, -4
 ; CHECK: meeb %f0, 0(%r2)
@@ -73,12 +73,12 @@ define float @f5(float %f1, float *%base) {
   %res = call float @llvm.experimental.constrained.fmul.f32(
                         float %f1, float %f2,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret float %res
 }
 
 ; Check that MEEB allows indices.
-define float @f6(float %f1, float *%base, i64 %index) {
+define float @f6(float %f1, float *%base, i64 %index) #0 {
 ; CHECK-LABEL: f6:
 ; CHECK: sllg %r1, %r3, 2
 ; CHECK: meeb %f0, 400(%r1,%r2)
@@ -89,12 +89,12 @@ define float @f6(float %f1, float *%base, i64 %index) {
   %res = call float @llvm.experimental.constrained.fmul.f32(
                         float %f1, float %f2,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret float %res
 }
 
 ; Check that multiplications of spilled values can use MEEB rather than MEEBR.
-define float @f7(float *%ptr0) {
+define float @f7(float *%ptr0) #0 {
 ; CHECK-LABEL: f7:
 ; CHECK: brasl %r14, foo@PLT
 ; CHECK-SCALAR: meeb %f0, 16{{[04]}}(%r15)
@@ -122,52 +122,54 @@ define float @f7(float *%ptr0) {
   %val9 = load float, float *%ptr9
   %val10 = load float, float *%ptr10
 
-  %ret = call float @foo()
+  %ret = call float @foo() #0
 
   %mul0 = call float @llvm.experimental.constrained.fmul.f32(
                         float %ret, float %val0,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   %mul1 = call float @llvm.experimental.constrained.fmul.f32(
                         float %mul0, float %val1,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   %mul2 = call float @llvm.experimental.constrained.fmul.f32(
                         float %mul1, float %val2,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   %mul3 = call float @llvm.experimental.constrained.fmul.f32(
                         float %mul2, float %val3,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   %mul4 = call float @llvm.experimental.constrained.fmul.f32(
                         float %mul3, float %val4,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   %mul5 = call float @llvm.experimental.constrained.fmul.f32(
                         float %mul4, float %val5,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   %mul6 = call float @llvm.experimental.constrained.fmul.f32(
                         float %mul5, float %val6,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   %mul7 = call float @llvm.experimental.constrained.fmul.f32(
                         float %mul6, float %val7,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   %mul8 = call float @llvm.experimental.constrained.fmul.f32(
                         float %mul7, float %val8,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   %mul9 = call float @llvm.experimental.constrained.fmul.f32(
                         float %mul8, float %val9,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   %mul10 = call float @llvm.experimental.constrained.fmul.f32(
                         float %mul9, float %val10,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
 
   ret float %mul10
 }
+
+attributes #0 = { strictfp }

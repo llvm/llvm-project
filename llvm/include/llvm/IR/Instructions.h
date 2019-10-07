@@ -374,8 +374,6 @@ public:
     return 0;
   }
 
-  // FIXME: Remove once migration to Align is over.
-  void setAlignment(unsigned Align);
   void setAlignment(MaybeAlign Align);
 
   /// Returns the ordering constraint of this store instruction.

@@ -7,11 +7,12 @@
 # RUN: ld.lld %t1.o %t2.o -o %t.exe
 # RUN: llvm-objdump -t -s %t.exe | FileCheck %s
 
-# CHECK:      Contents of section .debug_info:
-# CHECK-NEXT:  0000 ffffffff [[SYM:[0-9a-f]+]] [[SYM]]
-#                            ^------------------^-- __start
+# CHECK: [[SYM:[0-9a-f]+]]  .text  00000000 __start
 
-# CHECK: [[SYM]]  .text  00000000 __start
+# CHECK:      Contents of section .debug_info:
+# CHECK-NEXT:  0000 ffffffff [[SYM]] [[SYM]]
+#                            ^-------^-- __start
+
 
   .global __start
 __start:

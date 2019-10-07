@@ -30,9 +30,8 @@ using namespace llvm::ELF;
 using namespace llvm::dwarf;
 using namespace llvm::object;
 
-using namespace lld;
-using namespace lld::elf;
-
+namespace lld {
+namespace elf {
 namespace {
 class EhReader {
 public:
@@ -57,7 +56,7 @@ private:
 };
 }
 
-size_t elf::readEhRecordSize(InputSectionBase *s, size_t off) {
+size_t readEhRecordSize(InputSectionBase *s, size_t off) {
   return EhReader(s, s->data().slice(off)).readEhRecordSize();
 }
 
@@ -149,7 +148,7 @@ void EhReader::skipAugP() {
   d = d.slice(size);
 }
 
-uint8_t elf::getFdeEncoding(EhSectionPiece *p) {
+uint8_t getFdeEncoding(EhSectionPiece *p) {
   return EhReader(p->sec, p->data()).getFdeEncoding();
 }
 
@@ -195,3 +194,6 @@ uint8_t EhReader::getFdeEncoding() {
   }
   return DW_EH_PE_absptr;
 }
+
+} // namespace elf
+} // namespace lld

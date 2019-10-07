@@ -124,7 +124,7 @@ Instruction *InstCombiner::visitAtomicRMWInst(AtomicRMWInst &RMWI) {
     auto *SI = new StoreInst(RMWI.getValOperand(),
                              RMWI.getPointerOperand(), &RMWI);
     SI->setAtomic(Ordering, RMWI.getSyncScopeID());
-    SI->setAlignment(DL.getABITypeAlignment(RMWI.getType()));
+    SI->setAlignment(MaybeAlign(DL.getABITypeAlignment(RMWI.getType())));
     return eraseInstFromFunction(RMWI);
   }
   

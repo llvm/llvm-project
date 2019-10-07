@@ -54,6 +54,12 @@ public:
 
     ForCodeSize = MF.getFunction().hasOptSize();
     Subtarget = &MF.getSubtarget<WebAssemblySubtarget>();
+
+    // Wasm64 is not fully supported right now (and is not specified)
+    if (Subtarget->hasAddr64())
+      report_fatal_error(
+          "64-bit WebAssembly (wasm64) is not currently supported");
+
     return SelectionDAGISel::runOnMachineFunction(MF);
   }
 

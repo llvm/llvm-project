@@ -873,6 +873,7 @@ template <class AliasAnalysisType> class ClobberWalker {
         if (!DefChainEnd)
           for (auto *MA : def_chain(const_cast<MemoryAccess *>(Target)))
             DefChainEnd = MA;
+        assert(DefChainEnd && "Failed to find dominating phi/liveOnEntry");
 
         // If any of the terminated paths don't dominate the phi we'll try to
         // optimize, we need to figure out what they are and quit.

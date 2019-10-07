@@ -15,7 +15,9 @@
 // Unary ops.
 //------------------------------------------------------------------------------
 
-class GenericInstruction : StandardPseudoInstruction;
+class GenericInstruction : StandardPseudoInstruction {
+  let isPreISelOpcode = 1;
+}
 
 // Extend the underlying scalar type of an operation, leaving the high bits
 // unspecified.

@@ -97,6 +97,7 @@ LLDBSwigPythonCreateCommandObject(const char *python_class_name,
 
 extern "C" void *LLDBSwigPythonCreateScriptedThreadPlan(
     const char *python_class_name, const char *session_dictionary_name,
+    StructuredDataImpl *args_data,
     std::string &error_string,
     const lldb::ThreadPlanSP &thread_plan_sp);
 
@@ -720,9 +721,9 @@ bool ScriptInterpreterPythonImpl::EnterSession(uint16_t on_entry_flags,
 
   PythonDictionary &sys_module_dict = GetSysModuleDictionary();
   if (sys_module_dict.IsValid()) {
-    File in_file(in, false);
-    File out_file(out, false);
-    File err_file(err, false);
+    NativeFile in_file(in, false);
+    NativeFile out_file(out, false);
+    NativeFile err_file(err, false);
 
     lldb::FileSP in_sp;
     lldb::StreamFileSP out_sp;
@@ -1845,7 +1846,8 @@ StructuredData::DictionarySP ScriptInterpreterPythonImpl::OSPlugin_CreateThread(
 }
 
 StructuredData::ObjectSP ScriptInterpreterPythonImpl::CreateScriptedThreadPlan(
-    const char *class_name, std::string &error_str, 
+    const char *class_name, StructuredDataImpl *args_data,
+    std::string &error_str, 
     lldb::ThreadPlanSP thread_plan_sp) {
   if (class_name == nullptr || class_name[0] == '\0')
     return StructuredData::ObjectSP();
@@ -1868,7 +1870,7 @@ StructuredData::ObjectSP ScriptInterpreterPythonImpl::CreateScriptedThreadPlan(
                    Locker::AcquireLock | Locker::InitSession | Locker::NoSTDIN);
     ret_val = LLDBSwigPythonCreateScriptedThreadPlan(
         class_name, python_interpreter->m_dictionary_name.c_str(),
-        error_str, thread_plan_sp);
+        args_data, error_str, thread_plan_sp);
     if (!ret_val)
       return {};
   }

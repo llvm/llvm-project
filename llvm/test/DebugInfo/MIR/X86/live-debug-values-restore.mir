@@ -7,6 +7,7 @@
 #   'g': test for a crash from PR42773
 #   'h': complex expressions should be restored
 #   'i': spills should be restored across block boundaries
+#   'j': indirect DBG_VALUEs should be indirect after restoration
 
 # #define FORCE_SPILL() \
 #   __asm volatile("" : : : \
@@ -24,6 +25,7 @@
 # CHECK: ![[QVAR:[0-9]+]] = !DILocalVariable(name: "q",
 # CHECK: ![[RVAR:[0-9]+]] = !DILocalVariable(name: "r",
 # CHECK: ![[SVAR:[0-9]+]] = !DILocalVariable(name: "s",
+# CHECK: ![[TVAR:[0-9]+]] = !DILocalVariable(name: "t",
 
 # Ascertain that the spill has been recognized and manifested in a DBG_VALUE.
 # CHECK: MOV64mr $rsp,{{.*-8.*}}killed{{.*}}$rdi :: (store 8 into %stack.0)
@@ -81,7 +83,7 @@
     %0 = load i32, i32* %add.ptr, align 4, !dbg !223, !tbaa !24
     ret i32 %0, !dbg !228
   }
- 
+
   define dso_local i32 @i(i32* readonly %p) local_unnamed_addr !dbg !307 {
   entry:
     br label %foo
@@ -99,6 +101,25 @@
     %add.ptr = getelementptr inbounds i32, i32* %p, i64 1, !dbg !322
     %0 = load i32, i32* %add.ptr, align 4, !dbg !323, !tbaa !24
     ret i32 %0, !dbg !328
+  }
+
+  define dso_local i32 @j(i32* readonly %p) local_unnamed_addr !dbg !402 {
+  entry:
+    br label %foo
+
+  foo:
+    call void @llvm.dbg.value(metadata i32* %p, metadata !404, metadata !DIExpression()), !dbg !405
+    %tobool = icmp eq i32* %p, null, !dbg !406
+    br i1 %tobool, label %if.end, label %if.then, !dbg !408
+  
+  if.then:                                          ; preds = %entry
+    tail call void asm sideeffect "", "~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15},~{dirflag},~{fpsr},~{flags}"(), !dbg !409, !srcloc !411
+    br label %if.end, !dbg !412
+  
+  if.end:                                           ; preds = %entry, %if.then
+    %add.ptr = getelementptr inbounds i32, i32* %p, i64 1, !dbg !413
+    %0 = load i32, i32* %add.ptr, align 4, !dbg !414, !tbaa !24
+    ret i32 %0, !dbg !415
   }
 
   declare void @llvm.dbg.value(metadata, metadata, metadata)
@@ -181,6 +202,21 @@
   !322 = !DILocation(line: 109, column: 14, scope: !307)
   !323 = !DILocation(line: 109, column: 10, scope: !307)
   !328 = !DILocation(line: 109, column: 3, scope: !307)
+  !401 = !DIBasicType(name: "looong int", size: 64, encoding: DW_ATE_signed)
+  !402 = distinct !DISubprogram(name: "j", scope: !0, file: !1, line: 105, type: !8, scopeLine: 105, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !403)
+  !403 = !{!404}
+  !404 = !DILocalVariable(name: "t", arg: 1, scope: !402, file: !1, line: 105, type: !401)
+  !405 = !DILocation(line: 105, column: 12, scope: !402)
+  !406 = !DILocation(line: 106, column: 7, scope: !407)
+  !407 = distinct !DILexicalBlock(scope: !402, file: !1, line: 106, column: 7)
+  !408 = !DILocation(line: 106, column: 7, scope: !402)
+  !409 = !DILocation(line: 107, column: 5, scope: !410)
+  !410 = distinct !DILexicalBlock(scope: !407, file: !1, line: 106, column: 10)
+  !411 = !{i32 -2147471544}
+  !412 = !DILocation(line: 108, column: 3, scope: !410)
+  !413 = !DILocation(line: 109, column: 14, scope: !402)
+  !414 = !DILocation(line: 109, column: 10, scope: !402)
+  !415 = !DILocation(line: 109, column: 3, scope: !402)
 ...
 ---
 name:            f
@@ -593,5 +629,108 @@ body:             |
     renamable $rdi = MOV64rm $rsp, 1, $noreg, -8, $noreg :: (load 8 from %stack.0)
     renamable $eax = MOV32rm killed renamable $rdi, 1, $noreg, 4, $noreg, debug-location !323 :: (load 4 from %ir.add.ptr, !tbaa !24)
     RETQ $eax, debug-location !328
+
+...
+---
+# Test that if an unspilt DBG_VALUE starts as an indirect DBG_VALUE, then it
+# is restored as an indirect DBG_VALUE. FIXME: Note that for the intervening
+# period of being a spilt location there is still a missing layer of
+# indirection.
+
+# CHECK-LABEL: name: j
+# CHECK-LABEL: bb.0.entry:
+# CHECK:       DBG_VALUE $rdi, 0, ![[TVAR]], !DIExpression()
+# CHECK-LABEL: bb.1.if.then:
+# CHECK:       DBG_VALUE $rsp, 0, ![[TVAR]], !DIExpression(DW_OP_constu, 8, DW_OP_minus)
+# CHECK:       INLINEASM
+# CHECK:       DBG_VALUE ${{[a-zA-Z0-9]+}}, 0, ![[TVAR]], !DIExpression()
+# CHECK-LABEL: bb.2.if.end
+
+name:            j
+tracksRegLiveness: true
+liveins:         
+  - { reg: '$rdi', virtual-reg: '' }
+frameInfo:       
+  stackSize:       48
+  offsetAdjustment: -48
+  maxAlignment:    8
+  cvBytesOfCalleeSavedRegisters: 48
+fixedStack:      
+  - { id: 0, type: spill-slot, offset: -56, size: 8, alignment: 8, stack-id: default,
+      callee-saved-register: '$rbx', callee-saved-restored: true, debug-info-variable: '', 
+      debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, type: spill-slot, offset: -48, size: 8, alignment: 16, stack-id: default,
+      callee-saved-register: '$r12', callee-saved-restored: true, debug-info-variable: '', 
+      debug-info-expression: '', debug-info-location: '' }
+  - { id: 2, type: spill-slot, offset: -40, size: 8, alignment: 8, stack-id: default,
+      callee-saved-register: '$r13', callee-saved-restored: true, debug-info-variable: '', 
+      debug-info-expression: '', debug-info-location: '' }
+  - { id: 3, type: spill-slot, offset: -32, size: 8, alignment: 16, stack-id: default,
+      callee-saved-register: '$r14', callee-saved-restored: true, debug-info-variable: '', 
+      debug-info-expression: '', debug-info-location: '' }
+  - { id: 4, type: spill-slot, offset: -24, size: 8, alignment: 8, stack-id: default,
+      callee-saved-register: '$r15', callee-saved-restored: true, debug-info-variable: '', 
+      debug-info-expression: '', debug-info-location: '' }
+  - { id: 5, type: spill-slot, offset: -16, size: 8, alignment: 16, stack-id: default,
+      callee-saved-register: '$rbp', callee-saved-restored: true, debug-info-variable: '', 
+      debug-info-expression: '', debug-info-location: '' }
+stack:           
+  - { id: 0, name: '', type: spill-slot, offset: -64, size: 8, alignment: 8, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+constants:       []
+body:             |
+  bb.0.entry:
+    successors: %bb.2, %bb.1
+    liveins: $rdi, $rbx, $r12, $r13, $r14, $r15, $rbp
+  
+    DBG_VALUE $rdi, 0, !404, !DIExpression(), debug-location !405
+    DBG_VALUE $rdi, 0, !404, !DIExpression(), debug-location !405
+    TEST64rr renamable $rdi, renamable $rdi, implicit-def $eflags, debug-location !406
+    JCC_1 %bb.2, 4, implicit $eflags, debug-location !408
+  
+  bb.1.if.then:
+    successors: %bb.2
+    liveins: $rdi, $rbp, $r15, $r14, $r13, $r12, $rbx
+  
+    frame-setup PUSH64r killed $rbp, implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa_offset 16
+    frame-setup PUSH64r killed $r15, implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa_offset 24
+    frame-setup PUSH64r killed $r14, implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa_offset 32
+    frame-setup PUSH64r killed $r13, implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa_offset 40
+    frame-setup PUSH64r killed $r12, implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa_offset 48
+    frame-setup PUSH64r killed $rbx, implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa_offset 56
+    CFI_INSTRUCTION offset $rbx, -56
+    CFI_INSTRUCTION offset $r12, -48
+    CFI_INSTRUCTION offset $r13, -40
+    CFI_INSTRUCTION offset $r14, -32
+    CFI_INSTRUCTION offset $r15, -24
+    CFI_INSTRUCTION offset $rbp, -16
+    MOV64mr $rsp, 1, $noreg, -8, $noreg, killed renamable $rdi :: (store 8 into %stack.0)
+    INLINEASM &"", 1, 12, implicit-def dead early-clobber $rax, 12, implicit-def dead early-clobber $rbx, 12, implicit-def dead early-clobber $rcx, 12, implicit-def dead early-clobber $rdx, 12, implicit-def dead early-clobber $rsi, 12, implicit-def dead early-clobber $rdi, 12, implicit-def dead early-clobber $rbp, 12, implicit-def dead early-clobber $r8, 12, implicit-def dead early-clobber $r9, 12, implicit-def dead early-clobber $r10, 12, implicit-def dead early-clobber $r11, 12, implicit-def dead early-clobber $r12, 12, implicit-def dead early-clobber $r13, 12, implicit-def dead early-clobber $r14, 12, implicit-def dead early-clobber $r15, 12, implicit-def dead early-clobber $eflags, !20, debug-location !409
+    renamable $rdi = MOV64rm $rsp, 1, $noreg, -8, $noreg :: (load 8 from %stack.0)
+    $rbx = frame-destroy POP64r implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa_offset 48
+    $r12 = frame-destroy POP64r implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa_offset 40
+    $r13 = frame-destroy POP64r implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa_offset 32
+    $r14 = frame-destroy POP64r implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa_offset 24
+    $r15 = frame-destroy POP64r implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa_offset 16
+    $rbp = frame-destroy POP64r implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa_offset 8
+  
+  bb.2.if.end:
+    liveins: $rdi, $rbx, $r12, $r13, $r14, $r15, $rbp
+  
+    renamable $eax = MOV32rm killed renamable $rdi, 1, $noreg, 4, $noreg, debug-location !414 :: (load 4 from %ir.add.ptr, !tbaa !24)
+    RETQ $eax, debug-location !415
 
 ...

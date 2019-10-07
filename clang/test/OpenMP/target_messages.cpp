@@ -13,14 +13,12 @@
 // NO-HOST-BC: The provided host compiler IR file '1111.bc' is required to generate code for OpenMP target regions but cannot be found.
 
 // RUN: %clang_cc1 -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm-bc %s -o %t-ppc-host.bc -DREGION_HOST
-// RUN: not %clang_cc1 -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - -DREGION_DEVICE 2>&1 | FileCheck %s --check-prefix NO-REGION
-// NO-REGION: Offloading entry for target region is incorrect: either the address or the ID is invalid.
-// NO-REGION-NOT: Offloading entry for target region is incorrect: either the address or the ID is invalid.
+// RUN: not %clang_cc1 -verify -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - -DREGION_DEVICE 2>&1
 
 #if defined(REGION_HOST) || defined(REGION_DEVICE)
 void foo() {
 #ifdef REGION_HOST
-#pragma omp target
+#pragma omp target // expected-error {{Offloading entry for target region in _Z3foov is incorrect: either the address or the ID is invalid.}}
   ;
 #endif
 #ifdef REGION_DEVICE

@@ -12,13 +12,16 @@ add_llvm_fuzzer(clangd-fuzzer
   DUMMY_MAIN DummyClangdMain.cpp
   )
 
-target_link_libraries(clangd-fuzzer
+clang_target_link_libraries(clangd-fuzzer
   PRIVATE
   clangBasic
-  clangDaemon
   clangFormat
   clangFrontend
   clangSema
   clangTooling
   clangToolingCore
+  )
+target_link_libraries(clangd-fuzzer
+  PRIVATE
+  clangDaemon
   )

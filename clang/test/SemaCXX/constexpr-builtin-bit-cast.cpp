@@ -381,3 +381,19 @@ constexpr bool test_pad_buffer() {
   return x.a == z.a && x.b == z.b;
 }
 static_assert(test_pad_buffer());
+
+constexpr unsigned char identity1a = 42;
+constexpr unsigned char identity1b = __builtin_bit_cast(unsigned char, identity1a);
+static_assert(identity1b == 42);
+
+struct IdentityInStruct {
+  unsigned char n;
+};
+constexpr IdentityInStruct identity2a = {42};
+constexpr unsigned char identity2b = __builtin_bit_cast(unsigned char, identity2a.n);
+
+union IdentityInUnion {
+  unsigned char n;
+};
+constexpr IdentityInUnion identity3a = {42};
+constexpr unsigned char identity3b = __builtin_bit_cast(unsigned char, identity3a.n);

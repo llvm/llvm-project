@@ -628,11 +628,6 @@ bool HotColdSplitting::outlineColdRegions(Function &F, bool HasProfileSummary) {
     } while (!Region.empty());
   }
 
-  // We need to explicitly clear the assumption cache since the value tracking
-  // may now be invalid as part of the function has changed.
-  if (Changed)
-    if (AssumptionCache *AC = LookupAC(F))
-      AC->clear();
   return Changed;
 }
 

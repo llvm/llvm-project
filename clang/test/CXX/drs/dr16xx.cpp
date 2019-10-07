@@ -23,6 +23,18 @@ namespace std {
 } // std
 #endif
 
+namespace dr1601 { // dr1601: 10
+enum E : char { e };
+#if __cplusplus < 201103L
+    // expected-error@-2 {{enumeration types with a fixed underlying type are a C++11 extension}}
+#endif
+void f(char);
+void f(int);
+void g() {
+  f(e);
+}
+} // namespace dr1601
+
 namespace dr1611 { // dr1611: dup 1658
   struct A { A(int); };
   struct B : virtual A { virtual void f() = 0; };

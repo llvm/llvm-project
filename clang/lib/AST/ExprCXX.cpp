@@ -251,7 +251,7 @@ QualType CXXDeleteExpr::getDestroyedType() const {
   if (ArgType->isDependentType() && !ArgType->isPointerType())
     return QualType();
 
-  return ArgType->getAs<PointerType>()->getPointeeType();
+  return ArgType->castAs<PointerType>()->getPointeeType();
 }
 
 // CXXPseudoDestructorExpr
@@ -1512,11 +1512,8 @@ CXXRecordDecl *UnresolvedMemberExpr::getNamingClass() {
   // Otherwise the naming class must have been the base class.
   else {
     QualType BaseType = getBaseType().getNonReferenceType();
-    if (isArrow()) {
-      const auto *PT = BaseType->getAs<PointerType>();
-      assert(PT && "base of arrow member access is not pointer");
-      BaseType = PT->getPointeeType();
-    }
+    if (isArrow())
+      BaseType = BaseType->castAs<PointerType>()->getPointeeType();
 
     Record = BaseType->getAsCXXRecordDecl();
     assert(Record && "base of member expression does not name record");

@@ -1248,12 +1248,22 @@ bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
               // FIXME: More precise: no Uses that alias SI.
               if (!Flags->IsSink && !MSSA->dominates(SIMD, MU))
                 return false;
-            } else if (const auto *MD = dyn_cast<MemoryDef>(&MA))
+            } else if (const auto *MD = dyn_cast<MemoryDef>(&MA)) {
               if (auto *LI = dyn_cast<LoadInst>(MD->getMemoryInst())) {
                 (void)LI; // Silence warning.
                 assert(!LI->isUnordered() && "Expected unordered load");
                 return false;
               }
+              // Any call, while it may not be clobbering SI, it may be a use.
+              if (auto *CI = dyn_cast<CallInst>(MD->getMemoryInst())) {
+                // Check if the call may read from the memory locattion written
+                // to by SI. Check CI's attributes and arguments; the number of
+                // such checks performed is limited above by NoOfMemAccTooLarge.
+                ModRefInfo MRI = AA->getModRefInfo(CI, MemoryLocation::get(SI));
+                if (isModOrRefSet(MRI))
+                  return false;
+              }
+            }
         }
 
       auto *Source = MSSA->getSkipSelfWalker()->getClobberingMemoryAccess(SI);
@@ -1383,8 +1393,7 @@ static Instruction *CloneInstructionInExitBlock(
   if (!I.getName().empty())
     New->setName(I.getName() + ".le");
 
-  MemoryAccess *OldMemAcc;
-  if (MSSAU && (OldMemAcc = MSSAU->getMemorySSA()->getMemoryAccess(&I))) {
+  if (MSSAU && MSSAU->getMemorySSA()->getMemoryAccess(&I)) {
     // Create a new MemoryAccess and let MemorySSA set its defining access.
     MemoryAccess *NewMemAcc = MSSAU->createMemoryAccessInBB(
         New, nullptr, New->getParent(), MemorySSA::Beginning);
@@ -1791,7 +1800,7 @@ public:
       StoreInst *NewSI = new StoreInst(LiveInValue, Ptr, InsertPos);
       if (UnorderedAtomic)
         NewSI->setOrdering(AtomicOrdering::Unordered);
-      NewSI->setAlignment(Alignment);
+      NewSI->setAlignment(MaybeAlign(Alignment));
       NewSI->setDebugLoc(DL);
       if (AATags)
         NewSI->setAAMetadata(AATags);
@@ -2115,9 +2124,8 @@ bool llvm::promoteLoopAccessesToScalars(
     PreheaderLoad->setAAMetadata(AATags);
   SSA.AddAvailableValue(Preheader, PreheaderLoad);
 
-  MemoryAccess *PreheaderLoadMemoryAccess;
   if (MSSAU) {
-    PreheaderLoadMemoryAccess = MSSAU->createMemoryAccessInBB(
+    MemoryAccess *PreheaderLoadMemoryAccess = MSSAU->createMemoryAccessInBB(
         PreheaderLoad, nullptr, PreheaderLoad->getParent(), MemorySSA::End);
     MemoryUse *NewMemUse = cast<MemoryUse>(PreheaderLoadMemoryAccess);
     MSSAU->insertUse(NewMemUse, /*RenameUses=*/true);

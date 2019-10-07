@@ -698,7 +698,7 @@ TargetSP Debugger::FindTargetWithProcess(Process *process) {
 Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
     : UserID(g_unique_id++),
       Properties(std::make_shared<OptionValueProperties>()),
-      m_input_file_sp(std::make_shared<File>(stdin, false)),
+      m_input_file_sp(std::make_shared<NativeFile>(stdin, false)),
       m_output_stream_sp(std::make_shared<StreamFile>(stdout, false)),
       m_error_stream_sp(std::make_shared<StreamFile>(stderr, false)),
       m_input_recorder(nullptr),
@@ -821,31 +821,22 @@ void Debugger::SetAsyncExecution(bool async_execution) {
 
 repro::DataRecorder *Debugger::GetInputRecorder() { return m_input_recorder; }
 
-void Debugger::SetInputFileHandle(FILE *fh, bool tranfer_ownership,
-                                  repro::DataRecorder *recorder) {
+void Debugger::SetInputFile(FileSP file_sp, repro::DataRecorder *recorder) {
+  assert(file_sp && file_sp->IsValid());
   m_input_recorder = recorder;
-
-  m_input_file_sp = std::make_shared<File>(fh, tranfer_ownership);
-  if (!m_input_file_sp->IsValid())
-    m_input_file_sp = std::make_shared<File>(stdin, false);
-
+  m_input_file_sp = file_sp;
   // Save away the terminal state if that is relevant, so that we can restore
   // it in RestoreInputState.
   SaveInputTerminalState();
 }
 
-void Debugger::SetOutputFileHandle(FILE *fh, bool tranfer_ownership) {
-  FileSP file_sp = std::make_shared<File>(fh, tranfer_ownership);
-  if (!file_sp->IsValid())
-    file_sp = std::make_shared<File>(stdout, false);
+void Debugger::SetOutputFile(FileSP file_sp) {
+  assert(file_sp && file_sp->IsValid());
   m_output_stream_sp = std::make_shared<StreamFile>(file_sp);
-
 }
 
-void Debugger::SetErrorFileHandle(FILE *fh, bool tranfer_ownership) {
-  FileSP file_sp = std::make_shared<File>(fh, tranfer_ownership);
-  if (!file_sp->IsValid())
-    file_sp = std::make_shared<File>(stderr, false);
+void Debugger::SetErrorFile(FileSP file_sp) {
+  assert(file_sp && file_sp->IsValid());
   m_error_stream_sp = std::make_shared<StreamFile>(file_sp);
 }
 
@@ -990,7 +981,7 @@ void Debugger::AdoptTopIOHandlerFilesIfInvalid(FileSP &in, StreamFileSP &out,
 
     // If there is nothing, use stdin
     if (!in)
-      in = std::make_shared<File>(stdin, false);
+      in = std::make_shared<NativeFile>(stdin, false);
   }
   // If no STDOUT has been set, then set it appropriately
   if (!out) {

@@ -38,7 +38,6 @@
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
@@ -2713,7 +2712,6 @@ void MachineBlockPlacement::optimizeBranches() {
   // cannot because all branches may not be analyzable.
   // E.g., the target may be able to remove an unconditional branch to
   // a fallthrough when it occurs after predicated terminators.
-  SmallVector<MachineBasicBlock*, 4> EmptyBB;
   for (MachineBasicBlock *ChainBB : FunctionChain) {
     Cond.clear();
     MachineBasicBlock *TBB = nullptr, *FBB = nullptr; // For AnalyzeBranch.
@@ -2733,49 +2731,8 @@ void MachineBlockPlacement::optimizeBranches() {
         TII->removeBranch(*ChainBB);
         TII->insertBranch(*ChainBB, FBB, TBB, Cond, dl);
         ChainBB->updateTerminator();
-      } else if (Cond.empty() && TBB && ChainBB != TBB && !TBB->empty() &&
-                 !TBB->canFallThrough()) {
-        // When ChainBB is unconditional branch to the TBB, and TBB has no
-        // fallthrough predecessor and fallthrough successor, try to merge
-        // ChainBB and TBB. This is legal under the one of following conditions:
-        // 1. ChainBB is empty except for an unconditional branch.
-        // 2. TBB has only one predecessor.
-        MachineFunction::iterator I(TBB);
-        if (((TBB == &*F->begin()) || !std::prev(I)->canFallThrough()) &&
-             (TailDup.isSimpleBB(ChainBB) || (TBB->pred_size() == 1))) {
-          TII->removeBranch(*ChainBB);
-          ChainBB->removeSuccessor(TBB);
-
-          // Update the CFG.
-          while (!TBB->pred_empty()) {
-            MachineBasicBlock *Pred = *(TBB->pred_end() - 1);
-            Pred->ReplaceUsesOfBlockWith(TBB, ChainBB);
-          }
-
-          while (!TBB->succ_empty()) {
-            MachineBasicBlock *Succ = *(TBB->succ_end() - 1);
-            ChainBB->addSuccessor(Succ, MBPI->getEdgeProbability(TBB, Succ));
-            TBB->removeSuccessor(Succ);
-          }
-
-          // Move all the instructions of TBB to ChainBB.
-          ChainBB->splice(ChainBB->end(), TBB, TBB->begin(), TBB->end());
-          EmptyBB.push_back(TBB);
-
-          // If TBB was the target of a jump table, update jump tables to go to
-          // the ChainBB instead.
-          if (MachineJumpTableInfo *MJTI = F->getJumpTableInfo())
-            MJTI->ReplaceMBBInJumpTables(TBB, ChainBB);
-        }
       }
     }
-  }
-
-  for (auto BB: EmptyBB) {
-    MLI->removeBlock(BB);
-    FunctionChain.remove(BB);
-    BlockToChain.erase(BB);
-    F->erase(BB);
   }
 }
 
@@ -3097,9 +3054,6 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
     }
   }
 
-  // optimizeBranches() may change the blocks, but we haven't updated the
-  // post-dominator tree. Because the post-dominator tree won't be used after
-  // this function and this pass don't preserve the post-dominator tree.
   optimizeBranches();
   alignBlocks();
 

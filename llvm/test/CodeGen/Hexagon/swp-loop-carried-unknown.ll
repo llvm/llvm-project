@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -hexagon-initial-cfg-cleanup=0 < %s | FileCheck %s
+; RUN: llc -march=hexagon -hexagon-initial-cfg-cleanup=0 < %s -pipeliner-experimental-cg=true | FileCheck %s
 
 ; Test that the pipeliner schedules a store before the load in which there is a
 ; loop carried dependence. Previously, the loop carried dependence wasn't added

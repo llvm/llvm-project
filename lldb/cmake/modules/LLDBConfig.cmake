@@ -1,5 +1,6 @@
 include(CheckCXXSymbolExists)
 include(CheckTypeSize)
+include(CMakeDependentOption)
 
 set(LLDB_PROJECT_ROOT ${CMAKE_CURRENT_SOURCE_DIR})
 set(LLDB_SOURCE_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/source")
@@ -383,6 +384,13 @@ if(NOT DEFINED LLDB_VERSION_SUFFIX)
 endif()
 set(LLDB_VERSION "${LLDB_VERSION_MAJOR}.${LLDB_VERSION_MINOR}.${LLDB_VERSION_PATCH}${LLDB_VERSION_SUFFIX}")
 message(STATUS "LLDB version: ${LLDB_VERSION}")
+
+find_package(LibLZMA)
+cmake_dependent_option(LLDB_ENABLE_LZMA "Support LZMA compression" ON "LIBLZMA_FOUND" OFF)
+if (LLDB_ENABLE_LZMA)
+  include_directories(${LIBLZMA_INCLUDE_DIRS})
+endif()
+llvm_canonicalize_cmake_booleans(LLDB_ENABLE_LZMA)
 
 include_directories(BEFORE
   ${CMAKE_CURRENT_BINARY_DIR}/include

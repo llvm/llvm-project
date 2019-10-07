@@ -183,6 +183,24 @@ public:
     FILE *
     GetErrorFileHandle ();
 
+    SBError
+    SetInputFile (SBFile file);
+
+    SBError
+    SetOutputFile (SBFile file);
+
+    SBError
+    SetErrorFile (SBFile file);
+
+    SBFile
+    GetInputFile ();
+
+    SBFile
+    GetOutputFile ();
+
+    SBFile
+    GetErrorFile ();
+
     lldb::SBCommandInterpreter
     GetCommandInterpreter ();
 

@@ -115,6 +115,26 @@ scratch_load_dword v1, v2, off offset:-4097
 // GFX9-ERR: :32: error: expected a 13-bit signed offset
 // VI-ERR: :32: error: not a valid operand.
 
+scratch_load_dword v0, v1, off offset:-2049 glc slc
+// GFX10-ERR: :32: error: expected a 12-bit signed offset
+// GFX9: scratch_load_dword v0, v1, off offset:-2049 glc slc ; encoding: [0xff,0x57,0x53,0xdc,0x01,0x00,0x7f,0x00]
+// VI-ERR: :32: error: not a valid operand.
+
+scratch_load_dword v0, v1, off offset:-2048 glc slc
+// GFX10: scratch_load_dword v0, v1, off offset:-2048 glc slc ; encoding: [0x00,0x48,0x33,0xdc,0x01,0x00,0x7d,0x00]
+// GFX9: scratch_load_dword v0, v1, off offset:-2048 glc slc ; encoding: [0x00,0x58,0x53,0xdc,0x01,0x00,0x7f,0x00]
+// VI-ERR: :32: error: not a valid operand.
+
+scratch_load_dword v255, off, s1 offset:2047
+// GFX10: scratch_load_dword v255, off, s1 offset:2047 ; encoding: [0xff,0x47,0x30,0xdc,0x00,0x00,0x01,0xff]
+// GFX9: scratch_load_dword v255, off, s1 offset:2047 ; encoding: [0xff,0x47,0x50,0xdc,0x00,0x00,0x01,0xff]
+// VI-ERR: :34: error: not a valid operand.
+
+scratch_load_dword v255, off, s0 offset:2048
+// GFX10-ERR: :34: error: expected a 12-bit signed offset
+// GFX9: scratch_load_dword v255, off, s0 offset:2048 ; encoding: [0x00,0x48,0x50,0xdc,0x00,0x00,0x00,0xff]
+// VI-ERR: :34: error: not a valid operand.
+
 scratch_store_byte v1, v2, off
 // GFX10: encoding: [0x00,0x40,0x60,0xdc,0x01,0x02,0x7d,0x00]
 // GFX9: scratch_store_byte v1, v2, off ; encoding: [0x00,0x40,0x60,0xdc,0x01,0x02,0x7f,0x00]

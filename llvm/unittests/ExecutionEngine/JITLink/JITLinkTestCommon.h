@@ -77,9 +77,9 @@ public:
 
   class TestJITLinkContext : public jitlink::JITLinkContext {
   public:
-    using TestCaseFunction = std::function<void(jitlink::AtomGraph &)>;
+    using TestCaseFunction = std::function<void(jitlink::LinkGraph &)>;
 
-    using NotifyResolvedFunction = std::function<void(jitlink::AtomGraph &G)>;
+    using NotifyResolvedFunction = std::function<void(jitlink::LinkGraph &G)>;
 
     using NotifyFinalizedFunction = std::function<void(
         std::unique_ptr<jitlink::JITLinkMemoryManager::Allocation>)>;
@@ -103,11 +103,11 @@ public:
 
     void notifyFailed(Error Err) override;
 
-    void
-    lookup(const DenseSet<StringRef> &Symbols,
-           jitlink::JITLinkAsyncLookupContinuation LookupContinuation) override;
+    void lookup(
+        const DenseSet<StringRef> &Symbols,
+        std::unique_ptr<jitlink::JITLinkAsyncLookupContinuation> LC) override;
 
-    void notifyResolved(jitlink::AtomGraph &G) override;
+    void notifyResolved(jitlink::LinkGraph &G) override;
 
     void notifyFinalized(
         std::unique_ptr<jitlink::JITLinkMemoryManager::Allocation> A) override;
@@ -140,56 +140,60 @@ public:
   }
 
   template <typename T>
-  static Expected<T> readInt(jitlink::AtomGraph &G, jitlink::DefinedAtom &A,
+  static Expected<T> readInt(jitlink::LinkGraph &G, jitlink::Block &B,
                              size_t Offset = 0) {
-    if (Offset + sizeof(T) > A.getContent().size())
-      return make_error<StringError>("Reading past end of atom content",
+    if (Offset + sizeof(T) > B.getSize())
+      return make_error<StringError>("Reading past end of block content",
                                      inconvertibleErrorCode());
-    return support::endian::read<T, 1>(A.getContent().data() + Offset,
+    return support::endian::read<T, 1>(B.getContent().data() + Offset,
                                        G.getEndianness());
   }
 
   template <typename T>
-  static Expected<T> readInt(jitlink::AtomGraph &G, StringRef AtomName,
+  static Expected<T> readInt(jitlink::LinkGraph &G, StringRef SymbolName,
                              size_t Offset = 0) {
-    auto DA = G.findDefinedAtomByName(AtomName);
-    if (!DA)
-      return DA.takeError();
-    return readInt<T>(G, *DA);
+    for (auto *Sym : G.defined_symbols()) {
+      if (Sym->getName() == SymbolName)
+        return readInt<T>(G, Sym->getBlock(), Sym->getOffset() + Offset);
+    }
+    return make_error<StringError>("Symbol \"" + SymbolName + "\" not found",
+                                   inconvertibleErrorCode());
   }
 
   static Expected<std::pair<MCInst, size_t>>
-  disassemble(const MCDisassembler &Dis, jitlink::DefinedAtom &Atom,
-              size_t Offset = 0);
+  disassemble(const MCDisassembler &Dis, jitlink::Block &B, size_t Offset = 0);
 
   static Expected<int64_t> decodeImmediateOperand(const MCDisassembler &Dis,
-                                                  jitlink::DefinedAtom &Atom,
+                                                  jitlink::Block &B,
                                                   size_t OpIdx,
                                                   size_t Offset = 0);
 
-  static jitlink::Atom &atom(jitlink::AtomGraph &G, StringRef Name) {
-    return G.getAtomByName(Name);
+  static jitlink::Symbol &symbol(jitlink::LinkGraph &G, StringRef Name) {
+    for (auto *Sym : G.defined_symbols())
+      if (Sym->getName() == Name)
+        return *Sym;
+    for (auto *Sym : G.external_symbols())
+      if (Sym->getName() == Name)
+        return *Sym;
+    for (auto *Sym : G.absolute_symbols())
+      if (Sym->getName() == Name)
+        return *Sym;
+    llvm_unreachable("Name must reference a symbol");
   }
 
-  static jitlink::DefinedAtom &definedAtom(jitlink::AtomGraph &G,
-                                           StringRef Name) {
-    return G.getDefinedAtomByName(Name);
-  }
-
-  static JITTargetAddress atomAddr(jitlink::AtomGraph &G, StringRef Name) {
-    return atom(G, Name).getAddress();
+  static JITTargetAddress symbolAddr(jitlink::LinkGraph &G, StringRef Name) {
+    return symbol(G, Name).getAddress();
   }
 
   template <typename PredT>
-  static size_t countEdgesMatching(jitlink::DefinedAtom &DA,
-                                   const PredT &Pred) {
-    return std::count_if(DA.edges().begin(), DA.edges().end(), Pred);
+  static size_t countEdgesMatching(jitlink::Block &B, const PredT &Pred) {
+    return std::count_if(B.edges().begin(), B.edges().end(), Pred);
   }
 
   template <typename PredT>
-  static size_t countEdgesMatching(jitlink::AtomGraph &G, StringRef Name,
+  static size_t countEdgesMatching(jitlink::LinkGraph &G, StringRef Name,
                                    const PredT &Pred) {
-    return countEdgesMatching(definedAtom(G, Name), Pred);
+    return countEdgesMatching(symbol(G, Name), Pred);
   }
 
 private:

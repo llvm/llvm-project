@@ -338,7 +338,7 @@ static void CheckShadowMapping() {
 #if !SANITIZER_GO
 static void OnStackUnwind(const SignalContext &sig, const void *,
                           BufferedStackTrace *stack) {
-  stack->Unwind(sig.pc, sig.bp, sig.context,
+  stack->Unwind(StackTrace::GetNextInstructionPc(sig.pc), sig.bp, sig.context,
                 common_flags()->fast_unwind_on_fatal);
 }
 

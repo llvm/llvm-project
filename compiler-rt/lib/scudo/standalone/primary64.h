@@ -79,9 +79,9 @@ public:
       // memory accesses which ends up being fairly costly. The current lower
       // limit is mostly arbitrary and based on empirical observations.
       // TODO(kostyak): make the lower limit a runtime option
-      Region->CanRelease = (ReleaseToOsInterval > 0) &&
+      Region->CanRelease = (ReleaseToOsInterval >= 0) &&
                            (I != SizeClassMap::BatchClassId) &&
-                           (getSizeByClassId(I) >= (PageSize / 16));
+                           (getSizeByClassId(I) >= (PageSize / 32));
       Region->RandState = getRandomU32(&Seed);
     }
     ReleaseToOsIntervalMs = ReleaseToOsInterval;
@@ -167,14 +167,16 @@ public:
       printStats(I, 0);
   }
 
-  void releaseToOS() {
+  uptr releaseToOS() {
+    uptr TotalReleasedBytes = 0;
     for (uptr I = 0; I < NumClasses; I++) {
       if (I == SizeClassMap::BatchClassId)
         continue;
       RegionInfo *Region = getRegionInfo(I);
       ScopedLock L(Region->Mutex);
-      releaseToOSMaybe(Region, I, /*Force=*/true);
+      TotalReleasedBytes += releaseToOSMaybe(Region, I, /*Force=*/true);
     }
+    return TotalReleasedBytes;
   }
 
 private:
@@ -259,7 +261,7 @@ private:
     const uptr MappedUser = Region->MappedUser;
     const uptr TotalUserBytes = Region->AllocatedUser + MaxCount * Size;
     // Map more space for blocks, if necessary.
-    if (LIKELY(TotalUserBytes > MappedUser)) {
+    if (TotalUserBytes > MappedUser) {
       // Do the mmap for the user memory.
       const uptr UserMapSize =
           roundUpTo(TotalUserBytes - MappedUser, MapSizeIncrement);
@@ -325,43 +327,44 @@ private:
     if (Region->MappedUser == 0)
       return;
     const uptr InUse = Region->Stats.PoppedBlocks - Region->Stats.PushedBlocks;
-    const uptr AvailableChunks =
-        Region->AllocatedUser / getSizeByClassId(ClassId);
+    const uptr TotalChunks = Region->AllocatedUser / getSizeByClassId(ClassId);
     Printf("%s %02zu (%6zu): mapped: %6zuK popped: %7zu pushed: %7zu inuse: "
-           "%6zu avail: %6zu rss: %6zuK releases: %6zu last released: %6zuK "
+           "%6zu total: %6zu rss: %6zuK releases: %6zu last released: %6zuK "
            "region: 0x%zx (0x%zx)\n",
            Region->Exhausted ? "F" : " ", ClassId, getSizeByClassId(ClassId),
            Region->MappedUser >> 10, Region->Stats.PoppedBlocks,
-           Region->Stats.PushedBlocks, InUse, AvailableChunks, Rss >> 10,
+           Region->Stats.PushedBlocks, InUse, TotalChunks, Rss >> 10,
            Region->ReleaseInfo.RangesReleased,
            Region->ReleaseInfo.LastReleasedBytes >> 10, Region->RegionBeg,
            getRegionBaseByClassId(ClassId));
   }
 
-  NOINLINE void releaseToOSMaybe(RegionInfo *Region, uptr ClassId,
+  NOINLINE uptr releaseToOSMaybe(RegionInfo *Region, uptr ClassId,
                                  bool Force = false) {
     const uptr BlockSize = getSizeByClassId(ClassId);
     const uptr PageSize = getPageSizeCached();
 
     CHECK_GE(Region->Stats.PoppedBlocks, Region->Stats.PushedBlocks);
-    const uptr N = Region->Stats.PoppedBlocks - Region->Stats.PushedBlocks;
-    if (N * BlockSize < PageSize)
-      return; // No chance to release anything.
+    const uptr BytesInFreeList =
+        Region->AllocatedUser -
+        (Region->Stats.PoppedBlocks - Region->Stats.PushedBlocks) * BlockSize;
+    if (BytesInFreeList < PageSize)
+      return 0; // No chance to release anything.
     if ((Region->Stats.PushedBlocks -
          Region->ReleaseInfo.PushedBlocksAtLastRelease) *
             BlockSize <
         PageSize) {
-      return; // Nothing new to release.
+      return 0; // Nothing new to release.
     }
 
     if (!Force) {
       const s32 IntervalMs = ReleaseToOsIntervalMs;
       if (IntervalMs < 0)
-        return;
+        return 0;
       if (Region->ReleaseInfo.LastReleaseAtNs +
               static_cast<uptr>(IntervalMs) * 1000000ULL >
           getMonotonicTime()) {
-        return; // Memory was returned recently.
+        return 0; // Memory was returned recently.
       }
     }
 
@@ -377,6 +380,7 @@ private:
       Region->ReleaseInfo.LastReleasedBytes = Recorder.getReleasedBytes();
     }
     Region->ReleaseInfo.LastReleaseAtNs = getMonotonicTime();
+    return Recorder.getReleasedBytes();
   }
 };
 

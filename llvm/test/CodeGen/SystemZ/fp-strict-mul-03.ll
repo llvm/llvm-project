@@ -8,19 +8,19 @@ declare double @foo()
 declare double @llvm.experimental.constrained.fmul.f64(double, double, metadata, metadata)
 
 ; Check register multiplication.
-define double @f1(double %f1, double %f2) {
+define double @f1(double %f1, double %f2) #0 {
 ; CHECK-LABEL: f1:
 ; CHECK: mdbr %f0, %f2
 ; CHECK: br %r14
   %res = call double @llvm.experimental.constrained.fmul.f64(
                         double %f1, double %f2,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret double %res
 }
 
 ; Check the low end of the MDB range.
-define double @f2(double %f1, double *%ptr) {
+define double @f2(double %f1, double *%ptr) #0 {
 ; CHECK-LABEL: f2:
 ; CHECK: mdb %f0, 0(%r2)
 ; CHECK: br %r14
@@ -28,12 +28,12 @@ define double @f2(double %f1, double *%ptr) {
   %res = call double @llvm.experimental.constrained.fmul.f64(
                         double %f1, double %f2,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret double %res
 }
 
 ; Check the high end of the aligned MDB range.
-define double @f3(double %f1, double *%base) {
+define double @f3(double %f1, double *%base) #0 {
 ; CHECK-LABEL: f3:
 ; CHECK: mdb %f0, 4088(%r2)
 ; CHECK: br %r14
@@ -42,13 +42,13 @@ define double @f3(double %f1, double *%base) {
   %res = call double @llvm.experimental.constrained.fmul.f64(
                         double %f1, double %f2,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret double %res
 }
 
 ; Check the next doubleword up, which needs separate address logic.
 ; Other sequences besides this one would be OK.
-define double @f4(double %f1, double *%base) {
+define double @f4(double %f1, double *%base) #0 {
 ; CHECK-LABEL: f4:
 ; CHECK: aghi %r2, 4096
 ; CHECK: mdb %f0, 0(%r2)
@@ -58,12 +58,12 @@ define double @f4(double %f1, double *%base) {
   %res = call double @llvm.experimental.constrained.fmul.f64(
                         double %f1, double %f2,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret double %res
 }
 
 ; Check negative displacements, which also need separate address logic.
-define double @f5(double %f1, double *%base) {
+define double @f5(double %f1, double *%base) #0 {
 ; CHECK-LABEL: f5:
 ; CHECK: aghi %r2, -8
 ; CHECK: mdb %f0, 0(%r2)
@@ -73,12 +73,12 @@ define double @f5(double %f1, double *%base) {
   %res = call double @llvm.experimental.constrained.fmul.f64(
                         double %f1, double %f2,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret double %res
 }
 
 ; Check that MDB allows indices.
-define double @f6(double %f1, double *%base, i64 %index) {
+define double @f6(double %f1, double *%base, i64 %index) #0 {
 ; CHECK-LABEL: f6:
 ; CHECK: sllg %r1, %r3, 3
 ; CHECK: mdb %f0, 800(%r1,%r2)
@@ -89,12 +89,12 @@ define double @f6(double %f1, double *%base, i64 %index) {
   %res = call double @llvm.experimental.constrained.fmul.f64(
                         double %f1, double %f2,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret double %res
 }
 
 ; Check that multiplications of spilled values can use MDB rather than MDBR.
-define double @f7(double *%ptr0) {
+define double @f7(double *%ptr0) #0 {
 ; CHECK-LABEL: f7:
 ; CHECK: brasl %r14, foo@PLT
 ; CHECK-SCALAR: mdb %f0, 160(%r15)
@@ -122,52 +122,54 @@ define double @f7(double *%ptr0) {
   %val9 = load double, double *%ptr9
   %val10 = load double, double *%ptr10
 
-  %ret = call double @foo()
+  %ret = call double @foo() #0
 
   %mul0 = call double @llvm.experimental.constrained.fmul.f64(
                         double %ret, double %val0,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   %mul1 = call double @llvm.experimental.constrained.fmul.f64(
                         double %mul0, double %val1,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   %mul2 = call double @llvm.experimental.constrained.fmul.f64(
                         double %mul1, double %val2,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   %mul3 = call double @llvm.experimental.constrained.fmul.f64(
                         double %mul2, double %val3,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   %mul4 = call double @llvm.experimental.constrained.fmul.f64(
                         double %mul3, double %val4,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   %mul5 = call double @llvm.experimental.constrained.fmul.f64(
                         double %mul4, double %val5,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   %mul6 = call double @llvm.experimental.constrained.fmul.f64(
                         double %mul5, double %val6,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   %mul7 = call double @llvm.experimental.constrained.fmul.f64(
                         double %mul6, double %val7,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   %mul8 = call double @llvm.experimental.constrained.fmul.f64(
                         double %mul7, double %val8,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   %mul9 = call double @llvm.experimental.constrained.fmul.f64(
                         double %mul8, double %val9,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   %mul10 = call double @llvm.experimental.constrained.fmul.f64(
                         double %mul9, double %val10,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
 
   ret double %mul10
 }
+
+attributes #0 = { strictfp }

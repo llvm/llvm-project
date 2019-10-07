@@ -193,6 +193,10 @@ class LLVMHalfElementsVectorType<int num> : LLVMMatchType<num>;
 class LLVMSubdivide2VectorType<int num> : LLVMMatchType<num>;
 class LLVMSubdivide4VectorType<int num> : LLVMMatchType<num>;
 
+// Match the element count and bit width of another intrinsic parameter, but
+// change the element type to an integer.
+class LLVMVectorOfBitcastsToInt<int num> : LLVMMatchType<num>;
+
 def llvm_void_ty       : LLVMType<isVoid>;
 let isAny = 1 in {
   def llvm_any_ty        : LLVMType<Any>;
@@ -699,6 +703,14 @@ let IntrProperties = [IntrInaccessibleMemOnly, IntrWillReturn] in {
                                                          [ LLVMMatchType<0>,
                                                            llvm_metadata_ty,
                                                            llvm_metadata_ty ]>;
+  def int_experimental_constrained_lrint : Intrinsic<[ llvm_anyint_ty ],
+                                                     [ llvm_anyfloat_ty,
+                                                       llvm_metadata_ty,
+                                                       llvm_metadata_ty ]>;
+  def int_experimental_constrained_llrint : Intrinsic<[ llvm_anyint_ty ],
+                                                      [ llvm_anyfloat_ty,
+                                                        llvm_metadata_ty,
+                                                        llvm_metadata_ty ]>;
   def int_experimental_constrained_maxnum : Intrinsic<[ llvm_anyfloat_ty ],
                                                       [ LLVMMatchType<0>,
                                                         LLVMMatchType<0>,
@@ -717,6 +729,12 @@ let IntrProperties = [IntrInaccessibleMemOnly, IntrWillReturn] in {
                                                      [ LLVMMatchType<0>,
                                                        llvm_metadata_ty,
                                                        llvm_metadata_ty ]>;
+  def int_experimental_constrained_lround : Intrinsic<[ llvm_anyint_ty ],
+                                                      [ llvm_anyfloat_ty,
+                                                        llvm_metadata_ty ]>;
+  def int_experimental_constrained_llround : Intrinsic<[ llvm_anyint_ty ],
+                                                       [ llvm_anyfloat_ty,
+                                                         llvm_metadata_ty ]>;
   def int_experimental_constrained_round : Intrinsic<[ llvm_anyfloat_ty ],
                                                      [ LLVMMatchType<0>,
                                                       llvm_metadata_ty,

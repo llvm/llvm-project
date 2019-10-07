@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s bugprone-unhandled-self-assignment %t
+// RUN: %check_clang_tidy %s bugprone-unhandled-self-assignment %t -- -- -fno-delayed-template-parsing
 
 namespace std {
 

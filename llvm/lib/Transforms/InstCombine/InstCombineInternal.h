@@ -351,6 +351,8 @@ public:
   Instruction *visitOr(BinaryOperator &I);
   Instruction *visitXor(BinaryOperator &I);
   Instruction *visitShl(BinaryOperator &I);
+  Instruction *foldVariableSignZeroExtensionOfVariableHighBitExtract(
+      BinaryOperator &OldAShr);
   Instruction *visitAShr(BinaryOperator &I);
   Instruction *visitLShr(BinaryOperator &I);
   Instruction *commonShiftTransforms(BinaryOperator &I);

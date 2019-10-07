@@ -7,19 +7,19 @@
 declare float @llvm.experimental.constrained.sqrt.f32(float, metadata, metadata)
 
 ; Check register square root.
-define float @f1(float %val) {
+define float @f1(float %val) #0 {
 ; CHECK-LABEL: f1:
 ; CHECK: sqebr %f0, %f0
 ; CHECK: br %r14
   %res = call float @llvm.experimental.constrained.sqrt.f32(
                         float %val,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret float %res
 }
 
 ; Check the low end of the SQEB range.
-define float @f2(float *%ptr) {
+define float @f2(float *%ptr) #0 {
 ; CHECK-LABEL: f2:
 ; CHECK: sqeb %f0, 0(%r2)
 ; CHECK: br %r14
@@ -27,12 +27,12 @@ define float @f2(float *%ptr) {
   %res = call float @llvm.experimental.constrained.sqrt.f32(
                         float %val,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret float %res
 }
 
 ; Check the high end of the aligned SQEB range.
-define float @f3(float *%base) {
+define float @f3(float *%base) #0 {
 ; CHECK-LABEL: f3:
 ; CHECK: sqeb %f0, 4092(%r2)
 ; CHECK: br %r14
@@ -41,13 +41,13 @@ define float @f3(float *%base) {
   %res = call float @llvm.experimental.constrained.sqrt.f32(
                         float %val,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret float %res
 }
 
 ; Check the next word up, which needs separate address logic.
 ; Other sequences besides this one would be OK.
-define float @f4(float *%base) {
+define float @f4(float *%base) #0 {
 ; CHECK-LABEL: f4:
 ; CHECK: aghi %r2, 4096
 ; CHECK: sqeb %f0, 0(%r2)
@@ -57,12 +57,12 @@ define float @f4(float *%base) {
   %res = call float @llvm.experimental.constrained.sqrt.f32(
                         float %val,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret float %res
 }
 
 ; Check negative displacements, which also need separate address logic.
-define float @f5(float *%base) {
+define float @f5(float *%base) #0 {
 ; CHECK-LABEL: f5:
 ; CHECK: aghi %r2, -4
 ; CHECK: sqeb %f0, 0(%r2)
@@ -72,12 +72,12 @@ define float @f5(float *%base) {
   %res = call float @llvm.experimental.constrained.sqrt.f32(
                         float %val,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret float %res
 }
 
 ; Check that SQEB allows indices.
-define float @f6(float *%base, i64 %index) {
+define float @f6(float *%base, i64 %index) #0 {
 ; CHECK-LABEL: f6:
 ; CHECK: sllg %r1, %r3, 2
 ; CHECK: sqeb %f0, 400(%r1,%r2)
@@ -88,7 +88,8 @@ define float @f6(float *%base, i64 %index) {
   %res = call float @llvm.experimental.constrained.sqrt.f32(
                         float %val,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret float %res
 }
 
+attributes #0 = { strictfp }

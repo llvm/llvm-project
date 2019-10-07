@@ -25,12 +25,12 @@
         .word 32
 // Force generation of $d.0 as section is not all data
   nop
+// RELATIVE: SYMBOL TABLE:
+// RELATIVE: 00001154         .text           00000000 patatino
 // RELATIVE: Disassembly of section .text:
 // RELATIVE-EMPTY:
 // RELATIVE: $d.0:
 // RELATIVE:     1150:       04 00 00 00     .word   0x00000004
-// RELATIVE: SYMBOL TABLE:
-// RELATIVE: 00001154         .text           00000000 patatino
 
 // ABS: can't create dynamic relocation R_ARM_TARGET1 against symbol: patatino in readonly segment; recompile object files with -fPIC or pass '-Wl,-z,notext' to allow text relocations in the output
 // ABS: >>> defined in {{.*}}.o

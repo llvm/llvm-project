@@ -15,6 +15,7 @@
 #include "clang/Lex/Lexer.h"
 #include "clang/Tooling/Refactoring/SourceCode.h"
 #include "clang/Tooling/Refactoring/SourceCodeBuilders.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Support/Errc.h"
 #include <atomic>
 #include <memory>
@@ -24,6 +25,7 @@ using namespace clang;
 using namespace tooling;
 
 using ast_matchers::MatchFinder;
+using ast_type_traits::DynTypedNode;
 using llvm::errc;
 using llvm::Error;
 using llvm::Expected;
@@ -37,7 +39,7 @@ template <typename D> const D *down_cast(const StencilPartInterface *P) {
   return static_cast<const D *>(P);
 }
 
-static llvm::Expected<ast_type_traits::DynTypedNode>
+static llvm::Expected<DynTypedNode>
 getNode(const ast_matchers::BoundNodes &Nodes, StringRef Id) {
   auto &NodesMap = Nodes.getMap();
   auto It = NodesMap.find(Id);
@@ -57,6 +59,21 @@ struct RawTextData {
 // A debugging operation to dump the AST for a particular (bound) AST node.
 struct DebugPrintNodeData {
   explicit DebugPrintNodeData(std::string S) : Id(std::move(S)) {}
+  std::string Id;
+};
+
+// Operators that take a single node Id as an argument.
+enum class UnaryNodeOperator {
+  Parens,
+  Deref,
+  Address,
+};
+
+// Generic container for stencil operations with a (single) node-id argument.
+struct UnaryOperationData {
+  UnaryOperationData(UnaryNodeOperator Op, std::string Id)
+      : Op(Op), Id(std::move(Id)) {}
+  UnaryNodeOperator Op;
   std::string Id;
 };
 
@@ -82,7 +99,6 @@ struct IfBoundData {
   StencilPart TruePart;
   StencilPart FalsePart;
 };
-} // namespace
 
 bool isEqualData(const RawTextData &A, const RawTextData &B) {
   return A.Text == B.Text;
@@ -90,6 +106,10 @@ bool isEqualData(const RawTextData &A, const RawTextData &B) {
 
 bool isEqualData(const DebugPrintNodeData &A, const DebugPrintNodeData &B) {
   return A.Id == B.Id;
+}
+
+bool isEqualData(const UnaryOperationData &A, const UnaryOperationData &B) {
+  return A.Op == B.Op && A.Id == B.Id;
 }
 
 // Equality is not (yet) defined for \c RangeSelector.
@@ -107,6 +127,54 @@ bool isEqualData(const IfBoundData &A, const IfBoundData &B) {
 bool isEqualData(const MatchConsumer<std::string> &A,
                  const MatchConsumer<std::string> &B) {
   return false;
+}
+
+std::string toStringData(const RawTextData &Data) {
+  std::string Result;
+  llvm::raw_string_ostream OS(Result);
+  OS << "\"";
+  OS.write_escaped(Data.Text);
+  OS << "\"";
+  OS.flush();
+  return Result;
+}
+
+std::string toStringData(const DebugPrintNodeData &Data) {
+  return (llvm::Twine("dPrint(\"") + Data.Id + "\")").str();
+}
+
+std::string toStringData(const UnaryOperationData &Data) {
+  StringRef OpName;
+  switch (Data.Op) {
+  case UnaryNodeOperator::Parens:
+    OpName = "expression";
+    break;
+  case UnaryNodeOperator::Deref:
+    OpName = "deref";
+    break;
+  case UnaryNodeOperator::Address:
+    OpName = "addressOf";
+    break;
+  }
+  return (OpName + "(\"" + Data.Id + "\")").str();
+}
+
+std::string toStringData(const SelectorData &) { return "SelectorData()"; }
+
+std::string toStringData(const AccessData &Data) {
+  return (llvm::Twine("access(\"") + Data.BaseId + "\", " +
+          Data.Member.toString() + ")")
+      .str();
+}
+
+std::string toStringData(const IfBoundData &Data) {
+  return (llvm::Twine("ifBound(\"") + Data.Id + "\", " +
+          Data.TruePart.toString() + ", " + Data.FalsePart.toString() + ")")
+      .str();
+}
+
+std::string toStringData(const MatchConsumer<std::string> &) {
+  return "MatchConsumer<std::string>()";
 }
 
 // The `evalData()` overloads evaluate the given stencil data to a string, given
@@ -128,6 +196,32 @@ Error evalData(const DebugPrintNodeData &Data,
     return Err;
   NodeOrErr->print(Os, PrintingPolicy(Match.Context->getLangOpts()));
   *Result += Os.str();
+  return Error::success();
+}
+
+Error evalData(const UnaryOperationData &Data,
+               const MatchFinder::MatchResult &Match, std::string *Result) {
+  const auto *E = Match.Nodes.getNodeAs<Expr>(Data.Id);
+  if (E == nullptr)
+    return llvm::make_error<StringError>(
+        errc::invalid_argument, "Id not bound or not Expr: " + Data.Id);
+  llvm::Optional<std::string> Source;
+  switch (Data.Op) {
+  case UnaryNodeOperator::Parens:
+    Source = buildParens(*E, *Match.Context);
+    break;
+  case UnaryNodeOperator::Deref:
+    Source = buildDereference(*E, *Match.Context);
+    break;
+  case UnaryNodeOperator::Address:
+    Source = buildAddressOf(*E, *Match.Context);
+    break;
+  }
+  if (!Source)
+    return llvm::make_error<StringError>(
+        errc::invalid_argument,
+        "Could not construct expression source from ID: " + Data.Id);
+  *Result += *Source;
   return Error::success();
 }
 
@@ -202,7 +296,10 @@ public:
       return isEqualData(Data, OtherPtr->Data);
     return false;
   }
+
+  std::string toString() const override { return toStringData(Data); }
 };
+} // namespace
 
 StencilPart Stencil::wrap(StringRef Text) {
   return stencil::text(Text);
@@ -237,6 +334,21 @@ StencilPart stencil::selection(RangeSelector Selector) {
 
 StencilPart stencil::dPrint(StringRef Id) {
   return StencilPart(std::make_shared<StencilPartImpl<DebugPrintNodeData>>(Id));
+}
+
+StencilPart stencil::expression(llvm::StringRef Id) {
+  return StencilPart(std::make_shared<StencilPartImpl<UnaryOperationData>>(
+      UnaryNodeOperator::Parens, Id));
+}
+
+StencilPart stencil::deref(llvm::StringRef ExprId) {
+  return StencilPart(std::make_shared<StencilPartImpl<UnaryOperationData>>(
+      UnaryNodeOperator::Deref, ExprId));
+}
+
+StencilPart stencil::addressOf(llvm::StringRef ExprId) {
+  return StencilPart(std::make_shared<StencilPartImpl<UnaryOperationData>>(
+      UnaryNodeOperator::Address, ExprId));
 }
 
 StencilPart stencil::access(StringRef BaseId, StencilPart Member) {

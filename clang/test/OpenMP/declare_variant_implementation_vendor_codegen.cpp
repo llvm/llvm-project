@@ -3,11 +3,13 @@
 // RUN: %clang_cc1 -fopenmp -x c++ -triple %itanium_abi_triple -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -emit-llvm -o - -fopenmp-version=50 | FileCheck %s
 // expected-no-diagnostics
 
-// CHECK-NOT: ret i32 {{1|4}}
+// CHECK-NOT: ret i32 {{1|4|81|84}}
 // CHECK-DAG: @_Z3barv = {{.*}}alias i32 (), i32 ()* @_Z3foov
 // CHECK-DAG: @_ZN16SpecSpecialFuncs6MethodEv = {{.*}}alias i32 (%struct.SpecSpecialFuncs*), i32 (%struct.SpecSpecialFuncs*)* @_ZN16SpecSpecialFuncs7method_Ev
 // CHECK-DAG: @_ZN16SpecSpecialFuncs6methodEv = linkonce_odr {{.*}}alias i32 (%struct.SpecSpecialFuncs*), i32 (%struct.SpecSpecialFuncs*)* @_ZN16SpecSpecialFuncs7method_Ev
 // CHECK-DAG: @_ZN12SpecialFuncs6methodEv = linkonce_odr {{.*}}alias i32 (%struct.SpecialFuncs*), i32 (%struct.SpecialFuncs*)* @_ZN12SpecialFuncs7method_Ev
+// CHECK-DAG: @_Z5prio_v = {{.*}}alias i32 (), i32 ()* @_Z4priov
+// CHECK-DAG: @_ZL6prio1_v = internal alias i32 (), i32 ()* @_ZL5prio2v
 // CHECK-DAG: @_Z4callv = {{.*}}alias i32 (), i32 ()* @_Z4testv
 // CHECK-DAG: @_ZL9stat_usedv = internal alias i32 (), i32 ()* @_ZL10stat_used_v
 // CHECK-DAG: @_ZN12SpecialFuncs6MethodEv =  {{.*}}alias i32 (%struct.SpecialFuncs*), i32 (%struct.SpecialFuncs*)* @_ZN12SpecialFuncs7method_Ev
@@ -18,7 +20,9 @@
 // CHECK-DAG: ret i32 5
 // CHECK-DAG: ret i32 6
 // CHECK-DAG: ret i32 7
-// CHECK-NOT: ret i32 {{1|4}}
+// CHECK-DAG: ret i32 82
+// CHECK-DAG: ret i32 83
+// CHECK-NOT: ret i32 {{1|4|81|84}}
 
 #ifndef HEADER
 #define HEADER
@@ -87,5 +91,23 @@ void xxx() {
   (void)s.method();
   (void)s1.method();
 }
+
+int prio() { return 81; }
+int prio1() { return 82; }
+
+#pragma omp declare variant(prio) match(implementation = {vendor(llvm)})
+#pragma omp declare variant(prio1) match(implementation = {vendor(score(1): llvm)})
+int prio_() { return 1; }
+
+static int prio2() { return 83; }
+static int prio3() { return 84; }
+static int prio4() { return 84; }
+
+#pragma omp declare variant(prio4) match(implementation = {vendor(score(3): llvm)})
+#pragma omp declare variant(prio2) match(implementation = {vendor(score(5): llvm)})
+#pragma omp declare variant(prio3) match(implementation = {vendor(score(1): llvm)})
+static int prio1_() { return 1; }
+
+int int_fn() { return prio1_(); }
 
 #endif // HEADER

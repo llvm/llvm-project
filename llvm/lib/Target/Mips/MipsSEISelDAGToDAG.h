@@ -120,7 +120,7 @@ private:
   /// power of 2.
   bool selectVSplatUimmInvPow2(SDValue N, SDValue &Imm) const override;
   /// Select constant vector splats whose value is a run of set bits
-  /// ending at the most significant bit
+  /// ending at the most significant bit.
   bool selectVSplatMaskL(SDValue N, SDValue &Imm) const override;
   /// Select constant vector splats whose value is a run of set bits
   /// starting at bit zero.

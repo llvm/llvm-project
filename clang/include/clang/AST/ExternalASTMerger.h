@@ -23,7 +23,7 @@ namespace clang {
 /// ExternalASTSource implementation that merges information from several
 /// ASTContexts.
 ///
-/// ExtermalASTMerger maintains a vector of ASTImporters that it uses to import
+/// ExternalASTMerger maintains a vector of ASTImporters that it uses to import
 /// (potentially incomplete) Decls and DeclContexts from the source ASTContexts
 /// in response to ExternalASTSource API calls.
 ///
@@ -37,7 +37,7 @@ namespace clang {
 ///   lookup.  In this case, Origins contains an entry overriding lookup and
 ///   specifying the correct pair of DeclContext/ASTContext.
 ///
-/// - The DeclContext of origin was determined by another ExterenalASTMerger.
+/// - The DeclContext of origin was determined by another ExternalASTMerger.
 ///   (This is possible when the source ASTContext for one of the Importers has
 ///   its own ExternalASTMerger).  The origin must be properly forwarded in this
 ///   case.
@@ -84,17 +84,26 @@ public:
     ASTContext &AST;
     FileManager &FM;
     const OriginMap &OM;
+    /// True iff the source only exists temporary, i.e., it will be removed from
+    /// the ExternalASTMerger during the life time of the ExternalASTMerger.
+    bool Temporary;
+    /// If the ASTContext of this source has an ExternalASTMerger that imports
+    /// into this source, then this will point to that other ExternalASTMerger.
+    ExternalASTMerger *Merger;
 
   public:
-    ImporterSource(ASTContext &_AST, FileManager &_FM, const OriginMap &_OM)
-        : AST(_AST), FM(_FM), OM(_OM) {}
+    ImporterSource(ASTContext &AST, FileManager &FM, const OriginMap &OM,
+                   bool Temporary = false, ExternalASTMerger *Merger = nullptr)
+        : AST(AST), FM(FM), OM(OM), Temporary(Temporary), Merger(Merger) {}
     ASTContext &getASTContext() const { return AST; }
     FileManager &getFileManager() const { return FM; }
     const OriginMap &getOriginMap() const { return OM; }
+    bool isTemporary() const { return Temporary; }
+    ExternalASTMerger *getMerger() const { return Merger; }
   };
 
 private:
-  /// The target for this ExtenralASTMerger.
+  /// The target for this ExternalASTMerger.
   ImporterTarget Target;
   /// ExternalASTMerger has multiple ASTImporters that import into the same
   /// TU. This is the shared state for all ASTImporters of this
@@ -105,6 +114,12 @@ private:
 public:
   ExternalASTMerger(const ImporterTarget &Target,
                     llvm::ArrayRef<ImporterSource> Sources);
+
+  /// Asks all connected ASTImporters if any of them imported the given
+  /// declaration. If any ASTImporter did import the given declaration,
+  /// then this function returns the declaration that D was imported from.
+  /// Returns nullptr if no ASTImporter did import import D.
+  Decl *FindOriginalDecl(Decl *D);
 
   /// Add a set of ASTContexts as possible origins.
   ///
@@ -158,7 +173,7 @@ public:
   /// OriginContext.
   bool HasImporterForOrigin(ASTContext &OriginContext);
 
-  /// Returns a reference to the ASTRImporter from Importers whose origin
+  /// Returns a reference to the ASTImporter from Importers whose origin
   /// is OriginContext.  This allows manual import of ASTs while preserving the
   /// OriginMap correctly.
   ASTImporter &ImporterForOrigin(ASTContext &OriginContext);

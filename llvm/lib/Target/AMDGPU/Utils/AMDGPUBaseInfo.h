@@ -264,6 +264,24 @@ LLVM_READONLY
 const MIMGInfo *getMIMGInfo(unsigned Opc);
 
 LLVM_READONLY
+int getMTBUFBaseOpcode(unsigned Opc);
+
+LLVM_READONLY
+int getMTBUFOpcode(unsigned BaseOpc, unsigned Elements);
+
+LLVM_READONLY
+int getMTBUFElements(unsigned Opc);
+
+LLVM_READONLY
+bool getMTBUFHasVAddr(unsigned Opc);
+
+LLVM_READONLY
+bool getMTBUFHasSrsrc(unsigned Opc);
+
+LLVM_READONLY
+bool getMTBUFHasSoffset(unsigned Opc);
+
+LLVM_READONLY
 int getMUBUFBaseOpcode(unsigned Opc);
 
 LLVM_READONLY

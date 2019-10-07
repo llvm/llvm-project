@@ -52,7 +52,7 @@ static void demangling_terminate_handler()
                     name = thrown_type->name();
                 // If the uncaught exception can be caught with std::exception&
                 const __shim_type_info* catch_type =
-				 static_cast<const __shim_type_info*>(&typeid(std::exception));
+                    static_cast<const __shim_type_info*>(&typeid(std::exception));
                 if (catch_type->can_catch(thrown_type, thrown_object))
                 {
                     // Include the what() message from the exception

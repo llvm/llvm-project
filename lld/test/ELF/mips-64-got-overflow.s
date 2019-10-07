@@ -6,10 +6,8 @@
 # RUN: llvm-mc -filetype=obj -triple=mips64-unknown-linux %s -o %t2.so.o
 # RUN: ld.lld -shared -mips-got-size 32 %t1.so.o %t2.so.o -o %t-sgot.so
 # RUN: ld.lld -shared -mips-got-size 24 %t1.so.o %t2.so.o -o %t-mgot.so
-# RUN: llvm-readelf -s --mips-plt-got %t-sgot.so \
-# RUN:   | FileCheck -check-prefixes=SYM,SGOT %s
-# RUN: llvm-readelf -s --mips-plt-got %t-mgot.so \
-# RUN:   | FileCheck -check-prefixes=SYM,MGOT %s
+# RUN: llvm-readelf -s -A %t-sgot.so | FileCheck -check-prefixes=SYM,SGOT %s
+# RUN: llvm-readelf -s -A %t-mgot.so | FileCheck -check-prefixes=SYM,MGOT %s
 
 # SYM: Symbol table '.symtab'
 # SYM: {{.*}}: [[LOC1:[0-9a-f]+]]  {{.*}} local1

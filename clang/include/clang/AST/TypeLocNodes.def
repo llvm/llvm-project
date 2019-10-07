@@ -31,7 +31,7 @@
 TYPELOC(Qualified, TypeLoc)
 #define TYPE(Class, Base) UNQUAL_TYPELOC(Class, Base##Loc)
 #define ABSTRACT_TYPE(Class, Base) ABSTRACT_TYPELOC(Class, Base##Loc)
-#include "clang/AST/TypeNodes.def"
+#include "clang/AST/TypeNodes.inc"
 
 #undef DECLARATOR_TYPELOC
 #undef TYPESPEC_TYPELOC

@@ -32,15 +32,9 @@ class LexicalScope;
 class MCSection;
 
 // Data structure to hold a range for range lists.
-class RangeSpan {
-public:
-  RangeSpan(MCSymbol *S, MCSymbol *E) : Start(S), End(E) {}
-  const MCSymbol *getStart() const { return Start; }
-  const MCSymbol *getEnd() const { return End; }
-  void setEnd(const MCSymbol *E) { End = E; }
-
-private:
-  const MCSymbol *Start, *End;
+struct RangeSpan {
+  const MCSymbol *Begin;
+  const MCSymbol *End;
 };
 
 class RangeSpanList {

@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -enable-pipeliner -enable-bsb-sched=0 -join-liveintervals=false < %s | FileCheck %s
+; RUN: llc -march=hexagon -enable-pipeliner -enable-bsb-sched=0 -join-liveintervals=false < %s -pipeliner-experimental-cg=true | FileCheck %s
 
 ; XFAIL: *
 ; This test is failing after post-ra machine sinking.

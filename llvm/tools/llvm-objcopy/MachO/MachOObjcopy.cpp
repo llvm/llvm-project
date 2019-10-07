@@ -31,13 +31,14 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj) {
       !Config.SymbolsToKeepGlobal.empty() || !Config.SectionsToRename.empty() ||
       !Config.SymbolsToRename.empty() ||
       !Config.UnneededSymbolsToRemove.empty() ||
-      !Config.SetSectionFlags.empty() || !Config.ToRemove.empty() ||
-      Config.ExtractDWO || Config.KeepFileSymbols || Config.LocalizeHidden ||
-      Config.PreserveDates || Config.StripDWO || Config.StripNonAlloc ||
-      Config.StripSections || Config.Weaken || Config.DecompressDebugSections ||
-      Config.StripDebug || Config.StripNonAlloc || Config.StripSections ||
-      Config.StripUnneeded || Config.DiscardMode != DiscardType::None ||
-      !Config.SymbolsToAdd.empty() || Config.EntryExpr) {
+      !Config.SetSectionAlignment.empty() || !Config.SetSectionFlags.empty() ||
+      !Config.ToRemove.empty() || Config.ExtractDWO || Config.KeepFileSymbols ||
+      Config.LocalizeHidden || Config.PreserveDates || Config.StripDWO ||
+      Config.StripNonAlloc || Config.StripSections || Config.Weaken ||
+      Config.DecompressDebugSections || Config.StripDebug ||
+      Config.StripNonAlloc || Config.StripSections || Config.StripUnneeded ||
+      Config.DiscardMode != DiscardType::None || !Config.SymbolsToAdd.empty() ||
+      Config.EntryExpr) {
     return createStringError(llvm::errc::invalid_argument,
                              "option not supported by llvm-objcopy for MachO");
   }

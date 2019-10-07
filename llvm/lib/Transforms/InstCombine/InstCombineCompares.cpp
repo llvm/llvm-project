@@ -1384,6 +1384,29 @@ Instruction *InstCombiner::foldIRemByPowerOfTwoToBitTest(ICmpInst &I) {
   return ICmpInst::Create(Instruction::ICmp, Pred, Masked, Zero);
 }
 
+/// Fold equality-comparison between zero and any (maybe truncated) right-shift
+/// by one-less-than-bitwidth into a sign test on the original value.
+Instruction *foldSignBitTest(ICmpInst &I) {
+  ICmpInst::Predicate Pred;
+  Value *X;
+  Constant *C;
+  if (!I.isEquality() ||
+      !match(&I, m_ICmp(Pred, m_TruncOrSelf(m_Shr(m_Value(X), m_Constant(C))),
+                        m_Zero())))
+    return nullptr;
+
+  Type *XTy = X->getType();
+  unsigned XBitWidth = XTy->getScalarSizeInBits();
+  if (!match(C, m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_EQ,
+                                   APInt(XBitWidth, XBitWidth - 1))))
+    return nullptr;
+
+  return ICmpInst::Create(Instruction::ICmp,
+                          Pred == ICmpInst::ICMP_EQ ? ICmpInst::ICMP_SGE
+                                                    : ICmpInst::ICMP_SLT,
+                          X, ConstantInt::getNullValue(XTy));
+}
+
 // Handle  icmp pred X, 0
 Instruction *InstCombiner::foldICmpWithZero(ICmpInst &Cmp) {
   CmpInst::Predicate Pred = Cmp.getPredicate();
@@ -5448,6 +5471,11 @@ Instruction *InstCombiner::visitICmpInst(ICmpInst &I) {
 
   if (Instruction *Res = foldICmpInstWithConstant(I))
     return Res;
+
+  // Try to match comparison as a sign bit test. Intentionally do this after
+  // foldICmpInstWithConstant() to potentially let other folds to happen first.
+  if (Instruction *New = foldSignBitTest(I))
+    return New;
 
   if (Instruction *Res = foldICmpInstWithConstantNotInt(I))
     return Res;

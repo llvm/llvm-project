@@ -231,6 +231,7 @@ template <typename T> class ArrayRef;
     std::vector<Record*> ImplicitDefs, ImplicitUses;
 
     // Various boolean values we track for the instruction.
+    bool isPreISelOpcode : 1;
     bool isReturn : 1;
     bool isEHScopeReturn : 1;
     bool isBranch : 1;

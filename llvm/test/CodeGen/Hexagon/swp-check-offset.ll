@@ -1,6 +1,6 @@
-; RUN: llc -march=hexagon -mcpu=hexagonv5 -enable-pipeliner < %s | FileCheck %s
-; RUN: llc -march=hexagon -mcpu=hexagonv62 -enable-pipeliner < %s | FileCheck --check-prefix=CHECK-V62 %s
-; RUN: llc -march=hexagon -mcpu=hexagonv65 -enable-pipeliner < %s | FileCheck --check-prefix=CHECK-V65 %s
+; RUN: llc -march=hexagon -mcpu=hexagonv5 -enable-pipeliner < %s -pipeliner-experimental-cg=true | FileCheck %s
+; RUN: llc -march=hexagon -mcpu=hexagonv62 -enable-pipeliner < %s -pipeliner-experimental-cg=true | FileCheck --check-prefix=CHECK-V62 %s
+; RUN: llc -march=hexagon -mcpu=hexagonv65 -enable-pipeliner < %s -pipeliner-experimental-cg=true | FileCheck --check-prefix=CHECK-V65 %s
 
 ;
 ; Make sure we pipeline the loop and that we generate the correct

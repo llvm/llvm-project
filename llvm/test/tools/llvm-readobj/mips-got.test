@@ -1,30 +1,24 @@
-RUN: not llvm-readobj --mips-plt-got %p/Inputs/relocs.obj.elf-mips 2>&1 | \
-RUN:   FileCheck %s -DFILE=%p/Inputs/relocs.obj.elf-mips -check-prefix GOT-OBJ
-RUN: llvm-readobj --mips-plt-got %p/Inputs/dynamic-table-exe.mips | \
+RUN: llvm-readobj -A %p/Inputs/dynamic-table-exe.mips | \
 RUN:   FileCheck %s -check-prefix GOT-EXE
-RUN: llvm-readobj --mips-plt-got %p/Inputs/dynamic-table-so.mips | \
+RUN: llvm-readobj -A %p/Inputs/dynamic-table-so.mips | \
 RUN:   FileCheck %s -check-prefix GOT-SO
-RUN: llvm-readobj --mips-plt-got %p/Inputs/got-tls.so.elf-mips64el | \
+RUN: llvm-readobj -A %p/Inputs/got-tls.so.elf-mips64el | \
 RUN:   FileCheck %s -check-prefix GOT-TLS
-RUN: llvm-readobj --mips-plt-got %p/Inputs/got-empty.exe.mipsel | \
+RUN: llvm-readobj -A %p/Inputs/got-empty.exe.mipsel | \
 RUN:   FileCheck %s -check-prefix GOT-EMPTY
-RUN: llvm-readobj --mips-plt-got %p/Inputs/got-static.exe.mips | \
+RUN: llvm-readobj -A %p/Inputs/got-static.exe.mips | \
 RUN:   FileCheck %s -check-prefix GOT-STATIC
 
-RUN: not llvm-readelf --mips-plt-got %p/Inputs/relocs.obj.elf-mips 2>&1 | \
-RUN:   FileCheck %s -DFILE=%p/Inputs/relocs.obj.elf-mips -check-prefix GNU-GOT-OBJ
-RUN: llvm-readelf --mips-plt-got %p/Inputs/dynamic-table-exe.mips | \
+RUN: llvm-readelf -A %p/Inputs/dynamic-table-exe.mips | \
 RUN:   FileCheck %s --strict-whitespace -check-prefix GNU-GOT-EXE
-RUN: llvm-readelf --mips-plt-got %p/Inputs/dynamic-table-so.mips | \
+RUN: llvm-readelf -A %p/Inputs/dynamic-table-so.mips | \
 RUN:   FileCheck %s --strict-whitespace -check-prefix GNU-GOT-SO
-RUN: llvm-readelf --mips-plt-got %p/Inputs/got-tls.so.elf-mips64el | \
+RUN: llvm-readelf -A %p/Inputs/got-tls.so.elf-mips64el | \
 RUN:   FileCheck %s --strict-whitespace -check-prefix GNU-GOT-TLS
-RUN: llvm-readelf --mips-plt-got %p/Inputs/got-empty.exe.mipsel | \
+RUN: llvm-readelf -A %p/Inputs/got-empty.exe.mipsel | \
 RUN:   FileCheck %s --strict-whitespace -check-prefix GNU-GOT-EMPTY
-RUN: llvm-readelf --mips-plt-got %p/Inputs/got-static.exe.mips | \
+RUN: llvm-readelf -A %p/Inputs/got-static.exe.mips | \
 RUN:   FileCheck %s --strict-whitespace -check-prefix GNU-GOT-STATIC
-
-GOT-OBJ: error: '[[FILE]]': Cannot find .got section
 
 GOT-EXE:      Primary GOT {
 GOT-EXE-NEXT:   Canonical gp value: 0x418880
@@ -379,8 +373,6 @@ GOT-STATIC-NEXT:       Initial: 0x400104
 GOT-STATIC-NEXT:     }
 GOT-STATIC-NEXT:   ]
 GOT-STATIC-NEXT: }
-
-GNU-GOT-OBJ: error: '[[FILE]]': Cannot find .got section
 
 GNU-GOT-EXE:      Primary GOT:
 GNU-GOT-EXE-NEXT:  Canonical gp value: 00418880

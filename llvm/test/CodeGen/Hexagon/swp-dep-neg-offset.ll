@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -enable-pipeliner -hexagon-initial-cfg-cleanup=0 < %s | FileCheck %s
+; RUN: llc -march=hexagon -enable-pipeliner -hexagon-initial-cfg-cleanup=0 < %s -pipeliner-experimental-cg=true | FileCheck %s
 
 ; Test that the code that changes the dependences does not allow
 ; a load with a negative offset to be overlapped with the post

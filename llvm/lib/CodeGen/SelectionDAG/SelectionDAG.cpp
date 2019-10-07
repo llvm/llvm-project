@@ -7756,12 +7756,16 @@ SDNode* SelectionDAG::mutateStrictFPToFP(SDNode *Node) {
   case ISD::STRICT_FLOG:       NewOpc = ISD::FLOG;       break;
   case ISD::STRICT_FLOG10:     NewOpc = ISD::FLOG10;     break;
   case ISD::STRICT_FLOG2:      NewOpc = ISD::FLOG2;      break;
+  case ISD::STRICT_LRINT:      NewOpc = ISD::LRINT;      break;
+  case ISD::STRICT_LLRINT:     NewOpc = ISD::LLRINT;     break;
   case ISD::STRICT_FRINT:      NewOpc = ISD::FRINT;      break;
   case ISD::STRICT_FNEARBYINT: NewOpc = ISD::FNEARBYINT; break;
   case ISD::STRICT_FMAXNUM:    NewOpc = ISD::FMAXNUM;    break;
   case ISD::STRICT_FMINNUM:    NewOpc = ISD::FMINNUM;    break;
   case ISD::STRICT_FCEIL:      NewOpc = ISD::FCEIL;      break;
   case ISD::STRICT_FFLOOR:     NewOpc = ISD::FFLOOR;     break;
+  case ISD::STRICT_LROUND:     NewOpc = ISD::LROUND;     break;
+  case ISD::STRICT_LLROUND:    NewOpc = ISD::LLROUND;    break;
   case ISD::STRICT_FROUND:     NewOpc = ISD::FROUND;     break;
   case ISD::STRICT_FTRUNC:     NewOpc = ISD::FTRUNC;     break;
   case ISD::STRICT_FP_ROUND:   NewOpc = ISD::FP_ROUND;   break;

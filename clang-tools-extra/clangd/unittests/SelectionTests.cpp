@@ -354,6 +354,8 @@ TEST(SelectionTest, Selected) {
         #define ECHO(X) X
         ECHO(EC^HO([[$C[[int]]) EC^HO(a]]));
       ]])cpp",
+      R"cpp( $C[[^$C[[int]] a^]]; )cpp",
+      R"cpp( $C[[^$C[[int]] a = $C[[5]]^]]; )cpp",
   };
   for (const char *C : Cases) {
     Annotations Test(C);

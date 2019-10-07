@@ -161,7 +161,7 @@ static void handlePhiDef(CallInst *Expect) {
     return Result;
   };
 
-  auto *PhiDef = dyn_cast<PHINode>(V);
+  auto *PhiDef = cast<PHINode>(V);
 
   // Get the first dominating conditional branch of the operand
   // i's incoming block.

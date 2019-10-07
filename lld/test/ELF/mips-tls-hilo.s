@@ -5,10 +5,12 @@
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux %s -o %t.o
 # RUN: ld.lld %t.o -o %t.exe
 # RUN: llvm-objdump -d -t --no-show-raw-insn %t.exe | FileCheck -check-prefix=DIS %s
-# RUN: llvm-readobj -r --mips-plt-got %t.exe | FileCheck %s
+# RUN: llvm-readobj -r -A %t.exe | FileCheck %s
 
 # RUN: ld.lld %t.o -shared -o %t.so
-# RUN: llvm-readobj -r --mips-plt-got %t.so | FileCheck -check-prefix=SO %s
+# RUN: llvm-readobj -r -A %t.so | FileCheck -check-prefix=SO %s
+
+# DIS: 00000000 l    O .tdata          00000000 loc0
 
 # DIS:      __start:
 # DIS-NEXT:    addiu   $2, $3, 0
@@ -19,8 +21,6 @@
 #                              ^-- %hi(loc0 - .tdata - 0x7000)
 # DIS-NEXT:    addiu   $2, $3, -28672
 #                              ^-- %lo(loc0 - .tdata - 0x7000)
-
-# DIS: 00000000 l    O .tdata          00000000 loc0
 
 # CHECK:      Relocations [
 # CHECK-NEXT: ]

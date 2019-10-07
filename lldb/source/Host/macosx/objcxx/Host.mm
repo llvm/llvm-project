@@ -10,8 +10,8 @@
 
 #include <AvailabilityMacros.h>
 
-#if !defined(MAC_OS_X_VERSION_10_7) ||                                         \
-    MAC_OS_X_VERSION_MAX_ALLOWED < MAC_OS_X_VERSION_10_7
+// On device doesn't have supporty for XPC.
+#if defined(__APPLE__) && (defined(__arm64__) || defined(__aarch64__))
 #define NO_XPC_SERVICES 1
 #endif
 
@@ -1366,9 +1366,12 @@ Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
     }
     bool run_in_default_shell = true;
     bool hide_stderr = true;
-    RunShellCommand(expand_command, cwd, &status, nullptr, &output,
-                    std::chrono::seconds(10), run_in_default_shell,
-                    hide_stderr);
+    Status e = RunShellCommand(expand_command, cwd, &status, nullptr, &output,
+                               std::chrono::seconds(10), run_in_default_shell,
+                               hide_stderr);
+
+    if (e.Fail())
+      return e;
 
     if (status != 0) {
       error.SetErrorStringWithFormat("lldb-argdumper exited with error %d",

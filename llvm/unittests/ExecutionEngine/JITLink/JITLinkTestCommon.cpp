@@ -145,7 +145,7 @@ void JITLinkTestCommon::TestJITLinkContext::notifyFailed(Error Err) {
 
 void JITLinkTestCommon::TestJITLinkContext::lookup(
     const DenseSet<StringRef> &Symbols,
-    JITLinkAsyncLookupContinuation LookupContinuation) {
+    std::unique_ptr<JITLinkAsyncLookupContinuation> LC) {
   jitlink::AsyncLookupResult LookupResult;
   DenseSet<StringRef> MissingSymbols;
   for (const auto &Symbol : Symbols) {
@@ -157,7 +157,7 @@ void JITLinkTestCommon::TestJITLinkContext::lookup(
   }
 
   if (MissingSymbols.empty())
-    LookupContinuation(std::move(LookupResult));
+    LC->run(std::move(LookupResult));
   else {
     std::string ErrMsg;
     {
@@ -167,12 +167,12 @@ void JITLinkTestCommon::TestJITLinkContext::lookup(
         ErrMsgStream << " " << Sym;
       ErrMsgStream << " ]\n";
     }
-    LookupContinuation(
+    LC->run(
         make_error<StringError>(std::move(ErrMsg), inconvertibleErrorCode()));
   }
 }
 
-void JITLinkTestCommon::TestJITLinkContext::notifyResolved(AtomGraph &G) {
+void JITLinkTestCommon::TestJITLinkContext::notifyResolved(LinkGraph &G) {
   if (NotifyResolved)
     NotifyResolved(G);
 }
@@ -186,7 +186,7 @@ void JITLinkTestCommon::TestJITLinkContext::notifyFinalized(
 Error JITLinkTestCommon::TestJITLinkContext::modifyPassConfig(
     const Triple &TT, PassConfiguration &Config) {
   if (TestCase)
-    Config.PostFixupPasses.push_back([&](AtomGraph &G) -> Error {
+    Config.PostFixupPasses.push_back([&](LinkGraph &G) -> Error {
       TestCase(G);
       return Error::success();
     });
@@ -196,11 +196,11 @@ Error JITLinkTestCommon::TestJITLinkContext::modifyPassConfig(
 JITLinkTestCommon::JITLinkTestCommon() { initializeLLVMTargets(); }
 
 Expected<std::pair<MCInst, size_t>>
-JITLinkTestCommon::disassemble(const MCDisassembler &Dis,
-                               jitlink::DefinedAtom &Atom, size_t Offset) {
+JITLinkTestCommon::disassemble(const MCDisassembler &Dis, jitlink::Block &B,
+                               size_t Offset) {
   ArrayRef<uint8_t> InstBuffer(
-      reinterpret_cast<const uint8_t *>(Atom.getContent().data()) + Offset,
-      Atom.getContent().size() - Offset);
+      reinterpret_cast<const uint8_t *>(B.getContent().data()) + Offset,
+      B.getContent().size() - Offset);
 
   MCInst Inst;
   uint64_t InstSize;
@@ -214,11 +214,9 @@ JITLinkTestCommon::disassemble(const MCDisassembler &Dis,
   return std::make_pair(Inst, InstSize);
 }
 
-Expected<int64_t>
-JITLinkTestCommon::decodeImmediateOperand(const MCDisassembler &Dis,
-                                          jitlink::DefinedAtom &Atom,
-                                          size_t OpIdx, size_t Offset) {
-  auto InstAndSize = disassemble(Dis, Atom, Offset);
+Expected<int64_t> JITLinkTestCommon::decodeImmediateOperand(
+    const MCDisassembler &Dis, jitlink::Block &B, size_t OpIdx, size_t Offset) {
+  auto InstAndSize = disassemble(Dis, B, Offset);
   if (!InstAndSize)
     return InstAndSize.takeError();
 

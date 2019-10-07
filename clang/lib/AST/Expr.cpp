@@ -85,8 +85,8 @@ const Expr *Expr::skipRValueSubobjectAdjustments(
            CE->getCastKind() == CK_UncheckedDerivedToBase) &&
           E->getType()->isRecordType()) {
         E = CE->getSubExpr();
-        CXXRecordDecl *Derived
-          = cast<CXXRecordDecl>(E->getType()->getAs<RecordType>()->getDecl());
+        auto *Derived =
+            cast<CXXRecordDecl>(E->getType()->castAs<RecordType>()->getDecl());
         Adjustments.push_back(SubobjectAdjustment(CE, Derived));
         continue;
       }
@@ -3205,7 +3205,7 @@ bool Expr::isConstantInitializer(ASTContext &Ctx, bool IsForRef,
 
     if (ILE->getType()->isRecordType()) {
       unsigned ElementNo = 0;
-      RecordDecl *RD = ILE->getType()->getAs<RecordType>()->getDecl();
+      RecordDecl *RD = ILE->getType()->castAs<RecordType>()->getDecl();
       for (const auto *Field : RD->fields()) {
         // If this is a union, skip all the fields that aren't being initialized.
         if (RD->isUnion() && ILE->getInitializedFieldInUnion() != Field)

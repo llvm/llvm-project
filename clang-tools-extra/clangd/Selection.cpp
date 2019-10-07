@@ -61,13 +61,13 @@ public:
 
   // Associates any tokens overlapping [Begin, End) with an AST node.
   // Tokens that were already claimed by another AST node are not claimed again.
-  // Returns whether the node is selected in the sense of SelectionTree.
-  SelectionTree::Selection claim(unsigned Begin, unsigned End) {
+  // Updates Result if the node is selected in the sense of SelectionTree.
+  void claim(unsigned Begin, unsigned End, SelectionTree::Selection &Result) {
     assert(Begin <= End);
 
     // Fast-path for missing the selection entirely.
     if (Begin >= SelEnd || End <= SelBegin)
-      return SelectionTree::Unselected;
+      return;
 
     // We will consider the range (at least partially) selected if it hit any
     // selected and previously unclaimed token.
@@ -98,9 +98,13 @@ public:
       }
     }
 
-    if (!ClaimedAnyToken)
-      return SelectionTree::Unselected;
-    return PartialSelection ? SelectionTree::Partial : SelectionTree::Complete;
+    // If some tokens were previously claimed (Result != Unselected), we may
+    // upgrade from Partial->Complete, even if no new tokens were claimed.
+    // Important for [[int a]].
+    if (ClaimedAnyToken || Result) {
+      Result = std::max(Result, PartialSelection ? SelectionTree::Partial
+                                                 : SelectionTree::Complete);
+    }
   }
 
 private:
@@ -162,7 +166,9 @@ public:
     assert(V.Stack.size() == 1 && "Unpaired push/pop?");
     assert(V.Stack.top() == &V.Nodes.front());
     // We selected TUDecl if tokens were unclaimed (or the file is empty).
-    if (V.Nodes.size() == 1 || V.Claimed.claim(Begin, End)) {
+    SelectionTree::Selection UnclaimedTokens = SelectionTree::Unselected;
+    V.Claimed.claim(Begin, End, UnclaimedTokens);
+    if (UnclaimedTokens || V.Nodes.size() == 1) {
       StringRef FileContent = AST.getSourceManager().getBufferData(File);
       // Don't require the trailing newlines to be selected.
       bool SelectedAll = Begin == 0 && End >= FileContent.rtrim().size();
@@ -333,10 +339,11 @@ private:
     Nodes.emplace_back();
     Nodes.back().ASTNode = std::move(Node);
     Nodes.back().Parent = Stack.top();
-    // Early hit detection never selects the whole node.
     Stack.push(&Nodes.back());
-    Nodes.back().Selected =
-        claimRange(Early) ? SelectionTree::Partial : SelectionTree::Unselected;
+    claimRange(Early, Nodes.back().Selected);
+    // Early hit detection never selects the whole node.
+    if (Nodes.back().Selected)
+      Nodes.back().Selected = SelectionTree::Partial;
   }
 
   // Pops a node off the ancestor stack, and finalizes it. Pairs with push().
@@ -344,8 +351,7 @@ private:
   void pop() {
     Node &N = *Stack.top();
     dlog("{1}pop: {0}", printNodeToString(N.ASTNode, PrintPolicy), indent(-1));
-    if (auto Sel = claimRange(N.ASTNode.getSourceRange()))
-      N.Selected = Sel;
+    claimRange(N.ASTNode.getSourceRange(), N.Selected);
     if (N.Selected || !N.Children.empty()) {
       // Attach to the tree.
       N.Parent->Children.push_back(&N);
@@ -375,9 +381,10 @@ private:
   // Perform hit-testing of a complete Node against the selection.
   // This runs for every node in the AST, and must be fast in common cases.
   // This is usually called from pop(), so we can take children into account.
-  SelectionTree::Selection claimRange(SourceRange S) {
+  // The existing state of Result is relevant (early/late claims can interact).
+  void claimRange(SourceRange S, SelectionTree::Selection &Result) {
     if (!S.isValid())
-      return SelectionTree::Unselected;
+      return;
     // toHalfOpenFileRange() allows selection of constructs in macro args. e.g:
     //   #define LOOP_FOREVER(Body) for(;;) { Body }
     //   void IncrementLots(int &x) {
@@ -391,17 +398,16 @@ private:
     auto E = SM.getDecomposedLoc(Range->getEnd());
     // Otherwise, nodes in macro expansions can't be selected.
     if (B.first != SelFile || E.first != SelFile)
-      return SelectionTree::Unselected;
+      return;
     // Attempt to claim the remaining range. If there's nothing to claim, only
     // children were selected.
-    SelectionTree::Selection Result = Claimed.claim(B.second, E.second);
+    Claimed.claim(B.second, E.second, Result);
     if (Result)
       dlog("{1}hit selection: {0}",
            SourceRange(SM.getComposedLoc(B.first, B.second),
                        SM.getComposedLoc(E.first, E.second))
                .printToString(SM),
            indent());
-    return Result;
   }
 
   std::string indent(int Offset = 0) {

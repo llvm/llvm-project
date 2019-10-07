@@ -1,6 +1,6 @@
-; RUN: llc -march=hexagon -mcpu=hexagonv5 -enable-pipeliner < %s | FileCheck %s
-; RUN: llc -march=hexagon -mcpu=hexagonv5 -O2 < %s | FileCheck %s
-; RUN: llc -march=hexagon -mcpu=hexagonv5 -O3 < %s | FileCheck %s
+; RUN: llc -march=hexagon -mcpu=hexagonv5 -enable-pipeliner < %s -pipeliner-experimental-cg=true | FileCheck %s
+; RUN: llc -march=hexagon -mcpu=hexagonv5 -O2 < %s -pipeliner-experimental-cg=true | FileCheck %s
+; RUN: llc -march=hexagon -mcpu=hexagonv5 -O3 < %s -pipeliner-experimental-cg=true | FileCheck %s
 ;
 ; Check that we pipeline a vectorized dot product in a single packet.
 ;

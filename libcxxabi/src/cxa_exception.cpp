@@ -79,8 +79,8 @@ size_t cxa_exception_size_from_exception_thrown_size(size_t size) {
 }
 
 void __setExceptionClass(_Unwind_Exception* unwind_exception, uint64_t newValue) {
-	::memcpy(&unwind_exception->exception_class, &newValue, sizeof(newValue));
-	}
+    ::memcpy(&unwind_exception->exception_class, &newValue, sizeof(newValue));
+}
 
 
 static void setOurExceptionClass(_Unwind_Exception* unwind_exception) {
@@ -93,13 +93,13 @@ static void setDependentExceptionClass(_Unwind_Exception* unwind_exception) {
 
 //  Is it one of ours?
 uint64_t __getExceptionClass(const _Unwind_Exception* unwind_exception) {
-//	On x86 and some ARM unwinders, unwind_exception->exception_class is
-//		a uint64_t. On other ARM unwinders, it is a char[8]
-//	See: http://infocenter.arm.com/help/topic/com.arm.doc.ihi0038b/IHI0038B_ehabi.pdf
-//	So we just copy it into a uint64_t to be sure.
-	uint64_t exClass;
-	::memcpy(&exClass, &unwind_exception->exception_class, sizeof(exClass));
-	return exClass;
+    // On x86 and some ARM unwinders, unwind_exception->exception_class is
+    // a uint64_t. On other ARM unwinders, it is a char[8].
+    // See: http://infocenter.arm.com/help/topic/com.arm.doc.ihi0038b/IHI0038B_ehabi.pdf
+    // So we just copy it into a uint64_t to be sure.
+    uint64_t exClass;
+    ::memcpy(&exClass, &unwind_exception->exception_class, sizeof(exClass));
+    return exClass;
 }
 
 bool __isOurExceptionClass(const _Unwind_Exception* unwind_exception) {

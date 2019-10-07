@@ -95,10 +95,6 @@ set(BENCHMARK_TEST_LIBCXX_COMPILE_FLAGS
     ${SANITIZER_FLAGS}
     -Wno-user-defined-literals
 )
-if (LIBCXX_NEEDS_SITE_CONFIG)
-  list(APPEND BENCHMARK_TEST_LIBCXX_COMPILE_FLAGS
-      -include "${LIBCXX_BINARY_DIR}/__config_site")
-endif()
 
 set(BENCHMARK_TEST_LIBCXX_LINK_FLAGS
     -nodefaultlibs

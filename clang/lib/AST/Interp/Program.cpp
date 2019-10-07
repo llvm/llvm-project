@@ -123,7 +123,7 @@ llvm::Optional<unsigned> Program::getOrCreateDummy(const ParmVarDecl *PD) {
   auto &ASTCtx = Ctx.getASTContext();
 
   // Create a pointer to an incomplete array of the specified elements.
-  QualType ElemTy = PD->getType()->getAs<PointerType>()->getPointeeType();
+  QualType ElemTy = PD->getType()->castAs<PointerType>()->getPointeeType();
   QualType Ty = ASTCtx.getIncompleteArrayType(ElemTy, ArrayType::Normal, 0);
 
   // Dedup blocks since they are immutable and pointers cannot be compared.
@@ -238,7 +238,7 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
       if (Spec.isVirtual())
         continue;
 
-      const RecordDecl *BD = Spec.getType()->getAs<RecordType>()->getDecl();
+      const RecordDecl *BD = Spec.getType()->castAs<RecordType>()->getDecl();
       Record *BR = getOrCreateRecord(BD);
       if (Descriptor *Desc = GetBaseDesc(BD, BR)) {
         Size += align(sizeof(InlineDescriptor));
@@ -250,7 +250,7 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
     }
 
     for (const CXXBaseSpecifier &Spec : CD->vbases()) {
-      const RecordDecl *BD = Spec.getType()->getAs<RecordType>()->getDecl();
+      const RecordDecl *BD = Spec.getType()->castAs<RecordType>()->getDecl();
       Record *BR = getOrCreateRecord(BD);
 
       if (Descriptor *Desc = GetBaseDesc(BD, BR)) {

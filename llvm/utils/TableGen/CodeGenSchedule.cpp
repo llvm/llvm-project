@@ -1083,9 +1083,13 @@ void CodeGenSchedModels::createInstRWClass(Record *InstRWDef) {
             if (RWD->getValueAsDef("SchedModel") == RWModelDef &&
                 RWModelDef->getValueAsBit("FullInstRWOverlapCheck")) {
               for (Record *Inst : InstDefs) {
-                PrintFatalError(InstRWDef->getLoc(), "Overlapping InstRW def " +
-                            Inst->getName() + " also matches " +
-                            RWD->getValue("Instrs")->getValue()->getAsString());
+                PrintFatalError
+                    (InstRWDef->getLoc(),
+                     "Overlapping InstRW definition for \"" +
+                     Inst->getName() +
+                     "\" also matches previous \"" +
+                     RWD->getValue("Instrs")->getValue()->getAsString() +
+                     "\".");
               }
             }
           }
@@ -1115,9 +1119,13 @@ void CodeGenSchedModels::createInstRWClass(Record *InstRWDef) {
       for (Record *OldRWDef : SchedClasses[OldSCIdx].InstRWs) {
         if (OldRWDef->getValueAsDef("SchedModel") == RWModelDef) {
           for (Record *InstDef : InstDefs) {
-            PrintFatalError(OldRWDef->getLoc(), "Overlapping InstRW def " +
-                       InstDef->getName() + " also matches " +
-                       OldRWDef->getValue("Instrs")->getValue()->getAsString());
+            PrintFatalError
+                (InstRWDef->getLoc(),
+                 "Overlapping InstRW definition for \"" +
+                 InstDef->getName() +
+                 "\" also matches previous \"" +
+                 OldRWDef->getValue("Instrs")->getValue()->getAsString() +
+                 "\".");
           }
         }
         assert(OldRWDef != InstRWDef &&

@@ -361,3 +361,43 @@ ProgramHeaders:
     PAddr: 0x1000
     Sections:
       - Section: .dynamic
+
+## Show that we report a warning for a hash table which contains an entry of
+## the bucket array pointing to a cycle.
+
+# RUN: yaml2obj --docnum=6 %s -o %t6.so
+# RUN: llvm-readelf --hash-symbols %t6.so 2>&1 | FileCheck %s -DFILE=%t6.so --check-prefix=BROKEN
+
+# BROKEN:      Symbol table of .hash for image:
+# BROKEN-NEXT:  Num Buc:    Value  Size   Type   Bind Vis      Ndx Name
+# BROKEN-NEXT:    1   0: 00000000     0 NOTYPE  LOCAL  DEFAULT UND aaa
+# BROKEN: warning: '[[FILE]]': .hash section is invalid: bucket 1: a cycle was detected in the linked chain
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_386
+Sections:
+  - Name:    .hash
+    Type:    SHT_HASH
+    Link:    .dynsym
+    Bucket:  [ 1 ]
+    Chain:   [ 1, 1 ]
+  - Name:  .dynamic
+    Type:  SHT_DYNAMIC
+    Entries:
+## llvm-readelf will read the hash table from the file offset
+## p_offset + (p_vaddr - DT_HASH) = p_offset + (0 - 0) = p_offset,
+## which is the start of PT_LOAD, i.e. the file offset of .hash.
+      - Tag:   DT_HASH
+        Value: 0x0
+DynamicSymbols:
+  - Name:    aaa
+  - Name:    bbb
+ProgramHeaders:
+  - Type:  PT_LOAD
+    Sections:
+      - Section: .hash
+      - Section: .dynamic

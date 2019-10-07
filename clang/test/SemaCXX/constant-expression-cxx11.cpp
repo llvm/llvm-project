@@ -1108,6 +1108,11 @@ namespace MemberPointer {
   static_assert((int Derived::*)(int Mid<0>::*)&Mid<0>::n !=
                 (int Derived::*)(int Mid<1>::*)&Mid<1>::n, "");
   static_assert(&Mid<0>::n == (int Mid<0>::*)&Base::n, "");
+
+  constexpr int apply(const A &a, int (A::*f)() const) {
+    return (a.*f)();
+  }
+  static_assert(apply(A(2), &A::f) == 5, "");
 }
 
 namespace ArrayBaseDerived {

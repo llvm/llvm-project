@@ -34,6 +34,10 @@
 #error "wrong value for __cpp_char8_t"
 #endif
 
+#if check(constexpr_dynamic_alloc, 0, 0, 0, 0, 201907)
+#error "wrong value for __cpp_constexpr_dynamic_alloc"
+#endif
+
 #if check(constinit, 0, 0, 0, 0, 201907)
 #error "wrong value for __cpp_constinit"
 #endif

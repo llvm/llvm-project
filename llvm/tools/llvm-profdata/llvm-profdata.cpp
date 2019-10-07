@@ -439,12 +439,35 @@ static void populateProfileSymbolList(MemoryBuffer *Buffer,
     PSL.add(symbol);
 }
 
+static void handleExtBinaryWriter(sampleprof::SampleProfileWriter &Writer,
+                                  ProfileFormat OutputFormat,
+                                  MemoryBuffer *Buffer,
+                                  sampleprof::ProfileSymbolList &WriterList,
+                                  bool CompressAllSections) {
+  populateProfileSymbolList(Buffer, WriterList);
+  if (WriterList.size() > 0 && OutputFormat != PF_Ext_Binary)
+    warn("Profile Symbol list is not empty but the output format is not "
+         "ExtBinary format. The list will be lost in the output. ");
+
+  Writer.setProfileSymbolList(&WriterList);
+
+  if (CompressAllSections) {
+    if (OutputFormat != PF_Ext_Binary) {
+      warn("-compress-all-section is ignored. Specify -extbinary to enable it");
+    } else {
+      auto ExtBinaryWriter =
+          static_cast<sampleprof::SampleProfileWriterExtBinary *>(&Writer);
+      ExtBinaryWriter->setToCompressAllSections();
+    }
+  }
+}
+
 static void mergeSampleProfile(const WeightedFileVector &Inputs,
                                SymbolRemapper *Remapper,
                                StringRef OutputFilename,
                                ProfileFormat OutputFormat,
                                StringRef ProfileSymbolListFile,
-                               bool CompressProfSymList, FailureMode FailMode) {
+                               bool CompressAllSections, FailureMode FailMode) {
   using namespace sampleprof;
   StringMap<FunctionSamples> ProfileMap;
   SmallVector<std::unique_ptr<sampleprof::SampleProfileReader>, 5> Readers;
@@ -496,17 +519,12 @@ static void mergeSampleProfile(const WeightedFileVector &Inputs,
   if (std::error_code EC = WriterOrErr.getError())
     exitWithErrorCode(EC, OutputFilename);
 
+  auto Writer = std::move(WriterOrErr.get());
   // WriterList will have StringRef refering to string in Buffer.
   // Make sure Buffer lives as long as WriterList.
   auto Buffer = getInputFileBuf(ProfileSymbolListFile);
-  populateProfileSymbolList(Buffer.get(), WriterList);
-  WriterList.setToCompress(CompressProfSymList);
-  if (WriterList.size() > 0 && OutputFormat != PF_Ext_Binary)
-    warn("Profile Symbol list is not empty but the output format is not "
-         "ExtBinary format. The list will be lost in the output. ");
-
-  auto Writer = std::move(WriterOrErr.get());
-  Writer->setProfileSymbolList(&WriterList);
+  handleExtBinaryWriter(*Writer, OutputFormat, Buffer.get(), WriterList,
+                        CompressAllSections);
   Writer->write(ProfileMap);
 }
 
@@ -630,9 +648,10 @@ static int merge_main(int argc, const char *argv[]) {
       "prof-sym-list", cl::init(""),
       cl::desc("Path to file containing the list of function symbols "
                "used to populate profile symbol list"));
-  cl::opt<bool> CompressProfSymList(
-      "compress-prof-sym-list", cl::init(false), cl::Hidden,
-      cl::desc("Compress profile symbol list before write it into profile. "));
+  cl::opt<bool> CompressAllSections(
+      "compress-all-sections", cl::init(false), cl::Hidden,
+      cl::desc("Compress all sections when writing the profile (only "
+               "meaningful for -extbinary)"));
 
   cl::ParseCommandLineOptions(argc, argv, "LLVM profile data merger\n");
 
@@ -666,8 +685,8 @@ static int merge_main(int argc, const char *argv[]) {
                       OutputFormat, OutputSparse, NumThreads, FailureMode);
   else
     mergeSampleProfile(WeightedInputs, Remapper.get(), OutputFilename,
-                       OutputFormat, ProfileSymbolListFile,
-                       CompressProfSymList, FailureMode);
+                       OutputFormat, ProfileSymbolListFile, CompressAllSections,
+                       FailureMode);
 
   return 0;
 }

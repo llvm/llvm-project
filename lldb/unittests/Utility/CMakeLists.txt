@@ -11,7 +11,6 @@ add_lldb_unittest(UtilityTests
   EventTest.cpp
   FileSpecTest.cpp
   FlagsTest.cpp
-  JSONTest.cpp
   ListenerTest.cpp
   LogTest.cpp
   NameMatchesTest.cpp

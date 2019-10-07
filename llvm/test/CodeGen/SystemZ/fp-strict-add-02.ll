@@ -7,19 +7,19 @@ declare double @foo()
 declare double @llvm.experimental.constrained.fadd.f64(double, double, metadata, metadata)
 
 ; Check register addition.
-define double @f1(double %f1, double %f2) {
+define double @f1(double %f1, double %f2) #0 {
 ; CHECK-LABEL: f1:
 ; CHECK: adbr %f0, %f2
 ; CHECK: br %r14
   %res = call double @llvm.experimental.constrained.fadd.f64(
                         double %f1, double %f2,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret double %res
 }
 
 ; Check the low end of the ADB range.
-define double @f2(double %f1, double *%ptr) {
+define double @f2(double %f1, double *%ptr) #0 {
 ; CHECK-LABEL: f2:
 ; CHECK: adb %f0, 0(%r2)
 ; CHECK: br %r14
@@ -27,12 +27,12 @@ define double @f2(double %f1, double *%ptr) {
   %res = call double @llvm.experimental.constrained.fadd.f64(
                         double %f1, double %f2,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret double %res
 }
 
 ; Check the high end of the aligned ADB range.
-define double @f3(double %f1, double *%base) {
+define double @f3(double %f1, double *%base) #0 {
 ; CHECK-LABEL: f3:
 ; CHECK: adb %f0, 4088(%r2)
 ; CHECK: br %r14
@@ -41,13 +41,13 @@ define double @f3(double %f1, double *%base) {
   %res = call double @llvm.experimental.constrained.fadd.f64(
                         double %f1, double %f2,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret double %res
 }
 
 ; Check the next doubleword up, which needs separate address logic.
 ; Other sequences besides this one would be OK.
-define double @f4(double %f1, double *%base) {
+define double @f4(double %f1, double *%base) #0 {
 ; CHECK-LABEL: f4:
 ; CHECK: aghi %r2, 4096
 ; CHECK: adb %f0, 0(%r2)
@@ -57,12 +57,12 @@ define double @f4(double %f1, double *%base) {
   %res = call double @llvm.experimental.constrained.fadd.f64(
                         double %f1, double %f2,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret double %res
 }
 
 ; Check negative displacements, which also need separate address logic.
-define double @f5(double %f1, double *%base) {
+define double @f5(double %f1, double *%base) #0 {
 ; CHECK-LABEL: f5:
 ; CHECK: aghi %r2, -8
 ; CHECK: adb %f0, 0(%r2)
@@ -72,12 +72,12 @@ define double @f5(double %f1, double *%base) {
   %res = call double @llvm.experimental.constrained.fadd.f64(
                         double %f1, double %f2,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret double %res
 }
 
 ; Check that ADB allows indices.
-define double @f6(double %f1, double *%base, i64 %index) {
+define double @f6(double %f1, double *%base, i64 %index) #0 {
 ; CHECK-LABEL: f6:
 ; CHECK: sllg %r1, %r3, 3
 ; CHECK: adb %f0, 800(%r1,%r2)
@@ -88,12 +88,12 @@ define double @f6(double %f1, double *%base, i64 %index) {
   %res = call double @llvm.experimental.constrained.fadd.f64(
                         double %f1, double %f2,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret double %res
 }
 
 ; Check that additions of spilled values can use ADB rather than ADBR.
-define double @f7(double *%ptr0) {
+define double @f7(double *%ptr0) #0 {
 ; CHECK-LABEL: f7:
 ; CHECK: brasl %r14, foo@PLT
 ; CHECK-SCALAR: adb %f0, 160(%r15)
@@ -121,52 +121,54 @@ define double @f7(double *%ptr0) {
   %val9 = load double, double *%ptr9
   %val10 = load double, double *%ptr10
 
-  %ret = call double @foo()
+  %ret = call double @foo() #0
 
   %add0 = call double @llvm.experimental.constrained.fadd.f64(
                         double %ret, double %val0,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   %add1 = call double @llvm.experimental.constrained.fadd.f64(
                         double %add0, double %val1,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   %add2 = call double @llvm.experimental.constrained.fadd.f64(
                         double %add1, double %val2,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   %add3 = call double @llvm.experimental.constrained.fadd.f64(
                         double %add2, double %val3,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   %add4 = call double @llvm.experimental.constrained.fadd.f64(
                         double %add3, double %val4,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   %add5 = call double @llvm.experimental.constrained.fadd.f64(
                         double %add4, double %val5,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   %add6 = call double @llvm.experimental.constrained.fadd.f64(
                         double %add5, double %val6,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   %add7 = call double @llvm.experimental.constrained.fadd.f64(
                         double %add6, double %val7,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   %add8 = call double @llvm.experimental.constrained.fadd.f64(
                         double %add7, double %val8,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   %add9 = call double @llvm.experimental.constrained.fadd.f64(
                         double %add8, double %val9,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   %add10 = call double @llvm.experimental.constrained.fadd.f64(
                         double %add9, double %val10,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
 
   ret double %add10
 }
+
+attributes #0 = { strictfp }

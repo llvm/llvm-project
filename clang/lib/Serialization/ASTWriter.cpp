@@ -166,7 +166,7 @@ namespace clang {
 #define TYPE(Class, Base) \
         case Type::Class: Visit##Class##Type(cast<Class##Type>(T)); break;
 #define ABSTRACT_TYPE(Class, Base)
-#include "clang/AST/TypeNodes.def"
+#include "clang/AST/TypeNodes.inc"
         }
       }
     }
@@ -177,7 +177,7 @@ namespace clang {
 
 #define TYPE(Class, Base) void Visit##Class##Type(const Class##Type *T);
 #define ABSTRACT_TYPE(Class, Base)
-#include "clang/AST/TypeNodes.def"
+#include "clang/AST/TypeNodes.inc"
   };
 
 } // namespace clang
@@ -238,6 +238,7 @@ void ASTTypeWriter::VisitArrayType(const ArrayType *T) {
 void ASTTypeWriter::VisitConstantArrayType(const ConstantArrayType *T) {
   VisitArrayType(T);
   Record.AddAPInt(T->getSize());
+  Record.AddStmt(const_cast<Expr*>(T->getSizeExpr()));
   Code = TYPE_CONSTANT_ARRAY;
 }
 

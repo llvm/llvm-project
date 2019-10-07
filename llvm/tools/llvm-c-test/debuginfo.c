@@ -170,6 +170,27 @@ int llvm_test_dibuilder(void) {
   LLVMDIBuilderInsertDbgValueAtEnd(DIB, FooVal1, FooVar1, FooVarValueExpr,
                                    FooVarsLocation, FooVarBlock);
 
+  LLVMMetadataRef MacroFile =
+      LLVMDIBuilderCreateTempMacroFile(DIB, NULL, 0, File);
+  LLVMDIBuilderCreateMacro(DIB, MacroFile, 0, LLVMDWARFMacinfoRecordTypeDefine,
+                           "SIMPLE_DEFINE", 13, NULL, 0);
+  LLVMDIBuilderCreateMacro(DIB, MacroFile, 0, LLVMDWARFMacinfoRecordTypeDefine,
+                           "VALUE_DEFINE", 12, "1", 1);
+
+  LLVMMetadataRef EnumeratorTestA =
+      LLVMDIBuilderCreateEnumerator(DIB, "Test_A", strlen("Test_A"), 0, true);
+  LLVMMetadataRef EnumeratorTestB =
+      LLVMDIBuilderCreateEnumerator(DIB, "Test_B", strlen("Test_B"), 1, true);
+  LLVMMetadataRef EnumeratorTestC =
+      LLVMDIBuilderCreateEnumerator(DIB, "Test_B", strlen("Test_C"), 2, true);
+  LLVMMetadataRef EnumeratorsTest[] = {EnumeratorTestA, EnumeratorTestB,
+                                       EnumeratorTestC};
+  LLVMMetadataRef EnumTest = LLVMDIBuilderCreateEnumerationType(
+      DIB, NameSpace, "EnumTest", strlen("EnumTest"), File, 0, 64, 0,
+      EnumeratorsTest, 3, Int64Ty);
+  LLVMAddNamedMetadataOperand(
+      M, "EnumTest", LLVMMetadataAsValue(LLVMGetModuleContext(M), EnumTest));
+
   LLVMDIBuilderFinalize(DIB);
 
   char *MStr = LLVMPrintModuleToString(M);

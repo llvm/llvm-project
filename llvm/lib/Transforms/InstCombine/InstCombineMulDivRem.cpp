@@ -124,6 +124,50 @@ static Constant *getLogBase2(Type *Ty, Constant *C) {
   return ConstantVector::get(Elts);
 }
 
+// TODO: This is a specific form of a much more general pattern.
+//       We could detect a select with any binop identity constant, or we
+//       could use SimplifyBinOp to see if either arm of the select reduces.
+//       But that needs to be done carefully and/or while removing potential
+//       reverse canonicalizations as in InstCombiner::foldSelectIntoOp().
+static Value *foldMulSelectToNegate(BinaryOperator &I,
+                                    InstCombiner::BuilderTy &Builder) {
+  Value *Cond, *OtherOp;
+
+  // mul (select Cond, 1, -1), OtherOp --> select Cond, OtherOp, -OtherOp
+  // mul OtherOp, (select Cond, 1, -1) --> select Cond, OtherOp, -OtherOp
+  if (match(&I, m_c_Mul(m_OneUse(m_Select(m_Value(Cond), m_One(), m_AllOnes())),
+                        m_Value(OtherOp))))
+    return Builder.CreateSelect(Cond, OtherOp, Builder.CreateNeg(OtherOp));
+
+  // mul (select Cond, -1, 1), OtherOp --> select Cond, -OtherOp, OtherOp
+  // mul OtherOp, (select Cond, -1, 1) --> select Cond, -OtherOp, OtherOp
+  if (match(&I, m_c_Mul(m_OneUse(m_Select(m_Value(Cond), m_AllOnes(), m_One())),
+                        m_Value(OtherOp))))
+    return Builder.CreateSelect(Cond, Builder.CreateNeg(OtherOp), OtherOp);
+
+  // fmul (select Cond, 1.0, -1.0), OtherOp --> select Cond, OtherOp, -OtherOp
+  // fmul OtherOp, (select Cond, 1.0, -1.0) --> select Cond, OtherOp, -OtherOp
+  if (match(&I, m_c_FMul(m_OneUse(m_Select(m_Value(Cond), m_SpecificFP(1.0),
+                                           m_SpecificFP(-1.0))),
+                         m_Value(OtherOp)))) {
+    IRBuilder<>::FastMathFlagGuard FMFGuard(Builder);
+    Builder.setFastMathFlags(I.getFastMathFlags());
+    return Builder.CreateSelect(Cond, OtherOp, Builder.CreateFNeg(OtherOp));
+  }
+
+  // fmul (select Cond, -1.0, 1.0), OtherOp --> select Cond, -OtherOp, OtherOp
+  // fmul OtherOp, (select Cond, -1.0, 1.0) --> select Cond, -OtherOp, OtherOp
+  if (match(&I, m_c_FMul(m_OneUse(m_Select(m_Value(Cond), m_SpecificFP(-1.0),
+                                           m_SpecificFP(1.0))),
+                         m_Value(OtherOp)))) {
+    IRBuilder<>::FastMathFlagGuard FMFGuard(Builder);
+    Builder.setFastMathFlags(I.getFastMathFlags());
+    return Builder.CreateSelect(Cond, Builder.CreateFNeg(OtherOp), OtherOp);
+  }
+
+  return nullptr;
+}
+
 Instruction *InstCombiner::visitMul(BinaryOperator &I) {
   if (Value *V = SimplifyMulInst(I.getOperand(0), I.getOperand(1),
                                  SQ.getWithInstruction(&I)))
@@ -213,24 +257,8 @@ Instruction *InstCombiner::visitMul(BinaryOperator &I) {
   if (Instruction *FoldedMul = foldBinOpIntoSelectOrPhi(I))
     return FoldedMul;
 
-  // TODO: This is a specific form of a much more general pattern.
-  //       We could detect a select with any binop identity constant, or we
-  //       could use SimplifyBinOp to see if either arm of the select reduces.
-  //       But that needs to be done carefully and/or while removing potential
-  //       reverse canonicalizations as in InstCombiner::foldSelectIntoOp().
-  // mul (select Cond, 1, -1), Op1 --> select Cond, Op1, -Op1
-  // mul (select Cond, -1, 1), Op1 --> select Cond, -Op1, Op1
-  // mul Op0, (select Cond, 1, -1) --> select Cond, Op0, -Op0
-  // mul Op0, (select Cond, -1, 1) --> select Cond, -Op0, Op0
-  Value *Cond;
-  if (match(Op0, m_OneUse(m_Select(m_Value(Cond), m_One(), m_AllOnes()))))
-    return SelectInst::Create(Cond, Op1, Builder.CreateNeg(Op1));
-  if (match(Op0, m_OneUse(m_Select(m_Value(Cond), m_AllOnes(), m_One()))))
-    return SelectInst::Create(Cond, Builder.CreateNeg(Op1), Op1);
-  if (match(Op1, m_OneUse(m_Select(m_Value(Cond), m_One(), m_AllOnes()))))
-    return SelectInst::Create(Cond, Op0, Builder.CreateNeg(Op0));
-  if (match(Op1, m_OneUse(m_Select(m_Value(Cond), m_AllOnes(), m_One()))))
-    return SelectInst::Create(Cond, Builder.CreateNeg(Op0), Op0);
+  if (Value *FoldedMul = foldMulSelectToNegate(I, Builder))
+    return replaceInstUsesWith(I, FoldedMul);
 
   // Simplify mul instructions with a constant RHS.
   if (isa<Constant>(Op1)) {
@@ -376,6 +404,9 @@ Instruction *InstCombiner::visitFMul(BinaryOperator &I) {
 
   if (Instruction *FoldedMul = foldBinOpIntoSelectOrPhi(I))
     return FoldedMul;
+
+  if (Value *FoldedMul = foldMulSelectToNegate(I, Builder))
+    return replaceInstUsesWith(I, FoldedMul);
 
   // X * -1.0 --> -X
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);

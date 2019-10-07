@@ -52,6 +52,7 @@ SBRegistry::SBRegistry() {
   RegisterMethods<SBEvent>(R);
   RegisterMethods<SBExecutionContext>(R);
   RegisterMethods<SBExpressionOptions>(R);
+  RegisterMethods<SBFile>(R);
   RegisterMethods<SBFileSpec>(R);
   RegisterMethods<SBFileSpecList>(R);
   RegisterMethods<SBFrame>(R);

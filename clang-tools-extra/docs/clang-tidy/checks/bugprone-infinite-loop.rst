@@ -15,7 +15,7 @@ considered infinite if it does not have any loop exit statement (``break``,
 the condition:
 
 - It is a local variable.
-- It has no reference or pointer aliases
+- It has no reference or pointer aliases.
 - It is not a structure or class member.
 
 Furthermore, the condition must not contain a function call to consider the loop

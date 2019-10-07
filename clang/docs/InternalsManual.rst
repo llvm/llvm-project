@@ -1519,11 +1519,11 @@ statements are true:
 - A and X are nodes from the same ASTContext.
 - B and Y are nodes from the same ASTContext.
 - A and B may or may not be from the same ASTContext.
-- if A == X (pointer equivalency) then (there is a cycle during the traverse)
+- if A == X and B == Y (pointer equivalency) then (there is a cycle during the
+  traverse)
 
   - A and B are structurally equivalent if and only if
 
-    - B and Y are part of the same redeclaration chain,
     - All dependent nodes on the path from <A,B> to <X,Y> are structurally
       equivalent.
 
@@ -1562,15 +1562,6 @@ the whole redeclaration chain of the function. The most recent version of the
 ``ASTImporter`` uses the latter mechanism. We do import all function
 declarations - regardless if they are definitions or prototypes - in the order
 as they appear in the "from" context.
-
-.. Structural eq requires proper redecl chains
-
-Another reason why we must maintain and import redeclaration chains properly is
-that the :ref:`Structural Equivalency <structural-eq>` check would report false
-positive in-equivalencies otherwise. We must not allow having two (or more)
-independent redeclaration chains of structurally equivalent declarations.
-Structural equivalency identifies the chains with the canonical declaration,
-that becomes different for independent chains.
 
 .. One definition
 

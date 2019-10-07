@@ -3,7 +3,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux %s -o %t.o
 # RUN: ld.lld -r -o %t-rel.o %t.o
-# RUN: llvm-readobj --mips-reginfo %t-rel.o | FileCheck --check-prefix=REL %s
+# RUN: llvm-readobj -A %t-rel.o | FileCheck --check-prefix=REL %s
 
 # RUN: echo "SECTIONS { \
 # RUN:         .rodata ALIGN(0x1000) : { *(.rodata) } \
@@ -14,15 +14,15 @@
 
 # REL: GP: 0x0
 
-# DUMP: Contents of section .rodata:
-# DUMP: 1000 fffffff4 fffffff8
-#            ^ 0x20004 + 0x7ff0 - 0x28000
-#                     ^ 0x20008 + 0x7ff0 - 0x28000
-
 # DUMP: SYMBOL TABLE:
 # DUMP: 00020008         .text          00000000 bar
 # DUMP: 00020004         .text          00000000 foo
 # DUMP: 00028000         .got           00000000 .hidden _gp
+
+# DUMP: Contents of section .rodata:
+# DUMP: 1000 fffffff4 fffffff8
+#            ^ 0x20004 + 0x7ff0 - 0x28000
+#                     ^ 0x20008 + 0x7ff0 - 0x28000
 
   .text
   .global  __start

@@ -3,7 +3,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux %s -o %t.o
 # RUN: ld.lld %t.o -shared -o %t.so
-# RUN: llvm-readelf -s --mips-plt-got %t.so | FileCheck %s
+# RUN: llvm-readelf -s -A %t.so | FileCheck %s
 
 # CHECK: Symbol table '.symtab'
 # CHECK: {{.*}}: [[VAL:[0-9a-f]+]]  {{.*}}  glb1

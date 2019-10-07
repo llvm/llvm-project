@@ -1,5 +1,5 @@
-; RUN: llc -march=hexagon -mcpu=hexagonv5 -enable-pipeliner < %s | FileCheck %s
-; RUN: llc -march=hexagon -mcpu=hexagonv60 -enable-pipeliner < %s | FileCheck %s --check-prefix=CHECKV60
+; RUN: llc -march=hexagon -mcpu=hexagonv5 -enable-pipeliner < %s -pipeliner-experimental-cg=true | FileCheck %s
+; RUN: llc -march=hexagon -mcpu=hexagonv60 -enable-pipeliner < %s -pipeliner-experimental-cg=true | FileCheck %s --check-prefix=CHECKV60
 
 ; Simple vector total.
 ; CHECK: loop0(.LBB0_[[LOOP:.]],
