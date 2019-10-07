@@ -542,13 +542,10 @@ public:
   /// formation for predicated accesses, we may be able to relax this limitation
   /// in the future once we handle more complicated blocks.
   void reset() {
-    SmallPtrSet<InterleaveGroup<Instruction> *, 4> DelSet;
-    // Avoid releasing a pointer twice.
-    for (auto &I : InterleaveGroupMap)
-      DelSet.insert(I.second);
-    for (auto *Ptr : DelSet)
-      delete Ptr;
     InterleaveGroupMap.clear();
+    for (auto *Ptr : InterleaveGroups)
+      delete Ptr;
+    InterleaveGroups.clear();
     RequiresScalarEpilogue = false;
   }
 

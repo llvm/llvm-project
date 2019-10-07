@@ -572,3 +572,38 @@ for.body:
 for.end:
   ret void
 }
+
+; Do not sink branches: While branches are if-converted and do not require
+; sinking, instructions with side effects (e.g. loads) conditioned by those
+; branches will become users of the condition bit after vectorization and would
+; need to be sunk if the loop is vectorized.
+define void @do_not_sink_branch(i32 %x, i32* %in, i32* %out, i32 %tc) local_unnamed_addr #0 {
+; NO-SINK-AFTER-LABEL: do_not_sink_branch
+; NO-SINK-AFTER-NOT:   vector.ph:
+; NO-SINK-AFTER:       }
+entry:
+  %cmp530 = icmp slt i32 0, %tc
+  br label %for.body4
+
+for.body4:                                        ; preds = %cond.end, %entry
+  %indvars.iv = phi i32 [ 0, %entry ], [ %indvars.iv.next, %cond.end ]
+  %cmp534 = phi i1 [ %cmp530, %entry ], [ %cmp5, %cond.end ]
+  br i1 %cmp534, label %cond.true, label %cond.end
+
+cond.true:                                        ; preds = %for.body4
+  %arrayidx7 = getelementptr inbounds i32, i32* %in, i32 %indvars.iv
+  %in.val = load i32, i32* %arrayidx7, align 4
+  br label %cond.end
+
+cond.end:                                         ; preds = %for.body4, %cond.true
+  %cond = phi i32 [ %in.val, %cond.true ], [ 0, %for.body4 ]
+  %arrayidx8 = getelementptr inbounds i32, i32* %out, i32 %indvars.iv
+  store i32 %cond, i32* %arrayidx8, align 4
+  %indvars.iv.next = add nuw nsw i32 %indvars.iv, 1
+  %cmp5 = icmp slt i32 %indvars.iv.next, %tc
+  %exitcond = icmp eq i32 %indvars.iv.next, %x
+  br i1 %exitcond, label %for.end12.loopexit, label %for.body4
+
+for.end12.loopexit:                               ; preds = %cond.end
+  ret void
+}
