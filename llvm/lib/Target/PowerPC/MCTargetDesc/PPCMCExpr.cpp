@@ -19,8 +19,8 @@ using namespace llvm;
 
 const PPCMCExpr*
 PPCMCExpr::create(VariantKind Kind, const MCExpr *Expr,
-                  bool isDarwin, MCContext &Ctx) {
-  return new (Ctx) PPCMCExpr(Kind, Expr, isDarwin);
+                  bool IsDarwin, MCContext &Ctx) {
+  return new (Ctx) PPCMCExpr(Kind, Expr, IsDarwin);
 }
 
 void PPCMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {

@@ -1129,16 +1129,6 @@ private:
   /// Returns -1 if the cost is unknown.
   int getInstructionThroughput(const Instruction *I) const;
 
-  /// Given an input value that is an element of an 'or' reduction, check if the
-  /// reduction is composed of narrower loaded values. Assuming that a
-  /// legal-sized reduction of shifted/zexted loaded values can be load combined
-  /// in the backend, create a relative cost that accounts for the removal of
-  /// the intermediate ops and replacement by a single wide load.
-  /// TODO: If load combining is allowed in the IR optimizer, this analysis
-  ///       may not be necessary.
-  Optional<int> getLoadCombineCost(unsigned Opcode,
-                                   ArrayRef<const Value *> Args) const;
-
   /// The abstract base class used to type erase specific TTI
   /// implementations.
   class Concept;

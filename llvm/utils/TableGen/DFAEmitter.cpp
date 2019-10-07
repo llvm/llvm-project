@@ -373,7 +373,7 @@ void CustomDfaEmitter::printActionType(raw_ostream &OS) { OS << TypeName; }
 void CustomDfaEmitter::printActionValue(action_type A, raw_ostream &OS) {
   const ActionTuple &AT = Actions[A];
   if (AT.size() > 1)
-    OS << "{";
+    OS << "std::make_tuple(";
   bool First = true;
   for (const auto &SingleAction : AT) {
     if (!First)
@@ -382,7 +382,7 @@ void CustomDfaEmitter::printActionValue(action_type A, raw_ostream &OS) {
     SingleAction.print(OS);
   }
   if (AT.size() > 1)
-    OS << "}";
+    OS << ")";
 }
 
 namespace llvm {

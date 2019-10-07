@@ -159,18 +159,14 @@ define <4 x double> @C2(double* %ptr, double* %ptr2) nounwind uwtable readnone s
 ; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X32-NEXT:    vmovsd %xmm0, (%eax)
-; X32-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
-; X32-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; X32-NEXT:    vbroadcastsd (%ecx), %ymm0
+; X32-NEXT:    vmovlps %xmm0, (%eax)
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: C2:
 ; X64:       ## %bb.0: ## %entry
-; X64-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X64-NEXT:    vmovsd %xmm0, (%rsi)
-; X64-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
-; X64-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; X64-NEXT:    vbroadcastsd (%rdi), %ymm0
+; X64-NEXT:    vmovlps %xmm0, (%rsi)
 ; X64-NEXT:    retq
 entry:
   %q = load double, double* %ptr, align 8
@@ -231,18 +227,14 @@ define <8 x float> @D3(float* %ptr, float* %ptr2) nounwind uwtable readnone ssp 
 ; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X32-NEXT:    vbroadcastss (%ecx), %ymm0
 ; X32-NEXT:    vmovss %xmm0, (%eax)
-; X32-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,0,0,0]
-; X32-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: D3:
 ; X64:       ## %bb.0: ## %entry
-; X64-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-NEXT:    vbroadcastss (%rdi), %ymm0
 ; X64-NEXT:    vmovss %xmm0, (%rsi)
-; X64-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,0,0,0]
-; X64-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; X64-NEXT:    retq
 entry:
   %q = load float, float* %ptr, align 4
@@ -285,16 +277,14 @@ define <4 x float> @e2(float* %ptr, float* %ptr2) nounwind uwtable readnone ssp 
 ; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X32-NEXT:    vbroadcastss (%ecx), %xmm0
 ; X32-NEXT:    vmovss %xmm0, (%eax)
-; X32-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: e2:
 ; X64:       ## %bb.0: ## %entry
-; X64-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-NEXT:    vbroadcastss (%rdi), %xmm0
 ; X64-NEXT:    vmovss %xmm0, (%rsi)
-; X64-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; X64-NEXT:    retq
 entry:
   %q = load float, float* %ptr, align 4
@@ -669,16 +659,14 @@ define <2 x double> @I2(double* %ptr, double* %ptr2) nounwind uwtable readnone s
 ; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X32-NEXT:    vmovsd %xmm0, (%eax)
-; X32-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
+; X32-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
+; X32-NEXT:    vmovlps %xmm0, (%eax)
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: I2:
 ; X64:       ## %bb.0: ## %entry
-; X64-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X64-NEXT:    vmovsd %xmm0, (%rsi)
-; X64-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
+; X64-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
+; X64-NEXT:    vmovlps %xmm0, (%rsi)
 ; X64-NEXT:    retq
 entry:
   %q = load double, double* %ptr, align 4
@@ -884,7 +872,6 @@ define void @broadcast_v16i32(i32* %a, <16 x i32>* %b) {
 
 ;
 ; Broadcast scale factor for xyz vector - slp will have vectorized xy.
-; FIXME: Load as a broadcast and then use the scalar 0'th element.
 ;
 define double @broadcast_scale_xyz(double* nocapture readonly, double* nocapture readonly) nounwind {
 ; X32-LABEL: broadcast_scale_xyz:
@@ -892,9 +879,8 @@ define double @broadcast_scale_xyz(double* nocapture readonly, double* nocapture
 ; X32-NEXT:    subl $12, %esp
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X32-NEXT:    vmovddup {{.*#+}} xmm1 = xmm0[0,0]
-; X32-NEXT:    vmulpd (%eax), %xmm1, %xmm1
+; X32-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
+; X32-NEXT:    vmulpd (%eax), %xmm0, %xmm1
 ; X32-NEXT:    vmulsd 16(%eax), %xmm0, %xmm0
 ; X32-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm1[1,0]
 ; X32-NEXT:    vaddsd %xmm2, %xmm1, %xmm1
@@ -906,9 +892,8 @@ define double @broadcast_scale_xyz(double* nocapture readonly, double* nocapture
 ;
 ; X64-LABEL: broadcast_scale_xyz:
 ; X64:       ## %bb.0:
-; X64-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X64-NEXT:    vmovddup {{.*#+}} xmm1 = xmm0[0,0]
-; X64-NEXT:    vmulpd (%rsi), %xmm1, %xmm1
+; X64-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
+; X64-NEXT:    vmulpd (%rsi), %xmm0, %xmm1
 ; X64-NEXT:    vmulsd 16(%rsi), %xmm0, %xmm0
 ; X64-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm1[1,0]
 ; X64-NEXT:    vaddsd %xmm2, %xmm1, %xmm1

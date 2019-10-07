@@ -761,6 +761,11 @@ CombineTo(SDNode *N, SDValue Res0, SDValue Res1, bool AddTo) {
   return ((DAGCombiner*)DC)->CombineTo(N, Res0, Res1, AddTo);
 }
 
+bool TargetLowering::DAGCombinerInfo::
+recursivelyDeleteUnusedNodes(SDNode *N) {
+  return ((DAGCombiner*)DC)->recursivelyDeleteUnusedNodes(N);
+}
+
 void TargetLowering::DAGCombinerInfo::
 CommitTargetLoweringOpt(const TargetLowering::TargetLoweringOpt &TLO) {
   return ((DAGCombiner*)DC)->CommitTargetLoweringOpt(TLO);

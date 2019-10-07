@@ -1272,6 +1272,91 @@ TEST(LoopInfoTest, AuxiliaryIV) {
       });
 }
 
+TEST(LoopInfoTest, LoopNotInSimplifyForm) {
+  const char *ModuleStr =
+      "define void @foo(i32 %n) {\n"
+      "entry:\n"
+      "  %guard.cmp = icmp sgt i32 %n, 0\n"
+      "  br i1 %guard.cmp, label %for.cond, label %for.end\n"
+      "for.cond:\n"
+      "  %i.0 = phi i32 [ 0, %entry ], [ %inc, %latch.1 ], [ %inc, %latch.2 ]\n"
+      "  %inc = add nsw i32 %i.0, 1\n"
+      "  %cmp = icmp slt i32 %i.0, %n\n"
+      "  br i1 %cmp, label %latch.1, label %for.end\n"
+      "latch.1:\n"
+      "  br i1 undef, label %for.cond, label %latch.2\n"
+      "latch.2:\n"
+      "  br label %for.cond\n"
+      "for.end:\n"
+      "  ret void\n"
+      "}\n";
+
+  // Parse the module.
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleStr);
+
+  runWithLoopInfo(*M, "foo", [&](Function &F, LoopInfo &LI) {
+    Function::iterator FI = F.begin();
+    // First basic block is entry - skip it.
+    BasicBlock *Header = &*(++FI);
+    assert(Header && "No header");
+    Loop *L = LI.getLoopFor(Header);
+    EXPECT_NE(L, nullptr);
+    EXPECT_FALSE(L->isLoopSimplifyForm());
+    // No loop guard because loop in not in simplify form.
+    EXPECT_EQ(L->getLoopGuardBranch(), nullptr);
+    EXPECT_FALSE(L->isGuarded());
+  });
+}
+
+TEST(LoopInfoTest, LoopLatchNotExiting) {
+  const char *ModuleStr =
+      "define void @foo(i32* %A, i32 %ub) {\n"
+      "entry:\n"
+      "  %guardcmp = icmp slt i32 0, %ub\n"
+      "  br i1 %guardcmp, label %for.preheader, label %for.end\n"
+      "for.preheader:\n"
+      "  br label %for.body\n"
+      "for.body:\n"
+      "  %i = phi i32 [ 0, %for.preheader ], [ %inc, %for.body ]\n"
+      "  %idxprom = sext i32 %i to i64\n"
+      "  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %idxprom\n"
+      "  store i32 %i, i32* %arrayidx, align 4\n"
+      "  %inc = add nsw i32 %i, 1\n"
+      "  %cmp = icmp slt i32 %inc, %ub\n"
+      "  br i1 %cmp, label %for.latch, label %for.exit\n"
+      "for.latch:\n"
+      "  br label %for.body\n"
+      "for.exit:\n"
+      "  br label %for.end\n"
+      "for.end:\n"
+      "  ret void\n"
+      "}\n";
+
+  // Parse the module.
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleStr);
+
+  runWithLoopInfoPlus(
+      *M, "foo",
+      [&](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+        Function::iterator FI = F.begin();
+        // First two basic block are entry and for.preheader - skip them.
+        ++FI;
+        BasicBlock *Header = &*(++FI);
+        BasicBlock *Latch = &*(++FI);
+        assert(Header && "No header");
+        Loop *L = LI.getLoopFor(Header);
+        EXPECT_NE(L, nullptr);
+        EXPECT_TRUE(L->isLoopSimplifyForm());
+        EXPECT_EQ(L->getLoopLatch(), Latch);
+        EXPECT_FALSE(L->isLoopExiting(Latch));
+        // No loop guard becuase loop is not exiting on latch.
+        EXPECT_EQ(L->getLoopGuardBranch(), nullptr);
+        EXPECT_FALSE(L->isGuarded());
+      });
+}
+
 // Examine getUniqueExitBlocks/getUniqueNonLatchExitBlocks functions.
 TEST(LoopInfoTest, LoopUniqueExitBlocks) {
   const char *ModuleStr =
