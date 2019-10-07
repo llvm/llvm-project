@@ -162,8 +162,6 @@ GetDisplayDemangledNamesCache() {
 }
 
 #pragma mark Mangled
-// Default constructor
-Mangled::Mangled() : m_mangled(), m_demangled() {}
 
 Mangled::Mangled(ConstString s) : m_mangled(), m_demangled() {
   if (s)
