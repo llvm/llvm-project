@@ -65,7 +65,7 @@
 # CHECK-NEXT:      }
 # CHECK-NEXT:    ],
 # CHECK-NEXT:    "textDocument": {
-# CHECK-NEXT:      "uri": "file:///clangd-test/foo.cpp"
+# CHECK-NEXT:      "uri": "file://{{.*}}/clangd-test/foo.cpp"
 # CHECK-NEXT:    }
 # CHECK-NEXT:  }
 # CHECK-NEXT:}
@@ -84,7 +84,7 @@
 # CHECK-NEXT:      }
 # CHECK-NEXT:    ],
 # CHECK-NEXT:    "textDocument": {
-# CHECK-NEXT:      "uri": "file:///clangd-test/foo2.cpp"
+# CHECK-NEXT:      "uri": "file://{{.*}}/clangd-test/foo2.cpp"
 # CHECK-NEXT:    }
 # CHECK-NEXT:  }
 # CHECK-NEXT:}
@@ -99,7 +99,7 @@
 # CHECK-NEXT:      }
 # CHECK-NEXT:   ],
 # CHECK-NEXT:    "textDocument": {
-# CHECK-NEXT:      "uri": "file:///clangd-test/foo.cpp"
+# CHECK-NEXT:      "uri": "file://{{.*}}/clangd-test/foo.cpp"
 # CHECK-NEXT:    }
 # CHECK-NEXT:  }
 # CHECK-NEXT:}
@@ -114,7 +114,7 @@
 # CHECK-NEXT:      }
 # CHECK-NEXT:   ],
 # CHECK-NEXT:    "textDocument": {
-# CHECK-NEXT:      "uri": "file:///clangd-test/foo.cpp"
+# CHECK-NEXT:      "uri": "file://{{.*}}/clangd-test/foo.cpp"
 # CHECK-NEXT:    }
 # CHECK-NEXT:  }
 # CHECK-NEXT:}

@@ -413,6 +413,16 @@ TEST(MergeIndexTest, Refs) {
                                        FileURI("unittest:///test2.cc"))))));
 }
 
+TEST(MergeIndexTest, NonDocumentation) {
+  Symbol L, R;
+  L.ID = R.ID = SymbolID("x");
+  L.Definition.FileURI = "file:/x.h";
+  R.Documentation = "Forward declarations because x.h is too big to include";
+
+  Symbol M = mergeSymbol(L, R);
+  EXPECT_EQ(M.Documentation, "");
+}
+
 MATCHER_P2(IncludeHeaderWithRef, IncludeHeader, References, "") {
   return (arg.IncludeHeader == IncludeHeader) && (arg.References == References);
 }

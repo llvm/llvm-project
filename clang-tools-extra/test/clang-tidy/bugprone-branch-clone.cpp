@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s bugprone-branch-clone %t
+// RUN: %check_clang_tidy %s bugprone-branch-clone %t -- -- -fno-delayed-template-parsing
 
 void test_basic1(int in, int &out) {
   if (in > 77)

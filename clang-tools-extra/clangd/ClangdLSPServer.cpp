@@ -1045,7 +1045,7 @@ void ClangdLSPServer::onSwitchSourceHeader(
         if (!Path)
           return Reply(Path.takeError());
         if (*Path)
-          Reply(URIForFile::canonicalize(**Path, Params.uri.file()));
+          return Reply(URIForFile::canonicalize(**Path, Params.uri.file()));
         return Reply(llvm::None);
       });
 }

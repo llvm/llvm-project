@@ -103,23 +103,7 @@ endif ()
 # Setup flags.
 add_link_flags_if_supported(-nodefaultlibs)
 
-set(LIBCXXABI_SHARED_LINK_FLAGS)
-
 if ( APPLE )
-  if ( CMAKE_OSX_DEPLOYMENT_TARGET STREQUAL "10.6" )
-    list(APPEND LIBCXXABI_COMPILE_FLAGS "-U__STRICT_ANSI__")
-    list(APPEND LIBCXXABI_SHARED_LINK_FLAGS
-      "-compatibility_version 1"
-      "-current_version 1"
-      "-install_name /usr/lib/libc++abi.1.dylib")
-    list(APPEND LIBCXXABI_LINK_FLAGS
-        "/usr/lib/libSystem.B.dylib")
-  else()
-    list(APPEND LIBCXXABI_SHARED_LINK_FLAGS
-      "-compatibility_version 1"
-      "-install_name /usr/lib/libc++abi.1.dylib")
-  endif()
-
   if (LLVM_USE_SANITIZER)
     if (("${LLVM_USE_SANITIZER}" STREQUAL "Address") OR
         ("${LLVM_USE_SANITIZER}" STREQUAL "Address;Undefined") OR
@@ -148,7 +132,6 @@ endif()
 
 split_list(LIBCXXABI_COMPILE_FLAGS)
 split_list(LIBCXXABI_LINK_FLAGS)
-split_list(LIBCXXABI_SHARED_LINK_FLAGS)
 
 # FIXME: libc++abi.so will not link when modules are enabled because it depends
 # on symbols defined in libc++.so which has not yet been built.
@@ -187,13 +170,15 @@ if (LIBCXXABI_ENABLE_SHARED)
                           COMPILE_FLAGS
                             "${LIBCXXABI_COMPILE_FLAGS}"
                           LINK_FLAGS
-                            "${LIBCXXABI_LINK_FLAGS} ${LIBCXXABI_SHARED_LINK_FLAGS}"
+                            "${LIBCXXABI_LINK_FLAGS}"
                           OUTPUT_NAME
                             "c++abi"
                           SOVERSION
                             "1"
                           VERSION
-                            "1.0")
+                            "${LIBCXXABI_LIBRARY_VERSION}"
+                          DEFINE_SYMBOL
+                            "")
 
   if(LIBCXXABI_ENABLE_PIC)
     set_target_properties(cxxabi_shared PROPERTIES POSITION_INDEPENDENT_CODE ON)

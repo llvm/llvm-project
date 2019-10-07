@@ -125,6 +125,7 @@ TEST(HeaderSourceSwitchTest, FromHeaderToSource) {
   Testing.HeaderCode = R"cpp(
   void B_Sym1();
   void B_Sym2();
+  void B_Sym3_NoDef();
   )cpp";
   Testing.Filename = "b.cpp";
   Testing.Code = R"cpp(
@@ -163,6 +164,12 @@ TEST(HeaderSourceSwitchTest, FromHeaderToSource) {
          void B_Sym1();
        )cpp",
        testPath("a.cpp")},
+
+       {R"cpp(
+          // We don't have definition in the index, so stay in the header.
+          void B_Sym3_NoDef();
+       )cpp",
+       None},
   };
   for (const auto &Case : TestCases) {
     TestTU TU = TestTU::withCode(Case.HeaderCode);

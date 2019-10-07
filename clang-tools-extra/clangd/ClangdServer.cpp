@@ -460,7 +460,7 @@ void ClangdServer::switchSourceHeader(
   if (auto CorrespondingFile =
           getCorrespondingHeaderOrSource(Path, FSProvider.getFileSystem()))
     return CB(std::move(CorrespondingFile));
-  auto Action = [Path, CB = std::move(CB),
+  auto Action = [Path = Path.str(), CB = std::move(CB),
                  this](llvm::Expected<InputsAndAST> InpAST) mutable {
     if (!InpAST)
       return CB(InpAST.takeError());
