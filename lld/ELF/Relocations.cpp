@@ -62,9 +62,8 @@ using namespace llvm::ELF;
 using namespace llvm::object;
 using namespace llvm::support::endian;
 
-using namespace lld;
-using namespace lld::elf;
-
+namespace lld {
+namespace elf {
 static Optional<std::string> getLinkerScriptLocation(const Symbol &sym) {
   for (BaseCommand *base : script->sectionCommands)
     if (auto *cmd = dyn_cast<SymbolAssignment>(base))
@@ -823,7 +822,7 @@ static void reportUndefinedSymbol(const UndefinedDiag &undef,
     error(msg);
 }
 
-template <class ELFT> void elf::reportUndefinedSymbols() {
+template <class ELFT> void reportUndefinedSymbols() {
   // Find the first "undefined symbol" diagnostic for each diagnostic, and
   // collect all "referenced from" lines at the first diagnostic.
   DenseMap<Symbol *, UndefinedDiag *> firstRef;
@@ -1405,7 +1404,7 @@ static void scanRelocs(InputSectionBase &sec, ArrayRef<RelTy> rels) {
                       });
 }
 
-template <class ELFT> void elf::scanRelocations(InputSectionBase &s) {
+template <class ELFT> void scanRelocations(InputSectionBase &s) {
   if (s.areRelocsRela)
     scanRelocs<ELFT>(s, s.relas<ELFT>());
   else
@@ -1832,11 +1831,14 @@ bool ThunkCreator::createThunks(ArrayRef<OutputSection *> outputSections) {
   return addressesChanged;
 }
 
-template void elf::scanRelocations<ELF32LE>(InputSectionBase &);
-template void elf::scanRelocations<ELF32BE>(InputSectionBase &);
-template void elf::scanRelocations<ELF64LE>(InputSectionBase &);
-template void elf::scanRelocations<ELF64BE>(InputSectionBase &);
-template void elf::reportUndefinedSymbols<ELF32LE>();
-template void elf::reportUndefinedSymbols<ELF32BE>();
-template void elf::reportUndefinedSymbols<ELF64LE>();
-template void elf::reportUndefinedSymbols<ELF64BE>();
+template void scanRelocations<ELF32LE>(InputSectionBase &);
+template void scanRelocations<ELF32BE>(InputSectionBase &);
+template void scanRelocations<ELF64LE>(InputSectionBase &);
+template void scanRelocations<ELF64BE>(InputSectionBase &);
+template void reportUndefinedSymbols<ELF32LE>();
+template void reportUndefinedSymbols<ELF32BE>();
+template void reportUndefinedSymbols<ELF64LE>();
+template void reportUndefinedSymbols<ELF64BE>();
+
+} // namespace elf
+} // namespace lld

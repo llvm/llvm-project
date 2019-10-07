@@ -37,15 +37,14 @@ using namespace llvm::support;
 using namespace llvm::support::endian;
 using namespace llvm::sys;
 
-using namespace lld;
-using namespace lld::elf;
-
-std::vector<InputSectionBase *> elf::inputSections;
-
+namespace lld {
 // Returns a string to construct an error message.
-std::string lld::toString(const InputSectionBase *sec) {
+std::string toString(const elf::InputSectionBase *sec) {
   return (toString(sec->file) + ":(" + sec->name + ")").str();
 }
+
+namespace elf {
+std::vector<InputSectionBase *> inputSections;
 
 template <class ELFT>
 static ArrayRef<uint8_t> getSectionContents(ObjFile<ELFT> &file,
@@ -619,7 +618,7 @@ static int64_t getTlsTpOffset(const Symbol &s) {
   // Variant 2. Static TLS blocks, followed by alignment padding are placed
   // before TP. The alignment padding is added so that (TP - padding -
   // p_memsz) is congruent to p_vaddr modulo p_align.
-  elf::PhdrEntry *tls = Out::tlsPhdr;
+  PhdrEntry *tls = Out::tlsPhdr;
   switch (config->emachine) {
     // Variant 1.
   case EM_ARM:
@@ -1082,7 +1081,7 @@ void InputSectionBase::adjustSplitStackFunctionPrologues(uint8_t *buf,
                                                    end, f->stOther))
         continue;
       if (!getFile<ELFT>()->someNoSplitStack)
-        error(lld::toString(this) + ": " + f->getName() +
+        error(toString(this) + ": " + f->getName() +
               " (with -fsplit-stack) calls " + rel.sym->getName() +
               " (without -fsplit-stack), but couldn't adjust its prologue");
     }
@@ -1345,3 +1344,6 @@ template void EhInputSection::split<ELF32LE>();
 template void EhInputSection::split<ELF32BE>();
 template void EhInputSection::split<ELF64LE>();
 template void EhInputSection::split<ELF64BE>();
+
+} // namespace elf
+} // namespace lld

@@ -6019,6 +6019,13 @@ static bool hasVirtualDestructor(QualType T) {
   return false;
 }
 
+static const FunctionDecl *getVirtualOperatorDelete(QualType T) {
+  if (CXXRecordDecl *RD = T->getAsCXXRecordDecl())
+    if (CXXDestructorDecl *DD = RD->getDestructor())
+      return DD->isVirtual() ? DD->getOperatorDelete() : nullptr;
+  return nullptr;
+}
+
 /// Check that the given object is a suitable pointer to a heap allocation that
 /// still exists and is of the right kind for the purpose of a deletion.
 ///
@@ -13206,6 +13213,18 @@ bool VoidExprEvaluator::VisitCXXDeleteExpr(const CXXDeleteExpr *E) {
     Info.FFDiag(E, diag::note_constexpr_delete_base_nonvirt_dtor)
         << Arg->getType()->getPointeeType() << AllocType;
     return false;
+  }
+
+  // For a class type with a virtual destructor, the selected operator delete
+  // is the one looked up when building the destructor.
+  if (!E->isArrayForm() && !E->isGlobalDelete()) {
+    const FunctionDecl *VirtualDelete = getVirtualOperatorDelete(AllocType);
+    if (VirtualDelete &&
+        !VirtualDelete->isReplaceableGlobalAllocationFunction()) {
+      Info.FFDiag(E, diag::note_constexpr_new_non_replaceable)
+          << isa<CXXMethodDecl>(VirtualDelete) << VirtualDelete;
+      return false;
+    }
   }
 
   if (!HandleDestruction(Info, E->getExprLoc(), Pointer.getLValueBase(),

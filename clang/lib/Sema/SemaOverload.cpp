@@ -3765,6 +3765,34 @@ isBetterReferenceBindingKind(const StandardConversionSequence &SCS1,
           !SCS2.IsLvalueReference && SCS2.BindsToFunctionLvalue);
 }
 
+enum class FixedEnumPromotion {
+  None,
+  ToUnderlyingType,
+  ToPromotedUnderlyingType
+};
+
+/// Returns kind of fixed enum promotion the \a SCS uses.
+static FixedEnumPromotion
+getFixedEnumPromtion(Sema &S, const StandardConversionSequence &SCS) {
+
+  if (SCS.Second != ICK_Integral_Promotion)
+    return FixedEnumPromotion::None;
+
+  QualType FromType = SCS.getFromType();
+  if (!FromType->isEnumeralType())
+    return FixedEnumPromotion::None;
+
+  EnumDecl *Enum = FromType->getAs<EnumType>()->getDecl();
+  if (!Enum->isFixed())
+    return FixedEnumPromotion::None;
+
+  QualType UnderlyingType = Enum->getIntegerType();
+  if (S.Context.hasSameType(SCS.getToType(1), UnderlyingType))
+    return FixedEnumPromotion::ToUnderlyingType;
+
+  return FixedEnumPromotion::ToPromotedUnderlyingType;
+}
+
 /// CompareStandardConversionSequences - Compare two standard
 /// conversion sequences to determine whether one is better than the
 /// other or if they are indistinguishable (C++ 13.3.3.2p3).
@@ -3805,6 +3833,20 @@ CompareStandardConversionSequences(Sema &S, SourceLocation Loc,
     return SCS2.isPointerConversionToBool()
              ? ImplicitConversionSequence::Better
              : ImplicitConversionSequence::Worse;
+
+  // C++14 [over.ics.rank]p4b2:
+  // This is retroactively applied to C++11 by CWG 1601.
+  //
+  //   A conversion that promotes an enumeration whose underlying type is fixed
+  //   to its underlying type is better than one that promotes to the promoted
+  //   underlying type, if the two are different.
+  FixedEnumPromotion FEP1 = getFixedEnumPromtion(S, SCS1);
+  FixedEnumPromotion FEP2 = getFixedEnumPromtion(S, SCS2);
+  if (FEP1 != FixedEnumPromotion::None && FEP2 != FixedEnumPromotion::None &&
+      FEP1 != FEP2)
+    return FEP1 == FixedEnumPromotion::ToUnderlyingType
+               ? ImplicitConversionSequence::Better
+               : ImplicitConversionSequence::Worse;
 
   // C++ [over.ics.rank]p4b2:
   //
