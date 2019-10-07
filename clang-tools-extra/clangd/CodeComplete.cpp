@@ -83,6 +83,7 @@ CompletionItemKind toCompletionItemKind(index::SymbolKind Kind) {
   case SK::NamespaceAlias:
     return CompletionItemKind::Module;
   case SK::Macro:
+  case SK::CommentTag:
     return CompletionItemKind::Text;
   case SK::Enum:
     return CompletionItemKind::Enum;
