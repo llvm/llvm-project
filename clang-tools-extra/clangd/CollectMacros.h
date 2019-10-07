@@ -25,7 +25,8 @@ struct MainFileMacros {
   std::vector<Range> Ranges;
 };
 
-/// Collects macro definitions and expansions in the main file. It is used to:
+/// Collects macro references (e.g. definitions, expansions) in the main file.
+/// It is used to:
 ///  - collect macros in the preamble section of the main file (in Preamble.cpp)
 ///  - collect macros after the preamble of the main file (in ParsedAST.cpp)
 class CollectMainFileMacros : public PPCallbacks {
@@ -49,6 +50,27 @@ public:
     add(MacroName, MD.getMacroInfo());
   }
 
+  void MacroUndefined(const clang::Token &MacroName,
+                      const clang::MacroDefinition &MD,
+                      const clang::MacroDirective *Undef) override {
+    add(MacroName, MD.getMacroInfo());
+  }
+
+  void Ifdef(SourceLocation Loc, const Token &MacroName,
+             const MacroDefinition &MD) override {
+    add(MacroName, MD.getMacroInfo());
+  }
+
+  void Ifndef(SourceLocation Loc, const Token &MacroName,
+              const MacroDefinition &MD) override {
+    add(MacroName, MD.getMacroInfo());
+  }
+
+  void Defined(const Token &MacroName, const MacroDefinition &MD,
+               SourceRange Range) override {
+    add(MacroName, MD.getMacroInfo());
+  }
+
 private:
   void add(const Token &MacroNameTok, const MacroInfo *MI) {
     if (!InMainFile)
@@ -57,7 +79,7 @@ private:
     if (Loc.isMacroID())
       return;
 
-    if (auto Range = getTokenRange(SM, LangOpts, MacroNameTok.getLocation())) {
+    if (auto Range = getTokenRange(SM, LangOpts, Loc)) {
       Out.Names.insert(MacroNameTok.getIdentifierInfo()->getName());
       Out.Ranges.push_back(*Range);
     }

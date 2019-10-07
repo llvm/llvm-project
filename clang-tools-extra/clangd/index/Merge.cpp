@@ -186,7 +186,10 @@ Symbol mergeSymbol(const Symbol &L, const Symbol &R) {
     S.Signature = O.Signature;
   if (S.CompletionSnippetSuffix == "")
     S.CompletionSnippetSuffix = O.CompletionSnippetSuffix;
-  if (S.Documentation == "")
+  // Don't accept documentation from bare forward declarations, if there is a
+  // definition and it didn't provide one. S is often an undocumented class,
+  // and O is a non-canonical forward decl preceded by an irrelevant comment.
+  if (S.Documentation == "" && !S.Definition)
     S.Documentation = O.Documentation;
   if (S.ReturnType == "")
     S.ReturnType = O.ReturnType;
