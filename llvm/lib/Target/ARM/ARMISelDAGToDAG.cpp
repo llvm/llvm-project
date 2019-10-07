@@ -232,6 +232,14 @@ private:
   void SelectMVE_VADCSBC(SDNode *N, uint16_t OpcodeWithCarry,
                          uint16_t OpcodeWithNoCarry, bool Add, bool Predicated);
 
+  /// SelectMVE_VLD - Select MVE interleaving load intrinsics. NumVecs
+  /// should be 2 or 4. The opcode array specifies the instructions
+  /// used for 8, 16 and 32-bit lane sizes respectively, and each
+  /// pointer points to a set of NumVecs sub-opcodes used for the
+  /// different stages (e.g. VLD20 versus VLD21) of each load family.
+  void SelectMVE_VLD(SDNode *N, unsigned NumVecs,
+                     const uint16_t *const *Opcodes);
+
   /// SelectVLDDup - Select NEON load-duplicate intrinsics.  NumVecs
   /// should be 1, 2, 3 or 4.  The opcode array specifies the instructions used
   /// for loading D registers.
@@ -2449,6 +2457,47 @@ void ARMDAGToDAGISel::SelectMVE_VADCSBC(SDNode *N, uint16_t OpcodeWithCarry,
   CurDAG->SelectNodeTo(N, Opcode, N->getVTList(), makeArrayRef(Ops));
 }
 
+void ARMDAGToDAGISel::SelectMVE_VLD(SDNode *N, unsigned NumVecs,
+                                    const uint16_t *const *Opcodes) {
+  EVT VT = N->getValueType(0);
+  SDLoc Loc(N);
+
+  const uint16_t *OurOpcodes;
+  switch (VT.getVectorElementType().getSizeInBits()) {
+  case 8:
+    OurOpcodes = Opcodes[0];
+    break;
+  case 16:
+    OurOpcodes = Opcodes[1];
+    break;
+  case 32:
+    OurOpcodes = Opcodes[2];
+    break;
+  default:
+    llvm_unreachable("bad vector element size in SelectMVE_VLD");
+  }
+
+  EVT DataTy = EVT::getVectorVT(*CurDAG->getContext(), MVT::i64, NumVecs * 2);
+  EVT ResultTys[] = {DataTy, MVT::Other};
+
+  auto Data = SDValue(
+      CurDAG->getMachineNode(TargetOpcode::IMPLICIT_DEF, Loc, DataTy), 0);
+  SDValue Chain = N->getOperand(0);
+  for (unsigned Stage = 0; Stage < NumVecs; ++Stage) {
+    SDValue Ops[] = {Data, N->getOperand(2), Chain};
+    auto LoadInst =
+        CurDAG->getMachineNode(OurOpcodes[Stage], Loc, ResultTys, Ops);
+    Data = SDValue(LoadInst, 0);
+    Chain = SDValue(LoadInst, 1);
+  }
+
+  for (unsigned i = 0; i < NumVecs; i++)
+    ReplaceUses(SDValue(N, i),
+                CurDAG->getTargetExtractSubreg(ARM::qsub_0 + i, Loc, VT, Data));
+  ReplaceUses(SDValue(N, NumVecs), Chain);
+  CurDAG->RemoveDeadNode(N);
+}
+
 void ARMDAGToDAGISel::SelectVLDDup(SDNode *N, bool IsIntrinsic,
                                    bool isUpdating, unsigned NumVecs,
                                    const uint16_t *DOpcodes,
@@ -4180,6 +4229,31 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
                                          ARM::MVE_VLDRDU64_qi_pre};
       SelectMVE_WB(N, Opcodes,
                    IntNo == Intrinsic::arm_mve_vldr_gather_base_wb_predicated);
+      return;
+    }
+
+    case Intrinsic::arm_mve_vld2q: {
+      static const uint16_t Opcodes8[] = {ARM::MVE_VLD20_8, ARM::MVE_VLD21_8};
+      static const uint16_t Opcodes16[] = {ARM::MVE_VLD20_16,
+                                           ARM::MVE_VLD21_16};
+      static const uint16_t Opcodes32[] = {ARM::MVE_VLD20_32,
+                                           ARM::MVE_VLD21_32};
+      static const uint16_t *const Opcodes[] = {Opcodes8, Opcodes16, Opcodes32};
+      SelectMVE_VLD(N, 2, Opcodes);
+      return;
+    }
+
+    case Intrinsic::arm_mve_vld4q: {
+      static const uint16_t Opcodes8[] = {ARM::MVE_VLD40_8, ARM::MVE_VLD41_8,
+                                          ARM::MVE_VLD42_8, ARM::MVE_VLD43_8};
+      static const uint16_t Opcodes16[] = {ARM::MVE_VLD40_16, ARM::MVE_VLD41_16,
+                                           ARM::MVE_VLD42_16,
+                                           ARM::MVE_VLD43_16};
+      static const uint16_t Opcodes32[] = {ARM::MVE_VLD40_32, ARM::MVE_VLD41_32,
+                                           ARM::MVE_VLD42_32,
+                                           ARM::MVE_VLD43_32};
+      static const uint16_t *const Opcodes[] = {Opcodes8, Opcodes16, Opcodes32};
+      SelectMVE_VLD(N, 4, Opcodes);
       return;
     }
     }
