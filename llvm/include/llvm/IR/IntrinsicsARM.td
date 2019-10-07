@@ -817,4 +817,23 @@ def int_arm_mve_vcvt_narrow: Intrinsic<[llvm_v8f16_ty],
 def int_arm_mve_vcvt_narrow_predicated: Intrinsic<[llvm_v8f16_ty],
    [llvm_v8f16_ty, llvm_v4f32_ty, llvm_i32_ty, llvm_v4i1_ty], [IntrNoMem]>;
 
+def int_arm_mve_vldr_gather_base_wb: Intrinsic<
+   [llvm_anyvector_ty, llvm_anyvector_ty],
+   [LLVMMatchType<1>, llvm_i32_ty], [IntrReadMem]>;
+def int_arm_mve_vldr_gather_base_wb_predicated: Intrinsic<
+   [llvm_anyvector_ty, llvm_anyvector_ty],
+   [LLVMMatchType<1>, llvm_i32_ty, llvm_anyvector_ty], [IntrReadMem]>;
+
+def int_arm_mve_urshrl: Intrinsic<
+   [llvm_i32_ty, llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+   [IntrNoMem]>;
+
+def int_arm_mve_vadc: Intrinsic<
+   [llvm_anyvector_ty, llvm_i32_ty],
+   [LLVMMatchType<0>, LLVMMatchType<0>, llvm_i32_ty], [IntrNoMem]>;
+def int_arm_mve_vadc_predicated: Intrinsic<
+   [llvm_anyvector_ty, llvm_i32_ty],
+   [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>,
+    llvm_i32_ty, llvm_anyvector_ty], [IntrNoMem]>;
+
 } // end TargetPrefix
