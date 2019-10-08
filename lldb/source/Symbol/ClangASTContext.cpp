@@ -9580,7 +9580,7 @@ bool ClangASTContext::DumpTypeValue(
     if (type_class == clang::Type::Elaborated) {
       qual_type = llvm::cast<clang::ElaboratedType>(qual_type)->getNamedType();
       return DumpTypeValue(qual_type.getAsOpaquePtr(), s, format, data, byte_offset, byte_size,
-                           bitfield_bit_size, bitfield_bit_offset, exe_scope);
+                           bitfield_bit_size, bitfield_bit_offset, exe_scope, is_base_class);
     }
 
     switch (type_class) {
