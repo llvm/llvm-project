@@ -302,7 +302,7 @@ public:
   void getSectionNameIndex(const Elf_Sym *Symbol, const Elf_Sym *FirstSym,
                            StringRef &SectionName,
                            unsigned &SectionIndex) const;
-  std::string getStaticSymbolName(uint32_t Index) const;
+  Expected<std::string> getStaticSymbolName(uint32_t Index) const;
   std::string getDynamicString(uint64_t Value) const;
   StringRef getSymbolVersionByIndex(StringRef StrTab,
                                     uint32_t VersionSymbolIndex,
@@ -754,17 +754,22 @@ static std::string maybeDemangle(StringRef Name) {
 }
 
 template <typename ELFT>
-std::string ELFDumper<ELFT>::getStaticSymbolName(uint32_t Index) const {
+Expected<std::string>
+ELFDumper<ELFT>::getStaticSymbolName(uint32_t Index) const {
   const ELFFile<ELFT> *Obj = ObjF->getELFFile();
-  StringRef StrTable = unwrapOrError(
-      ObjF->getFileName(), Obj->getStringTableForSymtab(*DotSymtabSec));
-  Elf_Sym_Range Syms =
-      unwrapOrError(ObjF->getFileName(), Obj->symbols(DotSymtabSec));
-  if (Index >= Syms.size())
-    reportError(createError("Invalid symbol index"), ObjF->getFileName());
-  const Elf_Sym *Sym = &Syms[Index];
-  return maybeDemangle(
-      unwrapOrError(ObjF->getFileName(), Sym->getName(StrTable)));
+  Expected<const typename ELFT::Sym *> SymOrErr =
+      Obj->getSymbol(DotSymtabSec, Index);
+  if (!SymOrErr)
+    return SymOrErr.takeError();
+
+  Expected<StringRef> StrTabOrErr = Obj->getStringTableForSymtab(*DotSymtabSec);
+  if (!StrTabOrErr)
+    return StrTabOrErr.takeError();
+
+  Expected<StringRef> NameOrErr = (*SymOrErr)->getName(*StrTabOrErr);
+  if (!NameOrErr)
+    return NameOrErr.takeError();
+  return maybeDemangle(*NameOrErr);
 }
 
 template <typename ELFT>
@@ -4047,7 +4052,7 @@ void GNUStyle<ELFT>::printCGProfile(const ELFFile<ELFT> *Obj) {
 
 template <class ELFT>
 void GNUStyle<ELFT>::printAddrsig(const ELFFile<ELFT> *Obj) {
-    OS << "GNUStyle::printAddrsig not implemented\n";
+  reportError(createError("--addrsig: not implemented"), this->FileName);
 }
 
 static StringRef getGenericNoteTypeName(const uint32_t NT) {
@@ -5723,12 +5728,33 @@ void LLVMStyle<ELFT>::printCGProfile(const ELFFile<ELFT> *Obj) {
                           this->dumper()->getDotCGProfileSec()));
   for (const Elf_CGProfile &CGPE : CGProfile) {
     DictScope D(W, "CGProfileEntry");
-    W.printNumber("From", this->dumper()->getStaticSymbolName(CGPE.cgp_from),
-                  CGPE.cgp_from);
-    W.printNumber("To", this->dumper()->getStaticSymbolName(CGPE.cgp_to),
-                  CGPE.cgp_to);
+    W.printNumber(
+        "From",
+        unwrapOrError(this->FileName,
+                      this->dumper()->getStaticSymbolName(CGPE.cgp_from)),
+        CGPE.cgp_from);
+    W.printNumber(
+        "To",
+        unwrapOrError(this->FileName,
+                      this->dumper()->getStaticSymbolName(CGPE.cgp_to)),
+        CGPE.cgp_to);
     W.printNumber("Weight", CGPE.cgp_weight);
   }
+}
+
+static Expected<std::vector<uint64_t>> toULEB128Array(ArrayRef<uint8_t> Data) {
+  std::vector<uint64_t> Ret;
+  const uint8_t *Cur = Data.begin();
+  const uint8_t *End = Data.end();
+  while (Cur != End) {
+    unsigned Size;
+    const char *Err;
+    Ret.push_back(decodeULEB128(Cur, &Size, End, &Err));
+    if (Err)
+      return createError(Err);
+    Cur += Size;
+  }
+  return Ret;
 }
 
 template <class ELFT>
@@ -5739,18 +5765,20 @@ void LLVMStyle<ELFT>::printAddrsig(const ELFFile<ELFT> *Obj) {
   ArrayRef<uint8_t> Contents = unwrapOrError(
       this->FileName,
       Obj->getSectionContents(this->dumper()->getDotAddrsigSec()));
-  const uint8_t *Cur = Contents.begin();
-  const uint8_t *End = Contents.end();
-  while (Cur != End) {
-    unsigned Size;
-    const char *Err;
-    uint64_t SymIndex = decodeULEB128(Cur, &Size, End, &Err);
-    if (Err)
-      reportError(createError(Err), this->FileName);
+  Expected<std::vector<uint64_t>> V = toULEB128Array(Contents);
+  if (!V) {
+    reportWarning(V.takeError(), this->FileName);
+    return;
+  }
 
-    W.printNumber("Sym", this->dumper()->getStaticSymbolName(SymIndex),
-                  SymIndex);
-    Cur += Size;
+  for (uint64_t Sym : *V) {
+    Expected<std::string> NameOrErr = this->dumper()->getStaticSymbolName(Sym);
+    if (NameOrErr) {
+      W.printNumber("Sym", *NameOrErr, Sym);
+      continue;
+    }
+    reportWarning(NameOrErr.takeError(), this->FileName);
+    W.printNumber("Sym", "<?>", Sym);
   }
 }
 

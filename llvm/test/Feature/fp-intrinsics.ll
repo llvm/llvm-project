@@ -289,6 +289,90 @@ entry:
   ret double %result
 }
 
+; Verify that lrint(42.1) isn't simplified when the rounding mode is unknown.
+; CHECK-LABEL: f22
+; CHECK: call i32 @llvm.experimental.constrained.lrint
+define i32 @f22() #0 {
+entry:
+  %result = call i32 @llvm.experimental.constrained.lrint.i32.f64(double 42.1,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret i32 %result
+}
+
+; Verify that lrintf(42.0) isn't simplified when the rounding mode is unknown.
+; CHECK-LABEL: f23
+; CHECK: call i32 @llvm.experimental.constrained.lrint
+define i32 @f23() #0 {
+entry:
+  %result = call i32 @llvm.experimental.constrained.lrint.i32.f32(float 42.0,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret i32 %result
+}
+
+; Verify that llrint(42.1) isn't simplified when the rounding mode is unknown.
+; CHECK-LABEL: f24
+; CHECK: call i64 @llvm.experimental.constrained.llrint
+define i64 @f24() #0 {
+entry:
+  %result = call i64 @llvm.experimental.constrained.llrint.i64.f64(double 42.1,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret i64 %result
+}
+
+; Verify that llrint(42.0) isn't simplified when the rounding mode is unknown.
+; CHECK-LABEL: f25
+; CHECK: call i64 @llvm.experimental.constrained.llrint
+define i64 @f25() #0 {
+entry:
+  %result = call i64 @llvm.experimental.constrained.llrint.i64.f32(float 42.0,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret i64 %result
+}
+
+; Verify that lround(42.1) isn't simplified when the rounding mode is unknown.
+; CHECK-LABEL: f26
+; CHECK: call i32 @llvm.experimental.constrained.lround
+define i32 @f26() #0 {
+entry:
+  %result = call i32 @llvm.experimental.constrained.lround.i32.f64(double 42.1,
+                                               metadata !"fpexcept.strict") #0
+  ret i32 %result
+}
+
+; Verify that lround(42.0) isn't simplified when the rounding mode is unknown.
+; CHECK-LABEL: f27
+; CHECK: call i32 @llvm.experimental.constrained.lround
+define i32 @f27() #0 {
+entry:
+  %result = call i32 @llvm.experimental.constrained.lround.i32.f32(float 42.0,
+                                               metadata !"fpexcept.strict") #0
+  ret i32 %result
+}
+
+; Verify that llround(42.1) isn't simplified when the rounding mode is unknown.
+; CHECK-LABEL: f28
+; CHECK: call i64 @llvm.experimental.constrained.llround
+define i64 @f28() #0 {
+entry:
+  %result = call i64 @llvm.experimental.constrained.llround.i64.f64(double 42.1,
+                                               metadata !"fpexcept.strict") #0
+  ret i64 %result
+}
+
+; Verify that llround(42.0) isn't simplified when the rounding mode is unknown.
+; CHECK-LABEL: f29
+; CHECK: call i64 @llvm.experimental.constrained.llround
+define i64 @f29() #0 {
+entry:
+  %result = call i64 @llvm.experimental.constrained.llround.i64.f32(float 42.0,
+                                               metadata !"fpexcept.strict") #0
+  ret i64 %result
+}
+
 attributes #0 = { strictfp }
 
 @llvm.fp.env = thread_local global i8 zeroinitializer, section "llvm.metadata"
@@ -313,3 +397,11 @@ declare i32 @llvm.experimental.constrained.fptosi.i32.f64(double, metadata)
 declare i32 @llvm.experimental.constrained.fptoui.i32.f64(double, metadata)
 declare float @llvm.experimental.constrained.fptrunc.f32.f64(double, metadata, metadata)
 declare double @llvm.experimental.constrained.fpext.f64.f32(float, metadata)
+declare i32 @llvm.experimental.constrained.lrint.i32.f64(double, metadata, metadata)
+declare i32 @llvm.experimental.constrained.lrint.i32.f32(float, metadata, metadata)
+declare i64 @llvm.experimental.constrained.llrint.i64.f64(double, metadata, metadata)
+declare i64 @llvm.experimental.constrained.llrint.i64.f32(float, metadata, metadata)
+declare i32 @llvm.experimental.constrained.lround.i32.f64(double, metadata)
+declare i32 @llvm.experimental.constrained.lround.i32.f32(float, metadata)
+declare i64 @llvm.experimental.constrained.llround.i64.f64(double, metadata)
+declare i64 @llvm.experimental.constrained.llround.i64.f32(float, metadata)

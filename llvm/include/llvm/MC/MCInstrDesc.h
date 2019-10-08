@@ -129,7 +129,8 @@ namespace MCID {
 /// not use these directly.  These all correspond to bitfields in the
 /// MCInstrDesc::Flags field.
 enum Flag {
-  Variadic = 0,
+  PreISelOpcode = 0,
+  Variadic,
   HasOptionalDef,
   Pseudo,
   Return,
@@ -241,6 +242,10 @@ public:
 
   /// Return flags of this instruction.
   uint64_t getFlags() const { return Flags; }
+
+  /// \returns true if this instruction is emitted before instruction selection
+  /// and should be legalized/regbankselected/selected.
+  bool isPreISelOpcode() const { return Flags & (1ULL << MCID::PreISelOpcode); }
 
   /// Return true if this instruction can have a variable number of
   /// operands.  In this case, the variable operands will be after the normal

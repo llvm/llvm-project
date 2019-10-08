@@ -466,8 +466,16 @@ int TargetTransformInfo::getIntImmCost(Intrinsic::ID IID, unsigned Idx,
   return Cost;
 }
 
-unsigned TargetTransformInfo::getNumberOfRegisters(bool Vector) const {
-  return TTIImpl->getNumberOfRegisters(Vector);
+unsigned TargetTransformInfo::getNumberOfRegisters(unsigned ClassID) const {
+  return TTIImpl->getNumberOfRegisters(ClassID);
+}
+
+unsigned TargetTransformInfo::getRegisterClassForType(bool Vector, Type *Ty) const {
+  return TTIImpl->getRegisterClassForType(Vector, Ty);
+}
+
+const char* TargetTransformInfo::getRegisterClassName(unsigned ClassID) const {
+  return TTIImpl->getRegisterClassName(ClassID);
 }
 
 unsigned TargetTransformInfo::getRegisterBitWidth(bool Vector) const {

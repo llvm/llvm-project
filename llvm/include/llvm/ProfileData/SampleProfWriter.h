@@ -143,14 +143,16 @@ class SampleProfileWriterRawBinary : public SampleProfileWriterBinary {
 
 class SampleProfileWriterExtBinaryBase : public SampleProfileWriterBinary {
   using SampleProfileWriterBinary::SampleProfileWriterBinary;
-
 public:
   virtual std::error_code
   write(const StringMap<FunctionSamples> &ProfileMap) override;
 
+  void setToCompressAllSections();
+  void setToCompressSection(SecType Type);
+
 protected:
-  uint64_t markSectionStart();
-  uint64_t addNewSection(SecType Sec, uint64_t SectionStart);
+  uint64_t markSectionStart(SecType Type);
+  std::error_code addNewSection(SecType Sec, uint64_t SectionStart);
   virtual void initSectionLayout() = 0;
   virtual std::error_code
   writeSections(const StringMap<FunctionSamples> &ProfileMap) = 0;
@@ -158,34 +160,52 @@ protected:
   // Specifiy the section layout in the profile. Note that the order in
   // SecHdrTable (order to collect sections) may be different from the
   // order in SectionLayout (order to write out sections into profile).
-  SmallVector<SecType, 8> SectionLayout;
+  SmallVector<SecHdrTableEntry, 8> SectionLayout;
 
 private:
   void allocSecHdrTable();
   std::error_code writeSecHdrTable();
   virtual std::error_code
   writeHeader(const StringMap<FunctionSamples> &ProfileMap) override;
+  void addSectionFlags(SecType Type, SecFlags Flags);
+  SecHdrTableEntry &getEntryInLayout(SecType Type);
+  std::error_code compressAndOutput();
 
+  // We will swap the raw_ostream held by LocalBufStream and that
+  // held by OutputStream if we try to add a section which needs
+  // compression. After the swap, all the data written to output
+  // will be temporarily buffered into the underlying raw_string_ostream
+  // originally held by LocalBufStream. After the data writing for the
+  // section is completed, compress the data in the local buffer,
+  // swap the raw_ostream back and write the compressed data to the
+  // real output.
+  std::unique_ptr<raw_ostream> LocalBufStream;
   // The location where the output stream starts.
   uint64_t FileStart;
   // The location in the output stream where the SecHdrTable should be
   // written to.
   uint64_t SecHdrTableOffset;
+  // Initial Section Flags setting.
   std::vector<SecHdrTableEntry> SecHdrTable;
 };
 
 class SampleProfileWriterExtBinary : public SampleProfileWriterExtBinaryBase {
-  using SampleProfileWriterExtBinaryBase::SampleProfileWriterExtBinaryBase;
-
 public:
+  SampleProfileWriterExtBinary(std::unique_ptr<raw_ostream> &OS)
+      : SampleProfileWriterExtBinaryBase(OS) {
+    initSectionLayout();
+  }
+
   virtual void setProfileSymbolList(ProfileSymbolList *PSL) override {
     ProfSymList = PSL;
   };
 
 private:
   virtual void initSectionLayout() override {
-    SectionLayout = {SecProfSummary, SecNameTable, SecLBRProfile,
-                     SecProfileSymbolList};
+    SectionLayout = {{SecProfSummary, 0, 0, 0},
+                     {SecNameTable, 0, 0, 0},
+                     {SecLBRProfile, 0, 0, 0},
+                     {SecProfileSymbolList, 0, 0, 0}};
   };
   virtual std::error_code
   writeSections(const StringMap<FunctionSamples> &ProfileMap) override;

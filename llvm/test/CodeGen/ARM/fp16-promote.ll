@@ -202,7 +202,7 @@ define i1 @test_fcmp_ueq(half* %p, half* %q) #0 {
 ; CHECK-FP16: vcvtb.f32.f16
 ; CHECK-LIBCALL: bl __aeabi_h2f
 ; CHECK-LIBCALL: bl __aeabi_h2f
-; CHECK-VFP: vcmpe.f32
+; CHECK-VFP: vcmp.f32
 ; CHECK-NOVFP: bl __aeabi_fcmplt
 ; CHECK-FP16: vmrs APSR_nzcv, fpscr
 ; CHECK-VFP: strmi

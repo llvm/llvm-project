@@ -418,11 +418,18 @@ SubsumingPositionIterator::SubsumingPositionIterator(const IRPosition &IRP) {
   }
 }
 
-bool IRPosition::hasAttr(ArrayRef<Attribute::AttrKind> AKs) const {
-  for (const IRPosition &EquivIRP : SubsumingPositionIterator(*this))
+bool IRPosition::hasAttr(ArrayRef<Attribute::AttrKind> AKs,
+                         bool IgnoreSubsumingPositions) const {
+  for (const IRPosition &EquivIRP : SubsumingPositionIterator(*this)) {
     for (Attribute::AttrKind AK : AKs)
       if (EquivIRP.getAttr(AK).getKindAsEnum() == AK)
         return true;
+    // The first position returned by the SubsumingPositionIterator is
+    // always the position itself. If we ignore subsuming positions we
+    // are done after the first iteration.
+    if (IgnoreSubsumingPositions)
+      break;
+  }
   return false;
 }
 
@@ -589,11 +596,16 @@ static void clampCallSiteArgumentStates(Attributor &A, const AAType &QueryingAA,
   // The argument number which is also the call site argument number.
   unsigned ArgNo = QueryingAA.getIRPosition().getArgNo();
 
-  auto CallSiteCheck = [&](CallSite CS) {
-    const IRPosition &CSArgPos = IRPosition::callsite_argument(CS, ArgNo);
-    const AAType &AA = A.getAAFor<AAType>(QueryingAA, CSArgPos);
-    LLVM_DEBUG(dbgs() << "[Attributor] CS: " << *CS.getInstruction()
-                      << " AA: " << AA.getAsStr() << " @" << CSArgPos << "\n");
+  auto CallSiteCheck = [&](AbstractCallSite ACS) {
+    const IRPosition &ACSArgPos = IRPosition::callsite_argument(ACS, ArgNo);
+    // Check if a coresponding argument was found or if it is on not associated
+    // (which can happen for callback calls).
+    if (ACSArgPos.getPositionKind() == IRPosition::IRP_INVALID)
+      return false;
+
+    const AAType &AA = A.getAAFor<AAType>(QueryingAA, ACSArgPos);
+    LLVM_DEBUG(dbgs() << "[Attributor] ACS: " << *ACS.getInstruction()
+                      << " AA: " << AA.getAsStr() << " @" << ACSArgPos << "\n");
     const StateType &AAS = static_cast<const StateType &>(AA.getState());
     if (T.hasValue())
       *T &= AAS;
@@ -2069,7 +2081,7 @@ struct AAIsDeadImpl : public AAIsDead {
     for (const Instruction &I : BB)
       if (ImmutableCallSite ICS = ImmutableCallSite(&I))
         if (const Function *F = ICS.getCalledFunction())
-          if (F->hasInternalLinkage())
+          if (F->hasLocalLinkage())
             A.markLiveInternalFunction(*F);
   }
 
@@ -3093,9 +3105,12 @@ struct AAValueSimplifyArgument final : AAValueSimplifyImpl {
   ChangeStatus updateImpl(Attributor &A) override {
     bool HasValueBefore = SimplifiedAssociatedValue.hasValue();
 
-    auto PredForCallSite = [&](CallSite CS) {
-      return checkAndUpdate(A, *this, *CS.getArgOperand(getArgNo()),
-                            SimplifiedAssociatedValue);
+    auto PredForCallSite = [&](AbstractCallSite ACS) {
+      // Check if we have an associated argument or not (which can happen for
+      // callback calls).
+      if (Value *ArgOp = ACS.getCallArgOperand(getArgNo()))
+        return checkAndUpdate(A, *this, *ArgOp, SimplifiedAssociatedValue);
+      return false;
     };
 
     if (!A.checkForAllCallSites(PredForCallSite, *this, true))
@@ -3437,6 +3452,448 @@ struct AAHeapToStackFunction final : public AAHeapToStackImpl {
 };
 } // namespace
 
+/// -------------------- Memory Behavior Attributes ----------------------------
+/// Includes read-none, read-only, and write-only.
+/// ----------------------------------------------------------------------------
+struct AAMemoryBehaviorImpl : public AAMemoryBehavior {
+  AAMemoryBehaviorImpl(const IRPosition &IRP) : AAMemoryBehavior(IRP) {}
+
+  /// See AbstractAttribute::initialize(...).
+  void initialize(Attributor &A) override {
+    intersectAssumedBits(BEST_STATE);
+    getKnownStateFromValue(getIRPosition(), getState());
+    IRAttribute::initialize(A);
+  }
+
+  /// Return the memory behavior information encoded in the IR for \p IRP.
+  static void getKnownStateFromValue(const IRPosition &IRP,
+                                     IntegerState &State) {
+    SmallVector<Attribute, 2> Attrs;
+    IRP.getAttrs(AttrKinds, Attrs);
+    for (const Attribute &Attr : Attrs) {
+      switch (Attr.getKindAsEnum()) {
+      case Attribute::ReadNone:
+        State.addKnownBits(NO_ACCESSES);
+        break;
+      case Attribute::ReadOnly:
+        State.addKnownBits(NO_WRITES);
+        break;
+      case Attribute::WriteOnly:
+        State.addKnownBits(NO_READS);
+        break;
+      default:
+        llvm_unreachable("Unexpcted attribute!");
+      }
+    }
+
+    if (auto *I = dyn_cast<Instruction>(&IRP.getAnchorValue())) {
+      if (!I->mayReadFromMemory())
+        State.addKnownBits(NO_READS);
+      if (!I->mayWriteToMemory())
+        State.addKnownBits(NO_WRITES);
+    }
+  }
+
+  /// See AbstractAttribute::getDeducedAttributes(...).
+  void getDeducedAttributes(LLVMContext &Ctx,
+                            SmallVectorImpl<Attribute> &Attrs) const override {
+    assert(Attrs.size() == 0);
+    if (isAssumedReadNone())
+      Attrs.push_back(Attribute::get(Ctx, Attribute::ReadNone));
+    else if (isAssumedReadOnly())
+      Attrs.push_back(Attribute::get(Ctx, Attribute::ReadOnly));
+    else if (isAssumedWriteOnly())
+      Attrs.push_back(Attribute::get(Ctx, Attribute::WriteOnly));
+    assert(Attrs.size() <= 1);
+  }
+
+  /// See AbstractAttribute::manifest(...).
+  ChangeStatus manifest(Attributor &A) override {
+    IRPosition &IRP = getIRPosition();
+
+    // Check if we would improve the existing attributes first.
+    SmallVector<Attribute, 4> DeducedAttrs;
+    getDeducedAttributes(IRP.getAnchorValue().getContext(), DeducedAttrs);
+    if (llvm::all_of(DeducedAttrs, [&](const Attribute &Attr) {
+          return IRP.hasAttr(Attr.getKindAsEnum(),
+                             /* IgnoreSubsumingPositions */ true);
+        }))
+      return ChangeStatus::UNCHANGED;
+
+    // Clear existing attributes.
+    IRP.removeAttrs(AttrKinds);
+
+    // Use the generic manifest method.
+    return IRAttribute::manifest(A);
+  }
+
+  /// See AbstractState::getAsStr().
+  const std::string getAsStr() const override {
+    if (isAssumedReadNone())
+      return "readnone";
+    if (isAssumedReadOnly())
+      return "readonly";
+    if (isAssumedWriteOnly())
+      return "writeonly";
+    return "may-read/write";
+  }
+
+  /// The set of IR attributes AAMemoryBehavior deals with.
+  static const Attribute::AttrKind AttrKinds[3];
+};
+
+const Attribute::AttrKind AAMemoryBehaviorImpl::AttrKinds[] = {
+    Attribute::ReadNone, Attribute::ReadOnly, Attribute::WriteOnly};
+
+/// Memory behavior attribute for a floating value.
+struct AAMemoryBehaviorFloating : AAMemoryBehaviorImpl {
+  AAMemoryBehaviorFloating(const IRPosition &IRP) : AAMemoryBehaviorImpl(IRP) {}
+
+  /// See AbstractAttribute::initialize(...).
+  void initialize(Attributor &A) override {
+    AAMemoryBehaviorImpl::initialize(A);
+    // Initialize the use vector with all direct uses of the associated value.
+    for (const Use &U : getAssociatedValue().uses())
+      Uses.insert(&U);
+  }
+
+  /// See AbstractAttribute::updateImpl(...).
+  ChangeStatus updateImpl(Attributor &A) override;
+
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override {
+    if (isAssumedReadNone())
+      STATS_DECLTRACK_FLOATING_ATTR(readnone)
+    else if (isAssumedReadOnly())
+      STATS_DECLTRACK_FLOATING_ATTR(readonly)
+    else if (isAssumedWriteOnly())
+      STATS_DECLTRACK_FLOATING_ATTR(writeonly)
+  }
+
+private:
+  /// Return true if users of \p UserI might access the underlying
+  /// variable/location described by \p U and should therefore be analyzed.
+  bool followUsersOfUseIn(Attributor &A, const Use *U,
+                          const Instruction *UserI);
+
+  /// Update the state according to the effect of use \p U in \p UserI.
+  void analyzeUseIn(Attributor &A, const Use *U, const Instruction *UserI);
+
+protected:
+  /// Container for (transitive) uses of the associated argument.
+  SetVector<const Use *> Uses;
+};
+
+/// Memory behavior attribute for function argument.
+struct AAMemoryBehaviorArgument : AAMemoryBehaviorFloating {
+  AAMemoryBehaviorArgument(const IRPosition &IRP)
+      : AAMemoryBehaviorFloating(IRP) {}
+
+  /// See AbstractAttribute::initialize(...).
+  void initialize(Attributor &A) override {
+    AAMemoryBehaviorFloating::initialize(A);
+
+    // TODO: From readattrs.ll: "inalloca parameters are always
+    //                           considered written"
+    if (hasAttr({Attribute::InAlloca}))
+      removeAssumedBits(NO_WRITES);
+
+    // Initialize the use vector with all direct uses of the associated value.
+    Argument *Arg = getAssociatedArgument();
+    if (!Arg || !Arg->getParent()->hasExactDefinition())
+      indicatePessimisticFixpoint();
+  }
+
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override {
+    if (isAssumedReadNone())
+      STATS_DECLTRACK_ARG_ATTR(readnone)
+    else if (isAssumedReadOnly())
+      STATS_DECLTRACK_ARG_ATTR(readonly)
+    else if (isAssumedWriteOnly())
+      STATS_DECLTRACK_ARG_ATTR(writeonly)
+  }
+};
+
+struct AAMemoryBehaviorCallSiteArgument final : AAMemoryBehaviorArgument {
+  AAMemoryBehaviorCallSiteArgument(const IRPosition &IRP)
+      : AAMemoryBehaviorArgument(IRP) {}
+
+  /// See AbstractAttribute::updateImpl(...).
+  ChangeStatus updateImpl(Attributor &A) override {
+    // TODO: Once we have call site specific value information we can provide
+    //       call site specific liveness liveness information and then it makes
+    //       sense to specialize attributes for call sites arguments instead of
+    //       redirecting requests to the callee argument.
+    Argument *Arg = getAssociatedArgument();
+    const IRPosition &ArgPos = IRPosition::argument(*Arg);
+    auto &ArgAA = A.getAAFor<AAMemoryBehavior>(*this, ArgPos);
+    return clampStateAndIndicateChange(
+        getState(),
+        static_cast<const AANoCapture::StateType &>(ArgAA.getState()));
+  }
+
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override {
+    if (isAssumedReadNone())
+      STATS_DECLTRACK_CSARG_ATTR(readnone)
+    else if (isAssumedReadOnly())
+      STATS_DECLTRACK_CSARG_ATTR(readonly)
+    else if (isAssumedWriteOnly())
+      STATS_DECLTRACK_CSARG_ATTR(writeonly)
+  }
+};
+
+/// Memory behavior attribute for a call site return position.
+struct AAMemoryBehaviorCallSiteReturned final : AAMemoryBehaviorFloating {
+  AAMemoryBehaviorCallSiteReturned(const IRPosition &IRP)
+      : AAMemoryBehaviorFloating(IRP) {}
+
+  /// See AbstractAttribute::manifest(...).
+  ChangeStatus manifest(Attributor &A) override {
+    // We do not annotate returned values.
+    return ChangeStatus::UNCHANGED;
+  }
+
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override {}
+};
+
+/// An AA to represent the memory behavior function attributes.
+struct AAMemoryBehaviorFunction final : public AAMemoryBehaviorImpl {
+  AAMemoryBehaviorFunction(const IRPosition &IRP) : AAMemoryBehaviorImpl(IRP) {}
+
+  /// See AbstractAttribute::updateImpl(Attributor &A).
+  virtual ChangeStatus updateImpl(Attributor &A) override;
+
+  /// See AbstractAttribute::manifest(...).
+  ChangeStatus manifest(Attributor &A) override {
+    Function &F = cast<Function>(getAnchorValue());
+    if (isAssumedReadNone()) {
+      F.removeFnAttr(Attribute::ArgMemOnly);
+      F.removeFnAttr(Attribute::InaccessibleMemOnly);
+      F.removeFnAttr(Attribute::InaccessibleMemOrArgMemOnly);
+    }
+    return AAMemoryBehaviorImpl::manifest(A);
+  }
+
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override {
+    if (isAssumedReadNone())
+      STATS_DECLTRACK_FN_ATTR(readnone)
+    else if (isAssumedReadOnly())
+      STATS_DECLTRACK_FN_ATTR(readonly)
+    else if (isAssumedWriteOnly())
+      STATS_DECLTRACK_FN_ATTR(writeonly)
+  }
+};
+
+/// AAMemoryBehavior attribute for call sites.
+struct AAMemoryBehaviorCallSite final : AAMemoryBehaviorImpl {
+  AAMemoryBehaviorCallSite(const IRPosition &IRP) : AAMemoryBehaviorImpl(IRP) {}
+
+  /// See AbstractAttribute::initialize(...).
+  void initialize(Attributor &A) override {
+    AAMemoryBehaviorImpl::initialize(A);
+    Function *F = getAssociatedFunction();
+    if (!F || !F->hasExactDefinition())
+      indicatePessimisticFixpoint();
+  }
+
+  /// See AbstractAttribute::updateImpl(...).
+  ChangeStatus updateImpl(Attributor &A) override {
+    // TODO: Once we have call site specific value information we can provide
+    //       call site specific liveness liveness information and then it makes
+    //       sense to specialize attributes for call sites arguments instead of
+    //       redirecting requests to the callee argument.
+    Function *F = getAssociatedFunction();
+    const IRPosition &FnPos = IRPosition::function(*F);
+    auto &FnAA = A.getAAFor<AAMemoryBehavior>(*this, FnPos);
+    return clampStateAndIndicateChange(
+        getState(), static_cast<const AAAlign::StateType &>(FnAA.getState()));
+  }
+
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override {
+    if (isAssumedReadNone())
+      STATS_DECLTRACK_CS_ATTR(readnone)
+    else if (isAssumedReadOnly())
+      STATS_DECLTRACK_CS_ATTR(readonly)
+    else if (isAssumedWriteOnly())
+      STATS_DECLTRACK_CS_ATTR(writeonly)
+  }
+};
+
+ChangeStatus AAMemoryBehaviorFunction::updateImpl(Attributor &A) {
+
+  // The current assumed state used to determine a change.
+  auto AssumedState = getAssumed();
+
+  auto CheckRWInst = [&](Instruction &I) {
+    // If the instruction has an own memory behavior state, use it to restrict
+    // the local state. No further analysis is required as the other memory
+    // state is as optimistic as it gets.
+    if (ImmutableCallSite ICS = ImmutableCallSite(&I)) {
+      const auto &MemBehaviorAA = A.getAAFor<AAMemoryBehavior>(
+          *this, IRPosition::callsite_function(ICS));
+      intersectAssumedBits(MemBehaviorAA.getAssumed());
+      return !isAtFixpoint();
+    }
+
+    // Remove access kind modifiers if necessary.
+    if (I.mayReadFromMemory())
+      removeAssumedBits(NO_READS);
+    if (I.mayWriteToMemory())
+      removeAssumedBits(NO_WRITES);
+    return !isAtFixpoint();
+  };
+
+  if (!A.checkForAllReadWriteInstructions(CheckRWInst, *this))
+    return indicatePessimisticFixpoint();
+
+  return (AssumedState != getAssumed()) ? ChangeStatus::CHANGED
+                                        : ChangeStatus::UNCHANGED;
+}
+
+ChangeStatus AAMemoryBehaviorFloating::updateImpl(Attributor &A) {
+
+  const IRPosition &IRP = getIRPosition();
+  const IRPosition &FnPos = IRPosition::function_scope(IRP);
+  AAMemoryBehavior::StateType &S = getState();
+
+  // First, check the function scope. We take the known information and we avoid
+  // work if the assumed information implies the current assumed information for
+  // this attribute.
+  const auto &FnMemAA = A.getAAFor<AAMemoryBehavior>(*this, FnPos);
+  S.addKnownBits(FnMemAA.getKnown());
+  if ((S.getAssumed() & FnMemAA.getAssumed()) == S.getAssumed())
+    return ChangeStatus::UNCHANGED;
+
+  // Make sure the value is not captured (except through "return"), if
+  // it is, any information derived would be irrelevant anyway as we cannot
+  // check the potential aliases introduced by the capture.
+  const auto &ArgNoCaptureAA = A.getAAFor<AANoCapture>(*this, IRP);
+  if (!ArgNoCaptureAA.isAssumedNoCaptureMaybeReturned())
+    return indicatePessimisticFixpoint();
+
+  // The current assumed state used to determine a change.
+  auto AssumedState = S.getAssumed();
+
+  // Liveness information to exclude dead users.
+  // TODO: Take the FnPos once we have call site specific liveness information.
+  const auto &LivenessAA = A.getAAFor<AAIsDead>(
+      *this, IRPosition::function(*IRP.getAssociatedFunction()));
+
+  // Visit and expand uses until all are analyzed or a fixpoint is reached.
+  for (unsigned i = 0; i < Uses.size() && !isAtFixpoint(); i++) {
+    const Use *U = Uses[i];
+    Instruction *UserI = cast<Instruction>(U->getUser());
+    LLVM_DEBUG(dbgs() << "[AAMemoryBehavior] Use: " << **U << " in " << *UserI
+                      << " [Dead: " << (LivenessAA.isAssumedDead(UserI))
+                      << "]\n");
+    if (LivenessAA.isAssumedDead(UserI))
+      continue;
+
+    // Check if the users of UserI should also be visited.
+    if (followUsersOfUseIn(A, U, UserI))
+      for (const Use &UserIUse : UserI->uses())
+        Uses.insert(&UserIUse);
+
+    // If UserI might touch memory we analyze the use in detail.
+    if (UserI->mayReadOrWriteMemory())
+      analyzeUseIn(A, U, UserI);
+  }
+
+  return (AssumedState != getAssumed()) ? ChangeStatus::CHANGED
+                                        : ChangeStatus::UNCHANGED;
+}
+
+bool AAMemoryBehaviorFloating::followUsersOfUseIn(Attributor &A, const Use *U,
+                                                  const Instruction *UserI) {
+  // The loaded value is unrelated to the pointer argument, no need to
+  // follow the users of the load.
+  if (isa<LoadInst>(UserI))
+    return false;
+
+  // By default we follow all uses assuming UserI might leak information on U,
+  // we have special handling for call sites operands though.
+  ImmutableCallSite ICS(UserI);
+  if (!ICS || !ICS.isArgOperand(U))
+    return true;
+
+  // If the use is a call argument known not to be captured, the users of
+  // the call do not need to be visited because they have to be unrelated to
+  // the input. Note that this check is not trivial even though we disallow
+  // general capturing of the underlying argument. The reason is that the
+  // call might the argument "through return", which we allow and for which we
+  // need to check call users.
+  unsigned ArgNo = ICS.getArgumentNo(U);
+  const auto &ArgNoCaptureAA =
+      A.getAAFor<AANoCapture>(*this, IRPosition::callsite_argument(ICS, ArgNo));
+  return !ArgNoCaptureAA.isAssumedNoCapture();
+}
+
+void AAMemoryBehaviorFloating::analyzeUseIn(Attributor &A, const Use *U,
+                                            const Instruction *UserI) {
+  assert(UserI->mayReadOrWriteMemory());
+
+  switch (UserI->getOpcode()) {
+  default:
+    // TODO: Handle all atomics and other side-effect operations we know of.
+    break;
+  case Instruction::Load:
+    // Loads cause the NO_READS property to disappear.
+    removeAssumedBits(NO_READS);
+    return;
+
+  case Instruction::Store:
+    // Stores cause the NO_WRITES property to disappear if the use is the
+    // pointer operand. Note that we do assume that capturing was taken care of
+    // somewhere else.
+    if (cast<StoreInst>(UserI)->getPointerOperand() == U->get())
+      removeAssumedBits(NO_WRITES);
+    return;
+
+  case Instruction::Call:
+  case Instruction::CallBr:
+  case Instruction::Invoke: {
+    // For call sites we look at the argument memory behavior attribute (this
+    // could be recursive!) in order to restrict our own state.
+    ImmutableCallSite ICS(UserI);
+
+    // Give up on operand bundles.
+    if (ICS.isBundleOperand(U)) {
+      indicatePessimisticFixpoint();
+      return;
+    }
+
+    // Calling a function does read the function pointer, maybe write it if the
+    // function is self-modifying.
+    if (ICS.isCallee(U)) {
+      removeAssumedBits(NO_READS);
+      break;
+    }
+
+    // Adjust the possible access behavior based on the information on the
+    // argument.
+    unsigned ArgNo = ICS.getArgumentNo(U);
+    const IRPosition &ArgPos = IRPosition::callsite_argument(ICS, ArgNo);
+    const auto &MemBehaviorAA = A.getAAFor<AAMemoryBehavior>(*this, ArgPos);
+    // "assumed" has at most the same bits as the MemBehaviorAA assumed
+    // and at least "known".
+    intersectAssumedBits(MemBehaviorAA.getAssumed());
+    return;
+  }
+  };
+
+  // Generally, look at the "may-properties" and adjust the assumed state if we
+  // did not trigger special handling before.
+  if (UserI->mayReadFromMemory())
+    removeAssumedBits(NO_READS);
+  if (UserI->mayWriteToMemory())
+    removeAssumedBits(NO_WRITES);
+}
+
 /// ----------------------------------------------------------------------------
 ///                               Attributor
 /// ----------------------------------------------------------------------------
@@ -3465,18 +3922,21 @@ bool Attributor::isAssumedDead(const AbstractAttribute &AA,
   return true;
 }
 
-bool Attributor::checkForAllCallSites(const function_ref<bool(CallSite)> &Pred,
-                                      const AbstractAttribute &QueryingAA,
-                                      bool RequireAllCallSites) {
+bool Attributor::checkForAllCallSites(
+    const function_ref<bool(AbstractCallSite)> &Pred,
+    const AbstractAttribute &QueryingAA, bool RequireAllCallSites) {
   // We can try to determine information from
   // the call sites. However, this is only possible all call sites are known,
   // hence the function has internal linkage.
   const IRPosition &IRP = QueryingAA.getIRPosition();
   const Function *AssociatedFunction = IRP.getAssociatedFunction();
-  if (!AssociatedFunction)
+  if (!AssociatedFunction) {
+    LLVM_DEBUG(dbgs() << "[Attributor] No function associated with " << IRP
+                      << "\n");
     return false;
+  }
 
-  if (RequireAllCallSites && !AssociatedFunction->hasInternalLinkage()) {
+  if (RequireAllCallSites && !AssociatedFunction->hasLocalLinkage()) {
     LLVM_DEBUG(
         dbgs()
         << "[Attributor] Function " << AssociatedFunction->getName()
@@ -3485,15 +3945,21 @@ bool Attributor::checkForAllCallSites(const function_ref<bool(CallSite)> &Pred,
   }
 
   for (const Use &U : AssociatedFunction->uses()) {
-    Instruction *I = dyn_cast<Instruction>(U.getUser());
-    // TODO: Deal with abstract call sites here.
-    if (!I)
+    AbstractCallSite ACS(&U);
+    if (!ACS) {
+      LLVM_DEBUG(dbgs() << "[Attributor] Function "
+                        << AssociatedFunction->getName()
+                        << " has non call site use " << *U.get() << " in "
+                        << *U.getUser() << "\n");
       return false;
+    }
 
+    Instruction *I = ACS.getInstruction();
     Function *Caller = I->getFunction();
 
-    const auto &LivenessAA = getAAFor<AAIsDead>(
-        QueryingAA, IRPosition::function(*Caller), /* TrackDependence */ false);
+    const auto &LivenessAA =
+        getAAFor<AAIsDead>(QueryingAA, IRPosition::function(*Caller),
+                           /* TrackDependence */ false);
 
     // Skip dead calls.
     if (LivenessAA.isAssumedDead(I)) {
@@ -3503,22 +3969,22 @@ bool Attributor::checkForAllCallSites(const function_ref<bool(CallSite)> &Pred,
       continue;
     }
 
-    CallSite CS(U.getUser());
-    if (!CS || !CS.isCallee(&U)) {
+    const Use *EffectiveUse =
+        ACS.isCallbackCall() ? &ACS.getCalleeUseForCallback() : &U;
+    if (!ACS.isCallee(EffectiveUse)) {
       if (!RequireAllCallSites)
         continue;
-
-      LLVM_DEBUG(dbgs() << "[Attributor] User " << *U.getUser()
+      LLVM_DEBUG(dbgs() << "[Attributor] User " << EffectiveUse->getUser()
                         << " is an invalid use of "
                         << AssociatedFunction->getName() << "\n");
       return false;
     }
 
-    if (Pred(CS))
+    if (Pred(ACS))
       continue;
 
     LLVM_DEBUG(dbgs() << "[Attributor] Call site callback failed for "
-                      << *CS.getInstruction() << "\n");
+                      << *ACS.getInstruction() << "\n");
     return false;
   }
 
@@ -3607,7 +4073,8 @@ bool Attributor::checkForAllInstructions(
 
   auto &OpcodeInstMap =
       InfoCache.getOpcodeInstMapForFunction(*AssociatedFunction);
-  if (!checkForAllInstructionsImpl(OpcodeInstMap, Pred, &LivenessAA, AnyDead, Opcodes))
+  if (!checkForAllInstructionsImpl(OpcodeInstMap, Pred, &LivenessAA, AnyDead,
+                                   Opcodes))
     return false;
 
   // If we actually used liveness information so we have to record a dependence.
@@ -3855,7 +4322,7 @@ ChangeStatus Attributor::run(Module &M) {
     // below fixpoint loop will identify and eliminate them.
     SmallVector<Function *, 8> InternalFns;
     for (Function &F : M)
-      if (F.hasInternalLinkage())
+      if (F.hasLocalLinkage())
         InternalFns.push_back(&F);
 
     bool FoundDeadFn = true;
@@ -3869,7 +4336,7 @@ ChangeStatus Attributor::run(Module &M) {
         const auto *LivenessAA =
             lookupAAFor<AAIsDead>(IRPosition::function(*F));
         if (LivenessAA &&
-            !checkForAllCallSites([](CallSite CS) { return false; },
+            !checkForAllCallSites([](AbstractCallSite ACS) { return false; },
                                   *LivenessAA, true))
           continue;
 
@@ -3965,6 +4432,9 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
   // Every function might be "no-recurse".
   getOrCreateAAFor<AANoRecurse>(FPos);
 
+  // Every function might be "readnone/readonly/writeonly/...".
+  getOrCreateAAFor<AAMemoryBehavior>(FPos);
+
   // Every function might be applicable for Heap-To-Stack conversion.
   if (EnableHeapToStack)
     getOrCreateAAFor<AAHeapToStack>(FPos);
@@ -4019,6 +4489,10 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
 
       // Every argument with pointer type might be marked nocapture.
       getOrCreateAAFor<AANoCapture>(ArgPos);
+
+      // Every argument with pointer type might be marked
+      // "readnone/readonly/writeonly/..."
+      getOrCreateAAFor<AAMemoryBehavior>(ArgPos);
     }
   }
 
@@ -4163,7 +4637,7 @@ static bool runAttributorOnModule(Module &M, AnalysisGetter &AG) {
 
     // We look at internal functions only on-demand but if any use is not a
     // direct call, we have to do it eagerly.
-    if (F.hasInternalLinkage()) {
+    if (F.hasLocalLinkage()) {
       if (llvm::all_of(F.uses(), [](const Use &U) {
             return ImmutableCallSite(U.getUser()) &&
                    ImmutableCallSite(U.getUser()).isCallee(&U);
@@ -4232,6 +4706,7 @@ const char AAAlign::ID = 0;
 const char AANoCapture::ID = 0;
 const char AAValueSimplify::ID = 0;
 const char AAHeapToStack::ID = 0;
+const char AAMemoryBehavior::ID = 0;
 
 // Macro magic to create the static generator function for attributes that
 // follow the naming scheme.
@@ -4306,7 +4781,22 @@ const char AAHeapToStack::ID = 0;
       SWITCH_PK_INV(CLASS, IRP_CALL_SITE, "call site")                         \
       SWITCH_PK_CREATE(CLASS, IRP, IRP_FUNCTION, Function)                     \
     }                                                                          \
-    AA->initialize(A);                                                         \
+    return *AA;                                                                \
+  }
+
+#define CREATE_NON_RET_ABSTRACT_ATTRIBUTE_FOR_POSITION(CLASS)                  \
+  CLASS &CLASS::createForPosition(const IRPosition &IRP, Attributor &A) {      \
+    CLASS *AA = nullptr;                                                       \
+    switch (IRP.getPositionKind()) {                                           \
+      SWITCH_PK_INV(CLASS, IRP_INVALID, "invalid")                             \
+      SWITCH_PK_INV(CLASS, IRP_RETURNED, "returned")                           \
+      SWITCH_PK_CREATE(CLASS, IRP, IRP_FUNCTION, Function)                     \
+      SWITCH_PK_CREATE(CLASS, IRP, IRP_CALL_SITE, CallSite)                    \
+      SWITCH_PK_CREATE(CLASS, IRP, IRP_FLOAT, Floating)                        \
+      SWITCH_PK_CREATE(CLASS, IRP, IRP_ARGUMENT, Argument)                     \
+      SWITCH_PK_CREATE(CLASS, IRP, IRP_CALL_SITE_RETURNED, CallSiteReturned)   \
+      SWITCH_PK_CREATE(CLASS, IRP, IRP_CALL_SITE_ARGUMENT, CallSiteArgument)   \
+    }                                                                          \
     return *AA;                                                                \
   }
 
@@ -4329,7 +4819,11 @@ CREATE_ALL_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAValueSimplify)
 
 CREATE_FUNCTION_ONLY_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAHeapToStack)
 
+CREATE_NON_RET_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAMemoryBehavior)
+
+#undef CREATE_FUNCTION_ONLY_ABSTRACT_ATTRIBUTE_FOR_POSITION
 #undef CREATE_FUNCTION_ABSTRACT_ATTRIBUTE_FOR_POSITION
+#undef CREATE_NON_RET_ABSTRACT_ATTRIBUTE_FOR_POSITION
 #undef CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION
 #undef CREATE_ALL_ABSTRACT_ATTRIBUTE_FOR_POSITION
 #undef SWITCH_PK_CREATE

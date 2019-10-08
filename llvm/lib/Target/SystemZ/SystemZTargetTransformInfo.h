@@ -56,7 +56,7 @@ public:
   /// \name Vector TTI Implementations
   /// @{
 
-  unsigned getNumberOfRegisters(bool Vector);
+  unsigned getNumberOfRegisters(unsigned ClassID) const;
   unsigned getRegisterBitWidth(bool Vector) const;
 
   unsigned getCacheLineSize() { return 256; }

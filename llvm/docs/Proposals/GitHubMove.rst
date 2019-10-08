@@ -1081,6 +1081,6 @@ References
 
 .. [LattnerRevNum] Chris Lattner, http://lists.llvm.org/pipermail/llvm-dev/2011-July/041739.html
 .. [TrickRevNum] Andrew Trick, http://lists.llvm.org/pipermail/llvm-dev/2011-July/041721.html
-.. [JSonnRevNum] Joerg Sonnenberg, http://lists.llvm.org/pipermail/llvm-dev/2011-July/041688.html
+.. [JSonnRevNum] Joerg Sonnenberger, http://lists.llvm.org/pipermail/llvm-dev/2011-July/041688.html
 .. [MatthewsRevNum] Chris Matthews, http://lists.llvm.org/pipermail/cfe-dev/2016-July/049886.html
 .. [statuschecks] GitHub status-checks, https://help.github.com/articles/about-required-status-checks/

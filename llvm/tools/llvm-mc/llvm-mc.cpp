@@ -209,9 +209,10 @@ static const Target *GetTarget(const char *ProgName) {
   return TheTarget;
 }
 
-static std::unique_ptr<ToolOutputFile> GetOutputStream(StringRef Path) {
+static std::unique_ptr<ToolOutputFile> GetOutputStream(StringRef Path,
+    sys::fs::OpenFlags Flags) {
   std::error_code EC;
-  auto Out = std::make_unique<ToolOutputFile>(Path, EC, sys::fs::OF_None);
+  auto Out = std::make_unique<ToolOutputFile>(Path, EC, Flags);
   if (EC) {
     WithColor::error() << EC.message() << '\n';
     return nullptr;
@@ -413,7 +414,9 @@ int main(int argc, char **argv) {
     FeaturesStr = Features.getString();
   }
 
-  std::unique_ptr<ToolOutputFile> Out = GetOutputStream(OutputFilename);
+  sys::fs::OpenFlags Flags = (FileType == OFT_AssemblyFile) ? sys::fs::OF_Text
+                                                            : sys::fs::OF_None;
+  std::unique_ptr<ToolOutputFile> Out = GetOutputStream(OutputFilename, Flags);
   if (!Out)
     return 1;
 
@@ -423,7 +426,7 @@ int main(int argc, char **argv) {
       WithColor::error() << "dwo output only supported with object files\n";
       return 1;
     }
-    DwoOut = GetOutputStream(SplitDwarfFile);
+    DwoOut = GetOutputStream(SplitDwarfFile, sys::fs::OF_None);
     if (!DwoOut)
       return 1;
   }

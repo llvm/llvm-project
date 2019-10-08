@@ -342,6 +342,82 @@ entry:
   ret double %result
 }
 
+; CHECK-LABEL: f23
+; COMMON: jmp lrint
+define i32 @f23(double %x) #0 {
+entry:
+  %result = call i32 @llvm.experimental.constrained.lrint.i32.f64(double %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret i32 %result
+}
+
+; CHECK-LABEL: f24
+; COMMON: jmp lrintf
+define i32 @f24(float %x) #0 {
+entry:
+  %result = call i32 @llvm.experimental.constrained.lrint.i32.f32(float %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret i32 %result
+}
+
+; CHECK-LABEL: f25
+; COMMON: jmp llrint
+define i64 @f25(double %x) #0 {
+entry:
+  %result = call i64 @llvm.experimental.constrained.llrint.i64.f64(double %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret i64 %result
+}
+
+; CHECK-LABEL: f26
+; COMMON: jmp llrintf
+define i64 @f26(float %x) {
+entry:
+  %result = call i64 @llvm.experimental.constrained.llrint.i64.f32(float %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret i64 %result
+}
+
+; CHECK-LABEL: f27
+; COMMON: jmp lround
+define i32 @f27(double %x) #0 {
+entry:
+  %result = call i32 @llvm.experimental.constrained.lround.i32.f64(double %x,
+                                               metadata !"fpexcept.strict") #0
+  ret i32 %result
+}
+
+; CHECK-LABEL: f28
+; COMMON: jmp lroundf
+define i32 @f28(float %x) #0 {
+entry:
+  %result = call i32 @llvm.experimental.constrained.lround.i32.f32(float %x,
+                                               metadata !"fpexcept.strict") #0
+  ret i32 %result
+}
+
+; CHECK-LABEL: f29
+; COMMON: jmp llround
+define i64 @f29(double %x) #0 {
+entry:
+  %result = call i64 @llvm.experimental.constrained.llround.i64.f64(double %x,
+                                               metadata !"fpexcept.strict") #0
+  ret i64 %result
+}
+
+; CHECK-LABEL: f30
+; COMMON: jmp llroundf
+define i64 @f30(float %x) #0 {
+entry:
+  %result = call i64 @llvm.experimental.constrained.llround.i64.f32(float %x,
+                                               metadata !"fpexcept.strict") #0
+  ret i64 %result
+}
+
 attributes #0 = { strictfp }
 
 @llvm.fp.env = thread_local global i8 zeroinitializer, section "llvm.metadata"
@@ -368,3 +444,11 @@ declare i32 @llvm.experimental.constrained.fptosi.i32.f64(double, metadata)
 declare i32 @llvm.experimental.constrained.fptoui.i32.f64(double, metadata)
 declare float @llvm.experimental.constrained.fptrunc.f32.f64(double, metadata, metadata)
 declare double @llvm.experimental.constrained.fpext.f64.f32(float, metadata)
+declare i32 @llvm.experimental.constrained.lrint.i32.f64(double, metadata, metadata)
+declare i32 @llvm.experimental.constrained.lrint.i32.f32(float, metadata, metadata)
+declare i64 @llvm.experimental.constrained.llrint.i64.f64(double, metadata, metadata)
+declare i64 @llvm.experimental.constrained.llrint.i64.f32(float, metadata, metadata)
+declare i32 @llvm.experimental.constrained.lround.i32.f64(double, metadata)
+declare i32 @llvm.experimental.constrained.lround.i32.f32(float, metadata)
+declare i64 @llvm.experimental.constrained.llround.i64.f64(double, metadata)
+declare i64 @llvm.experimental.constrained.llround.i64.f32(float, metadata)

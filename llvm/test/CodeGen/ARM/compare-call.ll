@@ -18,5 +18,5 @@ UnifiedReturnBlock:             ; preds = %entry
 
 declare i32 @bar(...)
 
-; CHECK: vcmpe.f32
+; CHECK: vcmp.f32
 

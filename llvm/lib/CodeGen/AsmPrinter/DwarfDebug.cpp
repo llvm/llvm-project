@@ -1054,7 +1054,7 @@ void DwarfDebug::finalizeModuleInfo() {
     // If we're splitting the dwarf out now that we've got the entire
     // CU then add the dwo id to it.
     auto *SkCU = TheCU.getSkeleton();
-    if (useSplitDwarf() && !empty(TheCU.getUnitDie().children())) {
+    if (useSplitDwarf() && !TheCU.getUnitDie().children().empty()) {
       finishUnitAttributes(TheCU.getCUNode(), TheCU);
       TheCU.addString(TheCU.getUnitDie(), dwarf::DW_AT_GNU_dwo_name,
                       Asm->TM.Options.MCOptions.SplitDwarfFile);
@@ -1106,7 +1106,7 @@ void DwarfDebug::finalizeModuleInfo() {
     // is a bit pessimistic under LTO.
     if (!AddrPool.isEmpty() &&
         (getDwarfVersion() >= 5 ||
-         (SkCU && !empty(TheCU.getUnitDie().children()))))
+         (SkCU && !TheCU.getUnitDie().children().empty())))
       U.addAddrTableBase();
 
     if (getDwarfVersion() >= 5) {

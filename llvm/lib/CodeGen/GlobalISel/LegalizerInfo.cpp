@@ -433,7 +433,7 @@ LegalizeRuleSet &LegalizerInfo::getActionDefinitionsBuilder(
     std::initializer_list<unsigned> Opcodes) {
   unsigned Representative = *Opcodes.begin();
 
-  assert(!empty(Opcodes) && Opcodes.begin() + 1 != Opcodes.end() &&
+  assert(!llvm::empty(Opcodes) && Opcodes.begin() + 1 != Opcodes.end() &&
          "Initializer list must have at least two opcodes");
 
   for (auto I = Opcodes.begin() + 1, E = Opcodes.end(); I != E; ++I)

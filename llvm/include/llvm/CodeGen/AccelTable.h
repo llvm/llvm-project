@@ -101,8 +101,6 @@
 ///
 /// An Apple Accelerator Table can be serialized by calling emitAppleAccelTable
 /// function.
-///
-/// TODO: Add DWARF v5 emission code.
 
 namespace llvm {
 

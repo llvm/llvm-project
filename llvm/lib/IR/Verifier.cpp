@@ -4308,12 +4308,16 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   case Intrinsic::experimental_constrained_log:
   case Intrinsic::experimental_constrained_log10:
   case Intrinsic::experimental_constrained_log2:
+  case Intrinsic::experimental_constrained_lrint:
+  case Intrinsic::experimental_constrained_llrint:
   case Intrinsic::experimental_constrained_rint:
   case Intrinsic::experimental_constrained_nearbyint:
   case Intrinsic::experimental_constrained_maxnum:
   case Intrinsic::experimental_constrained_minnum:
   case Intrinsic::experimental_constrained_ceil:
   case Intrinsic::experimental_constrained_floor:
+  case Intrinsic::experimental_constrained_lround:
+  case Intrinsic::experimental_constrained_llround:
   case Intrinsic::experimental_constrained_round:
   case Intrinsic::experimental_constrained_trunc:
     visitConstrainedFPIntrinsic(cast<ConstrainedFPIntrinsic>(Call));
@@ -4765,6 +4769,31 @@ void Verifier::visitConstrainedFPIntrinsic(ConstrainedFPIntrinsic &FPI) {
     HasExceptionMD = true;
     HasRoundingMD = true;
     break;
+
+  case Intrinsic::experimental_constrained_lrint:
+  case Intrinsic::experimental_constrained_llrint: {
+    Assert((NumOperands == 3), "invalid arguments for constrained FP intrinsic",
+           &FPI);
+    Type *ValTy = FPI.getArgOperand(0)->getType();
+    Type *ResultTy = FPI.getType();
+    Assert(!ValTy->isVectorTy() && !ResultTy->isVectorTy(),
+           "Intrinsic does not support vectors", &FPI);
+    HasExceptionMD = true;
+    HasRoundingMD = true;
+  } 
+    break;
+
+  case Intrinsic::experimental_constrained_lround:
+  case Intrinsic::experimental_constrained_llround: {
+    Assert((NumOperands == 2), "invalid arguments for constrained FP intrinsic",
+           &FPI);
+    Type *ValTy = FPI.getArgOperand(0)->getType();
+    Type *ResultTy = FPI.getType();
+    Assert(!ValTy->isVectorTy() && !ResultTy->isVectorTy(),
+           "Intrinsic does not support vectors", &FPI);
+    HasExceptionMD = true;
+    break;
+  } 
 
   case Intrinsic::experimental_constrained_fma:
     Assert((NumOperands == 5), "invalid arguments for constrained FP intrinsic",

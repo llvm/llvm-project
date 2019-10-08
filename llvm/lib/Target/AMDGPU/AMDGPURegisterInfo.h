@@ -28,7 +28,7 @@ struct AMDGPURegisterInfo : public AMDGPUGenRegisterInfo {
 
   /// \returns the sub reg enum value for the given \p Channel
   /// (e.g. getSubRegFromChannel(0) -> AMDGPU::sub0)
-  static unsigned getSubRegFromChannel(unsigned Channel);
+  static unsigned getSubRegFromChannel(unsigned Channel, unsigned NumRegs = 1);
 
   void reserveRegisterTuples(BitVector &, unsigned Reg) const;
 };

@@ -363,6 +363,7 @@ CodeGenInstruction::CodeGenInstruction(Record *R)
   Namespace = R->getValueAsString("Namespace");
   AsmString = R->getValueAsString("AsmString");
 
+  isPreISelOpcode = R->getValueAsBit("isPreISelOpcode");
   isReturn     = R->getValueAsBit("isReturn");
   isEHScopeReturn = R->getValueAsBit("isEHScopeReturn");
   isBranch     = R->getValueAsBit("isBranch");

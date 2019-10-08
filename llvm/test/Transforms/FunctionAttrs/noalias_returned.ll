@@ -153,7 +153,7 @@ define i8* @test8(i32* %0) nounwind uwtable {
 ; TEST 9
 ; Simple Argument Test
 define internal void @test9(i8* %a, i8* %b) {
-; CHECK: define internal void @test9(i8* noalias nocapture %a, i8* nocapture %b)
+; CHECK: define internal void @test9(i8* noalias nocapture readnone %a, i8* nocapture readnone %b)
   ret void
 }
 define void @test9_helper(i8* %a, i8* %b) {

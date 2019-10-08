@@ -159,7 +159,7 @@ define void @test13_helper() {
   ret void
 }
 define internal void @test13(i8* %a, i8* %b, i8* %c) {
-; ATTRIBUTOR: define internal void @test13(i8* nocapture nonnull %a, i8* nocapture %b, i8* nocapture %c) 
+; ATTRIBUTOR: define internal void @test13(i8* nocapture nonnull readnone %a, i8* nocapture readnone %b, i8* nocapture readnone %c) 
   ret void
 }
 
@@ -178,8 +178,8 @@ declare nonnull i8* @nonnull()
 
 
 define internal i32* @f1(i32* %arg) {
-; FIXME: missing nonnull It should be nonnull @f1(i32* nonnull %arg)
-; ATTRIBUTOR: define internal nonnull i32* @f1(i32* %arg)
+; FIXME: missing nonnull It should be nonnull @f1(i32* nonnull readonly %arg)
+; ATTRIBUTOR: define internal nonnull i32* @f1(i32* readonly %arg)
 
 bb:
   %tmp = icmp eq i32* %arg, null
@@ -212,18 +212,18 @@ define internal i32* @f2(i32* %arg) {
 ; ATTRIBUTOR: define internal nonnull i32* @f2(i32* %arg)
 bb:
 
-; FIXME: missing nonnull. It should be @f1(i32* nonnull %arg) 
-; ATTRIBUTOR:   %tmp = tail call nonnull i32* @f1(i32* %arg)
+; FIXME: missing nonnull. It should be @f1(i32* nonnull readonly %arg) 
+; ATTRIBUTOR:   %tmp = tail call nonnull i32* @f1(i32* readonly %arg)
   %tmp = tail call i32* @f1(i32* %arg)
   ret i32* %tmp
 }
 
 define dso_local noalias i32* @f3(i32* %arg) {
-; FIXME: missing nonnull. It should be nonnull @f3(i32* nonnull %arg) 
-; ATTRIBUTOR: define dso_local noalias i32* @f3(i32* %arg)
+; FIXME: missing nonnull. It should be nonnull @f3(i32* nonnull readonly %arg) 
+; ATTRIBUTOR: define dso_local noalias i32* @f3(i32* readonly %arg)
 bb:
-; FIXME: missing nonnull. It should be @f1(i32* nonnull %arg) 
-; ATTRIBUTOR:   %tmp = call i32* @f1(i32* %arg)
+; FIXME: missing nonnull. It should be @f1(i32* nonnull readonly %arg) 
+; ATTRIBUTOR:   %tmp = call i32* @f1(i32* readonly %arg)
   %tmp = call i32* @f1(i32* %arg)
   ret i32* null
 }
@@ -402,7 +402,7 @@ declare i32 @esfp(...)
 define i1 @parent8(i8* %a, i8* %bogus1, i8* %b) personality i8* bitcast (i32 (...)* @esfp to i8*){
 ; FNATTR-LABEL: @parent8(i8* nonnull %a, i8* nocapture readnone %bogus1, i8* nonnull %b)
 ; FIXME : missing "nonnull", it should be @parent8(i8* nonnull %a, i8* %bogus1, i8* nonnull %b)
-; ATTRIBUTOR-LABEL: @parent8(i8* %a, i8* nocapture %bogus1, i8* %b)
+; ATTRIBUTOR-LABEL: @parent8(i8* %a, i8* nocapture readnone %bogus1, i8* %b)
 ; BOTH-NEXT:  entry:
 ; FNATTR-NEXT:    invoke void @use2nonnull(i8* %a, i8* %b)
 ; ATTRIBUTOR-NEXT:    invoke void @use2nonnull(i8* nonnull %a, i8* nonnull %b)
@@ -458,7 +458,7 @@ define  i32* @g1() {
   ret i32* %c
 }
 
-; ATTRIBUTOR: define internal void @called_by_weak(i32* nocapture nonnull %a)
+; ATTRIBUTOR: define internal void @called_by_weak(i32* nocapture nonnull readnone %a)
 define internal void @called_by_weak(i32* %a) {
   ret void
 }

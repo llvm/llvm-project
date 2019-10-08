@@ -23,6 +23,7 @@
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/WithColor.h"
+#include "llvm/TextAPI/MachO/Architecture.h"
 
 using namespace llvm;
 using namespace llvm::object;
@@ -438,14 +439,19 @@ readInputBinaries(ArrayRef<InputFile> InputFiles) {
     if (!B->isArchive() && !B->isMachO() && !B->isMachOUniversalBinary())
       reportError("File " + IF.FileName + " has unsupported binary format");
     if (IF.ArchType && (B->isMachO() || B->isArchive())) {
-      const auto ArchType =
-          B->isMachO() ? Slice(cast<MachOObjectFile>(B)).getArchString()
-                       : Slice(cast<Archive>(B)).getArchString();
-      if (Triple(*IF.ArchType).getArch() != Triple(ArchType).getArch())
+      const auto S = B->isMachO() ? Slice(cast<MachOObjectFile>(B))
+                                  : Slice(cast<Archive>(B));
+      const auto SpecifiedCPUType =
+          MachO::getCPUTypeFromArchitecture(
+              MachO::mapToArchitecture(Triple(*IF.ArchType)))
+              .first;
+      // For compatibility with cctools' lipo the comparison is relaxed just to
+      // checking cputypes.
+      if (S.getCPUType() != SpecifiedCPUType)
         reportError("specified architecture: " + *IF.ArchType +
                     " for file: " + B->getFileName() +
-                    " does not match the file's architecture (" + ArchType +
-                    ")");
+                    " does not match the file's architecture (" +
+                    S.getArchString() + ")");
     }
     InputBinaries.push_back(std::move(*BinaryOrErr));
   }

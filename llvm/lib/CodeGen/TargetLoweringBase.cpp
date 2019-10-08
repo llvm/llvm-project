@@ -709,10 +709,14 @@ void TargetLoweringBase::initActions() {
     setOperationAction(ISD::STRICT_FLOG, VT, Expand);
     setOperationAction(ISD::STRICT_FLOG10, VT, Expand);
     setOperationAction(ISD::STRICT_FLOG2, VT, Expand);
+    setOperationAction(ISD::STRICT_LRINT, VT, Expand);
+    setOperationAction(ISD::STRICT_LLRINT, VT, Expand);
     setOperationAction(ISD::STRICT_FRINT, VT, Expand);
     setOperationAction(ISD::STRICT_FNEARBYINT, VT, Expand);
     setOperationAction(ISD::STRICT_FCEIL, VT, Expand);
     setOperationAction(ISD::STRICT_FFLOOR, VT, Expand);
+    setOperationAction(ISD::STRICT_LROUND, VT, Expand);
+    setOperationAction(ISD::STRICT_LLROUND, VT, Expand);
     setOperationAction(ISD::STRICT_FROUND, VT, Expand);
     setOperationAction(ISD::STRICT_FTRUNC, VT, Expand);
     setOperationAction(ISD::STRICT_FMAXNUM, VT, Expand);

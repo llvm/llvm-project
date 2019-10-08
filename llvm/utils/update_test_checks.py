@@ -64,6 +64,8 @@ def main():
       '--function', help='The function in the test file to update')
   parser.add_argument('-u', '--update-only', action='store_true',
                       help='Only update test if it was already autogened')
+  parser.add_argument('-p', '--preserve-names', action='store_true',
+                      help='Do not scrub IR names')
   parser.add_argument('tests', nargs='+')
   args = parser.parse_args()
 
@@ -174,7 +176,8 @@ def main():
             continue
 
         # Print out the various check lines here.
-        common.add_ir_checks(output_lines, ';', prefix_list, func_dict, func_name)
+        common.add_ir_checks(output_lines, ';', prefix_list, func_dict,
+                             func_name, args.preserve_names)
         is_in_function_start = False
 
       if is_in_function:

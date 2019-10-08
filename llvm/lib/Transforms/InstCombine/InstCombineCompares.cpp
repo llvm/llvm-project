@@ -69,34 +69,6 @@ static bool hasBranchUse(ICmpInst &I) {
   return false;
 }
 
-/// Given an exploded icmp instruction, return true if the comparison only
-/// checks the sign bit. If it only checks the sign bit, set TrueIfSigned if the
-/// result of the comparison is true when the input value is signed.
-static bool isSignBitCheck(ICmpInst::Predicate Pred, const APInt &RHS,
-                           bool &TrueIfSigned) {
-  switch (Pred) {
-  case ICmpInst::ICMP_SLT:   // True if LHS s< 0
-    TrueIfSigned = true;
-    return RHS.isNullValue();
-  case ICmpInst::ICMP_SLE:   // True if LHS s<= RHS and RHS == -1
-    TrueIfSigned = true;
-    return RHS.isAllOnesValue();
-  case ICmpInst::ICMP_SGT:   // True if LHS s> -1
-    TrueIfSigned = false;
-    return RHS.isAllOnesValue();
-  case ICmpInst::ICMP_UGT:
-    // True if LHS u> RHS and RHS == high-bit-mask - 1
-    TrueIfSigned = true;
-    return RHS.isMaxSignedValue();
-  case ICmpInst::ICMP_UGE:
-    // True if LHS u>= RHS and RHS == high-bit-mask (2^7, 2^15, 2^31, etc)
-    TrueIfSigned = true;
-    return RHS.isSignMask();
-  default:
-    return false;
-  }
-}
-
 /// Returns true if the exploded icmp can be expressed as a signed comparison
 /// to zero and updates the predicate accordingly.
 /// The signedness of the comparison is preserved.

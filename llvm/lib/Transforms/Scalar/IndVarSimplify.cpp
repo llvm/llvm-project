@@ -1839,8 +1839,8 @@ void WidenIV::calculatePostIncRange(Instruction *NarrowDef,
     auto CmpRHSRange = SE->getSignedRange(SE->getSCEV(CmpRHS));
     auto CmpConstrainedLHSRange =
             ConstantRange::makeAllowedICmpRegion(P, CmpRHSRange);
-    auto NarrowDefRange =
-            CmpConstrainedLHSRange.addWithNoSignedWrap(*NarrowDefRHS);
+    auto NarrowDefRange = CmpConstrainedLHSRange.addWithNoWrap(
+        *NarrowDefRHS, OverflowingBinaryOperator::NoSignedWrap);
 
     updatePostIncRangeInfo(NarrowDef, NarrowUser, NarrowDefRange);
   };
@@ -2789,7 +2789,7 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
     // have already been removed; TODO: generalize
     BasicBlock *ExitBlock =
     BI->getSuccessor(L->contains(BI->getSuccessor(0)) ? 1 : 0);
-    if (!empty(ExitBlock->phis()))
+    if (!ExitBlock->phis().empty())
       return true;
 
     const SCEV *ExitCount = SE->getExitCount(L, ExitingBB);

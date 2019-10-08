@@ -331,7 +331,8 @@ define amdgpu_kernel void @mad_sub_f16(half addrspace(1)* noalias nocapture %out
 ; GFX10-FLUSH: v_mul_f16_e32 [[TMP:v[0-9]+]], [[REGA]], [[REGB]]
 ; GFX10-FLUSH: v_sub_f16_e32 [[RESULT:v[0-9]+]], [[REGC]], [[TMP]]
 ; GFX10-FLUSH:  global_store_short v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
-; GFX10-DENORM: global_store_short v{{\[[0-9]+:[0-9]+\]}}, [[REGC]]
+; GFX10-DENORM-STRICT: global_store_short v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
+; GFX10-DENORM-CONTRACT: global_store_short v{{\[[0-9]+:[0-9]+\]}}, [[REGC]]
 define amdgpu_kernel void @mad_sub_inv_f16(half addrspace(1)* noalias nocapture %out, half addrspace(1)* noalias nocapture readonly %ptr) #1 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
   %tid.ext = sext i32 %tid to i64
@@ -439,7 +440,8 @@ define amdgpu_kernel void @mad_sub_fabs_inv_f16(half addrspace(1)* noalias nocap
 ; GFX10-FLUSH: v_mul_f16_e32 [[TMP:v[0-9]+]], [[REGA]], [[REGB]]
 ; GFX10-FLUSH: v_add_f16_e32 [[RESULT:v[0-9]+]], [[REGC]], [[TMP]]
 ; GFX10-FLUSH:  global_store_short v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
-; GFX10-DENORM: global_store_short v{{\[[0-9]+:[0-9]+\]}}, [[REGC]]
+; GFX10-DENORM-STRICT: global_store_short v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
+; GFX10-DENORM-CONTRACT: global_store_short v{{\[[0-9]+:[0-9]+\]}}, [[REGC]]
 define amdgpu_kernel void @neg_neg_mad_f16(half addrspace(1)* noalias nocapture %out, half addrspace(1)* noalias nocapture readonly %ptr) #1 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
   %tid.ext = sext i32 %tid to i64

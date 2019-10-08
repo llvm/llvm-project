@@ -39,8 +39,8 @@ define i32 @volatile_load(i32*) norecurse nounwind uwtable {
   ret i32 %2
 }
 
-; CHECK: Function Attrs: nofree norecurse nosync nounwind uwtable willreturn
-; CHECK-NEXT: define internal i32 @internal_load(i32* nocapture nonnull %0)
+; CHECK: Function Attrs: nofree norecurse nosync nounwind readonly uwtable willreturn
+; CHECK-NEXT: define internal i32 @internal_load(i32* nocapture nonnull readonly %0)
 define internal i32 @internal_load(i32*) norecurse nounwind uwtable {
   %2 = load i32, i32* %0, align 4
   ret i32 %2
@@ -48,11 +48,11 @@ define internal i32 @internal_load(i32*) norecurse nounwind uwtable {
 ; TEST 1: Only first block is live.
 
 ; CHECK: Function Attrs: nofree noreturn nosync nounwind
-; CHECK-NEXT: define i32 @first_block_no_return(i32 %a, i32* nocapture nonnull %ptr1, i32* nocapture %ptr2)
+; CHECK-NEXT: define i32 @first_block_no_return(i32 %a, i32* nocapture nonnull readonly %ptr1, i32* nocapture readnone %ptr2)
 define i32 @first_block_no_return(i32 %a, i32* nonnull %ptr1, i32* %ptr2) #0 {
 entry:
   call i32 @internal_load(i32* %ptr1)
-  ; CHECK: call i32 @internal_load(i32* nocapture nonnull %ptr1)
+  ; CHECK: call i32 @internal_load(i32* nocapture nonnull readonly %ptr1)
   call void @no_return_call()
   ; CHECK: call void @no_return_call()
   ; CHECK-NEXT: unreachable
@@ -84,7 +84,7 @@ cond.end:                                         ; preds = %cond.false, %cond.t
 ; dead block and check if it is deduced.
 
 ; CHECK: Function Attrs: nosync
-; CHECK-NEXT: define i32 @dead_block_present(i32 %a, i32* nocapture %ptr1)
+; CHECK-NEXT: define i32 @dead_block_present(i32 %a, i32* nocapture readnone %ptr1)
 define i32 @dead_block_present(i32 %a, i32* %ptr1) #0 {
 entry:
   %cmp = icmp eq i32 %a, 0
@@ -239,7 +239,7 @@ cleanup:
 ; TEST 6: Undefined behvior, taken from LangRef.
 ; FIXME: Should be able to detect undefined behavior.
 
-; CHECK: define void @ub(i32* nocapture %0)
+; CHECK: define void @ub(i32* nocapture writeonly %0)
 define void @ub(i32* %0) {
   %poison = sub nuw i32 0, 1           ; Results in a poison value.
   %still_poison = and i32 %poison, 0   ; 0, but also poison.
@@ -660,7 +660,7 @@ define internal void @dead_e2() { ret void }
 ; CHECK: define internal void @non_dead_d13()
 ; CHECK: define internal void @non_dead_d14()
 ; Verify we actually deduce information for these functions.
-; CHECK: Function Attrs: nofree nosync nounwind willreturn
+; CHECK: Function Attrs: nofree nosync nounwind readnone willreturn
 ; CHECK-NEXT: define internal void @non_dead_d15()
 ; CHECK-NOT: define internal void @dead_e
 

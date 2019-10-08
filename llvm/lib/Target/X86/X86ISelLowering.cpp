@@ -2963,7 +2963,7 @@ static SDValue CreateCopyOfByValArgument(SDValue Src, SDValue Dst,
 static bool canGuaranteeTCO(CallingConv::ID CC) {
   return (CC == CallingConv::Fast || CC == CallingConv::GHC ||
           CC == CallingConv::X86_RegCall || CC == CallingConv::HiPE ||
-          CC == CallingConv::HHVM);
+          CC == CallingConv::HHVM || CC == CallingConv::Tail);
 }
 
 /// Return true if we might ever do TCO for calls with this calling convention.
@@ -2989,7 +2989,7 @@ static bool mayTailCallThisCC(CallingConv::ID CC) {
 /// Return true if the function is being made into a tailcall target by
 /// changing its ABI.
 static bool shouldGuaranteeTCO(CallingConv::ID CC, bool GuaranteedTailCallOpt) {
-  return GuaranteedTailCallOpt && canGuaranteeTCO(CC);
+  return (GuaranteedTailCallOpt && canGuaranteeTCO(CC)) || CC == CallingConv::Tail;
 }
 
 bool X86TargetLowering::mayBeEmittedAsTailCall(const CallInst *CI) const {
@@ -3615,6 +3615,8 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   bool IsWin64        = Subtarget.isCallingConvWin64(CallConv);
   StructReturnType SR = callIsStructReturn(Outs, Subtarget.isTargetMCU());
   bool IsSibcall      = false;
+  bool IsGuaranteeTCO = MF.getTarget().Options.GuaranteedTailCallOpt ||
+      CallConv == CallingConv::Tail;
   X86MachineFunctionInfo *X86Info = MF.getInfo<X86MachineFunctionInfo>();
   auto Attr = MF.getFunction().getFnAttribute("disable-tail-calls");
   const auto *CI = dyn_cast_or_null<CallInst>(CLI.CS.getInstruction());
@@ -3635,8 +3637,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   if (Attr.getValueAsString() == "true")
     isTailCall = false;
 
-  if (Subtarget.isPICStyleGOT() &&
-      !MF.getTarget().Options.GuaranteedTailCallOpt) {
+  if (Subtarget.isPICStyleGOT() && !IsGuaranteeTCO) {
     // If we are using a GOT, disable tail calls to external symbols with
     // default visibility. Tail calling such a symbol requires using a GOT
     // relocation, which forces early binding of the symbol. This breaks code
@@ -3663,7 +3664,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
     // Sibcalls are automatically detected tailcalls which do not require
     // ABI changes.
-    if (!MF.getTarget().Options.GuaranteedTailCallOpt && isTailCall)
+    if (!IsGuaranteeTCO && isTailCall)
       IsSibcall = true;
 
     if (isTailCall)
@@ -3695,8 +3696,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     // This is a sibcall. The memory operands are available in caller's
     // own caller's stack.
     NumBytes = 0;
-  else if (MF.getTarget().Options.GuaranteedTailCallOpt &&
-           canGuaranteeTCO(CallConv))
+  else if (IsGuaranteeTCO && canGuaranteeTCO(CallConv))
     NumBytes = GetAlignedArgumentStackSize(NumBytes, DAG);
 
   int FPDiff = 0;
@@ -4321,6 +4321,8 @@ bool X86TargetLowering::IsEligibleForTailCallOptimization(
   bool CCMatch = CallerCC == CalleeCC;
   bool IsCalleeWin64 = Subtarget.isCallingConvWin64(CalleeCC);
   bool IsCallerWin64 = Subtarget.isCallingConvWin64(CallerCC);
+  bool IsGuaranteeTCO = DAG.getTarget().Options.GuaranteedTailCallOpt ||
+      CalleeCC == CallingConv::Tail;
 
   // Win64 functions have extra shadow space for argument homing. Don't do the
   // sibcall if the caller and callee have mismatched expectations for this
@@ -4328,7 +4330,7 @@ bool X86TargetLowering::IsEligibleForTailCallOptimization(
   if (IsCalleeWin64 != IsCallerWin64)
     return false;
 
-  if (DAG.getTarget().Options.GuaranteedTailCallOpt) {
+  if (IsGuaranteeTCO) {
     if (canGuaranteeTCO(CalleeCC) && CCMatch)
       return true;
     return false;
@@ -7259,6 +7261,10 @@ static bool getTargetShuffleInputs(SDValue Op, const APInt &DemandedElts,
                                    SmallVectorImpl<int> &Mask,
                                    SelectionDAG &DAG, unsigned Depth,
                                    bool ResolveZero) {
+  EVT VT = Op.getValueType();
+  if (!VT.isSimple() || !VT.isVector())
+    return false;
+
   APInt KnownUndef, KnownZero;
   if (getTargetShuffleAndZeroables(Op, Mask, Inputs, KnownUndef, KnownZero)) {
     for (int i = 0, e = Mask.size(); i != e; ++i) {
@@ -7280,6 +7286,10 @@ static bool getTargetShuffleInputs(SDValue Op, SmallVectorImpl<SDValue> &Inputs,
                                    SmallVectorImpl<int> &Mask,
                                    SelectionDAG &DAG, unsigned Depth = 0,
                                    bool ResolveZero = true) {
+  EVT VT = Op.getValueType();
+  if (!VT.isSimple() || !VT.isVector())
+    return false;
+
   unsigned NumElts = Op.getValueType().getVectorNumElements();
   APInt DemandedElts = APInt::getAllOnesValue(NumElts);
   return getTargetShuffleInputs(Op, DemandedElts, Inputs, Mask, DAG, Depth,
@@ -24413,6 +24423,7 @@ SDValue X86TargetLowering::LowerINIT_TRAMPOLINE(SDValue Op,
     case CallingConv::X86_FastCall:
     case CallingConv::X86_ThisCall:
     case CallingConv::Fast:
+    case CallingConv::Tail:
       // Pass 'nest' parameter in EAX.
       // Must be kept in sync with X86CallingConv.td
       NestReg = X86::EAX;
@@ -34574,8 +34585,8 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
   // Get target/faux shuffle mask.
   SmallVector<int, 64> OpMask;
   SmallVector<SDValue, 2> OpInputs;
-  if (!VT.isSimple() || !getTargetShuffleInputs(Op, DemandedElts, OpInputs,
-                                                OpMask, TLO.DAG, Depth, false))
+  if (!getTargetShuffleInputs(Op, DemandedElts, OpInputs, OpMask, TLO.DAG,
+                              Depth, false))
     return false;
 
   // Shuffle inputs must be the same size as the result.
@@ -34954,8 +34965,7 @@ SDValue X86TargetLowering::SimplifyMultipleUseDemandedBitsForTargetNode(
 
   SmallVector<int, 16> ShuffleMask;
   SmallVector<SDValue, 2> ShuffleOps;
-  if (VT.isSimple() && VT.isVector() &&
-      getTargetShuffleInputs(Op, ShuffleOps, ShuffleMask, DAG, Depth)) {
+  if (getTargetShuffleInputs(Op, ShuffleOps, ShuffleMask, DAG, Depth)) {
     // If all the demanded elts are from one operand and are inline,
     // then we can use the operand directly.
     int NumOps = ShuffleOps.size();
@@ -42562,16 +42572,17 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
   SDValue Base = GorS->getBasePtr();
   SDValue Scale = GorS->getScale();
 
-  // Shrink constant indices if they are larger than 32-bits.
-  // Only do this before legalize types since v2i64 could become v2i32.
-  // FIXME: We could check that the type is legal if we're after legalize types,
-  // but then we would need to construct test cases where that happens.
-  // FIXME: We could support more than just constant vectors, but we need to
-  // careful with costing. A truncate that can be optimized out would be fine.
-  // Otherwise we might only want to create a truncate if it avoids a split.
   if (DCI.isBeforeLegalize()) {
+    unsigned IndexWidth = Index.getScalarValueSizeInBits();
+
+    // Shrink constant indices if they are larger than 32-bits.
+    // Only do this before legalize types since v2i64 could become v2i32.
+    // FIXME: We could check that the type is legal if we're after legalize
+    // types, but then we would need to construct test cases where that happens.
+    // FIXME: We could support more than just constant vectors, but we need to
+    // careful with costing. A truncate that can be optimized out would be fine.
+    // Otherwise we might only want to create a truncate if it avoids a split.
     if (auto *BV = dyn_cast<BuildVectorSDNode>(Index)) {
-      unsigned IndexWidth = Index.getScalarValueSizeInBits();
       if (BV->isConstant() && IndexWidth > 32 &&
           DAG.ComputeNumSignBits(Index) > (IndexWidth - 32)) {
         unsigned NumElts = Index.getValueType().getVectorNumElements();
@@ -42594,64 +42605,45 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
                                     Scatter->getIndexType());
       }
     }
+
+    // Shrink any sign/zero extends from 32 or smaller to larger than 32 if
+    // there are sufficient sign bits. Only do this before legalize types to
+    // avoid creating illegal types in truncate.
+    if ((Index.getOpcode() == ISD::SIGN_EXTEND ||
+         Index.getOpcode() == ISD::ZERO_EXTEND) &&
+        IndexWidth > 32 &&
+        Index.getOperand(0).getScalarValueSizeInBits() <= 32 &&
+        DAG.ComputeNumSignBits(Index) > (IndexWidth - 32)) {
+      unsigned NumElts = Index.getValueType().getVectorNumElements();
+      EVT NewVT = EVT::getVectorVT(*DAG.getContext(), MVT::i32, NumElts);
+      Index = DAG.getNode(ISD::TRUNCATE, DL, NewVT, Index);
+      if (auto *Gather = dyn_cast<MaskedGatherSDNode>(GorS)) {
+        SDValue Ops[] = { Chain, Gather->getPassThru(),
+                          Mask, Base, Index, Scale } ;
+        return DAG.getMaskedGather(Gather->getVTList(),
+                                   Gather->getMemoryVT(), DL, Ops,
+                                   Gather->getMemOperand(),
+                                   Gather->getIndexType());
+      }
+      auto *Scatter = cast<MaskedScatterSDNode>(GorS);
+      SDValue Ops[] = { Chain, Scatter->getValue(),
+                        Mask, Base, Index, Scale };
+      return DAG.getMaskedScatter(Scatter->getVTList(),
+                                  Scatter->getMemoryVT(), DL,
+                                  Ops, Scatter->getMemOperand(),
+                                  Scatter->getIndexType());
+    }
   }
 
   if (DCI.isBeforeLegalizeOps()) {
-    // Remove any sign extends from 32 or smaller to larger than 32.
-    // Only do this before LegalizeOps in case we need the sign extend for
-    // legalization.
-    if (Index.getOpcode() == ISD::SIGN_EXTEND &&
-        Index.getScalarValueSizeInBits() > 32 &&
-        Index.getOperand(0).getScalarValueSizeInBits() <= 32) {
-      Index = Index.getOperand(0);
-      if (auto *Gather = dyn_cast<MaskedGatherSDNode>(GorS)) {
-        SDValue Ops[] = { Chain, Gather->getPassThru(),
-                          Mask, Base, Index, Scale } ;
-        return DAG.getMaskedGather(Gather->getVTList(),
-                                   Gather->getMemoryVT(), DL, Ops,
-                                   Gather->getMemOperand(),
-                                   Gather->getIndexType());
-      }
-      auto *Scatter = cast<MaskedScatterSDNode>(GorS);
-      SDValue Ops[] = { Chain, Scatter->getValue(),
-                        Mask, Base, Index, Scale };
-      return DAG.getMaskedScatter(Scatter->getVTList(),
-                                  Scatter->getMemoryVT(), DL,
-                                  Ops, Scatter->getMemOperand(),
-                                  Scatter->getIndexType());
-    }
+    unsigned IndexWidth = Index.getScalarValueSizeInBits();
 
     // Make sure the index is either i32 or i64
-    unsigned ScalarSize = Index.getScalarValueSizeInBits();
-    if (ScalarSize != 32 && ScalarSize != 64) {
-      MVT EltVT = ScalarSize > 32 ? MVT::i64 : MVT::i32;
+    if (IndexWidth != 32 && IndexWidth != 64) {
+      MVT EltVT = IndexWidth > 32 ? MVT::i64 : MVT::i32;
       EVT IndexVT = EVT::getVectorVT(*DAG.getContext(), EltVT,
                                    Index.getValueType().getVectorNumElements());
       Index = DAG.getSExtOrTrunc(Index, DL, IndexVT);
-      if (auto *Gather = dyn_cast<MaskedGatherSDNode>(GorS)) {
-        SDValue Ops[] = { Chain, Gather->getPassThru(),
-                          Mask, Base, Index, Scale } ;
-        return DAG.getMaskedGather(Gather->getVTList(),
-                                   Gather->getMemoryVT(), DL, Ops,
-                                   Gather->getMemOperand(),
-                                   Gather->getIndexType());
-      }
-      auto *Scatter = cast<MaskedScatterSDNode>(GorS);
-      SDValue Ops[] = { Chain, Scatter->getValue(),
-                        Mask, Base, Index, Scale };
-      return DAG.getMaskedScatter(Scatter->getVTList(),
-                                  Scatter->getMemoryVT(), DL,
-                                  Ops, Scatter->getMemOperand(),
-                                  Scatter->getIndexType());
-    }
-
-    // Try to remove zero extends from 32->64 if we know the sign bit of
-    // the input is zero.
-    if (Index.getOpcode() == ISD::ZERO_EXTEND &&
-        Index.getScalarValueSizeInBits() == 64 &&
-        Index.getOperand(0).getScalarValueSizeInBits() == 32 &&
-        DAG.SignBitIsZero(Index.getOperand(0))) {
-      Index = Index.getOperand(0);
       if (auto *Gather = dyn_cast<MaskedGatherSDNode>(GorS)) {
         SDValue Ops[] = { Chain, Gather->getPassThru(),
                           Mask, Base, Index, Scale } ;

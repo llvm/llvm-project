@@ -848,7 +848,7 @@ bool WebAssemblyCFGStackify::fixUnwindMismatches(MachineFunction &MF) {
   SmallVector<const MachineBasicBlock *, 8> EHPadStack;
   // Range of intructions to be wrapped in a new nested try/catch
   using TryRange = std::pair<MachineInstr *, MachineInstr *>;
-  // In original CFG, <unwind destionation BB, a vector of try ranges>
+  // In original CFG, <unwind destination BB, a vector of try ranges>
   DenseMap<MachineBasicBlock *, SmallVector<TryRange, 4>> UnwindDestToTryRanges;
   // In new CFG, <destination to branch to, a vector of try ranges>
   DenseMap<MachineBasicBlock *, SmallVector<TryRange, 4>> BrDestToTryRanges;
@@ -985,7 +985,7 @@ bool WebAssemblyCFGStackify::fixUnwindMismatches(MachineFunction &MF) {
   // ...
   // cont:
   for (auto &P : UnwindDestToTryRanges) {
-    NumUnwindMismatches++;
+    NumUnwindMismatches += P.second.size();
 
     // This means the destination is the appendix BB, which was separately
     // handled above.
@@ -1300,7 +1300,9 @@ void WebAssemblyCFGStackify::placeMarkers(MachineFunction &MF) {
     }
   }
   // Fix mismatches in unwind destinations induced by linearizing the code.
-  fixUnwindMismatches(MF);
+  if (MCAI->getExceptionHandlingType() == ExceptionHandling::Wasm &&
+      MF.getFunction().hasPersonalityFn())
+    fixUnwindMismatches(MF);
 }
 
 void WebAssemblyCFGStackify::rewriteDepthImmediates(MachineFunction &MF) {

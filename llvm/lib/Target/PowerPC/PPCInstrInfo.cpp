@@ -2273,7 +2273,7 @@ void PPCInstrInfo::replaceInstrOperandWithImm(MachineInstr &MI,
   Register InUseReg = MI.getOperand(OpNo).getReg();
   MI.getOperand(OpNo).ChangeToImmediate(Imm);
 
-  if (empty(MI.implicit_operands()))
+  if (MI.implicit_operands().empty())
     return;
 
   // We need to make sure that the MI didn't have any implicit use

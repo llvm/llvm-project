@@ -455,6 +455,7 @@ namespace {
 // Various metrics for how much to strip off of pointers.
 enum PointerStripKind {
   PSK_ZeroIndices,
+  PSK_ZeroIndicesAndAliases,
   PSK_ZeroIndicesSameRepresentation,
   PSK_ZeroIndicesAndInvariantGroups,
   PSK_InBoundsConstantIndices,
@@ -475,6 +476,7 @@ static const Value *stripPointerCastsAndOffsets(const Value *V) {
     if (auto *GEP = dyn_cast<GEPOperator>(V)) {
       switch (StripKind) {
       case PSK_ZeroIndices:
+      case PSK_ZeroIndicesAndAliases:
       case PSK_ZeroIndicesSameRepresentation:
       case PSK_ZeroIndicesAndInvariantGroups:
         if (!GEP->hasAllZeroIndices())
@@ -497,6 +499,8 @@ static const Value *stripPointerCastsAndOffsets(const Value *V) {
       // TODO: If we know an address space cast will not change the
       //       representation we could look through it here as well.
       V = cast<Operator>(V)->getOperand(0);
+    } else if (StripKind == PSK_ZeroIndicesAndAliases && isa<GlobalAlias>(V)) {
+      V = cast<GlobalAlias>(V)->getAliasee();
     } else {
       if (const auto *Call = dyn_cast<CallBase>(V)) {
         if (const Value *RV = Call->getReturnedArgOperand()) {
@@ -524,6 +528,10 @@ static const Value *stripPointerCastsAndOffsets(const Value *V) {
 
 const Value *Value::stripPointerCasts() const {
   return stripPointerCastsAndOffsets<PSK_ZeroIndices>(this);
+}
+
+const Value *Value::stripPointerCastsAndAliases() const {
+  return stripPointerCastsAndOffsets<PSK_ZeroIndicesAndAliases>(this);
 }
 
 const Value *Value::stripPointerCastsSameRepresentation() const {

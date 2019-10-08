@@ -8,11 +8,9 @@ entry:
   ret i32 %add
 }
 
-; FIXME: Should be something like this.
-; define internal i32 @noalias_args(i32* nocapture readonly %A, i32* noalias nocapture readonly %B)
-; CHECK: define internal i32 @noalias_args(i32* nocapture %A, i32* noalias nocapture %B)
+; CHECK: define private i32 @noalias_args(i32* nocapture readonly %A, i32* noalias nocapture readonly %B)
 
-define internal i32 @noalias_args(i32* %A, i32* %B) #0 {
+define private i32 @noalias_args(i32* %A, i32* %B) #0 {
 entry:
   %0 = load i32, i32* %A, align 4
   %1 = load i32, i32* %B, align 4
@@ -25,7 +23,7 @@ entry:
 
 ; FIXME: Should be something like this.
 ; define internal i32 @noalias_args_argmem(i32* noalias nocapture readonly %A, i32* noalias nocapture readonly %B)
-; CHECK: define internal i32 @noalias_args_argmem(i32* nocapture %A, i32* nocapture %B)
+; CHECK: define internal i32 @noalias_args_argmem(i32* nocapture readonly %A, i32* nocapture readonly %B)
 ;
 define internal i32 @noalias_args_argmem(i32* %A, i32* %B) #1 {
 entry:

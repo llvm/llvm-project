@@ -334,6 +334,8 @@ static void checkOptions() {
       error("-r and --icf may not be used together");
     if (config->pie)
       error("-r and -pie may not be used together");
+    if (config->exportDynamic)
+      error("-r and --export-dynamic may not be used together");
   }
 
   if (config->executeOnly) {
