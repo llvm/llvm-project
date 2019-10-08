@@ -2029,8 +2029,8 @@ lldb::addr_t AppleObjCRuntimeV2::LookupRuntimeSymbol(ConstString name) {
   if (name_cstr) {
     llvm::StringRef name_strref(name_cstr);
 
-    static const llvm::StringRef ivar_prefix("OBJC_IVAR_$_");
-    static const llvm::StringRef class_prefix("OBJC_CLASS_$_");
+    llvm::StringRef ivar_prefix("OBJC_IVAR_$_");
+    llvm::StringRef class_prefix("OBJC_CLASS_$_");
 
     if (name_strref.startswith(ivar_prefix)) {
       llvm::StringRef ivar_skipped_prefix =

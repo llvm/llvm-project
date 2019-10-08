@@ -10,6 +10,7 @@
 #define liblldb_ConstString_h_
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/Support/FormatVariadic.h"
 
 #include <stddef.h>
@@ -437,6 +438,14 @@ public:
   static size_t StaticMemorySize();
 
 protected:
+  template <typename T> friend struct ::llvm::DenseMapInfo;
+  /// Only used by DenseMapInfo.
+  static ConstString FromStringPoolPointer(const char *ptr) {
+    ConstString s;
+    s.m_string = ptr;
+    return s;
+  };
+
   // Member variables
   const char *m_string;
 };
@@ -451,6 +460,27 @@ template <> struct format_provider<lldb_private::ConstString> {
   static void format(const lldb_private::ConstString &CS, llvm::raw_ostream &OS,
                      llvm::StringRef Options);
 };
+
+/// DenseMapInfo implementation.
+/// \{
+template <> struct DenseMapInfo<lldb_private::ConstString> {
+  static inline lldb_private::ConstString getEmptyKey() {
+    return lldb_private::ConstString::FromStringPoolPointer(
+        DenseMapInfo<const char *>::getEmptyKey());
+  }
+  static inline lldb_private::ConstString getTombstoneKey() {
+    return lldb_private::ConstString::FromStringPoolPointer(
+        DenseMapInfo<const char *>::getTombstoneKey());
+  }
+  static unsigned getHashValue(lldb_private::ConstString val) {
+    return DenseMapInfo<const char *>::getHashValue(val.m_string);
+  }
+  static bool isEqual(lldb_private::ConstString LHS,
+                      lldb_private::ConstString RHS) {
+    return LHS == RHS;
+  }
+};
+/// \}
 }
 
 #endif // liblldb_ConstString_h_

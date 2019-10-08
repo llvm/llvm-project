@@ -9374,6 +9374,7 @@ static bool DumpEnumValue(const clang::QualType &qual_type, Stream *s,
   // flags.
   for (auto enumerator : enum_decl->enumerators()) {
     uint64_t val = enumerator->getInitVal().getSExtValue();
+    val = llvm::SignExtend64(val, 8*byte_size);
     if (llvm::countPopulation(val) != 1 && (val & ~covered_bits) != 0)
       can_be_bitfield = false;
     covered_bits |= val;

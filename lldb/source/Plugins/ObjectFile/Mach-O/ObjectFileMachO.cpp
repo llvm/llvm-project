@@ -1895,18 +1895,6 @@ protected:
 };
 
 struct TrieEntry {
-  TrieEntry()
-      : name(), address(LLDB_INVALID_ADDRESS), flags(0), other(0),
-        import_name() {}
-
-  void Clear() {
-    name.Clear();
-    address = LLDB_INVALID_ADDRESS;
-    flags = 0;
-    other = 0;
-    import_name.Clear();
-  }
-
   void Dump() const {
     printf("0x%16.16llx 0x%16.16llx 0x%16.16llx \"%s\"",
            static_cast<unsigned long long>(address),
@@ -1918,9 +1906,9 @@ struct TrieEntry {
       printf("\n");
   }
   ConstString name;
-  uint64_t address;
-  uint64_t flags;
-  uint64_t other;
+  uint64_t address = LLDB_INVALID_ADDRESS;
+  uint64_t flags = 0;
+  uint64_t other = 0;
   ConstString import_name;
 };
 
@@ -2071,9 +2059,9 @@ size_t ObjectFileMachO::ParseSymtab() {
   uint32_t i;
   FileSpecList dylib_files;
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_SYMBOLS));
-  static const llvm::StringRef g_objc_v2_prefix_class("_OBJC_CLASS_$_");
-  static const llvm::StringRef g_objc_v2_prefix_metaclass("_OBJC_METACLASS_$_");
-  static const llvm::StringRef g_objc_v2_prefix_ivar("_OBJC_IVAR_$_");
+  llvm::StringRef g_objc_v2_prefix_class("_OBJC_CLASS_$_");
+  llvm::StringRef g_objc_v2_prefix_metaclass("_OBJC_METACLASS_$_");
+  llvm::StringRef g_objc_v2_prefix_ivar("_OBJC_IVAR_$_");
 
   for (i = 0; i < m_header.ncmds; ++i) {
     const lldb::offset_t cmd_offset = offset;
@@ -2490,8 +2478,8 @@ size_t ObjectFileMachO::ParseSymtab() {
   std::vector<uint32_t> N_BRAC_indexes;
   std::vector<uint32_t> N_COMM_indexes;
   typedef std::multimap<uint64_t, uint32_t> ValueToSymbolIndexMap;
-  typedef std::map<uint32_t, uint32_t> NListIndexToSymbolIndexMap;
-  typedef std::map<const char *, uint32_t> ConstNameToSymbolIndexMap;
+  typedef llvm::DenseMap<uint32_t, uint32_t> NListIndexToSymbolIndexMap;
+  typedef llvm::DenseMap<const char *, uint32_t> ConstNameToSymbolIndexMap;
   ValueToSymbolIndexMap N_FUN_addr_to_sym_idx;
   ValueToSymbolIndexMap N_STSYM_addr_to_sym_idx;
   ConstNameToSymbolIndexMap N_GSYM_name_to_sym_idx;
@@ -2701,8 +2689,8 @@ size_t ObjectFileMachO::ParseSymtab() {
 
             offset = 0;
 
-            typedef std::map<ConstString, uint16_t> UndefinedNameToDescMap;
-            typedef std::map<uint32_t, ConstString> SymbolIndexToName;
+            typedef llvm::DenseMap<ConstString, uint16_t> UndefinedNameToDescMap;
+            typedef llvm::DenseMap<uint32_t, ConstString> SymbolIndexToName;
             UndefinedNameToDescMap undefined_name_to_desc;
             SymbolIndexToName reexport_shlib_needs_fixup;
 
@@ -3326,13 +3314,13 @@ size_t ObjectFileMachO::ParseSymtab() {
                                 if (symbol_name) {
                                   llvm::StringRef symbol_name_ref(symbol_name);
                                   if (symbol_name_ref.startswith("_OBJC_")) {
-                                    static const llvm::StringRef
+                                    llvm::StringRef
                                         g_objc_v2_prefix_class(
                                             "_OBJC_CLASS_$_");
-                                    static const llvm::StringRef
+                                    llvm::StringRef
                                         g_objc_v2_prefix_metaclass(
                                             "_OBJC_METACLASS_$_");
-                                    static const llvm::StringRef
+                                    llvm::StringRef
                                         g_objc_v2_prefix_ivar("_OBJC_IVAR_$_");
                                     if (symbol_name_ref.startswith(
                                             g_objc_v2_prefix_class)) {
@@ -3382,7 +3370,7 @@ size_t ObjectFileMachO::ParseSymtab() {
                               type = eSymbolTypeRuntime;
                               if (symbol_name && symbol_name[0] == '.') {
                                 llvm::StringRef symbol_name_ref(symbol_name);
-                                static const llvm::StringRef
+                                llvm::StringRef
                                     g_objc_v1_prefix_class(".objc_class_name_");
                                 if (symbol_name_ref.startswith(
                                         g_objc_v1_prefix_class)) {
@@ -3499,15 +3487,11 @@ size_t ObjectFileMachO::ParseSymtab() {
                           // matches, then we can merge the two into just the
                           // function symbol to avoid duplicate entries in
                           // the symbol table
-                          std::pair<ValueToSymbolIndexMap::const_iterator,
-                                    ValueToSymbolIndexMap::const_iterator>
-                              range;
-                          range =
+                          auto range =
                               N_FUN_addr_to_sym_idx.equal_range(nlist.n_value);
                           if (range.first != range.second) {
                             bool found_it = false;
-                            for (ValueToSymbolIndexMap::const_iterator pos =
-                                     range.first;
+                            for (const auto pos = range.first;
                                  pos != range.second; ++pos) {
                               if (sym[sym_idx].GetMangled().GetName(
                                       lldb::eLanguageTypeUnknown,
@@ -3548,15 +3532,11 @@ size_t ObjectFileMachO::ParseSymtab() {
                           // matches, then we can merge the two into just the
                           // Static symbol to avoid duplicate entries in the
                           // symbol table
-                          std::pair<ValueToSymbolIndexMap::const_iterator,
-                                    ValueToSymbolIndexMap::const_iterator>
-                              range;
-                          range = N_STSYM_addr_to_sym_idx.equal_range(
+                          auto range = N_STSYM_addr_to_sym_idx.equal_range(
                               nlist.n_value);
                           if (range.first != range.second) {
                             bool found_it = false;
-                            for (ValueToSymbolIndexMap::const_iterator pos =
-                                     range.first;
+                            for (const auto pos = range.first;
                                  pos != range.second; ++pos) {
                               if (sym[sym_idx].GetMangled().GetName(
                                       lldb::eLanguageTypeUnknown,
@@ -3679,8 +3659,8 @@ size_t ObjectFileMachO::ParseSymtab() {
       nlist_idx = 0;
     }
 
-    typedef std::map<ConstString, uint16_t> UndefinedNameToDescMap;
-    typedef std::map<uint32_t, ConstString> SymbolIndexToName;
+    typedef llvm::DenseMap<ConstString, uint16_t> UndefinedNameToDescMap;
+    typedef llvm::DenseMap<uint32_t, ConstString> SymbolIndexToName;
     UndefinedNameToDescMap undefined_name_to_desc;
     SymbolIndexToName reexport_shlib_needs_fixup;
 
@@ -4218,11 +4198,11 @@ size_t ObjectFileMachO::ParseSymtab() {
                   if (symbol_name) {
                     llvm::StringRef symbol_name_ref(symbol_name);
                     if (symbol_name_ref.startswith("_OBJC_")) {
-                      static const llvm::StringRef g_objc_v2_prefix_class(
+                      llvm::StringRef g_objc_v2_prefix_class(
                           "_OBJC_CLASS_$_");
-                      static const llvm::StringRef g_objc_v2_prefix_metaclass(
+                      llvm::StringRef g_objc_v2_prefix_metaclass(
                           "_OBJC_METACLASS_$_");
-                      static const llvm::StringRef g_objc_v2_prefix_ivar(
+                      llvm::StringRef g_objc_v2_prefix_ivar(
                           "_OBJC_IVAR_$_");
                       if (symbol_name_ref.startswith(g_objc_v2_prefix_class)) {
                         symbol_name_non_abi_mangled = symbol_name + 1;
@@ -4262,7 +4242,7 @@ size_t ObjectFileMachO::ParseSymtab() {
                 type = eSymbolTypeRuntime;
                 if (symbol_name && symbol_name[0] == '.') {
                   llvm::StringRef symbol_name_ref(symbol_name);
-                  static const llvm::StringRef g_objc_v1_prefix_class(
+                  llvm::StringRef g_objc_v1_prefix_class(
                       ".objc_class_name_");
                   if (symbol_name_ref.startswith(g_objc_v1_prefix_class)) {
                     symbol_name_non_abi_mangled = symbol_name;

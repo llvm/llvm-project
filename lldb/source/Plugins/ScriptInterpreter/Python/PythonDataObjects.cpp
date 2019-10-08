@@ -18,6 +18,7 @@
 #include "lldb/Host/File.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/Stream.h"
 
 #include "llvm/ADT/StringSwitch.h"
@@ -28,6 +29,22 @@
 
 using namespace lldb_private;
 using namespace lldb;
+using namespace lldb_private::python;
+using llvm::Error;
+using llvm::Expected;
+
+template <> Expected<bool> python::As<bool>(Expected<PythonObject> &&obj) {
+  if (!obj)
+    return obj.takeError();
+  return obj.get().IsTrue();
+}
+
+template <>
+Expected<long long> python::As<long long>(Expected<PythonObject> &&obj) {
+  if (!obj)
+    return obj.takeError();
+  return obj.get().AsLongLong();
+}
 
 void StructuredPythonObject::Serialize(llvm::json::OStream &s) const {
   s.value(llvm::formatv("Python Obj: {0:X}", GetValue()).str());
@@ -166,12 +183,6 @@ PythonObject PythonObject::GetAttributeValue(llvm::StringRef attr) const {
   return PythonObject(PyRefType::Owned,
                       PyObject_GetAttr(m_py_obj, py_attr.get()));
 }
-
-bool PythonObject::IsNone() const { return m_py_obj == Py_None; }
-
-bool PythonObject::IsValid() const { return m_py_obj != nullptr; }
-
-bool PythonObject::IsAllocated() const { return IsValid() && !IsNone(); }
 
 StructuredData::ObjectSP PythonObject::CreateStructuredObject() const {
   switch (GetObjectType()) {
@@ -334,16 +345,23 @@ StructuredData::StringSP PythonByteArray::CreateStructuredString() const {
 
 // PythonString
 
+Expected<PythonString> PythonString::FromUTF8(llvm::StringRef string) {
+#if PY_MAJOR_VERSION >= 3
+  PyObject *str = PyUnicode_FromStringAndSize(string.data(), string.size());
+#else
+  PyObject *str = PyString_FromStringAndSize(string.data(), string.size());
+#endif
+  if (!str)
+    return llvm::make_error<PythonException>();
+  return Take<PythonString>(str);
+}
+
 PythonString::PythonString(PyRefType type, PyObject *py_obj) : PythonObject() {
   Reset(type, py_obj); // Use "Reset()" to ensure that py_obj is a string
 }
 
 PythonString::PythonString(llvm::StringRef string) : PythonObject() {
   SetString(string);
-}
-
-PythonString::PythonString(const char *string) : PythonObject() {
-  SetString(llvm::StringRef(string));
 }
 
 PythonString::PythonString() : PythonObject() {}
@@ -376,8 +394,12 @@ void PythonString::Reset(PyRefType type, PyObject *py_obj) {
   // In Python 2, Don't store PyUnicode objects directly, because we need
   // access to their underlying character buffers which Python 2 doesn't
   // provide.
-  if (PyUnicode_Check(py_obj))
-    result.Reset(PyRefType::Owned, PyUnicode_AsUTF8String(result.get()));
+  if (PyUnicode_Check(py_obj)) {
+    PyObject *s = PyUnicode_AsUTF8String(result.get());
+    if (s == NULL)
+      PyErr_Clear();
+    result.Reset(PyRefType::Owned, s);
+  }
 #endif
   // Calling PythonObject::Reset(const PythonObject&) will lead to stack
   // overflow since it calls back into the virtual implementation.
@@ -385,8 +407,17 @@ void PythonString::Reset(PyRefType type, PyObject *py_obj) {
 }
 
 llvm::StringRef PythonString::GetString() const {
+  auto s = AsUTF8();
+  if (!s) {
+    llvm::consumeError(s.takeError());
+    return llvm::StringRef("");
+  }
+  return s.get();
+}
+
+Expected<llvm::StringRef> PythonString::AsUTF8() const {
   if (!IsValid())
-    return llvm::StringRef();
+    return nullDeref();
 
   Py_ssize_t size;
   const char *data;
@@ -394,10 +425,16 @@ llvm::StringRef PythonString::GetString() const {
 #if PY_MAJOR_VERSION >= 3
   data = PyUnicode_AsUTF8AndSize(m_py_obj, &size);
 #else
-  char *c;
-  PyString_AsStringAndSize(m_py_obj, &c, &size);
+  char *c = NULL;
+  int r = PyString_AsStringAndSize(m_py_obj, &c, &size);
+  if (r < 0)
+    c = NULL;
   data = c;
 #endif
+
+  if (!data)
+    return exception();
+
   return llvm::StringRef(data, size);
 }
 
@@ -413,13 +450,13 @@ size_t PythonString::GetSize() const {
 }
 
 void PythonString::SetString(llvm::StringRef string) {
-#if PY_MAJOR_VERSION >= 3
-  PyObject *unicode = PyUnicode_FromStringAndSize(string.data(), string.size());
-  PythonObject::Reset(PyRefType::Owned, unicode);
-#else
-  PyObject *str = PyString_FromStringAndSize(string.data(), string.size());
-  PythonObject::Reset(PyRefType::Owned, str);
-#endif
+  auto s = FromUTF8(string);
+  if (!s) {
+    llvm::consumeError(s.takeError());
+    Reset();
+  } else {
+    PythonObject::Reset(std::move(s.get()));
+  }
 }
 
 StructuredData::StringSP PythonString::CreateStructuredString() const {
@@ -826,9 +863,23 @@ PythonModule PythonModule::AddModule(llvm::StringRef module) {
   return PythonModule(PyRefType::Borrowed, PyImport_AddModule(str.c_str()));
 }
 
-PythonModule PythonModule::ImportModule(llvm::StringRef module) {
-  std::string str = module.str();
-  return PythonModule(PyRefType::Owned, PyImport_ImportModule(str.c_str()));
+Expected<PythonModule> PythonModule::Import(const char *name) {
+  PyObject *mod = PyImport_ImportModule(name);
+  if (!mod)
+    return exception();
+  return Take<PythonModule>(mod);
+}
+
+Expected<PythonObject> PythonModule::Get(const char *name) {
+  if (!IsValid())
+    return nullDeref();
+  PyObject *dict = PyModule_GetDict(m_py_obj);
+  if (!dict)
+    return exception();
+  PyObject *item = PyDict_GetItemString(dict, name);
+  if (!item)
+    return exception();
+  return Retain<PythonObject>(item);
 }
 
 bool PythonModule::Check(PyObject *py_obj) {
@@ -1044,5 +1095,59 @@ FileUP PythonFile::GetUnderlyingFile() const {
     return nullptr;
   return file;
 }
+
+const char *PythonException::toCString() const {
+  if (!m_repr_bytes)
+    return "unknown exception";
+  return PyBytes_AS_STRING(m_repr_bytes);
+}
+
+PythonException::PythonException(const char *caller) {
+  assert(PyErr_Occurred());
+  m_exception_type = m_exception = m_traceback = m_repr_bytes = NULL;
+  PyErr_Fetch(&m_exception_type, &m_exception, &m_traceback);
+  PyErr_NormalizeException(&m_exception_type, &m_exception, &m_traceback);
+  PyErr_Clear();
+  if (m_exception) {
+    PyObject *repr = PyObject_Repr(m_exception);
+    if (repr) {
+      m_repr_bytes = PyUnicode_AsEncodedString(repr, "utf-8", nullptr);
+      if (!m_repr_bytes) {
+        PyErr_Clear();
+      }
+      Py_XDECREF(repr);
+    } else {
+      PyErr_Clear();
+    }
+  }
+  Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_SCRIPT);
+  if (caller)
+    LLDB_LOGF(log, "%s failed with exception: %s", caller, toCString());
+  else
+    LLDB_LOGF(log, "python exception: %s", toCString());
+}
+void PythonException::Restore() {
+  if (m_exception_type && m_exception) {
+    PyErr_Restore(m_exception_type, m_exception, m_traceback);
+  } else {
+    PyErr_SetString(PyExc_Exception, toCString());
+  }
+  m_exception_type = m_exception = m_traceback = NULL;
+}
+
+PythonException::~PythonException() {
+  Py_XDECREF(m_exception_type);
+  Py_XDECREF(m_exception);
+  Py_XDECREF(m_traceback);
+  Py_XDECREF(m_repr_bytes);
+}
+
+void PythonException::log(llvm::raw_ostream &OS) const { OS << toCString(); }
+
+std::error_code PythonException::convertToErrorCode() const {
+  return llvm::inconvertibleErrorCode();
+}
+
+char PythonException::ID = 0;
 
 #endif
