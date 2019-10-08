@@ -54,13 +54,19 @@ llvm::Expected<DWARFDebugAranges &> DWARFDebugInfo::GetCompileUnitAranges() {
 
   // Manually build arange data for everything that wasn't in the
   // .debug_aranges table.
-  const size_t num_units = GetNumUnits();
-  for (size_t idx = 0; idx < num_units; ++idx) {
-    DWARFUnit *cu = GetUnitAtIndex(idx);
+  //
+  // This step is skipped for dSYMs and other debug-info-only
+  // objects, which are always trusted to have a complete table.
+  auto *obj = m_dwarf.GetObjectFile();
+  if (!obj || obj->GetType() != ObjectFile::eTypeDebugInfo) {
+    const size_t num_units = GetNumUnits();
+    for (size_t idx = 0; idx < num_units; ++idx) {
+      DWARFUnit *cu = GetUnitAtIndex(idx);
 
-    dw_offset_t offset = cu->GetOffset();
-    if (cus_with_data.find(offset) == cus_with_data.end())
-      cu->BuildAddressRangeTable(m_cu_aranges_up.get());
+      dw_offset_t offset = cu->GetOffset();
+      if (cus_with_data.find(offset) == cus_with_data.end())
+        cu->BuildAddressRangeTable(m_cu_aranges_up.get());
+    }
   }
 
   const bool minimize = true;
