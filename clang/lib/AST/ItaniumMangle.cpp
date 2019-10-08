@@ -4273,8 +4273,11 @@ recurse:
   }
 
   case Expr::GNUNullExprClass:
-    // FIXME: should this really be mangled the same as nullptr?
-    // fallthrough
+    // Mangle as if an integer literal 0.
+    Out << 'L';
+    mangleType(E->getType());
+    Out << "0E";
+    break;
 
   case Expr::CXXNullPtrLiteralExprClass: {
     Out << "LDnE";

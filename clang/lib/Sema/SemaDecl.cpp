@@ -2172,7 +2172,7 @@ void Sema::MergeTypedefNameDecl(Scope *S, TypedefNameDecl *New,
         if (!T->isPointerType())
           break;
         if (!T->isVoidPointerType()) {
-          QualType PT = T->getAs<PointerType>()->getPointeeType();
+          QualType PT = T->castAs<PointerType>()->getPointeeType();
           if (!PT->isStructureType())
             break;
         }
@@ -8157,7 +8157,7 @@ static FunctionDecl *CreateNewFunctionDecl(Sema &SemaRef, Declarator &D,
   // the class has been completely parsed.
   if (!DC->isRecord() &&
       SemaRef.RequireNonAbstractType(
-          D.getIdentifierLoc(), R->getAs<FunctionType>()->getReturnType(),
+          D.getIdentifierLoc(), R->castAs<FunctionType>()->getReturnType(),
           diag::err_abstract_type_in_decl, SemaRef.AbstractReturnType))
     D.setInvalidType();
 

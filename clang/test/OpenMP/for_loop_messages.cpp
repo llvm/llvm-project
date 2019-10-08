@@ -370,7 +370,7 @@ int test_iteration_spaces() {
   }
 
 #pragma omp parallel
-// expected-error@+2 {{statement after '#pragma omp for' must be a for loop}}
+// omp4-error@+2 {{statement after '#pragma omp for' must be a for loop}}
 #pragma omp for
   for (auto &item : a) {
     item = item + 1;

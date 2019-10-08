@@ -2008,6 +2008,14 @@ void Sema::startOpenMPLoop() {
     DSAStack->loopInit();
 }
 
+void Sema::startOpenMPCXXRangeFor() {
+  assert(LangOpts.OpenMP && "OpenMP must be enabled.");
+  if (isOpenMPLoopDirective(DSAStack->getCurrentDirective())) {
+    DSAStack->resetPossibleLoopCounter();
+    DSAStack->loopStart();
+  }
+}
+
 bool Sema::isOpenMPPrivateDecl(const ValueDecl *D, unsigned Level) const {
   assert(LangOpts.OpenMP && "OpenMP is not allowed");
   if (isOpenMPLoopDirective(DSAStack->getCurrentDirective())) {
@@ -6490,10 +6498,13 @@ static bool checkOpenMPIterationSpace(
     Sema::VarsWithInheritedDSAType &VarsWithImplicitDSA,
     llvm::MutableArrayRef<LoopIterationSpace> ResultIterSpaces,
     llvm::MapVector<const Expr *, DeclRefExpr *> &Captures) {
-  // OpenMP [2.6, Canonical Loop Form]
+  // OpenMP [2.9.1, Canonical Loop Form]
   //   for (init-expr; test-expr; incr-expr) structured-block
+  //   for (range-decl: range-expr) structured-block
   auto *For = dyn_cast_or_null<ForStmt>(S);
-  if (!For) {
+  auto *CXXFor = dyn_cast_or_null<CXXForRangeStmt>(S);
+  // Ranged for is supported only in OpenMP 5.0.
+  if (!For && (SemaRef.LangOpts.OpenMP <= 45 || !CXXFor)) {
     SemaRef.Diag(S->getBeginLoc(), diag::err_omp_not_for)
         << (CollapseLoopCountExpr != nullptr || OrderedLoopCountExpr != nullptr)
         << getOpenMPDirectiveName(DKind) << TotalNestedLoopCount
@@ -6515,12 +6526,14 @@ static bool checkOpenMPIterationSpace(
     }
     return true;
   }
-  assert(For->getBody());
+  assert(((For && For->getBody()) || (CXXFor && CXXFor->getBody())) &&
+         "No loop body.");
 
-  OpenMPIterationSpaceChecker ISC(SemaRef, DSA, For->getForLoc());
+  OpenMPIterationSpaceChecker ISC(SemaRef, DSA,
+                                  For ? For->getForLoc() : CXXFor->getForLoc());
 
   // Check init.
-  Stmt *Init = For->getInit();
+  Stmt *Init = For ? For->getInit() : CXXFor->getBeginStmt();
   if (ISC.checkAndSetInit(Init))
     return true;
 
@@ -6556,18 +6569,18 @@ static bool checkOpenMPIterationSpace(
     assert(isOpenMPLoopDirective(DKind) && "DSA for non-loop vars");
 
     // Check test-expr.
-    HasErrors |= ISC.checkAndSetCond(For->getCond());
+    HasErrors |= ISC.checkAndSetCond(For ? For->getCond() : CXXFor->getCond());
 
     // Check incr-expr.
-    HasErrors |= ISC.checkAndSetInc(For->getInc());
+    HasErrors |= ISC.checkAndSetInc(For ? For->getInc() : CXXFor->getInc());
   }
 
   if (ISC.dependent() || SemaRef.CurContext->isDependentContext() || HasErrors)
     return HasErrors;
 
   // Build the loop's iteration space representation.
-  ResultIterSpaces[CurrentNestedLoopCount].PreCond =
-      ISC.buildPreCond(DSA.getCurScope(), For->getCond(), Captures);
+  ResultIterSpaces[CurrentNestedLoopCount].PreCond = ISC.buildPreCond(
+      DSA.getCurScope(), For ? For->getCond() : CXXFor->getCond(), Captures);
   ResultIterSpaces[CurrentNestedLoopCount].NumIterations =
       ISC.buildNumIterations(DSA.getCurScope(), ResultIterSpaces,
                              (isOpenMPWorksharingDirective(DKind) ||
@@ -6881,7 +6894,14 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
     // All loops associated with the construct must be perfectly nested; that
     // is, there must be no intervening code nor any OpenMP directive between
     // any two loops.
-    CurStmt = cast<ForStmt>(CurStmt)->getBody()->IgnoreContainers();
+    if (auto *For = dyn_cast<ForStmt>(CurStmt)) {
+      CurStmt = For->getBody();
+    } else {
+      assert(isa<CXXForRangeStmt>(CurStmt) &&
+             "Expected canonical for or range-based for loops.");
+      CurStmt = cast<CXXForRangeStmt>(CurStmt)->getBody();
+    }
+    CurStmt = CurStmt->IgnoreContainers();
   }
   for (unsigned Cnt = NestedLoopCount; Cnt < OrderedLoopCount; ++Cnt) {
     if (checkOpenMPIterationSpace(
@@ -6901,7 +6921,14 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
     // All loops associated with the construct must be perfectly nested; that
     // is, there must be no intervening code nor any OpenMP directive between
     // any two loops.
-    CurStmt = cast<ForStmt>(CurStmt)->getBody()->IgnoreContainers();
+    if (auto *For = dyn_cast<ForStmt>(CurStmt)) {
+      CurStmt = For->getBody();
+    } else {
+      assert(isa<CXXForRangeStmt>(CurStmt) &&
+             "Expected canonical for or range-based for loops.");
+      CurStmt = cast<CXXForRangeStmt>(CurStmt)->getBody();
+    }
+    CurStmt = CurStmt->IgnoreContainers();
   }
 
   Built.clear(/* size */ NestedLoopCount);

@@ -389,4 +389,67 @@ TEST(StencilEqualityTest, InEqualityRun) {
   auto S2 = cat(run(F));
   EXPECT_NE(S1, S2);
 }
+
+TEST(StencilToStringTest, RawTextOp) {
+  auto S = cat("foo bar baz");
+  StringRef Expected = R"("foo bar baz")";
+  EXPECT_EQ(S.toString(), Expected);
+}
+
+TEST(StencilToStringTest, RawTextOpEscaping) {
+  auto S = cat("foo \"bar\" baz\\n");
+  StringRef Expected = R"("foo \"bar\" baz\\n")";
+  EXPECT_EQ(S.toString(), Expected);
+}
+
+TEST(StencilToStringTest, DebugPrintNodeOp) {
+  auto S = cat(dPrint("Id"));
+  StringRef Expected = R"repr(dPrint("Id"))repr";
+  EXPECT_EQ(S.toString(), Expected);
+}
+
+TEST(StencilToStringTest, ExpressionOp) {
+  auto S = cat(expression("Id"));
+  StringRef Expected = R"repr(expression("Id"))repr";
+  EXPECT_EQ(S.toString(), Expected);
+}
+
+TEST(StencilToStringTest, DerefOp) {
+  auto S = cat(deref("Id"));
+  StringRef Expected = R"repr(deref("Id"))repr";
+  EXPECT_EQ(S.toString(), Expected);
+}
+
+TEST(StencilToStringTest, AddressOfOp) {
+  auto S = cat(addressOf("Id"));
+  StringRef Expected = R"repr(addressOf("Id"))repr";
+  EXPECT_EQ(S.toString(), Expected);
+}
+
+TEST(StencilToStringTest, AccessOp) {
+  auto S = cat(access("Id", text("memberData")));
+  StringRef Expected = R"repr(access("Id", "memberData"))repr";
+  EXPECT_EQ(S.toString(), Expected);
+}
+
+TEST(StencilToStringTest, AccessOpStencilPart) {
+  auto S = cat(access("Id", access("subId", "memberData")));
+  StringRef Expected = R"repr(access("Id", access("subId", "memberData")))repr";
+  EXPECT_EQ(S.toString(), Expected);
+}
+
+TEST(StencilToStringTest, IfBoundOp) {
+  auto S = cat(ifBound("Id", text("trueText"), access("exprId", "memberData")));
+  StringRef Expected =
+      R"repr(ifBound("Id", "trueText", access("exprId", "memberData")))repr";
+  EXPECT_EQ(S.toString(), Expected);
+}
+
+TEST(StencilToStringTest, MultipleOp) {
+  auto S = cat("foo", access("x", "m()"), "bar",
+               ifBound("x", text("t"), access("e", "f")));
+  StringRef Expected = R"repr("foo", access("x", "m()"), "bar", )repr"
+                       R"repr(ifBound("x", "t", access("e", "f")))repr";
+  EXPECT_EQ(S.toString(), Expected);
+}
 } // namespace

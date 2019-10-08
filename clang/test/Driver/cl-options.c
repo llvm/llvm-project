@@ -653,6 +653,8 @@
 // RUN:     -fcs-profile-generate \
 // RUN:     -fcs-profile-generate=dir \
 // RUN:     -ftime-trace \
+// RUN:     -ftrivial-auto-var-init=zero \
+// RUN:     -enable-trivial-auto-var-init-zero-knowing-it-will-be-removed-from-clang \
 // RUN:     --version \
 // RUN:     -Werror /Zs -- %s 2>&1
 

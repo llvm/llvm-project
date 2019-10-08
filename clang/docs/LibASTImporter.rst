@@ -106,7 +106,7 @@ Next, we define a matcher to match ``MyClass`` in the "from" context:
 
 .. code-block:: cpp
 
-  auto Matcher = cxxRecordDecl(hasName("C"));
+  auto Matcher = cxxRecordDecl(hasName("MyClass"));
   auto *From = getFirstDecl<CXXRecordDecl>(Matcher, FromUnit);
 
 Now we create the Importer and do the import:

@@ -51,13 +51,14 @@ static cl::list<unsigned>
                      "Can only be used with one input file."),
             cl::cat(ClangFormatCategory));
 static cl::list<std::string>
-LineRanges("lines", cl::desc("<start line>:<end line> - format a range of\n"
-                             "lines (both 1-based).\n"
-                             "Multiple ranges can be formatted by specifying\n"
-                             "several -lines arguments.\n"
-                             "Can't be used with -offset and -length.\n"
-                             "Can only be used with one input file."),
-           cl::cat(ClangFormatCategory));
+    LineRanges("lines",
+               cl::desc("<start line>:<end line> - format a range of\n"
+                        "lines (both 1-based).\n"
+                        "Multiple ranges can be formatted by specifying\n"
+                        "several -lines arguments.\n"
+                        "Can't be used with -offset and -length.\n"
+                        "Can only be used with one input file."),
+               cl::cat(ClangFormatCategory));
 static cl::opt<std::string>
     Style("style", cl::desc(clang::format::StyleOptionHelpDescription),
           cl::init(clang::format::DefaultFormatStyle),
@@ -72,12 +73,12 @@ static cl::opt<std::string>
                   cl::init(clang::format::DefaultFallbackStyle),
                   cl::cat(ClangFormatCategory));
 
-static cl::opt<std::string>
-AssumeFileName("assume-filename",
-               cl::desc("When reading from stdin, clang-format assumes this\n"
-                        "filename to look for a style config file (with\n"
-                        "-style=file) and to determine the language."),
-               cl::init("<stdin>"), cl::cat(ClangFormatCategory));
+static cl::opt<std::string> AssumeFileName(
+    "assume-filename",
+    cl::desc("When reading from stdin, clang-format assumes this\n"
+             "filename to look for a style config file (with\n"
+             "-style=file) and to determine the language."),
+    cl::init("<stdin>"), cl::cat(ClangFormatCategory));
 
 static cl::opt<bool> Inplace("i",
                              cl::desc("Inplace edit <file>s, if specified."),
@@ -249,8 +250,8 @@ static bool format(StringRef FileName) {
   // On Windows, overwriting a file with an open file mapping doesn't work,
   // so read the whole file into memory when formatting in-place.
   ErrorOr<std::unique_ptr<MemoryBuffer>> CodeOrErr =
-      !OutputXML && Inplace ? MemoryBuffer::getFileAsStream(FileName) :
-                              MemoryBuffer::getFileOrSTDIN(FileName);
+      !OutputXML && Inplace ? MemoryBuffer::getFileAsStream(FileName)
+                            : MemoryBuffer::getFileOrSTDIN(FileName);
   if (std::error_code EC = CodeOrErr.getError()) {
     errs() << EC.message() << "\n";
     return true;
@@ -264,20 +265,21 @@ static bool format(StringRef FileName) {
   // https://en.wikipedia.org/wiki/Byte_order_mark#Byte_order_marks_by_encoding
   // for more information.
   StringRef BufStr = Code->getBuffer();
-  const char *InvalidBOM = llvm::StringSwitch<const char *>(BufStr)
-    .StartsWith(llvm::StringLiteral::withInnerNUL("\x00\x00\xFE\xFF"),
-                                                  "UTF-32 (BE)")
-    .StartsWith(llvm::StringLiteral::withInnerNUL("\xFF\xFE\x00\x00"),
-                                                  "UTF-32 (LE)")
-    .StartsWith("\xFE\xFF", "UTF-16 (BE)")
-    .StartsWith("\xFF\xFE", "UTF-16 (LE)")
-    .StartsWith("\x2B\x2F\x76", "UTF-7")
-    .StartsWith("\xF7\x64\x4C", "UTF-1")
-    .StartsWith("\xDD\x73\x66\x73", "UTF-EBCDIC")
-    .StartsWith("\x0E\xFE\xFF", "SCSU")
-    .StartsWith("\xFB\xEE\x28", "BOCU-1")
-    .StartsWith("\x84\x31\x95\x33", "GB-18030")
-    .Default(nullptr);
+  const char *InvalidBOM =
+      llvm::StringSwitch<const char *>(BufStr)
+          .StartsWith(llvm::StringLiteral::withInnerNUL("\x00\x00\xFE\xFF"),
+                      "UTF-32 (BE)")
+          .StartsWith(llvm::StringLiteral::withInnerNUL("\xFF\xFE\x00\x00"),
+                      "UTF-32 (LE)")
+          .StartsWith("\xFE\xFF", "UTF-16 (BE)")
+          .StartsWith("\xFF\xFE", "UTF-16 (LE)")
+          .StartsWith("\x2B\x2F\x76", "UTF-7")
+          .StartsWith("\xF7\x64\x4C", "UTF-1")
+          .StartsWith("\xDD\x73\x66\x73", "UTF-EBCDIC")
+          .StartsWith("\x0E\xFE\xFF", "SCSU")
+          .StartsWith("\xFB\xEE\x28", "BOCU-1")
+          .StartsWith("\x84\x31\x95\x33", "GB-18030")
+          .Default(nullptr);
 
   if (InvalidBOM) {
     errs() << "error: encoding with unsupported byte order mark \""
@@ -313,8 +315,8 @@ static bool format(StringRef FileName) {
   // Get new affected ranges after sorting `#includes`.
   Ranges = tooling::calculateRangesAfterReplacements(Replaces, Ranges);
   FormattingAttemptStatus Status;
-  Replacements FormatChanges = reformat(*FormatStyle, *ChangedCode, Ranges,
-                                        AssumedFileName, &Status);
+  Replacements FormatChanges =
+      reformat(*FormatStyle, *ChangedCode, Ranges, AssumedFileName, &Status);
   Replaces = Replaces.merge(FormatChanges);
   if (OutputXML) {
     outs() << "<?xml version='1.0'?>\n<replacements "
@@ -361,8 +363,8 @@ static bool format(StringRef FileName) {
   return false;
 }
 
-}  // namespace format
-}  // namespace clang
+} // namespace format
+} // namespace clang
 
 static void PrintVersion(raw_ostream &OS) {
   OS << clang::getClangToolFullVersion("clang-format") << '\n';
@@ -424,7 +426,8 @@ int main(int argc, const char **argv) {
     Error = clang::format::format("-");
     return Error ? 1 : 0;
   }
-  if (FileNames.size() != 1 && (!Offsets.empty() || !Lengths.empty() || !LineRanges.empty())) {
+  if (FileNames.size() != 1 &&
+      (!Offsets.empty() || !Lengths.empty() || !LineRanges.empty())) {
     errs() << "error: -offset, -length and -lines can only be used for "
               "single file.\n";
     return 1;
