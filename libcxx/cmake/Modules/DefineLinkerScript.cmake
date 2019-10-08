@@ -38,7 +38,7 @@ function(define_linker_script target)
       endif()
     endforeach()
   endif()
-  list(JOIN link_libraries " " link_libraries)
+  string(REPLACE ";" " " link_libraries "${link_libraries}")
 
   set(linker_script "INPUT(${soname} ${link_libraries})")
   add_custom_command(TARGET "${target}" POST_BUILD
