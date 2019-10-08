@@ -146,6 +146,15 @@ function(add_benchmark_test name source_file)
   if (LLVM_USE_SANITIZER)
     target_link_libraries(${libcxx_target} PRIVATE -ldl)
   endif()
+  if (LIBCXX_HAS_C_LIB)
+    target_link_libraries(${libcxx_target} PRIVATE -lc)
+  endif()
+  if (LIBCXX_HAS_M_LIB)
+    target_link_libraries(${libcxx_target} PRIVATE -lm)
+  endif()
+  if (LIBCXX_HAS_PTHREAD_LIB)
+    target_link_libraries(${libcxx_target} PRIVATE -lpthread)
+  endif()
   set_target_properties(${libcxx_target}
     PROPERTIES
           OUTPUT_NAME "${name}.libcxx.out"
