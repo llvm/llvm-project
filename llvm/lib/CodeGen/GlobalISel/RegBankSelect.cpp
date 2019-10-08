@@ -139,7 +139,7 @@ bool RegBankSelect::repairReg(
          "need new vreg for each breakdown");
 
   // An empty range of new register means no repairing.
-  assert(!empty(NewVRegs) && "We should not have to repair");
+  assert(!NewVRegs.empty() && "We should not have to repair");
 
   MachineInstr *MI;
   if (ValMapping.NumBreakDowns == 1) {
