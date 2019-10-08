@@ -25,36 +25,44 @@ CHECK-NOT: TAG
 CHECK: AT_name {{.*}}basic3.c
 
 CHECK-NOT: Found valid debug map entry
-CHECK: Found valid debug map entry: _main 	0000000000000000 => 0000000100000ea0
+CHECK: Found valid debug map entry: _main	0x0000000000000000 => 0x0000000100000ea0
+CHECK-NEXT: Keeping subprogram DIE:
 CHECK-NEXT: DW_TAG_subprogram
 CHECK-NEXT:   DW_AT_name{{.*}}"main"
 
-CHECK: Found valid debug map entry: _private_int 	0000000000000560 => 0000000100001008
+CHECK: Found valid debug map entry: _private_int 	0x0000000000000560 => 0x0000000100001008
+CHECK-NEXT: Keeping variable DIE:
 CHECK-NEXT: DW_TAG_variable
 CHECK-NEXT:   DW_AT_name {{.*}}"private_int"
 CHECK-NOT: Found valid debug map entry
-CHECK: Found valid debug map entry: _baz 	0000000000000310 => 0000000100001000
+CHECK: Found valid debug map entry: _baz	0x0000000000000310 => 0x0000000100001000
+CHECK-NEXT: Keeping variable DIE:
 CHECK-NEXT: DW_TAG_variable
 CHECK-NEXT:   DW_AT_name {{.*}}"baz"
 CHECK-NOT: Found valid debug map entry
-CHECK: Found valid debug map entry: _foo 	0000000000000020 => 0000000100000ed0
+CHECK: Found valid debug map entry: _foo	0x0000000000000020 => 0x0000000100000ed0
+CHECK-NEXT: Keeping subprogram DIE:
 CHECK-NEXT: DW_TAG_subprogram
 CHECK-NEXT:   DW_AT_name {{.*}}"foo"
 CHECK-NOT: Found valid debug map entry
-CHECK: Found valid debug map entry: _inc 	0000000000000070 => 0000000100000f20
+CHECK: Found valid debug map entry: _inc	0x0000000000000070 => 0x0000000100000f20
+CHECK-NEXT: Keeping subprogram DIE:
 CHECK-NEXT: DW_TAG_subprogram
 CHECK-NEXT:   DW_AT_name {{.*}}"inc"
 
 CHECK-NOT: Found valid debug map entry
-CHECK: Found valid debug map entry: _val 	ffffffffffffffff => 0000000100001004
+CHECK: Found valid debug map entry: _val	0xffffffffffffffff => 0x0000000100001004
+CHECK-NEXT: Keeping variable DIE:
 CHECK-NEXT: DW_TAG_variable
 CHECK-NEXT:   DW_AT_name {{.*}}"val"
 CHECK-NOT: Found valid debug map entry
-CHECK: Found valid debug map entry: _bar 	0000000000000020 => 0000000100000f40
+CHECK: Found valid debug map entry: _bar	0x0000000000000020 => 0x0000000100000f40
+CHECK-NEXT: Keeping subprogram DIE:
 CHECK-NEXT: DW_TAG_subprogram
 CHECK-NEXT:   DW_AT_name {{.*}}"bar"
 CHECK-NOT: Found valid debug map entry
-CHECK: Found valid debug map entry: _inc 	0000000000000070 => 0000000100000f90
+CHECK: Found valid debug map entry: _inc	0x0000000000000070 => 0x0000000100000f90
+CHECK-NEXT: Keeping subprogram DIE:
 CHECK-NEXT: DW_TAG_subprogram
 CHECK-NEXT:   DW_AT_name {{.*}}"inc")
 
@@ -75,27 +83,33 @@ CHECK-LTO-NOT: TAG
 CHECK-LTO: AT_name {{.*}}basic3.c
 
 CHECK-LTO-NOT: Found valid debug map entry
-CHECK-LTO: Found valid debug map entry: _main 	0000000000000000 => 0000000100000f40
+CHECK-LTO: Found valid debug map entry: _main	0x0000000000000000 => 0x0000000100000f40
+CHECK-LTO-NEXT: Keeping subprogram DIE:
 CHECK-LTO-NEXT: DW_TAG_subprogram
 CHECK-LTO-NEXT:   DW_AT_name {{.*}}"main"
 CHECK-LTO-NOT: Found valid debug map entry
-CHECK-LTO: Found valid debug map entry: _private_int 	00000000000008e8 => 0000000100001008
+CHECK-LTO: Found valid debug map entry: _private_int 	0x00000000000008e8 => 0x0000000100001008
+CHECK-LTO-NEXT: Keeping variable DIE:
 CHECK-LTO-NEXT: DW_TAG_variable
 CHECK-LTO-NEXT:   DW_AT_name {{.*}}"private_int"
 CHECK-LTO-NOT: Found valid debug map entry
-CHECK-LTO: Found valid debug map entry: _baz 	0000000000000658 => 0000000100001000
+CHECK-LTO: Found valid debug map entry: _baz	0x0000000000000658 => 0x0000000100001000
+CHECK-LTO-NEXT: Keeping variable DIE:
 CHECK-LTO-NEXT: DW_TAG_variable
 CHECK-LTO-NEXT:   DW_AT_name {{.*}} "baz"
 CHECK-LTO-NOT: Found valid debug map entry
-CHECK-LTO: Found valid debug map entry: _foo 	0000000000000010 => 0000000100000f50
+CHECK-LTO: Found valid debug map entry: _foo	0x0000000000000010 => 0x0000000100000f50
+CHECK-LTO-NEXT: Keeping subprogram DIE:
 CHECK-LTO-NEXT: DW_TAG_subprogram
 CHECK-LTO-NEXT:   DW_AT_name {{.*}}"foo"
 CHECK-LTO-NOT: Found valid debug map entry
-CHECK-LTO: Found valid debug map entry: _val 	00000000000008ec => 0000000100001004
+CHECK-LTO: Found valid debug map entry: _val	0x00000000000008ec => 0x0000000100001004
+CHECK-LTO-NEXT: Keeping variable DIE:
 CHECK-LTO-NEXT: DW_TAG_variable
 CHECK-LTO-NEXT:   DW_AT_name {{.*}}"val"
 CHECK-LTO-NOT: Found valid debug map entry
-CHECK-LTO: Found valid debug map entry: _bar 	0000000000000050 => 0000000100000f90
+CHECK-LTO: Found valid debug map entry: _bar	0x0000000000000050 => 0x0000000100000f90
+CHECK-LTO-NEXT: Keeping subprogram DIE:
 CHECK-LTO-NEXT: DW_TAG_subprogram
 CHECK-LTO-NEXT:   DW_AT_name {{.*}}"bar"
 
@@ -120,36 +134,44 @@ CHECK-ARCHIVE-NOT: TAG
 CHECK-ARCHIVE: AT_name {{.*}}basic3.c
 
 CHECK-ARCHIVE-NOT: Found valid debug map entry
-CHECK-ARCHIVE: Found valid debug map entry: _main 	0000000000000000 => 0000000100000ea0
+CHECK-ARCHIVE: Found valid debug map entry: _main	0x0000000000000000 => 0x0000000100000ea0
+CHECK-ARCHIVE-NEXT: Keeping subprogram DIE:
 CHECK-ARCHIVE-NEXT: DW_TAG_subprogram
 CHECK-ARCHIVE-NEXT:   DW_AT_name{{.*}}"main"
 
 CHECK-ARCHIVE-NOT: Found valid debug map entry
-CHECK-ARCHIVE: Found valid debug map entry: _private_int 	0000000000000560 => 0000000100001004
+CHECK-ARCHIVE: Found valid debug map entry: _private_int	0x0000000000000560 => 0x0000000100001004
+CHECK-ARCHIVE-NEXT: Keeping variable DIE:
 CHECK-ARCHIVE-NEXT: DW_TAG_variable
 CHECK-ARCHIVE-NEXT:   DW_AT_name {{.*}}"private_int"
 CHECK-ARCHIVE-NOT: Found valid debug map entry
-CHECK-ARCHIVE: Found valid debug map entry: _baz 	0000000000000310 => 0000000100001000
+CHECK-ARCHIVE: Found valid debug map entry: _baz	0x0000000000000310 => 0x0000000100001000
+CHECK-ARCHIVE-NEXT: Keeping variable DIE:
 CHECK-ARCHIVE-NEXT: DW_TAG_variable
 CHECK-ARCHIVE-NEXT:   DW_AT_name {{.*}}"baz"
 CHECK-ARCHIVE-NOT: Found valid debug map entry
-CHECK-ARCHIVE: Found valid debug map entry: _foo 	0000000000000020 => 0000000100000ed0
+CHECK-ARCHIVE: Found valid debug map entry: _foo	0x0000000000000020 => 0x0000000100000ed0
+CHECK-ARCHIVE-NEXT: Keeping subprogram DIE:
 CHECK-ARCHIVE-NEXT: DW_TAG_subprogram
 CHECK-ARCHIVE-NEXT:   DW_AT_name {{.*}}"foo"
 CHECK-ARCHIVE-NOT: Found valid debug map entry
-CHECK-ARCHIVE: Found valid debug map entry: _inc 	0000000000000070 => 0000000100000f20
+CHECK-ARCHIVE: Found valid debug map entry: _inc	0x0000000000000070 => 0x0000000100000f20
+CHECK-ARCHIVE-NEXT: Keeping subprogram DIE:
 CHECK-ARCHIVE-NEXT: DW_TAG_subprogram
 CHECK-ARCHIVE-NEXT:   DW_AT_name {{.*}}"inc"
 
 CHECK-ARCHIVE-NOT: Found valid debug map entry
-CHECK-ARCHIVE: Found valid debug map entry: _val 	ffffffffffffffff => 0000000100001008
+CHECK-ARCHIVE: Found valid debug map entry: _val	0xffffffffffffffff => 0x0000000100001008
+CHECK-ARCHIVE-NEXT: Keeping variable DIE:
 CHECK-ARCHIVE-NEXT: DW_TAG_variable
 CHECK-ARCHIVE-NEXT:   DW_AT_name {{.*}}"val"
 CHECK-ARCHIVE-NOT: Found valid debug map entry
-CHECK-ARCHIVE: Found valid debug map entry: _bar 	0000000000000020 => 0000000100000f40
+CHECK-ARCHIVE: Found valid debug map entry: _bar	0x0000000000000020 => 0x0000000100000f40
+CHECK-ARCHIVE-NEXT: Keeping subprogram DIE:
 CHECK-ARCHIVE-NEXT: DW_TAG_subprogram
 CHECK-ARCHIVE-NEXT:   DW_AT_name {{.*}}"bar"
 CHECK-ARCHIVE-NOT: Found valid debug map entry
-CHECK-ARCHIVE: Found valid debug map entry: _inc 	0000000000000070 => 0000000100000f90
+CHECK-ARCHIVE: Found valid debug map entry: _inc	0x0000000000000070 => 0x0000000100000f90
+CHECK-ARCHIVE-NEXT: Keeping subprogram DIE:
 CHECK-ARCHIVE-NEXT: DW_TAG_subprogram
 CHECK-ARCHIVE-NEXT:   DW_AT_name {{.*}}"inc")
