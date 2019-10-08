@@ -23,8 +23,10 @@ uintptr_t GetCurrentProcess(void);
 #endif
 
 #if defined(__FreeBSD__) && defined(__arm__)
-#include <machine/sysarch.h>
+// clang-format off
 #include <sys/types.h>
+#include <machine/sysarch.h>
+// clang-format on
 #endif
 
 #if defined(__NetBSD__) && defined(__arm__)
@@ -32,8 +34,10 @@ uintptr_t GetCurrentProcess(void);
 #endif
 
 #if defined(__OpenBSD__) && defined(__mips__)
-#include <machine/sysarch.h>
+// clang-format off
 #include <sys/types.h>
+#include <machine/sysarch.h>
+// clang-format on
 #endif
 
 #if defined(__linux__) && defined(__mips__)
