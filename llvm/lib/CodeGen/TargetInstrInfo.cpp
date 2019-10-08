@@ -143,7 +143,7 @@ TargetInstrInfo::ReplaceTailWithBranchTo(MachineBasicBlock::iterator Tail,
   while (Tail != MBB->end()) {
     auto MI = Tail++;
     if (MI->isCall())
-      MBB->getParent()->updateCallSiteInfo(&*MI);
+      MBB->getParent()->eraseCallSiteInfo(&*MI);
     MBB->erase(MI);
   }
 

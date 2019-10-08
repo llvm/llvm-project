@@ -51,7 +51,11 @@ public:
 // Common code for all benchmark modes.
 class SnippetGenerator {
 public:
-  explicit SnippetGenerator(const LLVMState &State);
+  struct Options {
+    unsigned MaxConfigsPerOpcode = 1;
+  };
+
+  explicit SnippetGenerator(const LLVMState &State, const Options &Opts);
 
   virtual ~SnippetGenerator();
 
@@ -66,6 +70,7 @@ public:
 
 protected:
   const LLVMState &State;
+  const Options Opts;
 
 private:
   // API to be implemented by subclasses.

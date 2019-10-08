@@ -175,7 +175,7 @@ define void @test9_traversal(i1 %c, i32* align 4 %B, i32* align 8 %C) {
 
 ; FIXME: This will work with an upcoming patch (D66618 or similar)
 ;             define align 32 i32* @test10a(i32* align 32 "no-capture-maybe-returned" %p)
-; ATTRIBUTOR: define i32* @test10a(i32* align 32 "no-capture-maybe-returned" %p)
+; ATTRIBUTOR: define i32* @test10a(i32* nonnull align 32 dereferenceable(4) "no-capture-maybe-returned" %p)
 define i32* @test10a(i32* align 32 %p) {
 ; ATTRIBUTOR: %l = load i32, i32* %p, align 32
   %l = load i32, i32* %p
@@ -203,7 +203,7 @@ e:
 
 ; FIXME: This will work with an upcoming patch (D66618 or similar)
 ;             define align 32 i32* @test10b(i32* align 32 "no-capture-maybe-returned" %p)
-; ATTRIBUTOR: define i32* @test10b(i32* align 32 "no-capture-maybe-returned" %p)
+; ATTRIBUTOR: define i32* @test10b(i32* nonnull align 32 dereferenceable(4) "no-capture-maybe-returned" %p)
 define i32* @test10b(i32* align 32 %p) {
 ; ATTRIBUTOR: %l = load i32, i32* %p, align 32
   %l = load i32, i32* %p

@@ -40,7 +40,7 @@ define i32 @volatile_load(i32*) norecurse nounwind uwtable {
 }
 
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind readonly uwtable willreturn
-; CHECK-NEXT: define internal i32 @internal_load(i32* nocapture nonnull readonly %0)
+; CHECK-NEXT: define internal i32 @internal_load(i32* nocapture nonnull readonly dereferenceable(4) %0)
 define internal i32 @internal_load(i32*) norecurse nounwind uwtable {
   %2 = load i32, i32* %0, align 4
   ret i32 %2

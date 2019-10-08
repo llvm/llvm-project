@@ -244,7 +244,8 @@ declare i32 @printf(i8* nocapture, ...)
 ; }
 ;
 ; There should *not* be a no-capture attribute on %a
-; CHECK: define i64* @not_captured_but_returned_0(i64* returned writeonly "no-capture-maybe-returned" %a)
+; CHECK: define nonnull dereferenceable(8) i64* @not_captured_but_returned_0(i64* nonnull returned writeonly dereferenceable(8) "no-capture-maybe-returned" %a)
+
 define i64* @not_captured_but_returned_0(i64* %a) #0 {
 entry:
   store i64 0, i64* %a, align 8
@@ -354,6 +355,7 @@ entry:
 ;
 ; CHECK:     define i32* @ret_arg_or_unknown(i32* readnone %b)
 ; CHECK:     define i32* @ret_arg_or_unknown_through_phi(i32* readnone %b)
+
 declare i32* @unknown()
 
 define i32* @ret_arg_or_unknown(i32* %b) #0 {

@@ -95,6 +95,12 @@ static cl::opt<unsigned>
                    cl::desc("number of time to repeat the asm snippet"),
                    cl::cat(BenchmarkOptions), cl::init(10000));
 
+static cl::opt<unsigned> MaxConfigsPerOpcode(
+    "max-configs-per-opcode",
+    cl::desc(
+        "allow to snippet generator to generate at most that many configs"),
+    cl::cat(BenchmarkOptions), cl::init(1));
+
 static cl::opt<bool> IgnoreInvalidSchedClass(
     "ignore-invalid-sched-class",
     cl::desc("ignore instructions that do not define a sched class"),
@@ -214,8 +220,11 @@ generateSnippets(const LLVMState &State, unsigned Opcode,
   if (InstrDesc.isCall() || InstrDesc.isReturn())
     return make_error<Failure>("Unsupported opcode: isCall/isReturn");
 
+  SnippetGenerator::Options Options;
+  Options.MaxConfigsPerOpcode = MaxConfigsPerOpcode;
   const std::unique_ptr<SnippetGenerator> Generator =
-      State.getExegesisTarget().createSnippetGenerator(BenchmarkMode, State);
+      State.getExegesisTarget().createSnippetGenerator(BenchmarkMode, State,
+                                                       Options);
   if (!Generator)
     llvm::report_fatal_error("cannot create snippet generator");
   return Generator->generateConfigurations(Instr, ForbiddenRegs);

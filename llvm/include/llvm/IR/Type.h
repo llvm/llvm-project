@@ -21,6 +21,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/TypeSize.h"
 #include <cassert>
 #include <cstdint>
 #include <iterator>
@@ -281,12 +282,15 @@ public:
   /// This will return zero if the type does not have a size or is not a
   /// primitive type.
   ///
+  /// If this is a scalable vector type, the scalable property will be set and
+  /// the runtime size will be a positive integer multiple of the base size.
+  ///
   /// Note that this may not reflect the size of memory allocated for an
   /// instance of the type or the number of bytes that are written when an
   /// instance of the type is stored to memory. The DataLayout class provides
   /// additional query functions to provide this information.
   ///
-  unsigned getPrimitiveSizeInBits() const LLVM_READONLY;
+  TypeSize getPrimitiveSizeInBits() const LLVM_READONLY;
 
   /// If this is a vector type, return the getPrimitiveSizeInBits value for the
   /// element type. Otherwise return the getPrimitiveSizeInBits value for this

@@ -10,7 +10,7 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/MachineValueType.h"
-#include "llvm/Support/ScalableSize.h"
+#include "llvm/Support/TypeSize.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;

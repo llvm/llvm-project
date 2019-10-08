@@ -80,7 +80,7 @@ vmovaps (%rbx), %ymm3
 # CHECK-NEXT: RAT     - Register unavailable:                      0
 # CHECK-NEXT: RCU     - Retire tokens unavailable:                 0
 # CHECK-NEXT: SCHEDQ  - Scheduler full:                            0
-# CHECK-NEXT: LQ      - Load queue full:                           353  (86.9%)
+# CHECK-NEXT: LQ      - Load queue full:                           354  (87.2%)
 # CHECK-NEXT: SQ      - Store queue full:                          0
 # CHECK-NEXT: GROUP   - Static restrictions on the dispatch group: 0
 
@@ -102,9 +102,9 @@ vmovaps (%rbx), %ymm3
 # CHECK-NEXT: [4] Total number of buffer entries.
 
 # CHECK:       [1]            [2]        [3]        [4]
-# CHECK-NEXT: PdEX             32         36         40
+# CHECK-NEXT: PdEX             31         34         40
 # CHECK-NEXT: PdFPU            0          0          64
-# CHECK-NEXT: PdLoad           37         40         40
+# CHECK-NEXT: PdLoad           36         40         40
 # CHECK-NEXT: PdStore          0          0          24
 
 # CHECK:      Resources:
@@ -193,7 +193,7 @@ vmovaps (%rbx), %ymm3
 # CHECK-NEXT: RAT     - Register unavailable:                      0
 # CHECK-NEXT: RCU     - Retire tokens unavailable:                 0
 # CHECK-NEXT: SCHEDQ  - Scheduler full:                            0
-# CHECK-NEXT: LQ      - Load queue full:                           353  (86.9%)
+# CHECK-NEXT: LQ      - Load queue full:                           354  (87.2%)
 # CHECK-NEXT: SQ      - Store queue full:                          0
 # CHECK-NEXT: GROUP   - Static restrictions on the dispatch group: 0
 
@@ -215,9 +215,9 @@ vmovaps (%rbx), %ymm3
 # CHECK-NEXT: [4] Total number of buffer entries.
 
 # CHECK:       [1]            [2]        [3]        [4]
-# CHECK-NEXT: PdEX             32         36         40
+# CHECK-NEXT: PdEX             31         34         40
 # CHECK-NEXT: PdFPU            0          0          64
-# CHECK-NEXT: PdLoad           37         40         40
+# CHECK-NEXT: PdLoad           36         40         40
 # CHECK-NEXT: PdStore          0          0          24
 
 # CHECK:      Resources:
@@ -306,7 +306,7 @@ vmovaps (%rbx), %ymm3
 # CHECK-NEXT: RAT     - Register unavailable:                      0
 # CHECK-NEXT: RCU     - Retire tokens unavailable:                 0
 # CHECK-NEXT: SCHEDQ  - Scheduler full:                            0
-# CHECK-NEXT: LQ      - Load queue full:                           353  (86.9%)
+# CHECK-NEXT: LQ      - Load queue full:                           354  (87.2%)
 # CHECK-NEXT: SQ      - Store queue full:                          0
 # CHECK-NEXT: GROUP   - Static restrictions on the dispatch group: 0
 
@@ -328,9 +328,9 @@ vmovaps (%rbx), %ymm3
 # CHECK-NEXT: [4] Total number of buffer entries.
 
 # CHECK:       [1]            [2]        [3]        [4]
-# CHECK-NEXT: PdEX             32         36         40
+# CHECK-NEXT: PdEX             31         34         40
 # CHECK-NEXT: PdFPU            0          0          64
-# CHECK-NEXT: PdLoad           37         40         40
+# CHECK-NEXT: PdLoad           36         40         40
 # CHECK-NEXT: PdStore          0          0          24
 
 # CHECK:      Resources:
@@ -419,7 +419,7 @@ vmovaps (%rbx), %ymm3
 # CHECK-NEXT: RAT     - Register unavailable:                      0
 # CHECK-NEXT: RCU     - Retire tokens unavailable:                 0
 # CHECK-NEXT: SCHEDQ  - Scheduler full:                            0
-# CHECK-NEXT: LQ      - Load queue full:                           353  (86.9%)
+# CHECK-NEXT: LQ      - Load queue full:                           354  (87.2%)
 # CHECK-NEXT: SQ      - Store queue full:                          0
 # CHECK-NEXT: GROUP   - Static restrictions on the dispatch group: 0
 
@@ -441,9 +441,9 @@ vmovaps (%rbx), %ymm3
 # CHECK-NEXT: [4] Total number of buffer entries.
 
 # CHECK:       [1]            [2]        [3]        [4]
-# CHECK-NEXT: PdEX             32         36         40
+# CHECK-NEXT: PdEX             31         34         40
 # CHECK-NEXT: PdFPU            0          0          64
-# CHECK-NEXT: PdLoad           37         40         40
+# CHECK-NEXT: PdLoad           36         40         40
 # CHECK-NEXT: PdStore          0          0          24
 
 # CHECK:      Resources:
@@ -532,7 +532,7 @@ vmovaps (%rbx), %ymm3
 # CHECK-NEXT: RAT     - Register unavailable:                      0
 # CHECK-NEXT: RCU     - Retire tokens unavailable:                 0
 # CHECK-NEXT: SCHEDQ  - Scheduler full:                            0
-# CHECK-NEXT: LQ      - Load queue full:                           532  (87.9%)
+# CHECK-NEXT: LQ      - Load queue full:                           533  (88.1%)
 # CHECK-NEXT: SQ      - Store queue full:                          0
 # CHECK-NEXT: GROUP   - Static restrictions on the dispatch group: 0
 
@@ -554,8 +554,8 @@ vmovaps (%rbx), %ymm3
 # CHECK-NEXT: [4] Total number of buffer entries.
 
 # CHECK:       [1]            [2]        [3]        [4]
-# CHECK-NEXT: PdEX             34         38         40
-# CHECK-NEXT: PdFPU            34         38         64
+# CHECK-NEXT: PdEX             33         36         40
+# CHECK-NEXT: PdFPU            33         36         64
 # CHECK-NEXT: PdLoad           37         40         40
 # CHECK-NEXT: PdStore          0          0          24
 
@@ -646,7 +646,7 @@ vmovaps (%rbx), %ymm3
 # CHECK-NEXT: RAT     - Register unavailable:                      0
 # CHECK-NEXT: RCU     - Retire tokens unavailable:                 0
 # CHECK-NEXT: SCHEDQ  - Scheduler full:                            0
-# CHECK-NEXT: LQ      - Load queue full:                           532  (87.9%)
+# CHECK-NEXT: LQ      - Load queue full:                           533  (88.1%)
 # CHECK-NEXT: SQ      - Store queue full:                          0
 # CHECK-NEXT: GROUP   - Static restrictions on the dispatch group: 0
 
@@ -668,8 +668,8 @@ vmovaps (%rbx), %ymm3
 # CHECK-NEXT: [4] Total number of buffer entries.
 
 # CHECK:       [1]            [2]        [3]        [4]
-# CHECK-NEXT: PdEX             34         38         40
-# CHECK-NEXT: PdFPU            34         38         64
+# CHECK-NEXT: PdEX             33         36         40
+# CHECK-NEXT: PdFPU            33         36         64
 # CHECK-NEXT: PdLoad           37         40         40
 # CHECK-NEXT: PdStore          0          0          24
 
@@ -760,7 +760,7 @@ vmovaps (%rbx), %ymm3
 # CHECK-NEXT: RAT     - Register unavailable:                      0
 # CHECK-NEXT: RCU     - Retire tokens unavailable:                 0
 # CHECK-NEXT: SCHEDQ  - Scheduler full:                            0
-# CHECK-NEXT: LQ      - Load queue full:                           344  (56.9%)
+# CHECK-NEXT: LQ      - Load queue full:                           345  (57.0%)
 # CHECK-NEXT: SQ      - Store queue full:                          0
 # CHECK-NEXT: GROUP   - Static restrictions on the dispatch group: 0
 
@@ -781,9 +781,9 @@ vmovaps (%rbx), %ymm3
 # CHECK-NEXT: [4] Total number of buffer entries.
 
 # CHECK:       [1]            [2]        [3]        [4]
-# CHECK-NEXT: PdEX             33         38         40
-# CHECK-NEXT: PdFPU            33         38         64
-# CHECK-NEXT: PdLoad           37         40         40
+# CHECK-NEXT: PdEX             33         36         40
+# CHECK-NEXT: PdFPU            33         36         64
+# CHECK-NEXT: PdLoad           36         40         40
 # CHECK-NEXT: PdStore          0          0          24
 
 # CHECK:      Resources:

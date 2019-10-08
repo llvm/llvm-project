@@ -754,7 +754,7 @@ void BTFDebug::emitBTFSection() {
 void BTFDebug::emitBTFExtSection() {
   // Do not emit section if empty FuncInfoTable and LineInfoTable.
   if (!FuncInfoTable.size() && !LineInfoTable.size() &&
-      !OffsetRelocTable.size() && !ExternRelocTable.size())
+      !FieldRelocTable.size() && !ExternRelocTable.size())
     return;
 
   MCContext &Ctx = OS.getContext();
@@ -766,8 +766,8 @@ void BTFDebug::emitBTFExtSection() {
 
   // Account for FuncInfo/LineInfo record size as well.
   uint32_t FuncLen = 4, LineLen = 4;
-  // Do not account for optional OffsetReloc/ExternReloc.
-  uint32_t OffsetRelocLen = 0, ExternRelocLen = 0;
+  // Do not account for optional FieldReloc/ExternReloc.
+  uint32_t FieldRelocLen = 0, ExternRelocLen = 0;
   for (const auto &FuncSec : FuncInfoTable) {
     FuncLen += BTF::SecFuncInfoSize;
     FuncLen += FuncSec.second.size() * BTF::BPFFuncInfoSize;
@@ -776,17 +776,17 @@ void BTFDebug::emitBTFExtSection() {
     LineLen += BTF::SecLineInfoSize;
     LineLen += LineSec.second.size() * BTF::BPFLineInfoSize;
   }
-  for (const auto &OffsetRelocSec : OffsetRelocTable) {
-    OffsetRelocLen += BTF::SecOffsetRelocSize;
-    OffsetRelocLen += OffsetRelocSec.second.size() * BTF::BPFOffsetRelocSize;
+  for (const auto &FieldRelocSec : FieldRelocTable) {
+    FieldRelocLen += BTF::SecFieldRelocSize;
+    FieldRelocLen += FieldRelocSec.second.size() * BTF::BPFFieldRelocSize;
   }
   for (const auto &ExternRelocSec : ExternRelocTable) {
     ExternRelocLen += BTF::SecExternRelocSize;
     ExternRelocLen += ExternRelocSec.second.size() * BTF::BPFExternRelocSize;
   }
 
-  if (OffsetRelocLen)
-    OffsetRelocLen += 4;
+  if (FieldRelocLen)
+    FieldRelocLen += 4;
   if (ExternRelocLen)
     ExternRelocLen += 4;
 
@@ -795,8 +795,8 @@ void BTFDebug::emitBTFExtSection() {
   OS.EmitIntValue(FuncLen, 4);
   OS.EmitIntValue(LineLen, 4);
   OS.EmitIntValue(FuncLen + LineLen, 4);
-  OS.EmitIntValue(OffsetRelocLen, 4);
-  OS.EmitIntValue(FuncLen + LineLen + OffsetRelocLen, 4);
+  OS.EmitIntValue(FieldRelocLen, 4);
+  OS.EmitIntValue(FuncLen + LineLen + FieldRelocLen, 4);
   OS.EmitIntValue(ExternRelocLen, 4);
 
   // Emit func_info table.
@@ -831,19 +831,20 @@ void BTFDebug::emitBTFExtSection() {
     }
   }
 
-  // Emit offset reloc table.
-  if (OffsetRelocLen) {
-    OS.AddComment("OffsetReloc");
-    OS.EmitIntValue(BTF::BPFOffsetRelocSize, 4);
-    for (const auto &OffsetRelocSec : OffsetRelocTable) {
-      OS.AddComment("Offset reloc section string offset=" +
-                    std::to_string(OffsetRelocSec.first));
-      OS.EmitIntValue(OffsetRelocSec.first, 4);
-      OS.EmitIntValue(OffsetRelocSec.second.size(), 4);
-      for (const auto &OffsetRelocInfo : OffsetRelocSec.second) {
-        Asm->EmitLabelReference(OffsetRelocInfo.Label, 4);
-        OS.EmitIntValue(OffsetRelocInfo.TypeID, 4);
-        OS.EmitIntValue(OffsetRelocInfo.OffsetNameOff, 4);
+  // Emit field reloc table.
+  if (FieldRelocLen) {
+    OS.AddComment("FieldReloc");
+    OS.EmitIntValue(BTF::BPFFieldRelocSize, 4);
+    for (const auto &FieldRelocSec : FieldRelocTable) {
+      OS.AddComment("Field reloc section string offset=" +
+                    std::to_string(FieldRelocSec.first));
+      OS.EmitIntValue(FieldRelocSec.first, 4);
+      OS.EmitIntValue(FieldRelocSec.second.size(), 4);
+      for (const auto &FieldRelocInfo : FieldRelocSec.second) {
+        Asm->EmitLabelReference(FieldRelocInfo.Label, 4);
+        OS.EmitIntValue(FieldRelocInfo.TypeID, 4);
+        OS.EmitIntValue(FieldRelocInfo.OffsetNameOff, 4);
+        OS.EmitIntValue(FieldRelocInfo.RelocKind, 4);
       }
     }
   }
@@ -958,23 +959,27 @@ unsigned BTFDebug::populateStructType(const DIType *Ty) {
   return Id;
 }
 
-/// Generate a struct member offset relocation.
-void BTFDebug::generateOffsetReloc(const MachineInstr *MI,
+/// Generate a struct member field relocation.
+void BTFDebug::generateFieldReloc(const MachineInstr *MI,
                                    const MCSymbol *ORSym, DIType *RootTy,
                                    StringRef AccessPattern) {
   unsigned RootId = populateStructType(RootTy);
   size_t FirstDollar = AccessPattern.find_first_of('$');
   size_t FirstColon = AccessPattern.find_first_of(':');
+  size_t SecondColon = AccessPattern.find_first_of(':', FirstColon + 1);
   StringRef IndexPattern = AccessPattern.substr(FirstDollar + 1);
-  StringRef OffsetStr = AccessPattern.substr(FirstColon + 1,
-      FirstDollar - FirstColon);
+  StringRef RelocKindStr = AccessPattern.substr(FirstColon + 1,
+      SecondColon - FirstColon);
+  StringRef PatchImmStr = AccessPattern.substr(SecondColon + 1,
+      FirstDollar - SecondColon);
 
-  BTFOffsetReloc OffsetReloc;
-  OffsetReloc.Label = ORSym;
-  OffsetReloc.OffsetNameOff = addString(IndexPattern);
-  OffsetReloc.TypeID = RootId;
-  AccessOffsets[AccessPattern.str()] = std::stoi(OffsetStr);
-  OffsetRelocTable[SecNameOff].push_back(OffsetReloc);
+  BTFFieldReloc FieldReloc;
+  FieldReloc.Label = ORSym;
+  FieldReloc.OffsetNameOff = addString(IndexPattern);
+  FieldReloc.TypeID = RootId;
+  FieldReloc.RelocKind = std::stoull(RelocKindStr);
+  PatchImms[AccessPattern.str()] = std::stoul(PatchImmStr);
+  FieldRelocTable[SecNameOff].push_back(FieldReloc);
 }
 
 void BTFDebug::processLDimm64(const MachineInstr *MI) {
@@ -982,7 +987,7 @@ void BTFDebug::processLDimm64(const MachineInstr *MI) {
   // will generate an .BTF.ext record.
   //
   // If the insn is "r2 = LD_imm64 @__BTF_...",
-  // add this insn into the .BTF.ext OffsetReloc subsection.
+  // add this insn into the .BTF.ext FieldReloc subsection.
   // Relocation looks like:
   //  . SecName:
   //    . InstOffset
@@ -1013,7 +1018,7 @@ void BTFDebug::processLDimm64(const MachineInstr *MI) {
 
       MDNode *MDN = GVar->getMetadata(LLVMContext::MD_preserve_access_index);
       DIType *Ty = dyn_cast<DIType>(MDN);
-      generateOffsetReloc(MI, ORSym, Ty, GVar->getName());
+      generateFieldReloc(MI, ORSym, Ty, GVar->getName());
     } else if (GVar && !GVar->hasInitializer() && GVar->hasExternalLinkage() &&
                GVar->getSection() == BPFCoreSharedInfo::PatchableExtSecName) {
       MCSymbol *ORSym = OS.getContext().createTempSymbol();
@@ -1154,8 +1159,8 @@ bool BTFDebug::InstLower(const MachineInstr *MI, MCInst &OutMI) {
       const GlobalValue *GVal = MO.getGlobal();
       auto *GVar = dyn_cast<GlobalVariable>(GVal);
       if (GVar && GVar->hasAttribute(BPFCoreSharedInfo::AmaAttr)) {
-        // Emit "mov ri, <imm>" for abstract member accesses.
-        int64_t Imm = AccessOffsets[GVar->getName().str()];
+        // Emit "mov ri, <imm>" for patched immediate.
+        uint32_t Imm = PatchImms[GVar->getName().str()];
         OutMI.setOpcode(BPF::MOV_ri);
         OutMI.addOperand(MCOperand::createReg(MI->getOperand(0).getReg()));
         OutMI.addOperand(MCOperand::createImm(Imm));

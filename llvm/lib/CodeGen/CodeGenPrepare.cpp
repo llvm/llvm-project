@@ -1524,7 +1524,7 @@ SinkShiftAndTruncate(BinaryOperator *ShiftI, Instruction *User, ConstantInt *CI,
                      const TargetLowering &TLI, const DataLayout &DL) {
   BasicBlock *UserBB = User->getParent();
   DenseMap<BasicBlock *, CastInst *> InsertedTruncs;
-  TruncInst *TruncI = dyn_cast<TruncInst>(User);
+  auto *TruncI = cast<TruncInst>(User);
   bool MadeChange = false;
 
   for (Value::user_iterator TruncUI = TruncI->user_begin(),
@@ -3046,7 +3046,7 @@ public:
       To = dyn_cast<PHINode>(OldReplacement);
       OldReplacement = Get(From);
     }
-    assert(Get(To) == To && "Replacement PHI node is already replaced.");
+    assert(To && Get(To) == To && "Replacement PHI node is already replaced.");
     Put(From, To);
     From->replaceAllUsesWith(To);
     AllPhiNodes.erase(From);
@@ -3410,11 +3410,10 @@ private:
         Select->setFalseValue(ST.Get(Map[FalseValue]));
       } else {
         // Must be a Phi node then.
-        PHINode *PHI = cast<PHINode>(V);
-        auto *CurrentPhi = dyn_cast<PHINode>(Current);
+        auto *PHI = cast<PHINode>(V);
         // Fill the Phi node with values from predecessors.
         for (auto B : predecessors(PHI->getParent())) {
-          Value *PV = CurrentPhi->getIncomingValueForBlock(B);
+          Value *PV = cast<PHINode>(Current)->getIncomingValueForBlock(B);
           assert(Map.find(PV) != Map.end() && "No predecessor Value!");
           PHI->addIncoming(ST.Get(Map[PV]), B);
         }
@@ -3783,13 +3782,11 @@ bool TypePromotionHelper::canGetThrough(const Instruction *Inst,
   //          poisoned value                    regular value
   // It should be OK since undef covers valid value.
   if (Inst->getOpcode() == Instruction::Shl && Inst->hasOneUse()) {
-    const Instruction *ExtInst =
-        dyn_cast<const Instruction>(*Inst->user_begin());
+    const auto *ExtInst = cast<const Instruction>(*Inst->user_begin());
     if (ExtInst->hasOneUse()) {
-      const Instruction *AndInst =
-          dyn_cast<const Instruction>(*ExtInst->user_begin());
+      const auto *AndInst = dyn_cast<const Instruction>(*ExtInst->user_begin());
       if (AndInst && AndInst->getOpcode() == Instruction::And) {
-        const ConstantInt *Cst = dyn_cast<ConstantInt>(AndInst->getOperand(1));
+        const auto *Cst = dyn_cast<ConstantInt>(AndInst->getOperand(1));
         if (Cst &&
             Cst->getValue().isIntN(Inst->getType()->getIntegerBitWidth()))
           return true;
@@ -5814,7 +5811,7 @@ bool CodeGenPrepare::optimizeLoadExt(LoadInst *Load) {
     return false;
 
   IRBuilder<> Builder(Load->getNextNode());
-  auto *NewAnd = dyn_cast<Instruction>(
+  auto *NewAnd = cast<Instruction>(
       Builder.CreateAnd(Load, ConstantInt::get(Ctx, DemandBits)));
   // Mark this instruction as "inserted by CGP", so that other
   // optimizations don't touch it.

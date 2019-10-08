@@ -101,6 +101,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/CallGraph.h"
+#include "llvm/Analysis/MustExecute.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/PassManager.h"
@@ -595,7 +596,7 @@ private:
 /// instance down in the abstract attributes.
 struct InformationCache {
   InformationCache(const Module &M, AnalysisGetter &AG)
-      : DL(M.getDataLayout()), AG(AG) {
+      : DL(M.getDataLayout()), Explorer(/* ExploreInterBlock */ true), AG(AG) {
 
     CallGraph *CG = AG.getAnalysis<CallGraphAnalysis>(M);
     if (!CG)
@@ -624,6 +625,11 @@ struct InformationCache {
   /// Return the instructions in \p F that may read or write memory.
   InstructionVectorTy &getReadOrWriteInstsForFunction(const Function &F) {
     return FuncRWInstsMap[&F];
+  }
+
+  /// Return MustBeExecutedContextExplorer
+  MustBeExecutedContextExplorer &getMustBeExecutedContextExplorer() {
+    return Explorer;
   }
 
   /// Return TargetLibraryInfo for function \p F.
@@ -662,6 +668,9 @@ private:
 
   /// The datalayout used in the module.
   const DataLayout &DL;
+
+  /// MustBeExecutedContextExplorer
+  MustBeExecutedContextExplorer Explorer;
 
   /// Getters for analysis.
   AnalysisGetter &AG;
@@ -1712,6 +1721,11 @@ struct AADereferenceable
   /// Return true if we assume that the underlying value is nonnull.
   bool isAssumedNonNull() const {
     return NonNullAA && NonNullAA->isAssumedNonNull();
+  }
+
+  /// Return true if we know that the underlying value is nonnull.
+  bool isKnownNonNull() const {
+    return NonNullAA && NonNullAA->isKnownNonNull();
   }
 
   /// Return true if we assume that underlying value is

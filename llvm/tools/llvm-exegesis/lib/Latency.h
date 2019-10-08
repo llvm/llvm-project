@@ -24,7 +24,7 @@ namespace exegesis {
 
 class LatencySnippetGenerator : public SnippetGenerator {
 public:
-  LatencySnippetGenerator(const LLVMState &State) : SnippetGenerator(State) {}
+  using SnippetGenerator::SnippetGenerator;
   ~LatencySnippetGenerator() override;
 
   llvm::Expected<std::vector<CodeTemplate>>

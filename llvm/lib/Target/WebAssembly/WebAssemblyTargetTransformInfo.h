@@ -53,7 +53,7 @@ public:
   /// \name Vector TTI Implementations
   /// @{
 
-  unsigned getNumberOfRegisters(unsigned ClassID) const;
+  unsigned getNumberOfRegisters(bool Vector);
   unsigned getRegisterBitWidth(bool Vector) const;
   unsigned getArithmeticInstrCost(
       unsigned Opcode, Type *Ty,

@@ -526,38 +526,48 @@ void WebAssemblyCFGStackify::placeTryMarker(MachineBasicBlock &MBB) {
       AfterSet.insert(&MI);
   }
 
+  // If Header unwinds to MBB (= Header contains 'invoke'), the try block should
+  // contain the call within it. So the call should go after the TRY. The
+  // exception is when the header's terminator is a rethrow instruction, in
+  // which case that instruction, not a call instruction before it, is gonna
+  // throw.
+  MachineInstr *ThrowingCall = nullptr;
+  if (MBB.isPredecessor(Header)) {
+    auto TermPos = Header->getFirstTerminator();
+    if (TermPos == Header->end() ||
+        TermPos->getOpcode() != WebAssembly::RETHROW) {
+      for (auto &MI : reverse(*Header)) {
+        if (MI.isCall()) {
+          AfterSet.insert(&MI);
+          ThrowingCall = &MI;
+          // Possibly throwing calls are usually wrapped by EH_LABEL
+          // instructions. We don't want to split them and the call.
+          if (MI.getIterator() != Header->begin() &&
+              std::prev(MI.getIterator())->isEHLabel()) {
+            AfterSet.insert(&*std::prev(MI.getIterator()));
+            ThrowingCall = &*std::prev(MI.getIterator());
+          }
+          break;
+        }
+      }
+    }
+  }
+
   // Local expression tree should go after the TRY.
-  for (auto I = Header->getFirstTerminator(), E = Header->begin(); I != E;
-       --I) {
+  // For BLOCK placement, we start the search from the previous instruction of a
+  // BB's terminator, but in TRY's case, we should start from the previous
+  // instruction of a call that can throw, or a EH_LABEL that precedes the call,
+  // because the return values of the call's previous instructions can be
+  // stackified and consumed by the throwing call.
+  auto SearchStartPt = ThrowingCall ? MachineBasicBlock::iterator(ThrowingCall)
+                                    : Header->getFirstTerminator();
+  for (auto I = SearchStartPt, E = Header->begin(); I != E; --I) {
     if (std::prev(I)->isDebugInstr() || std::prev(I)->isPosition())
       continue;
     if (WebAssembly::isChild(*std::prev(I), MFI))
       AfterSet.insert(&*std::prev(I));
     else
       break;
-  }
-
-  // If Header unwinds to MBB (= Header contains 'invoke'), the try block should
-  // contain the call within it. So the call should go after the TRY. The
-  // exception is when the header's terminator is a rethrow instruction, in
-  // which case that instruction, not a call instruction before it, is gonna
-  // throw.
-  if (MBB.isPredecessor(Header)) {
-    auto TermPos = Header->getFirstTerminator();
-    if (TermPos == Header->end() ||
-        TermPos->getOpcode() != WebAssembly::RETHROW) {
-      for (const auto &MI : reverse(*Header)) {
-        if (MI.isCall()) {
-          AfterSet.insert(&MI);
-          // Possibly throwing calls are usually wrapped by EH_LABEL
-          // instructions. We don't want to split them and the call.
-          if (MI.getIterator() != Header->begin() &&
-              std::prev(MI.getIterator())->isEHLabel())
-            AfterSet.insert(&*std::prev(MI.getIterator()));
-          break;
-        }
-      }
-    }
   }
 
   // Add the TRY.

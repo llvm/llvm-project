@@ -122,8 +122,7 @@ public:
   /// \name Vector TTI Implementations
   /// @{
 
-  unsigned getNumberOfRegisters(unsigned ClassID) const {
-    bool Vector = (ClassID == 1);
+  unsigned getNumberOfRegisters(bool Vector) {
     if (Vector) {
       if (ST->hasNEON())
         return 16;

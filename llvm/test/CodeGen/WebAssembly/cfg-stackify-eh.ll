@@ -704,14 +704,41 @@ ehcleanup:                                        ; preds = %entry
   cleanupret from %0 unwind to caller
 }
 
+; Tests if 'try' marker is placed correctly. In this test, 'try' should be
+; placed before the call to 'nothrow_i32' and not between the call to
+; 'nothrow_i32' and 'fun', because the return value of 'nothrow_i32' is
+; stackified and pushed onto the stack to be consumed by the call to 'fun'.
+
+; CHECK-LABEL: test11
+; CHECK: try
+; CHECK: i32.call  $push{{.*}}=, nothrow_i32
+; CHECK: call      fun, $pop{{.*}}
+define void @test11() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+entry:
+  %call = call i32 @nothrow_i32()
+  invoke void @fun(i32 %call)
+          to label %invoke.cont unwind label %terminate
+
+invoke.cont:                                      ; preds = %entry
+  ret void
+
+terminate:                                        ; preds = %entry
+  %0 = cleanuppad within none []
+  %1 = tail call i8* @llvm.wasm.get.exception(token %0)
+  call void @__clang_call_terminate(i8* %1) [ "funclet"(token %0) ]
+  unreachable
+}
+
 ; Check if the unwind destination mismatch stats are correct
 ; NOSORT-STAT: 11 wasm-cfg-stackify    - Number of EH pad unwind mismatches found
 
 declare void @foo()
 declare void @bar()
 declare i32 @baz()
+declare void @fun(i32)
 ; Function Attrs: nounwind
 declare void @nothrow(i32) #0
+declare i32 @nothrow_i32() #0
 ; Function Attrs: nounwind
 declare %class.Object* @_ZN6ObjectD2Ev(%class.Object* returned) #0
 declare i32 @__gxx_wasm_personality_v0(...)

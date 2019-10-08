@@ -304,8 +304,7 @@ bool SystemZTTIImpl::isLSRCostLess(TargetTransformInfo::LSRCost &C1,
              C2.ScaleCost, C2.SetupCost);
 }
 
-unsigned SystemZTTIImpl::getNumberOfRegisters(unsigned ClassID) const {
-  bool Vector = (ClassID == 1);
+unsigned SystemZTTIImpl::getNumberOfRegisters(bool Vector) {
   if (!Vector)
     // Discount the stack pointer.  Also leave out %r0, since it can't
     // be used in an address.

@@ -50,6 +50,28 @@
 //   addr = preserve_struct_access_index(base, gep_index, di_index)
 //          !llvm.preserve.access.index <struct_ditype>
 //
+// Bitfield member access needs special attention. User cannot take the
+// address of a bitfield acceess. To facilitate kernel verifier
+// for easy bitfield code optimization, a new clang intrinsic is introduced:
+//   uint32_t __builtin_preserve_field_info(member_access, info_kind)
+// In IR, a chain with two (or more) intrinsic calls will be generated:
+//   ...
+//   addr = preserve_struct_access_index(base, 1, 1) !struct s
+//   uint32_t result = bpf_preserve_field_info(addr, info_kind)
+//
+// Suppose the info_kind is FIELD_SIGNEDNESS,
+// The above two IR intrinsics will be replaced with
+// a relocatable insn:
+//   signness = /* signness of member_access */
+// and signness can be changed by bpf loader based on the
+// types on the host.
+//
+// User can also test whether a field exists or not with
+//   uint32_t result = bpf_preserve_field_info(member_access, FIELD_EXISTENCE)
+// The field will be always available (result = 1) during initial
+// compilation, but bpf loader can patch with the correct value
+// on the target host where the member_access may or may not be available
+//
 //===----------------------------------------------------------------------===//
 
 #include "BPF.h"
@@ -88,7 +110,11 @@ class BPFAbstractMemberAccess final : public ModulePass {
 
 public:
   static char ID;
-  BPFAbstractMemberAccess() : ModulePass(ID) {}
+  TargetMachine *TM;
+  // Add optional BPFTargetMachine parameter so that BPF backend can add the phase
+  // with target machine to find out the endianness. The default constructor (without
+  // parameters) is used by the pass manager for managing purposes.
+  BPFAbstractMemberAccess(BPFTargetMachine *TM = nullptr) : ModulePass(ID), TM(TM) {}
 
   struct CallInfo {
     uint32_t Kind;
@@ -96,19 +122,21 @@ public:
     MDNode *Metadata;
     Value *Base;
   };
+  typedef std::stack<std::pair<CallInst *, CallInfo>> CallInfoStack;
 
 private:
   enum : uint32_t {
     BPFPreserveArrayAI = 1,
     BPFPreserveUnionAI = 2,
     BPFPreserveStructAI = 3,
+    BPFPreserveFieldInfoAI = 4,
   };
 
   std::map<std::string, GlobalVariable *> GEPGlobals;
   // A map to link preserve_*_access_index instrinsic calls.
   std::map<CallInst *, std::pair<CallInst *, CallInfo>> AIChain;
   // A map to hold all the base preserve_*_access_index instrinsic calls.
-  // The base call is not an input of any other preserve_*_access_index
+  // The base call is not an input of any other preserve_*
   // intrinsics.
   std::map<CallInst *, CallInfo> BaseAICalls;
 
@@ -127,6 +155,12 @@ private:
   bool removePreserveAccessIndexIntrinsic(Module &M);
   void replaceWithGEP(std::vector<CallInst *> &CallList,
                       uint32_t NumOfZerosIndex, uint32_t DIIndex);
+  bool HasPreserveFieldInfoCall(CallInfoStack &CallStack);
+  void GetStorageBitRange(DICompositeType *CTy, DIDerivedType *MemberTy,
+                          uint32_t AccessIndex, uint32_t &StartBitOffset,
+                          uint32_t &EndBitOffset);
+  uint32_t GetFieldInfo(uint32_t InfoKind, DICompositeType *CTy,
+                        uint32_t AccessIndex, uint32_t PatchImm);
 
   Value *computeBaseAndAccessKey(CallInst *Call, CallInfo &CInfo,
                                  std::string &AccessKey, MDNode *&BaseMeta);
@@ -139,8 +173,8 @@ char BPFAbstractMemberAccess::ID = 0;
 INITIALIZE_PASS(BPFAbstractMemberAccess, DEBUG_TYPE,
                 "abstracting struct/union member accessees", false, false)
 
-ModulePass *llvm::createBPFAbstractMemberAccess() {
-  return new BPFAbstractMemberAccess();
+ModulePass *llvm::createBPFAbstractMemberAccess(BPFTargetMachine *TM) {
+  return new BPFAbstractMemberAccess(TM);
 }
 
 bool BPFAbstractMemberAccess::runOnModule(Module &M) {
@@ -231,6 +265,16 @@ bool BPFAbstractMemberAccess::IsPreserveDIAccessIndexCall(const CallInst *Call,
     CInfo.Base = Call->getArgOperand(0);
     return true;
   }
+  if (GV->getName().startswith("llvm.bpf.preserve.field.info")) {
+    CInfo.Kind = BPFPreserveFieldInfoAI;
+    CInfo.Metadata = nullptr;
+    // Check validity of info_kind as clang did not check this.
+    uint64_t InfoKind = getConstant(Call->getArgOperand(1));
+    if (InfoKind >= BPFCoreSharedInfo::MAX_FIELD_RELOC_KIND)
+      report_fatal_error("Incorrect info_kind for llvm.bpf.preserve.field.info intrinsic");
+    CInfo.AccessIndex = InfoKind;
+    return true;
+  }
 
   return false;
 }
@@ -306,6 +350,9 @@ bool BPFAbstractMemberAccess::removePreserveAccessIndexIntrinsic(Module &M) {
 bool BPFAbstractMemberAccess::IsValidAIChain(const MDNode *ParentType,
                                              uint32_t ParentAI,
                                              const MDNode *ChildType) {
+  if (!ChildType)
+    return true; // preserve_field_info, no type comparison needed.
+
   const DIType *PType = stripQualifiers(cast<DIType>(ParentType));
   const DIType *CType = stripQualifiers(cast<DIType>(ChildType));
 
@@ -463,7 +510,187 @@ uint64_t BPFAbstractMemberAccess::getConstant(const Value *IndexValue) {
   return CV->getValue().getZExtValue();
 }
 
-/// Compute the base of the whole preserve_*_access_index chains, i.e., the base
+/// Get the start and the end of storage offset for \p MemberTy.
+/// The storage bits are corresponding to the LLVM internal types,
+/// and the storage bits for the member determines what load width
+/// to use in order to extract the bitfield value.
+void BPFAbstractMemberAccess::GetStorageBitRange(DICompositeType *CTy,
+                                                 DIDerivedType *MemberTy,
+                                                 uint32_t AccessIndex,
+                                                 uint32_t &StartBitOffset,
+                                                 uint32_t &EndBitOffset) {
+  auto SOff = dyn_cast<ConstantInt>(MemberTy->getStorageOffsetInBits());
+  assert(SOff);
+  StartBitOffset = SOff->getZExtValue();
+
+  EndBitOffset = CTy->getSizeInBits();
+  uint32_t Index = AccessIndex + 1;
+  for (; Index < CTy->getElements().size(); ++Index) {
+    auto Member = cast<DIDerivedType>(CTy->getElements()[Index]);
+    if (!Member->getStorageOffsetInBits()) {
+      EndBitOffset = Member->getOffsetInBits();
+      break;
+    }
+    SOff = dyn_cast<ConstantInt>(Member->getStorageOffsetInBits());
+    assert(SOff);
+    unsigned BitOffset = SOff->getZExtValue();
+    if (BitOffset != StartBitOffset) {
+      EndBitOffset = BitOffset;
+      break;
+    }
+  }
+}
+
+uint32_t BPFAbstractMemberAccess::GetFieldInfo(uint32_t InfoKind,
+                                               DICompositeType *CTy,
+                                               uint32_t AccessIndex,
+                                               uint32_t PatchImm) {
+  if (InfoKind == BPFCoreSharedInfo::FIELD_EXISTENCE)
+      return 1;
+
+  uint32_t Tag = CTy->getTag();
+  if (InfoKind == BPFCoreSharedInfo::FIELD_BYTE_OFFSET) {
+    if (Tag == dwarf::DW_TAG_array_type) {
+      auto *EltTy = stripQualifiers(CTy->getBaseType());
+      PatchImm += AccessIndex * calcArraySize(CTy, 1) *
+                  (EltTy->getSizeInBits() >> 3);
+    } else if (Tag == dwarf::DW_TAG_structure_type) {
+      auto *MemberTy = cast<DIDerivedType>(CTy->getElements()[AccessIndex]);
+      if (!MemberTy->isBitField()) {
+        PatchImm += MemberTy->getOffsetInBits() >> 3;
+      } else {
+        auto SOffset = dyn_cast<ConstantInt>(MemberTy->getStorageOffsetInBits());
+        assert(SOffset);
+        PatchImm += SOffset->getZExtValue() >> 3;
+      }
+    }
+    return PatchImm;
+  }
+
+  if (InfoKind == BPFCoreSharedInfo::FIELD_BYTE_SIZE) {
+    if (Tag == dwarf::DW_TAG_array_type) {
+      auto *EltTy = stripQualifiers(CTy->getBaseType());
+      return calcArraySize(CTy, 1) * (EltTy->getSizeInBits() >> 3);
+    } else {
+      auto *MemberTy = cast<DIDerivedType>(CTy->getElements()[AccessIndex]);
+      uint32_t SizeInBits = MemberTy->getSizeInBits();
+      if (!MemberTy->isBitField())
+        return SizeInBits >> 3;
+
+      unsigned SBitOffset, NextSBitOffset;
+      GetStorageBitRange(CTy, MemberTy, AccessIndex, SBitOffset, NextSBitOffset);
+      SizeInBits = NextSBitOffset - SBitOffset;
+      if (SizeInBits & (SizeInBits - 1))
+        report_fatal_error("Unsupported field expression for llvm.bpf.preserve.field.info");
+      return SizeInBits >> 3;
+    }
+  }
+
+  if (InfoKind == BPFCoreSharedInfo::FIELD_SIGNEDNESS) {
+    const DIType *BaseTy;
+    if (Tag == dwarf::DW_TAG_array_type) {
+      // Signedness only checked when final array elements are accessed.
+      if (CTy->getElements().size() != 1)
+        report_fatal_error("Invalid array expression for llvm.bpf.preserve.field.info");
+      BaseTy = stripQualifiers(CTy->getBaseType());
+    } else {
+      auto *MemberTy = cast<DIDerivedType>(CTy->getElements()[AccessIndex]);
+      BaseTy = stripQualifiers(MemberTy->getBaseType());
+    }
+
+    // Only basic types and enum types have signedness.
+    const auto *BTy = dyn_cast<DIBasicType>(BaseTy);
+    while (!BTy) {
+      const auto *CompTy = dyn_cast<DICompositeType>(BaseTy);
+      // Report an error if the field expression does not have signedness.
+      if (!CompTy || CompTy->getTag() != dwarf::DW_TAG_enumeration_type)
+        report_fatal_error("Invalid field expression for llvm.bpf.preserve.field.info");
+      BaseTy = stripQualifiers(CompTy->getBaseType());
+      BTy = dyn_cast<DIBasicType>(BaseTy);
+    }
+    uint32_t Encoding = BTy->getEncoding();
+    return (Encoding == dwarf::DW_ATE_signed || Encoding == dwarf::DW_ATE_signed_char);
+  }
+
+  if (InfoKind == BPFCoreSharedInfo::FIELD_LSHIFT_U64) {
+    // The value is loaded into a value with FIELD_BYTE_SIZE size,
+    // and then zero or sign extended to U64.
+    // FIELD_LSHIFT_U64 and FIELD_RSHIFT_U64 are operations
+    // to extract the original value.
+    const Triple &Triple = TM->getTargetTriple();
+    DIDerivedType *MemberTy = nullptr;
+    bool IsBitField = false;
+    uint32_t SizeInBits;
+
+    if (Tag == dwarf::DW_TAG_array_type) {
+      auto *EltTy = stripQualifiers(CTy->getBaseType());
+      SizeInBits = calcArraySize(CTy, 1) * EltTy->getSizeInBits();
+    } else {
+      MemberTy = cast<DIDerivedType>(CTy->getElements()[AccessIndex]);
+      SizeInBits = MemberTy->getSizeInBits();
+      IsBitField = MemberTy->isBitField();
+    }
+
+    if (!IsBitField) {
+      if (SizeInBits > 64)
+        report_fatal_error("too big field size for llvm.bpf.preserve.field.info");
+      return 64 - SizeInBits;
+    }
+
+    unsigned SBitOffset, NextSBitOffset;
+    GetStorageBitRange(CTy, MemberTy, AccessIndex, SBitOffset, NextSBitOffset);
+    if (NextSBitOffset - SBitOffset > 64)
+      report_fatal_error("too big field size for llvm.bpf.preserve.field.info");
+
+    unsigned OffsetInBits = MemberTy->getOffsetInBits();
+    if (Triple.getArch() == Triple::bpfel)
+      return SBitOffset + 64 - OffsetInBits - SizeInBits;
+    else
+      return OffsetInBits + 64 - NextSBitOffset;
+  }
+
+  if (InfoKind == BPFCoreSharedInfo::FIELD_RSHIFT_U64) {
+    DIDerivedType *MemberTy = nullptr;
+    bool IsBitField = false;
+    uint32_t SizeInBits;
+    if (Tag == dwarf::DW_TAG_array_type) {
+      auto *EltTy = stripQualifiers(CTy->getBaseType());
+      SizeInBits = calcArraySize(CTy, 1) * EltTy->getSizeInBits();
+    } else {
+      MemberTy = cast<DIDerivedType>(CTy->getElements()[AccessIndex]);
+      SizeInBits = MemberTy->getSizeInBits();
+      IsBitField = MemberTy->isBitField();
+    }
+
+    if (!IsBitField) {
+      if (SizeInBits > 64)
+        report_fatal_error("too big field size for llvm.bpf.preserve.field.info");
+      return 64 - SizeInBits;
+    }
+
+    unsigned SBitOffset, NextSBitOffset;
+    GetStorageBitRange(CTy, MemberTy, AccessIndex, SBitOffset, NextSBitOffset);
+    if (NextSBitOffset - SBitOffset > 64)
+      report_fatal_error("too big field size for llvm.bpf.preserve.field.info");
+
+    return 64 - SizeInBits;
+  }
+
+  llvm_unreachable("Unknown llvm.bpf.preserve.field.info info kind");
+}
+
+bool BPFAbstractMemberAccess::HasPreserveFieldInfoCall(CallInfoStack &CallStack) {
+  // This is called in error return path, no need to maintain CallStack.
+  while (CallStack.size()) {
+    auto StackElem = CallStack.top();
+    if (StackElem.second.Kind == BPFPreserveFieldInfoAI)
+      return true;
+    CallStack.pop();
+  }
+  return false;
+}
+
+/// Compute the base of the whole preserve_* intrinsics chains, i.e., the base
 /// pointer of the first preserve_*_access_index call, and construct the access
 /// string, which will be the name of a global variable.
 Value *BPFAbstractMemberAccess::computeBaseAndAccessKey(CallInst *Call,
@@ -472,7 +699,7 @@ Value *BPFAbstractMemberAccess::computeBaseAndAccessKey(CallInst *Call,
                                                         MDNode *&TypeMeta) {
   Value *Base = nullptr;
   std::string TypeName;
-  std::stack<std::pair<CallInst *, CallInfo>> CallStack;
+  CallInfoStack CallStack;
 
   // Put the access chain into a stack with the top as the head of the chain.
   while (Call) {
@@ -492,7 +719,8 @@ Value *BPFAbstractMemberAccess::computeBaseAndAccessKey(CallInst *Call,
   //    int a[10][20]; ... __builtin_preserve_access_index(&a[2][3]) ...
   // we will skip them.
   uint32_t FirstIndex = 0;
-  uint32_t AccessOffset = 0;
+  uint32_t PatchImm = 0; // AccessOffset or the requested field info
+  uint32_t InfoKind = BPFCoreSharedInfo::FIELD_BYTE_OFFSET;
   while (CallStack.size()) {
     auto StackElem = CallStack.top();
     Call = StackElem.first;
@@ -507,9 +735,11 @@ Value *BPFAbstractMemberAccess::computeBaseAndAccessKey(CallInst *Call,
       // struct or union type
       TypeName = Ty->getName();
       TypeMeta = Ty;
-      AccessOffset += FirstIndex * Ty->getSizeInBits() >> 3;
+      PatchImm += FirstIndex * (Ty->getSizeInBits() >> 3);
       break;
     }
+
+    assert(CInfo.Kind == BPFPreserveArrayAI);
 
     // Array entries will always be consumed for accumulative initial index.
     CallStack.pop();
@@ -546,16 +776,22 @@ Value *BPFAbstractMemberAccess::computeBaseAndAccessKey(CallInst *Call,
 
     if (CheckElemType) {
       auto *CTy = dyn_cast<DICompositeType>(BaseTy);
-      if (!CTy)
+      if (!CTy) {
+        if (HasPreserveFieldInfoCall(CallStack))
+          report_fatal_error("Invalid field access for llvm.preserve.field.info intrinsic");
         return nullptr;
+      }
 
       unsigned CTag = CTy->getTag();
-      if (CTag != dwarf::DW_TAG_structure_type && CTag != dwarf::DW_TAG_union_type)
-        return nullptr;
-      else
+      if (CTag == dwarf::DW_TAG_structure_type || CTag == dwarf::DW_TAG_union_type) {
         TypeName = CTy->getName();
+      } else {
+        if (HasPreserveFieldInfoCall(CallStack))
+          report_fatal_error("Invalid field access for llvm.preserve.field.info intrinsic");
+        return nullptr;
+      }
       TypeMeta = CTy;
-      AccessOffset += FirstIndex * CTy->getSizeInBits() >> 3;
+      PatchImm += FirstIndex * (CTy->getSizeInBits() >> 3);
       break;
     }
   }
@@ -569,6 +805,20 @@ Value *BPFAbstractMemberAccess::computeBaseAndAccessKey(CallInst *Call,
     CInfo = StackElem.second;
     CallStack.pop();
 
+    if (CInfo.Kind == BPFPreserveFieldInfoAI)
+      break;
+
+    // If the next Call (the top of the stack) is a BPFPreserveFieldInfoAI,
+    // the action will be extracting field info.
+    if (CallStack.size()) {
+      auto StackElem2 = CallStack.top();
+      CallInfo CInfo2 = StackElem2.second;
+      if (CInfo2.Kind == BPFPreserveFieldInfoAI) {
+        InfoKind = CInfo2.AccessIndex;
+        assert(CallStack.size() == 1);
+      }
+    }
+
     // Access Index
     uint64_t AccessIndex = CInfo.AccessIndex;
     AccessKey += ":" + std::to_string(AccessIndex);
@@ -576,20 +826,13 @@ Value *BPFAbstractMemberAccess::computeBaseAndAccessKey(CallInst *Call,
     MDNode *MDN = CInfo.Metadata;
     // At this stage, it cannot be pointer type.
     auto *CTy = cast<DICompositeType>(stripQualifiers(cast<DIType>(MDN)));
-    uint32_t Tag = CTy->getTag();
-    if (Tag == dwarf::DW_TAG_structure_type) {
-      auto *MemberTy = cast<DIDerivedType>(CTy->getElements()[AccessIndex]);
-      AccessOffset += MemberTy->getOffsetInBits() >> 3;
-    } else if (Tag == dwarf::DW_TAG_array_type) {
-      auto *EltTy = stripQualifiers(CTy->getBaseType());
-      AccessOffset += AccessIndex * calcArraySize(CTy, 1) *
-                      EltTy->getSizeInBits() >> 3;
-    }
+    PatchImm = GetFieldInfo(InfoKind, CTy, AccessIndex, PatchImm);
   }
 
-  // Access key is the type name + access string, uniquely identifying
-  // one kernel memory access.
-  AccessKey = TypeName + ":" + std::to_string(AccessOffset) + "$" + AccessKey;
+  // Access key is the type name + reloc type + patched imm + access string,
+  // uniquely identifying one relocation.
+  AccessKey = TypeName + ":" + std::to_string(InfoKind) + ":" +
+              std::to_string(PatchImm) + "$" + AccessKey;
 
   return Base;
 }
@@ -605,7 +848,34 @@ bool BPFAbstractMemberAccess::transformGEPChain(Module &M, CallInst *Call,
   if (!Base)
     return false;
 
-  // Do the transformation
+  BasicBlock *BB = Call->getParent();
+  GlobalVariable *GV;
+
+  if (GEPGlobals.find(AccessKey) == GEPGlobals.end()) {
+    IntegerType *VarType;
+    if (CInfo.Kind == BPFPreserveFieldInfoAI)
+      VarType = Type::getInt32Ty(BB->getContext()); // 32bit return value
+    else
+      VarType = Type::getInt64Ty(BB->getContext()); // 64bit ptr arith
+
+    GV = new GlobalVariable(M, VarType, false, GlobalVariable::ExternalLinkage,
+                            NULL, AccessKey);
+    GV->addAttribute(BPFCoreSharedInfo::AmaAttr);
+    GV->setMetadata(LLVMContext::MD_preserve_access_index, TypeMeta);
+    GEPGlobals[AccessKey] = GV;
+  } else {
+    GV = GEPGlobals[AccessKey];
+  }
+
+  if (CInfo.Kind == BPFPreserveFieldInfoAI) {
+    // Load the global variable which represents the returned field info.
+    auto *LDInst = new LoadInst(Type::getInt32Ty(BB->getContext()), GV);
+    BB->getInstList().insert(Call->getIterator(), LDInst);
+    Call->replaceAllUsesWith(LDInst);
+    Call->eraseFromParent();
+    return true;
+  }
+
   // For any original GEP Call and Base %2 like
   //   %4 = bitcast %struct.net_device** %dev1 to i64*
   // it is transformed to:
@@ -615,18 +885,6 @@ bool BPFAbstractMemberAccess::transformGEPChain(Module &M, CallInst *Call,
   //   %9 = bitcast i8* %8 to i64*
   //   using %9 instead of %4
   // The original Call inst is removed.
-  BasicBlock *BB = Call->getParent();
-  GlobalVariable *GV;
-
-  if (GEPGlobals.find(AccessKey) == GEPGlobals.end()) {
-    GV = new GlobalVariable(M, Type::getInt64Ty(BB->getContext()), false,
-                            GlobalVariable::ExternalLinkage, NULL, AccessKey);
-    GV->addAttribute(BPFCoreSharedInfo::AmaAttr);
-    GV->setMetadata(LLVMContext::MD_preserve_access_index, TypeMeta);
-    GEPGlobals[AccessKey] = GV;
-  } else {
-    GV = GEPGlobals[AccessKey];
-  }
 
   // Load the global variable.
   auto *LDInst = new LoadInst(Type::getInt64Ty(BB->getContext()), GV);

@@ -36,17 +36,17 @@ void ExegesisTarget::registerTarget(ExegesisTarget *Target) {
   FirstTarget = Target;
 }
 
-std::unique_ptr<SnippetGenerator>
-ExegesisTarget::createSnippetGenerator(InstructionBenchmark::ModeE Mode,
-                                       const LLVMState &State) const {
+std::unique_ptr<SnippetGenerator> ExegesisTarget::createSnippetGenerator(
+    InstructionBenchmark::ModeE Mode, const LLVMState &State,
+    const SnippetGenerator::Options &Opts) const {
   switch (Mode) {
   case InstructionBenchmark::Unknown:
     return nullptr;
   case InstructionBenchmark::Latency:
-    return createLatencySnippetGenerator(State);
+    return createLatencySnippetGenerator(State, Opts);
   case InstructionBenchmark::Uops:
   case InstructionBenchmark::InverseThroughput:
-    return createUopsSnippetGenerator(State);
+    return createUopsSnippetGenerator(State, Opts);
   }
   return nullptr;
 }
@@ -66,14 +66,14 @@ ExegesisTarget::createBenchmarkRunner(InstructionBenchmark::ModeE Mode,
   return nullptr;
 }
 
-std::unique_ptr<SnippetGenerator>
-ExegesisTarget::createLatencySnippetGenerator(const LLVMState &State) const {
-  return std::make_unique<LatencySnippetGenerator>(State);
+std::unique_ptr<SnippetGenerator> ExegesisTarget::createLatencySnippetGenerator(
+    const LLVMState &State, const SnippetGenerator::Options &Opts) const {
+  return std::make_unique<LatencySnippetGenerator>(State, Opts);
 }
 
-std::unique_ptr<SnippetGenerator>
-ExegesisTarget::createUopsSnippetGenerator(const LLVMState &State) const {
-  return std::make_unique<UopsSnippetGenerator>(State);
+std::unique_ptr<SnippetGenerator> ExegesisTarget::createUopsSnippetGenerator(
+    const LLVMState &State, const SnippetGenerator::Options &Opts) const {
+  return std::make_unique<UopsSnippetGenerator>(State, Opts);
 }
 
 std::unique_ptr<BenchmarkRunner> ExegesisTarget::createLatencyBenchmarkRunner(

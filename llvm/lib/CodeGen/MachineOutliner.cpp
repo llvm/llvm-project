@@ -1260,7 +1260,7 @@ bool MachineOutliner::outline(Module &M,
                   true /* isImp = true */));
           }
           if (MI.isCall())
-            MI.getMF()->updateCallSiteInfo(&MI);
+            MI.getMF()->eraseCallSiteInfo(&MI);
         };
         // Copy over the defs in the outlined range.
         // First inst in outlined range <-- Anything that's defined in this

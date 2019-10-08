@@ -160,17 +160,19 @@ LSUnit::Status LSUnit::isAvailable(const InstRef &IR) const {
 }
 
 void LSUnitBase::onInstructionExecuted(const InstRef &IR) {
+  unsigned GroupID = IR.getInstruction()->getLSUTokenID();
+  auto It = Groups.find(GroupID);
+  assert(It != Groups.end() && "Instruction not dispatched to the LS unit");
+  It->second->onInstructionExecuted();
+  if (It->second->isExecuted())
+    Groups.erase(It);
+}
+
+void LSUnitBase::onInstructionRetired(const InstRef &IR) {
   const InstrDesc &Desc = IR.getInstruction()->getDesc();
   bool IsALoad = Desc.MayLoad;
   bool IsAStore = Desc.MayStore;
   assert((IsALoad || IsAStore) && "Expected a memory operation!");
-
-  unsigned GroupID = IR.getInstruction()->getLSUTokenID();
-  auto It = Groups.find(GroupID);
-  It->second->onInstructionExecuted();
-  if (It->second->isExecuted()) {
-    Groups.erase(It);
-  }
 
   if (IsALoad) {
     releaseLQSlot();

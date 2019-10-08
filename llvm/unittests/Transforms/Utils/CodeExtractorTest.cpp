@@ -62,7 +62,8 @@ TEST(CodeExtractor, ExitStub) {
   CodeExtractor CE(Candidates);
   EXPECT_TRUE(CE.isEligible());
 
-  Function *Outlined = CE.extractCodeRegion();
+  CodeExtractorAnalysisCache CEAC(*Func);
+  Function *Outlined = CE.extractCodeRegion(CEAC);
   EXPECT_TRUE(Outlined);
   BasicBlock *Exit = getBlockByName(Func, "notExtracted");
   BasicBlock *ExitSplit = getBlockByName(Outlined, "notExtracted.split");
@@ -112,7 +113,8 @@ TEST(CodeExtractor, ExitPHIOnePredFromRegion) {
   CodeExtractor CE(ExtractedBlocks);
   EXPECT_TRUE(CE.isEligible());
 
-  Function *Outlined = CE.extractCodeRegion();
+  CodeExtractorAnalysisCache CEAC(*Func);
+  Function *Outlined = CE.extractCodeRegion(CEAC);
   EXPECT_TRUE(Outlined);
   BasicBlock *Exit1 = getBlockByName(Func, "exit1");
   BasicBlock *Exit2 = getBlockByName(Func, "exit2");
@@ -186,7 +188,8 @@ TEST(CodeExtractor, StoreOutputInvokeResultAfterEHPad) {
   CodeExtractor CE(ExtractedBlocks);
   EXPECT_TRUE(CE.isEligible());
 
-  Function *Outlined = CE.extractCodeRegion();
+  CodeExtractorAnalysisCache CEAC(*Func);
+  Function *Outlined = CE.extractCodeRegion(CEAC);
   EXPECT_TRUE(Outlined);
   EXPECT_FALSE(verifyFunction(*Outlined, &errs()));
   EXPECT_FALSE(verifyFunction(*Func, &errs()));
@@ -220,7 +223,8 @@ TEST(CodeExtractor, StoreOutputInvokeResultInExitStub) {
   CodeExtractor CE(Blocks);
   EXPECT_TRUE(CE.isEligible());
 
-  Function *Outlined = CE.extractCodeRegion();
+  CodeExtractorAnalysisCache CEAC(*Func);
+  Function *Outlined = CE.extractCodeRegion(CEAC);
   EXPECT_TRUE(Outlined);
   EXPECT_FALSE(verifyFunction(*Outlined));
   EXPECT_FALSE(verifyFunction(*Func));
@@ -271,7 +275,8 @@ TEST(CodeExtractor, ExtractAndInvalidateAssumptionCache) {
   CodeExtractor CE(Blocks, nullptr, false, nullptr, nullptr, &AC);
   EXPECT_TRUE(CE.isEligible());
 
-  Function *Outlined = CE.extractCodeRegion();
+  CodeExtractorAnalysisCache CEAC(*Func);
+  Function *Outlined = CE.extractCodeRegion(CEAC);
   EXPECT_TRUE(Outlined);
   EXPECT_FALSE(verifyFunction(*Outlined));
   EXPECT_FALSE(verifyFunction(*Func));

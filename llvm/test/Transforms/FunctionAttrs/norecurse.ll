@@ -130,8 +130,15 @@ define linkonce_odr i32 @leaf_redefinable() {
 
 ; Call through a function pointer
 ; ATTRIBUTOR-NOT: Function Attrs
-; ATTRIBUTOR: define i32 @eval_func(i32 (i32)* nocapture %0, i32 %1)
-define i32 @eval_func(i32 (i32)* , i32) local_unnamed_addr {
+; ATTRIBUTOR: define i32 @eval_func1(i32 (i32)* nocapture nonnull %0, i32 %1)
+define i32 @eval_func1(i32 (i32)* , i32) local_unnamed_addr {
+  %3 = tail call i32 %0(i32 %1) #2
+  ret i32 %3
+}
+
+; ATTRIBUTOR-NOT: Function Attrs
+; ATTRIBUTOR: define i32 @eval_func2(i32 (i32)* nocapture %0, i32 %1)
+define i32 @eval_func2(i32 (i32)* , i32) local_unnamed_addr "null-pointer-is-valid"="true"{
   %3 = tail call i32 %0(i32 %1) #2
   ret i32 %3
 }
