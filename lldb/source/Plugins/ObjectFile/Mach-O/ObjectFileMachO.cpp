@@ -1895,18 +1895,6 @@ protected:
 };
 
 struct TrieEntry {
-  TrieEntry()
-      : name(), address(LLDB_INVALID_ADDRESS), flags(0), other(0),
-        import_name() {}
-
-  void Clear() {
-    name.Clear();
-    address = LLDB_INVALID_ADDRESS;
-    flags = 0;
-    other = 0;
-    import_name.Clear();
-  }
-
   void Dump() const {
     printf("0x%16.16llx 0x%16.16llx 0x%16.16llx \"%s\"",
            static_cast<unsigned long long>(address),
@@ -1918,9 +1906,9 @@ struct TrieEntry {
       printf("\n");
   }
   ConstString name;
-  uint64_t address;
-  uint64_t flags;
-  uint64_t other;
+  uint64_t address = LLDB_INVALID_ADDRESS;
+  uint64_t flags = 0;
+  uint64_t other = 0;
   ConstString import_name;
 };
 
