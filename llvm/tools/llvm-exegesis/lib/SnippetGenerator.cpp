@@ -73,12 +73,13 @@ SnippetGenerator::generateConfigurations(
         BC.Info = CT.Info;
         for (InstructionTemplate &IT : CT.Instructions) {
           randomizeUnsetVariables(State.getExegesisTarget(), ForbiddenRegs, IT);
-          BC.Instructions.push_back(IT.build());
+          BC.Key.Instructions.push_back(IT.build());
         }
         if (CT.ScratchSpacePointerInReg)
           BC.LiveIns.push_back(CT.ScratchSpacePointerInReg);
-        BC.RegisterInitialValues =
+        BC.Key.RegisterInitialValues =
             computeRegisterInitialValues(CT.Instructions);
+        BC.Key.Config = CT.Config;
         Output.push_back(std::move(BC));
       }
     }

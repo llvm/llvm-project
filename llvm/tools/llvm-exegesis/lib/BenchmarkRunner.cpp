@@ -31,7 +31,6 @@ BenchmarkRunner::BenchmarkRunner(const LLVMState &State,
 
 BenchmarkRunner::~BenchmarkRunner() = default;
 
-
 namespace {
 class FunctionExecutorImpl : public BenchmarkRunner::FunctionExecutor {
 public:
@@ -92,10 +91,9 @@ InstructionBenchmark BenchmarkRunner::runConfiguration(
   InstrBenchmark.NumRepetitions = NumRepetitions;
   InstrBenchmark.Info = BC.Info;
 
-  const std::vector<llvm::MCInst> &Instructions = BC.Instructions;
+  const std::vector<llvm::MCInst> &Instructions = BC.Key.Instructions;
 
-  InstrBenchmark.Key.Instructions = Instructions;
-  InstrBenchmark.Key.RegisterInitialValues = BC.RegisterInitialValues;
+  InstrBenchmark.Key = BC.Key;
 
   // Assemble at least kMinInstructionsForSnippet instructions by repeating the
   // snippet for debug/analysis. This is so that the user clearly understands
@@ -104,10 +102,10 @@ InstructionBenchmark BenchmarkRunner::runConfiguration(
   {
     llvm::SmallString<0> Buffer;
     llvm::raw_svector_ostream OS(Buffer);
-    assembleToStream(
-        State.getExegesisTarget(), State.createTargetMachine(), BC.LiveIns,
-        BC.RegisterInitialValues,
-        Repetitor.Repeat(BC.Instructions, kMinInstructionsForSnippet), OS);
+    assembleToStream(State.getExegesisTarget(), State.createTargetMachine(),
+                     BC.LiveIns, BC.Key.RegisterInitialValues,
+                     Repetitor.Repeat(Instructions, kMinInstructionsForSnippet),
+                     OS);
     const ExecutableFunction EF(State.createTargetMachine(),
                                 getObjectFromBuffer(OS.str()));
     const auto FnBytes = EF.getFunctionBytes();
@@ -117,7 +115,7 @@ InstructionBenchmark BenchmarkRunner::runConfiguration(
   // Assemble NumRepetitions instructions repetitions of the snippet for
   // measurements.
   const auto Filler =
-      Repetitor.Repeat(BC.Instructions, InstrBenchmark.NumRepetitions);
+      Repetitor.Repeat(Instructions, InstrBenchmark.NumRepetitions);
 
   llvm::object::OwningBinary<llvm::object::ObjectFile> ObjectFile;
   if (DumpObjectToDisk) {
@@ -133,7 +131,7 @@ InstructionBenchmark BenchmarkRunner::runConfiguration(
     llvm::SmallString<0> Buffer;
     llvm::raw_svector_ostream OS(Buffer);
     assembleToStream(State.getExegesisTarget(), State.createTargetMachine(),
-                     BC.LiveIns, BC.RegisterInitialValues, Filler, OS);
+                     BC.LiveIns, BC.Key.RegisterInitialValues, Filler, OS);
     ObjectFile = getObjectFromBuffer(OS.str());
   }
 
@@ -150,7 +148,7 @@ InstructionBenchmark BenchmarkRunner::runConfiguration(
     // Scale the measurements by instruction.
     BM.PerInstructionValue /= InstrBenchmark.NumRepetitions;
     // Scale the measurements by snippet.
-    BM.PerSnippetValue *= static_cast<double>(BC.Instructions.size()) /
+    BM.PerSnippetValue *= static_cast<double>(Instructions.size()) /
                           InstrBenchmark.NumRepetitions;
   }
 
@@ -167,7 +165,7 @@ BenchmarkRunner::writeObjectFile(const BenchmarkCode &BC,
     return std::move(E);
   llvm::raw_fd_ostream OFS(ResultFD, true /*ShouldClose*/);
   assembleToStream(State.getExegesisTarget(), State.createTargetMachine(),
-                   BC.LiveIns, BC.RegisterInitialValues, FillFunction, OFS);
+                   BC.LiveIns, BC.Key.RegisterInitialValues, FillFunction, OFS);
   return ResultPath.str();
 }
 

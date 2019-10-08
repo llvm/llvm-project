@@ -4,8 +4,7 @@
 # have different configs, so they should not be placed in the same cluster by
 # stabilization.
 
-# CHECK-UNSTABLE: SQRTSSr
-# CHECK-UNSTABLE: SQRTSSr
+# CHECK-UNSTABLE-NOT: SQRTSSr
 
 ---
 mode:            latency
