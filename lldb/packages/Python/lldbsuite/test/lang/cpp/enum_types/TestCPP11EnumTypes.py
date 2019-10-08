@@ -19,8 +19,8 @@ class CPP11EnumTypesTestCase(TestBase):
         """Test C++11 enumeration class types as int8_t types."""
         self.build(
             dictionary={
-                'CFLAGS_EXTRAS': '"-DTEST_BLOCK_CAPTURED_VARS=int8_t"'})
-        self.image_lookup_for_enum_type()
+                'CFLAGS_EXTRAS': '"-DSIGNED_ENUM_CLASS_TYPE=int8_t"'})
+        self.image_lookup_for_enum_type(True)
 
     @expectedFailureAll(oslist=['freebsd'], bugnumber='llvm.org/pr36527')
     @skipIf(dwarf_version=['<', '4'])
@@ -28,8 +28,8 @@ class CPP11EnumTypesTestCase(TestBase):
         """Test C++11 enumeration class types as int16_t types."""
         self.build(
             dictionary={
-                'CFLAGS_EXTRAS': '"-DTEST_BLOCK_CAPTURED_VARS=int16_t"'})
-        self.image_lookup_for_enum_type()
+                'CFLAGS_EXTRAS': '"-DSIGNED_ENUM_CLASS_TYPE=int16_t"'})
+        self.image_lookup_for_enum_type(True)
 
     @expectedFailureAll(oslist=['freebsd'], bugnumber='llvm.org/pr36527')
     @skipIf(dwarf_version=['<', '4'])
@@ -37,8 +37,8 @@ class CPP11EnumTypesTestCase(TestBase):
         """Test C++11 enumeration class types as int32_t types."""
         self.build(
             dictionary={
-                'CFLAGS_EXTRAS': '"-DTEST_BLOCK_CAPTURED_VARS=int32_t"'})
-        self.image_lookup_for_enum_type()
+                'CFLAGS_EXTRAS': '"-DSIGNED_ENUM_CLASS_TYPE=int32_t"'})
+        self.image_lookup_for_enum_type(True)
 
     @expectedFailureAll(oslist=['freebsd'], bugnumber='llvm.org/pr36527')
     @skipIf(dwarf_version=['<', '4'])
@@ -46,8 +46,8 @@ class CPP11EnumTypesTestCase(TestBase):
         """Test C++11 enumeration class types as int64_t types."""
         self.build(
             dictionary={
-                'CFLAGS_EXTRAS': '"-DTEST_BLOCK_CAPTURED_VARS=int64_t"'})
-        self.image_lookup_for_enum_type()
+                'CFLAGS_EXTRAS': '"-DSIGNED_ENUM_CLASS_TYPE=int64_t"'})
+        self.image_lookup_for_enum_type(True)
 
     @expectedFailureAll(oslist=['freebsd'], bugnumber='llvm.org/pr36527')
     @skipIf(dwarf_version=['<', '4'])
@@ -55,8 +55,8 @@ class CPP11EnumTypesTestCase(TestBase):
         """Test C++11 enumeration class types as uint8_t types."""
         self.build(
             dictionary={
-                'CFLAGS_EXTRAS': '"-DTEST_BLOCK_CAPTURED_VARS=uint8_t"'})
-        self.image_lookup_for_enum_type()
+                'CFLAGS_EXTRAS': '"-DUNSIGNED_ENUM_CLASS_TYPE=uint8_t"'})
+        self.image_lookup_for_enum_type(False)
 
     @expectedFailureAll(oslist=['freebsd'], bugnumber='llvm.org/pr36527')
     @skipIf(dwarf_version=['<', '4'])
@@ -64,8 +64,8 @@ class CPP11EnumTypesTestCase(TestBase):
         """Test C++11 enumeration class types as uint16_t types."""
         self.build(
             dictionary={
-                'CFLAGS_EXTRAS': '"-DTEST_BLOCK_CAPTURED_VARS=uint16_t"'})
-        self.image_lookup_for_enum_type()
+                'CFLAGS_EXTRAS': '"-DUNSIGNED_ENUM_CLASS_TYPE=uint16_t"'})
+        self.image_lookup_for_enum_type(False)
 
     @expectedFailureAll(oslist=['freebsd'], bugnumber='llvm.org/pr36527')
     @skipIf(dwarf_version=['<', '4'])
@@ -73,8 +73,8 @@ class CPP11EnumTypesTestCase(TestBase):
         """Test C++11 enumeration class types as uint32_t types."""
         self.build(
             dictionary={
-                'CFLAGS_EXTRAS': '"-DTEST_BLOCK_CAPTURED_VARS=uint32_t"'})
-        self.image_lookup_for_enum_type()
+                'CFLAGS_EXTRAS': '"-DUNSIGNED_ENUM_CLASS_TYPE=uint32_t"'})
+        self.image_lookup_for_enum_type(False)
 
     @expectedFailureAll(oslist=['freebsd'], bugnumber='llvm.org/pr36527')
     @skipIf(dwarf_version=['<', '4'])
@@ -82,8 +82,8 @@ class CPP11EnumTypesTestCase(TestBase):
         """Test C++11 enumeration class types as uint64_t types."""
         self.build(
             dictionary={
-                'CFLAGS_EXTRAS': '"-DTEST_BLOCK_CAPTURED_VARS=uint64_t"'})
-        self.image_lookup_for_enum_type()
+                'CFLAGS_EXTRAS': '"-DUNSIGNED_ENUM_CLASS_TYPE=uint64_t"'})
+        self.image_lookup_for_enum_type(False)
 
     def setUp(self):
         # Call super's setUp().
@@ -91,7 +91,7 @@ class CPP11EnumTypesTestCase(TestBase):
         # Find the line number to break inside main().
         self.line = line_number('main.cpp', '// Set break point at this line.')
 
-    def image_lookup_for_enum_type(self):
+    def image_lookup_for_enum_type(self, is_signed):
         """Test C++11 enumeration class types."""
         exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
@@ -125,16 +125,28 @@ class CPP11EnumTypesTestCase(TestBase):
                              'kNumDays',
                              '}'])
 
-        enum_values = ['-4',
-                       'Monday',
-                       'Tuesday',
-                       'Wednesday',
-                       'Thursday',
-                       'Friday',
-                       'Saturday',
-                       'Sunday',
-                       'kNumDays',
-                       '5']
+        if is_signed:
+            enum_values = ['-4',
+                           'Monday',
+                           'Tuesday',
+                           'Wednesday',
+                           'Thursday',
+                           'Friday',
+                           'Saturday',
+                           'Sunday',
+                           'kNumDays',
+                           '5']
+        else:
+            enum_values = ['199',
+                           'Monday',
+                           'Tuesday',
+                           'Wednesday',
+                           'Thursday',
+                           'Friday',
+                           'Saturday',
+                           'Sunday',
+                           'kNumDays',
+                           '208']
 
         bkpt = self.target().FindBreakpointByID(bkpt_id)
         for enum_value in enum_values:
