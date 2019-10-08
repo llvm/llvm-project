@@ -25,11 +25,35 @@ class EnumTypesTestCase(TestBase):
         exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
+        lldbutil.run_to_source_breakpoint(
+            self, '// Breakpoint for bitfield', lldb.SBFileSpec("main.c"))
+
+        self.expect("fr var a", DATA_TYPES_DISPLAYED_CORRECTLY,
+                    patterns=[' = A$'])
+        self.expect("fr var b", DATA_TYPES_DISPLAYED_CORRECTLY,
+                    patterns=[' = B$'])
+        self.expect("fr var c", DATA_TYPES_DISPLAYED_CORRECTLY,
+                    patterns=[' = C$'])
+        self.expect("fr var ab", DATA_TYPES_DISPLAYED_CORRECTLY,
+                    patterns=[' = AB$'])
+        self.expect("fr var ac", DATA_TYPES_DISPLAYED_CORRECTLY,
+                    patterns=[' = A | C$'])
+        self.expect("fr var all", DATA_TYPES_DISPLAYED_CORRECTLY,
+                    patterns=[' = ALL$'])
+        # Test that an enum that doesn't match the heuristic we use in
+        # ClangASTContext::DumpEnumValue, gets printed as a raw integer.
+        self.expect("fr var omega", DATA_TYPES_DISPLAYED_CORRECTLY,
+                    patterns=[' = 7$'])
+        # Test the behavior in case have a variable of a type considered
+        # 'bitfield' by the heuristic, but the value isn't actually fully
+        # covered by the enumerators.
+        self.expect("p (enum bitfield)nonsense", DATA_TYPES_DISPLAYED_CORRECTLY,
+                    patterns=[' = B | C | 0x10$'])
+
         # Break inside the main.
         bkpt_id = lldbutil.run_break_set_by_file_and_line(
             self, "main.c", self.line, num_expected_locations=1, loc_exact=True)
-
-        self.runCmd("run", RUN_SUCCEEDED)
+        self.runCmd("c", RUN_SUCCEEDED)
 
         # The stop reason of the thread should be breakpoint.
         self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,

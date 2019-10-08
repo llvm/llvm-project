@@ -137,65 +137,6 @@ if (APPLE AND LLVM_USE_SANITIZER)
   endif()
 endif()
 
-function(cxx_link_system_libraries target)
-  target_add_link_flags_if_supported(${target} PRIVATE "-nodefaultlibs")
-  target_add_compile_flags_if_supported(${target} PRIVATE "/Zl")
-  target_add_link_flags_if_supported(${target} PRIVATE "/nodefaultlib")
-
-  if (LIBCXX_HAS_SYSTEM_LIB)
-    target_link_libraries(${target} PRIVATE System)
-  endif()
-
-  if (LIBCXX_HAS_PTHREAD_LIB)
-    target_link_libraries(${target} PRIVATE pthread)
-  endif()
-
-  if (LIBCXX_HAS_C_LIB)
-    target_link_libraries(${target} PRIVATE c)
-  endif()
-
-  if (LIBCXX_HAS_M_LIB)
-    target_link_libraries(${target} PRIVATE m)
-  endif()
-
-  if (LIBCXX_HAS_RT_LIB)
-    target_link_libraries(${target} PRIVATE rt)
-  endif()
-
-  if (LIBCXX_USE_COMPILER_RT)
-    find_compiler_rt_library(builtins LIBCXX_BUILTINS_LIBRARY)
-    if (LIBCXX_BUILTINS_LIBRARY)
-      target_link_libraries(${target} PRIVATE "${LIBCXX_BUILTINS_LIBRARY}")
-    endif()
-  elseif (LIBCXX_HAS_GCC_S_LIB)
-    target_link_libraries(${target} PRIVATE gcc_s)
-  endif()
-
-  if (LIBCXX_HAVE_CXX_ATOMICS_WITH_LIB)
-    target_link_libraries(${target} PRIVATE atomic)
-  endif()
-
-  if (MINGW)
-    target_link_libraries(${target} PRIVATE "${MINGW_LIBRARIES}")
-  endif()
-
-  if (LIBCXX_TARGETING_MSVC)
-    if (LIBCXX_DEBUG_BUILD)
-      set(LIB_SUFFIX "d")
-    else()
-      set(LIB_SUFFIX "")
-    endif()
-
-    target_link_libraries(${target} PRIVATE ucrt${LIB_SUFFIX}) # Universal C runtime
-    target_link_libraries(${target} PRIVATE vcruntime${LIB_SUFFIX}) # C++ runtime
-    target_link_libraries(${target} PRIVATE msvcrt${LIB_SUFFIX}) # C runtime startup files
-    target_link_libraries(${target} PRIVATE msvcprt${LIB_SUFFIX}) # C++ standard library. Required for exception_ptr internals.
-    # Required for standards-complaint wide character formatting functions
-    # (e.g. `printfw`/`scanfw`)
-    target_link_libraries(${target} PRIVATE iso_stdio_wide_specifiers)
-  endif()
-endfunction()
-
 if (LIBCXX_ENABLE_PARALLEL_ALGORITHMS AND NOT TARGET pstl::ParallelSTL)
   message(FATAL_ERROR "Could not find ParallelSTL")
 endif()
@@ -219,7 +160,6 @@ if (LIBCXX_ENABLE_SHARED)
   if(COMMAND llvm_setup_rpath)
     llvm_setup_rpath(cxx_shared)
   endif()
-  cxx_link_system_libraries(cxx_shared)
   target_link_libraries(cxx_shared PRIVATE ${LIBCXX_LIBRARIES})
   set_target_properties(cxx_shared
     PROPERTIES
@@ -322,7 +262,6 @@ endif()
 # Build the static library.
 if (LIBCXX_ENABLE_STATIC)
   add_library(cxx_static STATIC ${exclude_from_all} ${LIBCXX_SOURCES} ${LIBCXX_HEADERS})
-  cxx_link_system_libraries(cxx_static)
   target_link_libraries(cxx_static PRIVATE ${LIBCXX_LIBRARIES})
   set(CMAKE_STATIC_LIBRARY_PREFIX "lib")
   set_target_properties(cxx_static
@@ -385,9 +324,9 @@ if (LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY)
     )
   add_library(cxx_experimental STATIC ${LIBCXX_EXPERIMENTAL_SOURCES})
   if (LIBCXX_ENABLE_SHARED)
-    target_link_libraries(cxx_experimental cxx_shared)
+    target_link_libraries(cxx_experimental PRIVATE cxx_shared)
   else()
-    target_link_libraries(cxx_experimental cxx_static)
+    target_link_libraries(cxx_experimental PRIVATE cxx_static)
   endif()
 
   set_target_properties(cxx_experimental

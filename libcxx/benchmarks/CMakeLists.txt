@@ -146,21 +146,13 @@ function(add_benchmark_test name source_file)
   if (LLVM_USE_SANITIZER)
     target_link_libraries(${libcxx_target} PRIVATE -ldl)
   endif()
-  if (LIBCXX_HAS_C_LIB)
-    target_link_libraries(${libcxx_target} PRIVATE -lc)
-  endif()
-  if (LIBCXX_HAS_M_LIB)
-    target_link_libraries(${libcxx_target} PRIVATE -lm)
-  endif()
-  if (LIBCXX_HAS_PTHREAD_LIB)
-    target_link_libraries(${libcxx_target} PRIVATE -lpthread)
-  endif()
   set_target_properties(${libcxx_target}
     PROPERTIES
           OUTPUT_NAME "${name}.libcxx.out"
           RUNTIME_OUTPUT_DIRECTORY "${BENCHMARK_OUTPUT_DIR}"
           COMPILE_FLAGS "${BENCHMARK_TEST_LIBCXX_COMPILE_FLAGS}"
           LINK_FLAGS "${BENCHMARK_TEST_LIBCXX_LINK_FLAGS}")
+  cxx_link_system_libraries(${libcxx_target})
   if (LIBCXX_BENCHMARK_NATIVE_STDLIB)
     if (LIBCXX_BENCHMARK_NATIVE_STDLIB STREQUAL "libstdc++" AND NOT DEFINED LIBSTDCXX_FILESYSTEM_LIB
         AND "${name}" STREQUAL "filesystem")

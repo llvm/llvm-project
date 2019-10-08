@@ -2176,7 +2176,8 @@ uint32_t GDBRemoteCommunicationClient::FindProcesses(
       if (match_info.GetProcessInfo().EffectiveGroupIDIsValid())
         packet.Printf("egid:%u;",
                       match_info.GetProcessInfo().GetEffectiveGroupID());
-      packet.Printf("all_users:%u;", match_info.GetMatchAllUsers() ? 1 : 0);
+      if (match_info.GetProcessInfo().EffectiveGroupIDIsValid())
+        packet.Printf("all_users:%u;", match_info.GetMatchAllUsers() ? 1 : 0);
       if (match_info.GetProcessInfo().GetArchitecture().IsValid()) {
         const ArchSpec &match_arch =
             match_info.GetProcessInfo().GetArchitecture();
