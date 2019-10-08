@@ -555,6 +555,8 @@ int SwiftREPL::CompleteCode(const std::string &current_code,
       m_swift_ast_sp.reset(new SwiftASTContext(*target_swift_ast));
     swift::registerIDERequestFunctions(
         m_swift_ast_sp.get()->GetASTContext()->evaluator);
+    swift::registerTypeCheckerRequestFunctions(
+        m_swift_ast_sp.get()->GetASTContext()->evaluator);
   }
   SwiftASTContext *swift_ast = m_swift_ast_sp.get();
 
