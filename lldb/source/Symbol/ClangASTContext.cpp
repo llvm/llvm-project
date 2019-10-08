@@ -9486,6 +9486,32 @@ void ClangASTContext::DumpValue(
   }
 }
 
+static bool DumpEnumValue(const clang::QualType &qual_type, Stream *s,
+                          const DataExtractor &data, lldb::offset_t byte_offset,
+                          size_t byte_size, uint32_t bitfield_bit_offset,
+                          uint32_t bitfield_bit_size) {
+  const clang::EnumType *enutype =
+      llvm::cast<clang::EnumType>(qual_type.getTypePtr());
+  const clang::EnumDecl *enum_decl = enutype->getDecl();
+  assert(enum_decl);
+  clang::EnumDecl::enumerator_iterator enum_pos, enum_end_pos;
+  const bool is_signed = qual_type->isSignedIntegerOrEnumerationType();
+  lldb::offset_t offset = byte_offset;
+  const int64_t enum_value = data.GetMaxS64Bitfield(
+      &offset, byte_size, bitfield_bit_size, bitfield_bit_offset);
+
+  for (auto enumerator : enum_decl->enumerators()) {
+    if (enumerator->getInitVal().getSExtValue() == enum_value) {
+      s->PutCString(enumerator->getNameAsString());
+      return true;
+    }
+  }
+  // If we have gotten here we didn't get find the enumerator in the
+  // enum decl, so just print the integer.
+  s->Printf("%" PRIi64, enum_value);
+  return true;
+}
+
 bool ClangASTContext::DumpTypeValue(
     lldb::opaque_compiler_type_t type, Stream *s, lldb::Format format,
     const DataExtractor &data, lldb::offset_t byte_offset, size_t byte_size,
@@ -9530,45 +9556,9 @@ bool ClangASTContext::DumpTypeValue(
       // If our format is enum or default, show the enumeration value as its
       // enumeration string value, else just display it as requested.
       if ((format == eFormatEnum || format == eFormatDefault) &&
-          GetCompleteType(type)) {
-        const clang::EnumType *enutype =
-            llvm::cast<clang::EnumType>(qual_type.getTypePtr());
-        const clang::EnumDecl *enum_decl = enutype->getDecl();
-        assert(enum_decl);
-        clang::EnumDecl::enumerator_iterator enum_pos, enum_end_pos;
-        const bool is_signed = qual_type->isSignedIntegerOrEnumerationType();
-        lldb::offset_t offset = byte_offset;
-        if (is_signed) {
-          const int64_t enum_svalue = data.GetMaxS64Bitfield(
-              &offset, byte_size, bitfield_bit_size, bitfield_bit_offset);
-          for (enum_pos = enum_decl->enumerator_begin(),
-              enum_end_pos = enum_decl->enumerator_end();
-               enum_pos != enum_end_pos; ++enum_pos) {
-            if (enum_pos->getInitVal().getSExtValue() == enum_svalue) {
-              s->PutCString(enum_pos->getNameAsString());
-              return true;
-            }
-          }
-          // If we have gotten here we didn't get find the enumerator in the
-          // enum decl, so just print the integer.
-          s->Printf("%" PRIi64, enum_svalue);
-        } else {
-          const uint64_t enum_uvalue = data.GetMaxU64Bitfield(
-              &offset, byte_size, bitfield_bit_size, bitfield_bit_offset);
-          for (enum_pos = enum_decl->enumerator_begin(),
-              enum_end_pos = enum_decl->enumerator_end();
-               enum_pos != enum_end_pos; ++enum_pos) {
-            if (enum_pos->getInitVal().getZExtValue() == enum_uvalue) {
-              s->PutCString(enum_pos->getNameAsString());
-              return true;
-            }
-          }
-          // If we have gotten here we didn't get find the enumerator in the
-          // enum decl, so just print the integer.
-          s->Printf("%" PRIu64, enum_uvalue);
-        }
-        return true;
-      }
+          GetCompleteType(type))
+        return DumpEnumValue(qual_type, s, data, byte_offset, byte_size,
+                             bitfield_bit_offset, bitfield_bit_size);
       // format was not enum, just fall through and dump the value as
       // requested....
       LLVM_FALLTHROUGH;
