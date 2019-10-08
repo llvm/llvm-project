@@ -19,15 +19,9 @@ class MTCSwiftPropertyTestCase(TestBase):
     @skipUnlessDarwin
     def test(self):
         self.mtc_dylib_path = findMainThreadCheckerDylib()
-        if self.mtc_dylib_path == "":
-            self.skipTest("This test requires libMainThreadChecker.dylib.")
-
+        self.assertTrue(self.mtc_dylib_path != "")
         self.build()
         self.mtc_tests()
-
-    def setUp(self):
-        # Call super's setUp().
-        TestBase.setUp(self)
 
     def mtc_tests(self):
         # Load the test
@@ -41,6 +35,8 @@ class MTCSwiftPropertyTestCase(TestBase):
         thread = process.GetSelectedThread()
         frame = thread.GetSelectedFrame()
 
+        view = "NSView" if lldbplatformutil.getPlatform() == "macosx" else "UIView"
+
         self.expect(
             "thread info -s",
             substrs=["instrumentation_class", "api_name", "class_name", "selector", "description"])
@@ -49,9 +45,11 @@ class MTCSwiftPropertyTestCase(TestBase):
         json_line = '\n'.join(output_lines[2:])
         data = json.loads(json_line)
         self.assertEqual(data["instrumentation_class"], "MainThreadChecker")
-        self.assertEqual(data["api_name"], "NSView.superview")
-        self.assertEqual(data["class_name"], "NSView")
+        self.assertEqual(data["api_name"], view + ".superview")
+        self.assertEqual(data["class_name"], view)
         self.assertEqual(data["selector"], "superview")
-        self.assertEqual(data["description"], "NSView.superview must be used from main thread only")
+        self.assertEqual(data["description"], view + ".superview must be used from main thread only")
 
-        self.expect("thread info", substrs=['stop reason = NSView.superview must be used from main thread only'])
+        self.expect("thread info",
+                    substrs=['stop reason = ' + view +
+                             '.superview must be used from main thread only'])

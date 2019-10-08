@@ -46,8 +46,26 @@ class TestObjCIVarDiscovery(TestBase):
 
     def do_test(self, dbg):
         """Test that we can correctly see ivars from the Objective-C runtime"""
+
+        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
+        self.assertTrue(target, VALID_TARGET)
+        #self.registerSharedLibrariesWithTarget(target, ['aTestFramework.framework/aTestFramework'])
+        if lldb.remote_platform:
+            wd = lldb.remote_platform.GetWorkingDirectory()
+            directory = 'aTestFramework.framework/Versions/A/'
+            filename = directory + '/aTestFramework'
+            cur_dir = wd
+            for d in directory.split('/'):
+                err = lldb.remote_platform.MakeDirectory(
+                    os.path.join(cur_dir, d))
+                self.assertFalse(err.Fail(), 'Failed to mkdir ' + d + ':' + str(err))
+                cur_dir = os.path.join(cur_dir, d)
+            err = lldb.remote_platform.Put(
+                lldb.SBFileSpec(self.getBuildArtifact(filename)),
+                lldb.SBFileSpec(os.path.join(wd, filename)))
+            self.assertFalse(err.Fail(), 'Failed to copy ' + filename + ':' + str(err))
+
         # Launch the process, and do not stop at the entry point.
-        envp = ['DYLD_FRAMEWORK_PATH=.']
         lldbutil.run_to_source_breakpoint(
             self, 'Set breakpoint here', lldb.SBFileSpec('main.swift'))
 

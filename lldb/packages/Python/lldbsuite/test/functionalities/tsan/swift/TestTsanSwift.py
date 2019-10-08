@@ -28,6 +28,7 @@ class TsanSwiftTestCase(lldbtest.TestBase):
     @decorators.swiftTest
     @decorators.skipIfLinux
     @decorators.skipUnlessSwiftThreadSanitizer
+    @decorators.expectedFailureAll(archs=['arm64'])
     def test_tsan_swift(self):
         self.build()
         self.do_test()
@@ -45,7 +46,15 @@ class TsanSwiftTestCase(lldbtest.TestBase):
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, lldbtest.VALID_TARGET)
 
+        runtimes = []
+        for m in target.module_iter():
+            libspec = m.GetFileSpec()
+            if "clang_rt" in libspec.GetFilename():
+                runtimes.append(os.path.join(libspec.GetDirectory(), libspec.GetFilename()))
+        self.registerSharedLibrariesWithTarget(target, runtimes)
+
         self.runCmd("run")
+        self.runCmd("bt")
 
         stop_reason = self.dbg.GetSelectedTarget().process.GetSelectedThread().GetStopReason()
         if stop_reason == lldb.eStopReasonExec:

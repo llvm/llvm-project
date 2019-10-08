@@ -1,4 +1,7 @@
 import Foundation
+#if canImport(CoreGraphics)
+import CoreGraphics
+#endif
 
 extension Measurement where UnitType == UnitAngle {
   var radians: CGFloat {

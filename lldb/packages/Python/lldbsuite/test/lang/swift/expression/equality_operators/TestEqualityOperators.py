@@ -78,6 +78,7 @@ class TestUnitTests(TestBase):
         # Create the target
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
+        self.registerSharedLibrariesWithTarget(target, ['fooey'])
 
         # Set the breakpoints
         bkpt = target.BreakpointCreateByName(bkpt_name)

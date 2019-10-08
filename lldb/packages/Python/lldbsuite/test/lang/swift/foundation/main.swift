@@ -14,9 +14,10 @@ import Foundation
 // Test that importing Foundation and printing a value for which
 // no data formatter exists works consistently on all platforms.
 func main() {
-  var point = NSPoint(x: 23, y: 42)
-  print(point) //% self.expect("frame variable -- point", substrs=['x', '23', 'y', '42'])
-               //% self.expect("expression -- point", substrs=['x', '23', 'y', '42'])
+
+  var point = NSMakeRange(23, 42)
+  print(point) //% self.expect("frame variable -- point", substrs=['23', '42'])
+               //% self.expect("expression -- point", substrs=['23', '42'])
 }
 
 main()

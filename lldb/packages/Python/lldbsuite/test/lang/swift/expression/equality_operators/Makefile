@@ -1,20 +1,14 @@
-LEVEL = ../../../../make
-
-EXE=three
-SWIFT_SOURCES=three.swift
-LD_EXTRAS=-L$(shell pwd) -lfooey
-SWIFTFLAGS_EXTRAS= -I$(shell pwd)
+EXE := three
+SWIFT_SOURCES := three.swift
+LD_EXTRAS := -L. -lfooey
+SWIFTFLAGS_EXTRAS := -I.
 
 all: libfooey.dylib three
 
-include $(LEVEL)/Makefile.rules
+include Makefile.rules
 
 libfooey.dylib: one.swift two.swift
-	$(SWIFTC) $(SWIFT_MODULE_CACHE_FLAGS) -g -Onone $^ -emit-library -module-name fooey -emit-module -Xlinker -install_name -Xlinker @executable_path/$@ \
-	  -toolchain-stdlib-rpath
-ifneq "$(CODESIGN)" ""
-	$(CODESIGN) -s - "$@"
-endif
-
-clean::
-	rm -rf *.swiftmodule *.swiftdoc *.dSYM *~ lib*.dylib three
+	$(MAKE) -f $(MAKEFILE_RULES) \
+		MAKE_DSYM=YES DYLIB_ONLY=YES DYLIB_NAME=fooey \
+		SWIFT_SOURCES="one.swift two.swift" \
+		SWIFTFLAGS_EXTRAS=-I$(BUILDDIR)
