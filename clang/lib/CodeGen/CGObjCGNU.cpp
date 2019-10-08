@@ -4040,7 +4040,7 @@ LValue CGObjCGNU::EmitObjCValueForIvar(CodeGenFunction &CGF,
                                        const ObjCIvarDecl *Ivar,
                                        unsigned CVRQualifiers) {
   const ObjCInterfaceDecl *ID =
-    ObjectTy->getAs<ObjCObjectType>()->getInterface();
+    ObjectTy->castAs<ObjCObjectType>()->getInterface();
   return EmitValueForIvarAtOffset(CGF, ID, BaseValue, Ivar, CVRQualifiers,
                                   EmitIvarOffset(CGF, ID, Ivar));
 }

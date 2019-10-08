@@ -1659,7 +1659,7 @@ void CGDebugInfo::CollectCXXMemberFunctions(
     if (!Method || Method->isImplicit() || Method->hasAttr<NoDebugAttr>())
       continue;
 
-    if (Method->getType()->getAs<FunctionProtoType>()->getContainedAutoType())
+    if (Method->getType()->castAs<FunctionProtoType>()->getContainedAutoType())
       continue;
 
     // Reuse the existing member function declaration if it exists.
@@ -4561,7 +4561,7 @@ void CGDebugInfo::EmitUsingDecl(const UsingDecl &UD) {
   // return type in the definition)
   if (const auto *FD = dyn_cast<FunctionDecl>(USD.getUnderlyingDecl()))
     if (const auto *AT =
-            FD->getType()->getAs<FunctionProtoType>()->getContainedAutoType())
+            FD->getType()->castAs<FunctionProtoType>()->getContainedAutoType())
       if (AT->getDeducedType().isNull())
         return;
   if (llvm::DINode *Target =

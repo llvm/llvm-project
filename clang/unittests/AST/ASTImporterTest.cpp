@@ -4785,11 +4785,8 @@ TEST_P(ASTImporterLookupTableTest, LookupSearchesInTheWholeRedeclChain) {
   EXPECT_EQ(*Res.begin(), A);
 }
 
-
-// FIXME This test is disabled currently, upcoming patches will make it
-// possible to enable.
 TEST_P(ASTImporterOptionSpecificTestBase,
-       DISABLED_RedeclChainShouldBeCorrectAmongstNamespaces) {
+       RedeclChainShouldBeCorrectAmongstNamespaces) {
   Decl *FromTU = getTuDecl(
       R"(
       namespace NS {

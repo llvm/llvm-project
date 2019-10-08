@@ -9532,7 +9532,7 @@ ABIArgInfo RISCVABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
   // Complex types for the hard float ABI must be passed direct rather than
   // using CoerceAndExpand.
   if (IsFixed && Ty->isComplexType() && FLen && ArgFPRsLeft >= 2) {
-    QualType EltTy = Ty->getAs<ComplexType>()->getElementType();
+    QualType EltTy = Ty->castAs<ComplexType>()->getElementType();
     if (getContext().getTypeSize(EltTy) <= FLen) {
       ArgFPRsLeft -= 2;
       return ABIArgInfo::getDirect();

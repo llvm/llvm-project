@@ -9219,6 +9219,10 @@ public:
   /// construct.
   void startOpenMPLoop();
 
+  /// If the current region is a range loop-based region, mark the start of the
+  /// loop construct.
+  void startOpenMPCXXRangeFor();
+
   /// Check if the specified variable is used in 'private' clause.
   /// \param Level Relative level of nested OpenMP construct for that the check
   /// is performed.

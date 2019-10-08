@@ -269,7 +269,7 @@ int test_iteration_spaces() {
       c[globalii] += a[globalii] + ii;
   }
 
-// expected-error@+2 {{statement after '#pragma omp target teams distribute parallel for simd' must be a for loop}}
+// omp4-error@+2 {{statement after '#pragma omp target teams distribute parallel for simd' must be a for loop}}
 #pragma omp target teams distribute parallel for simd
   for (auto &item : a) {
     item = item + 1;

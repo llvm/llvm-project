@@ -17,6 +17,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/OpenMPClause.h"
 #include "clang/AST/Stmt.h"
+#include "clang/AST/StmtCXX.h"
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/SourceLocation.h"
 
@@ -1087,10 +1088,22 @@ public:
     // This relies on the loop form is already checked by Sema.
     const Stmt *Body =
         getInnermostCapturedStmt()->getCapturedStmt()->IgnoreContainers();
-    Body = cast<ForStmt>(Body)->getBody();
+    if (auto *For = dyn_cast<ForStmt>(Body)) {
+      Body = For->getBody();
+    } else {
+      assert(isa<CXXForRangeStmt>(Body) &&
+             "Expected canonical for loop or range-based for loop.");
+      Body = cast<CXXForRangeStmt>(Body)->getBody();
+    }
     for (unsigned Cnt = 1; Cnt < CollapsedNum; ++Cnt) {
       Body = Body->IgnoreContainers();
-      Body = cast<ForStmt>(Body)->getBody();
+      if (auto *For = dyn_cast<ForStmt>(Body)) {
+        Body = For->getBody();
+      } else {
+        assert(isa<CXXForRangeStmt>(Body) &&
+               "Expected canonical for loop or range-based for loop.");
+        Body = cast<CXXForRangeStmt>(Body)->getBody();
+      }
     }
     return Body;
   }

@@ -104,8 +104,8 @@ bool CodeGenModule::TryEmitBaseDestructorAsAlias(const CXXDestructorDecl *D) {
   // Give up if the calling conventions don't match. We could update the call,
   // but it is probably not worth it.
   const CXXDestructorDecl *BaseD = UniqueBase->getDestructor();
-  if (BaseD->getType()->getAs<FunctionType>()->getCallConv() !=
-      D->getType()->getAs<FunctionType>()->getCallConv())
+  if (BaseD->getType()->castAs<FunctionType>()->getCallConv() !=
+      D->getType()->castAs<FunctionType>()->getCallConv())
     return true;
 
   GlobalDecl AliasDecl(D, Dtor_Base);

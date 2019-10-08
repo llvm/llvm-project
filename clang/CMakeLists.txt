@@ -114,6 +114,7 @@ if( CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR )
   include(TableGen)
   include(HandleLLVMOptions)
   include(VersionFromVCS)
+  include(LLVMDistributionSupport)
 
   set(PACKAGE_VERSION "${LLVM_PACKAGE_VERSION}")
 
@@ -857,6 +858,10 @@ if (LLVM_ADD_NATIVE_VISUALIZERS_TO_SOLUTION)
   add_subdirectory(utils/ClangVisualizers)
 endif()
 add_subdirectory(utils/hmaptool)
+
+if(CLANG_BUILT_STANDALONE)
+  llvm_distribution_add_targets()
+endif()
 
 configure_file(
   ${CLANG_SOURCE_DIR}/include/clang/Config/config.h.cmake

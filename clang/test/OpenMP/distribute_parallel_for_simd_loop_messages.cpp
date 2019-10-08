@@ -379,7 +379,7 @@ int test_iteration_spaces() {
 
 #pragma omp target
 #pragma omp teams
-// expected-error@+2 {{statement after '#pragma omp distribute parallel for simd' must be a for loop}}
+// omp4-error@+2 {{statement after '#pragma omp distribute parallel for simd' must be a for loop}}
 #pragma omp distribute parallel for simd
   for (auto &item : a) {
     item = item + 1;

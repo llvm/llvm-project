@@ -373,3 +373,19 @@ namespace designated_init {
   template<typename T> void f(decltype(T{.a.b[3][1 ... 4] = 9}) x) {}
   void use_f(A a) { f<A>(a); }
 }
+
+namespace null {
+  template <decltype(nullptr) P>
+  void cpp_nullptr(typename enable_if<P == nullptr>::type* = 0) {
+  }
+
+  template <void *P>
+  void gnu_null(typename enable_if<P == __null>::type* = 0) {
+  }
+
+  // CHECK-LABEL: define {{.*}} @_ZN4null11cpp_nullptrILDn0EEEvPN9enable_ifIXeqT_LDnEEvE4typeE
+  template void cpp_nullptr<nullptr>(void *);
+
+  // CHECK-LABEL: define {{.*}} @_ZN4null8gnu_nullILPv0EEEvPN9enable_ifIXeqT_Ll0EEvE4typeE
+  template void gnu_null<nullptr>(void *);
+}

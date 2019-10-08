@@ -14678,6 +14678,33 @@ TEST_F(FormatTest, AlternativeOperators) {
   */
 }
 
+TEST_F(FormatTest, NotCastRPaen) {
+
+  verifyFormat("void operator++(int) noexcept;");
+  verifyFormat("void operator++(int &) noexcept;");
+  verifyFormat("void operator delete(void *, std::size_t, const std::nothrow_t "
+               "&) noexcept;");
+  verifyFormat(
+      "void operator delete(std::size_t, const std::nothrow_t &) noexcept;");
+  verifyFormat("void operator delete(const std::nothrow_t &) noexcept;");
+  verifyFormat("void operator delete(std::nothrow_t &) noexcept;");
+  verifyFormat("void operator delete(nothrow_t &) noexcept;");
+  verifyFormat("void operator delete(foo &) noexcept;");
+  verifyFormat("void operator delete(foo) noexcept;");
+  verifyFormat("void operator delete(int) noexcept;");
+  verifyFormat("void operator delete(int &) noexcept;");
+  verifyFormat("void operator delete(int &) volatile noexcept;");
+  verifyFormat("void operator delete(int &) const");
+  verifyFormat("void operator delete(int &) = default");
+  verifyFormat("void operator delete(int &) = delete");
+  verifyFormat("void operator delete(int &) [[noreturn]]");
+  verifyFormat("void operator delete(int &) throw();");
+  verifyFormat("void operator delete(int &) throw(int);");
+  verifyFormat("auto operator delete(int &) -> int;");
+  verifyFormat("auto operator delete(int &) override");
+  verifyFormat("auto operator delete(int &) final");
+}
+
 } // end namespace
 } // end namespace format
 } // end namespace clang
