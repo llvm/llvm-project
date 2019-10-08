@@ -267,10 +267,12 @@ def add_checks(output_lines, comment_marker, prefix_list, func_dict, func_name, 
       output_lines.append(comment_marker)
       break
 
-def add_ir_checks(output_lines, comment_marker, prefix_list, func_dict, func_name):
+def add_ir_checks(output_lines, comment_marker, prefix_list, func_dict,
+                  func_name, preserve_names):
   # Label format is based on IR string.
   check_label_format = '{} %s-LABEL: @%s('.format(comment_marker)
-  add_checks(output_lines, comment_marker, prefix_list, func_dict, func_name, check_label_format, False, False)
+  add_checks(output_lines, comment_marker, prefix_list, func_dict, func_name,
+             check_label_format, False, preserve_names)
 
 def add_analyze_checks(output_lines, comment_marker, prefix_list, func_dict, func_name):
   check_label_format = '{} %s-LABEL: \'%s\''.format(comment_marker)

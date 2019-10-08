@@ -103,7 +103,7 @@ template <> struct MappingTraits<RemarkLocation> {
 /// newlines in strings.
 struct StringBlockVal {
   StringRef Value;
-  StringBlockVal(const std::string &Value) : Value(Value) {}
+  StringBlockVal(StringRef R) : Value(R) {}
 };
 
 template <> struct BlockScalarTraits<StringBlockVal> {

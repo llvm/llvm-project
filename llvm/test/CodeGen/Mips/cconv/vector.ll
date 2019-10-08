@@ -50,23 +50,25 @@ define <2 x i8> @i8_2(<2 x i8> %a, <2 x i8> %b) {
 ;
 ; MIPS32R5EB-LABEL: i8_2:
 ; MIPS32R5EB:       # %bb.0:
-; MIPS32R5EB-NEXT:    addiu $sp, $sp, -48
-; MIPS32R5EB-NEXT:    .cfi_def_cfa_offset 48
-; MIPS32R5EB-NEXT:    sw $fp, 44($sp) # 4-byte Folded Spill
-; MIPS32R5EB-NEXT:    .cfi_offset 30, -4
+; MIPS32R5EB-NEXT:    addiu $sp, $sp, -64
+; MIPS32R5EB-NEXT:    .cfi_def_cfa_offset 64
+; MIPS32R5EB-NEXT:    sw $ra, 60($sp) # 4-byte Folded Spill
+; MIPS32R5EB-NEXT:    sw $fp, 56($sp) # 4-byte Folded Spill
+; MIPS32R5EB-NEXT:    .cfi_offset 31, -4
+; MIPS32R5EB-NEXT:    .cfi_offset 30, -8
 ; MIPS32R5EB-NEXT:    move $fp, $sp
 ; MIPS32R5EB-NEXT:    .cfi_def_cfa_register 30
 ; MIPS32R5EB-NEXT:    addiu $1, $zero, -16
 ; MIPS32R5EB-NEXT:    and $sp, $sp, $1
-; MIPS32R5EB-NEXT:    sw $5, 36($sp)
-; MIPS32R5EB-NEXT:    sw $4, 40($sp)
-; MIPS32R5EB-NEXT:    lbu $1, 37($sp)
+; MIPS32R5EB-NEXT:    sw $5, 48($sp)
+; MIPS32R5EB-NEXT:    sw $4, 52($sp)
+; MIPS32R5EB-NEXT:    lbu $1, 49($sp)
 ; MIPS32R5EB-NEXT:    sw $1, 28($sp)
-; MIPS32R5EB-NEXT:    lbu $1, 36($sp)
+; MIPS32R5EB-NEXT:    lbu $1, 48($sp)
 ; MIPS32R5EB-NEXT:    sw $1, 20($sp)
-; MIPS32R5EB-NEXT:    lbu $1, 41($sp)
+; MIPS32R5EB-NEXT:    lbu $1, 53($sp)
 ; MIPS32R5EB-NEXT:    sw $1, 12($sp)
-; MIPS32R5EB-NEXT:    lbu $1, 40($sp)
+; MIPS32R5EB-NEXT:    lbu $1, 52($sp)
 ; MIPS32R5EB-NEXT:    sw $1, 4($sp)
 ; MIPS32R5EB-NEXT:    ld.d $w0, 16($sp)
 ; MIPS32R5EB-NEXT:    ld.d $w1, 0($sp)
@@ -74,12 +76,13 @@ define <2 x i8> @i8_2(<2 x i8> %a, <2 x i8> %b) {
 ; MIPS32R5EB-NEXT:    shf.w $w0, $w0, 177
 ; MIPS32R5EB-NEXT:    copy_s.w $1, $w0[1]
 ; MIPS32R5EB-NEXT:    copy_s.w $2, $w0[3]
-; MIPS32R5EB-NEXT:    sb $2, 33($sp)
-; MIPS32R5EB-NEXT:    sb $1, 32($sp)
-; MIPS32R5EB-NEXT:    lhu $2, 32($sp)
+; MIPS32R5EB-NEXT:    sb $2, 45($sp)
+; MIPS32R5EB-NEXT:    sb $1, 44($sp)
+; MIPS32R5EB-NEXT:    lhu $2, 44($sp)
 ; MIPS32R5EB-NEXT:    move $sp, $fp
-; MIPS32R5EB-NEXT:    lw $fp, 44($sp) # 4-byte Folded Reload
-; MIPS32R5EB-NEXT:    addiu $sp, $sp, 48
+; MIPS32R5EB-NEXT:    lw $fp, 56($sp) # 4-byte Folded Reload
+; MIPS32R5EB-NEXT:    lw $ra, 60($sp) # 4-byte Folded Reload
+; MIPS32R5EB-NEXT:    addiu $sp, $sp, 64
 ; MIPS32R5EB-NEXT:    jr $ra
 ; MIPS32R5EB-NEXT:    nop
 ;
@@ -151,35 +154,38 @@ define <2 x i8> @i8_2(<2 x i8> %a, <2 x i8> %b) {
 ;
 ; MIPS32R5EL-LABEL: i8_2:
 ; MIPS32R5EL:       # %bb.0:
-; MIPS32R5EL-NEXT:    addiu $sp, $sp, -48
-; MIPS32R5EL-NEXT:    .cfi_def_cfa_offset 48
-; MIPS32R5EL-NEXT:    sw $fp, 44($sp) # 4-byte Folded Spill
-; MIPS32R5EL-NEXT:    .cfi_offset 30, -4
+; MIPS32R5EL-NEXT:    addiu $sp, $sp, -64
+; MIPS32R5EL-NEXT:    .cfi_def_cfa_offset 64
+; MIPS32R5EL-NEXT:    sw $ra, 60($sp) # 4-byte Folded Spill
+; MIPS32R5EL-NEXT:    sw $fp, 56($sp) # 4-byte Folded Spill
+; MIPS32R5EL-NEXT:    .cfi_offset 31, -4
+; MIPS32R5EL-NEXT:    .cfi_offset 30, -8
 ; MIPS32R5EL-NEXT:    move $fp, $sp
 ; MIPS32R5EL-NEXT:    .cfi_def_cfa_register 30
 ; MIPS32R5EL-NEXT:    addiu $1, $zero, -16
 ; MIPS32R5EL-NEXT:    and $sp, $sp, $1
-; MIPS32R5EL-NEXT:    sw $5, 36($sp)
-; MIPS32R5EL-NEXT:    sw $4, 40($sp)
-; MIPS32R5EL-NEXT:    lbu $1, 37($sp)
+; MIPS32R5EL-NEXT:    sw $5, 48($sp)
+; MIPS32R5EL-NEXT:    sw $4, 52($sp)
+; MIPS32R5EL-NEXT:    lbu $1, 49($sp)
 ; MIPS32R5EL-NEXT:    sw $1, 24($sp)
-; MIPS32R5EL-NEXT:    lbu $1, 36($sp)
+; MIPS32R5EL-NEXT:    lbu $1, 48($sp)
 ; MIPS32R5EL-NEXT:    sw $1, 16($sp)
-; MIPS32R5EL-NEXT:    lbu $1, 41($sp)
+; MIPS32R5EL-NEXT:    lbu $1, 53($sp)
 ; MIPS32R5EL-NEXT:    sw $1, 8($sp)
-; MIPS32R5EL-NEXT:    lbu $1, 40($sp)
+; MIPS32R5EL-NEXT:    lbu $1, 52($sp)
 ; MIPS32R5EL-NEXT:    sw $1, 0($sp)
 ; MIPS32R5EL-NEXT:    ld.d $w0, 16($sp)
 ; MIPS32R5EL-NEXT:    ld.d $w1, 0($sp)
 ; MIPS32R5EL-NEXT:    addv.d $w0, $w1, $w0
 ; MIPS32R5EL-NEXT:    copy_s.w $1, $w0[0]
 ; MIPS32R5EL-NEXT:    copy_s.w $2, $w0[2]
-; MIPS32R5EL-NEXT:    sb $2, 33($sp)
-; MIPS32R5EL-NEXT:    sb $1, 32($sp)
-; MIPS32R5EL-NEXT:    lhu $2, 32($sp)
+; MIPS32R5EL-NEXT:    sb $2, 45($sp)
+; MIPS32R5EL-NEXT:    sb $1, 44($sp)
+; MIPS32R5EL-NEXT:    lhu $2, 44($sp)
 ; MIPS32R5EL-NEXT:    move $sp, $fp
-; MIPS32R5EL-NEXT:    lw $fp, 44($sp) # 4-byte Folded Reload
-; MIPS32R5EL-NEXT:    addiu $sp, $sp, 48
+; MIPS32R5EL-NEXT:    lw $fp, 56($sp) # 4-byte Folded Reload
+; MIPS32R5EL-NEXT:    lw $ra, 60($sp) # 4-byte Folded Reload
+; MIPS32R5EL-NEXT:    addiu $sp, $sp, 64
 ; MIPS32R5EL-NEXT:    jr $ra
 ; MIPS32R5EL-NEXT:    nop
 ;
@@ -312,36 +318,38 @@ define <2 x i8> @i8x2_7(<2 x i8> %a, <2 x i8> %b, <2 x i8> %c, <2 x i8> %d, <2 x
 ; MIPS32R5EB:       # %bb.0: # %entry
 ; MIPS32R5EB-NEXT:    addiu $sp, $sp, -144
 ; MIPS32R5EB-NEXT:    .cfi_def_cfa_offset 144
-; MIPS32R5EB-NEXT:    sw $fp, 140($sp) # 4-byte Folded Spill
-; MIPS32R5EB-NEXT:    .cfi_offset 30, -4
+; MIPS32R5EB-NEXT:    sw $ra, 140($sp) # 4-byte Folded Spill
+; MIPS32R5EB-NEXT:    sw $fp, 136($sp) # 4-byte Folded Spill
+; MIPS32R5EB-NEXT:    .cfi_offset 31, -4
+; MIPS32R5EB-NEXT:    .cfi_offset 30, -8
 ; MIPS32R5EB-NEXT:    move $fp, $sp
 ; MIPS32R5EB-NEXT:    .cfi_def_cfa_register 30
 ; MIPS32R5EB-NEXT:    addiu $1, $zero, -16
 ; MIPS32R5EB-NEXT:    and $sp, $sp, $1
-; MIPS32R5EB-NEXT:    sw $5, 132($sp)
-; MIPS32R5EB-NEXT:    sw $4, 136($sp)
-; MIPS32R5EB-NEXT:    lbu $1, 133($sp)
+; MIPS32R5EB-NEXT:    sw $5, 128($sp)
+; MIPS32R5EB-NEXT:    sw $4, 132($sp)
+; MIPS32R5EB-NEXT:    lbu $1, 129($sp)
 ; MIPS32R5EB-NEXT:    sw $1, 76($sp)
-; MIPS32R5EB-NEXT:    lbu $1, 132($sp)
+; MIPS32R5EB-NEXT:    lbu $1, 128($sp)
 ; MIPS32R5EB-NEXT:    sw $1, 68($sp)
-; MIPS32R5EB-NEXT:    lbu $1, 137($sp)
+; MIPS32R5EB-NEXT:    lbu $1, 133($sp)
 ; MIPS32R5EB-NEXT:    sw $1, 60($sp)
-; MIPS32R5EB-NEXT:    lbu $1, 136($sp)
+; MIPS32R5EB-NEXT:    lbu $1, 132($sp)
 ; MIPS32R5EB-NEXT:    sw $1, 52($sp)
 ; MIPS32R5EB-NEXT:    ld.d $w0, 64($sp)
 ; MIPS32R5EB-NEXT:    ld.d $w1, 48($sp)
 ; MIPS32R5EB-NEXT:    addv.d $w0, $w1, $w0
-; MIPS32R5EB-NEXT:    sw $6, 128($sp)
-; MIPS32R5EB-NEXT:    lbu $1, 129($sp)
+; MIPS32R5EB-NEXT:    sw $6, 124($sp)
+; MIPS32R5EB-NEXT:    lbu $1, 125($sp)
 ; MIPS32R5EB-NEXT:    sw $1, 92($sp)
-; MIPS32R5EB-NEXT:    lbu $1, 128($sp)
+; MIPS32R5EB-NEXT:    lbu $1, 124($sp)
 ; MIPS32R5EB-NEXT:    sw $1, 84($sp)
 ; MIPS32R5EB-NEXT:    ld.d $w1, 80($sp)
 ; MIPS32R5EB-NEXT:    addv.d $w0, $w0, $w1
-; MIPS32R5EB-NEXT:    sw $7, 124($sp)
-; MIPS32R5EB-NEXT:    lbu $1, 125($sp)
+; MIPS32R5EB-NEXT:    sw $7, 120($sp)
+; MIPS32R5EB-NEXT:    lbu $1, 121($sp)
 ; MIPS32R5EB-NEXT:    sw $1, 108($sp)
-; MIPS32R5EB-NEXT:    lbu $1, 124($sp)
+; MIPS32R5EB-NEXT:    lbu $1, 120($sp)
 ; MIPS32R5EB-NEXT:    sw $1, 100($sp)
 ; MIPS32R5EB-NEXT:    ld.d $w1, 96($sp)
 ; MIPS32R5EB-NEXT:    addv.d $w0, $w0, $w1
@@ -366,11 +374,12 @@ define <2 x i8> @i8x2_7(<2 x i8> %a, <2 x i8> %b, <2 x i8> %c, <2 x i8> %d, <2 x
 ; MIPS32R5EB-NEXT:    shf.w $w0, $w0, 177
 ; MIPS32R5EB-NEXT:    copy_s.w $1, $w0[1]
 ; MIPS32R5EB-NEXT:    copy_s.w $2, $w0[3]
-; MIPS32R5EB-NEXT:    sb $2, 121($sp)
-; MIPS32R5EB-NEXT:    sb $1, 120($sp)
-; MIPS32R5EB-NEXT:    lhu $2, 120($sp)
+; MIPS32R5EB-NEXT:    sb $2, 117($sp)
+; MIPS32R5EB-NEXT:    sb $1, 116($sp)
+; MIPS32R5EB-NEXT:    lhu $2, 116($sp)
 ; MIPS32R5EB-NEXT:    move $sp, $fp
-; MIPS32R5EB-NEXT:    lw $fp, 140($sp) # 4-byte Folded Reload
+; MIPS32R5EB-NEXT:    lw $fp, 136($sp) # 4-byte Folded Reload
+; MIPS32R5EB-NEXT:    lw $ra, 140($sp) # 4-byte Folded Reload
 ; MIPS32R5EB-NEXT:    addiu $sp, $sp, 144
 ; MIPS32R5EB-NEXT:    jr $ra
 ; MIPS32R5EB-NEXT:    nop
@@ -550,36 +559,38 @@ define <2 x i8> @i8x2_7(<2 x i8> %a, <2 x i8> %b, <2 x i8> %c, <2 x i8> %d, <2 x
 ; MIPS32R5EL:       # %bb.0: # %entry
 ; MIPS32R5EL-NEXT:    addiu $sp, $sp, -144
 ; MIPS32R5EL-NEXT:    .cfi_def_cfa_offset 144
-; MIPS32R5EL-NEXT:    sw $fp, 140($sp) # 4-byte Folded Spill
-; MIPS32R5EL-NEXT:    .cfi_offset 30, -4
+; MIPS32R5EL-NEXT:    sw $ra, 140($sp) # 4-byte Folded Spill
+; MIPS32R5EL-NEXT:    sw $fp, 136($sp) # 4-byte Folded Spill
+; MIPS32R5EL-NEXT:    .cfi_offset 31, -4
+; MIPS32R5EL-NEXT:    .cfi_offset 30, -8
 ; MIPS32R5EL-NEXT:    move $fp, $sp
 ; MIPS32R5EL-NEXT:    .cfi_def_cfa_register 30
 ; MIPS32R5EL-NEXT:    addiu $1, $zero, -16
 ; MIPS32R5EL-NEXT:    and $sp, $sp, $1
-; MIPS32R5EL-NEXT:    sw $5, 132($sp)
-; MIPS32R5EL-NEXT:    sw $4, 136($sp)
-; MIPS32R5EL-NEXT:    lbu $1, 133($sp)
+; MIPS32R5EL-NEXT:    sw $5, 128($sp)
+; MIPS32R5EL-NEXT:    sw $4, 132($sp)
+; MIPS32R5EL-NEXT:    lbu $1, 129($sp)
 ; MIPS32R5EL-NEXT:    sw $1, 72($sp)
-; MIPS32R5EL-NEXT:    lbu $1, 132($sp)
+; MIPS32R5EL-NEXT:    lbu $1, 128($sp)
 ; MIPS32R5EL-NEXT:    sw $1, 64($sp)
-; MIPS32R5EL-NEXT:    lbu $1, 137($sp)
+; MIPS32R5EL-NEXT:    lbu $1, 133($sp)
 ; MIPS32R5EL-NEXT:    sw $1, 56($sp)
-; MIPS32R5EL-NEXT:    lbu $1, 136($sp)
+; MIPS32R5EL-NEXT:    lbu $1, 132($sp)
 ; MIPS32R5EL-NEXT:    sw $1, 48($sp)
 ; MIPS32R5EL-NEXT:    ld.d $w0, 64($sp)
 ; MIPS32R5EL-NEXT:    ld.d $w1, 48($sp)
 ; MIPS32R5EL-NEXT:    addv.d $w0, $w1, $w0
-; MIPS32R5EL-NEXT:    sw $6, 128($sp)
-; MIPS32R5EL-NEXT:    lbu $1, 129($sp)
+; MIPS32R5EL-NEXT:    sw $6, 124($sp)
+; MIPS32R5EL-NEXT:    lbu $1, 125($sp)
 ; MIPS32R5EL-NEXT:    sw $1, 88($sp)
-; MIPS32R5EL-NEXT:    lbu $1, 128($sp)
+; MIPS32R5EL-NEXT:    lbu $1, 124($sp)
 ; MIPS32R5EL-NEXT:    sw $1, 80($sp)
 ; MIPS32R5EL-NEXT:    ld.d $w1, 80($sp)
 ; MIPS32R5EL-NEXT:    addv.d $w0, $w0, $w1
-; MIPS32R5EL-NEXT:    sw $7, 124($sp)
-; MIPS32R5EL-NEXT:    lbu $1, 125($sp)
+; MIPS32R5EL-NEXT:    sw $7, 120($sp)
+; MIPS32R5EL-NEXT:    lbu $1, 121($sp)
 ; MIPS32R5EL-NEXT:    sw $1, 104($sp)
-; MIPS32R5EL-NEXT:    lbu $1, 124($sp)
+; MIPS32R5EL-NEXT:    lbu $1, 120($sp)
 ; MIPS32R5EL-NEXT:    sw $1, 96($sp)
 ; MIPS32R5EL-NEXT:    ld.d $w1, 96($sp)
 ; MIPS32R5EL-NEXT:    addv.d $w0, $w0, $w1
@@ -603,11 +614,12 @@ define <2 x i8> @i8x2_7(<2 x i8> %a, <2 x i8> %b, <2 x i8> %c, <2 x i8> %d, <2 x
 ; MIPS32R5EL-NEXT:    addv.d $w0, $w0, $w1
 ; MIPS32R5EL-NEXT:    copy_s.w $1, $w0[0]
 ; MIPS32R5EL-NEXT:    copy_s.w $2, $w0[2]
-; MIPS32R5EL-NEXT:    sb $2, 121($sp)
-; MIPS32R5EL-NEXT:    sb $1, 120($sp)
-; MIPS32R5EL-NEXT:    lhu $2, 120($sp)
+; MIPS32R5EL-NEXT:    sb $2, 117($sp)
+; MIPS32R5EL-NEXT:    sb $1, 116($sp)
+; MIPS32R5EL-NEXT:    lhu $2, 116($sp)
 ; MIPS32R5EL-NEXT:    move $sp, $fp
-; MIPS32R5EL-NEXT:    lw $fp, 140($sp) # 4-byte Folded Reload
+; MIPS32R5EL-NEXT:    lw $fp, 136($sp) # 4-byte Folded Reload
+; MIPS32R5EL-NEXT:    lw $ra, 140($sp) # 4-byte Folded Reload
 ; MIPS32R5EL-NEXT:    addiu $sp, $sp, 144
 ; MIPS32R5EL-NEXT:    jr $ra
 ; MIPS32R5EL-NEXT:    nop
@@ -952,8 +964,10 @@ define <8 x i8> @i8_8(<8 x i8> %a, <8 x i8> %b) {
 ; MIPS32R5EB:       # %bb.0:
 ; MIPS32R5EB-NEXT:    addiu $sp, $sp, -48
 ; MIPS32R5EB-NEXT:    .cfi_def_cfa_offset 48
-; MIPS32R5EB-NEXT:    sw $fp, 44($sp) # 4-byte Folded Spill
-; MIPS32R5EB-NEXT:    .cfi_offset 30, -4
+; MIPS32R5EB-NEXT:    sw $ra, 44($sp) # 4-byte Folded Spill
+; MIPS32R5EB-NEXT:    sw $fp, 40($sp) # 4-byte Folded Spill
+; MIPS32R5EB-NEXT:    .cfi_offset 31, -4
+; MIPS32R5EB-NEXT:    .cfi_offset 30, -8
 ; MIPS32R5EB-NEXT:    move $fp, $sp
 ; MIPS32R5EB-NEXT:    .cfi_def_cfa_register 30
 ; MIPS32R5EB-NEXT:    addiu $1, $zero, -16
@@ -1019,7 +1033,8 @@ define <8 x i8> @i8_8(<8 x i8> %a, <8 x i8> %b) {
 ; MIPS32R5EB-NEXT:    copy_s.w $2, $w0[1]
 ; MIPS32R5EB-NEXT:    copy_s.w $3, $w0[3]
 ; MIPS32R5EB-NEXT:    move $sp, $fp
-; MIPS32R5EB-NEXT:    lw $fp, 44($sp) # 4-byte Folded Reload
+; MIPS32R5EB-NEXT:    lw $fp, 40($sp) # 4-byte Folded Reload
+; MIPS32R5EB-NEXT:    lw $ra, 44($sp) # 4-byte Folded Reload
 ; MIPS32R5EB-NEXT:    addiu $sp, $sp, 48
 ; MIPS32R5EB-NEXT:    jr $ra
 ; MIPS32R5EB-NEXT:    nop
@@ -1088,8 +1103,10 @@ define <8 x i8> @i8_8(<8 x i8> %a, <8 x i8> %b) {
 ; MIPS32R5EL:       # %bb.0:
 ; MIPS32R5EL-NEXT:    addiu $sp, $sp, -48
 ; MIPS32R5EL-NEXT:    .cfi_def_cfa_offset 48
-; MIPS32R5EL-NEXT:    sw $fp, 44($sp) # 4-byte Folded Spill
-; MIPS32R5EL-NEXT:    .cfi_offset 30, -4
+; MIPS32R5EL-NEXT:    sw $ra, 44($sp) # 4-byte Folded Spill
+; MIPS32R5EL-NEXT:    sw $fp, 40($sp) # 4-byte Folded Spill
+; MIPS32R5EL-NEXT:    .cfi_offset 31, -4
+; MIPS32R5EL-NEXT:    .cfi_offset 30, -8
 ; MIPS32R5EL-NEXT:    move $fp, $sp
 ; MIPS32R5EL-NEXT:    .cfi_def_cfa_register 30
 ; MIPS32R5EL-NEXT:    addiu $1, $zero, -16
@@ -1155,7 +1172,8 @@ define <8 x i8> @i8_8(<8 x i8> %a, <8 x i8> %b) {
 ; MIPS32R5EL-NEXT:    copy_s.w $2, $w0[0]
 ; MIPS32R5EL-NEXT:    copy_s.w $3, $w0[2]
 ; MIPS32R5EL-NEXT:    move $sp, $fp
-; MIPS32R5EL-NEXT:    lw $fp, 44($sp) # 4-byte Folded Reload
+; MIPS32R5EL-NEXT:    lw $fp, 40($sp) # 4-byte Folded Reload
+; MIPS32R5EL-NEXT:    lw $ra, 44($sp) # 4-byte Folded Reload
 ; MIPS32R5EL-NEXT:    addiu $sp, $sp, 48
 ; MIPS32R5EL-NEXT:    jr $ra
 ; MIPS32R5EL-NEXT:    nop
@@ -1471,23 +1489,25 @@ define <2 x i16> @i16_2(<2 x i16> %a, <2 x i16> %b) {
 ;
 ; MIPS32R5EB-LABEL: i16_2:
 ; MIPS32R5EB:       # %bb.0:
-; MIPS32R5EB-NEXT:    addiu $sp, $sp, -48
-; MIPS32R5EB-NEXT:    .cfi_def_cfa_offset 48
-; MIPS32R5EB-NEXT:    sw $fp, 44($sp) # 4-byte Folded Spill
-; MIPS32R5EB-NEXT:    .cfi_offset 30, -4
+; MIPS32R5EB-NEXT:    addiu $sp, $sp, -64
+; MIPS32R5EB-NEXT:    .cfi_def_cfa_offset 64
+; MIPS32R5EB-NEXT:    sw $ra, 60($sp) # 4-byte Folded Spill
+; MIPS32R5EB-NEXT:    sw $fp, 56($sp) # 4-byte Folded Spill
+; MIPS32R5EB-NEXT:    .cfi_offset 31, -4
+; MIPS32R5EB-NEXT:    .cfi_offset 30, -8
 ; MIPS32R5EB-NEXT:    move $fp, $sp
 ; MIPS32R5EB-NEXT:    .cfi_def_cfa_register 30
 ; MIPS32R5EB-NEXT:    addiu $1, $zero, -16
 ; MIPS32R5EB-NEXT:    and $sp, $sp, $1
-; MIPS32R5EB-NEXT:    sw $5, 36($sp)
-; MIPS32R5EB-NEXT:    sw $4, 40($sp)
-; MIPS32R5EB-NEXT:    lhu $1, 38($sp)
+; MIPS32R5EB-NEXT:    sw $5, 48($sp)
+; MIPS32R5EB-NEXT:    sw $4, 52($sp)
+; MIPS32R5EB-NEXT:    lhu $1, 50($sp)
 ; MIPS32R5EB-NEXT:    sw $1, 28($sp)
-; MIPS32R5EB-NEXT:    lhu $1, 36($sp)
+; MIPS32R5EB-NEXT:    lhu $1, 48($sp)
 ; MIPS32R5EB-NEXT:    sw $1, 20($sp)
-; MIPS32R5EB-NEXT:    lhu $1, 42($sp)
+; MIPS32R5EB-NEXT:    lhu $1, 54($sp)
 ; MIPS32R5EB-NEXT:    sw $1, 12($sp)
-; MIPS32R5EB-NEXT:    lhu $1, 40($sp)
+; MIPS32R5EB-NEXT:    lhu $1, 52($sp)
 ; MIPS32R5EB-NEXT:    sw $1, 4($sp)
 ; MIPS32R5EB-NEXT:    ld.d $w0, 16($sp)
 ; MIPS32R5EB-NEXT:    ld.d $w1, 0($sp)
@@ -1495,12 +1515,13 @@ define <2 x i16> @i16_2(<2 x i16> %a, <2 x i16> %b) {
 ; MIPS32R5EB-NEXT:    shf.w $w0, $w0, 177
 ; MIPS32R5EB-NEXT:    copy_s.w $1, $w0[1]
 ; MIPS32R5EB-NEXT:    copy_s.w $2, $w0[3]
-; MIPS32R5EB-NEXT:    sh $2, 34($sp)
-; MIPS32R5EB-NEXT:    sh $1, 32($sp)
-; MIPS32R5EB-NEXT:    lw $2, 32($sp)
+; MIPS32R5EB-NEXT:    sh $2, 46($sp)
+; MIPS32R5EB-NEXT:    sh $1, 44($sp)
+; MIPS32R5EB-NEXT:    lw $2, 44($sp)
 ; MIPS32R5EB-NEXT:    move $sp, $fp
-; MIPS32R5EB-NEXT:    lw $fp, 44($sp) # 4-byte Folded Reload
-; MIPS32R5EB-NEXT:    addiu $sp, $sp, 48
+; MIPS32R5EB-NEXT:    lw $fp, 56($sp) # 4-byte Folded Reload
+; MIPS32R5EB-NEXT:    lw $ra, 60($sp) # 4-byte Folded Reload
+; MIPS32R5EB-NEXT:    addiu $sp, $sp, 64
 ; MIPS32R5EB-NEXT:    jr $ra
 ; MIPS32R5EB-NEXT:    nop
 ;
@@ -1532,35 +1553,38 @@ define <2 x i16> @i16_2(<2 x i16> %a, <2 x i16> %b) {
 ;
 ; MIPS32R5EL-LABEL: i16_2:
 ; MIPS32R5EL:       # %bb.0:
-; MIPS32R5EL-NEXT:    addiu $sp, $sp, -48
-; MIPS32R5EL-NEXT:    .cfi_def_cfa_offset 48
-; MIPS32R5EL-NEXT:    sw $fp, 44($sp) # 4-byte Folded Spill
-; MIPS32R5EL-NEXT:    .cfi_offset 30, -4
+; MIPS32R5EL-NEXT:    addiu $sp, $sp, -64
+; MIPS32R5EL-NEXT:    .cfi_def_cfa_offset 64
+; MIPS32R5EL-NEXT:    sw $ra, 60($sp) # 4-byte Folded Spill
+; MIPS32R5EL-NEXT:    sw $fp, 56($sp) # 4-byte Folded Spill
+; MIPS32R5EL-NEXT:    .cfi_offset 31, -4
+; MIPS32R5EL-NEXT:    .cfi_offset 30, -8
 ; MIPS32R5EL-NEXT:    move $fp, $sp
 ; MIPS32R5EL-NEXT:    .cfi_def_cfa_register 30
 ; MIPS32R5EL-NEXT:    addiu $1, $zero, -16
 ; MIPS32R5EL-NEXT:    and $sp, $sp, $1
-; MIPS32R5EL-NEXT:    sw $5, 36($sp)
-; MIPS32R5EL-NEXT:    sw $4, 40($sp)
-; MIPS32R5EL-NEXT:    lhu $1, 38($sp)
+; MIPS32R5EL-NEXT:    sw $5, 48($sp)
+; MIPS32R5EL-NEXT:    sw $4, 52($sp)
+; MIPS32R5EL-NEXT:    lhu $1, 50($sp)
 ; MIPS32R5EL-NEXT:    sw $1, 24($sp)
-; MIPS32R5EL-NEXT:    lhu $1, 36($sp)
+; MIPS32R5EL-NEXT:    lhu $1, 48($sp)
 ; MIPS32R5EL-NEXT:    sw $1, 16($sp)
-; MIPS32R5EL-NEXT:    lhu $1, 42($sp)
+; MIPS32R5EL-NEXT:    lhu $1, 54($sp)
 ; MIPS32R5EL-NEXT:    sw $1, 8($sp)
-; MIPS32R5EL-NEXT:    lhu $1, 40($sp)
+; MIPS32R5EL-NEXT:    lhu $1, 52($sp)
 ; MIPS32R5EL-NEXT:    sw $1, 0($sp)
 ; MIPS32R5EL-NEXT:    ld.d $w0, 16($sp)
 ; MIPS32R5EL-NEXT:    ld.d $w1, 0($sp)
 ; MIPS32R5EL-NEXT:    addv.d $w0, $w1, $w0
 ; MIPS32R5EL-NEXT:    copy_s.w $1, $w0[0]
 ; MIPS32R5EL-NEXT:    copy_s.w $2, $w0[2]
-; MIPS32R5EL-NEXT:    sh $2, 34($sp)
-; MIPS32R5EL-NEXT:    sh $1, 32($sp)
-; MIPS32R5EL-NEXT:    lw $2, 32($sp)
+; MIPS32R5EL-NEXT:    sh $2, 46($sp)
+; MIPS32R5EL-NEXT:    sh $1, 44($sp)
+; MIPS32R5EL-NEXT:    lw $2, 44($sp)
 ; MIPS32R5EL-NEXT:    move $sp, $fp
-; MIPS32R5EL-NEXT:    lw $fp, 44($sp) # 4-byte Folded Reload
-; MIPS32R5EL-NEXT:    addiu $sp, $sp, 48
+; MIPS32R5EL-NEXT:    lw $fp, 56($sp) # 4-byte Folded Reload
+; MIPS32R5EL-NEXT:    lw $ra, 60($sp) # 4-byte Folded Reload
+; MIPS32R5EL-NEXT:    addiu $sp, $sp, 64
 ; MIPS32R5EL-NEXT:    jr $ra
 ; MIPS32R5EL-NEXT:    nop
   %1 = add <2 x i16> %a, %b
@@ -1622,8 +1646,10 @@ define <4 x i16> @i16_4(<4 x i16> %a, <4 x i16> %b) {
 ; MIPS32R5EB:       # %bb.0:
 ; MIPS32R5EB-NEXT:    addiu $sp, $sp, -48
 ; MIPS32R5EB-NEXT:    .cfi_def_cfa_offset 48
-; MIPS32R5EB-NEXT:    sw $fp, 44($sp) # 4-byte Folded Spill
-; MIPS32R5EB-NEXT:    .cfi_offset 30, -4
+; MIPS32R5EB-NEXT:    sw $ra, 44($sp) # 4-byte Folded Spill
+; MIPS32R5EB-NEXT:    sw $fp, 40($sp) # 4-byte Folded Spill
+; MIPS32R5EB-NEXT:    .cfi_offset 31, -4
+; MIPS32R5EB-NEXT:    .cfi_offset 30, -8
 ; MIPS32R5EB-NEXT:    move $fp, $sp
 ; MIPS32R5EB-NEXT:    .cfi_def_cfa_register 30
 ; MIPS32R5EB-NEXT:    addiu $1, $zero, -16
@@ -1665,7 +1691,8 @@ define <4 x i16> @i16_4(<4 x i16> %a, <4 x i16> %b) {
 ; MIPS32R5EB-NEXT:    copy_s.w $2, $w0[1]
 ; MIPS32R5EB-NEXT:    copy_s.w $3, $w0[3]
 ; MIPS32R5EB-NEXT:    move $sp, $fp
-; MIPS32R5EB-NEXT:    lw $fp, 44($sp) # 4-byte Folded Reload
+; MIPS32R5EB-NEXT:    lw $fp, 40($sp) # 4-byte Folded Reload
+; MIPS32R5EB-NEXT:    lw $ra, 44($sp) # 4-byte Folded Reload
 ; MIPS32R5EB-NEXT:    addiu $sp, $sp, 48
 ; MIPS32R5EB-NEXT:    jr $ra
 ; MIPS32R5EB-NEXT:    nop
@@ -1710,8 +1737,10 @@ define <4 x i16> @i16_4(<4 x i16> %a, <4 x i16> %b) {
 ; MIPS32R5EL:       # %bb.0:
 ; MIPS32R5EL-NEXT:    addiu $sp, $sp, -48
 ; MIPS32R5EL-NEXT:    .cfi_def_cfa_offset 48
-; MIPS32R5EL-NEXT:    sw $fp, 44($sp) # 4-byte Folded Spill
-; MIPS32R5EL-NEXT:    .cfi_offset 30, -4
+; MIPS32R5EL-NEXT:    sw $ra, 44($sp) # 4-byte Folded Spill
+; MIPS32R5EL-NEXT:    sw $fp, 40($sp) # 4-byte Folded Spill
+; MIPS32R5EL-NEXT:    .cfi_offset 31, -4
+; MIPS32R5EL-NEXT:    .cfi_offset 30, -8
 ; MIPS32R5EL-NEXT:    move $fp, $sp
 ; MIPS32R5EL-NEXT:    .cfi_def_cfa_register 30
 ; MIPS32R5EL-NEXT:    addiu $1, $zero, -16
@@ -1753,7 +1782,8 @@ define <4 x i16> @i16_4(<4 x i16> %a, <4 x i16> %b) {
 ; MIPS32R5EL-NEXT:    copy_s.w $2, $w0[0]
 ; MIPS32R5EL-NEXT:    copy_s.w $3, $w0[2]
 ; MIPS32R5EL-NEXT:    move $sp, $fp
-; MIPS32R5EL-NEXT:    lw $fp, 44($sp) # 4-byte Folded Reload
+; MIPS32R5EL-NEXT:    lw $fp, 40($sp) # 4-byte Folded Reload
+; MIPS32R5EL-NEXT:    lw $ra, 44($sp) # 4-byte Folded Reload
 ; MIPS32R5EL-NEXT:    addiu $sp, $sp, 48
 ; MIPS32R5EL-NEXT:    jr $ra
 ; MIPS32R5EL-NEXT:    nop
@@ -1962,8 +1992,10 @@ define <2 x i32> @i32_2(<2 x i32> %a, <2 x i32> %b) {
 ; MIPS32R5EB:       # %bb.0:
 ; MIPS32R5EB-NEXT:    addiu $sp, $sp, -48
 ; MIPS32R5EB-NEXT:    .cfi_def_cfa_offset 48
-; MIPS32R5EB-NEXT:    sw $fp, 44($sp) # 4-byte Folded Spill
-; MIPS32R5EB-NEXT:    .cfi_offset 30, -4
+; MIPS32R5EB-NEXT:    sw $ra, 44($sp) # 4-byte Folded Spill
+; MIPS32R5EB-NEXT:    sw $fp, 40($sp) # 4-byte Folded Spill
+; MIPS32R5EB-NEXT:    .cfi_offset 31, -4
+; MIPS32R5EB-NEXT:    .cfi_offset 30, -8
 ; MIPS32R5EB-NEXT:    move $fp, $sp
 ; MIPS32R5EB-NEXT:    .cfi_def_cfa_register 30
 ; MIPS32R5EB-NEXT:    addiu $1, $zero, -16
@@ -1979,7 +2011,8 @@ define <2 x i32> @i32_2(<2 x i32> %a, <2 x i32> %b) {
 ; MIPS32R5EB-NEXT:    copy_s.w $2, $w0[1]
 ; MIPS32R5EB-NEXT:    copy_s.w $3, $w0[3]
 ; MIPS32R5EB-NEXT:    move $sp, $fp
-; MIPS32R5EB-NEXT:    lw $fp, 44($sp) # 4-byte Folded Reload
+; MIPS32R5EB-NEXT:    lw $fp, 40($sp) # 4-byte Folded Reload
+; MIPS32R5EB-NEXT:    lw $ra, 44($sp) # 4-byte Folded Reload
 ; MIPS32R5EB-NEXT:    addiu $sp, $sp, 48
 ; MIPS32R5EB-NEXT:    jr $ra
 ; MIPS32R5EB-NEXT:    nop
@@ -2010,8 +2043,10 @@ define <2 x i32> @i32_2(<2 x i32> %a, <2 x i32> %b) {
 ; MIPS32R5EL:       # %bb.0:
 ; MIPS32R5EL-NEXT:    addiu $sp, $sp, -48
 ; MIPS32R5EL-NEXT:    .cfi_def_cfa_offset 48
-; MIPS32R5EL-NEXT:    sw $fp, 44($sp) # 4-byte Folded Spill
-; MIPS32R5EL-NEXT:    .cfi_offset 30, -4
+; MIPS32R5EL-NEXT:    sw $ra, 44($sp) # 4-byte Folded Spill
+; MIPS32R5EL-NEXT:    sw $fp, 40($sp) # 4-byte Folded Spill
+; MIPS32R5EL-NEXT:    .cfi_offset 31, -4
+; MIPS32R5EL-NEXT:    .cfi_offset 30, -8
 ; MIPS32R5EL-NEXT:    move $fp, $sp
 ; MIPS32R5EL-NEXT:    .cfi_def_cfa_register 30
 ; MIPS32R5EL-NEXT:    addiu $1, $zero, -16
@@ -2026,7 +2061,8 @@ define <2 x i32> @i32_2(<2 x i32> %a, <2 x i32> %b) {
 ; MIPS32R5EL-NEXT:    copy_s.w $2, $w0[0]
 ; MIPS32R5EL-NEXT:    copy_s.w $3, $w0[2]
 ; MIPS32R5EL-NEXT:    move $sp, $fp
-; MIPS32R5EL-NEXT:    lw $fp, 44($sp) # 4-byte Folded Reload
+; MIPS32R5EL-NEXT:    lw $fp, 40($sp) # 4-byte Folded Reload
+; MIPS32R5EL-NEXT:    lw $ra, 44($sp) # 4-byte Folded Reload
 ; MIPS32R5EL-NEXT:    addiu $sp, $sp, 48
 ; MIPS32R5EL-NEXT:    jr $ra
 ; MIPS32R5EL-NEXT:    nop
@@ -2312,8 +2348,10 @@ define void @float_2(<2 x float> %a, <2 x float> %b) {
 ; MIPS32R5:       # %bb.0:
 ; MIPS32R5-NEXT:    addiu $sp, $sp, -48
 ; MIPS32R5-NEXT:    .cfi_def_cfa_offset 48
-; MIPS32R5-NEXT:    sw $fp, 44($sp) # 4-byte Folded Spill
-; MIPS32R5-NEXT:    .cfi_offset 30, -4
+; MIPS32R5-NEXT:    sw $ra, 44($sp) # 4-byte Folded Spill
+; MIPS32R5-NEXT:    sw $fp, 40($sp) # 4-byte Folded Spill
+; MIPS32R5-NEXT:    .cfi_offset 31, -4
+; MIPS32R5-NEXT:    .cfi_offset 30, -8
 ; MIPS32R5-NEXT:    move $fp, $sp
 ; MIPS32R5-NEXT:    .cfi_def_cfa_register 30
 ; MIPS32R5-NEXT:    addiu $1, $zero, -16
@@ -2331,7 +2369,8 @@ define void @float_2(<2 x float> %a, <2 x float> %b) {
 ; MIPS32R5-NEXT:    swc1 $f1, 4($2)
 ; MIPS32R5-NEXT:    swc1 $f0, %lo(float_res_v2f32)($1)
 ; MIPS32R5-NEXT:    move $sp, $fp
-; MIPS32R5-NEXT:    lw $fp, 44($sp) # 4-byte Folded Reload
+; MIPS32R5-NEXT:    lw $fp, 40($sp) # 4-byte Folded Reload
+; MIPS32R5-NEXT:    lw $ra, 44($sp) # 4-byte Folded Reload
 ; MIPS32R5-NEXT:    addiu $sp, $sp, 48
 ; MIPS32R5-NEXT:    jr $ra
 ; MIPS32R5-NEXT:    nop
@@ -2794,8 +2833,10 @@ define <8 x i8> @ret_8_i8() {
 ; MIPS32R5EB:       # %bb.0:
 ; MIPS32R5EB-NEXT:    addiu $sp, $sp, -32
 ; MIPS32R5EB-NEXT:    .cfi_def_cfa_offset 32
-; MIPS32R5EB-NEXT:    sw $fp, 28($sp) # 4-byte Folded Spill
-; MIPS32R5EB-NEXT:    .cfi_offset 30, -4
+; MIPS32R5EB-NEXT:    sw $ra, 28($sp) # 4-byte Folded Spill
+; MIPS32R5EB-NEXT:    sw $fp, 24($sp) # 4-byte Folded Spill
+; MIPS32R5EB-NEXT:    .cfi_offset 31, -4
+; MIPS32R5EB-NEXT:    .cfi_offset 30, -8
 ; MIPS32R5EB-NEXT:    move $fp, $sp
 ; MIPS32R5EB-NEXT:    .cfi_def_cfa_register 30
 ; MIPS32R5EB-NEXT:    addiu $1, $zero, -16
@@ -2810,7 +2851,8 @@ define <8 x i8> @ret_8_i8() {
 ; MIPS32R5EB-NEXT:    copy_s.w $2, $w0[1]
 ; MIPS32R5EB-NEXT:    copy_s.w $3, $w0[3]
 ; MIPS32R5EB-NEXT:    move $sp, $fp
-; MIPS32R5EB-NEXT:    lw $fp, 28($sp) # 4-byte Folded Reload
+; MIPS32R5EB-NEXT:    lw $fp, 24($sp) # 4-byte Folded Reload
+; MIPS32R5EB-NEXT:    lw $ra, 28($sp) # 4-byte Folded Reload
 ; MIPS32R5EB-NEXT:    addiu $sp, $sp, 32
 ; MIPS32R5EB-NEXT:    jr $ra
 ; MIPS32R5EB-NEXT:    nop
@@ -2829,8 +2871,10 @@ define <8 x i8> @ret_8_i8() {
 ; MIPS32R5EL:       # %bb.0:
 ; MIPS32R5EL-NEXT:    addiu $sp, $sp, -32
 ; MIPS32R5EL-NEXT:    .cfi_def_cfa_offset 32
-; MIPS32R5EL-NEXT:    sw $fp, 28($sp) # 4-byte Folded Spill
-; MIPS32R5EL-NEXT:    .cfi_offset 30, -4
+; MIPS32R5EL-NEXT:    sw $ra, 28($sp) # 4-byte Folded Spill
+; MIPS32R5EL-NEXT:    sw $fp, 24($sp) # 4-byte Folded Spill
+; MIPS32R5EL-NEXT:    .cfi_offset 31, -4
+; MIPS32R5EL-NEXT:    .cfi_offset 30, -8
 ; MIPS32R5EL-NEXT:    move $fp, $sp
 ; MIPS32R5EL-NEXT:    .cfi_def_cfa_register 30
 ; MIPS32R5EL-NEXT:    addiu $1, $zero, -16
@@ -2845,7 +2889,8 @@ define <8 x i8> @ret_8_i8() {
 ; MIPS32R5EL-NEXT:    copy_s.w $2, $w0[0]
 ; MIPS32R5EL-NEXT:    copy_s.w $3, $w0[2]
 ; MIPS32R5EL-NEXT:    move $sp, $fp
-; MIPS32R5EL-NEXT:    lw $fp, 28($sp) # 4-byte Folded Reload
+; MIPS32R5EL-NEXT:    lw $fp, 24($sp) # 4-byte Folded Reload
+; MIPS32R5EL-NEXT:    lw $ra, 28($sp) # 4-byte Folded Reload
 ; MIPS32R5EL-NEXT:    addiu $sp, $sp, 32
 ; MIPS32R5EL-NEXT:    jr $ra
 ; MIPS32R5EL-NEXT:    nop
@@ -2965,8 +3010,10 @@ define <4 x i16> @ret_4_i16() {
 ; MIPS32R5EB:       # %bb.0:
 ; MIPS32R5EB-NEXT:    addiu $sp, $sp, -32
 ; MIPS32R5EB-NEXT:    .cfi_def_cfa_offset 32
-; MIPS32R5EB-NEXT:    sw $fp, 28($sp) # 4-byte Folded Spill
-; MIPS32R5EB-NEXT:    .cfi_offset 30, -4
+; MIPS32R5EB-NEXT:    sw $ra, 28($sp) # 4-byte Folded Spill
+; MIPS32R5EB-NEXT:    sw $fp, 24($sp) # 4-byte Folded Spill
+; MIPS32R5EB-NEXT:    .cfi_offset 31, -4
+; MIPS32R5EB-NEXT:    .cfi_offset 30, -8
 ; MIPS32R5EB-NEXT:    move $fp, $sp
 ; MIPS32R5EB-NEXT:    .cfi_def_cfa_register 30
 ; MIPS32R5EB-NEXT:    addiu $1, $zero, -16
@@ -2981,7 +3028,8 @@ define <4 x i16> @ret_4_i16() {
 ; MIPS32R5EB-NEXT:    copy_s.w $2, $w0[1]
 ; MIPS32R5EB-NEXT:    copy_s.w $3, $w0[3]
 ; MIPS32R5EB-NEXT:    move $sp, $fp
-; MIPS32R5EB-NEXT:    lw $fp, 28($sp) # 4-byte Folded Reload
+; MIPS32R5EB-NEXT:    lw $fp, 24($sp) # 4-byte Folded Reload
+; MIPS32R5EB-NEXT:    lw $ra, 28($sp) # 4-byte Folded Reload
 ; MIPS32R5EB-NEXT:    addiu $sp, $sp, 32
 ; MIPS32R5EB-NEXT:    jr $ra
 ; MIPS32R5EB-NEXT:    nop
@@ -3000,8 +3048,10 @@ define <4 x i16> @ret_4_i16() {
 ; MIPS32R5EL:       # %bb.0:
 ; MIPS32R5EL-NEXT:    addiu $sp, $sp, -32
 ; MIPS32R5EL-NEXT:    .cfi_def_cfa_offset 32
-; MIPS32R5EL-NEXT:    sw $fp, 28($sp) # 4-byte Folded Spill
-; MIPS32R5EL-NEXT:    .cfi_offset 30, -4
+; MIPS32R5EL-NEXT:    sw $ra, 28($sp) # 4-byte Folded Spill
+; MIPS32R5EL-NEXT:    sw $fp, 24($sp) # 4-byte Folded Spill
+; MIPS32R5EL-NEXT:    .cfi_offset 31, -4
+; MIPS32R5EL-NEXT:    .cfi_offset 30, -8
 ; MIPS32R5EL-NEXT:    move $fp, $sp
 ; MIPS32R5EL-NEXT:    .cfi_def_cfa_register 30
 ; MIPS32R5EL-NEXT:    addiu $1, $zero, -16
@@ -3016,7 +3066,8 @@ define <4 x i16> @ret_4_i16() {
 ; MIPS32R5EL-NEXT:    copy_s.w $2, $w0[0]
 ; MIPS32R5EL-NEXT:    copy_s.w $3, $w0[2]
 ; MIPS32R5EL-NEXT:    move $sp, $fp
-; MIPS32R5EL-NEXT:    lw $fp, 28($sp) # 4-byte Folded Reload
+; MIPS32R5EL-NEXT:    lw $fp, 24($sp) # 4-byte Folded Reload
+; MIPS32R5EL-NEXT:    lw $ra, 28($sp) # 4-byte Folded Reload
 ; MIPS32R5EL-NEXT:    addiu $sp, $sp, 32
 ; MIPS32R5EL-NEXT:    jr $ra
 ; MIPS32R5EL-NEXT:    nop
@@ -3098,8 +3149,10 @@ define <2 x i32> @ret_2_i32() {
 ; MIPS32R5EB:       # %bb.0:
 ; MIPS32R5EB-NEXT:    addiu $sp, $sp, -32
 ; MIPS32R5EB-NEXT:    .cfi_def_cfa_offset 32
-; MIPS32R5EB-NEXT:    sw $fp, 28($sp) # 4-byte Folded Spill
-; MIPS32R5EB-NEXT:    .cfi_offset 30, -4
+; MIPS32R5EB-NEXT:    sw $ra, 28($sp) # 4-byte Folded Spill
+; MIPS32R5EB-NEXT:    sw $fp, 24($sp) # 4-byte Folded Spill
+; MIPS32R5EB-NEXT:    .cfi_offset 31, -4
+; MIPS32R5EB-NEXT:    .cfi_offset 30, -8
 ; MIPS32R5EB-NEXT:    move $fp, $sp
 ; MIPS32R5EB-NEXT:    .cfi_def_cfa_register 30
 ; MIPS32R5EB-NEXT:    addiu $1, $zero, -16
@@ -3114,7 +3167,8 @@ define <2 x i32> @ret_2_i32() {
 ; MIPS32R5EB-NEXT:    copy_s.w $2, $w0[1]
 ; MIPS32R5EB-NEXT:    copy_s.w $3, $w0[3]
 ; MIPS32R5EB-NEXT:    move $sp, $fp
-; MIPS32R5EB-NEXT:    lw $fp, 28($sp) # 4-byte Folded Reload
+; MIPS32R5EB-NEXT:    lw $fp, 24($sp) # 4-byte Folded Reload
+; MIPS32R5EB-NEXT:    lw $ra, 28($sp) # 4-byte Folded Reload
 ; MIPS32R5EB-NEXT:    addiu $sp, $sp, 32
 ; MIPS32R5EB-NEXT:    jr $ra
 ; MIPS32R5EB-NEXT:    nop
@@ -3133,8 +3187,10 @@ define <2 x i32> @ret_2_i32() {
 ; MIPS32R5EL:       # %bb.0:
 ; MIPS32R5EL-NEXT:    addiu $sp, $sp, -32
 ; MIPS32R5EL-NEXT:    .cfi_def_cfa_offset 32
-; MIPS32R5EL-NEXT:    sw $fp, 28($sp) # 4-byte Folded Spill
-; MIPS32R5EL-NEXT:    .cfi_offset 30, -4
+; MIPS32R5EL-NEXT:    sw $ra, 28($sp) # 4-byte Folded Spill
+; MIPS32R5EL-NEXT:    sw $fp, 24($sp) # 4-byte Folded Spill
+; MIPS32R5EL-NEXT:    .cfi_offset 31, -4
+; MIPS32R5EL-NEXT:    .cfi_offset 30, -8
 ; MIPS32R5EL-NEXT:    move $fp, $sp
 ; MIPS32R5EL-NEXT:    .cfi_def_cfa_register 30
 ; MIPS32R5EL-NEXT:    addiu $1, $zero, -16
@@ -3149,7 +3205,8 @@ define <2 x i32> @ret_2_i32() {
 ; MIPS32R5EL-NEXT:    copy_s.w $2, $w0[0]
 ; MIPS32R5EL-NEXT:    copy_s.w $3, $w0[2]
 ; MIPS32R5EL-NEXT:    move $sp, $fp
-; MIPS32R5EL-NEXT:    lw $fp, 28($sp) # 4-byte Folded Reload
+; MIPS32R5EL-NEXT:    lw $fp, 24($sp) # 4-byte Folded Reload
+; MIPS32R5EL-NEXT:    lw $ra, 28($sp) # 4-byte Folded Reload
 ; MIPS32R5EL-NEXT:    addiu $sp, $sp, 32
 ; MIPS32R5EL-NEXT:    jr $ra
 ; MIPS32R5EL-NEXT:    nop
@@ -6073,8 +6130,10 @@ define float @mixed_i8(<2 x float> %a, i8 %b, <2 x float> %c) {
 ; MIPS32R5:       # %bb.0: # %entry
 ; MIPS32R5-NEXT:    addiu $sp, $sp, -64
 ; MIPS32R5-NEXT:    .cfi_def_cfa_offset 64
-; MIPS32R5-NEXT:    sw $fp, 60($sp) # 4-byte Folded Spill
-; MIPS32R5-NEXT:    .cfi_offset 30, -4
+; MIPS32R5-NEXT:    sw $ra, 60($sp) # 4-byte Folded Spill
+; MIPS32R5-NEXT:    sw $fp, 56($sp) # 4-byte Folded Spill
+; MIPS32R5-NEXT:    .cfi_offset 31, -4
+; MIPS32R5-NEXT:    .cfi_offset 30, -8
 ; MIPS32R5-NEXT:    move $fp, $sp
 ; MIPS32R5-NEXT:    .cfi_def_cfa_register 30
 ; MIPS32R5-NEXT:    addiu $1, $zero, -16
@@ -6098,7 +6157,8 @@ define float @mixed_i8(<2 x float> %a, i8 %b, <2 x float> %c) {
 ; MIPS32R5-NEXT:    splati.w $w1, $w0[1]
 ; MIPS32R5-NEXT:    add.s $f0, $f0, $f1
 ; MIPS32R5-NEXT:    move $sp, $fp
-; MIPS32R5-NEXT:    lw $fp, 60($sp) # 4-byte Folded Reload
+; MIPS32R5-NEXT:    lw $fp, 56($sp) # 4-byte Folded Reload
+; MIPS32R5-NEXT:    lw $ra, 60($sp) # 4-byte Folded Reload
 ; MIPS32R5-NEXT:    addiu $sp, $sp, 64
 ; MIPS32R5-NEXT:    jr $ra
 ; MIPS32R5-NEXT:    nop

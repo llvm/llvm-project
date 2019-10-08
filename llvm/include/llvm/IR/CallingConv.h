@@ -75,6 +75,11 @@ namespace CallingConv {
     // CXX_FAST_TLS - Calling convention for access functions.
     CXX_FAST_TLS = 17,
 
+    /// Tail - This calling convention attemps to make calls as fast as
+    /// possible while guaranteeing that tail call optimization can always
+    /// be performed.
+    Tail = 18,
+
     // Target - This is the start of the target-specific calling conventions,
     // e.g. fastcall and thiscall on X86.
     FirstTargetCC = 64,

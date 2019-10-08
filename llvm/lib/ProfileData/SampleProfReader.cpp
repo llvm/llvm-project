@@ -26,6 +26,7 @@
 #include "llvm/IR/ProfileSummary.h"
 #include "llvm/ProfileData/ProfileCommon.h"
 #include "llvm/ProfileData/SampleProf.h"
+#include "llvm/Support/Compression.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/LineIterator.h"
@@ -471,6 +472,7 @@ std::error_code
 SampleProfileReaderExtBinary::readOneSection(const uint8_t *Start,
                                              uint64_t Size, SecType Type) {
   Data = Start;
+  End = Start + Size;
   switch (Type) {
   case SecProfSummary:
     if (std::error_code EC = readSummary())
@@ -487,7 +489,7 @@ SampleProfileReaderExtBinary::readOneSection(const uint8_t *Start,
     }
     break;
   case SecProfileSymbolList:
-    if (std::error_code EC = readProfileSymbolList())
+    if (std::error_code EC = readProfileSymbolList(Size))
       return EC;
     break;
   default:
@@ -496,27 +498,44 @@ SampleProfileReaderExtBinary::readOneSection(const uint8_t *Start,
   return sampleprof_error::success;
 }
 
-std::error_code SampleProfileReaderExtBinary::readProfileSymbolList() {
-  auto UncompressSize = readNumber<uint64_t>();
-  if (std::error_code EC = UncompressSize.getError())
+std::error_code
+SampleProfileReaderExtBinary::readProfileSymbolList(uint64_t Size) {
+  if (!ProfSymList)
+    ProfSymList = std::make_unique<ProfileSymbolList>();
+
+  if (std::error_code EC = ProfSymList->read(Data, Size))
     return EC;
+
+  Data = Data + Size;
+  return sampleprof_error::success;
+}
+
+std::error_code SampleProfileReaderExtBinaryBase::decompressSection(
+    const uint8_t *SecStart, const uint64_t SecSize,
+    const uint8_t *&DecompressBuf, uint64_t &DecompressBufSize) {
+  Data = SecStart;
+  End = SecStart + SecSize;
+  auto DecompressSize = readNumber<uint64_t>();
+  if (std::error_code EC = DecompressSize.getError())
+    return EC;
+  DecompressBufSize = *DecompressSize;
 
   auto CompressSize = readNumber<uint64_t>();
   if (std::error_code EC = CompressSize.getError())
     return EC;
 
-  if (!ProfSymList)
-    ProfSymList = std::make_unique<ProfileSymbolList>();
+  if (!llvm::zlib::isAvailable())
+    return sampleprof_error::zlib_unavailable;
 
-  if (std::error_code EC =
-          ProfSymList->read(*CompressSize, *UncompressSize, Data))
-    return EC;
-
-  // CompressSize is zero only when ProfileSymbolList is not compressed.
-  if (*CompressSize == 0)
-    Data = Data + *UncompressSize;
-  else
-    Data = Data + *CompressSize;
+  StringRef CompressedStrings(reinterpret_cast<const char *>(Data),
+                              *CompressSize);
+  char *Buffer = Allocator.Allocate<char>(DecompressBufSize);
+  size_t UCSize = DecompressBufSize;
+  llvm::Error E =
+      zlib::uncompress(CompressedStrings, Buffer, UCSize);
+  if (E)
+    return sampleprof_error::uncompress_failed;
+  DecompressBuf = reinterpret_cast<const uint8_t *>(Buffer);
   return sampleprof_error::success;
 }
 
@@ -528,11 +547,35 @@ std::error_code SampleProfileReaderExtBinaryBase::read() {
     // Skip empty section.
     if (!Entry.Size)
       continue;
+
     const uint8_t *SecStart = BufStart + Entry.Offset;
-    if (std::error_code EC = readOneSection(SecStart, Entry.Size, Entry.Type))
+    uint64_t SecSize = Entry.Size;
+
+    // If the section is compressed, decompress it into a buffer
+    // DecompressBuf before reading the actual data. The pointee of
+    // 'Data' will be changed to buffer hold by DecompressBuf
+    // temporarily when reading the actual data.
+    bool isCompressed = hasSecFlag(Entry, SecFlagCompress);
+    if (isCompressed) {
+      const uint8_t *DecompressBuf;
+      uint64_t DecompressBufSize;
+      if (std::error_code EC = decompressSection(
+              SecStart, SecSize, DecompressBuf, DecompressBufSize))
+        return EC;
+      SecStart = DecompressBuf;
+      SecSize = DecompressBufSize;
+    }
+
+    if (std::error_code EC = readOneSection(SecStart, SecSize, Entry.Type))
       return EC;
-    if (Data != SecStart + Entry.Size)
+    if (Data != SecStart + SecSize)
       return sampleprof_error::malformed;
+
+    // Change the pointee of 'Data' from DecompressBuf to original Buffer.
+    if (isCompressed) {
+      Data = BufStart + Entry.Offset;
+      End = BufStart + Buffer->getBufferSize();
+    }
   }
 
   return sampleprof_error::success;
@@ -621,10 +664,10 @@ std::error_code SampleProfileReaderExtBinaryBase::readSecHdrTableEntry() {
     return EC;
   Entry.Type = static_cast<SecType>(*Type);
 
-  auto Flag = readUnencodedNumber<uint64_t>();
-  if (std::error_code EC = Flag.getError())
+  auto Flags = readUnencodedNumber<uint64_t>();
+  if (std::error_code EC = Flags.getError())
     return EC;
-  Entry.Flag = *Flag;
+  Entry.Flags = *Flags;
 
   auto Offset = readUnencodedNumber<uint64_t>();
   if (std::error_code EC = Offset.getError())

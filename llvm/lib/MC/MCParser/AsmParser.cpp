@@ -2921,13 +2921,14 @@ bool AsmParser::parseEscapedString(std::string &Data) {
 
     // Recognize hex sequences similarly to GNU 'as'.
     if (Str[i] == 'x' || Str[i] == 'X') {
-      if (!isHexDigit(Str[i + 1]))
+      size_t length = Str.size();
+      if (i + 1 >= length || !isHexDigit(Str[i + 1]))
         return TokError("invalid hexadecimal escape sequence");
 
       // Consume hex characters. GNU 'as' reads all hexadecimal characters and
       // then truncates to the lower 16 bits. Seems reasonable.
       unsigned Value = 0;
-      while (isHexDigit(Str[i + 1]))
+      while (i + 1 < length && isHexDigit(Str[i + 1]))
         Value = Value * 16 + hexDigitValue(Str[++i]);
 
       Data += (unsigned char)(Value & 0xFF);

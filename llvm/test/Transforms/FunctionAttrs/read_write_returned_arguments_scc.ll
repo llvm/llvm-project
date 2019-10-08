@@ -102,7 +102,7 @@ return:                                           ; preds = %if.end, %if.then
 }
 
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind
-; CHECK-NEXT: define i32* @external_sink_ret2_nrw(i32* readnone %n0, i32* nocapture readonly %r0, i32* returned "no-capture-maybe-returned" %w0)
+; CHECK-NEXT: define i32* @external_sink_ret2_nrw(i32* readnone %n0, i32* nocapture readonly %r0, i32* returned writeonly "no-capture-maybe-returned" %w0)
 define i32* @external_sink_ret2_nrw(i32* %n0, i32* %r0, i32* %w0) {
 entry:
   %tobool = icmp ne i32* %n0, null

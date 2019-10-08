@@ -299,7 +299,7 @@ added in the future:
     allows the target to use whatever tricks it wants to produce fast
     code for the target, without having to conform to an externally
     specified ABI (Application Binary Interface). `Tail calls can only
-    be optimized when this, the GHC or the HiPE convention is
+    be optimized when this, the tailcc, the GHC or the HiPE convention is
     used. <CodeGenerator.html#id80>`_ This calling convention does not
     support varargs and requires the prototype of all callees to exactly
     match the prototype of the function definition.
@@ -436,6 +436,14 @@ added in the future:
     - On X86-64 RCX and R8 are available for additional integer returns, and
       XMM2 and XMM3 are available for additional FP/vector returns.
     - On iOS platforms, we use AAPCS-VFP calling convention.
+"``tailcc``" - Tail callable calling convention
+    This calling convention ensures that calls in tail position will always be
+    tail call optimized. This calling convention is equivalent to fastcc,
+    except for an additional guarantee that tail calls will be produced
+    whenever possible. `Tail calls can only be optimized when this, the fastcc,
+    the GHC or the HiPE convention is used. <CodeGenerator.html#id80>`_ This
+    calling convention does not support varargs and requires the prototype of
+    all callees to exactly match the prototype of the function definition.
 "``cc <n>``" - Numbered convention
     Any calling convention may be specified by number, allowing
     target-specific calling conventions to be used. Target specific
@@ -10232,11 +10240,12 @@ This instruction requires several arguments:
    Tail call optimization for calls marked ``tail`` is guaranteed to occur if
    the following conditions are met:
 
-   -  Caller and callee both have the calling convention ``fastcc``.
+   -  Caller and callee both have the calling convention ``fastcc`` or ``tailcc``.
    -  The call is in tail position (ret immediately follows call and ret
       uses value of call or is void).
-   -  Option ``-tailcallopt`` is enabled, or
-      ``llvm::GuaranteedTailCallOpt`` is ``true``.
+   -  Option ``-tailcallopt`` is enabled,
+      ``llvm::GuaranteedTailCallOpt`` is ``true``, or the calling convention
+      is ``tailcc``
    -  `Platform-specific constraints are
       met. <CodeGenerator.html#tailcallopt>`_
 
@@ -15940,6 +15949,102 @@ mode is determined by the runtime floating-point environment.  The rounding
 mode argument is only intended as information to the compiler.
 
 
+'``llvm.experimental.constrained.lrint``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare <inttype>
+      @llvm.experimental.constrained.lrint(<fptype> <op1>,
+                                           metadata <rounding mode>,
+                                           metadata <exception behavior>)
+
+Overview:
+"""""""""
+
+The '``llvm.experimental.constrained.lrint``' intrinsic returns the first
+operand rounded to the nearest integer. An inexact floating-point exception
+will be raised if the operand is not an integer. An invalid exception is
+raised if the result is too large to fit into a supported integer type,
+and in this case the result is undefined.
+
+Arguments:
+""""""""""
+
+The first argument is a floating-point number. The return value is an
+integer type. Not all types are supported on all targets. The supported
+types are the same as the ``llvm.lrint`` intrinsic and the ``lrint``
+libm functions.
+
+The second and third arguments specify the rounding mode and exception
+behavior as described above.
+
+Semantics:
+""""""""""
+
+This function returns the same values as the libm ``lrint`` functions
+would, and handles error conditions in the same way.
+
+The rounding mode is described, not determined, by the rounding mode
+argument.  The actual rounding mode is determined by the runtime floating-point
+environment.  The rounding mode argument is only intended as information
+to the compiler.
+
+If the runtime floating-point environment is using the default rounding mode
+then the results will be the same as the llvm.lrint intrinsic.
+
+
+'``llvm.experimental.constrained.llrint``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare <inttype>
+      @llvm.experimental.constrained.llrint(<fptype> <op1>,
+                                            metadata <rounding mode>,
+                                            metadata <exception behavior>)
+
+Overview:
+"""""""""
+
+The '``llvm.experimental.constrained.llrint``' intrinsic returns the first
+operand rounded to the nearest integer. An inexact floating-point exception
+will be raised if the operand is not an integer. An invalid exception is
+raised if the result is too large to fit into a supported integer type,
+and in this case the result is undefined.
+
+Arguments:
+""""""""""
+
+The first argument is a floating-point number. The return value is an
+integer type. Not all types are supported on all targets. The supported
+types are the same as the ``llvm.llrint`` intrinsic and the ``llrint``
+libm functions.
+
+The second and third arguments specify the rounding mode and exception
+behavior as described above.
+
+Semantics:
+""""""""""
+
+This function returns the same values as the libm ``llrint`` functions
+would, and handles error conditions in the same way.
+
+The rounding mode is described, not determined, by the rounding mode
+argument.  The actual rounding mode is determined by the runtime floating-point
+environment.  The rounding mode argument is only intended as information
+to the compiler.
+
+If the runtime floating-point environment is using the default rounding mode
+then the results will be the same as the llvm.llrint intrinsic.
+
+
 '``llvm.experimental.constrained.nearbyint``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -16159,6 +16264,82 @@ Semantics:
 """"""""""
 
 This function returns the same values as the libm ``round`` functions
+would and handles error conditions in the same way.
+
+
+'``llvm.experimental.constrained.lround``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare <inttype>
+      @llvm.experimental.constrained.lround(<fptype> <op1>,
+                                            metadata <exception behavior>)
+
+Overview:
+"""""""""
+
+The '``llvm.experimental.constrained.lround``' intrinsic returns the first
+operand rounded to the nearest integer with ties away from zero.  It will
+raise an inexact floating-point exception if the operand is not an integer.
+An invalid exception is raised if the result is too large to fit into a
+supported integer type, and in this case the result is undefined.
+
+Arguments:
+""""""""""
+
+The first argument is a floating-point number. The return value is an
+integer type. Not all types are supported on all targets. The supported
+types are the same as the ``llvm.lround`` intrinsic and the ``lround``
+libm functions.
+
+The second argument specifies the exception behavior as described above.
+
+Semantics:
+""""""""""
+
+This function returns the same values as the libm ``lround`` functions
+would and handles error conditions in the same way.
+
+
+'``llvm.experimental.constrained.llround``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare <inttype>
+      @llvm.experimental.constrained.llround(<fptype> <op1>,
+                                             metadata <exception behavior>)
+      
+Overview:
+"""""""""
+
+The '``llvm.experimental.constrained.llround``' intrinsic returns the first
+operand rounded to the nearest integer with ties away from zero. It will
+raise an inexact floating-point exception if the operand is not an integer.
+An invalid exception is raised if the result is too large to fit into a
+supported integer type, and in this case the result is undefined.
+
+Arguments:
+""""""""""
+
+The first argument is a floating-point number. The return value is an
+integer type. Not all types are supported on all targets. The supported
+types are the same as the ``llvm.llround`` intrinsic and the ``llround``
+libm functions.
+
+The second argument specifies the exception behavior as described above.
+
+Semantics:
+""""""""""
+
+This function returns the same values as the libm ``llround`` functions
 would and handles error conditions in the same way.
 
 

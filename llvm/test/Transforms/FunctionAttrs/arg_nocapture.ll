@@ -116,8 +116,7 @@ entry:
 ;
 ; CHECK: define dereferenceable_or_null(8) i64* @scc_B(double* readnone returned dereferenceable_or_null(8) "no-capture-maybe-returned" %a)
 ;
-; FIXME: readnone missing for %s
-; CHECK: define dereferenceable_or_null(2) i8* @scc_C(i16* returned dereferenceable_or_null(2) "no-capture-maybe-returned" %a)
+; CHECK: define dereferenceable_or_null(2) i8* @scc_C(i16* readnone returned dereferenceable_or_null(2) "no-capture-maybe-returned" %a)
 ;
 ; float *scc_A(int *a) {
 ;   return (float*)(a ? (int*)scc_A((int*)scc_B((double*)scc_C((short*)a))) : a);
@@ -245,7 +244,7 @@ declare i32 @printf(i8* nocapture, ...)
 ; }
 ;
 ; There should *not* be a no-capture attribute on %a
-; CHECK: define i64* @not_captured_but_returned_0(i64* returned "no-capture-maybe-returned" %a)
+; CHECK: define i64* @not_captured_but_returned_0(i64* returned writeonly "no-capture-maybe-returned" %a)
 define i64* @not_captured_but_returned_0(i64* %a) #0 {
 entry:
   store i64 0, i64* %a, align 8
@@ -260,7 +259,7 @@ entry:
 ; }
 ;
 ; There should *not* be a no-capture attribute on %a
-; CHECK: define nonnull i64* @not_captured_but_returned_1(i64* "no-capture-maybe-returned" %a)
+; CHECK: define nonnull i64* @not_captured_but_returned_1(i64* writeonly "no-capture-maybe-returned" %a)
 define i64* @not_captured_but_returned_1(i64* %a) #0 {
 entry:
   %add.ptr = getelementptr inbounds i64, i64* %a, i64 1
@@ -275,8 +274,7 @@ entry:
 ;   not_captured_but_returned_1(a);
 ; }
 ;
-; FIXME: no-capture missing for %a
-; CHECK: define void @test_not_captured_but_returned_calls(i64* nocapture %a)
+; CHECK: define void @test_not_captured_but_returned_calls(i64* nocapture writeonly %a)
 define void @test_not_captured_but_returned_calls(i64* %a) #0 {
 entry:
   %call = call i64* @not_captured_but_returned_0(i64* %a)
@@ -291,7 +289,7 @@ entry:
 ; }
 ;
 ; There should *not* be a no-capture attribute on %a
-; CHECK: define i64* @negative_test_not_captured_but_returned_call_0a(i64* returned "no-capture-maybe-returned" %a)
+; CHECK: define i64* @negative_test_not_captured_but_returned_call_0a(i64* returned writeonly "no-capture-maybe-returned" %a)
 define i64* @negative_test_not_captured_but_returned_call_0a(i64* %a) #0 {
 entry:
   %call = call i64* @not_captured_but_returned_0(i64* %a)
@@ -305,7 +303,7 @@ entry:
 ; }
 ;
 ; There should *not* be a no-capture attribute on %a
-; CHECK: define void @negative_test_not_captured_but_returned_call_0b(i64* %a)
+; CHECK: define void @negative_test_not_captured_but_returned_call_0b(i64* writeonly %a)
 define void @negative_test_not_captured_but_returned_call_0b(i64* %a) #0 {
 entry:
   %call = call i64* @not_captured_but_returned_0(i64* %a)
@@ -321,7 +319,7 @@ entry:
 ; }
 ;
 ; There should *not* be a no-capture attribute on %a
-; CHECK: define nonnull i64* @negative_test_not_captured_but_returned_call_1a(i64* "no-capture-maybe-returned" %a)
+; CHECK: define nonnull i64* @negative_test_not_captured_but_returned_call_1a(i64* writeonly "no-capture-maybe-returned" %a)
 define i64* @negative_test_not_captured_but_returned_call_1a(i64* %a) #0 {
 entry:
   %call = call i64* @not_captured_but_returned_1(i64* %a)
@@ -335,7 +333,7 @@ entry:
 ; }
 ;
 ; There should *not* be a no-capture attribute on %a
-; CHECK: define void @negative_test_not_captured_but_returned_call_1b(i64* %a)
+; CHECK: define void @negative_test_not_captured_but_returned_call_1b(i64* writeonly %a)
 define void @negative_test_not_captured_but_returned_call_1b(i64* %a) #0 {
 entry:
   %call = call i64* @not_captured_but_returned_1(i64* %a)
@@ -391,7 +389,7 @@ r:
 
 ; TEST not captured by readonly external function
 ;
-; CHECK: define void @not_captured_by_readonly_call(i32* nocapture %b)
+; CHECK: define void @not_captured_by_readonly_call(i32* nocapture readonly %b)
 declare i32* @readonly_unknown(i32*, i32*) readonly
 
 define void @not_captured_by_readonly_call(i32* %b) #0 {

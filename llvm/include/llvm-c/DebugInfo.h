@@ -170,6 +170,19 @@ typedef unsigned LLVMMetadataKind;
 typedef unsigned LLVMDWARFTypeEncoding;
 
 /**
+ * Describes the kind of macro declaration used for LLVMDIBuilderCreateMacro.
+ * @see llvm::dwarf::MacinfoRecordType
+ * @note Values are from DW_MACINFO_* constants in the DWARF specification.
+ */
+typedef enum {
+  LLVMDWARFMacinfoRecordTypeDefine = 0x01,
+  LLVMDWARFMacinfoRecordTypeMacro = 0x02,
+  LLVMDWARFMacinfoRecordTypeStartFile = 0x03,
+  LLVMDWARFMacinfoRecordTypeEndFile = 0x04,
+  LLVMDWARFMacinfoRecordTypeVendorExt = 0xff
+} LLVMDWARFMacinfoRecordType;
+
+/**
  * The current debug metadata version number.
  */
 unsigned LLVMDebugMetadataVersion(void);
@@ -520,6 +533,38 @@ LLVMDIBuilderCreateSubroutineType(LLVMDIBuilderRef Builder,
                                   LLVMMetadataRef *ParameterTypes,
                                   unsigned NumParameterTypes,
                                   LLVMDIFlags Flags);
+
+/**
+ * Create debugging information entry for a macro.
+ * @param Builder         The DIBuilder.
+ * @param ParentMacroFile Macro parent (could be NULL).
+ * @param Line            Source line number where the macro is defined.
+ * @param MacroType       DW_MACINFO_define or DW_MACINFO_undef.
+ * @param Name            Macro name.
+ * @param NameLen         Macro name length.
+ * @param Value           Macro value.
+ * @param ValueLen        Macro value length.
+ */
+LLVMMetadataRef LLVMDIBuilderCreateMacro(LLVMDIBuilderRef Builder,
+                                         LLVMMetadataRef ParentMacroFile,
+                                         unsigned Line,
+                                         LLVMDWARFMacinfoRecordType RecordType,
+                                         const char *Name, size_t NameLen,
+                                         const char *Value, size_t ValueLen);
+
+/**
+ * Create debugging information temporary entry for a macro file.
+ * List of macro node direct children will be calculated by DIBuilder,
+ * using the \p ParentMacroFile relationship.
+ * @param Builder         The DIBuilder.
+ * @param ParentMacroFile Macro parent (could be NULL).
+ * @param Line            Source line number where the macro file is included.
+ * @param File            File descriptor containing the name of the macro file.
+ */
+LLVMMetadataRef
+LLVMDIBuilderCreateTempMacroFile(LLVMDIBuilderRef Builder,
+                                 LLVMMetadataRef ParentMacroFile, unsigned Line,
+                                 LLVMMetadataRef File);
 
 /**
  * Create debugging information entry for an enumerator.

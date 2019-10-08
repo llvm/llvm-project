@@ -1160,6 +1160,7 @@ bool X86FastISel::X86SelectRet(const Instruction *I) {
   CallingConv::ID CC = F.getCallingConv();
   if (CC != CallingConv::C &&
       CC != CallingConv::Fast &&
+      CC != CallingConv::Tail &&
       CC != CallingConv::X86_FastCall &&
       CC != CallingConv::X86_StdCall &&
       CC != CallingConv::X86_ThisCall &&
@@ -1173,7 +1174,8 @@ bool X86FastISel::X86SelectRet(const Instruction *I) {
 
   // fastcc with -tailcallopt is intended to provide a guaranteed
   // tail call optimization. Fastisel doesn't know how to do that.
-  if (CC == CallingConv::Fast && TM.Options.GuaranteedTailCallOpt)
+  if ((CC == CallingConv::Fast && TM.Options.GuaranteedTailCallOpt) ||
+      CC == CallingConv::Tail)
     return false;
 
   // Let SDISel handle vararg functions.
@@ -3157,7 +3159,7 @@ static unsigned computeBytesPoppedByCalleeForSRet(const X86Subtarget *Subtarget,
   if (Subtarget->getTargetTriple().isOSMSVCRT())
     return 0;
   if (CC == CallingConv::Fast || CC == CallingConv::GHC ||
-      CC == CallingConv::HiPE)
+      CC == CallingConv::HiPE || CC == CallingConv::Tail)
     return 0;
 
   if (CS)
@@ -3208,6 +3210,7 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
   default: return false;
   case CallingConv::C:
   case CallingConv::Fast:
+  case CallingConv::Tail:
   case CallingConv::WebKit_JS:
   case CallingConv::Swift:
   case CallingConv::X86_FastCall:
@@ -3224,7 +3227,8 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
 
   // fastcc with -tailcallopt is intended to provide a guaranteed
   // tail call optimization. Fastisel doesn't know how to do that.
-  if (CC == CallingConv::Fast && TM.Options.GuaranteedTailCallOpt)
+  if ((CC == CallingConv::Fast && TM.Options.GuaranteedTailCallOpt) ||
+      CC == CallingConv::Tail)
     return false;
 
   // Don't know how to handle Win64 varargs yet.  Nothing special needed for

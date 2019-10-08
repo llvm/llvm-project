@@ -4,14 +4,14 @@
 
 ; CHECK: Function Attrs
 ; CHECK-SAME: norecurse nounwind readnone
-; ATTRIBUTOR: Function Attrs: nofree norecurse nosync nounwind willreturn
+; ATTRIBUTOR: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; BOTH-NEXT: define i32 @leaf()
 define i32 @leaf() {
   ret i32 1
 }
 
 ; BOTH: Function Attrs
-; CHECK-SAME: readnone
+; BOTH-SAME: readnone
 ; BOTH-NOT: norecurse
 ; BOTH-NEXT: define i32 @self_rec()
 define i32 @self_rec() {
@@ -20,7 +20,7 @@ define i32 @self_rec() {
 }
 
 ; BOTH: Function Attrs
-; CHECK-SAME: readnone
+; BOTH-SAME: readnone
 ; BOTH-NOT: norecurse
 ; BOTH-NEXT: define i32 @indirect_rec()
 define i32 @indirect_rec() {
@@ -28,7 +28,7 @@ define i32 @indirect_rec() {
   ret i32 %a
 }
 ; BOTH: Function Attrs
-; CHECK-SAME: readnone
+; BOTH-SAME: readnone
 ; BOTH-NOT: norecurse
 ; BOTH-NEXT: define i32 @indirect_rec2()
 define i32 @indirect_rec2() {
@@ -37,7 +37,7 @@ define i32 @indirect_rec2() {
 }
 
 ; BOTH: Function Attrs
-; CHECK-SAME: readnone
+; BOTH-SAME: readnone
 ; BOTH-NOT: norecurse
 ; BOTH-NEXT: define i32 @extern()
 define i32 @extern() {
@@ -53,7 +53,7 @@ declare i32 @k() readnone
 ; CHECK-SAME: nounwind
 ; BOTH-NOT: norecurse
 ; CHECK-NEXT: define void @intrinsic(i8* nocapture %dest, i8* nocapture readonly %src, i32 %len)
-; ATTRIBUTOR-NEXT: define void @intrinsic(i8* nocapture %dest, i8* nocapture %src, i32 %len)
+; ATTRIBUTOR-NEXT: define void @intrinsic(i8* nocapture writeonly %dest, i8* nocapture readonly %src, i32 %len)
 define void @intrinsic(i8* %dest, i8* %src, i32 %len) {
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* %dest, i8* %src, i32 %len, i1 false)
   ret void
@@ -66,7 +66,7 @@ declare void @llvm.memcpy.p0i8.p0i8.i32(i8*, i8*, i32, i1)
 ; BOTH: Function Attrs
 ; CHECK-SAME: norecurse readnone
 ; FIXME: missing "norecurse"
-; ATTRIBUTOR-SAME: nosync
+; ATTRIBUTOR-SAME: nosync readnone
 ; CHECK-NEXT: define internal i32 @called_by_norecurse()
 define internal i32 @called_by_norecurse() {
   %a = call i32 @k()
@@ -138,7 +138,7 @@ define i32 @eval_func(i32 (i32)* , i32) local_unnamed_addr {
 
 declare void @unknown()
 ; Call an unknown function in a dead block.
-; ATTRIBUTOR: Function Attrs: nofree norecurse nosync nounwind willreturn
+; ATTRIBUTOR: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; ATTRIBUTOR: define i32 @call_unknown_in_dead_block()
 define i32 @call_unknown_in_dead_block() local_unnamed_addr {
   ret i32 0

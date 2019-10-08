@@ -40,7 +40,7 @@ write_cmake_config("BuildVariables.inc") {
     # lib/Support/Windows/Path.inc.
     # advapi32 required for CryptAcquireContextW in
     # lib/Support/Windows/Path.inc
-    system_libs = "psapi.lib shell32.lib ole32.lib uuid.lib advapi32"
+    system_libs = "psapi.lib shell32.lib ole32.lib uuid.lib advapi32.lib"
   } else {
     system_libs += "-lm"
     if (host_os == "linux") {

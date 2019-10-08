@@ -506,12 +506,20 @@ def strict_flog2      : SDNode<"ISD::STRICT_FLOG2",
                                SDTFPUnaryOp, [SDNPHasChain]>;
 def strict_frint      : SDNode<"ISD::STRICT_FRINT",
                                SDTFPUnaryOp, [SDNPHasChain]>;
+def strict_lrint      : SDNode<"ISD::STRICT_LRINT",
+                               SDTFPToIntOp, [SDNPHasChain]>;
+def strict_llrint     : SDNode<"ISD::STRICT_LLRINT",
+                               SDTFPToIntOp, [SDNPHasChain]>;
 def strict_fnearbyint : SDNode<"ISD::STRICT_FNEARBYINT",
                                SDTFPUnaryOp, [SDNPHasChain]>;
 def strict_fceil      : SDNode<"ISD::STRICT_FCEIL",
                                SDTFPUnaryOp, [SDNPHasChain]>;
 def strict_ffloor     : SDNode<"ISD::STRICT_FFLOOR",
                                SDTFPUnaryOp, [SDNPHasChain]>;
+def strict_lround     : SDNode<"ISD::STRICT_LROUND",
+                               SDTFPToIntOp, [SDNPHasChain]>;
+def strict_llround    : SDNode<"ISD::STRICT_LLROUND",
+                               SDTFPToIntOp, [SDNPHasChain]>;
 def strict_fround     : SDNode<"ISD::STRICT_FROUND",
                                SDTFPUnaryOp, [SDNPHasChain]>;
 def strict_ftrunc     : SDNode<"ISD::STRICT_FTRUNC",
@@ -1339,6 +1347,12 @@ def any_flog2      : PatFrags<(ops node:$src),
 def any_frint      : PatFrags<(ops node:$src),
                               [(strict_frint node:$src),
                                (frint node:$src)]>;
+def any_lrint      : PatFrags<(ops node:$src),
+                              [(strict_lrint node:$src),
+                               (lrint node:$src)]>;
+def any_llrint     : PatFrags<(ops node:$src),
+                              [(strict_llrint node:$src),
+                               (llrint node:$src)]>;
 def any_fnearbyint : PatFrags<(ops node:$src),
                               [(strict_fnearbyint node:$src),
                                (fnearbyint node:$src)]>;
@@ -1348,6 +1362,12 @@ def any_fceil      : PatFrags<(ops node:$src),
 def any_ffloor     : PatFrags<(ops node:$src),
                               [(strict_ffloor node:$src),
                                (ffloor node:$src)]>;
+def any_lround     : PatFrags<(ops node:$src),
+                              [(strict_lround node:$src),
+                               (lround node:$src)]>;
+def any_llround    : PatFrags<(ops node:$src),
+                              [(strict_llround node:$src),
+                               (llround node:$src)]>;
 def any_fround     : PatFrags<(ops node:$src),
                               [(strict_fround node:$src),
                                (fround node:$src)]>;

@@ -1588,7 +1588,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     if (DstTy != LLT::vector(2, 16))
       break;
 
-    assert(MI.getNumOperands() == 3 && empty(OpdMapper.getVRegs(0)));
+    assert(MI.getNumOperands() == 3 && OpdMapper.getVRegs(0).empty());
     substituteSimpleCopyRegs(OpdMapper, 1);
     substituteSimpleCopyRegs(OpdMapper, 2);
 
@@ -1644,7 +1644,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
   case AMDGPU::G_EXTRACT_VECTOR_ELT: {
     SmallVector<Register, 2> DstRegs(OpdMapper.getVRegs(0));
 
-    assert(empty(OpdMapper.getVRegs(1)) && empty(OpdMapper.getVRegs(2)));
+    assert(OpdMapper.getVRegs(1).empty() && OpdMapper.getVRegs(2).empty());
 
     if (DstRegs.empty()) {
       applyDefaultMapping(OpdMapper);
@@ -1708,9 +1708,9 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
   case AMDGPU::G_INSERT_VECTOR_ELT: {
     SmallVector<Register, 2> InsRegs(OpdMapper.getVRegs(2));
 
-    assert(empty(OpdMapper.getVRegs(0)));
-    assert(empty(OpdMapper.getVRegs(1)));
-    assert(empty(OpdMapper.getVRegs(3)));
+    assert(OpdMapper.getVRegs(0).empty());
+    assert(OpdMapper.getVRegs(1).empty());
+    assert(OpdMapper.getVRegs(3).empty());
 
     if (InsRegs.empty()) {
       applyDefaultMapping(OpdMapper);
@@ -1785,8 +1785,8 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     case Intrinsic::amdgcn_readlane: {
       substituteSimpleCopyRegs(OpdMapper, 2);
 
-      assert(empty(OpdMapper.getVRegs(0)));
-      assert(empty(OpdMapper.getVRegs(3)));
+      assert(OpdMapper.getVRegs(0).empty());
+      assert(OpdMapper.getVRegs(3).empty());
 
       // Make sure the index is an SGPR. It doesn't make sense to run this in a
       // waterfall loop, so assume it's a uniform value.
@@ -1794,9 +1794,9 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       return;
     }
     case Intrinsic::amdgcn_writelane: {
-      assert(empty(OpdMapper.getVRegs(0)));
-      assert(empty(OpdMapper.getVRegs(2)));
-      assert(empty(OpdMapper.getVRegs(3)));
+      assert(OpdMapper.getVRegs(0).empty());
+      assert(OpdMapper.getVRegs(2).empty());
+      assert(OpdMapper.getVRegs(3).empty());
 
       substituteSimpleCopyRegs(OpdMapper, 4); // VGPR input val
       constrainOpWithReadfirstlane(MI, MRI, 2); // Source value
@@ -1818,7 +1818,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     case Intrinsic::amdgcn_ds_ordered_add:
     case Intrinsic::amdgcn_ds_ordered_swap: {
       // This is only allowed to execute with 1 lane, so readfirstlane is safe.
-      assert(empty(OpdMapper.getVRegs(0)));
+      assert(OpdMapper.getVRegs(0).empty());
       substituteSimpleCopyRegs(OpdMapper, 3);
       constrainOpWithReadfirstlane(MI, MRI, 2); // M0
       return;
@@ -2305,6 +2305,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_FCANONICALIZE:
   case AMDGPU::G_INTRINSIC_TRUNC:
   case AMDGPU::G_INTRINSIC_ROUND:
+  case AMDGPU::G_AMDGPU_FFBH_U32:
     return getDefaultMappingVOP(MI);
   case AMDGPU::G_UMULH:
   case AMDGPU::G_SMULH: {

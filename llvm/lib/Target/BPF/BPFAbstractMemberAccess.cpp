@@ -147,7 +147,7 @@ bool BPFAbstractMemberAccess::runOnModule(Module &M) {
   LLVM_DEBUG(dbgs() << "********** Abstract Member Accesses **********\n");
 
   // Bail out if no debug info.
-  if (empty(M.debug_compile_units()))
+  if (M.debug_compile_units().empty())
     return false;
 
   return doTransformation(M);

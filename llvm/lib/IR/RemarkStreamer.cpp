@@ -122,17 +122,19 @@ llvm::setupOptimizationRemarks(LLVMContext &Context, StringRef RemarksFilename,
   if (RemarksFilename.empty())
     return nullptr;
 
+  Expected<remarks::Format> Format = remarks::parseFormat(RemarksFormat);
+  if (Error E = Format.takeError())
+    return make_error<RemarkSetupFormatError>(std::move(E));
+
   std::error_code EC;
+  auto Flags = *Format == remarks::Format::YAML ? sys::fs::OF_Text
+                                                : sys::fs::OF_None;
   auto RemarksFile =
-      std::make_unique<ToolOutputFile>(RemarksFilename, EC, sys::fs::OF_None);
+      std::make_unique<ToolOutputFile>(RemarksFilename, EC, Flags);
   // We don't use llvm::FileError here because some diagnostics want the file
   // name separately.
   if (EC)
     return make_error<RemarkSetupFileError>(errorCodeToError(EC));
-
-  Expected<remarks::Format> Format = remarks::parseFormat(RemarksFormat);
-  if (Error E = Format.takeError())
-    return make_error<RemarkSetupFormatError>(std::move(E));
 
   Expected<std::unique_ptr<remarks::RemarkSerializer>> RemarkSerializer =
       remarks::createRemarkSerializer(

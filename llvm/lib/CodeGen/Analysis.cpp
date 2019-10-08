@@ -523,7 +523,8 @@ bool llvm::isInTailCallPosition(ImmutableCallSite CS, const TargetMachine &TM) {
   // longjmp on x86), it can end up causing miscompilation that has not
   // been fully understood.
   if (!Ret &&
-      (!TM.Options.GuaranteedTailCallOpt || !isa<UnreachableInst>(Term)))
+      ((!TM.Options.GuaranteedTailCallOpt &&
+        CS.getCallingConv() != CallingConv::Tail) || !isa<UnreachableInst>(Term)))
     return false;
 
   // If I will have a chain, make sure no other instruction that will have a

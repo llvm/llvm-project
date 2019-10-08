@@ -27,31 +27,31 @@
 
 ## Attempt to link DSO with -r
 # RUN: ld.lld -shared %t -o %t.so
-# RUN: not ld.lld -r %t.so %t -o %tfail 2>&1 | FileCheck -check-prefix=ERR %s
+# RUN: not ld.lld -r %t.so %t -o /dev/null 2>&1 | FileCheck -check-prefix=ERR %s
 # ERR: attempted static link of dynamic object
 
 ## Attempt to use -r and -shared together
-# RUN: not ld.lld -r -shared %t -o %tfail 2>&1 | FileCheck -check-prefix=ERR2 %s
+# RUN: not ld.lld -r -shared %t -o /dev/null 2>&1 | FileCheck -check-prefix=ERR2 %s
 # ERR2: -r and -shared may not be used together
 
 ## Attempt to use -r and --gc-sections together
-# RUN: not ld.lld -r --gc-sections %t -o %tfail 2>&1 | FileCheck -check-prefix=ERR3 %s
+# RUN: not ld.lld -r --gc-sections %t -o /dev/null 2>&1 | FileCheck -check-prefix=ERR3 %s
 # ERR3: -r and --gc-sections may not be used together
 
 ## Attempt to use -r and --gdb-index together
-# RUN: not ld.lld -r --gdb-index %t -o %tfail 2>&1 | FileCheck -check-prefix=ERR4 %s
+# RUN: not ld.lld -r --gdb-index %t -o /dev/null 2>&1 | FileCheck -check-prefix=ERR4 %s
 # ERR4: -r and --gdb-index may not be used together
 
 ## Attempt to use -r and --icf together
-# RUN: not ld.lld -r --icf=all %t -o %tfail 2>&1 | FileCheck -check-prefix=ERR5 %s
+# RUN: not ld.lld -r --icf=all %t -o /dev/null 2>&1 | FileCheck -check-prefix=ERR5 %s
 # ERR5: -r and --icf may not be used together
 
 ## Attempt to use -r and -pie together
-# RUN: not ld.lld -r -pie %t -o %tfail 2>&1 | FileCheck -check-prefix=ERR6 %s
+# RUN: not ld.lld -r -pie %t -o /dev/null 2>&1 | FileCheck -check-prefix=ERR6 %s
 # ERR6: -r and -pie may not be used together
 
 ## Attempt to use -shared and -pie together
-# RUN: not ld.lld -shared -pie %t -o %tfail 2>&1 | FileCheck -check-prefix=ERR7 %s
+# RUN: not ld.lld -shared -pie %t -o /dev/null 2>&1 | FileCheck -check-prefix=ERR7 %s
 # ERR7: -shared and -pie may not be used together
 
 ## "--output=foo" is equivalent to "-o foo".
@@ -71,6 +71,10 @@
 
 # RUN: not ld.lld %t -z max-page-size 2>&1 | FileCheck -check-prefix=ERR11 %s
 # ERR11: unknown -z value: max-page-size
+
+## Attempt to use -r and --export-dynamic together
+# RUN: not ld.lld -r -export-dynamic %t -o /dev/null 2>&1 | FileCheck -check-prefix=ERR12 %s
+# ERR12: -r and --export-dynamic may not be used together
 
 .globl _start
 _start:

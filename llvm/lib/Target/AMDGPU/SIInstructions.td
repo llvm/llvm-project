@@ -1982,3 +1982,13 @@ def : FP16Med3Pat<f16, V_MED3_F16>;
 defm : Int16Med3Pat<V_MED3_I16, smin, smax, smax_oneuse, smin_oneuse>;
 defm : Int16Med3Pat<V_MED3_U16, umin, umax, umax_oneuse, umin_oneuse>;
 } // End Predicates = [isGFX9Plus]
+
+class AMDGPUGenericInstruction : GenericInstruction {
+  let Namespace = "AMDGPU";
+}
+
+def G_AMDGPU_FFBH_U32 : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$src);
+  let hasSideEffects = 0;
+}

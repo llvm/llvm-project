@@ -865,12 +865,15 @@ void MipsSEFrameLowering::determineCalleeSaves(MachineFunction &MF,
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   MipsFunctionInfo *MipsFI = MF.getInfo<MipsFunctionInfo>();
   MipsABIInfo ABI = STI.getABI();
+  unsigned RA = ABI.IsN64() ? Mips::RA_64 : Mips::RA;
   unsigned FP = ABI.GetFramePtr();
   unsigned BP = ABI.IsN64() ? Mips::S7_64 : Mips::S7;
 
-  // Mark $fp as used if function has dedicated frame pointer.
-  if (hasFP(MF))
+  // Mark $ra and $fp as used if function has dedicated frame pointer.
+  if (hasFP(MF)) {
+    setAliasRegs(MF, SavedRegs, RA);
     setAliasRegs(MF, SavedRegs, FP);
+  }
   // Mark $s7 as used if function has dedicated base pointer.
   if (hasBP(MF))
     setAliasRegs(MF, SavedRegs, BP);

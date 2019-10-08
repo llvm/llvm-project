@@ -1103,6 +1103,16 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
       return;
     }
     break;
+  case ISD::STRICT_LRINT:
+  case ISD::STRICT_LLRINT:
+  case ISD::STRICT_LROUND:
+  case ISD::STRICT_LLROUND:
+    // These pseudo-ops are the same as the other STRICT_ ops except
+    // they are registered with setOperationAction() using the input type
+    // instead of the output type.
+    Action = TLI.getStrictFPOperationAction(Node->getOpcode(),
+                                            Node->getOperand(1).getValueType());
+    break;
   case ISD::SADDSAT:
   case ISD::UADDSAT:
   case ISD::SSUBSAT:
@@ -2141,6 +2151,9 @@ SDValue SelectionDAGLegalize::ExpandArgFPLibCall(SDNode* Node,
                                                  RTLIB::Libcall Call_F80,
                                                  RTLIB::Libcall Call_F128,
                                                  RTLIB::Libcall Call_PPCF128) {
+  if (Node->isStrictFPOpcode())
+    Node = DAG.mutateStrictFPToFP(Node);
+
   RTLIB::Libcall LC;
   switch (Node->getOperand(0).getValueType().getSimpleVT().SimpleTy) {
   default: llvm_unreachable("Unexpected request for libcall!");
@@ -2894,30 +2907,6 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
       LLVM_DEBUG(dbgs() << "Successfully expanded STRICT_FP_TO_UINT node\n");
       return true;
     }
-    break;
-  case ISD::LROUND:
-    Results.push_back(ExpandArgFPLibCall(Node, RTLIB::LROUND_F32,
-                                         RTLIB::LROUND_F64, RTLIB::LROUND_F80,
-                                         RTLIB::LROUND_F128,
-                                         RTLIB::LROUND_PPCF128));
-    break;
-  case ISD::LLROUND:
-    Results.push_back(ExpandArgFPLibCall(Node, RTLIB::LLROUND_F32,
-                                         RTLIB::LLROUND_F64, RTLIB::LLROUND_F80,
-                                         RTLIB::LLROUND_F128,
-                                         RTLIB::LLROUND_PPCF128));
-    break;
-  case ISD::LRINT:
-    Results.push_back(ExpandArgFPLibCall(Node, RTLIB::LRINT_F32,
-                                         RTLIB::LRINT_F64, RTLIB::LRINT_F80,
-                                         RTLIB::LRINT_F128,
-                                         RTLIB::LRINT_PPCF128));
-    break;
-  case ISD::LLRINT:
-    Results.push_back(ExpandArgFPLibCall(Node, RTLIB::LLRINT_F32,
-                                         RTLIB::LLRINT_F64, RTLIB::LLRINT_F80,
-                                         RTLIB::LLRINT_F128,
-                                         RTLIB::LLRINT_PPCF128));
     break;
   case ISD::VAARG:
     Results.push_back(DAG.expandVAArg(Node));
@@ -3712,10 +3701,25 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     // the "strict" properties.  For now, we just fall back to the non-strict
     // version if that is legal on the target.  The actual mutation of the
     // operation will happen in SelectionDAGISel::DoInstructionSelection.
-    if (TLI.getStrictFPOperationAction(Node->getOpcode(),
-                                       Node->getValueType(0))
-        == TargetLowering::Legal)
-      return true;
+    switch (Node->getOpcode()) {
+    default:
+      if (TLI.getStrictFPOperationAction(Node->getOpcode(),
+                                         Node->getValueType(0))
+          == TargetLowering::Legal)
+        return true;
+      break;
+    case ISD::STRICT_LRINT:
+    case ISD::STRICT_LLRINT:
+    case ISD::STRICT_LROUND:
+    case ISD::STRICT_LLROUND:
+      // These are registered by the operand type instead of the value
+      // type. Reflect that here.
+      if (TLI.getStrictFPOperationAction(Node->getOpcode(),
+                                         Node->getOperand(1).getValueType())
+          == TargetLowering::Legal)
+        return true;
+      break;
+    }
   }
 
   // Replace the original node with the legalized result.
@@ -3958,6 +3962,34 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
       Results.push_back(ExpandFPLibCall(Node, RTLIB::POW_F32, RTLIB::POW_F64,
                                         RTLIB::POW_F80, RTLIB::POW_F128,
                                         RTLIB::POW_PPCF128));
+    break;
+  case ISD::LROUND:
+  case ISD::STRICT_LROUND:
+    Results.push_back(ExpandArgFPLibCall(Node, RTLIB::LROUND_F32,
+                                         RTLIB::LROUND_F64, RTLIB::LROUND_F80,
+                                         RTLIB::LROUND_F128,
+                                         RTLIB::LROUND_PPCF128));
+    break;
+  case ISD::LLROUND:
+  case ISD::STRICT_LLROUND:
+    Results.push_back(ExpandArgFPLibCall(Node, RTLIB::LLROUND_F32,
+                                         RTLIB::LLROUND_F64, RTLIB::LLROUND_F80,
+                                         RTLIB::LLROUND_F128,
+                                         RTLIB::LLROUND_PPCF128));
+    break;
+  case ISD::LRINT:
+  case ISD::STRICT_LRINT:
+    Results.push_back(ExpandArgFPLibCall(Node, RTLIB::LRINT_F32,
+                                         RTLIB::LRINT_F64, RTLIB::LRINT_F80,
+                                         RTLIB::LRINT_F128,
+                                         RTLIB::LRINT_PPCF128));
+    break;
+  case ISD::LLRINT:
+  case ISD::STRICT_LLRINT:
+    Results.push_back(ExpandArgFPLibCall(Node, RTLIB::LLRINT_F32,
+                                         RTLIB::LLRINT_F64, RTLIB::LLRINT_F80,
+                                         RTLIB::LLRINT_F128,
+                                         RTLIB::LLRINT_PPCF128));
     break;
   case ISD::FDIV:
     Results.push_back(ExpandFPLibCall(Node, RTLIB::DIV_F32, RTLIB::DIV_F64,

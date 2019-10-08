@@ -519,8 +519,6 @@ public:
   /// \name Vector TTI Implementations
   /// @{
 
-  unsigned getNumberOfRegisters(bool Vector) { return Vector ? 0 : 1; }
-
   unsigned getRegisterBitWidth(bool Vector) const { return 32; }
 
   /// Estimate the overhead of scalarizing an instruction. Insert and Extract
