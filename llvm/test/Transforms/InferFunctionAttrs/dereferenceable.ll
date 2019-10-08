@@ -1,10 +1,17 @@
 ; RUN: opt < %s -inferattrs -S | FileCheck %s
+; RUN: opt < %s -attributor --attributor-disable=false -S | FileCheck %s --check-prefix=ATTRIBUTOR
+
+
 
 ; Determine dereference-ability before unused loads get deleted:
 ; https://bugs.llvm.org/show_bug.cgi?id=21780
 
 define <4 x double> @PR21780(double* %ptr) {
 ; CHECK-LABEL: @PR21780(double* %ptr)
+; FIXME: this should be @PR21780(double* nonnull dereferenceable(32) %ptr) 
+;        trakcing use of GEP in Attributor would fix this problem.
+; ATTRIBUTOR-LABEL: @PR21780(double* nocapture nonnull readonly dereferenceable(8) %ptr)
+
   ; GEP of index 0 is simplified away.
   %arrayidx1 = getelementptr inbounds double, double* %ptr, i64 1
   %arrayidx2 = getelementptr inbounds double, double* %ptr, i64 2
@@ -21,6 +28,43 @@ define <4 x double> @PR21780(double* %ptr) {
   %vecinit3 = insertelement <4 x double> %vecinit2, double %t3, i32 3
   %shuffle = shufflevector <4 x double> %vecinit3, <4 x double> %vecinit3, <4 x i32> <i32 0, i32 0, i32 2, i32 2>
   ret <4 x double> %shuffle
+}
+
+
+define double @PR21780_only_access3_with_inbounds(double* %ptr) {
+; CHECK-LABEL: @PR21780_only_access3_with_inbounds(double* %ptr)
+; FIXME: this should be @PR21780_only_access3_with_inbounds(double* nonnull dereferenceable(32) %ptr)
+;        trakcing use of GEP in Attributor would fix this problem.
+; ATTRIBUTOR-LABEL: @PR21780_only_access3_with_inbounds(double* nocapture readonly %ptr) 
+
+  %arrayidx3 = getelementptr inbounds double, double* %ptr, i64 3
+  %t3 = load double, double* %arrayidx3, align 8
+  ret double %t3
+}
+
+define double @PR21780_only_access3_without_inbounds(double* %ptr) {
+; CHECK-LABEL: @PR21780_only_access3_without_inbounds(double* %ptr)
+; ATTRIBUTOR-LABEL: @PR21780_only_access3_without_inbounds(double* nocapture readonly %ptr)
+  %arrayidx3 = getelementptr double, double* %ptr, i64 3
+  %t3 = load double, double* %arrayidx3, align 8
+  ret double %t3
+}
+
+define double @PR21780_without_inbounds(double* %ptr) {
+; CHECK-LABEL: @PR21780_without_inbounds(double* %ptr)
+; FIXME: this should be @PR21780_without_inbounds(double* nonnull dereferenceable(32) %ptr)
+; ATTRIBUTOR-LABEL: @PR21780_without_inbounds(double* nocapture nonnull readonly dereferenceable(8) %ptr)
+
+  %arrayidx1 = getelementptr double, double* %ptr, i64 1
+  %arrayidx2 = getelementptr double, double* %ptr, i64 2
+  %arrayidx3 = getelementptr double, double* %ptr, i64 3
+
+  %t0 = load double, double* %ptr, align 8
+  %t1 = load double, double* %arrayidx1, align 8
+  %t2 = load double, double* %arrayidx2, align 8
+  %t3 = load double, double* %arrayidx3, align 8
+
+  ret double %t3
 }
 
 ; Unsimplified, but still valid. Also, throw in some bogus arguments.

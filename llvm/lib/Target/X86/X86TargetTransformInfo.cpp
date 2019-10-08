@@ -116,8 +116,7 @@ llvm::Optional<unsigned> X86TTIImpl::getCacheAssociativity(
   llvm_unreachable("Unknown TargetTransformInfo::CacheLevel");
 }
 
-unsigned X86TTIImpl::getNumberOfRegisters(unsigned ClassID) const {
-  bool Vector = (ClassID == 1);
+unsigned X86TTIImpl::getNumberOfRegisters(bool Vector) {
   if (Vector && !ST->hasSSE1())
     return 0;
 

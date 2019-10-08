@@ -354,20 +354,7 @@ public:
     return TTI::TCC_Free;
   }
 
-  unsigned getNumberOfRegisters(unsigned ClassID) const { return 8; }
-
-  unsigned getRegisterClassForType(bool Vector, Type *Ty = nullptr) const {
-    return Vector ? 1 : 0;
-  };
-
-  const char* getRegisterClassName(unsigned ClassID) const {
-    switch (ClassID) {
-      default:
-        return "Generic::Unknown Register Class";
-      case 0: return "Generic::ScalarRC";
-      case 1: return "Generic::VectorRC";
-    }
-  }
+  unsigned getNumberOfRegisters(bool Vector) { return 8; }
 
   unsigned getRegisterBitWidth(bool Vector) const { return 32; }
 

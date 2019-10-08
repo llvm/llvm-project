@@ -608,9 +608,9 @@ def V_MADMK_F16 : VOP2_Pseudo <"v_madmk_f16", VOP_MADMK_F16, [], "">;
 defm V_LDEXP_F16 : VOP2Inst <"v_ldexp_f16", VOP_F16_F16_I32, AMDGPUldexp>;
 } // End FPDPRounding = 1
 
-defm V_LSHLREV_B16 : VOP2Inst <"v_lshlrev_b16", VOP_I16_I16_I16>;
-defm V_LSHRREV_B16 : VOP2Inst <"v_lshrrev_b16", VOP_I16_I16_I16>;
-defm V_ASHRREV_I16 : VOP2Inst <"v_ashrrev_i16", VOP_I16_I16_I16>;
+defm V_LSHLREV_B16 : VOP2Inst <"v_lshlrev_b16", VOP_I16_I16_I16, lshl_rev>;
+defm V_LSHRREV_B16 : VOP2Inst <"v_lshrrev_b16", VOP_I16_I16_I16, lshr_rev>;
+defm V_ASHRREV_I16 : VOP2Inst <"v_ashrrev_i16", VOP_I16_I16_I16, ashr_rev>;
 
 let isCommutable = 1 in {
 let FPDPRounding = 1 in {
@@ -620,16 +620,16 @@ defm V_SUBREV_F16 : VOP2Inst <"v_subrev_f16", VOP_F16_F16_F16, null_frag, "v_sub
 defm V_MUL_F16 : VOP2Inst <"v_mul_f16", VOP_F16_F16_F16, fmul>;
 def V_MADAK_F16 : VOP2_Pseudo <"v_madak_f16", VOP_MADAK_F16, [], "">;
 } // End FPDPRounding = 1
-defm V_ADD_U16 : VOP2Inst <"v_add_u16", VOP_I16_I16_I16>;
-defm V_SUB_U16 : VOP2Inst <"v_sub_u16" , VOP_I16_I16_I16>;
+defm V_ADD_U16 : VOP2Inst <"v_add_u16", VOP_I16_I16_I16, add>;
+defm V_SUB_U16 : VOP2Inst <"v_sub_u16" , VOP_I16_I16_I16, sub>;
 defm V_SUBREV_U16 : VOP2Inst <"v_subrev_u16", VOP_I16_I16_I16, null_frag, "v_sub_u16">;
-defm V_MUL_LO_U16 : VOP2Inst <"v_mul_lo_u16", VOP_I16_I16_I16>;
+defm V_MUL_LO_U16 : VOP2Inst <"v_mul_lo_u16", VOP_I16_I16_I16, mul>;
 defm V_MAX_F16 : VOP2Inst <"v_max_f16", VOP_F16_F16_F16, fmaxnum_like>;
 defm V_MIN_F16 : VOP2Inst <"v_min_f16", VOP_F16_F16_F16, fminnum_like>;
-defm V_MAX_U16 : VOP2Inst <"v_max_u16", VOP_I16_I16_I16>;
-defm V_MAX_I16 : VOP2Inst <"v_max_i16", VOP_I16_I16_I16>;
-defm V_MIN_U16 : VOP2Inst <"v_min_u16", VOP_I16_I16_I16>;
-defm V_MIN_I16 : VOP2Inst <"v_min_i16", VOP_I16_I16_I16>;
+defm V_MAX_U16 : VOP2Inst <"v_max_u16", VOP_I16_I16_I16, umax>;
+defm V_MAX_I16 : VOP2Inst <"v_max_i16", VOP_I16_I16_I16, smax>;
+defm V_MIN_U16 : VOP2Inst <"v_min_u16", VOP_I16_I16_I16, umin>;
+defm V_MIN_I16 : VOP2Inst <"v_min_i16", VOP_I16_I16_I16, smin>;
 
 let Constraints = "$vdst = $src2", DisableEncoding="$src2",
     isConvertibleToThreeAddress = 1 in {
@@ -722,53 +722,17 @@ defm V_PK_FMAC_F16 : VOP2Inst<"v_pk_fmac_f16", VOP_V2F16_V2F16_V2F16>;
 
 // Note: 16-bit instructions produce a 0 result in the high 16-bits
 // on GFX8 and GFX9 and preserve high 16 bits on GFX10+
-def ClearHI16 : OutPatFrag<(ops node:$op),
-                           (V_AND_B32_e64 $op, (V_MOV_B32_e32 (i32 0xffff)))>;
-
-multiclass Arithmetic_i16_Pats <SDPatternOperator op, Instruction inst,
-                                bit PreservesHI16 = 0> {
-
-def : GCNPat<
-  (op i16:$src0, i16:$src1),
-  !if(!eq(PreservesHI16,1), (ClearHI16 (inst $src0, $src1)), (inst $src0, $src1))
->;
+multiclass Arithmetic_i16_0Hi_Pats <SDPatternOperator op, Instruction inst> {
 
 def : GCNPat<
   (i32 (zext (op i16:$src0, i16:$src1))),
-  !if(!eq(PreservesHI16,1), (ClearHI16 (inst $src0, $src1)), (inst $src0, $src1))
+  (inst $src0, $src1)
 >;
 
 def : GCNPat<
   (i64 (zext (op i16:$src0, i16:$src1))),
    (REG_SEQUENCE VReg_64,
-     !if(!eq(PreservesHI16,1), (ClearHI16 (inst $src0, $src1)), (inst $src0, $src1)),
-     sub0,
-     (V_MOV_B32_e32 (i32 0)), sub1)
->;
-}
-
-multiclass Bits_OpsRev_i16_Pats <SDPatternOperator op, Instruction inst,
-                                 bit PreservesHI16 = 0> {
-
-def : GCNPat<
-  (op i16:$src0, i16:$src1),
-  !if(!eq(PreservesHI16,1), (ClearHI16 (inst VSrc_b32:$src1, VSrc_b32:$src0)),
-                                       (inst VSrc_b32:$src1, VSrc_b32:$src0))
->;
-
-def : GCNPat<
-  (i32 (zext (op i16:$src0, i16:$src1))),
-  !if(!eq(PreservesHI16,1), (ClearHI16 (inst VSrc_b32:$src1, VSrc_b32:$src0)),
-                                       (inst VSrc_b32:$src1, VSrc_b32:$src0))
->;
-
-
-def : GCNPat<
-  (i64 (zext (op i16:$src0, i16:$src1))),
-   (REG_SEQUENCE VReg_64,
-     !if(!eq(PreservesHI16,1), (ClearHI16 (inst VSrc_b32:$src1, VSrc_b32:$src0)),
-                                          (inst VSrc_b32:$src1, VSrc_b32:$src0)),
-     sub0,
+     (inst $src0, $src1), sub0,
      (V_MOV_B32_e32 (i32 0)), sub1)
 >;
 }
@@ -800,35 +764,16 @@ def : GCNPat <
 let Predicates = [Has16BitInsts] in {
 
 let Predicates = [Has16BitInsts, isGFX7GFX8GFX9] in {
-defm : Arithmetic_i16_Pats<add, V_ADD_U16_e64>;
-defm : Arithmetic_i16_Pats<mul, V_MUL_LO_U16_e64>;
-defm : Arithmetic_i16_Pats<sub, V_SUB_U16_e64>;
-defm : Arithmetic_i16_Pats<smin, V_MIN_I16_e64>;
-defm : Arithmetic_i16_Pats<smax, V_MAX_I16_e64>;
-defm : Arithmetic_i16_Pats<umin, V_MIN_U16_e64>;
-defm : Arithmetic_i16_Pats<umax, V_MAX_U16_e64>;
-}
-
-let Predicates = [Has16BitInsts, isGFX10Plus] in {
-defm : Arithmetic_i16_Pats<add, V_ADD_U16_e64,    1>;
-defm : Arithmetic_i16_Pats<mul, V_MUL_LO_U16_e64, 1>;
-defm : Arithmetic_i16_Pats<sub, V_SUB_U16_e64,    1>;
-defm : Arithmetic_i16_Pats<smin, V_MIN_I16_e64,   1>;
-defm : Arithmetic_i16_Pats<smax, V_MAX_I16_e64,   1>;
-defm : Arithmetic_i16_Pats<umin, V_MIN_U16_e64,   1>;
-defm : Arithmetic_i16_Pats<umax, V_MAX_U16_e64,   1>;
-}
-
-let Predicates = [Has16BitInsts, isGFX7GFX8GFX9] in {
-defm : Bits_OpsRev_i16_Pats<shl, V_LSHLREV_B16_e64>;
-defm : Bits_OpsRev_i16_Pats<srl, V_LSHRREV_B16_e64>;
-defm : Bits_OpsRev_i16_Pats<sra, V_ASHRREV_I16_e64>;
-}
-
-let Predicates = [Has16BitInsts, isGFX10Plus] in {
-defm : Bits_OpsRev_i16_Pats<shl, V_LSHLREV_B16_e64, 1>;
-defm : Bits_OpsRev_i16_Pats<srl, V_LSHRREV_B16_e64, 1>;
-defm : Bits_OpsRev_i16_Pats<sra, V_ASHRREV_I16_e64, 1>;
+defm : Arithmetic_i16_0Hi_Pats<add, V_ADD_U16_e64>;
+defm : Arithmetic_i16_0Hi_Pats<mul, V_MUL_LO_U16_e64>;
+defm : Arithmetic_i16_0Hi_Pats<sub, V_SUB_U16_e64>;
+defm : Arithmetic_i16_0Hi_Pats<smin, V_MIN_I16_e64>;
+defm : Arithmetic_i16_0Hi_Pats<smax, V_MAX_I16_e64>;
+defm : Arithmetic_i16_0Hi_Pats<umin, V_MIN_U16_e64>;
+defm : Arithmetic_i16_0Hi_Pats<umax, V_MAX_U16_e64>;
+defm : Arithmetic_i16_0Hi_Pats<lshl_rev, V_LSHLREV_B16_e64>;
+defm : Arithmetic_i16_0Hi_Pats<lshr_rev, V_LSHRREV_B16_e64>;
+defm : Arithmetic_i16_0Hi_Pats<ashr_rev, V_ASHRREV_I16_e64>;
 }
 
 def : ZExt_i16_i1_Pat<zext>;
@@ -939,11 +884,13 @@ let AssemblerPredicate = isGFX10Plus, DecoderNamespace = "GFX10" in {
     }
   }
   multiclass VOP2_Real_dpp_gfx10<bits<6> op> {
+    foreach _ = BoolToList<!cast<VOP2_Pseudo>(NAME#"_e32").Pfl.HasExtDPP>.ret in
     def _dpp_gfx10 : VOP2_DPP16<op, !cast<VOP2_Pseudo>(NAME#"_e32")> {
       let DecoderNamespace = "SDWA10";
     }
   }
   multiclass VOP2_Real_dpp8_gfx10<bits<6> op> {
+    foreach _ = BoolToList<!cast<VOP2_Pseudo>(NAME#"_e32").Pfl.HasExtDPP>.ret in
     def _dpp8_gfx10 : VOP2_DPP8<op, !cast<VOP2_Pseudo>(NAME#"_e32")> {
       let DecoderNamespace = "DPP8";
     }
@@ -981,6 +928,7 @@ let AssemblerPredicate = isGFX10Plus, DecoderNamespace = "GFX10" in {
     }
     multiclass VOP2_Real_dpp_gfx10_with_name<bits<6> op, string opName,
                                              string asmName> {
+      foreach _ = BoolToList<!cast<VOP2_Pseudo>(opName#"_e32").Pfl.HasExtDPP>.ret in
       def _dpp_gfx10 : VOP2_DPP16<op, !cast<VOP2_Pseudo>(opName#"_e32")> {
         VOP2_Pseudo ps = !cast<VOP2_Pseudo>(opName#"_e32");
         let AsmString = asmName # ps.Pfl.AsmDPP16;
@@ -988,6 +936,7 @@ let AssemblerPredicate = isGFX10Plus, DecoderNamespace = "GFX10" in {
     }
     multiclass VOP2_Real_dpp8_gfx10_with_name<bits<6> op, string opName,
                                               string asmName> {
+      foreach _ = BoolToList<!cast<VOP2_Pseudo>(opName#"_e32").Pfl.HasExtDPP>.ret in
       def _dpp8_gfx10 : VOP2_DPP8<op, !cast<VOP2_Pseudo>(opName#"_e32")> {
         VOP2_Pseudo ps = !cast<VOP2_Pseudo>(opName#"_e32");
         let AsmString = asmName # ps.Pfl.AsmDPP8;
@@ -1018,12 +967,14 @@ let AssemblerPredicate = isGFX10Plus, DecoderNamespace = "GFX10" in {
         let AsmString = asmName # !subst(", vcc", "", Ps.AsmOperands);
         let DecoderNamespace = "SDWA10";
       }
+    foreach _ = BoolToList<!cast<VOP2_Pseudo>(opName#"_e32").Pfl.HasExtDPP>.ret in
     def _dpp_gfx10 :
       VOP2_DPP16<op, !cast<VOP2_Pseudo>(opName#"_e32"), asmName> {
         string AsmDPP = !cast<VOP2_Pseudo>(opName#"_e32").Pfl.AsmDPP16;
         let AsmString = asmName # !subst(", vcc", "", AsmDPP);
         let DecoderNamespace = "SDWA10";
       }
+    foreach _ = BoolToList<!cast<VOP2_Pseudo>(opName#"_e32").Pfl.HasExtDPP>.ret in
     def _dpp8_gfx10 :
       VOP2_DPP8<op, !cast<VOP2_Pseudo>(opName#"_e32"), asmName> {
         string AsmDPP8 = !cast<VOP2_Pseudo>(opName#"_e32").Pfl.AsmDPP8;

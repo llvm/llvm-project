@@ -162,6 +162,11 @@ void BranchFolder::RemoveDeadBlock(MachineBasicBlock *MBB) {
   // Avoid matching if this pointer gets reused.
   TriedMerging.erase(MBB);
 
+  // Update call site info.
+  std::for_each(MBB->begin(), MBB->end(), [MF](const MachineInstr &MI) {
+    if (MI.isCall(MachineInstr::IgnoreBundle))
+      MF->eraseCallSiteInfo(&MI);
+  });
   // Remove the block.
   MF->erase(MBB);
   EHScopeMembership.erase(MBB);

@@ -128,6 +128,10 @@ private:
 
   bool trySelect(SDNode *Node) override;
 
+  // Emits proper ABI for _mcount profiling calls.
+  void emitMCountABI(MachineInstr &MI, MachineBasicBlock &MBB,
+                     MachineFunction &MF);
+
   void processFunctionAfterISel(MachineFunction &MF) override;
 
   bool SelectInlineAsmMemoryOperand(const SDValue &Op,

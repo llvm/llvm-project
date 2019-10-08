@@ -1930,6 +1930,13 @@ void DagInit::Profile(FoldingSetNodeID &ID) const {
   ProfileDagInit(ID, Val, ValName, makeArrayRef(getTrailingObjects<Init *>(), NumArgs), makeArrayRef(getTrailingObjects<StringInit *>(), NumArgNames));
 }
 
+Record *DagInit::getOperatorAsDef(ArrayRef<SMLoc> Loc) const {
+  if (DefInit *DefI = dyn_cast<DefInit>(Val))
+    return DefI->getDef();
+  PrintFatalError(Loc, "Expected record as operator");
+  return nullptr;
+}
+
 Init *DagInit::resolveReferences(Resolver &R) const {
   SmallVector<Init*, 8> NewArgs;
   NewArgs.reserve(arg_size());

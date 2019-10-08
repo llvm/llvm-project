@@ -1207,7 +1207,7 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
 
 
       // Update call site info and delete the pseudo instruction TCRETURN.
-      MBB.getParent()->updateCallSiteInfo(&MI, &*NewMI);
+      MBB.getParent()->moveCallSiteInfo(&MI, &*NewMI);
       MBB.erase(MBBI);
 
       MBBI = NewMI;
@@ -1439,7 +1439,7 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
 
       MIB.cloneMemRefs(MI);
       TransferImpOps(MI, MIB, MIB);
-      MI.getMF()->updateCallSiteInfo(&MI, &*MIB);
+      MI.getMF()->moveCallSiteInfo(&MI, &*MIB);
       MI.eraseFromParent();
       return true;
     }

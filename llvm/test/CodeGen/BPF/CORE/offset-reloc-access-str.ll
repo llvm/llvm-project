@@ -33,15 +33,17 @@ entry:
 ; CHECK:             .ascii  "0:1"                   # string offset=[[ACCESS_STR:[0-9]+]]
 ; CHECK-NEXT:        .byte   0
 ; CHECK:             .section        .BTF.ext,"",@progbits
-; CHECK:             .long   12                      # OffsetReloc
-; CHECK-NEXT:        .long   [[SEC_INDEX]]           # Offset reloc section string offset=[[SEC_INDEX]]
+; CHECK:             .long   16                      # FieldReloc
+; CHECK-NEXT:        .long   [[SEC_INDEX]]           # Field reloc section string offset=[[SEC_INDEX]]
 ; CHECK-NEXT:        .long   2
 ; CHECK-NEXT:        .long   .Ltmp{{[0-9]+}}
 ; CHECK-NEXT:        .long   {{[0-9]+}}
 ; CHECK-NEXT:        .long   [[ACCESS_STR]]
+; CHECK-NEXT:        .long   0
 ; CHECK-NEXT:        .long   .Ltmp{{[0-9]+}}
 ; CHECK-NEXT:        .long   {{[0-9]+}}
 ; CHECK-NEXT:        .long   [[ACCESS_STR]]
+; CHECK-NEXT:        .long   0
 
 declare dso_local i32 @get_value(i8*, i8*) local_unnamed_addr #1
 

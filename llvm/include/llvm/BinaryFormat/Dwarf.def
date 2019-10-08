@@ -17,7 +17,7 @@
     defined HANDLE_DW_VIRTUALITY || defined HANDLE_DW_DEFAULTED ||             \
     defined HANDLE_DW_CC || defined HANDLE_DW_LNS || defined HANDLE_DW_LNE ||  \
     defined HANDLE_DW_LNCT || defined HANDLE_DW_MACRO ||                       \
-    defined HANDLE_DW_RLE ||                                                   \
+    defined HANDLE_DW_RLE || defined HANDLE_DW_LLE ||                          \
     (defined HANDLE_DW_CFA && defined HANDLE_DW_CFA_PRED) ||                   \
     defined HANDLE_DW_APPLE_PROPERTY || defined HANDLE_DW_UT ||                \
     defined HANDLE_DWARF_SECTION || defined HANDLE_DW_IDX ||                   \
@@ -89,6 +89,10 @@
 
 #ifndef HANDLE_DW_RLE
 #define HANDLE_DW_RLE(ID, NAME)
+#endif
+
+#ifndef HANDLE_DW_LLE
+#define HANDLE_DW_LLE(ID, NAME)
 #endif
 
 #ifndef HANDLE_DW_CFA
@@ -825,6 +829,17 @@ HANDLE_DW_RLE(0x05, base_address)
 HANDLE_DW_RLE(0x06, start_end)
 HANDLE_DW_RLE(0x07, start_length)
 
+// DWARF v5 Loc List Entry encoding values.
+HANDLE_DW_LLE(0x00, end_of_list)
+HANDLE_DW_LLE(0x01, base_addressx)
+HANDLE_DW_LLE(0x02, startx_endx)
+HANDLE_DW_LLE(0x03, startx_length)
+HANDLE_DW_LLE(0x04, offset_pair)
+HANDLE_DW_LLE(0x05, default_location)
+HANDLE_DW_LLE(0x06, base_address)
+HANDLE_DW_LLE(0x07, start_end)
+HANDLE_DW_LLE(0x08, start_length)
+
 // Call frame instruction encodings.
 HANDLE_DW_CFA(0x00, nop)
 HANDLE_DW_CFA(0x40, advance_loc)
@@ -939,6 +954,7 @@ HANDLE_DW_IDX(0x05, type_hash)
 #undef HANDLE_DW_LNCT
 #undef HANDLE_DW_MACRO
 #undef HANDLE_DW_RLE
+#undef HANDLE_DW_LLE
 #undef HANDLE_DW_CFA
 #undef HANDLE_DW_CFA_PRED
 #undef HANDLE_DW_APPLE_PROPERTY

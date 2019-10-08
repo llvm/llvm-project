@@ -1,0 +1,24 @@
+# RUN: llvm-exegesis -mode=latency -opcode-name=SBB8rr -max-configs-per-opcode=1 | FileCheck -check-prefixes=CHECK,CHECK1 %s
+# RUN: llvm-exegesis -mode=latency -opcode-name=SBB8rr -max-configs-per-opcode=2 | FileCheck -check-prefixes=CHECK,CHECK2 %s
+
+CHECK:      ---
+CHECK-NEXT: mode: latency
+CHECK-NEXT: key:
+CHECK-NEXT:   instructions:
+CHECK-NEXT:     SBB8rr
+CHECK-NEXT: config: ''
+CHECK-NEXT: register_initial_values:
+CHECK-DAG: - '[[REG1:[A-Z0-9]+]]=0x0'
+CHECK-LAST: ...
+
+CHECK1-NOT: SBB8rr
+
+CHECK2:      ---
+CHECK2-NEXT: mode: latency
+CHECK2-NEXT: key:
+CHECK2-NEXT:   instructions:
+CHECK2-NEXT:     SBB8rr
+CHECK2-NEXT: config: ''
+CHECK2-NEXT: register_initial_values:
+CHECK2-DAG: - '[[REG1:[A-Z0-9]+]]=0x0'
+CHECK2-LAST: ...

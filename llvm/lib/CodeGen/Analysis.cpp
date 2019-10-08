@@ -309,7 +309,8 @@ static const Value *getNoopInput(const Value *V,
         NoopInput = Op;
     } else if (isa<TruncInst>(I) &&
                TLI.allowTruncateForTailCall(Op->getType(), I->getType())) {
-      DataBits = std::min(DataBits, I->getType()->getPrimitiveSizeInBits());
+      DataBits = std::min((uint64_t)DataBits,
+                         I->getType()->getPrimitiveSizeInBits().getFixedSize());
       NoopInput = Op;
     } else if (auto CS = ImmutableCallSite(I)) {
       const Value *ReturnedOp = CS.getReturnedArgOperand();

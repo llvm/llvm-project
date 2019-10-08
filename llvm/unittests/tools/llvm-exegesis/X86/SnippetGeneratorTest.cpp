@@ -45,7 +45,7 @@ protected:
 template <typename SnippetGeneratorT>
 class SnippetGeneratorTest : public X86SnippetGeneratorTest {
 protected:
-  SnippetGeneratorTest() : Generator(State) {}
+  SnippetGeneratorTest() : Generator(State, SnippetGenerator::Options()) {}
 
   std::vector<CodeTemplate> checkAndGetCodeTemplates(unsigned Opcode) {
     randomGenerator().seed(0); // Initialize seed.
@@ -335,7 +335,8 @@ TEST_F(UopsSnippetGeneratorTest, MemoryUse) {
 
 class FakeSnippetGenerator : public SnippetGenerator {
 public:
-  FakeSnippetGenerator(const LLVMState &State) : SnippetGenerator(State) {}
+  FakeSnippetGenerator(const LLVMState &State, const Options &Opts)
+      : SnippetGenerator(State, Opts) {}
 
   Instruction createInstruction(unsigned Opcode) {
     return State.getIC().getInstr(Opcode);

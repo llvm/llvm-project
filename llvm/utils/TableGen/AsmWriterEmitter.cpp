@@ -784,8 +784,7 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
       continue; // Aliases with priority 0 are never emitted.
 
     const DagInit *DI = R->getValueAsDag("ResultInst");
-    const DefInit *Op = cast<DefInit>(DI->getOperator());
-    AliasMap[getQualifiedName(Op->getDef())].insert(
+    AliasMap[getQualifiedName(DI->getOperatorAsDef(R->getLoc()))].insert(
         std::make_pair(CodeGenInstAlias(R, Target), Priority));
   }
 

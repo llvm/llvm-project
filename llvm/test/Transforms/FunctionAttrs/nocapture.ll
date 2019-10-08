@@ -120,7 +120,9 @@ define void @nc2(i32* %p, i32* %q) {
 	ret void
 }
 
-; EITHER: define void @nc3(void ()* nocapture %p)
+
+; FNATTR: define void @nc3(void ()* nocapture %p)
+; ATTRIBUTOR: define void @nc3(void ()* nocapture nonnull %p)
 define void @nc3(void ()* %p) {
 	call void %p()
 	ret void
@@ -133,7 +135,8 @@ define void @nc4(i8* %p) {
 	ret void
 }
 
-; EITHER: define void @nc5(void (i8*)* nocapture %f, i8* nocapture %p)
+; FNATTR: define void @nc5(void (i8*)* nocapture %f, i8* nocapture %p)
+; ATTRIBUTOR: define void @nc5(void (i8*)* nocapture nonnull %f, i8* nocapture %p)
 define void @nc5(void (i8*)* %f, i8* %p) {
 	call void %f(i8* %p) readonly nounwind
 	call void %f(i8* nocapture %p)
@@ -213,19 +216,22 @@ define void @test6_2(i8* %x6_2, i8* %y6_2, i8* %z6_2) {
   ret void
 }
 
-; EITHER: define void @test_cmpxchg(i32* nocapture %p)
+; FNATTR: define void @test_cmpxchg(i32* nocapture %p)
+; ATTRIBUTOR: define void @test_cmpxchg(i32* nocapture nonnull dereferenceable(4) %p)
 define void @test_cmpxchg(i32* %p) {
   cmpxchg i32* %p, i32 0, i32 1 acquire monotonic
   ret void
 }
 
-; EITHER: define void @test_cmpxchg_ptr(i32** nocapture %p, i32* %q)
+; FNATTR: define void @test_cmpxchg_ptr(i32** nocapture %p, i32* %q)
+; ATTRIBUTOR: define void @test_cmpxchg_ptr(i32** nocapture nonnull dereferenceable(8) %p, i32* %q)
 define void @test_cmpxchg_ptr(i32** %p, i32* %q) {
   cmpxchg i32** %p, i32* null, i32* %q acquire monotonic
   ret void
 }
 
-; EITHER: define void @test_atomicrmw(i32* nocapture %p)
+; FNATTR: define void @test_atomicrmw(i32* nocapture %p)
+; ATTRIBUTOR: define void @test_atomicrmw(i32* nocapture nonnull dereferenceable(4) %p)
 define void @test_atomicrmw(i32* %p) {
   atomicrmw add i32* %p, i32 1 seq_cst
   ret void

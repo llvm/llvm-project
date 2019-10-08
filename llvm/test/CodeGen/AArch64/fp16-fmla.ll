@@ -138,6 +138,16 @@ entry:
   ret <8 x half> %add
 }
 
+define <4 x half> @test_FMLSv4f16_OP1(<4 x half> %a, <4 x half> %b, <4 x half> %c) {
+; CHECK-LABEL: test_FMLSv4f16_OP1:
+; CHECK: fneg    {{v[0-9]+}}.4h, {{v[0-9]+}}.4h
+; CHECK: fmla    {{v[0-9]+}}.4h, {{v[0-9]+}}.4h, {{v[0-9]+}}.4h
+entry:
+  %mul = fmul fast <4 x half> %c, %b
+  %sub = fsub fast <4 x half> %mul, %a
+  ret <4 x half> %sub
+}
+
 define <4 x half> @test_FMLSv4f16_OP2(<4 x half> %a, <4 x half> %b, <4 x half> %c) {
 ; CHECK-LABEL: test_FMLSv4f16_OP2:
 ; CHECK: fmls    {{v[0-9]+}}.4h, {{v[0-9]+}}.4h, {{v[0-9]+}}.4h
@@ -149,7 +159,8 @@ entry:
 
 define <8 x half> @test_FMLSv8f16_OP1(<8 x half> %a, <8 x half> %b, <8 x half> %c) {
 ; CHECK-LABEL: test_FMLSv8f16_OP1:
-; CHECK: fmls    {{v[0-9]+}}.8h, {{v[0-9]+}}.8h, {{v[0-9]+}}.8h
+; CHECK: fneg    {{v[0-9]+}}.8h, {{v[0-9]+}}.8h
+; CHECK: fmla    {{v[0-9]+}}.8h, {{v[0-9]+}}.8h, {{v[0-9]+}}.8h
 entry:
   %mul = fmul fast <8 x half> %c, %b
   %sub = fsub fast <8 x half> %mul, %a
@@ -185,7 +196,8 @@ define <8 x half> @test_FMLSv8i16_indexed_OP1(<8 x half> %a, <8 x i16> %b, <8 x 
 ; CHECK: mul
 ; CHECK: fsub
 ; CHECK-FIXME: It should instead produce the following instruction:
-; CHECK-FIXME: fmls    {{v[0-9]+}}.8h, {{v[0-9]+}}.8h, {{v[0-9]+}}.8h
+; CHECK-FIXME: fneg    {{v[0-9]+}}.8h, {{v[0-9]+}}.8h
+; CHECK-FIXME: fmla    {{v[0-9]+}}.8h, {{v[0-9]+}}.8h, {{v[0-9]+}}.8h
 entry:
   %mul = mul <8 x i16> %c, %b
   %m = bitcast <8 x i16> %mul to <8 x half>

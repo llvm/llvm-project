@@ -8,6 +8,13 @@
 ; RUN: llc -mtriple=thumbv7m-eabi %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-V4
 ; RUN: llc -mtriple=thumbv7em-eabi %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-THUMBV6T2
 
+; Next test would previously trigger an assertion responsible for verification of
+; call site info state.
+; RUN: llc -stop-after=if-converter -debug-entry-values -mtriple=thumbv6t2-eabi %s -o -| FileCheck %s -check-prefix=CHECK-CALLSITE
+; CHECK-CALLSITE: name:  test_used_flags
+; CHECK-CALLSITE: callSites:
+
+
 define i32 @Test0(i32 %a, i32 %b, i32 %c) nounwind readnone ssp {
 entry:
 ; CHECK-LABEL: Test0

@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/iterator.h"
 #include "llvm/BinaryFormat/Minidump.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Support/Error.h"
@@ -80,15 +81,55 @@ public:
     return getListStream<minidump::Thread>(minidump::StreamType::ThreadList);
   }
 
-  /// Returns the list of memory ranges embedded in the MemoryList stream. An
-  /// error is returned if the file does not contain this stream, or if the
-  /// stream is not large enough to contain the number of memory descriptors
-  /// declared in the stream header. The consistency of the MemoryDescriptor
-  /// entries themselves is not checked in any way.
+  /// Returns the list of descriptors embedded in the MemoryList stream. The
+  /// descriptors provide the content of interesting regions of memory at the
+  /// time the minidump was taken. An error is returned if the file does not
+  /// contain this stream, or if the stream is not large enough to contain the
+  /// number of memory descriptors declared in the stream header. The
+  /// consistency of the MemoryDescriptor entries themselves is not checked in
+  /// any way.
   Expected<ArrayRef<minidump::MemoryDescriptor>> getMemoryList() const {
     return getListStream<minidump::MemoryDescriptor>(
         minidump::StreamType::MemoryList);
   }
+
+  class MemoryInfoIterator
+      : public iterator_facade_base<MemoryInfoIterator,
+                                    std::forward_iterator_tag,
+                                    minidump::MemoryInfo> {
+  public:
+    MemoryInfoIterator(ArrayRef<uint8_t> Storage, size_t Stride)
+        : Storage(Storage), Stride(Stride) {
+      assert(Storage.size() % Stride == 0);
+    }
+
+    bool operator==(const MemoryInfoIterator &R) const {
+      return Storage.size() == R.Storage.size();
+    }
+
+    const minidump::MemoryInfo &operator*() const {
+      assert(Storage.size() >= sizeof(minidump::MemoryInfo));
+      return *reinterpret_cast<const minidump::MemoryInfo *>(Storage.data());
+    }
+
+    MemoryInfoIterator &operator++() {
+      Storage = Storage.drop_front(Stride);
+      return *this;
+    }
+
+  private:
+    ArrayRef<uint8_t> Storage;
+    size_t Stride;
+  };
+
+  /// Returns the list of descriptors embedded in the MemoryInfoList stream. The
+  /// descriptors provide properties (e.g. permissions) of interesting regions
+  /// of memory at the time the minidump was taken. An error is returned if the
+  /// file does not contain this stream, or if the stream is not large enough to
+  /// contain the number of memory descriptors declared in the stream header.
+  /// The consistency of the MemoryInfoList entries themselves is not checked
+  /// in any way.
+  Expected<iterator_range<MemoryInfoIterator>> getMemoryInfoList() const;
 
 private:
   static Error createError(StringRef Str) {
@@ -137,10 +178,10 @@ private:
 };
 
 template <typename T>
-Expected<const T &> MinidumpFile::getStream(minidump::StreamType Stream) const {
-  if (auto OptionalStream = getRawStream(Stream)) {
-    if (OptionalStream->size() >= sizeof(T))
-      return *reinterpret_cast<const T *>(OptionalStream->data());
+Expected<const T &> MinidumpFile::getStream(minidump::StreamType Type) const {
+  if (Optional<ArrayRef<uint8_t>> Stream = getRawStream(Type)) {
+    if (Stream->size() >= sizeof(T))
+      return *reinterpret_cast<const T *>(Stream->data());
     return createEOFError();
   }
   return createError("No such stream");
@@ -153,10 +194,11 @@ Expected<ArrayRef<T>> MinidumpFile::getDataSliceAs(ArrayRef<uint8_t> Data,
   // Check for overflow.
   if (Count > std::numeric_limits<size_t>::max() / sizeof(T))
     return createEOFError();
-  auto ExpectedArray = getDataSlice(Data, Offset, sizeof(T) * Count);
-  if (!ExpectedArray)
-    return ExpectedArray.takeError();
-  return ArrayRef<T>(reinterpret_cast<const T *>(ExpectedArray->data()), Count);
+  Expected<ArrayRef<uint8_t>> Slice =
+      getDataSlice(Data, Offset, sizeof(T) * Count);
+  if (!Slice)
+    return Slice.takeError();
+  return ArrayRef<T>(reinterpret_cast<const T *>(Slice->data()), Count);
 }
 
 } // end namespace object

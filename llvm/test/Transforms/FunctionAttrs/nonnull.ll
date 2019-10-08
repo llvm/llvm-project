@@ -236,6 +236,104 @@ define void @f15(i8* %arg) {
   ret void
 }
 
+declare void @fun0() #1
+declare void @fun1(i8*) #1
+declare void @fun2(i8*, i8*) #1
+declare void @fun3(i8*, i8*, i8*) #1
+; TEST 16 simple path test
+; if(..)
+;   fun2(nonnull %a, nonnull %b)
+; else
+;   fun2(nonnull %a, %b)
+; We can say that %a is nonnull but %b is not.
+define void @f16(i8* %a, i8 * %b, i8 %c) {
+; FIXME: missing nonnull on %a
+; ATTRIBUTOR: define void @f16(i8* %a, i8* %b, i8 %c)
+  %cmp = icmp eq i8 %c, 0
+  br i1 %cmp, label %if.then, label %if.else
+if.then:
+  tail call void @fun2(i8* nonnull %a, i8* nonnull %b)
+  ret void
+if.else:
+  tail call void @fun2(i8* nonnull %a, i8* %b)
+  ret void
+}
+; TEST 17 explore child BB test
+; if(..)
+;    ... (willreturn & nounwind)
+; else
+;    ... (willreturn & nounwind)
+; fun1(nonnull %a)
+; We can say that %a is nonnull
+define void @f17(i8* %a, i8 %c) {
+; FIXME: missing nonnull on %a
+; ATTRIBUTOR: define void @f17(i8* %a, i8 %c)
+  %cmp = icmp eq i8 %c, 0
+  br i1 %cmp, label %if.then, label %if.else
+if.then:
+  tail call void @fun0()
+  br label %cont
+if.else:
+  tail call void @fun0()
+  br label %cont
+cont:
+  tail call void @fun1(i8* nonnull %a)
+  ret void
+}
+; TEST 18 More complex test
+; if(..)
+;    ... (willreturn & nounwind)
+; else
+;    ... (willreturn & nounwind)
+; if(..)
+;    ... (willreturn & nounwind)
+; else
+;    ... (willreturn & nounwind)
+; fun1(nonnull %a)
+
+define void @f18(i8* %a, i8* %b, i8 %c) {
+; FIXME: missing nonnull on %a
+; ATTRIBUTOR: define void @f18(i8* %a, i8* %b, i8 %c)
+  %cmp1 = icmp eq i8 %c, 0
+  br i1 %cmp1, label %if.then, label %if.else
+if.then:
+  tail call void @fun0()
+  br label %cont
+if.else:
+  tail call void @fun0()
+  br label %cont
+cont:
+  %cmp2 = icmp eq i8 %c, 1
+  br i1 %cmp2, label %cont.then, label %cont.else
+cont.then:
+  tail call void @fun1(i8* nonnull %b)
+  br label %cont2
+cont.else:
+  tail call void @fun0()
+  br label %cont2
+cont2:
+  tail call void @fun1(i8* nonnull %a)
+  ret void
+}
+
+; TEST 19: Loop
+
+define void @f19(i8* %a, i8* %b, i8 %c) {
+; FIXME: missing nonnull on %b
+; ATTRIBUTOR: define void @f19(i8* %a, i8* %b, i8 %c)
+  br label %loop.header
+loop.header:
+  %cmp2 = icmp eq i8 %c, 0
+  br i1 %cmp2, label %loop.body, label %loop.exit
+loop.body:
+  tail call void @fun1(i8* nonnull %b)
+  tail call void @fun1(i8* nonnull %a)
+  br label %loop.header
+loop.exit:
+  tail call void @fun1(i8* nonnull %b)
+  ret void
+}
+
 ; Test propagation of nonnull callsite args back to caller.
 
 declare void @use1(i8* %x)
@@ -268,14 +366,9 @@ define void @parent2(i8* %a, i8* %b, i8* %c) {
 ; FNATTR-NEXT:    call void @use3nonnull(i8* %b, i8* %c, i8* %a)
 ; FNATTR-NEXT:    call void @use3(i8* %c, i8* %a, i8* %b)
 
-; FIXME: missing "nonnull", it should be
-; @parent2(i8* nonnull %a, i8* nonnull %b, i8* nonnull %c)
-;     call void @use3nonnull(i8* nonnull %b, i8* nonnull %c, i8* nonnull %a)
-;     call void @use3(i8* nonnull %c, i8* nonnull %a, i8* nonnull %b)
-
-; ATTRIBUTOR-LABEL: @parent2(i8* %a, i8* %b, i8* %c)
+; ATTRIBUTOR-LABEL: @parent2(i8* nonnull %a, i8* nonnull %b, i8* nonnull %c)
 ; ATTRIBUTOR-NEXT:    call void @use3nonnull(i8* nonnull %b, i8* nonnull %c, i8* nonnull %a)
-; ATTRIBUTOR-NEXT:    call void @use3(i8* %c, i8* %a, i8* %b)
+; ATTRIBUTOR-NEXT:    call void @use3(i8* nonnull %c, i8* nonnull %a, i8* nonnull %b)
 
 ; BOTH-NEXT:    ret void
   call void @use3nonnull(i8* %b, i8* %c, i8* %a)
@@ -290,13 +383,9 @@ define void @parent3(i8* %a, i8* %b, i8* %c) {
 ; FNATTR-NEXT:    call void @use1nonnull(i8* %a)
 ; FNATTR-NEXT:    call void @use3(i8* %c, i8* %b, i8* %a)
 
-; FIXME: missing "nonnull", it should be,
-; @parent3(i8* nonnull %a, i8* %b, i8* %c)
-;    call void @use1nonnull(i8* nonnull %a)
-;    call void @use3(i8* %c, i8* %b, i8* nonnull %a)
-; ATTRIBUTOR-LABEL: @parent3(i8* %a, i8* %b, i8* %c)
+; ATTRIBUTOR-LABEL: @parent3(i8* nonnull %a, i8* %b, i8* %c)
 ; ATTRIBUTOR-NEXT:    call void @use1nonnull(i8* nonnull %a)
-; ATTRIBUTOR-NEXT:    call void @use3(i8* %c, i8* %b, i8* %a)
+; ATTRIBUTOR-NEXT:    call void @use3(i8* %c, i8* %b, i8* nonnull %a)
 
 ; BOTH-NEXT:  ret void
 
@@ -313,16 +402,10 @@ define void @parent4(i8* %a, i8* %b, i8* %c) {
 ; CHECK-NEXT:    call void @use2(i8* %a, i8* %c)
 ; CHECK-NEXT:    call void @use1(i8* %b)
 
-; FIXME : missing "nonnull", it should be
-; @parent4(i8* %a, i8* nonnull %b, i8* nonnull %c)
-;   call void @use2nonnull(i8* nonnull %c, i8* nonull %b)
-;   call void @use2(i8* %a, i8* nonnull %c)
-;   call void @use1(i8* nonnull %b)
-
-; ATTRIBUTOR-LABEL: @parent4(i8* %a, i8* %b, i8* %c)
+; ATTRIBUTOR-LABEL: @parent4(i8* %a, i8* nonnull %b, i8* nonnull %c)
 ; ATTRIBUTOR-NEXT:    call void @use2nonnull(i8* nonnull %c, i8* nonnull %b)
-; ATTRIBUTOR-NEXT:    call void @use2(i8* %a, i8* %c)
-; ATTRIBUTOR-NEXT:    call void @use1(i8* %b)
+; ATTRIBUTOR-NEXT:    call void @use2(i8* %a, i8* nonnull %c)
+; ATTRIBUTOR-NEXT:    call void @use1(i8* nonnull %b)
 
 ; BOTH: ret void
 
@@ -359,8 +442,7 @@ f:
 
 define i8 @parent6(i8* %a, i8* %b) {
 ; FNATTR-LABEL: @parent6(i8* nonnull %a, i8* %b)
-; FIXME: missing "nonnull"
-; ATTRIBUTOR-LABEL: @parent6(i8* %a, i8* %b)
+; ATTRIBUTOR-LABEL: @parent6(i8* nonnull %a, i8* %b)
 ; BOTH-NEXT:    [[C:%.*]] = load volatile i8, i8* %b
 ; FNATTR-NEXT:    call void @use1nonnull(i8* %a)
 ; ATTRIBUTOR-NEXT:    call void @use1nonnull(i8* nonnull %a)
@@ -378,14 +460,9 @@ define i8 @parent7(i8* %a) {
 ; FNATTR-NEXT:    [[RET:%.*]] = call i8 @use1safecall(i8* %a)
 ; FNATTR-NEXT:    call void @use1nonnull(i8* %a)
 
-; FIXME : missing "nonnull", it should be
-; @parent7(i8* nonnull %a)
-;   [[RET:%.*]] = call i8 @use1safecall(i8* nonnull %a)
-;   call void @use1nonnull(i8* nonnull %a)
-;   ret i8 [[RET]]
 
-; ATTRIBUTOR-LABEL: @parent7(i8* %a)
-; ATTRIBUTOR-NEXT:    [[RET:%.*]] = call i8 @use1safecall(i8* %a)
+; ATTRIBUTOR-LABEL: @parent7(i8* nonnull %a)
+; ATTRIBUTOR-NEXT:    [[RET:%.*]] = call i8 @use1safecall(i8* nonnull %a)
 ; ATTRIBUTOR-NEXT:    call void @use1nonnull(i8* nonnull %a)
 
 ; BOTH-NEXT: ret i8 [[RET]]
@@ -400,9 +477,7 @@ define i8 @parent7(i8* %a) {
 declare i32 @esfp(...)
 
 define i1 @parent8(i8* %a, i8* %bogus1, i8* %b) personality i8* bitcast (i32 (...)* @esfp to i8*){
-; FNATTR-LABEL: @parent8(i8* nonnull %a, i8* nocapture readnone %bogus1, i8* nonnull %b)
-; FIXME : missing "nonnull", it should be @parent8(i8* nonnull %a, i8* %bogus1, i8* nonnull %b)
-; ATTRIBUTOR-LABEL: @parent8(i8* %a, i8* nocapture readnone %bogus1, i8* %b)
+; BOTH-LABEL: @parent8(i8* nonnull %a, i8* nocapture readnone %bogus1, i8* nonnull %b) 
 ; BOTH-NEXT:  entry:
 ; FNATTR-NEXT:    invoke void @use2nonnull(i8* %a, i8* %b)
 ; ATTRIBUTOR-NEXT:    invoke void @use2nonnull(i8* nonnull %a, i8* nonnull %b)
@@ -470,4 +545,6 @@ define weak_odr void @weak_caller(i32* nonnull %a) {
   ret void
 }
 
+
 attributes #0 = { "null-pointer-is-valid"="true" }
+attributes #1 = { nounwind willreturn}

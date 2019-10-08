@@ -8526,7 +8526,7 @@ bool AArch64TargetLowering::isExtFreeImpl(const Instruction *Ext) const {
       // Get the shift amount based on the scaling factor:
       // log2(sizeof(IdxTy)) - log2(8).
       uint64_t ShiftAmt =
-          countTrailingZeros(DL.getTypeStoreSizeInBits(IdxTy)) - 3;
+        countTrailingZeros(DL.getTypeStoreSizeInBits(IdxTy).getFixedSize()) - 3;
       // Is the constant foldable in the shift of the addressing mode?
       // I.e., shift amount is between 1 and 4 inclusive.
       if (ShiftAmt == 0 || ShiftAmt > 4)

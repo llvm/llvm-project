@@ -62,6 +62,7 @@ STATISTIC(NumSDivs,     "Number of sdiv converted to udiv");
 STATISTIC(NumUDivs,     "Number of udivs whose width was decreased");
 STATISTIC(NumAShrs,     "Number of ashr converted to lshr");
 STATISTIC(NumSRems,     "Number of srem converted to urem");
+STATISTIC(NumSExt,      "Number of sext converted to zext");
 STATISTIC(NumOverflows, "Number of overflow checks removed");
 STATISTIC(NumSaturating,
     "Number of saturating arithmetics converted to normal arithmetics");
@@ -637,6 +638,27 @@ static bool processAShr(BinaryOperator *SDI, LazyValueInfo *LVI) {
   return true;
 }
 
+static bool processSExt(SExtInst *SDI, LazyValueInfo *LVI) {
+  if (SDI->getType()->isVectorTy())
+    return false;
+
+  Value *Base = SDI->getOperand(0);
+
+  Constant *Zero = ConstantInt::get(Base->getType(), 0);
+  if (LVI->getPredicateAt(ICmpInst::ICMP_SGE, Base, Zero, SDI) !=
+      LazyValueInfo::True)
+    return false;
+
+  ++NumSExt;
+  auto *ZExt =
+      CastInst::CreateZExtOrBitCast(Base, SDI->getType(), SDI->getName(), SDI);
+  ZExt->setDebugLoc(SDI->getDebugLoc());
+  SDI->replaceAllUsesWith(ZExt);
+  SDI->eraseFromParent();
+
+  return true;
+}
+
 static bool processBinOp(BinaryOperator *BinOp, LazyValueInfo *LVI) {
   using OBO = OverflowingBinaryOperator;
 
@@ -744,6 +766,9 @@ static bool runImpl(Function &F, LazyValueInfo *LVI, DominatorTree *DT,
         break;
       case Instruction::AShr:
         BBChanged |= processAShr(cast<BinaryOperator>(II), LVI);
+        break;
+      case Instruction::SExt:
+        BBChanged |= processSExt(cast<SExtInst>(II), LVI);
         break;
       case Instruction::Add:
       case Instruction::Sub:

@@ -1743,6 +1743,11 @@ bool IfConverter::IfConvertDiamondCommon(
       ++i;
   }
   while (NumDups1 != 0) {
+    // Since this instruction is going to be deleted, update call
+    // site info state if the instruction is call instruction.
+    if (DI2->isCall(MachineInstr::IgnoreBundle))
+      MBB2.getParent()->eraseCallSiteInfo(&*DI2);
+
     ++DI2;
     if (DI2 == MBB2.end())
       break;
@@ -1784,7 +1789,14 @@ bool IfConverter::IfConvertDiamondCommon(
     // NumDups2 only counted non-dbg_value instructions, so this won't
     // run off the head of the list.
     assert(DI1 != MBB1.begin());
+
     --DI1;
+
+    // Since this instruction is going to be deleted, update call
+    // site info state if the instruction is call instruction.
+    if (DI1->isCall(MachineInstr::IgnoreBundle))
+      MBB1.getParent()->eraseCallSiteInfo(&*DI1);
+
     // skip dbg_value instructions
     if (!DI1->isDebugInstr())
       ++i;
@@ -2069,6 +2081,10 @@ void IfConverter::CopyAndPredicateBlock(BBInfo &ToBBI, BBInfo &FromBBI,
       break;
 
     MachineInstr *MI = MF.CloneMachineInstr(&I);
+    // Make a copy of the call site info.
+    if (MI->isCall(MachineInstr::IgnoreBundle))
+      MF.copyCallSiteInfo(&I,MI);
+
     ToBBI.BB->insert(ToBBI.BB->end(), MI);
     ToBBI.NonPredSize++;
     unsigned ExtraPredCost = TII->getPredicationCost(I);

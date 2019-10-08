@@ -16,6 +16,7 @@
 #ifndef LLVM_MCA_RETIRE_STAGE_H
 #define LLVM_MCA_RETIRE_STAGE_H
 
+#include "llvm/MCA/HardwareUnits/LSUnit.h"
 #include "llvm/MCA/HardwareUnits/RegisterFile.h"
 #include "llvm/MCA/HardwareUnits/RetireControlUnit.h"
 #include "llvm/MCA/Stages/Stage.h"
@@ -27,13 +28,14 @@ class RetireStage final : public Stage {
   // Owner will go away when we move listeners/eventing to the stages.
   RetireControlUnit &RCU;
   RegisterFile &PRF;
+  LSUnitBase &LSU;
 
   RetireStage(const RetireStage &Other) = delete;
   RetireStage &operator=(const RetireStage &Other) = delete;
 
 public:
-  RetireStage(RetireControlUnit &R, RegisterFile &F)
-      : Stage(), RCU(R), PRF(F) {}
+  RetireStage(RetireControlUnit &R, RegisterFile &F, LSUnitBase &LS)
+      : Stage(), RCU(R), PRF(F), LSU(LS) {}
 
   bool hasWorkToComplete() const override { return !RCU.isEmpty(); }
   Error cycleStart() override;

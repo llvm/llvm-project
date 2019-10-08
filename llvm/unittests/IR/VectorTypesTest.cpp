@@ -6,9 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/LLVMContext.h"
-#include "llvm/Support/ScalableSize.h"
+#include "llvm/Support/TypeSize.h"
 #include "gtest/gtest.h"
 using namespace llvm;
 
@@ -159,6 +160,119 @@ TEST(VectorTypesTest, Scalable) {
   EltCnt = ScV8Int64Ty->getElementCount();
   EXPECT_EQ(EltCnt.Min, 8U);
   ASSERT_TRUE(EltCnt.Scalable);
+}
+
+TEST(VectorTypesTest, FixedLenComparisons) {
+  LLVMContext Ctx;
+  DataLayout DL("");
+
+  Type *Int32Ty = Type::getInt32Ty(Ctx);
+  Type *Int64Ty = Type::getInt64Ty(Ctx);
+
+  VectorType *V2Int32Ty = VectorType::get(Int32Ty, 2);
+  VectorType *V4Int32Ty = VectorType::get(Int32Ty, 4);
+
+  VectorType *V2Int64Ty = VectorType::get(Int64Ty, 2);
+
+  TypeSize V2I32Len = V2Int32Ty->getPrimitiveSizeInBits();
+  EXPECT_EQ(V2I32Len.getKnownMinSize(), 64U);
+  EXPECT_FALSE(V2I32Len.isScalable());
+
+  EXPECT_LT(V2Int32Ty->getPrimitiveSizeInBits(),
+            V4Int32Ty->getPrimitiveSizeInBits());
+  EXPECT_GT(V2Int64Ty->getPrimitiveSizeInBits(),
+            V2Int32Ty->getPrimitiveSizeInBits());
+  EXPECT_EQ(V4Int32Ty->getPrimitiveSizeInBits(),
+            V2Int64Ty->getPrimitiveSizeInBits());
+  EXPECT_NE(V2Int32Ty->getPrimitiveSizeInBits(),
+            V2Int64Ty->getPrimitiveSizeInBits());
+
+  // Check that a fixed-only comparison works for fixed size vectors.
+  EXPECT_EQ(V2Int64Ty->getPrimitiveSizeInBits().getFixedSize(),
+            V4Int32Ty->getPrimitiveSizeInBits().getFixedSize());
+
+  // Check the DataLayout interfaces.
+  EXPECT_EQ(DL.getTypeSizeInBits(V2Int64Ty),
+            DL.getTypeSizeInBits(V4Int32Ty));
+  EXPECT_EQ(DL.getTypeSizeInBits(V2Int32Ty), 64U);
+  EXPECT_EQ(DL.getTypeSizeInBits(V2Int64Ty), 128U);
+  EXPECT_EQ(DL.getTypeStoreSize(V2Int64Ty),
+            DL.getTypeStoreSize(V4Int32Ty));
+  EXPECT_NE(DL.getTypeStoreSizeInBits(V2Int32Ty),
+            DL.getTypeStoreSizeInBits(V2Int64Ty));
+  EXPECT_EQ(DL.getTypeStoreSizeInBits(V2Int32Ty), 64U);
+  EXPECT_EQ(DL.getTypeStoreSize(V2Int64Ty), 16U);
+  EXPECT_EQ(DL.getTypeAllocSize(V4Int32Ty),
+            DL.getTypeAllocSize(V2Int64Ty));
+  EXPECT_NE(DL.getTypeAllocSizeInBits(V2Int32Ty),
+            DL.getTypeAllocSizeInBits(V2Int64Ty));
+  EXPECT_EQ(DL.getTypeAllocSizeInBits(V4Int32Ty), 128U);
+  EXPECT_EQ(DL.getTypeAllocSize(V2Int32Ty), 8U);
+  ASSERT_TRUE(DL.typeSizeEqualsStoreSize(V4Int32Ty));
+}
+
+TEST(VectorTypesTest, ScalableComparisons) {
+  LLVMContext Ctx;
+  DataLayout DL("");
+
+  Type *Int32Ty = Type::getInt32Ty(Ctx);
+  Type *Int64Ty = Type::getInt64Ty(Ctx);
+
+  VectorType *ScV2Int32Ty = VectorType::get(Int32Ty, {2, true});
+  VectorType *ScV4Int32Ty = VectorType::get(Int32Ty, {4, true});
+
+  VectorType *ScV2Int64Ty = VectorType::get(Int64Ty, {2, true});
+
+  TypeSize ScV2I32Len = ScV2Int32Ty->getPrimitiveSizeInBits();
+  EXPECT_EQ(ScV2I32Len.getKnownMinSize(), 64U);
+  EXPECT_TRUE(ScV2I32Len.isScalable());
+
+  EXPECT_LT(ScV2Int32Ty->getPrimitiveSizeInBits(),
+            ScV4Int32Ty->getPrimitiveSizeInBits());
+  EXPECT_GT(ScV2Int64Ty->getPrimitiveSizeInBits(),
+            ScV2Int32Ty->getPrimitiveSizeInBits());
+  EXPECT_EQ(ScV4Int32Ty->getPrimitiveSizeInBits(),
+            ScV2Int64Ty->getPrimitiveSizeInBits());
+  EXPECT_NE(ScV2Int32Ty->getPrimitiveSizeInBits(),
+            ScV2Int64Ty->getPrimitiveSizeInBits());
+
+  // Check the DataLayout interfaces.
+  EXPECT_EQ(DL.getTypeSizeInBits(ScV2Int64Ty),
+            DL.getTypeSizeInBits(ScV4Int32Ty));
+  EXPECT_EQ(DL.getTypeSizeInBits(ScV2Int32Ty).getKnownMinSize(), 64U);
+  EXPECT_EQ(DL.getTypeStoreSize(ScV2Int64Ty),
+            DL.getTypeStoreSize(ScV4Int32Ty));
+  EXPECT_NE(DL.getTypeStoreSizeInBits(ScV2Int32Ty),
+            DL.getTypeStoreSizeInBits(ScV2Int64Ty));
+  EXPECT_EQ(DL.getTypeStoreSizeInBits(ScV2Int32Ty).getKnownMinSize(), 64U);
+  EXPECT_EQ(DL.getTypeStoreSize(ScV2Int64Ty).getKnownMinSize(), 16U);
+  EXPECT_EQ(DL.getTypeAllocSize(ScV4Int32Ty),
+            DL.getTypeAllocSize(ScV2Int64Ty));
+  EXPECT_NE(DL.getTypeAllocSizeInBits(ScV2Int32Ty),
+            DL.getTypeAllocSizeInBits(ScV2Int64Ty));
+  EXPECT_EQ(DL.getTypeAllocSizeInBits(ScV4Int32Ty).getKnownMinSize(), 128U);
+  EXPECT_EQ(DL.getTypeAllocSize(ScV2Int32Ty).getKnownMinSize(), 8U);
+  ASSERT_TRUE(DL.typeSizeEqualsStoreSize(ScV4Int32Ty));
+}
+
+TEST(VectorTypesTest, CrossComparisons) {
+  LLVMContext Ctx;
+
+  Type *Int32Ty = Type::getInt32Ty(Ctx);
+
+  VectorType *V4Int32Ty = VectorType::get(Int32Ty, {4, false});
+  VectorType *ScV4Int32Ty = VectorType::get(Int32Ty, {4, true});
+
+  // Even though the minimum size is the same, a scalable vector could be
+  // larger so we don't consider them to be the same size.
+  EXPECT_NE(V4Int32Ty->getPrimitiveSizeInBits(),
+            ScV4Int32Ty->getPrimitiveSizeInBits());
+  // If we are only checking the minimum, then they are the same size.
+  EXPECT_EQ(V4Int32Ty->getPrimitiveSizeInBits().getKnownMinSize(),
+            ScV4Int32Ty->getPrimitiveSizeInBits().getKnownMinSize());
+
+  // We can't use ordering comparisons (<,<=,>,>=) between scalable and
+  // non-scalable vector sizes.
 }
 
 } // end anonymous namespace

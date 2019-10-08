@@ -109,17 +109,18 @@ define dso_local i32 @bpf_prog(%struct.sk_buff*) local_unnamed_addr #0 !dbg !15 
 ; CHECK-NEXT:        .long   20
 ; CHECK-NEXT:        .long   124
 ; CHECK-NEXT:        .long   144
-; CHECK-NEXT:        .long   24
-; CHECK-NEXT:        .long   168
+; CHECK-NEXT:        .long   28
+; CHECK-NEXT:        .long   172
 ; CHECK-NEXT:        .long   0
 ; CHECK-NEXT:        .long   8                       # FuncInfo
 
-; CHECK:             .long   12                      # OffsetReloc
-; CHECK-NEXT:        .long   43                      # Offset reloc section string offset=43
+; CHECK:             .long   16                      # FieldReloc
+; CHECK-NEXT:        .long   43                      # Field reloc section string offset=43
 ; CHECK-NEXT:        .long   1
 ; CHECK-NEXT:        .long   .Ltmp2
 ; CHECK-NEXT:        .long   2
 ; CHECK-NEXT:        .long   86
+; CHECK-NEXT:        .long   0
 
 ; Function Attrs: argmemonly nounwind
 declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) #1
