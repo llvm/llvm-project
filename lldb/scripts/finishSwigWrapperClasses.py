@@ -179,6 +179,7 @@ def validate_arguments(vArgv):
         "prefix=",
         "cmakeBuildConfiguration=",
         "lldbLibDir=",
+        "lldbPythonPath=",
         "argsFile",
         "useSystemSix"]
     dictArgReq = {"-h": "o",          # o = optional, m = mandatory
@@ -191,7 +192,8 @@ def validate_arguments(vArgv):
                   "--cmakeBuildConfiguration": "o",
                   "--lldbLibDir": "o",
                   "--argsFile": "o",
-                  "--useSystemSix": "o"}
+                  "--useSystemSix": "o",
+                  "--lldbPythonPath": "m"}
 
     # Check for mandatory parameters
     nResult, dictArgs, strMsg = utilsArgsParse.parse(vArgv, strListArgs,
@@ -293,11 +295,9 @@ def run_post_process_for_each_script_supported(vDictArgs):
 
     # Iterate script directory find any script language directories
     for scriptLang in listDirs:
-        # __pycache__ is a magic directory in Python 3 that holds .pyc files
-        if scriptLang != "__pycache__" and scriptLang != "swig_bot_lib":
-            dbg.dump_text("Executing language script for \'%s\'" % scriptLang)
-            nResult, strStatusMsg = run_post_process(
-                scriptLang, strFinishFileName, vDictArgs)
+        dbg.dump_text("Executing language script for \'%s\'" % scriptLang)
+        nResult, strStatusMsg = run_post_process(
+            scriptLang, strFinishFileName, vDictArgs)
         if nResult < 0:
             break
 
@@ -336,13 +336,6 @@ def main(vArgv):
     gbDbgFlag = "-d" in dictArgs
     if gbDbgFlag:
         print_out_input_parameters(dictArgs)
-
-    # Check to see if we were called from the Makefile system. If we were, check
-    # if the caller wants SWIG to generate a dependency file.
-    # Not used in this program, but passed through to the language script file
-    # called by this program
-    global gbMakeFileFlag
-    gbMakeFileFlag = "-m" in dictArgs
 
     nResult, strMsg = run_post_process_for_each_script_supported(dictArgs)
 

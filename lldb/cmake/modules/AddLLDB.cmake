@@ -27,6 +27,10 @@ function(lldb_tablegen)
   endif()
 endfunction(lldb_tablegen)
 
+function(add_lldb_test_dependency name)
+  add_dependencies(lldb-test-deps ${name})
+endfunction(add_lldb_test_dependency)
+
 function(add_lldb_library name)
   include_directories(BEFORE
     ${CMAKE_CURRENT_BINARY_DIR}

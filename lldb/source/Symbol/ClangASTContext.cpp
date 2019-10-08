@@ -3916,25 +3916,6 @@ bool ClangASTContext::IsObjCObjectPointerType(const CompilerType &type,
   return false;
 }
 
-bool ClangASTContext::GetObjCClassName(const CompilerType &type,
-                                       std::string &class_name) {
-  if (!type)
-    return false;
-
-  clang::QualType qual_type(ClangUtil::GetCanonicalQualType(type));
-
-  const clang::ObjCObjectType *object_type =
-      llvm::dyn_cast<clang::ObjCObjectType>(qual_type);
-  if (object_type) {
-    const clang::ObjCInterfaceDecl *interface = object_type->getInterface();
-    if (interface) {
-      class_name = interface->getNameAsString();
-      return true;
-    }
-  }
-  return false;
-}
-
 // Type Completion
 
 bool ClangASTContext::GetCompleteType(lldb::opaque_compiler_type_t type) {

@@ -188,3 +188,32 @@ TEST(ScudoPrimaryTest, PrimaryThreaded) {
   testPrimaryThreaded<scudo::SizeClassAllocator32<SizeClassMap, 18U>>();
   testPrimaryThreaded<scudo::SizeClassAllocator64<SizeClassMap, 24U>>();
 }
+
+// Through a simple allocation that spans two pages, verify that releaseToOS
+// actually releases some bytes (at least one page worth). This is a regression
+// test for an error in how the release criteria were computed.
+template <typename Primary> static void testReleaseToOS() {
+  auto Deleter = [](Primary *P) {
+    P->unmapTestOnly();
+    delete P;
+  };
+  std::unique_ptr<Primary, decltype(Deleter)> Allocator(new Primary, Deleter);
+  Allocator->init(/*ReleaseToOsInterval=*/-1);
+  typename Primary::CacheT Cache;
+  Cache.init(nullptr, Allocator.get());
+  const scudo::uptr Size = scudo::getPageSizeCached() * 2;
+  EXPECT_TRUE(Primary::canAllocate(Size));
+  const scudo::uptr ClassId =
+      Primary::SizeClassMap::getClassIdBySize(Size);
+  void *P = Cache.allocate(ClassId);
+  EXPECT_NE(P, nullptr);
+  Cache.deallocate(ClassId, P);
+  Cache.destroy(nullptr);
+  EXPECT_GT(Allocator->releaseToOS(), 0U);
+}
+
+TEST(ScudoPrimaryTest, ReleaseToOS) {
+  using SizeClassMap = scudo::DefaultSizeClassMap;
+  testReleaseToOS<scudo::SizeClassAllocator32<SizeClassMap, 18U>>();
+  testReleaseToOS<scudo::SizeClassAllocator64<SizeClassMap, 24U>>();
+}

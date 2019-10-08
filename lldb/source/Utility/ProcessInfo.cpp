@@ -244,7 +244,7 @@ void ProcessInstanceInfo::DumpAsTableRow(Stream &s, UserIDResolver &resolver,
 }
 
 bool ProcessInstanceInfoMatch::NameMatches(const char *process_name) const {
-  if (m_name_match_type == NameMatch::Ignore)
+  if (m_name_match_type == NameMatch::Ignore || process_name == nullptr)
     return true;
   const char *match_name = m_match_info.GetName();
   if (!match_name)

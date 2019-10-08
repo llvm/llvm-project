@@ -603,9 +603,6 @@ public:
   static bool GetCXXClassName(const CompilerType &type,
                               std::string &class_name);
 
-  static bool GetObjCClassName(const CompilerType &type,
-                               std::string &class_name);
-
   // Type Completion
 
   bool GetCompleteType(lldb::opaque_compiler_type_t type) override;

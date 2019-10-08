@@ -33,7 +33,7 @@ class LoadUsingPathsTestCase(TestBase):
             ext = 'dylib'
         self.lib_name = 'libloadunload.' + ext
 
-        self.wd = self.getBuildDir()
+        self.wd = os.path.realpath(self.getBuildDir())
         self.hidden_dir = os.path.join(self.wd, 'hidden')
         self.hidden_lib = os.path.join(self.hidden_dir, self.lib_name)
 

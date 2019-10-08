@@ -597,86 +597,6 @@ def get_config_build_dir(vDictArgs, vstrFrameworkPythonDir):
 
     return (bOk, strConfigBldDir, strErrMsg)
 
-#++---------------------------------------------------------------------------
-# Details:  Determine where to put the files. Retrieve the directory path for
-#           Python's dist_packages/ site_package folder on a Windows platform.
-# Args:     vDictArgs   - (R) Program input parameters.
-# Returns:  Bool - True = function success, False = failure.
-#           Str - Python Framework directory path.
-#           strErrMsg - Error description on task failure.
-# Throws:   None.
-#--
-
-
-def get_framework_python_dir_windows(vDictArgs):
-    dbg = utilsDebug.CDebugFnVerbose(
-        "Python script get_framework_python_dir_windows()")
-    bOk = True
-    strWkDir = ""
-    strErrMsg = ""
-
-    # We are being built by LLVM, so use the PYTHON_INSTALL_DIR argument,
-    # and append the python version directory to the end of it.  Depending
-    # on the system other stuff may need to be put here as well.
-    from distutils.sysconfig import get_python_lib
-    strPythonInstallDir = ""
-    bHaveArgPrefix = "--prefix" in vDictArgs
-    if bHaveArgPrefix:
-        strPythonInstallDir = os.path.normpath(vDictArgs["--prefix"])
-
-    bHaveArgCmakeBuildConfiguration = "--cmakeBuildConfiguration" in vDictArgs
-    if bHaveArgCmakeBuildConfiguration:
-        strPythonInstallDir = os.path.join(
-            strPythonInstallDir,
-            vDictArgs["--cmakeBuildConfiguration"])
-
-    if strPythonInstallDir.__len__() != 0:
-        strWkDir = get_python_lib(True, False, strPythonInstallDir)
-    else:
-        strWkDir = get_python_lib(True, False)
-    strWkDir = os.path.normcase(os.path.join(strWkDir, "lldb"))
-
-    return (bOk, strWkDir, strErrMsg)
-
-#++---------------------------------------------------------------------------
-# Details:  Retrieve the directory path for Python's dist_packages/
-#           site_package folder on a UNIX style platform.
-# Args:     vDictArgs   - (R) Program input parameters.
-# Returns:  Bool - True = function success, False = failure.
-#           Str - Python Framework directory path.
-#           strErrMsg - Error description on task failure.
-# Throws:   None.
-#--
-
-
-def get_framework_python_dir_other_platforms(vDictArgs):
-    dbg = utilsDebug.CDebugFnVerbose(
-        "Python script get_framework_python_dir_other_platform()")
-    bOk = True
-    strWkDir = ""
-    strErrMsg = ""
-    bDbg = "-d" in vDictArgs
-
-    bMakeFileCalled = "-m" in vDictArgs
-    if bMakeFileCalled:
-        dbg.dump_text("Built by LLVM")
-        return get_framework_python_dir_windows(vDictArgs)
-    else:
-        dbg.dump_text("Built by XCode")
-        # We are being built by XCode, so all the lldb Python files can go
-        # into the LLDB.framework/Resources/Python subdirectory.
-        strWkDir = vDictArgs["--targetDir"]
-        strWkDir = os.path.join(strWkDir, "LLDB.framework")
-        if os.path.exists(strWkDir):
-            if bDbg:
-                print((strMsgFoundLldbFrameWkDir % strWkDir))
-            strWkDir = os.path.join(strWkDir, "Resources", "Python", "lldb")
-            strWkDir = os.path.normcase(strWkDir)
-        else:
-            bOk = False
-            strErrMsg = strErrMsgFrameWkPyDirNotExist % strWkDir
-
-    return (bOk, strWkDir, strErrMsg)
 
 #++---------------------------------------------------------------------------
 # Details:  Retrieve the directory path for Python's dist_packages/
@@ -694,19 +614,8 @@ def get_framework_python_dir(vDictArgs):
     dbg = utilsDebug.CDebugFnVerbose(
         "Python script get_framework_python_dir()")
     bOk = True
-    strWkDir = ""
     strErrMsg = ""
-
-    eOSType = utilsOsType.determine_os_type()
-    if eOSType == utilsOsType.EnumOsType.Unknown:
-        bOk = False
-        strErrMsg = strErrMsgOsTypeUnknown
-    elif eOSType == utilsOsType.EnumOsType.Windows:
-        bOk, strWkDir, strErrMsg = get_framework_python_dir_windows(vDictArgs)
-    else:
-        bOk, strWkDir, strErrMsg = get_framework_python_dir_other_platforms(
-            vDictArgs)
-
+    strWkDir = os.path.normpath(vDictArgs["--lldbPythonPath"])
     return (bOk, strWkDir, strErrMsg)
 
 #++---------------------------------------------------------------------------

@@ -55,28 +55,3 @@ add_custom_target(swig_wrapper ALL DEPENDS
   ${CMAKE_CURRENT_BINARY_DIR}/lldb.py
 )
 
-if(NOT LLDB_BUILD_FRAMEWORK)
-  execute_process(
-    COMMAND ${PYTHON_EXECUTABLE}
-        -c "import distutils.sysconfig, sys; print(distutils.sysconfig.get_python_lib(True, False, sys.argv[1]))"
-        ${CMAKE_BINARY_DIR}
-    OUTPUT_VARIABLE SWIG_PYTHON_DIR
-    OUTPUT_STRIP_TRAILING_WHITESPACE)
-  execute_process(
-    COMMAND ${PYTHON_EXECUTABLE}
-        -c "import distutils.sysconfig; print(distutils.sysconfig.get_python_lib(True, False, ''))"
-    OUTPUT_VARIABLE SWIG_INSTALL_DIR
-    OUTPUT_STRIP_TRAILING_WHITESPACE)
-
-  # Install the LLDB python module
-  add_custom_target(lldb-python-scripts)
-  add_dependencies(lldb-python-scripts finish_swig)
-  install(DIRECTORY ${SWIG_PYTHON_DIR}/
-    DESTINATION ${SWIG_INSTALL_DIR}
-    COMPONENT lldb-scripts)
-  if (NOT LLVM_ENABLE_IDE)
-    add_llvm_install_targets(install-lldb-python-scripts
-                             COMPONENT lldb-python-scripts
-                             DEPENDS lldb-python-scripts)
-  endif()
-endif()
