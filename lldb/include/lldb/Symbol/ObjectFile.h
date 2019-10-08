@@ -201,7 +201,7 @@ public:
   ///     \b false otherwise and \a archive_file and \a archive_object
   ///     are guaranteed to be remain unchanged.
   static bool SplitArchivePathWithObject(
-      const char *path_with_object, lldb_private::FileSpec &archive_file,
+      llvm::StringRef path_with_object, lldb_private::FileSpec &archive_file,
       lldb_private::ConstString &archive_object, bool must_exist);
 
   // LLVM RTTI support
