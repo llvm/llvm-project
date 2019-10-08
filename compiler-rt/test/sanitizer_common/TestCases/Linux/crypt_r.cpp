@@ -1,15 +1,14 @@
 // RUN: %clangxx -O0 -g %s -lcrypt -o %t && %run %t
 
+// crypt.h is missing from Android.
+// UNSUPPORTED: android
+
 #include <assert.h>
 #include <unistd.h>
 #include <cstring>
 #include <crypt.h>
 
-#include <sanitizer/msan_interface.h>
-
-int
-main (int argc, char** argv)
-{
+int main(int argc, char **argv) {
   {
     crypt_data cd;
     cd.initialized = 0;

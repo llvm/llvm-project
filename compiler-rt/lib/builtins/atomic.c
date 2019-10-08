@@ -51,9 +51,11 @@ static const long SPINLOCK_MASK = SPINLOCK_COUNT - 1;
 ////////////////////////////////////////////////////////////////////////////////
 #ifdef __FreeBSD__
 #include <errno.h>
-#include <machine/atomic.h>
+// clang-format off
 #include <sys/types.h>
+#include <machine/atomic.h>
 #include <sys/umtx.h>
+// clang-format on
 typedef struct _usem Lock;
 __inline static void unlock(Lock *l) {
   __c11_atomic_store((_Atomic(uint32_t) *)&l->_count, 1, __ATOMIC_RELEASE);
