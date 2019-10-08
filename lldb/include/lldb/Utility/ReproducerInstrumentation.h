@@ -177,6 +177,8 @@ template <typename... Ts> inline std::string stringify_args(const Ts &... ts) {
 #define LLDB_RECORD_DUMMY(Result, Class, Method, Signature, ...)               \
   lldb_private::repro::Recorder sb_recorder(LLVM_PRETTY_FUNCTION,              \
                                             stringify_args(__VA_ARGS__));
+#define LLDB_RECORD_DUMMY_NO_ARGS(Result, Class, Method)                       \
+  lldb_private::repro::Recorder sb_recorder(LLVM_PRETTY_FUNCTION);
 
 namespace lldb_private {
 namespace repro {

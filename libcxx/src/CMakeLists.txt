@@ -177,12 +177,10 @@ if (LIBCXX_ENABLE_SHARED)
   if (LIBCXXABI_USE_LLVM_UNWINDER)
     if (NOT LIBCXXABI_STATICALLY_LINK_UNWINDER_IN_SHARED_LIBRARY AND (TARGET unwind_shared OR HAVE_LIBUNWIND))
       target_link_libraries(cxx_shared PUBLIC unwind_shared)
-      list(APPEND LIBCXX_INTERFACE_LIBRARIES unwind_shared) # For the linker script
     elseif (LIBCXXABI_STATICALLY_LINK_UNWINDER_IN_SHARED_LIBRARY AND (TARGET unwind_static OR HAVE_LIBUNWIND))
       # libunwind is already included in libc++abi
     else()
-      target_link_libraries(cxx_shared PRIVATE unwind)
-      list(APPEND LIBCXX_INTERFACE_LIBRARIES unwind) # For the linker script
+      target_link_libraries(cxx_shared PUBLIC unwind)
     endif()
   endif()
 
@@ -195,7 +193,6 @@ if (LIBCXX_ENABLE_SHARED)
     endif()
   else()
     target_link_libraries(cxx_shared PUBLIC "${LIBCXX_CXX_SHARED_ABI_LIBRARY}")
-    list(APPEND LIBCXX_INTERFACE_LIBRARIES "${LIBCXX_CXX_SHARED_ABI_LIBRARY}") # For the linker script
   endif()
 
   # Maybe re-export symbols from libc++abi
@@ -222,31 +219,10 @@ if (LIBCXX_ENABLE_SHARED)
     endif()
   endif()
 
-  # Generate a linker script in place of a libc++.so symlink. Rerun this command
-  # after cxx builds.
+  # Generate a linker script in place of a libc++.so symlink.
   if (LIBCXX_ENABLE_ABI_LINKER_SCRIPT)
-    # Get the name of the ABI library and handle the case where CXXABI_LIBNAME
-    # is a target name and not a library. Ex cxxabi_shared.
-    set(LIBCXX_INTERFACE_LIBRARY_NAMES)
-    foreach(lib ${LIBCXX_INTERFACE_LIBRARIES})
-      # FIXME: Handle cxxabi_static and unwind_static.
-      if (TARGET ${lib} OR
-          (${lib} MATCHES "cxxabi(_static|_shared)?" AND HAVE_LIBCXXABI) OR
-          (${lib} MATCHES "unwind(_static|_shared)?" AND HAVE_LIBUNWIND))
-        list(APPEND LIBCXX_INTERFACE_LIBRARY_NAMES "$<TARGET_PROPERTY:${lib},OUTPUT_NAME>")
-      else()
-        list(APPEND LIBCXX_INTERFACE_LIBRARY_NAMES "${lib}")
-      endif()
-    endforeach()
-    add_custom_command(TARGET cxx_shared POST_BUILD
-      COMMAND
-        ${PYTHON_EXECUTABLE} ${LIBCXX_SOURCE_DIR}/utils/gen_link_script.py
-      ARGS
-        --input "$<TARGET_SONAME_FILE:cxx_shared>"
-        --output "$<TARGET_LINKER_FILE:cxx_shared>"
-        ${LIBCXX_INTERFACE_LIBRARY_NAMES}
-      WORKING_DIRECTORY ${LIBCXX_BUILD_DIR}
-    )
+      include(DefineLinkerScript)
+      define_linker_script(cxx_shared)
   endif()
 
   list(APPEND LIBCXX_BUILD_TARGETS "cxx_shared")

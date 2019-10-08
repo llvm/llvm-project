@@ -9386,17 +9386,20 @@ static bool DumpEnumValue(const clang::QualType &qual_type, Stream *s,
     }
   }
 
-  // No exact match, but we don't think this is a bitfield. Print the value as
-  // decimal.
-  if (!can_be_bitfield) {
-    s->Printf("%" PRIi64, enum_svalue);
-    return true;
-  }
-
   // Unsigned values make more sense for flags.
   offset = byte_offset;
   const uint64_t enum_uvalue = data.GetMaxU64Bitfield(
       &offset, byte_size, bitfield_bit_size, bitfield_bit_offset);
+
+  // No exact match, but we don't think this is a bitfield. Print the value as
+  // decimal.
+  if (!can_be_bitfield) {
+    if (qual_type->isSignedIntegerOrEnumerationType())
+      s->Printf("%" PRIi64, enum_svalue);
+    else
+      s->Printf("%" PRIu64, enum_uvalue);
+    return true;
+  }
 
   uint64_t remaining_value = enum_uvalue;
   std::vector<std::pair<uint64_t, llvm::StringRef>> values;
