@@ -9494,21 +9494,71 @@ static bool DumpEnumValue(const clang::QualType &qual_type, Stream *s,
       llvm::cast<clang::EnumType>(qual_type.getTypePtr());
   const clang::EnumDecl *enum_decl = enutype->getDecl();
   assert(enum_decl);
-  clang::EnumDecl::enumerator_iterator enum_pos, enum_end_pos;
-  const bool is_signed = qual_type->isSignedIntegerOrEnumerationType();
   lldb::offset_t offset = byte_offset;
-  const int64_t enum_value = data.GetMaxS64Bitfield(
+  const uint64_t enum_svalue = data.GetMaxS64Bitfield(
       &offset, byte_size, bitfield_bit_size, bitfield_bit_offset);
+  bool can_be_bitfield = true;
+  uint64_t covered_bits = 0;
+  int num_enumerators = 0;
 
+  // Try to find an exact match for the value.
+  // At the same time, we're applying a heuristic to determine whether we want
+  // to print this enum as a bitfield. We're likely dealing with a bitfield if
+  // every enumrator is either a one bit value or a superset of the previous
+  // enumerators. Also 0 doesn't make sense when the enumerators are used as
+  // flags.
   for (auto enumerator : enum_decl->enumerators()) {
-    if (enumerator->getInitVal().getSExtValue() == enum_value) {
+    uint64_t val = enumerator->getInitVal().getSExtValue();
+    if (llvm::countPopulation(val) != 1 && (val & ~covered_bits) != 0)
+      can_be_bitfield = false;
+    covered_bits |= val;
+    ++num_enumerators;
+    if (val == enum_svalue) {
+      // Found an exact match, that's all we need to do.
       s->PutCString(enumerator->getNameAsString());
       return true;
     }
   }
-  // If we have gotten here we didn't get find the enumerator in the
-  // enum decl, so just print the integer.
-  s->Printf("%" PRIi64, enum_value);
+
+  // No exact match, but we don't think this is a bitfield. Print the value as
+  // decimal.
+  if (!can_be_bitfield) {
+    s->Printf("%" PRIi64, enum_svalue);
+    return true;
+  }
+
+  // Unsigned values make more sense for flags.
+  offset = byte_offset;
+  const uint64_t enum_uvalue = data.GetMaxU64Bitfield(
+      &offset, byte_size, bitfield_bit_size, bitfield_bit_offset);
+
+  uint64_t remaining_value = enum_uvalue;
+  std::vector<std::pair<uint64_t, llvm::StringRef>> values;
+  values.reserve(num_enumerators);
+  for (auto enumerator : enum_decl->enumerators())
+    if (auto val = enumerator->getInitVal().getZExtValue())
+      values.emplace_back(val, enumerator->getName());
+
+  // Sort in reverse order of the number of the population count,  so that in
+  // `enum {A, B, ALL = A|B }` we visit ALL first. Use a stable sort so that
+  // A | C where A is declared before C is displayed in this order.
+  std::stable_sort(values.begin(), values.end(), [](const auto &a, const auto &b) {
+        return llvm::countPopulation(a.first) > llvm::countPopulation(b.first);
+      });
+
+  for (const auto &val : values) {
+    if ((remaining_value & val.first) != val.first)
+      continue;
+    remaining_value &= ~val.first;
+    s->PutCString(val.second);
+    if (remaining_value)
+      s->PutCString(" | ");
+  }
+
+  // If there is a remainder that is not covered by the value, print it as hex.
+  if (remaining_value)
+    s->Printf("0x%" PRIx64, remaining_value);
+
   return true;
 }
 
@@ -9526,6 +9576,13 @@ bool ClangASTContext::DumpTypeValue(
     clang::QualType qual_type(GetQualType(type));
 
     const clang::Type::TypeClass type_class = qual_type->getTypeClass();
+
+    if (type_class == clang::Type::Elaborated) {
+      qual_type = llvm::cast<clang::ElaboratedType>(qual_type)->getNamedType();
+      return DumpTypeValue(qual_type.getAsOpaquePtr(), s, format, data, byte_offset, byte_size,
+                           bitfield_bit_size, bitfield_bit_offset, exe_scope);
+    }
+
     switch (type_class) {
     case clang::Type::Typedef: {
       clang::QualType typedef_qual_type =
