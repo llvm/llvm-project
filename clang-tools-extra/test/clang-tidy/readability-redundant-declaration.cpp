@@ -2,6 +2,21 @@
 // RUN:   -config="{CheckOptions: \
 // RUN:             [{key: readability-redundant-declaration.IgnoreMacros, \
 // RUN:               value: 0}]}"
+//
+// With -fms-compatibility and -DEXTERNINLINE, the extern inline shouldn't
+// produce additional diagnostics, so same check suffix as before:
+// RUN: %check_clang_tidy %s readability-redundant-declaration %t -- \
+// RUN:   -config="{CheckOptions: \
+// RUN:             [{key: readability-redundant-declaration.IgnoreMacros, \
+// RUN:               value: 0}]}" -- -fms-compatibility -DEXTERNINLINE
+//
+// With -fno-ms-compatiblity, DEXTERNINLINE causes additional output.
+// (The leading ',' means "default checks in addition to NOMSCOMPAT checks.)
+// RUN: %check_clang_tidy -check-suffix=,NOMSCOMPAT \
+// RUN:   %s readability-redundant-declaration %t -- \
+// RUN:   -config="{CheckOptions: \
+// RUN:             [{key: readability-redundant-declaration.IgnoreMacros, \
+// RUN:               value: 0}]}" -- -fno-ms-compatibility -DEXTERNINLINE
 
 extern int Xyz;
 extern int Xyz; // Xyz
@@ -74,6 +89,8 @@ inline void g(); // g
 // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: redundant 'g' declaration
 // CHECK-FIXES: {{^}}// g{{$}}
 
+#if defined(EXTERNINLINE)
 extern inline void g(); // extern g
-// CHECK-MESSAGES: :[[@LINE-1]]:20: warning: redundant 'g' declaration
-// CHECK-FIXES: {{^}}// extern g{{$}}
+// CHECK-MESSAGES-NOMSCOMPAT: :[[@LINE-1]]:20: warning: redundant 'g' declaration
+// CHECK-FIXES-NOMSCOMPAT: {{^}}// extern g{{$}}
+#endif

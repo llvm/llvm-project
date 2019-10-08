@@ -1137,7 +1137,7 @@ public:
 
   const std::vector<FuzzyFindRequest> consumeRequests(size_t Num) const {
     std::unique_lock<std::mutex> Lock(Mut);
-    EXPECT_TRUE(wait(Lock, ReceivedRequestCV, timeoutSeconds(10),
+    EXPECT_TRUE(wait(Lock, ReceivedRequestCV, timeoutSeconds(30),
                      [this, Num] { return Requests.size() == Num; }));
     auto Reqs = std::move(Requests);
     Requests = {};
