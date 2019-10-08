@@ -304,6 +304,7 @@ extern unsigned struct_msqid_ds_sz;
 extern unsigned struct_mq_attr_sz;
 extern unsigned struct_timex_sz;
 extern unsigned struct_statvfs_sz;
+extern unsigned struct_crypt_data_sz;
 #endif  // SANITIZER_LINUX && !SANITIZER_ANDROID
 
 struct __sanitizer_iovec {
