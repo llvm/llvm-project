@@ -9509,6 +9509,7 @@ static bool DumpEnumValue(const clang::QualType &qual_type, Stream *s,
   // flags.
   for (auto enumerator : enum_decl->enumerators()) {
     uint64_t val = enumerator->getInitVal().getSExtValue();
+    val = llvm::SignExtend64(val, 8*byte_size);
     if (llvm::countPopulation(val) != 1 && (val & ~covered_bits) != 0)
       can_be_bitfield = false;
     covered_bits |= val;
@@ -9520,17 +9521,20 @@ static bool DumpEnumValue(const clang::QualType &qual_type, Stream *s,
     }
   }
 
-  // No exact match, but we don't think this is a bitfield. Print the value as
-  // decimal.
-  if (!can_be_bitfield) {
-    s->Printf("%" PRIi64, enum_svalue);
-    return true;
-  }
-
   // Unsigned values make more sense for flags.
   offset = byte_offset;
   const uint64_t enum_uvalue = data.GetMaxU64Bitfield(
       &offset, byte_size, bitfield_bit_size, bitfield_bit_offset);
+
+  // No exact match, but we don't think this is a bitfield. Print the value as
+  // decimal.
+  if (!can_be_bitfield) {
+    if (qual_type->isSignedIntegerOrEnumerationType())
+      s->Printf("%" PRIi64, enum_svalue);
+    else
+      s->Printf("%" PRIu64, enum_uvalue);
+    return true;
+  }
 
   uint64_t remaining_value = enum_uvalue;
   std::vector<std::pair<uint64_t, llvm::StringRef>> values;
