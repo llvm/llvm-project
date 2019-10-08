@@ -141,10 +141,12 @@ bool LoopExtractor::runOnLoop(Loop *L, LPPassManager &LPM) {
     if (NumLoops == 0) return Changed;
     --NumLoops;
     AssumptionCache *AC = nullptr;
+    Function &Func = *L->getHeader()->getParent();
     if (auto *ACT = getAnalysisIfAvailable<AssumptionCacheTracker>())
-      AC = ACT->lookupAssumptionCache(*L->getHeader()->getParent());
+      AC = ACT->lookupAssumptionCache(Func);
+    CodeExtractorAnalysisCache CEAC(Func);
     CodeExtractor Extractor(DT, *L, false, nullptr, nullptr, AC);
-    if (Extractor.extractCodeRegion() != nullptr) {
+    if (Extractor.extractCodeRegion(CEAC) != nullptr) {
       Changed = true;
       // After extraction, the loop is replaced by a function call, so
       // we shouldn't try to run any more loop passes on it.
