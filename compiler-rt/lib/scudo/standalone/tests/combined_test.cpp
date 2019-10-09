@@ -136,7 +136,21 @@ template <class Config> static void testAllocator() {
   }
 
   Allocator->releaseToOS();
-  Allocator->printStats();
+
+  scudo::uptr BufferSize = 8192;
+  std::vector<char> Buffer(BufferSize);
+  scudo::uptr ActualSize = Allocator->getStats(Buffer.data(), BufferSize);
+  while (ActualSize > BufferSize) {
+    BufferSize = ActualSize + 1024;
+    Buffer.resize(BufferSize);
+    ActualSize = Allocator->getStats(Buffer.data(), BufferSize);
+  }
+  std::string Stats(Buffer.begin(), Buffer.end());
+  // Basic checks on the contents of the statistics output, which also allows us
+  // to verify that we got it all.
+  EXPECT_NE(Stats.find("Stats: SizeClassAllocator"), std::string::npos);
+  EXPECT_NE(Stats.find("Stats: MapAllocator"), std::string::npos);
+  EXPECT_NE(Stats.find("Stats: Quarantine"), std::string::npos);
 }
 
 TEST(ScudoCombinedTest, BasicCombined) {

@@ -86,6 +86,7 @@ public:
   }
 
   static void print() {
+    ScopedString Buffer(1024);
     uptr PrevS = 0;
     uptr TotalCached = 0;
     for (uptr I = 0; I < NumClasses; I++) {
@@ -93,19 +94,20 @@ public:
         continue;
       const uptr S = getSizeByClassId(I);
       if (S >= MidSize / 2 && (S & (S - 1)) == 0)
-        Printf("\n");
+        Buffer.append("\n");
       const uptr D = S - PrevS;
       const uptr P = PrevS ? (D * 100 / PrevS) : 0;
       const uptr L = S ? getMostSignificantSetBitIndex(S) : 0;
       const uptr Cached = getMaxCachedHint(S) * S;
-      Printf(
+      Buffer.append(
           "C%02zu => S: %zu diff: +%zu %02zu%% L %zu Cached: %zu %zu; id %zu\n",
           I, getSizeByClassId(I), D, P, L, getMaxCachedHint(S), Cached,
           getClassIdBySize(S));
       TotalCached += Cached;
       PrevS = S;
     }
-    Printf("Total Cached: %zu\n", TotalCached);
+    Buffer.append("Total Cached: %zu\n", TotalCached);
+    Buffer.output();
   }
 
   static void validate() {
