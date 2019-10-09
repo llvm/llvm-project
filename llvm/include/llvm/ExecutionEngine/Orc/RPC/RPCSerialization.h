@@ -1,4 +1,4 @@
-//===- llvm/ExecutionEngine/Orc/RPCSerialization.h --------------*- C++ -*-===//
+//===- llvm/ExecutionEngine/Orc/RPC/RPCSerialization.h --------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,7 +9,7 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_RPCSERIALIZATION_H
 #define LLVM_EXECUTIONENGINE_ORC_RPCSERIALIZATION_H
 
-#include "OrcError.h"
+#include "llvm/ExecutionEngine/Orc/OrcError.h"
 #include "llvm/Support/thread.h"
 #include <map>
 #include <mutex>

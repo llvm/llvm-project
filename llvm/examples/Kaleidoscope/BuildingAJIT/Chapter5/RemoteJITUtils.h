@@ -13,7 +13,7 @@
 #ifndef LLVM_TOOLS_LLI_REMOTEJITUTILS_H
 #define LLVM_TOOLS_LLI_REMOTEJITUTILS_H
 
-#include "llvm/ExecutionEngine/Orc/RawByteChannel.h"
+#include "llvm/ExecutionEngine/Orc/RPC/RawByteChannel.h"
 #include "llvm/Support/Error.h"
 #include <cassert>
 #include <cerrno>

@@ -1,4 +1,4 @@
-//===- llvm/ExecutionEngine/Orc/RawByteChannel.h ----------------*- C++ -*-===//
+//===- llvm/ExecutionEngine/Orc/RPC/RawByteChannel.h ----------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,7 +10,7 @@
 #define LLVM_EXECUTIONENGINE_ORC_RAWBYTECHANNEL_H
 
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ExecutionEngine/Orc/RPCSerialization.h"
+#include "llvm/ExecutionEngine/Orc/RPC/RPCSerialization.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
