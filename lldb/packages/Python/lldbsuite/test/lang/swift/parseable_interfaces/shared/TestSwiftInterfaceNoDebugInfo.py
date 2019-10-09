@@ -113,6 +113,10 @@ class TestSwiftInterfaceNoDebugInfo(TestBase):
         self.runCmd('settings set symbols.clang-modules-cache-path "%s"'
                     % swift_mod_cache)
 
+        target = self.dbg.CreateTarget(self.getBuildArtifact("main"))
+        self.assertTrue(target, VALID_TARGET)
+        self.registerSharedLibrariesWithTarget(target, ['AA', 'BB', 'CC'])
+
         # Set a breakpoint in and launch the main executable
         lldbutil.run_to_source_breakpoint(
             self, "break here", lldb.SBFileSpec("main.swift"),

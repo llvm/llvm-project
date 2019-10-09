@@ -1,4 +1,4 @@
-#import <Cocoa/Cocoa.h>
+#import <CoreGraphics/CoreGraphics.h>
 #import "aTestFramework.h"
 
 class Base {
@@ -41,13 +41,13 @@ struct IntIntPair {
 
 @implementation MySubclass {
     NSString *m_mysubclass_s;
-    NSRect m_mysubclass_r;
+    CGRect m_mysubclass_r;
 }
 - (id)init {
     if (self = [super init]) {
         self->m_mysubclass_s = @"an NSString here";
         self->m_subclass_ivar = 42;
-        self->m_mysubclass_r = NSMakeRect(0, 0, 30, 40);
+        self->m_mysubclass_r = CGRectMake(0, 0, 30, 40);
     }
     return self;
 }

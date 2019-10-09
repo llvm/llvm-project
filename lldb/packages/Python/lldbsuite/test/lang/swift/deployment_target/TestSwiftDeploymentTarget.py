@@ -24,6 +24,7 @@ class TestSwiftDeploymentTarget(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @skipUnlessDarwin
+    @skipIfDarwinEmbedded # This test uses macOS triples explicitly.
     @skipIf(macos_version=["<", "10.11"])
     @swiftTest
     def test_swift_deployment_target(self):
@@ -35,6 +36,7 @@ class TestSwiftDeploymentTarget(TestBase):
         self.expect("p f", substrs=['i = 23'])
 
     @skipUnlessDarwin
+    @skipIfDarwinEmbedded # This test uses macOS triples explicitely.
     @skipIf(macos_version=["<", "10.11"])
     @swiftTest
     def test_swift_deployment_target_dlopen(self):
