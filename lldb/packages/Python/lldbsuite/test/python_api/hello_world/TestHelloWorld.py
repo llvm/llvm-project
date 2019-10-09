@@ -78,17 +78,19 @@ class HelloWorldTestCase(TestBase):
     @expectedFailureNetBSD
     def test_with_attach_to_process_with_id_api(self):
         """Create target, spawn a process, and attach to it with process id."""
-        exe = '%s_%d'%(self.getBuildArtifact(self.testMethodName), os.getpid())
+        exe = '%s_%d'%(self.testMethodName, os.getpid())
         d = {'EXE': exe}
         self.build(dictionary=d)
         self.setTearDownCleanup(dictionary=d)
-        target = self.dbg.CreateTarget(exe)
+        target = self.dbg.CreateTarget(self.getBuildArtifact(exe))
 
         # Spawn a new process
         token = exe+'.token'
-        if os.path.exists(token):
-            os.remove(token)
-        popen = self.spawnSubprocess(exe, [token])
+        if not lldb.remote_platform:
+            token = self.getBuildArtifact(token)
+            if os.path.exists(token):
+                os.remove(token)
+        popen = self.spawnSubprocess(self.getBuildArtifact(exe), [token])
         self.addTearDownHook(self.cleanupSubprocesses)
         lldbutil.wait_for_file_on_target(self, token)
 
@@ -110,17 +112,19 @@ class HelloWorldTestCase(TestBase):
     @expectedFailureNetBSD
     def test_with_attach_to_process_with_name_api(self):
         """Create target, spawn a process, and attach to it with process name."""
-        exe = '%s_%d'%(self.getBuildArtifact(self.testMethodName), os.getpid())
+        exe = '%s_%d'%(self.testMethodName, os.getpid())
         d = {'EXE': exe}
         self.build(dictionary=d)
         self.setTearDownCleanup(dictionary=d)
-        target = self.dbg.CreateTarget(exe)
+        target = self.dbg.CreateTarget(self.getBuildArtifact(exe))
 
         # Spawn a new process.
         token = exe+'.token'
-        if os.path.exists(token):
-            os.remove(token)
-        popen = self.spawnSubprocess(exe, [token])
+        if not lldb.remote_platform:
+            token = self.getBuildArtifact(token)
+            if os.path.exists(token):
+                os.remove(token)
+        popen = self.spawnSubprocess(self.getBuildArtifact(exe), [token])
         self.addTearDownHook(self.cleanupSubprocesses)
         lldbutil.wait_for_file_on_target(self, token)
 

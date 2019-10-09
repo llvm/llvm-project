@@ -313,6 +313,9 @@ public:
 
   FileSpec GetReproducerPath() const;
 
+  bool IsCapturing() { return static_cast<bool>(m_generator); };
+  bool IsReplaying() { return static_cast<bool>(m_loader); };
+
 protected:
   llvm::Error SetCapture(llvm::Optional<FileSpec> root);
   llvm::Error SetReplay(llvm::Optional<FileSpec> root);

@@ -879,8 +879,9 @@ bool ScriptInterpreterPythonImpl::ExecuteOneLine(
               ::setbuf(outfile_handle, nullptr);
 
             result->SetImmediateOutputFile(
-                debugger.GetOutputFile().GetStream());
-            result->SetImmediateErrorFile(debugger.GetErrorFile().GetStream());
+                debugger.GetOutputStream().GetFileSP());
+            result->SetImmediateErrorFile(
+                debugger.GetErrorStream().GetFileSP());
           }
         }
       }

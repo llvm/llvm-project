@@ -444,19 +444,19 @@ bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
       $1 = nullptr;
    else if (!lldb_private::PythonFile::Check($input)) {
       int fd = PyObject_AsFileDescriptor($input);
+      if (fd < 0 || PyErr_Occurred())
+        return nullptr;
       PythonObject py_input(PyRefType::Borrowed, $input);
       PythonString py_mode = py_input.GetAttributeValue("mode").AsType<PythonString>();
-
-      if (-1 != fd && py_mode.IsValid()) {
-         FILE *f;
-         if ((f = fdopen(fd, py_mode.GetString().str().c_str())))
-            $1 = f;
-         else
-            PyErr_SetString(PyExc_TypeError, strerror(errno));
-      } else {
-         PyErr_SetString(PyExc_TypeError,"not a file-like object");
-         return nullptr;
-      }
+      if (!py_mode.IsValid() || PyErr_Occurred())
+        return nullptr;
+        FILE *f;
+        if ((f = fdopen(fd, py_mode.GetString().str().c_str())))
+          $1 = f;
+        else {
+          PyErr_SetString(PyExc_TypeError, strerror(errno));
+          return nullptr;
+        }
    }
    else
    {

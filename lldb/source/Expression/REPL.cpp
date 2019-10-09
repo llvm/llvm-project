@@ -443,7 +443,7 @@ void REPL::IOHandlerInputComplete(IOHandler &io_handler, std::string &code) {
               .SetBaseLineNumber(m_code.GetSize() + 1);
         }
         if (extra_line) {
-          fprintf(output_sp->GetFile().GetStream(), "\n");
+          output_sp->Printf("\n");
         }
       }
     }

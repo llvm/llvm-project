@@ -44,13 +44,21 @@ public:
 
   const char *GetError();
 
-  size_t PutOutput(FILE *fh);
+  size_t PutOutput(FILE *fh); // DEPRECATED
+
+  size_t PutOutput(SBFile file);
+
+  size_t PutOutput(FileSP file);
 
   size_t GetOutputSize();
 
   size_t GetErrorSize();
 
-  size_t PutError(FILE *fh);
+  size_t PutError(FILE *fh); // DEPRECATED
+
+  size_t PutError(SBFile file);
+
+  size_t PutError(FileSP file);
 
   void Clear();
 
@@ -68,14 +76,21 @@ public:
 
   bool GetDescription(lldb::SBStream &description);
 
-  // deprecated, these two functions do not take ownership of file handle
-  void SetImmediateOutputFile(FILE *fh);
+  void SetImmediateOutputFile(FILE *fh); // DEPRECATED
 
-  void SetImmediateErrorFile(FILE *fh);
+  void SetImmediateErrorFile(FILE *fh); // DEPRECATED
 
-  void SetImmediateOutputFile(FILE *fh, bool transfer_ownership);
+  void SetImmediateOutputFile(FILE *fh, bool transfer_ownership); // DEPRECATED
 
-  void SetImmediateErrorFile(FILE *fh, bool transfer_ownership);
+  void SetImmediateErrorFile(FILE *fh, bool transfer_ownership); // DEPRECATED
+
+  void SetImmediateOutputFile(SBFile file);
+
+  void SetImmediateErrorFile(SBFile file);
+
+  void SetImmediateOutputFile(FileSP file);
+
+  void SetImmediateErrorFile(FileSP file);
 
   void PutCString(const char *string, int len = -1);
 
