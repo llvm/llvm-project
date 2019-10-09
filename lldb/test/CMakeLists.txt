@@ -70,6 +70,14 @@ else()
   endif()
 endif()
 
+if(NOT LLDB_BUILT_STANDALONE)
+  add_lldb_test_dependency(
+    FileCheck
+    count
+    not
+  )
+endif()
+
 # the value is not canonicalized within LLVM
 llvm_canonicalize_cmake_booleans(
   LLDB_DISABLE_PYTHON
@@ -99,14 +107,6 @@ configure_lit_site_cfg(
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/Shell/lit-lldb-init.in
   ${CMAKE_CURRENT_BINARY_DIR}/Shell/lit-lldb-init)
-
-if(NOT LLDB_BUILT_STANDALONE)
-  add_lldb_test_dependency(
-    FileCheck
-    count
-    not
-  )
-endif()
 
 
 add_lit_testsuites(LLDB
