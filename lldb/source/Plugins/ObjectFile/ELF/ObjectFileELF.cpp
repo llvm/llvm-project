@@ -36,7 +36,7 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Object/Decompressor.h"
 #include "llvm/Support/ARMBuildAttributes.h"
-#include "llvm/Support/JamCRC.h"
+#include "llvm/Support/CRC.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/MipsABIFlags.h"
@@ -398,10 +398,8 @@ bool ObjectFileELF::MagicBytesMatch(DataBufferSP &data_sp,
 }
 
 static uint32_t calc_crc32(uint32_t init, const DataExtractor &data) {
-  llvm::JamCRC crc(~init);
-  crc.update(llvm::makeArrayRef(
-      reinterpret_cast<const char *>(data.GetDataStart()), data.GetByteSize()));
-  return ~crc.getCRC();
+  return llvm::crc32(
+      init, llvm::makeArrayRef(data.GetDataStart(), data.GetByteSize()));
 }
 
 uint32_t ObjectFileELF::CalculateELFNotesSegmentsCRC32(

@@ -60,11 +60,6 @@ using testing::NotNull;
 using testing::Property;
 using testing::SizeIs;
 
-using llvm::APInt;
-using llvm::MCInst;
-using llvm::MCInstBuilder;
-using llvm::MCOperand;
-
 Matcher<MCOperand> IsImm(int64_t Value) {
   return AllOf(Property(&MCOperand::isImm, Eq(true)),
                Property(&MCOperand::getImm, Eq(Value)));

@@ -230,7 +230,7 @@ if (libcxx_enable_shared) {
 
   if (libcxx_enable_abi_linker_script) {
     action("cxx_linker_script") {
-      script = "//libcxx/utils/gen_link_script.py"
+      script = "//llvm/utils/gn/secondary/libcxx/utils/gen_link_script.py"
       outputs = [
         "$runtimes_dir/libc++.so",
       ]

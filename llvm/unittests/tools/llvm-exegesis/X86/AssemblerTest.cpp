@@ -16,12 +16,11 @@ void InitializeX86ExegesisTarget();
 
 namespace {
 
-using llvm::MCInstBuilder;
-using llvm::X86::EAX;
-using llvm::X86::MOV32ri;
-using llvm::X86::MOV64ri32;
-using llvm::X86::RAX;
-using llvm::X86::XOR32rr;
+using X86::EAX;
+using X86::MOV32ri;
+using X86::MOV64ri32;
+using X86::RAX;
+using X86::XOR32rr;
 
 class X86MachineFunctionGeneratorTest
     : public MachineFunctionGeneratorBaseTest {

@@ -56,6 +56,15 @@ def bar: Instruction {
   let Inst{1-0} = 0b10;
   let AsmString = "bar  $factor";
 }
+
+def baz : Instruction {
+  let InOperandList = (ins i32imm:$factor);
+  bits<32> Inst;
+  let EncodingInfos = EncodingByHwMode<
+    [ModeB], [fooTypeEncA]
+  >;
+  let AsmString = "foo  $factor";
+}
 }
 
 // DECODER-LABEL: DecoderTable_ModeA32[] =

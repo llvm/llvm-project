@@ -162,51 +162,66 @@ public:
 
   void HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
                         const clang::Diagnostic &Info) override {
+    if (!m_manager) {
+      // We have no DiagnosticManager before/after parsing but we still could
+      // receive diagnostics (e.g., by the ASTImporter failing to copy decls
+      // when we move the expression result ot the ScratchASTContext). Let's at
+      // least log these diagnostics until we find a way to properly render
+      // them and display them to the user.
+      Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+      if (log) {
+        llvm::SmallVector<char, 32> diag_str;
+        Info.FormatDiagnostic(diag_str);
+        diag_str.push_back('\0');
+        const char *plain_diag = diag_str.data();
+        LLDB_LOG(log, "Received diagnostic outside parsing: {0}", plain_diag);
+      }
+      return;
+    }
+
     // Render diagnostic message to m_output.
     m_output.clear();
     m_passthrough->HandleDiagnostic(DiagLevel, Info);
     m_os->flush();
 
-    if (m_manager) {
-      lldb_private::DiagnosticSeverity severity;
-      bool make_new_diagnostic = true;
+    lldb_private::DiagnosticSeverity severity;
+    bool make_new_diagnostic = true;
 
-      switch (DiagLevel) {
-      case DiagnosticsEngine::Level::Fatal:
-      case DiagnosticsEngine::Level::Error:
-        severity = eDiagnosticSeverityError;
-        break;
-      case DiagnosticsEngine::Level::Warning:
-        severity = eDiagnosticSeverityWarning;
-        break;
-      case DiagnosticsEngine::Level::Remark:
-      case DiagnosticsEngine::Level::Ignored:
-        severity = eDiagnosticSeverityRemark;
-        break;
-      case DiagnosticsEngine::Level::Note:
-        m_manager->AppendMessageToDiagnostic(m_output);
-        make_new_diagnostic = false;
-      }
-      if (make_new_diagnostic) {
-        // ClangDiagnostic messages are expected to have no whitespace/newlines
-        // around them.
-        std::string stripped_output = llvm::StringRef(m_output).trim();
+    switch (DiagLevel) {
+    case DiagnosticsEngine::Level::Fatal:
+    case DiagnosticsEngine::Level::Error:
+      severity = eDiagnosticSeverityError;
+      break;
+    case DiagnosticsEngine::Level::Warning:
+      severity = eDiagnosticSeverityWarning;
+      break;
+    case DiagnosticsEngine::Level::Remark:
+    case DiagnosticsEngine::Level::Ignored:
+      severity = eDiagnosticSeverityRemark;
+      break;
+    case DiagnosticsEngine::Level::Note:
+      m_manager->AppendMessageToDiagnostic(m_output);
+      make_new_diagnostic = false;
+    }
+    if (make_new_diagnostic) {
+      // ClangDiagnostic messages are expected to have no whitespace/newlines
+      // around them.
+      std::string stripped_output = llvm::StringRef(m_output).trim();
 
-        ClangDiagnostic *new_diagnostic =
-            new ClangDiagnostic(stripped_output, severity, Info.getID());
-        m_manager->AddDiagnostic(new_diagnostic);
+      ClangDiagnostic *new_diagnostic =
+          new ClangDiagnostic(stripped_output, severity, Info.getID());
+      m_manager->AddDiagnostic(new_diagnostic);
 
-        // Don't store away warning fixits, since the compiler doesn't have
-        // enough context in an expression for the warning to be useful.
-        // FIXME: Should we try to filter out FixIts that apply to our generated
-        // code, and not the user's expression?
-        if (severity == eDiagnosticSeverityError) {
-          size_t num_fixit_hints = Info.getNumFixItHints();
-          for (size_t i = 0; i < num_fixit_hints; i++) {
-            const clang::FixItHint &fixit = Info.getFixItHint(i);
-            if (!fixit.isNull())
-              new_diagnostic->AddFixitHint(fixit);
-          }
+      // Don't store away warning fixits, since the compiler doesn't have
+      // enough context in an expression for the warning to be useful.
+      // FIXME: Should we try to filter out FixIts that apply to our generated
+      // code, and not the user's expression?
+      if (severity == eDiagnosticSeverityError) {
+        size_t num_fixit_hints = Info.getNumFixItHints();
+        for (size_t i = 0; i < num_fixit_hints; i++) {
+          const clang::FixItHint &fixit = Info.getFixItHint(i);
+          if (!fixit.isNull())
+            new_diagnostic->AddFixitHint(fixit);
         }
       }
     }
