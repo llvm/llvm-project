@@ -84,7 +84,8 @@ TYPE("lto-bc",                   LTO_BC,       INVALID,         "o",      phases
 
 // Misc.
 TYPE("ast",                      AST,          INVALID,         "ast",    phases::Compile, phases::Backend, phases::Assemble, phases::Link)
-TYPE("ifs",                      IFS,          INVALID,         "ifs",    phases::Compile, phases::Backend, phases::Assemble, phases::Link)
+TYPE("ifs",                      IFS,          INVALID,         "ifs",    phases::IfsMerge)
+TYPE("ifs-cpp",                  IFS_CPP,      INVALID,         "ifs",    phases::Compile, phases::IfsMerge)
 TYPE("pcm",                      ModuleFile,   INVALID,         "pcm",    phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 TYPE("plist",                    Plist,        INVALID,         "plist",  phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 TYPE("rewritten-objc",           RewrittenObjC,INVALID,         "cpp",    phases::Compile, phases::Backend, phases::Assemble, phases::Link)

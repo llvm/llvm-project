@@ -499,6 +499,11 @@ ExprResult Sema::BuildCXXTypeId(QualType TypeInfoType,
       }
     }
 
+    ExprResult Result = CheckUnevaluatedOperand(E);
+    if (Result.isInvalid())
+      return ExprError();
+    E = Result.get();
+
     // C++ [expr.typeid]p4:
     //   [...] If the type of the type-id is a reference to a possibly
     //   cv-qualified type, the result of the typeid expression refers to a
@@ -6609,6 +6614,11 @@ ExprResult Sema::ActOnDecltypeExpression(Expr *E) {
   ExprEvalContexts.back().ExprContext =
       ExpressionEvaluationContextRecord::EK_Other;
 
+  Result = CheckUnevaluatedOperand(E);
+  if (Result.isInvalid())
+    return ExprError();
+  E = Result.get();
+
   // In MS mode, don't perform any extra checking of call return types within a
   // decltype expression.
   if (getLangOpts().MSVCCompat)
@@ -7233,7 +7243,10 @@ ExprResult Sema::BuildCXXNoexceptExpr(SourceLocation KeyLoc, Expr *Operand,
   if (R.isInvalid())
     return R;
 
-  // The operand may have been modified when checking the placeholder type.
+  R = CheckUnevaluatedOperand(R.get());
+  if (R.isInvalid())
+    return ExprError();
+
   Operand = R.get();
 
   if (!inTemplateInstantiation() && Operand->HasSideEffects(Context, false)) {
@@ -7337,12 +7350,17 @@ ExprResult Sema::IgnoredValueConversions(Expr *E) {
     // volatile lvalue with a special form, we perform an lvalue-to-rvalue
     // conversion.
     if (getLangOpts().CPlusPlus11 && E->isGLValue() &&
-        E->getType().isVolatileQualified() &&
-        IsSpecialDiscardedValue(E)) {
-      ExprResult Res = DefaultLvalueConversion(E);
-      if (Res.isInvalid())
-        return E;
-      E = Res.get();
+        E->getType().isVolatileQualified()) {
+       if (IsSpecialDiscardedValue(E)) {
+        ExprResult Res = DefaultLvalueConversion(E);
+        if (Res.isInvalid())
+          return E;
+        E = Res.get();
+      } else {
+        // Per C++2a [expr.ass]p5, a volatile assignment is not deprecated if
+        // it occurs as a discarded-value expression.
+        CheckUnusedVolatileAssignment(E);
+      }
     }
 
     // C++1z:
@@ -7374,6 +7392,14 @@ ExprResult Sema::IgnoredValueConversions(Expr *E) {
   if (!E->getType()->isVoidType())
     RequireCompleteType(E->getExprLoc(), E->getType(),
                         diag::err_incomplete_type);
+  return E;
+}
+
+ExprResult Sema::CheckUnevaluatedOperand(Expr *E) {
+  // Per C++2a [expr.ass]p5, a volatile assignment is not deprecated if
+  // it occurs as an unevaluated operand.
+  CheckUnusedVolatileAssignment(E);
+
   return E;
 }
 

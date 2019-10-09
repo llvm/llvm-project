@@ -1,0 +1,28 @@
+# RUN: %clang -emit-interface-stubs -o - -emit-merged-ifs %s | \
+# RUN: FileCheck %s --check-prefixes=CHECK-IFS
+
+# RUN: %clang -emit-interface-stubs -o - %s | llvm-readelf --all | \
+# RUN: FileCheck %s --check-prefixes=CHECK-ELF
+
+# CHECK-IFS: --- !experimental-ifs-v1
+# CHECK-IFS-NEXT: IfsVersion:      1.0
+# CHECK-IFS-NEXT: Triple: x86_64-linux-gnu
+# CHECK-IFS-NEXT: ObjectFileFormat: ELF
+# CHECK-IFS-NEXT: Symbols:
+# CHECK-IFS-NEXT:   b:               { Type: Object, Size: 4 }
+# CHECK-IFS-NEXT: ...
+
+# CHECK-ELF: ELF Header:
+# CHECK-ELF:   Class:                             ELF64
+# CHECK-ELF:   Data:                              2's complement, little endian
+# CHECK-ELF:   Type:                              DYN (Shared object file)
+# CHECK-ELF-NOT:   FUNC    GLOBAL DEFAULT  1 a
+# CHECK-ELF:   OBJECT  GLOBAL DEFAULT  1 b
+
+--- !experimental-ifs-v1
+IfsVersion: 1.0
+Triple: x86_64-linux-gnu
+ObjectFileFormat: ELF
+Symbols:
+  b: { Type: Object, Size: 4 }
+...

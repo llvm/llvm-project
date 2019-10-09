@@ -4242,6 +4242,9 @@ static Value *EmitTargetArchBuiltinExpr(CodeGenFunction *CGF,
   case llvm::Triple::aarch64:
   case llvm::Triple::aarch64_be:
     return CGF->EmitAArch64BuiltinExpr(BuiltinID, E, Arch);
+  case llvm::Triple::bpfeb:
+  case llvm::Triple::bpfel:
+    return CGF->EmitBPFBuiltinExpr(BuiltinID, E);
   case llvm::Triple::x86:
   case llvm::Triple::x86_64:
     return CGF->EmitX86BuiltinExpr(BuiltinID, E);
@@ -9298,6 +9301,37 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     return EmitNeonCall(CGM.getIntrinsic(Int, Ty), Ops, "vuqadd");
   }
   }
+}
+
+Value *CodeGenFunction::EmitBPFBuiltinExpr(unsigned BuiltinID,
+                                           const CallExpr *E) {
+  assert(BuiltinID == BPF::BI__builtin_preserve_field_info &&
+         "unexpected ARM builtin");
+
+  const Expr *Arg = E->getArg(0);
+  bool IsBitField = Arg->IgnoreParens()->getObjectKind() == OK_BitField;
+
+  if (!getDebugInfo()) {
+    CGM.Error(E->getExprLoc(), "using builtin_preserve_field_info() without -g");
+    return IsBitField ? EmitLValue(Arg).getBitFieldPointer()
+                      : EmitLValue(Arg).getPointer();
+  }
+
+  // Enable underlying preserve_*_access_index() generation.
+  bool OldIsInPreservedAIRegion = IsInPreservedAIRegion;
+  IsInPreservedAIRegion = true;
+  Value *FieldAddr = IsBitField ? EmitLValue(Arg).getBitFieldPointer()
+                                : EmitLValue(Arg).getPointer();
+  IsInPreservedAIRegion = OldIsInPreservedAIRegion;
+
+  ConstantInt *C = cast<ConstantInt>(EmitScalarExpr(E->getArg(1)));
+  Value *InfoKind = ConstantInt::get(Int64Ty, C->getSExtValue());
+
+  // Built the IR for the preserve_field_info intrinsic.
+  llvm::Function *FnGetFieldInfo = llvm::Intrinsic::getDeclaration(
+      &CGM.getModule(), llvm::Intrinsic::bpf_preserve_field_info,
+      {FieldAddr->getType()});
+  return Builder.CreateCall(FnGetFieldInfo, {FieldAddr, InfoKind});
 }
 
 llvm::Value *CodeGenFunction::

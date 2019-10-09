@@ -9690,7 +9690,7 @@ bool Sema::areMultiversionVariantFunctionsCompatible(
     const PartialDiagnosticAt &NoteCausedDiagIDAt,
     const PartialDiagnosticAt &NoSupportDiagIDAt,
     const PartialDiagnosticAt &DiffDiagIDAt, bool TemplatesSupported,
-    bool ConstexprSupported) {
+    bool ConstexprSupported, bool CLinkageMayDiffer) {
   enum DoesntSupport {
     FuncTemplates = 0,
     VirtFuncs = 1,
@@ -9783,7 +9783,7 @@ bool Sema::areMultiversionVariantFunctionsCompatible(
     if (OldFD->getStorageClass() != NewFD->getStorageClass())
       return Diag(DiffDiagIDAt.first, DiffDiagIDAt.second) << StorageClass;
 
-    if (OldFD->isExternC() != NewFD->isExternC())
+    if (!CLinkageMayDiffer && OldFD->isExternC() != NewFD->isExternC())
       return Diag(DiffDiagIDAt.first, DiffDiagIDAt.second) << Linkage;
 
     if (CheckEquivalentExceptionSpec(
@@ -9836,7 +9836,8 @@ static bool CheckMultiVersionAdditionalRules(Sema &S, const FunctionDecl *OldFD,
       PartialDiagnosticAt(NewFD->getLocation(),
                           S.PDiag(diag::err_multiversion_diff)),
       /*TemplatesSupported=*/false,
-      /*ConstexprSupported=*/!IsCPUSpecificCPUDispatchMVType);
+      /*ConstexprSupported=*/!IsCPUSpecificCPUDispatchMVType,
+      /*CLinkageMayDiffer=*/false);
 }
 
 /// Check the validity of a multiversion function declaration that is the
