@@ -372,6 +372,69 @@ bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
   $1 = $1 || PyCallable_Check(reinterpret_cast<PyObject*>($input));
 }
 
+
+%typemap(in) lldb::FileSP {
+  using namespace lldb_private;
+  PythonFile py_file(PyRefType::Borrowed, $input);
+  if (!py_file) {
+    PyErr_SetString(PyExc_TypeError, "not a file");
+    return nullptr;
+  }
+  auto sp = unwrapOrSetPythonException(py_file.ConvertToFile());
+  if (!sp)
+    return nullptr;
+  $1 = sp;
+}
+
+%typemap(in) lldb::FileSP FORCE_IO_METHODS {
+  using namespace lldb_private;
+  PythonFile py_file(PyRefType::Borrowed, $input);
+  if (!py_file) {
+    PyErr_SetString(PyExc_TypeError, "not a file");
+    return nullptr;
+  }
+  auto sp = unwrapOrSetPythonException(py_file.ConvertToFileForcingUseOfScriptingIOMethods());
+  if (!sp)
+    return nullptr;
+  $1 = sp;
+}
+
+%typemap(in) lldb::FileSP BORROWED {
+ using namespace lldb_private;
+  PythonFile py_file(PyRefType::Borrowed, $input);
+  if (!py_file) {
+    PyErr_SetString(PyExc_TypeError, "not a file");
+    return nullptr;
+  }
+  auto sp = unwrapOrSetPythonException(py_file.ConvertToFile(/*borrowed=*/true));
+  if (!sp)
+    return nullptr;
+  $1 = sp;
+}
+
+%typemap(in) lldb::FileSP BORROWED_FORCE_IO_METHODS {
+  using namespace lldb_private;
+  PythonFile py_file(PyRefType::Borrowed, $input);
+  if (!py_file) {
+    PyErr_SetString(PyExc_TypeError, "not a file");
+    return nullptr;
+  }
+  auto sp = unwrapOrSetPythonException(py_file.ConvertToFileForcingUseOfScriptingIOMethods(/*borrowed=*/true));
+  if (!sp)
+    return nullptr;
+  $1 = sp;
+}
+
+%typecheck(SWIG_TYPECHECK_POINTER) lldb::FileSP {
+  if (lldb_private::PythonFile::Check($input)) {
+    $1 = 1;
+  } else {
+    PyErr_Clear();
+    $1 = 0;
+  }
+}
+
+
 // FIXME both of these paths wind up calling fdopen() with no provision for ever calling
 // fclose() on the result.  SB interfaces that use FILE* should be deprecated for scripting
 // use and this typemap should eventually be removed.

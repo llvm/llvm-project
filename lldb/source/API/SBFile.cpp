@@ -16,7 +16,9 @@ using namespace lldb_private;
 
 SBFile::~SBFile() {}
 
-SBFile::SBFile(FileSP file_sp) : m_opaque_sp(file_sp) {}
+SBFile::SBFile(FileSP file_sp) : m_opaque_sp(file_sp) {
+  LLDB_RECORD_DUMMY(void, SBfile, SBFile, (FileSP), file_sp);
+}
 
 SBFile::SBFile() { LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBFile); }
 
