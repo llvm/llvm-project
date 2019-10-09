@@ -4675,7 +4675,7 @@ size_t ObjectFileMachO::ParseSymtab() {
             if (sym_idx >= num_syms)
               sym = symtab->Resize(++num_syms);
             sym[sym_idx].SetID(synthetic_sym_id++);
-            sym[sym_idx].GetMangled() = Mangled(e.entry.name, true);
+            sym[sym_idx].GetMangled() = Mangled(e.entry.name);
             sym[sym_idx].SetType(type);
             sym[sym_idx].SetIsSynthetic(true);
             sym[sym_idx].GetAddressRef().SetSection(symbol_section);
