@@ -185,17 +185,6 @@ static void skipRawString(const char *&First, const char *const End) {
   }
 }
 
-static void skipString(const char *&First, const char *const End) {
-  assert(*First == '\'' || *First == '"' || *First == '<');
-  const char Terminator = *First == '<' ? '>' : *First;
-  for (++First; First != End && *First != Terminator; ++First)
-    if (*First == '\\')
-      if (++First == End)
-        return;
-  if (First != End)
-    ++First; // Finish off the string.
-}
-
 // Returns the length of EOL, either 0 (no end-of-line), 1 (\n) or 2 (\r\n)
 static unsigned isEOL(const char *First, const char *const End) {
   if (First == End)
@@ -204,6 +193,35 @@ static unsigned isEOL(const char *First, const char *const End) {
       isVerticalWhitespace(First[1]) && First[0] != First[1])
     return 2;
   return !!isVerticalWhitespace(First[0]);
+}
+
+static void skipString(const char *&First, const char *const End) {
+  assert(*First == '\'' || *First == '"' || *First == '<');
+  const char Terminator = *First == '<' ? '>' : *First;
+  for (++First; First != End && *First != Terminator; ++First) {
+    // String and character literals don't extend past the end of the line.
+    if (isVerticalWhitespace(*First))
+      return;
+    if (*First != '\\')
+      continue;
+    // Skip past backslash to the next character. This ensures that the
+    // character right after it is skipped as well, which matters if it's
+    // the terminator.
+    if (++First == End)
+      return;
+    if (!isWhitespace(*First))
+      continue;
+    // Whitespace after the backslash might indicate a line continuation.
+    const char *FirstAfterBackslashPastSpace = First;
+    skipOverSpaces(FirstAfterBackslashPastSpace, End);
+    if (unsigned NLSize = isEOL(FirstAfterBackslashPastSpace, End)) {
+      // Advance the character pointer to the next line for the next
+      // iteration.
+      First = FirstAfterBackslashPastSpace + NLSize - 1;
+    }
+  }
+  if (First != End)
+    ++First; // Finish off the string.
 }
 
 // Returns the length of the skipped newline
