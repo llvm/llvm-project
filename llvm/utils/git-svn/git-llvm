@@ -46,7 +46,7 @@ except ImportError:
 
 # It's *almost* a straightforward mapping from the monorepo to svn...
 LLVM_MONOREPO_SVN_MAPPING = {
-    d: (d + '/trunk')
+    d: (d + '/branches/release_90')
     for d in [
         'clang-tools-extra',
         'compiler-rt',
@@ -67,8 +67,8 @@ LLVM_MONOREPO_SVN_MAPPING = {
         'pstl',
     ]
 }
-LLVM_MONOREPO_SVN_MAPPING.update({'clang': 'cfe/trunk'})
-LLVM_MONOREPO_SVN_MAPPING.update({'': 'monorepo-root/trunk'})
+LLVM_MONOREPO_SVN_MAPPING.update({'clang': 'cfe/branches/release_90'})
+LLVM_MONOREPO_SVN_MAPPING.update({'': 'monorepo-root/branches/release_90'})
 
 SPLIT_REPO_NAMES = {'llvm-' + d: d + '/trunk'
                     for d in ['www', 'zorg', 'test-suite', 'lnt']}
