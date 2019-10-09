@@ -29,10 +29,10 @@ public:
 
   // Clusters `Points` using DBSCAN with the given parameters. See the cc file
   // for more explanations on the algorithm.
-  static llvm::Expected<InstructionBenchmarkClustering>
+  static Expected<InstructionBenchmarkClustering>
   create(const std::vector<InstructionBenchmark> &Points, ModeE Mode,
          size_t DbscanMinPts, double AnalysisClusteringEpsilon,
-         llvm::Optional<unsigned> NumOpcodes = llvm::None);
+         Optional<unsigned> NumOpcodes = None);
 
   class ClusterId {
   public:
@@ -123,7 +123,7 @@ private:
       const std::vector<InstructionBenchmark> &Points,
       double AnalysisClusteringEpsilonSquared);
 
-  llvm::Error validateAndSetup();
+  Error validateAndSetup();
 
   void clusterizeDbScan(size_t MinPts);
   void clusterizeNaive(unsigned NumOpcodes);

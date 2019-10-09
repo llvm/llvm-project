@@ -17,7 +17,7 @@ site.addsitedir(os.path.dirname(__file__))
 from helper import toolchain
 
 # name: The name of this test suite.
-config.name = 'LLDB'
+config.name = 'lldb-shell'
 
 # testFormat: The test format to use to interpret tests.
 config.test_format = lit.formats.ShTest(not llvm_config.use_lit_shell)
@@ -35,7 +35,7 @@ config.excludes = ['Inputs', 'CMakeLists.txt', 'README.txt', 'LICENSE.txt']
 config.test_source_root = os.path.dirname(__file__)
 
 # test_exec_root: The root path where tests should be run.
-config.test_exec_root = os.path.join(config.lldb_obj_root, 'lit')
+config.test_exec_root = os.path.join(config.lldb_obj_root, 'test')
 
 
 llvm_config.use_default_substitutions()

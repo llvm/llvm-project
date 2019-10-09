@@ -275,6 +275,19 @@ def : Pat<(vec_t (wasm_shuffle (vec_t V128:$x), (vec_t V128:$y),
             (i32 LaneIdx32:$mE), (i32 LaneIdx32:$mF)))>;
 }
 
+// Swizzle lanes: v8x16.swizzle
+def wasm_swizzle_t : SDTypeProfile<1, 2, []>;
+def wasm_swizzle : SDNode<"WebAssemblyISD::SWIZZLE", wasm_swizzle_t>;
+let Predicates = [HasUnimplementedSIMD128] in
+defm SWIZZLE :
+  SIMD_I<(outs V128:$dst), (ins V128:$src, V128:$mask), (outs), (ins),
+         [(set (v16i8 V128:$dst),
+           (wasm_swizzle (v16i8 V128:$src), (v16i8 V128:$mask)))],
+         "v8x16.swizzle\t$dst, $src, $mask", "v8x16.swizzle", 192>;
+
+def : Pat<(int_wasm_swizzle (v16i8 V128:$src), (v16i8 V128:$mask)),
+          (SWIZZLE V128:$src, V128:$mask)>;
+
 // Create vector with identical lanes: splat
 def splat2 : PatFrag<(ops node:$x), (build_vector node:$x, node:$x)>;
 def splat4 : PatFrag<(ops node:$x), (build_vector

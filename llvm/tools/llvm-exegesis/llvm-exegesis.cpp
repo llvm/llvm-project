@@ -165,13 +165,12 @@ static ExitOnError ExitOnErr;
 // Checks that only one of OpcodeNames, OpcodeIndex or SnippetsFile is provided,
 // and returns the opcode indices or {} if snippets should be read from
 // `SnippetsFile`.
-static std::vector<unsigned>
-getOpcodesOrDie(const llvm::MCInstrInfo &MCInstrInfo) {
+static std::vector<unsigned> getOpcodesOrDie(const MCInstrInfo &MCInstrInfo) {
   const size_t NumSetFlags = (OpcodeNames.empty() ? 0 : 1) +
                              (OpcodeIndex == 0 ? 0 : 1) +
                              (SnippetsFile.empty() ? 0 : 1);
   if (NumSetFlags != 1)
-    llvm::report_fatal_error(
+    report_fatal_error(
         "please provide one and only one of 'opcode-index', 'opcode-name' or "
         "'snippets-file'");
   if (!SnippetsFile.empty())
@@ -185,33 +184,31 @@ getOpcodesOrDie(const llvm::MCInstrInfo &MCInstrInfo) {
     return Result;
   }
   // Resolve opcode name -> opcode.
-  const auto ResolveName =
-      [&MCInstrInfo](llvm::StringRef OpcodeName) -> unsigned {
+  const auto ResolveName = [&MCInstrInfo](StringRef OpcodeName) -> unsigned {
     for (unsigned I = 1, E = MCInstrInfo.getNumOpcodes(); I < E; ++I)
       if (MCInstrInfo.getName(I) == OpcodeName)
         return I;
     return 0u;
   };
-  llvm::SmallVector<llvm::StringRef, 2> Pieces;
-  llvm::StringRef(OpcodeNames.getValue())
+  SmallVector<StringRef, 2> Pieces;
+  StringRef(OpcodeNames.getValue())
       .split(Pieces, ",", /* MaxSplit */ -1, /* KeepEmpty */ false);
   std::vector<unsigned> Result;
-  for (const llvm::StringRef OpcodeName : Pieces) {
+  for (const StringRef OpcodeName : Pieces) {
     if (unsigned Opcode = ResolveName(OpcodeName))
       Result.push_back(Opcode);
     else
-      llvm::report_fatal_error(
-          llvm::Twine("unknown opcode ").concat(OpcodeName));
+      report_fatal_error(Twine("unknown opcode ").concat(OpcodeName));
   }
   return Result;
 }
 
 // Generates code snippets for opcode `Opcode`.
-static llvm::Expected<std::vector<BenchmarkCode>>
+static Expected<std::vector<BenchmarkCode>>
 generateSnippets(const LLVMState &State, unsigned Opcode,
-                 const llvm::BitVector &ForbiddenRegs) {
+                 const BitVector &ForbiddenRegs) {
   const Instruction &Instr = State.getIC().getInstr(Opcode);
-  const llvm::MCInstrDesc &InstrDesc = *Instr.Description;
+  const MCInstrDesc &InstrDesc = *Instr.Description;
   // Ignore instructions that we cannot run.
   if (InstrDesc.isPseudo())
     return make_error<Failure>("Unsupported opcode: isPseudo");
@@ -226,22 +223,22 @@ generateSnippets(const LLVMState &State, unsigned Opcode,
       State.getExegesisTarget().createSnippetGenerator(BenchmarkMode, State,
                                                        Options);
   if (!Generator)
-    llvm::report_fatal_error("cannot create snippet generator");
+    report_fatal_error("cannot create snippet generator");
   return Generator->generateConfigurations(Instr, ForbiddenRegs);
 }
 
 void benchmarkMain() {
 #ifndef HAVE_LIBPFM
-  llvm::report_fatal_error(
+  report_fatal_error(
       "benchmarking unavailable, LLVM was built without libpfm.");
 #endif
 
   if (exegesis::pfm::pfmInitialize())
-    llvm::report_fatal_error("cannot initialize libpfm");
+    report_fatal_error("cannot initialize libpfm");
 
-  llvm::InitializeNativeTarget();
-  llvm::InitializeNativeTargetAsmPrinter();
-  llvm::InitializeNativeTargetAsmParser();
+  InitializeNativeTarget();
+  InitializeNativeTargetAsmPrinter();
+  InitializeNativeTargetAsmParser();
   InitializeNativeExegesisTarget();
 
   const LLVMState State(CpuName);
@@ -256,16 +253,16 @@ void benchmarkMain() {
       // -ignore-invalid-sched-class is passed.
       if (IgnoreInvalidSchedClass &&
           State.getInstrInfo().get(Opcode).getSchedClass() == 0) {
-        llvm::errs() << State.getInstrInfo().getName(Opcode)
-                     << ": ignoring instruction without sched class\n";
+        errs() << State.getInstrInfo().getName(Opcode)
+               << ": ignoring instruction without sched class\n";
         continue;
       }
       auto ConfigsForInstr =
           generateSnippets(State, Opcode, Repetitor->getReservedRegs());
       if (!ConfigsForInstr) {
-        llvm::logAllUnhandledErrors(
-            ConfigsForInstr.takeError(), llvm::errs(),
-            llvm::Twine(State.getInstrInfo().getName(Opcode)).concat(": "));
+        logAllUnhandledErrors(
+            ConfigsForInstr.takeError(), errs(),
+            Twine(State.getInstrInfo().getName(Opcode)).concat(": "));
         continue;
       }
       std::move(ConfigsForInstr->begin(), ConfigsForInstr->end(),
@@ -278,11 +275,11 @@ void benchmarkMain() {
   const std::unique_ptr<BenchmarkRunner> Runner =
       State.getExegesisTarget().createBenchmarkRunner(BenchmarkMode, State);
   if (!Runner) {
-    llvm::report_fatal_error("cannot create benchmark runner");
+    report_fatal_error("cannot create benchmark runner");
   }
 
   if (NumRepetitions == 0)
-    llvm::report_fatal_error("--num-repetitions must be greater than zero");
+    report_fatal_error("--num-repetitions must be greater than zero");
 
   // Write to standard output if file is not set.
   if (BenchmarkFile.empty())
@@ -304,40 +301,39 @@ static void maybeRunAnalysis(const Analysis &Analyzer, const std::string &Name,
   if (OutputFilename.empty())
     return;
   if (OutputFilename != "-") {
-    llvm::errs() << "Printing " << Name << " results to file '"
-                 << OutputFilename << "'\n";
+    errs() << "Printing " << Name << " results to file '" << OutputFilename
+           << "'\n";
   }
   std::error_code ErrorCode;
-  llvm::raw_fd_ostream ClustersOS(OutputFilename, ErrorCode,
-                                  llvm::sys::fs::FA_Read |
-                                      llvm::sys::fs::FA_Write);
+  raw_fd_ostream ClustersOS(OutputFilename, ErrorCode,
+                            sys::fs::FA_Read | sys::fs::FA_Write);
   if (ErrorCode)
-    llvm::report_fatal_error("cannot open out file: " + OutputFilename);
+    report_fatal_error("cannot open out file: " + OutputFilename);
   if (auto Err = Analyzer.run<Pass>(ClustersOS))
-    llvm::report_fatal_error(std::move(Err));
+    report_fatal_error(std::move(Err));
 }
 
 static void analysisMain() {
   if (BenchmarkFile.empty())
-    llvm::report_fatal_error("--benchmarks-file must be set.");
+    report_fatal_error("--benchmarks-file must be set.");
 
   if (AnalysisClustersOutputFile.empty() &&
       AnalysisInconsistenciesOutputFile.empty()) {
-    llvm::report_fatal_error(
+    report_fatal_error(
         "At least one of --analysis-clusters-output-file and "
         "--analysis-inconsistencies-output-file must be specified.");
   }
 
-  llvm::InitializeNativeTarget();
-  llvm::InitializeNativeTargetAsmPrinter();
-  llvm::InitializeNativeTargetDisassembler();
+  InitializeNativeTarget();
+  InitializeNativeTargetAsmPrinter();
+  InitializeNativeTargetDisassembler();
   // Read benchmarks.
   const LLVMState State("");
   const std::vector<InstructionBenchmark> Points =
       ExitOnErr(InstructionBenchmark::readYamls(State, BenchmarkFile));
-  llvm::outs() << "Parsed " << Points.size() << " benchmark points\n";
+  outs() << "Parsed " << Points.size() << " benchmark points\n";
   if (Points.empty()) {
-    llvm::errs() << "no benchmarks to analyze\n";
+    errs() << "no benchmarks to analyze\n";
     return;
   }
   // FIXME: Check that all points have the same triple/cpu.
@@ -345,13 +341,13 @@ static void analysisMain() {
 
   std::string Error;
   const auto *TheTarget =
-      llvm::TargetRegistry::lookupTarget(Points[0].LLVMTriple, Error);
+      TargetRegistry::lookupTarget(Points[0].LLVMTriple, Error);
   if (!TheTarget) {
-    llvm::errs() << "unknown target '" << Points[0].LLVMTriple << "'\n";
+    errs() << "unknown target '" << Points[0].LLVMTriple << "'\n";
     return;
   }
 
-  std::unique_ptr<llvm::MCInstrInfo> InstrInfo(TheTarget->createMCInstrInfo());
+  std::unique_ptr<MCInstrInfo> InstrInfo(TheTarget->createMCInstrInfo());
 
   const auto Clustering = ExitOnErr(InstructionBenchmarkClustering::create(
       Points, AnalysisClusteringAlgorithm, AnalysisDbscanNumPoints,
@@ -375,8 +371,8 @@ int main(int Argc, char **Argv) {
   using namespace llvm;
   cl::ParseCommandLineOptions(Argc, Argv, "");
 
-  exegesis::ExitOnErr.setExitCodeMapper([](const llvm::Error &Err) {
-    if (Err.isA<llvm::StringError>())
+  exegesis::ExitOnErr.setExitCodeMapper([](const Error &Err) {
+    if (Err.isA<StringError>())
       return EXIT_SUCCESS;
     return EXIT_FAILURE;
   });

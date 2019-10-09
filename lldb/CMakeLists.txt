@@ -185,7 +185,6 @@ if(LLDB_INCLUDE_TESTS)
 
   add_subdirectory(test)
   add_subdirectory(unittests)
-  add_subdirectory(lit)
   add_subdirectory(utils/lit-cpuid)
   add_subdirectory(utils/lldb-dotest)
 endif()

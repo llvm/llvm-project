@@ -1629,15 +1629,27 @@ void LoopUnswitch::SimplifyCode(std::vector<Instruction*> &Worklist, Loop *L) {
           ReplaceUsesOfWith(PN, PN->getIncomingValue(0), Worklist, L, LPM,
                             MSSAU.get());
 
+        Instruction *STI = Succ->getTerminator();
+        Instruction *Start = &*Succ->begin();
+        // If there's nothing to move, mark the starting instruction as the last
+        // instruction in the block.
+        if (Start == STI)
+          Start = BI;
+
+        // Move all of the successor contents from Succ to Pred.
+        Pred->getInstList().splice(BI->getIterator(), Succ->getInstList(),
+                                   Succ->begin(), STI->getIterator());
+        if (MSSAU)
+          MSSAU->moveAllAfterMergeBlocks(Succ, Pred, Start);
+
+        // Move terminator instruction from Succ now, we're deleting BI below.
+        // FIXME: remove BI first might be more intuitive.
+        Pred->getInstList().splice(Pred->end(), Succ->getInstList());
+
         // If Succ has any successors with PHI nodes, update them to have
         // entries coming from Pred instead of Succ.
         Succ->replaceAllUsesWith(Pred);
 
-        // Move all of the successor contents from Succ to Pred.
-        Pred->getInstList().splice(BI->getIterator(), Succ->getInstList(),
-                                   Succ->begin(), Succ->end());
-        if (MSSAU)
-          MSSAU->moveAllAfterMergeBlocks(Succ, Pred, BI);
         LPM->deleteSimpleAnalysisValue(BI, L);
         RemoveFromWorklist(BI, Worklist);
         BI->eraseFromParent();

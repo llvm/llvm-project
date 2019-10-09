@@ -223,6 +223,50 @@ public:
   }
 
   virtual unsigned getHwMode() const { return 0; }
+
+  /// Return the cache size in bytes for the given level of cache.
+  /// Level is zero-based, so a value of zero means the first level of
+  /// cache.
+  ///
+  virtual Optional<unsigned> getCacheSize(unsigned Level) const;
+
+  /// Return the cache associatvity for the given level of cache.
+  /// Level is zero-based, so a value of zero means the first level of
+  /// cache.
+  ///
+  virtual Optional<unsigned> getCacheAssociativity(unsigned Level) const;
+
+  /// Return the target cache line size in bytes at a given level.
+  ///
+  virtual Optional<unsigned> getCacheLineSize(unsigned Level) const;
+
+  /// Return the target cache line size in bytes.  By default, return
+  /// the line size for the bottom-most level of cache.  This provides
+  /// a more convenient interface for the common case where all cache
+  /// levels have the same line size.  Return zero if there is no
+  /// cache model.
+  ///
+  virtual unsigned getCacheLineSize() const {
+    Optional<unsigned> Size = getCacheLineSize(0);
+    if (Size)
+      return *Size;
+
+    return 0;
+  }
+
+  /// Return the preferred prefetch distance in terms of instructions.
+  ///
+  virtual unsigned getPrefetchDistance() const;
+
+  /// Return the maximum prefetch distance in terms of loop
+  /// iterations.
+  ///
+  virtual unsigned getMaxPrefetchIterationsAhead() const;
+
+  /// Return the minimum stride necessary to trigger software
+  /// prefetching.
+  ///
+  virtual unsigned getMinPrefetchStride() const;
 };
 
 } // end namespace llvm

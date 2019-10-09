@@ -11,11 +11,11 @@
 namespace llvm {
 namespace exegesis {
 
-llvm::BitVector getAliasedBits(const llvm::MCRegisterInfo &RegInfo,
-                               const llvm::BitVector &SourceBits) {
-  llvm::BitVector AliasedBits(RegInfo.getNumRegs());
+BitVector getAliasedBits(const MCRegisterInfo &RegInfo,
+                         const BitVector &SourceBits) {
+  BitVector AliasedBits(RegInfo.getNumRegs());
   for (const size_t PhysReg : SourceBits.set_bits()) {
-    using RegAliasItr = llvm::MCRegAliasIterator;
+    using RegAliasItr = MCRegAliasIterator;
     for (auto Itr = RegAliasItr(PhysReg, &RegInfo, true); Itr.isValid();
          ++Itr) {
       AliasedBits.set(*Itr);
@@ -24,31 +24,30 @@ llvm::BitVector getAliasedBits(const llvm::MCRegisterInfo &RegInfo,
   return AliasedBits;
 }
 
-RegisterAliasingTracker::RegisterAliasingTracker(
-    const llvm::MCRegisterInfo &RegInfo)
+RegisterAliasingTracker::RegisterAliasingTracker(const MCRegisterInfo &RegInfo)
     : SourceBits(RegInfo.getNumRegs()), AliasedBits(RegInfo.getNumRegs()),
       Origins(RegInfo.getNumRegs()) {}
 
 RegisterAliasingTracker::RegisterAliasingTracker(
-    const llvm::MCRegisterInfo &RegInfo, const llvm::BitVector &ReservedReg,
-    const llvm::MCRegisterClass &RegClass)
+    const MCRegisterInfo &RegInfo, const BitVector &ReservedReg,
+    const MCRegisterClass &RegClass)
     : RegisterAliasingTracker(RegInfo) {
-  for (llvm::MCPhysReg PhysReg : RegClass)
+  for (MCPhysReg PhysReg : RegClass)
     if (!ReservedReg[PhysReg]) // Removing reserved registers.
       SourceBits.set(PhysReg);
   FillOriginAndAliasedBits(RegInfo, SourceBits);
 }
 
-RegisterAliasingTracker::RegisterAliasingTracker(
-    const llvm::MCRegisterInfo &RegInfo, const llvm::MCPhysReg PhysReg)
+RegisterAliasingTracker::RegisterAliasingTracker(const MCRegisterInfo &RegInfo,
+                                                 const MCPhysReg PhysReg)
     : RegisterAliasingTracker(RegInfo) {
   SourceBits.set(PhysReg);
   FillOriginAndAliasedBits(RegInfo, SourceBits);
 }
 
 void RegisterAliasingTracker::FillOriginAndAliasedBits(
-    const llvm::MCRegisterInfo &RegInfo, const llvm::BitVector &SourceBits) {
-  using RegAliasItr = llvm::MCRegAliasIterator;
+    const MCRegisterInfo &RegInfo, const BitVector &SourceBits) {
+  using RegAliasItr = MCRegAliasIterator;
   for (const size_t PhysReg : SourceBits.set_bits()) {
     for (auto Itr = RegAliasItr(PhysReg, &RegInfo, true); Itr.isValid();
          ++Itr) {
@@ -59,12 +58,12 @@ void RegisterAliasingTracker::FillOriginAndAliasedBits(
 }
 
 RegisterAliasingTrackerCache::RegisterAliasingTrackerCache(
-    const llvm::MCRegisterInfo &RegInfo, const llvm::BitVector &ReservedReg)
+    const MCRegisterInfo &RegInfo, const BitVector &ReservedReg)
     : RegInfo(RegInfo), ReservedReg(ReservedReg),
       EmptyRegisters(RegInfo.getNumRegs()) {}
 
 const RegisterAliasingTracker &
-RegisterAliasingTrackerCache::getRegister(llvm::MCPhysReg PhysReg) const {
+RegisterAliasingTrackerCache::getRegister(MCPhysReg PhysReg) const {
   auto &Found = Registers[PhysReg];
   if (!Found)
     Found.reset(new RegisterAliasingTracker(RegInfo, PhysReg));

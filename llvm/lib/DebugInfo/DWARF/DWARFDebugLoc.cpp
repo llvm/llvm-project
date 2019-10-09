@@ -143,7 +143,7 @@ DWARFDebugLoclists::parseOneLocationList(const DataExtractor &Data,
   DataExtractor::Cursor C(*Offset);
 
   // dwarf::DW_LLE_end_of_list_entry is 0 and indicates the end of the list.
-  while (auto Kind = static_cast<dwarf::LoclistEntries>(Data.getU8(C))) {
+  while (auto Kind = Data.getU8(C)) {
     Entry E;
     E.Kind = Kind;
     switch (Kind) {

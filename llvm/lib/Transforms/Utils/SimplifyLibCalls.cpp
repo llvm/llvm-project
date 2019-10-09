@@ -48,7 +48,6 @@ static cl::opt<bool>
                          cl::desc("Enable unsafe double to float "
                                   "shrinking for math lib calls"));
 
-
 //===----------------------------------------------------------------------===//
 // Helper Functions
 //===----------------------------------------------------------------------===//
@@ -1941,9 +1940,8 @@ Value *LibCallSimplifier::optimizeLog(CallInst *Log, IRBuilder<> &B) {
            ArgID == Intrinsic::exp || ArgID == Intrinsic::exp2) {
     Constant *Eul;
     if (ArgLb == ExpLb || ArgID == Intrinsic::exp)
-      // FIXME: The Euler number should be M_E, but it's place of definition
-      // is not quite standard.
-      Eul = ConstantFP::get(Log->getType(), 2.7182818284590452354);
+      // FIXME: Add more precise value of e for long double.
+      Eul = ConstantFP::get(Log->getType(), numbers::e);
     else if (ArgLb == Exp2Lb || ArgID == Intrinsic::exp2)
       Eul = ConstantFP::get(Log->getType(), 2.0);
     else

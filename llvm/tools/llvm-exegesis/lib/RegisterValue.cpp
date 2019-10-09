@@ -12,27 +12,27 @@
 namespace llvm {
 namespace exegesis {
 
-static llvm::APFloat getFloatValue(const llvm::fltSemantics &FltSemantics,
-                                   PredefinedValues Value) {
+static APFloat getFloatValue(const fltSemantics &FltSemantics,
+                             PredefinedValues Value) {
   switch (Value) {
   case PredefinedValues::POS_ZERO:
-    return llvm::APFloat::getZero(FltSemantics);
+    return APFloat::getZero(FltSemantics);
   case PredefinedValues::NEG_ZERO:
-    return llvm::APFloat::getZero(FltSemantics, true);
+    return APFloat::getZero(FltSemantics, true);
   case PredefinedValues::ONE:
-    return llvm::APFloat(FltSemantics, "1");
+    return APFloat(FltSemantics, "1");
   case PredefinedValues::TWO:
-    return llvm::APFloat(FltSemantics, "2");
+    return APFloat(FltSemantics, "2");
   case PredefinedValues::INF:
-    return llvm::APFloat::getInf(FltSemantics);
+    return APFloat::getInf(FltSemantics);
   case PredefinedValues::QNAN:
-    return llvm::APFloat::getQNaN(FltSemantics);
+    return APFloat::getQNaN(FltSemantics);
   case PredefinedValues::SMALLEST_NORM:
-    return llvm::APFloat::getSmallestNormalized(FltSemantics);
+    return APFloat::getSmallestNormalized(FltSemantics);
   case PredefinedValues::LARGEST:
-    return llvm::APFloat::getLargest(FltSemantics);
+    return APFloat::getLargest(FltSemantics);
   case PredefinedValues::ULP:
-    return llvm::APFloat::getSmallest(FltSemantics);
+    return APFloat::getSmallest(FltSemantics);
   case PredefinedValues::ONE_PLUS_ULP:
     auto Output = getFloatValue(FltSemantics, PredefinedValues::ONE);
     Output.next(false);
@@ -41,8 +41,8 @@ static llvm::APFloat getFloatValue(const llvm::fltSemantics &FltSemantics,
   llvm_unreachable("Unhandled exegesis::PredefinedValues");
 }
 
-llvm::APInt bitcastFloatValue(const llvm::fltSemantics &FltSemantics,
-                              PredefinedValues Value) {
+APInt bitcastFloatValue(const fltSemantics &FltSemantics,
+                        PredefinedValues Value) {
   return getFloatValue(FltSemantics, Value).bitcastToAPInt();
 }
 

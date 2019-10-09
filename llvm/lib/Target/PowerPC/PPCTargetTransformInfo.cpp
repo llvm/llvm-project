@@ -613,7 +613,7 @@ unsigned PPCTTIImpl::getRegisterBitWidth(bool Vector) const {
 
 }
 
-unsigned PPCTTIImpl::getCacheLineSize() {
+unsigned PPCTTIImpl::getCacheLineSize() const {
   // Check first if the user specified a custom line size.
   if (CacheLineSize.getNumOccurrences() > 0)
     return CacheLineSize;
@@ -628,7 +628,7 @@ unsigned PPCTTIImpl::getCacheLineSize() {
   return 64;
 }
 
-unsigned PPCTTIImpl::getPrefetchDistance() {
+unsigned PPCTTIImpl::getPrefetchDistance() const {
   // This seems like a reasonable default for the BG/Q (this pass is enabled, by
   // default, only on the BG/Q).
   return 300;

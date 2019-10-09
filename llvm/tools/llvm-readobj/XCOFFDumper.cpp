@@ -161,9 +161,9 @@ void XCOFFDumper::printCsectAuxEnt32(const XCOFFCsectAuxEnt32 *AuxEntPtr) {
   W.printNumber("Index",
                 Obj.getSymbolIndex(reinterpret_cast<uintptr_t>(AuxEntPtr)));
   if ((AuxEntPtr->SymbolAlignmentAndType & SymbolTypeMask) == XCOFF::XTY_LD)
-    W.printNumber("ContainingCsectSymbolIndex", AuxEntPtr->SectionLen);
+    W.printNumber("ContainingCsectSymbolIndex", AuxEntPtr->SectionOrLength);
   else
-    W.printNumber("SectionLen", AuxEntPtr->SectionLen);
+    W.printNumber("SectionLen", AuxEntPtr->SectionOrLength);
   W.printHex("ParameterHashIndex", AuxEntPtr->ParameterHashIndex);
   W.printHex("TypeChkSectNum", AuxEntPtr->TypeChkSectNum);
   // Print out symbol alignment and type.

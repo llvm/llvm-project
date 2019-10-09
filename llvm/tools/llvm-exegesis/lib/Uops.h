@@ -25,7 +25,7 @@ public:
   using SnippetGenerator::SnippetGenerator;
   ~UopsSnippetGenerator() override;
 
-  llvm::Expected<std::vector<CodeTemplate>>
+  Expected<std::vector<CodeTemplate>>
   generateCodeTemplates(const Instruction &Instr,
                         const BitVector &ForbiddenRegisters) const override;
 
@@ -69,7 +69,7 @@ public:
   static constexpr const size_t kMinNumDifferentAddresses = 6;
 
 private:
-  llvm::Expected<std::vector<BenchmarkMeasure>>
+  Expected<std::vector<BenchmarkMeasure>>
   runMeasurements(const FunctionExecutor &Executor) const override;
 };
 

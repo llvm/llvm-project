@@ -44,7 +44,7 @@ struct Variable {
   bool hasTiedOperands() const;
 
   // The indices of the operands tied to this Variable.
-  llvm::SmallVector<unsigned, 2> TiedOperands;
+  SmallVector<unsigned, 2> TiedOperands;
 
   // The index of this Variable in Instruction.Variables and its associated
   // Value in InstructionBuilder.VariableValues.
@@ -78,22 +78,22 @@ struct Operand {
   unsigned getVariableIndex() const;
   unsigned getImplicitReg() const;
   const RegisterAliasingTracker &getRegisterAliasing() const;
-  const llvm::MCOperandInfo &getExplicitOperandInfo() const;
+  const MCOperandInfo &getExplicitOperandInfo() const;
 
   // Please use the accessors above and not the following fields.
   int Index = -1;
   bool IsDef = false;
   const RegisterAliasingTracker *Tracker = nullptr; // Set for Register Op.
-  const llvm::MCOperandInfo *Info = nullptr;        // Set for Explicit Op.
+  const MCOperandInfo *Info = nullptr;              // Set for Explicit Op.
   int TiedToIndex = -1;                             // Set for Reg&Explicit Op.
-  const llvm::MCPhysReg *ImplicitReg = nullptr;     // Set for Implicit Op.
+  const MCPhysReg *ImplicitReg = nullptr;           // Set for Implicit Op.
   int VariableIndex = -1;                           // Set for Explicit Op.
 };
 
 // A view over an MCInstrDesc offering a convenient interface to compute
 // Register aliasing.
 struct Instruction {
-  Instruction(const llvm::MCInstrInfo &InstrInfo,
+  Instruction(const MCInstrInfo &InstrInfo,
               const RegisterAliasingTrackerCache &RATC, unsigned Opcode);
 
   // Returns the Operand linked to this Variable.
@@ -129,31 +129,31 @@ struct Instruction {
   bool hasOneUseOrOneDef() const;
 
   // Convenient function to help with debugging.
-  void dump(const llvm::MCRegisterInfo &RegInfo,
+  void dump(const MCRegisterInfo &RegInfo,
             const RegisterAliasingTrackerCache &RATC,
-            llvm::raw_ostream &Stream) const;
+            raw_ostream &Stream) const;
 
-  const llvm::MCInstrDesc *Description; // Never nullptr.
-  llvm::StringRef Name;                 // The name of this instruction.
-  llvm::SmallVector<Operand, 8> Operands;
-  llvm::SmallVector<Variable, 4> Variables;
-  llvm::BitVector ImplDefRegs; // The set of aliased implicit def registers.
-  llvm::BitVector ImplUseRegs; // The set of aliased implicit use registers.
-  llvm::BitVector AllDefRegs;  // The set of all aliased def registers.
-  llvm::BitVector AllUseRegs;  // The set of all aliased use registers.
+  const MCInstrDesc *Description; // Never nullptr.
+  StringRef Name;                 // The name of this instruction.
+  SmallVector<Operand, 8> Operands;
+  SmallVector<Variable, 4> Variables;
+  BitVector ImplDefRegs; // The set of aliased implicit def registers.
+  BitVector ImplUseRegs; // The set of aliased implicit use registers.
+  BitVector AllDefRegs;  // The set of all aliased def registers.
+  BitVector AllUseRegs;  // The set of all aliased use registers.
 };
 
 // Instructions are expensive to instantiate. This class provides a cache of
 // Instructions with lazy construction.
 struct InstructionsCache {
-  InstructionsCache(const llvm::MCInstrInfo &InstrInfo,
+  InstructionsCache(const MCInstrInfo &InstrInfo,
                     const RegisterAliasingTrackerCache &RATC);
 
   // Returns the Instruction object corresponding to this Opcode.
   const Instruction &getInstr(unsigned Opcode) const;
 
 private:
-  const llvm::MCInstrInfo &InstrInfo;
+  const MCInstrInfo &InstrInfo;
   const RegisterAliasingTrackerCache &RATC;
   mutable std::unordered_map<unsigned, std::unique_ptr<Instruction>>
       Instructions;
@@ -161,11 +161,11 @@ private:
 
 // Represents the assignment of a Register to an Operand.
 struct RegisterOperandAssignment {
-  RegisterOperandAssignment(const Operand *Operand, llvm::MCPhysReg Reg)
+  RegisterOperandAssignment(const Operand *Operand, MCPhysReg Reg)
       : Op(Operand), Reg(Reg) {}
 
   const Operand *Op; // Pointer to an Explicit Register Operand.
-  llvm::MCPhysReg Reg;
+  MCPhysReg Reg;
 
   bool operator==(const RegisterOperandAssignment &other) const;
 };
@@ -177,8 +177,8 @@ struct RegisterOperandAssignment {
 //   other (e.g. AX/AL)
 // - The operands are tied.
 struct AliasingRegisterOperands {
-  llvm::SmallVector<RegisterOperandAssignment, 1> Defs; // Unlikely size() > 1.
-  llvm::SmallVector<RegisterOperandAssignment, 2> Uses;
+  SmallVector<RegisterOperandAssignment, 1> Defs; // Unlikely size() > 1.
+  SmallVector<RegisterOperandAssignment, 2> Uses;
 
   // True is Defs and Use contain an Implicit Operand.
   bool hasImplicitAliasing() const;
@@ -195,15 +195,15 @@ struct AliasingConfigurations {
   bool empty() const; // True if no aliasing configuration is found.
   bool hasImplicitAliasing() const;
 
-  llvm::SmallVector<AliasingRegisterOperands, 32> Configurations;
+  SmallVector<AliasingRegisterOperands, 32> Configurations;
 };
 
 // Writes MCInst to OS.
 // This is not assembly but the internal LLVM's name for instructions and
 // registers.
-void DumpMCInst(const llvm::MCRegisterInfo &MCRegisterInfo,
-                const llvm::MCInstrInfo &MCInstrInfo,
-                const llvm::MCInst &MCInst, llvm::raw_ostream &OS);
+void DumpMCInst(const MCRegisterInfo &MCRegisterInfo,
+                const MCInstrInfo &MCInstrInfo, const MCInst &MCInst,
+                raw_ostream &OS);
 
 } // namespace exegesis
 } // namespace llvm

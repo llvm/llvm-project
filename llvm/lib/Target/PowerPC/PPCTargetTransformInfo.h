@@ -74,8 +74,8 @@ public:
   bool enableInterleavedAccessVectorization();
   unsigned getNumberOfRegisters(bool Vector);
   unsigned getRegisterBitWidth(bool Vector) const;
-  unsigned getCacheLineSize();
-  unsigned getPrefetchDistance();
+  unsigned getCacheLineSize() const override;
+  unsigned getPrefetchDistance() const override;
   unsigned getMaxInterleaveFactor(unsigned VF);
   int vectorCostAdjustment(int Cost, unsigned Opcode, Type *Ty1, Type *Ty2);
   int getArithmeticInstrCost(

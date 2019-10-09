@@ -892,22 +892,6 @@ bool AArch64TTIImpl::shouldConsiderAddressTypePromotion(
   return Considerable;
 }
 
-unsigned AArch64TTIImpl::getCacheLineSize() {
-  return ST->getCacheLineSize();
-}
-
-unsigned AArch64TTIImpl::getPrefetchDistance() {
-  return ST->getPrefetchDistance();
-}
-
-unsigned AArch64TTIImpl::getMinPrefetchStride() {
-  return ST->getMinPrefetchStride();
-}
-
-unsigned AArch64TTIImpl::getMaxPrefetchIterationsAhead() {
-  return ST->getMaxPrefetchIterationsAhead();
-}
-
 bool AArch64TTIImpl::useReductionIntrinsic(unsigned Opcode, Type *Ty,
                                            TTI::ReductionFlags Flags) const {
   assert(isa<VectorType>(Ty) && "Expected Ty to be a vector type");

@@ -9,7 +9,7 @@ import lit.formats
 from lit.llvm import llvm_config
 
 # name: The name of this test suite.
-config.name = 'lldb-Unit'
+config.name = 'lldb-unit'
 
 # suffixes: A list of file extensions to treat as test files.
 config.suffixes =  []

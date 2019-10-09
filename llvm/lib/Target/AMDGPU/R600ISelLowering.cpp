@@ -41,6 +41,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MachineValueType.h"
+#include "llvm/Support/MathExtras.h"
 #include <cassert>
 #include <cstdint>
 #include <iterator>
@@ -782,7 +783,7 @@ SDValue R600TargetLowering::LowerTrig(SDValue Op, SelectionDAG &DAG) const {
     return TrigVal;
   // On R600 hw, COS/SIN input must be between -Pi and Pi.
   return DAG.getNode(ISD::FMUL, DL, VT, TrigVal,
-      DAG.getConstantFP(3.14159265359, DL, MVT::f32));
+      DAG.getConstantFP(numbers::pif, DL, MVT::f32));
 }
 
 SDValue R600TargetLowering::LowerSHLParts(SDValue Op, SelectionDAG &DAG) const {

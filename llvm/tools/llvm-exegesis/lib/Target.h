@@ -9,7 +9,7 @@
 /// \file
 ///
 /// Classes that handle the creation of target-specific objects. This is
-/// similar to llvm::Target/TargetRegistry.
+/// similar to Target/TargetRegistry.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -56,31 +56,26 @@ struct PfmCountersInfo {
 struct CpuAndPfmCounters {
   const char *CpuName;
   const PfmCountersInfo *PCI;
-  bool operator<(llvm::StringRef S) const {
-    return llvm::StringRef(CpuName) < S;
-  }
+  bool operator<(StringRef S) const { return StringRef(CpuName) < S; }
 };
 
 class ExegesisTarget {
 public:
-  explicit ExegesisTarget(llvm::ArrayRef<CpuAndPfmCounters> CpuPfmCounters)
+  explicit ExegesisTarget(ArrayRef<CpuAndPfmCounters> CpuPfmCounters)
       : CpuPfmCounters(CpuPfmCounters) {}
 
   // Targets can use this to add target-specific passes in assembleToStream();
-  virtual void addTargetSpecificPasses(llvm::PassManagerBase &PM) const {}
+  virtual void addTargetSpecificPasses(PassManagerBase &PM) const {}
 
   // Generates code to move a constant into a the given register.
   // Precondition: Value must fit into Reg.
-  virtual std::vector<llvm::MCInst>
-  setRegTo(const llvm::MCSubtargetInfo &STI, unsigned Reg,
-           const llvm::APInt &Value) const = 0;
+  virtual std::vector<MCInst> setRegTo(const MCSubtargetInfo &STI, unsigned Reg,
+                                       const APInt &Value) const = 0;
 
   // Returns the register pointing to scratch memory, or 0 if this target
   // does not support memory operands. The benchmark function uses the
   // default calling convention.
-  virtual unsigned getScratchMemoryRegister(const llvm::Triple &) const {
-    return 0;
-  }
+  virtual unsigned getScratchMemoryRegister(const Triple &) const { return 0; }
 
   // Fills memory operands with references to the address at [Reg] + Offset.
   virtual void fillMemoryOperands(InstructionTemplate &IT, unsigned Reg,
@@ -90,14 +85,12 @@ public:
   }
 
   // Returns a counter usable as a loop counter.
-  virtual unsigned getLoopCounterRegister(const llvm::Triple &) const {
-    return 0;
-  }
+  virtual unsigned getLoopCounterRegister(const Triple &) const { return 0; }
 
   // Adds the code to decrement the loop counter and
   virtual void decrementLoopCounterAndJump(MachineBasicBlock &MBB,
                                            MachineBasicBlock &TargetMBB,
-                                           const llvm::MCInstrInfo &MII) const {
+                                           const MCInstrInfo &MII) const {
     llvm_unreachable("decrementLoopCounterAndBranch() requires "
                      "getLoopCounterRegister() > 0");
   }
@@ -119,8 +112,8 @@ public:
   // The target is responsible for handling any operand
   // starting from OPERAND_FIRST_TARGET.
   virtual void randomizeMCOperand(const Instruction &Instr, const Variable &Var,
-                                  llvm::MCOperand &AssignedValue,
-                                  const llvm::BitVector &ForbiddenRegs) const;
+                                  MCOperand &AssignedValue,
+                                  const BitVector &ForbiddenRegs) const;
 
   // Creates a snippet generator for the given mode.
   std::unique_ptr<SnippetGenerator>
@@ -134,7 +127,7 @@ public:
 
   // Returns the ExegesisTarget for the given triple or nullptr if the target
   // does not exist.
-  static const ExegesisTarget *lookup(llvm::Triple TT);
+  static const ExegesisTarget *lookup(Triple TT);
   // Returns the default (unspecialized) ExegesisTarget.
   static const ExegesisTarget &getDefault();
   // Registers a target. Not thread safe.
@@ -144,10 +137,10 @@ public:
 
   // Returns the Pfm counters for the given CPU (or the default if no pfm
   // counters are defined for this CPU).
-  const PfmCountersInfo &getPfmCounters(llvm::StringRef CpuName) const;
+  const PfmCountersInfo &getPfmCounters(StringRef CpuName) const;
 
 private:
-  virtual bool matchesArch(llvm::Triple::ArchType Arch) const = 0;
+  virtual bool matchesArch(Triple::ArchType Arch) const = 0;
 
   // Targets can implement their own snippet generators/benchmarks runners by
   // implementing these.
@@ -161,7 +154,7 @@ private:
       const LLVMState &State) const;
 
   const ExegesisTarget *Next = nullptr;
-  const llvm::ArrayRef<CpuAndPfmCounters> CpuPfmCounters;
+  const ArrayRef<CpuAndPfmCounters> CpuPfmCounters;
 };
 
 } // namespace exegesis

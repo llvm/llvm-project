@@ -24,11 +24,9 @@ namespace {
 
 enum EscapeTag { kEscapeCsv, kEscapeHtml, kEscapeHtmlString };
 
-template <EscapeTag Tag>
-void writeEscaped(llvm::raw_ostream &OS, const llvm::StringRef S);
+template <EscapeTag Tag> void writeEscaped(raw_ostream &OS, const StringRef S);
 
-template <>
-void writeEscaped<kEscapeCsv>(llvm::raw_ostream &OS, const llvm::StringRef S) {
+template <> void writeEscaped<kEscapeCsv>(raw_ostream &OS, const StringRef S) {
   if (std::find(S.begin(), S.end(), kCsvSep) == S.end()) {
     OS << S;
   } else {
@@ -44,8 +42,7 @@ void writeEscaped<kEscapeCsv>(llvm::raw_ostream &OS, const llvm::StringRef S) {
   }
 }
 
-template <>
-void writeEscaped<kEscapeHtml>(llvm::raw_ostream &OS, const llvm::StringRef S) {
+template <> void writeEscaped<kEscapeHtml>(raw_ostream &OS, const StringRef S) {
   for (const char C : S) {
     if (C == '<')
       OS << "&lt;";
@@ -59,8 +56,7 @@ void writeEscaped<kEscapeHtml>(llvm::raw_ostream &OS, const llvm::StringRef S) {
 }
 
 template <>
-void writeEscaped<kEscapeHtmlString>(llvm::raw_ostream &OS,
-                                     const llvm::StringRef S) {
+void writeEscaped<kEscapeHtmlString>(raw_ostream &OS, const StringRef S) {
   for (const char C : S) {
     if (C == '"')
       OS << "\\\"";
@@ -73,7 +69,7 @@ void writeEscaped<kEscapeHtmlString>(llvm::raw_ostream &OS,
 
 template <EscapeTag Tag>
 static void
-writeClusterId(llvm::raw_ostream &OS,
+writeClusterId(raw_ostream &OS,
                const InstructionBenchmarkClustering::ClusterId &CID) {
   if (CID.isNoise())
     writeEscaped<Tag>(OS, "[noise]");
@@ -84,7 +80,7 @@ writeClusterId(llvm::raw_ostream &OS,
 }
 
 template <EscapeTag Tag>
-static void writeMeasurementValue(llvm::raw_ostream &OS, const double Value) {
+static void writeMeasurementValue(raw_ostream &OS, const double Value) {
   // Given Value, if we wanted to serialize it to a string,
   // how many base-10 digits will we need to store, max?
   static constexpr auto MaxDigitCount =
@@ -98,39 +94,36 @@ static void writeMeasurementValue(llvm::raw_ostream &OS, const double Value) {
   static constexpr StringLiteral SimpleFloatFormat = StringLiteral("{0:F}");
 
   writeEscaped<Tag>(
-      OS,
-      llvm::formatv(SimpleFloatFormat.data(), Value).sstr<SerializationLen>());
+      OS, formatv(SimpleFloatFormat.data(), Value).sstr<SerializationLen>());
 }
 
 template <typename EscapeTag, EscapeTag Tag>
-void Analysis::writeSnippet(llvm::raw_ostream &OS,
-                            llvm::ArrayRef<uint8_t> Bytes,
+void Analysis::writeSnippet(raw_ostream &OS, ArrayRef<uint8_t> Bytes,
                             const char *Separator) const {
-  llvm::SmallVector<std::string, 3> Lines;
+  SmallVector<std::string, 3> Lines;
   // Parse the asm snippet and print it.
   while (!Bytes.empty()) {
-    llvm::MCInst MI;
+    MCInst MI;
     uint64_t MISize = 0;
-    if (!Disasm_->getInstruction(MI, MISize, Bytes, 0, llvm::nulls(),
-                                 llvm::nulls())) {
-      writeEscaped<Tag>(OS, llvm::join(Lines, Separator));
+    if (!Disasm_->getInstruction(MI, MISize, Bytes, 0, nulls(), nulls())) {
+      writeEscaped<Tag>(OS, join(Lines, Separator));
       writeEscaped<Tag>(OS, Separator);
       writeEscaped<Tag>(OS, "[error decoding asm snippet]");
       return;
     }
-    llvm::SmallString<128> InstPrinterStr; // FIXME: magic number.
-    llvm::raw_svector_ostream OSS(InstPrinterStr);
+    SmallString<128> InstPrinterStr; // FIXME: magic number.
+    raw_svector_ostream OSS(InstPrinterStr);
     InstPrinter_->printInst(&MI, OSS, "", *SubtargetInfo_);
     Bytes = Bytes.drop_front(MISize);
-    Lines.emplace_back(llvm::StringRef(InstPrinterStr).trim());
+    Lines.emplace_back(StringRef(InstPrinterStr).trim());
   }
-  writeEscaped<Tag>(OS, llvm::join(Lines, Separator));
+  writeEscaped<Tag>(OS, join(Lines, Separator));
 }
 
 // Prints a row representing an instruction, along with scheduling info and
 // point coordinates (measurements).
 void Analysis::printInstructionRowCsv(const size_t PointId,
-                                      llvm::raw_ostream &OS) const {
+                                      raw_ostream &OS) const {
   const InstructionBenchmark &Point = Clustering_.getPoints()[PointId];
   writeClusterId<kEscapeCsv>(OS, Clustering_.getClusterIdForPoint(PointId));
   OS << kCsvSep;
@@ -139,12 +132,12 @@ void Analysis::printInstructionRowCsv(const size_t PointId,
   writeEscaped<kEscapeCsv>(OS, Point.Key.Config);
   OS << kCsvSep;
   assert(!Point.Key.Instructions.empty());
-  const llvm::MCInst &MCI = Point.keyInstruction();
+  const MCInst &MCI = Point.keyInstruction();
   unsigned SchedClassId;
   std::tie(SchedClassId, std::ignore) = ResolvedSchedClass::resolveSchedClassId(
       *SubtargetInfo_, *InstrInfo_, MCI);
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  const llvm::MCSchedClassDesc *const SCDesc =
+  const MCSchedClassDesc *const SCDesc =
       SubtargetInfo_->getSchedModel().getSchedClassDesc(SchedClassId);
   writeEscaped<kEscapeCsv>(OS, SCDesc->Name);
 #else
@@ -157,8 +150,7 @@ void Analysis::printInstructionRowCsv(const size_t PointId,
   OS << "\n";
 }
 
-Analysis::Analysis(const llvm::Target &Target,
-                   std::unique_ptr<llvm::MCInstrInfo> InstrInfo,
+Analysis::Analysis(const Target &Target, std::unique_ptr<MCInstrInfo> InstrInfo,
                    const InstructionBenchmarkClustering &Clustering,
                    double AnalysisInconsistencyEpsilon,
                    bool AnalysisDisplayUnstableOpcodes)
@@ -175,21 +167,20 @@ Analysis::Analysis(const llvm::Target &Target,
   SubtargetInfo_.reset(Target.createMCSubtargetInfo(FirstPoint.LLVMTriple,
                                                     FirstPoint.CpuName, ""));
   InstPrinter_.reset(Target.createMCInstPrinter(
-      llvm::Triple(FirstPoint.LLVMTriple), 0 /*default variant*/, *AsmInfo_,
+      Triple(FirstPoint.LLVMTriple), 0 /*default variant*/, *AsmInfo_,
       *InstrInfo_, *RegInfo_));
 
-  Context_ = std::make_unique<llvm::MCContext>(AsmInfo_.get(), RegInfo_.get(),
-                                                &ObjectFileInfo_);
+  Context_ = std::make_unique<MCContext>(AsmInfo_.get(), RegInfo_.get(),
+                                         &ObjectFileInfo_);
   Disasm_.reset(Target.createMCDisassembler(*SubtargetInfo_, *Context_));
   assert(Disasm_ && "cannot create MCDisassembler. missing call to "
                     "InitializeXXXTargetDisassembler ?");
 }
 
 template <>
-llvm::Error
-Analysis::run<Analysis::PrintClusters>(llvm::raw_ostream &OS) const {
+Error Analysis::run<Analysis::PrintClusters>(raw_ostream &OS) const {
   if (Clustering_.getPoints().empty())
-    return llvm::Error::success();
+    return Error::success();
 
   // Write the header.
   OS << "cluster_id" << kCsvSep << "opcode_name" << kCsvSep << "config"
@@ -208,7 +199,7 @@ Analysis::run<Analysis::PrintClusters>(llvm::raw_ostream &OS) const {
     }
     OS << "\n\n";
   }
-  return llvm::Error::success();
+  return Error::success();
 }
 
 Analysis::ResolvedSchedClassAndPoints::ResolvedSchedClassAndPoints(
@@ -228,7 +219,7 @@ Analysis::makePointsPerSchedClass() const {
     assert(!Point.Key.Instructions.empty());
     // FIXME: we should be using the tuple of classes for instructions in the
     // snippet as key.
-    const llvm::MCInst &MCI = Point.keyInstruction();
+    const MCInst &MCI = Point.keyInstruction();
     unsigned SchedClassId;
     bool WasVariant;
     std::tie(SchedClassId, WasVariant) =
@@ -252,9 +243,9 @@ Analysis::makePointsPerSchedClass() const {
 
 // Uops repeat the same opcode over again. Just show this opcode and show the
 // whole snippet only on hover.
-static void writeUopsSnippetHtml(llvm::raw_ostream &OS,
-                                 const std::vector<llvm::MCInst> &Instructions,
-                                 const llvm::MCInstrInfo &InstrInfo) {
+static void writeUopsSnippetHtml(raw_ostream &OS,
+                                 const std::vector<MCInst> &Instructions,
+                                 const MCInstrInfo &InstrInfo) {
   if (Instructions.empty())
     return;
   writeEscaped<kEscapeHtml>(OS, InstrInfo.getName(Instructions[0].getOpcode()));
@@ -264,12 +255,11 @@ static void writeUopsSnippetHtml(llvm::raw_ostream &OS,
 
 // Latency tries to find a serial path. Just show the opcode path and show the
 // whole snippet only on hover.
-static void
-writeLatencySnippetHtml(llvm::raw_ostream &OS,
-                        const std::vector<llvm::MCInst> &Instructions,
-                        const llvm::MCInstrInfo &InstrInfo) {
+static void writeLatencySnippetHtml(raw_ostream &OS,
+                                    const std::vector<MCInst> &Instructions,
+                                    const MCInstrInfo &InstrInfo) {
   bool First = true;
-  for (const llvm::MCInst &Instr : Instructions) {
+  for (const MCInst &Instr : Instructions) {
     if (First)
       First = false;
     else
@@ -280,7 +270,7 @@ writeLatencySnippetHtml(llvm::raw_ostream &OS,
 
 void Analysis::printSchedClassClustersHtml(
     const std::vector<SchedClassCluster> &Clusters,
-    const ResolvedSchedClass &RSC, llvm::raw_ostream &OS) const {
+    const ResolvedSchedClass &RSC, raw_ostream &OS) const {
   const auto &Points = Clustering_.getPoints();
   OS << "<table class=\"sched-class-clusters\">";
   OS << "<tr><th>ClusterId</th><th>Opcode/Config</th>";
@@ -349,7 +339,7 @@ void Analysis::SchedClassCluster::addPoint(
 }
 
 bool Analysis::SchedClassCluster::measurementsMatch(
-    const llvm::MCSubtargetInfo &STI, const ResolvedSchedClass &RSC,
+    const MCSubtargetInfo &STI, const ResolvedSchedClass &RSC,
     const InstructionBenchmarkClustering &Clustering,
     const double AnalysisInconsistencyEpsilonSquared_) const {
   assert(!Clustering.getPoints().empty());
@@ -374,7 +364,7 @@ bool Analysis::SchedClassCluster::measurementsMatch(
 }
 
 void Analysis::printSchedClassDescHtml(const ResolvedSchedClass &RSC,
-                                       llvm::raw_ostream &OS) const {
+                                       raw_ostream &OS) const {
   OS << "<table class=\"sched-class-desc\">";
   OS << "<tr><th>Valid</th><th>Variant</th><th>NumMicroOps</th><th>Latency</"
         "th><th>RThroughput</th><th>WriteProcRes</th><th title=\"This is the "
@@ -499,8 +489,8 @@ tr.bad-cluster td.measurement span.minmax {
 )";
 
 template <>
-llvm::Error Analysis::run<Analysis::PrintSchedClassInconsistencies>(
-    llvm::raw_ostream &OS) const {
+Error Analysis::run<Analysis::PrintSchedClassInconsistencies>(
+    raw_ostream &OS) const {
   const auto &FirstPoint = Clustering_.getPoints()[0];
   // Print the header.
   OS << "<!DOCTYPE html><html>" << kHtmlHead << "<body>";
@@ -536,12 +526,12 @@ llvm::Error Analysis::run<Analysis::PrintSchedClassInconsistencies>(
 
     // Print any scheduling class that has at least one cluster that does not
     // match the checked-in data.
-    if (llvm::all_of(SchedClassClusters,
-                     [this, &RSCAndPoints](const SchedClassCluster &C) {
-                       return C.measurementsMatch(
-                           *SubtargetInfo_, RSCAndPoints.RSC, Clustering_,
-                           AnalysisInconsistencyEpsilonSquared_);
-                     }))
+    if (all_of(SchedClassClusters, [this,
+                                    &RSCAndPoints](const SchedClassCluster &C) {
+          return C.measurementsMatch(*SubtargetInfo_, RSCAndPoints.RSC,
+                                     Clustering_,
+                                     AnalysisInconsistencyEpsilonSquared_);
+        }))
       continue; // Nothing weird.
 
     OS << "<div class=\"inconsistency\"><p>Sched Class <span "
@@ -560,7 +550,7 @@ llvm::Error Analysis::run<Analysis::PrintSchedClassInconsistencies>(
   }
 
   OS << "</body></html>";
-  return llvm::Error::success();
+  return Error::success();
 }
 
 } // namespace exegesis

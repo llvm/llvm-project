@@ -6981,10 +6981,16 @@ bool SLPVectorizerPass::vectorizeGEPIndices(BasicBlock *BB, BoUpSLP &R) {
     LLVM_DEBUG(dbgs() << "SLP: Analyzing a getelementptr list of length "
                       << Entry.second.size() << ".\n");
 
-    // We process the getelementptr list in chunks of 16 (like we do for
-    // stores) to minimize compile-time.
-    for (unsigned BI = 0, BE = Entry.second.size(); BI < BE; BI += 16) {
-      auto Len = std::min<unsigned>(BE - BI, 16);
+    // Process the GEP list in chunks suitable for the target's supported
+    // vector size. If a vector register can't hold 1 element, we are done.
+    unsigned MaxVecRegSize = R.getMaxVecRegSize();
+    unsigned EltSize = R.getVectorElementSize(Entry.second[0]);
+    if (MaxVecRegSize < EltSize)
+      continue;
+
+    unsigned MaxElts = MaxVecRegSize / EltSize;
+    for (unsigned BI = 0, BE = Entry.second.size(); BI < BE; BI += MaxElts) {
+      auto Len = std::min<unsigned>(BE - BI, MaxElts);
       auto GEPList = makeArrayRef(&Entry.second[BI], Len);
 
       // Initialize a set a candidate getelementptrs. Note that we use a

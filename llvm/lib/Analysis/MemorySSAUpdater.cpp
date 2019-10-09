@@ -1159,25 +1159,32 @@ void MemorySSAUpdater::moveAllAccesses(BasicBlock *From, BasicBlock *To,
   if (!Accs)
     return;
 
+  assert(Start->getParent() == To && "Incorrect Start instruction");
   MemoryAccess *FirstInNew = nullptr;
   for (Instruction &I : make_range(Start->getIterator(), To->end()))
     if ((FirstInNew = MSSA->getMemoryAccess(&I)))
       break;
-  if (!FirstInNew)
-    return;
+  if (FirstInNew) {
+    auto *MUD = cast<MemoryUseOrDef>(FirstInNew);
+    do {
+      auto NextIt = ++MUD->getIterator();
+      MemoryUseOrDef *NextMUD = (!Accs || NextIt == Accs->end())
+                                    ? nullptr
+                                    : cast<MemoryUseOrDef>(&*NextIt);
+      MSSA->moveTo(MUD, To, MemorySSA::End);
+      // Moving MUD from Accs in the moveTo above, may delete Accs, so we need
+      // to retrieve it again.
+      Accs = MSSA->getWritableBlockAccesses(From);
+      MUD = NextMUD;
+    } while (MUD);
+  }
 
-  auto *MUD = cast<MemoryUseOrDef>(FirstInNew);
-  do {
-    auto NextIt = ++MUD->getIterator();
-    MemoryUseOrDef *NextMUD = (!Accs || NextIt == Accs->end())
-                                  ? nullptr
-                                  : cast<MemoryUseOrDef>(&*NextIt);
-    MSSA->moveTo(MUD, To, MemorySSA::End);
-    // Moving MUD from Accs in the moveTo above, may delete Accs, so we need to
-    // retrieve it again.
-    Accs = MSSA->getWritableBlockAccesses(From);
-    MUD = NextMUD;
-  } while (MUD);
+  // If all accesses were moved and only a trivial Phi remains, we try to remove
+  // that Phi. This is needed when From is going to be deleted.
+  auto *Defs = MSSA->getWritableBlockDefs(From);
+  if (Defs && !Defs->empty())
+    if (auto *Phi = dyn_cast<MemoryPhi>(&*Defs->begin()))
+      tryRemoveTrivialPhi(Phi);
 }
 
 void MemorySSAUpdater::moveAllAfterSpliceBlocks(BasicBlock *From,
@@ -1193,7 +1200,7 @@ void MemorySSAUpdater::moveAllAfterSpliceBlocks(BasicBlock *From,
 
 void MemorySSAUpdater::moveAllAfterMergeBlocks(BasicBlock *From, BasicBlock *To,
                                                Instruction *Start) {
-  assert(From->getSinglePredecessor() == To &&
+  assert(From->getUniquePredecessor() == To &&
          "From block is expected to have a single predecessor (To).");
   moveAllAccesses(From, To, Start);
   for (BasicBlock *Succ : successors(From))

@@ -80,9 +80,9 @@
 namespace llvm {
 namespace exegesis {
 
-static llvm::SmallVector<const Variable *, 8>
+static SmallVector<const Variable *, 8>
 getVariablesWithTiedOperands(const Instruction &Instr) {
-  llvm::SmallVector<const Variable *, 8> Result;
+  SmallVector<const Variable *, 8> Result;
   for (const auto &Var : Instr.Variables)
     if (Var.hasTiedOperands())
       Result.push_back(&Var);
@@ -145,7 +145,7 @@ static std::vector<InstructionTemplate> generateSnippetUsingStaticRenaming(
         return Instructions;
       }
       TmpIT.getValueFor(*TiedVariables[VarId]) =
-          llvm::MCOperand::createReg(NextPossibleReg);
+          MCOperand::createReg(NextPossibleReg);
       // Bump iterator.
       Iterators[VarId] = NextPossibleReg;
       // Prevent other variables from using the register.
@@ -157,8 +157,7 @@ static std::vector<InstructionTemplate> generateSnippetUsingStaticRenaming(
   }
 }
 
-llvm::Expected<std::vector<CodeTemplate>>
-UopsSnippetGenerator::generateCodeTemplates(
+Expected<std::vector<CodeTemplate>> UopsSnippetGenerator::generateCodeTemplates(
     const Instruction &Instr, const BitVector &ForbiddenRegisters) const {
   CodeTemplate CT;
   CT.ScratchSpacePointerInReg =
@@ -189,7 +188,7 @@ UopsSnippetGenerator::generateCodeTemplates(
     return getSingleton(std::move(CT));
   }
   // No tied variables, we pick random values for defs.
-  llvm::BitVector Defs(State.getRegInfo().getNumRegs());
+  BitVector Defs(State.getRegInfo().getNumRegs());
   for (const auto &Op : Instr.Operands) {
     if (Op.isReg() && Op.isExplicit() && Op.isDef() && !Op.isMemory()) {
       auto PossibleRegisters = Op.getRegisterAliasing().sourceBits();
@@ -198,7 +197,7 @@ UopsSnippetGenerator::generateCodeTemplates(
       assert(PossibleRegisters.any() && "No register left to choose from");
       const auto RandomReg = randomBit(PossibleRegisters);
       Defs.set(RandomReg);
-      IT.getValueFor(Op) = llvm::MCOperand::createReg(RandomReg);
+      IT.getValueFor(Op) = MCOperand::createReg(RandomReg);
     }
   }
   // And pick random use values that are not reserved and don't alias with defs.
@@ -210,7 +209,7 @@ UopsSnippetGenerator::generateCodeTemplates(
       remove(PossibleRegisters, DefAliases);
       assert(PossibleRegisters.any() && "No register left to choose from");
       const auto RandomReg = randomBit(PossibleRegisters);
-      IT.getValueFor(Op) = llvm::MCOperand::createReg(RandomReg);
+      IT.getValueFor(Op) = MCOperand::createReg(RandomReg);
     }
   }
   CT.Info =
@@ -220,7 +219,7 @@ UopsSnippetGenerator::generateCodeTemplates(
   return getSingleton(std::move(CT));
 }
 
-llvm::Expected<std::vector<BenchmarkMeasure>>
+Expected<std::vector<BenchmarkMeasure>>
 UopsBenchmarkRunner::runMeasurements(const FunctionExecutor &Executor) const {
   std::vector<BenchmarkMeasure> Result;
   const PfmCountersInfo &PCI = State.getPfmCounters();
