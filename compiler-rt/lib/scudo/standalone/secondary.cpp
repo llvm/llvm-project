@@ -123,12 +123,13 @@ void MapAllocator::deallocate(void *Ptr) {
   unmap(Addr, Size, UNMAP_ALL, &Data);
 }
 
-void MapAllocator::printStats() const {
-  Printf("Stats: MapAllocator: allocated %zu times (%zuK), freed %zu times "
-         "(%zuK), remains %zu (%zuK) max %zuM\n",
-         NumberOfAllocs, AllocatedBytes >> 10, NumberOfFrees, FreedBytes >> 10,
-         NumberOfAllocs - NumberOfFrees, (AllocatedBytes - FreedBytes) >> 10,
-         LargestSize >> 20);
+void MapAllocator::getStats(ScopedString *Str) const {
+  Str->append(
+      "Stats: MapAllocator: allocated %zu times (%zuK), freed %zu times "
+      "(%zuK), remains %zu (%zuK) max %zuM\n",
+      NumberOfAllocs, AllocatedBytes >> 10, NumberOfFrees, FreedBytes >> 10,
+      NumberOfAllocs - NumberOfFrees, (AllocatedBytes - FreedBytes) >> 10,
+      LargestSize >> 20);
 }
 
 } // namespace scudo

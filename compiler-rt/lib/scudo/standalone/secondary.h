@@ -12,6 +12,7 @@
 #include "common.h"
 #include "mutex.h"
 #include "stats.h"
+#include "string_utils.h"
 
 namespace scudo {
 
@@ -70,7 +71,7 @@ public:
     return getBlockEnd(Ptr) - reinterpret_cast<uptr>(Ptr);
   }
 
-  void printStats() const;
+  void getStats(ScopedString *Str) const;
 
   void disable() { Mutex.lock(); }
 
