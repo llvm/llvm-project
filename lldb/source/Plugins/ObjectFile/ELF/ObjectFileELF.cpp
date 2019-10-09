@@ -2778,6 +2778,51 @@ Symtab *ObjectFileELF::GetSymtab() {
     if (m_symtab_up == nullptr)
       m_symtab_up.reset(new Symtab(this));
 
+    // In the event that there's no symbol entry for the entry point we'll
+    // artifically create one. We delegate to the symtab object the figuring
+    // out of the proper size, this will usually make it span til the next
+    // symbol it finds in the section. This means that if there are missing
+    // symbols the entry point might span beyond its function definition.
+    // We're fine with this as it doesn't make it worse than not having a
+    // symbol entry at all.
+    if (CalculateType() == eTypeExecutable) {
+      ArchSpec arch = GetArchitecture();
+      auto entry_point_addr = GetEntryPointAddress();
+      bool is_valid_entry_point =
+          entry_point_addr.IsValid() && entry_point_addr.IsSectionOffset();
+      addr_t entry_point_file_addr = entry_point_addr.GetFileAddress();
+      if (is_valid_entry_point && !m_symtab_up->FindSymbolContainingFileAddress(
+                                      entry_point_file_addr)) {
+        uint64_t symbol_id = m_symtab_up->GetNumSymbols();
+        Symbol symbol(symbol_id,
+                      GetNextSyntheticSymbolName().GetCString(), // Symbol name.
+                      false,           // Is the symbol name mangled?
+                      eSymbolTypeCode, // Type of this symbol.
+                      true,            // Is this globally visible?
+                      false,           // Is this symbol debug info?
+                      false,           // Is this symbol a trampoline?
+                      true,            // Is this symbol artificial?
+                      entry_point_addr.GetSection(), // Section where this
+                                                     // symbol is defined.
+                      0,     // Offset in section or symbol value.
+                      0,     // Size.
+                      false, // Size is valid.
+                      false, // Contains linker annotations?
+                      0);    // Symbol flags.
+        m_symtab_up->AddSymbol(symbol);
+        // When the entry point is arm thumb we need to explicitly set its
+        // class address to reflect that. This is important because expression
+        // evaluation relies on correctly setting a breakpoint at this
+        // address.
+        if (arch.GetMachine() == llvm::Triple::arm &&
+            (entry_point_file_addr & 1))
+          m_address_class_map[entry_point_file_addr ^ 1] =
+              AddressClass::eCodeAlternateISA;
+        else
+          m_address_class_map[entry_point_file_addr] = AddressClass::eCode;
+      }
+    }
+
     m_symtab_up->CalculateSymbolSizes();
   }
 
