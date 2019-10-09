@@ -3341,15 +3341,15 @@ bool MipsAsmParser::expandLoadSingleImmToFPR(MCInst &Inst, SMLoc IDLoc,
 
   uint32_t ImmOp32 = covertDoubleImmToSingleImm(ImmOp64);
 
-  unsigned ATReg = getATReg(IDLoc);
-  if (!ATReg)
+  unsigned TmpReg = getATReg(IDLoc);
+  if (!TmpReg)
     return true;
 
   if (Lo_32(ImmOp64) == 0) {
-    if (loadImmediate(ImmOp32, ATReg, Mips::NoRegister, true, true, IDLoc, Out,
+    if (loadImmediate(ImmOp32, TmpReg, Mips::NoRegister, true, true, IDLoc, Out,
                       STI))
       return true;
-    TOut.emitRR(Mips::MTC1, FirstReg, ATReg, IDLoc, STI);
+    TOut.emitRR(Mips::MTC1, FirstReg, TmpReg, IDLoc, STI);
     return false;
   }
 
@@ -3372,7 +3372,7 @@ bool MipsAsmParser::expandLoadSingleImmToFPR(MCInst &Inst, SMLoc IDLoc,
 
   if (emitPartialAddress(TOut, IDLoc, Sym))
     return true;
-  TOut.emitRRX(Mips::LWC1, FirstReg, ATReg, MCOperand::createExpr(LoExpr),
+  TOut.emitRRX(Mips::LWC1, FirstReg, TmpReg, MCOperand::createExpr(LoExpr),
                IDLoc, STI);
   return false;
 }
@@ -3393,8 +3393,8 @@ bool MipsAsmParser::expandLoadDoubleImmToGPR(MCInst &Inst, SMLoc IDLoc,
   uint32_t LoImmOp64 = Lo_32(ImmOp64);
   uint32_t HiImmOp64 = Hi_32(ImmOp64);
 
-  unsigned ATReg = getATReg(IDLoc);
-  if (!ATReg)
+  unsigned TmpReg = getATReg(IDLoc);
+  if (!TmpReg)
     return true;
 
   if (LoImmOp64 == 0) {
@@ -3434,17 +3434,17 @@ bool MipsAsmParser::expandLoadDoubleImmToGPR(MCInst &Inst, SMLoc IDLoc,
     return true;
 
   if (isABI_N64())
-    TOut.emitRRX(Mips::DADDiu, ATReg, ATReg, MCOperand::createExpr(LoExpr),
+    TOut.emitRRX(Mips::DADDiu, TmpReg, TmpReg, MCOperand::createExpr(LoExpr),
                  IDLoc, STI);
   else
-    TOut.emitRRX(Mips::ADDiu, ATReg, ATReg, MCOperand::createExpr(LoExpr),
+    TOut.emitRRX(Mips::ADDiu, TmpReg, TmpReg, MCOperand::createExpr(LoExpr),
                  IDLoc, STI);
 
   if (isABI_N32() || isABI_N64())
-    TOut.emitRRI(Mips::LD, FirstReg, ATReg, 0, IDLoc, STI);
+    TOut.emitRRI(Mips::LD, FirstReg, TmpReg, 0, IDLoc, STI);
   else {
-    TOut.emitRRI(Mips::LW, FirstReg, ATReg, 0, IDLoc, STI);
-    TOut.emitRRI(Mips::LW, nextReg(FirstReg), ATReg, 4, IDLoc, STI);
+    TOut.emitRRI(Mips::LW, FirstReg, TmpReg, 0, IDLoc, STI);
+    TOut.emitRRI(Mips::LW, nextReg(FirstReg), TmpReg, 4, IDLoc, STI);
   }
   return false;
 }
@@ -3465,24 +3465,24 @@ bool MipsAsmParser::expandLoadDoubleImmToFPR(MCInst &Inst, bool Is64FPU,
   uint32_t LoImmOp64 = Lo_32(ImmOp64);
   uint32_t HiImmOp64 = Hi_32(ImmOp64);
 
-  unsigned ATReg = getATReg(IDLoc);
-  if (!ATReg)
+  unsigned TmpReg = getATReg(IDLoc);
+  if (!TmpReg)
     return true;
 
   if ((LoImmOp64 == 0) &&
       !((HiImmOp64 & 0xffff0000) && (HiImmOp64 & 0x0000ffff))) {
     // FIXME: In the case where the constant is zero, we can load the
     // register directly from the zero register.
-    if (loadImmediate(HiImmOp64, ATReg, Mips::NoRegister, true, true, IDLoc,
+    if (loadImmediate(HiImmOp64, TmpReg, Mips::NoRegister, true, true, IDLoc,
                       Out, STI))
       return true;
     if (isABI_N32() || isABI_N64())
-      TOut.emitRR(Mips::DMTC1, FirstReg, ATReg, IDLoc, STI);
+      TOut.emitRR(Mips::DMTC1, FirstReg, TmpReg, IDLoc, STI);
     else if (hasMips32r2()) {
       TOut.emitRR(Mips::MTC1, FirstReg, Mips::ZERO, IDLoc, STI);
-      TOut.emitRRR(Mips::MTHC1_D32, FirstReg, FirstReg, ATReg, IDLoc, STI);
+      TOut.emitRRR(Mips::MTHC1_D32, FirstReg, FirstReg, TmpReg, IDLoc, STI);
     } else {
-      TOut.emitRR(Mips::MTC1, nextReg(FirstReg), ATReg, IDLoc, STI);
+      TOut.emitRR(Mips::MTC1, nextReg(FirstReg), TmpReg, IDLoc, STI);
       TOut.emitRR(Mips::MTC1, FirstReg, Mips::ZERO, IDLoc, STI);
     }
     return false;
@@ -3509,7 +3509,7 @@ bool MipsAsmParser::expandLoadDoubleImmToFPR(MCInst &Inst, bool Is64FPU,
   if (emitPartialAddress(TOut, IDLoc, Sym))
     return true;
 
-  TOut.emitRRX(Is64FPU ? Mips::LDC164 : Mips::LDC1, FirstReg, ATReg,
+  TOut.emitRRX(Is64FPU ? Mips::LDC164 : Mips::LDC1, FirstReg, TmpReg,
                MCOperand::createExpr(LoExpr), IDLoc, STI);
 
   return false;
