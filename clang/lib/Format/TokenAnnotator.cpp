@@ -15,6 +15,7 @@
 #include "TokenAnnotator.h"
 #include "FormatToken.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Basic/TokenKinds.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/Debug.h"
 
@@ -65,7 +66,7 @@ public:
   AnnotatingParser(const FormatStyle &Style, AnnotatedLine &Line,
                    const AdditionalKeywords &Keywords)
       : Style(Style), Line(Line), CurrentToken(Line.First), AutoFound(false),
-        TrailingReturnFound(false), Keywords(Keywords) {
+        Keywords(Keywords) {
     Contexts.push_back(Context(tok::unknown, 1, /*IsExpression=*/false));
     resetTokenMetadata(CurrentToken);
   }
@@ -1397,11 +1398,7 @@ private:
                !Current.Previous->is(tok::kw_operator)) {
       // not auto operator->() -> xxx;
       Current.Type = TT_TrailingReturnArrow;
-      TrailingReturnFound = true;
-    } else if (Current.is(tok::star) ||
-               (Current.isOneOf(tok::amp, tok::ampamp) &&
-                (Current.NestingLevel != 0 || !Line.MightBeFunctionDecl ||
-                 TrailingReturnFound))) {
+    } else if (Current.isOneOf(tok::star, tok::amp, tok::ampamp)) {
       Current.Type = determineStarAmpUsage(Current,
                                            Contexts.back().CanBeExpression &&
                                                Contexts.back().IsExpression,
@@ -1424,8 +1421,6 @@ private:
         Current.Type = TT_ConditionalExpr;
       }
     } else if (Current.isBinaryOperator() &&
-               !(Line.MightBeFunctionDecl && Current.NestingLevel == 0 &&
-                 Current.isOneOf(tok::amp, tok::ampamp)) &&
                (!Current.Previous || Current.Previous->isNot(tok::l_square)) &&
                (!Current.is(tok::greater) &&
                 Style.Language != FormatStyle::LK_TextProto)) {
@@ -1500,12 +1495,11 @@ private:
       // colon after this, this is the only place which annotates the identifier
       // as a selector.)
       Current.Type = TT_SelectorName;
-    } else if (Current.isOneOf(tok::identifier, tok::kw_const, tok::amp,
-                               tok::ampamp) &&
+    } else if (Current.isOneOf(tok::identifier, tok::kw_const,
+                               tok::kw_noexcept) &&
                Current.Previous &&
                !Current.Previous->isOneOf(tok::equal, tok::at) &&
-               Line.MightBeFunctionDecl && !TrailingReturnFound &&
-               Contexts.size() == 1) {
+               Line.MightBeFunctionDecl && Contexts.size() == 1) {
       // Line.MightBeFunctionDecl can only be true after the parentheses of a
       // function declaration have been found.
       Current.Type = TT_TrailingAnnotation;
@@ -1689,7 +1683,8 @@ private:
 
     const FormatToken *NextToken = Tok.getNextNonComment();
     if (!NextToken ||
-        NextToken->isOneOf(tok::arrow, tok::equal, tok::kw_const) ||
+        NextToken->isOneOf(tok::arrow, tok::equal, tok::kw_const,
+                           tok::kw_noexcept) ||
         (NextToken->is(tok::l_brace) && !NextToken->getNextNonComment()))
       return TT_PointerOrReference;
 
@@ -1790,7 +1785,6 @@ private:
   AnnotatedLine &Line;
   FormatToken *CurrentToken;
   bool AutoFound;
-  bool TrailingReturnFound;
   const AdditionalKeywords &Keywords;
 
   // Set of "<" tokens that do not open a template parameter list. If parseAngle

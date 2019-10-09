@@ -1673,7 +1673,7 @@ void Clang::AddMIPSTargetArgs(const ArgList &Args,
   CmdArgs.push_back("-target-abi");
   CmdArgs.push_back(ABIName.data());
 
-  mips::FloatABI ABI = mips::getMipsFloatABI(D, Args);
+  mips::FloatABI ABI = mips::getMipsFloatABI(D, Args, Triple);
   if (ABI == mips::FloatABI::Soft) {
     // Floating point operations and argument passing are soft.
     CmdArgs.push_back("-msoft-float");

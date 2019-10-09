@@ -356,7 +356,7 @@ protected:
       if (name.startswith("__Z"))
         name = name.drop_front();
 
-      Mangled mangled(name, true);
+      Mangled mangled(name);
       if (mangled.GuessLanguage() == lldb::eLanguageTypeC_plus_plus) {
         ConstString demangled(
             mangled.GetDisplayDemangledName(lldb::eLanguageTypeC_plus_plus));

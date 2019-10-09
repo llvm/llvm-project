@@ -4421,11 +4421,22 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
           MakeCLOutputFilename(C.getArgs(), "", BaseName, types::TY_Image);
     } else {
       SmallString<128> Output(getDefaultImageName());
+      // HIP image for device compilation with -fno-gpu-rdc is per compilation
+      // unit.
+      bool IsHIPNoRDC = JA.getOffloadingDeviceKind() == Action::OFK_HIP &&
+                        !C.getArgs().hasFlag(options::OPT_fgpu_rdc,
+                                             options::OPT_fno_gpu_rdc, false);
+      if (IsHIPNoRDC) {
+        Output = BaseName;
+        llvm::sys::path::replace_extension(Output, "");
+      }
       Output += OffloadingPrefix;
       if (MultipleArchs && !BoundArch.empty()) {
         Output += "-";
         Output.append(BoundArch);
       }
+      if (IsHIPNoRDC)
+        Output += ".out";
       NamedOutput = C.getArgs().MakeArgString(Output.c_str());
     }
   } else if (JA.getType() == types::TY_PCH && IsCLMode()) {

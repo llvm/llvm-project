@@ -1052,13 +1052,6 @@ public:
     /// suffice, e.g., in a default function argument.
     Decl *ManglingContextDecl;
 
-    /// The context information used to mangle lambda expressions
-    /// and block literals within this context.
-    ///
-    /// This mangling information is allocated lazily, since most contexts
-    /// do not have lambda expressions or block literals.
-    std::unique_ptr<MangleNumberingContext> MangleNumbering;
-
     /// If we are processing a decltype type, a set of call expressions
     /// for which we have deferred checking the completeness of the return type.
     SmallVector<CallExpr *, 8> DelayedDecltypeCalls;
@@ -1087,12 +1080,7 @@ public:
                                       ExpressionKind ExprContext)
         : Context(Context), ParentCleanup(ParentCleanup),
           NumCleanupObjects(NumCleanupObjects), NumTypos(0),
-          ManglingContextDecl(ManglingContextDecl), MangleNumbering(),
-          ExprContext(ExprContext) {}
-
-    /// Retrieve the mangling numbering context, used to consistently
-    /// number constructs like lambdas for mangling.
-    MangleNumberingContext &getMangleNumberingContext(ASTContext &Ctx);
+          ManglingContextDecl(ManglingContextDecl), ExprContext(ExprContext) {}
 
     bool isUnevaluated() const {
       return Context == ExpressionEvaluationContext::Unevaluated ||

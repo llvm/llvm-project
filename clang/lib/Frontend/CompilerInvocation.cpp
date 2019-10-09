@@ -777,10 +777,14 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.DisableLLVMPasses = Args.hasArg(OPT_disable_llvm_passes);
   Opts.DisableLifetimeMarkers = Args.hasArg(OPT_disable_lifetimemarkers);
 
+  const llvm::Triple::ArchType DebugEntryValueArchs[] = {
+      llvm::Triple::x86, llvm::Triple::x86_64, llvm::Triple::aarch64,
+      llvm::Triple::arm, llvm::Triple::armeb};
+
   llvm::Triple T(TargetOpts.Triple);
-  llvm::Triple::ArchType Arch = T.getArch();
   if (Opts.OptimizationLevel > 0 &&
-      (Arch == llvm::Triple::x86 || Arch == llvm::Triple::x86_64))
+      Opts.getDebugInfo() >= codegenoptions::LimitedDebugInfo &&
+      llvm::is_contained(DebugEntryValueArchs, T.getArch()))
     Opts.EnableDebugEntryValues = Args.hasArg(OPT_femit_debug_entry_values);
 
   Opts.DisableO0ImplyOptNone = Args.hasArg(OPT_disable_O0_optnone);

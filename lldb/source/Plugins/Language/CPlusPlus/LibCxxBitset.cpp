@@ -30,8 +30,15 @@ public:
   ValueObjectSP GetChildAtIndex(size_t idx) override;
 
 private:
+  // The lifetime of a ValueObject and all its derivative ValueObjects
+  // (children, clones, etc.) is managed by a ClusterManager. These
+  // objects are only destroyed when every shared pointer to any of them
+  // is destroyed, so we must not store a shared pointer to any ValueObject
+  // derived from our backend ValueObject (since we're in the same cluster).
+  // Value objects created from raw data (i.e. in a different cluster) must
+  // be referenced via shared pointer to keep them alive, however.
   std::vector<ValueObjectSP> m_elements;
-  ValueObjectSP m_first;
+  ValueObject* m_first = nullptr;
   CompilerType m_bool_type;
   ByteOrder m_byte_order = eByteOrderInvalid;
   uint8_t m_byte_size = 0;
@@ -50,7 +57,7 @@ BitsetFrontEnd::BitsetFrontEnd(ValueObject &valobj)
 
 bool BitsetFrontEnd::Update() {
   m_elements.clear();
-  m_first.reset();
+  m_first = nullptr;
 
   TargetSP target_sp = m_backend.GetTargetSP();
   if (!target_sp)
@@ -63,7 +70,7 @@ bool BitsetFrontEnd::Update() {
 
   m_elements.assign(size, ValueObjectSP());
 
-  m_first = m_backend.GetChildMemberWithName(ConstString("__first_"), true);
+  m_first = m_backend.GetChildMemberWithName(ConstString("__first_"), true).get();
   return false;
 }
 
@@ -86,7 +93,7 @@ ValueObjectSP BitsetFrontEnd::GetChildAtIndex(size_t idx) {
     chunk = m_first->GetChildAtIndex(idx / *bit_size, true);
   } else {
     type = m_first->GetCompilerType();
-    chunk = m_first;
+    chunk = m_first->GetSP();
   }
   if (!type || !chunk)
     return {};

@@ -352,19 +352,11 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC,
     //  -- the initializers of inline variables
   case VariableTemplate:
     //  -- the initializers of templated variables
-    return &ExprEvalContexts.back().getMangleNumberingContext(Context);
+    return &Context.getManglingNumberContext(ASTContext::NeedExtraManglingDecl,
+                                             ManglingContextDecl);
   }
 
   llvm_unreachable("unexpected context");
-}
-
-MangleNumberingContext &
-Sema::ExpressionEvaluationContextRecord::getMangleNumberingContext(
-    ASTContext &Ctx) {
-  assert(ManglingContextDecl && "Need to have a context declaration");
-  if (!MangleNumbering)
-    MangleNumbering = Ctx.createMangleNumberingContext();
-  return *MangleNumbering;
 }
 
 CXXMethodDecl *Sema::startLambdaDefinition(

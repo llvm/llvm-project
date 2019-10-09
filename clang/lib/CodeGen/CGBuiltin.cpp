@@ -14066,6 +14066,12 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
                                      ConvertType(E->getType()));
     return Builder.CreateCall(Callee, {LHS, RHS});
   }
+  case WebAssembly::BI__builtin_wasm_swizzle_v8x16: {
+    Value *Src = EmitScalarExpr(E->getArg(0));
+    Value *Indices = EmitScalarExpr(E->getArg(1));
+    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_swizzle);
+    return Builder.CreateCall(Callee, {Src, Indices});
+  }
   case WebAssembly::BI__builtin_wasm_extract_lane_s_i8x16:
   case WebAssembly::BI__builtin_wasm_extract_lane_u_i8x16:
   case WebAssembly::BI__builtin_wasm_extract_lane_s_i16x8:

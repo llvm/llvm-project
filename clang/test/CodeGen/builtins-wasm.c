@@ -157,7 +157,6 @@ double max_f64(double x, double y) {
   // WEBASSEMBLY-NEXT: ret
 }
 
-
 int extract_lane_s_i8x16(i8x16 v) {
   return __builtin_wasm_extract_lane_s_i8x16(v, 13);
   // MISSING-SIMD: error: '__builtin_wasm_extract_lane_s_i8x16' needs target feature simd128
@@ -538,4 +537,10 @@ i32x4 widen_high_u_i32x4_i16x8(i16x8 v) {
   return __builtin_wasm_widen_high_u_i32x4_i16x8(v);
   // WEBASSEMBLY: call <4 x i32> @llvm.wasm.widen.high.unsigned.v4i32.v8i16(<8 x i16> %v)
   // WEBASSEMBLY: ret
+}
+
+i8x16 swizzle_v8x16(i8x16 x, i8x16 y) {
+  return __builtin_wasm_swizzle_v8x16(x, y);
+  // WEBASSEMBLY: call <16 x i8> @llvm.wasm.swizzle(<16 x i8> %x, <16 x i8> %y)
+  // WEBASSEMBLY-NEXT: ret
 }

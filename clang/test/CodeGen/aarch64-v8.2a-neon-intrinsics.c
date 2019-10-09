@@ -960,9 +960,7 @@ float16x8_t test_vfmaq_n_f16(float16x8_t a, float16x8_t b, float16_t c) {
 }
 
 // CHECK-LABEL: test_vfmah_lane_f16
-// CHECK: [[TMP0:%.*]] = bitcast <4 x half> %c to <8 x i8>
-// CHECK: [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x half>
-// CHECK: [[EXTR:%.*]] = extractelement <4 x half> [[TMP1]], i32 3
+// CHECK: [[EXTR:%.*]] = extractelement <4 x half> %c, i32 3
 // CHECK: [[FMA:%.*]]  = call half @llvm.fma.f16(half %b, half [[EXTR]], half %a)
 // CHECK: ret half [[FMA]]
 float16_t test_vfmah_lane_f16(float16_t a, float16_t b, float16x4_t c) {
@@ -970,9 +968,7 @@ float16_t test_vfmah_lane_f16(float16_t a, float16_t b, float16x4_t c) {
 }
 
 // CHECK-LABEL: test_vfmah_laneq_f16
-// CHECK: [[TMP0:%.*]] = bitcast <8 x half> %c to <16 x i8>
-// CHECK: [[TMP1:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x half>
-// CHECK: [[EXTR:%.*]] = extractelement <8 x half> [[TMP1]], i32 7
+// CHECK: [[EXTR:%.*]] = extractelement <8 x half> %c, i32 7
 // CHECK: [[FMA:%.*]]  = call half @llvm.fma.f16(half %b, half [[EXTR]], half %a)
 // CHECK: ret half [[FMA]]
 float16_t test_vfmah_laneq_f16(float16_t a, float16_t b, float16x8_t c) {
@@ -1071,9 +1067,7 @@ float16x8_t test_vfmsq_n_f16(float16x8_t a, float16x8_t b, float16_t c) {
 // CHECK: [[TMP0:%.*]] = fpext half %b to float
 // CHECK: [[TMP1:%.*]] = fsub float -0.000000e+00, [[TMP0]]
 // CHECK: [[SUB:%.*]]  = fptrunc float [[TMP1]] to half
-// CHECK: [[TMP2:%.*]] = bitcast <4 x half> %c to <8 x i8>
-// CHECK: [[TMP3:%.*]] = bitcast <8 x i8> [[TMP2]] to <4 x half>
-// CHECK: [[EXTR:%.*]] = extractelement <4 x half> [[TMP3]], i32 3
+// CHECK: [[EXTR:%.*]] = extractelement <4 x half> %c, i32 3
 // CHECK: [[FMA:%.*]]  = call half @llvm.fma.f16(half [[SUB]], half [[EXTR]], half %a)
 // CHECK: ret half [[FMA]]
 float16_t test_vfmsh_lane_f16(float16_t a, float16_t b, float16x4_t c) {
@@ -1084,9 +1078,7 @@ float16_t test_vfmsh_lane_f16(float16_t a, float16_t b, float16x4_t c) {
 // CHECK: [[TMP0:%.*]] = fpext half %b to float
 // CHECK: [[TMP1:%.*]] = fsub float -0.000000e+00, [[TMP0]]
 // CHECK: [[SUB:%.*]]  = fptrunc float [[TMP1]] to half
-// CHECK: [[TMP2:%.*]] = bitcast <8 x half> %c to <16 x i8>
-// CHECK: [[TMP3:%.*]] = bitcast <16 x i8> [[TMP2]] to <8 x half>
-// CHECK: [[EXTR:%.*]] = extractelement <8 x half> [[TMP3]], i32 7
+// CHECK: [[EXTR:%.*]] = extractelement <8 x half> %c, i32 7
 // CHECK: [[FMA:%.*]]  = call half @llvm.fma.f16(half [[SUB]], half [[EXTR]], half %a)
 // CHECK: ret half [[FMA]]
 float16_t test_vfmsh_laneq_f16(float16_t a, float16_t b, float16x8_t c) {
@@ -1231,9 +1223,7 @@ float16x8_t test_vmulxq_n_f16(float16x8_t a, float16_t b) {
 }
 
 // CHECK-LABEL: test_vmulxh_lane_f16
-// CHECK: [[TMP0:%.*]] = bitcast <4 x half> %b to <8 x i8>
-// CHECK: [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x half>
-// CHECK: [[EXTR:%.*]] = extractelement <4 x half> [[TMP1]], i32 3
+// CHECK: [[EXTR:%.*]] = extractelement <4 x half> %b, i32 3
 // CHECK: [[MULX:%.*]] = call half @llvm.aarch64.neon.fmulx.f16(half %a, half [[EXTR]]
 // CHECK: ret half [[MULX]]
 float16_t test_vmulxh_lane_f16(float16_t a, float16x4_t b) {
@@ -1241,9 +1231,7 @@ float16_t test_vmulxh_lane_f16(float16_t a, float16x4_t b) {
 }
 
 // CHECK-LABEL: test_vmulxh_laneq_f16
-// CHECK: [[TMP0:%.*]] = bitcast <8 x half> %b to <16 x i8>
-// CHECK: [[TMP1:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x half>
-// CHECK: [[EXTR:%.*]] = extractelement <8 x half> [[TMP1]], i32 7
+// CHECK: [[EXTR:%.*]] = extractelement <8 x half> %b, i32 7
 // CHECK: [[MULX:%.*]] = call half @llvm.aarch64.neon.fmulx.f16(half %a, half [[EXTR]])
 // CHECK: ret half [[MULX]]
 float16_t test_vmulxh_laneq_f16(float16_t a, float16x8_t b) {

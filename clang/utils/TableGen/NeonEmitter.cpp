@@ -636,7 +636,7 @@ std::string Type::builtin_str() const {
     default: llvm_unreachable("Unhandled case!");
     }
 
-  if (isChar() && !Pointer)
+  if (isChar() && !Pointer && Signed)
     // Make chars explicitly signed.
     S = "S" + S;
   else if (isInteger() && !Pointer && !Signed)
@@ -1442,7 +1442,7 @@ void Intrinsic::emitBodyAsBuiltinCall() {
     }
 
     // Check if an explicit cast is needed.
-    if (CastToType.isVector()) {
+    if (CastToType.isVector() && LocalCK == ClassB) {
       CastToType.makeInteger(8, true);
       Arg = "(" + CastToType.str() + ")" + Arg;
     }

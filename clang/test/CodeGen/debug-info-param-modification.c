@@ -1,4 +1,8 @@
 // RUN: %clang -Xclang -femit-debug-entry-values -g -O2 -Xclang -disable-llvm-passes -S -target x86_64-none-linux-gnu -emit-llvm %s -o - | FileCheck %s -check-prefix=CHECK-ENTRY-VAL-OPT
+// RUN: %clang -Xclang -femit-debug-entry-values -g -O2 -Xclang -disable-llvm-passes -S -target arm-none-linux-gnu -emit-llvm %s -o - | FileCheck %s -check-prefix=CHECK-ENTRY-VAL-OPT
+// RUN: %clang -Xclang -femit-debug-entry-values -g -O2 -Xclang -disable-llvm-passes -S -target aarch64-none-linux-gnu -emit-llvm %s -o - | FileCheck %s -check-prefix=CHECK-ENTRY-VAL-OPT
+// RUN: %clang -Xclang -femit-debug-entry-values -g -O2 -Xclang -disable-llvm-passes -S -target armeb-none-linux-gnu -emit-llvm %s -o - | FileCheck %s -check-prefix=CHECK-ENTRY-VAL-OPT
+
 // CHECK-ENTRY-VAL-OPT: !DILocalVariable(name: "a", arg: 1, scope: {{.*}}, file: {{.*}}, line: {{.*}}, type: {{.*}})
 // CHECK-ENTRY-VAL-OPT: !DILocalVariable(name: "b", arg: 2, scope: {{.*}}, file: {{.*}}, line: {{.*}}, type: {{.*}}, flags: DIFlagArgumentNotModified)
 //
