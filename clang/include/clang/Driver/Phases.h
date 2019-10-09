@@ -20,7 +20,8 @@ namespace phases {
     Compile,
     Backend,
     Assemble,
-    Link
+    Link,
+    IfsMerge,
   };
 
   enum {

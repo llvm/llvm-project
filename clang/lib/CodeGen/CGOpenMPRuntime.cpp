@@ -11172,7 +11172,8 @@ template <>
 bool checkContext<OMPDeclareVariantAttr::CtxSetImplementation,
                   OMPDeclareVariantAttr::CtxVendor>(
     const OMPDeclareVariantAttr *A) {
-  return !A->getImplVendor().compare("llvm");
+  return llvm::all_of(A->implVendors(),
+                      [](StringRef S) { return !S.compare_lower("llvm"); });
 }
 
 static bool greaterCtxScore(ASTContext &Ctx, const Expr *LHS, const Expr *RHS) {

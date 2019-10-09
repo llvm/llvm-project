@@ -1,28 +1,25 @@
-// REQUIRES: x86-registered-target
-// RUN: not %clang -target x86_64-linux-gnu -o - -emit-interface-stubs \
-// RUN: -interface-stub-version=bar-format %s 2>&1 | FileCheck %s
+// RUN: not %clang -emit-interface-stubs -interface-stub-version=bad-format %s 2>&1 | \
+// RUN: FileCheck %s
 
-// RUN: not %clang -target x86_64-linux-gnu -o - -emit-interface-stubs \
-// RUN: -interface-stub-version=experimental-tapi-elf-v1 %s 2>&1 | \
+// RUN: not %clang -emit-interface-stubs -interface-stub-version=experimental-tapi-elf-v1 %s 2>&1 | \
 // RUN: FileCheck -check-prefix=CHECK-TAPI-DEPRECATED %s
 
-// RUN: not %clang -target x86_64-linux-gnu -o - -emit-interface-stubs \
-// RUN: -interface-stub-version=experimental-yaml-elf-v1 %s 2>&1 | \
+// RUN: not %clang -emit-interface-stubs -interface-stub-version=experimental-yaml-elf-v1 %s 2>&1 | \
 // RUN: FileCheck -check-prefix=CHECK-YAML-DEPRECATED %s
 
-// RUN: not %clang_cc1 -target x86_64-linux-gnu -o - -emit-interface-stubs \
-// RUN: -interface-stub-version=bar-format %s 2>&1 | FileCheck %s
+// RUN: not %clang -emit-interface-stubs -interface-stub-version=bad-format %s 2>&1 | \
+// RUN: FileCheck %s
 
-// RUN: not %clang_cc1 -target x86_64-linux-gnu -o - -emit-interface-stubs \
+// RUN: not %clang -emit-interface-stubs \
 // RUN: -interface-stub-version=experimental-tapi-elf-v1 %s 2>&1 | \
 // RUN: FileCheck -check-prefix=CHECK-TAPI-DEPRECATED %s
 
-// RUN: not %clang_cc1 -target x86_64-linux-gnu -o - -emit-interface-stubs \
+// RUN: not %clang -emit-interface-stubs \
 // RUN: -interface-stub-version=experimental-yaml-elf-v1 %s 2>&1 | \
 // RUN: FileCheck -check-prefix=CHECK-YAML-DEPRECATED %s
 
 // CHECK: error: invalid value
-// CHECK: 'Invalid interface stub format: bar-format.' in 'Must specify a
+// CHECK: 'Invalid interface stub format: bad-format.' in 'Must specify a
 // CHECK: valid interface stub format type, ie:
 // CHECK: -interface-stub-version=experimental-ifs-v1'
 

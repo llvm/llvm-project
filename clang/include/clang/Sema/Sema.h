@@ -1069,6 +1069,11 @@ public:
 
     llvm::SmallPtrSet<const Expr *, 8> PossibleDerefs;
 
+    /// Expressions appearing as the LHS of a volatile assignment in this
+    /// context. We produce a warning for these when popping the context if
+    /// they are not discarded-value expressions nor unevaluated operands.
+    SmallVector<Expr*, 2> VolatileAssignmentLHSs;
+
     /// \brief Describes whether we are in an expression constext which we have
     /// to handle differently.
     enum ExpressionKind {
@@ -4306,6 +4311,9 @@ public:
 
   ExprResult TransformToPotentiallyEvaluated(Expr *E);
   ExprResult HandleExprEvaluationContextForTypeof(Expr *E);
+
+  ExprResult CheckUnevaluatedOperand(Expr *E);
+  void CheckUnusedVolatileAssignment(Expr *E);
 
   ExprResult ActOnConstantExpression(ExprResult Res);
 
@@ -9175,15 +9183,15 @@ public:
         OMPDeclareVariantAttr::CtxSetUnknown;
     OMPDeclareVariantAttr::CtxSelectorType Ctx =
         OMPDeclareVariantAttr::CtxUnknown;
-    StringRef ImplVendor;
+    MutableArrayRef<StringRef> ImplVendors;
     ExprResult CtxScore;
     explicit OpenMPDeclareVariantCtsSelectorData() = default;
     explicit OpenMPDeclareVariantCtsSelectorData(
         OMPDeclareVariantAttr::CtxSelectorSetType CtxSet,
-        OMPDeclareVariantAttr::CtxSelectorType Ctx, StringRef ImplVendor,
-        ExprResult CtxScore)
-        : CtxSet(CtxSet), Ctx(Ctx), ImplVendor(ImplVendor), CtxScore(CtxScore) {
-    }
+        OMPDeclareVariantAttr::CtxSelectorType Ctx,
+        MutableArrayRef<StringRef> ImplVendors, ExprResult CtxScore)
+        : CtxSet(CtxSet), Ctx(Ctx), ImplVendors(ImplVendors),
+          CtxScore(CtxScore) {}
   };
 
   /// Checks if the variant/multiversion functions are compatible.
@@ -9193,7 +9201,7 @@ public:
       const PartialDiagnosticAt &NoteCausedDiagIDAt,
       const PartialDiagnosticAt &NoSupportDiagIDAt,
       const PartialDiagnosticAt &DiffDiagIDAt, bool TemplatesSupported,
-      bool ConstexprSupported);
+      bool ConstexprSupported, bool CLinkageMayDiffer);
 
   /// Function tries to capture lambda's captured variables in the OpenMP region
   /// before the original lambda is captured.
@@ -11121,6 +11129,7 @@ private:
   bool CheckARMBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
 
   bool CheckAArch64BuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
+  bool CheckBPFBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
   bool CheckHexagonBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
   bool CheckHexagonBuiltinCpu(unsigned BuiltinID, CallExpr *TheCall);
   bool CheckHexagonBuiltinArgument(unsigned BuiltinID, CallExpr *TheCall);

@@ -27,11 +27,11 @@
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/Support/JamCRC.h"
-#include "llvm/Support/xxhash.h"
+#include "llvm/Support/CRC.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/StringSaver.h"
+#include "llvm/Support/xxhash.h"
 
 using namespace clang;
 

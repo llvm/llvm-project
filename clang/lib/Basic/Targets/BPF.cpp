@@ -13,10 +13,17 @@
 #include "BPF.h"
 #include "Targets.h"
 #include "clang/Basic/MacroBuilder.h"
+#include "clang/Basic/TargetBuiltins.h"
 #include "llvm/ADT/StringRef.h"
 
 using namespace clang;
 using namespace clang::targets;
+
+const Builtin::Info BPFTargetInfo::BuiltinInfo[] = {
+#define BUILTIN(ID, TYPE, ATTRS)                                               \
+  {#ID, TYPE, ATTRS, nullptr, ALL_LANGUAGES, nullptr},
+#include "clang/Basic/BuiltinsBPF.def"
+};
 
 void BPFTargetInfo::getTargetDefines(const LangOptions &Opts,
                                      MacroBuilder &Builder) const {
@@ -33,4 +40,9 @@ bool BPFTargetInfo::isValidCPUName(StringRef Name) const {
 
 void BPFTargetInfo::fillValidCPUList(SmallVectorImpl<StringRef> &Values) const {
   Values.append(std::begin(ValidCPUNames), std::end(ValidCPUNames));
+}
+
+ArrayRef<Builtin::Info> BPFTargetInfo::getTargetBuiltins() const {
+  return llvm::makeArrayRef(BuiltinInfo, clang::BPF::LastTSBuiltin -
+                                             Builtin::FirstTSBuiltin);
 }

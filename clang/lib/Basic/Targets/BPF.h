@@ -22,6 +22,8 @@ namespace clang {
 namespace targets {
 
 class LLVM_LIBRARY_VISIBILITY BPFTargetInfo : public TargetInfo {
+  static const Builtin::Info BuiltinInfo[];
+
 public:
   BPFTargetInfo(const llvm::Triple &Triple, const TargetOptions &)
       : TargetInfo(Triple) {
@@ -54,7 +56,7 @@ public:
     Features[Name] = Enabled;
   }
 
-  ArrayRef<Builtin::Info> getTargetBuiltins() const override { return None; }
+  ArrayRef<Builtin::Info> getTargetBuiltins() const override;
 
   const char *getClobbers() const override { return ""; }
 

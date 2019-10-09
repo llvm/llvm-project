@@ -34,6 +34,7 @@ module Clang_Basic {
   textual header "Basic/BuiltinsAArch64.def"
   textual header "Basic/BuiltinsAMDGPU.def"
   textual header "Basic/BuiltinsARM.def"
+  textual header "Basic/BuiltinsBPF.def"
   textual header "Basic/Builtins.def"
   textual header "Basic/BuiltinsHexagon.def"
   textual header "Basic/BuiltinsLe64.def"

@@ -399,9 +399,11 @@ static void instantiateOMPDeclareVariantAttr(
   if (!DeclVarData)
     return;
   // Instantiate the attribute.
-  Sema::OpenMPDeclareVariantCtsSelectorData Data(Attr.getCtxSelectorSet(),
-                                                 Attr.getCtxSelector(),
-                                                 Attr.getImplVendor(), Score);
+  Sema::OpenMPDeclareVariantCtsSelectorData Data(
+      Attr.getCtxSelectorSet(), Attr.getCtxSelector(),
+      llvm::makeMutableArrayRef(Attr.implVendors_begin(),
+                                Attr.implVendors_size()),
+      Score);
   S.ActOnOpenMPDeclareVariantDirective(DeclVarData.getValue().first,
                                        DeclVarData.getValue().second,
                                        Attr.getRange(), Data);

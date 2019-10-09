@@ -1,5 +1,5 @@
 // REQUIRES: x86-registered-target
-// RUN: %clang -target x86_64-linux-gnu -o - -emit-interface-stubs \
+// RUN: %clang -target x86_64-linux-gnu -o - -emit-interface-stubs -emit-merged-ifs \
 // RUN: -interface-stub-version=experimental-ifs-v1 %s | \
 // RUN: FileCheck %s
 
