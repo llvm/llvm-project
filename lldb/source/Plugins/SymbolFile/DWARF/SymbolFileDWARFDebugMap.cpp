@@ -1211,21 +1211,13 @@ void SymbolFileDWARFDebugMap::FindTypes(
   });
 }
 
-size_t
+void
 SymbolFileDWARFDebugMap::FindTypes(llvm::ArrayRef<CompilerContext> context,
-                                   LanguageSet languages, bool append,
-                                   TypeMap &types) {
-  if (!append)
-    types.Clear();
-
-  const uint32_t initial_types_size = types.GetSize();
-
+                                   LanguageSet languages, TypeMap &types) {
   ForEachSymbolFile([&](SymbolFileDWARF *oso_dwarf) -> bool {
-    oso_dwarf->FindTypes(context, languages, true, types);
+    oso_dwarf->FindTypes(context, languages, types);
     return false;
   });
-
-  return types.GetSize() - initial_types_size;
 }
 
 //

@@ -969,7 +969,7 @@ ReadVector(Process &process, ValueObject &valobj,
 
   // The layout of the vector is the same as what you'd expect for a C-style
   // array. It's a contiguous bag of bytes with no padding.
-  DataExtractor data;
+  lldb_private::DataExtractor data;
   uint64_t len = value_sp->GetData(data, error);
   unsigned elt_size = formatter.getElementSize();
   if (error.Fail())

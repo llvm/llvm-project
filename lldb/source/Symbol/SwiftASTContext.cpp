@@ -1939,7 +1939,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
           ss << ": "
              << module_swift_ast->GetFatalErrors().AsCString("unknown error");
 
-        target.GetDebugger().GetErrorFile()->Printf(
+        target.GetDebugger().GetErrorStreamSP()->Printf(
             "Error while loading Swift module:\n%s\n"
             "Debug info from this module will be unavailable in the "
             "debugger.\n\n",
@@ -3251,18 +3251,20 @@ public:
     decl_context.push_back({CompilerContextKind::AnyModule, ConstString()});
     decl_context.push_back({GetCompilerContextKind(kind), ConstString(name)});
     auto search = [&](Module &module) {
-      return module.FindTypes(decl_context,
-                              ClangASTContext::GetSupportedLanguagesForTypes(),
-                              true, clang_types);
+      module.FindTypes(decl_context,
+                       ClangASTContext::GetSupportedLanguagesForTypes(),
+                       clang_types);
     };
     if (Module *module = m_swift_ast_ctx.GetModule())
       search(*module);
     else if (TargetSP target_sp = m_swift_ast_ctx.GetTarget().lock()) {
       // In a scratch context, search everywhere.
       auto images = target_sp->GetImages();
-      for (size_t i = 0; i != images.GetSize(); ++i)
-        if (search(*images.GetModuleAtIndex(i)))
+      for (size_t i = 0; i != images.GetSize(); ++i) {
+        search(*images.GetModuleAtIndex(i));
+        if (clang_types.GetSize())
           break;
+      }
     }
 
     clang::FileSystemOptions file_system_options;

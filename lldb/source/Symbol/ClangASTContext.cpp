@@ -733,7 +733,7 @@ void ClangASTContext::CreateASTContext() {
 ClangASTContext *ClangASTContext::GetASTContext(clang::ASTContext *ast) {
   ClangASTContext *clang_ast = GetASTMap().Lookup(ast);
   if (!clang_ast)
-    clang_ast = new ClangASTContext(ast);
+    clang_ast = new ClangASTContext(*ast);
   return clang_ast;
 }
 
