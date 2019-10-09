@@ -48,6 +48,16 @@ if (WIN32)
 endif()
 
 if (NOT LLDB_DISABLE_PYTHON)
+  execute_process(
+    COMMAND ${PYTHON_EXECUTABLE}
+        -c "import distutils.sysconfig; print(distutils.sysconfig.get_python_lib(False, False, ''))"
+    OUTPUT_VARIABLE LLDB_PYTHON_DEFAULT_RELATIVE_PATH
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+  file(TO_CMAKE_PATH ${LLDB_PYTHON_DEFAULT_RELATIVE_PATH} LLDB_PYTHON_DEFAULT_RELATIVE_PATH)
+  set(LLDB_PYTHON_RELATIVE_PATH ${LLDB_PYTHON_DEFAULT_RELATIVE_PATH}
+    CACHE STRING "Path where Python modules are installed, relative to install prefix")
+
   add_subdirectory(scripts)
 endif ()
 
@@ -216,6 +226,12 @@ if (NOT LLDB_DISABLE_PYTHON)
     get_target_property(lldb_scripts_dir swig_wrapper BINARY_DIR)
     get_target_property(liblldb_build_dir liblldb LIBRARY_OUTPUT_DIRECTORY)
 
+    if(LLDB_BUILD_FRAMEWORK)
+      set(lldb_python_build_path "${liblldb_build_dir}/LLDB.framework/Resources/Python/lldb")
+    else()
+      set(lldb_python_build_path "${CMAKE_BINARY_DIR}/${LLDB_PYTHON_RELATIVE_PATH}/lldb")
+    endif()
+
     # Add a Post-Build Event to copy over Python files and create the symlink
     # to liblldb.so for the Python API(hardlink on Windows)
     add_custom_target(finish_swig ALL
@@ -227,6 +243,7 @@ if (NOT LLDB_DISABLE_PYTHON)
                --prefix=${CMAKE_BINARY_DIR}
                --cmakeBuildConfiguration=${CMAKE_CFG_INTDIR}
                --lldbLibDir=lib${LLVM_LIBDIR_SUFFIX}
+               --lldbPythonPath=${lldb_python_build_path}
                ${use_python_wrapper_from_src_dir}
                ${use_six_py_from_system}
         VERBATIM
@@ -239,6 +256,20 @@ if (NOT LLDB_DISABLE_PYTHON)
 
     # Ensure we do the python post-build step when building lldb.
     add_dependencies(lldb finish_swig)
+
+    if(NOT LLDB_BUILD_FRAMEWORK)
+      # Install the LLDB python module
+      add_custom_target(lldb-python-scripts)
+      add_dependencies(lldb-python-scripts finish_swig)
+      install(DIRECTORY ${CMAKE_BINARY_DIR}/${LLDB_PYTHON_RELATIVE_PATH}/
+              DESTINATION ${LLDB_PYTHON_RELATIVE_PATH}
+              COMPONENT lldb-scripts)
+      if (NOT LLVM_ENABLE_IDE)
+        add_llvm_install_targets(install-lldb-python-scripts
+                                 COMPONENT lldb-python-scripts
+                                 DEPENDS lldb-python-scripts)
+      endif()
+    endif()
 
     # Add a Post-Build Event to copy the custom Python DLL to the lldb binaries dir so that Windows can find it when launching
     # lldb.exe or any other executables that were linked with liblldb.

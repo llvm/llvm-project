@@ -44,8 +44,6 @@ add_lldb_library(lldbPluginSymbolFileDWARF PLUGIN
   UniqueDWARFASTType.cpp
 
   LINK_LIBS
-    clangAST
-    clangBasic
     lldbCore
     lldbExpression
     lldbHost
@@ -56,6 +54,9 @@ add_lldb_library(lldbPluginSymbolFileDWARF PLUGIN
     lldbPluginObjCLanguage
     lldbPluginCPlusPlusLanguage
     lldbPluginExpressionParserClang
+  CLANG_LIBS
+    clangAST
+    clangBasic
   LINK_COMPONENTS
     DebugInfoDWARF
     Support

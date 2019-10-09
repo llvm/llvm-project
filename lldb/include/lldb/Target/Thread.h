@@ -906,6 +906,7 @@ public:
 
   virtual lldb::ThreadPlanSP
   QueueThreadPlanForStepScripted(bool abort_other_plans, const char *class_name,
+                                 StructuredData::ObjectSP extra_args_sp,  
                                  bool stop_other_threads, Status &status);
 
   // Thread Plan accessors:

@@ -16,6 +16,7 @@
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionArgParser.h"
+#include "lldb/Interpreter/OptionGroupPythonClassWithDict.h"
 #include "lldb/Interpreter/OptionValueBoolean.h"
 #include "lldb/Interpreter/OptionValueString.h"
 #include "lldb/Interpreter/OptionValueUInt64.h"
@@ -241,15 +242,18 @@ public:
             interpreter, "breakpoint set",
             "Sets a breakpoint or set of breakpoints in the executable.",
             "breakpoint set <cmd-options>"),
-        m_bp_opts(), m_options() {
-          // We're picking up all the normal options, commands and disable.
-          m_all_options.Append(&m_bp_opts,
-                               LLDB_OPT_SET_1 | LLDB_OPT_SET_3 | LLDB_OPT_SET_4,
-                               LLDB_OPT_SET_ALL);
-          m_all_options.Append(&m_dummy_options, LLDB_OPT_SET_1, LLDB_OPT_SET_ALL);
-          m_all_options.Append(&m_options);
-          m_all_options.Finalize();
-        }
+        m_bp_opts(), m_python_class_options("scripted breakpoint", 'P'),
+        m_options() {
+    // We're picking up all the normal options, commands and disable.
+    m_all_options.Append(&m_python_class_options, LLDB_OPT_SET_1,
+                         LLDB_OPT_SET_11);
+    m_all_options.Append(&m_bp_opts,
+                         LLDB_OPT_SET_1 | LLDB_OPT_SET_3 | LLDB_OPT_SET_4,
+                         LLDB_OPT_SET_ALL);
+    m_all_options.Append(&m_dummy_options, LLDB_OPT_SET_1, LLDB_OPT_SET_ALL);
+    m_all_options.Append(&m_options);
+    m_all_options.Finalize();
+  }
 
   ~CommandObjectBreakpointSet() override = default;
 
@@ -354,6 +358,7 @@ public:
       case 'H':
         m_hardware = true;
         break;
+<<<<<<< HEAD
 
       case 'k': {
           if (m_current_key.empty())
@@ -363,6 +368,9 @@ public:
                                             m_current_key.c_str());
 
       } break;
+=======
+        
+>>>>>>> a8446221d1f565cbd2696ab71d42b4bf29b994e1
       case 'K': {
         bool success;
         bool value;
@@ -443,11 +451,15 @@ public:
       case 'p':
         m_source_text_regexp.assign(option_arg);
         break;
+<<<<<<< HEAD
 
       case 'P':
         m_python_class.assign(option_arg);
         break;
 
+=======
+        
+>>>>>>> a8446221d1f565cbd2696ab71d42b4bf29b994e1
       case 'r':
         m_func_regexp.assign(option_arg);
         break;
@@ -461,6 +473,7 @@ public:
         m_func_name_type_mask |= eFunctionNameTypeSelector;
         break;
 
+<<<<<<< HEAD
       case 'v': {
           if (!m_current_key.empty()) {
               m_extra_args_sp->AddStringItem(m_current_key, option_arg);
@@ -471,6 +484,8 @@ public:
                                            option_arg.str().c_str());
       } break;
 
+=======
+>>>>>>> a8446221d1f565cbd2696ab71d42b4bf29b994e1
       case 'w': {
         bool success;
         m_throw_bp = OptionArgParser::ToBoolean(option_arg, true, &success);
@@ -514,8 +529,6 @@ public:
       m_exception_extra_args.Clear();
       m_move_to_nearest_code = eLazyBoolCalculate;
       m_source_regex_func_names.clear();
-      m_python_class.clear();
-      m_extra_args_sp = std::make_shared<StructuredData::Dictionary>();
       m_current_key.clear();
     }
 
@@ -547,8 +560,6 @@ public:
     Args m_exception_extra_args;
     LazyBool m_move_to_nearest_code;
     std::unordered_set<std::string> m_source_regex_func_names;
-    std::string m_python_class;
-    StructuredData::DictionarySP m_extra_args_sp;
     std::string m_current_key;
   };
 
@@ -569,7 +580,7 @@ protected:
 
     BreakpointSetType break_type = eSetTypeInvalid;
 
-    if (!m_options.m_python_class.empty())
+    if (!m_python_class_options.GetClassName().empty())
       break_type = eSetTypeScripted;
     else if (m_options.m_line_num != 0)
       break_type = eSetTypeFileAndLine;
@@ -725,9 +736,9 @@ protected:
 
       Status error;
       bp_sp = target.CreateScriptedBreakpoint(
-          m_options.m_python_class, &(m_options.m_modules),
+          m_python_class_options.GetClassName().c_str(), &(m_options.m_modules),
           &(m_options.m_filenames), false, m_options.m_hardware,
-          m_options.m_extra_args_sp, &error);
+          m_python_class_options.GetStructuredData(), &error);
       if (error.Fail()) {
         result.AppendErrorWithFormat(
             "Error setting extra exception arguments: %s",
@@ -822,6 +833,7 @@ private:
 
   BreakpointOptionGroup m_bp_opts;
   BreakpointDummyOptionGroup m_dummy_options;
+  OptionGroupPythonClassWithDict m_python_class_options;
   CommandOptions m_options;
   OptionGroupOptions m_all_options;
 };

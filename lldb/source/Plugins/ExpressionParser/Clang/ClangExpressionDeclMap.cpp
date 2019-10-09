@@ -180,108 +180,20 @@ ClangExpressionDeclMap::TargetInfo ClangExpressionDeclMap::GetTargetInfo() {
   return ret;
 }
 
-namespace {
-/// This class walks an AST and ensures that all DeclContexts defined inside the
-/// current source file are properly complete.
-///
-/// This is used to ensure that persistent types defined in the current source
-/// file migrate completely to the persistent AST context before they are
-/// reused.  If that didn't happen, it would be impoossible to complete them
-/// because their origin would be gone.
-///
-/// The stragtegy used by this class is to check the SourceLocation (to be
-/// specific, the FileID) and see if it's the FileID for the current expression.
-/// Alternate strategies could include checking whether an ExternalASTMerger,
-/// set up to not have the current context as a source, can find an original for
-/// the type.
-class Completer : public clang::RecursiveASTVisitor<Completer> {
-private:
-  /// Used to import Decl contents
-  clang::ASTImporter &m_exporter;
-  /// The file that's going away
-  clang::FileID m_file;
-  /// Visited Decls, to avoid cycles
-  llvm::DenseSet<clang::Decl *> m_completed;
-
-  bool ImportAndCheckCompletable(clang::Decl *decl) {
-    llvm::Expected<clang::Decl *> imported_decl = m_exporter.Import(decl);
-    if (!imported_decl) {
-      llvm::consumeError(imported_decl.takeError());
-      return false;
-    }
-    if (m_completed.count(decl))
-      return false;
-    if (!llvm::isa<DeclContext>(decl))
-      return false;
-    const clang::SourceLocation loc = decl->getLocation();
-    if (!loc.isValid())
-      return false;
-    const clang::FileID file =
-        m_exporter.getFromContext().getSourceManager().getFileID(loc);
-    if (file != m_file)
-      return false;
-    // We are assuming the Decl was parsed in this very expression, so it
-    // should not have external storage.
-    lldbassert(!llvm::cast<DeclContext>(decl)->hasExternalLexicalStorage());
-    return true;
-  }
-
-  void Complete(clang::Decl *decl) {
-    m_completed.insert(decl);
-    auto *decl_context = llvm::cast<DeclContext>(decl);
-    llvm::Expected<clang::Decl *> imported_decl = m_exporter.Import(decl);
-    if (!imported_decl) {
-      llvm::consumeError(imported_decl.takeError());
-      return;
-    }
-    m_exporter.CompleteDecl(decl);
-    for (Decl *child : decl_context->decls())
-      if (ImportAndCheckCompletable(child))
-        Complete(child);
-  }
-
-  void MaybeComplete(clang::Decl *decl) {
-    if (ImportAndCheckCompletable(decl))
-      Complete(decl);
-  }
-
-public:
-  Completer(clang::ASTImporter &exporter, clang::FileID file)
-      : m_exporter(exporter), m_file(file) {}
-
-  // Implements the RecursiveASTVisitor's core API.  It is called on each Decl
-  // that the RecursiveASTVisitor encounters, and returns true if the traversal
-  // should continue.
-  bool VisitDecl(clang::Decl *decl) {
-    MaybeComplete(decl);
-    return true;
-  }
-};
-} // namespace
-
-static void CompleteAllDeclContexts(clang::ASTImporter &exporter,
-                                    clang::FileID file, clang::QualType root) {
-  clang::QualType canonical_type = root.getCanonicalType();
-  if (clang::TagDecl *tag_decl = canonical_type->getAsTagDecl()) {
-    Completer(exporter, file).TraverseDecl(tag_decl);
-  } else if (auto interface_type = llvm::dyn_cast<ObjCInterfaceType>(
-                 canonical_type.getTypePtr())) {
-    Completer(exporter, file).TraverseDecl(interface_type->getDecl());
-  } else {
-    Completer(exporter, file).TraverseType(canonical_type);
-  }
-}
-
 static clang::QualType ExportAllDeclaredTypes(
-    clang::ExternalASTMerger &merger, clang::ASTContext &source,
-    clang::FileManager &source_file_manager,
+    clang::ExternalASTMerger &parent_merger, clang::ExternalASTMerger &merger,
+    clang::ASTContext &source, clang::FileManager &source_file_manager,
     const clang::ExternalASTMerger::OriginMap &source_origin_map,
     clang::FileID file, clang::QualType root) {
+  // Mark the source as temporary to make sure all declarations from the
+  // AST are exported. Also add the parent_merger as the merger into the
+  // source AST so that the merger can track back any declarations from
+  // the persistent ASTs we used as sources.
   clang::ExternalASTMerger::ImporterSource importer_source(
-      source, source_file_manager, source_origin_map);
+      source, source_file_manager, source_origin_map, /*Temporary*/ true,
+      &parent_merger);
   merger.AddSources(importer_source);
   clang::ASTImporter &exporter = merger.ImporterForOrigin(source);
-  CompleteAllDeclContexts(exporter, file, root);
   llvm::Expected<clang::QualType> ret_or_error = exporter.Import(root);
   merger.RemoveSources(importer_source);
   if (ret_or_error) {
@@ -312,8 +224,9 @@ TypeFromUser ClangExpressionDeclMap::DeportType(ClangASTContext &target,
     auto scratch_ast_context = static_cast<ClangASTContextForExpressions *>(
         m_target->GetScratchClangASTContext());
     clang::QualType exported_type = ExportAllDeclaredTypes(
-        scratch_ast_context->GetMergerUnchecked(), *source.getASTContext(),
-        *source.getFileManager(), m_merger_up->GetOrigins(), source_file,
+        *m_merger_up.get(), scratch_ast_context->GetMergerUnchecked(),
+        *source.getASTContext(), *source.getFileManager(),
+        m_merger_up->GetOrigins(), source_file,
         clang::QualType::getFromOpaquePtr(parser_type.GetOpaqueQualType()));
     return TypeFromUser(exported_type.getAsOpaquePtr(), &target);
   } else {

@@ -2193,7 +2193,7 @@ CompilerType ClangASTContext::CreateArrayType(const CompilerType &element_type,
       } else {
         return CompilerType(this, ast->getConstantArrayType(
                                          ClangUtil::GetQualType(element_type),
-                                         ap_element_count,
+                                         ap_element_count, nullptr,
                                          clang::ArrayType::Normal, 0)
                                       .getAsOpaquePtr());
       }
@@ -3929,25 +3929,6 @@ bool ClangASTContext::IsObjCObjectPointerType(const CompilerType &type,
   return false;
 }
 
-bool ClangASTContext::GetObjCClassName(const CompilerType &type,
-                                       std::string &class_name) {
-  if (!type)
-    return false;
-
-  clang::QualType qual_type(ClangUtil::GetCanonicalQualType(type));
-
-  const clang::ObjCObjectType *object_type =
-      llvm::dyn_cast<clang::ObjCObjectType>(qual_type);
-  if (object_type) {
-    const clang::ObjCInterfaceDecl *interface = object_type->getInterface();
-    if (interface) {
-      class_name = interface->getNameAsString();
-      return true;
-    }
-  }
-  return false;
-}
-
 // Type Completion
 
 bool ClangASTContext::GetCompleteType(lldb::opaque_compiler_type_t type) {
@@ -4482,7 +4463,7 @@ CompilerType ClangASTContext::GetArrayType(lldb::opaque_compiler_type_t type,
         return CompilerType(
             this, ast_ctx
                       ->getConstantArrayType(
-                          qual_type, llvm::APInt(64, size),
+                          qual_type, llvm::APInt(64, size), nullptr,
                           clang::ArrayType::ArraySizeModifier::Normal, 0)
                       .getAsOpaquePtr());
       else

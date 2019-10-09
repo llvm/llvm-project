@@ -18,3 +18,6 @@ class LibcxxModernTypeLookup(TestBase):
 
         # Test a few simple expressions that should still work with modern-type-lookup.
         self.expect("expr pair", substrs=["(std::", "pair<int, long", "= (first = 1, second = 2)"])
+        self.expect("expr foo", substrs=["(std::", "string", "\"bar\""])
+        self.expect("expr map", substrs=["(std::", "map", "first = 1, second = 2"])
+        self.expect("expr umap", substrs=["(std::", "unordered_map", "first = 1, second = 2"])

@@ -1906,7 +1906,7 @@ bool GDBRemoteCommunicationClient::DecodeProcessInfoResponse(
       } else if (name.equals("euid")) {
         uint32_t uid = UINT32_MAX;
         value.getAsInteger(0, uid);
-        process_info.SetEffectiveGroupID(uid);
+        process_info.SetEffectiveUserID(uid);
       } else if (name.equals("gid")) {
         uint32_t gid = UINT32_MAX;
         value.getAsInteger(0, gid);
@@ -2176,8 +2176,7 @@ uint32_t GDBRemoteCommunicationClient::FindProcesses(
       if (match_info.GetProcessInfo().EffectiveGroupIDIsValid())
         packet.Printf("egid:%u;",
                       match_info.GetProcessInfo().GetEffectiveGroupID());
-      if (match_info.GetProcessInfo().EffectiveGroupIDIsValid())
-        packet.Printf("all_users:%u;", match_info.GetMatchAllUsers() ? 1 : 0);
+      packet.Printf("all_users:%u;", match_info.GetMatchAllUsers() ? 1 : 0);
       if (match_info.GetProcessInfo().GetArchitecture().IsValid()) {
         const ArchSpec &match_arch =
             match_info.GetProcessInfo().GetArchitecture();

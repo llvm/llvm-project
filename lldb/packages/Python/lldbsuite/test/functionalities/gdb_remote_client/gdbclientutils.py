@@ -160,8 +160,33 @@ class MockGDBServerResponder:
             return self.QListThreadsInStopReply()
         if packet.startswith("qMemoryRegionInfo:"):
             return self.qMemoryRegionInfo()
+        if packet == "qQueryGDBServer":
+            return self.qQueryGDBServer()
+        if packet == "qHostInfo":
+            return self.qHostInfo()
+        if packet == "qGetWorkingDir":
+            return self.qGetWorkingDir()
+        if packet == "qsProcessInfo":
+            return self.qsProcessInfo()
+        if packet.startswith("qfProcessInfo"):
+            return self.qfProcessInfo(packet)
 
         return self.other(packet)
+
+    def qsProcessInfo(self):
+        return "E04"
+
+    def qfProcessInfo(self, packet):
+        raise "E04"
+
+    def qGetWorkingDir(self):
+        return "2f"
+
+    def qHostInfo(self):
+        return "ptrsize:8;endian:little;"
+
+    def qQueryGDBServer(self):
+        return "E04"
 
     def interrupt(self):
         raise self.UnexpectedPacketException()
@@ -171,7 +196,7 @@ class MockGDBServerResponder:
 
     def vCont(self, packet):
         raise self.UnexpectedPacketException()
-    
+
     def readRegisters(self):
         return "00000000" * self.registerCount
 
@@ -424,7 +449,6 @@ class MockGDBServer:
 
     class InvalidPacketException(Exception):
         pass
-
 
 class GDBRemoteTestBase(TestBase):
     """

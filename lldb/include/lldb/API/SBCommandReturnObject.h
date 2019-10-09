@@ -15,22 +15,26 @@
 
 #include "lldb/API/SBDefines.h"
 
+namespace lldb_private {
+class SBCommandReturnObjectImpl;
+};
+
 namespace lldb {
 
 class LLDB_API SBCommandReturnObject {
 public:
   SBCommandReturnObject();
 
+  SBCommandReturnObject(lldb_private::CommandReturnObject &ref);
+
+  // rvalue ctor+assignment are incompatible with Reproducers.
+
   SBCommandReturnObject(const lldb::SBCommandReturnObject &rhs);
 
   ~SBCommandReturnObject();
 
-  const lldb::SBCommandReturnObject &
+  lldb::SBCommandReturnObject &
   operator=(const lldb::SBCommandReturnObject &rhs);
-
-  SBCommandReturnObject(lldb_private::CommandReturnObject *ptr);
-
-  lldb_private::CommandReturnObject *Release();
 
   explicit operator bool() const;
 
@@ -86,6 +90,9 @@ public:
 
   void SetError(const char *error_cstr);
 
+  // ref() is internal for LLDB only.
+  lldb_private::CommandReturnObject &ref() const;
+
 protected:
   friend class SBCommandInterpreter;
   friend class SBOptions;
@@ -96,10 +103,8 @@ protected:
 
   lldb_private::CommandReturnObject &operator*() const;
 
-  lldb_private::CommandReturnObject &ref() const;
-
 private:
-  std::unique_ptr<lldb_private::CommandReturnObject> m_opaque_up;
+  std::unique_ptr<lldb_private::SBCommandReturnObjectImpl> m_opaque_up;
 };
 
 } // namespace lldb

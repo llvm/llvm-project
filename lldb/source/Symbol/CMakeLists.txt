@@ -1,4 +1,6 @@
 set(LLVM_OPTIONAL_SOURCES LocateSymbolFileMacOSX.cpp)
+=======
+>>>>>>> a8446221d1f565cbd2696ab71d42b4bf29b994e1
 
 if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
   set(PLATFORM_SOURCES LocateSymbolFileMacOSX.cpp)
@@ -53,9 +55,6 @@ add_lldb_library(lldbSymbol
     swiftFrontend
     swiftSIL
     swiftSerialization
-    clangAST
-    clangBasic
-    clangFrontend
     lldbCore
     lldbExpression
     lldbHost
@@ -68,6 +67,11 @@ add_lldb_library(lldbSymbol
     lldbPluginObjCLanguage
     lldbPluginPlatformMacOSX
     lldbPluginObjCRuntime
+
+  CLANG_LIBS
+    clangAST
+    clangBasic
+    clangFrontend
 
   LINK_COMPONENTS
     Support
