@@ -88,7 +88,7 @@ protected:
     auto &r = Reproducer::Instance();
     if (auto generator = r.GetGenerator()) {
       generator->Keep();
-    } else if (r.GetLoader()) {
+    } else if (r.IsReplaying()) {
       // Make this operation a NOP in replay mode.
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
       return result.Succeeded();
@@ -132,9 +132,9 @@ protected:
     }
 
     auto &r = Reproducer::Instance();
-    if (r.GetGenerator()) {
+    if (r.IsCapturing()) {
       result.GetOutputStream() << "Reproducer is in capture mode.\n";
-    } else if (r.GetLoader()) {
+    } else if (r.IsReplaying()) {
       result.GetOutputStream() << "Reproducer is in replay mode.\n";
     } else {
       result.GetOutputStream() << "Reproducer is off.\n";
