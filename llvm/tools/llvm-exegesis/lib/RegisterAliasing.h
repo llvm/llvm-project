@@ -103,6 +103,13 @@ private:
       RegisterClasses;
 };
 
+// `a = a & ~b`, optimized for few bit sets in B and no allocation.
+inline void remove(llvm::BitVector &A, const llvm::BitVector &B) {
+  assert(A.size() == B.size());
+  for (auto I : B.set_bits())
+    A.reset(I);
+}
+
 } // namespace exegesis
 } // namespace llvm
 

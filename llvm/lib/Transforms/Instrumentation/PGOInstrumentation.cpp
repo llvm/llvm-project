@@ -96,6 +96,7 @@
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/Support/BranchProbability.h"
+#include "llvm/Support/CRC.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/DOTGraphTraits.h"
@@ -103,7 +104,6 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/GraphWriter.h"
-#include "llvm/Support/JamCRC.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
@@ -609,7 +609,7 @@ public:
 // value of each BB in the CFG. The higher 32 bits record the number of edges.
 template <class Edge, class BBInfo>
 void FuncPGOInstrumentation<Edge, BBInfo>::computeCFGHash() {
-  std::vector<char> Indexes;
+  std::vector<uint8_t> Indexes;
   JamCRC JC;
   for (auto &BB : F) {
     const Instruction *TI = BB.getTerminator();
@@ -620,7 +620,7 @@ void FuncPGOInstrumentation<Edge, BBInfo>::computeCFGHash() {
         continue;
       uint32_t Index = BI->Index;
       for (int J = 0; J < 4; J++)
-        Indexes.push_back((char)(Index >> (J * 8)));
+        Indexes.push_back((uint8_t)(Index >> (J * 8)));
     }
   }
   JC.update(Indexes);

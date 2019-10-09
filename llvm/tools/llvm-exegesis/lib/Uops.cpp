@@ -89,12 +89,6 @@ getVariablesWithTiedOperands(const Instruction &Instr) {
   return Result;
 }
 
-static void remove(llvm::BitVector &a, const llvm::BitVector &b) {
-  assert(a.size() == b.size());
-  for (auto I : b.set_bits())
-    a.reset(I);
-}
-
 UopsBenchmarkRunner::~UopsBenchmarkRunner() = default;
 
 UopsSnippetGenerator::~UopsSnippetGenerator() = default;

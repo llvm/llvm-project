@@ -101,9 +101,6 @@ of LLVM's high-level design, as well as its internals:
   Introduction to the general layout of the LLVM sourcebase, important classes
   and APIs, and some tips & tricks.
 
-:ref:`index-subsystem-docs`
-  A collection of pages documenting various subsystems of LLVM.
-
 `LLVM for Grad Students`__
   This is an introduction to the LLVM infrastructure by Adrian Sampson. While it
   has been written for grad students, it provides  a good, compact overview of

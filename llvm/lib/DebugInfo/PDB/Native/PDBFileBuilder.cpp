@@ -22,7 +22,7 @@
 #include "llvm/DebugInfo/PDB/Native/TpiStreamBuilder.h"
 #include "llvm/Support/BinaryStream.h"
 #include "llvm/Support/BinaryStreamWriter.h"
-#include "llvm/Support/JamCRC.h"
+#include "llvm/Support/CRC.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/xxhash.h"
 
@@ -174,8 +174,7 @@ Error PDBFileBuilder::finalizeMsfLayout() {
   if (!InjectedSources.empty()) {
     for (const auto &IS : InjectedSources) {
       JamCRC CRC(0);
-      CRC.update(makeArrayRef(IS.Content->getBufferStart(),
-                              IS.Content->getBufferSize()));
+      CRC.update(arrayRefFromStringRef(IS.Content->getBuffer()));
 
       SrcHeaderBlockEntry Entry;
       ::memset(&Entry, 0, sizeof(SrcHeaderBlockEntry));

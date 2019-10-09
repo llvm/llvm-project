@@ -17,6 +17,7 @@
 #include "X86RegisterInfo.h"
 #include "X86Subtarget.h"
 #include "llvm/MC/MCInstBuilder.h"
+#include "llvm/Support/FormatVariadic.h"
 
 namespace llvm {
 namespace exegesis {
@@ -177,6 +178,72 @@ static unsigned getX86FPFlags(const Instruction &Instr) {
   return Instr.Description->TSFlags & llvm::X86II::FPTypeMask;
 }
 
+// Helper to fill a memory operand with a value.
+static void setMemOp(InstructionTemplate &IT, int OpIdx,
+                     const MCOperand &OpVal) {
+  const auto Op = IT.Instr.Operands[OpIdx];
+  assert(Op.isExplicit() && "invalid memory pattern");
+  IT.getValueFor(Op) = OpVal;
+}
+
+// Common (latency, uops) code for LEA templates. `GetDestReg` takes the
+// addressing base and index registers and returns the LEA destination register.
+static llvm::Expected<std::vector<CodeTemplate>> generateLEATemplatesCommon(
+    const Instruction &Instr, const BitVector &ForbiddenRegisters,
+    const LLVMState &State, const SnippetGenerator::Options &Opts,
+    std::function<unsigned(unsigned, unsigned)> GetDestReg) {
+  assert(Instr.Operands.size() == 6 && "invalid LEA");
+  assert(X86II::getMemoryOperandNo(Instr.Description->TSFlags) == 1 &&
+         "invalid LEA");
+
+  constexpr const int kDestOp = 0;
+  constexpr const int kBaseOp = 1;
+  constexpr const int kIndexOp = 3;
+  auto PossibleDestRegs =
+      Instr.Operands[kDestOp].getRegisterAliasing().sourceBits();
+  remove(PossibleDestRegs, ForbiddenRegisters);
+  auto PossibleBaseRegs =
+      Instr.Operands[kBaseOp].getRegisterAliasing().sourceBits();
+  remove(PossibleBaseRegs, ForbiddenRegisters);
+  auto PossibleIndexRegs =
+      Instr.Operands[kIndexOp].getRegisterAliasing().sourceBits();
+  remove(PossibleIndexRegs, ForbiddenRegisters);
+
+  const auto &RegInfo = State.getRegInfo();
+  std::vector<CodeTemplate> Result;
+  for (const unsigned BaseReg : PossibleBaseRegs.set_bits()) {
+    for (const unsigned IndexReg : PossibleIndexRegs.set_bits()) {
+      for (int LogScale = 0; LogScale <= 3; ++LogScale) {
+        // FIXME: Add an option for controlling how we explore immediates.
+        for (const int Disp : {0, 42}) {
+          InstructionTemplate IT(Instr);
+          const int64_t Scale = 1ull << LogScale;
+          setMemOp(IT, 1, MCOperand::createReg(BaseReg));
+          setMemOp(IT, 2, MCOperand::createImm(Scale));
+          setMemOp(IT, 3, MCOperand::createReg(IndexReg));
+          setMemOp(IT, 4, MCOperand::createImm(Disp));
+          // SegmentReg must be 0 for LEA.
+          setMemOp(IT, 5, MCOperand::createReg(0));
+
+          // Output reg is selected by the caller.
+          setMemOp(IT, 0, MCOperand::createReg(GetDestReg(BaseReg, IndexReg)));
+
+          CodeTemplate CT;
+          CT.Instructions.push_back(std::move(IT));
+          CT.Config = formatv("{3}(%{0}, %{1}, {2})", RegInfo.getName(BaseReg),
+                              RegInfo.getName(IndexReg), Scale, Disp)
+                          .str();
+          Result.push_back(std::move(CT));
+          if (Result.size() >= Opts.MaxConfigsPerOpcode)
+            return std::move(Result);
+        }
+      }
+    }
+  }
+
+  return std::move(Result);
+}
+
 namespace {
 class X86LatencySnippetGenerator : public LatencySnippetGenerator {
 public:
@@ -193,6 +260,17 @@ X86LatencySnippetGenerator::generateCodeTemplates(
     const Instruction &Instr, const BitVector &ForbiddenRegisters) const {
   if (auto E = IsInvalidOpcode(Instr))
     return std::move(E);
+
+  // LEA gets special attention.
+  const auto Opcode = Instr.Description->getOpcode();
+  if (Opcode == X86::LEA64r || Opcode == X86::LEA64_32r) {
+    return generateLEATemplatesCommon(Instr, ForbiddenRegisters, State, Opts,
+                                      [](unsigned BaseReg, unsigned IndexReg) {
+                                        // We just select the same base and
+                                        // output register.
+                                        return BaseReg;
+                                      });
+  }
 
   switch (getX86FPFlags(Instr)) {
   case llvm::X86II::NotFP:
@@ -225,6 +303,7 @@ public:
   generateCodeTemplates(const Instruction &Instr,
                         const BitVector &ForbiddenRegisters) const override;
 };
+
 } // namespace
 
 llvm::Expected<std::vector<CodeTemplate>>
@@ -232,6 +311,28 @@ X86UopsSnippetGenerator::generateCodeTemplates(
     const Instruction &Instr, const BitVector &ForbiddenRegisters) const {
   if (auto E = IsInvalidOpcode(Instr))
     return std::move(E);
+
+  // LEA gets special attention.
+  const auto Opcode = Instr.Description->getOpcode();
+  if (Opcode == X86::LEA64r || Opcode == X86::LEA64_32r) {
+    // Any destination register that is not used for adddressing is fine.
+    auto PossibleDestRegs =
+        Instr.Operands[0].getRegisterAliasing().sourceBits();
+    remove(PossibleDestRegs, ForbiddenRegisters);
+    return generateLEATemplatesCommon(
+        Instr, ForbiddenRegisters, State, Opts,
+        [this, &PossibleDestRegs](unsigned BaseReg, unsigned IndexReg) {
+          auto PossibleDestRegsNow = PossibleDestRegs;
+          remove(PossibleDestRegsNow,
+                 State.getRATC().getRegister(BaseReg).aliasedBits());
+          remove(PossibleDestRegsNow,
+                 State.getRATC().getRegister(IndexReg).aliasedBits());
+          assert(PossibleDestRegsNow.set_bits().begin() !=
+                     PossibleDestRegsNow.set_bits().end() &&
+                 "no remaining registers");
+          return *PossibleDestRegsNow.set_bits().begin();
+        });
+  }
 
   switch (getX86FPFlags(Instr)) {
   case llvm::X86II::NotFP:
@@ -548,17 +649,11 @@ void ExegesisX86Target::fillMemoryOperands(InstructionTemplate &IT,
       ++MemOpIdx;
     }
   }
-  // Now fill in the memory operands.
-  const auto SetOp = [&IT](int OpIdx, const MCOperand &OpVal) {
-    const auto Op = IT.Instr.Operands[OpIdx];
-    assert(Op.isMemory() && Op.isExplicit() && "invalid memory pattern");
-    IT.getValueFor(Op) = OpVal;
-  };
-  SetOp(MemOpIdx + 0, MCOperand::createReg(Reg));    // BaseReg
-  SetOp(MemOpIdx + 1, MCOperand::createImm(1));      // ScaleAmt
-  SetOp(MemOpIdx + 2, MCOperand::createReg(0));      // IndexReg
-  SetOp(MemOpIdx + 3, MCOperand::createImm(Offset)); // Disp
-  SetOp(MemOpIdx + 4, MCOperand::createReg(0));      // Segment
+  setMemOp(IT, MemOpIdx + 0, MCOperand::createReg(Reg));    // BaseReg
+  setMemOp(IT, MemOpIdx + 1, MCOperand::createImm(1));      // ScaleAmt
+  setMemOp(IT, MemOpIdx + 2, MCOperand::createReg(0));      // IndexReg
+  setMemOp(IT, MemOpIdx + 3, MCOperand::createImm(Offset)); // Disp
+  setMemOp(IT, MemOpIdx + 4, MCOperand::createReg(0));      // Segment
 }
 
 void ExegesisX86Target::decrementLoopCounterAndJump(

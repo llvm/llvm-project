@@ -24,8 +24,6 @@ void InitializeAArch64ExegesisTarget();
 
 namespace {
 
-using llvm::APInt;
-using llvm::MCInst;
 using testing::Gt;
 using testing::IsEmpty;
 using testing::Not;
