@@ -5569,7 +5569,7 @@ class ObjCTypeParamType : public Type,
 
 public:
   bool isSugared() const { return true; }
-  QualType desugar() const { return getCanonicalTypeInternal(); }
+  QualType desugar() const;
 
   static bool classof(const Type *T) {
     return T->getTypeClass() == ObjCTypeParam;
