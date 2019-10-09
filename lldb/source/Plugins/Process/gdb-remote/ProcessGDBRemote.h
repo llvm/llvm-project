@@ -49,7 +49,8 @@ class ThreadGDBRemote;
 class ProcessGDBRemote : public Process,
                          private GDBRemoteClientBase::ContinueDelegate {
 public:
-  ProcessGDBRemote(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp);
+  ProcessGDBRemote(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp,
+                   const FileSpec *crash_file_path);
 
   ~ProcessGDBRemote() override;
 
@@ -71,6 +72,8 @@ public:
   // Check if a given Process
   bool CanDebug(lldb::TargetSP target_sp,
                 bool plugin_specified_by_name) override;
+
+  lldb_private::Status DoLoadCore() override;
 
   CommandObject *GetPluginCommandObject() override;
 
@@ -415,6 +418,7 @@ private:
   std::string m_partial_profile_data;
   std::map<uint64_t, uint32_t> m_thread_id_to_used_usec_map;
   uint64_t m_last_signals_version = 0;
+  const FileSpec *m_crash_file_path;
 
   static bool NewThreadNotifyBreakpointHit(void *baton,
                                            StoppointCallbackContext *context,

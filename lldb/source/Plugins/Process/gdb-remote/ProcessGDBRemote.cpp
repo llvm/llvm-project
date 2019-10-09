@@ -33,6 +33,7 @@
 #include "lldb/Breakpoint/Watchpoint.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
+#include "lldb/Core/ModuleList.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/StreamFile.h"
@@ -61,6 +62,7 @@
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/MemoryRegionInfo.h"
+#include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/SystemRuntime.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/TargetList.h"
@@ -208,8 +210,8 @@ ProcessGDBRemote::CreateInstance(lldb::TargetSP target_sp,
                                  const FileSpec *crash_file_path,
                                  bool can_connect) {
   lldb::ProcessSP process_sp;
-  if (crash_file_path == nullptr)
-    process_sp = std::make_shared<ProcessGDBRemote>(target_sp, listener_sp);
+  process_sp = std::make_shared<ProcessGDBRemote>(target_sp, listener_sp,
+                                                  crash_file_path);
   return process_sp;
 }
 
@@ -222,16 +224,15 @@ bool ProcessGDBRemote::CanDebug(lldb::TargetSP target_sp,
   Module *exe_module = target_sp->GetExecutableModulePointer();
   if (exe_module) {
     ObjectFile *exe_objfile = exe_module->GetObjectFile();
-    // We can't debug core files...
     switch (exe_objfile->GetType()) {
     case ObjectFile::eTypeInvalid:
-    case ObjectFile::eTypeCoreFile:
     case ObjectFile::eTypeDebugInfo:
     case ObjectFile::eTypeObjectFile:
     case ObjectFile::eTypeSharedLibrary:
     case ObjectFile::eTypeStubLibrary:
     case ObjectFile::eTypeJIT:
       return false;
+    case ObjectFile::eTypeCoreFile:
     case ObjectFile::eTypeExecutable:
     case ObjectFile::eTypeDynamicLinker:
     case ObjectFile::eTypeUnknown:
@@ -244,9 +245,58 @@ bool ProcessGDBRemote::CanDebug(lldb::TargetSP target_sp,
   return true;
 }
 
+Status ProcessGDBRemote::DoLoadCore() {
+  Status error;
+  Target &target = GetTarget();
+  // Save the initial_module for later
+  const lldb::ModuleSP initial_module = target.GetExecutableModule();
+
+  // Set m_crash_file_path as executable module
+  lldb::ModuleSP module(
+      new Module(*m_crash_file_path, target.GetArchitecture()));
+  module->GetObjectFile()->SetType(ObjectFile::Type::eTypeExecutable);
+  target.SetExecutableModule(module, eLoadDependentsNo);
+
+  // Check if we have a initial_module, otherwise return
+  if (!initial_module)
+    return error;
+
+  // Add initial_module in the target modules list
+  ModuleList matching_modules;
+  matching_modules.Append(initial_module);
+  ModuleSpec initial_module_spec(initial_module->GetFileSpec());
+  target.GetSharedModule(initial_module_spec, &error);
+
+  // Load the section of the initial_module
+  SectionList *section_list = initial_module->GetSectionList();
+  SectionSP section_sp;
+  addr_t addr;
+  switch (target.GetArchitecture().GetTriple().getArch()) {
+  case llvm::Triple::dpu: {
+    ConstString const_sect_name(".text");
+    addr = 0x80000000;
+    section_sp = section_list->FindSectionByName(const_sect_name);
+    break;
+  }
+  default:
+    return Status("Cannot load core for this architecture\n");
+  }
+  target.GetSectionLoadList().SetSectionLoadAddress(section_sp, addr);
+
+  target.ModulesDidLoad(matching_modules);
+  lldb::ProcessSP process_sp = target.CalculateProcess();
+  if (process_sp) {
+    process_sp->Destroy(true);
+  }
+
+  return error;
+}
+
+//----------------------------------------------------------------------
 // ProcessGDBRemote constructor
 ProcessGDBRemote::ProcessGDBRemote(lldb::TargetSP target_sp,
-                                   ListenerSP listener_sp)
+                                   ListenerSP listener_sp,
+                                   const FileSpec *crash_file_path)
     : Process(target_sp, listener_sp),
       m_debugserver_pid(LLDB_INVALID_PROCESS_ID), m_last_stop_packet_mutex(),
       m_register_info_sp(nullptr),
@@ -261,7 +311,8 @@ ProcessGDBRemote::ProcessGDBRemote(lldb::TargetSP target_sp,
       m_waiting_for_attach(false), m_destroy_tried_resuming(false),
       m_command_sp(), m_breakpoint_pc_offset(0),
       m_initial_tid(LLDB_INVALID_THREAD_ID), m_replay_mode(false),
-      m_allow_flash_writes(false), m_erased_flash_ranges() {
+      m_allow_flash_writes(false), m_erased_flash_ranges(),
+      m_crash_file_path(crash_file_path) {
   m_async_broadcaster.SetEventName(eBroadcastBitAsyncThreadShouldExit,
                                    "async thread should exit");
   m_async_broadcaster.SetEventName(eBroadcastBitAsyncContinue,
