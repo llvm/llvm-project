@@ -23,9 +23,9 @@
 # table.
 
 # IGNORE: comm -13 %t.dynsyms %t.funcsyms > %t.keep_symbols
-# The result of the preceeding command can be preprocessed in %p/Inputs/minidebuginfo.keep_symbols
+# The result of the preceeding command can be hardcoded
 # because we know what symbol to keep.
-# RUN: echo "multiplyByFour" > %p/Inputs/minidebuginfo.keep_symbols
+# RUN: echo "multiplyByFour" > %t.keep_symbols
 
 # Separate full debug info into debug binary.
 
@@ -34,12 +34,15 @@
 # Copy the full debuginfo, keeping only a minimal set of symbols and
 # removing some unnecessary sections.
 
-# RUN: llvm-objcopy -S --remove-section .gdb_index --remove-section .comment --keep-symbols=%p/Inputs/minidebuginfo.keep_symbols %t.debug %t.mini_debuginfo
+# RUN: llvm-objcopy -S --remove-section .gdb_index --remove-section .comment --keep-symbols=%t.keep_symbols %t.debug %t.mini_debuginfo
 
 # This command is not from the GDB manual but it slims down embedded minidebug
 # info. On top if that, it ensures that we only have the multiplyByThree symbol
-# in the .dynsym section of the main binary.
-# RUN: llvm-objcopy --remove-section=.rela.dyn --remove-section=.gnu.version --remove-section=.gnu.hash --remove-section=.dynsym %t.mini_debuginfo
+# in the .dynsym section of the main binary. The bits removing .rela.plt,
+# .rela.dyn and .dynsym sections can be removed once llvm-objcopy
+# --only-keep-debug starts to work.
+# RUN: llvm-objcopy --remove-section=.rela.plt --remove-section=.rela.dyn \
+# RUN:   --remove-section=.gnu.version --remove-section=.gnu.hash --remove-section=.dynsym %t.mini_debuginfo
 
 # Drop the full debug info from the original binary.
 

@@ -17,7 +17,7 @@
 
 namespace lldb_private {
 class SBCommandReturnObjectImpl;
-};
+}
 
 namespace lldb {
 

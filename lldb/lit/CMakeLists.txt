@@ -46,13 +46,9 @@ string(REPLACE ${CMAKE_CFG_INTDIR} ${dotest_args_replacement} LLDB_DOTEST_ARGS "
 string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} LLDB_LIBS_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR})
 string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} LLDB_TOOLS_DIR ${LLVM_RUNTIME_OUTPUT_INTDIR})
 
-list(APPEND LLDB_TEST_DEPS
-  LLDBUnitTests
-  dsymutil
+add_lldb_test_dependency(
   lit-cpuid
   llc
-  lldb
-  lldb-test
   lli
   llvm-config
   llvm-dwarfdump
@@ -64,7 +60,7 @@ list(APPEND LLDB_TEST_DEPS
   )
 
 if(TARGET lld)
-  list(APPEND LLDB_TEST_DEPS lld)
+  add_lldb_test_dependency(lld)
 endif()
 
 # the value is not canonicalized within LLVM
@@ -97,7 +93,7 @@ configure_file(
   ${CMAKE_CURRENT_BINARY_DIR}/lit-lldb-init)
 
 if(NOT LLDB_BUILT_STANDALONE)
-  list(APPEND LLDB_TEST_DEPS
+  add_lldb_test_dependency(
     FileCheck
     count
     not
@@ -106,7 +102,7 @@ endif()
 
 add_lit_testsuite(check-lldb-lit "Running lldb lit test suite"
   ${CMAKE_CURRENT_BINARY_DIR}
-  DEPENDS ${LLDB_TEST_DEPS}
+  DEPENDS lldb-test-deps
   )
 
 set_target_properties(check-lldb-lit PROPERTIES FOLDER "lldb tests")
@@ -119,5 +115,5 @@ endif()
 
 add_lit_testsuites(LLDB
   ${CMAKE_CURRENT_SOURCE_DIR}
-  DEPENDS ${LLDB_TEST_DEPS}
+  DEPENDS lldb-test-deps
   )

@@ -5,9 +5,7 @@ C_SOURCES := main.c
 all: a.out create-empty-corefile
 
 create-empty-corefile:
-	$(MAKE) VPATH=$(VPATH) -f $(SRCDIR)/create-empty-corefile.mk
-
-clean::
-	$(MAKE) -f create-empty-corefile.mk clean
+	$(MAKE) -f $(MAKEFILE_RULES) EXE=create-empty-corefile \
+		C_SOURCES=create-empty-corefile.c
 
 include Makefile.rules

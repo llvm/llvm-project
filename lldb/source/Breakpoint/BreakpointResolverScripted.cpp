@@ -92,7 +92,7 @@ BreakpointResolverScripted::CreateFromStructuredData(
   depth = (lldb::SearchDepth) depth_as_int;
   
   StructuredDataImpl *args_data_impl = new StructuredDataImpl();
-  StructuredData::Dictionary *args_dict = new StructuredData::Dictionary();
+  StructuredData::Dictionary *args_dict = nullptr;
   success = options_dict.GetValueForKeyAsDictionary(
     GetKey(OptionNames::ScriptArgs), args_dict);
   if (success) {

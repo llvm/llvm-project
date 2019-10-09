@@ -319,6 +319,12 @@ void ScriptInterpreterPython::ComputePythonDir(
   // x86_64, or bin on Windows).
   llvm::sys::path::remove_filename(path);
   llvm::sys::path::append(path, LLDB_PYTHON_RELATIVE_LIBDIR);
+
+#if defined(_WIN32)
+  // This will be injected directly through FileSpec.GetDirectory().SetString(),
+  // so we need to normalize manually.
+  std::replace(path.begin(), path.end(), '\\', '/');
+#endif
 }
 
 FileSpec ScriptInterpreterPython::GetPythonDir() {
@@ -334,7 +340,6 @@ FileSpec ScriptInterpreterPython::GetPythonDir() {
 #else
     ComputePythonDir(path);
 #endif
-    llvm::sys::path::native(path);
     spec.GetDirectory().SetString(path);
     return spec;
   }();

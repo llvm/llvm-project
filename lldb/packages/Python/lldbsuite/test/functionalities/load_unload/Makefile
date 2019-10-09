@@ -1,28 +1,32 @@
-LIB_PREFIX := loadunload_
-
-LD_EXTRAS := -L. -l$(LIB_PREFIX)d
+LD_EXTRAS := -L. -lloadunload_d
 CXX_SOURCES := main.cpp
 USE_LIBDL := 1
 
+a.out: lib_b lib_a lib_c lib_d hidden_lib_d
+
 include Makefile.rules
 
-a.out: lib_a lib_b lib_c lib_d hidden_lib_d install_name_tool
+lib_a: lib_b
+	$(MAKE) -f $(MAKEFILE_RULES) \
+		DYLIB_ONLY=YES DYLIB_CXX_SOURCES=a.cpp DYLIB_NAME=loadunload_a \
+		LD_EXTRAS="-L. -lloadunload_b"
 
-lib_%:
-	$(MAKE) VPATH=$(SRCDIR) -I $(SRCDIR) -f $(SRCDIR)/$*.mk
+lib_b:
+	$(MAKE) -f $(MAKEFILE_RULES) \
+		DYLIB_ONLY=YES DYLIB_CXX_SOURCES=b.cpp DYLIB_NAME=loadunload_b
 
-install_name_tool:
+lib_c:
+	$(MAKE) -f $(MAKEFILE_RULES) \
+		DYLIB_ONLY=YES DYLIB_CXX_SOURCES=c.cpp DYLIB_NAME=loadunload_c
+
+lib_d:
+	$(MAKE) -f $(MAKEFILE_RULES) \
+		DYLIB_ONLY=YES DYLIB_CXX_SOURCES=d.cpp DYLIB_NAME=loadunload_d
 ifeq ($(OS),Darwin)
 	install_name_tool -id @executable_path/libloadunload_d.dylib libloadunload_d.dylib
 endif
 
-
 hidden_lib_d:
-	$(MAKE) VPATH=$(SRCDIR)/hidden -I $(SRCDIR)/hidden -C hidden -f $(SRCDIR)/hidden/Makefile
-
-clean::
-	$(MAKE) -f $(SRCDIR)/a.mk clean
-	$(MAKE) -f $(SRCDIR)/b.mk clean
-	$(MAKE) -f $(SRCDIR)/c.mk clean
-	$(MAKE) -f $(SRCDIR)/d.mk clean
-	$(MAKE) -I $(SRCDIR)/hidden -C hidden -f $(SRCDIR)/hidden/Makefile clean
+	mkdir -p hidden
+	$(MAKE) VPATH=$(SRCDIR)/hidden -C hidden -f $(MAKEFILE_RULES) \
+		DYLIB_ONLY=YES DYLIB_CXX_SOURCES=d.cpp DYLIB_NAME=loadunload_d
