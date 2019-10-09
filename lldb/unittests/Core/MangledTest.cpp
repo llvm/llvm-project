@@ -29,9 +29,7 @@ using namespace lldb_private;
 
 TEST(MangledTest, ResultForValidName) {
   ConstString MangledName("_ZN1a1b1cIiiiEEvm");
-  bool IsMangled = true;
-
-  Mangled TheMangled(MangledName, IsMangled);
+  Mangled TheMangled(MangledName);
   ConstString TheDemangled =
       TheMangled.GetDemangledName(eLanguageTypeC_plus_plus);
 
@@ -41,9 +39,7 @@ TEST(MangledTest, ResultForValidName) {
 
 TEST(MangledTest, EmptyForInvalidName) {
   ConstString MangledName("_ZN1a1b1cmxktpEEvm");
-  bool IsMangled = true;
-
-  Mangled TheMangled(MangledName, IsMangled);
+  Mangled TheMangled(MangledName);
   ConstString TheDemangled =
       TheMangled.GetDemangledName(eLanguageTypeC_plus_plus);
 

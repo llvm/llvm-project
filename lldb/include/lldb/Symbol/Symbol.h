@@ -24,9 +24,8 @@ public:
   // drastically different meanings and sorting requirements.
   Symbol();
 
-  Symbol(uint32_t symID, const char *name, bool name_is_mangled,
-         lldb::SymbolType type, bool external, bool is_debug,
-         bool is_trampoline, bool is_artificial,
+  Symbol(uint32_t symID, llvm::StringRef name, lldb::SymbolType type,
+         bool external, bool is_debug, bool is_trampoline, bool is_artificial,
          const lldb::SectionSP &section_sp, lldb::addr_t value,
          lldb::addr_t size, bool size_is_valid,
          bool contains_linker_annotations, uint32_t flags);
