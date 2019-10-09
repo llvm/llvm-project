@@ -358,19 +358,7 @@ public:
       case 'H':
         m_hardware = true;
         break;
-<<<<<<< HEAD
 
-      case 'k': {
-          if (m_current_key.empty())
-            m_current_key.assign(option_arg);
-          else
-            error.SetErrorStringWithFormat("Key: %s missing value.",
-                                            m_current_key.c_str());
-
-      } break;
-=======
-        
->>>>>>> a8446221d1f565cbd2696ab71d42b4bf29b994e1
       case 'K': {
         bool success;
         bool value;
@@ -451,15 +439,7 @@ public:
       case 'p':
         m_source_text_regexp.assign(option_arg);
         break;
-<<<<<<< HEAD
 
-      case 'P':
-        m_python_class.assign(option_arg);
-        break;
-
-=======
-        
->>>>>>> a8446221d1f565cbd2696ab71d42b4bf29b994e1
       case 'r':
         m_func_regexp.assign(option_arg);
         break;
@@ -473,19 +453,6 @@ public:
         m_func_name_type_mask |= eFunctionNameTypeSelector;
         break;
 
-<<<<<<< HEAD
-      case 'v': {
-          if (!m_current_key.empty()) {
-              m_extra_args_sp->AddStringItem(m_current_key, option_arg);
-              m_current_key.clear();
-          }
-          else
-            error.SetErrorStringWithFormat("Value \"%s\" missing matching key.",
-                                           option_arg.str().c_str());
-      } break;
-
-=======
->>>>>>> a8446221d1f565cbd2696ab71d42b4bf29b994e1
       case 'w': {
         bool success;
         m_throw_bp = OptionArgParser::ToBoolean(option_arg, true, &success);

@@ -1,6 +1,4 @@
 set(LLVM_OPTIONAL_SOURCES LocateSymbolFileMacOSX.cpp)
-=======
->>>>>>> a8446221d1f565cbd2696ab71d42b4bf29b994e1
 
 if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
   set(PLATFORM_SOURCES LocateSymbolFileMacOSX.cpp)
