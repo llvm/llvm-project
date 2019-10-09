@@ -40,6 +40,34 @@ namespace {
 struct NoTTIImpl : TargetTransformInfoImplCRTPBase<NoTTIImpl> {
   explicit NoTTIImpl(const DataLayout &DL)
       : TargetTransformInfoImplCRTPBase<NoTTIImpl>(DL) {}
+
+  unsigned getCacheLineSize() const { return 0; }
+
+  llvm::Optional<unsigned> getCacheSize(TargetTransformInfo::CacheLevel Level) const {
+    switch (Level) {
+    case TargetTransformInfo::CacheLevel::L1D:
+      LLVM_FALLTHROUGH;
+    case TargetTransformInfo::CacheLevel::L2D:
+      return llvm::Optional<unsigned>();
+    }
+    llvm_unreachable("Unknown TargetTransformInfo::CacheLevel");
+  }
+
+  llvm::Optional<unsigned> getCacheAssociativity(
+    TargetTransformInfo::CacheLevel Level) const {
+    switch (Level) {
+    case TargetTransformInfo::CacheLevel::L1D:
+      LLVM_FALLTHROUGH;
+    case TargetTransformInfo::CacheLevel::L2D:
+      return llvm::Optional<unsigned>();
+    }
+
+    llvm_unreachable("Unknown TargetTransformInfo::CacheLevel");
+  }
+
+  unsigned getPrefetchDistance() const { return 0; }
+  unsigned getMinPrefetchStride() const { return 1; }
+  unsigned getMaxPrefetchIterationsAhead() const { return UINT_MAX; }
 };
 }
 

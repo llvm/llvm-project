@@ -227,17 +227,29 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU,
     Updates.push_back({DominatorTree::Delete, PredBB, BB});
   }
 
-  if (MSSAU)
-    MSSAU->moveAllAfterMergeBlocks(BB, PredBB, &*(BB->begin()));
+  Instruction *PTI = PredBB->getTerminator();
+  Instruction *STI = BB->getTerminator();
+  Instruction *Start = &*BB->begin();
+  // If there's nothing to move, mark the starting instruction as the last
+  // instruction in the block.
+  if (Start == STI)
+    Start = PTI;
 
-  // Delete the unconditional branch from the predecessor...
-  PredBB->getInstList().pop_back();
+  // Move all definitions in the successor to the predecessor...
+  PredBB->getInstList().splice(PTI->getIterator(), BB->getInstList(),
+                               BB->begin(), STI->getIterator());
+
+  if (MSSAU)
+    MSSAU->moveAllAfterMergeBlocks(BB, PredBB, Start);
 
   // Make all PHI nodes that referred to BB now refer to Pred as their
   // source...
   BB->replaceAllUsesWith(PredBB);
 
-  // Move all definitions in the successor to the predecessor...
+  // Delete the unconditional branch from the predecessor...
+  PredBB->getInstList().pop_back();
+
+  // Move terminator instruction and add unreachable to now empty BB.
   PredBB->getInstList().splice(PredBB->end(), BB->getInstList());
   new UnreachableInst(BB->getContext(), BB);
 
@@ -274,11 +286,10 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU,
            "applying corresponding DTU updates.");
     DTU->applyUpdatesPermissive(Updates);
     DTU->deleteBB(BB);
-  }
-
-  else {
+  } else {
     BB->eraseFromParent(); // Nuke BB if DTU is nullptr.
   }
+
   return true;
 }
 

@@ -27,13 +27,14 @@ TEST(PerfHelperTest, FunctionalTest) {
   std::string CallbackEventName;
   std::string CallbackEventNameFullyQualifed;
   int64_t CallbackEventCycles;
-  Measure(llvm::makeArrayRef(SingleEvent),
-          [&](const PerfEvent &Event, int64_t Value) {
-            CallbackEventName = Event.name();
-            CallbackEventNameFullyQualifed = Event.getPfmEventString();
-            CallbackEventCycles = Value;
-          },
-          EmptyFn);
+  Measure(
+      makeArrayRef(SingleEvent),
+      [&](const PerfEvent &Event, int64_t Value) {
+        CallbackEventName = Event.name();
+        CallbackEventNameFullyQualifed = Event.getPfmEventString();
+        CallbackEventCycles = Value;
+      },
+      EmptyFn);
   EXPECT_EQ(CallbackEventName, "CYCLES:u");
   EXPECT_THAT(CallbackEventNameFullyQualifed, Not(IsEmpty()));
   pfmTerminate();

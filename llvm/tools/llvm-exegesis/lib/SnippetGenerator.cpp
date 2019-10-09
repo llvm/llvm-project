@@ -30,18 +30,17 @@ std::vector<CodeTemplate> getSingleton(CodeTemplate &&CT) {
   return Result;
 }
 
-SnippetGeneratorFailure::SnippetGeneratorFailure(const llvm::Twine &S)
-    : llvm::StringError(S, llvm::inconvertibleErrorCode()) {}
+SnippetGeneratorFailure::SnippetGeneratorFailure(const Twine &S)
+    : StringError(S, inconvertibleErrorCode()) {}
 
 SnippetGenerator::SnippetGenerator(const LLVMState &State, const Options &Opts)
     : State(State), Opts(Opts) {}
 
 SnippetGenerator::~SnippetGenerator() = default;
 
-llvm::Expected<std::vector<BenchmarkCode>>
-SnippetGenerator::generateConfigurations(
-    const Instruction &Instr, const llvm::BitVector &ExtraForbiddenRegs) const {
-  llvm::BitVector ForbiddenRegs = State.getRATC().reservedRegisters();
+Expected<std::vector<BenchmarkCode>> SnippetGenerator::generateConfigurations(
+    const Instruction &Instr, const BitVector &ExtraForbiddenRegs) const {
+  BitVector ForbiddenRegs = State.getRATC().reservedRegisters();
   ForbiddenRegs |= ExtraForbiddenRegs;
   // If the instruction has memory registers, prevent the generator from
   // using the scratch register and its aliasing registers.
@@ -98,7 +97,7 @@ std::vector<RegisterValue> SnippetGenerator::computeRegisterInitialValues(
   // Ignore memory operands which are handled separately.
   // Loop invariant: DefinedRegs[i] is true iif it has been set at least once
   // before the current instruction.
-  llvm::BitVector DefinedRegs = State.getRATC().emptyRegisters();
+  BitVector DefinedRegs = State.getRATC().emptyRegisters();
   std::vector<RegisterValue> RIV;
   for (const InstructionTemplate &IT : Instructions) {
     // Returns the register that this Operand sets or uses, or 0 if this is not
@@ -134,11 +133,11 @@ std::vector<RegisterValue> SnippetGenerator::computeRegisterInitialValues(
   return RIV;
 }
 
-llvm::Expected<std::vector<CodeTemplate>>
+Expected<std::vector<CodeTemplate>>
 generateSelfAliasingCodeTemplates(const Instruction &Instr) {
   const AliasingConfigurations SelfAliasing(Instr, Instr);
   if (SelfAliasing.empty())
-    return llvm::make_error<SnippetGeneratorFailure>("empty self aliasing");
+    return make_error<SnippetGeneratorFailure>("empty self aliasing");
   std::vector<CodeTemplate> Result;
   Result.emplace_back();
   CodeTemplate &CT = Result.back();
@@ -155,13 +154,12 @@ generateSelfAliasingCodeTemplates(const Instruction &Instr) {
   return std::move(Result);
 }
 
-llvm::Expected<std::vector<CodeTemplate>>
-generateUnconstrainedCodeTemplates(const Instruction &Instr,
-                                   llvm::StringRef Msg) {
+Expected<std::vector<CodeTemplate>>
+generateUnconstrainedCodeTemplates(const Instruction &Instr, StringRef Msg) {
   std::vector<CodeTemplate> Result;
   Result.emplace_back();
   CodeTemplate &CT = Result.back();
-  CT.Info = llvm::formatv("{0}, repeating an unconstrained assignment", Msg);
+  CT.Info = formatv("{0}, repeating an unconstrained assignment", Msg);
   CT.Instructions.emplace_back(Instr);
   return std::move(Result);
 }
@@ -193,14 +191,14 @@ static void setRegisterOperandValue(const RegisterOperandAssignment &ROV,
       assert(AssignedValue.isReg() && AssignedValue.getReg() == ROV.Reg);
       return;
     }
-    AssignedValue = llvm::MCOperand::createReg(ROV.Reg);
+    AssignedValue = MCOperand::createReg(ROV.Reg);
   } else {
     assert(ROV.Op->isImplicitReg());
     assert(ROV.Reg == ROV.Op->getImplicitReg());
   }
 }
 
-size_t randomBit(const llvm::BitVector &Vector) {
+size_t randomBit(const BitVector &Vector) {
   assert(Vector.any());
   auto Itr = Vector.set_bits_begin();
   for (size_t I = randomIndex(Vector.count() - 1); I != 0; --I)
@@ -218,10 +216,10 @@ void setRandomAliasing(const AliasingConfigurations &AliasingConfigurations,
 }
 
 void randomizeUnsetVariables(const ExegesisTarget &Target,
-                             const llvm::BitVector &ForbiddenRegs,
+                             const BitVector &ForbiddenRegs,
                              InstructionTemplate &IT) {
   for (const Variable &Var : IT.Instr.Variables) {
-    llvm::MCOperand &AssignedValue = IT.getValueFor(Var);
+    MCOperand &AssignedValue = IT.getValueFor(Var);
     if (!AssignedValue.isValid())
       Target.randomizeMCOperand(IT.Instr, Var, AssignedValue, ForbiddenRegs);
   }

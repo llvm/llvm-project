@@ -30,6 +30,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ValueSymbolTable.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
@@ -48,18 +49,10 @@ static cl::list<std::string> UseNative("amdgpu-use-native",
   cl::CommaSeparated, cl::ValueOptional,
   cl::Hidden);
 
-#define MATH_PI     3.14159265358979323846264338327950288419716939937511
-#define MATH_E      2.71828182845904523536028747135266249775724709369996
-#define MATH_SQRT2  1.41421356237309504880168872420969807856967187537695
-
-#define MATH_LOG2E     1.4426950408889634073599246810018921374266459541529859
-#define MATH_LOG10E    0.4342944819032518276511289189166050822943970058036665
-// Value of log2(10)
-#define MATH_LOG2_10   3.3219280948873623478703194294893901758648313930245806
-// Value of 1 / log2(10)
-#define MATH_RLOG2_10  0.3010299956639811952137388947244930267681898814621085
-// Value of 1 / M_LOG2E_F = 1 / log2(e)
-#define MATH_RLOG2_E   0.6931471805599453094172321214581765680755001343602552
+#define MATH_PI      numbers::pi
+#define MATH_E       numbers::e
+#define MATH_SQRT2   numbers::sqrt2
+#define MATH_SQRT1_2 numbers::inv_sqrt2
 
 namespace llvm {
 
@@ -254,8 +247,8 @@ struct TableEntry {
 
 /* a list of {result, input} */
 static const TableEntry tbl_acos[] = {
-  {MATH_PI/2.0, 0.0},
-  {MATH_PI/2.0, -0.0},
+  {MATH_PI / 2.0, 0.0},
+  {MATH_PI / 2.0, -0.0},
   {0.0, 1.0},
   {MATH_PI, -1.0}
 };
@@ -271,8 +264,8 @@ static const TableEntry tbl_acospi[] = {
 static const TableEntry tbl_asin[] = {
   {0.0, 0.0},
   {-0.0, -0.0},
-  {MATH_PI/2.0, 1.0},
-  {-MATH_PI/2.0, -1.0}
+  {MATH_PI / 2.0, 1.0},
+  {-MATH_PI / 2.0, -1.0}
 };
 static const TableEntry tbl_asinh[] = {
   {0.0, 0.0},
@@ -287,8 +280,8 @@ static const TableEntry tbl_asinpi[] = {
 static const TableEntry tbl_atan[] = {
   {0.0, 0.0},
   {-0.0, -0.0},
-  {MATH_PI/4.0, 1.0},
-  {-MATH_PI/4.0, -1.0}
+  {MATH_PI / 4.0, 1.0},
+  {-MATH_PI / 4.0, -1.0}
 };
 static const TableEntry tbl_atanh[] = {
   {0.0, 0.0},
@@ -359,7 +352,7 @@ static const TableEntry tbl_log10[] = {
 };
 static const TableEntry tbl_rsqrt[] = {
   {1.0, 1.0},
-  {1.0/MATH_SQRT2, 2.0}
+  {MATH_SQRT1_2, 2.0}
 };
 static const TableEntry tbl_sin[] = {
   {0.0, 0.0},
@@ -868,7 +861,7 @@ static double log2(double V) {
 #if _XOPEN_SOURCE >= 600 || defined(_ISOC99_SOURCE) || _POSIX_C_SOURCE >= 200112L
   return ::log2(V);
 #else
-  return log(V) / 0.693147180559945309417;
+  return log(V) / numbers::ln2;
 #endif
 }
 }

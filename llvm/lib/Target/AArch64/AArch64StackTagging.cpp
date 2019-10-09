@@ -19,6 +19,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
@@ -491,6 +492,24 @@ void AArch64StackTagging::alignAndPadAlloca(AllocaInfo &Info) {
   Info.AI = NewAI;
 }
 
+// Helper function to check for post-dominance.
+static bool postDominates(const PostDominatorTree *PDT, const IntrinsicInst *A,
+                          const IntrinsicInst *B) {
+  const BasicBlock *ABB = A->getParent();
+  const BasicBlock *BBB = B->getParent();
+
+  if (ABB != BBB)
+    return PDT->dominates(ABB, BBB);
+
+  for (const Instruction &I : *ABB) {
+    if (&I == B)
+      return true;
+    if (&I == A)
+      return false;
+  }
+  llvm_unreachable("Corrupt instruction list");
+}
+
 // FIXME: check for MTE extension
 bool AArch64StackTagging::runOnFunction(Function &Fn) {
   if (!Fn.hasFnAttribute(Attribute::SanitizeMemTag))
@@ -565,23 +584,31 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
   if (NumInterestingAllocas == 0)
     return true;
 
+  std::unique_ptr<DominatorTree> DeleteDT;
+  DominatorTree *DT = nullptr;
+  if (auto *P = getAnalysisIfAvailable<DominatorTreeWrapperPass>())
+    DT = &P->getDomTree();
+
+  if (DT == nullptr && (NumInterestingAllocas > 1 ||
+                        !F->hasFnAttribute(Attribute::OptimizeNone))) {
+    DeleteDT = std::make_unique<DominatorTree>(*F);
+    DT = DeleteDT.get();
+  }
+
+  std::unique_ptr<PostDominatorTree> DeletePDT;
+  PostDominatorTree *PDT = nullptr;
+  if (auto *P = getAnalysisIfAvailable<PostDominatorTreeWrapperPass>())
+    PDT = &P->getPostDomTree();
+
+  if (PDT == nullptr && !F->hasFnAttribute(Attribute::OptimizeNone)) {
+    DeletePDT = std::make_unique<PostDominatorTree>(*F);
+    PDT = DeletePDT.get();
+  }
+
   SetTagFunc =
       Intrinsic::getDeclaration(F->getParent(), Intrinsic::aarch64_settag);
 
-  // Compute DT only if the function has the attribute, there are more than 1
-  // interesting allocas, and it is not available for free.
-  Instruction *Base;
-  if (NumInterestingAllocas > 1) {
-    auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>();
-    if (DTWP) {
-      Base = insertBaseTaggedPointer(Allocas, &DTWP->getDomTree());
-    } else {
-      DominatorTree DT(*F);
-      Base = insertBaseTaggedPointer(Allocas, &DT);
-    }
-  } else {
-    Base = insertBaseTaggedPointer(Allocas, nullptr);
-  }
+  Instruction *Base = insertBaseTaggedPointer(Allocas, DT);
 
   for (auto &I : Allocas) {
     const AllocaInfo &Info = I.second;
@@ -604,11 +631,37 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
     if (UnrecognizedLifetimes.empty() && Info.LifetimeStart.size() == 1 &&
         Info.LifetimeEnd.size() == 1) {
       IntrinsicInst *Start = Info.LifetimeStart[0];
+      IntrinsicInst *End = Info.LifetimeEnd[0];
       uint64_t Size =
           dyn_cast<ConstantInt>(Start->getArgOperand(0))->getZExtValue();
       Size = alignTo(Size, kTagGranuleSize);
       tagAlloca(AI, Start->getNextNode(), Start->getArgOperand(1), Size);
-      untagAlloca(AI, Info.LifetimeEnd[0], Size);
+      // We need to ensure that if we tag some object, we certainly untag it
+      // before the function exits.
+      if (PDT != nullptr && postDominates(PDT, End, Start)) {
+        untagAlloca(AI, End, Size);
+      } else {
+        SmallVector<Instruction *, 8> ReachableRetVec;
+        unsigned NumCoveredExits = 0;
+        for (auto &RI : RetVec) {
+          if (!isPotentiallyReachable(Start, RI, nullptr, DT))
+            continue;
+          ReachableRetVec.push_back(RI);
+          if (DT != nullptr && DT->dominates(End, RI))
+            ++NumCoveredExits;
+        }
+        // If there's a mix of covered and non-covered exits, just put the untag
+        // on exits, so we avoid the redundancy of untagging twice.
+        if (NumCoveredExits == ReachableRetVec.size()) {
+          untagAlloca(AI, End, Size);
+        } else {
+          for (auto &RI : ReachableRetVec)
+            untagAlloca(AI, RI, Size);
+          // We may have inserted untag outside of the lifetime interval.
+          // Remove the lifetime end call for this alloca.
+          End->eraseFromParent();
+        }
+      }
     } else {
       uint64_t Size = Info.AI->getAllocationSizeInBits(*DL).getValue() / 8;
       Value *Ptr = IRB.CreatePointerCast(TagPCall, IRB.getInt8PtrTy());

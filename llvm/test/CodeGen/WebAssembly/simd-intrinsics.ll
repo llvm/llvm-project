@@ -11,6 +11,16 @@ target triple = "wasm32-unknown-unknown"
 ; ==============================================================================
 ; 16 x i8
 ; ==============================================================================
+; CHECK-LABEL: swizzle_v16i8:
+; SIMD128-NEXT: .functype swizzle_v16i8 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: v8x16.swizzle $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+declare <16 x i8> @llvm.wasm.swizzle(<16 x i8>, <16 x i8>)
+define <16 x i8> @swizzle_v16i8(<16 x i8> %x, <16 x i8> %y) {
+  %a = call <16 x i8> @llvm.wasm.swizzle(<16 x i8> %x, <16 x i8> %y)
+  ret <16 x i8> %a
+}
+
 ; CHECK-LABEL: add_sat_s_v16i8:
 ; SIMD128-NEXT: .functype add_sat_s_v16i8 (v128, v128) -> (v128){{$}}
 ; SIMD128-NEXT: i8x16.add_saturate_s $push[[R:[0-9]+]]=, $0, $1{{$}}

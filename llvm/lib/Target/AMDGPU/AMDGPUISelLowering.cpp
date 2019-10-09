@@ -12,10 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define AMDGPU_LOG2E_F     1.44269504088896340735992468100189214f
-#define AMDGPU_LN2_F       0.693147180559945309417232121458176568f
-#define AMDGPU_LN10_F      2.30258509299404568401799145468436421f
-
 #include "AMDGPUISelLowering.h"
 #include "AMDGPU.h"
 #include "AMDGPUCallLowering.h"
@@ -37,6 +33,7 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/Support/KnownBits.h"
+#include "llvm/Support/MathExtras.h"
 using namespace llvm;
 
 #include "AMDGPUGenCallingConv.inc"
@@ -1135,9 +1132,9 @@ SDValue AMDGPUTargetLowering::LowerOperation(SDValue Op,
   case ISD::FROUND: return LowerFROUND(Op, DAG);
   case ISD::FFLOOR: return LowerFFLOOR(Op, DAG);
   case ISD::FLOG:
-    return LowerFLOG(Op, DAG, 1 / AMDGPU_LOG2E_F);
+    return LowerFLOG(Op, DAG, 1.0F / numbers::log2ef);
   case ISD::FLOG10:
-    return LowerFLOG(Op, DAG, AMDGPU_LN2_F / AMDGPU_LN10_F);
+    return LowerFLOG(Op, DAG, numbers::ln2f / numbers::ln10f);
   case ISD::FEXP:
     return lowerFEXP(Op, DAG);
   case ISD::SINT_TO_FP: return LowerSINT_TO_FP(Op, DAG);
@@ -2285,30 +2282,13 @@ SDValue AMDGPUTargetLowering::LowerFLOG(SDValue Op, SelectionDAG &DAG,
   return DAG.getNode(ISD::FMUL, SL, VT, Log2Operand, Log2BaseInvertedOperand);
 }
 
-// Return M_LOG2E of appropriate type
-static SDValue getLog2EVal(SelectionDAG &DAG, const SDLoc &SL, EVT VT) {
-  switch (VT.getScalarType().getSimpleVT().SimpleTy) {
-  case MVT::f32:
-    return DAG.getConstantFP(1.44269504088896340735992468100189214f, SL, VT);
-  case MVT::f16:
-    return DAG.getConstantFP(
-      APFloat(APFloat::IEEEhalf(), "1.44269504088896340735992468100189214"),
-      SL, VT);
-  case MVT::f64:
-    return DAG.getConstantFP(
-      APFloat(APFloat::IEEEdouble(), "0x1.71547652b82fep+0"), SL, VT);
-  default:
-    llvm_unreachable("unsupported fp type");
-  }
-}
-
 // exp2(M_LOG2E_F * f);
 SDValue AMDGPUTargetLowering::lowerFEXP(SDValue Op, SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
   SDLoc SL(Op);
   SDValue Src = Op.getOperand(0);
 
-  const SDValue K = getLog2EVal(DAG, SL, VT);
+  const SDValue K = DAG.getConstantFP(numbers::log2e, SL, VT);
   SDValue Mul = DAG.getNode(ISD::FMUL, SL, VT, Src, K, Op->getFlags());
   return DAG.getNode(ISD::FEXP2, SL, VT, Mul, Op->getFlags());
 }

@@ -1374,9 +1374,6 @@ exit:
   call void @f.nobuiltin() builtin
   ; CHECK: call void @f.nobuiltin() #43
 
-  call void @f.strictfp() strictfp
-  ; CHECK: call void @f.strictfp() #44
-
   call fastcc noalias i32* @f.noalias() noinline
   ; CHECK: call fastcc noalias i32* @f.noalias() #12
   tail call ghccc nonnull i32* @f.nonnull() minsize
@@ -1388,6 +1385,13 @@ exit:
 define void @instructions.call_musttail(i8* inalloca %val) {
   musttail call void @f.param.inalloca(i8* inalloca %val)
   ; CHECK: musttail call void @f.param.inalloca(i8* inalloca %val)
+
+  ret void
+}
+
+define void @instructions.strictfp() #44 {
+  call void @f.strictfp() strictfp
+  ; CHECK: call void @f.strictfp() #44
 
   ret void
 }

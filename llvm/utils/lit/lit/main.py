@@ -19,84 +19,12 @@ import tempfile
 import shutil
 from xml.sax.saxutils import quoteattr
 
-import lit.ProgressBar
-import lit.LitConfig
-import lit.Test
-import lit.run
-import lit.util
 import lit.discovery
-
-class TestingProgressDisplay(object):
-    def __init__(self, opts, numTests, progressBar=None):
-        self.opts = opts
-        self.numTests = numTests
-        self.progressBar = progressBar
-        self.completed = 0
-
-    def finish(self):
-        if self.progressBar:
-            self.progressBar.clear()
-        elif self.opts.quiet:
-            pass
-        elif self.opts.succinct:
-            sys.stdout.write('\n')
-
-    def update(self, test):
-        self.completed += 1
-
-        if self.opts.incremental:
-            update_incremental_cache(test)
-
-        if self.progressBar:
-            self.progressBar.update(float(self.completed)/self.numTests,
-                                    test.getFullName())
-
-        shouldShow = test.result.code.isFailure or \
-            self.opts.showAllOutput or \
-            (not self.opts.quiet and not self.opts.succinct)
-        if not shouldShow:
-            return
-
-        if self.progressBar:
-            self.progressBar.clear()
-
-        # Show the test result line.
-        test_name = test.getFullName()
-        print('%s: %s (%d of %d)' % (test.result.code.name, test_name,
-                                     self.completed, self.numTests))
-
-        # Show the test failure output, if requested.
-        if (test.result.code.isFailure and self.opts.showOutput) or \
-           self.opts.showAllOutput:
-            if test.result.code.isFailure:
-                print("%s TEST '%s' FAILED %s" % ('*'*20, test.getFullName(),
-                                                  '*'*20))
-            print(test.result.output)
-            print("*" * 20)
-
-        # Report test metrics, if present.
-        if test.result.metrics:
-            print("%s TEST '%s' RESULTS %s" % ('*'*10, test.getFullName(),
-                                               '*'*10))
-            items = sorted(test.result.metrics.items())
-            for metric_name, value in items:
-                print('%s: %s ' % (metric_name, value.format()))
-            print("*" * 10)
-
-        # Report micro-tests, if present
-        if test.result.microResults:
-            items = sorted(test.result.microResults.items())
-            for micro_test_name, micro_test in items:
-                print("%s MICRO-TEST: %s" %
-                         ('*'*3, micro_test_name))
-   
-                if micro_test.metrics:
-                    sorted_metrics = sorted(micro_test.metrics.items())
-                    for metric_name, value in sorted_metrics:
-                        print('    %s:  %s ' % (metric_name, value.format()))
-
-        # Ensure the output is flushed.
-        sys.stdout.flush()
+import lit.display
+import lit.LitConfig
+import lit.run
+import lit.Test
+import lit.util
 
 def write_test_results(run, lit_config, testing_time, output_path):
     try:
@@ -505,29 +433,22 @@ def main_with_tmp(builtinParameters):
     except:
         pass
 
-    extra = (' of %d' % numTotalTests) if (len(run.tests) != numTotalTests) else ''
-    header = '-- Testing: %d%s tests, %d workers --' % (len(run.tests), extra, opts.numWorkers)
-    progressBar = None
-    if not opts.quiet:
-        if opts.succinct and opts.useProgressBar:
-            try:
-                tc = lit.ProgressBar.TerminalController()
-                progressBar = lit.ProgressBar.ProgressBar(tc, header)
-            except ValueError:
-                print(header)
-                progressBar = lit.ProgressBar.SimpleProgressBar('Testing: ')
-        else:
-            print(header)
+    display = lit.display.create_display(opts, len(run.tests),
+                                         numTotalTests, opts.numWorkers)
+    def progress_callback(test):
+        display.update(test)
+        if opts.incremental:
+            update_incremental_cache(test)
 
     startTime = time.time()
-    display = TestingProgressDisplay(opts, len(run.tests), progressBar)
     try:
-        run.execute_tests(display, opts.numWorkers, opts.maxTime)
+        run.execute_tests(progress_callback, opts.numWorkers, opts.maxTime)
     except KeyboardInterrupt:
         sys.exit(2)
+    testing_time = time.time() - startTime
+
     display.finish()
 
-    testing_time = time.time() - startTime
     if not opts.quiet:
         print('Testing Time: %.2fs' % (testing_time,))
 

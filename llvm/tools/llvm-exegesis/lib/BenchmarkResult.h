@@ -32,7 +32,7 @@ namespace exegesis {
 
 struct InstructionBenchmarkKey {
   // The LLVM opcode name.
-  std::vector<llvm::MCInst> Instructions;
+  std::vector<MCInst> Instructions;
   // The initial values of the registers.
   std::vector<RegisterValue> RegisterInitialValues;
   // An opaque configuration, that can be used to separate several benchmarks of
@@ -62,7 +62,7 @@ struct InstructionBenchmark {
   std::string CpuName;
   std::string LLVMTriple;
   // Which instruction is being benchmarked here?
-  const llvm::MCInst &keyInstruction() const { return Key.Instructions[0]; }
+  const MCInst &keyInstruction() const { return Key.Instructions[0]; }
   // The number of instructions inside the repeated snippet. For example, if a
   // snippet of 3 instructions is repeated 4 times, this is 12.
   int NumRepetitions = 0;
@@ -75,19 +75,18 @@ struct InstructionBenchmark {
   std::vector<uint8_t> AssembledSnippet;
 
   // Read functions.
-  static llvm::Expected<InstructionBenchmark>
-  readYaml(const LLVMState &State, llvm::StringRef Filename);
+  static Expected<InstructionBenchmark> readYaml(const LLVMState &State,
+                                                 StringRef Filename);
 
-  static llvm::Expected<std::vector<InstructionBenchmark>>
-  readYamls(const LLVMState &State, llvm::StringRef Filename);
+  static Expected<std::vector<InstructionBenchmark>>
+  readYamls(const LLVMState &State, StringRef Filename);
 
-  llvm::Error readYamlFrom(const LLVMState &State,
-                           llvm::StringRef InputContent);
+  class Error readYamlFrom(const LLVMState &State, StringRef InputContent);
 
   // Write functions, non-const because of YAML traits.
-  llvm::Error writeYamlTo(const LLVMState &State, llvm::raw_ostream &S);
+  class Error writeYamlTo(const LLVMState &State, raw_ostream &S);
 
-  llvm::Error writeYaml(const LLVMState &State, const llvm::StringRef Filename);
+  class Error writeYaml(const LLVMState &State, const StringRef Filename);
 };
 
 //------------------------------------------------------------------------------

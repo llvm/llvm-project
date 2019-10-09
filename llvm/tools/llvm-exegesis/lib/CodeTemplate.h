@@ -31,19 +31,19 @@ struct InstructionTemplate {
   InstructionTemplate &operator=(InstructionTemplate &&);      // default
 
   unsigned getOpcode() const;
-  llvm::MCOperand &getValueFor(const Variable &Var);
-  const llvm::MCOperand &getValueFor(const Variable &Var) const;
-  llvm::MCOperand &getValueFor(const Operand &Op);
-  const llvm::MCOperand &getValueFor(const Operand &Op) const;
+  MCOperand &getValueFor(const Variable &Var);
+  const MCOperand &getValueFor(const Variable &Var) const;
+  MCOperand &getValueFor(const Operand &Op);
+  const MCOperand &getValueFor(const Operand &Op) const;
   bool hasImmediateVariables() const;
 
-  // Builds an llvm::MCInst from this InstructionTemplate setting its operands
+  // Builds an MCInst from this InstructionTemplate setting its operands
   // to the corresponding variable values. Precondition: All VariableValues must
   // be set.
-  llvm::MCInst build() const;
+  MCInst build() const;
 
   Instruction Instr;
-  llvm::SmallVector<llvm::MCOperand, 4> VariableValues;
+  SmallVector<MCOperand, 4> VariableValues;
 };
 
 enum class ExecutionMode : uint8_t {
@@ -91,14 +91,14 @@ enum class ExecutionMode : uint8_t {
 bool isEnumValue(ExecutionMode Execution);
 
 // Returns a human readable string for the enum.
-llvm::StringRef getName(ExecutionMode Execution);
+StringRef getName(ExecutionMode Execution);
 
 // Returns a sequence of increasing powers of two corresponding to all the
 // Execution flags.
-llvm::ArrayRef<ExecutionMode> getAllExecutionBits();
+ArrayRef<ExecutionMode> getAllExecutionBits();
 
 // Decomposes Execution into individual set bits.
-llvm::SmallVector<ExecutionMode, 4> getExecutionModeBits(ExecutionMode);
+SmallVector<ExecutionMode, 4> getExecutionModeBits(ExecutionMode);
 
 LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 
