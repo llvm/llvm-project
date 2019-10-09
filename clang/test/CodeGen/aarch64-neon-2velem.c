@@ -451,9 +451,7 @@ float64x2_t test_vfmsq_laneq_f64(float64x2_t a, float64x2_t b, float64x2_t v) {
 }
 
 // CHECK-LABEL: @test_vfmas_laneq_f32(
-// CHECK:   [[TMP0:%.*]] = bitcast <4 x float> %v to <16 x i8>
-// CHECK:   [[TMP1:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x float>
-// CHECK:   [[EXTRACT:%.*]] = extractelement <4 x float> [[TMP1]], i32 3
+// CHECK:   [[EXTRACT:%.*]] = extractelement <4 x float> %v, i32 3
 // CHECK:   [[TMP2:%.*]] = call float @llvm.fma.f32(float %b, float [[EXTRACT]], float %a)
 // CHECK:   ret float [[TMP2]]
 float32_t test_vfmas_laneq_f32(float32_t a, float32_t b, float32x4_t v) {
@@ -462,9 +460,7 @@ float32_t test_vfmas_laneq_f32(float32_t a, float32_t b, float32x4_t v) {
 
 // CHECK-LABEL: @test_vfmsd_lane_f64(
 // CHECK:   [[SUB:%.*]] = fsub double -0.000000e+00, %b
-// CHECK:   [[TMP0:%.*]] = bitcast <1 x double> %v to <8 x i8>
-// CHECK:   [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x double>
-// CHECK:   [[EXTRACT:%.*]] = extractelement <1 x double> [[TMP1]], i32 0
+// CHECK:   [[EXTRACT:%.*]] = extractelement <1 x double> %v, i32 0
 // CHECK:   [[TMP2:%.*]] = call double @llvm.fma.f64(double [[SUB]], double [[EXTRACT]], double %a)
 // CHECK:   ret double [[TMP2]]
 float64_t test_vfmsd_lane_f64(float64_t a, float64_t b, float64x1_t v) {
@@ -473,9 +469,7 @@ float64_t test_vfmsd_lane_f64(float64_t a, float64_t b, float64x1_t v) {
 
 // CHECK-LABEL: @test_vfmss_laneq_f32(
 // CHECK:   [[SUB:%.*]] = fsub float -0.000000e+00, %b
-// CHECK:   [[TMP0:%.*]] = bitcast <4 x float> %v to <16 x i8>
-// CHECK:   [[TMP1:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x float>
-// CHECK:   [[EXTRACT:%.*]] = extractelement <4 x float> [[TMP1]], i32 3
+// CHECK:   [[EXTRACT:%.*]] = extractelement <4 x float> %v, i32 3
 // CHECK:   [[TMP2:%.*]] = call float @llvm.fma.f32(float [[SUB]], float [[EXTRACT]], float %a)
 // CHECK:   ret float [[TMP2]]
 float32_t test_vfmss_laneq_f32(float32_t a, float32_t b, float32x4_t v) {
@@ -484,9 +478,7 @@ float32_t test_vfmss_laneq_f32(float32_t a, float32_t b, float32x4_t v) {
 
 // CHECK-LABEL: @test_vfmsd_laneq_f64(
 // CHECK:   [[SUB:%.*]] = fsub double -0.000000e+00, %b
-// CHECK:   [[TMP0:%.*]] = bitcast <2 x double> %v to <16 x i8>
-// CHECK:   [[TMP1:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x double>
-// CHECK:   [[EXTRACT:%.*]] = extractelement <2 x double> [[TMP1]], i32 1
+// CHECK:   [[EXTRACT:%.*]] = extractelement <2 x double> %v, i32 1
 // CHECK:   [[TMP2:%.*]] = call double @llvm.fma.f64(double [[SUB]], double [[EXTRACT]], double %a)
 // CHECK:   ret double [[TMP2]]
 float64_t test_vfmsd_laneq_f64(float64_t a, float64_t b, float64x2_t v) {

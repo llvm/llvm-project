@@ -8703,7 +8703,6 @@ uint64_t test_vqrshld_u64(uint64_t a, uint64_t b) {
 }
 
 // CHECK-LABEL: @test_vpaddd_s64(
-// CHECK:   [[TMP0:%.*]] = bitcast <2 x i64> %a to <16 x i8>
 // CHECK:   [[VPADDD_S64_I:%.*]] = call i64 @llvm.aarch64.neon.uaddv.i64.v2i64(<2 x i64> %a)
 // CHECK:   ret i64 [[VPADDD_S64_I]]
 int64_t test_vpaddd_s64(int64x2_t a) {
@@ -8711,7 +8710,6 @@ int64_t test_vpaddd_s64(int64x2_t a) {
 }
 
 // CHECK-LABEL: @test_vpadds_f32(
-// CHECK:   [[TMP0:%.*]] = bitcast <2 x float> %a to <8 x i8>
 // CHECK:   [[LANE0_I:%.*]] = extractelement <2 x float> %a, i64 0
 // CHECK:   [[LANE1_I:%.*]] = extractelement <2 x float> %a, i64 1
 // CHECK:   [[VPADDD_I:%.*]] = fadd float [[LANE0_I]], [[LANE1_I]]
@@ -8721,7 +8719,6 @@ float32_t test_vpadds_f32(float32x2_t a) {
 }
 
 // CHECK-LABEL: @test_vpaddd_f64(
-// CHECK:   [[TMP0:%.*]] = bitcast <2 x double> %a to <16 x i8>
 // CHECK:   [[LANE0_I:%.*]] = extractelement <2 x double> %a, i64 0
 // CHECK:   [[LANE1_I:%.*]] = extractelement <2 x double> %a, i64 1
 // CHECK:   [[VPADDD_I:%.*]] = fadd double [[LANE0_I]], [[LANE1_I]]
@@ -8731,7 +8728,6 @@ float64_t test_vpaddd_f64(float64x2_t a) {
 }
 
 // CHECK-LABEL: @test_vpmaxnms_f32(
-// CHECK:   [[TMP0:%.*]] = bitcast <2 x float> %a to <8 x i8>
 // CHECK:   [[VPMAXNMS_F32_I:%.*]] = call float @llvm.aarch64.neon.fmaxnmv.f32.v2f32(<2 x float> %a)
 // CHECK:   ret float [[VPMAXNMS_F32_I]]
 float32_t test_vpmaxnms_f32(float32x2_t a) {
@@ -8739,7 +8735,6 @@ float32_t test_vpmaxnms_f32(float32x2_t a) {
 }
 
 // CHECK-LABEL: @test_vpmaxnmqd_f64(
-// CHECK:   [[TMP0:%.*]] = bitcast <2 x double> %a to <16 x i8>
 // CHECK:   [[VPMAXNMQD_F64_I:%.*]] = call double @llvm.aarch64.neon.fmaxnmv.f64.v2f64(<2 x double> %a)
 // CHECK:   ret double [[VPMAXNMQD_F64_I]]
 float64_t test_vpmaxnmqd_f64(float64x2_t a) {
@@ -8747,7 +8742,6 @@ float64_t test_vpmaxnmqd_f64(float64x2_t a) {
 }
 
 // CHECK-LABEL: @test_vpmaxs_f32(
-// CHECK:   [[TMP0:%.*]] = bitcast <2 x float> %a to <8 x i8>
 // CHECK:   [[VPMAXS_F32_I:%.*]] = call float @llvm.aarch64.neon.fmaxv.f32.v2f32(<2 x float> %a)
 // CHECK:   ret float [[VPMAXS_F32_I]]
 float32_t test_vpmaxs_f32(float32x2_t a) {
@@ -8755,7 +8749,6 @@ float32_t test_vpmaxs_f32(float32x2_t a) {
 }
 
 // CHECK-LABEL: @test_vpmaxqd_f64(
-// CHECK:   [[TMP0:%.*]] = bitcast <2 x double> %a to <16 x i8>
 // CHECK:   [[VPMAXQD_F64_I:%.*]] = call double @llvm.aarch64.neon.fmaxv.f64.v2f64(<2 x double> %a)
 // CHECK:   ret double [[VPMAXQD_F64_I]]
 float64_t test_vpmaxqd_f64(float64x2_t a) {
@@ -8763,7 +8756,6 @@ float64_t test_vpmaxqd_f64(float64x2_t a) {
 }
 
 // CHECK-LABEL: @test_vpminnms_f32(
-// CHECK:   [[TMP0:%.*]] = bitcast <2 x float> %a to <8 x i8>
 // CHECK:   [[VPMINNMS_F32_I:%.*]] = call float @llvm.aarch64.neon.fminnmv.f32.v2f32(<2 x float> %a)
 // CHECK:   ret float [[VPMINNMS_F32_I]]
 float32_t test_vpminnms_f32(float32x2_t a) {
@@ -8771,7 +8763,6 @@ float32_t test_vpminnms_f32(float32x2_t a) {
 }
 
 // CHECK-LABEL: @test_vpminnmqd_f64(
-// CHECK:   [[TMP0:%.*]] = bitcast <2 x double> %a to <16 x i8>
 // CHECK:   [[VPMINNMQD_F64_I:%.*]] = call double @llvm.aarch64.neon.fminnmv.f64.v2f64(<2 x double> %a)
 // CHECK:   ret double [[VPMINNMQD_F64_I]]
 float64_t test_vpminnmqd_f64(float64x2_t a) {
@@ -8779,7 +8770,6 @@ float64_t test_vpminnmqd_f64(float64x2_t a) {
 }
 
 // CHECK-LABEL: @test_vpmins_f32(
-// CHECK:   [[TMP0:%.*]] = bitcast <2 x float> %a to <8 x i8>
 // CHECK:   [[VPMINS_F32_I:%.*]] = call float @llvm.aarch64.neon.fminv.f32.v2f32(<2 x float> %a)
 // CHECK:   ret float [[VPMINS_F32_I]]
 float32_t test_vpmins_f32(float32x2_t a) {
@@ -8787,7 +8777,6 @@ float32_t test_vpmins_f32(float32x2_t a) {
 }
 
 // CHECK-LABEL: @test_vpminqd_f64(
-// CHECK:   [[TMP0:%.*]] = bitcast <2 x double> %a to <16 x i8>
 // CHECK:   [[VPMINQD_F64_I:%.*]] = call double @llvm.aarch64.neon.fminv.f64.v2f64(<2 x double> %a)
 // CHECK:   ret double [[VPMINQD_F64_I]]
 float64_t test_vpminqd_f64(float64x2_t a) {
@@ -17690,7 +17679,6 @@ int64x1_t test_vneg_s64(int64x1_t a) {
 }
 
 // CHECK-LABEL: @test_vaddv_f32(
-// CHECK:   [[TMP0:%.*]] = bitcast <2 x float> %a to <8 x i8>
 // CHECK:   [[VADDV_F32_I:%.*]] = call float @llvm.aarch64.neon.faddv.f32.v2f32(<2 x float> %a)
 // CHECK:   ret float [[VADDV_F32_I]]
 float32_t test_vaddv_f32(float32x2_t a) {
@@ -17698,7 +17686,6 @@ float32_t test_vaddv_f32(float32x2_t a) {
 }
 
 // CHECK-LABEL: @test_vaddvq_f32(
-// CHECK:   [[TMP0:%.*]] = bitcast <4 x float> %a to <16 x i8>
 // CHECK:   [[VADDVQ_F32_I:%.*]] = call float @llvm.aarch64.neon.faddv.f32.v4f32(<4 x float> %a)
 // CHECK:   ret float [[VADDVQ_F32_I]]
 float32_t test_vaddvq_f32(float32x4_t a) {
@@ -17706,7 +17693,6 @@ float32_t test_vaddvq_f32(float32x4_t a) {
 }
 
 // CHECK-LABEL: @test_vaddvq_f64(
-// CHECK:   [[TMP0:%.*]] = bitcast <2 x double> %a to <16 x i8>
 // CHECK:   [[VADDVQ_F64_I:%.*]] = call double @llvm.aarch64.neon.faddv.f64.v2f64(<2 x double> %a)
 // CHECK:   ret double [[VADDVQ_F64_I]]
 float64_t test_vaddvq_f64(float64x2_t a) {
@@ -17714,7 +17700,6 @@ float64_t test_vaddvq_f64(float64x2_t a) {
 }
 
 // CHECK-LABEL: @test_vmaxv_f32(
-// CHECK:   [[TMP0:%.*]] = bitcast <2 x float> %a to <8 x i8>
 // CHECK:   [[VMAXV_F32_I:%.*]] = call float @llvm.aarch64.neon.fmaxv.f32.v2f32(<2 x float> %a)
 // CHECK:   ret float [[VMAXV_F32_I]]
 float32_t test_vmaxv_f32(float32x2_t a) {
@@ -17722,7 +17707,6 @@ float32_t test_vmaxv_f32(float32x2_t a) {
 }
 
 // CHECK-LABEL: @test_vmaxvq_f64(
-// CHECK:   [[TMP0:%.*]] = bitcast <2 x double> %a to <16 x i8>
 // CHECK:   [[VMAXVQ_F64_I:%.*]] = call double @llvm.aarch64.neon.fmaxv.f64.v2f64(<2 x double> %a)
 // CHECK:   ret double [[VMAXVQ_F64_I]]
 float64_t test_vmaxvq_f64(float64x2_t a) {
@@ -17730,7 +17714,6 @@ float64_t test_vmaxvq_f64(float64x2_t a) {
 }
 
 // CHECK-LABEL: @test_vminv_f32(
-// CHECK:   [[TMP0:%.*]] = bitcast <2 x float> %a to <8 x i8>
 // CHECK:   [[VMINV_F32_I:%.*]] = call float @llvm.aarch64.neon.fminv.f32.v2f32(<2 x float> %a)
 // CHECK:   ret float [[VMINV_F32_I]]
 float32_t test_vminv_f32(float32x2_t a) {
@@ -17738,7 +17721,6 @@ float32_t test_vminv_f32(float32x2_t a) {
 }
 
 // CHECK-LABEL: @test_vminvq_f64(
-// CHECK:   [[TMP0:%.*]] = bitcast <2 x double> %a to <16 x i8>
 // CHECK:   [[VMINVQ_F64_I:%.*]] = call double @llvm.aarch64.neon.fminv.f64.v2f64(<2 x double> %a)
 // CHECK:   ret double [[VMINVQ_F64_I]]
 float64_t test_vminvq_f64(float64x2_t a) {
@@ -17746,7 +17728,6 @@ float64_t test_vminvq_f64(float64x2_t a) {
 }
 
 // CHECK-LABEL: @test_vmaxnmvq_f64(
-// CHECK:   [[TMP0:%.*]] = bitcast <2 x double> %a to <16 x i8>
 // CHECK:   [[VMAXNMVQ_F64_I:%.*]] = call double @llvm.aarch64.neon.fmaxnmv.f64.v2f64(<2 x double> %a)
 // CHECK:   ret double [[VMAXNMVQ_F64_I]]
 float64_t test_vmaxnmvq_f64(float64x2_t a) {
@@ -17754,7 +17735,6 @@ float64_t test_vmaxnmvq_f64(float64x2_t a) {
 }
 
 // CHECK-LABEL: @test_vmaxnmv_f32(
-// CHECK:   [[TMP0:%.*]] = bitcast <2 x float> %a to <8 x i8>
 // CHECK:   [[VMAXNMV_F32_I:%.*]] = call float @llvm.aarch64.neon.fmaxnmv.f32.v2f32(<2 x float> %a)
 // CHECK:   ret float [[VMAXNMV_F32_I]]
 float32_t test_vmaxnmv_f32(float32x2_t a) {
@@ -17762,7 +17742,6 @@ float32_t test_vmaxnmv_f32(float32x2_t a) {
 }
 
 // CHECK-LABEL: @test_vminnmvq_f64(
-// CHECK:   [[TMP0:%.*]] = bitcast <2 x double> %a to <16 x i8>
 // CHECK:   [[VMINNMVQ_F64_I:%.*]] = call double @llvm.aarch64.neon.fminnmv.f64.v2f64(<2 x double> %a)
 // CHECK:   ret double [[VMINNMVQ_F64_I]]
 float64_t test_vminnmvq_f64(float64x2_t a) {
@@ -17770,7 +17749,6 @@ float64_t test_vminnmvq_f64(float64x2_t a) {
 }
 
 // CHECK-LABEL: @test_vminnmv_f32(
-// CHECK:   [[TMP0:%.*]] = bitcast <2 x float> %a to <8 x i8>
 // CHECK:   [[VMINNMV_F32_I:%.*]] = call float @llvm.aarch64.neon.fminnmv.f32.v2f32(<2 x float> %a)
 // CHECK:   ret float [[VMINNMV_F32_I]]
 float32_t test_vminnmv_f32(float32x2_t a) {
@@ -17798,7 +17776,6 @@ uint64x2_t test_vpaddq_u64(uint64x2_t a, uint64x2_t b) {
 }
 
 // CHECK-LABEL: @test_vpaddd_u64(
-// CHECK:   [[TMP0:%.*]] = bitcast <2 x i64> %a to <16 x i8>
 // CHECK:   [[VPADDD_U64_I:%.*]] = call i64 @llvm.aarch64.neon.uaddv.i64.v2i64(<2 x i64> %a)
 // CHECK:   ret i64 [[VPADDD_U64_I]]
 uint64_t test_vpaddd_u64(uint64x2_t a) {
@@ -17806,7 +17783,6 @@ uint64_t test_vpaddd_u64(uint64x2_t a) {
 }
 
 // CHECK-LABEL: @test_vaddvq_s64(
-// CHECK:   [[TMP0:%.*]] = bitcast <2 x i64> %a to <16 x i8>
 // CHECK:   [[VADDVQ_S64_I:%.*]] = call i64 @llvm.aarch64.neon.saddv.i64.v2i64(<2 x i64> %a)
 // CHECK:   ret i64 [[VADDVQ_S64_I]]
 int64_t test_vaddvq_s64(int64x2_t a) {
@@ -17814,7 +17790,6 @@ int64_t test_vaddvq_s64(int64x2_t a) {
 }
 
 // CHECK-LABEL: @test_vaddvq_u64(
-// CHECK:   [[TMP0:%.*]] = bitcast <2 x i64> %a to <16 x i8>
 // CHECK:   [[VADDVQ_U64_I:%.*]] = call i64 @llvm.aarch64.neon.uaddv.i64.v2i64(<2 x i64> %a)
 // CHECK:   ret i64 [[VADDVQ_U64_I]]
 uint64_t test_vaddvq_u64(uint64x2_t a) {
@@ -18178,7 +18153,6 @@ float64x1_t test_vrsqrts_f64(float64x1_t a, float64x1_t b) {
 }
 
 // CHECK-LABEL: @test_vminv_s32(
-// CHECK:   [[TMP0:%.*]] = bitcast <2 x i32> %a to <8 x i8>
 // CHECK:   [[VMINV_S32_I:%.*]] = call i32 @llvm.aarch64.neon.sminv.i32.v2i32(<2 x i32> %a)
 // CHECK:   ret i32 [[VMINV_S32_I]]
 int32_t test_vminv_s32(int32x2_t a) {
@@ -18186,7 +18160,6 @@ int32_t test_vminv_s32(int32x2_t a) {
 }
 
 // CHECK-LABEL: @test_vminv_u32(
-// CHECK:   [[TMP0:%.*]] = bitcast <2 x i32> %a to <8 x i8>
 // CHECK:   [[VMINV_U32_I:%.*]] = call i32 @llvm.aarch64.neon.uminv.i32.v2i32(<2 x i32> %a)
 // CHECK:   ret i32 [[VMINV_U32_I]]
 uint32_t test_vminv_u32(uint32x2_t a) {
@@ -18194,7 +18167,6 @@ uint32_t test_vminv_u32(uint32x2_t a) {
 }
 
 // CHECK-LABEL: @test_vmaxv_s32(
-// CHECK:   [[TMP0:%.*]] = bitcast <2 x i32> %a to <8 x i8>
 // CHECK:   [[VMAXV_S32_I:%.*]] = call i32 @llvm.aarch64.neon.smaxv.i32.v2i32(<2 x i32> %a)
 // CHECK:   ret i32 [[VMAXV_S32_I]]
 int32_t test_vmaxv_s32(int32x2_t a) {
@@ -18202,7 +18174,6 @@ int32_t test_vmaxv_s32(int32x2_t a) {
 }
 
 // CHECK-LABEL: @test_vmaxv_u32(
-// CHECK:   [[TMP0:%.*]] = bitcast <2 x i32> %a to <8 x i8>
 // CHECK:   [[VMAXV_U32_I:%.*]] = call i32 @llvm.aarch64.neon.umaxv.i32.v2i32(<2 x i32> %a)
 // CHECK:   ret i32 [[VMAXV_U32_I]]
 uint32_t test_vmaxv_u32(uint32x2_t a) {
@@ -18210,7 +18181,6 @@ uint32_t test_vmaxv_u32(uint32x2_t a) {
 }
 
 // CHECK-LABEL: @test_vaddv_s32(
-// CHECK:   [[TMP0:%.*]] = bitcast <2 x i32> %a to <8 x i8>
 // CHECK:   [[VADDV_S32_I:%.*]] = call i32 @llvm.aarch64.neon.saddv.i32.v2i32(<2 x i32> %a)
 // CHECK:   ret i32 [[VADDV_S32_I]]
 int32_t test_vaddv_s32(int32x2_t a) {
@@ -18218,7 +18188,6 @@ int32_t test_vaddv_s32(int32x2_t a) {
 }
 
 // CHECK-LABEL: @test_vaddv_u32(
-// CHECK:   [[TMP0:%.*]] = bitcast <2 x i32> %a to <8 x i8>
 // CHECK:   [[VADDV_U32_I:%.*]] = call i32 @llvm.aarch64.neon.uaddv.i32.v2i32(<2 x i32> %a)
 // CHECK:   ret i32 [[VADDV_U32_I]]
 uint32_t test_vaddv_u32(uint32x2_t a) {
@@ -18226,7 +18195,6 @@ uint32_t test_vaddv_u32(uint32x2_t a) {
 }
 
 // CHECK-LABEL: @test_vaddlv_s32(
-// CHECK:   [[TMP0:%.*]] = bitcast <2 x i32> %a to <8 x i8>
 // CHECK:   [[VADDLV_S32_I:%.*]] = call i64 @llvm.aarch64.neon.saddlv.i64.v2i32(<2 x i32> %a)
 // CHECK:   ret i64 [[VADDLV_S32_I]]
 int64_t test_vaddlv_s32(int32x2_t a) {
@@ -18234,7 +18202,6 @@ int64_t test_vaddlv_s32(int32x2_t a) {
 }
 
 // CHECK-LABEL: @test_vaddlv_u32(
-// CHECK:   [[TMP0:%.*]] = bitcast <2 x i32> %a to <8 x i8>
 // CHECK:   [[VADDLV_U32_I:%.*]] = call i64 @llvm.aarch64.neon.uaddlv.i64.v2i32(<2 x i32> %a)
 // CHECK:   ret i64 [[VADDLV_U32_I]]
 uint64_t test_vaddlv_u32(uint32x2_t a) {

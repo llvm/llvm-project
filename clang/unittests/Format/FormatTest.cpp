@@ -7037,31 +7037,31 @@ TEST_F(FormatTest, UnderstandsFunctionRefQualification) {
 
   verifyFormat("struct f {\n"
                "  template <class T>\n"
-               "  int &foo(const std::string &str) & noexcept {}\n"
+               "  int &foo(const std::string &str) &noexcept {}\n"
                "};",
                BreakTemplate);
 
   verifyFormat("struct f {\n"
                "  template <class T>\n"
-               "  int &foo(const std::string &str) && noexcept {}\n"
+               "  int &foo(const std::string &str) &&noexcept {}\n"
                "};",
                BreakTemplate);
 
   verifyFormat("struct f {\n"
                "  template <class T>\n"
-               "  int &foo(const std::string &str) const & noexcept {}\n"
+               "  int &foo(const std::string &str) const &noexcept {}\n"
                "};",
                BreakTemplate);
 
   verifyFormat("struct f {\n"
                "  template <class T>\n"
-               "  int &foo(const std::string &str) const & noexcept {}\n"
+               "  int &foo(const std::string &str) const &noexcept {}\n"
                "};",
                BreakTemplate);
 
   verifyFormat("struct f {\n"
                "  template <class T>\n"
-               "  auto foo(const std::string &str) && noexcept -> int & {}\n"
+               "  auto foo(const std::string &str) &&noexcept -> int & {}\n"
                "};",
                BreakTemplate);
 
@@ -7084,13 +7084,13 @@ TEST_F(FormatTest, UnderstandsFunctionRefQualification) {
 
   verifyFormat("struct f {\n"
                "  template <class T>\n"
-               "  int& foo(const std::string& str) const & noexcept {}\n"
+               "  int& foo(const std::string& str) const& noexcept {}\n"
                "};",
                AlignLeftBreakTemplate);
 
   verifyFormat("struct f {\n"
                "  template <class T>\n"
-               "  int& foo(const std::string& str) const & noexcept {}\n"
+               "  int& foo(const std::string& str) const&& noexcept {}\n"
                "};",
                AlignLeftBreakTemplate);
 
@@ -7099,6 +7099,24 @@ TEST_F(FormatTest, UnderstandsFunctionRefQualification) {
                "  auto foo(const std::string& str) && noexcept -> int& {}\n"
                "};",
                AlignLeftBreakTemplate);
+
+  // The `&` in `Type&` should not be confused with a trailing `&` of
+  // DEPRECATED(reason) member function.
+  verifyFormat("struct f {\n"
+               "  template <class T>\n"
+               "  DEPRECATED(reason)\n"
+               "  Type &foo(arguments) {}\n"
+               "};",
+               BreakTemplate);
+
+  verifyFormat("struct f {\n"
+               "  template <class T>\n"
+               "  DEPRECATED(reason)\n"
+               "  Type& foo(arguments) {}\n"
+               "};",
+               AlignLeftBreakTemplate);
+
+  verifyFormat("void (*foopt)(int) = &func;");
 }
 
 TEST_F(FormatTest, UnderstandsNewAndDelete) {

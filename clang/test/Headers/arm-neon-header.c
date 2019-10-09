@@ -20,4 +20,7 @@
 // RUN: %clang -fsyntax-only -Wall -Werror -ffreestanding -nostdinc++ --target=aarch64_be-none-eabi -march=armv8.2-a+fp16 -std=c++14 -xc++ %s
 // RUN: %clang -fsyntax-only -Wall -Werror -ffreestanding -nostdinc++ --target=aarch64_be-none-eabi -march=armv8.2-a+fp16 -std=c++17 -xc++ %s
 
+// RUN: %clang -fsyntax-only -Wall -Werror -ffreestanding --target=aarch64-none-eabi -march=armv8.2-a+fp16 -std=c11 -xc -flax-vector-conversions=none %s
+// RUN: %clang -fsyntax-only -Wall -Werror -ffreestanding --target=aarch64_be-none-eabi -march=armv8.2-a+fp16 -std=c11 -xc -flax-vector-conversions=none %s
+
 #include <arm_neon.h>

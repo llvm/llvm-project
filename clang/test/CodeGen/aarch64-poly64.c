@@ -61,48 +61,36 @@ poly64x2_t test_vbslq_p64(poly64x2_t a, poly64x2_t b, poly64x2_t c) {
 }
 
 // CHECK-LABEL: define i64 @test_vget_lane_p64(<1 x i64> %v) #0 {
-// CHECK:   [[TMP0:%.*]] = bitcast <1 x i64> %v to <8 x i8>
-// CHECK:   [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
-// CHECK:   [[VGET_LANE:%.*]] = extractelement <1 x i64> [[TMP1]], i32 0
+// CHECK:   [[VGET_LANE:%.*]] = extractelement <1 x i64> %v, i32 0
 // CHECK:   ret i64 [[VGET_LANE]]
 poly64_t test_vget_lane_p64(poly64x1_t v) {
   return vget_lane_p64(v, 0);
 }
 
 // CHECK-LABEL: define i64 @test_vgetq_lane_p64(<2 x i64> %v) #1 {
-// CHECK:   [[TMP0:%.*]] = bitcast <2 x i64> %v to <16 x i8>
-// CHECK:   [[TMP1:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
-// CHECK:   [[VGETQ_LANE:%.*]] = extractelement <2 x i64> [[TMP1]], i32 1
+// CHECK:   [[VGETQ_LANE:%.*]] = extractelement <2 x i64> %v, i32 1
 // CHECK:   ret i64 [[VGETQ_LANE]]
 poly64_t test_vgetq_lane_p64(poly64x2_t v) {
   return vgetq_lane_p64(v, 1);
 }
 
 // CHECK-LABEL: define <1 x i64> @test_vset_lane_p64(i64 %a, <1 x i64> %v) #0 {
-// CHECK:   [[TMP0:%.*]] = bitcast <1 x i64> %v to <8 x i8>
-// CHECK:   [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
-// CHECK:   [[VSET_LANE:%.*]] = insertelement <1 x i64> [[TMP1]], i64 %a, i32 0
+// CHECK:   [[VSET_LANE:%.*]] = insertelement <1 x i64> %v, i64 %a, i32 0
 // CHECK:   ret <1 x i64> [[VSET_LANE]]
 poly64x1_t test_vset_lane_p64(poly64_t a, poly64x1_t v) {
   return vset_lane_p64(a, v, 0);
 }
 
 // CHECK-LABEL: define <2 x i64> @test_vsetq_lane_p64(i64 %a, <2 x i64> %v) #1 {
-// CHECK:   [[TMP0:%.*]] = bitcast <2 x i64> %v to <16 x i8>
-// CHECK:   [[TMP1:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
-// CHECK:   [[VSET_LANE:%.*]] = insertelement <2 x i64> [[TMP1]], i64 %a, i32 1
+// CHECK:   [[VSET_LANE:%.*]] = insertelement <2 x i64> %v, i64 %a, i32 1
 // CHECK:   ret <2 x i64> [[VSET_LANE]]
 poly64x2_t test_vsetq_lane_p64(poly64_t a, poly64x2_t v) {
   return vsetq_lane_p64(a, v, 1);
 }
 
 // CHECK-LABEL: define <1 x i64> @test_vcopy_lane_p64(<1 x i64> %a, <1 x i64> %b) #0 {
-// CHECK:   [[TMP0:%.*]] = bitcast <1 x i64> %b to <8 x i8>
-// CHECK:   [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
-// CHECK:   [[VGET_LANE:%.*]] = extractelement <1 x i64> [[TMP1]], i32 0
-// CHECK:   [[TMP2:%.*]] = bitcast <1 x i64> %a to <8 x i8>
-// CHECK:   [[TMP3:%.*]] = bitcast <8 x i8> [[TMP2]] to <1 x i64>
-// CHECK:   [[VSET_LANE:%.*]] = insertelement <1 x i64> [[TMP3]], i64 [[VGET_LANE]], i32 0
+// CHECK:   [[VGET_LANE:%.*]] = extractelement <1 x i64> %b, i32 0
+// CHECK:   [[VSET_LANE:%.*]] = insertelement <1 x i64> %a, i64 [[VGET_LANE]], i32 0
 // CHECK:   ret <1 x i64> [[VSET_LANE]]
 poly64x1_t test_vcopy_lane_p64(poly64x1_t a, poly64x1_t b) {
   return vcopy_lane_p64(a, 0, b, 0);
@@ -110,24 +98,16 @@ poly64x1_t test_vcopy_lane_p64(poly64x1_t a, poly64x1_t b) {
 }
 
 // CHECK-LABEL: define <2 x i64> @test_vcopyq_lane_p64(<2 x i64> %a, <1 x i64> %b) #1 {
-// CHECK:   [[TMP0:%.*]] = bitcast <1 x i64> %b to <8 x i8>
-// CHECK:   [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
-// CHECK:   [[VGET_LANE:%.*]] = extractelement <1 x i64> [[TMP1]], i32 0
-// CHECK:   [[TMP2:%.*]] = bitcast <2 x i64> %a to <16 x i8>
-// CHECK:   [[TMP3:%.*]] = bitcast <16 x i8> [[TMP2]] to <2 x i64>
-// CHECK:   [[VSET_LANE:%.*]] = insertelement <2 x i64> [[TMP3]], i64 [[VGET_LANE]], i32 1
+// CHECK:   [[VGET_LANE:%.*]] = extractelement <1 x i64> %b, i32 0
+// CHECK:   [[VSET_LANE:%.*]] = insertelement <2 x i64> %a, i64 [[VGET_LANE]], i32 1
 // CHECK:   ret <2 x i64> [[VSET_LANE]]
 poly64x2_t test_vcopyq_lane_p64(poly64x2_t a, poly64x1_t b) {
   return vcopyq_lane_p64(a, 1, b, 0);
 }
 
 // CHECK-LABEL: define <2 x i64> @test_vcopyq_laneq_p64(<2 x i64> %a, <2 x i64> %b) #1 {
-// CHECK:   [[TMP0:%.*]] = bitcast <2 x i64> %b to <16 x i8>
-// CHECK:   [[TMP1:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
-// CHECK:   [[VGETQ_LANE:%.*]] = extractelement <2 x i64> [[TMP1]], i32 1
-// CHECK:   [[TMP2:%.*]] = bitcast <2 x i64> %a to <16 x i8>
-// CHECK:   [[TMP3:%.*]] = bitcast <16 x i8> [[TMP2]] to <2 x i64>
-// CHECK:   [[VSET_LANE:%.*]] = insertelement <2 x i64> [[TMP3]], i64 [[VGETQ_LANE]], i32 1
+// CHECK:   [[VGETQ_LANE:%.*]] = extractelement <2 x i64> %b, i32 1
+// CHECK:   [[VSET_LANE:%.*]] = insertelement <2 x i64> %a, i64 [[VGETQ_LANE]], i32 1
 // CHECK:   ret <2 x i64> [[VSET_LANE]]
 poly64x2_t test_vcopyq_laneq_p64(poly64x2_t a, poly64x2_t b) {
   return vcopyq_laneq_p64(a, 1, b, 1);
