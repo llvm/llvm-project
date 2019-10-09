@@ -142,15 +142,13 @@ get_demangled_name_without_arguments(ConstString mangled,
 
 #pragma mark DisplayDemangledNamesCache
 
-// make the key type be a const char* because that gives us usable DenseMapInfo
-// for free
-// making DenseMap work for ConstString requires us to provide two "invalid"
-// values:
-// the empty key and the tombstone key; but for ConstString, we really don't
-// have any
-// well-known invalid value other than ConstString(nullptr)
-// so, just use const char* as the key as LLVM knows how to do proper
-// DenseMapInfo for pointers
+// make the key type be a const char* because that gives us usable
+// DenseMapInfo for free making DenseMap work for ConstString requires
+// us to provide two "invalid" values: the empty key and the tombstone
+// key; but for ConstString, we really don't have any well-known
+// invalid value other than ConstString(nullptr) so, just use const
+// char* as the key as LLVM knows how to do proper DenseMapInfo for
+// pointers
 static ThreadSafeDenseMap<const char *, ConstString> *
 GetDisplayDemangledNamesCache() {
   ThreadSafeDenseMap<const char *, ConstString> *g_cache;
