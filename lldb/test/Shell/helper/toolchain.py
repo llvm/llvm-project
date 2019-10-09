@@ -29,7 +29,7 @@ def use_lldb_substitutions(config):
     if config.llvm_libs_dir:
         build_script_args.append('--libs-dir={0}'.format(config.llvm_libs_dir))
 
-    lldb_init = os.path.join(config.test_exec_root, 'lit-lldb-init')
+    lldb_init = os.path.join(config.test_exec_root, 'Shell', 'lit-lldb-init')
 
     primary_tools = [
         ToolSubst('%lldb',

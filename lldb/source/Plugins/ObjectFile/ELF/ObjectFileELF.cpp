@@ -2793,7 +2793,6 @@ Symtab *ObjectFileELF::GetSymtab() {
         uint64_t symbol_id = m_symtab_up->GetNumSymbols();
         Symbol symbol(symbol_id,
                       GetNextSyntheticSymbolName().GetCString(), // Symbol name.
-                      false,           // Is the symbol name mangled?
                       eSymbolTypeCode, // Type of this symbol.
                       true,            // Is this globally visible?
                       false,           // Is this symbol debug info?

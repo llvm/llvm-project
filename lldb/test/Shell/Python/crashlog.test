@@ -1,6 +1,6 @@
 #                                                                 -*- python -*-
 # REQUIRES: system-darwin
-# RUN: cd %S/../../examples/python && cat %s | %lldb | FileCheck %s
+# RUN: cd %S/../../../examples/python && cat %s | %lldb | FileCheck %s
 # CHECK-LABEL: {{S}}KIP BEYOND CHECKS
 script
 import crashlog
@@ -44,7 +44,7 @@ images = [
 # CHECK: (0)
 # CHECK: 01234
 # CHECK: /tmp/MyApp Pro.app/MyApp Pro
-    
+
 "0x7fff63f20000 - 0x7fff63f77ff7  libc++.1.dylib (400.9.4) /usr/lib/libc++.1.dylib"
 # CHECK: 0x7fff63f20000
 # CHECK: 0x7fff63f77ff7

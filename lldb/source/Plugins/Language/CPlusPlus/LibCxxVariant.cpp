@@ -184,7 +184,6 @@ public:
 
 private:
   size_t m_size = 0;
-  ValueObjectSP m_base_sp;
 };
 } // namespace
 
