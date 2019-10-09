@@ -5717,6 +5717,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddLastArg(CmdArgs, options::OPT_dM);
   Args.AddLastArg(CmdArgs, options::OPT_dD);
 
+  Args.AddLastArg(CmdArgs, options::OPT_fmax_tokens);
+
   // Handle serialized diagnostics.
   if (Arg *A = Args.getLastArg(options::OPT__serialize_diags)) {
     CmdArgs.push_back("-serialize-diagnostic-file");
