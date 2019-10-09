@@ -365,6 +365,7 @@ def make_symlink_native(vDictArgs, strSrc, strTarget):
 # Throws:   None.
 #--
 
+
 def make_symlink(
         vDictArgs,
         vstrFrameworkPythonDir,
@@ -373,13 +374,27 @@ def make_symlink(
     dbg = utilsDebug.CDebugFnVerbose("Python script make_symlink()")
     strTarget = os.path.join(vstrFrameworkPythonDir, vstrTargetFile)
     strTarget = os.path.normcase(strTarget)
-    strPrefix = vDictArgs['--prefix']
+    strSrc = ""
 
     os.chdir(vstrFrameworkPythonDir)
+    bMakeFileCalled = "-m" in vDictArgs
+    eOSType = utilsOsType.determine_os_type()
+    if not bMakeFileCalled:
+        strBuildDir = os.path.join("..", "..", "..")
+    else:
+        # Resolve vstrSrcFile path relatively the build directory
+        if eOSType == utilsOsType.EnumOsType.Windows:
+            # On a Windows platform the vstrFrameworkPythonDir looks like:
+            # llvm\\build\\Lib\\site-packages\\lldb
+            strBuildDir = os.path.join("..", "..", "..")
+        else:
+            # On a UNIX style platform the vstrFrameworkPythonDir looks like:
+            # llvm/build/lib/python2.7/site-packages/lldb
+            strBuildDir = os.path.join("..", "..", "..", "..")
+    strSrc = os.path.normcase(os.path.join(strBuildDir, vstrSrcFile))
 
-    strSrc = os.path.normcase(os.path.join(strPrefix, vstrSrcFile))
-    strRelSrc = os.path.relpath(strSrc, os.path.dirname(strTarget))
-    return make_symlink_native(vDictArgs, strRelSrc, strTarget)
+    return make_symlink_native(vDictArgs, strSrc, strTarget)
+
 
 #++---------------------------------------------------------------------------
 # Details:  Make the symbolic that the script bridge for Python will need in

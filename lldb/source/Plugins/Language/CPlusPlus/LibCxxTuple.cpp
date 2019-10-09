@@ -79,7 +79,9 @@ ValueObjectSP TupleFrontEnd::GetChildAtIndex(size_t idx) {
     m_elements[idx] =
         elem_sp->Clone(ConstString(llvm::formatv("[{0}]", idx).str())).get();
 
-  return m_elements[idx]->GetSP();
+  if (m_elements[idx])
+    return m_elements[idx]->GetSP();
+  return ValueObjectSP();
 }
 
 SyntheticChildrenFrontEnd *

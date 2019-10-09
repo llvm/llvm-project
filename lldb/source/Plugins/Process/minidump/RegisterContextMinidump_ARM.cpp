@@ -9,6 +9,7 @@
 #include "RegisterContextMinidump_ARM.h"
 
 #include "Utility/ARM_DWARF_Registers.h"
+#include "Utility/ARM_ehframe_Registers.h"
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/LLDBAssert.h"
@@ -29,14 +30,14 @@ using namespace minidump;
 #define DEF_R(i)                                                               \
   {                                                                            \
     "r" #i, nullptr, 4, OFFSET(r) + i * 4, eEncodingUint, eFormatHex,          \
-        {dwarf_r##i, dwarf_r##i, INV, INV, reg_r##i},                          \
+        {ehframe_r##i, dwarf_r##i, INV, INV, reg_r##i},                          \
         nullptr, nullptr, nullptr, 0    \
   }
 
 #define DEF_R_ARG(i, n)                                                        \
   {                                                                            \
     "r" #i, "arg" #n, 4, OFFSET(r) + i * 4, eEncodingUint, eFormatHex,         \
-        {dwarf_r##i, dwarf_r##i, LLDB_REGNUM_GENERIC_ARG1 + i, INV, reg_r##i}, \
+        {ehframe_r##i, dwarf_r##i, LLDB_REGNUM_GENERIC_ARG1 + i, INV, reg_r##i}, \
         nullptr, nullptr, nullptr, 0                                           \
   }
 
@@ -173,7 +174,7 @@ static RegisterInfo g_reg_info_apple_fp = {
     OFFSET(r) + 7 * 4,
     eEncodingUint,
     eFormatHex,
-    {INV, dwarf_r7, LLDB_REGNUM_GENERIC_FP, INV, reg_r7},
+    {ehframe_r7, dwarf_r7, LLDB_REGNUM_GENERIC_FP, INV, reg_r7},
     nullptr,
     nullptr,
     nullptr,
@@ -186,7 +187,7 @@ static RegisterInfo g_reg_info_fp = {
     OFFSET(r) + 11 * 4,
     eEncodingUint,
     eFormatHex,
-    {INV, dwarf_r11, LLDB_REGNUM_GENERIC_FP, INV, reg_r11},
+    {ehframe_r11, dwarf_r11, LLDB_REGNUM_GENERIC_FP, INV, reg_r11},
     nullptr,
     nullptr,
     nullptr,
@@ -213,7 +214,7 @@ static RegisterInfo g_reg_infos[] = {
      OFFSET(r) + 13 * 4,
      eEncodingUint,
      eFormatHex,
-     {INV, dwarf_sp, LLDB_REGNUM_GENERIC_SP, INV, reg_sp},
+     {ehframe_sp, dwarf_sp, LLDB_REGNUM_GENERIC_SP, INV, reg_sp},
      nullptr,
      nullptr,
      nullptr,
@@ -224,7 +225,7 @@ static RegisterInfo g_reg_infos[] = {
      OFFSET(r) + 14 * 4,
      eEncodingUint,
      eFormatHex,
-     {INV, dwarf_lr, LLDB_REGNUM_GENERIC_RA, INV, reg_lr},
+     {ehframe_lr, dwarf_lr, LLDB_REGNUM_GENERIC_RA, INV, reg_lr},
      nullptr,
      nullptr,
      nullptr,
@@ -235,7 +236,7 @@ static RegisterInfo g_reg_infos[] = {
      OFFSET(r) + 15 * 4,
      eEncodingUint,
      eFormatHex,
-     {INV, dwarf_pc, LLDB_REGNUM_GENERIC_PC, INV, reg_pc},
+     {ehframe_pc, dwarf_pc, LLDB_REGNUM_GENERIC_PC, INV, reg_pc},
      nullptr,
      nullptr,
      nullptr,
@@ -246,7 +247,7 @@ static RegisterInfo g_reg_infos[] = {
      OFFSET(cpsr),
      eEncodingUint,
      eFormatHex,
-     {INV, dwarf_cpsr, LLDB_REGNUM_GENERIC_FLAGS, INV, reg_cpsr},
+     {ehframe_cpsr, dwarf_cpsr, LLDB_REGNUM_GENERIC_FLAGS, INV, reg_cpsr},
      nullptr,
      nullptr,
      nullptr,
@@ -476,12 +477,22 @@ RegisterContextMinidump_ARM::RegisterContextMinidump_ARM(
   lldbassert(k_num_regs == k_num_reg_infos);
 }
 
-size_t RegisterContextMinidump_ARM::GetRegisterCount() { return k_num_regs; }
+size_t RegisterContextMinidump_ARM::GetRegisterCountStatic() {
+  return k_num_regs;
+}
 
+// Used for unit testing so we can verify register info is filled in for
+// all register flavors (DWARF, EH Frame, generic, etc).
+size_t RegisterContextMinidump_ARM::GetRegisterCount() {
+  return GetRegisterCountStatic();
+}
+
+// Used for unit testing so we can verify register info is filled in.
 const RegisterInfo *
-RegisterContextMinidump_ARM::GetRegisterInfoAtIndex(size_t reg) {
+RegisterContextMinidump_ARM::GetRegisterInfoAtIndexStatic(size_t reg,
+                                                          bool apple) {
   if (reg < k_num_reg_infos) {
-    if (m_apple) {
+    if (apple) {
       if (reg == reg_r7)
         return &g_reg_info_apple_fp;
     } else {
@@ -491,6 +502,11 @@ RegisterContextMinidump_ARM::GetRegisterInfoAtIndex(size_t reg) {
     return &g_reg_infos[reg];
   }
   return nullptr;
+}
+
+const RegisterInfo *
+RegisterContextMinidump_ARM::GetRegisterInfoAtIndex(size_t reg) {
+  return GetRegisterInfoAtIndexStatic(reg, m_apple);
 }
 
 size_t RegisterContextMinidump_ARM::GetRegisterSetCount() {

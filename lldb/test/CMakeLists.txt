@@ -58,8 +58,13 @@ add_lldb_test_dependency(
   llvm-mc
   llvm-objcopy
   llvm-readobj
-  llvm-strip
   )
+
+# Since llvm-strip is a symlink created by add_custom_target, it
+# doesn't expose an export target when building standalone.
+if(NOT LLDB_BUILT_STANDALONE)
+  add_lldb_test_dependency(llvm-strip)
+endif()
 
 if(TARGET lld)
   add_lldb_test_dependency(lld)
@@ -68,6 +73,14 @@ else()
   if (CMAKE_SYSTEM_NAME MATCHES "Windows")
     message(WARNING "lld required to test LLDB on Windows")
   endif()
+endif()
+
+if(NOT LLDB_BUILT_STANDALONE)
+  add_lldb_test_dependency(
+    FileCheck
+    count
+    not
+  )
 endif()
 
 # the value is not canonicalized within LLVM
@@ -94,19 +107,11 @@ configure_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
   ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg.py
   MAIN_CONFIG
-  ${CMAKE_CURRENT_SOURCE_DIR}/Shell/lit.cfg.py)
+  ${CMAKE_CURRENT_SOURCE_DIR}/lit.cfg.py)
 
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/Shell/lit-lldb-init.in
   ${CMAKE_CURRENT_BINARY_DIR}/Shell/lit-lldb-init)
-
-if(NOT LLDB_BUILT_STANDALONE)
-  add_lldb_test_dependency(
-    FileCheck
-    count
-    not
-  )
-endif()
 
 
 add_lit_testsuites(LLDB

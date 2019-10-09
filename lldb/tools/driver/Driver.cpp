@@ -11,6 +11,7 @@
 #include "lldb/API/SBCommandInterpreter.h"
 #include "lldb/API/SBCommandReturnObject.h"
 #include "lldb/API/SBDebugger.h"
+#include "lldb/API/SBFile.h"
 #include "lldb/API/SBHostOS.h"
 #include "lldb/API/SBLanguageRuntime.h"
 #include "lldb/API/SBReproducer.h"
@@ -499,16 +500,16 @@ int Driver::MainLoop() {
   SBCommandReturnObject result;
   sb_interpreter.SourceInitFileInHomeDirectory(result);
   if (m_option_data.m_debug_mode) {
-    result.PutError(m_debugger.GetErrorFileHandle());
-    result.PutOutput(m_debugger.GetOutputFileHandle());
+    result.PutError(m_debugger.GetErrorFile());
+    result.PutOutput(m_debugger.GetOutputFile());
   }
 
   // Source the local .lldbinit file if it exists and we're allowed to source.
   // Here we want to always print the return object because it contains the
   // warning and instructions to load local lldbinit files.
   sb_interpreter.SourceInitFileInCurrentWorkingDirectory(result);
-  result.PutError(m_debugger.GetErrorFileHandle());
-  result.PutOutput(m_debugger.GetOutputFileHandle());
+  result.PutError(m_debugger.GetErrorFile());
+  result.PutOutput(m_debugger.GetOutputFile());
 
   // We allow the user to specify an exit code when calling quit which we will
   // return when exiting.
@@ -574,8 +575,8 @@ int Driver::MainLoop() {
   }
 
   if (m_option_data.m_debug_mode) {
-    result.PutError(m_debugger.GetErrorFileHandle());
-    result.PutOutput(m_debugger.GetOutputFileHandle());
+    result.PutError(m_debugger.GetErrorFile());
+    result.PutOutput(m_debugger.GetOutputFile());
   }
 
   const bool handle_events = true;

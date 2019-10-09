@@ -78,37 +78,37 @@ int main(int, char**)
 
     {
     const int arr[] = { 1, 2, 1, INT_MAX, 3 };
-    std::unordered_set s(std::begin(arr), std::end(arr), 42, std::hash<short>());
+    std::unordered_set s(std::begin(arr), std::end(arr), 42, std::hash<long long>());
 
-    ASSERT_SAME_TYPE(decltype(s), std::unordered_set<int, std::hash<short>>);
+    ASSERT_SAME_TYPE(decltype(s), std::unordered_set<int, std::hash<long long>>);
     assert(std::is_permutation(s.begin(), s.end(), std::begin(expected_s), std::end(expected_s)));
     }
 
     {
     const int arr[] = { 1, 2, 1, INT_MAX, 3 };
-    std::unordered_set s(std::begin(arr), std::end(arr), 42, std::hash<short>(), test_allocator<int>(0, 40));
+    std::unordered_set s(std::begin(arr), std::end(arr), 42, std::hash<long long>(), test_allocator<int>(0, 40));
 
-    ASSERT_SAME_TYPE(decltype(s), std::unordered_set<int, std::hash<short>, std::equal_to<int>, test_allocator<int>>);
+    ASSERT_SAME_TYPE(decltype(s), std::unordered_set<int, std::hash<long long>, std::equal_to<int>, test_allocator<int>>);
     assert(std::is_permutation(s.begin(), s.end(), std::begin(expected_s), std::end(expected_s)));
     assert(s.get_allocator().get_id() == 40);
     }
 
     {
-    std::unordered_set<int, std::hash<short>, std::equal_to<>, test_allocator<int>> source;
+    std::unordered_set<int, std::hash<long long>, std::equal_to<>, test_allocator<int>> source;
     std::unordered_set s(source);
     ASSERT_SAME_TYPE(decltype(s), decltype(source));
     assert(s.size() == 0);
     }
 
     {
-    std::unordered_set<int, std::hash<short>, std::equal_to<>, test_allocator<int>> source;
+    std::unordered_set<int, std::hash<long long>, std::equal_to<>, test_allocator<int>> source;
     std::unordered_set s{source};  // braces instead of parens
     ASSERT_SAME_TYPE(decltype(s), decltype(source));
     assert(s.size() == 0);
     }
 
     {
-    std::unordered_set<int, std::hash<short>, std::equal_to<>, test_allocator<int>> source;
+    std::unordered_set<int, std::hash<long long>, std::equal_to<>, test_allocator<int>> source;
     std::unordered_set s(source, test_allocator<int>(0, 41));
     ASSERT_SAME_TYPE(decltype(s), decltype(source));
     assert(s.size() == 0);
@@ -116,7 +116,7 @@ int main(int, char**)
     }
 
     {
-    std::unordered_set<int, std::hash<short>, std::equal_to<>, test_allocator<int>> source;
+    std::unordered_set<int, std::hash<long long>, std::equal_to<>, test_allocator<int>> source;
     std::unordered_set s{source, test_allocator<int>(0, 42)};  // braces instead of parens
     ASSERT_SAME_TYPE(decltype(s), decltype(source));
     assert(s.size() == 0);
@@ -138,23 +138,23 @@ int main(int, char**)
     }
 
     {
-    std::unordered_set s({ 1, 2, 1, INT_MAX, 3 }, 42, std::hash<short>());
+    std::unordered_set s({ 1, 2, 1, INT_MAX, 3 }, 42, std::hash<long long>());
 
-    ASSERT_SAME_TYPE(decltype(s), std::unordered_set<int, std::hash<short>>);
+    ASSERT_SAME_TYPE(decltype(s), std::unordered_set<int, std::hash<long long>>);
     assert(std::is_permutation(s.begin(), s.end(), std::begin(expected_s), std::end(expected_s)));
     }
 
     {
-    std::unordered_set s({ 1, 2, 1, INT_MAX, 3 }, 42, std::hash<short>(), std::equal_to<>());
+    std::unordered_set s({ 1, 2, 1, INT_MAX, 3 }, 42, std::hash<long long>(), std::equal_to<>());
 
-    ASSERT_SAME_TYPE(decltype(s), std::unordered_set<int, std::hash<short>, std::equal_to<>>);
+    ASSERT_SAME_TYPE(decltype(s), std::unordered_set<int, std::hash<long long>, std::equal_to<>>);
     assert(std::is_permutation(s.begin(), s.end(), std::begin(expected_s), std::end(expected_s)));
     }
 
     {
-    std::unordered_set s({ 1, 2, 1, INT_MAX, 3 }, 42, std::hash<short>(), std::equal_to<>(), test_allocator<int>(0, 43));
+    std::unordered_set s({ 1, 2, 1, INT_MAX, 3 }, 42, std::hash<long long>(), std::equal_to<>(), test_allocator<int>(0, 43));
 
-    ASSERT_SAME_TYPE(decltype(s), std::unordered_set<int, std::hash<short>, std::equal_to<>, test_allocator<int>>);
+    ASSERT_SAME_TYPE(decltype(s), std::unordered_set<int, std::hash<long long>, std::equal_to<>, test_allocator<int>>);
     assert(std::is_permutation(s.begin(), s.end(), std::begin(expected_s), std::end(expected_s)));
     assert(s.get_allocator().get_id() == 43);
     }
@@ -170,9 +170,9 @@ int main(int, char**)
 
     {
     const int arr[] = { 1, 2, 1, INT_MAX, 3 };
-    std::unordered_set s(std::begin(arr), std::end(arr), 42, std::hash<short>(), test_allocator<int>(0, 44));
+    std::unordered_set s(std::begin(arr), std::end(arr), 42, std::hash<long long>(), test_allocator<int>(0, 44));
 
-    ASSERT_SAME_TYPE(decltype(s), std::unordered_set<int, std::hash<short>, std::equal_to<int>, test_allocator<int>>);
+    ASSERT_SAME_TYPE(decltype(s), std::unordered_set<int, std::hash<long long>, std::equal_to<int>, test_allocator<int>>);
     assert(std::is_permutation(s.begin(), s.end(), std::begin(expected_s), std::end(expected_s)));
     assert(s.get_allocator().get_id() == 44);
     }
@@ -186,9 +186,9 @@ int main(int, char**)
     }
 
     {
-    std::unordered_set s({ 1, 2, 1, INT_MAX, 3 }, 42, std::hash<short>(), test_allocator<int>(0, 42));
+    std::unordered_set s({ 1, 2, 1, INT_MAX, 3 }, 42, std::hash<long long>(), test_allocator<int>(0, 42));
 
-    ASSERT_SAME_TYPE(decltype(s), std::unordered_set<int, std::hash<short>, std::equal_to<int>, test_allocator<int>>);
+    ASSERT_SAME_TYPE(decltype(s), std::unordered_set<int, std::hash<long long>, std::equal_to<int>, test_allocator<int>>);
     assert(std::is_permutation(s.begin(), s.end(), std::begin(expected_s), std::end(expected_s)));
     assert(s.get_allocator().get_id() == 42);
     }

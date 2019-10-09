@@ -41,7 +41,7 @@ void fp_test()
 
     constexpr T maxV = std::numeric_limits<T>::max();
     constexpr T minV = std::numeric_limits<T>::min();
-    
+
 //  Things that can be compared exactly
     static_assert((std::midpoint(T(0), T(0))   == T(0)),   "");
     static_assert((std::midpoint(T(2), T(4))   == T(3)),   "");
@@ -58,7 +58,7 @@ void fp_test()
     assert((fptest_close_pct(std::midpoint(T(0.1),  T(0.4)),  T(0.25),     pct)));
 
     assert((fptest_close_pct(std::midpoint(T(11.2345), T(14.5432)), T(12.88885),  pct)));
-    
+
 //  From e to pi
     assert((fptest_close_pct(std::midpoint(T(2.71828182845904523536028747135266249775724709369995),
                                       T(3.14159265358979323846264338327950288419716939937510)),
@@ -86,7 +86,7 @@ void fp_test()
 //  TODO
 
 //  Check two values "close to each other"
-    T d1 = 3.14;
+    T d1 = T(3.14);
     T d0 = std::nextafter(d1, T(2));
     T d2 = std::nextafter(d1, T(5));
     assert(d0 < d1);  // sanity checking

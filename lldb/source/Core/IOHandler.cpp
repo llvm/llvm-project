@@ -329,10 +329,9 @@ bool IOHandlerEditline::GetLine(std::string &line, bool &interrupted) {
           prompt = GetPrompt();
 
         if (prompt && prompt[0]) {
-          FILE *out = GetOutputFILE();
-          if (out) {
-            ::fprintf(out, "%s", prompt);
-            ::fflush(out);
+          if (m_output_sp) {
+            m_output_sp->Printf("%s", prompt);
+            m_output_sp->Flush();
           }
         }
       }
@@ -491,10 +490,11 @@ bool IOHandlerEditline::GetLines(StringList &lines, bool &interrupted) {
       // Show line numbers if we are asked to
       std::string line;
       if (m_base_line_number > 0 && GetIsInteractive()) {
-        FILE *out = GetOutputFILE();
-        if (out)
-          ::fprintf(out, "%u%s", m_base_line_number + (uint32_t)lines.GetSize(),
-                    GetPrompt() == nullptr ? " " : "");
+        if (m_output_sp) {
+          m_output_sp->Printf("%u%s",
+                              m_base_line_number + (uint32_t)lines.GetSize(),
+                              GetPrompt() == nullptr ? " " : "");
+        }
       }
 
       m_curr_line_idx = lines.GetSize();

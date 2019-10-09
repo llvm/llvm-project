@@ -90,7 +90,7 @@ bool LibStdcppTupleSyntheticFrontEnd::MightHaveChildren() { return true; }
 
 lldb::ValueObjectSP
 LibStdcppTupleSyntheticFrontEnd::GetChildAtIndex(size_t idx) {
-  if (idx < m_members.size())
+  if (idx < m_members.size() && m_members[idx])
     return m_members[idx]->GetSP();
   return lldb::ValueObjectSP();
 }

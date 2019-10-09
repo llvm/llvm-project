@@ -49,8 +49,8 @@ namespace {
 class PlaceholderObjectFile : public ObjectFile {
 public:
   PlaceholderObjectFile(const lldb::ModuleSP &module_sp,
-                        const ModuleSpec &module_spec, lldb::offset_t base,
-                        lldb::offset_t size)
+                        const ModuleSpec &module_spec, lldb::addr_t base,
+                        lldb::addr_t size)
       : ObjectFile(module_sp, &module_spec.GetFileSpec(), /*file_offset*/ 0,
                    /*length*/ 0, /*data_sp*/ nullptr, /*data_offset*/ 0),
         m_arch(module_spec.GetArchitecture()), m_uuid(module_spec.GetUUID()),
@@ -58,7 +58,10 @@ public:
     m_symtab_up = std::make_unique<Symtab>(this);
   }
 
-  ConstString GetPluginName() override { return ConstString("placeholder"); }
+  static ConstString GetStaticPluginName() {
+    return ConstString("placeholder");
+  }
+  ConstString GetPluginName() override { return GetStaticPluginName(); }
   uint32_t GetPluginVersion() override { return 1; }
   bool ParseHeader() override { return true; }
   Type CalculateType() override { return eTypeUnknown; }
@@ -109,11 +112,12 @@ public:
               GetFileSpec(), m_base, m_base + m_size);
   }
 
+  lldb::addr_t GetBaseImageAddress() const { return m_base; }
 private:
   ArchSpec m_arch;
   UUID m_uuid;
-  lldb::offset_t m_base;
-  lldb::offset_t m_size;
+  lldb::addr_t m_base;
+  lldb::addr_t m_size;
 };
 } // namespace
 
@@ -351,14 +355,15 @@ void ProcessMinidump::ReadModuleList() {
   std::vector<const minidump::Module *> filtered_modules =
       m_minidump_parser->GetFilteredModuleList();
 
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_MODULES));
+  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_DYNAMIC_LOADER));
 
   for (auto module : filtered_modules) {
     std::string name = cantFail(m_minidump_parser->GetMinidumpFile().getString(
         module->ModuleNameRVA));
+    const uint64_t load_addr = module->BaseOfImage;
+    const uint64_t load_size = module->SizeOfImage;
     LLDB_LOG(log, "found module: name: {0} {1:x10}-{2:x10} size: {3}", name,
-             module->BaseOfImage, module->BaseOfImage + module->SizeOfImage,
-             module->SizeOfImage);
+             load_addr, load_addr + load_size, load_size);
 
     // check if the process is wow64 - a 32 bit windows process running on a
     // 64 bit windows
@@ -373,7 +378,7 @@ void ProcessMinidump::ReadModuleList() {
     Status error;
     // Try and find a module with a full UUID that matches. This function will
     // add the module to the target if it finds one.
-    lldb::ModuleSP module_sp = GetTarget().GetOrCreateModule(module_spec, 
+    lldb::ModuleSP module_sp = GetTarget().GetOrCreateModule(module_spec,
                                                      true /* notify */, &error);
     if (!module_sp) {
       // Try and find a module without specifying the UUID and only looking for
@@ -386,8 +391,8 @@ void ProcessMinidump::ReadModuleList() {
       ModuleSpec basename_module_spec(module_spec);
       basename_module_spec.GetUUID().Clear();
       basename_module_spec.GetFileSpec().GetDirectory().Clear();
-      module_sp = GetTarget().GetOrCreateModule(basename_module_spec, 
-                                                     true /* notify */, &error);
+      module_sp = GetTarget().GetOrCreateModule(basename_module_spec,
+                                                true /* notify */, &error);
       if (module_sp) {
         // We consider the module to be a match if the minidump UUID is a
         // prefix of the actual UUID, or if either of the UUIDs are empty.
@@ -399,6 +404,19 @@ void ProcessMinidump::ReadModuleList() {
             GetTarget().GetImages().Remove(module_sp);
             module_sp.reset();
         }
+      }
+    }
+    if (module_sp) {
+      // Watch out for place holder modules that have different paths, but the
+      // same UUID. If the base address is different, create a new module. If
+      // we don't then we will end up setting the load address of a different
+      // PlaceholderObjectFile and an assertion will fire.
+      auto *objfile = module_sp->GetObjectFile();
+      if (objfile && objfile->GetPluginName() ==
+          PlaceholderObjectFile::GetStaticPluginName()) {
+        if (((PlaceholderObjectFile *)objfile)->GetBaseImageAddress() !=
+            load_addr)
+          module_sp.reset();
       }
     }
     if (!module_sp) {
@@ -415,12 +433,12 @@ void ProcessMinidump::ReadModuleList() {
                name);
 
       module_sp = Module::CreateModuleFromObjectFile<PlaceholderObjectFile>(
-          module_spec, module->BaseOfImage, module->SizeOfImage);
+          module_spec, load_addr, load_size);
       GetTarget().GetImages().Append(module_sp, true /* notify */);
     }
 
     bool load_addr_changed = false;
-    module_sp->SetLoadAddress(GetTarget(), module->BaseOfImage, false,
+    module_sp->SetLoadAddress(GetTarget(), load_addr, false,
                               load_addr_changed);
   }
 }
