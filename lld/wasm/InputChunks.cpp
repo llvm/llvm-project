@@ -19,10 +19,9 @@
 using namespace llvm;
 using namespace llvm::wasm;
 using namespace llvm::support::endian;
-using namespace lld;
-using namespace lld::wasm;
 
-StringRef lld::relocTypeToString(uint8_t relocType) {
+namespace lld {
+StringRef relocTypeToString(uint8_t relocType) {
   switch (relocType) {
 #define WASM_RELOC(NAME, REL)                                                  \
   case REL:                                                                    \
@@ -33,10 +32,11 @@ StringRef lld::relocTypeToString(uint8_t relocType) {
   llvm_unreachable("unknown reloc type");
 }
 
-std::string lld::toString(const InputChunk *c) {
+std::string toString(const wasm::InputChunk *c) {
   return (toString(c->file) + ":(" + c->getName() + ")").str();
 }
 
+namespace wasm {
 StringRef InputChunk::getComdatName() const {
   uint32_t index = getComdat();
   if (index == UINT32_MAX)
@@ -346,3 +346,6 @@ void InputSegment::generateRelocationCode(raw_ostream &os) const {
     writeUleb128(os, 0, "offset");
   }
 }
+
+} // namespace wasm
+} // namespace lld

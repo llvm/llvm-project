@@ -17,7 +17,7 @@
 
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/SourceLocation.h"
-#include "clang/Tooling/Refactoring/MatchConsumer.h"
+#include "clang/Tooling/Transformer/MatchConsumer.h"
 #include "llvm/Support/Error.h"
 #include <functional>
 #include <string>

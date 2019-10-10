@@ -6,17 +6,12 @@ add_clang_library(clangToolingRefactoring
   AtomicChange.cpp
   Extract/Extract.cpp
   Extract/SourceExtraction.cpp
-  RangeSelector.cpp
   RefactoringActions.cpp
   Rename/RenamingAction.cpp
   Rename/SymbolOccurrences.cpp
   Rename/USRFinder.cpp
   Rename/USRFindingAction.cpp
   Rename/USRLocFinder.cpp
-  SourceCode.cpp
-  SourceCodeBuilders.cpp
-  Stencil.cpp
-  Transformer.cpp
 
   LINK_LIBS
   clangAST

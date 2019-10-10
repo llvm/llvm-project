@@ -3206,7 +3206,7 @@ float32x4_t test_vfmaq_f32(float32x4_t a, float32x4_t b, float32x4_t c) {
 }
 
 // CHECK-LABEL: @test_vfms_f32(
-// CHECK:   [[SUB_I:%.*]] = fsub <2 x float> <float -0.000000e+00, float -0.000000e+00>, %b
+// CHECK:   [[SUB_I:%.*]] = fneg <2 x float> %b
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x float> %a to <8 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <2 x float> [[SUB_I]] to <8 x i8>
 // CHECK:   [[TMP2:%.*]] = bitcast <2 x float> %c to <8 x i8>
@@ -3217,7 +3217,7 @@ float32x2_t test_vfms_f32(float32x2_t a, float32x2_t b, float32x2_t c) {
 }
 
 // CHECK-LABEL: @test_vfmsq_f32(
-// CHECK:   [[SUB_I:%.*]] = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %b
+// CHECK:   [[SUB_I:%.*]] = fneg <4 x float> %b
 // CHECK:   [[TMP0:%.*]] = bitcast <4 x float> %a to <16 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <4 x float> [[SUB_I]] to <16 x i8>
 // CHECK:   [[TMP2:%.*]] = bitcast <4 x float> %c to <16 x i8>
@@ -8809,7 +8809,7 @@ int32x2_t test_vneg_s32(int32x2_t a) {
 }
 
 // CHECK-LABEL: @test_vneg_f32(
-// CHECK:   [[SUB_I:%.*]] = fsub <2 x float> <float -0.000000e+00, float -0.000000e+00>, %a
+// CHECK:   [[SUB_I:%.*]] = fneg <2 x float> %a
 // CHECK:   ret <2 x float> [[SUB_I]]
 float32x2_t test_vneg_f32(float32x2_t a) {
   return vneg_f32(a);
@@ -8837,7 +8837,7 @@ int32x4_t test_vnegq_s32(int32x4_t a) {
 }
 
 // CHECK-LABEL: @test_vnegq_f32(
-// CHECK:   [[SUB_I:%.*]] = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %a
+// CHECK:   [[SUB_I:%.*]] = fneg <4 x float> %a
 // CHECK:   ret <4 x float> [[SUB_I]]
 float32x4_t test_vnegq_f32(float32x4_t a) {
   return vnegq_f32(a);

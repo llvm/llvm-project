@@ -12,8 +12,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLING_REFACTOR_MATCH_CONSUMER_H_
-#define LLVM_CLANG_TOOLING_REFACTOR_MATCH_CONSUMER_H_
+#ifndef LLVM_CLANG_TOOLING_TRANSFORMER_MATCH_CONSUMER_H_
+#define LLVM_CLANG_TOOLING_TRANSFORMER_MATCH_CONSUMER_H_
 
 #include "clang/AST/ASTTypeTraits.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
@@ -55,4 +55,4 @@ MatchConsumer<T> ifBound(std::string ID, MatchConsumer<T> TrueC,
 
 } // namespace tooling
 } // namespace clang
-#endif // LLVM_CLANG_TOOLING_REFACTOR_MATCH_CONSUMER_H_
+#endif // LLVM_CLANG_TOOLING_TRANSFORMER_MATCH_CONSUMER_H_

@@ -4114,13 +4114,9 @@ public:
   void setCaptures(ASTContext &Context, ArrayRef<Capture> Captures,
                    bool CapturesCXXThis);
 
-   unsigned getBlockManglingNumber() const {
-     return ManglingNumber;
-   }
+  unsigned getBlockManglingNumber() const { return ManglingNumber; }
 
-   Decl *getBlockManglingContextDecl() const {
-     return ManglingContextDecl;
-   }
+  Decl *getBlockManglingContextDecl() const { return ManglingContextDecl; }
 
   void setBlockMangling(unsigned Number, Decl *Ctx) {
     ManglingNumber = Number;

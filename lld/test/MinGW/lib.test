@@ -7,6 +7,13 @@ RUN: echo > %t/lib/libfoo.dll.a
 RUN: ld.lld -### -m i386pep -lfoo -L%t/lib | FileCheck -check-prefix=LIB2 %s
 LIB2: libfoo.dll.a
 
+RUN: not ld.lld -### -m i386pep -l:barefilename -L%t/lib 2>&1 | FileCheck -check-prefix=LIB-LITERAL-FAIL %s
+LIB-LITERAL-FAIL: unable to find library -l:barefilename
+
+RUN: echo > %t/lib/barefilename
+RUN: ld.lld -### -m i386pep -l:barefilename -L%t/lib 2>&1 | FileCheck -check-prefix=LIB-LITERAL %s
+LIB-LITERAL: barefilename
+
 RUN: not ld.lld -### -m i386pep -Bstatic -lfoo -L%t/lib 2>&1 | FileCheck -check-prefix=LIB3 %s
 LIB3: unable to find library -lfoo
 
@@ -19,3 +26,16 @@ RUN: echo > %t/lib/libbar.a
 RUN: ld.lld -### -m i386pep -Bstatic -lfoo -Bdynamic -lbar -L%t/lib | FileCheck -check-prefix=LIB5 %s
 LIB5:      libfoo.a
 LIB5-SAME: libbar.dll.a
+
+RUN: echo > %t/lib/noprefix.dll.a
+RUN: echo > %t/lib/msvcstyle.lib
+RUN: ld.lld -### -m i386pep -L%t/lib -lnoprefix -lmsvcstyle | FileCheck -check-prefix=OTHERSTYLES %s
+OTHERSTYLES: noprefix.dll.a
+OTHERSTYLES-SAME: msvcstyle.lib
+
+RUN: echo > %t/lib/libnoimplib.dll
+RUN: echo > %t/lib/noprefix_noimplib.dll
+RUN: not ld.lld -### -m i386pep -L%t/lib -lnoimplib 2>&1 | FileCheck -check-prefix=UNSUPPORTED-DLL1 %s
+RUN: not ld.lld -### -m i386pep -L%t/lib -lnoprefix_noimplib 2>&1 | FileCheck -check-prefix=UNSUPPORTED-DLL2 %s
+UNSUPPORTED-DLL1: lld doesn't support linking directly against {{.*}}libnoimplib.dll, use an import library
+UNSUPPORTED-DLL2: lld doesn't support linking directly against {{.*}}noprefix_noimplib.dll, use an import library

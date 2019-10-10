@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Tooling/Refactoring/SourceCode.h"
+#include "clang/Tooling/Transformer/SourceCode.h"
 #include "TestVisitor.h"
 #include "clang/Basic/Diagnostic.h"
 #include "llvm/Testing/Support/Annotations.h"

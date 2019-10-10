@@ -12,15 +12,15 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLING_REFACTOR_TRANSFORMER_H_
-#define LLVM_CLANG_TOOLING_REFACTOR_TRANSFORMER_H_
+#ifndef LLVM_CLANG_TOOLING_TRANSFORMER_TRANSFORMER_H_
+#define LLVM_CLANG_TOOLING_TRANSFORMER_TRANSFORMER_H_
 
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/ASTMatchers/ASTMatchersInternal.h"
 #include "clang/Tooling/Refactoring/AtomicChange.h"
-#include "clang/Tooling/Refactoring/MatchConsumer.h"
-#include "clang/Tooling/Refactoring/RangeSelector.h"
+#include "clang/Tooling/Transformer/MatchConsumer.h"
+#include "clang/Tooling/Transformer/RangeSelector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Error.h"
@@ -317,4 +317,4 @@ private:
 } // namespace tooling
 } // namespace clang
 
-#endif // LLVM_CLANG_TOOLING_REFACTOR_TRANSFORMER_H_
+#endif // LLVM_CLANG_TOOLING_TRANSFORMER_TRANSFORMER_H_

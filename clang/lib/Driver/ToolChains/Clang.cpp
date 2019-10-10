@@ -6497,3 +6497,57 @@ void OffloadBundler::ConstructJobMultipleOutputs(
       TCArgs.MakeArgString(getToolChain().GetProgramPath(getShortName())),
       CmdArgs, None));
 }
+
+void OffloadWrapper::ConstructJob(Compilation &C, const JobAction &JA,
+                                  const InputInfo &Output,
+                                  const InputInfoList &Inputs,
+                                  const ArgList &Args,
+                                  const char *LinkingOutput) const {
+  ArgStringList CmdArgs;
+
+  const llvm::Triple &Triple = getToolChain().getEffectiveTriple();
+
+  // Add the "effective" target triple.
+  CmdArgs.push_back("-target");
+  CmdArgs.push_back(Args.MakeArgString(Triple.getTriple()));
+
+  assert(JA.getInputs().size() == Inputs.size() &&
+         "Not have inputs for all dependence actions??");
+
+  // Add offload targets. It is a comma-separated list of offload target
+  // triples.
+  SmallString<128> Targets;
+  Targets += "-offload-targets=";
+  for (unsigned I = 0; I < Inputs.size(); ++I) {
+    if (I)
+      Targets += ',';
+
+    // Get input's Offload Kind and ToolChain.
+    const auto *OA = cast<OffloadAction>(JA.getInputs()[I]);
+    assert(OA->hasSingleDeviceDependence(/*DoNotConsiderHostActions=*/true) &&
+           "Expected one device dependence!");
+    const ToolChain *DeviceTC = nullptr;
+    OA->doOnEachDependence([&DeviceTC](Action *, const ToolChain *TC,
+                                       const char *) { DeviceTC = TC; });
+
+    // And add it to the offload targets.
+    Targets += DeviceTC->getTriple().normalize();
+  }
+  CmdArgs.push_back(Args.MakeArgString(Targets));
+
+  // Add the output file name.
+  assert(Output.isFilename() && "Invalid output.");
+  CmdArgs.push_back("-o");
+  CmdArgs.push_back(Output.getFilename());
+
+  // Add inputs.
+  for (const InputInfo &I : Inputs) {
+    assert(I.isFilename() && "Invalid input.");
+    CmdArgs.push_back(I.getFilename());
+  }
+
+  C.addCommand(std::make_unique<Command>(
+    JA, *this,
+    Args.MakeArgString(getToolChain().GetProgramPath(getShortName())),
+    CmdArgs, Inputs));
+}

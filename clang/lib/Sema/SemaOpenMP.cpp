@@ -1565,34 +1565,11 @@ enum class FunctionEmissionStatus {
 };
 } // anonymous namespace
 
-/// Do we know that we will eventually codegen the given function?
-static FunctionEmissionStatus isKnownDeviceEmitted(Sema &S, FunctionDecl *FD) {
-  assert(S.LangOpts.OpenMP && S.LangOpts.OpenMPIsDevice &&
-         "Expected OpenMP device compilation.");
-  // Templates are emitted when they're instantiated.
-  if (FD->isDependentContext())
-    return FunctionEmissionStatus::Discarded;
-
-  Optional<OMPDeclareTargetDeclAttr::DevTypeTy> DevTy =
-      OMPDeclareTargetDeclAttr::getDeviceType(FD->getCanonicalDecl());
-  if (DevTy.hasValue())
-    return (*DevTy == OMPDeclareTargetDeclAttr::DT_Host)
-               ? FunctionEmissionStatus::Discarded
-               : FunctionEmissionStatus::Emitted;
-
-  // Otherwise, the function is known-emitted if it's in our set of
-  // known-emitted functions.
-  return (S.DeviceKnownEmittedFns.count(FD) > 0)
-             ? FunctionEmissionStatus::Emitted
-             : FunctionEmissionStatus::Unknown;
-}
-
 Sema::DeviceDiagBuilder Sema::diagIfOpenMPDeviceCode(SourceLocation Loc,
                                                      unsigned DiagID) {
   assert(LangOpts.OpenMP && LangOpts.OpenMPIsDevice &&
          "Expected OpenMP device compilation.");
-  FunctionEmissionStatus FES =
-      isKnownDeviceEmitted(*this, getCurFunctionDecl());
+  FunctionEmissionStatus FES = getEmissionStatus(getCurFunctionDecl());
   DeviceDiagBuilder::Kind Kind = DeviceDiagBuilder::K_Nop;
   switch (FES) {
   case FunctionEmissionStatus::Emitted:
@@ -1602,42 +1579,23 @@ Sema::DeviceDiagBuilder Sema::diagIfOpenMPDeviceCode(SourceLocation Loc,
     Kind = isOpenMPDeviceDelayedContext(*this) ? DeviceDiagBuilder::K_Deferred
                                                : DeviceDiagBuilder::K_Immediate;
     break;
-  case FunctionEmissionStatus::Discarded:
+  case FunctionEmissionStatus::TemplateDiscarded:
+  case FunctionEmissionStatus::OMPDiscarded:
     Kind = DeviceDiagBuilder::K_Nop;
+    break;
+  case FunctionEmissionStatus::CUDADiscarded:
+    llvm_unreachable("CUDADiscarded unexpected in OpenMP device compilation");
     break;
   }
 
   return DeviceDiagBuilder(Kind, Loc, DiagID, getCurFunctionDecl(), *this);
 }
 
-/// Do we know that we will eventually codegen the given function?
-static FunctionEmissionStatus isKnownHostEmitted(Sema &S, FunctionDecl *FD) {
-  assert(S.LangOpts.OpenMP && !S.LangOpts.OpenMPIsDevice &&
-         "Expected OpenMP host compilation.");
-  // In OpenMP 4.5 all the functions are host functions.
-  if (S.LangOpts.OpenMP <= 45)
-    return FunctionEmissionStatus::Emitted;
-
-  Optional<OMPDeclareTargetDeclAttr::DevTypeTy> DevTy =
-      OMPDeclareTargetDeclAttr::getDeviceType(FD->getCanonicalDecl());
-  if (DevTy.hasValue())
-    return (*DevTy == OMPDeclareTargetDeclAttr::DT_NoHost)
-               ? FunctionEmissionStatus::Discarded
-               : FunctionEmissionStatus::Emitted;
-
-  // Otherwise, the function is known-emitted if it's in our set of
-  // known-emitted functions.
-  return (S.DeviceKnownEmittedFns.count(FD) > 0)
-             ? FunctionEmissionStatus::Emitted
-             : FunctionEmissionStatus::Unknown;
-}
-
 Sema::DeviceDiagBuilder Sema::diagIfOpenMPHostCode(SourceLocation Loc,
                                                    unsigned DiagID) {
   assert(LangOpts.OpenMP && !LangOpts.OpenMPIsDevice &&
          "Expected OpenMP host compilation.");
-  FunctionEmissionStatus FES =
-      isKnownHostEmitted(*this, getCurFunctionDecl());
+  FunctionEmissionStatus FES = getEmissionStatus(getCurFunctionDecl());
   DeviceDiagBuilder::Kind Kind = DeviceDiagBuilder::K_Nop;
   switch (FES) {
   case FunctionEmissionStatus::Emitted:
@@ -1646,7 +1604,9 @@ Sema::DeviceDiagBuilder Sema::diagIfOpenMPHostCode(SourceLocation Loc,
   case FunctionEmissionStatus::Unknown:
     Kind = DeviceDiagBuilder::K_Deferred;
     break;
-  case FunctionEmissionStatus::Discarded:
+  case FunctionEmissionStatus::TemplateDiscarded:
+  case FunctionEmissionStatus::OMPDiscarded:
+  case FunctionEmissionStatus::CUDADiscarded:
     Kind = DeviceDiagBuilder::K_Nop;
     break;
   }
@@ -1663,31 +1623,34 @@ void Sema::checkOpenMPDeviceFunction(SourceLocation Loc, FunctionDecl *Callee,
   FunctionDecl *Caller = getCurFunctionDecl();
 
   // host only function are not available on the device.
-  if (Caller &&
-      (isKnownDeviceEmitted(*this, Caller) == FunctionEmissionStatus::Emitted ||
-       (!isOpenMPDeviceDelayedContext(*this) &&
-        isKnownDeviceEmitted(*this, Caller) ==
-            FunctionEmissionStatus::Unknown)) &&
-      isKnownDeviceEmitted(*this, Callee) ==
-          FunctionEmissionStatus::Discarded) {
-    StringRef HostDevTy =
-        getOpenMPSimpleClauseTypeName(OMPC_device_type, OMPC_DEVICE_TYPE_host);
-    Diag(Loc, diag::err_omp_wrong_device_function_call) << HostDevTy << 0;
-    Diag(Callee->getAttr<OMPDeclareTargetDeclAttr>()->getLocation(),
-         diag::note_omp_marked_device_type_here)
-        << HostDevTy;
-    return;
+  if (Caller) {
+    FunctionEmissionStatus CallerS = getEmissionStatus(Caller);
+    FunctionEmissionStatus CalleeS = getEmissionStatus(Callee);
+    assert(CallerS != FunctionEmissionStatus::CUDADiscarded &&
+           CalleeS != FunctionEmissionStatus::CUDADiscarded &&
+           "CUDADiscarded unexpected in OpenMP device function check");
+    if ((CallerS == FunctionEmissionStatus::Emitted ||
+         (!isOpenMPDeviceDelayedContext(*this) &&
+          CallerS == FunctionEmissionStatus::Unknown)) &&
+        CalleeS == FunctionEmissionStatus::OMPDiscarded) {
+      StringRef HostDevTy = getOpenMPSimpleClauseTypeName(
+          OMPC_device_type, OMPC_DEVICE_TYPE_host);
+      Diag(Loc, diag::err_omp_wrong_device_function_call) << HostDevTy << 0;
+      Diag(Callee->getAttr<OMPDeclareTargetDeclAttr>()->getLocation(),
+           diag::note_omp_marked_device_type_here)
+          << HostDevTy;
+      return;
+    }
   }
   // If the caller is known-emitted, mark the callee as known-emitted.
   // Otherwise, mark the call in our call graph so we can traverse it later.
   if ((CheckForDelayedContext && !isOpenMPDeviceDelayedContext(*this)) ||
       (!Caller && !CheckForDelayedContext) ||
-      (Caller &&
-       isKnownDeviceEmitted(*this, Caller) == FunctionEmissionStatus::Emitted))
+      (Caller && getEmissionStatus(Caller) == FunctionEmissionStatus::Emitted))
     markKnownEmitted(*this, Caller, Callee, Loc,
                      [CheckForDelayedContext](Sema &S, FunctionDecl *FD) {
                        return CheckForDelayedContext &&
-                              isKnownDeviceEmitted(S, FD) ==
+                              S.getEmissionStatus(FD) ==
                                   FunctionEmissionStatus::Emitted;
                      });
   else if (Caller)
@@ -1703,29 +1666,38 @@ void Sema::checkOpenMPHostFunction(SourceLocation Loc, FunctionDecl *Callee,
   FunctionDecl *Caller = getCurFunctionDecl();
 
   // device only function are not available on the host.
-  if (Caller &&
-      isKnownHostEmitted(*this, Caller) == FunctionEmissionStatus::Emitted &&
-      isKnownHostEmitted(*this, Callee) == FunctionEmissionStatus::Discarded) {
-    StringRef NoHostDevTy = getOpenMPSimpleClauseTypeName(
-        OMPC_device_type, OMPC_DEVICE_TYPE_nohost);
-    Diag(Loc, diag::err_omp_wrong_device_function_call) << NoHostDevTy << 1;
-    Diag(Callee->getAttr<OMPDeclareTargetDeclAttr>()->getLocation(),
-         diag::note_omp_marked_device_type_here)
-        << NoHostDevTy;
-    return;
+  if (Caller) {
+    FunctionEmissionStatus CallerS = getEmissionStatus(Caller);
+    FunctionEmissionStatus CalleeS = getEmissionStatus(Callee);
+    assert(
+        (LangOpts.CUDA || (CallerS != FunctionEmissionStatus::CUDADiscarded &&
+                           CalleeS != FunctionEmissionStatus::CUDADiscarded)) &&
+        "CUDADiscarded unexpected in OpenMP host function check");
+    if (CallerS == FunctionEmissionStatus::Emitted &&
+        CalleeS == FunctionEmissionStatus::OMPDiscarded) {
+      StringRef NoHostDevTy = getOpenMPSimpleClauseTypeName(
+          OMPC_device_type, OMPC_DEVICE_TYPE_nohost);
+      Diag(Loc, diag::err_omp_wrong_device_function_call) << NoHostDevTy << 1;
+      Diag(Callee->getAttr<OMPDeclareTargetDeclAttr>()->getLocation(),
+           diag::note_omp_marked_device_type_here)
+          << NoHostDevTy;
+      return;
+    }
   }
   // If the caller is known-emitted, mark the callee as known-emitted.
   // Otherwise, mark the call in our call graph so we can traverse it later.
-  if ((!CheckCaller && !Caller) ||
-      (Caller &&
-       isKnownHostEmitted(*this, Caller) == FunctionEmissionStatus::Emitted))
-    markKnownEmitted(
-        *this, Caller, Callee, Loc, [CheckCaller](Sema &S, FunctionDecl *FD) {
-          return CheckCaller &&
-                 isKnownHostEmitted(S, FD) == FunctionEmissionStatus::Emitted;
-        });
-  else if (Caller)
-    DeviceCallGraph[Caller].insert({Callee, Loc});
+  if (!shouldIgnoreInHostDeviceCheck(Callee)) {
+    if ((!CheckCaller && !Caller) ||
+        (Caller &&
+         getEmissionStatus(Caller) == FunctionEmissionStatus::Emitted))
+      markKnownEmitted(
+          *this, Caller, Callee, Loc, [CheckCaller](Sema &S, FunctionDecl *FD) {
+            return CheckCaller &&
+                   S.getEmissionStatus(FD) == FunctionEmissionStatus::Emitted;
+          });
+    else if (Caller)
+      DeviceCallGraph[Caller].insert({Callee, Loc});
+  }
 }
 
 void Sema::checkOpenMPDeviceExpr(const Expr *E) {

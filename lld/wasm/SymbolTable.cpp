@@ -21,10 +21,10 @@
 using namespace llvm;
 using namespace llvm::wasm;
 using namespace llvm::object;
-using namespace lld;
-using namespace lld::wasm;
 
-SymbolTable *lld::wasm::symtab;
+namespace lld {
+namespace wasm {
+SymbolTable *symtab;
 
 void SymbolTable::addFile(InputFile *file) {
   log("Processing: " + toString(file));
@@ -692,3 +692,6 @@ void SymbolTable::handleSymbolVariants() {
     }
   }
 }
+
+} // namespace wasm
+} // namespace lld

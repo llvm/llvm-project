@@ -60,6 +60,16 @@ Improvements to Clang's diagnostics
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
+* In both C and C++ (C17 ``6.5.6p8``, C++ ``[expr.add]``), pointer arithmetic is
+  only permitted within arrays. In particular, the behavior of a program is not
+  defined if it adds a non-zero offset (or in C, any offset) to a null pointer,
+  or if it forms a null pointer by subtracting an integer from a non-null
+  pointer, and the LLVM optimizer now uses those guarantees for transformations.
+  This may lead to unintended behavior in code that performs these operations.
+  The Undefined Behavior Sanitizer ``-fsanitize=pointer-overflow`` check has
+  been extended to detect these cases, so that code relying on them can be
+  detected and fixed.
+
 - For X86 target, -march=skylake-avx512, -march=icelake-client,
   -march=icelake-server, -march=cascadelake, -march=cooperlake will default to
   not using 512-bit zmm registers in vectorized code unless 512-bit intrinsics
@@ -238,7 +248,40 @@ Static Analyzer
 Undefined Behavior Sanitizer (UBSan)
 ------------------------------------
 
-- ...
+- * The ``pointer-overflow`` check was extended added to catch the cases where
+    a non-zero offset is applied to a null pointer, or the result of
+    applying the offset is a null pointer.
+
+    .. code-block:: c++
+
+      #include <cstdint> // for intptr_t
+
+      static char *getelementpointer_inbounds(char *base, unsigned long offset) {
+        // Potentially UB.
+        return base + offset;
+      }
+
+      char *getelementpointer_unsafe(char *base, unsigned long offset) {
+        // Always apply offset. UB if base is ``nullptr`` and ``offset`` is not
+        // zero, or if ``base`` is non-``nullptr`` and ``offset`` is
+        // ``-reinterpret_cast<intptr_t>(base)``.
+        return getelementpointer_inbounds(base, offset);
+      }
+
+      char *getelementpointer_safe(char *base, unsigned long offset) {
+        // Cast pointer to integer, perform usual arithmetic addition,
+        // and cast to pointer. This is legal.
+        char *computed =
+            reinterpret_cast<char *>(reinterpret_cast<intptr_t>(base) + offset);
+        // If either the pointer becomes non-``nullptr``, or becomes
+        // ``nullptr``, we must use ``computed`` result.
+        if (((base == nullptr) && (computed != nullptr)) ||
+            ((base != nullptr) && (computed == nullptr)))
+          return computed;
+        // Else we can use ``getelementpointer_inbounds()``.
+        return getelementpointer_inbounds(base, offset);
+      }
+
 
 Core Analysis Improvements
 ==========================

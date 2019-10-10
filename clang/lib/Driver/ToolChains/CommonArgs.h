@@ -45,13 +45,6 @@ void AddRunTimeLibs(const ToolChain &TC, const Driver &D,
                     llvm::opt::ArgStringList &CmdArgs,
                     const llvm::opt::ArgList &Args);
 
-void AddOpenMPLinkerScript(const ToolChain &TC, Compilation &C,
-                           const InputInfo &Output,
-                           const InputInfoList &Inputs,
-                           const llvm::opt::ArgList &Args,
-                           llvm::opt::ArgStringList &CmdArgs,
-                           const JobAction &JA);
-
 void AddHIPLinkerScript(const ToolChain &TC, Compilation &C,
                         const InputInfo &Output, const InputInfoList &Inputs,
                         const llvm::opt::ArgList &Args,

@@ -208,9 +208,8 @@ public:
       // around them.
       std::string stripped_output = llvm::StringRef(m_output).trim();
 
-      ClangDiagnostic *new_diagnostic =
-          new ClangDiagnostic(stripped_output, severity, Info.getID());
-      m_manager->AddDiagnostic(new_diagnostic);
+      auto new_diagnostic = std::make_unique<ClangDiagnostic>(
+          stripped_output, severity, Info.getID());
 
       // Don't store away warning fixits, since the compiler doesn't have
       // enough context in an expression for the warning to be useful.
@@ -224,6 +223,8 @@ public:
             new_diagnostic->AddFixitHint(fixit);
         }
       }
+
+      m_manager->AddDiagnostic(std::move(new_diagnostic));
     }
   }
 
@@ -1100,8 +1101,8 @@ bool ClangExpressionParser::RewriteExpression(
   if (num_diags == 0)
     return false;
 
-  for (const Diagnostic *diag : diagnostic_manager.Diagnostics()) {
-    const ClangDiagnostic *diagnostic = llvm::dyn_cast<ClangDiagnostic>(diag);
+  for (const auto &diag : diagnostic_manager.Diagnostics()) {
+    const auto *diagnostic = llvm::dyn_cast<ClangDiagnostic>(diag.get());
     if (diagnostic && diagnostic->HasFixIts()) {
       for (const FixItHint &fixit : diagnostic->FixIts()) {
         // This is cobbed from clang::Rewrite::FixItRewriter.
