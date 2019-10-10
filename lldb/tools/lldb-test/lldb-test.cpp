@@ -19,7 +19,6 @@
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Symbol/ClangASTContext.h"
-#include "lldb/Symbol/ClangASTImporter.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/LineTable.h"
 #include "lldb/Symbol/SymbolFile.h"
