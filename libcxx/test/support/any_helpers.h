@@ -26,7 +26,7 @@ namespace std { namespace experimental {} }
 template <class T>
   struct IsSmallObject
     : public std::integral_constant<bool
-        , sizeof(T) <= (sizeof(void*)*3)
+        , sizeof(T) <= sizeof(std::any) - sizeof(void*)
           && std::alignment_of<void*>::value
              % std::alignment_of<T>::value == 0
           && std::is_nothrow_move_constructible<T>::value
