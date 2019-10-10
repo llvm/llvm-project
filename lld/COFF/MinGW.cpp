@@ -55,7 +55,7 @@ AutoExporter::AutoExporter() {
       // C++ symbols
       "__rtti_",
       "__builtin_",
-      // Artifical symbols such as .refptr
+      // Artificial symbols such as .refptr
       ".",
   };
 
