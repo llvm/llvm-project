@@ -48,7 +48,8 @@ struct ErrorDeadlySignal : ErrorBase {
       scariness.Scare(10, "stack-overflow");
     } else if (!signal.is_memory_access) {
       scariness.Scare(10, "signal");
-    } else if (signal.addr < GetPageSizeCached()) {
+    } else if (signal.is_true_faulting_addr &&
+               signal.addr < GetPageSizeCached()) {
       scariness.Scare(10, "null-deref");
     } else if (signal.addr == signal.pc) {
       scariness.Scare(60, "wild-jump");
