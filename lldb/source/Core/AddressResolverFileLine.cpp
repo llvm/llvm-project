@@ -38,8 +38,7 @@ AddressResolverFileLine::~AddressResolverFileLine() {}
 
 Searcher::CallbackReturn
 AddressResolverFileLine::SearchCallback(SearchFilter &filter,
-                                        SymbolContext &context, Address *addr,
-                                        bool containing) {
+                                        SymbolContext &context, Address *addr) {
   SymbolContextList sc_list;
   uint32_t sc_list_size;
   CompileUnit *cu = context.comp_unit;

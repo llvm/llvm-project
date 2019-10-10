@@ -120,10 +120,8 @@ void BreakpointResolverAddress::ResolveBreakpointInModules(
     BreakpointResolver::ResolveBreakpointInModules(filter, modules);
 }
 
-Searcher::CallbackReturn
-BreakpointResolverAddress::SearchCallback(SearchFilter &filter,
-                                          SymbolContext &context, Address *addr,
-                                          bool containing) {
+Searcher::CallbackReturn BreakpointResolverAddress::SearchCallback(
+    SearchFilter &filter, SymbolContext &context, Address *addr) {
   assert(m_breakpoint != nullptr);
 
   if (filter.AddressPasses(m_addr)) {
