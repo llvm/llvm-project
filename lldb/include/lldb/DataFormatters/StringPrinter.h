@@ -133,6 +133,9 @@ public:
       return m_language_type;
     }
 
+    void SetHasSourceSize(bool e) { m_has_source_size = e; }
+
+    bool HasSourceSize() const { return m_has_source_size; }
   private:
     uint64_t m_location;
     lldb::ProcessSP m_process_sp;
@@ -146,6 +149,7 @@ public:
     bool m_ignore_max_length;
     bool m_zero_is_terminator;
     lldb::LanguageType m_language_type;
+    bool m_has_source_size = false;
   };
 
   class ReadBufferAndDumpToStreamOptions {
@@ -245,6 +249,10 @@ public:
       return m_language_type;
     }
 
+    void SetHasSourceSize(bool e) { m_has_source_size = e; }
+
+    bool HasSourceSize() const { return m_has_source_size; }
+
   private:
     DataExtractor m_data;
     Stream *m_stream;
@@ -256,6 +264,7 @@ public:
     bool m_zero_is_terminator;
     bool m_is_truncated;
     lldb::LanguageType m_language_type;
+    bool m_has_source_size = false;
   };
 
   // I can't use a std::unique_ptr for this because the Deleter is a template
