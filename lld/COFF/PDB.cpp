@@ -514,16 +514,15 @@ static bool equals_path(StringRef path1, StringRef path2) {
   return path1.equals(path2);
 #endif
 }
-
 // Find by name an OBJ provided on the command line
-static ObjFile *findObjByName(StringRef fileNameOnly) {
-  SmallString<128> currentPath;
-
+static ObjFile *findObjWithPrecompSignature(StringRef fileNameOnly,
+                                            uint32_t precompSignature) {
   for (ObjFile *f : ObjFile::instances) {
     StringRef currentFileName = sys::path::filename(f->getName());
 
-    // Compare based solely on the file name (link.exe behavior)
-    if (equals_path(currentFileName, fileNameOnly))
+    if (f->pchSignature.hasValue() &&
+        f->pchSignature.getValue() == precompSignature &&
+        equals_path(fileNameOnly, currentFileName))
       return f;
   }
   return nullptr;
@@ -560,21 +559,14 @@ Expected<const CVIndexMap &> PDBLinker::aquirePrecompObj(ObjFile *file) {
 
   // link.exe requires that a precompiled headers object must always be provided
   // on the command-line, even if that's not necessary.
-  auto precompFile = findObjByName(precompFileName);
+  auto precompFile =
+      findObjWithPrecompSignature(precompFileName, precomp.Signature);
   if (!precompFile)
     return createFileError(
-        precompFileName.str(),
-        make_error<pdb::PDBError>(pdb::pdb_error_code::external_cmdline_ref));
+        precomp.getPrecompFilePath().str(),
+        make_error<pdb::PDBError>(pdb::pdb_error_code::no_matching_pch));
 
   addObjFile(precompFile, &indexMap);
-
-  if (!precompFile->pchSignature)
-    fatal(precompFile->getName() + " is not a precompiled headers object");
-
-  if (precomp.getSignature() != precompFile->pchSignature.getValueOr(0))
-    return createFileError(
-        precomp.getPrecompFilePath().str(),
-        make_error<pdb::PDBError>(pdb::pdb_error_code::signature_out_of_date));
 
   return indexMap;
 }

@@ -9,10 +9,10 @@ RUN: lld-link %S/Inputs/precomp-a.obj %S/Inputs/precomp-invalid.obj %S/Inputs/pr
 RUN: not lld-link %S/Inputs/precomp-a.obj %S/Inputs/precomp-b.obj /nodefaultlib /entry:main /debug /pdb:%t.pdb /out:%t.exe /opt:ref /opt:icf 2>&1 | FileCheck %s -check-prefix FAILURE-MISSING-PRECOMPOBJ
 
 FAILURE: warning: Cannot use debug info for '{{.*}}precomp-invalid.obj' [LNK4099]
-FAILURE-NEXT: failed to load reference '{{.*}}precomp.obj': The signature does not match; the file(s) might be out of date.
+FAILURE-NEXT: failed to load reference '{{.*}}precomp.obj': No matching precompiled header could be located.
 
 FAILURE-MISSING-PRECOMPOBJ: warning: Cannot use debug info for '{{.*}}precomp-a.obj' [LNK4099]
-FAILURE-MISSING-PRECOMPOBJ-NEXT: failed to load reference '{{.*}}precomp.obj': The path to this file must be provided on the command-line
+FAILURE-MISSING-PRECOMPOBJ-NEXT: failed to load reference '{{.*}}precomp.obj': No matching precompiled header could be located.
 
 CHECK: Types (TPI Stream)
 CHECK-NOT: LF_PRECOMP
