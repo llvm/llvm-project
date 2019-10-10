@@ -70,15 +70,17 @@ static const char *GetStreamOpenModeFromOptions(uint32_t options) {
 
 uint32_t File::GetOptionsFromMode(llvm::StringRef mode) {
   return llvm::StringSwitch<uint32_t>(mode)
-      .Case("r", File::eOpenOptionRead)
-      .Case("w", File::eOpenOptionWrite)
-      .Case("a", File::eOpenOptionWrite | File::eOpenOptionAppend |
-                     File::eOpenOptionCanCreate)
-      .Case("r+", File::eOpenOptionRead | File::eOpenOptionWrite)
-      .Case("w+", File::eOpenOptionRead | File::eOpenOptionWrite |
-                      File::eOpenOptionCanCreate | File::eOpenOptionTruncate)
-      .Case("a+", File::eOpenOptionRead | File::eOpenOptionWrite |
-                      File::eOpenOptionAppend | File::eOpenOptionCanCreate)
+      .Cases("r", "rb", eOpenOptionRead)
+      .Cases("w", "wb", eOpenOptionWrite)
+      .Cases("a", "ab",
+             eOpenOptionWrite | eOpenOptionAppend | eOpenOptionCanCreate)
+      .Cases("r+", "rb+", "r+b", eOpenOptionRead | eOpenOptionWrite)
+      .Cases("w+", "wb+", "w+b",
+             eOpenOptionRead | eOpenOptionWrite | eOpenOptionCanCreate |
+                 eOpenOptionTruncate)
+      .Cases("a+", "ab+", "a+b",
+             eOpenOptionRead | eOpenOptionWrite | eOpenOptionAppend |
+                 eOpenOptionCanCreate)
       .Default(0);
 }
 

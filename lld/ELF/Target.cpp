@@ -97,7 +97,12 @@ template <class ELFT> static ErrorPlace getErrPlace(const uint8_t *loc) {
       continue;
 
     uint8_t *isecLoc = Out::bufferStart + isec->getParent()->offset + isec->outSecOff;
-    if (isecLoc <= loc && loc < isecLoc + isec->getSize())
+    if (isecLoc > loc)
+      continue;
+    // isecLoc might be nullptr here, with isec->getSize() being non-zero.
+    // Adding these two together is not defined in C++.
+    if (loc < reinterpret_cast<uint8_t *>(
+                  reinterpret_cast<std::uintptr_t>(isecLoc) + isec->getSize()))
       return {isec, isec->template getLocation<ELFT>(loc - isecLoc) + ": "};
   }
   return {};
