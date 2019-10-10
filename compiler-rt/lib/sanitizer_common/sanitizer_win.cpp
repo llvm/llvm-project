@@ -945,6 +945,11 @@ bool SignalContext::IsMemoryAccess() const {
   return GetWriteFlag() != SignalContext::UNKNOWN;
 }
 
+bool SignalContext::IsTrueFaultingAddress() const {
+  // TODO: Provide real implementation for this. See Linux and Mac variants.
+  return IsMemoryAccess();
+}
+
 SignalContext::WriteFlag SignalContext::GetWriteFlag() const {
   EXCEPTION_RECORD *exception_record = (EXCEPTION_RECORD *)siginfo;
   // The contents of this array are documented at

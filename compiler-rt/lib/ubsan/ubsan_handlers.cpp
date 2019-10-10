@@ -691,14 +691,33 @@ static void handlePointerOverflowImpl(PointerOverflowData *Data,
                                       ValueHandle Result,
                                       ReportOptions Opts) {
   SourceLocation Loc = Data->Loc.acquire();
-  ErrorType ET = ErrorType::PointerOverflow;
+  ErrorType ET;
+
+  if (Base == 0 && Result == 0)
+    ET = ErrorType::NullptrWithOffset;
+  else if (Base == 0 && Result != 0)
+    ET = ErrorType::NullptrWithNonZeroOffset;
+  else if (Base != 0 && Result == 0)
+    ET = ErrorType::NullptrAfterNonZeroOffset;
+  else
+    ET = ErrorType::PointerOverflow;
 
   if (ignoreReport(Loc, Opts, ET))
     return;
 
   ScopedReport R(Opts, Loc, ET);
 
-  if ((sptr(Base) >= 0) == (sptr(Result) >= 0)) {
+  if (ET == ErrorType::NullptrWithOffset) {
+    Diag(Loc, DL_Error, ET, "applying zero offset to null pointer");
+  } else if (ET == ErrorType::NullptrWithNonZeroOffset) {
+    Diag(Loc, DL_Error, ET, "applying non-zero offset %0 to null pointer")
+        << Result;
+  } else if (ET == ErrorType::NullptrAfterNonZeroOffset) {
+    Diag(
+        Loc, DL_Error, ET,
+        "applying non-zero offset to non-null pointer %0 produced null pointer")
+        << (void *)Base;
+  } else if ((sptr(Base) >= 0) == (sptr(Result) >= 0)) {
     if (Base > Result)
       Diag(Loc, DL_Error, ET,
            "addition of unsigned offset to %0 overflowed to %1")
