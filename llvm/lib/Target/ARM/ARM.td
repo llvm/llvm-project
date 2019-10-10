@@ -57,12 +57,15 @@ def FeatureD32            : SubtargetFeature<"d32", "HasD32", "true",
                                              "Extend FP to 32 double registers">;
 
 multiclass VFPver<string name, string query, string description,
-                  list<SubtargetFeature> prev = [],
-                  list<SubtargetFeature> otherimplies = []> {
+                  list<SubtargetFeature> prev,
+                  list<SubtargetFeature> otherimplies,
+                  list<SubtargetFeature> vfp2prev = []> {
   def _D16_SP: SubtargetFeature<
     name#"d16sp", query#"D16SP", "true",
     description#" with only 16 d-registers and no double precision",
-    !foreach(v, prev, !cast<SubtargetFeature>(v # "_D16_SP")) # otherimplies>;
+    !foreach(v, prev, !cast<SubtargetFeature>(v # "_D16_SP")) #
+      !foreach(v, vfp2prev, !cast<SubtargetFeature>(v # "_SP")) #
+      otherimplies>;
   def _SP: SubtargetFeature<
     name#"sp", query#"SP", "true",
     description#" with no double precision",
@@ -72,6 +75,7 @@ multiclass VFPver<string name, string query, string description,
     name#"d16", query#"D16", "true",
     description#" with only 16 d-registers",
     !foreach(v, prev, !cast<SubtargetFeature>(v # "_D16")) #
+      vfp2prev #
       otherimplies # [FeatureFP64, !cast<SubtargetFeature>(NAME # "_D16_SP")]>;
   def "": SubtargetFeature<
     name, query, "true", description,
@@ -80,11 +84,23 @@ multiclass VFPver<string name, string query, string description,
         !cast<SubtargetFeature>(NAME # "_SP")]>;
 }
 
-defm FeatureVFP2: VFPver<"vfp2", "HasVFPv2", "Enable VFP2 instructions",
-                         [], [FeatureFPRegs]>;
+def FeatureVFP2_D16_SP     : SubtargetFeature<"vfp2d16sp", "HasVFPv2D16SP", "true",
+                                             "Enable VFP2 instructions with "
+                                             "no double precision",
+                                             [FeatureFPRegs]>;
+def FeatureVFP2_SP        : SubtargetFeature<"vfp2sp", "HasVFPv2SP", "true",
+                                             "Enable VFP2 instructions with "
+                                             "no double precision",
+                                             [FeatureVFP2_D16_SP]>;
+def FeatureVFP2_D16       : SubtargetFeature<"vfp2d16", "HasVFPv2D16", "true",
+                                             "Enable VFP2 instructions",
+                                             [FeatureFP64, FeatureVFP2_D16_SP]>;
+def FeatureVFP2           : SubtargetFeature<"vfp2", "HasVFPv2", "true",
+                                             "Enable VFP2 instructions",
+                                             [FeatureVFP2_D16, FeatureVFP2_SP]>;
 
 defm FeatureVFP3: VFPver<"vfp3", "HasVFPv3", "Enable VFP3 instructions",
-                         [FeatureVFP2]>;
+                         [], [], [FeatureVFP2]>;
 
 def FeatureNEON           : SubtargetFeature<"neon", "HasNEON", "true",
                                              "Enable NEON instructions",
@@ -98,7 +114,7 @@ defm FeatureVFP4: VFPver<"vfp4", "HasVFPv4", "Enable VFP4 instructions",
                          [FeatureVFP3], [FeatureFP16]>;
 
 defm FeatureFPARMv8: VFPver<"fp-armv8", "HasFPARMv8", "Enable ARMv8 FP",
-                         [FeatureVFP4]>;
+                         [FeatureVFP4], []>;
 
 def FeatureFullFP16       : SubtargetFeature<"fullfp16", "HasFullFP16", "true",
                                              "Enable full half-precision "
