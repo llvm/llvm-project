@@ -51,7 +51,6 @@ LoadCommands:
         reserved1:       0x00000000
         reserved2:       0x00000000
         reserved3:       0x00000000
-        content:         554889E54883EC30488D054112000031C948C7052C1200005704000048C70529120000AE080000488B151A120000897DE44889C7488D45E8488975D84889C6B821000000488955D04889C2E830010000488B7DD0488D35F5110000E840000000488D7DE8E81D01000031C04883C4305DC3662E0F1F8400000000000F1F440000554889E548C745F000000000488975F848897DF05DC3662E0F1F840000000000554889E54883EC3048C745F80000000048C745F00000000048C745E80000000048897DF8488975F0488B06488945E848897DD8488945E0488D3D62110000E81D000000488D7DD84889C6E891FFFFFF4883C4305DC3662E0F1F840000000000904883EC284889F8488B0F4883F9000F9CC2F6C2014889CE48897C2420488944241848894C24104889742408750A488B4424084883C428C3488B44241048C1F82048F7D8488B4C241089CA4863F2488B7C24204801F731D289D6488934244889C6488B1424488B0C24E81F0000004889C1488B54241848890248894C2408EBAE
       - sectname:        __stubs
         segname:         __TEXT
         addr:            0x0000000100000F60
@@ -64,7 +63,6 @@ LoadCommands:
         reserved1:       0x00000000
         reserved2:       0x00000006
         reserved3:       0x00000000
-        content:         FF259A100000FF259C100000FF259E100000
       - sectname:        __stub_helper
         segname:         __TEXT
         addr:            0x0000000100000F74
@@ -77,7 +75,6 @@ LoadCommands:
         reserved1:       0x00000000
         reserved2:       0x00000000
         reserved3:       0x00000000
-        content:         4C8D1D9D1000004153FF257D000000906800000000E9E6FFFFFF6819000000E9DCFFFFFF6830000000E9D2FFFFFF
       - sectname:        __swift5_typeref
         segname:         __TEXT
         addr:            0x0000000100000FA2
@@ -90,7 +87,6 @@ LoadCommands:
         reserved1:       0x00000000
         reserved2:       0x00000000
         reserved3:       0x00000000
-        content:         53695F53697400
       - sectname:        __const
         segname:         __TEXT
         addr:            0x0000000100000FAA
@@ -103,7 +99,6 @@ LoadCommands:
         reserved1:       0x00000000
         reserved2:       0x00000000
         reserved3:       0x00000000
-        content:         '0300'
       - sectname:        __unwind_info
         segname:         __TEXT
         addr:            0x0000000100000FAC
@@ -116,7 +111,6 @@ LoadCommands:
         reserved1:       0x00000000
         reserved2:       0x00000000
         reserved3:       0x00000000
-        content:         010000001C000000000000001C000000000000001C00000002000000E00D00003400000034000000600F00000000000034000000030000000C0002001400020000000001000100000000060200000001
   - cmd:             LC_SEGMENT_64
     cmdsize:         232
     segname:         __DATA_CONST
@@ -141,7 +135,6 @@ LoadCommands:
         reserved1:       0x00000003
         reserved2:       0x00000000
         reserved3:       0x00000000
-        content:         '0000000000000000'
       - sectname:        __objc_imageinfo
         segname:         __DATA_CONST
         addr:            0x0000000100001008
@@ -154,7 +147,6 @@ LoadCommands:
         reserved1:       0x00000000
         reserved2:       0x00000000
         reserved3:       0x00000000
-        content:         '0000000040070105'
   - cmd:             LC_SEGMENT_64
     cmdsize:         312
     segname:         __DATA
@@ -179,7 +171,6 @@ LoadCommands:
         reserved1:       0x00000004
         reserved2:       0x00000000
         reserved3:       0x00000000
-        content:         840F0000010000008E0F000001000000980F000001000000
       - sectname:        __data
         segname:         __DATA
         addr:            0x0000000100002018
@@ -192,7 +183,6 @@ LoadCommands:
         reserved1:       0x00000000
         reserved2:       0x00000000
         reserved3:       0x00000000
-        content:         000000000000000082EFFFFFFAFFFFFF
       - sectname:        __common
         segname:         __DATA
         addr:            0x0000000100002028
