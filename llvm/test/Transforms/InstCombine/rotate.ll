@@ -710,8 +710,14 @@ define i32 @rotl_constant_expr(i32 %shamt) {
 
 define i32 @rotateleft32_doubleand1(i32 %v, i8 %r) {
 ; CHECK-LABEL: @rotateleft32_doubleand1(
-; CHECK-NEXT:    [[Z:%.*]] = zext i8 [[R:%.*]] to i32
-; CHECK-NEXT:    [[OR:%.*]] = call i32 @llvm.fshl.i32(i32 [[V:%.*]], i32 [[V]], i32 [[Z]])
+; CHECK-NEXT:    [[M:%.*]] = and i8 [[R:%.*]], 31
+; CHECK-NEXT:    [[Z:%.*]] = zext i8 [[M]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 0, [[R]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], 31
+; CHECK-NEXT:    [[AND2:%.*]] = zext i8 [[TMP2]] to i32
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[V:%.*]], [[Z]]
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[V]], [[AND2]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHR]], [[SHL]]
 ; CHECK-NEXT:    ret i32 [[OR]]
 ;
   %m = and i8 %r, 31
@@ -726,8 +732,14 @@ define i32 @rotateleft32_doubleand1(i32 %v, i8 %r) {
 
 define i32 @rotateright32_doubleand1(i32 %v, i16 %r) {
 ; CHECK-LABEL: @rotateright32_doubleand1(
-; CHECK-NEXT:    [[Z:%.*]] = zext i16 [[R:%.*]] to i32
-; CHECK-NEXT:    [[OR:%.*]] = call i32 @llvm.fshr.i32(i32 [[V:%.*]], i32 [[V]], i32 [[Z]])
+; CHECK-NEXT:    [[M:%.*]] = and i16 [[R:%.*]], 31
+; CHECK-NEXT:    [[Z:%.*]] = zext i16 [[M]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i16 0, [[R]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i16 [[TMP1]], 31
+; CHECK-NEXT:    [[AND2:%.*]] = zext i16 [[TMP2]] to i32
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[V:%.*]], [[AND2]]
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[V]], [[Z]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHR]], [[SHL]]
 ; CHECK-NEXT:    ret i32 [[OR]]
 ;
   %m = and i16 %r, 31
