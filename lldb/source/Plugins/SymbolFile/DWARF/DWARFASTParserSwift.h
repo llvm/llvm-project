@@ -26,7 +26,7 @@ public:
   virtual ~DWARFASTParserSwift();
 
   lldb::TypeSP ParseTypeFromDWARF(const lldb_private::SymbolContext &sc,
-                                  const DWARFDIE &die, lldb_private::Log *log,
+                                  const DWARFDIE &die,
                                   bool *type_is_new_ptr) override;
 
   lldb_private::Function *
