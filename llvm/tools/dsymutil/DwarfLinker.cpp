@@ -574,16 +574,17 @@ bool DwarfLinker::RelocationManager::hasValidRelocation(
 
   const auto &ValidReloc = ValidRelocs[NextValidReloc++];
   const auto &Mapping = ValidReloc.Mapping->getValue();
-  uint64_t ObjectAddress = Mapping.ObjectAddress
-                               ? uint64_t(*Mapping.ObjectAddress)
-                               : std::numeric_limits<uint64_t>::max();
+  const uint64_t BinaryAddress = Mapping.BinaryAddress;
+  const uint64_t ObjectAddress = Mapping.ObjectAddress
+                                     ? uint64_t(*Mapping.ObjectAddress)
+                                     : std::numeric_limits<uint64_t>::max();
   if (Linker.Options.Verbose)
     outs() << "Found valid debug map entry: " << ValidReloc.Mapping->getKey()
-           << " "
-           << format("\t%016" PRIx64 " => %016" PRIx64, ObjectAddress,
-                     uint64_t(Mapping.BinaryAddress));
+           << "\t"
+           << format("0x%016" PRIx64 " => 0x%016" PRIx64 "\n", ObjectAddress,
+                     BinaryAddress);
 
-  Info.AddrAdjust = int64_t(Mapping.BinaryAddress) + ValidReloc.Addend;
+  Info.AddrAdjust = BinaryAddress + ValidReloc.Addend;
   if (Mapping.ObjectAddress)
     Info.AddrAdjust -= ObjectAddress;
   Info.InDebugMap = true;
@@ -640,7 +641,7 @@ unsigned DwarfLinker::shouldKeepVariableDIE(RelocationManager &RelocMgr,
 
   // See if there is a relocation to a valid debug map entry inside
   // this variable's location. The order is important here. We want to
-  // always check in the variable has a valid relocation, so that the
+  // always check if the variable has a valid relocation, so that the
   // DIEInfo is filled. However, we don't want a static variable in a
   // function to force us to keep the enclosing function.
   if (!RelocMgr.hasValidRelocation(LocationOffset, LocationEndOffset, MyInfo) ||
@@ -648,6 +649,7 @@ unsigned DwarfLinker::shouldKeepVariableDIE(RelocationManager &RelocMgr,
     return Flags;
 
   if (Options.Verbose) {
+    outs() << "Keeping variable DIE:";
     DIDumpOptions DumpOpts;
     DumpOpts.ChildRecurseDepth = 0;
     DumpOpts.Verbose = Options.Verbose;
@@ -684,6 +686,7 @@ unsigned DwarfLinker::shouldKeepSubprogramDIE(
     return Flags;
 
   if (Options.Verbose) {
+    outs() << "Keeping subprogram DIE:";
     DIDumpOptions DumpOpts;
     DumpOpts.ChildRecurseDepth = 0;
     DumpOpts.Verbose = Options.Verbose;
