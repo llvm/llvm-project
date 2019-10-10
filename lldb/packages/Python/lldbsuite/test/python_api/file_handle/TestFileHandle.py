@@ -12,8 +12,7 @@ from contextlib import contextmanager
 
 import lldb
 from lldbsuite.test import  lldbtest
-from lldbsuite.test.decorators import (
-    add_test_categories, skipIf, skipIfWindows, expectedFailure)
+from lldbsuite.test.decorators import *
 
 class OhNoe(Exception):
     pass
@@ -400,7 +399,7 @@ class FileHandleTestCase(lldbtest.TestBase):
 
 
     @add_test_categories(['pyapi'])
-    @expectedFailure # FIXME IOHandler still using FILE*
+    @expectedFailureAll() # FIXME IOHandler still using FILE*
     def test_string_inout(self):
         inf = io.StringIO("help help\n")
         outf = io.StringIO()
@@ -416,7 +415,7 @@ class FileHandleTestCase(lldbtest.TestBase):
 
 
     @add_test_categories(['pyapi'])
-    @expectedFailure # FIXME IOHandler still using FILE*
+    @expectedFailureAll() # FIXME IOHandler still using FILE*
     def test_bytes_inout(self):
         inf = io.BytesIO(b"help help\nhelp b\n")
         outf = io.BytesIO()
@@ -462,7 +461,7 @@ class FileHandleTestCase(lldbtest.TestBase):
 
 
     @add_test_categories(['pyapi'])
-    @expectedFailure #FIXME bug in ScriptInterpreterPython
+    @expectedFailureAll() #FIXME bug in ScriptInterpreterPython
     def test_replace_stdout_with_nonfile(self):
         debugger = self.debugger
         f = io.StringIO()
@@ -550,7 +549,7 @@ class FileHandleTestCase(lldbtest.TestBase):
 
     @add_test_categories(['pyapi'])
     @skipIf(py_version=['<', (3,)])
-    @expectedFailure # fixme multiple problems with this
+    @expectedFailureAll() # fixme multiple problems with this
     def test_string_out(self):
         f = io.StringIO()
         status = self.debugger.SetOutputFile(f)
@@ -560,7 +559,7 @@ class FileHandleTestCase(lldbtest.TestBase):
 
 
     @add_test_categories(['pyapi'])
-    @expectedFailure # FIXME need FileSP version of SBDebugger::SetErrorFile
+    @expectedFailureAll() # FIXME need FileSP version of SBDebugger::SetErrorFile
     @skipIf(py_version=['<', (3,)])
     def test_string_error(self):
         f = io.StringIO()
@@ -631,7 +630,7 @@ class FileHandleTestCase(lldbtest.TestBase):
 
 
     @add_test_categories(['pyapi'])
-    @expectedFailure # FIXME need FileSP version of SBDebugger::SetErrorFile
+    @expectedFailureAll() # FIXME need FileSP version of SBDebugger::SetErrorFile
     @skipIf(py_version=['<', (3,)])
     def test_file_out(self):
         with open(self.out_filename, 'w') as f:
@@ -655,7 +654,7 @@ class FileHandleTestCase(lldbtest.TestBase):
 
 
     @add_test_categories(['pyapi'])
-    @expectedFailure # FIXME need FileSP version of SBDebugger::SetErrorFile
+    @expectedFailureAll() # FIXME need FileSP version of SBDebugger::SetErrorFile
     def test_file_error(self):
         with open(self.out_filename, 'w') as f:
             status = self.debugger.SetErrorFile(f)
@@ -747,7 +746,7 @@ class FileHandleTestCase(lldbtest.TestBase):
 
 
     @add_test_categories(['pyapi'])
-    @expectedFailure # FIXME need FileSP version of SBDebugger::SetOutputFile
+    @expectedFailureAll() # FIXME need FileSP version of SBDebugger::SetOutputFile
     def test_close(self):
         debugger = self.debugger
         with open(self.out_filename, 'w') as f:
@@ -768,7 +767,7 @@ class FileHandleTestCase(lldbtest.TestBase):
 
     @add_test_categories(['pyapi'])
     @skipIf(py_version=['<', (3,)])
-    @expectedFailure # FIXME need FileSP version of SBDebugger::SetOutputFile
+    @expectedFailureAll() # FIXME need FileSP version of SBDebugger::SetOutputFile
     def test_stdout(self):
         f = io.StringIO()
         status = self.debugger.SetOutputFile(f)
@@ -778,7 +777,7 @@ class FileHandleTestCase(lldbtest.TestBase):
 
 
     @add_test_categories(['pyapi'])
-    @expectedFailure # FIXME implement SBFile::GetFile
+    @expectedFailureAll() # FIXME implement SBFile::GetFile
     @skipIf(py_version=['<', (3,)])
     def test_identity(self):
 
