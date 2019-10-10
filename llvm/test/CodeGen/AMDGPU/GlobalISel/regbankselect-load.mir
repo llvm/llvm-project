@@ -69,6 +69,8 @@
   define amdgpu_kernel void @load_constant_i32_uniform_align2() {ret void}
   define amdgpu_kernel void @load_constant_i32_uniform_align1() {ret void}
   define amdgpu_kernel void @load_private_uniform_sgpr_i32() {ret void}
+  define amdgpu_kernel void @load_constant_v8i32_vgpr_crash() { ret void }
+  define amdgpu_kernel void @load_constant_v8i32_vgpr_crash_loop_phi() { ret void }
 
   declare i32 @llvm.amdgcn.workitem.id.x() #0
   attributes #0 = { nounwind readnone }
@@ -651,4 +653,48 @@ body: |
     ; CHECK: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY1]](p5) :: (load 4, addrspace 5)
     %0:_(p5) = COPY $sgpr0
     %1:_(s32) = G_LOAD %0 :: (load 4, addrspace 5, align 4)
+...
+
+---
+name: load_constant_v8i32_vgpr_crash
+legalized: true
+tracksRegLiveness: true
+
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+
+    ; CHECK-LABEL: name: load_constant_v8i32_vgpr_crash
+    ; CHECK: %0:vgpr(p4) = COPY $vgpr0_vgpr1
+    ; CHECK: vgpr(<4 x s32>) = G_LOAD %0(p4)
+    ; CHECK: vgpr(<4 x s32>) = G_LOAD
+    ; CHECK: G_CONCAT_VECTORS
+    %0:_(p4) = COPY $vgpr0_vgpr1
+    %1:_(<8 x s32>) = G_LOAD %0 :: (load 32, addrspace 4)
+...
+
+---
+name: load_constant_v8i32_vgpr_crash_loop_phi
+legalized: true
+tracksRegLiveness: true
+
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1, $sgpr2_sgpr3
+
+    ; CHECK-LABEL: name: load_constant_v8i32_vgpr_crash_loop_phi
+    ; CHECK: G_PHI
+    ; CHECK: vgpr(<4 x s32>) = G_LOAD
+    ; CHECK: vgpr(<4 x s32>) = G_LOAD
+    ; CHECK: G_CONCAT_VECTORS
+
+    %0:_(p4) = COPY $sgpr0_sgpr1
+    %1:_(p4) = COPY $sgpr2_sgpr3
+    G_BR %bb.1
+
+  bb.1:
+    %2:_(p4) = G_PHI %0, %bb.0, %4, %bb.1
+    %3:_(<8 x s32>) = G_LOAD %2 :: (load 32, addrspace 4)
+    %4:_(p4) = COPY %1
+    G_BR %bb.1
 ...

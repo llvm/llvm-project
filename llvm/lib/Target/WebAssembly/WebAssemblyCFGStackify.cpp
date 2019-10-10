@@ -1227,11 +1227,11 @@ getDepth(const SmallVectorImpl<const MachineBasicBlock *> &Stack,
 /// checks for such cases and fixes up the signatures.
 void WebAssemblyCFGStackify::fixEndsAtEndOfFunction(MachineFunction &MF) {
   const auto &MFI = *MF.getInfo<WebAssemblyFunctionInfo>();
-  assert(MFI.getResults().size() <= 1);
 
   if (MFI.getResults().empty())
     return;
 
+  // TODO: Generalize from value types to function types for multivalue
   WebAssembly::ExprType RetType;
   switch (MFI.getResults().front().SimpleTy) {
   case MVT::i32:
@@ -1266,10 +1266,14 @@ void WebAssemblyCFGStackify::fixEndsAtEndOfFunction(MachineFunction &MF) {
       if (MI.isPosition() || MI.isDebugInstr())
         continue;
       if (MI.getOpcode() == WebAssembly::END_BLOCK) {
+        if (MFI.getResults().size() > 1)
+          report_fatal_error("Multivalue block signatures not implemented yet");
         EndToBegin[&MI]->getOperand(0).setImm(int32_t(RetType));
         continue;
       }
       if (MI.getOpcode() == WebAssembly::END_LOOP) {
+        if (MFI.getResults().size() > 1)
+          report_fatal_error("Multivalue loop signatures not implemented yet");
         EndToBegin[&MI]->getOperand(0).setImm(int32_t(RetType));
         continue;
       }

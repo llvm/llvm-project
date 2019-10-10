@@ -19,5 +19,5 @@ body: |
     ; CHECK-NOT: dead %{{[0-9]+}}
     ; CHECK: DROP_I32 killed %{{[0-9]+}}
     dead %0:i32 = CONST_I32 0, implicit-def dead $arguments, implicit $sp32, implicit $sp64
-    RETURN_VOID implicit-def dead $arguments
+    RETURN implicit-def dead $arguments
 ...

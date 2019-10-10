@@ -10,18 +10,18 @@ body: |
   bb.0:
     successors: %bb.1, %bb.2
     liveins: $sgpr4
-    undef %0.sub2:sreg_128 = COPY $sgpr4
+    undef %0.sub2:sgpr_128 = COPY $sgpr4
     %3 = IMPLICIT_DEF
     S_CBRANCH_SCC1 %bb.2, implicit undef $scc
 
   bb.1:
     successors: %bb.2
-    %0.sub0:sreg_128 = COPY %0.sub2
-    %0.sub1:sreg_128 = COPY %0.sub2
-    %1:sreg_128 = COPY %0
-    %2:sreg_128 = COPY %0
-    %0:sreg_128 = COPY %2
-    %3:sreg_128 = COPY %1
+    %0.sub0:sgpr_128 = COPY %0.sub2
+    %0.sub1:sgpr_128 = COPY %0.sub2
+    %1:sgpr_128 = COPY %0
+    %2:sgpr_128 = COPY %0
+    %0:sgpr_128 = COPY %2
+    %3:sgpr_128 = COPY %1
 
   bb.2:
     $sgpr1 = COPY %3

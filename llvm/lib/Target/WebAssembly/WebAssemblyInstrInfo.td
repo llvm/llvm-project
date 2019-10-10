@@ -106,7 +106,8 @@ def WebAssemblybr_table : SDNode<"WebAssemblyISD::BR_TABLE",
 def WebAssemblyargument : SDNode<"WebAssemblyISD::ARGUMENT",
                                  SDT_WebAssemblyArgument>;
 def WebAssemblyreturn   : SDNode<"WebAssemblyISD::RETURN",
-                                 SDT_WebAssemblyReturn, [SDNPHasChain]>;
+                                 SDT_WebAssemblyReturn,
+                                 [SDNPHasChain, SDNPVariadic]>;
 def WebAssemblywrapper  : SDNode<"WebAssemblyISD::Wrapper",
                                  SDT_WebAssemblyWrapper>;
 def WebAssemblywrapperPIC  : SDNode<"WebAssemblyISD::WrapperPIC",

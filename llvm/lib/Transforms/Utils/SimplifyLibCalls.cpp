@@ -1916,10 +1916,10 @@ Value *LibCallSimplifier::optimizeLog(CallInst *Log, IRBuilder<> &B) {
   B.setFastMathFlags(FastMathFlags::getFast());
 
   Function *ArgFn = Arg->getCalledFunction();
-  StringRef ArgNm = ArgFn->getName();
-  Intrinsic::ID ArgID = ArgFn->getIntrinsicID();
+  Intrinsic::ID ArgID =
+      ArgFn ? ArgFn->getIntrinsicID() : Intrinsic::not_intrinsic;
   LibFunc ArgLb = NotLibFunc;
-  TLI->getLibFunc(ArgNm, ArgLb);
+  TLI->getLibFunc(Arg, ArgLb);
 
   // log(pow(x,y)) -> y*log(x)
   if (ArgLb == PowLb || ArgID == Intrinsic::pow) {
@@ -1934,9 +1934,10 @@ Value *LibCallSimplifier::optimizeLog(CallInst *Log, IRBuilder<> &B) {
     substituteInParent(Arg, MulY);
     return MulY;
   }
+
   // log(exp{,2,10}(y)) -> y*log({e,2,10})
   // TODO: There is no exp10() intrinsic yet.
-  else if (ArgLb == ExpLb || ArgLb == Exp2Lb || ArgLb == Exp10Lb ||
+  if (ArgLb == ExpLb || ArgLb == Exp2Lb || ArgLb == Exp10Lb ||
            ArgID == Intrinsic::exp || ArgID == Intrinsic::exp2) {
     Constant *Eul;
     if (ArgLb == ExpLb || ArgID == Intrinsic::exp)

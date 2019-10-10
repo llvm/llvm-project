@@ -323,6 +323,8 @@ AMDGPURegisterBankInfo::getInstrAlternativeMappingsIntrinsicWSideEffects(
   }
 }
 
+// FIXME: Returns uniform if there's no source value information. This is
+// probably wrong.
 static bool isInstrUniformNonExtLoadAlign4(const MachineInstr &MI) {
   if (!MI.hasOneMemOperand())
     return false;
@@ -1047,8 +1049,13 @@ bool AMDGPURegisterBankInfo::applyMappingWideLoad(MachineInstr &MI,
   SmallVector<unsigned, 1> SrcRegs(OpdMapper.getVRegs(1));
 
   // If the pointer is an SGPR, we have nothing to do.
-  if (SrcRegs.empty())
-    return false;
+  if (SrcRegs.empty()) {
+    Register PtrReg = MI.getOperand(1).getReg();
+    const RegisterBank *PtrBank = getRegBank(PtrReg, MRI, *TRI);
+    if (PtrBank == &AMDGPU::SGPRRegBank)
+      return false;
+    SrcRegs.push_back(PtrReg);
+  }
 
   assert(LoadSize % MaxNonSmrdLoadSize == 0);
 
@@ -2025,7 +2032,7 @@ AMDGPURegisterBankInfo::getInstrMappingForLoad(const MachineInstr &MI) const {
 
   const MachineFunction &MF = *MI.getParent()->getParent();
   const MachineRegisterInfo &MRI = MF.getRegInfo();
-  SmallVector<const ValueMapping*, 8> OpdsMapping(MI.getNumOperands());
+  SmallVector<const ValueMapping*, 2> OpdsMapping(2);
   unsigned Size = getSizeInBits(MI.getOperand(0).getReg(), MRI, *TRI);
   LLT LoadTy = MRI.getType(MI.getOperand(0).getReg());
   Register PtrReg = MI.getOperand(1).getReg();
@@ -2036,7 +2043,10 @@ AMDGPURegisterBankInfo::getInstrMappingForLoad(const MachineInstr &MI) const {
   const ValueMapping *ValMapping;
   const ValueMapping *PtrMapping;
 
-  if ((AS != AMDGPUAS::LOCAL_ADDRESS && AS != AMDGPUAS::REGION_ADDRESS &&
+  const RegisterBank *PtrBank = getRegBank(PtrReg, MRI, *TRI);
+
+  if (PtrBank == &AMDGPU::SGPRRegBank &&
+      (AS != AMDGPUAS::LOCAL_ADDRESS && AS != AMDGPUAS::REGION_ADDRESS &&
        AS != AMDGPUAS::PRIVATE_ADDRESS) &&
       isInstrUniformNonExtLoadAlign4(MI)) {
     // We have a uniform instruction so we want to use an SMRD load

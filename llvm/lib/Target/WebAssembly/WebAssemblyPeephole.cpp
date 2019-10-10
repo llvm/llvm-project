@@ -75,9 +75,7 @@ static bool maybeRewriteToFallthrough(MachineInstr &MI, MachineBasicBlock &MBB,
                                       const MachineFunction &MF,
                                       WebAssemblyFunctionInfo &MFI,
                                       MachineRegisterInfo &MRI,
-                                      const WebAssemblyInstrInfo &TII,
-                                      unsigned FallthroughOpc,
-                                      unsigned CopyLocalOpc) {
+                                      const WebAssemblyInstrInfo &TII) {
   if (DisableWebAssemblyFallthroughReturnOpt)
     return false;
   if (&MBB != &MF.back())
@@ -90,13 +88,36 @@ static bool maybeRewriteToFallthrough(MachineInstr &MI, MachineBasicBlock &MBB,
   if (&MI != &*End)
     return false;
 
-  if (FallthroughOpc != WebAssembly::FALLTHROUGH_RETURN_VOID) {
-    // If the operand isn't stackified, insert a COPY to read the operand and
-    // stackify it.
-    MachineOperand &MO = MI.getOperand(0);
+  for (auto &MO : MI.explicit_operands()) {
+    // If the operand isn't stackified, insert a COPY to read the operands and
+    // stackify them.
     Register Reg = MO.getReg();
     if (!MFI.isVRegStackified(Reg)) {
-      Register NewReg = MRI.createVirtualRegister(MRI.getRegClass(Reg));
+      unsigned CopyLocalOpc;
+      const TargetRegisterClass *RegClass = MRI.getRegClass(Reg);
+      switch (RegClass->getID()) {
+      case WebAssembly::I32RegClassID:
+        CopyLocalOpc = WebAssembly::COPY_I32;
+        break;
+      case WebAssembly::I64RegClassID:
+        CopyLocalOpc = WebAssembly::COPY_I64;
+        break;
+      case WebAssembly::F32RegClassID:
+        CopyLocalOpc = WebAssembly::COPY_F32;
+        break;
+      case WebAssembly::F64RegClassID:
+        CopyLocalOpc = WebAssembly::COPY_F64;
+        break;
+      case WebAssembly::V128RegClassID:
+        CopyLocalOpc = WebAssembly::COPY_V128;
+        break;
+      case WebAssembly::EXNREFRegClassID:
+        CopyLocalOpc = WebAssembly::COPY_EXNREF;
+        break;
+      default:
+        llvm_unreachable("Unexpected register class for return operand");
+      }
+      Register NewReg = MRI.createVirtualRegister(RegClass);
       BuildMI(MBB, MI, MI.getDebugLoc(), TII.get(CopyLocalOpc), NewReg)
           .addReg(Reg);
       MO.setReg(NewReg);
@@ -104,8 +125,7 @@ static bool maybeRewriteToFallthrough(MachineInstr &MI, MachineBasicBlock &MBB,
     }
   }
 
-  // Rewrite the return.
-  MI.setDesc(TII.get(FallthroughOpc));
+  MI.setDesc(TII.get(WebAssembly::FALLTHROUGH_RETURN));
   return true;
 }
 
@@ -157,60 +177,8 @@ bool WebAssemblyPeephole::runOnMachineFunction(MachineFunction &MF) {
         break;
       }
       // Optimize away an explicit void return at the end of the function.
-      case WebAssembly::RETURN_I32:
-        Changed |= maybeRewriteToFallthrough(
-            MI, MBB, MF, MFI, MRI, TII, WebAssembly::FALLTHROUGH_RETURN_I32,
-            WebAssembly::COPY_I32);
-        break;
-      case WebAssembly::RETURN_I64:
-        Changed |= maybeRewriteToFallthrough(
-            MI, MBB, MF, MFI, MRI, TII, WebAssembly::FALLTHROUGH_RETURN_I64,
-            WebAssembly::COPY_I64);
-        break;
-      case WebAssembly::RETURN_F32:
-        Changed |= maybeRewriteToFallthrough(
-            MI, MBB, MF, MFI, MRI, TII, WebAssembly::FALLTHROUGH_RETURN_F32,
-            WebAssembly::COPY_F32);
-        break;
-      case WebAssembly::RETURN_F64:
-        Changed |= maybeRewriteToFallthrough(
-            MI, MBB, MF, MFI, MRI, TII, WebAssembly::FALLTHROUGH_RETURN_F64,
-            WebAssembly::COPY_F64);
-        break;
-      case WebAssembly::RETURN_v16i8:
-        Changed |= maybeRewriteToFallthrough(
-            MI, MBB, MF, MFI, MRI, TII, WebAssembly::FALLTHROUGH_RETURN_v16i8,
-            WebAssembly::COPY_V128);
-        break;
-      case WebAssembly::RETURN_v8i16:
-        Changed |= maybeRewriteToFallthrough(
-            MI, MBB, MF, MFI, MRI, TII, WebAssembly::FALLTHROUGH_RETURN_v8i16,
-            WebAssembly::COPY_V128);
-        break;
-      case WebAssembly::RETURN_v4i32:
-        Changed |= maybeRewriteToFallthrough(
-            MI, MBB, MF, MFI, MRI, TII, WebAssembly::FALLTHROUGH_RETURN_v4i32,
-            WebAssembly::COPY_V128);
-        break;
-      case WebAssembly::RETURN_v2i64:
-        Changed |= maybeRewriteToFallthrough(
-            MI, MBB, MF, MFI, MRI, TII, WebAssembly::FALLTHROUGH_RETURN_v2i64,
-            WebAssembly::COPY_V128);
-        break;
-      case WebAssembly::RETURN_v4f32:
-        Changed |= maybeRewriteToFallthrough(
-            MI, MBB, MF, MFI, MRI, TII, WebAssembly::FALLTHROUGH_RETURN_v4f32,
-            WebAssembly::COPY_V128);
-        break;
-      case WebAssembly::RETURN_v2f64:
-        Changed |= maybeRewriteToFallthrough(
-            MI, MBB, MF, MFI, MRI, TII, WebAssembly::FALLTHROUGH_RETURN_v2f64,
-            WebAssembly::COPY_V128);
-        break;
-      case WebAssembly::RETURN_VOID:
-        Changed |= maybeRewriteToFallthrough(
-            MI, MBB, MF, MFI, MRI, TII, WebAssembly::FALLTHROUGH_RETURN_VOID,
-            WebAssembly::INSTRUCTION_LIST_END);
+      case WebAssembly::RETURN:
+        Changed |= maybeRewriteToFallthrough(MI, MBB, MF, MFI, MRI, TII);
         break;
       }
 

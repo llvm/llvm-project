@@ -84,49 +84,19 @@ let isTerminator = 1, isBarrier = 1 in
 defm END_FUNCTION : NRI<(outs), (ins), [], "end_function", 0x0b>;
 } // Uses = [VALUE_STACK], Defs = [VALUE_STACK]
 
-multiclass RETURN<WebAssemblyRegClass vt> {
-  defm RETURN_#vt : I<(outs), (ins vt:$val), (outs), (ins),
-                      [(WebAssemblyreturn vt:$val)],
-                      "return  \t$val", "return", 0x0f>;
-  // Equivalent to RETURN_#vt, for use at the end of a function when wasm
-  // semantics return by falling off the end of the block.
-  let isCodeGenOnly = 1 in
-  defm FALLTHROUGH_RETURN_#vt : I<(outs), (ins vt:$val), (outs), (ins), []>;
-}
-
-multiclass SIMD_RETURN<ValueType vt> {
-  defm RETURN_#vt : I<(outs), (ins V128:$val), (outs), (ins),
-                      [(WebAssemblyreturn (vt V128:$val))],
-                      "return  \t$val", "return", 0x0f>,
-                    Requires<[HasSIMD128]>;
-  // Equivalent to RETURN_#vt, for use at the end of a function when wasm
-  // semantics return by falling off the end of the block.
-  let isCodeGenOnly = 1 in
-  defm FALLTHROUGH_RETURN_#vt : I<(outs), (ins V128:$val), (outs), (ins),
-                                  []>,
-                                  Requires<[HasSIMD128]>;
-}
 
 let isTerminator = 1, hasCtrlDep = 1, isBarrier = 1 in {
 
 let isReturn = 1 in {
-  defm "": RETURN<I32>;
-  defm "": RETURN<I64>;
-  defm "": RETURN<F32>;
-  defm "": RETURN<F64>;
-  defm "": RETURN<EXNREF>;
-  defm "": SIMD_RETURN<v16i8>;
-  defm "": SIMD_RETURN<v8i16>;
-  defm "": SIMD_RETURN<v4i32>;
-  defm "": SIMD_RETURN<v2i64>;
-  defm "": SIMD_RETURN<v4f32>;
-  defm "": SIMD_RETURN<v2f64>;
 
-  defm RETURN_VOID : NRI<(outs), (ins), [(WebAssemblyreturn)], "return", 0x0f>;
+defm RETURN : I<(outs), (ins variable_ops), (outs), (ins),
+                [(WebAssemblyreturn)],
+                "return", "return", 0x0f>;
+// Equivalent to RETURN, for use at the end of a function when wasm
+// semantics return by falling off the end of the block.
+let isCodeGenOnly = 1 in
+defm FALLTHROUGH_RETURN : I<(outs), (ins variable_ops), (outs), (ins), []>;
 
-  // This is to RETURN_VOID what FALLTHROUGH_RETURN_#vt is to RETURN_#vt.
-  let isCodeGenOnly = 1 in
-  defm FALLTHROUGH_RETURN_VOID : NRI<(outs), (ins), []>;
 } // isReturn = 1
 
 defm UNREACHABLE : NRI<(outs), (ins), [(trap)], "unreachable", 0x00>;

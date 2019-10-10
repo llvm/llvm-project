@@ -55,6 +55,6 @@ body: |
     %1:i32 = CALL_i32 @bar, implicit-def dead $arguments, implicit $sp32, implicit $sp64
     DBG_VALUE %1:i32, $noreg, !12, !DIExpression(), debug-location !15; <unknown>:357:12 line no:357
     CALL_VOID @foo, %1:i32, implicit-def dead $arguments, implicit $sp32, implicit $sp64
-    RETURN_VOID implicit-def dead $arguments
+    RETURN implicit-def dead $arguments
 
 ...

@@ -141,7 +141,7 @@ body: |
 
     ; GCN-LABEL: name: test_unmerge_values_s_s32_s_s32_s32_s_s32_s_s128
     ; GCN: liveins: $sgpr0_sgpr1_sgpr2_sgpr3
-    ; GCN: [[COPY:%[0-9]+]]:sreg_128 = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+    ; GCN: [[COPY:%[0-9]+]]:sgpr_128 = COPY $sgpr0_sgpr1_sgpr2_sgpr3
     ; GCN: [[COPY1:%[0-9]+]]:sreg_32_xm0 = COPY [[COPY]].sub0
     ; GCN: [[COPY2:%[0-9]+]]:sreg_32_xm0 = COPY [[COPY]].sub1
     ; GCN: [[COPY3:%[0-9]+]]:sreg_32_xm0 = COPY [[COPY]].sub2
@@ -164,7 +164,7 @@ body: |
 
     ; GCN-LABEL: name: test_unmerge_values_s_s64_s_s64_s_s128
     ; GCN: liveins: $sgpr0_sgpr1_sgpr2_sgpr3
-    ; GCN: [[COPY:%[0-9]+]]:sreg_128 = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+    ; GCN: [[COPY:%[0-9]+]]:sgpr_128 = COPY $sgpr0_sgpr1_sgpr2_sgpr3
     ; GCN: [[COPY1:%[0-9]+]]:sreg_64_xexec = COPY [[COPY]].sub0_sub1
     ; GCN: [[COPY2:%[0-9]+]]:sreg_64_xexec = COPY [[COPY]].sub2_sub3
     ; GCN: S_ENDPGM 0, implicit [[COPY1]], implicit [[COPY2]]

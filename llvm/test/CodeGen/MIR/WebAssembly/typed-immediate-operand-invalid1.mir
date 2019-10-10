@@ -9,5 +9,5 @@ body: |
     liveins: $arguments
     ; CHECK: [[@LINE+1]]:24: a typed immediate operand should start with one of 'i', 's', or 'p'
     %0:i32 = CONST_I32 abc 0, implicit-def dead $arguments
-    RETURN_VOID implicit-def dead $arguments
+    RETURN implicit-def dead $arguments
 ...

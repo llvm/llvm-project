@@ -852,8 +852,8 @@ bool WebAssemblyTargetLowering::CanLowerReturn(
     CallingConv::ID /*CallConv*/, MachineFunction & /*MF*/, bool /*IsVarArg*/,
     const SmallVectorImpl<ISD::OutputArg> &Outs,
     LLVMContext & /*Context*/) const {
-  // WebAssembly can't currently handle returning tuples.
-  return Outs.size() <= 1;
+  // WebAssembly can only handle returning tuples with multivalue enabled
+  return Subtarget->hasMultivalue() || Outs.size() <= 1;
 }
 
 SDValue WebAssemblyTargetLowering::LowerReturn(
@@ -861,7 +861,8 @@ SDValue WebAssemblyTargetLowering::LowerReturn(
     const SmallVectorImpl<ISD::OutputArg> &Outs,
     const SmallVectorImpl<SDValue> &OutVals, const SDLoc &DL,
     SelectionDAG &DAG) const {
-  assert(Outs.size() <= 1 && "WebAssembly can only return up to one value");
+  assert(Subtarget->hasMultivalue() ||
+         Outs.size() <= 1 && "MVP WebAssembly can only return up to one value");
   if (!callingConvSupported(CallConv))
     fail(DL, DAG, "WebAssembly doesn't support non-C calling conventions");
 

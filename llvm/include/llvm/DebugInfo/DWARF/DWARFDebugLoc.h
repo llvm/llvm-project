@@ -99,7 +99,7 @@ private:
   bool IsLittleEndian;
 
 public:
-  void parse(DataExtractor data, unsigned Version);
+  void parse(DataExtractor data, uint64_t Offset, uint64_t EndOffset, uint16_t Version);
   void dump(raw_ostream &OS, uint64_t BaseAddr, const MCRegisterInfo *RegInfo,
             Optional<uint64_t> Offset) const;
 

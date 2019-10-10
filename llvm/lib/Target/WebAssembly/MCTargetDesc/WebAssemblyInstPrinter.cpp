@@ -52,7 +52,9 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, raw_ostream &OS,
 
   // Print any additional variadic operands.
   const MCInstrDesc &Desc = MII.get(MI->getOpcode());
-  if (Desc.isVariadic())
+  if (Desc.isVariadic()) {
+    if (Desc.getNumOperands() == 0 && MI->getNumOperands() > 0)
+      OS << "\t";
     for (auto I = Desc.getNumOperands(), E = MI->getNumOperands(); I < E; ++I) {
       // FIXME: For CALL_INDIRECT_VOID, don't print a leading comma, because
       // we have an extra flags operand which is not currently printed, for
@@ -63,6 +65,7 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, raw_ostream &OS,
         OS << ", ";
       printOperand(MI, I, OS);
     }
+  }
 
   // Print any added annotation.
   printAnnotation(OS, Annot);

@@ -9,15 +9,17 @@ target triple = "wasm32-unknown-unknown"
 %pair = type { i32, i32 }
 %packed_pair = type <{ i32, i32 }>
 
-; CHECK-LABEL: sret:
-; CHECK-NEXT: sret (i32, i32, i32) -> ()
-define %pair @sret(%pair %p) {
+; CHECK-LABEL: pair_ident:
+; CHECK-NEXT: pair_ident (i32, i32) -> (i32, i32)
+; CHECK-NEXT: return $0, $1{{$}}
+define %pair @pair_ident(%pair %p) {
   ret %pair %p
 }
 
-; CHECK-LABEL: packed_sret:
-; CHECK-NEXT: packed_sret (i32, i32, i32) -> ()
-define %packed_pair @packed_sret(%packed_pair %p) {
+; CHECK-LABEL: packed_pair_ident:
+; CHECK-NEXT: packed_pair_ident (i32, i32) -> (i32, i32)
+; CHECK-nEXT: return $0, $1{{$}}
+define %packed_pair @packed_pair_ident(%packed_pair %p) {
   ret %packed_pair %p
 }
 

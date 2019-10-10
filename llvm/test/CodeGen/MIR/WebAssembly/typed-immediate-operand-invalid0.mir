@@ -9,5 +9,5 @@ body: |
     liveins: $arguments
     ; CHECK: [[@LINE+1]]:24: expected integers after 'i'/'s'/'p' type character
     %0:i32 = CONST_I32 i 0, implicit-def dead $arguments
-    RETURN_VOID implicit-def dead $arguments
+    RETURN implicit-def dead $arguments
 ...

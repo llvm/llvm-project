@@ -11,7 +11,7 @@ body: |
   bb.0:
     %0:i32 = CONST_I32 0, implicit-def $arguments
     %1:i32 = ARGUMENT_i32 0, implicit $arguments
-    RETURN_VOID implicit-def $arguments
+    RETURN implicit-def $arguments
 ...
 ---
 name: argument_i64
@@ -22,7 +22,7 @@ body: |
   bb.0:
     %0:i32 = CONST_I32 0, implicit-def $arguments
     %1:i64 = ARGUMENT_i64 0, implicit $arguments
-    RETURN_VOID implicit-def $arguments
+    RETURN implicit-def $arguments
 ...
 ---
 name: argument_f32
@@ -33,7 +33,7 @@ body: |
   bb.0:
     %0:i32 = CONST_I32 0, implicit-def $arguments
     %1:f32 = ARGUMENT_f32 0, implicit $arguments
-    RETURN_VOID implicit-def $arguments
+    RETURN implicit-def $arguments
 ...
 ---
 name: argument_f64
@@ -44,7 +44,7 @@ body: |
   bb.0:
     %0:i32 = CONST_I32 0, implicit-def $arguments
     %1:f64 = ARGUMENT_f64 0, implicit $arguments
-    RETURN_VOID implicit-def $arguments
+    RETURN implicit-def $arguments
 ...
 ---
 name: argument_exnref
@@ -55,5 +55,5 @@ body: |
   bb.0:
     %0:i32 = CONST_I32 0, implicit-def $arguments
     %1:exnref = ARGUMENT_exnref 0, implicit $arguments
-    RETURN_VOID implicit-def $arguments
+    RETURN implicit-def $arguments
 ...

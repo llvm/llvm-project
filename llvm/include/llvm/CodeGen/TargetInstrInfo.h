@@ -778,6 +778,19 @@ public:
     return false;
   }
 
+  /// Return the increase in code size needed to predicate a contiguous run of
+  /// NumInsts instructions.
+  virtual unsigned extraSizeToPredicateInstructions(const MachineFunction &MF,
+                                                    unsigned NumInsts) const {
+    return 0;
+  }
+
+  /// Return an estimate for the code size reduction (in bytes) which will be
+  /// caused by removing the given branch instruction during if-conversion.
+  virtual unsigned predictBranchSizeForIfCvt(MachineInstr &MI) const {
+    return getInstSizeInBytes(MI);
+  }
+
   /// Return true if it's profitable to unpredicate
   /// one side of a 'diamond', i.e. two sides of if-else predicated on mutually
   /// exclusive predicates.
