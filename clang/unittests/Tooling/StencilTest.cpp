@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Tooling/Refactoring/Stencil.h"
+#include "clang/Tooling/Transformer/Stencil.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Tooling/FixIt.h"
 #include "clang/Tooling/Tooling.h"

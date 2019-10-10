@@ -272,12 +272,11 @@ static bool isInInlineFunction(const DeclContext *DC) {
   return false;
 }
 
-MangleNumberingContext *
-Sema::getCurrentMangleNumberContext(const DeclContext *DC,
-                                    Decl *&ManglingContextDecl) {
+std::tuple<MangleNumberingContext *, Decl *>
+Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
   // Compute the context for allocating mangling numbers in the current
   // expression, if the ABI requires them.
-  ManglingContextDecl = ExprEvalContexts.back().ManglingContextDecl;
+  Decl *ManglingContextDecl = ExprEvalContexts.back().ManglingContextDecl;
 
   enum ContextKind {
     Normal,
@@ -325,22 +324,18 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC,
     if ((IsInNonspecializedTemplate &&
          !(ManglingContextDecl && isa<ParmVarDecl>(ManglingContextDecl))) ||
         isInInlineFunction(CurContext)) {
-      ManglingContextDecl = nullptr;
       while (auto *CD = dyn_cast<CapturedDecl>(DC))
         DC = CD->getParent();
-      return &Context.getManglingNumberContext(DC);
+      return std::make_tuple(&Context.getManglingNumberContext(DC), nullptr);
     }
 
-    ManglingContextDecl = nullptr;
-    return nullptr;
+    return std::make_tuple(nullptr, nullptr);
   }
 
   case StaticDataMember:
     //  -- the initializers of nonspecialized static members of template classes
-    if (!IsInNonspecializedTemplate) {
-      ManglingContextDecl = nullptr;
-      return nullptr;
-    }
+    if (!IsInNonspecializedTemplate)
+      return std::make_tuple(nullptr, nullptr);
     // Fall through to get the current context.
     LLVM_FALLTHROUGH;
 
@@ -352,8 +347,10 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC,
     //  -- the initializers of inline variables
   case VariableTemplate:
     //  -- the initializers of templated variables
-    return &Context.getManglingNumberContext(ASTContext::NeedExtraManglingDecl,
-                                             ManglingContextDecl);
+    return std::make_tuple(
+        &Context.getManglingNumberContext(ASTContext::NeedExtraManglingDecl,
+                                          ManglingContextDecl),
+        ManglingContextDecl);
   }
 
   llvm_unreachable("unexpected context");
@@ -431,10 +428,11 @@ CXXMethodDecl *Sema::startLambdaDefinition(
   if (Mangling) {
     Class->setLambdaMangling(Mangling->first, Mangling->second);
   } else {
+    MangleNumberingContext *MCtx;
     Decl *ManglingContextDecl;
-    if (MangleNumberingContext *MCtx =
-            getCurrentMangleNumberContext(Class->getDeclContext(),
-                                          ManglingContextDecl)) {
+    std::tie(MCtx, ManglingContextDecl) =
+        getCurrentMangleNumberContext(Class->getDeclContext());
+    if (MCtx) {
       unsigned ManglingNumber = MCtx->getManglingNumber(Method);
       Class->setLambdaMangling(ManglingNumber, ManglingContextDecl);
     }

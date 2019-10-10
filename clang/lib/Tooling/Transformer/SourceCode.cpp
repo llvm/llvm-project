@@ -9,7 +9,7 @@
 //  This file provides functions that simplify extraction of source code.
 //
 //===----------------------------------------------------------------------===//
-#include "clang/Tooling/Refactoring/SourceCode.h"
+#include "clang/Tooling/Transformer/SourceCode.h"
 #include "clang/Lex/Lexer.h"
 
 using namespace clang;

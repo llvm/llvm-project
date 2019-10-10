@@ -11,8 +11,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLING_REFACTOR_SOURCE_CODE_BUILDERS_H_
-#define LLVM_CLANG_TOOLING_REFACTOR_SOURCE_CODE_BUILDERS_H_
+#ifndef LLVM_CLANG_TOOLING_TRANSFORMER_SOURCE_CODE_BUILDERS_H_
+#define LLVM_CLANG_TOOLING_TRANSFORMER_SOURCE_CODE_BUILDERS_H_
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Expr.h"
@@ -83,4 +83,4 @@ llvm::Optional<std::string> buildArrow(const Expr &E,
 
 } // namespace tooling
 } // namespace clang
-#endif // LLVM_CLANG_TOOLING_REFACTOR_SOURCE_CODE_BUILDERS_H_
+#endif // LLVM_CLANG_TOOLING_TRANSFORMER_SOURCE_CODE_BUILDERS_H_

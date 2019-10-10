@@ -56,7 +56,7 @@ float _Complex sub_float_cr(float _Complex a, float b) {
 float _Complex sub_float_rc(float a, float _Complex b) {
   // X86-LABEL: @sub_float_rc(
   // X86: fsub
-  // X86: fsub float -0.{{0+}}e+00,
+  // X86: fneg
   // X86-NOT: fsub
   // X86: ret
   return a - b;
@@ -234,7 +234,7 @@ double _Complex sub_double_cr(double _Complex a, double b) {
 double _Complex sub_double_rc(double a, double _Complex b) {
   // X86-LABEL: @sub_double_rc(
   // X86: fsub
-  // X86: fsub double -0.{{0+}}e+00,
+  // X86: fneg
   // X86-NOT: fsub
   // X86: ret
   return a - b;
@@ -412,7 +412,7 @@ long double _Complex sub_long_double_cr(long double _Complex a, long double b) {
 long double _Complex sub_long_double_rc(long double a, long double _Complex b) {
   // X86-LABEL: @sub_long_double_rc(
   // X86: fsub
-  // X86: fsub x86_fp80 0xK8{{0+}},
+  // X86: fneg
   // X86-NOT: fsub
   // X86: ret
   return a - b;

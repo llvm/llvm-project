@@ -54,10 +54,14 @@ class CoverageMappingModuleGen {
   std::vector<llvm::Constant *> FunctionNames;
   llvm::StructType *FunctionRecordTy;
   std::vector<std::string> CoverageMappings;
+  SmallString<256> CWD;
+
+  /// Make the filename absolute, remove dots, and normalize slashes to local
+  /// path style.
+  std::string normalizeFilename(StringRef Filename);
 
 public:
-  CoverageMappingModuleGen(CodeGenModule &CGM, CoverageSourceInfo &SourceInfo)
-      : CGM(CGM), SourceInfo(SourceInfo), FunctionRecordTy(nullptr) {}
+  CoverageMappingModuleGen(CodeGenModule &CGM, CoverageSourceInfo &SourceInfo);
 
   CoverageSourceInfo &getSourceInfo() const {
     return SourceInfo;

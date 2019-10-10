@@ -1,5 +1,10 @@
 // RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify -isystem %S/Inputs %s
-// RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify -isystem %S/Inputs %s -fcuda-is-device
+// RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify -isystem %S/Inputs %s \
+// RUN:            -fcuda-is-device
+// RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify -isystem %S/Inputs \
+// RUN:            -fopenmp %s
+// RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify -isystem %S/Inputs \
+// RUN:            -fopenmp %s -fcuda-is-device
 
 #include "Inputs/cuda.h"
 

@@ -136,7 +136,7 @@ float64_t test_vfmad_laneq_f64(float64_t a, float64_t b, float64x2_t c) {
 }
 
 // CHECK-LABEL: define float @test_vfmss_lane_f32(float %a, float %b, <2 x float> %c) #0 {
-// CHECK:   [[SUB:%.*]] = fsub float -0.000000e+00, %b
+// CHECK:   [[SUB:%.*]] = fneg float %b
 // CHECK:   [[EXTRACT:%.*]] = extractelement <2 x float> %c, i32 1
 // CHECK:   [[TMP2:%.*]] = call float @llvm.fma.f32(float [[SUB]], float [[EXTRACT]], float %a)
 // CHECK:   ret float [[TMP2]]
@@ -159,7 +159,7 @@ float64x1_t test_vfma_lane_f64(float64x1_t a, float64x1_t b, float64x1_t v) {
 }
 
 // CHECK-LABEL: define <1 x double> @test_vfms_lane_f64(<1 x double> %a, <1 x double> %b, <1 x double> %v) #0 {
-// CHECK:   [[SUB:%.*]] = fsub <1 x double> <double -0.000000e+00>, %b
+// CHECK:   [[SUB:%.*]] = fneg <1 x double> %b
 // CHECK:   [[TMP0:%.*]] = bitcast <1 x double> %a to <8 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <1 x double> [[SUB]] to <8 x i8>
 // CHECK:   [[TMP2:%.*]] = bitcast <1 x double> %v to <8 x i8>
@@ -189,7 +189,7 @@ float64x1_t test_vfma_laneq_f64(float64x1_t a, float64x1_t b, float64x2_t v) {
 }
 
 // CHECK-LABEL: define <1 x double> @test_vfms_laneq_f64(<1 x double> %a, <1 x double> %b, <2 x double> %v) #1 {
-// CHECK:   [[SUB:%.*]] = fsub <1 x double> <double -0.000000e+00>, %b
+// CHECK:   [[SUB:%.*]] = fneg <1 x double> %b
 // CHECK:   [[TMP0:%.*]] = bitcast <1 x double> %a to <8 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <1 x double> [[SUB]] to <8 x i8>
 // CHECK:   [[TMP2:%.*]] = bitcast <2 x double> %v to <16 x i8>

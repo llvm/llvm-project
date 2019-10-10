@@ -130,7 +130,8 @@ Available checks are:
      ``__builtin_object_size``, and consequently may be able to detect more
      problems at higher optimization levels.
   -  ``-fsanitize=pointer-overflow``: Performing pointer arithmetic which
-     overflows.
+     overflows, or where either the old or new pointer value is a null pointer
+     (or in C, when they both are).
   -  ``-fsanitize=return``: In C++, reaching the end of a
      value-returning function without returning a value.
   -  ``-fsanitize=returns-nonnull-attribute``: Returning null pointer

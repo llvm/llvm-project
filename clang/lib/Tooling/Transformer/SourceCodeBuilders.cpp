@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Tooling/Refactoring/SourceCodeBuilders.h"
+#include "clang/Tooling/Transformer/SourceCodeBuilders.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
-#include "clang/Tooling/Refactoring/SourceCode.h"
+#include "clang/Tooling/Transformer/SourceCode.h"
 #include "llvm/ADT/Twine.h"
 #include <string>
 

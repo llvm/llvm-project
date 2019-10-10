@@ -125,17 +125,36 @@ searchLibrary(StringRef name, ArrayRef<StringRef> searchPaths, bool bStatic) {
     for (StringRef dir : searchPaths)
       if (Optional<std::string> s = findFile(dir, name.substr(1)))
         return *s;
-    fatal("unable to find library -l" + name);
+    error("unable to find library -l" + name);
+    return "";
   }
 
   for (StringRef dir : searchPaths) {
-    if (!bStatic)
+    if (!bStatic) {
       if (Optional<std::string> s = findFile(dir, "lib" + name + ".dll.a"))
         return *s;
+      if (Optional<std::string> s = findFile(dir, name + ".dll.a"))
+        return *s;
+    }
     if (Optional<std::string> s = findFile(dir, "lib" + name + ".a"))
       return *s;
+    if (!bStatic) {
+      if (Optional<std::string> s = findFile(dir, name + ".lib"))
+        return *s;
+      if (Optional<std::string> s = findFile(dir, "lib" + name + ".dll")) {
+        error("lld doesn't support linking directly against " + *s +
+              ", use an import library");
+        return "";
+      }
+      if (Optional<std::string> s = findFile(dir, name + ".dll")) {
+        error("lld doesn't support linking directly against " + *s +
+              ", use an import library");
+        return "";
+      }
+    }
   }
-  fatal("unable to find library -l" + name);
+  error("unable to find library -l" + name);
+  return "";
 }
 
 // Convert Unix-ish command line arguments to Windows-ish ones and
@@ -341,6 +360,9 @@ bool mingw::link(ArrayRef<const char *> argsArr, raw_ostream &diag) {
       break;
     }
   }
+
+  if (errorCount())
+    return false;
 
   if (args.hasArg(OPT_verbose) || args.hasArg(OPT__HASH_HASH_HASH))
     outs() << llvm::join(linkArgs, " ") << "\n";

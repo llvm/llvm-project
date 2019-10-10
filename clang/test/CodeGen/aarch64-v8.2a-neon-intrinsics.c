@@ -264,14 +264,14 @@ uint16x8_t test_vcvtpq_u16_f16 (float16x8_t a) {
 
 // FIXME: Fix the zero constant when fp16 non-storage-only type becomes available.
 // CHECK-LABEL: test_vneg_f16
-// CHECK:  [[NEG:%.*]] = fsub <4 x half> <half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000>, %a
+// CHECK:  [[NEG:%.*]] = fneg <4 x half> %a
 // CHECK:  ret <4 x half> [[NEG]]
 float16x4_t test_vneg_f16(float16x4_t a) {
   return vneg_f16(a);
 }
 
 // CHECK-LABEL: test_vnegq_f16
-// CHECK:  [[NEG:%.*]] = fsub <8 x half> <half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000>, %a
+// CHECK:  [[NEG:%.*]] = fneg <8 x half> %a
 // CHECK:  ret <8 x half> [[NEG]]
 float16x8_t test_vnegq_f16(float16x8_t a) {
   return vnegq_f16(a);
@@ -862,7 +862,7 @@ float16x8_t test_vfmaq_f16(float16x8_t a, float16x8_t b, float16x8_t c) {
 }
 
 // CHECK-LABEL: test_vfms_f16
-// CHECK:  [[SUB:%.*]] = fsub <4 x half> <half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000>, %b
+// CHECK:  [[SUB:%.*]] = fneg <4 x half> %b
 // CHECK:  [[ADD:%.*]] = call <4 x half> @llvm.fma.v4f16(<4 x half> [[SUB]], <4 x half> %c, <4 x half> %a)
 // CHECK:  ret <4 x half> [[ADD]]
 float16x4_t test_vfms_f16(float16x4_t a, float16x4_t b, float16x4_t c) {
@@ -870,7 +870,7 @@ float16x4_t test_vfms_f16(float16x4_t a, float16x4_t b, float16x4_t c) {
 }
 
 // CHECK-LABEL: test_vfmsq_f16
-// CHECK:  [[SUB:%.*]] = fsub <8 x half> <half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000>, %b
+// CHECK:  [[SUB:%.*]] = fneg <8 x half> %b
 // CHECK:  [[ADD:%.*]] = call <8 x half> @llvm.fma.v8f16(<8 x half> [[SUB]], <8 x half> %c, <8 x half> %a)
 // CHECK:  ret <8 x half> [[ADD]]
 float16x8_t test_vfmsq_f16(float16x8_t a, float16x8_t b, float16x8_t c) {
@@ -976,7 +976,7 @@ float16_t test_vfmah_laneq_f16(float16_t a, float16_t b, float16x8_t c) {
 }
 
 // CHECK-LABEL: test_vfms_lane_f16
-// CHECK: [[SUB:%.*]]  = fsub <4 x half> <half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000>, %b
+// CHECK: [[SUB:%.*]]  = fneg <4 x half> %b
 // CHECK: [[TMP0:%.*]] = bitcast <4 x half> %a to <8 x i8>
 // CHECK: [[TMP1:%.*]] = bitcast <4 x half> [[SUB]] to <8 x i8>
 // CHECK: [[TMP2:%.*]] = bitcast <4 x half> %c to <8 x i8>
@@ -991,7 +991,7 @@ float16x4_t test_vfms_lane_f16(float16x4_t a, float16x4_t b, float16x4_t c) {
 }
 
 // CHECK-LABEL: test_vfmsq_lane_f16
-// CHECK: [[SUB:%.*]]  = fsub <8 x half> <half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000>, %b
+// CHECK: [[SUB:%.*]]  = fneg <8 x half> %b
 // CHECK: [[TMP0:%.*]] = bitcast <8 x half> %a to <16 x i8>
 // CHECK: [[TMP1:%.*]] = bitcast <8 x half> [[SUB]] to <16 x i8>
 // CHECK: [[TMP2:%.*]] = bitcast <4 x half> %c to <8 x i8>
@@ -1006,7 +1006,7 @@ float16x8_t test_vfmsq_lane_f16(float16x8_t a, float16x8_t b, float16x4_t c) {
 }
 
 // CHECK-LABEL: test_vfms_laneq_f16
-// CHECK: [[SUB:%.*]]  = fsub <4 x half> <half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000>, %b
+// CHECK: [[SUB:%.*]]  = fneg <4 x half> %b
 // CHECK: [[TMP0:%.*]] = bitcast <4 x half> %a to <8 x i8>
 // CHECK: [[TMP1:%.*]] = bitcast <4 x half> [[SUB]] to <8 x i8>
 // CHECK: [[TMP2:%.*]] = bitcast <8 x half> %c to <16 x i8>
@@ -1021,7 +1021,7 @@ float16x4_t test_vfms_laneq_f16(float16x4_t a, float16x4_t b, float16x8_t c) {
 }
 
 // CHECK-LABEL: test_vfmsq_laneq_f16
-// CHECK: [[SUB:%.*]]  = fsub <8 x half> <half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000>, %b
+// CHECK: [[SUB:%.*]]  = fneg <8 x half> %b
 // CHECK: [[TMP0:%.*]] = bitcast <8 x half> %a to <16 x i8>
 // CHECK: [[TMP1:%.*]] = bitcast <8 x half> [[SUB]] to <16 x i8>
 // CHECK: [[TMP2:%.*]] = bitcast <8 x half> %c to <16 x i8>
@@ -1036,7 +1036,7 @@ float16x8_t test_vfmsq_laneq_f16(float16x8_t a, float16x8_t b, float16x8_t c) {
 }
 
 // CHECK-LABEL: test_vfms_n_f16
-// CHECK: [[SUB:%.*]]  = fsub <4 x half> <half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000>, %b
+// CHECK: [[SUB:%.*]]  = fneg <4 x half> %b
 // CHECK: [[TMP0:%.*]] = insertelement <4 x half> undef, half %c, i32 0
 // CHECK: [[TMP1:%.*]] = insertelement <4 x half> [[TMP0]], half %c, i32 1
 // CHECK: [[TMP2:%.*]] = insertelement <4 x half> [[TMP1]], half %c, i32 2
@@ -1048,7 +1048,7 @@ float16x4_t test_vfms_n_f16(float16x4_t a, float16x4_t b, float16_t c) {
 }
 
 // CHECK-LABEL: test_vfmsq_n_f16
-// CHECK: [[SUB:%.*]]  = fsub <8 x half> <half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000>, %b
+// CHECK: [[SUB:%.*]]  = fneg <8 x half> %b
 // CHECK: [[TMP0:%.*]] = insertelement <8 x half> undef, half %c, i32 0
 // CHECK: [[TMP1:%.*]] = insertelement <8 x half> [[TMP0]], half %c, i32 1
 // CHECK: [[TMP2:%.*]] = insertelement <8 x half> [[TMP1]], half %c, i32 2
@@ -1065,7 +1065,7 @@ float16x8_t test_vfmsq_n_f16(float16x8_t a, float16x8_t b, float16_t c) {
 
 // CHECK-LABEL: test_vfmsh_lane_f16
 // CHECK: [[TMP0:%.*]] = fpext half %b to float
-// CHECK: [[TMP1:%.*]] = fsub float -0.000000e+00, [[TMP0]]
+// CHECK: [[TMP1:%.*]] = fneg float [[TMP0]]
 // CHECK: [[SUB:%.*]]  = fptrunc float [[TMP1]] to half
 // CHECK: [[EXTR:%.*]] = extractelement <4 x half> %c, i32 3
 // CHECK: [[FMA:%.*]]  = call half @llvm.fma.f16(half [[SUB]], half [[EXTR]], half %a)
@@ -1076,7 +1076,7 @@ float16_t test_vfmsh_lane_f16(float16_t a, float16_t b, float16x4_t c) {
 
 // CHECK-LABEL: test_vfmsh_laneq_f16
 // CHECK: [[TMP0:%.*]] = fpext half %b to float
-// CHECK: [[TMP1:%.*]] = fsub float -0.000000e+00, [[TMP0]]
+// CHECK: [[TMP1:%.*]] = fneg float [[TMP0]]
 // CHECK: [[SUB:%.*]]  = fptrunc float [[TMP1]] to half
 // CHECK: [[EXTR:%.*]] = extractelement <8 x half> %c, i32 7
 // CHECK: [[FMA:%.*]]  = call half @llvm.fma.f16(half [[SUB]], half [[EXTR]], half %a)

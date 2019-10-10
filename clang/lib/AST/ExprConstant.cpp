@@ -5441,18 +5441,18 @@ static bool EvaluateArgs(ArrayRef<const Expr *> Args, ArgVector &ArgValues,
         }
     }
   }
-  for (ArrayRef<const Expr*>::iterator I = Args.begin(), E = Args.end();
-       I != E; ++I) {
-    if (!Evaluate(ArgValues[I - Args.begin()], Info, *I)) {
+  for (unsigned Idx = 0; Idx < Args.size(); Idx++) {
+    if (!Evaluate(ArgValues[Idx], Info, Args[Idx])) {
       // If we're checking for a potential constant expression, evaluate all
       // initializers even if some of them fail.
       if (!Info.noteFailure())
         return false;
       Success = false;
     } else if (!ForbiddenNullArgs.empty() &&
-               ForbiddenNullArgs[I - Args.begin()] &&
-               ArgValues[I - Args.begin()].isNullPointer()) {
-      Info.CCEDiag(*I, diag::note_non_null_attribute_failed);
+               ForbiddenNullArgs[Idx] &&
+               ArgValues[Idx].isLValue() &&
+               ArgValues[Idx].isNullPointer()) {
+      Info.CCEDiag(Args[Idx], diag::note_non_null_attribute_failed);
       if (!Info.noteFailure())
         return false;
       Success = false;

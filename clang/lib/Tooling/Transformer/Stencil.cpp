@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Tooling/Refactoring/Stencil.h"
+#include "clang/Tooling/Transformer/Stencil.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/Expr.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Lex/Lexer.h"
-#include "clang/Tooling/Refactoring/SourceCode.h"
-#include "clang/Tooling/Refactoring/SourceCodeBuilders.h"
+#include "clang/Tooling/Transformer/SourceCode.h"
+#include "clang/Tooling/Transformer/SourceCodeBuilders.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Errc.h"
 #include <atomic>

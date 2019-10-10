@@ -523,13 +523,13 @@ __m512d test_mm512_maskz_fmadd_round_pd(__mmask8 __U, __m512d __A, __m512d __B, 
 }
 __m512d test_mm512_fmsub_round_pd(__m512d __A, __m512d __B, __m512d __C) {
   // CHECK-LABEL: @test_mm512_fmsub_round_pd
-  // CHECK: fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>
+  // CHECK: fneg <8 x double>
   // CHECK: @llvm.x86.avx512.vfmadd.pd.512
   return _mm512_fmsub_round_pd(__A, __B, __C, _MM_FROUND_TO_ZERO | _MM_FROUND_NO_EXC);
 }
 __m512d test_mm512_mask_fmsub_round_pd(__m512d __A, __mmask8 __U, __m512d __B, __m512d __C) {
   // CHECK-LABEL: @test_mm512_mask_fmsub_round_pd
-  // CHECK: fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>
+  // CHECK: fneg <8 x double>
   // CHECK: @llvm.x86.avx512.vfmadd.pd.512
   // CHECK: bitcast i8 %{{.*}} to <8 x i1>
   // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}}
@@ -537,7 +537,7 @@ __m512d test_mm512_mask_fmsub_round_pd(__m512d __A, __mmask8 __U, __m512d __B, _
 }
 __m512d test_mm512_maskz_fmsub_round_pd(__mmask8 __U, __m512d __A, __m512d __B, __m512d __C) {
   // CHECK-LABEL: @test_mm512_maskz_fmsub_round_pd
-  // CHECK: fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>
+  // CHECK: fneg <8 x double>
   // CHECK: @llvm.x86.avx512.vfmadd.pd.512
   // CHECK: bitcast i8 %{{.*}} to <8 x i1>
   // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> zeroinitializer
@@ -545,13 +545,13 @@ __m512d test_mm512_maskz_fmsub_round_pd(__mmask8 __U, __m512d __A, __m512d __B, 
 }
 __m512d test_mm512_fnmadd_round_pd(__m512d __A, __m512d __B, __m512d __C) {
   // CHECK-LABEL: @test_mm512_fnmadd_round_pd
-  // CHECK: fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>
+  // CHECK: fneg <8 x double>
   // CHECK: @llvm.x86.avx512.vfmadd.pd.512
   return _mm512_fnmadd_round_pd(__A, __B, __C, _MM_FROUND_TO_ZERO | _MM_FROUND_NO_EXC);
 }
 __m512d test_mm512_mask3_fnmadd_round_pd(__m512d __A, __m512d __B, __m512d __C, __mmask8 __U) {
   // CHECK-LABEL: @test_mm512_mask3_fnmadd_round_pd
-  // CHECK: fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>
+  // CHECK: fneg <8 x double>
   // CHECK: @llvm.x86.avx512.vfmadd.pd.512
   // CHECK: bitcast i8 %{{.*}} to <8 x i1>
   // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}}
@@ -559,7 +559,7 @@ __m512d test_mm512_mask3_fnmadd_round_pd(__m512d __A, __m512d __B, __m512d __C, 
 }
 __m512d test_mm512_maskz_fnmadd_round_pd(__mmask8 __U, __m512d __A, __m512d __B, __m512d __C) {
   // CHECK-LABEL: @test_mm512_maskz_fnmadd_round_pd
-  // CHECK: fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>
+  // CHECK: fneg <8 x double>
   // CHECK: @llvm.x86.avx512.vfmadd.pd.512
   // CHECK: bitcast i8 %{{.*}} to <8 x i1>
   // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> zeroinitializer
@@ -567,15 +567,15 @@ __m512d test_mm512_maskz_fnmadd_round_pd(__mmask8 __U, __m512d __A, __m512d __B,
 }
 __m512d test_mm512_fnmsub_round_pd(__m512d __A, __m512d __B, __m512d __C) {
   // CHECK-LABEL: @test_mm512_fnmsub_round_pd
-  // CHECK: fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>
-  // CHECK: fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>
+  // CHECK: fneg <8 x double>
+  // CHECK: fneg <8 x double>
   // CHECK: @llvm.x86.avx512.vfmadd.pd.512
   return _mm512_fnmsub_round_pd(__A, __B, __C, _MM_FROUND_TO_ZERO | _MM_FROUND_NO_EXC);
 }
 __m512d test_mm512_maskz_fnmsub_round_pd(__mmask8 __U, __m512d __A, __m512d __B, __m512d __C) {
   // CHECK-LABEL: @test_mm512_maskz_fnmsub_round_pd
-  // CHECK: fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>
-  // CHECK: fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>
+  // CHECK: fneg <8 x double>
+  // CHECK: fneg <8 x double>
   // CHECK: @llvm.x86.avx512.vfmadd.pd.512
   // CHECK: bitcast i8 %{{.*}} to <8 x i1>
   // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> zeroinitializer
@@ -609,13 +609,13 @@ __m512d test_mm512_maskz_fmadd_pd(__mmask8 __U, __m512d __A, __m512d __B, __m512
 }
 __m512d test_mm512_fmsub_pd(__m512d __A, __m512d __B, __m512d __C) {
   // CHECK-LABEL: @test_mm512_fmsub_pd
-  // CHECK: fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %{{.*}}
+  // CHECK: fneg <8 x double> %{{.*}}
   // CHECK: call <8 x double> @llvm.fma.v8f64(<8 x double> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}})
   return _mm512_fmsub_pd(__A, __B, __C);
 }
 __m512d test_mm512_mask_fmsub_pd(__m512d __A, __mmask8 __U, __m512d __B, __m512d __C) {
   // CHECK-LABEL: @test_mm512_mask_fmsub_pd
-  // CHECK: fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %{{.*}}
+  // CHECK: fneg <8 x double> %{{.*}}
   // CHECK: call <8 x double> @llvm.fma.v8f64(<8 x double> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}})
   // CHECK: bitcast i8 %{{.*}} to <8 x i1>
   // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}}
@@ -623,7 +623,7 @@ __m512d test_mm512_mask_fmsub_pd(__m512d __A, __mmask8 __U, __m512d __B, __m512d
 }
 __m512d test_mm512_maskz_fmsub_pd(__mmask8 __U, __m512d __A, __m512d __B, __m512d __C) {
   // CHECK-LABEL: @test_mm512_maskz_fmsub_pd
-  // CHECK: fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %{{.*}}
+  // CHECK: fneg <8 x double> %{{.*}}
   // CHECK: call <8 x double> @llvm.fma.v8f64(<8 x double> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}})
   // CHECK: bitcast i8 %{{.*}} to <8 x i1>
   // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> zeroinitializer
@@ -631,13 +631,13 @@ __m512d test_mm512_maskz_fmsub_pd(__mmask8 __U, __m512d __A, __m512d __B, __m512
 }
 __m512d test_mm512_fnmadd_pd(__m512d __A, __m512d __B, __m512d __C) {
   // CHECK-LABEL: @test_mm512_fnmadd_pd
-  // CHECK: fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %{{.*}}
+  // CHECK: fneg <8 x double> %{{.*}}
   // CHECK: call <8 x double> @llvm.fma.v8f64(<8 x double> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}})
   return _mm512_fnmadd_pd(__A, __B, __C);
 }
 __m512d test_mm512_mask3_fnmadd_pd(__m512d __A, __m512d __B, __m512d __C, __mmask8 __U) {
   // CHECK-LABEL: @test_mm512_mask3_fnmadd_pd
-  // CHECK: fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %{{.*}}
+  // CHECK: fneg <8 x double> %{{.*}}
   // CHECK: call <8 x double> @llvm.fma.v8f64(<8 x double> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}})
   // CHECK: bitcast i8 %{{.*}} to <8 x i1>
   // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}}
@@ -645,7 +645,7 @@ __m512d test_mm512_mask3_fnmadd_pd(__m512d __A, __m512d __B, __m512d __C, __mmas
 }
 __m512d test_mm512_maskz_fnmadd_pd(__mmask8 __U, __m512d __A, __m512d __B, __m512d __C) {
   // CHECK-LABEL: @test_mm512_maskz_fnmadd_pd
-  // CHECK: fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %{{.*}}
+  // CHECK: fneg <8 x double> %{{.*}}
   // CHECK: call <8 x double> @llvm.fma.v8f64(<8 x double> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}})
   // CHECK: bitcast i8 %{{.*}} to <8 x i1>
   // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> zeroinitializer
@@ -653,15 +653,15 @@ __m512d test_mm512_maskz_fnmadd_pd(__mmask8 __U, __m512d __A, __m512d __B, __m51
 }
 __m512d test_mm512_fnmsub_pd(__m512d __A, __m512d __B, __m512d __C) {
   // CHECK-LABEL: @test_mm512_fnmsub_pd
-  // CHECK: fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %{{.*}}
-  // CHECK: fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %{{.*}}
+  // CHECK: fneg <8 x double> %{{.*}}
+  // CHECK: fneg <8 x double> %{{.*}}
   // CHECK: call <8 x double> @llvm.fma.v8f64(<8 x double> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}})
   return _mm512_fnmsub_pd(__A, __B, __C);
 }
 __m512d test_mm512_maskz_fnmsub_pd(__mmask8 __U, __m512d __A, __m512d __B, __m512d __C) {
   // CHECK-LABEL: @test_mm512_maskz_fnmsub_pd
-  // CHECK: fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %{{.*}}
-  // CHECK: fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %{{.*}}
+  // CHECK: fneg <8 x double> %{{.*}}
+  // CHECK: fneg <8 x double> %{{.*}}
   // CHECK: call <8 x double> @llvm.fma.v8f64(<8 x double> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}})
   // CHECK: bitcast i8 %{{.*}} to <8 x i1>
   // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> zeroinitializer
@@ -695,13 +695,13 @@ __m512 test_mm512_maskz_fmadd_round_ps(__mmask16 __U, __m512 __A, __m512 __B, __
 }
 __m512 test_mm512_fmsub_round_ps(__m512 __A, __m512 __B, __m512 __C) {
   // CHECK-LABEL: @test_mm512_fmsub_round_ps
-  // CHECK: fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
+  // CHECK: fneg <16 x float> %{{.*}}
   // CHECK: @llvm.x86.avx512.vfmadd.ps.512
   return _mm512_fmsub_round_ps(__A, __B, __C, _MM_FROUND_TO_ZERO | _MM_FROUND_NO_EXC);
 }
 __m512 test_mm512_mask_fmsub_round_ps(__m512 __A, __mmask16 __U, __m512 __B, __m512 __C) {
   // CHECK-LABEL: @test_mm512_mask_fmsub_round_ps
-  // CHECK: fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
+  // CHECK: fneg <16 x float> %{{.*}}
   // CHECK: @llvm.x86.avx512.vfmadd.ps.512
   // CHECK: bitcast i16 %{{.*}} to <16 x i1>
   // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
@@ -709,7 +709,7 @@ __m512 test_mm512_mask_fmsub_round_ps(__m512 __A, __mmask16 __U, __m512 __B, __m
 }
 __m512 test_mm512_maskz_fmsub_round_ps(__mmask16 __U, __m512 __A, __m512 __B, __m512 __C) {
   // CHECK-LABEL: @test_mm512_maskz_fmsub_round_ps
-  // CHECK: fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
+  // CHECK: fneg <16 x float> %{{.*}}
   // CHECK: @llvm.x86.avx512.vfmadd.ps.512
   // CHECK: bitcast i16 %{{.*}} to <16 x i1>
   // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> zeroinitializer
@@ -717,13 +717,13 @@ __m512 test_mm512_maskz_fmsub_round_ps(__mmask16 __U, __m512 __A, __m512 __B, __
 }
 __m512 test_mm512_fnmadd_round_ps(__m512 __A, __m512 __B, __m512 __C) {
   // CHECK-LABEL: @test_mm512_fnmadd_round_ps
-  // CHECK: fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
+  // CHECK: fneg <16 x float> %{{.*}}
   // CHECK: @llvm.x86.avx512.vfmadd.ps.512
   return _mm512_fnmadd_round_ps(__A, __B, __C, _MM_FROUND_TO_ZERO | _MM_FROUND_NO_EXC);
 }
 __m512 test_mm512_mask3_fnmadd_round_ps(__m512 __A, __m512 __B, __m512 __C, __mmask16 __U) {
   // CHECK-LABEL: @test_mm512_mask3_fnmadd_round_ps
-  // CHECK: fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
+  // CHECK: fneg <16 x float> %{{.*}}
   // CHECK: @llvm.x86.avx512.vfmadd.ps.512
   // CHECK: bitcast i16 %{{.*}} to <16 x i1>
   // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
@@ -731,7 +731,7 @@ __m512 test_mm512_mask3_fnmadd_round_ps(__m512 __A, __m512 __B, __m512 __C, __mm
 }
 __m512 test_mm512_maskz_fnmadd_round_ps(__mmask16 __U, __m512 __A, __m512 __B, __m512 __C) {
   // CHECK-LABEL: @test_mm512_maskz_fnmadd_round_ps
-  // CHECK: fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
+  // CHECK: fneg <16 x float> %{{.*}}
   // CHECK: @llvm.x86.avx512.vfmadd.ps.512
   // CHECK: bitcast i16 %{{.*}} to <16 x i1>
   // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> zeroinitializer
@@ -739,15 +739,15 @@ __m512 test_mm512_maskz_fnmadd_round_ps(__mmask16 __U, __m512 __A, __m512 __B, _
 }
 __m512 test_mm512_fnmsub_round_ps(__m512 __A, __m512 __B, __m512 __C) {
   // CHECK-LABEL: @test_mm512_fnmsub_round_ps
-  // CHECK: fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
-  // CHECK: fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
+  // CHECK: fneg <16 x float> %{{.*}}
+  // CHECK: fneg <16 x float> %{{.*}}
   // CHECK: @llvm.x86.avx512.vfmadd.ps.512
   return _mm512_fnmsub_round_ps(__A, __B, __C, _MM_FROUND_TO_ZERO | _MM_FROUND_NO_EXC);
 }
 __m512 test_mm512_maskz_fnmsub_round_ps(__mmask16 __U, __m512 __A, __m512 __B, __m512 __C) {
   // CHECK-LABEL: @test_mm512_maskz_fnmsub_round_ps
-  // CHECK: fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
-  // CHECK: fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
+  // CHECK: fneg <16 x float> %{{.*}}
+  // CHECK: fneg <16 x float> %{{.*}}
   // CHECK: @llvm.x86.avx512.vfmadd.ps.512
   // CHECK: bitcast i16 %{{.*}} to <16 x i1>
   // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> zeroinitializer
@@ -779,13 +779,13 @@ __m512 test_mm512_maskz_fmadd_ps(__mmask16 __U, __m512 __A, __m512 __B, __m512 _
 }
 __m512 test_mm512_fmsub_ps(__m512 __A, __m512 __B, __m512 __C) {
   // CHECK-LABEL: @test_mm512_fmsub_ps
-  // CHECK: fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
+  // CHECK: fneg <16 x float> %{{.*}}
   // CHECK: call <16 x float> @llvm.fma.v16f32(<16 x float> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}})
   return _mm512_fmsub_ps(__A, __B, __C);
 }
 __m512 test_mm512_mask_fmsub_ps(__m512 __A, __mmask16 __U, __m512 __B, __m512 __C) {
   // CHECK-LABEL: @test_mm512_mask_fmsub_ps
-  // CHECK: fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
+  // CHECK: fneg <16 x float> %{{.*}}
   // CHECK: call <16 x float> @llvm.fma.v16f32(<16 x float> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}})
   // CHECK: bitcast i16 %{{.*}} to <16 x i1>
   // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
@@ -793,7 +793,7 @@ __m512 test_mm512_mask_fmsub_ps(__m512 __A, __mmask16 __U, __m512 __B, __m512 __
 }
 __m512 test_mm512_maskz_fmsub_ps(__mmask16 __U, __m512 __A, __m512 __B, __m512 __C) {
   // CHECK-LABEL: @test_mm512_maskz_fmsub_ps
-  // CHECK: fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
+  // CHECK: fneg <16 x float> %{{.*}}
   // CHECK: call <16 x float> @llvm.fma.v16f32(<16 x float> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}})
   // CHECK: bitcast i16 %{{.*}} to <16 x i1>
   // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> zeroinitializer
@@ -801,13 +801,13 @@ __m512 test_mm512_maskz_fmsub_ps(__mmask16 __U, __m512 __A, __m512 __B, __m512 _
 }
 __m512 test_mm512_fnmadd_ps(__m512 __A, __m512 __B, __m512 __C) {
   // CHECK-LABEL: @test_mm512_fnmadd_ps
-  // CHECK: fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
+  // CHECK: fneg <16 x float> %{{.*}}
   // CHECK: call <16 x float> @llvm.fma.v16f32(<16 x float> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}})
   return _mm512_fnmadd_ps(__A, __B, __C);
 }
 __m512 test_mm512_mask3_fnmadd_ps(__m512 __A, __m512 __B, __m512 __C, __mmask16 __U) {
   // CHECK-LABEL: @test_mm512_mask3_fnmadd_ps
-  // CHECK: fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
+  // CHECK: fneg <16 x float> %{{.*}}
   // CHECK: call <16 x float> @llvm.fma.v16f32(<16 x float> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}})
   // CHECK: bitcast i16 %{{.*}} to <16 x i1>
   // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
@@ -815,7 +815,7 @@ __m512 test_mm512_mask3_fnmadd_ps(__m512 __A, __m512 __B, __m512 __C, __mmask16 
 }
 __m512 test_mm512_maskz_fnmadd_ps(__mmask16 __U, __m512 __A, __m512 __B, __m512 __C) {
   // CHECK-LABEL: @test_mm512_maskz_fnmadd_ps
-  // CHECK: fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
+  // CHECK: fneg <16 x float> %{{.*}}
   // CHECK: call <16 x float> @llvm.fma.v16f32(<16 x float> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}})
   // CHECK: bitcast i16 %{{.*}} to <16 x i1>
   // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> zeroinitializer
@@ -823,15 +823,15 @@ __m512 test_mm512_maskz_fnmadd_ps(__mmask16 __U, __m512 __A, __m512 __B, __m512 
 }
 __m512 test_mm512_fnmsub_ps(__m512 __A, __m512 __B, __m512 __C) {
   // CHECK-LABEL: @test_mm512_fnmsub_ps
-  // CHECK: fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
-  // CHECK: fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
+  // CHECK: fneg <16 x float> %{{.*}}
+  // CHECK: fneg <16 x float> %{{.*}}
   // CHECK: call <16 x float> @llvm.fma.v16f32(<16 x float> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}})
   return _mm512_fnmsub_ps(__A, __B, __C);
 }
 __m512 test_mm512_maskz_fnmsub_ps(__mmask16 __U, __m512 __A, __m512 __B, __m512 __C) {
   // CHECK-LABEL: @test_mm512_maskz_fnmsub_ps
-  // CHECK: fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
-  // CHECK: fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
+  // CHECK: fneg <16 x float> %{{.*}}
+  // CHECK: fneg <16 x float> %{{.*}}
   // CHECK: call <16 x float> @llvm.fma.v16f32(<16 x float> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}})
   // CHECK: bitcast i16 %{{.*}} to <16 x i1>
   // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> zeroinitializer
@@ -865,13 +865,13 @@ __m512d test_mm512_maskz_fmaddsub_round_pd(__mmask8 __U, __m512d __A, __m512d __
 }
 __m512d test_mm512_fmsubadd_round_pd(__m512d __A, __m512d __B, __m512d __C) {
   // CHECK-LABEL: @test_mm512_fmsubadd_round_pd
-  // CHECK: fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %{{.*}}
+  // CHECK: fneg <8 x double> %{{.*}}
   // CHECK: @llvm.x86.avx512.vfmaddsub.pd.512
   return _mm512_fmsubadd_round_pd(__A, __B, __C, _MM_FROUND_TO_ZERO | _MM_FROUND_NO_EXC);
 }
 __m512d test_mm512_mask_fmsubadd_round_pd(__m512d __A, __mmask8 __U, __m512d __B, __m512d __C) {
   // CHECK-LABEL: @test_mm512_mask_fmsubadd_round_pd
-  // CHECK: fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %{{.*}}
+  // CHECK: fneg <8 x double> %{{.*}}
   // CHECK: @llvm.x86.avx512.vfmaddsub.pd.512
   // CHECK: bitcast i8 %{{.*}} to <8 x i1>
   // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}}
@@ -879,7 +879,7 @@ __m512d test_mm512_mask_fmsubadd_round_pd(__m512d __A, __mmask8 __U, __m512d __B
 }
 __m512d test_mm512_maskz_fmsubadd_round_pd(__mmask8 __U, __m512d __A, __m512d __B, __m512d __C) {
   // CHECK-LABEL: @test_mm512_maskz_fmsubadd_round_pd
-  // CHECK: fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %{{.*}}
+  // CHECK: fneg <8 x double> %{{.*}}
   // CHECK: @llvm.x86.avx512.vfmaddsub.pd.512
   // CHECK: bitcast i8 %{{.*}} to <8 x i1>
   // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> zeroinitializer
@@ -888,7 +888,7 @@ __m512d test_mm512_maskz_fmsubadd_round_pd(__mmask8 __U, __m512d __A, __m512d __
 __m512d test_mm512_fmaddsub_pd(__m512d __A, __m512d __B, __m512d __C) {
   // CHECK-LABEL: @test_mm512_fmaddsub_pd
   // CHECK: [[ADD:%.+]] = call <8 x double> @llvm.fma.v8f64(<8 x double> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}})
-  // CHECK: [[NEG:%.+]] = fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %{{.*}}
+  // CHECK: [[NEG:%.+]] = fneg <8 x double> %{{.*}}
   // CHECK: [[SUB:%.+]] = call <8 x double> @llvm.fma.v8f64(<8 x double> %{{.*}}, <8 x double> %{{.*}}, <8 x double> [[NEG]]
   // CHECK: shufflevector <8 x double> [[SUB]], <8 x double> [[ADD]], <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 4, i32 13, i32 6, i32 15>
   return _mm512_fmaddsub_pd(__A, __B, __C);
@@ -896,7 +896,7 @@ __m512d test_mm512_fmaddsub_pd(__m512d __A, __m512d __B, __m512d __C) {
 __m512d test_mm512_mask_fmaddsub_pd(__m512d __A, __mmask8 __U, __m512d __B, __m512d __C) {
   // CHECK-LABEL: @test_mm512_mask_fmaddsub_pd
   // CHECK: [[ADD:%.+]] = call <8 x double> @llvm.fma.v8f64(<8 x double> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}})
-  // CHECK: [[NEG:%.+]] = fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %{{.*}}
+  // CHECK: [[NEG:%.+]] = fneg <8 x double> %{{.*}}
   // CHECK: [[SUB:%.+]] = call <8 x double> @llvm.fma.v8f64(<8 x double> %{{.*}}, <8 x double> %{{.*}}, <8 x double> [[NEG]]
   // CHECK: shufflevector <8 x double> [[SUB]], <8 x double> [[ADD]], <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 4, i32 13, i32 6, i32 15>
   // CHECK: bitcast i8 %{{.*}} to <8 x i1>
@@ -906,7 +906,7 @@ __m512d test_mm512_mask_fmaddsub_pd(__m512d __A, __mmask8 __U, __m512d __B, __m5
 __m512d test_mm512_mask3_fmaddsub_pd(__m512d __A, __m512d __B, __m512d __C, __mmask8 __U) {
   // CHECK-LABEL: @test_mm512_mask3_fmaddsub_pd
   // CHECK: [[ADD:%.+]] = call <8 x double> @llvm.fma.v8f64(<8 x double> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}})
-  // CHECK: [[NEG:%.+]] = fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %{{.*}}
+  // CHECK: [[NEG:%.+]] = fneg <8 x double> %{{.*}}
   // CHECK: [[SUB:%.+]] = call <8 x double> @llvm.fma.v8f64(<8 x double> %{{.*}}, <8 x double> %{{.*}}, <8 x double> [[NEG]]
   // CHECK: shufflevector <8 x double> [[SUB]], <8 x double> [[ADD]], <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 4, i32 13, i32 6, i32 15>
   // CHECK: bitcast i8 %{{.*}} to <8 x i1>
@@ -916,7 +916,7 @@ __m512d test_mm512_mask3_fmaddsub_pd(__m512d __A, __m512d __B, __m512d __C, __mm
 __m512d test_mm512_maskz_fmaddsub_pd(__mmask8 __U, __m512d __A, __m512d __B, __m512d __C) {
   // CHECK-LABEL: @test_mm512_maskz_fmaddsub_pd
   // CHECK: [[ADD:%.+]] = call <8 x double> @llvm.fma.v8f64(<8 x double> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}})
-  // CHECK: [[NEG:%.+]] = fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %{{.*}}
+  // CHECK: [[NEG:%.+]] = fneg <8 x double> %{{.*}}
   // CHECK: [[SUB:%.+]] = call <8 x double> @llvm.fma.v8f64(<8 x double> %{{.*}}, <8 x double> %{{.*}}, <8 x double> [[NEG]]
   // CHECK: shufflevector <8 x double> [[SUB]], <8 x double> [[ADD]], <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 4, i32 13, i32 6, i32 15>
   // CHECK: bitcast i8 %{{.*}} to <8 x i1>
@@ -925,7 +925,7 @@ __m512d test_mm512_maskz_fmaddsub_pd(__mmask8 __U, __m512d __A, __m512d __B, __m
 }
 __m512d test_mm512_fmsubadd_pd(__m512d __A, __m512d __B, __m512d __C) {
   // CHECK-LABEL: @test_mm512_fmsubadd_pd
-  // CHECK: [[NEG:%.+]] = fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %{{.*}}
+  // CHECK: [[NEG:%.+]] = fneg <8 x double> %{{.*}}
   // CHECK: [[SUB:%.+]] = call <8 x double> @llvm.fma.v8f64(<8 x double> %{{.*}}, <8 x double> %{{.*}}, <8 x double> [[NEG]]
   // CHECK: [[ADD:%.+]] = call <8 x double> @llvm.fma.v8f64(<8 x double> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}})
   // CHECK: shufflevector <8 x double> [[ADD]], <8 x double> [[SUB]], <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 4, i32 13, i32 6, i32 15>
@@ -933,7 +933,7 @@ __m512d test_mm512_fmsubadd_pd(__m512d __A, __m512d __B, __m512d __C) {
 }
 __m512d test_mm512_mask_fmsubadd_pd(__m512d __A, __mmask8 __U, __m512d __B, __m512d __C) {
   // CHECK-LABEL: @test_mm512_mask_fmsubadd_pd
-  // CHECK: [[NEG:%.+]] = fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %{{.*}}
+  // CHECK: [[NEG:%.+]] = fneg <8 x double> %{{.*}}
   // CHECK: [[SUB:%.+]] = call <8 x double> @llvm.fma.v8f64(<8 x double> %{{.*}}, <8 x double> %{{.*}}, <8 x double> [[NEG]]
   // CHECK: [[ADD:%.+]] = call <8 x double> @llvm.fma.v8f64(<8 x double> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}})
   // CHECK: shufflevector <8 x double> [[ADD]], <8 x double> [[SUB]], <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 4, i32 13, i32 6, i32 15>
@@ -943,7 +943,7 @@ __m512d test_mm512_mask_fmsubadd_pd(__m512d __A, __mmask8 __U, __m512d __B, __m5
 }
 __m512d test_mm512_maskz_fmsubadd_pd(__mmask8 __U, __m512d __A, __m512d __B, __m512d __C) {
   // CHECK-LABEL: @test_mm512_maskz_fmsubadd_pd
-  // CHECK: [[NEG:%.+]] = fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %{{.*}}
+  // CHECK: [[NEG:%.+]] = fneg <8 x double> %{{.*}}
   // CHECK: [[SUB:%.+]] = call <8 x double> @llvm.fma.v8f64(<8 x double> %{{.*}}, <8 x double> %{{.*}}, <8 x double> [[NEG]]
   // CHECK: [[ADD:%.+]] = call <8 x double> @llvm.fma.v8f64(<8 x double> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}})
   // CHECK: shufflevector <8 x double> [[ADD]], <8 x double> [[SUB]], <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 4, i32 13, i32 6, i32 15>
@@ -979,13 +979,13 @@ __m512 test_mm512_maskz_fmaddsub_round_ps(__mmask16 __U, __m512 __A, __m512 __B,
 }
 __m512 test_mm512_fmsubadd_round_ps(__m512 __A, __m512 __B, __m512 __C) {
   // CHECK-LABEL: @test_mm512_fmsubadd_round_ps
-  // CHECK: fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
+  // CHECK: fneg <16 x float> %{{.*}}
   // CHECK: @llvm.x86.avx512.vfmaddsub.ps.512
   return _mm512_fmsubadd_round_ps(__A, __B, __C, _MM_FROUND_TO_ZERO | _MM_FROUND_NO_EXC);
 }
 __m512 test_mm512_mask_fmsubadd_round_ps(__m512 __A, __mmask16 __U, __m512 __B, __m512 __C) {
   // CHECK-LABEL: @test_mm512_mask_fmsubadd_round_ps
-  // CHECK: fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
+  // CHECK: fneg <16 x float> %{{.*}}
   // CHECK: @llvm.x86.avx512.vfmaddsub.ps.512
   // CHECK: bitcast i16 %{{.*}} to <16 x i1>
   // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
@@ -993,7 +993,7 @@ __m512 test_mm512_mask_fmsubadd_round_ps(__m512 __A, __mmask16 __U, __m512 __B, 
 }
 __m512 test_mm512_maskz_fmsubadd_round_ps(__mmask16 __U, __m512 __A, __m512 __B, __m512 __C) {
   // CHECK-LABEL: @test_mm512_maskz_fmsubadd_round_ps
-  // CHECK: fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
+  // CHECK: fneg <16 x float> %{{.*}}
   // CHECK: @llvm.x86.avx512.vfmaddsub.ps.512
   // CHECK: bitcast i16 %{{.*}} to <16 x i1>
   // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> zeroinitializer
@@ -1002,7 +1002,7 @@ __m512 test_mm512_maskz_fmsubadd_round_ps(__mmask16 __U, __m512 __A, __m512 __B,
 __m512 test_mm512_fmaddsub_ps(__m512 __A, __m512 __B, __m512 __C) {
   // CHECK-LABEL: @test_mm512_fmaddsub_ps
   // CHECK: [[ADD:%.+]] = call <16 x float> @llvm.fma.v16f32(<16 x float> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}})
-  // CHECK: [[NEG:%.+]] = fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
+  // CHECK: [[NEG:%.+]] = fneg <16 x float> %{{.*}}
   // CHECK: [[SUB:%.+]] = call <16 x float> @llvm.fma.v16f32(<16 x float> %{{.*}}, <16 x float> %{{.*}}, <16 x float> [[NEG]]
   // CHECK: shufflevector <16 x float> [[SUB]], <16 x float> [[ADD]], <16 x i32> <i32 0, i32 17, i32 2, i32 19, i32 4, i32 21, i32 6, i32 23, i32 8, i32 25, i32 10, i32 27, i32 12, i32 29, i32 14, i32 31>
   return _mm512_fmaddsub_ps(__A, __B, __C);
@@ -1010,7 +1010,7 @@ __m512 test_mm512_fmaddsub_ps(__m512 __A, __m512 __B, __m512 __C) {
 __m512 test_mm512_mask_fmaddsub_ps(__m512 __A, __mmask16 __U, __m512 __B, __m512 __C) {
   // CHECK-LABEL: @test_mm512_mask_fmaddsub_ps
   // CHECK: [[ADD:%.+]] = call <16 x float> @llvm.fma.v16f32(<16 x float> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}})
-  // CHECK: [[NEG:%.+]] = fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
+  // CHECK: [[NEG:%.+]] = fneg <16 x float> %{{.*}}
   // CHECK: [[SUB:%.+]] = call <16 x float> @llvm.fma.v16f32(<16 x float> %{{.*}}, <16 x float> %{{.*}}, <16 x float> [[NEG]]
   // CHECK: shufflevector <16 x float> [[SUB]], <16 x float> [[ADD]], <16 x i32> <i32 0, i32 17, i32 2, i32 19, i32 4, i32 21, i32 6, i32 23, i32 8, i32 25, i32 10, i32 27, i32 12, i32 29, i32 14, i32 31>
   // CHECK: bitcast i16 %{{.*}} to <16 x i1>
@@ -1020,7 +1020,7 @@ __m512 test_mm512_mask_fmaddsub_ps(__m512 __A, __mmask16 __U, __m512 __B, __m512
 __m512 test_mm512_mask3_fmaddsub_ps(__m512 __A, __m512 __B, __m512 __C, __mmask16 __U) {
   // CHECK-LABEL: @test_mm512_mask3_fmaddsub_ps
   // CHECK: [[ADD:%.+]] = call <16 x float> @llvm.fma.v16f32(<16 x float> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}})
-  // CHECK: [[NEG:%.+]] = fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
+  // CHECK: [[NEG:%.+]] = fneg <16 x float> %{{.*}}
   // CHECK: [[SUB:%.+]] = call <16 x float> @llvm.fma.v16f32(<16 x float> %{{.*}}, <16 x float> %{{.*}}, <16 x float> [[NEG]]
   // CHECK: shufflevector <16 x float> [[SUB]], <16 x float> [[ADD]], <16 x i32> <i32 0, i32 17, i32 2, i32 19, i32 4, i32 21, i32 6, i32 23, i32 8, i32 25, i32 10, i32 27, i32 12, i32 29, i32 14, i32 31>
   // CHECK: bitcast i16 %{{.*}} to <16 x i1>
@@ -1030,7 +1030,7 @@ __m512 test_mm512_mask3_fmaddsub_ps(__m512 __A, __m512 __B, __m512 __C, __mmask1
 __m512 test_mm512_maskz_fmaddsub_ps(__mmask16 __U, __m512 __A, __m512 __B, __m512 __C) {
   // CHECK-LABEL: @test_mm512_maskz_fmaddsub_ps
   // CHECK: [[ADD:%.+]] = call <16 x float> @llvm.fma.v16f32(<16 x float> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}})
-  // CHECK: [[NEG:%.+]] = fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
+  // CHECK: [[NEG:%.+]] = fneg <16 x float> %{{.*}}
   // CHECK: [[SUB:%.+]] = call <16 x float> @llvm.fma.v16f32(<16 x float> %{{.*}}, <16 x float> %{{.*}}, <16 x float> [[NEG]]
   // CHECK: shufflevector <16 x float> [[SUB]], <16 x float> [[ADD]], <16 x i32> <i32 0, i32 17, i32 2, i32 19, i32 4, i32 21, i32 6, i32 23, i32 8, i32 25, i32 10, i32 27, i32 12, i32 29, i32 14, i32 31>
   // CHECK: bitcast i16 %{{.*}} to <16 x i1>
@@ -1039,7 +1039,7 @@ __m512 test_mm512_maskz_fmaddsub_ps(__mmask16 __U, __m512 __A, __m512 __B, __m51
 }
 __m512 test_mm512_fmsubadd_ps(__m512 __A, __m512 __B, __m512 __C) {
   // CHECK-LABEL: @test_mm512_fmsubadd_ps
-  // CHECK: [[NEG:%.+]] = fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
+  // CHECK: [[NEG:%.+]] = fneg <16 x float> %{{.*}}
   // CHECK: [[SUB:%.+]] = call <16 x float> @llvm.fma.v16f32(<16 x float> %{{.*}}, <16 x float> %{{.*}}, <16 x float> [[NEG]]
   // CHECK: [[ADD:%.+]] = call <16 x float> @llvm.fma.v16f32(<16 x float> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}})
   // CHECK: shufflevector <16 x float> [[ADD]], <16 x float> [[SUB]], <16 x i32> <i32 0, i32 17, i32 2, i32 19, i32 4, i32 21, i32 6, i32 23, i32 8, i32 25, i32 10, i32 27, i32 12, i32 29, i32 14, i32 31>
@@ -1047,7 +1047,7 @@ __m512 test_mm512_fmsubadd_ps(__m512 __A, __m512 __B, __m512 __C) {
 }
 __m512 test_mm512_mask_fmsubadd_ps(__m512 __A, __mmask16 __U, __m512 __B, __m512 __C) {
   // CHECK-LABEL: @test_mm512_mask_fmsubadd_ps
-  // CHECK: [[NEG:%.+]] = fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
+  // CHECK: [[NEG:%.+]] = fneg <16 x float> %{{.*}}
   // CHECK: [[SUB:%.+]] = call <16 x float> @llvm.fma.v16f32(<16 x float> %{{.*}}, <16 x float> %{{.*}}, <16 x float> [[NEG]]
   // CHECK: [[ADD:%.+]] = call <16 x float> @llvm.fma.v16f32(<16 x float> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}})
   // CHECK: shufflevector <16 x float> [[ADD]], <16 x float> [[SUB]], <16 x i32> <i32 0, i32 17, i32 2, i32 19, i32 4, i32 21, i32 6, i32 23, i32 8, i32 25, i32 10, i32 27, i32 12, i32 29, i32 14, i32 31>
@@ -1057,7 +1057,7 @@ __m512 test_mm512_mask_fmsubadd_ps(__m512 __A, __mmask16 __U, __m512 __B, __m512
 }
 __m512 test_mm512_maskz_fmsubadd_ps(__mmask16 __U, __m512 __A, __m512 __B, __m512 __C) {
   // CHECK-LABEL: @test_mm512_maskz_fmsubadd_ps
-  // CHECK: [[NEG:%.+]] = fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
+  // CHECK: [[NEG:%.+]] = fneg <16 x float> %{{.*}}
   // CHECK: [[SUB:%.+]] = call <16 x float> @llvm.fma.v16f32(<16 x float> %{{.*}}, <16 x float> %{{.*}}, <16 x float> [[NEG]]
   // CHECK: [[ADD:%.+]] = call <16 x float> @llvm.fma.v16f32(<16 x float> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}})
   // CHECK: shufflevector <16 x float> [[ADD]], <16 x float> [[SUB]], <16 x i32> <i32 0, i32 17, i32 2, i32 19, i32 4, i32 21, i32 6, i32 23, i32 8, i32 25, i32 10, i32 27, i32 12, i32 29, i32 14, i32 31>
@@ -1067,7 +1067,7 @@ __m512 test_mm512_maskz_fmsubadd_ps(__mmask16 __U, __m512 __A, __m512 __B, __m51
 }
 __m512d test_mm512_mask3_fmsub_round_pd(__m512d __A, __m512d __B, __m512d __C, __mmask8 __U) {
   // CHECK-LABEL: @test_mm512_mask3_fmsub_round_pd
-  // CHECK: fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>
+  // CHECK: fneg <8 x double> %{{.*}}
   // CHECK: @llvm.x86.avx512.vfmadd.pd.512
   // CHECK: bitcast i8 %{{.*}} to <8 x i1>
   // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}}
@@ -1075,7 +1075,7 @@ __m512d test_mm512_mask3_fmsub_round_pd(__m512d __A, __m512d __B, __m512d __C, _
 }
 __m512d test_mm512_mask3_fmsub_pd(__m512d __A, __m512d __B, __m512d __C, __mmask8 __U) {
   // CHECK-LABEL: @test_mm512_mask3_fmsub_pd
-  // CHECK: fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %{{.*}}
+  // CHECK: fneg <8 x double> %{{.*}}
   // CHECK: call <8 x double> @llvm.fma.v8f64(<8 x double> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}})
   // CHECK: bitcast i8 %{{.*}} to <8 x i1>
   // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}}
@@ -1083,7 +1083,7 @@ __m512d test_mm512_mask3_fmsub_pd(__m512d __A, __m512d __B, __m512d __C, __mmask
 }
 __m512 test_mm512_mask3_fmsub_round_ps(__m512 __A, __m512 __B, __m512 __C, __mmask16 __U) {
   // CHECK-LABEL: @test_mm512_mask3_fmsub_round_ps
-  // CHECK: fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
+  // CHECK: fneg <16 x float> %{{.*}}
   // CHECK: @llvm.x86.avx512.vfmadd.ps.512
   // CHECK: bitcast i16 %{{.*}} to <16 x i1>
   // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
@@ -1091,7 +1091,7 @@ __m512 test_mm512_mask3_fmsub_round_ps(__m512 __A, __m512 __B, __m512 __C, __mma
 }
 __m512 test_mm512_mask3_fmsub_ps(__m512 __A, __m512 __B, __m512 __C, __mmask16 __U) {
   // CHECK-LABEL: @test_mm512_mask3_fmsub_ps
-  // CHECK: fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
+  // CHECK: fneg <16 x float> %{{.*}}
   // CHECK: call <16 x float> @llvm.fma.v16f32(<16 x float> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}})
   // CHECK: bitcast i16 %{{.*}} to <16 x i1>
   // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
@@ -1099,7 +1099,7 @@ __m512 test_mm512_mask3_fmsub_ps(__m512 __A, __m512 __B, __m512 __C, __mmask16 _
 }
 __m512d test_mm512_mask3_fmsubadd_round_pd(__m512d __A, __m512d __B, __m512d __C, __mmask8 __U) {
   // CHECK-LABEL: @test_mm512_mask3_fmsubadd_round_pd
-  // CHECK: fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %{{.*}}
+  // CHECK: fneg <8 x double> %{{.*}}
   // CHECK: @llvm.x86.avx512.vfmaddsub.pd.512
   // CHECK: bitcast i8 %{{.*}} to <8 x i1>
   // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}}
@@ -1107,7 +1107,7 @@ __m512d test_mm512_mask3_fmsubadd_round_pd(__m512d __A, __m512d __B, __m512d __C
 }
 __m512d test_mm512_mask3_fmsubadd_pd(__m512d __A, __m512d __B, __m512d __C, __mmask8 __U) {
   // CHECK-LABEL: @test_mm512_mask3_fmsubadd_pd
-  // CHECK: [[NEG:%.+]] = fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %{{.*}}
+  // CHECK: [[NEG:%.+]] = fneg <8 x double> %{{.*}}
   // CHECK: [[SUB:%.+]] = call <8 x double> @llvm.fma.v8f64(<8 x double> %{{.*}}, <8 x double> %{{.*}}, <8 x double> [[NEG]]
   // CHECK: [[ADD:%.+]] = call <8 x double> @llvm.fma.v8f64(<8 x double> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}})
   // CHECK: shufflevector <8 x double> [[ADD]], <8 x double> [[SUB]], <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 4, i32 13, i32 6, i32 15>
@@ -1117,7 +1117,7 @@ __m512d test_mm512_mask3_fmsubadd_pd(__m512d __A, __m512d __B, __m512d __C, __mm
 }
 __m512 test_mm512_mask3_fmsubadd_round_ps(__m512 __A, __m512 __B, __m512 __C, __mmask16 __U) {
   // CHECK-LABEL: @test_mm512_mask3_fmsubadd_round_ps
-  // CHECK: fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
+  // CHECK: fneg <16 x float> %{{.*}}
   // CHECK: @llvm.x86.avx512.vfmaddsub.ps.512
   // CHECK: bitcast i16 %{{.*}} to <16 x i1>
   // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
@@ -1125,7 +1125,7 @@ __m512 test_mm512_mask3_fmsubadd_round_ps(__m512 __A, __m512 __B, __m512 __C, __
 }
 __m512 test_mm512_mask3_fmsubadd_ps(__m512 __A, __m512 __B, __m512 __C, __mmask16 __U) {
   // CHECK-LABEL: @test_mm512_mask3_fmsubadd_ps
-  // CHECK: [[NEG:%.+]] = fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
+  // CHECK: [[NEG:%.+]] = fneg <16 x float> %{{.*}}
   // CHECK: [[SUB:%.+]] = call <16 x float> @llvm.fma.v16f32(<16 x float> %{{.*}}, <16 x float> %{{.*}}, <16 x float> [[NEG]]
   // CHECK: [[ADD:%.+]] = call <16 x float> @llvm.fma.v16f32(<16 x float> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}})
   // CHECK: shufflevector <16 x float> [[ADD]], <16 x float> [[SUB]], <16 x i32> <i32 0, i32 17, i32 2, i32 19, i32 4, i32 21, i32 6, i32 23, i32 8, i32 25, i32 10, i32 27, i32 12, i32 29, i32 14, i32 31>
@@ -1135,7 +1135,7 @@ __m512 test_mm512_mask3_fmsubadd_ps(__m512 __A, __m512 __B, __m512 __C, __mmask1
 }
 __m512d test_mm512_mask_fnmadd_round_pd(__m512d __A, __mmask8 __U, __m512d __B, __m512d __C) {
   // CHECK-LABEL: @test_mm512_mask_fnmadd_round_pd
-  // CHECK: fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>
+  // CHECK: fneg <8 x double>
   // CHECK: @llvm.x86.avx512.vfmadd.pd.512
   // CHECK: bitcast i8 %{{.*}} to <8 x i1>
   // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}}
@@ -1143,7 +1143,7 @@ __m512d test_mm512_mask_fnmadd_round_pd(__m512d __A, __mmask8 __U, __m512d __B, 
 }
 __m512d test_mm512_mask_fnmadd_pd(__m512d __A, __mmask8 __U, __m512d __B, __m512d __C) {
   // CHECK-LABEL: @test_mm512_mask_fnmadd_pd
-  // CHECK: fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %{{.*}}
+  // CHECK: fneg <8 x double> %{{.*}}
   // CHECK: call <8 x double> @llvm.fma.v8f64(<8 x double> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}})
   // CHECK: bitcast i8 %{{.*}} to <8 x i1>
   // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}}
@@ -1151,7 +1151,7 @@ __m512d test_mm512_mask_fnmadd_pd(__m512d __A, __mmask8 __U, __m512d __B, __m512
 }
 __m512 test_mm512_mask_fnmadd_round_ps(__m512 __A, __mmask16 __U, __m512 __B, __m512 __C) {
   // CHECK-LABEL: @test_mm512_mask_fnmadd_round_ps
-  // CHECK: fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
+  // CHECK: fneg <16 x float> %{{.*}}
   // CHECK: @llvm.x86.avx512.vfmadd.ps.512
   // CHECK: bitcast i16 %{{.*}} to <16 x i1>
   // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
@@ -1159,7 +1159,7 @@ __m512 test_mm512_mask_fnmadd_round_ps(__m512 __A, __mmask16 __U, __m512 __B, __
 }
 __m512 test_mm512_mask_fnmadd_ps(__m512 __A, __mmask16 __U, __m512 __B, __m512 __C) {
   // CHECK-LABEL: @test_mm512_mask_fnmadd_ps
-  // CHECK: fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
+  // CHECK: fneg <16 x float> %{{.*}}
   // CHECK: call <16 x float> @llvm.fma.v16f32(<16 x float> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}})
   // CHECK: bitcast i16 %{{.*}} to <16 x i1>
   // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
@@ -1167,8 +1167,8 @@ __m512 test_mm512_mask_fnmadd_ps(__m512 __A, __mmask16 __U, __m512 __B, __m512 _
 }
 __m512d test_mm512_mask_fnmsub_round_pd(__m512d __A, __mmask8 __U, __m512d __B, __m512d __C) {
   // CHECK-LABEL: @test_mm512_mask_fnmsub_round_pd
-  // CHECK: fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>
-  // CHECK: fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>
+  // CHECK: fneg <8 x double>
+  // CHECK: fneg <8 x double>
   // CHECK: @llvm.x86.avx512.vfmadd.pd.512
   // CHECK: bitcast i8 %{{.*}} to <8 x i1>
   // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}}
@@ -1176,8 +1176,8 @@ __m512d test_mm512_mask_fnmsub_round_pd(__m512d __A, __mmask8 __U, __m512d __B, 
 }
 __m512d test_mm512_mask3_fnmsub_round_pd(__m512d __A, __m512d __B, __m512d __C, __mmask8 __U) {
   // CHECK-LABEL: @test_mm512_mask3_fnmsub_round_pd
-  // CHECK: fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>
-  // CHECK: fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>
+  // CHECK: fneg <8 x double>
+  // CHECK: fneg <8 x double>
   // CHECK: @llvm.x86.avx512.vfmadd.pd.512
   // CHECK: bitcast i8 %{{.*}} to <8 x i1>
   // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}}
@@ -1185,8 +1185,8 @@ __m512d test_mm512_mask3_fnmsub_round_pd(__m512d __A, __m512d __B, __m512d __C, 
 }
 __m512d test_mm512_mask_fnmsub_pd(__m512d __A, __mmask8 __U, __m512d __B, __m512d __C) {
   // CHECK-LABEL: @test_mm512_mask_fnmsub_pd
-  // CHECK: fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %{{.*}}
-  // CHECK: fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %{{.*}}
+  // CHECK: fneg <8 x double> %{{.*}}
+  // CHECK: fneg <8 x double> %{{.*}}
   // CHECK: call <8 x double> @llvm.fma.v8f64(<8 x double> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}})
   // CHECK: bitcast i8 %{{.*}} to <8 x i1>
   // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}}
@@ -1194,8 +1194,8 @@ __m512d test_mm512_mask_fnmsub_pd(__m512d __A, __mmask8 __U, __m512d __B, __m512
 }
 __m512d test_mm512_mask3_fnmsub_pd(__m512d __A, __m512d __B, __m512d __C, __mmask8 __U) {
   // CHECK-LABEL: @test_mm512_mask3_fnmsub_pd
-  // CHECK: fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %{{.*}}
-  // CHECK: fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %{{.*}}
+  // CHECK: fneg <8 x double> %{{.*}}
+  // CHECK: fneg <8 x double> %{{.*}}
   // CHECK: call <8 x double> @llvm.fma.v8f64(<8 x double> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}})
   // CHECK: bitcast i8 %{{.*}} to <8 x i1>
   // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}}
@@ -1203,8 +1203,8 @@ __m512d test_mm512_mask3_fnmsub_pd(__m512d __A, __m512d __B, __m512d __C, __mmas
 }
 __m512 test_mm512_mask_fnmsub_round_ps(__m512 __A, __mmask16 __U, __m512 __B, __m512 __C) {
   // CHECK-LABEL: @test_mm512_mask_fnmsub_round_ps
-  // CHECK: fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
-  // CHECK: fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
+  // CHECK: fneg <16 x float> %{{.*}}
+  // CHECK: fneg <16 x float> %{{.*}}
   // CHECK: @llvm.x86.avx512.vfmadd.ps.512
   // CHECK: bitcast i16 %{{.*}} to <16 x i1>
   // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
@@ -1212,8 +1212,8 @@ __m512 test_mm512_mask_fnmsub_round_ps(__m512 __A, __mmask16 __U, __m512 __B, __
 }
 __m512 test_mm512_mask3_fnmsub_round_ps(__m512 __A, __m512 __B, __m512 __C, __mmask16 __U) {
   // CHECK-LABEL: @test_mm512_mask3_fnmsub_round_ps
-  // CHECK: fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
-  // CHECK: fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
+  // CHECK: fneg <16 x float> %{{.*}}
+  // CHECK: fneg <16 x float> %{{.*}}
   // CHECK: @llvm.x86.avx512.vfmadd.ps.512
   // CHECK: bitcast i16 %{{.*}} to <16 x i1>
   // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
@@ -1221,8 +1221,8 @@ __m512 test_mm512_mask3_fnmsub_round_ps(__m512 __A, __m512 __B, __m512 __C, __mm
 }
 __m512 test_mm512_mask_fnmsub_ps(__m512 __A, __mmask16 __U, __m512 __B, __m512 __C) {
   // CHECK-LABEL: @test_mm512_mask_fnmsub_ps
-  // CHECK: fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
-  // CHECK: fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
+  // CHECK: fneg <16 x float> %{{.*}}
+  // CHECK: fneg <16 x float> %{{.*}}
   // CHECK: call <16 x float> @llvm.fma.v16f32(<16 x float> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}})
   // CHECK: bitcast i16 %{{.*}} to <16 x i1>
   // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
@@ -1230,8 +1230,8 @@ __m512 test_mm512_mask_fnmsub_ps(__m512 __A, __mmask16 __U, __m512 __B, __m512 _
 }
 __m512 test_mm512_mask3_fnmsub_ps(__m512 __A, __m512 __B, __m512 __C, __mmask16 __U) {
   // CHECK-LABEL: @test_mm512_mask3_fnmsub_ps
-  // CHECK: fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
-  // CHECK: fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
+  // CHECK: fneg <16 x float> %{{.*}}
+  // CHECK: fneg <16 x float> %{{.*}}
   // CHECK: call <16 x float> @llvm.fma.v16f32(<16 x float> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}})
   // CHECK: bitcast i16 %{{.*}} to <16 x i1>
   // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
@@ -7521,7 +7521,7 @@ __m128 test_mm_mask3_fmadd_round_ss(__m128 __W, __m128 __X, __m128 __Y, __mmask8
 
 __m128 test_mm_mask_fmsub_ss(__m128 __W, __mmask8 __U, __m128 __A, __m128 __B){
   // CHECK-LABEL: @test_mm_mask_fmsub_ss
-  // CHECK: [[NEG:%.+]] = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
+  // CHECK: [[NEG:%.+]] = fneg <4 x float> %{{.*}}
   // CHECK: [[A:%.+]] = extractelement <4 x float> [[ORIGA:%.+]], i64 0
   // CHECK-NEXT: [[B:%.+]] = extractelement <4 x float> %{{.*}}, i64 0
   // CHECK-NEXT: [[C:%.+]] = extractelement <4 x float> [[NEG]], i64 0
@@ -7535,7 +7535,7 @@ __m128 test_mm_mask_fmsub_ss(__m128 __W, __mmask8 __U, __m128 __A, __m128 __B){
 
 __m128 test_mm_fmsub_round_ss(__m128 __A, __m128 __B, __m128 __C){
   // CHECK-LABEL: @test_mm_fmsub_round_ss
-  // CHECK: [[NEG:%.+]] = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
+  // CHECK: [[NEG:%.+]] = fneg <4 x float> %{{.*}}
   // CHECK: [[A:%.+]] = extractelement <4 x float> [[ORIGA:%.+]], i64 0
   // CHECK-NEXT: [[B:%.+]] = extractelement <4 x float> %{{.*}}, i64 0
   // CHECK-NEXT: [[C:%.+]] = extractelement <4 x float> [[NEG]], i64 0
@@ -7546,7 +7546,7 @@ __m128 test_mm_fmsub_round_ss(__m128 __A, __m128 __B, __m128 __C){
 
 __m128 test_mm_mask_fmsub_round_ss(__m128 __W, __mmask8 __U, __m128 __A, __m128 __B){
   // CHECK-LABEL: @test_mm_mask_fmsub_round_ss
-  // CHECK: [[NEG:%.+]] = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
+  // CHECK: [[NEG:%.+]] = fneg <4 x float> %{{.*}}
   // CHECK: [[A:%.+]] = extractelement <4 x float> [[ORIGA:%.+]], i64 0
   // CHECK-NEXT: [[B:%.+]] = extractelement <4 x float> %{{.*}}, i64 0
   // CHECK-NEXT: [[C:%.+]] = extractelement <4 x float> [[NEG]], i64 0
@@ -7560,7 +7560,7 @@ __m128 test_mm_mask_fmsub_round_ss(__m128 __W, __mmask8 __U, __m128 __A, __m128 
 
 __m128 test_mm_maskz_fmsub_ss(__mmask8 __U, __m128 __A, __m128 __B, __m128 __C){
   // CHECK-LABEL: @test_mm_maskz_fmsub_ss
-  // CHECK: [[NEG:%.+]] = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
+  // CHECK: [[NEG:%.+]] = fneg <4 x float> %{{.*}}
   // CHECK: [[A:%.+]] = extractelement <4 x float> [[ORIGA:%.+]], i64 0
   // CHECK-NEXT: [[B:%.+]] = extractelement <4 x float> %{{.*}}, i64 0
   // CHECK-NEXT: [[C:%.+]] = extractelement <4 x float> [[NEG]], i64 0
@@ -7574,7 +7574,7 @@ __m128 test_mm_maskz_fmsub_ss(__mmask8 __U, __m128 __A, __m128 __B, __m128 __C){
 
 __m128 test_mm_maskz_fmsub_round_ss(__mmask8 __U, __m128 __A, __m128 __B, __m128 __C){
   // CHECK-LABEL: @test_mm_maskz_fmsub_round_ss
-  // CHECK: [[NEG:%.+]] = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
+  // CHECK: [[NEG:%.+]] = fneg <4 x float> %{{.*}}
   // CHECK: [[A:%.+]] = extractelement <4 x float> [[ORIGA:%.+]], i64 0
   // CHECK-NEXT: [[B:%.+]] = extractelement <4 x float> %{{.*}}, i64 0
   // CHECK-NEXT: [[C:%.+]] = extractelement <4 x float> [[NEG]], i64 0
@@ -7588,7 +7588,7 @@ __m128 test_mm_maskz_fmsub_round_ss(__mmask8 __U, __m128 __A, __m128 __B, __m128
 
 __m128 test_mm_mask3_fmsub_ss(__m128 __W, __m128 __X, __m128 __Y, __mmask8 __U){
   // CHECK-LABEL: @test_mm_mask3_fmsub_ss
-  // CHECK: [[NEG:%.+]] = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, [[ORIGC:%.+]]
+  // CHECK: [[NEG:%.+]] = fneg <4 x float> [[ORIGC:%.+]]
   // CHECK: [[A:%.+]] = extractelement <4 x float> %{{.*}}, i64 0
   // CHECK-NEXT: [[B:%.+]] = extractelement <4 x float> %{{.*}}, i64 0
   // CHECK-NEXT: [[C:%.+]] = extractelement <4 x float> [[NEG]], i64 0
@@ -7603,7 +7603,7 @@ __m128 test_mm_mask3_fmsub_ss(__m128 __W, __m128 __X, __m128 __Y, __mmask8 __U){
 
 __m128 test_mm_mask3_fmsub_round_ss(__m128 __W, __m128 __X, __m128 __Y, __mmask8 __U){
   // CHECK-LABEL: @test_mm_mask3_fmsub_round_ss
-  // CHECK: [[NEG:%.+]] = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, [[ORIGC:%.+]]
+  // CHECK: [[NEG:%.+]] = fneg <4 x float> [[ORIGC:%.+]]
   // CHECK: [[A:%.+]] = extractelement <4 x float> %{{.*}}, i64 0
   // CHECK-NEXT: [[B:%.+]] = extractelement <4 x float> %{{.*}}, i64 0
   // CHECK-NEXT: [[C:%.+]] = extractelement <4 x float> [[NEG]], i64 0
@@ -7618,7 +7618,7 @@ __m128 test_mm_mask3_fmsub_round_ss(__m128 __W, __m128 __X, __m128 __Y, __mmask8
 
 __m128 test_mm_mask_fnmadd_ss(__m128 __W, __mmask8 __U, __m128 __A, __m128 __B){
   // CHECK-LABEL: @test_mm_mask_fnmadd_ss
-  // CHECK: [[NEG:%.+]] = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
+  // CHECK: [[NEG:%.+]] = fneg <4 x float> %{{.*}}
   // CHECK: [[A:%.+]] = extractelement <4 x float> [[ORIGA:%.+]], i64 0
   // CHECK-NEXT: [[B:%.+]] = extractelement <4 x float> [[NEG]], i64 0
   // CHECK-NEXT: [[C:%.+]] = extractelement <4 x float> %{{.*}}, i64 0
@@ -7632,7 +7632,7 @@ __m128 test_mm_mask_fnmadd_ss(__m128 __W, __mmask8 __U, __m128 __A, __m128 __B){
 
 __m128 test_mm_fnmadd_round_ss(__m128 __A, __m128 __B, __m128 __C){
   // CHECK-LABEL: @test_mm_fnmadd_round_ss
-  // CHECK: [[NEG:%.+]] = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
+  // CHECK: [[NEG:%.+]] = fneg <4 x float> %{{.*}}
   // CHECK: [[A:%.+]] = extractelement <4 x float> [[ORIGA:%.+]], i64 0
   // CHECK-NEXT: [[B:%.+]] = extractelement <4 x float> [[NEG]], i64 0
   // CHECK-NEXT: [[C:%.+]] = extractelement <4 x float> %{{.*}}, i64 0
@@ -7643,7 +7643,7 @@ __m128 test_mm_fnmadd_round_ss(__m128 __A, __m128 __B, __m128 __C){
 
 __m128 test_mm_mask_fnmadd_round_ss(__m128 __W, __mmask8 __U, __m128 __A, __m128 __B){
   // CHECK-LABEL: @test_mm_mask_fnmadd_round_ss
-  // CHECK: [[NEG:%.+]] = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
+  // CHECK: [[NEG:%.+]] = fneg <4 x float> %{{.*}}
   // CHECK: [[A:%.+]] = extractelement <4 x float> [[ORIGA:%.+]], i64 0
   // CHECK-NEXT: [[B:%.+]] = extractelement <4 x float> [[NEG]], i64 0
   // CHECK-NEXT: [[C:%.+]] = extractelement <4 x float> %{{.*}}, i64 0
@@ -7657,7 +7657,7 @@ __m128 test_mm_mask_fnmadd_round_ss(__m128 __W, __mmask8 __U, __m128 __A, __m128
 
 __m128 test_mm_maskz_fnmadd_ss(__mmask8 __U, __m128 __A, __m128 __B, __m128 __C){
   // CHECK-LABEL: @test_mm_maskz_fnmadd_ss
-  // CHECK: [[NEG:%.+]] = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
+  // CHECK: [[NEG:%.+]] = fneg <4 x float> %{{.*}}
   // CHECK: [[A:%.+]] = extractelement <4 x float> [[ORIGA:%.+]], i64 0
   // CHECK-NEXT: [[B:%.+]] = extractelement <4 x float> [[NEG]], i64 0
   // CHECK-NEXT: [[C:%.+]] = extractelement <4 x float> %{{.*}}, i64 0
@@ -7671,7 +7671,7 @@ __m128 test_mm_maskz_fnmadd_ss(__mmask8 __U, __m128 __A, __m128 __B, __m128 __C)
 
 __m128 test_mm_maskz_fnmadd_round_ss(__mmask8 __U, __m128 __A, __m128 __B, __m128 __C){
   // CHECK-LABEL: @test_mm_maskz_fnmadd_round_ss
-  // CHECK: [[NEG:%.+]] = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
+  // CHECK: [[NEG:%.+]] = fneg <4 x float> %{{.*}}
   // CHECK: [[A:%.+]] = extractelement <4 x float> [[ORIGA:%.+]], i64 0
   // CHECK-NEXT: [[B:%.+]] = extractelement <4 x float> [[NEG]], i64 0
   // CHECK-NEXT: [[C:%.+]] = extractelement <4 x float> %{{.*}}, i64 0
@@ -7685,7 +7685,7 @@ __m128 test_mm_maskz_fnmadd_round_ss(__mmask8 __U, __m128 __A, __m128 __B, __m12
 
 __m128 test_mm_mask3_fnmadd_ss(__m128 __W, __m128 __X, __m128 __Y, __mmask8 __U){
   // CHECK-LABEL: @test_mm_mask3_fnmadd_ss
-  // CHECK: [[NEG:%.+]] = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
+  // CHECK: [[NEG:%.+]] = fneg <4 x float> %{{.*}}
   // CHECK: [[A:%.+]] = extractelement <4 x float> %{{.*}}, i64 0
   // CHECK-NEXT: [[B:%.+]] = extractelement <4 x float> [[NEG]], i64 0
   // CHECK-NEXT: [[C:%.+]] = extractelement <4 x float> [[ORIGC:%.+]], i64 0
@@ -7699,7 +7699,7 @@ __m128 test_mm_mask3_fnmadd_ss(__m128 __W, __m128 __X, __m128 __Y, __mmask8 __U)
 
 __m128 test_mm_mask3_fnmadd_round_ss(__m128 __W, __m128 __X, __m128 __Y, __mmask8 __U){
   // CHECK-LABEL: @test_mm_mask3_fnmadd_round_ss
-  // CHECK: [[NEG:%.+]] = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
+  // CHECK: [[NEG:%.+]] = fneg <4 x float> %{{.*}}
   // CHECK: [[A:%.+]] = extractelement <4 x float> %{{.*}}, i64 0
   // CHECK-NEXT: [[B:%.+]] = extractelement <4 x float> [[NEG]], i64 0
   // CHECK-NEXT: [[C:%.+]] = extractelement <4 x float> [[ORIGC:%.+]], i64 0
@@ -7713,8 +7713,8 @@ __m128 test_mm_mask3_fnmadd_round_ss(__m128 __W, __m128 __X, __m128 __Y, __mmask
 
 __m128 test_mm_mask_fnmsub_ss(__m128 __W, __mmask8 __U, __m128 __A, __m128 __B){
   // CHECK-LABEL: @test_mm_mask_fnmsub_ss
-  // CHECK: [[NEG:%.+]] = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
-  // CHECK: [[NEG2:%.+]] = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
+  // CHECK: [[NEG:%.+]] = fneg <4 x float> %{{.*}}
+  // CHECK: [[NEG2:%.+]] = fneg <4 x float> %{{.*}}
   // CHECK: [[A:%.+]] = extractelement <4 x float> [[ORIGA:%.+]], i64 0
   // CHECK-NEXT: [[B:%.+]] = extractelement <4 x float> [[NEG]], i64 0
   // CHECK-NEXT: [[C:%.+]] = extractelement <4 x float> [[NEG2]], i64 0
@@ -7728,8 +7728,8 @@ __m128 test_mm_mask_fnmsub_ss(__m128 __W, __mmask8 __U, __m128 __A, __m128 __B){
 
 __m128 test_mm_fnmsub_round_ss(__m128 __A, __m128 __B, __m128 __C){
   // CHECK-LABEL: @test_mm_fnmsub_round_ss
-  // CHECK: [[NEG:%.+]] = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
-  // CHECK: [[NEG2:%.+]] = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
+  // CHECK: [[NEG:%.+]] = fneg <4 x float> %{{.*}}
+  // CHECK: [[NEG2:%.+]] = fneg <4 x float> %{{.*}}
   // CHECK: [[A:%.+]] = extractelement <4 x float> [[ORIGA:%.+]], i64 0
   // CHECK-NEXT: [[B:%.+]] = extractelement <4 x float> [[NEG]], i64 0
   // CHECK-NEXT: [[C:%.+]] = extractelement <4 x float> [[NEG2]], i64 0
@@ -7740,8 +7740,8 @@ __m128 test_mm_fnmsub_round_ss(__m128 __A, __m128 __B, __m128 __C){
 
 __m128 test_mm_mask_fnmsub_round_ss(__m128 __W, __mmask8 __U, __m128 __A, __m128 __B){
   // CHECK-LABEL: @test_mm_mask_fnmsub_round_ss
-  // CHECK: [[NEG:%.+]] = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
-  // CHECK: [[NEG2:%.+]] = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
+  // CHECK: [[NEG:%.+]] = fneg <4 x float> %{{.*}}
+  // CHECK: [[NEG2:%.+]] = fneg <4 x float> %{{.*}}
   // CHECK: [[A:%.+]] = extractelement <4 x float> [[ORIGA:%.+]], i64 0
   // CHECK-NEXT: [[B:%.+]] = extractelement <4 x float> [[NEG]], i64 0
   // CHECK-NEXT: [[C:%.+]] = extractelement <4 x float> [[NEG2]], i64 0
@@ -7755,8 +7755,8 @@ __m128 test_mm_mask_fnmsub_round_ss(__m128 __W, __mmask8 __U, __m128 __A, __m128
 
 __m128 test_mm_maskz_fnmsub_ss(__mmask8 __U, __m128 __A, __m128 __B, __m128 __C){
   // CHECK-LABEL: @test_mm_maskz_fnmsub_ss
-  // CHECK: [[NEG:%.+]] = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
-  // CHECK: [[NEG2:%.+]] = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
+  // CHECK: [[NEG:%.+]] = fneg <4 x float> %{{.*}}
+  // CHECK: [[NEG2:%.+]] = fneg <4 x float> %{{.*}}
   // CHECK: [[A:%.+]] = extractelement <4 x float> [[ORIGA:%.+]], i64 0
   // CHECK-NEXT: [[B:%.+]] = extractelement <4 x float> [[NEG]], i64 0
   // CHECK-NEXT: [[C:%.+]] = extractelement <4 x float> [[NEG2]], i64 0
@@ -7770,8 +7770,8 @@ __m128 test_mm_maskz_fnmsub_ss(__mmask8 __U, __m128 __A, __m128 __B, __m128 __C)
 
 __m128 test_mm_maskz_fnmsub_round_ss(__mmask8 __U, __m128 __A, __m128 __B, __m128 __C){
   // CHECK-LABEL: @test_mm_maskz_fnmsub_round_ss
-  // CHECK: [[NEG:%.+]] = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
-  // CHECK: [[NEG2:%.+]] = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
+  // CHECK: [[NEG:%.+]] = fneg <4 x float> %{{.*}}
+  // CHECK: [[NEG2:%.+]] = fneg <4 x float> %{{.*}}
   // CHECK: [[A:%.+]] = extractelement <4 x float> [[ORIGA:%.+]], i64 0
   // CHECK-NEXT: [[B:%.+]] = extractelement <4 x float> [[NEG]], i64 0
   // CHECK-NEXT: [[C:%.+]] = extractelement <4 x float> [[NEG2]], i64 0
@@ -7785,8 +7785,8 @@ __m128 test_mm_maskz_fnmsub_round_ss(__mmask8 __U, __m128 __A, __m128 __B, __m12
 
 __m128 test_mm_mask3_fnmsub_ss(__m128 __W, __m128 __X, __m128 __Y, __mmask8 __U){
   // CHECK-LABEL: @test_mm_mask3_fnmsub_ss
-  // CHECK: [[NEG:%.+]] = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
-  // CHECK: [[NEG2:%.+]] = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, [[ORIGC:%.+]]
+  // CHECK: [[NEG:%.+]] = fneg <4 x float> %{{.*}}
+  // CHECK: [[NEG2:%.+]] = fneg <4 x float> [[ORIGC:%.+]]
   // CHECK: [[A:%.+]] = extractelement <4 x float> %{{.*}}, i64 0
   // CHECK-NEXT: [[B:%.+]] = extractelement <4 x float> [[NEG]], i64 0
   // CHECK-NEXT: [[C:%.+]] = extractelement <4 x float> [[NEG2]], i64 0
@@ -7801,8 +7801,8 @@ __m128 test_mm_mask3_fnmsub_ss(__m128 __W, __m128 __X, __m128 __Y, __mmask8 __U)
 
 __m128 test_mm_mask3_fnmsub_round_ss(__m128 __W, __m128 __X, __m128 __Y, __mmask8 __U){
   // CHECK-LABEL: @test_mm_mask3_fnmsub_round_ss
-  // CHECK: [[NEG:%.+]] = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
-  // CHECK: [[NEG2:%.+]] = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, [[ORIGC:%.+]]
+  // CHECK: [[NEG:%.+]] = fneg <4 x float> %{{.*}}
+  // CHECK: [[NEG2:%.+]] = fneg <4 x float> [[ORIGC:%.+]]
   // CHECK: [[A:%.+]] = extractelement <4 x float> %{{.*}}, i64 0
   // CHECK-NEXT: [[B:%.+]] = extractelement <4 x float> [[NEG]], i64 0
   // CHECK-NEXT: [[C:%.+]] = extractelement <4 x float> [[NEG2]], i64 0
@@ -7905,7 +7905,7 @@ __m128d test_mm_mask3_fmadd_round_sd(__m128d __W, __m128d __X, __m128d __Y, __mm
 
 __m128d test_mm_mask_fmsub_sd(__m128d __W, __mmask8 __U, __m128d __A, __m128d __B){
   // CHECK-LABEL: @test_mm_mask_fmsub_sd
-  // CHECK: [[NEG:%.+]] = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %{{.*}}
+  // CHECK: [[NEG:%.+]] = fneg <2 x double> %{{.*}}
   // CHECK: [[A:%.+]] = extractelement <2 x double> [[ORIGA:%.+]], i64 0
   // CHECK-NEXT: [[B:%.+]] = extractelement <2 x double> %{{.*}}, i64 0
   // CHECK-NEXT: [[C:%.+]] = extractelement <2 x double> [[NEG]], i64 0
@@ -7919,7 +7919,7 @@ __m128d test_mm_mask_fmsub_sd(__m128d __W, __mmask8 __U, __m128d __A, __m128d __
 
 __m128d test_mm_fmsub_round_sd(__m128d __A, __m128d __B, __m128d __C){
   // CHECK-LABEL: @test_mm_fmsub_round_sd
-  // CHECK: [[NEG:%.+]] = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %{{.*}}
+  // CHECK: [[NEG:%.+]] = fneg <2 x double> %{{.*}}
   // CHECK: [[A:%.+]] = extractelement <2 x double> [[ORIGA:%.+]], i64 0
   // CHECK-NEXT: [[B:%.+]] = extractelement <2 x double> %{{.*}}, i64 0
   // CHECK-NEXT: [[C:%.+]] = extractelement <2 x double> [[NEG]], i64 0
@@ -7930,7 +7930,7 @@ __m128d test_mm_fmsub_round_sd(__m128d __A, __m128d __B, __m128d __C){
 
 __m128d test_mm_mask_fmsub_round_sd(__m128d __W, __mmask8 __U, __m128d __A, __m128d __B){
   // CHECK-LABEL: @test_mm_mask_fmsub_round_sd
-  // CHECK: [[NEG:%.+]] = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %{{.*}}
+  // CHECK: [[NEG:%.+]] = fneg <2 x double> %{{.*}}
   // CHECK: [[A:%.+]] = extractelement <2 x double> [[ORIGA:%.+]], i64 0
   // CHECK-NEXT: [[B:%.+]] = extractelement <2 x double> %{{.*}}, i64 0
   // CHECK-NEXT: [[C:%.+]] = extractelement <2 x double> [[NEG]], i64 0
@@ -7944,7 +7944,7 @@ __m128d test_mm_mask_fmsub_round_sd(__m128d __W, __mmask8 __U, __m128d __A, __m1
 
 __m128d test_mm_maskz_fmsub_sd(__mmask8 __U, __m128d __A, __m128d __B, __m128d __C){
   // CHECK-LABEL: @test_mm_maskz_fmsub_sd
-  // CHECK: [[NEG:%.+]] = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %{{.*}}
+  // CHECK: [[NEG:%.+]] = fneg <2 x double> %{{.*}}
   // CHECK: [[A:%.+]] = extractelement <2 x double> [[ORIGA:%.+]], i64 0
   // CHECK-NEXT: [[B:%.+]] = extractelement <2 x double> %{{.*}}, i64 0
   // CHECK-NEXT: [[C:%.+]] = extractelement <2 x double> [[NEG]], i64 0
@@ -7958,7 +7958,7 @@ __m128d test_mm_maskz_fmsub_sd(__mmask8 __U, __m128d __A, __m128d __B, __m128d _
 
 __m128d test_mm_maskz_fmsub_round_sd(__mmask8 __U, __m128d __A, __m128d __B, __m128d __C){
   // CHECK-LABEL: @test_mm_maskz_fmsub_round_sd
-  // CHECK: [[NEG:%.+]] = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %{{.*}}
+  // CHECK: [[NEG:%.+]] = fneg <2 x double> %{{.*}}
   // CHECK: [[A:%.+]] = extractelement <2 x double> [[ORIGA:%.+]], i64 0
   // CHECK-NEXT: [[B:%.+]] = extractelement <2 x double> %{{.*}}, i64 0
   // CHECK-NEXT: [[C:%.+]] = extractelement <2 x double> [[NEG]], i64 0
@@ -7972,7 +7972,7 @@ __m128d test_mm_maskz_fmsub_round_sd(__mmask8 __U, __m128d __A, __m128d __B, __m
 
 __m128d test_mm_mask3_fmsub_sd(__m128d __W, __m128d __X, __m128d __Y, __mmask8 __U){
   // CHECK-LABEL: @test_mm_mask3_fmsub_sd
-  // CHECK: [[NEG:%.+]] = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, [[ORIGC:%.+]]
+  // CHECK: [[NEG:%.+]] = fneg <2 x double> [[ORIGC:%.+]]
   // CHECK: [[A:%.+]] = extractelement <2 x double> %{{.*}}, i64 0
   // CHECK-NEXT: [[B:%.+]] = extractelement <2 x double> %{{.*}}, i64 0
   // CHECK-NEXT: [[C:%.+]] = extractelement <2 x double> [[NEG]], i64 0
@@ -7987,7 +7987,7 @@ __m128d test_mm_mask3_fmsub_sd(__m128d __W, __m128d __X, __m128d __Y, __mmask8 _
 
 __m128d test_mm_mask3_fmsub_round_sd(__m128d __W, __m128d __X, __m128d __Y, __mmask8 __U){
   // CHECK-LABEL: @test_mm_mask3_fmsub_round_sd
-  // CHECK: [[NEG:%.+]] = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, [[ORIGC:%.+]]
+  // CHECK: [[NEG:%.+]] = fneg <2 x double> [[ORIGC:%.+]]
   // CHECK: [[A:%.+]] = extractelement <2 x double> %{{.*}}, i64 0
   // CHECK-NEXT: [[B:%.+]] = extractelement <2 x double> %{{.*}}, i64 0
   // CHECK-NEXT: [[C:%.+]] = extractelement <2 x double> [[NEG]], i64 0
@@ -8002,7 +8002,7 @@ __m128d test_mm_mask3_fmsub_round_sd(__m128d __W, __m128d __X, __m128d __Y, __mm
 
 __m128d test_mm_mask_fnmadd_sd(__m128d __W, __mmask8 __U, __m128d __A, __m128d __B){
   // CHECK-LABEL: @test_mm_mask_fnmadd_sd
-  // CHECK: [[NEG:%.+]] = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %{{.*}}
+  // CHECK: [[NEG:%.+]] = fneg <2 x double> %{{.*}}
   // CHECK: [[A:%.+]] = extractelement <2 x double> [[ORIGA:%.+]], i64 0
   // CHECK-NEXT: [[B:%.+]] = extractelement <2 x double> [[NEG]], i64 0
   // CHECK-NEXT: [[C:%.+]] = extractelement <2 x double> %{{.*}}, i64 0
@@ -8016,7 +8016,7 @@ __m128d test_mm_mask_fnmadd_sd(__m128d __W, __mmask8 __U, __m128d __A, __m128d _
 
 __m128d test_mm_fnmadd_round_sd(__m128d __A, __m128d __B, __m128d __C){
   // CHECK-LABEL: @test_mm_fnmadd_round_sd
-  // CHECK: [[NEG:%.+]] = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %{{.*}}
+  // CHECK: [[NEG:%.+]] = fneg <2 x double> %{{.*}}
   // CHECK: [[A:%.+]] = extractelement <2 x double> [[ORIGA:%.+]], i64 0
   // CHECK-NEXT: [[B:%.+]] = extractelement <2 x double> [[NEG]], i64 0
   // CHECK-NEXT: [[C:%.+]] = extractelement <2 x double> %{{.*}}, i64 0
@@ -8027,7 +8027,7 @@ __m128d test_mm_fnmadd_round_sd(__m128d __A, __m128d __B, __m128d __C){
 
 __m128d test_mm_mask_fnmadd_round_sd(__m128d __W, __mmask8 __U, __m128d __A, __m128d __B){
   // CHECK-LABEL: @test_mm_mask_fnmadd_round_sd
-  // CHECK: [[NEG:%.+]] = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %{{.*}}
+  // CHECK: [[NEG:%.+]] = fneg <2 x double> %{{.*}}
   // CHECK: [[A:%.+]] = extractelement <2 x double> [[ORIGA:%.+]], i64 0
   // CHECK-NEXT: [[B:%.+]] = extractelement <2 x double> [[NEG]], i64 0
   // CHECK-NEXT: [[C:%.+]] = extractelement <2 x double> %{{.*}}, i64 0
@@ -8041,7 +8041,7 @@ __m128d test_mm_mask_fnmadd_round_sd(__m128d __W, __mmask8 __U, __m128d __A, __m
 
 __m128d test_mm_maskz_fnmadd_sd(__mmask8 __U, __m128d __A, __m128d __B, __m128d __C){
   // CHECK-LABEL: @test_mm_maskz_fnmadd_sd
-  // CHECK: [[NEG:%.+]] = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %{{.*}}
+  // CHECK: [[NEG:%.+]] = fneg <2 x double> %{{.*}}
   // CHECK: [[A:%.+]] = extractelement <2 x double> [[ORIGA:%.+]], i64 0
   // CHECK-NEXT: [[B:%.+]] = extractelement <2 x double> [[NEG]], i64 0
   // CHECK-NEXT: [[C:%.+]] = extractelement <2 x double> %{{.*}}, i64 0
@@ -8055,7 +8055,7 @@ __m128d test_mm_maskz_fnmadd_sd(__mmask8 __U, __m128d __A, __m128d __B, __m128d 
 
 __m128d test_mm_maskz_fnmadd_round_sd(__mmask8 __U, __m128d __A, __m128d __B, __m128d __C){
   // CHECK-LABEL: @test_mm_maskz_fnmadd_round_sd
-  // CHECK: [[NEG:%.+]] = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %{{.*}}
+  // CHECK: [[NEG:%.+]] = fneg <2 x double> %{{.*}}
   // CHECK: [[A:%.+]] = extractelement <2 x double> [[ORIGA:%.+]], i64 0
   // CHECK-NEXT: [[B:%.+]] = extractelement <2 x double> [[NEG]], i64 0
   // CHECK-NEXT: [[C:%.+]] = extractelement <2 x double> %{{.*}}, i64 0
@@ -8069,7 +8069,7 @@ __m128d test_mm_maskz_fnmadd_round_sd(__mmask8 __U, __m128d __A, __m128d __B, __
 
 __m128d test_mm_mask3_fnmadd_sd(__m128d __W, __m128d __X, __m128d __Y, __mmask8 __U){
   // CHECK-LABEL: @test_mm_mask3_fnmadd_sd
-  // CHECK: [[NEG:%.+]] = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %{{.*}}
+  // CHECK: [[NEG:%.+]] = fneg <2 x double> %{{.*}}
   // CHECK: [[A:%.+]] = extractelement <2 x double> %{{.*}}, i64 0
   // CHECK-NEXT: [[B:%.+]] = extractelement <2 x double> [[NEG]], i64 0
   // CHECK-NEXT: [[C:%.+]] = extractelement <2 x double> [[ORIGC:%.+]], i64 0
@@ -8083,7 +8083,7 @@ __m128d test_mm_mask3_fnmadd_sd(__m128d __W, __m128d __X, __m128d __Y, __mmask8 
 
 __m128d test_mm_mask3_fnmadd_round_sd(__m128d __W, __m128d __X, __m128d __Y, __mmask8 __U){
   // CHECK-LABEL: @test_mm_mask3_fnmadd_round_sd
-  // CHECK: [[NEG:%.+]] = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %{{.*}}
+  // CHECK: [[NEG:%.+]] = fneg <2 x double> %{{.*}}
   // CHECK: [[A:%.+]] = extractelement <2 x double> %{{.*}}, i64 0
   // CHECK-NEXT: [[B:%.+]] = extractelement <2 x double> [[NEG]], i64 0
   // CHECK-NEXT: [[C:%.+]] = extractelement <2 x double> [[ORIGC:%.+]], i64 0
@@ -8097,8 +8097,8 @@ __m128d test_mm_mask3_fnmadd_round_sd(__m128d __W, __m128d __X, __m128d __Y, __m
 
 __m128d test_mm_mask_fnmsub_sd(__m128d __W, __mmask8 __U, __m128d __A, __m128d __B){
   // CHECK-LABEL: @test_mm_mask_fnmsub_sd
-  // CHECK: [[NEG:%.+]] = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %{{.*}}
-  // CHECK: [[NEG2:%.+]] = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %{{.*}}
+  // CHECK: [[NEG:%.+]] = fneg <2 x double> %{{.*}}
+  // CHECK: [[NEG2:%.+]] = fneg <2 x double> %{{.*}}
   // CHECK: [[A:%.+]] = extractelement <2 x double> [[ORIGA:%.]], i64 0
   // CHECK-NEXT: [[B:%.+]] = extractelement <2 x double> [[NEG]], i64 0
   // CHECK-NEXT: [[C:%.+]] = extractelement <2 x double> [[NEG2]], i64 0
@@ -8112,8 +8112,8 @@ __m128d test_mm_mask_fnmsub_sd(__m128d __W, __mmask8 __U, __m128d __A, __m128d _
 
 __m128d test_mm_fnmsub_round_sd(__m128d __A, __m128d __B, __m128d __C){
   // CHECK-LABEL: @test_mm_fnmsub_round_sd
-  // CHECK: [[NEG:%.+]] = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %{{.*}}
-  // CHECK: [[NEG2:%.+]] = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %{{.*}}
+  // CHECK: [[NEG:%.+]] = fneg <2 x double> %{{.*}}
+  // CHECK: [[NEG2:%.+]] = fneg <2 x double> %{{.*}}
   // CHECK: [[A:%.+]] = extractelement <2 x double> [[ORIGA:%.]], i64 0
   // CHECK-NEXT: [[B:%.+]] = extractelement <2 x double> [[NEG]], i64 0
   // CHECK-NEXT: [[C:%.+]] = extractelement <2 x double> [[NEG2]], i64 0
@@ -8124,8 +8124,8 @@ __m128d test_mm_fnmsub_round_sd(__m128d __A, __m128d __B, __m128d __C){
 
 __m128d test_mm_mask_fnmsub_round_sd(__m128d __W, __mmask8 __U, __m128d __A, __m128d __B){
   // CHECK-LABEL: @test_mm_mask_fnmsub_round_sd
-  // CHECK: [[NEG:%.+]] = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %{{.*}}
-  // CHECK: [[NEG2:%.+]] = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %{{.*}}
+  // CHECK: [[NEG:%.+]] = fneg <2 x double> %{{.*}}
+  // CHECK: [[NEG2:%.+]] = fneg <2 x double> %{{.*}}
   // CHECK: [[A:%.+]] = extractelement <2 x double> [[ORIGA:%.]], i64 0
   // CHECK-NEXT: [[B:%.+]] = extractelement <2 x double> [[NEG]], i64 0
   // CHECK-NEXT: [[C:%.+]] = extractelement <2 x double> [[NEG2]], i64 0
@@ -8139,8 +8139,8 @@ __m128d test_mm_mask_fnmsub_round_sd(__m128d __W, __mmask8 __U, __m128d __A, __m
 
 __m128d test_mm_maskz_fnmsub_sd(__mmask8 __U, __m128d __A, __m128d __B, __m128d __C){
   // CHECK-LABEL: @test_mm_maskz_fnmsub_sd
-  // CHECK: [[NEG:%.+]] = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %{{.*}}
-  // CHECK: [[NEG2:%.+]] = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %{{.*}}
+  // CHECK: [[NEG:%.+]] = fneg <2 x double> %{{.*}}
+  // CHECK: [[NEG2:%.+]] = fneg <2 x double> %{{.*}}
   // CHECK: [[A:%.+]] = extractelement <2 x double> [[ORIGA:%.]], i64 0
   // CHECK-NEXT: [[B:%.+]] = extractelement <2 x double> [[NEG]], i64 0
   // CHECK-NEXT: [[C:%.+]] = extractelement <2 x double> [[NEG2]], i64 0
@@ -8154,8 +8154,8 @@ __m128d test_mm_maskz_fnmsub_sd(__mmask8 __U, __m128d __A, __m128d __B, __m128d 
 
 __m128d test_mm_maskz_fnmsub_round_sd(__mmask8 __U, __m128d __A, __m128d __B, __m128d __C){
   // CHECK-LABEL: @test_mm_maskz_fnmsub_round_sd
-  // CHECK: [[NEG:%.+]] = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %{{.*}}
-  // CHECK: [[NEG2:%.+]] = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %{{.*}}
+  // CHECK: [[NEG:%.+]] = fneg <2 x double> %{{.*}}
+  // CHECK: [[NEG2:%.+]] = fneg <2 x double> %{{.*}}
   // CHECK: [[A:%.+]] = extractelement <2 x double> [[ORIGA:%.]], i64 0
   // CHECK-NEXT: [[B:%.+]] = extractelement <2 x double> [[NEG]], i64 0
   // CHECK-NEXT: [[C:%.+]] = extractelement <2 x double> [[NEG2]], i64 0
@@ -8169,8 +8169,8 @@ __m128d test_mm_maskz_fnmsub_round_sd(__mmask8 __U, __m128d __A, __m128d __B, __
 
 __m128d test_mm_mask3_fnmsub_sd(__m128d __W, __m128d __X, __m128d __Y, __mmask8 __U){
   // CHECK-LABEL: @test_mm_mask3_fnmsub_sd
-  // CHECK: [[NEG:%.+]] = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %{{.*}}
-  // CHECK: [[NEG2:%.+]] = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, [[ORIGC:%.+]]
+  // CHECK: [[NEG:%.+]] = fneg <2 x double> %{{.*}}
+  // CHECK: [[NEG2:%.+]] = fneg <2 x double> [[ORIGC:%.+]]
   // CHECK: [[A:%.+]] = extractelement <2 x double> %{{.*}}, i64 0
   // CHECK-NEXT: [[B:%.+]] = extractelement <2 x double> [[NEG]], i64 0
   // CHECK-NEXT: [[C:%.+]] = extractelement <2 x double> [[NEG2]], i64 0
@@ -8185,8 +8185,8 @@ __m128d test_mm_mask3_fnmsub_sd(__m128d __W, __m128d __X, __m128d __Y, __mmask8 
 
 __m128d test_mm_mask3_fnmsub_round_sd(__m128d __W, __m128d __X, __m128d __Y, __mmask8 __U){
   // CHECK-LABEL: @test_mm_mask3_fnmsub_round_sd
-  // CHECK: [[NEG:%.+]] = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %{{.*}}
-  // CHECK: [[NEG2:%.+]] = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, [[ORIGC:%.+]]
+  // CHECK: [[NEG:%.+]] = fneg <2 x double> %{{.*}}
+  // CHECK: [[NEG2:%.+]] = fneg <2 x double> [[ORIGC:%.+]]
   // CHECK: [[A:%.+]] = extractelement <2 x double> %{{.*}}, i64 0
   // CHECK-NEXT: [[B:%.+]] = extractelement <2 x double> [[NEG]], i64 0
   // CHECK-NEXT: [[C:%.+]] = extractelement <2 x double> [[NEG2]], i64 0

@@ -75,6 +75,7 @@ clang_target_link_libraries(ToolingTests
   clangToolingCore
   clangToolingInclusions
   clangToolingRefactoring
+  clangTransformer
   )
 
 target_link_libraries(ToolingTests
