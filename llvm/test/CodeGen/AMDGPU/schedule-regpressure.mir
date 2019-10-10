@@ -17,7 +17,7 @@ regBankSelected: false
 selected:        false
 tracksRegLiveness: true
 registers:
-  - { id: 0, class: sreg_128 }
+  - { id: 0, class: sgpr_128 }
   - { id: 1, class: sgpr_64 }
   - { id: 2, class: sreg_32_xm0 }
   - { id: 3, class: sgpr_32 }

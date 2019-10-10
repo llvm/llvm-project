@@ -12,7 +12,7 @@
 
 ; CHECK:      .debug_loclists contents:
 ; CHECK-NEXT: 0x00000000: locations list header: length = 0x00000015, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
-; CHECK-NEXT: 0x00000000:
+; CHECK-NEXT: 0x0000000c:
 ; CHECK-NEXT:  [0x0000000000000000, 0x0000000000000004): DW_OP_breg5 RDI+0
 ; CHECK-NEXT:  [0x0000000000000004, 0x0000000000000012): DW_OP_breg3 RBX+0
 

@@ -42,5 +42,5 @@ body: |
 
   bb.2:
   ; predecessors: %bb.0, %bb.1
-    RETURN_VOID implicit-def dead $arguments
+    RETURN implicit-def dead $arguments
 ...

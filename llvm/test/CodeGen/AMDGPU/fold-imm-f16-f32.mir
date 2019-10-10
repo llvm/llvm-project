@@ -131,7 +131,7 @@ registers:
   - { id: 7, class: sreg_32 }
   - { id: 8, class: sreg_32 }
   - { id: 9, class: sreg_32 }
-  - { id: 10, class: sreg_128 }
+  - { id: 10, class: sgpr_128 }
   - { id: 11, class: vgpr_32 }
   - { id: 12, class: vgpr_32 }
   - { id: 13, class: vgpr_32 }
@@ -193,7 +193,7 @@ registers:
   - { id: 7, class: sreg_32 }
   - { id: 8, class: sreg_32 }
   - { id: 9, class: sreg_32 }
-  - { id: 10, class: sreg_128 }
+  - { id: 10, class: sgpr_128 }
   - { id: 11, class: vgpr_32 }
   - { id: 12, class: vgpr_32 }
   - { id: 13, class: vgpr_32 }
@@ -259,7 +259,7 @@ registers:
   - { id: 7, class: sreg_32 }
   - { id: 8, class: sreg_32 }
   - { id: 9, class: sreg_32 }
-  - { id: 10, class: sreg_128 }
+  - { id: 10, class: sgpr_128 }
   - { id: 11, class: vgpr_32 }
   - { id: 12, class: vgpr_32 }
   - { id: 13, class: vgpr_32 }
@@ -329,7 +329,7 @@ registers:
   - { id: 7, class: sreg_32 }
   - { id: 8, class: sreg_32 }
   - { id: 9, class: sreg_32 }
-  - { id: 10, class: sreg_128 }
+  - { id: 10, class: sgpr_128 }
   - { id: 11, class: vgpr_32 }
   - { id: 12, class: vgpr_32 }
   - { id: 13, class: vgpr_32 }
@@ -398,7 +398,7 @@ registers:
   - { id: 7, class: sreg_32 }
   - { id: 8, class: sreg_32 }
   - { id: 9, class: sreg_32 }
-  - { id: 10, class: sreg_128 }
+  - { id: 10, class: sgpr_128 }
   - { id: 11, class: vgpr_32 }
   - { id: 12, class: vgpr_32 }
   - { id: 13, class: vgpr_32 }
@@ -463,7 +463,7 @@ registers:
   - { id: 7, class: sreg_32 }
   - { id: 8, class: sreg_32 }
   - { id: 9, class: sreg_32 }
-  - { id: 10, class: sreg_128 }
+  - { id: 10, class: sgpr_128 }
   - { id: 11, class: vgpr_32 }
   - { id: 12, class: vgpr_32 }
   - { id: 13, class: vgpr_32 }
@@ -535,7 +535,7 @@ registers:
   - { id: 7, class: sreg_32 }
   - { id: 8, class: sreg_32 }
   - { id: 9, class: sreg_32 }
-  - { id: 10, class: sreg_128 }
+  - { id: 10, class: sgpr_128 }
   - { id: 11, class: vgpr_32 }
   - { id: 12, class: vgpr_32 }
   - { id: 13, class: vgpr_32 }
@@ -602,7 +602,7 @@ registers:
   - { id: 7, class: sreg_32 }
   - { id: 8, class: sreg_32 }
   - { id: 9, class: sreg_32 }
-  - { id: 10, class: sreg_128 }
+  - { id: 10, class: sgpr_128 }
   - { id: 11, class: vgpr_32 }
   - { id: 12, class: vgpr_32 }
   - { id: 13, class: vgpr_32 }
@@ -668,7 +668,7 @@ registers:
   - { id: 7, class: sreg_32 }
   - { id: 8, class: sreg_32 }
   - { id: 9, class: sreg_32 }
-  - { id: 10, class: sreg_128 }
+  - { id: 10, class: sgpr_128 }
   - { id: 11, class: vgpr_32 }
   - { id: 12, class: vgpr_32 }
   - { id: 13, class: vgpr_32 }

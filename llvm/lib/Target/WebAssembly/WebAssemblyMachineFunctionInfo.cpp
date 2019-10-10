@@ -49,10 +49,12 @@ void llvm::computeSignatureVTs(const FunctionType *Ty, const Function &F,
   computeLegalValueVTs(F, TM, Ty->getReturnType(), Results);
 
   MVT PtrVT = MVT::getIntegerVT(TM.createDataLayout().getPointerSizeInBits());
-  if (Results.size() > 1) {
-    // WebAssembly currently can't lower returns of multiple values without
-    // demoting to sret (see WebAssemblyTargetLowering::CanLowerReturn). So
-    // replace multiple return values with a pointer parameter.
+  if (Results.size() > 1 &&
+      !TM.getSubtarget<WebAssemblySubtarget>(F).hasMultivalue()) {
+    // WebAssembly can't lower returns of multiple values without demoting to
+    // sret unless multivalue is enabled (see
+    // WebAssemblyTargetLowering::CanLowerReturn). So replace multiple return
+    // values with a poitner parameter.
     Results.clear();
     Params.push_back(PtrVT);
   }

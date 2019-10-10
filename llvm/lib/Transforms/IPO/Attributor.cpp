@@ -139,8 +139,8 @@ static cl::opt<unsigned> DepRecInterval(
 static cl::opt<bool> EnableHeapToStack("enable-heap-to-stack-conversion",
                                        cl::init(true), cl::Hidden);
 
-static cl::opt<int> MaxHeapToStackSize("max-heap-to-stack-size",
-                                       cl::init(128), cl::Hidden);
+static cl::opt<int> MaxHeapToStackSize("max-heap-to-stack-size", cl::init(128),
+                                       cl::Hidden);
 
 /// Logic operators for the change status enum class.
 ///
@@ -1907,7 +1907,11 @@ struct AANoAliasFloating final : AANoAliasImpl {
   /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     AANoAliasImpl::initialize(A);
-    if (isa<AllocaInst>(getAnchorValue()))
+    Value &Val = getAssociatedValue();
+    if (isa<AllocaInst>(Val))
+      indicateOptimisticFixpoint();
+    if (isa<ConstantPointerNull>(Val) &&
+        Val.getType()->getPointerAddressSpace() == 0)
       indicateOptimisticFixpoint();
   }
 
@@ -1971,8 +1975,12 @@ struct AANoAliasCallSiteArgument final : AANoAliasImpl {
     //             check only uses possibly executed before this callsite.
 
     auto &NoCaptureAA = A.getAAFor<AANoCapture>(*this, IRP);
-    if (!NoCaptureAA.isAssumedNoCaptureMaybeReturned())
+    if (!NoCaptureAA.isAssumedNoCaptureMaybeReturned()) {
+      LLVM_DEBUG(
+          dbgs() << "[Attributor][AANoAliasCSArg] " << V
+                 << " cannot be noalias as it is potentially captured\n");
       return indicatePessimisticFixpoint();
+    }
 
     // (iii) Check there is no other pointer argument which could alias with the
     // value.
@@ -1986,13 +1994,15 @@ struct AANoAliasCallSiteArgument final : AANoAliasImpl {
 
       if (const Function *F = getAnchorScope()) {
         if (AAResults *AAR = A.getInfoCache().getAAResultsForFunction(*F)) {
+          bool IsAliasing = AAR->isNoAlias(&getAssociatedValue(), ArgOp);
           LLVM_DEBUG(dbgs()
                      << "[Attributor][NoAliasCSArg] Check alias between "
                         "callsite arguments "
                      << AAR->isNoAlias(&getAssociatedValue(), ArgOp) << " "
-                     << getAssociatedValue() << " " << *ArgOp << "\n");
+                     << getAssociatedValue() << " " << *ArgOp << " => "
+                     << (IsAliasing ? "" : "no-") << "alias \n");
 
-          if (AAR->isNoAlias(&getAssociatedValue(), ArgOp))
+          if (IsAliasing)
             continue;
         }
       }
@@ -2880,6 +2890,13 @@ struct AANoCaptureImpl : public AANoCapture {
   /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     AANoCapture::initialize(A);
+
+    // You cannot "capture" null in the default address space.
+    if (isa<ConstantPointerNull>(getAssociatedValue()) &&
+        getAssociatedValue().getType()->getPointerAddressSpace() == 0) {
+      indicateOptimisticFixpoint();
+      return;
+    }
 
     const IRPosition &IRP = getIRPosition();
     const Function *F =

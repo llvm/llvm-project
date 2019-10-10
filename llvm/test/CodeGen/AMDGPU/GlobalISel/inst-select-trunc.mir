@@ -128,7 +128,7 @@ body: |
   bb.0:
     liveins: $sgpr0_sgpr1_sgpr2_sgpr3
     ; GCN-LABEL: name: trunc_sgpr_s128_to_s16
-    ; GCN: [[COPY:%[0-9]+]]:sreg_128 = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+    ; GCN: [[COPY:%[0-9]+]]:sgpr_128 = COPY $sgpr0_sgpr1_sgpr2_sgpr3
     ; GCN: [[COPY1:%[0-9]+]]:sreg_32_xm0 = COPY [[COPY]].sub0
     ; GCN: S_ENDPGM 0, implicit [[COPY1]]
     %0:sgpr(s128) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
@@ -163,7 +163,7 @@ body: |
     liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7
     ; GCN-LABEL: name: trunc_sgpr_s256_to_s128
     ; GCN: [[COPY:%[0-9]+]]:sreg_256 = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7
-    ; GCN: [[COPY1:%[0-9]+]]:sreg_128 = COPY [[COPY]].sub0_sub1_sub2_sub3
+    ; GCN: [[COPY1:%[0-9]+]]:sgpr_128 = COPY [[COPY]].sub0_sub1_sub2_sub3
     ; GCN: S_ENDPGM 0, implicit [[COPY1]]
     %0:sgpr(s256) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7
     %1:sgpr(s128) = G_TRUNC %0

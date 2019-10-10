@@ -9,7 +9,7 @@ define amdgpu_cs void @mmo_offsets0(<4 x i32> addrspace(6)* inreg noalias derefe
   ; GCN:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
   ; GCN:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 0
   ; GCN:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[S_MOV_B32_]], %subreg.sub1
-  ; GCN:   [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sreg_128 = S_LOAD_DWORDX4_IMM killed [[REG_SEQUENCE]], 0, 0, 0 :: (dereferenceable invariant load 16 from %ir.arg0, addrspace 6)
+  ; GCN:   [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM killed [[REG_SEQUENCE]], 0, 0, 0 :: (dereferenceable invariant load 16 from %ir.arg0, addrspace 6)
   ; GCN:   [[BUFFER_LOAD_DWORDX4_OFFSET:%[0-9]+]]:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET [[S_LOAD_DWORDX4_IMM]], [[S_MOV_B32_]], 16, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 16 from custom TargetCustom7 + 16, align 1, addrspace 4)
   ; GCN:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
   ; GCN:   [[BUFFER_LOAD_DWORDX4_IDXEN:%[0-9]+]]:vreg_128 = BUFFER_LOAD_DWORDX4_IDXEN [[V_MOV_B32_e32_]], [[S_LOAD_DWORDX4_IMM]], [[S_MOV_B32_]], 16, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 16 from custom TargetCustom7, align 1, addrspace 4)

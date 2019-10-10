@@ -325,7 +325,7 @@ body: |
 name:          smem_bundle
 tracksRegLiveness: true
 registers:
-  - { id: 0, class: sreg_128, preferred-register: '$sgpr0_sgpr1_sgpr2_sgpr3' }
+  - { id: 0, class: sgpr_128, preferred-register: '$sgpr0_sgpr1_sgpr2_sgpr3' }
   - { id: 1, class: sreg_32_xm0_xexec, preferred-register: '$sgpr16' }
   - { id: 2, class: sreg_32_xm0_xexec, preferred-register: '$sgpr17' }
   - { id: 3, class: sreg_32_xm0_xexec, preferred-register: '$sgpr4' }

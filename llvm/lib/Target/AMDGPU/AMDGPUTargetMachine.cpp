@@ -1052,7 +1052,7 @@ bool GCNTargetMachine::parseMachineFunctionInfo(
     return true;
 
   if (MFI->ScratchRSrcReg != AMDGPU::PRIVATE_RSRC_REG &&
-      !AMDGPU::SReg_128RegClass.contains(MFI->ScratchRSrcReg)) {
+      !AMDGPU::SGPR_128RegClass.contains(MFI->ScratchRSrcReg)) {
     return diagnoseRegisterClass(YamlMFI.ScratchRSrcReg);
   }
 
@@ -1101,7 +1101,7 @@ bool GCNTargetMachine::parseMachineFunctionInfo(
 
   if (YamlMFI.ArgInfo &&
       (parseAndCheckArgument(YamlMFI.ArgInfo->PrivateSegmentBuffer,
-                             AMDGPU::SReg_128RegClass,
+                             AMDGPU::SGPR_128RegClass,
                              MFI->ArgInfo.PrivateSegmentBuffer, 4, 0) ||
        parseAndCheckArgument(YamlMFI.ArgInfo->DispatchPtr,
                              AMDGPU::SReg_64RegClass, MFI->ArgInfo.DispatchPtr,

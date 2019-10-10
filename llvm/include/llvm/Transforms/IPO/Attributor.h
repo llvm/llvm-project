@@ -899,13 +899,12 @@ struct Attributor {
   const DataLayout &getDataLayout() const { return InfoCache.DL; }
 
 private:
-
   /// The private version of getAAFor that allows to omit a querying abstract
   /// attribute. See also the public getAAFor method.
   template <typename AAType>
   const AAType &getOrCreateAAFor(const IRPosition &IRP,
-                         const AbstractAttribute *QueryingAA = nullptr,
-                         bool TrackDependence = false) {
+                                 const AbstractAttribute *QueryingAA = nullptr,
+                                 bool TrackDependence = false) {
     if (const AAType *AAPtr =
             lookupAAFor<AAType>(IRP, QueryingAA, TrackDependence))
       return *AAPtr;
@@ -1417,7 +1416,8 @@ struct AAReturnedValues
       const function_ref<bool(Value &, const SmallSetVector<ReturnInst *, 4> &)>
           &Pred) const = 0;
 
-  using iterator = MapVector<Value *, SmallSetVector<ReturnInst *, 4>>::iterator;
+  using iterator =
+      MapVector<Value *, SmallSetVector<ReturnInst *, 4>>::iterator;
   using const_iterator =
       MapVector<Value *, SmallSetVector<ReturnInst *, 4>>::const_iterator;
   virtual llvm::iterator_range<iterator> returned_values() = 0;

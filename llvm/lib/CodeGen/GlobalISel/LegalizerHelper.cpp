@@ -2767,6 +2767,65 @@ LegalizerHelper::fewerElementsVectorUnmergeValues(MachineInstr &MI,
 }
 
 LegalizerHelper::LegalizeResult
+LegalizerHelper::fewerElementsVectorBuildVector(MachineInstr &MI,
+                                                unsigned TypeIdx,
+                                                LLT NarrowTy) {
+  assert(TypeIdx == 0 && "not a vector type index");
+  Register DstReg = MI.getOperand(0).getReg();
+  LLT DstTy = MRI.getType(DstReg);
+  LLT SrcTy = DstTy.getElementType();
+
+  int DstNumElts = DstTy.getNumElements();
+  int NarrowNumElts = NarrowTy.getNumElements();
+  int NumConcat = (DstNumElts + NarrowNumElts - 1) / NarrowNumElts;
+  LLT WidenedDstTy = LLT::vector(NarrowNumElts * NumConcat, SrcTy);
+
+  SmallVector<Register, 8> ConcatOps;
+  SmallVector<Register, 8> SubBuildVector;
+
+  Register UndefReg;
+  if (WidenedDstTy != DstTy)
+    UndefReg = MIRBuilder.buildUndef(SrcTy).getReg(0);
+
+  // Create a G_CONCAT_VECTORS of NarrowTy pieces, padding with undef as
+  // necessary.
+  //
+  // %3:_(<3 x s16>) = G_BUILD_VECTOR %0, %1, %2
+  //   -> <2 x s16>
+  //
+  // %4:_(s16) = G_IMPLICIT_DEF
+  // %5:_(<2 x s16>) = G_BUILD_VECTOR %0, %1
+  // %6:_(<2 x s16>) = G_BUILD_VECTOR %2, %4
+  // %7:_(<4 x s16>) = G_CONCAT_VECTORS %5, %6
+  // %3:_(<3 x s16>) = G_EXTRACT %7, 0
+  for (int I = 0; I != NumConcat; ++I) {
+    for (int J = 0; J != NarrowNumElts; ++J) {
+      int SrcIdx = NarrowNumElts * I + J;
+
+      if (SrcIdx < DstNumElts) {
+        Register SrcReg = MI.getOperand(SrcIdx + 1).getReg();
+        SubBuildVector.push_back(SrcReg);
+      } else
+        SubBuildVector.push_back(UndefReg);
+    }
+
+    auto BuildVec = MIRBuilder.buildBuildVector(NarrowTy, SubBuildVector);
+    ConcatOps.push_back(BuildVec.getReg(0));
+    SubBuildVector.clear();
+  }
+
+  if (DstTy == WidenedDstTy)
+    MIRBuilder.buildConcatVectors(DstReg, ConcatOps);
+  else {
+    auto Concat = MIRBuilder.buildConcatVectors(WidenedDstTy, ConcatOps);
+    MIRBuilder.buildExtract(DstReg, Concat, 0);
+  }
+
+  MI.eraseFromParent();
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult
 LegalizerHelper::reduceLoadStoreWidth(MachineInstr &MI, unsigned TypeIdx,
                                       LLT NarrowTy) {
   // FIXME: Don't know how to handle secondary types yet.
@@ -2941,6 +3000,8 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
     return fewerElementsVectorPhi(MI, TypeIdx, NarrowTy);
   case G_UNMERGE_VALUES:
     return fewerElementsVectorUnmergeValues(MI, TypeIdx, NarrowTy);
+  case G_BUILD_VECTOR:
+    return fewerElementsVectorBuildVector(MI, TypeIdx, NarrowTy);
   case G_LOAD:
   case G_STORE:
     return reduceLoadStoreWidth(MI, TypeIdx, NarrowTy);

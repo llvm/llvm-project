@@ -1079,3 +1079,23 @@ define void @vselect_split_v16i16_setcc(<16 x i16> %s, <16 x i16> %t, <16 x i32>
   store <16 x i32> %b, <16 x i32>* %r
   ret void
 }
+
+define <16 x i8> @trunc_packus_v16i32_v16i8(<16 x i32>* %p, <16 x i8>* %q) "min-legal-vector-width"="256" {
+; CHECK-LABEL: trunc_packus_v16i32_v16i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vpmaxsd 32(%rdi), %ymm0, %ymm1
+; CHECK-NEXT:    vpmovusdb %ymm1, %xmm1
+; CHECK-NEXT:    vpmaxsd (%rdi), %ymm0, %ymm0
+; CHECK-NEXT:    vpmovusdb %ymm0, %xmm0
+; CHECK-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %a = load <16 x i32>, <16 x i32>* %p
+  %b = icmp slt <16 x i32> %a, <i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255>
+  %c = select <16 x i1> %b, <16 x i32> %a, <16 x i32> <i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255>
+  %d = icmp sgt <16 x i32> %c, zeroinitializer
+  %e = select <16 x i1> %d, <16 x i32> %c, <16 x i32> zeroinitializer
+  %f = trunc <16 x i32> %e to <16 x i8>
+  ret <16 x i8> %f
+}

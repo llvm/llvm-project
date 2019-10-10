@@ -6,6 +6,7 @@ For those new to the LLVM system.
 .. toctree::
    :hidden:
 
+   CompilerWriterInfo
    Frontend/PerformanceTips
    GettingStarted
    GettingStartedVS
@@ -32,3 +33,6 @@ For those new to the LLVM system.
 :doc:`GettingStartedVS`
    An addendum to the main Getting Started guide for those using Visual Studio
    on Windows.
+
+:doc:`CompilerWriterInfo`
+  A list of helpful links for compiler writers.

@@ -4859,6 +4859,8 @@ bool X86TargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
 bool X86TargetLowering::shouldReduceLoadWidth(SDNode *Load,
                                               ISD::LoadExtType ExtTy,
                                               EVT NewVT) const {
+  assert(cast<LoadSDNode>(Load)->isSimple() && "illegal to narrow");
+  
   // "ELF Handling for Thread-Local Storage" specifies that R_X86_64_GOTTPOFF
   // relocation target a movq or addq instruction: don't let the load shrink.
   SDValue BasePtr = cast<LoadSDNode>(Load)->getBasePtr();
@@ -7724,7 +7726,7 @@ static SDValue LowerAsSplatVectorLoad(SDValue SrcOp, MVT VT, const SDLoc &dl,
 static bool findEltLoadSrc(SDValue Elt, LoadSDNode *&Ld, int64_t &ByteOffset) {
   if (ISD::isNON_EXTLoad(Elt.getNode())) {
     auto *BaseLd = cast<LoadSDNode>(Elt);
-    if (BaseLd->getMemOperand()->getFlags() & MachineMemOperand::MOVolatile)
+    if (!BaseLd->isSimple())
       return false;
     Ld = BaseLd;
     ByteOffset = 0;
@@ -7878,8 +7880,8 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
 
   auto CreateLoad = [&DAG, &DL, &Loads](EVT VT, LoadSDNode *LDBase) {
     auto MMOFlags = LDBase->getMemOperand()->getFlags();
-    assert(!(MMOFlags & MachineMemOperand::MOVolatile) &&
-           "Cannot merge volatile loads.");
+    assert(LDBase->isSimple() &&
+           "Cannot merge volatile or atomic loads.");
     SDValue NewLd =
         DAG.getLoad(VT, DL, LDBase->getChain(), LDBase->getBasePtr(),
                     LDBase->getPointerInfo(), LDBase->getAlignment(), MMOFlags);

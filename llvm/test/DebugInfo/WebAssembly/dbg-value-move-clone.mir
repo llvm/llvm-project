@@ -60,6 +60,6 @@ body: |
   bb.1:
     CALL_VOID @foo, %1:i32, implicit-def dead $arguments, implicit $sp32, implicit $sp64
     CALL_VOID @foo, %1:i32, implicit-def dead $arguments, implicit $sp32, implicit $sp64
-    RETURN_VOID implicit-def dead $arguments
+    RETURN implicit-def dead $arguments
 
 ...

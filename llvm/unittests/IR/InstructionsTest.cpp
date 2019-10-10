@@ -1115,5 +1115,20 @@ if.end:
   EXPECT_EQ(ArgBA->getBasicBlock(), &IfThen);
 }
 
+TEST(InstructionsTest, UnaryOperator) {
+  LLVMContext Context;
+  IRBuilder<> Builder(Context);
+  Instruction *I = Builder.CreatePHI(Builder.getDoubleTy(), 0);
+  Value *F = Builder.CreateFNeg(I);
+
+  EXPECT_TRUE(isa<Value>(F));
+  EXPECT_TRUE(isa<Instruction>(F));
+  EXPECT_TRUE(isa<UnaryInstruction>(F));
+  EXPECT_TRUE(isa<UnaryOperator>(F));
+  EXPECT_FALSE(isa<BinaryOperator>(F));
+
+  F->deleteValue();
+}
+
 } // end anonymous namespace
 } // end namespace llvm

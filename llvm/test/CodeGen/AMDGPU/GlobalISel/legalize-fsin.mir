@@ -344,12 +344,12 @@ body: |
     ; SI: [[INT4:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.fract), [[FMUL2]](s32)
     ; SI: [[INT5:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.sin), [[INT4]](s32)
     ; SI: [[FPTRUNC2:%[0-9]+]]:_(s16) = G_FPTRUNC [[INT5]](s32)
-    ; SI: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[FPTRUNC]](s16)
-    ; SI: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[FPTRUNC1]](s16)
-    ; SI: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[FPTRUNC2]](s16)
-    ; SI: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[ANYEXT]](s32), [[ANYEXT1]](s32), [[ANYEXT2]](s32)
-    ; SI: [[TRUNC3:%[0-9]+]]:_(<3 x s16>) = G_TRUNC [[BUILD_VECTOR]](<3 x s32>)
-    ; SI: S_NOP 0, implicit [[TRUNC3]](<3 x s16>)
+    ; SI: [[DEF2:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+    ; SI: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[FPTRUNC]](s16), [[FPTRUNC1]](s16)
+    ; SI: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[FPTRUNC2]](s16), [[DEF2]](s16)
+    ; SI: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR]](<2 x s16>), [[BUILD_VECTOR1]](<2 x s16>)
+    ; SI: [[EXTRACT1:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[CONCAT_VECTORS]](<4 x s16>), 0
+    ; SI: S_NOP 0, implicit [[EXTRACT1]](<3 x s16>)
     ; VI-LABEL: name: test_fsin_v3s16
     ; VI: [[DEF:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
     ; VI: [[EXTRACT:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[DEF]](<4 x s16>), 0
@@ -374,12 +374,12 @@ body: |
     ; VI: [[FMUL2:%[0-9]+]]:_(s16) = G_FMUL [[TRUNC2]], [[C1]]
     ; VI: [[INT4:%[0-9]+]]:_(s16) = G_INTRINSIC intrinsic(@llvm.amdgcn.fract), [[FMUL2]](s16)
     ; VI: [[INT5:%[0-9]+]]:_(s16) = G_INTRINSIC intrinsic(@llvm.amdgcn.sin), [[INT4]](s16)
-    ; VI: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[INT1]](s16)
-    ; VI: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[INT3]](s16)
-    ; VI: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[INT5]](s16)
-    ; VI: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[ANYEXT]](s32), [[ANYEXT1]](s32), [[ANYEXT2]](s32)
-    ; VI: [[TRUNC3:%[0-9]+]]:_(<3 x s16>) = G_TRUNC [[BUILD_VECTOR]](<3 x s32>)
-    ; VI: S_NOP 0, implicit [[TRUNC3]](<3 x s16>)
+    ; VI: [[DEF2:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+    ; VI: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[INT1]](s16), [[INT3]](s16)
+    ; VI: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[INT5]](s16), [[DEF2]](s16)
+    ; VI: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR]](<2 x s16>), [[BUILD_VECTOR1]](<2 x s16>)
+    ; VI: [[EXTRACT1:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[CONCAT_VECTORS]](<4 x s16>), 0
+    ; VI: S_NOP 0, implicit [[EXTRACT1]](<3 x s16>)
     ; GFX9-LABEL: name: test_fsin_v3s16
     ; GFX9: [[DEF:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
     ; GFX9: [[EXTRACT:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[DEF]](<4 x s16>), 0
@@ -401,12 +401,12 @@ body: |
     ; GFX9: [[INT1:%[0-9]+]]:_(s16) = G_INTRINSIC intrinsic(@llvm.amdgcn.sin), [[FMUL1]](s16)
     ; GFX9: [[FMUL2:%[0-9]+]]:_(s16) = G_FMUL [[TRUNC2]], [[C1]]
     ; GFX9: [[INT2:%[0-9]+]]:_(s16) = G_INTRINSIC intrinsic(@llvm.amdgcn.sin), [[FMUL2]](s16)
-    ; GFX9: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[INT]](s16)
-    ; GFX9: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[INT1]](s16)
-    ; GFX9: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[INT2]](s16)
-    ; GFX9: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[ANYEXT]](s32), [[ANYEXT1]](s32), [[ANYEXT2]](s32)
-    ; GFX9: [[TRUNC3:%[0-9]+]]:_(<3 x s16>) = G_TRUNC [[BUILD_VECTOR]](<3 x s32>)
-    ; GFX9: S_NOP 0, implicit [[TRUNC3]](<3 x s16>)
+    ; GFX9: [[DEF2:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+    ; GFX9: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[INT]](s16), [[INT1]](s16)
+    ; GFX9: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[INT2]](s16), [[DEF2]](s16)
+    ; GFX9: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR]](<2 x s16>), [[BUILD_VECTOR1]](<2 x s16>)
+    ; GFX9: [[EXTRACT1:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[CONCAT_VECTORS]](<4 x s16>), 0
+    ; GFX9: S_NOP 0, implicit [[EXTRACT1]](<3 x s16>)
     %0:_(<3 x s16>) = G_IMPLICIT_DEF
     %1:_(<3 x s16>) = G_FSIN %0
     S_NOP 0, implicit %1
@@ -451,8 +451,10 @@ body: |
     ; SI: [[INT6:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.fract), [[FMUL3]](s32)
     ; SI: [[INT7:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.sin), [[INT6]](s32)
     ; SI: [[FPTRUNC3:%[0-9]+]]:_(s16) = G_FPTRUNC [[INT7]](s32)
-    ; SI: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s16>) = G_BUILD_VECTOR [[FPTRUNC]](s16), [[FPTRUNC1]](s16), [[FPTRUNC2]](s16), [[FPTRUNC3]](s16)
-    ; SI: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<4 x s16>)
+    ; SI: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[FPTRUNC]](s16), [[FPTRUNC1]](s16)
+    ; SI: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[FPTRUNC2]](s16), [[FPTRUNC3]](s16)
+    ; SI: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR]](<2 x s16>), [[BUILD_VECTOR1]](<2 x s16>)
+    ; SI: $vgpr0_vgpr1 = COPY [[CONCAT_VECTORS]](<4 x s16>)
     ; VI-LABEL: name: test_fsin_v4s16
     ; VI: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $vgpr0_vgpr1
     ; VI: [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[COPY]](<4 x s16>)
@@ -478,8 +480,10 @@ body: |
     ; VI: [[FMUL3:%[0-9]+]]:_(s16) = G_FMUL [[TRUNC3]], [[C1]]
     ; VI: [[INT6:%[0-9]+]]:_(s16) = G_INTRINSIC intrinsic(@llvm.amdgcn.fract), [[FMUL3]](s16)
     ; VI: [[INT7:%[0-9]+]]:_(s16) = G_INTRINSIC intrinsic(@llvm.amdgcn.sin), [[INT6]](s16)
-    ; VI: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s16>) = G_BUILD_VECTOR [[INT1]](s16), [[INT3]](s16), [[INT5]](s16), [[INT7]](s16)
-    ; VI: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<4 x s16>)
+    ; VI: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[INT1]](s16), [[INT3]](s16)
+    ; VI: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[INT5]](s16), [[INT7]](s16)
+    ; VI: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR]](<2 x s16>), [[BUILD_VECTOR1]](<2 x s16>)
+    ; VI: $vgpr0_vgpr1 = COPY [[CONCAT_VECTORS]](<4 x s16>)
     ; GFX9-LABEL: name: test_fsin_v4s16
     ; GFX9: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $vgpr0_vgpr1
     ; GFX9: [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[COPY]](<4 x s16>)
@@ -501,8 +505,10 @@ body: |
     ; GFX9: [[INT2:%[0-9]+]]:_(s16) = G_INTRINSIC intrinsic(@llvm.amdgcn.sin), [[FMUL2]](s16)
     ; GFX9: [[FMUL3:%[0-9]+]]:_(s16) = G_FMUL [[TRUNC3]], [[C1]]
     ; GFX9: [[INT3:%[0-9]+]]:_(s16) = G_INTRINSIC intrinsic(@llvm.amdgcn.sin), [[FMUL3]](s16)
-    ; GFX9: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s16>) = G_BUILD_VECTOR [[INT]](s16), [[INT1]](s16), [[INT2]](s16), [[INT3]](s16)
-    ; GFX9: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<4 x s16>)
+    ; GFX9: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[INT]](s16), [[INT1]](s16)
+    ; GFX9: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[INT2]](s16), [[INT3]](s16)
+    ; GFX9: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR]](<2 x s16>), [[BUILD_VECTOR1]](<2 x s16>)
+    ; GFX9: $vgpr0_vgpr1 = COPY [[CONCAT_VECTORS]](<4 x s16>)
     %0:_(<4 x s16>) = COPY $vgpr0_vgpr1
     %1:_(<4 x s16>) = G_FSIN %0
     $vgpr0_vgpr1 = COPY %1

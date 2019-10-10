@@ -187,12 +187,11 @@ DWARFDebugLoclists::parseOneLocationList(const DataExtractor &Data,
   return LL;
 }
 
-void DWARFDebugLoclists::parse(DataExtractor data, unsigned Version) {
+void DWARFDebugLoclists::parse(DataExtractor data, uint64_t Offset, uint64_t EndOffset, uint16_t Version) {
   IsLittleEndian = data.isLittleEndian();
   AddressSize = data.getAddressSize();
 
-  uint64_t Offset = 0;
-  while (Offset < data.getData().size()) {
+  while (Offset < EndOffset) {
     if (auto LL = parseOneLocationList(data, &Offset, Version))
       Locations.push_back(std::move(*LL));
     else {

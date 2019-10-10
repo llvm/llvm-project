@@ -6,10 +6,10 @@ name: copy_i32
 body: |
   ; CHECK-LABEL: bb.0:
   ; CHECK-NEXT: %0:i32 = COPY_I32 %1:i32
-  ; CHECK-NEXT: RETURN_VOID
+  ; CHECK-NEXT: RETURN
   bb.0:
     %0:i32 = COPY %1:i32
-    RETURN_VOID implicit-def $arguments
+    RETURN implicit-def $arguments
 ...
 ---
 name: copy_i64
@@ -17,10 +17,10 @@ name: copy_i64
 body:             |
   ; CHECK-LABEL: bb.0:
   ; CHECK-NEXT: %0:i64 = COPY_I64 %1:i64
-  ; CHECK-NEXT: RETURN_VOID
+  ; CHECK-NEXT: RETURN
   bb.0:
     %0:i64 = COPY %1:i64
-    RETURN_VOID implicit-def $arguments
+    RETURN implicit-def $arguments
 ...
 ---
 name: copy_f32
@@ -28,10 +28,10 @@ name: copy_f32
 body: |
   ; CHECK-LABEL: bb.0:
   ; CHECK-NEXT: %0:f32 = COPY_F32 %1:f32
-  ; CHECK-NEXT: RETURN_VOID
+  ; CHECK-NEXT: RETURN
   bb.0:
     %0:f32 = COPY %1:f32
-    RETURN_VOID implicit-def $arguments
+    RETURN implicit-def $arguments
 ...
 ---
 name: copy_f64
@@ -39,10 +39,10 @@ name: copy_f64
 body: |
   ; CHECK-LABEL: bb.0:
   ; CHECK-NEXT: %0:f64 = COPY_F64 %1:f64
-  ; CHECK-NEXT: RETURN_VOID
+  ; CHECK-NEXT: RETURN
   bb.0:
     %0:f64 = COPY %1:f64
-    RETURN_VOID implicit-def $arguments
+    RETURN implicit-def $arguments
 ...
 ---
 name: copy_v128
@@ -50,10 +50,10 @@ name: copy_v128
 body: |
   ; CHECK-LABEL: bb.0:
   ; CHECK-NEXT: %0:v128 = COPY_V128 %1:v128
-  ; CHECK-NEXT: RETURN_VOID
+  ; CHECK-NEXT: RETURN
   bb.0:
     %0:v128 = COPY %1:v128
-    RETURN_VOID implicit-def $arguments
+    RETURN implicit-def $arguments
 ...
 ---
 name: copy_exnref
@@ -61,8 +61,8 @@ name: copy_exnref
 body: |
   ; CHECK-LABEL: bb.0:
   ; CHECK-NEXT: %0:exnref = COPY_EXNREF %1:exnref
-  ; CHECK-NEXT: RETURN_VOID
+  ; CHECK-NEXT: RETURN
   bb.0:
     %0:exnref = COPY %1:exnref
-    RETURN_VOID implicit-def $arguments
+    RETURN implicit-def $arguments
 ...

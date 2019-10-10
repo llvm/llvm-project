@@ -320,5 +320,14 @@ define i1 @captureDereferenceableOrNullICmp(i32* dereferenceable_or_null(4) %x) 
   ret i1 %2
 }
 
+declare void @unknown(i8*)
+define void @test_callsite() {
+entry:
+; We know that 'null' in AS 0 does not alias anything and cannot be captured
+; CHECK: call void @unknown(i8* noalias nocapture null)
+  call void @unknown(i8* null)
+  ret void
+}
+
 declare i8* @llvm.launder.invariant.group.p0i8(i8*)
 declare i8* @llvm.strip.invariant.group.p0i8(i8*)

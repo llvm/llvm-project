@@ -504,7 +504,7 @@ define float @fsub_op0_fmul_const_wrong_FMF(float %x) {
 define float @fold16(float %x, float %y) {
 ; CHECK-LABEL: @fold16(
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt float [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = fsub float -0.000000e+00, [[Y]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg float [[Y]]
 ; CHECK-NEXT:    [[R_P:%.*]] = select i1 [[CMP]], float [[Y]], float [[TMP1]]
 ; CHECK-NEXT:    [[R:%.*]] = fadd float [[R_P]], [[X]]
 ; CHECK-NEXT:    ret float [[R]]

@@ -125,10 +125,10 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   addRegisterClass(MVT::v3i32, &AMDGPU::SGPR_96RegClass);
   addRegisterClass(MVT::v3f32, &AMDGPU::VReg_96RegClass);
 
-  addRegisterClass(MVT::v2i64, &AMDGPU::SReg_128RegClass);
-  addRegisterClass(MVT::v2f64, &AMDGPU::SReg_128RegClass);
+  addRegisterClass(MVT::v2i64, &AMDGPU::SGPR_128RegClass);
+  addRegisterClass(MVT::v2f64, &AMDGPU::SGPR_128RegClass);
 
-  addRegisterClass(MVT::v4i32, &AMDGPU::SReg_128RegClass);
+  addRegisterClass(MVT::v4i32, &AMDGPU::SGPR_128RegClass);
   addRegisterClass(MVT::v4f32, &AMDGPU::VReg_128RegClass);
 
   addRegisterClass(MVT::v5i32, &AMDGPU::SGPR_160RegClass);
@@ -10494,7 +10494,7 @@ MachineSDNode *SITargetLowering::wrapAddr64Rsrc(SelectionDAG &DAG,
 
   // Combine the constants and the pointer.
   const SDValue Ops1[] = {
-    DAG.getTargetConstant(AMDGPU::SReg_128RegClassID, DL, MVT::i32),
+    DAG.getTargetConstant(AMDGPU::SGPR_128RegClassID, DL, MVT::i32),
     Ptr,
     DAG.getTargetConstant(AMDGPU::sub0_sub1, DL, MVT::i32),
     SubRegHi,
@@ -10524,7 +10524,7 @@ MachineSDNode *SITargetLowering::buildRSRC(SelectionDAG &DAG, const SDLoc &DL,
   SDValue DataHi = buildSMovImm32(DAG, DL, RsrcDword2And3 >> 32);
 
   const SDValue Ops[] = {
-    DAG.getTargetConstant(AMDGPU::SReg_128RegClassID, DL, MVT::i32),
+    DAG.getTargetConstant(AMDGPU::SGPR_128RegClassID, DL, MVT::i32),
     PtrLo,
     DAG.getTargetConstant(AMDGPU::sub0, DL, MVT::i32),
     PtrHi,
@@ -10567,7 +10567,7 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
         RC = &AMDGPU::SReg_96RegClass;
         break;
       case 128:
-        RC = &AMDGPU::SReg_128RegClass;
+        RC = &AMDGPU::SGPR_128RegClass;
         break;
       case 160:
         RC = &AMDGPU::SReg_160RegClass;

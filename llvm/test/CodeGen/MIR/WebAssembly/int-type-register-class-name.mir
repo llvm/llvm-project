@@ -9,5 +9,5 @@ body: |
     liveins: $arguments
     %0:i32 = CONST_I32 0, implicit-def dead $arguments
     ; CHECK: %0:i32 = CONST_I32 0, implicit-def dead $arguments
-    RETURN_VOID implicit-def dead $arguments
+    RETURN implicit-def dead $arguments
 ...
