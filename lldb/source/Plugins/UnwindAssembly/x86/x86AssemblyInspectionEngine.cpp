@@ -1371,7 +1371,6 @@ bool x86AssemblyInspectionEngine::AugmentUnwindPlanFromCallSite(
   int row_id = 1;
   bool unwind_plan_updated = false;
   UnwindPlan::RowSP row(new UnwindPlan::Row(*first_row));
-  m_cur_insn = data + offset;
 
   // After a mid-function epilogue we will need to re-insert the original
   // unwind rules so unwinds work for the remainder of the function.  These
@@ -1381,19 +1380,17 @@ bool x86AssemblyInspectionEngine::AugmentUnwindPlanFromCallSite(
   while (offset < size) {
     m_cur_insn = data + offset;
     int insn_len;
-    if (!instruction_length(m_cur_insn, insn_len, size - offset)
-        || insn_len == 0 
-        || insn_len > kMaxInstructionByteSize) {
+    if (!instruction_length(m_cur_insn, insn_len, size - offset) ||
+        insn_len == 0 || insn_len > kMaxInstructionByteSize) {
       // An unrecognized/junk instruction.
       break;
     }
 
     // Advance offsets.
     offset += insn_len;
-    m_cur_insn = data + offset;
 
     // offset is pointing beyond the bounds of the function; stop looping.
-    if (offset >= size) 
+    if (offset >= size)
       continue;
 
     if (reinstate_unwind_state) {
@@ -1547,16 +1544,18 @@ bool x86AssemblyInspectionEngine::AugmentUnwindPlanFromCallSite(
       //     [0x5d] pop %rbp/%ebp
       //  => [0xc3] ret
       if (pop_rbp_pattern_p() || leave_pattern_p()) {
-        offset += 1;
-        row->SetOffset(offset);
-        row->GetCFAValue().SetIsRegisterPlusOffset(
-            first_row->GetCFAValue().GetRegisterNumber(), m_wordsize);
+        m_cur_insn++;
+        if (ret_pattern_p()) {
+          row->SetOffset(offset);
+          row->GetCFAValue().SetIsRegisterPlusOffset(
+              first_row->GetCFAValue().GetRegisterNumber(), m_wordsize);
 
-        UnwindPlan::RowSP new_row(new UnwindPlan::Row(*row));
-        unwind_plan.InsertRow(new_row);
-        unwind_plan_updated = true;
-        reinstate_unwind_state = true;
-        continue;
+          UnwindPlan::RowSP new_row(new UnwindPlan::Row(*row));
+          unwind_plan.InsertRow(new_row);
+          unwind_plan_updated = true;
+          reinstate_unwind_state = true;
+          continue;
+        }
       }
     } else {
       // CFA register is not sp or fp.

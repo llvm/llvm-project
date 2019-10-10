@@ -426,11 +426,18 @@ def parseOptionsAndInitTestdirs():
         configuration.lldb_platform_working_dir = args.lldb_platform_working_dir
     if args.test_build_dir:
         configuration.test_build_dir = args.test_build_dir
-    if args.module_cache_dir:
-        configuration.module_cache_dir = args.module_cache_dir
+    if args.lldb_module_cache_dir:
+        configuration.lldb_module_cache_dir = args.lldb_module_cache_dir
     else:
-        configuration.module_cache_dir = os.path.join(configuration.test_build_dir,
-                                                      'module-cache-lldb')
+        configuration.lldb_module_cache_dir = os.path.join(
+            configuration.test_build_dir, 'module-cache-lldb')
+    if args.clang_module_cache_dir:
+        configuration.clang_module_cache_dir = args.clang_module_cache_dir
+    else:
+        configuration.clang_module_cache_dir = os.path.join(
+            configuration.test_build_dir, 'module-cache-clang')
+
+    os.environ['CLANG_MODULE_CACHE_DIR'] = configuration.clang_module_cache_dir
 
     # Gather all the dirs passed on the command line.
     if len(args.args) > 0:

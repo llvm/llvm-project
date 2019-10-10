@@ -47,6 +47,24 @@ using llvm::Triple;
 using llvm::support::ulittle32_t;
 
 namespace lld {
+
+// Returns the last element of a path, which is supposed to be a filename.
+static StringRef getBasename(StringRef path) {
+  return sys::path::filename(path, sys::path::Style::windows);
+}
+
+// Returns a string in the format of "foo.obj" or "foo.obj(bar.lib)".
+std::string toString(const coff::InputFile *file) {
+  if (!file)
+    return "<internal>";
+  if (file->parentName.empty() || file->kind() == coff::InputFile::ImportKind)
+    return file->getName();
+
+  return (getBasename(file->parentName) + "(" + getBasename(file->getName()) +
+          ")")
+      .str();
+}
+
 namespace coff {
 
 std::vector<ObjFile *> ObjFile::instances;
@@ -908,22 +926,6 @@ std::string replaceThinLTOSuffix(StringRef path) {
     return (path + repl).str();
   return path;
 }
+
 } // namespace coff
 } // namespace lld
-
-// Returns the last element of a path, which is supposed to be a filename.
-static StringRef getBasename(StringRef path) {
-  return sys::path::filename(path, sys::path::Style::windows);
-}
-
-// Returns a string in the format of "foo.obj" or "foo.obj(bar.lib)".
-std::string lld::toString(const coff::InputFile *file) {
-  if (!file)
-    return "<internal>";
-  if (file->parentName.empty() || file->kind() == coff::InputFile::ImportKind)
-    return file->getName();
-
-  return (getBasename(file->parentName) + "(" + getBasename(file->getName()) +
-          ")")
-      .str();
-}

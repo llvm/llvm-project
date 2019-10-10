@@ -171,15 +171,8 @@ endif
 #   o cxx_compiler
 #   o cxx_linker
 #----------------------------------------------------------------------
-CC ?= clang
-ifeq "$(CC)" "cc"
-	ifneq "$(shell which clang)" ""
-		CC = clang
-	else ifneq "$(shell which clang-3.5)" ""
-		CC = clang-3.5
-	else ifneq "$(shell which gcc)" ""
-		CC = gcc
-	endif
+ifeq "$(CC)" ""
+$(error "C compiler is not specified. Please run tests through lldb-dotest or lit")
 endif
 
 #----------------------------------------------------------------------
@@ -311,14 +304,6 @@ endif
 
 ifeq "$(MAKE_DWO)" "YES"
 	CFLAGS += -gsplit-dwarf
-endif
-
-# Use a shared module cache when building in the default test build directory.
-CLANG_MODULE_CACHE_DIR := $(shell echo "$(BUILDDIR)" | sed $(QUOTE)s/lldb-test-build.noindex.*/lldb-test-build.noindex\/module-cache-clang/$(QUOTE))
-
-ifeq "$(findstring lldb-test-build.noindex, $(BUILDDIR))" ""
-CLANG_MODULE_CACHE_DIR := $(BUILDDIR)/module-cache
-$(warning failed to set the shared clang module cache dir)
 endif
 
 MODULE_BASE_FLAGS := -fmodules -gmodules -fmodules-cache-path=$(CLANG_MODULE_CACHE_DIR)

@@ -111,12 +111,11 @@ public:
   ~ExceptionBreakpointResolver() override = default;
 
   Searcher::CallbackReturn SearchCallback(SearchFilter &filter,
-                                          SymbolContext &context, Address *addr,
-                                          bool containing) override {
+                                          SymbolContext &context,
+                                          Address *addr) override {
 
     if (SetActualResolver())
-      return m_actual_resolver_sp->SearchCallback(filter, context, addr,
-                                                  containing);
+      return m_actual_resolver_sp->SearchCallback(filter, context, addr);
     else
       return eCallbackReturnStop;
   }

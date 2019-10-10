@@ -27,4 +27,6 @@ class ImportStdModule(TestBase):
 
         # Call our custom function in our sysroot std module.
         # If this gives us the correct result, then we used the sysroot.
-        self.expect("expr std::myabs(-42)", substrs=['(int) $0 = 42'])
+        # We rely on the default argument of -123 to make sure we actually have the C++ module.
+        # (We don't have default arguments in the debug information).
+        self.expect("expr std::myabs()", substrs=['(int) $0 = 123'])

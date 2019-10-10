@@ -17,13 +17,14 @@ config.shared_libs = @LLVM_ENABLE_SHARED_LIBS@
 config.llvm_use_sanitizer = "@LLVM_USE_SANITIZER@"
 config.target_triple = "@TARGET_TRIPLE@"
 config.lldb_build_directory = "@LLDB_TEST_BUILD_DIRECTORY@"
-config.lldb_module_cache = "@LLDB_TEST_MODULE_CACHE_LLDB@"
-config.clang_module_cache = "@LLDB_TEST_MODULE_CACHE_CLANG@"
 config.python_executable = "@PYTHON_EXECUTABLE@"
 config.dotest_path = "@LLDB_SOURCE_DIR@/test/API/dotest.py"
 config.dotest_args_str = "@LLDB_DOTEST_ARGS@"
 config.lldb_disable_python = @LLDB_DISABLE_PYTHON@
 config.dotest_lit_args_str = None
+# The API tests use their own module caches.
+config.lldb_module_cache = os.path.join("@LLDB_TEST_MODULE_CACHE_LLDB@", "lldb-api")
+config.clang_module_cache = os.path.join("@LLDB_TEST_MODULE_CACHE_CLANG@", "lldb-api")
 
 # Additional dotest arguments can be passed to lit by providing a
 # semicolon-separates list: --param dotest-args="arg;arg".

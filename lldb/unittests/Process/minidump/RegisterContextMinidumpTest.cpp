@@ -157,33 +157,34 @@ static void TestARMRegInfo(const lldb_private::RegisterInfo *info) {
     EXPECT_NE(info->kinds[lldb::eRegisterKindDWARF], LLDB_INVALID_REGNUM);
   }
   // Verify generic register are set correctly
-  if (name == "r0")
+  if (name == "r0") {
     EXPECT_EQ(info->kinds[lldb::eRegisterKindGeneric],
               (uint32_t)LLDB_REGNUM_GENERIC_ARG1);
-  else if (name == "r1")
+  } else if (name == "r1") {
     EXPECT_EQ(info->kinds[lldb::eRegisterKindGeneric],
               (uint32_t)LLDB_REGNUM_GENERIC_ARG2);
-  else if (name == "r2")
+  } else if (name == "r2") {
     EXPECT_EQ(info->kinds[lldb::eRegisterKindGeneric],
               (uint32_t)LLDB_REGNUM_GENERIC_ARG3);
-  else if (name == "r3")
+  } else if (name == "r3") {
     EXPECT_EQ(info->kinds[lldb::eRegisterKindGeneric],
               (uint32_t)LLDB_REGNUM_GENERIC_ARG4);
-  else if (name == "sp")
+  } else if (name == "sp") {
     EXPECT_EQ(info->kinds[lldb::eRegisterKindGeneric],
               (uint32_t)LLDB_REGNUM_GENERIC_SP);
-  else if (name == "fp")
+  } else if (name == "fp") {
     EXPECT_EQ(info->kinds[lldb::eRegisterKindGeneric],
               (uint32_t)LLDB_REGNUM_GENERIC_FP);
-  else if (name == "lr")
+  } else if (name == "lr") {
     EXPECT_EQ(info->kinds[lldb::eRegisterKindGeneric],
               (uint32_t)LLDB_REGNUM_GENERIC_RA);
-  else if (name == "pc")
+  } else if (name == "pc") {
     EXPECT_EQ(info->kinds[lldb::eRegisterKindGeneric],
               (uint32_t)LLDB_REGNUM_GENERIC_PC);
-  else if (name == "cpsr")
+  } else if (name == "cpsr") {
     EXPECT_EQ(info->kinds[lldb::eRegisterKindGeneric],
               (uint32_t)LLDB_REGNUM_GENERIC_FLAGS);
+  }
 }
 
 TEST(RegisterContextMinidump, CheckRegisterContextMinidump_ARM) {
