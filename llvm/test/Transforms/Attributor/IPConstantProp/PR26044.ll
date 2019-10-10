@@ -14,7 +14,7 @@ define void @fn2(i32* %P) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* undef, align 4
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32 @fn1(i32 [[TMP0]])
 ; CHECK-NEXT:    store i32 [[CALL]], i32* [[P]]
-; CHECK-NEXT:    br label %for.cond1
+; CHECK-NEXT:    br label [[FOR_COND1:%.*]]
 ;
 entry:
   br label %if.end
@@ -55,7 +55,7 @@ define void @fn_no_null_opt(i32* %P) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* undef, align 4
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32 @fn0(i32 [[TMP0]])
 ; CHECK-NEXT:    store i32 [[CALL]], i32* [[P]]
-; CHECK-NEXT:    br label %for.cond1
+; CHECK-NEXT:    br label [[FOR_COND1:%.*]]
 ;
 entry:
   br label %if.end

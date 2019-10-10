@@ -33,6 +33,25 @@ STATISTIC(NumInvalidAbstractCallSitesUnknownCallee,
 STATISTIC(NumInvalidAbstractCallSitesNoCallback,
           "Number of invalid abstract call sites created (no callback)");
 
+void AbstractCallSite::getCallbackUses(ImmutableCallSite ICS,
+                                       SmallVectorImpl<const Use *> &CBUses) {
+  const Function *Callee = ICS.getCalledFunction();
+  if (!Callee)
+    return;
+
+  MDNode *CallbackMD = Callee->getMetadata(LLVMContext::MD_callback);
+  if (!CallbackMD)
+    return;
+
+  for (const MDOperand &Op : CallbackMD->operands()) {
+    MDNode *OpMD = cast<MDNode>(Op.get());
+    auto *CBCalleeIdxAsCM = cast<ConstantAsMetadata>(OpMD->getOperand(0));
+    uint64_t CBCalleeIdx =
+        cast<ConstantInt>(CBCalleeIdxAsCM->getValue())->getZExtValue();
+    CBUses.push_back(ICS.arg_begin() + CBCalleeIdx);
+  }
+}
+
 /// Create an abstract call site from a use.
 AbstractCallSite::AbstractCallSite(const Use *U) : CS(U->getUser()) {
 
