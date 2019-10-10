@@ -14,9 +14,8 @@
 using namespace llvm;
 using namespace llvm::wasm;
 
-using namespace lld;
-using namespace lld::wasm;
-
+namespace lld {
+namespace wasm {
 static bool requiresGOTAccess(const Symbol *sym) {
   return config->isPic && !sym->isHidden() && !sym->isLocal();
 }
@@ -54,7 +53,7 @@ static void addGOTEntry(Symbol *sym) {
     out.globalSec->addStaticGOTEntry(sym);
 }
 
-void lld::wasm::scanRelocations(InputChunk *chunk) {
+void scanRelocations(InputChunk *chunk) {
   if (!chunk->live)
     return;
   ObjFile *file = chunk->file;
@@ -113,3 +112,6 @@ void lld::wasm::scanRelocations(InputChunk *chunk) {
 
   }
 }
+
+} // namespace wasm
+} // namespace lld
