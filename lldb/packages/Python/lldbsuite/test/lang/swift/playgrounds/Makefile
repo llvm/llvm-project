@@ -1,26 +1,25 @@
-LEVEL = ../../../make
+EXE = PlaygroundStub
+SWIFT_SOURCES = PlaygroundStub.swift
 
-all: libPlaygroundsRuntime.dylib PlaygroundStub
-
-EXE=PlaygroundStub
-SWIFT_SOURCES=PlaygroundStub.swift
-#LINKFLAGS=-lPlaygroundsRuntime -L$(shell pwd) -I$(shell pwd) 
-#SWIFTFLAGS=-g -Onone $(LINKFLAGS)
-# Force a lower deployment target.
-MACOSX_DEPLOYMENT_TARGET := 10.10
-TRIPLE=x86_64-apple-macosx$(MACOSX_DEPLOYMENT_TARGET)
-
-include $(LEVEL)/Makefile.rules
-
-LD_EXTRAS=-lPlaygroundsRuntime -L$(shell pwd)
-
-libPlaygroundsRuntime.dylib: PlaygroundsRuntime.swift
-	$(SWIFTC) $(SWIFTFLAGS_NOLINK) -module-name PlaygroundsRuntime -emit-library -o $@ -Xlinker -install_name -Xlinker @executable_path/$@ $< \
-	  -toolchain-stdlib-rpath
-ifneq "$(CODESIGN)" ""
-	$(CODESIGN) -s - "$@"
+# The setup here is complex. We want to build the file with a deployment target
+# earlier than the availability set in the source file. This is made slightly
+# more complex by watchOS having misaligned version numbers.
+ifeq ($(TRIPLE),)
+TRIPLE := x86_64-apple-macosx10.10
+else
+override TRIPLE := $(shell echo $(TRIPLE) | sed 's/os[0-9.]*/os7.0/' | sed 's/watchos7.0/watchos5.0/')
 endif
 
-clean::
-	rm -rf *.dSYM *.dylib *.swiftdoc *.swiftmodule PlaygroundStub libPlaygroundsRuntime.dylib PlaygroundsRuntime.*
+# The deployment target we set is pre-ABI stability. The Swift driver will not
+# point the RPATH at the system library. Do it manually.
+LD_EXTRAS := -Xlinker -rpath -Xlinker /usr/lib/swift
+
+PlaygroundStub: libPlaygroundsRuntime.dylib
+
+include Makefile.rules
+
+libPlaygroundsRuntime.dylib: PlaygroundsRuntime.swift
+	$(MAKE) -f $(MAKEFILE_RULES) \
+		DYLIB_SWIFT_SOURCES=PlaygroundsRuntime.swift \
+		DYLIB_NAME=PlaygroundsRuntime
 

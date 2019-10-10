@@ -40,6 +40,7 @@ class SwiftRuntimeReportingABIv2TestCase(lldbtest.TestBase):
 
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, lldbtest.VALID_TARGET)
+        self.registerSharedLibrariesWithTarget(target, ['swiftCore'])
 
         self.runCmd("run")
 

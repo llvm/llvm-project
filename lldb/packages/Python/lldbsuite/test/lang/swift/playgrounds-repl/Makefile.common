@@ -1,0 +1,13 @@
+EXE := PlaygroundStub
+SWIFT_SOURCES := PlaygroundStub.swift
+
+PlaygroundStub: libPlaygroundsRuntime.dylib
+
+include Makefile.rules
+
+ifneq ($(MAKECMDGOALS),libPlaygroundsRuntime.dylib)
+libPlaygroundsRuntime.dylib: PlaygroundsRuntime.swift
+	$(MAKE) -C $(BUILDDIR) -f $(SRCDIR)/Makefile \
+		SWIFT_SOURCES= DYLIB_SWIFT_SOURCES=PlaygroundsRuntime.swift \
+		DYLIB_NAME=PlaygroundsRuntime libPlaygroundsRuntime.dylib
+endif

@@ -71,10 +71,10 @@ class TestResilience(TestBase):
         TestBase.setUp(self)
 
     def createSymlinks(self, exe_flavor, mod_flavor):
-        execute_command("ln -sf " + self.getBuildArtifact("main." + exe_flavor) + " " + self.getBuildArtifact("main"))
+        execute_command("cp " + self.getBuildArtifact("main." + exe_flavor) + " " + self.getBuildArtifact("main"))
         execute_command("ln -sf " + self.getBuildArtifact("main." + exe_flavor + ".dSYM") + " " + self.getBuildArtifact("main.dSYM"))
 
-        execute_command("ln -sf " + self.getBuildArtifact("libmod." + exe_flavor + ".dylib") + " " + self.getBuildArtifact("libmod.dylib"))
+        execute_command("cp " + self.getBuildArtifact("libmod." + exe_flavor + ".dylib") + " " + self.getBuildArtifact("libmod.dylib"))
         execute_command("ln -sf " + self.getBuildArtifact("libmod." + exe_flavor + ".dylib.dSYM") + " " + self.getBuildArtifact("libmod.dylib.dSYM"))
         execute_command("ln -sf " + self.getBuildArtifact("mod." + exe_flavor + ".o") + " " + self.getBuildArtifact("mod.o"))
 
@@ -106,6 +106,11 @@ class TestResilience(TestBase):
 
         source_name = "main.swift"
         source_spec = lldb.SBFileSpec(source_name)
+
+        target = self.dbg.CreateTarget(exe_path)
+        self.assertTrue(target, VALID_TARGET)
+        self.registerSharedLibrariesWithTarget(target, ['mod'])
+
         target, process, _, breakpoint = lldbutil.run_to_source_breakpoint(
             self, "break here", source_spec, exe_name=exe_path)
         dylib_breakpoint = target.BreakpointCreateByName("fA")

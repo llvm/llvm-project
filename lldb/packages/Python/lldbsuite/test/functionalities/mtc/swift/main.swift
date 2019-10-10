@@ -11,9 +11,14 @@
 // -----------------------------------------------------------------------------
 
 import Foundation
+#if canImport(AppKit)
 import AppKit
-
 let view = NSView()
+#else
+import UIKit
+let view = UIView()
+#endif
+
 let g = DispatchGroup()
 g.enter()
 Thread.detachNewThread {

@@ -50,6 +50,22 @@ class TestLibraryIndirect(TestBase):
         def cleanup():
             lldbutil.execute_command("make cleanup")
         self.addTearDownHook(cleanup)
+
+        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
+        self.assertTrue(target, VALID_TARGET)
+        self.registerSharedLibrariesWithTarget(target, ['SomeLibrary'])
+
+        if lldb.remote_platform:
+            ext = 'so'
+            if self.platformIsDarwin():
+                ext = 'dylib'
+            wd = lldb.remote_platform.GetWorkingDirectory()
+            filename = 'libSomeLibraryCore.' + ext
+            err = lldb.remote_platform.Put(
+                lldb.SBFileSpec(self.getBuildArtifact(filename)),
+                lldb.SBFileSpec(os.path.join(wd, filename)))
+            self.assertFalse(err.Fail(), 'Failed to copy ' + filename)
+
         lldbutil.run_to_source_breakpoint(self, "break here", lldb.SBFileSpec("main.swift"), self.launch_info())
 
         # This test is deliberately checking what the user will see, rather than
@@ -75,6 +91,22 @@ class TestLibraryIndirect(TestBase):
         def cleanup():
             lldbutil.execute_command("make cleanup")
         self.addTearDownHook(cleanup)
+
+        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
+        self.assertTrue(target, VALID_TARGET)
+        self.registerSharedLibrariesWithTarget(target, ['SomeLibrary'])
+
+        if lldb.remote_platform:
+            ext = 'so'
+            if self.platformIsDarwin():
+                ext = 'dylib'
+            wd = lldb.remote_platform.GetWorkingDirectory()
+            filename = 'libSomeLibraryCore.' + ext
+            err = lldb.remote_platform.Put(
+                lldb.SBFileSpec(self.getBuildArtifact(filename)),
+                lldb.SBFileSpec(os.path.join(wd, filename)))
+            self.assertFalse(err.Fail(), 'Failed to copy ' + filename)
+
         lldbutil.run_to_source_breakpoint(self, "break here", lldb.SBFileSpec("main.swift"), self.launch_info())
 
         # This test is deliberately checking what the user will see, rather than

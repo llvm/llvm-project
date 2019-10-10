@@ -22,6 +22,8 @@ import os.path
 import platform
 import unittest2
 
+import builder_darwin
+
 import sys
 if sys.version_info.major == 2:
     import commands as subprocess
@@ -39,10 +41,7 @@ class TestSwiftPlaygrounds(TestBase):
 
     @skipUnlessDarwin
     @swiftTest
-    @skipIf(
-        debug_info=decorators.no_match("dsym"),
-        bugnumber="This test only builds one way",
-        macos_version=["<", "10.11"])
+    @skipIf(debug_info=decorators.no_match("dsym"))
     def test_cross_module_extension(self):
         """Test that playgrounds work"""
         self.build()
@@ -62,13 +61,19 @@ class TestSwiftPlaygrounds(TestBase):
 
         # Create the target
         if force_target:
-            version, _, machine = platform.mac_ver()
-            triple = '%s-apple-macosx%s' % (machine, version)
-            target = self.dbg.CreateTargetWithFileAndArch(exe, triple)
+            if lldb.remote_platform:
+                triple = builder_darwin.construct_triple(
+                    configuration.lldb_platform_name,
+                    builder_darwin.getEffectiveArchitecture(None))
+            else:
+                version, _, machine = platform.mac_ver()
+                triple = '%s-apple-macosx%s' % (machine, version)
+            target = self.dbg.CreateTargetWithFileAndArch(exe, str(triple))
         else:
             target = self.dbg.CreateTarget(exe)
             
         self.assertTrue(target, VALID_TARGET)
+        self.registerSharedLibrariesWithTarget(target, ['libPlaygroundsRuntime.dylib'])
 
         # Set the breakpoints
         breakpoint = target.BreakpointCreateBySourceRegex(
@@ -81,7 +86,7 @@ class TestSwiftPlaygrounds(TestBase):
         threads = lldbutil.get_threads_stopped_at_breakpoint(
             process, breakpoint)
 
-        self.assertTrue(len(threads) == 1)
+        self.assertEqual(len(threads), 1)
 
         contents = ""
 
@@ -101,7 +106,7 @@ class TestSwiftPlaygrounds(TestBase):
             # This is expected to fail because the deployment target
             # is less than the availability of the function being
             # called.
-            self.assertTrue(playground_output == '""')
+            self.assertEqual(playground_output, '""')
             return
 
         self.assertTrue(playground_output is not None)

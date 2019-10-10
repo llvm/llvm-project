@@ -47,6 +47,13 @@ class AsanSwiftTestCase(lldbtest.TestBase):
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, lldbtest.VALID_TARGET)
 
+        runtimes = []
+        for m in target.module_iter():
+            libspec = m.GetFileSpec()
+            if "clang_rt" in libspec.GetFilename():
+                runtimes.append(os.path.join(libspec.GetDirectory(), libspec.GetFilename()))
+        self.registerSharedLibrariesWithTarget(target, runtimes)
+
         self.runCmd(
             "breakpoint set -f %s -l %d" %
             (self.main_source, self.line_breakpoint))
