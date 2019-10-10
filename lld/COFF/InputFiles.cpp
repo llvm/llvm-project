@@ -599,7 +599,7 @@ Optional<Symbol *> ObjFile::createDefined(
   // Comdat handling.
   // A comdat symbol consists of two symbol table entries.
   // The first symbol entry has the name of the section (e.g. .text), fixed
-  // values for the other fields, and one auxilliary record.
+  // values for the other fields, and one auxiliary record.
   // The second symbol entry has the name of the comdat symbol, called the
   // "comdat leader".
   // When this function is called for the first symbol entry of a comdat,
@@ -669,7 +669,7 @@ ArrayRef<uint8_t> ObjFile::getDebugSection(StringRef secName) {
   return {};
 }
 
-// OBJ files systematically store critical informations in a .debug$S stream,
+// OBJ files systematically store critical information in a .debug$S stream,
 // even if the TU was compiled with no debug info. At least two records are
 // always there. S_OBJNAME stores a 32-bit signature, which is loaded into the
 // PCHSignature member. S_COMPILE3 stores compile-time cmd-line flags. This is

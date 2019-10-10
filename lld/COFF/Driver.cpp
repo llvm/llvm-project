@@ -718,8 +718,7 @@ static std::string getImplibPath() {
   return out.str();
 }
 
-//
-// The import name is caculated as the following:
+// The import name is calculated as follows:
 //
 //        | LIBRARY w/ ext |   LIBRARY w/o ext   | no LIBRARY
 //   -----+----------------+---------------------+------------------

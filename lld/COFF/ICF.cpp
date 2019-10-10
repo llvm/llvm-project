@@ -77,7 +77,7 @@ private:
 // section is insignificant to the user program and the behaviour matches that
 // of the Visual C++ linker.
 bool ICF::isEligible(SectionChunk *c) {
-  // Non-comdat chunks, dead chunks, and writable chunks are not elegible.
+  // Non-comdat chunks, dead chunks, and writable chunks are not eligible.
   bool writable = c->getOutputCharacteristics() & llvm::COFF::IMAGE_SCN_MEM_WRITE;
   if (!c->isCOMDAT() || !c->live || writable)
     return false;
@@ -274,7 +274,7 @@ void ICF::run(ArrayRef<Chunk *> vec) {
       for (Symbol *b : sc->symbols())
         if (auto *sym = dyn_cast_or_null<DefinedRegular>(b))
           hash += sym->getChunk()->eqClass[cnt % 2];
-      // Set MSB to 1 to avoid collisions with non-hash classs.
+      // Set MSB to 1 to avoid collisions with non-hash classes.
       sc->eqClass[(cnt + 1) % 2] = hash | (1U << 31);
     });
   }
@@ -297,7 +297,7 @@ void ICF::run(ArrayRef<Chunk *> vec) {
 
   log("ICF needed " + Twine(cnt) + " iterations");
 
-  // Merge sections in the same classs.
+  // Merge sections in the same classes.
   forEachClass([&](size_t begin, size_t end) {
     if (end - begin == 1)
       return;

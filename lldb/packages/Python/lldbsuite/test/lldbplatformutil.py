@@ -17,6 +17,7 @@ from six.moves.urllib import parse as urlparse
 # LLDB modules
 from . import configuration
 import lldb
+import lldbsuite.test.lldbplatform as lldbplatform
 
 
 def check_first_register_readable(test_case):
@@ -144,6 +145,9 @@ def platformIsDarwin():
 def findMainThreadCheckerDylib():
     if not platformIsDarwin():
         return ""
+
+    if getPlatform() in lldbplatform.translate(lldbplatform.darwin_embedded):
+        return "/Developer/usr/lib/libMainThreadChecker.dylib"
 
     with os.popen('xcode-select -p') as output:
         xcode_developer_path = output.read().strip()

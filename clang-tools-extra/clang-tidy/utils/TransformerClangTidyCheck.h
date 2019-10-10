@@ -13,7 +13,7 @@
 #include "../utils/IncludeInserter.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Frontend/CompilerInstance.h"
-#include "clang/Tooling/Refactoring/Transformer.h"
+#include "clang/Tooling/Transformer/Transformer.h"
 #include <deque>
 #include <vector>
 

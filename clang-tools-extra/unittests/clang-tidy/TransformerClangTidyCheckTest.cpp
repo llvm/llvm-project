@@ -9,9 +9,9 @@
 #include "../clang-tidy/utils/TransformerClangTidyCheck.h"
 #include "ClangTidyTest.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
-#include "clang/Tooling/Refactoring/RangeSelector.h"
-#include "clang/Tooling/Refactoring/Stencil.h"
-#include "clang/Tooling/Refactoring/Transformer.h"
+#include "clang/Tooling/Transformer/RangeSelector.h"
+#include "clang/Tooling/Transformer/Stencil.h"
+#include "clang/Tooling/Transformer/Transformer.h"
 #include "gtest/gtest.h"
 
 namespace clang {

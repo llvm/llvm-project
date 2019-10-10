@@ -202,8 +202,9 @@ if (NOT LLDB_DISABLE_PYTHON)
     if(LLDB_BUILD_FRAMEWORK)
       set(lldb_python_build_path "${liblldb_build_dir}/LLDB.framework/Resources/Python/lldb")
     else()
-      set(lldb_python_build_path "${CMAKE_BINARY_DIR}/${LLDB_PYTHON_RELATIVE_PATH}/lldb")
+      set(lldb_python_build_path "${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${LLDB_PYTHON_RELATIVE_PATH}/lldb")
     endif()
+    get_filename_component(lldb_python_build_path ${lldb_python_build_path} ABSOLUTE)
 
     # Add a Post-Build Event to copy over Python files and create the symlink
     # to liblldb.so for the Python API(hardlink on Windows).
