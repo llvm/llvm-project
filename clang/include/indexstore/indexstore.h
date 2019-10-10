@@ -84,6 +84,26 @@
 # define INDEXSTORE_NOESCAPE
 #endif
 
+#if __has_attribute(flag_enum)
+# define INDEXSTORE_FLAG_ENUM_ATTR __attribute__((flag_enum))
+#else
+# define INDEXSTORE_FLAG_ENUM_ATTR
+#endif
+
+#if __has_attribute(enum_extensibility)
+# define INDEXSTORE_OPEN_ENUM_ATTR __attribute__((enum_extensibility(open)))
+#else
+# define INDEXSTORE_OPEN_ENUM_ATTR
+#endif
+
+#define INDEXSTORE_OPTIONS_ATTRS INDEXSTORE_OPEN_ENUM_ATTR INDEXSTORE_FLAG_ENUM_ATTR
+
+#if __has_extension(cxx_strong_enums) || __has_feature(objc_fixed_enum)
+# define INDEXSTORE_OPTIONS(_type, _name) enum INDEXSTORE_OPTIONS_ATTRS _name : _type _name; enum INDEXSTORE_OPTIONS_ATTRS _name : _type
+#else
+# define INDEXSTORE_OPTIONS(_type, _name) _type _name; enum INDEXSTORE_OPTIONS_ATTRS
+#endif
+
 INDEXSTORE_BEGIN_DECLS
 
 typedef void *indexstore_error_t;
@@ -263,7 +283,7 @@ typedef enum {
   INDEXSTORE_SYMBOL_SUBKIND_SWIFTACCESSORMODIFY = 1015,
 } indexstore_symbol_subkind_t;
 
-typedef enum {
+typedef INDEXSTORE_OPTIONS(uint64_t, indexstore_symbol_property_t) {
   INDEXSTORE_SYMBOL_PROPERTY_GENERIC                          = 1 << 0,
   INDEXSTORE_SYMBOL_PROPERTY_TEMPLATE_PARTIAL_SPECIALIZATION  = 1 << 1,
   INDEXSTORE_SYMBOL_PROPERTY_TEMPLATE_SPECIALIZATION          = 1 << 2,
@@ -273,7 +293,7 @@ typedef enum {
   INDEXSTORE_SYMBOL_PROPERTY_GKINSPECTABLE                    = 1 << 6,
   INDEXSTORE_SYMBOL_PROPERTY_LOCAL                            = 1 << 7,
   INDEXSTORE_SYMBOL_PROPERTY_PROTOCOL_INTERFACE               = 1 << 8,
-} indexstore_symbol_property_t;
+};
 
 typedef enum {
   INDEXSTORE_SYMBOL_LANG_C = 0,
@@ -283,7 +303,7 @@ typedef enum {
   INDEXSTORE_SYMBOL_LANG_SWIFT = 100,
 } indexstore_symbol_language_t;
 
-typedef enum {
+typedef INDEXSTORE_OPTIONS(uint64_t, indexstore_symbol_role_t) {
   INDEXSTORE_SYMBOL_ROLE_DECLARATION  = 1 << 0,
   INDEXSTORE_SYMBOL_ROLE_DEFINITION   = 1 << 1,
   INDEXSTORE_SYMBOL_ROLE_REFERENCE    = 1 << 2,
@@ -307,7 +327,7 @@ typedef enum {
   INDEXSTORE_SYMBOL_ROLE_REL_CONTAINEDBY = 1 << 16,
   INDEXSTORE_SYMBOL_ROLE_REL_IBTYPEOF    = 1 << 17,
   INDEXSTORE_SYMBOL_ROLE_REL_SPECIALIZATIONOF = 1 << 18,
-} indexstore_symbol_role_t;
+};
 
 INDEXSTORE_PUBLIC indexstore_symbol_language_t
 indexstore_symbol_get_language(indexstore_symbol_t);
@@ -318,13 +338,13 @@ indexstore_symbol_get_kind(indexstore_symbol_t);
 INDEXSTORE_PUBLIC indexstore_symbol_subkind_t
 indexstore_symbol_get_subkind(indexstore_symbol_t);
 
-INDEXSTORE_PUBLIC uint64_t
+INDEXSTORE_PUBLIC indexstore_symbol_property_t
 indexstore_symbol_get_properties(indexstore_symbol_t);
 
-INDEXSTORE_PUBLIC uint64_t
+INDEXSTORE_PUBLIC indexstore_symbol_role_t
 indexstore_symbol_get_roles(indexstore_symbol_t);
 
-INDEXSTORE_PUBLIC uint64_t
+INDEXSTORE_PUBLIC indexstore_symbol_role_t
 indexstore_symbol_get_related_roles(indexstore_symbol_t);
 
 INDEXSTORE_PUBLIC indexstore_string_ref_t
@@ -338,7 +358,7 @@ indexstore_symbol_get_codegen_name(indexstore_symbol_t);
 
 typedef void *indexstore_symbol_relation_t;
 
-INDEXSTORE_PUBLIC uint64_t
+INDEXSTORE_PUBLIC indexstore_symbol_role_t
 indexstore_symbol_relation_get_roles(indexstore_symbol_relation_t);
 
 INDEXSTORE_PUBLIC indexstore_symbol_t
@@ -360,7 +380,7 @@ indexstore_occurrence_relations_apply_f(indexstore_occurrence_t,
                                         void *context,
         INDEXSTORE_NOESCAPE bool(*applier)(void *context, indexstore_symbol_relation_t symbol_rel));
 
-INDEXSTORE_PUBLIC uint64_t
+INDEXSTORE_PUBLIC indexstore_symbol_role_t
 indexstore_occurrence_get_roles(indexstore_occurrence_t);
 
 INDEXSTORE_PUBLIC void
