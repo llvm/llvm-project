@@ -42,7 +42,7 @@ class SuppressionContext {
   void GetMatched(InternalMmapVector<Suppression *> *matched);
 
  private:
-  static const int kMaxSuppressionTypes = 32;
+  static const int kMaxSuppressionTypes = 64;
   const char **const suppression_types_;
   const int suppression_types_num_;
 

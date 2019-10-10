@@ -191,9 +191,14 @@ static void ReportDeadlySignalImpl(const SignalContext &sig, u32 tid,
   SanitizerCommonDecorator d;
   Printf("%s", d.Warning());
   const char *description = sig.Describe();
-  Report("ERROR: %s: %s on unknown address %p (pc %p bp %p sp %p T%d)\n",
-         SanitizerToolName, description, (void *)sig.addr, (void *)sig.pc,
-         (void *)sig.bp, (void *)sig.sp, tid);
+  if (sig.is_memory_access && !sig.is_true_faulting_addr)
+    Report("ERROR: %s: %s on unknown address (pc %p bp %p sp %p T%d)\n",
+           SanitizerToolName, description, (void *)sig.pc, (void *)sig.bp,
+           (void *)sig.sp, tid);
+  else
+    Report("ERROR: %s: %s on unknown address %p (pc %p bp %p sp %p T%d)\n",
+           SanitizerToolName, description, (void *)sig.addr, (void *)sig.pc,
+           (void *)sig.bp, (void *)sig.sp, tid);
   Printf("%s", d.Default());
   if (sig.pc < GetPageSizeCached())
     Report("Hint: pc points to the zero page.\n");
@@ -203,7 +208,11 @@ static void ReportDeadlySignalImpl(const SignalContext &sig, u32 tid,
             ? "WRITE"
             : (sig.write_flag == SignalContext::READ ? "READ" : "UNKNOWN");
     Report("The signal is caused by a %s memory access.\n", access_type);
-    if (sig.addr < GetPageSizeCached())
+    if (!sig.is_true_faulting_addr)
+      Report("Hint: this fault was caused by a dereference of a high value "
+             "address (see registers below).  Dissassemble the provided pc "
+             "to learn which register value was used.\n");
+    else if (sig.addr < GetPageSizeCached())
       Report("Hint: address points to the zero page.\n");
   }
   MaybeReportNonExecRegion(sig.pc);
