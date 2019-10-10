@@ -556,6 +556,7 @@ static amd_comgr_status_t linkWithLLD(llvm::ArrayRef<const char *> Args,
   ArgStringList LLDArgs(llvm::iterator_range<ArrayRef<const char *>::iterator>(
       Args.begin(), Args.end()));
   LLDArgs.insert(LLDArgs.begin(), "lld");
+  LLDArgs.push_back("--no-threads");
   ArrayRef<const char *> ArgRefs = llvm::makeArrayRef(LLDArgs);
   static std::mutex MScreen;
   MScreen.lock();
