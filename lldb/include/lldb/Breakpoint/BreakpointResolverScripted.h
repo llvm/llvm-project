@@ -26,8 +26,7 @@ public:
   BreakpointResolverScripted(Breakpoint *bkpt,
                              const llvm::StringRef class_name,
                              lldb::SearchDepth depth,
-                             StructuredDataImpl *args_data,
-                             ScriptInterpreter &script_interp);
+                             StructuredDataImpl *args_data);
 
   ~BreakpointResolverScripted() override;
 

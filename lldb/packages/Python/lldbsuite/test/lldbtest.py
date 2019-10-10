@@ -696,7 +696,7 @@ class Base(unittest2.TestCase):
             "settings set plugin.process.gdb-remote.packet-timeout 60",
 
             'settings set symbols.clang-modules-cache-path "{}"'.format(
-                configuration.module_cache_dir),
+                configuration.lldb_module_cache_dir),
             "settings set use-color false",
         ]
         # Make sure that a sanitizer LLDB's environment doesn't get passed on.

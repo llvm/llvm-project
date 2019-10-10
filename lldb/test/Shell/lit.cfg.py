@@ -45,9 +45,7 @@ config.environment['ASAN_OPTIONS'] = 'detect_container_overflow=0'
 # End Swift mod.
 
 llvm_config.use_default_substitutions()
-
 toolchain.use_lldb_substitutions(config)
-
 toolchain.use_support_substitutions(config)
 
 
@@ -75,9 +73,9 @@ llvm_config.feature_config(
 # incremental build whenever clang changes underneath, so doing it once per
 # lit.py invocation is close enough.
 for cachedir in [config.clang_module_cache, config.lldb_module_cache]:
-    if os.path.isdir(cachedir):
-        print("Deleting module cache at %s."%cachedir)
-        shutil.rmtree(cachedir)
+  if os.path.isdir(cachedir):
+     print("Deleting module cache at %s."%cachedir)
+     shutil.rmtree(cachedir)
 
 # Set a default per-test timeout of 10 minutes. Setting a timeout per test
 # requires that killProcessAndChildren() is supported on the platform and
