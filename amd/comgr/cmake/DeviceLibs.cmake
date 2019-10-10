@@ -47,18 +47,18 @@ add_dependencies(amd_comgr opencl2.0-c.inc_target)
 file(APPEND ${INC_DIR}/libraries.inc "#include \"opencl2.0-c.inc\"\n")
 
 # Generate function to select libraries for a given GFXIP number.
+file(APPEND ${INC_DIR}/libraries.inc "#include \"llvm/ADT/StringRef.h\"\n")
 file(APPEND ${INC_DIR}/libraries.inc
-  "static std::tuple<const char*, const void*, size_t> get_oclc_isa_version(unsigned int gfxip) { \
-   switch (gfxip) {")
+  "static std::tuple<const char*, const void*, size_t> get_oclc_isa_version(llvm::StringRef gfxip) {")
 foreach(AMDGCN_LIB_TARGET ${AMD_DEVICE_LIBS_TARGETS})
-  if (${AMDGCN_LIB_TARGET} MATCHES "^oclc_isa_version_[0-9]+_lib$")
-    string(REGEX REPLACE "^oclc_isa_version_([0-9]+)_lib$" "\\1" gfxip ${AMDGCN_LIB_TARGET})
+  if (${AMDGCN_LIB_TARGET} MATCHES "^oclc_isa_version_.+_lib$")
+    string(REGEX REPLACE "^oclc_isa_version_(.+)_lib$" "\\1" gfxip ${AMDGCN_LIB_TARGET})
     file(APPEND ${INC_DIR}/libraries.inc
-      "case ${gfxip}: return std::make_tuple(\"${AMDGCN_LIB_TARGET}.bc\", ${AMDGCN_LIB_TARGET}, ${AMDGCN_LIB_TARGET}_size);")
+      "if (gfxip == \"${gfxip}\") return std::make_tuple(\"${AMDGCN_LIB_TARGET}.bc\", ${AMDGCN_LIB_TARGET}, ${AMDGCN_LIB_TARGET}_size);")
   endif()
 endforeach()
 file(APPEND ${INC_DIR}/libraries.inc
-  "default: return std::make_tuple(nullptr, nullptr, 0); } }")
+  "return std::make_tuple(nullptr, nullptr, 0); }")
 
 # Generate function to select libraries for given feature.
 foreach(AMDGCN_LIB_TARGET ${AMD_DEVICE_LIBS_TARGETS})

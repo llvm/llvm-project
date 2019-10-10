@@ -100,10 +100,7 @@ amd_comgr_status_t addDeviceLibraries(DataAction *ActionInfo,
     return Status;
   if (!Ident.Processor.consume_front("gfx"))
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
-  uint32_t GFXIP;
-  if (Ident.Processor.getAsInteger<uint32_t>(10, GFXIP))
-    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
-  if (auto Status = addOCLCObject(ResultSet, get_oclc_isa_version(GFXIP)))
+  if (auto Status = addOCLCObject(ResultSet, get_oclc_isa_version(Ident.Processor)))
     return Status;
 
   bool CorrectlyRoundedSqrt = false, DazOpt = false, FiniteOnly = false,
