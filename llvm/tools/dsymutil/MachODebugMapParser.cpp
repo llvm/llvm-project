@@ -14,6 +14,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
+#include <vector>
 
 namespace {
 using namespace llvm;
@@ -51,6 +52,8 @@ private:
   StringRef MainBinaryStrings;
   /// The constructed DebugMap.
   std::unique_ptr<DebugMap> Result;
+  /// List of common symbols that need to be added to the debug map.
+  std::vector<std::string> CommonSymbols;
 
   /// Map of the currently processed object file symbol addresses.
   StringMap<Optional<uint64_t>> CurrentObjectAddresses;
@@ -80,6 +83,8 @@ private:
     handleStabSymbolTableEntry(STE.n_strx, STE.n_type, STE.n_sect, STE.n_desc,
                                STE.n_value);
   }
+
+  void addCommonSymbols();
 
   /// Dump the symbol table output header.
   void dumpSymTabHeader(raw_ostream &OS, StringRef Arch);
@@ -118,8 +123,28 @@ private:
 /// file. This is to be called after an object file is finished
 /// processing.
 void MachODebugMapParser::resetParserState() {
+  CommonSymbols.clear();
   CurrentObjectAddresses.clear();
   CurrentDebugMapObject = nullptr;
+}
+
+/// Commons symbols won't show up in the symbol map but might need to be
+/// relocated. We can add them to the symbol table ourselves by combining the
+/// information in the object file (the symbol name) and the main binary (the
+/// address).
+void MachODebugMapParser::addCommonSymbols() {
+  for (auto &CommonSymbol : CommonSymbols) {
+    uint64_t CommonAddr = getMainBinarySymbolAddress(CommonSymbol);
+    if (CommonAddr == 0) {
+      // The main binary doesn't have an address for the given symbol.
+      continue;
+    }
+    if (!CurrentDebugMapObject->addSymbol(CommonSymbol, None /*ObjectAddress*/,
+                                          CommonAddr, 0 /*size*/)) {
+      // The symbol is already present.
+      continue;
+    }
+  }
 }
 
 /// Create a new DebugMapObject. This function resets the state of the
@@ -127,6 +152,7 @@ void MachODebugMapParser::resetParserState() {
 /// everything up to add symbols to the new one.
 void MachODebugMapParser::switchToNewDebugMapObject(
     StringRef Filename, sys::TimePoint<std::chrono::seconds> Timestamp) {
+  addCommonSymbols();
   resetParserState();
 
   SmallString<80> Path(PathPrefix);
@@ -466,10 +492,15 @@ void MachODebugMapParser::loadCurrentObjectFileSymbols(
     // relocations will use the symbol itself, and won't need an
     // object file address. The object file address field is optional
     // in the DebugMap, leave it unassigned for these symbols.
-    if (Sym.getFlags() & (SymbolRef::SF_Absolute | SymbolRef::SF_Common))
+    uint32_t Flags = Sym.getFlags();
+    if (Flags & SymbolRef::SF_Absolute) {
       CurrentObjectAddresses[*Name] = None;
-    else
+    } else if (Flags & SymbolRef::SF_Common) {
+      CurrentObjectAddresses[*Name] = None;
+      CommonSymbols.push_back(*Name);
+    } else {
       CurrentObjectAddresses[*Name] = Addr;
+    }
   }
 }
 
