@@ -29,8 +29,8 @@
 using namespace llvm;
 using namespace llvm::object;
 
-using namespace lld;
-using namespace lld::coff;
+namespace lld {
+namespace coff {
 
 using SymbolMapTy =
     DenseMap<const SectionChunk *, SmallVector<DefinedRegular *, 4>>;
@@ -87,7 +87,7 @@ getSymbolStrings(ArrayRef<DefinedRegular *> syms) {
   return ret;
 }
 
-void coff::writeMapFile(ArrayRef<OutputSection *> outputSections) {
+void writeMapFile(ArrayRef<OutputSection *> outputSections) {
   if (config->mapFile.empty())
     return;
 
@@ -122,3 +122,6 @@ void coff::writeMapFile(ArrayRef<OutputSection *> outputSections) {
     }
   }
 }
+
+} // namespace coff
+} // namespace lld

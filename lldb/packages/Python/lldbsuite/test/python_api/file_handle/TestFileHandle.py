@@ -667,10 +667,10 @@ class FileHandleTestCase(lldbtest.TestBase):
 
     @add_test_categories(['pyapi'])
     def test_exceptions(self):
-        self.assertRaises(TypeError, lldb.SBFile, None)
-        self.assertRaises(TypeError, lldb.SBFile, "ham sandwich")
+        self.assertRaises(Exception, lldb.SBFile, None)
+        self.assertRaises(Exception, lldb.SBFile, "ham sandwich")
         if sys.version_info[0] < 3:
-            self.assertRaises(TypeError, lldb.SBFile, ReallyBadIO())
+            self.assertRaises(Exception, lldb.SBFile, ReallyBadIO())
         else:
             self.assertRaises(OhNoe, lldb.SBFile, ReallyBadIO())
             error, n = lldb.SBFile(BadIO()).Write(b"FOO")

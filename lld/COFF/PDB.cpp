@@ -59,12 +59,13 @@
 #include "llvm/Support/ScopedPrinter.h"
 #include <memory>
 
-using namespace lld;
-using namespace lld::coff;
 using namespace llvm;
 using namespace llvm::codeview;
 
 using llvm::object::coff_section;
+
+namespace lld {
+namespace coff {
 
 static ExitOnError exitOnErr;
 
@@ -1597,7 +1598,7 @@ void PDBLinker::addImportFilesToPDB(ArrayRef<OutputSection *> outputSections) {
 }
 
 // Creates a PDB file.
-void coff::createPDB(SymbolTable *symtab,
+void createPDB(SymbolTable *symtab,
                      ArrayRef<OutputSection *> outputSections,
                      ArrayRef<uint8_t> sectionTable,
                      llvm::codeview::DebugInfo *buildId) {
@@ -1798,7 +1799,7 @@ static bool findLineTable(const SectionChunk *c, uint32_t addr,
 // Use CodeView line tables to resolve a file and line number for the given
 // offset into the given chunk and return them, or {"", 0} if a line table was
 // not found.
-std::pair<StringRef, uint32_t> coff::getFileLineCodeView(const SectionChunk *c,
+std::pair<StringRef, uint32_t> getFileLineCodeView(const SectionChunk *c,
                                                          uint32_t addr) {
   ExitOnError exitOnErr;
 
@@ -1833,3 +1834,6 @@ std::pair<StringRef, uint32_t> coff::getFileLineCodeView(const SectionChunk *c,
   StringRef filename = exitOnErr(getFileName(cVStrTab, checksums, *nameIndex));
   return {filename, *lineNumber};
 }
+
+} // namespace coff
+} // namespace lld
