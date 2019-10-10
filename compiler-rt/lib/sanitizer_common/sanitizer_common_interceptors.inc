@@ -9608,6 +9608,21 @@ INTERCEPTOR(char *, crypt_r, char *key, char *salt, void *data) {
 #define INIT_CRYPT_R
 #endif
 
+#if SANITIZER_INTERCEPT_GETENTROPY
+INTERCEPTOR(int, getentropy, void *buf, SIZE_T buflen) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, getentropy, buf, buflen);
+  int r = REAL(getentropy)(buf, buflen);
+  if (r == 0) {
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, buf, buflen);
+  }
+  return r;
+}
+#define INIT_GETENTROPY COMMON_INTERCEPT_FUNCTION(getentropy)
+#else
+#define INIT_GETENTROPY
+#endif
+
 static void InitializeCommonInterceptors() {
 #if SI_POSIX
   static u64 metadata_mem[sizeof(MetadataHashMap) / sizeof(u64) + 1];
@@ -9908,6 +9923,7 @@ static void InitializeCommonInterceptors() {
   INIT_GETRANDOM;
   INIT_CRYPT;
   INIT_CRYPT_R;
+  INIT_GETENTROPY;
 
   INIT___PRINTF_CHK;
 }

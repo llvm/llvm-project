@@ -946,7 +946,7 @@ bool SignalContext::IsMemoryAccess() const {
 }
 
 bool SignalContext::IsTrueFaultingAddress() const {
-  // TODO: Provide real implementation for this. See Linux and Mac variants.
+  // FIXME: Provide real implementation for this. See Linux and Mac variants.
   return IsMemoryAccess();
 }
 

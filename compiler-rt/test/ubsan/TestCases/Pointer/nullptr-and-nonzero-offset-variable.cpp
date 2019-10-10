@@ -26,10 +26,6 @@ static char *getelementpointer_inbounds_v0(char *base, unsigned long offset) {
   // Potentially UB.
   return base + offset;
 }
-static char *getelementpointer_inbounds_v1(char *base, unsigned long offset) {
-  // Potentially UB.
-  return base + offset;
-}
 
 int main(int argc, char *argv[]) {
   char *base;
@@ -41,14 +37,8 @@ int main(int argc, char *argv[]) {
   base = (char *)0;
   offset = argc - 1;
   (void)getelementpointer_inbounds_v0(base, offset);
-  // CHECK-UB: {{.*}}.cpp:[[@LINE-17]]:15: runtime error: applying non-zero offset 1 to null pointer
-  // CHECK-UB-C: {{.*}}.cpp:[[@LINE-18]]:15: runtime error: applying zero offset to null pointer
-
-  base = (char *)(intptr_t)(argc - 1);
-  offset = argc == 1 ? 0 : -(argc - 1);
-  (void)getelementpointer_inbounds_v1(base, offset);
-  // CHECK-UB: {{.*}}.cpp:[[@LINE-19]]:15: runtime error: applying non-zero offset to non-null pointer {{.*}} produced null pointer
-  // CHECK-UB-C: {{.*}}.cpp:[[@LINE-20]]:15: runtime error: applying zero offset to null pointer
+  // CHECK-UB: {{.*}}.cpp:[[@LINE-13]]:15: runtime error: applying non-zero offset 1 to null pointer
+  // CHECK-UB-C: {{.*}}.cpp:[[@LINE-14]]:15: runtime error: applying zero offset to null pointer
 
   return 0;
 }
