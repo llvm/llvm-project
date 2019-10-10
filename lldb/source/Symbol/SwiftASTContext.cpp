@@ -3023,13 +3023,12 @@ public:
                                     diagnostic.description.size() - start_pos)
                             .c_str());
 
-            SwiftDiagnostic *new_diagnostic =
-                new SwiftDiagnostic(fixed_description.GetData(),
-                                    severity, origin, bufferID);
+            auto new_diagnostic = std::make_unique<SwiftDiagnostic>(
+                fixed_description.GetData(), severity, origin, bufferID);
             for (auto fixit : diagnostic.fixits)
               new_diagnostic->AddFixIt(fixit);
 
-            diagnostic_manager.AddDiagnostic(new_diagnostic);
+            diagnostic_manager.AddDiagnostic(std::move(new_diagnostic));
             added_one_diagnostic = true;
 
             continue;
