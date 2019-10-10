@@ -296,7 +296,7 @@ class MockGDBServer:
         try:
             # accept() is stubborn and won't fail even when the socket is
             # shutdown, so we'll use a timeout
-            self._socket.settimeout(2.0)
+            self._socket.settimeout(20.0)
             client, client_addr = self._socket.accept()
             self._client = client
             # The connected client inherits its timeout from self._socket,
