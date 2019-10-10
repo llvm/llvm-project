@@ -640,7 +640,7 @@ class spawn(SpawnBase):
             # this to happen. I think isalive() reports True, but the
             # process is dead to the kernel.
             # Make one last attempt to see if the kernel is up to date.
-            time.sleep(self.delayafterterminate)
+            time.sleep(self.delayafterterminate * 10)
             if not self.isalive():
                 return True
             else:
