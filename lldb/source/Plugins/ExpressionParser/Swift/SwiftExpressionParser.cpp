@@ -1886,8 +1886,8 @@ bool SwiftExpressionParser::RewriteExpression(
   llvm::StringRef text_ref(m_expr.Text());
   rewrite_buf.Initialize(text_ref);
 
-  for (const Diagnostic *diag : diagnostic_manager.Diagnostics()) {
-    const SwiftDiagnostic *diagnostic = llvm::dyn_cast<SwiftDiagnostic>(diag);
+  for (const auto &diag : diagnostic_manager.Diagnostics()) {
+    const auto *diagnostic = llvm::dyn_cast<SwiftDiagnostic>(diag.get());
     if (!(diagnostic && diagnostic->HasFixIts()))
       continue;
 
