@@ -61,6 +61,15 @@ for cachedir in [config.clang_module_cache, config.lldb_module_cache]:
     print("Deleting module cache at %s."%cachedir)
     shutil.rmtree(cachedir)
 
+# Set a default per-test timeout of 10 minutes. Setting a timeout per test
+# requires that killProcessAndChildren() is supported on the platform and
+# lit complains if the value is set but it is not supported.
+supported, errormsg = lit_config.maxIndividualTestTimeIsSupported
+if supported:
+    lit_config.maxIndividualTestTime = 600
+else:
+    lit_config.warning("Could not set a default per-test timeout. " + errormsg)
+
 # Build dotest command.
 dotest_cmd = [config.dotest_path]
 dotest_cmd.extend(config.dotest_args_str.split(';'))

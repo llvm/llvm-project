@@ -292,6 +292,11 @@ void SBDebugger::SetInputFileHandle(FILE *fh, bool transfer_ownership) {
   SetInputFile((FileSP)std::make_shared<NativeFile>(fh, transfer_ownership));
 }
 
+SBError SBDebugger::SetInputFile(FileSP file_sp) {
+  LLDB_RECORD_METHOD(SBError, SBDebugger, SetInputFile, (FileSP), file_sp);
+  return SetInputFile(SBFile(file_sp));
+}
+
 // Shouldn't really be settable after initialization as this could cause lots
 // of problems; don't want users trying to switch modes in the middle of a
 // debugging session.
@@ -332,6 +337,11 @@ SBError SBDebugger::SetInputFile(SBFile file) {
   return error;
 }
 
+SBError SBDebugger::SetOutputFile(FileSP file_sp) {
+  LLDB_RECORD_METHOD(SBError, SBDebugger, SetOutputFile, (FileSP), file_sp);
+  return SetOutputFile(SBFile(file_sp));
+}
+
 void SBDebugger::SetOutputFileHandle(FILE *fh, bool transfer_ownership) {
   LLDB_RECORD_METHOD(void, SBDebugger, SetOutputFileHandle, (FILE *, bool), fh,
                      transfer_ownership);
@@ -357,6 +367,11 @@ void SBDebugger::SetErrorFileHandle(FILE *fh, bool transfer_ownership) {
   LLDB_RECORD_METHOD(void, SBDebugger, SetErrorFileHandle, (FILE *, bool), fh,
                      transfer_ownership);
   SetErrorFile((FileSP)std::make_shared<NativeFile>(fh, transfer_ownership));
+}
+
+SBError SBDebugger::SetErrorFile(FileSP file_sp) {
+  LLDB_RECORD_METHOD(SBError, SBDebugger, SetErrorFile, (FileSP), file_sp);
+  return SetErrorFile(SBFile(file_sp));
 }
 
 SBError SBDebugger::SetErrorFile(SBFile file) {
@@ -1576,6 +1591,8 @@ static void SetFileHandleRedirect(SBDebugger *, FILE *, bool) {
 
 static SBError SetFileRedirect(SBDebugger *, SBFile file) { return SBError(); }
 
+static SBError SetFileRedirect(SBDebugger *, FileSP file) { return SBError(); }
+
 static bool GetDefaultArchitectureRedirect(char *arch_name,
                                            size_t arch_name_len) {
   // The function is writing to its argument. Without the redirect it would
@@ -1604,6 +1621,16 @@ template <> void RegisterMethods<SBDebugger>(Registry &R) {
              &SetFileRedirect);
   R.Register(&invoke<SBError (SBDebugger::*)(
                  SBFile)>::method<&SBDebugger::SetErrorFile>::doit,
+             &SetFileRedirect);
+
+  R.Register(&invoke<SBError (SBDebugger::*)(
+                 FileSP)>::method<&SBDebugger::SetInputFile>::doit,
+             &SetFileRedirect);
+  R.Register(&invoke<SBError (SBDebugger::*)(
+                 FileSP)>::method<&SBDebugger::SetOutputFile>::doit,
+             &SetFileRedirect);
+  R.Register(&invoke<SBError (SBDebugger::*)(
+                 FileSP)>::method<&SBDebugger::SetErrorFile>::doit,
              &SetFileRedirect);
 
   LLDB_REGISTER_CONSTRUCTOR(SBDebugger, ());

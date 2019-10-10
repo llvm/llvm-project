@@ -298,10 +298,10 @@ class BreakpointSerialization(TestBase):
     def do_check_extra_args(self):
 
         import side_effect
-	interp = self.dbg.GetCommandInterpreter()
-	error = lldb.SBError()
+        interp = self.dbg.GetCommandInterpreter()
+        error = lldb.SBError()
 
-	script_name = os.path.join(self.getSourceDir(), "resolver.py")
+        script_name = os.path.join(self.getSourceDir(), "resolver.py")
 
         command = "command script import " + script_name
         result = lldb.SBCommandReturnObject()

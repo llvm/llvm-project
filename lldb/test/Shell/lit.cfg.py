@@ -39,9 +39,7 @@ config.test_exec_root = os.path.join(config.lldb_obj_root, 'test')
 
 
 llvm_config.use_default_substitutions()
-
 toolchain.use_lldb_substitutions(config)
-
 toolchain.use_support_substitutions(config)
 
 

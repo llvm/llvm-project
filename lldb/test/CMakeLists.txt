@@ -87,32 +87,40 @@ if(NOT LLDB_BUILT_STANDALONE)
   )
 endif()
 
-# the value is not canonicalized within LLVM
+# These values are not canonicalized within LLVM.
 llvm_canonicalize_cmake_booleans(
   LLDB_DISABLE_PYTHON
   LLVM_ENABLE_ZLIB
   LLVM_ENABLE_SHARED_LIBS
   LLDB_IS_64_BITS)
 
-configure_lit_site_cfg(
-  ${CMAKE_CURRENT_SOURCE_DIR}/Shell/lit.site.cfg.py.in
-  ${CMAKE_CURRENT_BINARY_DIR}/Shell/lit.site.cfg.py
-  MAIN_CONFIG
-  ${CMAKE_CURRENT_SOURCE_DIR}/Shell/lit.cfg.py)
-configure_lit_site_cfg(
-  ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.site.cfg.py.in
-  ${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg.py
-  MAIN_CONFIG
-  ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.cfg.py)
-configure_lit_site_cfg(
-  ${CMAKE_CURRENT_SOURCE_DIR}/API/lit.site.cfg.in
-  ${CMAKE_CURRENT_BINARY_DIR}/API/lit.site.cfg)
+# Configure the top level test suite.
 configure_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
   ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg.py
   MAIN_CONFIG
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.cfg.py)
 
+# Configure the Shell test suite.
+configure_lit_site_cfg(
+  ${CMAKE_CURRENT_SOURCE_DIR}/Shell/lit.site.cfg.py.in
+  ${CMAKE_CURRENT_BINARY_DIR}/Shell/lit.site.cfg.py
+  MAIN_CONFIG
+  ${CMAKE_CURRENT_SOURCE_DIR}/Shell/lit.cfg.py)
+
+# Configure the Unit test suite.
+configure_lit_site_cfg(
+  ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.site.cfg.py.in
+  ${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg.py
+  MAIN_CONFIG
+  ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.cfg.py)
+
+# Configure the API test suite.
+configure_lit_site_cfg(
+  ${CMAKE_CURRENT_SOURCE_DIR}/API/lit.site.cfg.py.in
+  ${CMAKE_CURRENT_BINARY_DIR}/API/lit.site.cfg.py
+  MAIN_CONFIG
+  ${CMAKE_CURRENT_SOURCE_DIR}/API/lit.cfg.py)
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/Shell/lit-lldb-init.in
   ${CMAKE_CURRENT_BINARY_DIR}/Shell/lit-lldb-init)
