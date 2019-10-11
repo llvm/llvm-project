@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ObjectFilePECOFF.h"
+#include "PECallFrameInfo.h"
 #include "WindowsMiniDump.h"
 
 #include "lldb/Core/FileSpecList.h"
@@ -518,7 +519,26 @@ bool ObjectFilePECOFF::ParseCOFFOptionalHeader(lldb::offset_t *offset_ptr) {
   return success;
 }
 
+uint32_t ObjectFilePECOFF::GetRVA(const Address &addr) const {
+  return addr.GetFileAddress() - m_image_base;
+}
+
+Address ObjectFilePECOFF::GetAddress(uint32_t rva) {
+  SectionList *sect_list = GetSectionList();
+  if (!sect_list)
+    return Address(GetFileAddress(rva));
+
+  return Address(GetFileAddress(rva), sect_list);
+}
+
+lldb::addr_t ObjectFilePECOFF::GetFileAddress(uint32_t rva) const {
+  return m_image_base + rva;
+}
+
 DataExtractor ObjectFilePECOFF::ReadImageData(uint32_t offset, size_t size) {
+  if (!size)
+    return {};
+
   if (m_file) {
     // A bit of a hack, but we intend to write to this buffer, so we can't
     // mmap it.
@@ -539,6 +559,15 @@ DataExtractor ObjectFilePECOFF::ReadImageData(uint32_t offset, size_t size) {
     }
   }
   return data;
+}
+
+DataExtractor ObjectFilePECOFF::ReadImageDataByRVA(uint32_t rva, size_t size) {
+  if (m_file) {
+    Address addr = GetAddress(rva);
+    rva = addr.GetSection()->GetFileOffset() + addr.GetOffset();
+  }
+
+  return ReadImageData(rva, size);
 }
 
 // ParseSectionHeaders
@@ -678,14 +707,8 @@ Symtab *ObjectFilePECOFF::GetSymtab() {
         uint32_t data_start =
             m_coff_header_opt.data_dirs[coff_data_dir_export_table].vmaddr;
 
-        uint32_t address_rva = data_start;
-        if (m_file) {
-          Address address(m_coff_header_opt.image_base + data_start, sect_list);
-          address_rva =
-              address.GetSection()->GetFileOffset() + address.GetOffset();
-        }
-        DataExtractor symtab_data =
-            ReadImageData(address_rva, m_coff_header_opt.data_dirs[0].vmsize);
+        DataExtractor symtab_data = ReadImageDataByRVA(
+            data_start, m_coff_header_opt.data_dirs[0].vmsize);
         lldb::offset_t offset = 0;
 
         // Read export_table header
@@ -738,6 +761,19 @@ Symtab *ObjectFilePECOFF::GetSymtab() {
     }
   }
   return m_symtab_up.get();
+}
+
+std::unique_ptr<CallFrameInfo> ObjectFilePECOFF::CreateCallFrameInfo() {
+  if (coff_data_dir_exception_table >= m_coff_header_opt.data_dirs.size())
+    return {};
+
+  data_directory data_dir_exception =
+      m_coff_header_opt.data_dirs[coff_data_dir_exception_table];
+  if (!data_dir_exception.vmaddr)
+    return {};
+
+  return std::make_unique<PECallFrameInfo>(*this, data_dir_exception.vmaddr,
+                                           data_dir_exception.vmsize);
 }
 
 bool ObjectFilePECOFF::IsStripped() {

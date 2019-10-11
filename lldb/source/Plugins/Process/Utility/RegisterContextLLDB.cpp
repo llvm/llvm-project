@@ -12,6 +12,7 @@
 #include "lldb/Core/Value.h"
 #include "lldb/Expression/DWARFExpression.h"
 #include "lldb/Symbol/ArmUnwindInfo.h"
+#include "lldb/Symbol/CallFrameInfo.h"
 #include "lldb/Symbol/DWARFCallFrameInfo.h"
 #include "lldb/Symbol/FuncUnwinders.h"
 #include "lldb/Symbol/Function.h"
@@ -784,6 +785,16 @@ UnwindPlanSP RegisterContextLLDB::GetFullUnwindPlanForFrame() {
         unwind_plan_sp.reset();
     }
 
+    CallFrameInfo *object_file_unwind =
+        pc_module_sp->GetUnwindTable().GetObjectFileUnwindInfo();
+    if (object_file_unwind) {
+      unwind_plan_sp = std::make_shared<UnwindPlan>(lldb::eRegisterKindGeneric);
+      if (object_file_unwind->GetUnwindPlan(m_current_pc, *unwind_plan_sp))
+        return unwind_plan_sp;
+      else
+        unwind_plan_sp.reset();
+    }
+
     return arch_default_unwind_plan_sp;
   }
 
@@ -796,6 +807,9 @@ UnwindPlanSP RegisterContextLLDB::GetFullUnwindPlanForFrame() {
     m_fast_unwind_plan_sp.reset();
     unwind_plan_sp =
         func_unwinders_sp->GetEHFrameUnwindPlan(process->GetTarget());
+    if (!unwind_plan_sp)
+      unwind_plan_sp =
+          func_unwinders_sp->GetObjectFileUnwindPlan(process->GetTarget());
     if (unwind_plan_sp && unwind_plan_sp->PlanValidAtAddress(m_current_pc) &&
         unwind_plan_sp->GetSourcedFromCompiler() == eLazyBoolYes) {
       return unwind_plan_sp;
@@ -818,6 +832,9 @@ UnwindPlanSP RegisterContextLLDB::GetFullUnwindPlanForFrame() {
     // intend) or compact unwind (this won't work)
     unwind_plan_sp =
         func_unwinders_sp->GetEHFrameUnwindPlan(process->GetTarget());
+    if (!unwind_plan_sp)
+      unwind_plan_sp =
+          func_unwinders_sp->GetObjectFileUnwindPlan(process->GetTarget());
     if (unwind_plan_sp && unwind_plan_sp->PlanValidAtAddress(m_current_pc)) {
       UnwindLogMsgVerbose("frame uses %s for full UnwindPlan because the "
                           "DynamicLoader suggested we prefer it",

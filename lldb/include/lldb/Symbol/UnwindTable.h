@@ -27,6 +27,8 @@ public:
 
   ~UnwindTable();
 
+  lldb_private::CallFrameInfo *GetObjectFileUnwindInfo();
+
   lldb_private::DWARFCallFrameInfo *GetEHFrameInfo();
   lldb_private::DWARFCallFrameInfo *GetDebugFrameInfo();
 
@@ -71,6 +73,7 @@ private:
   bool m_initialized; // delay some initialization until ObjectFile is set up
   std::mutex m_mutex;
 
+  std::unique_ptr<CallFrameInfo> m_object_file_unwind_up;
   std::unique_ptr<DWARFCallFrameInfo> m_eh_frame_up;
   std::unique_ptr<DWARFCallFrameInfo> m_debug_frame_up;
   std::unique_ptr<CompactUnwindInfo> m_compact_unwind_up;
