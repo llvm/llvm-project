@@ -190,73 +190,73 @@ if(LLDB_INCLUDE_TESTS)
 endif()
 
 if (NOT LLDB_DISABLE_PYTHON)
-    if(NOT LLDB_BUILD_FRAMEWORK)
-      set(use_python_wrapper_from_src_dir -m)
+  if(NOT LLDB_BUILD_FRAMEWORK)
+    set(use_python_wrapper_from_src_dir -m)
+  endif()
+  if(LLDB_USE_SYSTEM_SIX)
+    set(use_six_py_from_system --useSystemSix)
+  endif()
+  get_target_property(lldb_scripts_dir swig_wrapper BINARY_DIR)
+  get_target_property(liblldb_build_dir liblldb LIBRARY_OUTPUT_DIRECTORY)
+
+  if(LLDB_BUILD_FRAMEWORK)
+    set(lldb_python_build_path "${liblldb_build_dir}/LLDB.framework/Resources/Python/lldb")
+  else()
+    set(lldb_python_build_path "${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${LLDB_PYTHON_RELATIVE_PATH}/lldb")
+  endif()
+  get_filename_component(lldb_python_build_path ${lldb_python_build_path} ABSOLUTE)
+
+  # Add a Post-Build Event to copy over Python files and create the symlink
+  # to liblldb.so for the Python API(hardlink on Windows).
+  add_custom_target(finish_swig ALL
+    COMMAND
+      ${PYTHON_EXECUTABLE} ${LLDB_SOURCE_DIR}/scripts/finishSwigWrapperClasses.py
+        --srcRoot=${LLDB_SOURCE_DIR}
+        --targetDir=${liblldb_build_dir}
+        --cfgBldDir=${lldb_scripts_dir}
+        --prefix=${CMAKE_BINARY_DIR}
+        --cmakeBuildConfiguration=${CMAKE_CFG_INTDIR}
+        --lldbLibDir=lib${LLVM_LIBDIR_SUFFIX}
+        --lldbPythonPath=${lldb_python_build_path}
+        ${use_python_wrapper_from_src_dir}
+        ${use_six_py_from_system}
+    VERBATIM
+    DEPENDS ${LLDB_SOURCE_DIR}/scripts/finishSwigWrapperClasses.py
+    DEPENDS ${lldb_scripts_dir}/lldb.py
+    COMMENT "Python script sym-linking LLDB Python API")
+
+  add_dependencies(finish_swig swig_wrapper liblldb lldb-argdumper)
+  set_target_properties(finish_swig swig_wrapper PROPERTIES FOLDER "lldb misc")
+
+  # Ensure we do the python post-build step when building lldb.
+  add_dependencies(lldb finish_swig)
+
+  if(NOT LLDB_BUILD_FRAMEWORK)
+    # Install the LLDB python module
+    add_custom_target(lldb-python-scripts)
+    add_dependencies(lldb-python-scripts finish_swig)
+    install(DIRECTORY ${CMAKE_BINARY_DIR}/${LLDB_PYTHON_RELATIVE_PATH}/
+            DESTINATION ${LLDB_PYTHON_RELATIVE_PATH}
+            COMPONENT lldb-python-scripts)
+    if (NOT LLVM_ENABLE_IDE)
+      add_llvm_install_targets(install-lldb-python-scripts
+                               COMPONENT lldb-python-scripts
+                               DEPENDS lldb-python-scripts)
     endif()
-    if(LLDB_USE_SYSTEM_SIX)
-      set(use_six_py_from_system --useSystemSix)
-    endif()
-    get_target_property(lldb_scripts_dir swig_wrapper BINARY_DIR)
-    get_target_property(liblldb_build_dir liblldb LIBRARY_OUTPUT_DIRECTORY)
+  endif()
 
-    if(LLDB_BUILD_FRAMEWORK)
-      set(lldb_python_build_path "${liblldb_build_dir}/LLDB.framework/Resources/Python/lldb")
-    else()
-      set(lldb_python_build_path "${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${LLDB_PYTHON_RELATIVE_PATH}/lldb")
-    endif()
-    get_filename_component(lldb_python_build_path ${lldb_python_build_path} ABSOLUTE)
-
-    # Add a Post-Build Event to copy over Python files and create the symlink
-    # to liblldb.so for the Python API(hardlink on Windows).
-    add_custom_target(finish_swig ALL
-        COMMAND
-           ${PYTHON_EXECUTABLE} ${LLDB_SOURCE_DIR}/scripts/finishSwigWrapperClasses.py
-               --srcRoot=${LLDB_SOURCE_DIR}
-               --targetDir=${liblldb_build_dir}
-               --cfgBldDir=${lldb_scripts_dir}
-               --prefix=${CMAKE_BINARY_DIR}
-               --cmakeBuildConfiguration=${CMAKE_CFG_INTDIR}
-               --lldbLibDir=lib${LLVM_LIBDIR_SUFFIX}
-               --lldbPythonPath=${lldb_python_build_path}
-               ${use_python_wrapper_from_src_dir}
-               ${use_six_py_from_system}
-        VERBATIM
-        DEPENDS ${LLDB_SOURCE_DIR}/scripts/finishSwigWrapperClasses.py
-        DEPENDS ${lldb_scripts_dir}/lldb.py
-        COMMENT "Python script sym-linking LLDB Python API")
-
-    add_dependencies(finish_swig swig_wrapper liblldb lldb-argdumper)
-    set_target_properties(finish_swig swig_wrapper PROPERTIES FOLDER "lldb misc")
-
-    # Ensure we do the python post-build step when building lldb.
-    add_dependencies(lldb finish_swig)
-
-    if(NOT LLDB_BUILD_FRAMEWORK)
-      # Install the LLDB python module
-      add_custom_target(lldb-python-scripts)
-      add_dependencies(lldb-python-scripts finish_swig)
-      install(DIRECTORY ${CMAKE_BINARY_DIR}/${LLDB_PYTHON_RELATIVE_PATH}/
-              DESTINATION ${LLDB_PYTHON_RELATIVE_PATH}
-              COMPONENT lldb-python-scripts)
-      if (NOT LLVM_ENABLE_IDE)
-        add_llvm_install_targets(install-lldb-python-scripts
-                                 COMPONENT lldb-python-scripts
-                                 DEPENDS lldb-python-scripts)
-      endif()
-    endif()
-
-    # Add a Post-Build Event to copy the custom Python DLL to the lldb binaries dir so that Windows can find it when launching
-    # lldb.exe or any other executables that were linked with liblldb.
-    if (WIN32 AND NOT "${PYTHON_DLL}" STREQUAL "")
-        # When using the Visual Studio CMake generator the lldb binaries end up in Release/bin, Debug/bin etc.
-        file(TO_NATIVE_PATH "${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin" LLDB_BIN_DIR)
-        file(TO_NATIVE_PATH "${PYTHON_DLL}" PYTHON_DLL_NATIVE_PATH)
-        add_custom_command(
-            TARGET finish_swig
-            POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy ${PYTHON_DLL_NATIVE_PATH} ${LLDB_BIN_DIR} VERBATIM
-            COMMENT "Copying Python DLL to LLDB binaries directory.")
-    endif ()
+  # Add a Post-Build Event to copy the custom Python DLL to the lldb binaries dir so that Windows can find it when launching
+  # lldb.exe or any other executables that were linked with liblldb.
+  if (WIN32 AND NOT "${PYTHON_DLL}" STREQUAL "")
+    # When using the Visual Studio CMake generator the lldb binaries end up in Release/bin, Debug/bin etc.
+    file(TO_NATIVE_PATH "${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin" LLDB_BIN_DIR)
+    file(TO_NATIVE_PATH "${PYTHON_DLL}" PYTHON_DLL_NATIVE_PATH)
+    add_custom_command(
+      TARGET finish_swig
+      POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy ${PYTHON_DLL_NATIVE_PATH} ${LLDB_BIN_DIR} VERBATIM
+      COMMENT "Copying Python DLL to LLDB binaries directory.")
+  endif ()
 endif ()
 
 if(LLDB_BUILT_STANDALONE AND NOT LLVM_ENABLE_IDE)

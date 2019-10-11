@@ -13,9 +13,9 @@
 # OBJ-NEXT:     ]
 
 # ERROR:      error: duplicate symbol: main
-# ERROR-NEXT: >>> defined at reduced.c:2 (/tmp/reduced.c:2)
+# ERROR-NEXT: >>> defined at reduced.c:2 ({{[/\\]}}tmp{{[/\\]}}reduced.c:2)
 # ERROR-NEXT: >>>
-# ERROR-NEXT: >>> defined at reduced.c:2 (/tmp/reduced.c:2)
+# ERROR-NEXT: >>> defined at reduced.c:2 ({{[/\\]}}tmp{{[/\\]}}reduced.c:2)
 # ERROR-NEXT: >>>
 
 	.text
