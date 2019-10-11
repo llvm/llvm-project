@@ -243,8 +243,14 @@ void ProcessInstanceInfo::DumpAsTableRow(Stream &s, UserIDResolver &resolver,
   }
 }
 
+bool ProcessInstanceInfoMatch::ArchitectureMatches(
+    const ArchSpec &arch_spec) const {
+  return !m_match_info.GetArchitecture().IsValid() ||
+         m_match_info.GetArchitecture().IsCompatibleMatch(arch_spec);
+}
+
 bool ProcessInstanceInfoMatch::NameMatches(const char *process_name) const {
-  if (m_name_match_type == NameMatch::Ignore || process_name == nullptr)
+  if (m_name_match_type == NameMatch::Ignore)
     return true;
   const char *match_name = m_match_info.GetName();
   if (!match_name)
@@ -253,11 +259,8 @@ bool ProcessInstanceInfoMatch::NameMatches(const char *process_name) const {
   return lldb_private::NameMatches(process_name, m_name_match_type, match_name);
 }
 
-bool ProcessInstanceInfoMatch::Matches(
+bool ProcessInstanceInfoMatch::ProcessIDsMatch(
     const ProcessInstanceInfo &proc_info) const {
-  if (!NameMatches(proc_info.GetName()))
-    return false;
-
   if (m_match_info.ProcessIDIsValid() &&
       m_match_info.GetProcessID() != proc_info.GetProcessID())
     return false;
@@ -265,7 +268,11 @@ bool ProcessInstanceInfoMatch::Matches(
   if (m_match_info.ParentProcessIDIsValid() &&
       m_match_info.GetParentProcessID() != proc_info.GetParentProcessID())
     return false;
+  return true;
+}
 
+bool ProcessInstanceInfoMatch::UserIDsMatch(
+    const ProcessInstanceInfo &proc_info) const {
   if (m_match_info.UserIDIsValid() &&
       m_match_info.GetUserID() != proc_info.GetUserID())
     return false;
@@ -281,12 +288,13 @@ bool ProcessInstanceInfoMatch::Matches(
   if (m_match_info.EffectiveGroupIDIsValid() &&
       m_match_info.GetEffectiveGroupID() != proc_info.GetEffectiveGroupID())
     return false;
-
-  if (m_match_info.GetArchitecture().IsValid() &&
-      !m_match_info.GetArchitecture().IsCompatibleMatch(
-          proc_info.GetArchitecture()))
-    return false;
   return true;
+}
+bool ProcessInstanceInfoMatch::Matches(
+    const ProcessInstanceInfo &proc_info) const {
+  return ArchitectureMatches(proc_info.GetArchitecture()) &&
+         ProcessIDsMatch(proc_info) && UserIDsMatch(proc_info) &&
+         NameMatches(proc_info.GetName());
 }
 
 bool ProcessInstanceInfoMatch::MatchAllProcesses() const {
