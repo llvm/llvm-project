@@ -5,7 +5,7 @@
 # RUN: ld.lld %t.o -o t.so -shared -version-script %p/Inputs/empty-ver.ver
 # RUN: llvm-readobj --version-info t.so | FileCheck %s
 
-# CHECK:       Symbols [
+# CHECK:      Version symbols [
 # CHECK-NEXT:   Symbol {
 # CHECK-NEXT:     Version: 0
 # CHECK-NEXT:     Name:

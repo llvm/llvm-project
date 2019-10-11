@@ -91,3 +91,20 @@ TEST(ProcessInstanceInfo, DumpTable_invalidUID) {
 )",
       s.GetData());
 }
+
+TEST(ProcessInstanceInfoMatch, Name) {
+  ProcessInstanceInfo info_bar, info_empty;
+  info_bar.GetExecutableFile().SetFile("/foo/bar", FileSpec::Style::posix);
+
+  ProcessInstanceInfoMatch match;
+  match.SetNameMatchType(NameMatch::Equals);
+  match.GetProcessInfo().GetExecutableFile().SetFile("bar",
+                                                     FileSpec::Style::posix);
+
+  EXPECT_TRUE(match.Matches(info_bar));
+  EXPECT_FALSE(match.Matches(info_empty));
+
+  match.GetProcessInfo().GetExecutableFile() = FileSpec();
+  EXPECT_TRUE(match.Matches(info_bar));
+  EXPECT_TRUE(match.Matches(info_empty));
+}

@@ -427,23 +427,35 @@ CreateRegionsCacheFromLinuxMaps(MinidumpParser &parser,
 static bool
 CreateRegionsCacheFromMemoryInfoList(MinidumpParser &parser,
                                      std::vector<MemoryRegionInfo> &regions) {
-  auto data = parser.GetStream(StreamType::MemoryInfoList);
-  if (data.empty())
+  Log *log = GetLogIfAnyCategoriesSet(LIBLLDB_LOG_MODULES);
+  auto ExpectedInfo = parser.GetMinidumpFile().getMemoryInfoList();
+  if (!ExpectedInfo) {
+    LLDB_LOG_ERROR(log, ExpectedInfo.takeError(),
+                   "Failed to read memory info list: {0}");
     return false;
-  auto mem_info_list = MinidumpMemoryInfo::ParseMemoryInfoList(data);
-  if (mem_info_list.empty())
-    return false;
+  }
   constexpr auto yes = MemoryRegionInfo::eYes;
   constexpr auto no = MemoryRegionInfo::eNo;
-  regions.reserve(mem_info_list.size());
-  for (const auto &entry : mem_info_list) {
+  for (const MemoryInfo &entry : *ExpectedInfo) {
     MemoryRegionInfo region;
-    region.GetRange().SetRangeBase(entry->base_address);
-    region.GetRange().SetByteSize(entry->region_size);
-    region.SetReadable(entry->isReadable() ? yes : no);
-    region.SetWritable(entry->isWritable() ? yes : no);
-    region.SetExecutable(entry->isExecutable() ? yes : no);
-    region.SetMapped(entry->isMapped() ? yes : no);
+    region.GetRange().SetRangeBase(entry.BaseAddress);
+    region.GetRange().SetByteSize(entry.RegionSize);
+
+    MemoryProtection prot = entry.Protect;
+    region.SetReadable(bool(prot & MemoryProtection::NoAccess) ? no : yes);
+    region.SetWritable(
+        bool(prot & (MemoryProtection::ReadWrite | MemoryProtection::WriteCopy |
+                     MemoryProtection::ExecuteReadWrite |
+                     MemoryProtection::ExeciteWriteCopy))
+            ? yes
+            : no);
+    region.SetExecutable(
+        bool(prot & (MemoryProtection::Execute | MemoryProtection::ExecuteRead |
+                     MemoryProtection::ExecuteReadWrite |
+                     MemoryProtection::ExeciteWriteCopy))
+            ? yes
+            : no);
+    region.SetMapped(entry.State != MemoryState::Free ? yes : no);
     regions.push_back(region);
   }
   return !regions.empty();
