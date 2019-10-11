@@ -513,6 +513,11 @@ void CodeGenFunction::EmitCilkForStmt(const CilkForStmt &S,
   CatchScope->setCatchAllHandler(0, DetRethrow.get());
   RunCleanupsScope DetachCleanupsScope(*this);
 
+  // Set up a nested sync region for the loop body, and ensure it has an
+  // implicit sync.
+  PushSyncRegion();
+  CurSyncRegion->addImplicitSync();
+
   // Store the blocks to use for break and continue.
   JumpDest Preattach = getJumpDestInCurrentScope("pfor.preattach");
   BreakContinueStack.push_back(BreakContinue(Preattach, Preattach));
@@ -546,7 +551,10 @@ void CodeGenFunction::EmitCilkForStmt(const CilkForStmt &S,
   // Finish detached body and emit the reattach.
   {
     EmitBlock(Preattach.getBlock());
+    // The design of the exception-handling mechanism means we need to cleanup
+    // the scope before popping the sync region.
     DetachCleanupsScope.ForceCleanup();
+    PopSyncRegion();
     popCatchScope();
     Builder.CreateReattach(Continue.getBlock(), SyncRegionStart);
   }
