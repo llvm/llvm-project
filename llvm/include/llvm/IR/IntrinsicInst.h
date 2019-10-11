@@ -273,12 +273,16 @@ namespace llvm {
       case Intrinsic::experimental_constrained_log:
       case Intrinsic::experimental_constrained_log10:
       case Intrinsic::experimental_constrained_log2:
+      case Intrinsic::experimental_constrained_lrint:
+      case Intrinsic::experimental_constrained_llrint:
       case Intrinsic::experimental_constrained_rint:
       case Intrinsic::experimental_constrained_nearbyint:
       case Intrinsic::experimental_constrained_maxnum:
       case Intrinsic::experimental_constrained_minnum:
       case Intrinsic::experimental_constrained_ceil:
       case Intrinsic::experimental_constrained_floor:
+      case Intrinsic::experimental_constrained_lround:
+      case Intrinsic::experimental_constrained_llround:
       case Intrinsic::experimental_constrained_round:
       case Intrinsic::experimental_constrained_trunc:
         return true;

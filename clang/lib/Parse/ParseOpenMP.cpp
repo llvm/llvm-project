@@ -812,10 +812,13 @@ static ExprResult parseContextScore(Parser &P) {
 }
 
 /// Parse context selector for 'implementation' selector set:
-/// 'vendor' '(' <vendor> ')'
-static void
-parseImplementationSelector(Parser &P,
-                            Sema::OpenMPDeclareVariantCtsSelectorData &Data) {
+/// 'vendor' '(' [ 'score' '(' <score _expr> ')' ':' ] <vendor> { ',' <vendor> }
+/// ')'
+static void parseImplementationSelector(
+    Parser &P, SourceLocation Loc, llvm::StringMap<SourceLocation> &UsedCtx,
+    llvm::function_ref<void(SourceRange,
+                            const Sema::OpenMPDeclareVariantCtsSelectorData &)>
+        Callback) {
   const Token &Tok = P.getCurToken();
   // Parse inner context selector set name, if any.
   if (!Tok.is(tok::identifier)) {
@@ -829,6 +832,15 @@ parseImplementationSelector(Parser &P,
   }
   SmallString<16> Buffer;
   StringRef CtxSelectorName = P.getPreprocessor().getSpelling(Tok, Buffer);
+  auto Res = UsedCtx.try_emplace(CtxSelectorName, Tok.getLocation());
+  if (!Res.second) {
+    // OpenMP 5.0, 2.3.2 Context Selectors, Restrictions.
+    // Each trait-selector-name can only be specified once.
+    P.Diag(Tok.getLocation(), diag::err_omp_declare_variant_ctx_mutiple_use)
+        << CtxSelectorName << "implementation";
+    P.Diag(Res.first->getValue(), diag::note_omp_declare_variant_ctx_used_here)
+        << CtxSelectorName;
+  }
   OMPDeclareVariantAttr::CtxSelectorType CSKind =
       OMPDeclareVariantAttr::CtxUnknown;
   (void)OMPDeclareVariantAttr::ConvertStrToCtxSelectorType(CtxSelectorName,
@@ -840,20 +852,39 @@ parseImplementationSelector(Parser &P,
     BalancedDelimiterTracker T(P, tok::l_paren, tok::annot_pragma_openmp_end);
     (void)T.expectAndConsume(diag::err_expected_lparen_after,
                              CtxSelectorName.data());
-    Data.CtxScore = parseContextScore(P);
-    // Parse <vendor>.
-    StringRef VendorName;
-    if (Tok.is(tok::identifier)) {
-      VendorName = P.getPreprocessor().getSpelling(P.getCurToken(), Buffer);
-      (void)P.ConsumeToken();
-    } else {
-      P.Diag(Tok.getLocation(), diag::err_omp_declare_variant_item_expected)
-          << "vendor identifier" << "vendor" << "implementation";
-    }
+    const ExprResult Score = parseContextScore(P);
+    SmallVector<llvm::SmallString<16>, 4> Vendors;
+    do {
+      // Parse <vendor>.
+      StringRef VendorName;
+      if (Tok.is(tok::identifier)) {
+        Buffer.clear();
+        VendorName = P.getPreprocessor().getSpelling(P.getCurToken(), Buffer);
+        (void)P.ConsumeToken();
+        if (!VendorName.empty())
+          Vendors.push_back(VendorName);
+      } else {
+        P.Diag(Tok.getLocation(), diag::err_omp_declare_variant_item_expected)
+            << "vendor identifier"
+            << "vendor"
+            << "implementation";
+      }
+      if (!P.TryConsumeToken(tok::comma) && Tok.isNot(tok::r_paren)) {
+        P.Diag(Tok, diag::err_expected_punc)
+            << (VendorName.empty() ? "vendor name" : VendorName);
+      }
+    } while (Tok.is(tok::identifier));
     // Parse ')'.
     (void)T.consumeClose();
-    if (!VendorName.empty())
-      Data.ImplVendor = VendorName;
+    if (!Vendors.empty()) {
+      SmallVector<StringRef, 4> ImplVendors(Vendors.size());
+      for (int I = 0, E = Vendors.size(); I < E; ++I)
+        ImplVendors[I] = Vendors[I];
+      Sema::OpenMPDeclareVariantCtsSelectorData Data(
+          OMPDeclareVariantAttr::CtxSetImplementation, CSKind, ImplVendors,
+          Score);
+      Callback(SourceRange(Loc, Tok.getLocation()), Data);
+    }
     break;
   }
   case OMPDeclareVariantAttr::CtxUnknown:
@@ -865,8 +896,6 @@ parseImplementationSelector(Parser &P,
       ;
     return;
   }
-  Data.CtxSet = OMPDeclareVariantAttr::CtxSetImplementation;
-  Data.Ctx = CSKind;
 }
 
 /// Parses clauses for 'declare variant' directive.
@@ -878,6 +907,7 @@ bool Parser::parseOpenMPContextSelectors(
     llvm::function_ref<void(SourceRange,
                             const Sema::OpenMPDeclareVariantCtsSelectorData &)>
         Callback) {
+  llvm::StringMap<SourceLocation> UsedCtxSets;
   do {
     // Parse inner context selector set name.
     if (!Tok.is(tok::identifier)) {
@@ -887,6 +917,16 @@ bool Parser::parseOpenMPContextSelectors(
     }
     SmallString<16> Buffer;
     StringRef CtxSelectorSetName = PP.getSpelling(Tok, Buffer);
+    auto Res = UsedCtxSets.try_emplace(CtxSelectorSetName, Tok.getLocation());
+    if (!Res.second) {
+      // OpenMP 5.0, 2.3.2 Context Selectors, Restrictions.
+      // Each trait-set-selector-name can only be specified once.
+      Diag(Tok.getLocation(), diag::err_omp_declare_variant_ctx_set_mutiple_use)
+          << CtxSelectorSetName;
+      Diag(Res.first->getValue(),
+           diag::note_omp_declare_variant_ctx_set_used_here)
+          << CtxSelectorSetName;
+    }
     // Parse '='.
     (void)ConsumeToken();
     if (Tok.isNot(tok::equal)) {
@@ -897,7 +937,6 @@ bool Parser::parseOpenMPContextSelectors(
     (void)ConsumeToken();
     // TBD: add parsing of known context selectors.
     // Unknown selector - just ignore it completely.
-    Sema::OpenMPDeclareVariantCtsSelectorData Data;
     {
       // Parse '{'.
       BalancedDelimiterTracker TBr(*this, tok::l_brace,
@@ -908,21 +947,28 @@ bool Parser::parseOpenMPContextSelectors(
           OMPDeclareVariantAttr::CtxSetUnknown;
       (void)OMPDeclareVariantAttr::ConvertStrToCtxSelectorSetType(
           CtxSelectorSetName, CSSKind);
-      switch (CSSKind) {
-      case OMPDeclareVariantAttr::CtxSetImplementation:
-        parseImplementationSelector(*this, Data);
-        break;
-      case OMPDeclareVariantAttr::CtxSetUnknown:
-        // Skip until either '}', ')', or end of directive.
-        while (!SkipUntil(tok::r_brace, tok::r_paren,
-                          tok::annot_pragma_openmp_end, StopBeforeMatch))
-          ;
-        break;
-      }
+      llvm::StringMap<SourceLocation> UsedCtx;
+      do {
+        switch (CSSKind) {
+        case OMPDeclareVariantAttr::CtxSetImplementation:
+          parseImplementationSelector(*this, Loc, UsedCtx, Callback);
+          break;
+        case OMPDeclareVariantAttr::CtxSetUnknown:
+          // Skip until either '}', ')', or end of directive.
+          while (!SkipUntil(tok::r_brace, tok::r_paren,
+                            tok::annot_pragma_openmp_end, StopBeforeMatch))
+            ;
+          break;
+        }
+        const Token PrevTok = Tok;
+        if (!TryConsumeToken(tok::comma) && Tok.isNot(tok::r_brace))
+          Diag(Tok, diag::err_omp_expected_comma_brace)
+              << (PrevTok.isAnnotation() ? "context selector trait"
+                                         : PP.getSpelling(PrevTok));
+      } while (Tok.is(tok::identifier));
       // Parse '}'.
       (void)TBr.consumeClose();
     }
-    Callback(SourceRange(Loc, Tok.getLocation()), Data);
     // Consume ','
     if (Tok.isNot(tok::r_paren) && Tok.isNot(tok::annot_pragma_openmp_end))
       (void)ExpectAndConsume(tok::comma);

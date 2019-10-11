@@ -30,6 +30,11 @@ l1:
 g1:
   .word 0
 
+# CHECK: SYMBOL TABLE:
+# CHECK: 0021020 l     O .data   00000004 l1
+# CHECK: 0021000         .text   00000000 __start
+# CHECK: 0021024 g     O .data   00000004 g1
+
 # CHECK:      __start:
 # CHECK-NEXT:  21000:   lui    $8, 2
 #                                  ^-- %hi(__start+4)
@@ -45,8 +50,3 @@ g1:
 #                                  ^-- %hi(l1+0x20000-4)
 # CHECK-NEXT:  21018:   addi   $8, $8, 4124
 #                                      ^-- %lo(l1-4)
-
-# CHECK: SYMBOL TABLE:
-# CHECK: 0021020 l     O .data   00000004 l1
-# CHECK: 0021000         .text   00000000 __start
-# CHECK: 0021024 g     O .data   00000004 g1

@@ -237,39 +237,40 @@ void InstructionBenchmarkClustering::clusterizeNaive(unsigned NumOpcodes) {
 // We shall find every opcode with benchmarks not in just one cluster, and move
 // *all* the benchmarks of said Opcode into one new unstable cluster per Opcode.
 void InstructionBenchmarkClustering::stabilize(unsigned NumOpcodes) {
-  // Given an instruction Opcode, in which clusters do benchmarks of this
-  // instruction lie? Normally, they all should be in the same cluster.
-  std::vector<llvm::SmallSet<ClusterId, 1>> OpcodeToClusterIDs;
-  OpcodeToClusterIDs.resize(NumOpcodes);
-  // The list of opcodes that have more than one cluster.
-  llvm::SetVector<size_t> UnstableOpcodes;
-  // Populate OpcodeToClusterIDs and UnstableOpcodes data structures.
+  // Given an instruction Opcode and Config, in which clusters do benchmarks of
+  // this instruction lie? Normally, they all should be in the same cluster.
+  struct OpcodeAndConfig {
+    explicit OpcodeAndConfig(const InstructionBenchmark &IB)
+        : Opcode(IB.keyInstruction().getOpcode()), Config(&IB.Key.Config) {}
+    unsigned Opcode;
+    const std::string *Config;
+
+    auto Tie() const -> auto { return std::tie(Opcode, *Config); }
+
+    bool operator<(const OpcodeAndConfig &O) const { return Tie() < O.Tie(); }
+    bool operator!=(const OpcodeAndConfig &O) const { return Tie() != O.Tie(); }
+  };
+  std::map<OpcodeAndConfig, llvm::SmallSet<ClusterId, 1>>
+      OpcodeConfigToClusterIDs;
+  // Populate OpcodeConfigToClusterIDs and UnstableOpcodes data structures.
   assert(ClusterIdForPoint_.size() == Points_.size() && "size mismatch");
   for (const auto &Point : zip(Points_, ClusterIdForPoint_)) {
     const ClusterId &ClusterIdOfPoint = std::get<1>(Point);
     if (!ClusterIdOfPoint.isValid())
       continue; // Only process fully valid clusters.
-    const unsigned Opcode = std::get<0>(Point).keyInstruction().getOpcode();
-    assert(Opcode < NumOpcodes && "NumOpcodes is incorrect (too small)");
+    const OpcodeAndConfig Key(std::get<0>(Point));
     llvm::SmallSet<ClusterId, 1> &ClusterIDsOfOpcode =
-        OpcodeToClusterIDs[Opcode];
+        OpcodeConfigToClusterIDs[Key];
     ClusterIDsOfOpcode.insert(ClusterIdOfPoint);
-    // Is there more than one ClusterID for this opcode?.
-    if (ClusterIDsOfOpcode.size() < 2)
-      continue; // If not, then at this moment this Opcode is stable.
-    // Else let's record this unstable opcode for future use.
-    UnstableOpcodes.insert(Opcode);
   }
-  assert(OpcodeToClusterIDs.size() == NumOpcodes && "sanity check");
 
-  // We know with how many [new] clusters we will end up with.
-  const auto NewTotalClusterCount = Clusters_.size() + UnstableOpcodes.size();
-  Clusters_.reserve(NewTotalClusterCount);
-  for (const size_t UnstableOpcode : UnstableOpcodes.getArrayRef()) {
+  for (const auto &OpcodeConfigToClusterID : OpcodeConfigToClusterIDs) {
     const llvm::SmallSet<ClusterId, 1> &ClusterIDs =
-        OpcodeToClusterIDs[UnstableOpcode];
-    assert(ClusterIDs.size() > 1 &&
-           "Should only have Opcodes with more than one cluster.");
+        OpcodeConfigToClusterID.second;
+    const OpcodeAndConfig &Key = OpcodeConfigToClusterID.first;
+    // We only care about unstable instructions.
+    if (ClusterIDs.size() < 2)
+      continue;
 
     // Create a new unstable cluster, one per Opcode.
     Clusters_.emplace_back(ClusterId::makeValidUnstable(Clusters_.size()));
@@ -290,8 +291,8 @@ void InstructionBenchmarkClustering::stabilize(unsigned NumOpcodes) {
       // and the rest of the points is for the UnstableOpcode.
       const auto it = std::stable_partition(
           OldCluster.PointIndices.begin(), OldCluster.PointIndices.end(),
-          [this, UnstableOpcode](size_t P) {
-            return Points_[P].keyInstruction().getOpcode() != UnstableOpcode;
+          [this, &Key](size_t P) {
+            return OpcodeAndConfig(Points_[P]) != Key;
           });
       assert(std::distance(it, OldCluster.PointIndices.end()) > 0 &&
              "Should have found at least one bad point");
@@ -314,7 +315,6 @@ void InstructionBenchmarkClustering::stabilize(unsigned NumOpcodes) {
            "New unstable cluster should end up with no less points than there "
            "was clusters");
   }
-  assert(Clusters_.size() == NewTotalClusterCount && "sanity check");
 }
 
 llvm::Expected<InstructionBenchmarkClustering>

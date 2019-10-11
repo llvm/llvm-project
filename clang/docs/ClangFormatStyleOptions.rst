@@ -141,7 +141,7 @@ the configuration (without a prefix: ``Auto``).
     <https://google.github.io/styleguide/cppguide.html>`_
   * ``Chromium``
     A style complying with `Chromium's style guide
-    <https://www.chromium.org/developers/coding-style>`_
+    <https://chromium.googlesource.com/chromium/src/+/master/styleguide/styleguide.md>`_
   * ``Mozilla``
     A style complying with `Mozilla's style guide
     <https://developer.mozilla.org/en-US/docs/Developer_Guide/Coding_Style>`_
@@ -2301,7 +2301,8 @@ the configuration (without a prefix: ``Auto``).
 
 **SpacesInSquareBrackets** (``bool``)
   If ``true``, spaces will be inserted after ``[`` and before ``]``.
-  Lambdas or unspecified size array declarations will not be affected.
+  Lambdas without arguments or unspecified size array declarations will not be
+  affected.
 
   .. code-block:: c++
 
@@ -2310,11 +2311,12 @@ the configuration (without a prefix: ``Auto``).
      std::unique_ptr<int[]> foo() {} // Won't be affected
 
 **Standard** (``LanguageStandard``)
+  Parse and format C++ constructs compatible with this standard.
+
   .. code-block:: c++
 
      c++03:                                 latest:
      vector<set<int> > x;           vs.     vector<set<int>> x;
-  Parse and format C++ constructs compatible with this standard.
 
   Possible values:
 

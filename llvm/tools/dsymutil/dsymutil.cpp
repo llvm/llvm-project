@@ -520,9 +520,10 @@ int main(int argc, char **argv) {
 
     // If there is more than one link to execute, we need to generate
     // temporary files.
-    bool NeedsTempFiles =
+    const bool NeedsTempFiles =
         !Options.DumpDebugMap && (Options.OutputFile != "-") &&
         (DebugMapPtrsOrErr->size() != 1 || Options.LinkOpts.Update);
+    const bool Verify = Options.Verify && !Options.LinkOpts.NoOutput;
 
     SmallVector<MachOUtils::ArchAndFile, 4> TempFiles;
     std::atomic_char AllOK(1);
@@ -577,7 +578,6 @@ int main(int argc, char **argv) {
         }
       }
 
-      const bool Verify = Options.Verify && !Options.LinkOpts.NoOutput;
       auto LinkLambda = [&, OutputFile](std::shared_ptr<raw_fd_ostream> Stream,
                                         LinkOptions Options) {
         AllOK.fetch_and(

@@ -14,8 +14,9 @@ using namespace llvm;
 using namespace llvm::object;
 using namespace llvm::support::endian;
 using namespace llvm::ELF;
-using namespace lld;
-using namespace lld::elf;
+
+namespace lld {
+namespace elf {
 
 namespace {
 
@@ -436,7 +437,10 @@ void RISCV::relocateOne(uint8_t *loc, const RelType type,
   }
 }
 
-TargetInfo *elf::getRISCVTargetInfo() {
+TargetInfo *getRISCVTargetInfo() {
   static RISCV target;
   return &target;
 }
+
+} // namespace elf
+} // namespace lld

@@ -2000,6 +2000,9 @@ void ResetAllOptionOccurrences();
 /// where no options are supported.
 void ResetCommandLineParser();
 
+/// Parses `Arg` into the option handler `Handler`.
+bool ProvidePositionalOption(Option *Handler, StringRef Arg, int i);
+
 } // end namespace cl
 
 } // end namespace llvm

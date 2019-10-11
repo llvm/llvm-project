@@ -18,9 +18,41 @@
 using namespace lldb;
 using namespace lldb_private;
 
+class lldb_private::SBCommandReturnObjectImpl {
+public:
+  SBCommandReturnObjectImpl()
+      : m_ptr(new CommandReturnObject()), m_owned(true) {}
+  SBCommandReturnObjectImpl(CommandReturnObject &ref)
+      : m_ptr(&ref), m_owned(false) {}
+  SBCommandReturnObjectImpl(const SBCommandReturnObjectImpl &rhs)
+      : m_ptr(new CommandReturnObject(*rhs.m_ptr)), m_owned(rhs.m_owned) {}
+  SBCommandReturnObjectImpl &operator=(const SBCommandReturnObjectImpl &rhs) {
+    SBCommandReturnObjectImpl copy(rhs);
+    std::swap(*this, copy);
+    return *this;
+  }
+  // rvalue ctor+assignment are not used by SBCommandReturnObject.
+  ~SBCommandReturnObjectImpl() {
+    if (m_owned)
+      delete m_ptr;
+  }
+
+  CommandReturnObject &operator*() const { return *m_ptr; }
+
+private:
+  CommandReturnObject *m_ptr;
+  bool m_owned;
+};
+
 SBCommandReturnObject::SBCommandReturnObject()
-    : m_opaque_up(new CommandReturnObject()) {
+    : m_opaque_up(new SBCommandReturnObjectImpl()) {
   LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBCommandReturnObject);
+}
+
+SBCommandReturnObject::SBCommandReturnObject(CommandReturnObject &ref)
+    : m_opaque_up(new SBCommandReturnObjectImpl(ref)) {
+  LLDB_RECORD_CONSTRUCTOR(SBCommandReturnObject,
+                          (lldb_private::CommandReturnObject &), ref);
 }
 
 SBCommandReturnObject::SBCommandReturnObject(const SBCommandReturnObject &rhs)
@@ -31,26 +63,10 @@ SBCommandReturnObject::SBCommandReturnObject(const SBCommandReturnObject &rhs)
   m_opaque_up = clone(rhs.m_opaque_up);
 }
 
-SBCommandReturnObject::SBCommandReturnObject(CommandReturnObject *ptr)
-    : m_opaque_up(ptr) {
-  LLDB_RECORD_CONSTRUCTOR(SBCommandReturnObject,
-                          (lldb_private::CommandReturnObject *), ptr);
-  assert(ptr != nullptr);
-}
-
-SBCommandReturnObject::~SBCommandReturnObject() = default;
-
-CommandReturnObject *SBCommandReturnObject::Release() {
-  LLDB_RECORD_METHOD_NO_ARGS(lldb_private::CommandReturnObject *,
-                             SBCommandReturnObject, Release);
-
-  return LLDB_RECORD_RESULT(m_opaque_up.release());
-}
-
-const SBCommandReturnObject &SBCommandReturnObject::
+SBCommandReturnObject &SBCommandReturnObject::
 operator=(const SBCommandReturnObject &rhs) {
   LLDB_RECORD_METHOD(
-      const lldb::SBCommandReturnObject &,
+      lldb::SBCommandReturnObject &,
       SBCommandReturnObject, operator=,(const lldb::SBCommandReturnObject &),
       rhs);
 
@@ -58,6 +74,8 @@ operator=(const SBCommandReturnObject &rhs) {
     m_opaque_up = clone(rhs.m_opaque_up);
   return LLDB_RECORD_RESULT(*this);
 }
+
+SBCommandReturnObject::~SBCommandReturnObject() = default;
 
 bool SBCommandReturnObject::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBCommandReturnObject, IsValid);
@@ -73,27 +91,27 @@ SBCommandReturnObject::operator bool() const {
 const char *SBCommandReturnObject::GetOutput() {
   LLDB_RECORD_METHOD_NO_ARGS(const char *, SBCommandReturnObject, GetOutput);
 
-  ConstString output(m_opaque_up->GetOutputData());
+  ConstString output(ref().GetOutputData());
   return output.AsCString(/*value_if_empty*/ "");
 }
 
 const char *SBCommandReturnObject::GetError() {
   LLDB_RECORD_METHOD_NO_ARGS(const char *, SBCommandReturnObject, GetError);
 
-  ConstString output(m_opaque_up->GetErrorData());
+  ConstString output(ref().GetErrorData());
   return output.AsCString(/*value_if_empty*/ "");
 }
 
 size_t SBCommandReturnObject::GetOutputSize() {
   LLDB_RECORD_METHOD_NO_ARGS(size_t, SBCommandReturnObject, GetOutputSize);
 
-  return m_opaque_up->GetOutputData().size();
+  return ref().GetOutputData().size();
 }
 
 size_t SBCommandReturnObject::GetErrorSize() {
   LLDB_RECORD_METHOD_NO_ARGS(size_t, SBCommandReturnObject, GetErrorSize);
 
-  return m_opaque_up->GetErrorData().size();
+  return ref().GetErrorData().size();
 }
 
 size_t SBCommandReturnObject::PutOutput(FILE *fh) {
@@ -121,65 +139,63 @@ size_t SBCommandReturnObject::PutError(FILE *fh) {
 void SBCommandReturnObject::Clear() {
   LLDB_RECORD_METHOD_NO_ARGS(void, SBCommandReturnObject, Clear);
 
-  m_opaque_up->Clear();
+  ref().Clear();
 }
 
 lldb::ReturnStatus SBCommandReturnObject::GetStatus() {
   LLDB_RECORD_METHOD_NO_ARGS(lldb::ReturnStatus, SBCommandReturnObject,
                              GetStatus);
 
-  return m_opaque_up->GetStatus();
+  return ref().GetStatus();
 }
 
 void SBCommandReturnObject::SetStatus(lldb::ReturnStatus status) {
   LLDB_RECORD_METHOD(void, SBCommandReturnObject, SetStatus,
                      (lldb::ReturnStatus), status);
 
-  m_opaque_up->SetStatus(status);
+  ref().SetStatus(status);
 }
 
 bool SBCommandReturnObject::Succeeded() {
   LLDB_RECORD_METHOD_NO_ARGS(bool, SBCommandReturnObject, Succeeded);
 
-  return m_opaque_up->Succeeded();
+  return ref().Succeeded();
 }
 
 bool SBCommandReturnObject::HasResult() {
   LLDB_RECORD_METHOD_NO_ARGS(bool, SBCommandReturnObject, HasResult);
 
-  return m_opaque_up->HasResult();
+  return ref().HasResult();
 }
 
 void SBCommandReturnObject::AppendMessage(const char *message) {
   LLDB_RECORD_METHOD(void, SBCommandReturnObject, AppendMessage, (const char *),
                      message);
 
-  m_opaque_up->AppendMessage(message);
+  ref().AppendMessage(message);
 }
 
 void SBCommandReturnObject::AppendWarning(const char *message) {
   LLDB_RECORD_METHOD(void, SBCommandReturnObject, AppendWarning, (const char *),
                      message);
 
-  m_opaque_up->AppendWarning(message);
+  ref().AppendWarning(message);
 }
 
 CommandReturnObject *SBCommandReturnObject::operator->() const {
-  return m_opaque_up.get();
+  return &**m_opaque_up;
 }
 
 CommandReturnObject *SBCommandReturnObject::get() const {
-  return m_opaque_up.get();
+  return &**m_opaque_up;
 }
 
 CommandReturnObject &SBCommandReturnObject::operator*() const {
-  assert(m_opaque_up.get());
-  return *(m_opaque_up.get());
+  return **m_opaque_up;
 }
 
 CommandReturnObject &SBCommandReturnObject::ref() const {
-  assert(m_opaque_up.get());
-  return *(m_opaque_up.get());
+  return **m_opaque_up;
 }
 
 bool SBCommandReturnObject::GetDescription(SBStream &description) {
@@ -189,12 +205,12 @@ bool SBCommandReturnObject::GetDescription(SBStream &description) {
   Stream &strm = description.ref();
 
   description.Printf("Error:  ");
-  lldb::ReturnStatus status = m_opaque_up->GetStatus();
+  lldb::ReturnStatus status = ref().GetStatus();
   if (status == lldb::eReturnStatusStarted)
     strm.PutCString("Started");
   else if (status == lldb::eReturnStatusInvalid)
     strm.PutCString("Invalid");
-  else if (m_opaque_up->Succeeded())
+  else if (ref().Succeeded())
     strm.PutCString("Success");
   else
     strm.PutCString("Fail");
@@ -227,7 +243,7 @@ void SBCommandReturnObject::SetImmediateOutputFile(FILE *fh,
   LLDB_RECORD_METHOD(void, SBCommandReturnObject, SetImmediateOutputFile,
                      (FILE *, bool), fh, transfer_ownership);
 
-  m_opaque_up->SetImmediateOutputFile(fh, transfer_ownership);
+  ref().SetImmediateOutputFile(fh, transfer_ownership);
 }
 
 void SBCommandReturnObject::SetImmediateErrorFile(FILE *fh,
@@ -235,7 +251,7 @@ void SBCommandReturnObject::SetImmediateErrorFile(FILE *fh,
   LLDB_RECORD_METHOD(void, SBCommandReturnObject, SetImmediateErrorFile,
                      (FILE *, bool), fh, transfer_ownership);
 
-  m_opaque_up->SetImmediateErrorFile(fh, transfer_ownership);
+  ref().SetImmediateErrorFile(fh, transfer_ownership);
 }
 
 void SBCommandReturnObject::PutCString(const char *string, int len) {
@@ -246,9 +262,9 @@ void SBCommandReturnObject::PutCString(const char *string, int len) {
     return;
   } else if (len > 0) {
     std::string buffer(string, len);
-    m_opaque_up->AppendMessage(buffer.c_str());
+    ref().AppendMessage(buffer.c_str());
   } else
-    m_opaque_up->AppendMessage(string);
+    ref().AppendMessage(string);
 }
 
 const char *SBCommandReturnObject::GetOutput(bool only_if_no_immediate) {
@@ -256,7 +272,7 @@ const char *SBCommandReturnObject::GetOutput(bool only_if_no_immediate) {
                      only_if_no_immediate);
 
   if (!only_if_no_immediate ||
-      m_opaque_up->GetImmediateOutputStream().get() == nullptr)
+      ref().GetImmediateOutputStream().get() == nullptr)
     return GetOutput();
   return nullptr;
 }
@@ -265,8 +281,7 @@ const char *SBCommandReturnObject::GetError(bool only_if_no_immediate) {
   LLDB_RECORD_METHOD(const char *, SBCommandReturnObject, GetError, (bool),
                      only_if_no_immediate);
 
-  if (!only_if_no_immediate ||
-      m_opaque_up->GetImmediateErrorStream().get() == nullptr)
+  if (!only_if_no_immediate || ref().GetImmediateErrorStream().get() == nullptr)
     return GetError();
   return nullptr;
 }
@@ -274,7 +289,7 @@ const char *SBCommandReturnObject::GetError(bool only_if_no_immediate) {
 size_t SBCommandReturnObject::Printf(const char *format, ...) {
   va_list args;
   va_start(args, format);
-  size_t result = m_opaque_up->GetOutputStream().PrintfVarArg(format, args);
+  size_t result = ref().GetOutputStream().PrintfVarArg(format, args);
   va_end(args);
   return result;
 }
@@ -286,9 +301,9 @@ void SBCommandReturnObject::SetError(lldb::SBError &error,
                      fallback_error_cstr);
 
   if (error.IsValid())
-    m_opaque_up->SetError(error.ref(), fallback_error_cstr);
+    ref().SetError(error.ref(), fallback_error_cstr);
   else if (fallback_error_cstr)
-    m_opaque_up->SetError(Status(), fallback_error_cstr);
+    ref().SetError(Status(), fallback_error_cstr);
 }
 
 void SBCommandReturnObject::SetError(const char *error_cstr) {
@@ -296,7 +311,7 @@ void SBCommandReturnObject::SetError(const char *error_cstr) {
                      error_cstr);
 
   if (error_cstr)
-    m_opaque_up->SetError(error_cstr);
+    ref().SetError(error_cstr);
 }
 
 namespace lldb_private {
@@ -306,13 +321,11 @@ template <>
 void RegisterMethods<SBCommandReturnObject>(Registry &R) {
   LLDB_REGISTER_CONSTRUCTOR(SBCommandReturnObject, ());
   LLDB_REGISTER_CONSTRUCTOR(SBCommandReturnObject,
-                            (const lldb::SBCommandReturnObject &));
+                            (lldb_private::CommandReturnObject &));
   LLDB_REGISTER_CONSTRUCTOR(SBCommandReturnObject,
-                            (lldb_private::CommandReturnObject *));
-  LLDB_REGISTER_METHOD(lldb_private::CommandReturnObject *,
-                       SBCommandReturnObject, Release, ());
+                            (const lldb::SBCommandReturnObject &));
   LLDB_REGISTER_METHOD(
-      const lldb::SBCommandReturnObject &,
+      lldb::SBCommandReturnObject &,
       SBCommandReturnObject, operator=,(const lldb::SBCommandReturnObject &));
   LLDB_REGISTER_METHOD_CONST(bool, SBCommandReturnObject, IsValid, ());
   LLDB_REGISTER_METHOD_CONST(bool, SBCommandReturnObject, operator bool, ());

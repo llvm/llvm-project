@@ -13,7 +13,7 @@ define <4 x float> @repeated_fp_divisor(float %a, <4 x float> %b) {
 ; CHECK-NEXT:    lvx 4, 0, 3
 ; CHECK-NEXT:    xxspltw 0, 0, 0
 ; CHECK-NEXT:    xvresp 1, 0
-; CHECK-NEXT:    xvnmsubasp 35, 1, 0
+; CHECK-NEXT:    xvnmsubasp 35, 0, 1
 ; CHECK-NEXT:    xvmulsp 0, 34, 36
 ; CHECK-NEXT:    xvmaddasp 1, 1, 35
 ; CHECK-NEXT:    xvmulsp 34, 0, 1

@@ -1317,19 +1317,19 @@ bb15:
 }
 
 ; CHECK-LABEL: _build_delaunay:
-; CHECK: vcmpe
-; CHECK: vcmpe
-; CHECK: vcmpe
-; CHECK: vcmpe
-; CHECK: vcmpe
-; CHECK: vcmpe
-; CHECK: vcmpe
-; CHECK: vcmpe
-; CHECK: vcmpe
-; CHECK: vcmpe
-; CHECK: vcmpe
-; CHECK: vcmpe
-; CHECK: vcmpe
+; CHECK: vcmp
+; CHECK: vcmp
+; CHECK: vcmp
+; CHECK: vcmp
+; CHECK: vcmp
+; CHECK: vcmp
+; CHECK: vcmp
+; CHECK: vcmp
+; CHECK: vcmp
+; CHECK: vcmp
+; CHECK: vcmp
+; CHECK: vcmp
+; CHECK: vcmp
 
 declare i32 @puts(i8* nocapture) nounwind
 

@@ -101,24 +101,103 @@ private:
   ExternalASTMerger &Parent;
   ASTImporter Reverse;
   const ExternalASTMerger::OriginMap &FromOrigins;
-
+  /// @see ExternalASTMerger::ImporterSource::Temporary
+  bool TemporarySource;
+  /// Map of imported declarations back to the declarations they originated
+  /// from.
+  llvm::DenseMap<Decl *, Decl *> ToOrigin;
+  /// @see ExternalASTMerger::ImporterSource::Merger
+  ExternalASTMerger *SourceMerger;
   llvm::raw_ostream &logs() { return Parent.logs(); }
 public:
   LazyASTImporter(ExternalASTMerger &_Parent, ASTContext &ToContext,
                   FileManager &ToFileManager,
-                  const ExternalASTMerger::ImporterSource &_Source,
+                  const ExternalASTMerger::ImporterSource &S,
                   std::shared_ptr<ASTImporterSharedState> SharedState)
-      : ASTImporter(ToContext, ToFileManager, _Source.getASTContext(),
-                    _Source.getFileManager(),
+      : ASTImporter(ToContext, ToFileManager, S.getASTContext(),
+                    S.getFileManager(),
                     /*MinimalImport=*/true, SharedState),
         Parent(_Parent),
-        Reverse(_Source.getASTContext(), _Source.getFileManager(), ToContext,
-                ToFileManager, /*MinimalImport=*/true),
-        FromOrigins(_Source.getOriginMap()) {}
+        Reverse(S.getASTContext(), S.getFileManager(), ToContext, ToFileManager,
+                /*MinimalImport=*/true),
+        FromOrigins(S.getOriginMap()), TemporarySource(S.isTemporary()),
+        SourceMerger(S.getMerger()) {}
+
+  llvm::Expected<Decl *> ImportImpl(Decl *FromD) override {
+    if (!TemporarySource || !SourceMerger)
+      return ASTImporter::ImportImpl(FromD);
+
+    // If we get here, then this source is importing from a temporary ASTContext
+    // that also has another ExternalASTMerger attached. It could be
+    // possible that the current ExternalASTMerger and the temporary ASTContext
+    // share a common ImporterSource, which means that the temporary
+    // AST could contain declarations that were imported from a source
+    // that this ExternalASTMerger can access directly. Instead of importing
+    // such declarations from the temporary ASTContext, they should instead
+    // be directly imported by this ExternalASTMerger from the original
+    // source. This way the ExternalASTMerger can safely do a minimal import
+    // without creating incomplete declarations originated from a temporary
+    // ASTContext. If we would try to complete such declarations later on, we
+    // would fail to do so as their temporary AST could be deleted (which means
+    // that the missing parts of the minimally imported declaration in that
+    // ASTContext were also deleted).
+    //
+    // The following code tracks back any declaration that needs to be
+    // imported from the temporary ASTContext to a persistent ASTContext.
+    // Then the ExternalASTMerger tries to import from the persistent
+    // ASTContext directly by using the associated ASTImporter. If that
+    // succeeds, this ASTImporter just maps the declarations imported by
+    // the other (persistent) ASTImporter to this (temporary) ASTImporter.
+    // The steps can be visualized like this:
+    //
+    //  Target AST <--- 3. Indirect import --- Persistent AST
+    //       ^            of persistent decl        ^
+    //       |                                      |
+    // 1. Current import           2. Tracking back to persistent decl
+    // 4. Map persistent decl                       |
+    //  & pretend we imported.                      |
+    //       |                                      |
+    // Temporary AST -------------------------------'
+
+    // First, ask the ExternalASTMerger of the source where the temporary
+    // declaration originated from.
+    Decl *Persistent = SourceMerger->FindOriginalDecl(FromD);
+    // FromD isn't from a persistent AST, so just do a normal import.
+    if (!Persistent)
+      return ASTImporter::ImportImpl(FromD);
+    // Now ask the current ExternalASTMerger to try import the persistent
+    // declaration into the target.
+    ASTContext &PersistentCtx = Persistent->getASTContext();
+    ASTImporter &OtherImporter = Parent.ImporterForOrigin(PersistentCtx);
+    // Check that we never end up in the current Importer again.
+    assert((&PersistentCtx != &getFromContext()) && (&OtherImporter != this) &&
+           "Delegated to same Importer?");
+    auto DeclOrErr = OtherImporter.Import(Persistent);
+    // Errors when importing the persistent decl are treated as if we
+    // had errors with importing the temporary decl.
+    if (!DeclOrErr)
+      return DeclOrErr.takeError();
+    Decl *D = *DeclOrErr;
+    // Tell the current ASTImporter that this has already been imported
+    // to prevent any further queries for the temporary decl.
+    MapImported(FromD, D);
+    return D;
+  }
+
+  /// Implements the ASTImporter interface for tracking back a declaration
+  /// to its original declaration it came from.
+  Decl *GetOriginalDecl(Decl *To) override {
+    auto It = ToOrigin.find(To);
+    if (It != ToOrigin.end())
+      return It->second;
+    return nullptr;
+  }
 
   /// Whenever a DeclContext is imported, ensure that ExternalASTSource's origin
   /// map is kept up to date.  Also set the appropriate flags.
   void Imported(Decl *From, Decl *To) override {
+    ToOrigin[To] = From;
+
     if (auto *ToDC = dyn_cast<DeclContext>(To)) {
       const bool LoggingEnabled = Parent.LoggingEnabled();
       if (LoggingEnabled)
@@ -322,9 +401,19 @@ ExternalASTMerger::ExternalASTMerger(const ImporterTarget &Target,
   AddSources(Sources);
 }
 
+Decl *ExternalASTMerger::FindOriginalDecl(Decl *D) {
+  assert(&D->getASTContext() == &Target.AST);
+  for (const auto &I : Importers)
+    if (auto Result = I->GetOriginalDecl(D))
+      return Result;
+  return nullptr;
+}
+
 void ExternalASTMerger::AddSources(llvm::ArrayRef<ImporterSource> Sources) {
   for (const ImporterSource &S : Sources) {
     assert(&S.getASTContext() != &Target.AST);
+    // Check that the associated merger actually imports into the source AST.
+    assert(!S.getMerger() || &S.getMerger()->Target.AST == &S.getASTContext());
     Importers.push_back(std::make_unique<LazyASTImporter>(
         *this, Target.AST, Target.FM, S, SharedState));
   }

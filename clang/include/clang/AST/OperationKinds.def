@@ -66,8 +66,9 @@ CAST_OPERATION(BitCast)
 ///    bool b; reinterpret_cast<char&>(b) = 'a';
 CAST_OPERATION(LValueBitCast)
 
-/// CK_LValueToRValueBitCast - A conversion that causes us to reinterpret an
-/// lvalue as an rvalue of a different type. Created by __builtin_bit_cast.
+/// CK_LValueToRValueBitCast - A conversion that causes us to reinterpret the
+/// object representation of an lvalue as an rvalue. Created by
+/// __builtin_bit_cast.
 CAST_OPERATION(LValueToRValueBitCast)
 
 /// CK_LValueToRValue - A conversion which causes the extraction of

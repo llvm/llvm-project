@@ -120,13 +120,17 @@ private:
   /// power of 2.
   bool selectVSplatUimmInvPow2(SDValue N, SDValue &Imm) const override;
   /// Select constant vector splats whose value is a run of set bits
-  /// ending at the most significant bit
+  /// ending at the most significant bit.
   bool selectVSplatMaskL(SDValue N, SDValue &Imm) const override;
   /// Select constant vector splats whose value is a run of set bits
   /// starting at bit zero.
   bool selectVSplatMaskR(SDValue N, SDValue &Imm) const override;
 
   bool trySelect(SDNode *Node) override;
+
+  // Emits proper ABI for _mcount profiling calls.
+  void emitMCountABI(MachineInstr &MI, MachineBasicBlock &MBB,
+                     MachineFunction &MF);
 
   void processFunctionAfterISel(MachineFunction &MF) override;
 

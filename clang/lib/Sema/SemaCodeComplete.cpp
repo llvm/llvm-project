@@ -1185,6 +1185,9 @@ static OverloadCompare compareOverloads(const CXXMethodDecl &Candidate,
                                         const CXXMethodDecl &Incumbent,
                                         const Qualifiers &ObjectQuals,
                                         ExprValueKind ObjectKind) {
+  // Base/derived shadowing is handled elsewhere.
+  if (Candidate.getDeclContext() != Incumbent.getDeclContext())
+    return OverloadCompare::BothViable;
   if (Candidate.isVariadic() != Incumbent.isVariadic() ||
       Candidate.getNumParams() != Incumbent.getNumParams() ||
       Candidate.getMinRequiredArguments() !=

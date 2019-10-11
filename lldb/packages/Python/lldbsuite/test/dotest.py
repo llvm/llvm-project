@@ -667,34 +667,42 @@ def visit_file(dir, name):
 
     # Thoroughly check the filterspec against the base module and admit
     # the (base, filterspec) combination only when it makes sense.
-    filterspec = None
-    for filterspec in configuration.filters:
-        # Optimistically set the flag to True.
-        filtered = True
-        module = __import__(base)
-        parts = filterspec.split('.')
-        obj = module
+
+    def check(obj, parts):
         for part in parts:
             try:
                 parent, obj = obj, getattr(obj, part)
             except AttributeError:
                 # The filterspec has failed.
-                filtered = False
-                break
+                return False
+        return True
 
-        # If filtered, we have a good filterspec.  Add it.
-        if filtered:
-            # print("adding filter spec %s to module %s" % (filterspec, module))
-            configuration.suite.addTests(
-                unittest2.defaultTestLoader.loadTestsFromName(
-                    filterspec, module))
-            continue
+    module = __import__(base)
+
+    def iter_filters():
+        for filterspec in configuration.filters:
+            parts = filterspec.split('.')
+            if check(module, parts):
+                yield filterspec
+            elif parts[0] == base and len(parts) > 1 and check(module, parts[1:]):
+                yield '.'.join(parts[1:])
+            else:
+                for key,value in module.__dict__.items():
+                    if check(value, parts):
+                        yield key + '.' + filterspec
+
+    filtered = False
+    for filterspec in iter_filters():
+        filtered = True
+        print("adding filter spec %s to module %s" % (filterspec, repr(module)))
+        tests = unittest2.defaultTestLoader.loadTestsFromName(filterspec, module)
+        configuration.suite.addTests(tests)
 
     # Forgo this module if the (base, filterspec) combo is invalid
     if configuration.filters and not filtered:
         return
 
-    if not filterspec or not filtered:
+    if not filtered:
         # Add the entire file's worth of tests since we're not filtered.
         # Also the fail-over case when the filterspec branch
         # (base, filterspec) combo doesn't make sense.

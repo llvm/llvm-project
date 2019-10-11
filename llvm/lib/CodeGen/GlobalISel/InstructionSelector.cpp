@@ -79,5 +79,5 @@ bool InstructionSelector::isObviouslySafeToFold(MachineInstr &MI,
     return true;
 
   return !MI.mayLoadOrStore() && !MI.mayRaiseFPException() &&
-         !MI.hasUnmodeledSideEffects() && empty(MI.implicit_operands());
+         !MI.hasUnmodeledSideEffects() && MI.implicit_operands().empty();
 }

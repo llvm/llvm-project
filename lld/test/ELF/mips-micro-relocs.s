@@ -25,16 +25,9 @@
 # RUN:   | FileCheck --check-prefixes=ASM,EL %s
 # RUN: llvm-readelf -h %tel.exe | FileCheck --check-prefix=ELF %s
 
-# ASM:      __start:
-# ASM-NEXT:      20110:  lui     $3, 1
-# ASM-NEXT:              addiu   $3, $3, 32495
-# ASM-NEXT:              lw      $3, -32744($gp)
-# ASM-NEXT:              lw      $3, -32744($3)
-# ASM-NEXT:              beqz16  $6, -32
-# ASM-NEXT:              sll     $3, $fp, 0
-# ASM-NEXT:              b16     -40
-# ASM-NEXT:              nop
-# ASM-NEXT:              b       -44
+# ASM: 00038000         .got   00000000 .hidden _gp
+# ASM: 00020100 g F     .text  00000000 0x80 foo
+# ASM: 00020110         .text  00000000 0x80 __start
 
 # EB:      Contents of section .data:
 # EB-NEXT:  30000 fffe8111
@@ -48,9 +41,16 @@
 # EL:      Contents of section .debug_info
 # EL-NEXT:  0000 11010200
 
-# ASM: 00038000         .got   00000000 .hidden _gp
-# ASM: 00020100 g F     .text  00000000 0x80 foo
-# ASM: 00020110         .text  00000000 0x80 __start
+# ASM:      __start:
+# ASM-NEXT:      20110:  lui     $3, 1
+# ASM-NEXT:              addiu   $3, $3, 32495
+# ASM-NEXT:              lw      $3, -32744($gp)
+# ASM-NEXT:              lw      $3, -32744($3)
+# ASM-NEXT:              beqz16  $6, -32
+# ASM-NEXT:              sll     $3, $fp, 0
+# ASM-NEXT:              b16     -40
+# ASM-NEXT:              nop
+# ASM-NEXT:              b       -44
 
 # ELF: Entry point address: 0x20111
 

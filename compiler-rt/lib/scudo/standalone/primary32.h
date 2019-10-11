@@ -72,9 +72,9 @@ public:
       SizeClassInfo *Sci = getSizeClassInfo(I);
       Sci->RandState = getRandomU32(&Seed);
       // See comment in the 64-bit primary about releasing smaller size classes.
-      Sci->CanRelease = (ReleaseToOsInterval > 0) &&
+      Sci->CanRelease = (ReleaseToOsInterval >= 0) &&
                         (I != SizeClassMap::BatchClassId) &&
-                        (getSizeByClassId(I) >= (PageSize / 16));
+                        (getSizeByClassId(I) >= (PageSize / 32));
     }
     ReleaseToOsIntervalMs = ReleaseToOsInterval;
   }
@@ -161,14 +161,16 @@ public:
       printStats(I, 0);
   }
 
-  void releaseToOS() {
+  uptr releaseToOS() {
+    uptr TotalReleasedBytes = 0;
     for (uptr I = 0; I < NumClasses; I++) {
       if (I == SizeClassMap::BatchClassId)
         continue;
       SizeClassInfo *Sci = getSizeClassInfo(I);
       ScopedLock L(Sci->Mutex);
-      releaseToOSMaybe(Sci, I, /*Force=*/true);
+      TotalReleasedBytes += releaseToOSMaybe(Sci, I, /*Force=*/true);
     }
+    return TotalReleasedBytes;
   }
 
 private:
@@ -339,35 +341,38 @@ private:
            AvailableChunks, Rss >> 10);
   }
 
-  NOINLINE void releaseToOSMaybe(SizeClassInfo *Sci, uptr ClassId,
+  NOINLINE uptr releaseToOSMaybe(SizeClassInfo *Sci, uptr ClassId,
                                  bool Force = false) {
     const uptr BlockSize = getSizeByClassId(ClassId);
     const uptr PageSize = getPageSizeCached();
 
     CHECK_GE(Sci->Stats.PoppedBlocks, Sci->Stats.PushedBlocks);
-    const uptr N = Sci->Stats.PoppedBlocks - Sci->Stats.PushedBlocks;
-    if (N * BlockSize < PageSize)
-      return; // No chance to release anything.
+    const uptr BytesInFreeList =
+        Sci->AllocatedUser -
+        (Sci->Stats.PoppedBlocks - Sci->Stats.PushedBlocks) * BlockSize;
+    if (BytesInFreeList < PageSize)
+      return 0; // No chance to release anything.
     if ((Sci->Stats.PushedBlocks - Sci->ReleaseInfo.PushedBlocksAtLastRelease) *
             BlockSize <
         PageSize) {
-      return; // Nothing new to release.
+      return 0; // Nothing new to release.
     }
 
     if (!Force) {
       const s32 IntervalMs = ReleaseToOsIntervalMs;
       if (IntervalMs < 0)
-        return;
+        return 0;
       if (Sci->ReleaseInfo.LastReleaseAtNs +
               static_cast<uptr>(IntervalMs) * 1000000ULL >
           getMonotonicTime()) {
-        return; // Memory was returned recently.
+        return 0; // Memory was returned recently.
       }
     }
 
     // TODO(kostyak): currently not ideal as we loop over all regions and
     // iterate multiple times over the same freelist if a ClassId spans multiple
     // regions. But it will have to do for now.
+    uptr TotalReleasedBytes = 0;
     for (uptr I = MinRegionIndex; I <= MaxRegionIndex; I++) {
       if (PossibleRegions[I] == ClassId) {
         ReleaseRecorder Recorder(I * RegionSize);
@@ -377,10 +382,12 @@ private:
           Sci->ReleaseInfo.PushedBlocksAtLastRelease = Sci->Stats.PushedBlocks;
           Sci->ReleaseInfo.RangesReleased += Recorder.getReleasedRangesCount();
           Sci->ReleaseInfo.LastReleasedBytes = Recorder.getReleasedBytes();
+          TotalReleasedBytes += Sci->ReleaseInfo.LastReleasedBytes;
         }
       }
     }
     Sci->ReleaseInfo.LastReleaseAtNs = getMonotonicTime();
+    return TotalReleasedBytes;
   }
 
   SizeClassInfo SizeClassInfoArray[NumClasses];

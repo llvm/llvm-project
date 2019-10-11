@@ -953,12 +953,16 @@ public:
       case ISD::STRICT_FLOG: EqOpc = ISD::FLOG; break;
       case ISD::STRICT_FLOG10: EqOpc = ISD::FLOG10; break;
       case ISD::STRICT_FLOG2: EqOpc = ISD::FLOG2; break;
+      case ISD::STRICT_LRINT: EqOpc = ISD::LRINT; break;
+      case ISD::STRICT_LLRINT: EqOpc = ISD::LLRINT; break;
       case ISD::STRICT_FRINT: EqOpc = ISD::FRINT; break;
       case ISD::STRICT_FNEARBYINT: EqOpc = ISD::FNEARBYINT; break;
       case ISD::STRICT_FMAXNUM: EqOpc = ISD::FMAXNUM; break;
       case ISD::STRICT_FMINNUM: EqOpc = ISD::FMINNUM; break;
       case ISD::STRICT_FCEIL: EqOpc = ISD::FCEIL; break;
       case ISD::STRICT_FFLOOR: EqOpc = ISD::FFLOOR; break;
+      case ISD::STRICT_LROUND: EqOpc = ISD::LROUND; break;
+      case ISD::STRICT_LLROUND: EqOpc = ISD::LLROUND; break;
       case ISD::STRICT_FROUND: EqOpc = ISD::FROUND; break;
       case ISD::STRICT_FTRUNC: EqOpc = ISD::FTRUNC; break;
       case ISD::STRICT_FP_TO_SINT: EqOpc = ISD::FP_TO_SINT; break;
@@ -3262,6 +3266,8 @@ public:
     SDValue CombineTo(SDNode *N, ArrayRef<SDValue> To, bool AddTo = true);
     SDValue CombineTo(SDNode *N, SDValue Res, bool AddTo = true);
     SDValue CombineTo(SDNode *N, SDValue Res0, SDValue Res1, bool AddTo = true);
+
+    bool recursivelyDeleteUnusedNodes(SDNode *N);
 
     void CommitTargetLoweringOpt(const TargetLoweringOpt &TLO);
   };

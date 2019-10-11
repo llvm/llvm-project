@@ -36,7 +36,8 @@
 
 SRCDIR := $(shell dirname $(firstword $(MAKEFILE_LIST)))
 BUILDDIR := $(shell pwd)
-THIS_FILE_DIR := $(shell dirname $(lastword $(MAKEFILE_LIST)))
+MAKEFILE_RULES := $(lastword $(MAKEFILE_LIST))
+THIS_FILE_DIR := $(shell dirname $(MAKEFILE_RULES))
 LLDB_BASE_DIR := $(THIS_FILE_DIR)/../../../../../
 
 #----------------------------------------------------------------------
@@ -764,29 +765,10 @@ endif
 dsym:	$(DSYM)
 all:	$(EXE) $(DSYM)
 clean::
-	$(RM) -rf $(OBJECTS) $(PREREQS) $(PREREQS:.d=.d.tmp) $(DWOS) $(ARCHIVE_NAME) $(ARCHIVE_OBJECTS) $(CLANG_MODULE_CACHE_DIR)
-ifneq "$(DYLIB_NAME)" ""
-	$(RM) -r $(DYLIB_FILENAME).dSYM
-	$(RM) $(DYLIB_OBJECTS) $(DYLIB_PREREQS) $(DYLIB_PREREQS:.d=.d.tmp) $(DYLIB_DWOS) $(DYLIB_FILENAME) $(DYLIB_FILENAME).debug
-endif
-ifneq "$(FRAMEWORK)" ""
-	$(RM) -rf $(FRAMEWORK).framework
-endif
-ifneq "$(PCH_OUTPUT)" ""
-	$(RM) $(PCH_OUTPUT)
-endif
-ifneq "$(DSYM)" ""
-	$(RM) -r "$(DSYM)"
-endif
-ifeq "$(OS)" "Windows_NT"
-# http://llvm.org/pr24589
-	IF EXIST "$(EXE)" del "$(EXE)"
-	$(RM) $(wildcard *.manifest *.pdb *.ilk)
-ifneq "$(DYLIB_NAME)" ""
-	$(RM) $(DYLIB_NAME).lib $(DYLIB_NAME).exp
-endif
+ifeq "$(findstring lldb-test-build.noindex, $(BUILDDIR))" ""
+	$(error Trying to invoke the clean rule, but not using the default build tree layout)
 else
-	$(RM) "$(EXE)"
+	$(RM) -r $(wildcard $(BUILDDIR)/*)
 endif
 
 #----------------------------------------------------------------------

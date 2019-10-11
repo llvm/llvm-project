@@ -56,86 +56,142 @@ std::error_code JITLinkError::convertToErrorCode() const {
   return std::error_code(GenericJITLinkError, *JITLinkerErrorCategory);
 }
 
-const StringRef getGenericEdgeKindName(Edge::Kind K) {
+const char *getGenericEdgeKindName(Edge::Kind K) {
   switch (K) {
   case Edge::Invalid:
     return "INVALID RELOCATION";
   case Edge::KeepAlive:
     return "Keep-Alive";
-  case Edge::LayoutNext:
-    return "Layout-Next";
   default:
     llvm_unreachable("Unrecognized relocation kind");
   }
 }
 
-raw_ostream &operator<<(raw_ostream &OS, const Atom &A) {
+const char *getLinkageName(Linkage L) {
+  switch (L) {
+  case Linkage::Strong:
+    return "strong";
+  case Linkage::Weak:
+    return "weak";
+  }
+  llvm_unreachable("Unrecognized llvm.jitlink.Linkage enum");
+}
+
+const char *getScopeName(Scope S) {
+  switch (S) {
+  case Scope::Default:
+    return "default";
+  case Scope::Hidden:
+    return "hidden";
+  case Scope::Local:
+    return "local";
+  }
+  llvm_unreachable("Unrecognized llvm.jitlink.Scope enum");
+}
+
+raw_ostream &operator<<(raw_ostream &OS, const Block &B) {
+  return OS << formatv("{0:x16}", B.getAddress()) << " -- "
+            << formatv("{0:x16}", B.getAddress() + B.getSize()) << ": "
+            << (B.isZeroFill() ? "zero-fill" : "content")
+            << ", align = " << B.getAlignment()
+            << ", align-ofs = " << B.getAlignmentOffset()
+            << ", section = " << B.getSection().getName();
+}
+
+raw_ostream &operator<<(raw_ostream &OS, const Symbol &Sym) {
   OS << "<";
-  if (A.getName().empty())
-    OS << "anon@" << format("0x%016" PRIx64, A.getAddress());
+  if (Sym.getName().empty())
+    OS << "*anon*";
   else
-    OS << A.getName();
-  OS << " [";
-  if (A.isDefined()) {
-    auto &DA = static_cast<const DefinedAtom &>(A);
-    OS << " section=" << DA.getSection().getName();
-    if (DA.isLive())
-      OS << " live";
-    if (DA.shouldDiscard())
-      OS << " should-discard";
-  } else
-    OS << " external";
-  OS << " ]>";
+    OS << Sym.getName();
+  OS << ": flags = ";
+  switch (Sym.getLinkage()) {
+  case Linkage::Strong:
+    OS << 'S';
+    break;
+  case Linkage::Weak:
+    OS << 'W';
+    break;
+  }
+  switch (Sym.getScope()) {
+  case Scope::Default:
+    OS << 'D';
+    break;
+  case Scope::Hidden:
+    OS << 'H';
+    break;
+  case Scope::Local:
+    OS << 'L';
+    break;
+  }
+  OS << (Sym.isLive() ? '+' : '-')
+     << ", size = " << formatv("{0:x8}", Sym.getSize())
+     << ", addr = " << formatv("{0:x16}", Sym.getAddress()) << " ("
+     << formatv("{0:x16}", Sym.getAddressable().getAddress()) << " + "
+     << formatv("{0:x8}", Sym.getOffset());
+  if (Sym.isDefined())
+    OS << " " << Sym.getBlock().getSection().getName();
+  OS << ")>";
   return OS;
 }
 
-void printEdge(raw_ostream &OS, const Atom &FixupAtom, const Edge &E,
+void printEdge(raw_ostream &OS, const Block &B, const Edge &E,
                StringRef EdgeKindName) {
-  OS << "edge@" << formatv("{0:x16}", FixupAtom.getAddress() + E.getOffset())
-     << ": " << FixupAtom << " + " << E.getOffset() << " -- " << EdgeKindName
-     << " -> " << E.getTarget() << " + " << E.getAddend();
+  OS << "edge@" << formatv("{0:x16}", B.getAddress() + E.getOffset()) << ": "
+     << formatv("{0:x16}", B.getAddress()) << " + " << E.getOffset() << " -- "
+     << EdgeKindName << " -> " << E.getTarget() << " + " << E.getAddend();
 }
 
 Section::~Section() {
-  for (auto *DA : DefinedAtoms)
-    DA->~DefinedAtom();
+  for (auto *Sym : Symbols)
+    Sym->~Symbol();
 }
 
-void AtomGraph::dump(raw_ostream &OS,
+LinkGraph::~LinkGraph() {
+  // Destroy blocks.
+  for (auto *B : Blocks)
+    B->~Block();
+}
+
+void LinkGraph::dump(raw_ostream &OS,
                      std::function<StringRef(Edge::Kind)> EdgeKindToName) {
   if (!EdgeKindToName)
     EdgeKindToName = [](Edge::Kind K) { return StringRef(); };
 
-  OS << "Defined atoms:\n";
-  for (auto *DA : defined_atoms()) {
-    OS << "  " << format("0x%016" PRIx64, DA->getAddress()) << ": " << *DA
+  OS << "Symbols:\n";
+  for (auto *Sym : defined_symbols()) {
+    OS << "  " << format("0x%016" PRIx64, Sym->getAddress()) << ": " << *Sym
        << "\n";
-    for (auto &E : DA->edges()) {
-      OS << "    ";
-      StringRef EdgeName = (E.getKind() < Edge::FirstRelocation
-                                ? getGenericEdgeKindName(E.getKind())
-                                : EdgeKindToName(E.getKind()));
+    if (Sym->isDefined()) {
+      for (auto &E : Sym->getBlock().edges()) {
+        OS << "    ";
+        StringRef EdgeName = (E.getKind() < Edge::FirstRelocation
+                                  ? getGenericEdgeKindName(E.getKind())
+                                  : EdgeKindToName(E.getKind()));
 
-      if (!EdgeName.empty())
-        printEdge(OS, *DA, E, EdgeName);
-      else {
-        auto EdgeNumberString = std::to_string(E.getKind());
-        printEdge(OS, *DA, E, EdgeNumberString);
+        if (!EdgeName.empty())
+          printEdge(OS, Sym->getBlock(), E, EdgeName);
+        else {
+          auto EdgeNumberString = std::to_string(E.getKind());
+          printEdge(OS, Sym->getBlock(), E, EdgeNumberString);
+        }
+        OS << "\n";
       }
-      OS << "\n";
     }
   }
 
-  OS << "Absolute atoms:\n";
-  for (auto *A : absolute_atoms())
-    OS << "  " << format("0x%016" PRIx64, A->getAddress()) << ": " << *A
+  OS << "Absolute symbols:\n";
+  for (auto *Sym : absolute_symbols())
+    OS << "  " << format("0x%016" PRIx64, Sym->getAddress()) << ": " << *Sym
        << "\n";
 
-  OS << "External atoms:\n";
-  for (auto *A : external_atoms())
-    OS << "  " << format("0x%016" PRIx64, A->getAddress()) << ": " << *A
+  OS << "External symbols:\n";
+  for (auto *Sym : external_symbols())
+    OS << "  " << format("0x%016" PRIx64, Sym->getAddress()) << ": " << *Sym
        << "\n";
 }
+
+void JITLinkAsyncLookupContinuation::anchor() {}
 
 JITLinkContext::~JITLinkContext() {}
 
@@ -143,8 +199,8 @@ bool JITLinkContext::shouldAddDefaultTargetPasses(const Triple &TT) const {
   return true;
 }
 
-AtomGraphPassFunction JITLinkContext::getMarkLivePass(const Triple &TT) const {
-  return AtomGraphPassFunction();
+LinkGraphPassFunction JITLinkContext::getMarkLivePass(const Triple &TT) const {
+  return LinkGraphPassFunction();
 }
 
 Error JITLinkContext::modifyPassConfig(const Triple &TT,
@@ -152,9 +208,9 @@ Error JITLinkContext::modifyPassConfig(const Triple &TT,
   return Error::success();
 }
 
-Error markAllAtomsLive(AtomGraph &G) {
-  for (auto *DA : G.defined_atoms())
-    DA->setLive(true);
+Error markAllSymbolsLive(LinkGraph &G) {
+  for (auto *Sym : G.defined_symbols())
+    Sym->setLive(true);
   return Error::success();
 }
 

@@ -34,6 +34,9 @@
 namespace llvm {
 namespace jitlink {
 
+class Symbol;
+class Section;
+
 /// Base class for errors originating in JIT linker, e.g. missing relocation
 /// support.
 class JITLinkError : public ErrorInfo<JITLinkError> {
@@ -50,27 +53,22 @@ private:
   std::string ErrMsg;
 };
 
-// Forward declare the Atom class.
-class Atom;
-
-/// Edge class. Represents both object file relocations, as well as layout and
-/// keep-alive constraints.
+/// Represents fixups and constraints in the LinkGraph.
 class Edge {
 public:
   using Kind = uint8_t;
 
-  using GenericEdgeKind = enum : Kind {
+  enum GenericEdgeKind : Kind {
     Invalid,                    // Invalid edge value.
     FirstKeepAlive,             // Keeps target alive. Offset/addend zero.
     KeepAlive = FirstKeepAlive, // Tag first edge kind that preserves liveness.
-    LayoutNext,                 // Layout constraint. Offset/Addend zero.
     FirstRelocation             // First architecture specific relocation.
   };
 
   using OffsetT = uint32_t;
   using AddendT = int64_t;
 
-  Edge(Kind K, OffsetT Offset, Atom &Target, AddendT Addend)
+  Edge(Kind K, OffsetT Offset, Symbol &Target, AddendT Addend)
       : Target(&Target), Offset(Offset), Addend(Addend), K(K) {}
 
   OffsetT getOffset() const { return Offset; }
@@ -82,169 +80,516 @@ public:
     return K - FirstRelocation;
   }
   bool isKeepAlive() const { return K >= FirstKeepAlive; }
-  Atom &getTarget() const { return *Target; }
-  void setTarget(Atom &Target) { this->Target = &Target; }
+  Symbol &getTarget() const { return *Target; }
+  void setTarget(Symbol &Target) { this->Target = &Target; }
   AddendT getAddend() const { return Addend; }
   void setAddend(AddendT Addend) { this->Addend = Addend; }
 
 private:
-  Atom *Target;
-  OffsetT Offset;
-  AddendT Addend;
+  Symbol *Target = nullptr;
+  OffsetT Offset = 0;
+  AddendT Addend = 0;
   Kind K = 0;
 };
 
-using EdgeVector = std::vector<Edge>;
+/// Returns the string name of the given generic edge kind, or "unknown"
+/// otherwise. Useful for debugging.
+const char *getGenericEdgeKindName(Edge::Kind K);
 
-const StringRef getGenericEdgeKindName(Edge::Kind K);
-
-/// Base Atom class. Used by absolute and undefined atoms.
-class Atom {
-  friend class AtomGraph;
+/// Base class for Addressable entities (externals, absolutes, blocks).
+class Addressable {
+  friend class LinkGraph;
 
 protected:
-  /// Create a named (as yet unresolved) atom.
-  Atom(StringRef Name)
-      : Name(Name), IsDefined(false), IsLive(false), ShouldDiscard(false),
-        IsGlobal(false), IsAbsolute(false), IsCallable(false),
-        IsExported(false), IsWeak(false), HasLayoutNext(false),
-        IsCommon(false) {}
+  Addressable(JITTargetAddress Address, bool IsDefined)
+      : Address(Address), IsDefined(IsDefined), IsAbsolute(false) {}
 
-  /// Create an absolute symbol atom.
-  Atom(StringRef Name, JITTargetAddress Address)
-      : Name(Name), Address(Address), IsDefined(true), IsLive(false),
-        ShouldDiscard(false), IsGlobal(false), IsAbsolute(false),
-        IsCallable(false), IsExported(false), IsWeak(false),
-        HasLayoutNext(false), IsCommon(false) {}
+  Addressable(JITTargetAddress Address)
+      : Address(Address), IsDefined(false), IsAbsolute(true) {
+    assert(!(IsDefined && IsAbsolute) &&
+           "Block cannot be both defined and absolute");
+  }
 
 public:
-  /// Returns true if this atom has a name.
-  bool hasName() const { return Name != StringRef(); }
+  Addressable(const Addressable &) = delete;
+  Addressable &operator=(const Addressable &) = default;
+  Addressable(Addressable &&) = delete;
+  Addressable &operator=(Addressable &&) = default;
 
-  /// Returns the name of this atom.
-  StringRef getName() const { return Name; }
-
-  /// Returns the current target address of this atom.
-  /// The initial target address (for atoms that have one) will be taken from
-  /// the input object file's virtual address space. During the layout phase
-  /// of JIT linking the atom's address will be updated to point to its final
-  /// address in the JIT'd process.
   JITTargetAddress getAddress() const { return Address; }
-
-  /// Set the current target address of this atom.
   void setAddress(JITTargetAddress Address) { this->Address = Address; }
 
-  /// Returns true if this is a defined atom.
-  bool isDefined() const { return IsDefined; }
-
-  /// Returns true if this atom is marked as live.
-  bool isLive() const { return IsLive; }
-
-  /// Mark this atom as live.
-  ///
-  /// Note: Only defined and absolute atoms can be marked live.
-  void setLive(bool IsLive) {
-    assert((IsDefined || IsAbsolute || !IsLive) &&
-           "Only defined and absolute atoms can be marked live");
-    this->IsLive = IsLive;
-  }
-
-  /// Returns true if this atom should be discarded during pruning.
-  bool shouldDiscard() const { return ShouldDiscard; }
-
-  /// Mark this atom to be discarded.
-  ///
-  /// Note: Only defined and absolute atoms can be marked live.
-  void setShouldDiscard(bool ShouldDiscard) {
-    assert((IsDefined || IsAbsolute || !ShouldDiscard) &&
-           "Only defined and absolute atoms can be marked live");
-    this->ShouldDiscard = ShouldDiscard;
-  }
-
-  /// Returns true if this definition is global (i.e. visible outside this
-  /// linkage unit).
-  ///
-  /// Note: This is distict from Exported, which means visibile outside the
-  /// JITDylib that this graph is being linked in to.
-  bool isGlobal() const { return IsGlobal; }
-
-  /// Mark this atom as global.
-  void setGlobal(bool IsGlobal) { this->IsGlobal = IsGlobal; }
-
-  /// Returns true if this atom represents an absolute symbol.
-  bool isAbsolute() const { return IsAbsolute; }
-
-  /// Returns true if this atom is known to be callable.
-  ///
-  /// Primarily provided for easy interoperability with ORC, which uses the
-  /// JITSymbolFlags::Common flag to identify symbols that can be interposed
-  /// with stubs.
-  bool isCallable() const { return IsCallable; }
-
-  /// Mark this atom as callable.
-  void setCallable(bool IsCallable) {
-    assert((IsDefined || IsAbsolute || !IsCallable) &&
-           "Callable atoms must be defined or absolute");
-    this->IsCallable = IsCallable;
-  }
-
-  /// Returns true if this atom should appear in the symbol table of a final
-  /// linked image.
-  bool isExported() const { return IsExported; }
-
-  /// Mark this atom as exported.
-  void setExported(bool IsExported) {
-    assert((!IsExported || ((IsDefined || IsAbsolute) && hasName())) &&
-           "Exported atoms must have names");
-    this->IsExported = IsExported;
-  }
-
-  /// Returns true if this is a weak symbol.
-  bool isWeak() const { return IsWeak; }
-
-  /// Mark this atom as weak.
-  void setWeak(bool IsWeak) { this->IsWeak = IsWeak; }
+  /// Returns true if this is a defined addressable, in which case you
+  /// can downcast this to a .
+  bool isDefined() const { return static_cast<bool>(IsDefined); }
+  bool isAbsolute() const { return static_cast<bool>(IsAbsolute); }
 
 private:
-  StringRef Name;
   JITTargetAddress Address = 0;
-
-  bool IsDefined : 1;
-  bool IsLive : 1;
-  bool ShouldDiscard : 1;
-
-  bool IsGlobal : 1;
-  bool IsAbsolute : 1;
-  bool IsCallable : 1;
-  bool IsExported : 1;
-  bool IsWeak : 1;
-
-protected:
-  // These flags only make sense for DefinedAtom, but we can minimize the size
-  // of DefinedAtom by defining them here.
-  bool HasLayoutNext : 1;
-  bool IsCommon : 1;
+  uint64_t IsDefined : 1;
+  uint64_t IsAbsolute : 1;
 };
 
-// Forward declare DefinedAtom.
-class DefinedAtom;
+using BlockOrdinal = unsigned;
+using SectionOrdinal = unsigned;
 
-raw_ostream &operator<<(raw_ostream &OS, const Atom &A);
-void printEdge(raw_ostream &OS, const Atom &FixupAtom, const Edge &E,
+/// An Addressable with content and edges.
+class Block : public Addressable {
+  friend class LinkGraph;
+
+private:
+  /// Create a zero-fill defined addressable.
+  Block(Section &Parent, BlockOrdinal Ordinal, JITTargetAddress Size,
+        JITTargetAddress Address, uint64_t Alignment, uint64_t AlignmentOffset)
+      : Addressable(Address, true), Parent(Parent), Size(Size),
+        Ordinal(Ordinal) {
+    assert(isPowerOf2_64(Alignment) && "Alignment must be power of 2");
+    assert(AlignmentOffset < Alignment &&
+           "Alignment offset cannot exceed alignment");
+    assert(AlignmentOffset <= MaxAlignmentOffset &&
+           "Alignment offset exceeds maximum");
+    P2Align = Alignment ? countTrailingZeros(Alignment) : 0;
+    this->AlignmentOffset = AlignmentOffset;
+  }
+
+  /// Create a defined addressable for the given content.
+  Block(Section &Parent, BlockOrdinal Ordinal, StringRef Content,
+        JITTargetAddress Address, uint64_t Alignment, uint64_t AlignmentOffset)
+      : Addressable(Address, true), Parent(Parent), Data(Content.data()),
+        Size(Content.size()), Ordinal(Ordinal) {
+    assert(isPowerOf2_64(Alignment) && "Alignment must be power of 2");
+    assert(AlignmentOffset < Alignment &&
+           "Alignment offset cannot exceed alignment");
+    assert(AlignmentOffset <= MaxAlignmentOffset &&
+           "Alignment offset exceeds maximum");
+    P2Align = Alignment ? countTrailingZeros(Alignment) : 0;
+    this->AlignmentOffset = AlignmentOffset;
+  }
+
+public:
+  using EdgeVector = std::vector<Edge>;
+  using edge_iterator = EdgeVector::iterator;
+  using const_edge_iterator = EdgeVector::const_iterator;
+
+  Block(const Block &) = delete;
+  Block &operator=(const Block &) = delete;
+  Block(Block &&) = delete;
+  Block &operator=(Block &&) = delete;
+
+  /// Return the parent section for this block.
+  Section &getSection() const { return Parent; }
+
+  /// Return the ordinal for this block.
+  BlockOrdinal getOrdinal() const { return Ordinal; }
+
+  /// Returns true if this is a zero-fill block.
+  ///
+  /// If true, getSize is callable but getContent is not (the content is
+  /// defined to be a sequence of zero bytes of length Size).
+  bool isZeroFill() const { return !Data; }
+
+  /// Returns the size of this defined addressable.
+  size_t getSize() const { return Size; }
+
+  /// Get the content for this block. Block must not be a zero-fill block.
+  StringRef getContent() const {
+    assert(Data && "Section does not contain content");
+    return StringRef(Data, Size);
+  }
+
+  /// Set the content for this block.
+  /// Caller is responsible for ensuring the underlying bytes are not
+  /// deallocated while pointed to by this block.
+  void setContent(StringRef Content) {
+    Data = Content.data();
+    Size = Content.size();
+  }
+
+  /// Get the alignment for this content.
+  uint64_t getAlignment() const { return 1ull << P2Align; }
+
+  /// Get the alignment offset for this content.
+  uint64_t getAlignmentOffset() const { return AlignmentOffset; }
+
+  /// Add an edge to this block.
+  void addEdge(Edge::Kind K, Edge::OffsetT Offset, Symbol &Target,
+               Edge::AddendT Addend) {
+    Edges.push_back(Edge(K, Offset, Target, Addend));
+  }
+
+  /// Return the list of edges attached to this content.
+  iterator_range<edge_iterator> edges() {
+    return make_range(Edges.begin(), Edges.end());
+  }
+
+  /// Returns the list of edges attached to this content.
+  iterator_range<const_edge_iterator> edges() const {
+    return make_range(Edges.begin(), Edges.end());
+  }
+
+  /// Return the size of the edges list.
+  size_t edges_size() const { return Edges.size(); }
+
+  /// Returns true if the list of edges is empty.
+  bool edges_empty() const { return Edges.empty(); }
+
+private:
+  static constexpr uint64_t MaxAlignmentOffset = (1ULL << 57) - 1;
+
+  uint64_t P2Align : 5;
+  uint64_t AlignmentOffset : 57;
+  Section &Parent;
+  const char *Data = nullptr;
+  size_t Size = 0;
+  BlockOrdinal Ordinal = 0;
+  std::vector<Edge> Edges;
+};
+
+/// Describes symbol linkage. This can be used to make resolve definition
+/// clashes.
+enum class Linkage : uint8_t {
+  Strong,
+  Weak,
+};
+
+/// For errors and debugging output.
+const char *getLinkageName(Linkage L);
+
+/// Defines the scope in which this symbol should be visible:
+///   Default -- Visible in the public interface of the linkage unit.
+///   Hidden -- Visible within the linkage unit, but not exported from it.
+///   Local -- Visible only within the LinkGraph.
+enum class Scope : uint8_t { Default, Hidden, Local };
+
+/// For debugging output.
+const char *getScopeName(Scope S);
+
+raw_ostream &operator<<(raw_ostream &OS, const Block &B);
+
+/// Symbol representation.
+///
+/// Symbols represent locations within Addressable objects.
+/// They can be either Named or Anonymous.
+/// Anonymous symbols have neither linkage nor visibility, and must point at
+/// ContentBlocks.
+/// Named symbols may be in one of four states:
+///   - Null: Default initialized. Assignable, but otherwise unusable.
+///   - Defined: Has both linkage and visibility and points to a ContentBlock
+///   - Common: Has both linkage and visibility, points to a null Addressable.
+///   - External: Has neither linkage nor visibility, points to an external
+///     Addressable.
+///
+class Symbol {
+  friend class LinkGraph;
+
+private:
+  Symbol(Addressable &Base, JITTargetAddress Offset, StringRef Name,
+         JITTargetAddress Size, Linkage L, Scope S, bool IsLive,
+         bool IsCallable)
+      : Name(Name), Base(&Base), Offset(Offset), Size(Size) {
+    setLinkage(L);
+    setScope(S);
+    setLive(IsLive);
+    setCallable(IsCallable);
+  }
+
+  static Symbol &constructCommon(void *SymStorage, Block &Base, StringRef Name,
+                                 JITTargetAddress Size, Scope S, bool IsLive) {
+    assert(SymStorage && "Storage cannot be null");
+    assert(!Name.empty() && "Common symbol name cannot be empty");
+    assert(Base.isDefined() &&
+           "Cannot create common symbol from undefined block");
+    assert(static_cast<Block &>(Base).getSize() == Size &&
+           "Common symbol size should match underlying block size");
+    auto *Sym = reinterpret_cast<Symbol *>(SymStorage);
+    new (Sym) Symbol(Base, 0, Name, Size, Linkage::Weak, S, IsLive, false);
+    return *Sym;
+  }
+
+  static Symbol &constructExternal(void *SymStorage, Addressable &Base,
+                                   StringRef Name, JITTargetAddress Size) {
+    assert(SymStorage && "Storage cannot be null");
+    assert(!Base.isDefined() &&
+           "Cannot create external symbol from defined block");
+    assert(!Name.empty() && "External symbol name cannot be empty");
+    auto *Sym = reinterpret_cast<Symbol *>(SymStorage);
+    new (Sym) Symbol(Base, 0, Name, Size, Linkage::Strong, Scope::Default,
+                     false, false);
+    return *Sym;
+  }
+
+  static Symbol &constructAbsolute(void *SymStorage, Addressable &Base,
+                                   StringRef Name, JITTargetAddress Size,
+                                   Linkage L, Scope S, bool IsLive) {
+    assert(SymStorage && "Storage cannot be null");
+    assert(!Base.isDefined() &&
+           "Cannot create absolute symbol from a defined block");
+    auto *Sym = reinterpret_cast<Symbol *>(SymStorage);
+    new (Sym) Symbol(Base, 0, Name, Size, L, S, IsLive, false);
+    return *Sym;
+  }
+
+  static Symbol &constructAnonDef(void *SymStorage, Block &Base,
+                                  JITTargetAddress Offset,
+                                  JITTargetAddress Size, bool IsCallable,
+                                  bool IsLive) {
+    assert(SymStorage && "Storage cannot be null");
+    auto *Sym = reinterpret_cast<Symbol *>(SymStorage);
+    new (Sym) Symbol(Base, Offset, StringRef(), Size, Linkage::Strong,
+                     Scope::Local, IsLive, IsCallable);
+    return *Sym;
+  }
+
+  static Symbol &constructNamedDef(void *SymStorage, Block &Base,
+                                   JITTargetAddress Offset, StringRef Name,
+                                   JITTargetAddress Size, Linkage L, Scope S,
+                                   bool IsLive, bool IsCallable) {
+    assert(SymStorage && "Storage cannot be null");
+    assert(!Name.empty() && "Name cannot be empty");
+    auto *Sym = reinterpret_cast<Symbol *>(SymStorage);
+    new (Sym) Symbol(Base, Offset, Name, Size, L, S, IsLive, IsCallable);
+    return *Sym;
+  }
+
+public:
+  /// Create a null Symbol. This allows Symbols to be default initialized for
+  /// use in containers (e.g. as map values). Null symbols are only useful for
+  /// assigning to.
+  Symbol() = default;
+
+  // Symbols are not movable or copyable.
+  Symbol(const Symbol &) = delete;
+  Symbol &operator=(const Symbol &) = delete;
+  Symbol(Symbol &&) = delete;
+  Symbol &operator=(Symbol &&) = delete;
+
+  /// Returns true if this symbol has a name.
+  bool hasName() const { return !Name.empty(); }
+
+  /// Returns the name of this symbol (empty if the symbol is anonymous).
+  StringRef getName() const {
+    assert((!Name.empty() || getScope() == Scope::Local) &&
+           "Anonymous symbol has non-local scope");
+    return Name;
+  }
+
+  /// Returns true if this Symbol has content (potentially) defined within this
+  /// object file (i.e. is anything but an external or absolute symbol).
+  bool isDefined() const {
+    assert(Base && "Attempt to access null symbol");
+    return Base->isDefined();
+  }
+
+  /// Returns true if this symbol is live (i.e. should be treated as a root for
+  /// dead stripping).
+  bool isLive() const {
+    assert(Base && "Attempting to access null symbol");
+    return IsLive;
+  }
+
+  /// Set this symbol's live bit.
+  void setLive(bool IsLive) { this->IsLive = IsLive; }
+
+  /// Returns true is this symbol is callable.
+  bool isCallable() const { return IsCallable; }
+
+  /// Set this symbol's callable bit.
+  void setCallable(bool IsCallable) { this->IsCallable = IsCallable; }
+
+  /// Returns true if the underlying addressable is an unresolved external.
+  bool isExternal() const {
+    assert(Base && "Attempt to access null symbol");
+    return !Base->isDefined() && !Base->isAbsolute();
+  }
+
+  /// Returns true if the underlying addressable is an absolute symbol.
+  bool isAbsolute() const {
+    assert(Base && "Attempt to access null symbol");
+    return !Base->isDefined() && Base->isAbsolute();
+  }
+
+  /// Return the addressable that this symbol points to.
+  Addressable &getAddressable() {
+    assert(Base && "Cannot get underlying addressable for null symbol");
+    return *Base;
+  }
+
+  /// Return the addressable that thsi symbol points to.
+  const Addressable &getAddressable() const {
+    assert(Base && "Cannot get underlying addressable for null symbol");
+    return *Base;
+  }
+
+  /// Return the Block for this Symbol (Symbol must be defined).
+  Block &getBlock() {
+    assert(Base && "Cannot get block for null symbol");
+    assert(Base->isDefined() && "Not a defined symbol");
+    return static_cast<Block &>(*Base);
+  }
+
+  /// Return the Block for this Symbol (Symbol must be defined).
+  const Block &getBlock() const {
+    assert(Base && "Cannot get block for null symbol");
+    assert(Base->isDefined() && "Not a defined symbol");
+    return static_cast<const Block &>(*Base);
+  }
+
+  /// Returns the offset for this symbol within the underlying addressable.
+  JITTargetAddress getOffset() const { return Offset; }
+
+  /// Returns the address of this symbol.
+  JITTargetAddress getAddress() const { return Base->getAddress() + Offset; }
+
+  /// Returns the size of this symbol.
+  JITTargetAddress getSize() const { return Size; }
+
+  /// Returns true if this symbol is backed by a zero-fill block.
+  /// This method may only be called on defined symbols.
+  bool isSymbolZeroFill() const { return getBlock().isZeroFill(); }
+
+  /// Returns the content in the underlying block covered by this symbol.
+  /// This method may only be called on defined non-zero-fill symbols.
+  StringRef getSymbolContent() const {
+    return getBlock().getContent().substr(Offset, Size);
+  }
+
+  /// Get the linkage for this Symbol.
+  Linkage getLinkage() const { return static_cast<Linkage>(L); }
+
+  /// Set the linkage for this Symbol.
+  void setLinkage(Linkage L) {
+    assert((L == Linkage::Strong || (Base->isDefined() && !Name.empty())) &&
+           "Linkage can only be applied to defined named symbols");
+    this->L = static_cast<uint8_t>(L);
+  }
+
+  /// Get the visibility for this Symbol.
+  Scope getScope() const { return static_cast<Scope>(S); }
+
+  /// Set the visibility for this Symbol.
+  void setScope(Scope S) {
+    assert((S == Scope::Default || Base->isDefined() || Base->isAbsolute()) &&
+           "Invalid visibility for symbol type");
+    this->S = static_cast<uint8_t>(S);
+  }
+
+private:
+  void makeExternal(Addressable &A) {
+    assert(!A.isDefined() && "Attempting to make external with defined block");
+    Base = &A;
+    Offset = 0;
+    setLinkage(Linkage::Strong);
+    setScope(Scope::Default);
+    IsLive = 0;
+    // note: Size and IsCallable fields left unchanged.
+  }
+
+  static constexpr uint64_t MaxOffset = (1ULL << 59) - 1;
+
+  // FIXME: A char* or SymbolStringPtr may pack better.
+  StringRef Name;
+  Addressable *Base = nullptr;
+  uint64_t Offset : 59;
+  uint64_t L : 1;
+  uint64_t S : 2;
+  uint64_t IsLive : 1;
+  uint64_t IsCallable : 1;
+  JITTargetAddress Size = 0;
+};
+
+raw_ostream &operator<<(raw_ostream &OS, const Symbol &A);
+
+void printEdge(raw_ostream &OS, const Block &B, const Edge &E,
                StringRef EdgeKindName);
 
-/// Represents a section address range via a pair of DefinedAtom pointers to
-/// the first and last atoms in the section.
+/// Represents an object file section.
+class Section {
+  friend class LinkGraph;
+
+private:
+  Section(StringRef Name, sys::Memory::ProtectionFlags Prot,
+          SectionOrdinal SecOrdinal)
+      : Name(Name), Prot(Prot), SecOrdinal(SecOrdinal) {}
+
+  using SymbolSet = DenseSet<Symbol *>;
+  using BlockSet = DenseSet<Block *>;
+
+public:
+  using symbol_iterator = SymbolSet::iterator;
+  using const_symbol_iterator = SymbolSet::const_iterator;
+
+  using block_iterator = BlockSet::iterator;
+  using const_block_iterator = BlockSet::const_iterator;
+
+  ~Section();
+
+  /// Returns the name of this section.
+  StringRef getName() const { return Name; }
+
+  /// Returns the protection flags for this section.
+  sys::Memory::ProtectionFlags getProtectionFlags() const { return Prot; }
+
+  /// Returns the ordinal for this section.
+  SectionOrdinal getOrdinal() const { return SecOrdinal; }
+
+  /// Returns an iterator over the symbols defined in this section.
+  iterator_range<symbol_iterator> symbols() {
+    return make_range(Symbols.begin(), Symbols.end());
+  }
+
+  /// Returns an iterator over the symbols defined in this section.
+  iterator_range<const_symbol_iterator> symbols() const {
+    return make_range(Symbols.begin(), Symbols.end());
+  }
+
+  /// Return the number of symbols in this section.
+  SymbolSet::size_type symbols_size() { return Symbols.size(); }
+
+  /// Return true if this section contains no symbols.
+  bool symbols_empty() const { return Symbols.empty(); }
+
+  /// Returns the ordinal for the next block.
+  BlockOrdinal getNextBlockOrdinal() { return NextBlockOrdinal++; }
+
+private:
+  void addSymbol(Symbol &Sym) {
+    assert(!Symbols.count(&Sym) && "Symbol is already in this section");
+    Symbols.insert(&Sym);
+  }
+
+  void removeSymbol(Symbol &Sym) {
+    assert(Symbols.count(&Sym) && "symbol is not in this section");
+    Symbols.erase(&Sym);
+  }
+
+  StringRef Name;
+  sys::Memory::ProtectionFlags Prot;
+  SectionOrdinal SecOrdinal = 0;
+  BlockOrdinal NextBlockOrdinal = 0;
+  SymbolSet Symbols;
+};
+
+/// Represents a section address range via a pair of Block pointers
+/// to the first and last Blocks in the section.
 class SectionRange {
 public:
   SectionRange() = default;
-  SectionRange(DefinedAtom *First, DefinedAtom *Last)
-      : First(First), Last(Last) {}
-  DefinedAtom *getFirstAtom() const {
+  SectionRange(const Section &Sec) {
+    if (Sec.symbols_empty())
+      return;
+    First = Last = *Sec.symbols().begin();
+    for (auto *Sym : Sec.symbols()) {
+      if (Sym->getAddress() < First->getAddress())
+        First = Sym;
+      if (Sym->getAddress() > Last->getAddress())
+        Last = Sym;
+    }
+  }
+  Symbol *getFirstSymbol() const {
     assert((!Last || First) && "First can not be null if end is non-null");
     return First;
   }
-  DefinedAtom *getLastAtom() const {
+  Symbol *getLastSymbol() const {
     assert((First || !Last) && "Last can not be null if start is non-null");
     return Last;
   }
@@ -252,290 +597,119 @@ public:
     assert((First || !Last) && "Last can not be null if start is non-null");
     return !First;
   }
-  JITTargetAddress getStart() const;
-  JITTargetAddress getEnd() const;
-  uint64_t getSize() const;
+  JITTargetAddress getStart() const {
+    return First ? First->getBlock().getAddress() : 0;
+  }
+  JITTargetAddress getEnd() const {
+    return Last ? Last->getBlock().getAddress() + Last->getBlock().getSize()
+                : 0;
+  }
+  uint64_t getSize() const { return getEnd() - getStart(); }
 
 private:
-  DefinedAtom *First = nullptr;
-  DefinedAtom *Last = nullptr;
+  Symbol *First = nullptr;
+  Symbol *Last = nullptr;
 };
 
-/// Represents an object file section.
-class Section {
-  friend class AtomGraph;
-
-private:
-  Section(StringRef Name, uint32_t Alignment, sys::Memory::ProtectionFlags Prot,
-          unsigned Ordinal, bool IsZeroFill)
-      : Name(Name), Alignment(Alignment), Prot(Prot), Ordinal(Ordinal),
-        IsZeroFill(IsZeroFill) {
-    assert(isPowerOf2_32(Alignment) && "Alignments must be a power of 2");
-  }
-
-  using DefinedAtomSet = DenseSet<DefinedAtom *>;
-
-public:
-  using atom_iterator = DefinedAtomSet::iterator;
-  using const_atom_iterator = DefinedAtomSet::const_iterator;
-
-  ~Section();
-  StringRef getName() const { return Name; }
-  uint32_t getAlignment() const { return Alignment; }
-  sys::Memory::ProtectionFlags getProtectionFlags() const { return Prot; }
-  unsigned getSectionOrdinal() const { return Ordinal; }
-  size_t getNextAtomOrdinal() { return ++NextAtomOrdinal; }
-
-  bool isZeroFill() const { return IsZeroFill; }
-
-  /// Returns an iterator over the atoms in the section (in no particular
-  /// order).
-  iterator_range<atom_iterator> atoms() {
-    return make_range(DefinedAtoms.begin(), DefinedAtoms.end());
-  }
-
-  /// Returns an iterator over the atoms in the section (in no particular
-  /// order).
-  iterator_range<const_atom_iterator> atoms() const {
-    return make_range(DefinedAtoms.begin(), DefinedAtoms.end());
-  }
-
-  /// Return the number of atoms in this section.
-  DefinedAtomSet::size_type atoms_size() { return DefinedAtoms.size(); }
-
-  /// Return true if this section contains no atoms.
-  bool atoms_empty() const { return DefinedAtoms.empty(); }
-
-  /// Returns the range of this section as the pair of atoms with the lowest
-  /// and highest target address. This operation is expensive, as it
-  /// must traverse all atoms in the section.
-  ///
-  /// Note: If the section is empty, both values will be null. The section
-  /// address will evaluate to null, and the size to zero. If the section
-  /// contains a single atom both values will point to it, the address will
-  /// evaluate to the address of that atom, and the size will be the size of
-  /// that atom.
-  SectionRange getRange() const;
-
-private:
-  void addAtom(DefinedAtom &DA) {
-    assert(!DefinedAtoms.count(&DA) && "Atom is already in this section");
-    DefinedAtoms.insert(&DA);
-  }
-
-  void removeAtom(DefinedAtom &DA) {
-    assert(DefinedAtoms.count(&DA) && "Atom is not in this section");
-    DefinedAtoms.erase(&DA);
-  }
-
-  StringRef Name;
-  uint32_t Alignment = 0;
-  sys::Memory::ProtectionFlags Prot;
-  unsigned Ordinal = 0;
-  unsigned NextAtomOrdinal = 0;
-  bool IsZeroFill = false;
-  DefinedAtomSet DefinedAtoms;
-};
-
-/// Defined atom class. Suitable for use by defined named and anonymous
-/// atoms.
-class DefinedAtom : public Atom {
-  friend class AtomGraph;
-
-private:
-  DefinedAtom(Section &Parent, JITTargetAddress Address, uint32_t Alignment)
-      : Atom("", Address), Parent(Parent), Ordinal(Parent.getNextAtomOrdinal()),
-        Alignment(Alignment) {
-    assert(isPowerOf2_32(Alignment) && "Alignments must be a power of two");
-  }
-
-  DefinedAtom(Section &Parent, StringRef Name, JITTargetAddress Address,
-              uint32_t Alignment)
-      : Atom(Name, Address), Parent(Parent),
-        Ordinal(Parent.getNextAtomOrdinal()), Alignment(Alignment) {
-    assert(isPowerOf2_32(Alignment) && "Alignments must be a power of two");
-  }
-
-public:
-  using edge_iterator = EdgeVector::iterator;
-
-  Section &getSection() const { return Parent; }
-
-  uint64_t getSize() const { return Size; }
-
-  StringRef getContent() const {
-    assert(!Parent.isZeroFill() && "Trying to get content for zero-fill atom");
-    assert(Size <= std::numeric_limits<size_t>::max() &&
-           "Content size too large");
-    return {ContentPtr, static_cast<size_t>(Size)};
-  }
-  void setContent(StringRef Content) {
-    assert(!Parent.isZeroFill() && "Calling setContent on zero-fill atom?");
-    ContentPtr = Content.data();
-    Size = Content.size();
-  }
-
-  bool isZeroFill() const { return Parent.isZeroFill(); }
-
-  void setZeroFill(uint64_t Size) {
-    assert(Parent.isZeroFill() && !ContentPtr &&
-           "Can't set zero-fill length of a non zero-fill atom");
-    this->Size = Size;
-  }
-
-  uint64_t getZeroFillSize() const {
-    assert(Parent.isZeroFill() &&
-           "Can't get zero-fill length of a non zero-fill atom");
-    return Size;
-  }
-
-  uint32_t getAlignment() const { return Alignment; }
-
-  bool hasLayoutNext() const { return HasLayoutNext; }
-  void setLayoutNext(DefinedAtom &Next) {
-    assert(!HasLayoutNext && "Atom already has layout-next constraint");
-    HasLayoutNext = true;
-    Edges.push_back(Edge(Edge::LayoutNext, 0, Next, 0));
-  }
-  DefinedAtom &getLayoutNext() {
-    assert(HasLayoutNext && "Atom does not have a layout-next constraint");
-    DefinedAtom *Next = nullptr;
-    for (auto &E : edges())
-      if (E.getKind() == Edge::LayoutNext) {
-        assert(E.getTarget().isDefined() &&
-               "layout-next target atom must be a defined atom");
-        Next = static_cast<DefinedAtom *>(&E.getTarget());
-        break;
-      }
-    assert(Next && "Missing LayoutNext edge");
-    return *Next;
-  }
-
-  bool isCommon() const { return IsCommon; }
-
-  void addEdge(Edge::Kind K, Edge::OffsetT Offset, Atom &Target,
-               Edge::AddendT Addend) {
-    assert(K != Edge::LayoutNext &&
-           "Layout edges should be added via setLayoutNext");
-    Edges.push_back(Edge(K, Offset, Target, Addend));
-  }
-
-  iterator_range<edge_iterator> edges() {
-    return make_range(Edges.begin(), Edges.end());
-  }
-  size_t edges_size() const { return Edges.size(); }
-  bool edges_empty() const { return Edges.empty(); }
-
-  unsigned getOrdinal() const { return Ordinal; }
-
-private:
-  void setCommon(uint64_t Size) {
-    assert(ContentPtr == 0 && "Atom already has content?");
-    IsCommon = true;
-    setZeroFill(Size);
-  }
-
-  EdgeVector Edges;
-  uint64_t Size = 0;
-  Section &Parent;
-  const char *ContentPtr = nullptr;
-  unsigned Ordinal = 0;
-  uint32_t Alignment = 0;
-};
-
-inline JITTargetAddress SectionRange::getStart() const {
-  return First ? First->getAddress() : 0;
-}
-
-inline JITTargetAddress SectionRange::getEnd() const {
-  return Last ? Last->getAddress() + Last->getSize() : 0;
-}
-
-inline uint64_t SectionRange::getSize() const { return getEnd() - getStart(); }
-
-inline SectionRange Section::getRange() const {
-  if (atoms_empty())
-    return SectionRange();
-  DefinedAtom *First = *DefinedAtoms.begin(), *Last = *DefinedAtoms.begin();
-  for (auto *DA : atoms()) {
-    if (DA->getAddress() < First->getAddress())
-      First = DA;
-    if (DA->getAddress() > Last->getAddress())
-      Last = DA;
-  }
-  return SectionRange(First, Last);
-}
-
-class AtomGraph {
+class LinkGraph {
 private:
   using SectionList = std::vector<std::unique_ptr<Section>>;
-  using AddressToAtomMap = std::map<JITTargetAddress, DefinedAtom *>;
-  using NamedAtomMap = DenseMap<StringRef, Atom *>;
-  using ExternalAtomSet = DenseSet<Atom *>;
+  using ExternalSymbolSet = DenseSet<Symbol *>;
+  using BlockSet = DenseSet<Block *>;
+
+  template <typename... ArgTs>
+  Addressable &createAddressable(ArgTs &&... Args) {
+    Addressable *A =
+        reinterpret_cast<Addressable *>(Allocator.Allocate<Addressable>());
+    new (A) Addressable(std::forward<ArgTs>(Args)...);
+    return *A;
+  }
+
+  void destroyAddressable(Addressable &A) {
+    A.~Addressable();
+    Allocator.Deallocate(&A);
+  }
+
+  template <typename... ArgTs> Block &createBlock(ArgTs &&... Args) {
+    Block *B = reinterpret_cast<Block *>(Allocator.Allocate<Block>());
+    new (B) Block(std::forward<ArgTs>(Args)...);
+    Blocks.insert(B);
+    return *B;
+  }
+
+  void destroyBlock(Block &B) {
+    Blocks.erase(&B);
+    B.~Block();
+    Allocator.Deallocate(&B);
+  }
+
+  void destroySymbol(Symbol &S) {
+    S.~Symbol();
+    Allocator.Deallocate(&S);
+  }
 
 public:
-  using external_atom_iterator = ExternalAtomSet::iterator;
+  using external_symbol_iterator = ExternalSymbolSet::iterator;
+
+  using block_iterator = BlockSet::iterator;
 
   using section_iterator = pointee_iterator<SectionList::iterator>;
   using const_section_iterator = pointee_iterator<SectionList::const_iterator>;
 
-  template <typename SecItrT, typename AtomItrT, typename T>
-  class defined_atom_iterator_impl
+  template <typename SectionItrT, typename SymbolItrT, typename T>
+  class defined_symbol_iterator_impl
       : public iterator_facade_base<
-            defined_atom_iterator_impl<SecItrT, AtomItrT, T>,
+            defined_symbol_iterator_impl<SectionItrT, SymbolItrT, T>,
             std::forward_iterator_tag, T> {
   public:
-    defined_atom_iterator_impl() = default;
+    defined_symbol_iterator_impl() = default;
 
-    defined_atom_iterator_impl(SecItrT SI, SecItrT SE)
-        : SI(SI), SE(SE),
-          AI(SI != SE ? SI->atoms().begin() : Section::atom_iterator()) {
-      moveToNextAtomOrEnd();
+    defined_symbol_iterator_impl(SectionItrT SecI, SectionItrT SecE)
+        : SecI(SecI), SecE(SecE),
+          SymI(SecI != SecE ? SecI->symbols().begin() : SymbolItrT()) {
+      moveToNextSymbolOrEnd();
     }
 
-    bool operator==(const defined_atom_iterator_impl &RHS) const {
-      return (SI == RHS.SI) && (AI == RHS.AI);
+    bool operator==(const defined_symbol_iterator_impl &RHS) const {
+      return (SecI == RHS.SecI) && (SymI == RHS.SymI);
     }
 
     T operator*() const {
-      assert(AI != SI->atoms().end() && "Dereferencing end?");
-      return *AI;
+      assert(SymI != SecI->symbols().end() && "Dereferencing end?");
+      return *SymI;
     }
 
-    defined_atom_iterator_impl operator++() {
-      ++AI;
-      moveToNextAtomOrEnd();
+    defined_symbol_iterator_impl operator++() {
+      ++SymI;
+      moveToNextSymbolOrEnd();
       return *this;
     }
 
   private:
-    void moveToNextAtomOrEnd() {
-      while (SI != SE && AI == SI->atoms().end()) {
-        ++SI;
-        if (SI == SE)
-          AI = Section::atom_iterator();
-        else
-          AI = SI->atoms().begin();
+    void moveToNextSymbolOrEnd() {
+      while (SecI != SecE && SymI == SecI->symbols().end()) {
+        ++SecI;
+        SymI = SecI == SecE ? SymbolItrT() : SecI->symbols().begin();
       }
     }
 
-    SecItrT SI, SE;
-    AtomItrT AI;
+    SectionItrT SecI, SecE;
+    SymbolItrT SymI;
   };
 
-  using defined_atom_iterator =
-      defined_atom_iterator_impl<section_iterator, Section::atom_iterator,
-                                 DefinedAtom *>;
+  using defined_symbol_iterator =
+      defined_symbol_iterator_impl<const_section_iterator,
+                                   Section::symbol_iterator, Symbol *>;
 
-  using const_defined_atom_iterator =
-      defined_atom_iterator_impl<const_section_iterator,
-                                 Section::const_atom_iterator,
-                                 const DefinedAtom *>;
+  using const_defined_symbol_iterator = defined_symbol_iterator_impl<
+      const_section_iterator, Section::const_symbol_iterator, const Symbol *>;
 
-  AtomGraph(std::string Name, unsigned PointerSize,
+  LinkGraph(std::string Name, unsigned PointerSize,
             support::endianness Endianness)
       : Name(std::move(Name)), PointerSize(PointerSize),
         Endianness(Endianness) {}
+
+  ~LinkGraph();
 
   /// Returns the name of this graph (usually the name of the original
   /// underlying MemoryBuffer).
@@ -544,84 +718,83 @@ public:
   /// Returns the pointer size for use in this graph.
   unsigned getPointerSize() const { return PointerSize; }
 
-  /// Returns the endianness of atom-content in this graph.
+  /// Returns the endianness of content in this graph.
   support::endianness getEndianness() const { return Endianness; }
 
   /// Create a section with the given name, protection flags, and alignment.
-  Section &createSection(StringRef Name, uint32_t Alignment,
-                         sys::Memory::ProtectionFlags Prot, bool IsZeroFill) {
-    std::unique_ptr<Section> Sec(
-        new Section(Name, Alignment, Prot, Sections.size(), IsZeroFill));
+  Section &createSection(StringRef Name, sys::Memory::ProtectionFlags Prot) {
+    std::unique_ptr<Section> Sec(new Section(Name, Prot, Sections.size()));
     Sections.push_back(std::move(Sec));
     return *Sections.back();
   }
 
-  /// Add an external atom representing an undefined symbol in this graph.
-  Atom &addExternalAtom(StringRef Name) {
-    assert(!NamedAtoms.count(Name) && "Duplicate named atom inserted");
-    Atom *A = reinterpret_cast<Atom *>(
-        AtomAllocator.Allocate(sizeof(Atom), alignof(Atom)));
-    new (A) Atom(Name);
-    ExternalAtoms.insert(A);
-    NamedAtoms[Name] = A;
-    return *A;
+  /// Create a content block.
+  Block &createContentBlock(Section &Parent, StringRef Content,
+                            uint64_t Address, uint64_t Alignment,
+                            uint64_t AlignmentOffset) {
+    return createBlock(Parent, Parent.getNextBlockOrdinal(), Content, Address,
+                       Alignment, AlignmentOffset);
   }
 
-  /// Add an external atom representing an absolute symbol.
-  Atom &addAbsoluteAtom(StringRef Name, JITTargetAddress Addr) {
-    assert(!NamedAtoms.count(Name) && "Duplicate named atom inserted");
-    Atom *A = reinterpret_cast<Atom *>(
-        AtomAllocator.Allocate(sizeof(Atom), alignof(Atom)));
-    new (A) Atom(Name, Addr);
-    AbsoluteAtoms.insert(A);
-    NamedAtoms[Name] = A;
-    return *A;
+  /// Create a zero-fill block.
+  Block &createZeroFillBlock(Section &Parent, uint64_t Size, uint64_t Address,
+                             uint64_t Alignment, uint64_t AlignmentOffset) {
+    return createBlock(Parent, Parent.getNextBlockOrdinal(), Size, Address,
+                       Alignment, AlignmentOffset);
   }
 
-  /// Add an anonymous defined atom to the graph.
-  ///
-  /// Anonymous atoms have content but no name. They must have an address.
-  DefinedAtom &addAnonymousAtom(Section &Parent, JITTargetAddress Address,
-                                uint32_t Alignment) {
-    DefinedAtom *A = reinterpret_cast<DefinedAtom *>(
-        AtomAllocator.Allocate(sizeof(DefinedAtom), alignof(DefinedAtom)));
-    new (A) DefinedAtom(Parent, Address, Alignment);
-    Parent.addAtom(*A);
-    getAddrToAtomMap()[A->getAddress()] = A;
-    return *A;
+  /// Add an external symbol.
+  /// Some formats (e.g. ELF) allow Symbols to have sizes. For Symbols whose
+  /// size is not known, you should substitute '0'.
+  Symbol &addExternalSymbol(StringRef Name, uint64_t Size) {
+    auto &Sym = Symbol::constructExternal(
+        Allocator.Allocate<Symbol>(), createAddressable(0, false), Name, Size);
+    ExternalSymbols.insert(&Sym);
+    return Sym;
   }
 
-  /// Add a defined atom to the graph.
-  ///
-  /// Allocates and constructs a DefinedAtom instance with the given parent,
-  /// name, address, and alignment.
-  DefinedAtom &addDefinedAtom(Section &Parent, StringRef Name,
-                              JITTargetAddress Address, uint32_t Alignment) {
-    assert(!NamedAtoms.count(Name) && "Duplicate named atom inserted");
-    DefinedAtom *A = reinterpret_cast<DefinedAtom *>(
-        AtomAllocator.Allocate(sizeof(DefinedAtom), alignof(DefinedAtom)));
-    new (A) DefinedAtom(Parent, Name, Address, Alignment);
-    Parent.addAtom(*A);
-    getAddrToAtomMap()[A->getAddress()] = A;
-    NamedAtoms[Name] = A;
-    return *A;
+  /// Add an absolute symbol.
+  Symbol &addAbsoluteSymbol(StringRef Name, JITTargetAddress Address,
+                            uint64_t Size, Linkage L, Scope S, bool IsLive) {
+    auto &Sym = Symbol::constructAbsolute(Allocator.Allocate<Symbol>(),
+                                          createAddressable(Address), Name,
+                                          Size, L, S, IsLive);
+    AbsoluteSymbols.insert(&Sym);
+    return Sym;
   }
 
-  /// Add a common symbol atom to the graph.
-  ///
-  /// Adds a common-symbol atom to the graph with the given parent, name,
-  /// address, alignment and size.
-  DefinedAtom &addCommonAtom(Section &Parent, StringRef Name,
-                             JITTargetAddress Address, uint32_t Alignment,
-                             uint64_t Size) {
-    assert(!NamedAtoms.count(Name) && "Duplicate named atom inserted");
-    DefinedAtom *A = reinterpret_cast<DefinedAtom *>(
-        AtomAllocator.Allocate(sizeof(DefinedAtom), alignof(DefinedAtom)));
-    new (A) DefinedAtom(Parent, Name, Address, Alignment);
-    A->setCommon(Size);
-    Parent.addAtom(*A);
-    NamedAtoms[Name] = A;
-    return *A;
+  /// Convenience method for adding a weak zero-fill symbol.
+  Symbol &addCommonSymbol(StringRef Name, Scope S, Section &Section,
+                          JITTargetAddress Address, uint64_t Size,
+                          uint64_t Alignment, bool IsLive) {
+    auto &Sym = Symbol::constructCommon(
+        Allocator.Allocate<Symbol>(),
+        createBlock(Section, Section.getNextBlockOrdinal(), Address, Size,
+                    Alignment, 0),
+        Name, Size, S, IsLive);
+    Section.addSymbol(Sym);
+    return Sym;
+  }
+
+  /// Add an anonymous symbol.
+  Symbol &addAnonymousSymbol(Block &Content, JITTargetAddress Offset,
+                             JITTargetAddress Size, bool IsCallable,
+                             bool IsLive) {
+    auto &Sym = Symbol::constructAnonDef(Allocator.Allocate<Symbol>(), Content,
+                                         Offset, Size, IsCallable, IsLive);
+    Content.getSection().addSymbol(Sym);
+    return Sym;
+  }
+
+  /// Add a named symbol.
+  Symbol &addDefinedSymbol(Block &Content, JITTargetAddress Offset,
+                           StringRef Name, JITTargetAddress Size, Linkage L,
+                           Scope S, bool IsCallable, bool IsLive) {
+    auto &Sym =
+        Symbol::constructNamedDef(Allocator.Allocate<Symbol>(), Content, Offset,
+                                  Name, Size, L, S, IsLive, IsCallable);
+    Content.getSection().addSymbol(Sym);
+    return Sym;
   }
 
   iterator_range<section_iterator> sections() {
@@ -638,135 +811,79 @@ public:
     return nullptr;
   }
 
-  iterator_range<external_atom_iterator> external_atoms() {
-    return make_range(ExternalAtoms.begin(), ExternalAtoms.end());
+  iterator_range<external_symbol_iterator> external_symbols() {
+    return make_range(ExternalSymbols.begin(), ExternalSymbols.end());
   }
 
-  iterator_range<external_atom_iterator> absolute_atoms() {
-    return make_range(AbsoluteAtoms.begin(), AbsoluteAtoms.end());
+  iterator_range<external_symbol_iterator> absolute_symbols() {
+    return make_range(AbsoluteSymbols.begin(), AbsoluteSymbols.end());
   }
 
-  iterator_range<defined_atom_iterator> defined_atoms() {
-    return make_range(defined_atom_iterator(Sections.begin(), Sections.end()),
-                      defined_atom_iterator(Sections.end(), Sections.end()));
+  iterator_range<defined_symbol_iterator> defined_symbols() {
+    return make_range(defined_symbol_iterator(Sections.begin(), Sections.end()),
+                      defined_symbol_iterator(Sections.end(), Sections.end()));
   }
 
-  iterator_range<const_defined_atom_iterator> defined_atoms() const {
+  iterator_range<const_defined_symbol_iterator> defined_symbols() const {
     return make_range(
-        const_defined_atom_iterator(Sections.begin(), Sections.end()),
-        const_defined_atom_iterator(Sections.end(), Sections.end()));
+        const_defined_symbol_iterator(Sections.begin(), Sections.end()),
+        const_defined_symbol_iterator(Sections.end(), Sections.end()));
   }
 
-  /// Returns the atom with the given name, which must exist in this graph.
-  Atom &getAtomByName(StringRef Name) {
-    auto I = NamedAtoms.find(Name);
-    assert(I != NamedAtoms.end() && "Name not in NamedAtoms map");
-    return *I->second;
+  iterator_range<block_iterator> blocks() {
+    return make_range(Blocks.begin(), Blocks.end());
   }
 
-  /// Returns the atom with the given name, which must exist in this graph and
-  /// be a DefinedAtom.
-  DefinedAtom &getDefinedAtomByName(StringRef Name) {
-    auto &A = getAtomByName(Name);
-    assert(A.isDefined() && "Atom is not a defined atom");
-    return static_cast<DefinedAtom &>(A);
-  }
-
-  /// Search for the given atom by name.
-  /// Returns the atom (if found) or an error (if no atom with this name
-  /// exists).
-  Expected<Atom &> findAtomByName(StringRef Name) {
-    auto I = NamedAtoms.find(Name);
-    if (I == NamedAtoms.end())
-      return make_error<JITLinkError>("No atom named " + Name);
-    return *I->second;
-  }
-
-  /// Search for the given defined atom by name.
-  /// Returns the defined atom (if found) or an error (if no atom with this
-  /// name exists, or if one exists but is not a defined atom).
-  Expected<DefinedAtom &> findDefinedAtomByName(StringRef Name) {
-    auto I = NamedAtoms.find(Name);
-    if (I == NamedAtoms.end())
-      return make_error<JITLinkError>("No atom named " + Name);
-    if (!I->second->isDefined())
-      return make_error<JITLinkError>("Atom " + Name +
-                                      " exists but is not a "
-                                      "defined atom");
-    return static_cast<DefinedAtom &>(*I->second);
-  }
-
-  /// Returns the atom covering the given address, or an error if no such atom
-  /// exists.
-  ///
-  /// Returns null if no atom exists at the given address.
-  DefinedAtom *getAtomByAddress(JITTargetAddress Address) {
-    refreshAddrToAtomCache();
-
-    // If there are no defined atoms, bail out early.
-    if (AddrToAtomCache->empty())
-      return nullptr;
-
-    // Find the atom *after* the given address.
-    auto I = AddrToAtomCache->upper_bound(Address);
-
-    // If this address falls before any known atom, bail out.
-    if (I == AddrToAtomCache->begin())
-      return nullptr;
-
-    // The atom we're looking for is the one before the atom we found.
-    --I;
-
-    // Otherwise range check the atom that was found.
-    assert(!I->second->getContent().empty() && "Atom content not set");
-    if (Address >= I->second->getAddress() + I->second->getContent().size())
-      return nullptr;
-
-    return I->second;
-  }
-
-  /// Like getAtomByAddress, but returns an Error if the given address is not
-  /// covered by an atom, rather than a null pointer.
-  Expected<DefinedAtom &> findAtomByAddress(JITTargetAddress Address) {
-    if (auto *DA = getAtomByAddress(Address))
-      return *DA;
-    return make_error<JITLinkError>("No atom at address " +
-                                    formatv("{0:x16}", Address));
-  }
-
-  // Remove the given external atom from the graph.
-  void removeExternalAtom(Atom &A) {
-    assert(!A.isDefined() && !A.isAbsolute() && "A is not an external atom");
-    assert(ExternalAtoms.count(&A) && "A is not in the external atoms set");
-    ExternalAtoms.erase(&A);
-    A.~Atom();
-  }
-
-  /// Remove the given absolute atom from the graph.
-  void removeAbsoluteAtom(Atom &A) {
-    assert(A.isAbsolute() && "A is not an absolute atom");
-    assert(AbsoluteAtoms.count(&A) && "A is not in the absolute atoms set");
-    AbsoluteAtoms.erase(&A);
-    A.~Atom();
-  }
-
-  /// Remove the given defined atom from the graph.
-  void removeDefinedAtom(DefinedAtom &DA) {
-    if (AddrToAtomCache) {
-      assert(AddrToAtomCache->count(DA.getAddress()) &&
-             "Cache exists, but does not contain atom");
-      AddrToAtomCache->erase(DA.getAddress());
+  /// Turn a defined symbol into an external one.
+  void makeExternal(Symbol &Sym) {
+    if (Sym.getAddressable().isAbsolute()) {
+      assert(AbsoluteSymbols.count(&Sym) &&
+             "Sym is not in the absolute symbols set");
+      AbsoluteSymbols.erase(&Sym);
+    } else {
+      assert(Sym.isDefined() && "Sym is not a defined symbol");
+      Section &Sec = Sym.getBlock().getSection();
+      Sec.removeSymbol(Sym);
     }
-    if (DA.hasName()) {
-      assert(NamedAtoms.count(DA.getName()) && "Named atom not in map");
-      NamedAtoms.erase(DA.getName());
-    }
-    DA.getSection().removeAtom(DA);
-    DA.~DefinedAtom();
+    Sym.makeExternal(createAddressable(false));
+    ExternalSymbols.insert(&Sym);
   }
 
-  /// Invalidate the atom-to-address map.
-  void invalidateAddrToAtomMap() { AddrToAtomCache = None; }
+  /// Removes an external symbol. Also removes the underlying Addressable.
+  void removeExternalSymbol(Symbol &Sym) {
+    assert(!Sym.isDefined() && !Sym.isAbsolute() &&
+           "Sym is not an external symbol");
+    assert(ExternalSymbols.count(&Sym) && "Symbol is not in the externals set");
+    ExternalSymbols.erase(&Sym);
+    Addressable &Base = *Sym.Base;
+    destroySymbol(Sym);
+    destroyAddressable(Base);
+  }
+
+  /// Remove an absolute symbol. Also removes the underlying Addressable.
+  void removeAbsoluteSymbol(Symbol &Sym) {
+    assert(!Sym.isDefined() && Sym.isAbsolute() &&
+           "Sym is not an absolute symbol");
+    assert(AbsoluteSymbols.count(&Sym) &&
+           "Symbol is not in the absolute symbols set");
+    AbsoluteSymbols.erase(&Sym);
+    Addressable &Base = *Sym.Base;
+    destroySymbol(Sym);
+    destroyAddressable(Base);
+  }
+
+  /// Removes defined symbols. Does not remove the underlying block.
+  void removeDefinedSymbol(Symbol &Sym) {
+    assert(Sym.isDefined() && "Sym is not a defined symbol");
+    Sym.getBlock().getSection().removeSymbol(Sym);
+    destroySymbol(Sym);
+  }
+
+  /// Remove a block.
+  void removeBlock(Block &B) {
+    Blocks.erase(&B);
+    destroyBlock(B);
+  }
 
   /// Dump the graph.
   ///
@@ -778,87 +895,84 @@ public:
                 std::function<StringRef(Edge::Kind)>());
 
 private:
-  AddressToAtomMap &getAddrToAtomMap() {
-    refreshAddrToAtomCache();
-    return *AddrToAtomCache;
-  }
-
-  const AddressToAtomMap &getAddrToAtomMap() const {
-    refreshAddrToAtomCache();
-    return *AddrToAtomCache;
-  }
-
-  void refreshAddrToAtomCache() const {
-    if (!AddrToAtomCache) {
-      AddrToAtomCache = AddressToAtomMap();
-      for (auto *DA : defined_atoms())
-        (*AddrToAtomCache)[DA->getAddress()] = const_cast<DefinedAtom *>(DA);
-    }
-  }
-
-  // Put the BumpPtrAllocator first so that we don't free any of the atoms in
-  // it until all of their destructors have been run.
-  BumpPtrAllocator AtomAllocator;
+  // Put the BumpPtrAllocator first so that we don't free any of the underlying
+  // memory until the Symbol/Addressable destructors have been run.
+  BumpPtrAllocator Allocator;
 
   std::string Name;
   unsigned PointerSize;
   support::endianness Endianness;
+  BlockSet Blocks;
   SectionList Sections;
-  NamedAtomMap NamedAtoms;
-  ExternalAtomSet ExternalAtoms;
-  ExternalAtomSet AbsoluteAtoms;
-  mutable Optional<AddressToAtomMap> AddrToAtomCache;
+  ExternalSymbolSet ExternalSymbols;
+  ExternalSymbolSet AbsoluteSymbols;
 };
 
-/// A function for mutating AtomGraphs.
-using AtomGraphPassFunction = std::function<Error(AtomGraph &)>;
+/// A function for mutating LinkGraphs.
+using LinkGraphPassFunction = std::function<Error(LinkGraph &)>;
 
-/// A list of atom graph passes.
-using AtomGraphPassList = std::vector<AtomGraphPassFunction>;
+/// A list of LinkGraph passes.
+using LinkGraphPassList = std::vector<LinkGraphPassFunction>;
 
-/// An atom graph pass configuration, consisting of a list of pre-prune,
+/// An LinkGraph pass configuration, consisting of a list of pre-prune,
 /// post-prune, and post-fixup passes.
 struct PassConfiguration {
 
   /// Pre-prune passes.
   ///
   /// These passes are called on the graph after it is built, and before any
-  /// atoms have been pruned.
+  /// symbols have been pruned.
   ///
-  /// Notable use cases: Marking atoms live or should-discard.
-  AtomGraphPassList PrePrunePasses;
+  /// Notable use cases: Marking symbols live or should-discard.
+  LinkGraphPassList PrePrunePasses;
 
   /// Post-prune passes.
   ///
-  /// These passes are called on the graph after dead and should-discard atoms
-  /// have been removed, but before fixups are applied.
+  /// These passes are called on the graph after dead stripping, but before
+  /// fixups are applied.
   ///
-  /// Notable use cases: Building GOT, stub, and TLV atoms.
-  AtomGraphPassList PostPrunePasses;
+  /// Notable use cases: Building GOT, stub, and TLV symbols.
+  LinkGraphPassList PostPrunePasses;
 
   /// Post-fixup passes.
   ///
-  /// These passes are called on the graph after atom contents has been copied
+  /// These passes are called on the graph after block contents has been copied
   /// to working memory, and fixups applied.
   ///
   /// Notable use cases: Testing and validation.
-  AtomGraphPassList PostFixupPasses;
+  LinkGraphPassList PostFixupPasses;
 };
 
 /// A map of symbol names to resolved addresses.
 using AsyncLookupResult = DenseMap<StringRef, JITEvaluatedSymbol>;
 
-/// A function to call with a resolved symbol map (See AsyncLookupResult) or an
-/// error if resolution failed.
-using JITLinkAsyncLookupContinuation =
-    std::function<void(Expected<AsyncLookupResult> LR)>;
+/// A function object to call with a resolved symbol map (See AsyncLookupResult)
+/// or an error if resolution failed.
+class JITLinkAsyncLookupContinuation {
+public:
+  virtual ~JITLinkAsyncLookupContinuation() {}
+  virtual void run(Expected<AsyncLookupResult> LR) = 0;
 
-/// An asynchronous symbol lookup. Performs a search (possibly asynchronously)
-/// for the given symbols, calling the given continuation with either the result
-/// (if the lookup succeeds), or an error (if the lookup fails).
-using JITLinkAsyncLookupFunction =
-    std::function<void(const DenseSet<StringRef> &Symbols,
-                       JITLinkAsyncLookupContinuation LookupContinuation)>;
+private:
+  virtual void anchor();
+};
+
+/// Create a lookup continuation from a function object.
+template <typename Continuation>
+std::unique_ptr<JITLinkAsyncLookupContinuation>
+createLookupContinuation(Continuation Cont) {
+
+  class Impl final : public JITLinkAsyncLookupContinuation {
+  public:
+    Impl(Continuation C) : C(std::move(C)) {}
+    void run(Expected<AsyncLookupResult> LR) override { C(std::move(LR)); }
+
+  private:
+    Continuation C;
+  };
+
+  return std::make_unique<Impl>(std::move(Cont));
+}
 
 /// Holds context for a single jitLink invocation.
 class JITLinkContext {
@@ -881,13 +995,13 @@ public:
   /// lookup continutation which it must call with a result to continue the
   /// linking process.
   virtual void lookup(const DenseSet<StringRef> &Symbols,
-                      JITLinkAsyncLookupContinuation LookupContinuation) = 0;
+                      std::unique_ptr<JITLinkAsyncLookupContinuation> LC) = 0;
 
-  /// Called by JITLink once all defined atoms in the graph have been assigned
-  /// their final memory locations in the target process. At this point he
-  /// atom graph can be, inspected to build a symbol table however the atom
+  /// Called by JITLink once all defined symbols in the graph have been assigned
+  /// their final memory locations in the target process. At this point the
+  /// LinkGraph can be inspected to build a symbol table, however the block
   /// content will not generally have been copied to the target location yet.
-  virtual void notifyResolved(AtomGraph &G) = 0;
+  virtual void notifyResolved(LinkGraph &G) = 0;
 
   /// Called by JITLink to notify the context that the object has been
   /// finalized (i.e. emitted to memory and memory permissions set). If all of
@@ -904,20 +1018,20 @@ public:
 
   /// Returns the mark-live pass to be used for this link. If no pass is
   /// returned (the default) then the target-specific linker implementation will
-  /// choose a conservative default (usually marking all atoms live).
+  /// choose a conservative default (usually marking all symbols live).
   /// This function is only called if shouldAddDefaultTargetPasses returns true,
   /// otherwise the JITContext is responsible for adding a mark-live pass in
   /// modifyPassConfig.
-  virtual AtomGraphPassFunction getMarkLivePass(const Triple &TT) const;
+  virtual LinkGraphPassFunction getMarkLivePass(const Triple &TT) const;
 
   /// Called by JITLink to modify the pass pipeline prior to linking.
   /// The default version performs no modification.
   virtual Error modifyPassConfig(const Triple &TT, PassConfiguration &Config);
 };
 
-/// Marks all atoms in a graph live. This can be used as a default, conservative
-/// mark-live implementation.
-Error markAllAtomsLive(AtomGraph &G);
+/// Marks all symbols in a graph live. This can be used as a default,
+/// conservative mark-live implementation.
+Error markAllSymbolsLive(LinkGraph &G);
 
 /// Basic JITLink implementation.
 ///

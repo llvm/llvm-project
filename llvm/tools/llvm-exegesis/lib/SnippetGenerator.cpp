@@ -33,7 +33,8 @@ std::vector<CodeTemplate> getSingleton(CodeTemplate &&CT) {
 SnippetGeneratorFailure::SnippetGeneratorFailure(const llvm::Twine &S)
     : llvm::StringError(S, llvm::inconvertibleErrorCode()) {}
 
-SnippetGenerator::SnippetGenerator(const LLVMState &State) : State(State) {}
+SnippetGenerator::SnippetGenerator(const LLVMState &State, const Options &Opts)
+    : State(State), Opts(Opts) {}
 
 SnippetGenerator::~SnippetGenerator() = default;
 
@@ -73,13 +74,17 @@ SnippetGenerator::generateConfigurations(
         BC.Info = CT.Info;
         for (InstructionTemplate &IT : CT.Instructions) {
           randomizeUnsetVariables(State.getExegesisTarget(), ForbiddenRegs, IT);
-          BC.Instructions.push_back(IT.build());
+          BC.Key.Instructions.push_back(IT.build());
         }
         if (CT.ScratchSpacePointerInReg)
           BC.LiveIns.push_back(CT.ScratchSpacePointerInReg);
-        BC.RegisterInitialValues =
+        BC.Key.RegisterInitialValues =
             computeRegisterInitialValues(CT.Instructions);
+        BC.Key.Config = CT.Config;
         Output.push_back(std::move(BC));
+        if (Output.size() >= Opts.MaxConfigsPerOpcode)
+          return Output; // Early exit if we exceeded the number of allowed
+                         // configs.
       }
     }
     return Output;

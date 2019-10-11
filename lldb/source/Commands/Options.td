@@ -163,17 +163,6 @@ let Command = "breakpoint set" in {
     "match against all source files, pass the \"--all-files\" option.">;
   def breakpoint_set_all_files : Option<"all-files", "A">, Group<9>,
     Desc<"All files are searched for source pattern matches.">;
-  def breakpoint_set_python_class : Option<"python-class", "P">, Group<11>,
-    Arg<"PythonClass">, Required, Desc<"The name of the class that implement "
-    "a scripted breakpoint.">;
-  def breakpoint_set_python_class_key : Option<"python-class-key", "k">,
-    Group<11>, Arg<"None">,
-    Desc<"The key for a key/value pair passed to the class that implements a "
-    "scripted breakpoint.  Can be specified more than once.">;
-  def breakpoint_set_python_class_value : Option<"python-class-value", "v">,
-    Group<11>, Arg<"None">, Desc<"The value for the previous key in the pair "
-    "passed to the class that implements a scripted breakpoint. "
-    "Can be specified more than once.">;
   def breakpoint_set_language_exception : Option<"language-exception", "E">,
     Group<10>, Arg<"Language">, Required,
     Desc<"Set the breakpoint on exceptions thrown by the specified language "

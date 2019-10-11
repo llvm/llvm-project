@@ -37,11 +37,11 @@
 using namespace llvm;
 using namespace llvm::ELF;
 using namespace llvm::object;
-using namespace llvm::support::endian;
 
-using namespace lld;
-using namespace lld::elf;
+namespace endian = llvm::support::endian;
 
+namespace lld {
+namespace elf {
 namespace {
 template <class ELFT> class MarkLive {
 public:
@@ -141,7 +141,7 @@ void MarkLive<ELFT>::scanEhFrameSection(EhInputSection &eh,
     if (firstRelI == (unsigned)-1)
       continue;
 
-    if (read32<ELFT::TargetEndianness>(piece.data().data() + 4) == 0) {
+    if (endian::read32<ELFT::TargetEndianness>(piece.data().data() + 4) == 0) {
       // This is a CIE, we only need to worry about the first relocation. It is
       // known to point to the personality function.
       resolveReloc(eh, rels[firstRelI], false);
@@ -317,7 +317,7 @@ template <class ELFT> void MarkLive<ELFT>::moveToMain() {
 // Before calling this function, Live bits are off for all
 // input sections. This function make some or all of them on
 // so that they are emitted to the output file.
-template <class ELFT> void elf::markLive() {
+template <class ELFT> void markLive() {
   // If -gc-sections is not given, no sections are removed.
   if (!config->gcSections) {
     for (InputSectionBase *sec : inputSections)
@@ -379,7 +379,10 @@ template <class ELFT> void elf::markLive() {
         message("removing unused section " + toString(sec));
 }
 
-template void elf::markLive<ELF32LE>();
-template void elf::markLive<ELF32BE>();
-template void elf::markLive<ELF64LE>();
-template void elf::markLive<ELF64BE>();
+template void markLive<ELF32LE>();
+template void markLive<ELF32BE>();
+template void markLive<ELF64LE>();
+template void markLive<ELF64BE>();
+
+} // namespace elf
+} // namespace lld

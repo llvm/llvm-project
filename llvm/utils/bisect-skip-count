@@ -20,6 +20,7 @@
 # result.  Incrementing the last good count by one or decrementing the
 # last good skip by one should produce a failure.
 #
+from __future__ import print_function
 import os
 import sys
 import argparse
@@ -52,10 +53,10 @@ print("End: %d" % end)
 
 last = None
 while start != end and start != end-1:
-    count = start + (end - start)/2
+    count = start + (end - start)//2
     print("Visiting Skip: %d with (Start, End) = (%d,%d)" % (count, start, end))
     cmd = [x % {'skip':count, 'count':-1} for x in args.command]
-    print cmd
+    print(cmd)
     try:
         result = subprocess.call(cmd, shell=args.shell, timeout=args.timeout)
         if result == 0:
@@ -75,10 +76,10 @@ print("Bisect of Count starting!")
 print("Start: %d" % start)
 print("End: %d" % end)
 while start != end and start != end-1:
-    count = start + (end - start)/2
+    count = start + (end - start)//2
     print("Visiting Count: %d with (Start, End) = (%d,%d)" % (count, start, end))
     cmd = [x % {'count':count, 'skip':firstcount } for x in args.command]
-    print cmd
+    print(cmd)
     try:
         result = subprocess.call(cmd, shell=args.shell, timeout=args.timeout)
         if result == 0:

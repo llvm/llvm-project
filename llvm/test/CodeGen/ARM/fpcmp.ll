@@ -2,7 +2,7 @@
 
 define i32 @f1(float %a) {
 ;CHECK-LABEL: f1:
-;CHECK: vcmpe.f32
+;CHECK: vcmp.f32
 ;CHECK: movmi
 entry:
         %tmp = fcmp olt float %a, 1.000000e+00          ; <i1> [#uses=1]
@@ -22,7 +22,7 @@ entry:
 
 define i32 @f3(float %a) {
 ;CHECK-LABEL: f3:
-;CHECK: vcmpe.f32
+;CHECK: vcmp.f32
 ;CHECK: movgt
 entry:
         %tmp = fcmp ogt float %a, 1.000000e+00          ; <i1> [#uses=1]
@@ -32,7 +32,7 @@ entry:
 
 define i32 @f4(float %a) {
 ;CHECK-LABEL: f4:
-;CHECK: vcmpe.f32
+;CHECK: vcmp.f32
 ;CHECK: movge
 entry:
         %tmp = fcmp oge float %a, 1.000000e+00          ; <i1> [#uses=1]
@@ -42,7 +42,7 @@ entry:
 
 define i32 @f5(float %a) {
 ;CHECK-LABEL: f5:
-;CHECK: vcmpe.f32
+;CHECK: vcmp.f32
 ;CHECK: movls
 entry:
         %tmp = fcmp ole float %a, 1.000000e+00          ; <i1> [#uses=1]
@@ -62,7 +62,7 @@ entry:
 
 define i32 @g1(double %a) {
 ;CHECK-LABEL: g1:
-;CHECK: vcmpe.f64
+;CHECK: vcmp.f64
 ;CHECK: movmi
 entry:
         %tmp = fcmp olt double %a, 1.000000e+00         ; <i1> [#uses=1]

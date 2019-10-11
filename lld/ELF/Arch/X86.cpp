@@ -16,8 +16,9 @@
 using namespace llvm;
 using namespace llvm::support::endian;
 using namespace llvm::ELF;
-using namespace lld;
-using namespace lld::elf;
+
+namespace lld {
+namespace elf {
 
 namespace {
 class X86 : public TargetInfo {
@@ -539,7 +540,7 @@ void RetpolineNoPic::writePlt(uint8_t *buf, uint64_t gotPltEntryAddr,
   write32le(buf + 22, -off - 26);
 }
 
-TargetInfo *elf::getX86TargetInfo() {
+TargetInfo *getX86TargetInfo() {
   if (config->zRetpolineplt) {
     if (config->isPic) {
       static RetpolinePic t;
@@ -552,3 +553,6 @@ TargetInfo *elf::getX86TargetInfo() {
   static X86 t;
   return &t;
 }
+
+} // namespace elf
+} // namespace lld

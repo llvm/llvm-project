@@ -7,26 +7,22 @@
 define void @foo() nounwind {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi sp, sp, -2032
+; CHECK-NEXT:    sd ra, 2024(sp)
 ; CHECK-NEXT:    lui a0, 95
 ; CHECK-NEXT:    addiw a0, a0, 1505
 ; CHECK-NEXT:    slli a0, a0, 13
-; CHECK-NEXT:    addi a0, a0, 32
+; CHECK-NEXT:    addi a0, a0, -2000
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    lui a0, 781250
-; CHECK-NEXT:    addiw a0, a0, 24
-; CHECK-NEXT:    add a0, sp, a0
-; CHECK-NEXT:    sd ra, 0(a0)
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    call baz
-; CHECK-NEXT:    lui a0, 781250
-; CHECK-NEXT:    addiw a0, a0, 24
-; CHECK-NEXT:    add a0, sp, a0
-; CHECK-NEXT:    ld ra, 0(a0)
 ; CHECK-NEXT:    lui a0, 95
 ; CHECK-NEXT:    addiw a0, a0, 1505
 ; CHECK-NEXT:    slli a0, a0, 13
-; CHECK-NEXT:    addi a0, a0, 32
+; CHECK-NEXT:    addi a0, a0, -2000
 ; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    ld ra, 2024(sp)
+; CHECK-NEXT:    addi sp, sp, 2032
 ; CHECK-NEXT:    ret
 entry:
   %w = alloca [100000000 x { fp128, fp128 }], align 16

@@ -29,6 +29,7 @@ add_host_subdirectory(common
   common/HostProcess.cpp
   common/HostThread.cpp
   common/LockFileBase.cpp
+  common/LZMA.cpp
   common/MainLoop.cpp
   common/MonitoringProcessLauncher.cpp
   common/NativeProcessProtocol.cpp
@@ -156,6 +157,9 @@ if (HAVE_LIBDL)
 endif()
 if (NOT LLDB_DISABLE_LIBEDIT)
   list(APPEND EXTRA_LIBS ${libedit_LIBRARIES})
+endif()
+if (LLDB_ENABLE_LZMA)
+  list(APPEND EXTRA_LIBS ${LIBLZMA_LIBRARIES})
 endif()
 
 if (NOT LLDB_DISABLE_LIBEDIT)

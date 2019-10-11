@@ -488,6 +488,14 @@ public:
 /// possible to define other types of profile inherited from
 /// SampleProfileReaderExtBinaryBase/SampleProfileWriterExtBinaryBase.
 class SampleProfileReaderExtBinaryBase : public SampleProfileReaderBinary {
+private:
+  std::error_code decompressSection(const uint8_t *SecStart,
+                                    const uint64_t SecSize,
+                                    const uint8_t *&DecompressBuf,
+                                    uint64_t &DecompressBufSize);
+
+  BumpPtrAllocator Allocator;
+
 protected:
   std::vector<SecHdrTableEntry> SecHdrTable;
   std::unique_ptr<ProfileSymbolList> ProfSymList;
@@ -518,7 +526,7 @@ private:
   virtual std::error_code verifySPMagic(uint64_t Magic) override;
   virtual std::error_code readOneSection(const uint8_t *Start, uint64_t Size,
                                          SecType Type) override;
-  std::error_code readProfileSymbolList();
+  std::error_code readProfileSymbolList(uint64_t Size);
 
 public:
   SampleProfileReaderExtBinary(std::unique_ptr<MemoryBuffer> B, LLVMContext &C,

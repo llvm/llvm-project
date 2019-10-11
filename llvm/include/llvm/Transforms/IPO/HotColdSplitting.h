@@ -23,6 +23,7 @@ class TargetTransformInfo;
 class OptimizationRemarkEmitter;
 class AssumptionCache;
 class DominatorTree;
+class CodeExtractorAnalysisCache;
 
 /// A sequence of basic blocks.
 ///
@@ -43,8 +44,10 @@ private:
   bool isFunctionCold(const Function &F) const;
   bool shouldOutlineFrom(const Function &F) const;
   bool outlineColdRegions(Function &F, bool HasProfileSummary);
-  Function *extractColdRegion(const BlockSequence &Region, DominatorTree &DT,
-                              BlockFrequencyInfo *BFI, TargetTransformInfo &TTI,
+  Function *extractColdRegion(const BlockSequence &Region,
+                              const CodeExtractorAnalysisCache &CEAC,
+                              DominatorTree &DT, BlockFrequencyInfo *BFI,
+                              TargetTransformInfo &TTI,
                               OptimizationRemarkEmitter &ORE,
                               AssumptionCache *AC, unsigned Count);
   ProfileSummaryInfo *PSI;

@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/posix/HostInfoPosix.h"
-#include "lldb/Utility/UserIDResolver.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/UserIDResolver.h"
 
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Twine.h"
@@ -103,8 +103,6 @@ llvm::Optional<std::string> PosixUserIDResolver::DoGetGroupName(id_t gid) {
     if (group_info_ptr)
       return std::string(group_info_ptr->gr_name);
   }
-#else
-  assert(false && "getgrgid_r() not supported on Android");
 #endif
   return llvm::None;
 }

@@ -2,12 +2,12 @@ set(LLVM_LINK_COMPONENTS
   Support
   )
 
-add_clang_executable(pp-trace
+add_clang_tool(pp-trace
   PPTrace.cpp
   PPCallbacksTracker.cpp
   )
 
-target_link_libraries(pp-trace
+clang_target_link_libraries(pp-trace
   PRIVATE
   clangAST
   clangBasic

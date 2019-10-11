@@ -46,15 +46,17 @@ entry:
 ; CHECK:             .ascii  "v1"                    # string offset=81
 ; CHECK-NEXT:        .byte   0
 
-; CHECK:             .long   12                      # OffsetReloc
-; CHECK-NEXT:        .long   [[SEC_STR]]             # Offset reloc section string offset=[[SEC_STR]]
+; CHECK:             .long   16                      # FieldReloc
+; CHECK-NEXT:        .long   [[SEC_STR]]             # Field reloc section string offset=[[SEC_STR]]
 ; CHECK-NEXT:        .long   2
 ; CHECK-NEXT:        .long   .Ltmp{{[0-9]+}}
 ; CHECK-NEXT:        .long   [[V3_TID]]
 ; CHECK-NEXT:        .long   [[ACCESS_STR]]
+; CHECK-NEXT:        .long   0
 ; CHECK-NEXT:        .long   .Ltmp{{[0-9]+}}
 ; CHECK-NEXT:        .long   [[V1_TID]]
 ; CHECK-NEXT:        .long   [[ACCESS_STR]]
+; CHECK-NEXT:        .long   0
 
 declare dso_local i32 @get_value(i32*) local_unnamed_addr #1
 

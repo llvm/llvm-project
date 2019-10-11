@@ -142,7 +142,7 @@ define void @test_cmpfp0(float* %glob, i32 %X) {
 ;CHECK-LABEL: test_cmpfp0:
 entry:
 	%tmp = load float, float* %glob		; <float> [#uses=1]
-;CHECK: vcmpe.f32
+;CHECK: vcmp.f32
 	%tmp.upgrd.3 = fcmp ogt float %tmp, 0.000000e+00		; <i1> [#uses=1]
 	br i1 %tmp.upgrd.3, label %cond_true, label %cond_false
 

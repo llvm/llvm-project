@@ -292,7 +292,7 @@ public:
                               MachineSSAUpdater *Updater) {
     // Insert an implicit_def to represent an undef value.
     MachineInstr *NewDef = InsertNewDef(TargetOpcode::IMPLICIT_DEF,
-                                        BB, BB->getFirstTerminator(),
+                                        BB, BB->getFirstNonPHI(),
                                         Updater->VRC, Updater->MRI,
                                         Updater->TII);
     return NewDef->getOperand(0).getReg();

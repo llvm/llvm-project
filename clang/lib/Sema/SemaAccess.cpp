@@ -1551,7 +1551,7 @@ Sema::AccessResult Sema::CheckUnresolvedMemberAccess(UnresolvedMemberExpr *E,
 
   QualType BaseType = E->getBaseType();
   if (E->isArrow())
-    BaseType = BaseType->getAs<PointerType>()->getPointeeType();
+    BaseType = BaseType->castAs<PointerType>()->getPointeeType();
 
   AccessTarget Entity(Context, AccessTarget::Member, E->getNamingClass(),
                       Found, BaseType);

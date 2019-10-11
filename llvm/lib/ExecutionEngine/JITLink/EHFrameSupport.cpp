@@ -17,18 +17,14 @@
 namespace llvm {
 namespace jitlink {
 
-EHFrameParser::EHFrameParser(AtomGraph &G, Section &EHFrameSection,
-                             StringRef EHFrameContent,
-                             JITTargetAddress EHFrameAddress,
-                             Edge::Kind FDEToCIERelocKind,
-                             Edge::Kind FDEToTargetRelocKind)
-    : G(G), EHFrameSection(EHFrameSection), EHFrameContent(EHFrameContent),
-      EHFrameAddress(EHFrameAddress),
-      EHFrameReader(EHFrameContent, G.getEndianness()),
-      FDEToCIERelocKind(FDEToCIERelocKind),
-      FDEToTargetRelocKind(FDEToTargetRelocKind) {}
+EHFrameBinaryParser::EHFrameBinaryParser(JITTargetAddress EHFrameAddress,
+                                         StringRef EHFrameContent,
+                                         unsigned PointerSize,
+                                         support::endianness Endianness)
+    : EHFrameAddress(EHFrameAddress), EHFrameContent(EHFrameContent),
+      PointerSize(PointerSize), EHFrameReader(EHFrameContent, Endianness) {}
 
-Error EHFrameParser::atomize() {
+Error EHFrameBinaryParser::addToGraph() {
   while (!EHFrameReader.empty()) {
     size_t RecordOffset = EHFrameReader.getOffset();
 
@@ -38,44 +34,39 @@ Error EHFrameParser::atomize() {
              << " (offset " << RecordOffset << ")\n";
     });
 
-    size_t CIELength = 0;
-    uint32_t CIELengthField;
-    if (auto Err = EHFrameReader.readInteger(CIELengthField))
+    size_t RecordLength = 0;
+    uint32_t RecordLengthField;
+    if (auto Err = EHFrameReader.readInteger(RecordLengthField))
       return Err;
 
-    // Process CIE length/extended-length fields to build the atom.
+    // Process CIE/FDE length/extended-length fields to build the blocks.
     //
     // The value of these fields describe the length of the *rest* of the CIE
     // (not including data up to the end of the field itself) so we have to
-    // bump CIELength to include the data up to the end of the field: 4 bytes
+    // bump RecordLength to include the data up to the end of the field: 4 bytes
     // for Length, or 12 bytes (4 bytes + 8 bytes) for ExtendedLength.
-    if (CIELengthField == 0) // Length 0 means end of __eh_frame section.
+    if (RecordLengthField == 0) // Length 0 means end of __eh_frame section.
       break;
 
     // If the regular length field's value is 0xffffffff, use extended length.
-    if (CIELengthField == 0xffffffff) {
-      uint64_t CIEExtendedLengthField;
-      if (auto Err = EHFrameReader.readInteger(CIEExtendedLengthField))
+    if (RecordLengthField == 0xffffffff) {
+      uint64_t ExtendedLengthField;
+      if (auto Err = EHFrameReader.readInteger(ExtendedLengthField))
         return Err;
-      if (CIEExtendedLengthField > EHFrameReader.bytesRemaining())
+      if (ExtendedLengthField > EHFrameReader.bytesRemaining())
         return make_error<JITLinkError>("CIE record extends past the end of "
                                         "the __eh_frame section");
-      if (CIEExtendedLengthField + 12 > std::numeric_limits<size_t>::max())
+      if (ExtendedLengthField + 12 > std::numeric_limits<size_t>::max())
         return make_error<JITLinkError>("CIE record too large to process");
-      CIELength = CIEExtendedLengthField + 12;
+      RecordLength = ExtendedLengthField + 12;
     } else {
-      if (CIELengthField > EHFrameReader.bytesRemaining())
+      if (RecordLengthField > EHFrameReader.bytesRemaining())
         return make_error<JITLinkError>("CIE record extends past the end of "
                                         "the __eh_frame section");
-      CIELength = CIELengthField + 4;
+      RecordLength = RecordLengthField + 4;
     }
 
-    LLVM_DEBUG(dbgs() << "  length: " << CIELength << "\n");
-
-    // Add an atom for this record.
-    CurRecordAtom = &G.addAnonymousAtom(
-        EHFrameSection, EHFrameAddress + RecordOffset, G.getPointerSize());
-    CurRecordAtom->setContent(EHFrameContent.substr(RecordOffset, CIELength));
+    LLVM_DEBUG(dbgs() << "  length: " << RecordLength << "\n");
 
     // Read the CIE Pointer.
     size_t CIEPointerAddress = EHFrameAddress + EHFrameReader.getOffset();
@@ -85,21 +76,24 @@ Error EHFrameParser::atomize() {
 
     // Based on the CIE pointer value, parse this as a CIE or FDE record.
     if (CIEPointer == 0) {
-      if (auto Err = processCIE())
+      if (auto Err = processCIE(RecordOffset, RecordLength))
         return Err;
     } else {
-      if (auto Err = processFDE(CIEPointerAddress, CIEPointer))
+      if (auto Err = processFDE(RecordOffset, RecordLength, CIEPointerAddress,
+                                CIEPointer))
         return Err;
     }
 
-    EHFrameReader.setOffset(RecordOffset + CIELength);
+    EHFrameReader.setOffset(RecordOffset + RecordLength);
   }
 
   return Error::success();
 }
 
-Expected<EHFrameParser::AugmentationInfo>
-EHFrameParser::parseAugmentationString() {
+void EHFrameBinaryParser::anchor() {}
+
+Expected<EHFrameBinaryParser::AugmentationInfo>
+EHFrameBinaryParser::parseAugmentationString() {
   AugmentationInfo AugInfo;
   uint8_t NextChar;
   uint8_t *NextField = &AugInfo.Fields[0];
@@ -139,14 +133,14 @@ EHFrameParser::parseAugmentationString() {
   return std::move(AugInfo);
 }
 
-Expected<JITTargetAddress> EHFrameParser::readAbsolutePointer() {
+Expected<JITTargetAddress> EHFrameBinaryParser::readAbsolutePointer() {
   static_assert(sizeof(JITTargetAddress) == sizeof(uint64_t),
                 "Result must be able to hold a uint64_t");
   JITTargetAddress Addr;
-  if (G.getPointerSize() == 8) {
+  if (PointerSize == 8) {
     if (auto Err = EHFrameReader.readInteger(Addr))
       return std::move(Err);
-  } else if (G.getPointerSize() == 4) {
+  } else if (PointerSize == 4) {
     uint32_t Addr32;
     if (auto Err = EHFrameReader.readInteger(Addr32))
       return std::move(Err);
@@ -156,14 +150,19 @@ Expected<JITTargetAddress> EHFrameParser::readAbsolutePointer() {
   return Addr;
 }
 
-Error EHFrameParser::processCIE() {
+Error EHFrameBinaryParser::processCIE(size_t RecordOffset,
+                                      size_t RecordLength) {
   // Use the dwarf namespace for convenient access to pointer encoding
   // constants.
   using namespace dwarf;
 
   LLVM_DEBUG(dbgs() << "  Record is CIE\n");
 
-  CIEInformation CIEInfo(*CurRecordAtom);
+  auto &CIESymbol =
+      createCIERecord(EHFrameAddress + RecordOffset,
+                      EHFrameContent.substr(RecordOffset, RecordLength));
+
+  CIEInformation CIEInfo(CIESymbol);
 
   uint8_t Version = 0;
   if (auto Err = EHFrameReader.readInteger(Version))
@@ -179,7 +178,7 @@ Error EHFrameParser::processCIE() {
 
   // Skip the EH Data field if present.
   if (AugInfo->EHDataFieldPresent)
-    if (auto Err = EHFrameReader.skip(G.getPointerSize()))
+    if (auto Err = EHFrameReader.skip(PointerSize))
       return Err;
 
   // Read and sanity check the code alignment factor.
@@ -226,7 +225,7 @@ Error EHFrameParser::processCIE() {
         return make_error<JITLinkError>(
             "Unsupported LSDA pointer encoding " +
             formatv("{0:x2}", LSDAPointerEncoding) + " in CIE at " +
-            formatv("{0:x16}", CurRecordAtom->getAddress()));
+            formatv("{0:x16}", CIESymbol.getAddress()));
       break;
     }
     case 'P': {
@@ -239,7 +238,7 @@ Error EHFrameParser::processCIE() {
             "Unspported personality pointer "
             "encoding " +
             formatv("{0:x2}", PersonalityPointerEncoding) + " in CIE at " +
-            formatv("{0:x16}", CurRecordAtom->getAddress()));
+            formatv("{0:x16}", CIESymbol.getAddress()));
       uint32_t PersonalityPointerAddress;
       if (auto Err = EHFrameReader.readInteger(PersonalityPointerAddress))
         return Err;
@@ -254,7 +253,7 @@ Error EHFrameParser::processCIE() {
             "Unsupported FDE address pointer "
             "encoding " +
             formatv("{0:x2}", FDEPointerEncoding) + " in CIE at " +
-            formatv("{0:x16}", CurRecordAtom->getAddress()));
+            formatv("{0:x16}", CIESymbol.getAddress()));
       break;
     }
     default:
@@ -267,15 +266,16 @@ Error EHFrameParser::processCIE() {
     return make_error<JITLinkError>("Read past the end of the augmentation "
                                     "data while parsing fields");
 
-  assert(!CIEInfos.count(CurRecordAtom->getAddress()) &&
+  assert(!CIEInfos.count(CIESymbol.getAddress()) &&
          "Multiple CIEs recorded at the same address?");
-  CIEInfos[CurRecordAtom->getAddress()] = std::move(CIEInfo);
+  CIEInfos[CIESymbol.getAddress()] = std::move(CIEInfo);
 
   return Error::success();
 }
 
-Error EHFrameParser::processFDE(JITTargetAddress CIEPointerAddress,
-                                uint32_t CIEPointer) {
+Error EHFrameBinaryParser::processFDE(size_t RecordOffset, size_t RecordLength,
+                                      JITTargetAddress CIEPointerAddress,
+                                      uint32_t CIEPointer) {
   LLVM_DEBUG(dbgs() << "  Record is FDE\n");
 
   LLVM_DEBUG({
@@ -286,15 +286,10 @@ Error EHFrameParser::processFDE(JITTargetAddress CIEPointerAddress,
   auto CIEInfoItr = CIEInfos.find(CIEPointerAddress - CIEPointer);
   if (CIEInfoItr == CIEInfos.end())
     return make_error<JITLinkError>(
-        "FDE at " + formatv("{0:x16}", CurRecordAtom->getAddress()) +
+        "FDE at " + formatv("{0:x16}", EHFrameAddress + RecordOffset) +
         " points to non-existant CIE at " +
         formatv("{0:x16}", CIEPointerAddress - CIEPointer));
   auto &CIEInfo = CIEInfoItr->second;
-
-  // The CIEPointer looks good. Add a relocation.
-  CurRecordAtom->addEdge(FDEToCIERelocKind,
-                         CIEPointerAddress - CurRecordAtom->getAddress(),
-                         *CIEInfo.CIEAtom, 0);
 
   // Read and sanity check the PC-start pointer and size.
   JITTargetAddress PCBeginAddress = EHFrameAddress + EHFrameReader.getOffset();
@@ -305,83 +300,68 @@ Error EHFrameParser::processFDE(JITTargetAddress CIEPointerAddress,
 
   JITTargetAddress PCBegin = PCBeginAddress + *PCBeginDelta;
   LLVM_DEBUG({
-    dbgs() << "  PC begin: " << format("0x%016" PRIx64, PCBegin) << "\n";
+    dbgs() << "    PC begin: " << format("0x%016" PRIx64, PCBegin) << "\n";
   });
 
-  auto *TargetAtom = G.getAtomByAddress(PCBegin);
+  auto *TargetSymbol = getSymbolAtAddress(PCBegin);
 
-  if (!TargetAtom)
+  if (!TargetSymbol)
     return make_error<JITLinkError>("FDE PC-begin " +
                                     formatv("{0:x16}", PCBegin) +
-                                    " does not point at atom");
+                                    " does not point at symbol");
 
-  if (TargetAtom->getAddress() != PCBegin)
+  if (TargetSymbol->getAddress() != PCBegin)
     return make_error<JITLinkError>(
         "FDE PC-begin " + formatv("{0:x16}", PCBegin) +
-        " does not point to start of atom at " +
-        formatv("{0:x16}", TargetAtom->getAddress()));
+        " does not point to start of symbol at " +
+        formatv("{0:x16}", TargetSymbol->getAddress()));
 
-  LLVM_DEBUG(dbgs() << "  FDE target: " << *TargetAtom << "\n");
-
-  // The PC-start pointer and size look good. Add relocations.
-  CurRecordAtom->addEdge(FDEToTargetRelocKind,
-                         PCBeginAddress - CurRecordAtom->getAddress(),
-                         *TargetAtom, 0);
-
-  // Add a keep-alive relocation from the function to the FDE to ensure it is
-  // not dead stripped.
-  TargetAtom->addEdge(Edge::KeepAlive, 0, *CurRecordAtom, 0);
+  LLVM_DEBUG(dbgs() << "  FDE target: " << *TargetSymbol << "\n");
 
   // Skip over the PC range size field.
-  if (auto Err = EHFrameReader.skip(G.getPointerSize()))
+  if (auto Err = EHFrameReader.skip(PointerSize))
     return Err;
 
+  Symbol *LSDASymbol = nullptr;
+  JITTargetAddress LSDAAddress = 0;
   if (CIEInfo.FDEsHaveLSDAField) {
     uint64_t AugmentationDataSize;
     if (auto Err = EHFrameReader.readULEB128(AugmentationDataSize))
       return Err;
-    if (AugmentationDataSize != G.getPointerSize())
+    if (AugmentationDataSize != PointerSize)
       return make_error<JITLinkError>(
           "Unexpected FDE augmentation data size (expected " +
-          Twine(G.getPointerSize()) + ", got " + Twine(AugmentationDataSize) +
-          ") for FDE at " + formatv("{0:x16}", CurRecordAtom->getAddress()));
-    JITTargetAddress LSDAAddress = EHFrameAddress + EHFrameReader.getOffset();
+          Twine(PointerSize) + ", got " + Twine(AugmentationDataSize) +
+          ") for FDE at " + formatv("{0:x16}", EHFrameAddress + RecordOffset));
+    LSDAAddress = EHFrameAddress + EHFrameReader.getOffset();
     auto LSDADelta = readAbsolutePointer();
     if (!LSDADelta)
       return LSDADelta.takeError();
 
     JITTargetAddress LSDA = LSDAAddress + *LSDADelta;
 
-    auto *LSDAAtom = G.getAtomByAddress(LSDA);
+    LSDASymbol = getSymbolAtAddress(LSDA);
 
-    if (!LSDAAtom)
+    if (!LSDASymbol)
       return make_error<JITLinkError>("FDE LSDA " + formatv("{0:x16}", LSDA) +
-                                      " does not point at atom");
+                                      " does not point at symbol");
 
-    if (LSDAAtom->getAddress() != LSDA)
+    if (LSDASymbol->getAddress() != LSDA)
       return make_error<JITLinkError>(
           "FDE LSDA " + formatv("{0:x16}", LSDA) +
-          " does not point to start of atom at " +
-          formatv("{0:x16}", LSDAAtom->getAddress()));
+          " does not point to start of symbol at " +
+          formatv("{0:x16}", LSDASymbol->getAddress()));
 
-    LLVM_DEBUG(dbgs() << "  FDE LSDA: " << *LSDAAtom << "\n");
-
-    // LSDA looks good. Add relocations.
-    CurRecordAtom->addEdge(FDEToTargetRelocKind,
-                           LSDAAddress - CurRecordAtom->getAddress(), *LSDAAtom,
-                           0);
+    LLVM_DEBUG(dbgs() << "  FDE LSDA: " << *LSDASymbol << "\n");
   }
 
-  return Error::success();
-}
+  JITTargetAddress RecordAddress = EHFrameAddress + RecordOffset;
+  auto FDESymbol = createFDERecord(
+      RecordAddress, EHFrameContent.substr(RecordOffset, RecordLength),
+      *CIEInfo.CIESymbol, CIEPointerAddress - RecordAddress, *TargetSymbol,
+      PCBeginAddress - RecordAddress, LSDASymbol, LSDAAddress - RecordAddress);
 
-Error addEHFrame(AtomGraph &G, Section &EHFrameSection,
-                 StringRef EHFrameContent, JITTargetAddress EHFrameAddress,
-                 Edge::Kind FDEToCIERelocKind,
-                 Edge::Kind FDEToTargetRelocKind) {
-  return EHFrameParser(G, EHFrameSection, EHFrameContent, EHFrameAddress,
-                       FDEToCIERelocKind, FDEToTargetRelocKind)
-      .atomize();
+  return FDESymbol.takeError();
 }
 
 // Determine whether we can register EH tables.
@@ -523,7 +503,7 @@ InProcessEHFrameRegistrar &InProcessEHFrameRegistrar::getInstance() {
 
 InProcessEHFrameRegistrar::InProcessEHFrameRegistrar() {}
 
-AtomGraphPassFunction
+LinkGraphPassFunction
 createEHFrameRecorderPass(const Triple &TT,
                           StoreFrameRangeFunction StoreRangeAddress) {
   const char *EHFrameSectionName = nullptr;
@@ -533,14 +513,14 @@ createEHFrameRecorderPass(const Triple &TT,
     EHFrameSectionName = ".eh_frame";
 
   auto RecordEHFrame =
-    [EHFrameSectionName,
-     StoreFrameRange = std::move(StoreRangeAddress)](AtomGraph &G) -> Error {
-    // Search for a non-empty eh-frame and record the address of the first atom
-    // in it.
+      [EHFrameSectionName,
+       StoreFrameRange = std::move(StoreRangeAddress)](LinkGraph &G) -> Error {
+    // Search for a non-empty eh-frame and record the address of the first
+    // symbol in it.
     JITTargetAddress Addr = 0;
     size_t Size = 0;
     if (auto *S = G.findSectionByName(EHFrameSectionName)) {
-      auto R = S->getRange();
+      auto R = SectionRange(*S);
       Addr = R.getStart();
       Size = R.getSize();
     }

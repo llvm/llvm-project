@@ -386,7 +386,7 @@ public:
     auto hasDefaultCXXMethodCC = [](ASTContext &C, const CXXMethodDecl *MD) {
       auto DefaultCC = C.getDefaultCallingConvention(/*IsVariadic=*/false,
                                                      /*IsCXXMethod=*/true);
-      auto CC = MD->getType()->getAs<FunctionProtoType>()->getCallConv();
+      auto CC = MD->getType()->castAs<FunctionProtoType>()->getCallConv();
       return CC == DefaultCC;
     };
 

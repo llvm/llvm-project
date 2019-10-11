@@ -397,17 +397,6 @@ void reportWarning(Error Err, StringRef Input) {
 
 } // namespace llvm
 
-static bool isMipsArch(unsigned Arch) {
-  switch (Arch) {
-  case llvm::Triple::mips:
-  case llvm::Triple::mipsel:
-  case llvm::Triple::mips64:
-  case llvm::Triple::mips64el:
-    return true;
-  default:
-    return false;
-  }
-}
 namespace {
 struct ReadObjTypeTableBuilder {
   ReadObjTypeTableBuilder()
@@ -502,16 +491,8 @@ static void dumpObject(const ObjectFile *Obj, ScopedPrinter &Writer,
   if (Obj->isELF()) {
     if (opts::ELFLinkerOptions)
       Dumper->printELFLinkerOptions();
-    if (opts::ArchSpecificInfo) {
-      if (Obj->getArch() == llvm::Triple::arm)
-        Dumper->printAttributes();
-      else if (isMipsArch(Obj->getArch())) {
-        Dumper->printMipsABIFlags();
-        Dumper->printMipsOptions();
-        Dumper->printMipsReginfo();
-        Dumper->printMipsPLTGOT();
-      }
-    }
+    if (opts::ArchSpecificInfo)
+      Dumper->printArchSpecificInfo();
     if (opts::SectionGroups)
       Dumper->printGroupSections();
     if (opts::HashHistogram)
@@ -710,8 +691,10 @@ int main(int argc, const char *argv[]) {
     opts::UnwindInfo = true;
     opts::SectionGroups = true;
     opts::HashHistogram = true;
-    if (opts::Output == opts::LLVM)
+    if (opts::Output == opts::LLVM) {
+      opts::Addrsig = true;
       opts::PrintStackSizes = true;
+    }
   }
 
   if (opts::Headers) {

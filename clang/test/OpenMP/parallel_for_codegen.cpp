@@ -469,6 +469,165 @@ int decrement_nowait () {
   return 0;
 // OMP5: ret i32 0
 }
+
+// OMP5-LABEL: range_for_single
+void range_for_single() {
+  int arr[10] = {0};
+// OMP5: call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* {{.+}}, i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, [10 x i32]*)* [[OUTLINED:@.+]] to void (i32*, i32*, ...)*), [10 x i32]* %{{.+}})
+#pragma omp parallel for
+  for (auto &a : arr)
+    (void)a;
+}
+
+// OMP5: define internal void @.omp_outlined.(i32* {{.+}}, i32* {{.+}}, [10 x i32]* dereferenceable(40) %arr)
+// OMP5: [[ARR_ADDR:%.+]] = alloca [10 x i32]*,
+// OMP5: [[IV:%.+]] = alloca i64,
+// OMP5: [[RANGE_ADDR:%.+]] = alloca [10 x i32]*,
+// OMP5: [[END_ADDR:%.+]] = alloca i32*,
+// OMP5: alloca i32*,
+// OMP5: alloca i32*,
+// OMP5: alloca i64,
+// OMP5: [[BEGIN_INIT:%.+]] = alloca i32*,
+// OMP5: [[LB:%.+]] = alloca i64,
+// OMP5: [[UB:%.+]] = alloca i64,
+// OMP5: [[STRIDE:%.+]] = alloca i64,
+// OMP5: [[IS_LAST:%.+]] = alloca i32,
+// OMP5: [[BEGIN:%.+]] = alloca i32*,
+// OMP5: [[A_PTR:%.+]] = alloca i32*,
+// OMP5: [[GTID:%.+]] = call i32 @__kmpc_global_thread_num(
+
+// __range = arr;
+// OMP5: [[ARR:%.+]] = load [10 x i32]*, [10 x i32]** [[ARR_ADDR]],
+// OMP5: store [10 x i32]* [[ARR]], [10 x i32]** [[RANGE_ADDR]],
+
+// __end = end(_range);
+// OMP5: [[RANGE:%.+]] = load [10 x i32]*, [10 x i32]** [[RANGE_ADDR]],
+// OMP5: [[RANGE_0:%.+]] = getelementptr inbounds [10 x i32], [10 x i32]* [[RANGE]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
+// OMP5: [[RANGE_10:%.+]] = getelementptr inbounds i32, i32* [[RANGE_0]], i{{[0-9]+}} 10
+// OMP5: store i32* [[RANGE_10]], i32** [[END_ADDR]],
+
+// OMP5: [[RANGE:%.+]] = load [10 x i32]*, [10 x i32]** [[RANGE_ADDR]],
+// OMP5: [[RANGE_0:%.+]] = getelementptr inbounds [10 x i32], [10 x i32]* [[RANGE]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
+// OMP5: store i32* [[RANGE_0]], i32** [[CAP1:%.+]],
+// OMP5: [[END:%.+]] = load i32*, i32** [[END_ADDR]],
+// OMP5: store i32* [[END]], i32** [[CAP2:%.+]],
+
+// calculate number of elements.
+// OMP5: [[CAP2_VAL:%.+]] = load i32*, i32** [[CAP2]],
+// OMP5: [[CAP1_VAL:%.+]] = load i32*, i32** [[CAP1]],
+// OMP5: [[CAP2_I64:%.+]] = ptrtoint i32* [[CAP2_VAL]] to i64
+// OMP5: [[CAP1_I64:%.+]] = ptrtoint i32* [[CAP1_VAL]] to i64
+// OMP5: [[DIFF:%.+]] = sub i64 [[CAP2_I64]], [[CAP1_I64]]
+// OMP5: [[NUM:%.+]] = sdiv exact i64 [[DIFF]], 4
+// OMP5: [[NUM1:%.+]] = sub nsw i64 [[NUM]], 1
+// OMP5: [[NUM2:%.+]] = add nsw i64 [[NUM1]], 1
+// OMP5: [[NUM3:%.+]] = sdiv i64 [[NUM2]], 1
+// OMP5: [[NUM4:%.+]] = sub nsw i64 [[NUM3]], 1
+// OMP5: store i64 [[NUM4]], i64* [[CAP3:%.+]],
+// OMP5: [[RANGE_0:%.+]] = load i32*, i32** [[CAP1]],
+
+// __begin = begin(range);
+// OMP5: store i32* [[RANGE_0]], i32** [[BEGIN_INIT]],
+// OMP5: [[CAP1_VAL:%.+]] = load i32*, i32** [[CAP1]],
+// OMP5: [[CAP2_VAL:%.+]] = load i32*, i32** [[CAP2]],
+// OMP5: [[CMP:%.+]] = icmp ult i32* [[CAP1_VAL]], [[CAP2_VAL]]
+
+// __begin >= __end ? goto then : goto exit;
+// OMP5: br i1 [[CMP]], label %[[THEN:.+]], label %[[EXIT:.+]]
+
+// OMP5: [[THEN]]:
+
+// lb = 0;
+// OMP5: store i64 0, i64* [[LB]],
+
+// ub = number of elements
+// OMP5: [[NUM:%.+]] = load i64, i64* [[CAP3]],
+// OMP5: store i64 [[NUM]], i64* [[UB]],
+
+// stride = 1;
+// OMP5: store i64 1, i64* [[STRIDE]],
+
+// is_last = 0;
+// OMP5: store i32 0, i32* [[IS_LAST]],
+
+// loop.
+// OMP5: call void @__kmpc_for_static_init_8(%struct.ident_t* {{.+}}, i32 [[GTID]], i32 34, i32* [[IS_LAST]], i64* [[LB]], i64* [[UB]], i64* [[STRIDE]], i64 1, i64 1)
+
+// ub = (ub > number_of_elems ? number_of_elems : ub);
+// OMP5: [[UB_VAL:%.+]] = load i64, i64* [[UB]],
+// OMP5: [[NUM_VAL:%.+]] = load i64, i64* [[CAP3]],
+// OMP5: [[CMP:%.+]] = icmp sgt i64 [[UB_VAL]], [[NUM_VAL]]
+// OMP5: br i1 [[CMP]], label %[[TRUE:.+]], label %[[FALSE:.+]]
+
+// OMP5: [[TRUE]]:
+// OMP5: [[NUM_VAL:%.+]] = load i64, i64* [[CAP3]],
+// OMP5: br label %[[END:.+]]
+
+// OMP5: [[FALSE]]:
+// OMP5: [[UB_VAL:%.+]] = load i64, i64* [[UB]],
+// OMP5: br label %[[END:.+]]
+
+// OMP5: [[END]]:
+// OMP5: [[MIN:%.+]] = phi i64 [ [[NUM_VAL]], %[[TRUE]] ], [ [[UB_VAL]], %[[FALSE]] ]
+// OMP%: store i64 [[MIN]], i64* [[UB]],
+
+// iv = lb;
+// OMP5: [[LB_VAL:%.+]] = load i64, i64* [[LB]],
+// OMP5: store i64 [[LB_VAL]], i64* [[IV]],
+
+// goto loop;
+// loop:
+// OMP5: br label %[[LOOP:.+]]
+
+// OMP5: [[LOOP]]:
+
+// iv <= ub ? goto body : goto end;
+// OMP5: [[IV_VAL:%.+]] = load i64, i64* [[IV]],
+// OMP5: [[UB_VAL:%.+]] = load i64, i64* [[UB]],
+// OMP5: [[CMP:%.+]] = icmp sle i64 [[IV_VAL]], [[UB_VAL]]
+// OMP5: br i1 [[CMP]], label %[[BODY:.+]], label %[[END:.+]]
+
+// body:
+// __begin = begin(arr) + iv * 1;
+// OMP5: [[BODY]]:
+// OMP5: [[CAP1_VAL:%.+]] = load i32*, i32** [[CAP1]],
+// OMP5: [[IV_VAL:%.+]] = load i64, i64* [[IV]],
+// OMP5: [[MUL:%.+]] = mul nsw i64 [[IV_VAL]], 1
+// OMP5: [[ADDR:%.+]] = getelementptr inbounds i32, i32* [[CAP1_VAL]], i64 [[MUL]]
+// OMP5: store i32* [[ADDR]], i32** [[BEGIN]],
+
+// a = *__begin;
+// OMP5: [[BEGIN_VAL:%.+]] = load i32*, i32** [[BEGIN]],
+// OMP5: store i32* [[BEGIN_VAL]], i32** [[A_PTR]],
+
+// (void)a;
+// OMP5: load i32*, i32** [[A_PTR]],
+
+// iv += 1;
+// OMP5: [[IV_VAL:%.+]] = load i64, i64* [[IV]],
+// OMP5: [[IV_VAL_ADD_1:%.+]] = add nsw i64 [[IV_VAL]], 1
+// OMP5: store i64 [[IV_VAL_ADD_1]], i64* [[IV]],
+
+// goto loop;
+// OMP5: br label %[[LOOP]]
+
+// end:
+// OMP5: [[END]]:
+// OMP5: call void @__kmpc_for_static_fini(%struct.ident_t* {{.+}}, i32 [[GTID]])
+// exit:
+// OMP5: [[EXIT]]:
+// OMP5: ret void
+
+// OMP5-LABEL: range_for_collapsed
+void range_for_collapsed() {
+  int arr[10] = {0};
+// OMP5: call void @__kmpc_for_static_init_8(%struct.ident_t* {{.+}}, i32 [[GTID%.+]], i32 34, i32* %{{.+}}, i64* %{{.+}}, i64* %{{.+}}, i64* %{{.+}}, i64 1, i64 1)
+#pragma omp parallel for collapse(2)
+  for (auto &a : arr)
+    for (auto b : arr)
+      a = b;
+// OMP5: call void @__kmpc_for_static_fini(%struct.ident_t* {{.+}}, i32 [[GTID]])
+}
 #endif // OMP5
 
 #endif // HEADER

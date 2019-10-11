@@ -42,10 +42,7 @@
 //
 // Future improvements:
 //
-// - This currently relies on the scheduler to place loads and stores next to
-//   each other, and then only merges adjacent pairs of instructions. It would
-//   be good to be more flexible with interleaved instructions, and possibly run
-//   before scheduling. It currently missing stores of constants because loading
+// - This is currently missing stores of constants because loading
 //   the constant into the data register is placed between the stores, although
 //   this is arguably a scheduling problem.
 //
@@ -98,14 +95,8 @@ enum InstClassEnum {
   DS_READ,
   DS_WRITE,
   S_BUFFER_LOAD_IMM,
-  BUFFER_LOAD_OFFEN = AMDGPU::BUFFER_LOAD_DWORD_OFFEN,
-  BUFFER_LOAD_OFFSET = AMDGPU::BUFFER_LOAD_DWORD_OFFSET,
-  BUFFER_STORE_OFFEN = AMDGPU::BUFFER_STORE_DWORD_OFFEN,
-  BUFFER_STORE_OFFSET = AMDGPU::BUFFER_STORE_DWORD_OFFSET,
-  BUFFER_LOAD_OFFEN_exact = AMDGPU::BUFFER_LOAD_DWORD_OFFEN_exact,
-  BUFFER_LOAD_OFFSET_exact = AMDGPU::BUFFER_LOAD_DWORD_OFFSET_exact,
-  BUFFER_STORE_OFFEN_exact = AMDGPU::BUFFER_STORE_DWORD_OFFEN_exact,
-  BUFFER_STORE_OFFSET_exact = AMDGPU::BUFFER_STORE_DWORD_OFFSET_exact,
+  BUFFER_LOAD,
+  BUFFER_STORE,
 };
 
 enum RegisterEnum {
@@ -295,54 +286,65 @@ static unsigned getOpcodeWidth(const MachineInstr &MI, const SIInstrInfo &TII) {
   }
 }
 
+/// Maps instruction opcode to enum InstClassEnum.
 static InstClassEnum getInstClass(unsigned Opc, const SIInstrInfo &TII) {
-  if (TII.isMUBUF(Opc)) {
-    const int baseOpcode = AMDGPU::getMUBUFBaseOpcode(Opc);
-
-    // If we couldn't identify the opcode, bail out.
-    if (baseOpcode == -1) {
-      return UNKNOWN;
-    }
-
-    switch (baseOpcode) {
-    case AMDGPU::BUFFER_LOAD_DWORD_OFFEN:
-      return BUFFER_LOAD_OFFEN;
-    case AMDGPU::BUFFER_LOAD_DWORD_OFFSET:
-      return BUFFER_LOAD_OFFSET;
-    case AMDGPU::BUFFER_STORE_DWORD_OFFEN:
-      return BUFFER_STORE_OFFEN;
-    case AMDGPU::BUFFER_STORE_DWORD_OFFSET:
-      return BUFFER_STORE_OFFSET;
-    case AMDGPU::BUFFER_LOAD_DWORD_OFFEN_exact:
-      return BUFFER_LOAD_OFFEN_exact;
-    case AMDGPU::BUFFER_LOAD_DWORD_OFFSET_exact:
-      return BUFFER_LOAD_OFFSET_exact;
-    case AMDGPU::BUFFER_STORE_DWORD_OFFEN_exact:
-      return BUFFER_STORE_OFFEN_exact;
-    case AMDGPU::BUFFER_STORE_DWORD_OFFSET_exact:
-      return BUFFER_STORE_OFFSET_exact;
-    default:
-      return UNKNOWN;
-    }
-  }
-
   switch (Opc) {
+  default:
+    if (TII.isMUBUF(Opc)) {
+      switch (AMDGPU::getMUBUFBaseOpcode(Opc)) {
+      default:
+        return UNKNOWN;
+      case AMDGPU::BUFFER_LOAD_DWORD_OFFEN:
+      case AMDGPU::BUFFER_LOAD_DWORD_OFFEN_exact:
+      case AMDGPU::BUFFER_LOAD_DWORD_OFFSET:
+      case AMDGPU::BUFFER_LOAD_DWORD_OFFSET_exact:
+        return BUFFER_LOAD;
+      case AMDGPU::BUFFER_STORE_DWORD_OFFEN:
+      case AMDGPU::BUFFER_STORE_DWORD_OFFEN_exact:
+      case AMDGPU::BUFFER_STORE_DWORD_OFFSET:
+      case AMDGPU::BUFFER_STORE_DWORD_OFFSET_exact:
+        return BUFFER_STORE;
+      }
+    }
+    return UNKNOWN;
   case AMDGPU::S_BUFFER_LOAD_DWORD_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX2_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX4_IMM:
     return S_BUFFER_LOAD_IMM;
   case AMDGPU::DS_READ_B32:
-  case AMDGPU::DS_READ_B64:
   case AMDGPU::DS_READ_B32_gfx9:
+  case AMDGPU::DS_READ_B64:
   case AMDGPU::DS_READ_B64_gfx9:
     return DS_READ;
   case AMDGPU::DS_WRITE_B32:
-  case AMDGPU::DS_WRITE_B64:
   case AMDGPU::DS_WRITE_B32_gfx9:
+  case AMDGPU::DS_WRITE_B64:
   case AMDGPU::DS_WRITE_B64_gfx9:
     return DS_WRITE;
+  }
+}
+
+/// Determines instruction subclass from opcode. Only instructions
+/// of the same subclass can be merged together.
+static unsigned getInstSubclass(unsigned Opc, const SIInstrInfo &TII) {
+  switch (Opc) {
   default:
-    return UNKNOWN;
+    if (TII.isMUBUF(Opc))
+      return AMDGPU::getMUBUFBaseOpcode(Opc);
+    return -1;
+  case AMDGPU::DS_READ_B32:
+  case AMDGPU::DS_READ_B32_gfx9:
+  case AMDGPU::DS_READ_B64:
+  case AMDGPU::DS_READ_B64_gfx9:
+  case AMDGPU::DS_WRITE_B32:
+  case AMDGPU::DS_WRITE_B32_gfx9:
+  case AMDGPU::DS_WRITE_B64:
+  case AMDGPU::DS_WRITE_B64_gfx9:
+    return Opc;
+  case AMDGPU::S_BUFFER_LOAD_DWORD_IMM:
+  case AMDGPU::S_BUFFER_LOAD_DWORDX2_IMM:
+  case AMDGPU::S_BUFFER_LOAD_DWORDX4_IMM:
+    return AMDGPU::S_BUFFER_LOAD_DWORD_IMM;
   }
 }
 
@@ -674,6 +676,7 @@ bool SILoadStoreOptimizer::findMatchingInst(CombineInfo &CI) {
   if (InstClass == UNKNOWN) {
     return false;
   }
+  const unsigned InstSubclass = getInstSubclass(Opc, *TII);
 
   // Do not merge VMEM buffer instructions with "swizzled" bit set.
   int Swizzled =
@@ -688,11 +691,10 @@ bool SILoadStoreOptimizer::findMatchingInst(CombineInfo &CI) {
   addDefsUsesToList(*CI.I, RegDefsToMove, PhysRegUsesToMove);
 
   for (; MBBI != E; ++MBBI) {
-    const bool IsDS = (InstClass == DS_READ) || (InstClass == DS_WRITE);
 
     if ((getInstClass(MBBI->getOpcode(), *TII) != InstClass) ||
-        (IsDS && (MBBI->getOpcode() != Opc))) {
-      // This is not a matching DS instruction, but we can keep looking as
+        (getInstSubclass(MBBI->getOpcode(), *TII) != InstSubclass)) {
+      // This is not a matching instruction, but we can keep looking as
       // long as one of these conditions are met:
       // 1. It is safe to move I down past MBBI.
       // 2. It is safe to move MBBI down past the instruction that I will
@@ -1060,8 +1062,10 @@ unsigned SILoadStoreOptimizer::getNewOpcode(const CombineInfo &CI) {
 
   switch (CI.InstClass) {
   default:
+    assert(CI.InstClass == BUFFER_LOAD || CI.InstClass == BUFFER_STORE);
     // FIXME: Handle d16 correctly
-    return AMDGPU::getMUBUFOpcode(CI.InstClass, Width);
+    return AMDGPU::getMUBUFOpcode(AMDGPU::getMUBUFBaseOpcode(CI.I->getOpcode()),
+                                  Width);
   case UNKNOWN:
     llvm_unreachable("Unknown instruction class");
   case S_BUFFER_LOAD_IMM:
@@ -1078,71 +1082,33 @@ unsigned SILoadStoreOptimizer::getNewOpcode(const CombineInfo &CI) {
 
 std::pair<unsigned, unsigned>
 SILoadStoreOptimizer::getSubRegIdxs(const CombineInfo &CI) {
-  if (CI.Offset0 > CI.Offset1) {
-    switch (CI.Width0) {
-    default:
-      return std::make_pair(0, 0);
-    case 1:
-      switch (CI.Width1) {
-      default:
-        return std::make_pair(0, 0);
-      case 1:
-        return std::make_pair(AMDGPU::sub1, AMDGPU::sub0);
-      case 2:
-        return std::make_pair(AMDGPU::sub2, AMDGPU::sub0_sub1);
-      case 3:
-        return std::make_pair(AMDGPU::sub3, AMDGPU::sub0_sub1_sub2);
-      }
-    case 2:
-      switch (CI.Width1) {
-      default:
-        return std::make_pair(0, 0);
-      case 1:
-        return std::make_pair(AMDGPU::sub1_sub2, AMDGPU::sub0);
-      case 2:
-        return std::make_pair(AMDGPU::sub2_sub3, AMDGPU::sub0_sub1);
-      }
-    case 3:
-      switch (CI.Width1) {
-      default:
-        return std::make_pair(0, 0);
-      case 1:
-        return std::make_pair(AMDGPU::sub1_sub2_sub3, AMDGPU::sub0);
-      }
-    }
+
+  if (CI.Width0 == 0 || CI.Width0 == 0 || CI.Width0 + CI.Width1 > 4)
+    return std::make_pair(0, 0);
+
+  bool ReverseOrder = CI.Offset0 > CI.Offset1;
+
+  static const unsigned Idxs[4][4] = {
+      {AMDGPU::sub0, AMDGPU::sub0_sub1, AMDGPU::sub0_sub1_sub2, AMDGPU::sub0_sub1_sub2_sub3},
+      {AMDGPU::sub1, AMDGPU::sub1_sub2, AMDGPU::sub1_sub2_sub3, 0},
+      {AMDGPU::sub2, AMDGPU::sub2_sub3, 0, 0},
+      {AMDGPU::sub3, 0, 0, 0},
+  };
+  unsigned Idx0;
+  unsigned Idx1;
+
+  assert(CI.Width0 >= 1 && CI.Width0 <= 3);
+  assert(CI.Width1 >= 1 && CI.Width1 <= 3);
+
+  if (ReverseOrder) {
+    Idx1 = Idxs[0][CI.Width1 - 1];
+    Idx0 = Idxs[CI.Width1][CI.Width0 - 1];
   } else {
-    switch (CI.Width0) {
-    default:
-      return std::make_pair(0, 0);
-    case 1:
-      switch (CI.Width1) {
-      default:
-        return std::make_pair(0, 0);
-      case 1:
-        return std::make_pair(AMDGPU::sub0, AMDGPU::sub1);
-      case 2:
-        return std::make_pair(AMDGPU::sub0, AMDGPU::sub1_sub2);
-      case 3:
-        return std::make_pair(AMDGPU::sub0, AMDGPU::sub1_sub2_sub3);
-      }
-    case 2:
-      switch (CI.Width1) {
-      default:
-        return std::make_pair(0, 0);
-      case 1:
-        return std::make_pair(AMDGPU::sub0_sub1, AMDGPU::sub2);
-      case 2:
-        return std::make_pair(AMDGPU::sub0_sub1, AMDGPU::sub2_sub3);
-      }
-    case 3:
-      switch (CI.Width1) {
-      default:
-        return std::make_pair(0, 0);
-      case 1:
-        return std::make_pair(AMDGPU::sub0_sub1_sub2, AMDGPU::sub3);
-      }
-    }
+    Idx0 = Idxs[0][CI.Width0 - 1];
+    Idx1 = Idxs[CI.Width0][CI.Width1 - 1];
   }
+
+  return std::make_pair(Idx0, Idx1);
 }
 
 const TargetRegisterClass *
@@ -1671,10 +1637,7 @@ SILoadStoreOptimizer::optimizeInstsWithSameBaseAddr(
         OptimizeListAgain |= (CI.Width0 + CI.Width1) < 16;
       }
       break;
-    case BUFFER_LOAD_OFFEN:
-    case BUFFER_LOAD_OFFSET:
-    case BUFFER_LOAD_OFFEN_exact:
-    case BUFFER_LOAD_OFFSET_exact:
+    case BUFFER_LOAD:
       if (findMatchingInst(CI)) {
         Modified = true;
         removeCombinedInst(MergeList, *CI.Paired);
@@ -1683,10 +1646,7 @@ SILoadStoreOptimizer::optimizeInstsWithSameBaseAddr(
         OptimizeListAgain |= (CI.Width0 + CI.Width1) < 4;
       }
       break;
-    case BUFFER_STORE_OFFEN:
-    case BUFFER_STORE_OFFSET:
-    case BUFFER_STORE_OFFEN_exact:
-    case BUFFER_STORE_OFFSET_exact:
+    case BUFFER_STORE:
       if (findMatchingInst(CI)) {
         Modified = true;
         removeCombinedInst(MergeList, *CI.Paired);

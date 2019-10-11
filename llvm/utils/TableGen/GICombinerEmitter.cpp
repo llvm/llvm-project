@@ -26,6 +26,11 @@ cl::OptionCategory
 static cl::list<std::string>
     SelectedCombiners("combiners", cl::desc("Emit the specified combiners"),
                       cl::cat(GICombinerEmitterCat), cl::CommaSeparated);
+static cl::opt<bool> ShowExpansions(
+    "gicombiner-show-expansions",
+    cl::desc("Use C++ comments to indicate occurence of code expansion"),
+    cl::cat(GICombinerEmitterCat));
+
 namespace {
 class GICombinerEmitter {
   StringRef Name;

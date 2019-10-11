@@ -19,8 +19,9 @@ using namespace llvm;
 using namespace llvm::object;
 using namespace llvm::support::endian;
 using namespace llvm::ELF;
-using namespace lld;
-using namespace lld::elf;
+
+namespace lld {
+namespace elf {
 
 namespace {
 class Hexagon final : public TargetInfo {
@@ -102,13 +103,13 @@ RelExpr Hexagon::getRelExpr(RelType type, const Symbol &s,
   case R_HEX_LO16:
     return R_ABS;
   case R_HEX_B9_PCREL:
-  case R_HEX_B9_PCREL_X:
   case R_HEX_B13_PCREL:
   case R_HEX_B15_PCREL:
-  case R_HEX_B15_PCREL_X:
   case R_HEX_6_PCREL_X:
   case R_HEX_32_PCREL:
     return R_PC;
+  case R_HEX_B9_PCREL_X:
+  case R_HEX_B15_PCREL_X:
   case R_HEX_B22_PCREL:
   case R_HEX_PLT_B22_PCREL:
   case R_HEX_B22_PCREL_X:
@@ -318,7 +319,10 @@ RelType Hexagon::getDynRel(RelType type) const {
   return R_HEX_NONE;
 }
 
-TargetInfo *elf::getHexagonTargetInfo() {
+TargetInfo *getHexagonTargetInfo() {
   static Hexagon target;
   return &target;
 }
+
+} // namespace elf
+} // namespace lld

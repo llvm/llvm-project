@@ -137,12 +137,16 @@ class StdTuplePrinter(object):
         def __iter__(self):
             return self
 
-        def next(self):
+        def __next__(self):
             # child_iter raises StopIteration when appropriate.
             field_name = self.child_iter.next()
             child = self.val["__base_"][field_name]["__value_"]
             self.count += 1
             return ("[%d]" % self.count, child)
+
+        # TODO Delete when we drop Python 2.
+        def next(self):
+            return self.__next__()
 
     def __init__(self, val):
         self.val = val
@@ -311,7 +315,7 @@ class StdVectorPrinter(object):
         def __iter__(self):
             return self
 
-        def next(self):
+        def __next__(self):
             """Retrieve the next element."""
 
             self.count += 1
@@ -328,6 +332,10 @@ class StdVectorPrinter(object):
                 self.offset = 0
             return ("[%d]" % self.count, outbit)
 
+        # TODO Delete when we drop Python 2.
+        def next(self):
+            return self.__next__()
+
     class _VectorIterator(object):
         """Class to iterate over the non-bool vector's children."""
 
@@ -339,13 +347,17 @@ class StdVectorPrinter(object):
         def __iter__(self):
             return self
 
-        def next(self):
+        def __next__(self):
             self.count += 1
             if self.item == self.end:
                 raise StopIteration
             entry = self.item.dereference()
             self.item += 1
             return ("[%d]" % self.count, entry)
+
+        # TODO Delete when we drop Python 2.
+        def next(self):
+            return self.__next__()
 
     def __init__(self, val):
         """Set val, length, capacity, and iterator for bool and normal vectors."""

@@ -69,34 +69,6 @@ static bool hasBranchUse(ICmpInst &I) {
   return false;
 }
 
-/// Given an exploded icmp instruction, return true if the comparison only
-/// checks the sign bit. If it only checks the sign bit, set TrueIfSigned if the
-/// result of the comparison is true when the input value is signed.
-static bool isSignBitCheck(ICmpInst::Predicate Pred, const APInt &RHS,
-                           bool &TrueIfSigned) {
-  switch (Pred) {
-  case ICmpInst::ICMP_SLT:   // True if LHS s< 0
-    TrueIfSigned = true;
-    return RHS.isNullValue();
-  case ICmpInst::ICMP_SLE:   // True if LHS s<= RHS and RHS == -1
-    TrueIfSigned = true;
-    return RHS.isAllOnesValue();
-  case ICmpInst::ICMP_SGT:   // True if LHS s> -1
-    TrueIfSigned = false;
-    return RHS.isAllOnesValue();
-  case ICmpInst::ICMP_UGT:
-    // True if LHS u> RHS and RHS == high-bit-mask - 1
-    TrueIfSigned = true;
-    return RHS.isMaxSignedValue();
-  case ICmpInst::ICMP_UGE:
-    // True if LHS u>= RHS and RHS == high-bit-mask (2^7, 2^15, 2^31, etc)
-    TrueIfSigned = true;
-    return RHS.isSignMask();
-  default:
-    return false;
-  }
-}
-
 /// Returns true if the exploded icmp can be expressed as a signed comparison
 /// to zero and updates the predicate accordingly.
 /// The signedness of the comparison is preserved.
@@ -1382,6 +1354,29 @@ Instruction *InstCombiner::foldIRemByPowerOfTwoToBitTest(ICmpInst &I) {
   Value *Mask = Builder.CreateAdd(Y, Constant::getAllOnesValue(Y->getType()));
   Value *Masked = Builder.CreateAnd(X, Mask);
   return ICmpInst::Create(Instruction::ICmp, Pred, Masked, Zero);
+}
+
+/// Fold equality-comparison between zero and any (maybe truncated) right-shift
+/// by one-less-than-bitwidth into a sign test on the original value.
+Instruction *foldSignBitTest(ICmpInst &I) {
+  ICmpInst::Predicate Pred;
+  Value *X;
+  Constant *C;
+  if (!I.isEquality() ||
+      !match(&I, m_ICmp(Pred, m_TruncOrSelf(m_Shr(m_Value(X), m_Constant(C))),
+                        m_Zero())))
+    return nullptr;
+
+  Type *XTy = X->getType();
+  unsigned XBitWidth = XTy->getScalarSizeInBits();
+  if (!match(C, m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_EQ,
+                                   APInt(XBitWidth, XBitWidth - 1))))
+    return nullptr;
+
+  return ICmpInst::Create(Instruction::ICmp,
+                          Pred == ICmpInst::ICMP_EQ ? ICmpInst::ICMP_SGE
+                                                    : ICmpInst::ICMP_SLT,
+                          X, ConstantInt::getNullValue(XTy));
 }
 
 // Handle  icmp pred X, 0
@@ -5448,6 +5443,11 @@ Instruction *InstCombiner::visitICmpInst(ICmpInst &I) {
 
   if (Instruction *Res = foldICmpInstWithConstant(I))
     return Res;
+
+  // Try to match comparison as a sign bit test. Intentionally do this after
+  // foldICmpInstWithConstant() to potentially let other folds to happen first.
+  if (Instruction *New = foldSignBitTest(I))
+    return New;
 
   if (Instruction *Res = foldICmpInstWithConstantNotInt(I))
     return Res;

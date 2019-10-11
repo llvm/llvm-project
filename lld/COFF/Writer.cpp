@@ -743,7 +743,8 @@ void Writer::addSyntheticIdata() {
   add(".idata$2", idata.dirs);
   add(".idata$4", idata.lookups);
   add(".idata$5", idata.addresses);
-  add(".idata$6", idata.hints);
+  if (!idata.hints.empty())
+    add(".idata$6", idata.hints);
   add(".idata$7", idata.dllNames);
 }
 

@@ -15,7 +15,7 @@
 
 # RUN: %{lit} -j2 %{inputs}/parallelism-groups | FileCheck %s
 
-# CHECK:     -- Testing: 2 tests, 2 threads --
+# CHECK:     -- Testing: 2 tests, 2 workers --
 # CHECK-DAG: PASS: parallelism-groups :: test1.txt
 # CHECK-DAG: PASS: parallelism-groups :: test2.txt
 # CHECK:     Expected Passes    : 2

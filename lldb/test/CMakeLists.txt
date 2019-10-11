@@ -10,7 +10,7 @@ function(add_python_test_target name test_script args comment)
     COMMENT "${comment}"
     USES_TERMINAL
     )
-  add_dependencies(${name} ${LLDB_TEST_DEPS})
+  add_dependencies(${name} lldb-test-deps)
 endfunction()
 
 # The default architecture with which to compile test executables is the default LLVM target
@@ -109,17 +109,17 @@ if(CMAKE_HOST_APPLE)
     endif()
     message(STATUS "LLDB tests use out-of-tree debugserver: ${system_debugserver_path}")
     list(APPEND LLDB_TEST_COMMON_ARGS --out-of-tree-debugserver)
-    add_dependencies(lldb-test-deps debugserver)
+    add_lldb_test_dependency(debugserver)
   elseif(TARGET debugserver)
     set(debugserver_path ${LLVM_RUNTIME_OUTPUT_INTDIR}/debugserver)
     message(STATUS "LLDB Tests use just-built debugserver: ${debugserver_path}")
     list(APPEND LLDB_TEST_COMMON_ARGS --server ${debugserver_path})
-    add_dependencies(lldb-test-deps debugserver)
+    add_lldb_test_dependency(debugserver)
   elseif(TARGET lldb-server)
     set(lldb_server_path ${LLVM_RUNTIME_OUTPUT_INTDIR}/lldb-server)
     message(STATUS "LLDB Tests use just-built lldb-server: ${lldb_server_path}")
     list(APPEND LLDB_TEST_COMMON_ARGS --server ${lldb_server_path})
-    add_dependencies(lldb-test-deps lldb-server)
+    add_lldb_test_dependency(lldb-server)
   else()
     message(WARNING "LLDB Tests enabled, but no server available")
   endif()
@@ -128,22 +128,14 @@ endif()
 set(LLDB_DOTEST_ARGS ${LLDB_TEST_COMMON_ARGS};${LLDB_TEST_USER_ARGS})
 set_property(GLOBAL PROPERTY LLDB_DOTEST_ARGS_PROPERTY ${LLDB_DOTEST_ARGS})
 
-# If tests crash cause LLDB to crash, or things are otherwise unstable, or if machine-parsable
-# output is desired (i.e. in continuous integration contexts) check-lldb-single is a better target.
 add_custom_target(check-lldb)
 add_dependencies(check-lldb lldb-test-deps)
 set_target_properties(check-lldb PROPERTIES FOLDER "lldb misc")
 
-# If we're building with an in-tree clang, then list clang as a dependency
-# to run tests.
-if (TARGET clang)
-  add_dependencies(check-lldb clang)
-endif()
-
 # LLD is required to link test executables on Windows.
 if (CMAKE_SYSTEM_NAME MATCHES "Windows")
   if (TARGET lld)
-    add_dependencies(check-lldb lld)
+    add_lldb_test_dependency(lld)
   else ()
     message(WARNING "lld required to test LLDB on Windows")
   endif ()

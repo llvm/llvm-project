@@ -14,15 +14,15 @@
 
 # REL: GP: 0x0
 
-# DUMP: Contents of section .rodata:
-# DUMP: 1000 fffffff4 fffffff8
-#            ^ 0x20004 + 0x7ff0 - 0x28000
-#                     ^ 0x20008 + 0x7ff0 - 0x28000
-
 # DUMP: SYMBOL TABLE:
 # DUMP: 00020008         .text          00000000 bar
 # DUMP: 00020004         .text          00000000 foo
 # DUMP: 00028000         .got           00000000 .hidden _gp
+
+# DUMP: Contents of section .rodata:
+# DUMP: 1000 fffffff4 fffffff8
+#            ^ 0x20004 + 0x7ff0 - 0x28000
+#                     ^ 0x20008 + 0x7ff0 - 0x28000
 
   .text
   .global  __start

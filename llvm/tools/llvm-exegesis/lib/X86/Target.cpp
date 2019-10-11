@@ -462,14 +462,16 @@ private:
                             sizeof(kUnavailableRegisters[0]));
   }
 
-  std::unique_ptr<SnippetGenerator>
-  createLatencySnippetGenerator(const LLVMState &State) const override {
-    return std::make_unique<X86LatencySnippetGenerator>(State);
+  std::unique_ptr<SnippetGenerator> createLatencySnippetGenerator(
+      const LLVMState &State,
+      const SnippetGenerator::Options &Opts) const override {
+    return std::make_unique<X86LatencySnippetGenerator>(State, Opts);
   }
 
-  std::unique_ptr<SnippetGenerator>
-  createUopsSnippetGenerator(const LLVMState &State) const override {
-    return std::make_unique<X86UopsSnippetGenerator>(State);
+  std::unique_ptr<SnippetGenerator> createUopsSnippetGenerator(
+      const LLVMState &State,
+      const SnippetGenerator::Options &Opts) const override {
+    return std::make_unique<X86UopsSnippetGenerator>(State, Opts);
   }
 
   bool matchesArch(llvm::Triple::ArchType Arch) const override {

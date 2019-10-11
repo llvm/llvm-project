@@ -212,13 +212,15 @@ clang-format
 
 - The ``Standard`` style option specifies which version of C++ should be used
   when parsing and formatting C++ code. The set of allowed values has changed:
+
   - ``Latest`` will always enable new C++ language features.
   - ``c++03``, ``c++11``, ``c++14``, ``c++17``, ``c++20`` will pin to exactly
     that language version.
   - ``Auto`` is the default and detects style from the code (this is unchanged).
- The previous values of ``Cpp03`` and ``Cpp11`` are deprecated. Note that
- ``Cpp11`` is treated as ``Latest``, as this was always clang-format's behavior.
- (One motivation for this change is the new name describes the behavior better).
+
+  The previous values of ``Cpp03`` and ``Cpp11`` are deprecated. Note that
+  ``Cpp11`` is treated as ``Latest``, as this was always clang-format's behavior.
+  (One motivation for this change is the new name describes the behavior better).
 
 libclang
 --------

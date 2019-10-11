@@ -1659,7 +1659,7 @@ void CGDebugInfo::CollectCXXMemberFunctions(
     if (!Method || Method->isImplicit() || Method->hasAttr<NoDebugAttr>())
       continue;
 
-    if (Method->getType()->getAs<FunctionProtoType>()->getContainedAutoType())
+    if (Method->getType()->castAs<FunctionProtoType>()->getContainedAutoType())
       continue;
 
     // Reuse the existing member function declaration if it exists.
@@ -3276,8 +3276,8 @@ void CGDebugInfo::collectVarDeclProps(const VarDecl *VD, llvm::DIFile *&Unit,
     llvm::APInt ConstVal(32, 1);
     QualType ET = CGM.getContext().getAsArrayType(T)->getElementType();
 
-    T = CGM.getContext().getConstantArrayType(ET, ConstVal, ArrayType::Normal,
-                                              0);
+    T = CGM.getContext().getConstantArrayType(ET, ConstVal, nullptr,
+                                              ArrayType::Normal, 0);
   }
 
   Name = VD->getName();
@@ -3873,8 +3873,8 @@ CGDebugInfo::EmitTypeForVarWithBlocksAttr(const VarDecl *VD,
 
     if (NumPaddingBytes.isPositive()) {
       llvm::APInt pad(32, NumPaddingBytes.getQuantity());
-      FType = CGM.getContext().getConstantArrayType(CGM.getContext().CharTy,
-                                                    pad, ArrayType::Normal, 0);
+      FType = CGM.getContext().getConstantArrayType(
+          CGM.getContext().CharTy, pad, nullptr, ArrayType::Normal, 0);
       EltTys.push_back(CreateMemberType(Unit, FType, "", &FieldOffset));
     }
   }
@@ -4561,7 +4561,7 @@ void CGDebugInfo::EmitUsingDecl(const UsingDecl &UD) {
   // return type in the definition)
   if (const auto *FD = dyn_cast<FunctionDecl>(USD.getUnderlyingDecl()))
     if (const auto *AT =
-            FD->getType()->getAs<FunctionProtoType>()->getContainedAutoType())
+            FD->getType()->castAs<FunctionProtoType>()->getContainedAutoType())
       if (AT->getDeducedType().isNull())
         return;
   if (llvm::DINode *Target =

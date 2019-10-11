@@ -84,13 +84,22 @@ public:
     ASTContext &AST;
     FileManager &FM;
     const OriginMap &OM;
+    /// True iff the source only exists temporary, i.e., it will be removed from
+    /// the ExternalASTMerger during the life time of the ExternalASTMerger.
+    bool Temporary;
+    /// If the ASTContext of this source has an ExternalASTMerger that imports
+    /// into this source, then this will point to that other ExternalASTMerger.
+    ExternalASTMerger *Merger;
 
   public:
-    ImporterSource(ASTContext &_AST, FileManager &_FM, const OriginMap &_OM)
-        : AST(_AST), FM(_FM), OM(_OM) {}
+    ImporterSource(ASTContext &AST, FileManager &FM, const OriginMap &OM,
+                   bool Temporary = false, ExternalASTMerger *Merger = nullptr)
+        : AST(AST), FM(FM), OM(OM), Temporary(Temporary), Merger(Merger) {}
     ASTContext &getASTContext() const { return AST; }
     FileManager &getFileManager() const { return FM; }
     const OriginMap &getOriginMap() const { return OM; }
+    bool isTemporary() const { return Temporary; }
+    ExternalASTMerger *getMerger() const { return Merger; }
   };
 
 private:
@@ -105,6 +114,12 @@ private:
 public:
   ExternalASTMerger(const ImporterTarget &Target,
                     llvm::ArrayRef<ImporterSource> Sources);
+
+  /// Asks all connected ASTImporters if any of them imported the given
+  /// declaration. If any ASTImporter did import the given declaration,
+  /// then this function returns the declaration that D was imported from.
+  /// Returns nullptr if no ASTImporter did import import D.
+  Decl *FindOriginalDecl(Decl *D);
 
   /// Add a set of ASTContexts as possible origins.
   ///

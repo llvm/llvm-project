@@ -20,24 +20,23 @@ namespace jitlink {
 
 template <typename BuilderImpl> class BasicGOTAndStubsBuilder {
 public:
-  BasicGOTAndStubsBuilder(AtomGraph &G) : G(G) {}
+  BasicGOTAndStubsBuilder(LinkGraph &G) : G(G) {}
 
   void run() {
-    // We're going to be adding new atoms, but we don't want to iterate over
-    // the newly added ones, so just copy the existing atoms out.
-    std::vector<DefinedAtom *> DAs(G.defined_atoms().begin(),
-                                   G.defined_atoms().end());
+    // We're going to be adding new blocks, but we don't want to iterate over
+    // the newly added ones, so just copy the existing blocks out.
+    std::vector<Block *> Blocks(G.blocks().begin(), G.blocks().end());
 
-    for (auto *DA : DAs)
-      for (auto &E : DA->edges())
+    for (auto *B : Blocks)
+      for (auto &E : B->edges())
         if (impl().isGOTEdge(E))
-          impl().fixGOTEdge(E, getGOTEntryAtom(E.getTarget()));
+          impl().fixGOTEdge(E, getGOTEntrySymbol(E.getTarget()));
         else if (impl().isExternalBranchEdge(E))
-          impl().fixExternalBranchEdge(E, getStubAtom(E.getTarget()));
+          impl().fixExternalBranchEdge(E, getStubSymbol(E.getTarget()));
   }
 
 protected:
-  Atom &getGOTEntryAtom(Atom &Target) {
+  Symbol &getGOTEntrySymbol(Symbol &Target) {
     assert(Target.hasName() && "GOT edge cannot point to anonymous target");
 
     auto GOTEntryI = GOTEntries.find(Target.getName());
@@ -49,31 +48,31 @@ protected:
           GOTEntries.insert(std::make_pair(Target.getName(), &GOTEntry)).first;
     }
 
-    assert(GOTEntryI != GOTEntries.end() && "Could not get GOT entry atom");
+    assert(GOTEntryI != GOTEntries.end() && "Could not get GOT entry symbol");
     return *GOTEntryI->second;
   }
 
-  Atom &getStubAtom(Atom &Target) {
+  Symbol &getStubSymbol(Symbol &Target) {
     assert(Target.hasName() &&
            "External branch edge can not point to an anonymous target");
     auto StubI = Stubs.find(Target.getName());
 
     if (StubI == Stubs.end()) {
-      auto &StubAtom = impl().createStub(Target);
-      StubI = Stubs.insert(std::make_pair(Target.getName(), &StubAtom)).first;
+      auto &StubSymbol = impl().createStub(Target);
+      StubI = Stubs.insert(std::make_pair(Target.getName(), &StubSymbol)).first;
     }
 
-    assert(StubI != Stubs.end() && "Count not get stub atom");
+    assert(StubI != Stubs.end() && "Count not get stub symbol");
     return *StubI->second;
   }
 
-  AtomGraph &G;
+  LinkGraph &G;
 
 private:
   BuilderImpl &impl() { return static_cast<BuilderImpl &>(*this); }
 
-  DenseMap<StringRef, DefinedAtom *> GOTEntries;
-  DenseMap<StringRef, DefinedAtom *> Stubs;
+  DenseMap<StringRef, Symbol *> GOTEntries;
+  DenseMap<StringRef, Symbol *> Stubs;
 };
 
 } // end namespace jitlink

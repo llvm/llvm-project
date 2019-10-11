@@ -16,6 +16,7 @@
 #include "lldb/API/SBFrame.h"
 #include "lldb/API/SBProcess.h"
 #include "lldb/API/SBStream.h"
+#include "lldb/API/SBStructuredData.h"
 #include "lldb/API/SBSymbolContext.h"
 #include "lldb/API/SBThreadCollection.h"
 #include "lldb/API/SBThreadPlan.h"
@@ -23,6 +24,7 @@
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/StreamFile.h"
+#include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Symbol/CompileUnit.h"
@@ -965,9 +967,24 @@ SBError SBThread::StepUsingScriptedThreadPlan(const char *script_class_name) {
 }
 
 SBError SBThread::StepUsingScriptedThreadPlan(const char *script_class_name,
+                                            bool resume_immediately) {
+  LLDB_RECORD_METHOD(lldb::SBError, SBThread, StepUsingScriptedThreadPlan,
+                     (const char *, bool), script_class_name, 
+                     resume_immediately);
+
+  lldb::SBStructuredData no_data;
+  return LLDB_RECORD_RESULT(
+      StepUsingScriptedThreadPlan(script_class_name, 
+                                  no_data, 
+                                  resume_immediately));
+}
+
+SBError SBThread::StepUsingScriptedThreadPlan(const char *script_class_name,
+                                              SBStructuredData &args_data,
                                               bool resume_immediately) {
   LLDB_RECORD_METHOD(lldb::SBError, SBThread, StepUsingScriptedThreadPlan,
-                     (const char *, bool), script_class_name,
+                     (const char *, lldb::SBStructuredData &, bool), 
+                     script_class_name, args_data,
                      resume_immediately);
 
   SBError error;
@@ -982,8 +999,10 @@ SBError SBThread::StepUsingScriptedThreadPlan(const char *script_class_name,
 
   Thread *thread = exe_ctx.GetThreadPtr();
   Status new_plan_status;
+  StructuredData::ObjectSP obj_sp = args_data.m_impl_up->GetObjectSP();
+
   ThreadPlanSP new_plan_sp = thread->QueueThreadPlanForStepScripted(
-      false, script_class_name, false, new_plan_status);
+      false, script_class_name, obj_sp, false, new_plan_status);
 
   if (new_plan_status.Fail()) {
     error.SetErrorString(new_plan_status.AsCString());
@@ -1460,6 +1479,8 @@ void RegisterMethods<SBThread>(Registry &R) {
                        (const char *));
   LLDB_REGISTER_METHOD(lldb::SBError, SBThread, StepUsingScriptedThreadPlan,
                        (const char *, bool));
+  LLDB_REGISTER_METHOD(lldb::SBError, SBThread, StepUsingScriptedThreadPlan,
+                       (const char *, SBStructuredData &, bool));
   LLDB_REGISTER_METHOD(lldb::SBError, SBThread, JumpToLine,
                        (lldb::SBFileSpec &, uint32_t));
   LLDB_REGISTER_METHOD(lldb::SBError, SBThread, ReturnFromFrame,

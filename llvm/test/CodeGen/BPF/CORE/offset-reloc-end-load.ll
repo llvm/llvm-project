@@ -30,12 +30,13 @@ entry:
 ; CHECK:       .ascii  ".text"                 # string offset=20
 ; CHECK:       .ascii  "0:1"                   # string offset=26
 ;
-; CHECK:       .long   12                      # OffsetReloc
-; CHECK-NEXT:  .long   20                      # Offset reloc section string offset=20
+; CHECK:       .long   16                      # FieldReloc
+; CHECK-NEXT:  .long   20                      # Field reloc section string offset=20
 ; CHECK-NEXT:  .long   1
 ; CHECK-NEXT:  .long   .Ltmp{{[0-9]+}}
 ; CHECK-NEXT:  .long   2
 ; CHECK-NEXT:  .long   26
+; CHECK-NEXT:  .long   0
 
 ; Function Attrs: nounwind readnone
 declare i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.ss(%struct.s*, i32, i32) #1

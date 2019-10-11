@@ -61,7 +61,9 @@ def create_parser():
         '-f',
         metavar='filterspec',
         action='append',
-        help='Specify a filter, which consists of the test class name, a dot, followed by the test method, to only admit such test into the test suite')  # FIXME: Example?
+        help=('Specify a filter, which looks like "TestModule.TestClass.test_name".  '+
+            'You may also use shortened filters, such as '+
+            '"TestModule.TestClass", "TestClass.test_name", or just "test_name".'))
     group.add_argument(
         '-p',
         metavar='pattern',

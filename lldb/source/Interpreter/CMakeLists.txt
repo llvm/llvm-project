@@ -20,6 +20,7 @@ add_lldb_library(lldbInterpreter
   OptionGroupBoolean.cpp
   OptionGroupFile.cpp
   OptionGroupFormat.cpp
+  OptionGroupPythonClassWithDict.cpp
   OptionGroupOutputFile.cpp
   OptionGroupPlatform.cpp
   OptionGroupString.cpp

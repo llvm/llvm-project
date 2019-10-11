@@ -52,6 +52,10 @@ void RetireStage::notifyInstructionRetired(const InstRef &IR) const {
   llvm::SmallVector<unsigned, 4> FreedRegs(PRF.getNumRegisterFiles());
   const Instruction &Inst = *IR.getInstruction();
 
+  // Release the load/store queue entries.
+  if (Inst.isMemOp())
+    LSU.onInstructionRetired(IR);
+
   for (const WriteState &WS : Inst.getDefs())
     PRF.removeRegisterWrite(WS, FreedRegs);
   notifyEvent<HWInstructionEvent>(HWInstructionRetiredEvent(IR, FreedRegs));

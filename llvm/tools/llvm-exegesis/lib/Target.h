@@ -125,7 +125,8 @@ public:
   // Creates a snippet generator for the given mode.
   std::unique_ptr<SnippetGenerator>
   createSnippetGenerator(InstructionBenchmark::ModeE Mode,
-                         const LLVMState &State) const;
+                         const LLVMState &State,
+                         const SnippetGenerator::Options &Opts) const;
   // Creates a benchmark runner for the given mode.
   std::unique_ptr<BenchmarkRunner>
   createBenchmarkRunner(InstructionBenchmark::ModeE Mode,
@@ -151,9 +152,9 @@ private:
   // Targets can implement their own snippet generators/benchmarks runners by
   // implementing these.
   std::unique_ptr<SnippetGenerator> virtual createLatencySnippetGenerator(
-      const LLVMState &State) const;
+      const LLVMState &State, const SnippetGenerator::Options &Opts) const;
   std::unique_ptr<SnippetGenerator> virtual createUopsSnippetGenerator(
-      const LLVMState &State) const;
+      const LLVMState &State, const SnippetGenerator::Options &Opts) const;
   std::unique_ptr<BenchmarkRunner> virtual createLatencyBenchmarkRunner(
       const LLVMState &State, InstructionBenchmark::ModeE Mode) const;
   std::unique_ptr<BenchmarkRunner> virtual createUopsBenchmarkRunner(

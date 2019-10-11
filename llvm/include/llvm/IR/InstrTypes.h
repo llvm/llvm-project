@@ -975,7 +975,7 @@ public:
   static Type* makeCmpResultType(Type* opnd_type) {
     if (VectorType* vt = dyn_cast<VectorType>(opnd_type)) {
       return VectorType::get(Type::getInt1Ty(opnd_type->getContext()),
-                             vt->getNumElements());
+                             vt->getElementCount());
     }
     return Type::getInt1Ty(opnd_type->getContext());
   }

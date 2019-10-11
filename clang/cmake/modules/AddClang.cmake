@@ -86,9 +86,13 @@ macro(add_clang_library name)
     # llvm_add_library ignores BUILD_SHARED_LIBS if STATIC is explicitly set,
     # so we need to handle it here.
     if(BUILD_SHARED_LIBS)
-      set(LIBTYPE SHARED OBJECT)
+      set(LIBTYPE SHARED)
     else()
-      set(LIBTYPE STATIC OBJECT)
+      set(LIBTYPE STATIC)
+    endif()
+    if(NOT XCODE)
+      # The Xcode generator doesn't handle object libraries correctly.
+      list(APPEND LIBTYPE OBJECT)
     endif()
     set_property(GLOBAL APPEND PROPERTY CLANG_STATIC_LIBS ${name})
   endif()

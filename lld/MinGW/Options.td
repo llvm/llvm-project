@@ -63,6 +63,7 @@ def strip_all: F<"strip-all">,
     HelpText<"Omit all symbol information from the output binary">;
 def strip_debug: F<"strip-debug">,
     HelpText<"Omit all debug information, but keep symbol information">;
+defm reproduce: Eq<"reproduce", "Write a tar file containing input files and command line options to reproduce link">;
 defm undefined: Eq<"undefined", "Include symbol in the link, if available">;
 def whole_archive: F<"whole-archive">,
     HelpText<"Include all object files for following archives">;

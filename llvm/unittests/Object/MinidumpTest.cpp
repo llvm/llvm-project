@@ -511,3 +511,202 @@ TEST(MinidumpFile, getMemoryList) {
     EXPECT_EQ(0x00090807u, MD.Memory.RVA);
   }
 }
+
+TEST(MinidumpFile, getMemoryInfoList) {
+  std::vector<uint8_t> OneEntry{
+      // Header
+      'M', 'D', 'M', 'P', 0x93, 0xa7, 0, 0, // Signature, Version
+      1, 0, 0, 0,                           // NumberOfStreams,
+      32, 0, 0, 0,                          // StreamDirectoryRVA
+      0, 1, 2, 3, 4, 5, 6, 7,               // Checksum, TimeDateStamp
+      0, 0, 0, 0, 0, 0, 0, 0,               // Flags
+                                            // Stream Directory
+      16, 0, 0, 0, 64, 0, 0, 0,             // Type, DataSize,
+      44, 0, 0, 0,                          // RVA
+      // MemoryInfoListHeader
+      16, 0, 0, 0, 48, 0, 0, 0, // SizeOfHeader, SizeOfEntry
+      1, 0, 0, 0, 0, 0, 0, 0,   // NumberOfEntries
+      // MemoryInfo
+      0, 1, 2, 3, 4, 5, 6, 7,   // BaseAddress
+      8, 9, 0, 1, 2, 3, 4, 5,   // AllocationBase
+      16, 0, 0, 0, 6, 7, 8, 9,  // AllocationProtect, Reserved0
+      0, 1, 2, 3, 4, 5, 6, 7,   // RegionSize
+      0, 16, 0, 0, 32, 0, 0, 0, // State, Protect
+      0, 0, 2, 0, 8, 9, 0, 1,   // Type, Reserved1
+  };
+
+  // Same as before, but the list header is larger.
+  std::vector<uint8_t> BiggerHeader{
+      // Header
+      'M', 'D', 'M', 'P', 0x93, 0xa7, 0, 0, // Signature, Version
+      1, 0, 0, 0,                           // NumberOfStreams,
+      32, 0, 0, 0,                          // StreamDirectoryRVA
+      0, 1, 2, 3, 4, 5, 6, 7,               // Checksum, TimeDateStamp
+      0, 0, 0, 0, 0, 0, 0, 0,               // Flags
+                                            // Stream Directory
+      16, 0, 0, 0, 68, 0, 0, 0,             // Type, DataSize,
+      44, 0, 0, 0,                          // RVA
+      // MemoryInfoListHeader
+      20, 0, 0, 0, 48, 0, 0, 0, // SizeOfHeader, SizeOfEntry
+      1, 0, 0, 0, 0, 0, 0, 0,   // NumberOfEntries
+      0, 0, 0, 0,               // ???
+      // MemoryInfo
+      0, 1, 2, 3, 4, 5, 6, 7,   // BaseAddress
+      8, 9, 0, 1, 2, 3, 4, 5,   // AllocationBase
+      16, 0, 0, 0, 6, 7, 8, 9,  // AllocationProtect, Reserved0
+      0, 1, 2, 3, 4, 5, 6, 7,   // RegionSize
+      0, 16, 0, 0, 32, 0, 0, 0, // State, Protect
+      0, 0, 2, 0, 8, 9, 0, 1,   // Type, Reserved1
+  };
+
+  // Same as before, but the entry is larger.
+  std::vector<uint8_t> BiggerEntry{
+      // Header
+      'M', 'D', 'M', 'P', 0x93, 0xa7, 0, 0, // Signature, Version
+      1, 0, 0, 0,                           // NumberOfStreams,
+      32, 0, 0, 0,                          // StreamDirectoryRVA
+      0, 1, 2, 3, 4, 5, 6, 7,               // Checksum, TimeDateStamp
+      0, 0, 0, 0, 0, 0, 0, 0,               // Flags
+                                            // Stream Directory
+      16, 0, 0, 0, 68, 0, 0, 0,             // Type, DataSize,
+      44, 0, 0, 0,                          // RVA
+      // MemoryInfoListHeader
+      16, 0, 0, 0, 52, 0, 0, 0, // SizeOfHeader, SizeOfEntry
+      1, 0, 0, 0, 0, 0, 0, 0,   // NumberOfEntries
+      // MemoryInfo
+      0, 1, 2, 3, 4, 5, 6, 7,   // BaseAddress
+      8, 9, 0, 1, 2, 3, 4, 5,   // AllocationBase
+      16, 0, 0, 0, 6, 7, 8, 9,  // AllocationProtect, Reserved0
+      0, 1, 2, 3, 4, 5, 6, 7,   // RegionSize
+      0, 16, 0, 0, 32, 0, 0, 0, // State, Protect
+      0, 0, 2, 0, 8, 9, 0, 1,   // Type, Reserved1
+      0, 0, 0, 0,               // ???
+  };
+
+  for (ArrayRef<uint8_t> Data : {OneEntry, BiggerHeader, BiggerEntry}) {
+    auto ExpectedFile = create(Data);
+    ASSERT_THAT_EXPECTED(ExpectedFile, Succeeded());
+    const MinidumpFile &File = **ExpectedFile;
+    auto ExpectedInfo = File.getMemoryInfoList();
+    ASSERT_THAT_EXPECTED(ExpectedInfo, Succeeded());
+    ASSERT_EQ(1u, std::distance(ExpectedInfo->begin(), ExpectedInfo->end()));
+    const MemoryInfo &Info = *ExpectedInfo.get().begin();
+    EXPECT_EQ(0x0706050403020100u, Info.BaseAddress);
+    EXPECT_EQ(0x0504030201000908u, Info.AllocationBase);
+    EXPECT_EQ(MemoryProtection::Execute, Info.AllocationProtect);
+    EXPECT_EQ(0x09080706u, Info.Reserved0);
+    EXPECT_EQ(0x0706050403020100u, Info.RegionSize);
+    EXPECT_EQ(MemoryState::Commit, Info.State);
+    EXPECT_EQ(MemoryProtection::ExecuteRead, Info.Protect);
+    EXPECT_EQ(MemoryType::Private, Info.Type);
+    EXPECT_EQ(0x01000908u, Info.Reserved1);
+  }
+
+  // Header does not fit into the stream.
+  std::vector<uint8_t> HeaderTooBig{
+      // Header
+      'M', 'D', 'M', 'P', 0x93, 0xa7, 0, 0, // Signature, Version
+      1, 0, 0, 0,                           // NumberOfStreams,
+      32, 0, 0, 0,                          // StreamDirectoryRVA
+      0, 1, 2, 3, 4, 5, 6, 7,               // Checksum, TimeDateStamp
+      0, 0, 0, 0, 0, 0, 0, 0,               // Flags
+                                            // Stream Directory
+      16, 0, 0, 0, 15, 0, 0, 0,             // Type, DataSize,
+      44, 0, 0, 0,                          // RVA
+      // MemoryInfoListHeader
+      16, 0, 0, 0, 48, 0, 0, 0, // SizeOfHeader, SizeOfEntry
+      1, 0, 0, 0, 0, 0, 0,      // ???
+  };
+  Expected<std::unique_ptr<MinidumpFile>> File = create(HeaderTooBig);
+  ASSERT_THAT_EXPECTED(File, Succeeded());
+  EXPECT_THAT_EXPECTED(File.get()->getMemoryInfoList(), Failed<BinaryError>());
+
+  // Header fits into the stream, but it is too small to contain the required
+  // entries.
+  std::vector<uint8_t> HeaderTooSmall{
+      // Header
+      'M', 'D', 'M', 'P', 0x93, 0xa7, 0, 0, // Signature, Version
+      1, 0, 0, 0,                           // NumberOfStreams,
+      32, 0, 0, 0,                          // StreamDirectoryRVA
+      0, 1, 2, 3, 4, 5, 6, 7,               // Checksum, TimeDateStamp
+      0, 0, 0, 0, 0, 0, 0, 0,               // Flags
+                                            // Stream Directory
+      16, 0, 0, 0, 15, 0, 0, 0,             // Type, DataSize,
+      44, 0, 0, 0,                          // RVA
+      // MemoryInfoListHeader
+      15, 0, 0, 0, 48, 0, 0, 0, // SizeOfHeader, SizeOfEntry
+      1, 0, 0, 0, 0, 0, 0,      // ???
+  };
+  File = create(HeaderTooSmall);
+  ASSERT_THAT_EXPECTED(File, Succeeded());
+  EXPECT_THAT_EXPECTED(File.get()->getMemoryInfoList(), Failed<BinaryError>());
+
+  std::vector<uint8_t> EntryTooBig{
+      // Header
+      'M', 'D', 'M', 'P', 0x93, 0xa7, 0, 0, // Signature, Version
+      1, 0, 0, 0,                           // NumberOfStreams,
+      32, 0, 0, 0,                          // StreamDirectoryRVA
+      0, 1, 2, 3, 4, 5, 6, 7,               // Checksum, TimeDateStamp
+      0, 0, 0, 0, 0, 0, 0, 0,               // Flags
+                                            // Stream Directory
+      16, 0, 0, 0, 64, 0, 0, 0,             // Type, DataSize,
+      44, 0, 0, 0,                          // RVA
+      // MemoryInfoListHeader
+      16, 0, 0, 0, 49, 0, 0, 0, // SizeOfHeader, SizeOfEntry
+      1, 0, 0, 0, 0, 0, 0, 0,   // NumberOfEntries
+      // MemoryInfo
+      0, 1, 2, 3, 4, 5, 6, 7,   // BaseAddress
+      8, 9, 0, 1, 2, 3, 4, 5,   // AllocationBase
+      16, 0, 0, 0, 6, 7, 8, 9,  // AllocationProtect, Reserved0
+      0, 1, 2, 3, 4, 5, 6, 7,   // RegionSize
+      0, 16, 0, 0, 32, 0, 0, 0, // State, Protect
+      0, 0, 2, 0, 8, 9, 0, 1,   // Type, Reserved1
+  };
+  File = create(EntryTooBig);
+  ASSERT_THAT_EXPECTED(File, Succeeded());
+  EXPECT_THAT_EXPECTED(File.get()->getMemoryInfoList(), Failed<BinaryError>());
+
+  std::vector<uint8_t> ThreeEntries{
+      // Header
+      'M', 'D', 'M', 'P', 0x93, 0xa7, 0, 0, // Signature, Version
+      1, 0, 0, 0,                           // NumberOfStreams,
+      32, 0, 0, 0,                          // StreamDirectoryRVA
+      0, 1, 2, 3, 4, 5, 6, 7,               // Checksum, TimeDateStamp
+      0, 0, 0, 0, 0, 0, 0, 0,               // Flags
+                                            // Stream Directory
+      16, 0, 0, 0, 160, 0, 0, 0,            // Type, DataSize,
+      44, 0, 0, 0,                          // RVA
+      // MemoryInfoListHeader
+      16, 0, 0, 0, 48, 0, 0, 0, // SizeOfHeader, SizeOfEntry
+      3, 0, 0, 0, 0, 0, 0, 0,   // NumberOfEntries
+      // MemoryInfo
+      0, 1, 2, 3, 0, 0, 0, 0, // BaseAddress
+      0, 0, 0, 0, 0, 0, 0, 0, // AllocationBase
+      0, 0, 0, 0, 0, 0, 0, 0, // AllocationProtect, Reserved0
+      0, 0, 0, 0, 0, 0, 0, 0, // RegionSize
+      0, 0, 0, 0, 0, 0, 0, 0, // State, Protect
+      0, 0, 0, 0, 0, 0, 0, 0, // Type, Reserved1
+      0, 0, 4, 5, 6, 7, 0, 0, // BaseAddress
+      0, 0, 0, 0, 0, 0, 0, 0, // AllocationBase
+      0, 0, 0, 0, 0, 0, 0, 0, // AllocationProtect, Reserved0
+      0, 0, 0, 0, 0, 0, 0, 0, // RegionSize
+      0, 0, 0, 0, 0, 0, 0, 0, // State, Protect
+      0, 0, 0, 0, 0, 0, 0, 0, // Type, Reserved1
+      0, 0, 0, 8, 9, 0, 1, 0, // BaseAddress
+      0, 0, 0, 0, 0, 0, 0, 0, // AllocationBase
+      0, 0, 0, 0, 0, 0, 0, 0, // AllocationProtect, Reserved0
+      0, 0, 0, 0, 0, 0, 0, 0, // RegionSize
+      0, 0, 0, 0, 0, 0, 0, 0, // State, Protect
+      0, 0, 0, 0, 0, 0, 0, 0, // Type, Reserved1
+  };
+  File = create(ThreeEntries);
+  ASSERT_THAT_EXPECTED(File, Succeeded());
+  auto ExpectedInfo = File.get()->getMemoryInfoList();
+  ASSERT_THAT_EXPECTED(ExpectedInfo, Succeeded());
+  EXPECT_THAT(to_vector<3>(map_range(*ExpectedInfo,
+                                     [](const MemoryInfo &Info) -> uint64_t {
+                                       return Info.BaseAddress;
+                                     })),
+              testing::ElementsAre(0x0000000003020100u, 0x0000070605040000u,
+                                   0x0001000908000000u));
+}

@@ -1260,7 +1260,7 @@ bool MachineOutliner::outline(Module &M,
                   true /* isImp = true */));
           }
           if (MI.isCall())
-            MI.getMF()->updateCallSiteInfo(&MI);
+            MI.getMF()->eraseCallSiteInfo(&MI);
         };
         // Copy over the defs in the outlined range.
         // First inst in outlined range <-- Anything that's defined in this
@@ -1301,6 +1301,12 @@ void MachineOutliner::populateMapper(InstructionMapper &Mapper, Module &M,
     // If there's nothing in F, then there's no reason to try and outline from
     // it.
     if (F.empty())
+      continue;
+
+    // Disable outlining from noreturn functions right now. Noreturn requires
+    // special handling for the case where what we are outlining could be a
+    // tail call.
+    if (F.hasFnAttribute(Attribute::NoReturn))
       continue;
 
     // There's something in F. Check if it has a MachineFunction associated with

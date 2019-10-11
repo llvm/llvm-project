@@ -82,7 +82,7 @@ define <8 x i32> @t1_vec_splat_undef(<8 x i32> %x, <8 x i32> %nbits) {
 ; CHECK-NEXT:    call void @use8xi32(<8 x i32> [[T2]])
 ; CHECK-NEXT:    call void @use8xi32(<8 x i32> [[T4]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl <8 x i32> [[X:%.*]], [[T4]]
-; CHECK-NEXT:    [[T5:%.*]] = and <8 x i32> [[TMP1]], <i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647, i32 0, i32 2147483647>
+; CHECK-NEXT:    [[T5:%.*]] = and <8 x i32> [[TMP1]], <i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647, i32 undef, i32 2147483647>
 ; CHECK-NEXT:    ret <8 x i32> [[T5]]
 ;
   %t0 = add <8 x i32> %nbits, <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 undef, i32 -1>

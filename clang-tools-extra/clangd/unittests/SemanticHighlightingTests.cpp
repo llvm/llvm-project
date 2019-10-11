@@ -476,6 +476,20 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
         $Macro[[assert]]($Variable[[x]] != $Function[[f]]());
       }
     )cpp",
+      // highlighting all macro references
+      R"cpp(
+      #ifndef $Macro[[name]]
+      #define $Macro[[name]]
+      #endif
+
+      #define $Macro[[test]]
+      #undef $Macro[[test]]
+      #ifdef $Macro[[test]]
+      #endif
+
+      #if defined($Macro[[test]])
+      #endif
+    )cpp",
       R"cpp(
       struct $Class[[S]] {
         $Primitive[[float]] $Field[[Value]];

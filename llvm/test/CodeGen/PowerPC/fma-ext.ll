@@ -54,7 +54,6 @@ define double @test_FMSUB_EXT2(float %A, float %B, double %C) {
                                 
 ; CHECK-VSX-LABEL: test_FMSUB_EXT2:
 ; CHECK-VSX: xsnmsubmdp
-; CHECK-VSX-NEXT: fmr
 ; CHECK-VSX-NEXT: blr
 }
 

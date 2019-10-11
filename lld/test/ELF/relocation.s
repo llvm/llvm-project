@@ -46,6 +46,39 @@
 // SEC-NEXT:   EntrySize: 0
 // SEC-NEXT:   }
 
+.section .R_X86_64_64,"a",@progbits
+.global R_X86_64_64
+R_X86_64_64:
+ .quad R_X86_64_64
+
+// CHECK:      Contents of section .R_X86_64_64:
+// CHECK-NEXT:   2002f8 f8022000 00000000
+
+.section .R_X86_64_GOTPCREL,"a",@progbits
+.global R_X86_64_GOTPCREL
+R_X86_64_GOTPCREL:
+ .long zed@gotpcrel
+
+// 0x202460(.got) - 0x200300(.R_X86_64_GOTPCREL) = 0x2160
+// CHECK:      Contents of section .R_X86_64_GOTPCREL
+// CHECK-NEXT:   200300 60210000
+
+.section .R_X86_64_GOT32,"a",@progbits
+.global R_X86_64_GOT32
+R_X86_64_GOT32:
+        .long zed@got
+
+// CHECK: Contents of section .R_X86_64_GOT32:
+// CHECK-NEXT: f8efffff
+
+
+// CHECK: Contents of section .R_X86_64_GOT64:
+// CHECK-NEXT: f8efffff ffffffff
+.section .R_X86_64_GOT64,"a",@progbits
+.global R_X86_64_GOT64
+R_X86_64_GOT64:
+        .quad zed@got
+
 .section       .text,"ax",@progbits,unique,1
 .global _start
 _start:
@@ -111,36 +144,3 @@ R_X86_64_32S_2:
 // CHECK-EMPTY:
 // CHECK-NEXT: R_X86_64_32S_2:
 // CHECK-NEXT: 201331: {{.*}}  movl    2102112, %eax
-
-.section .R_X86_64_64,"a",@progbits
-.global R_X86_64_64
-R_X86_64_64:
- .quad R_X86_64_64
-
-// CHECK:      Contents of section .R_X86_64_64:
-// CHECK-NEXT:   2002f8 f8022000 00000000
-
-.section .R_X86_64_GOTPCREL,"a",@progbits
-.global R_X86_64_GOTPCREL
-R_X86_64_GOTPCREL:
- .long zed@gotpcrel
-
-// 0x202460(.got) - 0x200300(.R_X86_64_GOTPCREL) = 0x2160
-// CHECK:      Contents of section .R_X86_64_GOTPCREL
-// CHECK-NEXT:   200300 60210000
-
-.section .R_X86_64_GOT32,"a",@progbits
-.global R_X86_64_GOT32
-R_X86_64_GOT32:
-        .long zed@got
-
-// CHECK: Contents of section .R_X86_64_GOT32:
-// CHECK-NEXT: f8efffff
-
-
-// CHECK: Contents of section .R_X86_64_GOT64:
-// CHECK-NEXT: f8efffff ffffffff
-.section .R_X86_64_GOT64,"a",@progbits
-.global R_X86_64_GOT64
-R_X86_64_GOT64:
-        .quad zed@got

@@ -455,7 +455,7 @@ void RegisterBankInfo::applyDefaultMapping(const OperandsMapper &OpdMapper) {
            "This mapping is too complex for this function");
     iterator_range<SmallVectorImpl<Register>::const_iterator> NewRegs =
         OpdMapper.getVRegs(OpIdx);
-    if (empty(NewRegs)) {
+    if (NewRegs.empty()) {
       LLVM_DEBUG(dbgs() << " has not been repaired, nothing to be done\n");
       continue;
     }

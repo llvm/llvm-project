@@ -1781,7 +1781,7 @@ define float @debug_info(float %gamma, float %slopeLimit, i1 %or.cond, double %t
 ; ARM-NEXT:    vmov.f32 s0, #1.000000e+00
 ; ARM-NEXT:    vmov.f64 d16, #1.000000e+00
 ; ARM-NEXT:    vadd.f64 d16, d9, d16
-; ARM-NEXT:    vcmpe.f32 s16, s0
+; ARM-NEXT:    vcmp.f32 s16, s0
 ; ARM-NEXT:    vmrs APSR_nzcv, fpscr
 ; ARM-NEXT:    vmov d17, r0, r1
 ; ARM-NEXT:    vmov.f64 d18, d9
@@ -1828,7 +1828,7 @@ define float @debug_info(float %gamma, float %slopeLimit, i1 %or.cond, double %t
 ; THUMB-NEXT:    vmov.f32 s0, #1.000000e+00
 ; THUMB-NEXT:    vmov.f64 d16, #1.000000e+00
 ; THUMB-NEXT:    vmov.f64 d18, d9
-; THUMB-NEXT:    vcmpe.f32 s16, s0
+; THUMB-NEXT:    vcmp.f32 s16, s0
 ; THUMB-NEXT:    vadd.f64 d16, d9, d16
 ; THUMB-NEXT:    vmrs APSR_nzcv, fpscr
 ; THUMB-NEXT:    it gt

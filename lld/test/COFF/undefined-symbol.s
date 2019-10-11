@@ -20,7 +20,7 @@
 # CHECK-NEXT: error: undefined symbol: __declspec(dllimport) int __cdecl baz(void)
 # CHECK-NEXT: >>> referenced by {{.*}}.obj:(f2)
 # CHECK-EMPTY:
-# CHECK-NEXT: error: undefined symbol: __imp_undecorated
+# CHECK-NEXT: error: undefined symbol: __declspec(dllimport) undecorated
 # CHECK-NEXT: >>> referenced by {{.*}}.obj:(f2)
 
         .section        .text,"xr",one_only,main

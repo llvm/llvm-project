@@ -488,9 +488,8 @@ namespace instantiation_dependent {
   template<typename T, __typeof(sizeof(0))> int &f(...);
   int &rf = f<struct incomplete, 0>(0);
 
-  // FIXME: This fails because we mishandle instantiation-dependent array bounds :(
   int arr[sizeof(sizeof(int))];
   template<typename T, int (*)[sizeof(sizeof(T))]> void g(int);
   template<typename T, int (*)[sizeof(sizeof(int))]> int &g(...);
-  int &rg = g<struct incomplete, &arr>(0); // expected-error {{cannot bind}}
+  int &rg = g<struct incomplete, &arr>(0);
 }

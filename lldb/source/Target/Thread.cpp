@@ -13,6 +13,7 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/FormatEntity.h"
 #include "lldb/Core/Module.h"
+#include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Interpreter/OptionValueFileSpecList.h"
@@ -1482,9 +1483,18 @@ ThreadPlanSP Thread::QueueThreadPlanForStepUntil(
 }
 
 lldb::ThreadPlanSP Thread::QueueThreadPlanForStepScripted(
-    bool abort_other_plans, const char *class_name, bool stop_other_threads,
+    bool abort_other_plans, const char *class_name, 
+    StructuredData::ObjectSP extra_args_sp,  bool stop_other_threads,
     Status &status) {
-  ThreadPlanSP thread_plan_sp(new ThreadPlanPython(*this, class_name));
+    
+  StructuredDataImpl *extra_args_impl = nullptr; 
+  if (extra_args_sp) {
+    extra_args_impl = new StructuredDataImpl();
+    extra_args_impl->SetObjectSP(extra_args_sp);
+  }
+
+  ThreadPlanSP thread_plan_sp(new ThreadPlanPython(*this, class_name, 
+                                                   extra_args_impl));
 
   status = QueueThreadPlan(thread_plan_sp, abort_other_plans);
   return thread_plan_sp;

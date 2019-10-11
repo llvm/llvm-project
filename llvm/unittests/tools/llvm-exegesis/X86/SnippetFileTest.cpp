@@ -78,8 +78,8 @@ TEST_F(X86SnippetFileTest, Works) {
   EXPECT_FALSE((bool)Snippets.takeError());
   ASSERT_THAT(*Snippets, SizeIs(1));
   const auto &Snippet = (*Snippets)[0];
-  ASSERT_THAT(Snippet.Instructions, ElementsAre(HasOpcode(X86::INC64r)));
-  ASSERT_THAT(Snippet.RegisterInitialValues,
+  ASSERT_THAT(Snippet.Key.Instructions, ElementsAre(HasOpcode(X86::INC64r)));
+  ASSERT_THAT(Snippet.Key.RegisterInitialValues,
               ElementsAre(RegisterInitialValueIs(X86::RAX, 15),
                           RegisterInitialValueIs(X86::SIL, 0)));
   ASSERT_THAT(Snippet.LiveIns, ElementsAre(X86::RDI, X86::DL));

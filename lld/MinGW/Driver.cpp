@@ -216,6 +216,8 @@ bool mingw::link(ArrayRef<const char *> argsArr, raw_ostream &diag) {
     add("-base:" + StringRef(a->getValue()));
   if (auto *a = args.getLastArg(OPT_map))
     add("-lldmap:" + StringRef(a->getValue()));
+  if (auto *a = args.getLastArg(OPT_reproduce))
+    add("-reproduce:" + StringRef(a->getValue()));
 
   if (auto *a = args.getLastArg(OPT_o))
     add("-out:" + StringRef(a->getValue()));

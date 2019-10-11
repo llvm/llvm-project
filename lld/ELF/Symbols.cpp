@@ -23,9 +23,20 @@ using namespace llvm;
 using namespace llvm::object;
 using namespace llvm::ELF;
 
-using namespace lld;
-using namespace lld::elf;
+namespace lld {
+// Returns a symbol for an error message.
+static std::string demangle(StringRef symName) {
+  if (elf::config->demangle)
+    return demangleItanium(symName);
+  return symName;
+}
 
+std::string toString(const elf::Symbol &b) { return demangle(b.getName()); }
+std::string toELFString(const Archive::Symbol &b) {
+  return demangle(b.getName());
+}
+
+namespace elf {
 Defined *ElfSym::bss;
 Defined *ElfSym::etext1;
 Defined *ElfSym::etext2;
@@ -41,19 +52,6 @@ Defined *ElfSym::relaIpltStart;
 Defined *ElfSym::relaIpltEnd;
 Defined *ElfSym::riscvGlobalPointer;
 Defined *ElfSym::tlsModuleBase;
-
-// Returns a symbol for an error message.
-static std::string demangle(StringRef symName) {
-  if (config->demangle)
-    return demangleItanium(symName);
-  return symName;
-}
-namespace lld {
-std::string toString(const Symbol &b) { return demangle(b.getName()); }
-std::string toELFString(const Archive::Symbol &b) {
-  return demangle(b.getName());
-}
-} // namespace lld
 
 static uint64_t getSymVA(const Symbol &sym, int64_t &addend) {
   switch (sym.kind()) {
@@ -298,7 +296,7 @@ bool Symbol::includeInDynsym() const {
 }
 
 // Print out a log message for --trace-symbol.
-void elf::printTraceSymbol(const Symbol *sym) {
+void printTraceSymbol(const Symbol *sym) {
   std::string s;
   if (sym->isUndefined())
     s = ": reference to ";
@@ -314,7 +312,7 @@ void elf::printTraceSymbol(const Symbol *sym) {
   message(toString(sym->file) + s + sym->getName());
 }
 
-void elf::maybeWarnUnorderableSymbol(const Symbol *sym) {
+void maybeWarnUnorderableSymbol(const Symbol *sym) {
   if (!config->warnSymbolOrdering)
     return;
 
@@ -655,3 +653,6 @@ void Symbol::resolveShared(const SharedSymbol &other) {
     referenced = true;
   }
 }
+
+} // namespace elf
+} // namespace lld

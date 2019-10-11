@@ -1,5 +1,6 @@
 include(CheckCXXSymbolExists)
 include(CheckTypeSize)
+include(CMakeDependentOption)
 
 set(LLDB_PROJECT_ROOT ${CMAKE_CURRENT_SOURCE_DIR})
 set(LLDB_SOURCE_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/source")
@@ -266,10 +267,15 @@ function(find_python_libs_windows)
   message(STATUS "LLDB Found PythonIncludeDirs: ${PYTHON_INCLUDE_DIR}")
 endfunction(find_python_libs_windows)
 
+# Call find_python_libs_windows ahead of the rest of the python configuration.
+# It's possible that it won't find a python installation and will then set
+# LLDB_DISABLE_PYTHON to ON.
+if (NOT LLDB_DISABLE_PYTHON AND "${CMAKE_SYSTEM_NAME}" STREQUAL "Windows")
+  find_python_libs_windows()
+endif()
+
 if (NOT LLDB_DISABLE_PYTHON)
   if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Windows")
-    find_python_libs_windows()
-
     if (NOT LLDB_RELOCATABLE_PYTHON)
       file(TO_CMAKE_PATH "${PYTHON_HOME}" LLDB_PYTHON_HOME)
       add_definitions( -DLLDB_PYTHON_HOME="${LLDB_PYTHON_HOME}" )
@@ -383,6 +389,13 @@ if(NOT DEFINED LLDB_VERSION_SUFFIX)
 endif()
 set(LLDB_VERSION "${LLDB_VERSION_MAJOR}.${LLDB_VERSION_MINOR}.${LLDB_VERSION_PATCH}${LLDB_VERSION_SUFFIX}")
 message(STATUS "LLDB version: ${LLDB_VERSION}")
+
+find_package(LibLZMA)
+cmake_dependent_option(LLDB_ENABLE_LZMA "Support LZMA compression" ON "LIBLZMA_FOUND" OFF)
+if (LLDB_ENABLE_LZMA)
+  include_directories(${LIBLZMA_INCLUDE_DIRS})
+endif()
+llvm_canonicalize_cmake_booleans(LLDB_ENABLE_LZMA)
 
 include_directories(BEFORE
   ${CMAKE_CURRENT_BINARY_DIR}/include

@@ -102,6 +102,10 @@ public:
 
 private:
   void handleCXXRecordDecl(const CXXRecordDecl *RecordDecl) {
+    if (!RecordDecl->getDefinition()) {
+      USRSet.insert(getUSRForDecl(RecordDecl));
+      return;
+    }
     RecordDecl = RecordDecl->getDefinition();
     if (const auto *ClassTemplateSpecDecl =
             dyn_cast<ClassTemplateSpecializationDecl>(RecordDecl))

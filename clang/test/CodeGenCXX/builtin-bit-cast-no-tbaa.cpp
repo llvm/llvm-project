@@ -15,5 +15,10 @@ void test_scalar2() {
   // CHECK: load i32, i32* {{.*}}, align 4, !tbaa ![[MAY_ALIAS_TBAA]]
 }
 
+int test_same_type(int &r) {
+  // CHECK: load i32, i32* {{.*}}, align 4, !tbaa ![[MAY_ALIAS_TBAA]]
+  return __builtin_bit_cast(int, r);
+}
+
 // CHECK: ![[CHAR_TBAA:.*]] = !{!"omnipotent char", {{.*}}, i64 0}
 // CHECK: ![[MAY_ALIAS_TBAA]] = !{![[CHAR_TBAA]], ![[CHAR_TBAA]], i64 0}

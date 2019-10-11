@@ -492,6 +492,10 @@ class Instruction : InstructionEncoding {
   // Added complexity passed onto matching pattern.
   int AddedComplexity  = 0;
 
+  // Indicates if this is a pre-isel opcode that should be
+  // legalized/regbankselected/selected.
+  bit isPreISelOpcode = 0;
+
   // These bits capture information about the high-level semantics of the
   // instruction.
   bit isReturn     = 0;     // Is this instruction a return instruction?

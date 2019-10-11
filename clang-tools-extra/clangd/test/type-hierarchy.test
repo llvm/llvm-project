@@ -32,7 +32,7 @@
 # CHECK-NEXT:            "line": 3
 # CHECK-NEXT:          }
 # CHECK-NEXT:        },
-# CHECK-NEXT:        "uri": "file:///clangd-test/main.cpp"
+# CHECK-NEXT:        "uri": "file://{{.*}}/clangd-test/main.cpp"
 # CHECK-NEXT:      }
 # CHECK-NEXT:    ],
 # CHECK-NEXT:    "kind": 23,
@@ -66,7 +66,7 @@
 # CHECK-NEXT:                "line": 0
 # CHECK-NEXT:              }
 # CHECK-NEXT:            },
-# CHECK-NEXT:            "uri": "file:///clangd-test/main.cpp"
+# CHECK-NEXT:            "uri": "file://{{.*}}/clangd-test/main.cpp"
 # CHECK-NEXT:          }
 # CHECK-NEXT:        ],
 # CHECK-NEXT:        "range": {
@@ -89,7 +89,7 @@
 # CHECK-NEXT:            "line": 1
 # CHECK-NEXT:          }
 # CHECK-NEXT:        },
-# CHECK-NEXT:        "uri": "file:///clangd-test/main.cpp"
+# CHECK-NEXT:        "uri": "file://{{.*}}/clangd-test/main.cpp"
 # CHECK-NEXT:      }
 # CHECK-NEXT:    ],
 # CHECK-NEXT:    "range": {
@@ -112,7 +112,7 @@
 # CHECK-NEXT:        "line": 2
 # CHECK-NEXT:      }
 # CHECK-NEXT:    },
-# CHECK-NEXT:    "uri": "file:///clangd-test/main.cpp"
+# CHECK-NEXT:    "uri": "file://{{.*}}/clangd-test/main.cpp"
 # CHECK-NEXT:  }
 ---
 {"jsonrpc":"2.0","id":2,"method":"typeHierarchy/resolve","params":{"item":{"uri":"test:///main.cpp","data":"A6576FE083F2949A","name":"Child3","kind":23,"range":{"end":{"character":13,"line":3},"start":{"character":7,"line":3}},"selectionRange":{"end":{"character":13,"line":3},"start":{"character":7,"line":3}}},"direction":0,"resolve":1}}
@@ -144,7 +144,7 @@
 # CHECK-NEXT:            "line": 4
 # CHECK-NEXT:          }
 # CHECK-NEXT:        },
-# CHECK-NEXT:        "uri": "file:///clangd-test/main.cpp"
+# CHECK-NEXT:        "uri": "file://{{.*}}/clangd-test/main.cpp"
 # CHECK-NEXT:      }
 # CHECK-NEXT:    ],
 # CHECK-NEXT:    "data": "A6576FE083F2949A",
@@ -170,7 +170,7 @@
 # CHECK-NEXT:        "line": 3
 # CHECK-NEXT:      }
 # CHECK-NEXT:    },
-# CHECK-NEXT:    "uri": "file:///clangd-test/main.cpp"
+# CHECK-NEXT:    "uri": "file://{{.*}}/clangd-test/main.cpp"
 # CHECK-NEXT:  }
 ---
 {"jsonrpc":"2.0","id":3,"method":"shutdown"}

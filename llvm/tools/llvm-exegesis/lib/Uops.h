@@ -22,7 +22,7 @@ namespace exegesis {
 
 class UopsSnippetGenerator : public SnippetGenerator {
 public:
-  UopsSnippetGenerator(const LLVMState &State) : SnippetGenerator(State) {}
+  using SnippetGenerator::SnippetGenerator;
   ~UopsSnippetGenerator() override;
 
   llvm::Expected<std::vector<CodeTemplate>>

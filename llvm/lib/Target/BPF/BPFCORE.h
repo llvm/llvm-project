@@ -13,6 +13,16 @@ namespace llvm {
 
 class BPFCoreSharedInfo {
 public:
+  enum OffsetRelocKind : uint32_t {
+    FIELD_BYTE_OFFSET = 0,
+    FIELD_BYTE_SIZE,
+    FIELD_EXISTENCE,
+    FIELD_SIGNEDNESS,
+    FIELD_LSHIFT_U64,
+    FIELD_RSHIFT_U64,
+
+    MAX_FIELD_RELOC_KIND,
+  };
   /// The attribute attached to globals representing a member offset
   static const std::string AmaAttr;
   /// The section name to identify a patchable external global

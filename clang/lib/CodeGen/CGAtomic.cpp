@@ -102,8 +102,9 @@ namespace {
           llvm::APInt Size(
               /*numBits=*/32,
               C.toCharUnitsFromBits(AtomicSizeInBits).getQuantity());
-          AtomicTy = C.getConstantArrayType(C.CharTy, Size, ArrayType::Normal,
-                                            /*IndexTypeQuals=*/0);
+          AtomicTy =
+              C.getConstantArrayType(C.CharTy, Size, nullptr, ArrayType::Normal,
+                                     /*IndexTypeQuals=*/0);
         }
         AtomicAlign = ValueAlign = lvalue.getAlignment();
       } else if (lvalue.isVectorElt()) {
@@ -969,7 +970,7 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
     auto CastToGenericAddrSpace = [&](llvm::Value *V, QualType PT) {
       if (!E->isOpenCL())
         return V;
-      auto AS = PT->getAs<PointerType>()->getPointeeType().getAddressSpace();
+      auto AS = PT->castAs<PointerType>()->getPointeeType().getAddressSpace();
       if (AS == LangAS::opencl_generic)
         return V;
       auto DestAS = getContext().getTargetAddressSpace(LangAS::opencl_generic);

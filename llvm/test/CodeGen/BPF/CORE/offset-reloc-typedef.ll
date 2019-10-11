@@ -45,12 +45,13 @@ entry:
 ; CHECK-NEXT:    .byte   0
 ; CHECK:         .ascii  "1:1:1"                 # string offset=[[ACCESS_STR:[0-9]+]]
 ; CHECK-NEXT:    .byte   0
-; CHECK:         .long   12                      # OffsetReloc
-; CHECK-NEXT:    .long   [[SEC_STR:[0-9]+]]      # Offset reloc section string offset=[[SEC_STR:[0-9]+]]
+; CHECK:         .long   16                      # FieldReloc
+; CHECK-NEXT:    .long   [[SEC_STR:[0-9]+]]      # Field reloc section string offset=[[SEC_STR:[0-9]+]]
 ; CHECK-NEXT:    .long   1
 ; CHECK-NEXT:    .long   [[RELOC:.Ltmp[0-9]+]]
 ; CHECK-NEXT:    .long   [[TYPE_ID:[0-9]+]]
 ; CHECK-NEXT:    .long   [[ACCESS_STR:[0-9]+]]
+; CHECK-NEXT:    .long   0
 
 declare dso_local i32 @get_value(i8*) local_unnamed_addr #1
 

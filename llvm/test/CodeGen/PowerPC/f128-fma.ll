@@ -129,7 +129,7 @@ entry:
 ; CHECK-DAG: lxv v[[REG3:[0-9]+]], 0(r3)
 ; CHECK-DAG: lxv v[[REG4:[0-9]+]], 0(r4)
 ; CHECK-DAG: lxv v[[REG5:[0-9]+]], 0(r5)
-; CHECK: xsnmsubqp v[[REG3]], v[[REG5]], v[[REG4]]
+; CHECK: xsnmsubqp v[[REG3]], v[[REG4]], v[[REG5]]
 ; CHECK-NEXT: stxv v[[REG3]], 0(r6)
 ; CHECK-NEXT: blr
 }

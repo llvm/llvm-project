@@ -194,7 +194,7 @@ define float @foo_loop(%swift_error** swifterror %error_ptr_ref, i32 %cc, float 
 ; CHECK-O0: strb [[ID2]], [{{.*}}[[ID]], #8]
 ; spill r0
 ; CHECK-O0: str r0, [sp{{.*}}]
-; CHECK-O0: vcmpe
+; CHECK-O0: vcmp
 ; CHECK-O0: ble
 ; reload from stack
 ; CHECK-O0: ldr r8

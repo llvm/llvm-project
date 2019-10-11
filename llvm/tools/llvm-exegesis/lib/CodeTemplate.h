@@ -115,6 +115,8 @@ struct CodeTemplate {
   CodeTemplate &operator=(const CodeTemplate &) = delete;
 
   ExecutionMode Execution = ExecutionMode::UNKNOWN;
+  // See InstructionBenchmarkKey.::Config.
+  std::string Config;
   // Some information about how this template has been created.
   std::string Info;
   // The list of the instructions for this template.

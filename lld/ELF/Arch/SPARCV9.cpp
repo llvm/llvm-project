@@ -16,8 +16,9 @@
 using namespace llvm;
 using namespace llvm::support::endian;
 using namespace llvm::ELF;
-using namespace lld;
-using namespace lld::elf;
+
+namespace lld {
+namespace elf {
 
 namespace {
 class SPARCV9 final : public TargetInfo {
@@ -143,7 +144,10 @@ void SPARCV9::writePlt(uint8_t *buf, uint64_t gotEntryAddr,
   relocateOne(buf + 4, R_SPARC_WDISP19, -(off + 4 - pltEntrySize));
 }
 
-TargetInfo *elf::getSPARCV9TargetInfo() {
+TargetInfo *getSPARCV9TargetInfo() {
   static SPARCV9 target;
   return &target;
 }
+
+} // namespace elf
+} // namespace lld

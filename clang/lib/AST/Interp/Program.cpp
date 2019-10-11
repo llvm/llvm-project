@@ -123,7 +123,7 @@ llvm::Optional<unsigned> Program::getOrCreateDummy(const ParmVarDecl *PD) {
   auto &ASTCtx = Ctx.getASTContext();
 
   // Create a pointer to an incomplete array of the specified elements.
-  QualType ElemTy = PD->getType()->getAs<PointerType>()->getPointeeType();
+  QualType ElemTy = PD->getType()->castAs<PointerType>()->getPointeeType();
   QualType Ty = ASTCtx.getIncompleteArrayType(ElemTy, ArrayType::Normal, 0);
 
   // Dedup blocks since they are immutable and pointers cannot be compared.

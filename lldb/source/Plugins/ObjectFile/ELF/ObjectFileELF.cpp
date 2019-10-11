@@ -18,6 +18,7 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Host/FileSystem.h"
+#include "lldb/Host/LZMA.h"
 #include "lldb/Symbol/DWARFCallFrameInfo.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Target/SectionLoadList.h"
@@ -1842,6 +1843,70 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
   // unified section list.
   if (GetType() != eTypeDebugInfo)
     unified_section_list = *m_sections_up;
+  
+  // If there's a .gnu_debugdata section, we'll try to read the .symtab that's
+  // embedded in there and replace the one in the original object file (if any).
+  // If there's none in the orignal object file, we add it to it.
+  if (auto gdd_obj_file = GetGnuDebugDataObjectFile()) {
+    if (auto gdd_objfile_section_list = gdd_obj_file->GetSectionList()) {
+      if (SectionSP symtab_section_sp =
+              gdd_objfile_section_list->FindSectionByType(
+                  eSectionTypeELFSymbolTable, true)) {
+        SectionSP module_section_sp = unified_section_list.FindSectionByType(
+            eSectionTypeELFSymbolTable, true);
+        if (module_section_sp)
+          unified_section_list.ReplaceSection(module_section_sp->GetID(),
+                                              symtab_section_sp);
+        else
+          unified_section_list.AddSection(symtab_section_sp);
+      }
+    }
+  }  
+}
+
+std::shared_ptr<ObjectFileELF> ObjectFileELF::GetGnuDebugDataObjectFile() {
+  if (m_gnu_debug_data_object_file != nullptr)
+    return m_gnu_debug_data_object_file;
+
+  SectionSP section =
+      GetSectionList()->FindSectionByName(ConstString(".gnu_debugdata"));
+  if (!section)
+    return nullptr;
+
+  if (!lldb_private::lzma::isAvailable()) {
+    GetModule()->ReportWarning(
+        "No LZMA support found for reading .gnu_debugdata section");
+    return nullptr;
+  }
+
+  // Uncompress the data
+  DataExtractor data;
+  section->GetSectionData(data);
+  llvm::SmallVector<uint8_t, 0> uncompressedData;
+  auto err = lldb_private::lzma::uncompress(data.GetData(), uncompressedData);
+  if (err) {
+    GetModule()->ReportWarning(
+        "An error occurred while decompression the section %s: %s",
+        section->GetName().AsCString(), llvm::toString(std::move(err)).c_str());
+    return nullptr;
+  }
+
+  // Construct ObjectFileELF object from decompressed buffer
+  DataBufferSP gdd_data_buf(
+      new DataBufferHeap(uncompressedData.data(), uncompressedData.size()));
+  auto fspec = GetFileSpec().CopyByAppendingPathComponent(
+      llvm::StringRef("gnu_debugdata"));
+  m_gnu_debug_data_object_file.reset(new ObjectFileELF(
+      GetModule(), gdd_data_buf, 0, &fspec, 0, gdd_data_buf->GetByteSize()));
+
+  // This line is essential; otherwise a breakpoint can be set but not hit.
+  m_gnu_debug_data_object_file->SetType(ObjectFile::eTypeDebugInfo);
+
+  ArchSpec spec = m_gnu_debug_data_object_file->GetArchitecture();
+  if (spec && m_gnu_debug_data_object_file->SetModulesArchitecture(spec))
+    return m_gnu_debug_data_object_file;
+  
+  return nullptr;
 }
 
 // Find the arm/aarch64 mapping symbol character in the given symbol name.
@@ -2649,17 +2714,27 @@ Symtab *ObjectFileELF::GetSymtab() {
     // while the reverse is not necessarily true.
     Section *symtab =
         section_list->FindSectionByType(eSectionTypeELFSymbolTable, true).get();
-    if (!symtab) {
-      // The symtab section is non-allocable and can be stripped, so if it
-      // doesn't exist then use the dynsym section which should always be
-      // there.
-      symtab =
-          section_list->FindSectionByType(eSectionTypeELFDynamicSymbols, true)
-              .get();
-    }
     if (symtab) {
       m_symtab_up.reset(new Symtab(symtab->GetObjectFile()));
       symbol_id += ParseSymbolTable(m_symtab_up.get(), symbol_id, symtab);
+    }
+
+    // The symtab section is non-allocable and can be stripped, while the
+    // .dynsym section which should always be always be there. To support the
+    // minidebuginfo case we parse .dynsym when there's a .gnu_debuginfo
+    // section, nomatter if .symtab was already parsed or not. This is because
+    // minidebuginfo normally removes the .symtab symbols which have their
+    // matching .dynsym counterparts.
+    if (!symtab ||
+        GetSectionList()->FindSectionByName(ConstString(".gnu_debugdata"))) {
+      Section *dynsym =
+          section_list->FindSectionByType(eSectionTypeELFDynamicSymbols, true)
+              .get();
+      if (dynsym) {
+        if (!m_symtab_up)
+          m_symtab_up.reset(new Symtab(dynsym->GetObjectFile()));
+        symbol_id += ParseSymbolTable(m_symtab_up.get(), symbol_id, dynsym);
+      }
     }
 
     // DT_JMPREL
@@ -2702,6 +2777,51 @@ Symtab *ObjectFileELF::GetSymtab() {
     // do the section lookup next time.
     if (m_symtab_up == nullptr)
       m_symtab_up.reset(new Symtab(this));
+
+    // In the event that there's no symbol entry for the entry point we'll
+    // artifically create one. We delegate to the symtab object the figuring
+    // out of the proper size, this will usually make it span til the next
+    // symbol it finds in the section. This means that if there are missing
+    // symbols the entry point might span beyond its function definition.
+    // We're fine with this as it doesn't make it worse than not having a
+    // symbol entry at all.
+    if (CalculateType() == eTypeExecutable) {
+      ArchSpec arch = GetArchitecture();
+      auto entry_point_addr = GetEntryPointAddress();
+      bool is_valid_entry_point =
+          entry_point_addr.IsValid() && entry_point_addr.IsSectionOffset();
+      addr_t entry_point_file_addr = entry_point_addr.GetFileAddress();
+      if (is_valid_entry_point && !m_symtab_up->FindSymbolContainingFileAddress(
+                                      entry_point_file_addr)) {
+        uint64_t symbol_id = m_symtab_up->GetNumSymbols();
+        Symbol symbol(symbol_id,
+                      GetNextSyntheticSymbolName().GetCString(), // Symbol name.
+                      false,           // Is the symbol name mangled?
+                      eSymbolTypeCode, // Type of this symbol.
+                      true,            // Is this globally visible?
+                      false,           // Is this symbol debug info?
+                      false,           // Is this symbol a trampoline?
+                      true,            // Is this symbol artificial?
+                      entry_point_addr.GetSection(), // Section where this
+                                                     // symbol is defined.
+                      0,     // Offset in section or symbol value.
+                      0,     // Size.
+                      false, // Size is valid.
+                      false, // Contains linker annotations?
+                      0);    // Symbol flags.
+        m_symtab_up->AddSymbol(symbol);
+        // When the entry point is arm thumb we need to explicitly set its
+        // class address to reflect that. This is important because expression
+        // evaluation relies on correctly setting a breakpoint at this
+        // address.
+        if (arch.GetMachine() == llvm::Triple::arm &&
+            (entry_point_file_addr & 1))
+          m_address_class_map[entry_point_file_addr ^ 1] =
+              AddressClass::eCodeAlternateISA;
+        else
+          m_address_class_map[entry_point_file_addr] = AddressClass::eCode;
+      }
+    }
 
     m_symtab_up->CalculateSymbolSizes();
   }

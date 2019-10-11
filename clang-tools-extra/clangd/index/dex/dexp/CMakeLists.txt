@@ -9,8 +9,11 @@ add_clang_executable(dexp
   Dexp.cpp
   )
 
-target_link_libraries(dexp
+clang_target_link_libraries(dexp
   PRIVATE
   clangBasic
+  )
+target_link_libraries(dexp
+  PRIVATE
   clangDaemon
   )

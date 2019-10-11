@@ -169,13 +169,15 @@ void ProcessInstanceInfo::DumpTableHeader(Stream &s, bool show_args,
 
   if (verbose) {
     s.Printf("PID    PARENT USER       GROUP      EFF USER   EFF GROUP  TRIPLE "
-             "                  %s\n",
+             "                        %s\n",
              label);
-    s.PutCString("====== ====== ========== ========== ========== ========== "
-                 "======================== ============================\n");
+    s.PutCString(
+        "====== ====== ========== ========== ========== ========== "
+        "============================== ============================\n");
   } else {
-    s.Printf("PID    PARENT USER       TRIPLE                   %s\n", label);
-    s.PutCString("====== ====== ========== ======================== "
+    s.Printf("PID    PARENT USER       TRIPLE                         %s\n",
+             label);
+    s.PutCString("====== ====== ========== ============================== "
                  "============================\n");
   }
 }
@@ -216,12 +218,12 @@ void ProcessInstanceInfo::DumpAsTableRow(Stream &s, UserIDResolver &resolver,
             &ProcessInstanceInfo::GetEffectiveGroupID,
             &UserIDResolver::GetGroupName);
 
-      s.Printf("%-24s ", arch_strm.GetData());
+      s.Printf("%-30s ", arch_strm.GetData());
     } else {
       print(&ProcessInstanceInfo::EffectiveUserIDIsValid,
             &ProcessInstanceInfo::GetEffectiveUserID,
             &UserIDResolver::GetUserName);
-      s.Printf("%-24s ", arch_strm.GetData());
+      s.Printf("%-30s ", arch_strm.GetData());
     }
 
     if (verbose || show_args) {

@@ -101,7 +101,7 @@ template <class Config> static void testAllocator() {
   // returns the same chunk. This requires that all the sizes we iterate on use
   // the same block size, but that should be the case for 2048 with our default
   // class size maps.
-  P  = Allocator->allocate(DataSize, Origin);
+  P = Allocator->allocate(DataSize, Origin);
   memset(P, Marker, DataSize);
   for (scudo::sptr Delta = -32; Delta < 32; Delta += 8) {
     const scudo::uptr NewSize = DataSize + Delta;

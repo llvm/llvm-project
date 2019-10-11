@@ -1188,6 +1188,10 @@ SUnit *ScheduleDAGRRList::CopyAndMoveSuccessors(SUnit *SU) {
     if (!Pred.isArtificial())
       AddPredQueued(NewSU, Pred);
 
+  // Make sure the clone comes after the original. (InstrEmitter assumes
+  // this ordering.)
+  AddPredQueued(NewSU, SDep(SU, SDep::Artificial));
+
   // Only copy scheduled successors. Cut them from old node's successor
   // list and move them over.
   SmallVector<std::pair<SUnit *, SDep>, 4> DelDeps;

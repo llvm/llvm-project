@@ -8,6 +8,7 @@
 
 #include "llvm/Transforms/Utils/CodeExtractor.h"
 #include "llvm/AsmParser/Parser.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
@@ -61,7 +62,8 @@ TEST(CodeExtractor, ExitStub) {
   CodeExtractor CE(Candidates);
   EXPECT_TRUE(CE.isEligible());
 
-  Function *Outlined = CE.extractCodeRegion();
+  CodeExtractorAnalysisCache CEAC(*Func);
+  Function *Outlined = CE.extractCodeRegion(CEAC);
   EXPECT_TRUE(Outlined);
   BasicBlock *Exit = getBlockByName(Func, "notExtracted");
   BasicBlock *ExitSplit = getBlockByName(Outlined, "notExtracted.split");
@@ -111,7 +113,8 @@ TEST(CodeExtractor, ExitPHIOnePredFromRegion) {
   CodeExtractor CE(ExtractedBlocks);
   EXPECT_TRUE(CE.isEligible());
 
-  Function *Outlined = CE.extractCodeRegion();
+  CodeExtractorAnalysisCache CEAC(*Func);
+  Function *Outlined = CE.extractCodeRegion(CEAC);
   EXPECT_TRUE(Outlined);
   BasicBlock *Exit1 = getBlockByName(Func, "exit1");
   BasicBlock *Exit2 = getBlockByName(Func, "exit2");
@@ -185,7 +188,8 @@ TEST(CodeExtractor, StoreOutputInvokeResultAfterEHPad) {
   CodeExtractor CE(ExtractedBlocks);
   EXPECT_TRUE(CE.isEligible());
 
-  Function *Outlined = CE.extractCodeRegion();
+  CodeExtractorAnalysisCache CEAC(*Func);
+  Function *Outlined = CE.extractCodeRegion(CEAC);
   EXPECT_TRUE(Outlined);
   EXPECT_FALSE(verifyFunction(*Outlined, &errs()));
   EXPECT_FALSE(verifyFunction(*Func, &errs()));
@@ -219,10 +223,63 @@ TEST(CodeExtractor, StoreOutputInvokeResultInExitStub) {
   CodeExtractor CE(Blocks);
   EXPECT_TRUE(CE.isEligible());
 
-  Function *Outlined = CE.extractCodeRegion();
+  CodeExtractorAnalysisCache CEAC(*Func);
+  Function *Outlined = CE.extractCodeRegion(CEAC);
   EXPECT_TRUE(Outlined);
   EXPECT_FALSE(verifyFunction(*Outlined));
   EXPECT_FALSE(verifyFunction(*Func));
 }
 
+TEST(CodeExtractor, ExtractAndInvalidateAssumptionCache) {
+  LLVMContext Ctx;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M(parseAssemblyString(R"ir(
+        target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+        target triple = "aarch64"
+
+        %b = type { i64 }
+        declare void @g(i8*)
+
+        declare void @llvm.assume(i1) #0
+
+        define void @test() {
+        entry:
+          br label %label
+
+        label:
+          %0 = load %b*, %b** inttoptr (i64 8 to %b**), align 8
+          %1 = getelementptr inbounds %b, %b* %0, i64 undef, i32 0
+          %2 = load i64, i64* %1, align 8
+          %3 = icmp ugt i64 %2, 1
+          br i1 %3, label %if.then, label %if.else
+
+        if.then:
+          unreachable
+
+        if.else:
+          call void @g(i8* undef)
+          store i64 undef, i64* null, align 536870912
+          %4 = icmp eq i64 %2, 0
+          call void @llvm.assume(i1 %4)
+          unreachable
+        }
+
+        attributes #0 = { nounwind willreturn }
+  )ir",
+                                                Err, Ctx));
+
+  assert(M && "Could not parse module?");
+  Function *Func = M->getFunction("test");
+  SmallVector<BasicBlock *, 1> Blocks{ getBlockByName(Func, "if.else") };
+  AssumptionCache AC(*Func);
+  CodeExtractor CE(Blocks, nullptr, false, nullptr, nullptr, &AC);
+  EXPECT_TRUE(CE.isEligible());
+
+  CodeExtractorAnalysisCache CEAC(*Func);
+  Function *Outlined = CE.extractCodeRegion(CEAC);
+  EXPECT_TRUE(Outlined);
+  EXPECT_FALSE(verifyFunction(*Outlined));
+  EXPECT_FALSE(verifyFunction(*Func));
+  EXPECT_FALSE(CE.verifyAssumptionCache(*Func, &AC));
+}
 } // end anonymous namespace

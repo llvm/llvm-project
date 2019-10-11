@@ -79,7 +79,7 @@ void test(unsigned a, unsigned b) {
   res = 2 ^ 32; // expected-warning {{result of '2 ^ 32' is 34; did you mean '1LL << 32'?}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:9-[[@LINE-1]]:15}:"1LL << 32"
   // expected-note@-2 {{replace expression with '0x2 ^ 32' or use 'xor' instead of '^' to silence this warning}}
-  res = 2 ^ 64; // expected-warning {{result of '2 ^ 64' is 66; did you mean an exponentiation?}}
+  res = 2 ^ 64; // expected-warning {{result of '2 ^ 64' is 66; did you mean exponentiation?}}
   // expected-note@-1 {{replace expression with '0x2 ^ 64' or use 'xor' instead of '^' to silence this warning}}
   res = 2 ^ 65;
 

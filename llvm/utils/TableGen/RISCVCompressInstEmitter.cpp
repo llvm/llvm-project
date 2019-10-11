@@ -411,12 +411,8 @@ void RISCVCompressInstEmitter::evaluateCompressPat(Record *Rec) {
   assert(SourceDag && "Missing 'Input' in compress pattern!");
   LLVM_DEBUG(dbgs() << "Input: " << *SourceDag << "\n");
 
-  DefInit *OpDef = dyn_cast<DefInit>(SourceDag->getOperator());
-  if (!OpDef)
-    PrintFatalError(Rec->getLoc(),
-                    Rec->getName() + " has unexpected operator type!");
   // Checking we are transforming from compressed to uncompressed instructions.
-  Record *Operator = OpDef->getDef();
+  Record *Operator = SourceDag->getOperatorAsDef(Rec->getLoc());
   if (!Operator->isSubClassOf("RVInst"))
     PrintFatalError(Rec->getLoc(), "Input instruction '" + Operator->getName() +
                                        "' is not a 32 bit wide instruction!");
@@ -428,12 +424,7 @@ void RISCVCompressInstEmitter::evaluateCompressPat(Record *Rec) {
   assert(DestDag && "Missing 'Output' in compress pattern!");
   LLVM_DEBUG(dbgs() << "Output: " << *DestDag << "\n");
 
-  DefInit *DestOpDef = dyn_cast<DefInit>(DestDag->getOperator());
-  if (!DestOpDef)
-    PrintFatalError(Rec->getLoc(),
-                    Rec->getName() + " has unexpected operator type!");
-
-  Record *DestOperator = DestOpDef->getDef();
+  Record *DestOperator = DestDag->getOperatorAsDef(Rec->getLoc());
   if (!DestOperator->isSubClassOf("RVInst16"))
     PrintFatalError(Rec->getLoc(), "Output instruction  '" +
                                        DestOperator->getName() +

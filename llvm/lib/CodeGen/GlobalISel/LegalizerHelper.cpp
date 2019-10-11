@@ -2247,6 +2247,10 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
     return lowerShuffleVector(MI);
   case G_DYN_STACKALLOC:
     return lowerDynStackAlloc(MI);
+  case G_EXTRACT:
+    return lowerExtract(MI);
+  case G_INSERT:
+    return lowerInsert(MI);
   }
 }
 
@@ -4098,4 +4102,76 @@ LegalizerHelper::lowerDynStackAlloc(MachineInstr &MI) {
 
   MI.eraseFromParent();
   return Legalized;
+}
+
+LegalizerHelper::LegalizeResult
+LegalizerHelper::lowerExtract(MachineInstr &MI) {
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+  unsigned Offset = MI.getOperand(2).getImm();
+
+  LLT DstTy = MRI.getType(Dst);
+  LLT SrcTy = MRI.getType(Src);
+
+  if (DstTy.isScalar() &&
+      (SrcTy.isScalar() ||
+       (SrcTy.isVector() && DstTy == SrcTy.getElementType()))) {
+    LLT SrcIntTy = SrcTy;
+    if (!SrcTy.isScalar()) {
+      SrcIntTy = LLT::scalar(SrcTy.getSizeInBits());
+      Src = MIRBuilder.buildBitcast(SrcIntTy, Src).getReg(0);
+    }
+
+    if (Offset == 0)
+      MIRBuilder.buildTrunc(Dst, Src);
+    else {
+      auto ShiftAmt = MIRBuilder.buildConstant(SrcIntTy, Offset);
+      auto Shr = MIRBuilder.buildLShr(SrcIntTy, Src, ShiftAmt);
+      MIRBuilder.buildTrunc(Dst, Shr);
+    }
+
+    MI.eraseFromParent();
+    return Legalized;
+  }
+
+  return UnableToLegalize;
+}
+
+LegalizerHelper::LegalizeResult LegalizerHelper::lowerInsert(MachineInstr &MI) {
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+  Register InsertSrc = MI.getOperand(2).getReg();
+  uint64_t Offset = MI.getOperand(3).getImm();
+
+  LLT DstTy = MRI.getType(Src);
+  LLT InsertTy = MRI.getType(InsertSrc);
+
+  if (InsertTy.isScalar() &&
+      (DstTy.isScalar() ||
+       (DstTy.isVector() && DstTy.getElementType() == InsertTy))) {
+    LLT IntDstTy = DstTy;
+    if (!DstTy.isScalar()) {
+      IntDstTy = LLT::scalar(DstTy.getSizeInBits());
+      Src = MIRBuilder.buildBitcast(IntDstTy, Src).getReg(0);
+    }
+
+    Register ExtInsSrc = MIRBuilder.buildZExt(IntDstTy, InsertSrc).getReg(0);
+    if (Offset != 0) {
+      auto ShiftAmt = MIRBuilder.buildConstant(IntDstTy, Offset);
+      ExtInsSrc = MIRBuilder.buildShl(IntDstTy, ExtInsSrc, ShiftAmt).getReg(0);
+    }
+
+    APInt MaskVal = ~APInt::getBitsSet(DstTy.getSizeInBits(), Offset,
+                                       InsertTy.getSizeInBits());
+
+    auto Mask = MIRBuilder.buildConstant(IntDstTy, MaskVal);
+    auto MaskedSrc = MIRBuilder.buildAnd(IntDstTy, Src, Mask);
+    auto Or = MIRBuilder.buildOr(IntDstTy, MaskedSrc, ExtInsSrc);
+
+    MIRBuilder.buildBitcast(Dst, Or);
+    MI.eraseFromParent();
+    return Legalized;
+  }
+
+  return UnableToLegalize;
 }

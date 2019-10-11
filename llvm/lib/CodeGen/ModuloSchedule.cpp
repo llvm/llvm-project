@@ -1314,7 +1314,7 @@ void KernelRewriter::rewrite() {
 
   // Now remap every instruction in the loop.
   for (MachineInstr &MI : *BB) {
-    if (MI.isPHI())
+    if (MI.isPHI() || MI.isTerminator())
       continue;
     for (MachineOperand &MO : MI.uses()) {
       if (!MO.isReg() || MO.getReg().isPhysical() || MO.isImplicit())

@@ -31,7 +31,7 @@ add_clang_library(clangTidy
   )
 
 if(CLANG_ENABLE_STATIC_ANALYZER)
-  target_link_libraries(clangTidy PRIVATE
+  clang_target_link_libraries(clangTidy PRIVATE
     clangStaticAnalyzerCore
     clangStaticAnalyzerFrontend
   )

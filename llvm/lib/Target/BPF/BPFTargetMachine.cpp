@@ -94,7 +94,7 @@ TargetPassConfig *BPFTargetMachine::createPassConfig(PassManagerBase &PM) {
 
 void BPFPassConfig::addIRPasses() {
 
-  addPass(createBPFAbstractMemberAccess());
+  addPass(createBPFAbstractMemberAccess(&getBPFTargetMachine()));
 
   TargetPassConfig::addIRPasses();
 }

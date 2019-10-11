@@ -50,18 +50,21 @@ entry:
 ; CHECK:             .ascii  "0:0:0"                 # string offset=76
 ; CHECK:             .ascii  "0:0:0:0"               # string offset=82
 
-; CHECK:             .long   12                      # OffsetReloc
-; CHECK-NEXT:        .long   29                      # Offset reloc section string offset=29
+; CHECK:             .long   16                      # FieldReloc
+; CHECK-NEXT:        .long   29                      # Field reloc section string offset=29
 ; CHECK-NEXT:        .long   3
 ; CHECK_NEXT:        .long   .Ltmp{{[0-9]+}}
 ; CHECK_NEXT:        .long   2
 ; CHECK_NEXT:        .long   72
+; CHECK_NEXT:        .long   0
 ; CHECK_NEXT:        .long   .Ltmp{{[0-9]+}}
 ; CHECK_NEXT:        .long   2
 ; CHECK_NEXT:        .long   76
+; CHECK_NEXT:        .long   0
 ; CHECK_NEXT:        .long   .Ltmp{{[0-9]+}}
 ; CHECK_NEXT:        .long   2
 ; CHECK_NEXT:        .long   82
+; CHECK_NEXT:        .long   0
 
 ; Function Attrs: nounwind readnone
 declare %struct.s1* @llvm.preserve.struct.access.index.p0s_struct.s1s.p0s_struct.r1s(%struct.r1*, i32, i32) #1

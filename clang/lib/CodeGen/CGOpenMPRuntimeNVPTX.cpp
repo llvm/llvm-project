@@ -280,7 +280,8 @@ static RecordDecl *buildRecordForGlobalizedVars(
       }
     } else {
       llvm::APInt ArraySize(32, BufSize);
-      Type = C.getConstantArrayType(Type, ArraySize, ArrayType::Normal, 0);
+      Type = C.getConstantArrayType(Type, ArraySize, nullptr, ArrayType::Normal,
+                                    0);
       Field = FieldDecl::Create(
           C, GlobalizedRD, Loc, Loc, VD->getIdentifier(), Type,
           C.getTrivialTypeSourceInfo(Type, SourceLocation()),
@@ -4269,7 +4270,7 @@ void CGOpenMPRuntimeNVPTX::emitReduction(
   }
   llvm::APInt ArraySize(/*unsigned int numBits=*/32, Size);
   QualType ReductionArrayTy =
-      C.getConstantArrayType(C.VoidPtrTy, ArraySize, ArrayType::Normal,
+      C.getConstantArrayType(C.VoidPtrTy, ArraySize, nullptr, ArrayType::Normal,
                              /*IndexTypeQuals=*/0);
   Address ReductionList =
       CGF.CreateMemTemp(ReductionArrayTy, ".omp.reduction.red_list");
@@ -5056,7 +5057,7 @@ void CGOpenMPRuntimeNVPTX::clear() {
       Size = llvm::alignTo(Size, RecAlignment);
       llvm::APInt ArySize(/*numBits=*/64, Size);
       QualType SubTy = C.getConstantArrayType(
-          C.CharTy, ArySize, ArrayType::Normal, /*IndexTypeQuals=*/0);
+          C.CharTy, ArySize, nullptr, ArrayType::Normal, /*IndexTypeQuals=*/0);
       const bool UseSharedMemory = Size <= SharedMemorySize;
       auto *Field =
           FieldDecl::Create(C, UseSharedMemory ? SharedStaticRD : StaticRD,
@@ -5083,7 +5084,7 @@ void CGOpenMPRuntimeNVPTX::clear() {
     if (!SharedStaticRD->field_empty()) {
       llvm::APInt ArySize(/*numBits=*/64, SharedMemorySize);
       QualType SubTy = C.getConstantArrayType(
-          C.CharTy, ArySize, ArrayType::Normal, /*IndexTypeQuals=*/0);
+          C.CharTy, ArySize, nullptr, ArrayType::Normal, /*IndexTypeQuals=*/0);
       auto *Field = FieldDecl::Create(
           C, SharedStaticRD, SourceLocation(), SourceLocation(), nullptr, SubTy,
           C.getTrivialTypeSourceInfo(SubTy, SourceLocation()),
@@ -5116,11 +5117,12 @@ void CGOpenMPRuntimeNVPTX::clear() {
       std::pair<unsigned, unsigned> SMsBlockPerSM = getSMsBlocksPerSM(CGM);
       llvm::APInt Size1(32, SMsBlockPerSM.second);
       QualType Arr1Ty =
-          C.getConstantArrayType(StaticTy, Size1, ArrayType::Normal,
+          C.getConstantArrayType(StaticTy, Size1, nullptr, ArrayType::Normal,
                                  /*IndexTypeQuals=*/0);
       llvm::APInt Size2(32, SMsBlockPerSM.first);
-      QualType Arr2Ty = C.getConstantArrayType(Arr1Ty, Size2, ArrayType::Normal,
-                                               /*IndexTypeQuals=*/0);
+      QualType Arr2Ty =
+          C.getConstantArrayType(Arr1Ty, Size2, nullptr, ArrayType::Normal,
+                                 /*IndexTypeQuals=*/0);
       llvm::Type *LLVMArr2Ty = CGM.getTypes().ConvertTypeForMem(Arr2Ty);
       // FIXME: nvlink does not handle weak linkage correctly (object with the
       // different size are reported as erroneous).

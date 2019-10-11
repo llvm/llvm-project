@@ -15,6 +15,7 @@
 #include "clang/Lex/Lexer.h"
 #include "clang/Tooling/Refactoring/SourceCode.h"
 #include "clang/Tooling/Refactoring/SourceCodeBuilders.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Support/Errc.h"
 #include <atomic>
 #include <memory>
@@ -126,6 +127,54 @@ bool isEqualData(const IfBoundData &A, const IfBoundData &B) {
 bool isEqualData(const MatchConsumer<std::string> &A,
                  const MatchConsumer<std::string> &B) {
   return false;
+}
+
+std::string toStringData(const RawTextData &Data) {
+  std::string Result;
+  llvm::raw_string_ostream OS(Result);
+  OS << "\"";
+  OS.write_escaped(Data.Text);
+  OS << "\"";
+  OS.flush();
+  return Result;
+}
+
+std::string toStringData(const DebugPrintNodeData &Data) {
+  return (llvm::Twine("dPrint(\"") + Data.Id + "\")").str();
+}
+
+std::string toStringData(const UnaryOperationData &Data) {
+  StringRef OpName;
+  switch (Data.Op) {
+  case UnaryNodeOperator::Parens:
+    OpName = "expression";
+    break;
+  case UnaryNodeOperator::Deref:
+    OpName = "deref";
+    break;
+  case UnaryNodeOperator::Address:
+    OpName = "addressOf";
+    break;
+  }
+  return (OpName + "(\"" + Data.Id + "\")").str();
+}
+
+std::string toStringData(const SelectorData &) { return "SelectorData()"; }
+
+std::string toStringData(const AccessData &Data) {
+  return (llvm::Twine("access(\"") + Data.BaseId + "\", " +
+          Data.Member.toString() + ")")
+      .str();
+}
+
+std::string toStringData(const IfBoundData &Data) {
+  return (llvm::Twine("ifBound(\"") + Data.Id + "\", " +
+          Data.TruePart.toString() + ", " + Data.FalsePart.toString() + ")")
+      .str();
+}
+
+std::string toStringData(const MatchConsumer<std::string> &) {
+  return "MatchConsumer<std::string>()";
 }
 
 // The `evalData()` overloads evaluate the given stencil data to a string, given
@@ -247,6 +296,8 @@ public:
       return isEqualData(Data, OtherPtr->Data);
     return false;
   }
+
+  std::string toString() const override { return toStringData(Data); }
 };
 } // namespace
 

@@ -13,7 +13,7 @@ declare i64 @llvm.experimental.constrained.fptoui.i64.f64(double, metadata)
 declare i64 @llvm.experimental.constrained.fptoui.i64.f128(fp128, metadata)
 
 ; Test f32->i64.
-define i64 @f1(float %f) {
+define i64 @f1(float %f) #0 {
 ; CHECK-LABEL: f1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    larl %r1, .LCPI0_0
@@ -29,12 +29,12 @@ define i64 @f1(float %f) {
 ; CHECK-NEXT:    xgr %r2, %r0
 ; CHECK-NEXT:    br %r14
   %conv = call i64 @llvm.experimental.constrained.fptoui.i64.f32(float %f,
-                                               metadata !"fpexcept.strict")
+                                               metadata !"fpexcept.strict") #0
   ret i64 %conv
 }
 
 ; Test f64->i64.
-define i64 @f2(double %f) {
+define i64 @f2(double %f) #0 {
 ; CHECK-LABEL: f2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    larl %r1, .LCPI1_0
@@ -50,12 +50,12 @@ define i64 @f2(double %f) {
 ; CHECK-NEXT:    xgr %r2, %r0
 ; CHECK-NEXT:    br %r14
   %conv = call i64 @llvm.experimental.constrained.fptoui.i64.f64(double %f,
-                                               metadata !"fpexcept.strict")
+                                               metadata !"fpexcept.strict") #0
   ret i64 %conv
 }
 
 ; Test f128->i64.
-define i64 @f3(fp128 *%src) {
+define i64 @f3(fp128 *%src) #0 {
 ; CHECK-LABEL: f3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ld %f0, 0(%r2)
@@ -74,6 +74,8 @@ define i64 @f3(fp128 *%src) {
 ; CHECK-NEXT:    br %r14
   %f = load fp128, fp128 *%src
   %conv = call i64 @llvm.experimental.constrained.fptoui.i64.f128(fp128 %f,
-                                               metadata !"fpexcept.strict")
+                                               metadata !"fpexcept.strict") #0
   ret i64 %conv
 }
+
+attributes #0 = { strictfp }

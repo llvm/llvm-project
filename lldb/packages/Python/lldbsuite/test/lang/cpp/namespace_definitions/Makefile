@@ -1,17 +1,15 @@
-LD_EXTRAS := -L. -l$(LIB_PREFIX)a -l$(LIB_PREFIX)b
+LD_EXTRAS := -L. -la -lb
 CXX_SOURCES := main.cpp
+
+a.out: liba libb
 
 include Makefile.rules
 
-.PHONY:
-a.out: lib_a lib_b
+liba:
+	$(MAKE) -f $(MAKEFILE_RULES) \
+		DYLIB_ONLY=YES DYLIB_NAME=a DYLIB_CXX_SOURCES=a.cpp
 
-lib_%:
-	$(MAKE) VPATH=$(VPATH) -f $(SRCDIR)/$*.mk
+libb:
+	$(MAKE) -f $(MAKEFILE_RULES) \
+		DYLIB_ONLY=YES DYLIB_NAME=b DYLIB_CXX_SOURCES=b.cpp
 
-hidden_lib_d:
-	$(MAKE) -C hidden
-
-clean::
-	$(MAKE) -f $(SRCDIR)/a.mk clean
-	$(MAKE) -f $(SRCDIR)/b.mk clean

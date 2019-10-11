@@ -4,6 +4,7 @@ executable("llvm-tblgen") {
     "//llvm/lib/MC",
     "//llvm/lib/Support",
     "//llvm/lib/TableGen",
+    "//llvm/utils/TableGen/GlobalISel",
   ]
   sources = [
     "AsmMatcherEmitter.cpp",
@@ -25,6 +26,7 @@ executable("llvm-tblgen") {
     "DAGISelMatcherEmitter.cpp",
     "DAGISelMatcherGen.cpp",
     "DAGISelMatcherOpt.cpp",
+    "DFAEmitter.cpp",
     "DFAPacketizerEmitter.cpp",
     "DisassemblerEmitter.cpp",
     "ExegesisEmitter.cpp",

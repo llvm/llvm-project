@@ -15,7 +15,7 @@
 namespace llvm {
 class BPFTargetMachine;
 
-ModulePass *createBPFAbstractMemberAccess();
+ModulePass *createBPFAbstractMemberAccess(BPFTargetMachine *TM);
 
 FunctionPass *createBPFISelDag(BPFTargetMachine &TM);
 FunctionPass *createBPFMISimplifyPatchablePass();

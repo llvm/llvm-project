@@ -3,7 +3,7 @@
 
 define i32 @test([1024 x i8]* %target) {
 ; CHECK-LABEL: @test(
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[TARGET:%.*]], i64 0, i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [1024 x i8], [1024 x i8]* [[TARGET:%.*]], i64 0, i64 0
 ; CHECK-NEXT:    store i8 1, i8* [[TMP1]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast [1024 x i8]* [[TARGET]] to i16*
 ; CHECK-NEXT:    store i16 257, i16* [[TMP2]], align 2

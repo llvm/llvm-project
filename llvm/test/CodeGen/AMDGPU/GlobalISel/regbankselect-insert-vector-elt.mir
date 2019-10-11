@@ -85,12 +85,12 @@ body: |
     ; CHECK: [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
     ; CHECK: .1:
     ; CHECK: successors: %bb.2(0x40000000), %bb.1(0x40000000)
-    ; CHECK: [[PHI:%[0-9]+]]:sreg_64 = PHI [[DEF1]], %bb.0, %9, %bb.1
+    ; CHECK: [[PHI:%[0-9]+]]:sreg_64_xexec = PHI [[DEF1]], %bb.0, %9, %bb.1
     ; CHECK: [[PHI1:%[0-9]+]]:vgpr(<4 x s32>) = G_PHI [[DEF]](<4 x s32>), %bb.0, %3(<4 x s32>), %bb.1
     ; CHECK: [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[COPY2]](s32), implicit $exec
-    ; CHECK: [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64 = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_]](s32), [[COPY2]](s32), implicit $exec
+    ; CHECK: [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_]](s32), [[COPY2]](s32), implicit $exec
     ; CHECK: [[IVEC:%[0-9]+]]:vgpr(<4 x s32>) = G_INSERT_VECTOR_ELT [[COPY]], [[COPY1]](s32), [[V_READFIRSTLANE_B32_]](s32)
-    ; CHECK: [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64 = S_AND_SAVEEXEC_B64 killed [[V_CMP_EQ_U32_e64_]], implicit-def $exec, implicit-def $scc, implicit $exec
+    ; CHECK: [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[V_CMP_EQ_U32_e64_]], implicit-def $exec, implicit-def $scc, implicit $exec
     ; CHECK: $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
     ; CHECK: S_CBRANCH_EXECNZ %bb.1, implicit $exec
     ; CHECK: .2:
@@ -125,12 +125,12 @@ body: |
     ; CHECK: [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
     ; CHECK: .1:
     ; CHECK: successors: %bb.2(0x40000000), %bb.1(0x40000000)
-    ; CHECK: [[PHI:%[0-9]+]]:sreg_64 = PHI [[DEF1]], %bb.0, %9, %bb.1
+    ; CHECK: [[PHI:%[0-9]+]]:sreg_64_xexec = PHI [[DEF1]], %bb.0, %9, %bb.1
     ; CHECK: [[PHI1:%[0-9]+]]:vgpr(<4 x s32>) = G_PHI [[DEF]](<4 x s32>), %bb.0, %3(<4 x s32>), %bb.1
     ; CHECK: [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[COPY2]](s32), implicit $exec
-    ; CHECK: [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64 = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_]](s32), [[COPY2]](s32), implicit $exec
+    ; CHECK: [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_]](s32), [[COPY2]](s32), implicit $exec
     ; CHECK: [[IVEC:%[0-9]+]]:vgpr(<4 x s32>) = G_INSERT_VECTOR_ELT [[COPY]], [[COPY1]](s32), [[V_READFIRSTLANE_B32_]](s32)
-    ; CHECK: [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64 = S_AND_SAVEEXEC_B64 killed [[V_CMP_EQ_U32_e64_]], implicit-def $exec, implicit-def $scc, implicit $exec
+    ; CHECK: [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[V_CMP_EQ_U32_e64_]], implicit-def $exec, implicit-def $scc, implicit $exec
     ; CHECK: $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
     ; CHECK: S_CBRANCH_EXECNZ %bb.1, implicit $exec
     ; CHECK: .2:
@@ -165,12 +165,12 @@ body: |
     ; CHECK: [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
     ; CHECK: .1:
     ; CHECK: successors: %bb.2(0x40000000), %bb.1(0x40000000)
-    ; CHECK: [[PHI:%[0-9]+]]:sreg_64 = PHI [[DEF1]], %bb.0, %9, %bb.1
+    ; CHECK: [[PHI:%[0-9]+]]:sreg_64_xexec = PHI [[DEF1]], %bb.0, %9, %bb.1
     ; CHECK: [[PHI1:%[0-9]+]]:vgpr(<4 x s32>) = G_PHI [[DEF]](<4 x s32>), %bb.0, %3(<4 x s32>), %bb.1
     ; CHECK: [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[COPY2]](s32), implicit $exec
-    ; CHECK: [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64 = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_]](s32), [[COPY2]](s32), implicit $exec
+    ; CHECK: [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_]](s32), [[COPY2]](s32), implicit $exec
     ; CHECK: [[IVEC:%[0-9]+]]:vgpr(<4 x s32>) = G_INSERT_VECTOR_ELT [[COPY]], [[COPY1]](s32), [[V_READFIRSTLANE_B32_]](s32)
-    ; CHECK: [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64 = S_AND_SAVEEXEC_B64 killed [[V_CMP_EQ_U32_e64_]], implicit-def $exec, implicit-def $scc, implicit $exec
+    ; CHECK: [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[V_CMP_EQ_U32_e64_]], implicit-def $exec, implicit-def $scc, implicit $exec
     ; CHECK: $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
     ; CHECK: S_CBRANCH_EXECNZ %bb.1, implicit $exec
     ; CHECK: .2:
@@ -228,12 +228,12 @@ body: |
     ; CHECK: [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
     ; CHECK: .1:
     ; CHECK: successors: %bb.2(0x40000000), %bb.1(0x40000000)
-    ; CHECK: [[PHI:%[0-9]+]]:sreg_64 = PHI [[DEF1]], %bb.0, %9, %bb.1
+    ; CHECK: [[PHI:%[0-9]+]]:sreg_64_xexec = PHI [[DEF1]], %bb.0, %9, %bb.1
     ; CHECK: [[PHI1:%[0-9]+]]:vgpr(<4 x s32>) = G_PHI [[DEF]](<4 x s32>), %bb.0, %3(<4 x s32>), %bb.1
     ; CHECK: [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[COPY2]](s32), implicit $exec
-    ; CHECK: [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64 = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_]](s32), [[COPY2]](s32), implicit $exec
+    ; CHECK: [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_]](s32), [[COPY2]](s32), implicit $exec
     ; CHECK: [[IVEC:%[0-9]+]]:vgpr(<4 x s32>) = G_INSERT_VECTOR_ELT [[COPY]], [[COPY1]](s32), [[V_READFIRSTLANE_B32_]](s32)
-    ; CHECK: [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64 = S_AND_SAVEEXEC_B64 killed [[V_CMP_EQ_U32_e64_]], implicit-def $exec, implicit-def $scc, implicit $exec
+    ; CHECK: [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[V_CMP_EQ_U32_e64_]], implicit-def $exec, implicit-def $scc, implicit $exec
     ; CHECK: $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
     ; CHECK: S_CBRANCH_EXECNZ %bb.1, implicit $exec
     ; CHECK: .2:
@@ -344,12 +344,12 @@ body: |
     ; CHECK: [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
     ; CHECK: .1:
     ; CHECK: successors: %bb.2(0x40000000), %bb.1(0x40000000)
-    ; CHECK: [[PHI:%[0-9]+]]:sreg_64 = PHI [[DEF1]], %bb.0, %9, %bb.1
+    ; CHECK: [[PHI:%[0-9]+]]:sreg_64_xexec = PHI [[DEF1]], %bb.0, %9, %bb.1
     ; CHECK: [[PHI1:%[0-9]+]]:vgpr(<8 x s64>) = G_PHI [[DEF]](<8 x s64>), %bb.0, %3(<8 x s64>), %bb.1
     ; CHECK: [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[COPY2]](s32), implicit $exec
-    ; CHECK: [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64 = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_]](s32), [[COPY2]](s32), implicit $exec
+    ; CHECK: [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_]](s32), [[COPY2]](s32), implicit $exec
     ; CHECK: [[IVEC:%[0-9]+]]:vgpr(<8 x s64>) = G_INSERT_VECTOR_ELT [[COPY]], [[COPY1]](s64), [[V_READFIRSTLANE_B32_]](s32)
-    ; CHECK: [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64 = S_AND_SAVEEXEC_B64 killed [[V_CMP_EQ_U32_e64_]], implicit-def $exec, implicit-def $scc, implicit $exec
+    ; CHECK: [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[V_CMP_EQ_U32_e64_]], implicit-def $exec, implicit-def $scc, implicit $exec
     ; CHECK: $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
     ; CHECK: S_CBRANCH_EXECNZ %bb.1, implicit $exec
     ; CHECK: .2:
@@ -391,20 +391,20 @@ body: |
     ; CHECK: [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
     ; CHECK: .1:
     ; CHECK: successors: %bb.2(0x40000000), %bb.1(0x40000000)
-    ; CHECK: [[PHI:%[0-9]+]]:sreg_64 = PHI [[DEF5]], %bb.0, %25, %bb.1
+    ; CHECK: [[PHI:%[0-9]+]]:sreg_64_xexec = PHI [[DEF5]], %bb.0, %25, %bb.1
     ; CHECK: [[PHI1:%[0-9]+]]:sgpr(s32) = G_PHI [[DEF]](s32), %bb.0, %8(s32), %bb.1
     ; CHECK: [[PHI2:%[0-9]+]]:sgpr(s32) = G_PHI [[DEF1]](s32), %bb.0, %9(s32), %bb.1
     ; CHECK: [[PHI3:%[0-9]+]]:vgpr(<16 x s32>) = G_PHI [[DEF2]](<16 x s32>), %bb.0, %10(<16 x s32>), %bb.1
     ; CHECK: [[PHI4:%[0-9]+]]:vgpr(<16 x s32>) = G_PHI [[DEF3]](<16 x s32>), %bb.0, %11(<16 x s32>), %bb.1
     ; CHECK: [[PHI5:%[0-9]+]]:vgpr(<8 x s64>) = G_PHI [[DEF4]](<8 x s64>), %bb.0, %3(<8 x s64>), %bb.1
     ; CHECK: [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[COPY2]](s32), implicit $exec
-    ; CHECK: [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64 = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_]](s32), [[COPY2]](s32), implicit $exec
+    ; CHECK: [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_]](s32), [[COPY2]](s32), implicit $exec
     ; CHECK: [[SHL:%[0-9]+]]:sgpr(s32) = G_SHL [[V_READFIRSTLANE_B32_]], [[C]](s32)
     ; CHECK: [[ADD:%[0-9]+]]:sgpr(s32) = G_ADD [[SHL]], [[C]]
     ; CHECK: [[IVEC:%[0-9]+]]:vgpr(<16 x s32>) = G_INSERT_VECTOR_ELT [[BITCAST]], [[UV]](s32), [[SHL]](s32)
     ; CHECK: [[IVEC1:%[0-9]+]]:vgpr(<16 x s32>) = G_INSERT_VECTOR_ELT [[IVEC]], [[UV1]](s32), [[ADD]](s32)
     ; CHECK: [[BITCAST1:%[0-9]+]]:vgpr(<8 x s64>) = G_BITCAST [[IVEC1]](<16 x s32>)
-    ; CHECK: [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64 = S_AND_SAVEEXEC_B64 killed [[V_CMP_EQ_U32_e64_]], implicit-def $exec, implicit-def $scc, implicit $exec
+    ; CHECK: [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[V_CMP_EQ_U32_e64_]], implicit-def $exec, implicit-def $scc, implicit $exec
     ; CHECK: $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
     ; CHECK: S_CBRANCH_EXECNZ %bb.1, implicit $exec
     ; CHECK: .2:
@@ -469,12 +469,12 @@ body: |
     ; CHECK: [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
     ; CHECK: .1:
     ; CHECK: successors: %bb.2(0x40000000), %bb.1(0x40000000)
-    ; CHECK: [[PHI:%[0-9]+]]:sreg_64 = PHI [[DEF1]], %bb.0, %9, %bb.1
+    ; CHECK: [[PHI:%[0-9]+]]:sreg_64_xexec = PHI [[DEF1]], %bb.0, %9, %bb.1
     ; CHECK: [[PHI1:%[0-9]+]]:vgpr(<8 x s64>) = G_PHI [[DEF]](<8 x s64>), %bb.0, %3(<8 x s64>), %bb.1
     ; CHECK: [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[COPY2]](s32), implicit $exec
-    ; CHECK: [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64 = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_]](s32), [[COPY2]](s32), implicit $exec
+    ; CHECK: [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_]](s32), [[COPY2]](s32), implicit $exec
     ; CHECK: [[IVEC:%[0-9]+]]:vgpr(<8 x s64>) = G_INSERT_VECTOR_ELT [[COPY]], [[COPY1]](s64), [[V_READFIRSTLANE_B32_]](s32)
-    ; CHECK: [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64 = S_AND_SAVEEXEC_B64 killed [[V_CMP_EQ_U32_e64_]], implicit-def $exec, implicit-def $scc, implicit $exec
+    ; CHECK: [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[V_CMP_EQ_U32_e64_]], implicit-def $exec, implicit-def $scc, implicit $exec
     ; CHECK: $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
     ; CHECK: S_CBRANCH_EXECNZ %bb.1, implicit $exec
     ; CHECK: .2:
@@ -516,20 +516,20 @@ body: |
     ; CHECK: [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
     ; CHECK: .1:
     ; CHECK: successors: %bb.2(0x40000000), %bb.1(0x40000000)
-    ; CHECK: [[PHI:%[0-9]+]]:sreg_64 = PHI [[DEF5]], %bb.0, %25, %bb.1
+    ; CHECK: [[PHI:%[0-9]+]]:sreg_64_xexec = PHI [[DEF5]], %bb.0, %25, %bb.1
     ; CHECK: [[PHI1:%[0-9]+]]:sgpr(s32) = G_PHI [[DEF]](s32), %bb.0, %8(s32), %bb.1
     ; CHECK: [[PHI2:%[0-9]+]]:sgpr(s32) = G_PHI [[DEF1]](s32), %bb.0, %9(s32), %bb.1
     ; CHECK: [[PHI3:%[0-9]+]]:vgpr(<16 x s32>) = G_PHI [[DEF2]](<16 x s32>), %bb.0, %10(<16 x s32>), %bb.1
     ; CHECK: [[PHI4:%[0-9]+]]:vgpr(<16 x s32>) = G_PHI [[DEF3]](<16 x s32>), %bb.0, %11(<16 x s32>), %bb.1
     ; CHECK: [[PHI5:%[0-9]+]]:vgpr(<8 x s64>) = G_PHI [[DEF4]](<8 x s64>), %bb.0, %3(<8 x s64>), %bb.1
     ; CHECK: [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[COPY2]](s32), implicit $exec
-    ; CHECK: [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64 = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_]](s32), [[COPY2]](s32), implicit $exec
+    ; CHECK: [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_]](s32), [[COPY2]](s32), implicit $exec
     ; CHECK: [[SHL:%[0-9]+]]:sgpr(s32) = G_SHL [[V_READFIRSTLANE_B32_]], [[C]](s32)
     ; CHECK: [[ADD:%[0-9]+]]:sgpr(s32) = G_ADD [[SHL]], [[C]]
     ; CHECK: [[IVEC:%[0-9]+]]:vgpr(<16 x s32>) = G_INSERT_VECTOR_ELT [[BITCAST]], [[UV]](s32), [[SHL]](s32)
     ; CHECK: [[IVEC1:%[0-9]+]]:vgpr(<16 x s32>) = G_INSERT_VECTOR_ELT [[IVEC]], [[UV1]](s32), [[ADD]](s32)
     ; CHECK: [[BITCAST1:%[0-9]+]]:vgpr(<8 x s64>) = G_BITCAST [[IVEC1]](<16 x s32>)
-    ; CHECK: [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64 = S_AND_SAVEEXEC_B64 killed [[V_CMP_EQ_U32_e64_]], implicit-def $exec, implicit-def $scc, implicit $exec
+    ; CHECK: [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[V_CMP_EQ_U32_e64_]], implicit-def $exec, implicit-def $scc, implicit $exec
     ; CHECK: $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
     ; CHECK: S_CBRANCH_EXECNZ %bb.1, implicit $exec
     ; CHECK: .2:

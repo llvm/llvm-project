@@ -293,7 +293,7 @@ define i32 @test26(float %F) {
 
 define [4 x float]* @test27([9 x [4 x float]]* %A) {
 ; CHECK-LABEL: @test27(
-; CHECK-NEXT:    [[C:%.*]] = getelementptr inbounds [9 x [4 x float]], [9 x [4 x float]]* [[A:%.*]], i64 0, i64 0
+; CHECK-NEXT:    [[C:%.*]] = getelementptr [9 x [4 x float]], [9 x [4 x float]]* [[A:%.*]], i64 0, i64 0
 ; CHECK-NEXT:    ret [4 x float]* [[C]]
 ;
   %c = bitcast [9 x [4 x float]]* %A to [4 x float]*
@@ -302,7 +302,7 @@ define [4 x float]* @test27([9 x [4 x float]]* %A) {
 
 define float* @test28([4 x float]* %A) {
 ; CHECK-LABEL: @test28(
-; CHECK-NEXT:    [[C:%.*]] = getelementptr inbounds [4 x float], [4 x float]* [[A:%.*]], i64 0, i64 0
+; CHECK-NEXT:    [[C:%.*]] = getelementptr [4 x float], [4 x float]* [[A:%.*]], i64 0, i64 0
 ; CHECK-NEXT:    ret float* [[C]]
 ;
   %c = bitcast [4 x float]* %A to float*

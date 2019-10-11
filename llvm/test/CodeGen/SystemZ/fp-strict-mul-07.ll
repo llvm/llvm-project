@@ -5,7 +5,7 @@
 
 declare double @llvm.experimental.constrained.fma.f64(double %f1, double %f2, double %f3, metadata, metadata)
 
-define double @f1(double %f1, double %f2, double %acc) {
+define double @f1(double %f1, double %f2, double %acc) #0 {
 ; CHECK-LABEL: f1:
 ; CHECK-SCALAR: madbr %f4, %f0, %f2
 ; CHECK-SCALAR: ldr %f0, %f4
@@ -14,11 +14,11 @@ define double @f1(double %f1, double %f2, double %acc) {
   %res = call double @llvm.experimental.constrained.fma.f64 (
                         double %f1, double %f2, double %acc,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret double %res
 }
 
-define double @f2(double %f1, double *%ptr, double %acc) {
+define double @f2(double %f1, double *%ptr, double %acc) #0 {
 ; CHECK-LABEL: f2:
 ; CHECK: madb %f2, %f0, 0(%r2)
 ; CHECK: ldr %f0, %f2
@@ -27,11 +27,11 @@ define double @f2(double %f1, double *%ptr, double %acc) {
   %res = call double @llvm.experimental.constrained.fma.f64 (
                         double %f1, double %f2, double %acc,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret double %res
 }
 
-define double @f3(double %f1, double *%base, double %acc) {
+define double @f3(double %f1, double *%base, double %acc) #0 {
 ; CHECK-LABEL: f3:
 ; CHECK: madb %f2, %f0, 4088(%r2)
 ; CHECK: ldr %f0, %f2
@@ -41,11 +41,11 @@ define double @f3(double %f1, double *%base, double %acc) {
   %res = call double @llvm.experimental.constrained.fma.f64 (
                         double %f1, double %f2, double %acc,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret double %res
 }
 
-define double @f4(double %f1, double *%base, double %acc) {
+define double @f4(double %f1, double *%base, double %acc) #0 {
 ; The important thing here is that we don't generate an out-of-range
 ; displacement.  Other sequences besides this one would be OK.
 ;
@@ -59,11 +59,11 @@ define double @f4(double %f1, double *%base, double %acc) {
   %res = call double @llvm.experimental.constrained.fma.f64 (
                         double %f1, double %f2, double %acc,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret double %res
 }
 
-define double @f5(double %f1, double *%base, double %acc) {
+define double @f5(double %f1, double *%base, double %acc) #0 {
 ; Here too the important thing is that we don't generate an out-of-range
 ; displacement.  Other sequences besides this one would be OK.
 ;
@@ -77,11 +77,11 @@ define double @f5(double %f1, double *%base, double %acc) {
   %res = call double @llvm.experimental.constrained.fma.f64 (
                         double %f1, double %f2, double %acc,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret double %res
 }
 
-define double @f6(double %f1, double *%base, i64 %index, double %acc) {
+define double @f6(double %f1, double *%base, i64 %index, double %acc) #0 {
 ; CHECK-LABEL: f6:
 ; CHECK: sllg %r1, %r3, 3
 ; CHECK: madb %f2, %f0, 0(%r1,%r2)
@@ -92,11 +92,11 @@ define double @f6(double %f1, double *%base, i64 %index, double %acc) {
   %res = call double @llvm.experimental.constrained.fma.f64 (
                         double %f1, double %f2, double %acc,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret double %res
 }
 
-define double @f7(double %f1, double *%base, i64 %index, double %acc) {
+define double @f7(double %f1, double *%base, i64 %index, double %acc) #0 {
 ; CHECK-LABEL: f7:
 ; CHECK: sllg %r1, %r3, 3
 ; CHECK: madb %f2, %f0, 4088({{%r1,%r2|%r2,%r1}})
@@ -108,11 +108,11 @@ define double @f7(double %f1, double *%base, i64 %index, double %acc) {
   %res = call double @llvm.experimental.constrained.fma.f64 (
                         double %f1, double %f2, double %acc,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret double %res
 }
 
-define double @f8(double %f1, double *%base, i64 %index, double %acc) {
+define double @f8(double %f1, double *%base, i64 %index, double %acc) #0 {
 ; CHECK-LABEL: f8:
 ; CHECK: sllg %r1, %r3, 3
 ; CHECK: lay %r1, 4096({{%r1,%r2|%r2,%r1}})
@@ -125,6 +125,8 @@ define double @f8(double %f1, double *%base, i64 %index, double %acc) {
   %res = call double @llvm.experimental.constrained.fma.f64 (
                         double %f1, double %f2, double %acc,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret double %res
 }
+
+attributes #0 = { strictfp }

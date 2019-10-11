@@ -15,7 +15,7 @@ declare void @_ZdaPv(i8*) local_unnamed_addr #2
 ; TEST 1 (positive case)
 ; FNATTR: Function Attrs: noinline norecurse nounwind readnone uwtable
 ; FNATTR-NEXT: define void @only_return()
-; ATTRIBUTOR: Function Attrs: nofree noinline nosync nounwind uwtable
+; ATTRIBUTOR: Function Attrs: nofree noinline nosync nounwind readnone uwtable
 ; ATTRIBUTOR-NEXT: define void @only_return()
 define void @only_return() #0 {
     ret void
@@ -92,7 +92,7 @@ end:
 
 ; FNATTR: Function Attrs: noinline nounwind readnone uwtable
 ; FNATTR-NEXT: define void @mutual_recursion1()
-; ATTRIBUTOR: Function Attrs: nofree noinline noreturn nosync nounwind uwtable
+; ATTRIBUTOR: Function Attrs: nofree noinline noreturn nosync nounwind readnone uwtable
 ; ATTRIBUTOR-NEXT: define void @mutual_recursion1()
 define void @mutual_recursion1() #0 {
   call void @mutual_recursion2()
@@ -101,7 +101,7 @@ define void @mutual_recursion1() #0 {
 
 ; FNATTR: Function Attrs: noinline nounwind readnone uwtable
 ; FNATTR-NEXT: define void @mutual_recursion2()
-; ATTRIBUTOR: Function Attrs: nofree noinline noreturn nosync nounwind uwtable
+; ATTRIBUTOR: Function Attrs: nofree noinline noreturn nosync nounwind readnone uwtable
 ; ATTRIBUTOR-NEXT: define void @mutual_recursion2()
 define void @mutual_recursion2() #0 {
   call void @mutual_recursion1()
@@ -158,7 +158,7 @@ declare void @nofree_function() nofree readnone #0
 
 ; FNATTR: Function Attrs: noinline nounwind readnone uwtable
 ; FNATTR-NEXT: define void @call_nofree_function()
-; ATTRIBUTOR: Function Attrs: nofree noinline nosync nounwind uwtable
+; ATTRIBUTOR: Function Attrs: nofree noinline nosync nounwind readnone uwtable
 ; ATTRIBUTOR-NEXT: define void @call_nofree_function()
 define void @call_nofree_function() #0 {
     tail call void @nofree_function()
@@ -211,7 +211,7 @@ declare float @llvm.floor.f32(float)
 ; FNATTRS: Function Attrs: noinline nounwind uwtable
 ; FNATTRS-NEXT: define void @call_floor(float %a)
 ; FIXME: missing nofree
-; ATTRIBUTOR: Function Attrs: noinline nosync nounwind uwtable
+; ATTRIBUTOR: Function Attrs: noinline nosync nounwind readnone uwtable
 ; ATTRIBUTOR-NEXT: define void @call_floor(float %a)
 
 define void @call_floor(float %a) #0 {
@@ -224,7 +224,7 @@ define void @call_floor(float %a) #0 {
 
 ; FNATTRS: Function Attrs: noinline nounwind uwtable
 ; FNATTRS-NEXT: define void @f1()
-; ATTRIBUTOR: Function Attrs: nofree noinline nosync nounwind uwtable
+; ATTRIBUTOR: Function Attrs: nofree noinline nosync nounwind readnone uwtable
 ; ATTRIBUTOR-NEXT: define void @f1()
 define void @f1() #0 {
     tail call void @nofree_function()
@@ -233,7 +233,7 @@ define void @f1() #0 {
 
 ; FNATTRS: Function Attrs: noinline nounwind uwtable
 ; FNATTRS-NEXT: define void @f2()
-; ATTRIBUTOR: Function Attrs: nofree noinline nosync nounwind uwtable
+; ATTRIBUTOR: Function Attrs: nofree noinline nosync nounwind readnone uwtable
 ; ATTRIBUTOR-NEXT: define void @f2()
 define void @f2() #0 {
     tail call void @f1()

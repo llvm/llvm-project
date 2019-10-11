@@ -6,7 +6,7 @@ declare <4 x float> @llvm.experimental.constrained.fma.v4f32(<4 x float>, <4 x f
 
 ; Test a v4f32 multiply-and-add.
 define <4 x float> @f1(<4 x float> %dummy, <4 x float> %val1,
-                       <4 x float> %val2, <4 x float> %val3) {
+                       <4 x float> %val2, <4 x float> %val3) #0 {
 ; CHECK-LABEL: f1:
 ; CHECK: vfmasb %v24, %v26, %v28, %v30
 ; CHECK: br %r14
@@ -15,13 +15,13 @@ define <4 x float> @f1(<4 x float> %dummy, <4 x float> %val1,
                         <4 x float> %val2,
                         <4 x float> %val3,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret <4 x float> %ret
 }
 
 ; Test a v4f32 multiply-and-subtract.
 define <4 x float> @f2(<4 x float> %dummy, <4 x float> %val1,
-                       <4 x float> %val2, <4 x float> %val3) {
+                       <4 x float> %val2, <4 x float> %val3) #0 {
 ; CHECK-LABEL: f2:
 ; CHECK: vfmssb %v24, %v26, %v28, %v30
 ; CHECK: br %r14
@@ -32,6 +32,8 @@ define <4 x float> @f2(<4 x float> %dummy, <4 x float> %val1,
                         <4 x float> %val2,
                         <4 x float> %negval3,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret <4 x float> %ret
 }
+
+attributes #0 = { strictfp }

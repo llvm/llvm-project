@@ -251,7 +251,21 @@ public:
   enum Kind { UnknownTy, InvalidTy, SpecificTy, ObjCPointerTy, CPointerTy,
               AnyCharTy, CStrTy, WCStrTy, WIntTy };
 
-  enum MatchKind { NoMatch = 0, Match = 1, NoMatchPedantic };
+  /// How well a given conversion specifier matches its argument.
+  enum MatchKind {
+    /// The conversion specifier and the argument types are incompatible. For
+    /// instance, "%d" and float.
+    NoMatch = 0,
+    /// The conversion specifier and the argument type are compatible. For
+    /// instance, "%d" and _Bool.
+    Match = 1,
+    /// The conversion specifier and the argument type are disallowed by the C
+    /// standard, but are in practice harmless. For instance, "%p" and int*.
+    NoMatchPedantic,
+    /// The conversion specifier and the argument type are compatible, but still
+    /// seems likely to be an error. For instance, "%hd" and _Bool.
+    NoMatchTypeConfusion,
+  };
 
 private:
   const Kind K;

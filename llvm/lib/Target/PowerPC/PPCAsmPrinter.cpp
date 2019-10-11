@@ -517,7 +517,7 @@ void PPCAsmPrinter::EmitTlsCall(const MachineInstr *MI,
 ///
 void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
   MCInst TmpInst;
-  bool isDarwin = TM.getTargetTriple().isOSDarwin();
+  const bool IsDarwin = TM.getTargetTriple().isOSDarwin();
   const Module *M = MF->getFunction().getParent();
   PICLevel::Level PL = M->getPICLevel();
 
@@ -604,7 +604,7 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     //       addis r30, r30, {.LTOC,_GLOBAL_OFFSET_TABLE} - .L0$pb@ha
     //       addi r30, r30, {.LTOC,_GLOBAL_OFFSET_TABLE} - .L0$pb@l
     // Get the offset from the GOT Base Register to the GOT
-    LowerPPCMachineInstrToMCInst(MI, TmpInst, *this, isDarwin);
+    LowerPPCMachineInstrToMCInst(MI, TmpInst, *this, IsDarwin);
     if (Subtarget->isSecurePlt() && isPositionIndependent() ) {
       unsigned PICR = TmpInst.getOperand(0).getReg();
       MCSymbol *BaseSymbol = OutContext.getOrCreateSymbol(
@@ -655,10 +655,10 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     }
   }
   case PPC::LWZtoc: {
-    assert(!isDarwin && "TOC is an ELF/XCOFF construct.");
+    assert(!IsDarwin && "TOC is an ELF/XCOFF construct.");
 
     // Transform %rN = LWZtoc @op1, %r2
-    LowerPPCMachineInstrToMCInst(MI, TmpInst, *this, isDarwin);
+    LowerPPCMachineInstrToMCInst(MI, TmpInst, *this, IsDarwin);
 
     // Change the opcode to LWZ.
     TmpInst.setOpcode(PPC::LWZ);
@@ -724,7 +724,7 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
   case PPC::LDtocBA:
   case PPC::LDtoc: {
     // Transform %x3 = LDtoc @min1, %x2
-    LowerPPCMachineInstrToMCInst(MI, TmpInst, *this, isDarwin);
+    LowerPPCMachineInstrToMCInst(MI, TmpInst, *this, IsDarwin);
 
     // Change the opcode to LD, and the global address operand to be a
     // reference to the TOC entry we will synthesize later.
@@ -755,7 +755,7 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
 
   case PPC::ADDIStocHA8: {
     // Transform %xd = ADDIStocHA8 %x2, @sym
-    LowerPPCMachineInstrToMCInst(MI, TmpInst, *this, isDarwin);
+    LowerPPCMachineInstrToMCInst(MI, TmpInst, *this, IsDarwin);
 
     // Change the opcode to ADDIS8.  If the global address is external, has
     // common linkage, is a non-local function address, or is a jump table
@@ -801,7 +801,7 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
   }
   case PPC::LDtocL: {
     // Transform %xd = LDtocL @sym, %xs
-    LowerPPCMachineInstrToMCInst(MI, TmpInst, *this, isDarwin);
+    LowerPPCMachineInstrToMCInst(MI, TmpInst, *this, IsDarwin);
 
     // Change the opcode to LD.  If the global address is external, has
     // common linkage, or is a jump table address, then reference the
@@ -843,7 +843,7 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
   }
   case PPC::ADDItocL: {
     // Transform %xd = ADDItocL %xs, @sym
-    LowerPPCMachineInstrToMCInst(MI, TmpInst, *this, isDarwin);
+    LowerPPCMachineInstrToMCInst(MI, TmpInst, *this, IsDarwin);
 
     // Change the opcode to ADDI8.  If the global address is external, then
     // generate a TOC entry and reference that.  Otherwise reference the
@@ -888,7 +888,7 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
   case PPC::LDgotTprelL:
   case PPC::LDgotTprelL32: {
     // Transform %xd = LDgotTprelL @sym, %xs
-    LowerPPCMachineInstrToMCInst(MI, TmpInst, *this, isDarwin);
+    LowerPPCMachineInstrToMCInst(MI, TmpInst, *this, IsDarwin);
 
     // Change the opcode to LD.
     TmpInst.setOpcode(Subtarget->isPPC64() ? PPC::LD : PPC::LWZ);
@@ -1130,7 +1130,7 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
   }
   }
 
-  LowerPPCMachineInstrToMCInst(MI, TmpInst, *this, isDarwin);
+  LowerPPCMachineInstrToMCInst(MI, TmpInst, *this, IsDarwin);
   EmitToStreamer(*OutStreamer, TmpInst);
 }
 

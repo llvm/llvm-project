@@ -50,18 +50,32 @@ def get_line2spell_and_mangled(args, clang_args):
         '-test-print-mangle', f.name])
     if sys.version_info[0] > 2:
       output = output.decode()
-
-  RE = re.compile(r'^FunctionDecl=(\w+):(\d+):\d+ \(Definition\) \[mangled=([^]]+)\]')
+  DeclRE = re.compile(r'^FunctionDecl=(\w+):(\d+):\d+ \(Definition\)')
+  MangleRE = re.compile(r'.*\[mangled=([^]]+)\]')
+  MatchedDecl = False
   for line in output.splitlines():
-    m = RE.match(line)
-    if not m: continue
-    spell, line, mangled = m.groups()
+    # Get the function source name, line number and mangled name.  Sometimes
+    # c-index-test outputs the mangled name on a separate line (this can happen
+    # with block comments in front of functions).  Keep scanning until we see
+    # the mangled name.
+    decl_m = DeclRE.match(line)
+    mangle_m = MangleRE.match(line)
+
+    if decl_m:
+      MatchedDecl = True
+      spell, lineno = decl_m.groups()
+    if MatchedDecl and mangle_m:
+      mangled = mangle_m.group(1)
+      MatchedDecl = False
+    else:
+      continue
+
     if mangled == '_' + spell:
       # HACK for MacOS (where the mangled name includes an _ for C but the IR won't):
       mangled = spell
     # Note -test-print-mangle does not print file names so if #include is used,
     # the line number may come from an included file.
-    ret[int(line)-1] = (spell, mangled)
+    ret[int(lineno)-1] = (spell, mangled)
   if args.verbose:
     for line, func_name in sorted(ret.items()):
       print('line {}: found function {}'.format(line+1, func_name), file=sys.stderr)
