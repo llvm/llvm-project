@@ -1506,7 +1506,8 @@ void PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
     Target *target, std::vector<std::string> &options, SDKType sdk_type) {
   const std::vector<std::string> apple_arguments = {
       "-x",       "objective-c++", "-fobjc-arc",
-      "-fblocks", "-D_ISO646_H",   "-D__ISO646_H"};
+      "-fblocks", "-D_ISO646_H",   "-D__ISO646_H",
+      "-fgnuc-version=4.2.1"};
 
   options.insert(options.end(), apple_arguments.begin(), apple_arguments.end());
 
