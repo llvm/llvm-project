@@ -2829,7 +2829,8 @@ public:
 
     eMenuID_Process,
     eMenuID_ProcessAttach,
-    eMenuID_ProcessDetach,
+    eMenuID_ProcessDetachResume,
+    eMenuID_ProcessDetachSuspended,
     eMenuID_ProcessLaunch,
     eMenuID_ProcessContinue,
     eMenuID_ProcessHalt,
@@ -2974,13 +2975,15 @@ public:
     }
       return MenuActionResult::Handled;
 
-    case eMenuID_ProcessDetach: {
+    case eMenuID_ProcessDetachResume:
+    case eMenuID_ProcessDetachSuspended: {
       ExecutionContext exe_ctx =
           m_debugger.GetCommandInterpreter().GetExecutionContext();
       if (exe_ctx.HasProcessScope()) {
         Process *process = exe_ctx.GetProcessPtr();
         if (process && process->IsAlive())
-          process->Detach(false);
+          process->Detach(menu.GetIdentifier() ==
+                          eMenuID_ProcessDetachSuspended);
       }
     }
       return MenuActionResult::Handled;
@@ -3233,10 +3236,8 @@ public:
         {KEY_NPAGE, "Page down"},
         {'b', "Set breakpoint on selected source/disassembly line"},
         {'c', "Continue process"},
-        {'d', "Detach and resume process"},
         {'D', "Detach with process suspended"},
         {'h', "Show help dialog"},
-        {'k', "Kill process"},
         {'n', "Step over (source line)"},
         {'N', "Step over (single instruction)"},
         {'o', "Step out"},
@@ -3798,24 +3799,13 @@ public:
       }
       return eKeyHandled;
 
-    case 'd': // 'd' == detach and let run
     case 'D': // 'D' == detach and keep stopped
     {
       ExecutionContext exe_ctx =
           m_debugger.GetCommandInterpreter().GetExecutionContext();
       if (exe_ctx.HasProcessScope())
-        exe_ctx.GetProcessRef().Detach(c == 'D');
+        exe_ctx.GetProcessRef().Detach(true);
     }
-      return eKeyHandled;
-
-    case 'k':
-      // 'k' == kill
-      {
-        ExecutionContext exe_ctx =
-            m_debugger.GetCommandInterpreter().GetExecutionContext();
-        if (exe_ctx.HasProcessScope())
-          exe_ctx.GetProcessRef().Destroy(false);
-      }
       return eKeyHandled;
 
     case 'c':
@@ -3937,8 +3927,12 @@ void IOHandlerCursesGUI::Activate() {
                                     ApplicationDelegate::eMenuID_Process));
     process_menu_sp->AddSubmenu(MenuSP(new Menu(
         "Attach", nullptr, 'a', ApplicationDelegate::eMenuID_ProcessAttach)));
-    process_menu_sp->AddSubmenu(MenuSP(new Menu(
-        "Detach", nullptr, 'd', ApplicationDelegate::eMenuID_ProcessDetach)));
+    process_menu_sp->AddSubmenu(
+        MenuSP(new Menu("Detach and resume", nullptr, 'd',
+                        ApplicationDelegate::eMenuID_ProcessDetachResume)));
+    process_menu_sp->AddSubmenu(
+        MenuSP(new Menu("Detach suspended", nullptr, 's',
+                        ApplicationDelegate::eMenuID_ProcessDetachSuspended)));
     process_menu_sp->AddSubmenu(MenuSP(new Menu(
         "Launch", nullptr, 'l', ApplicationDelegate::eMenuID_ProcessLaunch)));
     process_menu_sp->AddSubmenu(MenuSP(new Menu(Menu::Type::Separator)));
