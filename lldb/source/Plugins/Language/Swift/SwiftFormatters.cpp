@@ -81,6 +81,7 @@ static bool readStringFromAddress(
   read_options.SetProcessSP(process);
   read_options.SetStream(&stream);
   read_options.SetSourceSize(length);
+  read_options.SetHasSourceSize(true);
   read_options.SetNeedsZeroTermination(false);
   read_options.SetIgnoreMaxLength(summary_options.GetCapping() ==
                                   lldb::eTypeSummaryUncapped);
@@ -282,7 +283,7 @@ bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
     options.SetSourceSize(count);
     options.SetBinaryZeroIsTerminator(false);
     options.SetLanguage(lldb::eLanguageTypeSwift);
-
+    options.SetHasSourceSize(true);
     return StringPrinter::ReadBufferAndDumpToStream<
         StringPrinter::StringElementType::UTF8>(options);
 
@@ -410,6 +411,7 @@ bool lldb_private::formatters::swift::StaticString_SummaryProvider(
   read_options.SetProcessSP(process_sp);
   read_options.SetLocation(start_ptr);
   read_options.SetSourceSize(size);
+  read_options.SetHasSourceSize(true);
   read_options.SetBinaryZeroIsTerminator(false);
   read_options.SetNeedsZeroTermination(false);
   read_options.SetStream(&stream);
