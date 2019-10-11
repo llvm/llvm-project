@@ -407,13 +407,14 @@ int ExecuteCommand(const Command &Cmd) {
   // that lacks a mutable working directory. Fortunately, when this is the case
   // a mutable output directory must be specified using "-artifact_prefix=...",
   // so write the log file(s) there.
+  // However, we don't want to apply this logic for absolute paths.
   int FdOut = STDOUT_FILENO;
   if (Cmd.hasOutputFile()) {
-    std::string Path;
-    if (Cmd.hasFlag("artifact_prefix"))
-      Path = Cmd.getFlagValue("artifact_prefix") + "/" + Cmd.getOutputFile();
-    else
-      Path = Cmd.getOutputFile();
+    std::string Path = Cmd.getOutputFile();
+    bool IsAbsolutePath = Path.length() > 1 && Path[0] == '/';
+    if (!IsAbsolutePath && Cmd.hasFlag("artifact_prefix"))
+      Path = Cmd.getFlagValue("artifact_prefix") + "/" + Path;
+
     FdOut = open(Path.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0);
     if (FdOut == -1) {
       Printf("libFuzzer: failed to open %s: %s\n", Path.c_str(),
