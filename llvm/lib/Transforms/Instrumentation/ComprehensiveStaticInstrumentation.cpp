@@ -1215,7 +1215,8 @@ void CSIImpl::instrumentDetach(DetachInst *DI, DominatorTree *DT, TaskInfo &TI,
   {
     if (isCriticalContinueEdge(DI, 1))
       ContinueBlock = SplitCriticalEdge(
-          DI, 1, CriticalEdgeSplittingOptions(DT).setSplitDetachContinue());
+          DI, 1,
+          CriticalEdgeSplittingOptions(DT, &LI).setSplitDetachContinue());
 
     IRBuilder<> IRB(&*ContinueBlock->getFirstInsertionPt());
     uint64_t LocalID = DetachContinueFED.add(*ContinueBlock);

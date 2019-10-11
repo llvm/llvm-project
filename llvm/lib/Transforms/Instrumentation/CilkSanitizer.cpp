@@ -2806,7 +2806,7 @@ bool CilkSanitizerImpl::instrumentDetach(DetachInst *DI, unsigned SyncRegNum,
     if (isCriticalContinueEdge(DI, 1))
       ContinueBlock = SplitCriticalEdge(
           DI, 1,
-          CriticalEdgeSplittingOptions(DT).setSplitDetachContinue());
+          CriticalEdgeSplittingOptions(DT, &LI).setSplitDetachContinue());
 
     IRBuilder<> IRB(&*ContinueBlock->getFirstInsertionPt());
     uint64_t LocalID = DetachContinueFED.add(*ContinueBlock);
