@@ -1264,6 +1264,10 @@ protected:
         verbose = true;
         break;
 
+      case 'x':
+        match_info.SetMatchAllUsers(true);
+        break;
+
       default:
         llvm_unreachable("Unimplemented option");
       }
