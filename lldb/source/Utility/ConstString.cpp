@@ -31,7 +31,10 @@ using namespace lldb_private;
 class Pool {
 public:
   typedef const char *StringPoolValueType;
-  typedef llvm::StringMap<StringPoolValueType, llvm::BumpPtrAllocator>
+  // BumpPtrAllocator allocates in 4KiB chunks, any larger C++ project is going
+  // to have megabytes of symbols, so allocate in larger chunks.
+  typedef llvm::BumpPtrAllocatorImpl<llvm::MallocAllocator, 1048576> Allocator;
+  typedef llvm::StringMap<StringPoolValueType, Allocator>
       StringPool;
   typedef llvm::StringMapEntry<StringPoolValueType> StringPoolEntryType;
 
@@ -152,7 +155,9 @@ protected:
 
   struct PoolEntry {
     mutable llvm::sys::SmartRWMutex<false> m_mutex;
-    StringPool m_string_map;
+    // StringMap by default starts with 16 buckets, any larger project is
+    // going to have many symbols, so start with a larger value.
+    StringPool m_string_map = StringPool( 65536 );
   };
 
   std::array<PoolEntry, 256> m_string_pools;
