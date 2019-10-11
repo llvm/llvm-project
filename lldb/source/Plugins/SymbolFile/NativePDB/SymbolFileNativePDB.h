@@ -9,7 +9,6 @@
 #ifndef LLDB_PLUGINS_SYMBOLFILE_NATIVEPDB_SYMBOLFILENATIVEPDB_H
 #define LLDB_PLUGINS_SYMBOLFILE_NATIVEPDB_SYMBOLFILENATIVEPDB_H
 
-#include "lldb/Symbol/ClangASTImporter.h"
 #include "lldb/Symbol/SymbolFile.h"
 
 #include "llvm/ADT/DenseMap.h"
@@ -35,7 +34,6 @@ struct UnionRecord;
 } // namespace llvm
 
 namespace lldb_private {
-class ClangASTImporter;
 
 namespace npdb {
 class PdbAstBuilder;
