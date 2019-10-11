@@ -125,7 +125,7 @@ __ockl_multi_grid_is_valid(void)
 __attribute__((convergent)) void
 __ockl_multi_grid_sync(void)
 {
-    __llvm_fence_sc_dev();
+    __llvm_fence_sc_sys();
 
     if (choose_one_grid_workitem()) {
         __constant struct mg_info *m = (__constant struct mg_info *)get_mg_info_arg();
