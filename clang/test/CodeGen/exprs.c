@@ -143,7 +143,7 @@ int f12() {
 // Make sure negate of fp uses -0.0 for proper -0 handling.
 double f13(double X) {
   // CHECK-LABEL: define double @f13
-  // CHECK: fneg double
+  // CHECK: fsub double -0.0
   return -X;
 }
 

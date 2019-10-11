@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -verify -ffreestanding -fsyntax-only -triple=i686-linux-gnu -std=c11
+// RUN: %clang_cc1 %s -verify -fgnuc-version=4.2.1 -ffreestanding -fsyntax-only -triple=i686-linux-gnu -std=c11
 
 // Basic parsing/Sema tests for __c11_atomic_*
 

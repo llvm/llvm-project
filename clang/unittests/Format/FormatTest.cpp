@@ -14723,6 +14723,12 @@ TEST_F(FormatTest, NotCastRPaen) {
   verifyFormat("auto operator delete(int &) final");
 }
 
-} // end namespace
-} // end namespace format
-} // end namespace clang
+TEST_F(FormatTest, STLWhileNotDefineChed) {
+  verifyFormat("#if defined(while)\n"
+               "#define while EMIT WARNING C4005\n"
+               "#endif // while");
+}
+
+} // namespace
+} // namespace format
+} // namespace clang

@@ -17,6 +17,7 @@
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/Scope.h"
 #include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/UniqueVector.h"
 
 using namespace clang;
 
@@ -134,7 +135,8 @@ static OpenMPDirectiveKind parseOpenMPDirectiveKind(Parser &P) {
       {OMPD_target_teams_distribute_parallel, OMPD_for,
        OMPD_target_teams_distribute_parallel_for},
       {OMPD_target_teams_distribute_parallel_for, OMPD_simd,
-       OMPD_target_teams_distribute_parallel_for_simd}};
+       OMPD_target_teams_distribute_parallel_for_simd},
+      {OMPD_master, OMPD_taskloop, OMPD_master_taskloop}};
   enum { CancellationPoint = 0, DeclareReduction = 1, TargetData = 2 };
   Token Tok = P.getCurToken();
   unsigned DKind =
@@ -853,7 +855,7 @@ static void parseImplementationSelector(
     (void)T.expectAndConsume(diag::err_expected_lparen_after,
                              CtxSelectorName.data());
     const ExprResult Score = parseContextScore(P);
-    SmallVector<llvm::SmallString<16>, 4> Vendors;
+    llvm::UniqueVector<llvm::SmallString<16>> Vendors;
     do {
       // Parse <vendor>.
       StringRef VendorName;
@@ -862,7 +864,7 @@ static void parseImplementationSelector(
         VendorName = P.getPreprocessor().getSpelling(P.getCurToken(), Buffer);
         (void)P.ConsumeToken();
         if (!VendorName.empty())
-          Vendors.push_back(VendorName);
+          Vendors.insert(VendorName);
       } else {
         P.Diag(Tok.getLocation(), diag::err_omp_declare_variant_item_expected)
             << "vendor identifier"
@@ -878,10 +880,10 @@ static void parseImplementationSelector(
     (void)T.consumeClose();
     if (!Vendors.empty()) {
       SmallVector<StringRef, 4> ImplVendors(Vendors.size());
-      for (int I = 0, E = Vendors.size(); I < E; ++I)
-        ImplVendors[I] = Vendors[I];
+      llvm::copy(Vendors, ImplVendors.begin());
       Sema::OpenMPDeclareVariantCtsSelectorData Data(
-          OMPDeclareVariantAttr::CtxSetImplementation, CSKind, ImplVendors,
+          OMPDeclareVariantAttr::CtxSetImplementation, CSKind,
+          llvm::makeMutableArrayRef(ImplVendors.begin(), ImplVendors.size()),
           Score);
       Callback(SourceRange(Loc, Tok.getLocation()), Data);
     }
@@ -1502,6 +1504,7 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
   case OMPD_target_parallel_for:
   case OMPD_taskloop:
   case OMPD_taskloop_simd:
+  case OMPD_master_taskloop:
   case OMPD_distribute:
   case OMPD_end_declare_target:
   case OMPD_target_update:
@@ -1556,12 +1559,11 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
 ///         'parallel for' | 'parallel sections' | 'task' | 'taskyield' |
 ///         'barrier' | 'taskwait' | 'flush' | 'ordered' | 'atomic' |
 ///         'for simd' | 'parallel for simd' | 'target' | 'target data' |
-///         'taskgroup' | 'teams' | 'taskloop' | 'taskloop simd' |
-///         'distribute' | 'target enter data' | 'target exit data' |
-///         'target parallel' | 'target parallel for' |
-///         'target update' | 'distribute parallel for' |
-///         'distribute paralle for simd' | 'distribute simd' |
-///         'target parallel for simd' | 'target simd' |
+///         'taskgroup' | 'teams' | 'taskloop' | 'taskloop simd' | 'master
+///         taskloop' | 'distribute' | 'target enter data' | 'target exit data'
+///         | 'target parallel' | 'target parallel for' | 'target update' |
+///         'distribute parallel for' | 'distribute paralle for simd' |
+///         'distribute simd' | 'target parallel for simd' | 'target simd' |
 ///         'teams distribute' | 'teams distribute simd' |
 ///         'teams distribute parallel for simd' |
 ///         'teams distribute parallel for' | 'target teams' |
@@ -1744,6 +1746,7 @@ Parser::ParseOpenMPDeclarativeOrExecutableDirective(ParsedStmtContext StmtCtx) {
   case OMPD_target_parallel_for:
   case OMPD_taskloop:
   case OMPD_taskloop_simd:
+  case OMPD_master_taskloop:
   case OMPD_distribute:
   case OMPD_distribute_parallel_for:
   case OMPD_distribute_parallel_for_simd:

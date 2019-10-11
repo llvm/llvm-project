@@ -803,6 +803,7 @@ static bool hasNestedSPMDDirective(ASTContext &Ctx,
     case OMPD_declare_mapper:
     case OMPD_taskloop:
     case OMPD_taskloop_simd:
+    case OMPD_master_taskloop:
     case OMPD_requires:
     case OMPD_unknown:
       llvm_unreachable("Unexpected directive.");
@@ -874,6 +875,7 @@ static bool supportsSPMDExecutionMode(ASTContext &Ctx,
   case OMPD_declare_mapper:
   case OMPD_taskloop:
   case OMPD_taskloop_simd:
+  case OMPD_master_taskloop:
   case OMPD_requires:
   case OMPD_unknown:
     break;
@@ -1038,6 +1040,7 @@ static bool hasNestedLightweightDirective(ASTContext &Ctx,
     case OMPD_declare_mapper:
     case OMPD_taskloop:
     case OMPD_taskloop_simd:
+    case OMPD_master_taskloop:
     case OMPD_requires:
     case OMPD_unknown:
       llvm_unreachable("Unexpected directive.");
@@ -1115,6 +1118,7 @@ static bool supportsLightweightRuntime(ASTContext &Ctx,
   case OMPD_declare_mapper:
   case OMPD_taskloop:
   case OMPD_taskloop_simd:
+  case OMPD_master_taskloop:
   case OMPD_requires:
   case OMPD_unknown:
     break;
@@ -1893,6 +1897,19 @@ unsigned CGOpenMPRuntimeNVPTX::getDefaultLocationReserved2Flags() const {
     return UndefinedMode;
   }
   llvm_unreachable("Unknown flags are requested.");
+}
+
+bool CGOpenMPRuntimeNVPTX::tryEmitDeclareVariant(const GlobalDecl &NewGD,
+                                                 const GlobalDecl &OldGD,
+                                                 llvm::GlobalValue *OrigAddr,
+                                                 bool IsForDefinition) {
+  // Emit the function in OldGD with the body from NewGD, if NewGD is defined.
+  auto *NewFD = cast<FunctionDecl>(NewGD.getDecl());
+  if (NewFD->isDefined()) {
+    CGM.emitOpenMPDeviceFunctionRedefinition(OldGD, NewGD, OrigAddr);
+    return true;
+  }
+  return false;
 }
 
 CGOpenMPRuntimeNVPTX::CGOpenMPRuntimeNVPTX(CodeGenModule &CGM)

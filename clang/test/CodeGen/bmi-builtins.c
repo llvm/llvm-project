@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +bmi -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +bmi -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,CHECK_TZCNT
+// RUN: %clang_cc1 -fms-extensions -fms-compatibility -fms-compatibility-version=17.00 -ffreestanding %s -triple=x86_64-windows-msvc -emit-llvm -o - -Wall -Werror -DTEST_TZCNT | FileCheck %s --check-prefix=CHECK-TZCNT
 
 
 #include <immintrin.h>
@@ -13,12 +14,57 @@
 // instruction is identical in hardware, the AMD and Intel
 // intrinsics are different!
 
+unsigned short test_tzcnt_u16(unsigned short __X) {
+  // CHECK-TZCNT-LABEL: test_tzcnt_u16
+  // CHECK-TZCNT: i16 @llvm.cttz.i16(i16 %{{.*}}, i1 false)
+  return _tzcnt_u16(__X);
+}
+
 unsigned short test__tzcnt_u16(unsigned short __X) {
-  // CHECK-LABEL: test__tzcnt_u16
-  // CHECK: i16 @llvm.cttz.i16(i16 %{{.*}}, i1 false)
+  // CHECK-TZCNT-LABEL: test__tzcnt_u16
+  // CHECK-TZCNT: i16 @llvm.cttz.i16(i16 %{{.*}}, i1 false)
   return __tzcnt_u16(__X);
 }
 
+unsigned int test__tzcnt_u32(unsigned int __X) {
+  // CHECK-TZCNT-LABEL: test__tzcnt_u32
+  // CHECK-TZCNT: i32 @llvm.cttz.i32(i32 %{{.*}}, i1 false)
+  return __tzcnt_u32(__X);
+}
+
+int test_mm_tzcnt_32(unsigned int __X) {
+  // CHECK-TZCNT-LABEL: test_mm_tzcnt_32
+  // CHECK-TZCNT: i32 @llvm.cttz.i32(i32 %{{.*}}, i1 false)
+  return _mm_tzcnt_32(__X);
+}
+
+unsigned int test_tzcnt_u32(unsigned int __X) {
+  // CHECK-TZCNT-LABEL: test_tzcnt_u32
+  // CHECK-TZCNT: i32 @llvm.cttz.i32(i32 %{{.*}}, i1 false)
+  return _tzcnt_u32(__X);
+}
+
+#ifdef __x86_64__
+unsigned long long test__tzcnt_u64(unsigned long long __X) {
+  // CHECK-TZCNT-LABEL: test__tzcnt_u64
+  // CHECK-TZCNT: i64 @llvm.cttz.i64(i64 %{{.*}}, i1 false)
+  return __tzcnt_u64(__X);
+}
+
+long long test_mm_tzcnt_64(unsigned long long __X) {
+  // CHECK-TZCNT-LABEL: test_mm_tzcnt_64
+  // CHECK-TZCNT: i64 @llvm.cttz.i64(i64 %{{.*}}, i1 false)
+  return _mm_tzcnt_64(__X);
+}
+
+unsigned long long test_tzcnt_u64(unsigned long long __X) {
+  // CHECK-TZCNT-LABEL: test_tzcnt_u64
+  // CHECK-TZCNT: i64 @llvm.cttz.i64(i64 %{{.*}}, i1 false)
+  return _tzcnt_u64(__X);
+}
+#endif
+
+#if !defined(TEST_TZCNT)
 unsigned int test__andn_u32(unsigned int __X, unsigned int __Y) {
   // CHECK-LABEL: test__andn_u32
   // CHECK: xor i32 %{{.*}}, -1
@@ -51,18 +97,6 @@ unsigned int test__blsr_u32(unsigned int __X) {
   // CHECK: sub i32 %{{.*}}, 1
   // CHECK: and i32 %{{.*}}, %{{.*}}
   return __blsr_u32(__X);
-}
-
-unsigned int test__tzcnt_u32(unsigned int __X) {
-  // CHECK-LABEL: test__tzcnt_u32
-  // CHECK: i32 @llvm.cttz.i32(i32 %{{.*}}, i1 false)
-  return __tzcnt_u32(__X);
-}
-
-int test_mm_tzcnt_32(unsigned int __X) {
-  // CHECK-LABEL: test_mm_tzcnt_32
-  // CHECK: i32 @llvm.cttz.i32(i32 %{{.*}}, i1 false)
-  return _mm_tzcnt_32(__X);
 }
 
 #ifdef __x86_64__
@@ -99,27 +133,9 @@ unsigned long long test__blsr_u64(unsigned long long __X) {
   // CHECK: and i64 %{{.*}}, %{{.*}}
   return __blsr_u64(__X);
 }
-
-unsigned long long test__tzcnt_u64(unsigned long long __X) {
-  // CHECK-LABEL: test__tzcnt_u64
-  // CHECK: i64 @llvm.cttz.i64(i64 %{{.*}}, i1 false)
-  return __tzcnt_u64(__X);
-}
-
-long long test_mm_tzcnt_64(unsigned long long __X) {
-  // CHECK-LABEL: test_mm_tzcnt_64
-  // CHECK: i64 @llvm.cttz.i64(i64 %{{.*}}, i1 false)
-  return _mm_tzcnt_64(__X);
-}
 #endif
 
 // Intel intrinsics
-
-unsigned short test_tzcnt_u16(unsigned short __X) {
-  // CHECK-LABEL: test_tzcnt_u16
-  // CHECK: i16 @llvm.cttz.i16(i16 %{{.*}}, i1 false)
-  return _tzcnt_u16(__X);
-}
 
 unsigned int test_andn_u32(unsigned int __X, unsigned int __Y) {
   // CHECK-LABEL: test_andn_u32
@@ -158,12 +174,6 @@ unsigned int test_blsr_u32(unsigned int __X) {
   // CHECK: sub i32 %{{.*}}, 1
   // CHECK: and i32 %{{.*}}, %{{.*}}
   return _blsr_u32(__X);
-}
-
-unsigned int test_tzcnt_u32(unsigned int __X) {
-  // CHECK-LABEL: test_tzcnt_u32
-  // CHECK: i32 @llvm.cttz.i32(i32 %{{.*}}, i1 false)
-  return _tzcnt_u32(__X);
 }
 
 #ifdef __x86_64__
@@ -206,10 +216,6 @@ unsigned long long test_blsr_u64(unsigned long long __X) {
   // CHECK: and i64 %{{.*}}, %{{.*}}
   return _blsr_u64(__X);
 }
-
-unsigned long long test_tzcnt_u64(unsigned long long __X) {
-  // CHECK-LABEL: test_tzcnt_u64
-  // CHECK: i64 @llvm.cttz.i64(i64 %{{.*}}, i1 false)
-  return _tzcnt_u64(__X);
-}
 #endif
+
+#endif // !defined(TEST_TZCNT)
