@@ -1099,9 +1099,6 @@ QualType Sema::CheckNonTypeTemplateParameterType(QualType T,
       T->isMemberPointerType() ||
       //   -- std::nullptr_t.
       T->isNullPtrType() ||
-      // If T is a dependent type, we can't do the check now, so we
-      // assume that it is well-formed.
-      T->isDependentType() ||
       // Allow use of auto in template parameter declarations.
       T->isUndeducedType()) {
     // C++ [temp.param]p5: The top-level cv-qualifiers on the template-parameter
@@ -1114,8 +1111,17 @@ QualType Sema::CheckNonTypeTemplateParameterType(QualType T,
   //   A non-type template-parameter of type "array of T" or
   //   "function returning T" is adjusted to be of type "pointer to
   //   T" or "pointer to function returning T", respectively.
-  else if (T->isArrayType() || T->isFunctionType())
+  if (T->isArrayType() || T->isFunctionType())
     return Context.getDecayedType(T);
+
+  // If T is a dependent type, we can't do the check now, so we
+  // assume that it is well-formed. Note that stripping off the
+  // qualifiers here is not really correct if T turns out to be
+  // an array type, but we'll recompute the type everywhere it's
+  // used during instantiation, so that should be OK. (Using the
+  // qualified type is equally wrong.)
+  if (T->isDependentType())
+    return T.getUnqualifiedType();
 
   Diag(Loc, diag::err_template_nontype_parm_bad_type)
     << T;

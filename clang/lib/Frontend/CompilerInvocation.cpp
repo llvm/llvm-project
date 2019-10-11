@@ -2276,6 +2276,7 @@ void CompilerInvocation::setLangDefaults(LangOptions &Opts, InputKind IK,
   Opts.Digraphs = Std.hasDigraphs();
   Opts.GNUMode = Std.isGNUMode();
   Opts.GNUInline = !Opts.C99 && !Opts.CPlusPlus;
+  Opts.GNUCVersion = 0;
   Opts.HexFloats = Std.hasHexFloats();
   Opts.ImplicitInt = Std.hasImplicitInt();
 
@@ -2598,6 +2599,21 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
     if (Args.hasArg(OPT_fobjc_subscripting_legacy_runtime))
       Opts.ObjCSubscriptingLegacyRuntime =
         (Opts.ObjCRuntime.getKind() == ObjCRuntime::FragileMacOSX);
+  }
+
+  if (Arg *A = Args.getLastArg(options::OPT_fgnuc_version_EQ)) {
+    // Check that the version has 1 to 3 components and the minor and patch
+    // versions fit in two decimal digits.
+    VersionTuple GNUCVer;
+    bool Invalid = GNUCVer.tryParse(A->getValue());
+    unsigned Major = GNUCVer.getMajor();
+    unsigned Minor = GNUCVer.getMinor().getValueOr(0);
+    unsigned Patch = GNUCVer.getSubminor().getValueOr(0);
+    if (Invalid || GNUCVer.getBuild() || Minor >= 100 || Patch >= 100) {
+      Diags.Report(diag::err_drv_invalid_value)
+          << A->getAsString(Args) << A->getValue();
+    }
+    Opts.GNUCVersion = Major * 100 * 100 + Minor * 100 + Patch;
   }
 
   if (Args.hasArg(OPT_fgnu89_inline)) {

@@ -15,7 +15,7 @@
 // Check that -fprofile-generate=/path/to generates /path/to/default.profraw
 // RUN: %clang %s -c -S -o - -emit-llvm -fprofile-generate=/path/to -fno-experimental-new-pass-manager | FileCheck -check-prefixes=PROFILE-GEN,PROFILE-GEN-EQ %s
 // RxUN: %clang %s -c -S -o - -emit-llvm -fprofile-generate=/path/to -fexperimental-new-pass-manager | FileCheck -check-prefixes=PROFILE-GEN,PROFILE-GEN-EQ %s
-// PROFILE-GEN-EQ: constant [{{.*}} x i8] c"/path/to{{/|\\5C}}{{.*}}\00"
+// PROFILE-GEN-EQ: constant [{{.*}} x i8] c"/path/to{{/|\\\\}}{{.*}}\00"
 
 // Check that -fprofile-use=some/path reads some/path/default.profdata
 // This uses Clang FE format profile.

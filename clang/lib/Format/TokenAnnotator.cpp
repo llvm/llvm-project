@@ -845,7 +845,6 @@ private:
       break;
     case tok::kw_if:
     case tok::kw_while:
-      assert(!Line.startsWith(tok::hash));
       if (Tok->is(tok::kw_if) && CurrentToken &&
           CurrentToken->isOneOf(tok::kw_constexpr, tok::identifier))
         next();

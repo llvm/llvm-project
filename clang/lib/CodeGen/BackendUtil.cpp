@@ -975,6 +975,7 @@ static void addSanitizersAtO0(ModulePassManager &MPM,
   }
 
   if (LangOpts.Sanitize.has(SanitizerKind::Memory)) {
+    MPM.addPass(MemorySanitizerPass({}));
     MPM.addPass(createModuleToFunctionPassAdaptor(MemorySanitizerPass({})));
   }
 
@@ -984,6 +985,7 @@ static void addSanitizersAtO0(ModulePassManager &MPM,
   }
 
   if (LangOpts.Sanitize.has(SanitizerKind::Thread)) {
+    MPM.addPass(ThreadSanitizerPass());
     MPM.addPass(createModuleToFunctionPassAdaptor(ThreadSanitizerPass()));
   }
 }
@@ -1166,16 +1168,23 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
             [](FunctionPassManager &FPM, PassBuilder::OptimizationLevel Level) {
               FPM.addPass(BoundsCheckingPass());
             });
-      if (LangOpts.Sanitize.has(SanitizerKind::Memory))
+      if (LangOpts.Sanitize.has(SanitizerKind::Memory)) {
+        PB.registerPipelineStartEPCallback([](ModulePassManager &MPM) {
+          MPM.addPass(MemorySanitizerPass({}));
+        });
         PB.registerOptimizerLastEPCallback(
             [](FunctionPassManager &FPM, PassBuilder::OptimizationLevel Level) {
               FPM.addPass(MemorySanitizerPass({}));
             });
-      if (LangOpts.Sanitize.has(SanitizerKind::Thread))
+      }
+      if (LangOpts.Sanitize.has(SanitizerKind::Thread)) {
+        PB.registerPipelineStartEPCallback(
+            [](ModulePassManager &MPM) { MPM.addPass(ThreadSanitizerPass()); });
         PB.registerOptimizerLastEPCallback(
             [](FunctionPassManager &FPM, PassBuilder::OptimizationLevel Level) {
               FPM.addPass(ThreadSanitizerPass());
             });
+      }
       if (LangOpts.Sanitize.has(SanitizerKind::Address)) {
         PB.registerPipelineStartEPCallback([&](ModulePassManager &MPM) {
           MPM.addPass(

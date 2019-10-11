@@ -1264,9 +1264,10 @@ CGOpenMPRuntime::CGOpenMPRuntime(CodeGenModule &CGM, StringRef FirstSeparator,
   loadOffloadInfoMetadata();
 }
 
-static bool tryEmitAlias(CodeGenModule &CGM, const GlobalDecl &NewGD,
-                         const GlobalDecl &OldGD, llvm::GlobalValue *OrigAddr,
-                         bool IsForDefinition) {
+bool CGOpenMPRuntime::tryEmitDeclareVariant(const GlobalDecl &NewGD,
+                                            const GlobalDecl &OldGD,
+                                            llvm::GlobalValue *OrigAddr,
+                                            bool IsForDefinition) {
   // Emit at least a definition for the aliasee if the the address of the
   // original function is requested.
   if (IsForDefinition || OrigAddr)
@@ -1327,8 +1328,8 @@ void CGOpenMPRuntime::clear() {
     StringRef MangledName = CGM.getMangledName(Pair.second.second);
     llvm::GlobalValue *Addr = CGM.GetGlobalValue(MangledName);
     // If not able to emit alias, just emit original declaration.
-    (void)tryEmitAlias(CGM, Pair.second.first, Pair.second.second, Addr,
-                       /*IsForDefinition=*/false);
+    (void)tryEmitDeclareVariant(Pair.second.first, Pair.second.second, Addr,
+                                /*IsForDefinition=*/false);
   }
 }
 
@@ -6847,6 +6848,7 @@ emitNumTeamsForTargetDirective(CodeGenFunction &CGF,
   case OMPD_declare_mapper:
   case OMPD_taskloop:
   case OMPD_taskloop_simd:
+  case OMPD_master_taskloop:
   case OMPD_requires:
   case OMPD_unknown:
     break;
@@ -7153,6 +7155,7 @@ emitNumThreadsForTargetDirective(CodeGenFunction &CGF,
   case OMPD_declare_mapper:
   case OMPD_taskloop:
   case OMPD_taskloop_simd:
+  case OMPD_master_taskloop:
   case OMPD_requires:
   case OMPD_unknown:
     break;
@@ -8924,6 +8927,7 @@ getNestedDistributeDirective(ASTContext &Ctx, const OMPExecutableDirective &D) {
     case OMPD_declare_mapper:
     case OMPD_taskloop:
     case OMPD_taskloop_simd:
+    case OMPD_master_taskloop:
     case OMPD_requires:
     case OMPD_unknown:
       llvm_unreachable("Unexpected directive.");
@@ -9681,6 +9685,7 @@ void CGOpenMPRuntime::scanForTargetRegionsFunctions(const Stmt *S,
     case OMPD_declare_mapper:
     case OMPD_taskloop:
     case OMPD_taskloop_simd:
+    case OMPD_master_taskloop:
     case OMPD_requires:
     case OMPD_unknown:
       llvm_unreachable("Unknown target directive for OpenMP device codegen.");
@@ -10307,6 +10312,7 @@ void CGOpenMPRuntime::emitTargetDataStandAloneCall(
     case OMPD_declare_mapper:
     case OMPD_taskloop:
     case OMPD_taskloop_simd:
+    case OMPD_master_taskloop:
     case OMPD_target:
     case OMPD_target_simd:
     case OMPD_target_teams_distribute:
@@ -11273,7 +11279,7 @@ bool CGOpenMPRuntime::emitDeclareVariant(GlobalDecl GD, bool IsForDefinition) {
   if (NewFD == D)
     return false;
   GlobalDecl NewGD = GD.getWithDecl(NewFD);
-  if (tryEmitAlias(CGM, NewGD, GD, Orig, IsForDefinition)) {
+  if (tryEmitDeclareVariant(NewGD, GD, Orig, IsForDefinition)) {
     DeferredVariantFunction.erase(D);
     return true;
   }

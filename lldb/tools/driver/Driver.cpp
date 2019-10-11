@@ -19,8 +19,8 @@
 #include "lldb/API/SBStringList.h"
 
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Process.h"
@@ -807,23 +807,9 @@ llvm::Optional<int> InitializeReproducer(opt::InputArgList &input_args) {
   return llvm::None;
 }
 
-int
-#ifdef _MSC_VER
-wmain(int argc, wchar_t const *wargv[])
-#else
-main(int argc, char const *argv[])
-#endif
+int main(int argc, char const *argv[])
 {
-#ifdef _MSC_VER
-  // Convert wide arguments to UTF-8
-  std::vector<std::string> argvStrings(argc);
-  std::vector<const char *> argvPointers(argc);
-  for (int i = 0; i != argc; ++i) {
-    llvm::convertWideToUTF8(wargv[i], argvStrings[i]);
-    argvPointers[i] = argvStrings[i].c_str();
-  }
-  const char **argv = argvPointers.data();
-#endif
+  llvm::InitLLVM IL(argc, argv);
 
   // Print stack trace on crash.
   llvm::StringRef ToolName = llvm::sys::path::filename(argv[0]);

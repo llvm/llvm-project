@@ -85,7 +85,7 @@ int main() {
   // CHECK-CXX11: private unnamed_addr constant [3 x i32] [i32 75, i32 76, i32 0], align 4
   const wchar_t *l = LR"bar(KL)bar";
 
-  // CHECK-CXX11: private unnamed_addr constant [9 x i8] c"abc\5Cndef\00", align 1
+  // CHECK-CXX11: private unnamed_addr constant [9 x i8] c"abc\\ndef\00", align 1
   const char *m = R"(abc\ndef)";
 
   // CHECK-CXX11: private unnamed_addr constant [8 x i8] c"abc\0Adef\00", align 1
@@ -96,13 +96,13 @@ def)";
   const char *q = R"(abc
 def)" "ghi";
 
-  // CHECK-CXX11: private unnamed_addr constant [13 x i8] c"abc\5C\0A??=\0Adef\00", align 1
+  // CHECK-CXX11: private unnamed_addr constant [13 x i8] c"abc\\\0A??=\0Adef\00", align 1
   const char *r = R\
 "(abc\
 ??=
 def)";
 
-  // CHECK-CXX11: private unnamed_addr constant [13 x i8] c"def\5C\0A??=\0Aabc\00", align 1
+  // CHECK-CXX11: private unnamed_addr constant [13 x i8] c"def\\\0A??=\0Aabc\00", align 1
   const char *s = u8R\
 "(def\
 ??=

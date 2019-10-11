@@ -918,6 +918,11 @@ void StmtProfiler::VisitOMPTaskLoopSimdDirective(
   VisitOMPLoopDirective(S);
 }
 
+void StmtProfiler::VisitOMPMasterTaskLoopDirective(
+    const OMPMasterTaskLoopDirective *S) {
+  VisitOMPLoopDirective(S);
+}
+
 void StmtProfiler::VisitOMPDistributeDirective(
     const OMPDistributeDirective *S) {
   VisitOMPLoopDirective(S);

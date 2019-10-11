@@ -671,6 +671,9 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
   case Stmt::OMPTaskLoopSimdDirectiveClass:
     K = CXCursor_OMPTaskLoopSimdDirective;
     break;
+  case Stmt::OMPMasterTaskLoopDirectiveClass:
+    K = CXCursor_OMPMasterTaskLoopDirective;
+    break;
   case Stmt::OMPDistributeDirectiveClass:
     K = CXCursor_OMPDistributeDirective;
     break;

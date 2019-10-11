@@ -77,11 +77,11 @@ void test1() {
 
   res_vf = vec_nabs(vf);
 // CHECK: [[VEC:%[0-9]+]] = call <4 x float> @llvm.fabs.v4f32(<4 x float> %{{[0-9]*}})
-// CHECK-NEXT: fneg <4 x float> [[VEC]]
+// CHECK-NEXT: fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, [[VEC]]
 
   res_vd = vec_nabs(vd);
 // CHECK: [[VECD:%[0-9]+]] = call <2 x double> @llvm.fabs.v2f64(<2 x double> %{{[0-9]*}})
-// CHECK: fneg <2 x double> [[VECD]]
+// CHECK: fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, [[VECD]]
 
   dummy();
 // CHECK: call void @dummy()
@@ -1686,12 +1686,12 @@ vec_xst_be(vd, sll, ad);
 // CHECK-LE: call void @llvm.ppc.vsx.stxvd2x.be(<2 x double> %{{[0-9]+}}, i8* %{{[0-9]+}})
 
   res_vf = vec_neg(vf);
-// CHECK: fneg <4 x float> {{%[0-9]+}}
-// CHECK-LE: fneg <4 x float> {{%[0-9]+}}
+// CHECK: fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, {{%[0-9]+}}
+// CHECK-LE: fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, {{%[0-9]+}}
 
   res_vd = vec_neg(vd);
-// CHECK: fneg <2 x double> {{%[0-9]+}}
-// CHECK-LE: fneg <2 x double> {{%[0-9]+}}
+// CHECK: fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, {{%[0-9]+}}
+// CHECK-LE: fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, {{%[0-9]+}}
 
 res_vd = vec_xxpermdi(vd, vd, 0);
 // CHECK: shufflevector <2 x i64> %{{[0-9]+}}, <2 x i64> %{{[0-9]+}}, <2 x i32> <i32 0, i32 2>

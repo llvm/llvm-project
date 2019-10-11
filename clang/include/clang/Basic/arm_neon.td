@@ -1651,10 +1651,10 @@ let ArchGuard = "defined(__ARM_FEATURE_DOTPROD) && defined(__aarch64__)" in {
 
 // v8.2-A FP16 fused multiply-add long instructions.
 let ArchGuard = "defined(__ARM_FEATURE_FP16FML) && defined(__aarch64__)" in {
-  def VFMLAL_LOW  : SInst<"vfmlal_low",  "ffHH", "hQh">;
-  def VFMLSL_LOW  : SInst<"vfmlsl_low",  "ffHH", "hQh">;
-  def VFMLAL_HIGH : SInst<"vfmlal_high", "ffHH", "hQh">;
-  def VFMLSL_HIGH : SInst<"vfmlsl_high", "ffHH", "hQh">;
+  def VFMLAL_LOW  : SInst<"vfmlal_low",  "nndd", "hQh">;
+  def VFMLSL_LOW  : SInst<"vfmlsl_low",  "nndd", "hQh">;
+  def VFMLAL_HIGH : SInst<"vfmlal_high", "nndd", "hQh">;
+  def VFMLSL_HIGH : SInst<"vfmlsl_high", "nndd", "hQh">;
 
   def VFMLAL_LANE_LOW  : SOpInst<"vfmlal_lane_low",  "ffH0i", "hQh", OP_FMLAL_LN>;
   def VFMLSL_LANE_LOW  : SOpInst<"vfmlsl_lane_low",  "ffH0i", "hQh", OP_FMLSL_LN>;

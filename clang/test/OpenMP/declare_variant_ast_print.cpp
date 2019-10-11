@@ -40,7 +40,7 @@ int bar();
 #pragma omp declare variant(foofoo <T>) match(user = {condition(<expr>)})
 #pragma omp declare variant(foofoo <T>) match(implementation={vendor(llvm)})
 #pragma omp declare variant(foofoo <T>) match(implementation={vendor(unknown)})
-#pragma omp declare variant(foofoo <T>) match(implementation={vendor(score(C+5): ibm, xxx)})
+#pragma omp declare variant(foofoo <T>) match(implementation={vendor(score(C+5): ibm, xxx, ibm)})
 template <typename T, int C>
 T barbar();
 

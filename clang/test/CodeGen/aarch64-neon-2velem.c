@@ -333,7 +333,7 @@ float32x4_t test_vfmaq_laneq_f32(float32x4_t a, float32x4_t b, float32x4_t v) {
 }
 
 // CHECK-LABEL: @test_vfms_lane_f32(
-// CHECK:   [[SUB:%.*]] = fneg <2 x float> %b
+// CHECK:   [[SUB:%.*]] = fsub <2 x float> <float -0.000000e+00, float -0.000000e+00>, %b
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x float> %a to <8 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <2 x float> [[SUB]] to <8 x i8>
 // CHECK:   [[TMP2:%.*]] = bitcast <2 x float> %v to <8 x i8>
@@ -348,7 +348,7 @@ float32x2_t test_vfms_lane_f32(float32x2_t a, float32x2_t b, float32x2_t v) {
 }
 
 // CHECK-LABEL: @test_vfmsq_lane_f32(
-// CHECK:   [[SUB:%.*]] = fneg <4 x float> %b
+// CHECK:   [[SUB:%.*]] = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %b
 // CHECK:   [[TMP0:%.*]] = bitcast <4 x float> %a to <16 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <4 x float> [[SUB]] to <16 x i8>
 // CHECK:   [[TMP2:%.*]] = bitcast <2 x float> %v to <8 x i8>
@@ -363,7 +363,7 @@ float32x4_t test_vfmsq_lane_f32(float32x4_t a, float32x4_t b, float32x2_t v) {
 }
 
 // CHECK-LABEL: @test_vfms_laneq_f32(
-// CHECK:   [[SUB:%.*]] = fneg <2 x float> %b
+// CHECK:   [[SUB:%.*]] = fsub <2 x float> <float -0.000000e+00, float -0.000000e+00>, %b
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x float> %a to <8 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <2 x float> [[SUB]] to <8 x i8>
 // CHECK:   [[TMP2:%.*]] = bitcast <4 x float> %v to <16 x i8>
@@ -378,7 +378,7 @@ float32x2_t test_vfms_laneq_f32(float32x2_t a, float32x2_t b, float32x4_t v) {
 }
 
 // CHECK-LABEL: @test_vfmsq_laneq_f32(
-// CHECK:   [[SUB:%.*]] = fneg <4 x float> %b
+// CHECK:   [[SUB:%.*]] = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %b
 // CHECK:   [[TMP0:%.*]] = bitcast <4 x float> %a to <16 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <4 x float> [[SUB]] to <16 x i8>
 // CHECK:   [[TMP2:%.*]] = bitcast <4 x float> %v to <16 x i8>
@@ -421,7 +421,7 @@ float64x2_t test_vfmaq_laneq_f64(float64x2_t a, float64x2_t b, float64x2_t v) {
 }
 
 // CHECK-LABEL: @test_vfmsq_lane_f64(
-// CHECK:   [[SUB:%.*]] = fneg <2 x double> %b
+// CHECK:   [[SUB:%.*]] = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %b
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x double> %a to <16 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <2 x double> [[SUB]] to <16 x i8>
 // CHECK:   [[TMP2:%.*]] = bitcast <1 x double> %v to <8 x i8>
@@ -436,7 +436,7 @@ float64x2_t test_vfmsq_lane_f64(float64x2_t a, float64x2_t b, float64x1_t v) {
 }
 
 // CHECK-LABEL: @test_vfmsq_laneq_f64(
-// CHECK:   [[SUB:%.*]] = fneg <2 x double> %b
+// CHECK:   [[SUB:%.*]] = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %b
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x double> %a to <16 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <2 x double> [[SUB]] to <16 x i8>
 // CHECK:   [[TMP2:%.*]] = bitcast <2 x double> %v to <16 x i8>
@@ -459,7 +459,7 @@ float32_t test_vfmas_laneq_f32(float32_t a, float32_t b, float32x4_t v) {
 }
 
 // CHECK-LABEL: @test_vfmsd_lane_f64(
-// CHECK:   [[SUB:%.*]] = fneg double %b
+// CHECK:   [[SUB:%.*]] = fsub double -0.000000e+00, %b
 // CHECK:   [[EXTRACT:%.*]] = extractelement <1 x double> %v, i32 0
 // CHECK:   [[TMP2:%.*]] = call double @llvm.fma.f64(double [[SUB]], double [[EXTRACT]], double %a)
 // CHECK:   ret double [[TMP2]]
@@ -468,7 +468,7 @@ float64_t test_vfmsd_lane_f64(float64_t a, float64_t b, float64x1_t v) {
 }
 
 // CHECK-LABEL: @test_vfmss_laneq_f32(
-// CHECK:   [[SUB:%.*]] = fneg float %b
+// CHECK:   [[SUB:%.*]] = fsub float -0.000000e+00, %b
 // CHECK:   [[EXTRACT:%.*]] = extractelement <4 x float> %v, i32 3
 // CHECK:   [[TMP2:%.*]] = call float @llvm.fma.f32(float [[SUB]], float [[EXTRACT]], float %a)
 // CHECK:   ret float [[TMP2]]
@@ -477,7 +477,7 @@ float32_t test_vfmss_laneq_f32(float32_t a, float32_t b, float32x4_t v) {
 }
 
 // CHECK-LABEL: @test_vfmsd_laneq_f64(
-// CHECK:   [[SUB:%.*]] = fneg double %b
+// CHECK:   [[SUB:%.*]] = fsub double -0.000000e+00, %b
 // CHECK:   [[EXTRACT:%.*]] = extractelement <2 x double> %v, i32 1
 // CHECK:   [[TMP2:%.*]] = call double @llvm.fma.f64(double [[SUB]], double [[EXTRACT]], double %a)
 // CHECK:   ret double [[TMP2]]
@@ -1767,7 +1767,7 @@ float32x4_t test_vfmaq_laneq_f32_0(float32x4_t a, float32x4_t b, float32x4_t v) 
 }
 
 // CHECK-LABEL: @test_vfms_lane_f32_0(
-// CHECK:   [[SUB:%.*]] = fneg <2 x float> %b
+// CHECK:   [[SUB:%.*]] = fsub <2 x float> <float -0.000000e+00, float -0.000000e+00>, %b
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x float> %a to <8 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <2 x float> [[SUB]] to <8 x i8>
 // CHECK:   [[TMP2:%.*]] = bitcast <2 x float> %v to <8 x i8>
@@ -1782,7 +1782,7 @@ float32x2_t test_vfms_lane_f32_0(float32x2_t a, float32x2_t b, float32x2_t v) {
 }
 
 // CHECK-LABEL: @test_vfmsq_lane_f32_0(
-// CHECK:   [[SUB:%.*]] = fneg <4 x float> %b
+// CHECK:   [[SUB:%.*]] = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %b
 // CHECK:   [[TMP0:%.*]] = bitcast <4 x float> %a to <16 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <4 x float> [[SUB]] to <16 x i8>
 // CHECK:   [[TMP2:%.*]] = bitcast <2 x float> %v to <8 x i8>
@@ -1797,7 +1797,7 @@ float32x4_t test_vfmsq_lane_f32_0(float32x4_t a, float32x4_t b, float32x2_t v) {
 }
 
 // CHECK-LABEL: @test_vfms_laneq_f32_0(
-// CHECK:   [[SUB:%.*]] = fneg <2 x float> %b
+// CHECK:   [[SUB:%.*]] = fsub <2 x float> <float -0.000000e+00, float -0.000000e+00>, %b
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x float> %a to <8 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <2 x float> [[SUB]] to <8 x i8>
 // CHECK:   [[TMP2:%.*]] = bitcast <4 x float> %v to <16 x i8>
@@ -1812,7 +1812,7 @@ float32x2_t test_vfms_laneq_f32_0(float32x2_t a, float32x2_t b, float32x4_t v) {
 }
 
 // CHECK-LABEL: @test_vfmsq_laneq_f32_0(
-// CHECK:   [[SUB:%.*]] = fneg <4 x float> %b
+// CHECK:   [[SUB:%.*]] = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %b
 // CHECK:   [[TMP0:%.*]] = bitcast <4 x float> %a to <16 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <4 x float> [[SUB]] to <16 x i8>
 // CHECK:   [[TMP2:%.*]] = bitcast <4 x float> %v to <16 x i8>
@@ -1841,7 +1841,7 @@ float64x2_t test_vfmaq_laneq_f64_0(float64x2_t a, float64x2_t b, float64x2_t v) 
 }
 
 // CHECK-LABEL: @test_vfmsq_laneq_f64_0(
-// CHECK:   [[SUB:%.*]] = fneg <2 x double> %b
+// CHECK:   [[SUB:%.*]] = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %b
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x double> %a to <16 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <2 x double> [[SUB]] to <16 x i8>
 // CHECK:   [[TMP2:%.*]] = bitcast <2 x double> %v to <16 x i8>
@@ -3101,7 +3101,7 @@ float32x4_t test_vfmaq_n_f32(float32x4_t a, float32x4_t b, float32_t n) {
 }
 
 // CHECK-LABEL: @test_vfms_n_f32(
-// CHECK:   [[SUB_I:%.*]] = fneg <2 x float> %b
+// CHECK:   [[SUB_I:%.*]] = fsub <2 x float> <float -0.000000e+00, float -0.000000e+00>, %b
 // CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x float> undef, float %n, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <2 x float> [[VECINIT_I]], float %n, i32 1
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x float> %a to <8 x i8>
@@ -3114,7 +3114,7 @@ float32x2_t test_vfms_n_f32(float32x2_t a, float32x2_t b, float32_t n) {
 }
 
 // CHECK-LABEL: @test_vfms_n_f64(
-// CHECK:   [[SUB_I:%.*]] = fneg <1 x double> %b
+// CHECK:   [[SUB_I:%.*]] = fsub <1 x double> <double -0.000000e+00>, %b
 // CHECK:   [[VECINIT_I:%.*]] = insertelement <1 x double> undef, double %n, i32 0
 // CHECK:   [[TMP0:%.*]] = bitcast <1 x double> %a to <8 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <1 x double> [[SUB_I]] to <8 x i8>
@@ -3126,7 +3126,7 @@ float64x1_t test_vfms_n_f64(float64x1_t a, float64x1_t b, float64_t n) {
 }
 
 // CHECK-LABEL: @test_vfmsq_n_f32(
-// CHECK:   [[SUB_I:%.*]] = fneg <4 x float> %b
+// CHECK:   [[SUB_I:%.*]] = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %b
 // CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x float> undef, float %n, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <4 x float> [[VECINIT_I]], float %n, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <4 x float> [[VECINIT1_I]], float %n, i32 2

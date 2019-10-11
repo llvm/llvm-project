@@ -2742,6 +2742,50 @@ void CodeGenModule::EmitMultiVersionFunctionDefinition(GlobalDecl GD,
     EmitGlobalFunctionDefinition(GD, GV);
 }
 
+void CodeGenModule::emitOpenMPDeviceFunctionRedefinition(
+    GlobalDecl OldGD, GlobalDecl NewGD, llvm::GlobalValue *GV) {
+  assert(getLangOpts().OpenMP && getLangOpts().OpenMPIsDevice &&
+         OpenMPRuntime && "Expected OpenMP device mode.");
+  const auto *D = cast<FunctionDecl>(OldGD.getDecl());
+
+  // Compute the function info and LLVM type.
+  const CGFunctionInfo &FI = getTypes().arrangeGlobalDeclaration(OldGD);
+  llvm::FunctionType *Ty = getTypes().GetFunctionType(FI);
+
+  // Get or create the prototype for the function.
+  if (!GV || (GV->getType()->getElementType() != Ty)) {
+    GV = cast<llvm::GlobalValue>(GetOrCreateLLVMFunction(
+        getMangledName(OldGD), Ty, GlobalDecl(), /*ForVTable=*/false,
+        /*DontDefer=*/true, /*IsThunk=*/false, llvm::AttributeList(),
+        ForDefinition));
+    SetFunctionAttributes(OldGD, cast<llvm::Function>(GV),
+                          /*IsIncompleteFunction=*/false,
+                          /*IsThunk=*/false);
+  }
+  // We need to set linkage and visibility on the function before
+  // generating code for it because various parts of IR generation
+  // want to propagate this information down (e.g. to local static
+  // declarations).
+  auto *Fn = cast<llvm::Function>(GV);
+  setFunctionLinkage(OldGD, Fn);
+
+  // FIXME: this is redundant with part of
+  // setFunctionDefinitionAttributes
+  setGVProperties(Fn, OldGD);
+
+  MaybeHandleStaticInExternC(D, Fn);
+
+  maybeSetTrivialComdat(*D, *Fn);
+
+  CodeGenFunction(*this).GenerateCode(NewGD, Fn, FI);
+
+  setNonAliasAttributes(OldGD, Fn);
+  SetLLVMFunctionAttributesForDefinition(D, Fn);
+
+  if (D->hasAttr<AnnotateAttr>())
+    AddGlobalAnnotations(D, Fn);
+}
+
 void CodeGenModule::EmitGlobalDefinition(GlobalDecl GD, llvm::GlobalValue *GV) {
   const auto *D = cast<ValueDecl>(GD.getDecl());
 
