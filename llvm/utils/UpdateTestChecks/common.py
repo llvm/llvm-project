@@ -265,16 +265,37 @@ def genericize_check_lines(lines, is_analyze, vars_seen):
 
 
 def add_checks(output_lines, comment_marker, prefix_list, func_dict, func_name, check_label_format, is_asm, is_analyze):
+  # prefix_blacklist are prefixes we cannot use to print the function because it doesn't exist in run lines that use these prefixes as well.
+  prefix_blacklist = set()
   printed_prefixes = []
   for p in prefix_list:
     checkprefixes = p[0]
+    # If not all checkprefixes of this run line produced the function we cannot check for it as it does not
+    # exist for this run line. A subset of the check prefixes might know about the function but only because
+    # other run lines created it.
+    if any(map(lambda checkprefix: func_name not in func_dict[checkprefix], checkprefixes)):
+        prefix_blacklist |= set(checkprefixes)
+        continue
+
+  # prefix_blacklist is constructed, we can now emit the output
+  for p in prefix_list:
+    checkprefixes = p[0]
+    saved_output = None
     for checkprefix in checkprefixes:
       if checkprefix in printed_prefixes:
         break
-      # TODO func_dict[checkprefix] may be None, '' or not exist.
-      # Fix the call sites.
-      if func_name not in func_dict[checkprefix] or not func_dict[checkprefix][func_name]:
-        continue
+
+      # prefix is blacklisted. We remember the output as we might need it later but we will not emit anything for the prefix.
+      if checkprefix in prefix_blacklist:
+          if not saved_output and func_name in func_dict[checkprefix]:
+              saved_output = func_dict[checkprefix][func_name]
+          continue
+
+      # If we do not have output for this prefix but there is one saved, we go ahead with this prefix and the saved output.
+      if not func_dict[checkprefix][func_name]:
+        if not saved_output:
+            continue
+        func_dict[checkprefix][func_name] = saved_output
 
       # Add some space between different check prefixes, but not after the last
       # check line (before the test code).
