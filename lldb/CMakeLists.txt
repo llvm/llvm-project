@@ -229,7 +229,7 @@ if (NOT LLDB_DISABLE_PYTHON)
   get_filename_component(lldb_python_build_path ${lldb_python_build_path} ABSOLUTE)
 
   # Add a Post-Build Event to copy over Python files and create the symlink
-  # to liblldb.so for the Python API(hardlink on Windows)
+  # to liblldb.so for the Python API(hardlink on Windows).
   add_custom_target(finish_swig ALL
     COMMAND
       ${PYTHON_EXECUTABLE} ${LLDB_SOURCE_DIR}/scripts/finishSwigWrapperClasses.py
@@ -270,14 +270,14 @@ if (NOT LLDB_DISABLE_PYTHON)
   # Add a Post-Build Event to copy the custom Python DLL to the lldb binaries dir so that Windows can find it when launching
   # lldb.exe or any other executables that were linked with liblldb.
   if (WIN32 AND NOT "${PYTHON_DLL}" STREQUAL "")
-      # When using the Visual Studio CMake generator the lldb binaries end up in Release/bin, Debug/bin etc.
-      file(TO_NATIVE_PATH "${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin" LLDB_BIN_DIR)
-      file(TO_NATIVE_PATH "${PYTHON_DLL}" PYTHON_DLL_NATIVE_PATH)
-      add_custom_command(
-          TARGET finish_swig
-          POST_BUILD
-          COMMAND ${CMAKE_COMMAND} -E copy ${PYTHON_DLL_NATIVE_PATH} ${LLDB_BIN_DIR} VERBATIM
-          COMMENT "Copying Python DLL to LLDB binaries directory.")
+    # When using the Visual Studio CMake generator the lldb binaries end up in Release/bin, Debug/bin etc.
+    file(TO_NATIVE_PATH "${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin" LLDB_BIN_DIR)
+    file(TO_NATIVE_PATH "${PYTHON_DLL}" PYTHON_DLL_NATIVE_PATH)
+    add_custom_command(
+      TARGET finish_swig
+      POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy ${PYTHON_DLL_NATIVE_PATH} ${LLDB_BIN_DIR} VERBATIM
+      COMMENT "Copying Python DLL to LLDB binaries directory.")
   endif ()
 endif ()
 
