@@ -49,12 +49,16 @@ li.d	$4, 1.12345
 # N32-N64:         ld      $4, 0($1)                  # encoding: [0x00,0x00,0x24,0xdc]
 
 li.d	$4, 1
-# ALL:   lui     $4, 16368                   # encoding: [0xf0,0x3f,0x04,0x3c]
-# O32:   addiu   $5, $zero, 0                # encoding: [0x00,0x00,0x05,0x24]
+# O32:     lui     $4, 16368                          # encoding: [0xf0,0x3f,0x04,0x3c]
+# O32:     addiu   $5, $zero, 0                       # encoding: [0x00,0x00,0x05,0x24]
+# N32-N64: ori     $4, $zero, 65472                   # encoding: [0xc0,0xff,0x04,0x34]
+# N32-N64: dsll    $4, $4, 46                         # encoding: [0xbc,0x23,0x04,0x00]
 
 li.d	$4, 1.0
-# ALL:   lui     $4, 16368                   # encoding: [0xf0,0x3f,0x04,0x3c]
-# O32:   addiu   $5, $zero, 0                # encoding: [0x00,0x00,0x05,0x24]
+# O32:     lui     $4, 16368                          # encoding: [0xf0,0x3f,0x04,0x3c]
+# O32:     addiu   $5, $zero, 0                       # encoding: [0x00,0x00,0x05,0x24]
+# N32-N64: ori     $4, $zero, 65472                   # encoding: [0xc0,0xff,0x04,0x34]
+# N32-N64: dsll    $4, $4, 46                         # encoding: [0xbc,0x23,0x04,0x00]
 
 li.d	$4, 12345678910
 # ALL:	.section	.rodata,"a",@progbits
@@ -153,8 +157,10 @@ li.d	$4, 0.4
 # N32-N64:         ld      $4, 0($1)                  # encoding: [0x00,0x00,0x24,0xdc]
 
 li.d	$4, 1.5
-# ALL:  lui     $4, 16376               # encoding: [0xf8,0x3f,0x04,0x3c]
-# O32:  addiu   $5, $zero, 0            # encoding: [0x00,0x00,0x05,0x24]
+# O32:     lui     $4, 16376                          # encoding: [0xf8,0x3f,0x04,0x3c]
+# O32:     addiu   $5, $zero, 0                       # encoding: [0x00,0x00,0x05,0x24]
+# N32-N64: ori     $4, $zero, 65504                   # encoding: [0xe0,0xff,0x04,0x34]
+# N32-N64: dsll    $4, $4, 46                         # encoding: [0xbc,0x23,0x04,0x00]
 
 li.d	$4, 12345678910.12345678910
 # ALL:	.section	.rodata,"a",@progbits
@@ -271,7 +277,8 @@ li.d	$f4, 1
 # CHECK-MIPS32r2: lui     $1, 16368          # encoding: [0xf0,0x3f,0x01,0x3c]
 # CHECK-MIPS32r2: mtc1    $zero, $f4         # encoding: [0x00,0x20,0x80,0x44]
 # CHECK-MIPS32r2: mthc1   $1, $f4            # encoding: [0x00,0x20,0xe1,0x44]
-# N32-N64:        lui     $1, 16368          # encoding: [0xf0,0x3f,0x01,0x3c]
+# N32-N64:        ori     $1, $zero, 65472   # encoding: [0xc0,0xff,0x01,0x34]
+# N32-N64:        dsll    $1, $1, 46         # encoding: [0xbc,0x0b,0x01,0x00]
 # N32-N64:        dmtc1   $1, $f4            # encoding: [0x00,0x20,0xa1,0x44]
 
 li.d	$f4, 1.0
@@ -281,7 +288,8 @@ li.d	$f4, 1.0
 # CHECK-MIPS32r2: lui     $1, 16368          # encoding: [0xf0,0x3f,0x01,0x3c]
 # CHECK-MIPS32r2: mtc1    $zero, $f4         # encoding: [0x00,0x20,0x80,0x44]
 # CHECK-MIPS32r2: mthc1   $1, $f4            # encoding: [0x00,0x20,0xe1,0x44]
-# N32-N64:        lui     $1, 16368          # encoding: [0xf0,0x3f,0x01,0x3c]
+# N32-N64:        ori     $1, $zero, 65472   # encoding: [0xc0,0xff,0x01,0x34]
+# N32-N64:        dsll    $1, $1, 46         # encoding: [0xbc,0x0b,0x01,0x00]
 # N32-N64:        dmtc1   $1, $f4            # encoding: [0x00,0x20,0xa1,0x44]
 
 li.d	$f4, 12345678910
@@ -360,7 +368,8 @@ li.d	$f4, 1.5
 # CHECK-MIPS32r2: lui     $1, 16376          # encoding: [0xf8,0x3f,0x01,0x3c]
 # CHECK-MIPS32r2: mtc1    $zero, $f4         # encoding: [0x00,0x20,0x80,0x44]
 # CHECK-MIPS32r2: mthc1   $1, $f4            # encoding: [0x00,0x20,0xe1,0x44]
-# N32-N64:        lui     $1, 16376          # encoding: [0xf8,0x3f,0x01,0x3c]
+# N32-N64:        ori     $1, $zero, 65504   # encoding: [0xe0,0xff,0x01,0x34]
+# N32-N64:        dsll    $1, $1, 46         # encoding: [0xbc,0x0b,0x01,0x00]
 # N32-N64:        dmtc1   $1, $f4            # encoding: [0x00,0x20,0xa1,0x44]
 
 li.d	$f4, 2.5
@@ -370,7 +379,8 @@ li.d	$f4, 2.5
 # CHECK-MIPS32r2: lui     $1, 16388          # encoding: [0x04,0x40,0x01,0x3c]
 # CHECK-MIPS32r2: mtc1    $zero, $f4         # encoding: [0x00,0x20,0x80,0x44]
 # CHECK-MIPS32r2: mthc1   $1, $f4            # encoding: [0x00,0x20,0xe1,0x44]
-# N32-N64:        lui     $1, 16388          # encoding: [0x04,0x40,0x01,0x3c]
+# N32-N64:        ori     $1, $zero, 32776   # encoding: [0x08,0x80,0x01,0x34]
+# N32-N64:        dsll    $1, $1, 47         # encoding: [0xfc,0x0b,0x01,0x00]
 # N32-N64:        dmtc1   $1, $f4            # encoding: [0x00,0x20,0xa1,0x44]
 
 li.d	$f4, 2.515625

@@ -3399,8 +3399,8 @@ bool MipsAsmParser::expandLoadDoubleImmToGPR(MCInst &Inst, SMLoc IDLoc,
 
   if (LoImmOp64 == 0) {
     if (isABI_N32() || isABI_N64()) {
-      if (loadImmediate(HiImmOp64, FirstReg, Mips::NoRegister, false, true,
-                        IDLoc, Out, STI))
+      if (loadImmediate(ImmOp64, FirstReg, Mips::NoRegister, false, true, IDLoc,
+                        Out, STI))
         return true;
     } else {
       if (loadImmediate(HiImmOp64, FirstReg, Mips::NoRegister, true, true,
@@ -3473,12 +3473,20 @@ bool MipsAsmParser::expandLoadDoubleImmToFPR(MCInst &Inst, bool Is64FPU,
       !((HiImmOp64 & 0xffff0000) && (HiImmOp64 & 0x0000ffff))) {
     // FIXME: In the case where the constant is zero, we can load the
     // register directly from the zero register.
-    if (loadImmediate(HiImmOp64, TmpReg, Mips::NoRegister, true, true, IDLoc,
+
+    if (isABI_N32() || isABI_N64()) {
+      if (loadImmediate(ImmOp64, TmpReg, Mips::NoRegister, false, false, IDLoc,
+                        Out, STI))
+        return true;
+      TOut.emitRR(Mips::DMTC1, FirstReg, TmpReg, IDLoc, STI);
+      return false;
+    }
+
+    if (loadImmediate(HiImmOp64, TmpReg, Mips::NoRegister, true, false, IDLoc,
                       Out, STI))
       return true;
-    if (isABI_N32() || isABI_N64())
-      TOut.emitRR(Mips::DMTC1, FirstReg, TmpReg, IDLoc, STI);
-    else if (hasMips32r2()) {
+
+    if (hasMips32r2()) {
       TOut.emitRR(Mips::MTC1, FirstReg, Mips::ZERO, IDLoc, STI);
       TOut.emitRRR(Mips::MTHC1_D32, FirstReg, FirstReg, TmpReg, IDLoc, STI);
     } else {
