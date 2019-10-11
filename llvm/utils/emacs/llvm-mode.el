@@ -28,7 +28,7 @@
          "norecurse" "nounwind" "optnone" "optsize" "readnone" "readonly" "returns_twice"
          "speculatable" "ssp" "sspreq" "sspstrong" "safestack" "sanitize_address" "sanitize_hwaddress" "sanitize_memtag"
          "sanitize_thread" "sanitize_memory" "strictfp" "uwtable" "writeonly" "immarg"
-	 "local_unnamed_addr" "nocapture" "nonnull" "sanitize_cilk" "stealable" "unnamed_addr") 'symbols) . font-lock-constant-face)
+	 "dso_local" "local_unnamed_addr" "nocapture" "nonnull" "sanitize_cilk" "stealable" "unnamed_addr") 'symbols) . font-lock-constant-face)
    ;; Variables
    '("%[-a-zA-Z$._][-a-zA-Z$._0-9]*" . font-lock-variable-name-face)
    ;; Labels
